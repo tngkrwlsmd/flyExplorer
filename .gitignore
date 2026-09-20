@@ -1,3 +1,27 @@
+# Generated Visual Studio / GYP project files
 *.sln
+*.vcproj
+*.vcproj.*
 *.vcxproj
-/tools
+*.vcxproj.*
+*.suo
+*.user
+*.ncb
+*.sdf
+*.opensdf
+*.VC.db
+*.VC.VC.opendb
+.vs/
+ipch/
+
+# Build outputs and intermediates
+/bin/
+/obj/
+
+# Local build toolchain downloaded by build setup
+/tools/
+
+# Distribution staging and generated packages
+/dist/bin/
+/dist/fxfile_v*.exe
+/dist/fxfile_v*_portable.zip
