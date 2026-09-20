@@ -26,7 +26,19 @@
 #include <algorithm>
 #include <string>
 #include <cctype>
-#include <xmemory>
+#include <memory>
+
+#if defined(XPR_CFG_COMPILER_MSVC) && (XPR_CFG_COMPILER_VER > 1500)
+namespace std
+{
+namespace tr1
+{
+using ::std::unordered_map;
+using ::std::unordered_multimap;
+using ::std::unordered_set;
+} // namespace tr1
+} // namespace std
+#endif
 
 #define FXFILE_STL_FOR_EACH(aIterator, aContainer) \
     for ((aIterator) = (aContainer).begin(); (aIterator) != (aContainer).end(); ++(aIterator))

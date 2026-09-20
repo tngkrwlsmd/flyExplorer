@@ -23,6 +23,11 @@ typedef regex tregex;
 typedef cmatch tcmatch;
 typedef smatch tsmatch;
 #endif
+
+using ::std::regex_match;
+using ::std::regex_search;
+namespace regex_constants = ::std::regex_constants;
+
 } // namespace tr1
 } // namespace std
 

@@ -21,9 +21,17 @@ Requirements to Build
 Build on Windows
 ----------------
 1. Run 'build.bat' batch file to generate MSVS solution file.
-   build.bat [msvs_version] [target_arch]
+   build.bat [msvs_version] [target_arch] [platform_toolset]
    e.g.) build.bat 2015 x64
          build.bat 2008 x86
+
+   For a current Visual Studio that does not provide the VS2015 v140
+   toolset, keep the GYP generator at 2015 and pass the installed toolset
+   as the third argument. For example, Visual Studio 2026 uses v145:
+         build.bat 2015 x64 v145
+
+   When building x64, select a matching configuration/platform pair such as
+   'Debug-x64-Unicode | x64' or 'Release-x64-Unicode | x64'.
 
 2. Build 'fxfile.sln'.
    Run 'devenv.exe' and build

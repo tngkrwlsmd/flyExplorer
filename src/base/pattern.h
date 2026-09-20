@@ -10,7 +10,7 @@
 
 #include "xpr_types.h"
 #include "xpr_mutex.h"
-#include <xmemory>
+#include <memory>
 
 namespace fxfile
 {
@@ -55,11 +55,11 @@ protected:
     Singleton(void) {}
 
 private:
-    static std::auto_ptr<T> mSingleInstance;
+    static std::unique_ptr<T> mSingleInstance;
     static xpr::Mutex mMutex;
 };
 
-template <typename T> std::auto_ptr<T> Singleton<T>::mSingleInstance;
+template <typename T> std::unique_ptr<T> Singleton<T>::mSingleInstance;
 template <typename T> xpr::Mutex Singleton<T>::mMutex;
 } // namespace base
 } // namespace fxfile

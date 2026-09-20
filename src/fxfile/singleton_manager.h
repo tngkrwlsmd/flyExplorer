@@ -51,7 +51,7 @@ public:
     }
 
     template <typename T>
-    static xpr_bool_t &exist(void)
+    static xpr_bool_t exist(void)
     {
         const xpr_char_t *sTypeName = typeid(T).name();
 
