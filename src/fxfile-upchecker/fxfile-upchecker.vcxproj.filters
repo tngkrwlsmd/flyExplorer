@@ -1,0 +1,234 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="..">
+      <UniqueIdentifier>{739DB09A-CC57-A953-A6CF-F64FA08E4FA7}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="..\base">
+      <UniqueIdentifier>{DBBAC0A6-BB0A-CA51-45CC-DA4574B671E6}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="..">
+      <UniqueIdentifier>{739DB09A-CC57-A953-A6CF-F64FA08E4FA7}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="..\base">
+      <UniqueIdentifier>{DBBAC0A6-BB0A-CA51-45CC-DA4574B671E6}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="..">
+      <UniqueIdentifier>{739DB09A-CC57-A953-A6CF-F64FA08E4FA7}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="..\base">
+      <UniqueIdentifier>{DBBAC0A6-BB0A-CA51-45CC-DA4574B671E6}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="..">
+      <UniqueIdentifier>{739DB09A-CC57-A953-A6CF-F64FA08E4FA7}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="..\base">
+      <UniqueIdentifier>{DBBAC0A6-BB0A-CA51-45CC-DA4574B671E6}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="..">
+      <UniqueIdentifier>{739DB09A-CC57-A953-A6CF-F64FA08E4FA7}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="..\base">
+      <UniqueIdentifier>{DBBAC0A6-BB0A-CA51-45CC-DA4574B671E6}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="..">
+      <UniqueIdentifier>{739DB09A-CC57-A953-A6CF-F64FA08E4FA7}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="..\base">
+      <UniqueIdentifier>{DBBAC0A6-BB0A-CA51-45CC-DA4574B671E6}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="..">
+      <UniqueIdentifier>{739DB09A-CC57-A953-A6CF-F64FA08E4FA7}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="..\base">
+      <UniqueIdentifier>{DBBAC0A6-BB0A-CA51-45CC-DA4574B671E6}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="..">
+      <UniqueIdentifier>{739DB09A-CC57-A953-A6CF-F64FA08E4FA7}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="..\base">
+      <UniqueIdentifier>{DBBAC0A6-BB0A-CA51-45CC-DA4574B671E6}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="..">
+      <UniqueIdentifier>{739DB09A-CC57-A953-A6CF-F64FA08E4FA7}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="..\base">
+      <UniqueIdentifier>{DBBAC0A6-BB0A-CA51-45CC-DA4574B671E6}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="..">
+      <UniqueIdentifier>{739DB09A-CC57-A953-A6CF-F64FA08E4FA7}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="..\base">
+      <UniqueIdentifier>{DBBAC0A6-BB0A-CA51-45CC-DA4574B671E6}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="..">
+      <UniqueIdentifier>{739DB09A-CC57-A953-A6CF-F64FA08E4FA7}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="..\base">
+      <UniqueIdentifier>{DBBAC0A6-BB0A-CA51-45CC-DA4574B671E6}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="..">
+      <UniqueIdentifier>{739DB09A-CC57-A953-A6CF-F64FA08E4FA7}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="..\base">
+      <UniqueIdentifier>{DBBAC0A6-BB0A-CA51-45CC-DA4574B671E6}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="..">
+      <UniqueIdentifier>{739DB09A-CC57-A953-A6CF-F64FA08E4FA7}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="..\base">
+      <UniqueIdentifier>{DBBAC0A6-BB0A-CA51-45CC-DA4574B671E6}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="..">
+      <UniqueIdentifier>{739DB09A-CC57-A953-A6CF-F64FA08E4FA7}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="..\base">
+      <UniqueIdentifier>{DBBAC0A6-BB0A-CA51-45CC-DA4574B671E6}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="..">
+      <UniqueIdentifier>{739DB09A-CC57-A953-A6CF-F64FA08E4FA7}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="..\base">
+      <UniqueIdentifier>{DBBAC0A6-BB0A-CA51-45CC-DA4574B671E6}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="..">
+      <UniqueIdentifier>{739DB09A-CC57-A953-A6CF-F64FA08E4FA7}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="..\base">
+      <UniqueIdentifier>{DBBAC0A6-BB0A-CA51-45CC-DA4574B671E6}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="..">
+      <UniqueIdentifier>{739DB09A-CC57-A953-A6CF-F64FA08E4FA7}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="..\base">
+      <UniqueIdentifier>{DBBAC0A6-BB0A-CA51-45CC-DA4574B671E6}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="..">
+      <UniqueIdentifier>{739DB09A-CC57-A953-A6CF-F64FA08E4FA7}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="..\base">
+      <UniqueIdentifier>{DBBAC0A6-BB0A-CA51-45CC-DA4574B671E6}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="..">
+      <UniqueIdentifier>{739DB09A-CC57-A953-A6CF-F64FA08E4FA7}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="..\base">
+      <UniqueIdentifier>{DBBAC0A6-BB0A-CA51-45CC-DA4574B671E6}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="..">
+      <UniqueIdentifier>{739DB09A-CC57-A953-A6CF-F64FA08E4FA7}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="..\base">
+      <UniqueIdentifier>{DBBAC0A6-BB0A-CA51-45CC-DA4574B671E6}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="..">
+      <UniqueIdentifier>{739DB09A-CC57-A953-A6CF-F64FA08E4FA7}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="..\base">
+      <UniqueIdentifier>{DBBAC0A6-BB0A-CA51-45CC-DA4574B671E6}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="..">
+      <UniqueIdentifier>{739DB09A-CC57-A953-A6CF-F64FA08E4FA7}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="..\base">
+      <UniqueIdentifier>{DBBAC0A6-BB0A-CA51-45CC-DA4574B671E6}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="res">
+      <UniqueIdentifier>{1177910C-2DCE-8F2F-24FB-580080DDACDC}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="res">
+      <UniqueIdentifier>{1177910C-2DCE-8F2F-24FB-580080DDACDC}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\base\conf_file.cpp">
+      <Filter>..\base</Filter>
+    </ClCompile>
+    <ClInclude Include="..\base\conf_file.h">
+      <Filter>..\base</Filter>
+    </ClInclude>
+    <ClInclude Include="..\base\conf_file_ex.h">
+      <Filter>..\base</Filter>
+    </ClInclude>
+    <ClCompile Include="..\base\crc32.c">
+      <Filter>..\base</Filter>
+    </ClCompile>
+    <ClInclude Include="..\base\crc32.h">
+      <Filter>..\base</Filter>
+    </ClInclude>
+    <ClInclude Include="..\base\def.h">
+      <Filter>..\base</Filter>
+    </ClInclude>
+    <ClInclude Include="..\base\def_win.h">
+      <Filter>..\base</Filter>
+    </ClInclude>
+    <ClCompile Include="..\base\env_path.cpp">
+      <Filter>..\base</Filter>
+    </ClCompile>
+    <ClInclude Include="..\base\env_path.h">
+      <Filter>..\base</Filter>
+    </ClInclude>
+    <ClCompile Include="..\base\md5.c">
+      <Filter>..\base</Filter>
+    </ClCompile>
+    <ClInclude Include="..\base\md5.h">
+      <Filter>..\base</Filter>
+    </ClInclude>
+    <ClCompile Include="..\base\getopt.c">
+      <Filter>..\base</Filter>
+    </ClCompile>
+    <ClInclude Include="..\base\getopt.h">
+      <Filter>..\base</Filter>
+    </ClInclude>
+    <ClCompile Include="..\base\pidl_win.cpp">
+      <Filter>..\base</Filter>
+    </ClCompile>
+    <ClInclude Include="..\base\pidl_win.h">
+      <Filter>..\base</Filter>
+    </ClInclude>
+    <ClCompile Include="..\base\sha.c">
+      <Filter>..\base</Filter>
+    </ClCompile>
+    <ClInclude Include="..\base\sha.h">
+      <Filter>..\base</Filter>
+    </ClInclude>
+    <ClInclude Include="..\base\shell_item.h">
+      <Filter>..\base</Filter>
+    </ClInclude>
+    <ClCompile Include="..\base\shell_item_win.cpp">
+      <Filter>..\base</Filter>
+    </ClCompile>
+    <ClCompile Include="..\base\update_info_manager.cpp">
+      <Filter>..\base</Filter>
+    </ClCompile>
+    <ClInclude Include="..\base\update_info_manager.h">
+      <Filter>..\base</Filter>
+    </ClInclude>
+    <ClInclude Include="..\base\upchecker_def.h">
+      <Filter>..\base</Filter>
+    </ClInclude>
+    <ClCompile Include="main_window.cpp"/>
+    <ClInclude Include="main_window.h"/>
+    <ClCompile Include="meta_data_file.cpp"/>
+    <ClInclude Include="meta_data_file.h"/>
+    <ClCompile Include="program_opts.cpp"/>
+    <ClInclude Include="program_opts.h"/>
+    <ClInclude Include="resource.h"/>
+    <ClCompile Include="single_process.cpp"/>
+    <ClInclude Include="single_process.h"/>
+    <ClCompile Include="stdafx.cpp"/>
+    <ClInclude Include="stdafx.h"/>
+    <ClCompile Include="update_checker.cpp"/>
+    <ClInclude Include="update_checker.h"/>
+    <ClCompile Include="win_app.cpp"/>
+    <ClInclude Include="win_app.h"/>
+    <ResourceCompile Include="fxfile-upchecker.rc"/>
+    <None Include="res\fxfile-upchecker.ico">
+      <Filter>res</Filter>
+    </None>
+    <None Include="res\fxfile-upchecker.rc2">
+      <Filter>res</Filter>
+    </None>
+    <None Include="fxfile-upchecker.gyp"/>
+  </ItemGroup>
+</Project>

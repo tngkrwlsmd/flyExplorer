@@ -1,0 +1,10 @@
+; Override names for external functions
+EXPORTS
+
+	fxfile_crash_init
+
+	fxfile_crash_getAppName
+	fxfile_crash_setAppName
+	fxfile_crash_getAppVer
+	fxfile_crash_setAppVer
+	fxfile_crash_setDevelopInfo
