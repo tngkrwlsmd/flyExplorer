@@ -221,9 +221,41 @@
     'targets':
     [
         {
+            'target_name': 'zlib-vendored',
+
+            'type': 'static_library',
+
+            'include_dirs':
+            [
+                '../../lib/zlib/include',
+            ],
+
+            'sources':
+            [
+                '../../lib/zlib/src/adler32.c',
+                '../../lib/zlib/src/compress.c',
+                '../../lib/zlib/src/crc32.c',
+                '../../lib/zlib/src/deflate.c',
+                '../../lib/zlib/src/infback.c',
+                '../../lib/zlib/src/inffast.c',
+                '../../lib/zlib/src/inflate.c',
+                '../../lib/zlib/src/inftrees.c',
+                '../../lib/zlib/src/trees.c',
+                '../../lib/zlib/src/uncompr.c',
+                '../../lib/zlib/src/zutil.c',
+                '../../lib/zlib/src/ioapi.c',
+                '../../lib/zlib/src/zip.c',
+            ],
+        },
+        {
             'target_name': 'fxfile-crash',
             
             'type': 'shared_library',
+
+            'dependencies':
+            [
+                'zlib-vendored',
+            ],
             
             'defines':
             [
@@ -252,7 +284,6 @@
                     'AdditionalLibraryDirectories':
                     [
                         '$(OutDir)',
-                        '../../lib/zlib/lib',
                     ]
                 },
             },
