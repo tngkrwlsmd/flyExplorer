@@ -66,7 +66,10 @@
                         'Optimization':                   0,
                         'BasicRuntimeChecks':             3,
                         'WarningLevel':                   3,
-                        'DebugInformationFormat':         4,
+                        # Use Program Database (/Zi) instead of legacy Edit and Continue
+                        # (/ZI). Modern Win32 linking retains /SAFESEH, which conflicts
+                        # with /EDITANDCONTINUE and emits LNK4075.
+                        'DebugInformationFormat':         3,
                     },
                     'VCLinkerTool': 
                     {
