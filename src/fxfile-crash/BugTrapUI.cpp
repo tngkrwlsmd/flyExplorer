@@ -335,16 +335,27 @@ static DWORD WSASendReport(PCTSTR pszHostName, CTransferThreadParams* pTransferT
 
 				SOCKADDR_IN sockAddr;
 				ZeroMemory(&sockAddr, sizeof(sockAddr));
-				if (*pszHostNameA >= '0' && *pszHostNameA <= '9')
-					sockAddr.sin_addr.s_addr = inet_addr(pszHostNameA);
-				else
+				sockAddr.sin_addr.s_addr = INADDR_NONE;
+
+				ADDRINFOA hints = {0};
+				hints.ai_family = AF_INET;
+				hints.ai_socktype = SOCK_STREAM;
+
+				PADDRINFOA pAddresses = NULL;
+				if (getaddrinfo(pszHostNameA, NULL, &hints, &pAddresses) == 0)
 				{
-					hostent* pHostEnt = gethostbyname(pszHostNameA);
-					if (pHostEnt != NULL)
-						CopyMemory(&sockAddr.sin_addr, pHostEnt->h_addr, pHostEnt->h_length);
-					else
-						sockAddr.sin_addr.s_addr = INADDR_NONE;
+					for (PADDRINFOA pAddress = pAddresses; pAddress != NULL; pAddress = pAddress->ai_next)
+					{
+						if (pAddress->ai_family == AF_INET && pAddress->ai_addrlen >= sizeof(SOCKADDR_IN))
+						{
+							const SOCKADDR_IN* pResolved = reinterpret_cast<const SOCKADDR_IN*>(pAddress->ai_addr);
+							sockAddr.sin_addr = pResolved->sin_addr;
+							break;
+						}
+					}
+					freeaddrinfo(pAddresses);
 				}
+
 				if (sockAddr.sin_addr.s_addr != INADDR_NONE)
 				{
 					sockAddr.sin_family = AF_INET;
