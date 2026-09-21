@@ -155,6 +155,14 @@ jobs:
             -SourceDir "bin\x64" `
             -Configuration "Release-x64-Unicode"
 
+      - name: Stage x64 runtime for packaging
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: flyexplorer-runtime-x64
+          path: bin/x64
+          if-no-files-found: error
+          retention-days: 1
+
 
   build-release-x86-regression:
     runs-on: windows-2025-vs2026
@@ -424,3 +432,67 @@ jobs:
           }
 
           Write-Host "Verified current packaging names for xpr and fxfile-upchecker."
+
+      - name: Stage x86 Unicode runtime for packaging
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: flyexplorer-runtime-x86-unicode
+          path: bin/x86-unicode
+          if-no-files-found: error
+          retention-days: 1
+
+      - name: Stage x86 Multibyte runtime for packaging
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: flyexplorer-runtime-x86-multibyte
+          path: bin/x86-multibyte
+          if-no-files-found: error
+          retention-days: 1
+
+      - name: Stage x64 updater runtime for packaging
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: flyexplorer-upchecker-x64
+          path: bin/x64/upchecker
+          if-no-files-found: error
+          retention-days: 1
+
+
+  build-release-packages:
+    needs:
+      - build-release-x64-unicode
+      - build-release-x86-regression
+    runs-on: windows-2025-vs2026
+    timeout-minutes: 20
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - name: Download x64 runtime
+        uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5
+        with:
+          name: flyexplorer-runtime-x64
+          path: _package-input/x64
+
+      - name: Download x86 Unicode runtime
+        uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5
+        with:
+          name: flyexplorer-runtime-x86-unicode
+          path: _package-input/x86-unicode
+
+      - name: Download x86 Multibyte runtime
+        uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5
+        with:
+          name: flyexplorer-runtime-x86-multibyte
+          path: _package-input/x86-multibyte
+
+      - name: Download x64 updater runtime
+        uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5
+        with:
+          name: flyexplorer-upchecker-x64
+          path: _package-input/x64-upchecker
+
+      - name: Assemble verified package inputs
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force 
