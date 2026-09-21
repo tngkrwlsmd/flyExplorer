@@ -304,6 +304,23 @@ inline unsigned CHashTraits<KEY_TYPE>::HashKey(const KEY_TYPE& key)
 	return ((unsigned)key >> 4);
 }
 
+/// Explicit specialization for module handles so x64 address bits participate in the hash.
+template <> class CHashTraits<HMODULE>
+{
+public:
+	static unsigned HashKey(const HMODULE& hModule);
+};
+
+inline unsigned CHashTraits<HMODULE>::HashKey(const HMODULE& hModule)
+{
+	ULONG_PTR nValue = reinterpret_cast<ULONG_PTR>(hModule);
+	nValue >>= 4;
+#if defined(_WIN64)
+	nValue ^= (nValue >> 32);
+#endif
+	return static_cast<unsigned>(nValue);
+}
+
 /// Explicit template specialization for string hash tables.
 template <> class CHashTraits<CStrHolder>
 {
