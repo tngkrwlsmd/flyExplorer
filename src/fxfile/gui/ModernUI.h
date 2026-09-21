@@ -12,6 +12,10 @@
 #define WM_DPICHANGED 0x02E0
 #endif
 
+#ifndef WM_DPICHANGED_AFTERPARENT
+#define WM_DPICHANGED_AFTERPARENT 0x02E3
+#endif
+
 namespace fxfile
 {
 namespace ui
