@@ -78,7 +78,7 @@ try {
     Set-Content -LiteralPath (Join-Path $testDir "root.txt") -Value "flyExplorer runtime smoke" -Encoding UTF8
     Set-Content -LiteralPath (Join-Path $testDir "FolderA\child.txt") -Value "child" -Encoding UTF8
 
-    Copy-Item -LiteralPath (Join-Path $resolvedSource "*") -Destination $runtimeDir -Recurse -Force
+    Copy-Item -Path (Join-Path $resolvedSource "*") -Destination $runtimeDir -Recurse -Force
 
     Write-Utf16Config -Path (Join-Path $confDir "fxfile-main.conf") -Lines @(
         "[main]",
@@ -182,6 +182,10 @@ finally {
         finally {
             $process.Dispose()
         }
+    }
+
+    foreach ($valueName in @("fxfile-launcher", "fxfile-upchecker")) {
+        Remove-ItemProperty -Path $runKey -Name $valueName -ErrorAction SilentlyContinue
     }
 
     if (Test-Path -LiteralPath $appRegistryRoot) {
