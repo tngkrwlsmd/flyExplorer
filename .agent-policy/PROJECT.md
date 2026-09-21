@@ -77,7 +77,7 @@
     }
   ],
   "review": {
-    "reviewed_revision": "0c9c8f09a9e1cd32c4841a3ba4ad7972893864ed",
+    "reviewed_revision": "229f12121027a82513b70d5a688e737888b1c28a",
     "reviewed_at": "2026-09-21",
     "reviewed_paths": [
       "README",
@@ -183,9 +183,10 @@
 - DriveDetailDlg 현대화는 Debug/Release x64, x86 Unicode/Multibyte compile/link, warning 0, hosted launch smoke, package regression을 통과했다. 실제 dialog open/close, keyboard navigation, 100/125/150/200% DPI visual, High Contrast visual은 아직 수동 검증하지 않았다.
 - top-level MainFrame title bar는 documented `DWMWA_USE_IMMERSIVE_DARK_MODE` DWM attribute를 동적 로딩하는 ModernUI helper로 opt-in하며 create/settings/theme change 시 재적용한다. High Contrast에서는 dark frame 요청을 끄고, 미지원 Windows/DWM 실패는 기존 frame 동작으로 fallback한다.
 - MainFrame title-bar foundation은 source-invariant, Debug/Release x64, x86 Unicode/Multibyte compile/link, warning 0, hosted launch smoke, package regression을 통과했다. 실제 Windows 11 light/dark 전환 시 title-bar visual, High Contrast visual은 아직 수동 검증하지 않았다.
-- ModernUI는 documented `SetWindowTheme`를 `uxtheme.dll`에서 동적으로 해석해 common control에 Windows Explorer visual-style association을 적용하고 High Contrast에서는 association을 제거하는 `applyExplorerControlTheme` helper를 제공한다. 기존 ListCtrlEx/TreeCtrlEx의 Explorer-theme 사용 계약을 중앙화할 수 있는 기반이며 아직 해당 call site를 helper로 이관하거나 dark-specific theme subclass를 적용하지 않았다.
-- common-control theme helper foundation은 source-invariant, Debug/Release x64, x86 Unicode/Multibyte compile/link, warning 0, hosted launch smoke, package regression을 통과했다. Explorer/control theme의 실제 light/dark/High Contrast visual 결과는 아직 수동 검증하지 않았다.
-- common-control call-site 이관과 실제 dark control/dialog theming, 나머지 dialog/icon asset 현대화는 후속 phase 범위다.
+- ModernUI는 documented `SetWindowTheme`를 `uxtheme.dll`에서 동적으로 해석해 common control에 Windows Explorer visual-style association을 적용하고 High Contrast에서는 association을 제거하는 `applyExplorerControlTheme` helper를 제공한다. explicit theme disable은 `resetControlTheme`가 소유하며, ListCtrlEx/TreeCtrlEx의 기존 `enableVistaEnhanced` enable/disable semantics는 유지한 채 direct `SetWindowTheme` 호출을 이 helper pair로 이관했다.
+- Explorer list/tree theme migration은 source-invariant, Debug/Release x64, x86 Unicode/Multibyte compile/link, warning 0, hosted launch smoke, package regression을 통과했다. 실제 light/dark/High Contrast visual과 interactive list/tree behavior는 아직 수동 검증하지 않았다.
+- MainFrame은 settings/theme change에서 top-level frame theme를 재적용하고 child 전체를 redraw하며, MenuBar는 `WM_THEMECHANGED`에서 theme handle을 다시 열고 ToolBarEx는 DPI/settings/theme change에서 modern metrics를 갱신한다. rebar MenuBar/ToolBarEx의 `SetWindowThemeXP(..., L"", L"")`는 WinXP 전용 legacy empty-theme association으로 Explorer sub-app theme와 의미가 달라 그대로 유지했다.
+- ListCtrlEx/TreeCtrlEx의 direct common-control call-site 이관은 완료되었다. dark-specific common-control rendering, edit/combo/dialog dark theme 확대, menu/rebar dark rendering, 나머지 dialog/icon asset 현대화는 후속 phase 범위다.
 
 ## Recommended verification
 

@@ -133,21 +133,29 @@ refreshed for settings/theme notifications; High Contrast keeps the existing
 light-frame fallback, and unsupported/down-level DWM calls fail without adding a
 load-time dependency.
 
-ModernUI now also provides a common-control theme helper that dynamically
-resolves the documented `SetWindowTheme` API and applies the Windows Explorer
-visual-style association, while High Contrast removes that association and
-falls back to the system control rendering. This is a shared foundation for
-later list/tree/edit/combo/dialog theme work; existing control call sites have
-not all been migrated to it, and it does not yet claim dark-specific common-
-control styling.
+ModernUI now also provides common-control theme helpers that dynamically
+resolve the documented `SetWindowTheme` API. `applyExplorerControlTheme`
+applies the Windows Explorer visual-style association while High Contrast falls
+back to system control rendering, and `resetControlTheme` preserves explicit
+theme-disable behavior. `ListCtrlEx` and `TreeCtrlEx` now route their existing
+`enableVistaEnhanced` enable/disable contract through these helpers instead of
+calling `SetWindowTheme` directly.
+
+MainFrame already reapplies its top-level frame theme and redraws child windows
+for settings/theme changes. The legacy rebar MenuBar and ToolBarEx keep their
+WinXP-only `SetWindowThemeXP(..., L"", L"")` behavior because an empty theme
+association is not equivalent to the Explorer sub-app theme; MenuBar reopens its
+theme handle on `WM_THEMECHANGED`, while ToolBarEx refreshes its modern metrics
+for DPI/settings/theme notifications.
 
 This remains a ModernUI foundation, not a claim of complete Windows 11 dark-mode
-support. Common-control call-site migration/dark styling, dialog theming, icon modernization, and broader dialog
-modernization beyond the first reference remain separate work. Hosted CI verifies
-compile/link, warning-free builds, launch smoke, and packaging for the title-bar
-foundation, but light/dark title-bar appearance, 100/125/150/200% visual
-inspection, High Contrast appearance, and interactive status-bar/DriveDetailDlg
-behavior still require separate manual evidence.
+support. Dark-specific common-control styling, edit/combo/dialog theming, menu
+and rebar dark rendering, icon modernization, and broader dialog modernization
+remain separate work. Hosted CI verifies compile/link, warning-free builds,
+launch smoke, and packaging for the list/tree migration, but light/dark control
+appearance, 100/125/150/200% visual inspection, High Contrast appearance, and
+interactive list/tree/status-bar/DriveDetailDlg behavior still require separate
+manual evidence.
 
 Generate the Visual Studio Solution
 -----------------------------------
