@@ -360,7 +360,7 @@ static DWORD WSASendReport(PCTSTR pszHostName, CTransferThreadParams* pTransferT
 				{
 					sockAddr.sin_family = AF_INET;
 					sockAddr.sin_port = htons(g_nSupportPort);
-					SOCKET sock = WSASocket(AF_INET, SOCK_STREAM, IPPROTO_TCP, NULL, NULL, WSA_FLAG_OVERLAPPED);
+					SOCKET sock = WSASocketW(AF_INET, SOCK_STREAM, IPPROTO_TCP, NULL, 0, WSA_FLAG_OVERLAPPED);
 					if (sock != INVALID_SOCKET)
 					{
 						CMemStream MemStream(256);
