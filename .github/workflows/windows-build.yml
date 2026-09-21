@@ -101,6 +101,24 @@ jobs:
             throw "fxfile-upchecker must not build in Release-x64-Unicode."
           }
 
+          $aggregateProjectLine = $solution -split "\r?\n" |
+            Where-Object { $_ -match '^Project\(' -and $_ -like '*"fxfile.vcxproj"*' } |
+            Select-Object -First 1
+          if (-not $aggregateProjectLine) {
+            throw "Could not find the root aggregate fxfile.vcxproj in the generated solution."
+          }
+
+          $aggregateGuidMatches = [regex]::Matches($aggregateProjectLine, '\{[0-9A-Fa-f-]+\}')
+          if ($aggregateGuidMatches.Count -lt 2) {
+            throw "Could not resolve the root aggregate project GUID."
+          }
+          $aggregateGuid = $aggregateGuidMatches[$aggregateGuidMatches.Count - 1].Value
+
+          $aggregateReleaseBuildKey = "$aggregateGuid.Release-x64-Unicode|x64.Build.0"
+          if ($solution.Contains($aggregateReleaseBuildKey)) {
+            throw "The root aggregate project must not build in Release-x64-Unicode."
+          }
+
       - name: Build Release-x64-Unicode
         shell: pwsh
         env:

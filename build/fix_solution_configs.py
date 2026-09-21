@@ -364,17 +364,25 @@ def main() -> int:
         patched_lines.append(line)
 
     invalid_updater_builds: list[str] = []
+    invalid_aggregate_builds: list[str] = []
     for line in patched_lines:
         match = CONFIG_RE.match(line)
         if not match:
             continue
 
+        guid = match.group(2).upper()
+        configuration = match.group(3)
+        entry_type = match.group(4)
+
         if (
-            match.group(2).upper() == upchecker_guid
-            and match.group(4) == "Build.0"
-            and not is_x86_multibyte_configuration(match.group(3))
+            guid == upchecker_guid
+            and entry_type == "Build.0"
+            and not is_x86_multibyte_configuration(configuration)
         ):
-            invalid_updater_builds.append(match.group(3))
+            invalid_updater_builds.append(configuration)
+
+        if guid == aggregate_guid and entry_type == "Build.0":
+            invalid_aggregate_builds.append(configuration)
 
     if invalid_updater_builds:
         print(
@@ -382,6 +390,15 @@ def main() -> int:
             file=sys.stderr,
         )
         for configuration in invalid_updater_builds:
+            print(f"  {configuration}", file=sys.stderr)
+        return 1
+
+    if invalid_aggregate_builds:
+        print(
+            "ERROR: Root aggregate project is still enabled for Build Solution:",
+            file=sys.stderr,
+        )
+        for configuration in invalid_aggregate_builds:
             print(f"  {configuration}", file=sys.stderr)
         return 1
 
@@ -441,6 +458,7 @@ def main() -> int:
     print(f"Skipped {skipped_upchecker} non-multibyte updater build mappings.")
     print("Verified updater builds are restricted to x86-multibyte solution configurations.")
     print(f"Skipped {skipped_aggregate} aggregate-project build mappings.")
+    print("Verified the root aggregate project is excluded from Build Solution.")
     print(f"Applied static MFC settings to {len(MFC_PROJECTS)} projects ({mfc_changed} configurations updated).")
     print(
         "Aligned product TargetName values with linker outputs "
