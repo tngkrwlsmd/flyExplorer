@@ -81,6 +81,34 @@ contains Visual Studio and other system software, so it is not clean-Windows
 Sandbox/VM evidence and does not replace interactive functional or visual
 regression testing.
 
+Local CI
+--------
+Use `local_ci.bat` from a normal Command Prompt to run the same verification
+locally without spending GitHub Actions minutes. The default profile is `x64`:
+
+    local_ci.bat
+    local_ci.bat x64
+
+Available profiles:
+
+    local_ci.bat quick
+    local_ci.bat policy
+    local_ci.bat x86
+    local_ci.bat release
+    local_ci.bat full
+
+`quick` runs only the source invariant preflight. `x64` regenerates the VS 2026
+x64 solution, builds Release-x64-Unicode, rejects compiler/linker/MSBuild
+warnings, verifies core artifacts, and runs the x64 launch smoke. `x86` builds
+and smoke-tests both Release x86 configurations. `release` runs x64 + x86 and
+then builds/validates the portable archives and NSIS installer. `full` adds the
+vendored policy/readiness/conformance checks and Debug-x64 regression build.
+
+The `policy`/`full` profiles create or reuse
+`%TEMP%\\flyExplorer-policy-venv` and install the locked policy dependencies
+there. MSBuild logs are written under `%TEMP%\\flyExplorer-local-ci`. Local CI
+does not publish artifacts or modify GitHub Actions state.
+
 Hosted runtime smoke can also be invoked manually after a build, for example:
 
     pwsh -File build\runtime_smoke.ps1 -SourceDir bin\x64 -Configuration Release-x64-Unicode

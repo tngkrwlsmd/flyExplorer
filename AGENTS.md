@@ -35,6 +35,7 @@
 - `build/common.gypi`
 - `src/**/**/*.gyp`
 - `build.bat`
+- `local_ci.bat`
 - `build/fix_solution_configs.py`
 - `copy_lib.bat`
 - `copy_languages.bat`
@@ -133,7 +134,8 @@ UI/UX 현대화 작업은 다음 원칙을 따른다.
 
 기본 검증 흐름:
 
-0. `python build/validate_source_invariants.py`로 source invariant preflight 수행
+0. 일상적인 로컬 검증은 `local_ci.bat x64`를 우선 사용한다. 더 좁게는 `local_ci.bat quick`, 릴리스 전에는 `local_ci.bat release` 또는 `local_ci.bat full`을 사용할 수 있다.
+1. `python build/validate_source_invariants.py`로 source invariant preflight 수행
 1. x64 영향이 있으면 `build.bat 2026 x64`로 솔루션을 재생성하고 generated project의 `v145` 계약 확인
 2. C++/빌드 변경이면 영향 범위에 따라 `Debug-x64-Unicode | x64`와 `Release-x64-Unicode | x64` compile/link 및 핵심 산출물 확인
 3. x86, 공통 코드, updater, 배포 경로 영향이 있으면 `build.bat 2026 x86` 후 `Release-x86-Unicode | Win32`와 `Release-x86-Multibyte | Win32`를 검증
