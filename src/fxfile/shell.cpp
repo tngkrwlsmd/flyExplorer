@@ -1805,7 +1805,7 @@ xpr_sint_t GetRootDriveType(xpr_tchar_t aDriveChar)
             HANDLE sFile;
             xpr_sint_t sDriveTypeNumber;
 
-            if ((xpr_sint_t)GetVersion() < 0)
+            if (xpr::getOsVer() < xpr::kOsVerWinNT)
             {
                 sFile = ::CreateFileA("\\\\.\\VWIN32", 0, 0, 0, 0, FILE_FLAG_DELETE_ON_CLOSE, 0);
 
