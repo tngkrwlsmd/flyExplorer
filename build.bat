@@ -29,12 +29,12 @@ if /I not "%msvs_version%"=="2026" (
 set "PYTHON_CMD="
 py -3 -c "import sys; raise SystemExit(0 if sys.version_info >= (3, 9) else 1)" >nul 2>&1
 if not errorlevel 1 set "PYTHON_CMD=py -3"
+if defined PYTHON_CMD goto python_ready
 
-if not defined PYTHON_CMD (
-    python -c "import sys; raise SystemExit(0 if sys.version_info >= (3, 9) else 1)" >nul 2>&1
-    if not errorlevel 1 set "PYTHON_CMD=python"
-)
+python -c "import sys; raise SystemExit(0 if sys.version_info >= (3, 9) else 1)" >nul 2>&1
+if not errorlevel 1 set "PYTHON_CMD=python"
 
+:python_ready
 if not defined PYTHON_CMD (
     echo ERROR: Python 3.9 or newer is required.
     echo Install Python 3 and make either "py -3" or "python" available on PATH.
