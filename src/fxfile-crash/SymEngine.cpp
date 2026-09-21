@@ -903,7 +903,7 @@ void CSymEngine::GetRegistersValues(CRegistersValues& rRegVals)
 		return;
 
 #define CONVERT_REGISTER_VALUE_TO_STRING(reg, digits) \
-	_stprintf_s(rRegVals.m_sz##reg, countof(rRegVals.m_sz##reg), _T("0x%0") _T(#digits) _T("lX"), m_pExceptionPointers->ContextRecord->reg);
+	_stprintf_s(rRegVals.m_sz##reg, countof(rRegVals.m_sz##reg), _T("0x%0") _T(#digits) _T("I64X"), static_cast<ULONGLONG>(m_pExceptionPointers->ContextRecord->reg));
 
 #if defined _M_IX86
 	CONVERT_REGISTER_VALUE_TO_STRING(Eax, 8);
@@ -985,11 +985,11 @@ void CSymEngine::GetRegistersString(PTSTR pszRegString, DWORD dwRegStringSize)
 	           m_pExceptionPointers->ContextRecord->SegGs);
 #elif defined _M_X64
 	_stprintf_s(pszRegString, dwRegStringSize,
-	           _T("RAX=%016X  RBX=%016X\r\n")
-			   _T("RCX=%016X  RDX=%016X\r\n")
-	           _T("RSI=%016X  RDI=%016X\r\n")
-			   _T("FLG=%08X          RBP=%016X\r\n")
-	           _T("RSP=%016X  RIP=%016X\r\n")
+	           _T("RAX=%016I64X  RBX=%016I64X\r\n")
+			   _T("RCX=%016I64X  RDX=%016I64X\r\n")
+	           _T("RSI=%016I64X  RDI=%016I64X\r\n")
+			   _T("FLG=%08X          RBP=%016I64X\r\n")
+	           _T("RSP=%016I64X  RIP=%016I64X\r\n")
 	           _T("CS=%04X  DS=%04X  SS=%04X  ES=%04X  FS=%04X  GS=%04X"),
 
 	           m_pExceptionPointers->ContextRecord->Rax,
@@ -1272,13 +1272,14 @@ void CSymEngine::GetOsString(CUTF8EncStream& rEncStream)
  */
 void CSymEngine::GetMemInfo(CMemInfo& rMemInfo)
 {
-	MEMORYSTATUS ms;
-	GlobalMemoryStatus(&ms);
+	MEMORYSTATUSEX ms = {0};
+	ms.dwLength = sizeof(ms);
+	GlobalMemoryStatusEx(&ms);
 	_ultot_s(ms.dwMemoryLoad, rMemInfo.m_szMemoryLoad, countof(rMemInfo.m_szMemoryLoad), 10);
-	_ultot_s((DWORD)ms.dwTotalPhys, rMemInfo.m_szTotalPhys, countof(rMemInfo.m_szTotalPhys), 10);
-	_ultot_s((DWORD)ms.dwAvailPhys, rMemInfo.m_szAvailPhys, countof(rMemInfo.m_szAvailPhys), 10);
-	_ultot_s((DWORD)ms.dwTotalPageFile, rMemInfo.m_szTotalPageFile, countof(rMemInfo.m_szTotalPageFile), 10);
-	_ultot_s((DWORD)ms.dwAvailPageFile, rMemInfo.m_szAvailPageFile, countof(rMemInfo.m_szAvailPageFile), 10);
+	_ui64tot_s(ms.ullTotalPhys, rMemInfo.m_szTotalPhys, countof(rMemInfo.m_szTotalPhys), 10);
+	_ui64tot_s(ms.ullAvailPhys, rMemInfo.m_szAvailPhys, countof(rMemInfo.m_szAvailPhys), 10);
+	_ui64tot_s(ms.ullTotalPageFile, rMemInfo.m_szTotalPageFile, countof(rMemInfo.m_szTotalPageFile), 10);
+	_ui64tot_s(ms.ullAvailPageFile, rMemInfo.m_szAvailPageFile, countof(rMemInfo.m_szAvailPageFile), 10);
 }
 
 /**
@@ -1287,19 +1288,20 @@ void CSymEngine::GetMemInfo(CMemInfo& rMemInfo)
  */
 void CSymEngine::GetMemString(PTSTR pszMemString, DWORD dwMemStringSize)
 {
-	MEMORYSTATUS ms;
-	GlobalMemoryStatus(&ms);
+	MEMORYSTATUSEX ms = {0};
+	ms.dwLength = sizeof(ms);
+	GlobalMemoryStatusEx(&ms);
 	_stprintf_s(pszMemString, dwMemStringSize,
 	            _T("Current Memory Load:         %lu%%\r\n")
-	            _T("Total Physical Memory:       %lu MB\r\n")
-	            _T("Available Physical Memory:   %lu MB\r\n")
-	            _T("Total Page File Memory:      %lu MB\r\n")
-	            _T("Available Page File Memory:  %lu MB"),
+	            _T("Total Physical Memory:       %I64u MB\r\n")
+	            _T("Available Physical Memory:   %I64u MB\r\n")
+	            _T("Total Page File Memory:      %I64u MB\r\n")
+	            _T("Available Page File Memory:  %I64u MB"),
 	            ms.dwMemoryLoad,
-	            ms.dwTotalPhys / (1024 * 1024),
-	            ms.dwAvailPhys / (1024 * 1024),
-	            ms.dwTotalPageFile / (1024 * 1024),
-	            ms.dwAvailPageFile / (1024 * 1024));
+	            ms.ullTotalPhys / (1024 * 1024),
+	            ms.ullAvailPhys / (1024 * 1024),
+	            ms.ullTotalPageFile / (1024 * 1024),
+	            ms.ullAvailPageFile / (1024 * 1024));
 }
 
 /**
@@ -1741,13 +1743,13 @@ void CSymEngine::GetModuleList(CUTF8EncStream& rEncStream, CEnumProcess* pEnumPr
 			}
 			rEncStream.WriteAscii(szBaseMsg);
 #if defined _WIN64
-			sprintf_s(szTempBuf, countof(szTempBuf), "%016lX", (DWORD_PTR)ModuleEntry.m_pLoadBase);
+			sprintf_s(szTempBuf, countof(szTempBuf), "%016IX", reinterpret_cast<ULONG_PTR>(ModuleEntry.m_pLoadBase));
 #elif defined _WIN32
-			sprintf_s(szTempBuf, countof(szTempBuf), "%08lX", (DWORD_PTR)ModuleEntry.m_pLoadBase);
+			sprintf_s(szTempBuf, countof(szTempBuf), "%08IX", reinterpret_cast<ULONG_PTR>(ModuleEntry.m_pLoadBase));
 #endif
 			rEncStream.WriteAscii(szTempBuf);
 			rEncStream.WriteAscii(szSizeMsg);
-			sprintf_s(szTempBuf, countof(szTempBuf), "%08lX", (DWORD_PTR)ModuleEntry.m_dwModuleSize);
+			sprintf_s(szTempBuf, countof(szTempBuf), "%08lX", static_cast<unsigned long>(ModuleEntry.m_dwModuleSize));
 			rEncStream.WriteAscii(szTempBuf);
 			rEncStream.WriteAscii(szNewLine);
 		}
@@ -1785,12 +1787,12 @@ void CSymEngine::GetModuleList(CXmlWriter& rXmlWriter, CEnumProcess* pEnumProces
 			  *szVersionString = _T('\0');
 		  rXmlWriter.WriteElementString(_T("version"), szVersionString); // <version>...</version>
 #if defined _WIN64
-		  _stprintf_s(szTempBuf, countof(szTempBuf), _T("0x%016lX"), (DWORD_PTR)ModuleEntry.m_pLoadBase);
+		  _stprintf_s(szTempBuf, countof(szTempBuf), _T("0x%016IX"), reinterpret_cast<ULONG_PTR>(ModuleEntry.m_pLoadBase));
 #elif defined _WIN32
-		  _stprintf_s(szTempBuf, countof(szTempBuf), _T("0x%08lX"), (DWORD_PTR)ModuleEntry.m_pLoadBase);
+		  _stprintf_s(szTempBuf, countof(szTempBuf), _T("0x%08IX"), reinterpret_cast<ULONG_PTR>(ModuleEntry.m_pLoadBase));
 #endif
 		  rXmlWriter.WriteElementString(_T("base"), szTempBuf); // <base>...</base>
-		  _stprintf_s(szTempBuf, countof(szTempBuf), _T("0x%08lX"), (DWORD_PTR)ModuleEntry.m_dwModuleSize);
+		  _stprintf_s(szTempBuf, countof(szTempBuf), _T("0x%08lX"), static_cast<unsigned long>(ModuleEntry.m_dwModuleSize));
 		  rXmlWriter.WriteElementString(_T("size"), szTempBuf); // <size>...</size>
 		 rXmlWriter.WriteEndElement(); // </module>
 		 bContinue = pEnumProcess->GetModuleNext(rProcEntry.m_dwProcessID, ModuleEntry);
@@ -3112,10 +3114,10 @@ BOOL CSymEngine::GetNextStackTraceEntry(CStackTraceEntry& rEntry)
 	WORD wExceptionSegment = m_swContext.m_stFrame.AddrPC.Segment;
 #if defined _WIN64
 	_stprintf_s(rEntry.m_szAddress, countof(rEntry.m_szAddress),
-	            _T("%04lX:%016lX"), wExceptionSegment, dwExceptionAddress);
+	            _T("%04X:%016I64X"), static_cast<unsigned>(wExceptionSegment), static_cast<ULONGLONG>(dwExceptionAddress));
 #elif defined _WIN32
 	_stprintf_s(rEntry.m_szAddress, countof(rEntry.m_szAddress),
-	            _T("%04lX:%08lX"), wExceptionSegment, dwExceptionAddress);
+	            _T("%04X:%08I64X"), static_cast<unsigned>(wExceptionSegment), static_cast<ULONGLONG>(dwExceptionAddress));
 #endif
 
 	BYTE arrSymBuffer[512];
