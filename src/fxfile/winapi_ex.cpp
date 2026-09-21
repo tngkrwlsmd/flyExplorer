@@ -506,23 +506,8 @@ HRESULT StorageToFile(LPSTORAGE aStorage, xpr_tchar_t *aFileName)
 
 xpr_bool_t IsUACRequiredWindows(void)
 {
-    xpr_bool_t sIsUACRequired = XPR_FALSE;
-
-    OSVERSIONINFO sOsVersionInfo;
-    sOsVersionInfo.dwOSVersionInfoSize = sizeof(OSVERSIONINFO);
-
-    if (::GetVersionEx(&sOsVersionInfo) == XPR_TRUE)
-    {
-        if (sOsVersionInfo.dwPlatformId == VER_PLATFORM_WIN32_NT &&
-            sOsVersionInfo.dwMajorVersion >= 6 &&
-            sOsVersionInfo.dwMinorVersion >= 0)
-        {
-            // Windows VISTA or Higher
-            sIsUACRequired = XPR_TRUE;
-        }
-    }
-
-    return sIsUACRequired;
+    // UAC is part of every Windows version supported by flyExplorer.
+    return XPR_TRUE;
 }
 
 HRESULT IsUACElevated(xpr_bool_t *aElevated)
