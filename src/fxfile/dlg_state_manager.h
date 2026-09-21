@@ -39,7 +39,7 @@ protected:
     xpr::string mPath;
     xpr_bool_t  mLoaded;
 
-    typedef std::tr1::unordered_map<xpr::string, DlgState *> DlgStateMap;
+    typedef std::unordered_map<xpr::string, DlgState *> DlgStateMap;
     DlgStateMap mDlgStateMap;
 };
 } // namespace fxfile
