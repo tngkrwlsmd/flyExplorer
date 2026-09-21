@@ -77,7 +77,7 @@
     }
   ],
   "review": {
-    "reviewed_revision": "361a78f2bd8ff8b2c19b6ebb09de62fbd2067fd5",
+    "reviewed_revision": "62973f6570422660edf5d1a98583adda5578d0c2",
     "reviewed_at": "2026-09-21",
     "reviewed_paths": [
       "README",
