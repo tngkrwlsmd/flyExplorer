@@ -26,6 +26,7 @@
 #include "SizableReBar.h"
 #include "ToolBarEx.h"
 #include "WinAppEx.h"
+#include "../ModernUI.h"
 
 #include <afxpriv.h>    // ON_MESSAGE_VOID()
 
@@ -61,6 +62,9 @@ CToolBarEx::CToolBarEx()
 
 CToolBarEx::~CToolBarEx()
 {
+    if (m_uiFont.m_hObject != NULL)
+        m_uiFont.DeleteObject();
+
     m_dqButtons.clear();
     m_mpButtons.clear();
 }
@@ -80,7 +84,8 @@ BOOL CToolBarEx::Create( CWnd* pParentWnd,
     if (!CreateEx(pParentWnd, dwCtrlStyle, dwStyle, CRect(0,0,0,0), nID))
         return FALSE;
 
-    GetToolBarCtrl().SetExtendedStyle(dwExtendedStyle);
+    GetToolBarCtrl().SetExtendedStyle(dwExtendedStyle | TBSTYLE_EX_DOUBLEBUFFER);
+    ApplyModernMetrics();
 
     return TRUE;
 }
@@ -354,6 +359,15 @@ LRESULT CToolBarEx::WindowProc( UINT message, WPARAM wParam, LPARAM lParam )
                 UpdateToolbarSize();
                 break;
             }
+
+        case WM_DPICHANGED:
+        case WM_SETTINGCHANGE:
+        case WM_THEMECHANGED:
+            {
+                ApplyModernMetrics();
+                UpdateToolbarSize();
+                break;
+            }
     }
 
     return CToolBar::WindowProc( message, wParam, lParam );
@@ -460,6 +474,31 @@ void CToolBarEx::ReloadButtons()
         VERIFY( GetButtonInfo( tbinfo.idCommand, tbinfo ) );
         VERIFY( tbCtrl.DeleteButton( 0 ) );
         VERIFY( tbCtrl.AddButtons( 1, &tbinfo ) );
+    }
+}
+
+void CToolBarEx::ApplyModernMetrics()
+{
+    if (!::IsWindow(m_hWnd))
+        return;
+
+    const UINT sDpi = fxfile::ui::ModernUI::getDpi(m_hWnd);
+    const int sHorizontalPadding = fxfile::ui::ModernUI::scale(6, sDpi);
+    const int sVerticalPadding = fxfile::ui::ModernUI::scale(5, sDpi);
+
+    GetToolBarCtrl().SendMessage(
+        TB_SETPADDING,
+        0,
+        MAKELPARAM(sHorizontalPadding, sVerticalPadding));
+
+    LOGFONT sLogFont = {0};
+    if (XPR_IS_TRUE(fxfile::ui::ModernUI::getUIFont(sLogFont, m_hWnd)))
+    {
+        if (m_uiFont.m_hObject != NULL)
+            m_uiFont.DeleteObject();
+
+        if (m_uiFont.CreateFontIndirect(&sLogFont))
+            SetFont(&m_uiFont, FALSE);
     }
 }
 

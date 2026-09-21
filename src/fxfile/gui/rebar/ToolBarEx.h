@@ -113,6 +113,7 @@ public:
 // Implementation
 protected:
     void ReloadButtons();
+    void ApplyModernMetrics();
     BOOL GetButtonInfo( UINT nID, TBBUTTON& tbinfo );
 
     static LRESULT CALLBACK CBTProc( int nCode, WPARAM wParam, LPARAM lParam );
@@ -143,6 +144,7 @@ protected:
     CImageList      m_imageListCold;
     CImageList      m_imageListHot;
     CImageList      m_imageListDisabled;
+    CFont           m_uiFont;
     COLORREF        m_clrMask;
     HGLOBAL         m_hToolbarData;
 
