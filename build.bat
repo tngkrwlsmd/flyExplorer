@@ -26,24 +26,24 @@ if /I not "%msvs_version%"=="2026" (
     echo Requested msvs_version = %msvs_version%
 )
 
-set "PYTHON_CMD="
-py -3 -c "import sys; raise SystemExit(0 if sys.version_info >= (3, 9) else 1)" >nul 2>&1
-if not errorlevel 1 set "PYTHON_CMD=py -3"
-if defined PYTHON_CMD goto python_ready
+set "PYTHON_EXE="
+for /f "delims=" %%P in ('python -c "import sys; print(sys.executable) if sys.version_info >= (3, 9) else sys.exit(1)" 2^>nul') do set "PYTHON_EXE=%%P"
+if defined PYTHON_EXE goto python_ready
 
-python -c "import sys; raise SystemExit(0 if sys.version_info >= (3, 9) else 1)" >nul 2>&1
-if not errorlevel 1 set "PYTHON_CMD=python"
+for /f "delims=" %%P in ('py -3 -c "import sys; print(sys.executable) if sys.version_info >= (3, 9) else sys.exit(1)" 2^>nul') do set "PYTHON_EXE=%%P"
 
 :python_ready
-if not defined PYTHON_CMD (
+if not defined PYTHON_EXE (
     echo ERROR: Python 3.9 or newer is required.
-    echo Install Python 3 and make either "py -3" or "python" available on PATH.
+    echo Install Python 3 and make either "python" or "py -3" available on PATH.
     popd
     exit /b 1
 )
 
+echo Python = %PYTHON_EXE%
+
 echo Running source invariant preflight...
-%PYTHON_CMD% "build\validate_source_invariants.py"
+"%PYTHON_EXE%" "build\validate_source_invariants.py"
 if errorlevel 1 (
     echo ERROR: Source invariant preflight failed.
     echo Fix the reported source dependency/integration issue before generating projects.
@@ -82,7 +82,7 @@ echo target_arch = %target_arch%
 echo gyp-next = %GYP_VERSION%
 echo ----------
 
-%PYTHON_CMD% "%GYP_DIR%\gyp_main.py" fxfile.gyp --depth=. -G msvs_version=%msvs_version% -D target_arch=%target_arch% -D msvs_version=%msvs_version%
+"%PYTHON_EXE%" "%GYP_DIR%\gyp_main.py" fxfile.gyp --depth=. -G msvs_version=%msvs_version% -D target_arch=%target_arch% -D msvs_version=%msvs_version%
 if errorlevel 1 (
     echo ERROR: Failed to generate Visual Studio projects.
     popd
@@ -112,7 +112,7 @@ if /I "%target_arch%"=="x64" (
 )
 
 echo Fixing mixed x64/x86 solution configuration mappings...
-%PYTHON_CMD% "build\fix_solution_configs.py" "fxfile.sln"
+"%PYTHON_EXE%" "build\fix_solution_configs.py" "fxfile.sln"
 if errorlevel 1 (
     echo ERROR: Failed to fix helper project configuration mappings.
     popd
