@@ -26,7 +26,7 @@
     "test_command": {
       "value": "",
       "status": "N/A",
-      "evidence": "manual:no automated unit/integration test command is currently documented; build and Sandbox smoke tests are used"
+      "evidence": "manual:no single unit/integration test command is defined; source preflight, Windows Product Build CI, hosted runtime smoke, and package validation are automated, while clean Windows Sandbox/VM checks remain manual"
     },
     "runtime": {
       "value": "Visual Studio 2026",
@@ -77,7 +77,7 @@
     }
   ],
   "review": {
-    "reviewed_revision": "2ed19ac54b60c1f8ca358ea19a053198a01c1748",
+    "reviewed_revision": "91bd56906ed349eaca1a779aa2e6c77ae5fec707",
     "reviewed_at": "2026-09-21",
     "reviewed_paths": [
       "README",
