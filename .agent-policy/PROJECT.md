@@ -77,7 +77,7 @@
     }
   ],
   "review": {
-    "reviewed_revision": "229f12121027a82513b70d5a688e737888b1c28a",
+    "reviewed_revision": "27c709692daadd4639447b27941f579faacdab07",
     "reviewed_at": "2026-09-21",
     "reviewed_paths": [
       "README",
@@ -186,7 +186,11 @@
 - ModernUI는 documented `SetWindowTheme`를 `uxtheme.dll`에서 동적으로 해석해 common control에 Windows Explorer visual-style association을 적용하고 High Contrast에서는 association을 제거하는 `applyExplorerControlTheme` helper를 제공한다. explicit theme disable은 `resetControlTheme`가 소유하며, ListCtrlEx/TreeCtrlEx의 기존 `enableVistaEnhanced` enable/disable semantics는 유지한 채 direct `SetWindowTheme` 호출을 이 helper pair로 이관했다.
 - Explorer list/tree theme migration은 source-invariant, Debug/Release x64, x86 Unicode/Multibyte compile/link, warning 0, hosted launch smoke, package regression을 통과했다. 실제 light/dark/High Contrast visual과 interactive list/tree behavior는 아직 수동 검증하지 않았다.
 - MainFrame은 settings/theme change에서 top-level frame theme를 재적용하고 child 전체를 redraw하며, MenuBar는 `WM_THEMECHANGED`에서 theme handle을 다시 열고 ToolBarEx는 DPI/settings/theme change에서 modern metrics를 갱신한다. rebar MenuBar/ToolBarEx의 `SetWindowThemeXP(..., L"", L"")`는 WinXP 전용 legacy empty-theme association으로 Explorer sub-app theme와 의미가 달라 그대로 유지했다.
-- ListCtrlEx/TreeCtrlEx의 direct common-control call-site 이관은 완료되었다. dark-specific common-control rendering, edit/combo/dialog dark theme 확대, menu/rebar dark rendering, 나머지 dialog/icon asset 현대화는 후속 phase 범위다.
+- ListCtrlEx/TreeCtrlEx의 direct common-control call-site 이관은 완료되었다.
+- Explorer file list/header dark-styling 단위에서 ModernUI ThemePalette는 Windows Runtime UISettings의 documented foreground/background color signal을 사용해 사용자 app light/dark preference를 반영한다. High Contrast에서는 기존 system-color palette를 유지하고, WinRT activation/color query가 실패하면 기존 system-color 기반 palette로 fallback한다.
+- ExplorerCtrl의 thumbnail/custom-draw 경로는 selection, inactive selection, surface, border, text를 ThemePalette에서 가져오며, image-list background는 실제 list background와 동기화한다. FlatHeaderCtrl은 기존 ThemePalette custom draw를 유지해 list/header가 동일 palette contract를 공유한다.
+- Explorer file list/header dark-styling은 source-invariant, Debug/Release x64, x86 Unicode/Multibyte compile/link, warning rejection, hosted launch smoke, package regression을 branch CI에서 통과했다. 실제 Windows light/dark 전환 visual, selection/focus contrast, High Contrast visual, 100/125/150/200% DPI visual은 아직 수동 검증하지 않았다.
+- file list/header dark-specific styling은 완료되었다. folder tree dark styling, AddressBar/edit/combo dark styling, auxiliary common controls, menu/rebar dark rendering, 나머지 dialog/icon asset 현대화는 후속 phase 범위다.
 
 ## Recommended verification
 

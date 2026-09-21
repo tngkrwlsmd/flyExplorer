@@ -148,14 +148,22 @@ association is not equivalent to the Explorer sub-app theme; MenuBar reopens its
 theme handle on `WM_THEMECHANGED`, while ToolBarEx refreshes its modern metrics
 for DPI/settings/theme notifications.
 
+For the explorer file list/header styling, ModernUI now also reads the documented
+Windows Runtime UISettings foreground/background colors to reflect the user's app
+light/dark preference in ThemePalette. High Contrast stays on the system-color
+path, and unavailable WinRT activation or color queries fall back to the existing
+system-color palette. ExplorerCtrl's thumbnail/custom-draw colors and image-list
+background now share this palette contract, while FlatHeaderCtrl keeps its existing
+ThemePalette-based custom drawing.
+
 This remains a ModernUI foundation, not a claim of complete Windows 11 dark-mode
-support. Dark-specific common-control styling, edit/combo/dialog theming, menu
-and rebar dark rendering, icon modernization, and broader dialog modernization
-remain separate work. Hosted CI verifies compile/link, warning-free builds,
-launch smoke, and packaging for the list/tree migration, but light/dark control
-appearance, 100/125/150/200% visual inspection, High Contrast appearance, and
-interactive list/tree/status-bar/DriveDetailDlg behavior still require separate
-manual evidence.
+support. File list/header dark-specific styling is now implemented, while folder
+tree, AddressBar/edit/combo, auxiliary common controls, menu/rebar dark rendering,
+icon modernization, and broader dialog modernization remain separate work.
+Hosted CI verifies compile/link, warning-free builds, launch smoke, and packaging
+for the file-list/header change, but actual light/dark switching appearance,
+selection/focus contrast, 100/125/150/200% visual inspection, High Contrast
+appearance, and interactive behavior still require separate manual evidence.
 
 Generate the Visual Studio Solution
 -----------------------------------
