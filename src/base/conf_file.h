@@ -34,7 +34,7 @@ protected:
     typedef std::list<Section *> SectionList;
     typedef std::list<Key     *> KeyList;
     typedef std::list<Comment *> CommentList;
-    typedef std::tr1::unordered_map<xpr::string, Key *> KeyMap;
+    typedef std::unordered_map<xpr::string, Key *> KeyMap;
 
 public:
     class SectionIterator
