@@ -2121,23 +2121,30 @@ void CSymEngine::GetComputerIPs(CStrStream& rStream)
 		CHAR szHostName[256];
 		if (gethostname(szHostName, countof(szHostName)) == ERROR_SUCCESS)
 		{
-			hostent* pHostEnt = gethostbyname(szHostName);
-			if (pHostEnt != NULL && pHostEnt->h_addrtype == AF_INET)
+			ADDRINFOA hints = {0};
+			hints.ai_family = AF_INET;
+			hints.ai_socktype = SOCK_STREAM;
+
+			PADDRINFOA pAddresses = NULL;
+			if (getaddrinfo(szHostName, NULL, &hints, &pAddresses) == 0)
 			{
 				DWORD dwAddrPos = 0;
-				for (;;)
+				for (PADDRINFOA pAddress = pAddresses; pAddress != NULL; pAddress = pAddress->ai_next)
 				{
-					void *pIPAddr = pHostEnt->h_addr_list[dwAddrPos];
-					if (pIPAddr == NULL)
-						break;
-					IN_ADDR sin_addr;
-					CopyMemory(&sin_addr, pIPAddr, pHostEnt->h_length);
-					char* pszIPAddrA = inet_ntoa(sin_addr);
+					if (pAddress->ai_family != AF_INET || pAddress->ai_addrlen < sizeof(SOCKADDR_IN))
+						continue;
+
+					const SOCKADDR_IN* pSockAddr = reinterpret_cast<const SOCKADDR_IN*>(pAddress->ai_addr);
+					CHAR szIPAddr[INET_ADDRSTRLEN] = {0};
+					if (InetNtopA(AF_INET, const_cast<IN_ADDR*>(&pSockAddr->sin_addr), szIPAddr, countof(szIPAddr)) == NULL)
+						continue;
+
 					if (dwAddrPos)
 						rStream << _T(", ");
-					rStream << pszIPAddrA;
+					rStream << szIPAddr;
 					++dwAddrPos;
 				}
+				freeaddrinfo(pAddresses);
 			}
 		}
 		WSACleanup();
@@ -2165,30 +2172,34 @@ void CSymEngine::GetComputerIPs(CXmlWriter& rXmlWriter)
 		CHAR szHostName[256];
 		if (gethostname(szHostName, countof(szHostName)) == ERROR_SUCCESS)
 		{
-			hostent* pHostEnt = gethostbyname(szHostName);
-			if (pHostEnt != NULL && pHostEnt->h_addrtype == AF_INET)
+			ADDRINFOA hints = {0};
+			hints.ai_family = AF_INET;
+			hints.ai_socktype = SOCK_STREAM;
+
+			PADDRINFOA pAddresses = NULL;
+			if (getaddrinfo(szHostName, NULL, &hints, &pAddresses) == 0)
 			{
 				rXmlWriter.WriteStartElement(_T("ips")); // <ips>
-				DWORD dwAddrPos = 0;
-				for (;;)
+				for (PADDRINFOA pAddress = pAddresses; pAddress != NULL; pAddress = pAddress->ai_next)
 				{
-					void *pIPAddr = pHostEnt->h_addr_list[dwAddrPos];
-					if (pIPAddr == NULL)
-						break;
-					IN_ADDR sin_addr;
-					CopyMemory(&sin_addr, pIPAddr, pHostEnt->h_length);
-					char* pszIPAddrA = inet_ntoa(sin_addr);
+					if (pAddress->ai_family != AF_INET || pAddress->ai_addrlen < sizeof(SOCKADDR_IN))
+						continue;
+
+					const SOCKADDR_IN* pSockAddr = reinterpret_cast<const SOCKADDR_IN*>(pAddress->ai_addr);
+					CHAR szIPAddrA[INET_ADDRSTRLEN] = {0};
+					if (InetNtopA(AF_INET, const_cast<IN_ADDR*>(&pSockAddr->sin_addr), szIPAddrA, countof(szIPAddrA)) == NULL)
+						continue;
 #ifdef _UNICODE
-					TCHAR szIPAddr[32];
-					MultiByteToWideChar(CP_ACP, 0, pszIPAddrA, -1, szIPAddr, countof(szIPAddr));
+					TCHAR szIPAddr[INET_ADDRSTRLEN];
+					MultiByteToWideChar(CP_ACP, 0, szIPAddrA, -1, szIPAddr, countof(szIPAddr));
 					PWSTR pszIPAddr = szIPAddr;
 #else
-					PSTR pszIPAddr = pszIPAddrA;
+					PSTR pszIPAddr = szIPAddrA;
 #endif
 					rXmlWriter.WriteElementString(_T("ip"), pszIPAddr); // <ip>...</ip>
-					++dwAddrPos;
 				}
 				rXmlWriter.WriteEndElement(); // </ips>
+				freeaddrinfo(pAddresses);
 			}
 		}
 		WSACleanup();
