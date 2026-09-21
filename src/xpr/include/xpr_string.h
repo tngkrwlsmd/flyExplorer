@@ -475,7 +475,7 @@ XPR_INLINE bool operator>= (const String &aString1, const xpr_wchar_t *aString2)
 XPR_NAMESPACE_STD_TR1_BEGIN
 
 template <>
-struct hash<xpr::String> : public unary_function<xpr::String, xpr_size_t>
+struct hash<xpr::String>
 {
     xpr_size_t operator()(const xpr::String &aValue) const
     {
