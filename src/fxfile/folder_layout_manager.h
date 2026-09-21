@@ -52,9 +52,9 @@ private:
     xpr_uint64_t generateHashValue(const FolderLayout &aFolderLayout) const;
 
 private:
-    typedef std::tr1::unordered_set<xpr::string> SubSet;                   // <path>
-    typedef std::tr1::unordered_map<xpr::string, xpr_uint64_t> IndexMap;   // <path, hash>
-    typedef std::tr1::unordered_map<xpr_uint64_t, FolderLayout *> HashMap; // <hash, value>
+    typedef std::unordered_set<xpr::string> SubSet;                   // <path>
+    typedef std::unordered_map<xpr::string, xpr_uint64_t> IndexMap;   // <path, hash>
+    typedef std::unordered_map<xpr_uint64_t, FolderLayout *> HashMap; // <hash, value>
 
     SubSet   mSubSet;
     IndexMap mIndexMap;
