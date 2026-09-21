@@ -288,6 +288,9 @@ protected:
     afx_msg void OnPaint(void);
     afx_msg xpr_bool_t OnEraseBkgnd(CDC *aDC);
     afx_msg void OnSize(xpr_uint_t aType, xpr_sint_t cx, xpr_sint_t cy);
+    afx_msg void OnSettingChange(xpr_uint_t aFlags, const xpr_tchar_t *aSection);
+    afx_msg LRESULT OnDpiChanged(WPARAM aWParam, LPARAM aLParam);
+    afx_msg LRESULT OnThemeChanged(WPARAM aWParam, LPARAM aLParam);
     afx_msg void OnClose(void);
     afx_msg void OnSysCommand(xpr_uint_t aId, LPARAM lParam);
     afx_msg void OnMeasureItem(xpr_sint_t aIdCtl, LPMEASUREITEMSTRUCT aMeasureItemStruct);

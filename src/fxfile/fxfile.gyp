@@ -251,6 +251,13 @@
                         '$(OutDir)',
                     ]
                 },
+                'VCManifestTool':
+                {
+                    'AdditionalManifestFiles':
+                    [
+                        './res/fxfile.exe.manifest',
+                    ],
+                },
             },
             
             'msvs_precompiled_header': 'stdafx.h',
@@ -329,6 +336,8 @@
                 './gui/ListCtrlPrint.cpp',
                 './gui/ListCtrlPrint.h',
                 './gui/MemDC.h',
+                './gui/ModernUI.cpp',
+                './gui/ModernUI.h',
                 './gui/Print.cpp',
                 './gui/Print.h',
                 './gui/ResizingDialog.cpp',

@@ -1,0 +1,186 @@
+//
+// Copyright (c) 2026 flyExplorer contributors.
+//
+// Windows 11 UI foundation: DPI, system typography and theme metrics.
+//
+
+#include "stdafx.h"
+#include "ModernUI.h"
+
+namespace fxfile
+{
+namespace ui
+{
+namespace
+{
+typedef UINT (WINAPI *GetDpiForWindowProc)(HWND);
+typedef BOOL (WINAPI *SystemParametersInfoForDpiProc)(UINT, UINT, PVOID, UINT, UINT);
+
+COLORREF blendColor(COLORREF aBase, COLORREF aOverlay, xpr_uint_t aOverlayPercent)
+{
+    if (aOverlayPercent > 100)
+        aOverlayPercent = 100;
+
+    const xpr_uint_t sBasePercent = 100 - aOverlayPercent;
+
+    const xpr_uint_t sRed =
+        (GetRValue(aBase) * sBasePercent + GetRValue(aOverlay) * aOverlayPercent) / 100;
+    const xpr_uint_t sGreen =
+        (GetGValue(aBase) * sBasePercent + GetGValue(aOverlay) * aOverlayPercent) / 100;
+    const xpr_uint_t sBlue =
+        (GetBValue(aBase) * sBasePercent + GetBValue(aOverlay) * aOverlayPercent) / 100;
+
+    return RGB(sRed, sGreen, sBlue);
+}
+
+xpr_bool_t isDarkColor(COLORREF aColor)
+{
+    // ITU-R BT.601 luma approximation. This is intentionally based on the
+    // effective system palette instead of undocumented dark-mode APIs.
+    const xpr_uint_t sLuma =
+        (GetRValue(aColor) * 299 +
+         GetGValue(aColor) * 587 +
+         GetBValue(aColor) * 114) / 1000;
+
+    return sLuma < 128 ? XPR_TRUE : XPR_FALSE;
+}
+} // namespace anonymous
+
+xpr_uint_t ModernUI::getDpi(HWND aHwnd)
+{
+    HMODULE sUser32 = ::GetModuleHandle(XPR_STRING_LITERAL("user32.dll"));
+    if (XPR_IS_NOT_NULL(sUser32))
+    {
+        GetDpiForWindowProc sGetDpiForWindow =
+            reinterpret_cast<GetDpiForWindowProc>(::GetProcAddress(sUser32, "GetDpiForWindow"));
+
+        if (XPR_IS_NOT_NULL(sGetDpiForWindow) && XPR_IS_NOT_NULL(aHwnd))
+        {
+            const UINT sDpi = sGetDpiForWindow(aHwnd);
+            if (sDpi != 0)
+                return static_cast<xpr_uint_t>(sDpi);
+        }
+    }
+
+    HDC sDC = ::GetDC(aHwnd);
+    if (XPR_IS_NOT_NULL(sDC))
+    {
+        const xpr_sint_t sDpi = ::GetDeviceCaps(sDC, LOGPIXELSX);
+        ::ReleaseDC(aHwnd, sDC);
+
+        if (sDpi > 0)
+            return static_cast<xpr_uint_t>(sDpi);
+    }
+
+    return kDefaultDpi;
+}
+
+xpr_sint_t ModernUI::scale(xpr_sint_t aValue, xpr_uint_t aDpi)
+{
+    if (aDpi == 0)
+        aDpi = kDefaultDpi;
+
+    return ::MulDiv(aValue, static_cast<xpr_sint_t>(aDpi), kDefaultDpi);
+}
+
+xpr_sint_t ModernUI::scaleForWindow(xpr_sint_t aValue, HWND aHwnd)
+{
+    return scale(aValue, getDpi(aHwnd));
+}
+
+xpr_bool_t ModernUI::getUIFont(LOGFONT &aLogFont, HWND aHwnd)
+{
+    ::ZeroMemory(&aLogFont, sizeof(aLogFont));
+
+    NONCLIENTMETRICS sMetrics = {0};
+    sMetrics.cbSize = sizeof(sMetrics);
+
+    xpr_bool_t sLoaded = XPR_FALSE;
+    const xpr_uint_t sDpi = getDpi(aHwnd);
+
+    HMODULE sUser32 = ::GetModuleHandle(XPR_STRING_LITERAL("user32.dll"));
+    if (XPR_IS_NOT_NULL(sUser32))
+    {
+        SystemParametersInfoForDpiProc sSystemParametersInfoForDpi =
+            reinterpret_cast<SystemParametersInfoForDpiProc>(
+                ::GetProcAddress(sUser32, "SystemParametersInfoForDpi"));
+
+        if (XPR_IS_NOT_NULL(sSystemParametersInfoForDpi))
+        {
+            sLoaded = sSystemParametersInfoForDpi(
+                SPI_GETNONCLIENTMETRICS,
+                sizeof(sMetrics),
+                &sMetrics,
+                0,
+                sDpi) ? XPR_TRUE : XPR_FALSE;
+        }
+    }
+
+    if (XPR_IS_FALSE(sLoaded))
+    {
+        sLoaded = ::SystemParametersInfo(
+            SPI_GETNONCLIENTMETRICS,
+            sizeof(sMetrics),
+            &sMetrics,
+            0) ? XPR_TRUE : XPR_FALSE;
+    }
+
+    if (XPR_IS_TRUE(sLoaded))
+    {
+        aLogFont = sMetrics.lfMessageFont;
+        if (aLogFont.lfFaceName[0] == XPR_STRING_LITERAL('\0'))
+            aLogFont = sMetrics.lfMenuFont;
+
+        return XPR_TRUE;
+    }
+
+    HFONT sFont = static_cast<HFONT>(::GetStockObject(DEFAULT_GUI_FONT));
+    if (XPR_IS_NOT_NULL(sFont) && ::GetObject(sFont, sizeof(aLogFont), &aLogFont) != 0)
+        return XPR_TRUE;
+
+    return XPR_FALSE;
+}
+
+xpr_bool_t ModernUI::isHighContrast(void)
+{
+    HIGHCONTRAST sHighContrast = {0};
+    sHighContrast.cbSize = sizeof(sHighContrast);
+
+    if (::SystemParametersInfo(
+            SPI_GETHIGHCONTRAST,
+            sizeof(sHighContrast),
+            &sHighContrast,
+            0) == XPR_FALSE)
+    {
+        return XPR_FALSE;
+    }
+
+    return (sHighContrast.dwFlags & HCF_HIGHCONTRASTON) != 0 ? XPR_TRUE : XPR_FALSE;
+}
+
+ThemePalette ModernUI::getPalette(void)
+{
+    ThemePalette sPalette;
+
+    sPalette.mWindow        = ::GetSysColor(COLOR_WINDOW);
+    sPalette.mSurface       = blendColor(
+        ::GetSysColor(COLOR_WINDOW),
+        ::GetSysColor(COLOR_3DFACE),
+        35);
+    sPalette.mText          = ::GetSysColor(COLOR_WINDOWTEXT);
+    sPalette.mSecondaryText = ::GetSysColor(COLOR_GRAYTEXT);
+    sPalette.mBorder        = ::GetSysColor(COLOR_3DSHADOW);
+    sPalette.mSeparator     = ::GetSysColor(COLOR_3DLIGHT);
+    sPalette.mSelection     = ::GetSysColor(COLOR_HIGHLIGHT);
+    sPalette.mSelectionText = ::GetSysColor(COLOR_HIGHLIGHTTEXT);
+    sPalette.mHover         = blendColor(
+        sPalette.mSurface,
+        sPalette.mSelection,
+        12);
+    sPalette.mDark          = isDarkColor(sPalette.mWindow);
+    sPalette.mHighContrast  = isHighContrast();
+
+    return sPalette;
+}
+} // namespace ui
+} // namespace fxfile

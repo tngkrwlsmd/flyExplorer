@@ -29,6 +29,7 @@
 #include "app_ver.h"
 
 #include "gui/FileDialogST.h"
+#include "gui/ModernUI.h"
 #include "gui/SysTray.h"
 
 #include "option.h"
@@ -224,6 +225,9 @@ BEGIN_MESSAGE_MAP(MainFrame, super)
     ON_WM_PAINT()
     ON_WM_ERASEBKGND()
     ON_WM_SIZE()
+    ON_WM_SETTINGCHANGE()
+    ON_MESSAGE(WM_DPICHANGED, OnDpiChanged)
+    ON_MESSAGE(WM_THEMECHANGED, OnThemeChanged)
     ON_WM_CLOSE()
     ON_WM_SETFOCUS()
     ON_WM_SYSCOMMAND()
@@ -487,6 +491,49 @@ void MainFrame::onSplitterActivedPane(Splitter &aSplitter, xpr_sint_t aRow, xpr_
 
         sExplorerView->setActivateBarStatus(sActive, sLastActived);
     }
+}
+
+void MainFrame::OnSettingChange(xpr_uint_t aFlags, const xpr_tchar_t *aSection)
+{
+    super::OnSettingChange(aFlags, aSection);
+
+    RedrawWindow(
+        XPR_NULL,
+        XPR_NULL,
+        RDW_INVALIDATE | RDW_FRAME | RDW_ALLCHILDREN);
+}
+
+LRESULT MainFrame::OnDpiChanged(WPARAM aWParam, LPARAM aLParam)
+{
+    const RECT *sSuggestedRect = reinterpret_cast<const RECT *>(aLParam);
+    if (XPR_IS_NOT_NULL(sSuggestedRect))
+    {
+        SetWindowPos(
+            XPR_NULL,
+            sSuggestedRect->left,
+            sSuggestedRect->top,
+            sSuggestedRect->right - sSuggestedRect->left,
+            sSuggestedRect->bottom - sSuggestedRect->top,
+            SWP_NOZORDER | SWP_NOACTIVATE);
+    }
+
+    RecalcLayout();
+    RedrawWindow(
+        XPR_NULL,
+        XPR_NULL,
+        RDW_INVALIDATE | RDW_FRAME | RDW_ALLCHILDREN);
+
+    return 0;
+}
+
+LRESULT MainFrame::OnThemeChanged(WPARAM aWParam, LPARAM aLParam)
+{
+    RedrawWindow(
+        XPR_NULL,
+        XPR_NULL,
+        RDW_INVALIDATE | RDW_FRAME | RDW_ALLCHILDREN);
+
+    return 0;
 }
 
 void MainFrame::OnDestroy(void)
