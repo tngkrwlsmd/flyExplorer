@@ -46,19 +46,7 @@ goto :usage_error
 :profile_quick
 call :find_python
 if errorlevel 1 goto :failed
-call :append_file_to_log
-set "LOG_TITLE=%~1"
-set "LOG_FILE=%~2"
->>"%LOCAL_CI_LOG%" echo.
->>"%LOCAL_CI_LOG%" echo ==== %LOG_TITLE% ====
-if exist "%LOG_FILE%" (
-    type "%LOG_FILE%" >>"%LOCAL_CI_LOG%"
-) else (
-    >>"%LOCAL_CI_LOG%" echo [local-ci] No captured output.
-)
-exit /b 0
-
-:run_source_preflight
+call :run_source_preflight
 if errorlevel 1 goto :failed
 goto :passed
 
@@ -190,6 +178,18 @@ if exist "%LOG_FILE%" (
     type "%LOG_FILE%" >>"%LOCAL_CI_LOG%"
 ) else (
     echo [local-ci] No captured output.
+    >>"%LOCAL_CI_LOG%" echo [local-ci] No captured output.
+)
+exit /b 0
+
+:append_file_to_log
+set "LOG_TITLE=%~1"
+set "LOG_FILE=%~2"
+>>"%LOCAL_CI_LOG%" echo.
+>>"%LOCAL_CI_LOG%" echo ==== %LOG_TITLE% ====
+if exist "%LOG_FILE%" (
+    type "%LOG_FILE%" >>"%LOCAL_CI_LOG%"
+) else (
     >>"%LOCAL_CI_LOG%" echo [local-ci] No captured output.
 )
 exit /b 0
