@@ -77,7 +77,7 @@
     }
   ],
   "review": {
-    "reviewed_revision": "683c9787c84919da0fe8aece4dfbe6f0c1398fa4",
+    "reviewed_revision": "5da88a0f04c689d84c0197827b1b18dac0f62643",
     "reviewed_at": "2026-09-21",
     "reviewed_paths": [
       "README",
@@ -151,7 +151,11 @@
 - x64 solution은 mixed-architecture helper mapping을 사용한다.
 - updater는 x64 Build Solution에서 의도적으로 제외한다.
 - product unit/integration test suite는 아직 확인되지 않았다.
-- Windows Product Build CI가 `Release-x64-Unicode | x64`의 실제 compile/link와 핵심 산출물을 검증하지만 clean-runtime smoke test와 UI regression은 아직 자동화하지 않는다.
+- Windows Product Build CI가 `Release-x64-Unicode | x64`의 실제 compile/link와 핵심 산출물을 검증하며, MSBuild file log에서 compiler/linker/MSBuild warning이 발견되면 실패한다. reviewed revision 기준 해당 제품 빌드는 warning 0건이다.
+- xpr의 logical target 이름은 `xpr`로 유지하면서 generated MSBuild `TargetName`을 physical product 이름(`libxprw` 계열)과 정렬해 MSB8012를 제거했다.
+- crash module은 vendored zlib 1.2.3 source를 현재 MSVC로 직접 빌드하며 legacy `zlibS-x64.lib`를 링크하지 않는다.
+- crash/network resolver 경로는 deprecated `gethostbyname`/`inet_ntoa`/`inet_addr` 대신 modern Winsock address API를 사용한다.
+- clean-runtime smoke test와 UI regression은 아직 자동화하지 않는다.
 - `build/validate_source_invariants.py`가 C++ cross-cutting dependency와 ModernUI integration의 빠른 static preflight를 제공한다.
 - `.agent-policy/`에는 upstream `universal-agent-docs` revision `cc250a63994f1d9d4fcfdbb2bab9b622230bf8c6`의 validated policy bundle을 vendor하며 root CI에서 bundle/readiness/conformance를 검사한다.
 - Profile C runtime enforcement는 설치되어 있지 않다.
