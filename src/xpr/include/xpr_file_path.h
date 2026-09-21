@@ -283,7 +283,7 @@ XPR_INLINE bool operator>= (const FilePath &aFilePath1, const xpr_tchar_t *aFile
 XPR_NAMESPACE_STD_TR1_BEGIN
 
 template <>
-struct hash<xpr::FilePath> : public unary_function<xpr::FilePath, xpr_size_t>
+struct hash<xpr::FilePath>
 {
     xpr_size_t operator()(const xpr::FilePath &aValue) const
     {
