@@ -28,4 +28,5 @@ ipch/
 /dist/SHA256SUMS.txt
 
 # Local CI and developer logs
-/logs/
+/logs/*
+!/logs/.gitkeep
