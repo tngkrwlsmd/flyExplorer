@@ -1151,79 +1151,41 @@ void CSymEngine::GetCpuString(CUTF8EncStream& rEncStream)
  */
 void CSymEngine::GetOsInfo(COsInfo& rOsInfo)
 {
+	static const TCHAR szWindows10OrLater[] = _T("Windows 10 or later");
 	static const TCHAR szUnknown[] = _T("Unknown");
-	static const TCHAR szWindowsNT351[] = _T("Windows NT 3.51");
-	static const TCHAR szWindowsNT40[] = _T("Windows NT 4.0");
-	static const TCHAR szWindows95[] = _T("Windows 95");
-	static const TCHAR szWindows98[] = _T("Windows 98");
-	static const TCHAR szWindowsMe[] = _T("Windows Me");
-	static const TCHAR szWindows2000[] = _T("Windows 2000");
-	static const TCHAR szWindowsXP[] = _T("Windows XP");
-	static const TCHAR szWindowsVista[] = _T("Windows Vista");
-	static const TCHAR szWindowsServer2003[] = _T("Windows Server 2003");
 
-	OSVERSIONINFO osvi;
-	osvi.dwOSVersionInfoSize = sizeof(osvi);
-	GetVersionEx(&osvi);
+	rOsInfo.m_pszWinVersion = szWindows10OrLater;
+	*rOsInfo.m_szSPVersion = _T('\0');
+	_tcscpy_s(rOsInfo.m_szBuildNumber, countof(rOsInfo.m_szBuildNumber), szUnknown);
 
-	rOsInfo.m_pszWinVersion = szUnknown;
-	switch (osvi.dwMajorVersion)
+	TCHAR szKernelPath[MAX_PATH] = {0};
+	HMODULE hKernel = GetModuleHandle(_T("kernel32.dll"));
+	if (hKernel != NULL &&
+		GetModuleFileName(hKernel, szKernelPath, countof(szKernelPath)) != 0)
 	{
-	case 3:
-		if (osvi.dwMinorVersion == 51 && osvi.dwPlatformId == VER_PLATFORM_WIN32_NT)
-			rOsInfo.m_pszWinVersion = szWindowsNT351;
-		break;
-	case 4:
-		switch (osvi.dwMinorVersion)
+		DWORD dwHandle = 0;
+		DWORD dwSize = GetFileVersionInfoSize(szKernelPath, &dwHandle);
+		if (dwSize != 0)
 		{
-		case 0:
-			if (osvi.dwPlatformId == VER_PLATFORM_WIN32_NT)
-				rOsInfo.m_pszWinVersion = szWindowsNT40;
-			else if (osvi.dwPlatformId == VER_PLATFORM_WIN32_WINDOWS)
-				rOsInfo.m_pszWinVersion = szWindows95;
-			break;
-		case 10:
-			if (osvi.dwPlatformId == VER_PLATFORM_WIN32_WINDOWS)
-				rOsInfo.m_pszWinVersion = szWindows98;
-			break;
-		case 90:
-			if (osvi.dwPlatformId == VER_PLATFORM_WIN32_WINDOWS)
-				rOsInfo.m_pszWinVersion = szWindowsMe;
-			break;
-		}
-		break;
-	case 5:
-		if (osvi.dwPlatformId == VER_PLATFORM_WIN32_NT)
-		{
-			switch (osvi.dwMinorVersion)
+			PBYTE pVersionInfo = new BYTE[dwSize];
+			if (GetFileVersionInfo(szKernelPath, 0, dwSize, pVersionInfo))
 			{
-			case 0:
-				rOsInfo.m_pszWinVersion = szWindows2000;
-				break;
-			case 1:
-				rOsInfo.m_pszWinVersion = szWindowsXP;
-				break;
-			case 2:
-				rOsInfo.m_pszWinVersion = szWindowsServer2003;
-				break;
+				VS_FIXEDFILEINFO* pFixedInfo = NULL;
+				UINT uLength = 0;
+				if (VerQueryValue(pVersionInfo, _T("\\"), (LPVOID*)&pFixedInfo, &uLength) &&
+					pFixedInfo != NULL &&
+					uLength >= sizeof(VS_FIXEDFILEINFO) &&
+					pFixedInfo->dwSignature == VS_FFI_SIGNATURE)
+				{
+					_ultot_s(HIWORD(pFixedInfo->dwFileVersionLS),
+						rOsInfo.m_szBuildNumber,
+						countof(rOsInfo.m_szBuildNumber),
+						10);
+				}
 			}
+			delete[] pVersionInfo;
 		}
-		break;
-	case 6:
-		if (osvi.dwPlatformId == VER_PLATFORM_WIN32_NT)
-		{
-			switch (osvi.dwMinorVersion)
-			{
-			case 0:
-				rOsInfo.m_pszWinVersion = szWindowsVista;
-				break;
-			}
-		}
-		break;
 	}
-
-	_tcscpy_s(rOsInfo.m_szSPVersion, countof(rOsInfo.m_szSPVersion), osvi.szCSDVersion);
-	_ultot_s(osvi.dwBuildNumber, rOsInfo.m_szBuildNumber, countof(rOsInfo.m_szBuildNumber), 10);
 
 #ifdef _MANAGED
 	NetThunks::GetNetVersion(rOsInfo.m_szNetVersion, countof(rOsInfo.m_szNetVersion));
