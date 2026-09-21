@@ -29,12 +29,16 @@ if /I not "%msvs_version%"=="2026" (
 set "PYTHON_EXE="
 set "PYTHON_ARGS="
 
-python -c "import sys; raise SystemExit(0 if sys.version_info >= (3, 9) else 1)" >nul 2>&1
+where python >nul 2>&1
+if errorlevel 1 goto python_try_launcher
+python "build\check_python.py" >nul 2>&1
 if not errorlevel 1 goto python_use_python
 
-py -3 -c "import sys; raise SystemExit(0 if sys.version_info >= (3, 9) else 1)" >nul 2>&1
+:python_try_launcher
+where py >nul 2>&1
+if errorlevel 1 goto python_missing
+py -3 "build\check_python.py" >nul 2>&1
 if not errorlevel 1 goto python_use_py
-
 goto python_missing
 
 :python_use_python
@@ -53,10 +57,9 @@ popd
 exit /b 1
 
 :python_ready
-echo Python command = %PYTHON_EXE% %PYTHON_ARGS%
-%PYTHON_EXE% %PYTHON_ARGS% -c "import sys; print('Python executable =', sys.executable); print('Python version =', sys.version.split()[0])"
+%PYTHON_EXE% %PYTHON_ARGS% "build\check_python.py"
 if errorlevel 1 (
-    echo ERROR: Python was detected but could not be executed.
+    echo ERROR: Python was detected but failed the bootstrap check.
     popd
     exit /b 1
 )
