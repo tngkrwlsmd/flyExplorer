@@ -11,6 +11,7 @@
 #include "wnet_mgr.h"
 
 #include <afxsock.h>
+#include <ws2tcpip.h>
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -45,7 +46,6 @@ static xpr_bool_t WINAPI EnumerateFunc(LPNETRESOURCE lpnr2, LPNETRESOURCE aNetRe
     LPNETRESOURCE sLocalNetResource;
     xpr_tchar_t sFullName[XPR_MAX_URL_LENGTH + 1] = {0};
     xpr_char_t sAnsiFullName[XPR_MAX_URL_LENGTH + 1] = {0};
-    xpr_char_t sHostName[XPR_MAX_URL_LENGTH + 1] = {0};
     xpr_size_t sInputBytes;
     xpr_size_t sOutputBytes;
 
@@ -82,27 +82,29 @@ static xpr_bool_t WINAPI EnumerateFunc(LPNETRESOURCE lpnr2, LPNETRESOURCE aNetRe
                 XPR_TCS_TO_MBS(sFullName, &sInputBytes, sAnsiFullName, &sOutputBytes);
                 sAnsiFullName[sOutputBytes / sizeof(xpr_char_t)] = 0;
 
-                gethostname(sHostName, (xpr_sint_t)strlen(sHostName));
+                ADDRINFOA sHints = {0};
+                sHints.ai_family = AF_INET;
+                sHints.ai_socktype = SOCK_STREAM;
 
-#pragma warning(push)
-#pragma warning(disable:4996)
-
-                HOSTENT *sHostEnt = gethostbyname(sAnsiFullName);
-
-#pragma warning(pop)
-
-                if (XPR_IS_NOT_NULL(sHostEnt))
+                PADDRINFOA sAddresses = XPR_NULL;
+                if (getaddrinfo(sAnsiFullName, XPR_NULL, &sHints, &sAddresses) == 0)
                 {
-                    struct in_addr *sInAddr = (struct in_addr *)sHostEnt->h_addr_list[0];
-                    if (sInAddr->S_un.S_un_b.s_b1 == pin_addr2->S_un.S_un_b.s_b1 &&
-                        sInAddr->S_un.S_un_b.s_b2 == pin_addr2->S_un.S_un_b.s_b2 &&
-                        sInAddr->S_un.S_un_b.s_b3 == pin_addr2->S_un.S_un_b.s_b3 &&
-                        sInAddr->S_un.S_un_b.s_b4 == pin_addr2->S_un.S_un_b.s_b4)
+                    for (PADDRINFOA sAddress = sAddresses; XPR_IS_NOT_NULL(sAddress); sAddress = sAddress->ai_next)
                     {
-                        _tcscpy(aNetResource->lpRemoteName, sLocalNetResource[i].lpRemoteName);
-                        sResult = XPR_TRUE;
-                        goto ENUM_END;
+                        if (sAddress->ai_family != AF_INET || sAddress->ai_addrlen < sizeof(SOCKADDR_IN))
+                            continue;
+
+                        const SOCKADDR_IN *sSockAddr = reinterpret_cast<const SOCKADDR_IN *>(sAddress->ai_addr);
+                        if (sSockAddr->sin_addr.S_un.S_addr == pin_addr2->S_un.S_addr)
+                        {
+                            _tcscpy(aNetResource->lpRemoteName, sLocalNetResource[i].lpRemoteName);
+                            sResult = XPR_TRUE;
+                            freeaddrinfo(sAddresses);
+                            goto ENUM_END;
+                        }
                     }
+
+                    freeaddrinfo(sAddresses);
                 }
 
                 if (RESOURCEUSAGE_CONTAINER == (sLocalNetResource[i].dwUsage & RESOURCEUSAGE_CONTAINER))
