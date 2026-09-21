@@ -1,4 +1,4 @@
-#include "StdAfx.h"
+﻿#include "StdAfx.h"
 
 #ifdef _MANAGED
 
@@ -16,7 +16,7 @@ using namespace System::Runtime::InteropServices;
 [assembly: AssemblyConfiguration("")];
 [assembly: AssemblyCompany("IntelleSoft")];
 [assembly: AssemblyProduct("BugTrap")];
-[assembly: AssemblyCopyright("Copyright � 2005-2009 IntelleSoft")];
+[assembly: AssemblyCopyright("Copyright © 2005-2009 IntelleSoft")];
 [assembly: AssemblyTrademark("")];
 [assembly: AssemblyCulture("")];
 
