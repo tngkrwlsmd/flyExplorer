@@ -31,7 +31,6 @@
                 {
                     'OutputDirectory':       '../../bin',
                     'IntermediateDirectory': '../../obj/fxfile-keyhook/dbg-x86',
-                    'TargetName':            '$(ProjectName)_dbg',
                 },
                 
                 'msvs_settings':
@@ -62,7 +61,6 @@
                 {
                     'OutputDirectory':       '../../bin',
                     'IntermediateDirectory': '../../obj/fxfile-keyhook/rel-x86',
-                    'TargetName':            '$(ProjectName)',
                 },
                 
                 'msvs_settings':
