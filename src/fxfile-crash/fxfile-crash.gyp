@@ -38,7 +38,7 @@
                 {
                     'VCLinkerTool': 
                     {
-                        'OutputFile': '$(OutDir)\$(ProjectName)_dbg.dll',
+                        'OutputFile': '$(OutDir)\\$(ProjectName)_dbg.dll',
                         'AdditionalLibraryDirectories':
                         [
                         ],
@@ -69,7 +69,7 @@
                 {
                     'VCLinkerTool': 
                     {
-                        'OutputFile': '$(OutDir)\$(ProjectName).dll',
+                        'OutputFile': '$(OutDir)\\$(ProjectName).dll',
                         'AdditionalLibraryDirectories':
                         [
                         ],
@@ -100,7 +100,7 @@
                 {
                     'VCLinkerTool': 
                     {
-                        'OutputFile': '$(OutDir)\$(ProjectName)_dbg.dll',
+                        'OutputFile': '$(OutDir)\\$(ProjectName)_dbg.dll',
                         'AdditionalLibraryDirectories':
                         [
                         ],
@@ -131,7 +131,7 @@
                 {
                     'VCLinkerTool': 
                     {
-                        'OutputFile': '$(OutDir)\$(ProjectName).dll',
+                        'OutputFile': '$(OutDir)\\$(ProjectName).dll',
                         'AdditionalLibraryDirectories':
                         [
                         ],
@@ -166,7 +166,7 @@
                             {
                                 'VCLinkerTool': 
                                 {
-                                    'OutputFile': '$(OutDir)\$(ProjectName)_dbg.dll',
+                                    'OutputFile': '$(OutDir)\\$(ProjectName)_dbg.dll',
                                     'AdditionalLibraryDirectories':
                                     [
                                     ],
@@ -197,7 +197,7 @@
                             {
                                 'VCLinkerTool': 
                                 {
-                                    'OutputFile': '$(OutDir)\$(ProjectName).dll',
+                                    'OutputFile': '$(OutDir)\\$(ProjectName).dll',
                                     'AdditionalLibraryDirectories':
                                     [
                                     ],

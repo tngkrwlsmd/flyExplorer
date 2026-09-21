@@ -44,7 +44,7 @@
                 {
                     'VCLinkerTool': 
                     {
-                        'OutputFile': '$(OutDir)\$(ProjectName)_dbg.exe',
+                        'OutputFile': '$(OutDir)\\$(ProjectName)_dbg.exe',
                         'AdditionalLibraryDirectories':
                         [
                             '../../lib/gfl/libW',
@@ -73,7 +73,7 @@
                 {
                     'VCLinkerTool': 
                     {
-                        'OutputFile': '$(OutDir)\$(ProjectName).exe',
+                        'OutputFile': '$(OutDir)\\$(ProjectName).exe',
                         'AdditionalLibraryDirectories':
                         [
                             '../../lib/gfl/libW',
@@ -101,7 +101,7 @@
                 {
                     'VCLinkerTool': 
                     {
-                        'OutputFile': '$(OutDir)\$(ProjectName)_dbg.exe',
+                        'OutputFile': '$(OutDir)\\$(ProjectName)_dbg.exe',
                         'AdditionalLibraryDirectories':
                         [
                             '../../lib/gfl/lib',
@@ -130,7 +130,7 @@
                 {
                     'VCLinkerTool': 
                     {
-                        'OutputFile': '$(OutDir)\$(ProjectName).exe',
+                        'OutputFile': '$(OutDir)\\$(ProjectName).exe',
                         'AdditionalLibraryDirectories':
                         [
                             '../../lib/gfl/lib',
@@ -162,7 +162,7 @@
                             {
                                 'VCLinkerTool': 
                                 {
-                                    'OutputFile': '$(OutDir)\$(ProjectName)_dbg.exe',
+                                    'OutputFile': '$(OutDir)\\$(ProjectName)_dbg.exe',
                                     'AdditionalLibraryDirectories':
                                     [
                                         '../../lib/gfl/lib64W',
@@ -191,7 +191,7 @@
                             {
                                 'VCLinkerTool': 
                                 {
-                                    'OutputFile': '$(OutDir)\$(ProjectName).exe',
+                                    'OutputFile': '$(OutDir)\\$(ProjectName).exe',
                                     'AdditionalLibraryDirectories':
                                     [
                                         '../../lib/gfl/lib64W',

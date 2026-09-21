@@ -43,7 +43,7 @@
                 
                     'VCLinkerTool': 
                     {
-                        'OutputFile': '$(OutDir)\lib$(ProjectName)w_dbg.dll',
+                        'OutputFile': '$(OutDir)\\lib$(ProjectName)w_dbg.dll',
                         'AdditionalLibraryDirectories':
                         [
                             '../../lib/libxml2/lib',
@@ -80,7 +80,7 @@
                     
                     'VCLinkerTool': 
                     {
-                        'OutputFile': '$(OutDir)\lib$(ProjectName)w.dll',
+                        'OutputFile': '$(OutDir)\\lib$(ProjectName)w.dll',
                         'AdditionalLibraryDirectories':
                         [
                             '../../lib/libxml2/lib',
@@ -117,7 +117,7 @@
                 
                     'VCLinkerTool': 
                     {
-                        'OutputFile': '$(OutDir)\lib$(ProjectName)_dbg.dll',
+                        'OutputFile': '$(OutDir)\\lib$(ProjectName)_dbg.dll',
                         'AdditionalLibraryDirectories':
                         [
                             '../../lib/libxml2/lib',
@@ -157,7 +157,7 @@
                     
                     'VCLinkerTool': 
                     {
-                        'OutputFile': '$(OutDir)\lib$(ProjectName).dll',
+                        'OutputFile': '$(OutDir)\\lib$(ProjectName).dll',
                         'AdditionalLibraryDirectories':
                         [
                             '../../lib/libxml2/lib',
@@ -201,7 +201,7 @@
                                 
                                 'VCLinkerTool': 
                                 {
-                                    'OutputFile': '$(OutDir)\lib$(ProjectName)w_dbg.dll',
+                                    'OutputFile': '$(OutDir)\\lib$(ProjectName)w_dbg.dll',
                                     'AdditionalLibraryDirectories':
                                     [
                                         '../../lib/libxml2/lib64',
@@ -238,7 +238,7 @@
                                 
                                 'VCLinkerTool': 
                                 {
-                                    'OutputFile': '$(OutDir)\lib$(ProjectName)w.dll',
+                                    'OutputFile': '$(OutDir)\\lib$(ProjectName)w.dll',
                                     'AdditionalLibraryDirectories':
                                     [
                                         '../../lib/libxml2/lib64',

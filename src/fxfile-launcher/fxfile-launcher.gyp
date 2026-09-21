@@ -43,7 +43,7 @@
                 {
                     'VCLinkerTool': 
                     {
-                        'OutputFile': '$(OutDir)\$(ProjectName)_dbg.exe',
+                        'OutputFile': '$(OutDir)\\$(ProjectName)_dbg.exe',
                         'AdditionalLibraryDirectories':
                         [
                         ],
@@ -75,7 +75,7 @@
                 {
                     'VCLinkerTool': 
                     {
-                        'OutputFile': '$(OutDir)\$(ProjectName).exe',
+                        'OutputFile': '$(OutDir)\\$(ProjectName).exe',
                         'AdditionalLibraryDirectories':
                         [
                         ],
