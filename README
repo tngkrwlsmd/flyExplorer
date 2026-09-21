@@ -66,9 +66,41 @@ The multibyte build verifies `libxpr.dll/.lib`, builds
 and validates the current distribution input names. All product configurations
 fail CI if compiler, linker, or MSBuild warnings are emitted.
 
-A successful Windows Product Build is compile/link, warning, build-contract, and
-artifact evidence. It does not replace a clean-runtime Windows Sandbox smoke
-test or UI regression check.
+After each verified release build, the workflow also runs
+`build/runtime_smoke.ps1` against a temporary copy of the staged runtime. The
+smoke test uses an isolated `--conf_dir`, disables launcher/update startup
+behavior, starts `fxfile.exe`, requires a top-level main window, checks that
+the process remains alive for a short stability window, and then cleans up its
+temporary files and test registry state. This hosted-runner launch smoke runs
+for x64 Unicode, x86 Unicode, and x86 Multibyte.
+
+A successful Windows Product Build is compile/link, warning, build-contract,
+artifact, and **hosted-runner launch** evidence. GitHub's Windows runner already
+contains Visual Studio and other system software, so this is not clean-Windows
+Sandbox/VM evidence and does not replace interactive functional or visual
+regression testing.
+
+Hosted runtime smoke can also be invoked manually after a build, for example:
+
+    pwsh -File build\runtime_smoke.ps1 -SourceDir bin\x64 -Configuration Release-x64-Unicode
+
+Manual Runtime Smoke Checklist
+------------------------------
+For an interactive Windows or Sandbox check, keep destructive file operations
+out of scope and verify at least:
+
+1. Startup: the main window appears and no crash/missing-DLL dialog is shown.
+2. Folder tree: expand Desktop, select a drive, and navigate to a test folder.
+3. File list: enter a child folder and navigate back to its parent.
+4. AddressBar: confirm the current path, type a test path, press Enter, open the
+   dropdown, and confirm basic autocomplete behavior.
+5. Tabs: create, switch, and close a tab.
+6. Window behavior: minimize, restore, resize, and maximize.
+7. Helpers: note launcher/keyhook/updater behavior without installing updates or
+   modifying shell integration.
+
+Record Windows Sandbox/clean-VM, interactive functional, and visual results
+separately from the hosted-runner launch smoke.
 
 Generate the Visual Studio Solution
 -----------------------------------

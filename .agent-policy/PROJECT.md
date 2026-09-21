@@ -77,7 +77,7 @@
     }
   ],
   "review": {
-    "reviewed_revision": "871714bfe2337d4dff927698e6ee5f3e710d3f16",
+    "reviewed_revision": "a0aeab4ebb38cc125a9b051f23d660e228796cd0",
     "reviewed_at": "2026-09-21",
     "reviewed_paths": [
       "README",
@@ -86,6 +86,7 @@
       "build/fix_solution_configs.py",
       "build/validate_source_invariants.py",
       ".github/workflows/windows-build.yml",
+      "build/runtime_smoke.ps1",
       "fxfile.gyp",
       "src/fxfile",
       "src/xpr",
@@ -128,8 +129,9 @@
 | third-party | `lib/`, `CREDITS` | Contract / Observed | ABI/license 검토 필요 |
 | 패키징 | `dist/` | Observed | NSIS/portable package |
 | 개발 환경 문서 | `README` | Intended / Observed | 실제 build evidence와 함께 해석 |
-| 제품 빌드 CI | `.github/workflows/windows-build.yml` | Contract / Evidence | VS 2026 x64 Unicode + x86 Unicode/Multibyte compile/link, warning, 산출물 검증 |
-| build/runtime 결과 | GitHub Actions build log, Visual Studio build log, Windows Sandbox smoke test | Evidence | compile/link와 runtime evidence를 분리 |
+| 제품 빌드 CI | `.github/workflows/windows-build.yml` | Contract / Evidence | VS 2026 x64 Unicode + x86 Unicode/Multibyte compile/link, warning, 산출물 및 hosted-runner launch smoke 검증 |
+| runtime smoke | `build/runtime_smoke.ps1` | Contract / Evidence | 임시 staged runtime + isolated conf_dir에서 process/main-window/stability 검증 |
+| build/runtime 결과 | GitHub Actions build log, Visual Studio build log, hosted-runner launch smoke, Windows Sandbox/VM smoke | Evidence | compile/link, hosted runtime, clean-runtime evidence를 분리 |
 
 ## Generated artifacts
 
@@ -157,7 +159,8 @@
 - crash module은 vendored zlib 1.2.3 source를 현재 MSVC로 직접 빌드하며 legacy `zlibS-x64.lib`를 링크하지 않는다.
 - crash/network resolver 경로는 deprecated `gethostbyname`/`inet_ntoa`/`inet_addr` 대신 modern Winsock address API를 사용한다.
 - distribution 입력 이름은 현재 제품 계약에 맞춰 Unicode/x64 `libxprw.dll`과 `upchecker/fxfile-upchecker.exe`를 사용하며 Windows CI에서 이름 계약을 정적으로 검증한다. 실제 NSIS/portable archive 생성은 아직 CI에서 실행하지 않는다.
-- clean-runtime smoke test와 UI regression은 아직 자동화하지 않는다.
+- GitHub-hosted Windows runner에서 x64 Unicode, x86 Unicode, x86 Multibyte의 launch smoke를 자동화한다. smoke는 staged runtime을 임시 디렉터리에 복사하고 isolated `--conf_dir`로 `fxfile.exe`를 시작한 뒤 top-level main window와 short stability window를 확인한다.
+- hosted runner에는 Visual Studio와 여러 system runtime이 이미 설치되어 있으므로 이 결과는 clean Windows Sandbox/VM evidence가 아니다. Windows Sandbox/clean VM, interactive functional smoke, visual regression은 아직 자동화하지 않는다.
 - `build/validate_source_invariants.py`가 C++ cross-cutting dependency와 ModernUI integration의 빠른 static preflight를 제공한다.
 - `.agent-policy/`에는 upstream `universal-agent-docs` revision `cc250a63994f1d9d4fcfdbb2bab9b622230bf8c6`의 validated policy bundle을 vendor하며 root CI에서 bundle/readiness/conformance를 검사한다.
 - Profile C runtime enforcement는 설치되어 있지 않다.
@@ -175,9 +178,10 @@
 3. `Release-x64-Unicode | x64` Build Solution
 4. `build.bat 2026 x86` 후 `Release-x86-Unicode | Win32` 및 `Release-x86-Multibyte | Win32` Build Solution
 5. x64/x86 제품 산출물과 x86 Multibyte `fxfile-upchecker` 산출물 확인
-6. GitHub Actions의 Windows Product Build 결과와 로컬 build evidence를 비교
-7. Windows Sandbox에서 clean-runtime smoke test
-8. UI 변경이면 기능 회귀와 visual 결과를 별도로 확인
+6. `build/runtime_smoke.ps1` 또는 GitHub Actions hosted-runner launch smoke 결과 확인
+7. GitHub Actions의 Windows Product Build 결과와 로컬 build/runtime evidence를 비교
+8. Windows Sandbox 또는 clean VM에서 clean-runtime smoke test
+9. interactive 기능 및 UI 변경이면 visual 결과를 별도로 확인
 
 ## Maintenance
 
