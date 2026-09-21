@@ -12,9 +12,54 @@
     [
         {
             'target_name': 'fxfile',
-            
+
             'type': 'none',
-            
+
+            # This is the solution aggregate/umbrella project.  It does not
+            # compile sources itself, but Visual Studio still requires it to
+            # expose every solution configuration that can be selected.
+            'default_configuration': 'Debug-x86-Unicode',
+
+            'configurations':
+            {
+                'Debug-x86-Unicode':
+                {
+                    'msvs_configuration_platform': 'Win32',
+                },
+
+                'Release-x86-Unicode':
+                {
+                    'msvs_configuration_platform': 'Win32',
+                },
+
+                'Debug-x86-Multibyte':
+                {
+                    'msvs_configuration_platform': 'Win32',
+                },
+
+                'Release-x86-Multibyte':
+                {
+                    'msvs_configuration_platform': 'Win32',
+                },
+
+                'conditions':
+                [
+                    [ 'target_arch!="x86"',
+                        {
+                            'Debug-x64-Unicode':
+                            {
+                                'msvs_configuration_platform': 'x64',
+                            },
+
+                            'Release-x64-Unicode':
+                            {
+                                'msvs_configuration_platform': 'x64',
+                            },
+                        },
+                    ],
+                ],
+            },
+
             'dependencies':
             [
                 'src/xpr/xpr.gyp:*',

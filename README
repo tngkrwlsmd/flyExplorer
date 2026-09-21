@@ -41,6 +41,11 @@ gyp-next 0.22.2 supports Visual Studio 2026. The build script removes stale
 generated Visual Studio projects before regeneration and verifies that the new
 .vcxproj files use the v145 platform toolset.
 
+The root fxfile.vcxproj is an aggregate project used only to group the solution.
+It now exposes the same x86/x64 solution configuration names as the real build
+projects so Visual Studio can load Release-x64-Unicode and Debug-x64-Unicode
+without configuration-mismatch errors.
+
 The main application, xpr, and crash module have native x64 configurations.
 The legacy updater, launcher, and keyboard-hook helper are intentionally Win32
 projects. When an x64 solution is generated, build\fix_solution_configs.py
@@ -54,7 +59,8 @@ older version of this build script, simply run:
 
     build.bat
 
-again. Stale generated solution/project files are removed automatically.
+again. Stale generated solution/project files, including the root aggregate
+fxfile.vcxproj, are removed automatically before regeneration.
 
 After generation, open:
 

@@ -63,6 +63,7 @@ if not exist "%GYP_DIR%\gyp_main.py" (
 
 echo Removing stale Visual Studio project files...
 if exist "fxfile.sln" del /q "fxfile.sln"
+for %%F in (*.vcxproj *.vcxproj.filters *.vcxproj.user) do if exist "%%F" del /q "%%F" >nul 2>&1
 for /r "%~dp0src" %%F in (*.vcxproj *.vcxproj.filters *.vcxproj.user) do del /q "%%F" >nul 2>&1
 
 set "GYP_MSVS_VERSION=%msvs_version%"
@@ -83,6 +84,22 @@ if not exist "fxfile.sln" (
     echo ERROR: fxfile.sln was not generated.
     popd
     exit /b 1
+)
+
+if not exist "fxfile.vcxproj" (
+    echo ERROR: The root aggregate fxfile.vcxproj was not generated.
+    popd
+    exit /b 1
+)
+
+if /I "%target_arch%"=="x64" (
+    findstr /c:"Release-x64-Unicode|x64" "fxfile.vcxproj" >nul 2>&1
+    if errorlevel 1 (
+        echo ERROR: Root fxfile.vcxproj is missing Release-x64-Unicode^|x64.
+        echo The generated aggregate project is inconsistent with the x64 solution.
+        popd
+        exit /b 1
+    )
 )
 
 echo Fixing mixed x64/x86 solution configuration mappings...
