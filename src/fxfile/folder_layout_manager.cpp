@@ -627,7 +627,7 @@ void FolderLayoutManager::verify(void)
         }
     }
 
-    typedef std::tr1::unordered_set<xpr_uint64_t> HashSet;
+    typedef std::unordered_set<xpr_uint64_t> HashSet;
     HashSet sHashSet;
 
     {
