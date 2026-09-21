@@ -364,7 +364,7 @@ set "BUILD_RESULT=%errorlevel%"
 
 rem MSBuild's file logger uses the Windows ANSI code page on localized systems.
 rem Convert it to BOM-less UTF-8 before displaying/appending to the unified log.
-powershell -NoProfile -ExecutionPolicy Bypass -Command "$r = New-Object System.IO.StreamReader($env:MSBUILD_RAW_LOG, [System.Text.Encoding]::Default, $true); try { $text = $r.ReadToEnd() } finally { $r.Dispose() }; $utf8 = New-Object System.Text.UTF8Encoding($false); [System.IO.File]::WriteAllText($env:STEP_LOG, $text, $utf8)"
+powershell -NoProfile -ExecutionPolicy Bypass -Command "$text = Get-Content -LiteralPath $env:MSBUILD_RAW_LOG -Raw -Encoding Default; $utf8 = New-Object System.Text.UTF8Encoding $false; [System.IO.File]::WriteAllText($env:STEP_LOG, $text, $utf8)"
 if errorlevel 1 (
     echo ERROR: Failed to convert MSBuild log to UTF-8.
     >>"%LOCAL_CI_LOG%" echo ERROR: Failed to convert MSBuild log to UTF-8.
