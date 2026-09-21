@@ -7,6 +7,12 @@
 #include "stdafx.h"
 #include "ModernUI.h"
 
+#include <roapi.h>
+#include <winstring.h>
+#include <windows.ui.viewmanagement.h>
+
+#pragma comment(lib, "RuntimeObject.lib")
+
 namespace fxfile
 {
 namespace ui
@@ -17,6 +23,80 @@ typedef UINT (WINAPI *GetDpiForWindowProc)(HWND);
 typedef BOOL (WINAPI *SystemParametersInfoForDpiProc)(UINT, UINT, PVOID, UINT, UINT);
 typedef HRESULT (WINAPI *DwmSetWindowAttributeProc)(HWND, DWORD, LPCVOID, DWORD);
 typedef HRESULT (WINAPI *SetWindowThemeProc)(HWND, LPCWSTR, LPCWSTR);
+
+class ThemeSettings
+{
+public:
+    ThemeSettings(void)
+        : mInitialized(XPR_FALSE)
+        , mSettings(XPR_NULL)
+    {
+        const HRESULT sInitResult = ::RoInitialize(RO_INIT_SINGLETHREADED);
+        if (FAILED(sInitResult))
+            return;
+
+        mInitialized = XPR_TRUE;
+
+        HSTRING_HEADER sHeader = {0};
+        HSTRING sClassId = XPR_NULL;
+        const wchar_t *sRuntimeClass = RuntimeClass_Windows_UI_ViewManagement_UISettings;
+
+        HRESULT sResult = ::WindowsCreateStringReference(
+            sRuntimeClass,
+            static_cast<UINT32>(::wcslen(sRuntimeClass)),
+            &sHeader,
+            &sClassId);
+        if (FAILED(sResult))
+            return;
+
+        IInspectable *sInspectable = XPR_NULL;
+        sResult = ::RoActivateInstance(sClassId, &sInspectable);
+        if (SUCCEEDED(sResult) && XPR_IS_NOT_NULL(sInspectable))
+        {
+            sInspectable->QueryInterface(
+                __uuidof(ABI::Windows::UI::ViewManagement::IUISettings3),
+                reinterpret_cast<void **>(&mSettings));
+        }
+
+        if (XPR_IS_NOT_NULL(sInspectable))
+            sInspectable->Release();
+    }
+
+    ~ThemeSettings(void)
+    {
+        if (XPR_IS_NOT_NULL(mSettings))
+            mSettings->Release();
+
+        if (XPR_IS_TRUE(mInitialized))
+            ::RoUninitialize();
+    }
+
+    xpr_bool_t getColor(
+        ABI::Windows::UI::ViewManagement::UIColorType aColorType,
+        COLORREF &aColor) const
+    {
+        if (XPR_IS_NULL(mSettings))
+            return XPR_FALSE;
+
+        ABI::Windows::UI::Color sColor = {0};
+        const HRESULT sResult = mSettings->GetColorValue(aColorType, &sColor);
+        if (FAILED(sResult))
+            return XPR_FALSE;
+
+        aColor = RGB(sColor.R, sColor.G, sColor.B);
+        return XPR_TRUE;
+    }
+
+private:
+    xpr_bool_t mInitialized;
+    ABI::Windows::UI::ViewManagement::IUISettings3 *mSettings;
+};
+
+ThemeSettings &getThemeSettings(void)
+{
+    static thread_local ThemeSettings sThemeSettings;
+    return sThemeSettings;
+}
 
 #ifndef DWMWA_USE_IMMERSIVE_DARK_MODE
 #define DWMWA_USE_IMMERSIVE_DARK_MODE 20
@@ -179,12 +259,46 @@ ThemePalette ModernUI::getPalette(void)
     sPalette.mSeparator     = ::GetSysColor(COLOR_3DLIGHT);
     sPalette.mSelection     = ::GetSysColor(COLOR_HIGHLIGHT);
     sPalette.mSelectionText = ::GetSysColor(COLOR_HIGHLIGHTTEXT);
-    sPalette.mHover         = blendColor(
+    sPalette.mHighContrast  = isHighContrast();
+    sPalette.mDark          = isDarkColor(sPalette.mWindow);
+
+    // Microsoft documents UISettings foreground/background colors as the
+    // Win32 signal for the user's app light/dark preference. Keep High
+    // Contrast on the system-color path and retain the legacy system-color
+    // palette if Windows Runtime activation is unavailable for any reason.
+    if (XPR_IS_FALSE(sPalette.mHighContrast))
+    {
+        ThemeSettings &sThemeSettings = getThemeSettings();
+        COLORREF sBackground = 0;
+        COLORREF sForeground = 0;
+
+        if (XPR_IS_TRUE(sThemeSettings.getColor(
+                ABI::Windows::UI::ViewManagement::UIColorType_Background,
+                sBackground)) &&
+            XPR_IS_TRUE(sThemeSettings.getColor(
+                ABI::Windows::UI::ViewManagement::UIColorType_Foreground,
+                sForeground)))
+        {
+            // A light foreground is the documented indicator that the app
+            // color mode is dark.
+            sPalette.mDark = XPR_IS_FALSE(isDarkColor(sForeground));
+
+            if (XPR_IS_TRUE(sPalette.mDark))
+            {
+                sPalette.mWindow        = sBackground;
+                sPalette.mSurface       = blendColor(sBackground, sForeground, 8);
+                sPalette.mText          = sForeground;
+                sPalette.mSecondaryText = blendColor(sBackground, sForeground, 65);
+                sPalette.mBorder        = blendColor(sBackground, sForeground, 24);
+                sPalette.mSeparator     = blendColor(sBackground, sForeground, 16);
+            }
+        }
+    }
+
+    sPalette.mHover = blendColor(
         sPalette.mSurface,
         sPalette.mSelection,
         12);
-    sPalette.mDark          = isDarkColor(sPalette.mWindow);
-    sPalette.mHighContrast  = isHighContrast();
 
     return sPalette;
 }

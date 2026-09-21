@@ -6777,6 +6777,7 @@ void ExplorerCtrl::OnCustomdrawThumbnail(LPNMLVCUSTOMDRAW aNmLvCustomDraw)
     CRect        sBoundsRect, sIconRect, sLabelRect;
     xpr::string  sLabel = GetItemText(sItemIndex, 0);
     xpr_sint_t   sOffset = sDC->GetTextExtent(XPR_STRING_LITERAL(" ")).cx * 2;
+    const ui::ThemePalette sPalette = ui::ModernUI::getPalette();
 
     LPLVITEMDATA sLvItemData = ((LPLVITEMDATA)aNmLvCustomDraw->nmcd.lItemlParam);
     verifyItemData(&sLvItemData);
@@ -6804,14 +6805,14 @@ void ExplorerCtrl::OnCustomdrawThumbnail(LPNMLVCUSTOMDRAW aNmLvCustomDraw)
     {
         CRect sSelRect(sIconRect);
         sSelRect.bottom += 2;
-        sDC->FillSolidRect(sSelRect, ::GetSysColor(COLOR_HIGHLIGHT));
+        sDC->FillSolidRect(sSelRect, sPalette.mSelection);
     }
 
     sIconRect.top += 2;
     sIconRect.left += 2;
     sIconRect.right -= 2;
-    sDC->FillSolidRect(sIconRect, RGB(255,255,255));
-    sDC->Draw3dRect(sIconRect, ::GetSysColor(COLOR_3DLIGHT), ::GetSysColor(COLOR_3DLIGHT));
+    sDC->FillSolidRect(sIconRect, sPalette.mSurface);
+    sDC->Draw3dRect(sIconRect, sPalette.mBorder, sPalette.mBorder);
 
     if (XPR_IS_FALSE(mOption.mParentFolder) || XPR_IS_NOT_NULL(sLvItemData))
     {
@@ -6829,7 +6830,7 @@ void ExplorerCtrl::OnCustomdrawThumbnail(LPNMLVCUSTOMDRAW aNmLvCustomDraw)
                 sTempDC.CreateCompatibleDC(sDC);
                 sBitmap.CreateCompatibleBitmap(sDC, 32, 32);
                 sOldBitmap = sTempDC.SelectObject(&sBitmap);
-                sTempDC.FillSolidRect(0,0,32,32,::GetSysColor(COLOR_WINDOW));
+                sTempDC.FillSolidRect(0,0,32,32,sPalette.mWindow);
 
                 mNormalImgList->DrawIndirect(&sTempDC, sLvItem.iImage, CPoint(0,0), CSize(32,32), CPoint(0,0), ILD_NORMAL, SRCCOPY);
                 BLENDFUNCTION sBlendFunc = { AC_SRC_OVER, 0, 128, 0 };
@@ -6919,20 +6920,23 @@ void ExplorerCtrl::OnCustomdrawThumbnail(LPNMLVCUSTOMDRAW aNmLvCustomDraw)
     {
         if (XPR_IS_TRUE(sListHasFocus))
         {
-            sBkgndColor = GetSysColor(COLOR_HIGHLIGHT);
-            sDC->SetTextColor(GetSysColor(COLOR_HIGHLIGHTTEXT));
+            sBkgndColor = sPalette.mSelection;
+            sDC->SetTextColor(sPalette.mSelectionText);
             sDC->FillSolidRect(sSelRect, sBkgndColor);
         }
         else // case : Killed Focus
         {
-            sBkgndColor = GetSysColor(COLOR_BTNFACE);
-            sDC->SetTextColor(GetSysColor(COLOR_BTNTEXT));
+            sBkgndColor = XPR_IS_TRUE(sPalette.mHighContrast) ?
+                sPalette.mSelection : sPalette.mHover;
+            sDC->SetTextColor(
+                XPR_IS_TRUE(sPalette.mHighContrast) ?
+                    sPalette.mSelectionText : sPalette.mText);
             sDC->FillSolidRect(sSelRect, sBkgndColor);
         }
     }
     else
     {
-        sBkgndColor = GetSysColor(COLOR_WINDOW);
+        sBkgndColor = sPalette.mWindow;
 
         CBrush sBrush;
         LOGBRUSH sLogBrush = {0};
@@ -8766,6 +8770,12 @@ void ExplorerCtrl::applyModernAppearance(void)
     if (mOption.mTextColorType != COLOR_TYPE_CUSTOM)
         SetTextColor(sPalette.mText);
 
+    const COLORREF sImageListBackground = GetBkColor();
+    if (XPR_IS_NOT_NULL(mExtraLargeImgList)) mExtraLargeImgList->SetBkColor(sImageListBackground);
+    if (XPR_IS_NOT_NULL(mLargeImgList))      mLargeImgList->SetBkColor(sImageListBackground);
+    if (XPR_IS_NOT_NULL(mMediumImgList))     mMediumImgList->SetBkColor(sImageListBackground);
+    if (XPR_IS_NOT_NULL(mSmallImgList))      mSmallImgList->SetBkColor(sImageListBackground);
+
     if (XPR_IS_FALSE(mOption.mCustomFont))
         setCustomFont(XPR_FALSE, (xpr_tchar_t *)XPR_NULL);
 
@@ -8778,13 +8788,6 @@ void ExplorerCtrl::applyModernAppearance(void)
 void ExplorerCtrl::OnSysColorChange(void)
 {
     super::OnSysColorChange();
-
-    const ui::ThemePalette sPalette = ui::ModernUI::getPalette();
-
-    if (XPR_IS_NOT_NULL(mExtraLargeImgList)) mExtraLargeImgList->SetBkColor(sPalette.mWindow);
-    if (XPR_IS_NOT_NULL(mLargeImgList))      mLargeImgList->SetBkColor(sPalette.mWindow);
-    if (XPR_IS_NOT_NULL(mMediumImgList))     mMediumImgList->SetBkColor(sPalette.mWindow);
-    if (XPR_IS_NOT_NULL(mSmallImgList))      mSmallImgList->SetBkColor(sPalette.mWindow);
 
     applyModernAppearance();
 }
