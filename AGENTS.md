@@ -119,17 +119,20 @@ UI/UX 현대화 작업은 다음 원칙을 따른다.
 
 ## 8. 검증
 
-최소 검증 흐름:
+검증은 변경 범위에 맞춰 단계적으로 수행하고, 정적 검사·컴파일/링크·호스티드 실행·클린 환경 검증을 서로 다른 evidence로 기록한다.
 
-0. `python build/validate_source_invariants.py` source invariant preflight
-1. `build.bat`이 성공하고 `fxfile.sln`을 재생성하는지 확인
-2. 생성 프로젝트가 `v145`를 사용하는지 확인
-3. `Release-x64-Unicode | x64` Build Solution 수행
-4. 핵심 산출물 `bin/x64/fxfile.exe` 존재 확인
-5. 필요한 DLL/Languages가 배치됐는지 확인
-6. 가능하면 Windows Sandbox에서 clean-runtime 실행 확인
+기본 검증 흐름:
 
-현재 product unit/integration test suite는 확인되지 않았다. 대신 source-invariant preflight와 vendored policy validation/conformance는 자동화한다. 따라서 Static validation, compile/link 성공, 실제 runtime smoke test의 evidence 수준을 서로 분리해 보고한다.
+0. `python build/validate_source_invariants.py`로 source invariant preflight 수행
+1. x64 영향이 있으면 `build.bat 2026 x64`로 솔루션을 재생성하고 generated project의 `v145` 계약 확인
+2. C++/빌드 변경이면 영향 범위에 따라 `Debug-x64-Unicode | x64`와 `Release-x64-Unicode | x64` compile/link 및 핵심 산출물 확인
+3. x86, 공통 코드, updater, 배포 경로 영향이 있으면 `build.bat 2026 x86` 후 `Release-x86-Unicode | Win32`와 `Release-x86-Multibyte | Win32`를 검증
+4. release runtime은 `build/runtime_smoke.ps1` 또는 동일 계약의 GitHub Actions hosted-runner launch smoke로 process/main-window/stability 확인
+5. packaging 영향이 있으면 `dist\package.bat` 실행 후 `build\validate_package.ps1 -DistDir dist`로 portable ZIP 3종과 NSIS installer payload 검증
+6. remote checkpoint에서는 `Policy and Source Validation`과 `Windows Product Build` 결과를 확인하고, branch 검증 후 main에 반영했다면 main CI도 다시 확인
+7. 설치/제거, shell integration, interactive 기능, DPI/High Contrast/visual 변경은 필요 시 Windows Sandbox 또는 clean VM에서 별도 수동 evidence 확보
+
+현재 별도 product unit/integration test suite는 확인되지 않았다. 대신 source-invariant preflight, vendored policy validation/conformance, x64/x86 compile/link, warning rejection, hosted launch smoke, package payload validation이 CI로 자동화되어 있다. 이 자동화 결과는 clean Windows 설치/제거와 interactive/visual regression evidence를 대체하지 않는다.
 
 버그 수정은 가능하면 재현 가능한 regression check를 추가하되, repository에 존재하지 않는 대규모 테스트 프레임워크를 단일 수정 때문에 도입하지 않는다.
 
