@@ -9,6 +9,7 @@
 
 #include "stdafx.h"
 #include "TreeCtrlEx.h"
+#include "ModernUI.h"
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -95,8 +96,8 @@ void TreeCtrlEx::enableVistaEnhanced(xpr_bool_t aEnable)
 
     if (XPR_IS_TRUE(aEnable))
     {
-        // enable explorer theme
-        SetWindowTheme(m_hWnd, XPR_WIDE_STRING_LITERAL("explorer"), XPR_NULL);
+        // enable explorer theme through the shared ModernUI foundation
+        fxfile::ui::ModernUI::applyExplorerControlTheme(m_hWnd);
 
         ModifyStyle(TVS_HASLINES, TVS_FULLROWSELECT | TVS_TRACKSELECT);
 
@@ -105,7 +106,7 @@ void TreeCtrlEx::enableVistaEnhanced(xpr_bool_t aEnable)
     else
     {
         // disable explorer theme
-        SetWindowTheme(m_hWnd, XPR_NULL, XPR_NULL);
+        fxfile::ui::ModernUI::resetControlTheme(m_hWnd);
 
         ModifyStyle(TVS_FULLROWSELECT | TVS_TRACKSELECT, TVS_HASLINES);
     }

@@ -11,6 +11,7 @@
 #include "ListCtrlEx.h"
 
 #include "FlatHeaderCtrl.h"
+#include "ModernUI.h"
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -55,13 +56,13 @@ void ListCtrlEx::enableVistaEnhanced(xpr_bool_t aEnable)
 {
     if (XPR_IS_TRUE(aEnable))
     {
-        // enable explorer theme
-        SetWindowTheme(m_hWnd, XPR_WIDE_STRING_LITERAL("explorer"), XPR_NULL);
+        // enable explorer theme through the shared ModernUI foundation
+        fxfile::ui::ModernUI::applyExplorerControlTheme(m_hWnd);
     }
     else
     {
-        // diable explorer theme
-        SetWindowTheme(m_hWnd, XPR_NULL, XPR_NULL);
+        // disable explorer theme
+        fxfile::ui::ModernUI::resetControlTheme(m_hWnd);
     }
 
     DWORD sExStyle = GetExtendedStyle();

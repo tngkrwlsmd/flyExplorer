@@ -101,10 +101,27 @@ def validate_common_control_theme_integration() -> list[str]:
 
     if "applyExplorerControlTheme(HWND aHwnd)" not in modern_ui_header:
         errors.append("src/fxfile/gui/ModernUI.h: missing Explorer control-theme helper declaration")
+    if "resetControlTheme(HWND aHwnd)" not in modern_ui_header:
+        errors.append("src/fxfile/gui/ModernUI.h: missing control-theme reset helper declaration")
 
     for token in ("SetWindowTheme", "uxtheme.dll", 'L"Explorer"'):
         if token not in modern_ui_source:
             errors.append(f"src/fxfile/gui/ModernUI.cpp: missing control-theme integration token {token}")
+
+    for rel_path in ("gui/ListCtrlEx.cpp", "gui/TreeCtrlEx.cpp"):
+        control_path = FXFILE_SRC / rel_path
+        try:
+            control_source = control_path.read_text(encoding="utf-8")
+        except OSError as exc:
+            errors.append(f"{control_path.relative_to(ROOT)}: cannot read: {exc}")
+            continue
+
+        if "ModernUI::applyExplorerControlTheme" not in control_source:
+            errors.append(f"{control_path.relative_to(ROOT)}: Explorer theme is not routed through ModernUI")
+        if "ModernUI::resetControlTheme" not in control_source:
+            errors.append(f"{control_path.relative_to(ROOT)}: theme reset is not routed through ModernUI")
+        if re.search(r"(?<!ModernUI::)SetWindowTheme\s*\(", strip_comments(control_source)):
+            errors.append(f"{control_path.relative_to(ROOT)}: direct SetWindowTheme call remains")
 
     return errors
 

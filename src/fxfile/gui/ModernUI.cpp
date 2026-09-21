@@ -252,5 +252,28 @@ xpr_bool_t ModernUI::applyExplorerControlTheme(HWND aHwnd)
     ::FreeLibrary(sUxTheme);
     return sApplied;
 }
+xpr_bool_t ModernUI::resetControlTheme(HWND aHwnd)
+{
+    if (XPR_IS_NULL(aHwnd))
+        return XPR_FALSE;
+
+    HMODULE sUxTheme = ::LoadLibrary(XPR_STRING_LITERAL("uxtheme.dll"));
+    if (XPR_IS_NULL(sUxTheme))
+        return XPR_FALSE;
+
+    SetWindowThemeProc sSetWindowTheme =
+        reinterpret_cast<SetWindowThemeProc>(
+            ::GetProcAddress(sUxTheme, "SetWindowTheme"));
+
+    xpr_bool_t sApplied = XPR_FALSE;
+    if (XPR_IS_NOT_NULL(sSetWindowTheme))
+    {
+        const HRESULT sResult = sSetWindowTheme(aHwnd, XPR_NULL, XPR_NULL);
+        sApplied = SUCCEEDED(sResult) ? XPR_TRUE : XPR_FALSE;
+    }
+
+    ::FreeLibrary(sUxTheme);
+    return sApplied;
+}
 } // namespace ui
 } // namespace fxfile
