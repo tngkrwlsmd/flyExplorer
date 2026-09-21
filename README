@@ -114,6 +114,9 @@ See `LOCAL_CI_MANUAL.txt` for the short profile-by-profile usage guide.
 `local_ci.bat` forces redirected Python output to UTF-8 so readiness and
 conformance messages containing Unicode punctuation do not fail on Korean or
 other non-UTF-8 Windows ANSI code pages.
+The local conformance invocation also suppresses only Python `zipfile`'s expected
+`Duplicate name` warning from the intentional duplicate-entry negative fixture;
+the duplicate-entry validation case itself still runs and must pass.
 Local CI does not publish artifacts or modify GitHub Actions state. On a developer
 machine, runtime smoke refuses to overwrite existing flyExplorer HKCU startup or
 profile state. When such state is present, `local_ci.bat` records that smoke as

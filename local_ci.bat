@@ -214,7 +214,9 @@ call :append_file "Development readiness" "%STEP_LOG%"
 if not "%POLICY_RESULT%"=="0" exit /b %POLICY_RESULT%
 
 pushd ".agent-policy"
-"%POLICY_VENV%\Scripts\python.exe" "scripts\conformance.py" >"%STEP_LOG%" 2>&1
+rem The invalid-distribution corpus intentionally creates a duplicate ZIP entry.
+rem Suppress only zipfile's expected duplicate-name UserWarning; test semantics remain unchanged.
+"%POLICY_VENV%\Scripts\python.exe" -W "ignore:Duplicate name:UserWarning:zipfile" "scripts\conformance.py" >"%STEP_LOG%" 2>&1
 set "POLICY_RESULT=%errorlevel%"
 popd
 call :append_file "Policy conformance" "%STEP_LOG%"

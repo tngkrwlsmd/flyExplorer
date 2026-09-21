@@ -1,4 +1,5 @@
-rmdir /s /q bin
+@echo off
+if exist "bin" rmdir /s /q "bin"
 mkdir bin
 mkdir bin\x86-multibyte
 mkdir bin\x86-unicode
