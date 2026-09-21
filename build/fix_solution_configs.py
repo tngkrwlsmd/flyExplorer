@@ -23,14 +23,17 @@ UPCHECKER_PROJECT = r"src\fxfile-upchecker\fxfile-upchecker.vcxproj"
 XPR_PROJECT = r"src\xpr\xpr.vcxproj"
 AGGREGATE_PROJECT = r"fxfile.vcxproj"
 
-XPR_TARGET_NAMES = {
+XPR_X86_TARGET_NAMES = {
     "debug-x86-unicode": "libxprw_dbg",
     "release-x86-unicode": "libxprw",
     "debug-x86-multibyte": "libxpr_dbg",
     "release-x86-multibyte": "libxpr",
+}
+XPR_X64_TARGET_NAMES = {
     "debug-x64-unicode": "libxprw_dbg",
     "release-x64-unicode": "libxprw",
 }
+XPR_TARGET_NAMES = {**XPR_X86_TARGET_NAMES, **XPR_X64_TARGET_NAMES}
 
 PROJECT_RE = re.compile(
     r'^Project\("[^"]+"\)\s*=\s*"[^"]+",\s*"([^"]+)",\s*"(\{[0-9A-Fa-f-]+\})"\s*$'
@@ -57,11 +60,16 @@ def is_x64_configuration(solution_configuration: str) -> bool:
     return "|x64" in solution_configuration.lower()
 
 
+def is_x86_multibyte_configuration(solution_configuration: str) -> bool:
+    name = solution_configuration.strip().lower()
+    return "x86-multibyte|win32" in name
+
+
 def qualify(tag: str, namespace: str) -> str:
     return f"{{{namespace}}}{tag}" if namespace else tag
 
 
-def set_xpr_target_names(project_path: Path) -> int:
+def set_xpr_target_names(project_path: Path, require_x64: bool) -> int:
     if not project_path.is_file():
         raise FileNotFoundError(project_path)
 
@@ -89,7 +97,10 @@ def set_xpr_target_names(project_path: Path) -> int:
                 configurations.append((configuration, platform))
 
     seen = {configuration.lower() for configuration, _ in configurations}
-    missing = sorted(set(XPR_TARGET_NAMES) - seen)
+    required = set(XPR_X86_TARGET_NAMES)
+    if require_x64:
+        required.update(XPR_X64_TARGET_NAMES)
+    missing = sorted(required - seen)
     if missing:
         raise ValueError(
             "Missing xpr project configurations: " + ", ".join(missing)
@@ -203,6 +214,13 @@ def main() -> int:
     upchecker_guid = project_guids[upchecker_path]
     aggregate_guid = project_guids[aggregate_path]
 
+    has_x64_solution_configuration = False
+    for line in lines:
+        match = CONFIG_RE.match(line)
+        if match and is_x64_configuration(match.group(3)):
+            has_x64_solution_configuration = True
+            break
+
     patched_lines: list[str] = []
     mapped_count = 0
     skipped_upchecker = 0
@@ -227,13 +245,12 @@ def main() -> int:
 
         if guid in helper_guids:
             # The updater links against the x86 multibyte xpr import library.
-            # A single solution configuration cannot build xpr as x64 and x86
-            # at the same time, so defer the updater during x64 builds. It is
-            # built by Release/Debug-x86-Multibyte configurations instead.
+            # Build it only from x86-multibyte solution configurations; Unicode
+            # and x64 product builds use libxprw and must not schedule it.
             if (
                 guid == upchecker_guid
                 and entry_type == "Build.0"
-                and is_x64_configuration(solution_configuration)
+                and not is_x86_multibyte_configuration(solution_configuration)
             ):
                 skipped_upchecker += 1
                 continue
@@ -271,7 +288,9 @@ def main() -> int:
     xpr_relative = Path(project_paths[xpr_path].replace("\\", "/"))
     xpr_project_path = solution_path.parent / xpr_relative
     try:
-        xpr_changed = set_xpr_target_names(xpr_project_path)
+        xpr_changed = set_xpr_target_names(
+            xpr_project_path, has_x64_solution_configuration
+        )
     except (OSError, ET.ParseError, ValueError) as error:
         print(f"ERROR: Failed to patch xpr target names in {xpr_project_path}: {error}", file=sys.stderr)
         return 1
@@ -280,7 +299,7 @@ def main() -> int:
     for path in sorted(WIN32_HELPER_PROJECTS):
         print(f"  {path}")
     print(f"Updated {mapped_count} helper configuration mappings.")
-    print(f"Skipped {skipped_upchecker} x64 updater build mappings.")
+    print(f"Skipped {skipped_upchecker} non-multibyte updater build mappings.")
     print(f"Skipped {skipped_aggregate} aggregate-project build mappings.")
     print(f"Applied static MFC settings to {len(MFC_PROJECTS)} projects ({mfc_changed} configurations updated).")
     print(f"Aligned xpr TargetName values with linker outputs ({xpr_changed} configurations updated).")
