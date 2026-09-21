@@ -18,6 +18,42 @@ namespace fxfile
 {
 #define PACK_VERSION(major,minor) MAKELONG(minor,major)
 
+static xpr_bool_t getWindowsFileVersion(DWORD &aMajor, DWORD &aMinor, DWORD &aBuild)
+{
+    xpr_tchar_t sKernelPath[XPR_MAX_PATH + 1] = {0};
+    HMODULE sKernel = ::GetModuleHandle(XPR_STRING_LITERAL("kernel32.dll"));
+    if (XPR_IS_NULL(sKernel) ||
+        ::GetModuleFileName(sKernel, sKernelPath, XPR_COUNT_OF(sKernelPath)) == 0)
+        return XPR_FALSE;
+
+    DWORD sHandle = 0;
+    DWORD sSize = ::GetFileVersionInfoSize(sKernelPath, &sHandle);
+    if (sSize == 0)
+        return XPR_FALSE;
+
+    BYTE *sVersionData = new BYTE[sSize];
+    xpr_bool_t sResult = XPR_FALSE;
+
+    if (::GetFileVersionInfo(sKernelPath, 0, sSize, sVersionData) != XPR_FALSE)
+    {
+        VS_FIXEDFILEINFO *sFixedInfo = XPR_NULL;
+        UINT sFixedInfoSize = 0;
+        if (::VerQueryValue(sVersionData, XPR_STRING_LITERAL("\\"), (LPVOID *)&sFixedInfo, &sFixedInfoSize) != XPR_FALSE &&
+            XPR_IS_NOT_NULL(sFixedInfo) &&
+            sFixedInfoSize >= sizeof(VS_FIXEDFILEINFO) &&
+            sFixedInfo->dwSignature == VS_FFI_SIGNATURE)
+        {
+            aMajor = HIWORD(sFixedInfo->dwFileVersionMS);
+            aMinor = LOWORD(sFixedInfo->dwFileVersionMS);
+            aBuild = HIWORD(sFixedInfo->dwFileVersionLS);
+            sResult = XPR_TRUE;
+        }
+    }
+
+    XPR_SAFE_DELETE_ARRAY(sVersionData);
+    return sResult;
+}
+
 UserEnv::UserEnv(void)
 {
     getUserEnvironment();
@@ -29,8 +65,17 @@ UserEnv::~UserEnv(void)
 
 void UserEnv::getUserEnvironment(void)
 {
+    ::ZeroMemory(&mOSVerInfo, sizeof(mOSVerInfo));
     mOSVerInfo.dwOSVersionInfoSize = sizeof(mOSVerInfo);
-    ::GetVersionEx((LPOSVERSIONINFO)&mOSVerInfo);
+    mOSVerInfo.dwPlatformId = VER_PLATFORM_WIN32_NT;
+
+    DWORD sMajor = 10;
+    DWORD sMinor = 0;
+    DWORD sBuild = 0;
+    getWindowsFileVersion(sMajor, sMinor, sBuild);
+    mOSVerInfo.dwMajorVersion = sMajor;
+    mOSVerInfo.dwMinorVersion = sMinor;
+    mOSVerInfo.dwBuildNumber = sBuild;
 
     DWORD sComctl32DllVer = getDllVersion(XPR_STRING_LITERAL("Comctl32.dll"));
     DWORD sShlwapiDllVer  = getDllVersion(XPR_STRING_LITERAL("Shlwapi.dll"));
