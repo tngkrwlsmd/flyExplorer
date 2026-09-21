@@ -15,6 +15,11 @@ namespace
 {
 typedef UINT (WINAPI *GetDpiForWindowProc)(HWND);
 typedef BOOL (WINAPI *SystemParametersInfoForDpiProc)(UINT, UINT, PVOID, UINT, UINT);
+typedef HRESULT (WINAPI *DwmSetWindowAttributeProc)(HWND, DWORD, LPCVOID, DWORD);
+
+#ifndef DWMWA_USE_IMMERSIVE_DARK_MODE
+#define DWMWA_USE_IMMERSIVE_DARK_MODE 20
+#endif
 
 COLORREF blendColor(COLORREF aBase, COLORREF aOverlay, xpr_uint_t aOverlayPercent)
 {
@@ -181,6 +186,39 @@ ThemePalette ModernUI::getPalette(void)
     sPalette.mHighContrast  = isHighContrast();
 
     return sPalette;
+}
+
+xpr_bool_t ModernUI::applyWindowFrameTheme(HWND aHwnd)
+{
+    if (XPR_IS_NULL(aHwnd))
+        return XPR_FALSE;
+
+    // DWMWA_USE_IMMERSIVE_DARK_MODE is documented for Windows 11 build 22000+.
+    // Resolve DWM dynamically so older Windows versions keep the existing
+    // light frame instead of gaining a new load-time dependency.
+    HMODULE sDwmApi = ::LoadLibrary(XPR_STRING_LITERAL("dwmapi.dll"));
+    if (XPR_IS_NULL(sDwmApi))
+        return XPR_FALSE;
+
+    DwmSetWindowAttributeProc sDwmSetWindowAttribute =
+        reinterpret_cast<DwmSetWindowAttributeProc>(
+            ::GetProcAddress(sDwmApi, "DwmSetWindowAttribute"));
+
+    xpr_bool_t sApplied = XPR_FALSE;
+    if (XPR_IS_NOT_NULL(sDwmSetWindowAttribute))
+    {
+        const BOOL sUseDarkFrame = XPR_IS_TRUE(isHighContrast()) ? FALSE : TRUE;
+        const HRESULT sResult = sDwmSetWindowAttribute(
+            aHwnd,
+            DWMWA_USE_IMMERSIVE_DARK_MODE,
+            &sUseDarkFrame,
+            sizeof(sUseDarkFrame));
+
+        sApplied = SUCCEEDED(sResult) ? XPR_TRUE : XPR_FALSE;
+    }
+
+    ::FreeLibrary(sDwmApi);
+    return sApplied;
 }
 } // namespace ui
 } // namespace fxfile

@@ -60,6 +60,34 @@ def validate_translation_units() -> list[str]:
     return errors
 
 
+def validate_window_frame_theme_integration() -> list[str]:
+    errors: list[str] = []
+    modern_ui_header_path = FXFILE_SRC / "gui" / "ModernUI.h"
+    modern_ui_source_path = FXFILE_SRC / "gui" / "ModernUI.cpp"
+    main_frame_path = FXFILE_SRC / "main_frame.cpp"
+
+    try:
+        modern_ui_header = modern_ui_header_path.read_text(encoding="utf-8")
+        modern_ui_source = modern_ui_source_path.read_text(encoding="utf-8")
+        main_frame = main_frame_path.read_text(encoding="utf-8")
+    except OSError as exc:
+        return [f"ModernUI title-bar integration source cannot be read: {exc}"]
+
+    if "applyWindowFrameTheme(HWND aHwnd)" not in modern_ui_header:
+        errors.append("src/fxfile/gui/ModernUI.h: missing window-frame theme helper declaration")
+
+    for token in ("DwmSetWindowAttribute", "DWMWA_USE_IMMERSIVE_DARK_MODE", "dwmapi.dll"):
+        if token not in modern_ui_source:
+            errors.append(f"src/fxfile/gui/ModernUI.cpp: missing title-bar integration token {token}")
+
+    if main_frame.count("ui::ModernUI::applyWindowFrameTheme(m_hWnd);") < 3:
+        errors.append(
+            "src/fxfile/main_frame.cpp: window-frame theme must be applied on create, settings change, and theme change"
+        )
+
+    return errors
+
+
 def validate_modern_ui_registration() -> list[str]:
     errors: list[str] = []
     gyp_path = ROOT / "src" / "fxfile" / "fxfile.gyp"
@@ -94,6 +122,7 @@ def validate_modern_ui_registration() -> list[str]:
 
 def main() -> int:
     errors = validate_translation_units()
+    errors.extend(validate_window_frame_theme_integration())
     errors.extend(validate_modern_ui_registration())
 
     if errors:

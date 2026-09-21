@@ -301,6 +301,8 @@ xpr_sint_t MainFrame::OnCreate(LPCREATESTRUCT aCreateStruct)
     if (super::OnCreate(aCreateStruct) == -1)
         return -1;
 
+    ui::ModernUI::applyWindowFrameTheme(m_hWnd);
+
     if (mDropTarget.Register(this) == XPR_FALSE)
     {
         const xpr_tchar_t *sMsg = gApp.loadString(XPR_STRING_LITERAL("main_frame.msg.warning_not_supported_drag_drop_clipboard"));
@@ -501,6 +503,8 @@ void MainFrame::OnSettingChange(xpr_uint_t aFlags, const xpr_tchar_t *aSection)
 {
     super::OnSettingChange(aFlags, aSection);
 
+    ui::ModernUI::applyWindowFrameTheme(m_hWnd);
+
     RedrawWindow(
         XPR_NULL,
         XPR_NULL,
@@ -532,6 +536,8 @@ LRESULT MainFrame::OnDpiChanged(WPARAM aWParam, LPARAM aLParam)
 
 LRESULT MainFrame::OnThemeChanged(WPARAM aWParam, LPARAM aLParam)
 {
+    ui::ModernUI::applyWindowFrameTheme(m_hWnd);
+
     RedrawWindow(
         XPR_NULL,
         XPR_NULL,

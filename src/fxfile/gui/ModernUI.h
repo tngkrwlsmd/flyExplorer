@@ -51,6 +51,7 @@ public:
     static xpr_bool_t getUIFont(LOGFONT &aLogFont, HWND aHwnd);
     static ThemePalette getPalette(void);
     static xpr_bool_t isHighContrast(void);
+    static xpr_bool_t applyWindowFrameTheme(HWND aHwnd);
 
 private:
     ModernUI(void);
