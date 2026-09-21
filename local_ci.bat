@@ -369,9 +369,9 @@ echo [local-ci] Rebuilding %CI_CONFIGURATION% ^| %CI_PLATFORM%...
 >>"%LOCAL_CI_LOG%" echo [local-ci] Rebuilding %CI_CONFIGURATION% ^| %CI_PLATFORM%...
 
 rem Rebuild is intentional: local CI must not reuse stale object files from a
-rem previous CRT/configuration state. The normal file logger also records every
-rem source file actually compiled.
-"%MSBUILD_EXE%" "fxfile.sln" /m /nologo /verbosity:normal /t:Rebuild /fl "/flp:logfile=%MSBUILD_RAW_LOG%;verbosity=normal" "/p:Configuration=%CI_CONFIGURATION%" "/p:Platform=%CI_PLATFORM%"
+rem previous CRT/configuration state. Console verbosity stays minimal, similar
+rem to Visual Studio build output, while the file logger keeps normal detail.
+"%MSBUILD_EXE%" "fxfile.sln" /m /nologo /verbosity:minimal /t:Rebuild /fl "/flp:logfile=%MSBUILD_RAW_LOG%;verbosity=normal" "/p:Configuration=%CI_CONFIGURATION%" "/p:Platform=%CI_PLATFORM%"
 set "BUILD_RESULT=%errorlevel%"
 
 rem MSBuild's file logger uses the Windows ANSI code page on localized systems.

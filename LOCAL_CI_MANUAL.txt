@@ -35,7 +35,8 @@ PowerShell / Command Prompt에서 프로젝트 루트에서 실행합니다.
 
 실행할 때마다 이전 local CI 로그는 새 로그로 교체됩니다.
 MSBuild의 한국어 출력도 UTF-8로 변환해서 같은 파일에 저장합니다.
-Rebuild가 실제로 컴파일한 .cpp 파일 내역은 빌드 중 콘솔에 표시되고 이 로그에도 저장됩니다.
+Rebuild 중 콘솔에는 Visual Studio 빌드처럼 MainDlg.cpp 같은 컴파일 파일명과 핵심 결과만 표시됩니다.
+상세 MSBuild 내용은 local-ci.log에 저장됩니다.
 
 결과
 ----
