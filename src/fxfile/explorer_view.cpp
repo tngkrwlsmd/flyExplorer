@@ -22,6 +22,7 @@
 
 #include "gui/MemDC.h"
 #include "gui/TabCtrl.h"
+#include "gui/ModernUI.h"
 
 #include "explorer_view_observer.h"
 #include "main_frame.h"
@@ -52,7 +53,7 @@ namespace fxfile
 {
 namespace
 {
-const xpr_sint_t kTabHeight = 27;
+const xpr_sint_t kTabHeight = 30;
 
 //
 // control id
@@ -810,12 +811,15 @@ void ExplorerView::recalcLayout(void)
 
         if (XPR_IS_TRUE(sResizeTabCtrl))
         {
+            const xpr_sint_t sTabHeight =
+                ui::ModernUI::scaleForWindow(kTabHeight, m_hWnd);
+
             CRect sTabRect(sRect);
-            sTabRect.bottom = sTabRect.top + kTabHeight;
+            sTabRect.bottom = sTabRect.top + sTabHeight;
 
             ::DeferWindowPos(sHdwp, *mTabCtrl, XPR_NULL, sTabRect.left, sTabRect.top, sTabRect.Width(), sTabRect.Height(), SWP_NOZORDER);
 
-            sRect.top += kTabHeight;
+            sRect.top += sTabHeight;
         }
     }
 
@@ -901,17 +905,17 @@ void ExplorerView::OnDraw(CDC *aDC)
 // Printer Processing
 //--------------------------------
 // ID_FILE_PRINT
-//       ก้
+//       ยกรฉ
 // super::OnFilePrint
-//       ก้
+//       ยกรฉ
 // super::OnPreparePrinting
-//       ก้
+//       ยกรฉ
 // super::OnBeginPrinting
-//       ก้
+//       ยกรฉ
 // super::OnPrint    <-----+
-//       ก้                 | Yes
+//       ยกรฉ                 | Yes
 // more print page?  ------+
-//       ก้ No
+//       ยกรฉ No
 // super::OnEndPrinting
 //--------------------------------
 

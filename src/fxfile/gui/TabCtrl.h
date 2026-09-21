@@ -112,6 +112,8 @@ protected:
     afx_msg void OnPaint(void);
     afx_msg xpr_bool_t OnEraseBkgnd(CDC *aDC);
     afx_msg void OnSettingChange(xpr_uint_t aFlags, const xpr_tchar_t *aSection);
+    afx_msg LRESULT OnDpiChanged(WPARAM aWParam, LPARAM aLParam);
+    afx_msg LRESULT OnThemeChanged(WPARAM aWParam, LPARAM aLParam);
     afx_msg void OnLButtonDblClk(xpr_uint_t aFlags, CPoint aPoint);
     afx_msg void OnLButtonDown(xpr_uint_t aFlags, CPoint aPoint);
     afx_msg void OnMouseMove(xpr_uint_t aFlags, CPoint aPoint);

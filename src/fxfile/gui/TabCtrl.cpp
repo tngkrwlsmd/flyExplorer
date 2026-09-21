@@ -11,6 +11,7 @@
 #include "TabCtrl.h"
 
 #include "TabCtrlObserver.h"
+#include "ModernUI.h"
 #include "gdi.h"
 #include <math.h>
 
@@ -99,6 +100,8 @@ BEGIN_MESSAGE_MAP(TabCtrl, super)
     ON_WM_PAINT()
     ON_WM_ERASEBKGND()
     ON_WM_SETTINGCHANGE()
+    ON_MESSAGE(WM_DPICHANGED, OnDpiChanged)
+    ON_MESSAGE(WM_THEMECHANGED, OnThemeChanged)
     ON_WM_LBUTTONDOWN()
     ON_WM_LBUTTONUP()
     ON_WM_MOUSEMOVE()
@@ -549,6 +552,22 @@ void TabCtrl::OnSize(xpr_uint_t aType, xpr_sint_t cx, xpr_sint_t cy)
 
 void TabCtrl::recalcLayout(xpr_bool_t aRedraw)
 {
+    const xpr_uint_t sDpi = fxfile::ui::ModernUI::getDpi(m_hWnd);
+    const xpr_sint_t sDefaultTabSize = fxfile::ui::ModernUI::scale(kDefaultTabSize, sDpi);
+    const CRect sTabOffset(
+        fxfile::ui::ModernUI::scale(kTabOffset.left, sDpi),
+        fxfile::ui::ModernUI::scale(kTabOffset.top, sDpi),
+        fxfile::ui::ModernUI::scale(kTabOffset.right, sDpi),
+        fxfile::ui::ModernUI::scale(kTabOffset.bottom, sDpi));
+    const CRect sTextOffset(
+        fxfile::ui::ModernUI::scale(kTextOffset.left, sDpi),
+        fxfile::ui::ModernUI::scale(kTextOffset.top, sDpi),
+        fxfile::ui::ModernUI::scale(kTextOffset.right, sDpi),
+        fxfile::ui::ModernUI::scale(kTextOffset.bottom, sDpi));
+    const xpr_sint_t sIconOffset = fxfile::ui::ModernUI::scale(kIconOffset, sDpi);
+    const xpr_sint_t sBarLineHeight = max(1, fxfile::ui::ModernUI::scale(kBarLineHeight, sDpi));
+    const xpr_sint_t sInactiveTabOffset = fxfile::ui::ModernUI::scale(kInactivedTabOffset, sDpi);
+
     CRect sClientRect;
     GetClientRect(&sClientRect);
 
@@ -558,18 +577,18 @@ void TabCtrl::recalcLayout(xpr_bool_t aRedraw)
     if (sWidth <= 0 || sHeight <= 0)
         return;
 
-    sWidth -= kTabOffset.left;
+    sWidth -= sTabOffset.left;
 
     SIZE sNewButtonIconSize = {0};
     if (XPR_IS_TRUE(mShowNewButton))
     {
         getIconInfo(mNewButtonIcon, &sNewButtonIconSize);
 
-        sWidth -= sNewButtonIconSize.cx + kIconOffset * 2;
+        sWidth -= sNewButtonIconSize.cx + sIconOffset * 2;
     }
     else
     {
-        sWidth -= kTabOffset.right;
+        sWidth -= sTabOffset.right;
     }
 
     xpr_sint_t sIconWidth = 0;
@@ -582,9 +601,9 @@ void TabCtrl::recalcLayout(xpr_bool_t aRedraw)
     }
 
     xpr_size_t  i, j;
-    xpr_sint_t  sLeft   = kTabOffset.left;
-    xpr_sint_t  sTop    = kTabOffset.top;
-    xpr_sint_t  sBottom = sHeight - kBarLineHeight;
+    xpr_sint_t  sLeft   = sTabOffset.left;
+    xpr_sint_t  sTop    = sTabOffset.top;
+    xpr_sint_t  sBottom = sHeight - sBarLineHeight;
     TabItem    *sTabItem;
     CRect       sLastTabRect(0, sTop, 0, sBottom);
     TabDeque::iterator sIterator;
@@ -596,13 +615,13 @@ void TabCtrl::recalcLayout(xpr_bool_t aRedraw)
 
         if (mTabDeque.size() > 1)
         {
-            sAvgTabSize = (xpr_double_t)(sWidth - kDefaultTabSize) / (xpr_double_t)(mTabDeque.size() - 1);
-            if (sAvgTabSize >= kDefaultTabSize)
-                sAvgTabSize = kDefaultTabSize;
+            sAvgTabSize = (xpr_double_t)(sWidth - sDefaultTabSize) / (xpr_double_t)(mTabDeque.size() - 1);
+            if (sAvgTabSize >= sDefaultTabSize)
+                sAvgTabSize = sDefaultTabSize;
         }
         else
         {
-            sAvgTabSize = min(sWidth, kDefaultTabSize);
+            sAvgTabSize = min(sWidth, sDefaultTabSize);
         }
 
         sIterator = mTabDeque.begin();
@@ -615,11 +634,11 @@ void TabCtrl::recalcLayout(xpr_bool_t aRedraw)
             if (i == mCurTab)
             {
                 sTabItem->mTabRect.left   = sTabLeft;
-                sTabItem->mTabRect.right  = sTabLeft + kDefaultTabSize;
+                sTabItem->mTabRect.right  = sTabLeft + sDefaultTabSize;
                 sTabItem->mTabRect.top    = sTop;
                 sTabItem->mTabRect.bottom = sBottom;
 
-                sLeft += kDefaultTabSize;
+                sLeft += sDefaultTabSize;
             }
             else
             {
@@ -674,11 +693,11 @@ void TabCtrl::recalcLayout(xpr_bool_t aRedraw)
                 sTabTextRect,
                 DT_CALCRECT | DT_LEFT | DT_VCENTER | DT_SINGLELINE);
 
-            sTabTextRect.right += kTextOffset.left + kTextOffset.right;
+            sTabTextRect.right += sTextOffset.left + sTextOffset.right;
 
             if (XPR_IS_RANGE(0, sTabItem->mImageIndex, sImageListCount - 1))
             {
-                sTabTextRect.right += sIconWidth + kIconOffset;
+                sTabTextRect.right += sIconWidth + sIconOffset;
             }
 
             sDC.SelectObject(sOldFont);
@@ -709,7 +728,7 @@ void TabCtrl::recalcLayout(xpr_bool_t aRedraw)
 
                     XPR_ASSERT(sTabItem != XPR_NULL);
 
-                    sCurTabAutoFitWidth = min(sCurTabAutoFitWidth, kDefaultTabSize);
+                    sCurTabAutoFitWidth = min(sCurTabAutoFitWidth, sDefaultTabSize);
 
                     sTabItem->mTabRect.left = sCurTabAutoFitWidth;
 
@@ -762,8 +781,8 @@ void TabCtrl::recalcLayout(xpr_bool_t aRedraw)
     // calcuate new tab button area
     if (XPR_IS_TRUE(mShowNewButton))
     {
-        mNewButtonRect.left   = sLastTabRect.right  + kIconOffset;
-        mNewButtonRect.top    = sLastTabRect.top    + (sLastTabRect.Height() + kInactivedTabOffset - sNewButtonIconSize.cy) / 2;
+        mNewButtonRect.left   = sLastTabRect.right  + sIconOffset;
+        mNewButtonRect.top    = sLastTabRect.top    + (sLastTabRect.Height() + sInactiveTabOffset - sNewButtonIconSize.cy) / 2;
         mNewButtonRect.right  = mNewButtonRect.left + sNewButtonIconSize.cx;
         mNewButtonRect.bottom = mNewButtonRect.top  + sNewButtonIconSize.cy;
     }
@@ -774,222 +793,152 @@ void TabCtrl::recalcLayout(xpr_bool_t aRedraw)
 
 void TabCtrl::OnPaint(void)
 {
-    CPaintDC sPaintDC(this); // device context for painting
+    CPaintDC sPaintDC(this);
 
     CRect sClientRect;
     GetClientRect(&sClientRect);
 
-    COLORREF sFaceColor   = ::GetSysColor(COLOR_3DFACE);
-    COLORREF sShadowColor = ::GetSysColor(COLOR_3DSHADOW);
-    COLORREF sTextColor   = ::GetSysColor(COLOR_BTNTEXT);
+    const fxfile::ui::ThemePalette sPalette = fxfile::ui::ModernUI::getPalette();
+    const xpr_uint_t sDpi = fxfile::ui::ModernUI::getDpi(m_hWnd);
+    const CRect sTextOffset(
+        fxfile::ui::ModernUI::scale(kTextOffset.left, sDpi),
+        fxfile::ui::ModernUI::scale(kTextOffset.top, sDpi),
+        fxfile::ui::ModernUI::scale(kTextOffset.right, sDpi),
+        fxfile::ui::ModernUI::scale(kTextOffset.bottom, sDpi));
+    const xpr_sint_t sIconOffset = fxfile::ui::ModernUI::scale(kIconOffset, sDpi);
+    const xpr_sint_t sAccentHeight = max(2, fxfile::ui::ModernUI::scale(2, sDpi));
 
     CDC sMemDC;
     sMemDC.CreateCompatibleDC(&sPaintDC);
     sMemDC.SetBkMode(TRANSPARENT);
-    sMemDC.SetTextColor(sTextColor);
 
     CBitmap sBitmap;
     sBitmap.CreateCompatibleBitmap(&sPaintDC, sClientRect.Width(), sClientRect.Height());
-
     CBitmap *sOldBitmap = sMemDC.SelectObject(&sBitmap);
 
-    // draw background
-    sMemDC.FillSolidRect(&sClientRect, RGB(255,255,255));
+    sMemDC.FillSolidRect(&sClientRect, sPalette.mSurface);
 
-    // Alpha Blend
-    {
-        BLENDFUNCTION sBlendFunction = {0};
-        sBlendFunction.BlendOp             = AC_SRC_OVER;
-        sBlendFunction.BlendFlags          = 0;
-        sBlendFunction.SourceConstantAlpha = 100;
-        sBlendFunction.AlphaFormat         = 0;
-
-        CDC sTempDC;
-        sTempDC.CreateCompatibleDC(&sMemDC);
-
-        CBitmap sBitmap;
-        sBitmap.CreateCompatibleBitmap(&sTempDC, sClientRect.Width(), sClientRect.Height());
-
-        CBitmap *sOldBitmap = sTempDC.SelectObject(&sBitmap);
-
-        sTempDC.FillSolidRect(&sClientRect, sFaceColor);
-
-        ::AlphaBlend(
-            sMemDC.m_hDC,
-            sClientRect.left, sClientRect.top, sClientRect.Width(), sClientRect.Height(),
-            sTempDC.m_hDC,
-            0, 0, sClientRect.Width(), sClientRect.Height(),
-            sBlendFunction);
-
-        sTempDC.SelectObject(sOldBitmap);
-    }
-
-    // draw tab button
-    xpr_sint_t  i;
-    TabItem    *sTabItem;
-    CFont      *sOldFont;
-    CRect       sTabRect, sCurTabButtonRect;
-    CPen        sPen(PS_SOLID, 1, sShadowColor);
-    CPen       *sOldPen;
-    xpr_sint_t  sIconWidth = 0, sIconHeight = 0, sImageListCount = 0;
-    TabDeque::iterator sIterator;
-
+    xpr_sint_t sIconWidth = 0;
+    xpr_sint_t sIconHeight = 0;
+    xpr_sint_t sImageListCount = 0;
     if (XPR_IS_NOT_NULL(mImageList))
     {
         ImageList_GetIconSize(mImageList->m_hImageList, &sIconWidth, &sIconHeight);
         sImageListCount = mImageList->GetImageCount();
     }
 
-    sOldPen = sMemDC.SelectObject(&sPen);
-
-    sIterator = mTabDeque.begin();
-    for (i = 0; sIterator != mTabDeque.end(); ++sIterator, ++i)
+    TabDeque::iterator sIterator = mTabDeque.begin();
+    for (xpr_sint_t i = 0; sIterator != mTabDeque.end(); ++sIterator, ++i)
     {
-        sTabItem = *sIterator;
+        TabItem *sTabItem = *sIterator;
         if (XPR_IS_NULL(sTabItem))
             continue;
 
-        sTabRect = sTabItem->mTabRect;
+        CRect sTabButtonRect(sTabItem->mTabRect);
+        const xpr_bool_t sSelected = (i == mCurTab) ? XPR_TRUE : XPR_FALSE;
+        const xpr_bool_t sHovered = (i == mTabHover) ? XPR_TRUE : XPR_FALSE;
 
-        CRect sTabButtonRect(sTabRect);
-        if (i == mCurTab || i == mTabHover)
+        COLORREF sBackColor = sPalette.mSurface;
+        COLORREF sTextColor = sPalette.mText;
+
+        if (XPR_IS_TRUE(sPalette.mHighContrast) && XPR_IS_TRUE(sSelected))
         {
-            if (mXPTheme.IsAppThemed() == XPR_TRUE)
-            {
-                sTabButtonRect.InflateRect(0, 0, 1, 2);
-
-                if (i == mCurTab)
-                {
-                    mXPTheme.DrawBackground(sMemDC, TABP_TABITEM, TIS_SELECTED, &sTabButtonRect, XPR_NULL);
-                }
-                else
-                {
-                    mXPTheme.DrawBackground(sMemDC, TABP_TABITEM, TIS_HOT, &sTabButtonRect, XPR_NULL);
-                }
-            }
-            else
-            {
-                sTabButtonRect.InflateRect(1, 0, 0, 2);
-
-                sMemDC.FillSolidRect(sTabButtonRect, ::GetSysColor(COLOR_WINDOW));
-
-                sMemDC.MoveTo(sTabButtonRect.left,  sTabButtonRect.bottom);
-                sMemDC.LineTo(sTabButtonRect.left,  sTabButtonRect.top);
-                sMemDC.LineTo(sTabButtonRect.right, sTabButtonRect.top);
-                sMemDC.LineTo(sTabButtonRect.right, sTabButtonRect.bottom);
-            }
-
-            if (i == mCurTab)
-            {
-                sCurTabButtonRect = sTabButtonRect;
-            }
+            sBackColor = sPalette.mSelection;
+            sTextColor = sPalette.mSelectionText;
         }
-        else
+        else if (XPR_IS_TRUE(sSelected))
         {
-            if (mXPTheme.IsAppThemed() == XPR_TRUE)
-            {
-                sTabButtonRect.DeflateRect(0, kInactivedTabOffset, -1, 0);
+            sBackColor = sPalette.mWindow;
+        }
+        else if (XPR_IS_TRUE(sHovered))
+        {
+            sBackColor = sPalette.mHover;
+        }
 
-                mXPTheme.DrawBackground(sMemDC, TABP_TABITEM, TIS_NORMAL, &sTabButtonRect, XPR_NULL);
-            }
-            else
-            {
-                sTabButtonRect.DeflateRect(0, kInactivedTabOffset, -1, 0);
+        sMemDC.FillSolidRect(&sTabButtonRect, sBackColor);
 
-                sMemDC.FillSolidRect(sTabButtonRect, sFaceColor);
-
-                sMemDC.MoveTo(sTabButtonRect.left,  sTabButtonRect.bottom);
-                sMemDC.LineTo(sTabButtonRect.left,  sTabButtonRect.top);
-                sMemDC.LineTo(sTabButtonRect.right, sTabButtonRect.top);
-                sMemDC.LineTo(sTabButtonRect.right, sTabButtonRect.bottom);
-            }
+        if (XPR_IS_TRUE(sSelected))
+        {
+            CRect sAccentRect(sTabButtonRect);
+            sAccentRect.top = max(sAccentRect.top, sAccentRect.bottom - sAccentHeight);
+            sMemDC.FillSolidRect(&sAccentRect, sPalette.mSelection);
         }
 
         CRect sTabTextRect(sTabButtonRect);
-        sTabTextRect.DeflateRect(kTextOffset);
+        sTabTextRect.DeflateRect(sTextOffset);
 
-        if (XPR_IS_NOT_NULL(mImageList))
+        if (XPR_IS_NOT_NULL(mImageList) &&
+            XPR_IS_RANGE(0, sTabItem->mImageIndex, sImageListCount - 1))
         {
-            if (XPR_IS_RANGE(0, sTabItem->mImageIndex, sImageListCount - 1))
-            {
-                CRect sTabIconRect(sTabTextRect);
-                sTabIconRect.right   = sTabIconRect.left + sIconWidth;
-                sTabIconRect.top     = sTabIconRect.top + (sTabIconRect.Height() - sIconHeight) / 2;
-                sTabIconRect.bottom  = sTabIconRect.top + sIconHeight;
+            CRect sTabIconRect(sTabTextRect);
+            sTabIconRect.right = sTabIconRect.left + sIconWidth;
+            sTabIconRect.top += (sTabIconRect.Height() - sIconHeight) / 2;
+            sTabIconRect.bottom = sTabIconRect.top + sIconHeight;
 
-                mImageList->Draw(&sMemDC,
-                                 sTabItem->mImageIndex,
-                                 sTabIconRect.TopLeft(),
-                                 ILD_NORMAL | ILD_TRANSPARENT);
+            mImageList->Draw(
+                &sMemDC,
+                sTabItem->mImageIndex,
+                sTabIconRect.TopLeft(),
+                ILD_NORMAL | ILD_TRANSPARENT);
 
-                sTabTextRect.left += sIconWidth + kIconOffset;
-            }
+            sTabTextRect.left += sIconWidth + sIconOffset;
         }
 
-        if (i == mCurTab)
-            sOldFont = sMemDC.SelectObject(&mBoldFont);
-        else
-            sOldFont = sMemDC.SelectObject(&mFont);
-
+        CFont *sOldFont = sMemDC.SelectObject(
+            XPR_IS_TRUE(sSelected) ? &mBoldFont : &mFont);
+        sMemDC.SetTextColor(sTextColor);
         sMemDC.DrawText(
             sTabItem->mText.c_str(),
             (xpr_sint_t)sTabItem->mText.length(),
             sTabTextRect,
             DT_LEFT | DT_VCENTER | DT_SINGLELINE | DT_END_ELLIPSIS);
-
         sMemDC.SelectObject(sOldFont);
     }
 
-    // draw new tab button
     if (XPR_IS_TRUE(mShowNewButton))
     {
-        CPoint sNewButtonPoint(mNewButtonRect.TopLeft());
-        if (XPR_IS_TRUE(mNewButtonPressed))
-        {
-            if (XPR_IS_TRUE(mNewButtonPressedLeave))
-            {
-                --sNewButtonPoint.x;
-                --sNewButtonPoint.y;
-            }
-        }
-        else if (XPR_IS_TRUE(mNewButtonHover))
-        {
-            --sNewButtonPoint.x;
-            --sNewButtonPoint.y;
-        }
+        CRect sNewButtonBackRect(mNewButtonRect);
+        sNewButtonBackRect.InflateRect(sIconOffset, sIconOffset / 2);
+
+        if (XPR_IS_TRUE(mNewButtonHover))
+            sMemDC.FillSolidRect(&sNewButtonBackRect, sPalette.mHover);
 
         SIZE sNewButtonIconSize = {0};
         getIconInfo(mNewButtonIcon, &sNewButtonIconSize);
 
-        ::DrawIconEx(sMemDC,
-                     sNewButtonPoint.x,
-                     sNewButtonPoint.y,
-                     mNewButtonIcon,
-                     sNewButtonIconSize.cx,
-                     sNewButtonIconSize.cy,
-                     0,
-                     XPR_NULL,
-                     DI_NORMAL);
+        CPoint sNewButtonPoint(
+            mNewButtonRect.left,
+            mNewButtonRect.top);
+
+        if (XPR_IS_TRUE(mNewButtonPressed) && XPR_IS_FALSE(mNewButtonPressedLeave))
+        {
+            sNewButtonPoint.x += 1;
+            sNewButtonPoint.y += 1;
+        }
+
+        ::DrawIconEx(
+            sMemDC,
+            sNewButtonPoint.x,
+            sNewButtonPoint.y,
+            mNewButtonIcon,
+            sNewButtonIconSize.cx,
+            sNewButtonIconSize.cy,
+            0,
+            XPR_NULL,
+            DI_NORMAL);
     }
 
-    // draw underline
-    CRect sUnderlineRect(sClientRect);
-    if (mCurTab != InvalidTab)
-    {
-        sMemDC.MoveTo(sUnderlineRect.left,     sUnderlineRect.bottom - 1);
-        sMemDC.LineTo(sCurTabButtonRect.left,  sUnderlineRect.bottom - 1);
-        sMemDC.MoveTo(sCurTabButtonRect.right, sUnderlineRect.bottom - 1);
-        sMemDC.LineTo(sUnderlineRect.right,    sUnderlineRect.bottom - 1);
-    }
-    else
-    {
-        sMemDC.MoveTo(sUnderlineRect.left,  sUnderlineRect.bottom - 1);
-        sMemDC.LineTo(sUnderlineRect.right, sUnderlineRect.bottom - 1);
-    }
+    const xpr_sint_t sSeparatorHeight = max(1, fxfile::ui::ModernUI::scale(1, sDpi));
+    CRect sSeparatorRect(sClientRect);
+    sSeparatorRect.top = max(sSeparatorRect.top, sSeparatorRect.bottom - sSeparatorHeight);
+    sMemDC.FillSolidRect(&sSeparatorRect, sPalette.mSeparator);
 
-    sMemDC.SelectObject(sOldPen);
-
-    sPaintDC.BitBlt(0, 0, sClientRect.Width(), sClientRect.Height(), &sMemDC, 0, 0, SRCCOPY);
+    sPaintDC.BitBlt(
+        0, 0,
+        sClientRect.Width(), sClientRect.Height(),
+        &sMemDC,
+        0, 0,
+        SRCCOPY);
 
     sMemDC.SelectObject(sOldBitmap);
 }
@@ -1002,16 +951,14 @@ xpr_bool_t TabCtrl::OnEraseBkgnd(CDC *aDC)
 
 void TabCtrl::createFont(void)
 {
-    NONCLIENTMETRICS sNonClientMetrics = {0};
-    sNonClientMetrics.cbSize = sizeof(sNonClientMetrics);
-    ::SystemParametersInfo(SPI_GETNONCLIENTMETRICS, sizeof(sNonClientMetrics), &sNonClientMetrics, 0);
-
-    LOGFONT sLogFont = sNonClientMetrics.lfMenuFont;
+    LOGFONT sLogFont = {0};
+    if (XPR_IS_FALSE(fxfile::ui::ModernUI::getUIFont(sLogFont, GetSafeHwnd())))
+        return;
 
     mFont.CreateFontIndirect(&sLogFont);
     SetFont(&mFont, XPR_TRUE);
 
-    sLogFont.lfWeight = FW_BOLD;
+    sLogFont.lfWeight = FW_SEMIBOLD;
     mBoldFont.CreateFontIndirect(&sLogFont);
 }
 
@@ -1030,10 +977,22 @@ void TabCtrl::destroyFont(void)
 void TabCtrl::OnSettingChange(xpr_uint_t aFlags, const xpr_tchar_t *aSection)
 {
     recreateFont();
-
-    Invalidate();
+    recalcLayout();
 
     super::OnSettingChange(aFlags, aSection);
+}
+
+LRESULT TabCtrl::OnDpiChanged(WPARAM aWParam, LPARAM aLParam)
+{
+    recreateFont();
+    recalcLayout();
+    return 0;
+}
+
+LRESULT TabCtrl::OnThemeChanged(WPARAM aWParam, LPARAM aLParam)
+{
+    Invalidate(XPR_FALSE);
+    return 0;
 }
 
 void TabCtrl::OnLButtonDblClk(xpr_uint_t aFlags, CPoint aPoint)
@@ -1163,7 +1122,7 @@ void TabCtrl::OnMouseMove(xpr_uint_t aFlags, CPoint aPoint)
             xpr_sint_t sYDist = mDragBegunPoint.y - aPoint.y;
             xpr_sint_t sRoundDist = (xpr_sint_t)sqrt((xpr_float_t)(sXDist * sXDist + sYDist * sYDist));
 
-            if (sRoundDist > kDragDist)
+            if (sRoundDist > fxfile::ui::ModernUI::scaleForWindow(kDragDist, m_hWnd))
             {
                 mDragTab = mDragBegunTab;
             }
