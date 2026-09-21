@@ -107,9 +107,10 @@ vendored policy/readiness/conformance checks and Debug-x64 regression build.
 The `policy`/`full` profiles create or reuse
 `%TEMP%\\flyExplorer-policy-venv` and install the locked policy dependencies
 there. This directory is an isolated Python virtual environment, not a log
-directory. Local CI logs are written under `logs\\local-ci` in the repository
-root; `logs/` is ignored by Git. Policy, source-preflight, bootstrap, MSBuild,
-runtime-smoke, and package-validation stages each write their own log files.
+directory. Local CI writes one consolidated log to `logs\\local-ci\\local-ci.log` in the
+repository root; `logs/` is ignored by Git. Each run replaces the previous
+local CI log, and temporary capture files are deleted when the run finishes.
+See `LOCAL_CI_MANUAL.txt` for the short profile-by-profile usage guide.
 `local_ci.bat` forces redirected Python output to UTF-8 so readiness and
 conformance messages containing Unicode punctuation do not fail on Korean or
 other non-UTF-8 Windows ANSI code pages.

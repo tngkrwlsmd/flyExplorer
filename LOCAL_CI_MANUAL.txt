@@ -1,0 +1,54 @@
+flyExplorer local_ci.bat 간단 사용법
+================================
+
+PowerShell / Command Prompt에서 프로젝트 루트에서 실행합니다.
+
+.\local_ci.bat
+  = 기본 검증. .\local_ci.bat x64와 같습니다.
+
+.\local_ci.bat quick
+  = 가장 빠른 정적 Source Invariant 검증만 수행합니다.
+
+.\local_ci.bat policy
+  = Policy / Readiness / Conformance 검증을 수행합니다.
+
+.\local_ci.bat x64
+  = Release x64 빌드 + Warning 검사 + 산출물 검사 + Runtime Smoke를 수행합니다.
+  = 평소 개발 후 가장 자주 사용하면 되는 검증입니다.
+
+.\local_ci.bat x86
+  = x86 Unicode + x86 Multibyte 빌드와 호환성 검증을 수행합니다.
+
+.\local_ci.bat release
+  = x64 + x86 전체 Release 빌드 후 Portable / NSIS 패키지까지 검증합니다.
+
+.\local_ci.bat full
+  = 가능한 전체 로컬 CI 검증을 수행합니다.
+  = Policy + Release x64 + Debug x64 + x86 Unicode/Multibyte + Runtime Smoke + Package 검증입니다.
+
+로그
+----
+모든 실행 로그는 하나의 파일로 저장됩니다.
+
+  logs\local-ci\local-ci.log
+
+실행할 때마다 이전 local CI 로그는 새 로그로 교체됩니다.
+
+결과
+----
+PASS
+  = 실행한 검증이 모두 통과했습니다.
+
+PASS WITH SKIPS
+  = 빌드 검증은 통과했지만 기존 사용자 Registry 상태 보호 등의 이유로 일부 Runtime Smoke를 건너뛰었습니다.
+  = 건너뛴 Runtime Smoke는 NOT TESTED입니다.
+
+FAIL
+  = 검증 중 하나가 실패했습니다. logs\local-ci\local-ci.log를 확인하세요.
+
+참고
+----
+policy/full 실행 시 사용하는 Python 가상환경:
+  %TEMP%\flyExplorer-policy-venv
+
+이 폴더는 로그가 아니며 삭제해도 다음 실행 시 다시 생성됩니다.
