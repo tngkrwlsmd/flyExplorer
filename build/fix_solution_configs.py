@@ -73,47 +73,57 @@ def set_xpr_target_names(project_path: Path) -> int:
         namespace = root.tag[1:].split("}", 1)[0]
         ET.register_namespace("", namespace)
 
-    changed = 0
-    seen: set[str] = set()
-
-    for group in root.findall(qualify("PropertyGroup", namespace)):
-        condition = group.get("Condition", "")
-        out_dir = group.find(qualify("OutDir", namespace))
-        if not condition or out_dir is None:
+    configurations: list[tuple[str, str]] = []
+    for item_group in root.findall(qualify("ItemGroup", namespace)):
+        if item_group.get("Label") != "ProjectConfigurations":
             continue
 
-        normalized_condition = condition.lower()
-        matched_configuration = None
-        for configuration in XPR_TARGET_NAMES:
-            if configuration in normalized_condition:
-                matched_configuration = configuration
-                break
+        for project_configuration in item_group.findall(
+            qualify("ProjectConfiguration", namespace)
+        ):
+            include = project_configuration.get("Include", "")
+            if "|" not in include:
+                continue
+            configuration, platform = include.split("|", 1)
+            if configuration.lower() in XPR_TARGET_NAMES:
+                configurations.append((configuration, platform))
 
-        if matched_configuration is None:
-            continue
-
-        target_name = group.find(qualify("TargetName", namespace))
-        expected = XPR_TARGET_NAMES[matched_configuration]
-        if target_name is None:
-            target_name = ET.Element(qualify("TargetName", namespace))
-            target_name.text = expected
-            group.append(target_name)
-            changed += 1
-        elif target_name.text != expected:
-            target_name.text = expected
-            changed += 1
-
-        seen.add(matched_configuration)
-
+    seen = {configuration.lower() for configuration, _ in configurations}
     missing = sorted(set(XPR_TARGET_NAMES) - seen)
     if missing:
         raise ValueError(
-            "Missing xpr configuration property groups: " + ", ".join(missing)
+            "Missing xpr project configurations: " + ", ".join(missing)
         )
+
+    insert_at = len(root)
+    for index, element in enumerate(list(root)):
+        if element.tag != qualify("Import", namespace):
+            continue
+        project = element.get("Project", "")
+        if "Microsoft.Cpp.targets" in project:
+            insert_at = index
+            break
+
+    changed = 0
+    for configuration, platform in configurations:
+        property_group = ET.Element(
+            qualify("PropertyGroup", namespace),
+            {
+                "Condition": (
+                    f"'$(Configuration)|$(Platform)'=="
+                    f"'{configuration}|{platform}'"
+                )
+            },
+        )
+        target_name = ET.SubElement(
+            property_group, qualify("TargetName", namespace)
+        )
+        target_name.text = XPR_TARGET_NAMES[configuration.lower()]
+        root.insert(insert_at + changed, property_group)
+        changed += 1
 
     tree.write(project_path, encoding="utf-8", xml_declaration=True)
     return changed
-
 
 def set_static_mfc(project_path: Path) -> int:
     if not project_path.is_file():
