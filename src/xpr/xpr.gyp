@@ -31,19 +31,15 @@
                 {
                     'IntermediateDirectory': '../../obj/xpr/dbg-x86-unicode',
                     'OutputDirectory':       '../../bin/x86-unicode',
-                    'TargetName':            'lib$(ProjectName)w_dbg',
                 },
                 
                 'msvs_settings':
                 {
-                    'VCCLCompilerTool':
-                    {
-                        'UsePrecompiledHeader': 3,
-                    },
                 
                     'VCLinkerTool': 
                     {
                         'OutputFile': '$(OutDir)\\lib$(ProjectName)w_dbg.dll',
+                        'ImportLibrary': '$(OutDir)\\lib$(ProjectName)w_dbg.lib',
                         'AdditionalLibraryDirectories':
                         [
                             '../../lib/libxml2/lib',
@@ -68,19 +64,15 @@
                 {
                     'IntermediateDirectory': '../../obj/xpr/rel-x86-unicode',
                     'OutputDirectory':       '../../bin/x86-unicode',
-                    'TargetName':            'lib$(ProjectName)w',
                 },
                 
                 'msvs_settings':
                 {
-                    'VCCLCompilerTool':
-                    {
-                        'UsePrecompiledHeader': 3,
-                    },
                     
                     'VCLinkerTool': 
                     {
                         'OutputFile': '$(OutDir)\\lib$(ProjectName)w.dll',
+                        'ImportLibrary': '$(OutDir)\\lib$(ProjectName)w.lib',
                         'AdditionalLibraryDirectories':
                         [
                             '../../lib/libxml2/lib',
@@ -105,19 +97,15 @@
                 {
                     'IntermediateDirectory': '../../obj/xpr/dbg-x86-multibyte',
                     'OutputDirectory':       '../../bin/x86-multibyte',
-                    'TargetName':            'lib$(ProjectName)_dbg',
                 },
                 
                 'msvs_settings':
                 {
-                    'VCCLCompilerTool':
-                    {
-                        'UsePrecompiledHeader': 3,
-                    },
                 
                     'VCLinkerTool': 
                     {
                         'OutputFile': '$(OutDir)\\lib$(ProjectName)_dbg.dll',
+                        'ImportLibrary': '$(OutDir)\\lib$(ProjectName)_dbg.lib',
                         'AdditionalLibraryDirectories':
                         [
                             '../../lib/libxml2/lib',
@@ -133,8 +121,8 @@
                     },
                 },
 
-                'msvs_postbuild': 'xcopy $(TargetDir)$(TargetName).lib $(TargetDir).. /c /r /y\r\n'
-                                  'xcopy $(TargetDir)$(TargetFileName) $(TargetDir).. /c /r /y\r\n',
+                'msvs_postbuild': 'xcopy "$(TargetDir)lib$(ProjectName)_dbg.lib" "$(TargetDir).." /c /r /y /i\r\n'
+                                  'xcopy "$(TargetDir)lib$(ProjectName)_dbg.dll" "$(TargetDir).." /c /r /y /i\r\n',
             },
             
             'Release-x86-Multibyte':
@@ -145,19 +133,15 @@
                 {
                     'IntermediateDirectory': '../../obj/xpr/rel-x86-multibyte',
                     'OutputDirectory':       '../../bin/x86-multibyte',
-                    'TargetName':            'lib$(ProjectName)',
                 },
                 
                 'msvs_settings':
                 {
-                    'VCCLCompilerTool':
-                    {
-                        'UsePrecompiledHeader': 3,
-                    },
                     
                     'VCLinkerTool': 
                     {
                         'OutputFile': '$(OutDir)\\lib$(ProjectName).dll',
+                        'ImportLibrary': '$(OutDir)\\lib$(ProjectName).lib',
                         'AdditionalLibraryDirectories':
                         [
                             '../../lib/libxml2/lib',
@@ -173,8 +157,8 @@
                     },
                 },
 
-                'msvs_postbuild': 'xcopy $(TargetDir)$(TargetName).lib $(TargetDir).. /c /r /y\r\n'
-                                  'xcopy $(TargetDir)$(TargetFileName) $(TargetDir).. /c /r /y\r\n',
+                'msvs_postbuild': 'xcopy "$(TargetDir)lib$(ProjectName).lib" "$(TargetDir).." /c /r /y /i\r\n'
+                                  'xcopy "$(TargetDir)lib$(ProjectName).dll" "$(TargetDir).." /c /r /y /i\r\n',
             },
             
             'conditions':
@@ -189,19 +173,15 @@
                             {
                                 'IntermediateDirectory': '../../obj/xpr/dbg-x64',
                                 'OutputDirectory':       '../../bin/x64',
-                                'TargetName':            'lib$(ProjectName)w_dbg',
                             },
                             
                             'msvs_settings':
                             {
-                                'VCCLCompilerTool':
-                                {
-                                    'UsePrecompiledHeader': 3,
-                                },
                                 
                                 'VCLinkerTool': 
                                 {
                                     'OutputFile': '$(OutDir)\\lib$(ProjectName)w_dbg.dll',
+                        'ImportLibrary': '$(OutDir)\\lib$(ProjectName)w_dbg.lib',
                                     'AdditionalLibraryDirectories':
                                     [
                                         '../../lib/libxml2/lib64',
@@ -226,19 +206,15 @@
                             {
                                 'IntermediateDirectory': '../../obj/xpr/rel-x64',
                                 'OutputDirectory':       '../../bin/x64',
-                                'TargetName':            'lib$(ProjectName)w',
                             },
                             
                             'msvs_settings':
                             {
-                                'VCCLCompilerTool':
-                                {
-                                    'UsePrecompiledHeader': 3,
-                                },
                                 
                                 'VCLinkerTool': 
                                 {
                                     'OutputFile': '$(OutDir)\\lib$(ProjectName)w.dll',
+                        'ImportLibrary': '$(OutDir)\\lib$(ProjectName)w.lib',
                                     'AdditionalLibraryDirectories':
                                     [
                                         '../../lib/libxml2/lib64',

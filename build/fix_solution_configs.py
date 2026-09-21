@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Fix Visual Studio solution mappings for fxfile's Win32-only helper projects."""
+"""Fix Visual Studio solution mappings for fxfile's mixed-architecture build."""
 
 from __future__ import annotations
 
@@ -8,11 +8,13 @@ import re
 import sys
 from pathlib import Path
 
-HELPER_PROJECTS = {
+WIN32_HELPER_PROJECTS = {
     r"src\fxfile-upchecker\fxfile-upchecker.vcxproj",
     r"src\fxfile-launcher\fxfile-launcher.vcxproj",
     r"src\fxfile-keyhook\fxfile-keyhook.vcxproj",
 }
+UPCHECKER_PROJECT = r"src\fxfile-upchecker\fxfile-upchecker.vcxproj"
+AGGREGATE_PROJECT = r"fxfile.vcxproj"
 
 PROJECT_RE = re.compile(
     r'^Project\("[^"]+"\)\s*=\s*"[^"]+",\s*"([^"]+)",\s*"(\{[0-9A-Fa-f-]+\})"\s*$'
@@ -35,6 +37,10 @@ def helper_configuration(solution_configuration: str) -> str | None:
     return None
 
 
+def is_x64_configuration(solution_configuration: str) -> bool:
+    return "|x64" in solution_configuration.lower()
+
+
 def main() -> int:
     if len(sys.argv) != 2:
         print("Usage: fix_solution_configs.py <solution.sln>", file=sys.stderr)
@@ -50,44 +56,74 @@ def main() -> int:
     text = raw.decode("utf-8-sig")
     lines = text.splitlines(keepends=True)
 
-    expected_paths = {normalize_project_path(path) for path in HELPER_PROJECTS}
-    helper_guids: dict[str, str] = {}
+    helper_paths = {normalize_project_path(path) for path in WIN32_HELPER_PROJECTS}
+    upchecker_path = normalize_project_path(UPCHECKER_PROJECT)
+    aggregate_path = normalize_project_path(AGGREGATE_PROJECT)
 
+    project_guids: dict[str, str] = {}
     for line in lines:
         match = PROJECT_RE.match(line.rstrip("\r\n"))
-        if not match:
-            continue
+        if match:
+            project_guids[normalize_project_path(match.group(1))] = match.group(2).upper()
 
-        project_path = normalize_project_path(match.group(1))
-        if project_path in expected_paths:
-            helper_guids[match.group(2).upper()] = match.group(1)
-
-    found_paths = {normalize_project_path(path) for path in helper_guids.values()}
-    missing = sorted(expected_paths - found_paths)
+    missing = sorted((helper_paths | {aggregate_path}) - set(project_guids))
     if missing:
-        print("ERROR: Expected Win32 helper projects were not found in the solution:", file=sys.stderr)
+        print("ERROR: Expected projects were not found in the solution:", file=sys.stderr)
         for path in missing:
             print(f"  {path}", file=sys.stderr)
         return 1
 
+    helper_guids = {project_guids[path] for path in helper_paths}
+    upchecker_guid = project_guids[upchecker_path]
+    aggregate_guid = project_guids[aggregate_path]
+
     patched_lines: list[str] = []
-    patched_count = 0
+    mapped_count = 0
+    skipped_upchecker = 0
+    skipped_aggregate = 0
 
     for line in lines:
         match = CONFIG_RE.match(line)
-        if match and match.group(2).upper() in helper_guids:
-            mapped = helper_configuration(match.group(3))
+        if not match:
+            patched_lines.append(line)
+            continue
+
+        guid = match.group(2).upper()
+        solution_configuration = match.group(3)
+        entry_type = match.group(4)
+
+        # The root fxfile.vcxproj is only an umbrella project. Individual
+        # projects are already present in the solution, so building the
+        # umbrella again only duplicates dependency traversal.
+        if guid == aggregate_guid and entry_type == "Build.0":
+            skipped_aggregate += 1
+            continue
+
+        if guid in helper_guids:
+            # The updater links against the x86 multibyte xpr import library.
+            # A single solution configuration cannot build xpr as x64 and x86
+            # at the same time, so defer the updater during x64 builds. It is
+            # built by Release/Debug-x86-Multibyte configurations instead.
+            if (
+                guid == upchecker_guid
+                and entry_type == "Build.0"
+                and is_x64_configuration(solution_configuration)
+            ):
+                skipped_upchecker += 1
+                continue
+
+            mapped = helper_configuration(solution_configuration)
             if mapped:
                 newline = match.group(6) or ""
                 line = (
-                    f"{match.group(1)}{match.group(2)}.{match.group(3)}."
-                    f"{match.group(4)} = {mapped}{newline}"
+                    f"{match.group(1)}{match.group(2)}.{solution_configuration}."
+                    f"{entry_type} = {mapped}{newline}"
                 )
-                patched_count += 1
+                mapped_count += 1
 
         patched_lines.append(line)
 
-    if patched_count == 0:
+    if mapped_count == 0:
         print("ERROR: No helper project configuration mappings were found to patch.", file=sys.stderr)
         return 1
 
@@ -96,10 +132,12 @@ def main() -> int:
         output = codecs.BOM_UTF8 + output
     solution_path.write_bytes(output)
 
-    print("Mapped Win32-only helper projects inside the mixed x64 solution:")
-    for path in sorted(helper_guids.values()):
+    print("Mapped Win32 helper projects inside the mixed-architecture solution:")
+    for path in sorted(WIN32_HELPER_PROJECTS):
         print(f"  {path}")
-    print(f"Updated {patched_count} solution configuration mappings.")
+    print(f"Updated {mapped_count} helper configuration mappings.")
+    print(f"Skipped {skipped_upchecker} x64 updater build mappings.")
+    print(f"Skipped {skipped_aggregate} aggregate-project build mappings.")
     return 0
 
 

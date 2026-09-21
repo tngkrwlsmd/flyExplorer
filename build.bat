@@ -144,7 +144,7 @@ if errorlevel 1 (
 echo ----------
 echo Generated fxfile.sln for Visual Studio %msvs_version%.
 if /I "%msvs_version%"=="2026" echo Verified platform toolset: v145
-if /I "%target_arch%"=="x64" echo Win32-only helper projects are mapped to x86 configurations.
+if /I "%target_arch%"=="x64" echo Win32 helpers are mapped to x86; updater is deferred to an x86-multibyte build.
 echo For a 64-bit release build, use configuration Release-x64-Unicode.
 
 popd

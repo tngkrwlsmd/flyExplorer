@@ -49,10 +49,11 @@ without configuration-mismatch errors.
 The main application, xpr, and crash module have native x64 configurations.
 The legacy updater, launcher, and keyboard-hook helper are intentionally Win32
 projects. When an x64 solution is generated, build\fix_solution_configs.py
-automatically maps those helper projects to Debug-x86|Win32 or
-Release-x86|Win32. This preserves the original mixed-architecture packaging
-model instead of incorrectly trying to link the Win32-only third-party updater
-libraries as x64.
+maps the launcher and keyboard hook to Win32. The updater is kept loadable but
+is not built as part of an x64 solution build because it depends on the x86
+multibyte xpr library. Build Release-x86-Multibyte when you need the updater
+for packaging. The root aggregate project is also excluded from Build Solution
+because all real projects are already listed individually.
 
 If you previously generated fxfile.sln with Visual Studio 2015/v140 or with an
 older version of this build script, simply run:
@@ -73,7 +74,10 @@ For the recommended 64-bit release build, select:
     Configuration: Release-x64-Unicode
     Platform:      x64
 
-Then run "Build Solution" in Visual Studio.
+Then run "Build Solution" in Visual Studio. The x64 build produces the main
+application, x64 xpr/crash modules, and the Win32 launcher/keyhook helpers.
+The updater is intentionally deferred; build Release-x86-Multibyte separately
+when preparing a full distribution.
 
 The main executable is generated under:
 

@@ -6,7 +6,7 @@
 
 #ifndef __XPR_H__
 #define __XPR_H__ 1
-#pragma once;
+#pragma once
 
 #include "xpr_config.h"
 #include "xpr_define.h"
