@@ -26,6 +26,7 @@
 #include "gui/gdi.h"
 #include "gui/DragImage.h"
 #include "gui/DropSource.h"
+#include "gui/ModernUI.h"
 #include "gui/WindowScroller.h"    // for Wheel Scroller
 
 #include "xpr_string_tokenizer.h"
