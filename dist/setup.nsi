@@ -139,7 +139,6 @@ FunctionEnd
 !macroend
 
 !insertmacro GET_WINDOWS_VERSION_FUNCTION_MACRO ""
-!insertmacro GET_WINDOWS_VERSION_FUNCTION_MACRO "un."
 
 Function .onInit
 
