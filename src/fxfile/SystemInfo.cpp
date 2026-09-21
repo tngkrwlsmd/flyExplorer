@@ -183,29 +183,8 @@ BOOL SystemInfoUtils::GetDeviceFileName( LPCTSTR lpFsFileName, CString& deviceFi
 //Get NT version
 DWORD SystemInfoUtils::GetNTMajorVersion()
 {
-   OSVERSIONINFOEX osvi;
-   BOOL bOsVersionInfoEx;
-   
-   // Try calling GetVersionEx using the OSVERSIONINFOEX structure,
-   // which is supported on Windows 2000.
-   //
-   // If that fails, try using the OSVERSIONINFO structure.
-
-   ZeroMemory(&osvi, sizeof(OSVERSIONINFOEX));
-   osvi.dwOSVersionInfoSize = sizeof(OSVERSIONINFOEX);
-
-   bOsVersionInfoEx = GetVersionEx ((OSVERSIONINFO *) &osvi);
-
-   if( bOsVersionInfoEx == 0 )
-   {
-      // If OSVERSIONINFOEX doesn't work, try OSVERSIONINFO.
-
-      osvi.dwOSVersionInfoSize = sizeof (OSVERSIONINFO);
-      if (! GetVersionEx ( (OSVERSIONINFO *) &osvi) ) 
-         return FALSE;
-   }
-
-   return osvi.dwMajorVersion;
+   // flyExplorer supports Windows 10/11; both expose the NT 10.x API surface.
+   return 10;
 }
 
 //////////////////////////////////////////////////////////////////////////////////////
