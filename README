@@ -126,12 +126,20 @@ and uses ThemePalette colors plus DPI-scaled metrics in `DrivePieCtrl`.
 Drive-data queries, localized strings, icon behavior, and the dialog's existing
 information structure remain unchanged.
 
-This is a ModernUI foundation, not a claim of complete Windows 11 dark-mode
-support. Dark title bars/common-control theming, icon modernization, and broader
-dialog modernization beyond this first reference remain separate work. Hosted CI
-verifies compile/link, warning-free builds, launch smoke, and packaging;
-100/125/150/200% visual inspection, High Contrast appearance, and interactive
-status-bar/DriveDetailDlg behavior still require separate manual evidence.
+The main top-level frame now opts into the documented Windows 11 DWM
+`DWMWA_USE_IMMERSIVE_DARK_MODE` window-frame behavior through a dynamically
+resolved ModernUI helper. The frame request is applied after creation and
+refreshed for settings/theme notifications; High Contrast keeps the existing
+light-frame fallback, and unsupported/down-level DWM calls fail without adding a
+load-time dependency.
+
+This remains a ModernUI foundation, not a claim of complete Windows 11 dark-mode
+support. Common-control/dialog theming, icon modernization, and broader dialog
+modernization beyond the first reference remain separate work. Hosted CI verifies
+compile/link, warning-free builds, launch smoke, and packaging for the title-bar
+foundation, but light/dark title-bar appearance, 100/125/150/200% visual
+inspection, High Contrast appearance, and interactive status-bar/DriveDetailDlg
+behavior still require separate manual evidence.
 
 Generate the Visual Studio Solution
 -----------------------------------
