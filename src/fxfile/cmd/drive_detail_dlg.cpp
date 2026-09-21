@@ -13,6 +13,7 @@
 #include "size_format.h"
 #include "option.h"
 #include "resource.h"
+#include "gui/ModernUI.h"
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -37,11 +38,19 @@ void DriveDetailDlg::DoDataExchange(CDataExchange* pDX)
 
 BEGIN_MESSAGE_MAP(DriveDetailDlg, super)
     ON_WM_DESTROY()
+    ON_WM_SETTINGCHANGE()
+    ON_MESSAGE(WM_DPICHANGED, OnDpiChanged)
+    ON_MESSAGE(WM_DPICHANGED_AFTERPARENT, OnDpiChangedAfterParent)
+    ON_MESSAGE(WM_THEMECHANGED, OnThemeChanged)
 END_MESSAGE_MAP()
 
 xpr_bool_t DriveDetailDlg::OnInitDialog(void) 
 {
     super::OnInitDialog();
+
+    createUIFont();
+    applyUIFont();
+    applyAppearance();
 
     SetDlgItemText(IDC_DRIVE_LABEL_LABEL,      gApp.loadString(XPR_STRING_LITERAL("popup.drive_info.label.label")));
     SetDlgItemText(IDC_DRIVE_LABEL_TYPE,       gApp.loadString(XPR_STRING_LITERAL("popup.drive_info.label.type")));
@@ -58,11 +67,128 @@ xpr_bool_t DriveDetailDlg::OnInitDialog(void)
     return XPR_TRUE;
 }
 
+void DriveDetailDlg::createUIFont(void)
+{
+    if (XPR_IS_NOT_NULL(mUIFont.m_hObject))
+        mUIFont.DeleteObject();
+
+    LOGFONT sLogFont = {0};
+    if (XPR_IS_TRUE(ui::ModernUI::getUIFont(sLogFont, GetSafeHwnd())))
+    {
+        if (mUIFont.CreateFontIndirect(&sLogFont) == XPR_FALSE)
+            mUIFont.CreateStockObject(DEFAULT_GUI_FONT);
+    }
+    else
+    {
+        mUIFont.CreateStockObject(DEFAULT_GUI_FONT);
+    }
+}
+
+void DriveDetailDlg::applyUIFont(void)
+{
+    if (XPR_IS_NULL(mUIFont.m_hObject))
+        return;
+
+    SetFont(&mUIFont, XPR_FALSE);
+
+    const xpr_uint_t sControlIds[] =
+    {
+        IDC_DRIVE_DRIVE,
+        IDC_DRIVE_LABEL_LABEL,
+        IDC_DRIVE_LABEL_TYPE,
+        IDC_DRIVE_LABEL_FILESYSTEM,
+        IDC_DRIVE_LABEL_FREE,
+        IDC_DRIVE_LABEL_USED,
+        IDC_DRIVE_LABEL_TOTAL,
+        IDC_DRIVE_LABEL,
+        IDC_DRIVE_TYPE,
+        IDC_DRIVE_FILESYSTEM,
+        IDC_DRIVE_FREE_BYTE,
+        IDC_DRIVE_FREE_UNIT,
+        IDC_DRIVE_USED_BYTE,
+        IDC_DRIVE_USED_UNIT,
+        IDC_DRIVE_TOTAL_BYTE,
+        IDC_DRIVE_TOTAL_UNIT,
+    };
+
+    for (xpr_size_t i = 0; i < XPR_COUNT_OF(sControlIds); ++i)
+    {
+        CWnd *sControl = GetDlgItem(sControlIds[i]);
+        if (XPR_IS_NOT_NULL(sControl))
+            sControl->SetFont(&mUIFont, XPR_FALSE);
+    }
+
+    if (::IsWindow(mDrivePieCtrl.GetSafeHwnd()) == XPR_TRUE)
+        mDrivePieCtrl.SetFont(&mUIFont, XPR_FALSE);
+
+    // TextProgressCtrl owns its ModernUI font because it is a shared control.
+    // Preserve this dialog's existing bold percentage contract.
+    if (::IsWindow(mProgressCtrl.GetSafeHwnd()) == XPR_TRUE)
+        mProgressCtrl.setBoldFont(XPR_TRUE);
+}
+
+void DriveDetailDlg::applyAppearance(void)
+{
+    const ui::ThemePalette sPalette = ui::ModernUI::getPalette();
+    const COLORREF sTrackColor =
+        XPR_IS_TRUE(sPalette.mHighContrast) ? sPalette.mWindow : sPalette.mSurface;
+
+    if (::IsWindow(mProgressCtrl.GetSafeHwnd()) == XPR_TRUE)
+    {
+        mProgressCtrl.setProgressColor(sPalette.mSelection);
+        mProgressCtrl.setBackColor(sTrackColor);
+        mProgressCtrl.setTextBackColor(sPalette.mSelectionText);
+        mProgressCtrl.setTextProgressColor(sPalette.mText);
+        mProgressCtrl.Invalidate(XPR_FALSE);
+    }
+
+    if (::IsWindow(mDrivePieCtrl.GetSafeHwnd()) == XPR_TRUE)
+        mDrivePieCtrl.Invalidate(XPR_FALSE);
+}
+
+void DriveDetailDlg::refreshAppearance(void)
+{
+    createUIFont();
+    applyUIFont();
+    applyAppearance();
+    Invalidate(XPR_FALSE);
+}
+
 void DriveDetailDlg::OnDestroy(void) 
 {
     super::OnDestroy();
 
     DESTROY_ICON(mDriveIconHandle);
+
+    if (XPR_IS_NOT_NULL(mUIFont.m_hObject))
+        mUIFont.DeleteObject();
+}
+
+void DriveDetailDlg::OnSettingChange(xpr_uint_t aFlags, const xpr_tchar_t *aSection)
+{
+    refreshAppearance();
+    super::OnSettingChange(aFlags, aSection);
+}
+
+LRESULT DriveDetailDlg::OnDpiChanged(WPARAM aWParam, LPARAM aLParam)
+{
+    refreshAppearance();
+    return 0;
+}
+
+LRESULT DriveDetailDlg::OnDpiChangedAfterParent(WPARAM aWParam, LPARAM aLParam)
+{
+    // DriveDetailDlg is a DS_CONTROL child window. Per-Monitor V2 notifies
+    // child windows after their parent has processed the monitor DPI change.
+    refreshAppearance();
+    return 0;
+}
+
+LRESULT DriveDetailDlg::OnThemeChanged(WPARAM aWParam, LPARAM aLParam)
+{
+    applyAppearance();
+    Invalidate(XPR_FALSE);
+    return 0;
 }
 
 void DriveDetailDlg::setDrive(xpr_tchar_t aDrive)
@@ -137,7 +263,15 @@ void DriveDetailDlg::setDrive(xpr_tchar_t aDrive)
     SizeFormat::getSizeUnitFormat(sUsed.QuadPart, SIZE_UNIT_AUTO, sFormatedSize, 0xfe);
     GetDlgItem(IDC_DRIVE_USED_UNIT)->SetWindowText(sFormatedSize);
 
-    mProgressCtrl.setPos((xpr_sint_t)(((xpr_double_t)(xpr_sint64_t)sUsed.QuadPart / (xpr_double_t)(xpr_sint64_t)sTotal.QuadPart) * 100.0));
+    xpr_sint_t sUsedPercent = 0;
+    if (sTotal.QuadPart > 0)
+    {
+        sUsedPercent = (xpr_sint_t)(
+            ((xpr_double_t)(xpr_sint64_t)sUsed.QuadPart /
+             (xpr_double_t)(xpr_sint64_t)sTotal.QuadPart) * 100.0);
+    }
+
+    mProgressCtrl.setPos(sUsedPercent);
     mDrivePieCtrl.setDrive(sDrivePath);
 }
 } // namespace cmd

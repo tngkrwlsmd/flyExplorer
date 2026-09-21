@@ -25,6 +25,7 @@ protected:
     void drawLegends(CDC &aDC);
     void getDriveSpace(void);
     void drawDrivePie(CDC &aDC);
+    xpr_sint_t scaleMetric(xpr_sint_t aValue) const;
 
 protected:
     xpr::string  mTotalSizeText;
@@ -39,6 +40,10 @@ protected:
 protected:
     DECLARE_MESSAGE_MAP()
     afx_msg void OnPaint(void);
+    afx_msg void OnSettingChange(xpr_uint_t aFlags, const xpr_tchar_t *aSection);
+    afx_msg LRESULT OnDpiChanged(WPARAM aWParam, LPARAM aLParam);
+    afx_msg LRESULT OnDpiChangedAfterParent(WPARAM aWParam, LPARAM aLParam);
+    afx_msg LRESULT OnThemeChanged(WPARAM aWParam, LPARAM aLParam);
 };
 
 #endif // __FXFILE_DRIVE_PIE_CTRL_H__

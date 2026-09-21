@@ -10,21 +10,21 @@
 #include "stdafx.h"
 #include "DrivePieCtrl.h"
 
+#include "ModernUI.h"
+
 #include <math.h>
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
 #endif
 
-#define DEFAULT_MARGIN     5
-
-const COLORREF FREE_RGB  = RGB(255, 0, 255);
-const COLORREF USED_RGB  = RGB(0, 0, 255);
-const COLORREF WHITE_RGB = RGB(255, 255, 255);
+const xpr_sint_t kMargin = 5;
+const xpr_sint_t kLegendMarkerSize = 13;
 
 DrivePieCtrl::DrivePieCtrl(void)
     : mTotalSize(0), mUsedSize(0), mFreeSize(0)
 {
+    mDrive[0] = XPR_STRING_LITERAL('\0');
 }
 
 DrivePieCtrl::~DrivePieCtrl(void)
@@ -33,6 +33,10 @@ DrivePieCtrl::~DrivePieCtrl(void)
 
 BEGIN_MESSAGE_MAP(DrivePieCtrl, CStatic)
     ON_WM_PAINT()
+    ON_WM_SETTINGCHANGE()
+    ON_MESSAGE(WM_DPICHANGED, OnDpiChanged)
+    ON_MESSAGE(WM_DPICHANGED_AFTERPARENT, OnDpiChangedAfterParent)
+    ON_MESSAGE(WM_THEMECHANGED, OnThemeChanged)
 END_MESSAGE_MAP()
 
 void DrivePieCtrl::OnPaint(void)
@@ -63,29 +67,36 @@ void DrivePieCtrl::setDrive(const xpr_tchar_t *aDrive)
     Invalidate();
 }
 
+xpr_sint_t DrivePieCtrl::scaleMetric(xpr_sint_t aValue) const
+{
+    return fxfile::ui::ModernUI::scaleForWindow(aValue, GetSafeHwnd());
+}
+
 void DrivePieCtrl::drawDrivePie(CDC &aDC)
 {
-    if (mDrive[0] == '\0')
-        return;
-
     CRect sClientRect;
     GetClientRect(&sClientRect);
-    sClientRect.DeflateRect(1, 1);
-    aDC.FillSolidRect(&sClientRect, WHITE_RGB);
 
-    if (mTotalSize == 0)
+    const fxfile::ui::ThemePalette sPalette = fxfile::ui::ModernUI::getPalette();
+    const COLORREF sBackgroundColor =
+        XPR_IS_TRUE(sPalette.mHighContrast) ? sPalette.mWindow : sPalette.mSurface;
+    aDC.FillSolidRect(&sClientRect, sBackgroundColor);
+
+    if (mDrive[0] == XPR_STRING_LITERAL('\0') || mTotalSize == 0)
         return;
 
-    sClientRect.top    = sClientRect.top    + /*sClientRect.Height()*2/5*/ + DEFAULT_MARGIN;
-    sClientRect.right  = sClientRect.right  - DEFAULT_MARGIN;
-    sClientRect.left   = sClientRect.left   + DEFAULT_MARGIN;
-    sClientRect.bottom = sClientRect.bottom - DEFAULT_MARGIN;
+    const xpr_sint_t sMargin = scaleMetric(kMargin);
+    sClientRect.DeflateRect(sMargin, sMargin);
 
     CPen *sOldPen;
     CBrush *sOldBrush;
-    COLORREF sColors[2] = { USED_RGB, FREE_RGB };
+    const COLORREF sColors[2] =
+    {
+        sPalette.mSelection,
+        XPR_IS_TRUE(sPalette.mHighContrast) ? sPalette.mWindow : sPalette.mSurface,
+    };
 
-    // draw pie
+    // Draw the existing used/free pie with system-derived colors.
     xpr_sint_t sCenterX, sCenterY, sRadius, sNewX, sNewY, sLastX, sLastY;
     sCenterX = sClientRect.left + (xpr_sint_t)(sClientRect.Width() / 3.2);
     sCenterY = sClientRect.top + sClientRect.Height() / 2;
@@ -110,7 +121,7 @@ void DrivePieCtrl::drawDrivePie(CDC &aDC)
     for (i = 0; i < 2; ++i)
     {
         if (sSlice[i] == 0.f)
-            break;
+            continue;
 
         sDataSum += sSlice[i];
         sDegree = sDataSum * 2.0 * XPR_MATH_PI;
@@ -122,11 +133,14 @@ void DrivePieCtrl::drawDrivePie(CDC &aDC)
         CPoint sPoint2(sNewX, sNewY);
 
         CBrush sBrush(sColors[i]);
-        CPen sPiePen(PS_SOLID, 1, sColors[i]);
+        CPen sPiePen(PS_SOLID, max(1, scaleMetric(1)), sPalette.mBorder);
         sOldPen = aDC.SelectObject(&sPiePen);
         sOldBrush = aDC.SelectObject(&sBrush);
 
-        aDC.Pie(sPieRect, sPoint1, sPoint2);
+        if (sSlice[i] >= 1.0)
+            aDC.Ellipse(sPieRect);
+        else
+            aDC.Pie(sPieRect, sPoint1, sPoint2);
 
         aDC.SelectObject(sOldBrush);
         aDC.SelectObject(sOldPen);
@@ -157,29 +171,38 @@ void DrivePieCtrl::getDriveSpace(void)
 
 void DrivePieCtrl::drawLegends(CDC &aDC)
 {
-    if (mDrive[0] == '\0')
+    if (mDrive[0] == XPR_STRING_LITERAL('\0') || mTotalSize == 0)
         return;
 
-    if (mTotalSize == 0)
-        return;
+    const xpr_sint_t sMargin = scaleMetric(kMargin);
+    const xpr_sint_t sMarkerSize = scaleMetric(kLegendMarkerSize);
+    const fxfile::ui::ThemePalette sPalette = fxfile::ui::ModernUI::getPalette();
 
     CRect sClientRect;
     GetClientRect(&sClientRect);
-    sClientRect.top    = sClientRect.top + DEFAULT_MARGIN;
-    sClientRect.right  = sClientRect.right - DEFAULT_MARGIN;
-    sClientRect.left   = sClientRect.left + (xpr_sint_t)(sClientRect.Width()/1.8) + DEFAULT_MARGIN;
-    sClientRect.bottom = sClientRect.bottom - sClientRect.Height()*3/5 - DEFAULT_MARGIN;
+    sClientRect.top    += sMargin;
+    sClientRect.right  -= sMargin;
+    sClientRect.left   += (xpr_sint_t)(sClientRect.Width() / 1.8) + sMargin;
+    sClientRect.bottom -= sClientRect.Height() * 3 / 5 + sMargin;
 
     CRect sLine1Rect, sLine2Rect, sLine3Rect;
     sLine1Rect = sLine2Rect = sLine3Rect = sClientRect;
-    sLine1Rect.bottom = sClientRect.top + sClientRect.Height()/3;
-    sLine2Rect.top = sLine1Rect.bottom + DEFAULT_MARGIN;
-    sLine2Rect.bottom = sClientRect.bottom - sClientRect.Height()/3 + DEFAULT_MARGIN/2;
-    sLine3Rect.top = sLine2Rect.bottom + DEFAULT_MARGIN;
+    sLine1Rect.bottom = sClientRect.top + sClientRect.Height() / 3;
+    sLine2Rect.top = sLine1Rect.bottom + sMargin;
+    sLine2Rect.bottom = sClientRect.bottom - sClientRect.Height() / 3 + sMargin / 2;
+    sLine3Rect.top = sLine2Rect.bottom + sMargin;
 
     xpr::string sTitle;
-    CFont *sFont = GetParent()->GetFont();
-    CFont *sOldFont = aDC.SelectObject(sFont);
+    CFont *sFont = GetFont();
+    if (XPR_IS_NULL(sFont))
+        sFont = GetParent()->GetFont();
+
+    CFont *sOldFont = XPR_NULL;
+    if (XPR_IS_NOT_NULL(sFont))
+        sOldFont = aDC.SelectObject(sFont);
+
+    aDC.SetBkMode(TRANSPARENT);
+    aDC.SetTextColor(sPalette.mText);
 
     if (mTotalSize > 1024.0*1024.0*1024)
         sTitle.format(XPR_STRING_LITERAL("%s: %2.2f GB"), mTotalSizeText.c_str(), mTotalSize/1024.0/1024.0/1024.0);
@@ -187,7 +210,7 @@ void DrivePieCtrl::drawLegends(CDC &aDC)
         sTitle.format(XPR_STRING_LITERAL("%s: %2.2f MB"), mTotalSizeText.c_str(), mTotalSize/1024.0/1024.0);
     else
         sTitle.format(XPR_STRING_LITERAL("%s: %2.2f KB"), mTotalSizeText.c_str(), mTotalSize/1024.0);
-    aDC.TextOut(sLine1Rect.left + DEFAULT_MARGIN, sLine1Rect.top + DEFAULT_MARGIN, sTitle.c_str());
+    aDC.TextOut(sLine1Rect.left + sMargin, sLine1Rect.top + sMargin, sTitle.c_str());
 
     if (mUsedSize > 1024.0*1024.0*1024)
         sTitle.format(XPR_STRING_LITERAL("%s: %2.2f GB"), mUsedSizeText.c_str(), mUsedSize/1024.0/1024.0/1024.0);
@@ -195,7 +218,7 @@ void DrivePieCtrl::drawLegends(CDC &aDC)
         sTitle.format(XPR_STRING_LITERAL("%s: %2.2f MB"), mUsedSizeText.c_str(), mUsedSize/1024.0/1024.0);
     else
         sTitle.format(XPR_STRING_LITERAL("%s: %2.2f KB"), mUsedSizeText.c_str(), mUsedSize/1024.0);
-    aDC.TextOut(sLine2Rect.left + DEFAULT_MARGIN + sLine2Rect.Width()/5, sLine2Rect.top, sTitle.c_str());
+    aDC.TextOut(sLine2Rect.left + sMargin + sLine2Rect.Width()/5, sLine2Rect.top, sTitle.c_str());
 
     if (mFreeSize > 1024.0*1024.0*1024)
         sTitle.format(XPR_STRING_LITERAL("%s: %2.2f GB"), mFreeSizeText.c_str(), mFreeSize/1024.0/1024.0/1024.0);
@@ -203,23 +226,54 @@ void DrivePieCtrl::drawLegends(CDC &aDC)
         sTitle.format(XPR_STRING_LITERAL("%s: %2.2f MB"), mFreeSizeText.c_str(), mFreeSize/1024.0/1024.0);
     else
         sTitle.format(XPR_STRING_LITERAL("%s: %2.2f KB"), mFreeSizeText.c_str(), mFreeSize/1024.0);
-    aDC.TextOut(sLine3Rect.left + DEFAULT_MARGIN + sLine3Rect.Width()/5, sLine3Rect.top - DEFAULT_MARGIN, sTitle.c_str());
+    aDC.TextOut(sLine3Rect.left + sMargin + sLine3Rect.Width()/5, sLine3Rect.top - sMargin, sTitle.c_str());
 
-    aDC.SelectObject(sOldFont);
+    if (XPR_IS_NOT_NULL(sOldFont))
+        aDC.SelectObject(sOldFont);
 
-    CBrush sUsedBrush, sFreeBrush;
-    CRect sUsedRect, sFreeRect;
-    sUsedRect.top    = sLine2Rect.top;
-    sUsedRect.left   = sLine2Rect.left + DEFAULT_MARGIN * 2;
-    sUsedRect.right  = sUsedRect.left  + DEFAULT_MARGIN * 3 - 2;
-    sUsedRect.bottom = sUsedRect.top   + DEFAULT_MARGIN * 3 - 2;
-    sUsedBrush.CreateSolidBrush(USED_RGB);
+    const COLORREF sFreeColor =
+        XPR_IS_TRUE(sPalette.mHighContrast) ? sPalette.mWindow : sPalette.mSurface;
+
+    CRect sUsedRect(
+        sLine2Rect.left + sMargin * 2,
+        sLine2Rect.top,
+        sLine2Rect.left + sMargin * 2 + sMarkerSize,
+        sLine2Rect.top + sMarkerSize);
+    CRect sFreeRect(
+        sLine3Rect.left + sMargin * 2,
+        sLine3Rect.top - sMargin,
+        sLine3Rect.left + sMargin * 2 + sMarkerSize,
+        sLine3Rect.top - sMargin + sMarkerSize);
+
+    CBrush sUsedBrush(sPalette.mSelection);
+    CBrush sFreeBrush(sFreeColor);
     aDC.FillRect(&sUsedRect, &sUsedBrush);
-
-    sFreeRect.top    = sLine3Rect.top  - DEFAULT_MARGIN;
-    sFreeRect.left   = sLine3Rect.left + DEFAULT_MARGIN * 2;
-    sFreeRect.right  = sFreeRect.left  + DEFAULT_MARGIN * 3 - 2;
-    sFreeRect.bottom = sFreeRect.top   + DEFAULT_MARGIN * 3 - 2;
-    sFreeBrush.CreateSolidBrush(FREE_RGB);
     aDC.FillRect(&sFreeRect, &sFreeBrush);
+
+    aDC.Draw3dRect(&sUsedRect, sPalette.mBorder, sPalette.mBorder);
+    aDC.Draw3dRect(&sFreeRect, sPalette.mBorder, sPalette.mBorder);
+}
+
+void DrivePieCtrl::OnSettingChange(xpr_uint_t aFlags, const xpr_tchar_t *aSection)
+{
+    Invalidate(XPR_FALSE);
+    CStatic::OnSettingChange(aFlags, aSection);
+}
+
+LRESULT DrivePieCtrl::OnDpiChanged(WPARAM aWParam, LPARAM aLParam)
+{
+    Invalidate(XPR_FALSE);
+    return 0;
+}
+
+LRESULT DrivePieCtrl::OnDpiChangedAfterParent(WPARAM aWParam, LPARAM aLParam)
+{
+    Invalidate(XPR_FALSE);
+    return 0;
+}
+
+LRESULT DrivePieCtrl::OnThemeChanged(WPARAM aWParam, LPARAM aLParam)
+{
+    Invalidate(XPR_FALSE);
+    return 0;
 }

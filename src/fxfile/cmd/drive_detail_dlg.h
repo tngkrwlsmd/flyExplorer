@@ -30,6 +30,13 @@ protected:
     DrivePieCtrl     mDrivePieCtrl;
     TextProgressCtrl mProgressCtrl;
     HICON            mDriveIconHandle;
+    CFont            mUIFont;
+
+protected:
+    void createUIFont(void);
+    void applyUIFont(void);
+    void applyAppearance(void);
+    void refreshAppearance(void);
 
 protected:
     virtual void DoDataExchange(CDataExchange* pDX);    // DDX/DDV support
@@ -38,6 +45,10 @@ protected:
     DECLARE_MESSAGE_MAP()
     virtual xpr_bool_t OnInitDialog(void);
     afx_msg void OnDestroy(void);
+    afx_msg void OnSettingChange(xpr_uint_t aFlags, const xpr_tchar_t *aSection);
+    afx_msg LRESULT OnDpiChanged(WPARAM aWParam, LPARAM aLParam);
+    afx_msg LRESULT OnDpiChangedAfterParent(WPARAM aWParam, LPARAM aLParam);
+    afx_msg LRESULT OnThemeChanged(WPARAM aWParam, LPARAM aLParam);
 };
 } // namespace cmd
 } // namespace fxfile
