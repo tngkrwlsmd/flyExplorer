@@ -77,7 +77,7 @@
     }
   ],
   "review": {
-    "reviewed_revision": "546e9700320edcd53f5f90cc3f8a5ec7a941ccb2",
+    "reviewed_revision": "4834f64a6bc719477e7835f136e7b3448e60efa4",
     "reviewed_at": "2026-09-21",
     "reviewed_paths": [
       "README",
@@ -150,7 +150,8 @@
 - 현재 automated test suite는 확인되지 않았다.
 - Windows 11 UI 현대화 Phase 1에서 Per-Monitor V2 DPI, system typography, theme palette foundation을 추가했다.
 - Phase 2에서 toolbar padding/system typography/double buffering과 flat theme-aware tab rendering, DPI-scaled tab metrics를 추가했다.
-- 실제 dark-mode title bar/control theming과 list/tree/pane modern drawing은 후속 phase 범위다.
+- Phase 3에서 file list/header를 system font/theme palette 기반으로 정리하고, folder tree에 DPI-aware row/indent/system typography를 적용했으며 explorer pane/splitter 배경을 flat separator 기반으로 정리했다.
+- 실제 dark-mode title bar/control theming, address/status/dialog/icon asset 현대화는 후속 phase 범위다.
 
 ## Recommended verification
 
