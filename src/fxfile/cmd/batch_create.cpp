@@ -218,7 +218,7 @@ xpr_sint_t BatchCreate::runThread(xpr::Thread &aThread)
     Item *sItem2;
     NewDeque::iterator sIterator;
 
-    typedef std::tr1::unordered_multimap<xpr::string, Item *> HashPathMap;
+    typedef std::unordered_multimap<xpr::string, Item *> HashPathMap;
     typedef std::pair<HashPathMap::iterator, HashPathMap::iterator> HashPathPairIterator;
     HashPathMap sHashPathMap;
     HashPathMap::iterator sHashPathIterator;
