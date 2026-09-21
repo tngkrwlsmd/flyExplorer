@@ -56,14 +56,6 @@ if not exist "%GYP_DIR%\gyp_main.py" (
     )
 )
 
-findstr /C:"\"2026\"" "%GYP_DIR%\pylib\gyp\MSVSVersion.py" >nul 2>&1
-if errorlevel 1 (
-    echo ERROR: The installed gyp-next does not support Visual Studio 2026.
-    echo Delete tools\gyp-next and run build.bat again.
-    popd
-    exit /b 1
-)
-
 set "GYP_MSVS_VERSION=%msvs_version%"
 
 echo msvs_version = %msvs_version%
