@@ -183,9 +183,36 @@ After a successful Release-x64-Unicode build, run:
 
 Distribution
 ------------
-The dist directory contains the NSIS installer and portable-package scripts.
-After all required release configurations have been built, dist\package.bat can
-assemble the distribution files.
+The `dist` directory contains the release staging, portable-package, and NSIS
+installer scripts. A full package requires all three verified release builds:
+`Release-x64-Unicode | x64`, `Release-x86-Unicode | Win32`, and
+`Release-x86-Multibyte | Win32`; the multibyte build provides the Win32 update
+checker that is staged under each platform's `upchecker` directory.
+
+After those builds are available under `bin`, run from the repository root:
+
+    dist\package.bat
+
+Packaging uses the vendored `dist\7zip\7za.exe` and
+`dist\nsis\makensis.exe`, so the package build does not download an external
+NSIS toolchain. It creates:
+
+    dist\fxfile_v2.0.4-dev.exe
+    dist\fxfile_v2.0.4-dev_x64_portable.zip
+    dist\fxfile_v2.0.4-dev_x86_unicode_portable.zip
+    dist\fxfile_v2.0.4-dev_x86_multibyte_portable.zip
+
+`build\validate_package.ps1` validates the staged runtime trees and portable
+ZIP payloads, rejects development artifacts such as PDB/OBJ/LIB/project files,
+and checks that the NSIS installer was actually produced. The Windows Product
+Build workflow runs this packaging path after the build/runtime jobs, writes
+`SHA256SUMS.txt`, and uploads the validated outputs as the
+`flyExplorer-release-package` GitHub Actions artifact.
+
+Package Build/Payload PASS is not clean-install evidence. The CI job does not
+install or uninstall the NSIS package, modify shell integration, or prove a
+clean Windows Sandbox/VM installation. Those checks remain separate runtime
+validation work.
 
 Legacy build
 ------------

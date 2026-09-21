@@ -39,13 +39,14 @@
 - `copy_lib.bat`
 - `copy_languages.bat`
 - `dist/`의 패키징/NSIS 스크립트
+- `build/validate_package.ps1`의 release payload 검증 규칙
 
 다음은 생성물이며 직접 편집을 기본 해법으로 사용하지 않는다.
 
 - `fxfile.sln`
 - `*.vcxproj`, `*.vcxproj.filters`, `*.vcxproj.user`
 - `bin/`, `obj/`, `tools/`
-- `dist/bin/` 및 생성 installer/portable archive
+- `dist/bin/`, `dist/SHA256SUMS.txt` 및 생성 installer/portable archive
 
 생성 프로젝트에 문제가 있으면 우선 GYP 또는 post-generation fixer를 수정하고 `build.bat`으로 재생성한다.
 
