@@ -124,6 +124,20 @@ UI/UX 현대화 작업은 다음 원칙을 따른다.
 - GitHub Release 생성, public artifact publish, 외부 업로드/배포는 별도 명시적 요청 없이 수행하지 않는다.
 - commit/push 여부는 실제 remote 상태대로 보고한다.
 
+### Long-running commit/push checkpoints
+
+장기 작업은 반드시 하나의 commit/push로 끝낼 필요가 없다. 변경 범위, 위험, 검증 지점이 분리되는 경우에는 복구·검토·handoff가 가능한 **논리적 하위 작업 단위**로 checkpoint를 만들 수 있다.
+
+- 각 checkpoint commit은 하나의 설명 가능한 목적만 가진다. unrelated change를 섞지 않는다.
+- 각 checkpoint는 그 단계에 맞는 좁은 검증을 통과한 상태여야 한다. 예를 들어 UI 현대화라면 `theme/DPI foundation`, `toolbar/tab`, `pane/list`처럼 독립적으로 검토 가능한 경계가 적합하다.
+- 실행하지 못한 검증이나 알려진 제한은 checkpoint 시점에도 숨기지 않는다.
+- 중간 push는 장기 작업의 복구 지점, 다른 작업자와의 handoff, 위험한 후속 단계 전 안전한 기준점, remote에서만 가능한 검증이 실제로 필요할 때 사용한다. commit 수를 늘리기 위해 기계적으로 쪼개지 않는다.
+- checkpoint의 narrow validation PASS는 전체 작업의 최종 회귀 PASS를 의미하지 않는다.
+- 여러 checkpoint로 나눈 작업은 마지막에 요청 전체 범위에 대해 §8의 build/runtime 검증을 다시 수행한다. 최종 검증이 실패하면 작업 완료로 보고하지 않는다.
+- checkpoint는 force push, branch protection, required check 등 기존 Git 안전 규칙을 우회하는 수단으로 사용하지 않는다.
+- 다음 checkpoint를 시작하기 전에 동시 변경 가능성이 있으면 remote `main`과 현재 HEAD를 다시 확인하고, stale context로 이전 상태를 덮어쓰지 않는다.
+- direct-to-main 흐름에서 중간 push를 사용하는 경우에도 각 push 직전 최신 remote 상태와 fast-forward 가능 여부를 확인한다.
+
 ## 10. Dependencies and bundled binaries
 
 `lib/`의 third-party component는 오래된 binary/source가 포함되어 있으므로:
