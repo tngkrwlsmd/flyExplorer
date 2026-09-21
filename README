@@ -9,13 +9,13 @@ fxfile (formerly flyExplorer) is a free, open source file manager for Microsoft 
 
 Modern Build Environment
 ------------------------
-The project build bootstrap has been updated for Visual Studio 2026.
+The default build path targets Visual Studio 2026 and the v145 platform toolset.
 
 Required software:
 
 1. Visual Studio 2026
    - Install the "Desktop development with C++" workload.
-   - Install MFC for the latest v145 build tools.
+   - Install MFC for the current MSVC v145 x64/x86 build tools.
    - Install a current Windows 10/11 SDK.
 2. Python 3.9 or newer.
 3. Git.
@@ -25,7 +25,7 @@ for the default build path.
 
 Generate the Visual Studio Solution
 -----------------------------------
-From a normal Command Prompt or Developer Command Prompt in the repository root:
+From a Command Prompt in the repository root:
 
     build.bat
 
@@ -37,8 +37,15 @@ On first run, build.bat automatically clones the pinned gyp-next version into:
 
     tools\gyp-next
 
-gyp-next 0.22.2 supports Visual Studio 2026 and generates projects that use the
-Visual Studio 2026 v145 platform toolset.
+gyp-next 0.22.2 supports Visual Studio 2026. The build script removes stale
+generated Visual Studio projects before regeneration and verifies that the new
+.vcxproj files use the v145 platform toolset.
+
+If you previously generated fxfile.sln with Visual Studio 2015/v140, simply run:
+
+    build.bat
+
+again. The stale v140 solution/project files are removed automatically.
 
 After generation, open:
 
@@ -78,8 +85,8 @@ assemble the distribution files.
 Legacy build
 ------------
 The original project used a customized fxfile/gyp fork, Python 2.7.4, and
-Visual Studio 2015. Those instructions are retained only in repository history;
-the default build path now targets Visual Studio 2026.
+Visual Studio 2015/v140. Those instructions are retained only in repository
+history; the default build path now targets Visual Studio 2026/v145.
 
 License
 -------
