@@ -84,6 +84,23 @@ jobs:
             throw "The generated xpr project is missing the Release Unicode TargetName contract."
           }
 
+          $updaterProjectLine = $solution -split "\r?\n" |
+            Where-Object { $_ -like '*src\fxfile-upchecker\fxfile-upchecker.vcxproj*' } |
+            Select-Object -First 1
+          if (-not $updaterProjectLine) {
+            throw "Could not find the fxfile-upchecker project in the generated solution."
+          }
+
+          $updaterGuid = [regex]::Match($updaterProjectLine, '\{[0-9A-Fa-f-]+\}').Value
+          if (-not $updaterGuid) {
+            throw "Could not resolve the fxfile-upchecker project GUID."
+          }
+
+          $releaseBuildKey = "$updaterGuid.Release-x64-Unicode|x64.Build.0"
+          if ($solution.Contains($releaseBuildKey)) {
+            throw "fxfile-upchecker must not build in Release-x64-Unicode."
+          }
+
       - name: Build Release-x64-Unicode
         shell: pwsh
         env:

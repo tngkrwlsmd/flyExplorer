@@ -363,6 +363,28 @@ def main() -> int:
 
         patched_lines.append(line)
 
+    invalid_updater_builds: list[str] = []
+    for line in patched_lines:
+        match = CONFIG_RE.match(line)
+        if not match:
+            continue
+
+        if (
+            match.group(2).upper() == upchecker_guid
+            and match.group(4) == "Build.0"
+            and not is_x86_multibyte_configuration(match.group(3))
+        ):
+            invalid_updater_builds.append(match.group(3))
+
+    if invalid_updater_builds:
+        print(
+            "ERROR: Updater is still enabled for non-multibyte solution configurations:",
+            file=sys.stderr,
+        )
+        for configuration in invalid_updater_builds:
+            print(f"  {configuration}", file=sys.stderr)
+        return 1
+
     if mapped_count == 0:
         print("ERROR: No helper project configuration mappings were found to patch.", file=sys.stderr)
         return 1
@@ -417,6 +439,7 @@ def main() -> int:
         print(f"  {path}")
     print(f"Updated {mapped_count} helper configuration mappings.")
     print(f"Skipped {skipped_upchecker} non-multibyte updater build mappings.")
+    print("Verified updater builds are restricted to x86-multibyte solution configurations.")
     print(f"Skipped {skipped_aggregate} aggregate-project build mappings.")
     print(f"Applied static MFC settings to {len(MFC_PROJECTS)} projects ({mfc_changed} configurations updated).")
     print(
