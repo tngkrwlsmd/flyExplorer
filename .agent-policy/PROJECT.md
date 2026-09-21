@@ -77,11 +77,12 @@
     }
   ],
   "review": {
-    "reviewed_revision": "514e66e792e4843ea9ab6900bebd0f0fa3053a22",
+    "reviewed_revision": "992b069732a5567778de97e966061f19c63baf5c",
     "reviewed_at": "2026-09-21",
     "reviewed_paths": [
       "README",
       "build.bat",
+      "local_ci.bat",
       "build/common.gypi",
       "build/fix_solution_configs.py",
       "build/validate_source_invariants.py",
@@ -169,12 +170,12 @@
 - crash module은 vendored zlib 1.2.3 source를 현재 MSVC로 직접 빌드하며 legacy `zlibS-x64.lib`를 링크하지 않는다.
 - crash/network resolver 경로는 deprecated `gethostbyname`/`inet_ntoa`/`inet_addr` 대신 modern Winsock address API를 사용한다.
 - distribution 입력 이름은 현재 제품 계약에 맞춰 Unicode/x64 `libxprw.dll`과 `upchecker/fxfile-upchecker.exe`를 사용한다. Actions의 package job과 artifact upload는 비용 절감을 위해 제거했으며, release packaging은 로컬에서 `dist/package.bat`과 `build/validate_package.ps1`로 수행한다.
-- 패키징은 vendored `dist/7zip/7za.exe`와 `dist/nsis/makensis.exe`를 사용하며 외부 NSIS 다운로드를 요구하지 않는다. 검증된 installer/portable 3종과 `SHA256SUMS.txt`는 `flyExplorer-release-package` Actions artifact로 보존한다.
+- 패키징은 vendored `dist/7zip/7za.exe`와 `dist/nsis/makensis.exe`를 사용하며 외부 NSIS 다운로드를 요구하지 않는다. Actions package upload는 제거되어 현재 installer/portable 결과는 로컬 `dist/`에서 생성·검증하며, 필요 시 별도 release 절차에서 보존한다.
 - installer 실제 설치/제거, shell integration install/remove, clean Windows Sandbox/VM install은 아직 자동화하지 않으며 Package Build/Payload PASS와 구분한다.
 - GitHub-hosted Windows runner의 기본 remote runtime evidence는 x64 Unicode launch smoke 하나만 유지한다. smoke는 staged runtime을 임시 디렉터리에 복사하고 isolated `--conf_dir`로 `fxfile.exe`를 시작한 뒤 top-level main window와 short stability window를 확인한다. x86 launch smoke는 Actions 비용 절감을 위해 제거했다.
 - hosted runner에는 Visual Studio와 여러 system runtime이 이미 설치되어 있으므로 이 결과는 clean Windows Sandbox/VM evidence가 아니다. Windows Sandbox/clean VM, interactive functional smoke, visual regression은 아직 자동화하지 않는다.
 - `build/validate_source_invariants.py`가 C++ cross-cutting dependency와 ModernUI integration의 빠른 static preflight를 제공한다.
-- `.agent-policy/`에는 upstream `universal-agent-docs` revision `cc250a63994f1d9d4fcfdbb2bab9b622230bf8c6`의 validated policy bundle을 vendor하며 root CI에서 bundle/readiness/conformance를 검사한다.
+- `.agent-policy/`에는 upstream `universal-agent-docs` revision `cc250a63994f1d9d4fcfdbb2bab9b622230bf8c6`의 validated policy bundle을 vendor한다. GitHub Actions의 Source Validation은 현재 source invariant만 실행하고, bundle/readiness/conformance 전체 검증은 `local_ci.bat policy` 또는 `local_ci.bat full`에서 수행한다.
 - Profile C runtime enforcement는 설치되어 있지 않다.
 - Windows 11 UI 현대화 Phase 1에서 Per-Monitor V2 DPI, system typography, theme palette foundation을 추가했다.
 - Phase 2에서 toolbar padding/system typography/double buffering과 flat theme-aware tab rendering, DPI-scaled tab metrics를 추가했다.
