@@ -42,6 +42,15 @@ if not defined PYTHON_CMD (
     exit /b 1
 )
 
+echo Running source invariant preflight...
+%PYTHON_CMD% "build\validate_source_invariants.py"
+if errorlevel 1 (
+    echo ERROR: Source invariant preflight failed.
+    echo Fix the reported source dependency/integration issue before generating projects.
+    popd
+    exit /b 1
+)
+
 if not exist "%GYP_DIR%\gyp_main.py" (
     where git >nul 2>&1
     if errorlevel 1 (
