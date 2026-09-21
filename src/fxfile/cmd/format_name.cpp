@@ -183,9 +183,9 @@ xpr_bool_t FormatBaseFileName::write(base::XmlWriter &aXmlWriter) const
 
 xpr_bool_t FormatBaseFileName::canParseShort(const xpr::string &aFormatString)
 {
-    const std::tr1::tregex sRegEx(kShortFormatBaseFileNameRegExpr);
+    const xpr::tregex sRegEx(kShortFormatBaseFileNameRegExpr);
 
-    return (std::tr1::regex_match(aFormatString.c_str(), sRegEx) == true) ? XPR_TRUE : XPR_FALSE;
+    return (std::regex_match(aFormatString.c_str(), sRegEx) == true) ? XPR_TRUE : XPR_FALSE;
 }
 
 void FormatBaseFileName::parseShort(const xpr::string &aFormatString, Format *&aFormat)
@@ -269,9 +269,9 @@ xpr_bool_t FormatFileExt::write(base::XmlWriter &aXmlWriter) const
 
 xpr_bool_t FormatFileExt::canParseShort(const xpr::string &aFormatString)
 {
-    const std::tr1::tregex sRegEx(kShortFormatFileExtRegExpr);
+    const xpr::tregex sRegEx(kShortFormatFileExtRegExpr);
 
-    return (std::tr1::regex_match(aFormatString.c_str(), sRegEx) == true) ? XPR_TRUE : XPR_FALSE;
+    return (std::regex_match(aFormatString.c_str(), sRegEx) == true) ? XPR_TRUE : XPR_FALSE;
 }
 
 void FormatFileExt::parseShort(const xpr::string &aFormatString, Format *&aFormat)
@@ -350,9 +350,9 @@ xpr_bool_t FormatFileName::write(base::XmlWriter &aXmlWriter) const
 
 xpr_bool_t FormatFileName::canParseShort(const xpr::string &aFormatString)
 {
-    const std::tr1::tregex sRegEx(kShortFormatFileNameRegExpr);
+    const xpr::tregex sRegEx(kShortFormatFileNameRegExpr);
 
-    return (std::tr1::regex_match(aFormatString.c_str(), sRegEx) == true) ? XPR_TRUE : XPR_FALSE;
+    return (std::regex_match(aFormatString.c_str(), sRegEx) == true) ? XPR_TRUE : XPR_FALSE;
 }
 
 void FormatFileName::parseShort(const xpr::string &aFormatString, Format *&aFormat)
@@ -436,9 +436,9 @@ xpr_bool_t FormatOrgBaseFileName::write(base::XmlWriter &aXmlWriter) const
 
 xpr_bool_t FormatOrgBaseFileName::canParseShort(const xpr::string &aFormatString)
 {
-    const std::tr1::tregex sRegEx(kShortFormatOrgBaseFileNameRegExpr);
+    const xpr::tregex sRegEx(kShortFormatOrgBaseFileNameRegExpr);
 
-    return (std::tr1::regex_match(aFormatString.c_str(), sRegEx) == true) ? XPR_TRUE : XPR_FALSE;
+    return (std::regex_match(aFormatString.c_str(), sRegEx) == true) ? XPR_TRUE : XPR_FALSE;
 }
 
 void FormatOrgBaseFileName::parseShort(const xpr::string &aFormatString, Format *&aFormat)
@@ -522,9 +522,9 @@ xpr_bool_t FormatOrgFileExt::write(base::XmlWriter &aXmlWriter) const
 
 xpr_bool_t FormatOrgFileExt::canParseShort(const xpr::string &aFormatString)
 {
-    const std::tr1::tregex sRegEx(kShortFormatOrgFileExtRegExpr);
+    const xpr::tregex sRegEx(kShortFormatOrgFileExtRegExpr);
 
-    return (std::tr1::regex_match(aFormatString.c_str(), sRegEx) == true) ? XPR_TRUE : XPR_FALSE;
+    return (std::regex_match(aFormatString.c_str(), sRegEx) == true) ? XPR_TRUE : XPR_FALSE;
 }
 
 void FormatOrgFileExt::parseShort(const xpr::string &aFormatString, Format *&aFormat)
@@ -603,9 +603,9 @@ xpr_bool_t FormatOrgFileName::write(base::XmlWriter &aXmlWriter) const
 
 xpr_bool_t FormatOrgFileName::canParseShort(const xpr::string &aFormatString)
 {
-    const std::tr1::tregex sRegEx(kShortFormatOrgFileNameRegExpr);
+    const xpr::tregex sRegEx(kShortFormatOrgFileNameRegExpr);
 
-    return (std::tr1::regex_match(aFormatString.c_str(), sRegEx) == true) ? XPR_TRUE : XPR_FALSE;
+    return (std::regex_match(aFormatString.c_str(), sRegEx) == true) ? XPR_TRUE : XPR_FALSE;
 }
 
 void FormatOrgFileName::parseShort(const xpr::string &aFormatString, Format *&aFormat)
