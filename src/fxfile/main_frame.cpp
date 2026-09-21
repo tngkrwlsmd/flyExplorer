@@ -196,10 +196,14 @@ xpr_bool_t MainFrame::PreCreateWindow(CREATESTRUCT &aCreateStruct)
         CRect sWorkAreaRect;
         GetPrimaryDesktopRect(sWorkAreaRect, XPR_TRUE);
 
-        sWindowRect.left   = (sWorkAreaRect.Width()  - DEFAULT_WINDOW_WIDTH)  / 2;
-        sWindowRect.top    = (sWorkAreaRect.Height() - DEFAULT_WINDOW_HEIGHT) / 2;
-        sWindowRect.right  = sWindowRect.left + DEFAULT_WINDOW_WIDTH;
-        sWindowRect.bottom = sWindowRect.top  + DEFAULT_WINDOW_HEIGHT;
+        const xpr_uint_t sDpi = ui::ModernUI::getDpi(XPR_NULL);
+        const xpr_sint_t sDefaultWidth = ui::ModernUI::scale(DEFAULT_WINDOW_WIDTH, sDpi);
+        const xpr_sint_t sDefaultHeight = ui::ModernUI::scale(DEFAULT_WINDOW_HEIGHT, sDpi);
+
+        sWindowRect.left   = (sWorkAreaRect.Width()  - sDefaultWidth)  / 2;
+        sWindowRect.top    = (sWorkAreaRect.Height() - sDefaultHeight) / 2;
+        sWindowRect.right  = sWindowRect.left + sDefaultWidth;
+        sWindowRect.bottom = sWindowRect.top  + sDefaultHeight;
 
         sCmdShow = SW_SHOWNORMAL;
     }

@@ -15,6 +15,7 @@
 
 #include "gui/gdi.h"
 #include "gui/MemDC.h"
+#include "gui/ModernUI.h"
 #include "gui/BCMenu.h"
 
 #include "option.h"
@@ -105,6 +106,7 @@ BEGIN_MESSAGE_MAP(PathBar, CWnd)
     ON_WM_MOUSEMOVE()
     ON_WM_SIZE()
     ON_WM_SETTINGCHANGE()
+    ON_MESSAGE(WM_DPICHANGED, OnDpiChanged)
     ON_WM_CONTEXTMENU()
     ON_WM_DESTROY()
     ON_WM_CAPTURECHANGED()
@@ -180,27 +182,42 @@ void PathBar::OnPaint(void)
     CRect sClientRect;
     GetClientRect(&sClientRect);
 
-    COLORREF sBackColor = CalculateColor(GetSysColor(COLOR_WINDOW), GetSysColor(COLOR_3DFACE), 150);
+    const ui::ThemePalette sPalette = ui::ModernUI::getPalette();
+    const xpr_uint_t sDpi = ui::ModernUI::getDpi(m_hWnd);
+    const xpr_sint_t sGap = ui::ModernUI::scale(GAP, sDpi);
+    const xpr_sint_t sIconGap = ui::ModernUI::scale(GAP_ICON, sDpi);
+    const xpr_sint_t sIconSize = ui::ModernUI::scale(16, sDpi);
+
+    COLORREF sBackColor = sPalette.mSurface;
     sMemDC.FillSolidRect(sClientRect, sBackColor);
 
     CFont *sOldFont = sMemDC.SelectObject(&mTextFont);
     sMemDC.SetBkMode(TRANSPARENT);
-    sMemDC.SetTextColor(::GetSysColor(COLOR_WINDOWTEXT));
+    sMemDC.SetTextColor(sPalette.mText);
 
     xpr_uint_t sFormat = DT_LEFT | DT_VCENTER | DT_SINGLELINE | DT_NOPREFIX | DT_PATH_ELLIPSIS;
 
     if (XPR_IS_NOT_NULL(mIcon))
     {
-        CPoint ptIcon(GAP_ICON, (sClientRect.Height() - 16) / 2);
-        ::DrawIconEx(sMemDC.m_hDC, ptIcon.x, ptIcon.y, mIcon, 16, 16, 0, XPR_NULL, DI_NORMAL);
+        CPoint ptIcon(sIconGap, (sClientRect.Height() - sIconSize) / 2);
+        ::DrawIconEx(
+            sMemDC.m_hDC,
+            ptIcon.x,
+            ptIcon.y,
+            mIcon,
+            sIconSize,
+            sIconSize,
+            0,
+            XPR_NULL,
+            DI_NORMAL);
     }
 
     CRect sTextRect(sClientRect);
-    sTextRect.left  += XPR_IS_NOT_NULL(mIcon) ? GAP_ICON : GAP;
-    sTextRect.right -= XPR_IS_NOT_NULL(mIcon) ? GAP_ICON : GAP;
+    sTextRect.left  += XPR_IS_NOT_NULL(mIcon) ? sIconGap : sGap;
+    sTextRect.right -= XPR_IS_NOT_NULL(mIcon) ? sIconGap : sGap;
 
     if (XPR_IS_NOT_NULL(mIcon))
-        sTextRect.left += 16 + GAP_ICON;
+        sTextRect.left += sIconSize + sIconGap;
 
     sMemDC.DrawText(mPath, sTextRect, sFormat);
 
@@ -215,7 +232,7 @@ void PathBar::OnPaint(void)
 
         CRect sTextUnderLineRect(sTextRect);
         sMemDC.DrawText(mPathMouse, (xpr_sint_t)_tcslen(mPathMouse), sTextUnderLineRect, DT_CALCRECT | sFormat);
-        sBackColor = CalculateColor(GetSysColor(COLOR_WINDOW), GetSysColor(COLOR_3DFACE), 150);
+        sBackColor = sPalette.mSurface;
         sMemDC.FillSolidRect(sTextUnderLineRect, sBackColor);
 
         sMemDC.DrawText(mPathMouse, sTextRect, sFormat);
@@ -330,12 +347,17 @@ void PathBar::OnMouseMove(xpr_uint_t aFlags, CPoint aPoint)
     CRect sClientRect;
     GetClientRect(&sClientRect);
 
+    const xpr_uint_t sDpi = ui::ModernUI::getDpi(m_hWnd);
+    const xpr_sint_t sGap = ui::ModernUI::scale(GAP, sDpi);
+    const xpr_sint_t sIconGap = ui::ModernUI::scale(GAP_ICON, sDpi);
+    const xpr_sint_t sIconSize = ui::ModernUI::scale(16, sDpi);
+
     CRect sTextRect(sClientRect);
-    sTextRect.left  += XPR_IS_NOT_NULL(mIcon) ? GAP_ICON : GAP;
-    sTextRect.right -= XPR_IS_NOT_NULL(mIcon) ? GAP_ICON : GAP;
+    sTextRect.left  += XPR_IS_NOT_NULL(mIcon) ? sIconGap : sGap;
+    sTextRect.right -= XPR_IS_NOT_NULL(mIcon) ? sIconGap : sGap;
 
     if (XPR_IS_NOT_NULL(mIcon))
-        sTextRect.left += 16 + GAP_ICON;
+        sTextRect.left += sIconSize + sIconGap;
 
     xpr_uint_t sFormat = DT_LEFT | DT_VCENTER | DT_SINGLELINE | DT_NOPREFIX | DT_PATH_ELLIPSIS;
 
@@ -473,16 +495,14 @@ void PathBar::updateFonts(void)
 
     if (XPR_IS_NULL(mTextFont.m_hObject))
     {
-        // font Creation
-        NONCLIENTMETRICS sNonClientMetrics = {0};
-        sNonClientMetrics.cbSize = sizeof(sNonClientMetrics);
-        ::SystemParametersInfo(SPI_GETNONCLIENTMETRICS, sizeof(sNonClientMetrics), &sNonClientMetrics, 0);
+        LOGFONT sLogFont = {0};
+        if (XPR_IS_TRUE(ui::ModernUI::getUIFont(sLogFont, GetSafeHwnd())))
+        {
+            mTextFont.CreateFontIndirect(&sLogFont);
 
-        //sNonClientMetrics.lfMenuFont.lfWeight = FW_BOLD;
-        mTextFont.CreateFontIndirect(&sNonClientMetrics.lfMenuFont);
-
-        sNonClientMetrics.lfMenuFont.lfUnderline = XPR_TRUE;
-        mTextUnderLineFont.CreateFontIndirect(&sNonClientMetrics.lfMenuFont);
+            sLogFont.lfUnderline = XPR_TRUE;
+            mTextUnderLineFont.CreateFontIndirect(&sLogFont);
+        }
     }
 }
 
@@ -522,6 +542,15 @@ void PathBar::OnSettingChange(xpr_uint_t aFlags, const xpr_tchar_t *aSection)
     CWnd::OnSettingChange(aFlags, aSection);
 
     updateFonts();
+    recalcLayout();
+}
+
+LRESULT PathBar::OnDpiChanged(WPARAM aWParam, LPARAM aLParam)
+{
+    updateFonts();
+    recalcLayout();
+
+    return 0;
 }
 
 void PathBar::trackGoUpMenu(CPoint aPoint)
@@ -635,7 +664,7 @@ xpr_sint_t PathBar::getHeight(void)
 
     sClientDC.SelectObject(sOldFont);
 
-    return sPathRect.Height() + 6;
+    return sPathRect.Height() + ui::ModernUI::scaleForWindow(6, m_hWnd);
 }
 
 LRESULT PathBar::WindowProc(xpr_uint_t aMsg, WPARAM aWParam, LPARAM aLParam)

@@ -77,6 +77,7 @@ protected:
     afx_msg void OnMouseMove(xpr_uint_t aFlags, CPoint aPoint);
     afx_msg void OnSize(xpr_uint_t aType, xpr_sint_t cx, xpr_sint_t cy);
     afx_msg void OnSettingChange(xpr_uint_t aFlags, const xpr_tchar_t *aSection);
+    afx_msg LRESULT OnDpiChanged(WPARAM aWParam, LPARAM aLParam);
     afx_msg void OnContextMenu(CWnd *aWnd, CPoint aPoint);
     afx_msg void OnDestroy(void);
     afx_msg void OnCaptureChanged(CWnd *aWnd);
