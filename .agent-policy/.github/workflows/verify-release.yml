@@ -1,0 +1,149 @@
+name: Verify immutable universal-agent-docs release
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: "Trusted SemVer release tag, for example v0.1.0"
+        required: true
+        type: string
+      expected_source_sha:
+        description: "Trusted 40-hex commit SHA that the release tag must resolve to"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  attestations: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+
+      - name: Verify trusted tag and source revision
+        id: source
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ inputs.release_tag }}
+          EXPECTED_SOURCE_SHA: ${{ inputs.expected_source_sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          case "$EXPECTED_SOURCE_SHA" in
+            (*[!0-9a-f]*|'') echo "expected_source_sha must be lowercase hex" >&2; exit 1 ;;
+          esac
+          test "${#EXPECTED_SOURCE_SHA}" -eq 40
+
+          python - "$TAG" <<'PY'
+          import re
+          import sys
+
+          tag = sys.argv[1]
+          pattern = re.compile(
+              r"^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)"
+              r"(?:-((?:0|[1-9][0-9]*|[0-9A-Za-z-]*[A-Za-z-][0-9A-Za-z-]*)"
+              r"(?:\.(?:0|[1-9][0-9]*|[0-9A-Za-z-]*[A-Za-z-][0-9A-Za-z-]*))*))?"
+              r"(?:\+([0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*))?$"
+          )
+          if not pattern.fullmatch(tag):
+              raise SystemExit(f"release tag is not strict SemVer with v prefix: {tag}")
+          PY
+
+          git fetch --force origin "refs/tags/$TAG:refs/tags/$TAG"
+          resolved_sha="$(git rev-list -n 1 "$TAG")"
+          test "$resolved_sha" = "$EXPECTED_SOURCE_SHA"
+
+          git fetch --no-tags origin main:refs/remotes/origin/main
+          git merge-base --is-ancestor "$EXPECTED_SOURCE_SHA" origin/main
+
+          release_json="$(gh api "repos/$GITHUB_REPOSITORY/releases/tags/$TAG")"
+          test "$(jq -r '.tag_name' <<<"$release_json")" = "$TAG"
+          test "$(jq -r '.draft' <<<"$release_json")" = "false"
+          test "$(jq -r '.immutable' <<<"$release_json")" = "true"
+
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "sha=$EXPECTED_SOURCE_SHA" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
+        with:
+          python-version: "3.14"
+          cache: pip
+
+      - name: Install hash-locked validation dependencies
+        run: python -m pip install --require-hashes --requirement requirements.lock
+
+      - name: Download canonical release assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.source.outputs.tag }}
+        run: gh release download "$TAG" --repo "$GITHUB_REPOSITORY" --dir downloaded
+
+      - name: Verify GitHub immutable release attestation
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.source.outputs.tag }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh release verify "$TAG" --repo "$GITHUB_REPOSITORY"
+          for file in \
+            universal-agent-docs.zip \
+            universal-agent-docs.sha256 \
+            universal-agent-docs.trust.json \
+            universal-agent-docs.release.json \
+            universal-agent-docs-consumer.zip \
+            universal-agent-docs-consumer.sha256 \
+            universal-agent-docs-consumer.release.json
+          do
+            gh release verify-asset "$TAG" "downloaded/$file" --repo "$GITHUB_REPOSITORY"
+          done
+
+      - name: Verify build provenance
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.source.outputs.tag }}
+          SOURCE_SHA: ${{ steps.source.outputs.sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          signer="github.com/$GITHUB_REPOSITORY/.github/workflows/release.yml"
+          for file in \
+            universal-agent-docs.zip \
+            universal-agent-docs.sha256 \
+            universal-agent-docs.trust.json \
+            universal-agent-docs.release.json \
+            universal-agent-docs-consumer.zip \
+            universal-agent-docs-consumer.sha256 \
+            universal-agent-docs-consumer.release.json
+          do
+            gh attestation verify "downloaded/$file" \
+              --repo "$GITHUB_REPOSITORY" \
+              --signer-workflow "$signer" \
+              --source-ref "refs/tags/$TAG" \
+              --source-digest "$SOURCE_SHA"
+          done
+
+      - name: Verify detached ZIP checksum
+        working-directory: downloaded
+        run: sha256sum --check universal-agent-docs.sha256
+
+      - name: Verify detached consumer ZIP checksum
+        working-directory: downloaded
+        run: sha256sum --check universal-agent-docs-consumer.sha256
+
+      - name: Verify canonical distribution and manifests
+        run: >-
+          python scripts/validate.py
+          --distribution downloaded/universal-agent-docs.zip
+          --trusted-manifest downloaded/universal-agent-docs.trust.json
+          --release-manifest downloaded/universal-agent-docs.release.json
+
+      - name: Verify canonical consumer distribution and manifest
+        run: >-
+          python scripts/package_consumer.py
+          --verify downloaded/universal-agent-docs-consumer.zip
+          --release-manifest downloaded/universal-agent-docs-consumer.release.json

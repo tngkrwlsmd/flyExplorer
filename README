@@ -23,6 +23,32 @@ Required software:
 The old Python 2.7.4 and Visual Studio 2015/v140 toolchain are no longer required
 for the default build path.
 
+Development Policy and Fast Preflight
+-------------------------------------
+The repository vendors the validated `universal-agent-docs` policy bundle under
+`.agent-policy/`. Project-specific instructions remain in `AGENTS.md` and
+project facts in `.agent-policy/PROJECT.md`.
+
+Before a C++ checkpoint, run:
+
+    python build/validate_source_invariants.py
+
+`build.bat` runs this preflight automatically before downloading tools,
+deleting stale generated projects, or running GYP. The current preflight checks
+direct header dependencies for cross-cutting ModernUI symbols and verifies the
+DPI/manifest integration points. It is a static check and does not replace a
+Visual Studio compile/link build.
+
+Policy/readiness checks can be run with:
+
+    python -m pip install --require-hashes --requirement .agent-policy/requirements.lock
+    python .agent-policy/scripts/validate.py
+    python .agent-policy/scripts/validate.py --project-root . --readiness development
+    python .agent-policy/scripts/conformance.py
+
+These checks are also wired to repository CI. A policy/static PASS must not be
+reported as a product compile, integration, or runtime PASS.
+
 Generate the Visual Studio Solution
 -----------------------------------
 From a Command Prompt in the repository root:

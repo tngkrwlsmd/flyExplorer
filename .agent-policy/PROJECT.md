@@ -1,12 +1,12 @@
 # PROJECT.md — flyExplorer project facts, architecture, readiness
 
-이 파일은 universal-agent-docs의 PROJECT template을 flyExplorer에 맞게 채운 Guidance용 프로젝트 지도다.
+이 파일은 universal-agent-docs의 PROJECT template을 flyExplorer에 맞게 채운 Validated-profile 프로젝트 지도다.
 상세 제품 명세를 복제하지 않고 실제 Source of Truth 위치와 현재 확인된 build/runtime 사실을 기록한다.
 
 <!-- project-facts:start -->
 ```json
 {
-  "profile": "flyexplorer-guidance",
+  "profile": "flyexplorer-validated",
   "facts": {
     "repository_root": {
       "value": ".",
@@ -77,13 +77,14 @@
     }
   ],
   "review": {
-    "reviewed_revision": "4834f64a6bc719477e7835f136e7b3448e60efa4",
+    "reviewed_revision": "361a78f2bd8ff8b2c19b6ebb09de62fbd2067fd5",
     "reviewed_at": "2026-09-21",
     "reviewed_paths": [
       "README",
       "build.bat",
       "build/common.gypi",
       "build/fix_solution_configs.py",
+      "build/validate_source_invariants.py",
       "fxfile.gyp",
       "src/fxfile",
       "src/xpr",
@@ -147,7 +148,10 @@
 - 일부 third-party binary는 오래되었고 architecture가 제한될 수 있다.
 - x64 solution은 mixed-architecture helper mapping을 사용한다.
 - updater는 x64 Build Solution에서 의도적으로 제외한다.
-- 현재 automated test suite는 확인되지 않았다.
+- product unit/integration test suite는 아직 확인되지 않았다.
+- `build/validate_source_invariants.py`가 C++ cross-cutting dependency와 ModernUI integration의 빠른 static preflight를 제공한다.
+- `.agent-policy/`에는 upstream `universal-agent-docs` revision `cc250a63994f1d9d4fcfdbb2bab9b622230bf8c6`의 validated policy bundle을 vendor하며 root CI에서 bundle/readiness/conformance를 검사한다.
+- Profile C runtime enforcement는 설치되어 있지 않다.
 - Windows 11 UI 현대화 Phase 1에서 Per-Monitor V2 DPI, system typography, theme palette foundation을 추가했다.
 - Phase 2에서 toolbar padding/system typography/double buffering과 flat theme-aware tab rendering, DPI-scaled tab metrics를 추가했다.
 - Phase 3에서 file list/header를 system font/theme palette 기반으로 정리하고, folder tree에 DPI-aware row/indent/system typography를 적용했으며 explorer pane/splitter 배경을 flat separator 기반으로 정리했다.
@@ -155,6 +159,7 @@
 
 ## Recommended verification
 
+0. `python build/validate_source_invariants.py`
 1. `build.bat`
 2. 새로 생성된 `fxfile.sln`을 Visual Studio 2026에서 열기
 3. `Release-x64-Unicode | x64` Build Solution
