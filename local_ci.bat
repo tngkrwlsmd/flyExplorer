@@ -46,7 +46,19 @@ goto :usage_error
 :profile_quick
 call :find_python
 if errorlevel 1 goto :failed
-call :run_source_preflight
+call :append_file_to_log
+set "LOG_TITLE=%~1"
+set "LOG_FILE=%~2"
+>>"%LOCAL_CI_LOG%" echo.
+>>"%LOCAL_CI_LOG%" echo ==== %LOG_TITLE% ====
+if exist "%LOG_FILE%" (
+    type "%LOG_FILE%" >>"%LOCAL_CI_LOG%"
+) else (
+    >>"%LOCAL_CI_LOG%" echo [local-ci] No captured output.
+)
+exit /b 0
+
+:run_source_preflight
 if errorlevel 1 goto :failed
 goto :passed
 
@@ -359,7 +371,7 @@ echo [local-ci] Rebuilding %CI_CONFIGURATION% ^| %CI_PLATFORM%...
 rem Rebuild is intentional: local CI must not reuse stale object files from a
 rem previous CRT/configuration state. The normal file logger also records every
 rem source file actually compiled.
-"%MSBUILD_EXE%" "fxfile.sln" /m /nologo /verbosity:quiet /t:Rebuild /fl "/flp:logfile=%MSBUILD_RAW_LOG%;verbosity=normal" "/p:Configuration=%CI_CONFIGURATION%" "/p:Platform=%CI_PLATFORM%" >nul 2>&1
+"%MSBUILD_EXE%" "fxfile.sln" /m /nologo /verbosity:normal /t:Rebuild /fl "/flp:logfile=%MSBUILD_RAW_LOG%;verbosity=normal" "/p:Configuration=%CI_CONFIGURATION%" "/p:Platform=%CI_PLATFORM%"
 set "BUILD_RESULT=%errorlevel%"
 
 rem MSBuild's file logger uses the Windows ANSI code page on localized systems.
@@ -371,7 +383,7 @@ if errorlevel 1 (
     exit /b 1
 )
 
-call :append_file "%CI_TITLE% rebuild" "%STEP_LOG%"
+call :append_file_to_log "%CI_TITLE% rebuild" "%STEP_LOG%"
 if not "%BUILD_RESULT%"=="0" exit /b %BUILD_RESULT%
 
 rem Scan the UTF-8 normalized log. The full warning line is already visible
