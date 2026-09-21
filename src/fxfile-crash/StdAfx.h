@@ -33,6 +33,7 @@
 #include <windowsx.h>
 #include <tchar.h>
 #include <winsock2.h>
+#include <ws2tcpip.h>
 #include <shellapi.h>
 #include <psapi.h>
 #include <commctrl.h>
