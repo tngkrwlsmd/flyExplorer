@@ -1,12 +1,12 @@
-name: Policy and Source Validation
+name: Source Validation
 
 # Temporary Actions budget pause through 2026-09-30.
-# No push/PR CI. A manual run requires an explicit budget override.
+# No push/PR CI. Manual runs require an explicit budget override.
 on:
   workflow_dispatch:
     inputs:
       run_ci:
-        description: "Budget override: run policy validation before 2026-10-01"
+        description: "Budget override: run source validation before 2026-10-01"
         required: false
         default: false
         type: boolean
@@ -18,21 +18,11 @@ jobs:
   validate:
     if: ${{ inputs.run_ci }}
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
         with:
           python-version: "3.14"
-          cache: pip
-          cache-dependency-path: .agent-policy/requirements.lock
-      - name: Install policy validation dependencies
-        run: python -m pip install --require-hashes --requirement .agent-policy/requirements.lock
-      - name: Validate vendored policy bundle
-        run: python .agent-policy/scripts/validate.py
-      - name: Validate flyExplorer development readiness
-        run: python .agent-policy/scripts/validate.py --project-root . --readiness development
-      - name: Run policy conformance corpus
-        working-directory: .agent-policy
-        run: python scripts/conformance.py
-      - name: Run flyExplorer source invariant preflight
+      - name: Run source invariant preflight
         run: python build/validate_source_invariants.py

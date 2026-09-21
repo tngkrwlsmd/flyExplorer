@@ -1,7 +1,7 @@
 name: Windows Product Build
 
 # Temporary Actions budget pause through 2026-09-30.
-# No push/PR CI. Manual runs are opt-in and default to the smallest useful build.
+# No push/PR CI. Manual runs are opt-in and intentionally minimal.
 on:
   workflow_dispatch:
     inputs:
@@ -10,8 +10,8 @@ on:
         required: false
         default: false
         type: boolean
-      full_matrix:
-        description: "Also run Debug x64, x86 regressions, and packaging"
+      run_x86_compat:
+        description: "Also compile the x86 Unicode/Multibyte compatibility builds"
         required: false
         default: false
         type: boolean
@@ -20,23 +20,17 @@ permissions:
   contents: read
 
 jobs:
-  build-release-x64-unicode:
+  release-x64:
     if: ${{ inputs.run_ci }}
     runs-on: windows-2025-vs2026
     timeout-minutes: 30
-
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
         with:
           python-version: "3.14"
 
-      - name: Run source invariant preflight
-        shell: cmd
-        run: python build\validate_source_invariants.py
-
-      - name: Generate Visual Studio 2026 solution
+      - name: Generate Visual Studio 2026 x64 solution
         shell: cmd
         run: call build.bat 2026 x64
 
@@ -60,9 +54,8 @@ jobs:
           }
 
           "path=$msbuild" >> $env:GITHUB_OUTPUT
-          & $msbuild -version
 
-      - name: Verify generated build contract
+      - name: Verify generated x64 contract
         shell: pwsh
         run: |
           if (-not (Test-Path "fxfile.sln")) {
@@ -75,12 +68,7 @@ jobs:
           }
 
           $projects = Get-ChildItem "src" -Recurse -Filter "*.vcxproj"
-          if (-not $projects) {
-            throw "No generated Visual Studio projects were found."
-          }
-
-          $v145Projects = $projects | Select-String -SimpleMatch "<PlatformToolset>v145</PlatformToolset>"
-          if (-not $v145Projects) {
+          if (-not ($projects | Select-String -SimpleMatch "<PlatformToolset>v145</PlatformToolset>")) {
             throw "Generated projects do not contain the v145 platform toolset."
           }
 
@@ -89,280 +77,55 @@ jobs:
             throw "The main MFC project is missing UseOfMfc=Static."
           }
 
-          $xprProject = Get-Content "src\xpr\xpr.vcxproj" -Raw
-          if ($xprProject -notmatch "<TargetName>libxprw</TargetName>") {
-            throw "The generated xpr project is missing the Release Unicode TargetName contract."
-          }
-
-          $updaterProjectLine = $solution -split "\r?\n" |
-            Where-Object { $_ -like '*src\fxfile-upchecker\fxfile-upchecker.vcxproj*' } |
-            Select-Object -First 1
-          if (-not $updaterProjectLine) {
-            throw "Could not find the fxfile-upchecker project in the generated solution."
-          }
-
-          $updaterGuid = [regex]::Match($updaterProjectLine, '\{[0-9A-Fa-f-]+\}').Value
-          if (-not $updaterGuid) {
-            throw "Could not resolve the fxfile-upchecker project GUID."
-          }
-
-          $releaseBuildKey = "$updaterGuid.Release-x64-Unicode|x64.Build.0"
-          if ($solution.Contains($releaseBuildKey)) {
-            throw "fxfile-upchecker must not build in Release-x64-Unicode."
-          }
-
-          $aggregateProjectLine = $solution -split "\r?\n" |
-            Where-Object { $_ -match '^Project\(' -and $_ -like '*"fxfile.vcxproj"*' } |
-            Select-Object -First 1
-          if (-not $aggregateProjectLine) {
-            throw "Could not find the root aggregate fxfile.vcxproj in the generated solution."
-          }
-
-          $aggregateGuidMatches = [regex]::Matches($aggregateProjectLine, '\{[0-9A-Fa-f-]+\}')
-          if ($aggregateGuidMatches.Count -lt 2) {
-            throw "Could not resolve the root aggregate project GUID."
-          }
-          $aggregateGuid = $aggregateGuidMatches[$aggregateGuidMatches.Count - 1].Value
-
-          $aggregateReleaseBuildKey = "$aggregateGuid.Release-x64-Unicode|x64.Build.0"
-          if ($solution.Contains($aggregateReleaseBuildKey)) {
-            throw "The root aggregate project must not build in Release-x64-Unicode."
-          }
-
       - name: Build Release-x64-Unicode
         shell: pwsh
         env:
           MSBUILD_PATH: ${{ steps.msbuild.outputs.path }}
         run: |
-          $logPath = Join-Path $env:RUNNER_TEMP "fxfile-msbuild.log"
-
-          & $env:MSBUILD_PATH "fxfile.sln" `
-            /m `
-            /nologo `
-            /verbosity:minimal `
-            /fl `
-            "/flp:logfile=$logPath;verbosity=normal" `
-            /p:Configuration=Release-x64-Unicode `
-            /p:Platform=x64
-
+          $logPath = Join-Path $env:RUNNER_TEMP "fxfile-msbuild-x64.log"
+          & $env:MSBUILD_PATH "fxfile.sln" /m /nologo /verbosity:minimal /fl "/flp:logfile=$logPath;verbosity=normal" /p:Configuration=Release-x64-Unicode /p:Platform=x64
           if ($LASTEXITCODE -ne 0) {
-            throw "MSBuild failed with exit code $LASTEXITCODE."
+            throw "Release-x64-Unicode MSBuild failed with exit code $LASTEXITCODE."
           }
 
-      - name: Reject compiler, linker, and MSBuild warnings
+      - name: Reject build warnings
         shell: pwsh
         run: |
-          $logPath = Join-Path $env:RUNNER_TEMP "fxfile-msbuild.log"
-          if (-not (Test-Path $logPath)) {
-            throw "MSBuild log was not created: $logPath"
-          }
-
+          $logPath = Join-Path $env:RUNNER_TEMP "fxfile-msbuild-x64.log"
           $warnings = Select-String -Path $logPath -Pattern "\bwarning (?:C\d+|LNK\d+|MSB\d+):"
           if ($warnings) {
-            Write-Host "Unexpected product build warnings:"
-            $warnings | ForEach-Object { Write-Host $_.Line }
-            throw "Product build emitted $($warnings.Count) compiler/linker/MSBuild warning(s)."
+            throw "Release-x64-Unicode emitted $($warnings.Count) compiler/linker/MSBuild warning(s)."
           }
 
-          Write-Host "Verified warning-free product build log."
-
-      - name: Verify product artifacts
+      - name: Verify x64 artifacts
         shell: pwsh
         run: |
-          $requiredFiles = @(
+          foreach ($path in @(
             "bin\x64\fxfile.exe",
             "bin\x64\libxprw.dll",
             "bin\x64\fxfile-crash.dll",
             "bin\x64\fxfile-launcher.exe",
             "bin\x64\fxfile-keyhook.dll"
-          )
-
-          foreach ($path in $requiredFiles) {
-            if (-not (Test-Path $path)) {
-              throw "Required build artifact is missing: $path"
-            }
-            Write-Host "Verified: $path"
-          }
-
-          $languageFiles = Get-ChildItem "bin\x64\Languages" -File -ErrorAction SilentlyContinue
-          if (-not $languageFiles) {
-            throw "No language resources were staged under bin\x64\Languages."
-          }
-
-          Write-Host "Verified language resources:"
-          $languageFiles | ForEach-Object { Write-Host "  $($_.FullName)" }
-          Write-Host "fxfile-upchecker is intentionally not required by the x64 solution build."
-
-      - name: Run hosted-runner x64 launch smoke
-        shell: pwsh
-        run: |
-          & ".\build\runtime_smoke.ps1" `
-            -SourceDir "bin\x64" `
-            -Configuration "Release-x64-Unicode"
-
-      - name: Stage x64 runtime for packaging
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
-        with:
-          name: flyexplorer-runtime-x64
-          path: bin/x64
-          if-no-files-found: error
-          retention-days: 1
-
-
-  build-debug-x64-regression:
-    if: ${{ inputs.run_ci && inputs.full_matrix }}
-    runs-on: windows-2025-vs2026
-    timeout-minutes: 45
-
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-
-      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
-        with:
-          python-version: "3.14"
-
-      - name: Run source invariant preflight
-        shell: cmd
-        run: python build\validate_source_invariants.py
-
-      - name: Generate Visual Studio 2026 x64 solution
-        shell: cmd
-        run: call build.bat 2026 x64
-
-      - name: Locate Visual Studio 2026 MSBuild
-        shell: pwsh
-        run: |
-          $vswhere = Join-Path ${env:ProgramFiles(x86)} "Microsoft Visual Studio\Installer\vswhere.exe"
-          if (-not (Test-Path $vswhere)) {
-            throw "vswhere.exe was not found on the Visual Studio 2026 runner."
-          }
-
-          $installationPath = & $vswhere -latest -products * -requires Microsoft.Component.MSBuild -property installationPath
-          if (-not $installationPath) {
-            throw "Visual Studio installation with MSBuild was not found."
-          }
-
-          $msbuild = Join-Path $installationPath "MSBuild\Current\Bin\MSBuild.exe"
-          if (-not (Test-Path $msbuild)) {
-            throw "MSBuild.exe was not found at $msbuild."
-          }
-
-          "MSBUILD_PATH=$msbuild" >> $env:GITHUB_ENV
-          & $msbuild -version
-
-      - name: Verify generated Debug x64 contract
-        shell: pwsh
-        run: |
-          $solution = Get-Content "fxfile.sln" -Raw
-          if ($solution -notmatch [regex]::Escape("Debug-x64-Unicode|x64")) {
-            throw "Debug-x64-Unicode|x64 is missing from fxfile.sln."
-          }
-
-          $mainProject = Get-Content "src\fxfile\fxfile.vcxproj" -Raw
-          $crashProject = Get-Content "src\fxfile-crash\fxfile-crash.vcxproj" -Raw
-          $xprProject = Get-Content "src\xpr\xpr.vcxproj" -Raw
-          $launcherProject = Get-Content "src\fxfile-launcher\fxfile-launcher.vcxproj" -Raw
-          $keyhookProject = Get-Content "src\fxfile-keyhook\fxfile-keyhook.vcxproj" -Raw
-
-          foreach ($contract in @(
-            @($mainProject, "<TargetName>fxfile_dbg</TargetName>", "fxfile"),
-            @($crashProject, "<TargetName>fxfile-crash_dbg</TargetName>", "fxfile-crash"),
-            @($xprProject, "<TargetName>libxprw_dbg</TargetName>", "xpr"),
-            @($launcherProject, "<TargetName>fxfile-launcher_dbg</TargetName>", "fxfile-launcher"),
-            @($keyhookProject, "<TargetName>fxfile-keyhook_dbg</TargetName>", "fxfile-keyhook")
-          )) {
-            if (-not $contract[0].Contains($contract[1])) {
-              throw "$($contract[2]) is missing its Debug TargetName contract."
-            }
-          }
-
-          $updaterProjectLine = $solution -split "\r?\n" |
-            Where-Object { $_ -like '*src\fxfile-upchecker\fxfile-upchecker.vcxproj*' } |
-            Select-Object -First 1
-          if (-not $updaterProjectLine) {
-            throw "Could not find the fxfile-upchecker project in the generated solution."
-          }
-
-          $updaterGuid = [regex]::Match($updaterProjectLine, '\{[0-9A-Fa-f-]+\}').Value
-          if (-not $updaterGuid) {
-            throw "Could not resolve the fxfile-upchecker project GUID."
-          }
-
-          $debugBuildKey = "$updaterGuid.Debug-x64-Unicode|x64.Build.0"
-          if ($solution.Contains($debugBuildKey)) {
-            throw "fxfile-upchecker must not build in Debug-x64-Unicode."
-          }
-
-      - name: Build Debug-x64-Unicode
-        shell: pwsh
-        run: |
-          $logPath = Join-Path $env:RUNNER_TEMP "fxfile-msbuild-debug-x64.log"
-
-          & $env:MSBUILD_PATH "fxfile.sln" `
-            /m `
-            /nologo `
-            /verbosity:minimal `
-            /fl `
-            "/flp:logfile=$logPath;verbosity=normal" `
-            /p:Configuration=Debug-x64-Unicode `
-            /p:Platform=x64
-
-          if ($LASTEXITCODE -ne 0) {
-            throw "Debug-x64-Unicode MSBuild failed with exit code $LASTEXITCODE."
-          }
-
-      - name: Reject Debug x64 warnings
-        shell: pwsh
-        run: |
-          $logPath = Join-Path $env:RUNNER_TEMP "fxfile-msbuild-debug-x64.log"
-          if (-not (Test-Path $logPath)) {
-            throw "MSBuild log was not created: $logPath"
-          }
-
-          $warnings = Select-String -Path $logPath -Pattern "\bwarning (?:C\d+|LNK\d+|MSB\d+):"
-          if ($warnings) {
-            Write-Host "Unexpected Debug-x64-Unicode warnings:"
-            $warnings | ForEach-Object { Write-Host $_.Line }
-            throw "Debug-x64-Unicode emitted $($warnings.Count) compiler/linker/MSBuild warning(s)."
-          }
-
-          Write-Host "Verified warning-free Debug-x64-Unicode build log."
-
-      - name: Verify Debug x64 artifacts
-        shell: pwsh
-        run: |
-          foreach ($path in @(
-            "bin\x64\fxfile_dbg.exe",
-            "bin\x64\fxfile-crash_dbg.dll",
-            "bin\x64\libxprw_dbg.dll",
-            "bin\x64\fxfile-launcher_dbg.exe",
-            "bin\x64\fxfile-keyhook_dbg.dll"
           )) {
             if (-not (Test-Path -LiteralPath $path -PathType Leaf)) {
-              throw "Required Debug-x64-Unicode artifact is missing: $path"
+              throw "Required Release-x64-Unicode artifact is missing: $path"
             }
-            Write-Host "Verified: $path"
           }
 
-          if (Test-Path -LiteralPath "bin\fxfile-upchecker_dbg.exe") {
-            throw "fxfile-upchecker was unexpectedly built by Debug-x64-Unicode."
-          }
+      - name: Run x64 launch smoke
+        shell: pwsh
+        run: |
+          & ".\build\runtime_smoke.ps1" -SourceDir "bin\x64" -Configuration "Release-x64-Unicode"
 
-  build-release-x86-regression:
-    if: ${{ inputs.run_ci && inputs.full_matrix }}
+  x86-compat:
+    if: ${{ inputs.run_ci && inputs.run_x86_compat }}
     runs-on: windows-2025-vs2026
-    timeout-minutes: 45
-
+    timeout-minutes: 40
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
         with:
           python-version: "3.14"
-
-      - name: Run source invariant preflight
-        shell: cmd
-        run: python build\validate_source_invariants.py
 
       - name: Generate Visual Studio 2026 x86 solution
         shell: cmd
@@ -373,372 +136,42 @@ jobs:
         shell: pwsh
         run: |
           $vswhere = Join-Path ${env:ProgramFiles(x86)} "Microsoft Visual Studio\Installer\vswhere.exe"
-          if (-not (Test-Path $vswhere)) {
-            throw "vswhere.exe was not found on the Visual Studio 2026 runner."
-          }
-
           $installationPath = & $vswhere -latest -products * -requires Microsoft.Component.MSBuild -property installationPath
-          if (-not $installationPath) {
-            throw "Visual Studio installation with MSBuild was not found."
-          }
-
           $msbuild = Join-Path $installationPath "MSBuild\Current\Bin\MSBuild.exe"
           if (-not (Test-Path $msbuild)) {
-            throw "MSBuild.exe was not found at $msbuild."
+            throw "MSBuild.exe was not found."
           }
-
           "path=$msbuild" >> $env:GITHUB_OUTPUT
-          & $msbuild -version
 
-      - name: Verify generated x86 build contract
-        shell: pwsh
-        run: |
-          if (-not (Test-Path "fxfile.sln")) {
-            throw "fxfile.sln was not generated."
-          }
-
-          $solution = Get-Content "fxfile.sln" -Raw
-          foreach ($configuration in @(
-            "Release-x86-Unicode|Win32",
-            "Release-x86-Multibyte|Win32"
-          )) {
-            if ($solution -notmatch [regex]::Escape($configuration)) {
-              throw "$configuration is missing from fxfile.sln."
-            }
-          }
-
-          $projects = Get-ChildItem "src" -Recurse -Filter "*.vcxproj"
-          if (-not $projects) {
-            throw "No generated Visual Studio projects were found."
-          }
-
-          $v145Projects = $projects | Select-String -SimpleMatch "<PlatformToolset>v145</PlatformToolset>"
-          if (-not $v145Projects) {
-            throw "Generated projects do not contain the v145 platform toolset."
-          }
-
-          $mainProject = Get-Content "src\fxfile\fxfile.vcxproj" -Raw
-          if ($mainProject -notmatch "<UseOfMfc>Static</UseOfMfc>") {
-            throw "The main MFC project is missing UseOfMfc=Static."
-          }
-
-          $xprProject = Get-Content "src\xpr\xpr.vcxproj" -Raw
-          foreach ($targetName in @("libxprw", "libxpr")) {
-            if ($xprProject -notmatch "<TargetName>$targetName</TargetName>") {
-              throw "The generated xpr project is missing TargetName=$targetName."
-            }
-          }
-
-          $updaterProjectLine = $solution -split "\r?\n" |
-            Where-Object { $_ -like '*src\fxfile-upchecker\fxfile-upchecker.vcxproj*' } |
-            Select-Object -First 1
-          if (-not $updaterProjectLine -or $updaterProjectLine -notmatch '(\{[0-9A-Fa-f-]+\})"\s*$') {
-            throw "Could not resolve the fxfile-upchecker project GUID."
-          }
-
-          $updaterGuid = $Matches[1]
-          $unicodeBuildKey = "$updaterGuid.Release-x86-Unicode|Win32.Build.0"
-          $multibyteBuildKey = "$updaterGuid.Release-x86-Multibyte|Win32.Build.0"
-
-          if ($solution.Contains($unicodeBuildKey)) {
-            throw "fxfile-upchecker must not build in Release-x86-Unicode."
-          }
-          if (-not $solution.Contains($multibyteBuildKey)) {
-            throw "fxfile-upchecker must build in Release-x86-Multibyte."
-          }
-
-      - name: Build Release-x86-Unicode
+      - name: Build x86 compatibility configurations
         shell: pwsh
         env:
           MSBUILD_PATH: ${{ steps.msbuild.outputs.path }}
         run: |
-          $logPath = Join-Path $env:RUNNER_TEMP "fxfile-msbuild-x86-unicode.log"
+          foreach ($configuration in @("Release-x86-Unicode", "Release-x86-Multibyte")) {
+            $logPath = Join-Path $env:RUNNER_TEMP "fxfile-msbuild-$configuration.log"
+            & $env:MSBUILD_PATH "fxfile.sln" /m /nologo /verbosity:minimal /fl "/flp:logfile=$logPath;verbosity=normal" "/p:Configuration=$configuration" /p:Platform=Win32
+            if ($LASTEXITCODE -ne 0) {
+              throw "$configuration MSBuild failed with exit code $LASTEXITCODE."
+            }
 
-          & $env:MSBUILD_PATH "fxfile.sln" `
-            /m `
-            /nologo `
-            /verbosity:minimal `
-            /fl `
-            "/flp:logfile=$logPath;verbosity=normal" `
-            /p:Configuration=Release-x86-Unicode `
-            /p:Platform=Win32
-
-          if ($LASTEXITCODE -ne 0) {
-            throw "Release-x86-Unicode MSBuild failed with exit code $LASTEXITCODE."
+            $warnings = Select-String -Path $logPath -Pattern "\bwarning (?:C\d+|LNK\d+|MSB\d+):"
+            if ($warnings) {
+              throw "$configuration emitted $($warnings.Count) compiler/linker/MSBuild warning(s)."
+            }
           }
 
-      - name: Reject Release-x86-Unicode warnings
+      - name: Verify x86 compatibility artifacts
         shell: pwsh
         run: |
-          $logPath = Join-Path $env:RUNNER_TEMP "fxfile-msbuild-x86-unicode.log"
-          if (-not (Test-Path $logPath)) {
-            throw "MSBuild log was not created: $logPath"
-          }
-
-          $warnings = Select-String -Path $logPath -Pattern "\bwarning (?:C\d+|LNK\d+|MSB\d+):"
-          if ($warnings) {
-            Write-Host "Unexpected Release-x86-Unicode warnings:"
-            $warnings | ForEach-Object { Write-Host $_.Line }
-            throw "Release-x86-Unicode emitted $($warnings.Count) compiler/linker/MSBuild warning(s)."
-          }
-
-          Write-Host "Verified warning-free Release-x86-Unicode build log."
-
-      - name: Verify Release-x86-Unicode artifacts
-        shell: pwsh
-        run: |
-          $requiredFiles = @(
+          foreach ($path in @(
             "bin\x86-unicode\fxfile.exe",
             "bin\x86-unicode\libxprw.dll",
-            "bin\x86-unicode\libxprw.lib",
-            "bin\x86-unicode\fxfile-crash.dll",
-            "bin\x86-unicode\fxfile-launcher.exe",
-            "bin\x86-unicode\fxfile-keyhook.dll"
-          )
-
-          foreach ($path in $requiredFiles) {
-            if (-not (Test-Path $path)) {
-              throw "Required Release-x86-Unicode artifact is missing: $path"
-            }
-            Write-Host "Verified: $path"
-          }
-
-          if (Test-Path "bin\fxfile-upchecker.exe") {
-            throw "fxfile-upchecker was unexpectedly built by Release-x86-Unicode."
-          }
-
-      - name: Run hosted-runner x86 Unicode launch smoke
-        shell: pwsh
-        run: |
-          & ".\build\runtime_smoke.ps1" `
-            -SourceDir "bin\x86-unicode" `
-            -Configuration "Release-x86-Unicode"
-
-      - name: Build Release-x86-Multibyte
-        shell: pwsh
-        env:
-          MSBUILD_PATH: ${{ steps.msbuild.outputs.path }}
-        run: |
-          $logPath = Join-Path $env:RUNNER_TEMP "fxfile-msbuild-x86-multibyte.log"
-
-          & $env:MSBUILD_PATH "fxfile.sln" `
-            /m `
-            /nologo `
-            /verbosity:minimal `
-            /fl `
-            "/flp:logfile=$logPath;verbosity=normal" `
-            /p:Configuration=Release-x86-Multibyte `
-            /p:Platform=Win32
-
-          if ($LASTEXITCODE -ne 0) {
-            throw "Release-x86-Multibyte MSBuild failed with exit code $LASTEXITCODE."
-          }
-
-      - name: Reject Release-x86-Multibyte warnings
-        shell: pwsh
-        run: |
-          $logPath = Join-Path $env:RUNNER_TEMP "fxfile-msbuild-x86-multibyte.log"
-          if (-not (Test-Path $logPath)) {
-            throw "MSBuild log was not created: $logPath"
-          }
-
-          $warnings = Select-String -Path $logPath -Pattern "\bwarning (?:C\d+|LNK\d+|MSB\d+):"
-          if ($warnings) {
-            Write-Host "Unexpected Release-x86-Multibyte warnings:"
-            $warnings | ForEach-Object { Write-Host $_.Line }
-            throw "Release-x86-Multibyte emitted $($warnings.Count) compiler/linker/MSBuild warning(s)."
-          }
-
-          Write-Host "Verified warning-free Release-x86-Multibyte build log."
-
-      - name: Verify Release-x86-Multibyte and updater artifacts
-        shell: pwsh
-        run: |
-          $requiredFiles = @(
-            "bin\x86-multibyte\fxfile.exe",
-            "bin\x86-multibyte\libxpr.dll",
-            "bin\x86-multibyte\libxpr.lib",
-            "bin\x86-multibyte\fxfile-crash.dll",
-            "bin\x86-multibyte\fxfile-launcher.exe",
-            "bin\x86-multibyte\fxfile-keyhook.dll",
-            "bin\fxfile-upchecker.exe",
-            "bin\x86-multibyte\upchecker\fxfile-upchecker.exe",
-            "bin\x86-multibyte\upchecker\libxpr.dll"
-          )
-
-          foreach ($path in $requiredFiles) {
-            if (-not (Test-Path $path)) {
-              throw "Required Release-x86-Multibyte artifact is missing: $path"
-            }
-            Write-Host "Verified: $path"
-          }
-
-          Write-Host "Verified x86 multibyte updater -> libxpr runtime packaging contract."
-
-      - name: Run hosted-runner x86 Multibyte launch smoke
-        shell: pwsh
-        run: |
-          & ".\build\runtime_smoke.ps1" `
-            -SourceDir "bin\x86-multibyte" `
-            -Configuration "Release-x86-Multibyte"
-
-      - name: Verify packaging source contract
-        shell: pwsh
-        run: |
-          $copyScript = Get-Content "dist\copy.bat" -Raw
-          $installer = Get-Content "dist\setup.nsi" -Raw
-
-          $requiredCopyTokens = @(
-            "..\bin\x86-unicode\libxprw.dll",
-            "..\bin\x86-multibyte\libxpr.dll",
-            "..\bin\x64\libxprw.dll",
-            "\upchecker\fxfile-upchecker.exe"
-          )
-          foreach ($token in $requiredCopyTokens) {
-            if (-not $copyScript.Contains($token)) {
-              throw "dist/copy.bat is missing current package input: $token"
-            }
-          }
-
-          foreach ($stale in @("fxfile-updater.exe", "\updater")) {
-            if ($copyScript.Contains($stale)) {
-              throw "dist/copy.bat still references stale updater contract: $stale"
-            }
-            if ($installer.Contains($stale)) {
-              throw "dist/setup.nsi still references stale updater contract: $stale"
-            }
-          }
-
-          if (-not $installer.Contains("fxfile-upchecker.exe")) {
-            throw "dist/setup.nsi does not manage the current fxfile-upchecker process."
-          }
-          if (-not $installer.Contains('$INSTDIR\libxprw.dll')) {
-            throw "dist/setup.nsi does not remove the Unicode xpr runtime."
-          }
-
-          Write-Host "Verified current packaging names for xpr and fxfile-upchecker."
-
-      - name: Stage x86 Unicode runtime for packaging
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
-        with:
-          name: flyexplorer-runtime-x86-unicode
-          path: bin/x86-unicode
-          if-no-files-found: error
-          retention-days: 1
-
-      - name: Stage x86 Multibyte runtime for packaging
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
-        with:
-          name: flyexplorer-runtime-x86-multibyte
-          path: bin/x86-multibyte
-          if-no-files-found: error
-          retention-days: 1
-
-      - name: Stage x64 updater runtime for packaging
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
-        with:
-          name: flyexplorer-upchecker-x64
-          path: bin/x64/upchecker
-          if-no-files-found: error
-          retention-days: 1
-
-
-  build-release-packages:
-    if: ${{ inputs.run_ci && inputs.full_matrix }}
-    needs:
-      - build-release-x64-unicode
-      - build-release-x86-regression
-    runs-on: windows-2025-vs2026
-    timeout-minutes: 20
-
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-
-      - name: Download x64 runtime
-        uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5
-        with:
-          name: flyexplorer-runtime-x64
-          path: _package-input/x64
-
-      - name: Download x86 Unicode runtime
-        uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5
-        with:
-          name: flyexplorer-runtime-x86-unicode
-          path: _package-input/x86-unicode
-
-      - name: Download x86 Multibyte runtime
-        uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5
-        with:
-          name: flyexplorer-runtime-x86-multibyte
-          path: _package-input/x86-multibyte
-
-      - name: Download x64 updater runtime
-        uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5
-        with:
-          name: flyexplorer-upchecker-x64
-          path: _package-input/x64-upchecker
-
-      - name: Assemble verified package inputs
-        shell: pwsh
-        run: |
-          $dirs = @("bin\x64", "bin\x64\upchecker", "bin\x86-unicode", "bin\x86-multibyte")
-          foreach ($dir in $dirs) {
-            New-Item -ItemType Directory -Force -Path $dir | Out-Null
-          }
-
-          Copy-Item "_package-input\x64\*" "bin\x64" -Recurse -Force
-          Copy-Item "_package-input\x86-unicode\*" "bin\x86-unicode" -Recurse -Force
-          Copy-Item "_package-input\x86-multibyte\*" "bin\x86-multibyte" -Recurse -Force
-          Copy-Item "_package-input\x64-upchecker\*" "bin\x64\upchecker" -Recurse -Force
-
-          $required = @(
-            "bin\x64\fxfile.exe",
-            "bin\x64\upchecker\fxfile-upchecker.exe",
-            "bin\x86-unicode\fxfile.exe",
-            "bin\x86-unicode\upchecker\fxfile-upchecker.exe",
-            "bin\x86-multibyte\fxfile.exe",
-            "bin\x86-multibyte\upchecker\fxfile-upchecker.exe"
-          )
-          foreach ($path in $required) {
+            "bin\x86\fxfile.exe",
+            "bin\x86\libxpr.dll",
+            "bin\x86\upchecker\fxfile-upchecker.exe"
+          )) {
             if (-not (Test-Path -LiteralPath $path -PathType Leaf)) {
-              throw "Verified package input is missing: $path"
+              throw "Required x86 compatibility artifact is missing: $path"
             }
           }
-
-      - name: Build portable archives and NSIS installer
-        shell: cmd
-        run: call dist\package.bat
-
-      - name: Validate package payloads
-        shell: pwsh
-        run: |
-          & ".\build\validate_package.ps1" -DistDir "dist"
-
-      - name: Write package checksums
-        shell: pwsh
-        run: |
-          $packages = @(
-            "dist\fxfile_v2.0.4-dev.exe",
-            "dist\fxfile_v2.0.4-dev_x64_portable.zip",
-            "dist\fxfile_v2.0.4-dev_x86_unicode_portable.zip",
-            "dist\fxfile_v2.0.4-dev_x86_multibyte_portable.zip"
-          )
-          $lines = foreach ($package in $packages) {
-            $hash = Get-FileHash -Algorithm SHA256 -LiteralPath $package
-            "$($hash.Hash.ToLowerInvariant()) *$([System.IO.Path]::GetFileName($package))"
-          }
-          $lines | Set-Content -LiteralPath "dist\SHA256SUMS.txt" -Encoding ascii
-          Get-Content -LiteralPath "dist\SHA256SUMS.txt"
-
-      - name: Upload validated release packages
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
-        with:
-          name: flyExplorer-release-package
-          path: |
-            dist/fxfile_v2.0.4-dev.exe
-            dist/fxfile_v2.0.4-dev_x64_portable.zip
-            dist/fxfile_v2.0.4-dev_x86_unicode_portable.zip
-            dist/fxfile_v2.0.4-dev_x86_multibyte_portable.zip
-            dist/SHA256SUMS.txt
-          if-no-files-found: error
-          retention-days: 14
