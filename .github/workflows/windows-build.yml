@@ -148,6 +148,13 @@ jobs:
           $languageFiles | ForEach-Object { Write-Host "  $($_.FullName)" }
           Write-Host "fxfile-upchecker is intentionally not required by the x64 solution build."
 
+      - name: Run hosted-runner x64 launch smoke
+        shell: pwsh
+        run: |
+          & ".\build\runtime_smoke.ps1" `
+            -SourceDir "bin\x64" `
+            -Configuration "Release-x64-Unicode"
+
 
   build-release-x86-regression:
     runs-on: windows-2025-vs2026
@@ -307,6 +314,13 @@ jobs:
             throw "fxfile-upchecker was unexpectedly built by Release-x86-Unicode."
           }
 
+      - name: Run hosted-runner x86 Unicode launch smoke
+        shell: pwsh
+        run: |
+          & ".\build\runtime_smoke.ps1" `
+            -SourceDir "bin\x86-unicode" `
+            -Configuration "Release-x86-Unicode"
+
       - name: Build Release-x86-Multibyte
         shell: pwsh
         env:
@@ -367,6 +381,13 @@ jobs:
           }
 
           Write-Host "Verified x86 multibyte updater -> libxpr runtime packaging contract."
+
+      - name: Run hosted-runner x86 Multibyte launch smoke
+        shell: pwsh
+        run: |
+          & ".\build\runtime_smoke.ps1" `
+            -SourceDir "bin\x86-multibyte" `
+            -Configuration "Release-x86-Multibyte"
 
       - name: Verify packaging source contract
         shell: pwsh
