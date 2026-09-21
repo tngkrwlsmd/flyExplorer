@@ -106,8 +106,11 @@ vendored policy/readiness/conformance checks and Debug-x64 regression build.
 
 The `policy`/`full` profiles create or reuse
 `%TEMP%\\flyExplorer-policy-venv` and install the locked policy dependencies
-there. MSBuild logs are written under `%TEMP%\\flyExplorer-local-ci`. Local CI
-does not publish artifacts or modify GitHub Actions state.
+there. This directory is an isolated Python virtual environment, not a log
+directory. Local CI logs are written under `logs\\local-ci` in the repository
+root; `logs/` is ignored by Git. Policy, source-preflight, bootstrap, MSBuild,
+runtime-smoke, and package-validation stages each write their own log files.
+Local CI does not publish artifacts or modify GitHub Actions state.
 
 Hosted runtime smoke can also be invoked manually after a build, for example:
 

@@ -26,7 +26,7 @@
     "test_command": {
       "value": "local_ci.bat x64",
       "status": "Confirmed",
-      "evidence": "path:local_ci.bat; default local verification orchestrates Release x64 compile/link, warning rejection, artifact checks, and launch smoke while broader profiles cover x86, policy, debug, and packaging"
+      "evidence": "command-source:README::local_ci.bat x64"
     },
     "runtime": {
       "value": "Visual Studio 2026",
@@ -77,7 +77,7 @@
     }
   ],
   "review": {
-    "reviewed_revision": "992b069732a5567778de97e966061f19c63baf5c",
+    "reviewed_revision": "99de8d14938621266c1452757a3cb426b1e84f62",
     "reviewed_at": "2026-09-21",
     "reviewed_paths": [
       "README",

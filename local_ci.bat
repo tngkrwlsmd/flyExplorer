@@ -4,8 +4,13 @@ pushd "%~dp0" || exit /b 1
 
 set "PROFILE=%~1"
 if "%PROFILE%"=="" set "PROFILE=x64"
-set "LOG_DIR=%TEMP%\flyExplorer-local-ci"
+set "LOG_DIR=%~dp0logs\local-ci"
 if not exist "%LOG_DIR%" mkdir "%LOG_DIR%" >nul 2>&1
+set "SESSION_LOG=%LOG_DIR%\session.log"
+> "%SESSION_LOG%" echo Local CI profile: %PROFILE%
+>>"%SESSION_LOG%" echo Started: %DATE% %TIME%
+>>"%SESSION_LOG%" echo Repository: %~dp0
+echo [local-ci] Logs = "%LOG_DIR%"
 
 if /I "%PROFILE%"=="help" goto :usage
 if /I "%PROFILE%"=="--help" goto :usage
@@ -140,8 +145,11 @@ exit /b 0
 :run_source_preflight
 echo.
 echo ==== Source invariant preflight ====
-"%PYTHON_EXE%" %PYTHON_ARGS% "build\validate_source_invariants.py"
-exit /b %errorlevel%
+set "SOURCE_LOG=%LOG_DIR%\source-preflight.log"
+"%PYTHON_EXE%" %PYTHON_ARGS% "build\validate_source_invariants.py" >"%SOURCE_LOG%" 2>&1
+set "SOURCE_RESULT=%errorlevel%"
+type "%SOURCE_LOG%"
+exit /b %SOURCE_RESULT%
 
 :run_policy_validation
 echo.
@@ -154,19 +162,30 @@ if not exist "%POLICY_VENV%\Scripts\python.exe" (
     if errorlevel 1 exit /b 1
 )
 
-"%POLICY_VENV%\Scripts\python.exe" -m pip install --disable-pip-version-check --require-hashes --requirement ".agent-policy\requirements.lock"
-if errorlevel 1 exit /b 1
+set "POLICY_INSTALL_LOG=%LOG_DIR%\policy-install.log"
+"%POLICY_VENV%\Scripts\python.exe" -m pip install --disable-pip-version-check --require-hashes --requirement ".agent-policy\requirements.lock" >"%POLICY_INSTALL_LOG%" 2>&1
+set "POLICY_RESULT=%errorlevel%"
+type "%POLICY_INSTALL_LOG%"
+if not "%POLICY_RESULT%"=="0" exit /b %POLICY_RESULT%
 
-"%POLICY_VENV%\Scripts\python.exe" ".agent-policy\scripts\validate.py"
-if errorlevel 1 exit /b 1
+set "POLICY_BUNDLE_LOG=%LOG_DIR%\policy-bundle.log"
+"%POLICY_VENV%\Scripts\python.exe" ".agent-policy\scripts\validate.py" >"%POLICY_BUNDLE_LOG%" 2>&1
+set "POLICY_RESULT=%errorlevel%"
+type "%POLICY_BUNDLE_LOG%"
+if not "%POLICY_RESULT%"=="0" exit /b %POLICY_RESULT%
 
-"%POLICY_VENV%\Scripts\python.exe" ".agent-policy\scripts\validate.py" --project-root . --readiness development
-if errorlevel 1 exit /b 1
+set "POLICY_READINESS_LOG=%LOG_DIR%\policy-readiness.log"
+"%POLICY_VENV%\Scripts\python.exe" ".agent-policy\scripts\validate.py" --project-root . --readiness development >"%POLICY_READINESS_LOG%" 2>&1
+set "POLICY_RESULT=%errorlevel%"
+type "%POLICY_READINESS_LOG%"
+if not "%POLICY_RESULT%"=="0" exit /b %POLICY_RESULT%
 
+set "POLICY_CONFORMANCE_LOG=%LOG_DIR%\policy-conformance.log"
 pushd ".agent-policy"
-"%POLICY_VENV%\Scripts\python.exe" "scripts\conformance.py"
+"%POLICY_VENV%\Scripts\python.exe" "scripts\conformance.py" >"%POLICY_CONFORMANCE_LOG%" 2>&1
 set "POLICY_RESULT=%errorlevel%"
 popd
+type "%POLICY_CONFORMANCE_LOG%"
 if not "%POLICY_RESULT%"=="0" exit /b %POLICY_RESULT%
 
 call :run_source_preflight
@@ -175,8 +194,11 @@ exit /b %errorlevel%
 :run_x64_release
 echo.
 echo ==== Release x64 local CI ====
-call "build.bat" 2026 x64
-if errorlevel 1 exit /b 1
+set "BOOTSTRAP_LOG=%LOG_DIR%\build-x64-bootstrap.log"
+call "build.bat" 2026 x64 >"%BOOTSTRAP_LOG%" 2>&1
+set "BOOTSTRAP_RESULT=%errorlevel%"
+type "%BOOTSTRAP_LOG%"
+if not "%BOOTSTRAP_RESULT%"=="0" exit /b %BOOTSTRAP_RESULT%
 
 call :build_configuration "Release-x64-Unicode" "x64" "release-x64"
 if errorlevel 1 exit /b 1
@@ -192,8 +214,11 @@ if errorlevel 1 exit /b 1
 call :require_file "bin\x64\fxfile-keyhook.dll"
 if errorlevel 1 exit /b 1
 
-powershell -NoProfile -ExecutionPolicy Bypass -File "build\runtime_smoke.ps1" -SourceDir "bin\x64" -Configuration "Release-x64-Unicode"
-exit /b %errorlevel%
+set "SMOKE_LOG=%LOG_DIR%\smoke-x64.log"
+powershell -NoProfile -ExecutionPolicy Bypass -File "build\runtime_smoke.ps1" -SourceDir "bin\x64" -Configuration "Release-x64-Unicode" >"%SMOKE_LOG%" 2>&1
+set "SMOKE_RESULT=%errorlevel%"
+type "%SMOKE_LOG%"
+exit /b %SMOKE_RESULT%
 
 :run_x64_debug
 echo.
@@ -215,8 +240,11 @@ exit /b %errorlevel%
 :run_x86_release
 echo.
 echo ==== x86 compatibility local CI ====
-call "build.bat" 2026 x86
-if errorlevel 1 exit /b 1
+set "BOOTSTRAP_LOG=%LOG_DIR%\build-x86-bootstrap.log"
+call "build.bat" 2026 x86 >"%BOOTSTRAP_LOG%" 2>&1
+set "BOOTSTRAP_RESULT=%errorlevel%"
+type "%BOOTSTRAP_LOG%"
+if not "%BOOTSTRAP_RESULT%"=="0" exit /b %BOOTSTRAP_RESULT%
 
 call :build_configuration "Release-x86-Unicode" "Win32" "release-x86-unicode"
 if errorlevel 1 exit /b 1
@@ -232,8 +260,11 @@ if errorlevel 1 exit /b 1
 call :require_file "bin\x86-unicode\fxfile-keyhook.dll"
 if errorlevel 1 exit /b 1
 
-powershell -NoProfile -ExecutionPolicy Bypass -File "build\runtime_smoke.ps1" -SourceDir "bin\x86-unicode" -Configuration "Release-x86-Unicode"
-if errorlevel 1 exit /b 1
+set "SMOKE_LOG=%LOG_DIR%\smoke-x86-unicode.log"
+powershell -NoProfile -ExecutionPolicy Bypass -File "build\runtime_smoke.ps1" -SourceDir "bin\x86-unicode" -Configuration "Release-x86-Unicode" >"%SMOKE_LOG%" 2>&1
+set "SMOKE_RESULT=%errorlevel%"
+type "%SMOKE_LOG%"
+if not "%SMOKE_RESULT%"=="0" exit /b %SMOKE_RESULT%
 
 call :build_configuration "Release-x86-Multibyte" "Win32" "release-x86-multibyte"
 if errorlevel 1 exit /b 1
@@ -253,8 +284,11 @@ if errorlevel 1 exit /b 1
 call :require_file "bin\x64\upchecker\fxfile-upchecker.exe"
 if errorlevel 1 exit /b 1
 
-powershell -NoProfile -ExecutionPolicy Bypass -File "build\runtime_smoke.ps1" -SourceDir "bin\x86-multibyte" -Configuration "Release-x86-Multibyte"
-exit /b %errorlevel%
+set "SMOKE_LOG=%LOG_DIR%\smoke-x86-multibyte.log"
+powershell -NoProfile -ExecutionPolicy Bypass -File "build\runtime_smoke.ps1" -SourceDir "bin\x86-multibyte" -Configuration "Release-x86-Multibyte" >"%SMOKE_LOG%" 2>&1
+set "SMOKE_RESULT=%errorlevel%"
+type "%SMOKE_LOG%"
+exit /b %SMOKE_RESULT%
 
 :run_package_validation
 echo.
@@ -268,11 +302,17 @@ if errorlevel 1 exit /b 1
 call :require_file "bin\x64\upchecker\fxfile-upchecker.exe"
 if errorlevel 1 exit /b 1
 
-call "dist\package.bat"
-if errorlevel 1 exit /b 1
+set "PACKAGE_BUILD_LOG=%LOG_DIR%\package-build.log"
+call "dist\package.bat" >"%PACKAGE_BUILD_LOG%" 2>&1
+set "PACKAGE_RESULT=%errorlevel%"
+type "%PACKAGE_BUILD_LOG%"
+if not "%PACKAGE_RESULT%"=="0" exit /b %PACKAGE_RESULT%
 
-powershell -NoProfile -ExecutionPolicy Bypass -File "build\validate_package.ps1" -DistDir "dist"
-exit /b %errorlevel%
+set "PACKAGE_VALIDATE_LOG=%LOG_DIR%\package-validate.log"
+powershell -NoProfile -ExecutionPolicy Bypass -File "build\validate_package.ps1" -DistDir "dist" >"%PACKAGE_VALIDATE_LOG%" 2>&1
+set "PACKAGE_RESULT=%errorlevel%"
+type "%PACKAGE_VALIDATE_LOG%"
+exit /b %PACKAGE_RESULT%
 
 :build_configuration
 set "CI_CONFIGURATION=%~1"
@@ -306,6 +346,8 @@ echo.
 echo ============================================================
 echo Local CI PASS: %PROFILE%
 echo ============================================================
+>>"%SESSION_LOG%" echo Result: PASS
+>>"%SESSION_LOG%" echo Finished: %DATE% %TIME%
 popd
 exit /b 0
 
@@ -317,6 +359,8 @@ echo ============================================================
 echo Local CI FAIL: %PROFILE% ^(exit %RESULT%^)
 echo Logs: "%LOG_DIR%"
 echo ============================================================
+>>"%SESSION_LOG%" echo Result: FAIL ^(exit %RESULT%^)
+>>"%SESSION_LOG%" echo Finished: %DATE% %TIME%
 popd
 exit /b %RESULT%
 

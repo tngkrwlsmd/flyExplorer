@@ -26,3 +26,6 @@ ipch/
 /dist/fxfile_v*.exe
 /dist/fxfile_v*_portable.zip
 /dist/SHA256SUMS.txt
+
+# Local CI and developer logs
+/logs/
