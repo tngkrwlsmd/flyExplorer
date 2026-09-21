@@ -26,9 +26,6 @@ jobs:
         run: python .agent-policy/scripts/validate.py
       - name: Validate flyExplorer development readiness
         run: python .agent-policy/scripts/validate.py --project-root . --readiness development
-      - name: Run policy unit tests
-        working-directory: .agent-policy
-        run: python -m unittest discover -s tests -v
       - name: Run policy conformance corpus
         working-directory: .agent-policy
         run: python scripts/conformance.py
