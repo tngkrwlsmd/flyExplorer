@@ -102,6 +102,29 @@ out of scope and verify at least:
 Record Windows Sandbox/clean-VM, interactive functional, and visual results
 separately from the hosted-runner launch smoke.
 
+Windows 11 UI Modernization
+---------------------------
+The current UI modernization keeps the MFC/Win32 architecture while reusing the
+shared `gui/ModernUI` DPI, system-typography, and system-palette foundation.
+The status-bar layer now uses the system UI font, 96-DPI logical pane metrics
+that are rescaled for the current monitor, flat ThemePalette-based
+background/text/separators, and settings/theme/DPI refresh handling.
+
+`ExplorerStatusBar` keeps its existing four-pane information contract and
+drive-properties double-click behavior. Its drive-usage progress remains the
+existing GDI `TextProgressCtrl`, but uses DPI-aware system typography,
+palette-derived fill/track/text colors, bounded percentage rendering, and
+DPI-scaled insets. Other StatusBar consumers share the generic typography,
+palette, and DPI metric fixes without adopting Explorer-specific progress
+styling.
+
+This is a ModernUI foundation, not a claim of complete Windows 11 dark-mode
+support. Dark title bars/common-control theming, icon modernization, and broader
+dialog modernization remain separate work. Hosted CI verifies compile/link,
+warning-free builds, launch smoke, and packaging; 100/125/150/200% visual
+inspection, High Contrast appearance, and interactive status-bar behavior still
+require separate manual evidence.
+
 Generate the Visual Studio Solution
 -----------------------------------
 From a Command Prompt in the repository root:

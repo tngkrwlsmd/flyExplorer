@@ -77,7 +77,7 @@
     }
   ],
   "review": {
-    "reviewed_revision": "c2ec97b6b0135f990ff7fd1435f2b6cbbb48b29f",
+    "reviewed_revision": "8979332bf9556c284251b00932da5f91180c3751",
     "reviewed_at": "2026-09-21",
     "reviewed_paths": [
       "README",
@@ -177,7 +177,9 @@
 - Phase 2에서 toolbar padding/system typography/double buffering과 flat theme-aware tab rendering, DPI-scaled tab metrics를 추가했다.
 - Phase 3에서 file list/header를 system font/theme palette 기반으로 정리하고, folder tree에 DPI-aware row/indent/system typography를 적용했으며 explorer pane/splitter 배경을 flat separator 기반으로 정리했다.
 - Phase 4의 첫 단위로 AddressBar에 system UI font fallback, ComboBox/edit font 동기화, font/icon 기반 DPI-aware item metrics, settings/DPI 변경 시 font refresh를 적용했다.
-- 실제 dark-mode title bar/control theming과 status/dialog/icon asset 현대화는 후속 phase 범위다.
+- Phase 4의 다음 단위로 StatusBar 공통 기반에 system UI font, 96-DPI logical pane metrics, ThemePalette 기반 flat background/text/separator, settings/theme/DPI refresh를 적용하고, ExplorerStatusBar의 4-pane 정보 구조와 drive-properties double-click 계약을 유지한 채 drive usage progress를 palette/DPI-aware rendering으로 정리했다.
+- StatusBar/TextProgressCtrl 현대화는 Windows Product Build에서 x64/x86 compile/link, warning 0, hosted launch smoke, package regression을 통과했지만 100/125/150/200% DPI visual, High Contrast visual, interactive status-bar 동작은 별도 수동 evidence가 아직 없다.
+- 실제 dark-mode title bar/control theming과 dialog/icon asset 현대화는 후속 phase 범위다.
 
 ## Recommended verification
 
