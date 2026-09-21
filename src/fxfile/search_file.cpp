@@ -110,10 +110,10 @@ void SearchFile::setSearchParam(const SearchParam &aParam)
 
     if (isFlag(FlagRegExpr))
     {
-        std::tr1::tregex::flag_type sRegExprFlags = std::tr1::regex_constants::ECMAScript;
+        xpr::tregex::flag_type sRegExprFlags = std::regex_constants::ECMAScript;
         if (isFlag(FlagCase) == XPR_FALSE)
         {
-            sRegExprFlags |= std::tr1::regex_constants::icase;
+            sRegExprFlags |= std::regex_constants::icase;
         }
 
         mRegExpr.assign(aParam.mName, sRegExprFlags);
@@ -328,7 +328,7 @@ void SearchFile::searchRecursive(xpr_sint_t aDepth, const xpr_tchar_t *aFolder, 
                 // check to match the file name
                 if (XPR_IS_TRUE(isFlag(FlagRegExpr)))
                 {
-                    sMatched = (std::tr1::regex_search(mWin32FindData.cFileName, mRegExpr) == true) ? XPR_TRUE : XPR_FALSE;
+                    sMatched = (std::regex_search(mWin32FindData.cFileName, mRegExpr) == true) ? XPR_TRUE : XPR_FALSE;
                 }
                 else
                 {
