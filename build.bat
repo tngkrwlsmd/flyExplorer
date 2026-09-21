@@ -28,36 +28,44 @@ if /I not "%msvs_version%"=="2026" (
 
 set "PYTHON_EXE="
 set "PYTHON_ARGS="
+set "PYTHON_CANDIDATES=%TEMP%\flyexplorer-python-%RANDOM%-%RANDOM%.txt"
 
-where python >nul 2>&1
+where python >"%PYTHON_CANDIDATES%" 2>nul
 if errorlevel 1 goto python_try_launcher
-python "build\check_python.py" >nul 2>&1
-if not errorlevel 1 goto python_use_python
+
+for /f "usebackq delims=" %%P in ("%PYTHON_CANDIDATES%") do (
+    "%%P" "build\check_python.py" >nul 2>&1
+    if not errorlevel 1 (
+        set "PYTHON_EXE=%%P"
+        goto python_ready
+    )
+)
 
 :python_try_launcher
-where py >nul 2>&1
+where py >"%PYTHON_CANDIDATES%" 2>nul
 if errorlevel 1 goto python_missing
-py -3 "build\check_python.py" >nul 2>&1
-if not errorlevel 1 goto python_use_py
+
+for /f "usebackq delims=" %%P in ("%PYTHON_CANDIDATES%") do (
+    "%%P" -3 "build\check_python.py" >nul 2>&1
+    if not errorlevel 1 (
+        set "PYTHON_EXE=%%P"
+        set "PYTHON_ARGS=-3"
+        goto python_ready
+    )
+)
 goto python_missing
 
-:python_use_python
-set "PYTHON_EXE=python"
-goto python_ready
-
-:python_use_py
-set "PYTHON_EXE=py"
-set "PYTHON_ARGS=-3"
-goto python_ready
-
 :python_missing
+if exist "%PYTHON_CANDIDATES%" del /q "%PYTHON_CANDIDATES%" >nul 2>&1
 echo ERROR: Python 3.9 or newer is required.
 echo Install Python 3 and make either "python" or "py -3" available on PATH.
 popd
 exit /b 1
 
 :python_ready
-%PYTHON_EXE% %PYTHON_ARGS% "build\check_python.py"
+if exist "%PYTHON_CANDIDATES%" del /q "%PYTHON_CANDIDATES%" >nul 2>&1
+echo Python command = "%PYTHON_EXE%" %PYTHON_ARGS%
+"%PYTHON_EXE%" %PYTHON_ARGS% "build\check_python.py"
 if errorlevel 1 (
     echo ERROR: Python was detected but failed the bootstrap check.
     popd
@@ -65,7 +73,7 @@ if errorlevel 1 (
 )
 
 echo Running source invariant preflight...
-%PYTHON_EXE% %PYTHON_ARGS% "build\validate_source_invariants.py"
+"%PYTHON_EXE%" %PYTHON_ARGS% "build\validate_source_invariants.py"
 if errorlevel 1 (
     echo ERROR: Source invariant preflight failed.
     echo Fix the reported source dependency/integration issue before generating projects.
@@ -104,7 +112,7 @@ echo target_arch = %target_arch%
 echo gyp-next = %GYP_VERSION%
 echo ----------
 
-%PYTHON_EXE% %PYTHON_ARGS% "%GYP_DIR%\gyp_main.py" fxfile.gyp --depth=. -G msvs_version=%msvs_version% -D target_arch=%target_arch% -D msvs_version=%msvs_version%
+"%PYTHON_EXE%" %PYTHON_ARGS% "%GYP_DIR%\gyp_main.py" fxfile.gyp --depth=. -G msvs_version=%msvs_version% -D target_arch=%target_arch% -D msvs_version=%msvs_version%
 if errorlevel 1 (
     echo ERROR: Failed to generate Visual Studio projects.
     popd
@@ -134,7 +142,7 @@ if /I "%target_arch%"=="x64" (
 )
 
 echo Fixing mixed x64/x86 solution configuration mappings...
-%PYTHON_EXE% %PYTHON_ARGS% "build\fix_solution_configs.py" "fxfile.sln"
+"%PYTHON_EXE%" %PYTHON_ARGS% "build\fix_solution_configs.py" "fxfile.sln"
 if errorlevel 1 (
     echo ERROR: Failed to fix helper project configuration mappings.
     popd
