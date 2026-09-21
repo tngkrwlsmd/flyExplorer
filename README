@@ -3,39 +3,89 @@ fxfile
 
 Copyright (c) 2013 Leon Lee Author. All rights reserved.
 
-
 Overview
 --------
-fxfile is a free, open source, professional file manager for Microsoft Windows platform.
+fxfile (formerly flyExplorer) is a free, open source file manager for Microsoft Windows.
 
+Modern Build Environment
+------------------------
+The project build bootstrap has been updated for Visual Studio 2026.
 
-Requirements to Build
-----------------------
-1. Clone customized gyp of fxfile.
-   git clone https://github.com/fxfile/gyp tools/gyp
+Required software:
 
-2. Check out python.
-   svn co https://src.chromium.org/svn/trunk/tools/third_party/python_274 tools/python_274
+1. Visual Studio 2026
+   - Install the "Desktop development with C++" workload.
+   - Install MFC for the latest v145 build tools.
+   - Install a current Windows 10/11 SDK.
+2. Python 3.9 or newer.
+3. Git.
 
+The old Python 2.7.4 and Visual Studio 2015/v140 toolchain are no longer required
+for the default build path.
 
-Build on Windows
-----------------
-1. Run 'build.bat' batch file to generate MSVS solution file.
-   build.bat [msvs_version] [target_arch]
-   e.g.) build.bat 2015 x64
-         build.bat 2008 x86
+Generate the Visual Studio Solution
+-----------------------------------
+From a normal Command Prompt or Developer Command Prompt in the repository root:
 
-2. Build 'fxfile.sln'.
-   Run 'devenv.exe' and build
+    build.bat
 
+The default is equivalent to:
+
+    build.bat 2026 x64
+
+On first run, build.bat automatically clones the pinned gyp-next version into:
+
+    tools\gyp-next
+
+gyp-next 0.22.2 supports Visual Studio 2026 and generates projects that use the
+Visual Studio 2026 v145 platform toolset.
+
+After generation, open:
+
+    fxfile.sln
+
+Build fxfile
+------------
+For the recommended 64-bit release build, select:
+
+    Configuration: Release-x64-Unicode
+    Platform:      x64
+
+Then run "Build Solution" in Visual Studio.
+
+The main executable is generated under:
+
+    bin\x64\fxfile.exe
+
+Prepare Runtime Files
+---------------------
+Before running the built executable, copy the bundled runtime libraries and
+language resources:
+
+    copy_lib.bat
+    copy_languages.bat
+
+Then run:
+
+    bin\x64\fxfile.exe
+
+Distribution
+------------
+The dist directory contains the NSIS installer and portable-package scripts.
+After all required release configurations have been built, dist\package.bat can
+assemble the distribution files.
+
+Legacy build
+------------
+The original project used a customized fxfile/gyp fork, Python 2.7.4, and
+Visual Studio 2015. Those instructions are retained only in repository history;
+the default build path now targets Visual Studio 2026.
 
 License
 -------
-Read 'LICENSE' file.
-
+Read the LICENSE file.
 
 Contact
 -------
 Web site: http://www.flychk.com
 E-mail:   flychk@flychk.com
-

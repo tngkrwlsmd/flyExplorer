@@ -64,11 +64,9 @@
                     {
                         'RuntimeLibrary':                 1, # static debug (MTD)
                         'Optimization':                   0,
-                        'MinimalRebuild':                 'true',
                         'BasicRuntimeChecks':             3,
                         'WarningLevel':                   3,
                         'DebugInformationFormat':         4,
-                        'Detect64BitPortabilityProblems': 'true',
                     },
                     'VCLinkerTool': 
                     {
@@ -98,11 +96,9 @@
                     {
                         'RuntimeLibrary':                 1, # static debug (MTD)
                         'Optimization':                   0,
-                        'MinimalRebuild':                 'true',
                         'BasicRuntimeChecks':             3,
                         'WarningLevel':                   3,
                         'DebugInformationFormat':         3,
-                        'Detect64BitPortabilityProblems': 'false',
                     },
                     'VCLinkerTool': 
                     {
