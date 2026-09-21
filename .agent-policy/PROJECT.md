@@ -77,7 +77,7 @@
     }
   ],
   "review": {
-    "reviewed_revision": "595968021c2b8ab287fefadbf3ffbeec2f29b0d1",
+    "reviewed_revision": "f58f43d38e76881d6e3969efbb36391ae902a3cf",
     "reviewed_at": "2026-09-21",
     "reviewed_paths": [
       "README",
@@ -148,7 +148,8 @@
 - x64 solution은 mixed-architecture helper mapping을 사용한다.
 - updater는 x64 Build Solution에서 의도적으로 제외한다.
 - 현재 automated test suite는 확인되지 않았다.
-- UI는 legacy Windows/MFC 스타일이며 Windows 11 UI/UX 현대화가 다음 주요 작업 축이다.
+- Windows 11 UI 현대화 Phase 1에서 Per-Monitor V2 DPI, system typography, theme palette foundation을 추가했다.
+- 실제 dark-mode rendering과 toolbar/tab/list/tree의 개별 modern drawing은 후속 phase 범위다.
 
 ## Recommended verification
 
