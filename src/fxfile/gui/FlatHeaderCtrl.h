@@ -60,6 +60,8 @@ protected:
     afx_msg void OnMouseMove(xpr_uint_t aFlags, CPoint aPoint);
     afx_msg LRESULT OnMouseHover(WPARAM wParam, LPARAM lParam);
     afx_msg LRESULT OnMouseLeave(WPARAM wParam, LPARAM lParam);
+    afx_msg void OnSettingChange(xpr_uint_t aFlags, const xpr_tchar_t *aSection);
+    afx_msg LRESULT OnDpiChanged(WPARAM wParam, LPARAM lParam);
     afx_msg LRESULT OnThemeChanged(WPARAM wParam, LPARAM lParam);
     afx_msg void OnHdnBegindrag(NMHDR *aNmHdr, LRESULT *aResult);
     afx_msg void OnHdnEnddrag(NMHDR *aNmHdr, LRESULT *aResult);

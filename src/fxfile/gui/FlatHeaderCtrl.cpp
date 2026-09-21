@@ -11,6 +11,7 @@
 #include "FlatHeaderCtrl.h"
 
 #include "MemDC.h"
+#include "ModernUI.h"
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -40,6 +41,8 @@ BEGIN_MESSAGE_MAP(FlatHeaderCtrl, CHeaderCtrl)
     ON_WM_CREATE()
     ON_WM_WINDOWPOSCHANGED()
     ON_WM_MOUSEMOVE()
+    ON_WM_SETTINGCHANGE()
+    ON_MESSAGE(WM_DPICHANGED,   OnDpiChanged)
     ON_MESSAGE(WM_MOUSEHOVER,   OnMouseHover)
     ON_MESSAGE(WM_MOUSELEAVE,   OnMouseLeave)
     ON_MESSAGE(WM_THEMECHANGED, OnThemeChanged)
@@ -52,19 +55,19 @@ void FlatHeaderCtrl::initHeader(xpr_bool_t aBoldFont)
     if (XPR_IS_NOT_NULL(mFont.m_hObject))
         mFont.DeleteObject();
 
-    NONCLIENTMETRICS sNonClientMetrics = {0};
-    sNonClientMetrics.cbSize = sizeof(sNonClientMetrics);
-    SystemParametersInfo(SPI_GETNONCLIENTMETRICS, sizeof(sNonClientMetrics), &sNonClientMetrics, 0);
+    LOGFONT sLogFont = {0};
+    if (XPR_IS_TRUE(fxfile::ui::ModernUI::getUIFont(sLogFont, GetSafeHwnd())))
+    {
+        if (XPR_IS_TRUE(aBoldFont))
+            sLogFont.lfWeight = FW_SEMIBOLD;
 
-    if (XPR_IS_TRUE(aBoldFont))
-        sNonClientMetrics.lfMessageFont.lfWeight = FW_BOLD;
+        mFont.CreateFontIndirect(&sLogFont);
+        if (XPR_IS_NOT_NULL(mFont.m_hObject))
+            SetFont(&mFont);
+    }
 
-    mFont.CreateFontIndirect(&sNonClientMetrics.lfMessageFont);
-    SetFont(&mFont);
-
+    mOffset = fxfile::ui::ModernUI::scaleForWindow(6, GetSafeHwnd());
     mBoldFont = aBoldFont;
-
-    mXPTheme.Open(GetSafeHwnd(), XPR_WIDE_STRING_LITERAL("HEADER"));
 }
 
 xpr_sint_t FlatHeaderCtrl::OnCreate(LPCREATESTRUCT aCreateStruct)
@@ -136,111 +139,90 @@ void FlatHeaderCtrl::DrawItem(LPDRAWITEMSTRUCT aDrawItemStruct)
     drawItem(sDC, sItemRect, sState, sIndex);
 }
 
-void FlatHeaderCtrl::drawItem(CDC *aDC, CRect aItemRect, xpr_uint_t aState, xpr_sint_t aIndex) 
+void FlatHeaderCtrl::drawItem(CDC *aDC, CRect aItemRect, xpr_uint_t aState, xpr_sint_t aIndex)
 {
-    CRect sIconRect;
-    sIconRect = aItemRect;
+    const fxfile::ui::ThemePalette sPalette = fxfile::ui::ModernUI::getPalette();
+    const xpr_uint_t sDpi = fxfile::ui::ModernUI::getDpi(GetSafeHwnd());
+    const xpr_sint_t sArrowHeight = max(4, fxfile::ui::ModernUI::scale(ARROW_HEIGHT, sDpi));
+    const xpr_sint_t sSeparatorWidth = max(1, fxfile::ui::ModernUI::scale(1, sDpi));
 
-    COLORREF sBtnFaceColor    = ::GetSysColor(COLOR_BTNFACE);
-    COLORREF sBtnHilightColor = ::GetSysColor(COLOR_BTNHILIGHT);
-    COLORREF sBtnShadowColor  = ::GetSysColor(COLOR_BTNSHADOW);
-
-    xpr_sint_t sSavedDC = aDC->SaveDC();
+    const xpr_sint_t sSavedDC = aDC->SaveDC();
 
     HD_ITEM sHdItem = {0};
-    xpr_tchar_t sText[XPR_MAX_PATH + 1];
+    xpr_tchar_t sText[XPR_MAX_PATH + 1] = {0};
 
     sHdItem.mask       = HDI_TEXT | HDI_FORMAT;
     sHdItem.pszText    = sText;
     sHdItem.cchTextMax = XPR_MAX_PATH;
     GetItem(aIndex, &sHdItem);
 
-    xpr_uint_t sFormat = DT_SINGLELINE | DT_NOPREFIX | DT_NOCLIP | DT_VCENTER | DT_END_ELLIPSIS;
-    if (sHdItem.fmt & HDF_LEFT)        sFormat |= DT_LEFT;
-    else if (sHdItem.fmt & HDF_CENTER) sFormat |= DT_CENTER;
-    else if (sHdItem.fmt & HDF_RIGHT)  sFormat |= DT_RIGHT;
-
-    // draw background
-    if (mXPTheme.IsAppThemed() == XPR_TRUE)
-    {
-        xpr_sint_t sPartId = HP_HEADERITEM;
-        xpr_sint_t sStateId = HIS_NORMAL;
-
-        if (XPR_TEST_BITS(aState, ODS_HOTLIGHT)) sStateId = HIS_HOT;
-        if (XPR_TEST_BITS(aState, ODS_SELECTED)) sStateId = HIS_PRESSED;
-
-        mXPTheme.DrawBackground(*aDC, sPartId, sStateId, &aItemRect, XPR_NULL);
-    }
-    else
-    {
-        aDC->FillSolidRect(aItemRect, sBtnFaceColor);
-        aDC->Draw3dRect(aItemRect, sBtnHilightColor, sBtnShadowColor);
-    }
-
-    aDC->SetBkMode(TRANSPARENT);
-
-    // if mouse button is pressed
+    COLORREF sBackColor = sPalette.mSurface;
+    if (XPR_TEST_BITS(aState, ODS_HOTLIGHT))
+        sBackColor = sPalette.mHover;
     if (XPR_TEST_BITS(aState, ODS_SELECTED))
-    {
-        aItemRect.left++;
-        aItemRect.top += 2;
-        aItemRect.right++;
+        sBackColor = XPR_IS_TRUE(sPalette.mHighContrast) ? sPalette.mSelection : sPalette.mHover;
 
-        sIconRect.left++;
-        sIconRect.top -= 2;
-        sIconRect.right++;
-    }
+    aDC->FillSolidRect(aItemRect, sBackColor);
+    aDC->SetBkMode(TRANSPARENT);
+    aDC->SetTextColor(
+        XPR_IS_TRUE(sPalette.mHighContrast) && XPR_TEST_BITS(aState, ODS_SELECTED) ?
+            sPalette.mSelectionText : sPalette.mText);
 
+    CRect sSeparatorRect(aItemRect);
+    sSeparatorRect.left = max(sSeparatorRect.left, sSeparatorRect.right - sSeparatorWidth);
+    aDC->FillSolidRect(sSeparatorRect, sPalette.mSeparator);
+
+    CRect sTextArea(aItemRect);
     if (aIndex == mSortColumn)
-        aItemRect.right -= 3 * mOffset;
+        sTextArea.right -= 3 * mOffset;
 
-    aItemRect.left  += mOffset;
-    aItemRect.right -= mOffset;
+    sTextArea.left  += mOffset;
+    sTextArea.right -= mOffset;
 
-    // draw text
+    xpr_uint_t sFormat = DT_SINGLELINE | DT_NOPREFIX | DT_VCENTER | DT_END_ELLIPSIS;
+    if (sHdItem.fmt & HDF_CENTER)     sFormat |= DT_CENTER;
+    else if (sHdItem.fmt & HDF_RIGHT) sFormat |= DT_RIGHT;
+    else                              sFormat |= DT_LEFT;
+
+    CFont *sOldFont = XPR_NULL;
+    if (XPR_IS_NOT_NULL(mFont.m_hObject))
+        sOldFont = aDC->SelectObject(&mFont);
+
     CRect sTextRect(0,0,0,0);
-    if (aItemRect.left < aItemRect.right)
+    if (sTextArea.left < sTextArea.right)
     {
-        if (XPR_IS_TRUE(mBoldFont))
-        {
-            CFont *sOldFont = aDC->SelectObject(&mFont);
-            aDC->DrawText(sText, -1, &sTextRect, DT_SINGLELINE | DT_CALCRECT);
-            aDC->DrawText(sText,-1,aItemRect, sFormat);
-            aDC->SelectObject(sOldFont);
-        }
-        else
-        {
-            aDC->DrawText(sText, -1, &sTextRect, DT_SINGLELINE | DT_CALCRECT);
-            aDC->DrawText(sText, -1, aItemRect, sFormat);
-        }
+        aDC->DrawText(sText, -1, &sTextRect, DT_SINGLELINE | DT_CALCRECT);
+        aDC->DrawText(sText, -1, sTextArea, sFormat);
     }
 
-    if ((sHdItem.fmt & HDF_RIGHT) != HDF_RIGHT)
-        sIconRect.right = aItemRect.left + sTextRect.Width() + mOffset * 4;
-
-    // draw arrow
     if (aIndex == mSortColumn)
     {
-        CBrush sBrush(sBtnShadowColor);
-        POINT aPoints[3];
+        const xpr_sint_t sCenterX = aItemRect.right - (mOffset * 2);
+        const xpr_sint_t sCenterY = aItemRect.top + aItemRect.Height() / 2;
+        const xpr_sint_t sHalfWidth = max(3, sArrowHeight / 2);
 
+        POINT sPoints[3];
         if (XPR_IS_TRUE(mSortAscending))
         {
-            aPoints[0].x = sIconRect.right - 2 * mOffset;         aPoints[0].y = (sIconRect.Height() - ARROW_HEIGHT) / 2;
-            aPoints[1].x = sIconRect.right - 3 * mOffset / 2 + 2; aPoints[1].y = aPoints[0].y + ARROW_HEIGHT;
-            aPoints[2].x = sIconRect.right - 5 * mOffset / 2 - 2; aPoints[2].y = aPoints[0].y + ARROW_HEIGHT;
+            sPoints[0].x = sCenterX;              sPoints[0].y = sCenterY - sArrowHeight / 2;
+            sPoints[1].x = sCenterX - sHalfWidth; sPoints[1].y = sCenterY + sArrowHeight / 2;
+            sPoints[2].x = sCenterX + sHalfWidth; sPoints[2].y = sCenterY + sArrowHeight / 2;
         }
         else
         {
-            aPoints[0].x = sIconRect.right - 3 * mOffset / 2 + 2; aPoints[0].y = (sIconRect.Height() - ARROW_HEIGHT) / 2 + 2;
-            aPoints[1].x = sIconRect.right - 5 * mOffset / 2 - 1; aPoints[1].y = aPoints[0].y;
-            aPoints[2].x = sIconRect.right - 2 * mOffset;         aPoints[2].y = aPoints[0].y + ARROW_HEIGHT - 1;
+            sPoints[0].x = sCenterX - sHalfWidth; sPoints[0].y = sCenterY - sArrowHeight / 2;
+            sPoints[1].x = sCenterX + sHalfWidth; sPoints[1].y = sCenterY - sArrowHeight / 2;
+            sPoints[2].x = sCenterX;              sPoints[2].y = sCenterY + sArrowHeight / 2;
         }
 
-        CRgn sRgn;
-        sRgn.CreatePolygonRgn(aPoints, 3, ALTERNATE);
-        aDC->FillRgn(&sRgn, &sBrush);
+        CBrush sArrowBrush(sPalette.mSecondaryText);
+        CRgn sArrowRgn;
+        sArrowRgn.CreatePolygonRgn(sPoints, 3, ALTERNATE);
+        aDC->FillRgn(&sArrowRgn, &sArrowBrush);
     }
+
+    if (XPR_IS_NOT_NULL(sOldFont))
+        aDC->SelectObject(sOldFont);
 
     aDC->RestoreDC(sSavedDC);
 }
@@ -250,122 +232,68 @@ void FlatHeaderCtrl::OnPaint(void)
     CPaintDC sPaintDC(this);
     MemDC sMemDC(&sPaintDC);
 
-    CRect sClientClient;
-    GetClientRect(&sClientClient);
+    CRect sClientRect;
+    GetClientRect(&sClientRect);
 
-    COLORREF sBtnFaceColor = ::GetSysColor(COLOR_BTNFACE);
-    sMemDC.FillSolidRect(sClientClient, sBtnFaceColor);
+    const fxfile::ui::ThemePalette sPalette = fxfile::ui::ModernUI::getPalette();
+    sMemDC.FillSolidRect(sClientRect, sPalette.mSurface);
 
     mCallDrawItem = XPR_FALSE;
-
     CWnd::DefWindowProc(WM_PAINT, (WPARAM)sMemDC.m_hDC, 0);
-
-    if (mXPTheme.IsAppThemed() == XPR_FALSE)
-        drawFlatBorder(&sMemDC);
+    drawFlatBorder(&sMemDC);
 }
 
 void FlatHeaderCtrl::drawFlatBorder(CDC *aDC)
 {
-    CRect sRect;
-    GetWindowRect(&sRect);
-    ScreenToClient(&sRect);
+    CRect sClientRect;
+    GetClientRect(&sClientRect);
 
-    COLORREF sBtnFaceColor    = ::GetSysColor(COLOR_BTNFACE);
-    COLORREF sBtnHilightColor = ::GetSysColor(COLOR_BTNHILIGHT);
-    COLORREF sBtnShadowColor  = ::GetSysColor(COLOR_BTNSHADOW);
+    const fxfile::ui::ThemePalette sPalette = fxfile::ui::ModernUI::getPalette();
+    const xpr_sint_t sSeparatorHeight =
+        max(1, fxfile::ui::ModernUI::scaleForWindow(1, GetSafeHwnd()));
 
-    CRect sItemRect;
-    xpr_sint_t i, sCount, sTotal;
-    xpr_sint_t *sItemOrders = XPR_NULL;
+    xpr_sint_t sTotalWidth = 0;
+    const xpr_sint_t sCount = GetItemCount();
 
-    HD_ITEM sHdItem = {0};
-    sHdItem.fmt  = HDF_STRING | HDF_LEFT | HDF_OWNERDRAW;
-    sHdItem.mask = HDI_WIDTH | HDI_TEXT | HDI_FORMAT | HDI_ORDER;
-
-    CFont *sOldFont = XPR_NULL;
     if (XPR_IS_FALSE(mCallDrawItem))
-        sOldFont = aDC->SelectObject(GetFont());
-
-    sTotal = 0;
-    sCount = GetItemCount();
-    if (sCount > 0)
     {
-        sItemOrders = new xpr_sint_t[sCount];
+        CFont *sOldFont = XPR_NULL;
+        if (XPR_IS_NOT_NULL(mFont.m_hObject))
+            sOldFont = aDC->SelectObject(&mFont);
 
-        for (i = 0; i < sCount; ++i)
+        for (xpr_sint_t i = 0; i < sCount; ++i)
         {
-            GetItem(i, &sHdItem);
-            sItemOrders[sHdItem.iOrder] = i;
-
-            sItemRect.left = sTotal;
-
-            sTotal += sHdItem.cxy;
-
-            sItemRect.right  = sTotal;
-            sItemRect.top    = sRect.top;
-            sItemRect.bottom = sRect.bottom;
-
-            if (XPR_IS_FALSE(mCallDrawItem))
+            CRect sItemRect;
+            if (GetItemRect(i, &sItemRect) == XPR_TRUE)
             {
                 drawItem(aDC, sItemRect, 0, i);
+                sTotalWidth = max(sTotalWidth, sItemRect.right);
             }
+        }
+
+        if (XPR_IS_NOT_NULL(sOldFont))
+            aDC->SelectObject(sOldFont);
+    }
+    else
+    {
+        for (xpr_sint_t i = 0; i < sCount; ++i)
+        {
+            CRect sItemRect;
+            if (GetItemRect(i, &sItemRect) == XPR_TRUE)
+                sTotalWidth = max(sTotalWidth, sItemRect.right);
         }
     }
 
-    if (XPR_IS_NOT_NULL(sOldFont))
-        aDC->SelectObject(sOldFont);
-
-    aDC->Draw3dRect(sRect, sBtnFaceColor, sBtnFaceColor);
-
-    sRect.DeflateRect(1,1);
-    aDC->Draw3dRect(sRect, sBtnFaceColor, sBtnFaceColor);
-
-    sRect.InflateRect(1,1);
-    aDC->Draw3dRect(sRect, sBtnHilightColor, sBtnShadowColor);
-
-    CPen sHighlightPen(PS_SOLID, 1, sBtnHilightColor);
-    CPen sShadowPen(PS_SOLID, 1, sBtnShadowColor);
-    CPen sFacePen(PS_SOLID, 1, sBtnFaceColor);
-
-    CPen *sOldPen = aDC->SelectObject(&sHighlightPen);
-
-    xpr_sint_t cx = 0;
-    for (i = 0; i < sCount; ++i)
+    if (sTotalWidth < sClientRect.right)
     {
-        sHdItem.fmt  = HDF_STRING | HDF_LEFT | HDF_OWNERDRAW;
-        sHdItem.mask = HDI_WIDTH | HDI_TEXT | HDI_FORMAT;
-        GetItem(sItemOrders[i], &sHdItem);
-
-        cx += sHdItem.cxy;
-
-        aDC->SelectObject(&sShadowPen);
-        aDC->MoveTo(cx, 2);
-        aDC->LineTo(cx, sRect.bottom - 2);
-
-        aDC->SelectObject(&sHighlightPen);
-        aDC->MoveTo(cx + 1, 2);
-        aDC->LineTo(cx + 1, sRect.bottom - 2);
-
-        aDC->SelectObject(&sFacePen);
-        aDC->MoveTo(cx - 1, 2);
-        aDC->LineTo(cx - 1, sRect.bottom - 2);
-
-        aDC->SelectObject(&sFacePen);
-        aDC->MoveTo(cx - 2, 2);
-        aDC->LineTo(cx - 2, sRect.bottom - 2);
+        CRect sFillRect(sClientRect);
+        sFillRect.left = max(sClientRect.left, sTotalWidth);
+        aDC->FillSolidRect(sFillRect, sPalette.mSurface);
     }
 
-    CRect sFillRect = sRect;
-    sFillRect.left += sTotal;
-    sFillRect.DeflateRect(1,1,1,1);
-    aDC->FillSolidRect(&sFillRect, sBtnFaceColor);
-
-    aDC->SelectObject(sOldPen);
-
-    XPR_SAFE_DELETE_ARRAY(sItemOrders);
-    DELETE_OBJECT(sHighlightPen);
-    DELETE_OBJECT(sShadowPen);
-    DELETE_OBJECT(sFacePen);
+    CRect sBottomRect(sClientRect);
+    sBottomRect.top = max(sBottomRect.top, sBottomRect.bottom - sSeparatorHeight);
+    aDC->FillSolidRect(sBottomRect, sPalette.mSeparator);
 }
 
 void FlatHeaderCtrl::OnWindowPosChanged(WINDOWPOS FAR *aWindowPos)
@@ -461,15 +389,26 @@ LRESULT FlatHeaderCtrl::OnMouseLeave(WPARAM wParam, LPARAM lParam)
     return 0;
 }
 
+void FlatHeaderCtrl::OnSettingChange(xpr_uint_t aFlags, const xpr_tchar_t *aSection)
+{
+    CHeaderCtrl::OnSettingChange(aFlags, aSection);
+    initHeader(mBoldFont);
+    resizeWindow();
+    Invalidate(XPR_FALSE);
+}
+
+LRESULT FlatHeaderCtrl::OnDpiChanged(WPARAM wParam, LPARAM lParam)
+{
+    initHeader(mBoldFont);
+    resizeWindow();
+    Invalidate(XPR_FALSE);
+    return 0;
+}
+
 LRESULT FlatHeaderCtrl::OnThemeChanged(WPARAM wParam, LPARAM lParam)
 {
-    if (mXPTheme.IsAppThemed() == XPR_TRUE)
-        mXPTheme.Close();
-
-    mXPTheme.Open(GetSafeHwnd(), XPR_WIDE_STRING_LITERAL("HEADER"));
-
+    initHeader(mBoldFont);
     Invalidate(XPR_FALSE);
-
     return 0;
 }
 

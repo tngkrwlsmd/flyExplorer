@@ -301,6 +301,7 @@ public:
 
 protected:
     void applyOption(Option &aNewOption);
+    void applyModernAppearance(void);
 
     xpr_bool_t exploreItem(LPITEMIDLIST aFullPidl, xpr_bool_t aUpdateBuddy = XPR_TRUE);
 
@@ -437,6 +438,7 @@ protected:
     // option
     Option       mOption;
     Option      *mNewOption;
+    xpr_bool_t   mOptionApplied;
 
     // folder information
     LPTVITEMDATA mTvItemData;    // current folder data
@@ -501,6 +503,7 @@ protected:
     CImageList *mMediumImgList;
     CImageList *mNormalImgList;
     CImageList *mSmallImgList;
+    CFont       mDefaultFont;
     CFont      *mCustomFont;
 
     struct SortData;
@@ -532,6 +535,9 @@ protected:
     afx_msg void OnKeyUp(xpr_uint_t aChar, xpr_uint_t aRepCnt, xpr_uint_t aFlags);
     afx_msg void OnKillFocus(CWnd *aNewWnd);
     afx_msg void OnSysColorChange(void);
+    afx_msg void OnSettingChange(xpr_uint_t aFlags, const xpr_tchar_t *aSection);
+    afx_msg LRESULT OnDpiChanged(WPARAM aWParam, LPARAM aLParam);
+    afx_msg LRESULT OnThemeChanged(WPARAM aWParam, LPARAM aLParam);
     afx_msg void OnDestroy(void);
     afx_msg void OnTimer(UINT_PTR aIdEvent);
     afx_msg xpr_bool_t OnEraseBkgnd(CDC *aDC);

@@ -140,6 +140,7 @@ xpr_uint_t ExplorerCtrl::mCodeMgr = 0;
 ExplorerCtrl::ExplorerCtrl(void)
     : mViewIndex(-1)
     , mNewOption(XPR_NULL)
+    , mOptionApplied(XPR_FALSE)
 {
     mRefCount++;
 
@@ -275,6 +276,9 @@ BEGIN_MESSAGE_MAP(ExplorerCtrl, super)
     ON_WM_KEYUP()
     ON_WM_KILLFOCUS()
     ON_WM_SYSCOLORCHANGE()
+    ON_WM_SETTINGCHANGE()
+    ON_MESSAGE(WM_DPICHANGED, OnDpiChanged)
+    ON_MESSAGE(WM_THEMECHANGED, OnThemeChanged)
     ON_WM_DESTROY()
     ON_WM_TIMER()
     ON_WM_ERASEBKGND()
@@ -2795,6 +2799,8 @@ void ExplorerCtrl::applyOption(Option &aNewOption)
         SetBkImage(XPR_STRING_LITERAL(""));
     }
 
+    const ui::ThemePalette sPalette = ui::ModernUI::getPalette();
+
     if (aNewOption.mBkgndColorType == COLOR_TYPE_CUSTOM)
     {
         SetBkColor(aNewOption.mBkgndColor);
@@ -2802,8 +2808,8 @@ void ExplorerCtrl::applyOption(Option &aNewOption)
     }
     else
     {
-        SetBkColor(::GetSysColor(COLOR_WINDOW));
-        SetTextBkColor(::GetSysColor(COLOR_WINDOW));
+        SetBkColor(sPalette.mWindow);
+        SetTextBkColor(sPalette.mWindow);
     }
 
     if (aNewOption.mTextColorType == COLOR_TYPE_CUSTOM)
@@ -2812,7 +2818,7 @@ void ExplorerCtrl::applyOption(Option &aNewOption)
     }
     else
     {
-        SetTextColor(::GetSysColor(COLOR_WINDOWTEXT));
+        SetTextColor(sPalette.mText);
     }
 
     // set system image list or custom image list
@@ -2860,6 +2866,7 @@ void ExplorerCtrl::applyOption(Option &aNewOption)
 
     // set new option
     mOption = aNewOption;
+    mOptionApplied = XPR_TRUE;
 
     // set thumbnail options
     Thumbnail &sThumbnail = Thumbnail::instance();
@@ -8741,21 +8748,62 @@ LPITEMIDLIST ExplorerCtrl::getFolderGroup(void) const
     return sFolderGroupFullPidl;
 }
 
-void ExplorerCtrl::OnSysColorChange(void) 
+void ExplorerCtrl::applyModernAppearance(void)
+{
+    if (XPR_IS_FALSE(mOptionApplied))
+        return;
+
+    const ui::ThemePalette sPalette = ui::ModernUI::getPalette();
+
+    if (mOption.mBkgndColorType != COLOR_TYPE_CUSTOM &&
+        XPR_IS_FALSE(mOption.mBkgndImage))
+    {
+        SetBkColor(sPalette.mWindow);
+        SetTextBkColor(sPalette.mWindow);
+    }
+
+    if (mOption.mTextColorType != COLOR_TYPE_CUSTOM)
+        SetTextColor(sPalette.mText);
+
+    if (XPR_IS_FALSE(mOption.mCustomFont))
+        setCustomFont(XPR_FALSE, (xpr_tchar_t *)XPR_NULL);
+
+    if (XPR_IS_NOT_NULL(mHeaderCtrl))
+        mHeaderCtrl->Invalidate(XPR_FALSE);
+
+    Invalidate(XPR_FALSE);
+}
+
+void ExplorerCtrl::OnSysColorChange(void)
 {
     super::OnSysColorChange();
 
-    COLORREF sWindowColor = ::GetSysColor(COLOR_WINDOW);
-    mExtraLargeImgList->SetBkColor(sWindowColor);
-    mLargeImgList->SetBkColor(sWindowColor);
-    mMediumImgList->SetBkColor(sWindowColor);
-    mSmallImgList->SetBkColor(sWindowColor);
+    const ui::ThemePalette sPalette = ui::ModernUI::getPalette();
 
-    if (mOption.mBkgndColorType != COLOR_TYPE_CUSTOM)
-    {
-        SetTextBkColor(sWindowColor);
-        SetBkColor(sWindowColor);
-    }
+    if (XPR_IS_NOT_NULL(mExtraLargeImgList)) mExtraLargeImgList->SetBkColor(sPalette.mWindow);
+    if (XPR_IS_NOT_NULL(mLargeImgList))      mLargeImgList->SetBkColor(sPalette.mWindow);
+    if (XPR_IS_NOT_NULL(mMediumImgList))     mMediumImgList->SetBkColor(sPalette.mWindow);
+    if (XPR_IS_NOT_NULL(mSmallImgList))      mSmallImgList->SetBkColor(sPalette.mWindow);
+
+    applyModernAppearance();
+}
+
+void ExplorerCtrl::OnSettingChange(xpr_uint_t aFlags, const xpr_tchar_t *aSection)
+{
+    super::OnSettingChange(aFlags, aSection);
+    applyModernAppearance();
+}
+
+LRESULT ExplorerCtrl::OnDpiChanged(WPARAM aWParam, LPARAM aLParam)
+{
+    applyModernAppearance();
+    return 0;
+}
+
+LRESULT ExplorerCtrl::OnThemeChanged(WPARAM aWParam, LPARAM aLParam)
+{
+    applyModernAppearance();
+    return 0;
 }
 
 void ExplorerCtrl::OnDeleteallitems(NMHDR *aNmHdr, LRESULT *aResult)
@@ -8953,7 +9001,16 @@ void ExplorerCtrl::setCustomFont(xpr_bool_t aCustomFont, xpr_tchar_t *aFontText)
 {
     if (XPR_IS_FALSE(aCustomFont))
     {
-        SetFont(XPR_NULL);
+        if (XPR_IS_NOT_NULL(mDefaultFont.m_hObject))
+            mDefaultFont.DeleteObject();
+
+        LOGFONT sLogFont = {0};
+        if (XPR_IS_TRUE(ui::ModernUI::getUIFont(sLogFont, GetSafeHwnd())))
+        {
+            mDefaultFont.CreateFontIndirect(&sLogFont);
+            if (XPR_IS_NOT_NULL(mDefaultFont.m_hObject))
+                SetFont(&mDefaultFont);
+        }
         return;
     }
 
