@@ -7,7 +7,9 @@ param(
 
     [int]$StartupTimeoutSeconds = 12,
 
-    [int]$StabilitySeconds = 3
+    [int]$StabilitySeconds = 3,
+
+    [switch]$SkipIfUserStateExists
 )
 
 $ErrorActionPreference = "Stop"
@@ -56,19 +58,36 @@ if ($xprCandidates.Count -ne 1) {
 }
 
 $runKey = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Run"
+$blockingUserState = @()
+
 foreach ($valueName in @("fxfile-launcher", "fxfile-upchecker")) {
     $existing = Get-ItemProperty -Path $runKey -Name $valueName -ErrorAction SilentlyContinue
     if ($null -ne $existing) {
-        throw "Refusing runtime smoke because HKCU Run value '$valueName' already exists."
+        $blockingUserState += "HKCU Run value '$valueName'"
     }
 }
 
 $appRegistryRoot = "HKCU:\Software\fxfile"
 if (Test-Path -LiteralPath $appRegistryRoot) {
-    throw "Refusing runtime smoke because existing flyExplorer HKCU profile data was found."
+    $blockingUserState += "existing flyExplorer HKCU profile data"
 }
 
-$smokeRoot = Join-Path $env:RUNNER_TEMP ("flyExplorer-runtime-smoke-" + [guid]::NewGuid().ToString("N"))
+if ($blockingUserState.Count -gt 0) {
+    $reason = $blockingUserState -join ", "
+    if ($SkipIfUserStateExists) {
+        Write-Host "Runtime smoke SKIPPED: refusing to modify existing user state ($reason)."
+        exit 3
+    }
+
+    throw "Refusing runtime smoke because existing user state was found: $reason."
+}
+
+$tempRoot = $env:RUNNER_TEMP
+if ([string]::IsNullOrWhiteSpace($tempRoot)) {
+    $tempRoot = [System.IO.Path]::GetTempPath()
+}
+
+$smokeRoot = Join-Path $tempRoot ("flyExplorer-runtime-smoke-" + [guid]::NewGuid().ToString("N"))
 $runtimeDir = Join-Path $smokeRoot "runtime"
 $confDir = Join-Path $smokeRoot "conf"
 $testDir = Join-Path $smokeRoot "test-root"

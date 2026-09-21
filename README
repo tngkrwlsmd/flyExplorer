@@ -110,7 +110,11 @@ there. This directory is an isolated Python virtual environment, not a log
 directory. Local CI logs are written under `logs\\local-ci` in the repository
 root; `logs/` is ignored by Git. Policy, source-preflight, bootstrap, MSBuild,
 runtime-smoke, and package-validation stages each write their own log files.
-Local CI does not publish artifacts or modify GitHub Actions state.
+Local CI does not publish artifacts or modify GitHub Actions state. On a developer
+machine, runtime smoke refuses to overwrite existing flyExplorer HKCU startup or
+profile state. When such state is present, `local_ci.bat` records that smoke as
+SKIPPED/NOT TESTED and continues the remaining local checks; GitHub-hosted smoke
+keeps the strict behavior and still fails on unexpected pre-existing state.
 
 Hosted runtime smoke can also be invoked manually after a build, for example:
 

@@ -214,11 +214,8 @@ if errorlevel 1 exit /b 1
 call :require_file "bin\x64\fxfile-keyhook.dll"
 if errorlevel 1 exit /b 1
 
-set "SMOKE_LOG=%LOG_DIR%\smoke-x64.log"
-powershell -NoProfile -ExecutionPolicy Bypass -File "build\runtime_smoke.ps1" -SourceDir "bin\x64" -Configuration "Release-x64-Unicode" >"%SMOKE_LOG%" 2>&1
-set "SMOKE_RESULT=%errorlevel%"
-type "%SMOKE_LOG%"
-exit /b %SMOKE_RESULT%
+call :run_runtime_smoke "bin\x64" "Release-x64-Unicode" "x64"
+exit /b %errorlevel%
 
 :run_x64_debug
 echo.
@@ -260,11 +257,8 @@ if errorlevel 1 exit /b 1
 call :require_file "bin\x86-unicode\fxfile-keyhook.dll"
 if errorlevel 1 exit /b 1
 
-set "SMOKE_LOG=%LOG_DIR%\smoke-x86-unicode.log"
-powershell -NoProfile -ExecutionPolicy Bypass -File "build\runtime_smoke.ps1" -SourceDir "bin\x86-unicode" -Configuration "Release-x86-Unicode" >"%SMOKE_LOG%" 2>&1
-set "SMOKE_RESULT=%errorlevel%"
-type "%SMOKE_LOG%"
-if not "%SMOKE_RESULT%"=="0" exit /b %SMOKE_RESULT%
+call :run_runtime_smoke "bin\x86-unicode" "Release-x86-Unicode" "x86-unicode"
+if errorlevel 1 exit /b 1
 
 call :build_configuration "Release-x86-Multibyte" "Win32" "release-x86-multibyte"
 if errorlevel 1 exit /b 1
@@ -284,11 +278,8 @@ if errorlevel 1 exit /b 1
 call :require_file "bin\x64\upchecker\fxfile-upchecker.exe"
 if errorlevel 1 exit /b 1
 
-set "SMOKE_LOG=%LOG_DIR%\smoke-x86-multibyte.log"
-powershell -NoProfile -ExecutionPolicy Bypass -File "build\runtime_smoke.ps1" -SourceDir "bin\x86-multibyte" -Configuration "Release-x86-Multibyte" >"%SMOKE_LOG%" 2>&1
-set "SMOKE_RESULT=%errorlevel%"
-type "%SMOKE_LOG%"
-exit /b %SMOKE_RESULT%
+call :run_runtime_smoke "bin\x86-multibyte" "Release-x86-Multibyte" "x86-multibyte"
+exit /b %errorlevel%
 
 :run_package_validation
 echo.
@@ -313,6 +304,25 @@ powershell -NoProfile -ExecutionPolicy Bypass -File "build\validate_package.ps1"
 set "PACKAGE_RESULT=%errorlevel%"
 type "%PACKAGE_VALIDATE_LOG%"
 exit /b %PACKAGE_RESULT%
+
+:run_runtime_smoke
+set "SMOKE_SOURCE=%~1"
+set "SMOKE_CONFIGURATION=%~2"
+set "SMOKE_TAG=%~3"
+set "SMOKE_LOG=%LOG_DIR%\smoke-%SMOKE_TAG%.log"
+
+powershell -NoProfile -ExecutionPolicy Bypass -File "build\runtime_smoke.ps1" -SourceDir "%SMOKE_SOURCE%" -Configuration "%SMOKE_CONFIGURATION%" -SkipIfUserStateExists >"%SMOKE_LOG%" 2>&1
+set "SMOKE_RESULT=%errorlevel%"
+type "%SMOKE_LOG%"
+
+if "%SMOKE_RESULT%"=="3" (
+    echo [local-ci] Runtime smoke SKIPPED: %SMOKE_CONFIGURATION%
+    >>"%SESSION_LOG%" echo SKIPPED: runtime smoke %SMOKE_CONFIGURATION% due to existing user state
+    set "LOCAL_CI_SKIPPED=1"
+    exit /b 0
+)
+
+exit /b %SMOKE_RESULT%
 
 :build_configuration
 set "CI_CONFIGURATION=%~1"
@@ -344,9 +354,15 @@ exit /b 0
 :passed
 echo.
 echo ============================================================
-echo Local CI PASS: %PROFILE%
+if defined LOCAL_CI_SKIPPED (
+    echo Local CI PASS WITH SKIPS: %PROFILE%
+    echo Review session.log and smoke logs for NOT TESTED runtime checks.
+    >>"%SESSION_LOG%" echo Result: PASS_WITH_SKIPS
+) else (
+    echo Local CI PASS: %PROFILE%
+    >>"%SESSION_LOG%" echo Result: PASS
+)
 echo ============================================================
->>"%SESSION_LOG%" echo Result: PASS
 >>"%SESSION_LOG%" echo Finished: %DATE% %TIME%
 popd
 exit /b 0
