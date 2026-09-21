@@ -8,22 +8,20 @@
 #define __XPR_REG_EXPR_H__ 1
 #pragma once
 
+#include "xpr_config.h"
 #include <regex>
 
-namespace std
-{
-namespace tr1
+namespace xpr
 {
 #if defined(XPR_CFG_UNICODE)
-typedef wregex tregex;
-typedef wcmatch tcmatch;
-typedef wsmatch tsmatch;
+typedef std::wregex  tregex;
+typedef std::wcmatch tcmatch;
+typedef std::wsmatch tsmatch;
 #else
-typedef regex tregex;
-typedef cmatch tcmatch;
-typedef smatch tsmatch;
+typedef std::regex  tregex;
+typedef std::cmatch tcmatch;
+typedef std::smatch tsmatch;
 #endif
-} // namespace tr1
-} // namespace std
+} // namespace xpr
 
 #endif // __XPR_REG_EXPR_H__
