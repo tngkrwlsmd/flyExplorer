@@ -118,12 +118,20 @@ DPI-scaled insets. Other StatusBar consumers share the generic typography,
 palette, and DPI metric fixes without adopting Explorer-specific progress
 styling.
 
+The first dialog-specific modernization reference is `DriveDetailDlg`. It
+applies the current-DPI system UI font to its labels and value fields, preserves
+the existing bold percentage text in the shared `TextProgressCtrl`, refreshes
+typography and custom-control appearance for settings/theme/DPI notifications,
+and uses ThemePalette colors plus DPI-scaled metrics in `DrivePieCtrl`.
+Drive-data queries, localized strings, icon behavior, and the dialog's existing
+information structure remain unchanged.
+
 This is a ModernUI foundation, not a claim of complete Windows 11 dark-mode
 support. Dark title bars/common-control theming, icon modernization, and broader
-dialog modernization remain separate work. Hosted CI verifies compile/link,
-warning-free builds, launch smoke, and packaging; 100/125/150/200% visual
-inspection, High Contrast appearance, and interactive status-bar behavior still
-require separate manual evidence.
+dialog modernization beyond this first reference remain separate work. Hosted CI
+verifies compile/link, warning-free builds, launch smoke, and packaging;
+100/125/150/200% visual inspection, High Contrast appearance, and interactive
+status-bar/DriveDetailDlg behavior still require separate manual evidence.
 
 Generate the Visual Studio Solution
 -----------------------------------

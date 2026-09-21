@@ -77,7 +77,7 @@
     }
   ],
   "review": {
-    "reviewed_revision": "8979332bf9556c284251b00932da5f91180c3751",
+    "reviewed_revision": "2ed19ac54b60c1f8ca358ea19a053198a01c1748",
     "reviewed_at": "2026-09-21",
     "reviewed_paths": [
       "README",
@@ -179,7 +179,9 @@
 - Phase 4의 첫 단위로 AddressBar에 system UI font fallback, ComboBox/edit font 동기화, font/icon 기반 DPI-aware item metrics, settings/DPI 변경 시 font refresh를 적용했다.
 - Phase 4의 다음 단위로 StatusBar 공통 기반에 system UI font, 96-DPI logical pane metrics, ThemePalette 기반 flat background/text/separator, settings/theme/DPI refresh를 적용하고, ExplorerStatusBar의 4-pane 정보 구조와 drive-properties double-click 계약을 유지한 채 drive usage progress를 palette/DPI-aware rendering으로 정리했다.
 - StatusBar/TextProgressCtrl 현대화는 Windows Product Build에서 x64/x86 compile/link, warning 0, hosted launch smoke, package regression을 통과했지만 100/125/150/200% DPI visual, High Contrast visual, interactive status-bar 동작은 별도 수동 evidence가 아직 없다.
-- 실제 dark-mode title bar/control theming과 dialog/icon asset 현대화는 후속 phase 범위다.
+- Dialog 현대화의 첫 reference로 DriveDetailDlg에 ModernUI system UI font와 explicit child-font 동기화, settings/theme/DPI refresh를 적용했다. 기존 bold TextProgressCtrl percentage contract는 유지하며, DrivePieCtrl은 ThemePalette 기반 used/free colors와 DPI-scaled margin/legend metric을 사용한다.
+- DriveDetailDlg 현대화는 Debug/Release x64, x86 Unicode/Multibyte compile/link, warning 0, hosted launch smoke, package regression을 통과했다. 실제 dialog open/close, keyboard navigation, 100/125/150/200% DPI visual, High Contrast visual은 아직 수동 검증하지 않았다.
+- 실제 dark-mode title bar/control theming과 나머지 dialog/icon asset 현대화는 후속 phase 범위다.
 
 ## Recommended verification
 
