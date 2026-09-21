@@ -26,7 +26,7 @@
     "test_command": {
       "value": "",
       "status": "N/A",
-      "evidence": "manual:no single unit/integration test command is defined; source preflight, Windows Product Build CI, hosted runtime smoke, and package validation are automated, while clean Windows Sandbox/VM checks remain manual"
+      "evidence": "manual:no single unit/integration test command is defined; GitHub Actions automatic CI is budget-paused through 2026-09-30, so local source preflight/manual build evidence is preferred during the pause; clean Windows Sandbox/VM checks remain manual"
     },
     "runtime": {
       "value": "Visual Studio 2026",
@@ -77,7 +77,7 @@
     }
   ],
   "review": {
-    "reviewed_revision": "27c709692daadd4639447b27941f579faacdab07",
+    "reviewed_revision": "88cdb2273ade81715ab2bede8cb1529eeea7da80",
     "reviewed_at": "2026-09-21",
     "reviewed_paths": [
       "README",
@@ -135,7 +135,7 @@
 | third-party | `lib/`, `CREDITS` | Contract / Observed | ABI/license 검토 필요 |
 | 패키징 | `dist/package.bat`, `dist/copy.bat`, `dist/make_portable.bat`, `dist/make_installer.bat`, `dist/setup.nsi` | Contract / Observed | x64/x86 staging, portable ZIP 3종, vendored NSIS installer |
 | 개발 환경 문서 | `README` | Intended / Observed | 실제 build evidence와 함께 해석 |
-| 제품 빌드 CI | `.github/workflows/windows-build.yml` | Contract / Evidence | VS 2026 x64 Unicode + x86 Unicode/Multibyte compile/link, warning, 산출물 및 hosted-runner launch smoke 검증 |
+| 제품 빌드 CI | `.github/workflows/windows-build.yml` | Contract / Evidence | 2026-09-30까지 automatic trigger 중지; explicit `run_ci` override에서만 실행하며 `full_matrix` 없이는 Release x64만 허용 |
 | runtime smoke | `build/runtime_smoke.ps1` | Contract / Evidence | 임시 staged runtime + isolated conf_dir에서 process/main-window/stability 검증 |
 | package validation | `build/validate_package.ps1` | Contract / Evidence | staging/portable payload, updater runtime, installer output 검증 |
 | build/runtime 결과 | GitHub Actions build log, Visual Studio build log, hosted-runner launch smoke, Windows Sandbox/VM smoke | Evidence | compile/link, hosted runtime, clean-runtime evidence를 분리 |
@@ -160,6 +160,8 @@
 - x64 solution은 mixed-architecture helper mapping을 사용한다.
 - updater는 x64 Build Solution에서 의도적으로 제외한다.
 - product unit/integration test suite는 아직 확인되지 않았다.
+- GitHub Actions budget 보호를 위해 2026-09-22부터 2026-09-30까지 `Policy and Source Validation`과 `Windows Product Build`의 automatic push/PR trigger를 중지했다. 수동 dispatch도 `run_ci` explicit override 없이는 job이 실행되지 않으며, Windows의 Debug x64/x86/package matrix는 추가 `full_matrix` override가 필요하다.
+- budget pause 기간에는 branch/main CI PASS를 완료 조건으로 요구하지 않는다. local/static validation과 실제 수행한 local build만 Evidence로 기록하고, 수행하지 않은 compile/runtime/package/visual 검증은 `NOT TESTED`로 남긴다. 검증 스크립트는 삭제하지 않고 재개 시점까지 보존한다.
 - Windows Product Build CI가 `Release-x64-Unicode | x64`, `Release-x86-Unicode | Win32`, `Release-x86-Multibyte | Win32`의 실제 compile/link와 핵심 산출물을 검증하며, 각 MSBuild file log에서 compiler/linker/MSBuild warning이 발견되면 실패한다. reviewed revision 기준 세 제품 빌드는 모두 warning 0건이다.
 - x86 Unicode는 `libxprw.dll/.lib`, x86 Multibyte는 `libxpr.dll/.lib` 계약을 검증한다. `fxfile-upchecker`는 Unicode/x64 Build Solution에서 제외되고 x86 Multibyte에서 실제 compile/link 및 runtime staging 산출물을 검증한다.
 - xpr의 logical target 이름은 `xpr`로 유지하면서 generated MSBuild `TargetName`을 configuration별 physical product 이름(`libxprw` / `libxpr` 계열)과 정렬해 MSB8012를 제거했다.
@@ -203,7 +205,7 @@
 6. `build/runtime_smoke.ps1` 또는 GitHub Actions hosted-runner launch smoke 결과 확인
 7. `dist/package.bat`으로 portable ZIP 3종과 NSIS installer 생성
 8. `build/validate_package.ps1 -DistDir dist`로 package payload 검증
-9. GitHub Actions의 Windows Product Build 결과와 로컬 build/runtime/package evidence를 비교
+9. **2026-09-30까지는 GitHub Actions를 실행하지 않는다.** pause 해제 후에만 Windows Product Build와 로컬 evidence를 비교
 10. Windows Sandbox 또는 clean VM에서 clean install/runtime smoke test
 11. interactive 기능 및 UI 변경이면 visual 결과를 별도로 확인
 

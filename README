@@ -46,11 +46,20 @@ Policy/readiness checks can be run with:
     python .agent-policy/scripts/validate.py --project-root . --readiness development
     python .agent-policy/scripts/conformance.py
 
-These checks are also wired to repository CI. A policy/static PASS must not be
-reported as a product compile, integration, or runtime PASS.
+These checks remain available, but automatic GitHub Actions CI is temporarily
+paused through 2026-09-30 to conserve the repository Actions budget. During the
+pause, do not manually dispatch CI unless the user explicitly approves spending
+Actions minutes. A policy/static PASS must not be reported as a product compile,
+integration, or runtime PASS.
 
 Windows Product Build CI
 ------------------------
+Automatic push/pull-request triggers are disabled through 2026-09-30. A manual
+dispatch must explicitly enable the `run_ci` budget override; the default manual
+Windows run is Release x64 only, while Debug x64, x86 regressions, and packaging
+also require `full_matrix`. On or after 2026-10-01, review the Actions budget
+before restoring any automatic trigger or broad matrix.
+
 The separate `.github/workflows/windows-build.yml` workflow runs on GitHub's
 Windows Server 2025 image with Visual Studio 2026. Its x64 job regenerates the
 solution with `build.bat 2026 x64`, verifies the v145/MFC build contract,

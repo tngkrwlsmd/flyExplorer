@@ -119,6 +119,16 @@ UI/UX 현대화 작업은 다음 원칙을 따른다.
 
 ## 8. 검증
 
+### Temporary GitHub Actions budget pause — 2026-09-22 through 2026-09-30
+
+- GitHub Actions의 자동 `push`/`pull_request` CI는 사용량 보호를 위해 일시 중지한다.
+- 2026-10-01 전에는 일반 개발 checkpoint, branch, main 반영을 이유로 Actions를 수동 실행하지 않는다.
+- 사용자가 해당 실행에서 Actions 비용 사용을 명시적으로 허용한 경우에만 workflow의 `run_ci` budget override를 켤 수 있다.
+- Windows workflow의 Debug x64, x86 regression, packaging은 추가로 `full_matrix`를 켠 경우에만 실행한다. 예산 pause 중 기본값은 실행하지 않는 것이다.
+- pause 기간에는 `python build/validate_source_invariants.py` 같은 로컬/정적 검증과 가능한 로컬 빌드를 우선한다. Windows compile/runtime/package를 실제로 실행하지 못했으면 `NOT TESTED`로 기록한다.
+- 테스트/검증 스크립트 자체는 비용 절감 목적으로 삭제하지 않는다. 비용은 remote Actions 실행을 막아 절감하고, 검증 자산은 다음 재개 시점까지 보존한다.
+- 2026-10-01 이후에도 자동 CI를 기계적으로 되살리지 않는다. Actions 예산을 확인한 뒤 필요한 최소 matrix와 trigger를 명시적으로 재검토하고 복구한다.
+
 검증은 변경 범위에 맞춰 단계적으로 수행하고, 정적 검사·컴파일/링크·호스티드 실행·클린 환경 검증을 서로 다른 evidence로 기록한다.
 
 기본 검증 흐름:
