@@ -167,9 +167,9 @@ jobs:
           foreach ($path in @(
             "bin\x86-unicode\fxfile.exe",
             "bin\x86-unicode\libxprw.dll",
-            "bin\x86\fxfile.exe",
-            "bin\x86\libxpr.dll",
-            "bin\x86\upchecker\fxfile-upchecker.exe"
+            "bin\x86-multibyte\fxfile.exe",
+            "bin\x86-multibyte\libxpr.dll",
+            "bin\x86-multibyte\upchecker\fxfile-upchecker.exe"
           )) {
             if (-not (Test-Path -LiteralPath $path -PathType Leaf)) {
               throw "Required x86 compatibility artifact is missing: $path"
