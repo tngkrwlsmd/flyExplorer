@@ -269,7 +269,7 @@ CSymEngine::CSymEngine(const CEngineParams& rParams)
 			DWORD dwOptions = FSymGetOptions();
 			FSymSetOptions(dwOptions | SYMOPT_DEFERRED_LOADS | SYMOPT_LOAD_LINES | SYMOPT_UNDNAME);
 
-			m_hSymProcess = g_bWinNT ? GetCurrentProcess() : (HANDLE)GetCurrentProcessId();
+			m_hSymProcess = GetCurrentProcess();
 			if (FSymInitialize(m_hSymProcess, NULL, TRUE))
 				SetEngineParameters(rParams);
 			else
