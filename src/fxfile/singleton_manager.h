@@ -82,7 +82,7 @@ public:
     }
 
 protected:
-    typedef std::tr1::unordered_map<xpr::string, SingletonInstance *> InstanceMap;
+    typedef std::unordered_map<xpr::string, SingletonInstance *> InstanceMap;
     static InstanceMap mInstanceMap;
     static xpr::Mutex  mMutex;
 };
