@@ -459,7 +459,7 @@ protected:
     AdvFileChangeWatcher::AdvWatchId mAdvWatchId;
     xpr_bool_t                       mNotify;
 
-    typedef std::tr1::unordered_multimap<xpr::string, LPLVITEMDATA> NameMap;
+    typedef std::unordered_multimap<xpr::string, LPLVITEMDATA> NameMap;
     typedef std::pair<NameMap::iterator, NameMap::iterator> NameMapPairIterator;
     typedef std::pair<NameMap::const_iterator, NameMap::const_iterator> NameMapPairConstIterator;
     NameMap mNameMap;
