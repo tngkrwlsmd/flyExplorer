@@ -110,6 +110,9 @@ there. This directory is an isolated Python virtual environment, not a log
 directory. Local CI logs are written under `logs\\local-ci` in the repository
 root; `logs/` is ignored by Git. Policy, source-preflight, bootstrap, MSBuild,
 runtime-smoke, and package-validation stages each write their own log files.
+`local_ci.bat` forces redirected Python output to UTF-8 so readiness and
+conformance messages containing Unicode punctuation do not fail on Korean or
+other non-UTF-8 Windows ANSI code pages.
 Local CI does not publish artifacts or modify GitHub Actions state. On a developer
 machine, runtime smoke refuses to overwrite existing flyExplorer HKCU startup or
 profile state. When such state is present, `local_ci.bat` records that smoke as

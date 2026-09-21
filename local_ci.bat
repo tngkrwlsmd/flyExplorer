@@ -2,6 +2,12 @@
 setlocal EnableExtensions
 pushd "%~dp0" || exit /b 1
 
+rem Python switches to the Windows ANSI code page when stdout is redirected.
+rem Force UTF-8 so policy/readiness logs can contain Unicode punctuation safely.
+set "PYTHONUTF8=1"
+set "PYTHONIOENCODING=utf-8"
+chcp 65001 >nul
+
 set "PROFILE=%~1"
 if "%PROFILE%"=="" set "PROFILE=x64"
 set "LOG_DIR=%~dp0logs\local-ci"
