@@ -95,7 +95,7 @@ private:
     typedef std::deque<xpr::string> NameDeque;
     typedef std::deque<SearchDir *> SearchDirDeque;
     NameDeque      mNameDeque;
-    std::tr1::tregex mRegExpr;
+    xpr::tregex mRegExpr;
     SearchDirDeque mSearchIncDirDeque;
     SearchDirDeque mSearchExcDirDeque;
 
