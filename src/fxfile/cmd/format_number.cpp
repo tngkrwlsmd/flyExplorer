@@ -180,9 +180,9 @@ Format *FormatNumber::newClone(void) const
 
 xpr_bool_t FormatNumber::canParseShort(const xpr::string &aFormatString)
 {
-    const std::tr1::tregex sRegEx(kShortFormatNumberRegExpr);
+    const xpr::tregex sRegEx(kShortFormatNumberRegExpr);
 
-    return (std::tr1::regex_match(aFormatString.c_str(), sRegEx) == true) ? XPR_TRUE : XPR_FALSE;
+    return (std::regex_match(aFormatString.c_str(), sRegEx) == true) ? XPR_TRUE : XPR_FALSE;
 }
 
 // count format (e.g. <1> or <1+2> or <1-2> or <001+2> or <-001+2> or <-001-2>)
