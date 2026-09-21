@@ -495,4 +495,64 @@ jobs:
       - name: Assemble verified package inputs
         shell: pwsh
         run: |
-          New-Item -ItemType Directory -Force 
+          $dirs = @("bin\x64", "bin\x64\upchecker", "bin\x86-unicode", "bin\x86-multibyte")
+          foreach ($dir in $dirs) {
+            New-Item -ItemType Directory -Force -Path $dir | Out-Null
+          }
+
+          Copy-Item "_package-input\x64\*" "bin\x64" -Recurse -Force
+          Copy-Item "_package-input\x86-unicode\*" "bin\x86-unicode" -Recurse -Force
+          Copy-Item "_package-input\x86-multibyte\*" "bin\x86-multibyte" -Recurse -Force
+          Copy-Item "_package-input\x64-upchecker\*" "bin\x64\upchecker" -Recurse -Force
+
+          $required = @(
+            "bin\x64\fxfile.exe",
+            "bin\x64\upchecker\fxfile-upchecker.exe",
+            "bin\x86-unicode\fxfile.exe",
+            "bin\x86-unicode\upchecker\fxfile-upchecker.exe",
+            "bin\x86-multibyte\fxfile.exe",
+            "bin\x86-multibyte\upchecker\fxfile-upchecker.exe"
+          )
+          foreach ($path in $required) {
+            if (-not (Test-Path -LiteralPath $path -PathType Leaf)) {
+              throw "Verified package input is missing: $path"
+            }
+          }
+
+      - name: Build portable archives and NSIS installer
+        shell: cmd
+        run: call dist\package.bat
+
+      - name: Validate package payloads
+        shell: pwsh
+        run: |
+          & ".\build\validate_package.ps1" -DistDir "dist"
+
+      - name: Write package checksums
+        shell: pwsh
+        run: |
+          $packages = @(
+            "dist\fxfile_v2.0.4-dev.exe",
+            "dist\fxfile_v2.0.4-dev_x64_portable.zip",
+            "dist\fxfile_v2.0.4-dev_x86_unicode_portable.zip",
+            "dist\fxfile_v2.0.4-dev_x86_multibyte_portable.zip"
+          )
+          $lines = foreach ($package in $packages) {
+            $hash = Get-FileHash -Algorithm SHA256 -LiteralPath $package
+            "$($hash.Hash.ToLowerInvariant()) *$([System.IO.Path]::GetFileName($package))"
+          }
+          $lines | Set-Content -LiteralPath "dist\SHA256SUMS.txt" -Encoding ascii
+          Get-Content -LiteralPath "dist\SHA256SUMS.txt"
+
+      - name: Upload validated release packages
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: flyExplorer-release-package
+          path: |
+            dist/fxfile_v2.0.4-dev.exe
+            dist/fxfile_v2.0.4-dev_x64_portable.zip
+            dist/fxfile_v2.0.4-dev_x86_unicode_portable.zip
+            dist/fxfile_v2.0.4-dev_x86_multibyte_portable.zip
+            dist/SHA256SUMS.txt
+          if-no-files-found: error
+          retention-days: 14
