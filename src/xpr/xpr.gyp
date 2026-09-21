@@ -31,6 +31,7 @@
                 {
                     'IntermediateDirectory': '../../obj/xpr/dbg-x86-unicode',
                     'OutputDirectory':       '../../bin/x86-unicode',
+                    'TargetName':            'lib$(ProjectName)w_dbg',
                 },
                 
                 'msvs_settings':
@@ -64,6 +65,7 @@
                 {
                     'IntermediateDirectory': '../../obj/xpr/rel-x86-unicode',
                     'OutputDirectory':       '../../bin/x86-unicode',
+                    'TargetName':            'lib$(ProjectName)w',
                 },
                 
                 'msvs_settings':
@@ -97,6 +99,7 @@
                 {
                     'IntermediateDirectory': '../../obj/xpr/dbg-x86-multibyte',
                     'OutputDirectory':       '../../bin/x86-multibyte',
+                    'TargetName':            'lib$(ProjectName)_dbg',
                 },
                 
                 'msvs_settings':
@@ -133,6 +136,7 @@
                 {
                     'IntermediateDirectory': '../../obj/xpr/rel-x86-multibyte',
                     'OutputDirectory':       '../../bin/x86-multibyte',
+                    'TargetName':            'lib$(ProjectName)',
                 },
                 
                 'msvs_settings':
@@ -173,6 +177,7 @@
                             {
                                 'IntermediateDirectory': '../../obj/xpr/dbg-x64',
                                 'OutputDirectory':       '../../bin/x64',
+                                'TargetName':            'lib$(ProjectName)w_dbg',
                             },
                             
                             'msvs_settings':
@@ -206,6 +211,7 @@
                             {
                                 'IntermediateDirectory': '../../obj/xpr/rel-x64',
                                 'OutputDirectory':       '../../bin/x64',
+                                'TargetName':            'lib$(ProjectName)w',
                             },
                             
                             'msvs_settings':
