@@ -1037,7 +1037,7 @@ void AddressBar::updateMetrics(void)
     if (XPR_IS_NOT_NULL(mSmallImgList) && XPR_IS_NOT_NULL(mSmallImgList->m_hImageList))
     {
         xpr_sint_t sIconWidth = 0;
-        mSmallImgList->GetIconSize(sIconWidth, sIconHeight);
+        ::ImageList_GetIconSize(mSmallImgList->m_hImageList, &sIconWidth, &sIconHeight);
     }
 
     const xpr_sint_t sContentHeight = max(sTextHeight, sIconHeight);
