@@ -16,6 +16,7 @@
 #include "shell_enumerator.h"
 
 #include "gui/gdi.h"
+#include "gui/ModernUI.h"
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -53,7 +54,7 @@ AddressBar::AddressBar(void)
 
     mSmallImgList   = XPR_NULL;
 
-    mCustomFont     = XPR_NULL;
+    mDisplayFont    = XPR_NULL;
 
     mShcnDesktopId  = 0;
     mShcnComputerId = 0;
@@ -66,6 +67,8 @@ AddressBar::~AddressBar(void)
 
 BEGIN_MESSAGE_MAP(AddressBar, CComboBoxEx)
     ON_WM_CREATE()
+    ON_WM_SETTINGCHANGE()
+    ON_MESSAGE(WM_DPICHANGED, OnDpiChanged)
     ON_MESSAGE(WM_SHCN_DESKTOP,  OnShcnDesktop)
     ON_MESSAGE(WM_SHCN_COMPUTER, OnShcnComputer)
     ON_CONTROL_REFLECT(CBN_SELENDOK, OnSelEndOK)
@@ -100,15 +103,33 @@ xpr_sint_t AddressBar::OnCreate(LPCREATESTRUCT aCreateStruct)
 
     mInit = XPR_FALSE;
 
+    setCustomFont(gOpt->mConfig.mCustomFontText);
+
+    return 0;
+}
+
+void AddressBar::OnSettingChange(xpr_uint_t aFlags, const xpr_tchar_t *aSection)
+{
+    CComboBoxEx::OnSettingChange(aFlags, aSection);
+
+    setCustomFont(gOpt->mConfig.mCustomFontText);
+}
+
+LRESULT AddressBar::OnDpiChanged(WPARAM aWParam, LPARAM aLParam)
+{
+    setCustomFont(gOpt->mConfig.mCustomFontText);
+
     return 0;
 }
 
 xpr_bool_t AddressBar::DestroyWindow(void)
 {
-    if (XPR_IS_NOT_NULL(mCustomFont))
+    applyDisplayFont(XPR_NULL);
+
+    if (XPR_IS_NOT_NULL(mDisplayFont))
     {
-        DELETE_OBJECT(*mCustomFont);
-        XPR_SAFE_DELETE(mCustomFont);
+        DELETE_OBJECT(*mDisplayFont);
+        XPR_SAFE_DELETE(mDisplayFont);
     }
 
     return CComboBoxEx::DestroyWindow();
@@ -118,6 +139,8 @@ void AddressBar::setSystemImageList(CImageList *aSmallImgList)
 {
     mSmallImgList = aSmallImgList;
     SetImageList(mSmallImgList);
+
+    updateMetrics();
 }
 
 void AddressBar::setAutoComplete(void)
@@ -957,52 +980,118 @@ xpr_bool_t AddressBar::PreTranslateMessage(MSG* pMsg)
     return CComboBoxEx::PreTranslateMessage(pMsg);
 }
 
+void AddressBar::setDisplayFont(const LOGFONT *aLogFont)
+{
+    applyDisplayFont(XPR_NULL);
+
+    if (XPR_IS_NOT_NULL(mDisplayFont))
+        mDisplayFont->DeleteObject();
+
+    if (XPR_IS_NOT_NULL(aLogFont))
+    {
+        if (XPR_IS_NULL(mDisplayFont))
+            mDisplayFont = new CFont;
+
+        mDisplayFont->CreateFontIndirect(aLogFont);
+        if (XPR_IS_NOT_NULL(mDisplayFont->m_hObject))
+            applyDisplayFont(mDisplayFont);
+    }
+
+    updateMetrics();
+}
+
+void AddressBar::applyDisplayFont(CFont *aFont)
+{
+    SetFont(aFont, XPR_TRUE);
+
+    CComboBox *sComboBox = GetComboBoxCtrl();
+    if (XPR_IS_NOT_NULL(sComboBox) && XPR_IS_NOT_NULL(sComboBox->m_hWnd))
+        sComboBox->SetFont(aFont, XPR_TRUE);
+
+    CEdit *sEdit = GetEditCtrl();
+    if (XPR_IS_NOT_NULL(sEdit) && XPR_IS_NOT_NULL(sEdit->m_hWnd))
+        sEdit->SetFont(aFont, XPR_TRUE);
+}
+
+void AddressBar::updateMetrics(void)
+{
+    if (XPR_IS_NULL(m_hWnd))
+        return;
+
+    CClientDC sClientDC(this);
+
+    CFont *sFont = GetFont();
+    CFont *sOldFont = XPR_NULL;
+    if (XPR_IS_NOT_NULL(sFont) && XPR_IS_NOT_NULL(sFont->m_hObject))
+        sOldFont = sClientDC.SelectObject(sFont);
+
+    TEXTMETRIC sTextMetric = {0};
+    xpr_sint_t sTextHeight = ui::ModernUI::scaleForWindow(16, GetSafeHwnd());
+    if (sClientDC.GetTextMetrics(&sTextMetric) != 0)
+        sTextHeight = sTextMetric.tmHeight;
+
+    if (XPR_IS_NOT_NULL(sOldFont))
+        sClientDC.SelectObject(sOldFont);
+
+    xpr_sint_t sIconHeight = 0;
+    if (XPR_IS_NOT_NULL(mSmallImgList) && XPR_IS_NOT_NULL(mSmallImgList->m_hImageList))
+    {
+        xpr_sint_t sIconWidth = 0;
+        mSmallImgList->GetIconSize(sIconWidth, sIconHeight);
+    }
+
+    const xpr_sint_t sContentHeight = max(sTextHeight, sIconHeight);
+    const xpr_sint_t sItemHeight =
+        sContentHeight + ui::ModernUI::scaleForWindow(8, GetSafeHwnd());
+
+    CComboBox *sComboBox = GetComboBoxCtrl();
+    if (XPR_IS_NOT_NULL(sComboBox) && XPR_IS_NOT_NULL(sComboBox->m_hWnd))
+    {
+        sComboBox->SetItemHeight(-1, sItemHeight);
+        sComboBox->SetItemHeight(0, sItemHeight);
+    }
+}
+
 void AddressBar::setCustomFont(xpr_tchar_t *aFontText)
 {
-    if (gOpt->mConfig.mCustomFont == XPR_FALSE)
+    LOGFONT sLogFont = {0};
+
+    if (XPR_IS_FALSE(gOpt->mConfig.mCustomFont))
     {
-        SetFont(XPR_NULL);
+        if (XPR_IS_TRUE(ui::ModernUI::getUIFont(sLogFont, GetSafeHwnd())))
+            setDisplayFont(&sLogFont);
+        else
+            setDisplayFont(XPR_NULL);
+
         return;
     }
 
     if (XPR_IS_NULL(aFontText))
         return;
 
-    if (XPR_IS_NOT_NULL(mCustomFont))
-        mCustomFont->DeleteObject();
-    else
-        mCustomFont = new CFont;
-
-    LOGFONT sLogFont = {0};
     StringToLogFont(aFontText, sLogFont);
-
-    mCustomFont->CreateFontIndirect(&sLogFont);
-    if (XPR_IS_NOT_NULL(mCustomFont->m_hObject))
-        SetFont(mCustomFont);
+    setDisplayFont(&sLogFont);
 }
 
 void AddressBar::setCustomFont(CFont *aFont)
 {
-    if (gOpt->mConfig.mCustomFont == XPR_FALSE)
+    LOGFONT sLogFont = {0};
+
+    if (XPR_IS_FALSE(gOpt->mConfig.mCustomFont))
     {
-        SetFont(XPR_NULL);
+        if (XPR_IS_TRUE(ui::ModernUI::getUIFont(sLogFont, GetSafeHwnd())))
+            setDisplayFont(&sLogFont);
+        else
+            setDisplayFont(XPR_NULL);
+
         return;
     }
 
     if (XPR_IS_NULL(aFont) || XPR_IS_NULL(aFont->m_hObject))
         return;
 
-    if (XPR_IS_NOT_NULL(mCustomFont))
-        mCustomFont->DeleteObject();
-    else
-        mCustomFont = new CFont;
-
-    LOGFONT sLogFont = {0};
     aFont->GetLogFont(&sLogFont);
-
-    mCustomFont->CreateFontIndirect(&sLogFont);
-    if (XPR_IS_NOT_NULL(mCustomFont->m_hObject))
-        SetFont(mCustomFont);
+    setDisplayFont(&sLogFont);
 }
 
 xpr_sint_t AddressBar::searchName(const xpr_tchar_t *aName)

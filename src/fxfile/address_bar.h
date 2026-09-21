@@ -40,6 +40,10 @@ public:
     void setCustomFont(xpr_tchar_t *aFontText);
 
 protected:
+    void setDisplayFont(const LOGFONT *aLogFont);
+    void applyDisplayFont(CFont *aFont);
+    void updateMetrics(void);
+
     typedef std::deque<LPABITEMDATA> CbItemDataDeque;
 
     xpr_bool_t exploreItem(LPITEMIDLIST aFullPidl, xpr_bool_t aNotifyBuddy = XPR_FALSE);
@@ -80,7 +84,7 @@ protected:
     LPITEMIDLIST  mOldSelFullPidl;
     xpr_sint_t    mAutoComplete;
 
-    CFont        *mCustomFont;
+    CFont        *mDisplayFont;
 
     xpr_uint_t    mShcnDesktopId;
     xpr_uint_t    mShcnComputerId;
@@ -94,6 +98,8 @@ protected:
     DECLARE_MESSAGE_MAP()
     afx_msg void OnDeleteItem(NMHDR *aNmHdr, LRESULT *aResult);
     afx_msg xpr_sint_t OnCreate(LPCREATESTRUCT aCreateStruct);
+    afx_msg void OnSettingChange(xpr_uint_t aFlags, const xpr_tchar_t *aSection);
+    afx_msg LRESULT OnDpiChanged(WPARAM aWParam, LPARAM aLParam);
     afx_msg void OnSelEndOK(void);
     afx_msg void OnSelChange(void);
     afx_msg void OnDropdown(void);
