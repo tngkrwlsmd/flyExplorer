@@ -225,6 +225,59 @@
 
             'type': 'static_library',
 
+            'configurations':
+            {
+                'Debug-x86-Unicode':
+                {
+                    'msvs_configuration_attributes':
+                    {
+                        'IntermediateDirectory': '../../obj/zlib-vendored/dbg-x86-unicode',
+                    },
+                },
+                'Release-x86-Unicode':
+                {
+                    'msvs_configuration_attributes':
+                    {
+                        'IntermediateDirectory': '../../obj/zlib-vendored/rel-x86-unicode',
+                    },
+                },
+                'Debug-x86-Multibyte':
+                {
+                    'msvs_configuration_attributes':
+                    {
+                        'IntermediateDirectory': '../../obj/zlib-vendored/dbg-x86-multibyte',
+                    },
+                },
+                'Release-x86-Multibyte':
+                {
+                    'msvs_configuration_attributes':
+                    {
+                        'IntermediateDirectory': '../../obj/zlib-vendored/rel-x86-multibyte',
+                    },
+                },
+                'conditions':
+                [
+                    [ 'target_arch!="x86"',
+                        {
+                            'Debug-x64-Unicode':
+                            {
+                                'msvs_configuration_attributes':
+                                {
+                                    'IntermediateDirectory': '../../obj/zlib-vendored/dbg-x64',
+                                },
+                            },
+                            'Release-x64-Unicode':
+                            {
+                                'msvs_configuration_attributes':
+                                {
+                                    'IntermediateDirectory': '../../obj/zlib-vendored/rel-x64',
+                                },
+                            },
+                        },
+                    ],
+                ],
+            },
+
             'include_dirs':
             [
                 '../../lib/zlib/include',
