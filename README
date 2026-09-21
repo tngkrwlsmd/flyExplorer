@@ -105,7 +105,8 @@ x64 + x86 and then builds/validates the portable archives and NSIS installer.
 `full` adds the vendored policy/readiness/conformance checks and a Debug-x64
 rebuild. Local CI deliberately uses MSBuild `Rebuild` rather than incremental
 `Build` so stale object files cannot hide CRT/configuration drift and compiled
-`.cpp` files remain visible in the normal-verbosity build log.
+`.cpp` files remain visible in the normal-verbosity build log and stream to
+the console while MSBuild runs.
 
 The `policy`/`full` profiles create or reuse
 `%TEMP%\\flyExplorer-policy-venv` and install the locked policy dependencies
