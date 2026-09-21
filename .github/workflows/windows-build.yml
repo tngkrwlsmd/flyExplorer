@@ -79,21 +79,47 @@ jobs:
             throw "The main MFC project is missing UseOfMfc=Static."
           }
 
+          $xprProject = Get-Content "src\xpr\xpr.vcxproj" -Raw
+          if ($xprProject -notmatch "<TargetName>libxprw</TargetName>") {
+            throw "The generated xpr project is missing the Release Unicode TargetName contract."
+          }
+
       - name: Build Release-x64-Unicode
         shell: pwsh
         env:
           MSBUILD_PATH: ${{ steps.msbuild.outputs.path }}
         run: |
+          $logPath = Join-Path $env:RUNNER_TEMP "fxfile-msbuild.log"
+
           & $env:MSBUILD_PATH "fxfile.sln" `
             /m `
             /nologo `
             /verbosity:minimal `
+            /fl `
+            "/flp:logfile=$logPath;verbosity=normal" `
             /p:Configuration=Release-x64-Unicode `
             /p:Platform=x64
 
           if ($LASTEXITCODE -ne 0) {
             throw "MSBuild failed with exit code $LASTEXITCODE."
           }
+
+      - name: Reject compiler, linker, and MSBuild warnings
+        shell: pwsh
+        run: |
+          $logPath = Join-Path $env:RUNNER_TEMP "fxfile-msbuild.log"
+          if (-not (Test-Path $logPath)) {
+            throw "MSBuild log was not created: $logPath"
+          }
+
+          $warnings = Select-String -Path $logPath -Pattern "\bwarning (?:C\d+|LNK\d+|MSB\d+):"
+          if ($warnings) {
+            Write-Host "Unexpected product build warnings:"
+            $warnings | ForEach-Object { Write-Host $_.Line }
+            throw "Product build emitted $($warnings.Count) compiler/linker/MSBuild warning(s)."
+          }
+
+          Write-Host "Verified warning-free product build log."
 
       - name: Verify product artifacts
         shell: pwsh
