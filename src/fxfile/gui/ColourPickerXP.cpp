@@ -329,16 +329,8 @@ CColourPickerXP::CColourPickerXP(void):
 	m_strRGBText(_T("RGB")),
 	m_bAlwaysRGB(FALSE)
 {
-	OSVERSIONINFO osvi;
-	osvi.dwOSVersionInfoSize = sizeof (osvi);
-	::GetVersionEx (&osvi);
-	bool bIsXP = osvi.dwPlatformId == VER_PLATFORM_WIN32_NT &&
-		(osvi.dwMajorVersion > 5 || (osvi.dwMajorVersion == 5 &&
-		osvi.dwMinorVersion >= 1));
-
 	m_bFlatMenus = FALSE;
- 	if (bIsXP)
-		::SystemParametersInfo (SPI_GETFLATMENU, 0, &m_bFlatMenus, FALSE);
+	::SystemParametersInfo (SPI_GETFLATMENU, 0, &m_bFlatMenus, FALSE);
 }
 
 //***********************************************************************
@@ -1172,16 +1164,10 @@ void CColourPopupXP::Initialise()
 
     m_bChildWindowVisible = FALSE;
 
-	OSVERSIONINFO osvi;
-	osvi.dwOSVersionInfoSize = sizeof (osvi);
-	::GetVersionEx (&osvi);
-	m_bIsXP = osvi.dwPlatformId == VER_PLATFORM_WIN32_NT &&
-		(osvi.dwMajorVersion > 5 || (osvi.dwMajorVersion == 5 &&
-		osvi.dwMinorVersion >= 1));
+	m_bIsXP = TRUE;
 
 	m_bFlatmenus = FALSE;
- 	if (m_bIsXP)
-		::SystemParametersInfo (SPI_GETFLATMENU, 0, &m_bFlatmenus, FALSE);
+	::SystemParametersInfo (SPI_GETFLATMENU, 0, &m_bFlatmenus, FALSE);
 
 	//
 	// Get all the colors I need
