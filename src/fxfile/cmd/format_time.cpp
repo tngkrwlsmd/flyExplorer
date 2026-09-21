@@ -237,9 +237,9 @@ xpr_bool_t FormatNowTime::write(base::XmlWriter &aXmlWriter) const
 
 xpr_bool_t FormatNowTime::canParseShort(const xpr::string &aFormatString)
 {
-    const std::tr1::tregex sRegEx(kShortFormatTimeRegExpr);
+    const xpr::tregex sRegEx(kShortFormatTimeRegExpr);
 
-    return (std::tr1::regex_match(aFormatString.c_str(), sRegEx) == true) ? XPR_TRUE : XPR_FALSE;
+    return (std::regex_match(aFormatString.c_str(), sRegEx) == true) ? XPR_TRUE : XPR_FALSE;
 }
 
 void FormatNowTime::parseShort(const xpr::string &aFormatString, Format *&aFormat)
@@ -322,9 +322,9 @@ xpr_bool_t FormatCTime::write(base::XmlWriter &aXmlWriter) const
 
 xpr_bool_t FormatCTime::canParseShort(const xpr::string &aFormatString)
 {
-    const std::tr1::tregex sRegEx(kShortFormatCTimeRegExpr);
+    const xpr::tregex sRegEx(kShortFormatCTimeRegExpr);
 
-    return (std::tr1::regex_match(aFormatString.c_str(), sRegEx) == true) ? XPR_TRUE : XPR_FALSE;
+    return (std::regex_match(aFormatString.c_str(), sRegEx) == true) ? XPR_TRUE : XPR_FALSE;
 }
 
 void FormatCTime::parseShort(const xpr::string &aFormatString, Format *&aFormat)
@@ -407,9 +407,9 @@ xpr_bool_t FormatMTime::write(base::XmlWriter &aXmlWriter) const
 
 xpr_bool_t FormatMTime::canParseShort(const xpr::string &aFormatString)
 {
-    const std::tr1::tregex sRegEx(kShortFormatMTimeRegExpr);
+    const xpr::tregex sRegEx(kShortFormatMTimeRegExpr);
 
-    return (std::tr1::regex_match(aFormatString.c_str(), sRegEx) == true) ? XPR_TRUE : XPR_FALSE;
+    return (std::regex_match(aFormatString.c_str(), sRegEx) == true) ? XPR_TRUE : XPR_FALSE;
 }
 
 void FormatMTime::parseShort(const xpr::string &aFormatString, Format *&aFormat)
