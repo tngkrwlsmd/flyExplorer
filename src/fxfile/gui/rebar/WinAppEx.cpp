@@ -53,47 +53,9 @@ IMPLEMENT_DYNAMIC(WinAppEx, CWinApp )
 
 WinAppEx::WinAppEx( LPCTSTR lpszAppName /*=0*/ ) : CWinApp( lpszAppName )
 {
-    // Determine system type
-    OSVERSIONINFO osvi;
-    osvi.dwOSVersionInfoSize = sizeof( osvi );
-    VERIFY( ::GetVersionEx( &osvi ) );
-
-    switch ( osvi.dwPlatformId )
-    {
-        case VER_PLATFORM_WIN32_NT:
-            if ( osvi.dwMajorVersion >= 5 )
-            {
-                if ( osvi.dwMinorVersion >= 1 )
-                {
-                    m_eOs = osWinXP;
-                }
-                else
-                {
-                    m_eOs = osWin2K;
-                }
-            }
-            else
-            {
-                m_eOs = osWinNT;
-            }
-            break;
-
-        case VER_PLATFORM_WIN32_WINDOWS:
-            if ( ( osvi.dwMajorVersion > 4 ) ||
-                 ( osvi.dwMajorVersion == 4 && osvi.dwMinorVersion > 0 ) )
-            {
-                m_eOs = osWin98;
-            }
-            else
-            {
-                m_eOs = osWin95;
-            }
-            break;
-
-        default:
-            m_eOs = osUnknown;
-            break;
-    }
+    // The supported Windows 10/11 range uses the newest behavior represented
+    // by this legacy compatibility enum.
+    m_eOs = osWinXP;
 
     m_bBitmappedMenus = IsWin50();
 
