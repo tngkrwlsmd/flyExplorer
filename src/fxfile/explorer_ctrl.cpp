@@ -38,6 +38,7 @@
 #include "gui/DropSource.h"
 #include "gui/DragImage.h"
 #include "gui/MemDC.h"
+#include "gui/ModernUI.h"
 #include "gui/BCMenu.h"
 #include "gui/FileDialogST.h"
 #include "gui/WindowScroller.h"
