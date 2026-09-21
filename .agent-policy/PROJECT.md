@@ -77,7 +77,7 @@
     }
   ],
   "review": {
-    "reviewed_revision": "52499667c0adaa8ce0ef012195fd9a0d5d68379e",
+    "reviewed_revision": "0c9c8f09a9e1cd32c4841a3ba4ad7972893864ed",
     "reviewed_at": "2026-09-21",
     "reviewed_paths": [
       "README",
@@ -183,7 +183,9 @@
 - DriveDetailDlg 현대화는 Debug/Release x64, x86 Unicode/Multibyte compile/link, warning 0, hosted launch smoke, package regression을 통과했다. 실제 dialog open/close, keyboard navigation, 100/125/150/200% DPI visual, High Contrast visual은 아직 수동 검증하지 않았다.
 - top-level MainFrame title bar는 documented `DWMWA_USE_IMMERSIVE_DARK_MODE` DWM attribute를 동적 로딩하는 ModernUI helper로 opt-in하며 create/settings/theme change 시 재적용한다. High Contrast에서는 dark frame 요청을 끄고, 미지원 Windows/DWM 실패는 기존 frame 동작으로 fallback한다.
 - MainFrame title-bar foundation은 source-invariant, Debug/Release x64, x86 Unicode/Multibyte compile/link, warning 0, hosted launch smoke, package regression을 통과했다. 실제 Windows 11 light/dark 전환 시 title-bar visual, High Contrast visual은 아직 수동 검증하지 않았다.
-- common-control/dialog dark theming과 나머지 dialog/icon asset 현대화는 후속 phase 범위다.
+- ModernUI는 documented `SetWindowTheme`를 `uxtheme.dll`에서 동적으로 해석해 common control에 Windows Explorer visual-style association을 적용하고 High Contrast에서는 association을 제거하는 `applyExplorerControlTheme` helper를 제공한다. 기존 ListCtrlEx/TreeCtrlEx의 Explorer-theme 사용 계약을 중앙화할 수 있는 기반이며 아직 해당 call site를 helper로 이관하거나 dark-specific theme subclass를 적용하지 않았다.
+- common-control theme helper foundation은 source-invariant, Debug/Release x64, x86 Unicode/Multibyte compile/link, warning 0, hosted launch smoke, package regression을 통과했다. Explorer/control theme의 실제 light/dark/High Contrast visual 결과는 아직 수동 검증하지 않았다.
+- common-control call-site 이관과 실제 dark control/dialog theming, 나머지 dialog/icon asset 현대화는 후속 phase 범위다.
 
 ## Recommended verification
 

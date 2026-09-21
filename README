@@ -133,8 +133,16 @@ refreshed for settings/theme notifications; High Contrast keeps the existing
 light-frame fallback, and unsupported/down-level DWM calls fail without adding a
 load-time dependency.
 
+ModernUI now also provides a common-control theme helper that dynamically
+resolves the documented `SetWindowTheme` API and applies the Windows Explorer
+visual-style association, while High Contrast removes that association and
+falls back to the system control rendering. This is a shared foundation for
+later list/tree/edit/combo/dialog theme work; existing control call sites have
+not all been migrated to it, and it does not yet claim dark-specific common-
+control styling.
+
 This remains a ModernUI foundation, not a claim of complete Windows 11 dark-mode
-support. Common-control/dialog theming, icon modernization, and broader dialog
+support. Common-control call-site migration/dark styling, dialog theming, icon modernization, and broader dialog
 modernization beyond the first reference remain separate work. Hosted CI verifies
 compile/link, warning-free builds, launch smoke, and packaging for the title-bar
 foundation, but light/dark title-bar appearance, 100/125/150/200% visual
