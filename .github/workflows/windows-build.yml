@@ -367,3 +367,39 @@ jobs:
           }
 
           Write-Host "Verified x86 multibyte updater -> libxpr runtime packaging contract."
+
+      - name: Verify packaging source contract
+        shell: pwsh
+        run: |
+          $copyScript = Get-Content "dist\copy.bat" -Raw
+          $installer = Get-Content "dist\setup.nsi" -Raw
+
+          $requiredCopyTokens = @(
+            "..\bin\x86-unicode\libxprw.dll",
+            "..\bin\x86-multibyte\libxpr.dll",
+            "..\bin\x64\libxprw.dll",
+            "\upchecker\fxfile-upchecker.exe"
+          )
+          foreach ($token in $requiredCopyTokens) {
+            if (-not $copyScript.Contains($token)) {
+              throw "dist/copy.bat is missing current package input: $token"
+            }
+          }
+
+          foreach ($stale in @("fxfile-updater.exe", "\updater")) {
+            if ($copyScript.Contains($stale)) {
+              throw "dist/copy.bat still references stale updater contract: $stale"
+            }
+            if ($installer.Contains($stale)) {
+              throw "dist/setup.nsi still references stale updater contract: $stale"
+            }
+          }
+
+          if (-not $installer.Contains("fxfile-upchecker.exe")) {
+            throw "dist/setup.nsi does not manage the current fxfile-upchecker process."
+          }
+          if (-not $installer.Contains('$INSTDIR\libxprw.dll')) {
+            throw "dist/setup.nsi does not remove the Unicode xpr runtime."
+          }
+
+          Write-Host "Verified current packaging names for xpr and fxfile-upchecker."
