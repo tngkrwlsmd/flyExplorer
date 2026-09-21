@@ -77,7 +77,7 @@
     }
   ],
   "review": {
-    "reviewed_revision": "62973f6570422660edf5d1a98583adda5578d0c2",
+    "reviewed_revision": "9d5d99154ca29d11850ba8e80a38c91126898c22",
     "reviewed_at": "2026-09-21",
     "reviewed_paths": [
       "README",
@@ -85,6 +85,7 @@
       "build/common.gypi",
       "build/fix_solution_configs.py",
       "build/validate_source_invariants.py",
+      ".github/workflows/windows-build.yml",
       "fxfile.gyp",
       "src/fxfile",
       "src/xpr",
@@ -127,7 +128,8 @@
 | third-party | `lib/`, `CREDITS` | Contract / Observed | ABI/license 검토 필요 |
 | 패키징 | `dist/` | Observed | NSIS/portable package |
 | 개발 환경 문서 | `README` | Intended / Observed | 실제 build evidence와 함께 해석 |
-| build/runtime 결과 | Visual Studio build log, Windows Sandbox smoke test | Evidence | 실행 시점 evidence |
+| 제품 빌드 CI | `.github/workflows/windows-build.yml` | Contract / Evidence | VS 2026 Release-x64-Unicode compile/link 및 산출물 검증 |
+| build/runtime 결과 | GitHub Actions build log, Visual Studio build log, Windows Sandbox smoke test | Evidence | compile/link와 runtime evidence를 분리 |
 
 ## Generated artifacts
 
@@ -149,6 +151,7 @@
 - x64 solution은 mixed-architecture helper mapping을 사용한다.
 - updater는 x64 Build Solution에서 의도적으로 제외한다.
 - product unit/integration test suite는 아직 확인되지 않았다.
+- Windows Product Build CI가 `Release-x64-Unicode | x64`의 실제 compile/link와 핵심 산출물을 검증하지만 clean-runtime smoke test와 UI regression은 아직 자동화하지 않는다.
 - `build/validate_source_invariants.py`가 C++ cross-cutting dependency와 ModernUI integration의 빠른 static preflight를 제공한다.
 - `.agent-policy/`에는 upstream `universal-agent-docs` revision `cc250a63994f1d9d4fcfdbb2bab9b622230bf8c6`의 validated policy bundle을 vendor하며 root CI에서 bundle/readiness/conformance를 검사한다.
 - Profile C runtime enforcement는 설치되어 있지 않다.
@@ -164,8 +167,9 @@
 2. 새로 생성된 `fxfile.sln`을 Visual Studio 2026에서 열기
 3. `Release-x64-Unicode | x64` Build Solution
 4. `bin/x64/fxfile.exe` 생성 확인
-5. Windows Sandbox에서 clean-runtime smoke test
-6. UI 변경이면 기능 회귀와 visual 결과를 별도로 확인
+5. GitHub Actions의 Windows Product Build 결과와 로컬 build evidence를 비교
+6. Windows Sandbox에서 clean-runtime smoke test
+7. UI 변경이면 기능 회귀와 visual 결과를 별도로 확인
 
 ## Maintenance
 

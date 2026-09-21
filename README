@@ -49,6 +49,18 @@ Policy/readiness checks can be run with:
 These checks are also wired to repository CI. A policy/static PASS must not be
 reported as a product compile, integration, or runtime PASS.
 
+Windows Product Build CI
+------------------------
+The separate `.github/workflows/windows-build.yml` workflow runs on GitHub's
+Windows Server 2025 image with Visual Studio 2026. It regenerates the solution
+with `build.bat 2026 x64`, verifies the v145/MFC build contract, builds
+`Release-x64-Unicode | x64`, and checks the main executable plus the expected
+x64 and Win32 helper artifacts.
+
+A successful Windows Product Build is compile/link and artifact evidence. It
+does not replace a clean-runtime Windows Sandbox smoke test or UI regression
+check.
+
 Generate the Visual Studio Solution
 -----------------------------------
 From a Command Prompt in the repository root:
