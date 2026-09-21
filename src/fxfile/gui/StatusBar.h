@@ -57,6 +57,9 @@ protected:
     void createFont(void);
     void recreateFont(void);
     void destroyFont(void);
+    void refreshMetrics(void);
+    void updateDynamicPaneSize(PaneItem *aPaneItem);
+    xpr_sint_t scaleMetric(xpr_sint_t aValue) const;
 
     xpr_bool_t registerWindowClass(void);
     virtual void PreSubclassWindow(void);
@@ -81,6 +84,8 @@ protected:
     afx_msg void OnPaint(void);
     afx_msg xpr_bool_t OnEraseBkgnd(CDC *aDC);
     afx_msg void OnSettingChange(xpr_uint_t aFlags, const xpr_tchar_t *aSection);
+    afx_msg LRESULT OnDpiChanged(WPARAM aWParam, LPARAM aLParam);
+    afx_msg LRESULT OnThemeChanged(WPARAM aWParam, LPARAM aLParam);
     afx_msg void OnLButtonDblClk(xpr_uint_t aFlags, CPoint aPoint);
     afx_msg void OnContextMenu(CWnd *aWnd, CPoint aPoint);
     afx_msg LRESULT OnSetText(WPARAM aWParam, LPARAM aLParam);

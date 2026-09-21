@@ -34,6 +34,9 @@ public:
     void       setRange(xpr_sint_t aMin, xpr_sint_t aMax);
 
 protected:
+    virtual void PreSubclassWindow(void);
+
+protected:
     xpr_sint_t mMin;
     xpr_sint_t mMax;
     xpr_sint_t mPos;
@@ -56,6 +59,9 @@ protected:
     afx_msg void OnNcPaint(void);
     afx_msg void OnSize(xpr_uint_t aType, xpr_sint_t cx, xpr_sint_t cy);
     afx_msg void OnLButtonDblClk(xpr_uint_t aFlags, CPoint aPoint);
+    afx_msg void OnSettingChange(xpr_uint_t aFlags, const xpr_tchar_t *aSection);
+    afx_msg LRESULT OnDpiChanged(WPARAM aWParam, LPARAM aLParam);
+    afx_msg LRESULT OnThemeChanged(WPARAM aWParam, LPARAM aLParam);
 };
 
 #endif // __FXFILE_TEXT_PROGRESS_CTRL_H__

@@ -11,7 +11,7 @@
 #include "StatusBar.h"
 #include "StatusBarObserver.h"
 
-#include "gdi.h"
+#include "ModernUI.h"
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -19,8 +19,12 @@
 
 namespace
 {
-const xpr_sint_t kGap = 2;
-const xpr_sint_t kTextOffset = 3;
+const xpr_sint_t kPaneGap = 2;
+const xpr_sint_t kTextPadding = 4;
+const xpr_sint_t kSeparatorInset = 3;
+const xpr_sint_t kVerticalPadding = 2;
+const xpr_sint_t kTopBorder = 1;
+const xpr_sint_t kMinimumHeight = 18;
 
 const xpr_tchar_t kClassName[] = XPR_STRING_LITERAL("StatusBar");
 } // namespace anonymous
@@ -32,11 +36,15 @@ public:
     {
         mPaneId    = 0;
         mData      = XPR_NULL;
-        mSize      = 0;
-        mMinSize   = 0;
-        mIcon      = XPR_NULL;
+        mSize          = 0;
+        mMinSize       = 0;
+        mLogicalSize   = 0;
+        mLogicalMinSize = 0;
+        mDynamicSize   = XPR_FALSE;
+        mDynamicOffset = 0;
+        mIcon          = XPR_NULL;
 
-        mPaneRect  = CRect(0, 0, 0, 0);
+        mPaneRect      = CRect(0, 0, 0, 0);
     }
 
 public:
@@ -45,6 +53,10 @@ public:
     void         *mData;
     xpr_size_t    mSize;
     xpr_size_t    mMinSize;
+    xpr_size_t    mLogicalSize;
+    xpr_size_t    mLogicalMinSize;
+    xpr_bool_t    mDynamicSize;
+    xpr_sint_t    mDynamicOffset;
     HICON         mIcon;
 
     CRect         mPaneRect;
@@ -113,6 +125,8 @@ BEGIN_MESSAGE_MAP(StatusBar, super)
     ON_WM_PAINT()
     ON_WM_ERASEBKGND()
     ON_WM_SETTINGCHANGE()
+    ON_MESSAGE(WM_DPICHANGED, OnDpiChanged)
+    ON_MESSAGE(WM_THEMECHANGED, OnThemeChanged)
     ON_WM_LBUTTONDBLCLK()
     ON_WM_CONTEXTMENU()
     ON_MESSAGE(WM_SETTEXT, OnSetText)
@@ -123,12 +137,16 @@ xpr_sint_t StatusBar::OnCreate(LPCREATESTRUCT aCreateStruct)
     if (super::OnCreate(aCreateStruct) == -1)
         return -1;
 
+    if (XPR_IS_NULL(mFont.m_hObject))
+        createFont();
+
     return 0;
 }
 
 void StatusBar::PreSubclassWindow(void)
 {
-    createFont();
+    if (XPR_IS_NULL(mFont.m_hObject))
+        createFont();
 
     super::PreSubclassWindow();
 }
@@ -197,8 +215,12 @@ xpr_bool_t StatusBar::setPaneSize(xpr_size_t aIndex, xpr_size_t aSize, xpr_size_
     if (XPR_IS_NULL(sPaneItem))
         return XPR_FALSE;
 
-    sPaneItem->mSize    = aSize;
-    sPaneItem->mMinSize = aMinSize;
+    sPaneItem->mLogicalSize    = aSize;
+    sPaneItem->mLogicalMinSize = aMinSize;
+    sPaneItem->mDynamicSize    = XPR_FALSE;
+    sPaneItem->mDynamicOffset  = 0;
+    sPaneItem->mSize           = static_cast<xpr_size_t>(max(0, scaleMetric(static_cast<xpr_sint_t>(aSize))));
+    sPaneItem->mMinSize        = static_cast<xpr_size_t>(max(0, scaleMetric(static_cast<xpr_sint_t>(aMinSize))));
 
     recalcLayout();
 
@@ -233,29 +255,11 @@ xpr_bool_t StatusBar::setDynamicPaneText(xpr_sint_t aIndex, const xpr_tchar_t *a
     if (XPR_IS_NULL(sPaneItem))
         return XPR_FALSE;
 
-    xpr_size_t sSize = 0;
+    sPaneItem->mText          = aText;
+    sPaneItem->mDynamicSize   = XPR_TRUE;
+    sPaneItem->mDynamicOffset = aOffset;
 
-    if (aText[0] != XPR_STRING_LITERAL('\0'))
-    {
-        CClientDC sClientDC(this);
-        CFont *sOldFont = sClientDC.SelectObject(&mFont);
-
-        SIZE sTextExtent = {0};
-        ::GetTextExtentPoint32(sClientDC.m_hDC, aText, (xpr_sint_t)_tcslen(aText), &sTextExtent);
-
-        sClientDC.SelectObject(sOldFont);
-
-        sSize = sTextExtent.cx + aOffset + kTextOffset * 2 + 1;
-    }
-
-    if (sPaneItem->mMinSize != 0)
-    {
-        sSize = max(sSize, sPaneItem->mMinSize);
-    }
-
-    sPaneItem->mText = aText;
-    sPaneItem->mSize = sSize;
-
+    updateDynamicPaneSize(sPaneItem);
     recalcLayout();
 
     return XPR_TRUE;
@@ -342,15 +346,20 @@ xpr_sint_t StatusBar::getDefaultHeight(void)
 {
     CClientDC sClientDC(this);
 
-    CFont *sOldFont = sClientDC.SelectObject(&mFont);
+    CFont *sOldFont = XPR_NULL;
+    if (XPR_IS_NOT_NULL(mFont.m_hObject))
+        sOldFont = sClientDC.SelectObject(&mFont);
 
     CSize sText = sClientDC.GetTextExtent(XPR_STRING_LITERAL("TEST"));
 
-    sClientDC.SelectObject(sOldFont);
+    if (XPR_IS_NOT_NULL(sOldFont))
+        sClientDC.SelectObject(sOldFont);
 
-    //xpr_sint_t sCyEdge = GetSystemMetrics(SM_CYEDGE);
+    const xpr_sint_t sVerticalPadding = scaleMetric(kVerticalPadding);
+    const xpr_sint_t sTopBorder = max(1, scaleMetric(kTopBorder));
+    const xpr_sint_t sMinimumHeight = scaleMetric(kMinimumHeight);
 
-    return sText.cy + 2;
+    return max(sMinimumHeight, sText.cy + (sVerticalPadding * 2) + sTopBorder);
 }
 
 xpr_size_t StatusBar::IdToIndex(xpr_size_t aPaneId) const
@@ -443,17 +452,20 @@ void StatusBar::recalcLayout(xpr_bool_t aRedraw)
     CRect sClientRect;
     GetClientRect(&sClientRect);
 
-    xpr_sint_t sWidth  = sClientRect.Width();
-    xpr_sint_t sHeight = sClientRect.Height();
+    const xpr_sint_t sWidth  = sClientRect.Width();
+    const xpr_sint_t sHeight = sClientRect.Height();
 
     if (sWidth <= 0 || sHeight <= 0)
         return;
 
-    xpr_size_t sPaneCount = mPaneDeque.size();
+    const xpr_size_t sPaneCount = mPaneDeque.size();
     if (sPaneCount == 0)
         return;
 
-    xpr_sint_t sWidthWithoutGap = sWidth - (((xpr_sint_t)sPaneCount - 1) * kGap);
+    const xpr_sint_t sGap = scaleMetric(kPaneGap);
+    const xpr_sint_t sTopBorder = max(1, scaleMetric(kTopBorder));
+    const xpr_sint_t sWidthWithoutGap =
+        sWidth - (((xpr_sint_t)sPaneCount - 1) * sGap);
 
     xpr_sint_t sTotalFixedSize = 0;
     PaneItem *sPaneItem;
@@ -469,11 +481,11 @@ void StatusBar::recalcLayout(xpr_bool_t aRedraw)
         sTotalFixedSize += (xpr_sint_t)sPaneItem->mSize;
     }
 
-    xpr_sint_t sFirstPaneSize = sWidth - sTotalFixedSize;
+    xpr_sint_t sFirstPaneSize = sWidthWithoutGap - sTotalFixedSize;
 
     xpr_sint_t sLeft = 0;
-    xpr_sint_t sTop = 1;
-    xpr_sint_t sBottom = sClientRect.bottom;
+    const xpr_sint_t sTop = sTopBorder;
+    const xpr_sint_t sBottom = sClientRect.bottom;
     xpr_size_t i;
 
     sIterator = mPaneDeque.begin();
@@ -502,7 +514,7 @@ void StatusBar::recalcLayout(xpr_bool_t aRedraw)
             sPaneItem->mPaneRect.right = sLeft + sFirstPaneSize;
         }
 
-        sLeft = sPaneItem->mPaneRect.right + kGap;
+        sLeft = sPaneItem->mPaneRect.right + sGap;
     }
 
     if (XPR_IS_TRUE(aRedraw))
@@ -511,44 +523,47 @@ void StatusBar::recalcLayout(xpr_bool_t aRedraw)
 
 void StatusBar::OnPaint(void)
 {
-    CPaintDC sPaintDC(this); // device context for painting
+    CPaintDC sPaintDC(this);
 
     CRect sClientRect;
     GetClientRect(&sClientRect);
+    if (sClientRect.IsRectEmpty())
+        return;
 
-    COLORREF sFaceColor   = ::GetSysColor(COLOR_3DFACE);
-    COLORREF sShadowColor = ::GetSysColor(COLOR_3DSHADOW);
-    COLORREF sTextColor   = ::GetSysColor(COLOR_BTNTEXT);
+    const fxfile::ui::ThemePalette sPalette = fxfile::ui::ModernUI::getPalette();
+    const COLORREF sBackgroundColor =
+        XPR_IS_TRUE(sPalette.mHighContrast) ? sPalette.mWindow : sPalette.mSurface;
+    const COLORREF sSeparatorColor =
+        XPR_IS_TRUE(sPalette.mHighContrast) ? sPalette.mBorder : sPalette.mSeparator;
 
     CDC sMemDC;
     sMemDC.CreateCompatibleDC(&sPaintDC);
     sMemDC.SetBkMode(TRANSPARENT);
-    sMemDC.SetTextColor(sTextColor);
+    sMemDC.SetTextColor(sPalette.mText);
 
     CBitmap sBitmap;
     sBitmap.CreateCompatibleBitmap(&sPaintDC, sClientRect.Width(), sClientRect.Height());
 
     CBitmap *sOldBitmap = sMemDC.SelectObject(&sBitmap);
+    sMemDC.FillSolidRect(&sClientRect, sBackgroundColor);
 
-    sMemDC.FillSolidRect(&sClientRect, sFaceColor);
+    const xpr_sint_t sLineWidth = max(1, scaleMetric(1));
+    const xpr_sint_t sTextPadding = scaleMetric(kTextPadding);
+    const xpr_sint_t sSeparatorInset = scaleMetric(kSeparatorInset);
 
-    CPen sBorderPen(PS_SOLID, 1, LightenColor(sShadowColor, 0.3));
-    CPen sSeparatorPen(PS_SOLID, 1, LightenColor(sShadowColor, 0.6));
-
-    CPen *sOldPen = sMemDC.SelectObject(&sBorderPen);
-    CFont *sOldFont = sMemDC.SelectObject(&mFont);
+    CPen sSeparatorPen(PS_SOLID, sLineWidth, sSeparatorColor);
+    CPen *sOldPen = sMemDC.SelectObject(&sSeparatorPen);
+    CFont *sOldFont = XPR_NULL;
+    if (XPR_IS_NOT_NULL(mFont.m_hObject))
+        sOldFont = sMemDC.SelectObject(&mFont);
 
     sMemDC.MoveTo(0, 0);
     sMemDC.LineTo(sClientRect.right, 0);
 
-    sMemDC.SelectObject(sOldPen);
-
-    sOldPen = sMemDC.SelectObject(&sSeparatorPen);
-
     xpr_sint_t i;
     PaneDeque::iterator sIterator;
     PaneItem *sPaneItem;
-    CRect sPaneRect, sCurPaneButtonRect;
+    CRect sPaneRect;
 
     sIterator = mPaneDeque.begin();
     for (i = 0; sIterator != mPaneDeque.end(); ++sIterator, ++i)
@@ -562,14 +577,14 @@ void StatusBar::OnPaint(void)
         CRect sPaneTextRect(sPaneRect);
         if (i > 0)
         {
-            sMemDC.MoveTo(sPaneRect.left, sPaneRect.top + 2);
-            sMemDC.LineTo(sPaneRect.left, sPaneRect.bottom - 2);
+            sMemDC.MoveTo(sPaneRect.left, sPaneRect.top + sSeparatorInset);
+            sMemDC.LineTo(sPaneRect.left, max(sPaneRect.top + sSeparatorInset, sPaneRect.bottom - sSeparatorInset));
 
-            sPaneTextRect.DeflateRect(1 + kTextOffset, 0, kTextOffset, 0);
+            sPaneTextRect.DeflateRect(sLineWidth + sTextPadding, 0, sTextPadding, 0);
         }
         else
         {
-            sPaneTextRect.DeflateRect(kTextOffset, 0, kTextOffset, 0);
+            sPaneTextRect.DeflateRect(sTextPadding, 0, sTextPadding, 0);
         }
 
         sMemDC.DrawText(
@@ -579,7 +594,8 @@ void StatusBar::OnPaint(void)
             DT_LEFT | DT_VCENTER | DT_SINGLELINE | DT_END_ELLIPSIS);
     }
 
-    sMemDC.SelectObject(sOldFont);
+    if (XPR_IS_NOT_NULL(sOldFont))
+        sMemDC.SelectObject(sOldFont);
     sMemDC.SelectObject(sOldPen);
 
     sPaintDC.BitBlt(0, 0, sClientRect.Width(), sClientRect.Height(), &sMemDC, 0, 0, SRCCOPY);
@@ -595,17 +611,25 @@ xpr_bool_t StatusBar::OnEraseBkgnd(CDC *aDC)
 
 void StatusBar::createFont(void)
 {
-    NONCLIENTMETRICS sNonClientMetrics = {0};
-    sNonClientMetrics.cbSize = sizeof(sNonClientMetrics);
-    ::SystemParametersInfo(SPI_GETNONCLIENTMETRICS, sizeof(sNonClientMetrics), &sNonClientMetrics, 0);
+    LOGFONT sLogFont = {0};
+    if (XPR_IS_TRUE(fxfile::ui::ModernUI::getUIFont(sLogFont, GetSafeHwnd())))
+    {
+        if (mFont.CreateFontIndirect(&sLogFont) == XPR_FALSE)
+            mFont.CreateStockObject(DEFAULT_GUI_FONT);
+    }
+    else
+    {
+        mFont.CreateStockObject(DEFAULT_GUI_FONT);
+        if (XPR_IS_NOT_NULL(mFont.m_hObject))
+            ::GetObject(mFont.m_hObject, sizeof(sLogFont), &sLogFont);
+    }
 
-    LOGFONT sLogFont = sNonClientMetrics.lfMenuFont;
-
-    mFont.CreateFontIndirect(&sLogFont);
-    SetFont(&mFont, XPR_TRUE);
+    if (XPR_IS_NOT_NULL(mFont.m_hObject))
+        SetFont(&mFont, XPR_TRUE);
 
     sLogFont.lfWeight = FW_BOLD;
-    mBoldFont.CreateFontIndirect(&sLogFont);
+    if (mBoldFont.CreateFontIndirect(&sLogFont) == XPR_FALSE)
+        mBoldFont.CreateStockObject(DEFAULT_GUI_FONT);
 }
 
 void StatusBar::recreateFont(void)
@@ -620,13 +644,96 @@ void StatusBar::destroyFont(void)
     if (XPR_IS_NOT_NULL(mBoldFont.m_hObject)) mBoldFont.DeleteObject();
 }
 
+xpr_sint_t StatusBar::scaleMetric(xpr_sint_t aValue) const
+{
+    return fxfile::ui::ModernUI::scaleForWindow(aValue, GetSafeHwnd());
+}
+
+void StatusBar::updateDynamicPaneSize(PaneItem *aPaneItem)
+{
+    if (XPR_IS_NULL(aPaneItem))
+        return;
+
+    xpr_size_t sSize = 0;
+
+    if (aPaneItem->mText.empty() == XPR_FALSE)
+    {
+        CClientDC sClientDC(this);
+        CFont *sOldFont = XPR_NULL;
+        if (XPR_IS_NOT_NULL(mFont.m_hObject))
+            sOldFont = sClientDC.SelectObject(&mFont);
+
+        SIZE sTextExtent = {0};
+        ::GetTextExtentPoint32(
+            sClientDC.m_hDC,
+            aPaneItem->mText.c_str(),
+            (xpr_sint_t)aPaneItem->mText.length(),
+            &sTextExtent);
+
+        if (XPR_IS_NOT_NULL(sOldFont))
+            sClientDC.SelectObject(sOldFont);
+
+        const xpr_sint_t sTextPadding = scaleMetric(kTextPadding);
+        const xpr_sint_t sOffset = scaleMetric(aPaneItem->mDynamicOffset);
+        const xpr_sint_t sSeparatorWidth = max(1, scaleMetric(1));
+
+        sSize = static_cast<xpr_size_t>(
+            max(0, sTextExtent.cx + sOffset + (sTextPadding * 2) + sSeparatorWidth));
+    }
+
+    if (aPaneItem->mMinSize != 0)
+        sSize = max(sSize, aPaneItem->mMinSize);
+
+    aPaneItem->mSize = sSize;
+}
+
+void StatusBar::refreshMetrics(void)
+{
+    PaneDeque::iterator sIterator = mPaneDeque.begin();
+    for (; sIterator != mPaneDeque.end(); ++sIterator)
+    {
+        PaneItem *sPaneItem = *sIterator;
+        if (XPR_IS_NULL(sPaneItem))
+            continue;
+
+        sPaneItem->mMinSize = static_cast<xpr_size_t>(
+            max(0, scaleMetric(static_cast<xpr_sint_t>(sPaneItem->mLogicalMinSize))));
+
+        if (XPR_IS_TRUE(sPaneItem->mDynamicSize))
+        {
+            updateDynamicPaneSize(sPaneItem);
+        }
+        else
+        {
+            sPaneItem->mSize = static_cast<xpr_size_t>(
+                max(0, scaleMetric(static_cast<xpr_sint_t>(sPaneItem->mLogicalSize))));
+        }
+    }
+}
+
 void StatusBar::OnSettingChange(xpr_uint_t aFlags, const xpr_tchar_t *aSection)
 {
     recreateFont();
-
-    Invalidate();
+    refreshMetrics();
+    recalcLayout();
+    Invalidate(XPR_FALSE);
 
     super::OnSettingChange(aFlags, aSection);
+}
+
+LRESULT StatusBar::OnDpiChanged(WPARAM aWParam, LPARAM aLParam)
+{
+    recreateFont();
+    refreshMetrics();
+    recalcLayout();
+    Invalidate(XPR_FALSE);
+    return 0;
+}
+
+LRESULT StatusBar::OnThemeChanged(WPARAM aWParam, LPARAM aLParam)
+{
+    Invalidate(XPR_FALSE);
+    return 0;
 }
 
 xpr_size_t StatusBar::hitTest(const POINT &aPoint) const

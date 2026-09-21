@@ -38,6 +38,8 @@ public:
     void showDriveProperties(void);
 
 protected:
+    void applyPaneMetrics(void);
+    void applyProgressAppearance(void);
     void recalcLayout(void);
 
 protected:
@@ -48,6 +50,9 @@ protected:
     afx_msg xpr_sint_t OnCreate(LPCREATESTRUCT aCreateStruct);
     afx_msg void OnDestroy(void);
     afx_msg void OnSize(xpr_uint_t aType, xpr_sint_t cx, xpr_sint_t cy);
+    afx_msg void OnSettingChange(xpr_uint_t aFlags, const xpr_tchar_t *aSection);
+    afx_msg LRESULT OnDpiChanged(WPARAM aWParam, LPARAM aLParam);
+    afx_msg LRESULT OnThemeChanged(WPARAM aWParam, LPARAM aLParam);
     afx_msg LRESULT OnProgressDblclk(WPARAM wParam, LPARAM lParam);
     DECLARE_MESSAGE_MAP()
 };

@@ -14,7 +14,7 @@
 #include "size_format.h"
 #include "option.h"
 
-#include "gui/MemDC.h"
+#include "gui/ModernUI.h"
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -25,6 +25,8 @@ namespace fxfile
 namespace
 {
 const xpr_sint_t kPaneWidth[] = { 150, 90, 70, 90 };
+const xpr_sint_t kProgressInsetX = 4;
+const xpr_sint_t kProgressInsetY = 2;
 
 //
 // control id
@@ -49,6 +51,9 @@ BEGIN_MESSAGE_MAP(ExplorerStatusBar, super)
     ON_WM_CREATE()
     ON_WM_SIZE()
     ON_WM_DESTROY()
+    ON_WM_SETTINGCHANGE()
+    ON_MESSAGE(WM_DPICHANGED, OnDpiChanged)
+    ON_MESSAGE(WM_THEMECHANGED, OnThemeChanged)
     ON_MESSAGE(WM_PROGRESS_DBLCK, OnProgressDblclk)
 END_MESSAGE_MAP()
 
@@ -63,17 +68,11 @@ xpr_sint_t ExplorerStatusBar::OnCreate(LPCREATESTRUCT aCreateStruct)
     addPane(kPaneIdDriveProgress, XPR_NULL);
 
     // First pane is variable. One's pane size is minimum size.
-    setPaneSize(0, kPaneWidth[0], kPaneWidth[0]);
-    setPaneSize(1, kPaneWidth[1], kPaneWidth[1]);
-    setPaneSize(2, kPaneWidth[2], kPaneWidth[2]);
-    setPaneSize(3, kPaneWidth[3], kPaneWidth[3]);
+    applyPaneMetrics();
 
     mDriveProgressCtrl.Create(WS_VISIBLE | WS_CHILD | /*WS_BORDER |*/ PBS_SMOOTH, CRect(0,0,0,0), this, CTRL_ID_DRIVE_PROGRESS_CTRL);
     mDriveProgressCtrl.setRange(0, 100);
-    mDriveProgressCtrl.setProgressColor(RGB(100,100,100));
-    mDriveProgressCtrl.setBackColor(::GetSysColor(COLOR_3DFACE));
-    mDriveProgressCtrl.setTextProgressColor(RGB(50,50,50));
-    mDriveProgressCtrl.setTextBackColor(RGB(255,255,255));
+    applyProgressAppearance();
 
     recalcLayout();
 
@@ -96,13 +95,90 @@ void ExplorerStatusBar::OnSize(xpr_uint_t aType, xpr_sint_t cx, xpr_sint_t cy)
     recalcLayout();
 }
 
+void ExplorerStatusBar::applyPaneMetrics(void)
+{
+    setPaneSize(0, kPaneWidth[0], kPaneWidth[0]);
+    setPaneSize(1, kPaneWidth[1], kPaneWidth[1]);
+    setPaneSize(2, kPaneWidth[2], kPaneWidth[2]);
+    setPaneSize(3, kPaneWidth[3], kPaneWidth[3]);
+
+    xpr_tchar_t sText[XPR_MAX_PATH * 2 + 1] = {0};
+    if (XPR_IS_TRUE(getPaneText(1, sText, XPR_COUNT_OF(sText) - 1)))
+        setDynamicPaneText(1, sText, 0);
+
+    sText[0] = XPR_STRING_LITERAL('\0');
+    if (XPR_IS_TRUE(getPaneText(2, sText, XPR_COUNT_OF(sText) - 1)))
+        setDynamicPaneText(2, sText, 0);
+}
+
+void ExplorerStatusBar::applyProgressAppearance(void)
+{
+    if (::IsWindow(mDriveProgressCtrl.GetSafeHwnd()) == XPR_FALSE)
+        return;
+
+    const ui::ThemePalette sPalette = ui::ModernUI::getPalette();
+    const COLORREF sTrackColor =
+        XPR_IS_TRUE(sPalette.mHighContrast) ? sPalette.mWindow : sPalette.mSurface;
+
+    mDriveProgressCtrl.setBoldFont(XPR_FALSE);
+    mDriveProgressCtrl.setProgressColor(sPalette.mSelection);
+    mDriveProgressCtrl.setBackColor(sTrackColor);
+
+    // TextProgressCtrl names these colors from the background perspective:
+    // mTextBackColor is painted over the filled region, and
+    // mTextProgressColor is painted over the track region.
+    mDriveProgressCtrl.setTextBackColor(sPalette.mSelectionText);
+    mDriveProgressCtrl.setTextProgressColor(sPalette.mText);
+    mDriveProgressCtrl.Invalidate(XPR_FALSE);
+}
+
 void ExplorerStatusBar::recalcLayout(void)
 {
+    if (::IsWindow(mDriveProgressCtrl.GetSafeHwnd()) == XPR_FALSE)
+        return;
+
     CRect sRect;
-    getPaneRect(3, &sRect);
+    if (XPR_IS_FALSE(getPaneRect(3, &sRect)))
+        return;
+
+    const xpr_sint_t sInsetX =
+        ui::ModernUI::scaleForWindow(kProgressInsetX, GetSafeHwnd());
+    const xpr_sint_t sInsetY =
+        ui::ModernUI::scaleForWindow(kProgressInsetY, GetSafeHwnd());
+
+    if (sRect.Width() > (sInsetX * 2) && sRect.Height() > (sInsetY * 2))
+        sRect.DeflateRect(sInsetX, sInsetY);
 
     mDriveProgressCtrl.MoveWindow(sRect);
     mDriveProgressCtrl.Invalidate(XPR_FALSE);
+}
+
+void ExplorerStatusBar::OnSettingChange(xpr_uint_t aFlags, const xpr_tchar_t *aSection)
+{
+    super::OnSettingChange(aFlags, aSection);
+
+    applyPaneMetrics();
+    applyProgressAppearance();
+    recalcLayout();
+}
+
+LRESULT ExplorerStatusBar::OnDpiChanged(WPARAM aWParam, LPARAM aLParam)
+{
+    super::OnDpiChanged(aWParam, aLParam);
+
+    applyPaneMetrics();
+    applyProgressAppearance();
+    recalcLayout();
+    return 0;
+}
+
+LRESULT ExplorerStatusBar::OnThemeChanged(WPARAM aWParam, LPARAM aLParam)
+{
+    super::OnThemeChanged(aWParam, aLParam);
+
+    applyProgressAppearance();
+    recalcLayout();
+    return 0;
 }
 
 void ExplorerStatusBar::setDiskFreeSpace(const xpr_tchar_t *aPath)

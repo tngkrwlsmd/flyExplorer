@@ -11,6 +11,7 @@
 #include "TextProgressCtrl.h"
 
 #include "MemDC.h"
+#include "ModernUI.h"
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -38,6 +39,9 @@ BEGIN_MESSAGE_MAP(TextProgressCtrl, super)
     ON_WM_PAINT()
     ON_WM_ERASEBKGND()
     ON_WM_LBUTTONDBLCLK()
+    ON_WM_SETTINGCHANGE()
+    ON_MESSAGE(WM_DPICHANGED, OnDpiChanged)
+    ON_MESSAGE(WM_THEMECHANGED, OnThemeChanged)
 END_MESSAGE_MAP()
 
 xpr_sint_t TextProgressCtrl::OnCreate(LPCREATESTRUCT aCreateStruct)
@@ -53,22 +57,34 @@ xpr_sint_t TextProgressCtrl::OnCreate(LPCREATESTRUCT aCreateStruct)
     return 0;
 }
 
+void TextProgressCtrl::PreSubclassWindow(void)
+{
+    super::PreSubclassWindow();
+
+    if (XPR_IS_NULL(mTextFont.m_hObject))
+        setBoldFont(mBoldFont);
+}
+
 void TextProgressCtrl::setBoldFont(xpr_bool_t aBold)
 {
     if (XPR_IS_NOT_NULL(mTextFont.m_hObject))
         mTextFont.DeleteObject();
 
-    NONCLIENTMETRICS sNonClientMetrics = {0};
-    sNonClientMetrics.cbSize = sizeof(sNonClientMetrics);
-    ::SystemParametersInfo(SPI_GETNONCLIENTMETRICS, sizeof(NONCLIENTMETRICS), &sNonClientMetrics, 0);
+    LOGFONT sLogFont = {0};
+    if (XPR_IS_TRUE(fxfile::ui::ModernUI::getUIFont(sLogFont, GetSafeHwnd())))
+    {
+        if (XPR_IS_TRUE(aBold))
+            sLogFont.lfWeight = FW_BOLD;
 
-    if (XPR_IS_TRUE(aBold))
-        sNonClientMetrics.lfMenuFont.lfWeight = FW_BOLD;
-
-    if (mTextFont.CreateFontIndirect(&sNonClientMetrics.lfMenuFont) == XPR_FALSE)
+        if (mTextFont.CreateFontIndirect(&sLogFont) == XPR_FALSE)
+            mTextFont.CreateStockObject(DEFAULT_GUI_FONT);
+    }
+    else
+    {
         mTextFont.CreateStockObject(DEFAULT_GUI_FONT);
+    }
 
-    if (::IsWindow(m_hWnd) == XPR_TRUE)
+    if (::IsWindow(m_hWnd) == XPR_TRUE && XPR_IS_NOT_NULL(mTextFont.m_hObject))
         SetFont(&mTextFont);
 
     mBoldFont = aBold;
@@ -153,6 +169,11 @@ void TextProgressCtrl::OnPaint(void)
     if ((mMax - mMin) > 0)
         sFraction = (xpr_double_t)(mPos - mMin) / ((xpr_double_t)(mMax - mMin));
 
+    if (sFraction < 0.0)
+        sFraction = 0.0;
+    else if (sFraction > 1.0)
+        sFraction = 1.0;
+
     CRect sProgressRect(sClientRect);
     sProgressRect.right = sProgressRect.left + (xpr_sint_t)(sProgressRect.Width() * sFraction);
 
@@ -198,4 +219,25 @@ void TextProgressCtrl::OnLButtonDblClk(xpr_uint_t aFlags, CPoint aPoint)
     GetParent()->SendMessage(WM_PROGRESS_DBLCK, (WPARAM)aFlags, (LPARAM)&aPoint);
 
     super::OnLButtonDblClk(aFlags, aPoint);
+}
+
+void TextProgressCtrl::OnSettingChange(xpr_uint_t aFlags, const xpr_tchar_t *aSection)
+{
+    setBoldFont(mBoldFont);
+    Invalidate(XPR_FALSE);
+
+    super::OnSettingChange(aFlags, aSection);
+}
+
+LRESULT TextProgressCtrl::OnDpiChanged(WPARAM aWParam, LPARAM aLParam)
+{
+    setBoldFont(mBoldFont);
+    Invalidate(XPR_FALSE);
+    return 0;
+}
+
+LRESULT TextProgressCtrl::OnThemeChanged(WPARAM aWParam, LPARAM aLParam)
+{
+    Invalidate(XPR_FALSE);
+    return 0;
 }
