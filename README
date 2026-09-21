@@ -75,13 +75,17 @@ The main executable is generated under:
 
 Prepare Runtime Files
 ---------------------
-Before running the built executable, copy the bundled runtime libraries and
-language resources:
+build.bat now prepares the bundled runtime libraries and language-resource
+directories automatically before you open the generated solution. The helper
+post-build steps also create their destination directories and run non-
+interactively.
+
+You can still refresh these files manually at any time:
 
     copy_lib.bat
     copy_languages.bat
 
-Then run:
+After a successful Release-x64-Unicode build, run:
 
     bin\x64\fxfile.exe
 

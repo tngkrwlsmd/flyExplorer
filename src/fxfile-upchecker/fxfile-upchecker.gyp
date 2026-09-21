@@ -130,15 +130,15 @@
                 },
             },
 
-            'msvs_postbuild': 'mkdir $(TargetDir)x86-unicode\\upchecker\r\n'
-                              'mkdir $(TargetDir)x86-multibyte\\upchecker\r\n'
-                              'mkdir $(TargetDir)x64\\upchecker\r\n'
-                              'xcopy $(TargetDir)*.dll $(TargetDir)x86-unicode\\upchecker /c /r /y\r\n'
-                              'xcopy $(TargetDir)*.dll $(TargetDir)x86-multibyte\\upchecker /c /r /y\r\n'
-                              'xcopy $(TargetDir)*.dll $(TargetDir)x64\\upchecker /c /r /y\r\n'
-                              'xcopy $(TargetPath) $(TargetDir)x86-unicode\\upchecker /c /r /y\r\n'
-                              'xcopy $(TargetPath) $(TargetDir)x86-multibyte\\upchecker /c /r /y\r\n'
-                              'xcopy $(TargetPath) $(TargetDir)x64\\upchecker /c /r /y\r\n',
+            'msvs_postbuild': 'if not exist "$(TargetDir)x86-unicode\\upchecker" mkdir "$(TargetDir)x86-unicode\\upchecker"\r\n'
+                              'if not exist "$(TargetDir)x86-multibyte\\upchecker" mkdir "$(TargetDir)x86-multibyte\\upchecker"\r\n'
+                              'if not exist "$(TargetDir)x64\\upchecker" mkdir "$(TargetDir)x64\\upchecker"\r\n'
+                              'xcopy "$(TargetDir)*.dll" "$(TargetDir)x86-unicode\\upchecker" /c /r /y /i\r\n'
+                              'xcopy "$(TargetDir)*.dll" "$(TargetDir)x86-multibyte\\upchecker" /c /r /y /i\r\n'
+                              'xcopy "$(TargetDir)*.dll" "$(TargetDir)x64\\upchecker" /c /r /y /i\r\n'
+                              'xcopy "$(TargetPath)" "$(TargetDir)x86-unicode\\upchecker" /c /r /y /i\r\n'
+                              'xcopy "$(TargetPath)" "$(TargetDir)x86-multibyte\\upchecker" /c /r /y /i\r\n'
+                              'xcopy "$(TargetPath)" "$(TargetDir)x64\\upchecker" /c /r /y /i\r\n',
 
             'msvs_precompiled_header': 'stdafx.h',
             'msvs_precompiled_source': 'stdafx.cpp',

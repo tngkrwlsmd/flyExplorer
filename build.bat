@@ -110,6 +110,20 @@ if /I "%msvs_version%"=="2026" (
     )
 )
 
+echo Preparing bundled runtime files and language resources...
+call copy_lib.bat >nul
+if errorlevel 1 (
+    echo ERROR: Failed to prepare bundled runtime libraries.
+    popd
+    exit /b 1
+)
+call copy_languages.bat >nul
+if errorlevel 1 (
+    echo ERROR: Failed to prepare language resources.
+    popd
+    exit /b 1
+)
+
 echo ----------
 echo Generated fxfile.sln for Visual Studio %msvs_version%.
 if /I "%msvs_version%"=="2026" echo Verified platform toolset: v145

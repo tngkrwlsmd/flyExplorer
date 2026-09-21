@@ -122,9 +122,12 @@
             'msvs_precompiled_header': 'stdafx.h',
             'msvs_precompiled_source': 'stdafx.cpp',
             
-            'msvs_postbuild': 'xcopy $(TargetPath) $(TargetDir)x86-unicode /c /r /y\r\n'
-                              'xcopy $(TargetPath) $(TargetDir)x86-multibyte /c /r /y\r\n'
-                              'xcopy $(TargetPath) $(TargetDir)x64 /c /r /y\r\n',
+            'msvs_postbuild': 'if not exist "$(TargetDir)x86-unicode" mkdir "$(TargetDir)x86-unicode"\r\n'
+                              'if not exist "$(TargetDir)x86-multibyte" mkdir "$(TargetDir)x86-multibyte"\r\n'
+                              'if not exist "$(TargetDir)x64" mkdir "$(TargetDir)x64"\r\n'
+                              'xcopy "$(TargetPath)" "$(TargetDir)x86-unicode" /c /r /y /i\r\n'
+                              'xcopy "$(TargetPath)" "$(TargetDir)x86-multibyte" /c /r /y /i\r\n'
+                              'xcopy "$(TargetPath)" "$(TargetDir)x64" /c /r /y /i\r\n',
             
             'sources':
             [
