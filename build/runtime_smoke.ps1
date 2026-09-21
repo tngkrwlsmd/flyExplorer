@@ -39,15 +39,17 @@ Require-Path (Join-Path $resolvedSource "fxfile-launcher.exe") "launcher helper"
 Require-Path (Join-Path $resolvedSource "fxfile-keyhook.dll") "keyhook helper"
 Require-Path (Join-Path $resolvedSource "Languages") "language directory"
 
-$languageFiles = Get-ChildItem -LiteralPath (Join-Path $resolvedSource "Languages") -File
+$languageFiles = @(Get-ChildItem -LiteralPath (Join-Path $resolvedSource "Languages") -File)
 if (-not $languageFiles) {
     throw "No language files were staged under $resolvedSource\Languages."
 }
 
 $xprCandidates = @(
-    (Join-Path $resolvedSource "libxprw.dll"),
-    (Join-Path $resolvedSource "libxpr.dll")
-) | Where-Object { Test-Path -LiteralPath $_ }
+    @(
+        (Join-Path $resolvedSource "libxprw.dll"),
+        (Join-Path $resolvedSource "libxpr.dll")
+    ) | Where-Object { Test-Path -LiteralPath $_ }
+)
 
 if ($xprCandidates.Count -ne 1) {
     throw "Expected exactly one xpr runtime in $resolvedSource; found $($xprCandidates.Count)."
