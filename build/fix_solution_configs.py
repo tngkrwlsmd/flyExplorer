@@ -23,6 +23,37 @@ UPCHECKER_PROJECT = r"src\fxfile-upchecker\fxfile-upchecker.vcxproj"
 XPR_PROJECT = r"src\xpr\xpr.vcxproj"
 AGGREGATE_PROJECT = r"fxfile.vcxproj"
 
+PRODUCT_TARGET_NAMES = {
+    r"src\fxfile\fxfile.vcxproj": {
+        "debug-x86-unicode": "fxfile_dbg",
+        "release-x86-unicode": "fxfile",
+        "debug-x86-multibyte": "fxfile_dbg",
+        "release-x86-multibyte": "fxfile",
+        "debug-x64-unicode": "fxfile_dbg",
+        "release-x64-unicode": "fxfile",
+    },
+    r"src\fxfile-crash\fxfile-crash.vcxproj": {
+        "debug-x86-unicode": "fxfile-crash_dbg",
+        "release-x86-unicode": "fxfile-crash",
+        "debug-x86-multibyte": "fxfile-crash_dbg",
+        "release-x86-multibyte": "fxfile-crash",
+        "debug-x64-unicode": "fxfile-crash_dbg",
+        "release-x64-unicode": "fxfile-crash",
+    },
+    r"src\fxfile-launcher\fxfile-launcher.vcxproj": {
+        "debug-x86": "fxfile-launcher_dbg",
+        "release-x86": "fxfile-launcher",
+    },
+    r"src\fxfile-keyhook\fxfile-keyhook.vcxproj": {
+        "debug-x86": "fxfile-keyhook_dbg",
+        "release-x86": "fxfile-keyhook",
+    },
+    r"src\fxfile-upchecker\fxfile-upchecker.vcxproj": {
+        "debug-x86": "fxfile-upchecker_dbg",
+        "release-x86": "fxfile-upchecker",
+    },
+}
+
 XPR_X86_TARGET_NAMES = {
     "debug-x86-unicode": "libxprw_dbg",
     "release-x86-unicode": "libxprw",
@@ -67,6 +98,72 @@ def is_x86_multibyte_configuration(solution_configuration: str) -> bool:
 
 def qualify(tag: str, namespace: str) -> str:
     return f"{{{namespace}}}{tag}" if namespace else tag
+
+
+def set_project_target_names(
+    project_path: Path, target_names: dict[str, str], require_x64: bool
+) -> int:
+    if not project_path.is_file():
+        raise FileNotFoundError(project_path)
+
+    tree = ET.parse(project_path)
+    root = tree.getroot()
+
+    namespace = ""
+    if root.tag.startswith("{"):
+        namespace = root.tag[1:].split("}", 1)[0]
+        ET.register_namespace("", namespace)
+
+    configurations: list[tuple[str, str]] = []
+    for item_group in root.findall(qualify("ItemGroup", namespace)):
+        if item_group.get("Label") != "ProjectConfigurations":
+            continue
+
+        for project_configuration in item_group.findall(
+            qualify("ProjectConfiguration", namespace)
+        ):
+            include = project_configuration.get("Include", "")
+            if "|" not in include:
+                continue
+            configuration, platform = include.split("|", 1)
+            key = configuration.lower()
+            if key in target_names:
+                if not require_x64 and "x64" in key:
+                    continue
+                configurations.append((configuration, platform))
+
+    if not configurations:
+        raise ValueError(f"No target-name configurations found in {project_path}")
+
+    insert_at = len(root)
+    for index, element in enumerate(list(root)):
+        if element.tag != qualify("Import", namespace):
+            continue
+        project = element.get("Project", "")
+        if "Microsoft.Cpp.targets" in project:
+            insert_at = index
+            break
+
+    changed = 0
+    for configuration, platform in configurations:
+        property_group = ET.Element(
+            qualify("PropertyGroup", namespace),
+            {
+                "Condition": (
+                    f"'$(Configuration)|$(Platform)'=="
+                    f"'{configuration}|{platform}'"
+                )
+            },
+        )
+        target_name = ET.SubElement(
+            property_group, qualify("TargetName", namespace)
+        )
+        target_name.text = target_names[configuration.lower()]
+        root.insert(insert_at + changed, property_group)
+        changed += 1
+
+    tree.write(project_path, encoding="utf-8", xml_declaration=True)
+    return changed
 
 
 def set_xpr_target_names(project_path: Path, require_x64: bool) -> int:
@@ -285,6 +382,26 @@ def main() -> int:
             print(f"ERROR: Failed to patch MFC project {project_path}: {error}", file=sys.stderr)
             return 1
 
+    product_target_name_changes = 0
+    for project, target_names in PRODUCT_TARGET_NAMES.items():
+        normalized = normalize_project_path(project)
+        if normalized not in project_paths:
+            print(f"ERROR: Target-name project not found in solution: {project}", file=sys.stderr)
+            return 1
+
+        relative = Path(project_paths[normalized].replace("\\", "/"))
+        project_path = solution_path.parent / relative
+        try:
+            product_target_name_changes += set_project_target_names(
+                project_path, target_names, has_x64_solution_configuration
+            )
+        except (OSError, ET.ParseError, ValueError) as error:
+            print(
+                f"ERROR: Failed to patch target names in {project_path}: {error}",
+                file=sys.stderr,
+            )
+            return 1
+
     xpr_relative = Path(project_paths[xpr_path].replace("\\", "/"))
     xpr_project_path = solution_path.parent / xpr_relative
     try:
@@ -302,6 +419,10 @@ def main() -> int:
     print(f"Skipped {skipped_upchecker} non-multibyte updater build mappings.")
     print(f"Skipped {skipped_aggregate} aggregate-project build mappings.")
     print(f"Applied static MFC settings to {len(MFC_PROJECTS)} projects ({mfc_changed} configurations updated).")
+    print(
+        "Aligned product TargetName values with linker outputs "
+        f"({product_target_name_changes} configurations updated)."
+    )
     print(f"Aligned xpr TargetName values with linker outputs ({xpr_changed} configurations updated).")
     return 0
 

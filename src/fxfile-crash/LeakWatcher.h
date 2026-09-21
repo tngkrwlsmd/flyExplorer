@@ -14,6 +14,10 @@
 
 #pragma once
 
+#ifdef _malloca
+ #undef _malloca
+#endif
+
 #define _CRTDBG_MAP_ALLOC
 #include <crtdbg.h>
 
