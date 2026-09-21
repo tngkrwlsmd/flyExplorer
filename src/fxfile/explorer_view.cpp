@@ -871,24 +871,27 @@ void ExplorerView::recalcLayout(void)
 
 void ExplorerView::OnPaint(void)
 {
-    CPaintDC sDC(this); // device context for painting
+    CPaintDC sDC(this);
 
     CRect sClientRect;
     GetClientRect(&sClientRect);
 
-    MemDC sMemDC(&sDC);
-    sMemDC.FillSolidRect(&sClientRect, ::GetSysColor(COLOR_WINDOW));
+    const ui::ThemePalette sPalette = ui::ModernUI::getPalette();
 
-    xpr_sint_t sSplitSize = mSplitter.getSplitSize();
+    MemDC sMemDC(&sDC);
+    sMemDC.FillSolidRect(&sClientRect, sPalette.mWindow);
+
+    const xpr_sint_t sSplitSize = mSplitter.getSplitSize();
 
     CSize sPaneSize(0, 0);
     mSplitter.getPaneSize(0, 0, sPaneSize);
 
     CRect sSplitterRect(sClientRect);
     sSplitterRect.left  = sPaneSize.cx;
-    sSplitterRect.right = sSplitterRect.left + sSplitSize;
+    sSplitterRect.right = min(sClientRect.right, sSplitterRect.left + sSplitSize);
 
-    sMemDC.FillSolidRect(&sClientRect, ::GetSysColor(COLOR_BTNFACE));
+    if (sSplitterRect.left < sSplitterRect.right)
+        sMemDC.FillSolidRect(&sSplitterRect, sPalette.mSeparator);
 }
 
 xpr_bool_t ExplorerView::OnEraseBkgnd(CDC *aDC)

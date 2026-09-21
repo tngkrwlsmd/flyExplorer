@@ -24,6 +24,7 @@
 
 #include "gui/DropTarget.h"
 #include "gui/MemDC.h"
+#include "gui/ModernUI.h"
 
 #include "tab_pane_observer.h"
 #include "main_frame.h"
@@ -363,13 +364,15 @@ void ExplorerPane::recalcLayout(void)
 
 void ExplorerPane::OnPaint(void)
 {
-    CPaintDC sDC(this); // device context for painting
+    CPaintDC sDC(this);
 
     CRect sClientRect;
     GetClientRect(&sClientRect);
 
+    const ui::ThemePalette sPalette = ui::ModernUI::getPalette();
+
     MemDC sMemDC(&sDC);
-    sMemDC.FillSolidRect(&sClientRect, ::GetSysColor(COLOR_WINDOW));
+    sMemDC.FillSolidRect(&sClientRect, sPalette.mWindow);
 }
 
 xpr_bool_t ExplorerPane::OnEraseBkgnd(CDC *aDC)
