@@ -41,7 +41,7 @@ protected:
     void addSpec(const xpr_tchar_t *aSpec, xpr_uint_t aCSIDL);
 
 protected:
-    typedef std::tr1::unordered_map<xpr::string, xpr_uint_t> SpecMap;
+    typedef std::unordered_map<xpr::string, xpr_uint_t> SpecMap;
     SpecMap mSpecMap;
 };
 } // namespace base
