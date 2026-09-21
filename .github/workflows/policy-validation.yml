@@ -1,17 +1,22 @@
 name: Policy and Source Validation
 
+# Temporary Actions budget pause through 2026-09-30.
+# No push/PR CI. A manual run requires an explicit budget override.
 on:
-  push:
-    branches:
-      - "**"
-  pull_request:
   workflow_dispatch:
+    inputs:
+      run_ci:
+        description: "Budget override: run policy validation before 2026-10-01"
+        required: false
+        default: false
+        type: boolean
 
 permissions:
   contents: read
 
 jobs:
   validate:
+    if: ${{ inputs.run_ci }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
