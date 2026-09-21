@@ -1,17 +1,23 @@
 #!/usr/bin/env python3
-"""Fix Visual Studio solution mappings for fxfile's mixed-architecture build."""
+"""Fix Visual Studio solution/project settings for fxfile's modern build."""
 
 from __future__ import annotations
 
 import codecs
 import re
 import sys
+import xml.etree.ElementTree as ET
 from pathlib import Path
 
 WIN32_HELPER_PROJECTS = {
     r"src\fxfile-upchecker\fxfile-upchecker.vcxproj",
     r"src\fxfile-launcher\fxfile-launcher.vcxproj",
     r"src\fxfile-keyhook\fxfile-keyhook.vcxproj",
+}
+MFC_PROJECTS = {
+    r"src\fxfile\fxfile.vcxproj",
+    r"src\fxfile-launcher\fxfile-launcher.vcxproj",
+    r"src\fxfile-upchecker\fxfile-upchecker.vcxproj",
 }
 UPCHECKER_PROJECT = r"src\fxfile-upchecker\fxfile-upchecker.vcxproj"
 AGGREGATE_PROJECT = r"fxfile.vcxproj"
@@ -41,6 +47,47 @@ def is_x64_configuration(solution_configuration: str) -> bool:
     return "|x64" in solution_configuration.lower()
 
 
+def qualify(tag: str, namespace: str) -> str:
+    return f"{{{namespace}}}{tag}" if namespace else tag
+
+
+def set_static_mfc(project_path: Path) -> int:
+    if not project_path.is_file():
+        raise FileNotFoundError(project_path)
+
+    tree = ET.parse(project_path)
+    root = tree.getroot()
+
+    namespace = ""
+    if root.tag.startswith("{"):
+        namespace = root.tag[1:].split("}", 1)[0]
+        ET.register_namespace("", namespace)
+
+    changed = 0
+    for group in root.findall(qualify("PropertyGroup", namespace)):
+        if group.get("Label") != "Configuration":
+            continue
+
+        use_of_mfc = group.find(qualify("UseOfMfc", namespace))
+        if use_of_mfc is None:
+            use_of_mfc = ET.Element(qualify("UseOfMfc", namespace))
+            use_of_mfc.text = "Static"
+
+            configuration_type = group.find(qualify("ConfigurationType", namespace))
+            if configuration_type is not None:
+                index = list(group).index(configuration_type) + 1
+                group.insert(index, use_of_mfc)
+            else:
+                group.append(use_of_mfc)
+            changed += 1
+        elif use_of_mfc.text != "Static":
+            use_of_mfc.text = "Static"
+            changed += 1
+
+    tree.write(project_path, encoding="utf-8", xml_declaration=True)
+    return changed
+
+
 def main() -> int:
     if len(sys.argv) != 2:
         print("Usage: fix_solution_configs.py <solution.sln>", file=sys.stderr)
@@ -57,16 +104,20 @@ def main() -> int:
     lines = text.splitlines(keepends=True)
 
     helper_paths = {normalize_project_path(path) for path in WIN32_HELPER_PROJECTS}
+    mfc_paths = {normalize_project_path(path) for path in MFC_PROJECTS}
     upchecker_path = normalize_project_path(UPCHECKER_PROJECT)
     aggregate_path = normalize_project_path(AGGREGATE_PROJECT)
 
     project_guids: dict[str, str] = {}
+    project_paths: dict[str, str] = {}
     for line in lines:
         match = PROJECT_RE.match(line.rstrip("\r\n"))
         if match:
-            project_guids[normalize_project_path(match.group(1))] = match.group(2).upper()
+            normalized = normalize_project_path(match.group(1))
+            project_guids[normalized] = match.group(2).upper()
+            project_paths[normalized] = match.group(1)
 
-    missing = sorted((helper_paths | {aggregate_path}) - set(project_guids))
+    missing = sorted((helper_paths | mfc_paths | {aggregate_path}) - set(project_guids))
     if missing:
         print("ERROR: Expected projects were not found in the solution:", file=sys.stderr)
         for path in missing:
@@ -132,12 +183,23 @@ def main() -> int:
         output = codecs.BOM_UTF8 + output
     solution_path.write_bytes(output)
 
+    mfc_changed = 0
+    for normalized in sorted(mfc_paths):
+        relative = Path(project_paths[normalized].replace("\\", "/"))
+        project_path = solution_path.parent / relative
+        try:
+            mfc_changed += set_static_mfc(project_path)
+        except (OSError, ET.ParseError) as error:
+            print(f"ERROR: Failed to patch MFC project {project_path}: {error}", file=sys.stderr)
+            return 1
+
     print("Mapped Win32 helper projects inside the mixed-architecture solution:")
     for path in sorted(WIN32_HELPER_PROJECTS):
         print(f"  {path}")
     print(f"Updated {mapped_count} helper configuration mappings.")
     print(f"Skipped {skipped_upchecker} x64 updater build mappings.")
     print(f"Skipped {skipped_aggregate} aggregate-project build mappings.")
+    print(f"Applied static MFC settings to {len(MFC_PROJECTS)} projects ({mfc_changed} configurations updated).")
     return 0
 
 

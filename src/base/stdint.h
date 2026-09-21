@@ -126,7 +126,7 @@ typedef uint64_t  uintmax_t;
 
 // 7.18.2 Limits of specified-width integer types
 
-#if !defined(__cplusplus) || defined(__STDC_LIMIT_MACROS) || (_MSC_VER >= 1600) // [   See footnote 220 at page 257 and footnote 221 at page 259
+#if !defined(__cplusplus) || defined(__STDC_LIMIT_MACROS) // [   See footnote 220 at page 257 and footnote 221 at page 259
 
 // 7.18.2.1 Limits of exact-width integer types
 #define INT8_MIN     ((int8_t)_I8_MIN)
@@ -220,10 +220,23 @@ typedef uint64_t  uintmax_t;
 
 #endif // __STDC_LIMIT_MACROS ]
 
+// Modern MSVC's STL expects PTRDIFF_MAX to be available from <stdint.h> in
+// C++ mode. This legacy compatibility header predates that requirement and
+// intentionally hides the rest of the C99 limit macros unless requested.
+// Expose only the pointer-difference limit required by the modern STL so we
+// do not collide with Windows SDK integer-limit macros.
+#if defined(__cplusplus) && (_MSC_VER >= 1600) && !defined(PTRDIFF_MAX)
+#  ifdef _WIN64
+#    define PTRDIFF_MAX _I64_MAX
+#  else
+#    define PTRDIFF_MAX _I32_MAX
+#  endif
+#endif
+
 
 // 7.18.4 Limits of other integer types
 
-#if !defined(__cplusplus) || defined(__STDC_CONSTANT_MACROS) || (_MSC_VER >= 1600) // [   See footnote 224 at page 260
+#if !defined(__cplusplus) || defined(__STDC_CONSTANT_MACROS) // [   See footnote 224 at page 260
 
 // 7.18.4.1 Macros for minimum-width integer constants
 

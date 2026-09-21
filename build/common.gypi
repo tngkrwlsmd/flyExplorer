@@ -193,7 +193,9 @@
                 'abstract': 1,
                 'msvs_configuration_attributes':
                 {
-                    'UseOfMFC':              1,
+                    # gyp-next no longer converts the legacy UseOfMFC
+                    # attribute. build/fix_solution_configs.py writes the
+                    # equivalent modern MSBuild UseOfMfc property.
                     'ConfigurationType':     1,
                 },
                 'msvs_settings':
