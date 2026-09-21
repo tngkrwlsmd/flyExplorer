@@ -20,17 +20,8 @@ MFC_PROJECTS = {
     r"src\fxfile-upchecker\fxfile-upchecker.vcxproj",
 }
 UPCHECKER_PROJECT = r"src\fxfile-upchecker\fxfile-upchecker.vcxproj"
-XPR_PROJECT = r"src\xpr\xpr.vcxproj"
 AGGREGATE_PROJECT = r"fxfile.vcxproj"
 
-XPR_TARGET_NAMES = {
-    "debug-x86-unicode": "libxprw_dbg",
-    "release-x86-unicode": "libxprw",
-    "debug-x86-multibyte": "libxpr_dbg",
-    "release-x86-multibyte": "libxpr",
-    "debug-x64-unicode": "libxprw_dbg",
-    "release-x64-unicode": "libxprw",
-}
 
 PROJECT_RE = re.compile(
     r'^Project\("[^"]+"\)\s*=\s*"[^"]+",\s*"([^"]+)",\s*"(\{[0-9A-Fa-f-]+\})"\s*$'
@@ -60,70 +51,6 @@ def is_x64_configuration(solution_configuration: str) -> bool:
 def qualify(tag: str, namespace: str) -> str:
     return f"{{{namespace}}}{tag}" if namespace else tag
 
-
-def set_xpr_target_names(project_path: Path) -> int:
-    if not project_path.is_file():
-        raise FileNotFoundError(project_path)
-
-    tree = ET.parse(project_path)
-    root = tree.getroot()
-
-    namespace = ""
-    if root.tag.startswith("{"):
-        namespace = root.tag[1:].split("}", 1)[0]
-        ET.register_namespace("", namespace)
-
-    configurations: list[tuple[str, str]] = []
-    for item_group in root.findall(qualify("ItemGroup", namespace)):
-        if item_group.get("Label") != "ProjectConfigurations":
-            continue
-
-        for project_configuration in item_group.findall(
-            qualify("ProjectConfiguration", namespace)
-        ):
-            include = project_configuration.get("Include", "")
-            if "|" not in include:
-                continue
-            configuration, platform = include.split("|", 1)
-            if configuration.lower() in XPR_TARGET_NAMES:
-                configurations.append((configuration, platform))
-
-    seen = {configuration.lower() for configuration, _ in configurations}
-    missing = sorted(set(XPR_TARGET_NAMES) - seen)
-    if missing:
-        raise ValueError(
-            "Missing xpr project configurations: " + ", ".join(missing)
-        )
-
-    insert_at = len(root)
-    for index, element in enumerate(list(root)):
-        if element.tag != qualify("Import", namespace):
-            continue
-        project = element.get("Project", "")
-        if "Microsoft.Cpp.targets" in project:
-            insert_at = index
-            break
-
-    changed = 0
-    for configuration, platform in configurations:
-        property_group = ET.Element(
-            qualify("PropertyGroup", namespace),
-            {
-                "Condition": (
-                    f"'$(Configuration)|$(Platform)'=="
-                    f"'{configuration}|{platform}'"
-                )
-            },
-        )
-        target_name = ET.SubElement(
-            property_group, qualify("TargetName", namespace)
-        )
-        target_name.text = XPR_TARGET_NAMES[configuration.lower()]
-        root.insert(insert_at + changed, property_group)
-        changed += 1
-
-    tree.write(project_path, encoding="utf-8", xml_declaration=True)
-    return changed
 
 def set_static_mfc(project_path: Path) -> int:
     if not project_path.is_file():
@@ -180,7 +107,6 @@ def main() -> int:
     helper_paths = {normalize_project_path(path) for path in WIN32_HELPER_PROJECTS}
     mfc_paths = {normalize_project_path(path) for path in MFC_PROJECTS}
     upchecker_path = normalize_project_path(UPCHECKER_PROJECT)
-    xpr_path = normalize_project_path(XPR_PROJECT)
     aggregate_path = normalize_project_path(AGGREGATE_PROJECT)
 
     project_guids: dict[str, str] = {}
@@ -192,7 +118,7 @@ def main() -> int:
             project_guids[normalized] = match.group(2).upper()
             project_paths[normalized] = match.group(1)
 
-    missing = sorted((helper_paths | mfc_paths | {xpr_path, aggregate_path}) - set(project_guids))
+    missing = sorted((helper_paths | mfc_paths | {aggregate_path}) - set(project_guids))
     if missing:
         print("ERROR: Expected projects were not found in the solution:", file=sys.stderr)
         for path in missing:
@@ -268,14 +194,6 @@ def main() -> int:
             print(f"ERROR: Failed to patch MFC project {project_path}: {error}", file=sys.stderr)
             return 1
 
-    xpr_relative = Path(project_paths[xpr_path].replace("\\", "/"))
-    xpr_project_path = solution_path.parent / xpr_relative
-    try:
-        xpr_changed = set_xpr_target_names(xpr_project_path)
-    except (OSError, ET.ParseError, ValueError) as error:
-        print(f"ERROR: Failed to patch xpr target names in {xpr_project_path}: {error}", file=sys.stderr)
-        return 1
-
     print("Mapped Win32 helper projects inside the mixed-architecture solution:")
     for path in sorted(WIN32_HELPER_PROJECTS):
         print(f"  {path}")
@@ -283,7 +201,6 @@ def main() -> int:
     print(f"Skipped {skipped_upchecker} x64 updater build mappings.")
     print(f"Skipped {skipped_aggregate} aggregate-project build mappings.")
     print(f"Applied static MFC settings to {len(MFC_PROJECTS)} projects ({mfc_changed} configurations updated).")
-    print(f"Aligned xpr TargetName values with linker outputs ({xpr_changed} configurations updated).")
     return 0
 
 
