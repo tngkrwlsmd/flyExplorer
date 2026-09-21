@@ -1,0 +1,123 @@
+name: Windows Product Build
+
+on:
+  push:
+    branches:
+      - "**"
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-release-x64-unicode:
+    runs-on: windows-2025-vs2026
+    timeout-minutes: 30
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
+        with:
+          python-version: "3.14"
+
+      - name: Run source invariant preflight
+        shell: cmd
+        run: python build\validate_source_invariants.py
+
+      - name: Generate Visual Studio 2026 solution
+        shell: cmd
+        run: call build.bat 2026 x64
+
+      - name: Locate Visual Studio 2026 MSBuild
+        id: msbuild
+        shell: pwsh
+        run: |
+          $vswhere = Join-Path ${env:ProgramFiles(x86)} "Microsoft Visual Studio\Installer\vswhere.exe"
+          if (-not (Test-Path $vswhere)) {
+            throw "vswhere.exe was not found on the Visual Studio 2026 runner."
+          }
+
+          $installationPath = & $vswhere -latest -products * -requires Microsoft.Component.MSBuild -property installationPath
+          if (-not $installationPath) {
+            throw "Visual Studio installation with MSBuild was not found."
+          }
+
+          $msbuild = Join-Path $installationPath "MSBuild\Current\Bin\MSBuild.exe"
+          if (-not (Test-Path $msbuild)) {
+            throw "MSBuild.exe was not found at $msbuild."
+          }
+
+          "path=$msbuild" >> $env:GITHUB_OUTPUT
+          & $msbuild -version
+
+      - name: Verify generated build contract
+        shell: pwsh
+        run: |
+          if (-not (Test-Path "fxfile.sln")) {
+            throw "fxfile.sln was not generated."
+          }
+
+          $solution = Get-Content "fxfile.sln" -Raw
+          if ($solution -notmatch [regex]::Escape("Release-x64-Unicode|x64")) {
+            throw "Release-x64-Unicode|x64 is missing from fxfile.sln."
+          }
+
+          $projects = Get-ChildItem "src" -Recurse -Filter "*.vcxproj"
+          if (-not $projects) {
+            throw "No generated Visual Studio projects were found."
+          }
+
+          $v145Projects = $projects | Select-String -SimpleMatch "<PlatformToolset>v145</PlatformToolset>"
+          if (-not $v145Projects) {
+            throw "Generated projects do not contain the v145 platform toolset."
+          }
+
+          $mainProject = Get-Content "src\fxfile\fxfile.vcxproj" -Raw
+          if ($mainProject -notmatch "<UseOfMfc>Static</UseOfMfc>") {
+            throw "The main MFC project is missing UseOfMfc=Static."
+          }
+
+      - name: Build Release-x64-Unicode
+        shell: pwsh
+        env:
+          MSBUILD_PATH: ${{ steps.msbuild.outputs.path }}
+        run: |
+          & $env:MSBUILD_PATH "fxfile.sln" `
+            /m `
+            /nologo `
+            /verbosity:minimal `
+            /p:Configuration=Release-x64-Unicode `
+            /p:Platform=x64
+
+          if ($LASTEXITCODE -ne 0) {
+            throw "MSBuild failed with exit code $LASTEXITCODE."
+          }
+
+      - name: Verify product artifacts
+        shell: pwsh
+        run: |
+          $requiredFiles = @(
+            "bin\x64\fxfile.exe",
+            "bin\x64\libxprw.dll",
+            "bin\x64\fxfile-crash.dll",
+            "bin\x64\fxfile-launcher.exe",
+            "bin\x64\fxfile-keyhook.dll"
+          )
+
+          foreach ($path in $requiredFiles) {
+            if (-not (Test-Path $path)) {
+              throw "Required build artifact is missing: $path"
+            }
+            Write-Host "Verified: $path"
+          }
+
+          $languageFiles = Get-ChildItem "bin\x64\Languages" -File -ErrorAction SilentlyContinue
+          if (-not $languageFiles) {
+            throw "No language resources were staged under bin\x64\Languages."
+          }
+
+          Write-Host "Verified language resources:"
+          $languageFiles | ForEach-Object { Write-Host "  $($_.FullName)" }
+          Write-Host "fxfile-upchecker is intentionally not required by the x64 solution build."
