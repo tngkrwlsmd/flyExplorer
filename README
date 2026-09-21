@@ -55,37 +55,29 @@ integration, or runtime PASS.
 Windows Product Build CI
 ------------------------
 Automatic push/pull-request triggers are disabled through 2026-09-30. A manual
-dispatch must explicitly enable the `run_ci` budget override; the default manual
-Windows run is Release x64 only, while Debug x64, x86 regressions, and packaging
-also require `full_matrix`. On or after 2026-10-01, review the Actions budget
-before restoring any automatic trigger or broad matrix.
+dispatch must explicitly enable the `run_ci` budget override. On or after
+2026-10-01, review the Actions budget before restoring any automatic trigger.
 
-The separate `.github/workflows/windows-build.yml` workflow runs on GitHub's
-Windows Server 2025 image with Visual Studio 2026. Its x64 job regenerates the
-solution with `build.bat 2026 x64`, verifies the v145/MFC build contract,
-builds `Release-x64-Unicode | x64`, and checks the main executable plus the
-expected x64 and Win32 helper artifacts.
+The Actions workflows are intentionally slim:
 
-The same workflow also regenerates the x86 solution with `build.bat 2026 x86`
-and builds both `Release-x86-Unicode | Win32` and
-`Release-x86-Multibyte | Win32`. The Unicode build verifies the
-`libxprw.dll/.lib` contract and intentionally excludes the multibyte updater.
-The multibyte build verifies `libxpr.dll/.lib`, builds
-`fxfile-upchecker.exe`, checks its packaged `upchecker` runtime directory,
-and validates the current distribution input names. All product configurations
-fail CI if compiler, linker, or MSBuild warnings are emitted.
+- `.github/workflows/policy-validation.yml` now runs only
+  `build/validate_source_invariants.py`. The fuller vendored-policy validation,
+  readiness, and conformance commands remain available for local/manual use.
+- `.github/workflows/windows-build.yml` defaults to one
+  `Release-x64-Unicode | x64` job. It regenerates the solution, checks the
+  v145/MFC contract, compiles and links the product, rejects compiler/linker/
+  MSBuild warnings, verifies the core artifacts, and runs the x64 launch smoke.
+- Set `run_x86_compat=true` only when x86 compatibility needs explicit remote
+  evidence. That optional job compiles `Release-x86-Unicode | Win32` and
+  `Release-x86-Multibyte | Win32` and verifies the key runtime/updater
+  artifacts. It intentionally does not run x86 launch smoke.
+- Debug x64, package generation, package validation, Actions artifact
+  staging/upload, and the previous full policy corpus are no longer part of
+  GitHub Actions. Run those locally or immediately before a release when needed.
 
-After each verified release build, the workflow also runs
-`build/runtime_smoke.ps1` against a temporary copy of the staged runtime. The
-smoke test uses an isolated `--conf_dir`, disables launcher/update startup
-behavior, starts `fxfile.exe`, requires a top-level main window, checks that
-the process remains alive for a short stability window, and then cleans up its
-temporary files and test registry state. This hosted-runner launch smoke runs
-for x64 Unicode, x86 Unicode, and x86 Multibyte.
-
-A successful Windows Product Build is compile/link, warning, build-contract,
-artifact, and **hosted-runner launch** evidence. GitHub's Windows runner already
-contains Visual Studio and other system software, so this is not clean-Windows
+A successful default Windows Product Build is Release-x64 compile/link, warning,
+artifact, and hosted-runner launch evidence only. GitHub's Windows runner already
+contains Visual Studio and other system software, so it is not clean-Windows
 Sandbox/VM evidence and does not replace interactive functional or visual
 regression testing.
 
@@ -276,14 +268,14 @@ NSIS toolchain. It creates:
 
 `build\validate_package.ps1` validates the staged runtime trees and portable
 ZIP payloads, rejects development artifacts such as PDB/OBJ/LIB/project files,
-and checks that the NSIS installer was actually produced. The Windows Product
-Build workflow runs this packaging path after the build/runtime jobs, writes
-`SHA256SUMS.txt`, and uploads the validated outputs as the
-`flyExplorer-release-package` GitHub Actions artifact.
+and checks that the NSIS installer was actually produced. Packaging is no longer
+run or uploaded by GitHub Actions; build the required release configurations and
+run `dist\package.bat` plus `build\validate_package.ps1 -DistDir dist` locally
+when preparing a release.
 
-Package Build/Payload PASS is not clean-install evidence. The CI job does not
-install or uninstall the NSIS package, modify shell integration, or prove a
-clean Windows Sandbox/VM installation. Those checks remain separate runtime
+Package Build/Payload PASS is not clean-install evidence. The packaging scripts
+do not install or uninstall the NSIS package, modify shell integration, or prove
+a clean Windows Sandbox/VM installation. Those checks remain separate runtime
 validation work.
 
 Legacy build

@@ -77,7 +77,7 @@
     }
   ],
   "review": {
-    "reviewed_revision": "88cdb2273ade81715ab2bede8cb1529eeea7da80",
+    "reviewed_revision": "7738e5eca4b1ac56c46520b5a7f58073cd1673d4",
     "reviewed_at": "2026-09-21",
     "reviewed_paths": [
       "README",
@@ -135,7 +135,7 @@
 | third-party | `lib/`, `CREDITS` | Contract / Observed | ABI/license 검토 필요 |
 | 패키징 | `dist/package.bat`, `dist/copy.bat`, `dist/make_portable.bat`, `dist/make_installer.bat`, `dist/setup.nsi` | Contract / Observed | x64/x86 staging, portable ZIP 3종, vendored NSIS installer |
 | 개발 환경 문서 | `README` | Intended / Observed | 실제 build evidence와 함께 해석 |
-| 제품 빌드 CI | `.github/workflows/windows-build.yml` | Contract / Evidence | 2026-09-30까지 automatic trigger 중지; explicit `run_ci` override에서만 실행하며 `full_matrix` 없이는 Release x64만 허용 |
+| 제품 빌드 CI | `.github/workflows/windows-build.yml` | Contract / Evidence | automatic trigger 중지; explicit `run_ci`에서 Release x64 build/warning/artifact/x64 smoke만 기본 실행, `run_x86_compat`에서만 x86 Unicode/Multibyte compile/artifact 확인 |
 | runtime smoke | `build/runtime_smoke.ps1` | Contract / Evidence | 임시 staged runtime + isolated conf_dir에서 process/main-window/stability 검증 |
 | package validation | `build/validate_package.ps1` | Contract / Evidence | staging/portable payload, updater runtime, installer output 검증 |
 | build/runtime 결과 | GitHub Actions build log, Visual Studio build log, hosted-runner launch smoke, Windows Sandbox/VM smoke | Evidence | compile/link, hosted runtime, clean-runtime evidence를 분리 |
@@ -160,17 +160,17 @@
 - x64 solution은 mixed-architecture helper mapping을 사용한다.
 - updater는 x64 Build Solution에서 의도적으로 제외한다.
 - product unit/integration test suite는 아직 확인되지 않았다.
-- GitHub Actions budget 보호를 위해 2026-09-22부터 2026-09-30까지 `Policy and Source Validation`과 `Windows Product Build`의 automatic push/PR trigger를 중지했다. 수동 dispatch도 `run_ci` explicit override 없이는 job이 실행되지 않으며, Windows의 Debug x64/x86/package matrix는 추가 `full_matrix` override가 필요하다.
+- GitHub Actions budget 보호를 위해 2026-09-22부터 2026-09-30까지 `Source Validation`과 `Windows Product Build`의 automatic push/PR trigger를 중지했다. 수동 dispatch도 `run_ci` explicit override 없이는 job이 실행되지 않는다. Windows는 Release x64만 기본 실행하며 x86 compatibility는 추가 `run_x86_compat` 입력이 필요하다; Debug x64와 package/upload job은 Actions에서 제거했다.
 - budget pause 기간에는 branch/main CI PASS를 완료 조건으로 요구하지 않는다. local/static validation과 실제 수행한 local build만 Evidence로 기록하고, 수행하지 않은 compile/runtime/package/visual 검증은 `NOT TESTED`로 남긴다. 검증 스크립트는 삭제하지 않고 재개 시점까지 보존한다.
-- Windows Product Build CI가 `Release-x64-Unicode | x64`, `Release-x86-Unicode | Win32`, `Release-x86-Multibyte | Win32`의 실제 compile/link와 핵심 산출물을 검증하며, 각 MSBuild file log에서 compiler/linker/MSBuild warning이 발견되면 실패한다. reviewed revision 기준 세 제품 빌드는 모두 warning 0건이다.
-- x86 Unicode는 `libxprw.dll/.lib`, x86 Multibyte는 `libxpr.dll/.lib` 계약을 검증한다. `fxfile-upchecker`는 Unicode/x64 Build Solution에서 제외되고 x86 Multibyte에서 실제 compile/link 및 runtime staging 산출물을 검증한다.
+- 현재 slimmed Windows Product Build는 기본적으로 `Release-x64-Unicode | x64`만 compile/link하고 warning, 핵심 산출물, hosted x64 launch smoke를 검증한다. x86 Unicode/Multibyte는 명시적 `run_x86_compat` 입력에서만 compile/link와 핵심 산출물을 확인한다. Debug x64와 package build/upload는 Actions에서 제거했다.
+- x86 Unicode는 `libxprw.dll/.lib`, x86 Multibyte는 `libxpr.dll/.lib` 계약을 유지한다. `fxfile-upchecker`는 Unicode/x64 Build Solution에서 제외되고 x86 Multibyte에서 빌드된다. Actions의 optional x86 compatibility job은 두 구성의 compile/link와 핵심 updater 산출물만 확인하며 x86 hosted launch smoke는 더 이상 실행하지 않는다.
 - xpr의 logical target 이름은 `xpr`로 유지하면서 generated MSBuild `TargetName`을 configuration별 physical product 이름(`libxprw` / `libxpr` 계열)과 정렬해 MSB8012를 제거했다.
 - crash module은 vendored zlib 1.2.3 source를 현재 MSVC로 직접 빌드하며 legacy `zlibS-x64.lib`를 링크하지 않는다.
 - crash/network resolver 경로는 deprecated `gethostbyname`/`inet_ntoa`/`inet_addr` 대신 modern Winsock address API를 사용한다.
-- distribution 입력 이름은 현재 제품 계약에 맞춰 Unicode/x64 `libxprw.dll`과 `upchecker/fxfile-upchecker.exe`를 사용한다. Windows Product Build CI는 세 release runtime을 모아 `dist/package.bat`을 실제 실행하고 portable ZIP 3종과 NSIS installer를 생성한 뒤 `build/validate_package.ps1`로 staging/ZIP/installer output을 검증한다.
+- distribution 입력 이름은 현재 제품 계약에 맞춰 Unicode/x64 `libxprw.dll`과 `upchecker/fxfile-upchecker.exe`를 사용한다. Actions의 package job과 artifact upload는 비용 절감을 위해 제거했으며, release packaging은 로컬에서 `dist/package.bat`과 `build/validate_package.ps1`로 수행한다.
 - 패키징은 vendored `dist/7zip/7za.exe`와 `dist/nsis/makensis.exe`를 사용하며 외부 NSIS 다운로드를 요구하지 않는다. 검증된 installer/portable 3종과 `SHA256SUMS.txt`는 `flyExplorer-release-package` Actions artifact로 보존한다.
 - installer 실제 설치/제거, shell integration install/remove, clean Windows Sandbox/VM install은 아직 자동화하지 않으며 Package Build/Payload PASS와 구분한다.
-- GitHub-hosted Windows runner에서 x64 Unicode, x86 Unicode, x86 Multibyte의 launch smoke를 자동화한다. smoke는 staged runtime을 임시 디렉터리에 복사하고 isolated `--conf_dir`로 `fxfile.exe`를 시작한 뒤 top-level main window와 short stability window를 확인한다.
+- GitHub-hosted Windows runner의 기본 remote runtime evidence는 x64 Unicode launch smoke 하나만 유지한다. smoke는 staged runtime을 임시 디렉터리에 복사하고 isolated `--conf_dir`로 `fxfile.exe`를 시작한 뒤 top-level main window와 short stability window를 확인한다. x86 launch smoke는 Actions 비용 절감을 위해 제거했다.
 - hosted runner에는 Visual Studio와 여러 system runtime이 이미 설치되어 있으므로 이 결과는 clean Windows Sandbox/VM evidence가 아니다. Windows Sandbox/clean VM, interactive functional smoke, visual regression은 아직 자동화하지 않는다.
 - `build/validate_source_invariants.py`가 C++ cross-cutting dependency와 ModernUI integration의 빠른 static preflight를 제공한다.
 - `.agent-policy/`에는 upstream `universal-agent-docs` revision `cc250a63994f1d9d4fcfdbb2bab9b622230bf8c6`의 validated policy bundle을 vendor하며 root CI에서 bundle/readiness/conformance를 검사한다.

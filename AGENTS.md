@@ -124,7 +124,7 @@ UI/UX 현대화 작업은 다음 원칙을 따른다.
 - GitHub Actions의 자동 `push`/`pull_request` CI는 사용량 보호를 위해 일시 중지한다.
 - 2026-10-01 전에는 일반 개발 checkpoint, branch, main 반영을 이유로 Actions를 수동 실행하지 않는다.
 - 사용자가 해당 실행에서 Actions 비용 사용을 명시적으로 허용한 경우에만 workflow의 `run_ci` budget override를 켤 수 있다.
-- Windows workflow의 Debug x64, x86 regression, packaging은 추가로 `full_matrix`를 켠 경우에만 실행한다. 예산 pause 중 기본값은 실행하지 않는 것이다.
+- Windows workflow는 `run_ci=true`일 때도 기본적으로 Release x64만 실행한다. x86 Unicode/Multibyte compatibility compile은 `run_x86_compat=true`일 때만 추가한다. Debug x64와 packaging/upload job은 Actions에서 제거했으며 필요 시 로컬/릴리스 직전 수동 검증으로 수행한다.
 - pause 기간에는 `python build/validate_source_invariants.py` 같은 로컬/정적 검증과 가능한 로컬 빌드를 우선한다. Windows compile/runtime/package를 실제로 실행하지 못했으면 `NOT TESTED`로 기록한다.
 - 테스트/검증 스크립트 자체는 비용 절감 목적으로 삭제하지 않는다. 비용은 remote Actions 실행을 막아 절감하고, 검증 자산은 다음 재개 시점까지 보존한다.
 - 2026-10-01 이후에도 자동 CI를 기계적으로 되살리지 않는다. Actions 예산을 확인한 뒤 필요한 최소 matrix와 trigger를 명시적으로 재검토하고 복구한다.
@@ -139,10 +139,10 @@ UI/UX 현대화 작업은 다음 원칙을 따른다.
 3. x86, 공통 코드, updater, 배포 경로 영향이 있으면 `build.bat 2026 x86` 후 `Release-x86-Unicode | Win32`와 `Release-x86-Multibyte | Win32`를 검증
 4. release runtime은 `build/runtime_smoke.ps1` 또는 동일 계약의 GitHub Actions hosted-runner launch smoke로 process/main-window/stability 확인
 5. packaging 영향이 있으면 `dist\package.bat` 실행 후 `build\validate_package.ps1 -DistDir dist`로 portable ZIP 3종과 NSIS installer payload 검증
-6. remote checkpoint에서는 `Policy and Source Validation`과 `Windows Product Build` 결과를 확인하고, branch 검증 후 main에 반영했다면 main CI도 다시 확인
+6. CI pause가 해제된 뒤 remote 검증이 필요한 경우에만 `Source Validation`과 최소 `Windows Product Build`를 실행한다. 2026-09-30까지는 branch/main 반영을 이유로 remote CI를 요구하거나 실행하지 않는다
 7. 설치/제거, shell integration, interactive 기능, DPI/High Contrast/visual 변경은 필요 시 Windows Sandbox 또는 clean VM에서 별도 수동 evidence 확보
 
-현재 별도 product unit/integration test suite는 확인되지 않았다. 대신 source-invariant preflight, vendored policy validation/conformance, x64/x86 compile/link, warning rejection, hosted launch smoke, package payload validation이 CI로 자동화되어 있다. 이 자동화 결과는 clean Windows 설치/제거와 interactive/visual regression evidence를 대체하지 않는다.
+현재 별도 product unit/integration test suite는 확인되지 않았다. GitHub Actions는 비용 절감을 위해 최소화되어 `Source Validation`의 source-invariant preflight와 `Windows Product Build`의 Release x64 compile/link, warning rejection, artifact 확인, x64 launch smoke만 기본 원격 검증으로 남긴다. x86 Unicode/Multibyte compile은 명시적 `run_x86_compat` 옵션에서만 실행하며 Debug x64, package build/upload, policy conformance/readiness는 Actions에서 제거했다. 전체 policy 검증과 packaging은 로컬 명령으로 유지하며, clean Windows 설치/제거와 interactive/visual regression evidence는 여전히 별도다.
 
 버그 수정은 가능하면 재현 가능한 regression check를 추가하되, repository에 존재하지 않는 대규모 테스트 프레임워크를 단일 수정 때문에 도입하지 않는다.
 
