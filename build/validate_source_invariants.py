@@ -88,6 +88,27 @@ def validate_window_frame_theme_integration() -> list[str]:
     return errors
 
 
+def validate_common_control_theme_integration() -> list[str]:
+    errors: list[str] = []
+    modern_ui_header_path = FXFILE_SRC / "gui" / "ModernUI.h"
+    modern_ui_source_path = FXFILE_SRC / "gui" / "ModernUI.cpp"
+
+    try:
+        modern_ui_header = modern_ui_header_path.read_text(encoding="utf-8")
+        modern_ui_source = modern_ui_source_path.read_text(encoding="utf-8")
+    except OSError as exc:
+        return [f"ModernUI control-theme integration source cannot be read: {exc}"]
+
+    if "applyExplorerControlTheme(HWND aHwnd)" not in modern_ui_header:
+        errors.append("src/fxfile/gui/ModernUI.h: missing Explorer control-theme helper declaration")
+
+    for token in ("SetWindowTheme", "uxtheme.dll", 'L"Explorer"'):
+        if token not in modern_ui_source:
+            errors.append(f"src/fxfile/gui/ModernUI.cpp: missing control-theme integration token {token}")
+
+    return errors
+
+
 def validate_modern_ui_registration() -> list[str]:
     errors: list[str] = []
     gyp_path = ROOT / "src" / "fxfile" / "fxfile.gyp"
@@ -123,6 +144,7 @@ def validate_modern_ui_registration() -> list[str]:
 def main() -> int:
     errors = validate_translation_units()
     errors.extend(validate_window_frame_theme_integration())
+    errors.extend(validate_common_control_theme_integration())
     errors.extend(validate_modern_ui_registration())
 
     if errors:

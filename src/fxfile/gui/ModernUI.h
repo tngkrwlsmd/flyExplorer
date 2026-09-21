@@ -52,6 +52,7 @@ public:
     static ThemePalette getPalette(void);
     static xpr_bool_t isHighContrast(void);
     static xpr_bool_t applyWindowFrameTheme(HWND aHwnd);
+    static xpr_bool_t applyExplorerControlTheme(HWND aHwnd);
 
 private:
     ModernUI(void);

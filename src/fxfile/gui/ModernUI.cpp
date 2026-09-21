@@ -16,6 +16,7 @@ namespace
 typedef UINT (WINAPI *GetDpiForWindowProc)(HWND);
 typedef BOOL (WINAPI *SystemParametersInfoForDpiProc)(UINT, UINT, PVOID, UINT, UINT);
 typedef HRESULT (WINAPI *DwmSetWindowAttributeProc)(HWND, DWORD, LPCVOID, DWORD);
+typedef HRESULT (WINAPI *SetWindowThemeProc)(HWND, LPCWSTR, LPCWSTR);
 
 #ifndef DWMWA_USE_IMMERSIVE_DARK_MODE
 #define DWMWA_USE_IMMERSIVE_DARK_MODE 20
@@ -218,6 +219,37 @@ xpr_bool_t ModernUI::applyWindowFrameTheme(HWND aHwnd)
     }
 
     ::FreeLibrary(sDwmApi);
+    return sApplied;
+}
+
+xpr_bool_t ModernUI::applyExplorerControlTheme(HWND aHwnd)
+{
+    if (XPR_IS_NULL(aHwnd))
+        return XPR_FALSE;
+
+    // SetWindowTheme is documented, but resolving it dynamically keeps the
+    // ModernUI foundation safe on systems where uxtheme is unavailable.
+    HMODULE sUxTheme = ::LoadLibrary(XPR_STRING_LITERAL("uxtheme.dll"));
+    if (XPR_IS_NULL(sUxTheme))
+        return XPR_FALSE;
+
+    SetWindowThemeProc sSetWindowTheme =
+        reinterpret_cast<SetWindowThemeProc>(
+            ::GetProcAddress(sUxTheme, "SetWindowTheme"));
+
+    xpr_bool_t sApplied = XPR_FALSE;
+    if (XPR_IS_NOT_NULL(sSetWindowTheme))
+    {
+        // High Contrast should retain the system's default control rendering.
+        // The Explorer theme is a documented/common Win32 visual-style opt-in
+        // already used by flyExplorer list/tree controls.
+        const LPCWSTR sSubAppName =
+            XPR_IS_TRUE(isHighContrast()) ? XPR_NULL : L"Explorer";
+        const HRESULT sResult = sSetWindowTheme(aHwnd, sSubAppName, XPR_NULL);
+        sApplied = SUCCEEDED(sResult) ? XPR_TRUE : XPR_FALSE;
+    }
+
+    ::FreeLibrary(sUxTheme);
     return sApplied;
 }
 } // namespace ui
