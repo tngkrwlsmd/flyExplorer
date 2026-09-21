@@ -50,14 +50,14 @@ public:
     static void insertComboEditString(CComboBox *aComboBox, xpr_bool_t aCase = XPR_TRUE);
 
 protected:
-    typedef std::tr1::unordered_map<xpr::string, xpr::string> ValueMap;
+    typedef std::unordered_map<xpr::string, xpr::string> ValueMap;
 
     const xpr::string &getSection(void) const;
     const ValueMap &getValueMap(void) const;
     void setValueMap(const ValueMap &aValueMap);
 
 protected:
-    typedef std::tr1::unordered_map<xpr::string, xpr_uint_t> CtrlMap;
+    typedef std::unordered_map<xpr::string, xpr_uint_t> CtrlMap;
 
     CDialog   *mDlg;
     CtrlMap    mListCtrlMap;
