@@ -106,6 +106,7 @@ struct FolderCtrl::EnumData
 
 FolderCtrl::FolderCtrl(void)
     : mViewIndex(-1)
+    , mOptionApplied(XPR_FALSE)
 {
     mObserver           = XPR_NULL;
 
@@ -150,6 +151,9 @@ BEGIN_MESSAGE_MAP(FolderCtrl, super)
     ON_WM_PAINT()
     ON_WM_CONTEXTMENU()
     ON_WM_SYSCOLORCHANGE()
+    ON_WM_SETTINGCHANGE()
+    ON_MESSAGE(WM_DPICHANGED, OnDpiChanged)
+    ON_MESSAGE(WM_THEMECHANGED, OnThemeChanged)
     ON_WM_MOUSEACTIVATE()
     ON_WM_MBUTTONDOWN()
     ON_NOTIFY_REFLECT(NM_CLICK,           OnClick)
@@ -276,15 +280,20 @@ void FolderCtrl::setOption(Option &aOption)
     // enable vista enhanced control
     enableVistaEnhanced(!mOption.mClassicThemeStyle);
 
-    // set item height
+    const ui::ThemePalette sPalette = ui::ModernUI::getPalette();
+
+    // Keep explicit user item-height settings unchanged. The default path is
+    // a compact Windows 11-style logical height that scales with the monitor.
     if (XPR_IS_TRUE(mOption.mIsItemHeight))
     {
         SetItemHeight(mOption.mItemHeight);
     }
     else
     {
-        SetItemHeight(-1);
+        SetItemHeight(ui::ModernUI::scaleForWindow(22, GetSafeHwnd()));
     }
+
+    SetIndent(ui::ModernUI::scaleForWindow(20, GetSafeHwnd()));
 
     // set background color
     if (mOption.mBkgndColorType == COLOR_TYPE_CUSTOM)
@@ -293,7 +302,7 @@ void FolderCtrl::setOption(Option &aOption)
     }
     else
     {
-        SetBkColor(::GetSysColor(COLOR_WINDOW));
+        SetBkColor(sPalette.mWindow);
     }
 
     // set text color
@@ -303,11 +312,15 @@ void FolderCtrl::setOption(Option &aOption)
     }
     else
     {
-        SetTextColor(::GetSysColor(COLOR_WINDOWTEXT));
+        SetTextColor(sPalette.mText);
     }
 
-    // set custom font
+    // set custom/system font
     setCustomFont(mOption.mCustomFont, mOption.mCustomFontText);
+    mOptionApplied = XPR_TRUE;
+
+    if (XPR_IS_NOT_NULL(mSmallImgList))
+        mSmallImgList->SetBkColor(GetBkColor());
 
     // update selected tree item
     HTREEITEM sTreeItem = GetSelectedItem();
@@ -1572,7 +1585,7 @@ LRESULT FolderCtrl::OnShellChangeNotify(WPARAM wParam, LPARAM lParam)
     case SHCNE_DRIVEADD:      OnShcnDriveAdd(sShcn);               break;
     case SHCNE_DRIVEREMOVED:  OnShcnDriveRemove(sShcn);            break;
 
-        //-- ¹ÌÃ³¸® --
+        //-- Â¹ÃŒÃƒÂ³Â¸Â® --
 #ifdef XPR_CFG_BUILD_DEBUG
     case SHCNE_FREESPACE:
         break;
@@ -2791,12 +2804,55 @@ void FolderCtrl::OnEndlabeledit(NMHDR *aNmHdr, LRESULT *aResult)
     COM_FREE(sNewPidl);
 }
 
+void FolderCtrl::applyModernAppearance(void)
+{
+    if (XPR_IS_FALSE(mOptionApplied))
+        return;
+
+    const ui::ThemePalette sPalette = ui::ModernUI::getPalette();
+
+    if (mOption.mBkgndColorType != COLOR_TYPE_CUSTOM)
+        SetBkColor(sPalette.mWindow);
+
+    if (mOption.mTextColorType != COLOR_TYPE_CUSTOM)
+        SetTextColor(sPalette.mText);
+
+    if (XPR_IS_FALSE(mOption.mCustomFont))
+        setCustomFont(XPR_FALSE, (xpr_tchar_t *)XPR_NULL);
+
+    if (XPR_IS_FALSE(mOption.mIsItemHeight))
+        SetItemHeight(ui::ModernUI::scaleForWindow(22, GetSafeHwnd()));
+
+    SetIndent(ui::ModernUI::scaleForWindow(20, GetSafeHwnd()));
+
+    if (XPR_IS_NOT_NULL(mSmallImgList))
+        mSmallImgList->SetBkColor(GetBkColor());
+
+    Invalidate(XPR_FALSE);
+}
+
 void FolderCtrl::OnSysColorChange(void)
 {
     super::OnSysColorChange();
+    applyModernAppearance();
+}
 
-    COLORREF sColor = ::GetSysColor(COLOR_WINDOW);
-    mSmallImgList->SetBkColor(sColor);
+void FolderCtrl::OnSettingChange(xpr_uint_t aFlags, const xpr_tchar_t *aSection)
+{
+    super::OnSettingChange(aFlags, aSection);
+    applyModernAppearance();
+}
+
+LRESULT FolderCtrl::OnDpiChanged(WPARAM aWParam, LPARAM aLParam)
+{
+    applyModernAppearance();
+    return 0;
+}
+
+LRESULT FolderCtrl::OnThemeChanged(WPARAM aWParam, LPARAM aLParam)
+{
+    applyModernAppearance();
+    return 0;
 }
 
 DROPEFFECT FolderCtrl::OnDragEnter(COleDataObject *aOleDataObject, DWORD aKeyState, CPoint aPoint)
@@ -3638,7 +3694,16 @@ void FolderCtrl::setCustomFont(xpr_bool_t aCustomFont, xpr_tchar_t *aFontText)
 {
     if (XPR_IS_FALSE(aCustomFont))
     {
-        SetFont(XPR_NULL);
+        if (XPR_IS_NOT_NULL(mDefaultFont.m_hObject))
+            mDefaultFont.DeleteObject();
+
+        LOGFONT sLogFont = {0};
+        if (XPR_IS_TRUE(ui::ModernUI::getUIFont(sLogFont, GetSafeHwnd())))
+        {
+            mDefaultFont.CreateFontIndirect(&sLogFont);
+            if (XPR_IS_NOT_NULL(mDefaultFont.m_hObject))
+                SetFont(&mDefaultFont);
+        }
         return;
     }
 
@@ -3662,7 +3727,16 @@ void FolderCtrl::setCustomFont(xpr_bool_t aCustomFont, CFont *aFont)
 {
     if (XPR_IS_FALSE(aCustomFont))
     {
-        SetFont(XPR_NULL);
+        if (XPR_IS_NOT_NULL(mDefaultFont.m_hObject))
+            mDefaultFont.DeleteObject();
+
+        LOGFONT sLogFont = {0};
+        if (XPR_IS_TRUE(ui::ModernUI::getUIFont(sLogFont, GetSafeHwnd())))
+        {
+            mDefaultFont.CreateFontIndirect(&sLogFont);
+            if (XPR_IS_NOT_NULL(mDefaultFont.m_hObject))
+                SetFont(&mDefaultFont);
+        }
         return;
     }
 

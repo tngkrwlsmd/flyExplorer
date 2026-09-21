@@ -127,6 +127,8 @@ public:
     xpr_bool_t getDataObject(LPDATAOBJECT *aDataObject) const;
 
 protected:
+    void applyModernAppearance(void);
+
     xpr_bool_t exploreItem(LPTVITEMDATA aTvItemData);
 
     struct EnumData;
@@ -197,7 +199,8 @@ protected:
     xpr_bool_t  mInit;
     xpr_bool_t  mUpdate;
 
-    Option mOption;
+    Option      mOption;
+    xpr_bool_t  mOptionApplied;
 
     CImageList *mSmallImgList;
     ShellIcon  *mShellIcon;
@@ -205,6 +208,7 @@ protected:
     // Drag & Drop, and Clipboard
     DropTarget  mDropTarget;
 
+    CFont       mDefaultFont;
     CFont      *mCustomFont;
 
     xpr_bool_t  mMouseEdit;
@@ -249,6 +253,9 @@ protected:
     afx_msg void OnBeginlabeledit(NMHDR *aNmHdr, LRESULT *aResult);
     afx_msg void OnEndlabeledit(NMHDR *aNmHdr, LRESULT *aResult);
     afx_msg void OnSysColorChange(void);
+    afx_msg void OnSettingChange(xpr_uint_t aFlags, const xpr_tchar_t *aSection);
+    afx_msg LRESULT OnDpiChanged(WPARAM aWParam, LPARAM aLParam);
+    afx_msg LRESULT OnThemeChanged(WPARAM aWParam, LPARAM aLParam);
     afx_msg void OnDestroy(void);
     afx_msg void OnTimer(UINT_PTR nIDEvent);
     afx_msg void OnPaint(void);
