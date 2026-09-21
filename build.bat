@@ -85,6 +85,14 @@ if not exist "fxfile.sln" (
     exit /b 1
 )
 
+echo Fixing mixed x64/x86 solution configuration mappings...
+%PYTHON_CMD% "build\fix_solution_configs.py" "fxfile.sln"
+if errorlevel 1 (
+    echo ERROR: Failed to fix helper project configuration mappings.
+    popd
+    exit /b 1
+)
+
 if /I "%msvs_version%"=="2026" (
     findstr /s /m /c:"<PlatformToolset>v140</PlatformToolset>" src\*.vcxproj >nul 2>&1
     if not errorlevel 1 (
@@ -105,6 +113,7 @@ if /I "%msvs_version%"=="2026" (
 echo ----------
 echo Generated fxfile.sln for Visual Studio %msvs_version%.
 if /I "%msvs_version%"=="2026" echo Verified platform toolset: v145
+if /I "%target_arch%"=="x64" echo Win32-only helper projects are mapped to x86 configurations.
 echo For a 64-bit release build, use configuration Release-x64-Unicode.
 
 popd
