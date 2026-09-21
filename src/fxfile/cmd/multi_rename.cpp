@@ -131,7 +131,7 @@ xpr_sint_t MultiRename::runThread(xpr::Thread &aThread)
     RenDeque::iterator sIterator;
     RenDeque::iterator sIterator2;
 
-    typedef std::tr1::unordered_multimap<xpr::string, RenItem *> HashPathMap;
+    typedef std::unordered_multimap<xpr::string, RenItem *> HashPathMap;
     typedef std::pair<HashPathMap::iterator, HashPathMap::iterator> HashPathPairIterator;
     HashPathMap sHashOldPathMap;
     HashPathMap sHashNewPathMap;
