@@ -18,7 +18,7 @@ rem Keep one persistent log only. Temporary capture files are deleted on exit.
 del /q "%LOG_DIR%\*.log" "%LOG_DIR%\*.tmp" >nul 2>&1
 set "LOCAL_CI_LOG=%LOG_DIR%\local-ci.log"
 set "STEP_LOG=%LOG_DIR%\step.tmp"
-set "AUX_LOG=%LOG_DIR%\aux.tmp"
+set "MSBUILD_RAW_LOG=%LOG_DIR%\msbuild-raw.tmp"
 
 > "%LOCAL_CI_LOG%" echo ============================================================
 >>"%LOCAL_CI_LOG%" echo flyExplorer Local CI
@@ -350,16 +350,37 @@ set "CI_CONFIGURATION=%~1"
 set "CI_PLATFORM=%~2"
 set "CI_TITLE=%~3"
 
-del /q "%STEP_LOG%" >nul 2>&1
-"%MSBUILD_EXE%" "fxfile.sln" /m /nologo /verbosity:quiet /fl "/flp:logfile=%STEP_LOG%;verbosity=normal" "/p:Configuration=%CI_CONFIGURATION%" "/p:Platform=%CI_PLATFORM%" >nul 2>&1
+del /q "%STEP_LOG%" "%MSBUILD_RAW_LOG%" >nul 2>&1
+echo.
+echo [local-ci] Rebuilding %CI_CONFIGURATION% ^| %CI_PLATFORM%...
+>>"%LOCAL_CI_LOG%" echo.
+>>"%LOCAL_CI_LOG%" echo [local-ci] Rebuilding %CI_CONFIGURATION% ^| %CI_PLATFORM%...
+
+rem Rebuild is intentional: local CI must not reuse stale object files from a
+rem previous CRT/configuration state. The normal file logger also records every
+rem source file actually compiled.
+"%MSBUILD_EXE%" "fxfile.sln" /m /nologo /verbosity:quiet /t:Rebuild /fl "/flp:logfile=%MSBUILD_RAW_LOG%;verbosity=normal" "/p:Configuration=%CI_CONFIGURATION%" "/p:Platform=%CI_PLATFORM%" >nul 2>&1
 set "BUILD_RESULT=%errorlevel%"
-call :append_file "%CI_TITLE% build" "%STEP_LOG%"
+
+rem MSBuild's file logger uses the Windows ANSI code page on localized systems.
+rem Convert it to BOM-less UTF-8 before displaying/appending to the unified log.
+powershell -NoProfile -ExecutionPolicy Bypass -Command "$r = New-Object System.IO.StreamReader($env:MSBUILD_RAW_LOG, [System.Text.Encoding]::Default, $true); try { $text = $r.ReadToEnd() } finally { $r.Dispose() }; $utf8 = New-Object System.Text.UTF8Encoding($false); [System.IO.File]::WriteAllText($env:STEP_LOG, $text, $utf8)"
+if errorlevel 1 (
+    echo ERROR: Failed to convert MSBuild log to UTF-8.
+    >>"%LOCAL_CI_LOG%" echo ERROR: Failed to convert MSBuild log to UTF-8.
+    exit /b 1
+)
+
+call :append_file "%CI_TITLE% rebuild" "%STEP_LOG%"
 if not "%BUILD_RESULT%"=="0" exit /b %BUILD_RESULT%
 
-powershell -NoProfile -ExecutionPolicy Bypass -Command "$warnings = @(Select-String -LiteralPath $env:STEP_LOG -Pattern '\bwarning (?:C\d+|LNK\d+|MSB\d+):'); if ($warnings.Count -gt 0) { foreach ($w in $warnings) { Write-Host $w.Line }; exit 1 }" >"%AUX_LOG%" 2>&1
+rem Scan the UTF-8 normalized log. The full warning line is already visible
+rem above, so do not duplicate it through another code-page conversion path.
+powershell -NoProfile -ExecutionPolicy Bypass -Command "$text = [System.IO.File]::ReadAllText($env:STEP_LOG, [System.Text.Encoding]::UTF8); if ([regex]::IsMatch($text, '\bwarning (?:C\d+|LNK\d+|MSB\d+):')) { exit 1 }; exit 0"
 set "WARNING_RESULT=%errorlevel%"
 if not "%WARNING_RESULT%"=="0" (
-    call :append_file "%CI_TITLE% warning rejection" "%AUX_LOG%"
+    echo ERROR: Unexpected compiler/linker/MSBuild warning detected in %CI_CONFIGURATION%.
+    >>"%LOCAL_CI_LOG%" echo ERROR: Unexpected compiler/linker/MSBuild warning detected in %CI_CONFIGURATION%.
     exit /b %WARNING_RESULT%
 )
 
@@ -393,7 +414,7 @@ if defined LOCAL_CI_SKIPPED (
 echo Log: "%LOCAL_CI_LOG%"
 echo ============================================================
 >>"%LOCAL_CI_LOG%" echo Finished: %DATE% %TIME%
-del /q "%STEP_LOG%" "%AUX_LOG%" >nul 2>&1
+del /q "%STEP_LOG%" "%MSBUILD_RAW_LOG%" >nul 2>&1
 popd
 exit /b 0
 
@@ -408,7 +429,7 @@ echo ============================================================
 >>"%LOCAL_CI_LOG%" echo.
 >>"%LOCAL_CI_LOG%" echo Result: FAIL ^(exit %RESULT%^)
 >>"%LOCAL_CI_LOG%" echo Finished: %DATE% %TIME%
-del /q "%STEP_LOG%" "%AUX_LOG%" >nul 2>&1
+del /q "%STEP_LOG%" "%MSBUILD_RAW_LOG%" >nul 2>&1
 popd
 exit /b %RESULT%
 
@@ -423,12 +444,12 @@ echo   release  x64 + x86 + package build/payload validation.
 echo   full     policy + x64 Release/Debug + x86 + package validation.
 echo.
 echo See LOCAL_CI_MANUAL.txt for the short usage guide.
-del /q "%STEP_LOG%" "%AUX_LOG%" >nul 2>&1
+del /q "%STEP_LOG%" "%MSBUILD_RAW_LOG%" >nul 2>&1
 popd
 exit /b 0
 
 :usage_error
 echo Usage: local_ci.bat [quick^|policy^|x64^|x86^|release^|full]
-del /q "%STEP_LOG%" "%AUX_LOG%" >nul 2>&1
+del /q "%STEP_LOG%" "%MSBUILD_RAW_LOG%" >nul 2>&1
 popd
 exit /b 2

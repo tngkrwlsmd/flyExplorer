@@ -98,11 +98,14 @@ Available profiles:
     local_ci.bat full
 
 `quick` runs only the source invariant preflight. `x64` regenerates the VS 2026
-x64 solution, builds Release-x64-Unicode, rejects compiler/linker/MSBuild
-warnings, verifies core artifacts, and runs the x64 launch smoke. `x86` builds
-and smoke-tests both Release x86 configurations. `release` runs x64 + x86 and
-then builds/validates the portable archives and NSIS installer. `full` adds the
-vendored policy/readiness/conformance checks and Debug-x64 regression build.
+x64 solution, **rebuilds** Release-x64-Unicode from source, rejects compiler/
+linker/MSBuild warnings, verifies core artifacts, and runs the x64 launch smoke.
+`x86` rebuilds and smoke-tests both Release x86 configurations. `release` runs
+x64 + x86 and then builds/validates the portable archives and NSIS installer.
+`full` adds the vendored policy/readiness/conformance checks and a Debug-x64
+rebuild. Local CI deliberately uses MSBuild `Rebuild` rather than incremental
+`Build` so stale object files cannot hide CRT/configuration drift and compiled
+`.cpp` files remain visible in the normal-verbosity build log.
 
 The `policy`/`full` profiles create or reuse
 `%TEMP%\\flyExplorer-policy-venv` and install the locked policy dependencies
@@ -114,6 +117,9 @@ See `LOCAL_CI_MANUAL.txt` for the short profile-by-profile usage guide.
 `local_ci.bat` forces redirected Python output to UTF-8 so readiness and
 conformance messages containing Unicode punctuation do not fail on Korean or
 other non-UTF-8 Windows ANSI code pages.
+MSBuild file-logger output is separately normalized from the Windows ANSI code
+page to BOM-less UTF-8 before it is printed and appended to `local-ci.log`, so
+localized Korean build messages do not corrupt the consolidated UTF-8 log.
 The local conformance invocation also suppresses only Python `zipfile`'s expected
 `Duplicate name` warning from the intentional duplicate-entry negative fixture;
 the duplicate-entry validation case itself still runs and must pass.
