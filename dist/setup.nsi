@@ -82,28 +82,28 @@ UninstPage custom un.RemoveOptionEnterPage un.RemoveOptionLeavePage
 #!insertmacro MUI_LANGUAGE "English"
 !insertmacro MUI_LANGUAGE "Korean"
 
-LangString TEXT_WELCOMEPAGE_TITLE          ${LANG_KOREAN} "${PRODUCT_NAME} ${PRODUCT_VER} ¼³Ä¡¸¦ ½ÃÀÛÇÕ´Ï´Ù."
-LangString TEXT_WELCOMEPAGE_TEXT           ${LANG_KOREAN} "ÀÌ ÇÁ·Î±×·¥Àº »ç¿ëÀÚ ÄÄÇ»ÅÍ¿¡ ${PRODUCT_NAME} ${PRODUCT_VER}(À»)¸¦ ¼³Ä¡ÇÒ °ÍÀÔ´Ï´Ù.\r\n\r\n¼³Ä¡¸¦ ½ÃÀÛÇÏ±â Àü¿¡ fxfileÀ» Á¾·áÇÏ¿© ÁÖ½Ã±â ¹Ù¶ø´Ï´Ù. ¼³Ä¡¸¦ ½ÃÀÛÇÏ¸é °­Á¦ Á¾·áµË´Ï´Ù.\r\n\r\n°è¼ÓÇÏ½Ã·Á¸é '´ÙÀ½' ¹öÆ°À» ´­·¯ ÁÖ¼¼¿ä."
+LangString TEXT_WELCOMEPAGE_TITLE          ${LANG_KOREAN} "${PRODUCT_NAME} ${PRODUCT_VER} ì„¤ì¹˜ë¥¼ ì‹œìž‘í•©ë‹ˆë‹¤."
+LangString TEXT_WELCOMEPAGE_TEXT           ${LANG_KOREAN} "ì´ í”„ë¡œê·¸ëž¨ì€ ì‚¬ìš©ìž ì»´í“¨í„°ì— ${PRODUCT_NAME} ${PRODUCT_VER}(ì„)ë¥¼ ì„¤ì¹˜í•  ê²ƒìž…ë‹ˆë‹¤.\r\n\r\nì„¤ì¹˜ë¥¼ ì‹œìž‘í•˜ê¸° ì „ì— fxfileì„ ì¢…ë£Œí•˜ì—¬ ì£¼ì‹œê¸° ë°”ëžë‹ˆë‹¤. ì„¤ì¹˜ë¥¼ ì‹œìž‘í•˜ë©´ ê°•ì œ ì¢…ë£Œë©ë‹ˆë‹¤.\r\n\r\nê³„ì†í•˜ì‹œë ¤ë©´ 'ë‹¤ìŒ' ë²„íŠ¼ì„ ëˆŒëŸ¬ ì£¼ì„¸ìš”."
 
-LangString TEXT_OPTION_HEADER              ${LANG_KOREAN} "¹öÀü ¼±ÅÃ"
-LangString TEXT_OPTION_HEADER_DESC         ${LANG_KOREAN} "¼³Ä¡ÇÏ°íÀÚ ÇÏ´Â ¹öÀüÀ» ¼±ÅÃÇÏ¿© ÁÖ½Ê½Ã¿À."
-LangString TEXT_OPTION_TEXT                ${LANG_KOREAN} "64bit ¹öÀüÀº À©µµ¿ìÁî 64bitÀÎ °æ¿ì¿¡¸¸ ¼³Ä¡ °¡´ÉÇÏ°í 32bit Unicode ¹öÀüÀº À©µµ¿ìÁî NT °è¿­, 32bit Multibyte´Â ¸ðµç À©µµ¿ì¿¡¼­ ¼³Ä¡ °¡´ÉÇÕ´Ï´Ù. À©µµ¿ìÁî NT, 2000, XP, 2003, Vista, 2008, 7, 8, 2012, 8.1 ÀÌ»ó¿¡¼­´Â 64bit ¶Ç´Â 32bit Unicode ¹öÀüÀ» ±ÇÀåÇÕ´Ï´Ù."
+LangString TEXT_OPTION_HEADER              ${LANG_KOREAN} "ë²„ì „ ì„ íƒ"
+LangString TEXT_OPTION_HEADER_DESC         ${LANG_KOREAN} "ì„¤ì¹˜í•˜ê³ ìž í•˜ëŠ” ë²„ì „ì„ ì„ íƒí•˜ì—¬ ì£¼ì‹­ì‹œì˜¤."
+LangString TEXT_OPTION_TEXT                ${LANG_KOREAN} "64bit ë²„ì „ì€ ìœˆë„ìš°ì¦ˆ 64bitì¸ ê²½ìš°ì—ë§Œ ì„¤ì¹˜ ê°€ëŠ¥í•˜ê³  32bit Unicode ë²„ì „ì€ ìœˆë„ìš°ì¦ˆ NT ê³„ì—´, 32bit MultibyteëŠ” ëª¨ë“  ìœˆë„ìš°ì—ì„œ ì„¤ì¹˜ ê°€ëŠ¥í•©ë‹ˆë‹¤. ìœˆë„ìš°ì¦ˆ NT, 2000, XP, 2003, Vista, 2008, 7, 8, 2012, 8.1 ì´ìƒì—ì„œëŠ” 64bit ë˜ëŠ” 32bit Unicode ë²„ì „ì„ ê¶Œìž¥í•©ë‹ˆë‹¤."
 
-LangString TEXT_DESKTOP_SHORTCUT           ${LANG_KOREAN} "¹ÙÅÁ È­¸é¿¡ ¹Ù·Î °¡±â ¸¸µé±â"
-LangString TEXT_QUICKLAUNCH_SHORTCUT       ${LANG_KOREAN} "ºü¸¥ ½ÇÇà¿¡ ¹Ù·Î °¡±â ¸¸µé±â"
-LangString TEXT_DESC_DESKTOP_SHORTCUT      ${LANG_KOREAN} "fxfileÀÇ ¹Ù·Î °¡±â¸¦ ¹ÙÅÁ È­¸é¿¡ »ý¼ºÇÕ´Ï´Ù."
-LangString TEXT_DESC_QUICKLAUNCH_SHORTCUT  ${LANG_KOREAN} "fxfileÀÇ ¹Ù·Î °¡±â¸¦ ºü¸¥ ½ÇÇà¿¡ »ý¼ºÇÕ´Ï´Ù."
+LangString TEXT_DESKTOP_SHORTCUT           ${LANG_KOREAN} "ë°”íƒ• í™”ë©´ì— ë°”ë¡œ ê°€ê¸° ë§Œë“¤ê¸°"
+LangString TEXT_QUICKLAUNCH_SHORTCUT       ${LANG_KOREAN} "ë¹ ë¥¸ ì‹¤í–‰ì— ë°”ë¡œ ê°€ê¸° ë§Œë“¤ê¸°"
+LangString TEXT_DESC_DESKTOP_SHORTCUT      ${LANG_KOREAN} "fxfileì˜ ë°”ë¡œ ê°€ê¸°ë¥¼ ë°”íƒ• í™”ë©´ì— ìƒì„±í•©ë‹ˆë‹¤."
+LangString TEXT_DESC_QUICKLAUNCH_SHORTCUT  ${LANG_KOREAN} "fxfileì˜ ë°”ë¡œ ê°€ê¸°ë¥¼ ë¹ ë¥¸ ì‹¤í–‰ì— ìƒì„±í•©ë‹ˆë‹¤."
 
-LangString TEXT_FINISHPAGE_TITLE           ${LANG_KOREAN} "${PRODUCT_NAME} ${PRODUCT_VER} ¼³Ä¡ ¿Ï·á"
-LangString TEXT_FINISHPAGE_TEXT            ${LANG_KOREAN} "${PRODUCT_NAME} ${PRODUCT_VER}ÀÇ ¼³Ä¡°¡ ¿Ï·áµÇ¾ú½À´Ï´Ù. ¼³Ä¡ ÇÁ·Î±×·¥À» ¸¶Ä¡·Á¸é '¸¶Ä§' ¹öÆ°À» ´­·¯ ÁÖ¼¼¿ä."
-LangString TEXT_FINISHPAGE_RUN_TEXT        ${LANG_KOREAN} "${PRODUCT_NAME} ½ÇÇàÇÏ±â(&R)"
-LangString TEXT_FINISHPAGE_SHOWREADME_TEXT ${LANG_KOREAN} "Readme ÆÄÀÏ º¸±â(&S)"
+LangString TEXT_FINISHPAGE_TITLE           ${LANG_KOREAN} "${PRODUCT_NAME} ${PRODUCT_VER} ì„¤ì¹˜ ì™„ë£Œ"
+LangString TEXT_FINISHPAGE_TEXT            ${LANG_KOREAN} "${PRODUCT_NAME} ${PRODUCT_VER}ì˜ ì„¤ì¹˜ê°€ ì™„ë£Œë˜ì—ˆìŠµë‹ˆë‹¤. ì„¤ì¹˜ í”„ë¡œê·¸ëž¨ì„ ë§ˆì¹˜ë ¤ë©´ 'ë§ˆì¹¨' ë²„íŠ¼ì„ ëˆŒëŸ¬ ì£¼ì„¸ìš”."
+LangString TEXT_FINISHPAGE_RUN_TEXT        ${LANG_KOREAN} "${PRODUCT_NAME} ì‹¤í–‰í•˜ê¸°(&R)"
+LangString TEXT_FINISHPAGE_SHOWREADME_TEXT ${LANG_KOREAN} "Readme íŒŒì¼ ë³´ê¸°(&S)"
 
-LangString TEXT_UN_OPTION_HEADER           ${LANG_KOREAN} "Ãß°¡ Á¦°Å ¿É¼Ç"
-LangString TEXT_UN_OPTION_HEADER_DESC      ${LANG_KOREAN} "Ãß°¡ÀûÀÎ Á¦°Å ¿É¼ÇÀ» ¼±ÅÃÇÏ½Ê½Ã¿À."
-LangString TEXT_UN_OPTION_CHECK_CONF       ${LANG_KOREAN} "È¯°æ ¼³Á¤ ÆÄÀÏ ¸ðµÎ Á¦°Å(&C)"
-LangString TEXT_UN_OPTION_CHECK_INSTDIR    ${LANG_KOREAN} "¼³Ä¡µÈ µð·ºÅä¸® ¸ðµÎ Á¦°Å(&D)"
-LangString TEXT_UN_OPTION_SUBTITLE         ${LANG_KOREAN} "Ãß°¡ÀûÀ¸·Î Á¦°ÅÇÒ ¿É¼ÇÀ» ¼±ÅÃÇÏ½Ê½Ã¿À."
+LangString TEXT_UN_OPTION_HEADER           ${LANG_KOREAN} "ì¶”ê°€ ì œê±° ì˜µì…˜"
+LangString TEXT_UN_OPTION_HEADER_DESC      ${LANG_KOREAN} "ì¶”ê°€ì ì¸ ì œê±° ì˜µì…˜ì„ ì„ íƒí•˜ì‹­ì‹œì˜¤."
+LangString TEXT_UN_OPTION_CHECK_CONF       ${LANG_KOREAN} "í™˜ê²½ ì„¤ì • íŒŒì¼ ëª¨ë‘ ì œê±°(&C)"
+LangString TEXT_UN_OPTION_CHECK_INSTDIR    ${LANG_KOREAN} "ì„¤ì¹˜ëœ ë””ë ‰í† ë¦¬ ëª¨ë‘ ì œê±°(&D)"
+LangString TEXT_UN_OPTION_SUBTITLE         ${LANG_KOREAN} "ì¶”ê°€ì ìœ¼ë¡œ ì œê±°í•  ì˜µì…˜ì„ ì„ íƒí•˜ì‹­ì‹œì˜¤."
 
 !macro GET_WINDOWS_VERSION_FUNCTION_MACRO un
 Function ${un}GetWindowsVersion
@@ -228,7 +228,7 @@ Section "" SecCopyUI
     #
     FindProcDLL::KillProc "fxfile.exe"
     FindProcDLL::KillProc "fxfile-launcher.exe"
-    FindProcDLL::KillProc "fxfile-updater.exe"
+    FindProcDLL::KillProc "fxfile-upchecker.exe"
 
     FindProcLoopfxfile:
         FindProcDLL::FindProc "fxfile.exe"
@@ -245,7 +245,7 @@ Section "" SecCopyUI
     FindProcLoopfxfilelauncherDone:
 
     FindProcLoopfxfileupdater:
-        FindProcDLL::FindProc "fxfile-updater.exe"
+        FindProcDLL::FindProc "fxfile-upchecker.exe"
 
         IntCmp $R0 0 FindProcLoopfxfileupdaterDone
         Goto FindProcLoopfxfileupdater
@@ -343,7 +343,7 @@ Section "Uninstall"
     #
     FindProcDLL::KillProc "fxfile.exe"
     FindProcDLL::KillProc "fxfile-launcher.exe"
-    FindProcDLL::KillProc "fxfile-updater.exe"
+    FindProcDLL::KillProc "fxfile-upchecker.exe"
 
     unFindProcLoopfxfile:
         FindProcDLL::FindProc "fxfile.exe"
@@ -360,7 +360,7 @@ Section "Uninstall"
     unFindProcLoopLauncherDone:
 
     unFindProcLoopUpdater:
-        FindProcDLL::FindProc "fxfile-updater.exe"
+        FindProcDLL::FindProc "fxfile-upchecker.exe"
 
         IntCmp $R0 0 unFindProcLoopUpdaterDone
         goto unFindProcLoopUpdater
@@ -384,6 +384,7 @@ Section "Uninstall"
     Delete "$INSTDIR\libwinpthread-1.dll"
     Delete "$INSTDIR\libxml2-2.dll"
     Delete "$INSTDIR\libxpr.dll"
+    Delete "$INSTDIR\libxprw.dll"
     Delete "$INSTDIR\zlib1.dll"
     Delete "$INSTDIR\Uninstall.exe"
     Delete "$INSTDIR\custom_image_list_16.bmp"
@@ -393,7 +394,7 @@ Section "Uninstall"
     Delete "$INSTDIR\history.txt"
     Delete "$INSTDIR\license.txt"
     RMDir /r "$INSTDIR\Languages"
-    RMDir /r "$INSTDIR\updater"
+    RMDir /r "$INSTDIR\upchecker"
     RMDir /r "$APPDATA\fxfile-launcher"
 
     # Read a value from an InstallOptions INI file
@@ -457,12 +458,12 @@ Section "Uninstall"
     SetRegView 32
     DeleteRegKey HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\fxfile"
     DeleteRegKey HKCU "Software\fxfile"
-    DeleteRegKey HKCR "Folder\shell\fxfile·Î ¿­±â"
+    DeleteRegKey HKCR "Folder\shell\fxfileë¡œ ì—´ê¸°"
     
     SetRegView 64
     DeleteRegKey HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\fxfile"
     DeleteRegKey HKCU "Software\fxfile"
-    DeleteRegKey HKCR "Folder\shell\fxfile·Î ¿­±â"
+    DeleteRegKey HKCR "Folder\shell\fxfileë¡œ ì—´ê¸°"
 
     # Display the Finish header
     #!insertmacro MUI_UNFINISHHEADER
