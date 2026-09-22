@@ -227,6 +227,7 @@ void BookmarkToolBar::setBookmark(void)
             addBookmarkButton(i, sBookmarkMgr.getBookmark(i));
     }
 
+    ApplyModernMetrics();
     UpdateToolbarSize();
 }
 
