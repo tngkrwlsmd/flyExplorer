@@ -2168,6 +2168,93 @@ def validate_local_ci_warning_policy_wiring() -> list[str]:
     return errors
 
 
+def validate_active_ci_scope_documentation() -> list[str]:
+    """Keep active CI guidance aligned with the user-selected Release x64 scope."""
+
+    errors: list[str] = []
+    paths = {
+        "agents": ROOT / "AGENTS.md",
+        "project": ROOT / ".agent-policy" / "PROJECT.md",
+        "readme": ROOT / "README",
+        "manual": ROOT / "LOCAL_CI_MANUAL.txt",
+        "local_ci": ROOT / "local_ci.bat",
+        "workflow": ROOT / ".github" / "workflows" / "windows-build.yml",
+    }
+
+    contents: dict[str, str] = {}
+    for name, path in paths.items():
+        try:
+            contents[name] = path.read_text(encoding="utf-8", errors="replace")
+        except OSError as exc:
+            errors.append(f"{path.relative_to(ROOT)}: cannot read active CI scope contract: {exc}")
+
+    if errors:
+        return errors
+
+    required = {
+        "agents": (
+            "현재 개발/CI의 단일 build command는 `local_ci.bat x64`",
+            "`Release-x64-Unicode | x64`만 Rebuild",
+            "`run_x86_compat`는 현재 정책상 켜지 않는다",
+        ),
+        "project": (
+            "현재 활성 CI build 범위는 `Release-x64-Unicode | x64` 하나뿐이다",
+            "기본 검증은 `local_ci.bat x64`만 실행한다",
+            "`local_ci.bat full` 및 Actions `run_x86_compat`는 현재 비활성 범위",
+        ),
+        "readme": (
+            "Release-x64-Unicode | x64\nonly",
+            "Do not run them for normal development unless the user",
+            "Debug-x64, x86 Unicode/Multibyte, `release`, `full`",
+        ),
+        "manual": (
+            "Release-x64-Unicode | x64 한정입니다.",
+            ".\\local_ci.bat x64",
+            "사용자가 검증 범위를 다시 넓히라고 명시하기 전에는 실행하지 않습니다.",
+        ),
+        "local_ci": (
+            "Active project CI scope (2026-09-23): Release-x64-Unicode | x64 only.",
+            'if /I "%PROFILE%"=="x64" goto :profile_x64',
+            'call :run_x64_release',
+            'call :build_configuration "Release-x64-Unicode" "x64" "Release x64"',
+        ),
+        "workflow": (
+            "Active project CI scope (2026-09-23) is Release-x64-Unicode | x64 only.",
+            "INACTIVE by current policy; enable only after explicit user scope expansion",
+            "jobs:\n  release-x64:",
+        ),
+    }
+
+    for name, tokens in required.items():
+        source = contents[name]
+        for token in tokens:
+            if token not in source:
+                errors.append(
+                    f"{paths[name].relative_to(ROOT)}: missing active CI scope token {token}"
+                )
+
+    local_ci = contents["local_ci"]
+    profile_start = local_ci.find(":profile_x64")
+    profile_end = local_ci.find("\n:profile_x86", profile_start)
+    profile_x64 = (
+        local_ci[profile_start:profile_end]
+        if profile_start >= 0 and profile_end > profile_start
+        else ""
+    )
+    if not profile_x64:
+        errors.append("local_ci.bat: x64 profile block cannot be located")
+    else:
+        if "call :run_x64_release" not in profile_x64:
+            errors.append("local_ci.bat: active x64 profile no longer calls Release x64")
+        for forbidden in ("run_x64_debug", "run_x86_release", "run_package_validation"):
+            if forbidden in profile_x64:
+                errors.append(
+                    f"local_ci.bat: active x64 profile unexpectedly expands CI scope via {forbidden}"
+                )
+
+    return errors
+
+
 def validate_installer_smoke_wiring() -> list[str]:
     """Protect the non-destructive installer/shell smoke contract."""
 
@@ -2276,6 +2363,7 @@ def main() -> int:
     errors.extend(validate_ui_resource_contracts())
     errors.extend(validate_functional_test_wiring())
     errors.extend(validate_local_ci_warning_policy_wiring())
+    errors.extend(validate_active_ci_scope_documentation())
     errors.extend(validate_installer_smoke_wiring())
     errors.extend(validate_modern_ui_registration())
 
