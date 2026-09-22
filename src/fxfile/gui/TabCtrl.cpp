@@ -822,6 +822,10 @@ void TabCtrl::OnPaint(void)
     const xpr_sint_t sIconOffset = fxfile::ui::ModernUI::scale(kIconOffset, sDpi);
     const xpr_sint_t sAccentHeight =
         fxfile::ui::ModernUI::getActivePaneIndicatorThickness(m_hWnd);
+    const xpr_sint_t sTabInset =
+        max(1, fxfile::ui::ModernUI::scale(2, sDpi));
+    const xpr_sint_t sCornerRadius =
+        fxfile::ui::ModernUI::getControlCornerRadius(m_hWnd);
 
     CDC sMemDC;
     sMemDC.CreateCompatibleDC(&sPaintDC);
@@ -831,7 +835,11 @@ void TabCtrl::OnPaint(void)
     sBitmap.CreateCompatibleBitmap(&sPaintDC, sClientRect.Width(), sClientRect.Height());
     CBitmap *sOldBitmap = sMemDC.SelectObject(&sBitmap);
 
-    sMemDC.FillSolidRect(&sClientRect, sPalette.mSurface);
+    sMemDC.FillSolidRect(
+        &sClientRect,
+        XPR_IS_TRUE(sPalette.mHighContrast) ?
+        sPalette.mSurface :
+        sPalette.mChrome);
 
     xpr_sint_t sIconWidth = 0;
     xpr_sint_t sIconHeight = 0;
@@ -853,38 +861,82 @@ void TabCtrl::OnPaint(void)
         const xpr_bool_t sSelected = (i == mCurTab) ? XPR_TRUE : XPR_FALSE;
         const xpr_bool_t sHovered = (i == mTabHover) ? XPR_TRUE : XPR_FALSE;
 
-        COLORREF sBackColor = sPalette.mSurface;
+        COLORREF sBackColor =
+            XPR_IS_TRUE(sPalette.mHighContrast) ?
+            sPalette.mSurface :
+            sPalette.mChrome;
         COLORREF sTextColor = sPalette.mText;
 
         if (XPR_IS_TRUE(sPalette.mHighContrast) && XPR_IS_TRUE(sSelected))
         {
             sBackColor = sPalette.mSelection;
             sTextColor = sPalette.mSelectionText;
+            sMemDC.FillSolidRect(&sTabButtonRect, sBackColor);
         }
-        else if (XPR_IS_TRUE(sSelected))
+        else
         {
-            sBackColor =
-                XPR_IS_TRUE(mPaneActive) ?
-                sPalette.mWindow :
-                sPalette.mHover;
-        }
-        else if (XPR_IS_TRUE(sHovered))
-        {
-            sBackColor = sPalette.mHover;
-        }
+            if (XPR_IS_TRUE(sSelected))
+            {
+                sBackColor =
+                    XPR_IS_TRUE(mPaneActive) ?
+                    sPalette.mElevated :
+                    sPalette.mInactiveSelection;
+            }
+            else if (XPR_IS_TRUE(sHovered))
+            {
+                sBackColor = sPalette.mHover;
+            }
 
-        sMemDC.FillSolidRect(&sTabButtonRect, sBackColor);
+            if (XPR_IS_TRUE(sSelected) || XPR_IS_TRUE(sHovered))
+            {
+                CRect sRoundedRect(sTabButtonRect);
+                sRoundedRect.DeflateRect(
+                    sTabInset,
+                    sTabInset,
+                    sTabInset,
+                    max(0, sTabInset - 1));
+
+                CBrush sTabBrush(sBackColor);
+                CBrush *sOldBrush = sMemDC.SelectObject(&sTabBrush);
+                CPen *sOldPen =
+                    (CPen *)sMemDC.SelectStockObject(NULL_PEN);
+                sMemDC.RoundRect(
+                    &sRoundedRect,
+                    CPoint(sCornerRadius * 2, sCornerRadius * 2));
+                sMemDC.SelectObject(sOldPen);
+                sMemDC.SelectObject(sOldBrush);
+            }
+        }
 
         if (XPR_IS_TRUE(sSelected))
         {
             CRect sAccentRect(sTabButtonRect);
-            sAccentRect.top = max(sAccentRect.top, sAccentRect.bottom - sAccentHeight);
+            sAccentRect.left += sHorizontalPadding;
+            sAccentRect.right -= sHorizontalPadding;
+            sAccentRect.top =
+                max(sAccentRect.top, sAccentRect.bottom - sAccentHeight);
             const COLORREF sAccentColor =
                 XPR_IS_TRUE(sPalette.mHighContrast) ||
                 XPR_IS_TRUE(mPaneActive) ?
                 sPalette.mSelection :
                 sPalette.mSeparator;
-            sMemDC.FillSolidRect(&sAccentRect, sAccentColor);
+
+            if (XPR_IS_TRUE(sPalette.mHighContrast))
+            {
+                sMemDC.FillSolidRect(&sAccentRect, sAccentColor);
+            }
+            else
+            {
+                CBrush sAccentBrush(sAccentColor);
+                CBrush *sOldBrush = sMemDC.SelectObject(&sAccentBrush);
+                CPen *sOldPen =
+                    (CPen *)sMemDC.SelectStockObject(NULL_PEN);
+                sMemDC.RoundRect(
+                    &sAccentRect,
+                    CPoint(sAccentHeight, sAccentHeight));
+                sMemDC.SelectObject(sOldPen);
+                sMemDC.SelectObject(sOldBrush);
+            }
         }
 
         CRect sTabTextRect(sTabButtonRect);
