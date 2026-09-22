@@ -383,7 +383,8 @@ def _check(generated: Dict[str, str]) -> int:
 def _write(generated: Dict[str, str]) -> int:
     for name, content in generated.items():
         path = FLUENT_DIR / name
-        path.write_text(content, encoding="utf-8", newline="\n")
+        with path.open("w", encoding="utf-8", newline="\n") as stream:
+            stream.write(content)
         print(f"wrote {path.relative_to(ROOT)}")
     return 0
 
