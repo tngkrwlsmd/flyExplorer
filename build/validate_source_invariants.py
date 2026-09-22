@@ -651,6 +651,7 @@ def validate_soft_surface_contract() -> list[str]:
             "BM_GETCHECK",
             "CBS_DROPDOWNLIST",
             "CB_GETDROPPEDSTATE",
+            "resetControlTheme(sComboInfo.hwndList)",
             "getCardCornerRadius",
             "applyRoundedWindowRegion",
             "sPalette.mCard",
@@ -1047,18 +1048,33 @@ def validate_popup_menu_contract() -> list[str]:
 
 
 def validate_fluent_asset_contract() -> list[str]:
-    """Protect Microsoft Fluent source provenance without bundling Windows fonts."""
+    """Protect Microsoft Fluent source provenance and command/frame mapping."""
 
     errors: list[str] = []
     fluent_dir = FXFILE_SRC / "res" / "fluent"
     license_path = fluent_dir / "LICENSE"
     readme_path = fluent_dir / "README.md"
-    settings_svg_path = fluent_dir / "ic_fluent_settings_16_regular.svg"
+    mapping_path = fluent_dir / "COMMAND_ICON_MAP.md"
+    gyp_path = FXFILE_SRC / "fxfile.gyp"
+
+    representative_assets = (
+        "ic_fluent_settings_16_regular.svg",
+        "ic_fluent_arrow_left_20_regular.svg",
+        "ic_fluent_arrow_right_20_regular.svg",
+        "ic_fluent_arrow_up_20_regular.svg",
+        "ic_fluent_search_20_regular.svg",
+        "ic_fluent_cut_20_regular.svg",
+        "ic_fluent_copy_20_regular.svg",
+        "ic_fluent_clipboard_paste_20_regular.svg",
+        "ic_fluent_folder_add_20_regular.svg",
+        "ic_fluent_settings_20_regular.svg",
+    )
 
     try:
         license_text = license_path.read_text(encoding="utf-8", errors="replace")
         readme = readme_path.read_text(encoding="utf-8", errors="replace")
-        settings_svg = settings_svg_path.read_text(encoding="utf-8", errors="replace")
+        mapping = mapping_path.read_text(encoding="utf-8", errors="replace")
+        gyp = gyp_path.read_text(encoding="utf-8", errors="replace")
     except OSError as exc:
         return [f"Fluent asset foundation cannot be read: {exc}"]
 
@@ -1067,24 +1083,75 @@ def validate_fluent_asset_contract() -> list[str]:
         "Copyright (c) 2020 Microsoft Corporation",
     ):
         if token not in license_text:
-            errors.append(f"src/fxfile/res/fluent/LICENSE: missing upstream license token {token}")
+            errors.append(
+                f"src/fxfile/res/fluent/LICENSE: missing upstream license token {token}"
+            )
 
     for token in (
         "https://github.com/microsoft/fluentui-system-icons",
-        "assets/Settings/SVG/ic_fluent_settings_16_regular.svg",
+        "COMMAND_ICON_MAP.md",
         "Do not replace Windows Shell file/folder icons",
+        "Do not make normal builds download assets from the network",
     ):
         if token not in readme:
-            errors.append(f"src/fxfile/res/fluent/README.md: missing provenance token {token}")
+            errors.append(
+                f"src/fxfile/res/fluent/README.md: missing provenance token {token}"
+            )
+
+    for asset_name in representative_assets:
+        asset_path = fluent_dir / asset_name
+        try:
+            svg = asset_path.read_text(encoding="utf-8", errors="replace")
+        except OSError as exc:
+            errors.append(
+                f"{asset_path.relative_to(ROOT)}: cannot read Fluent SVG: {exc}"
+            )
+            continue
+
+        for token in ("<svg ", "<path ", 'fill="#212121"'):
+            if token not in svg:
+                errors.append(
+                    f"{asset_path.relative_to(ROOT)}: "
+                    f"missing canonical Fluent SVG token {token}"
+                )
+
+        gyp_token = f"./res/fluent/{asset_name}"
+        if gyp_token not in gyp:
+            errors.append(
+                f"src/fxfile/fxfile.gyp: missing Fluent source registration {gyp_token}"
+            )
+
+    mapping_contract = (
+        ("0", "ID_GO_BACK", "Arrow Left 20 Regular"),
+        ("1", "ID_GO_FORWARD", "Arrow Right 20 Regular"),
+        ("2", "ID_GO_UP", "Arrow Up 20 Regular"),
+        ("8", "ID_TOOL_FILE_SEARCH", "Search 20 Regular"),
+        ("12", "ID_EDIT_CUT", "Cut 20 Regular"),
+        ("13", "ID_EDIT_COPY", "Copy 20 Regular"),
+        ("14", "ID_EDIT_PASTE", "Clipboard Paste 20 Regular"),
+        ("37", "ID_FILE_NEW_FOLDER", "Folder Add 20 Regular"),
+        ("38", "ID_TOOL_OPTION", "Settings 20 Regular"),
+    )
+    for frame, command, fluent_name in mapping_contract:
+        if (
+            f"| {frame} |" not in mapping
+            or command not in mapping
+            or fluent_name not in mapping
+        ):
+            errors.append(
+                "src/fxfile/res/fluent/COMMAND_ICON_MAP.md: "
+                f"missing mapping {frame}/{command}/{fluent_name}"
+            )
 
     for token in (
-        '<svg width="16" height="16" viewBox="0 0 16 16"',
-        'fill="#212121"',
+        "Preserve the existing command IDs and image indexes",
+        "Do not replace Shell-owned file/folder icons",
+        "No network download is allowed during normal builds",
     ):
-        if token not in settings_svg:
+        if token not in mapping:
             errors.append(
-                f"src/fxfile/res/fluent/ic_fluent_settings_16_regular.svg: "
-                f"missing upstream SVG token {token}"
+                f"src/fxfile/res/fluent/COMMAND_ICON_MAP.md: "
+                f"missing migration rule {token}"
             )
 
     if fluent_dir.exists():
@@ -1096,7 +1163,6 @@ def validate_fluent_asset_contract() -> list[str]:
                 )
 
     return errors
-
 
 def validate_ui_resource_contracts() -> list[str]:
     """Protect icon/bitmap frame geometry and canonical resource wiring."""
