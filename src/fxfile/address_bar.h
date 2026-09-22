@@ -47,9 +47,19 @@ protected:
     void applyModernAppearance(void);
     void installComboSubclass(void);
     void removeComboSubclass(void);
+    void installEditSubclass(void);
+    void removeEditSubclass(void);
     void applyChildThemes(void);
+    void redrawModernFrame(void);
     LRESULT handleComboCtlColor(xpr_uint_t aMessage, HDC aDC, HWND aControlHwnd);
     static LRESULT CALLBACK ComboSubclassProc(
+        HWND aHwnd,
+        UINT aMessage,
+        WPARAM aWParam,
+        LPARAM aLParam,
+        UINT_PTR aSubclassId,
+        DWORD_PTR aRefData);
+    static LRESULT CALLBACK EditSubclassProc(
         HWND aHwnd,
         UINT aMessage,
         WPARAM aWParam,
@@ -99,8 +109,9 @@ protected:
 
     CFont        *mDisplayFont;
 
-    CBrush         mDarkBackgroundBrush;
+    CBrush         mBackgroundBrush;
     HWND           mComboBoxHwnd;
+    HWND           mEditHwnd;
 
     xpr_uint_t    mShcnDesktopId;
     xpr_uint_t    mShcnComputerId;
@@ -114,6 +125,7 @@ protected:
     DECLARE_MESSAGE_MAP()
     afx_msg void OnDeleteItem(NMHDR *aNmHdr, LRESULT *aResult);
     afx_msg xpr_sint_t OnCreate(LPCREATESTRUCT aCreateStruct);
+    afx_msg void OnNcPaint(void);
     afx_msg void OnSettingChange(xpr_uint_t aFlags, const xpr_tchar_t *aSection);
     afx_msg void OnSysColorChange(void);
     afx_msg LRESULT OnThemeChanged(WPARAM aWParam, LPARAM aLParam);
