@@ -77,8 +77,8 @@
     }
   ],
   "review": {
-    "reviewed_revision": "8b8aea4c0db16b75fc80d4a3516b4cc9c788f914",
-    "reviewed_at": "2026-09-21",
+    "reviewed_revision": "1a8f7c1443f0f824766689d567618499bd2f10ef",
+    "reviewed_at": "2026-09-22",
     "reviewed_paths": [
       "README",
       "LOCAL_CI_MANUAL.txt",
@@ -207,7 +207,13 @@
 - Folder Tree image-list background는 attach 시점과 theme/settings refresh 시 실제 TreeView background와 동기화하며, focus gain/loss 시 selected row를 다시 그려 focused/unfocused dark selection 상태가 즉시 갱신되도록 했다. theme/settings/system-color/DPI 변경은 existing applyModernAppearance 경로에서 theme association -> palette/color/metrics -> image-list -> redraw 순서로 갱신된다.
 - 1-D2 변경 범위 정적 대조는 PASS: 변경 파일은 src/fxfile/gui/TreeCtrlEx.h/.cpp와 src/fxfile/folder_ctrl.cpp뿐이며 ModernUI direct include/helper contract, direct SetWindowTheme 금지, native glyph preservation, image-list sync, theme/settings/DPI refresh tokens를 확인했다. 이 실행 환경은 Windows/MSVC와 repository clone network가 없어 local_ci.bat quick 및 local_ci.bat x64는 실행하지 못했으므로 NOT TESTED다.
 - 1-D2 실제 Windows visual/interactive 검증은 NOT TESTED: Light/Dark/High Contrast, 100/125/150/200% DPI, focused/unfocused selection, hover, native expand/collapse glyph, tree line, icon halo, rename/navigation/drag-drop/context-menu 동작을 실제 화면에서 확인해야 한다.
-- 다음 UI 현대화 단위는 1-D3 AddressBar/Edit/Combo dark-specific styling이다. auxiliary common controls, menu/rebar dark rendering, 나머지 dialog/icon asset 현대화는 후속 phase 범위다.
+- 1-D3 AddressBar/Edit/Combo dark-specific styling을 완료했다. AddressBar는 기존 CComboBoxEx + child ComboBox/Edit + native drop-down ListBox 구조와 기존 CBS_OWNERDRAWFIXED 계약을 유지하며, 새로운 owner-draw/custom Edit로 교체하지 않았다.
+- AddressBar는 child ComboBox를 SetWindowSubclass로 관찰하고 dark/non-HC에서 WM_CTLCOLOREDIT / WM_CTLCOLORLISTBOX / WM_CTLCOLORSTATIC의 text/background를 ThemePalette mText/mSecondaryText/mWindow와 재사용 CBrush로 공급한다. text selection, caret, focus cue, drop-down button/arrow는 Windows native rendering에 맡긴다.
+- AddressBar/ComboBox/Edit/ListBox에는 ModernUI::applyExplorerControlTheme를 재적용하며 drop-down ListBox는 CBN_DROPDOWN 시 COMBOBOXINFO로 다시 조회해 lazily created HWND에도 theme association을 갱신한다. Light/High Contrast는 custom brush/color 경로를 사용하지 않고 native/system rendering으로 fallback한다.
+- AddressBar는 기존 system UI font, child font synchronization, font/icon 기반 item-height 계산, SHAutoComplete, Enter/Tab/Escape navigation 경로를 유지한다. WM_SETTINGCHANGE / WM_SYSCOLORCHANGE / WM_THEMECHANGED / WM_DPICHANGED에서 theme/color/font/metric/redraw를 갱신한다.
+- 1-D3 정적 범위 검토는 PASS: 구현 변경은 src/fxfile/address_bar.h/.cpp에 한정되고 ModernUI direct include, existing owner-draw preservation, native arrow/focus handling, High Contrast fallback, child HWND refresh, autocomplete/font/DPI contract 보존을 확인했다. build/validate_source_invariants.py 및 ModernUI palette 구조는 변경하지 않았다.
+- 이 실행 환경에서는 Windows/MSVC local_ci.bat quick 및 local_ci.bat x64를 실행하지 못했으므로 둘 다 NOT TESTED다. 실제 Windows Light/Dark/High Contrast, 100/125/150/200% DPI, focused/unfocused, edit selection/caret, drop-down selected item/arrow, Korean IME, autocomplete, Enter/path navigation은 NOT TESTED다.
+- 다음 UI 현대화 범위는 auxiliary common controls를 먼저 정리한 뒤 menu/rebar dark rendering으로 진행한다. 나머지 dialog/icon asset 현대화는 후속 phase 범위다.
 
 ## Recommended verification
 
