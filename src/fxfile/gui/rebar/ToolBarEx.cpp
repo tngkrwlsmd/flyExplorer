@@ -994,7 +994,7 @@ bool CToolBarPopup::ShowPopup( UINT nFlags, CPoint pt, CRect& rcExclude )
     {
         fxfile::ui::ModernUI::applyRoundedWindowRegion(
             m_hWnd,
-            8);
+            fxfile::ui::ModernUI::getPopupCornerRadius(m_hWnd));
     }
 
     SetCapture();
