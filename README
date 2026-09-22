@@ -77,7 +77,7 @@ The Actions workflows are intentionally slim:
   `Release-x64-Unicode | x64` job. It regenerates the solution, checks the
   v145/MFC contract, compiles and links the product, rejects compiler/linker/
   MSBuild warnings, verifies the core artifacts, runs the isolated native
-  native product functional regression (filesystem operations, rename,
+  product functional regression (filesystem operations, rename,
   pattern/path, config persistence, updater contracts, hash and shell-command
   checks), and then runs the x64 launch smoke.
 - Set `run_x86_compat=true` only when x86 compatibility needs explicit remote
