@@ -276,8 +276,8 @@ def validate_ui_resource_contracts() -> list[str]:
         "config_tree.bmp": (528, 16, 16, 33),
         "tb_main_cold_small.bmp": (816, 16, 16, 51),
         "tb_main_hot_small.bmp": (816, 16, 16, 51),
-        "tb_main_cold_large.bmp": (1122, 22, 16, 51),
-        "tb_main_hot_large.bmp": (1122, 22, 16, 51),
+        "tb_main_cold_large.bmp": (1122, 22, 22, 51),
+        "tb_main_hot_large.bmp": (1122, 22, 22, 51),
         "tb_drive.bmp": (16, 16, 16, 1),
         "tb_rename.bmp": (176, 16, 16, 11),
         "sync_images.bmp": (80, 16, 16, 5),
@@ -288,8 +288,11 @@ def validate_ui_resource_contracts() -> list[str]:
         if geometry is None:
             continue
 
-        width, height, _bpp = geometry
+        width, height, bpp = geometry
         rel = (resource_dir / name).relative_to(ROOT).as_posix()
+        if bpp != 16:
+            errors.append(f"{rel}: expected legacy mask-strip 16bpp contract, got {bpp}bpp")
+
         if (width, height) != (expected_width, expected_height):
             errors.append(
                 f"{rel}: geometry {width}x{height} changed; "
