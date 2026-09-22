@@ -54,6 +54,7 @@ Private Explorer APIs, undocumented dark-theme strings, and resource extraction 
 - Windows App SDK / WinUI XAML Islands: too much runtime/build surface for the current MFC modernization checkpoint.
 - Mica/Acrylic as a blanket fix: opaque MFC content means it does not solve button/menu/text theming by itself.
 - Explorer private implementation/resource reuse: unsupported and intentionally outside project policy.
+- A new SVG rasterizer dependency: the canonical Fluent SVG set and command/frame mapping are established first. Runtime bitmap replacement waits until a converter can be pinned with verified license, deterministic 16/22-pixel output, offline Windows developer availability, and no normal-build network dependency.
 
 ## Fluent asset prototype
 
