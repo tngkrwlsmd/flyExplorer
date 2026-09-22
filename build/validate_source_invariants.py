@@ -104,6 +104,67 @@ def validate_window_frame_theme_integration() -> list[str]:
     return errors
 
 
+def validate_theme_mode_contract() -> list[str]:
+    errors: list[str] = []
+    paths = {
+        "modern_h": FXFILE_SRC / "gui" / "ModernUI.h",
+        "modern_cpp": FXFILE_SRC / "gui" / "ModernUI.cpp",
+        "option_h": FXFILE_SRC / "option.h",
+        "option_cpp": FXFILE_SRC / "option.cpp",
+        "cfg_cpp": FXFILE_SRC / "cfg" / "cfg_appearance_dlg.cpp",
+        "main_frame": FXFILE_SRC / "main_frame.cpp",
+        "resource_h": FXFILE_SRC / "resource.h",
+        "rc": FXFILE_SRC / "fxfile.rc",
+    }
+
+    contents: dict[str, str] = {}
+    for name, path in paths.items():
+        try:
+            contents[name] = path.read_text(encoding="utf-8", errors="replace")
+        except OSError as exc:
+            errors.append(f"{path.relative_to(ROOT)}: cannot read theme-mode contract: {exc}")
+
+    if errors:
+        return errors
+
+    for token in ("ThemeModeSystem", "ThemeModeLight", "ThemeModeDark", "setThemeMode", "getThemeMode"):
+        if token not in contents["modern_h"]:
+            errors.append(f"src/fxfile/gui/ModernUI.h: missing theme-mode token {token}")
+
+    for token in ("ThemeModeLight", "ThemeModeDark", "gThemeMode"):
+        if token not in contents["modern_cpp"]:
+            errors.append(f"src/fxfile/gui/ModernUI.cpp: missing explicit theme-mode implementation token {token}")
+
+    if "mThemeMode" not in contents["option_h"]:
+        errors.append("src/fxfile/option.h: missing persisted theme-mode field")
+    if 'XPR_STRING_LITERAL("config.theme_mode")' not in contents["option_cpp"]:
+        errors.append("src/fxfile/option.cpp: missing config.theme_mode persistence key")
+
+    for token in (
+        "IDC_CFG_APPEARANCE_THEME_MODE",
+        "popup.cfg.body.appearance.theme_mode.system",
+        "popup.cfg.body.appearance.theme_mode.light",
+        "popup.cfg.body.appearance.theme_mode.dark",
+    ):
+        if token not in contents["cfg_cpp"]:
+            errors.append(f"src/fxfile/cfg/cfg_appearance_dlg.cpp: missing theme selector token {token}")
+
+    for token in (
+        "ON_COMMAND_RANGE(ID_VIEW_THEME_SYSTEM, ID_VIEW_THEME_DARK, OnViewThemeMode)",
+        "ON_UPDATE_COMMAND_UI_RANGE(ID_VIEW_THEME_SYSTEM, ID_VIEW_THEME_DARK, OnUpdateViewThemeMode)",
+        "ui::ModernUI::setThemeMode(aOption.mConfig.mThemeMode);",
+        "OptionManager::instance().saveConfigOption();",
+    ):
+        if token not in contents["main_frame"]:
+            errors.append(f"src/fxfile/main_frame.cpp: missing runtime theme-mode token {token}")
+
+    for token in ("ID_VIEW_THEME_SYSTEM", "ID_VIEW_THEME_LIGHT", "ID_VIEW_THEME_DARK"):
+        if token not in contents["resource_h"] or token not in contents["rc"]:
+            errors.append(f"theme command/resource wiring is missing token {token}")
+
+    return errors
+
+
 def validate_common_control_theme_integration() -> list[str]:
     errors: list[str] = []
     modern_ui_header_path = FXFILE_SRC / "gui" / "ModernUI.h"
@@ -902,6 +963,7 @@ def validate_modern_ui_registration() -> list[str]:
 def main() -> int:
     errors = validate_translation_units()
     errors.extend(validate_window_frame_theme_integration())
+    errors.extend(validate_theme_mode_contract())
     errors.extend(validate_common_control_theme_integration())
     errors.extend(validate_modern_dialog_migration())
     errors.extend(validate_custom_dialog_paint_regressions())
