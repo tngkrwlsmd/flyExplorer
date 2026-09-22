@@ -999,7 +999,7 @@ void BCMenu::DrawItemWindows8Style(LPDRAWITEMSTRUCT aDrawItemStruct)
         return;
     }
 
-    sDC->FillSolidRect(sItemRect, sPalette.mSurface);
+    sDC->FillSolidRect(sItemRect, sPalette.mElevated);
 
     if (sFlags & MF_SEPARATOR)
     {
@@ -1057,27 +1057,39 @@ void BCMenu::drawSelection(CDC *aDC, const CRect &aItemRect, UINT aItemState)
     const fxfile::ui::ThemePalette sPalette = fxfile::ui::ModernUI::getPalette();
 
     CRect sSelectionRect(aItemRect);
-    sSelectionRect.DeflateRect(2, 1, 2, 1);
+    const xpr_sint_t sHorizontalInset =
+        fxfile::ui::ModernUI::scaleForWindow(4, sMetricHwnd);
+    const xpr_sint_t sVerticalInset =
+        max(1, fxfile::ui::ModernUI::scaleForWindow(2, sMetricHwnd));
+    sSelectionRect.DeflateRect(
+        sHorizontalInset,
+        sVerticalInset,
+        sHorizontalInset,
+        sVerticalInset);
 
-    // Windows 11 popup menus use a subtle hover surface rather than the
-    // classic full-strength highlight rectangle. Disabled rows keep the same
-    // geometry so keyboard/mouse tracking does not jump visually.
-    aDC->FillSolidRect(
-        &sSelectionRect,
+    // Windows 11 menus read as soft floating surfaces: leave an outer gutter
+    // and round only the tracked row rather than painting a hard full-width
+    // selection rectangle.
+    const COLORREF sFillColor =
         (aItemState & ODS_GRAYED) ?
-        sPalette.mSurface :
-        sPalette.mHover);
+        sPalette.mElevated :
+        sPalette.mHover;
+    const COLORREF sBorderColor =
+        (aItemState & ODS_FOCUS) ?
+        sPalette.mFocus :
+        sFillColor;
+    const xpr_sint_t sRadius =
+        fxfile::ui::ModernUI::getControlCornerRadius(sMetricHwnd);
 
-    if ((aItemState & ODS_FOCUS) != 0)
-    {
-        CPen sFocusPen(PS_SOLID, 1, sPalette.mBorder);
-        CPen *sOldPen = aDC->SelectObject(&sFocusPen);
-        CBrush *sOldBrush =
-            (CBrush *)aDC->SelectStockObject(NULL_BRUSH);
-        aDC->Rectangle(&sSelectionRect);
-        aDC->SelectObject(sOldBrush);
-        aDC->SelectObject(sOldPen);
-    }
+    CBrush sFillBrush(sFillColor);
+    CPen sBorderPen(PS_SOLID, 1, sBorderColor);
+    CBrush *sOldBrush = aDC->SelectObject(&sFillBrush);
+    CPen *sOldPen = aDC->SelectObject(&sBorderPen);
+    aDC->RoundRect(
+        &sSelectionRect,
+        CPoint(sRadius * 2, sRadius * 2));
+    aDC->SelectObject(sOldPen);
+    aDC->SelectObject(sOldBrush);
 }
 
 void BCMenu::drawIcon(CDC *aDC, const CRect &aItemRect, CImageList *aImageList)
