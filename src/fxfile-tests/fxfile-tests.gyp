@@ -154,12 +154,14 @@
             'dependencies':
             [
                 '../xpr/xpr.gyp:xpr',
+                '../fxfile-crash/fxfile-crash.gyp:fxfile-crash',
             ],
 
             'include_dirs':
             [
                 '../xpr/include',
                 '../fxfile',
+                '../fxfile-crash',
                 '../base',
             ],
 
