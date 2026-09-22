@@ -11,6 +11,8 @@
 #define __FXFILE_FILE_SCRAP_DROP_DLG_H__ 1
 #pragma once
 
+#include "gui/ModernDialog.h"
+
 #include "gui/BCMenu.h"
 #include "gui/DropTarget.h"
 
@@ -18,9 +20,9 @@ namespace fxfile
 {
 class DlgState;
 
-class FileScrapDropDlg : public CDialog, public DropTargetObserver
+class FileScrapDropDlg : public CModernDialog, public DropTargetObserver
 {
-    typedef CDialog super;
+    typedef CModernDialog super;
 
 public:
     FileScrapDropDlg(void);

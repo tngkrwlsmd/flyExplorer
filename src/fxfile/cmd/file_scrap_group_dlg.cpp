@@ -22,7 +22,7 @@ namespace fxfile
 namespace cmd
 {
 FileScrapGroupDlg::FileScrapGroupDlg(void)
-    : CDialog(IDD_FILE_SCRAP_GROUP, XPR_NULL)
+    : super(IDD_FILE_SCRAP_GROUP, XPR_NULL)
     , mSelGroupId(FileScrap::InvalidGroupId)
 {
 }
@@ -33,18 +33,18 @@ FileScrapGroupDlg::~FileScrapGroupDlg(void)
 
 void FileScrapGroupDlg::DoDataExchange(CDataExchange* pDX)
 {
-    CDialog::DoDataExchange(pDX);
+    super::DoDataExchange(pDX);
     DDX_Control(pDX, IDC_LIST, mListBox);
 }
 
-BEGIN_MESSAGE_MAP(FileScrapGroupDlg, CDialog)
+BEGIN_MESSAGE_MAP(FileScrapGroupDlg, super)
     ON_LBN_DBLCLK(IDC_LIST, OnDblclkGrpList)
     ON_BN_CLICKED(IDOK, OnOK)
 END_MESSAGE_MAP()
 
 xpr_bool_t FileScrapGroupDlg::OnInitDialog(void) 
 {
-    CDialog::OnInitDialog();
+    super::OnInitDialog();
 
     if (mTitle.empty() == XPR_FALSE)
         SetWindowText(mTitle.c_str());
@@ -124,7 +124,7 @@ void FileScrapGroupDlg::OnOK(void)
 
     mSelGroupId = sGroup->mGroupId;
 
-    CDialog::OnOK();
+    super::OnOK();
 }
 } // namespace cmd
 } // namespace fxfile

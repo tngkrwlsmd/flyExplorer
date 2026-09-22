@@ -11,12 +11,16 @@
 #define __FXFILE_FILE_SCRAP_GROUP_DLG_H__ 1
 #pragma once
 
+#include "../gui/ModernDialog.h"
+
 namespace fxfile
 {
 namespace cmd
 {
-class FileScrapGroupDlg : public CDialog
+class FileScrapGroupDlg : public CModernDialog
 {
+    typedef CModernDialog super;
+
 public:
     FileScrapGroupDlg(void);
     virtual ~FileScrapGroupDlg(void);
