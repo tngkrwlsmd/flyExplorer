@@ -911,6 +911,77 @@ def validate_ui_resource_contracts() -> list[str]:
             if token not in source:
                 errors.append(f"{source_name}: toolbar image mapping changed near {token}")
 
+    expected_main_toolbar_frames = (
+        (0, "ID_GO_BACK"),
+        (1, "ID_GO_FORWARD"),
+        (2, "ID_GO_UP"),
+        (3, "ID_GO_HISTORY"),
+        (0, "0"),
+        (7, "ID_VIEW_FOLDER_TREE_SHOW"),
+        (8, "ID_TOOL_FILE_SEARCH"),
+        (0, "0"),
+        (10, "ID_GO_BOOKMARK"),
+        (11, "ID_GO_DRIVE"),
+        (43, "ID_GO_WORKING_FOLDER"),
+        (44, "ID_GO_WORKING_FOLDER_0"),
+        (45, "ID_GO_WORKING_FOLDER_1"),
+        (46, "ID_GO_WORKING_FOLDER_2"),
+        (47, "ID_GO_WORKING_FOLDER_3"),
+        (48, "ID_GO_WORKING_FOLDER_4"),
+        (0, "0"),
+        (12, "ID_EDIT_CUT"),
+        (13, "ID_EDIT_COPY"),
+        (14, "ID_EDIT_PASTE"),
+        (34, "ID_EDIT_FOLDER_MOVE"),
+        (35, "ID_EDIT_FOLDER_COPY"),
+        (0, "0"),
+        (18, "ID_FILE_RENAME"),
+        (19, "ID_FILE_DELETE"),
+        (29, "ID_EDIT_UNDO"),
+        (33, "ID_FILE_ATTRTIME"),
+        (20, "ID_FILE_PROPERTY"),
+        (0, "0"),
+        (26, "ID_VIEW_STYLE"),
+        (21, "ID_WINDOW_SPLIT"),
+        (22, "ID_WINDOW_SPLIT_SINGLE"),
+        (23, "ID_WINDOW_SPLIT_1x2"),
+        (24, "ID_WINDOW_SPLIT_2x1"),
+        (39, "ID_WINDOW_SPLIT_EQUAL"),
+        (40, "ID_WINDOW_SPLIT_SWAP"),
+        (0, "0"),
+        (37, "ID_FILE_NEW_FOLDER"),
+        (30, "ID_EDIT_FILE_SCRAP_VIEW"),
+        (31, "ID_TOOL_CMD"),
+        (27, "ID_TOOL_EMPTY_RECYCLEBIN"),
+        (32, "ID_FILE_PRINT"),
+        (36, "ID_VIEW_PICVIEWER"),
+        (41, "ID_FILE_VIEW"),
+        (42, "ID_FILE_EDIT"),
+        (0, "0"),
+        (38, "ID_TOOL_OPTION"),
+        (28, "ID_APP_ABOUT"),
+    )
+    toolbar_block_match = re.search(
+        r"TBBUTTONEX\s+kTbButtons\[\]\s*=\s*\{(?P<body>.*?)\n\};",
+        main_toolbar,
+        re.DOTALL,
+    )
+    if toolbar_block_match is None:
+        errors.append("src/fxfile/main_toolbar.cpp: kTbButtons table not found")
+    else:
+        actual_main_toolbar_frames = tuple(
+            (int(frame), command)
+            for frame, command in re.findall(
+                r"\{\s*\{\s*(\d+)\s*,\s*(ID_[A-Z0-9_]+|0)\s*,",
+                toolbar_block_match.group("body"),
+            )
+        )
+        if actual_main_toolbar_frames != expected_main_toolbar_frames:
+            errors.append(
+                "src/fxfile/main_toolbar.cpp: toolbar frame/command order changed; "
+                "update artwork and invariant together only after reviewing the bitmap-frame contract"
+            )
+
     if "sBitmap.LoadBitmap(IDB_CONFIG_TREE);" not in cfg_main:
         errors.append("src/fxfile/cfg/cfg_main_dlg.cpp: config tree bitmap resource changed")
     if "mImgList.Create(16, 16" not in cfg_main:
