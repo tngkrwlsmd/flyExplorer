@@ -99,6 +99,8 @@ C++ 변경에는 다음을 추가로 적용한다.
 
 - 새 project symbol, helper, macro, message constant를 사용하는 translation unit은 해당 정의를 소유한 header를 **직접 include**한다. 우연한 transitive include나 PCH에 기대지 않는다.
 - 공통 cross-cutting helper를 추가하면 `build/validate_source_invariants.py`의 direct-header rule에 등록할 수 있는지 검토한다.
+- 표준 non-resizing dialog는 `CModernDialog`를 사용하고, direct `CDialog`는 `CResizingDialog`, `CfgDlg`/`CfgMainDlg`, `TitleDlg`, `DriveDetailDlg`처럼 별도 ModernUI 책임이 명확한 전문 owner만 allowlist한다.
+- toolbar/config-tree bitmap strip은 command/image index 계약이므로 frame 수, cell geometry, mask 형식, resource ID mapping을 근거 없이 바꾸지 않는다. `fxfile.ico`는 16/32/48/256 frame 계약을 유지한다.
 - C++ checkpoint 전에 최소 `python build/validate_source_invariants.py`를 실행한다. `build.bat`도 GYP 생성 전에 같은 source-invariant/regression preflight를 자동 실행한다.
 - preflight의 PASS는 **Static evidence**일 뿐 compile/link PASS가 아니다. 실제 Visual Studio build를 실행하지 않았다면 반드시 `NOT TESTED`로 구분한다.
 - 새 header/API 사용, message-map entry, GYP source registration, manifest/resource wiring을 추가했으면 선언/정의/include/registration 네 지점을 함께 점검한다.

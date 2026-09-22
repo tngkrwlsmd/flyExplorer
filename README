@@ -37,11 +37,14 @@ Before a C++ checkpoint, run:
 deleting stale generated projects, or running GYP. The current preflight checks
 direct header dependencies for cross-cutting ModernUI symbols, verifies the
 DPI/manifest integration points, and carries deterministic regression guards for
-known UI integration failures. In particular, it rejects the unsupported
-ToolbarWindow32 `TB_SETBKCOLOR`/`TB_SETTEXTCOLOR` identifiers and verifies that
-toolbar dark-state colors remain routed through `NM_CUSTOMDRAW`/
-`NMTBCUSTOMDRAW`. It is a static check and does not replace a Visual Studio
-compile/link build.
+known UI integration failures. It prevents standard non-resizing dialogs from
+drifting back to direct `CDialog` inheritance outside the specialized allowlist,
+checks the ThemePalette/DPI wiring of custom-painted About/Tip/PictureViewer
+surfaces, and protects toolbar/config-tree bitmap frame geometry plus the
+application-icon frame contract. It also rejects the unsupported ToolbarWindow32
+`TB_SETBKCOLOR`/`TB_SETTEXTCOLOR` identifiers and verifies that toolbar
+dark-state colors remain routed through `NM_CUSTOMDRAW`/`NMTBCUSTOMDRAW`.
+It is a static check and does not replace a Visual Studio compile/link build.
 
 Policy/readiness checks can be run with:
 
@@ -234,19 +237,31 @@ ModernUI's top-level frame helper now follows the actual ThemePalette light/dark
 state instead of requesting a dark frame for every non-High-Contrast window.
 ModernUI also exposes a DPI-aware resource-icon loader, and the command dialogs
 that owned the legacy IDR_MAINFRAME title icon now load that icon after HWND
-creation at the current monitor DPI. This modernizes icon loading/scaling only;
-the legacy .ico/bitmap artwork itself has not been redrawn or replaced.
+creation at the current monitor DPI. Standard non-resizing dialogs now share the
+new `CModernDialog` base for system typography, ThemePalette surfaces,
+common-control theme association, top-level frame theme, and
+settings/theme/DPI refresh. Specialized owners such as `CResizingDialog`,
+`TitleDlg`, `CfgDlg`/`CfgMainDlg`, and `DriveDetailDlg` keep their
+dedicated contracts.
+
+Custom-painted `AboutDlg`, `TipDlg`, `PictureViewer`, and toolbar customize
+surfaces now use ThemePalette/DPI-aware paths instead of fixed light-only
+backgrounds. The application `fxfile.ico` preserves its existing 16/32/48
+frames and adds a 32-bit 256px frame for high-DPI shell use. Main toolbar and
+config-tree bitmap strips remain command/index-sensitive legacy artwork, so
+their current frame count, cell geometry, mask format, RC registration, and GYP
+registration are protected by automated resource-contract checks rather than
+being silently rearranged.
 
 The shared dialog/icon modernization has source-level static coverage, and the
-preflight now includes deterministic regression guards for known toolbar API and
-custom-draw wiring failures. Compile/link, runtime, and package evidence for the
-current `main` still requires a fresh matching `local_ci.bat x64`/`full` run;
-static PASS must not be promoted to product PASS. Light/Dark/High Contrast,
+preflight now includes deterministic regression guards for direct-dialog drift,
+custom-paint regressions, toolbar API/custom-draw wiring, and UI resource
+contracts. Compile/link, runtime, and package evidence for the current `main`
+still requires a fresh matching `local_ci.bat x64`/`full` run; static evidence
+must not be promoted to product PASS. Light/Dark/High Contrast,
 100/125/150/200% DPI, representative dialog controls, resize/config behavior,
-keyboard/IME behavior, and title-icon visual sharpness remain separate manual
-evidence. Direct-CDialog outliers outside the CResizingDialog/TitleDlg/CfgDlg
-families and actual icon/bitmap artwork refresh remain follow-up implementation
-work, with final visual quality kept separate from automated evidence.
+keyboard/IME behavior, and final artwork quality remain separate manual
+evidence.
 
 Generate the Visual Studio Solution
 -----------------------------------
