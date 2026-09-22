@@ -16,6 +16,7 @@
 #include "conf_file_ex.h"
 #include "env_path.h"
 #include "program_opts.h"
+#include "version_compare.h"
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -224,15 +225,12 @@ void MainWindow::OnTimer(UINT_PTR aIdEvent)
     if (aIdEvent == kTimerIdCheckFirst ||
         aIdEvent == kTimerIdCheck)
     {
-        xpr_bool_t  sNeedCheck = XPR_TRUE;
-        xpr_rcode_t sRcode;
-        xpr_sint_t  sMajorVer;
-        xpr_sint_t  sMinorVer;
-        xpr_sint_t  sPatchVer;
-        xpr::string sCheckedVersion;
-        xpr::string sDownloadedFilePath;
-        xpr_size_t  sInputBytes;
-        xpr_size_t  sOutputBytes;
+        xpr_bool_t   sNeedCheck = XPR_TRUE;
+        xpr_bool_t   sCheckSucceeded = XPR_FALSE;
+        xpr_rcode_t  sRcode;
+        base::Version sVersion;
+        xpr_size_t   sInputBytes;
+        xpr_size_t   sOutputBytes;
 
         if (XPR_IS_TRUE(mUpdateChecker->isChecked()))
         {
@@ -246,41 +244,70 @@ void MainWindow::OnTimer(UINT_PTR aIdEvent)
             sRcode = mUpdateInfoManager->writeUpdateInfo(mUpdateInfo);
 
             // check
-            if (mUpdateChecker->check() == XPR_TRUE)
+            sCheckSucceeded = mUpdateChecker->check();
+            if (XPR_IS_TRUE(sCheckSucceeded))
             {
-                const MetaDataFile::MetaData &sMetaData = mUpdateChecker->getMetaData();
+                const MetaDataFile::MetaData &sMetaData =
+                    mUpdateChecker->getMetaData();
 
-                _stscanf(sMetaData.mVersion.c_str(),
-                    XPR_STRING_LITERAL("%d.%d.%d"),
-                    &sMajorVer, &sMinorVer, &sPatchVer);
-
-                mUpdateInfo.mStatus   = kUpdateStatusChecked;
-                mUpdateInfo.mMajorVer = sMajorVer;
-                mUpdateInfo.mMinorVer = sMinorVer;
-                mUpdateInfo.mPatchVer = sPatchVer;
-
-                sInputBytes = sMetaData.mNewUrl.length() * sizeof(xpr_tchar_t);
-                sOutputBytes = XPR_MAX_URL_LENGTH * sizeof(xpr_wchar_t);
-                XPR_TCS_TO_UTF16(sMetaData.mNewUrl.c_str(), &sInputBytes, mUpdateInfo.mNewUrl, &sOutputBytes);
-                mUpdateInfo.mNewUrl[sOutputBytes / sizeof(xpr_wchar_t)] = 0;
-
-                sRcode = mUpdateInfoManager->writeUpdateInfo(mUpdateInfo);
-                if (XPR_RCODE_IS_SUCCESS(sRcode))
+                if (XPR_IS_FALSE(
+                        base::parseVersion(
+                            sMetaData.mVersion,
+                            sVersion)))
                 {
-                    KillTimer(aIdEvent);
-                    SetTimer(kTimerIdCheck, mConfig.mCheckPeriodTime, XPR_NULL);
+                    sCheckSucceeded = XPR_FALSE;
+                }
+                else
+                {
+                    mUpdateInfo.mStatus   = kUpdateStatusChecked;
+                    mUpdateInfo.mMajorVer = sVersion.mMajor;
+                    mUpdateInfo.mMinorVer = sVersion.mMinor;
+                    mUpdateInfo.mPatchVer = sVersion.mPatch;
+
+                    sInputBytes =
+                        sMetaData.mNewUrl.length() *
+                        sizeof(xpr_tchar_t);
+                    sOutputBytes =
+                        XPR_MAX_URL_LENGTH *
+                        sizeof(xpr_wchar_t);
+                    XPR_TCS_TO_UTF16(
+                        sMetaData.mNewUrl.c_str(),
+                        &sInputBytes,
+                        mUpdateInfo.mNewUrl,
+                        &sOutputBytes);
+                    mUpdateInfo.mNewUrl[
+                        sOutputBytes /
+                        sizeof(xpr_wchar_t)] = 0;
+
+                    sRcode =
+                        mUpdateInfoManager->writeUpdateInfo(
+                            mUpdateInfo);
+                    if (XPR_RCODE_IS_SUCCESS(sRcode))
+                    {
+                        KillTimer(aIdEvent);
+                        SetTimer(
+                            kTimerIdCheck,
+                            mConfig.mCheckPeriodTime,
+                            XPR_NULL);
+                    }
                 }
             }
-            else
+
+            if (XPR_IS_FALSE(sCheckSucceeded))
             {
                 mUpdateInfo.mStatus = kUpdateStatusCheckFailed;
 
-                sRcode = mUpdateInfoManager->writeUpdateInfo(mUpdateInfo);
+                sRcode =
+                    mUpdateInfoManager->writeUpdateInfo(
+                        mUpdateInfo);
                 if (XPR_RCODE_IS_SUCCESS(sRcode))
                 {
                     // recheck after 5 seconds
                     KillTimer(aIdEvent);
-                    SetTimer(kTimerIdCheckFirst, 5000, XPR_NULL);
+                    SetTimer(
+                        kTimerIdCheckFirst,
+                        5000,
+                        XPR_NULL);
                 }
             }
         }
