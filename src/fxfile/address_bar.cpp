@@ -1166,18 +1166,34 @@ void AddressBar::applyChildThemes(void)
     if (XPR_IS_NULL(m_hWnd))
         return;
 
-    ui::ModernUI::applyExplorerControlTheme(m_hWnd);
+    const ui::ThemePalette sPalette = ui::ModernUI::getPalette();
+    const xpr_bool_t sOwnDarkChrome =
+        (XPR_IS_TRUE(sPalette.mDark) &&
+         XPR_IS_FALSE(sPalette.mHighContrast)) ?
+        XPR_TRUE :
+        XPR_FALSE;
+
+    if (XPR_IS_TRUE(sOwnDarkChrome))
+        ui::ModernUI::resetControlTheme(m_hWnd);
+    else
+        ui::ModernUI::applyExplorerControlTheme(m_hWnd);
 
     CComboBox *sComboBox = GetComboBoxCtrl();
     if (XPR_IS_NULL(sComboBox) || XPR_IS_NULL(sComboBox->m_hWnd))
         return;
 
-    ui::ModernUI::applyExplorerControlTheme(sComboBox->m_hWnd);
+    if (XPR_IS_TRUE(sOwnDarkChrome))
+        ui::ModernUI::resetControlTheme(sComboBox->m_hWnd);
+    else
+        ui::ModernUI::applyExplorerControlTheme(sComboBox->m_hWnd);
 
     CEdit *sEdit = GetEditCtrl();
     if (XPR_IS_NOT_NULL(sEdit) && XPR_IS_NOT_NULL(sEdit->m_hWnd))
     {
-        ui::ModernUI::applyExplorerControlTheme(sEdit->m_hWnd);
+        if (XPR_IS_TRUE(sOwnDarkChrome))
+            ui::ModernUI::resetControlTheme(sEdit->m_hWnd);
+        else
+            ui::ModernUI::applyExplorerControlTheme(sEdit->m_hWnd);
         const xpr_sint_t sTextMargin =
             ui::ModernUI::getAddressTextMargin(GetSafeHwnd());
         sEdit->SendMessage(
@@ -1192,7 +1208,10 @@ void AddressBar::applyChildThemes(void)
     {
         if (XPR_IS_NOT_NULL(sComboBoxInfo.hwndList))
         {
-            ui::ModernUI::applyExplorerControlTheme(sComboBoxInfo.hwndList);
+            if (XPR_IS_TRUE(sOwnDarkChrome))
+                ui::ModernUI::resetControlTheme(sComboBoxInfo.hwndList);
+            else
+                ui::ModernUI::applyExplorerControlTheme(sComboBoxInfo.hwndList);
             ::InvalidateRect(sComboBoxInfo.hwndList, XPR_NULL, TRUE);
         }
     }
