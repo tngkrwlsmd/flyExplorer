@@ -166,6 +166,8 @@
             'sources':
             [
                 'functional_tests.cpp',
+                'functional_test_groups.h',
+                'pattern_path_tests.cpp',
                 '../fxfile/file_operation_core.cpp',
                 '../fxfile/file_operation_core.h',
                 '../fxfile/shell_registry_core.cpp',
@@ -177,6 +179,8 @@
                 '../base/md5.c',
                 '../base/md5.h',
                 '../base/hash-internal.h',
+                '../base/fnmatch.cpp',
+                '../base/fnmatch.h',
             ],
         },
     ],
