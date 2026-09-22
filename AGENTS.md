@@ -135,6 +135,7 @@ UI/UX 현대화 작업은 다음 원칙을 따른다.
 - MFC 전체를 WinUI 3 등으로 즉시 재작성하지 않는다. 먼저 기존 MFC view/control/resource 경계를 파악하고 점진적으로 개선한다.
 - keyboard navigation, accelerator, context menu, drag/drop, multi-pane/tab workflow를 보존한다.
 - 시스템 font, DPI scaling, high-DPI icon sizing, light/dark theme, hover/focus state를 우선한다.
+- DPI-aware paint/layout fragment를 함수 간 이동하거나 새 renderer로 분리할 때 scale expression만 복사하지 말고 기준 HWND/DPI context의 선언·fallback·signedness까지 함께 점검한다. renderer는 다른 함수의 local metric context를 암묵적으로 전제하지 않는다.
 - 새 색상은 가능하면 Windows/system theme 값에서 유도하고 hard-coded palette를 최소화한다.
 - 오래된 16px bitmap/icon을 교체할 때 command ID와 기능 매핑을 깨뜨리지 않는다.
 - UI 구조 변경은 screenshot/실행 evidence로 확인하고, functional regression과 visual regression을 구분한다.
