@@ -46,8 +46,47 @@ HHOOK               CToolBarEx::m_hCBTHook           = 0;
 
 IMPLEMENT_DYNAMIC( CToolBarEx, CToolBar )
 
+#ifndef TBCDRF_NOBACKGROUND
+#define TBCDRF_NOBACKGROUND 0x00400000
+#endif
+
 namespace
 {
+void DrawRoundedToolbarState(
+    LPNMTBCUSTOMDRAW aCustomDraw,
+    COLORREF aFillColor)
+{
+    RECT sRect = aCustomDraw->nmcd.rc;
+    const HWND sHwnd = aCustomDraw->nmcd.hdr.hwndFrom;
+    const xpr_sint_t sInset =
+        max(1, fxfile::ui::ModernUI::scaleForWindow(3, sHwnd));
+    const xpr_sint_t sRadius =
+        fxfile::ui::ModernUI::getControlCornerRadius(sHwnd);
+
+    ::InflateRect(&sRect, -sInset, -sInset);
+    if (sRect.right <= sRect.left || sRect.bottom <= sRect.top)
+        return;
+
+    HBRUSH sBrush = ::CreateSolidBrush(aFillColor);
+    if (XPR_IS_NULL(sBrush))
+        return;
+
+    HGDIOBJ sOldBrush = ::SelectObject(aCustomDraw->nmcd.hdc, sBrush);
+    HGDIOBJ sOldPen =
+        ::SelectObject(aCustomDraw->nmcd.hdc, ::GetStockObject(NULL_PEN));
+    ::RoundRect(
+        aCustomDraw->nmcd.hdc,
+        sRect.left,
+        sRect.top,
+        sRect.right,
+        sRect.bottom,
+        sRadius * 2,
+        sRadius * 2);
+    ::SelectObject(aCustomDraw->nmcd.hdc, sOldPen);
+    ::SelectObject(aCustomDraw->nmcd.hdc, sOldBrush);
+    ::DeleteObject(sBrush);
+}
+
 LRESULT ApplyDarkToolBarCustomDraw(
     LPNMTBCUSTOMDRAW aCustomDraw,
     xpr_bool_t aElevatedSurface = XPR_FALSE)
@@ -79,7 +118,11 @@ LRESULT ApplyDarkToolBarCustomDraw(
         case CDDS_ITEMPREPAINT:
         {
             const UINT sItemState = aCustomDraw->nmcd.uItemState;
-            LRESULT sResult = CDRF_DODEFAULT | TBCDRF_NOEDGES | TBCDRF_NOOFFSET;
+            LRESULT sResult =
+                CDRF_DODEFAULT |
+                TBCDRF_NOEDGES |
+                TBCDRF_NOOFFSET |
+                TBCDRF_NOBACKGROUND;
 
             aCustomDraw->clrBtnFace = sBackground;
             aCustomDraw->clrText =
@@ -95,12 +138,13 @@ LRESULT ApplyDarkToolBarCustomDraw(
                     XPR_TRUE :
                     XPR_FALSE;
 
-                aCustomDraw->clrHighlightHotTrack =
+                const COLORREF sStateColor =
                     XPR_IS_TRUE(sSelected) ?
                     sPalette.mPressed :
                     sPalette.mHover;
+                DrawRoundedToolbarState(aCustomDraw, sStateColor);
+                aCustomDraw->clrHighlightHotTrack = sStateColor;
                 aCustomDraw->clrText = sPalette.mText;
-                sResult |= TBCDRF_HILITEHOTTRACK;
             }
 
             return sResult;
