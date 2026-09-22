@@ -43,6 +43,13 @@ public:
         kDefaultDpi = 96,
     };
 
+    enum ThemeMode
+    {
+        ThemeModeSystem = 0,
+        ThemeModeLight,
+        ThemeModeDark,
+    };
+
 public:
     static xpr_uint_t getDpi(HWND aHwnd);
     static xpr_sint_t scale(xpr_sint_t aValue, xpr_uint_t aDpi);
@@ -50,6 +57,8 @@ public:
 
     static xpr_bool_t getUIFont(LOGFONT &aLogFont, HWND aHwnd);
     static HICON loadIconResource(HINSTANCE aInstance, xpr_uint_t aResourceId, HWND aHwnd, xpr_sint_t aLogicalSize);
+    static void setThemeMode(xpr_sint_t aThemeMode);
+    static xpr_sint_t getThemeMode(void);
     static ThemePalette getPalette(void);
     static xpr_bool_t isHighContrast(void);
     static xpr_bool_t applyWindowFrameTheme(HWND aHwnd);
