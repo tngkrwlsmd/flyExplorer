@@ -58,10 +58,10 @@ const UINT_PTR kModernCfgButtonSubclassId = 0x46474346; // 'FGCF'
 LRESULT CALLBACK ModernCfgButtonSubclassProc(
     HWND aHwnd,
     UINT aMessage,
-    WPARAM aWParam,
-    LPARAM aLParam,
+    WPARAM,
+    LPARAM,
     UINT_PTR aSubclassId,
-    DWORD_PTR aRefData)
+    DWORD_PTR)
 {
     switch (aMessage)
     {
