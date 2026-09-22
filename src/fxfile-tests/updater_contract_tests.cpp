@@ -268,7 +268,7 @@ bool testUpdaterContracts(void)
 
 #if defined(XPR_CFG_UNICODE)
     const xpr::string sConfDir =
-        L"C:\\Users\\테스트 사용자\\flyExplorer conf";
+        L"C:\\Users\\\xD14C\xC2A4\xD2B8 \xC0AC\xC6A9\xC790\\flyExplorer conf";
     const xpr::string sExecutable =
         L"C:\\Program Files\\flyExplorer\\upchecker\\fxfile-upchecker.exe";
 #else
