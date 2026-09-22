@@ -1049,21 +1049,23 @@ void AddressBar::applyModernAppearance(void)
         return;
 
     installComboSubclass();
+    installEditSubclass();
 
     const ui::ThemePalette sPalette = ui::ModernUI::getPalette();
 
-    if (XPR_IS_TRUE(sPalette.mDark) && XPR_IS_FALSE(sPalette.mHighContrast))
+    if (XPR_IS_FALSE(sPalette.mHighContrast))
     {
-        if (XPR_IS_NOT_NULL(mDarkBackgroundBrush.m_hObject))
-            mDarkBackgroundBrush.DeleteObject();
+        if (XPR_IS_NOT_NULL(mBackgroundBrush.m_hObject))
+            mBackgroundBrush.DeleteObject();
 
-        mDarkBackgroundBrush.CreateSolidBrush(sPalette.mWindow);
+        mBackgroundBrush.CreateSolidBrush(sPalette.mWindow);
     }
-    else if (XPR_IS_NOT_NULL(mDarkBackgroundBrush.m_hObject))
+    else if (XPR_IS_NOT_NULL(mBackgroundBrush.m_hObject))
     {
-        mDarkBackgroundBrush.DeleteObject();
+        mBackgroundBrush.DeleteObject();
     }
 
+    updateMetrics();
     applyChildThemes();
 
     RedrawWindow(XPR_NULL, XPR_NULL, RDW_INVALIDATE | RDW_ERASE | RDW_FRAME | RDW_ALLCHILDREN);
@@ -1110,6 +1112,55 @@ void AddressBar::removeComboSubclass(void)
     mComboBoxHwnd = XPR_NULL;
 }
 
+void AddressBar::installEditSubclass(void)
+{
+    if (XPR_IS_NULL(m_hWnd))
+        return;
+
+    CEdit *sEdit = GetEditCtrl();
+    if (XPR_IS_NULL(sEdit) || XPR_IS_NULL(sEdit->m_hWnd))
+        return;
+
+    const HWND sEditHwnd = sEdit->m_hWnd;
+    if (mEditHwnd == sEditHwnd)
+        return;
+
+    removeEditSubclass();
+
+    if (::SetWindowSubclass(
+            sEditHwnd,
+            AddressBar::EditSubclassProc,
+            kAddressBarEditSubclassId,
+            reinterpret_cast<DWORD_PTR>(this)) != FALSE)
+    {
+        mEditHwnd = sEditHwnd;
+    }
+}
+
+void AddressBar::removeEditSubclass(void)
+{
+    if (XPR_IS_NULL(mEditHwnd))
+        return;
+
+    if (::IsWindow(mEditHwnd) != FALSE)
+    {
+        ::RemoveWindowSubclass(
+            mEditHwnd,
+            AddressBar::EditSubclassProc,
+            kAddressBarEditSubclassId);
+    }
+
+    mEditHwnd = XPR_NULL;
+}
+
+void AddressBar::redrawModernFrame(void)
+{
+    if (XPR_IS_NULL(m_hWnd))
+        return;
+
+    RedrawWindow(XPR_NULL, XPR_NULL, RDW_INVALIDATE | RDW_FRAME);
+}
+
 void AddressBar::applyChildThemes(void)
 {
     if (XPR_IS_NULL(m_hWnd))
@@ -1125,7 +1176,15 @@ void AddressBar::applyChildThemes(void)
 
     CEdit *sEdit = GetEditCtrl();
     if (XPR_IS_NOT_NULL(sEdit) && XPR_IS_NOT_NULL(sEdit->m_hWnd))
+    {
         ui::ModernUI::applyExplorerControlTheme(sEdit->m_hWnd);
+        const xpr_sint_t sTextMargin =
+            ui::ModernUI::getAddressTextMargin(GetSafeHwnd());
+        sEdit->SendMessage(
+            EM_SETMARGINS,
+            EC_LEFTMARGIN | EC_RIGHTMARGIN,
+            MAKELPARAM(sTextMargin, sTextMargin));
+    }
 
     COMBOBOXINFO sComboBoxInfo = {0};
     sComboBoxInfo.cbSize = sizeof(COMBOBOXINFO);
@@ -1147,8 +1206,10 @@ LRESULT AddressBar::handleComboCtlColor(xpr_uint_t aMessage, HDC aDC, HWND aCont
 {
     const ui::ThemePalette sPalette = ui::ModernUI::getPalette();
 
-    // Light and High Contrast retain the native/system rendering path.
-    if (XPR_IS_FALSE(sPalette.mDark) || XPR_IS_TRUE(sPalette.mHighContrast))
+    // High Contrast keeps the native/system rendering path. Light and Dark
+    // share the same palette contract so the address field stays visually
+    // aligned with the surrounding navigation surface.
+    if (XPR_IS_TRUE(sPalette.mHighContrast))
         return 0;
 
     if (aMessage != WM_CTLCOLOREDIT &&
@@ -1158,7 +1219,7 @@ LRESULT AddressBar::handleComboCtlColor(xpr_uint_t aMessage, HDC aDC, HWND aCont
         return 0;
     }
 
-    if (XPR_IS_NULL(mDarkBackgroundBrush.m_hObject))
+    if (XPR_IS_NULL(mBackgroundBrush.m_hObject))
         return 0;
 
     COLORREF sTextColor = sPalette.mText;
@@ -1169,7 +1230,7 @@ LRESULT AddressBar::handleComboCtlColor(xpr_uint_t aMessage, HDC aDC, HWND aCont
     ::SetBkColor(aDC, sPalette.mWindow);
     ::SetBkMode(aDC, OPAQUE);
 
-    return reinterpret_cast<LRESULT>((HBRUSH)mDarkBackgroundBrush.GetSafeHandle());
+    return reinterpret_cast<LRESULT>((HBRUSH)mBackgroundBrush.GetSafeHandle());
 }
 
 LRESULT CALLBACK AddressBar::ComboSubclassProc(
@@ -1207,6 +1268,36 @@ LRESULT CALLBACK AddressBar::ComboSubclassProc(
                 ::RemoveWindowSubclass(aHwnd, AddressBar::ComboSubclassProc, aSubclassId);
                 break;
             }
+        }
+    }
+
+    return ::DefSubclassProc(aHwnd, aMessage, aWParam, aLParam);
+}
+
+LRESULT CALLBACK AddressBar::EditSubclassProc(
+    HWND aHwnd,
+    UINT aMessage,
+    WPARAM aWParam,
+    LPARAM aLParam,
+    UINT_PTR aSubclassId,
+    DWORD_PTR aRefData)
+{
+    AddressBar *sAddressBar = reinterpret_cast<AddressBar *>(aRefData);
+
+    if (XPR_IS_NOT_NULL(sAddressBar))
+    {
+        switch (aMessage)
+        {
+        case WM_SETFOCUS:
+        case WM_KILLFOCUS:
+            sAddressBar->redrawModernFrame();
+            break;
+
+        case WM_NCDESTROY:
+            if (sAddressBar->mEditHwnd == aHwnd)
+                sAddressBar->mEditHwnd = XPR_NULL;
+            ::RemoveWindowSubclass(aHwnd, AddressBar::EditSubclassProc, aSubclassId);
+            break;
         }
     }
 
