@@ -125,6 +125,7 @@ protected:
 protected:
     //{{AFX_MSG(CSizableReBar)
     afx_msg int OnCreate(LPCREATESTRUCT lpCreateStruct);
+    afx_msg BOOL OnEraseBkgnd(CDC *pDC);
     afx_msg void OnNcPaint();
     afx_msg void OnNcCalcSize(BOOL bCalcValidRects, NCCALCSIZE_PARAMS FAR* lpncsp);
     afx_msg LRESULT OnNcHitTest(CPoint point);
