@@ -1421,10 +1421,22 @@ int CToolBarPopup::OnCreate( LPCREATESTRUCT lpCreateStruct )
 
         const int sPopupPadding =
             fxfile::ui::ModernUI::getPopupItemPadding(m_hWnd);
+        const int sPopupItemHeight =
+            fxfile::ui::ModernUI::getPopupItemHeight(m_hWnd);
+
         m_tbCtrl.SendMessage(
             TB_SETPADDING,
             0,
             MAKELPARAM(sPopupPadding, max(1, sPopupPadding / 2)));
+
+        const DWORD sCurrentButtonSize =
+            static_cast<DWORD>(m_tbCtrl.SendMessage(TB_GETBUTTONSIZE, 0, 0));
+        m_tbCtrl.SendMessage(
+            TB_SETBUTTONSIZE,
+            0,
+            MAKELPARAM(
+                LOWORD(sCurrentButtonSize),
+                max((int)HIWORD(sCurrentButtonSize), sPopupItemHeight)));
 
         CFont *sSourceFont = m_pToolBar->GetFont();
         if (sSourceFont != NULL && sSourceFont->m_hObject != NULL)
