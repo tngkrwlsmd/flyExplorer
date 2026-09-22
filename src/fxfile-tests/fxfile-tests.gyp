@@ -167,6 +167,8 @@
                 'functional_tests.cpp',
                 '../fxfile/file_operation_core.cpp',
                 '../fxfile/file_operation_core.h',
+                '../fxfile/shell_registry_core.cpp',
+                '../fxfile/shell_registry_core.h',
             ],
         },
     ],

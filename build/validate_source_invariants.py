@@ -502,6 +502,10 @@ def validate_functional_test_wiring() -> list[str]:
         if entry not in fxfile_gyp:
             errors.append(f"src/fxfile/fxfile.gyp: missing production file-operation seam {entry}")
 
+    for entry in ("./shell_registry_core.cpp", "./shell_registry_core.h"):
+        if entry not in fxfile_gyp:
+            errors.append(f"src/fxfile/fxfile.gyp: missing shell-registry core {entry}")
+
     if '#include "file_operation_core.h"' not in contents[file_op_thread_path]:
         errors.append("src/fxfile/file_op_thread.cpp: missing direct include for file_operation_core.h")
 
@@ -519,6 +523,7 @@ def validate_functional_test_wiring() -> list[str]:
         "'../xpr/xpr.gyp:xpr'",
         "'functional_tests.cpp'",
         "'../fxfile/file_operation_core.cpp'",
+        "'../fxfile/shell_registry_core.cpp'",
         "'SubSystem': 1",
     )
     for token in required_gyp_tokens:
@@ -536,6 +541,9 @@ def validate_functional_test_wiring() -> list[str]:
         "FOF_RENAMEONCOLLISION",
         "getTempDir",
         "fixture cleanup",
+        "testShellRegistryCommandContract",
+        "shellreg::buildOpenCommand",
+        "shellreg::buildCommandKey",
     )
     for token in required_test_tokens:
         if token not in test_source:

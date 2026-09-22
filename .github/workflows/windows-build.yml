@@ -116,7 +116,7 @@ jobs:
             }
           }
 
-      - name: Run x64 functional regression
+      - name: Run x64 filesystem and shell-contract functional regression
         shell: pwsh
         run: |
           & ".\bin\x64\fxfile-functional-tests.exe"
@@ -190,7 +190,7 @@ jobs:
             }
           }
 
-      - name: Run x86 functional regression
+      - name: Run x86 filesystem and shell-contract functional regression
         shell: pwsh
         run: |
           foreach ($path in @(

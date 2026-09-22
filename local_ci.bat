@@ -378,6 +378,7 @@ set "FUNCTIONAL_CONFIGURATION=%~1"
 set "FUNCTIONAL_PLATFORM=%~2"
 set "FUNCTIONAL_BINARY=%~3"
 set "FUNCTIONAL_TITLE=%~4"
+rem Native suite covers isolated filesystem operations and shell-registration command contracts.
 
 call :build_configuration "%FUNCTIONAL_CONFIGURATION%" "%FUNCTIONAL_PLATFORM%" "%FUNCTIONAL_TITLE% build" "src\fxfile-tests\fxfile-functional-tests.vcxproj"
 if errorlevel 1 exit /b 1

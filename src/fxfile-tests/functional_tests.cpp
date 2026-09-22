@@ -14,6 +14,7 @@
 
 #include "xpr.h"
 #include "file_operation_core.h"
+#include "shell_registry_core.h"
 
 namespace
 {
@@ -563,6 +564,41 @@ bool testLongLegacyPath(TestState &aState)
            sRead == sData;
 }
 
+bool testShellRegistryCommandContract(void)
+{
+#if defined(XPR_CFG_UNICODE)
+    const xpr::string sModuleDir =
+        L"C:\\Program Files\\\xD50C\xB77C\xC774\\fxfile";
+#else
+    const xpr::string sModuleDir =
+        "C:\\Program Files\\flyExplorer\\fxfile";
+#endif
+
+    xpr::string sCommand;
+    fxfile::shellreg::buildOpenCommand(sModuleDir, sCommand);
+
+    xpr::string sExpected =
+        XPR_STRING_LITERAL("\"");
+    sExpected += sModuleDir;
+    sExpected += XPR_STRING_LITERAL("\\fxfile.exe\" \"%1\"");
+
+    xpr::string sMenuKey;
+    fxfile::shellreg::buildMenuKey(
+        XPR_STRING_LITERAL("open-with-"),
+        XPR_STRING_LITERAL("-menu"),
+        sMenuKey);
+
+    xpr::string sCommandKey;
+    fxfile::shellreg::buildCommandKey(
+        XPR_STRING_LITERAL("open-with-"),
+        XPR_STRING_LITERAL("-menu"),
+        sCommandKey);
+
+    return sCommand == sExpected &&
+           sMenuKey == XPR_STRING_LITERAL("open-with-fxfile-menu") &&
+           sCommandKey == XPR_STRING_LITERAL("open-with-fxfile-menu\\command");
+}
+
 bool testRecursiveDelete(TestState &aState)
 {
     const xpr::string sTree =
@@ -606,6 +642,7 @@ int _tmain(void)
     report(sState, "read-only FileSys remove failure", testReadOnlyFailure(sState));
     report(sState, "missing shell source failure", testMissingSourceFailure(sState));
     report(sState, "long legacy path FileIo round-trip", testLongLegacyPath(sState));
+    report(sState, "shell context-menu command contract", testShellRegistryCommandContract());
     report(sState, "recursive shell delete", testRecursiveDelete(sState));
 
     if (!removeTree(sState.mRoot))
