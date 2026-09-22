@@ -141,6 +141,32 @@ xpr_bool_t isDarkColor(COLORREF aColor)
 
     return sLuma < 128 ? XPR_TRUE : XPR_FALSE;
 }
+
+const xpr_tchar_t kThemeApplyGuardProp[] =
+    XPR_STRING_LITERAL("fxfile.ModernUI.ThemeApplyGuard");
+
+xpr_bool_t beginControlThemeChange(HWND aHwnd)
+{
+    if (XPR_IS_NULL(aHwnd) || ::IsWindow(aHwnd) == FALSE)
+        return XPR_FALSE;
+
+    // SetWindowTheme synchronously sends WM_THEMECHANGED to some common and
+    // custom controls. A WM_THEMECHANGED handler that reapplies the same
+    // association would otherwise recurse until the process terminates.
+    if (XPR_IS_NOT_NULL(::GetProp(aHwnd, kThemeApplyGuardProp)))
+        return XPR_FALSE;
+
+    return ::SetProp(
+        aHwnd,
+        kThemeApplyGuardProp,
+        reinterpret_cast<HANDLE>(1)) != FALSE ? XPR_TRUE : XPR_FALSE;
+}
+
+void endControlThemeChange(HWND aHwnd)
+{
+    if (XPR_IS_NOT_NULL(aHwnd))
+        ::RemoveProp(aHwnd, kThemeApplyGuardProp);
+}
 } // namespace anonymous
 
 xpr_uint_t ModernUI::getDpi(HWND aHwnd)
@@ -659,7 +685,7 @@ xpr_bool_t ModernUI::applyRoundedWindowRegion(
 
 xpr_bool_t ModernUI::applyExplorerControlTheme(HWND aHwnd)
 {
-    if (XPR_IS_NULL(aHwnd))
+    if (XPR_IS_NULL(aHwnd) || ::IsWindow(aHwnd) == FALSE)
         return XPR_FALSE;
 
     // SetWindowTheme is documented, but resolving it dynamically keeps the
@@ -672,24 +698,39 @@ xpr_bool_t ModernUI::applyExplorerControlTheme(HWND aHwnd)
         reinterpret_cast<SetWindowThemeProc>(
             ::GetProcAddress(sUxTheme, "SetWindowTheme"));
 
-    xpr_bool_t sApplied = XPR_FALSE;
-    if (XPR_IS_NOT_NULL(sSetWindowTheme))
+    if (XPR_IS_NULL(sSetWindowTheme))
     {
-        // High Contrast should retain the system's default control rendering.
-        // The Explorer theme is a documented/common Win32 visual-style opt-in
-        // already used by flyExplorer list/tree controls.
-        const LPCWSTR sSubAppName =
-            XPR_IS_TRUE(isHighContrast()) ? XPR_NULL : L"Explorer";
-        const HRESULT sResult = sSetWindowTheme(aHwnd, sSubAppName, XPR_NULL);
-        sApplied = SUCCEEDED(sResult) ? XPR_TRUE : XPR_FALSE;
+        ::FreeLibrary(sUxTheme);
+        return XPR_FALSE;
     }
 
+    if (XPR_IS_FALSE(beginControlThemeChange(aHwnd)))
+    {
+        // The only expected false result for a valid control during theme
+        // application is a synchronous WM_THEMECHANGED re-entry. Treat that
+        // nested request as already satisfied by the outer operation.
+        const xpr_bool_t sNested =
+            XPR_IS_NOT_NULL(::GetProp(aHwnd, kThemeApplyGuardProp)) ?
+            XPR_TRUE : XPR_FALSE;
+        ::FreeLibrary(sUxTheme);
+        return sNested;
+    }
+
+    // High Contrast should retain the system's default control rendering.
+    // The Explorer theme is a documented/common Win32 visual-style opt-in
+    // already used by flyExplorer list/tree controls.
+    const LPCWSTR sSubAppName =
+        XPR_IS_TRUE(isHighContrast()) ? XPR_NULL : L"Explorer";
+    const HRESULT sResult = sSetWindowTheme(aHwnd, sSubAppName, XPR_NULL);
+
+    endControlThemeChange(aHwnd);
     ::FreeLibrary(sUxTheme);
-    return sApplied;
+    return SUCCEEDED(sResult) ? XPR_TRUE : XPR_FALSE;
 }
+
 xpr_bool_t ModernUI::resetControlTheme(HWND aHwnd)
 {
-    if (XPR_IS_NULL(aHwnd))
+    if (XPR_IS_NULL(aHwnd) || ::IsWindow(aHwnd) == FALSE)
         return XPR_FALSE;
 
     HMODULE sUxTheme = ::LoadLibrary(XPR_STRING_LITERAL("uxtheme.dll"));
@@ -700,20 +741,31 @@ xpr_bool_t ModernUI::resetControlTheme(HWND aHwnd)
         reinterpret_cast<SetWindowThemeProc>(
             ::GetProcAddress(sUxTheme, "SetWindowTheme"));
 
-    xpr_bool_t sApplied = XPR_FALSE;
-    if (XPR_IS_NOT_NULL(sSetWindowTheme))
+    if (XPR_IS_NULL(sSetWindowTheme))
     {
-        // SetWindowTheme(hwnd, NULL, NULL) restores the default visual-style
-        // association; it does not disable themed painting. Dark surfaces
-        // that are fully owned by flyExplorer need the documented empty
-        // sub-app/sub-id contract so native light borders/backgrounds do not
-        // leak through custom palette rendering.
-        const HRESULT sResult = sSetWindowTheme(aHwnd, L"", L"");
-        sApplied = SUCCEEDED(sResult) ? XPR_TRUE : XPR_FALSE;
+        ::FreeLibrary(sUxTheme);
+        return XPR_FALSE;
     }
 
+    if (XPR_IS_FALSE(beginControlThemeChange(aHwnd)))
+    {
+        const xpr_bool_t sNested =
+            XPR_IS_NOT_NULL(::GetProp(aHwnd, kThemeApplyGuardProp)) ?
+            XPR_TRUE : XPR_FALSE;
+        ::FreeLibrary(sUxTheme);
+        return sNested;
+    }
+
+    // SetWindowTheme(hwnd, NULL, NULL) restores the default visual-style
+    // association; it does not disable themed painting. Dark surfaces that
+    // are fully owned by flyExplorer need the documented empty sub-app/sub-id
+    // contract so native light borders/backgrounds do not leak through custom
+    // palette rendering.
+    const HRESULT sResult = sSetWindowTheme(aHwnd, L"", L"");
+
+    endControlThemeChange(aHwnd);
     ::FreeLibrary(sUxTheme);
-    return sApplied;
+    return SUCCEEDED(sResult) ? XPR_TRUE : XPR_FALSE;
 }
 } // namespace ui
 } // namespace fxfile
