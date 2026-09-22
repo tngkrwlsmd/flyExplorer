@@ -269,10 +269,14 @@ frames and adds a 32-bit 256px frame for high-DPI shell use. `tip.ico` and
 `shortcut.ico` now carry 32/40/48/64px frames, while `goup.ico` preserves its
 legacy 16/32 variants and adds 40/48/64px 32-bit frames. Parent-folder rendering
 uses the shared DPI-aware icon loader instead of fixed-size `LoadIcon` drawing.
-Main toolbar and config-tree bitmap strips remain command/index-sensitive legacy
-artwork, so their current frame count, cell geometry, mask format, RC
-registration, and GYP registration are protected by automated resource-contract
-checks rather than being silently rearranged.
+Main toolbar still preserves the historical 51-frame command/index and bitmap
+fallback contract, but a manifest-driven Microsoft Fluent registry now overlays
+23 command frames at runtime: every command enabled by default plus optional
+History and Settings. App-owned BCMenu reuses the same command-ID artwork, and
+the settings navigation tree overlays 17 strong semantic matches while retaining
+its 33-frame bitmap as High-Contrast/legacy fallback. Frame counts, cell geometry,
+mask format, RC/GYP registration and generated-mask determinism remain protected
+by automated resource-contract checks.
 
 The shared dialog/icon modernization has source-level static coverage, and the
 preflight now includes deterministic regression guards for direct-dialog drift,
