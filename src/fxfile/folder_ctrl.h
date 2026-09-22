@@ -128,6 +128,7 @@ public:
 
 protected:
     void applyModernAppearance(void);
+    void refreshModernTreeStyle(void);
 
     xpr_bool_t exploreItem(LPTVITEMDATA aTvItemData);
 
