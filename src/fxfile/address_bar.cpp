@@ -120,12 +120,16 @@ xpr_sint_t AddressBar::OnCreate(LPCREATESTRUCT aCreateStruct)
 
 void AddressBar::OnNcPaint(void)
 {
-    Default();
-
     const ui::ThemePalette sPalette = ui::ModernUI::getPalette();
     if (XPR_IS_TRUE(sPalette.mHighContrast))
+    {
+        Default();
         return;
+    }
 
+    // The address control owns its non-client frame outside High Contrast.
+    // Letting the native/classic frame paint first leaves a second dark edge
+    // around the palette-owned ComboBoxEx in Dark mode.
     CWindowDC sDC(this);
     CRect sWindowRect;
     GetWindowRect(&sWindowRect);
