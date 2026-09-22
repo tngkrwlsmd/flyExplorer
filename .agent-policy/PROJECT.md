@@ -77,8 +77,8 @@
     }
   ],
   "review": {
-    "reviewed_revision": "dfb585d9fc5d11a8e8872a6897c2b5313802b96e",
-    "reviewed_at": "2026-09-22",
+    "reviewed_revision": "d2396b9f43ea88efe3e99e19b1454c7db65a3bf0",
+    "reviewed_at": "2026-09-23",
     "reviewed_paths": [
       "AGENTS.md",
       "README",
