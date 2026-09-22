@@ -149,6 +149,7 @@
 | installer smoke | `build/installer_smoke.ps1`, `dist/setup.nsi` | Contract / Evidence | 기본 safety-contract inspection; elevated + FXFILE_INSTALLER_SMOKE=1에서 temp install/runtime/uninstall, main/upchecker architecture, protected Registry/shortcut/startup/profile snapshot 비변경, 기존 fxfile process/sibling sentinel 보존 검증 |
 | package validation | `build/validate_package.ps1` | Contract / Evidence | staging/portable payload, main/upchecker PE architecture, XPR runtime/architecture staging, stale updater, ZIP traversal/duplicate/casing/development-artifact, installer output + installer-smoke wiring 검증 |
 | build/runtime 결과 | GitHub Actions build log, Visual Studio build log, hosted-runner launch smoke, Windows Sandbox/VM smoke | Evidence | compile/link, hosted runtime, clean-runtime evidence를 분리 |
+| 오류 진단/재발 방지 이력 | `docs/development/ERROR_HISTORY.md` | Evidence / Intended | 확정된 오류의 발생→최초 실제 오류→원인→해결→재발 방지→검증 상태를 기록; 반복 가능성이 있으면 invariant/regression/preflight로 승격 |
 
 ## Generated artifacts
 
@@ -174,6 +175,7 @@
 - budget pause 기간에는 branch/main CI PASS를 완료 조건으로 요구하지 않는다. `local_ci.bat`을 로컬 검증 진입점으로 사용하고 실제 수행한 profile의 결과만 Evidence로 기록한다. 수행하지 않은 compile/runtime/package/visual 검증은 `NOT TESTED`로 남긴다. 검증 스크립트는 삭제하지 않고 재개 시점까지 보존한다.
 - `local_ci.bat`은 redirected Python stdout을 UTF-8로 강제한다. Windows ANSI code page가 CP949 등일 때 policy/readiness/conformance 출력의 Unicode 문장부호로 `UnicodeEncodeError`가 발생하지 않도록 하기 위한 로컬 검증 contract다.
 - 로컬 CI의 영구 로그는 `logs/local-ci/local-ci.log` 하나만 사용한다. 실행 시작 시 이전 local CI `.log`를 정리하고 단계별 임시 capture 파일은 종료 시 삭제한다. 간단한 프로필 사용법은 루트 `LOCAL_CI_MANUAL.txt`를 Source of Truth로 둔다.
+- 확정된 build/compile/link/runtime/CI orchestration 오류는 `docs/development/ERROR_HISTORY.md`에 root cause 중심으로 남긴다. 같은 유형이 다시 발생할 수 있으면 문서 기록만으로 끝내지 않고 `build/validate_source_invariants.py`, native functional regression, build-script preflight 또는 contract guard 중 가장 적합하고 저렴한 자동 방어선을 추가한다. 제품 오류와 CI orchestration 오류, static/compile/runtime/visual evidence는 서로 구분한다.
 - 로컬 C++ CI profile(`x64`, `x86`, `release`, `full`)은 MSBuild `Rebuild`를 사용해 stale `obj`/CRT configuration 재사용을 방지한다. console은 MSBuild minimal verbosity를 사용해 Visual Studio 일반 빌드처럼 `.cpp` 파일명과 핵심 결과만 표시한다. file logger는 normal verbosity를 유지하며 localized MSBuild output은 Windows ANSI code page에서 BOM-less UTF-8로 변환한 뒤 통합 `local-ci.log`에 저장한다.
 - policy conformance의 `distribution-duplicate-entry` negative fixture는 같은 ZIP entry를 의도적으로 두 번 생성한다. 로컬 CI는 이 검증을 유지하면서 Python `zipfile`의 expected duplicate-name warning만 국소적으로 숨긴다. `dist/copy.bat`은 staging `bin`이 존재할 때만 삭제해 정상 package build에서 불필요한 `The system cannot find the file specified.` 메시지를 내지 않는다.
 - `.agent-policy/PROJECT.md`의 `reviewed_at`은 validator의 UTC date 기준으로 기록한다. 한국 등 UTC+ 시차 지역의 로컬 날짜를 그대로 기록하면 UTC 자정 전에는 미래 날짜로 판정될 수 있다.
