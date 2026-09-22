@@ -260,6 +260,46 @@ xpr_sint_t ModernUI::getPopupBorderThickness(HWND aHwnd)
     return max(1, scaleForWindow(1, aHwnd));
 }
 
+xpr_sint_t ModernUI::getContentRowHeight(HWND aHwnd)
+{
+    return scaleForWindow(24, aHwnd);
+}
+
+xpr_sint_t ModernUI::getTreeRowHeight(HWND aHwnd)
+{
+    return getContentRowHeight(aHwnd);
+}
+
+xpr_sint_t ModernUI::getTreeIndent(HWND aHwnd)
+{
+    return scaleForWindow(20, aHwnd);
+}
+
+xpr_sint_t ModernUI::getListHeaderTextPadding(HWND aHwnd)
+{
+    return scaleForWindow(8, aHwnd);
+}
+
+xpr_sint_t ModernUI::getTabHeight(HWND aHwnd)
+{
+    return scaleForWindow(32, aHwnd);
+}
+
+xpr_sint_t ModernUI::getTabHorizontalPadding(HWND aHwnd)
+{
+    return scaleForWindow(10, aHwnd);
+}
+
+xpr_sint_t ModernUI::getPaneSeparatorThickness(HWND aHwnd)
+{
+    return max(1, scaleForWindow(2, aHwnd));
+}
+
+xpr_sint_t ModernUI::getActivePaneIndicatorThickness(HWND aHwnd)
+{
+    return max(2, scaleForWindow(3, aHwnd));
+}
+
 xpr_bool_t ModernUI::getUIFont(LOGFONT &aLogFont, HWND aHwnd)
 {
     ::ZeroMemory(&aLogFont, sizeof(aLogFont));
