@@ -887,7 +887,9 @@ CToolBarPopup::CToolBarPopup( CToolBarEx* pToolBar )
     m_bTextLabels = false;
 
     WinAppEx* pApp = WinAppEx::GetInstance();
-    m_bFlatMenu = ( pApp->IsWinXP() && pApp->GetFlatMenu() );
+    // Keep the exact XP behavior, but use the flat palette-owned shell on
+    // current Windows where a WS_DLGFRAME popup reads as legacy chrome.
+    m_bFlatMenu = pApp->IsWinXP() ? pApp->GetFlatMenu() : true;
 }
 
 CToolBarPopup::~CToolBarPopup()
@@ -1209,13 +1211,13 @@ BOOL CToolBarPopup::OnNotify( WPARAM wParam, LPARAM lParam, LRESULT* pResult )
                 LPNMTBCUSTOMDRAW lpNMCustomDraw = ( LPNMTBCUSTOMDRAW )pNMHDR;
                 const fxfile::ui::ThemePalette sPalette = fxfile::ui::ModernUI::getPalette();
 
-                if ( XPR_IS_TRUE(sPalette.mDark) && XPR_IS_FALSE(sPalette.mHighContrast) )
+                WinAppEx* pApp = WinAppEx::GetInstance();
+                if ( XPR_IS_FALSE(sPalette.mHighContrast) && !pApp->IsWinXP() )
                 {
                     *pResult = ApplyDarkToolBarCustomDraw(lpNMCustomDraw);
                 }
                 else
                 {
-                    WinAppEx* pApp = WinAppEx::GetInstance();
                     if ( pApp->IsWinXP() )
                     {
                         *pResult = CDRF_DODEFAULT;  // by default
@@ -1366,6 +1368,7 @@ BEGIN_MESSAGE_MAP(CToolBarPopup, CWnd)
     //{{AFX_MSG_MAP(CToolBarPopup)
     ON_WM_CAPTURECHANGED()
     ON_WM_CREATE()
+    ON_WM_ERASEBKGND()
     ON_WM_MOUSEACTIVATE()
     ON_WM_NCPAINT()
     //}}AFX_MSG_MAP
@@ -1415,6 +1418,17 @@ int CToolBarPopup::OnCreate( LPCREATESTRUCT lpCreateStruct )
         CToolTipCtrl* sToolTip = m_tbCtrl.GetToolTips();
         if (sToolTip != NULL && ::IsWindow(sToolTip->m_hWnd))
             fxfile::ui::ModernUI::applyExplorerControlTheme(sToolTip->m_hWnd);
+
+        const int sPopupPadding =
+            fxfile::ui::ModernUI::getPopupItemPadding(m_hWnd);
+        m_tbCtrl.SendMessage(
+            TB_SETPADDING,
+            0,
+            MAKELPARAM(sPopupPadding, max(1, sPopupPadding / 2)));
+
+        CFont *sSourceFont = m_pToolBar->GetFont();
+        if (sSourceFont != NULL && sSourceFont->m_hObject != NULL)
+            m_tbCtrl.SetFont(sSourceFont, FALSE);
     }
 
     // There could be only two modes, depending on text options
@@ -1493,6 +1507,21 @@ int CToolBarPopup::OnCreate( LPCREATESTRUCT lpCreateStruct )
     m_tbCtrl.MoveWindow( rcClient );
 
     return 0;
+}
+
+BOOL CToolBarPopup::OnEraseBkgnd(CDC *pDC)
+{
+    if (pDC == NULL)
+        return CWnd::OnEraseBkgnd(pDC);
+
+    const fxfile::ui::ThemePalette sPalette = fxfile::ui::ModernUI::getPalette();
+    if (XPR_IS_TRUE(sPalette.mHighContrast))
+        return CWnd::OnEraseBkgnd(pDC);
+
+    CRect sClientRect;
+    GetClientRect(&sClientRect);
+    pDC->FillSolidRect(&sClientRect, sPalette.mSurface);
+    return TRUE;
 }
 
 int CToolBarPopup::OnMouseActivate( CWnd* /*pDesktopWnd*/, UINT /*nHitTest*/, UINT /*message*/ )
