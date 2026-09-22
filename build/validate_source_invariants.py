@@ -399,12 +399,58 @@ def validate_ui_resource_contracts() -> list[str]:
             if frames.get(256, 0) < 32:
                 errors.append("src/fxfile/res/fxfile.ico: 256x256 frame must be 32-bit")
 
+    def icon_frames(name: str) -> dict[int, int]:
+        path = resource_dir / name
+        try:
+            data = path.read_bytes()
+        except OSError as exc:
+            errors.append(f"{path.relative_to(ROOT)}: cannot read: {exc}")
+            return {}
+
+        if len(data) < 6 or read_u16(data, 0) != 0 or read_u16(data, 2) != 1:
+            errors.append(f"{path.relative_to(ROOT)}: invalid ICO header")
+            return {}
+
+        count = read_u16(data, 4)
+        frames: dict[int, int] = {}
+        for index in range(count):
+            entry = 6 + index * 16
+            if entry + 16 > len(data):
+                errors.append(f"{path.relative_to(ROOT)}: truncated icon directory")
+                break
+
+            width = data[entry] or 256
+            height = data[entry + 1] or 256
+            bpp = read_u16(data, entry + 6)
+            if width == height:
+                frames[width] = max(frames.get(width, 0), bpp)
+
+        return frames
+
+    dpi_icon_contracts = {
+        "tip.ico": (32, 40, 48, 64),
+        "shortcut.ico": (32, 40, 48, 64),
+        "goup.ico": (16, 32, 40, 48, 64),
+    }
+    for name, required_sizes in dpi_icon_contracts.items():
+        frames = icon_frames(name)
+        rel = (resource_dir / name).relative_to(ROOT).as_posix()
+        for size in required_sizes:
+            if size not in frames:
+                errors.append(f"{rel}: missing {size}x{size} DPI frame")
+        for size in (40, 48, 64):
+            if size in required_sizes and frames.get(size, 0) < 32:
+                errors.append(f"{rel}: {size}x{size} DPI frame must be 32-bit")
+
     try:
         rc = rc_path.read_text(encoding="utf-8", errors="replace")
         gyp = gyp_path.read_text(encoding="utf-8", errors="replace")
         main_toolbar = main_toolbar_path.read_text(encoding="utf-8", errors="replace")
         scrap_toolbar = scrap_toolbar_path.read_text(encoding="utf-8", errors="replace")
         cfg_main = cfg_main_path.read_text(encoding="utf-8", errors="replace")
+        explorer_ctrl = (FXFILE_SRC / "explorer_ctrl.cpp").read_text(
+            encoding="utf-8", errors="replace"
+        )
     except OSError as exc:
         errors.append(f"UI resource wiring source cannot be read: {exc}")
         return errors
@@ -416,6 +462,9 @@ def validate_ui_resource_contracts() -> list[str]:
         'IDB_TB_MAIN_HOT_SMALL   BITMAP                  "res\\\\tb_main_hot_small.bmp"',
         'IDB_TB_MAIN_COLD_SMALL  BITMAP                  "res\\\\tb_main_cold_small.bmp"',
         'IDB_CONFIG_TREE         BITMAP                  "res\\\\config_tree.bmp"',
+        'IDI_TIP                 ICON                    "res\\\\tip.ico"',
+        'IDI_SHORTCUT            ICON                    "res\\\\shortcut.ico"',
+        'IDI_GO_UP               ICON                    "res\\\\goup.ico"',
     )
     for token in rc_tokens:
         if token not in rc:
@@ -431,6 +480,9 @@ def validate_ui_resource_contracts() -> list[str]:
         "tb_drive.bmp",
         "tb_rename.bmp",
         "sync_images.bmp",
+        "tip.ico",
+        "shortcut.ico",
+        "goup.ico",
     ):
         if f"'./res/{asset}'" not in gyp:
             errors.append(f"src/fxfile/fxfile.gyp: missing UI asset registration ./res/{asset}")
@@ -452,6 +504,17 @@ def validate_ui_resource_contracts() -> list[str]:
         errors.append("src/fxfile/cfg/cfg_main_dlg.cpp: config tree bitmap resource changed")
     if "mImgList.Create(16, 16" not in cfg_main:
         errors.append("src/fxfile/cfg/cfg_main_dlg.cpp: config tree 16px frame contract changed")
+
+    for token in (
+        "ModernUI::loadIconResource",
+        "IDI_GO_UP",
+        "ModernUI::scaleForWindow",
+    ):
+        if token not in explorer_ctrl:
+            errors.append(f"src/fxfile/explorer_ctrl.cpp: missing DPI go-up icon token {token}")
+
+    if "LoadIcon(IDI_GO_UP)" in explorer_ctrl:
+        errors.append("src/fxfile/explorer_ctrl.cpp: legacy fixed-size IDI_GO_UP LoadIcon returned")
 
     return errors
 

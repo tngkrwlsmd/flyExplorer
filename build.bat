@@ -73,7 +73,7 @@ if errorlevel 1 (
 )
 
 echo Running source invariant and regression preflight...
-rem Includes ModernUI wiring, direct-CDialog migration, custom-paint/resource guards, functional-test wiring, and known compiler regressions.
+rem Includes ModernUI/dialog wiring, DPI icon/resource guards, functional/installer-test wiring, and known compiler regressions.
 "%PYTHON_EXE%" %PYTHON_ARGS% "build\validate_source_invariants.py"
 if errorlevel 1 (
     echo ERROR: Source invariant/regression preflight failed.
