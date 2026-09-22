@@ -372,12 +372,14 @@ xpr_bool_t MainFrame::OnCreateClient(LPCREATESTRUCT aCreateStruct, CCreateContex
     mSplitter.setObserver(dynamic_cast<SplitterObserver *>(this));
     mSplitter.setMaxSplitCount(MAX_VIEW_SPLIT_ROW, MAX_VIEW_SPLIT_COLUMN);
     mSplitter.setPaneSizeLimit(MIN_PANE_SIZE, ksintmax);
-    mSplitter.setSplitSize(SPLITTER_SIZE);
+    mSplitter.setSplitSize(
+        ui::ModernUI::getPaneSeparatorThickness(GetSafeHwnd()));
 
     mSingleFolderSplitter.setObserver(dynamic_cast<SplitterObserver *>(this));
     mSingleFolderSplitter.setMaxSplitCount(1, 2);
     mSingleFolderSplitter.setPaneSizeLimit(MIN_PANE_SIZE, ksintmax);
-    mSingleFolderSplitter.setSplitSize(SPLITTER_SIZE);
+    mSingleFolderSplitter.setSplitSize(
+        ui::ModernUI::getPaneSeparatorThickness(GetSafeHwnd()));
 
     if (XPR_IS_TRUE(gOpt->mMain.mSingleFolderPaneMode) && XPR_IS_TRUE(gOpt->mMain.mShowSingleFolderPane))
         mSingleFolderSplitter.split(1, 2);
