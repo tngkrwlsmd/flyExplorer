@@ -13,6 +13,8 @@
 #include "resource.h"
 #include "clipboard.h"
 
+#include "gui/ModernUI.h"
+
 #ifdef _DEBUG
 #define new DEBUG_NEW
 #endif
@@ -24,7 +26,7 @@ namespace cmd
 InfoCopyableDlg::InfoCopyableDlg(void)
     : super(IDD_INFO_COPYABLE, XPR_NULL)
 {
-    mIcon = AfxGetApp()->LoadIcon(IDR_MAINFRAME);
+    mIcon = XPR_NULL;
 }
 
 InfoCopyableDlg::~InfoCopyableDlg(void)
@@ -74,7 +76,14 @@ xpr_bool_t InfoCopyableDlg::OnInitDialog(void)
 {
     super::OnInitDialog();
 
-    SetIcon(mIcon, XPR_TRUE);
+    DESTROY_ICON(mIcon);
+    mIcon = ui::ModernUI::loadIconResource(
+        AfxGetResourceHandle(),
+        IDR_MAINFRAME,
+        GetSafeHwnd(),
+        32);
+    if (XPR_IS_NOT_NULL(mIcon))
+        SetIcon(mIcon, XPR_TRUE);
 
     // CResizingDialog -------------------------------------------
     //HideSizeIcon();

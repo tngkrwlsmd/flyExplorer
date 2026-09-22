@@ -17,6 +17,8 @@
 #include "pic_conv_opt_dlg.h"
 #include "pic_conv_color_dlg.h"
 
+#include "gui/ModernUI.h"
+
 #ifdef _DEBUG
 #define new DEBUG_NEW
 #endif
@@ -49,7 +51,7 @@ PicConvDlg::PicConvDlg(void)
     , mPaletteTransparent(-1)
     , mDlgState(XPR_NULL)
 {
-    mIcon = AfxGetApp()->LoadIcon(IDR_MAINFRAME);
+    mIcon = XPR_NULL;
 }
 
 PicConvDlg::~PicConvDlg(void)
@@ -91,7 +93,14 @@ xpr_bool_t PicConvDlg::OnInitDialog(void)
 {
     super::OnInitDialog();
 
-    SetIcon(mIcon, XPR_TRUE);
+    DESTROY_ICON(mIcon);
+    mIcon = ui::ModernUI::loadIconResource(
+        AfxGetResourceHandle(),
+        IDR_MAINFRAME,
+        GetSafeHwnd(),
+        32);
+    if (XPR_IS_NOT_NULL(mIcon))
+        SetIcon(mIcon, XPR_TRUE);
 
     // CResizingDialog -------------------------------------------
     //HideSizeIcon();

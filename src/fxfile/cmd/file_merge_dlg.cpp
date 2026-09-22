@@ -17,6 +17,8 @@
 #include "dlg_state.h"
 #include "dlg_state_manager.h"
 
+#include "gui/ModernUI.h"
+
 #ifdef _DEBUG
 #define new DEBUG_NEW
 #endif
@@ -45,7 +47,7 @@ FileMergeDlg::FileMergeDlg(void)
     , mFileMerge(XPR_NULL)
     , mDlgState(XPR_NULL)
 {
-    mIcon = AfxGetApp()->LoadIcon(IDR_MAINFRAME);
+    mIcon = XPR_NULL;
 }
 
 FileMergeDlg::~FileMergeDlg(void)
@@ -76,7 +78,14 @@ xpr_bool_t FileMergeDlg::OnInitDialog(void)
 {
     CResizingDialog::OnInitDialog();
 
-    SetIcon(mIcon, XPR_TRUE);
+    DESTROY_ICON(mIcon);
+    mIcon = ui::ModernUI::loadIconResource(
+        AfxGetResourceHandle(),
+        IDR_MAINFRAME,
+        GetSafeHwnd(),
+        32);
+    if (XPR_IS_NOT_NULL(mIcon))
+        SetIcon(mIcon, XPR_TRUE);
 
     // CResizingDialog -------------------------------------------
     //HideSizeIcon();

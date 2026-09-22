@@ -15,6 +15,8 @@
 #include "dlg_state.h"
 #include "dlg_state_manager.h"
 
+#include "gui/ModernUI.h"
+
 #ifdef _DEBUG
 #define new DEBUG_NEW
 #endif
@@ -46,7 +48,7 @@ AttrTimeDlg::AttrTimeDlg(void)
     , mAttrTime(XPR_NULL)
     , mDlgState(XPR_NULL)
 {
-    mIcon = AfxGetApp()->LoadIcon(IDR_MAINFRAME);
+    mIcon = XPR_NULL;
 }
 
 AttrTimeDlg::~AttrTimeDlg(void)
@@ -97,7 +99,14 @@ xpr_bool_t AttrTimeDlg::OnInitDialog(void)
 {
     super::OnInitDialog();
 
-    SetIcon(mIcon, XPR_TRUE);
+    DESTROY_ICON(mIcon);
+    mIcon = ui::ModernUI::loadIconResource(
+        AfxGetResourceHandle(),
+        IDR_MAINFRAME,
+        GetSafeHwnd(),
+        32);
+    if (XPR_IS_NOT_NULL(mIcon))
+        SetIcon(mIcon, XPR_TRUE);
 
     // CResizingDialog -------------------------------------------
     //HideSizeIcon();
