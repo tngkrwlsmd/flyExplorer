@@ -130,22 +130,22 @@ void CModernDialog::refreshModernAppearance(void)
             SetFont(&mModernUIFont, XPR_FALSE);
     }
 
-    if (mModernSurfaceColor != sPalette.mSurface)
+    if (mModernSurfaceColor != sPalette.mCard)
     {
         if (XPR_IS_NOT_NULL(mModernSurfaceBrush.m_hObject))
             mModernSurfaceBrush.DeleteObject();
         mModernSurfaceColor =
-            (mModernSurfaceBrush.CreateSolidBrush(sPalette.mSurface) == TRUE) ?
-            sPalette.mSurface : CLR_INVALID;
+            (mModernSurfaceBrush.CreateSolidBrush(sPalette.mCard) == TRUE) ?
+            sPalette.mCard : CLR_INVALID;
     }
 
-    if (mModernWindowColor != sPalette.mWindow)
+    if (mModernWindowColor != sPalette.mElevated)
     {
         if (XPR_IS_NOT_NULL(mModernWindowBrush.m_hObject))
             mModernWindowBrush.DeleteObject();
         mModernWindowColor =
-            (mModernWindowBrush.CreateSolidBrush(sPalette.mWindow) == TRUE) ?
-            sPalette.mWindow : CLR_INVALID;
+            (mModernWindowBrush.CreateSolidBrush(sPalette.mElevated) == TRUE) ?
+            sPalette.mElevated : CLR_INVALID;
     }
 
     applyModernAppearanceToChildren(sPreviousFont);
@@ -159,7 +159,7 @@ BOOL CModernDialog::OnEraseBkgnd(CDC *aDC)
     {
         CRect sClientRect;
         GetClientRect(&sClientRect);
-        aDC->FillSolidRect(&sClientRect, sPalette.mSurface);
+        aDC->FillSolidRect(&sClientRect, sPalette.mCard);
         return TRUE;
     }
     return super::OnEraseBkgnd(aDC);
@@ -178,14 +178,14 @@ HBRUSH CModernDialog::OnCtlColor(CDC *aDC, CWnd *aWnd, UINT aCtlColor)
     if (aCtlColor == CTLCOLOR_EDIT || aCtlColor == CTLCOLOR_LISTBOX)
     {
         aDC->SetBkMode(OPAQUE);
-        aDC->SetBkColor(sPalette.mWindow);
+        aDC->SetBkColor(sPalette.mElevated);
         if (XPR_IS_NOT_NULL(mModernWindowBrush.m_hObject))
             return (HBRUSH)mModernWindowBrush.GetSafeHandle();
     }
     else if (aCtlColor == CTLCOLOR_STATIC || aCtlColor == CTLCOLOR_BTN || aCtlColor == CTLCOLOR_DLG)
     {
         aDC->SetBkMode(TRANSPARENT);
-        aDC->SetBkColor(sPalette.mSurface);
+        aDC->SetBkColor(sPalette.mCard);
         if (XPR_IS_NOT_NULL(mModernSurfaceBrush.m_hObject))
             return (HBRUSH)mModernSurfaceBrush.GetSafeHandle();
     }
