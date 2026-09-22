@@ -436,6 +436,64 @@
 
 ---
 
+
+## 2026-09-22 — Dark settings surface clipping / mixed light controls / popup icon contrast 회귀
+
+**오류 발생**
+- 실행/환경: Windows 11 실제 사용자 스크린샷.
+- 사용자에게 보인 증상:
+  - 환경 설정 페이지에 큰 검은 사각형 section surface가 생겨 Win11 설정 hierarchy와 어울리지 않음.
+  - 일부 edit/combo/button에 밝은 native border/background가 남아 Dark page와 섞임.
+  - page-local "모두 적용" 같은 pushbutton이 흰색 native button으로 남음.
+  - child page 모서리 근처 control 일부가 잘리거나 위치가 부자연스러워 보임.
+  - BCMenu popup의 legacy bitmap icon이 Dark surface에서 과도하게 밝거나 검은 부분이 배경에 묻혀 일부 icon이 사라진 것처럼 보임.
+
+**최초 실제 오류**
+- `ModernUI::resetControlTheme`가 `SetWindowTheme(hwnd, NULL, NULL)`을 사용하고 있었다. 이 호출은 themed rendering disable이 아니라 default visual-style association 복원이라 custom Dark paint와 native light chrome이 계속 혼재했다.
+- `CfgDlg` child page 전체에 rounded window region을 적용했지만 canonical RC에는 x/y==0에서 시작하는 control이 다수 있어 page corner region이 실제 child control 영역을 잘랐다.
+- `ModernGroupBoxSubclassProc`가 BS_GROUPBOX의 전체 rect를 `mElevated` rounded card로 채워 resource grouping box마다 큰 검은 island를 만들었다.
+- CfgDlg의 page-local BS_PUSHBUTTON/BS_DEFPUSHBUTTON은 dark paint adapter 대상이 아니었다.
+- BCMenu `drawIcon`은 legacy source icon을 `DrawIconEx(... DI_NORMAL)`로 그대로 그려 popup ThemePalette와 icon luminance/contrast ownership이 분리되어 있었다.
+
+**원인 진단**
+- Root cause: "native theme reset", "page rounding", "group card", "menu icon"을 각각 현대화 요소로 추가했지만 실제 Win32 paint/geometry ownership을 하나의 hierarchy로 검증하지 않았다.
+- Observed: main settings/footer 일부는 custom dark paint인데 page-local buttons과 themed borders는 native light path가 남았다.
+- Observed: resource-defined groupbox/page geometry는 legacy DLU 좌표를 그대로 사용하는데 window-region clipping과 larger visual layers를 추가해 control bounds와 충돌했다.
+- Observed: legacy menu bitmap은 색상형 source이므로 Dark popup에서 원본 색을 유지하면 Fluent/Win11 command-menu icon weight와 맞지 않는다.
+
+**해결 방법**
+- `gui/ModernUI.cpp`: `resetControlTheme`이 documented `SetWindowTheme(hwnd, L"", L"")`을 사용해 실제 themed painting을 disable하도록 수정했다.
+- `cfg/cfg_dlg.cpp`: Dark/non-HC Explorer-owned edit/list/combo 계열은 theme disable 후 palette path가 surface를 소유한다.
+- `cfg/cfg_dlg.cpp`: groupbox를 전체 rounded card로 채우지 않고 page background + section label + subtle separator로 변경했다.
+- `cfg/cfg_dlg.cpp`: BS_PUSHBUTTON/BS_DEFPUSHBUTTON용 Dark paint adapter를 추가해 page-local button도 같은 palette hierarchy를 사용한다.
+- `cfg/cfg_dlg.cpp`, `cfg/cfg_main_dlg.cpp`: child page 자체 rounded window region을 제거해 x/y==0 resource control clipping을 방지했다.
+- `gui/BCMenu.cpp`: non-HC menu icon을 documented `DrawState(... DST_ICON | DSS_MONO)`로 palette text/secondary-text color에 tint하고 High Contrast는 원본/system path로 fallback한다.
+- 비집중 control border는 `mBorder`보다 약한 `mSeparator`를 사용해 흰 외곽선처럼 보이는 대비를 낮췄다.
+
+**재발 방지**
+- `build/validate_source_invariants.py`가 `SetWindowTheme(hwnd, L"", L"")` disable contract를 검사하고 `NULL,NULL` reset이 되돌아오는 것을 금지한다.
+- settings guard가 page pushbutton adapter, page-region clearing, dark control theme ownership, flat groupbox hierarchy를 검사한다.
+- popup guard가 `DrawState`, `DST_ICON | DSS_MONO`, disabled secondary-text tint를 검사한다.
+- Win11 visual modernization에서 resource page 전체에 rounded window region을 적용하지 않는다. rounding은 control/surface 단위로만 적용하고 RC의 actual child bounds를 먼저 확인한다.
+
+**검증 상태**
+- 사용자 screenshot evidence: FAIL — 수정 전 검은 group card, white/mixed controls, clipped page details, overbright/hidden menu icons 확인.
+- Static/source self-review: PASS — 수정 후 paint ownership/token/diff를 repository source에서 대조.
+- `python build/validate_source_invariants.py`: NOT TESTED.
+- Compile/link: NOT TESTED.
+- Functional/runtime: NOT TESTED.
+- 수정 후 Windows 11 Light/Dark/System/High Contrast 및 DPI visual: NOT TESTED.
+
+**관련 commit**
+- `b8ae8e3e` — `fix: actually disable native theme for owned dark controls`
+- `c67ee1a6` — `ui: tint popup icons for dark menu contrast`
+- `2131d37e` — `ui: unify dark settings control surfaces`
+- `03f8ec1a` — `ui: stop clipping dark settings pages`
+- `95f2eb98`, `46a85be4`, `4ddf1269` — settings border softening
+- `a8dc5380` — `test: guard coherent dark settings and menu icons`
+
+---
+
 ## 오류를 예방하기 위한 일반 개발 규칙
 
 1. 새 header/API/macro는 소유 header를 직접 include한다. PCH/transitive include에 기대지 않는다.
