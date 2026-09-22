@@ -11,13 +11,15 @@
 #define __FXFILE_TIP_DLG_H__ 1
 #pragma once
 
+#include "../gui/ModernDialog.h"
+
 namespace fxfile
 {
 namespace cmd
 {
-class TipDlg : public CDialog
+class TipDlg : public CModernDialog
 {
-    typedef CDialog super;
+    typedef CModernDialog super;
 
 public:
     TipDlg(void);

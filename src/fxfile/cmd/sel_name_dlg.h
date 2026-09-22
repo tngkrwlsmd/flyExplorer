@@ -11,15 +11,17 @@
 #define __FXFILE_SEL_NAME_DLG_H__ 1
 #pragma once
 
+#include "../gui/ModernDialog.h"
+
 namespace fxfile
 {
 class DlgState;
 
 namespace cmd
 {
-class SelNameDlg : public CDialog
+class SelNameDlg : public CModernDialog
 {
-    typedef CDialog super;
+    typedef CModernDialog super;
 
 public:
     typedef std::list<xpr::string> PatternList;

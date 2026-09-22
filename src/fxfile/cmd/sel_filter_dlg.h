@@ -11,6 +11,8 @@
 #define __FXFILE_SEL_FILTER_DLG_H__ 1
 #pragma once
 
+#include "../gui/ModernDialog.h"
+
 #include "file_filter.h"
 
 namespace fxfile
@@ -19,9 +21,9 @@ class DlgState;
 
 namespace cmd
 {
-class SelFilterDlg : public CDialog
+class SelFilterDlg : public CModernDialog
 {
-    typedef CDialog super;
+    typedef CModernDialog super;
 
 public:
     SelFilterDlg(xpr_bool_t aSelect);

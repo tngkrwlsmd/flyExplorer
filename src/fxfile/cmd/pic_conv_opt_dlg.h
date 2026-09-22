@@ -11,6 +11,8 @@
 #define __FXFILE_PIC_CONV_OPT_DLG_H__ 1
 #pragma once
 
+#include "../gui/ModernDialog.h"
+
 #include "gfl/libgfl.h"
 
 namespace fxfile
@@ -79,9 +81,9 @@ enum
 #define MAX_FORMAT_COUNT   100
 #define MAX_FORMAT_CONTROL 5
 
-class PicConvOptDlg : public CDialog
+class PicConvOptDlg : public CModernDialog
 {
-    typedef CDialog super;
+    typedef CModernDialog super;
 
 public:
     PicConvOptDlg(xpr_sint_t       aFormat,

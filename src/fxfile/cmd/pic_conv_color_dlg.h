@@ -11,6 +11,8 @@
 #define __FXFILE_PIC_CONV_COLOR_DLG_H__ 1
 #pragma once
 
+#include "../gui/ModernDialog.h"
+
 #include "pic_conv_opt_dlg.h"
 #include "gfl/libgfl.h"
 
@@ -18,9 +20,9 @@ namespace fxfile
 {
 namespace cmd
 {
-class PicConvColorDlg : public CDialog
+class PicConvColorDlg : public CModernDialog
 {
-    typedef CDialog super;
+    typedef CModernDialog super;
 
 public:
     PicConvColorDlg(const xpr_tchar_t *aPath);

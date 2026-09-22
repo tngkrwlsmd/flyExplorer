@@ -11,6 +11,8 @@
 #define __FXFILE_SEARCH_LOC_EDIT_DLG_H__ 1
 #pragma once
 
+#include "../gui/ModernDialog.h"
+
 #include "search.h"
 #include "resource.h"
 
@@ -18,9 +20,9 @@ namespace fxfile
 {
 namespace cmd
 {
-class SearchLocEditDlg : public CDialog
+class SearchLocEditDlg : public CModernDialog
 {
-    typedef CDialog super;
+    typedef CModernDialog super;
 
 public:
     SearchLocEditDlg(void);
