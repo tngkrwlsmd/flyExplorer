@@ -11,15 +11,17 @@
 #define __FXFILE_ABOUT_DLG_H__ 1
 #pragma once
 
+#include "../gui/ModernDialog.h"
+
 namespace fxfile
 {
 namespace cmd
 {
 class AboutTabDlg;
 
-class AboutDlg : public CDialog
+class AboutDlg : public CModernDialog
 {
-    typedef CDialog super;
+    typedef CModernDialog super;
 
 public:
     AboutDlg(void);

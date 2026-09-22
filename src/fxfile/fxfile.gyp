@@ -330,6 +330,8 @@
                 './gui/ListCtrlPrint.cpp',
                 './gui/ListCtrlPrint.h',
                 './gui/MemDC.h',
+                './gui/ModernDialog.cpp',
+                './gui/ModernDialog.h',
                 './gui/ModernUI.cpp',
                 './gui/ModernUI.h',
                 './gui/Print.cpp',

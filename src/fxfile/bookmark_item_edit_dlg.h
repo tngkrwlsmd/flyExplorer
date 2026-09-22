@@ -11,13 +11,15 @@
 #define __FXFILE_BOOKMARK_ITEM_EDIT_DLG_H__ 1
 #pragma once
 
+#include "gui/ModernDialog.h"
+
 #include "bookmark.h"
 
 namespace fxfile
 {
-class BookmarkItemEditDlg : public CDialog
+class BookmarkItemEditDlg : public CModernDialog
 {
-    typedef CDialog super;
+    typedef CModernDialog super;
 
 public:
     BookmarkItemEditDlg(void);

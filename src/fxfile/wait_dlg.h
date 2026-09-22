@@ -11,15 +11,17 @@
 #define __FXFILE_WAIT_DLG_H__ 1
 #pragma once
 
+#include "gui/ModernDialog.h"
+
 #include "pattern.h"
 
 namespace fxfile
 {
-class WaitDlg : public CDialog, public fxfile::base::Singleton<WaitDlg>
+class WaitDlg : public CModernDialog, public fxfile::base::Singleton<WaitDlg>
 {
     friend class fxfile::base::Singleton<WaitDlg>;
 
-    typedef CDialog super;
+    typedef CModernDialog super;
 
 protected: WaitDlg(void);
 public:   ~WaitDlg(void);
