@@ -197,7 +197,7 @@ exit /b 0
 :run_source_preflight
 "%PYTHON_EXE%" %PYTHON_ARGS% "build\validate_source_invariants.py" >"%STEP_LOG%" 2>&1
 set "SOURCE_RESULT=%errorlevel%"
-call :append_file "Source invariant preflight" "%STEP_LOG%"
+call :append_file "Source invariant and regression preflight" "%STEP_LOG%"
 exit /b %SOURCE_RESULT%
 
 :run_policy_validation
@@ -448,7 +448,7 @@ exit /b %RESULT%
 :usage
 echo Usage: local_ci.bat [quick^|policy^|x64^|x86^|release^|full]
 echo.
-echo   quick    Source invariant preflight only.
+echo   quick    Source invariant + known regression guard preflight only.
 echo   policy   Full vendored policy/readiness/conformance validation.
 echo   x64      Default. Release x64 build, warning check, artifacts, launch smoke.
 echo   x86      x86 Unicode + Multibyte builds, warning checks, artifacts, smokes.

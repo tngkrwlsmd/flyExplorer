@@ -2,6 +2,7 @@ name: Source Validation
 
 # Temporary Actions budget pause through 2026-09-30.
 # No push/PR CI. Manual runs require an explicit budget override.
+# The static preflight includes deterministic known-regression guards.
 on:
   workflow_dispatch:
     inputs:
@@ -24,5 +25,5 @@ jobs:
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
         with:
           python-version: "3.14"
-      - name: Run source invariant preflight
+      - name: Run source invariant and regression preflight
         run: python build/validate_source_invariants.py

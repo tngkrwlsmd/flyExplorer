@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
-"""Fast source-level preflight checks for flyExplorer.
+"""Fast source-level invariant and regression preflight checks for flyExplorer.
 
-This guard intentionally covers cheap, deterministic invariants that should fail
-before GYP generation or a Visual Studio build. It does not replace compilation.
+This guard intentionally covers cheap, deterministic invariants and known
+regressions that should fail before GYP generation or a Visual Studio build.
+It does not replace compilation.
 """
 
 from __future__ import annotations
@@ -126,6 +127,45 @@ def validate_common_control_theme_integration() -> list[str]:
     return errors
 
 
+def validate_toolbar_custom_draw_regression() -> list[str]:
+    """Prevent recurrence of the ToolbarWindow32 color-message compile failure."""
+
+    errors: list[str] = []
+    toolbar_path = FXFILE_SRC / "gui" / "rebar" / "ToolBarEx.cpp"
+
+    try:
+        toolbar_source = toolbar_path.read_text(encoding="utf-8")
+    except OSError as exc:
+        return [f"{toolbar_path.relative_to(ROOT)}: cannot read: {exc}"]
+
+    toolbar_code = strip_comments(toolbar_source)
+    rel = toolbar_path.relative_to(ROOT).as_posix()
+
+    # These messages belong to no supported ToolbarWindow32 contract. A previous
+    # dark-mode change confused them with RB_SETBKCOLOR/RB_SETTEXTCOLOR and broke
+    # the Visual Studio build with C2065 before runtime tests could start.
+    for token in ("TB_SETBKCOLOR", "TB_SETTEXTCOLOR"):
+        if token in toolbar_code:
+            errors.append(
+                f"{rel}: unsupported toolbar color message {token} reintroduced; "
+                "use the existing NM_CUSTOMDRAW/NMTBCUSTOMDRAW path"
+            )
+
+    required_tokens = (
+        "ApplyDarkToolBarCustomDraw",
+        "ON_NOTIFY_REFLECT( NM_CUSTOMDRAW, OnCustomDraw )",
+        "aCustomDraw->clrBtnFace",
+        "aCustomDraw->clrText",
+        "aCustomDraw->clrHighlightHotTrack",
+        "ApplyDarkToolBarCustomDraw(lpNMCustomDraw)",
+    )
+    for token in required_tokens:
+        if token not in toolbar_code:
+            errors.append(f"{rel}: missing toolbar custom-draw regression token {token}")
+
+    return errors
+
+
 def validate_modern_ui_registration() -> list[str]:
     errors: list[str] = []
     gyp_path = ROOT / "src" / "fxfile" / "fxfile.gyp"
@@ -162,15 +202,16 @@ def main() -> int:
     errors = validate_translation_units()
     errors.extend(validate_window_frame_theme_integration())
     errors.extend(validate_common_control_theme_integration())
+    errors.extend(validate_toolbar_custom_draw_regression())
     errors.extend(validate_modern_ui_registration())
 
     if errors:
-        print("Source invariant preflight: FAIL", file=sys.stderr)
+        print("Source invariant/regression preflight: FAIL", file=sys.stderr)
         for error in errors:
             print(f"  - {error}", file=sys.stderr)
         return 1
 
-    print("Source invariant preflight: PASS")
+    print("Source invariant/regression preflight: PASS")
     return 0
 
 

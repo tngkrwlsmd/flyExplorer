@@ -35,9 +35,13 @@ Before a C++ checkpoint, run:
 
 `build.bat` runs this preflight automatically before downloading tools,
 deleting stale generated projects, or running GYP. The current preflight checks
-direct header dependencies for cross-cutting ModernUI symbols and verifies the
-DPI/manifest integration points. It is a static check and does not replace a
-Visual Studio compile/link build.
+direct header dependencies for cross-cutting ModernUI symbols, verifies the
+DPI/manifest integration points, and carries deterministic regression guards for
+known UI integration failures. In particular, it rejects the unsupported
+ToolbarWindow32 `TB_SETBKCOLOR`/`TB_SETTEXTCOLOR` identifiers and verifies that
+toolbar dark-state colors remain routed through `NM_CUSTOMDRAW`/
+`NMTBCUSTOMDRAW`. It is a static check and does not replace a Visual Studio
+compile/link build.
 
 Policy/readiness checks can be run with:
 
@@ -97,7 +101,7 @@ Available profiles:
     local_ci.bat release
     local_ci.bat full
 
-`quick` runs only the source invariant preflight. `x64` regenerates the VS 2026
+`quick` runs the source invariant and known-regression preflight. `x64` regenerates the VS 2026
 x64 solution, **rebuilds** Release-x64-Unicode from source, rejects compiler/
 linker/MSBuild warnings, verifies core artifacts, and runs the x64 launch smoke.
 `x86` rebuilds and smoke-tests both Release x86 configurations. `release` runs
@@ -105,7 +109,7 @@ x64 + x86 and then builds/validates the portable archives and NSIS installer.
 `full` adds the vendored policy/readiness/conformance checks and a Debug-x64
 rebuild. Local CI deliberately uses MSBuild `Rebuild` rather than incremental
 `Build` so stale object files cannot hide CRT/configuration drift and compiled
-compiled `.cpp` files remain visible in the console using MSBuild minimal
+`.cpp` files remain visible in the console using MSBuild minimal
 verbosity (similar to ordinary Visual Studio build output), while the file
 logger keeps normal detail for diagnostics.
 
@@ -233,13 +237,16 @@ that owned the legacy IDR_MAINFRAME title icon now load that icon after HWND
 creation at the current monitor DPI. This modernizes icon loading/scaling only;
 the legacy .ico/bitmap artwork itself has not been redrawn or replaced.
 
-The dialog/icon changes have only static source review in this environment.
-Windows local_ci quick/x64 execution and actual Light/Dark/High Contrast,
+The shared dialog/icon modernization has source-level static coverage, and the
+preflight now includes deterministic regression guards for known toolbar API and
+custom-draw wiring failures. Compile/link, runtime, and package evidence for the
+current `main` still requires a fresh matching `local_ci.bat x64`/`full` run;
+static PASS must not be promoted to product PASS. Light/Dark/High Contrast,
 100/125/150/200% DPI, representative dialog controls, resize/config behavior,
 keyboard/IME behavior, and title-icon visual sharpness remain separate manual
-evidence and must not be treated as PASS. Direct-CDialog outliers outside the
-CResizingDialog/TitleDlg/CfgDlg families and actual icon/bitmap artwork refresh
-remain follow-up visual-modernization work.
+evidence. Direct-CDialog outliers outside the CResizingDialog/TitleDlg/CfgDlg
+families and actual icon/bitmap artwork refresh remain follow-up implementation
+work, with final visual quality kept separate from automated evidence.
 
 Generate the Visual Studio Solution
 -----------------------------------

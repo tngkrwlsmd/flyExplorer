@@ -7,7 +7,7 @@ PowerShell / Command Prompt에서 프로젝트 루트에서 실행합니다.
   = 기본 검증. .\local_ci.bat x64와 같습니다.
 
 .\local_ci.bat quick
-  = 가장 빠른 정적 Source Invariant 검증만 수행합니다.
+  = 가장 빠른 정적 Source Invariant + 알려진 회귀 가드 검증을 수행합니다.
 
 .\local_ci.bat policy
   = Policy / Readiness / Conformance 검증을 수행합니다.

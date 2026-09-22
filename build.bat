@@ -72,10 +72,10 @@ if errorlevel 1 (
     exit /b 1
 )
 
-echo Running source invariant preflight...
+echo Running source invariant and regression preflight...
 "%PYTHON_EXE%" %PYTHON_ARGS% "build\validate_source_invariants.py"
 if errorlevel 1 (
-    echo ERROR: Source invariant preflight failed.
+    echo ERROR: Source invariant/regression preflight failed.
     echo Fix the reported source dependency/integration issue before generating projects.
     popd
     exit /b 1

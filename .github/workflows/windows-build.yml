@@ -2,6 +2,7 @@ name: Windows Product Build
 
 # Temporary Actions budget pause through 2026-09-30.
 # No push/PR CI. Manual runs are opt-in and intentionally minimal.
+# build.bat runs the same source invariant/regression preflight before GYP.
 on:
   workflow_dispatch:
     inputs:
@@ -30,7 +31,7 @@ jobs:
         with:
           python-version: "3.14"
 
-      - name: Generate Visual Studio 2026 x64 solution
+      - name: Generate Visual Studio 2026 x64 solution with source regression preflight
         shell: cmd
         run: call build.bat 2026 x64
 
@@ -127,7 +128,7 @@ jobs:
         with:
           python-version: "3.14"
 
-      - name: Generate Visual Studio 2026 x86 solution
+      - name: Generate Visual Studio 2026 x86 solution with source regression preflight
         shell: cmd
         run: call build.bat 2026 x86
 
