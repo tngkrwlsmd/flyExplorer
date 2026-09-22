@@ -63,6 +63,7 @@ public:
     static xpr_sint_t getCommandVerticalPadding(HWND aHwnd);
     static xpr_sint_t getAddressBarHeight(HWND aHwnd);
     static xpr_sint_t getAddressHorizontalInset(HWND aHwnd);
+    static xpr_sint_t getAddressVerticalInset(HWND aHwnd);
     static xpr_sint_t getAddressTextMargin(HWND aHwnd);
     static xpr_sint_t getPopupItemPadding(HWND aHwnd);
 
