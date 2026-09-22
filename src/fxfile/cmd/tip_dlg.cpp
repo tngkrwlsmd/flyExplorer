@@ -9,6 +9,7 @@
 
 #include "stdafx.h"
 #include "tip_dlg.h"
+#include "../gui/ModernUI.h"
 
 #include "option.h"
 #include "resource.h"
@@ -84,8 +85,17 @@ void TipDlg::OnPaint(void)
 {
     CPaintDC sPaintDc(this);
 
-    const CRect sOffsetRect(7, 10, 7, 10);
-    const CPoint sTextOffset(15, 10);
+    const xpr_uint_t sDpi = ui::ModernUI::getDpi(GetSafeHwnd());
+    const xpr_sint_t sIconSize = ui::ModernUI::scale(32, sDpi);
+    const CRect sOffsetRect(
+        ui::ModernUI::scale(7, sDpi),
+        ui::ModernUI::scale(10, sDpi),
+        ui::ModernUI::scale(7, sDpi),
+        ui::ModernUI::scale(10, sDpi));
+    const CPoint sTextOffset(
+        ui::ModernUI::scale(15, sDpi),
+        ui::ModernUI::scale(10, sDpi));
+    const ui::ThemePalette sPalette = ui::ModernUI::getPalette();
 
     CRect sRect;
     GetClientRect(&sRect);
@@ -95,27 +105,39 @@ void TipDlg::OnPaint(void)
     ScreenToClient(&sOkButtonRect);
     sRect.bottom = sOkButtonRect.top - sOffsetRect.bottom;
 
-    // draw background
-    sPaintDc.FillSolidRect(sRect, RGB(255,255,255));
+    sPaintDc.FillSolidRect(sRect, sPalette.mSurface);
 
-    HICON sIcon = AfxGetApp()->LoadIcon(IDI_TIP);
+    HICON sIcon = ui::ModernUI::loadIconResource(
+        AfxGetResourceHandle(),
+        IDI_TIP,
+        GetSafeHwnd(),
+        32);
     if (sIcon != XPR_NULL)
     {
         CPoint sIconPoint(sOffsetRect.left, sOffsetRect.top);
-        ::DrawIconEx(sPaintDc.m_hDC, sIconPoint.x, sIconPoint.y, sIcon, 32, 32, 0, XPR_NULL, DI_NORMAL);
+        ::DrawIconEx(
+            sPaintDc.m_hDC,
+            sIconPoint.x,
+            sIconPoint.y,
+            sIcon,
+            sIconSize,
+            sIconSize,
+            0,
+            XPR_NULL,
+            DI_NORMAL);
         DESTROY_ICON(sIcon);
     }
 
-    CPen sPen(PS_SOLID, 1, RGB(200,200,200));
+    CPen sPen(PS_SOLID, 1, sPalette.mSeparator);
     CPen *sOldPen = sPaintDc.SelectObject(&sPen);
     sPaintDc.MoveTo(sRect.left,  sRect.bottom);
     sPaintDc.LineTo(sRect.right, sRect.bottom);
     sPaintDc.SelectObject(sOldPen);
 
     CRect sTitleRect(sRect);
-    sTitleRect.left   = sOffsetRect.left + 32 + sTextOffset.x;
+    sTitleRect.left   = sOffsetRect.left + sIconSize + sTextOffset.x;
     sTitleRect.top    = sOffsetRect.top;
-    sTitleRect.bottom = sTitleRect.top + 32;
+    sTitleRect.bottom = sTitleRect.top + sIconSize;
 
     LOGFONT sLogFont = {0};
     GetFont()->GetLogFont(&sLogFont);
@@ -127,14 +149,14 @@ void TipDlg::OnPaint(void)
     sLogFont.lfHeight = -MulDiv(13, GetDeviceCaps(sPaintDc.m_hDC, LOGPIXELSY), 72);
     sTitleFont.CreateFontIndirect(&sLogFont);
 
-    sPaintDc.SetTextColor(RGB(0,50,150));
+    sPaintDc.SetTextColor(sPalette.mSelection);
 
     CFont *sOldFont = sPaintDc.SelectObject(&sTitleFont);
     const xpr_tchar_t sTipOfTodayText[] = XPR_STRING_LITERAL("Did you know...");
     sPaintDc.DrawText(sTipOfTodayText, (xpr_sint_t)_tcslen(sTipOfTodayText), sTitleRect, DT_SINGLELINE | DT_LEFT | DT_VCENTER);
     sPaintDc.SelectObject(sOldFont);
 
-    sPaintDc.SetTextColor(RGB(0,0,0));
+    sPaintDc.SetTextColor(sPalette.mText);
 
     CRect sTextRect;
     sTextRect.left   = sTitleRect.left;

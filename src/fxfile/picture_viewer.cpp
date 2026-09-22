@@ -643,7 +643,8 @@ void PictureViewer::OnPaint(void)
         CBitmap *sOldBitmap = sMemDc.SelectObject(&sBitmap);
 
         CRect sRect(sClientRect);
-        sMemDc.FillSolidRect(sRect, RGB(255,255,255));
+        const ui::ThemePalette sPalette = ui::ModernUI::getPalette();
+        sMemDc.FillSolidRect(sRect, sPalette.mWindow);
 
         sRect.left   = (sRect.Width()  - mImgSize.cx) / 2;
         sRect.right  = (sRect.left     + mImgSize.cx);
