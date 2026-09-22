@@ -136,14 +136,15 @@ bool ConfFile::KeyIterator::operator!= (const ConfFile::KeyIterator &aIterator) 
 }
 
 ConfFile::ConfFile(void)
+    : mFlags(0)
 {
 }
 
 ConfFile::ConfFile(const xpr_tchar_t *aFilePath)
+    : mFilePath(aFilePath)
+    , mFlags(0)
 {
     XPR_ASSERT(aFilePath != XPR_NULL);
-
-    mFilePath = aFilePath;
 }
 
 ConfFile::ConfFile(const xpr::string &aFilePath)
