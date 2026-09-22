@@ -160,6 +160,7 @@
             [
                 '../xpr/include',
                 '../fxfile',
+                '../base',
             ],
 
             'sources':
@@ -169,6 +170,11 @@
                 '../fxfile/file_operation_core.h',
                 '../fxfile/shell_registry_core.cpp',
                 '../fxfile/shell_registry_core.h',
+                '../base/crc32.c',
+                '../base/crc32.h',
+                '../base/md5.c',
+                '../base/md5.h',
+                '../base/hash-internal.h',
             ],
         },
     ],

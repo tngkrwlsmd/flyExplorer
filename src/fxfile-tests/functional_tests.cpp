@@ -15,6 +15,8 @@
 #include "xpr.h"
 #include "file_operation_core.h"
 #include "shell_registry_core.h"
+#include "crc32.h"
+#include "md5.h"
 
 namespace
 {
@@ -564,6 +566,30 @@ bool testLongLegacyPath(TestState &aState)
            sRead == sData;
 }
 
+bool testHashKnownVectors(void)
+{
+    static const char kVector[] = "123456789";
+
+    xpr_uint8_t sCrc[CRC32_DIGEST_SIZE] = {0};
+    xpr_uint8_t sMd5[MD5_DIGEST_SIZE] = {0};
+
+    CRC32(kVector, 9, sCrc);
+    MD5(kVector, 9, sMd5);
+
+    static const xpr_uint8_t kExpectedCrc[CRC32_DIGEST_SIZE] =
+        {0xcb, 0xf4, 0x39, 0x26};
+    static const xpr_uint8_t kExpectedMd5[MD5_DIGEST_SIZE] =
+        {
+            0x25, 0xf9, 0xe7, 0x94,
+            0x32, 0x3b, 0x45, 0x38,
+            0x85, 0xf5, 0x18, 0x1f,
+            0x1b, 0x62, 0x4d, 0x0b
+        };
+
+    return memcmp(sCrc, kExpectedCrc, CRC32_DIGEST_SIZE) == 0 &&
+           memcmp(sMd5, kExpectedMd5, MD5_DIGEST_SIZE) == 0;
+}
+
 bool testShellRegistryCommandContract(void)
 {
 #if defined(XPR_CFG_UNICODE)
@@ -642,6 +668,7 @@ int _tmain(void)
     report(sState, "read-only FileSys remove failure", testReadOnlyFailure(sState));
     report(sState, "missing shell source failure", testMissingSourceFailure(sState));
     report(sState, "long legacy path FileIo round-trip", testLongLegacyPath(sState));
+    report(sState, "CRC32/MD5 known vectors", testHashKnownVectors());
     report(sState, "shell context-menu command contract", testShellRegistryCommandContract());
     report(sState, "recursive shell delete", testRecursiveDelete(sState));
 

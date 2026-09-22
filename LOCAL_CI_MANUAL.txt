@@ -14,6 +14,7 @@ PowerShell / Command Prompt에서 프로젝트 루트에서 실행합니다.
   = OS 임시 디렉터리 아래에서 native functional regression을 수행합니다.
   = 실제 product 경로인 xpr::FileSys/FileIo와 SHFileOperation seam을 사용해 copy/move/delete/rename/mkdir, Unicode/공백 파일명, 충돌, 오류, 무결성, cleanup을 검증합니다.
   = ShellRegistry가 실제 사용하는 context-menu key/command 조립도 quoting과 Unicode 경로를 포함해 검증합니다.
+  = production CRC32/MD5 구현은 표준 known-vector로 검증합니다.
 
 .\local_ci.bat install
   = 생성된 NSIS installer와 shell-integration 안전 계약을 검사합니다.

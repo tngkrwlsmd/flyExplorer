@@ -587,6 +587,8 @@ def validate_functional_test_wiring() -> list[str]:
         "'functional_tests.cpp'",
         "'../fxfile/file_operation_core.cpp'",
         "'../fxfile/shell_registry_core.cpp'",
+        "'../base/crc32.c'",
+        "'../base/md5.c'",
         "'SubSystem': 1",
     )
     for token in required_gyp_tokens:
@@ -607,6 +609,9 @@ def validate_functional_test_wiring() -> list[str]:
         "testShellRegistryCommandContract",
         "shellreg::buildOpenCommand",
         "shellreg::buildCommandKey",
+        "testHashKnownVectors",
+        "CRC32(kVector, 9, sCrc)",
+        "MD5(kVector, 9, sMd5)",
     )
     for token in required_test_tokens:
         if token not in test_source:
