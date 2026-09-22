@@ -457,10 +457,11 @@ xpr_bool_t CfgMainDlg::showCfg(xpr_sint_t aCfgIndex)
             ui::ModernUI::getDialogSectionSpacing(GetSafeHwnd());
 
         sCfgItem->mCfgDlg->SetWindowPos(XPR_NULL, sDescRect.left, y, 0, 0, SWP_NOSIZE);
-        ui::ModernUI::applyRoundedWindowRegion(
-            sCfgItem->mCfgDlg->GetSafeHwnd(),
-            ui::ModernUI::getCardCornerRadius(
-                sCfgItem->mCfgDlg->GetSafeHwnd()));
+
+        // Child configuration resources intentionally place some controls at
+        // x/y == 0. A rounded child-window region clips those controls, so the
+        // page stays rectangular and individual surfaces own their rounding.
+        ::SetWindowRgn(sCfgItem->mCfgDlg->GetSafeHwnd(), XPR_NULL, TRUE);
     }
 
     sCfgItem->mCfgDlg->ShowWindow(SW_SHOW);
@@ -526,7 +527,16 @@ void CfgMainDlg::applyModernAppearanceToChild(CWnd *aWnd, HFONT aPreviousFont)
         _tcsicmp(sClassName, XPR_STRING_LITERAL("ListBox")) == 0 ||
         _tcsicmp(sClassName, XPR_STRING_LITERAL("SysTreeView32")) == 0)
     {
-        ui::ModernUI::applyExplorerControlTheme(aWnd->GetSafeHwnd());
+        const ui::ThemePalette sPalette = ui::ModernUI::getPalette();
+        if (XPR_IS_TRUE(sPalette.mDark) &&
+            XPR_IS_FALSE(sPalette.mHighContrast))
+        {
+            ui::ModernUI::resetControlTheme(aWnd->GetSafeHwnd());
+        }
+        else
+        {
+            ui::ModernUI::applyExplorerControlTheme(aWnd->GetSafeHwnd());
+        }
     }
 
     CWnd *sChild = aWnd->GetWindow(GW_CHILD);
