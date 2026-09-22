@@ -262,16 +262,30 @@ void ExplorerPane::recalcLayout(void)
     // address bar
     if (isVisibleAddressBar() == XPR_TRUE && XPR_IS_NOT_NULL(mAddressBar) && XPR_IS_NOT_NULL(mAddressBar->m_hWnd))
     {
-        xpr_sint_t sCxEdge = ::GetSystemMetrics(SM_CXEDGE);
-        xpr_sint_t sCyEdge = ::GetSystemMetrics(SM_CYEDGE);
+        const xpr_sint_t sHorizontalInset =
+            ui::ModernUI::getAddressHorizontalInset(GetSafeHwnd());
+        const xpr_sint_t sVerticalInset =
+            ui::ModernUI::getAddressVerticalInset(GetSafeHwnd());
 
-        ::DeferWindowPos(sHdwp, *mAddressBar, XPR_NULL, sRect.left - sCxEdge, sRect.top - sCyEdge, sRect.Width() + (sCxEdge * 2), 1000, SWP_NOZORDER);
+        // Keep the large ComboBox height argument so the native dropdown can
+        // retain its existing capacity. The closed field height is controlled
+        // by AddressBar::updateMetrics; only the navigation-row margins change.
+        ::DeferWindowPos(
+            sHdwp,
+            *mAddressBar,
+            XPR_NULL,
+            sRect.left + sHorizontalInset,
+            sRect.top + sVerticalInset,
+            max(1, sRect.Width() - (sHorizontalInset * 2)),
+            1000,
+            SWP_NOZORDER);
 
         CRect sAddressWindowRect;
         mAddressBar->GetWindowRect(&sAddressWindowRect);
 
+        sRect.top += sVerticalInset;
         sRect.top += sAddressWindowRect.Height();
-        sRect.top -= sCyEdge;
+        sRect.top += sVerticalInset;
     }
 
     // path bar and drive bar
