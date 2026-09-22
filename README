@@ -80,14 +80,12 @@ The Actions workflows are intentionally slim:
   product functional regression (filesystem operations, rename,
   pattern/path, config persistence, updater contracts, hash and shell-command
   checks), and then runs the x64 launch smoke.
-- Set `run_x86_compat=true` only when x86 compatibility needs explicit remote
-  evidence. That optional job compiles `Release-x86-Unicode | Win32` and
-  `Release-x86-Multibyte | Win32`, verifies the key runtime/updater
-  artifacts, and runs the same native functional regression for both x86
-  configurations. It intentionally does not run x86 launch smoke.
-- Debug x64, package generation, package validation, Actions artifact
-  staging/upload, and the previous full policy corpus are no longer part of
-  GitHub Actions. Run those locally or immediately before a release when needed.
+- The x86-compatibility workflow input is retained for future/manual use, but
+  the current project CI scope does **not** permit enabling it unless the user
+  explicitly expands the validation scope.
+- Debug x64, x86 compatibility, package generation/validation, Actions artifact
+  staging/upload, and the previous full policy corpus are not part of the
+  active CI scope.
 
 A successful default Windows Product Build is Release-x64 compile/link, warning,
 artifact, and hosted-runner launch evidence only. GitHub's Windows runner already
@@ -97,13 +95,21 @@ regression testing.
 
 Local CI
 --------
-Use `local_ci.bat` from a normal Command Prompt to run the same verification
-locally without spending GitHub Actions minutes. The default profile is `x64`:
+The active development/CI build scope is currently **Release-x64-Unicode | x64
+only**. Use `local_ci.bat x64` (or the no-argument default, which is the same
+profile):
 
     local_ci.bat
     local_ci.bat x64
 
-Available profiles:
+The `x64` profile regenerates the VS 2026 x64 solution, runs the source
+invariant/regression preflight, **rebuilds Release-x64-Unicode from source**,
+runs the native functional regression, rejects compiler/linker/MSBuild warnings,
+verifies core artifacts, and runs the x64 launch smoke.
+
+Other profiles remain implemented as maintenance assets but are **not part of
+the active CI scope**. Do not run them for normal development unless the user
+explicitly expands the validation scope:
 
     local_ci.bat quick
     local_ci.bat test
@@ -113,26 +119,17 @@ Available profiles:
     local_ci.bat release
     local_ci.bat full
 
-`quick` runs the deterministic source/resource/regression preflight. `test`
-generates the x64 solution, builds `fxfile-functional-tests.exe`, and runs
-isolated temp-directory filesystem operations plus production rename transforms,
-fnmatch/FilePath contracts, UTF-8 ConfFile persistence, updater version/metadata
-and command-quoting contracts, CRC32/MD5 known vectors, and shell-registration
-command/key contracts. `install` inspects the
-isolated NSIS smoke contract; set `FXFILE_INSTALLER_SMOKE=1` from an elevated
-local shell to opt into temporary install/runtime/uninstall verification.
-`x64` regenerates the VS 2026 x64 solution, **rebuilds**
-Release-x64-Unicode from source, runs the functional regression, rejects
-compiler/linker/MSBuild warnings, verifies core artifacts, and runs the x64
-launch smoke. `x86` rebuilds both Release x86 configurations and runs the
-functional regression for each before the runtime smoke. `release` runs x64 +
-x86, builds/validates the portable archives and NSIS installer, and checks the
-installer-smoke contract. `full` adds the vendored
-policy/readiness/conformance checks and a Debug-x64 rebuild. Local CI deliberately uses MSBuild `Rebuild` rather than incremental
-`Build` so stale object files cannot hide CRT/configuration drift and compiled
-`.cpp` files remain visible in the console using MSBuild minimal
-verbosity (similar to ordinary Visual Studio build output), while the file
-logger keeps normal detail for diagnostics.
+In particular, Debug-x64, x86 Unicode/Multibyte, `release`, `full`, and the
+GitHub Actions x86-compatibility job are inactive by current project direction.
+The utility profiles are retained so they can be used for a specifically
+requested static, installer, policy, compatibility, or release investigation
+without reconstructing the tooling.
+
+Local CI deliberately uses MSBuild `Rebuild` rather than incremental `Build`
+so stale object files cannot hide CRT/configuration drift and compiled `.cpp`
+files remain visible in the console using MSBuild minimal verbosity (similar to
+ordinary Visual Studio build output), while the file logger keeps normal detail
+for diagnostics.
 
 The `policy`/`full` profiles create or reuse
 `%TEMP%\\flyExplorer-policy-venv` and install the locked policy dependencies
