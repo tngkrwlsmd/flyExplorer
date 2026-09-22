@@ -111,6 +111,12 @@ C++ 변경에는 다음을 추가로 적용한다.
 
 UI/UX 현대화 작업은 다음 원칙을 따른다.
 
+- **장기 UI 기준선은 현재 Windows 11 기본 파일 탐색기다.** MFC를 유지하더라도 main frame chrome, command bar, navigation/address surface, tab, file list/header, folder tree, status surface의 시각적 위계·여백·상태 표현은 Windows 11 Explorer와 비교하며 개선한다.
+- Windows 11 Explorer를 픽셀 단위로 복제하기보다 flyExplorer의 multi-pane/tab/고급 file-manager 기능을 보존한 채 그 위에 현대적인 Windows 11 presentation을 적용한다.
+- UI 우선순위는 **main frame/command surface → navigation/address/tab → list/tree/content → popup/context surface → dialogs** 순으로 둔다. 사용자 스크린샷에서 즉시 드러나는 legacy chrome과 과밀한 control spacing을 먼저 줄인다.
+- 앱 테마는 사용자 선택 가능한 **System / Light / Dark** 모드를 제공하고 설정에 영구 저장한다. High Contrast는 사용자 강제 테마보다 우선하며 system accessibility rendering을 유지한다.
+- dark UI는 순수 검정 한 장으로 평탄화하지 않고 Windows 11 Explorer처럼 window/surface/separator 계층이 구분되는 neutral dark palette를 사용한다. Light도 과도한 3D border와 legacy gray chrome을 줄인다.
+- UI checkpoint는 가능하면 같은 화면을 Windows 11 Explorer reference와 나란히 비교하고, command hit target, whitespace, typography, separator, selected/hover/focus contrast를 시각 evidence로 남긴다.
 - 핵심 file-manager 기능과 정보 밀도를 유지하면서 presentation layer를 현대화한다.
 - MFC 전체를 WinUI 3 등으로 즉시 재작성하지 않는다. 먼저 기존 MFC view/control/resource 경계를 파악하고 점진적으로 개선한다.
 - keyboard navigation, accelerator, context menu, drag/drop, multi-pane/tab workflow를 보존한다.
