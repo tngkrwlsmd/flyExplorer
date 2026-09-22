@@ -170,6 +170,8 @@
                 '../fxfile/file_operation_core.h',
                 '../fxfile/shell_registry_core.cpp',
                 '../fxfile/shell_registry_core.h',
+                '../fxfile/cmd/rename_transform_core.cpp',
+                '../fxfile/cmd/rename_transform_core.h',
                 '../base/crc32.c',
                 '../base/crc32.h',
                 '../base/md5.c',
