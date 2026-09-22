@@ -1103,6 +1103,19 @@ int CMenuBar::OnCreate( LPCREATESTRUCT lpCreateStruct )
 
     GetToolBarCtrl().SetImageList( 0 );
 
+    if (!WinAppEx::GetInstance()->IsWinXP())
+    {
+        CToolBarCtrl &sToolBarCtrl = GetToolBarCtrl();
+        const DWORD sButtonSize =
+            static_cast<DWORD>(sToolBarCtrl.SendMessage(TB_GETBUTTONSIZE, 0, 0));
+        const xpr_sint_t sMenuHeight =
+            fxfile::ui::ModernUI::getMenuBarItemHeight(m_hWnd);
+        sToolBarCtrl.SendMessage(
+            TB_SETBUTTONSIZE,
+            0,
+            MAKELPARAM(LOWORD(sButtonSize), max((int)HIWORD(sButtonSize), sMenuHeight)));
+    }
+
     return 0;
 }
 
@@ -1540,7 +1553,7 @@ void CMenuBar::OnCustomDraw( NMHDR* pNMHDR, LRESULT* pResult )
             const fxfile::ui::ThemePalette sPalette = fxfile::ui::ModernUI::getPalette();
             if ( XPR_IS_FALSE(sPalette.mHighContrast) && !WinAppEx::GetInstance()->IsWinXP() )
             {
-                ::SetDCBrushColor( nmcd.hdc, sPalette.mSurface );
+                ::SetDCBrushColor( nmcd.hdc, sPalette.mChrome );
                 ::FillRect(
                     nmcd.hdc,
                     &nmcd.rc,
@@ -1588,7 +1601,7 @@ void CMenuBar::OnCustomDraw( NMHDR* pNMHDR, LRESULT* pResult )
                 {
                     *pResult |= TBCDRF_NOEDGES | TBCDRF_NOOFFSET;
 
-                    lpNMCustomDraw->clrBtnFace = sPalette.mSurface;
+                    lpNMCustomDraw->clrBtnFace = sPalette.mChrome;
                     lpNMCustomDraw->clrText =
                         ( ( uItemState & CDIS_DISABLED ) || !m_bFrameActive ) ?
                         sPalette.mSecondaryText :
@@ -1599,12 +1612,9 @@ void CMenuBar::OnCustomDraw( NMHDR* pNMHDR, LRESULT* pResult )
                     {
                         lpNMCustomDraw->clrHighlightHotTrack =
                             ( uItemState & CDIS_SELECTED ) ?
-                            sPalette.mSelection :
+                            sPalette.mPressed :
                             sPalette.mHover;
-                        lpNMCustomDraw->clrText =
-                            ( uItemState & CDIS_SELECTED ) ?
-                            sPalette.mSelectionText :
-                            sPalette.mText;
+                        lpNMCustomDraw->clrText = sPalette.mText;
                         *pResult |= TBCDRF_HILITEHOTTRACK;
                     }
                 }
