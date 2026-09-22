@@ -107,6 +107,20 @@ C++ 변경에는 다음을 추가로 적용한다.
 - 컴파일 실패가 발생하면 첫 실제 compiler error를 기준으로 root cause를 수정하고 preflight와 관련 build를 다시 실행한다. 연쇄 오류를 각각 독립 결함으로 취급하지 않는다.
 - 여러 UI phase처럼 후속 단계가 앞 단계 C++에 의존하면, 가능하면 앞 단계의 compiler evidence를 확보한 뒤 다음 단계로 진행한다. compiler 환경이 없어 계속 진행해야 하면 compile 상태를 완료로 표현하지 않는다.
 
+### Error diagnosis / prevention record
+
+확정된 오류는 수정만 하고 끝내지 않는다. 재발 방지와 다음 진단 속도를 위해 `docs/development/ERROR_HISTORY.md`에 별도 기록한다.
+
+- 기록 단위는 **오류 발생 → 최초 실제 오류 → 원인 진단 → 해결 방법 → 재발 방지 → 검증 상태 → 관련 commit** 순서를 기본으로 한다.
+- 하나의 root cause에서 파생된 compiler/linker cascade는 여러 독립 오류처럼 기록하지 않고, 최초 실제 오류와 cascade 범위를 구분한다.
+- 원인이 불확실한 상태에서 추정 해결책을 기록하지 않는다. 로그/코드/재현 evidence로 확인된 사실과 inference를 분리한다.
+- 같은 계열 오류가 다시 발생할 가능성이 있으면 단순 문서 기록으로 끝내지 말고 `build/validate_source_invariants.py`, native regression test, build-script preflight, resource/ABI contract guard 중 가장 싼 deterministic 방어선을 추가할 수 있는지 검토한다.
+- build script/CI 자체의 오류는 제품 코드 오류와 분리해 기록한다. 제품 compile/link가 성공했는지, CI orchestration이 실패했는지를 별도 evidence로 남긴다.
+- 새 오류를 고친 뒤에는 가능하면 실패를 재현하던 동일 profile/command를 다시 실행한다. 실행하지 못했다면 `NOT TESTED`로 명시한다.
+- 이미 `ERROR_HISTORY.md`에 유사 사례가 있으면 먼저 해당 원인/해결/guard를 확인하고, 새 evidence 없이 같은 실패 접근을 반복하지 않는다.
+- 재발 방지 규칙이 일반 개발 원칙으로 승격될 가치가 있으면 이 `AGENTS.md` 또는 `.agent-policy/PROJECT.md`에도 반영한다. 프로젝트 고유 사실은 `.agent-policy/PROJECT.md`, 실행 원칙은 `AGENTS.md`에 둔다.
+- 오류 기록에는 secret, 개인 경로의 불필요한 사용자명, access token, 계정 식별자 등 민감정보를 남기지 않는다. 경로가 필요하면 repository-relative 또는 일반화된 형태를 우선한다.
+
 ## 7. Windows 11 UI modernization
 
 UI/UX 현대화 작업은 다음 원칙을 따른다.
