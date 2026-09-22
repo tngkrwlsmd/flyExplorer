@@ -409,12 +409,14 @@
 
 **해결 방법**
 - `cfg/cfg_dlg.cpp`: Dark/non-HC checkbox/radio에만 paint subclass를 추가해 background, label, disabled text, check/radio/focus visual을 ThemePalette로 그린다. click/check/keyboard messages는 native Button에 계속 전달한다.
+- `cfg/cfg_dlg.cpp`: Dark `CBS_DROPDOWNLIST`의 closed field/button은 기존 adapter가 그리며, `CB_SHOWDROPDOWN` 이후 실제 ListBox HWND의 Explorer association도 reset해 기존 CTLCOLOR palette path가 dropdown text/background를 소유한다. dropdown/keyboard/accessibility 동작은 native ComboBox/ListBox에 남긴다.
 - `address_bar.cpp`: Dark/non-HC에서는 outer/ComboBox/Edit/lazy ListBox의 Explorer association을 reset하고 기존 AddressBar palette/subclass paint가 coherent surface를 소유한다. Light/High Contrast는 documented native association path를 유지한다.
 - `gui/BCMenu.cpp`: app-owned submenu chevron은 Windows 11 system-provided Segoe Fluent Icons를 우선 사용하고 font 부재 시 geometry fallback을 사용한다. shell IContextMenu routing은 유지한다.
+- `src/fxfile/res/fluent/`: Microsoft Fluent UI System Icons MIT license, representative command SVG set, 기존 toolbar frame/command mapping inventory를 추가했다. runtime bitmap strip은 아직 변경하지 않는다.
 
 **재발 방지**
-- `build/validate_source_invariants.py`가 settings toggle paint/native fallback wiring, AddressBar dark theme reset/native input tokens, popup Fluent chevron+fallback을 검사한다.
-- Microsoft Fluent source prototype은 upstream MIT license/provenance와 함께 유지하고 Windows font binary가 repository에 들어오지 않도록 guard한다.
+- `build/validate_source_invariants.py`가 settings toggle paint/native fallback wiring, settings ComboBox dropdown ListBox theme reset, AddressBar dark theme reset/native input tokens, popup Fluent chevron+fallback을 검사한다.
+- Fluent source contract는 upstream MIT license/provenance, representative SVG existence, canonical GYP registration, main-toolbar frame/command mapping을 함께 검사하고 Windows font binary가 repository에 들어오지 않도록 guard한다.
 - Dark UI 검토 시 visual-style association 또는 WM_CTLCOLOR 호출 존재만으로 완료로 판단하지 않고 실제 최종 paint owner를 확인한다.
 
 **검증 상태**
@@ -428,6 +430,9 @@
 - `3e974a12` — `ui: give dark address bar full paint ownership`
 - `20356129` — `ui: modernize popup chevrons and spacing`
 - `962e0864` — `ui: tune popup metrics toward Explorer`
+- `e2385e3e` — `ui: complete dark settings combo ownership`
+- `b9c6c518` — `build: register Fluent source assets`
+- `295be416` — `test: guard Fluent command asset foundation`
 
 ---
 
