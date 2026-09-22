@@ -78,6 +78,104 @@
       "name": "Settings",
       "small_svg": "ic_fluent_settings_16_regular.svg",
       "large_svg": "ic_fluent_settings_20_regular.svg"
+    },
+    {
+      "frame": 3,
+      "command": "ID_GO_HISTORY",
+      "name": "History",
+      "small_svg": "ic_fluent_history_16_regular.svg",
+      "large_svg": "ic_fluent_history_20_regular.svg"
+    },
+    {
+      "frame": 7,
+      "command": "ID_VIEW_FOLDER_TREE_SHOW",
+      "name": "Folder Open",
+      "small_svg": "ic_fluent_folder_open_16_regular.svg",
+      "large_svg": "ic_fluent_folder_open_20_regular.svg"
+    },
+    {
+      "frame": 10,
+      "command": "ID_GO_BOOKMARK",
+      "name": "Star",
+      "small_svg": "ic_fluent_star_16_regular.svg",
+      "large_svg": "ic_fluent_star_20_regular.svg"
+    },
+    {
+      "frame": 11,
+      "command": "ID_GO_DRIVE",
+      "name": "Hard Drive",
+      "small_svg": "ic_fluent_hard_drive_16_regular.svg",
+      "large_svg": "ic_fluent_hard_drive_20_regular.svg"
+    },
+    {
+      "frame": 43,
+      "command": "ID_GO_WORKING_FOLDER",
+      "name": "Folder",
+      "small_svg": "ic_fluent_folder_16_regular.svg",
+      "large_svg": "ic_fluent_folder_20_regular.svg"
+    },
+    {
+      "frame": 18,
+      "command": "ID_FILE_RENAME",
+      "name": "Rename",
+      "small_svg": "ic_fluent_rename_16_regular.svg",
+      "large_svg": "ic_fluent_rename_20_regular.svg"
+    },
+    {
+      "frame": 19,
+      "command": "ID_FILE_DELETE",
+      "name": "Delete",
+      "small_svg": "ic_fluent_delete_16_regular.svg",
+      "large_svg": "ic_fluent_delete_20_regular.svg"
+    },
+    {
+      "frame": 29,
+      "command": "ID_EDIT_UNDO",
+      "name": "Arrow Undo",
+      "small_svg": "ic_fluent_arrow_undo_16_regular.svg",
+      "large_svg": "ic_fluent_arrow_undo_20_regular.svg"
+    },
+    {
+      "frame": 20,
+      "command": "ID_FILE_PROPERTY",
+      "name": "Document Settings",
+      "small_svg": "ic_fluent_document_settings_16_regular.svg",
+      "large_svg": "ic_fluent_document_settings_20_regular.svg"
+    },
+    {
+      "frame": 21,
+      "command": "ID_WINDOW_SPLIT",
+      "name": "Window Multiple",
+      "small_svg": "ic_fluent_window_multiple_16_regular.svg",
+      "large_svg": "ic_fluent_window_multiple_20_regular.svg"
+    },
+    {
+      "frame": 26,
+      "command": "ID_VIEW_STYLE",
+      "name": "Apps List",
+      "small_svg": "ic_fluent_apps_list_20_regular.svg",
+      "large_svg": "ic_fluent_apps_list_20_regular.svg"
+    },
+    {
+      "frame": 31,
+      "command": "ID_TOOL_CMD",
+      "name": "Window Console",
+      "small_svg": "ic_fluent_window_console_20_regular.svg",
+      "large_svg": "ic_fluent_window_console_20_regular.svg"
+    },
+    {
+      "frame": 27,
+      "command": "ID_TOOL_EMPTY_RECYCLEBIN",
+      "name": "Bin Recycle",
+      "small_svg": "ic_fluent_bin_recycle_20_regular.svg",
+      "large_svg": "ic_fluent_bin_recycle_20_regular.svg"
+    },
+    {
+      "frame": 28,
+      "command": "ID_APP_ABOUT",
+      "name": "Info",
+      "small_svg": "ic_fluent_info_16_regular.svg",
+      "large_svg": "ic_fluent_info_20_regular.svg"
     }
   ]
 }
