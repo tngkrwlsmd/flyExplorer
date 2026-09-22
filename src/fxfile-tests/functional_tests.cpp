@@ -16,6 +16,7 @@
 #include "xpr.h"
 #include "file_operation_core.h"
 #include "shell_registry_core.h"
+#include "cmd/rename_transform_core.h"
 #include "crc32.h"
 #include "md5.h"
 
@@ -567,6 +568,127 @@ bool testLongLegacyPath(TestState &aState)
            sRead == sData;
 }
 
+bool testRenameTransformCore(void)
+{
+    using namespace fxfile::cmd::rename_core;
+
+    xpr::string sBase;
+    xpr::string sExt;
+
+    splitBaseFileNameAndExt(
+        XPR_FALSE,
+        XPR_STRING_LITERAL("archive.tar.gz"),
+        sBase,
+        sExt);
+    if (sBase != XPR_STRING_LITERAL("archive.tar") ||
+        sExt != XPR_STRING_LITERAL(".gz"))
+    {
+        return false;
+    }
+
+    splitBaseFileNameAndExt(
+        XPR_FALSE,
+        XPR_STRING_LITERAL(".gitignore"),
+        sBase,
+        sExt);
+    if (sBase != XPR_STRING_LITERAL("") ||
+        sExt != XPR_STRING_LITERAL(".gitignore"))
+    {
+        return false;
+    }
+
+    splitBaseFileNameAndExt(
+        XPR_TRUE,
+        XPR_STRING_LITERAL("folder.name"),
+        sBase,
+        sExt);
+    if (sBase != XPR_STRING_LITERAL("folder.name") ||
+        sExt.empty() == XPR_FALSE)
+    {
+        return false;
+    }
+
+    xpr::string sName = XPR_STRING_LITERAL("One one ONE.txt");
+    replaceText(
+        sName,
+        XPR_STRING_LITERAL("one"),
+        XPR_STRING_LITERAL("X"),
+        -1,
+        XPR_FALSE);
+    if (sName != XPR_STRING_LITERAL("X X X.txt"))
+        return false;
+
+    sName = XPR_STRING_LITERAL("abcdef");
+    replaceText(
+        sName,
+        XPR_STRING_LITERAL("cd"),
+        XPR_STRING_LITERAL("XY"),
+        1,
+        XPR_TRUE);
+    if (sName != XPR_STRING_LITERAL("abXYef"))
+        return false;
+
+    sName = XPR_STRING_LITERAL("abc");
+    insertAtFirst(sName, XPR_STRING_LITERAL("["));
+    insertAtLast(sName, XPR_STRING_LITERAL("]"));
+    insertFromFirst(sName, 2, XPR_STRING_LITERAL("-"));
+    insertFromLast(sName, 1, XPR_STRING_LITERAL("+"));
+    if (sName != XPR_STRING_LITERAL("[a-bc+]"))
+        return false;
+
+    sName = XPR_STRING_LITERAL("abcdef");
+    deleteAtFirst(sName, 2);
+    if (sName != XPR_STRING_LITERAL("cdef"))
+        return false;
+
+    sName = XPR_STRING_LITERAL("abcdef");
+    deleteAtLast(sName, 2);
+    if (sName != XPR_STRING_LITERAL("abcd"))
+        return false;
+
+    sName = XPR_STRING_LITERAL("abcdef");
+    deleteFromFirst(sName, 2, 2);
+    if (sName != XPR_STRING_LITERAL("abef"))
+        return false;
+
+    sName = XPR_STRING_LITERAL("abcdef");
+    deleteFromLast(sName, 1, 2);
+    if (sName != XPR_STRING_LITERAL("abcf"))
+        return false;
+
+    sName = XPR_STRING_LITERAL("__hELLo WORLD");
+    upperAtFirstChar(sName, XPR_STRING_LITERAL("_"));
+    if (sName != XPR_STRING_LITERAL("__Hello world"))
+        return false;
+
+    sName = XPR_STRING_LITERAL("hELLo-world TEST");
+    upperAtFirstCharOnEveryWord(sName, XPR_STRING_LITERAL("-"));
+    if (sName != XPR_STRING_LITERAL("Hello-World Test"))
+        return false;
+
+    sName = XPR_STRING_LITERAL("MiXeD");
+    toLower(sName);
+    if (sName != XPR_STRING_LITERAL("mixed"))
+        return false;
+    toUpper(sName);
+    if (sName != XPR_STRING_LITERAL("MIXED"))
+        return false;
+
+    sName.clear();
+    appendNumber(sName, 2, 1, 2, XPR_TRUE, 3);
+    if (sName != XPR_STRING_LITERAL("005"))
+        return false;
+
+#if defined(XPR_CFG_UNICODE)
+    sName = L"\xD55C\xAE00.TXT";
+    toLower(sName);
+    if (sName != L"\xD55C\xAE00.txt")
+        return false;
+#endif
+
+    return true;
+}
+
 bool testHashKnownVectors(void)
 {
     static const char kVector[] = "123456789";
@@ -669,6 +791,7 @@ int _tmain(void)
     report(sState, "read-only FileSys remove failure", testReadOnlyFailure(sState));
     report(sState, "missing shell source failure", testMissingSourceFailure(sState));
     report(sState, "long legacy path FileIo round-trip", testLongLegacyPath(sState));
+    report(sState, "rename/format transform core", testRenameTransformCore());
     report(sState, "CRC32/MD5 known vectors", testHashKnownVectors());
     report(sState, "shell context-menu command contract", testShellRegistryCommandContract());
     report(sState, "recursive shell delete", testRecursiveDelete(sState));
