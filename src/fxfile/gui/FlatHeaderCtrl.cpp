@@ -157,11 +157,17 @@ void FlatHeaderCtrl::drawItem(CDC *aDC, CRect aItemRect, xpr_uint_t aState, xpr_
     sHdItem.cchTextMax = XPR_MAX_PATH;
     GetItem(aIndex, &sHdItem);
 
-    COLORREF sBackColor = sPalette.mSurface;
+    COLORREF sBackColor =
+        XPR_IS_TRUE(sPalette.mHighContrast) ?
+        sPalette.mSurface :
+        sPalette.mChrome;
     if (XPR_TEST_BITS(aState, ODS_HOTLIGHT))
         sBackColor = sPalette.mHover;
     if (XPR_TEST_BITS(aState, ODS_SELECTED))
-        sBackColor = XPR_IS_TRUE(sPalette.mHighContrast) ? sPalette.mSelection : sPalette.mHover;
+        sBackColor =
+            XPR_IS_TRUE(sPalette.mHighContrast) ?
+            sPalette.mSelection :
+            sPalette.mPressed;
 
     aDC->FillSolidRect(aItemRect, sBackColor);
     aDC->SetBkMode(TRANSPARENT);
@@ -170,8 +176,14 @@ void FlatHeaderCtrl::drawItem(CDC *aDC, CRect aItemRect, xpr_uint_t aState, xpr_
             sPalette.mSelectionText : sPalette.mText);
 
     CRect sSeparatorRect(aItemRect);
-    sSeparatorRect.left = max(sSeparatorRect.left, sSeparatorRect.right - sSeparatorWidth);
-    aDC->FillSolidRect(sSeparatorRect, sPalette.mSeparator);
+    const xpr_sint_t sSeparatorInset =
+        fxfile::ui::ModernUI::scale(6, sDpi);
+    sSeparatorRect.left =
+        max(sSeparatorRect.left, sSeparatorRect.right - sSeparatorWidth);
+    sSeparatorRect.top += sSeparatorInset;
+    sSeparatorRect.bottom -= sSeparatorInset;
+    if (sSeparatorRect.top < sSeparatorRect.bottom)
+        aDC->FillSolidRect(sSeparatorRect, sPalette.mSeparator);
 
     CRect sTextArea(aItemRect);
     if (aIndex == mSortColumn)
