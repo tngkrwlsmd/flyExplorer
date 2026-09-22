@@ -262,6 +262,8 @@
                 '../base/conf_file.cpp',
                 '../base/conf_file.h',
                 '../base/conf_file_ex.h',
+                '../base/version_compare.cpp',
+                '../base/version_compare.h',
                 '../base/crc32.c',
                 '../base/crc32.h',
                 '../base/def.h',
