@@ -186,7 +186,7 @@ void CfgDlg::refreshModernAppearance(void)
 xpr_bool_t CfgDlg::OnEraseBkgnd(CDC *aDC)
 {
     const ui::ThemePalette sPalette = ui::ModernUI::getPalette();
-    if (XPR_IS_TRUE(sPalette.mDark) && XPR_IS_FALSE(sPalette.mHighContrast))
+    if (XPR_IS_FALSE(sPalette.mHighContrast))
     {
         CRect sClientRect;
         GetClientRect(&sClientRect);
@@ -200,7 +200,7 @@ xpr_bool_t CfgDlg::OnEraseBkgnd(CDC *aDC)
 HBRUSH CfgDlg::OnCtlColor(CDC *aDC, CWnd *aWnd, xpr_uint_t aCtlColor)
 {
     const ui::ThemePalette sPalette = ui::ModernUI::getPalette();
-    if (XPR_IS_FALSE(sPalette.mDark) || XPR_IS_TRUE(sPalette.mHighContrast))
+    if (XPR_IS_TRUE(sPalette.mHighContrast))
         return super::OnCtlColor(aDC, aWnd, aCtlColor);
 
     aDC->SetTextColor(
