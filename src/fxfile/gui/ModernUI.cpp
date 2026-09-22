@@ -703,7 +703,12 @@ xpr_bool_t ModernUI::resetControlTheme(HWND aHwnd)
     xpr_bool_t sApplied = XPR_FALSE;
     if (XPR_IS_NOT_NULL(sSetWindowTheme))
     {
-        const HRESULT sResult = sSetWindowTheme(aHwnd, XPR_NULL, XPR_NULL);
+        // SetWindowTheme(hwnd, NULL, NULL) restores the default visual-style
+        // association; it does not disable themed painting. Dark surfaces
+        // that are fully owned by flyExplorer need the documented empty
+        // sub-app/sub-id contract so native light borders/backgrounds do not
+        // leak through custom palette rendering.
+        const HRESULT sResult = sSetWindowTheme(aHwnd, L"", L"");
         sApplied = SUCCEEDED(sResult) ? XPR_TRUE : XPR_FALSE;
     }
 
