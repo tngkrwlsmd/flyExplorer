@@ -1,0 +1,90 @@
+{
+  "version": 1,
+  "frame_count": 51,
+  "mask_color": "#FF00FF",
+  "themes": {
+    "light": "#212121",
+    "dark": "#F5F5F5"
+  },
+  "sizes": {
+    "small": {
+      "cell": 16,
+      "design": 16
+    },
+    "large": {
+      "cell": 22,
+      "design": 20
+    }
+  },
+  "outputs": {
+    "light_small": "tb_main_fluent_light_small.bmp",
+    "dark_small": "tb_main_fluent_dark_small.bmp",
+    "light_large": "tb_main_fluent_light_large.bmp",
+    "dark_large": "tb_main_fluent_dark_large.bmp"
+  },
+  "commands": [
+    {
+      "frame": 0,
+      "command": "ID_GO_BACK",
+      "name": "Arrow Left",
+      "small_svg": "ic_fluent_arrow_left_16_regular.svg",
+      "large_svg": "ic_fluent_arrow_left_20_regular.svg"
+    },
+    {
+      "frame": 1,
+      "command": "ID_GO_FORWARD",
+      "name": "Arrow Right",
+      "small_svg": "ic_fluent_arrow_right_16_regular.svg",
+      "large_svg": "ic_fluent_arrow_right_20_regular.svg"
+    },
+    {
+      "frame": 2,
+      "command": "ID_GO_UP",
+      "name": "Arrow Up",
+      "small_svg": "ic_fluent_arrow_up_16_regular.svg",
+      "large_svg": "ic_fluent_arrow_up_20_regular.svg"
+    },
+    {
+      "frame": 8,
+      "command": "ID_TOOL_FILE_SEARCH",
+      "name": "Search",
+      "small_svg": "ic_fluent_search_16_regular.svg",
+      "large_svg": "ic_fluent_search_20_regular.svg"
+    },
+    {
+      "frame": 12,
+      "command": "ID_EDIT_CUT",
+      "name": "Cut",
+      "small_svg": "ic_fluent_cut_16_regular.svg",
+      "large_svg": "ic_fluent_cut_20_regular.svg"
+    },
+    {
+      "frame": 13,
+      "command": "ID_EDIT_COPY",
+      "name": "Copy",
+      "small_svg": "ic_fluent_copy_16_regular.svg",
+      "large_svg": "ic_fluent_copy_20_regular.svg"
+    },
+    {
+      "frame": 14,
+      "command": "ID_EDIT_PASTE",
+      "name": "Clipboard Paste",
+      "small_svg": "ic_fluent_clipboard_paste_16_regular.svg",
+      "large_svg": "ic_fluent_clipboard_paste_20_regular.svg"
+    },
+    {
+      "frame": 37,
+      "command": "ID_FILE_NEW_FOLDER",
+      "name": "Folder Add",
+      "small_svg": "ic_fluent_folder_add_16_regular.svg",
+      "large_svg": "ic_fluent_folder_add_20_regular.svg"
+    },
+    {
+      "frame": 38,
+      "command": "ID_TOOL_OPTION",
+      "name": "Settings",
+      "small_svg": "ic_fluent_settings_16_regular.svg",
+      "large_svg": "ic_fluent_settings_20_regular.svg"
+    }
+  ]
+}
