@@ -1049,7 +1049,7 @@ void BCMenu::DrawItemWindows8Style(LPDRAWITEMSTRUCT aDrawItemStruct)
     drawSelection(sDC, sItemRect, sItemState);
 
     if (sIconIndex >= 0 && sImageList != NULL)
-        drawIcon(sDC, sItemRect, sImageList);
+        drawIcon(sDC, sItemRect, sItemState, sImageList);
 
     if (sIconIndex < 0 && (sItemState & ODS_CHECKED))
         drawCheckOrRadioMark(sDC, sItemRect, sItemState, sMenuItem, sMenuItemId);
@@ -1135,7 +1135,11 @@ void BCMenu::drawSelection(CDC *aDC, const CRect &aItemRect, UINT aItemState)
     aDC->SelectObject(sOldBrush);
 }
 
-void BCMenu::drawIcon(CDC *aDC, const CRect &aItemRect, CImageList *aImageList)
+void BCMenu::drawIcon(
+    CDC *aDC,
+    const CRect &aItemRect,
+    UINT aItemState,
+    CImageList *aImageList)
 {
     ASSERT(aDC != NULL);
     ASSERT(aImageList != NULL);
@@ -1157,9 +1161,49 @@ void BCMenu::drawIcon(CDC *aDC, const CRect &aItemRect, CImageList *aImageList)
         aItemRect.top + max(0, (aItemRect.Height() - m_nIconY) / 2);
 
     HICON sIcon = aImageList->ExtractIcon(0);
-    if (sIcon != NULL)
+    if (XPR_IS_NULL(sIcon))
+        return;
+
+    const fxfile::ui::ThemePalette sPalette =
+        fxfile::ui::ModernUI::getPalette();
+
+    xpr_bool_t sDrawn = XPR_FALSE;
+    if (XPR_IS_FALSE(sPalette.mHighContrast))
     {
-        DrawIconEx(
+        const COLORREF sIconColor =
+            (aItemState & ODS_GRAYED) ?
+            sPalette.mSecondaryText :
+            sPalette.mText;
+        HBRUSH sBrush = ::CreateSolidBrush(sIconColor);
+        if (XPR_IS_NOT_NULL(sBrush))
+        {
+            // Menu resources are mostly legacy colored bitmaps. Windows 11
+            // command menus read as restrained monochrome symbols, and the
+            // original dark pixels can disappear on a dark popup. DrawState
+            // uses the existing icon mask as a documented monochrome stencil
+            // while ThemePalette owns contrast.
+            if (::DrawState(
+                    aDC->m_hDC,
+                    XPR_NULL,
+                    sBrush,
+                    XPR_NULL,
+                    reinterpret_cast<LPARAM>(sIcon),
+                    0,
+                    sX,
+                    sY,
+                    m_nIconX,
+                    m_nIconY,
+                    DST_ICON | DSS_MONO) != FALSE)
+            {
+                sDrawn = XPR_TRUE;
+            }
+            ::DeleteObject(sBrush);
+        }
+    }
+
+    if (XPR_IS_FALSE(sDrawn))
+    {
+        ::DrawIconEx(
             aDC->m_hDC,
             sX,
             sY,
@@ -1167,10 +1211,11 @@ void BCMenu::drawIcon(CDC *aDC, const CRect &aItemRect, CImageList *aImageList)
             m_nIconX,
             m_nIconY,
             0,
-            NULL,
+            XPR_NULL,
             DI_NORMAL);
-        ::DestroyIcon(sIcon);
     }
+
+    ::DestroyIcon(sIcon);
 }
 
 void BCMenu::drawCheckOrRadioMark(
