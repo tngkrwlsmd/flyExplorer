@@ -77,7 +77,7 @@
     }
   ],
   "review": {
-    "reviewed_revision": "c454d531bd6a5c8c409ed92976d447af08e984de",
+    "reviewed_revision": "d203d55f6370961cef7f4e87f7633e49a783651c",
     "reviewed_at": "2026-09-22",
     "reviewed_paths": [
       "AGENTS.md",
@@ -184,7 +184,7 @@
 - crash/network resolver 경로는 deprecated `gethostbyname`/`inet_ntoa`/`inet_addr` 대신 modern Winsock address API를 사용한다.
 - distribution 입력 이름은 현재 제품 계약에 맞춰 Unicode/x64 `libxprw.dll`과 `upchecker/fxfile-upchecker.exe`를 사용한다. Actions의 package job과 artifact upload는 비용 절감을 위해 제거했으며, release packaging은 로컬에서 `dist/package.bat`과 `build/validate_package.ps1`로 수행한다.
 - 패키징은 vendored `dist/7zip/7za.exe`와 `dist/nsis/makensis.exe`를 사용하며 외부 NSIS 다운로드를 요구하지 않는다. Actions package upload는 제거되어 현재 installer/portable 결과는 로컬 `dist/`에서 생성·검증하며, 필요 시 별도 release 절차에서 보존한다.
-- installer는 `/FXFILE_SMOKE=<temp-dir>` 격리 mode와 `build/installer_smoke.ps1`을 갖는다. 기본 `local_ci.bat install`은 contract inspection 후 actual install을 SKIP한다. 관리자 권한 + `FXFILE_INSTALLER_SMOKE=1` opt-in에서는 temp install/runtime/uninstall과 selected Registry/shell/startup snapshot 비변경을 자동 검증한다. 이 smoke는 실제 제품 Registry/Start Menu/Desktop/shell-context registration을 의도적으로 수행하지 않으므로 clean Windows Sandbox/VM의 real install/uninstall/shell integration evidence와 구분한다.
+- installer는 `/FXFILE_SMOKE=<temp-dir>` 격리 mode와 `build/installer_smoke.ps1`을 갖는다. 기본 `local_ci.bat install`은 생성 installer 없이도 source safety-contract inspection을 수행한 뒤 actual install을 SKIP한다. 관리자 권한 + `FXFILE_INSTALLER_SMOKE=1` opt-in에서는 temp install/runtime/uninstall과 selected Registry/shell/startup snapshot 비변경을 자동 검증한다. 이 smoke는 실제 제품 Registry/Start Menu/Desktop/shell-context registration을 의도적으로 수행하지 않으므로 clean Windows Sandbox/VM의 real install/uninstall/shell integration evidence와 구분한다.
 - GitHub-hosted Windows runner의 기본 remote runtime evidence는 x64 Unicode launch smoke 하나만 유지한다. smoke는 staged runtime을 임시 디렉터리에 복사하고 isolated `--conf_dir`로 `fxfile.exe`를 시작한 뒤 top-level main window와 short stability window를 확인한다. x86 launch smoke는 Actions 비용 절감을 위해 제거했다.
 - hosted runner에는 Visual Studio와 여러 system runtime이 이미 설치되어 있으므로 이 결과는 clean Windows Sandbox/VM evidence가 아니다. Windows Sandbox/clean VM, interactive functional smoke, visual regression은 아직 자동화하지 않는다.
 - `build/validate_source_invariants.py`가 C++ cross-cutting dependency와 ModernUI integration의 빠른 static preflight를 제공하며, 알려진 product regression도 함께 차단한다. 현재 ToolbarWindow32에 존재하지 않는 `TB_SETBKCOLOR`/`TB_SETTEXTCOLOR` 재도입을 거부하고 `NM_CUSTOMDRAW`/`NMTBCUSTOMDRAW` 기반 dark-state color wiring이 유지되는지 검사한다.
