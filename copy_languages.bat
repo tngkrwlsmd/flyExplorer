@@ -24,8 +24,12 @@ if errorlevel 1 (
 exit /b 0
 
 :copy_newer
+if not exist "%~1" (
+    >&2 echo ERROR: Required staging source is missing: "%~1".
+    exit /b 1
+)
 xcopy "%~1" "%~2" /d /e /r /y /i >nul
-if errorlevel 1 (
+if errorlevel 2 (
     >&2 echo ERROR: Failed to copy "%~1" to "%~2".
     exit /b 1
 )
