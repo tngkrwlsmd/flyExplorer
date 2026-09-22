@@ -300,6 +300,46 @@ xpr_sint_t ModernUI::getActivePaneIndicatorThickness(HWND aHwnd)
     return max(2, scaleForWindow(3, aHwnd));
 }
 
+xpr_sint_t ModernUI::getControlCornerRadius(HWND aHwnd)
+{
+    return scaleForWindow(6, aHwnd);
+}
+
+xpr_sint_t ModernUI::getCardCornerRadius(HWND aHwnd)
+{
+    return scaleForWindow(8, aHwnd);
+}
+
+xpr_sint_t ModernUI::getPopupCornerRadius(HWND aHwnd)
+{
+    return scaleForWindow(8, aHwnd);
+}
+
+xpr_sint_t ModernUI::getMenuBarItemHeight(HWND aHwnd)
+{
+    return scaleForWindow(32, aHwnd);
+}
+
+xpr_sint_t ModernUI::getSettingsNavRowHeight(HWND aHwnd)
+{
+    return scaleForWindow(34, aHwnd);
+}
+
+xpr_sint_t ModernUI::getSettingsPanelPadding(HWND aHwnd)
+{
+    return scaleForWindow(14, aHwnd);
+}
+
+xpr_sint_t ModernUI::getDialogControlHeight(HWND aHwnd)
+{
+    return scaleForWindow(30, aHwnd);
+}
+
+xpr_sint_t ModernUI::getDialogSectionSpacing(HWND aHwnd)
+{
+    return scaleForWindow(12, aHwnd);
+}
+
 xpr_bool_t ModernUI::getUIFont(LOGFONT &aLogFont, HWND aHwnd)
 {
     ::ZeroMemory(&aLogFont, sizeof(aLogFont));
@@ -455,8 +495,8 @@ ThemePalette ModernUI::getPalette(void)
             // Lift it slightly toward the foreground so the frame/content
             // surfaces match Windows 11 Explorer's neutral dark hierarchy
             // instead of collapsing into a flat pure-black canvas.
-            sPalette.mWindow        = blendColor(sBackground, sForeground, 8);
-            sPalette.mSurface       = blendColor(sBackground, sForeground, 12);
+            sPalette.mWindow        = blendColor(sBackground, sForeground, 10);
+            sPalette.mSurface       = blendColor(sBackground, sForeground, 14);
             sPalette.mText          = sForeground;
             sPalette.mSecondaryText = blendColor(sPalette.mWindow, sForeground, 65);
             sPalette.mBorder        = blendColor(sPalette.mWindow, sForeground, 24);
@@ -465,8 +505,8 @@ ThemePalette ModernUI::getPalette(void)
         else if (sThemeMode == ThemeModeDark)
         {
             sPalette.mDark          = XPR_TRUE;
-            sPalette.mWindow        = blendColor(sSystemWindow, sSystemText, 88);
-            sPalette.mSurface       = blendColor(sPalette.mWindow, sSystemWindow, 5);
+            sPalette.mWindow        = blendColor(sSystemWindow, sSystemText, 90);
+            sPalette.mSurface       = blendColor(sPalette.mWindow, sSystemWindow, 8);
             sPalette.mText          = sSystemWindow;
             sPalette.mSecondaryText = blendColor(sPalette.mWindow, sPalette.mText, 65);
             sPalette.mBorder        = blendColor(sPalette.mWindow, sPalette.mText, 24);
@@ -478,10 +518,51 @@ ThemePalette ModernUI::getPalette(void)
         }
     }
 
-    sPalette.mHover = blendColor(
-        sPalette.mSurface,
-        sPalette.mSelection,
-        12);
+    if (XPR_IS_TRUE(sPalette.mHighContrast))
+    {
+        sPalette.mChrome            = sPalette.mSurface;
+        sPalette.mElevated          = sPalette.mSurface;
+        sPalette.mCard              = sPalette.mSurface;
+        sPalette.mHover             = sPalette.mSelection;
+        sPalette.mPressed           = sPalette.mSelection;
+        sPalette.mInactiveSelection = sPalette.mSurface;
+        sPalette.mFocus             = sPalette.mSelection;
+    }
+    else
+    {
+        const xpr_uint_t sChromeLift = XPR_IS_TRUE(sPalette.mDark) ? 4 : 2;
+        const xpr_uint_t sElevatedLift = XPR_IS_TRUE(sPalette.mDark) ? 7 : 4;
+        const xpr_uint_t sCardLift = XPR_IS_TRUE(sPalette.mDark) ? 5 : 2;
+
+        sPalette.mChrome = blendColor(
+            sPalette.mSurface,
+            sPalette.mText,
+            sChromeLift);
+        sPalette.mElevated = blendColor(
+            sPalette.mSurface,
+            sPalette.mText,
+            sElevatedLift);
+        sPalette.mCard = blendColor(
+            sPalette.mWindow,
+            sPalette.mText,
+            sCardLift);
+        sPalette.mHover = blendColor(
+            sPalette.mElevated,
+            sPalette.mSelection,
+            10);
+        sPalette.mPressed = blendColor(
+            sPalette.mElevated,
+            sPalette.mSelection,
+            18);
+        sPalette.mInactiveSelection = blendColor(
+            sPalette.mSurface,
+            sPalette.mSelection,
+            6);
+        sPalette.mFocus = blendColor(
+            sPalette.mSelection,
+            sPalette.mText,
+            XPR_IS_TRUE(sPalette.mDark) ? 8 : 4);
+    }
 
     return sPalette;
 }
