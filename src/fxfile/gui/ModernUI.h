@@ -73,6 +73,16 @@ public:
     static xpr_sint_t getPopupShortcutGap(HWND aHwnd);
     static xpr_sint_t getPopupBorderThickness(HWND aHwnd);
 
+    // Shared content-surface metrics for list/tree/tab/pane presentation.
+    static xpr_sint_t getContentRowHeight(HWND aHwnd);
+    static xpr_sint_t getTreeRowHeight(HWND aHwnd);
+    static xpr_sint_t getTreeIndent(HWND aHwnd);
+    static xpr_sint_t getListHeaderTextPadding(HWND aHwnd);
+    static xpr_sint_t getTabHeight(HWND aHwnd);
+    static xpr_sint_t getTabHorizontalPadding(HWND aHwnd);
+    static xpr_sint_t getPaneSeparatorThickness(HWND aHwnd);
+    static xpr_sint_t getActivePaneIndicatorThickness(HWND aHwnd);
+
     static xpr_bool_t getUIFont(LOGFONT &aLogFont, HWND aHwnd);
     static HICON loadIconResource(HINSTANCE aInstance, xpr_uint_t aResourceId, HWND aHwnd, xpr_sint_t aLogicalSize);
     static void setThemeMode(xpr_sint_t aThemeMode);
