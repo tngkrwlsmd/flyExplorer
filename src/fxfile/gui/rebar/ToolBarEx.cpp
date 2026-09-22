@@ -902,11 +902,35 @@ CToolBarPopup::~CToolBarPopup()
 bool CToolBarPopup::ShowPopup( UINT nFlags, CPoint pt, CRect& rcExclude )
 {
     WinAppEx* pApp = WinAppEx::GetInstance();
-    CString strWndClass = AfxRegisterWndClass( CS_SAVEBITS | ( pApp->IsWinXP() ? CS_DROPSHADOW : 0 ),
-        ::LoadCursor( 0, IDC_ARROW ), ( HBRUSH )( COLOR_MENU + 1 ), 0 );
+    const bool sLegacyPopup = pApp->IsWinXP();
+    const HBRUSH sClassBrush =
+        sLegacyPopup ?
+        (HBRUSH)(COLOR_MENU + 1) :
+        (HBRUSH)::GetStockObject(NULL_BRUSH);
+    CString strWndClass = AfxRegisterWndClass(
+        CS_SAVEBITS | (sLegacyPopup ? CS_DROPSHADOW : 0),
+        ::LoadCursor(0, IDC_ARROW),
+        sClassBrush,
+        0);
 
-    if ( !CreateEx( m_bFlatMenu ? ( WS_EX_TOOLWINDOW | WS_EX_TOPMOST ) : WS_EX_PALETTEWINDOW, strWndClass, 0,
-            WS_POPUP | WS_CLIPSIBLINGS | WS_OVERLAPPED | ( m_bFlatMenu ? WS_BORDER : ( WS_DLGFRAME | WS_CLIPCHILDREN ) ),
+    const DWORD sExStyle =
+        sLegacyPopup ?
+        (m_bFlatMenu ?
+            (WS_EX_TOOLWINDOW | WS_EX_TOPMOST) :
+            WS_EX_PALETTEWINDOW) :
+        (WS_EX_TOOLWINDOW | WS_EX_TOPMOST);
+    const DWORD sPopupFrameStyle =
+        sLegacyPopup ?
+        (m_bFlatMenu ?
+            WS_BORDER :
+            (WS_DLGFRAME | WS_CLIPCHILDREN)) :
+        WS_CLIPCHILDREN;
+
+    if ( !CreateEx(
+            sExStyle,
+            strWndClass,
+            0,
+            WS_POPUP | WS_CLIPSIBLINGS | WS_OVERLAPPED | sPopupFrameStyle,
             CRect( 0, 0, 0, 0 ), 0, 0 ) )
     {
         return false;
@@ -947,6 +971,17 @@ void CToolBarPopup::SetPosition( UINT nFlags, CPoint pt, CRect& rcExclude )
     m_tbCtrl.GetWindowRect( rc );
 
     CalcWindowRect( rc, CWnd::adjustBorder );
+
+    const fxfile::ui::ThemePalette sPalette =
+        fxfile::ui::ModernUI::getPalette();
+    if (!WinAppEx::GetInstance()->IsWinXP() &&
+        XPR_IS_FALSE(sPalette.mHighContrast))
+    {
+        const int sBorderThickness =
+            fxfile::ui::ModernUI::getPopupBorderThickness(m_hWnd);
+        rc.InflateRect(sBorderThickness, sBorderThickness);
+    }
+
     rc.OffsetRect( -rc.TopLeft() );
     rc.OffsetRect(
         ( nFlags & TPM_CENTERALIGN ) ? ( pt.x - rc.Width() / 2 ) :
@@ -1516,6 +1551,18 @@ int CToolBarPopup::OnCreate( LPCREATESTRUCT lpCreateStruct )
         VERIFY( m_tbCtrl.GetItemRect( 0, rcClient ) );
     }
 
+    if (!WinAppEx::GetInstance()->IsWinXP())
+    {
+        const fxfile::ui::ThemePalette sPalette =
+            fxfile::ui::ModernUI::getPalette();
+        if (XPR_IS_FALSE(sPalette.mHighContrast))
+        {
+            const int sBorderThickness =
+                fxfile::ui::ModernUI::getPopupBorderThickness(m_hWnd);
+            rcClient.OffsetRect(sBorderThickness, sBorderThickness);
+        }
+    }
+
     m_tbCtrl.MoveWindow( rcClient );
 
     return 0;
@@ -1533,6 +1580,16 @@ BOOL CToolBarPopup::OnEraseBkgnd(CDC *pDC)
     CRect sClientRect;
     GetClientRect(&sClientRect);
     pDC->FillSolidRect(&sClientRect, sPalette.mSurface);
+
+    const int sBorderThickness =
+        fxfile::ui::ModernUI::getPopupBorderThickness(m_hWnd);
+    CBrush sBorderBrush(sPalette.mBorder);
+    for (int i = 0; i < sBorderThickness && !sClientRect.IsRectEmpty(); ++i)
+    {
+        pDC->FrameRect(&sClientRect, &sBorderBrush);
+        sClientRect.DeflateRect(1, 1);
+    }
+
     return TRUE;
 }
 
