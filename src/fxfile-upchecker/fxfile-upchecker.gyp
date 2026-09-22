@@ -166,6 +166,7 @@
                 '../base/shell_item_win.cpp',
                 '../base/update_info_manager.cpp',
                 '../base/update_info_manager.h',
+                '../base/update_metadata.h',
                 '../base/upchecker_def.h',
 
                 './main_window.cpp',

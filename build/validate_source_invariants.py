@@ -536,6 +536,8 @@ def validate_functional_test_wiring() -> list[str]:
     app_ver_path = FXFILE_SRC / "app_ver.cpp"
     upchecker_main_path = ROOT / "src" / "fxfile-upchecker" / "main_window.cpp"
     metadata_path = ROOT / "src" / "fxfile-upchecker" / "meta_data_file.cpp"
+    metadata_core_path = ROOT / "src" / "base" / "update_metadata.h"
+    upchecker_gyp_path = ROOT / "src" / "fxfile-upchecker" / "fxfile-upchecker.gyp"
     conf_file_path = ROOT / "src" / "base" / "conf_file.cpp"
 
     paths = (
@@ -553,6 +555,8 @@ def validate_functional_test_wiring() -> list[str]:
         app_ver_path,
         upchecker_main_path,
         metadata_path,
+        metadata_core_path,
+        upchecker_gyp_path,
     )
 
     contents: dict[Path, str] = {}
@@ -578,6 +582,8 @@ def validate_functional_test_wiring() -> list[str]:
     app_ver_source = contents[app_ver_path]
     upchecker_main = contents[upchecker_main_path]
     metadata_source = contents[metadata_path]
+    metadata_core = contents[metadata_core_path]
+    upchecker_gyp = contents[upchecker_gyp_path]
 
     if "src/fxfile-tests/fxfile-tests.gyp:*" not in root_gyp:
         errors.append("fxfile.gyp: functional-test target is not in the solution dependency graph")
@@ -650,6 +656,7 @@ def validate_functional_test_wiring() -> list[str]:
         "'updater_contract_tests.cpp'",
         "'../base/version_compare.cpp'",
         "'../base/upchecker_command.cpp'",
+        "'../base/update_metadata.h'",
         "'SubSystem': 1",
     )
     for token in required_gyp_tokens:
@@ -735,6 +742,8 @@ def validate_functional_test_wiring() -> list[str]:
         "buildUpcheckerConfDirArgument",
         "buildUpcheckerStartupCommand",
         "--conf_dir=",
+        "parseUpdateMetadataFile",
+        "2.0.4-beta",
     ):
         if token not in updater_test:
             errors.append(
@@ -748,9 +757,27 @@ def validate_functional_test_wiring() -> list[str]:
         if token not in upchecker_main:
             errors.append(f"src/fxfile-upchecker/main_window.cpp: missing updater safety token {token}")
 
-    for token in ("parseVersion", "mProgram.empty()", "mNewUrl.empty()"):
-        if token not in metadata_source:
-            errors.append(f"src/fxfile-upchecker/meta_data_file.cpp: missing metadata validation token {token}")
+    if "base::parseUpdateMetadataFile" not in metadata_source:
+        errors.append(
+            "src/fxfile-upchecker/meta_data_file.cpp: production metadata parser no longer delegates to shared core"
+        )
+
+    for token in (
+        "ConfFileEx",
+        "kFlagLock",
+        "mProgram.empty()",
+        "mNewUrl.empty()",
+        "parseVersion",
+    ):
+        if token not in metadata_core:
+            errors.append(
+                f"src/base/update_metadata.h: missing metadata parser token {token}"
+            )
+
+    if "'../base/update_metadata.h'" not in upchecker_gyp:
+        errors.append(
+            "src/fxfile-upchecker/fxfile-upchecker.gyp: shared update metadata contract is not registered"
+        )
 
     upchecker_manager_path = FXFILE_SRC / "upchecker_manager.cpp"
     command_core_path = ROOT / "src" / "base" / "upchecker_command.cpp"

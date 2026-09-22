@@ -11,6 +11,8 @@
 #define __FXFILE_UPCHECKER_META_DATA_FILE_H__ 1
 #pragma once
 
+#include "update_metadata.h"
+
 namespace fxfile
 {
 namespace upchecker
@@ -18,12 +20,7 @@ namespace upchecker
 class MetaDataFile
 {
 public:
-    struct MetaData
-    {
-        xpr::string mProgram;
-        xpr::string mVersion;
-        xpr::string mNewUrl;
-    };
+    typedef fxfile::base::UpdateMetadata MetaData;
 
 public:
     static xpr_bool_t parseMetaFile(const xpr::string &aMetaFilePath, MetaData &aMetaData);

@@ -190,6 +190,7 @@
                 '../base/version_compare.h',
                 '../base/upchecker_command.cpp',
                 '../base/upchecker_command.h',
+                '../base/update_metadata.h',
             ],
         },
     ],
