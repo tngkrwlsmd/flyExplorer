@@ -48,11 +48,18 @@ IMPLEMENT_DYNAMIC( CToolBarEx, CToolBar )
 
 namespace
 {
-LRESULT ApplyDarkToolBarCustomDraw(LPNMTBCUSTOMDRAW aCustomDraw)
+LRESULT ApplyDarkToolBarCustomDraw(
+    LPNMTBCUSTOMDRAW aCustomDraw,
+    xpr_bool_t aElevatedSurface = XPR_FALSE)
 {
     const fxfile::ui::ThemePalette sPalette = fxfile::ui::ModernUI::getPalette();
     if (XPR_IS_TRUE(sPalette.mHighContrast) || WinAppEx::GetInstance()->IsWinXP())
         return CDRF_DODEFAULT;
+
+    const COLORREF sBackground =
+        XPR_IS_TRUE(aElevatedSurface) ?
+        sPalette.mElevated :
+        sPalette.mChrome;
 
     switch (aCustomDraw->nmcd.dwDrawStage)
     {
@@ -61,7 +68,7 @@ LRESULT ApplyDarkToolBarCustomDraw(LPNMTBCUSTOMDRAW aCustomDraw)
             // ToolbarWindow32 is transparent in the rebar. Paint the complete
             // command surface ourselves so Light/Dark modes cannot leak the
             // legacy COLOR_BTNFACE/white rebar background around buttons.
-            ::SetDCBrushColor(aCustomDraw->nmcd.hdc, sPalette.mChrome);
+            ::SetDCBrushColor(aCustomDraw->nmcd.hdc, sBackground);
             ::FillRect(
                 aCustomDraw->nmcd.hdc,
                 &aCustomDraw->nmcd.rc,
@@ -74,7 +81,7 @@ LRESULT ApplyDarkToolBarCustomDraw(LPNMTBCUSTOMDRAW aCustomDraw)
             const UINT sItemState = aCustomDraw->nmcd.uItemState;
             LRESULT sResult = CDRF_DODEFAULT | TBCDRF_NOEDGES | TBCDRF_NOOFFSET;
 
-            aCustomDraw->clrBtnFace = sPalette.mChrome;
+            aCustomDraw->clrBtnFace = sBackground;
             aCustomDraw->clrText =
                 (sItemState & CDIS_DISABLED) ?
                 sPalette.mSecondaryText :
@@ -938,6 +945,14 @@ bool CToolBarPopup::ShowPopup( UINT nFlags, CPoint pt, CRect& rcExclude )
     }
 
     SetPosition( nFlags, pt, rcExclude );
+
+    if (!sLegacyPopup)
+    {
+        fxfile::ui::ModernUI::applyRoundedWindowRegion(
+            m_hWnd,
+            8);
+    }
+
     SetCapture();
     SendMessage( WM_SETCURSOR, ( WPARAM )m_hWnd, MAKELPARAM( HTCLIENT, 0 ) );
 
@@ -1250,7 +1265,7 @@ BOOL CToolBarPopup::OnNotify( WPARAM wParam, LPARAM lParam, LRESULT* pResult )
                 WinAppEx* pApp = WinAppEx::GetInstance();
                 if ( XPR_IS_FALSE(sPalette.mHighContrast) && !pApp->IsWinXP() )
                 {
-                    *pResult = ApplyDarkToolBarCustomDraw(lpNMCustomDraw);
+                    *pResult = ApplyDarkToolBarCustomDraw(lpNMCustomDraw, XPR_TRUE);
                 }
                 else
                 {
@@ -1580,7 +1595,7 @@ BOOL CToolBarPopup::OnEraseBkgnd(CDC *pDC)
 
     CRect sClientRect;
     GetClientRect(&sClientRect);
-    pDC->FillSolidRect(&sClientRect, sPalette.mSurface);
+    pDC->FillSolidRect(&sClientRect, sPalette.mElevated);
 
     const int sBorderThickness =
         fxfile::ui::ModernUI::getPopupBorderThickness(m_hWnd);
