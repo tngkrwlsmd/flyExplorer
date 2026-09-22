@@ -435,6 +435,15 @@ set "CI_PROJECT=%~4"
 if not defined CI_PROJECT set "CI_PROJECT=fxfile.sln"
 
 del /q "%STEP_LOG%" "%MSBUILD_RAW_LOG%" "%MSBUILD_ERROR_LOG%" >nul 2>&1
+
+powershell -NoProfile -ExecutionPolicy Bypass -File "build\check_build_output_locks.ps1" -Configuration "%CI_CONFIGURATION%" >"%STEP_LOG%" 2>&1
+set "OUTPUT_LOCK_RESULT=%errorlevel%"
+if not "%OUTPUT_LOCK_RESULT%"=="0" (
+    call :append_file "Build output lock preflight: %CI_TITLE%" "%STEP_LOG%"
+    exit /b %OUTPUT_LOCK_RESULT%
+)
+del /q "%STEP_LOG%" >nul 2>&1
+
 echo.
 echo [local-ci] Rebuilding %CI_CONFIGURATION% ^| %CI_PLATFORM%...
 
