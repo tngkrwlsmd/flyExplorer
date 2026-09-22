@@ -189,13 +189,42 @@ LRESULT CALLBACK ModernCfgComboSubclassProc(
             break;
         }
 
+        case CB_SHOWDROPDOWN:
+        {
+            const LRESULT sResult =
+                ::DefSubclassProc(aHwnd, aMessage, aWParam, aLParam);
+
+            COMBOBOXINFO sComboInfo = {0};
+            sComboInfo.cbSize = sizeof(COMBOBOXINFO);
+            if (::GetComboBoxInfo(aHwnd, &sComboInfo) != FALSE &&
+                XPR_IS_NOT_NULL(sComboInfo.hwndList))
+            {
+                const ui::ThemePalette sPalette =
+                    ui::ModernUI::getPalette();
+                if (XPR_IS_TRUE(sPalette.mDark) &&
+                    XPR_IS_FALSE(sPalette.mHighContrast))
+                {
+                    ui::ModernUI::resetControlTheme(sComboInfo.hwndList);
+                }
+                else
+                {
+                    ui::ModernUI::applyExplorerControlTheme(
+                        sComboInfo.hwndList);
+                }
+
+                ::InvalidateRect(sComboInfo.hwndList, XPR_NULL, TRUE);
+            }
+
+            ::InvalidateRect(aHwnd, XPR_NULL, FALSE);
+            return sResult;
+        }
+
         case WM_MOUSELEAVE:
         case WM_LBUTTONDOWN:
         case WM_LBUTTONUP:
         case WM_ENABLE:
         case WM_SETFOCUS:
         case WM_KILLFOCUS:
-        case CB_SHOWDROPDOWN:
             ::InvalidateRect(aHwnd, XPR_NULL, FALSE);
             break;
 
@@ -707,6 +736,14 @@ void CfgDlg::applyModernAppearanceToChild(CWnd *aWnd, HFONT aPreviousFont)
             ::GetWindowLongPtr(aWnd->GetSafeHwnd(), GWL_STYLE);
         if ((sStyle & CBS_DROPDOWNLIST) == CBS_DROPDOWNLIST)
         {
+            const ui::ThemePalette sPalette =
+                ui::ModernUI::getPalette();
+            if (XPR_IS_TRUE(sPalette.mDark) &&
+                XPR_IS_FALSE(sPalette.mHighContrast))
+            {
+                ui::ModernUI::resetControlTheme(aWnd->GetSafeHwnd());
+            }
+
             ::SetWindowSubclass(
                 aWnd->GetSafeHwnd(),
                 ModernCfgComboSubclassProc,
