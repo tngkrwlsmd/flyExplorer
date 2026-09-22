@@ -61,7 +61,7 @@ protected:
 protected:
     TreeCtrlEx mTreeCtrl;
     CFont      mUIFont;
-    CBrush     mDarkGrayBrush;
+    CFont      mHeaderFont;
     CBrush     mSurfaceBrush;
     CBrush     mWindowBrush;
     COLORREF   mSurfaceColor;
