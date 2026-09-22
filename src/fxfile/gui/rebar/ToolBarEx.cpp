@@ -46,6 +46,58 @@ HHOOK               CToolBarEx::m_hCBTHook           = 0;
 
 IMPLEMENT_DYNAMIC( CToolBarEx, CToolBar )
 
+namespace
+{
+LRESULT ApplyDarkToolBarCustomDraw(LPNMTBCUSTOMDRAW aCustomDraw)
+{
+    const fxfile::ui::ThemePalette sPalette = fxfile::ui::ModernUI::getPalette();
+    if (XPR_IS_FALSE(sPalette.mDark) || XPR_IS_TRUE(sPalette.mHighContrast))
+        return CDRF_DODEFAULT;
+
+    switch (aCustomDraw->nmcd.dwDrawStage)
+    {
+        case CDDS_PREPAINT:
+            return CDRF_NOTIFYITEMDRAW;
+
+        case CDDS_ITEMPREPAINT:
+        {
+            const UINT sItemState = aCustomDraw->nmcd.uItemState;
+            LRESULT sResult = CDRF_DODEFAULT | TBCDRF_NOEDGES | TBCDRF_NOOFFSET;
+
+            aCustomDraw->clrBtnFace = sPalette.mSurface;
+            aCustomDraw->clrText =
+                (sItemState & CDIS_DISABLED) ?
+                sPalette.mSecondaryText :
+                sPalette.mText;
+
+            if (!(sItemState & CDIS_DISABLED) &&
+                (sItemState & (CDIS_HOT | CDIS_SELECTED | CDIS_CHECKED)))
+            {
+                const xpr_bool_t sSelected =
+                    (sItemState & (CDIS_SELECTED | CDIS_CHECKED)) != 0 ?
+                    XPR_TRUE :
+                    XPR_FALSE;
+
+                aCustomDraw->clrHighlightHotTrack =
+                    XPR_IS_TRUE(sSelected) ?
+                    sPalette.mSelection :
+                    sPalette.mHover;
+                aCustomDraw->clrText =
+                    XPR_IS_TRUE(sSelected) ?
+                    sPalette.mSelectionText :
+                    sPalette.mText;
+                sResult |= TBCDRF_HILITEHOTTRACK;
+            }
+
+            return sResult;
+        }
+
+        default:
+            return CDRF_DODEFAULT;
+    }
+}
+} // namespace
+
 CToolBarEx::CToolBarEx()
 {
     m_pObserver = NULL;
@@ -86,6 +138,7 @@ BOOL CToolBarEx::Create( CWnd* pParentWnd,
 
     GetToolBarCtrl().SetExtendedStyle(dwExtendedStyle | TBSTYLE_EX_DOUBLEBUFFER);
     ApplyModernMetrics();
+    ApplyModernAppearance();
 
     return TRUE;
 }
@@ -362,9 +415,11 @@ LRESULT CToolBarEx::WindowProc( UINT message, WPARAM wParam, LPARAM lParam )
 
         case WM_DPICHANGED:
         case WM_SETTINGCHANGE:
+        case WM_SYSCOLORCHANGE:
         case WM_THEMECHANGED:
             {
                 ApplyModernMetrics();
+                ApplyModernAppearance();
                 UpdateToolbarSize();
                 break;
             }
@@ -502,6 +557,35 @@ void CToolBarEx::ApplyModernMetrics()
     }
 }
 
+void CToolBarEx::ApplyModernAppearance()
+{
+    if (!::IsWindow(m_hWnd))
+        return;
+
+    const fxfile::ui::ThemePalette sPalette = fxfile::ui::ModernUI::getPalette();
+
+    if (!WinAppEx::GetInstance()->IsWinXP())
+        fxfile::ui::ModernUI::applyExplorerControlTheme(m_hWnd);
+
+    const COLORREF sBackColor =
+        XPR_IS_TRUE(sPalette.mHighContrast) ?
+        ::GetSysColor(COLOR_BTNFACE) :
+        sPalette.mSurface;
+    const COLORREF sTextColor =
+        XPR_IS_TRUE(sPalette.mHighContrast) ?
+        ::GetSysColor(COLOR_BTNTEXT) :
+        sPalette.mText;
+
+    GetToolBarCtrl().SendMessage(TB_SETBKCOLOR, 0, sBackColor);
+    GetToolBarCtrl().SendMessage(TB_SETTEXTCOLOR, 0, sTextColor);
+
+    CToolTipCtrl* sToolTip = GetToolBarCtrl().GetToolTips();
+    if (sToolTip != NULL && ::IsWindow(sToolTip->m_hWnd))
+        fxfile::ui::ModernUI::applyExplorerControlTheme(sToolTip->m_hWnd);
+
+    Invalidate(FALSE);
+}
+
 void CToolBarEx::UpdateToolbarSize()
 {
     CToolBarCtrl& tbCtrl = GetToolBarCtrl();
@@ -538,6 +622,7 @@ BEGIN_MESSAGE_MAP(CToolBarEx, CToolBar)
 
     ON_MESSAGE( WM_REBAR_CHEVRONPUSHED, OnReBarChevronPushed )
 
+    ON_NOTIFY_REFLECT( NM_CUSTOMDRAW, OnCustomDraw )
     ON_NOTIFY_REFLECT( TBN_GETINFOTIP, OnGetInfoTip )
 
     // Toolbar customization
@@ -570,6 +655,12 @@ LRESULT CToolBarEx::OnReBarChevronPushed( WPARAM wParam, LPARAM /*lParam*/ )
         CPoint( rcChevron.left, rcChevron.bottom ), rcChevron );
 
     return 0L;
+}
+
+void CToolBarEx::OnCustomDraw( NMHDR* pNMHDR, LRESULT* pResult )
+{
+    LPNMTBCUSTOMDRAW sCustomDraw = reinterpret_cast<LPNMTBCUSTOMDRAW>(pNMHDR);
+    *pResult = ApplyDarkToolBarCustomDraw(sCustomDraw);
 }
 
 void CToolBarEx::OnGetInfoTip( NMHDR* pNMHDR, LRESULT* pResult )
@@ -1066,7 +1157,12 @@ void CToolBarPopup::DrawBorder( CDC* pDC )
     rcClient.OffsetRect( -rcWindow.TopLeft() );
     rcWindow.OffsetRect( -rcWindow.TopLeft() );
     pDC->ExcludeClipRect( rcClient );
-    pDC->FillSolidRect( rcWindow, ::GetSysColor( COLOR_3DSHADOW ) );
+    const fxfile::ui::ThemePalette sPalette = fxfile::ui::ModernUI::getPalette();
+    pDC->FillSolidRect(
+        rcWindow,
+        XPR_IS_TRUE(sPalette.mHighContrast) ?
+            ::GetSysColor(COLOR_3DSHADOW) :
+            sPalette.mBorder );
 }
 
 /////////////////////////////////////////////////////////////////////////////
@@ -1098,52 +1194,57 @@ BOOL CToolBarPopup::OnNotify( WPARAM wParam, LPARAM lParam, LRESULT* pResult )
 
             case NM_CUSTOMDRAW:
             {
-                WinAppEx* pApp = WinAppEx::GetInstance();
-                if ( pApp->IsWinXP() )
+                LPNMTBCUSTOMDRAW lpNMCustomDraw = ( LPNMTBCUSTOMDRAW )pNMHDR;
+                const fxfile::ui::ThemePalette sPalette = fxfile::ui::ModernUI::getPalette();
+
+                if ( XPR_IS_TRUE(sPalette.mDark) && XPR_IS_FALSE(sPalette.mHighContrast) )
                 {
-                    LPNMTBCUSTOMDRAW lpNMCustomDraw = ( LPNMTBCUSTOMDRAW )pNMHDR;
-                    *pResult = CDRF_DODEFAULT;  // by default
-
-                    switch ( lpNMCustomDraw->nmcd.dwDrawStage )
+                    *pResult = ApplyDarkToolBarCustomDraw(lpNMCustomDraw);
+                }
+                else
+                {
+                    WinAppEx* pApp = WinAppEx::GetInstance();
+                    if ( pApp->IsWinXP() )
                     {
-                        case CDDS_PREPAINT:
-                            *pResult = CDRF_NOTIFYITEMDRAW;
-                            break;
+                        *pResult = CDRF_DODEFAULT;  // by default
 
-                        case CDDS_ITEMPREPAINT:
+                        switch ( lpNMCustomDraw->nmcd.dwDrawStage )
                         {
-                            *pResult |= TBCDRF_NOEDGES | TBCDRF_NOOFFSET;
-                            UINT uItemState = lpNMCustomDraw->nmcd.uItemState;
-                            if ( !( uItemState & CDIS_DISABLED ) && ( uItemState & ( CDIS_HOT | CDIS_SELECTED ) ) )
+                            case CDDS_PREPAINT:
+                                *pResult = CDRF_NOTIFYITEMDRAW;
+                                break;
+
+                            case CDDS_ITEMPREPAINT:
                             {
-                                lpNMCustomDraw->clrHighlightHotTrack = ::GetSysColor( pApp->GetFlatMenu() ? COLOR_MENUHILIGHT : COLOR_HIGHLIGHT );
-                                lpNMCustomDraw->clrText = ::GetSysColor( COLOR_HIGHLIGHTTEXT );
-                                *pResult |= TBCDRF_HILITEHOTTRACK;
-                            }
-                            else
-                            {
-                                if ( uItemState & CDIS_DISABLED )
+                                *pResult |= TBCDRF_NOEDGES | TBCDRF_NOOFFSET;
+                                UINT uItemState = lpNMCustomDraw->nmcd.uItemState;
+                                if ( !( uItemState & CDIS_DISABLED ) && ( uItemState & ( CDIS_HOT | CDIS_SELECTED ) ) )
                                 {
-                                    lpNMCustomDraw->clrText = ::GetSysColor( COLOR_GRAYTEXT );
-                                }
-                                else if ( uItemState & CDIS_CHECKED )
-                                {
+                                    lpNMCustomDraw->clrHighlightHotTrack = ::GetSysColor( pApp->GetFlatMenu() ? COLOR_MENUHILIGHT : COLOR_HIGHLIGHT );
                                     lpNMCustomDraw->clrText = ::GetSysColor( COLOR_HIGHLIGHTTEXT );
-                                    lpNMCustomDraw->clrBtnFace = ::GetSysColor( pApp->GetFlatMenu() ? COLOR_MENUHILIGHT : COLOR_HIGHLIGHT );
+                                    *pResult |= TBCDRF_HILITEHOTTRACK;
                                 }
                                 else
                                 {
-                                    lpNMCustomDraw->clrText = ::GetSysColor( COLOR_MENUTEXT );
+                                    if ( uItemState & CDIS_DISABLED )
+                                    {
+                                        lpNMCustomDraw->clrText = ::GetSysColor( COLOR_GRAYTEXT );
+                                    }
+                                    else if ( uItemState & CDIS_CHECKED )
+                                    {
+                                        lpNMCustomDraw->clrText = ::GetSysColor( COLOR_HIGHLIGHTTEXT );
+                                        lpNMCustomDraw->clrBtnFace = ::GetSysColor( pApp->GetFlatMenu() ? COLOR_MENUHILIGHT : COLOR_HIGHLIGHT );
+                                    }
+                                    else
+                                    {
+                                        lpNMCustomDraw->clrText = ::GetSysColor( COLOR_MENUTEXT );
+                                    }
                                 }
+                                break;
                             }
-                            break;
                         }
                     }
                 }
-                //else
-                //{
-                //    *pResult = m_pToolBar->DoCustomDraw( pNMHDR, &m_tbCtrl );
-                //}
                 break;
             }
             case TBN_GETINFOTIP:
@@ -1295,6 +1396,28 @@ int CToolBarPopup::OnCreate( LPCREATESTRUCT lpCreateStruct )
         HRESULT hr = ::SetWindowThemeXP( m_tbCtrl.m_hWnd, L"", L"" );
         ASSERT( SUCCEEDED( hr ) );
     }
+    else
+    {
+        fxfile::ui::ModernUI::applyExplorerControlTheme(m_tbCtrl.m_hWnd);
+
+        CToolTipCtrl* sToolTip = m_tbCtrl.GetToolTips();
+        if (sToolTip != NULL && ::IsWindow(sToolTip->m_hWnd))
+            fxfile::ui::ModernUI::applyExplorerControlTheme(sToolTip->m_hWnd);
+    }
+
+    const fxfile::ui::ThemePalette sPalette = fxfile::ui::ModernUI::getPalette();
+    m_tbCtrl.SendMessage(
+        TB_SETBKCOLOR,
+        0,
+        XPR_IS_TRUE(sPalette.mHighContrast) ?
+            ::GetSysColor(COLOR_BTNFACE) :
+            sPalette.mSurface);
+    m_tbCtrl.SendMessage(
+        TB_SETTEXTCOLOR,
+        0,
+        XPR_IS_TRUE(sPalette.mHighContrast) ?
+            ::GetSysColor(COLOR_BTNTEXT) :
+            sPalette.mText);
 
     // There could be only two modes, depending on text options
     // of the original toolbar: with or without text labels.

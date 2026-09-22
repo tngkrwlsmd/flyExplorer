@@ -24,6 +24,7 @@
 #include "Resource.h"
 #include "MenuBar.h"
 #include "SizableReBar.h"
+#include "../ModernUI.h"
 
 #include "../BCMenu.h"
 
@@ -1069,6 +1070,7 @@ BEGIN_MESSAGE_MAP(CMenuBar, CToolBar)
     ON_WM_KILLFOCUS()
     ON_WM_GETDLGCODE()
     ON_WM_SETTINGCHANGE()
+    ON_WM_SYSCOLORCHANGE()
     //}}AFX_MSG_MAP
 
     ON_MESSAGE( WM_MB_SHOWPOPUPMENU, OnShowPopupMenu )
@@ -1368,6 +1370,15 @@ void CMenuBar::OnSettingChange( UINT uFlags, LPCTSTR lpszSection )
     CToolBar::OnSettingChange( uFlags, lpszSection );
 
     UpdateMenuBar();
+    Invalidate();
+}
+
+void CMenuBar::OnSysColorChange()
+{
+    CToolBar::OnSysColorChange();
+
+    Invalidate();
+    UpdateWindow();
 }
 
 LRESULT CMenuBar::OnShowPopupMenu( WPARAM wParam, LPARAM lParam )
@@ -1434,6 +1445,9 @@ LRESULT CMenuBar::OnThemeChanged( WPARAM /*wParam*/, LPARAM /*lParam*/ )
 {
     CloseTheme();
     OpenTheme();
+
+    Invalidate();
+    UpdateWindow();
 
     return Default();
 }
@@ -1557,26 +1571,54 @@ void CMenuBar::OnCustomDraw( NMHDR* pNMHDR, LRESULT* pResult )
             }
             else
             {
-                WinAppEx* pApp = WinAppEx::GetInstance();
-                if ( pApp->IsWin50() )
+                const fxfile::ui::ThemePalette sPalette = fxfile::ui::ModernUI::getPalette();
+                if ( XPR_IS_TRUE(sPalette.mDark) && XPR_IS_FALSE(sPalette.mHighContrast) )
                 {
-                    if ( pApp->IsWinXP() && pApp->GetFlatMenu() )
+                    *pResult |= TBCDRF_NOEDGES | TBCDRF_NOOFFSET;
+
+                    lpNMCustomDraw->clrBtnFace = sPalette.mSurface;
+                    lpNMCustomDraw->clrText =
+                        ( ( uItemState & CDIS_DISABLED ) || !m_bFrameActive ) ?
+                        sPalette.mSecondaryText :
+                        sPalette.mText;
+
+                    if ( !( uItemState & CDIS_DISABLED ) &&
+                         ( uItemState & ( CDIS_HOT | CDIS_SELECTED ) ) )
                     {
-                        *pResult |= TBCDRF_NOEDGES | TBCDRF_NOOFFSET;
-                        if ( !( uItemState & CDIS_DISABLED ) && ( uItemState & ( CDIS_HOT | CDIS_SELECTED ) ) )
+                        lpNMCustomDraw->clrHighlightHotTrack =
+                            ( uItemState & CDIS_SELECTED ) ?
+                            sPalette.mSelection :
+                            sPalette.mHover;
+                        lpNMCustomDraw->clrText =
+                            ( uItemState & CDIS_SELECTED ) ?
+                            sPalette.mSelectionText :
+                            sPalette.mText;
+                        *pResult |= TBCDRF_HILITEHOTTRACK;
+                    }
+                }
+                else
+                {
+                    WinAppEx* pApp = WinAppEx::GetInstance();
+                    if ( pApp->IsWin50() )
+                    {
+                        if ( pApp->IsWinXP() && pApp->GetFlatMenu() )
                         {
-                            lpNMCustomDraw->clrHighlightHotTrack = ::GetSysColor( COLOR_MENUHILIGHT );
-                            lpNMCustomDraw->clrText = ::GetSysColor( m_bFrameActive ? COLOR_HIGHLIGHTTEXT : COLOR_GRAYTEXT );
-                            *pResult |= TBCDRF_HILITEHOTTRACK;
+                            *pResult |= TBCDRF_NOEDGES | TBCDRF_NOOFFSET;
+                            if ( !( uItemState & CDIS_DISABLED ) && ( uItemState & ( CDIS_HOT | CDIS_SELECTED ) ) )
+                            {
+                                lpNMCustomDraw->clrHighlightHotTrack = ::GetSysColor( COLOR_MENUHILIGHT );
+                                lpNMCustomDraw->clrText = ::GetSysColor( m_bFrameActive ? COLOR_HIGHLIGHTTEXT : COLOR_GRAYTEXT );
+                                *pResult |= TBCDRF_HILITEHOTTRACK;
+                            }
+                            else if ( ( uItemState & CDIS_DISABLED ) || !m_bFrameActive )
+                            {
+                                lpNMCustomDraw->clrText = ::GetSysColor( COLOR_GRAYTEXT );
+                            }
                         }
-                        else if ( ( uItemState & CDIS_DISABLED ) || !m_bFrameActive )
+                        else if ( !m_bFrameActive )
                         {
                             lpNMCustomDraw->clrText = ::GetSysColor( COLOR_GRAYTEXT );
                         }
-                    }
-                    else if ( !m_bFrameActive )
-                    {
-                        lpNMCustomDraw->clrText = ::GetSysColor( COLOR_GRAYTEXT );
                     }
                 }
             }

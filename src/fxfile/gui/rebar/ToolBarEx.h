@@ -114,6 +114,7 @@ public:
 protected:
     void ReloadButtons();
     void ApplyModernMetrics();
+    void ApplyModernAppearance();
     BOOL GetButtonInfo( UINT nID, TBBUTTON& tbinfo );
 
     static LRESULT CALLBACK CBTProc( int nCode, WPARAM wParam, LPARAM lParam );
@@ -160,6 +161,7 @@ protected:
 
     afx_msg LRESULT OnReBarChevronPushed( WPARAM wParam, LPARAM lParam );
 
+    afx_msg void OnCustomDraw( NMHDR* pNMHDR, LRESULT* pResult );
     afx_msg void OnGetInfoTip( NMHDR* pNMHDR, LRESULT* pResult );
 
     // Toolbar customization

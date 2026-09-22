@@ -80,6 +80,7 @@ public:
 
 // Implementation
 protected:
+    void ApplyModernAppearance();
     bool DoAddBar( CWnd* pBar, REBARBANDINFO* prbbi, LPCTSTR lpszTitle, bool bAlwaysVisiblem, bool bHasGripper );
     UINT GetSizingEdgeHitCode() const;
     bool GetSizingEdgeRect( const CRect& rcBar, CRect& rcEdge, UINT nHitTest ) const;
@@ -132,6 +133,9 @@ protected:
     afx_msg void OnLButtonUp(UINT nFlags, CPoint point);
     afx_msg void OnNcLButtonDown(UINT nHitTest, CPoint point);
     afx_msg void OnSize(UINT nType, int cx, int cy);
+    afx_msg void OnSettingChange(UINT uFlags, LPCTSTR lpszSection);
+    afx_msg void OnSysColorChange();
+    afx_msg LRESULT OnThemeChanged(WPARAM wParam, LPARAM lParam);
     //}}AFX_MSG
     afx_msg void OnRecalcParent();
     DECLARE_MESSAGE_MAP();

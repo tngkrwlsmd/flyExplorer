@@ -224,6 +224,7 @@ protected:
     afx_msg void OnKillFocus(CWnd* pNewWnd);
     afx_msg UINT OnGetDlgCode();
     afx_msg void OnSettingChange(UINT uFlags, LPCTSTR lpszSection);
+    afx_msg void OnSysColorChange();
     //}}AFX_MSG
 
     afx_msg LRESULT OnShowPopupMenu( WPARAM wParam, LPARAM lParam );

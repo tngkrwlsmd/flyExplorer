@@ -22,6 +22,7 @@
 
 #include "stdafx.h"
 #include "SizableReBar.h"
+#include "../ModernUI.h"
 
 #include <afxpriv.h>
 
@@ -490,6 +491,9 @@ BEGIN_MESSAGE_MAP( CSizableReBar, CControlBar )
     ON_WM_LBUTTONUP()
     ON_WM_NCLBUTTONDOWN()
     ON_WM_SIZE()
+    ON_WM_SETTINGCHANGE()
+    ON_WM_SYSCOLORCHANGE()
+    ON_MESSAGE(WM_THEMECHANGED, OnThemeChanged)
     //}}AFX_MSG_MAP
     ON_MESSAGE_VOID( WM_RECALCPARENT, OnRecalcParent )
 END_MESSAGE_MAP()
@@ -526,6 +530,7 @@ int CSizableReBar::OnCreate( LPCREATESTRUCT lpCreateStruct )
 
     VERIFY( m_rbCtrl.ModifyStyleEx( 0, WS_EX_TOOLWINDOW ) );
 
+    ApplyModernAppearance();
     return 0;
 }
 
@@ -591,7 +596,27 @@ void CSizableReBar::OnNcCalcSize( BOOL bCalcValidRects, NCCALCSIZE_PARAMS FAR* l
 
 void CSizableReBar::OnNcPaint()
 {
-    EraseNonClient();
+    const fxfile::ui::ThemePalette sPalette = fxfile::ui::ModernUI::getPalette();
+    if (XPR_IS_FALSE(sPalette.mDark) || XPR_IS_TRUE(sPalette.mHighContrast))
+    {
+        EraseNonClient();
+        return;
+    }
+
+    CWindowDC sDC(this);
+
+    CRect sWindowRect;
+    GetWindowRect(sWindowRect);
+    const CPoint sWindowTopLeft = sWindowRect.TopLeft();
+    sWindowRect.OffsetRect(-sWindowTopLeft);
+
+    CRect sClientRect;
+    GetClientRect(sClientRect);
+    ClientToScreen(sClientRect);
+    sClientRect.OffsetRect(-sWindowTopLeft);
+
+    sDC.ExcludeClipRect(sClientRect);
+    sDC.FillSolidRect(sWindowRect, sPalette.mBorder);
 }
 
 LRESULT CSizableReBar::OnNcHitTest( CPoint point )
@@ -607,6 +632,55 @@ LRESULT CSizableReBar::OnNcHitTest( CPoint point )
     }
 
     return HTCLIENT;
+}
+
+void CSizableReBar::ApplyModernAppearance()
+{
+    if (!::IsWindow(m_rbCtrl.m_hWnd))
+        return;
+
+    const fxfile::ui::ThemePalette sPalette = fxfile::ui::ModernUI::getPalette();
+
+    fxfile::ui::ModernUI::applyExplorerControlTheme(m_rbCtrl.m_hWnd);
+
+    const COLORREF sBackColor =
+        XPR_IS_TRUE(sPalette.mHighContrast) ?
+        ::GetSysColor(COLOR_BTNFACE) :
+        sPalette.mSurface;
+    const COLORREF sTextColor =
+        XPR_IS_TRUE(sPalette.mHighContrast) ?
+        ::GetSysColor(COLOR_BTNTEXT) :
+        sPalette.mText;
+
+    m_rbCtrl.SendMessage(RB_SETBKCOLOR, 0, sBackColor);
+    m_rbCtrl.SendMessage(RB_SETTEXTCOLOR, 0, sTextColor);
+
+    m_rbCtrl.RedrawWindow(
+        NULL,
+        NULL,
+        RDW_INVALIDATE | RDW_ERASE | RDW_FRAME | RDW_ALLCHILDREN);
+    RedrawWindow(
+        NULL,
+        NULL,
+        RDW_INVALIDATE | RDW_ERASE | RDW_FRAME);
+}
+
+void CSizableReBar::OnSettingChange( UINT uFlags, LPCTSTR lpszSection )
+{
+    CControlBar::OnSettingChange(uFlags, lpszSection);
+    ApplyModernAppearance();
+}
+
+void CSizableReBar::OnSysColorChange()
+{
+    CControlBar::OnSysColorChange();
+    ApplyModernAppearance();
+}
+
+LRESULT CSizableReBar::OnThemeChanged( WPARAM /*wParam*/, LPARAM /*lParam*/ )
+{
+    ApplyModernAppearance();
+    return Default();
 }
 
 void CSizableReBar::OnSize( UINT nType, int cx, int cy )

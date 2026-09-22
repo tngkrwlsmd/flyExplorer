@@ -28,7 +28,8 @@
 //////////////////////////////////////////////////////////////////////
 
 #include "stdafx.h"        // Standard windows header file
-#include "BCMenu.h"        // BCMenu class declaration
+#include "BCMenu.h"
+#include "ModernUI.h"        // BCMenu class declaration
 #include <afxpriv.h>       //SK: makes A2W and other spiffy AFX macros work
 
 #include "gdi.h"
@@ -775,9 +776,13 @@ void BCMenu::DrawItemStandardStyle(LPDRAWITEMSTRUCT lpDIS)
 	BCMenuData *pMenuData = (BCMenuData *)lpDIS->itemData;
 	UINT state = (((BCMenuData *)(lpDIS->itemData))->nFlags);
 
-	COLORREF crBack  = ::GetSysColor(COLOR_MENU);
-	COLORREF crBegin = CalculateColor(GetSysColor(COLOR_WINDOW), GetSysColor(COLOR_3DFACE), 220);
-	COLORREF crEnd   = GetSysColor(COLOR_3DFACE);
+    const fxfile::ui::ThemePalette sPalette = fxfile::ui::ModernUI::getPalette();
+    const xpr_bool_t sUseDarkPalette =
+        XPR_IS_TRUE(sPalette.mDark) && XPR_IS_FALSE(sPalette.mHighContrast);
+
+	COLORREF crBack  = XPR_IS_TRUE(sUseDarkPalette) ? sPalette.mSurface : ::GetSysColor(COLOR_MENU);
+	COLORREF crBegin = XPR_IS_TRUE(sUseDarkPalette) ? sPalette.mSurface : CalculateColor(GetSysColor(COLOR_WINDOW), GetSysColor(COLOR_3DFACE), 220);
+	COLORREF crEnd   = XPR_IS_TRUE(sUseDarkPalette) ? sPalette.mSurface : GetSysColor(COLOR_3DFACE);
 	
 	CRect rcR(rc);
 	rcR.left += m_nIconX + 4;
@@ -797,7 +802,10 @@ void BCMenu::DrawItemStandardStyle(LPDRAWITEMSTRUCT lpDIS)
 	else
 	{
 		CBrush brSelect;
-		brSelect.CreateSolidBrush(GetSysColor(COLOR_HIGHLIGHT));
+		brSelect.CreateSolidBrush(
+            XPR_IS_TRUE(sUseDarkPalette) ?
+            sPalette.mSelection :
+            GetSysColor(COLOR_HIGHLIGHT));
 
 		// Get State(up, down, focused, disabled)
 		CString strText;
@@ -920,7 +928,16 @@ void BCMenu::DrawItemStandardStyle(LPDRAWITEMSTRUCT lpDIS)
 			UINT nFormat2 = DT_RIGHT | DT_SINGLELINE | DT_VCENTER | DT_END_ELLIPSIS;
 
 			COLORREF crText;
-			if (lpDIS->itemState & ODS_GRAYED)
+			if (XPR_IS_TRUE(sUseDarkPalette))
+            {
+                if (lpDIS->itemState & ODS_GRAYED)
+                    crText = sPalette.mSecondaryText;
+                else if (state & ODS_SELECTED)
+                    crText = sPalette.mSelectionText;
+                else
+                    crText = sPalette.mText;
+            }
+            else if (lpDIS->itemState & ODS_GRAYED)
 				crText = RGB(140, 140, 140);
 			else
 			{
@@ -960,8 +977,16 @@ void BCMenu::DrawItemWindows8Style(LPDRAWITEMSTRUCT aDrawItemStruct)
     UINT        sFlags      = sMenuData->nFlags;
     UINT        sItemState  = aDrawItemStruct->itemState;
 
-    COLORREF sBkgndColor = CalculateColor(GetSysColor(COLOR_MENU), GetSysColor(COLOR_3DFACE  ), 240);
-    COLORREF sLineColor  = CalculateColor(GetSysColor(COLOR_MENU), GetSysColor(COLOR_3DSHADOW), 200);
+    const fxfile::ui::ThemePalette sPalette = fxfile::ui::ModernUI::getPalette();
+    const xpr_bool_t sUseDarkPalette =
+        XPR_IS_TRUE(sPalette.mDark) && XPR_IS_FALSE(sPalette.mHighContrast);
+
+    COLORREF sBkgndColor = XPR_IS_TRUE(sUseDarkPalette) ?
+        sPalette.mSurface :
+        CalculateColor(GetSysColor(COLOR_MENU), GetSysColor(COLOR_3DFACE), 240);
+    COLORREF sLineColor = XPR_IS_TRUE(sUseDarkPalette) ?
+        sPalette.mSeparator :
+        CalculateColor(GetSysColor(COLOR_MENU), GetSysColor(COLOR_3DSHADOW), 200);
 
     CPen sPen(PS_SOLID, 1, sLineColor);
     CPen *sOldPen = (CPen *)sDC->SelectObject(&sPen);
@@ -1022,30 +1047,39 @@ void BCMenu::drawSelection(CDC *aDC, const CRect &aItemRect, UINT aItemState)
 {
     ASSERT(aDC != NULL);
 
+    const fxfile::ui::ThemePalette sPalette = fxfile::ui::ModernUI::getPalette();
+    const xpr_bool_t sUseDarkPalette =
+        XPR_IS_TRUE(sPalette.mDark) && XPR_IS_FALSE(sPalette.mHighContrast);
+
     if (aItemState & ODS_SELECTED)
     {
-        if ((aItemState & ODS_GRAYED) != ODS_GRAYED)
+        COLORREF sBoxLineColor;
+        COLORREF sBoxColor;
+
+        if (XPR_IS_TRUE(sUseDarkPalette))
         {
-            COLORREF sBoxLineColor  = CalculateColor(GetSysColor(COLOR_MENU), GetSysColor(COLOR_HIGHLIGHT), 100);
-            COLORREF sBoxColor      = CalculateColor(GetSysColor(COLOR_MENU), GetSysColor(COLOR_HIGHLIGHT), 220);
-
-            CRect sBoxRect(aItemRect);
-            aDC->FillSolidRect(sBoxRect, sBoxLineColor);
-
-            sBoxRect.DeflateRect(1, 1, 1, 1);
-            aDC->FillSolidRect(sBoxRect, sBoxColor);
+            sBoxLineColor = sPalette.mBorder;
+            sBoxColor =
+                (aItemState & ODS_GRAYED) ?
+                sPalette.mSurface :
+                sPalette.mSelection;
+        }
+        else if ((aItemState & ODS_GRAYED) != ODS_GRAYED)
+        {
+            sBoxLineColor = CalculateColor(GetSysColor(COLOR_MENU), GetSysColor(COLOR_HIGHLIGHT), 100);
+            sBoxColor = CalculateColor(GetSysColor(COLOR_MENU), GetSysColor(COLOR_HIGHLIGHT), 220);
         }
         else
         {
-            COLORREF sBoxLineColor  = CalculateColor(GetSysColor(COLOR_MENU), GetSysColor(COLOR_BTNSHADOW), 100);
-            COLORREF sBoxColor      = CalculateColor(GetSysColor(COLOR_MENU), GetSysColor(COLOR_BTNSHADOW), 220);
-
-            CRect sBoxRect(aItemRect);
-            aDC->FillSolidRect(sBoxRect, sBoxLineColor);
-
-            sBoxRect.DeflateRect(1, 1, 1, 1);
-            aDC->FillSolidRect(sBoxRect, sBoxColor);
+            sBoxLineColor = CalculateColor(GetSysColor(COLOR_MENU), GetSysColor(COLOR_BTNSHADOW), 100);
+            sBoxColor = CalculateColor(GetSysColor(COLOR_MENU), GetSysColor(COLOR_BTNSHADOW), 220);
         }
+
+        CRect sBoxRect(aItemRect);
+        aDC->FillSolidRect(sBoxRect, sBoxLineColor);
+
+        sBoxRect.DeflateRect(1, 1, 1, 1);
+        aDC->FillSolidRect(sBoxRect, sBoxColor);
 
         CPoint sVertPoint1(aItemRect.left + m_nIconX + ICON_OFFSET_X2, aItemRect.top    + 1);
         CPoint sVertPoint2(aItemRect.left + m_nIconX + ICON_OFFSET_X2, aItemRect.bottom - 1);
@@ -1121,7 +1155,28 @@ void BCMenu::drawText(CDC *aDC, const CRect &aItemRect, UINT aItemState, const C
     sFont.CreateFontIndirect(&sNonClientMetrics.lfMenuFont);
 
     int sOldMode = aDC->GetBkMode();
-    COLORREF sTextColor = (aItemState & ODS_GRAYED) ? GetSysColor(COLOR_3DSHADOW) : GetSysColor(COLOR_MENUTEXT);
+
+    const fxfile::ui::ThemePalette sPalette = fxfile::ui::ModernUI::getPalette();
+    const xpr_bool_t sUseDarkPalette =
+        XPR_IS_TRUE(sPalette.mDark) && XPR_IS_FALSE(sPalette.mHighContrast);
+
+    COLORREF sTextColor;
+    if (XPR_IS_TRUE(sUseDarkPalette))
+    {
+        if (aItemState & ODS_GRAYED)
+            sTextColor = sPalette.mSecondaryText;
+        else if (aItemState & ODS_SELECTED)
+            sTextColor = sPalette.mSelectionText;
+        else
+            sTextColor = sPalette.mText;
+    }
+    else
+    {
+        sTextColor =
+            (aItemState & ODS_GRAYED) ?
+            GetSysColor(COLOR_3DSHADOW) :
+            GetSysColor(COLOR_MENUTEXT);
+    }
 
     CFont *sOldFont = aDC->SelectObject(&sFont);
 
