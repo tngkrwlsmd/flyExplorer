@@ -77,7 +77,7 @@
     }
   ],
   "review": {
-    "reviewed_revision": "d203d55f6370961cef7f4e87f7633e49a783651c",
+    "reviewed_revision": "5c00b4a61953f72721324e97b8e5d988e42097a6",
     "reviewed_at": "2026-09-22",
     "reviewed_paths": [
       "AGENTS.md",
@@ -99,6 +99,7 @@
       "dist/make_installer.bat",
       "dist/setup.nsi",
       "fxfile.gyp",
+      "src/base",
       "src/fxfile",
       "src/fxfile-tests",
       "src/xpr",
@@ -143,10 +144,10 @@
 | 패키징 | `dist/package.bat`, `dist/copy.bat`, `dist/make_portable.bat`, `dist/make_installer.bat`, `dist/setup.nsi` | Contract / Observed | x64/x86 staging, portable ZIP 3종, vendored NSIS installer |
 | 개발 환경 문서 | `README` | Intended / Observed | 실제 build evidence와 함께 해석 |
 | 제품 빌드 CI | `.github/workflows/windows-build.yml` | Contract / Evidence | automatic trigger 중지; explicit `run_ci`에서 Release x64 build/warning/artifact/native functional regression/x64 smoke 실행, `run_x86_compat`에서 x86 Unicode/Multibyte compile/artifact/native functional regression 추가 |
-| native functional regression | `src/fxfile-tests/fxfile-tests.gyp`, `src/fxfile-tests/functional_tests.cpp` | Contract / Evidence | OS temp fixture에서 xpr FileSys/FileIo, SHFileOperation seam, CRC32/MD5 known vector, ShellRegistry command/key 조립 검증 |
+| native functional regression | `src/fxfile-tests/fxfile-tests.gyp`, `src/fxfile-tests/*.cpp` | Contract / Evidence | OS temp fixture에서 xpr FileSys/FileIo/SHFileOperation, rename transform, fnmatch/FilePath, UTF-8 ConfFileEx persistence, updater version/metadata/command quoting, CRC32/MD5, ShellRegistry command/key contract 검증 |
 | runtime smoke | `build/runtime_smoke.ps1` | Contract / Evidence | 임시 staged runtime + isolated conf_dir에서 process/main-window/stability 검증 |
-| installer smoke | `build/installer_smoke.ps1`, `dist/setup.nsi` | Contract / Evidence | 기본 safety-contract inspection; elevated + FXFILE_INSTALLER_SMOKE=1에서 temp install/runtime/uninstall + protected Registry snapshot 비변경 검증 |
-| package validation | `build/validate_package.ps1` | Contract / Evidence | staging/portable payload, updater runtime, installer output + installer-smoke wiring 검증 |
+| installer smoke | `build/installer_smoke.ps1`, `dist/setup.nsi` | Contract / Evidence | 기본 safety-contract inspection; elevated + FXFILE_INSTALLER_SMOKE=1에서 temp install/runtime/uninstall, main/upchecker architecture, protected Registry/shortcut/startup/profile snapshot 비변경, 기존 fxfile process/sibling sentinel 보존 검증 |
+| package validation | `build/validate_package.ps1` | Contract / Evidence | staging/portable payload, main/upchecker PE architecture, XPR runtime/architecture staging, stale updater, ZIP traversal/duplicate/casing/development-artifact, installer output + installer-smoke wiring 검증 |
 | build/runtime 결과 | GitHub Actions build log, Visual Studio build log, hosted-runner launch smoke, Windows Sandbox/VM smoke | Evidence | compile/link, hosted runtime, clean-runtime evidence를 분리 |
 
 ## Generated artifacts
@@ -240,14 +241,17 @@
 - 기존 IDR_MAINFRAME title icon을 소유하던 CResizingDialog 계열 18개 command dialog는 constructor-time LoadIcon 대신 OnInitDialog 시점의 DPI-aware ModernUI::loadIconResource 경로로 전환했다. icon handle ownership/DestroyIcon 계약은 유지한다.
 - icon/resource modernization은 DPI-aware loading/scaling을 유지하면서 application `fxfile.ico`의 기존 16/32/48 프레임을 보존하고 32-bit 256px 프레임을 추가했다. `tip.ico`/`shortcut.ico`는 32/40/48/64px, `goup.ico`는 기존 16/32px 변형을 보존하면서 40/48/64px 32-bit 프레임을 추가했고 ExplorerCtrl parent-folder icon도 fixed-size LoadIcon 대신 ModernUI DPI loader/scale 경로를 사용한다. main toolbar small/large hot/cold strip과 config-tree strip은 command/image index에 강하게 결합된 legacy artwork이므로 프레임 순서를 재디자인하지 않고 frame count/cell geometry/16bpp mask format/RC/GYP wiring을 source-invariant가 고정한다. 최종 artwork 미감은 automated PASS로 주장하지 않는다.
 - standard non-resizing direct `CDialog` outlier modernization을 완료했다. 새 `CModernDialog` base는 system UI font, ThemePalette surface/window brush, Explorer common-control association, top-level frame theme, settings/syscolor/theme/DPI refresh를 공통 소유한다. Bookmark/Wait/About/설정 보조/선택·변환·검색/file-scrap 계열과 PictureViewer/COptionsDialog가 이 기반으로 이동했고, `CResizingDialog`, `TitleDlg`, `CfgDlg`/`CfgMainDlg`, `DriveDetailDlg`는 기존 전문 ModernUI owner로 allowlist한다. AboutDlg/TipDlg/PictureViewer의 custom paint 및 toolbar customize owner-draw는 ThemePalette/DPI 경로로 별도 보정했다.
-- `build/validate_source_invariants.py`는 ModernDialog 등록/direct include/direct-CDialog allowlist, About/Tip/PictureViewer custom-paint wiring, toolbar invalid-message/custom-draw wiring, toolbar/config-tree bitmap frame geometry, app/tip/shortcut/go-up icon frame 계약과 go-up DPI loader, native functional-test wiring, isolated installer-smoke wiring을 검사한다. validator는 Python 3.9+ 계약을 유지한다. 이 실행 환경에서는 Windows/MSVC `local_ci.bat quick`/`test`/`install`/`x64`/`full`을 실제 실행하지 못했으므로 현재 `main`의 compile/link/functional/runtime/package/install evidence는 NOT TESTED다.
-- 이번 범위의 자동화 가능한 product functional regression, shell-command contract, isolated installer smoke, direct-dialog/DPI icon/resource regression 보강은 구현 완료했다. toolbar/config-tree strip은 기능 index를 보존하기 위해 구조를 유지하며 실제 시각 재디자인과 최종 visual acceptance는 별도 manual/design evidence로 남는다. 실제 제품 Registry shell registration, clean Windows install/uninstall, Light/Dark/High Contrast/DPI/interactive 검증도 별도 Manual / NOT TESTED evidence다.
+- `build/validate_source_invariants.py`는 ModernDialog 등록/direct include/direct-CDialog allowlist, About/Tip/PictureViewer custom-paint wiring, toolbar invalid-message/custom-draw wiring, toolbar/config-tree bitmap frame geometry, app/tip/shortcut/go-up icon frame 계약과 go-up DPI loader, rename/pattern-path/config/updater native functional-test wiring, shared updater metadata/version/command core, isolated installer-smoke wiring을 검사한다. validator는 Python 3.9+ 계약을 유지한다.
+- native functional regression은 filesystem/hash/shell contract에서 확장되어 batch-rename transform core, `fnmatch`/`xpr::FilePath`, UTF-8 `ConfFileEx` round-trip/default/corrupt input, updater strict version 비교/metadata parser/conf-dir+startup quoting을 production implementation으로 검증하도록 구성됐다. 이 과정에서 `ConfFile::mFlags` constructor 초기화, version compare ordering, malformed updater version 처리, updater metadata 필수 필드, conf-dir quoting, rename boundary input을 수정하고 회귀를 추가했다.
+- package validation은 main executable과 모든 package의 Win32 upchecker PE machine을 확인하고 wrong XPR runtime, stale `fxfile-updater.exe`, nested architecture staging, unsafe ZIP path, duplicate/case-colliding entry, 개발 산출물 혼입을 차단한다. isolated installer smoke는 install/uninstall 전후 Registry뿐 아니라 shortcut/startup/profile snapshot, pre-existing fxfile process, sibling sentinel과 installed architecture를 보호한다.
+- 이번 범위의 자동화 가능한 product functional regression, updater/release/package/installer hardening, shell-command contract, direct-dialog/DPI icon/resource regression 보강은 구현 완료했다. toolbar/config-tree strip은 기능 index를 보존하기 위해 구조를 유지하며 실제 시각 재디자인과 최종 visual acceptance는 별도 manual/design evidence로 남는다.
+- 이 실행 환경에서는 Windows/MSVC `local_ci.bat quick`/`test`/`install`/`x64`/`x86`/`release`/`full`을 실제 실행하지 못했으므로 현재 `main`의 compile/link/functional/runtime/package/install evidence는 NOT TESTED다. 실제 제품 Registry shell registration, clean Windows install/uninstall, Light/Dark/High Contrast/DPI/interactive 검증도 별도 Manual / NOT TESTED evidence다.
 
 ## Recommended verification
 
 0. `local_ci.bat x64` (일상적인 기본 로컬 CI)
 1. static 확인은 `local_ci.bat quick`; product 기능만은 `local_ci.bat test`; installer contract/격리 설치는 `local_ci.bat install`; 릴리스 준비는 `local_ci.bat release`; 전체 회귀는 `local_ci.bat full`
-2. `python build/validate_source_invariants.py` (source invariant + dialog/resource/DPI-icon + functional/installer wiring + known regression guards)
+2. `python build/validate_source_invariants.py` (source invariant + dialog/resource/DPI-icon + rename/pattern/config/updater functional + installer wiring + known regression guards)
 3. `build.bat`
 4. 새로 생성된 `fxfile.sln`을 Visual Studio 2026에서 열기
 5. `Release-x64-Unicode | x64` Build Solution
