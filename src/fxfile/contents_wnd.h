@@ -176,6 +176,8 @@ protected:
     afx_msg void OnPaint(void);
     afx_msg xpr_bool_t OnEraseBkgnd(CDC* pDC);
     afx_msg void OnSettingChange(xpr_uint_t uFlags, const xpr_tchar_t *lpszSection);
+    afx_msg void OnSysColorChange(void);
+    afx_msg LRESULT OnThemeChanged(WPARAM aWParam, LPARAM aLParam);
     afx_msg void OnSize(xpr_uint_t nType, xpr_sint_t cx, xpr_sint_t cy);
 };
 } // namespace fxfile

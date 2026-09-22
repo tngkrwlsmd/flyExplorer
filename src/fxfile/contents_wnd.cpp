@@ -18,6 +18,7 @@
 
 #include "gui/gdi.h"
 #include "gui/MemDC.h"
+#include "gui/ModernUI.h"
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -93,6 +94,8 @@ BEGIN_MESSAGE_MAP(ContentsWnd, super)
     ON_WM_PAINT()
     ON_WM_ERASEBKGND()
     ON_WM_SETTINGCHANGE()
+    ON_WM_SYSCOLORCHANGE()
+    ON_MESSAGE(WM_THEMECHANGED, OnThemeChanged)
     ON_WM_SIZE()
 END_MESSAGE_MAP()
 
@@ -125,6 +128,19 @@ void ContentsWnd::OnSettingChange(xpr_uint_t uFlags, const xpr_tchar_t *lpszSect
     super::OnSettingChange(uFlags, lpszSection);
 
     updateFont();
+    RedrawWindow(XPR_NULL, XPR_NULL, RDW_INVALIDATE | RDW_ERASE | RDW_ALLCHILDREN);
+}
+
+void ContentsWnd::OnSysColorChange(void)
+{
+    super::OnSysColorChange();
+    RedrawWindow(XPR_NULL, XPR_NULL, RDW_INVALIDATE | RDW_ERASE | RDW_ALLCHILDREN);
+}
+
+LRESULT ContentsWnd::OnThemeChanged(WPARAM aWParam, LPARAM aLParam)
+{
+    RedrawWindow(XPR_NULL, XPR_NULL, RDW_INVALIDATE | RDW_ERASE | RDW_ALLCHILDREN);
+    return 0;
 }
 
 void ContentsWnd::OnPaint(void) 
@@ -136,31 +152,30 @@ void ContentsWnd::OnPaint(void)
 
     MemDC sMemDc(&sPaintDc);
 
-    if (gOpt->mConfig.mContentsStyle == CONTENTS_NONE)
-        sMemDc.FillSolidRect(&sClientRect, ::GetSysColor(COLOR_WINDOW));
-    else if (gOpt->mConfig.mContentsStyle == CONTENTS_EXPLORER)
-        sMemDc.FillSolidRect(&sClientRect, RGB(255,255,255));
-    else if (gOpt->mConfig.mContentsStyle == CONTENTS_BASIC)
-    {
-        COLORREF sBackColor = CalculateColor(RGB(255,255,255), GetSysColor(COLOR_3DFACE), 180);
-        sMemDc.FillSolidRect(&sClientRect, sBackColor);
-    }
+    const ui::ThemePalette sPalette = ui::ModernUI::getPalette();
+
+    const COLORREF sWindowColor = sPalette.mWindow;
+    const COLORREF sSurfaceColor = sPalette.mSurface;
+
+    if (gOpt->mConfig.mContentsStyle == CONTENTS_BASIC)
+        sMemDc.FillSolidRect(&sClientRect, sSurfaceColor);
+    else
+        sMemDc.FillSolidRect(&sClientRect, sWindowColor);
 
     // fill foreground
     sMemDc.SetBkMode(TRANSPARENT);
+    sMemDc.SetTextColor(sPalette.mText);
 
     // contents picture
     if (gOpt->mConfig.mContentsStyle == CONTENTS_EXPLORER)
     {
-        COLORREF sBackColor = CalculateColor(RGB(255,255,255), GetSysColor(COLOR_3DFACE), 200);
-        COLORREF sBarColor  = GetSysColor(COLOR_APPWORKSPACE);
         CRect sContentsRect(0, sClientRect.top, 200, sClientRect.top+60);
 
         // background
-        sMemDc.FillSolidRect(sContentsRect, sBackColor);
+        sMemDc.FillSolidRect(sContentsRect, sSurfaceColor);
 
         // bar
-        CPen sPen(PS_SOLID, 1, sBarColor);
+        CPen sPen(PS_SOLID, 1, sPalette.mSeparator);
         CPen *sOldPen = sMemDc.SelectObject(&sPen);
 
         sMemDc.MoveTo(0, sClientRect.top+60);
@@ -173,10 +188,10 @@ void ContentsWnd::OnPaint(void)
         sPen.DeleteObject();
 
         // icon box
-        sPen.CreatePen(PS_SOLID, 1, GetSysColor(COLOR_3DFACE));
+        sPen.CreatePen(PS_SOLID, 1, sPalette.mBorder);
         sOldPen = sMemDc.SelectObject(&sPen);
         CBrush sBrush;
-        sBrush.CreateSolidBrush(RGB(255,255,255));
+        sBrush.CreateSolidBrush(sWindowColor);
         CBrush *sOldBrush = sMemDc.SelectObject(&sBrush);
 
         CRect sBoxRect(sContentsRect);
@@ -326,18 +341,30 @@ xpr_sint_t ContentsWnd::HelpItem::draw(CDC *aDc, xpr_sint_t aTop, xpr_sint_t aWi
 
 xpr_sint_t ContentsWnd::InfotipItem::draw(CDC *aDc, xpr_sint_t aTop, xpr_sint_t aWidth, xpr_sint_t aHeight, CFont *aTextFont, CFont *aBoldTextFont)
 {
+    const ui::ThemePalette sPalette = ui::ModernUI::getPalette();
+    const COLORREF sOldTextColor = aDc->GetTextColor();
+    const COLORREF sInfoBackColor =
+        XPR_IS_TRUE(sPalette.mHighContrast) ?
+        ::GetSysColor(COLOR_INFOBK) :
+        sPalette.mSurface;
+    const COLORREF sInfoTextColor =
+        XPR_IS_TRUE(sPalette.mHighContrast) ?
+        ::GetSysColor(COLOR_INFOTEXT) :
+        sPalette.mText;
+
     CRect sTipRect(10, aTop, aWidth-2, aTop+aHeight);
     aDc->DrawText(mInfotip.c_str(), sTipRect, DT_LEFT | DT_WORDBREAK | DT_NOPREFIX | DT_CALCRECT);
     sTipRect.right = aWidth-2;
 
     sTipRect.InflateRect(1, 3, 1, 1);
-    aDc->FillSolidRect(sTipRect, RGB(222,222,222));
+    aDc->FillSolidRect(sTipRect, sPalette.mBorder);
     sTipRect.DeflateRect(1, 1, 1, 1);
-    aDc->FillSolidRect(sTipRect, ::GetSysColor(COLOR_INFOBK));
+    aDc->FillSolidRect(sTipRect, sInfoBackColor);
 
     sTipRect.DeflateRect(2, 1, 0, 0);
-    aDc->SetTextColor(::GetSysColor(COLOR_INFOTEXT));
+    aDc->SetTextColor(sInfoTextColor);
     aDc->DrawText(mInfotip.c_str(), sTipRect, DT_LEFT | DT_WORDBREAK | DT_NOPREFIX);
+    aDc->SetTextColor(sOldTextColor);
 
     return sTipRect.bottom + aHeight;
 }
@@ -421,6 +448,9 @@ xpr_sint_t ContentsWnd::MultiSelItem::draw(CDC *aDc, xpr_sint_t aTop, xpr_sint_t
 
 xpr_sint_t ContentsWnd::DriveSpaceItem::draw(CDC *aDc, xpr_sint_t aTop, xpr_sint_t aWidth, xpr_sint_t aHeight, CFont *aTextFont, CFont *aBoldTextFont)
 {
+    const ui::ThemePalette sPalette = ui::ModernUI::getPalette();
+    const COLORREF sOldTextColor = aDc->GetTextColor();
+
     CRect sRect;
     sRect.left   = 10;
     sRect.right  = aWidth;
@@ -436,20 +466,19 @@ xpr_sint_t ContentsWnd::DriveSpaceItem::draw(CDC *aDc, xpr_sint_t aTop, xpr_sint
     sRect.top    += sGap;
     sRect.bottom += sGap;
     CRect sRect2(sRect.left, sRect.top, sRect.left+12, sRect.top+12);
-    aDc->FillSolidRect(sRect2, RGB(0,0,0));
+    aDc->FillSolidRect(sRect2, sPalette.mBorder);
     sRect2.DeflateRect(1, 1, 1, 1);
-    aDc->FillSolidRect(sRect2, RGB(222,222,222));
+    aDc->FillSolidRect(sRect2, sPalette.mSeparator);
     sRect.left = sRect2.right + 5;
     aDc->DrawText(mUsedSize.c_str(), sRect, DT_SINGLELINE | DT_LEFT | DT_NOPREFIX);
 
     sRect.left    = 30;
     sRect.top    += sGap;
     sRect.bottom += sGap;
-    sRect2 = sRect;
     sRect2 = CRect(sRect.left, sRect.top, sRect.left+12, sRect.top+12);
-    aDc->FillSolidRect(sRect2, RGB(0,0,0));
+    aDc->FillSolidRect(sRect2, sPalette.mBorder);
     sRect2.DeflateRect(1, 1, 1, 1);
-    aDc->FillSolidRect(sRect2, RGB(255,255,255));
+    aDc->FillSolidRect(sRect2, sPalette.mWindow);
     sRect.left = sRect2.right + 5;
     aDc->DrawText(mFreeSize.c_str(), sRect, DT_SINGLELINE | DT_LEFT | DT_NOPREFIX);
 
@@ -461,20 +490,21 @@ xpr_sint_t ContentsWnd::DriveSpaceItem::draw(CDC *aDc, xpr_sint_t aTop, xpr_sint
     sProgressRect.right  = aWidth-10;
     sProgressRect.bottom = sProgressRect.top + aHeight;
     sProgressRect.InflateRect(1, 1, 1, 1);
-    aDc->FillSolidRect(sProgressRect, RGB(0,0,0));
+    aDc->FillSolidRect(sProgressRect, sPalette.mBorder);
     sProgressRect.DeflateRect(1, 1, 1, 1);
     sProgressRect.right = sProgressRect.left + (xpr_sint_t)(sProgressRect.Width()*(mUsedPercentage/100.0));
-    aDc->FillSolidRect(sProgressRect, RGB(222,222,222));
+    aDc->FillSolidRect(sProgressRect, sPalette.mSeparator);
     sProgressRect.left  = sProgressRect.right;
     sProgressRect.right = aWidth-10;
-    aDc->FillSolidRect(sProgressRect, RGB(255,255,255));
+    aDc->FillSolidRect(sProgressRect, sPalette.mWindow);
 
     sProgressRect.left = 10;
     xpr_tchar_t sUsedPercent[0x20] = {0};
     _stprintf(sUsedPercent, XPR_STRING_LITERAL("%d%%"), mUsedPercentage);
-    aDc->SetTextColor(RGB(0,0,0));
+    aDc->SetTextColor(sPalette.mText);
     aDc->SetBkMode(TRANSPARENT);
     aDc->DrawText(sUsedPercent, sProgressRect, DT_SINGLELINE | DT_CENTER | DT_NOPREFIX | DT_VCENTER);
+    aDc->SetTextColor(sOldTextColor);
 
     return sProgressRect.bottom + aHeight;
 }

@@ -39,6 +39,8 @@ protected:
 protected:
     void SetWindowText(const xpr_tchar_t *aText);
     void SetFont(CFont *aFont);
+    void ensureBackgroundBrush(COLORREF aColor);
+    void updateAppearance(void);
 
 protected:
     BookmarkItem *mBookmarkItem;
@@ -49,6 +51,8 @@ protected:
     xpr_bool_t    mBookmarkActive;
     CFont         mTextFont;
     CToolTipCtrl  mToolTipCtrl;
+    CBrush        mBackgroundBrush;
+    COLORREF      mBackgroundColor;
 
 protected:
     DECLARE_MESSAGE_MAP()
@@ -60,6 +64,9 @@ protected:
     afx_msg xpr_sint_t OnCreate(LPCREATESTRUCT lpCreateStruct);
     afx_msg void OnContextMenu(CWnd* pWnd, CPoint pt);
     afx_msg void OnMouseMove(xpr_uint_t nFlags, CPoint pt);
+    afx_msg void OnSettingChange(xpr_uint_t aFlags, const xpr_tchar_t *aSection);
+    afx_msg void OnSysColorChange(void);
+    afx_msg LRESULT OnThemeChanged(WPARAM aWParam, LPARAM aLParam);
 };
 } // namespace fxfile
 

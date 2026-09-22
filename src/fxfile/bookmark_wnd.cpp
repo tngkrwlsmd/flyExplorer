@@ -13,6 +13,8 @@
 #include "option.h"
 #include "main_frame.h"
 
+#include "gui/ModernUI.h"
+
 #ifdef _DEBUG
 #define new DEBUG_NEW
 #endif
@@ -27,12 +29,16 @@ BookmarkWnd::BookmarkWnd(void)
     , mBookmarkColor(DEF_INFO_BAR_BOOKMARK_COLOR)
     , mCursor(XPR_NULL)
     , mIndex(-1)
+    , mBackgroundColor(CLR_INVALID)
 {
 }
 
 BookmarkWnd::~BookmarkWnd(void)
 {
     mTextFont.DeleteObject();
+
+    if (XPR_IS_NOT_NULL(mBackgroundBrush.m_hObject))
+        mBackgroundBrush.DeleteObject();
 }
 
 BEGIN_MESSAGE_MAP(BookmarkWnd, CStatic)
@@ -44,6 +50,9 @@ BEGIN_MESSAGE_MAP(BookmarkWnd, CStatic)
     ON_WM_CREATE()
     ON_WM_CONTEXTMENU()
     ON_WM_MOUSEMOVE()
+    ON_WM_SETTINGCHANGE()
+    ON_WM_SYSCOLORCHANGE()
+    ON_MESSAGE(WM_THEMECHANGED, OnThemeChanged)
 END_MESSAGE_MAP()
 
 xpr_sint_t BookmarkWnd::OnCreate(LPCREATESTRUCT lpCreateStruct) 
@@ -61,6 +70,7 @@ xpr_sint_t BookmarkWnd::OnCreate(LPCREATESTRUCT lpCreateStruct)
     SetFont(&sFont);
 
     mToolTipCtrl.Create(this);
+    updateAppearance();
 
     if (gOpt->mConfig.mBookmarkTooltip == XPR_TRUE)
     {
@@ -111,16 +121,76 @@ xpr_bool_t BookmarkWnd::PreTranslateMessage(MSG* pMsg)
 void BookmarkWnd::setBookmarkColor(COLORREF aBookmarkColor)
 {
     mBookmarkColor = aBookmarkColor;
+
+    if (XPR_IS_NOT_NULL(m_hWnd))
+        Invalidate(XPR_FALSE);
 }
 
 HBRUSH BookmarkWnd::CtlColor(CDC* pDC, xpr_uint_t nCtlColor) 
 {
     ASSERT(nCtlColor == CTLCOLOR_STATIC);
 
-    pDC->SetTextColor(mBookmarkColor);
+    const ui::ThemePalette sPalette = ui::ModernUI::getPalette();
+    ensureBackgroundBrush(sPalette.mWindow);
+
+    pDC->SetTextColor(
+        XPR_IS_TRUE(sPalette.mHighContrast) ?
+        sPalette.mText :
+        mBookmarkColor);
+    pDC->SetBkColor(sPalette.mWindow);
     pDC->SetBkMode(TRANSPARENT);
 
-    return (HBRUSH)GetStockObject(WHITE_BRUSH);//(HBRUSH)GetStockObject(NULL_BRUSH);
+    if (XPR_IS_NOT_NULL(mBackgroundBrush.m_hObject))
+        return (HBRUSH)mBackgroundBrush.GetSafeHandle();
+
+    return ::GetSysColorBrush(COLOR_WINDOW);
+}
+
+void BookmarkWnd::ensureBackgroundBrush(COLORREF aColor)
+{
+    if (mBackgroundColor == aColor &&
+        XPR_IS_NOT_NULL(mBackgroundBrush.m_hObject))
+    {
+        return;
+    }
+
+    if (XPR_IS_NOT_NULL(mBackgroundBrush.m_hObject))
+        mBackgroundBrush.DeleteObject();
+
+    if (mBackgroundBrush.CreateSolidBrush(aColor) != FALSE)
+        mBackgroundColor = aColor;
+    else
+        mBackgroundColor = CLR_INVALID;
+}
+
+void BookmarkWnd::updateAppearance(void)
+{
+    const ui::ThemePalette sPalette = ui::ModernUI::getPalette();
+    ensureBackgroundBrush(sPalette.mWindow);
+
+    if (XPR_IS_NOT_NULL(mToolTipCtrl.m_hWnd))
+        ui::ModernUI::applyExplorerControlTheme(mToolTipCtrl.m_hWnd);
+
+    if (XPR_IS_NOT_NULL(m_hWnd))
+        Invalidate(XPR_FALSE);
+}
+
+void BookmarkWnd::OnSettingChange(xpr_uint_t aFlags, const xpr_tchar_t *aSection)
+{
+    CStatic::OnSettingChange(aFlags, aSection);
+    updateAppearance();
+}
+
+void BookmarkWnd::OnSysColorChange(void)
+{
+    CStatic::OnSysColorChange();
+    updateAppearance();
+}
+
+LRESULT BookmarkWnd::OnThemeChanged(WPARAM aWParam, LPARAM aLParam)
+{
+    updateAppearance();
+    return 0;
 }
 
 LRESULT BookmarkWnd::OnNcHitTest(CPoint aPoint) 

@@ -11,6 +11,7 @@
 #include "bookmark_set_wnd.h"
 
 #include "gui/MemDC.h"
+#include "gui/ModernUI.h"
 
 #include "option.h"
 #include "bookmark_wnd.h"
@@ -88,6 +89,8 @@ BEGIN_MESSAGE_MAP(BookmarkSetWnd, super)
     ON_WM_PAINT()
     ON_WM_ERASEBKGND()
     ON_WM_SETTINGCHANGE()
+    ON_WM_SYSCOLORCHANGE()
+    ON_MESSAGE(WM_THEMECHANGED, OnThemeChanged)
     ON_WM_VSCROLL()
     ON_WM_SIZE()
 END_MESSAGE_MAP()
@@ -97,6 +100,7 @@ xpr_sint_t BookmarkSetWnd::OnCreate(LPCREATESTRUCT lpCreateStruct)
     if (super::OnCreate(lpCreateStruct) == -1)
         return -1;
 
+    ui::ModernUI::applyExplorerControlTheme(m_hWnd);
     return 0;
 }
 
@@ -121,6 +125,23 @@ void BookmarkSetWnd::OnSettingChange(xpr_uint_t uFlags, const xpr_tchar_t *lpszS
 {
     super::OnSettingChange(uFlags, lpszSection);
 
+    ui::ModernUI::applyExplorerControlTheme(m_hWnd);
+    RedrawWindow(XPR_NULL, XPR_NULL, RDW_INVALIDATE | RDW_ERASE | RDW_ALLCHILDREN);
+}
+
+void BookmarkSetWnd::OnSysColorChange(void)
+{
+    super::OnSysColorChange();
+
+    ui::ModernUI::applyExplorerControlTheme(m_hWnd);
+    RedrawWindow(XPR_NULL, XPR_NULL, RDW_INVALIDATE | RDW_ERASE | RDW_ALLCHILDREN);
+}
+
+LRESULT BookmarkSetWnd::OnThemeChanged(WPARAM aWParam, LPARAM aLParam)
+{
+    ui::ModernUI::applyExplorerControlTheme(m_hWnd);
+    RedrawWindow(XPR_NULL, XPR_NULL, RDW_INVALIDATE | RDW_ERASE | RDW_ALLCHILDREN);
+    return 0;
 }
 
 void BookmarkSetWnd::OnPaint(void) 
@@ -130,8 +151,10 @@ void BookmarkSetWnd::OnPaint(void)
     CRect sClientRect;
     GetClientRect(sClientRect);
 
+    const ui::ThemePalette sPalette = ui::ModernUI::getPalette();
+
     MemDC sMemDc(&sPaintDc);
-    sMemDc.FillSolidRect(&sClientRect, RGB(255,255,255));
+    sMemDc.FillSolidRect(&sClientRect, sPalette.mWindow);
 }
 
 xpr_bool_t BookmarkSetWnd::OnEraseBkgnd(CDC* pDC) 
