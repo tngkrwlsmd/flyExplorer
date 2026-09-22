@@ -229,6 +229,7 @@ public:
         xpr_tchar_t     mCustomFontText[MAX_FONT_TEXT + 1];
         xpr_bool_t      mAnimationMenu;
         xpr_bool_t      mStandardMenu;
+        xpr_sint_t      mThemeMode;
         xpr_uint_t      mActiveViewColor;
 
         // tab
