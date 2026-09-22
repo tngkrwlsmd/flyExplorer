@@ -91,7 +91,13 @@ xpr_bool_t CfgMainDlg::OnInitDialog(void)
     refreshModernAppearance();
     mTreeCtrl.enableVistaEnhanced(XPR_TRUE);
 
-    mDarkGrayBrush.CreateSolidBrush(RGB(127,127,127));
+    // Use a roomy, borderless navigation row similar to Windows 11 settings
+    // surfaces while preserving the existing tree hierarchy and icons.
+    const xpr_sint_t sModernItemHeight =
+        ui::ModernUI::scaleForWindow(28, GetSafeHwnd());
+    if (mTreeCtrl.GetItemHeight() < sModernItemHeight)
+        mTreeCtrl.SetItemHeight(sModernItemHeight);
+    mTreeCtrl.SetIndent(ui::ModernUI::scaleForWindow(20, GetSafeHwnd()));
 
     CBitmap sBitmap;
     sBitmap.LoadBitmap(IDB_CONFIG_TREE);
@@ -100,7 +106,6 @@ xpr_bool_t CfgMainDlg::OnInitDialog(void)
     sBitmap.DeleteObject();
 
     mTreeCtrl.SetImageList(&mImgList, TVSIL_NORMAL);
-    mTreeCtrl.SetItemHeight(mTreeCtrl.GetItemHeight() + 2);
     refreshModernAppearance();
 
     // copy config
@@ -218,7 +223,8 @@ xpr_bool_t CfgMainDlg::showCfg(xpr_sint_t aCfgIndex)
         GetDlgItem(IDC_CFG_DESC)->GetWindowRect(&sDescRect);
         ScreenToClient(&sDescRect);
 
-        xpr_sint_t y = ui::ModernUI::scaleForWindow(44, GetSafeHwnd());
+        const xpr_sint_t y =
+            sDescRect.bottom + ui::ModernUI::scaleForWindow(10, GetSafeHwnd());
 
         sCfgItem->mCfgDlg->SetWindowPos(XPR_NULL, sDescRect.left, y, 0, 0, SWP_NOSIZE);
     }
@@ -226,7 +232,7 @@ xpr_bool_t CfgMainDlg::showCfg(xpr_sint_t aCfgIndex)
     sCfgItem->mCfgDlg->ShowWindow(SW_SHOW);
 
     // description (e.g. Configuration > Function > Bookmark)
-    xpr::string sDesc(XPR_STRING_LITERAL("  "));
+    xpr::string sDesc;
     xpr_sint_t sParent = sCfgItem->mParent;
 
     sDesc += gApp.loadString(XPR_STRING_LITERAL("popup.cfg.title"));
@@ -323,6 +329,12 @@ void CfgMainDlg::refreshModernAppearance(void)
             mUIFont.DeleteObject();
         if (mUIFont.CreateFontIndirect(&sLogFont) == XPR_TRUE)
             SetFont(&mUIFont, XPR_FALSE);
+
+        LOGFONT sHeaderLogFont = sLogFont;
+        sHeaderLogFont.lfWeight = FW_SEMIBOLD;
+        if (XPR_IS_NOT_NULL(mHeaderFont.m_hObject))
+            mHeaderFont.DeleteObject();
+        mHeaderFont.CreateFontIndirect(&sHeaderLogFont);
     }
 
     if (mSurfaceColor != sPalette.mSurface)
@@ -348,6 +360,10 @@ void CfgMainDlg::refreshModernAppearance(void)
     ui::ModernUI::applyWindowFrameTheme(GetSafeHwnd());
     applyModernAppearanceToChildren(sPreviousFont);
 
+    CWnd *sDescWnd = GetDlgItem(IDC_CFG_DESC);
+    if (XPR_IS_NOT_NULL(sDescWnd) && XPR_IS_NOT_NULL(mHeaderFont.m_hObject))
+        sDescWnd->SetFont(&mHeaderFont, XPR_FALSE);
+
     if (::IsWindow(mTreeCtrl.GetSafeHwnd()) == XPR_TRUE)
     {
         mTreeCtrl.SetBkColor(sPalette.mWindow);
@@ -370,7 +386,7 @@ void CfgMainDlg::refreshModernAppearance(void)
 xpr_bool_t CfgMainDlg::OnEraseBkgnd(CDC *aDC)
 {
     const ui::ThemePalette sPalette = ui::ModernUI::getPalette();
-    if (XPR_IS_TRUE(sPalette.mDark) && XPR_IS_FALSE(sPalette.mHighContrast))
+    if (XPR_IS_FALSE(sPalette.mHighContrast))
     {
         CRect sClientRect;
         GetClientRect(&sClientRect);
@@ -410,6 +426,7 @@ void CfgMainDlg::OnDestroy(void)
     super::OnDestroy();
 
     DELETE_OBJECT(mUIFont);
+    DELETE_OBJECT(mHeaderFont);
     DELETE_OBJECT(mSurfaceBrush);
     DELETE_OBJECT(mWindowBrush);
 
@@ -546,43 +563,30 @@ HBRUSH CfgMainDlg::OnCtlColor(CDC* pDC, CWnd* pWnd, xpr_uint_t nCtlColor)
     if (XPR_IS_TRUE(sPalette.mHighContrast))
         return super::OnCtlColor(pDC, pWnd, nCtlColor);
 
-    if (XPR_IS_TRUE(sPalette.mDark))
+    pDC->SetTextColor(
+        XPR_IS_NOT_NULL(pWnd) && XPR_IS_FALSE(pWnd->IsWindowEnabled()) ?
+        sPalette.mSecondaryText :
+        sPalette.mText);
+
+    if (nCtlColor == CTLCOLOR_EDIT || nCtlColor == CTLCOLOR_LISTBOX)
     {
-        pDC->SetTextColor(
-            XPR_IS_NOT_NULL(pWnd) && XPR_IS_FALSE(pWnd->IsWindowEnabled()) ?
-            sPalette.mSecondaryText :
-            sPalette.mText);
-
-        if (nCtlColor == CTLCOLOR_EDIT || nCtlColor == CTLCOLOR_LISTBOX)
-        {
-            pDC->SetBkMode(OPAQUE);
-            pDC->SetBkColor(sPalette.mWindow);
-            if (XPR_IS_NOT_NULL(mWindowBrush.m_hObject))
-                return (HBRUSH)mWindowBrush.GetSafeHandle();
-        }
-
-        if (nCtlColor == CTLCOLOR_STATIC ||
-            nCtlColor == CTLCOLOR_BTN ||
-            nCtlColor == CTLCOLOR_DLG)
-        {
-            pDC->SetBkMode(TRANSPARENT);
-            pDC->SetBkColor(sPalette.mSurface);
-            if (XPR_IS_NOT_NULL(mSurfaceBrush.m_hObject))
-                return (HBRUSH)mSurfaceBrush.GetSafeHandle();
-        }
-
-        return super::OnCtlColor(pDC, pWnd, nCtlColor);
+        pDC->SetBkMode(OPAQUE);
+        pDC->SetBkColor(sPalette.mWindow);
+        if (XPR_IS_NOT_NULL(mWindowBrush.m_hObject))
+            return (HBRUSH)mWindowBrush.GetSafeHandle();
     }
 
-    HBRUSH sBrush = super::OnCtlColor(pDC, pWnd, nCtlColor);
-    if (XPR_IS_NOT_NULL(pWnd) && pWnd->GetDlgCtrlID() == IDC_CFG_DESC)
+    if (nCtlColor == CTLCOLOR_STATIC ||
+        nCtlColor == CTLCOLOR_BTN ||
+        nCtlColor == CTLCOLOR_DLG)
     {
-        pDC->SetTextColor(RGB(255,255,255));
         pDC->SetBkMode(TRANSPARENT);
-        return mDarkGrayBrush;
+        pDC->SetBkColor(sPalette.mSurface);
+        if (XPR_IS_NOT_NULL(mSurfaceBrush.m_hObject))
+            return (HBRUSH)mSurfaceBrush.GetSafeHandle();
     }
 
-    return sBrush;
+    return super::OnCtlColor(pDC, pWnd, nCtlColor);
 }
 
 void CfgMainDlg::OnDefault(void)
