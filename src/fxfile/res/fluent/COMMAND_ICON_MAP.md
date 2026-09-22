@@ -1,8 +1,8 @@
 # Fluent command-icon mapping inventory
 
-This inventory maps the existing flyExplorer main-toolbar command/image contract to Microsoft Fluent UI System Icons candidates. It does **not** change runtime frame indexes yet.
+This inventory maps the existing flyExplorer main-toolbar command/image contract to Microsoft Fluent UI System Icons candidates. Runtime frame indexes remain unchanged.
 
-The current bitmap strips remain canonical until deterministic SVG rasterization is implemented and verified against the existing 16/22-pixel, 51-frame resource contract.
+Nine representative command frames now use generated Fluent masks at runtime while every non-migrated frame continues to come from the historical 16/22-pixel, 51-frame bitmap strips. The SVG + manifest + deterministic generator are canonical for migrated artwork; the legacy strips remain canonical for all other frames.
 
 | Current frame | Command | Fluent candidate | Status |
 | ---: | --- | --- | --- |
