@@ -3,6 +3,20 @@ flyExplorer local_ci.bat 간단 사용법
 
 PowerShell / Command Prompt에서 프로젝트 루트에서 실행합니다.
 
+현재 활성 개발/CI build 범위
+---------------------------
+Release-x64-Unicode | x64 한정입니다.
+
+기본/에이전트 CI에서는 아래 명령만 사용합니다.
+
+.\local_ci.bat x64
+
+인자 없는 .\local_ci.bat도 x64와 동일합니다.
+Debug-x64, x86 Unicode/Multibyte, x86/release/full profile은 도구에 남겨두지만
+사용자가 검증 범위를 다시 넓히라고 명시하기 전에는 실행하지 않습니다.
+quick/test/install/policy도 특정 정적/기능/installer/policy 검증을 명시적으로
+요청받은 경우에만 별도 evidence로 사용합니다.
+
 .\local_ci.bat
   = 기본 검증. .\local_ci.bat x64와 같습니다.
 
@@ -26,20 +40,23 @@ PowerShell / Command Prompt에서 프로젝트 루트에서 실행합니다.
   = Policy / Readiness / Conformance 검증을 수행합니다.
 
 .\local_ci.bat x64
-  = Release x64 전체 Rebuild + Functional Regression + Warning 검사 + 산출물 검사 + Runtime Smoke를 수행합니다.
+  = 현재 활성 CI profile입니다.
+  = Release-x64-Unicode | x64 Rebuild + Functional Regression + Warning 검사 + 산출물 검사 + Runtime Smoke를 수행합니다.
   = 기존 obj를 재사용하지 않고 소스를 다시 컴파일합니다. 정상 MSBuild 진행 내역은 영구 로그에 저장하지 않고 확정된 build error만 기록합니다.
   = Rebuild 전에 bin 출력 파일 lock을 검사합니다. 이 저장소의 bin에서 실행한 flyExplorer가 있으면 종료한 뒤 다시 실행해야 하며 local CI가 사용자 프로세스를 강제 종료하지는 않습니다.
   = 평소 개발 후 가장 자주 사용하면 되는 검증입니다.
 
 .\local_ci.bat x86
-  = x86 Unicode + x86 Multibyte 전체 Rebuild와 각 구성의 Functional Regression을 수행합니다.
+  = 보존된 호환성 profile입니다. 현재 활성 CI에서는 실행하지 않습니다.
+  = 사용자가 범위를 명시적으로 확대한 경우에만 x86 Unicode + x86 Multibyte Rebuild를 수행합니다.
 
 .\local_ci.bat release
-  = x64 + x86 전체 Release Rebuild + Functional Regression 후 Portable / NSIS 패키지와 installer smoke 계약까지 검증합니다.
+  = 보존된 release/package profile입니다. 현재 활성 CI에서는 실행하지 않습니다.
+  = 사용자가 범위를 명시적으로 확대한 경우에만 x64 + x86 Release + package/installer 검증을 수행합니다.
 
 .\local_ci.bat full
-  = 가능한 전체 로컬 CI 검증을 수행합니다.
-  = Policy + Release x64 Rebuild + Debug x64 Rebuild + x86 Unicode/Multibyte Rebuild + Functional Regression + Runtime Smoke + Package + installer smoke 계약 검증입니다.
+  = 보존된 전체 검증 profile입니다. 현재 활성 CI에서는 실행하지 않습니다.
+  = 사용자가 범위를 명시적으로 확대한 경우에만 Policy + Release/Debug x64 + x86 + package/installer 검증을 수행합니다.
 
 로그
 ----
