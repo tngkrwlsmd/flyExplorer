@@ -51,13 +51,23 @@ namespace
 LRESULT ApplyDarkToolBarCustomDraw(LPNMTBCUSTOMDRAW aCustomDraw)
 {
     const fxfile::ui::ThemePalette sPalette = fxfile::ui::ModernUI::getPalette();
-    if (XPR_IS_FALSE(sPalette.mDark) || XPR_IS_TRUE(sPalette.mHighContrast))
+    if (XPR_IS_TRUE(sPalette.mHighContrast) || WinAppEx::GetInstance()->IsWinXP())
         return CDRF_DODEFAULT;
 
     switch (aCustomDraw->nmcd.dwDrawStage)
     {
         case CDDS_PREPAINT:
+        {
+            // ToolbarWindow32 is transparent in the rebar. Paint the complete
+            // command surface ourselves so Light/Dark modes cannot leak the
+            // legacy COLOR_BTNFACE/white rebar background around buttons.
+            ::SetDCBrushColor(aCustomDraw->nmcd.hdc, sPalette.mSurface);
+            ::FillRect(
+                aCustomDraw->nmcd.hdc,
+                &aCustomDraw->nmcd.rc,
+                static_cast<HBRUSH>(::GetStockObject(DC_BRUSH)));
             return CDRF_NOTIFYITEMDRAW;
+        }
 
         case CDDS_ITEMPREPAINT:
         {
