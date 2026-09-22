@@ -28,6 +28,20 @@ const xpr_uint_t kCommandIds[] =
     ID_EDIT_PASTE,
     ID_FILE_NEW_FOLDER,
     ID_TOOL_OPTION,
+    ID_GO_HISTORY,
+    ID_VIEW_FOLDER_TREE_SHOW,
+    ID_GO_BOOKMARK,
+    ID_GO_DRIVE,
+    ID_GO_WORKING_FOLDER,
+    ID_FILE_RENAME,
+    ID_FILE_DELETE,
+    ID_EDIT_UNDO,
+    ID_FILE_PROPERTY,
+    ID_WINDOW_SPLIT,
+    ID_VIEW_STYLE,
+    ID_TOOL_CMD,
+    ID_TOOL_EMPTY_RECYCLEBIN,
+    ID_APP_ABOUT,
 };
 
 const xpr_byte_t kSmallMasks[][32] =
