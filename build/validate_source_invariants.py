@@ -9,6 +9,7 @@ It does not replace compilation.
 from __future__ import annotations
 
 import re
+import subprocess
 import sys
 from pathlib import Path
 
@@ -1048,35 +1049,63 @@ def validate_popup_menu_contract() -> list[str]:
 
 
 def validate_fluent_asset_contract() -> list[str]:
-    """Protect Microsoft Fluent source provenance and command/frame mapping."""
+    """Protect Fluent provenance, generated masks, and runtime frame wiring."""
 
     errors: list[str] = []
     fluent_dir = FXFILE_SRC / "res" / "fluent"
     license_path = fluent_dir / "LICENSE"
     readme_path = fluent_dir / "README.md"
     mapping_path = fluent_dir / "COMMAND_ICON_MAP.md"
+    manifest_path = fluent_dir / "toolbar_manifest.json"
+    generator_path = ROOT / "build" / "generate_fluent_toolbar_assets.py"
     gyp_path = FXFILE_SRC / "fxfile.gyp"
+    main_toolbar_path = FXFILE_SRC / "main_toolbar.cpp"
+    main_toolbar_header_path = FXFILE_SRC / "main_toolbar.h"
+    toolbar_cpp_path = FXFILE_SRC / "gui" / "rebar" / "ToolBarEx.cpp"
+    toolbar_header_path = FXFILE_SRC / "gui" / "rebar" / "ToolBarEx.h"
 
     representative_assets = (
-        "ic_fluent_settings_16_regular.svg",
+        "ic_fluent_arrow_left_16_regular.svg",
         "ic_fluent_arrow_left_20_regular.svg",
+        "ic_fluent_arrow_right_16_regular.svg",
         "ic_fluent_arrow_right_20_regular.svg",
+        "ic_fluent_arrow_up_16_regular.svg",
         "ic_fluent_arrow_up_20_regular.svg",
+        "ic_fluent_search_16_regular.svg",
         "ic_fluent_search_20_regular.svg",
+        "ic_fluent_cut_16_regular.svg",
         "ic_fluent_cut_20_regular.svg",
+        "ic_fluent_copy_16_regular.svg",
         "ic_fluent_copy_20_regular.svg",
+        "ic_fluent_clipboard_paste_16_regular.svg",
         "ic_fluent_clipboard_paste_20_regular.svg",
+        "ic_fluent_folder_add_16_regular.svg",
         "ic_fluent_folder_add_20_regular.svg",
+        "ic_fluent_settings_16_regular.svg",
         "ic_fluent_settings_20_regular.svg",
+    )
+    generated_assets = (
+        "generated_toolbar_masks_small.inc",
+        "generated_toolbar_masks_large.inc",
     )
 
     try:
         license_text = license_path.read_text(encoding="utf-8", errors="replace")
         readme = readme_path.read_text(encoding="utf-8", errors="replace")
         mapping = mapping_path.read_text(encoding="utf-8", errors="replace")
+        manifest = manifest_path.read_text(encoding="utf-8", errors="replace")
+        generator = generator_path.read_text(encoding="utf-8", errors="replace")
         gyp = gyp_path.read_text(encoding="utf-8", errors="replace")
+        main_toolbar = main_toolbar_path.read_text(encoding="utf-8", errors="replace")
+        main_toolbar_header = main_toolbar_header_path.read_text(
+            encoding="utf-8", errors="replace"
+        )
+        toolbar_cpp = toolbar_cpp_path.read_text(encoding="utf-8", errors="replace")
+        toolbar_header = toolbar_header_path.read_text(
+            encoding="utf-8", errors="replace"
+        )
     except OSError as exc:
-        return [f"Fluent asset foundation cannot be read: {exc}"]
+        return [f"Fluent toolbar contract cannot be read: {exc}"]
 
     for token in (
         "MIT License",
@@ -1089,13 +1118,15 @@ def validate_fluent_asset_contract() -> list[str]:
 
     for token in (
         "https://github.com/microsoft/fluentui-system-icons",
-        "COMMAND_ICON_MAP.md",
+        "toolbar_manifest.json",
+        "ThemePalette.mText",
         "Do not replace Windows Shell file/folder icons",
         "Do not make normal builds download assets from the network",
+        "generated_toolbar_masks_*.inc",
     ):
         if token not in readme:
             errors.append(
-                f"src/fxfile/res/fluent/README.md: missing provenance token {token}"
+                f"src/fxfile/res/fluent/README.md: missing runtime pipeline token {token}"
             )
 
     for asset_name in representative_assets:
@@ -1121,6 +1152,57 @@ def validate_fluent_asset_contract() -> list[str]:
                 f"src/fxfile/fxfile.gyp: missing Fluent source registration {gyp_token}"
             )
 
+    for asset_name in generated_assets:
+        asset_path = fluent_dir / asset_name
+        if not asset_path.is_file():
+            errors.append(f"{asset_path.relative_to(ROOT)}: generated mask is missing")
+        if f"./res/fluent/{asset_name}" not in gyp:
+            errors.append(
+                f"src/fxfile/fxfile.gyp: missing generated Fluent mask {asset_name}"
+            )
+
+    for token in (
+        "./res/fluent/toolbar_manifest.json",
+        "./res/fluent/generated_toolbar_masks_small.inc",
+        "./res/fluent/generated_toolbar_masks_large.inc",
+    ):
+        if token not in gyp:
+            errors.append(f"src/fxfile/fxfile.gyp: missing Fluent runtime token {token}")
+
+    for token in (
+        '"version": 1',
+        '"frame_count": 51',
+        '"small": "generated_toolbar_masks_small.inc"',
+        '"large": "generated_toolbar_masks_large.inc"',
+        '"frame": 0',
+        '"frame": 38',
+    ):
+        if token not in manifest:
+            errors.append(
+                f"src/fxfile/res/fluent/toolbar_manifest.json: missing token {token}"
+            )
+
+    for token in (
+        "_SUPPORTED_COMMANDS = frozenset(\"MLHVCZ\")",
+        "_CUBIC_STEPS = 32",
+        "_SUPERSAMPLE = 4",
+        "toolbar frame_count must remain 51",
+        "duplicate frame index",
+        "duplicate command",
+        "--check",
+        "--write",
+    ):
+        if token not in generator:
+            errors.append(
+                f"build/generate_fluent_toolbar_assets.py: missing deterministic token {token}"
+            )
+    for forbidden in ("import requests", "import urllib", "http://", "https://"):
+        if forbidden in generator:
+            errors.append(
+                "build/generate_fluent_toolbar_assets.py: "
+                f"network dependency is forbidden ({forbidden})"
+            )
+
     mapping_contract = (
         ("0", "ID_GO_BACK", "Arrow Left 20 Regular"),
         ("1", "ID_GO_FORWARD", "Arrow Right 20 Regular"),
@@ -1137,10 +1219,11 @@ def validate_fluent_asset_contract() -> list[str]:
             f"| {frame} |" not in mapping
             or command not in mapping
             or fluent_name not in mapping
+            or "runtime Fluent mask" not in mapping
         ):
             errors.append(
                 "src/fxfile/res/fluent/COMMAND_ICON_MAP.md: "
-                f"missing mapping {frame}/{command}/{fluent_name}"
+                f"missing runtime mapping {frame}/{command}/{fluent_name}"
             )
 
     for token in (
@@ -1154,6 +1237,42 @@ def validate_fluent_asset_contract() -> list[str]:
                 f"missing migration rule {token}"
             )
 
+    for token in (
+        '#include "gui/ModernUI.h"',
+        "kFluentToolbarFrames[] = {",
+        "0, 1, 2, 8, 12, 13, 14, 37, 38",
+        "generated_toolbar_masks_small.inc",
+        "generated_toolbar_masks_large.inc",
+        "createFluentToolbarIcon",
+        "replaceFluentToolbarFrame",
+        "m_imageListCold",
+        "m_imageListHot",
+        "sPalette.mText",
+    ):
+        if token not in main_toolbar:
+            errors.append(f"src/fxfile/main_toolbar.cpp: missing Fluent runtime token {token}")
+
+    if "virtual void OnImageListsReloaded();" not in main_toolbar_header:
+        errors.append(
+            "src/fxfile/main_toolbar.h: MainToolBar image-list reload hook is missing"
+        )
+
+    for token in (
+        "virtual void OnImageListsReloaded();",
+    ):
+        if token not in toolbar_header:
+            errors.append(f"ToolBarEx.h: missing toolbar artwork hook {token}")
+
+    for token in (
+        "void CToolBarEx::OnImageListsReloaded()",
+        "OnImageListsReloaded();",
+        "SetIconType(m_nIconType, false);",
+        "m_nIDSmallCold = (UINT)-1;",
+        "m_nIDLargeCold = (UINT)-1;",
+    ):
+        if token not in toolbar_cpp:
+            errors.append(f"ToolBarEx.cpp: missing toolbar artwork refresh token {token}")
+
     if fluent_dir.exists():
         for asset in fluent_dir.iterdir():
             if asset.suffix.lower() in (".ttf", ".otf", ".woff", ".woff2"):
@@ -1161,6 +1280,25 @@ def validate_fluent_asset_contract() -> list[str]:
                     f"{asset.relative_to(ROOT)}: system/font binary must not be vendored "
                     "for Fluent glyph rendering"
                 )
+
+    try:
+        result = subprocess.run(
+            [sys.executable, str(generator_path), "--check"],
+            cwd=str(ROOT),
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            check=False,
+        )
+    except OSError as exc:
+        errors.append(f"Fluent toolbar generator could not run: {exc}")
+    else:
+        if result.returncode != 0:
+            detail = (result.stderr or result.stdout).strip()
+            errors.append(
+                "Fluent toolbar generated masks are stale or invalid"
+                + (f": {detail}" if detail else "")
+            )
 
     return errors
 
