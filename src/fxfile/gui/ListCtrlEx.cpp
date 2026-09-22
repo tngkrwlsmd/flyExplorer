@@ -26,6 +26,10 @@ ListCtrlEx::ListCtrlEx(void)
 BEGIN_MESSAGE_MAP(ListCtrlEx, super)
     ON_WM_CREATE()
     ON_WM_DESTROY()
+    ON_WM_SETTINGCHANGE()
+    ON_WM_SYSCOLORCHANGE()
+    ON_MESSAGE(WM_DPICHANGED, OnDpiChanged)
+    ON_MESSAGE(WM_THEMECHANGED, OnThemeChanged)
 END_MESSAGE_MAP()
 
 xpr_sint_t ListCtrlEx::OnCreate(LPCREATESTRUCT aCreateStruct)
@@ -72,6 +76,26 @@ void ListCtrlEx::enableVistaEnhanced(xpr_bool_t aEnable)
     mVistaEnhanced = aEnable;
 }
 
+void ListCtrlEx::refreshModernAppearance(void)
+{
+    if (XPR_IS_NULL(m_hWnd))
+        return;
+
+    if (XPR_IS_TRUE(mVistaEnhanced))
+        fxfile::ui::ModernUI::applyExplorerControlTheme(m_hWnd);
+    else
+        fxfile::ui::ModernUI::resetControlTheme(m_hWnd);
+
+    if (XPR_IS_NOT_NULL(mHeaderCtrl) &&
+        XPR_IS_NOT_NULL(mHeaderCtrl->m_hWnd))
+    {
+        mHeaderCtrl->initHeader(XPR_FALSE);
+        mHeaderCtrl->Invalidate(XPR_FALSE);
+    }
+
+    Invalidate(XPR_FALSE);
+}
+
 xpr_bool_t ListCtrlEx::subclassHeader(xpr_bool_t aBoldFont)
 {
     if (XPR_IS_NOT_NULL(mHeaderCtrl))
@@ -98,6 +122,32 @@ xpr_sint_t ListCtrlEx::setSortImage(xpr_sint_t aColumn, xpr_bool_t aAscending)
         return -1;
 
     return mHeaderCtrl->setSortImage(aColumn, aAscending);
+}
+
+void ListCtrlEx::OnSettingChange(
+    xpr_uint_t aFlags,
+    const xpr_tchar_t *aSection)
+{
+    super::OnSettingChange(aFlags, aSection);
+    refreshModernAppearance();
+}
+
+void ListCtrlEx::OnSysColorChange(void)
+{
+    super::OnSysColorChange();
+    refreshModernAppearance();
+}
+
+LRESULT ListCtrlEx::OnDpiChanged(WPARAM aWParam, LPARAM aLParam)
+{
+    refreshModernAppearance();
+    return 0;
+}
+
+LRESULT ListCtrlEx::OnThemeChanged(WPARAM aWParam, LPARAM aLParam)
+{
+    refreshModernAppearance();
+    return 0;
 }
 
 LRESULT ListCtrlEx::WindowProc(xpr_uint_t msg, WPARAM wParam, LPARAM lParam) 
