@@ -77,7 +77,7 @@
     }
   ],
   "review": {
-    "reviewed_revision": "56a12f94022ba31cd6c8baf502fd7ed143d56229",
+    "reviewed_revision": "85161d2d8b07b9d8d6337edfb9026d97f6c3a104",
     "reviewed_at": "2026-09-22",
     "reviewed_paths": [
       "README",
@@ -220,7 +220,14 @@
 - BookmarkWnd는 기존 CStatic + WM_CTLCOLOR_REFLECT 동작을 유지하고 WHITE_BRUSH를 제거했다. ThemePalette mWindow 기반 reusable CBrush를 멤버로 관리하여 paint/message마다 GDI brush를 생성하지 않으며, High Contrast에서는 bookmark custom text color 대신 system-derived palette text를 사용한다. Tooltip theme association도 기존 ModernUI helper로 갱신한다.
 - auxiliary 구현 정적 범위 검토는 PASS: 변경 파일은 activate_bar.h/.cpp, contents_wnd.h/.cpp, bookmark_set_wnd.h/.cpp, bookmark_wnd.h/.cpp뿐이며 generated project, MenuBar/Rebar/Toolbar, TabCtrl, source invariant, ModernUI palette 구조는 변경하지 않았다. 새 ModernUI 사용 cpp는 모두 ModernUI.h를 직접 include하며 hard-coded RGB(255,255,255)/WHITE_BRUSH light-only 경로 제거, theme/syscolor/settings handlers, High Contrast fallback, reusable bookmark brush를 확인했다.
 - 이 실행 환경에서는 Windows/MSVC local_ci.bat quick 및 local_ci.bat x64를 실행하지 못했으므로 둘 다 NOT TESTED다. 실제 Windows Light/Dark/High Contrast, 100/125/150/200% DPI, ActivateBar active/last-active 상태, ContentsWnd infotip/drive-space/bookmark rendering, native scrollbar/tooltip, mouse/keyboard/scroll/bookmark interaction은 NOT TESTED다.
-- 다음 UI 현대화 단위는 MenuBar / Rebar / Toolbar dark rendering이다. 나머지 dialog/icon asset 현대화는 후속 phase 범위다.
+- MenuBar / Rebar / Toolbar dark rendering을 완료했다. CMenuBar는 기존 CToolBar + NM_CUSTOMDRAW ownership을 유지하고 dark/non-HC에서 normal/disabled/hot/selected text/background를 ThemePalette mText/mSecondaryText/mHover/mSelection/mSelectionText로 보정한다. 기존 system-menu icon, MDI caption-button 동작, keyboard/menu tracking은 변경하지 않았다.
+- CToolBarEx는 기존 native ToolbarWindow32 구조, image-list/button command semantics, DPI/system-font metrics를 유지하면서 reflected NM_CUSTOMDRAW를 추가했다. dark/non-HC에서 normal/disabled/hot/selected/checked 상태를 ThemePalette로 그리며 Light/High Contrast는 default/native path를 유지한다. toolbar 및 tooltip HWND에는 documented ModernUI Explorer theme helper를 재적용하고 TB_SETBKCOLOR/TB_SETTEXTCOLOR를 palette/system color에 맞춘다.
+- CToolBarPopup chevron menu도 동일 toolbar palette contract를 사용한다. exact Windows XP에서만 기존 SetWindowThemeXP(..., L"", L"") legacy path를 유지하고 그 외에는 ModernUI helper를 사용한다. popup border는 dark에서 mBorder, High Contrast에서는 COLOR_3DSHADOW를 사용한다.
+- CSizableReBar는 FrameWndEx menu rebar와 MainCoolBar toolbar rebar가 공유하는 실제 host이므로 공통 dark styling ownership을 맡는다. internal CReBarCtrl에 documented Explorer association을 적용하고 RB_SETBKCOLOR/RB_SETTEXTCOLOR를 ThemePalette/System color로 갱신하며, dark non-client sizing edge는 mBorder로 그린다. WM_SETTINGCHANGE / WM_SYSCOLORCHANGE / WM_THEMECHANGED에서 즉시 refresh한다.
+- BCMenu owner-draw popup의 실제 활성 경로인 Windows8/Standard style만 ThemePalette-aware하게 변경했다. dark/non-HC에서 background/separator/normal text/disabled text/selection을 mSurface/mSeparator/mText/mSecondaryText/mSelection/mSelectionText로 처리하며 Light/High Contrast는 기존 system-color 경로를 유지한다. 사용되지 않는 legacy Office/Vista drawing path는 건드리지 않았다.
+- Menu/Rebar/Toolbar 구현 정적 범위 검토는 PASS: 변경 파일은 gui/rebar/MenuBar.h/.cpp, ToolBarEx.h/.cpp, SizableReBar.h/.cpp, gui/BCMenu.cpp에 한정되고 각 ModernUI 사용 translation unit의 direct include, handler declaration/definition/message-map 일치, toolbar/popup/rebar High Contrast fallback, active BCMenu draw path와 dark separator를 확인했다. generated project, ModernUI palette 구조, build/validate_source_invariants.py는 변경하지 않았다.
+- 이 실행 환경에서는 Windows/MSVC local_ci.bat quick 및 local_ci.bat x64를 실행하지 못했으므로 둘 다 NOT TESTED다. 실제 Windows Light/Dark/High Contrast, 100/125/150/200% DPI, menu hot/selected/disabled, accelerator/menu tracking, toolbar hot/checked/disabled/dropdown, chevron popup, rebar gripper/band border/resize, tooltip appearance와 interactive behavior는 NOT TESTED다.
+- 다음 UI 현대화 범위는 broader dialog modernization과 icon asset modernization을 별도 단위로 정리한다.
 
 ## Recommended verification
 
