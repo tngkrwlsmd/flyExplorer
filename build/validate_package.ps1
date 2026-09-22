@@ -69,6 +69,17 @@ function Normalize-ZipPath {
     return ($Path -replace "\\", "/").TrimStart("/")
 }
 
+function Assert-SafeZipPath {
+    param([string]$Path, [string]$ConfigName)
+
+    $normalized = $Path -replace "\\", "/"
+    if ($normalized.StartsWith("/") -or
+        $normalized -match "^[A-Za-z]:" -or
+        @($normalized.Split("/") | Where-Object { $_ -eq ".." }).Count -gt 0) {
+        throw "$ConfigName portable archive contains unsafe path: $Path"
+    }
+}
+
 Add-Type -AssemblyName System.IO.Compression.FileSystem
 
 foreach ($config in $configurations) {
@@ -84,6 +95,24 @@ foreach ($config in $configurations) {
     $languages = @(Get-ChildItem -LiteralPath (Join-Path $stage "Languages") -Filter "*.xml" -File -ErrorAction SilentlyContinue)
     if ($languages.Count -eq 0) {
         throw "$($config.Name) package has no language XML files."
+    }
+
+    $unexpectedXpr = if ($config.Xpr -eq "libxprw.dll") { "libxpr.dll" } else { "libxprw.dll" }
+    if (Test-Path -LiteralPath (Join-Path $stage $unexpectedXpr) -PathType Leaf) {
+        throw "$($config.Name) staging contains wrong XPR runtime: $unexpectedXpr"
+    }
+
+    foreach ($archDir in @("x64", "x86-unicode", "x86-multibyte")) {
+        if (Test-Path -LiteralPath (Join-Path $stage $archDir) -PathType Container) {
+            throw "$($config.Name) staging unexpectedly contains architecture directory: $archDir"
+        }
+    }
+
+    $staleStage = @(Get-ChildItem -LiteralPath $stage -Recurse -File | Where-Object {
+        $_.Name -ieq "fxfile-updater.exe"
+    })
+    if ($staleStage.Count -gt 0) {
+        throw "Stale updater payload found in $($config.Name) staging: $($staleStage.FullName -join ', ')"
     }
 
     $forbiddenStage = @(Get-ChildItem -LiteralPath $stage -Recurse -File | Where-Object {
@@ -103,10 +132,42 @@ foreach ($config in $configurations) {
             throw "$($config.Name) portable archive is empty."
         }
 
+        foreach ($entry in $entries) {
+            Assert-SafeZipPath $entry.FullName $config.Name
+        }
+
         $entryNames = @($entries | ForEach-Object { Normalize-ZipPath $_.FullName })
+        $duplicateNames = @(
+            $entryNames |
+                Group-Object { $_.ToLowerInvariant() } |
+                Where-Object { $_.Count -gt 1 }
+        )
+        if ($duplicateNames.Count -gt 0) {
+            throw "$($config.Name) portable archive has duplicate/case-colliding entries: $($duplicateNames.Name -join ', ')"
+        }
+
+        $unexpectedXprName = if ($config.Xpr -eq "libxprw.dll") { "libxpr.dll" } else { "libxprw.dll" }
+        if ($entryNames -icontains $unexpectedXprName) {
+            throw "$($config.Name) portable archive contains wrong XPR runtime: $unexpectedXprName"
+        }
+
+        foreach ($archDir in @("x64/", "x86-unicode/", "x86-multibyte/")) {
+            if (@($entryNames | Where-Object { $_.StartsWith($archDir, [StringComparison]::OrdinalIgnoreCase) }).Count -gt 0) {
+                throw "$($config.Name) portable archive contains nested architecture staging: $archDir"
+            }
+        }
+
+        if (@($entryNames | Where-Object { [System.IO.Path]::GetFileName($_) -ieq "fxfile-updater.exe" }).Count -gt 0) {
+            throw "$($config.Name) portable archive contains stale fxfile-updater.exe."
+        }
+
         foreach ($relative in $commonFiles + @($config.Xpr) + $upcheckerFiles) {
             $expected = Normalize-ZipPath $relative
-            if ($entryNames -notcontains $expected) {
+            if ($entryNames -cnotcontains $expected) {
+                $caseInsensitiveMatch = @($entryNames | Where-Object { $_ -ieq $expected })
+                if ($caseInsensitiveMatch.Count -gt 0) {
+                    throw "$($config.Name) portable archive casing mismatch: expected $expected, found $($caseInsensitiveMatch[0])"
+                }
                 throw "$($config.Name) portable archive is missing: $expected"
             }
         }
