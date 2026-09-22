@@ -280,6 +280,7 @@ void FolderCtrl::setOption(Option &aOption)
 
     // enable vista enhanced control
     enableVistaEnhanced(!mOption.mClassicThemeStyle);
+    refreshModernTreeStyle();
 
     const ui::ThemePalette sPalette = ui::ModernUI::getPalette();
 
@@ -2831,6 +2832,19 @@ void FolderCtrl::OnEndlabeledit(NMHDR *aNmHdr, LRESULT *aResult)
     COM_FREE(sNewPidl);
 }
 
+void FolderCtrl::refreshModernTreeStyle(void)
+{
+    const ui::ThemePalette sPalette = ui::ModernUI::getPalette();
+    const xpr_bool_t sShowTreeLines =
+        XPR_IS_TRUE(mOption.mClassicThemeStyle) ||
+        XPR_IS_TRUE(sPalette.mHighContrast);
+
+    if (XPR_IS_TRUE(sShowTreeLines))
+        ModifyStyle(0, TVS_HASLINES);
+    else
+        ModifyStyle(TVS_HASLINES, 0);
+}
+
 void FolderCtrl::applyModernAppearance(void)
 {
     // The Explorer association must be refreshed even before options are
@@ -2839,6 +2853,8 @@ void FolderCtrl::applyModernAppearance(void)
 
     if (XPR_IS_FALSE(mOptionApplied))
         return;
+
+    refreshModernTreeStyle();
 
     const ui::ThemePalette sPalette = ui::ModernUI::getPalette();
 
