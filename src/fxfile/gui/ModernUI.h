@@ -66,6 +66,12 @@ public:
     static xpr_sint_t getAddressVerticalInset(HWND aHwnd);
     static xpr_sint_t getAddressTextMargin(HWND aHwnd);
     static xpr_sint_t getPopupItemPadding(HWND aHwnd);
+    static xpr_sint_t getPopupItemHeight(HWND aHwnd);
+    static xpr_sint_t getPopupIconGutter(HWND aHwnd);
+    static xpr_sint_t getPopupSeparatorHeight(HWND aHwnd);
+    static xpr_sint_t getPopupSeparatorInset(HWND aHwnd);
+    static xpr_sint_t getPopupShortcutGap(HWND aHwnd);
+    static xpr_sint_t getPopupBorderThickness(HWND aHwnd);
 
     static xpr_bool_t getUIFont(LOGFONT &aLogFont, HWND aHwnd);
     static HICON loadIconResource(HINSTANCE aInstance, xpr_uint_t aResourceId, HWND aHwnd, xpr_sint_t aLogicalSize);
