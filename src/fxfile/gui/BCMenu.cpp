@@ -1184,7 +1184,6 @@ void BCMenu::drawIcon(
             // while ThemePalette owns contrast.
             if (::DrawState(
                     aDC->m_hDC,
-                    XPR_NULL,
                     sBrush,
                     XPR_NULL,
                     reinterpret_cast<LPARAM>(sIcon),
