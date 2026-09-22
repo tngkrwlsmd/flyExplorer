@@ -185,6 +185,46 @@ xpr_sint_t ModernUI::scaleForWindow(xpr_sint_t aValue, HWND aHwnd)
     return scale(aValue, getDpi(aHwnd));
 }
 
+xpr_sint_t ModernUI::getCommandBarHeight(HWND aHwnd)
+{
+    return scaleForWindow(40, aHwnd);
+}
+
+xpr_sint_t ModernUI::getCommandButtonExtent(HWND aHwnd)
+{
+    return scaleForWindow(36, aHwnd);
+}
+
+xpr_sint_t ModernUI::getCommandHorizontalPadding(HWND aHwnd)
+{
+    return scaleForWindow(10, aHwnd);
+}
+
+xpr_sint_t ModernUI::getCommandVerticalPadding(HWND aHwnd)
+{
+    return scaleForWindow(7, aHwnd);
+}
+
+xpr_sint_t ModernUI::getAddressBarHeight(HWND aHwnd)
+{
+    return scaleForWindow(36, aHwnd);
+}
+
+xpr_sint_t ModernUI::getAddressHorizontalInset(HWND aHwnd)
+{
+    return scaleForWindow(6, aHwnd);
+}
+
+xpr_sint_t ModernUI::getAddressTextMargin(HWND aHwnd)
+{
+    return scaleForWindow(10, aHwnd);
+}
+
+xpr_sint_t ModernUI::getPopupItemPadding(HWND aHwnd)
+{
+    return scaleForWindow(8, aHwnd);
+}
+
 xpr_bool_t ModernUI::getUIFont(LOGFONT &aLogFont, HWND aHwnd)
 {
     ::ZeroMemory(&aLogFont, sizeof(aLogFont));
