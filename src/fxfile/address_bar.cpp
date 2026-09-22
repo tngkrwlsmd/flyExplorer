@@ -1365,14 +1365,21 @@ void AddressBar::updateMetrics(void)
     }
 
     const xpr_sint_t sContentHeight = max(sTextHeight, sIconHeight);
-    const xpr_sint_t sItemHeight =
-        sContentHeight + ui::ModernUI::scaleForWindow(8, GetSafeHwnd());
+    const xpr_sint_t sDropDownItemHeight =
+        sContentHeight + ui::ModernUI::getPopupItemPadding(GetSafeHwnd());
+    const xpr_sint_t sFieldItemHeight = max(
+        sDropDownItemHeight,
+        ui::ModernUI::getAddressBarHeight(GetSafeHwnd()) -
+            ui::ModernUI::scaleForWindow(6, GetSafeHwnd()));
 
     CComboBox *sComboBox = GetComboBoxCtrl();
     if (XPR_IS_NOT_NULL(sComboBox) && XPR_IS_NOT_NULL(sComboBox->m_hWnd))
     {
-        sComboBox->SetItemHeight(-1, sItemHeight);
-        sComboBox->SetItemHeight(0, sItemHeight);
+        // -1 controls the closed edit/selection field, while index 0 controls
+        // the fixed-height drop-down rows. Keeping those separate gives the
+        // navigation field a comfortable Win11 height without bloating menus.
+        sComboBox->SetItemHeight(-1, sFieldItemHeight);
+        sComboBox->SetItemHeight(0, sDropDownItemHeight);
     }
 }
 
