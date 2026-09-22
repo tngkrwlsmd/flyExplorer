@@ -34,6 +34,7 @@ public:
     void setImageList(CImageList *aImageList);
     void setTabSizeLimit(xpr_sint_t aMinSize, xpr_sint_t aMaxSize);
     void setTabSizeMode(xpr_bool_t aFixedSizeMode, xpr_sint_t aFixedSize = 0);
+    void setPaneActive(xpr_bool_t aActive);
     void enableDragMove(xpr_bool_t aDragMove);
     void showNewButton(xpr_bool_t aShowNewButton, const xpr_tchar_t *aToolTipText);
     void setTabIcon(HICON aNewButtonId);
@@ -87,6 +88,7 @@ protected:
     CFont       mFont;
     CFont       mBoldFont;
 
+    xpr_bool_t  mPaneActive;
     xpr_bool_t  mSetCapture;
     xpr_size_t  mTabHover;
     xpr_bool_t  mDragMove;
