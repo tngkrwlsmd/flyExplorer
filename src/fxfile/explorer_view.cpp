@@ -53,8 +53,6 @@ namespace fxfile
 {
 namespace
 {
-const xpr_sint_t kTabHeight = 30;
-
 //
 // control id
 //
@@ -812,7 +810,7 @@ void ExplorerView::recalcLayout(void)
         if (XPR_IS_TRUE(sResizeTabCtrl))
         {
             const xpr_sint_t sTabHeight =
-                ui::ModernUI::scaleForWindow(kTabHeight, m_hWnd);
+                ui::ModernUI::getTabHeight(m_hWnd);
 
             CRect sTabRect(sRect);
             sTabRect.bottom = sTabRect.top + sTabHeight;
@@ -827,7 +825,9 @@ void ExplorerView::recalcLayout(void)
     if (XPR_IS_NOT_NULL(mActivateBar) && XPR_IS_NOT_NULL(mActivateBar->m_hWnd))
     {
         CRect sActivateBarRect(sRect);
-        sActivateBarRect.bottom = sActivateBarRect.top + 5;
+        sActivateBarRect.bottom =
+            sActivateBarRect.top +
+            ui::ModernUI::getActivePaneIndicatorThickness(m_hWnd);
 
         ::DeferWindowPos(sHdwp, *mActivateBar, XPR_NULL, sActivateBarRect.left, sActivateBarRect.top, sActivateBarRect.Width(), sActivateBarRect.Height(), SWP_NOZORDER);
 
@@ -1821,7 +1821,8 @@ xpr_bool_t ExplorerView::createSplitter(void)
     mSplitter.setObserver(dynamic_cast<SplitterObserver *>(this));
     mSplitter.setMaxSplitCount(1, 2);
     mSplitter.setPaneSizeLimit(50, ksintmax);
-    mSplitter.setSplitSize(2);
+    mSplitter.setSplitSize(
+        ui::ModernUI::getPaneSeparatorThickness(GetSafeHwnd()));
 
     return XPR_TRUE;
 }
