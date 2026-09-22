@@ -1026,6 +1026,30 @@ def validate_popup_menu_contract() -> list[str]:
         if token not in bc_menu:
             errors.append(f"src/fxfile/gui/BCMenu.cpp: popup measurement token missing {token}")
 
+    draw_state_signature = re.compile(
+        r"::DrawState\s*\(\s*"
+        r"aDC->m_hDC\s*,\s*"
+        r"sBrush\s*,\s*"
+        r"XPR_NULL\s*,\s*"
+        r"reinterpret_cast<LPARAM>\(sIcon\)\s*,\s*"
+        r"0\s*,\s*sX\s*,\s*sY\s*,\s*"
+        r"m_nIconX\s*,\s*m_nIconY\s*,\s*"
+        r"DST_ICON\s*\|\s*DSS_MONO\s*\)"
+    )
+    if draw_state_signature.search(strip_comments(bc_menu)) is None:
+        errors.append(
+            "src/fxfile/gui/BCMenu.cpp: popup icon DrawState must use the "
+            "10-argument Win32 signature (HDC, HBRUSH, callback, icon, ...)"
+        )
+
+    if re.search(
+        r"::DrawState\s*\(\s*aDC->m_hDC\s*,\s*XPR_NULL\s*,\s*sBrush",
+        strip_comments(bc_menu),
+    ):
+        errors.append(
+            "src/fxfile/gui/BCMenu.cpp: obsolete 11-argument DrawState ordering returned"
+        )
+
     context_menu = contents["context_menu"]
     for token in (
         "IID_IContextMenu3",
