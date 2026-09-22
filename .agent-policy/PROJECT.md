@@ -263,6 +263,7 @@
 - TabCtrl은 non-HC selected/hover tab을 rounded card로, FolderCtrl의 palette-owned 기본 background는 card surface로, FlatHeaderCtrl/StatusBar는 chrome hierarchy로 정리했다. file/folder explicit custom color 설정은 계속 우선하므로 사용자 지정 색을 테마가 강제로 덮어쓰지 않는다.
 - `validate_soft_surface_contract()`은 layered palette/metric/rounded-region helper, toolbar/menu rounded state, settings shell/card, tab/header/folder/status hierarchy와 High Contrast fallback을 구조적으로 보호한다. 기존 popup/toolbar validator의 exact call token도 elevated popup signature에 맞춰 갱신했다.
 - softness/rounding branch의 connector 기반 declaration/definition/token/static wiring self-check는 PASS다. 그러나 실제 `python build/validate_source_invariants.py`, `local_ci.bat quick`, `local_ci.bat x64`, compile/link/runtime 및 Windows 11 Light/Dark/System/High Contrast 100/125/150/200% DPI visual 검증은 이 환경에서 실행하지 못했으므로 NOT TESTED다.
+- AddressBar는 background/text/focus surface를 elevated/focus palette로 올렸지만 outer `CComboBoxEx`/dropdown button chrome은 native ownership을 계속 유지한다. 실제 Windows 11 Dark에서 native outer combo가 밝게 남는다면 IME/SHAutoComplete/keyboard 계약을 보존하는 별도 address-control visual checkpoint로 다루며, 이번 softness 단계에서 owner-draw rewrite로 우회하지 않는다.
 
 ## Recommended verification
 
