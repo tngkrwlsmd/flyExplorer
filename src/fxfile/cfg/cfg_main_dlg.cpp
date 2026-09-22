@@ -216,6 +216,45 @@ void InstallModernCfgButton(HWND aHwnd)
         kModernCfgButtonSubclassId,
         0);
 }
+
+void EnsureModernCfgButtonHeight(
+    HWND aHwnd,
+    xpr_sint_t aMinimumHeight)
+{
+    if (XPR_IS_NULL(aHwnd) ||
+        ::IsWindow(aHwnd) == FALSE ||
+        aMinimumHeight <= 0)
+    {
+        return;
+    }
+
+    RECT sRect = {0};
+    if (::GetWindowRect(aHwnd, &sRect) == FALSE)
+        return;
+
+    HWND sParent = ::GetParent(aHwnd);
+    if (XPR_IS_NULL(sParent))
+        return;
+
+    ::MapWindowPoints(
+        HWND_DESKTOP,
+        sParent,
+        reinterpret_cast<LPPOINT>(&sRect),
+        2);
+
+    const xpr_sint_t sCurrentHeight = sRect.bottom - sRect.top;
+    if (sCurrentHeight >= aMinimumHeight)
+        return;
+
+    ::SetWindowPos(
+        aHwnd,
+        XPR_NULL,
+        sRect.left,
+        sRect.bottom - aMinimumHeight,
+        sRect.right - sRect.left,
+        aMinimumHeight,
+        SWP_NOZORDER | SWP_NOACTIVATE);
+}
 } // namespace
 
 xpr_sint_t CfgMainDlg::mLastShowCfg = 0;
@@ -275,10 +314,26 @@ xpr_bool_t CfgMainDlg::OnInitDialog(void)
 
     mTreeCtrl.SetImageList(&mImgList, TVSIL_NORMAL);
 
-    InstallModernCfgButton(GetDlgItem(IDOK)->GetSafeHwnd());
-    InstallModernCfgButton(GetDlgItem(IDCANCEL)->GetSafeHwnd());
-    InstallModernCfgButton(GetDlgItem(IDC_CFG_APPLY)->GetSafeHwnd());
-    InstallModernCfgButton(GetDlgItem(IDC_CFG_DEFAULT)->GetSafeHwnd());
+    CWnd *sFooterButtons[] =
+    {
+        GetDlgItem(IDOK),
+        GetDlgItem(IDCANCEL),
+        GetDlgItem(IDC_CFG_APPLY),
+        GetDlgItem(IDC_CFG_DEFAULT),
+    };
+    const xpr_sint_t sFooterButtonHeight =
+        ui::ModernUI::getDialogControlHeight(GetSafeHwnd());
+    for (xpr_size_t i = 0; i < XPR_COUNT_OF(sFooterButtons); ++i)
+    {
+        CWnd *sButton = sFooterButtons[i];
+        if (XPR_IS_NULL(sButton))
+            continue;
+
+        InstallModernCfgButton(sButton->GetSafeHwnd());
+        EnsureModernCfgButtonHeight(
+            sButton->GetSafeHwnd(),
+            sFooterButtonHeight);
+    }
 
     refreshModernAppearance();
 
@@ -398,12 +453,14 @@ xpr_bool_t CfgMainDlg::showCfg(xpr_sint_t aCfgIndex)
         ScreenToClient(&sDescRect);
 
         const xpr_sint_t y =
-            sDescRect.bottom + ui::ModernUI::scaleForWindow(10, GetSafeHwnd());
+            sDescRect.bottom +
+            ui::ModernUI::getDialogSectionSpacing(GetSafeHwnd());
 
         sCfgItem->mCfgDlg->SetWindowPos(XPR_NULL, sDescRect.left, y, 0, 0, SWP_NOSIZE);
         ui::ModernUI::applyRoundedWindowRegion(
             sCfgItem->mCfgDlg->GetSafeHwnd(),
-            8);
+            ui::ModernUI::getCardCornerRadius(
+                sCfgItem->mCfgDlg->GetSafeHwnd()));
     }
 
     sCfgItem->mCfgDlg->ShowWindow(SW_SHOW);
@@ -555,7 +612,8 @@ void CfgMainDlg::refreshModernAppearance(void)
 
         ui::ModernUI::applyRoundedWindowRegion(
             mTreeCtrl.GetSafeHwnd(),
-            8);
+            ui::ModernUI::getCardCornerRadius(
+                mTreeCtrl.GetSafeHwnd()));
     }
 
     RedrawWindow(
