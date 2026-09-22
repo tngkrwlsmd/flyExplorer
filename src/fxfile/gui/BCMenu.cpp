@@ -29,7 +29,8 @@
 
 #include "stdafx.h"        // Standard windows header file
 #include "BCMenu.h"
-#include "ModernUI.h"        // BCMenu class declaration
+#include "ModernUI.h"
+#include "FluentCommandIcons.h"        // BCMenu class declaration
 #include <afxpriv.h>       //SK: makes A2W and other spiffy AFX macros work
 
 #include "gdi.h"
@@ -1049,7 +1050,7 @@ void BCMenu::DrawItemWindows8Style(LPDRAWITEMSTRUCT aDrawItemStruct)
     drawSelection(sDC, sItemRect, sItemState);
 
     if (sIconIndex >= 0 && sImageList != NULL)
-        drawIcon(sDC, sItemRect, sItemState, sImageList);
+        drawIcon(sDC, sItemRect, sItemState, sMenuItemId, sImageList);
 
     if (sIconIndex < 0 && (sItemState & ODS_CHECKED))
         drawCheckOrRadioMark(sDC, sItemRect, sItemState, sMenuItem, sMenuItemId);
@@ -1139,6 +1140,7 @@ void BCMenu::drawIcon(
     CDC *aDC,
     const CRect &aItemRect,
     UINT aItemState,
+    UINT_PTR aCommandId,
     CImageList *aImageList)
 {
     ASSERT(aDC != NULL);
@@ -1160,12 +1162,39 @@ void BCMenu::drawIcon(
     const xpr_sint_t sY =
         aItemRect.top + max(0, (aItemRect.Height() - m_nIconY) / 2);
 
-    HICON sIcon = aImageList->ExtractIcon(0);
-    if (XPR_IS_NULL(sIcon))
-        return;
-
     const fxfile::ui::ThemePalette sPalette =
         fxfile::ui::ModernUI::getPalette();
+
+    HICON sIcon = XPR_NULL;
+    if (aCommandId <= static_cast<UINT_PTR>(UINT_MAX))
+    {
+        sIcon = fxfile::ui::FluentCommandIcons::createIcon(
+            static_cast<xpr_uint_t>(aCommandId),
+            m_nIconX <= 16 ? 16 : 22,
+            (aItemState & ODS_GRAYED) ?
+            sPalette.mSecondaryText :
+            sPalette.mText);
+    }
+
+    if (XPR_IS_NOT_NULL(sIcon))
+    {
+        ::DrawIconEx(
+            aDC->m_hDC,
+            sX,
+            sY,
+            sIcon,
+            m_nIconX,
+            m_nIconY,
+            0,
+            XPR_NULL,
+            DI_NORMAL);
+        ::DestroyIcon(sIcon);
+        return;
+    }
+
+    sIcon = aImageList->ExtractIcon(0);
+    if (XPR_IS_NULL(sIcon))
+        return;
 
     xpr_bool_t sDrawn = XPR_FALSE;
     if (XPR_IS_FALSE(sPalette.mHighContrast))
