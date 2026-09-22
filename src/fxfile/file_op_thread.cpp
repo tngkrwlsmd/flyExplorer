@@ -9,6 +9,7 @@
 
 #include "stdafx.h"
 #include "file_op_thread.h"
+#include "file_operation_core.h"
 
 #include "option.h"
 
@@ -162,7 +163,7 @@ void FileOpThread::OnFileOp(void)
         aFileOpUndo.addOperation(mShFileOpStruct);
     }
 
-    ::SHFileOperation(mShFileOpStruct);
+    fileop::execute(mShFileOpStruct);
 
     xpr_tchar_t *sSource = (xpr_tchar_t *)mShFileOpStruct->pFrom;
     xpr_tchar_t *sTarget = (xpr_tchar_t *)mShFileOpStruct->pTo;

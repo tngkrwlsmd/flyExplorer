@@ -444,6 +444,8 @@
                 './file_change_watcher.h',
                 './file_op_thread.cpp',
                 './file_op_thread.h',
+                './file_operation_core.cpp',
+                './file_operation_core.h',
                 './file_op_undo.cpp',
                 './file_op_undo.h',
                 './file_scrap.cpp',

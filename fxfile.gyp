@@ -64,6 +64,7 @@
             [
                 'src/xpr/xpr.gyp:*',
                 'src/fxfile/fxfile.gyp:*',
+                'src/fxfile-tests/fxfile-tests.gyp:*',
                 'src/fxfile-crash/fxfile-crash.gyp:*',
                 'src/fxfile-upchecker/fxfile-upchecker.gyp:*',
                 'src/fxfile-launcher/fxfile-launcher.gyp:*',
