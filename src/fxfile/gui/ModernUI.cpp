@@ -327,12 +327,16 @@ ThemePalette ModernUI::getPalette(void)
             (sThemeMode == ThemeModeDark && XPR_IS_TRUE(sSystemDark)))
         {
             sPalette.mDark          = XPR_TRUE;
-            sPalette.mWindow        = sBackground;
-            sPalette.mSurface       = blendColor(sBackground, sForeground, 8);
+            // Windows UISettings may report an almost-black app background.
+            // Lift it slightly toward the foreground so the frame/content
+            // surfaces match Windows 11 Explorer's neutral dark hierarchy
+            // instead of collapsing into a flat pure-black canvas.
+            sPalette.mWindow        = blendColor(sBackground, sForeground, 8);
+            sPalette.mSurface       = blendColor(sBackground, sForeground, 12);
             sPalette.mText          = sForeground;
-            sPalette.mSecondaryText = blendColor(sBackground, sForeground, 65);
-            sPalette.mBorder        = blendColor(sBackground, sForeground, 24);
-            sPalette.mSeparator     = blendColor(sBackground, sForeground, 16);
+            sPalette.mSecondaryText = blendColor(sPalette.mWindow, sForeground, 65);
+            sPalette.mBorder        = blendColor(sPalette.mWindow, sForeground, 24);
+            sPalette.mSeparator     = blendColor(sPalette.mWindow, sForeground, 16);
         }
         else if (sThemeMode == ThemeModeDark)
         {
