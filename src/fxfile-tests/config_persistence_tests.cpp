@@ -102,7 +102,7 @@ bool testConfigPersistenceContracts(void)
         XPR_IS_FALSE(sWrite.setValueI64(
             XPR_STRING_LITERAL("General"),
             XPR_STRING_LITERAL("Large"),
-            XPR_INT64_LITERAL(9223372036854770000))))
+            static_cast<xpr_sint64_t>(9223372036854770000LL))))
     {
         return false;
     }
