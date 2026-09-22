@@ -117,6 +117,40 @@ CTypedPtrArray<CPtrArray, HMENU> BCMenu::m_AllSubMenus;  // Stores list of all s
 BOOL BCMenu::mStandardMenuStyle = FALSE;
 BOOL BCMenu::mAnimationMenu     = FALSE;
 
+namespace
+{
+int CALLBACK DetectSegoeFluentIcons(
+    const LOGFONTW *,
+    const TEXTMETRICW *,
+    DWORD,
+    LPARAM aFound)
+{
+    BOOL *sFound = reinterpret_cast<BOOL *>(aFound);
+    if (sFound != XPR_NULL)
+        *sFound = TRUE;
+    return 0;
+}
+
+xpr_bool_t HasSegoeFluentIcons(HDC aDC)
+{
+    if (XPR_IS_NULL(aDC))
+        return XPR_FALSE;
+
+    LOGFONTW sLogFont = {0};
+    sLogFont.lfCharSet = DEFAULT_CHARSET;
+    wcscpy_s(sLogFont.lfFaceName, L"Segoe Fluent Icons");
+
+    BOOL sFound = FALSE;
+    ::EnumFontFamiliesExW(
+        aDC,
+        &sLogFont,
+        reinterpret_cast<FONTENUMPROCW>(DetectSegoeFluentIcons),
+        reinterpret_cast<LPARAM>(&sFound),
+        0);
+    return sFound != FALSE ? XPR_TRUE : XPR_FALSE;
+}
+} // namespace
+
 IMPLEMENT_DYNCREATE(BCMenu, CMenu)
 
 BCMenu::BCMenu()
@@ -1020,7 +1054,11 @@ void BCMenu::DrawItemWindows8Style(LPDRAWITEMSTRUCT aDrawItemStruct)
     if (sIconIndex < 0 && (sItemState & ODS_CHECKED))
         drawCheckOrRadioMark(sDC, sItemRect, sItemState, sMenuItem, sMenuItemId);
 
-    drawText(sDC, sItemRect, sItemState, sText, sAccelKey);
+    const xpr_bool_t sSubmenu =
+        (sFlags & MF_POPUP) != 0 ? XPR_TRUE : XPR_FALSE;
+    drawText(sDC, sItemRect, sItemState, sText, sAccelKey, sSubmenu);
+    if (XPR_IS_TRUE(sSubmenu))
+        drawSubmenuChevron(sDC, sItemRect, sItemState);
 }
 
 void BCMenu::drawSeperator(CDC *aDC, const CRect &aItemRect)
@@ -1179,12 +1217,88 @@ void BCMenu::drawCheckOrRadioMark(
         DrawCheckMark(aDC, sX, sY, sGlyphColor);
 }
 
+void BCMenu::drawSubmenuChevron(
+    CDC *aDC,
+    const CRect &aItemRect,
+    UINT aItemState)
+{
+    ASSERT(aDC != NULL);
+
+    CWnd *sMainWnd = AfxGetMainWnd();
+    HWND sMetricHwnd =
+        XPR_IS_NOT_NULL(sMainWnd) ?
+        sMainWnd->GetSafeHwnd() :
+        ::GetDesktopWindow();
+
+    const fxfile::ui::ThemePalette sPalette =
+        fxfile::ui::ModernUI::getPalette();
+    const COLORREF sColor =
+        (aItemState & ODS_GRAYED) ?
+        sPalette.mSecondaryText :
+        sPalette.mText;
+
+    const xpr_sint_t sTrailingWidth =
+        fxfile::ui::ModernUI::scaleForWindow(20, sMetricHwnd);
+    CRect sGlyphRect(aItemRect);
+    sGlyphRect.left = max(sGlyphRect.left, sGlyphRect.right - sTrailingWidth);
+
+    if (XPR_IS_TRUE(HasSegoeFluentIcons(aDC->m_hDC)))
+    {
+        LOGFONTW sLogFont = {0};
+        sLogFont.lfHeight =
+            -fxfile::ui::ModernUI::scaleForWindow(12, sMetricHwnd);
+        sLogFont.lfWeight = FW_NORMAL;
+        sLogFont.lfCharSet = DEFAULT_CHARSET;
+        wcscpy_s(sLogFont.lfFaceName, L"Segoe Fluent Icons");
+
+        HFONT sFont = ::CreateFontIndirectW(&sLogFont);
+        if (XPR_IS_NOT_NULL(sFont))
+        {
+            HGDIOBJ sOldFont = ::SelectObject(aDC->m_hDC, sFont);
+            const int sOldMode = ::SetBkMode(aDC->m_hDC, TRANSPARENT);
+            const COLORREF sOldColor = ::SetTextColor(aDC->m_hDC, sColor);
+            const wchar_t sChevron[] = { 0xE970, L'\0' };
+            ::DrawTextW(
+                aDC->m_hDC,
+                sChevron,
+                -1,
+                &sGlyphRect,
+                DT_CENTER | DT_VCENTER | DT_SINGLELINE | DT_NOPREFIX);
+            ::SetTextColor(aDC->m_hDC, sOldColor);
+            ::SetBkMode(aDC->m_hDC, sOldMode);
+            ::SelectObject(aDC->m_hDC, sOldFont);
+            ::DeleteObject(sFont);
+            return;
+        }
+    }
+
+    const xpr_sint_t sHalfHeight =
+        max(2, fxfile::ui::ModernUI::scaleForWindow(3, sMetricHwnd));
+    const xpr_sint_t sHalfWidth =
+        max(1, fxfile::ui::ModernUI::scaleForWindow(2, sMetricHwnd));
+    const xpr_sint_t sCenterX =
+        (sGlyphRect.left + sGlyphRect.right) / 2;
+    const xpr_sint_t sCenterY =
+        (sGlyphRect.top + sGlyphRect.bottom) / 2;
+
+    CPen sPen(
+        PS_SOLID,
+        max(1, fxfile::ui::ModernUI::scaleForWindow(1, sMetricHwnd)),
+        sColor);
+    CPen *sOldPen = aDC->SelectObject(&sPen);
+    aDC->MoveTo(sCenterX - sHalfWidth, sCenterY - sHalfHeight);
+    aDC->LineTo(sCenterX + sHalfWidth, sCenterY);
+    aDC->LineTo(sCenterX - sHalfWidth, sCenterY + sHalfHeight);
+    aDC->SelectObject(sOldPen);
+}
+
 void BCMenu::drawText(
     CDC *aDC,
     const CRect &aItemRect,
     UINT aItemState,
     const CString &aText,
-    const CString &aAccelKey)
+    const CString &aAccelKey,
+    xpr_bool_t aSubmenu)
 {
     ASSERT(aDC != NULL);
 
@@ -1209,6 +1323,13 @@ void BCMenu::drawText(
         aItemRect.top,
         aItemRect.right - sPadding,
         aItemRect.bottom);
+    if (XPR_IS_TRUE(aSubmenu))
+    {
+        sTextRect.right = max(
+            sTextRect.left,
+            sTextRect.right -
+                fxfile::ui::ModernUI::scaleForWindow(18, sMetricHwnd));
+    }
 
     LOGFONT sLogFont = {0};
     CFont sFont;
@@ -1352,13 +1473,18 @@ void BCMenu::MeasureItem(LPMEASUREITEMSTRUCT lpMIS)
         sAccelKey.IsEmpty() ?
         0 :
         fxfile::ui::ModernUI::getPopupShortcutGap(sMetricHwnd);
+    const xpr_sint_t sSubmenuExtent =
+        (uState & MF_POPUP) != 0 ?
+        fxfile::ui::ModernUI::scaleForWindow(18, sMetricHwnd) :
+        0;
 
     lpMIS->itemWidth =
         sGutter +
         (sPadding * 2) +
         sTextSize.cx +
         sShortcutGap +
-        sAccelSize.cx;
+        sAccelSize.cx +
+        sSubmenuExtent;
 
     const xpr_uint_t sMaxItemWidth = static_cast<xpr_uint_t>(
         fxfile::ui::ModernUI::scaleForWindow(MAX_MENU_WIDTH, sMetricHwnd));
