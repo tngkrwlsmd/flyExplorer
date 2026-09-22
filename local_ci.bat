@@ -511,7 +511,7 @@ if defined LOCAL_CI_SKIPPED (
 echo Log: "%LOCAL_CI_LOG%"
 echo ============================================================
 >>"%LOCAL_CI_LOG%" echo Finished: %DATE% %TIME%
-del /q "%STEP_LOG%" "%MSBUILD_RAW_LOG%" >nul 2>&1
+del /q "%STEP_LOG%" "%MSBUILD_RAW_LOG%" "%MSBUILD_ERROR_LOG%" >nul 2>&1
 popd
 exit /b 0
 
@@ -526,7 +526,7 @@ echo ============================================================
 >>"%LOCAL_CI_LOG%" echo.
 >>"%LOCAL_CI_LOG%" echo Result: FAIL ^(exit %RESULT%^)
 >>"%LOCAL_CI_LOG%" echo Finished: %DATE% %TIME%
-del /q "%STEP_LOG%" "%MSBUILD_RAW_LOG%" >nul 2>&1
+del /q "%STEP_LOG%" "%MSBUILD_RAW_LOG%" "%MSBUILD_ERROR_LOG%" >nul 2>&1
 popd
 exit /b %RESULT%
 
@@ -543,12 +543,12 @@ echo   release  x64 + x86 functional regression + package + installer smoke cont
 echo   full     policy + x64 Release/Debug + x86 functional regression + package + installer smoke contract.
 echo.
 echo See LOCAL_CI_MANUAL.txt for the short usage guide.
-del /q "%STEP_LOG%" "%MSBUILD_RAW_LOG%" >nul 2>&1
+del /q "%STEP_LOG%" "%MSBUILD_RAW_LOG%" "%MSBUILD_ERROR_LOG%" >nul 2>&1
 popd
 exit /b 0
 
 :usage_error
 echo Usage: local_ci.bat [quick^|test^|install^|policy^|x64^|x86^|release^|full]
-del /q "%STEP_LOG%" "%MSBUILD_RAW_LOG%" >nul 2>&1
+del /q "%STEP_LOG%" "%MSBUILD_RAW_LOG%" "%MSBUILD_ERROR_LOG%" >nul 2>&1
 popd
 exit /b 2
