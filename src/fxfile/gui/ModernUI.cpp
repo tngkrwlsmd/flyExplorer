@@ -621,12 +621,12 @@ xpr_bool_t ModernUI::applyWindowFrameTheme(HWND aHwnd)
 
 xpr_bool_t ModernUI::applyRoundedWindowRegion(
     HWND aHwnd,
-    xpr_sint_t aLogicalRadius)
+    xpr_sint_t aRadius)
 {
     if (XPR_IS_NULL(aHwnd) || ::IsWindow(aHwnd) == FALSE)
         return XPR_FALSE;
 
-    if (XPR_IS_TRUE(isHighContrast()) || aLogicalRadius <= 0)
+    if (XPR_IS_TRUE(isHighContrast()) || aRadius <= 0)
     {
         ::SetWindowRgn(aHwnd, XPR_NULL, TRUE);
         return XPR_TRUE;
@@ -636,8 +636,7 @@ xpr_bool_t ModernUI::applyRoundedWindowRegion(
     if (::GetClientRect(aHwnd, &sClientRect) == FALSE)
         return XPR_FALSE;
 
-    const xpr_sint_t sRadius =
-        max(1, scaleForWindow(aLogicalRadius, aHwnd));
+    const xpr_sint_t sRadius = max(1, aRadius);
     HRGN sRegion = ::CreateRoundRectRgn(
         sClientRect.left,
         sClientRect.top,
