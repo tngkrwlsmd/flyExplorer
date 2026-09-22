@@ -26,6 +26,8 @@ namespace fxfile
 {
 namespace
 {
+const UINT_PTR kAddressBarComboSubclassId = 1;
+
 // item type
 enum
 {
@@ -55,6 +57,7 @@ AddressBar::AddressBar(void)
     mSmallImgList   = XPR_NULL;
 
     mDisplayFont    = XPR_NULL;
+    mComboBoxHwnd   = XPR_NULL;
 
     mShcnDesktopId  = 0;
     mShcnComputerId = 0;
@@ -68,6 +71,8 @@ AddressBar::~AddressBar(void)
 BEGIN_MESSAGE_MAP(AddressBar, CComboBoxEx)
     ON_WM_CREATE()
     ON_WM_SETTINGCHANGE()
+    ON_WM_SYSCOLORCHANGE()
+    ON_MESSAGE(WM_THEMECHANGED, OnThemeChanged)
     ON_MESSAGE(WM_DPICHANGED, OnDpiChanged)
     ON_MESSAGE(WM_SHCN_DESKTOP,  OnShcnDesktop)
     ON_MESSAGE(WM_SHCN_COMPUTER, OnShcnComputer)
@@ -104,6 +109,8 @@ xpr_sint_t AddressBar::OnCreate(LPCREATESTRUCT aCreateStruct)
     mInit = XPR_FALSE;
 
     setCustomFont(gOpt->mConfig.mCustomFontText);
+    installComboSubclass();
+    applyModernAppearance();
 
     return 0;
 }
@@ -113,18 +120,37 @@ void AddressBar::OnSettingChange(xpr_uint_t aFlags, const xpr_tchar_t *aSection)
     CComboBoxEx::OnSettingChange(aFlags, aSection);
 
     setCustomFont(gOpt->mConfig.mCustomFontText);
+    applyModernAppearance();
+}
+
+void AddressBar::OnSysColorChange(void)
+{
+    CComboBoxEx::OnSysColorChange();
+    applyModernAppearance();
+}
+
+LRESULT AddressBar::OnThemeChanged(WPARAM aWParam, LPARAM aLParam)
+{
+    const LRESULT sResult = DefWindowProc(WM_THEMECHANGED, aWParam, aLParam);
+    applyModernAppearance();
+    return sResult;
 }
 
 LRESULT AddressBar::OnDpiChanged(WPARAM aWParam, LPARAM aLParam)
 {
     setCustomFont(gOpt->mConfig.mCustomFontText);
+    applyModernAppearance();
 
     return 0;
 }
 
 xpr_bool_t AddressBar::DestroyWindow(void)
 {
+    removeComboSubclass();
     applyDisplayFont(XPR_NULL);
+
+    if (XPR_IS_NOT_NULL(mDarkBackgroundBrush.m_hObject))
+        mDarkBackgroundBrush.DeleteObject();
 
     if (XPR_IS_NOT_NULL(mDisplayFont))
     {
@@ -980,6 +1006,176 @@ xpr_bool_t AddressBar::PreTranslateMessage(MSG* pMsg)
     return CComboBoxEx::PreTranslateMessage(pMsg);
 }
 
+void AddressBar::applyModernAppearance(void)
+{
+    if (XPR_IS_NULL(m_hWnd))
+        return;
+
+    installComboSubclass();
+
+    const ui::ThemePalette sPalette = ui::ModernUI::getPalette();
+
+    if (XPR_IS_TRUE(sPalette.mDark) && XPR_IS_FALSE(sPalette.mHighContrast))
+    {
+        if (XPR_IS_NOT_NULL(mDarkBackgroundBrush.m_hObject))
+            mDarkBackgroundBrush.DeleteObject();
+
+        mDarkBackgroundBrush.CreateSolidBrush(sPalette.mWindow);
+    }
+    else if (XPR_IS_NOT_NULL(mDarkBackgroundBrush.m_hObject))
+    {
+        mDarkBackgroundBrush.DeleteObject();
+    }
+
+    applyChildThemes();
+
+    RedrawWindow(XPR_NULL, XPR_NULL, RDW_INVALIDATE | RDW_ERASE | RDW_FRAME | RDW_ALLCHILDREN);
+}
+
+void AddressBar::installComboSubclass(void)
+{
+    if (XPR_IS_NULL(m_hWnd))
+        return;
+
+    CComboBox *sComboBox = GetComboBoxCtrl();
+    if (XPR_IS_NULL(sComboBox) || XPR_IS_NULL(sComboBox->m_hWnd))
+        return;
+
+    const HWND sComboBoxHwnd = sComboBox->m_hWnd;
+    if (mComboBoxHwnd == sComboBoxHwnd)
+        return;
+
+    removeComboSubclass();
+
+    if (::SetWindowSubclass(
+            sComboBoxHwnd,
+            AddressBar::ComboSubclassProc,
+            kAddressBarComboSubclassId,
+            reinterpret_cast<DWORD_PTR>(this)) != FALSE)
+    {
+        mComboBoxHwnd = sComboBoxHwnd;
+    }
+}
+
+void AddressBar::removeComboSubclass(void)
+{
+    if (XPR_IS_NULL(mComboBoxHwnd))
+        return;
+
+    if (::IsWindow(mComboBoxHwnd) != FALSE)
+    {
+        ::RemoveWindowSubclass(
+            mComboBoxHwnd,
+            AddressBar::ComboSubclassProc,
+            kAddressBarComboSubclassId);
+    }
+
+    mComboBoxHwnd = XPR_NULL;
+}
+
+void AddressBar::applyChildThemes(void)
+{
+    if (XPR_IS_NULL(m_hWnd))
+        return;
+
+    ui::ModernUI::applyExplorerControlTheme(m_hWnd);
+
+    CComboBox *sComboBox = GetComboBoxCtrl();
+    if (XPR_IS_NULL(sComboBox) || XPR_IS_NULL(sComboBox->m_hWnd))
+        return;
+
+    ui::ModernUI::applyExplorerControlTheme(sComboBox->m_hWnd);
+
+    CEdit *sEdit = GetEditCtrl();
+    if (XPR_IS_NOT_NULL(sEdit) && XPR_IS_NOT_NULL(sEdit->m_hWnd))
+        ui::ModernUI::applyExplorerControlTheme(sEdit->m_hWnd);
+
+    COMBOBOXINFO sComboBoxInfo = {0};
+    sComboBoxInfo.cbSize = sizeof(COMBOBOXINFO);
+    if (::GetComboBoxInfo(sComboBox->m_hWnd, &sComboBoxInfo) != FALSE)
+    {
+        if (XPR_IS_NOT_NULL(sComboBoxInfo.hwndList))
+        {
+            ui::ModernUI::applyExplorerControlTheme(sComboBoxInfo.hwndList);
+            ::InvalidateRect(sComboBoxInfo.hwndList, XPR_NULL, TRUE);
+        }
+    }
+
+    ::InvalidateRect(sComboBox->m_hWnd, XPR_NULL, TRUE);
+    if (XPR_IS_NOT_NULL(sEdit) && XPR_IS_NOT_NULL(sEdit->m_hWnd))
+        ::InvalidateRect(sEdit->m_hWnd, XPR_NULL, TRUE);
+}
+
+LRESULT AddressBar::handleComboCtlColor(xpr_uint_t aMessage, HDC aDC, HWND aControlHwnd)
+{
+    const ui::ThemePalette sPalette = ui::ModernUI::getPalette();
+
+    // Light and High Contrast retain the native/system rendering path.
+    if (XPR_IS_FALSE(sPalette.mDark) || XPR_IS_TRUE(sPalette.mHighContrast))
+        return 0;
+
+    if (aMessage != WM_CTLCOLOREDIT &&
+        aMessage != WM_CTLCOLORLISTBOX &&
+        aMessage != WM_CTLCOLORSTATIC)
+    {
+        return 0;
+    }
+
+    if (XPR_IS_NULL(mDarkBackgroundBrush.m_hObject))
+        return 0;
+
+    COLORREF sTextColor = sPalette.mText;
+    if (XPR_IS_NOT_NULL(aControlHwnd) && ::IsWindowEnabled(aControlHwnd) == FALSE)
+        sTextColor = sPalette.mSecondaryText;
+
+    ::SetTextColor(aDC, sTextColor);
+    ::SetBkColor(aDC, sPalette.mWindow);
+    ::SetBkMode(aDC, OPAQUE);
+
+    return reinterpret_cast<LRESULT>((HBRUSH)mDarkBackgroundBrush.GetSafeHandle());
+}
+
+LRESULT CALLBACK AddressBar::ComboSubclassProc(
+    HWND aHwnd,
+    UINT aMessage,
+    WPARAM aWParam,
+    LPARAM aLParam,
+    UINT_PTR aSubclassId,
+    DWORD_PTR aRefData)
+{
+    AddressBar *sAddressBar = reinterpret_cast<AddressBar *>(aRefData);
+
+    if (XPR_IS_NOT_NULL(sAddressBar))
+    {
+        switch (aMessage)
+        {
+        case WM_CTLCOLOREDIT:
+        case WM_CTLCOLORLISTBOX:
+        case WM_CTLCOLORSTATIC:
+            {
+                const LRESULT sBrush = sAddressBar->handleComboCtlColor(
+                    aMessage,
+                    reinterpret_cast<HDC>(aWParam),
+                    reinterpret_cast<HWND>(aLParam));
+                if (sBrush != 0)
+                    return sBrush;
+                break;
+            }
+
+        case WM_NCDESTROY:
+            {
+                if (sAddressBar->mComboBoxHwnd == aHwnd)
+                    sAddressBar->mComboBoxHwnd = XPR_NULL;
+
+                ::RemoveWindowSubclass(aHwnd, AddressBar::ComboSubclassProc, aSubclassId);
+                break;
+            }
+        }
+    }
+
+    return ::DefSubclassProc(aHwnd, aMessage, aWParam, aLParam);
+}
+
 void AddressBar::setDisplayFont(const LOGFONT *aLogFont)
 {
     applyDisplayFont(XPR_NULL);
@@ -1156,6 +1352,9 @@ xpr_sint_t AddressBar::searchFullPath(const xpr_tchar_t *aFullPath)
 
 void AddressBar::OnDropdown(void)
 {
+    // The native ComboBox may create its list window lazily. Refresh the
+    // documented theme association after the drop-down HWND is available.
+    applyChildThemes();
 }
 
 LRESULT AddressBar::OnShcnDesktop(WPARAM wParam, LPARAM lParam)

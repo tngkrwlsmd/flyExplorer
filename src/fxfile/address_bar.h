@@ -44,6 +44,19 @@ protected:
     void applyDisplayFont(CFont *aFont);
     void updateMetrics(void);
 
+    void applyModernAppearance(void);
+    void installComboSubclass(void);
+    void removeComboSubclass(void);
+    void applyChildThemes(void);
+    LRESULT handleComboCtlColor(xpr_uint_t aMessage, HDC aDC, HWND aControlHwnd);
+    static LRESULT CALLBACK ComboSubclassProc(
+        HWND aHwnd,
+        UINT aMessage,
+        WPARAM aWParam,
+        LPARAM aLParam,
+        UINT_PTR aSubclassId,
+        DWORD_PTR aRefData);
+
     typedef std::deque<LPABITEMDATA> CbItemDataDeque;
 
     xpr_bool_t exploreItem(LPITEMIDLIST aFullPidl, xpr_bool_t aNotifyBuddy = XPR_FALSE);
@@ -86,6 +99,9 @@ protected:
 
     CFont        *mDisplayFont;
 
+    CBrush         mDarkBackgroundBrush;
+    HWND           mComboBoxHwnd;
+
     xpr_uint_t    mShcnDesktopId;
     xpr_uint_t    mShcnComputerId;
 
@@ -99,6 +115,8 @@ protected:
     afx_msg void OnDeleteItem(NMHDR *aNmHdr, LRESULT *aResult);
     afx_msg xpr_sint_t OnCreate(LPCREATESTRUCT aCreateStruct);
     afx_msg void OnSettingChange(xpr_uint_t aFlags, const xpr_tchar_t *aSection);
+    afx_msg void OnSysColorChange(void);
+    afx_msg LRESULT OnThemeChanged(WPARAM aWParam, LPARAM aLParam);
     afx_msg LRESULT OnDpiChanged(WPARAM aWParam, LPARAM aLParam);
     afx_msg void OnSelEndOK(void);
     afx_msg void OnSelChange(void);
