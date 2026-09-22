@@ -602,6 +602,110 @@ def validate_navigation_surface_contract() -> list[str]:
     return errors
 
 
+def validate_content_surface_contract() -> list[str]:
+    """Protect the Win11 list/tree/tab/pane hierarchy without changing control semantics."""
+
+    errors: list[str] = []
+    paths = {
+        "modern_h": FXFILE_SRC / "gui" / "ModernUI.h",
+        "modern_cpp": FXFILE_SRC / "gui" / "ModernUI.cpp",
+        "list_h": FXFILE_SRC / "gui" / "ListCtrlEx.h",
+        "list_cpp": FXFILE_SRC / "gui" / "ListCtrlEx.cpp",
+        "header": FXFILE_SRC / "gui" / "FlatHeaderCtrl.cpp",
+        "folder_h": FXFILE_SRC / "folder_ctrl.h",
+        "folder_cpp": FXFILE_SRC / "folder_ctrl.cpp",
+        "tab_h": FXFILE_SRC / "gui" / "TabCtrl.h",
+        "tab_cpp": FXFILE_SRC / "gui" / "TabCtrl.cpp",
+        "view": FXFILE_SRC / "explorer_view.cpp",
+        "main_frame": FXFILE_SRC / "main_frame.cpp",
+    }
+
+    contents: dict[str, str] = {}
+    for name, source_path in paths.items():
+        try:
+            contents[name] = source_path.read_text(encoding="utf-8", errors="replace")
+        except OSError as exc:
+            errors.append(
+                f"{source_path.relative_to(ROOT)}: cannot read content-surface contract: {exc}"
+            )
+
+    if errors:
+        return errors
+
+    metrics = (
+        "getContentRowHeight",
+        "getTreeRowHeight",
+        "getTreeIndent",
+        "getListHeaderTextPadding",
+        "getTabHeight",
+        "getTabHorizontalPadding",
+        "getPaneSeparatorThickness",
+        "getActivePaneIndicatorThickness",
+    )
+    for metric in metrics:
+        if metric not in contents["modern_h"]:
+            errors.append(f"src/fxfile/gui/ModernUI.h: missing content metric {metric}")
+        if f"ModernUI::{metric}" not in contents["modern_cpp"]:
+            errors.append(f"src/fxfile/gui/ModernUI.cpp: missing content metric implementation {metric}")
+
+    for token in (
+        "refreshModernAppearance",
+        "ON_WM_SETTINGCHANGE()",
+        "ON_WM_SYSCOLORCHANGE()",
+        "WM_DPICHANGED",
+        "WM_THEMECHANGED",
+    ):
+        if token not in contents["list_h"] and token not in contents["list_cpp"]:
+            errors.append(f"ListCtrlEx: missing content refresh token {token}")
+
+    for token in (
+        "ModernUI::applyExplorerControlTheme",
+        "mHeaderCtrl->initHeader",
+        "mHeaderCtrl->Invalidate",
+    ):
+        if token not in contents["list_cpp"]:
+            errors.append(f"src/fxfile/gui/ListCtrlEx.cpp: missing list refresh token {token}")
+
+    if "getListHeaderTextPadding" not in contents["header"]:
+        errors.append("src/fxfile/gui/FlatHeaderCtrl.cpp: shared list-header padding metric is not used")
+
+    for token in (
+        "refreshModernTreeStyle",
+        "getTreeRowHeight",
+        "getTreeIndent",
+        "mClassicThemeStyle",
+        "mHighContrast",
+        "ModifyStyle(TVS_HASLINES, 0)",
+    ):
+        if token not in contents["folder_cpp"] and token not in contents["folder_h"]:
+            errors.append(f"FolderCtrl: missing modern tree contract token {token}")
+
+    for token in (
+        "setPaneActive",
+        "mPaneActive",
+        "getTabHorizontalPadding",
+        "getActivePaneIndicatorThickness",
+    ):
+        if token not in contents["tab_h"] and token not in contents["tab_cpp"]:
+            errors.append(f"TabCtrl: missing pane/tab hierarchy token {token}")
+
+    for token in (
+        "getTabHeight",
+        "getActivePaneIndicatorThickness",
+        "getPaneSeparatorThickness",
+        "mTabCtrl->setPaneActive(aActivate)",
+    ):
+        if token not in contents["view"]:
+            errors.append(f"src/fxfile/explorer_view.cpp: missing content hierarchy token {token}")
+
+    if contents["main_frame"].count("getPaneSeparatorThickness") < 2:
+        errors.append(
+            "src/fxfile/main_frame.cpp: main and single-folder splitters must use shared pane separator metrics"
+        )
+
+    return errors
+
+
 def validate_popup_menu_contract() -> list[str]:
     """Protect the Win11 popup/menu presentation while preserving shell routing."""
 
@@ -1581,6 +1685,7 @@ def main() -> int:
     errors.extend(validate_command_surface_contract())
     errors.extend(validate_configuration_shell_contract())
     errors.extend(validate_navigation_surface_contract())
+    errors.extend(validate_content_surface_contract())
     errors.extend(validate_popup_menu_contract())
     errors.extend(validate_ui_resource_contracts())
     errors.extend(validate_functional_test_wiring())
