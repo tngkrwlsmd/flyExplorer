@@ -28,6 +28,7 @@ PowerShell / Command Prompt에서 프로젝트 루트에서 실행합니다.
 .\local_ci.bat x64
   = Release x64 전체 Rebuild + Functional Regression + Warning 검사 + 산출물 검사 + Runtime Smoke를 수행합니다.
   = 기존 obj를 재사용하지 않고 소스를 다시 컴파일합니다. 정상 MSBuild 진행 내역은 영구 로그에 저장하지 않고 확정된 build error만 기록합니다.
+  = Rebuild 전에 bin 출력 파일 lock을 검사합니다. 이 저장소의 bin에서 실행한 flyExplorer가 있으면 종료한 뒤 다시 실행해야 하며 local CI가 사용자 프로세스를 강제 종료하지는 않습니다.
   = 평소 개발 후 가장 자주 사용하면 되는 검증입니다.
 
 .\local_ci.bat x86
