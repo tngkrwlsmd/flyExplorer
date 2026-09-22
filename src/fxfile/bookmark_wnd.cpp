@@ -133,10 +133,15 @@ HBRUSH BookmarkWnd::CtlColor(CDC* pDC, xpr_uint_t nCtlColor)
     const ui::ThemePalette sPalette = ui::ModernUI::getPalette();
     ensureBackgroundBrush(sPalette.mWindow);
 
-    pDC->SetTextColor(
-        XPR_IS_TRUE(sPalette.mHighContrast) ?
-        sPalette.mText :
-        mBookmarkColor);
+    COLORREF sBookmarkTextColor = mBookmarkColor;
+    if (XPR_IS_TRUE(sPalette.mHighContrast) ||
+        (XPR_IS_TRUE(sPalette.mDark) &&
+         mBookmarkColor == DEF_INFO_BAR_BOOKMARK_COLOR))
+    {
+        sBookmarkTextColor = sPalette.mText;
+    }
+
+    pDC->SetTextColor(sBookmarkTextColor);
     pDC->SetBkColor(sPalette.mWindow);
     pDC->SetBkMode(TRANSPARENT);
 
