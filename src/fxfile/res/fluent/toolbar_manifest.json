@@ -1,11 +1,6 @@
 {
   "version": 1,
   "frame_count": 51,
-  "mask_color": "#FF00FF",
-  "themes": {
-    "light": "#212121",
-    "dark": "#F5F5F5"
-  },
   "sizes": {
     "small": {
       "cell": 16,
@@ -17,10 +12,8 @@
     }
   },
   "outputs": {
-    "light_small": "tb_main_fluent_light_small.bmp",
-    "dark_small": "tb_main_fluent_dark_small.bmp",
-    "light_large": "tb_main_fluent_light_large.bmp",
-    "dark_large": "tb_main_fluent_dark_large.bmp"
+    "small": "generated_toolbar_masks_small.inc",
+    "large": "generated_toolbar_masks_large.inc"
   },
   "commands": [
     {
