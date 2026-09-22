@@ -576,7 +576,7 @@ bool testRenameTransformCore(void)
     xpr::string sBase;
     xpr::string sExt;
 
-    splitBaseFileNameAndExt(
+    fxfile::cmd::rename_core::splitBaseFileNameAndExt(
         XPR_FALSE,
         XPR_STRING_LITERAL("archive.tar.gz"),
         sBase,
@@ -587,7 +587,7 @@ bool testRenameTransformCore(void)
         return false;
     }
 
-    splitBaseFileNameAndExt(
+    fxfile::cmd::rename_core::splitBaseFileNameAndExt(
         XPR_FALSE,
         XPR_STRING_LITERAL(".gitignore"),
         sBase,
@@ -598,7 +598,7 @@ bool testRenameTransformCore(void)
         return false;
     }
 
-    splitBaseFileNameAndExt(
+    fxfile::cmd::rename_core::splitBaseFileNameAndExt(
         XPR_TRUE,
         XPR_STRING_LITERAL("folder.name"),
         sBase,
