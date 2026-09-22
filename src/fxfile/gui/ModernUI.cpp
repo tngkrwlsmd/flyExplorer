@@ -223,12 +223,15 @@ xpr_sint_t ModernUI::getCommandButtonExtent(HWND aHwnd)
 
 xpr_sint_t ModernUI::getCommandHorizontalPadding(HWND aHwnd)
 {
-    return scaleForWindow(10, aHwnd);
+    // A 22 px Fluent command glyph plus 7 px on either side fills the
+    // 36-DIP Windows 11-style command hit target without the oversized gaps
+    // produced by the legacy 16 px bitmap assumptions.
+    return scaleForWindow(7, aHwnd);
 }
 
 xpr_sint_t ModernUI::getCommandVerticalPadding(HWND aHwnd)
 {
-    return scaleForWindow(7, aHwnd);
+    return scaleForWindow(6, aHwnd);
 }
 
 xpr_sint_t ModernUI::getAddressBarHeight(HWND aHwnd)
