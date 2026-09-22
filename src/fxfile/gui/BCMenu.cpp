@@ -797,7 +797,18 @@ void BCMenu::DrawItemStandardStyle(LPDRAWITEMSTRUCT lpDIS)
 		CRect rcSept(rc);
 		rcSept.top  += rcSept.Height() >> 1;
 
-		pDC->DrawEdge(rcSept, EDGE_ETCHED, BF_TOP);
+        if (XPR_IS_TRUE(sUseDarkPalette))
+        {
+            CPen sSeparatorPen(PS_SOLID, 1, sPalette.mSeparator);
+            CPen *sOldSeparatorPen = pDC->SelectObject(&sSeparatorPen);
+            pDC->MoveTo(rcSept.left, rcSept.top);
+            pDC->LineTo(rcSept.right, rcSept.top);
+            pDC->SelectObject(sOldSeparatorPen);
+        }
+        else
+        {
+		    pDC->DrawEdge(rcSept, EDGE_ETCHED, BF_TOP);
+        }
 	}
 	else
 	{
