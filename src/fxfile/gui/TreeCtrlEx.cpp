@@ -94,26 +94,39 @@ void TreeCtrlEx::enableVistaEnhanced(xpr_bool_t aEnable)
     DWORD sExStyleMask = TVS_EX_DOUBLEBUFFER | TVS_EX_FADEINOUTEXPANDOS | TVS_EX_AUTOHSCROLL;
     DWORD sExStyle     = TVS_EX_DOUBLEBUFFER;
 
+    mVistaEnhanced = aEnable;
+    refreshVistaEnhancedTheme();
+
     if (XPR_IS_TRUE(aEnable))
     {
-        // enable explorer theme through the shared ModernUI foundation
-        fxfile::ui::ModernUI::applyExplorerControlTheme(m_hWnd);
-
         ModifyStyle(TVS_HASLINES, TVS_FULLROWSELECT | TVS_TRACKSELECT);
 
         sExStyle = sExStyleMask;
     }
     else
     {
-        // disable explorer theme
-        fxfile::ui::ModernUI::resetControlTheme(m_hWnd);
-
         ModifyStyle(TVS_FULLROWSELECT | TVS_TRACKSELECT, TVS_HASLINES);
     }
 
     SetExtendedStyle(sExStyleMask, sExStyle);
+}
 
-    mVistaEnhanced = aEnable;
+void TreeCtrlEx::refreshVistaEnhancedTheme(void)
+{
+    if (XPR_IS_NULL(m_hWnd))
+        return;
+
+    if (XPR_IS_TRUE(mVistaEnhanced))
+    {
+        // Reapply the Explorer association so theme/High Contrast transitions
+        // use the current system rendering contract.
+        fxfile::ui::ModernUI::applyExplorerControlTheme(m_hWnd);
+    }
+    else
+    {
+        // Preserve the explicit classic-theme disable contract.
+        fxfile::ui::ModernUI::resetControlTheme(m_hWnd);
+    }
 }
 
 DWORD TreeCtrlEx::GetExtendedStyle() const

@@ -296,25 +296,29 @@ void FolderCtrl::setOption(Option &aOption)
 
     SetIndent(ui::ModernUI::scaleForWindow(20, GetSafeHwnd()));
 
-    // set background color
-    if (mOption.mBkgndColorType == COLOR_TYPE_CUSTOM)
-    {
-        SetBkColor(mOption.mBkgndColor);
-    }
-    else
+    // High Contrast always follows system colors. Outside High Contrast,
+    // preserve the user's explicit folder-tree color choices.
+    if (XPR_IS_TRUE(sPalette.mHighContrast) ||
+        mOption.mBkgndColorType != COLOR_TYPE_CUSTOM)
     {
         SetBkColor(sPalette.mWindow);
     }
-
-    // set text color
-    if (mOption.mTextColorType == COLOR_TYPE_CUSTOM)
-    {
-        SetTextColor(mOption.mTextColor);
-    }
     else
+    {
+        SetBkColor(mOption.mBkgndColor);
+    }
+
+    if (XPR_IS_TRUE(sPalette.mHighContrast) ||
+        mOption.mTextColorType != COLOR_TYPE_CUSTOM)
     {
         SetTextColor(sPalette.mText);
     }
+    else
+    {
+        SetTextColor(mOption.mTextColor);
+    }
+
+    SetLineColor(XPR_IS_TRUE(sPalette.mHighContrast) ? CLR_DEFAULT : sPalette.mSeparator);
 
     // set custom/system font
     setCustomFont(mOption.mCustomFont, mOption.mCustomFontText);
@@ -353,6 +357,9 @@ LPARAM FolderCtrl::GetItemData(HTREEITEM aTreeItem) const
 void FolderCtrl::setImageList(CImageList *aSmallImgList)
 {
     mSmallImgList = aSmallImgList;
+
+    if (XPR_IS_NOT_NULL(mSmallImgList))
+        mSmallImgList->SetBkColor(GetBkColor());
 
     super::SetImageList(mSmallImgList, TVSIL_NORMAL);
 }
@@ -1381,11 +1388,27 @@ void FolderCtrl::OnSetFocus(CWnd* pOldWnd)
     super::OnSetFocus(pOldWnd);
 
     setUpdate(XPR_TRUE);
+
+    HTREEITEM sTreeItem = GetSelectedItem();
+    if (XPR_IS_NOT_NULL(sTreeItem))
+    {
+        CRect sRect;
+        if (GetItemRect(sTreeItem, &sRect, XPR_FALSE) == XPR_TRUE)
+            InvalidateRect(&sRect, XPR_FALSE);
+    }
 }
 
 void FolderCtrl::OnKillFocus(CWnd* pNewWnd) 
 {
     super::OnKillFocus(pNewWnd);
+
+    HTREEITEM sTreeItem = GetSelectedItem();
+    if (XPR_IS_NOT_NULL(sTreeItem))
+    {
+        CRect sRect;
+        if (GetItemRect(sTreeItem, &sRect, XPR_FALSE) == XPR_TRUE)
+            InvalidateRect(&sRect, XPR_FALSE);
+    }
 }
 
 xpr_sint_t FolderCtrl::getClipFormatCount(void) const
@@ -2807,16 +2830,36 @@ void FolderCtrl::OnEndlabeledit(NMHDR *aNmHdr, LRESULT *aResult)
 
 void FolderCtrl::applyModernAppearance(void)
 {
+    // The Explorer association must be refreshed even before options are
+    // applied so High Contrast/theme transitions keep native glyph behavior.
+    refreshVistaEnhancedTheme();
+
     if (XPR_IS_FALSE(mOptionApplied))
         return;
 
     const ui::ThemePalette sPalette = ui::ModernUI::getPalette();
 
-    if (mOption.mBkgndColorType != COLOR_TYPE_CUSTOM)
+    if (XPR_IS_TRUE(sPalette.mHighContrast) ||
+        mOption.mBkgndColorType != COLOR_TYPE_CUSTOM)
+    {
         SetBkColor(sPalette.mWindow);
+    }
+    else
+    {
+        SetBkColor(mOption.mBkgndColor);
+    }
 
-    if (mOption.mTextColorType != COLOR_TYPE_CUSTOM)
+    if (XPR_IS_TRUE(sPalette.mHighContrast) ||
+        mOption.mTextColorType != COLOR_TYPE_CUSTOM)
+    {
         SetTextColor(sPalette.mText);
+    }
+    else
+    {
+        SetTextColor(mOption.mTextColor);
+    }
+
+    SetLineColor(XPR_IS_TRUE(sPalette.mHighContrast) ? CLR_DEFAULT : sPalette.mSeparator);
 
     if (XPR_IS_FALSE(mOption.mCustomFont))
         setCustomFont(XPR_FALSE, (xpr_tchar_t *)XPR_NULL);
@@ -2829,7 +2872,7 @@ void FolderCtrl::applyModernAppearance(void)
     if (XPR_IS_NOT_NULL(mSmallImgList))
         mSmallImgList->SetBkColor(GetBkColor());
 
-    Invalidate(XPR_FALSE);
+    RedrawWindow(XPR_NULL, XPR_NULL, RDW_INVALIDATE | RDW_ERASE | RDW_ALLCHILDREN);
 }
 
 void FolderCtrl::OnSysColorChange(void)
@@ -3644,8 +3687,47 @@ void FolderCtrl::OnCustomdraw(NMHDR *aNmHdr, LRESULT *aResult)
     {
         *aResult = CDRF_NOTIFYITEMDRAW;
     }
-    if (sNmTvCustomDraw->nmcd.dwDrawStage == CDDS_ITEMPREPAINT)
+    else if (sNmTvCustomDraw->nmcd.dwDrawStage == CDDS_ITEMPREPAINT)
     {
+        const ui::ThemePalette sPalette = ui::ModernUI::getPalette();
+
+        // Light and High Contrast retain native TreeView state rendering.
+        // Dark mode only supplies item colors; the control still owns glyphs,
+        // tree lines, selection geometry and the keyboard focus rectangle.
+        if (XPR_IS_TRUE(sPalette.mDark) &&
+            XPR_IS_FALSE(sPalette.mHighContrast))
+        {
+            const xpr_bool_t sSelected =
+                XPR_TEST_BITS(sNmTvCustomDraw->nmcd.uItemState, CDIS_SELECTED);
+            const xpr_bool_t sHot =
+                XPR_TEST_BITS(sNmTvCustomDraw->nmcd.uItemState, CDIS_HOT);
+
+            if (XPR_IS_TRUE(sSelected))
+            {
+                if (GetFocus() == this)
+                {
+                    sNmTvCustomDraw->clrText   = sPalette.mSelectionText;
+                    sNmTvCustomDraw->clrTextBk = sPalette.mSelection;
+                }
+                else
+                {
+                    sNmTvCustomDraw->clrText   = GetTextColor();
+                    sNmTvCustomDraw->clrTextBk = sPalette.mHover;
+                }
+            }
+            else if (XPR_IS_TRUE(sHot))
+            {
+                sNmTvCustomDraw->clrText   = GetTextColor();
+                sNmTvCustomDraw->clrTextBk = sPalette.mHover;
+            }
+            else
+            {
+                sNmTvCustomDraw->clrText   = GetTextColor();
+                sNmTvCustomDraw->clrTextBk = GetBkColor();
+            }
+        }
+
+        // Keep the existing inactive-highlight option as a post-paint outline.
         *aResult = CDRF_NOTIFYPOSTPAINT;
     }
     else if (sNmTvCustomDraw->nmcd.dwDrawStage == CDDS_ITEMPOSTPAINT)

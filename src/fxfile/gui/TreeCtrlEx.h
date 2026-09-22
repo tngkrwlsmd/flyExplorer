@@ -40,6 +40,10 @@ public:
     xpr_bool_t isVistaEnhanced(void) const;
     void enableVistaEnhanced(xpr_bool_t aEnable);
 
+protected:
+    void refreshVistaEnhancedTheme(void);
+
+public:
     DWORD GetExtendedStyle() const;
     DWORD SetExtendedStyle(DWORD dwExMask, DWORD dwExStyles);
 
