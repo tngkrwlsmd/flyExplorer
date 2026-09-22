@@ -1764,15 +1764,21 @@ def validate_functional_test_wiring() -> list[str]:
 
 
 def validate_local_ci_warning_policy_wiring() -> list[str]:
-    """Protect error-focused local-CI logging and warning-policy diagnostics."""
+    """Protect local-CI diagnostics, output-lock preflight, and staging semantics."""
 
     errors: list[str] = []
     local_ci_path = ROOT / "local_ci.bat"
+    lock_check_path = ROOT / "build" / "check_build_output_locks.ps1"
+    copy_lib_path = ROOT / "copy_lib.bat"
+    copy_languages_path = ROOT / "copy_languages.bat"
 
     try:
         local_ci = local_ci_path.read_text(encoding="utf-8", errors="replace")
+        lock_check = lock_check_path.read_text(encoding="utf-8", errors="replace")
+        copy_lib = copy_lib_path.read_text(encoding="utf-8", errors="replace")
+        copy_languages = copy_languages_path.read_text(encoding="utf-8", errors="replace")
     except OSError as exc:
-        return [f"local_ci.bat: cannot read warning-policy wiring: {exc}"]
+        return [f"local CI/build staging source cannot be read: {exc}"]
 
     required_tokens = (
         '"/consoleloggerparameters:NoSummary"',
@@ -1795,6 +1801,51 @@ def validate_local_ci_warning_policy_wiring() -> list[str]:
         errors.append(
             "local_ci.bat: warning-policy diagnostic pipeline is not wired with PowerShell pipes"
         )
+
+    build_start = local_ci.find(":build_configuration")
+    build_end = local_ci.find("\n:require_file", build_start)
+    build_section = (
+        local_ci[build_start:build_end]
+        if build_start >= 0 and build_end > build_start
+        else ""
+    )
+    lock_call = '-File "build\\check_build_output_locks.ps1" -Configuration "%CI_CONFIGURATION%"'
+    msbuild_call = '"%MSBUILD_EXE%" "%CI_PROJECT%"'
+    for token in (lock_call, "OUTPUT_LOCK_RESULT", "Build output lock preflight: %CI_TITLE%"):
+        if token not in build_section:
+            errors.append(f"local_ci.bat: missing build-output lock preflight token {token}")
+    if lock_call in build_section and msbuild_call in build_section:
+        if build_section.find(lock_call) > build_section.find(msbuild_call):
+            errors.append("local_ci.bat: output-lock preflight must run before MSBuild Rebuild")
+
+    for token in (
+        "[System.IO.FileShare]::None",
+        "libxprw.dll",
+        "fxfile-crash.dll",
+        "Local CI will not terminate user processes automatically.",
+        "exit 2",
+    ):
+        if token not in lock_check:
+            errors.append(
+                f"build/check_build_output_locks.ps1: missing lock-contract token {token}"
+            )
+
+    for source_name, source in (
+        ("copy_lib.bat", copy_lib),
+        ("copy_languages.bat", copy_languages),
+    ):
+        for token in (
+            'call :copy_newer',
+            'if not exist "%~1"',
+            '/d /e /r /y /i',
+            'if errorlevel 2',
+        ):
+            if token not in source:
+                errors.append(f"{source_name}: missing idempotent staging token {token}")
+        if " /c " in source.lower():
+            errors.append(
+                f"{source_name}: xcopy /c returned; required staging copy failures must not be ignored"
+            )
 
     return errors
 
