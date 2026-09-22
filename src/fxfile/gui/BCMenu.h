@@ -273,7 +273,7 @@ public:
 private:
     void drawSelection(CDC *pDC, const CRect &rc, UINT aItemState);
     void drawCheckOrRadioMark(CDC *pDC, const CRect &rc, UINT aItemState, HMENU aMenuItem, UINT aMenuItemId);
-    void drawIcon(CDC *pDC, const CRect &rc, CImageList *pImgList);
+    void drawIcon(CDC *pDC, const CRect &rc, UINT aItemState, CImageList *pImgList);
     void drawSeperator(CDC *pDC, const CRect &aItemRect);
     void drawSubmenuChevron(CDC *aDC, const CRect &aItemRect, UINT aItemState);
     void drawText(CDC *aDC, const CRect &aItemRect, UINT aItemState, const CString &aText, const CString &aAccelKey, xpr_bool_t aSubmenu);
