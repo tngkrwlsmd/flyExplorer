@@ -51,6 +51,7 @@ protected:
     void removeEditSubclass(void);
     void applyChildThemes(void);
     void redrawModernFrame(void);
+    void drawModernComboButton(HWND aComboHwnd);
     LRESULT handleComboCtlColor(xpr_uint_t aMessage, HDC aDC, HWND aControlHwnd);
     static LRESULT CALLBACK ComboSubclassProc(
         HWND aHwnd,

@@ -738,6 +738,12 @@ def validate_navigation_surface_contract() -> list[str]:
         "VK_RETURN",
         "VK_TAB",
         "VK_ESCAPE",
+        "drawModernComboButton",
+        "GetComboBoxInfo",
+        "STATE_SYSTEM_PRESSED",
+        "CB_GETDROPPEDSTATE",
+        "TME_LEAVE",
+        "sAddressBar->drawModernComboButton(aHwnd);",
         "::DefSubclassProc",
     ):
         if token not in address_contract:
@@ -745,6 +751,12 @@ def validate_navigation_surface_contract() -> list[str]:
 
     if "mDarkBackgroundBrush" in address_contract:
         errors.append("AddressBar: dark-only background brush returned; Light/Dark should share ThemePalette")
+
+    for token in ("DarkMode_Explorer", "DarkMode_CFD"):
+        if token in address_contract:
+            errors.append(
+                f"AddressBar: undocumented dark theme association returned: {token}"
+            )
 
     for token in (
         "getAddressHorizontalInset",

@@ -1233,6 +1233,114 @@ LRESULT AddressBar::handleComboCtlColor(xpr_uint_t aMessage, HDC aDC, HWND aCont
     return reinterpret_cast<LRESULT>((HBRUSH)mBackgroundBrush.GetSafeHandle());
 }
 
+void AddressBar::drawModernComboButton(HWND aComboHwnd)
+{
+    if (XPR_IS_NULL(aComboHwnd) || ::IsWindow(aComboHwnd) == FALSE)
+        return;
+
+    const ui::ThemePalette sPalette = ui::ModernUI::getPalette();
+    if (XPR_IS_TRUE(sPalette.mHighContrast) || XPR_IS_FALSE(sPalette.mDark))
+        return;
+
+    COMBOBOXINFO sComboBoxInfo = {0};
+    sComboBoxInfo.cbSize = sizeof(COMBOBOXINFO);
+    if (::GetComboBoxInfo(aComboHwnd, &sComboBoxInfo) == FALSE ||
+        XPR_TEST_BITS(sComboBoxInfo.stateButton, STATE_SYSTEM_INVISIBLE))
+    {
+        return;
+    }
+
+    RECT sButtonRect = sComboBoxInfo.rcButton;
+    if (::IsRectEmpty(&sButtonRect) != FALSE)
+        return;
+
+    HDC sDC = ::GetDC(aComboHwnd);
+    if (XPR_IS_NULL(sDC))
+        return;
+
+    POINT sCursor = {0};
+    xpr_bool_t sHot = XPR_FALSE;
+    if (::GetCursorPos(&sCursor) != FALSE &&
+        ::ScreenToClient(aComboHwnd, &sCursor) != FALSE &&
+        ::PtInRect(&sButtonRect, sCursor) != FALSE)
+    {
+        sHot = XPR_TRUE;
+    }
+
+    const xpr_bool_t sPressed =
+        (XPR_TEST_BITS(sComboBoxInfo.stateButton, STATE_SYSTEM_PRESSED) ||
+         ::SendMessage(aComboHwnd, CB_GETDROPPEDSTATE, 0, 0) != FALSE) ?
+        XPR_TRUE :
+        XPR_FALSE;
+    const xpr_bool_t sEnabled =
+        ::IsWindowEnabled(aComboHwnd) != FALSE ?
+        XPR_TRUE :
+        XPR_FALSE;
+
+    COLORREF sFillColor = sPalette.mElevated;
+    COLORREF sArrowColor = sPalette.mText;
+    if (XPR_IS_FALSE(sEnabled))
+    {
+        sFillColor = sPalette.mCard;
+        sArrowColor = sPalette.mSecondaryText;
+    }
+    else if (XPR_IS_TRUE(sPressed))
+    {
+        sFillColor = sPalette.mPressed;
+    }
+    else if (XPR_IS_TRUE(sHot))
+    {
+        sFillColor = sPalette.mHover;
+    }
+
+    ::SetDCBrushColor(sDC, sFillColor);
+    ::FillRect(
+        sDC,
+        &sButtonRect,
+        static_cast<HBRUSH>(::GetStockObject(DC_BRUSH)));
+
+    RECT sSeparatorRect = sButtonRect;
+    sSeparatorRect.right =
+        sSeparatorRect.left +
+        max(1, ui::ModernUI::scaleForWindow(1, aComboHwnd));
+    ::SetDCBrushColor(sDC, sPalette.mSeparator);
+    ::FillRect(
+        sDC,
+        &sSeparatorRect,
+        static_cast<HBRUSH>(::GetStockObject(DC_BRUSH)));
+
+    const xpr_sint_t sCenterX =
+        (sButtonRect.left + sButtonRect.right) / 2;
+    const xpr_sint_t sCenterY =
+        (sButtonRect.top + sButtonRect.bottom) / 2;
+    const xpr_sint_t sArrowHalfWidth =
+        max(2, ui::ModernUI::scaleForWindow(3, aComboHwnd));
+    const xpr_sint_t sArrowOffset =
+        max(1, ui::ModernUI::scaleForWindow(2, aComboHwnd));
+    const xpr_sint_t sPenWidth =
+        max(1, ui::ModernUI::scaleForWindow(1, aComboHwnd));
+
+    HPEN sArrowPen = ::CreatePen(PS_SOLID, sPenWidth, sArrowColor);
+    if (XPR_IS_NOT_NULL(sArrowPen))
+    {
+        HGDIOBJ sOldPen = ::SelectObject(sDC, sArrowPen);
+        ::MoveToEx(
+            sDC,
+            sCenterX - sArrowHalfWidth,
+            sCenterY - sArrowOffset,
+            XPR_NULL);
+        ::LineTo(sDC, sCenterX, sCenterY + sArrowOffset);
+        ::LineTo(
+            sDC,
+            sCenterX + sArrowHalfWidth,
+            sCenterY - sArrowOffset);
+        ::SelectObject(sDC, sOldPen);
+        ::DeleteObject(sArrowPen);
+    }
+
+    ::ReleaseDC(aComboHwnd, sDC);
+}
+
 LRESULT CALLBACK AddressBar::ComboSubclassProc(
     HWND aHwnd,
     UINT aMessage,
@@ -1259,6 +1367,42 @@ LRESULT CALLBACK AddressBar::ComboSubclassProc(
                     return sBrush;
                 break;
             }
+
+        case WM_PAINT:
+            {
+                // Keep the native ComboBox responsible for layout, hit-testing,
+                // input and accessibility. Only replace the dark visual of the
+                // drop-down button after the native control has painted.
+                const LRESULT sResult =
+                    ::DefSubclassProc(aHwnd, aMessage, aWParam, aLParam);
+                sAddressBar->drawModernComboButton(aHwnd);
+                return sResult;
+            }
+
+        case WM_MOUSEMOVE:
+            {
+                TRACKMOUSEEVENT sTrack = {0};
+                sTrack.cbSize = sizeof(sTrack);
+                sTrack.dwFlags = TME_LEAVE;
+                sTrack.hwndTrack = aHwnd;
+                ::TrackMouseEvent(&sTrack);
+                ::InvalidateRect(aHwnd, XPR_NULL, FALSE);
+                break;
+            }
+
+        case WM_MOUSELEAVE:
+        case WM_LBUTTONDOWN:
+        case WM_LBUTTONUP:
+        case WM_CAPTURECHANGED:
+        case WM_ENABLE:
+            ::InvalidateRect(aHwnd, XPR_NULL, FALSE);
+            break;
+
+        case WM_SETFOCUS:
+        case WM_KILLFOCUS:
+            sAddressBar->redrawModernFrame();
+            ::InvalidateRect(aHwnd, XPR_NULL, FALSE);
+            break;
 
         case WM_NCDESTROY:
             {
