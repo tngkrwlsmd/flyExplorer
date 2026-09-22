@@ -159,7 +159,7 @@ bool testConfigPersistenceContracts(void)
         sRead.getValueI64(
             XPR_STRING_LITERAL("General"),
             XPR_STRING_LITERAL("Large"),
-            0) != XPR_INT64_LITERAL(9223372036854770000))
+            0) != XPR_SINT64_LITERAL(9223372036854770000))
     {
         xpr::FileSys::remove(sPath);
         return false;
