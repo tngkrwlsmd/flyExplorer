@@ -194,7 +194,7 @@
 - GitHub-hosted Windows runner의 기본 remote runtime evidence는 x64 Unicode launch smoke 하나만 유지한다. smoke는 staged runtime을 임시 디렉터리에 복사하고 isolated `--conf_dir`로 `fxfile.exe`를 시작한 뒤 top-level main window와 short stability window를 확인한다. x86 launch smoke는 Actions 비용 절감을 위해 제거했다.
 - hosted runner에는 Visual Studio와 여러 system runtime이 이미 설치되어 있으므로 이 결과는 clean Windows Sandbox/VM evidence가 아니다. Windows Sandbox/clean VM, interactive functional smoke, visual regression은 아직 자동화하지 않는다.
 - `build/validate_source_invariants.py`가 C++ cross-cutting dependency와 ModernUI integration의 빠른 static preflight를 제공하며, 알려진 product regression도 함께 차단한다. 현재 ToolbarWindow32에 존재하지 않는 `TB_SETBKCOLOR`/`TB_SETTEXTCOLOR` 재도입을 거부하고 `NM_CUSTOMDRAW`/`NMTBCUSTOMDRAW` 기반 dark-state color wiring이 유지되는지 검사한다.
-- `.agent-policy/`에는 upstream `universal-agent-docs` revision `cc250a63994f1d9d4fcfdbb2bab9b622230bf8c6`의 validated policy bundle을 vendor한다. GitHub Actions의 Source Validation은 source invariant + known regression preflight만 실행하도록 유지하며, bundle/readiness/conformance 전체 검증은 `local_ci.bat policy` 또는 `local_ci.bat full`에서 수행한다. 2026-09-30까지 Actions 자동 trigger는 계속 중지되어 있고 수동 실행도 explicit budget override 없이는 실행하지 않는다.
+- `.agent-policy/`에는 upstream `universal-agent-docs` revision `cc250a63994f1d9d4fcfdbb2bab9b622230bf8c6`의 validated policy bundle을 vendor한다. policy/readiness/conformance 검증 자산은 `local_ci.bat policy/full`에 보존되어 있지만 현재 활성 CI 범위에는 포함하지 않는다. 사용자가 해당 범위를 명시적으로 요청할 때만 실행한다. 2026-09-30까지 Actions 자동 trigger는 계속 중지되어 있고 수동 실행도 explicit budget override 없이는 실행하지 않는다.
 - Profile C runtime enforcement는 설치되어 있지 않다.
 - 2026-09-22 이후 UI 현대화의 장기 reference target은 **현재 Windows 11 기본 파일 탐색기**다. MFC/multi-pane/tab/file-operation semantics는 유지하되 main frame chrome, command bar, navigation/address/tab, list/tree/content, popup/context, dialog 순으로 Windows 11 Explorer의 visual hierarchy, spacing, typography, neutral surface, hover/focus/selection 상태에 근접시키는 것을 기본 개발 방향으로 삼는다. System/Light/Dark 앱 테마 선택을 제품 기능으로 유지하며 High Contrast가 항상 우선한다.
 - UI 구현 우선순위는 **Microsoft 공식/public asset → documented Windows API → Windows system theme/font/color/metric → documented Win32/MFC customization → 필요한 최소 custom drawing** 순이다. 기존 ModernUI custom drawing은 유지 자체가 목적이 아니며, 공식 Microsoft 자산/API보다 시각적으로 불리하거나 중복되면 기능 계약을 보존하는 범위에서 교체한다.
@@ -284,21 +284,13 @@
 
 ## Recommended verification
 
-0. `local_ci.bat x64` (일상적인 기본 로컬 CI)
-1. static 확인은 `local_ci.bat quick`; product 기능만은 `local_ci.bat test`; installer contract/격리 설치는 `local_ci.bat install`; 릴리스 준비는 `local_ci.bat release`; 전체 회귀는 `local_ci.bat full`
-2. `python build/validate_source_invariants.py` (source invariant + dialog/resource/DPI-icon + rename/pattern/config/updater functional + installer wiring + known regression guards)
-3. `build.bat`
-4. 새로 생성된 `fxfile.sln`을 Visual Studio 2026에서 열기
-5. `Release-x64-Unicode | x64` Build Solution — **현재 CI 검증 범위**
-6. x86 Unicode/Multibyte build는 현재 사용자 지시에 따라 CI에서 실행하지 않는다. 사용자가 범위를 다시 넓힐 때만 별도 검증한다.
-7. 현재 CI evidence는 x64 제품 산출물만 판단하며 x86/upchecker 산출물은 `NOT TESTED`로 둔다.
-8. `build/runtime_smoke.ps1` 또는 GitHub Actions hosted-runner launch smoke 결과 확인
-9. `dist/package.bat`으로 portable ZIP 3종과 NSIS installer 생성
-10. `build/validate_package.ps1 -DistDir dist`로 package payload + installer-smoke wiring 검증
-11. `local_ci.bat install`로 installer safety contract 검사; 격리 temp install/uninstall evidence가 필요하면 elevated shell에서 `FXFILE_INSTALLER_SMOKE=1` opt-in
-12. **2026-09-30까지는 GitHub Actions를 실행하지 않는다.** pause 해제 후에만 Windows Product Build와 로컬 evidence를 비교
-13. Windows Sandbox 또는 clean VM에서 실제 product Registry/shell registration을 포함한 clean install/runtime/uninstall 검증
-14. interactive 기능 및 UI 변경이면 visual 결과를 별도로 확인
+0. **현재 활성 CI build 범위는 `Release-x64-Unicode | x64` 하나뿐이다.**
+1. 기본 검증은 `local_ci.bat x64`만 실행한다. 이 profile이 source invariant preflight → VS 2026 x64 solution 생성 → Release x64 Rebuild → functional regression → warning/artifact 검사 → x64 runtime smoke를 묶어서 수행한다.
+2. `Debug-x64-Unicode | x64`, x86 Unicode/Multibyte, `local_ci.bat x86`, `local_ci.bat release`, `local_ci.bat full` 및 Actions `run_x86_compat`는 현재 비활성 범위다. 사용자가 명시적으로 다시 허용하기 전에는 실행하지 않는다.
+3. `quick/test/install/policy`, packaging/installer/clean-VM 검증은 기능을 보존하지만 기본 CI matrix가 아니다. 해당 범위를 사용자가 요청하거나 그 변경 자체를 검증할 때만 별도 evidence로 수행한다.
+4. compile/link 완료 판단은 `Release-x64-Unicode | x64` evidence만 사용한다. Debug/x86 결과를 요구하지 않으며 실행하지 않은 범위는 `NOT TESTED`로 둔다.
+5. **2026-09-30까지 GitHub Actions는 branch/main 반영만을 이유로 실행하지 않는다.** 사용자가 Actions 사용을 명시적으로 허용하더라도 현재 Windows build 범위는 Release x64 하나다.
+6. interactive UI/DPI/High Contrast/visual 결과와 clean Windows Registry/shell integration은 CI build와 별도의 수동 evidence로 구분한다.
 
 ## Maintenance
 
