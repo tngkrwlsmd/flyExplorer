@@ -13,6 +13,7 @@
 #include "crc32.h"
 #include "md5.h"
 #include "sha.h"
+#include "version_compare.h"
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -42,12 +43,39 @@ xpr_bool_t MetaDataFile::parseMetaFile(const xpr::string &aMetaFilePath, MetaDat
         return XPR_FALSE;
     }
 
-    fxfile::base::ConfFile::Section *sSection = sConfFile.findSection(XPR_STRING_LITERAL(""));
-    XPR_ASSERT(sSection != XPR_NULL);
+    fxfile::base::ConfFile::Section *sSection =
+        sConfFile.findSection(XPR_STRING_LITERAL(""));
+    if (XPR_IS_NULL(sSection))
+    {
+        return XPR_FALSE;
+    }
 
-    aMetaData.mProgram = sConfFile.getValueS(sSection, kProgramKey, XPR_STRING_LITERAL(""));
-    aMetaData.mVersion = sConfFile.getValueS(sSection, kVersionKey, XPR_STRING_LITERAL(""));
-    aMetaData.mNewUrl  = sConfFile.getValueS(sSection, sNewUrlKey,  XPR_STRING_LITERAL(""));
+    aMetaData.mProgram =
+        sConfFile.getValueS(
+            sSection,
+            kProgramKey,
+            XPR_STRING_LITERAL(""));
+    aMetaData.mVersion =
+        sConfFile.getValueS(
+            sSection,
+            kVersionKey,
+            XPR_STRING_LITERAL(""));
+    aMetaData.mNewUrl =
+        sConfFile.getValueS(
+            sSection,
+            sNewUrlKey,
+            XPR_STRING_LITERAL(""));
+
+    fxfile::base::Version sVersion;
+    if (aMetaData.mProgram.empty() == XPR_TRUE ||
+        aMetaData.mNewUrl.empty() == XPR_TRUE ||
+        XPR_IS_FALSE(
+            fxfile::base::parseVersion(
+                aMetaData.mVersion,
+                sVersion)))
+    {
+        return XPR_FALSE;
+    }
 
     return XPR_TRUE;
 }
