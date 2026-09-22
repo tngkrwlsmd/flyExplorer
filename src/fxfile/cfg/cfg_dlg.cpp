@@ -573,7 +573,7 @@ void DrawModernCfgPushButton(HWND aHwnd)
     COLORREF sText =
         XPR_IS_TRUE(sEnabled) ? sPalette.mText : sPalette.mSecondaryText;
     COLORREF sBorder =
-        XPR_IS_TRUE(sFocused) ? sPalette.mFocus : sPalette.mBorder;
+        XPR_IS_TRUE(sFocused) ? sPalette.mFocus : sPalette.mSeparator;
 
     if (XPR_IS_TRUE(sEnabled))
     {
