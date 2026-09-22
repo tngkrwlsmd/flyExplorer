@@ -227,7 +227,7 @@ xpr_sint_t ModernUI::getAddressTextMargin(HWND aHwnd)
 
 xpr_sint_t ModernUI::getPopupItemPadding(HWND aHwnd)
 {
-    return scaleForWindow(8, aHwnd);
+    return scaleForWindow(6, aHwnd);
 }
 
 xpr_sint_t ModernUI::getPopupItemHeight(HWND aHwnd)
@@ -237,7 +237,7 @@ xpr_sint_t ModernUI::getPopupItemHeight(HWND aHwnd)
 
 xpr_sint_t ModernUI::getPopupIconGutter(HWND aHwnd)
 {
-    return scaleForWindow(28, aHwnd);
+    return scaleForWindow(32, aHwnd);
 }
 
 xpr_sint_t ModernUI::getPopupSeparatorHeight(HWND aHwnd)
@@ -252,7 +252,7 @@ xpr_sint_t ModernUI::getPopupSeparatorInset(HWND aHwnd)
 
 xpr_sint_t ModernUI::getPopupShortcutGap(HWND aHwnd)
 {
-    return scaleForWindow(18, aHwnd);
+    return scaleForWindow(14, aHwnd);
 }
 
 xpr_sint_t ModernUI::getPopupBorderThickness(HWND aHwnd)
