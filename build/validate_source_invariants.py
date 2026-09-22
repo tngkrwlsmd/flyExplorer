@@ -2069,6 +2069,8 @@ def validate_functional_test_wiring() -> list[str]:
         "FO_DELETE",
         "FOF_RENAMEONCOLLISION",
         "getTempDir",
+        "xpr::initialize()",
+        "xpr::finalize()",
         "fixture cleanup",
         "testShellRegistryCommandContract",
         "shellreg::buildOpenCommand",
