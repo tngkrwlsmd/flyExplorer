@@ -9,6 +9,7 @@
 
 #include "stdafx.h"
 #include "format_delete.h"
+#include "rename_transform_core.h"
 #include "xml.h"
 
 #ifdef _DEBUG
@@ -64,71 +65,24 @@ Format *FormatDelete::newClone(void) const
 
 void FormatDelete::rename(RenameContext &aContext) const
 {
-    xpr_sint_t sOffset = mPos;
-    xpr_sint_t sLength = mLength;
-    const xpr_sint_t sNameLength = (xpr_sint_t)aContext.mNewFileName.length();
-
-    if (sLength > 0)
+    switch (mPosType)
     {
-        switch (mPosType)
-        {
-        case DeletePosTypeAtFirst:
-            sOffset = 0;
-            if (sNameLength < sLength)
-            {
-                sLength = sNameLength;
-            }
+    case DeletePosTypeAtFirst:
+        rename_core::deleteAtFirst(aContext.mNewFileName, mLength);
+        break;
 
-            aContext.mNewFileName.erase(sOffset, sLength);
-            break;
+    case DeletePosTypeAtLast:
+        rename_core::deleteAtLast(aContext.mNewFileName, mLength);
+        break;
 
-        case DeletePosTypeAtLast:
-            if (sNameLength < sLength)
-            {
-                sLength = sNameLength;
-            }
-            sOffset = sNameLength - sLength;
+    case DeletePosTypeFromLast:
+        rename_core::deleteFromLast(aContext.mNewFileName, mPos, mLength);
+        break;
 
-            aContext.mNewFileName.erase(sOffset, sLength);
-            break;
-
-        case DeletePosTypeFromLast:
-            if (sOffset >= 0)
-            {
-                if (sOffset > sNameLength)
-                {
-                    sOffset = sNameLength;
-                }
-
-                if ((sOffset + sLength) > sNameLength)
-                {
-                    sLength = sNameLength - sOffset;
-                }
-
-                sOffset = sNameLength - sLength - sOffset;
-
-                aContext.mNewFileName.erase(sOffset, sLength);
-            }
-            break;
-
-        default:
-        case DeletePosTypeFromFirst:
-            if (sOffset >= 0)
-            {
-                if (sOffset > sNameLength)
-                {
-                    sOffset = sNameLength;
-                }
-
-                if ((sOffset + sLength) > sNameLength)
-                {
-                    sLength = sNameLength - sOffset;
-                }
-
-                aContext.mNewFileName.erase(sOffset, sLength);
-            }
-            break;
-        }
+    default:
+    case DeletePosTypeFromFirst:
+        rename_core::deleteFromFirst(aContext.mNewFileName, mPos, mLength);
+        break;
     }
 }
 
