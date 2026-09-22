@@ -77,7 +77,7 @@
     }
   ],
   "review": {
-    "reviewed_revision": "5c00b4a61953f72721324e97b8e5d988e42097a6",
+    "reviewed_revision": "c20192916fba7af536411810defc6ac2439b28fa",
     "reviewed_at": "2026-09-22",
     "reviewed_paths": [
       "AGENTS.md",
