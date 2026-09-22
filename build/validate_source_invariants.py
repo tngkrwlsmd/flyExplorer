@@ -76,6 +76,48 @@ def validate_translation_units() -> list[str]:
     return errors
 
 
+def validate_modern_subclass_forwarding() -> list[str]:
+    """Keep ModernUI subclass callbacks forwarding the Win32 message parameters they use."""
+
+    errors: list[str] = []
+    contracts = (
+        (
+            FXFILE_SRC / "cfg" / "cfg_dlg.cpp",
+            "ModernGroupBoxSubclassProc",
+        ),
+        (
+            FXFILE_SRC / "cfg" / "cfg_main_dlg.cpp",
+            "ModernCfgButtonSubclassProc",
+        ),
+    )
+
+    for path, proc_name in contracts:
+        try:
+            source = path.read_text(encoding="utf-8", errors="replace")
+        except OSError as exc:
+            errors.append(f"{path.relative_to(ROOT)}: cannot read subclass forwarding contract: {exc}")
+            continue
+
+        signature = (
+            f"LRESULT CALLBACK {proc_name}(\n"
+            "    HWND aHwnd,\n"
+            "    UINT aMessage,\n"
+            "    WPARAM aWParam,\n"
+            "    LPARAM aLParam,\n"
+        )
+        if signature not in source:
+            errors.append(
+                f"{path.relative_to(ROOT)}: {proc_name} must name WPARAM/LPARAM before forwarding them"
+            )
+
+        if "return ::DefSubclassProc(aHwnd, aMessage, aWParam, aLParam);" not in source:
+            errors.append(
+                f"{path.relative_to(ROOT)}: {proc_name} no longer forwards the original message parameters"
+            )
+
+    return errors
+
+
 def validate_window_frame_theme_integration() -> list[str]:
     errors: list[str] = []
     modern_ui_header_path = FXFILE_SRC / "gui" / "ModernUI.h"
@@ -1810,6 +1852,7 @@ def validate_modern_ui_registration() -> list[str]:
 
 def main() -> int:
     errors = validate_translation_units()
+    errors.extend(validate_modern_subclass_forwarding())
     errors.extend(validate_window_frame_theme_integration())
     errors.extend(validate_theme_mode_contract())
     errors.extend(validate_common_control_theme_integration())
