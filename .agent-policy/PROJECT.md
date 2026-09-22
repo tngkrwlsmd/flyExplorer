@@ -178,6 +178,7 @@
 - 로컬 CI의 영구 로그는 `logs/local-ci/local-ci.log` 하나만 사용한다. 실행 시작 시 이전 local CI `.log`를 정리하고 단계별 임시 capture 파일은 종료 시 삭제한다. 간단한 프로필 사용법은 루트 `LOCAL_CI_MANUAL.txt`를 Source of Truth로 둔다.
 - 확정된 build/compile/link/runtime/CI orchestration 오류는 `docs/development/ERROR_HISTORY.md`에 root cause 중심으로 남긴다. 같은 유형이 다시 발생할 수 있으면 문서 기록만으로 끝내지 않고 `build/validate_source_invariants.py`, native functional regression, build-script preflight 또는 contract guard 중 가장 적합하고 저렴한 자동 방어선을 추가한다. 제품 오류와 CI orchestration 오류, static/compile/runtime/visual evidence는 서로 구분한다.
 - 로컬 C++ CI profile(`x64`, `x86`, `release`, `full`)은 MSBuild `Rebuild`를 사용해 stale `obj`/CRT configuration 재사용을 방지한다. console은 MSBuild minimal verbosity를 사용해 Visual Studio 일반 빌드처럼 `.cpp` 파일명과 핵심 결과만 표시한다. file logger는 normal verbosity를 유지하며 localized MSBuild output은 Windows ANSI code page에서 BOM-less UTF-8로 변환한 뒤 통합 `local-ci.log`에 저장한다.
+- **현재 활성 CI 범위(2026-09-23 사용자 지시): `Release-x64-Unicode | x64`만 검증한다.** compile CI 재검증은 `local_ci.bat x64`만 사용하며 x86 Unicode/Multibyte, `release`, `full` 등 추가 build matrix는 사용자가 명시적으로 범위를 다시 넓히기 전에는 실행하거나 완료 조건으로 요구하지 않는다. source invariant preflight는 x64 profile에 포함된 범위에서 계속 수행한다.
 - Rebuild 직전 `build/check_build_output_locks.ps1`가 현재 configuration의 repository-owned `bin` 산출물을 exclusive-open으로 확인한다. 실행 중인 repository flyExplorer 등이 linker output을 점유하면 MSBuild의 후속 LNK1104 cascade까지 진행하지 않고 lock된 파일을 명시해 fail-fast한다. 사용자 프로세스는 자동 종료하지 않는다. `copy_lib.bat` / `copy_languages.bat`은 directory create를 idempotent하게 처리하고 `xcopy /d`로 unchanged runtime/language 파일을 다시 덮어쓰지 않으며 실제 staging source/copy 실패는 반환한다.
 - policy conformance의 `distribution-duplicate-entry` negative fixture는 같은 ZIP entry를 의도적으로 두 번 생성한다. 로컬 CI는 이 검증을 유지하면서 Python `zipfile`의 expected duplicate-name warning만 국소적으로 숨긴다. `dist/copy.bat`은 staging `bin`이 존재할 때만 삭제해 정상 package build에서 불필요한 `The system cannot find the file specified.` 메시지를 내지 않는다.
 - `.agent-policy/PROJECT.md`의 `reviewed_at`은 validator의 UTC date 기준으로 기록한다. 한국 등 UTC+ 시차 지역의 로컬 날짜를 그대로 기록하면 UTC 자정 전에는 미래 날짜로 판정될 수 있다.
@@ -288,9 +289,9 @@
 2. `python build/validate_source_invariants.py` (source invariant + dialog/resource/DPI-icon + rename/pattern/config/updater functional + installer wiring + known regression guards)
 3. `build.bat`
 4. 새로 생성된 `fxfile.sln`을 Visual Studio 2026에서 열기
-5. `Release-x64-Unicode | x64` Build Solution
-6. `build.bat 2026 x86` 후 `Release-x86-Unicode | Win32` 및 `Release-x86-Multibyte | Win32` Build Solution
-7. x64/x86 제품 산출물과 x86 Multibyte `fxfile-upchecker` 산출물 확인
+5. `Release-x64-Unicode | x64` Build Solution — **현재 CI 검증 범위**
+6. x86 Unicode/Multibyte build는 현재 사용자 지시에 따라 CI에서 실행하지 않는다. 사용자가 범위를 다시 넓힐 때만 별도 검증한다.
+7. 현재 CI evidence는 x64 제품 산출물만 판단하며 x86/upchecker 산출물은 `NOT TESTED`로 둔다.
 8. `build/runtime_smoke.ps1` 또는 GitHub Actions hosted-runner launch smoke 결과 확인
 9. `dist/package.bat`으로 portable ZIP 3종과 NSIS installer 생성
 10. `build/validate_package.ps1 -DistDir dist`로 package payload + installer-smoke wiring 검증
