@@ -158,7 +158,12 @@ $protectedPaths = @(
     (Join-Path $env:PUBLIC "Desktop\fxfile.lnk"),
     (Join-Path $env:APPDATA "Microsoft\Internet Explorer\Quick Launch\fxfile.lnk"),
     (Join-Path $env:APPDATA "Microsoft\Windows\Start Menu\Programs\fxfile"),
-    (Join-Path $env:ProgramData "Microsoft\Windows\Start Menu\Programs\fxfile")
+    (Join-Path $env:ProgramData "Microsoft\Windows\Start Menu\Programs\fxfile"),
+    (Join-Path $env:APPDATA ".fxfile"),
+    (Join-Path $env:APPDATA "fxfile\conf"),
+    (Join-Path $env:APPDATA "fxfile\reports"),
+    (Join-Path $env:APPDATA "fxfile\update"),
+    (Join-Path $env:APPDATA "fxfile-launcher")
 )
 $protectedPathBefore = @{}
 foreach ($path in $protectedPaths) {
@@ -184,14 +189,31 @@ try {
         throw "Isolated installer exited with code $($installProcess.ExitCode)."
     }
 
-    foreach ($relative in @(
+    $requiredPayload = @(
         "fxfile.exe",
         "fxfile-crash.dll",
         "fxfile-launcher.exe",
         "fxfile-keyhook.dll",
-        "Uninstall.exe"
-    )) {
+        "Uninstall.exe",
+        "upchecker\fxfile-upchecker.exe",
+        "upchecker\dbghelp.dll",
+        "upchecker\libcurl.dll",
+        "upchecker\libgcc_s_sjlj-1.dll",
+        "upchecker\libiconv-2.dll",
+        "upchecker\libwinpthread-1.dll",
+        "upchecker\libxml2-2.dll",
+        "upchecker\libxpr.dll",
+        "upchecker\zlib1.dll"
+    )
+    foreach ($relative in $requiredPayload) {
         Assert-File (Join-Path $installDir $relative) "installed payload"
+    }
+
+    $languages = @(
+        Get-ChildItem -LiteralPath (Join-Path $installDir "Languages") -Filter "*.xml" -File -ErrorAction SilentlyContinue
+    )
+    if ($languages.Count -eq 0) {
+        throw "Isolated installer did not install any language XML files."
     }
 
     $expectedMainMachine = if ([Environment]::Is64BitOperatingSystem) { 0x8664 } else { 0x014C }
@@ -230,7 +252,7 @@ try {
 
     foreach ($path in $protectedPaths) {
         if ((Get-PathSnapshot $path) -ne $protectedPathBefore[$path]) {
-            throw "Installer smoke changed protected shortcut/start-menu state: $path"
+            throw "Installer smoke changed protected shortcut/start-menu/user-state path: $path"
         }
     }
 
@@ -269,7 +291,7 @@ try {
 
     foreach ($path in $protectedPaths) {
         if ((Get-PathSnapshot $path) -ne $protectedPathBefore[$path]) {
-            throw "Installer smoke changed protected shortcut/start-menu state: $path"
+            throw "Installer smoke changed protected shortcut/start-menu/user-state path: $path"
         }
     }
 
