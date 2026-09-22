@@ -141,7 +141,7 @@ void AddressBar::OnNcPaint(void)
 
     const COLORREF sBorderColor =
         XPR_IS_TRUE(sFocused) ?
-        sPalette.mSelection :
+        sPalette.mFocus :
         sPalette.mBorder;
 
     ::SetDCBrushColor(sDC.GetSafeHdc(), sBorderColor);
@@ -1058,7 +1058,7 @@ void AddressBar::applyModernAppearance(void)
         if (XPR_IS_NOT_NULL(mBackgroundBrush.m_hObject))
             mBackgroundBrush.DeleteObject();
 
-        mBackgroundBrush.CreateSolidBrush(sPalette.mWindow);
+        mBackgroundBrush.CreateSolidBrush(sPalette.mElevated);
     }
     else if (XPR_IS_NOT_NULL(mBackgroundBrush.m_hObject))
     {
@@ -1227,7 +1227,7 @@ LRESULT AddressBar::handleComboCtlColor(xpr_uint_t aMessage, HDC aDC, HWND aCont
         sTextColor = sPalette.mSecondaryText;
 
     ::SetTextColor(aDC, sTextColor);
-    ::SetBkColor(aDC, sPalette.mWindow);
+    ::SetBkColor(aDC, sPalette.mElevated);
     ::SetBkMode(aDC, OPAQUE);
 
     return reinterpret_cast<LRESULT>((HBRUSH)mBackgroundBrush.GetSafeHandle());
