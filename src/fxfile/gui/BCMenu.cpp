@@ -1049,11 +1049,23 @@ void BCMenu::DrawItemWindows8Style(LPDRAWITEMSTRUCT aDrawItemStruct)
 
     drawSelection(sDC, sItemRect, sItemState);
 
-    if (sIconIndex >= 0 && sImageList != NULL)
-        drawIcon(sDC, sItemRect, sItemState, sMenuItemId, sImageList);
+    const xpr_bool_t sHasFluentIcon =
+        sMenuItemId <= static_cast<UINT_PTR>(0xffffffffu) &&
+        fxfile::ui::FluentCommandIcons::hasCommand(
+            static_cast<xpr_uint_t>(sMenuItemId));
 
-    if (sIconIndex < 0 && (sItemState & ODS_CHECKED))
+    if (sIconIndex >= 0 && sImageList != NULL)
+    {
+        drawIcon(sDC, sItemRect, sItemState, sMenuItemId, sImageList);
+    }
+    else if ((sItemState & ODS_CHECKED) != 0)
+    {
         drawCheckOrRadioMark(sDC, sItemRect, sItemState, sMenuItem, sMenuItemId);
+    }
+    else if (XPR_IS_TRUE(sHasFluentIcon))
+    {
+        drawIcon(sDC, sItemRect, sItemState, sMenuItemId, XPR_NULL);
+    }
 
     const xpr_bool_t sSubmenu =
         (sFlags & MF_POPUP) != 0 ? XPR_TRUE : XPR_FALSE;
@@ -1144,11 +1156,6 @@ void BCMenu::drawIcon(
     CImageList *aImageList)
 {
     ASSERT(aDC != NULL);
-    ASSERT(aImageList != NULL);
-
-    if (aImageList->m_hImageList == NULL || aImageList->GetImageCount() <= 0)
-        return;
-
     CWnd *sMainWnd = AfxGetMainWnd();
     HWND sMetricHwnd =
         XPR_IS_NOT_NULL(sMainWnd) ?
@@ -1166,7 +1173,7 @@ void BCMenu::drawIcon(
         fxfile::ui::ModernUI::getPalette();
 
     HICON sIcon = XPR_NULL;
-    if (aCommandId <= static_cast<UINT_PTR>(UINT_MAX))
+    if (aCommandId <= static_cast<UINT_PTR>(0xffffffffu))
     {
         sIcon = fxfile::ui::FluentCommandIcons::createIcon(
             static_cast<xpr_uint_t>(aCommandId),
@@ -1189,6 +1196,13 @@ void BCMenu::drawIcon(
             XPR_NULL,
             DI_NORMAL);
         ::DestroyIcon(sIcon);
+        return;
+    }
+
+    if (XPR_IS_NULL(aImageList) ||
+        aImageList->m_hImageList == NULL ||
+        aImageList->GetImageCount() <= 0)
+    {
         return;
     }
 
