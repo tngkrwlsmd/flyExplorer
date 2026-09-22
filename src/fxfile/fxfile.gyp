@@ -883,6 +883,8 @@
                 './cmd/format_number.h',
                 './cmd/format_replace.cpp',
                 './cmd/format_replace.h',
+                './cmd/rename_transform_core.cpp',
+                './cmd/rename_transform_core.h',
                 './cmd/format_short_parser.cpp',
                 './cmd/format_short_parser.h',
                 './cmd/format_string.cpp',
