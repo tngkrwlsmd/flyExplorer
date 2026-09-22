@@ -1470,6 +1470,8 @@
 #define IDC_RENAME_TIP_GROUP_TIME_FORMAT 1854
 #define IDC_INFO_COPY                   1855
 #define IDC_INFO_EDIT                   1856
+#define IDC_CFG_APPEARANCE_LABEL_THEME_MODE 1857
+#define IDC_CFG_APPEARANCE_THEME_MODE   1858
 #define ID_FILE_NEW_FOLDER              30000
 #define ID_FILE_NEW_FILE                30001
 #define ID_FILE_NEW_TEXT                30002
@@ -1632,6 +1634,9 @@
 #define ID_VIEW_PICVIEWER               33043
 #define ID_VIEW_ARRAY_ASCENDING         33044
 #define ID_VIEW_ARRAY_DECENDING         33045
+#define ID_VIEW_THEME_SYSTEM            33046
+#define ID_VIEW_THEME_LIGHT             33047
+#define ID_VIEW_THEME_DARK              33048
 #define ID_VIEW_STYLE                   33100
 #define ID_VIEW_STYLE_EXTRA_LARGE_ICONS 33101
 #define ID_VIEW_STYLE_MEDIUM_ICONS      33102
@@ -1874,7 +1879,7 @@
 #define _APS_3D_CONTROLS                     1
 #define _APS_NEXT_RESOURCE_VALUE        427
 #define _APS_NEXT_COMMAND_VALUE         50015
-#define _APS_NEXT_CONTROL_VALUE         1857
+#define _APS_NEXT_CONTROL_VALUE         1859
 #define _APS_NEXT_SYMED_VALUE           126
 #endif
 #endif
