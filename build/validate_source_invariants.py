@@ -742,10 +742,14 @@ def validate_ui_resource_contracts() -> list[str]:
             errors.append(f"{path.relative_to(ROOT)}: invalid BMP header")
             return None
 
+        pixel_offset = read_u32(data, 10)
+        dib_size = read_u32(data, 14)
         width = int.from_bytes(data[18:22], "little", signed=True)
         height = int.from_bytes(data[22:26], "little", signed=True)
+        planes = read_u16(data, 26)
         bpp = read_u16(data, 28)
-        return width, abs(height), bpp
+        compression = read_u32(data, 30)
+        return width, abs(height), bpp, planes, compression, pixel_offset, dib_size, data
 
     bitmap_contracts = {
         "config_tree.bmp": (528, 16, 16, 33),
@@ -763,10 +767,20 @@ def validate_ui_resource_contracts() -> list[str]:
         if geometry is None:
             continue
 
-        width, height, bpp = geometry
+        width, height, bpp, planes, compression, pixel_offset, dib_size, data = geometry
         rel = (resource_dir / name).relative_to(ROOT).as_posix()
         if bpp != 16:
             errors.append(f"{rel}: expected legacy mask-strip 16bpp contract, got {bpp}bpp")
+        if planes != 1 or compression != 0:
+            errors.append(
+                f"{rel}: expected BI_RGB/1-plane bitmap contract, "
+                f"got planes={planes}, compression={compression}"
+            )
+        if pixel_offset != 54 or dib_size != 40:
+            errors.append(
+                f"{rel}: BMP header layout changed; expected 54-byte pixel offset "
+                f"and 40-byte BITMAPINFOHEADER"
+            )
 
         if (width, height) != (expected_width, expected_height):
             errors.append(
@@ -780,6 +794,13 @@ def validate_ui_resource_contracts() -> list[str]:
                 f"{rel}: frame contract changed; expected {expected_frames} frames "
                 f"at {cell_width}px"
             )
+
+        # RGB(255,0,255) is 0x7C1F in the 5-5-5 BI_RGB pixels used by the
+        # legacy ImageList_LoadImage mask contract. Require at least one mask
+        # pixel so a future artwork replacement cannot silently become opaque.
+        mask_word = b"\x1f\x7c"
+        if mask_word not in data[pixel_offset:]:
+            errors.append(f"{rel}: RGB(255,0,255) transparent-mask pixels are missing")
 
     icon_path = resource_dir / "fxfile.ico"
     try:
@@ -903,6 +924,13 @@ def validate_ui_resource_contracts() -> list[str]:
         "(UINT)-1, IDB_TB_MAIN_COLD_SMALL, IDB_TB_MAIN_HOT_SMALL",
         "(UINT)-1, IDB_TB_MAIN_COLD_LARGE, IDB_TB_MAIN_HOT_LARGE",
     )
+
+    for source_name, source in (
+        ("src/fxfile/main_toolbar.cpp", main_toolbar),
+        ("src/fxfile/file_scrap_toolbar.cpp", scrap_toolbar),
+    ):
+        if "const COLORREF IL_COLOR_MASK = RGB(255,0,255);" not in source:
+            errors.append(f"{source_name}: toolbar RGB(255,0,255) mask contract changed")
     for source_name, source in (
         ("src/fxfile/main_toolbar.cpp", main_toolbar),
         ("src/fxfile/file_scrap_toolbar.cpp", scrap_toolbar),
@@ -980,6 +1008,39 @@ def validate_ui_resource_contracts() -> list[str]:
             errors.append(
                 "src/fxfile/main_toolbar.cpp: toolbar frame/command order changed; "
                 "update artwork and invariant together only after reviewing the bitmap-frame contract"
+            )
+
+    expected_scrap_toolbar_frames = (
+        (30, "ID_EDIT_FILE_SCRAP_GROUP_ADD"),
+        (0, "0"),
+        (35, "ID_EDIT_FILE_SCRAP_COPY_TO"),
+        (34, "ID_EDIT_FILE_SCRAP_MOVE_TO"),
+        (19, "ID_EDIT_FILE_SCRAP_DELETE"),
+        (0, "0"),
+        (5, "ID_EDIT_FILE_SCRAP_REFRESH"),
+        (0, "0"),
+        (50, "ID_EDIT_FILE_SCRAP_VALIDATE"),
+        (49, "ID_EDIT_FILE_SCRAP_REMOVE_LIST"),
+        (49, "ID_EDIT_FILE_SCRAP_REMOVE_ALL_LIST"),
+    )
+    scrap_toolbar_block_match = re.search(
+        r"TBBUTTONEX\s+kTbButtons\[\]\s*=\s*\{(?P<body>.*?)\n\};",
+        scrap_toolbar,
+        re.DOTALL,
+    )
+    if scrap_toolbar_block_match is None:
+        errors.append("src/fxfile/file_scrap_toolbar.cpp: kTbButtons table not found")
+    else:
+        actual_scrap_toolbar_frames = tuple(
+            (int(frame), command)
+            for frame, command in re.findall(
+                r"\{\s*\{\s*(\d+)\s*,\s*(ID_[A-Za-z0-9_]+|0)\s*,",
+                scrap_toolbar_block_match.group("body"),
+            )
+        )
+        if actual_scrap_toolbar_frames != expected_scrap_toolbar_frames:
+            errors.append(
+                "src/fxfile/file_scrap_toolbar.cpp: toolbar frame/command order changed"
             )
 
     if "sBitmap.LoadBitmap(IDB_CONFIG_TREE);" not in cfg_main:
