@@ -27,6 +27,7 @@ const UINT_PTR kModernGroupBoxSubclassId = 0x46474342; // 'FGCB'
 
 const UINT_PTR kModernCfgComboSubclassId = 0x46474343; // 'FGCC'
 const UINT_PTR kModernCfgToggleSubclassId = 0x46474354; // 'FGCT'
+const UINT_PTR kModernCfgPushButtonSubclassId = 0x46474350; // 'FGCP'
 
 void DrawModernCfgCombo(HWND aHwnd)
 {
@@ -527,6 +528,162 @@ LRESULT CALLBACK ModernCfgToggleSubclassProc(
 }
 
 
+xpr_bool_t IsModernCfgPushButtonType(DWORD aButtonType)
+{
+    return
+        aButtonType == BS_PUSHBUTTON ||
+        aButtonType == BS_DEFPUSHBUTTON ?
+        XPR_TRUE :
+        XPR_FALSE;
+}
+
+void DrawModernCfgPushButton(HWND aHwnd)
+{
+    const ui::ThemePalette sPalette = ui::ModernUI::getPalette();
+    if (XPR_IS_TRUE(sPalette.mHighContrast) || XPR_IS_FALSE(sPalette.mDark))
+        return;
+
+    PAINTSTRUCT sPaint = {0};
+    HDC sDC = ::BeginPaint(aHwnd, &sPaint);
+    if (XPR_IS_NULL(sDC))
+        return;
+
+    RECT sRect = {0};
+    ::GetClientRect(aHwnd, &sRect);
+
+    const xpr_bool_t sEnabled =
+        ::IsWindowEnabled(aHwnd) != FALSE ? XPR_TRUE : XPR_FALSE;
+    const xpr_bool_t sFocused =
+        ::GetFocus() == aHwnd ? XPR_TRUE : XPR_FALSE;
+    const LRESULT sState = ::SendMessage(aHwnd, BM_GETSTATE, 0, 0);
+    const xpr_bool_t sPressed =
+        (sState & BST_PUSHED) != 0 ? XPR_TRUE : XPR_FALSE;
+
+    POINT sCursor = {0};
+    RECT sWindowRect = {0};
+    ::GetCursorPos(&sCursor);
+    ::GetWindowRect(aHwnd, &sWindowRect);
+    const xpr_bool_t sHot =
+        ::PtInRect(&sWindowRect, sCursor) != FALSE ?
+        XPR_TRUE :
+        XPR_FALSE;
+
+    COLORREF sFill =
+        XPR_IS_TRUE(sEnabled) ? sPalette.mElevated : sPalette.mCard;
+    COLORREF sText =
+        XPR_IS_TRUE(sEnabled) ? sPalette.mText : sPalette.mSecondaryText;
+    COLORREF sBorder =
+        XPR_IS_TRUE(sFocused) ? sPalette.mFocus : sPalette.mBorder;
+
+    if (XPR_IS_TRUE(sEnabled))
+    {
+        if (XPR_IS_TRUE(sPressed))
+            sFill = sPalette.mPressed;
+        else if (XPR_IS_TRUE(sHot))
+            sFill = sPalette.mHover;
+    }
+
+    HBRUSH sBrush = ::CreateSolidBrush(sFill);
+    HPEN sPen = ::CreatePen(PS_SOLID, 1, sBorder);
+    HGDIOBJ sOldBrush = ::SelectObject(sDC, sBrush);
+    HGDIOBJ sOldPen = ::SelectObject(sDC, sPen);
+    const xpr_sint_t sRadius =
+        ui::ModernUI::getControlCornerRadius(aHwnd);
+    ::RoundRect(
+        sDC,
+        sRect.left,
+        sRect.top,
+        sRect.right,
+        sRect.bottom,
+        sRadius * 2,
+        sRadius * 2);
+    ::SelectObject(sDC, sOldPen);
+    ::SelectObject(sDC, sOldBrush);
+    ::DeleteObject(sPen);
+    ::DeleteObject(sBrush);
+
+    xpr_tchar_t sLabel[256] = {0};
+    ::GetWindowText(aHwnd, sLabel, XPR_COUNT_OF(sLabel));
+    HFONT sFont = reinterpret_cast<HFONT>(
+        ::SendMessage(aHwnd, WM_GETFONT, 0, 0));
+    HGDIOBJ sOldFont = XPR_NULL;
+    if (XPR_IS_NOT_NULL(sFont))
+        sOldFont = ::SelectObject(sDC, sFont);
+
+    ::SetBkMode(sDC, TRANSPARENT);
+    ::SetTextColor(sDC, sText);
+    ::DrawText(
+        sDC,
+        sLabel,
+        -1,
+        &sRect,
+        DT_CENTER | DT_VCENTER | DT_SINGLELINE | DT_END_ELLIPSIS);
+
+    if (XPR_IS_NOT_NULL(sOldFont))
+        ::SelectObject(sDC, sOldFont);
+
+    ::EndPaint(aHwnd, &sPaint);
+}
+
+LRESULT CALLBACK ModernCfgPushButtonSubclassProc(
+    HWND aHwnd,
+    UINT aMessage,
+    WPARAM aWParam,
+    LPARAM aLParam,
+    UINT_PTR aSubclassId,
+    DWORD_PTR)
+{
+    switch (aMessage)
+    {
+        case WM_PAINT:
+        {
+            const ui::ThemePalette sPalette = ui::ModernUI::getPalette();
+            if (XPR_IS_TRUE(sPalette.mDark) &&
+                XPR_IS_FALSE(sPalette.mHighContrast))
+            {
+                DrawModernCfgPushButton(aHwnd);
+                return 0;
+            }
+            break;
+        }
+
+        case WM_MOUSEMOVE:
+        {
+            TRACKMOUSEEVENT sTrack = {0};
+            sTrack.cbSize = sizeof(sTrack);
+            sTrack.dwFlags = TME_LEAVE;
+            sTrack.hwndTrack = aHwnd;
+            ::TrackMouseEvent(&sTrack);
+            ::InvalidateRect(aHwnd, XPR_NULL, FALSE);
+            break;
+        }
+
+        case WM_MOUSELEAVE:
+        case WM_LBUTTONDOWN:
+        case WM_LBUTTONUP:
+        case WM_ENABLE:
+        case WM_SETFOCUS:
+        case WM_KILLFOCUS:
+        case WM_THEMECHANGED:
+        case WM_SETTINGCHANGE:
+        case WM_SYSCOLORCHANGE:
+            ::InvalidateRect(aHwnd, XPR_NULL, FALSE);
+            break;
+
+        case WM_NCDESTROY:
+            ::RemoveWindowSubclass(
+                aHwnd,
+                ModernCfgPushButtonSubclassProc,
+                aSubclassId);
+            break;
+
+        default:
+            break;
+    }
+
+    return ::DefSubclassProc(aHwnd, aMessage, aWParam, aLParam);
+}
+
 LRESULT CALLBACK ModernGroupBoxSubclassProc(
     HWND aHwnd,
     UINT aMessage,
@@ -551,64 +708,61 @@ LRESULT CALLBACK ModernGroupBoxSubclassProc(
             RECT sClientRect = {0};
             ::GetClientRect(aHwnd, &sClientRect);
 
+            // Resource group boxes are layout containers, not independent
+            // cards. Painting their whole rectangle as an elevated surface
+            // created large black islands and covered the page hierarchy.
             ::SetDCBrushColor(sDC, sPalette.mCard);
             ::FillRect(
                 sDC,
                 &sClientRect,
                 static_cast<HBRUSH>(::GetStockObject(DC_BRUSH)));
 
-            RECT sCardRect = sClientRect;
-            const xpr_sint_t sTitleOffset =
-                ui::ModernUI::scaleForWindow(6, aHwnd);
-            sCardRect.top += sTitleOffset;
-
-            const xpr_sint_t sRadius =
-                ui::ModernUI::getCardCornerRadius(aHwnd);
-            HBRUSH sCardBrush = ::CreateSolidBrush(sPalette.mElevated);
-            HPEN sBorderPen = ::CreatePen(PS_SOLID, 1, sPalette.mSeparator);
-            HGDIOBJ sOldBrush = ::SelectObject(sDC, sCardBrush);
-            HGDIOBJ sOldPen = ::SelectObject(sDC, sBorderPen);
-            ::RoundRect(
-                sDC,
-                sCardRect.left,
-                sCardRect.top,
-                sCardRect.right,
-                sCardRect.bottom,
-                sRadius * 2,
-                sRadius * 2);
-            ::SelectObject(sDC, sOldPen);
-            ::SelectObject(sDC, sOldBrush);
-            ::DeleteObject(sBorderPen);
-            ::DeleteObject(sCardBrush);
-
             xpr_tchar_t sText[256] = {0};
             ::GetWindowText(aHwnd, sText, XPR_COUNT_OF(sText));
-            if (sText[0] != XPR_STRING_LITERAL('\0'))
-            {
-                HFONT sFont = reinterpret_cast<HFONT>(
-                    ::SendMessage(aHwnd, WM_GETFONT, 0, 0));
-                HGDIOBJ sOldFont = XPR_NULL;
-                if (XPR_IS_NOT_NULL(sFont))
-                    sOldFont = ::SelectObject(sDC, sFont);
 
-                ::SetBkMode(sDC, TRANSPARENT);
-                ::SetTextColor(sDC, sPalette.mText);
+            HFONT sFont = reinterpret_cast<HFONT>(
+                ::SendMessage(aHwnd, WM_GETFONT, 0, 0));
+            HGDIOBJ sOldFont = XPR_NULL;
+            if (XPR_IS_NOT_NULL(sFont))
+                sOldFont = ::SelectObject(sDC, sFont);
 
-                RECT sTextRect = sClientRect;
-                const xpr_sint_t sPadding =
-                    ui::ModernUI::getSettingsPanelPadding(aHwnd);
-                sTextRect.left += sPadding;
-                sTextRect.right -= sPadding;
-                ::DrawText(
-                    sDC,
-                    sText,
-                    -1,
-                    &sTextRect,
-                    DT_LEFT | DT_TOP | DT_SINGLELINE | DT_END_ELLIPSIS);
+            ::SetBkMode(sDC, TRANSPARENT);
+            ::SetTextColor(sDC, sPalette.mText);
 
-                if (XPR_IS_NOT_NULL(sOldFont))
-                    ::SelectObject(sDC, sOldFont);
-            }
+            RECT sTextRect = sClientRect;
+            const xpr_sint_t sInset =
+                ui::ModernUI::scaleForWindow(2, aHwnd);
+            sTextRect.left += sInset;
+            ::DrawText(
+                sDC,
+                sText,
+                -1,
+                &sTextRect,
+                DT_LEFT | DT_TOP | DT_SINGLELINE | DT_END_ELLIPSIS);
+
+            RECT sMeasureRect = sTextRect;
+            ::DrawText(
+                sDC,
+                sText,
+                -1,
+                &sMeasureRect,
+                DT_LEFT | DT_TOP | DT_SINGLELINE | DT_CALCRECT);
+
+            const xpr_sint_t sLineY =
+                min(
+                    sClientRect.bottom - 1,
+                    max(
+                        sClientRect.top,
+                        sMeasureRect.bottom +
+                            ui::ModernUI::scaleForWindow(4, aHwnd)));
+            CPen sSeparatorPen(PS_SOLID, 1, sPalette.mSeparator);
+            CPen *sOldPen = CDC::FromHandle(sDC)->SelectObject(&sSeparatorPen);
+            ::MoveToEx(sDC, sClientRect.left, sLineY, XPR_NULL);
+            ::LineTo(sDC, sClientRect.right, sLineY);
+            CDC::FromHandle(sDC)->SelectObject(sOldPen);
+
+            if (XPR_IS_NOT_NULL(sOldFont))
+                ::SelectObject(sDC, sOldFont);
 
             ::EndPaint(aHwnd, &sPaint);
             return 0;
@@ -621,7 +775,10 @@ LRESULT CALLBACK ModernGroupBoxSubclassProc(
             break;
 
         case WM_NCDESTROY:
-            ::RemoveWindowSubclass(aHwnd, ModernGroupBoxSubclassProc, aSubclassId);
+            ::RemoveWindowSubclass(
+                aHwnd,
+                ModernGroupBoxSubclassProc,
+                aSubclassId);
             break;
 
         default:
@@ -630,6 +787,7 @@ LRESULT CALLBACK ModernGroupBoxSubclassProc(
 
     return ::DefSubclassProc(aHwnd, aMessage, aWParam, aLParam);
 }
+
 } // namespace
 
 CfgDlg::CfgDlg(xpr_uint_t aResourceId, CWnd *aParentWnd)
@@ -728,7 +886,18 @@ void CfgDlg::applyModernAppearanceToChild(CWnd *aWnd, HFONT aPreviousFont)
         XPR_FALSE;
 
     if (XPR_IS_TRUE(sExplorerThemeControl))
-        ui::ModernUI::applyExplorerControlTheme(aWnd->GetSafeHwnd());
+    {
+        const ui::ThemePalette sPalette = ui::ModernUI::getPalette();
+        if (XPR_IS_TRUE(sPalette.mDark) &&
+            XPR_IS_FALSE(sPalette.mHighContrast))
+        {
+            ui::ModernUI::resetControlTheme(aWnd->GetSafeHwnd());
+        }
+        else
+        {
+            ui::ModernUI::applyExplorerControlTheme(aWnd->GetSafeHwnd());
+        }
+    }
 
     if (_tcsicmp(sClassName, XPR_STRING_LITERAL("ComboBox")) == 0)
     {
@@ -736,14 +905,6 @@ void CfgDlg::applyModernAppearanceToChild(CWnd *aWnd, HFONT aPreviousFont)
             ::GetWindowLongPtr(aWnd->GetSafeHwnd(), GWL_STYLE);
         if ((sStyle & CBS_DROPDOWNLIST) == CBS_DROPDOWNLIST)
         {
-            const ui::ThemePalette sPalette =
-                ui::ModernUI::getPalette();
-            if (XPR_IS_TRUE(sPalette.mDark) &&
-                XPR_IS_FALSE(sPalette.mHighContrast))
-            {
-                ui::ModernUI::resetControlTheme(aWnd->GetSafeHwnd());
-            }
-
             ::SetWindowSubclass(
                 aWnd->GetSafeHwnd(),
                 ModernCfgComboSubclassProc,
@@ -770,6 +931,14 @@ void CfgDlg::applyModernAppearanceToChild(CWnd *aWnd, HFONT aPreviousFont)
                 aWnd->GetSafeHwnd(),
                 ModernCfgToggleSubclassProc,
                 kModernCfgToggleSubclassId,
+                0);
+        }
+        else if (XPR_IS_TRUE(IsModernCfgPushButtonType(sButtonType)))
+        {
+            ::SetWindowSubclass(
+                aWnd->GetSafeHwnd(),
+                ModernCfgPushButtonSubclassProc,
+                kModernCfgPushButtonSubclassId,
                 0);
         }
     }
@@ -831,9 +1000,11 @@ void CfgDlg::refreshModernAppearance(void)
             mWindowColor = CLR_INVALID;
     }
 
-    ui::ModernUI::applyRoundedWindowRegion(
-        GetSafeHwnd(),
-        ui::ModernUI::getCardCornerRadius(GetSafeHwnd()));
+    // Config pages contain controls at x/y == 0 in the canonical RC.
+    // Rounding the child-window region clips those controls at the corners.
+    // Keep the page rectangular and let individual controls/surfaces own
+    // their rounded geometry.
+    ::SetWindowRgn(GetSafeHwnd(), XPR_NULL, TRUE);
     applyModernAppearanceToChildren(sPreviousFont);
     RedrawWindow(
         XPR_NULL,
