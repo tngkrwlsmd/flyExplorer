@@ -831,6 +831,12 @@ void MainFrame::OnPaint(void)
 
     if (isPreviewMode() == XPR_FALSE)
     {
+        const ui::ThemePalette sPalette = ui::ModernUI::getPalette();
+        const COLORREF sSplitterColor =
+            XPR_IS_TRUE(sPalette.mHighContrast) ?
+            ::GetSysColor(COLOR_BTNFACE) :
+            sPalette.mSeparator;
+
         xpr_sint_t i;
         xpr_sint_t sSplitterCount;
         CRect sSplitterRect;
@@ -842,7 +848,7 @@ void MainFrame::OnPaint(void)
             {
                 mSingleFolderSplitter.getSplitterRect(i, sSplitterRect);
 
-                sDC.FillSolidRect(&sSplitterRect, ::GetSysColor(COLOR_BTNFACE));
+                sDC.FillSolidRect(&sSplitterRect, sSplitterColor);
             }
         }
 
@@ -856,7 +862,7 @@ void MainFrame::OnPaint(void)
             {
                 mSplitter.getSplitterRect(i, sSplitterRect);
 
-                sDC.FillSolidRect(&sSplitterRect, ::GetSysColor(COLOR_BTNFACE));
+                sDC.FillSolidRect(&sSplitterRect, sSplitterColor);
             }
         }
     }
@@ -864,6 +870,15 @@ void MainFrame::OnPaint(void)
 
 xpr_bool_t MainFrame::OnEraseBkgnd(CDC *aDC)
 {
+    const ui::ThemePalette sPalette = ui::ModernUI::getPalette();
+    if (XPR_IS_FALSE(sPalette.mHighContrast))
+    {
+        CRect sClientRect;
+        GetClientRect(&sClientRect);
+        aDC->FillSolidRect(&sClientRect, sPalette.mWindow);
+        return XPR_TRUE;
+    }
+
     return super::OnEraseBkgnd(aDC);
 }
 
