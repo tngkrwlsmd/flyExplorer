@@ -230,6 +230,8 @@ BEGIN_MESSAGE_MAP(MainFrame, super)
     ON_WM_ERASEBKGND()
     ON_WM_SIZE()
     ON_WM_SETTINGCHANGE()
+    ON_COMMAND_RANGE(ID_VIEW_THEME_SYSTEM, ID_VIEW_THEME_DARK, OnViewThemeMode)
+    ON_UPDATE_COMMAND_UI_RANGE(ID_VIEW_THEME_SYSTEM, ID_VIEW_THEME_DARK, OnUpdateViewThemeMode)
     ON_MESSAGE(WM_DPICHANGED, OnDpiChanged)
     ON_MESSAGE(WM_THEMECHANGED, OnThemeChanged)
     ON_WM_CLOSE()
@@ -511,6 +513,32 @@ void MainFrame::OnSettingChange(xpr_uint_t aFlags, const xpr_tchar_t *aSection)
         RDW_INVALIDATE | RDW_FRAME | RDW_ALLCHILDREN);
 }
 
+void MainFrame::OnViewThemeMode(UINT aId)
+{
+    if (aId < ID_VIEW_THEME_SYSTEM || aId > ID_VIEW_THEME_DARK)
+        return;
+
+    const xpr_sint_t sThemeMode =
+        static_cast<xpr_sint_t>(aId - ID_VIEW_THEME_SYSTEM);
+
+    if (gOpt->mConfig.mThemeMode == sThemeMode)
+        return;
+
+    gOpt->mConfig.mThemeMode = sThemeMode;
+    setChangedOption(*gOpt);
+    OptionManager::instance().saveConfigOption();
+}
+
+void MainFrame::OnUpdateViewThemeMode(CCmdUI *aCmdUI)
+{
+    if (XPR_IS_NULL(aCmdUI))
+        return;
+
+    const xpr_sint_t sThemeMode =
+        static_cast<xpr_sint_t>(aCmdUI->m_nID - ID_VIEW_THEME_SYSTEM);
+    aCmdUI->SetRadio(gOpt->mConfig.mThemeMode == sThemeMode);
+}
+
 LRESULT MainFrame::OnDpiChanged(WPARAM aWParam, LPARAM aLParam)
 {
     const RECT *sSuggestedRect = reinterpret_cast<const RECT *>(aLParam);
@@ -669,6 +697,19 @@ void MainFrame::saveOption(void)
 
 void MainFrame::setOption(Option &aOption)
 {
+    const xpr_sint_t sOldThemeMode = ui::ModernUI::getThemeMode();
+    ui::ModernUI::setThemeMode(aOption.mConfig.mThemeMode);
+
+    if (sOldThemeMode != ui::ModernUI::getThemeMode() && ::IsWindow(m_hWnd))
+    {
+        ui::ModernUI::applyWindowFrameTheme(m_hWnd);
+        SendMessageToDescendants(WM_SETTINGCHANGE, 0, 0, TRUE, TRUE);
+        RedrawWindow(
+            XPR_NULL,
+            XPR_NULL,
+            RDW_INVALIDATE | RDW_FRAME | RDW_ALLCHILDREN);
+    }
+
     // tray
     if (XPR_IS_FALSE(aOption.mConfig.mTray))
     {
