@@ -350,6 +350,47 @@
 
 ---
 
+
+## 2026-09-22 — 실행 중 build output 점유로 local CI가 LNK1104까지 진행함
+
+**오류 발생**
+- 실행/프로필: `local_ci.bat x64`.
+- 사용자에게 보인 증상: source invariant는 PASS했지만 runtime/language staging 중 `Sharing violation`이 반복되고, Release x64 link에서 `fxfile-crash.dll`과 `libxprw.dll`을 열 수 없다는 `LNK1104`로 FAIL.
+
+**최초 실제 오류**
+- static/source 오류가 아니라 repository `bin`의 기존 파일이 사용 중이거나 쓰기 불가능한 상태였다.
+- staging의 `Sharing violation`은 같은 output tree가 사용 중이라는 선행 신호였고, 최종 fatal은 linker가 project-owned DLL을 교체하지 못한 `LNK1104`였다.
+- 기존 local CI는 MSBuild 전에 build output lock을 검사하지 않아 원인이 명확한 환경 오류도 linker cascade까지 진행했다.
+
+**원인 진단**
+- Observed: GYP의 x64 OutputDirectory는 `bin/x64`이며 `libxprw.dll`과 `fxfile-crash.dll`도 같은 디렉터리에 linker output으로 생성된다.
+- Observed: 실패 로그는 staging 단계의 sharing violation 뒤 같은 `bin/x64` linker output 두 개에 LNK1104를 기록했다.
+- 제한: 기존 CI는 lock owner/PID를 기록하지 않았으므로 어떤 프로세스가 점유했는지는 해당 로그만으로 확정할 수 없다. 실행 중인 repository flyExplorer가 이 DLL들을 로드한 경우가 대표적인 재현 조건이다.
+- Root cause: local Rebuild가 기존 output을 교체해야 하는데 build 전에 exclusive-write 가능성을 확인하는 preflight가 없었고, staging scripts도 unchanged bundled files를 매번 다시 복사하려 했다.
+
+**해결 방법**
+- `build/check_build_output_locks.ps1` 추가: 현재 configuration의 repository-owned EXE/DLL output을 MSBuild 직전 exclusive-open으로 검사하고, 잠긴 파일을 명시한 뒤 fail-fast한다.
+- `local_ci.bat`: 모든 `:build_configuration` Rebuild 전에 output-lock preflight를 실행한다. 사용자 프로세스를 자동 종료하지 않는다.
+- `copy_lib.bat`, `copy_languages.bat`: directory creation을 idempotent하게 만들고 `xcopy /d`로 unchanged 파일은 덮어쓰지 않는다. staging source가 없거나 실제 copy error가 발생하면 실패를 반환한다.
+
+**재발 방지**
+- `build/validate_source_invariants.py`가 lock-preflight wiring, MSBuild보다 앞선 실행 순서, `FileShare::None` 계약, non-destructive process policy, staging `/d`/error handling을 검사한다.
+- local CI에서 LNK1104가 repository output 경로를 가리키면 compiler/linker source defect로 보기 전에 output lock을 먼저 진단한다.
+
+**검증 상태**
+- 기존 사용자 evidence: source invariant PASS 후 staging sharing violation + Release x64 LNK1104 FAIL.
+- Static: PARTIAL PASS — repository source에서 lock preflight/local_ci/copy staging/validator wiring을 대조했다.
+- 수정 후 source invariant: NOT TESTED — 사용자 Windows checkout에서 재실행 필요.
+- 수정 후 compile/link/functional/runtime: NOT TESTED — repository `bin`을 사용하는 flyExplorer를 닫은 상태에서 `local_ci.bat x64` 재실행 필요.
+
+**관련 commit**
+- `275fc85e` — `build: detect locked local CI outputs`
+- `4f8acef3` — `build: fail fast on locked outputs`
+- `7a9ff045`, `ecd1e4e3` — `build: tolerate unchanged staged files`
+- `30220ff2` — `test: guard local CI output lock handling`
+
+---
+
 ## 오류를 예방하기 위한 일반 개발 규칙
 
 1. 새 header/API/macro는 소유 header를 직접 include한다. PCH/transitive include에 기대지 않는다.
