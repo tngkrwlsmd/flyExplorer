@@ -28,6 +28,7 @@ const UINT_PTR kModernGroupBoxSubclassId = 0x46474342; // 'FGCB'
 const UINT_PTR kModernCfgComboSubclassId = 0x46474343; // 'FGCC'
 const UINT_PTR kModernCfgToggleSubclassId = 0x46474354; // 'FGCT'
 const UINT_PTR kModernCfgPushButtonSubclassId = 0x46474350; // 'FGCP'
+const UINT_PTR kModernCfgEditSubclassId = 0x46474345; // 'FGCE'
 
 void DrawModernCfgCombo(HWND aHwnd)
 {
@@ -528,6 +529,82 @@ LRESULT CALLBACK ModernCfgToggleSubclassProc(
 }
 
 
+void DrawModernCfgEditFrame(HWND aHwnd)
+{
+    const ui::ThemePalette sPalette = ui::ModernUI::getPalette();
+    if (XPR_IS_TRUE(sPalette.mHighContrast) || XPR_IS_FALSE(sPalette.mDark))
+        return;
+
+    HDC sDC = ::GetWindowDC(aHwnd);
+    if (XPR_IS_NULL(sDC))
+        return;
+
+    RECT sWindowRect = {0};
+    ::GetWindowRect(aHwnd, &sWindowRect);
+    ::OffsetRect(
+        &sWindowRect,
+        -sWindowRect.left,
+        -sWindowRect.top);
+
+    const COLORREF sBorder =
+        (::GetFocus() == aHwnd) ?
+        sPalette.mFocus :
+        sPalette.mSeparator;
+    HBRUSH sBrush = ::CreateSolidBrush(sBorder);
+    if (XPR_IS_NOT_NULL(sBrush))
+    {
+        ::FrameRect(sDC, &sWindowRect, sBrush);
+        ::DeleteObject(sBrush);
+    }
+
+    ::ReleaseDC(aHwnd, sDC);
+}
+
+LRESULT CALLBACK ModernCfgEditSubclassProc(
+    HWND aHwnd,
+    UINT aMessage,
+    WPARAM aWParam,
+    LPARAM aLParam,
+    UINT_PTR aSubclassId,
+    DWORD_PTR)
+{
+    switch (aMessage)
+    {
+        case WM_NCPAINT:
+        {
+            const LRESULT sResult =
+                ::DefSubclassProc(aHwnd, aMessage, aWParam, aLParam);
+            DrawModernCfgEditFrame(aHwnd);
+            return sResult;
+        }
+
+        case WM_SETFOCUS:
+        case WM_KILLFOCUS:
+        case WM_ENABLE:
+        case WM_THEMECHANGED:
+        case WM_SETTINGCHANGE:
+        case WM_SYSCOLORCHANGE:
+            ::RedrawWindow(
+                aHwnd,
+                XPR_NULL,
+                XPR_NULL,
+                RDW_INVALIDATE | RDW_FRAME);
+            break;
+
+        case WM_NCDESTROY:
+            ::RemoveWindowSubclass(
+                aHwnd,
+                ModernCfgEditSubclassProc,
+                aSubclassId);
+            break;
+
+        default:
+            break;
+    }
+
+    return ::DefSubclassProc(aHwnd, aMessage, aWParam, aLParam);
+}
+
 xpr_bool_t IsModernCfgPushButtonType(DWORD aButtonType)
 {
     return
@@ -899,6 +976,15 @@ void CfgDlg::applyModernAppearanceToChild(CWnd *aWnd, HFONT aPreviousFont)
         }
     }
 
+    if (_tcsicmp(sClassName, XPR_STRING_LITERAL("Edit")) == 0)
+    {
+        ::SetWindowSubclass(
+            aWnd->GetSafeHwnd(),
+            ModernCfgEditSubclassProc,
+            kModernCfgEditSubclassId,
+            0);
+    }
+
     if (_tcsicmp(sClassName, XPR_STRING_LITERAL("ComboBox")) == 0)
     {
         const LONG_PTR sStyle =
@@ -924,6 +1010,20 @@ void CfgDlg::applyModernAppearanceToChild(CWnd *aWnd, HFONT aPreviousFont)
                 ModernGroupBoxSubclassProc,
                 kModernGroupBoxSubclassId,
                 0);
+
+            // Legacy RC files often declare GROUPBOX after the controls that
+            // visually live inside it. Native group boxes do not obscure
+            // those siblings, but an opaque owner-draw child can. Keep the
+            // layout container at the bottom of the sibling z-order so radio
+            // buttons/check boxes remain visible (notably Layout > Style).
+            ::SetWindowPos(
+                aWnd->GetSafeHwnd(),
+                HWND_BOTTOM,
+                0,
+                0,
+                0,
+                0,
+                SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
         }
         else if (XPR_IS_TRUE(IsModernCfgToggleType(sButtonType)))
         {
