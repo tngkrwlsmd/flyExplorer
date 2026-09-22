@@ -12,6 +12,7 @@
 #pragma once
 
 #include "xml.h"
+#include "rename_transform_core.h"
 
 namespace fxfile
 {
@@ -65,25 +66,11 @@ public:
                                       xpr::string       &aBaseFileName,
                                       xpr::string       &aFileExt)
     {
-        if (XPR_IS_TRUE(aFolder))
-        {
-            aBaseFileName = aFilePath;
-            aFileExt.clear();
-        }
-        else
-        {
-            xpr_size_t sOffset = aFilePath.rfind(XPR_FILE_EXT_SEPARATOR);
-            if (sOffset != xpr::string::npos)
-            {
-                aBaseFileName = aFilePath.substr(0, sOffset);
-                aFileExt      = aFilePath.substr(sOffset);
-            }
-            else
-            {
-                aBaseFileName = aFilePath;
-                aFileExt.clear();
-            }
-        }
+        rename_core::splitBaseFileNameAndExt(
+            aFolder,
+            aFilePath,
+            aBaseFileName,
+            aFileExt);
     }
 
 private:
