@@ -151,7 +151,7 @@ void DrawModernCfgCombo(HWND aHwnd)
     }
 
     const COLORREF sBorderColor =
-        XPR_IS_TRUE(sFocused) ? sPalette.mFocus : sPalette.mBorder;
+        XPR_IS_TRUE(sFocused) ? sPalette.mFocus : sPalette.mSeparator;
     ::SetDCBrushColor(sDC, sBorderColor);
     ::FrameRect(
         sDC,
@@ -307,7 +307,7 @@ void DrawModernCfgToggle(HWND aHwnd)
 
     COLORREF sFill = sPalette.mElevated;
     COLORREF sBorder =
-        XPR_IS_TRUE(sFocused) ? sPalette.mFocus : sPalette.mBorder;
+        XPR_IS_TRUE(sFocused) ? sPalette.mFocus : sPalette.mSeparator;
     COLORREF sGlyph = sPalette.mText;
     if (XPR_IS_FALSE(sEnabled))
     {
