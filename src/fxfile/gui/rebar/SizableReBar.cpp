@@ -674,12 +674,15 @@ void CSizableReBar::ApplyModernAppearance()
 
     const fxfile::ui::ThemePalette sPalette = fxfile::ui::ModernUI::getPalette();
 
-    fxfile::ui::ModernUI::applyExplorerControlTheme(m_rbCtrl.m_hWnd);
+    if (XPR_IS_TRUE(sPalette.mDark) && XPR_IS_FALSE(sPalette.mHighContrast))
+        fxfile::ui::ModernUI::resetControlTheme(m_rbCtrl.m_hWnd);
+    else
+        fxfile::ui::ModernUI::applyExplorerControlTheme(m_rbCtrl.m_hWnd);
 
     const COLORREF sBackColor =
         XPR_IS_TRUE(sPalette.mHighContrast) ?
         ::GetSysColor(COLOR_BTNFACE) :
-        sPalette.mSurface;
+        sPalette.mChrome;
     const COLORREF sTextColor =
         XPR_IS_TRUE(sPalette.mHighContrast) ?
         ::GetSysColor(COLOR_BTNTEXT) :
