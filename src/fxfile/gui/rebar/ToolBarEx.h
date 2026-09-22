@@ -113,6 +113,7 @@ public:
 // Implementation
 protected:
     void ReloadButtons();
+    virtual void OnImageListsReloaded();
     void ApplyModernMetrics();
     void ApplyModernAppearance();
     BOOL GetButtonInfo( UINT nID, TBBUTTON& tbinfo );

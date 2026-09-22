@@ -168,6 +168,13 @@ CToolBarEx::CToolBarEx()
     m_nIconType = TBI_SMALL;
     m_nTextTypeDefault = TBT_RIGHT;
     m_nIconTypeDefault = TBI_SMALL;
+
+    m_nIDSmallCold = (UINT)-1;
+    m_nIDSmallHot = (UINT)-1;
+    m_nIDSmallDisabled = (UINT)-1;
+    m_nIDLargeCold = (UINT)-1;
+    m_nIDLargeHot = (UINT)-1;
+    m_nIDLargeDisabled = (UINT)-1;
 }
 
 CToolBarEx::~CToolBarEx()
@@ -334,6 +341,8 @@ void CToolBarEx::SetIconType( int nIconType, bool bUpdate /*=true*/ )
         tbCtrl.SetDisabledImageList( &m_imageListDisabled );
     }
 
+    OnImageListsReloaded();
+
     // If requested, reflect changes immediately
     if ( bUpdate )
     {
@@ -482,6 +491,14 @@ LRESULT CToolBarEx::WindowProc( UINT message, WPARAM wParam, LPARAM lParam )
             {
                 ApplyModernMetrics();
                 ApplyModernAppearance();
+
+                const UINT sColdImageListId =
+                    (m_nIconType == TBI_SMALL) ?
+                    m_nIDSmallCold :
+                    m_nIDLargeCold;
+                if (sColdImageListId != (UINT)-1)
+                    SetIconType(m_nIconType, false);
+
                 UpdateToolbarSize();
                 break;
             }
@@ -579,6 +596,10 @@ bool CToolBarEx::IsIconTypeAvailable( int /*nIconType*/ ) const
 
 /////////////////////////////////////////////////////////////////////////////
 // Implementation
+
+void CToolBarEx::OnImageListsReloaded()
+{
+}
 
 void CToolBarEx::ReloadButtons()
 {
