@@ -1445,6 +1445,42 @@ def validate_functional_test_wiring() -> list[str]:
     return errors
 
 
+def validate_local_ci_warning_policy_wiring() -> list[str]:
+    """Protect error-focused local-CI logging and warning-policy diagnostics."""
+
+    errors: list[str] = []
+    local_ci_path = ROOT / "local_ci.bat"
+
+    try:
+        local_ci = local_ci_path.read_text(encoding="utf-8", errors="replace")
+    except OSError as exc:
+        return [f"local_ci.bat: cannot read warning-policy wiring: {exc}"]
+
+    required_tokens = (
+        '"/consoleloggerparameters:NoSummary"',
+        '"/flp1:logfile=%MSBUILD_ERROR_LOG%;errorsonly"',
+        '"/flp2:logfile=%MSBUILD_RAW_LOG%;verbosity=normal"',
+        "'ERROR: warning policy violation: ' + $_.Trim()",
+        "[System.IO.File]::WriteAllLines($env:MSBUILD_ERROR_LOG, $warnings, $utf8)",
+    )
+    for token in required_tokens:
+        if token not in local_ci:
+            errors.append(f"local_ci.bat: missing warning-policy logging token {token}")
+
+    if "$lines ^| Where-Object" in local_ci or "} ^| ForEach-Object" in local_ci:
+        errors.append(
+            "local_ci.bat: PowerShell warning extractor contains cmd caret-escaped pipes "
+            "inside a quoted -Command; use raw '|' so diagnostics can be extracted"
+        )
+
+    if "$lines | Where-Object" not in local_ci or "} | ForEach-Object" not in local_ci:
+        errors.append(
+            "local_ci.bat: warning-policy diagnostic pipeline is not wired with PowerShell pipes"
+        )
+
+    return errors
+
+
 def validate_installer_smoke_wiring() -> list[str]:
     """Protect the non-destructive installer/shell smoke contract."""
 
@@ -1548,6 +1584,7 @@ def main() -> int:
     errors.extend(validate_popup_menu_contract())
     errors.extend(validate_ui_resource_contracts())
     errors.extend(validate_functional_test_wiring())
+    errors.extend(validate_local_ci_warning_policy_wiring())
     errors.extend(validate_installer_smoke_wiring())
     errors.extend(validate_modern_ui_registration())
 
