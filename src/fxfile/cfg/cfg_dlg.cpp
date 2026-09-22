@@ -25,6 +25,191 @@ namespace
 {
 const UINT_PTR kModernGroupBoxSubclassId = 0x46474342; // 'FGCB'
 
+const UINT_PTR kModernCfgComboSubclassId = 0x46474343; // 'FGCC'
+
+void DrawModernCfgCombo(HWND aHwnd)
+{
+    if (XPR_IS_NULL(aHwnd) || ::IsWindow(aHwnd) == FALSE)
+        return;
+
+    const LONG_PTR sStyle = ::GetWindowLongPtr(aHwnd, GWL_STYLE);
+    if ((sStyle & CBS_DROPDOWNLIST) != CBS_DROPDOWNLIST)
+        return;
+
+    const ui::ThemePalette sPalette = ui::ModernUI::getPalette();
+    if (XPR_IS_TRUE(sPalette.mHighContrast) || XPR_IS_FALSE(sPalette.mDark))
+        return;
+
+    COMBOBOXINFO sComboInfo = {0};
+    sComboInfo.cbSize = sizeof(COMBOBOXINFO);
+    if (::GetComboBoxInfo(aHwnd, &sComboInfo) == FALSE)
+        return;
+
+    HDC sDC = ::GetDC(aHwnd);
+    if (XPR_IS_NULL(sDC))
+        return;
+
+    RECT sClientRect = {0};
+    ::GetClientRect(aHwnd, &sClientRect);
+
+    const xpr_bool_t sEnabled =
+        ::IsWindowEnabled(aHwnd) != FALSE ? XPR_TRUE : XPR_FALSE;
+    const xpr_bool_t sFocused =
+        ::GetFocus() == aHwnd ? XPR_TRUE : XPR_FALSE;
+    const xpr_bool_t sDropped =
+        ::SendMessage(aHwnd, CB_GETDROPPEDSTATE, 0, 0) != FALSE ?
+        XPR_TRUE : XPR_FALSE;
+
+    POINT sCursor = {0};
+    xpr_bool_t sHotButton = XPR_FALSE;
+    if (::GetCursorPos(&sCursor) != FALSE &&
+        ::ScreenToClient(aHwnd, &sCursor) != FALSE &&
+        ::PtInRect(&sComboInfo.rcButton, sCursor) != FALSE)
+    {
+        sHotButton = XPR_TRUE;
+    }
+
+    COLORREF sFieldColor =
+        XPR_IS_TRUE(sEnabled) ? sPalette.mElevated : sPalette.mCard;
+    COLORREF sTextColor =
+        XPR_IS_TRUE(sEnabled) ? sPalette.mText : sPalette.mSecondaryText;
+    COLORREF sButtonColor = sFieldColor;
+    if (XPR_IS_TRUE(sDropped))
+        sButtonColor = sPalette.mPressed;
+    else if (XPR_IS_TRUE(sHotButton) && XPR_IS_TRUE(sEnabled))
+        sButtonColor = sPalette.mHover;
+
+    ::SetDCBrushColor(sDC, sFieldColor);
+    ::FillRect(
+        sDC,
+        &sClientRect,
+        static_cast<HBRUSH>(::GetStockObject(DC_BRUSH)));
+
+    RECT sTextRect = sComboInfo.rcItem;
+    const xpr_sint_t sTextMargin =
+        ui::ModernUI::getAddressTextMargin(aHwnd);
+    sTextRect.left += sTextMargin;
+    sTextRect.right -= sTextMargin;
+
+    xpr_tchar_t sText[256] = {0};
+    ::GetWindowText(aHwnd, sText, XPR_COUNT_OF(sText));
+
+    HFONT sFont = reinterpret_cast<HFONT>(
+        ::SendMessage(aHwnd, WM_GETFONT, 0, 0));
+    HGDIOBJ sOldFont = XPR_NULL;
+    if (XPR_IS_NOT_NULL(sFont))
+        sOldFont = ::SelectObject(sDC, sFont);
+
+    ::SetBkMode(sDC, TRANSPARENT);
+    ::SetTextColor(sDC, sTextColor);
+    ::DrawText(
+        sDC,
+        sText,
+        -1,
+        &sTextRect,
+        DT_LEFT | DT_VCENTER | DT_SINGLELINE | DT_END_ELLIPSIS);
+
+    if (XPR_IS_NOT_NULL(sOldFont))
+        ::SelectObject(sDC, sOldFont);
+
+    ::SetDCBrushColor(sDC, sButtonColor);
+    ::FillRect(
+        sDC,
+        &sComboInfo.rcButton,
+        static_cast<HBRUSH>(::GetStockObject(DC_BRUSH)));
+
+    RECT sSeparatorRect = sComboInfo.rcButton;
+    sSeparatorRect.right =
+        sSeparatorRect.left +
+        max(1, ui::ModernUI::scaleForWindow(1, aHwnd));
+    ::SetDCBrushColor(sDC, sPalette.mSeparator);
+    ::FillRect(
+        sDC,
+        &sSeparatorRect,
+        static_cast<HBRUSH>(::GetStockObject(DC_BRUSH)));
+
+    const xpr_sint_t sCenterX =
+        (sComboInfo.rcButton.left + sComboInfo.rcButton.right) / 2;
+    const xpr_sint_t sCenterY =
+        (sComboInfo.rcButton.top + sComboInfo.rcButton.bottom) / 2;
+    const xpr_sint_t sHalfWidth =
+        max(2, ui::ModernUI::scaleForWindow(3, aHwnd));
+    const xpr_sint_t sOffset =
+        max(1, ui::ModernUI::scaleForWindow(2, aHwnd));
+
+    HPEN sArrowPen = ::CreatePen(PS_SOLID, 1, sTextColor);
+    if (XPR_IS_NOT_NULL(sArrowPen))
+    {
+        HGDIOBJ sOldPen = ::SelectObject(sDC, sArrowPen);
+        ::MoveToEx(sDC, sCenterX - sHalfWidth, sCenterY - sOffset, XPR_NULL);
+        ::LineTo(sDC, sCenterX, sCenterY + sOffset);
+        ::LineTo(sDC, sCenterX + sHalfWidth, sCenterY - sOffset);
+        ::SelectObject(sDC, sOldPen);
+        ::DeleteObject(sArrowPen);
+    }
+
+    const COLORREF sBorderColor =
+        XPR_IS_TRUE(sFocused) ? sPalette.mFocus : sPalette.mBorder;
+    ::SetDCBrushColor(sDC, sBorderColor);
+    ::FrameRect(
+        sDC,
+        &sClientRect,
+        static_cast<HBRUSH>(::GetStockObject(DC_BRUSH)));
+
+    ::ReleaseDC(aHwnd, sDC);
+}
+
+LRESULT CALLBACK ModernCfgComboSubclassProc(
+    HWND aHwnd,
+    UINT aMessage,
+    WPARAM aWParam,
+    LPARAM aLParam,
+    UINT_PTR aSubclassId,
+    DWORD_PTR)
+{
+    switch (aMessage)
+    {
+        case WM_PAINT:
+        {
+            const LRESULT sResult =
+                ::DefSubclassProc(aHwnd, aMessage, aWParam, aLParam);
+            DrawModernCfgCombo(aHwnd);
+            return sResult;
+        }
+
+        case WM_MOUSEMOVE:
+        {
+            TRACKMOUSEEVENT sTrack = {0};
+            sTrack.cbSize = sizeof(sTrack);
+            sTrack.dwFlags = TME_LEAVE;
+            sTrack.hwndTrack = aHwnd;
+            ::TrackMouseEvent(&sTrack);
+            ::InvalidateRect(aHwnd, XPR_NULL, FALSE);
+            break;
+        }
+
+        case WM_MOUSELEAVE:
+        case WM_LBUTTONDOWN:
+        case WM_LBUTTONUP:
+        case WM_ENABLE:
+        case WM_SETFOCUS:
+        case WM_KILLFOCUS:
+        case CB_SHOWDROPDOWN:
+            ::InvalidateRect(aHwnd, XPR_NULL, FALSE);
+            break;
+
+        case WM_NCDESTROY:
+            ::RemoveWindowSubclass(
+                aHwnd,
+                ModernCfgComboSubclassProc,
+                aSubclassId);
+            break;
+    }
+
+    return ::DefSubclassProc(aHwnd, aMessage, aWParam, aLParam);
+}
+
+
 LRESULT CALLBACK ModernGroupBoxSubclassProc(
     HWND aHwnd,
     UINT aMessage,
@@ -227,6 +412,20 @@ void CfgDlg::applyModernAppearanceToChild(CWnd *aWnd, HFONT aPreviousFont)
 
     if (XPR_IS_TRUE(sExplorerThemeControl))
         ui::ModernUI::applyExplorerControlTheme(aWnd->GetSafeHwnd());
+
+    if (_tcsicmp(sClassName, XPR_STRING_LITERAL("ComboBox")) == 0)
+    {
+        const LONG_PTR sStyle =
+            ::GetWindowLongPtr(aWnd->GetSafeHwnd(), GWL_STYLE);
+        if ((sStyle & CBS_DROPDOWNLIST) == CBS_DROPDOWNLIST)
+        {
+            ::SetWindowSubclass(
+                aWnd->GetSafeHwnd(),
+                ModernCfgComboSubclassProc,
+                kModernCfgComboSubclassId,
+                0);
+        }
+    }
 
     if (_tcsicmp(sClassName, XPR_STRING_LITERAL("Button")) == 0)
     {
