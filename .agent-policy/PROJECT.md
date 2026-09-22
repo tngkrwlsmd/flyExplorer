@@ -77,7 +77,7 @@
     }
   ],
   "review": {
-    "reviewed_revision": "d89527602c5a55ae70e666e3b3d1857136dc2f5a",
+    "reviewed_revision": "8b8aea4c0db16b75fc80d4a3516b4cc9c788f914",
     "reviewed_at": "2026-09-21",
     "reviewed_paths": [
       "README",
@@ -201,7 +201,13 @@
 - Explorer file list/header dark-styling 단위에서 ModernUI ThemePalette는 Windows Runtime UISettings의 documented foreground/background color signal을 사용해 사용자 app light/dark preference를 반영한다. High Contrast에서는 기존 system-color palette를 유지하고, WinRT activation/color query가 실패하면 기존 system-color 기반 palette로 fallback한다.
 - ExplorerCtrl의 thumbnail/custom-draw 경로는 selection, inactive selection, surface, border, text를 ThemePalette에서 가져오며, image-list background는 실제 list background와 동기화한다. FlatHeaderCtrl은 기존 ThemePalette custom draw를 유지해 list/header가 동일 palette contract를 공유한다.
 - Explorer file list/header dark-styling은 source-invariant, Debug/Release x64, x86 Unicode/Multibyte compile/link, warning rejection, hosted launch smoke, package regression을 branch CI에서 통과했다. 실제 Windows light/dark 전환 visual, selection/focus contrast, High Contrast visual, 100/125/150/200% DPI visual은 아직 수동 검증하지 않았다.
-- file list/header dark-specific styling은 완료되었다. folder tree dark styling, AddressBar/edit/combo dark styling, auxiliary common controls, menu/rebar dark rendering, 나머지 dialog/icon asset 현대화는 후속 phase 범위다.
+- file list/header dark-specific styling은 완료되었다.
+- Folder Tree 1-D2 dark-specific styling을 완료했다. TreeCtrlEx는 기존 enableVistaEnhanced semantics를 유지하면서 theme/High Contrast 전환 때 Explorer association을 재적용하는 generic refresh helper를 제공한다. FolderCtrl은 기존 NM_CUSTOMDRAW ownership을 유지하고 dark mode에서만 ThemePalette의 mSelection/mSelectionText/mHover/mText로 focused selection, inactive selection, hot/default item colors를 보정한다. Light와 High Contrast는 native TreeView state rendering을 유지하며 glyph, tree line geometry, keyboard focus rectangle은 custom drawing하지 않는다.
+- FolderCtrl은 High Contrast 동안 background/text/line을 system palette/CLR_DEFAULT로 강제하고 HC 해제 후 기존 custom folder-tree color 설정으로 복귀한다. 기존 inactive-highlight user option은 Light/Dark에서 유지하고 High Contrast에서는 custom outline을 억제한다.
+- Folder Tree image-list background는 attach 시점과 theme/settings refresh 시 실제 TreeView background와 동기화하며, focus gain/loss 시 selected row를 다시 그려 focused/unfocused dark selection 상태가 즉시 갱신되도록 했다. theme/settings/system-color/DPI 변경은 existing applyModernAppearance 경로에서 theme association -> palette/color/metrics -> image-list -> redraw 순서로 갱신된다.
+- 1-D2 변경 범위 정적 대조는 PASS: 변경 파일은 src/fxfile/gui/TreeCtrlEx.h/.cpp와 src/fxfile/folder_ctrl.cpp뿐이며 ModernUI direct include/helper contract, direct SetWindowTheme 금지, native glyph preservation, image-list sync, theme/settings/DPI refresh tokens를 확인했다. 이 실행 환경은 Windows/MSVC와 repository clone network가 없어 local_ci.bat quick 및 local_ci.bat x64는 실행하지 못했으므로 NOT TESTED다.
+- 1-D2 실제 Windows visual/interactive 검증은 NOT TESTED: Light/Dark/High Contrast, 100/125/150/200% DPI, focused/unfocused selection, hover, native expand/collapse glyph, tree line, icon halo, rename/navigation/drag-drop/context-menu 동작을 실제 화면에서 확인해야 한다.
+- 다음 UI 현대화 단위는 1-D3 AddressBar/Edit/Combo dark-specific styling이다. auxiliary common controls, menu/rebar dark rendering, 나머지 dialog/icon asset 현대화는 후속 phase 범위다.
 
 ## Recommended verification
 
