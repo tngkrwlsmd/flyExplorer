@@ -8,6 +8,7 @@ It does not replace compilation.
 
 from __future__ import annotations
 
+import json
 import re
 import subprocess
 import sys
@@ -1105,27 +1106,10 @@ def validate_fluent_asset_contract() -> list[str]:
     main_toolbar_header_path = FXFILE_SRC / "main_toolbar.h"
     toolbar_cpp_path = FXFILE_SRC / "gui" / "rebar" / "ToolBarEx.cpp"
     toolbar_header_path = FXFILE_SRC / "gui" / "rebar" / "ToolBarEx.h"
+    fluent_icon_cpp_path = FXFILE_SRC / "gui" / "FluentCommandIcons.cpp"
+    fluent_icon_header_path = FXFILE_SRC / "gui" / "FluentCommandIcons.h"
+    bc_menu_path = FXFILE_SRC / "gui" / "BCMenu.cpp"
 
-    representative_assets = (
-        "ic_fluent_arrow_left_16_regular.svg",
-        "ic_fluent_arrow_left_20_regular.svg",
-        "ic_fluent_arrow_right_16_regular.svg",
-        "ic_fluent_arrow_right_20_regular.svg",
-        "ic_fluent_arrow_up_16_regular.svg",
-        "ic_fluent_arrow_up_20_regular.svg",
-        "ic_fluent_search_16_regular.svg",
-        "ic_fluent_search_20_regular.svg",
-        "ic_fluent_cut_16_regular.svg",
-        "ic_fluent_cut_20_regular.svg",
-        "ic_fluent_copy_16_regular.svg",
-        "ic_fluent_copy_20_regular.svg",
-        "ic_fluent_clipboard_paste_16_regular.svg",
-        "ic_fluent_clipboard_paste_20_regular.svg",
-        "ic_fluent_folder_add_16_regular.svg",
-        "ic_fluent_folder_add_20_regular.svg",
-        "ic_fluent_settings_16_regular.svg",
-        "ic_fluent_settings_20_regular.svg",
-    )
     generated_assets = (
         "generated_toolbar_masks_small.inc",
         "generated_toolbar_masks_large.inc",
@@ -1146,8 +1130,34 @@ def validate_fluent_asset_contract() -> list[str]:
         toolbar_header = toolbar_header_path.read_text(
             encoding="utf-8", errors="replace"
         )
+        fluent_icon_cpp = fluent_icon_cpp_path.read_text(
+            encoding="utf-8", errors="replace"
+        )
+        fluent_icon_header = fluent_icon_header_path.read_text(
+            encoding="utf-8", errors="replace"
+        )
+        bc_menu = bc_menu_path.read_text(encoding="utf-8", errors="replace")
     except OSError as exc:
         return [f"Fluent toolbar contract cannot be read: {exc}"]
+
+    try:
+        manifest_data = json.loads(manifest)
+    except json.JSONDecodeError as exc:
+        return [f"src/fxfile/res/fluent/toolbar_manifest.json: invalid JSON: {exc}"]
+
+    manifest_commands = manifest_data.get("commands", [])
+    if not isinstance(manifest_commands, list):
+        return ["src/fxfile/res/fluent/toolbar_manifest.json: commands must be a list"]
+
+    runtime_assets = sorted(
+        {
+            item[key]
+            for item in manifest_commands
+            if isinstance(item, dict)
+            for key in ("small_svg", "large_svg")
+            if isinstance(item.get(key), str)
+        }
+    )
 
     for token in (
         "MIT License",
@@ -1171,7 +1181,7 @@ def validate_fluent_asset_contract() -> list[str]:
                 f"src/fxfile/res/fluent/README.md: missing runtime pipeline token {token}"
             )
 
-    for asset_name in representative_assets:
+    for asset_name in runtime_assets:
         asset_path = fluent_dir / asset_name
         try:
             svg = asset_path.read_text(encoding="utf-8", errors="replace")
@@ -1217,11 +1227,52 @@ def validate_fluent_asset_contract() -> list[str]:
         '"small": "generated_toolbar_masks_small.inc"',
         '"large": "generated_toolbar_masks_large.inc"',
         '"frame": 0',
-        '"frame": 38',
+        '"frame": 43',
     ):
         if token not in manifest:
             errors.append(
                 f"src/fxfile/res/fluent/toolbar_manifest.json: missing token {token}"
+            )
+
+    if len(manifest_commands) != 23:
+        errors.append(
+            "src/fxfile/res/fluent/toolbar_manifest.json: "
+            f"expected 23 runtime Fluent commands, found {len(manifest_commands)}"
+        )
+
+    default_visible_commands = (
+        "ID_GO_BACK",
+        "ID_GO_FORWARD",
+        "ID_GO_UP",
+        "ID_VIEW_FOLDER_TREE_SHOW",
+        "ID_TOOL_FILE_SEARCH",
+        "ID_GO_BOOKMARK",
+        "ID_GO_DRIVE",
+        "ID_GO_WORKING_FOLDER",
+        "ID_EDIT_CUT",
+        "ID_EDIT_COPY",
+        "ID_EDIT_PASTE",
+        "ID_FILE_RENAME",
+        "ID_FILE_DELETE",
+        "ID_EDIT_UNDO",
+        "ID_FILE_PROPERTY",
+        "ID_VIEW_STYLE",
+        "ID_WINDOW_SPLIT",
+        "ID_FILE_NEW_FOLDER",
+        "ID_TOOL_CMD",
+        "ID_TOOL_EMPTY_RECYCLEBIN",
+        "ID_APP_ABOUT",
+    )
+    manifest_command_names = {
+        item.get("command")
+        for item in manifest_commands
+        if isinstance(item, dict)
+    }
+    for command in default_visible_commands:
+        if command not in manifest_command_names:
+            errors.append(
+                "src/fxfile/res/fluent/toolbar_manifest.json: "
+                f"default-visible toolbar command is not Fluent-mapped: {command}"
             )
 
     for token in (
@@ -1245,23 +1296,16 @@ def validate_fluent_asset_contract() -> list[str]:
                 f"network dependency is forbidden ({forbidden})"
             )
 
-    mapping_contract = (
-        ("0", "ID_GO_BACK", "Arrow Left 20 Regular"),
-        ("1", "ID_GO_FORWARD", "Arrow Right 20 Regular"),
-        ("2", "ID_GO_UP", "Arrow Up 20 Regular"),
-        ("8", "ID_TOOL_FILE_SEARCH", "Search 20 Regular"),
-        ("12", "ID_EDIT_CUT", "Cut 20 Regular"),
-        ("13", "ID_EDIT_COPY", "Copy 20 Regular"),
-        ("14", "ID_EDIT_PASTE", "Clipboard Paste 20 Regular"),
-        ("37", "ID_FILE_NEW_FOLDER", "Folder Add 20 Regular"),
-        ("38", "ID_TOOL_OPTION", "Settings 20 Regular"),
-    )
     mapping_lines = mapping.splitlines()
-    for frame, command, fluent_name in mapping_contract:
+    for item in manifest_commands:
+        if not isinstance(item, dict):
+            errors.append("src/fxfile/res/fluent/toolbar_manifest.json: invalid command entry")
+            continue
+        frame = item.get("frame")
+        command = item.get("command")
         expected_tokens = (
             f"| {frame} |",
-            command,
-            fluent_name,
+            str(command),
             "runtime Fluent mask",
         )
         if not any(
@@ -1270,7 +1314,7 @@ def validate_fluent_asset_contract() -> list[str]:
         ):
             errors.append(
                 "src/fxfile/res/fluent/COMMAND_ICON_MAP.md: "
-                f"missing runtime mapping {frame}/{command}/{fluent_name}"
+                f"missing runtime mapping {frame}/{command}"
             )
 
     for token in (
@@ -1286,18 +1330,72 @@ def validate_fluent_asset_contract() -> list[str]:
 
     for token in (
         '#include "gui/ModernUI.h"',
-        "kFluentToolbarFrames[] = {",
-        "0, 1, 2, 8, 12, 13, 14, 37, 38",
-        "generated_toolbar_masks_small.inc",
-        "generated_toolbar_masks_large.inc",
-        "createFluentToolbarIcon",
-        "replaceFluentToolbarFrame",
+        '#include "gui/FluentCommandIcons.h"',
+        "kFluentToolbarFrames[] =",
+        "ui::FluentCommandIcons::createIcon",
         "m_imageListCold",
         "m_imageListHot",
         "sPalette.mText",
     ):
         if token not in main_toolbar:
             errors.append(f"src/fxfile/main_toolbar.cpp: missing Fluent runtime token {token}")
+
+    for item in manifest_commands:
+        if not isinstance(item, dict):
+            continue
+        frame = item.get("frame")
+        command = item.get("command")
+        frame_token = f"{{ {int(frame):2d}, {command} }}" if isinstance(frame, int) else ""
+        compact_token = f"{{ {frame}, {command} }}"
+        if frame_token not in main_toolbar and compact_token not in main_toolbar:
+            errors.append(
+                "src/fxfile/main_toolbar.cpp: "
+                f"missing Fluent frame wiring {frame}/{command}"
+            )
+        if str(command) not in fluent_icon_cpp:
+            errors.append(
+                "src/fxfile/gui/FluentCommandIcons.cpp: "
+                f"missing command registry entry {command}"
+            )
+
+    for token in (
+        "generated_toolbar_masks_small.inc",
+        "generated_toolbar_masks_large.inc",
+        "FluentCommandIcons::hasCommand",
+        "FluentCommandIcons::createIcon",
+        "kCommandIds[]",
+    ):
+        if token not in fluent_icon_cpp:
+            errors.append(
+                f"src/fxfile/gui/FluentCommandIcons.cpp: missing shared icon token {token}"
+            )
+
+    for token in (
+        "class FluentCommandIcons",
+        "static xpr_bool_t hasCommand",
+        "static HICON createIcon",
+    ):
+        if token not in fluent_icon_header:
+            errors.append(
+                f"src/fxfile/gui/FluentCommandIcons.h: missing shared icon contract {token}"
+            )
+
+    for token in (
+        "FluentCommandIcons::hasCommand",
+        "FluentCommandIcons::createIcon",
+        "drawIcon(sDC, sItemRect, sItemState, sMenuItemId, XPR_NULL)",
+    ):
+        if token not in bc_menu:
+            errors.append(
+                f"src/fxfile/gui/BCMenu.cpp: missing Fluent menu icon preference {token}"
+            )
+
+    for token in (
+        "./gui/FluentCommandIcons.cpp",
+        "./gui/FluentCommandIcons.h",
+    ):
+        if token not in gyp:
+            errors.append(f"src/fxfile/fxfile.gyp: missing shared Fluent icon source {token}")
 
     if "virtual void OnImageListsReloaded();" not in main_toolbar_header:
         errors.append(
