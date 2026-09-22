@@ -989,120 +989,94 @@ void BCMenu::DrawItemWindows8Style(LPDRAWITEMSTRUCT aDrawItemStruct)
     UINT        sItemState  = aDrawItemStruct->itemState;
 
     const fxfile::ui::ThemePalette sPalette = fxfile::ui::ModernUI::getPalette();
-    const xpr_bool_t sUseDarkPalette =
-        XPR_IS_TRUE(sPalette.mDark) && XPR_IS_FALSE(sPalette.mHighContrast);
 
-    COLORREF sBkgndColor = XPR_IS_TRUE(sUseDarkPalette) ?
-        sPalette.mSurface :
-        CalculateColor(GetSysColor(COLOR_MENU), GetSysColor(COLOR_3DFACE), 240);
-    COLORREF sLineColor = XPR_IS_TRUE(sUseDarkPalette) ?
-        sPalette.mSeparator :
-        CalculateColor(GetSysColor(COLOR_MENU), GetSysColor(COLOR_3DSHADOW), 200);
+    // High Contrast must retain the system-owned visual contract. The normal
+    // Light/Dark path is a single neutral popup surface like Windows 11:
+    // no icon-gutter gradient, no etched separator and no 3D selection box.
+    if (XPR_IS_TRUE(sPalette.mHighContrast))
+    {
+        DrawItemStandardStyle(aDrawItemStruct);
+        return;
+    }
 
-    CPen sPen(PS_SOLID, 1, sLineColor);
-    CPen *sOldPen = (CPen *)sDC->SelectObject(&sPen);
-
-    // draw background
-    sDC->FillSolidRect(sItemRect, sBkgndColor);
+    sDC->FillSolidRect(sItemRect, sPalette.mSurface);
 
     if (sFlags & MF_SEPARATOR)
     {
-        // draw seperator
         drawSeperator(sDC, sItemRect);
-    }
-    else
-    {
-        CString     sText      = sMenuData->GetString();
-        CString     sAccelKey  = sMenuData->strAccelKey;
-        int         sIconIndex = sMenuData->menuIconNormal;
-        CImageList *sImageList = sMenuData->bitmap;
-
-        // draw selection
-        drawSelection(sDC, sItemRect, sItemState);
-
-        // draw icon
-        if (sIconIndex >= 0 && sImageList != NULL)
-        {
-            drawIcon(sDC, sItemRect, sImageList);
-        }
-
-        // draw check or radio mark
-        if (sIconIndex < 0 && sItemState & ODS_CHECKED)
-        {
-            drawCheckOrRadioMark(sDC, sItemRect, sItemState, sMenuItem, sMenuItemId);
-        }
-
-        // draw text
-        drawText(sDC, sItemRect, sItemState, sText, sAccelKey);
+        return;
     }
 
-    sDC->SelectObject(sOldPen);
+    CString     sText      = sMenuData->GetString();
+    CString     sAccelKey  = sMenuData->strAccelKey;
+    int         sIconIndex = sMenuData->menuIconNormal;
+    CImageList *sImageList = sMenuData->bitmap;
+
+    drawSelection(sDC, sItemRect, sItemState);
+
+    if (sIconIndex >= 0 && sImageList != NULL)
+        drawIcon(sDC, sItemRect, sImageList);
+
+    if (sIconIndex < 0 && (sItemState & ODS_CHECKED))
+        drawCheckOrRadioMark(sDC, sItemRect, sItemState, sMenuItem, sMenuItemId);
+
+    drawText(sDC, sItemRect, sItemState, sText, sAccelKey);
 }
 
 void BCMenu::drawSeperator(CDC *aDC, const CRect &aItemRect)
 {
     ASSERT(aDC != NULL);
 
-    CPoint sVertPoint1(aItemRect.left + m_nIconX + ICON_OFFSET_X2, aItemRect.top);
-    CPoint sVertPoint2(aItemRect.left + m_nIconX + ICON_OFFSET_X2, aItemRect.bottom);
-    aDC->MoveTo(sVertPoint1);
-    aDC->LineTo(sVertPoint2);
+    CWnd *sMainWnd = AfxGetMainWnd();
+    HWND sMetricHwnd =
+        XPR_IS_NOT_NULL(sMainWnd) ?
+        sMainWnd->GetSafeHwnd() :
+        ::GetDesktopWindow();
 
-    CPoint sHorzPoint1(aItemRect.left + m_nIconX + ICON_OFFSET_X2 + GAP, aItemRect.top + (aItemRect.Height() / 2));
-    CPoint sHorzPoint2(aItemRect.right, aItemRect.top + (aItemRect.Height() / 2));
-    aDC->MoveTo(sHorzPoint1);
-    aDC->LineTo(sHorzPoint2);
+    const fxfile::ui::ThemePalette sPalette = fxfile::ui::ModernUI::getPalette();
+    const xpr_sint_t sInset =
+        fxfile::ui::ModernUI::getPopupSeparatorInset(sMetricHwnd);
+
+    const xpr_sint_t sY = aItemRect.top + (aItemRect.Height() / 2);
+    CPen sPen(PS_SOLID, 1, sPalette.mSeparator);
+    CPen *sOldPen = aDC->SelectObject(&sPen);
+
+    aDC->MoveTo(aItemRect.left + sInset, sY);
+    aDC->LineTo(max(aItemRect.left + sInset, aItemRect.right - sInset), sY);
+
+    aDC->SelectObject(sOldPen);
 }
 
 void BCMenu::drawSelection(CDC *aDC, const CRect &aItemRect, UINT aItemState)
 {
     ASSERT(aDC != NULL);
 
+    if ((aItemState & ODS_SELECTED) == 0)
+        return;
+
     const fxfile::ui::ThemePalette sPalette = fxfile::ui::ModernUI::getPalette();
-    const xpr_bool_t sUseDarkPalette =
-        XPR_IS_TRUE(sPalette.mDark) && XPR_IS_FALSE(sPalette.mHighContrast);
 
-    if (aItemState & ODS_SELECTED)
+    CRect sSelectionRect(aItemRect);
+    sSelectionRect.DeflateRect(2, 1, 2, 1);
+
+    // Windows 11 popup menus use a subtle hover surface rather than the
+    // classic full-strength highlight rectangle. Disabled rows keep the same
+    // geometry so keyboard/mouse tracking does not jump visually.
+    aDC->FillSolidRect(
+        &sSelectionRect,
+        (aItemState & ODS_GRAYED) ?
+        sPalette.mSurface :
+        sPalette.mHover);
+
+    if ((aItemState & ODS_FOCUS) != 0)
     {
-        COLORREF sBoxLineColor;
-        COLORREF sBoxColor;
-
-        if (XPR_IS_TRUE(sUseDarkPalette))
-        {
-            sBoxLineColor = sPalette.mBorder;
-            sBoxColor =
-                (aItemState & ODS_GRAYED) ?
-                sPalette.mSurface :
-                sPalette.mSelection;
-        }
-        else if ((aItemState & ODS_GRAYED) != ODS_GRAYED)
-        {
-            sBoxLineColor = CalculateColor(GetSysColor(COLOR_MENU), GetSysColor(COLOR_HIGHLIGHT), 100);
-            sBoxColor = CalculateColor(GetSysColor(COLOR_MENU), GetSysColor(COLOR_HIGHLIGHT), 220);
-        }
-        else
-        {
-            sBoxLineColor = CalculateColor(GetSysColor(COLOR_MENU), GetSysColor(COLOR_BTNSHADOW), 100);
-            sBoxColor = CalculateColor(GetSysColor(COLOR_MENU), GetSysColor(COLOR_BTNSHADOW), 220);
-        }
-
-        CRect sBoxRect(aItemRect);
-        aDC->FillSolidRect(sBoxRect, sBoxLineColor);
-
-        sBoxRect.DeflateRect(1, 1, 1, 1);
-        aDC->FillSolidRect(sBoxRect, sBoxColor);
-
-        CPoint sVertPoint1(aItemRect.left + m_nIconX + ICON_OFFSET_X2, aItemRect.top    + 1);
-        CPoint sVertPoint2(aItemRect.left + m_nIconX + ICON_OFFSET_X2, aItemRect.bottom - 1);
-        aDC->MoveTo(sVertPoint1);
-        aDC->LineTo(sVertPoint2);
-    }
-    else
-    {
-        CPoint sVertPoint1(aItemRect.left + m_nIconX + ICON_OFFSET_X2, aItemRect.top);
-        CPoint sVertPoint2(aItemRect.left + m_nIconX + ICON_OFFSET_X2, aItemRect.bottom);
-        aDC->MoveTo(sVertPoint1);
-        aDC->LineTo(sVertPoint2);
+        CPen sFocusPen(PS_SOLID, 1, sPalette.mBorder);
+        CPen *sOldPen = aDC->SelectObject(&sFocusPen);
+        CBrush *sOldBrush =
+            (CBrush *)aDC->SelectStockObject(NULL_BRUSH);
+        aDC->Rectangle(&sSelectionRect);
+        aDC->SelectObject(sOldBrush);
+        aDC->SelectObject(sOldPen);
     }
 }
 
@@ -1111,99 +1085,173 @@ void BCMenu::drawIcon(CDC *aDC, const CRect &aItemRect, CImageList *aImageList)
     ASSERT(aDC != NULL);
     ASSERT(aImageList != NULL);
 
-    CPoint sIconPoint(aItemRect.left + ICON_OFFSET_X, aItemRect.top + ICON_OFFSET_Y);
+    if (aImageList->m_hImageList == NULL || aImageList->GetImageCount() <= 0)
+        return;
 
-    if (aImageList->m_hImageList != NULL && aImageList->GetImageCount() > 0)
+    CWnd *sMainWnd = AfxGetMainWnd();
+    HWND sMetricHwnd =
+        XPR_IS_NOT_NULL(sMainWnd) ?
+        sMainWnd->GetSafeHwnd() :
+        ::GetDesktopWindow();
+
+    const xpr_sint_t sGutter =
+        fxfile::ui::ModernUI::getPopupIconGutter(sMetricHwnd);
+    const xpr_sint_t sX =
+        aItemRect.left + max(0, (sGutter - m_nIconX) / 2);
+    const xpr_sint_t sY =
+        aItemRect.top + max(0, (aItemRect.Height() - m_nIconY) / 2);
+
+    HICON sIcon = aImageList->ExtractIcon(0);
+    if (sIcon != NULL)
     {
-        HICON sIcon = aImageList->ExtractIcon(0);
-        if (sIcon != NULL)
-        {
-            DrawIconEx(aDC->m_hDC, sIconPoint.x, sIconPoint.y, sIcon, 16, 16, 0, NULL, DI_NORMAL);
-
-            ::DestroyIcon(sIcon);
-            sIcon = NULL;
-        }
+        DrawIconEx(
+            aDC->m_hDC,
+            sX,
+            sY,
+            sIcon,
+            m_nIconX,
+            m_nIconY,
+            0,
+            NULL,
+            DI_NORMAL);
+        ::DestroyIcon(sIcon);
     }
 }
 
-void BCMenu::drawCheckOrRadioMark(CDC *aDC, const CRect &aItemRect, UINT aItemState, HMENU aMenuItem, UINT aMenuItemId)
+void BCMenu::drawCheckOrRadioMark(
+    CDC *aDC,
+    const CRect &aItemRect,
+    UINT aItemState,
+    HMENU aMenuItem,
+    UINT aMenuItemId)
 {
     ASSERT(aDC != NULL);
 
-    CRect sMarkRect(aItemRect.left + ICON_OFFSET_X, aItemRect.top + ICON_OFFSET_Y, aItemRect.left + ICON_OFFSET_X + m_nIconX, aItemRect.top + ICON_OFFSET_Y + m_nIconY);
-
     CMenuItemInfo sMenuItemInfo;
-    sMenuItemInfo.fMask = MIIM_CHECKMARKS;
-    ::GetMenuItemInfo((HMENU)aMenuItem, aMenuItemId, MF_BYCOMMAND, &sMenuItemInfo);
+    sMenuItemInfo.fMask = MIIM_FTYPE | MIIM_CHECKMARKS;
+    ::GetMenuItemInfo(
+        (HMENU)aMenuItem,
+        aMenuItemId,
+        MF_BYCOMMAND,
+        &sMenuItemInfo);
 
-    Draw3DCheckmark(aDC, sMarkRect, aItemState & ODS_SELECTED, sMenuItemInfo.hbmpChecked);
+    CWnd *sMainWnd = AfxGetMainWnd();
+    HWND sMetricHwnd =
+        XPR_IS_NOT_NULL(sMainWnd) ?
+        sMainWnd->GetSafeHwnd() :
+        ::GetDesktopWindow();
+
+    const xpr_sint_t sGutter =
+        fxfile::ui::ModernUI::getPopupIconGutter(sMetricHwnd);
+    const xpr_sint_t sGlyphWidth = 7;
+    const xpr_sint_t sGlyphHeight = 7;
+    const xpr_sint_t sX =
+        aItemRect.left + max(0, (sGutter - sGlyphWidth) / 2);
+    const xpr_sint_t sY =
+        aItemRect.top + max(0, (aItemRect.Height() - sGlyphHeight) / 2);
+
+    const fxfile::ui::ThemePalette sPalette = fxfile::ui::ModernUI::getPalette();
+    const COLORREF sGlyphColor =
+        (aItemState & ODS_GRAYED) ?
+        sPalette.mSecondaryText :
+        sPalette.mText;
+
+    if ((sMenuItemInfo.fType & MFT_RADIOCHECK) != 0)
+        DrawRadioDot(aDC, sX, sY, sGlyphColor);
+    else
+        DrawCheckMark(aDC, sX, sY, sGlyphColor);
 }
 
-void BCMenu::drawText(CDC *aDC, const CRect &aItemRect, UINT aItemState, const CString &aText, const CString &aAccelKey)
+void BCMenu::drawText(
+    CDC *aDC,
+    const CRect &aItemRect,
+    UINT aItemState,
+    const CString &aText,
+    const CString &aAccelKey)
 {
     ASSERT(aDC != NULL);
 
     if (aText.IsEmpty())
-    {
         return;
-    }
 
-    CRect sTextRect(aItemRect.left + m_nIconX + ICON_OFFSET_X2 + GAP + TEXT_OFFSET_X, aItemRect.top + 1, aItemRect.right, aItemRect.bottom);
-    if (aAccelKey.GetLength() > 0)
-    {
-        sTextRect.right -= m_nIconX;
-    }
-    else
-    {
-        sTextRect.right -= TEXT_OFFSET_X;
-    }
+    CWnd *sMainWnd = AfxGetMainWnd();
+    HWND sMetricHwnd =
+        XPR_IS_NOT_NULL(sMainWnd) ?
+        sMainWnd->GetSafeHwnd() :
+        ::GetDesktopWindow();
 
-    NONCLIENTMETRICS sNonClientMetrics = {0};
-    sNonClientMetrics.cbSize = sizeof(NONCLIENTMETRICS);
-    SystemParametersInfo(SPI_GETNONCLIENTMETRICS, sNonClientMetrics.cbSize, &sNonClientMetrics, 0); 
+    const xpr_sint_t sGutter =
+        fxfile::ui::ModernUI::getPopupIconGutter(sMetricHwnd);
+    const xpr_sint_t sPadding =
+        fxfile::ui::ModernUI::getPopupItemPadding(sMetricHwnd);
+    const xpr_sint_t sShortcutGap =
+        fxfile::ui::ModernUI::getPopupShortcutGap(sMetricHwnd);
 
+    CRect sTextRect(
+        aItemRect.left + sGutter + sPadding,
+        aItemRect.top,
+        aItemRect.right - sPadding,
+        aItemRect.bottom);
+
+    LOGFONT sLogFont = {0};
     CFont sFont;
-    sFont.CreateFontIndirect(&sNonClientMetrics.lfMenuFont);
-
-    int sOldMode = aDC->GetBkMode();
-
-    const fxfile::ui::ThemePalette sPalette = fxfile::ui::ModernUI::getPalette();
-    const xpr_bool_t sUseDarkPalette =
-        XPR_IS_TRUE(sPalette.mDark) && XPR_IS_FALSE(sPalette.mHighContrast);
-
-    COLORREF sTextColor;
-    if (XPR_IS_TRUE(sUseDarkPalette))
+    if (XPR_IS_TRUE(
+            fxfile::ui::ModernUI::getUIFont(
+                sLogFont,
+                sMetricHwnd)))
     {
-        if (aItemState & ODS_GRAYED)
-            sTextColor = sPalette.mSecondaryText;
-        else if (aItemState & ODS_SELECTED)
-            sTextColor = sPalette.mSelectionText;
-        else
-            sTextColor = sPalette.mText;
+        sFont.CreateFontIndirect(&sLogFont);
     }
     else
     {
-        sTextColor =
-            (aItemState & ODS_GRAYED) ?
-            GetSysColor(COLOR_3DSHADOW) :
-            GetSysColor(COLOR_MENUTEXT);
+        NONCLIENTMETRICS sNonClientMetrics = {0};
+        sNonClientMetrics.cbSize = sizeof(NONCLIENTMETRICS);
+        SystemParametersInfo(
+            SPI_GETNONCLIENTMETRICS,
+            sNonClientMetrics.cbSize,
+            &sNonClientMetrics,
+            0);
+        sFont.CreateFontIndirect(&sNonClientMetrics.lfMenuFont);
     }
 
     CFont *sOldFont = aDC->SelectObject(&sFont);
+    const int sOldMode = aDC->SetBkMode(TRANSPARENT);
 
-    aDC->SetBkMode(TRANSPARENT);
-    aDC->SetTextColor(sTextColor);
+    const fxfile::ui::ThemePalette sPalette = fxfile::ui::ModernUI::getPalette();
+    aDC->SetTextColor(
+        (aItemState & ODS_GRAYED) ?
+        sPalette.mSecondaryText :
+        sPalette.mText);
 
-    aDC->DrawText(aText, sTextRect, DT_LEFT | DT_SINGLELINE | DT_VCENTER | DT_END_ELLIPSIS);
+    CRect sLabelRect(sTextRect);
+    CRect sShortcutRect(sTextRect);
 
     if (aAccelKey.GetLength() > 0)
     {
-        aDC->DrawText(aAccelKey, sTextRect, DT_RIGHT | DT_SINGLELINE | DT_VCENTER | DT_END_ELLIPSIS);
+        const CSize sAccelSize = aDC->GetTextExtent(aAccelKey);
+        sShortcutRect.left =
+            max(
+                sShortcutRect.left,
+                sShortcutRect.right - sAccelSize.cx);
+        sLabelRect.right =
+            max(
+                sLabelRect.left,
+                sShortcutRect.left - sShortcutGap);
     }
+
+    const UINT sLabelFormat =
+        DT_LEFT | DT_SINGLELINE | DT_VCENTER | DT_END_ELLIPSIS;
+    const UINT sShortcutFormat =
+        DT_RIGHT | DT_SINGLELINE | DT_VCENTER | DT_END_ELLIPSIS;
+
+    aDC->DrawText(aText, &sLabelRect, sLabelFormat);
+    if (aAccelKey.GetLength() > 0)
+        aDC->DrawText(aAccelKey, &sShortcutRect, sShortcutFormat);
 
     aDC->SetBkMode(sOldMode);
     aDC->SelectObject(sOldFont);
 }
+
 
 void BCMenu::DrawItem(LPDRAWITEMSTRUCT lpDIS)
 {
