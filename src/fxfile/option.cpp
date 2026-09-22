@@ -311,6 +311,7 @@ static const OptionKey gConfigOptionKeys[] =
     { XPR_STRING_LITERAL("config.recent_file"),                                OptionKey::TypeBoolean, &Option::mConfig.mRecentFile,                   (void *)XPR_TRUE                       },
     { XPR_STRING_LITERAL("config.animation_menu"),                             OptionKey::TypeBoolean, &Option::mConfig.mAnimationMenu,                (void *)XPR_FALSE                      },
     { XPR_STRING_LITERAL("config.standard_menu"),                              OptionKey::TypeBoolean, &Option::mConfig.mStandardMenu,                 (void *)XPR_FALSE                      },
+    { XPR_STRING_LITERAL("config.theme_mode"),                                 OptionKey::TypeInteger, &Option::mConfig.mThemeMode,                    (void *)0                              },
 
     { XPR_STRING_LITERAL("config.tab.switch_to_new_tab"),                      OptionKey::TypeBoolean, &Option::mConfig.mTabSwitchToNewTab,            (void *)XPR_TRUE                       },
     { XPR_STRING_LITERAL("config.tab.auto_fit"),                               OptionKey::TypeBoolean, &Option::mConfig.mTabAutoFit,                   (void *)XPR_FALSE                      },
