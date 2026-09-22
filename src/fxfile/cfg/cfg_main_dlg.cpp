@@ -51,6 +51,173 @@ namespace fxfile
 {
 namespace cfg
 {
+namespace
+{
+const UINT_PTR kModernCfgButtonSubclassId = 0x46474346; // 'FGCF'
+
+LRESULT CALLBACK ModernCfgButtonSubclassProc(
+    HWND aHwnd,
+    UINT aMessage,
+    WPARAM aWParam,
+    LPARAM aLParam,
+    UINT_PTR aSubclassId,
+    DWORD_PTR aRefData)
+{
+    switch (aMessage)
+    {
+        case WM_MOUSEMOVE:
+        {
+            TRACKMOUSEEVENT sTrack = {0};
+            sTrack.cbSize = sizeof(sTrack);
+            sTrack.dwFlags = TME_LEAVE;
+            sTrack.hwndTrack = aHwnd;
+            ::TrackMouseEvent(&sTrack);
+            ::InvalidateRect(aHwnd, XPR_NULL, FALSE);
+            break;
+        }
+
+        case WM_MOUSELEAVE:
+            ::InvalidateRect(aHwnd, XPR_NULL, FALSE);
+            break;
+
+        case WM_PAINT:
+        {
+            const ui::ThemePalette sPalette = ui::ModernUI::getPalette();
+            if (XPR_IS_TRUE(sPalette.mHighContrast))
+                break;
+
+            PAINTSTRUCT sPaint = {0};
+            HDC sDC = ::BeginPaint(aHwnd, &sPaint);
+            if (XPR_IS_NULL(sDC))
+                return 0;
+
+            RECT sRect = {0};
+            ::GetClientRect(aHwnd, &sRect);
+
+            POINT sCursor = {0};
+            ::GetCursorPos(&sCursor);
+            RECT sWindowRect = {0};
+            ::GetWindowRect(aHwnd, &sWindowRect);
+            const xpr_bool_t sHot =
+                ::PtInRect(&sWindowRect, sCursor) != FALSE ?
+                XPR_TRUE :
+                XPR_FALSE;
+
+            const LRESULT sState = ::SendMessage(aHwnd, BM_GETSTATE, 0, 0);
+            const xpr_bool_t sPressed =
+                (sState & BST_PUSHED) != 0 ? XPR_TRUE : XPR_FALSE;
+            const xpr_bool_t sFocused =
+                (::GetFocus() == aHwnd) ? XPR_TRUE : XPR_FALSE;
+            const xpr_bool_t sEnabled =
+                ::IsWindowEnabled(aHwnd) != FALSE ? XPR_TRUE : XPR_FALSE;
+            const xpr_bool_t sPrimary =
+                ::GetDlgCtrlID(aHwnd) == IDOK ? XPR_TRUE : XPR_FALSE;
+
+            COLORREF sFill = sPalette.mElevated;
+            COLORREF sText = sPalette.mText;
+            COLORREF sBorder = sPalette.mBorder;
+
+            if (XPR_IS_FALSE(sEnabled))
+            {
+                sFill = sPalette.mCard;
+                sText = sPalette.mSecondaryText;
+            }
+            else if (XPR_IS_TRUE(sPressed))
+            {
+                sFill = sPalette.mPressed;
+            }
+            else if (XPR_IS_TRUE(sPrimary))
+            {
+                sFill = sPalette.mSelection;
+                sText = sPalette.mSelectionText;
+                sBorder = sPalette.mSelection;
+            }
+            else if (XPR_IS_TRUE(sHot))
+            {
+                sFill = sPalette.mHover;
+            }
+
+            if (XPR_IS_TRUE(sFocused))
+                sBorder = sPalette.mFocus;
+
+            HBRUSH sBrush = ::CreateSolidBrush(sFill);
+            HPEN sPen = ::CreatePen(PS_SOLID, 1, sBorder);
+            HGDIOBJ sOldBrush = ::SelectObject(sDC, sBrush);
+            HGDIOBJ sOldPen = ::SelectObject(sDC, sPen);
+
+            const xpr_sint_t sRadius =
+                ui::ModernUI::getControlCornerRadius(aHwnd);
+            ::RoundRect(
+                sDC,
+                sRect.left,
+                sRect.top,
+                sRect.right,
+                sRect.bottom,
+                sRadius * 2,
+                sRadius * 2);
+
+            ::SelectObject(sDC, sOldPen);
+            ::SelectObject(sDC, sOldBrush);
+            ::DeleteObject(sPen);
+            ::DeleteObject(sBrush);
+
+            xpr_tchar_t sLabel[128] = {0};
+            ::GetWindowText(aHwnd, sLabel, XPR_COUNT_OF(sLabel));
+            HFONT sFont = reinterpret_cast<HFONT>(
+                ::SendMessage(aHwnd, WM_GETFONT, 0, 0));
+            HGDIOBJ sOldFont = XPR_NULL;
+            if (XPR_IS_NOT_NULL(sFont))
+                sOldFont = ::SelectObject(sDC, sFont);
+
+            ::SetBkMode(sDC, TRANSPARENT);
+            ::SetTextColor(sDC, sText);
+            ::DrawText(
+                sDC,
+                sLabel,
+                -1,
+                &sRect,
+                DT_CENTER | DT_VCENTER | DT_SINGLELINE | DT_END_ELLIPSIS);
+
+            if (XPR_IS_NOT_NULL(sOldFont))
+                ::SelectObject(sDC, sOldFont);
+
+            ::EndPaint(aHwnd, &sPaint);
+            return 0;
+        }
+
+        case WM_ENABLE:
+        case WM_SETFOCUS:
+        case WM_KILLFOCUS:
+            ::InvalidateRect(aHwnd, XPR_NULL, FALSE);
+            break;
+
+        case WM_NCDESTROY:
+            ::RemoveWindowSubclass(
+                aHwnd,
+                ModernCfgButtonSubclassProc,
+                aSubclassId);
+            break;
+
+        default:
+            break;
+    }
+
+    return ::DefSubclassProc(aHwnd, aMessage, aWParam, aLParam);
+}
+
+void InstallModernCfgButton(HWND aHwnd)
+{
+    if (XPR_IS_NULL(aHwnd) || ::IsWindow(aHwnd) == FALSE)
+        return;
+
+    ::SetWindowSubclass(
+        aHwnd,
+        ModernCfgButtonSubclassProc,
+        kModernCfgButtonSubclassId,
+        0);
+}
+} // namespace
+
 xpr_sint_t CfgMainDlg::mLastShowCfg = 0;
 
 CfgMainDlg::CfgMainDlg(xpr_sint_t aInitShowCfg)
@@ -95,7 +262,7 @@ xpr_bool_t CfgMainDlg::OnInitDialog(void)
     // Use a roomy, borderless navigation row similar to Windows 11 settings
     // surfaces while preserving the existing tree hierarchy and icons.
     const xpr_sint_t sModernItemHeight =
-        ui::ModernUI::scaleForWindow(28, GetSafeHwnd());
+        ui::ModernUI::getSettingsNavRowHeight(GetSafeHwnd());
     if (mTreeCtrl.GetItemHeight() < sModernItemHeight)
         mTreeCtrl.SetItemHeight(sModernItemHeight);
     mTreeCtrl.SetIndent(ui::ModernUI::scaleForWindow(20, GetSafeHwnd()));
@@ -107,6 +274,12 @@ xpr_bool_t CfgMainDlg::OnInitDialog(void)
     sBitmap.DeleteObject();
 
     mTreeCtrl.SetImageList(&mImgList, TVSIL_NORMAL);
+
+    InstallModernCfgButton(GetDlgItem(IDOK)->GetSafeHwnd());
+    InstallModernCfgButton(GetDlgItem(IDCANCEL)->GetSafeHwnd());
+    InstallModernCfgButton(GetDlgItem(IDC_CFG_APPLY)->GetSafeHwnd());
+    InstallModernCfgButton(GetDlgItem(IDC_CFG_DEFAULT)->GetSafeHwnd());
+
     refreshModernAppearance();
 
     // copy config
@@ -228,6 +401,9 @@ xpr_bool_t CfgMainDlg::showCfg(xpr_sint_t aCfgIndex)
             sDescRect.bottom + ui::ModernUI::scaleForWindow(10, GetSafeHwnd());
 
         sCfgItem->mCfgDlg->SetWindowPos(XPR_NULL, sDescRect.left, y, 0, 0, SWP_NOSIZE);
+        ui::ModernUI::applyRoundedWindowRegion(
+            sCfgItem->mCfgDlg->GetSafeHwnd(),
+            8);
     }
 
     sCfgItem->mCfgDlg->ShowWindow(SW_SHOW);
@@ -338,12 +514,12 @@ void CfgMainDlg::refreshModernAppearance(void)
         mHeaderFont.CreateFontIndirect(&sHeaderLogFont);
     }
 
-    if (mSurfaceColor != sPalette.mSurface)
+    if (mSurfaceColor != sPalette.mElevated)
     {
         if (XPR_IS_NOT_NULL(mSurfaceBrush.m_hObject))
             mSurfaceBrush.DeleteObject();
-        if (mSurfaceBrush.CreateSolidBrush(sPalette.mSurface) == XPR_TRUE)
-            mSurfaceColor = sPalette.mSurface;
+        if (mSurfaceBrush.CreateSolidBrush(sPalette.mElevated) == XPR_TRUE)
+            mSurfaceColor = sPalette.mElevated;
         else
             mSurfaceColor = CLR_INVALID;
     }
@@ -367,7 +543,7 @@ void CfgMainDlg::refreshModernAppearance(void)
 
     if (::IsWindow(mTreeCtrl.GetSafeHwnd()) == XPR_TRUE)
     {
-        mTreeCtrl.SetBkColor(sPalette.mWindow);
+        mTreeCtrl.SetBkColor(sPalette.mCard);
         mTreeCtrl.SetTextColor(sPalette.mText);
         mTreeCtrl.SetLineColor(
             XPR_IS_TRUE(sPalette.mHighContrast) ?
@@ -375,7 +551,11 @@ void CfgMainDlg::refreshModernAppearance(void)
             sPalette.mSeparator);
 
         if (XPR_IS_NOT_NULL(mImgList.m_hImageList))
-            mImgList.SetBkColor(sPalette.mWindow);
+            mImgList.SetBkColor(sPalette.mCard);
+
+        ui::ModernUI::applyRoundedWindowRegion(
+            mTreeCtrl.GetSafeHwnd(),
+            8);
     }
 
     RedrawWindow(
@@ -391,7 +571,7 @@ xpr_bool_t CfgMainDlg::OnEraseBkgnd(CDC *aDC)
     {
         CRect sClientRect;
         GetClientRect(&sClientRect);
-        aDC->FillSolidRect(&sClientRect, sPalette.mSurface);
+        aDC->FillSolidRect(&sClientRect, sPalette.mWindow);
         return XPR_TRUE;
     }
 
@@ -586,18 +766,15 @@ void CfgMainDlg::OnTreeCustomDraw(NMHDR* pNMHDR, LRESULT* pResult)
                 (::GetFocus() == mTreeCtrl.GetSafeHwnd()) ? XPR_TRUE : XPR_FALSE;
 
             sCustomDraw->clrText = sPalette.mText;
-            sCustomDraw->clrTextBk = sPalette.mWindow;
+            sCustomDraw->clrTextBk = sPalette.mCard;
 
             if (XPR_IS_TRUE(sSelected))
             {
                 sCustomDraw->clrTextBk =
                     XPR_IS_TRUE(sFocused) ?
-                    sPalette.mSelection :
-                    sPalette.mHover;
-                sCustomDraw->clrText =
-                    XPR_IS_TRUE(sFocused) ?
-                    sPalette.mSelectionText :
-                    sPalette.mText;
+                    sPalette.mPressed :
+                    sPalette.mInactiveSelection;
+                sCustomDraw->clrText = sPalette.mText;
             }
             else if (XPR_IS_TRUE(sHot))
             {
@@ -630,9 +807,9 @@ HBRUSH CfgMainDlg::OnCtlColor(CDC* pDC, CWnd* pWnd, xpr_uint_t nCtlColor)
     if (nCtlColor == CTLCOLOR_EDIT || nCtlColor == CTLCOLOR_LISTBOX)
     {
         pDC->SetBkMode(OPAQUE);
-        pDC->SetBkColor(sPalette.mWindow);
-        if (XPR_IS_NOT_NULL(mWindowBrush.m_hObject))
-            return (HBRUSH)mWindowBrush.GetSafeHandle();
+        pDC->SetBkColor(sPalette.mElevated);
+        if (XPR_IS_NOT_NULL(mSurfaceBrush.m_hObject))
+            return (HBRUSH)mSurfaceBrush.GetSafeHandle();
     }
 
     if (nCtlColor == CTLCOLOR_STATIC ||
@@ -640,9 +817,9 @@ HBRUSH CfgMainDlg::OnCtlColor(CDC* pDC, CWnd* pWnd, xpr_uint_t nCtlColor)
         nCtlColor == CTLCOLOR_DLG)
     {
         pDC->SetBkMode(TRANSPARENT);
-        pDC->SetBkColor(sPalette.mSurface);
-        if (XPR_IS_NOT_NULL(mSurfaceBrush.m_hObject))
-            return (HBRUSH)mSurfaceBrush.GetSafeHandle();
+        pDC->SetBkColor(sPalette.mWindow);
+        if (XPR_IS_NOT_NULL(mWindowBrush.m_hObject))
+            return (HBRUSH)mWindowBrush.GetSafeHandle();
     }
 
     return super::OnCtlColor(pDC, pWnd, nCtlColor);
