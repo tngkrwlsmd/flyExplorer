@@ -1263,75 +1263,127 @@ void BCMenu::DrawItem(LPDRAWITEMSTRUCT lpDIS)
 
 void BCMenu::MeasureItem(LPMEASUREITEMSTRUCT lpMIS)
 {
-	BCMenuData *pMenuData = (BCMenuData *)lpMIS->itemData;
-	UINT uState = pMenuData->nFlags;
+    BCMenuData *pMenuData = (BCMenuData *)lpMIS->itemData;
+    UINT uState = pMenuData->nFlags;
 
-	if (uState & MF_SEPARATOR)
-	{
-		lpMIS->itemWidth  = 0;
-		lpMIS->itemHeight = SEPARATOR_HEIGHT;
-	}
-	else
-	{
-		CWnd *pWnd = AfxGetMainWnd();
-		CDC *pDC = pWnd->GetDC();
+    CWnd *pWnd = AfxGetMainWnd();
+    HWND sMetricHwnd =
+        XPR_IS_NOT_NULL(pWnd) ?
+        pWnd->GetSafeHwnd() :
+        ::GetDesktopWindow();
 
-		NONCLIENTMETRICS ncm = {0};
-		ncm.cbSize = sizeof(NONCLIENTMETRICS);
-		SystemParametersInfo(SPI_GETNONCLIENTMETRICS, ncm.cbSize, &ncm, 0); 
+    if (uState & MF_SEPARATOR)
+    {
+        lpMIS->itemWidth  = 0;
+        lpMIS->itemHeight =
+            fxfile::ui::ModernUI::getPopupSeparatorHeight(sMetricHwnd);
+        return;
+    }
 
-		CFont ftMenu;
-		ftMenu.CreateFontIndirect(&ncm.lfMenuFont);
-		CFont *pOldFont = pDC->SelectObject(&ftMenu);
-        
-		SIZE sz = {0};
-		static wchar_t wszMenuDispText[0xff] = {0};
-		wcscpy(wszMenuDispText, pMenuData->GetWideString());
-		if (pMenuData->strAccelKey.GetLength() > 0)
-		{
-			LPTSTR lpszAccelKey = pMenuData->strAccelKey.GetBuffer();
+    CDC *pDC = XPR_IS_NOT_NULL(pWnd) ? pWnd->GetDC() : XPR_NULL;
+    if (XPR_IS_NULL(pDC))
+    {
+        lpMIS->itemWidth =
+            fxfile::ui::ModernUI::getPopupIconGutter(sMetricHwnd) +
+            (fxfile::ui::ModernUI::getPopupItemPadding(sMetricHwnd) * 2) +
+            fxfile::ui::ModernUI::scaleForWindow(120, sMetricHwnd);
+        lpMIS->itemHeight =
+            fxfile::ui::ModernUI::getPopupItemHeight(sMetricHwnd);
+        return;
+    }
 
-			USES_CONVERSION;
-			swprintf(wszMenuDispText+wcslen(wszMenuDispText), L"\t%s", T2W(lpszAccelKey));
-		}
-		::GetTextExtentPoint32W(pDC->m_hDC, wszMenuDispText, (int)wcslen(wszMenuDispText), &sz);
+    LOGFONT sLogFont = {0};
+    CFont sFont;
+    if (XPR_IS_TRUE(
+            fxfile::ui::ModernUI::getUIFont(
+                sLogFont,
+                sMetricHwnd)))
+    {
+        sFont.CreateFontIndirect(&sLogFont);
+    }
+    else
+    {
+        NONCLIENTMETRICS sNonClientMetrics = {0};
+        sNonClientMetrics.cbSize = sizeof(NONCLIENTMETRICS);
+        SystemParametersInfo(
+            SPI_GETNONCLIENTMETRICS,
+            sNonClientMetrics.cbSize,
+            &sNonClientMetrics,
+            0);
+        sFont.CreateFontIndirect(&sNonClientMetrics.lfMenuFont);
+    }
 
-		pDC->SelectObject (pOldFont);
-		pWnd->ReleaseDC(pDC);
-		ftMenu.DeleteObject();
+    CFont *pOldFont = pDC->SelectObject(&sFont);
 
-		lpMIS->itemWidth = m_nIconX + (ICON_OFFSET_X2 * 2) + GAP + TEXT_OFFSET_X + sz.cx;
-		lpMIS->itemWidth = min(lpMIS->itemWidth, MAX_MENU_WIDTH);
+    const CString sText = pMenuData->GetString();
+    const CString sAccelKey = pMenuData->strAccelKey;
+    const CSize sTextSize = pDC->GetTextExtent(sText);
+    const CSize sAccelSize =
+        sAccelKey.IsEmpty() ?
+        CSize(0, 0) :
+        pDC->GetTextExtent(sAccelKey);
 
-		lpMIS->itemHeight = max(GetSystemMetrics(SM_CYMENU), (m_nIconY + ICON_OFFSET_Y2));
-	}
+    pDC->SelectObject(pOldFont);
+    if (XPR_IS_NOT_NULL(pWnd))
+        pWnd->ReleaseDC(pDC);
+
+    const xpr_sint_t sGutter =
+        fxfile::ui::ModernUI::getPopupIconGutter(sMetricHwnd);
+    const xpr_sint_t sPadding =
+        fxfile::ui::ModernUI::getPopupItemPadding(sMetricHwnd);
+    const xpr_sint_t sShortcutGap =
+        sAccelKey.IsEmpty() ?
+        0 :
+        fxfile::ui::ModernUI::getPopupShortcutGap(sMetricHwnd);
+
+    lpMIS->itemWidth =
+        sGutter +
+        (sPadding * 2) +
+        sTextSize.cx +
+        sShortcutGap +
+        sAccelSize.cx;
+    lpMIS->itemWidth = min(
+        lpMIS->itemWidth,
+        fxfile::ui::ModernUI::scaleForWindow(MAX_MENU_WIDTH, sMetricHwnd));
+
+    lpMIS->itemHeight = max(
+        fxfile::ui::ModernUI::getPopupItemHeight(sMetricHwnd),
+        m_nIconY + (sPadding * 2));
 }
 
 int BCMenu::GetMenuHeight()
 {
-	MENUITEMINFO mii = {0};
-	mii.cbSize = sizeof(MENUITEMINFO);
-	mii.fMask = MIIM_FTYPE;
+    CWnd *sMainWnd = AfxGetMainWnd();
+    HWND sMetricHwnd =
+        XPR_IS_NOT_NULL(sMainWnd) ?
+        sMainWnd->GetSafeHwnd() :
+        ::GetDesktopWindow();
 
-	int cyMenu = GetSystemMetrics(SM_CYMENU);
-	int nDefaultHeight = cyMenu > (m_nIconY+4) ? cyMenu : (m_nIconY+4);
+    MENUITEMINFO sMenuItemInfo = {0};
+    sMenuItemInfo.cbSize = sizeof(MENUITEMINFO);
+    sMenuItemInfo.fMask = MIIM_FTYPE;
 
-	int nHeight = 0;
-	int nCount = GetMenuItemCount();
-	for (int i=0; i<nCount; i++)
-	{
-		GetMenuItemInfo(i, &mii, TRUE);
-		nHeight += (mii.fType & MFT_SEPARATOR) ? SEPARATOR_HEIGHT : nDefaultHeight;
-	}
+    const xpr_sint_t sDefaultHeight = max(
+        fxfile::ui::ModernUI::getPopupItemHeight(sMetricHwnd),
+        m_nIconY +
+            (fxfile::ui::ModernUI::getPopupItemPadding(sMetricHwnd) * 2));
+    const xpr_sint_t sSeparatorHeight =
+        fxfile::ui::ModernUI::getPopupSeparatorHeight(sMetricHwnd);
 
-	return nHeight;
+    xpr_sint_t sHeight = 0;
+    const xpr_sint_t sCount = GetMenuItemCount();
+    for (xpr_sint_t i = 0; i < sCount; ++i)
+    {
+        GetMenuItemInfo(i, &sMenuItemInfo, TRUE);
+        sHeight +=
+            (sMenuItemInfo.fType & MFT_SEPARATOR) ?
+            sSeparatorHeight :
+            sDefaultHeight;
+    }
+
+    return sHeight;
 }
-/*
-void BCMenu::SetMenuItemHeight(int nItemHeight)
-{
-	m_nItemHeight = nItemHeight;
-}
-*/
+
 void BCMenu::SetIconSize (int width, int height)
 {
 	m_nIconX = width;
