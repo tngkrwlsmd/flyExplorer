@@ -22,6 +22,7 @@
 
 #include "stdafx.h"
 #include "SizableReBar.h"
+#include "WinAppEx.h"
 #include "../ModernUI.h"
 
 #include <afxpriv.h>
@@ -483,6 +484,7 @@ void CSizableReBar::OnUpdateCmdUI( CFrameWnd* pTarget, BOOL bDisableIfNoHandler 
 BEGIN_MESSAGE_MAP( CSizableReBar, CControlBar )
     //{{AFX_MSG_MAP(CSizableReBar)
     ON_WM_CREATE()
+    ON_WM_ERASEBKGND()
     ON_WM_NCPAINT()
     ON_WM_NCCALCSIZE()
     ON_WM_NCHITTEST()
@@ -522,8 +524,22 @@ int CSizableReBar::OnCreate( LPCREATESTRUCT lpCreateStruct )
         dwOrientStyle = CCS_RIGHT;
     }
 
-    if ( !m_rbCtrl.Create( RBS_BANDBORDERS | RBS_VARHEIGHT | RBS_DBLCLKTOGGLE | CCS_NODIVIDER | CCS_NOPARENTALIGN | dwOrientStyle |
-            WS_BORDER | WS_CHILD | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | WS_VISIBLE, CRect( 0, 0, 0, 0 ), this, 1 ) )
+    DWORD dwReBarStyle =
+        RBS_VARHEIGHT | RBS_DBLCLKTOGGLE | CCS_NODIVIDER |
+        CCS_NOPARENTALIGN | dwOrientStyle |
+        WS_CHILD | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | WS_VISIBLE;
+
+    // Preserve the exact legacy frame only on XP. On supported modern Windows
+    // the band/outer borders make the stacked toolbars look like classic
+    // control strips instead of a single Windows 11 command surface.
+    if ( WinAppEx::GetInstance()->IsWinXP() )
+        dwReBarStyle |= RBS_BANDBORDERS | WS_BORDER;
+
+    if ( !m_rbCtrl.Create(
+            dwReBarStyle,
+            CRect( 0, 0, 0, 0 ),
+            this,
+            1 ) )
     {
         return -1;
     }
@@ -532,6 +548,23 @@ int CSizableReBar::OnCreate( LPCREATESTRUCT lpCreateStruct )
 
     ApplyModernAppearance();
     return 0;
+}
+
+BOOL CSizableReBar::OnEraseBkgnd(CDC *pDC)
+{
+    if (pDC == NULL)
+        return CControlBar::OnEraseBkgnd(pDC);
+
+    const fxfile::ui::ThemePalette sPalette = fxfile::ui::ModernUI::getPalette();
+    const COLORREF sBackground =
+        XPR_IS_TRUE(sPalette.mHighContrast) ?
+        ::GetSysColor(COLOR_BTNFACE) :
+        sPalette.mSurface;
+
+    CRect sClientRect;
+    GetClientRect(&sClientRect);
+    pDC->FillSolidRect(&sClientRect, sBackground);
+    return TRUE;
 }
 
 void CSizableReBar::OnNcLButtonDown( UINT nHitTest, CPoint point )
