@@ -9,6 +9,7 @@
 
 #include "stdafx.h"
 #include "format_number.h"
+#include "rename_transform_core.h"
 #include "xpr_reg_expr.h"
 #include "xml.h"
 
@@ -67,19 +68,13 @@ FormatNumber::~FormatNumber(void)
 
 void FormatNumber::rename(RenameContext &aContext) const
 {
-    xpr_sint_t  sNumber = mStart + (xpr_sint_t)aContext.mIndex * mStep;
-    xpr::string sStringFormat;
-
-    if (XPR_IS_TRUE(mZeroFilled))
-    {
-        sStringFormat.format(XPR_STRING_LITERAL("%%0%dd"), mDigit);
-    }
-    else
-    {
-        sStringFormat.format(XPR_STRING_LITERAL("%%d"));
-    }
-
-    aContext.mNewFileName.append_format(sStringFormat.c_str(), sNumber);
+    rename_core::appendNumber(
+        aContext.mNewFileName,
+        aContext.mIndex,
+        mStart,
+        mStep,
+        mZeroFilled,
+        mDigit);
 }
 
 xpr_bool_t FormatNumber::canParseXml(const xpr::string &aElementName)
