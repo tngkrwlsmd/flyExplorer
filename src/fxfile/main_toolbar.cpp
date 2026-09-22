@@ -45,6 +45,20 @@ const struct FluentToolbarFrame
     { 14, ID_EDIT_PASTE },
     { 37, ID_FILE_NEW_FOLDER },
     { 38, ID_TOOL_OPTION },
+    {  3, ID_GO_HISTORY },
+    {  7, ID_VIEW_FOLDER_TREE_SHOW },
+    { 10, ID_GO_BOOKMARK },
+    { 11, ID_GO_DRIVE },
+    { 43, ID_GO_WORKING_FOLDER },
+    { 18, ID_FILE_RENAME },
+    { 19, ID_FILE_DELETE },
+    { 29, ID_EDIT_UNDO },
+    { 20, ID_FILE_PROPERTY },
+    { 21, ID_WINDOW_SPLIT },
+    { 26, ID_VIEW_STYLE },
+    { 31, ID_TOOL_CMD },
+    { 27, ID_TOOL_EMPTY_RECYCLEBIN },
+    { 28, ID_APP_ABOUT },
 };
 
 const xpr_byte_t TBSTYLE_1 = TBSTYLE_BUTTON;
