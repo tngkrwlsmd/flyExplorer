@@ -11,6 +11,10 @@ chcp 65001 >nul
 set "PROFILE=%~1"
 if "%PROFILE%"=="" set "PROFILE=x64"
 
+rem Active project CI scope (2026-09-23): Release-x64-Unicode | x64 only.
+rem Other profiles are retained as maintenance tools and must not be selected
+rem by an agent unless the user explicitly expands the validation scope.
+
 set "LOG_DIR=%~dp0logs\local-ci"
 if not exist "%LOG_DIR%" mkdir "%LOG_DIR%" >nul 2>&1
 
@@ -541,14 +545,14 @@ exit /b %RESULT%
 :usage
 echo Usage: local_ci.bat [quick^|test^|install^|policy^|x64^|x86^|release^|full]
 echo.
-echo   quick    Source invariant + deterministic regression preflight only.
-echo   test     Build and run isolated native product functional regression.
-echo   install  Inspect installer/shell contract; set FXFILE_INSTALLER_SMOKE=1 for isolated install/uninstall.
-echo   policy   Full vendored policy/readiness/conformance validation.
-echo   x64      Default. Release x64 build, functional regression, artifacts, launch smoke.
-echo   x86      x86 Unicode + Multibyte builds, functional regression, artifacts, smokes.
-echo   release  x64 + x86 functional regression + package + installer smoke contract.
-echo   full     policy + x64 Release/Debug + x86 functional regression + package + installer smoke contract.
+echo   x64      ACTIVE CI. Release-x64-Unicode ^| x64 build + regression + artifacts + smoke.
+echo   quick    Maintenance utility; not active CI unless explicitly requested.
+echo   test     Maintenance utility; not active CI unless explicitly requested.
+echo   install  Maintenance utility; not active CI unless explicitly requested.
+echo   policy   Maintenance utility; not active CI unless explicitly requested.
+echo   x86      INACTIVE. Run only after explicit user scope expansion.
+echo   release  INACTIVE. Run only after explicit user scope expansion.
+echo   full     INACTIVE. Includes Debug/x86; run only after explicit user scope expansion.
 echo.
 echo See LOCAL_CI_MANUAL.txt for the short usage guide.
 del /q "%STEP_LOG%" "%MSBUILD_RAW_LOG%" "%MSBUILD_ERROR_LOG%" >nul 2>&1
