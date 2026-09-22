@@ -547,17 +547,30 @@ void CToolBarEx::ApplyModernMetrics()
     if (!::IsWindow(m_hWnd))
         return;
 
-    const UINT sDpi = fxfile::ui::ModernUI::getDpi(m_hWnd);
-    // Windows 11 Explorer gives command-bar actions more breathing room than
-    // the legacy compact toolbar. Keep the existing icon-strip contract, but
-    // raise hit-target density through DPI-scaled padding.
-    const int sHorizontalPadding = fxfile::ui::ModernUI::scale(10, sDpi);
-    const int sVerticalPadding = fxfile::ui::ModernUI::scale(7, sDpi);
+    // Keep the bitmap strip and command mapping intact, but let every toolbar
+    // share the same Windows 11 command metrics. Text/list buttons still use
+    // their native autosize width; the default button extent only establishes
+    // a comfortable minimum hit target.
+    const int sHorizontalPadding =
+        fxfile::ui::ModernUI::getCommandHorizontalPadding(m_hWnd);
+    const int sVerticalPadding =
+        fxfile::ui::ModernUI::getCommandVerticalPadding(m_hWnd);
+    const int sButtonExtent =
+        fxfile::ui::ModernUI::getCommandButtonExtent(m_hWnd);
 
-    GetToolBarCtrl().SendMessage(
+    CToolBarCtrl &sToolBarCtrl = GetToolBarCtrl();
+    sToolBarCtrl.SendMessage(
         TB_SETPADDING,
         0,
         MAKELPARAM(sHorizontalPadding, sVerticalPadding));
+
+    const DWORD sCurrentButtonSize =
+        static_cast<DWORD>(sToolBarCtrl.SendMessage(TB_GETBUTTONSIZE, 0, 0));
+    const int sCurrentButtonWidth = LOWORD(sCurrentButtonSize);
+    sToolBarCtrl.SendMessage(
+        TB_SETBUTTONSIZE,
+        0,
+        MAKELPARAM(max(sCurrentButtonWidth, sButtonExtent), sButtonExtent));
 
     LOGFONT sLogFont = {0};
     if (XPR_IS_TRUE(fxfile::ui::ModernUI::getUIFont(sLogFont, m_hWnd)))
