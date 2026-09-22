@@ -439,10 +439,11 @@ echo.
 echo [local-ci] Rebuilding %CI_CONFIGURATION% ^| %CI_PLATFORM%...
 
 rem Rebuild is intentional: local CI must not reuse stale object files from a
-rem previous CRT/configuration state. Console and persistent diagnostics use
-rem MSBuild's ErrorsOnly logger. A separate normal-detail temporary log exists
-rem only for warning-policy detection and is deleted when local CI exits.
-"%MSBUILD_EXE%" "%CI_PROJECT%" /m /nologo /verbosity:minimal "/consoleloggerparameters:ErrorsOnly;NoSummary" /t:Rebuild /fl1 "/flp1:logfile=%MSBUILD_ERROR_LOG%;errorsonly" /fl2 "/flp2:logfile=%MSBUILD_RAW_LOG%;verbosity=normal" "/p:Configuration=%CI_CONFIGURATION%" "/p:Platform=%CI_PLATFORM%"
+rem previous CRT/configuration state. Keep normal MSBuild progress visible in
+rem the shell, while the persistent log remains error-focused. A separate
+rem normal-detail temporary log exists only for warning-policy detection and is
+rem deleted when local CI exits.
+"%MSBUILD_EXE%" "%CI_PROJECT%" /m /nologo /verbosity:minimal "/consoleloggerparameters:NoSummary" /t:Rebuild /fl1 "/flp1:logfile=%MSBUILD_ERROR_LOG%;errorsonly" /fl2 "/flp2:logfile=%MSBUILD_RAW_LOG%;verbosity=normal" "/p:Configuration=%CI_CONFIGURATION%" "/p:Platform=%CI_PLATFORM%"
 set "BUILD_RESULT=%errorlevel%"
 
 if not "%BUILD_RESULT%"=="0" (
