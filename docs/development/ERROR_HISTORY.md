@@ -584,6 +584,41 @@
 
 ---
 
+## 2026-09-23 — native functional regression harness의 XPR lifecycle 누락
+
+**오류 발생**
+- 확인 경로: 현재 native functional regression harness source/contract audit.
+- `src/fxfile-tests/functional_tests.cpp`는 production `xpr::FileSys` / `xpr::FileIo`를 직접 사용하면서 product executable이 수행하는 XPR runtime initialize/finalize lifecycle을 명시적으로 갖고 있지 않았다.
+
+**최초 실제 오류**
+- 테스트 entry point가 fixture 생성과 production XPR API 호출 전에 `xpr::initialize()`를 호출하지 않았고, 종료 경로에도 `xpr::finalize()`가 없었다.
+- 이는 테스트가 production runtime initialization contract를 우연한 process state에 의존하게 만드는 harness-level 결함이다.
+
+**원인 진단**
+- Observed: main application과 updater는 startup/exit에서 XPR lifecycle을 명시적으로 소유하지만 standalone functional-test executable은 동일 ownership을 빠뜨렸다.
+- Root cause: product API를 직접 재사용하는 standalone test target을 추가하면서 library dependency/include wiring은 맞췄지만 process-level runtime lifecycle까지 test entry point 계약에 포함하지 않았다.
+
+**해결 방법**
+- `src/fxfile-tests/functional_tests.cpp`: `_tmain()` 시작에서 `xpr::initialize()` 성공을 확인한다.
+- fixture setup 실패와 정상 test summary 종료 경로에서 `xpr::finalize()`를 호출한다.
+- 실제 test result exit code는 finalize 전에 보존해 기존 PASS/FAIL semantics를 유지한다.
+
+**재발 방지**
+- `build/validate_source_invariants.py::validate_functional_test_wiring()`이 `xpr::initialize()` / `xpr::finalize()` token을 functional-test lifecycle contract로 검사한다.
+- standalone executable test가 production runtime/library API를 직접 사용할 때 process initialization/finalization contract도 함께 확인한다.
+
+**검증 상태**
+- Static/source self-review: PASS — functional-test entry point와 invariant guard가 latest main에서 함께 존재함을 확인.
+- `python build/validate_source_invariants.py`: NOT TESTED in this connector environment.
+- `local_ci.bat x64` / `Release-x64-Unicode | x64` functional regression: NOT TESTED after this lifecycle fix.
+- UI/runtime visual: 해당 없음.
+
+**관련 commit**
+- `1eb5ff24` — `test: initialize XPR runtime in functional regression`
+- `7c9b69f4` — `test: guard functional XPR lifecycle`
+
+---
+
 ## 오류를 예방하기 위한 일반 개발 규칙
 
 1. 새 header/API/macro는 소유 header를 직접 include한다. PCH/transitive include에 기대지 않는다.
