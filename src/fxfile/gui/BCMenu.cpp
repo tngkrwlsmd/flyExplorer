@@ -1322,7 +1322,9 @@ void BCMenu::drawSubmenuChevron(
     const COLORREF sColor =
         (aItemState & ODS_GRAYED) ?
         sPalette.mSecondaryText :
-        sPalette.mText;
+        ((aItemState & ODS_SELECTED) ?
+            sPalette.mText :
+            sPalette.mSecondaryText);
 
     const xpr_sint_t sTrailingWidth =
         fxfile::ui::ModernUI::scaleForWindow(20, sMetricHwnd);
@@ -1443,10 +1445,12 @@ void BCMenu::drawText(
     const int sOldMode = aDC->SetBkMode(TRANSPARENT);
 
     const fxfile::ui::ThemePalette sPalette = fxfile::ui::ModernUI::getPalette();
-    aDC->SetTextColor(
+    const COLORREF sPrimaryTextColor =
         (aItemState & ODS_GRAYED) ?
         sPalette.mSecondaryText :
-        sPalette.mText);
+        sPalette.mText;
+    const COLORREF sShortcutTextColor = sPalette.mSecondaryText;
+    aDC->SetTextColor(sPrimaryTextColor);
 
     CRect sLabelRect(sTextRect);
     CRect sShortcutRect(sTextRect);
@@ -1471,7 +1475,11 @@ void BCMenu::drawText(
 
     aDC->DrawText(aText, &sLabelRect, sLabelFormat);
     if (aAccelKey.GetLength() > 0)
+    {
+        aDC->SetTextColor(sShortcutTextColor);
         aDC->DrawText(aAccelKey, &sShortcutRect, sShortcutFormat);
+        aDC->SetTextColor(sPrimaryTextColor);
+    }
 
     aDC->SetBkMode(sOldMode);
     aDC->SelectObject(sOldFont);
