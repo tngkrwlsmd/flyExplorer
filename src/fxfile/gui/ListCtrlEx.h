@@ -39,6 +39,7 @@ public:
 protected:
     xpr_bool_t subclassHeader(xpr_bool_t aBoldFont = XPR_FALSE);
     xpr_sint_t setSortImage(xpr_sint_t aColumn, xpr_bool_t aAscending);
+    void refreshModernAppearance(void);
 
 protected:
     xpr_bool_t      mVistaEnhanced;
@@ -51,6 +52,10 @@ protected:
     DECLARE_MESSAGE_MAP()
     afx_msg xpr_sint_t OnCreate(LPCREATESTRUCT aCreateStruct);
     afx_msg void OnDestroy(void);
+    afx_msg void OnSettingChange(xpr_uint_t aFlags, const xpr_tchar_t *aSection);
+    afx_msg void OnSysColorChange(void);
+    afx_msg LRESULT OnDpiChanged(WPARAM aWParam, LPARAM aLParam);
+    afx_msg LRESULT OnThemeChanged(WPARAM aWParam, LPARAM aLParam);
 };
 
 #endif // __FXFILE_LIST_CTRL_EX_H__
