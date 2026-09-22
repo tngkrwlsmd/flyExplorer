@@ -391,6 +391,46 @@
 
 ---
 
+
+## 2026-09-22 — Dark settings toggle text와 AddressBar visual-style ownership 불일치
+
+**오류 발생**
+- 실행/환경: Windows 11 실제 사용자 스크린샷.
+- 사용자에게 보인 증상: Dark 설정 페이지에서 checkbox/radio label이 어두운 색으로 표시되어 배경과 대비가 부족했고, AddressBar도 inner palette surface와 native-themed outer/child 영역이 섞여 반쪽짜리 Dark control처럼 보였다.
+
+**최초 실제 오류**
+- CfgDlg는 WM_CTLCOLOR에서 ThemePalette text를 공급하고 있었지만 themed Win32 Button의 checkbox/radio label paint를 해당 경로가 완전히 소유하지 않았다.
+- AddressBar는 palette-backed edit/background/button adapter를 갖고 있으면서도 Dark에서 outer CComboBoxEx, child ComboBox/Edit/ListBox에 documented `Explorer` visual-style association을 계속 적용해 paint ownership이 혼재했다.
+
+**원인 진단**
+- Observed: settings page background/card는 Dark ThemePalette를 사용하지만 screenshot의 toggle labels는 dark text로 남았다.
+- Observed: AddressBar child controls에는 `applyExplorerControlTheme`와 palette custom paint가 동시에 적용돼 있었다.
+- Root cause: native visual-style association/WM_CTLCOLOR가 custom Dark surface 전체의 text/chrome ownership을 보장한다고 가정한 control별 paint ownership 오류였다.
+
+**해결 방법**
+- `cfg/cfg_dlg.cpp`: Dark/non-HC checkbox/radio에만 paint subclass를 추가해 background, label, disabled text, check/radio/focus visual을 ThemePalette로 그린다. click/check/keyboard messages는 native Button에 계속 전달한다.
+- `address_bar.cpp`: Dark/non-HC에서는 outer/ComboBox/Edit/lazy ListBox의 Explorer association을 reset하고 기존 AddressBar palette/subclass paint가 coherent surface를 소유한다. Light/High Contrast는 documented native association path를 유지한다.
+- `gui/BCMenu.cpp`: app-owned submenu chevron은 Windows 11 system-provided Segoe Fluent Icons를 우선 사용하고 font 부재 시 geometry fallback을 사용한다. shell IContextMenu routing은 유지한다.
+
+**재발 방지**
+- `build/validate_source_invariants.py`가 settings toggle paint/native fallback wiring, AddressBar dark theme reset/native input tokens, popup Fluent chevron+fallback을 검사한다.
+- Microsoft Fluent source prototype은 upstream MIT license/provenance와 함께 유지하고 Windows font binary가 repository에 들어오지 않도록 guard한다.
+- Dark UI 검토 시 visual-style association 또는 WM_CTLCOLOR 호출 존재만으로 완료로 판단하지 않고 실제 최종 paint owner를 확인한다.
+
+**검증 상태**
+- Static: PARTIAL PASS — repository source에서 paint ownership, native forwarding, asset provenance 및 validator wiring을 대조했다.
+- Source invariant 실행: NOT TESTED — 현재 connector 환경에서는 Windows checkout command를 실행하지 못함.
+- Compile/link / Functional regression / Runtime smoke: NOT TESTED.
+- Visual/manual: 수정 후 NOT TESTED — Windows 11 Light/Dark/System/High Contrast 및 100/125/150/200% DPI에서 재확인 필요.
+
+**관련 commit**
+- `1e9d5477` — `ui: fix dark settings toggle contrast`
+- `3e974a12` — `ui: give dark address bar full paint ownership`
+- `20356129` — `ui: modernize popup chevrons and spacing`
+- `962e0864` — `ui: tune popup metrics toward Explorer`
+
+---
+
 ## 오류를 예방하기 위한 일반 개발 규칙
 
 1. 새 header/API/macro는 소유 header를 직접 include한다. PCH/transitive include에 기대지 않는다.

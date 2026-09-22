@@ -59,3 +59,11 @@ Private Explorer APIs, undocumented dark-theme strings, and resource extraction 
 
 `src/fxfile/res/fluent/` contains the first canonical upstream SVG sample and its Microsoft MIT license.
 The runtime toolbar bitmap contract remains unchanged until a deterministic rasterization step is selected and verified against the existing 16/22-pixel frame/index invariants.
+
+## Implemented convergence checkpoint
+
+- Dark settings checkbox/radio labels now use a ThemePalette-backed paint adapter only in Dark/non-High-Contrast; native button input/check/keyboard semantics remain intact.
+- Dark AddressBar controls reset the Explorer visual-style association so the existing palette adapters own the complete surface; Light/High Contrast retain the documented native association path.
+- App-owned BCMenu submenu arrows use the system-installed Segoe Fluent Icons `ChevronRightSmall` glyph (U+E970) when available and a geometry fallback otherwise.
+- Popup shared metrics were tightened from the earlier oversized legacy proportions; shell-owned IContextMenu rendering/routing remains untouched.
+- The Fluent settings SVG is still a source/provenance prototype, not yet a runtime toolbar replacement.

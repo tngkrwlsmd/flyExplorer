@@ -645,12 +645,17 @@ def validate_soft_surface_contract() -> list[str]:
             "ModernGroupBoxSubclassProc",
             "ModernCfgComboSubclassProc",
             "DrawModernCfgCombo",
+            "ModernCfgToggleSubclassProc",
+            "DrawModernCfgToggle",
+            "IsModernCfgToggleType",
+            "BM_GETCHECK",
             "CBS_DROPDOWNLIST",
             "CB_GETDROPPEDSTATE",
             "getCardCornerRadius",
             "applyRoundedWindowRegion",
             "sPalette.mCard",
             "sPalette.mElevated",
+            "sPalette.mText",
         ),
         "modern_dialog": ("sPalette.mCard", "sPalette.mElevated"),
         "tab": (
@@ -770,6 +775,11 @@ def validate_navigation_surface_contract() -> list[str]:
         "CB_GETDROPPEDSTATE",
         "TME_LEAVE",
         "sAddressBar->drawModernComboButton(aHwnd);",
+        "sOwnDarkChrome",
+        "resetControlTheme(m_hWnd)",
+        "resetControlTheme(sComboBox->m_hWnd)",
+        "resetControlTheme(sEdit->m_hWnd)",
+        "resetControlTheme(sComboBoxInfo.hwndList)",
         "::DefSubclassProc",
     ):
         if token not in address_contract:
@@ -972,6 +982,11 @@ def validate_popup_menu_contract() -> list[str]:
         "getPopupSeparatorInset",
         "getPopupShortcutGap",
         "MFT_RADIOCHECK",
+        "drawSubmenuChevron",
+        "Segoe Fluent Icons",
+        "HasSegoeFluentIcons",
+        "0xE970",
+        "CPen sPen",
     ):
         if token not in modern_draw:
             errors.append(f"src/fxfile/gui/BCMenu.cpp: missing modern popup rendering token {token}")
@@ -1027,6 +1042,58 @@ def validate_popup_menu_contract() -> list[str]:
     for unsupported in ("TB_SETBKCOLOR", "TB_SETTEXTCOLOR"):
         if unsupported in toolbar:
             errors.append(f"src/fxfile/gui/rebar/ToolBarEx.cpp: unsupported toolbar color message returned: {unsupported}")
+
+    return errors
+
+
+def validate_fluent_asset_contract() -> list[str]:
+    """Protect Microsoft Fluent source provenance without bundling Windows fonts."""
+
+    errors: list[str] = []
+    fluent_dir = FXFILE_SRC / "res" / "fluent"
+    license_path = fluent_dir / "LICENSE"
+    readme_path = fluent_dir / "README.md"
+    settings_svg_path = fluent_dir / "ic_fluent_settings_16_regular.svg"
+
+    try:
+        license_text = license_path.read_text(encoding="utf-8", errors="replace")
+        readme = readme_path.read_text(encoding="utf-8", errors="replace")
+        settings_svg = settings_svg_path.read_text(encoding="utf-8", errors="replace")
+    except OSError as exc:
+        return [f"Fluent asset foundation cannot be read: {exc}"]
+
+    for token in (
+        "MIT License",
+        "Copyright (c) 2020 Microsoft Corporation",
+    ):
+        if token not in license_text:
+            errors.append(f"src/fxfile/res/fluent/LICENSE: missing upstream license token {token}")
+
+    for token in (
+        "https://github.com/microsoft/fluentui-system-icons",
+        "assets/Settings/SVG/ic_fluent_settings_16_regular.svg",
+        "Do not replace Windows Shell file/folder icons",
+    ):
+        if token not in readme:
+            errors.append(f"src/fxfile/res/fluent/README.md: missing provenance token {token}")
+
+    for token in (
+        '<svg width="16" height="16" viewBox="0 0 16 16"',
+        'fill="#212121"',
+    ):
+        if token not in settings_svg:
+            errors.append(
+                f"src/fxfile/res/fluent/ic_fluent_settings_16_regular.svg: "
+                f"missing upstream SVG token {token}"
+            )
+
+    if fluent_dir.exists():
+        for asset in fluent_dir.iterdir():
+            if asset.suffix.lower() in (".ttf", ".otf", ".woff", ".woff2"):
+                errors.append(
+                    f"{asset.relative_to(ROOT)}: system/font binary must not be vendored "
+                    "for Fluent glyph rendering"
+                )
 
     return errors
 
@@ -1954,6 +2021,7 @@ def main() -> int:
     errors.extend(validate_navigation_surface_contract())
     errors.extend(validate_content_surface_contract())
     errors.extend(validate_popup_menu_contract())
+    errors.extend(validate_fluent_asset_contract())
     errors.extend(validate_ui_resource_contracts())
     errors.extend(validate_functional_test_wiring())
     errors.extend(validate_local_ci_warning_policy_wiring())
