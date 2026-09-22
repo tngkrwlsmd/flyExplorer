@@ -360,7 +360,8 @@ def validate_toolbar_custom_draw_regression() -> list[str]:
         "aCustomDraw->clrBtnFace",
         "aCustomDraw->clrText",
         "aCustomDraw->clrHighlightHotTrack",
-        "ApplyDarkToolBarCustomDraw(lpNMCustomDraw)",
+        "ApplyDarkToolBarCustomDraw(sCustomDraw)",
+        "ApplyDarkToolBarCustomDraw(lpNMCustomDraw, XPR_TRUE)",
     )
     for token in required_tokens:
         if token not in toolbar_code:
@@ -472,7 +473,7 @@ def validate_configuration_shell_contract() -> list[str]:
     for token in (
         "mHeaderFont",
         "FW_SEMIBOLD",
-        "scaleForWindow(28",
+        "getSettingsNavRowHeight",
         "SetIndent(ui::ModernUI::scaleForWindow(20",
         "sDescRect.bottom + ui::ModernUI::scaleForWindow(10",
         "ON_NOTIFY(NM_CUSTOMDRAW, IDC_CFG_TREE, OnTreeCustomDraw)",
@@ -494,6 +495,131 @@ def validate_configuration_shell_contract() -> list[str]:
     for token in ("sPalette.mSeparator", "sPalette.mWindow"):
         if token not in contents["main_frame"]:
             errors.append(f"src/fxfile/main_frame.cpp: missing content hierarchy token {token}")
+
+    return errors
+
+
+def validate_soft_surface_contract() -> list[str]:
+    """Protect the Win11 layered/rounded visual language and accessibility fallback."""
+
+    errors: list[str] = []
+    paths = {
+        "modern_h": FXFILE_SRC / "gui" / "ModernUI.h",
+        "modern_cpp": FXFILE_SRC / "gui" / "ModernUI.cpp",
+        "toolbar": FXFILE_SRC / "gui" / "rebar" / "ToolBarEx.cpp",
+        "menubar": FXFILE_SRC / "gui" / "rebar" / "MenuBar.cpp",
+        "rebar": FXFILE_SRC / "gui" / "rebar" / "SizableReBar.cpp",
+        "address": FXFILE_SRC / "address_bar.cpp",
+        "cfg_main": FXFILE_SRC / "cfg" / "cfg_main_dlg.cpp",
+        "cfg_page": FXFILE_SRC / "cfg" / "cfg_dlg.cpp",
+        "modern_dialog": FXFILE_SRC / "gui" / "ModernDialog.cpp",
+        "tab": FXFILE_SRC / "gui" / "TabCtrl.cpp",
+        "header": FXFILE_SRC / "gui" / "FlatHeaderCtrl.cpp",
+        "folder": FXFILE_SRC / "folder_ctrl.cpp",
+        "status": FXFILE_SRC / "gui" / "StatusBar.cpp",
+    }
+
+    contents: dict[str, str] = {}
+    for name, source_path in paths.items():
+        try:
+            contents[name] = source_path.read_text(encoding="utf-8", errors="replace")
+        except OSError as exc:
+            errors.append(
+                f"{source_path.relative_to(ROOT)}: cannot read soft-surface contract: {exc}"
+            )
+
+    if errors:
+        return errors
+
+    palette_fields = (
+        "mChrome",
+        "mElevated",
+        "mCard",
+        "mPressed",
+        "mInactiveSelection",
+        "mFocus",
+    )
+    for field in palette_fields:
+        if field not in contents["modern_h"]:
+            errors.append(f"src/fxfile/gui/ModernUI.h: missing layered palette field {field}")
+        if f"sPalette.{field}" not in contents["modern_cpp"]:
+            errors.append(f"src/fxfile/gui/ModernUI.cpp: layered palette field is not initialized {field}")
+
+    softness_metrics = (
+        "getControlCornerRadius",
+        "getCardCornerRadius",
+        "getPopupCornerRadius",
+        "getMenuBarItemHeight",
+        "getSettingsNavRowHeight",
+        "getSettingsPanelPadding",
+        "getDialogControlHeight",
+        "getDialogSectionSpacing",
+    )
+    for metric in softness_metrics:
+        if metric not in contents["modern_h"] or f"ModernUI::{metric}" not in contents["modern_cpp"]:
+            errors.append(f"ModernUI softness metric is missing or unimplemented: {metric}")
+
+    for token in (
+        "applyRoundedWindowRegion",
+        "CreateRoundRectRgn",
+        "SetWindowRgn",
+        "isHighContrast()",
+    ):
+        if token not in contents["modern_cpp"]:
+            errors.append(f"ModernUI rounded-region contract is missing token {token}")
+
+    for source_name, required in {
+        "toolbar": (
+            "TBCDRF_NOBACKGROUND",
+            "DrawRoundedToolbarState",
+            "sPalette.mChrome",
+            "sPalette.mElevated",
+            "sPalette.mPressed",
+        ),
+        "menubar": (
+            "TBCDRF_NOBACKGROUND",
+            "DrawRoundedMenuBarState",
+            "getMenuBarItemHeight",
+            "sPalette.mChrome",
+            "sPalette.mPressed",
+        ),
+        "rebar": ("sPalette.mChrome",),
+        "address": ("sPalette.mElevated", "sPalette.mFocus"),
+        "cfg_main": (
+            "ModernCfgButtonSubclassProc",
+            "getSettingsNavRowHeight",
+            "applyRoundedWindowRegion",
+            "sPalette.mCard",
+            "sPalette.mElevated",
+            "sPalette.mInactiveSelection",
+        ),
+        "cfg_page": (
+            "ModernGroupBoxSubclassProc",
+            "getCardCornerRadius",
+            "applyRoundedWindowRegion",
+            "sPalette.mCard",
+            "sPalette.mElevated",
+        ),
+        "modern_dialog": ("sPalette.mCard", "sPalette.mElevated"),
+        "tab": (
+            "getControlCornerRadius",
+            "sPalette.mChrome",
+            "sPalette.mElevated",
+            "sPalette.mInactiveSelection",
+        ),
+        "header": ("sPalette.mChrome", "sPalette.mPressed"),
+        "folder": ("sPalette.mCard",),
+        "status": ("sPalette.mChrome",),
+    }.items():
+        source = contents[source_name]
+        for token in required:
+            if token not in source:
+                errors.append(f"{source_name}: missing Win11 soft-surface token {token}")
+
+    for source_name in ("cfg_main", "cfg_page", "modern_dialog"):
+        source = contents[source_name]
+        if "mHighContrast" not in source:
+            errors.append(f"{source_name}: High Contrast fallback token is missing")
 
     return errors
 
@@ -593,8 +719,9 @@ def validate_navigation_surface_contract() -> list[str]:
         "afx_msg BOOL OnEraseBkgnd(CDC *pDC);",
         "BOOL CToolBarPopup::OnEraseBkgnd",
         "getPopupItemPadding",
-        "sPalette.mSurface",
-        "ApplyDarkToolBarCustomDraw(lpNMCustomDraw)",
+        "sPalette.mElevated",
+        "applyRoundedWindowRegion",
+        "ApplyDarkToolBarCustomDraw(lpNMCustomDraw, XPR_TRUE)",
     ):
         if token not in popup_contract:
             errors.append(f"toolbar chevron popup: missing modern surface token {token}")
@@ -751,9 +878,11 @@ def validate_popup_menu_contract() -> list[str]:
     )
 
     for token in (
-        "sPalette.mSurface",
+        "sPalette.mElevated",
         "sPalette.mHover",
         "sPalette.mSeparator",
+        "getControlCornerRadius",
+        "RoundRect",
         "DrawItemStandardStyle(aDrawItemStruct)",
         "getPopupIconGutter",
         "getPopupSeparatorInset",
@@ -804,7 +933,8 @@ def validate_popup_menu_contract() -> list[str]:
         "getPopupItemPadding",
         "getPopupBorderThickness",
         "BOOL CToolBarPopup::OnEraseBkgnd",
-        "ApplyDarkToolBarCustomDraw(lpNMCustomDraw)",
+        "ApplyDarkToolBarCustomDraw(lpNMCustomDraw, XPR_TRUE)",
+        "applyRoundedWindowRegion",
         "SetBkColor(CLR_NONE)",
     ):
         if token not in toolbar:
@@ -1684,6 +1814,7 @@ def main() -> int:
     errors.extend(validate_toolbar_custom_draw_regression())
     errors.extend(validate_command_surface_contract())
     errors.extend(validate_configuration_shell_contract())
+    errors.extend(validate_soft_surface_contract())
     errors.extend(validate_navigation_surface_contract())
     errors.extend(validate_content_surface_contract())
     errors.extend(validate_popup_menu_contract())
