@@ -215,6 +215,11 @@ xpr_sint_t ModernUI::getAddressHorizontalInset(HWND aHwnd)
     return scaleForWindow(6, aHwnd);
 }
 
+xpr_sint_t ModernUI::getAddressVerticalInset(HWND aHwnd)
+{
+    return scaleForWindow(4, aHwnd);
+}
+
 xpr_sint_t ModernUI::getAddressTextMargin(HWND aHwnd)
 {
     return scaleForWindow(10, aHwnd);
