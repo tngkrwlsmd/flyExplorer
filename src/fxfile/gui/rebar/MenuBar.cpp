@@ -623,7 +623,11 @@ void CMenuBar::UpdateMenuBar()
         VERIFY( m_fontMenu.DeleteObject() );
     }
 
-    VERIFY( m_fontMenu.CreateFontIndirect( &WinAppEx::GetInstance()->GetNonClientMetrics().lfMenuFont ) );
+    LOGFONT sMenuFont = {0};
+    if (XPR_IS_FALSE(fxfile::ui::ModernUI::getUIFont(sMenuFont, m_hWnd)))
+        sMenuFont = WinAppEx::GetInstance()->GetNonClientMetrics().lfMenuFont;
+
+    VERIFY( m_fontMenu.CreateFontIndirect( &sMenuFont ) );
     SetFont( &m_fontMenu, TRUE );
 
     CToolBarCtrl& tbCtrl = GetToolBarCtrl();
