@@ -1348,7 +1348,7 @@
             <String ID="popup.cfg.title">환경 설정</String>
             <String ID="popup.cfg.tree.general">일반</String>
             <String ID="popup.cfg.tree.general.startup">시작 폴더</String>
-            <String ID="popup.cfg.tree.appearance">표시</String>
+            <String ID="popup.cfg.tree.appearance">모양 및 테마</String>
             <String ID="popup.cfg.tree.appearance.layout">레이아웃</String>
             <String ID="popup.cfg.tree.appearance.font">폰트</String>
             <String ID="popup.cfg.tree.appearance.color">색</String>
