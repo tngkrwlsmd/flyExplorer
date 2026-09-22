@@ -11,6 +11,9 @@
 #define __FXFILE_BASE_CONF_FILE_H__ 1
 #pragma once
 
+#include <list>
+#include <unordered_map>
+
 namespace fxfile
 {
 namespace base
