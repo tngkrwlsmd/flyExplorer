@@ -74,8 +74,8 @@ void FileScrapToolBar::Init(void)
     SetIconSize(CSize(22, 22), CSize(16, 16));
 
     SetImageList(
-        IDB_TB_MAIN_COLD_SMALL, IDB_TB_MAIN_HOT_SMALL, IDB_TB_MAIN_HOT_SMALL,
-        IDB_TB_MAIN_COLD_LARGE, IDB_TB_MAIN_HOT_LARGE, IDB_TB_MAIN_HOT_LARGE,
+        (UINT)-1, IDB_TB_MAIN_COLD_SMALL, IDB_TB_MAIN_HOT_SMALL,
+        (UINT)-1, IDB_TB_MAIN_COLD_LARGE, IDB_TB_MAIN_HOT_LARGE,
         TBI_SMALL, IL_COLOR_MASK);
 
     xpr_sint_t sCount = sizeof(kTbButtons) / sizeof(kTbButtons[0]);
