@@ -569,6 +569,10 @@ def validate_functional_test_wiring() -> list[str]:
         if entry not in fxfile_gyp:
             errors.append(f"src/fxfile/fxfile.gyp: missing shell-registry core {entry}")
 
+    for entry in ("./cmd/rename_transform_core.cpp", "./cmd/rename_transform_core.h"):
+        if entry not in fxfile_gyp:
+            errors.append(f"src/fxfile/fxfile.gyp: missing rename transform core {entry}")
+
     if '#include "file_operation_core.h"' not in contents[file_op_thread_path]:
         errors.append("src/fxfile/file_op_thread.cpp: missing direct include for file_operation_core.h")
 
@@ -577,6 +581,34 @@ def validate_functional_test_wiring() -> list[str]:
 
     if "::SHFileOperation(mShFileOpStruct)" in file_op_thread:
         errors.append("src/fxfile/file_op_thread.cpp: direct SHFileOperation bypassed the testable production seam")
+
+    rename_production_paths = (
+        FXFILE_SRC / "cmd" / "format.h",
+        FXFILE_SRC / "cmd" / "format_replace.cpp",
+        FXFILE_SRC / "cmd" / "format_insert.cpp",
+        FXFILE_SRC / "cmd" / "format_delete.cpp",
+        FXFILE_SRC / "cmd" / "format_case.cpp",
+        FXFILE_SRC / "cmd" / "format_number.cpp",
+    )
+    rename_production = ""
+    for path in rename_production_paths:
+        try:
+            rename_production += path.read_text(
+                encoding="utf-8", errors="replace"
+            )
+        except OSError as exc:
+            errors.append(f"{path.relative_to(ROOT)}: cannot read: {exc}")
+
+    for token in (
+        "rename_core::splitBaseFileNameAndExt",
+        "rename_core::replaceText",
+        "rename_core::insertFromLast",
+        "rename_core::deleteFromLast",
+        "rename_core::toLower",
+        "rename_core::appendNumber",
+    ):
+        if token not in rename_production:
+            errors.append(f"rename production wiring is missing token {token}")
 
     if "return ::SHFileOperation(aOperation);" not in core_source:
         errors.append("src/fxfile/file_operation_core.cpp: production seam no longer delegates to SHFileOperation")
@@ -587,6 +619,7 @@ def validate_functional_test_wiring() -> list[str]:
         "'functional_tests.cpp'",
         "'../fxfile/file_operation_core.cpp'",
         "'../fxfile/shell_registry_core.cpp'",
+        "'../fxfile/cmd/rename_transform_core.cpp'",
         "'../base/crc32.c'",
         "'../base/md5.c'",
         "'SubSystem': 1",
@@ -609,6 +642,12 @@ def validate_functional_test_wiring() -> list[str]:
         "testShellRegistryCommandContract",
         "shellreg::buildOpenCommand",
         "shellreg::buildCommandKey",
+        "testRenameTransformCore",
+        "rename_core::splitBaseFileNameAndExt",
+        "replaceText(",
+        "insertFromLast(",
+        "deleteFromLast(",
+        "appendNumber(",
         "testHashKnownVectors",
         "CRC32(kVector, 9, sCrc)",
         "MD5(kVector, 9, sMd5)",
