@@ -9,6 +9,7 @@
 
 #include "stdafx.h"
 #include "app_ver.h"
+#include "version_compare.h"
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -58,35 +59,22 @@ void getFullAppVer(xpr_tchar_t *aAppVer)
     }
 }
 
-xpr_bool_t isLastedVer(xpr_sint_t aMajorVer, xpr_sint_t aMinorVer, xpr_sint_t aPatchVer)
+xpr_bool_t isLastedVer(
+    xpr_sint_t aMajorVer,
+    xpr_sint_t aMinorVer,
+    xpr_sint_t aPatchVer)
 {
-    if (aMajorVer > FXFILE_MAJOR_VER)
-    {
-        return XPR_FALSE;
-    }
-    else if (aMajorVer > FXFILE_MAJOR_VER)
-    {
-        return XPR_TRUE;
-    }
+    const base::Version sCurrent(
+        FXFILE_MAJOR_VER,
+        FXFILE_MINOR_VER,
+        FXFILE_PATCH_VER);
+    const base::Version sRemote(
+        aMajorVer,
+        aMinorVer,
+        aPatchVer);
 
-    if (aMinorVer > FXFILE_MINOR_VER)
-    {
-        return XPR_FALSE;
-    }
-    else if (aMinorVer > FXFILE_MINOR_VER)
-    {
-        return XPR_TRUE;
-    }
-
-    if (aPatchVer > FXFILE_PATCH_VER)
-    {
-        return XPR_FALSE;
-    }
-    else if (aPatchVer > FXFILE_PATCH_VER)
-    {
-        return XPR_TRUE;
-    }
-
-    return XPR_TRUE;
+    return (base::compareVersion(sCurrent, sRemote) >= 0) ?
+        XPR_TRUE : XPR_FALSE;
 }
+
 } // namespace fxfile
