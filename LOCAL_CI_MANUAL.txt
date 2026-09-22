@@ -8,7 +8,7 @@ PowerShell / Command Prompt에서 프로젝트 루트에서 실행합니다.
 
 .\local_ci.bat quick
   = 가장 빠른 정적 Source Invariant + 알려진 회귀 가드 검증을 수행합니다.
-  = ModernUI 연결, direct CDialog 현대화 회귀, 알려진 잘못된 Win32 API 재도입을 함께 검사합니다.
+  = ModernUI 연결, direct CDialog 현대화 회귀, toolbar/config-tree/icon resource 계약, 알려진 잘못된 Win32 API 재도입을 함께 검사합니다.
 
 .\local_ci.bat policy
   = Policy / Readiness / Conformance 검증을 수행합니다.

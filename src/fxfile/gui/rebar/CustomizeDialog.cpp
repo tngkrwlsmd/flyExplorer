@@ -532,9 +532,10 @@ void CCustomizeDialog::RefreshModernAppearance()
             sPalette.mSurface : CLR_INVALID;
     }
 
-    for (UINT id : { IDC_LB_AVAILABLE, IDC_LB_CURRENT })
+    const UINT sListIds[] = { IDC_LB_AVAILABLE, IDC_LB_CURRENT };
+    for (xpr_size_t i = 0; i < XPR_COUNT_OF(sListIds); ++i)
     {
-        CWnd *sList = GetDlgItem(id);
+        CWnd *sList = GetDlgItem(sListIds[i]);
         if (sList != NULL && ::IsWindow(sList->GetSafeHwnd()))
             fxfile::ui::ModernUI::applyExplorerControlTheme(sList->GetSafeHwnd());
     }

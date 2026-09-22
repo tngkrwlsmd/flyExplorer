@@ -3,7 +3,7 @@ name: Windows Product Build
 # Temporary Actions budget pause through 2026-09-30.
 # No push/PR CI. Manual runs are opt-in and intentionally minimal.
 # build.bat runs the same source invariant/regression preflight before GYP,
-# including direct-CDialog modernization drift.
+# including direct-CDialog modernization drift and UI resource contracts.
 on:
   workflow_dispatch:
     inputs:
