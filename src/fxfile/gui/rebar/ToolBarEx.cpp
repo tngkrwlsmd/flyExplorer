@@ -259,6 +259,7 @@ void CToolBarEx::SetIconType( int nIconType, bool bUpdate /*=true*/ )
     m_imageListCold.DeleteImageList();
     VERIFY( m_imageListCold.Attach( ImageList_LoadImage( hInst, lpResName,
         szIcon.cx, 0, m_clrMask, IMAGE_BITMAP, LR_CREATEDIBSECTION ) ) );
+    m_imageListCold.SetBkColor(CLR_NONE);
     tbCtrl.SetImageList( &m_imageListCold );
 
     if ( nIDHot != ( UINT )-1 ) // "hot" imagelist is optional
@@ -269,6 +270,7 @@ void CToolBarEx::SetIconType( int nIconType, bool bUpdate /*=true*/ )
         m_imageListHot.DeleteImageList();
         VERIFY( m_imageListHot.Attach( ImageList_LoadImage( hInst, lpResName,
             szIcon.cx, 0, m_clrMask, IMAGE_BITMAP, LR_CREATEDIBSECTION ) ) );
+        m_imageListHot.SetBkColor(CLR_NONE);
         tbCtrl.SetHotImageList( &m_imageListHot );
     }
 
@@ -280,6 +282,7 @@ void CToolBarEx::SetIconType( int nIconType, bool bUpdate /*=true*/ )
         m_imageListDisabled.DeleteImageList();
         VERIFY( m_imageListDisabled.Attach( ImageList_LoadImage( hInst, lpResName,
             szIcon.cx, 0, m_clrMask, IMAGE_BITMAP, LR_CREATEDIBSECTION ) ) );
+        m_imageListDisabled.SetBkColor(CLR_NONE);
         tbCtrl.SetDisabledImageList( &m_imageListDisabled );
     }
 
@@ -336,6 +339,7 @@ void CToolBarEx::GetImageList(CImageList *pImgList, BOOL bSmall/* = TRUE*/, int 
             pImgList->DeleteImageList();
 
         pImgList->Attach(hImageList);
+        pImgList->SetBkColor(CLR_NONE);
     }
 }
 
