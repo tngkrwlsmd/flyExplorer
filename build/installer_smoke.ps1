@@ -34,6 +34,70 @@ function Assert-SnapshotUnchanged {
     }
 }
 
+function Get-PathSnapshot {
+    param([string]$Path)
+
+    if (-not (Test-Path -LiteralPath $Path)) {
+        return "<missing>"
+    }
+
+    if (Test-Path -LiteralPath $Path -PathType Leaf) {
+        $item = Get-Item -LiteralPath $Path
+        $hash = (Get-FileHash -LiteralPath $Path -Algorithm SHA256).Hash
+        return "file|$($item.Length)|$hash"
+    }
+
+    $root = (Resolve-Path -LiteralPath $Path).Path
+    $entries = @(
+        Get-ChildItem -LiteralPath $root -Recurse -Force |
+            ForEach-Object {
+                $relative = $_.FullName.Substring($root.Length).TrimStart("\")
+                if ($_.PSIsContainer) {
+                    "dir|$relative"
+                }
+                else {
+                    $hash = (Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash
+                    "file|$relative|$($_.Length)|$hash"
+                }
+            } |
+            Sort-Object
+    )
+    return ($entries -join [Environment]::NewLine)
+}
+
+function Get-PeMachine {
+    param([string]$Path)
+
+    $stream = [System.IO.File]::Open($Path, [System.IO.FileMode]::Open, [System.IO.FileAccess]::Read, [System.IO.FileShare]::ReadWrite)
+    try {
+        $reader = [System.IO.BinaryReader]::new($stream)
+        if ($reader.ReadUInt16() -ne 0x5A4D) {
+            throw "Not a PE image: $Path"
+        }
+        $stream.Position = 0x3C
+        $peOffset = $reader.ReadInt32()
+        $stream.Position = $peOffset
+        if ($reader.ReadUInt32() -ne 0x00004550) {
+            throw "Invalid PE signature: $Path"
+        }
+        return $reader.ReadUInt16()
+    }
+    finally {
+        $stream.Dispose()
+    }
+}
+
+function Assert-ProcessesAlive {
+    param([int[]]$ProcessIds)
+
+    foreach ($processId in $ProcessIds) {
+        if (-not (Get-Process -Id $processId -ErrorAction SilentlyContinue)) {
+            throw "Installer smoke terminated a pre-existing fxfile process: PID $processId"
+        }
+    }
+}
+
+
 $dist = (Resolve-Path -LiteralPath $DistDir).Path
 $installer = Join-Path $dist "fxfile_v2.0.4-dev.exe"
 $setupPath = Join-Path $dist "setup.nsi"
@@ -89,12 +153,31 @@ foreach ($name in $registryQueries.Keys) {
     $before[$name] = Get-RegSnapshot $registryQueries[$name]
 }
 
+$protectedPaths = @(
+    (Join-Path ([Environment]::GetFolderPath("Desktop")) "fxfile.lnk"),
+    (Join-Path $env:PUBLIC "Desktop\fxfile.lnk"),
+    (Join-Path $env:APPDATA "Microsoft\Internet Explorer\Quick Launch\fxfile.lnk"),
+    (Join-Path $env:APPDATA "Microsoft\Windows\Start Menu\Programs\fxfile"),
+    (Join-Path $env:ProgramData "Microsoft\Windows\Start Menu\Programs\fxfile")
+)
+$protectedPathBefore = @{}
+foreach ($path in $protectedPaths) {
+    $protectedPathBefore[$path] = Get-PathSnapshot $path
+}
+
+$protectedProcessIds = @(
+    Get-Process -Name "fxfile" -ErrorAction SilentlyContinue |
+        Select-Object -ExpandProperty Id
+)
+
 $tempRoot = Join-Path ([System.IO.Path]::GetTempPath()) ("flyExplorer-installer-smoke-" + [guid]::NewGuid().ToString("N"))
 $installDir = Join-Path $tempRoot "install"
+$siblingSentinel = Join-Path $tempRoot "sibling-sentinel.txt"
 $runtimeSkipped = $false
 
 try {
     New-Item -ItemType Directory -Path $tempRoot -Force | Out-Null
+    Set-Content -LiteralPath $siblingSentinel -Value "flyExplorer installer smoke sentinel" -Encoding ASCII
 
     $installProcess = Start-Process -FilePath $installer -ArgumentList @("/S", "/FXFILE_SMOKE=$installDir") -Wait -PassThru
     if ($installProcess.ExitCode -ne 0) {
@@ -109,6 +192,19 @@ try {
         "Uninstall.exe"
     )) {
         Assert-File (Join-Path $installDir $relative) "installed payload"
+    }
+
+    $expectedMainMachine = if ([Environment]::Is64BitOperatingSystem) { 0x8664 } else { 0x014C }
+    $mainMachine = Get-PeMachine (Join-Path $installDir "fxfile.exe")
+    if ($mainMachine -ne $expectedMainMachine) {
+        throw ("Installed fxfile.exe architecture mismatch: expected 0x{0:X4}, got 0x{1:X4}" -f $expectedMainMachine, $mainMachine)
+    }
+
+    $upcheckerPath = Join-Path $installDir "upchecker\fxfile-upchecker.exe"
+    Assert-File $upcheckerPath "installed updater helper"
+    $upcheckerMachine = Get-PeMachine $upcheckerPath
+    if ($upcheckerMachine -ne 0x014C) {
+        throw ("Installed upchecker architecture mismatch: expected x86 0x014C, got 0x{0:X4}" -f $upcheckerMachine)
     }
 
     $xpr = @(
@@ -130,6 +226,17 @@ try {
         $afterInstall[$name] = Get-RegSnapshot $registryQueries[$name]
     }
     Assert-SnapshotUnchanged $before $afterInstall
+    Assert-ProcessesAlive $protectedProcessIds
+
+    foreach ($path in $protectedPaths) {
+        if ((Get-PathSnapshot $path) -ne $protectedPathBefore[$path]) {
+            throw "Installer smoke changed protected shortcut/start-menu state: $path"
+        }
+    }
+
+    if (-not (Test-Path -LiteralPath $siblingSentinel -PathType Leaf)) {
+        throw "Installer smoke removed the sibling sentinel during install."
+    }
 
     $runtimeSmoke = Join-Path $PSScriptRoot "runtime_smoke.ps1"
     & $runtimeSmoke -SourceDir $installDir -Configuration "Installer smoke payload" -SkipIfUserStateExists
@@ -158,6 +265,18 @@ try {
         $afterUninstall[$name] = Get-RegSnapshot $registryQueries[$name]
     }
     Assert-SnapshotUnchanged $before $afterUninstall
+    Assert-ProcessesAlive $protectedProcessIds
+
+    foreach ($path in $protectedPaths) {
+        if ((Get-PathSnapshot $path) -ne $protectedPathBefore[$path]) {
+            throw "Installer smoke changed protected shortcut/start-menu state: $path"
+        }
+    }
+
+    if (-not (Test-Path -LiteralPath $siblingSentinel -PathType Leaf) -or
+        (Get-Content -LiteralPath $siblingSentinel -Raw).Trim() -ne "flyExplorer installer smoke sentinel") {
+        throw "Isolated uninstaller removed or modified the sibling sentinel."
+    }
 
     Write-Host "Isolated installer install/uninstall smoke PASS."
 }
