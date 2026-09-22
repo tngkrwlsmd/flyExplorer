@@ -77,9 +77,10 @@
     }
   ],
   "review": {
-    "reviewed_revision": "cbc14e5dbd0d13782ab32a85a0368a3eb42ec34e",
+    "reviewed_revision": "81e8bc86cabc99048c163c3836b69f8785037679",
     "reviewed_at": "2026-09-22",
     "reviewed_paths": [
+      "AGENTS.md",
       "README",
       "LOCAL_CI_MANUAL.txt",
       "build.bat",
@@ -87,6 +88,7 @@
       "build/common.gypi",
       "build/fix_solution_configs.py",
       "build/validate_source_invariants.py",
+      ".github/workflows/policy-validation.yml",
       ".github/workflows/windows-build.yml",
       "build/runtime_smoke.ps1",
       "build/validate_package.ps1",
@@ -232,16 +234,16 @@
 - 설정 UI는 CfgDlg 공통 page base와 CfgMainDlg host를 현대화했다. 약 30개의 CfgDlg-derived page는 공통 system font/dark surface/edit-list color/theme refresh를 상속하고, CfgMainDlg는 window-frame theme, palette-backed host surface, config TreeCtrl background/text/line 및 image-list background를 갱신한다. 기존 config tree 구조, apply/default semantics, dynamically-created page lifecycle은 변경하지 않았다.
 - ModernUI::applyWindowFrameTheme는 이제 실제 ThemePalette mDark 값을 따라 DWMWA_USE_IMMERSIVE_DARK_MODE를 true/false로 설정하여 Light mode에서 dark title bar를 강제하지 않는다. ModernUI::loadIconResource는 logical icon size를 current window DPI로 scale해서 LoadImage(IMAGE_ICON)로 로드하는 공통 helper다.
 - 기존 IDR_MAINFRAME title icon을 소유하던 CResizingDialog 계열 18개 command dialog는 constructor-time LoadIcon 대신 OnInitDialog 시점의 DPI-aware ModernUI::loadIconResource 경로로 전환했다. icon handle ownership/DestroyIcon 계약은 유지한다.
-- 이번 icon modernization은 resource artwork 자체를 새로 그리거나 교체한 작업이 아니라 DPI-aware loading/scaling 및 legacy title-icon 사용 경로 정리다. toolbar/config-tree/legacy bitmap strip 및 실제 `.ico` artwork 재디자인은 후속 구현 범위로 남는다. 자동화 가능한 resource mapping/compile/package 검증은 개발 작업에 포함하되 최종 시각 품질 평가는 automated PASS로 주장하지 않는다.
-- dialog/icon 구현 정적 범위 검토는 PASS: ModernUI 사용 translation unit direct include, CResizingDialog/TitleDlg/CfgDlg/CfgMainDlg handler declaration/definition/message-map 연결, reusable brush lifetime, High Contrast fallback, current-palette frame mode, DPI-aware icon helper와 migrated title-icon call sites를 확인했다. generated project와 build/validate_source_invariants.py는 변경하지 않았다.
-- 이 실행 환경에서는 Windows/MSVC local_ci.bat quick 및 local_ci.bat x64를 실행하지 못했으므로 둘 다 NOT TESTED다. 실제 Windows Light/Dark/High Contrast, 100/125/150/200% DPI, representative resizing/title/config dialogs, edit/list/button/static rendering, title icon sharpness, focus/keyboard/IME, resize/config apply behavior는 NOT TESTED다.
-- 남은 자동화 가능한 UI modernization은 `CResizingDialog`/`TitleDlg`/`CfgDlg` 계층 밖의 direct `CDialog` outlier 정리와 actual icon/bitmap artwork refresh다. 구현·정적 회귀·compile/package 검증은 자동 작업 범위로 진행하고, Light/Dark/High Contrast/DPI/interactive/clean-install 같은 사람의 시각·상호작용 검증은 별도 수동 evidence로 유지한다.
+- icon/resource modernization은 DPI-aware loading/scaling을 유지하면서 application `fxfile.ico`의 기존 16/32/48 프레임을 보존하고 32-bit 256px 프레임을 추가했다. main toolbar small/large hot/cold strip과 config-tree strip은 command/image index에 강하게 결합된 legacy artwork이므로 이번 자동 작업에서 프레임 순서를 재디자인하지 않았고, 대신 frame count/cell geometry/16bpp mask format/RC/GYP wiring을 source-invariant가 고정한다. 최종 artwork 미감은 automated PASS로 주장하지 않는다.
+- standard non-resizing direct `CDialog` outlier modernization을 완료했다. 새 `CModernDialog` base는 system UI font, ThemePalette surface/window brush, Explorer common-control association, top-level frame theme, settings/syscolor/theme/DPI refresh를 공통 소유한다. Bookmark/Wait/About/설정 보조/선택·변환·검색/file-scrap 계열과 PictureViewer/COptionsDialog가 이 기반으로 이동했고, `CResizingDialog`, `TitleDlg`, `CfgDlg`/`CfgMainDlg`, `DriveDetailDlg`는 기존 전문 ModernUI owner로 allowlist한다. AboutDlg/TipDlg/PictureViewer의 custom paint 및 toolbar customize owner-draw는 ThemePalette/DPI 경로로 별도 보정했다.
+- `build/validate_source_invariants.py`는 이제 ModernDialog 등록/direct include/direct-CDialog allowlist, About/Tip/PictureViewer custom-paint wiring, toolbar invalid-message/custom-draw wiring, toolbar/config-tree bitmap frame geometry와 application icon 16/32/48/256 contract를 검사한다. 새 resource validator는 프로젝트의 Python 3.9+ 계약을 지키도록 3.10 전용 union type syntax를 사용하지 않는다. 이 실행 환경에서는 Windows/MSVC `local_ci.bat quick`/`x64`/`full`을 실제 실행하지 못했으므로 현재 `main`의 compile/link/runtime/package evidence는 NOT TESTED다.
+- 이번 범위의 자동화 가능한 direct-dialog migration과 deterministic regression/resource contract 보강은 완료했다. 남은 UI 자산 작업은 command/index를 보존한 toolbar/config-tree artwork의 실제 시각 재디자인 및 최종 visual acceptance 성격이며, Light/Dark/High Contrast/DPI/interactive/clean-install 검증과 함께 별도 manual evidence로 유지한다.
 
 ## Recommended verification
 
 0. `local_ci.bat x64` (일상적인 기본 로컬 CI)
 1. 더 좁은 static 확인은 `local_ci.bat quick`; 릴리스 준비는 `local_ci.bat release`; 전체 회귀는 `local_ci.bat full`
-2. `python build/validate_source_invariants.py` (source invariant + known regression guards)
+2. `python build/validate_source_invariants.py` (source invariant + direct-dialog/custom-paint/resource/known regression guards)
 3. `build.bat`
 4. 새로 생성된 `fxfile.sln`을 Visual Studio 2026에서 열기
 5. `Release-x64-Unicode | x64` Build Solution
