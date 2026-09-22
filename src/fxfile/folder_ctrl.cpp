@@ -318,7 +318,10 @@ void FolderCtrl::setOption(Option &aOption)
         SetTextColor(mOption.mTextColor);
     }
 
-    SetLineColor(XPR_IS_TRUE(sPalette.mHighContrast) ? CLR_DEFAULT : sPalette.mSeparator);
+    SetLineColor(
+        XPR_IS_TRUE(sPalette.mDark) && XPR_IS_FALSE(sPalette.mHighContrast) ?
+        sPalette.mSeparator :
+        CLR_DEFAULT);
 
     // set custom/system font
     setCustomFont(mOption.mCustomFont, mOption.mCustomFontText);
@@ -2859,7 +2862,10 @@ void FolderCtrl::applyModernAppearance(void)
         SetTextColor(mOption.mTextColor);
     }
 
-    SetLineColor(XPR_IS_TRUE(sPalette.mHighContrast) ? CLR_DEFAULT : sPalette.mSeparator);
+    SetLineColor(
+        XPR_IS_TRUE(sPalette.mDark) && XPR_IS_FALSE(sPalette.mHighContrast) ?
+        sPalette.mSeparator :
+        CLR_DEFAULT);
 
     if (XPR_IS_FALSE(mOption.mCustomFont))
         setCustomFont(XPR_FALSE, (xpr_tchar_t *)XPR_NULL);
@@ -3732,7 +3738,10 @@ void FolderCtrl::OnCustomdraw(NMHDR *aNmHdr, LRESULT *aResult)
     }
     else if (sNmTvCustomDraw->nmcd.dwDrawStage == CDDS_ITEMPOSTPAINT)
     {
-        if (XPR_TEST_BITS(sNmTvCustomDraw->nmcd.uItemState, CDIS_SELECTED))
+        const ui::ThemePalette sPalette = ui::ModernUI::getPalette();
+
+        if (XPR_IS_FALSE(sPalette.mHighContrast) &&
+            XPR_TEST_BITS(sNmTvCustomDraw->nmcd.uItemState, CDIS_SELECTED))
         {
             if (mOption.mHighlight == XPR_TRUE)
             {
