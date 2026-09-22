@@ -641,7 +641,19 @@ void CToolBarEx::ApplyModernAppearance()
         return;
 
     if (!WinAppEx::GetInstance()->IsWinXP())
-        fxfile::ui::ModernUI::applyExplorerControlTheme(m_hWnd);
+    {
+        const fxfile::ui::ThemePalette sPalette =
+            fxfile::ui::ModernUI::getPalette();
+        if (XPR_IS_TRUE(sPalette.mDark) &&
+            XPR_IS_FALSE(sPalette.mHighContrast))
+        {
+            fxfile::ui::ModernUI::resetControlTheme(m_hWnd);
+        }
+        else
+        {
+            fxfile::ui::ModernUI::applyExplorerControlTheme(m_hWnd);
+        }
+    }
 
     CToolTipCtrl* sToolTip = GetToolBarCtrl().GetToolTips();
     if (sToolTip != NULL && ::IsWindow(sToolTip->m_hWnd))
