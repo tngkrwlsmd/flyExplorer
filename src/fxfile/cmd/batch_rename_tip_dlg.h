@@ -11,13 +11,15 @@
 #define __FXFILE_BATCH_RENAME_TIP_DLG_H__ 1
 #pragma once
 
+#include "../gui/ModernDialog.h"
+
 namespace fxfile
 {
 namespace cmd
 {
-class BatchRenameTipDlg : public CDialog
+class BatchRenameTipDlg : public CModernDialog
 {
-    typedef CDialog super;
+    typedef CModernDialog super;
 
 public:
     BatchRenameTipDlg(void);

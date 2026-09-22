@@ -11,6 +11,8 @@
 #define __FXFILE_PROGRAM_ASS_SET_DLG_H__ 1
 #pragma once
 
+#include "../gui/ModernDialog.h"
+
 #include "../file_filter.h"
 #include "../program_ass.h"
 
@@ -18,9 +20,9 @@ namespace fxfile
 {
 namespace cfg
 {
-class ProgramAssSetDlg : public CDialog
+class ProgramAssSetDlg : public CModernDialog
 {
-    typedef CDialog super;
+    typedef CModernDialog super;
 
 public:
     ProgramAssSetDlg(ProgramAssItem *aProgramAssItem = XPR_NULL);

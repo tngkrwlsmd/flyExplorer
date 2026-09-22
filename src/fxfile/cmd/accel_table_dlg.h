@@ -11,15 +11,17 @@
 #define __FXFILE_ACCEL_TABLE_DLG_H__ 1
 #pragma once
 
+#include "../gui/ModernDialog.h"
+
 #include "fxfile_def.h"
 
 namespace fxfile
 {
 namespace cmd
 {
-class AccelTableDlg : public CDialog
+class AccelTableDlg : public CModernDialog
 {
-    typedef CDialog super;
+    typedef CModernDialog super;
 
 public:
     AccelTableDlg(HACCEL aAccelHandle, xpr_uint_t aResourceId);

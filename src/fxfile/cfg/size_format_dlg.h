@@ -11,6 +11,8 @@
 #define __FXFILE_SIZE_FORMAT_DLG_H__ 1
 #pragma once
 
+#include "../gui/ModernDialog.h"
+
 #include "../size_format.h"
 
 namespace fxfile
@@ -19,9 +21,9 @@ namespace cfg
 {
 typedef std::deque<SizeFormat::Item *> SizeFormatDeque;
 
-class SizeFormatDlg : public CDialog
+class SizeFormatDlg : public CModernDialog
 {
-    typedef CDialog super;
+    typedef CModernDialog super;
 
 public:
     SizeFormatDlg(void);

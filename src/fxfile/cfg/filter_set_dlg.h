@@ -11,6 +11,8 @@
 #define __FXFILE_FILTER_SET_DLG_H__ 1
 #pragma once
 
+#include "../gui/ModernDialog.h"
+
 #include "../file_filter.h"
 #include "gui/ColourPickerXP.h"
 #include "gui/IconList.h"
@@ -19,9 +21,9 @@ namespace fxfile
 {
 namespace cfg
 {
-class FilterSetDlg : public CDialog
+class FilterSetDlg : public CModernDialog
 {
-    typedef CDialog super;
+    typedef CModernDialog super;
 
 public:
     FilterSetDlg(FilterItem *aFilterItem = XPR_NULL);

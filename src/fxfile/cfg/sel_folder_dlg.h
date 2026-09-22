@@ -11,13 +11,15 @@
 #define __FXFILE_SEL_FOLDER_DLG_H__ 1
 #pragma once
 
+#include "../gui/ModernDialog.h"
+
 namespace fxfile
 {
 class DlgState;
 
-class SelFolderDlg : public CDialog
+class SelFolderDlg : public CModernDialog
 {
-    typedef CDialog super;
+    typedef CModernDialog super;
 
 public:
     SelFolderDlg(void);
