@@ -9,6 +9,7 @@
 
 #include "stdafx.h"
 #include "about_dlg.h"
+#include "../gui/ModernUI.h"
 #include "about_tab_dlg.h"
 #include "about_tab_info_dlg.h"
 #include "about_tab_license_dlg.h"
@@ -84,8 +85,15 @@ void AboutDlg::OnPaint(void)
 {
     CPaintDC sPaintDc(this);
 
-    const CRect sOffsetRect(10, 10, 7, 7);
-    const CPoint sTextOffset(15, 0);
+    const xpr_uint_t sDpi = ui::ModernUI::getDpi(GetSafeHwnd());
+    const xpr_sint_t sIconSize = ui::ModernUI::scale(32, sDpi);
+    const CRect sOffsetRect(
+        ui::ModernUI::scale(10, sDpi),
+        ui::ModernUI::scale(10, sDpi),
+        ui::ModernUI::scale(7, sDpi),
+        ui::ModernUI::scale(7, sDpi));
+    const CPoint sTextOffset(ui::ModernUI::scale(15, sDpi), 0);
+    const ui::ThemePalette sPalette = ui::ModernUI::getPalette();
 
     CRect sRect;
     GetClientRect(&sRect);
@@ -95,27 +103,39 @@ void AboutDlg::OnPaint(void)
     ScreenToClient(&sTabRect);
     sRect.bottom = sTabRect.top - sOffsetRect.bottom;
 
-    // draw background
-    sPaintDc.FillSolidRect(sRect, RGB(255,255,255));
+    sPaintDc.FillSolidRect(sRect, sPalette.mSurface);
 
-    HICON sIcon = AfxGetApp()->LoadIcon(IDR_MAINFRAME);
+    HICON sIcon = ui::ModernUI::loadIconResource(
+        AfxGetResourceHandle(),
+        IDR_MAINFRAME,
+        GetSafeHwnd(),
+        32);
     if (sIcon != XPR_NULL)
     {
         CPoint sIconPoint(sOffsetRect.left, sOffsetRect.top);
-        ::DrawIconEx(sPaintDc.m_hDC, sIconPoint.x, sIconPoint.y, sIcon, 32, 32, 0, XPR_NULL, DI_NORMAL);
+        ::DrawIconEx(
+            sPaintDc.m_hDC,
+            sIconPoint.x,
+            sIconPoint.y,
+            sIcon,
+            sIconSize,
+            sIconSize,
+            0,
+            XPR_NULL,
+            DI_NORMAL);
         DESTROY_ICON(sIcon);
     }
 
-    CPen sPen(PS_SOLID, 1, RGB(200,200,200));
+    CPen sPen(PS_SOLID, 1, sPalette.mSeparator);
     CPen *sOldPen = sPaintDc.SelectObject(&sPen);
     sPaintDc.MoveTo(sRect.left,  sRect.bottom);
     sPaintDc.LineTo(sRect.right, sRect.bottom);
     sPaintDc.SelectObject(sOldPen);
 
     CRect sTitleRect(sRect), sCalcRect;
-    sTitleRect.left   = sOffsetRect.left + 32 + sTextOffset.x;
+    sTitleRect.left   = sOffsetRect.left + sIconSize + sTextOffset.x;
     sTitleRect.top    = sOffsetRect.top;
-    sTitleRect.bottom = sTitleRect.top + 32;
+    sTitleRect.bottom = sTitleRect.top + sIconSize;
 
     LOGFONT sLogFont = {0};
     GetFont()->GetLogFont(&sLogFont);
@@ -127,7 +147,7 @@ void AboutDlg::OnPaint(void)
     sLogFont.lfHeight = -MulDiv(13, GetDeviceCaps(sPaintDc.m_hDC, LOGPIXELSY), 72);
     sTitleFont.CreateFontIndirect(&sLogFont);
 
-    sPaintDc.SetTextColor(RGB(0,50,150));
+    sPaintDc.SetTextColor(sPalette.mSelection);
 
     CFont *sOldFont = sPaintDc.SelectObject(&sTitleFont);
 
@@ -138,7 +158,7 @@ void AboutDlg::OnPaint(void)
 
     sPaintDc.SelectObject(sOldFont);
 
-    sPaintDc.SetTextColor(RGB(0,0,0));
+    sPaintDc.SetTextColor(sPalette.mText);
 
     sOldFont = sPaintDc.SelectObject(&sTextFont);
 
@@ -146,7 +166,7 @@ void AboutDlg::OnPaint(void)
     sTextRect.left   = sTitleRect.left;
     sTextRect.top    = sCalcRect.bottom + 0;
     sTextRect.right  = sRect.right  - sOffsetRect.right;
-    sTextRect.bottom = sTextRect.top + 32;
+    sTextRect.bottom = sTextRect.top + sIconSize;
 
     sPaintDc.DrawText(mLicense.c_str(), (xpr_sint_t)mLicense.length(), sTextRect, DT_LEFT | DT_TOP);
 
