@@ -77,7 +77,7 @@
     }
   ],
   "review": {
-    "reviewed_revision": "81e8bc86cabc99048c163c3836b69f8785037679",
+    "reviewed_revision": "c454d531bd6a5c8c409ed92976d447af08e984de",
     "reviewed_at": "2026-09-22",
     "reviewed_paths": [
       "AGENTS.md",
@@ -91,6 +91,7 @@
       ".github/workflows/policy-validation.yml",
       ".github/workflows/windows-build.yml",
       "build/runtime_smoke.ps1",
+      "build/installer_smoke.ps1",
       "build/validate_package.ps1",
       "dist/package.bat",
       "dist/copy.bat",
@@ -99,6 +100,7 @@
       "dist/setup.nsi",
       "fxfile.gyp",
       "src/fxfile",
+      "src/fxfile-tests",
       "src/xpr",
       "src/fxfile-crash",
       "src/fxfile-keyhook",
@@ -135,14 +137,16 @@
 |---|---|---|---|
 | 빌드/프로젝트 정의 | `fxfile.gyp`, `src/**/*.gyp`, `build/common.gypi` | Contract | 생성된 vcxproj보다 우선 |
 | VS 2026 생성/보정 | `build.bat`, `build/fix_solution_configs.py` | Observed / Contract | v145, mixed architecture mapping |
-| 로컬 CI orchestration | `local_ci.bat`, `LOCAL_CI_MANUAL.txt` | Contract / Evidence | quick/policy/x64/x86/release/full profiles; 실행 로그는 `logs/local-ci/local-ci.log` 하나로 통합, manual은 프로필별 한 줄 사용법 제공 |
+| 로컬 CI orchestration | `local_ci.bat`, `LOCAL_CI_MANUAL.txt` | Contract / Evidence | quick/test/install/policy/x64/x86/release/full profiles; 실행 로그는 `logs/local-ci/local-ci.log` 하나로 통합, manual은 실행/skip 계약 제공 |
 | 프로그램 구현 | `src/` | Observed | C++/MFC |
 | third-party | `lib/`, `CREDITS` | Contract / Observed | ABI/license 검토 필요 |
 | 패키징 | `dist/package.bat`, `dist/copy.bat`, `dist/make_portable.bat`, `dist/make_installer.bat`, `dist/setup.nsi` | Contract / Observed | x64/x86 staging, portable ZIP 3종, vendored NSIS installer |
 | 개발 환경 문서 | `README` | Intended / Observed | 실제 build evidence와 함께 해석 |
-| 제품 빌드 CI | `.github/workflows/windows-build.yml` | Contract / Evidence | automatic trigger 중지; explicit `run_ci`에서 Release x64 build/warning/artifact/x64 smoke만 기본 실행, `run_x86_compat`에서만 x86 Unicode/Multibyte compile/artifact 확인 |
+| 제품 빌드 CI | `.github/workflows/windows-build.yml` | Contract / Evidence | automatic trigger 중지; explicit `run_ci`에서 Release x64 build/warning/artifact/native functional regression/x64 smoke 실행, `run_x86_compat`에서 x86 Unicode/Multibyte compile/artifact/native functional regression 추가 |
+| native functional regression | `src/fxfile-tests/fxfile-tests.gyp`, `src/fxfile-tests/functional_tests.cpp` | Contract / Evidence | OS temp fixture에서 xpr FileSys/FileIo, SHFileOperation seam, CRC32/MD5 known vector, ShellRegistry command/key 조립 검증 |
 | runtime smoke | `build/runtime_smoke.ps1` | Contract / Evidence | 임시 staged runtime + isolated conf_dir에서 process/main-window/stability 검증 |
-| package validation | `build/validate_package.ps1` | Contract / Evidence | staging/portable payload, updater runtime, installer output 검증 |
+| installer smoke | `build/installer_smoke.ps1`, `dist/setup.nsi` | Contract / Evidence | 기본 safety-contract inspection; elevated + FXFILE_INSTALLER_SMOKE=1에서 temp install/runtime/uninstall + protected Registry snapshot 비변경 검증 |
+| package validation | `build/validate_package.ps1` | Contract / Evidence | staging/portable payload, updater runtime, installer output + installer-smoke wiring 검증 |
 | build/runtime 결과 | GitHub Actions build log, Visual Studio build log, hosted-runner launch smoke, Windows Sandbox/VM smoke | Evidence | compile/link, hosted runtime, clean-runtime evidence를 분리 |
 
 ## Generated artifacts
@@ -164,7 +168,7 @@
 - 일부 third-party binary는 오래되었고 architecture가 제한될 수 있다.
 - x64 solution은 mixed-architecture helper mapping을 사용한다.
 - updater는 x64 Build Solution에서 의도적으로 제외한다.
-- product unit/integration test suite는 아직 확인되지 않았다.
+- native product functional regression suite가 존재한다. `src/fxfile-tests/fxfile-tests.gyp`의 executable은 production xpr FileSys/FileIo, SHFileOperation seam, CRC32/MD5, ShellRegistry command/key core를 직접 사용하고 fixture는 OS temp 아래에서 생성/정리한다.
 - GitHub Actions budget 보호를 위해 2026-09-22부터 2026-09-30까지 `Source Validation`과 `Windows Product Build`의 automatic push/PR trigger를 중지했다. 수동 dispatch도 `run_ci` explicit override 없이는 job이 실행되지 않는다. Windows는 Release x64만 기본 실행하며 x86 compatibility는 추가 `run_x86_compat` 입력이 필요하다; Debug x64와 package/upload job은 Actions에서 제거했다.
 - budget pause 기간에는 branch/main CI PASS를 완료 조건으로 요구하지 않는다. `local_ci.bat`을 로컬 검증 진입점으로 사용하고 실제 수행한 profile의 결과만 Evidence로 기록한다. 수행하지 않은 compile/runtime/package/visual 검증은 `NOT TESTED`로 남긴다. 검증 스크립트는 삭제하지 않고 재개 시점까지 보존한다.
 - `local_ci.bat`은 redirected Python stdout을 UTF-8로 강제한다. Windows ANSI code page가 CP949 등일 때 policy/readiness/conformance 출력의 Unicode 문장부호로 `UnicodeEncodeError`가 발생하지 않도록 하기 위한 로컬 검증 contract다.
@@ -173,14 +177,14 @@
 - policy conformance의 `distribution-duplicate-entry` negative fixture는 같은 ZIP entry를 의도적으로 두 번 생성한다. 로컬 CI는 이 검증을 유지하면서 Python `zipfile`의 expected duplicate-name warning만 국소적으로 숨긴다. `dist/copy.bat`은 staging `bin`이 존재할 때만 삭제해 정상 package build에서 불필요한 `The system cannot find the file specified.` 메시지를 내지 않는다.
 - `.agent-policy/PROJECT.md`의 `reviewed_at`은 validator의 UTC date 기준으로 기록한다. 한국 등 UTC+ 시차 지역의 로컬 날짜를 그대로 기록하면 UTC 자정 전에는 미래 날짜로 판정될 수 있다.
 - 로컬 runtime smoke는 기존 `HKCU\...\Run`의 flyExplorer startup 값이나 `HKCU\Software\fxfile` profile data를 발견하면 해당 사용자 상태를 수정하지 않고 exit code 3으로 skip한다. `local_ci.bat`은 이를 `PASS_WITH_SKIPS`로 기록하고 runtime evidence를 `NOT TESTED`로 남기며 나머지 build/package 검증을 계속한다. GitHub-hosted smoke는 이 opt-in skip switch를 사용하지 않아 기존 strict failure contract를 유지한다.
-- 현재 slimmed Windows Product Build는 기본적으로 `Release-x64-Unicode | x64`만 compile/link하고 warning, 핵심 산출물, hosted x64 launch smoke를 검증한다. x86 Unicode/Multibyte는 명시적 `run_x86_compat` 입력에서만 compile/link와 핵심 산출물을 확인한다. Debug x64와 package build/upload는 Actions에서 제거했다.
+- 현재 slimmed Windows Product Build는 기본적으로 `Release-x64-Unicode | x64` compile/link, warning, 핵심 산출물, native functional regression, hosted x64 launch smoke를 검증한다. x86 Unicode/Multibyte는 명시적 `run_x86_compat` 입력에서 compile/link, 핵심 산출물, native functional regression을 추가한다. Debug x64와 package build/upload는 Actions에서 제거했다.
 - x86 Unicode는 `libxprw.dll/.lib`, x86 Multibyte는 `libxpr.dll/.lib` 계약을 유지한다. `fxfile-upchecker`는 Unicode/x64 Build Solution에서 제외되고 x86 Multibyte에서 빌드된다. Actions의 optional x86 compatibility job은 두 구성의 compile/link와 핵심 updater 산출물만 확인하며 x86 hosted launch smoke는 더 이상 실행하지 않는다.
 - xpr의 logical target 이름은 `xpr`로 유지하면서 generated MSBuild `TargetName`을 configuration별 physical product 이름(`libxprw` / `libxpr` 계열)과 정렬해 MSB8012를 제거했다.
 - crash module은 vendored zlib 1.2.3 source를 현재 MSVC로 직접 빌드하며 legacy `zlibS-x64.lib`를 링크하지 않는다.
 - crash/network resolver 경로는 deprecated `gethostbyname`/`inet_ntoa`/`inet_addr` 대신 modern Winsock address API를 사용한다.
 - distribution 입력 이름은 현재 제품 계약에 맞춰 Unicode/x64 `libxprw.dll`과 `upchecker/fxfile-upchecker.exe`를 사용한다. Actions의 package job과 artifact upload는 비용 절감을 위해 제거했으며, release packaging은 로컬에서 `dist/package.bat`과 `build/validate_package.ps1`로 수행한다.
 - 패키징은 vendored `dist/7zip/7za.exe`와 `dist/nsis/makensis.exe`를 사용하며 외부 NSIS 다운로드를 요구하지 않는다. Actions package upload는 제거되어 현재 installer/portable 결과는 로컬 `dist/`에서 생성·검증하며, 필요 시 별도 release 절차에서 보존한다.
-- installer 실제 설치/제거, shell integration install/remove, clean Windows Sandbox/VM install은 아직 자동화하지 않으며 Package Build/Payload PASS와 구분한다.
+- installer는 `/FXFILE_SMOKE=<temp-dir>` 격리 mode와 `build/installer_smoke.ps1`을 갖는다. 기본 `local_ci.bat install`은 contract inspection 후 actual install을 SKIP한다. 관리자 권한 + `FXFILE_INSTALLER_SMOKE=1` opt-in에서는 temp install/runtime/uninstall과 selected Registry/shell/startup snapshot 비변경을 자동 검증한다. 이 smoke는 실제 제품 Registry/Start Menu/Desktop/shell-context registration을 의도적으로 수행하지 않으므로 clean Windows Sandbox/VM의 real install/uninstall/shell integration evidence와 구분한다.
 - GitHub-hosted Windows runner의 기본 remote runtime evidence는 x64 Unicode launch smoke 하나만 유지한다. smoke는 staged runtime을 임시 디렉터리에 복사하고 isolated `--conf_dir`로 `fxfile.exe`를 시작한 뒤 top-level main window와 short stability window를 확인한다. x86 launch smoke는 Actions 비용 절감을 위해 제거했다.
 - hosted runner에는 Visual Studio와 여러 system runtime이 이미 설치되어 있으므로 이 결과는 clean Windows Sandbox/VM evidence가 아니다. Windows Sandbox/clean VM, interactive functional smoke, visual regression은 아직 자동화하지 않는다.
 - `build/validate_source_invariants.py`가 C++ cross-cutting dependency와 ModernUI integration의 빠른 static preflight를 제공하며, 알려진 product regression도 함께 차단한다. 현재 ToolbarWindow32에 존재하지 않는 `TB_SETBKCOLOR`/`TB_SETTEXTCOLOR` 재도입을 거부하고 `NM_CUSTOMDRAW`/`NMTBCUSTOMDRAW` 기반 dark-state color wiring이 유지되는지 검사한다.
@@ -234,16 +238,16 @@
 - 설정 UI는 CfgDlg 공통 page base와 CfgMainDlg host를 현대화했다. 약 30개의 CfgDlg-derived page는 공통 system font/dark surface/edit-list color/theme refresh를 상속하고, CfgMainDlg는 window-frame theme, palette-backed host surface, config TreeCtrl background/text/line 및 image-list background를 갱신한다. 기존 config tree 구조, apply/default semantics, dynamically-created page lifecycle은 변경하지 않았다.
 - ModernUI::applyWindowFrameTheme는 이제 실제 ThemePalette mDark 값을 따라 DWMWA_USE_IMMERSIVE_DARK_MODE를 true/false로 설정하여 Light mode에서 dark title bar를 강제하지 않는다. ModernUI::loadIconResource는 logical icon size를 current window DPI로 scale해서 LoadImage(IMAGE_ICON)로 로드하는 공통 helper다.
 - 기존 IDR_MAINFRAME title icon을 소유하던 CResizingDialog 계열 18개 command dialog는 constructor-time LoadIcon 대신 OnInitDialog 시점의 DPI-aware ModernUI::loadIconResource 경로로 전환했다. icon handle ownership/DestroyIcon 계약은 유지한다.
-- icon/resource modernization은 DPI-aware loading/scaling을 유지하면서 application `fxfile.ico`의 기존 16/32/48 프레임을 보존하고 32-bit 256px 프레임을 추가했다. main toolbar small/large hot/cold strip과 config-tree strip은 command/image index에 강하게 결합된 legacy artwork이므로 이번 자동 작업에서 프레임 순서를 재디자인하지 않았고, 대신 frame count/cell geometry/16bpp mask format/RC/GYP wiring을 source-invariant가 고정한다. 최종 artwork 미감은 automated PASS로 주장하지 않는다.
+- icon/resource modernization은 DPI-aware loading/scaling을 유지하면서 application `fxfile.ico`의 기존 16/32/48 프레임을 보존하고 32-bit 256px 프레임을 추가했다. `tip.ico`/`shortcut.ico`는 32/40/48/64px, `goup.ico`는 기존 16/32px 변형을 보존하면서 40/48/64px 32-bit 프레임을 추가했고 ExplorerCtrl parent-folder icon도 fixed-size LoadIcon 대신 ModernUI DPI loader/scale 경로를 사용한다. main toolbar small/large hot/cold strip과 config-tree strip은 command/image index에 강하게 결합된 legacy artwork이므로 프레임 순서를 재디자인하지 않고 frame count/cell geometry/16bpp mask format/RC/GYP wiring을 source-invariant가 고정한다. 최종 artwork 미감은 automated PASS로 주장하지 않는다.
 - standard non-resizing direct `CDialog` outlier modernization을 완료했다. 새 `CModernDialog` base는 system UI font, ThemePalette surface/window brush, Explorer common-control association, top-level frame theme, settings/syscolor/theme/DPI refresh를 공통 소유한다. Bookmark/Wait/About/설정 보조/선택·변환·검색/file-scrap 계열과 PictureViewer/COptionsDialog가 이 기반으로 이동했고, `CResizingDialog`, `TitleDlg`, `CfgDlg`/`CfgMainDlg`, `DriveDetailDlg`는 기존 전문 ModernUI owner로 allowlist한다. AboutDlg/TipDlg/PictureViewer의 custom paint 및 toolbar customize owner-draw는 ThemePalette/DPI 경로로 별도 보정했다.
-- `build/validate_source_invariants.py`는 이제 ModernDialog 등록/direct include/direct-CDialog allowlist, About/Tip/PictureViewer custom-paint wiring, toolbar invalid-message/custom-draw wiring, toolbar/config-tree bitmap frame geometry와 application icon 16/32/48/256 contract를 검사한다. 새 resource validator는 프로젝트의 Python 3.9+ 계약을 지키도록 3.10 전용 union type syntax를 사용하지 않는다. 이 실행 환경에서는 Windows/MSVC `local_ci.bat quick`/`x64`/`full`을 실제 실행하지 못했으므로 현재 `main`의 compile/link/runtime/package evidence는 NOT TESTED다.
-- 이번 범위의 자동화 가능한 direct-dialog migration과 deterministic regression/resource contract 보강은 완료했다. 남은 UI 자산 작업은 command/index를 보존한 toolbar/config-tree artwork의 실제 시각 재디자인 및 최종 visual acceptance 성격이며, Light/Dark/High Contrast/DPI/interactive/clean-install 검증과 함께 별도 manual evidence로 유지한다.
+- `build/validate_source_invariants.py`는 ModernDialog 등록/direct include/direct-CDialog allowlist, About/Tip/PictureViewer custom-paint wiring, toolbar invalid-message/custom-draw wiring, toolbar/config-tree bitmap frame geometry, app/tip/shortcut/go-up icon frame 계약과 go-up DPI loader, native functional-test wiring, isolated installer-smoke wiring을 검사한다. validator는 Python 3.9+ 계약을 유지한다. 이 실행 환경에서는 Windows/MSVC `local_ci.bat quick`/`test`/`install`/`x64`/`full`을 실제 실행하지 못했으므로 현재 `main`의 compile/link/functional/runtime/package/install evidence는 NOT TESTED다.
+- 이번 범위의 자동화 가능한 product functional regression, shell-command contract, isolated installer smoke, direct-dialog/DPI icon/resource regression 보강은 구현 완료했다. toolbar/config-tree strip은 기능 index를 보존하기 위해 구조를 유지하며 실제 시각 재디자인과 최종 visual acceptance는 별도 manual/design evidence로 남는다. 실제 제품 Registry shell registration, clean Windows install/uninstall, Light/Dark/High Contrast/DPI/interactive 검증도 별도 Manual / NOT TESTED evidence다.
 
 ## Recommended verification
 
 0. `local_ci.bat x64` (일상적인 기본 로컬 CI)
-1. 더 좁은 static 확인은 `local_ci.bat quick`; 릴리스 준비는 `local_ci.bat release`; 전체 회귀는 `local_ci.bat full`
-2. `python build/validate_source_invariants.py` (source invariant + direct-dialog/custom-paint/resource/known regression guards)
+1. static 확인은 `local_ci.bat quick`; product 기능만은 `local_ci.bat test`; installer contract/격리 설치는 `local_ci.bat install`; 릴리스 준비는 `local_ci.bat release`; 전체 회귀는 `local_ci.bat full`
+2. `python build/validate_source_invariants.py` (source invariant + dialog/resource/DPI-icon + functional/installer wiring + known regression guards)
 3. `build.bat`
 4. 새로 생성된 `fxfile.sln`을 Visual Studio 2026에서 열기
 5. `Release-x64-Unicode | x64` Build Solution
@@ -251,10 +255,11 @@
 7. x64/x86 제품 산출물과 x86 Multibyte `fxfile-upchecker` 산출물 확인
 8. `build/runtime_smoke.ps1` 또는 GitHub Actions hosted-runner launch smoke 결과 확인
 9. `dist/package.bat`으로 portable ZIP 3종과 NSIS installer 생성
-10. `build/validate_package.ps1 -DistDir dist`로 package payload 검증
-11. **2026-09-30까지는 GitHub Actions를 실행하지 않는다.** pause 해제 후에만 Windows Product Build와 로컬 evidence를 비교
-12. Windows Sandbox 또는 clean VM에서 clean install/runtime smoke test
-13. interactive 기능 및 UI 변경이면 visual 결과를 별도로 확인
+10. `build/validate_package.ps1 -DistDir dist`로 package payload + installer-smoke wiring 검증
+11. `local_ci.bat install`로 installer safety contract 검사; 격리 temp install/uninstall evidence가 필요하면 elevated shell에서 `FXFILE_INSTALLER_SMOKE=1` opt-in
+12. **2026-09-30까지는 GitHub Actions를 실행하지 않는다.** pause 해제 후에만 Windows Product Build와 로컬 evidence를 비교
+13. Windows Sandbox 또는 clean VM에서 실제 product Registry/shell registration을 포함한 clean install/runtime/uninstall 검증
+14. interactive 기능 및 UI 변경이면 visual 결과를 별도로 확인
 
 ## Maintenance
 
