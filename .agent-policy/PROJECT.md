@@ -77,7 +77,7 @@
     }
   ],
   "review": {
-    "reviewed_revision": "d2396b9f43ea88efe3e99e19b1454c7db65a3bf0",
+    "reviewed_revision": "afd9d8ee98638204a8a75fa7ee3ba4e68728015c",
     "reviewed_at": "2026-09-23",
     "reviewed_paths": [
       "AGENTS.md",
@@ -101,6 +101,14 @@
       "fxfile.gyp",
       "src/base",
       "src/fxfile",
+      "src/fxfile/gui/FluentCommandIcons.cpp",
+      "src/fxfile/gui/FluentCommandIcons.h",
+      "src/fxfile/gui/BCMenu.cpp",
+      "src/fxfile/cfg/cfg_dlg.cpp",
+      "src/fxfile/cfg/cfg_main_dlg.cpp",
+      "src/fxfile/res/fluent/toolbar_manifest.json",
+      "src/fxfile/res/fluent/COMMAND_ICON_MAP.md",
+      "build/generate_fluent_toolbar_assets.py",
       "src/fxfile-tests",
       "src/xpr",
       "src/fxfile-crash",
