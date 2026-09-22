@@ -10,23 +10,27 @@ PowerShell / Command Prompt에서 프로젝트 루트에서 실행합니다.
   = 가장 빠른 정적 Source Invariant + 알려진 회귀 가드 검증을 수행합니다.
   = ModernUI 연결, direct CDialog 현대화 회귀, toolbar/config-tree/icon resource 계약, 알려진 잘못된 Win32 API 재도입을 함께 검사합니다.
 
+.\local_ci.bat test
+  = OS 임시 디렉터리 아래에서 native functional regression을 수행합니다.
+  = 실제 product 경로인 xpr::FileSys/FileIo와 SHFileOperation seam을 사용해 copy/move/delete/rename/mkdir, Unicode/공백 파일명, 충돌, 오류, 무결성, cleanup을 검증합니다.
+
 .\local_ci.bat policy
   = Policy / Readiness / Conformance 검증을 수행합니다.
 
 .\local_ci.bat x64
-  = Release x64 전체 Rebuild + Warning 검사 + 산출물 검사 + Runtime Smoke를 수행합니다.
+  = Release x64 전체 Rebuild + Functional Regression + Warning 검사 + 산출물 검사 + Runtime Smoke를 수행합니다.
   = 기존 obj를 재사용하지 않고 소스를 다시 컴파일하며 .cpp 컴파일 내역이 로그에 표시됩니다.
   = 평소 개발 후 가장 자주 사용하면 되는 검증입니다.
 
 .\local_ci.bat x86
-  = x86 Unicode + x86 Multibyte 전체 Rebuild와 호환성 검증을 수행합니다.
+  = x86 Unicode + x86 Multibyte 전체 Rebuild와 각 구성의 Functional Regression을 수행합니다.
 
 .\local_ci.bat release
-  = x64 + x86 전체 Release Rebuild 후 Portable / NSIS 패키지까지 검증합니다.
+  = x64 + x86 전체 Release Rebuild + Functional Regression 후 Portable / NSIS 패키지까지 검증합니다.
 
 .\local_ci.bat full
   = 가능한 전체 로컬 CI 검증을 수행합니다.
-  = Policy + Release x64 Rebuild + Debug x64 Rebuild + x86 Unicode/Multibyte Rebuild + Runtime Smoke + Package 검증입니다.
+  = Policy + Release x64 Rebuild + Debug x64 Rebuild + x86 Unicode/Multibyte Rebuild + Functional Regression + Runtime Smoke + Package 검증입니다.
 
 로그
 ----

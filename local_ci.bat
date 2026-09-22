@@ -33,6 +33,7 @@ if /I "%PROFILE%"=="help" goto :usage
 if /I "%PROFILE%"=="--help" goto :usage
 if /I "%PROFILE%"=="/?" goto :usage
 if /I "%PROFILE%"=="quick" goto :profile_quick
+if /I "%PROFILE%"=="test" goto :profile_test
 if /I "%PROFILE%"=="policy" goto :profile_policy
 if /I "%PROFILE%"=="x64" goto :profile_x64
 if /I "%PROFILE%"=="x86" goto :profile_x86
@@ -47,6 +48,15 @@ goto :usage_error
 call :find_python
 if errorlevel 1 goto :failed
 call :run_source_preflight
+if errorlevel 1 goto :failed
+goto :passed
+
+:profile_test
+call :locate_msbuild
+if errorlevel 1 goto :failed
+call :generate_solution "x64" "Generate Visual Studio 2026 x64 solution for functional tests"
+if errorlevel 1 goto :failed
+call :run_functional_tests "Release-x64-Unicode" "x64" "bin\x64\fxfile-functional-tests.exe" "Release x64 functional regression"
 if errorlevel 1 goto :failed
 goto :passed
 
@@ -238,11 +248,17 @@ if not "%POLICY_RESULT%"=="0" exit /b %POLICY_RESULT%
 call :run_source_preflight
 exit /b %errorlevel%
 
-:run_x64_release
-call "build.bat" 2026 x64 >"%STEP_LOG%" 2>&1
+:generate_solution
+set "GEN_ARCH=%~1"
+set "GEN_TITLE=%~2"
+call "build.bat" 2026 "%GEN_ARCH%" >"%STEP_LOG%" 2>&1
 set "BOOTSTRAP_RESULT=%errorlevel%"
-call :append_file "Generate Visual Studio 2026 x64 solution" "%STEP_LOG%"
-if not "%BOOTSTRAP_RESULT%"=="0" exit /b %BOOTSTRAP_RESULT%
+call :append_file "%GEN_TITLE%" "%STEP_LOG%"
+exit /b %BOOTSTRAP_RESULT%
+
+:run_x64_release
+call :generate_solution "x64" "Generate Visual Studio 2026 x64 solution"
+if errorlevel 1 exit /b 1
 
 call :build_configuration "Release-x64-Unicode" "x64" "Release x64"
 if errorlevel 1 exit /b 1
@@ -256,6 +272,9 @@ if errorlevel 1 exit /b 1
 call :require_file "bin\x64\fxfile-launcher.exe"
 if errorlevel 1 exit /b 1
 call :require_file "bin\x64\fxfile-keyhook.dll"
+if errorlevel 1 exit /b 1
+
+call :run_functional_tests "Release-x64-Unicode" "x64" "bin\x64\fxfile-functional-tests.exe" "Release x64 functional regression"
 if errorlevel 1 exit /b 1
 
 call :run_runtime_smoke "bin\x64" "Release-x64-Unicode" "Release x64 runtime smoke"
@@ -277,10 +296,8 @@ call :require_file "bin\x64\fxfile-keyhook_dbg.dll"
 exit /b %errorlevel%
 
 :run_x86_release
-call "build.bat" 2026 x86 >"%STEP_LOG%" 2>&1
-set "BOOTSTRAP_RESULT=%errorlevel%"
-call :append_file "Generate Visual Studio 2026 x86 solution" "%STEP_LOG%"
-if not "%BOOTSTRAP_RESULT%"=="0" exit /b %BOOTSTRAP_RESULT%
+call :generate_solution "x86" "Generate Visual Studio 2026 x86 solution"
+if errorlevel 1 exit /b 1
 
 call :build_configuration "Release-x86-Unicode" "Win32" "Release x86 Unicode"
 if errorlevel 1 exit /b 1
@@ -294,6 +311,9 @@ if errorlevel 1 exit /b 1
 call :require_file "bin\x86-unicode\fxfile-launcher.exe"
 if errorlevel 1 exit /b 1
 call :require_file "bin\x86-unicode\fxfile-keyhook.dll"
+if errorlevel 1 exit /b 1
+
+call :run_functional_tests "Release-x86-Unicode" "Win32" "bin\x86-unicode\fxfile-functional-tests.exe" "Release x86 Unicode functional regression"
 if errorlevel 1 exit /b 1
 
 call :run_runtime_smoke "bin\x86-unicode" "Release-x86-Unicode" "Release x86 Unicode runtime smoke"
@@ -315,6 +335,9 @@ if errorlevel 1 exit /b 1
 call :require_file "bin\x86-multibyte\upchecker\fxfile-upchecker.exe"
 if errorlevel 1 exit /b 1
 call :require_file "bin\x64\upchecker\fxfile-upchecker.exe"
+if errorlevel 1 exit /b 1
+
+call :run_functional_tests "Release-x86-Multibyte" "Win32" "bin\x86-multibyte\fxfile-functional-tests.exe" "Release x86 Multibyte functional regression"
 if errorlevel 1 exit /b 1
 
 call :run_runtime_smoke "bin\x86-multibyte" "Release-x86-Multibyte" "Release x86 Multibyte runtime smoke"
@@ -340,6 +363,23 @@ set "PACKAGE_RESULT=%errorlevel%"
 call :append_file "Validate release packages" "%STEP_LOG%"
 exit /b %PACKAGE_RESULT%
 
+:run_functional_tests
+set "FUNCTIONAL_CONFIGURATION=%~1"
+set "FUNCTIONAL_PLATFORM=%~2"
+set "FUNCTIONAL_BINARY=%~3"
+set "FUNCTIONAL_TITLE=%~4"
+
+call :build_configuration "%FUNCTIONAL_CONFIGURATION%" "%FUNCTIONAL_PLATFORM%" "%FUNCTIONAL_TITLE% build" "src\fxfile-tests\fxfile-functional-tests.vcxproj"
+if errorlevel 1 exit /b 1
+
+call :require_file "%FUNCTIONAL_BINARY%"
+if errorlevel 1 exit /b 1
+
+"%FUNCTIONAL_BINARY%" >"%STEP_LOG%" 2>&1
+set "FUNCTIONAL_RESULT=%errorlevel%"
+call :append_file "%FUNCTIONAL_TITLE%" "%STEP_LOG%"
+exit /b %FUNCTIONAL_RESULT%
+
 :run_runtime_smoke
 set "SMOKE_SOURCE=%~1"
 set "SMOKE_CONFIGURATION=%~2"
@@ -362,6 +402,8 @@ exit /b %SMOKE_RESULT%
 set "CI_CONFIGURATION=%~1"
 set "CI_PLATFORM=%~2"
 set "CI_TITLE=%~3"
+set "CI_PROJECT=%~4"
+if not defined CI_PROJECT set "CI_PROJECT=fxfile.sln"
 
 del /q "%STEP_LOG%" "%MSBUILD_RAW_LOG%" >nul 2>&1
 echo.
@@ -372,7 +414,7 @@ echo [local-ci] Rebuilding %CI_CONFIGURATION% ^| %CI_PLATFORM%...
 rem Rebuild is intentional: local CI must not reuse stale object files from a
 rem previous CRT/configuration state. Console verbosity stays minimal, similar
 rem to Visual Studio build output, while the file logger keeps normal detail.
-"%MSBUILD_EXE%" "fxfile.sln" /m /nologo /verbosity:minimal /t:Rebuild /fl "/flp:logfile=%MSBUILD_RAW_LOG%;verbosity=normal" "/p:Configuration=%CI_CONFIGURATION%" "/p:Platform=%CI_PLATFORM%"
+"%MSBUILD_EXE%" "%CI_PROJECT%" /m /nologo /verbosity:minimal /t:Rebuild /fl "/flp:logfile=%MSBUILD_RAW_LOG%;verbosity=normal" "/p:Configuration=%CI_CONFIGURATION%" "/p:Platform=%CI_PLATFORM%"
 set "BUILD_RESULT=%errorlevel%"
 
 rem MSBuild's file logger uses the Windows ANSI code page on localized systems.
@@ -447,14 +489,15 @@ popd
 exit /b %RESULT%
 
 :usage
-echo Usage: local_ci.bat [quick^|policy^|x64^|x86^|release^|full]
+echo Usage: local_ci.bat [quick^|test^|policy^|x64^|x86^|release^|full]
 echo.
-echo   quick    Source invariant + known regression guard preflight only.
+echo   quick    Source invariant + deterministic regression preflight only.
+echo   test     Build and run isolated native filesystem functional regression.
 echo   policy   Full vendored policy/readiness/conformance validation.
-echo   x64      Default. Release x64 build, warning check, artifacts, launch smoke.
-echo   x86      x86 Unicode + Multibyte builds, warning checks, artifacts, smokes.
-echo   release  x64 + x86 + package build/payload validation.
-echo   full     policy + x64 Release/Debug + x86 + package validation.
+echo   x64      Default. Release x64 build, functional regression, artifacts, launch smoke.
+echo   x86      x86 Unicode + Multibyte builds, functional regression, artifacts, smokes.
+echo   release  x64 + x86 functional regression + package build/payload validation.
+echo   full     policy + x64 Release/Debug + x86 functional regression + package validation.
 echo.
 echo See LOCAL_CI_MANUAL.txt for the short usage guide.
 del /q "%STEP_LOG%" "%MSBUILD_RAW_LOG%" >nul 2>&1
@@ -462,7 +505,7 @@ popd
 exit /b 0
 
 :usage_error
-echo Usage: local_ci.bat [quick^|policy^|x64^|x86^|release^|full]
+echo Usage: local_ci.bat [quick^|test^|policy^|x64^|x86^|release^|full]
 del /q "%STEP_LOG%" "%MSBUILD_RAW_LOG%" >nul 2>&1
 popd
 exit /b 2

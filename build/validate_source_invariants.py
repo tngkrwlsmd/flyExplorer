@@ -456,6 +456,94 @@ def validate_ui_resource_contracts() -> list[str]:
     return errors
 
 
+def validate_functional_test_wiring() -> list[str]:
+    """Protect the production seam and native functional-test integration."""
+
+    errors: list[str] = []
+    root_gyp_path = ROOT / "fxfile.gyp"
+    fxfile_gyp_path = FXFILE_SRC / "fxfile.gyp"
+    file_op_thread_path = FXFILE_SRC / "file_op_thread.cpp"
+    core_header_path = FXFILE_SRC / "file_operation_core.h"
+    core_source_path = FXFILE_SRC / "file_operation_core.cpp"
+    test_gyp_path = ROOT / "src" / "fxfile-tests" / "fxfile-tests.gyp"
+    test_source_path = ROOT / "src" / "fxfile-tests" / "functional_tests.cpp"
+
+    paths = (
+        root_gyp_path,
+        fxfile_gyp_path,
+        file_op_thread_path,
+        core_header_path,
+        core_source_path,
+        test_gyp_path,
+        test_source_path,
+    )
+
+    contents: dict[Path, str] = {}
+    for path in paths:
+        try:
+            contents[path] = path.read_text(encoding="utf-8", errors="replace")
+        except OSError as exc:
+            errors.append(f"{path.relative_to(ROOT)}: cannot read: {exc}")
+
+    if errors:
+        return errors
+
+    root_gyp = contents[root_gyp_path]
+    fxfile_gyp = contents[fxfile_gyp_path]
+    file_op_thread = strip_comments(contents[file_op_thread_path])
+    core_source = strip_comments(contents[core_source_path])
+    test_gyp = contents[test_gyp_path]
+    test_source = contents[test_source_path]
+
+    if "src/fxfile-tests/fxfile-tests.gyp:*" not in root_gyp:
+        errors.append("fxfile.gyp: functional-test target is not in the solution dependency graph")
+
+    for entry in ("./file_operation_core.cpp", "./file_operation_core.h"):
+        if entry not in fxfile_gyp:
+            errors.append(f"src/fxfile/fxfile.gyp: missing production file-operation seam {entry}")
+
+    if '#include "file_operation_core.h"' not in contents[file_op_thread_path]:
+        errors.append("src/fxfile/file_op_thread.cpp: missing direct include for file_operation_core.h")
+
+    if "fileop::execute(mShFileOpStruct);" not in file_op_thread:
+        errors.append("src/fxfile/file_op_thread.cpp: production shell operation no longer uses fileop::execute")
+
+    if "::SHFileOperation(mShFileOpStruct)" in file_op_thread:
+        errors.append("src/fxfile/file_op_thread.cpp: direct SHFileOperation bypassed the testable production seam")
+
+    if "return ::SHFileOperation(aOperation);" not in core_source:
+        errors.append("src/fxfile/file_operation_core.cpp: production seam no longer delegates to SHFileOperation")
+
+    required_gyp_tokens = (
+        "'target_name': 'fxfile-functional-tests'",
+        "'../xpr/xpr.gyp:xpr'",
+        "'functional_tests.cpp'",
+        "'../fxfile/file_operation_core.cpp'",
+        "'SubSystem': 1",
+    )
+    for token in required_gyp_tokens:
+        if token not in test_gyp:
+            errors.append(f"src/fxfile-tests/fxfile-tests.gyp: missing functional-test token {token}")
+
+    required_test_tokens = (
+        "xpr::FileSys::mkdir_recursive",
+        "xpr::FileSys::rename",
+        "xpr::FileSys::remove",
+        "xpr::FileIo",
+        "FO_COPY",
+        "FO_MOVE",
+        "FO_DELETE",
+        "FOF_RENAMEONCOLLISION",
+        "getTempDir",
+        "fixture cleanup",
+    )
+    for token in required_test_tokens:
+        if token not in test_source:
+            errors.append(f"src/fxfile-tests/functional_tests.cpp: missing regression token {token}")
+
+    return errors
+
+
 def validate_modern_ui_registration() -> list[str]:
     errors: list[str] = []
     gyp_path = ROOT / "src" / "fxfile" / "fxfile.gyp"
@@ -496,6 +584,7 @@ def main() -> int:
     errors.extend(validate_custom_dialog_paint_regressions())
     errors.extend(validate_toolbar_custom_draw_regression())
     errors.extend(validate_ui_resource_contracts())
+    errors.extend(validate_functional_test_wiring())
     errors.extend(validate_modern_ui_registration())
 
     if errors:

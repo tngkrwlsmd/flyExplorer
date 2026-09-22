@@ -3,7 +3,7 @@ name: Windows Product Build
 # Temporary Actions budget pause through 2026-09-30.
 # No push/PR CI. Manual runs are opt-in and intentionally minimal.
 # build.bat runs the same source invariant/regression preflight before GYP,
-# including direct-CDialog modernization drift and UI resource contracts.
+# including direct-CDialog modernization drift, UI resource contracts, and functional-test wiring.
 on:
   workflow_dispatch:
     inputs:
@@ -107,11 +107,20 @@ jobs:
             "bin\x64\libxprw.dll",
             "bin\x64\fxfile-crash.dll",
             "bin\x64\fxfile-launcher.exe",
-            "bin\x64\fxfile-keyhook.dll"
+            "bin\x64\fxfile-keyhook.dll",
+            "bin\x64\fxfile-functional-tests.exe"
           )) {
             if (-not (Test-Path -LiteralPath $path -PathType Leaf)) {
               throw "Required Release-x64-Unicode artifact is missing: $path"
             }
+          }
+
+      - name: Run x64 functional regression
+        shell: pwsh
+        run: |
+          & ".\bin\x64\fxfile-functional-tests.exe"
+          if ($LASTEXITCODE -ne 0) {
+            throw "x64 functional regression failed with exit code $LASTEXITCODE."
           }
 
       - name: Run x64 launch smoke
@@ -169,11 +178,26 @@ jobs:
           foreach ($path in @(
             "bin\x86-unicode\fxfile.exe",
             "bin\x86-unicode\libxprw.dll",
+            "bin\x86-unicode\fxfile-functional-tests.exe",
             "bin\x86-multibyte\fxfile.exe",
             "bin\x86-multibyte\libxpr.dll",
+            "bin\x86-multibyte\fxfile-functional-tests.exe",
             "bin\x86-multibyte\upchecker\fxfile-upchecker.exe"
           )) {
             if (-not (Test-Path -LiteralPath $path -PathType Leaf)) {
               throw "Required x86 compatibility artifact is missing: $path"
+            }
+          }
+
+      - name: Run x86 functional regression
+        shell: pwsh
+        run: |
+          foreach ($path in @(
+            "bin\x86-unicode\fxfile-functional-tests.exe",
+            "bin\x86-multibyte\fxfile-functional-tests.exe"
+          )) {
+            & ".\$path"
+            if ($LASTEXITCODE -ne 0) {
+              throw "$path functional regression failed with exit code $LASTEXITCODE."
             }
           }
