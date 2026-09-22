@@ -530,6 +530,7 @@ def validate_functional_test_wiring() -> list[str]:
     core_source_path = FXFILE_SRC / "file_operation_core.cpp"
     test_gyp_path = ROOT / "src" / "fxfile-tests" / "fxfile-tests.gyp"
     test_source_path = ROOT / "src" / "fxfile-tests" / "functional_tests.cpp"
+    pattern_path_test_path = ROOT / "src" / "fxfile-tests" / "pattern_path_tests.cpp"
 
     paths = (
         root_gyp_path,
@@ -539,6 +540,7 @@ def validate_functional_test_wiring() -> list[str]:
         core_source_path,
         test_gyp_path,
         test_source_path,
+        pattern_path_test_path,
     )
 
     contents: dict[Path, str] = {}
@@ -557,6 +559,7 @@ def validate_functional_test_wiring() -> list[str]:
     core_source = strip_comments(contents[core_source_path])
     test_gyp = contents[test_gyp_path]
     test_source = contents[test_source_path]
+    pattern_path_test = contents[pattern_path_test_path]
 
     if "src/fxfile-tests/fxfile-tests.gyp:*" not in root_gyp:
         errors.append("fxfile.gyp: functional-test target is not in the solution dependency graph")
@@ -622,6 +625,8 @@ def validate_functional_test_wiring() -> list[str]:
         "'../fxfile/cmd/rename_transform_core.cpp'",
         "'../base/crc32.c'",
         "'../base/md5.c'",
+        "'../base/fnmatch.cpp'",
+        "'pattern_path_tests.cpp'",
         "'SubSystem': 1",
     )
     for token in required_gyp_tokens:
@@ -643,6 +648,7 @@ def validate_functional_test_wiring() -> list[str]:
         "shellreg::buildOpenCommand",
         "shellreg::buildCommandKey",
         "testRenameTransformCore",
+        "testPatternAndPathContracts",
         "rename_core::splitBaseFileNameAndExt",
         "replaceText(",
         "insertFromLast(",
@@ -655,6 +661,21 @@ def validate_functional_test_wiring() -> list[str]:
     for token in required_test_tokens:
         if token not in test_source:
             errors.append(f"src/fxfile-tests/functional_tests.cpp: missing regression token {token}")
+
+    for token in (
+        "fnmatch(",
+        "FNM_CASEFOLD",
+        "xpr::FilePath",
+        "normalize()",
+        "getParentDir",
+        "getFileName",
+        "getExt",
+        "isNetwork",
+    ):
+        if token not in pattern_path_test:
+            errors.append(
+                f"src/fxfile-tests/pattern_path_tests.cpp: missing path/filter token {token}"
+            )
 
     return errors
 
