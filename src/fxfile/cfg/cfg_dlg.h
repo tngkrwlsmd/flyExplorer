@@ -25,6 +25,7 @@ class CfgDlg : public CDialog
 
 public:
     CfgDlg(xpr_uint_t aResourceId = 0, CWnd *sParentWnd = XPR_NULL);
+    virtual ~CfgDlg(void);
 
 public:
     CfgDlgObserver *getObserver(void) const;
@@ -43,9 +44,18 @@ public:
 
 protected:
     void addIgnoreApply(xpr_uint_t aId);
+    void refreshModernAppearance(void);
+    void applyModernAppearanceToChildren(HFONT aPreviousFont);
+    void applyModernAppearanceToChild(CWnd *aWnd, HFONT aPreviousFont);
 
 protected:
     CfgDlgObserver *mObserver;
+
+    CFont    mUIFont;
+    CBrush   mSurfaceBrush;
+    CBrush   mWindowBrush;
+    COLORREF mSurfaceColor;
+    COLORREF mWindowColor;
 
     xpr_uint_t mResourceId;
     xpr_size_t mCfgIndex;
@@ -62,6 +72,14 @@ protected:
 
 protected:
     DECLARE_MESSAGE_MAP()
+    virtual xpr_bool_t OnInitDialog(void);
+    afx_msg xpr_bool_t OnEraseBkgnd(CDC *aDC);
+    afx_msg HBRUSH OnCtlColor(CDC *aDC, CWnd *aWnd, xpr_uint_t aCtlColor);
+    afx_msg void OnSettingChange(xpr_uint_t aFlags, const xpr_tchar_t *aSection);
+    afx_msg void OnSysColorChange(void);
+    afx_msg LRESULT OnThemeChanged(WPARAM aWParam, LPARAM aLParam);
+    afx_msg LRESULT OnDpiChanged(WPARAM aWParam, LPARAM aLParam);
+    afx_msg LRESULT OnDpiChangedAfterParent(WPARAM aWParam, LPARAM aLParam);
     afx_msg LRESULT OnMsgApply(WPARAM wParam, LPARAM lParam);
 };
 } // namespace cfg

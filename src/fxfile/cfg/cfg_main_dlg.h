@@ -60,7 +60,17 @@ protected:
 
 protected:
     TreeCtrlEx mTreeCtrl;
+    CFont      mUIFont;
     CBrush     mDarkGrayBrush;
+    CBrush     mSurfaceBrush;
+    CBrush     mWindowBrush;
+    COLORREF   mSurfaceColor;
+    COLORREF   mWindowColor;
+
+protected:
+    void refreshModernAppearance(void);
+    void applyModernAppearanceToChildren(HFONT aPreviousFont);
+    void applyModernAppearanceToChild(CWnd *aWnd, HFONT aPreviousFont);
 
 protected:
     // from CfgDlgObserver
@@ -74,6 +84,11 @@ protected:
 protected:
     DECLARE_MESSAGE_MAP()
     afx_msg void OnDestroy(void);
+    afx_msg xpr_bool_t OnEraseBkgnd(CDC *aDC);
+    afx_msg void OnSettingChange(xpr_uint_t aFlags, const xpr_tchar_t *aSection);
+    afx_msg void OnSysColorChange(void);
+    afx_msg LRESULT OnThemeChanged(WPARAM aWParam, LPARAM aLParam);
+    afx_msg LRESULT OnDpiChanged(WPARAM aWParam, LPARAM aLParam);
     virtual void OnOK(void);
     virtual void OnCancel(void);
     afx_msg void OnApply(void);

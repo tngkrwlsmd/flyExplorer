@@ -10,6 +10,8 @@
 #include "stdafx.h"
 #include "cfg_main_dlg.h"
 
+#include "../gui/ModernUI.h"
+
 #include "../resource.h"
 #include "../option_manager.h"
 
@@ -56,6 +58,8 @@ CfgMainDlg::CfgMainDlg(xpr_sint_t aInitShowCfg)
     , mInitShowCfg(aInitShowCfg)
     , mShowCfg(-1)
     , mChanging(XPR_FALSE)
+    , mSurfaceColor(CLR_INVALID)
+    , mWindowColor(CLR_INVALID)
 {
     if (mInitShowCfg == -1)
         mInitShowCfg = mLastShowCfg;
@@ -70,6 +74,11 @@ void CfgMainDlg::DoDataExchange(CDataExchange* pDX)
 BEGIN_MESSAGE_MAP(CfgMainDlg, super)
     ON_WM_CTLCOLOR()
     ON_WM_DESTROY()
+    ON_WM_ERASEBKGND()
+    ON_WM_SETTINGCHANGE()
+    ON_WM_SYSCOLORCHANGE()
+    ON_MESSAGE(WM_THEMECHANGED, OnThemeChanged)
+    ON_MESSAGE(WM_DPICHANGED, OnDpiChanged)
     ON_NOTIFY(TVN_SELCHANGED, IDC_CFG_TREE, OnSelchangedTree)
     ON_BN_CLICKED(IDC_CFG_DEFAULT, OnDefault)
     ON_BN_CLICKED(IDC_CFG_APPLY,   OnApply)
@@ -79,6 +88,7 @@ xpr_bool_t CfgMainDlg::OnInitDialog(void)
 {
     super::OnInitDialog();
 
+    refreshModernAppearance();
     mTreeCtrl.enableVistaEnhanced(XPR_TRUE);
 
     mDarkGrayBrush.CreateSolidBrush(RGB(127,127,127));
@@ -91,6 +101,7 @@ xpr_bool_t CfgMainDlg::OnInitDialog(void)
 
     mTreeCtrl.SetImageList(&mImgList, TVSIL_NORMAL);
     mTreeCtrl.SetItemHeight(mTreeCtrl.GetItemHeight() + 2);
+    refreshModernAppearance();
 
     // copy config
     gOpt->copyConfig(mNewConfig);
@@ -207,9 +218,7 @@ xpr_bool_t CfgMainDlg::showCfg(xpr_sint_t aCfgIndex)
         GetDlgItem(IDC_CFG_DESC)->GetWindowRect(&sDescRect);
         ScreenToClient(&sDescRect);
 
-        HDC sDC = ::GetDC(XPR_NULL);
-        xpr_sint_t y = MulDiv(44, GetDeviceCaps(sDC , LOGPIXELSY), 96);
-        ::ReleaseDC(XPR_NULL, sDC);
+        xpr_sint_t y = ui::ModernUI::scaleForWindow(44, GetSafeHwnd());
 
         sCfgItem->mCfgDlg->SetWindowPos(XPR_NULL, sDescRect.left, y, 0, 0, SWP_NOSIZE);
     }
@@ -244,9 +253,165 @@ xpr_bool_t CfgMainDlg::showCfg(xpr_sint_t aCfgIndex)
     return XPR_TRUE;
 }
 
+void CfgMainDlg::applyModernAppearanceToChild(CWnd *aWnd, HFONT aPreviousFont)
+{
+    if (XPR_IS_NULL(aWnd) || ::IsWindow(aWnd->GetSafeHwnd()) == FALSE)
+        return;
+
+    xpr_tchar_t sClassName[64] = {0};
+    ::GetClassName(aWnd->GetSafeHwnd(), sClassName, XPR_COUNT_OF(sClassName));
+
+    const xpr_bool_t sStandardFontControl =
+        (_tcsicmp(sClassName, XPR_STRING_LITERAL("Static")) == 0 ||
+         _tcsicmp(sClassName, XPR_STRING_LITERAL("Button")) == 0 ||
+         _tcsicmp(sClassName, XPR_STRING_LITERAL("Edit")) == 0 ||
+         _tcsicmp(sClassName, XPR_STRING_LITERAL("ComboBox")) == 0 ||
+         _tcsicmp(sClassName, XPR_STRING_LITERAL("ComboBoxEx32")) == 0 ||
+         _tcsicmp(sClassName, XPR_STRING_LITERAL("ListBox")) == 0 ||
+         _tcsicmp(sClassName, XPR_STRING_LITERAL("SysTreeView32")) == 0) ?
+        XPR_TRUE :
+        XPR_FALSE;
+
+    if (XPR_IS_TRUE(sStandardFontControl) && XPR_IS_NOT_NULL(mUIFont.m_hObject))
+    {
+        HFONT sCurrentFont = reinterpret_cast<HFONT>(
+            aWnd->SendMessage(WM_GETFONT, 0, 0));
+        if (XPR_IS_NULL(sCurrentFont) || sCurrentFont == aPreviousFont)
+            aWnd->SetFont(&mUIFont, XPR_FALSE);
+    }
+
+    if (_tcsicmp(sClassName, XPR_STRING_LITERAL("Edit")) == 0 ||
+        _tcsicmp(sClassName, XPR_STRING_LITERAL("ComboBox")) == 0 ||
+        _tcsicmp(sClassName, XPR_STRING_LITERAL("ComboBoxEx32")) == 0 ||
+        _tcsicmp(sClassName, XPR_STRING_LITERAL("ListBox")) == 0 ||
+        _tcsicmp(sClassName, XPR_STRING_LITERAL("SysTreeView32")) == 0)
+    {
+        ui::ModernUI::applyExplorerControlTheme(aWnd->GetSafeHwnd());
+    }
+
+    CWnd *sChild = aWnd->GetWindow(GW_CHILD);
+    while (XPR_IS_NOT_NULL(sChild))
+    {
+        applyModernAppearanceToChild(sChild, aPreviousFont);
+        sChild = sChild->GetNextWindow();
+    }
+}
+
+void CfgMainDlg::applyModernAppearanceToChildren(HFONT aPreviousFont)
+{
+    CWnd *sChild = GetWindow(GW_CHILD);
+    while (XPR_IS_NOT_NULL(sChild))
+    {
+        applyModernAppearanceToChild(sChild, aPreviousFont);
+        sChild = sChild->GetNextWindow();
+    }
+}
+
+void CfgMainDlg::refreshModernAppearance(void)
+{
+    if (XPR_IS_NULL(m_hWnd))
+        return;
+
+    const ui::ThemePalette sPalette = ui::ModernUI::getPalette();
+    const HFONT sPreviousFont = reinterpret_cast<HFONT>(
+        SendMessage(WM_GETFONT, 0, 0));
+
+    LOGFONT sLogFont = {0};
+    if (XPR_IS_TRUE(ui::ModernUI::getUIFont(sLogFont, GetSafeHwnd())))
+    {
+        if (XPR_IS_NOT_NULL(mUIFont.m_hObject))
+            mUIFont.DeleteObject();
+        if (mUIFont.CreateFontIndirect(&sLogFont) == XPR_TRUE)
+            SetFont(&mUIFont, XPR_FALSE);
+    }
+
+    if (mSurfaceColor != sPalette.mSurface)
+    {
+        if (XPR_IS_NOT_NULL(mSurfaceBrush.m_hObject))
+            mSurfaceBrush.DeleteObject();
+        if (mSurfaceBrush.CreateSolidBrush(sPalette.mSurface) == XPR_TRUE)
+            mSurfaceColor = sPalette.mSurface;
+        else
+            mSurfaceColor = CLR_INVALID;
+    }
+
+    if (mWindowColor != sPalette.mWindow)
+    {
+        if (XPR_IS_NOT_NULL(mWindowBrush.m_hObject))
+            mWindowBrush.DeleteObject();
+        if (mWindowBrush.CreateSolidBrush(sPalette.mWindow) == XPR_TRUE)
+            mWindowColor = sPalette.mWindow;
+        else
+            mWindowColor = CLR_INVALID;
+    }
+
+    ui::ModernUI::applyWindowFrameTheme(GetSafeHwnd());
+    applyModernAppearanceToChildren(sPreviousFont);
+
+    if (::IsWindow(mTreeCtrl.GetSafeHwnd()) == XPR_TRUE)
+    {
+        mTreeCtrl.SetBkColor(sPalette.mWindow);
+        mTreeCtrl.SetTextColor(sPalette.mText);
+        mTreeCtrl.SetLineColor(
+            XPR_IS_TRUE(sPalette.mHighContrast) ?
+            CLR_DEFAULT :
+            sPalette.mSeparator);
+
+        if (XPR_IS_NOT_NULL(mImgList.m_hImageList))
+            mImgList.SetBkColor(sPalette.mWindow);
+    }
+
+    RedrawWindow(
+        XPR_NULL,
+        XPR_NULL,
+        RDW_INVALIDATE | RDW_ERASE | RDW_FRAME | RDW_ALLCHILDREN);
+}
+
+xpr_bool_t CfgMainDlg::OnEraseBkgnd(CDC *aDC)
+{
+    const ui::ThemePalette sPalette = ui::ModernUI::getPalette();
+    if (XPR_IS_TRUE(sPalette.mDark) && XPR_IS_FALSE(sPalette.mHighContrast))
+    {
+        CRect sClientRect;
+        GetClientRect(&sClientRect);
+        aDC->FillSolidRect(&sClientRect, sPalette.mSurface);
+        return XPR_TRUE;
+    }
+
+    return super::OnEraseBkgnd(aDC);
+}
+
+void CfgMainDlg::OnSettingChange(xpr_uint_t aFlags, const xpr_tchar_t *aSection)
+{
+    super::OnSettingChange(aFlags, aSection);
+    refreshModernAppearance();
+}
+
+void CfgMainDlg::OnSysColorChange(void)
+{
+    super::OnSysColorChange();
+    refreshModernAppearance();
+}
+
+LRESULT CfgMainDlg::OnThemeChanged(WPARAM aWParam, LPARAM aLParam)
+{
+    refreshModernAppearance();
+    return Default();
+}
+
+LRESULT CfgMainDlg::OnDpiChanged(WPARAM aWParam, LPARAM aLParam)
+{
+    refreshModernAppearance();
+    return Default();
+}
+
 void CfgMainDlg::OnDestroy(void)
 {
     super::OnDestroy();
+
+    DELETE_OBJECT(mUIFont);
+    DELETE_OBJECT(mSurfaceBrush);
+    DELETE_OBJECT(mWindowBrush);
 
     CfgItem *sCfgItem;
     CfgDeque::iterator sIterator;
@@ -376,19 +541,45 @@ void CfgMainDlg::OnSelchangedTree(NMHDR* pNMHDR, LRESULT* pResult)
 
 HBRUSH CfgMainDlg::OnCtlColor(CDC* pDC, CWnd* pWnd, xpr_uint_t nCtlColor)
 {
-    HBRUSH sBrush = super::OnCtlColor(pDC, pWnd, nCtlColor);
+    const ui::ThemePalette sPalette = ui::ModernUI::getPalette();
 
-    if (pWnd != XPR_NULL)
+    if (XPR_IS_TRUE(sPalette.mHighContrast))
+        return super::OnCtlColor(pDC, pWnd, nCtlColor);
+
+    if (XPR_IS_TRUE(sPalette.mDark))
     {
-        switch (pWnd->GetDlgCtrlID())
+        pDC->SetTextColor(
+            XPR_IS_NOT_NULL(pWnd) && XPR_IS_FALSE(pWnd->IsWindowEnabled()) ?
+            sPalette.mSecondaryText :
+            sPalette.mText);
+
+        if (nCtlColor == CTLCOLOR_EDIT || nCtlColor == CTLCOLOR_LISTBOX)
         {
-        case IDC_CFG_DESC:
-            {
-                pDC->SetTextColor(RGB(255,255,255));
-                pDC->SetBkMode(TRANSPARENT);
-                return mDarkGrayBrush;
-            }
+            pDC->SetBkMode(OPAQUE);
+            pDC->SetBkColor(sPalette.mWindow);
+            if (XPR_IS_NOT_NULL(mWindowBrush.m_hObject))
+                return (HBRUSH)mWindowBrush.GetSafeHandle();
         }
+
+        if (nCtlColor == CTLCOLOR_STATIC ||
+            nCtlColor == CTLCOLOR_BTN ||
+            nCtlColor == CTLCOLOR_DLG)
+        {
+            pDC->SetBkMode(TRANSPARENT);
+            pDC->SetBkColor(sPalette.mSurface);
+            if (XPR_IS_NOT_NULL(mSurfaceBrush.m_hObject))
+                return (HBRUSH)mSurfaceBrush.GetSafeHandle();
+        }
+
+        return super::OnCtlColor(pDC, pWnd, nCtlColor);
+    }
+
+    HBRUSH sBrush = super::OnCtlColor(pDC, pWnd, nCtlColor);
+    if (XPR_IS_NOT_NULL(pWnd) && pWnd->GetDlgCtrlID() == IDC_CFG_DESC)
+    {
+        pDC->SetTextColor(RGB(255,255,255));
+        pDC->SetBkMode(TRANSPARENT);
+        return mDarkGrayBrush;
     }
 
     return sBrush;
