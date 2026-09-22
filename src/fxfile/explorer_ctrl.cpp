@@ -6743,23 +6743,37 @@ void ExplorerCtrl::OnCustomdraw(NMHDR *aNmHdr, LRESULT *aResult)
                                          sViewStyle == VIEW_STYLE_MEDIUM_ICONS      ||
                                          sViewStyle == VIEW_STYLE_THUMBNAIL);
 
-                if (XPR_IS_TRUE(sLargeIcon))
-                {
-                    sIconPoint.x = sIconRect.left + ((sIconRect.Width()  - 32) / 2);
-                    sIconPoint.y = sIconRect.top  + ((sIconRect.Height() - 32) / 2);
-                }
-                else
-                {
-                    sIconPoint.x = sIconRect.left + ((sIconRect.Width()  - 16) / 2);
-                    sIconPoint.y = sIconRect.top  + ((sIconRect.Height() - 16) / 2);
-                }
+                const xpr_sint_t sLogicalIconSize =
+                    XPR_IS_TRUE(sLargeIcon) ? 32 : 16;
+                const xpr_sint_t sIconSize =
+                    ui::ModernUI::scaleForWindow(
+                        sLogicalIconSize,
+                        GetSafeHwnd());
 
-                HICON sIcon = AfxGetApp()->LoadIcon(IDI_GO_UP);
-                if (XPR_IS_TRUE(sLargeIcon))
-                    DrawIconEx(sDC->m_hDC, sIconPoint.x, sIconPoint.y, sIcon, 32, 32, 0, XPR_NULL, DI_NORMAL);
-                else
-                    DrawIconEx(sDC->m_hDC, sIconPoint.x, sIconPoint.y, sIcon, 16, 16, 0, XPR_NULL, DI_NORMAL);
-                DESTROY_ICON(sIcon);
+                sIconPoint.x =
+                    sIconRect.left + ((sIconRect.Width()  - sIconSize) / 2);
+                sIconPoint.y =
+                    sIconRect.top  + ((sIconRect.Height() - sIconSize) / 2);
+
+                HICON sIcon = ui::ModernUI::loadIconResource(
+                    AfxGetResourceHandle(),
+                    IDI_GO_UP,
+                    GetSafeHwnd(),
+                    sLogicalIconSize);
+                if (XPR_IS_NOT_NULL(sIcon))
+                {
+                    DrawIconEx(
+                        sDC->m_hDC,
+                        sIconPoint.x,
+                        sIconPoint.y,
+                        sIcon,
+                        sIconSize,
+                        sIconSize,
+                        0,
+                        XPR_NULL,
+                        DI_NORMAL);
+                    DESTROY_ICON(sIcon);
+                }
             }
         }
 
@@ -6865,13 +6879,34 @@ void ExplorerCtrl::OnCustomdrawThumbnail(LPNMLVCUSTOMDRAW aNmLvCustomDraw)
         LPLVITEMDATA sLvItemData2 = ((LPLVITEMDATA)aNmLvCustomDraw->nmcd.lItemlParam);
         if (sLvItemData2->mItemType == IDT_PARENT)
         {
-            CPoint sIconPoint;
-            sIconPoint.x = sIconRect.left + ((sIconRect.Width()  - 32) / 2);
-            sIconPoint.y = sIconRect.top  + ((sIconRect.Height() - 32) / 2);
+            const xpr_sint_t sIconSize =
+                ui::ModernUI::scaleForWindow(32, GetSafeHwnd());
 
-            HICON sIcon = AfxGetApp()->LoadIcon(IDI_GO_UP);
-            DrawIconEx(sDC->m_hDC, sIconPoint.x, sIconPoint.y, sIcon, 32, 32, 0, XPR_NULL, DI_NORMAL);
-            DESTROY_ICON(sIcon);
+            CPoint sIconPoint;
+            sIconPoint.x =
+                sIconRect.left + ((sIconRect.Width()  - sIconSize) / 2);
+            sIconPoint.y =
+                sIconRect.top  + ((sIconRect.Height() - sIconSize) / 2);
+
+            HICON sIcon = ui::ModernUI::loadIconResource(
+                AfxGetResourceHandle(),
+                IDI_GO_UP,
+                GetSafeHwnd(),
+                32);
+            if (XPR_IS_NOT_NULL(sIcon))
+            {
+                DrawIconEx(
+                    sDC->m_hDC,
+                    sIconPoint.x,
+                    sIconPoint.y,
+                    sIcon,
+                    sIconSize,
+                    sIconSize,
+                    0,
+                    XPR_NULL,
+                    DI_NORMAL);
+                DESTROY_ICON(sIcon);
+            }
         }
         else
         {
