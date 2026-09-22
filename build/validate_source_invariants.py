@@ -1214,12 +1214,17 @@ def validate_fluent_asset_contract() -> list[str]:
         ("37", "ID_FILE_NEW_FOLDER", "Folder Add 20 Regular"),
         ("38", "ID_TOOL_OPTION", "Settings 20 Regular"),
     )
+    mapping_lines = mapping.splitlines()
     for frame, command, fluent_name in mapping_contract:
-        if (
-            f"| {frame} |" not in mapping
-            or command not in mapping
-            or fluent_name not in mapping
-            or "runtime Fluent mask" not in mapping
+        expected_tokens = (
+            f"| {frame} |",
+            command,
+            fluent_name,
+            "runtime Fluent mask",
+        )
+        if not any(
+            all(token in line for token in expected_tokens)
+            for line in mapping_lines
         ):
             errors.append(
                 "src/fxfile/res/fluent/COMMAND_ICON_MAP.md: "
