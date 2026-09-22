@@ -325,6 +325,8 @@
                 './gui/FileDialogST.h',
                 './gui/FlatHeaderCtrl.cpp',
                 './gui/FlatHeaderCtrl.h',
+                './gui/FluentCommandIcons.cpp',
+                './gui/FluentCommandIcons.h',
                 './gui/gdi.cpp',
                 './gui/gdi.h',
                 './gui/IconList.cpp',
