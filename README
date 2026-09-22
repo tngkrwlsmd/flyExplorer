@@ -207,21 +207,21 @@ system-color palette. ExplorerCtrl's thumbnail/custom-draw colors and image-list
 background now share this palette contract, while FlatHeaderCtrl keeps its existing
 ThemePalette-based custom drawing.
 
-The first three explorer-control dark-styling units are now implemented: file
-list/header, folder tree, and AddressBar/edit/combo. AddressBar keeps its existing
-ComboBoxEx/child Edit/native drop-down architecture and existing owner-draw style;
-dark-specific work adds ThemePalette-based Edit/ListBox colors through the
-documented WM_CTLCOLOREDIT/WM_CTLCOLORLISTBOX path, refreshes documented Explorer
-theme association for the ComboBoxEx, ComboBox, Edit, and lazily created drop-down
-ListBox, and leaves the native drop-down button, text selection, caret, and focus
-cues in control of Windows. Light and High Contrast stay on the native/system
-rendering path. Auxiliary common controls, menu/rebar dark rendering, icon
-modernization, and broader dialog modernization remain separate work.
+The main explorer dark-styling units now include file list/header, folder tree,
+AddressBar/edit/combo, and the remaining auxiliary shell controls that still had
+light-only painting. The auxiliary pass keeps the existing custom-rendering
+ownership of ActivateBar and ContentsWnd, replaces hard-coded white/gray surfaces
+with ThemePalette colors, updates the optional bookmark area to use a reusable
+palette-backed brush instead of WHITE_BRUSH, and keeps High Contrast on
+system-derived colors. TabCtrl was already ThemePalette-based and was intentionally
+left unchanged. MenuBar/Rebar/Toolbar dark rendering, icon modernization, and
+broader dialog modernization remain separate work.
 
-The AddressBar change has only static source review in this environment. Windows
-local_ci quick/x64 execution and actual Light/Dark/High Contrast, DPI,
-focus/selection, Korean IME, autocomplete, and drop-down visual/interactive
-validation remain separate manual evidence and must not be treated as PASS.
+The auxiliary control change has only static source review in this environment.
+Windows local_ci quick/x64 execution and actual Light/Dark/High Contrast, DPI,
+active-pane state, ContentsWnd/bookmark rendering, scrollbar/tooltip appearance,
+and interactive behavior remain separate manual evidence and must not be treated
+as PASS.
 
 Generate the Visual Studio Solution
 -----------------------------------

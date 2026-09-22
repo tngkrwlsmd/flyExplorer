@@ -77,7 +77,7 @@
     }
   ],
   "review": {
-    "reviewed_revision": "1a8f7c1443f0f824766689d567618499bd2f10ef",
+    "reviewed_revision": "56a12f94022ba31cd6c8baf502fd7ed143d56229",
     "reviewed_at": "2026-09-22",
     "reviewed_paths": [
       "README",
@@ -213,7 +213,14 @@
 - AddressBar는 기존 system UI font, child font synchronization, font/icon 기반 item-height 계산, SHAutoComplete, Enter/Tab/Escape navigation 경로를 유지한다. WM_SETTINGCHANGE / WM_SYSCOLORCHANGE / WM_THEMECHANGED / WM_DPICHANGED에서 theme/color/font/metric/redraw를 갱신한다.
 - 1-D3 정적 범위 검토는 PASS: 구현 변경은 src/fxfile/address_bar.h/.cpp에 한정되고 ModernUI direct include, existing owner-draw preservation, native arrow/focus handling, High Contrast fallback, child HWND refresh, autocomplete/font/DPI contract 보존을 확인했다. build/validate_source_invariants.py 및 ModernUI palette 구조는 변경하지 않았다.
 - 이 실행 환경에서는 Windows/MSVC local_ci.bat quick 및 local_ci.bat x64를 실행하지 못했으므로 둘 다 NOT TESTED다. 실제 Windows Light/Dark/High Contrast, 100/125/150/200% DPI, focused/unfocused, edit selection/caret, drop-down selected item/arrow, Korean IME, autocomplete, Enter/path navigation은 NOT TESTED다.
-- 다음 UI 현대화 범위는 auxiliary common controls를 먼저 정리한 뒤 menu/rebar dark rendering으로 진행한다. 나머지 dialog/icon asset 현대화는 후속 phase 범위다.
+- auxiliary common controls inventory를 정리했다. main explorer shell에서 TabCtrl은 이미 ThemePalette 기반 selected/hover/background/separator rendering과 settings/theme/DPI refresh를 갖고 있어 재작업하지 않았고, PathBar 계열도 별도 대규모 recolor 대상으로 잡지 않았다. dialog 전용 CButton/CStatic/CProgressCtrl/CListBox/CComboBox/CEdit 등은 broader dialog modernization 범위로 남겼다.
+- 이번 auxiliary dark styling의 실제 수정 대상은 main ExplorerView의 ActivateBar와 optional ContentsWnd 정보 영역(ContentsWnd + BookmarkSetWnd + BookmarkWnd)이다. MenuBar/Rebar/Toolbar, File List/Header, Folder Tree, AddressBar, StatusBar는 수정하지 않았다.
+- ActivateBar는 기존 custom paint ownership과 사용자 active-pane color 설정을 유지하면서 ThemePalette의 window/surface를 inactive/last-active 배경 계산에 사용한다. High Contrast에서는 사용자 색을 강제하지 않고 mSelection/mSurface/mWindow system-derived palette로 fallback하며 WM_SETTINGCHANGE / WM_SYSCOLORCHANGE / WM_THEMECHANGED에서 즉시 갱신한다.
+- ContentsWnd는 기존 custom paint ownership을 유지하고 hard-coded white/gray/black surface, infotip, icon-box, drive-space legend/progress 색을 ThemePalette mWindow/mSurface/mText/mBorder/mSeparator로 교체했다. High Contrast infotip text/background는 COLOR_INFOTEXT/COLOR_INFOBK를 유지한다. BookmarkSetWnd 배경은 ThemePalette mWindow로 전환하고 documented Explorer theme helper를 settings/syscolor/theme refresh 때 재적용한다.
+- BookmarkWnd는 기존 CStatic + WM_CTLCOLOR_REFLECT 동작을 유지하고 WHITE_BRUSH를 제거했다. ThemePalette mWindow 기반 reusable CBrush를 멤버로 관리하여 paint/message마다 GDI brush를 생성하지 않으며, High Contrast에서는 bookmark custom text color 대신 system-derived palette text를 사용한다. Tooltip theme association도 기존 ModernUI helper로 갱신한다.
+- auxiliary 구현 정적 범위 검토는 PASS: 변경 파일은 activate_bar.h/.cpp, contents_wnd.h/.cpp, bookmark_set_wnd.h/.cpp, bookmark_wnd.h/.cpp뿐이며 generated project, MenuBar/Rebar/Toolbar, TabCtrl, source invariant, ModernUI palette 구조는 변경하지 않았다. 새 ModernUI 사용 cpp는 모두 ModernUI.h를 직접 include하며 hard-coded RGB(255,255,255)/WHITE_BRUSH light-only 경로 제거, theme/syscolor/settings handlers, High Contrast fallback, reusable bookmark brush를 확인했다.
+- 이 실행 환경에서는 Windows/MSVC local_ci.bat quick 및 local_ci.bat x64를 실행하지 못했으므로 둘 다 NOT TESTED다. 실제 Windows Light/Dark/High Contrast, 100/125/150/200% DPI, ActivateBar active/last-active 상태, ContentsWnd infotip/drive-space/bookmark rendering, native scrollbar/tooltip, mouse/keyboard/scroll/bookmark interaction은 NOT TESTED다.
+- 다음 UI 현대화 단위는 MenuBar / Rebar / Toolbar dark rendering이다. 나머지 dialog/icon asset 현대화는 후속 phase 범위다.
 
 ## Recommended verification
 
