@@ -15,6 +15,7 @@
 #include "explorer_view.h"
 #include "conf_dir.h"
 #include "ctrl_id.h"
+#include "gui/ModernUI.h"
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -353,13 +354,17 @@ void MainCoolBar::onUpdatedToolbarSize(CToolBarEx &theToolBar)
         }
     }
 
-    // Modify parent band info accordingly
+    // Modify parent band info accordingly. A single-row band uses the shared
+    // command-bar height so main/drive/bookmark surfaces align vertically,
+    // while wrapped toolbars retain their larger native calculated height.
     REBARBANDINFO sRebarBandInfo;
     sRebarBandInfo.cbSize     = sizeof(sRebarBandInfo);
     sRebarBandInfo.fMask      = RBBIM_CHILDSIZE | RBBIM_IDEALSIZE;
     sRebarBandInfo.cxIdeal    = cxIdeal;
     sRebarBandInfo.cxMinChild = 0;
-    sRebarBandInfo.cyMinChild = cyChild;
+    sRebarBandInfo.cyMinChild = max(
+        cyChild,
+        ui::ModernUI::getCommandBarHeight(theToolBar.GetSafeHwnd()));
     VERIFY(sReBarCtrl.SetBandInfo(sBandIndex, &sRebarBandInfo));
 }
 
