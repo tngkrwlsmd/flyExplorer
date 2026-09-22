@@ -559,7 +559,7 @@ BOOL CSizableReBar::OnEraseBkgnd(CDC *pDC)
     const COLORREF sBackground =
         XPR_IS_TRUE(sPalette.mHighContrast) ?
         ::GetSysColor(COLOR_BTNFACE) :
-        sPalette.mSurface;
+        sPalette.mChrome;
 
     CRect sClientRect;
     GetClientRect(&sClientRect);
