@@ -1536,8 +1536,20 @@ void CMenuBar::OnCustomDraw( NMHDR* pNMHDR, LRESULT* pResult )
             break;
         }
         case CDDS_PREPAINT:
+        {
+            const fxfile::ui::ThemePalette sPalette = fxfile::ui::ModernUI::getPalette();
+            if ( XPR_IS_FALSE(sPalette.mHighContrast) && !WinAppEx::GetInstance()->IsWinXP() )
+            {
+                ::SetDCBrushColor( nmcd.hdc, sPalette.mSurface );
+                ::FillRect(
+                    nmcd.hdc,
+                    &nmcd.rc,
+                    static_cast<HBRUSH>(::GetStockObject(DC_BRUSH)) );
+            }
+
             *pResult = CDRF_NOTIFYITEMDRAW;
             break;
+        }
 
         case CDDS_ITEMPREPAINT:
         {
@@ -1572,7 +1584,7 @@ void CMenuBar::OnCustomDraw( NMHDR* pNMHDR, LRESULT* pResult )
             else
             {
                 const fxfile::ui::ThemePalette sPalette = fxfile::ui::ModernUI::getPalette();
-                if ( XPR_IS_TRUE(sPalette.mDark) && XPR_IS_FALSE(sPalette.mHighContrast) )
+                if ( XPR_IS_FALSE(sPalette.mHighContrast) && !WinAppEx::GetInstance()->IsWinXP() )
                 {
                     *pResult |= TBCDRF_NOEDGES | TBCDRF_NOOFFSET;
 
