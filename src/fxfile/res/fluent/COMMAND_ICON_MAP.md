@@ -1,43 +1,47 @@
 # Fluent command-icon mapping inventory
 
-This inventory maps the existing flyExplorer main-toolbar command/image contract to Microsoft Fluent UI System Icons candidates. Runtime frame indexes remain unchanged.
+This inventory maps the existing flyExplorer main-toolbar command/image contract to Microsoft Fluent UI System Icons. Runtime frame indexes remain unchanged.
 
-Nine representative command frames now use generated Fluent masks at runtime while every non-migrated frame continues to come from the historical 16/22-pixel, 51-frame bitmap strips. The SVG + manifest + deterministic generator are canonical for migrated artwork; the legacy strips remain canonical for all other frames.
+The runtime Fluent registry currently covers 23 commands. That includes all 21 commands enabled by default in the Main Toolbar plus the optional History and Settings commands. The historical 16/22-pixel, 51-frame bitmap strips remain the fallback and persistence/index contract for every non-migrated frame.
 
-| Current frame | Command | Fluent candidate | Status |
+| Current frame | Command | Fluent source | Status |
 | ---: | --- | --- | --- |
-| 0 | `ID_GO_BACK` | `Arrow Left 20 Regular` | runtime Fluent mask |
-| 1 | `ID_GO_FORWARD` | `Arrow Right 20 Regular` | runtime Fluent mask |
-| 2 | `ID_GO_UP` | `Arrow Up 20 Regular` | runtime Fluent mask |
-| 3 | `ID_GO_HISTORY` | `History 20 Regular` | mapping verified upstream; not vendored yet |
-| 7 | `ID_VIEW_FOLDER_TREE_SHOW` | `Folder Open 20 Regular` | mapping verified upstream; semantic review before rasterization |
-| 8 | `ID_TOOL_FILE_SEARCH` | `Search 20 Regular` | runtime Fluent mask |
-| 10 | `ID_GO_BOOKMARK` | `Star 20 Regular` | mapping verified upstream; not vendored yet |
-| 11 | `ID_GO_DRIVE` | `Hard Drive 20 Regular` | mapping verified upstream; not vendored yet |
-| 12 | `ID_EDIT_CUT` | `Cut 20 Regular` | runtime Fluent mask |
-| 13 | `ID_EDIT_COPY` | `Copy 20 Regular` | runtime Fluent mask |
-| 14 | `ID_EDIT_PASTE` | `Clipboard Paste 20 Regular` | runtime Fluent mask |
-| 18 | `ID_FILE_RENAME` | `Rename 20 Regular` | mapping verified upstream; not vendored yet |
-| 19 | `ID_FILE_DELETE` | `Delete 20 Regular` | mapping verified upstream; not vendored yet |
-| 20 | `ID_FILE_PROPERTY` | `Info 20 Regular` | candidate; semantic review required |
-| 21 | `ID_WINDOW_SPLIT` | `Window Multiple 20 Regular` | candidate; semantic review required |
-| 26 | `ID_VIEW_STYLE` | `Apps List 20 Regular` | candidate; semantic review required |
-| 27 | `ID_TOOL_EMPTY_RECYCLEBIN` | `Recycle 20 Regular` | mapping verified upstream; not vendored yet |
-| 31 | `ID_TOOL_CMD` | `Window Console 20 Regular` | mapping verified upstream; not vendored yet |
-| 32 | `ID_FILE_PRINT` | `Document Print 20 Regular` | mapping verified upstream; not vendored yet |
-| 36 | `ID_VIEW_PICVIEWER` | `Image 20 Regular` | mapping verified upstream; not vendored yet |
-| 37 | `ID_FILE_NEW_FOLDER` | `Folder Add 20 Regular` | runtime Fluent mask |
-| 38 | `ID_TOOL_OPTION` | `Settings 20 Regular` | runtime Fluent mask |
-| 41 | `ID_FILE_VIEW` | `Document 20 Regular` | mapping verified upstream; semantic review required |
-| 42 | `ID_FILE_EDIT` | `Document Edit 20 Regular` | mapping verified upstream; not vendored yet |
-| 43 | `ID_GO_WORKING_FOLDER` | `Folder 20 Regular` | candidate; working-folder state needs review |
+| 0 | `ID_GO_BACK` | `Arrow Left Regular` | runtime Fluent mask |
+| 1 | `ID_GO_FORWARD` | `Arrow Right Regular` | runtime Fluent mask |
+| 2 | `ID_GO_UP` | `Arrow Up Regular` | runtime Fluent mask |
+| 3 | `ID_GO_HISTORY` | `History Regular` | runtime Fluent mask |
+| 7 | `ID_VIEW_FOLDER_TREE_SHOW` | `Folder Open Regular` | runtime Fluent mask |
+| 8 | `ID_TOOL_FILE_SEARCH` | `Search Regular` | runtime Fluent mask |
+| 10 | `ID_GO_BOOKMARK` | `Star Regular` | runtime Fluent mask |
+| 11 | `ID_GO_DRIVE` | `Hard Drive Regular` | runtime Fluent mask |
+| 12 | `ID_EDIT_CUT` | `Cut Regular` | runtime Fluent mask |
+| 13 | `ID_EDIT_COPY` | `Copy Regular` | runtime Fluent mask |
+| 14 | `ID_EDIT_PASTE` | `Clipboard Paste Regular` | runtime Fluent mask |
+| 18 | `ID_FILE_RENAME` | `Rename Regular` | runtime Fluent mask |
+| 19 | `ID_FILE_DELETE` | `Delete Regular` | runtime Fluent mask |
+| 20 | `ID_FILE_PROPERTY` | `Document Settings Regular` | runtime Fluent mask |
+| 21 | `ID_WINDOW_SPLIT` | `Window Multiple Regular` | runtime Fluent mask |
+| 26 | `ID_VIEW_STYLE` | `Apps List Regular` | runtime Fluent mask |
+| 27 | `ID_TOOL_EMPTY_RECYCLEBIN` | `Bin Recycle Regular` | runtime Fluent mask |
+| 28 | `ID_APP_ABOUT` | `Info Regular` | runtime Fluent mask |
+| 29 | `ID_EDIT_UNDO` | `Arrow Undo Regular` | runtime Fluent mask |
+| 31 | `ID_TOOL_CMD` | `Window Console Regular` | runtime Fluent mask |
+| 37 | `ID_FILE_NEW_FOLDER` | `Folder Add Regular` | runtime Fluent mask |
+| 38 | `ID_TOOL_OPTION` | `Settings Regular` | runtime Fluent mask |
+| 43 | `ID_GO_WORKING_FOLDER` | `Folder Regular` | runtime Fluent mask |
+
+## Remaining legacy main-toolbar artwork
+
+The following non-default or specialized frames remain on the historical bitmap strips until their semantics are reviewed: working-folder slots 0-4, folder move/copy, attribute/time, split variants, split equal/swap, file-scrap view, print, picture viewer, file view/edit and the other non-command/reserved frames.
 
 ## Rules
 
 - Preserve the existing command IDs and image indexes during artwork migration.
 - Do not replace Shell-owned file/folder icons with Fluent application-command artwork.
 - Prefer Regular glyphs for neutral commands. Use Filled only when an actual active/selected semantic state needs it.
-- The representative runtime migration uses official 16px source SVGs for the 16px toolbar and official 20px source SVGs centered in the existing 22px large-toolbar cell.
-- Generated masks are theme-neutral; runtime applies ThemePalette text color to both cold/hot image lists while existing toolbar custom draw owns hover/pressed surfaces.
+- Prefer official 16px Regular SVGs for the 16px toolbar and official 20px Regular SVGs for the 22px large-toolbar cell. Where upstream has no 16px variant, the audited 20px source is deterministically scaled into the 16px design cell.
+- `toolbar_manifest.json` is the canonical command/frame/SVG mapping. Generated masks must stay byte-for-byte reproducible from the manifest and vendored SVGs.
+- `FluentCommandIcons` is the shared runtime adapter used by Main Toolbar, BCMenu and selected settings-tree navigation glyphs.
+- Generated masks are theme-neutral; runtime applies ThemePalette text/secondary-text colors while existing custom draw owns hover/pressed surfaces.
 - Do not reorder the historical 51-frame strip or hand-edit generated Fluent masks independently.
 - No network download is allowed during normal builds.
