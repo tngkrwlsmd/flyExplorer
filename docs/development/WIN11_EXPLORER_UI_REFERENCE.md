@@ -67,5 +67,5 @@ The SVG sources are registered in canonical `fxfile.gyp`, but the runtime toolba
 - Dark AddressBar controls reset the Explorer visual-style association so the existing palette adapters own the complete surface; Light/High Contrast retain the documented native association path.
 - App-owned BCMenu submenu arrows use the system-installed Segoe Fluent Icons `ChevronRightSmall` glyph (U+E970) when available and a geometry fallback otherwise.
 - Popup shared metrics were tightened from the earlier oversized legacy proportions; shell-owned IContextMenu rendering/routing remains untouched.
-- The representative Fluent SVG set is still a source/provenance and mapping foundation, not yet a runtime toolbar replacement.
+- The Fluent SVG/manifest pipeline is now an active runtime replacement for 23 command IDs: all 21 Main Toolbar commands enabled by default plus optional History and Settings. Main Toolbar and app-owned BCMenu share `FluentCommandIcons`; settings navigation overlays 17 strong semantic matches while preserving the historical bitmap fallback and High Contrast path.
 - Dark settings ComboBox drop-down ListBox handles reset the Explorer visual-style association after `CB_SHOWDROPDOWN`, allowing the existing palette CTLCOLOR path to own list text/background while preserving native dropdown/keyboard behavior.
