@@ -61,7 +61,7 @@ LRESULT ApplyDarkToolBarCustomDraw(LPNMTBCUSTOMDRAW aCustomDraw)
             // ToolbarWindow32 is transparent in the rebar. Paint the complete
             // command surface ourselves so Light/Dark modes cannot leak the
             // legacy COLOR_BTNFACE/white rebar background around buttons.
-            ::SetDCBrushColor(aCustomDraw->nmcd.hdc, sPalette.mSurface);
+            ::SetDCBrushColor(aCustomDraw->nmcd.hdc, sPalette.mChrome);
             ::FillRect(
                 aCustomDraw->nmcd.hdc,
                 &aCustomDraw->nmcd.rc,
@@ -74,7 +74,7 @@ LRESULT ApplyDarkToolBarCustomDraw(LPNMTBCUSTOMDRAW aCustomDraw)
             const UINT sItemState = aCustomDraw->nmcd.uItemState;
             LRESULT sResult = CDRF_DODEFAULT | TBCDRF_NOEDGES | TBCDRF_NOOFFSET;
 
-            aCustomDraw->clrBtnFace = sPalette.mSurface;
+            aCustomDraw->clrBtnFace = sPalette.mChrome;
             aCustomDraw->clrText =
                 (sItemState & CDIS_DISABLED) ?
                 sPalette.mSecondaryText :
@@ -90,12 +90,9 @@ LRESULT ApplyDarkToolBarCustomDraw(LPNMTBCUSTOMDRAW aCustomDraw)
 
                 aCustomDraw->clrHighlightHotTrack =
                     XPR_IS_TRUE(sSelected) ?
-                    sPalette.mSelection :
+                    sPalette.mPressed :
                     sPalette.mHover;
-                aCustomDraw->clrText =
-                    XPR_IS_TRUE(sSelected) ?
-                    sPalette.mSelectionText :
-                    sPalette.mText;
+                aCustomDraw->clrText = sPalette.mText;
                 sResult |= TBCDRF_HILITEHOTTRACK;
             }
 
