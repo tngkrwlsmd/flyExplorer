@@ -424,6 +424,80 @@ def validate_command_surface_contract() -> list[str]:
     return errors
 
 
+def validate_configuration_shell_contract() -> list[str]:
+    """Protect the modern settings-shell layout and palette hierarchy."""
+
+    errors: list[str] = []
+    paths = {
+        "rc": FXFILE_SRC / "fxfile.rc",
+        "cfg_h": FXFILE_SRC / "cfg" / "cfg_main_dlg.h",
+        "cfg_cpp": FXFILE_SRC / "cfg" / "cfg_main_dlg.cpp",
+        "cfg_page": FXFILE_SRC / "cfg" / "cfg_dlg.cpp",
+        "modern_dialog": FXFILE_SRC / "gui" / "ModernDialog.cpp",
+        "main_frame": FXFILE_SRC / "main_frame.cpp",
+    }
+
+    contents: dict[str, str] = {}
+    for name, path in paths.items():
+        try:
+            contents[name] = path.read_text(encoding="utf-8", errors="replace")
+        except OSError as exc:
+            errors.append(f"{path.relative_to(ROOT)}: cannot read configuration-shell contract: {exc}")
+
+    if errors:
+        return errors
+
+    rc = contents["rc"]
+    cfg_cpp = contents["cfg_cpp"]
+
+    cfg_start = rc.find("IDD_CFG_MAIN DIALOGEX")
+    cfg_end = rc.find("\nEND", cfg_start)
+    cfg_resource = rc[cfg_start:cfg_end] if cfg_start >= 0 and cfg_end >= 0 else ""
+    for token in (
+        "IDD_CFG_MAIN DIALOGEX 0, 0, 430, 328",
+        "TVS_FULLROWSELECT",
+        "IDC_CFG_DESC,138,8,282,20",
+        "IDOK,238,302,58,18",
+    ):
+        if token not in cfg_resource:
+            errors.append(f"src/fxfile/fxfile.rc: modern configuration-shell token missing {token}")
+
+    for legacy_token in ("TVS_HASLINES", "TVS_LINESATROOT", "WS_BORDER | WS_HSCROLL"):
+        if legacy_token in cfg_resource:
+            errors.append(f"src/fxfile/fxfile.rc: legacy configuration navigation token returned {legacy_token}")
+
+    if "mDarkGrayBrush" in contents["cfg_h"] or "mDarkGrayBrush" in cfg_cpp:
+        errors.append("configuration shell: legacy fixed gray breadcrumb brush returned")
+
+    for token in (
+        "mHeaderFont",
+        "FW_SEMIBOLD",
+        "scaleForWindow(28",
+        "SetIndent(ui::ModernUI::scaleForWindow(20",
+        "sDescRect.bottom + ui::ModernUI::scaleForWindow(10",
+        "ON_NOTIFY(NM_CUSTOMDRAW, IDC_CFG_TREE, OnTreeCustomDraw)",
+        "void CfgMainDlg::OnTreeCustomDraw",
+        "sPalette.mSelection",
+        "sPalette.mHover",
+    ):
+        source = contents["cfg_h"] + cfg_cpp
+        if token not in source:
+            errors.append(f"configuration shell: missing modern navigation token {token}")
+
+    for source_name in ("cfg_page", "modern_dialog"):
+        source = contents[source_name]
+        if "if (XPR_IS_FALSE(sPalette.mHighContrast))" not in source:
+            errors.append(f"{source_name}: light/dark palette surface contract missing")
+        if "if (XPR_IS_TRUE(sPalette.mHighContrast))" not in source:
+            errors.append(f"{source_name}: High Contrast native fallback missing")
+
+    for token in ("sPalette.mSeparator", "sPalette.mWindow"):
+        if token not in contents["main_frame"]:
+            errors.append(f"src/fxfile/main_frame.cpp: missing content hierarchy token {token}")
+
+    return errors
+
+
 def validate_ui_resource_contracts() -> list[str]:
     """Protect icon/bitmap frame geometry and canonical resource wiring."""
 
@@ -1030,6 +1104,7 @@ def main() -> int:
     errors.extend(validate_custom_dialog_paint_regressions())
     errors.extend(validate_toolbar_custom_draw_regression())
     errors.extend(validate_command_surface_contract())
+    errors.extend(validate_configuration_shell_contract())
     errors.extend(validate_ui_resource_contracts())
     errors.extend(validate_functional_test_wiring())
     errors.extend(validate_installer_smoke_wiring())
