@@ -66,7 +66,8 @@ void FlatHeaderCtrl::initHeader(xpr_bool_t aBoldFont)
             SetFont(&mFont);
     }
 
-    mOffset = fxfile::ui::ModernUI::scaleForWindow(6, GetSafeHwnd());
+    mOffset =
+        fxfile::ui::ModernUI::getListHeaderTextPadding(GetSafeHwnd());
     mBoldFont = aBoldFont;
 }
 
