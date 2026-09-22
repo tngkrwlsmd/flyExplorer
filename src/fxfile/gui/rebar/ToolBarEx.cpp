@@ -538,8 +538,11 @@ void CToolBarEx::ApplyModernMetrics()
         return;
 
     const UINT sDpi = fxfile::ui::ModernUI::getDpi(m_hWnd);
-    const int sHorizontalPadding = fxfile::ui::ModernUI::scale(6, sDpi);
-    const int sVerticalPadding = fxfile::ui::ModernUI::scale(5, sDpi);
+    // Windows 11 Explorer gives command-bar actions more breathing room than
+    // the legacy compact toolbar. Keep the existing icon-strip contract, but
+    // raise hit-target density through DPI-scaled padding.
+    const int sHorizontalPadding = fxfile::ui::ModernUI::scale(10, sDpi);
+    const int sVerticalPadding = fxfile::ui::ModernUI::scale(7, sDpi);
 
     GetToolBarCtrl().SendMessage(
         TB_SETPADDING,
