@@ -28,10 +28,10 @@ const UINT_PTR kModernGroupBoxSubclassId = 0x46474342; // 'FGCB'
 LRESULT CALLBACK ModernGroupBoxSubclassProc(
     HWND aHwnd,
     UINT aMessage,
-    WPARAM aWParam,
-    LPARAM aLParam,
+    WPARAM,
+    LPARAM,
     UINT_PTR aSubclassId,
-    DWORD_PTR aRefData)
+    DWORD_PTR)
 {
     switch (aMessage)
     {
