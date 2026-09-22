@@ -1,4 +1,5 @@
 !include                  "MUI.nsh"
+!include                  "FileFunc.nsh"
 
 !define PRODUCT_NAME      "fxfile"
 !define PRODUCT_MAJOR_VER "2"
@@ -25,6 +26,7 @@ Var UN_OPT_RMCONF
 Var UN_OPT_RMALL
 Var PLATFORM
 Var PLATFORM_BIT
+Var SMOKE_MODE
 
 #--------------------------------
 # Modern UI Configuration
@@ -144,6 +146,30 @@ Function .onInit
 
     Call GetWindowsVersion
 
+    # /FXFILE_SMOKE=<temp-dir> enables a side-effect-free installer test mode.
+    # It never kills existing processes, writes product Registry state, creates
+    # shortcuts, or launches the product. Payload is installed only below the
+    # caller-provided temporary directory.
+    ${GetParameters} $R1
+    ${GetOptions} $R1 "/FXFILE_SMOKE=" $R2
+    StrCmp $R2 "" EndSmokeInit
+
+        StrCpy $SMOKE_MODE "1"
+        StrCpy $INSTDIR $R2
+
+        StrCmp $PLATFORM_BIT "64" SmokeOpt64 SmokeOpt32
+        SmokeOpt64:
+            StrCpy $OPT_64BIT "1"
+            StrCpy $OPT_32BIT_UNICODE "0"
+            StrCpy $OPT_32BIT_MULTIBYTE "0"
+            Goto EndSmokeInit
+        SmokeOpt32:
+            StrCpy $OPT_64BIT "0"
+            StrCpy $OPT_32BIT_UNICODE "1"
+            StrCpy $OPT_32BIT_MULTIBYTE "0"
+
+    EndSmokeInit:
+
     # Select language
     !insertmacro MUI_LANGDLL_DISPLAY
     
@@ -154,7 +180,9 @@ FunctionEnd
 
 Function .onInstSuccess
 
-    ExecShell "" "$INSTDIR\fxfile-launcher.exe"
+    StrCmp $SMOKE_MODE "1" OnInstSuccessDone
+        ExecShell "" "$INSTDIR\fxfile-launcher.exe"
+    OnInstSuccessDone:
   
 FunctionEnd
 
@@ -184,6 +212,8 @@ FunctionEnd
 
 Function OptionLeavePage
 
+    StrCmp $SMOKE_MODE "1" EndInstallDir
+
     # Read option value
     !insertmacro MUI_INSTALLOPTIONS_READ $OPT_64BIT           "option.ini" "Field 2" "State"
     !insertmacro MUI_INSTALLOPTIONS_READ $OPT_32BIT_UNICODE   "option.ini" "Field 3" "State"
@@ -204,11 +234,15 @@ Function OptionLeavePage
 FunctionEnd
 
 Section "$(TEXT_DESKTOP_SHORTCUT)" DESKTOP_SHORTCUT
-   CreateShortCut "$DESKTOP\fxfile.lnk" "$INSTDIR\fxfile.exe"
+   StrCmp $SMOKE_MODE "1" DesktopShortcutDone
+       CreateShortCut "$DESKTOP\fxfile.lnk" "$INSTDIR\fxfile.exe"
+   DesktopShortcutDone:
 SectionEnd
 
 Section "$(TEXT_QUICKLAUNCH_SHORTCUT)" QUICKLAUNCH_SHORTCUT
-   CreateShortCut "$QUICKLAUNCH\fxfile.lnk" "$INSTDIR\fxfile.exe"
+   StrCmp $SMOKE_MODE "1" QuickLaunchShortcutDone
+       CreateShortCut "$QUICKLAUNCH\fxfile.lnk" "$INSTDIR\fxfile.exe"
+   QuickLaunchShortcutDone:
 SectionEnd
 
 !insertmacro MUI_FUNCTION_DESCRIPTION_BEGIN
@@ -223,8 +257,10 @@ Section "" SecCopyUI
     SetOutPath "$INSTDIR"
 
     #
-    # Kill processes
+    # Kill processes only during a real installation.
     #
+    StrCmp $SMOKE_MODE "1" SkipInstallProcessKill
+
     FindProcDLL::KillProc "fxfile.exe"
     FindProcDLL::KillProc "fxfile-launcher.exe"
     FindProcDLL::KillProc "fxfile-upchecker.exe"
@@ -250,6 +286,8 @@ Section "" SecCopyUI
         Goto FindProcLoopfxfileupdater
     FindProcLoopfxfileupdaterDone:
 
+    SkipInstallProcessKill:
+
     SetOverwrite on
   
     File /r "bin\*.*"
@@ -273,6 +311,8 @@ Section "" SecCopyUI
     RMDir /r "$INSTDIR\x64"
     RMDir /r "$INSTDIR\x86-unicode"
     RMDir /r "$INSTDIR\x86-multibyte"
+
+    StrCmp $SMOKE_MODE "1" CreateUninstaller
 
     # Store install folder
     DeleteRegKey HKCU "Software\fxfile\fxfile"
@@ -304,12 +344,20 @@ Section "" SecCopyUI
   
     !insertmacro MUI_STARTMENU_WRITE_END
   
-    # Create uninstaller
+    # Create uninstaller. Smoke mode reaches this label without touching
+    # product Registry keys or Start Menu/Desktop shortcuts.
+    CreateUninstaller:
     WriteUninstaller "$INSTDIR\Uninstall.exe"
 
 SectionEnd
 
 Function un.onInit
+
+    ${un.GetParameters} $R1
+    ${un.GetOptions} $R1 "/FXFILE_SMOKE=" $R2
+    StrCmp $R2 "" EndUnSmokeInit
+        StrCpy $SMOKE_MODE "1"
+    EndUnSmokeInit:
 
     # Extract InstallOptions INI files
     !insertmacro MUI_INSTALLOPTIONS_EXTRACT "option_uninstall.ini"
@@ -338,8 +386,10 @@ Section "Uninstall"
     SetShellVarContext all
 
     #
-    # Kill processes
+    # Kill processes only during a real uninstall.
     #
+    StrCmp $SMOKE_MODE "1" unSkipProcessKill
+
     FindProcDLL::KillProc "fxfile.exe"
     FindProcDLL::KillProc "fxfile-launcher.exe"
     FindProcDLL::KillProc "fxfile-upchecker.exe"
@@ -364,6 +414,8 @@ Section "Uninstall"
         IntCmp $R0 0 unFindProcLoopUpdaterDone
         goto unFindProcLoopUpdater
     unFindProcLoopUpdaterDone:
+
+    unSkipProcessKill:
     
     #
     # current user
@@ -394,6 +446,10 @@ Section "Uninstall"
     Delete "$INSTDIR\license.txt"
     RMDir /r "$INSTDIR\Languages"
     RMDir /r "$INSTDIR\upchecker"
+
+    # Smoke uninstall removes only its temporary install tree.
+    StrCmp $SMOKE_MODE "1" unSmokeCleanup
+
     RMDir /r "$APPDATA\fxfile-launcher"
 
     # Read a value from an InstallOptions INI file
@@ -463,6 +519,13 @@ Section "Uninstall"
     DeleteRegKey HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\fxfile"
     DeleteRegKey HKCU "Software\fxfile"
     DeleteRegKey HKCR "Folder\shell\fxfile로 열기"
+
+    Goto unUninstallDone
+
+    unSmokeCleanup:
+        RMDir /r "$INSTDIR"
+
+    unUninstallDone:
 
     # Display the Finish header
     #!insertmacro MUI_UNFINISHHEADER
