@@ -650,6 +650,10 @@ def validate_soft_surface_contract() -> list[str]:
             "getDialogSectionSpacing",
             "getCardCornerRadius",
             "applyRoundedWindowRegion",
+            "RefreshCfgTreeImageList",
+            "kCfgTreeFluentIcons",
+            "FluentCommandIcons::createIcon",
+            "ImageList_ReplaceIcon",
             "sPalette.mCard",
             "sPalette.mElevated",
             "sPalette.mInactiveSelection",
@@ -664,6 +668,13 @@ def validate_soft_surface_contract() -> list[str]:
             "ModernCfgPushButtonSubclassProc",
             "DrawModernCfgPushButton",
             "IsModernCfgPushButtonType",
+            "ModernCfgEditSubclassProc",
+            "DrawModernCfgEditFrame",
+            "WM_NCPAINT",
+            "RDW_FRAME",
+            "WS_EX_TRANSPARENT",
+            "HWND_BOTTOM",
+            "CWnd *sNextChild = sChild->GetNextWindow()",
             "BM_GETCHECK",
             "CBS_DROPDOWNLIST",
             "CB_GETDROPPEDSTATE",
@@ -1869,10 +1880,20 @@ def validate_ui_resource_contracts() -> list[str]:
                 "src/fxfile/file_scrap_toolbar.cpp: toolbar frame/command order changed"
             )
 
-    if "sBitmap.LoadBitmap(IDB_CONFIG_TREE);" not in cfg_main:
-        errors.append("src/fxfile/cfg/cfg_main_dlg.cpp: config tree bitmap resource changed")
-    if "mImgList.Create(16, 16" not in cfg_main:
-        errors.append("src/fxfile/cfg/cfg_main_dlg.cpp: config tree 16px frame contract changed")
+    for token in (
+        "RefreshCfgTreeImageList",
+        "sBitmap.LoadBitmap(IDB_CONFIG_TREE)",
+        "aImageList.Create(16, 16",
+        "kCfgTreeFluentIcons",
+        "FluentCommandIcons::createIcon",
+        "ImageList_ReplaceIcon",
+        "mTreeCtrl.SetImageList(&mImgList, TVSIL_NORMAL)",
+    ):
+        if token not in cfg_main:
+            errors.append(
+                "src/fxfile/cfg/cfg_main_dlg.cpp: "
+                f"config-tree base/Fluent overlay contract missing {token}"
+            )
 
     for token in (
         "ModernUI::loadIconResource",
