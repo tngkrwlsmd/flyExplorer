@@ -643,6 +643,8 @@ def validate_functional_test_wiring() -> list[str]:
     required_gyp_tokens = (
         "'target_name': 'fxfile-functional-tests'",
         "'../xpr/xpr.gyp:xpr'",
+        "'../fxfile-crash/fxfile-crash.gyp:fxfile-crash'",
+        "'../fxfile-crash'",
         "'functional_tests.cpp'",
         "'../fxfile/file_operation_core.cpp'",
         "'../fxfile/shell_registry_core.cpp'",
