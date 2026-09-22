@@ -218,6 +218,10 @@
             <String ID="cmd.bookmark_bar.refresh">북마크 새로 고침(&amp;R)</String>
             <String ID="cmd.tools.lock">도구 이동 잠금(&amp;L)</String>
             <String ID="cmd.tool_bar.customize">사용자 지정(&amp;C)...</String>
+            <String ID="cmd.theme.popup">테마(&amp;H)</String>
+            <String ID="cmd.theme.system">시스템 기본값(&amp;S)</String>
+            <String ID="cmd.theme.light">라이트(&amp;L)</String>
+            <String ID="cmd.theme.dark">다크(&amp;D)</String>
             <String ID="cmd.folder_tree">폴더 트리(&amp;F)</String>
             <String ID="cmd.folder_tree.show">보이기(&amp;W)</String>
             <String ID="cmd.folder_tree.none">표시 안함(&amp;N)</String>
@@ -1411,6 +1415,10 @@
             <String ID="popup.cfg.body.general.startup.view.check.no_last_network_folder">네트워크 폴더 기억하지 않기(&amp;N)</String>
             <String ID="popup.cfg.body.general.startup.view.msg.folder_browse.title">시작시 처음에 띄울 폴더를 선택하여 주십시오.</String>
 
+            <String ID="popup.cfg.body.appearance.label.theme_mode">앱 테마:</String>
+            <String ID="popup.cfg.body.appearance.theme_mode.system">시스템 설정 사용</String>
+            <String ID="popup.cfg.body.appearance.theme_mode.light">라이트</String>
+            <String ID="popup.cfg.body.appearance.theme_mode.dark">다크</String>
             <String ID="popup.cfg.body.appearance.check.menu_animation">메뉴 에니메이션 효과 사용하기(&amp;A)</String>
             <String ID="popup.cfg.body.appearance.check.standard_style_menu">표준 메뉴 스타일 사용하기(&amp;M)</String>
             <String ID="popup.cfg.body.appearance.check.single_view_split_as_actived_view">활성화된 창의 경로로 단일창 변경(&amp;A)</String>
