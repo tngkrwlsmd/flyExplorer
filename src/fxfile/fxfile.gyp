@@ -547,6 +547,8 @@
                 './shell_new.h',
                 './shell_registry.cpp',
                 './shell_registry.h',
+                './shell_registry_core.cpp',
+                './shell_registry_core.h',
                 './singleton_manager.h',
                 './singleton_manager.cpp',
                 './single_process.h',
