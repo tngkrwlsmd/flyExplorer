@@ -55,6 +55,17 @@ public:
     static xpr_sint_t scale(xpr_sint_t aValue, xpr_uint_t aDpi);
     static xpr_sint_t scaleForWindow(xpr_sint_t aValue, HWND aHwnd);
 
+    // Shared Windows 11 navigation/command metrics. Keep these centralized so
+    // toolbar, rebar and address surfaces stay visually aligned at every DPI.
+    static xpr_sint_t getCommandBarHeight(HWND aHwnd);
+    static xpr_sint_t getCommandButtonExtent(HWND aHwnd);
+    static xpr_sint_t getCommandHorizontalPadding(HWND aHwnd);
+    static xpr_sint_t getCommandVerticalPadding(HWND aHwnd);
+    static xpr_sint_t getAddressBarHeight(HWND aHwnd);
+    static xpr_sint_t getAddressHorizontalInset(HWND aHwnd);
+    static xpr_sint_t getAddressTextMargin(HWND aHwnd);
+    static xpr_sint_t getPopupItemPadding(HWND aHwnd);
+
     static xpr_bool_t getUIFont(LOGFONT &aLogFont, HWND aHwnd);
     static HICON loadIconResource(HINSTANCE aInstance, xpr_uint_t aResourceId, HWND aHwnd, xpr_sint_t aLogicalSize);
     static void setThemeMode(xpr_sint_t aThemeMode);
