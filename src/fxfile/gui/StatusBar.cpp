@@ -532,7 +532,9 @@ void StatusBar::OnPaint(void)
 
     const fxfile::ui::ThemePalette sPalette = fxfile::ui::ModernUI::getPalette();
     const COLORREF sBackgroundColor =
-        XPR_IS_TRUE(sPalette.mHighContrast) ? sPalette.mWindow : sPalette.mSurface;
+        XPR_IS_TRUE(sPalette.mHighContrast) ?
+        sPalette.mWindow :
+        sPalette.mChrome;
     const COLORREF sSeparatorColor =
         XPR_IS_TRUE(sPalette.mHighContrast) ? sPalette.mBorder : sPalette.mSeparator;
 
