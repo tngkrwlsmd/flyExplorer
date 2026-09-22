@@ -115,7 +115,7 @@ LRESULT CALLBACK ModernCfgButtonSubclassProc(
 
             COLORREF sFill = sPalette.mElevated;
             COLORREF sText = sPalette.mText;
-            COLORREF sBorder = sPalette.mBorder;
+            COLORREF sBorder = sPalette.mSeparator;
 
             if (XPR_IS_FALSE(sEnabled))
             {
