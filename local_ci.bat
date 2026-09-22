@@ -439,15 +439,25 @@ echo.
 echo [local-ci] Rebuilding %CI_CONFIGURATION% ^| %CI_PLATFORM%...
 
 rem Rebuild is intentional: local CI must not reuse stale object files from a
-rem previous CRT/configuration state. The console shows only confirmed MSBuild
-rem errors. A temporary normal-detail file is retained only long enough to
-rem detect warning-policy violations and is never appended wholesale to the
-rem persistent local-ci.log.
-"%MSBUILD_EXE%" "%CI_PROJECT%" /m /nologo /verbosity:minimal "/consoleloggerparameters:ErrorsOnly;NoSummary" /t:Rebuild /fl "/flp:logfile=%MSBUILD_RAW_LOG%;verbosity=normal" "/p:Configuration=%CI_CONFIGURATION%" "/p:Platform=%CI_PLATFORM%"
+rem previous CRT/configuration state. Console and persistent diagnostics use
+rem MSBuild's ErrorsOnly logger. A separate normal-detail temporary log exists
+rem only for warning-policy detection and is deleted when local CI exits.
+"%MSBUILD_EXE%" "%CI_PROJECT%" /m /nologo /verbosity:minimal "/consoleloggerparameters:ErrorsOnly;NoSummary" /t:Rebuild /fl1 "/flp1:logfile=%MSBUILD_ERROR_LOG%;errorsonly" /fl2 "/flp2:logfile=%MSBUILD_RAW_LOG%;verbosity=normal" "/p:Configuration=%CI_CONFIGURATION%" "/p:Platform=%CI_PLATFORM%"
 set "BUILD_RESULT=%errorlevel%"
 
-rem MSBuild's file logger uses the Windows ANSI code page on localized systems.
-rem Normalize the temporary raw log to BOM-less UTF-8 for deterministic scans.
+if not "%BUILD_RESULT%"=="0" (
+    powershell -NoProfile -ExecutionPolicy Bypass -Command "if (Test-Path -LiteralPath $env:MSBUILD_ERROR_LOG) { $text = Get-Content -LiteralPath $env:MSBUILD_ERROR_LOG -Raw -Encoding Default } else { $text = '' }; if ([string]::IsNullOrWhiteSpace($text)) { $text = 'ERROR: MSBuild failed for ' + $env:CI_CONFIGURATION + ' (exit ' + $env:BUILD_RESULT + ').' + [Environment]::NewLine }; $utf8 = New-Object System.Text.UTF8Encoding $false; [System.IO.File]::WriteAllText($env:STEP_LOG, $text, $utf8)"
+    if errorlevel 1 (
+        echo ERROR: Failed to normalize MSBuild error diagnostics.
+        >>"%LOCAL_CI_LOG%" echo ERROR: Failed to normalize MSBuild error diagnostics.
+        exit /b 1
+    )
+    call :append_file "MSBuild errors: %CI_TITLE%" "%STEP_LOG%"
+    exit /b %BUILD_RESULT%
+)
+
+rem Normalize the normal-detail temporary log only after a successful build so
+rem it can be scanned for warnings without persisting normal compile progress.
 powershell -NoProfile -ExecutionPolicy Bypass -Command "$text = Get-Content -LiteralPath $env:MSBUILD_RAW_LOG -Raw -Encoding Default; $utf8 = New-Object System.Text.UTF8Encoding $false; [System.IO.File]::WriteAllText($env:STEP_LOG, $text, $utf8)"
 if errorlevel 1 (
     echo ERROR: Failed to convert MSBuild log to UTF-8.
@@ -455,20 +465,8 @@ if errorlevel 1 (
     exit /b 1
 )
 
-if not "%BUILD_RESULT%"=="0" (
-    powershell -NoProfile -ExecutionPolicy Bypass -Command "$lines = Get-Content -LiteralPath $env:STEP_LOG -Encoding UTF8; $errors = @($lines ^| Where-Object { $_ -match ':\s*(?:fatal\s+)?error\s+[A-Z]+\d+:' -or $_ -match '^\s*ERROR:' }); if ($errors.Count -eq 0) { $errors = @('ERROR: MSBuild failed for ' + $env:CI_CONFIGURATION + ' (exit ' + $env:BUILD_RESULT + ').') }; $utf8 = New-Object System.Text.UTF8Encoding $false; [System.IO.File]::WriteAllLines($env:MSBUILD_ERROR_LOG, $errors, $utf8)"
-    if errorlevel 1 (
-        echo ERROR: Failed to extract MSBuild error diagnostics.
-        >>"%LOCAL_CI_LOG%" echo ERROR: Failed to extract MSBuild error diagnostics.
-        exit /b 1
-    )
-    call :append_file "MSBuild errors: %CI_TITLE%" "%MSBUILD_ERROR_LOG%"
-    exit /b %BUILD_RESULT%
-)
-
-rem Warnings remain a CI failure by policy, but normal MSBuild progress stays
-rem out of the persistent log. When the policy triggers, record only the
-rem resulting policy error with the warning diagnostic that caused it.
+rem Warnings remain a CI failure by policy. If that policy triggers, persist
+rem only the resulting policy-error diagnostics, not normal MSBuild progress.
 powershell -NoProfile -ExecutionPolicy Bypass -Command "$text = [System.IO.File]::ReadAllText($env:STEP_LOG, [System.Text.Encoding]::UTF8); if ([regex]::IsMatch($text, '\bwarning (?:C\d+|LNK\d+|MSB\d+):')) { exit 1 }; exit 0"
 set "WARNING_RESULT=%errorlevel%"
 if not "%WARNING_RESULT%"=="0" (
