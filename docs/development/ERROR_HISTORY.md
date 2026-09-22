@@ -532,6 +532,58 @@
 
 ---
 
+
+## 2026-09-23 — Settings Style control 가림 / Dark Edit edge / Fluent menu icon gate 회귀
+
+**오류 발생**
+- 실행/환경: Windows 11 실제 사용자 스크린샷.
+- `환경 설정 > 모양 및 테마 > 레이아웃`의 `스타일` section은 제목/영역만 보이고 내부 Standard/Basic style 선택 항목이 보이지 않았다.
+- `환경 설정 > 일반 > 시작 폴더`의 path Edit 주변에 Dark surface와 맞지 않는 밝은 native edge가 남았다.
+- app-owned popup menu는 일부 command icon이 여전히 legacy 느낌이거나 아예 보이지 않는 상태였고, Main Toolbar도 9개 command만 Fluent runtime artwork를 사용해 기본 표시 command 대부분이 legacy였다.
+
+**최초 실제 오류**
+- `IDD_CFG_APPEARANCE_LAYOUT` resource에는 `IDC_CFG_LAYOUT_INFO_BAR_STANDARD_STYLE` / `IDC_CFG_LAYOUT_INFO_BAR_BASIC_STYLE`가 실제로 존재하고 init/enable logic도 정상이다. 하지만 `GROUPBOX`가 sibling control 뒤에 선언되어 있고 `ModernGroupBoxSubclassProc`가 전체 client rect를 불투명하게 owner-paint해 sibling radio/check control을 덮을 수 있었다.
+- settings Edit는 native non-client border를 유지한 채 CTLCOLOR/client surface만 Dark palette로 바뀌어 multi-pixel `WS_BORDER` / themed edge가 일부 DPI에서 밝게 남을 수 있었다.
+- BCMenu의 Fluent draw path가 legacy `menuIconNormal >= 0 && bitmap != NULL` 조건 뒤에 있어, Fluent registry에 command가 있어도 legacy bitmap이 없는 menu item은 Fluent icon을 그릴 기회가 없었다.
+- Main Toolbar의 Fluent registry가 9개 command에만 한정되어 있었다.
+
+**원인 진단**
+- Root cause 1: legacy RC의 groupbox z-order와 opaque custom groupbox paint ownership을 함께 고려하지 않았다.
+- Root cause 2: Dark Edit의 client background와 non-client border ownership을 분리해서 처리했다.
+- Root cause 3: Fluent artwork source가 Main Toolbar private path에 묶여 있었고 BCMenu 표시 여부가 legacy bitmap 존재 여부에 종속되어 있었다.
+- Root cause 4: 대표 command migration을 실제 default-visible command coverage로 확대하지 않아 한 화면 안에 Fluent/legacy artwork가 과도하게 혼재했다.
+
+**해결 방법**
+- `cfg/cfg_dlg.cpp`: GROUPBOX를 transparent section-label container로 유지하고 `HWND_BOTTOM`에 배치한다. child traversal은 z-order 변경 전에 next sibling을 저장해 누락/반복을 방지한다.
+- `cfg/cfg_dlg.cpp`: `ModernCfgEditSubclassProc`가 Dark/non-HC의 `WM_NCPAINT` 후 전체 native non-client band를 `mElevated`로 덮고 normal `mSeparator` / focus `mFocus` frame을 소유한다. native Edit input/caret/selection/IME/clipboard semantics는 그대로 둔다.
+- `gui/FluentCommandIcons.*`: command-ID 기반 shared Fluent runtime adapter를 추가해 generated mask를 Main Toolbar와 BCMenu가 공유한다.
+- `gui/BCMenu.cpp`: legacy bitmap이 없어도 shared registry에 command ID가 있으면 Fluent icon을 우선 그린다. check/radio item semantics와 legacy fallback은 유지한다.
+- Main Toolbar manifest/runtime coverage를 23개 command로 확장했다. 이 중 기본 표시 21개 command는 전부 Fluent registry 대상이며 optional History/Settings도 포함한다.
+- CfgMainDlg navigation은 33-frame legacy bitmap fallback을 유지하면서 의미가 명확한 17개 category image index를 non-High-Contrast에서 shared Fluent registry로 overlay한다.
+- popup menu의 padding/shortcut gap/icon gutter와 accelerator/chevron text role을 조정해 primary text와 secondary metadata hierarchy를 분리했다.
+
+**재발 방지**
+- `build/validate_source_invariants.py`가 GROUPBOX transparency/z-order, stable child traversal, Dark Edit NC-frame ownership을 검사한다.
+- Fluent validator는 `toolbar_manifest.json`을 canonical source로 파싱하고 23-command coverage, 기본 표시 21개 command mapping, SVG/GYP registration, generated-mask determinism, Main Toolbar/BCMenu shared registry wiring을 검사한다.
+- settings navigation guard는 `config_tree.bmp` 33-frame fallback과 runtime Fluent overlay가 함께 유지되는지 검사한다.
+
+**검증 상태**
+- 사용자 screenshot evidence: FAIL — 수정 전 Layout Style 항목 가림, 밝은 folder Edit edge, legacy/missing popup icon 및 혼합 toolbar artwork 확인.
+- Static/source self-review: PASS — resource/init logic과 paint/icon ownership을 latest main source에서 대조.
+- `python build/validate_source_invariants.py`: NOT TESTED.
+- `Release-x64-Unicode | x64` compile/link + functional regression + runtime smoke: NOT TESTED.
+- 수정 후 Windows 11 visual/manual 및 DPI 100/125/150/200%: NOT TESTED.
+
+**관련 commit**
+- `59088311`, `daad8b57`, `78a34994` — settings group/edit ownership 수정
+- `5882dc13`, `e1987bc8`, `654aac89`, `e2d87520` — shared Fluent command-icon path
+- `27c2ea41` ~ `41f011b4` — 23-command manifest/mask/default-toolbar migration
+- `7c395e6a`, `279ba426` — popup metric/text hierarchy 정리
+- `6a0a986d` — settings navigation Fluent overlay
+- `ad56d3dc`, `5d971fff` — manifest/settings regression guards
+
+---
+
 ## 오류를 예방하기 위한 일반 개발 규칙
 
 1. 새 header/API/macro는 소유 header를 직접 include한다. PCH/transitive include에 기대지 않는다.
