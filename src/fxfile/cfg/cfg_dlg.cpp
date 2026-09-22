@@ -1046,8 +1046,9 @@ void CfgDlg::applyModernAppearanceToChild(CWnd *aWnd, HFONT aPreviousFont)
     CWnd *sChild = aWnd->GetWindow(GW_CHILD);
     while (XPR_IS_NOT_NULL(sChild))
     {
+        CWnd *sNextChild = sChild->GetNextWindow();
         applyModernAppearanceToChild(sChild, aPreviousFont);
-        sChild = sChild->GetNextWindow();
+        sChild = sNextChild;
     }
 }
 
@@ -1056,8 +1057,9 @@ void CfgDlg::applyModernAppearanceToChildren(HFONT aPreviousFont)
     CWnd *sChild = GetWindow(GW_CHILD);
     while (XPR_IS_NOT_NULL(sChild))
     {
+        CWnd *sNextChild = sChild->GetNextWindow();
         applyModernAppearanceToChild(sChild, aPreviousFont);
-        sChild = sChild->GetNextWindow();
+        sChild = sNextChild;
     }
 }
 
