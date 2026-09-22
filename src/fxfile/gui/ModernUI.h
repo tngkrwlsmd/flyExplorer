@@ -24,6 +24,9 @@ struct ThemePalette
 {
     COLORREF mWindow;
     COLORREF mSurface;
+    COLORREF mChrome;
+    COLORREF mElevated;
+    COLORREF mCard;
     COLORREF mText;
     COLORREF mSecondaryText;
     COLORREF mBorder;
@@ -31,6 +34,9 @@ struct ThemePalette
     COLORREF mSelection;
     COLORREF mSelectionText;
     COLORREF mHover;
+    COLORREF mPressed;
+    COLORREF mInactiveSelection;
+    COLORREF mFocus;
     xpr_bool_t mDark;
     xpr_bool_t mHighContrast;
 };
@@ -82,6 +88,16 @@ public:
     static xpr_sint_t getTabHorizontalPadding(HWND aHwnd);
     static xpr_sint_t getPaneSeparatorThickness(HWND aHwnd);
     static xpr_sint_t getActivePaneIndicatorThickness(HWND aHwnd);
+
+    // Shared Win11 softness/rounding metrics.
+    static xpr_sint_t getControlCornerRadius(HWND aHwnd);
+    static xpr_sint_t getCardCornerRadius(HWND aHwnd);
+    static xpr_sint_t getPopupCornerRadius(HWND aHwnd);
+    static xpr_sint_t getMenuBarItemHeight(HWND aHwnd);
+    static xpr_sint_t getSettingsNavRowHeight(HWND aHwnd);
+    static xpr_sint_t getSettingsPanelPadding(HWND aHwnd);
+    static xpr_sint_t getDialogControlHeight(HWND aHwnd);
+    static xpr_sint_t getDialogSectionSpacing(HWND aHwnd);
 
     static xpr_bool_t getUIFont(LOGFONT &aLogFont, HWND aHwnd);
     static HICON loadIconResource(HINSTANCE aInstance, xpr_uint_t aResourceId, HWND aHwnd, xpr_sint_t aLogicalSize);
