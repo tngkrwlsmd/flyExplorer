@@ -92,7 +92,13 @@ def validate_window_frame_theme_integration() -> list[str]:
     if "applyWindowFrameTheme(HWND aHwnd)" not in modern_ui_header:
         errors.append("src/fxfile/gui/ModernUI.h: missing window-frame theme helper declaration")
 
-    for token in ("DwmSetWindowAttribute", "DWMWA_USE_IMMERSIVE_DARK_MODE", "dwmapi.dll"):
+    for token in (
+        "DwmSetWindowAttribute",
+        "DWMWA_USE_IMMERSIVE_DARK_MODE",
+        "DWMWA_WINDOW_CORNER_PREFERENCE",
+        "DWMWCP_ROUND",
+        "dwmapi.dll",
+    ):
         if token not in modern_ui_source:
             errors.append(f"src/fxfile/gui/ModernUI.cpp: missing title-bar integration token {token}")
 
@@ -359,6 +365,61 @@ def validate_toolbar_custom_draw_regression() -> list[str]:
     for token in required_tokens:
         if token not in toolbar_code:
             errors.append(f"{rel}: missing toolbar custom-draw regression token {token}")
+
+    return errors
+
+
+def validate_command_surface_contract() -> list[str]:
+    """Keep the Win11-style toolbar/menu/rebar presentation contract intact."""
+
+    errors: list[str] = []
+    paths = {
+        "toolbar": FXFILE_SRC / "gui" / "rebar" / "ToolBarEx.cpp",
+        "menubar": FXFILE_SRC / "gui" / "rebar" / "MenuBar.cpp",
+        "rebar_h": FXFILE_SRC / "gui" / "rebar" / "SizableReBar.h",
+        "rebar_cpp": FXFILE_SRC / "gui" / "rebar" / "SizableReBar.cpp",
+    }
+
+    contents: dict[str, str] = {}
+    for name, path in paths.items():
+        try:
+            contents[name] = path.read_text(encoding="utf-8", errors="replace")
+        except OSError as exc:
+            errors.append(f"{path.relative_to(ROOT)}: cannot read command-surface contract: {exc}")
+
+    if errors:
+        return errors
+
+    for token in (
+        "::FillRect(",
+        "sPalette.mSurface",
+        "TBCDRF_NOEDGES",
+        "TBCDRF_NOOFFSET",
+    ):
+        if token not in contents["toolbar"]:
+            errors.append(f"src/fxfile/gui/rebar/ToolBarEx.cpp: missing flat command-surface token {token}")
+
+    for token in (
+        "::FillRect(",
+        "sPalette.mSurface",
+        "TBCDRF_NOEDGES",
+        "TBCDRF_NOOFFSET",
+    ):
+        if token not in contents["menubar"]:
+            errors.append(f"src/fxfile/gui/rebar/MenuBar.cpp: missing flat menu-surface token {token}")
+
+    if "afx_msg BOOL OnEraseBkgnd(CDC *pDC);" not in contents["rebar_h"]:
+        errors.append("src/fxfile/gui/rebar/SizableReBar.h: missing modern surface erase hook")
+
+    for token in (
+        "ON_WM_ERASEBKGND()",
+        "BOOL CSizableReBar::OnEraseBkgnd",
+        "if ( WinAppEx::GetInstance()->IsWinXP() )",
+        "dwReBarStyle |= RBS_BANDBORDERS | WS_BORDER;",
+        "sPalette.mSurface",
+    ):
+        if token not in contents["rebar_cpp"]:
+            errors.append(f"src/fxfile/gui/rebar/SizableReBar.cpp: missing modern rebar token {token}")
 
     return errors
 
@@ -968,6 +1029,7 @@ def main() -> int:
     errors.extend(validate_modern_dialog_migration())
     errors.extend(validate_custom_dialog_paint_regressions())
     errors.extend(validate_toolbar_custom_draw_regression())
+    errors.extend(validate_command_surface_contract())
     errors.extend(validate_ui_resource_contracts())
     errors.extend(validate_functional_test_wiring())
     errors.extend(validate_installer_smoke_wiring())
