@@ -9,6 +9,7 @@
 
 #include "stdafx.h"
 #include "picture_viewer.h"
+#include "gui/ModernUI.h"
 
 #include "string_table.h"
 
@@ -1039,7 +1040,8 @@ xpr_bool_t PictureViewer::OnEraseBkgnd(CDC *aDC)
     {
         CRect sClientRect;
         GetClientRect(&sClientRect);
-        aDC->FillSolidRect(0, 0, sClientRect.Width(), sClientRect.Height(), RGB(255,255,255));
+        const ui::ThemePalette sPalette = ui::ModernUI::getPalette();
+        aDC->FillSolidRect(0, 0, sClientRect.Width(), sClientRect.Height(), sPalette.mWindow);
     }
 
     return XPR_TRUE;

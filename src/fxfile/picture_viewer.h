@@ -14,15 +14,16 @@
 #include "xpr_mutex.h"
 
 #include "gui/BCMenu.h"
+#include "gui/ModernDialog.h"
 #include "gfl/libgfl.h"
 
 namespace fxfile
 {
 class DlgState;
 
-class PictureViewer : public CDialog
+class PictureViewer : public CModernDialog
 {
-    typedef CDialog super;
+    typedef CModernDialog super;
 
 public:
     PictureViewer(void);
