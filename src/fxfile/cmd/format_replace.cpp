@@ -9,6 +9,7 @@
 
 #include "stdafx.h"
 #include "format_replace.h"
+#include "rename_transform_core.h"
 #include "xml.h"
 
 #ifdef _DEBUG
@@ -76,40 +77,12 @@ Format *FormatReplace::newClone(void) const
 
 void FormatReplace::rename(RenameContext &aContext) const
 {
-    xpr::string sOld           = aContext.mNewFileName;
-    xpr::string sFindString    = mFindString;
-    xpr::string sReplaceString = mReplaceString;
-    xpr_sint_t  sRepeat        = mRepeat;
-    xpr_size_t  sOffset        = 0;
-    xpr_size_t  sFind          = 0;
-    xpr_sint_t  sLenDiff       = (xpr_sint_t)mReplaceString.length() - (xpr_sint_t)mFindString.length();
-    xpr_sint_t  i;
-
-    if (sRepeat < 0)
-    {
-        sRepeat = XPR_MAX_PATH;
-    }
-
-    if (XPR_IS_FALSE(mCaseSensitivity))
-    {
-        sOld.upper_case();
-        sFindString.upper_case();
-        sReplaceString.upper_case();
-    }
-
-    for (i = 0; i < sRepeat; ++i)
-    {
-        sFind = sOld.find(sFindString, sOffset);
-        if (sFind == xpr::string::npos)
-        {
-            break;
-        }
-
-        aContext.mNewFileName.erase(sFind + i * sLenDiff, mFindString.length());
-        aContext.mNewFileName.insert(sFind + i * sLenDiff, mReplaceString);
-
-        sOffset = sFind + sFindString.length();
-    }
+    rename_core::replaceText(
+        aContext.mNewFileName,
+        mFindString,
+        mReplaceString,
+        mRepeat,
+        mCaseSensitivity);
 }
 
 xpr_bool_t FormatReplace::canParseXml(const xpr::string &aElementName)
