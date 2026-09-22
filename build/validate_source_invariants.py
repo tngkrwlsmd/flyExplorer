@@ -972,7 +972,7 @@ def validate_ui_resource_contracts() -> list[str]:
         actual_main_toolbar_frames = tuple(
             (int(frame), command)
             for frame, command in re.findall(
-                r"\{\s*\{\s*(\d+)\s*,\s*(ID_[A-Z0-9_]+|0)\s*,",
+                r"\{\s*\{\s*(\d+)\s*,\s*(ID_[A-Za-z0-9_]+|0)\s*,",
                 toolbar_block_match.group("body"),
             )
         )
