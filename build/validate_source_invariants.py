@@ -459,7 +459,8 @@ def validate_command_surface_contract() -> list[str]:
         "BOOL CSizableReBar::OnEraseBkgnd",
         "if ( WinAppEx::GetInstance()->IsWinXP() )",
         "dwReBarStyle |= RBS_BANDBORDERS | WS_BORDER;",
-        "sPalette.mSurface",
+        "sPalette.mChrome",
+        "resetControlTheme(m_rbCtrl.m_hWnd)",
     ):
         if token not in contents["rebar_cpp"]:
             errors.append(f"src/fxfile/gui/rebar/SizableReBar.cpp: missing modern rebar token {token}")
@@ -618,6 +619,7 @@ def validate_soft_surface_contract() -> list[str]:
             "sPalette.mChrome",
             "sPalette.mElevated",
             "sPalette.mPressed",
+            "resetControlTheme(m_hWnd)",
         ),
         "menubar": (
             "TBCDRF_NOBACKGROUND",
@@ -641,6 +643,10 @@ def validate_soft_surface_contract() -> list[str]:
         ),
         "cfg_page": (
             "ModernGroupBoxSubclassProc",
+            "ModernCfgComboSubclassProc",
+            "DrawModernCfgCombo",
+            "CBS_DROPDOWNLIST",
+            "CB_GETDROPPEDSTATE",
             "getCardCornerRadius",
             "applyRoundedWindowRegion",
             "sPalette.mCard",
@@ -666,6 +672,26 @@ def validate_soft_surface_contract() -> list[str]:
         source = contents[source_name]
         if "mHighContrast" not in source:
             errors.append(f"{source_name}: High Contrast fallback token is missing")
+
+    bookmark_path = FXFILE_SRC / "bookmark_wnd.cpp"
+    try:
+        bookmark_source = bookmark_path.read_text(
+            encoding="utf-8", errors="replace"
+        )
+    except OSError as exc:
+        errors.append(
+            f"{bookmark_path.relative_to(ROOT)}: cannot read bookmark visual contract: {exc}"
+        )
+    else:
+        for token in (
+            "mBookmarkColor == DEF_INFO_BAR_BOOKMARK_COLOR",
+            "XPR_IS_TRUE(sPalette.mDark)",
+            "sBookmarkTextColor = sPalette.mText",
+        ):
+            if token not in bookmark_source:
+                errors.append(
+                    f"src/fxfile/bookmark_wnd.cpp: missing dark bookmark readability token {token}"
+                )
 
     return errors
 
