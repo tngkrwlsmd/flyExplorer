@@ -230,9 +230,20 @@ def validate_common_control_theme_integration() -> list[str]:
     if "resetControlTheme(HWND aHwnd)" not in modern_ui_header:
         errors.append("src/fxfile/gui/ModernUI.h: missing control-theme reset helper declaration")
 
-    for token in ("SetWindowTheme", "uxtheme.dll", 'L"Explorer"'):
+    for token in (
+        "SetWindowTheme",
+        "uxtheme.dll",
+        'L"Explorer"',
+        'sSetWindowTheme(aHwnd, L"", L"")',
+    ):
         if token not in modern_ui_source:
             errors.append(f"src/fxfile/gui/ModernUI.cpp: missing control-theme integration token {token}")
+
+    if "sSetWindowTheme(aHwnd, XPR_NULL, XPR_NULL)" in modern_ui_source:
+        errors.append(
+            "src/fxfile/gui/ModernUI.cpp: resetControlTheme must disable themed painting "
+            "with empty strings instead of restoring the default association"
+        )
 
     for rel_path in ("gui/ListCtrlEx.cpp", "gui/TreeCtrlEx.cpp"):
         control_path = FXFILE_SRC / rel_path
@@ -649,14 +660,18 @@ def validate_soft_surface_contract() -> list[str]:
             "ModernCfgToggleSubclassProc",
             "DrawModernCfgToggle",
             "IsModernCfgToggleType",
+            "ModernCfgPushButtonSubclassProc",
+            "DrawModernCfgPushButton",
+            "IsModernCfgPushButtonType",
             "BM_GETCHECK",
             "CBS_DROPDOWNLIST",
             "CB_GETDROPPEDSTATE",
             "resetControlTheme(sComboInfo.hwndList)",
-            "getCardCornerRadius",
-            "applyRoundedWindowRegion",
+            "resetControlTheme(aWnd->GetSafeHwnd())",
+            "SetWindowRgn(GetSafeHwnd(), XPR_NULL, TRUE)",
             "sPalette.mCard",
             "sPalette.mElevated",
+            "sPalette.mSeparator",
             "sPalette.mText",
         ),
         "modern_dialog": ("sPalette.mCard", "sPalette.mElevated"),
@@ -989,6 +1004,9 @@ def validate_popup_menu_contract() -> list[str]:
         "HasSegoeFluentIcons",
         "0xE970",
         "CPen sPen",
+        "DrawState(",
+        "DST_ICON | DSS_MONO",
+        "sPalette.mSecondaryText",
     ):
         if token not in modern_draw:
             errors.append(f"src/fxfile/gui/BCMenu.cpp: missing modern popup rendering token {token}")
