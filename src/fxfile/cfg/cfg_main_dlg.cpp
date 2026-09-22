@@ -11,6 +11,7 @@
 #include "cfg_main_dlg.h"
 
 #include "../gui/ModernUI.h"
+#include "../gui/FluentCommandIcons.h"
 
 #include "../resource.h"
 #include "../option_manager.h"
@@ -54,6 +55,79 @@ namespace cfg
 namespace
 {
 const UINT_PTR kModernCfgButtonSubclassId = 0x46474346; // 'FGCF'
+
+struct CfgTreeFluentIcon
+{
+    xpr_sint_t mImageIndex;
+    xpr_uint_t mCommandId;
+};
+
+const CfgTreeFluentIcon kCfgTreeFluentIcons[] =
+{
+    {  0, ID_TOOL_OPTION },           // General
+    { 31, ID_GO_WORKING_FOLDER },     // Startup folder
+    { 18, ID_VIEW_STYLE },            // Appearance
+    { 29, ID_WINDOW_SPLIT },          // Layout
+    { 12, ID_VIEW_STYLE },            // File list
+    { 20, ID_VIEW_FOLDER_TREE_SHOW }, // Folder layout
+    { 11, ID_TOOL_FILE_SEARCH },      // Filtering
+    { 25, ID_GO_HISTORY },            // History
+    {  3, ID_VIEW_FOLDER_TREE_SHOW }, // Folder tree
+    { 32, ID_WINDOW_SPLIT },          // Tabs
+    { 17, ID_TOOL_OPTION },           // Function
+    { 13, ID_GO_BOOKMARK },           // Bookmark
+    {  7, ID_FILE_RENAME },           // Rename
+    { 21, ID_FILE_PROPERTY },         // Program association
+    { 26, ID_FILE_PROPERTY },         // File operation
+    {  6, ID_TOOL_OPTION },           // Advanced
+    { 23, ID_GO_WORKING_FOLDER },     // Config directory
+};
+
+void RefreshCfgTreeImageList(CImageList &aImageList, HWND aHwnd)
+{
+    if (XPR_IS_NOT_NULL(aImageList.m_hImageList))
+        aImageList.DeleteImageList();
+
+    CBitmap sBitmap;
+    if (sBitmap.LoadBitmap(IDB_CONFIG_TREE) == FALSE)
+        return;
+
+    if (aImageList.Create(16, 16, ILC_COLOR32 | ILC_MASK, 33, 4) == FALSE)
+    {
+        sBitmap.DeleteObject();
+        return;
+    }
+
+    aImageList.Add(&sBitmap, RGB(255, 0, 255));
+    sBitmap.DeleteObject();
+
+    const ui::ThemePalette sPalette = ui::ModernUI::getPalette();
+    if (XPR_IS_TRUE(sPalette.mHighContrast))
+        return;
+
+    for (xpr_size_t i = 0; i < XPR_COUNT_OF(kCfgTreeFluentIcons); ++i)
+    {
+        const CfgTreeFluentIcon &sEntry = kCfgTreeFluentIcons[i];
+        if (sEntry.mImageIndex < 0 ||
+            sEntry.mImageIndex >= aImageList.GetImageCount())
+        {
+            continue;
+        }
+
+        HICON sIcon = ui::FluentCommandIcons::createIcon(
+            sEntry.mCommandId,
+            16,
+            sPalette.mText);
+        if (XPR_IS_NULL(sIcon))
+            continue;
+
+        ::ImageList_ReplaceIcon(
+            aImageList.m_hImageList,
+            sEntry.mImageIndex,
+            sIcon);
+        ::DestroyIcon(sIcon);
+    }
+}
 
 LRESULT CALLBACK ModernCfgButtonSubclassProc(
     HWND aHwnd,
@@ -306,12 +380,7 @@ xpr_bool_t CfgMainDlg::OnInitDialog(void)
         mTreeCtrl.SetItemHeight(sModernItemHeight);
     mTreeCtrl.SetIndent(ui::ModernUI::scaleForWindow(20, GetSafeHwnd()));
 
-    CBitmap sBitmap;
-    sBitmap.LoadBitmap(IDB_CONFIG_TREE);
-    mImgList.Create(16, 16, ILC_COLORDDB | ILC_MASK, 18, 18);
-    mImgList.Add(&sBitmap, RGB(255,0,255));
-    sBitmap.DeleteObject();
-
+    RefreshCfgTreeImageList(mImgList, GetSafeHwnd());
     mTreeCtrl.SetImageList(&mImgList, TVSIL_NORMAL);
 
     CWnd *sFooterButtons[] =
@@ -617,8 +686,12 @@ void CfgMainDlg::refreshModernAppearance(void)
             CLR_DEFAULT :
             sPalette.mSeparator);
 
+        RefreshCfgTreeImageList(mImgList, GetSafeHwnd());
         if (XPR_IS_NOT_NULL(mImgList.m_hImageList))
+        {
             mImgList.SetBkColor(sPalette.mCard);
+            mTreeCtrl.SetImageList(&mImgList, TVSIL_NORMAL);
+        }
 
         ui::ModernUI::applyRoundedWindowRegion(
             mTreeCtrl.GetSafeHwnd(),
