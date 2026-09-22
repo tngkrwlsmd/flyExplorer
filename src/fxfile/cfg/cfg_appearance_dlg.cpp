@@ -12,6 +12,7 @@
 
 #include "../resource.h"
 #include "../option.h"
+#include "../gui/ModernUI.h"
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -39,6 +40,13 @@ xpr_bool_t CfgAppearanceDlg::OnInitDialog(void)
 {
     super::OnInitDialog();
 
+    SetDlgItemText(IDC_CFG_APPEARANCE_LABEL_THEME_MODE,                  gApp.loadString(XPR_STRING_LITERAL("popup.cfg.body.appearance.label.theme_mode")));
+
+    CComboBox *sThemeMode = (CComboBox *)GetDlgItem(IDC_CFG_APPEARANCE_THEME_MODE);
+    sThemeMode->AddString(gApp.loadString(XPR_STRING_LITERAL("popup.cfg.body.appearance.theme_mode.system")));
+    sThemeMode->AddString(gApp.loadString(XPR_STRING_LITERAL("popup.cfg.body.appearance.theme_mode.light")));
+    sThemeMode->AddString(gApp.loadString(XPR_STRING_LITERAL("popup.cfg.body.appearance.theme_mode.dark")));
+
     SetDlgItemText(IDC_CFG_APPEARANCE_MENU_ANIMATION,                    gApp.loadString(XPR_STRING_LITERAL("popup.cfg.body.appearance.check.menu_animation")));
     SetDlgItemText(IDC_CFG_APPEARANCE_STANDARD_MENU_STYLE,               gApp.loadString(XPR_STRING_LITERAL("popup.cfg.body.appearance.check.standard_style_menu")));
     SetDlgItemText(IDC_CFG_APPEARANCE_SINGLE_VIEW_SPLIT_AS_ACTIVED_VIEW, gApp.loadString(XPR_STRING_LITERAL("popup.cfg.body.appearance.check.single_view_split_as_actived_view")));
@@ -55,6 +63,11 @@ void CfgAppearanceDlg::OnDestroy(void)
 
 void CfgAppearanceDlg::onInit(const Option::Config &aConfig)
 {
+    xpr_sint_t sThemeMode = aConfig.mThemeMode;
+    if (sThemeMode < ui::ModernUI::ThemeModeSystem || sThemeMode > ui::ModernUI::ThemeModeDark)
+        sThemeMode = ui::ModernUI::ThemeModeSystem;
+
+    ((CComboBox *)GetDlgItem(IDC_CFG_APPEARANCE_THEME_MODE))->SetCurSel(sThemeMode);
     ((CButton *)GetDlgItem(IDC_CFG_APPEARANCE_MENU_ANIMATION                   ))->SetCheck(aConfig.mAnimationMenu);
     ((CButton *)GetDlgItem(IDC_CFG_APPEARANCE_STANDARD_MENU_STYLE              ))->SetCheck(aConfig.mStandardMenu);
     ((CButton *)GetDlgItem(IDC_CFG_APPEARANCE_SINGLE_VIEW_SPLIT_AS_ACTIVED_VIEW))->SetCheck(aConfig.mSingleViewSplitAsActivedView);
@@ -63,6 +76,11 @@ void CfgAppearanceDlg::onInit(const Option::Config &aConfig)
 
 void CfgAppearanceDlg::onApply(Option::Config &aConfig)
 {
+    xpr_sint_t sThemeMode = ((CComboBox *)GetDlgItem(IDC_CFG_APPEARANCE_THEME_MODE))->GetCurSel();
+    if (sThemeMode < ui::ModernUI::ThemeModeSystem || sThemeMode > ui::ModernUI::ThemeModeDark)
+        sThemeMode = ui::ModernUI::ThemeModeSystem;
+
+    aConfig.mThemeMode                    = sThemeMode;
     aConfig.mAnimationMenu                = ((CButton *)GetDlgItem(IDC_CFG_APPEARANCE_MENU_ANIMATION                         ))->GetCheck();
     aConfig.mStandardMenu                 = ((CButton *)GetDlgItem(IDC_CFG_APPEARANCE_STANDARD_MENU_STYLE                    ))->GetCheck();
     aConfig.mSingleViewSplitAsActivedView = ((CButton *)GetDlgItem(IDC_CFG_APPEARANCE_SINGLE_VIEW_SPLIT_AS_ACTIVED_VIEW      ))->GetCheck();
