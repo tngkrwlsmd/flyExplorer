@@ -1342,9 +1342,10 @@ void BCMenu::MeasureItem(LPMEASUREITEMSTRUCT lpMIS)
         sTextSize.cx +
         sShortcutGap +
         sAccelSize.cx;
-    lpMIS->itemWidth = min(
-        lpMIS->itemWidth,
+
+    const xpr_uint_t sMaxItemWidth = static_cast<xpr_uint_t>(
         fxfile::ui::ModernUI::scaleForWindow(MAX_MENU_WIDTH, sMetricHwnd));
+    lpMIS->itemWidth = min(lpMIS->itemWidth, sMaxItemWidth);
 
     lpMIS->itemHeight = max(
         fxfile::ui::ModernUI::getPopupItemHeight(sMetricHwnd),
