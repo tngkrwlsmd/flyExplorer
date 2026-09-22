@@ -494,6 +494,44 @@
 
 ---
 
+
+## 2026-09-23 — BCMenu DrawState 호출 인자 수 오류로 Release x64 compile 실패
+
+**오류 발생**
+- 실행/프로필: `local_ci.bat x64` → `Release-x64-Unicode | x64`.
+- source invariant/regression preflight와 VS 2026/v145 solution 생성은 PASS했지만 `src/fxfile/gui/BCMenu.cpp(1185)`에서 C2660으로 compile이 중단됐다.
+- 최초 실제 compiler error: `DrawState: 함수는 11개의 인수를 사용하지 않습니다.`
+
+**최초 실제 오류**
+- popup icon monochrome tint를 추가하면서 Win32 `DrawState` 호출을
+  `HDC, NULL, HBRUSH, NULL, icon, ...` 순서로 작성해 11개 인자를 전달했다.
+- Win32 signature는 `HDC, HBRUSH, DRAWSTATEPROC, LPARAM, WPARAM, x, y, cx, cy, flags`의 10개 인자다.
+
+**원인 진단**
+- Root cause: GDI API의 parameter ownership을 확인하지 않고 brush와 callback 사이에 불필요한 null placeholder를 추가했다.
+- 기존 static guard는 `DrawState(` 및 `DST_ICON | DSS_MONO` token 존재만 검사해 실제 arity/order 오류를 잡지 못했다.
+
+**해결 방법**
+- `gui/BCMenu.cpp`: `DrawState(aDC->m_hDC, sBrush, XPR_NULL, reinterpret_cast<LPARAM>(sIcon), 0, ...)`의 documented 10-argument signature로 수정했다.
+- menu icon의 ThemePalette monochrome tint semantics 자체는 유지했다.
+
+**재발 방지**
+- `build/validate_source_invariants.py`에 DrawState 호출의 첫 인자 순서를 regex로 검증하는 guard를 추가했다.
+- `aDC->m_hDC, XPR_NULL, sBrush`의 과거 11-argument ordering이 돌아오면 preflight에서 실패한다.
+
+**검증 상태**
+- 사용자 로컬 evidence: source invariant PASS, VS 2026/v145 generation PASS, 수정 전 Release x64 compile FAIL.
+- 수정 후 static/source self-review: PASS.
+- 수정 후 `local_ci.bat x64` / compile/link/runtime: NOT TESTED.
+- 현재 사용자 지시에 따라 CI 범위는 `Release-x64-Unicode | x64`로 한정한다. x86/Multibyte/release/full matrix는 별도 지시 전까지 실행하지 않는다.
+
+**관련 commit**
+- `c9fbb7d5` — `fix: use Win32 DrawState signature correctly`
+- `7440a6a0` — `test: guard Win32 DrawState menu icon signature`
+- `4ae5f7e6` — `docs: scope active CI to Release x64 Unicode`
+
+---
+
 ## 오류를 예방하기 위한 일반 개발 규칙
 
 1. 새 header/API/macro는 소유 header를 직접 include한다. PCH/transitive include에 기대지 않는다.
