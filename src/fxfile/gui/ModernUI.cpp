@@ -24,6 +24,8 @@ typedef BOOL (WINAPI *SystemParametersInfoForDpiProc)(UINT, UINT, PVOID, UINT, U
 typedef HRESULT (WINAPI *DwmSetWindowAttributeProc)(HWND, DWORD, LPCVOID, DWORD);
 typedef HRESULT (WINAPI *SetWindowThemeProc)(HWND, LPCWSTR, LPCWSTR);
 
+xpr_sint_t gThemeMode = ModernUI::ThemeModeSystem;
+
 class ThemeSettings
 {
 public:
@@ -263,16 +265,30 @@ xpr_bool_t ModernUI::isHighContrast(void)
     return (sHighContrast.dwFlags & HCF_HIGHCONTRASTON) != 0 ? XPR_TRUE : XPR_FALSE;
 }
 
+void ModernUI::setThemeMode(xpr_sint_t aThemeMode)
+{
+    if (aThemeMode < ThemeModeSystem || aThemeMode > ThemeModeDark)
+        aThemeMode = ThemeModeSystem;
+
+    gThemeMode = aThemeMode;
+}
+
+xpr_sint_t ModernUI::getThemeMode(void)
+{
+    return gThemeMode;
+}
+
 ThemePalette ModernUI::getPalette(void)
 {
     ThemePalette sPalette;
 
-    sPalette.mWindow        = ::GetSysColor(COLOR_WINDOW);
-    sPalette.mSurface       = blendColor(
-        ::GetSysColor(COLOR_WINDOW),
-        ::GetSysColor(COLOR_3DFACE),
-        35);
-    sPalette.mText          = ::GetSysColor(COLOR_WINDOWTEXT);
+    const COLORREF sSystemWindow = ::GetSysColor(COLOR_WINDOW);
+    const COLORREF sSystemFace = ::GetSysColor(COLOR_3DFACE);
+    const COLORREF sSystemText = ::GetSysColor(COLOR_WINDOWTEXT);
+
+    sPalette.mWindow        = sSystemWindow;
+    sPalette.mSurface       = blendColor(sSystemWindow, sSystemFace, 35);
+    sPalette.mText          = sSystemText;
     sPalette.mSecondaryText = ::GetSysColor(COLOR_GRAYTEXT);
     sPalette.mBorder        = ::GetSysColor(COLOR_3DSHADOW);
     sPalette.mSeparator     = ::GetSysColor(COLOR_3DLIGHT);
@@ -281,36 +297,56 @@ ThemePalette ModernUI::getPalette(void)
     sPalette.mHighContrast  = isHighContrast();
     sPalette.mDark          = isDarkColor(sPalette.mWindow);
 
-    // Microsoft documents UISettings foreground/background colors as the
-    // Win32 signal for the user's app light/dark preference. Keep High
-    // Contrast on the system-color path and retain the legacy system-color
-    // palette if Windows Runtime activation is unavailable for any reason.
+    // High Contrast always owns the final colors. Outside High Contrast,
+    // ThemeModeSystem follows the documented UISettings app-color signal.
+    // Explicit Light keeps the Win32 system-color baseline, while explicit
+    // Dark reuses the native dark palette when Windows is dark and otherwise
+    // derives a dark palette from the user's system window/text colors.
     if (XPR_IS_FALSE(sPalette.mHighContrast))
     {
+        const xpr_sint_t sThemeMode = getThemeMode();
+
         ThemeSettings &sThemeSettings = getThemeSettings();
         COLORREF sBackground = 0;
         COLORREF sForeground = 0;
-
-        if (XPR_IS_TRUE(sThemeSettings.getColor(
+        const xpr_bool_t sHasSystemTheme =
+            XPR_IS_TRUE(sThemeSettings.getColor(
                 ABI::Windows::UI::ViewManagement::UIColorType_Background,
                 sBackground)) &&
             XPR_IS_TRUE(sThemeSettings.getColor(
                 ABI::Windows::UI::ViewManagement::UIColorType_Foreground,
-                sForeground)))
-        {
-            // A light foreground is the documented indicator that the app
-            // color mode is dark.
-            sPalette.mDark = XPR_IS_FALSE(isDarkColor(sForeground));
+                sForeground)) ?
+            XPR_TRUE :
+            XPR_FALSE;
 
-            if (XPR_IS_TRUE(sPalette.mDark))
-            {
-                sPalette.mWindow        = sBackground;
-                sPalette.mSurface       = blendColor(sBackground, sForeground, 8);
-                sPalette.mText          = sForeground;
-                sPalette.mSecondaryText = blendColor(sBackground, sForeground, 65);
-                sPalette.mBorder        = blendColor(sBackground, sForeground, 24);
-                sPalette.mSeparator     = blendColor(sBackground, sForeground, 16);
-            }
+        xpr_bool_t sSystemDark = XPR_FALSE;
+        if (XPR_IS_TRUE(sHasSystemTheme))
+            sSystemDark = XPR_IS_FALSE(isDarkColor(sForeground));
+
+        if ((sThemeMode == ThemeModeSystem && XPR_IS_TRUE(sSystemDark)) ||
+            (sThemeMode == ThemeModeDark && XPR_IS_TRUE(sSystemDark)))
+        {
+            sPalette.mDark          = XPR_TRUE;
+            sPalette.mWindow        = sBackground;
+            sPalette.mSurface       = blendColor(sBackground, sForeground, 8);
+            sPalette.mText          = sForeground;
+            sPalette.mSecondaryText = blendColor(sBackground, sForeground, 65);
+            sPalette.mBorder        = blendColor(sBackground, sForeground, 24);
+            sPalette.mSeparator     = blendColor(sBackground, sForeground, 16);
+        }
+        else if (sThemeMode == ThemeModeDark)
+        {
+            sPalette.mDark          = XPR_TRUE;
+            sPalette.mWindow        = blendColor(sSystemWindow, sSystemText, 88);
+            sPalette.mSurface       = blendColor(sPalette.mWindow, sSystemWindow, 5);
+            sPalette.mText          = sSystemWindow;
+            sPalette.mSecondaryText = blendColor(sPalette.mWindow, sPalette.mText, 65);
+            sPalette.mBorder        = blendColor(sPalette.mWindow, sPalette.mText, 24);
+            sPalette.mSeparator     = blendColor(sPalette.mWindow, sPalette.mText, 16);
+        }
+        else if (sThemeMode == ThemeModeLight)
+        {
+            sPalette.mDark = XPR_FALSE;
         }
     }
 
