@@ -471,7 +471,7 @@ rem only the resulting policy-error diagnostics, not normal MSBuild progress.
 powershell -NoProfile -ExecutionPolicy Bypass -Command "$text = [System.IO.File]::ReadAllText($env:STEP_LOG, [System.Text.Encoding]::UTF8); if ([regex]::IsMatch($text, '\bwarning (?:C\d+|LNK\d+|MSB\d+):')) { exit 1 }; exit 0"
 set "WARNING_RESULT=%errorlevel%"
 if not "%WARNING_RESULT%"=="0" (
-    powershell -NoProfile -ExecutionPolicy Bypass -Command "$lines = Get-Content -LiteralPath $env:STEP_LOG -Encoding UTF8; $warnings = @($lines ^| Where-Object { $_ -match '\bwarning (?:C\d+|LNK\d+|MSB\d+):' } ^| ForEach-Object { 'ERROR: warning policy violation: ' + $_.Trim() }); $utf8 = New-Object System.Text.UTF8Encoding $false; [System.IO.File]::WriteAllLines($env:MSBUILD_ERROR_LOG, $warnings, $utf8)"
+    powershell -NoProfile -ExecutionPolicy Bypass -Command "$lines = Get-Content -LiteralPath $env:STEP_LOG -Encoding UTF8; $warnings = @($lines | Where-Object { $_ -match '\bwarning (?:C\d+|LNK\d+|MSB\d+):' } | ForEach-Object { 'ERROR: warning policy violation: ' + $_.Trim() }); $utf8 = New-Object System.Text.UTF8Encoding $false; [System.IO.File]::WriteAllLines($env:MSBUILD_ERROR_LOG, $warnings, $utf8)"
     if errorlevel 1 (
         echo ERROR: Failed to extract warning-policy diagnostics.
         >>"%LOCAL_CI_LOG%" echo ERROR: Failed to extract warning-policy diagnostics.
