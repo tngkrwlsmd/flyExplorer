@@ -34,6 +34,48 @@ static char THIS_FILE[]=__FILE__;
 #define new DEBUG_NEW
 #endif
 
+#ifndef TBCDRF_NOBACKGROUND
+#define TBCDRF_NOBACKGROUND 0x00400000
+#endif
+
+namespace
+{
+void DrawRoundedMenuBarState(
+    LPNMTBCUSTOMDRAW aCustomDraw,
+    COLORREF aFillColor)
+{
+    RECT sRect = aCustomDraw->nmcd.rc;
+    const HWND sHwnd = aCustomDraw->nmcd.hdr.hwndFrom;
+    const xpr_sint_t sInset =
+        max(1, fxfile::ui::ModernUI::scaleForWindow(3, sHwnd));
+    const xpr_sint_t sRadius =
+        fxfile::ui::ModernUI::getControlCornerRadius(sHwnd);
+
+    ::InflateRect(&sRect, -sInset, -sInset);
+    if (sRect.right <= sRect.left || sRect.bottom <= sRect.top)
+        return;
+
+    HBRUSH sBrush = ::CreateSolidBrush(aFillColor);
+    if (XPR_IS_NULL(sBrush))
+        return;
+
+    HGDIOBJ sOldBrush = ::SelectObject(aCustomDraw->nmcd.hdc, sBrush);
+    HGDIOBJ sOldPen =
+        ::SelectObject(aCustomDraw->nmcd.hdc, ::GetStockObject(NULL_PEN));
+    ::RoundRect(
+        aCustomDraw->nmcd.hdc,
+        sRect.left,
+        sRect.top,
+        sRect.right,
+        sRect.bottom,
+        sRadius * 2,
+        sRadius * 2);
+    ::SelectObject(aCustomDraw->nmcd.hdc, sOldPen);
+    ::SelectObject(aCustomDraw->nmcd.hdc, sOldBrush);
+    ::DeleteObject(sBrush);
+}
+} // namespace
+
 /////////////////////////////////////////////////////////////////////////////
 // CMenuBarButton
 
@@ -1599,7 +1641,10 @@ void CMenuBar::OnCustomDraw( NMHDR* pNMHDR, LRESULT* pResult )
                 const fxfile::ui::ThemePalette sPalette = fxfile::ui::ModernUI::getPalette();
                 if ( XPR_IS_FALSE(sPalette.mHighContrast) && !WinAppEx::GetInstance()->IsWinXP() )
                 {
-                    *pResult |= TBCDRF_NOEDGES | TBCDRF_NOOFFSET;
+                    *pResult |=
+                        TBCDRF_NOEDGES |
+                        TBCDRF_NOOFFSET |
+                        TBCDRF_NOBACKGROUND;
 
                     lpNMCustomDraw->clrBtnFace = sPalette.mChrome;
                     lpNMCustomDraw->clrText =
@@ -1610,12 +1655,15 @@ void CMenuBar::OnCustomDraw( NMHDR* pNMHDR, LRESULT* pResult )
                     if ( !( uItemState & CDIS_DISABLED ) &&
                          ( uItemState & ( CDIS_HOT | CDIS_SELECTED ) ) )
                     {
-                        lpNMCustomDraw->clrHighlightHotTrack =
+                        const COLORREF sStateColor =
                             ( uItemState & CDIS_SELECTED ) ?
                             sPalette.mPressed :
                             sPalette.mHover;
+                        DrawRoundedMenuBarState(
+                            lpNMCustomDraw,
+                            sStateColor);
+                        lpNMCustomDraw->clrHighlightHotTrack = sStateColor;
                         lpNMCustomDraw->clrText = sPalette.mText;
-                        *pResult |= TBCDRF_HILITEHOTTRACK;
                     }
                 }
                 else
