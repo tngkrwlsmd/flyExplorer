@@ -2,6 +2,9 @@ name: Windows Product Build
 
 # Temporary Actions budget pause through 2026-09-30.
 # No push/PR CI. Manual runs are opt-in and intentionally minimal.
+# Active project CI scope (2026-09-23) is Release-x64-Unicode | x64 only.
+# The x86 compatibility job is retained but must not be enabled unless the user
+# explicitly expands the validation scope.
 # build.bat runs the same source invariant/regression preflight before GYP,
 # including dialog/resource/DPI-icon plus rename/filter/config/updater functional-test and isolated installer-smoke wiring.
 # Installer execution remains local/package-time because this minimal hosted workflow does not build packages.
@@ -14,7 +17,7 @@ on:
         default: false
         type: boolean
       run_x86_compat:
-        description: "Also compile the x86 Unicode/Multibyte compatibility builds"
+        description: "INACTIVE by current policy; enable only after explicit user scope expansion"
         required: false
         default: false
         type: boolean
