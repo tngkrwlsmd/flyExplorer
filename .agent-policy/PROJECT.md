@@ -77,7 +77,7 @@
     }
   ],
   "review": {
-    "reviewed_revision": "5e250f7b428715424acbfda14d64a9d02ec5ef14",
+    "reviewed_revision": "7c9b69f4a03b1cedf3030624b3b40d335c6071be",
     "reviewed_at": "2026-09-23",
     "reviewed_paths": [
       "AGENTS.md",
@@ -180,6 +180,7 @@
 - x64 solution은 mixed-architecture helper mapping을 사용한다.
 - updater는 x64 Build Solution에서 의도적으로 제외한다.
 - native product functional regression suite가 존재한다. `src/fxfile-tests/fxfile-tests.gyp`의 executable은 production xpr FileSys/FileIo, SHFileOperation seam, CRC32/MD5, ShellRegistry command/key core를 직접 사용하고 fixture는 OS temp 아래에서 생성/정리한다.
+- native functional-test executable은 product와 동일하게 `xpr::initialize()` 성공 후 production XPR API를 사용하고 모든 정상/fixture-setup 실패 종료 경로에서 `xpr::finalize()`를 호출한다. source invariant가 이 lifecycle token을 guard한다.
 - GitHub Actions budget 보호를 위해 2026-09-22부터 2026-09-30까지 `Source Validation`과 `Windows Product Build`의 automatic push/PR trigger를 중지했다. 수동 dispatch도 `run_ci` explicit override 없이는 job이 실행되지 않는다. Windows는 Release x64만 기본 실행하며 x86 compatibility는 추가 `run_x86_compat` 입력이 필요하다; Debug x64와 package/upload job은 Actions에서 제거했다.
 - budget pause 기간에는 branch/main CI PASS를 완료 조건으로 요구하지 않는다. `local_ci.bat`을 로컬 검증 진입점으로 사용하고 실제 수행한 profile의 결과만 Evidence로 기록한다. 수행하지 않은 compile/runtime/package/visual 검증은 `NOT TESTED`로 남긴다. 검증 스크립트는 삭제하지 않고 재개 시점까지 보존한다.
 - `local_ci.bat`은 redirected Python stdout을 UTF-8로 강제한다. Windows ANSI code page가 CP949 등일 때 policy/readiness/conformance 출력의 Unicode 문장부호로 `UnicodeEncodeError`가 발생하지 않도록 하기 위한 로컬 검증 contract다.
@@ -206,7 +207,7 @@
 - Profile C runtime enforcement는 설치되어 있지 않다.
 - 2026-09-22 이후 UI 현대화의 장기 reference target은 **현재 Windows 11 기본 파일 탐색기**다. MFC/multi-pane/tab/file-operation semantics는 유지하되 main frame chrome, command bar, navigation/address/tab, list/tree/content, popup/context, dialog 순으로 Windows 11 Explorer의 visual hierarchy, spacing, typography, neutral surface, hover/focus/selection 상태에 근접시키는 것을 기본 개발 방향으로 삼는다. System/Light/Dark 앱 테마 선택을 제품 기능으로 유지하며 High Contrast가 항상 우선한다.
 - UI 구현 우선순위는 **Microsoft 공식/public asset → documented Windows API → Windows system theme/font/color/metric → documented Win32/MFC customization → 필요한 최소 custom drawing** 순이다. 기존 ModernUI custom drawing은 유지 자체가 목적이 아니며, 공식 Microsoft 자산/API보다 시각적으로 불리하거나 중복되면 기능 계약을 보존하는 범위에서 교체한다.
-- application chrome command icon의 canonical source는 Microsoft Fluent UI System Icons를 우선한다. 대표 Main Toolbar 9개 command(Back/Forward/Up/Search/Cut/Copy/Paste/New Folder/Settings)는 vendored 16px/20px Regular SVG + `toolbar_manifest.json` + deterministic generator가 canonical artwork이며, generated theme-neutral mask를 runtime에 `ThemePalette.mText`로 tint한다. 실제 filesystem/file/folder icon은 Windows Shell ownership을 유지한다. Fluent UI System Icons SVG는 MIT license를 확인한 필요한 파일만 vendoring하며 build 시 인터넷 다운로드를 필수로 만들지 않는다. Windows 자체 font/resource file은 repository에 복사하지 않는다.
+- application chrome command icon의 canonical source는 Microsoft Fluent UI System Icons를 우선한다. `toolbar_manifest.json`은 현재 23개 runtime command를 canonical mapping으로 관리하며, 기본 표시 Main Toolbar 21개 command 전체와 optional History/Settings를 포함한다. vendored 16px/20px Regular SVG + deterministic generator가 theme-neutral mask를 만들고 `FluentCommandIcons`가 command ID 기반 HICON adapter를 제공한다. Main Toolbar와 app-owned BCMenu가 같은 artwork source를 공유하고, settings navigation은 의미가 명확한 17개 category frame에 동일 registry를 overlay한다. 실제 filesystem/file/folder icon과 shell-owned context menu artwork는 Windows Shell ownership을 유지한다. Fluent UI System Icons SVG는 MIT license를 확인한 필요한 파일만 vendoring하며 build 시 인터넷 다운로드를 필수로 만들지 않는다. Windows 자체 font/resource file은 repository에 복사하지 않는다.
 - Segoe Fluent Icons는 Windows 11의 system-provided symbol font로만 선택적으로 사용하고 Windows 10에는 기본 포함되지 않는 점을 고려해 반드시 fallback을 둔다. font 파일 자체를 배포 자산으로 추가하지 않는다.
 - Explorer private API, undocumented dark-theme association string, Windows 내부 resource extraction/copy를 UI 구현 해법으로 사용하지 않는다. `SetWindowTheme(..., L"Explorer", ...)`는 documented visual-style association일 뿐 app Dark ownership을 보장하지 않으므로 실제 paint ownership을 별도로 검증한다.
 - custom-painted Dark control에서 visual style을 끌 때 `SetWindowTheme(hwnd, L"", L"")`의 documented disable contract를 사용한다. `SetWindowTheme(hwnd, NULL, NULL)`은 default association 복원이지 theme disable이 아니므로 `resetControlTheme` 구현에서 사용하지 않는다.
