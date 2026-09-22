@@ -320,7 +320,7 @@ void FolderCtrl::setOption(Option &aOption)
     }
 
     SetLineColor(
-        XPR_IS_FALSE(sPalette.mHighContrast) ?
+        XPR_IS_TRUE(sPalette.mDark) && XPR_IS_FALSE(sPalette.mHighContrast) ?
         sPalette.mSeparator :
         CLR_DEFAULT);
 
@@ -2879,7 +2879,7 @@ void FolderCtrl::applyModernAppearance(void)
     }
 
     SetLineColor(
-        XPR_IS_FALSE(sPalette.mHighContrast) ?
+        XPR_IS_TRUE(sPalette.mDark) && XPR_IS_FALSE(sPalette.mHighContrast) ?
         sPalette.mSeparator :
         CLR_DEFAULT);
 
