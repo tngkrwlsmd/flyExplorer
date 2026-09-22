@@ -301,7 +301,7 @@ void CfgDlg::refreshModernAppearance(void)
 
     ui::ModernUI::applyRoundedWindowRegion(
         GetSafeHwnd(),
-        8);
+        ui::ModernUI::getCardCornerRadius(GetSafeHwnd()));
     applyModernAppearanceToChildren(sPreviousFont);
     RedrawWindow(
         XPR_NULL,
