@@ -100,7 +100,7 @@ C++ 변경에는 다음을 추가로 적용한다.
 - 새 project symbol, helper, macro, message constant를 사용하는 translation unit은 해당 정의를 소유한 header를 **직접 include**한다. 우연한 transitive include나 PCH에 기대지 않는다.
 - 공통 cross-cutting helper를 추가하면 `build/validate_source_invariants.py`의 direct-header rule에 등록할 수 있는지 검토한다.
 - 표준 non-resizing dialog는 `CModernDialog`를 사용하고, direct `CDialog`는 `CResizingDialog`, `CfgDlg`/`CfgMainDlg`, `TitleDlg`, `DriveDetailDlg`처럼 별도 ModernUI 책임이 명확한 전문 owner만 allowlist한다.
-- toolbar/config-tree bitmap strip은 command/image index 계약이므로 frame 수, cell geometry, mask 형식, resource ID mapping을 근거 없이 바꾸지 않는다. `fxfile.ico`는 16/32/48/256 frame 계약을 유지한다.
+- toolbar/config-tree bitmap strip은 command/image index 계약이므로 frame 수, cell geometry, mask 형식, resource ID mapping을 근거 없이 바꾸지 않는다. `fxfile.ico`는 16/32/48/256 frame 계약을 유지하고, DPI-aware dialog/parent-folder에 쓰이는 `tip.ico`/`shortcut.ico`/`goup.ico`의 40/48/64px 32-bit frame 계약도 source invariant로 보호한다.
 - C++ checkpoint 전에 최소 `python build/validate_source_invariants.py`를 실행한다. `build.bat`도 GYP 생성 전에 같은 source-invariant/regression preflight를 자동 실행한다.
 - preflight의 PASS는 **Static evidence**일 뿐 compile/link PASS가 아니다. 실제 Visual Studio build를 실행하지 않았다면 반드시 `NOT TESTED`로 구분한다.
 - 새 header/API 사용, message-map entry, GYP source registration, manifest/resource wiring을 추가했으면 선언/정의/include/registration 네 지점을 함께 점검한다.
@@ -136,17 +136,18 @@ UI/UX 현대화 작업은 다음 원칙을 따른다.
 
 기본 검증 흐름:
 
-0. 일상적인 로컬 검증은 `local_ci.bat x64`를 우선 사용한다. 더 좁게는 `local_ci.bat quick`, 릴리스 전에는 `local_ci.bat release` 또는 `local_ci.bat full`을 사용할 수 있다.
+0. 일상적인 로컬 검증은 `local_ci.bat x64`를 우선 사용한다. 정적 검증은 `local_ci.bat quick`, product functional regression만 확인할 때는 `local_ci.bat test`, 생성된 installer 안전 계약/격리 설치를 확인할 때는 `local_ci.bat install`, 릴리스 전에는 `local_ci.bat release` 또는 `local_ci.bat full`을 사용할 수 있다.
 1. `python build/validate_source_invariants.py`로 source invariant + known regression guard preflight 수행
 1. x64 영향이 있으면 `build.bat 2026 x64`로 솔루션을 재생성하고 generated project의 `v145` 계약 확인
 2. C++/빌드 변경이면 영향 범위에 따라 `Debug-x64-Unicode | x64`와 `Release-x64-Unicode | x64` compile/link 및 핵심 산출물 확인
 3. x86, 공통 코드, updater, 배포 경로 영향이 있으면 `build.bat 2026 x86` 후 `Release-x86-Unicode | Win32`와 `Release-x86-Multibyte | Win32`를 검증
 4. release runtime은 `build/runtime_smoke.ps1` 또는 동일 계약의 GitHub Actions hosted-runner launch smoke로 process/main-window/stability 확인
 5. packaging 영향이 있으면 `dist\package.bat` 실행 후 `build\validate_package.ps1 -DistDir dist`로 portable ZIP 3종과 NSIS installer payload 검증
-6. CI pause가 해제된 뒤 remote 검증이 필요한 경우에만 `Source Validation`과 최소 `Windows Product Build`를 실행한다. 2026-09-30까지는 branch/main 반영을 이유로 remote CI를 요구하거나 실행하지 않는다
-7. 설치/제거, shell integration, interactive 기능, DPI/High Contrast/visual 변경은 필요 시 Windows Sandbox 또는 clean VM에서 별도 수동 evidence 확보
+6. installer 영향이 있으면 `local_ci.bat install`로 smoke contract를 검사한다. 실제 temp install/uninstall은 관리자 권한의 격리 실행에서 `FXFILE_INSTALLER_SMOKE=1`을 명시했을 때만 허용하며, 사용자 Registry/shortcut/shell state를 변경하지 않는 계약을 유지한다
+7. CI pause가 해제된 뒤 remote 검증이 필요한 경우에만 `Source Validation`과 최소 `Windows Product Build`를 실행한다. 2026-09-30까지는 branch/main 반영을 이유로 remote CI를 요구하거나 실행하지 않는다
+8. 실제 제품 Registry/shell integration, interactive 기능, DPI/High Contrast/visual 변경, clean-install UX는 필요 시 Windows Sandbox 또는 clean VM에서 별도 수동 evidence 확보
 
-현재 별도 product unit/integration test suite는 확인되지 않았다. GitHub Actions는 비용 절감을 위해 최소화되어 `Source Validation`의 source-invariant/regression preflight와 `Windows Product Build`의 Release x64 compile/link, warning rejection, artifact 확인, x64 launch smoke만 기본 원격 검증으로 남긴다. x86 Unicode/Multibyte compile은 명시적 `run_x86_compat` 옵션에서만 실행하며 Debug x64, package build/upload, policy conformance/readiness는 Actions에서 제거했다. 전체 policy 검증과 packaging은 로컬 명령으로 유지하며, clean Windows 설치/제거와 interactive/visual regression evidence는 여전히 별도다.
+별도 native product functional regression target `src/fxfile-tests/fxfile-functional-tests.gyp`가 존재한다. 이 suite는 OS temp fixture에서 production `xpr::FileSys/FileIo`, SHFileOperation seam, CRC32/MD5 구현, ShellRegistry command/key 조립을 직접 검증한다. GitHub Actions는 비용 절감을 위해 최소화되어 `Source Validation`의 source-invariant/regression preflight와 `Windows Product Build`의 Release x64 compile/link, warning rejection, artifact 확인, native functional regression, x64 launch smoke만 기본 원격 검증으로 남긴다. x86 Unicode/Multibyte compile + native functional regression은 명시적 `run_x86_compat` 옵션에서만 실행하며 Debug x64, package build/upload, policy conformance/readiness는 Actions에서 제거했다. 전체 policy/packaging/installer smoke는 로컬 명령으로 유지하며, clean Windows의 실제 제품 registration과 interactive/visual regression evidence는 여전히 별도다.
 
 버그 수정은 가능하면 재현 가능한 regression check를 추가하되, repository에 존재하지 않는 대규모 테스트 프레임워크를 단일 수정 때문에 도입하지 않는다.
 

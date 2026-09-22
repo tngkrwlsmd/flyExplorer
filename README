@@ -73,11 +73,14 @@ The Actions workflows are intentionally slim:
 - `.github/workflows/windows-build.yml` defaults to one
   `Release-x64-Unicode | x64` job. It regenerates the solution, checks the
   v145/MFC contract, compiles and links the product, rejects compiler/linker/
-  MSBuild warnings, verifies the core artifacts, and runs the x64 launch smoke.
+  MSBuild warnings, verifies the core artifacts, runs the isolated native
+  filesystem/hash/shell-command functional regression, and then runs the x64
+  launch smoke.
 - Set `run_x86_compat=true` only when x86 compatibility needs explicit remote
   evidence. That optional job compiles `Release-x86-Unicode | Win32` and
-  `Release-x86-Multibyte | Win32` and verifies the key runtime/updater
-  artifacts. It intentionally does not run x86 launch smoke.
+  `Release-x86-Multibyte | Win32`, verifies the key runtime/updater
+  artifacts, and runs the same native functional regression for both x86
+  configurations. It intentionally does not run x86 launch smoke.
 - Debug x64, package generation, package validation, Actions artifact
   staging/upload, and the previous full policy corpus are no longer part of
   GitHub Actions. Run those locally or immediately before a release when needed.
@@ -99,18 +102,27 @@ locally without spending GitHub Actions minutes. The default profile is `x64`:
 Available profiles:
 
     local_ci.bat quick
+    local_ci.bat test
+    local_ci.bat install
     local_ci.bat policy
     local_ci.bat x86
     local_ci.bat release
     local_ci.bat full
 
-`quick` runs the source invariant and known-regression preflight. `x64` regenerates the VS 2026
-x64 solution, **rebuilds** Release-x64-Unicode from source, rejects compiler/
-linker/MSBuild warnings, verifies core artifacts, and runs the x64 launch smoke.
-`x86` rebuilds and smoke-tests both Release x86 configurations. `release` runs
-x64 + x86 and then builds/validates the portable archives and NSIS installer.
-`full` adds the vendored policy/readiness/conformance checks and a Debug-x64
-rebuild. Local CI deliberately uses MSBuild `Rebuild` rather than incremental
+`quick` runs the deterministic source/resource/regression preflight. `test`
+generates the x64 solution, builds `fxfile-functional-tests.exe`, and runs
+isolated temp-directory filesystem operations, production CRC32/MD5 known
+vectors, and shell-registration command/key contracts. `install` inspects the
+isolated NSIS smoke contract; set `FXFILE_INSTALLER_SMOKE=1` from an elevated
+local shell to opt into temporary install/runtime/uninstall verification.
+`x64` regenerates the VS 2026 x64 solution, **rebuilds**
+Release-x64-Unicode from source, runs the functional regression, rejects
+compiler/linker/MSBuild warnings, verifies core artifacts, and runs the x64
+launch smoke. `x86` rebuilds both Release x86 configurations and runs the
+functional regression for each before the runtime smoke. `release` runs x64 +
+x86, builds/validates the portable archives and NSIS installer, and checks the
+installer-smoke contract. `full` adds the vendored
+policy/readiness/conformance checks and a Debug-x64 rebuild. Local CI deliberately uses MSBuild `Rebuild` rather than incremental
 `Build` so stale object files cannot hide CRT/configuration drift and compiled
 `.cpp` files remain visible in the console using MSBuild minimal
 verbosity (similar to ordinary Visual Studio build output), while the file
@@ -135,8 +147,11 @@ the duplicate-entry validation case itself still runs and must pass.
 Local CI does not publish artifacts or modify GitHub Actions state. On a developer
 machine, runtime smoke refuses to overwrite existing flyExplorer HKCU startup or
 profile state. When such state is present, `local_ci.bat` records that smoke as
-SKIPPED/NOT TESTED and continues the remaining local checks; GitHub-hosted smoke
-keeps the strict behavior and still fails on unexpected pre-existing state.
+SKIPPED/NOT TESTED and continues the remaining local checks. Installer execution
+is also opt-in: without `FXFILE_INSTALLER_SMOKE=1`, or without an elevated token,
+the installer contract is inspected but actual install/uninstall is recorded as
+SKIPPED/NOT TESTED. GitHub-hosted launch smoke keeps the strict behavior and still
+fails on unexpected pre-existing state.
 
 Hosted runtime smoke can also be invoked manually after a build, for example:
 
@@ -247,11 +262,14 @@ dedicated contracts.
 Custom-painted `AboutDlg`, `TipDlg`, `PictureViewer`, and toolbar customize
 surfaces now use ThemePalette/DPI-aware paths instead of fixed light-only
 backgrounds. The application `fxfile.ico` preserves its existing 16/32/48
-frames and adds a 32-bit 256px frame for high-DPI shell use. Main toolbar and
-config-tree bitmap strips remain command/index-sensitive legacy artwork, so
-their current frame count, cell geometry, mask format, RC registration, and GYP
-registration are protected by automated resource-contract checks rather than
-being silently rearranged.
+frames and adds a 32-bit 256px frame for high-DPI shell use. `tip.ico` and
+`shortcut.ico` now carry 32/40/48/64px frames, while `goup.ico` preserves its
+legacy 16/32 variants and adds 40/48/64px 32-bit frames. Parent-folder rendering
+uses the shared DPI-aware icon loader instead of fixed-size `LoadIcon` drawing.
+Main toolbar and config-tree bitmap strips remain command/index-sensitive legacy
+artwork, so their current frame count, cell geometry, mask format, RC
+registration, and GYP registration are protected by automated resource-contract
+checks rather than being silently rearranged.
 
 The shared dialog/icon modernization has source-level static coverage, and the
 preflight now includes deterministic regression guards for direct-dialog drift,
@@ -370,10 +388,17 @@ run or uploaded by GitHub Actions; build the required release configurations and
 run `dist\package.bat` plus `build\validate_package.ps1 -DistDir dist` locally
 when preparing a release.
 
-Package Build/Payload PASS is not clean-install evidence. The packaging scripts
-do not install or uninstall the NSIS package, modify shell integration, or prove
-a clean Windows Sandbox/VM installation. Those checks remain separate runtime
-validation work.
+Package Build/Payload PASS is not clean-install evidence. The repository now
+contains `build\installer_smoke.ps1` plus an NSIS
+`/FXFILE_SMOKE=<temp-dir>` mode. The default smoke only inspects that safety
+contract. With `FXFILE_INSTALLER_SMOKE=1` in an elevated local shell,
+`local_ci.bat install`/release/full may install only into a temporary directory,
+verify the installed payload, run the protected runtime smoke, confirm selected
+Registry/shell/startup snapshots did not change, silently uninstall, and verify
+cleanup. That isolated smoke deliberately skips real product Registry,
+Start-Menu/Desktop, launcher-startup, and shell-context registration, so a real
+clean Windows Sandbox/VM install and shell-integration UX remain separate manual
+evidence.
 
 Legacy build
 ------------
