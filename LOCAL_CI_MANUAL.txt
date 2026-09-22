@@ -48,7 +48,8 @@ PowerShell / Command Prompt에서 프로젝트 루트에서 실행합니다.
 
 실행할 때마다 이전 local CI 로그는 새 로그로 교체됩니다.
 MSBuild 진단은 UTF-8로 정규화합니다.
-Rebuild 중 정상 컴파일 진행 내역과 상세 MSBuild 출력은 임시 파일에서만 사용하며 실행 종료 시 삭제합니다.
+Rebuild 중 일반 MSBuild 진행 출력은 PowerShell/터미널에 표시합니다.
+상세 MSBuild 출력은 warning 정책 검사용 임시 파일에서만 사용하며 실행 종료 시 삭제합니다.
 local-ci.log에는 실제 MSBuild error 또는 warning 금지 정책이 CI 실패를 만든 경우의 policy error만 기록합니다.
 
 결과
