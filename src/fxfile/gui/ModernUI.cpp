@@ -619,6 +619,45 @@ xpr_bool_t ModernUI::applyWindowFrameTheme(HWND aHwnd)
     return sApplied;
 }
 
+xpr_bool_t ModernUI::applyRoundedWindowRegion(
+    HWND aHwnd,
+    xpr_sint_t aLogicalRadius)
+{
+    if (XPR_IS_NULL(aHwnd) || ::IsWindow(aHwnd) == FALSE)
+        return XPR_FALSE;
+
+    if (XPR_IS_TRUE(isHighContrast()) || aLogicalRadius <= 0)
+    {
+        ::SetWindowRgn(aHwnd, XPR_NULL, TRUE);
+        return XPR_TRUE;
+    }
+
+    RECT sClientRect = {0};
+    if (::GetClientRect(aHwnd, &sClientRect) == FALSE)
+        return XPR_FALSE;
+
+    const xpr_sint_t sRadius =
+        max(1, scaleForWindow(aLogicalRadius, aHwnd));
+    HRGN sRegion = ::CreateRoundRectRgn(
+        sClientRect.left,
+        sClientRect.top,
+        sClientRect.right + 1,
+        sClientRect.bottom + 1,
+        sRadius * 2,
+        sRadius * 2);
+    if (XPR_IS_NULL(sRegion))
+        return XPR_FALSE;
+
+    if (::SetWindowRgn(aHwnd, sRegion, TRUE) == 0)
+    {
+        ::DeleteObject(sRegion);
+        return XPR_FALSE;
+    }
+
+    // The system owns sRegion after successful SetWindowRgn.
+    return XPR_TRUE;
+}
+
 xpr_bool_t ModernUI::applyExplorerControlTheme(HWND aHwnd)
 {
     if (XPR_IS_NULL(aHwnd))
