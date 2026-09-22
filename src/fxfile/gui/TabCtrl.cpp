@@ -559,10 +559,12 @@ void TabCtrl::recalcLayout(xpr_bool_t aRedraw)
         fxfile::ui::ModernUI::scale(kTabOffset.top, sDpi),
         fxfile::ui::ModernUI::scale(kTabOffset.right, sDpi),
         fxfile::ui::ModernUI::scale(kTabOffset.bottom, sDpi));
+    const xpr_sint_t sHorizontalPadding =
+        fxfile::ui::ModernUI::getTabHorizontalPadding(m_hWnd);
     const CRect sTextOffset(
-        fxfile::ui::ModernUI::scale(kTextOffset.left, sDpi),
+        sHorizontalPadding,
         fxfile::ui::ModernUI::scale(kTextOffset.top, sDpi),
-        fxfile::ui::ModernUI::scale(kTextOffset.right, sDpi),
+        sHorizontalPadding,
         fxfile::ui::ModernUI::scale(kTextOffset.bottom, sDpi));
     const xpr_sint_t sIconOffset = fxfile::ui::ModernUI::scale(kIconOffset, sDpi);
     const xpr_sint_t sBarLineHeight = max(1, fxfile::ui::ModernUI::scale(kBarLineHeight, sDpi));
@@ -800,13 +802,16 @@ void TabCtrl::OnPaint(void)
 
     const fxfile::ui::ThemePalette sPalette = fxfile::ui::ModernUI::getPalette();
     const xpr_uint_t sDpi = fxfile::ui::ModernUI::getDpi(m_hWnd);
+    const xpr_sint_t sHorizontalPadding =
+        fxfile::ui::ModernUI::getTabHorizontalPadding(m_hWnd);
     const CRect sTextOffset(
-        fxfile::ui::ModernUI::scale(kTextOffset.left, sDpi),
+        sHorizontalPadding,
         fxfile::ui::ModernUI::scale(kTextOffset.top, sDpi),
-        fxfile::ui::ModernUI::scale(kTextOffset.right, sDpi),
+        sHorizontalPadding,
         fxfile::ui::ModernUI::scale(kTextOffset.bottom, sDpi));
     const xpr_sint_t sIconOffset = fxfile::ui::ModernUI::scale(kIconOffset, sDpi);
-    const xpr_sint_t sAccentHeight = max(2, fxfile::ui::ModernUI::scale(2, sDpi));
+    const xpr_sint_t sAccentHeight =
+        fxfile::ui::ModernUI::getActivePaneIndicatorThickness(m_hWnd);
 
     CDC sMemDC;
     sMemDC.CreateCompatibleDC(&sPaintDC);
