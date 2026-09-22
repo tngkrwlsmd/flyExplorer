@@ -794,11 +794,18 @@ bool testRecursiveDelete(TestState &aState)
 
 int _tmain(void)
 {
+    if (xpr::initialize() == XPR_FALSE)
+    {
+        std::cerr << "[FAIL] XPR runtime initialization" << std::endl;
+        return 1;
+    }
+
     TestState sState;
 
     if (!prepareRoot(sState))
     {
         std::cerr << "[FAIL] fixture setup" << std::endl;
+        xpr::finalize();
         return 1;
     }
 
@@ -835,5 +842,7 @@ int _tmain(void)
               << sState.mFailed << " failed."
               << std::endl;
 
-    return sState.mFailed == 0 ? 0 : 1;
+    const int sExitCode = sState.mFailed == 0 ? 0 : 1;
+    xpr::finalize();
+    return sExitCode;
 }
