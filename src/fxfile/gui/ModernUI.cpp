@@ -227,7 +227,37 @@ xpr_sint_t ModernUI::getAddressTextMargin(HWND aHwnd)
 
 xpr_sint_t ModernUI::getPopupItemPadding(HWND aHwnd)
 {
+    return scaleForWindow(10, aHwnd);
+}
+
+xpr_sint_t ModernUI::getPopupItemHeight(HWND aHwnd)
+{
+    return scaleForWindow(32, aHwnd);
+}
+
+xpr_sint_t ModernUI::getPopupIconGutter(HWND aHwnd)
+{
+    return scaleForWindow(32, aHwnd);
+}
+
+xpr_sint_t ModernUI::getPopupSeparatorHeight(HWND aHwnd)
+{
     return scaleForWindow(8, aHwnd);
+}
+
+xpr_sint_t ModernUI::getPopupSeparatorInset(HWND aHwnd)
+{
+    return scaleForWindow(12, aHwnd);
+}
+
+xpr_sint_t ModernUI::getPopupShortcutGap(HWND aHwnd)
+{
+    return scaleForWindow(24, aHwnd);
+}
+
+xpr_sint_t ModernUI::getPopupBorderThickness(HWND aHwnd)
+{
+    return max(1, scaleForWindow(1, aHwnd));
 }
 
 xpr_bool_t ModernUI::getUIFont(LOGFONT &aLogFont, HWND aHwnd)
