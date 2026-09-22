@@ -286,14 +286,14 @@ HBRUSH CResizingDialog::OnCtlColor(CDC* pDC, CWnd* pWnd, UINT nCtlColor)
         case CTLCOLOR_LISTBOX:
             pDC->SetBkMode(OPAQUE);
             pDC->SetBkColor(sPalette.mWindow);
-            return static_cast<HBRUSH>(m_windowBrush.GetSafeHandle());
+            return (HBRUSH)m_windowBrush.GetSafeHandle();
 
         case CTLCOLOR_STATIC:
         case CTLCOLOR_BTN:
         case CTLCOLOR_DLG:
             pDC->SetBkMode(TRANSPARENT);
             pDC->SetBkColor(sPalette.mSurface);
-            return static_cast<HBRUSH>(m_surfaceBrush.GetSafeHandle());
+            return (HBRUSH)m_surfaceBrush.GetSafeHandle();
 
         default:
             return CDialog::OnCtlColor(pDC, pWnd, nCtlColor);
