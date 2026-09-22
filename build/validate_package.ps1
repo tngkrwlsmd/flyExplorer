@@ -11,16 +11,19 @@ $configurations = @(
     @{
         Name = "x64"
         Xpr = "libxprw.dll"
+        Machine = 0x8664
         Zip = "fxfile_v2.0.4-dev_x64_portable.zip"
     },
     @{
         Name = "x86-unicode"
         Xpr = "libxprw.dll"
+        Machine = 0x014C
         Zip = "fxfile_v2.0.4-dev_x86_unicode_portable.zip"
     },
     @{
         Name = "x86-multibyte"
         Xpr = "libxpr.dll"
+        Machine = 0x014C
         Zip = "fxfile_v2.0.4-dev_x86_multibyte_portable.zip"
     }
 )
@@ -80,6 +83,66 @@ function Assert-SafeZipPath {
     }
 }
 
+function Get-PeMachineFromStream {
+    param(
+        [System.IO.Stream]$Stream,
+        [string]$Description
+    )
+
+    if (-not $Stream.CanSeek) {
+        throw "$Description stream is not seekable."
+    }
+
+    $reader = New-Object System.IO.BinaryReader($Stream)
+    try {
+        if ($Stream.Length -lt 64 -or $reader.ReadUInt16() -ne 0x5A4D) {
+            throw "$Description does not have an MZ header."
+        }
+
+        $Stream.Position = 0x3C
+        $peOffset = $reader.ReadInt32()
+        if ($peOffset -lt 0 -or ($peOffset + 6) -gt $Stream.Length) {
+            throw "$Description has an invalid PE offset."
+        }
+
+        $Stream.Position = $peOffset
+        if ($reader.ReadUInt32() -ne 0x00004550) {
+            throw "$Description does not have a PE signature."
+        }
+
+        return $reader.ReadUInt16()
+    }
+    finally {
+        $reader.Dispose()
+    }
+}
+
+function Get-PeMachine {
+    param([string]$Path, [string]$Description)
+
+    $stream = [System.IO.File]::OpenRead($Path)
+    return Get-PeMachineFromStream $stream $Description
+}
+
+function Get-ZipEntryPeMachine {
+    param(
+        [System.IO.Compression.ZipArchiveEntry]$Entry,
+        [string]$Description
+    )
+
+    $entryStream = $Entry.Open()
+    $memory = New-Object System.IO.MemoryStream
+    try {
+        $entryStream.CopyTo($memory)
+        $memory.Position = 0
+        return Get-PeMachineFromStream $memory $Description
+    }
+    finally {
+        $entryStream.Dispose()
+        $memory.Dispose()
+    }
+}
+
 Add-Type -AssemblyName System.IO.Compression.FileSystem
 
 foreach ($config in $configurations) {
@@ -90,6 +153,18 @@ foreach ($config in $configurations) {
 
     foreach ($relative in $commonFiles + @($config.Xpr) + $upcheckerFiles) {
         Assert-File (Join-Path $stage ($relative -replace "/", "\")) "$($config.Name) package payload"
+    }
+
+    $mainExe = Join-Path $stage "fxfile.exe"
+    $mainMachine = Get-PeMachine $mainExe "$($config.Name) fxfile.exe"
+    if ($mainMachine -ne $config.Machine) {
+        throw ("$($config.Name) fxfile.exe architecture mismatch: expected 0x{0:X4}, got 0x{1:X4}" -f $config.Machine, $mainMachine)
+    }
+
+    $upcheckerExe = Join-Path $stage "upchecker\fxfile-upchecker.exe"
+    $upcheckerMachine = Get-PeMachine $upcheckerExe "$($config.Name) upchecker"
+    if ($upcheckerMachine -ne 0x014C) {
+        throw ("$($config.Name) upchecker architecture mismatch: expected x86 0x014C, got 0x{0:X4}" -f $upcheckerMachine)
     }
 
     $languages = @(Get-ChildItem -LiteralPath (Join-Path $stage "Languages") -Filter "*.xml" -File -ErrorAction SilentlyContinue)
@@ -137,6 +212,29 @@ foreach ($config in $configurations) {
         }
 
         $entryNames = @($entries | ForEach-Object { Normalize-ZipPath $_.FullName })
+
+        $mainEntry = @($entries | Where-Object {
+            (Normalize-ZipPath $_.FullName) -ceq "fxfile.exe"
+        })
+        if ($mainEntry.Count -ne 1) {
+            throw "$($config.Name) portable archive must contain exactly one fxfile.exe."
+        }
+        $mainZipMachine = Get-ZipEntryPeMachine $mainEntry[0] "$($config.Name) archive fxfile.exe"
+        if ($mainZipMachine -ne $config.Machine) {
+            throw ("$($config.Name) archive fxfile.exe architecture mismatch: expected 0x{0:X4}, got 0x{1:X4}" -f $config.Machine, $mainZipMachine)
+        }
+
+        $upcheckerEntry = @($entries | Where-Object {
+            (Normalize-ZipPath $_.FullName) -ceq "upchecker/fxfile-upchecker.exe"
+        })
+        if ($upcheckerEntry.Count -ne 1) {
+            throw "$($config.Name) portable archive must contain exactly one upchecker/fxfile-upchecker.exe."
+        }
+        $upcheckerZipMachine = Get-ZipEntryPeMachine $upcheckerEntry[0] "$($config.Name) archive upchecker"
+        if ($upcheckerZipMachine -ne 0x014C) {
+            throw ("$($config.Name) archive upchecker architecture mismatch: expected x86 0x014C, got 0x{0:X4}" -f $upcheckerZipMachine)
+        }
+
         $duplicateNames = @(
             $entryNames |
                 Group-Object { $_.ToLowerInvariant() } |
