@@ -22,6 +22,7 @@
 
 #include "stdafx.h"
 #include "CustomizeDialog.h"
+#include "../ModernUI.h"
 
 #include "../../resource.h"
 #include "GlobalData.h"
@@ -48,7 +49,7 @@ COptionsDialog::COptionsDialog( int nTextType, int nIconType )
 
 void COptionsDialog::DoDataExchange( CDataExchange* pDX )
 {
-    CDialog::DoDataExchange( pDX );
+    CModernDialog::DoDataExchange( pDX );
     //{{AFX_DATA_MAP(COptionsDialog)
     DDX_Control(pDX, IDC_CUSTOM_TOOLBAR_TEXT_OPTION, m_cbTextType);
     DDX_Control(pDX, IDC_CUSTOM_TOOLBAR_ICON_OPTION, m_cbIconType);
@@ -99,7 +100,7 @@ CCustomizeDialog* COptionsDialog::GetCustomizeDialog() const
 /////////////////////////////////////////////////////////////////////////////
 // COptionsDialog message handlers
 
-BEGIN_MESSAGE_MAP(COptionsDialog, CDialog)
+BEGIN_MESSAGE_MAP(COptionsDialog, CModernDialog)
     //{{AFX_MSG_MAP(COptionsDialog)
     ON_CBN_SELENDOK(IDC_CUSTOM_TOOLBAR_TEXT_OPTION, OnTextType)
     ON_CBN_SELENDOK(IDC_CUSTOM_TOOLBAR_ICON_OPTION, OnIconType)
@@ -109,7 +110,7 @@ END_MESSAGE_MAP()
 
 BOOL COptionsDialog::OnInitDialog() 
 {
-    CDialog::OnInitDialog();
+    CModernDialog::OnInitDialog();
 
     CCustomizeDialog* pCustomizeDialog = GetCustomizeDialog();
 
@@ -158,6 +159,7 @@ IMPLEMENT_DYNAMIC( CCustomizeDialog, CWnd )
 
 CCustomizeDialog::CCustomizeDialog( CToolBarEx* pToolBar )
     : m_dlgOptions( pToolBar->m_nTextType, pToolBar->m_nIconType )
+    , m_surfaceColor(CLR_INVALID)
 {
     m_pToolBar = pToolBar;
 }
@@ -251,8 +253,12 @@ BEGIN_MESSAGE_MAP(CCustomizeDialog, CWnd)
     ON_WM_DRAWITEM()
     ON_WM_MEASUREITEM()
     ON_WM_CTLCOLOR()
+    ON_WM_SETTINGCHANGE()
+    ON_WM_SYSCOLORCHANGE()
     //}}AFX_MSG_MAP
     ON_MESSAGE( WM_INITDIALOG, OnInitDialog )
+    ON_MESSAGE( WM_THEMECHANGED, OnThemeChanged )
+    ON_MESSAGE( WM_DPICHANGED, OnDpiChanged )
 END_MESSAGE_MAP()
 
 LRESULT CCustomizeDialog::OnInitDialog( WPARAM /*wParam*/, LPARAM /*lParam*/ )
@@ -279,7 +285,7 @@ LRESULT CCustomizeDialog::OnInitDialog( WPARAM /*wParam*/, LPARAM /*lParam*/ )
 
     LRESULT sResult = Default();
 
-    RedrawWindow(XPR_NULL, XPR_NULL, RDW_INVALIDATE | RDW_UPDATENOW | RDW_ERASE | RDW_INTERNALPAINT | RDW_ALLCHILDREN);
+    RefreshModernAppearance();
 
     return sResult;
 }
@@ -313,13 +319,28 @@ void CCustomizeDialog::OnDrawItem( int nIDCtl, LPDRAWITEMSTRUCT lpDrawItemStruct
             CRect rcLabel( rcItem );
             rcLabel.left += szButton.cx + 1;
 
-            // Cache system colors
-            COLORREF clrText     = ::GetSysColor( bSelected ? COLOR_HIGHLIGHTTEXT : COLOR_BTNTEXT );
-            COLORREF clrBack     = ::GetSysColor( bSelected ? COLOR_HIGHLIGHT : COLOR_BTNFACE );
-            COLORREF clrGrayText = ::GetSysColor( COLOR_GRAYTEXT );
-            COLORREF clrBtnFace  = ::GetSysColor( COLOR_BTNFACE );
-            COLORREF clr3dShadow = ::GetSysColor( COLOR_3DSHADOW );
-            COLORREF clr3dHilite = ::GetSysColor( COLOR_3DHILIGHT );
+            const fxfile::ui::ThemePalette sPalette = fxfile::ui::ModernUI::getPalette();
+            const bool bModernDark =
+                XPR_IS_TRUE(sPalette.mDark) && XPR_IS_FALSE(sPalette.mHighContrast);
+
+            COLORREF clrText = bModernDark ?
+                (bSelected ? sPalette.mSelectionText : sPalette.mText) :
+                ::GetSysColor( bSelected ? COLOR_HIGHLIGHTTEXT : COLOR_BTNTEXT );
+            COLORREF clrBack = bModernDark ?
+                (bSelected ? sPalette.mSelection : sPalette.mSurface) :
+                ::GetSysColor( bSelected ? COLOR_HIGHLIGHT : COLOR_BTNFACE );
+            COLORREF clrGrayText = bModernDark ?
+                sPalette.mSecondaryText :
+                ::GetSysColor( COLOR_GRAYTEXT );
+            COLORREF clrBtnFace = bModernDark ?
+                sPalette.mSurface :
+                ::GetSysColor( COLOR_BTNFACE );
+            COLORREF clr3dShadow = bModernDark ?
+                sPalette.mBorder :
+                ::GetSysColor( COLOR_3DSHADOW );
+            COLORREF clr3dHilite = bModernDark ?
+                sPalette.mSeparator :
+                ::GetSysColor( COLOR_3DHILIGHT );
 
             pDC->FillSolidRect( rcImage, clrBtnFace );
             pDC->FillSolidRect( rcLabel, clrBack );
@@ -475,9 +496,73 @@ HBRUSH CCustomizeDialog::OnCtlColor( CDC* pDC, CWnd* pWnd, UINT nCtlColor )
         if ( ( nIDCtl == IDC_LB_AVAILABLE ) ||
              ( nIDCtl == IDC_LB_CURRENT ) )
         {
-            hbr = ::GetSysColorBrush( COLOR_BTNFACE );
+            const fxfile::ui::ThemePalette sPalette = fxfile::ui::ModernUI::getPalette();
+            if (XPR_IS_TRUE(sPalette.mDark) && XPR_IS_FALSE(sPalette.mHighContrast))
+            {
+                pDC->SetTextColor(sPalette.mText);
+                pDC->SetBkColor(sPalette.mSurface);
+                if (XPR_IS_NOT_NULL(m_surfaceBrush.m_hObject))
+                    hbr = (HBRUSH)m_surfaceBrush.GetSafeHandle();
+            }
+            else
+            {
+                hbr = ::GetSysColorBrush( COLOR_BTNFACE );
+            }
         }
     }
 
     return hbr;
+}
+
+void CCustomizeDialog::RefreshModernAppearance()
+{
+    if (!::IsWindow(m_hWnd))
+        return;
+
+    const fxfile::ui::ThemePalette sPalette = fxfile::ui::ModernUI::getPalette();
+    fxfile::ui::ModernUI::applyWindowFrameTheme(m_hWnd);
+
+    if (m_surfaceColor != sPalette.mSurface)
+    {
+        if (XPR_IS_NOT_NULL(m_surfaceBrush.m_hObject))
+            m_surfaceBrush.DeleteObject();
+
+        m_surfaceColor =
+            (m_surfaceBrush.CreateSolidBrush(sPalette.mSurface) == TRUE) ?
+            sPalette.mSurface : CLR_INVALID;
+    }
+
+    for (UINT id : { IDC_LB_AVAILABLE, IDC_LB_CURRENT })
+    {
+        CWnd *sList = GetDlgItem(id);
+        if (sList != NULL && ::IsWindow(sList->GetSafeHwnd()))
+            fxfile::ui::ModernUI::applyExplorerControlTheme(sList->GetSafeHwnd());
+    }
+
+    RedrawWindow(XPR_NULL, XPR_NULL,
+        RDW_INVALIDATE | RDW_UPDATENOW | RDW_ERASE | RDW_INTERNALPAINT | RDW_ALLCHILDREN);
+}
+
+void CCustomizeDialog::OnSettingChange(UINT uFlags, LPCTSTR lpszSection)
+{
+    CWnd::OnSettingChange(uFlags, lpszSection);
+    RefreshModernAppearance();
+}
+
+void CCustomizeDialog::OnSysColorChange()
+{
+    CWnd::OnSysColorChange();
+    RefreshModernAppearance();
+}
+
+LRESULT CCustomizeDialog::OnThemeChanged(WPARAM, LPARAM)
+{
+    RefreshModernAppearance();
+    return Default();
+}
+
+LRESULT CCustomizeDialog::OnDpiChanged(WPARAM, LPARAM)
+{
+    RefreshModernAppearance();
+    return Default();
 }

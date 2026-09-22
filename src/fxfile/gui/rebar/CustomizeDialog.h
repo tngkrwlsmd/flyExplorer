@@ -28,6 +28,7 @@
 #endif // _MSC_VER > 1000
 
 #include "GlobalData.h"
+#include "../ModernDialog.h"
 
 /////////////////////////////////////////////////////////////////////////////
 // Options
@@ -56,7 +57,7 @@ enum
 
 class CCustomizeDialog;
 
-class COptionsDialog : public CDialog
+class COptionsDialog : public CModernDialog
 {
 // Construction
 public:
@@ -130,11 +131,14 @@ public:
 // Implementation
 protected:
     CSize GetButtonSize() const;
+    void RefreshModernAppearance();
 
 // Implementation data
 protected:
     COptionsDialog  m_dlgOptions;
     CToolBarEx*     m_pToolBar;
+    CBrush          m_surfaceBrush;
+    COLORREF        m_surfaceColor;
 
 // Generated message map functions
 protected:
@@ -142,8 +146,12 @@ protected:
     afx_msg void OnDrawItem(int nIDCtl, LPDRAWITEMSTRUCT lpDrawItemStruct);
     afx_msg void OnMeasureItem(int nIDCtl, LPMEASUREITEMSTRUCT lpMeasureItemStruct);
     afx_msg HBRUSH OnCtlColor(CDC* pDC, CWnd* pWnd, UINT nCtlColor);
+    afx_msg void OnSettingChange(UINT uFlags, LPCTSTR lpszSection);
+    afx_msg void OnSysColorChange();
     //}}AFX_MSG
     LRESULT OnInitDialog( WPARAM wParam, LPARAM lParam );
+    LRESULT OnThemeChanged(WPARAM wParam, LPARAM lParam);
+    LRESULT OnDpiChanged(WPARAM wParam, LPARAM lParam);
     DECLARE_MESSAGE_MAP()
 };
 
