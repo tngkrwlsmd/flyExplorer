@@ -94,6 +94,7 @@ protected:
     afx_msg void OnApply(void);
     virtual xpr_bool_t OnInitDialog(void);
     afx_msg void OnSelchangedTree(NMHDR* pNMHDR, LRESULT* pResult);
+    afx_msg void OnTreeCustomDraw(NMHDR* pNMHDR, LRESULT* pResult);
     afx_msg void OnDefault(void);
     afx_msg HBRUSH OnCtlColor(CDC* pDC, CWnd* pWnd, xpr_uint_t nCtlColor);
 };
