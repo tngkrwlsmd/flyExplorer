@@ -802,6 +802,98 @@ def validate_ui_resource_contracts() -> list[str]:
         if mask_word not in data[pixel_offset:]:
             errors.append(f"{rel}: RGB(255,0,255) transparent-mask pixels are missing")
 
+    modern_toolbar_frames = (
+        0, 1, 2, 3, 5, 7, 8, 10, 11, 12, 13, 14,
+        18, 19, 20, 21, 22, 23, 24, 26, 27, 28, 29, 30,
+        31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42,
+        43, 44, 45, 46, 47, 48, 49, 50,
+    )
+    toolbar_strip_names = (
+        "tb_main_cold_small.bmp",
+        "tb_main_hot_small.bmp",
+        "tb_main_cold_large.bmp",
+        "tb_main_hot_large.bmp",
+    )
+    toolbar_strip_pixels: dict[str, tuple[set[tuple[int, int]], set[int]]] = {}
+
+    for name in toolbar_strip_names:
+        geometry = bitmap_geometry(name)
+        if geometry is None:
+            continue
+
+        width, height, bpp, planes, compression, pixel_offset, dib_size, data = geometry
+        cell_width = height
+        stride = ((width * 2 + 3) // 4) * 4
+        mask_value = 0x7C1F
+        occupied: set[tuple[int, int]] = set()
+        ink_values: set[int] = set()
+
+        for frame in modern_toolbar_frames:
+            colors: set[int] = set()
+            min_x = cell_width
+            min_y = height
+            max_x = -1
+            max_y = -1
+
+            for y in range(height):
+                source_row = height - 1 - y
+                for x in range(cell_width):
+                    pixel = (
+                        pixel_offset
+                        + source_row * stride
+                        + (frame * cell_width + x) * 2
+                    )
+                    value = read_u16(data, pixel)
+                    colors.add(value)
+                    if value != mask_value:
+                        occupied.add((frame, y * cell_width + x))
+                        ink_values.add(value)
+                        min_x = min(min_x, x)
+                        min_y = min(min_y, y)
+                        max_x = max(max_x, x)
+                        max_y = max(max_y, y)
+
+            rel = (resource_dir / name).relative_to(ROOT).as_posix()
+            if len(colors) != 2 or mask_value not in colors:
+                errors.append(
+                    f"{rel}: modern frame {frame} must contain exactly "
+                    "transparent mask + one flat glyph color"
+                )
+            if max_x < min_x or max_y < min_y:
+                errors.append(f"{rel}: modern frame {frame} is unexpectedly blank")
+            else:
+                margin = min(
+                    min_x,
+                    min_y,
+                    cell_width - 1 - max_x,
+                    height - 1 - max_y,
+                )
+                if margin < 1:
+                    errors.append(
+                        f"{rel}: modern frame {frame} touches the bitmap cell edge"
+                    )
+
+        toolbar_strip_pixels[name] = (occupied, ink_values)
+
+    for size in ("small", "large"):
+        cold_name = f"tb_main_cold_{size}.bmp"
+        hot_name = f"tb_main_hot_{size}.bmp"
+        if cold_name not in toolbar_strip_pixels or hot_name not in toolbar_strip_pixels:
+            continue
+
+        cold_shape, cold_inks = toolbar_strip_pixels[cold_name]
+        hot_shape, hot_inks = toolbar_strip_pixels[hot_name]
+        if cold_shape != hot_shape:
+            errors.append(
+                f"toolbar {size}: COLD/HOT glyph geometry diverged; "
+                "state changes must not move command artwork"
+            )
+        if cold_inks == hot_inks:
+            errors.append(
+                f"toolbar {size}: COLD/HOT glyph colors are identical; "
+                "hover state must remain visually distinct"
+            )
+
     icon_path = resource_dir / "fxfile.ico"
     try:
         icon = icon_path.read_bytes()
