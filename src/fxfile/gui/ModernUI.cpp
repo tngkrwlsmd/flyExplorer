@@ -227,6 +227,25 @@ xpr_bool_t ModernUI::getUIFont(LOGFONT &aLogFont, HWND aHwnd)
     return XPR_FALSE;
 }
 
+HICON ModernUI::loadIconResource(
+    HINSTANCE aInstance,
+    xpr_uint_t aResourceId,
+    HWND aHwnd,
+    xpr_sint_t aLogicalSize)
+{
+    if (XPR_IS_NULL(aInstance) || aResourceId == 0 || aLogicalSize <= 0)
+        return XPR_NULL;
+
+    const xpr_sint_t sPixelSize = scale(aLogicalSize, getDpi(aHwnd));
+    return static_cast<HICON>(::LoadImage(
+        aInstance,
+        MAKEINTRESOURCE(aResourceId),
+        IMAGE_ICON,
+        sPixelSize,
+        sPixelSize,
+        LR_DEFAULTCOLOR));
+}
+
 xpr_bool_t ModernUI::isHighContrast(void)
 {
     HIGHCONTRAST sHighContrast = {0};
@@ -322,7 +341,11 @@ xpr_bool_t ModernUI::applyWindowFrameTheme(HWND aHwnd)
     xpr_bool_t sApplied = XPR_FALSE;
     if (XPR_IS_NOT_NULL(sDwmSetWindowAttribute))
     {
-        const BOOL sUseDarkFrame = XPR_IS_TRUE(isHighContrast()) ? FALSE : TRUE;
+        const ThemePalette sPalette = getPalette();
+        const BOOL sUseDarkFrame =
+            (XPR_IS_TRUE(sPalette.mDark) && XPR_IS_FALSE(sPalette.mHighContrast)) ?
+            TRUE :
+            FALSE;
         const HRESULT sResult = sDwmSetWindowAttribute(
             aHwnd,
             DWMWA_USE_IMMERSIVE_DARK_MODE,

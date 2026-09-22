@@ -14,6 +14,7 @@
 #include "dlg_state.h"
 #include "dlg_state_manager.h"
 #include "resource.h"
+#include "gui/ModernUI.h"
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -30,8 +31,8 @@ HistoryDlg::HistoryDlg(xpr_size_t aHistory)
     , mCurHistoryDisp(aHistory)
     , mIndex(0xffffffff)
     , mDlgState(XPR_NULL)
+    , mIcon(XPR_NULL)
 {
-    mIcon = AfxGetApp()->LoadIcon(IDR_MAINFRAME);
 }
 
 HistoryDlg::~HistoryDlg(void)
@@ -73,7 +74,14 @@ xpr_bool_t HistoryDlg::OnInitDialog(void)
 {
     super::OnInitDialog();
 
-    SetIcon(mIcon, XPR_TRUE);
+    DESTROY_ICON(mIcon);
+    mIcon = ui::ModernUI::loadIconResource(
+        AfxGetResourceHandle(),
+        IDR_MAINFRAME,
+        GetSafeHwnd(),
+        32);
+    if (XPR_IS_NOT_NULL(mIcon))
+        SetIcon(mIcon, XPR_TRUE);
 
     HICON sIconHandle;
     sIconHandle = AfxGetApp()->LoadIcon(MAKEINTRESOURCE(IDI_NOT));

@@ -49,6 +49,7 @@ public:
     static xpr_sint_t scaleForWindow(xpr_sint_t aValue, HWND aHwnd);
 
     static xpr_bool_t getUIFont(LOGFONT &aLogFont, HWND aHwnd);
+    static HICON loadIconResource(HINSTANCE aInstance, xpr_uint_t aResourceId, HWND aHwnd, xpr_sint_t aLogicalSize);
     static ThemePalette getPalette(void);
     static xpr_bool_t isHighContrast(void);
     static xpr_bool_t applyWindowFrameTheme(HWND aHwnd);

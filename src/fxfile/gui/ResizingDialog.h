@@ -17,6 +17,7 @@ class CResizingDialog : public CDialog
 public:
 	DECLARE_DYNCREATE(CResizingDialog)
 	CResizingDialog(const UINT resID = 0,CWnd *pParent = NULL);
+	virtual ~CResizingDialog();
 	// possible sizing types
 	
 	enum eSizeType
@@ -66,13 +67,29 @@ protected:
 	eSizeType			m_yAllow;          // vertical sizing allowed
 	SizeGripWnd		m_wndSizeGrip;     // size icon window
 	bool				m_bInited;         // set after initialize
-	
+
+    CFont                   m_uiFont;
+    CBrush                  m_surfaceBrush;
+    CBrush                  m_windowBrush;
+    COLORREF                m_surfaceColor;
+    COLORREF                m_windowColor;
+
 protected:
+    void RefreshModernAppearance();
+    void ApplyModernAppearanceToChildren(HFONT aPreviousFont);
+    void ApplyModernAppearanceToChild(CWnd *aWnd, HFONT aPreviousFont);
+
 	//{{AFX_MSG(CResizingDialog)
 	virtual BOOL OnInitDialog();
 	afx_msg void OnSize(UINT nType, int cx, int cy);
 	afx_msg void OnGetMinMaxInfo(MINMAXINFO *lpMMI);
 	afx_msg BOOL OnEraseBkgnd(CDC* pDC);
+    afx_msg HBRUSH OnCtlColor(CDC* pDC, CWnd* pWnd, UINT nCtlColor);
+    afx_msg void OnSettingChange(UINT uFlags, LPCTSTR lpszSection);
+    afx_msg void OnSysColorChange();
+    afx_msg LRESULT OnThemeChanged(WPARAM wParam, LPARAM lParam);
+    afx_msg LRESULT OnDpiChanged(WPARAM wParam, LPARAM lParam);
+    afx_msg LRESULT OnDpiChangedAfterParent(WPARAM wParam, LPARAM lParam);
 	afx_msg LRESULT OnNcHitTest(CPoint point);
 	//}}AFX_MSG
 	DECLARE_MESSAGE_MAP()

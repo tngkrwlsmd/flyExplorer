@@ -5,6 +5,7 @@
 
 #include "stdafx.h"
 #include "ResizingDialog.h"
+#include "ModernUI.h"
 
 
 #ifdef _DEBUG
@@ -23,6 +24,8 @@ IMPLEMENT_DYNCREATE(CResizingDialog, CDialog)
 
 CResizingDialog::CResizingDialog(const UINT resID, CWnd *pParent)
 : CDialog(resID, pParent)
+, m_surfaceColor(CLR_INVALID)
+, m_windowColor(CLR_INVALID)
 {
 	//{{AFX_DATA_INIT(CResizingDialog)
 	//}}AFX_DATA_INIT
@@ -35,10 +38,26 @@ CResizingDialog::CResizingDialog(const UINT resID, CWnd *pParent)
 	m_bInited = false;
 }
 
+CResizingDialog::~CResizingDialog()
+{
+    if (m_uiFont.GetSafeHandle() != NULL)
+        m_uiFont.DeleteObject();
+    if (m_surfaceBrush.GetSafeHandle() != NULL)
+        m_surfaceBrush.DeleteObject();
+    if (m_windowBrush.GetSafeHandle() != NULL)
+        m_windowBrush.DeleteObject();
+}
+
 BEGIN_MESSAGE_MAP(CResizingDialog, CDialog)
 	ON_WM_SIZE()
 	ON_WM_GETMINMAXINFO()
 	ON_WM_ERASEBKGND()
+    ON_WM_CTLCOLOR()
+    ON_WM_SETTINGCHANGE()
+    ON_WM_SYSCOLORCHANGE()
+    ON_MESSAGE(WM_THEMECHANGED, OnThemeChanged)
+    ON_MESSAGE(WM_DPICHANGED, OnDpiChanged)
+    ON_MESSAGE(WM_DPICHANGED_AFTERPARENT, OnDpiChangedAfterParent)
 	ON_WM_NCHITTEST()
 END_MESSAGE_MAP()
 
@@ -46,6 +65,8 @@ BOOL CResizingDialog::OnInitDialog()
 {
 	// call the base class
 	CDialog::OnInitDialog();
+
+    RefreshModernAppearance();
 
 	CRect rcIcon,rcDialogClient;
 
@@ -116,6 +137,107 @@ void CResizingDialog::OnGetMinMaxInfo(MINMAXINFO *lpMMI)
 	}
 }
 
+void CResizingDialog::ApplyModernAppearanceToChild(CWnd *aWnd, HFONT aPreviousFont)
+{
+    if (aWnd == NULL || !::IsWindow(aWnd->GetSafeHwnd()))
+        return;
+
+    TCHAR sClassName[64] = {0};
+    ::GetClassName(aWnd->GetSafeHwnd(), sClassName, XPR_COUNT_OF(sClassName));
+
+    const bool sStandardFontControl =
+        _tcsicmp(sClassName, _T("Static")) == 0 ||
+        _tcsicmp(sClassName, _T("Button")) == 0 ||
+        _tcsicmp(sClassName, _T("Edit")) == 0 ||
+        _tcsicmp(sClassName, _T("ComboBox")) == 0 ||
+        _tcsicmp(sClassName, _T("ComboBoxEx32")) == 0 ||
+        _tcsicmp(sClassName, _T("ListBox")) == 0 ||
+        _tcsicmp(sClassName, _T("SysListView32")) == 0 ||
+        _tcsicmp(sClassName, _T("SysTreeView32")) == 0 ||
+        _tcsicmp(sClassName, _T("SysTabControl32")) == 0;
+
+    if (sStandardFontControl && m_uiFont.GetSafeHandle() != NULL)
+    {
+        HFONT sCurrentFont = reinterpret_cast<HFONT>(
+            aWnd->SendMessage(WM_GETFONT, 0, 0));
+        if (sCurrentFont == NULL || sCurrentFont == aPreviousFont)
+            aWnd->SetFont(&m_uiFont, FALSE);
+    }
+
+    const bool sExplorerThemeControl =
+        _tcsicmp(sClassName, _T("Edit")) == 0 ||
+        _tcsicmp(sClassName, _T("ComboBox")) == 0 ||
+        _tcsicmp(sClassName, _T("ComboBoxEx32")) == 0 ||
+        _tcsicmp(sClassName, _T("ListBox")) == 0 ||
+        _tcsicmp(sClassName, _T("SysListView32")) == 0 ||
+        _tcsicmp(sClassName, _T("SysTreeView32")) == 0 ||
+        _tcsicmp(sClassName, _T("SysTabControl32")) == 0;
+
+    if (sExplorerThemeControl)
+        fxfile::ui::ModernUI::applyExplorerControlTheme(aWnd->GetSafeHwnd());
+
+    CWnd *sChild = aWnd->GetWindow(GW_CHILD);
+    while (sChild != NULL)
+    {
+        ApplyModernAppearanceToChild(sChild, aPreviousFont);
+        sChild = sChild->GetNextWindow();
+    }
+}
+
+void CResizingDialog::ApplyModernAppearanceToChildren(HFONT aPreviousFont)
+{
+    CWnd *sChild = GetWindow(GW_CHILD);
+    while (sChild != NULL)
+    {
+        ApplyModernAppearanceToChild(sChild, aPreviousFont);
+        sChild = sChild->GetNextWindow();
+    }
+}
+
+void CResizingDialog::RefreshModernAppearance()
+{
+    if (!::IsWindow(GetSafeHwnd()))
+        return;
+
+    const fxfile::ui::ThemePalette sPalette = fxfile::ui::ModernUI::getPalette();
+    const HFONT sPreviousFont = reinterpret_cast<HFONT>(
+        SendMessage(WM_GETFONT, 0, 0));
+
+    LOGFONT sLogFont = {0};
+    if (XPR_IS_TRUE(fxfile::ui::ModernUI::getUIFont(sLogFont, GetSafeHwnd())))
+    {
+        if (m_uiFont.GetSafeHandle() != NULL)
+            m_uiFont.DeleteObject();
+
+        if (m_uiFont.CreateFontIndirect(&sLogFont))
+            SetFont(&m_uiFont, FALSE);
+    }
+
+    if (m_surfaceColor != sPalette.mSurface)
+    {
+        if (m_surfaceBrush.GetSafeHandle() != NULL)
+            m_surfaceBrush.DeleteObject();
+        m_surfaceBrush.CreateSolidBrush(sPalette.mSurface);
+        m_surfaceColor = sPalette.mSurface;
+    }
+
+    if (m_windowColor != sPalette.mWindow)
+    {
+        if (m_windowBrush.GetSafeHandle() != NULL)
+            m_windowBrush.DeleteObject();
+        m_windowBrush.CreateSolidBrush(sPalette.mWindow);
+        m_windowColor = sPalette.mWindow;
+    }
+
+    fxfile::ui::ModernUI::applyWindowFrameTheme(GetSafeHwnd());
+    ApplyModernAppearanceToChildren(sPreviousFont);
+
+    RedrawWindow(
+        NULL,
+        NULL,
+        RDW_INVALIDATE | RDW_ERASE | RDW_FRAME | RDW_ALLCHILDREN);
+}
+
 BOOL CResizingDialog::OnEraseBkgnd(CDC *pDC)
 {
 	std::vector<CItem>::const_iterator it;
@@ -133,8 +255,79 @@ BOOL CResizingDialog::OnEraseBkgnd(CDC *pDC)
 			pDC->ExcludeClipRect(it->m_rcControl);
 	}
 
+    const fxfile::ui::ThemePalette sPalette = fxfile::ui::ModernUI::getPalette();
+    if (XPR_IS_TRUE(sPalette.mDark) && XPR_IS_FALSE(sPalette.mHighContrast))
+    {
+        CRect sClientRect;
+        GetClientRect(sClientRect);
+        pDC->FillSolidRect(sClientRect, sPalette.mSurface);
+        return TRUE;
+    }
+
 	CDialog::OnEraseBkgnd(pDC);
 	return FALSE;
+}
+
+HBRUSH CResizingDialog::OnCtlColor(CDC* pDC, CWnd* pWnd, UINT nCtlColor)
+{
+    const fxfile::ui::ThemePalette sPalette = fxfile::ui::ModernUI::getPalette();
+    if (XPR_IS_FALSE(sPalette.mDark) || XPR_IS_TRUE(sPalette.mHighContrast))
+        return CDialog::OnCtlColor(pDC, pWnd, nCtlColor);
+
+    const COLORREF sTextColor =
+        (pWnd != NULL && !pWnd->IsWindowEnabled()) ?
+        sPalette.mSecondaryText :
+        sPalette.mText;
+    pDC->SetTextColor(sTextColor);
+
+    switch (nCtlColor)
+    {
+        case CTLCOLOR_EDIT:
+        case CTLCOLOR_LISTBOX:
+            pDC->SetBkMode(OPAQUE);
+            pDC->SetBkColor(sPalette.mWindow);
+            return static_cast<HBRUSH>(m_windowBrush.GetSafeHandle());
+
+        case CTLCOLOR_STATIC:
+        case CTLCOLOR_BTN:
+        case CTLCOLOR_DLG:
+            pDC->SetBkMode(TRANSPARENT);
+            pDC->SetBkColor(sPalette.mSurface);
+            return static_cast<HBRUSH>(m_surfaceBrush.GetSafeHandle());
+
+        default:
+            return CDialog::OnCtlColor(pDC, pWnd, nCtlColor);
+    }
+}
+
+void CResizingDialog::OnSettingChange(UINT uFlags, LPCTSTR lpszSection)
+{
+    CDialog::OnSettingChange(uFlags, lpszSection);
+    RefreshModernAppearance();
+}
+
+void CResizingDialog::OnSysColorChange()
+{
+    CDialog::OnSysColorChange();
+    RefreshModernAppearance();
+}
+
+LRESULT CResizingDialog::OnThemeChanged(WPARAM /*wParam*/, LPARAM /*lParam*/)
+{
+    RefreshModernAppearance();
+    return Default();
+}
+
+LRESULT CResizingDialog::OnDpiChanged(WPARAM /*wParam*/, LPARAM /*lParam*/)
+{
+    RefreshModernAppearance();
+    return Default();
+}
+
+LRESULT CResizingDialog::OnDpiChangedAfterParent(WPARAM /*wParam*/, LPARAM /*lParam*/)
+{
+    RefreshModernAppearance();
+    return Default();
 }
 
 void CResizingDialog::AddControl(const UINT resID, const eSizeType xsize, const eSizeType ysize, const bool bFlickerFree)
