@@ -291,6 +291,8 @@
                 '../base/string_table.h',
                 '../base/update_info_manager.cpp',
                 '../base/update_info_manager.h',
+                '../base/upchecker_command.cpp',
+                '../base/upchecker_command.h',
                 '../base/upchecker_def.h',
                 '../base/xml.cpp',
                 '../base/xml.h',

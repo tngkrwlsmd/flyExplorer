@@ -14,6 +14,7 @@
 #include "app_ver.h"
 
 #include "conf_file_ex.h"
+#include "upchecker_command.h"
 
 #include <atlbase.h> // for CRegKey
 
@@ -30,7 +31,6 @@ namespace
 {
 const xpr_tchar_t kUpcheckerProgramDebug          [] = XPR_STRING_LITERAL("upchecker\\fxfile-upchecker_dbg.exe");
 const xpr_tchar_t kUpcheckerProgram               [] = XPR_STRING_LITERAL("upchecker\\fxfile-upchecker.exe");
-const xpr_tchar_t kUpcheckerProgramOptionConfDir  [] = XPR_STRING_LITERAL("--conf_dir");
 const xpr_tchar_t kUpcheckerSection               [] = XPR_STRING_LITERAL("config");
 const xpr_tchar_t kUpcheckerRegKey                [] = XPR_STRING_LITERAL("Software\\Microsoft\\Windows\\CurrentVersion\\Run");
 const xpr_tchar_t kUpcheckerRegValueNameWinStartup[] = XPR_STRING_LITERAL("fxfile-upchecker");
@@ -82,7 +82,9 @@ void UpcheckerManager::startupProcess(void)
         const xpr_tchar_t *sLoadConfDir = sConfDir.getConfDir();
 
         xpr::string sParameters;
-        sParameters.format(XPR_STRING_LITERAL("%s=%s"), kUpcheckerProgramOptionConfDir, sLoadConfDir);
+        base::buildUpcheckerConfDirArgument(
+            sLoadConfDir,
+            sParameters);
 
         ::ShellExecute(XPR_NULL, XPR_STRING_LITERAL("open"), sPath.c_str(), sParameters.c_str(), XPR_NULL, 0);
     }
@@ -135,14 +137,11 @@ void UpcheckerManager::registerWinStartup(void)
         ConfDir &sConfDir = ConfDir::instance();
         const xpr_tchar_t *sLoadConfDir = sConfDir.getConfDir();
 
-        xpr::string sParameters;
-        sParameters.format(XPR_STRING_LITERAL("%s=\"%s\""), kUpcheckerProgramOptionConfDir, sLoadConfDir);
-
         xpr::string sValue;
-        sValue += XPR_STRING_LITERAL("\"");
-        sValue += sPath;
-        sValue += XPR_STRING_LITERAL("\" ");
-        sValue += sParameters;
+        base::buildUpcheckerStartupCommand(
+            sPath,
+            sLoadConfDir,
+            sValue);
 
         sRegKey.SetStringValue(kUpcheckerRegValueNameWinStartup, sValue.c_str());
     }
