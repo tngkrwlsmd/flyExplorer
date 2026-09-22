@@ -80,6 +80,7 @@ BEGIN_MESSAGE_MAP(CfgMainDlg, super)
     ON_MESSAGE(WM_THEMECHANGED, OnThemeChanged)
     ON_MESSAGE(WM_DPICHANGED, OnDpiChanged)
     ON_NOTIFY(TVN_SELCHANGED, IDC_CFG_TREE, OnSelchangedTree)
+    ON_NOTIFY(NM_CUSTOMDRAW, IDC_CFG_TREE, OnTreeCustomDraw)
     ON_BN_CLICKED(IDC_CFG_DEFAULT, OnDefault)
     ON_BN_CLICKED(IDC_CFG_APPLY,   OnApply)
 END_MESSAGE_MAP()
@@ -555,6 +556,64 @@ void CfgMainDlg::OnSelchangedTree(NMHDR* pNMHDR, LRESULT* pResult)
     mShowCfg = i;
     mLastShowCfg = mShowCfg;
 }
+
+void CfgMainDlg::OnTreeCustomDraw(NMHDR* pNMHDR, LRESULT* pResult)
+{
+    NMTVCUSTOMDRAW *sCustomDraw =
+        reinterpret_cast<NMTVCUSTOMDRAW *>(pNMHDR);
+    const ui::ThemePalette sPalette = ui::ModernUI::getPalette();
+
+    if (XPR_IS_TRUE(sPalette.mHighContrast))
+    {
+        *pResult = CDRF_DODEFAULT;
+        return;
+    }
+
+    switch (sCustomDraw->nmcd.dwDrawStage)
+    {
+        case CDDS_PREPAINT:
+            *pResult = CDRF_NOTIFYITEMDRAW;
+            return;
+
+        case CDDS_ITEMPREPAINT:
+        {
+            const UINT sState = sCustomDraw->nmcd.uItemState;
+            const xpr_bool_t sSelected =
+                (sState & CDIS_SELECTED) != 0 ? XPR_TRUE : XPR_FALSE;
+            const xpr_bool_t sHot =
+                (sState & CDIS_HOT) != 0 ? XPR_TRUE : XPR_FALSE;
+            const xpr_bool_t sFocused =
+                (::GetFocus() == mTreeCtrl.GetSafeHwnd()) ? XPR_TRUE : XPR_FALSE;
+
+            sCustomDraw->clrText = sPalette.mText;
+            sCustomDraw->clrTextBk = sPalette.mWindow;
+
+            if (XPR_IS_TRUE(sSelected))
+            {
+                sCustomDraw->clrTextBk =
+                    XPR_IS_TRUE(sFocused) ?
+                    sPalette.mSelection :
+                    sPalette.mHover;
+                sCustomDraw->clrText =
+                    XPR_IS_TRUE(sFocused) ?
+                    sPalette.mSelectionText :
+                    sPalette.mText;
+            }
+            else if (XPR_IS_TRUE(sHot))
+            {
+                sCustomDraw->clrTextBk = sPalette.mHover;
+            }
+
+            *pResult = CDRF_DODEFAULT;
+            return;
+        }
+
+        default:
+            *pResult = CDRF_DODEFAULT;
+            return;
+    }
+}
+
 
 HBRUSH CfgMainDlg::OnCtlColor(CDC* pDC, CWnd* pWnd, xpr_uint_t nCtlColor)
 {
