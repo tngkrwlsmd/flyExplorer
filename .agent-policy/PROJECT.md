@@ -77,7 +77,7 @@
     }
   ],
   "review": {
-    "reviewed_revision": "361289359d4232eab07d0fbda28c0e724c0d85ee",
+    "reviewed_revision": "cbc14e5dbd0d13782ab32a85a0368a3eb42ec34e",
     "reviewed_at": "2026-09-22",
     "reviewed_paths": [
       "README",
@@ -181,8 +181,8 @@
 - installer 실제 설치/제거, shell integration install/remove, clean Windows Sandbox/VM install은 아직 자동화하지 않으며 Package Build/Payload PASS와 구분한다.
 - GitHub-hosted Windows runner의 기본 remote runtime evidence는 x64 Unicode launch smoke 하나만 유지한다. smoke는 staged runtime을 임시 디렉터리에 복사하고 isolated `--conf_dir`로 `fxfile.exe`를 시작한 뒤 top-level main window와 short stability window를 확인한다. x86 launch smoke는 Actions 비용 절감을 위해 제거했다.
 - hosted runner에는 Visual Studio와 여러 system runtime이 이미 설치되어 있으므로 이 결과는 clean Windows Sandbox/VM evidence가 아니다. Windows Sandbox/clean VM, interactive functional smoke, visual regression은 아직 자동화하지 않는다.
-- `build/validate_source_invariants.py`가 C++ cross-cutting dependency와 ModernUI integration의 빠른 static preflight를 제공한다.
-- `.agent-policy/`에는 upstream `universal-agent-docs` revision `cc250a63994f1d9d4fcfdbb2bab9b622230bf8c6`의 validated policy bundle을 vendor한다. GitHub Actions의 Source Validation은 현재 source invariant만 실행하고, bundle/readiness/conformance 전체 검증은 `local_ci.bat policy` 또는 `local_ci.bat full`에서 수행한다.
+- `build/validate_source_invariants.py`가 C++ cross-cutting dependency와 ModernUI integration의 빠른 static preflight를 제공하며, 알려진 product regression도 함께 차단한다. 현재 ToolbarWindow32에 존재하지 않는 `TB_SETBKCOLOR`/`TB_SETTEXTCOLOR` 재도입을 거부하고 `NM_CUSTOMDRAW`/`NMTBCUSTOMDRAW` 기반 dark-state color wiring이 유지되는지 검사한다.
+- `.agent-policy/`에는 upstream `universal-agent-docs` revision `cc250a63994f1d9d4fcfdbb2bab9b622230bf8c6`의 validated policy bundle을 vendor한다. GitHub Actions의 Source Validation은 source invariant + known regression preflight만 실행하도록 유지하며, bundle/readiness/conformance 전체 검증은 `local_ci.bat policy` 또는 `local_ci.bat full`에서 수행한다. 2026-09-30까지 Actions 자동 trigger는 계속 중지되어 있고 수동 실행도 explicit budget override 없이는 실행하지 않는다.
 - Profile C runtime enforcement는 설치되어 있지 않다.
 - Windows 11 UI 현대화 Phase 1에서 Per-Monitor V2 DPI, system typography, theme palette foundation을 추가했다.
 - Phase 2에서 toolbar padding/system typography/double buffering과 flat theme-aware tab rendering, DPI-scaled tab metrics를 추가했다.
@@ -226,22 +226,22 @@
 - CSizableReBar는 FrameWndEx menu rebar와 MainCoolBar toolbar rebar가 공유하는 실제 host이므로 공통 dark styling ownership을 맡는다. internal CReBarCtrl에 documented Explorer association을 적용하고 RB_SETBKCOLOR/RB_SETTEXTCOLOR를 ThemePalette/System color로 갱신하며, dark non-client sizing edge는 mBorder로 그린다. WM_SETTINGCHANGE / WM_SYSCOLORCHANGE / WM_THEMECHANGED에서 즉시 refresh한다.
 - BCMenu owner-draw popup의 실제 활성 경로인 Windows8/Standard style만 ThemePalette-aware하게 변경했다. dark/non-HC에서 background/separator/normal text/disabled text/selection을 mSurface/mSeparator/mText/mSecondaryText/mSelection/mSelectionText로 처리하며 Light/High Contrast는 기존 system-color 경로를 유지한다. 사용되지 않는 legacy Office/Vista drawing path는 건드리지 않았다.
 - Menu/Rebar/Toolbar 구현 정적 범위 검토는 PASS: 변경 파일은 gui/rebar/MenuBar.h/.cpp, ToolBarEx.h/.cpp, SizableReBar.h/.cpp, gui/BCMenu.cpp에 한정되고 각 ModernUI 사용 translation unit의 direct include, handler declaration/definition/message-map 일치, toolbar/popup/rebar High Contrast fallback, active BCMenu draw path와 dark separator를 확인했다. generated project, ModernUI palette 구조, build/validate_source_invariants.py는 변경하지 않았다.
-- 2026-09-22 사용자 로컬 full CI는 policy/readiness/conformance/source-invariant와 VS2026/v145 solution generation을 통과한 뒤 Release-x64-Unicode compile에서 ToolBarEx.cpp의 존재하지 않는 TB_SETBKCOLOR/TB_SETTEXTCOLOR 4곳 때문에 C2065로 중단됐다. 해당 호출을 제거하고 기존 NM_CUSTOMDRAW color path를 canonical toolbar rendering 경로로 유지했다. 수정 후 Windows/MSVC local_ci.bat x64/full 재실행은 아직 NOT TESTED이며, 실제 Windows Light/Dark/High Contrast, 100/125/150/200% DPI와 toolbar/menu/rebar interactive visual behavior도 NOT TESTED다.
+- 2026-09-22 사용자 로컬 full CI에서 발견된 ToolBarEx.cpp의 `TB_SETBKCOLOR`/`TB_SETTEXTCOLOR` C2065 compile regression은 제거되었고, 동일 식별자 재도입과 toolbar custom-draw wiring 손실을 `build/validate_source_invariants.py`가 정적으로 차단하도록 보강했다. 이후 업로드된 full 로그는 수정 전 Toolbar 소스를 계속 컴파일한 stale local checkout 결과였으므로 현재 `main`의 post-fix compile/runtime/package PASS evidence로 사용하지 않는다. 현재 `main`에 대한 fresh Windows `local_ci.bat x64`/`full`은 아직 NOT TESTED이며, 실제 Windows visual/interactive evidence도 별도다.
 - broader dialog modernization의 공통 기반을 완료했다. CResizingDialog는 검색/히스토리/드라이브/파일 작업/CRC/배치/동기화 등 다수 modeless/resizable command dialog가 공유하는 base로서 system UI font, ThemePalette surface/window background, WM_CTLCOLOR 기반 edit/list/static/button 색 보정, documented Explorer common-control association, settings/syscolor/theme/DPI refresh를 공통 제공한다. Light/High Contrast는 native/system rendering으로 fallback하며 기존 resize/layout, command routing, per-dialog custom font를 보존한다.
 - TitleDlg 기반(create/rename/shortcut/file-list 계열)은 기존 custom header ownership을 유지하면서 header background/text/separator를 ThemePalette로 전환하고 32 logical-pixel description icon을 current-DPI 크기로 로드/그린다. resource-ID icon은 HWND 생성 이후 ModernUI::loadIconResource로 로드하고 DPI 변경 시 다시 로드하며, caller가 전달한 shell/external HICON은 기존 ownership 계약을 유지한다.
 - 설정 UI는 CfgDlg 공통 page base와 CfgMainDlg host를 현대화했다. 약 30개의 CfgDlg-derived page는 공통 system font/dark surface/edit-list color/theme refresh를 상속하고, CfgMainDlg는 window-frame theme, palette-backed host surface, config TreeCtrl background/text/line 및 image-list background를 갱신한다. 기존 config tree 구조, apply/default semantics, dynamically-created page lifecycle은 변경하지 않았다.
 - ModernUI::applyWindowFrameTheme는 이제 실제 ThemePalette mDark 값을 따라 DWMWA_USE_IMMERSIVE_DARK_MODE를 true/false로 설정하여 Light mode에서 dark title bar를 강제하지 않는다. ModernUI::loadIconResource는 logical icon size를 current window DPI로 scale해서 LoadImage(IMAGE_ICON)로 로드하는 공통 helper다.
 - 기존 IDR_MAINFRAME title icon을 소유하던 CResizingDialog 계열 18개 command dialog는 constructor-time LoadIcon 대신 OnInitDialog 시점의 DPI-aware ModernUI::loadIconResource 경로로 전환했다. icon handle ownership/DestroyIcon 계약은 유지한다.
-- 이번 icon modernization은 resource artwork 자체를 새로 그리거나 교체한 작업이 아니라 DPI-aware loading/scaling 및 legacy title-icon 사용 경로 정리다. toolbar/config-tree/legacy bitmap strip 및 실제 .ico artwork 재디자인은 별도 visual-asset 작업으로 남는다.
+- 이번 icon modernization은 resource artwork 자체를 새로 그리거나 교체한 작업이 아니라 DPI-aware loading/scaling 및 legacy title-icon 사용 경로 정리다. toolbar/config-tree/legacy bitmap strip 및 실제 `.ico` artwork 재디자인은 후속 구현 범위로 남는다. 자동화 가능한 resource mapping/compile/package 검증은 개발 작업에 포함하되 최종 시각 품질 평가는 automated PASS로 주장하지 않는다.
 - dialog/icon 구현 정적 범위 검토는 PASS: ModernUI 사용 translation unit direct include, CResizingDialog/TitleDlg/CfgDlg/CfgMainDlg handler declaration/definition/message-map 연결, reusable brush lifetime, High Contrast fallback, current-palette frame mode, DPI-aware icon helper와 migrated title-icon call sites를 확인했다. generated project와 build/validate_source_invariants.py는 변경하지 않았다.
 - 이 실행 환경에서는 Windows/MSVC local_ci.bat quick 및 local_ci.bat x64를 실행하지 못했으므로 둘 다 NOT TESTED다. 실제 Windows Light/Dark/High Contrast, 100/125/150/200% DPI, representative resizing/title/config dialogs, edit/list/button/static rendering, title icon sharpness, focus/keyboard/IME, resize/config apply behavior는 NOT TESTED다.
-- 남은 UI modernization은 CResizingDialog/TitleDlg/CfgDlg 계층 밖의 direct CDialog outlier와 actual icon/bitmap artwork refresh를 별도 시각 검증 단위로 처리한다.
+- 남은 자동화 가능한 UI modernization은 `CResizingDialog`/`TitleDlg`/`CfgDlg` 계층 밖의 direct `CDialog` outlier 정리와 actual icon/bitmap artwork refresh다. 구현·정적 회귀·compile/package 검증은 자동 작업 범위로 진행하고, Light/Dark/High Contrast/DPI/interactive/clean-install 같은 사람의 시각·상호작용 검증은 별도 수동 evidence로 유지한다.
 
 ## Recommended verification
 
 0. `local_ci.bat x64` (일상적인 기본 로컬 CI)
 1. 더 좁은 static 확인은 `local_ci.bat quick`; 릴리스 준비는 `local_ci.bat release`; 전체 회귀는 `local_ci.bat full`
-2. `python build/validate_source_invariants.py`
+2. `python build/validate_source_invariants.py` (source invariant + known regression guards)
 3. `build.bat`
 4. 새로 생성된 `fxfile.sln`을 Visual Studio 2026에서 열기
 5. `Release-x64-Unicode | x64` Build Solution
