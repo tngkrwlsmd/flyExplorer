@@ -1,15 +1,15 @@
 #!/usr/bin/env python3
-"""Generate deterministic Fluent toolbar overlay strips.
+"""Generate deterministic Fluent toolbar masks from vendored Microsoft SVGs.
 
 The runtime toolbar keeps the historical 51-frame bitmap/index contract.
-This generator rasterizes only the representative Microsoft Fluent SVG
-commands listed in toolbar_manifest.json and leaves every other frame fully
-transparent (RGB 255,0,255 mask).
+Only the representative commands listed in toolbar_manifest.json are
+rasterized. Generated output is a pair of C++ include fragments containing
+theme-neutral 1-bit masks. Runtime code applies ThemePalette.mText so one
+canonical SVG source works for System, Light, Dark, and High Contrast.
 
-No third-party Python packages are used. The supported SVG subset is
-intentionally narrow and validated: absolute M/L/H/V/C/Z path commands,
-plain path fills, and a rectangular viewBox. This matches the vendored
-Fluent command sources in this repository.
+No third-party Python package or network access is required. The supported
+SVG subset is deliberately narrow and validated: absolute M/L/H/V/C/Z path
+commands, nonzero path fill, no transforms, and a rectangular viewBox.
 """
 
 from __future__ import annotations
@@ -18,14 +18,13 @@ import argparse
 import json
 import math
 import re
-import struct
 import sys
 import xml.etree.ElementTree as ET
 from pathlib import Path
+from typing import Dict, List, Optional, Set, Tuple
 
 ROOT = Path(__file__).resolve().parents[1]
 FLUENT_DIR = ROOT / "src" / "fxfile" / "res" / "fluent"
-RESOURCE_DIR = ROOT / "src" / "fxfile" / "res"
 MANIFEST_PATH = FLUENT_DIR / "toolbar_manifest.json"
 
 _NUMBER_RE = r"[-+]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][-+]?\d+)?"
@@ -34,26 +33,15 @@ _SUPPORTED_COMMANDS = frozenset("MLHVCZ")
 _CUBIC_STEPS = 32
 _SUPERSAMPLE = 4
 
+Point = Tuple[float, float]
+PathPoints = List[Point]
+
 
 class AssetError(RuntimeError):
     pass
 
 
-def _parse_hex_color(value: str) -> tuple[int, int, int]:
-    if not re.fullmatch(r"#[0-9A-Fa-f]{6}", value):
-        raise AssetError(f"invalid RGB color: {value}")
-    return tuple(int(value[i : i + 2], 16) for i in (1, 3, 5))
-
-
-def _rgb555(color: tuple[int, int, int]) -> int:
-    r, g, b = color
-    r5 = (r * 31 + 127) // 255
-    g5 = (g * 31 + 127) // 255
-    b5 = (b * 31 + 127) // 255
-    return (r5 << 10) | (g5 << 5) | b5
-
-
-def _tokenize_path(data: str) -> list[str]:
+def _tokenize_path(data: str) -> List[str]:
     tokens = _TOKEN_RE.findall(data.replace(",", " "))
     letters = {ch for ch in re.findall(r"[A-Za-z]", data)}
     unsupported = letters - _SUPPORTED_COMMANDS
@@ -64,14 +52,14 @@ def _tokenize_path(data: str) -> list[str]:
     return tokens
 
 
-def _flatten_path(data: str) -> list[list[tuple[float, float]]]:
+def _flatten_path(data: str) -> List[PathPoints]:
     tokens = _tokenize_path(data)
     index = 0
-    command: str | None = None
-    current = (0.0, 0.0)
-    start = (0.0, 0.0)
-    subpath: list[tuple[float, float]] | None = None
-    paths: list[list[tuple[float, float]]] = []
+    command: Optional[str] = None
+    current: Point = (0.0, 0.0)
+    start: Point = (0.0, 0.0)
+    subpath: Optional[PathPoints] = None
+    paths: List[PathPoints] = []
 
     def number() -> float:
         nonlocal index
@@ -81,7 +69,7 @@ def _flatten_path(data: str) -> list[list[tuple[float, float]]]:
         index += 1
         return value
 
-    def begin(point: tuple[float, float]) -> None:
+    def begin(point: Point) -> None:
         nonlocal subpath, start, current
         if subpath and len(subpath) >= 2:
             paths.append(subpath)
@@ -89,7 +77,7 @@ def _flatten_path(data: str) -> list[list[tuple[float, float]]]:
         start = point
         current = point
 
-    def line(point: tuple[float, float]) -> None:
+    def line(point: Point) -> None:
         nonlocal subpath, current
         if subpath is None:
             raise AssetError("SVG line command before moveto")
@@ -104,8 +92,7 @@ def _flatten_path(data: str) -> list[list[tuple[float, float]]]:
             raise AssetError("SVG path does not start with a command")
 
         if command == "M":
-            point = (number(), number())
-            begin(point)
+            begin((number(), number()))
             command = "L"
             while index < len(tokens) and tokens[index] not in _SUPPORTED_COMMANDS:
                 line((number(), number()))
@@ -127,19 +114,16 @@ def _flatten_path(data: str) -> list[list[tuple[float, float]]]:
                 for step in range(1, _CUBIC_STEPS + 1):
                     t = step / _CUBIC_STEPS
                     mt = 1.0 - t
-                    x = (
+                    line((
                         mt * mt * mt * x0
                         + 3.0 * mt * mt * t * x1
                         + 3.0 * mt * t * t * x2
-                        + t * t * t * x3
-                    )
-                    y = (
+                        + t * t * t * x3,
                         mt * mt * mt * y0
                         + 3.0 * mt * mt * t * y1
                         + 3.0 * mt * t * t * y2
-                        + t * t * t * y3
-                    )
-                    line((x, y))
+                        + t * t * t * y3,
+                    ))
         elif command == "Z":
             if subpath is None:
                 raise AssetError("SVG close command before moveto")
@@ -163,7 +147,7 @@ def _flatten_path(data: str) -> list[list[tuple[float, float]]]:
     return paths
 
 
-def _load_svg(path: Path) -> tuple[tuple[float, float, float, float], list[list[tuple[float, float]]]]:
+def _load_svg(path: Path) -> Tuple[Tuple[float, float, float, float], List[PathPoints]]:
     try:
         root = ET.fromstring(path.read_text(encoding="utf-8"))
     except (OSError, ET.ParseError) as exc:
@@ -175,23 +159,26 @@ def _load_svg(path: Path) -> tuple[tuple[float, float, float, float], list[list[
     view_box = root.get("viewBox")
     if view_box is None:
         raise AssetError(f"{path}: missing viewBox")
+
     parts = [float(item) for item in view_box.replace(",", " ").split()]
     if len(parts) != 4 or parts[2] <= 0 or parts[3] <= 0:
         raise AssetError(f"{path}: invalid viewBox {view_box!r}")
-    vb = (parts[0], parts[1], parts[2], parts[3])
+    parsed_view_box = (parts[0], parts[1], parts[2], parts[3])
 
-    paths: list[list[tuple[float, float]]] = []
+    paths: List[PathPoints] = []
     for element in root.iter():
         tag = element.tag.rsplit("}", 1)[-1]
-        if tag in ("svg",):
+        if tag == "svg":
             continue
         if tag != "path":
             raise AssetError(f"{path}: unsupported SVG element <{tag}>")
         if element.get("transform"):
             raise AssetError(f"{path}: path transform is not supported")
-        fill_rule = element.get("fill-rule", "nonzero")
-        if fill_rule != "nonzero":
-            raise AssetError(f"{path}: unsupported fill-rule {fill_rule!r}")
+        if element.get("fill-rule", "nonzero") != "nonzero":
+            raise AssetError(f"{path}: only nonzero fill-rule is supported")
+        fill = element.get("fill", "#212121")
+        if fill.upper() != "#212121":
+            raise AssetError(f"{path}: unexpected Fluent source fill {fill!r}")
         data = element.get("d")
         if not data:
             raise AssetError(f"{path}: path is missing d attribute")
@@ -199,41 +186,31 @@ def _load_svg(path: Path) -> tuple[tuple[float, float, float, float], list[list[
 
     if not paths:
         raise AssetError(f"{path}: no path data")
-    return vb, paths
+    return parsed_view_box, paths
 
 
-def _is_left(
-    p0: tuple[float, float],
-    p1: tuple[float, float],
-    x: float,
-    y: float,
-) -> float:
+def _is_left(p0: Point, p1: Point, x: float, y: float) -> float:
     return (p1[0] - p0[0]) * (y - p0[1]) - (x - p0[0]) * (p1[1] - p0[1])
 
 
-def _inside_nonzero(
-    paths: list[list[tuple[float, float]]],
-    x: float,
-    y: float,
-) -> bool:
+def _inside_nonzero(paths: List[PathPoints], x: float, y: float) -> bool:
     winding = 0
     for path in paths:
         for p0, p1 in zip(path, path[1:]):
             if p0[1] <= y:
                 if p1[1] > y and _is_left(p0, p1, x, y) > 0:
                     winding += 1
-            else:
-                if p1[1] <= y and _is_left(p0, p1, x, y) < 0:
-                    winding -= 1
+            elif p1[1] <= y and _is_left(p0, p1, x, y) < 0:
+                winding -= 1
     return winding != 0
 
 
 def _transform_paths(
-    paths: list[list[tuple[float, float]]],
-    view_box: tuple[float, float, float, float],
+    paths: List[PathPoints],
+    view_box: Tuple[float, float, float, float],
     cell: int,
     design: int,
-) -> list[list[tuple[float, float]]]:
+) -> List[PathPoints]:
     vb_x, vb_y, vb_w, vb_h = view_box
     scale = min(design / vb_w, design / vb_h)
     width = vb_w * scale
@@ -249,11 +226,7 @@ def _transform_paths(
     ]
 
 
-def _render_cell(
-    svg_path: Path,
-    cell: int,
-    design: int,
-) -> list[bool]:
+def _render_cell(svg_path: Path, cell: int, design: int) -> List[bool]:
     view_box, raw_paths = _load_svg(svg_path)
     paths = _transform_paths(raw_paths, view_box, cell, design)
 
@@ -280,55 +253,12 @@ def _render_cell(
     return pixels
 
 
-def _encode_bmp(
-    frame_count: int,
-    cell: int,
-    frame_pixels: dict[int, list[bool]],
-    glyph_color: tuple[int, int, int],
-    mask_color: tuple[int, int, int],
-) -> bytes:
-    width = frame_count * cell
-    height = cell
-    stride = ((width * 2 + 3) // 4) * 4
-    glyph = _rgb555(glyph_color)
-    mask = _rgb555(mask_color)
-
-    data = bytearray(stride * height)
-    for y in range(height):
-        target_y = height - 1 - y
-        row = target_y * stride
-        for frame in range(frame_count):
-            pixels = frame_pixels.get(frame)
-            for x in range(cell):
-                value = glyph if pixels and pixels[y * cell + x] else mask
-                offset = row + (frame * cell + x) * 2
-                data[offset : offset + 2] = struct.pack("<H", value)
-
-    pixel_offset = 54
-    file_size = pixel_offset + len(data)
-    header = struct.pack(
-        "<2sIHHI",
-        b"BM",
-        file_size,
-        0,
-        0,
-        pixel_offset,
-    )
-    info = struct.pack(
-        "<IiiHHIIiiII",
-        40,
-        width,
-        height,
-        1,
-        16,
-        0,
-        len(data),
-        0,
-        0,
-        0,
-        0,
-    )
-    return header + info + bytes(data)
+def _pack_mask(pixels: List[bool]) -> bytes:
+    packed = bytearray((len(pixels) + 7) // 8)
+    for index, enabled in enumerate(pixels):
+        if enabled:
+            packed[index // 8] |= 0x80 >> (index % 8)
+    return bytes(packed)
 
 
 def _load_manifest() -> dict:
@@ -340,12 +270,16 @@ def _load_manifest() -> dict:
     if manifest.get("version") != 1:
         raise AssetError("unsupported toolbar manifest version")
     frame_count = manifest.get("frame_count")
-    if not isinstance(frame_count, int) or frame_count <= 0:
-        raise AssetError("invalid frame_count")
+    if not isinstance(frame_count, int) or frame_count != 51:
+        raise AssetError("toolbar frame_count must remain 51")
 
-    frames: set[int] = set()
-    commands: set[str] = set()
-    for item in manifest.get("commands", []):
+    frames: Set[int] = set()
+    commands: Set[str] = set()
+    items = manifest.get("commands")
+    if not isinstance(items, list) or not items:
+        raise AssetError("toolbar manifest has no commands")
+
+    for item in items:
         frame = item.get("frame")
         command = item.get("command")
         if not isinstance(frame, int) or not 0 <= frame < frame_count:
@@ -358,6 +292,7 @@ def _load_manifest() -> dict:
             raise AssetError(f"duplicate command: {command}")
         frames.add(frame)
         commands.add(command)
+
         for key in ("small_svg", "large_svg"):
             name = item.get(key)
             if not isinstance(name, str) or not name.endswith(".svg"):
@@ -365,56 +300,64 @@ def _load_manifest() -> dict:
             if not (FLUENT_DIR / name).is_file():
                 raise AssetError(f"{command}: missing source {name}")
 
+    for size_name in ("small", "large"):
+        spec = manifest.get("sizes", {}).get(size_name, {})
+        cell = spec.get("cell")
+        design = spec.get("design")
+        if not isinstance(cell, int) or not isinstance(design, int):
+            raise AssetError(f"invalid {size_name} size contract")
+        output = manifest.get("outputs", {}).get(size_name)
+        if not isinstance(output, str) or not output.endswith(".inc"):
+            raise AssetError(f"invalid {size_name} generated output")
+
     return manifest
 
 
-def _generate_all() -> dict[str, bytes]:
+def _format_include(manifest: dict, size_name: str) -> str:
+    spec = manifest["sizes"][size_name]
+    cell = int(spec["cell"])
+    design = int(spec["design"])
+    svg_key = f"{size_name}_svg"
+    byte_count = (cell * cell + 7) // 8
+
+    lines = [
+        "// Generated by build/generate_fluent_toolbar_assets.py. DO NOT EDIT.",
+        f"// {size_name}: {cell}x{cell}, {byte_count} bytes per command mask.",
+    ]
+
+    for item in manifest["commands"]:
+        pixels = _render_cell(FLUENT_DIR / item[svg_key], cell, design)
+        packed = _pack_mask(pixels)
+        if len(packed) != byte_count:
+            raise AssetError(f"{item['command']}: generated mask size mismatch")
+
+        values = ", ".join(f"0x{value:02x}" for value in packed)
+        lines.append(
+            "    { "
+            + values
+            + f" }}, // frame {item['frame']} {item['command']}"
+        )
+
+    lines.append("")
+    return "\n".join(lines)
+
+
+def _generate_all() -> Dict[str, str]:
     manifest = _load_manifest()
-    frame_count = manifest["frame_count"]
-    mask_color = _parse_hex_color(manifest["mask_color"])
-
-    raster_cache: dict[tuple[str, int, int], list[bool]] = {}
-    frame_sets: dict[str, dict[int, list[bool]]] = {"small": {}, "large": {}}
-
+    generated: Dict[str, str] = {}
     for size_name in ("small", "large"):
-        spec = manifest["sizes"][size_name]
-        cell = int(spec["cell"])
-        design = int(spec["design"])
-        svg_key = f"{size_name}_svg"
-        for item in manifest["commands"]:
-            svg_name = item[svg_key]
-            cache_key = (svg_name, cell, design)
-            if cache_key not in raster_cache:
-                raster_cache[cache_key] = _render_cell(
-                    FLUENT_DIR / svg_name,
-                    cell,
-                    design,
-                )
-            frame_sets[size_name][item["frame"]] = raster_cache[cache_key]
-
-    generated: dict[str, bytes] = {}
-    for theme_name, color_value in manifest["themes"].items():
-        glyph_color = _parse_hex_color(color_value)
-        for size_name in ("small", "large"):
-            spec = manifest["sizes"][size_name]
-            key = f"{theme_name}_{size_name}"
-            output_name = manifest["outputs"][key]
-            generated[output_name] = _encode_bmp(
-                frame_count,
-                int(spec["cell"]),
-                frame_sets[size_name],
-                glyph_color,
-                mask_color,
-            )
+        generated[manifest["outputs"][size_name]] = _format_include(
+            manifest, size_name
+        )
     return generated
 
 
-def _check(generated: dict[str, bytes]) -> int:
-    mismatched: list[str] = []
+def _check(generated: Dict[str, str]) -> int:
+    mismatched: List[str] = []
     for name, expected in generated.items():
-        path = RESOURCE_DIR / name
+        path = FLUENT_DIR / name
         try:
-            actual = path.read_bytes()
+            actual = path.read_text(encoding="utf-8")
         except OSError:
             mismatched.append(name)
             continue
@@ -423,7 +366,7 @@ def _check(generated: dict[str, bytes]) -> int:
 
     if mismatched:
         print(
-            "Fluent toolbar assets are stale or missing: "
+            "Fluent toolbar generated masks are stale or missing: "
             + ", ".join(mismatched),
             file=sys.stderr,
         )
@@ -433,14 +376,14 @@ def _check(generated: dict[str, bytes]) -> int:
         )
         return 1
 
-    print("Fluent toolbar generated assets: PASS")
+    print("Fluent toolbar generated masks: PASS")
     return 0
 
 
-def _write(generated: dict[str, bytes]) -> int:
-    for name, data in generated.items():
-        path = RESOURCE_DIR / name
-        path.write_bytes(data)
+def _write(generated: Dict[str, str]) -> int:
+    for name, content in generated.items():
+        path = FLUENT_DIR / name
+        path.write_text(content, encoding="utf-8", newline="\n")
         print(f"wrote {path.relative_to(ROOT)}")
     return 0
 
