@@ -13,6 +13,7 @@
 
 #include "gui/gdi.h"
 #include "gui/MemDC.h"
+#include "gui/ModernUI.h"
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -40,6 +41,9 @@ BEGIN_MESSAGE_MAP(ActivateBar, CWnd)
     ON_WM_DESTROY()
     ON_WM_PAINT()
     ON_WM_ERASEBKGND()
+    ON_WM_SETTINGCHANGE()
+    ON_WM_SYSCOLORCHANGE()
+    ON_MESSAGE(WM_THEMECHANGED, OnThemeChanged)
 END_MESSAGE_MAP()
 
 xpr_bool_t ActivateBar::Create(CWnd *aParentWnd, xpr_uint_t aId, const RECT &aRect)
@@ -79,6 +83,7 @@ xpr_sint_t ActivateBar::OnCreate(LPCREATESTRUCT aCreateStruct)
     if (CWnd::OnCreate(aCreateStruct) == -1)
         return -1;
 
+    applyModernAppearance();
     return 0;
 }
 
@@ -96,20 +101,7 @@ void ActivateBar::activate(xpr_bool_t aActivate, xpr_bool_t aLastActivated)
     if (XPR_IS_TRUE(mActivate))
         mLastActivated = XPR_FALSE;
 
-    if (XPR_IS_FALSE(mActivate))
-    {
-        if (XPR_IS_TRUE(aLastActivated))
-            mBackColor = CalculateColor(GetSysColor(COLOR_WINDOW), gOpt->mConfig.mActiveViewColor, 150);
-        else
-            mBackColor = CalculateColor(GetSysColor(COLOR_WINDOW), GetSysColor(COLOR_3DFACE), 50);
-    }
-    else
-    {
-        mBackColor = gOpt->mConfig.mActiveViewColor;
-    }
-
-    Invalidate(XPR_FALSE);
-    UpdateWindow();
+    applyModernAppearance();
 }
 
 xpr_bool_t ActivateBar::isActivated(void) const
@@ -122,7 +114,10 @@ void ActivateBar::setActivateBackColor(COLORREF aBackColor)
     if (XPR_IS_FALSE(mActivate))
         return;
 
-    mBackColor = aBackColor;
+    const ui::ThemePalette sPalette = ui::ModernUI::getPalette();
+    mBackColor = XPR_IS_TRUE(sPalette.mHighContrast) ?
+        sPalette.mSelection :
+        aBackColor;
 
     Invalidate(XPR_FALSE);
     UpdateWindow();
@@ -136,6 +131,64 @@ void ActivateBar::setBackColor(COLORREF aBackColor)
 COLORREF ActivateBar::getBackColor(void) const
 {
     return mBackColor;
+}
+
+void ActivateBar::applyModernAppearance(void)
+{
+    const ui::ThemePalette sPalette = ui::ModernUI::getPalette();
+
+    if (XPR_IS_TRUE(sPalette.mHighContrast))
+    {
+        if (XPR_IS_TRUE(mActivate))
+            mBackColor = sPalette.mSelection;
+        else if (XPR_IS_TRUE(mLastActivated))
+            mBackColor = sPalette.mSurface;
+        else
+            mBackColor = sPalette.mWindow;
+    }
+    else if (XPR_IS_TRUE(mActivate))
+    {
+        // Preserve the user's configured active-pane color outside High Contrast.
+        mBackColor = gOpt->mConfig.mActiveViewColor;
+    }
+    else if (XPR_IS_TRUE(mLastActivated))
+    {
+        mBackColor = CalculateColor(
+            sPalette.mWindow,
+            gOpt->mConfig.mActiveViewColor,
+            150);
+    }
+    else
+    {
+        mBackColor = CalculateColor(
+            sPalette.mWindow,
+            sPalette.mSurface,
+            50);
+    }
+
+    if (XPR_IS_NOT_NULL(m_hWnd))
+    {
+        Invalidate(XPR_FALSE);
+        UpdateWindow();
+    }
+}
+
+void ActivateBar::OnSettingChange(xpr_uint_t aFlags, const xpr_tchar_t *aSection)
+{
+    CWnd::OnSettingChange(aFlags, aSection);
+    applyModernAppearance();
+}
+
+void ActivateBar::OnSysColorChange(void)
+{
+    CWnd::OnSysColorChange();
+    applyModernAppearance();
+}
+
+LRESULT ActivateBar::OnThemeChanged(WPARAM aWParam, LPARAM aLParam)
+{
+    applyModernAppearance();
+    return 0;
 }
 
 void ActivateBar::OnPaint(void)

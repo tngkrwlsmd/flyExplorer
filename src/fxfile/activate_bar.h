@@ -28,6 +28,9 @@ public:
     COLORREF getBackColor(void) const;
 
 protected:
+    void applyModernAppearance(void);
+
+protected:
     xpr_bool_t mActivate;
     xpr_bool_t mLastActivated;
 
@@ -42,6 +45,9 @@ protected:
     afx_msg void OnDestroy(void);
     afx_msg void OnPaint(void);
     afx_msg xpr_bool_t OnEraseBkgnd(CDC *aDC);
+    afx_msg void OnSettingChange(xpr_uint_t aFlags, const xpr_tchar_t *aSection);
+    afx_msg void OnSysColorChange(void);
+    afx_msg LRESULT OnThemeChanged(WPARAM aWParam, LPARAM aLParam);
 };
 } // namespace fxfile
 
