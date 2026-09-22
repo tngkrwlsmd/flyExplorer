@@ -2,6 +2,9 @@
 // Copyright (c) 2026 flyExplorer contributors.
 //
 
+#include <windows.h>
+#include <tchar.h>
+
 #include "functional_test_groups.h"
 
 #include "xpr.h"
@@ -9,8 +12,6 @@
 #include "upchecker_command.h"
 #include "update_metadata.h"
 #include "conf_file_ex.h"
-#include <windows.h>
-#include <tchar.h>
 
 namespace fxfile
 {
