@@ -302,7 +302,7 @@ void FolderCtrl::setOption(Option &aOption)
     if (XPR_IS_TRUE(sPalette.mHighContrast) ||
         mOption.mBkgndColorType != COLOR_TYPE_CUSTOM)
     {
-        SetBkColor(sPalette.mWindow);
+        SetBkColor(sPalette.mCard);
     }
     else
     {
@@ -2861,7 +2861,7 @@ void FolderCtrl::applyModernAppearance(void)
     if (XPR_IS_TRUE(sPalette.mHighContrast) ||
         mOption.mBkgndColorType != COLOR_TYPE_CUSTOM)
     {
-        SetBkColor(sPalette.mWindow);
+        SetBkColor(sPalette.mCard);
     }
     else
     {
