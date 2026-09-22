@@ -2,7 +2,8 @@ name: Source Validation
 
 # Temporary Actions budget pause through 2026-09-30.
 # No push/PR CI. Manual runs require an explicit budget override.
-# The static preflight includes deterministic known-regression guards.
+# The static preflight includes deterministic known-regression guards,
+# including direct-CDialog modernization drift.
 on:
   workflow_dispatch:
     inputs:

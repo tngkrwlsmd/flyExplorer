@@ -73,6 +73,7 @@ if errorlevel 1 (
 )
 
 echo Running source invariant and regression preflight...
+rem Includes ModernUI wiring, direct-CDialog migration, and known compiler regression guards.
 "%PYTHON_EXE%" %PYTHON_ARGS% "build\validate_source_invariants.py"
 if errorlevel 1 (
     echo ERROR: Source invariant/regression preflight failed.

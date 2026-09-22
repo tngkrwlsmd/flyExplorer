@@ -195,6 +195,7 @@ if exist "%LOG_FILE%" (
 exit /b 0
 
 :run_source_preflight
+rem Covers source wiring, direct-CDialog modernization, and known regression guards.
 "%PYTHON_EXE%" %PYTHON_ARGS% "build\validate_source_invariants.py" >"%STEP_LOG%" 2>&1
 set "SOURCE_RESULT=%errorlevel%"
 call :append_file "Source invariant and regression preflight" "%STEP_LOG%"

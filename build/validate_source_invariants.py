@@ -30,6 +30,21 @@ INCLUDE_RE = re.compile(r'^\s*#\s*include\s*[<"]([^">]+)[">]', re.MULTILINE)
 BLOCK_COMMENT_RE = re.compile(r"/\*.*?\*/", re.DOTALL)
 LINE_COMMENT_RE = re.compile(r"//.*?$", re.MULTILINE)
 
+DIRECT_CDIALOG_ALLOWLIST = {
+    "src/fxfile/gui/ModernDialog.h",
+    "src/fxfile/gui/ResizingDialog.h",
+    "src/fxfile/cfg/cfg_dlg.h",
+    "src/fxfile/cfg/cfg_main_dlg.h",
+    "src/fxfile/cmd/title_dlg.h",
+    "src/fxfile/cmd/drive_detail_dlg.h",
+}
+DIRECT_CDIALOG_RE = re.compile(
+    r"class\s+\w+[^;{\n]*:\s*public\s+CDialog(?:\s*[,\{])"
+)
+MODERN_DIALOG_RE = re.compile(
+    r"class\s+\w+[^;{\n]*:\s*public\s+CModernDialog(?:\s*[,\{])"
+)
+
 
 def strip_comments(text: str) -> str:
     return LINE_COMMENT_RE.sub("", BLOCK_COMMENT_RE.sub("", text))
@@ -127,6 +142,63 @@ def validate_common_control_theme_integration() -> list[str]:
     return errors
 
 
+def validate_modern_dialog_migration() -> list[str]:
+    """Keep standard dialogs on the shared ModernUI base unless explicitly owned elsewhere."""
+
+    errors: list[str] = []
+    modern_dialog_header = FXFILE_SRC / "gui" / "ModernDialog.h"
+    modern_dialog_source = FXFILE_SRC / "gui" / "ModernDialog.cpp"
+    gyp_path = FXFILE_SRC / "fxfile.gyp"
+
+    try:
+        modern_header = modern_dialog_header.read_text(encoding="utf-8")
+        modern_source = modern_dialog_source.read_text(encoding="utf-8")
+        gyp = gyp_path.read_text(encoding="utf-8")
+    except OSError as exc:
+        return [f"ModernDialog integration source cannot be read: {exc}"]
+
+    required_base_tokens = (
+        "class CModernDialog : public CDialog",
+        "refreshModernAppearance",
+        "ON_WM_ERASEBKGND()",
+        "ON_WM_CTLCOLOR()",
+        "ON_WM_SETTINGCHANGE()",
+        "ON_WM_SYSCOLORCHANGE()",
+        "WM_THEMECHANGED",
+        "WM_DPICHANGED",
+        "WM_DPICHANGED_AFTERPARENT",
+        "ModernUI::applyWindowFrameTheme",
+        "ModernUI::applyExplorerControlTheme",
+    )
+    base_text = modern_header + "\n" + modern_source
+    for token in required_base_tokens:
+        if token not in base_text:
+            errors.append(f"ModernDialog integration is missing token {token}")
+
+    for entry in ("./gui/ModernDialog.cpp", "./gui/ModernDialog.h"):
+        if entry not in gyp:
+            errors.append(f"src/fxfile/fxfile.gyp: missing source registration {entry}")
+
+    for path in sorted(FXFILE_SRC.rglob("*.h")):
+        rel = path.relative_to(ROOT).as_posix()
+        text = path.read_text(encoding="utf-8", errors="replace")
+        code = strip_comments(text)
+
+        if DIRECT_CDIALOG_RE.search(code) and rel not in DIRECT_CDIALOG_ALLOWLIST:
+            errors.append(
+                f"{rel}: direct CDialog inheritance is not allowlisted; "
+                "use CModernDialog or document specialized ModernUI ownership"
+            )
+
+        if MODERN_DIALOG_RE.search(code) and path.name != "ModernDialog.h":
+            if "ModernDialog.h" not in direct_include_basenames(text):
+                errors.append(
+                    f"{rel}: CModernDialog subclass does not directly include ModernDialog.h"
+                )
+
+    return errors
+
+
 def validate_toolbar_custom_draw_regression() -> list[str]:
     """Prevent recurrence of the ToolbarWindow32 color-message compile failure."""
 
@@ -202,6 +274,7 @@ def main() -> int:
     errors = validate_translation_units()
     errors.extend(validate_window_frame_theme_integration())
     errors.extend(validate_common_control_theme_integration())
+    errors.extend(validate_modern_dialog_migration())
     errors.extend(validate_toolbar_custom_draw_regression())
     errors.extend(validate_modern_ui_registration())
 
