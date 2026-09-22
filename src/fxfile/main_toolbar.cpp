@@ -146,7 +146,7 @@ void MainToolBar::Init(void)
     SetImageList(
         (UINT)-1, IDB_TB_MAIN_COLD_SMALL, IDB_TB_MAIN_HOT_SMALL,
         (UINT)-1, IDB_TB_MAIN_COLD_LARGE, IDB_TB_MAIN_HOT_LARGE,
-        TBI_SMALL, IL_COLOR_MASK);
+        TBI_LARGE, IL_COLOR_MASK);
 
     xpr_sint_t sCount = sizeof(kTbButtons) / sizeof(kTbButtons[0]);
     SetButtons(sCount, kTbButtons);
