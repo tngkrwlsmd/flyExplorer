@@ -18,6 +18,8 @@
 
 #include "command_string_table.h"
 
+#include "gui/ModernUI.h"
+
 #ifdef _DEBUG
 #define new DEBUG_NEW
 #endif
@@ -31,7 +33,7 @@ SearchLocDlg::SearchLocDlg(void)
     , mSearchUserLoc(XPR_NULL)
     , mDlgState(XPR_NULL)
 {
-    mIcon = AfxGetApp()->LoadIcon(IDR_MAINFRAME);
+    mIcon = XPR_NULL;
 }
 
 SearchLocDlg::~SearchLocDlg(void)
@@ -95,7 +97,14 @@ xpr_bool_t SearchLocDlg::OnInitDialog(void)
 {
     super::OnInitDialog();
 
-    SetIcon(mIcon, XPR_TRUE);
+    DESTROY_ICON(mIcon);
+    mIcon = ui::ModernUI::loadIconResource(
+        AfxGetResourceHandle(),
+        IDR_MAINFRAME,
+        GetSafeHwnd(),
+        32);
+    if (XPR_IS_NOT_NULL(mIcon))
+        SetIcon(mIcon, XPR_TRUE);
 
     // CResizingDialog -------------------------------------------
     //HideSizeIcon();

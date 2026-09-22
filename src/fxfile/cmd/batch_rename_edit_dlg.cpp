@@ -15,6 +15,8 @@
 #include "dlg_state.h"
 #include "dlg_state_manager.h"
 
+#include "gui/ModernUI.h"
+
 #ifdef _DEBUG
 #define new DEBUG_NEW
 #endif
@@ -27,7 +29,7 @@ BatchRenameEditDlg::BatchRenameEditDlg(void)
     : super(IDD_BATCH_RENAME_EDIT, XPR_NULL)
     , mDlgState(XPR_NULL)
 {
-    mIcon = AfxGetApp()->LoadIcon(IDR_MAINFRAME);
+    mIcon = XPR_NULL;
 
     mSyncScroll = XPR_FALSE;
 
@@ -116,7 +118,14 @@ xpr_bool_t BatchRenameEditDlg::OnInitDialog(void)
 {
     super::OnInitDialog();
 
-    SetIcon(mIcon, XPR_TRUE);
+    DESTROY_ICON(mIcon);
+    mIcon = ui::ModernUI::loadIconResource(
+        AfxGetResourceHandle(),
+        IDR_MAINFRAME,
+        GetSafeHwnd(),
+        32);
+    if (XPR_IS_NOT_NULL(mIcon))
+        SetIcon(mIcon, XPR_TRUE);
 
     // CResizingDialog -------------------------------------------
     //HideSizeIcon();
