@@ -1202,7 +1202,11 @@ def validate_fluent_asset_contract() -> list[str]:
             )
             continue
 
-        for token in ("<svg ", "<path ", 'fill="#212121"'):
+        # Microsoft Fluent upstream SVGs are not uniform about explicit
+        # path fill attributes: many rely on the SVG default black fill while
+        # others write fill="#212121". The generator consumes path geometry,
+        # so validate structural provenance tokens instead of one paint literal.
+        for token in ("<svg ", "viewBox=", "<path "):
             if token not in svg:
                 errors.append(
                     f"{asset_path.relative_to(ROOT)}: "
