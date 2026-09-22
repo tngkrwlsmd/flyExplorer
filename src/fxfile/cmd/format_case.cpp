@@ -9,6 +9,7 @@
 
 #include "stdafx.h"
 #include "format_case.h"
+#include "rename_transform_core.h"
 #include "xpr_file_sys.h"
 #include "xml.h"
 
@@ -87,11 +88,11 @@ void FormatCase::rename(RenameContext &aContext) const
     switch (mCaseType)
     {
     case CaseTypeLower:
-        aContext.mNewFileName.lower_case();
+        rename_core::toLower(aContext.mNewFileName);
         break;
 
     case CaseTypeUpper:
-        aContext.mNewFileName.upper_case();
+        rename_core::toUpper(aContext.mNewFileName);
         break;
 
     case CaseTypeUpperAtFirstChar:
@@ -129,66 +130,18 @@ void FormatCase::rename(RenameContext &aContext) const
     }
 }
 
-void FormatCase::convertUpperAtFirstChar(xpr::string &aName, const xpr::string &aSkipChars)
+void FormatCase::convertUpperAtFirstChar(
+    xpr::string       &aName,
+    const xpr::string &aSkipChars)
 {
-    if (aName.empty() == XPR_TRUE)
-    {
-        return;
-    }
-
-    aName.lower_case();
-
-    xpr_size_t sOffset = aName.find_first_not_of(aSkipChars, 0);
-    if (sOffset == xpr::string::npos)
-    {
-        return;
-    }
-
-    if (aName.length() == sOffset)
-    {
-        return;
-    }
-
-    xpr::string sChar(1, aName[sOffset]);
-    sChar.upper_case();
-
-    aName.replace(sOffset, 1, sChar);
+    rename_core::upperAtFirstChar(aName, aSkipChars);
 }
 
-void FormatCase::convertUpperAtFirstCharOnEveryWord(xpr::string &aName, const xpr::string &aSkipChars)
+void FormatCase::convertUpperAtFirstCharOnEveryWord(
+    xpr::string       &aName,
+    const xpr::string &aSkipChars)
 {
-    if (aName.empty() == XPR_TRUE)
-    {
-        return;
-    }
-
-    xpr_size_t  sOffset = 0;
-    xpr::string sSkipChars(aSkipChars);
-    xpr::string sChar;
-
-    sSkipChars += XPR_MBCS_STRING_LITERAL(' ');
-
-    aName.lower_case();
-
-    while (true)
-    {
-        sOffset = aName.find_first_not_of(sSkipChars, sOffset);
-        if (sOffset == xpr::string::npos)
-        {
-            break;
-        }
-
-        sChar = aName[sOffset];
-        sChar.upper_case();
-
-        aName.replace(sOffset, 1, sChar);
-
-        sOffset = aName.find_first_of(sSkipChars, sOffset);
-        if (sOffset == xpr::string::npos)
-        {
-            break;
-        }
-    }
+    rename_core::upperAtFirstCharOnEveryWord(aName, aSkipChars);
 }
 
 xpr_bool_t FormatCase::canParseXml(const xpr::string &aElementName)
