@@ -498,6 +498,110 @@ def validate_configuration_shell_contract() -> list[str]:
     return errors
 
 
+def validate_navigation_surface_contract() -> list[str]:
+    """Protect Win11 navigation/address/auxiliary-bar presentation without changing input semantics."""
+
+    errors: list[str] = []
+    paths = {
+        "modern_h": FXFILE_SRC / "gui" / "ModernUI.h",
+        "modern_cpp": FXFILE_SRC / "gui" / "ModernUI.cpp",
+        "toolbar": FXFILE_SRC / "gui" / "rebar" / "ToolBarEx.cpp",
+        "toolbar_h": FXFILE_SRC / "gui" / "rebar" / "ToolBarEx.h",
+        "coolbar": FXFILE_SRC / "main_coolbar.cpp",
+        "address_h": FXFILE_SRC / "address_bar.h",
+        "address_cpp": FXFILE_SRC / "address_bar.cpp",
+        "pane": FXFILE_SRC / "explorer_pane.cpp",
+        "drive": FXFILE_SRC / "drive_toolbar.cpp",
+        "bookmark": FXFILE_SRC / "bookmark_toolbar.cpp",
+    }
+
+    contents: dict[str, str] = {}
+    for name, path in paths.items():
+        try:
+            contents[name] = path.read_text(encoding="utf-8", errors="replace")
+        except OSError as exc:
+            errors.append(f"{path.relative_to(ROOT)}: cannot read navigation-surface contract: {exc}")
+
+    if errors:
+        return errors
+
+    for token in (
+        "getCommandBarHeight",
+        "getCommandButtonExtent",
+        "getCommandHorizontalPadding",
+        "getCommandVerticalPadding",
+        "getAddressBarHeight",
+        "getAddressHorizontalInset",
+        "getAddressVerticalInset",
+        "getAddressTextMargin",
+        "getPopupItemPadding",
+    ):
+        if token not in contents["modern_h"] or f"ModernUI::{token}" not in contents["modern_cpp"]:
+            errors.append(f"ModernUI navigation metric is missing or unimplemented: {token}")
+
+    for token in (
+        "getCommandHorizontalPadding",
+        "getCommandVerticalPadding",
+        "getCommandButtonExtent",
+        "TB_SETBUTTONSIZE",
+    ):
+        if token not in contents["toolbar"]:
+            errors.append(f"src/fxfile/gui/rebar/ToolBarEx.cpp: missing navigation hit-target token {token}")
+
+    if "getCommandBarHeight(theToolBar.GetSafeHwnd())" not in contents["coolbar"]:
+        errors.append("src/fxfile/main_coolbar.cpp: coolbar band height is not tied to ModernUI")
+
+    address_contract = contents["address_h"] + contents["address_cpp"]
+    for token in (
+        "EditSubclassProc",
+        "mEditHwnd",
+        "mBackgroundBrush",
+        "ON_WM_NCPAINT()",
+        "void AddressBar::OnNcPaint",
+        "EM_SETMARGINS",
+        "getAddressTextMargin",
+        "SetItemHeight(-1, sFieldItemHeight)",
+        "SetItemHeight(0, sDropDownItemHeight)",
+        "SHAutoComplete",
+        "VK_RETURN",
+        "VK_TAB",
+        "VK_ESCAPE",
+        "::DefSubclassProc",
+    ):
+        if token not in address_contract:
+            errors.append(f"AddressBar navigation/input contract is missing token {token}")
+
+    if "mDarkBackgroundBrush" in address_contract:
+        errors.append("AddressBar: dark-only background brush returned; Light/Dark should share ThemePalette")
+
+    for token in (
+        "getAddressHorizontalInset",
+        "getAddressVerticalInset",
+        "sAddressWindowRect.Height()",
+        "1000",
+    ):
+        if token not in contents["pane"]:
+            errors.append(f"src/fxfile/explorer_pane.cpp: missing native address layout token {token}")
+
+    for source_name in ("drive", "bookmark"):
+        source = contents[source_name]
+        if "ApplyModernMetrics();" not in source or "UpdateToolbarSize();" not in source:
+            errors.append(f"{source_name}: auxiliary toolbar modern metric refresh is missing")
+
+    popup_contract = contents["toolbar_h"] + contents["toolbar"]
+    for token in (
+        "afx_msg BOOL OnEraseBkgnd(CDC *pDC);",
+        "BOOL CToolBarPopup::OnEraseBkgnd",
+        "getPopupItemPadding",
+        "sPalette.mSurface",
+        "ApplyDarkToolBarCustomDraw(lpNMCustomDraw)",
+    ):
+        if token not in popup_contract:
+            errors.append(f"toolbar chevron popup: missing modern surface token {token}")
+
+    return errors
+
+
 def validate_ui_resource_contracts() -> list[str]:
     """Protect icon/bitmap frame geometry and canonical resource wiring."""
 
@@ -1105,6 +1209,7 @@ def main() -> int:
     errors.extend(validate_toolbar_custom_draw_regression())
     errors.extend(validate_command_surface_contract())
     errors.extend(validate_configuration_shell_contract())
+    errors.extend(validate_navigation_surface_contract())
     errors.extend(validate_ui_resource_contracts())
     errors.extend(validate_functional_test_wiring())
     errors.extend(validate_installer_smoke_wiring())
