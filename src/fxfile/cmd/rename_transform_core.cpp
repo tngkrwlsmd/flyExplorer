@@ -43,6 +43,9 @@ void replaceText(
     xpr_sint_t         aRepeat,
     xpr_bool_t         aCaseSensitivity)
 {
+    if (aFind.empty() == XPR_TRUE || aRepeat == 0)
+        return;
+
     xpr::string sOld(aName);
     xpr::string sFind(aFind);
     xpr_sint_t sRepeat = aRepeat;
@@ -87,7 +90,13 @@ void insertFromFirst(
     xpr_sint_t         aPos,
     const xpr::string &aText)
 {
-    const xpr_sint_t sOffset = (aPos < 0) ? 0 : aPos;
+    xpr_sint_t sOffset = (aPos < 0) ? 0 : aPos;
+    const xpr_sint_t sLength =
+        static_cast<xpr_sint_t>(aName.length());
+
+    if (sOffset > sLength)
+        sOffset = sLength;
+
     aName.insert(static_cast<xpr_size_t>(sOffset), aText);
 }
 
@@ -96,13 +105,15 @@ void insertFromLast(
     xpr_sint_t         aPos,
     const xpr::string &aText)
 {
-    const xpr_size_t sLength = aName.length();
-    xpr_size_t sOffset = sLength - aPos;
+    const xpr_sint_t sLength =
+        static_cast<xpr_sint_t>(aName.length());
+    xpr_sint_t sPos = (aPos < 0) ? 0 : aPos;
 
-    if (static_cast<xpr_sint_t>(sLength) <= aPos)
-        sOffset = 0;
+    if (sPos > sLength)
+        sPos = sLength;
 
-    aName.insert(sOffset, aText);
+    const xpr_sint_t sOffset = sLength - sPos;
+    aName.insert(static_cast<xpr_size_t>(sOffset), aText);
 }
 
 void deleteAtFirst(xpr::string &aName, xpr_sint_t aLength)

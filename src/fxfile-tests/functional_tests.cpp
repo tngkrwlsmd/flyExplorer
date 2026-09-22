@@ -680,6 +680,26 @@ bool testRenameTransformCore(void)
     if (sName != XPR_STRING_LITERAL("005"))
         return false;
 
+    sName = XPR_STRING_LITERAL("unchanged");
+    replaceText(
+        sName,
+        XPR_STRING_LITERAL(""),
+        XPR_STRING_LITERAL("x"),
+        -1,
+        XPR_TRUE);
+    if (sName != XPR_STRING_LITERAL("unchanged"))
+        return false;
+
+    sName = XPR_STRING_LITERAL("abcd");
+    insertFromFirst(sName, 99, XPR_STRING_LITERAL("X"));
+    if (sName != XPR_STRING_LITERAL("abcdX"))
+        return false;
+
+    sName = XPR_STRING_LITERAL("abcd");
+    insertFromLast(sName, -3, XPR_STRING_LITERAL("X"));
+    if (sName != XPR_STRING_LITERAL("abcdX"))
+        return false;
+
 #if defined(XPR_CFG_UNICODE)
     sName = L"\xD55C\xAE00.TXT";
     toLower(sName);
