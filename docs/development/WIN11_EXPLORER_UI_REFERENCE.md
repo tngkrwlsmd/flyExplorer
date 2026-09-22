@@ -57,8 +57,8 @@ Private Explorer APIs, undocumented dark-theme strings, and resource extraction 
 
 ## Fluent asset prototype
 
-`src/fxfile/res/fluent/` contains the first canonical upstream SVG sample and its Microsoft MIT license.
-The runtime toolbar bitmap contract remains unchanged until a deterministic rasterization step is selected and verified against the existing 16/22-pixel frame/index invariants.
+`src/fxfile/res/fluent/` contains the Microsoft MIT license, a representative canonical SVG source set for Back/Forward/Up/Search/Cut/Copy/Paste/New Folder/Settings, and `COMMAND_ICON_MAP.md` mapping those semantics onto existing flyExplorer command/frame contracts.
+The SVG sources are registered in canonical `fxfile.gyp`, but the runtime toolbar bitmap contract remains unchanged until a deterministic rasterization step is selected and verified against the existing 16/22-pixel 51-frame invariants.
 
 ## Implemented convergence checkpoint
 
@@ -66,4 +66,5 @@ The runtime toolbar bitmap contract remains unchanged until a deterministic rast
 - Dark AddressBar controls reset the Explorer visual-style association so the existing palette adapters own the complete surface; Light/High Contrast retain the documented native association path.
 - App-owned BCMenu submenu arrows use the system-installed Segoe Fluent Icons `ChevronRightSmall` glyph (U+E970) when available and a geometry fallback otherwise.
 - Popup shared metrics were tightened from the earlier oversized legacy proportions; shell-owned IContextMenu rendering/routing remains untouched.
-- The Fluent settings SVG is still a source/provenance prototype, not yet a runtime toolbar replacement.
+- The representative Fluent SVG set is still a source/provenance and mapping foundation, not yet a runtime toolbar replacement.
+- Dark settings ComboBox drop-down ListBox handles reset the Explorer visual-style association after `CB_SHOWDROPDOWN`, allowing the existing palette CTLCOLOR path to own list text/background while preserving native dropdown/keyboard behavior.
