@@ -912,22 +912,27 @@ void ContentsWnd::updateFont(void)
     mFileNameFont = new CFont;
     mFullPathFont = new CFont;
 
-    // font Creation
-    NONCLIENTMETRICS sNonClientMetrics;
-    sNonClientMetrics.cbSize = sizeof(NONCLIENTMETRICS);
-    ::SystemParametersInfo(SPI_GETNONCLIENTMETRICS, sizeof(NONCLIENTMETRICS), &sNonClientMetrics, 0);
-    LOGFONT sLogFont = sNonClientMetrics.lfMenuFont;
+    // Use the current DPI-aware Windows UI font. On Korean Windows this
+    // naturally resolves through the system's Korean UI font fallback instead
+    // of preserving the legacy dialog/menu typeface from the resource file.
+    LOGFONT sLogFont = {0};
+    if (XPR_IS_FALSE(ui::ModernUI::getUIFont(sLogFont, GetSafeHwnd())))
+        return;
+
     if (mTextFont->CreateFontIndirect(&sLogFont) == XPR_FALSE)
         return;
 
-    sLogFont.lfWeight = FW_BOLD;
+    sLogFont.lfWeight = FW_SEMIBOLD;
     if (mFileNameFont->CreateFontIndirect(&sLogFont) == XPR_FALSE)
         return;
 
     if (mFullPathFont->CreateFontIndirect(&sLogFont) == XPR_FALSE)
         return;
 
-    sLogFont.lfHeight = -MulDiv(13, GetDeviceCaps(GetDC()->m_hDC, LOGPIXELSY), 72);
+    sLogFont.lfHeight = MulDiv(
+        sLogFont.lfHeight,
+        ui::ModernUI::scaleForWindow(12, GetSafeHwnd()),
+        ui::ModernUI::scaleForWindow(9, GetSafeHwnd()));
     if (mTitleFont->CreateFontIndirect(&sLogFont) == XPR_FALSE)
         return;
 }
