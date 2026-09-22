@@ -11,15 +11,17 @@
 #define __FXFILE_DOS_CMD_DLG_H__ 1
 #pragma once
 
+#include "../gui/ModernDialog.h"
+
 namespace fxfile
 {
 class DlgState;
 
 namespace cmd
 {
-class DosCmdDlg : public CDialog
+class DosCmdDlg : public CModernDialog
 {
-    typedef CDialog super;
+    typedef CModernDialog super;
 
 public:
     DosCmdDlg(const xpr_tchar_t *aPath = XPR_NULL);

@@ -11,15 +11,17 @@
 #define __FXFILE_COLUMN_SET_DLG_H__ 1
 #pragma once
 
+#include "../gui/ModernDialog.h"
+
 #include "folder_layout.h"
 
 namespace fxfile
 {
 namespace cmd
 {
-class ColumnSetDlg : public CDialog
+class ColumnSetDlg : public CModernDialog
 {
-    typedef CDialog super;
+    typedef CModernDialog super;
 
 public:
     ColumnSetDlg(void);

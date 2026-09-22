@@ -11,15 +11,17 @@
 #define __FXFILE_DRIVE_INFO_DLG_H__ 1
 #pragma once
 
+#include "../gui/ModernDialog.h"
+
 #include "drive_detail_dlg.h"
 
 namespace fxfile
 {
 namespace cmd
 {
-class DriveInfoDlg : public CDialog
+class DriveInfoDlg : public CModernDialog
 {
-    typedef CDialog super;
+    typedef CModernDialog super;
 
 public:
     DriveInfoDlg(xpr_tchar_t aDrive = 0);

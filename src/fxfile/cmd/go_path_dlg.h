@@ -11,15 +11,17 @@
 #define __FXFILE_GO_PATH_DLG_H__ 1
 #pragma once
 
+#include "../gui/ModernDialog.h"
+
 namespace fxfile
 {
 class DlgState;
 
 namespace cmd
 {
-class GoPathDlg : public CDialog
+class GoPathDlg : public CModernDialog
 {
-    typedef CDialog super;
+    typedef CModernDialog super;
 
 public:
     GoPathDlg(void);

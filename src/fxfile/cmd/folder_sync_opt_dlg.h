@@ -11,15 +11,17 @@
 #define __FXFILE_FOLDER_SYNC_OPT_DLG_H__ 1
 #pragma once
 
+#include "../gui/ModernDialog.h"
+
 #include "gui/ResizingDialog.h"
 
 namespace fxfile
 {
 namespace cmd
 {
-class FolderSyncOptDlg : public CDialog
+class FolderSyncOptDlg : public CModernDialog
 {
-    typedef CDialog super;
+    typedef CModernDialog super;
 
 public:
     FolderSyncOptDlg(void);

@@ -11,15 +11,17 @@
 #define __FXFILE_PARAM_EXEC_DLG_H__ 1
 #pragma once
 
+#include "../gui/ModernDialog.h"
+
 namespace fxfile
 {
 class DlgState;
 
 namespace cmd
 {
-class ParamExecDlg : public CDialog
+class ParamExecDlg : public CModernDialog
 {
-    typedef CDialog super;
+    typedef CModernDialog super;
 
 public:
     ParamExecDlg(void);
