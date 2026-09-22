@@ -38,7 +38,6 @@ $dist = (Resolve-Path -LiteralPath $DistDir).Path
 $installer = Join-Path $dist "fxfile_v2.0.4-dev.exe"
 $setupPath = Join-Path $dist "setup.nsi"
 
-Assert-File $installer "NSIS installer"
 Assert-File $setupPath "NSIS source"
 
 $setup = Get-Content -LiteralPath $setupPath -Raw
@@ -65,6 +64,8 @@ if (-not $ExecuteInstall) {
     Write-Host "Set FXFILE_INSTALLER_SMOKE=1 to opt into the isolated payload install test."
     exit 3
 }
+
+Assert-File $installer "NSIS installer"
 
 $identity = [Security.Principal.WindowsIdentity]::GetCurrent()
 $principal = [Security.Principal.WindowsPrincipal]::new($identity)

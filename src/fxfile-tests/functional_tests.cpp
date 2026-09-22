@@ -9,6 +9,7 @@
 #include <shellapi.h>
 #include <tchar.h>
 
+#include <cstring>
 #include <iostream>
 #include <vector>
 
