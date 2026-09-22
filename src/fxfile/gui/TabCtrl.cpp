@@ -48,6 +48,7 @@ TabCtrl::TabCtrl(void)
     , mFixedSizeMode(XPR_FALSE), mFixedSize(kDefaultTabSize), mTabMinSize(0), mTabMaxSize(ksint32max)
     , mImageList(XPR_NULL)
     , mShowNewButton(XPR_FALSE), mNewButtonIcon(XPR_NULL), mNewButtonRect(CRect(0,0,0,0)), mNewButtonHover(XPR_FALSE), mNewButtonPressed(XPR_FALSE), mNewButtonPressedLeave(XPR_FALSE)
+    , mPaneActive(XPR_FALSE)
     , mSetCapture(XPR_FALSE), mTabHover(InvalidTab)
     , mDragMove(XPR_FALSE), mDragTab(InvalidTab), mDragBegunPoint(0,0), mDragBegun(XPR_FALSE), mDragBegunTab(InvalidTab)
 {
@@ -162,6 +163,15 @@ void TabCtrl::setTabSizeMode(xpr_bool_t aFixedSizeMode, xpr_sint_t aFixedSize)
     mFixedSize = aFixedSize;
 
     recalcLayout();
+}
+
+void TabCtrl::setPaneActive(xpr_bool_t aActive)
+{
+    if (mPaneActive == aActive)
+        return;
+
+    mPaneActive = aActive;
+    Invalidate(XPR_FALSE);
 }
 
 void TabCtrl::enableDragMove(xpr_bool_t aDragMove)
@@ -853,7 +863,10 @@ void TabCtrl::OnPaint(void)
         }
         else if (XPR_IS_TRUE(sSelected))
         {
-            sBackColor = sPalette.mWindow;
+            sBackColor =
+                XPR_IS_TRUE(mPaneActive) ?
+                sPalette.mWindow :
+                sPalette.mHover;
         }
         else if (XPR_IS_TRUE(sHovered))
         {
@@ -866,7 +879,12 @@ void TabCtrl::OnPaint(void)
         {
             CRect sAccentRect(sTabButtonRect);
             sAccentRect.top = max(sAccentRect.top, sAccentRect.bottom - sAccentHeight);
-            sMemDC.FillSolidRect(&sAccentRect, sPalette.mSelection);
+            const COLORREF sAccentColor =
+                XPR_IS_TRUE(sPalette.mHighContrast) ||
+                XPR_IS_TRUE(mPaneActive) ?
+                sPalette.mSelection :
+                sPalette.mSeparator;
+            sMemDC.FillSolidRect(&sAccentRect, sAccentColor);
         }
 
         CRect sTabTextRect(sTabButtonRect);
