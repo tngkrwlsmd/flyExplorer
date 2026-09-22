@@ -192,6 +192,7 @@ void DriveToolBar::createDriveBar(void)
     mThread    = (HANDLE)::_beginthreadex(XPR_NULL, 0, DriveProc, this, 0, &mThreadId);
     ::SetThreadPriority(mThread, THREAD_PRIORITY_BELOW_NORMAL);
 
+    ApplyModernMetrics();
     UpdateToolbarSize();
 
     mBarCreated = XPR_TRUE;
