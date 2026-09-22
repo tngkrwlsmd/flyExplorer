@@ -104,6 +104,15 @@ ThemeSettings &getThemeSettings(void)
 #define DWMWA_USE_IMMERSIVE_DARK_MODE 20
 #endif
 
+#ifndef DWMWA_WINDOW_CORNER_PREFERENCE
+#define DWMWA_WINDOW_CORNER_PREFERENCE 33
+#endif
+
+#ifndef DWMWCP_DEFAULT
+#define DWMWCP_DEFAULT 0
+#define DWMWCP_ROUND   2
+#endif
+
 COLORREF blendColor(COLORREF aBase, COLORREF aOverlay, xpr_uint_t aOverlayPercent)
 {
     if (aOverlayPercent > 100)
@@ -393,6 +402,21 @@ xpr_bool_t ModernUI::applyWindowFrameTheme(HWND aHwnd)
             sizeof(sUseDarkFrame));
 
         sApplied = SUCCEEDED(sResult) ? XPR_TRUE : XPR_FALSE;
+
+        // Windows 11 dialogs and Explorer use rounded top-level corners. The
+        // documented DWM attribute is ignored on older Windows, so it is safe
+        // to request here while retaining the existing fallback behavior.
+        const DWORD sCornerPreference =
+            XPR_IS_TRUE(sPalette.mHighContrast) ?
+            DWMWCP_DEFAULT :
+            DWMWCP_ROUND;
+        const HRESULT sCornerResult = sDwmSetWindowAttribute(
+            aHwnd,
+            DWMWA_WINDOW_CORNER_PREFERENCE,
+            &sCornerPreference,
+            sizeof(sCornerPreference));
+        if (SUCCEEDED(sCornerResult))
+            sApplied = XPR_TRUE;
     }
 
     ::FreeLibrary(sDwmApi);
