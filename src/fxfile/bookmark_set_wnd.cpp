@@ -139,7 +139,9 @@ void BookmarkSetWnd::OnSysColorChange(void)
 
 LRESULT BookmarkSetWnd::OnThemeChanged(WPARAM aWParam, LPARAM aLParam)
 {
-    ui::ModernUI::applyExplorerControlTheme(m_hWnd);
+    // WM_THEMECHANGED is also emitted synchronously by SetWindowTheme. Do not
+    // reapply the Explorer association from inside this notification; doing so
+    // used to recurse during startup/settings initialization.
     RedrawWindow(XPR_NULL, XPR_NULL, RDW_INVALIDATE | RDW_ERASE | RDW_ALLCHILDREN);
     return 0;
 }
