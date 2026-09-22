@@ -155,7 +155,7 @@ void CModernDialog::refreshModernAppearance(void)
 BOOL CModernDialog::OnEraseBkgnd(CDC *aDC)
 {
     const fxfile::ui::ThemePalette sPalette = fxfile::ui::ModernUI::getPalette();
-    if (XPR_IS_TRUE(sPalette.mDark) && XPR_IS_FALSE(sPalette.mHighContrast))
+    if (XPR_IS_FALSE(sPalette.mHighContrast))
     {
         CRect sClientRect;
         GetClientRect(&sClientRect);
@@ -168,7 +168,7 @@ BOOL CModernDialog::OnEraseBkgnd(CDC *aDC)
 HBRUSH CModernDialog::OnCtlColor(CDC *aDC, CWnd *aWnd, UINT aCtlColor)
 {
     const fxfile::ui::ThemePalette sPalette = fxfile::ui::ModernUI::getPalette();
-    if (XPR_IS_FALSE(sPalette.mDark) || XPR_IS_TRUE(sPalette.mHighContrast))
+    if (XPR_IS_TRUE(sPalette.mHighContrast))
         return super::OnCtlColor(aDC, aWnd, aCtlColor);
 
     aDC->SetTextColor(
