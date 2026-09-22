@@ -21,6 +21,115 @@ namespace fxfile
 {
 namespace cfg
 {
+namespace
+{
+const UINT_PTR kModernGroupBoxSubclassId = 0x46474342; // 'FGCB'
+
+LRESULT CALLBACK ModernGroupBoxSubclassProc(
+    HWND aHwnd,
+    UINT aMessage,
+    WPARAM aWParam,
+    LPARAM aLParam,
+    UINT_PTR aSubclassId,
+    DWORD_PTR aRefData)
+{
+    switch (aMessage)
+    {
+        case WM_PAINT:
+        {
+            const ui::ThemePalette sPalette = ui::ModernUI::getPalette();
+            if (XPR_IS_TRUE(sPalette.mHighContrast))
+                break;
+
+            PAINTSTRUCT sPaint = {0};
+            HDC sDC = ::BeginPaint(aHwnd, &sPaint);
+            if (XPR_IS_NULL(sDC))
+                return 0;
+
+            RECT sClientRect = {0};
+            ::GetClientRect(aHwnd, &sClientRect);
+
+            ::SetDCBrushColor(sDC, sPalette.mCard);
+            ::FillRect(
+                sDC,
+                &sClientRect,
+                static_cast<HBRUSH>(::GetStockObject(DC_BRUSH)));
+
+            RECT sCardRect = sClientRect;
+            const xpr_sint_t sTitleOffset =
+                ui::ModernUI::scaleForWindow(6, aHwnd);
+            sCardRect.top += sTitleOffset;
+
+            const xpr_sint_t sRadius =
+                ui::ModernUI::getCardCornerRadius(aHwnd);
+            HBRUSH sCardBrush = ::CreateSolidBrush(sPalette.mElevated);
+            HPEN sBorderPen = ::CreatePen(PS_SOLID, 1, sPalette.mSeparator);
+            HGDIOBJ sOldBrush = ::SelectObject(sDC, sCardBrush);
+            HGDIOBJ sOldPen = ::SelectObject(sDC, sBorderPen);
+            ::RoundRect(
+                sDC,
+                sCardRect.left,
+                sCardRect.top,
+                sCardRect.right,
+                sCardRect.bottom,
+                sRadius * 2,
+                sRadius * 2);
+            ::SelectObject(sDC, sOldPen);
+            ::SelectObject(sDC, sOldBrush);
+            ::DeleteObject(sBorderPen);
+            ::DeleteObject(sCardBrush);
+
+            xpr_tchar_t sText[256] = {0};
+            ::GetWindowText(aHwnd, sText, XPR_COUNT_OF(sText));
+            if (sText[0] != XPR_STRING_LITERAL('\0'))
+            {
+                HFONT sFont = reinterpret_cast<HFONT>(
+                    ::SendMessage(aHwnd, WM_GETFONT, 0, 0));
+                HGDIOBJ sOldFont = XPR_NULL;
+                if (XPR_IS_NOT_NULL(sFont))
+                    sOldFont = ::SelectObject(sDC, sFont);
+
+                ::SetBkMode(sDC, TRANSPARENT);
+                ::SetTextColor(sDC, sPalette.mText);
+
+                RECT sTextRect = sClientRect;
+                const xpr_sint_t sPadding =
+                    ui::ModernUI::getSettingsPanelPadding(aHwnd);
+                sTextRect.left += sPadding;
+                sTextRect.right -= sPadding;
+                ::DrawText(
+                    sDC,
+                    sText,
+                    -1,
+                    &sTextRect,
+                    DT_LEFT | DT_TOP | DT_SINGLELINE | DT_END_ELLIPSIS);
+
+                if (XPR_IS_NOT_NULL(sOldFont))
+                    ::SelectObject(sDC, sOldFont);
+            }
+
+            ::EndPaint(aHwnd, &sPaint);
+            return 0;
+        }
+
+        case WM_THEMECHANGED:
+        case WM_SETTINGCHANGE:
+        case WM_SYSCOLORCHANGE:
+            ::InvalidateRect(aHwnd, XPR_NULL, TRUE);
+            break;
+
+        case WM_NCDESTROY:
+            ::RemoveWindowSubclass(aHwnd, ModernGroupBoxSubclassProc, aSubclassId);
+            break;
+
+        default:
+            break;
+    }
+
+    return ::DefSubclassProc(aHwnd, aMessage, aWParam, aLParam);
+}
+} // namespace
+
 CfgDlg::CfgDlg(xpr_uint_t aResourceId, CWnd *aParentWnd)
     : super(aResourceId, aParentWnd)
     , mObserver(XPR_NULL)
@@ -119,6 +228,20 @@ void CfgDlg::applyModernAppearanceToChild(CWnd *aWnd, HFONT aPreviousFont)
     if (XPR_IS_TRUE(sExplorerThemeControl))
         ui::ModernUI::applyExplorerControlTheme(aWnd->GetSafeHwnd());
 
+    if (_tcsicmp(sClassName, XPR_STRING_LITERAL("Button")) == 0)
+    {
+        const DWORD sButtonType =
+            static_cast<DWORD>(aWnd->GetStyle()) & BS_TYPEMASK;
+        if (sButtonType == BS_GROUPBOX)
+        {
+            ::SetWindowSubclass(
+                aWnd->GetSafeHwnd(),
+                ModernGroupBoxSubclassProc,
+                kModernGroupBoxSubclassId,
+                0);
+        }
+    }
+
     CWnd *sChild = aWnd->GetWindow(GW_CHILD);
     while (XPR_IS_NOT_NULL(sChild))
     {
@@ -156,26 +279,29 @@ void CfgDlg::refreshModernAppearance(void)
             SetFont(&mUIFont, XPR_FALSE);
     }
 
-    if (mSurfaceColor != sPalette.mSurface)
+    if (mSurfaceColor != sPalette.mCard)
     {
         if (XPR_IS_NOT_NULL(mSurfaceBrush.m_hObject))
             mSurfaceBrush.DeleteObject();
-        if (mSurfaceBrush.CreateSolidBrush(sPalette.mSurface) == XPR_TRUE)
-            mSurfaceColor = sPalette.mSurface;
+        if (mSurfaceBrush.CreateSolidBrush(sPalette.mCard) == XPR_TRUE)
+            mSurfaceColor = sPalette.mCard;
         else
             mSurfaceColor = CLR_INVALID;
     }
 
-    if (mWindowColor != sPalette.mWindow)
+    if (mWindowColor != sPalette.mElevated)
     {
         if (XPR_IS_NOT_NULL(mWindowBrush.m_hObject))
             mWindowBrush.DeleteObject();
-        if (mWindowBrush.CreateSolidBrush(sPalette.mWindow) == XPR_TRUE)
-            mWindowColor = sPalette.mWindow;
+        if (mWindowBrush.CreateSolidBrush(sPalette.mElevated) == XPR_TRUE)
+            mWindowColor = sPalette.mElevated;
         else
             mWindowColor = CLR_INVALID;
     }
 
+    ui::ModernUI::applyRoundedWindowRegion(
+        GetSafeHwnd(),
+        8);
     applyModernAppearanceToChildren(sPreviousFont);
     RedrawWindow(
         XPR_NULL,
@@ -190,7 +316,7 @@ xpr_bool_t CfgDlg::OnEraseBkgnd(CDC *aDC)
     {
         CRect sClientRect;
         GetClientRect(&sClientRect);
-        aDC->FillSolidRect(&sClientRect, sPalette.mSurface);
+        aDC->FillSolidRect(&sClientRect, sPalette.mCard);
         return XPR_TRUE;
     }
 
@@ -211,7 +337,7 @@ HBRUSH CfgDlg::OnCtlColor(CDC *aDC, CWnd *aWnd, xpr_uint_t aCtlColor)
     if (aCtlColor == CTLCOLOR_EDIT || aCtlColor == CTLCOLOR_LISTBOX)
     {
         aDC->SetBkMode(OPAQUE);
-        aDC->SetBkColor(sPalette.mWindow);
+        aDC->SetBkColor(sPalette.mElevated);
         if (XPR_IS_NOT_NULL(mWindowBrush.m_hObject))
             return (HBRUSH)mWindowBrush.GetSafeHandle();
     }
@@ -220,7 +346,7 @@ HBRUSH CfgDlg::OnCtlColor(CDC *aDC, CWnd *aWnd, xpr_uint_t aCtlColor)
              aCtlColor == CTLCOLOR_DLG)
     {
         aDC->SetBkMode(TRANSPARENT);
-        aDC->SetBkColor(sPalette.mSurface);
+        aDC->SetBkColor(sPalette.mCard);
         if (XPR_IS_NOT_NULL(mSurfaceBrush.m_hObject))
             return (HBRUSH)mSurfaceBrush.GetSafeHandle();
     }
