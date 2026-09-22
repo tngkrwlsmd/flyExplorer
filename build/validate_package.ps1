@@ -144,6 +144,18 @@ foreach ($token in @(
     }
 }
 
+foreach ($token in @(
+    'Var SMOKE_MODE',
+    '/FXFILE_SMOKE=',
+    'StrCmp $SMOKE_MODE "1" SkipInstallProcessKill',
+    'StrCmp $SMOKE_MODE "1" CreateUninstaller',
+    'StrCmp $SMOKE_MODE "1" unSmokeCleanup'
+)) {
+    if (-not $setup.Contains($token)) {
+        throw "setup.nsi is missing installer-smoke safety contract: $token"
+    }
+}
+
 foreach ($stale in @("fxfile-updater.exe", "\updater\")) {
     if ($setup.Contains($stale)) {
         throw "setup.nsi still references stale updater contract: $stale"

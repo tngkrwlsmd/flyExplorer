@@ -544,6 +544,63 @@ def validate_functional_test_wiring() -> list[str]:
     return errors
 
 
+def validate_installer_smoke_wiring() -> list[str]:
+    """Protect the non-destructive installer/shell smoke contract."""
+
+    errors: list[str] = []
+    setup_path = ROOT / "dist" / "setup.nsi"
+    smoke_path = ROOT / "build" / "installer_smoke.ps1"
+    local_ci_path = ROOT / "local_ci.bat"
+
+    try:
+        setup = setup_path.read_text(encoding="utf-8", errors="replace")
+        smoke = smoke_path.read_text(encoding="utf-8", errors="replace")
+        local_ci = local_ci_path.read_text(encoding="utf-8", errors="replace")
+    except OSError as exc:
+        return [f"installer smoke source cannot be read: {exc}"]
+
+    setup_tokens = (
+        '!include                  "FileFunc.nsh"',
+        "Var SMOKE_MODE",
+        "/FXFILE_SMOKE=",
+        'StrCmp $SMOKE_MODE "1" SkipInstallProcessKill',
+        'StrCmp $SMOKE_MODE "1" CreateUninstaller',
+        'StrCmp $SMOKE_MODE "1" DesktopShortcutDone',
+        'StrCmp $SMOKE_MODE "1" QuickLaunchShortcutDone',
+        'StrCmp $SMOKE_MODE "1" OnInstSuccessDone',
+        'StrCmp $SMOKE_MODE "1" unSkipProcessKill',
+        'StrCmp $SMOKE_MODE "1" unSmokeCleanup',
+    )
+    for token in setup_tokens:
+        if token not in setup:
+            errors.append(f"dist/setup.nsi: missing isolated installer token {token}")
+
+    smoke_tokens = (
+        "[switch]$ExecuteInstall",
+        "Installer smoke contract inspection PASS.",
+        "FXFILE_INSTALLER_SMOKE=1",
+        "Assert-SnapshotUnchanged",
+        "/FXFILE_SMOKE=$installDir",
+        "/FXFILE_SMOKE=1",
+        "runtime_smoke.ps1",
+    )
+    for token in smoke_tokens:
+        if token not in smoke:
+            errors.append(f"build/installer_smoke.ps1: missing smoke contract token {token}")
+
+    local_ci_tokens = (
+        'if /I "%PROFILE%"=="install" goto :profile_install',
+        ":run_installer_smoke",
+        'if /I "%FXFILE_INSTALLER_SMOKE%"=="1"',
+        '"build\\installer_smoke.ps1"',
+    )
+    for token in local_ci_tokens:
+        if token not in local_ci:
+            errors.append(f"local_ci.bat: missing installer-smoke integration token {token}")
+
+    return errors
+
+
 def validate_modern_ui_registration() -> list[str]:
     errors: list[str] = []
     gyp_path = ROOT / "src" / "fxfile" / "fxfile.gyp"
@@ -585,6 +642,7 @@ def main() -> int:
     errors.extend(validate_toolbar_custom_draw_regression())
     errors.extend(validate_ui_resource_contracts())
     errors.extend(validate_functional_test_wiring())
+    errors.extend(validate_installer_smoke_wiring())
     errors.extend(validate_modern_ui_registration())
 
     if errors:

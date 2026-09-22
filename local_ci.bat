@@ -34,6 +34,7 @@ if /I "%PROFILE%"=="--help" goto :usage
 if /I "%PROFILE%"=="/?" goto :usage
 if /I "%PROFILE%"=="quick" goto :profile_quick
 if /I "%PROFILE%"=="test" goto :profile_test
+if /I "%PROFILE%"=="install" goto :profile_install
 if /I "%PROFILE%"=="policy" goto :profile_policy
 if /I "%PROFILE%"=="x64" goto :profile_x64
 if /I "%PROFILE%"=="x86" goto :profile_x86
@@ -57,6 +58,11 @@ if errorlevel 1 goto :failed
 call :generate_solution "x64" "Generate Visual Studio 2026 x64 solution for functional tests"
 if errorlevel 1 goto :failed
 call :run_functional_tests "Release-x64-Unicode" "x64" "bin\x64\fxfile-functional-tests.exe" "Release x64 functional regression"
+if errorlevel 1 goto :failed
+goto :passed
+
+:profile_install
+call :run_installer_smoke
 if errorlevel 1 goto :failed
 goto :passed
 
@@ -90,6 +96,8 @@ call :run_x86_release
 if errorlevel 1 goto :failed
 call :run_package_validation
 if errorlevel 1 goto :failed
+call :run_installer_smoke
+if errorlevel 1 goto :failed
 goto :passed
 
 :profile_full
@@ -106,6 +114,8 @@ if errorlevel 1 goto :failed
 call :run_x86_release
 if errorlevel 1 goto :failed
 call :run_package_validation
+if errorlevel 1 goto :failed
+call :run_installer_smoke
 if errorlevel 1 goto :failed
 goto :passed
 
@@ -380,6 +390,23 @@ set "FUNCTIONAL_RESULT=%errorlevel%"
 call :append_file "%FUNCTIONAL_TITLE%" "%STEP_LOG%"
 exit /b %FUNCTIONAL_RESULT%
 
+:run_installer_smoke
+set "INSTALLER_SMOKE_ARGS="
+if /I "%FXFILE_INSTALLER_SMOKE%"=="1" set "INSTALLER_SMOKE_ARGS=-ExecuteInstall"
+
+powershell -NoProfile -ExecutionPolicy Bypass -File "build\installer_smoke.ps1" -DistDir "dist" %INSTALLER_SMOKE_ARGS% >"%STEP_LOG%" 2>&1
+set "INSTALLER_SMOKE_RESULT=%errorlevel%"
+call :append_file "Installer / shell integration smoke" "%STEP_LOG%"
+
+if "%INSTALLER_SMOKE_RESULT%"=="3" (
+    echo [local-ci] Installer smoke SKIPPED: isolated install execution was not enabled or could not run safely.
+    >>"%LOCAL_CI_LOG%" echo [local-ci] Installer smoke SKIPPED: actual install/uninstall remains NOT TESTED.
+    set "LOCAL_CI_SKIPPED=1"
+    exit /b 0
+)
+
+exit /b %INSTALLER_SMOKE_RESULT%
+
 :run_runtime_smoke
 set "SMOKE_SOURCE=%~1"
 set "SMOKE_CONFIGURATION=%~2"
@@ -458,7 +485,7 @@ echo.
 echo ============================================================
 if defined LOCAL_CI_SKIPPED (
     echo Local CI PASS WITH SKIPS: %PROFILE%
-    echo Runtime smoke checks marked SKIPPED are NOT TESTED.
+    echo Smoke checks marked SKIPPED are NOT TESTED.
     >>"%LOCAL_CI_LOG%" echo.
     >>"%LOCAL_CI_LOG%" echo Result: PASS_WITH_SKIPS
 ) else (
@@ -489,15 +516,16 @@ popd
 exit /b %RESULT%
 
 :usage
-echo Usage: local_ci.bat [quick^|test^|policy^|x64^|x86^|release^|full]
+echo Usage: local_ci.bat [quick^|test^|install^|policy^|x64^|x86^|release^|full]
 echo.
 echo   quick    Source invariant + deterministic regression preflight only.
 echo   test     Build and run isolated native filesystem functional regression.
+echo   install  Inspect installer/shell contract; set FXFILE_INSTALLER_SMOKE=1 for isolated install/uninstall.
 echo   policy   Full vendored policy/readiness/conformance validation.
 echo   x64      Default. Release x64 build, functional regression, artifacts, launch smoke.
 echo   x86      x86 Unicode + Multibyte builds, functional regression, artifacts, smokes.
-echo   release  x64 + x86 functional regression + package build/payload validation.
-echo   full     policy + x64 Release/Debug + x86 functional regression + package validation.
+echo   release  x64 + x86 functional regression + package + installer smoke contract.
+echo   full     policy + x64 Release/Debug + x86 functional regression + package + installer smoke contract.
 echo.
 echo See LOCAL_CI_MANUAL.txt for the short usage guide.
 del /q "%STEP_LOG%" "%MSBUILD_RAW_LOG%" >nul 2>&1
@@ -505,7 +533,7 @@ popd
 exit /b 0
 
 :usage_error
-echo Usage: local_ci.bat [quick^|test^|policy^|x64^|x86^|release^|full]
+echo Usage: local_ci.bat [quick^|test^|install^|policy^|x64^|x86^|release^|full]
 del /q "%STEP_LOG%" "%MSBUILD_RAW_LOG%" >nul 2>&1
 popd
 exit /b 2
