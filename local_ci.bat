@@ -19,6 +19,7 @@ del /q "%LOG_DIR%\*.log" "%LOG_DIR%\*.tmp" >nul 2>&1
 set "LOCAL_CI_LOG=%LOG_DIR%\local-ci.log"
 set "STEP_LOG=%LOG_DIR%\step.tmp"
 set "MSBUILD_RAW_LOG=%LOG_DIR%\msbuild-raw.tmp"
+set "MSBUILD_ERROR_LOG=%LOG_DIR%\msbuild-errors.tmp"
 
 > "%LOCAL_CI_LOG%" echo ============================================================
 >>"%LOCAL_CI_LOG%" echo flyExplorer Local CI
@@ -433,20 +434,20 @@ set "CI_TITLE=%~3"
 set "CI_PROJECT=%~4"
 if not defined CI_PROJECT set "CI_PROJECT=fxfile.sln"
 
-del /q "%STEP_LOG%" "%MSBUILD_RAW_LOG%" >nul 2>&1
+del /q "%STEP_LOG%" "%MSBUILD_RAW_LOG%" "%MSBUILD_ERROR_LOG%" >nul 2>&1
 echo.
 echo [local-ci] Rebuilding %CI_CONFIGURATION% ^| %CI_PLATFORM%...
->>"%LOCAL_CI_LOG%" echo.
->>"%LOCAL_CI_LOG%" echo [local-ci] Rebuilding %CI_CONFIGURATION% ^| %CI_PLATFORM%...
 
 rem Rebuild is intentional: local CI must not reuse stale object files from a
-rem previous CRT/configuration state. Console verbosity stays minimal, similar
-rem to Visual Studio build output, while the file logger keeps normal detail.
-"%MSBUILD_EXE%" "%CI_PROJECT%" /m /nologo /verbosity:minimal /t:Rebuild /fl "/flp:logfile=%MSBUILD_RAW_LOG%;verbosity=normal" "/p:Configuration=%CI_CONFIGURATION%" "/p:Platform=%CI_PLATFORM%"
+rem previous CRT/configuration state. The console shows only confirmed MSBuild
+rem errors. A temporary normal-detail file is retained only long enough to
+rem detect warning-policy violations and is never appended wholesale to the
+rem persistent local-ci.log.
+"%MSBUILD_EXE%" "%CI_PROJECT%" /m /nologo /verbosity:minimal "/consoleloggerparameters:ErrorsOnly;NoSummary" /t:Rebuild /fl "/flp:logfile=%MSBUILD_RAW_LOG%;verbosity=normal" "/p:Configuration=%CI_CONFIGURATION%" "/p:Platform=%CI_PLATFORM%"
 set "BUILD_RESULT=%errorlevel%"
 
 rem MSBuild's file logger uses the Windows ANSI code page on localized systems.
-rem Convert it to BOM-less UTF-8 before displaying/appending to the unified log.
+rem Normalize the temporary raw log to BOM-less UTF-8 for deterministic scans.
 powershell -NoProfile -ExecutionPolicy Bypass -Command "$text = Get-Content -LiteralPath $env:MSBUILD_RAW_LOG -Raw -Encoding Default; $utf8 = New-Object System.Text.UTF8Encoding $false; [System.IO.File]::WriteAllText($env:STEP_LOG, $text, $utf8)"
 if errorlevel 1 (
     echo ERROR: Failed to convert MSBuild log to UTF-8.
@@ -454,21 +455,34 @@ if errorlevel 1 (
     exit /b 1
 )
 
-call :append_file_to_log "%CI_TITLE% rebuild" "%STEP_LOG%"
-if not "%BUILD_RESULT%"=="0" exit /b %BUILD_RESULT%
+if not "%BUILD_RESULT%"=="0" (
+    powershell -NoProfile -ExecutionPolicy Bypass -Command "$lines = Get-Content -LiteralPath $env:STEP_LOG -Encoding UTF8; $errors = @($lines ^| Where-Object { $_ -match ':\s*(?:fatal\s+)?error\s+[A-Z]+\d+:' -or $_ -match '^\s*ERROR:' }); if ($errors.Count -eq 0) { $errors = @('ERROR: MSBuild failed for ' + $env:CI_CONFIGURATION + ' (exit ' + $env:BUILD_RESULT + ').') }; $utf8 = New-Object System.Text.UTF8Encoding $false; [System.IO.File]::WriteAllLines($env:MSBUILD_ERROR_LOG, $errors, $utf8)"
+    if errorlevel 1 (
+        echo ERROR: Failed to extract MSBuild error diagnostics.
+        >>"%LOCAL_CI_LOG%" echo ERROR: Failed to extract MSBuild error diagnostics.
+        exit /b 1
+    )
+    call :append_file "MSBuild errors: %CI_TITLE%" "%MSBUILD_ERROR_LOG%"
+    exit /b %BUILD_RESULT%
+)
 
-rem Scan the UTF-8 normalized log. The full warning line is already visible
-rem above, so do not duplicate it through another code-page conversion path.
+rem Warnings remain a CI failure by policy, but normal MSBuild progress stays
+rem out of the persistent log. When the policy triggers, record only the
+rem resulting policy error with the warning diagnostic that caused it.
 powershell -NoProfile -ExecutionPolicy Bypass -Command "$text = [System.IO.File]::ReadAllText($env:STEP_LOG, [System.Text.Encoding]::UTF8); if ([regex]::IsMatch($text, '\bwarning (?:C\d+|LNK\d+|MSB\d+):')) { exit 1 }; exit 0"
 set "WARNING_RESULT=%errorlevel%"
 if not "%WARNING_RESULT%"=="0" (
-    echo ERROR: Unexpected compiler/linker/MSBuild warning detected in %CI_CONFIGURATION%.
-    >>"%LOCAL_CI_LOG%" echo ERROR: Unexpected compiler/linker/MSBuild warning detected in %CI_CONFIGURATION%.
+    powershell -NoProfile -ExecutionPolicy Bypass -Command "$lines = Get-Content -LiteralPath $env:STEP_LOG -Encoding UTF8; $warnings = @($lines ^| Where-Object { $_ -match '\bwarning (?:C\d+|LNK\d+|MSB\d+):' } ^| ForEach-Object { 'ERROR: warning policy violation: ' + $_.Trim() }); $utf8 = New-Object System.Text.UTF8Encoding $false; [System.IO.File]::WriteAllLines($env:MSBUILD_ERROR_LOG, $warnings, $utf8)"
+    if errorlevel 1 (
+        echo ERROR: Failed to extract warning-policy diagnostics.
+        >>"%LOCAL_CI_LOG%" echo ERROR: Failed to extract warning-policy diagnostics.
+        exit /b 1
+    )
+    call :append_file "Build policy error: %CI_TITLE%" "%MSBUILD_ERROR_LOG%"
     exit /b %WARNING_RESULT%
 )
 
-echo [local-ci] Warning check PASS: %CI_CONFIGURATION%
->>"%LOCAL_CI_LOG%" echo [local-ci] Warning check PASS: %CI_CONFIGURATION%
+echo [local-ci] Build PASS: %CI_CONFIGURATION%
 exit /b 0
 
 :require_file
