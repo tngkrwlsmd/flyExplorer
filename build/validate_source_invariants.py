@@ -602,6 +602,117 @@ def validate_navigation_surface_contract() -> list[str]:
     return errors
 
 
+def validate_popup_menu_contract() -> list[str]:
+    """Protect the Win11 popup/menu presentation while preserving shell routing."""
+
+    errors: list[str] = []
+    paths = {
+        "modern_h": FXFILE_SRC / "gui" / "ModernUI.h",
+        "modern_cpp": FXFILE_SRC / "gui" / "ModernUI.cpp",
+        "bc_menu": FXFILE_SRC / "gui" / "BCMenu.cpp",
+        "context_menu": FXFILE_SRC / "context_menu.cpp",
+        "toolbar": FXFILE_SRC / "gui" / "rebar" / "ToolBarEx.cpp",
+    }
+
+    contents: dict[str, str] = {}
+    for name, path in paths.items():
+        try:
+            contents[name] = path.read_text(encoding="utf-8", errors="replace")
+        except OSError as exc:
+            errors.append(f"{path.relative_to(ROOT)}: cannot read popup-menu contract: {exc}")
+
+    if errors:
+        return errors
+
+    popup_metrics = (
+        "getPopupItemPadding",
+        "getPopupItemHeight",
+        "getPopupIconGutter",
+        "getPopupSeparatorHeight",
+        "getPopupSeparatorInset",
+        "getPopupShortcutGap",
+        "getPopupBorderThickness",
+    )
+    for token in popup_metrics:
+        if token not in contents["modern_h"] or f"ModernUI::{token}" not in contents["modern_cpp"]:
+            errors.append(f"ModernUI popup metric is missing or unimplemented: {token}")
+
+    bc_menu = contents["bc_menu"]
+    modern_start = bc_menu.find("void BCMenu::DrawItemWindows8Style")
+    modern_end = bc_menu.find("\nvoid BCMenu::DrawItem(", modern_start)
+    modern_draw = (
+        bc_menu[modern_start:modern_end]
+        if modern_start >= 0 and modern_end > modern_start
+        else ""
+    )
+
+    for token in (
+        "sPalette.mSurface",
+        "sPalette.mHover",
+        "sPalette.mSeparator",
+        "DrawItemStandardStyle(aDrawItemStruct)",
+        "getPopupIconGutter",
+        "getPopupSeparatorInset",
+        "getPopupShortcutGap",
+        "MFT_RADIOCHECK",
+    ):
+        if token not in modern_draw:
+            errors.append(f"src/fxfile/gui/BCMenu.cpp: missing modern popup rendering token {token}")
+
+    for legacy_token in ("DrawHorzGradient(", "DrawVertGradient(", "DrawEdge("):
+        if legacy_token in modern_draw:
+            errors.append(
+                f"src/fxfile/gui/BCMenu.cpp: legacy popup rendering returned in default modern path: {legacy_token}"
+            )
+
+    for token in (
+        "getPopupSeparatorHeight",
+        "getPopupItemHeight",
+        "getPopupIconGutter",
+        "getPopupShortcutGap",
+    ):
+        if token not in bc_menu:
+            errors.append(f"src/fxfile/gui/BCMenu.cpp: popup measurement token missing {token}")
+
+    context_menu = contents["context_menu"]
+    for token in (
+        "IID_IContextMenu3",
+        "IID_IContextMenu2",
+        "HandleMenuMsg2",
+        "HandleMenuMsg",
+        "WM_DRAWITEM",
+        "WM_MEASUREITEM",
+        "::TrackPopupMenuEx",
+    ):
+        if token not in context_menu:
+            errors.append(f"src/fxfile/context_menu.cpp: shell context-menu routing token missing {token}")
+
+    if "BCMenu sMenu" in context_menu:
+        errors.append(
+            "src/fxfile/context_menu.cpp: shell-owned context menu must not be converted to BCMenu owner-draw"
+        )
+
+    toolbar = contents["toolbar"]
+    for token in (
+        "sLegacyPopup",
+        "GetStockObject(NULL_BRUSH)",
+        "getPopupItemHeight",
+        "getPopupItemPadding",
+        "getPopupBorderThickness",
+        "BOOL CToolBarPopup::OnEraseBkgnd",
+        "ApplyDarkToolBarCustomDraw(lpNMCustomDraw)",
+        "SetBkColor(CLR_NONE)",
+    ):
+        if token not in toolbar:
+            errors.append(f"src/fxfile/gui/rebar/ToolBarEx.cpp: modern popup/artwork token missing {token}")
+
+    for unsupported in ("TB_SETBKCOLOR", "TB_SETTEXTCOLOR"):
+        if unsupported in toolbar:
+            errors.append(f"src/fxfile/gui/rebar/ToolBarEx.cpp: unsupported toolbar color message returned: {unsupported}")
+
+    return errors
+
+
 def validate_ui_resource_contracts() -> list[str]:
     """Protect icon/bitmap frame geometry and canonical resource wiring."""
 
@@ -789,8 +900,8 @@ def validate_ui_resource_contracts() -> list[str]:
 
     toolbar_contract = (
         "SetIconSize(CSize(22, 22), CSize(16, 16));",
-        "IDB_TB_MAIN_COLD_SMALL, IDB_TB_MAIN_HOT_SMALL, IDB_TB_MAIN_HOT_SMALL",
-        "IDB_TB_MAIN_COLD_LARGE, IDB_TB_MAIN_HOT_LARGE, IDB_TB_MAIN_HOT_LARGE",
+        "(UINT)-1, IDB_TB_MAIN_COLD_SMALL, IDB_TB_MAIN_HOT_SMALL",
+        "(UINT)-1, IDB_TB_MAIN_COLD_LARGE, IDB_TB_MAIN_HOT_LARGE",
     )
     for source_name, source in (
         ("src/fxfile/main_toolbar.cpp", main_toolbar),
@@ -1210,6 +1321,7 @@ def main() -> int:
     errors.extend(validate_command_surface_contract())
     errors.extend(validate_configuration_shell_contract())
     errors.extend(validate_navigation_surface_contract())
+    errors.extend(validate_popup_menu_contract())
     errors.extend(validate_ui_resource_contracts())
     errors.extend(validate_functional_test_wiring())
     errors.extend(validate_installer_smoke_wiring())
