@@ -47,6 +47,7 @@ protected:
     void OnDropWorkingFolder(xpr_sint_t aIndex, LPITEMIDLIST aFullPidl);
 
 protected:
+    virtual void OnImageListsReloaded();
     virtual xpr_bool_t HasButtonText(xpr_uint_t aId);
     virtual xpr_bool_t HasButtonTip(xpr_uint_t aId);
     virtual void GetButtonTextByCommand(xpr_uint_t aId, CString &aText);
