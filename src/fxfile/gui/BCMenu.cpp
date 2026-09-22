@@ -1055,6 +1055,11 @@ void BCMenu::drawSelection(CDC *aDC, const CRect &aItemRect, UINT aItemState)
         return;
 
     const fxfile::ui::ThemePalette sPalette = fxfile::ui::ModernUI::getPalette();
+    CWnd *sMainWnd = AfxGetMainWnd();
+    HWND sMetricHwnd =
+        XPR_IS_NOT_NULL(sMainWnd) ?
+        sMainWnd->GetSafeHwnd() :
+        ::GetDesktopWindow();
 
     CRect sSelectionRect(aItemRect);
     const xpr_sint_t sHorizontalInset =
