@@ -291,10 +291,10 @@ void FolderCtrl::setOption(Option &aOption)
     }
     else
     {
-        SetItemHeight(ui::ModernUI::scaleForWindow(22, GetSafeHwnd()));
+        SetItemHeight(ui::ModernUI::getTreeRowHeight(GetSafeHwnd()));
     }
 
-    SetIndent(ui::ModernUI::scaleForWindow(20, GetSafeHwnd()));
+    SetIndent(ui::ModernUI::getTreeIndent(GetSafeHwnd()));
 
     // High Contrast always follows system colors. Outside High Contrast,
     // preserve the user's explicit folder-tree color choices.
@@ -319,7 +319,7 @@ void FolderCtrl::setOption(Option &aOption)
     }
 
     SetLineColor(
-        XPR_IS_TRUE(sPalette.mDark) && XPR_IS_FALSE(sPalette.mHighContrast) ?
+        XPR_IS_FALSE(sPalette.mHighContrast) ?
         sPalette.mSeparator :
         CLR_DEFAULT);
 
@@ -2863,7 +2863,7 @@ void FolderCtrl::applyModernAppearance(void)
     }
 
     SetLineColor(
-        XPR_IS_TRUE(sPalette.mDark) && XPR_IS_FALSE(sPalette.mHighContrast) ?
+        XPR_IS_FALSE(sPalette.mHighContrast) ?
         sPalette.mSeparator :
         CLR_DEFAULT);
 
@@ -2871,9 +2871,9 @@ void FolderCtrl::applyModernAppearance(void)
         setCustomFont(XPR_FALSE, (xpr_tchar_t *)XPR_NULL);
 
     if (XPR_IS_FALSE(mOption.mIsItemHeight))
-        SetItemHeight(ui::ModernUI::scaleForWindow(22, GetSafeHwnd()));
+        SetItemHeight(ui::ModernUI::getTreeRowHeight(GetSafeHwnd()));
 
-    SetIndent(ui::ModernUI::scaleForWindow(20, GetSafeHwnd()));
+    SetIndent(ui::ModernUI::getTreeIndent(GetSafeHwnd()));
 
     if (XPR_IS_NOT_NULL(mSmallImgList))
         mSmallImgList->SetBkColor(GetBkColor());
