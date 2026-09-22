@@ -2150,6 +2150,9 @@ void ExplorerView::OnSetFocus(CWnd *aOldWnd)
 
 void ExplorerView::setActivateBarStatus(xpr_bool_t aActivate, xpr_bool_t aLastActivated)
 {
+    if (XPR_IS_NOT_NULL(mTabCtrl) && IsWindow(mTabCtrl->m_hWnd))
+        mTabCtrl->setPaneActive(aActivate);
+
     if (XPR_IS_NOT_NULL(mActivateBar) && IsWindow(mActivateBar->m_hWnd))
     {
         mActivateBar->activate(aActivate, aLastActivated);
