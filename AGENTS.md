@@ -164,6 +164,12 @@ UI/UX 현대화 작업은 다음 원칙을 따른다.
 
 장기 작업은 반드시 하나의 commit/push로 끝낼 필요가 없다. 변경 범위, 위험, 검증 지점이 분리되는 경우에는 복구·검토·handoff가 가능한 **논리적 하위 작업 단위**로 checkpoint를 만들 수 있다.
 
+연결 중단으로 인한 작업 유실이나 stale 상태 재개를 막기 위해 다음 복구 규칙도 적용한다.
+
+- 여러 파일에 걸친 중요한 변경사항은 통상 10~15분 이상 commit/push되지 않은 상태로 두지 않는다. 더 긴 단일 변경이 불가피하면 대규모 수정·삭제·리팩터링·merge 같은 위험한 후속 작업 전에 현재까지의 안전한 상태를 checkpoint로 commit하고 원격 branch에 push한다.
+- checkpoint를 만들기 전에는 `git status`와 `git diff`를 확인하여 의도하지 않은 파일, generated artifact, unrelated change가 포함되지 않았는지 검토한다.
+- 연결 중단 후 작업을 재개할 때는 코드를 바로 수정하지 않는다. 먼저 현재 branch, `git status`, 최근 commit, 원격 tracking branch 상태와 local/remote 차이를 확인하여 마지막으로 안전하게 push된 checkpoint를 식별한 뒤 그 이후의 남은 작업만 계속한다.
+
 - 각 checkpoint commit은 하나의 설명 가능한 목적만 가진다. unrelated change를 섞지 않는다.
 - 각 checkpoint는 그 단계에 맞는 좁은 검증을 통과한 상태여야 한다. 예를 들어 UI 현대화라면 `theme/DPI foundation`, `toolbar/tab`, `pane/list`처럼 독립적으로 검토 가능한 경계가 적합하다.
 - 실행하지 못한 검증이나 알려진 제한은 checkpoint 시점에도 숨기지 않는다.
