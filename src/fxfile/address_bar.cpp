@@ -27,6 +27,7 @@ namespace fxfile
 namespace
 {
 const UINT_PTR kAddressBarComboSubclassId = 1;
+const UINT_PTR kAddressBarEditSubclassId = 2;
 
 // item type
 enum
@@ -58,6 +59,7 @@ AddressBar::AddressBar(void)
 
     mDisplayFont    = XPR_NULL;
     mComboBoxHwnd   = XPR_NULL;
+    mEditHwnd       = XPR_NULL;
 
     mShcnDesktopId  = 0;
     mShcnComputerId = 0;
@@ -70,6 +72,7 @@ AddressBar::~AddressBar(void)
 
 BEGIN_MESSAGE_MAP(AddressBar, CComboBoxEx)
     ON_WM_CREATE()
+    ON_WM_NCPAINT()
     ON_WM_SETTINGCHANGE()
     ON_WM_SYSCOLORCHANGE()
     ON_MESSAGE(WM_THEMECHANGED, OnThemeChanged)
@@ -115,6 +118,39 @@ xpr_sint_t AddressBar::OnCreate(LPCREATESTRUCT aCreateStruct)
     return 0;
 }
 
+void AddressBar::OnNcPaint(void)
+{
+    Default();
+
+    const ui::ThemePalette sPalette = ui::ModernUI::getPalette();
+    if (XPR_IS_TRUE(sPalette.mHighContrast))
+        return;
+
+    CWindowDC sDC(this);
+    CRect sWindowRect;
+    GetWindowRect(&sWindowRect);
+    sWindowRect.OffsetRect(-sWindowRect.TopLeft());
+
+    HWND sFocusHwnd = ::GetFocus();
+    const xpr_bool_t sFocused =
+        (sFocusHwnd == m_hWnd ||
+         sFocusHwnd == mComboBoxHwnd ||
+         sFocusHwnd == mEditHwnd) ?
+        XPR_TRUE :
+        XPR_FALSE;
+
+    const COLORREF sBorderColor =
+        XPR_IS_TRUE(sFocused) ?
+        sPalette.mSelection :
+        sPalette.mBorder;
+
+    ::SetDCBrushColor(sDC.GetSafeHdc(), sBorderColor);
+    ::FrameRect(
+        sDC.GetSafeHdc(),
+        &sWindowRect,
+        static_cast<HBRUSH>(::GetStockObject(DC_BRUSH)));
+}
+
 void AddressBar::OnSettingChange(xpr_uint_t aFlags, const xpr_tchar_t *aSection)
 {
     CComboBoxEx::OnSettingChange(aFlags, aSection);
@@ -146,11 +182,12 @@ LRESULT AddressBar::OnDpiChanged(WPARAM aWParam, LPARAM aLParam)
 
 xpr_bool_t AddressBar::DestroyWindow(void)
 {
+    removeEditSubclass();
     removeComboSubclass();
     applyDisplayFont(XPR_NULL);
 
-    if (XPR_IS_NOT_NULL(mDarkBackgroundBrush.m_hObject))
-        mDarkBackgroundBrush.DeleteObject();
+    if (XPR_IS_NOT_NULL(mBackgroundBrush.m_hObject))
+        mBackgroundBrush.DeleteObject();
 
     if (XPR_IS_NOT_NULL(mDisplayFont))
     {
