@@ -8,18 +8,19 @@ PowerShell / Command Prompt에서 프로젝트 루트에서 실행합니다.
 
 .\local_ci.bat quick
   = 가장 빠른 정적 Source Invariant + 알려진 회귀 가드 검증을 수행합니다.
-  = ModernUI 연결, direct CDialog 현대화 회귀, toolbar/config-tree resource 계약, app/tip/shortcut/go-up DPI icon frame 계약, 알려진 잘못된 Win32 API 재도입을 함께 검사합니다.
+  = ModernUI 연결, direct CDialog 현대화 회귀, toolbar/config-tree resource 계약, app/tip/shortcut/go-up DPI icon frame 계약, rename/pattern/config/updater functional-test wiring, installer smoke wiring, 알려진 잘못된 Win32 API 재도입을 함께 검사합니다.
 
 .\local_ci.bat test
   = OS 임시 디렉터리 아래에서 native functional regression을 수행합니다.
   = 실제 product 경로인 xpr::FileSys/FileIo와 SHFileOperation seam을 사용해 copy/move/delete/rename/mkdir, Unicode/공백 파일명, 충돌, 오류, 무결성, cleanup을 검증합니다.
+  = batch-rename transform core, fnmatch/FilePath, UTF-8 ConfFileEx persistence, updater version/metadata parser와 conf-dir/startup command quoting contract를 검증합니다.
   = ShellRegistry가 실제 사용하는 context-menu key/command 조립도 quoting과 Unicode 경로를 포함해 검증합니다.
   = production CRC32/MD5 구현은 표준 known-vector로 검증합니다.
 
 .\local_ci.bat install
   = 생성된 NSIS installer와 shell-integration 안전 계약을 검사합니다.
   = 기본값은 실제 설치/제거를 건너뛰어 PASS WITH SKIPS가 됩니다.
-  = 관리자 권한의 격리 실행에서 "set FXFILE_INSTALLER_SMOKE=1" 후 실행하면 temp 경로 설치/Runtime Smoke/제거와 Registry 비변경까지 검사합니다.
+  = 관리자 권한의 격리 실행에서 "set FXFILE_INSTALLER_SMOKE=1" 후 실행하면 temp 경로 설치/Runtime Smoke/제거, main/upchecker architecture, Registry/shortcut/startup/profile 비변경, 기존 fxfile process 생존과 sibling sentinel 보존까지 검사합니다.
 
 .\local_ci.bat policy
   = Policy / Readiness / Conformance 검증을 수행합니다.

@@ -37,14 +37,17 @@ Before a C++ checkpoint, run:
 deleting stale generated projects, or running GYP. The current preflight checks
 direct header dependencies for cross-cutting ModernUI symbols, verifies the
 DPI/manifest integration points, and carries deterministic regression guards for
-known UI integration failures. It prevents standard non-resizing dialogs from
+known UI and product-integration failures. It prevents standard non-resizing dialogs from
 drifting back to direct `CDialog` inheritance outside the specialized allowlist,
 checks the ThemePalette/DPI wiring of custom-painted About/Tip/PictureViewer
 surfaces, and protects toolbar/config-tree bitmap frame geometry plus the
 application-icon frame contract. It also rejects the unsupported ToolbarWindow32
 `TB_SETBKCOLOR`/`TB_SETTEXTCOLOR` identifiers and verifies that toolbar
-dark-state colors remain routed through `NM_CUSTOMDRAW`/`NMTBCUSTOMDRAW`.
-It is a static check and does not replace a Visual Studio compile/link build.
+dark-state colors remain routed through `NM_CUSTOMDRAW`/`NMTBCUSTOMDRAW`. The
+same preflight also protects native-test wiring for rename transforms,
+fnmatch/FilePath, ConfFile persistence, updater version/metadata/command
+contracts, and the isolated installer smoke path. It is a static check and does
+not replace a Visual Studio compile/link build.
 
 Policy/readiness checks can be run with:
 
@@ -74,8 +77,9 @@ The Actions workflows are intentionally slim:
   `Release-x64-Unicode | x64` job. It regenerates the solution, checks the
   v145/MFC contract, compiles and links the product, rejects compiler/linker/
   MSBuild warnings, verifies the core artifacts, runs the isolated native
-  filesystem/hash/shell-command functional regression, and then runs the x64
-  launch smoke.
+  native product functional regression (filesystem operations, rename,
+  pattern/path, config persistence, updater contracts, hash and shell-command
+  checks), and then runs the x64 launch smoke.
 - Set `run_x86_compat=true` only when x86 compatibility needs explicit remote
   evidence. That optional job compiles `Release-x86-Unicode | Win32` and
   `Release-x86-Multibyte | Win32`, verifies the key runtime/updater
@@ -111,8 +115,10 @@ Available profiles:
 
 `quick` runs the deterministic source/resource/regression preflight. `test`
 generates the x64 solution, builds `fxfile-functional-tests.exe`, and runs
-isolated temp-directory filesystem operations, production CRC32/MD5 known
-vectors, and shell-registration command/key contracts. `install` inspects the
+isolated temp-directory filesystem operations plus production rename transforms,
+fnmatch/FilePath contracts, UTF-8 ConfFile persistence, updater version/metadata
+and command-quoting contracts, CRC32/MD5 known vectors, and shell-registration
+command/key contracts. `install` inspects the
 isolated NSIS smoke contract; set `FXFILE_INSTALLER_SMOKE=1` from an elevated
 local shell to opt into temporary install/runtime/uninstall verification.
 `x64` regenerates the VS 2026 x64 solution, **rebuilds**
@@ -382,8 +388,11 @@ NSIS toolchain. It creates:
     dist\fxfile_v2.0.4-dev_x86_multibyte_portable.zip
 
 `build\validate_package.ps1` validates the staged runtime trees and portable
-ZIP payloads, rejects development artifacts such as PDB/OBJ/LIB/project files,
-and checks that the NSIS installer was actually produced. Packaging is no longer
+ZIP payloads, verifies the expected main executable and x86 upchecker PE
+architecture, rejects wrong XPR runtimes, stale updater names, nested staging,
+unsafe/archive-traversal paths, duplicate or case-colliding entries and
+development artifacts such as PDB/OBJ/LIB/project files, and checks that the
+NSIS installer was actually produced. Packaging is no longer
 run or uploaded by GitHub Actions; build the required release configurations and
 run `dist\package.bat` plus `build\validate_package.ps1 -DistDir dist` locally
 when preparing a release.
@@ -393,9 +402,10 @@ contains `build\installer_smoke.ps1` plus an NSIS
 `/FXFILE_SMOKE=<temp-dir>` mode. The default smoke only inspects that safety
 contract. With `FXFILE_INSTALLER_SMOKE=1` in an elevated local shell,
 `local_ci.bat install`/release/full may install only into a temporary directory,
-verify the installed payload, run the protected runtime smoke, confirm selected
-Registry/shell/startup snapshots did not change, silently uninstall, and verify
-cleanup. That isolated smoke deliberately skips real product Registry,
+verify the installed payload and main/upchecker architecture, run the protected
+runtime smoke, confirm Registry/shell/startup plus Desktop/Start-Menu/Quick
+Launch and temporary profile sentinels did not change, preserve pre-existing
+fxfile processes and sibling files, silently uninstall, and verify cleanup. That isolated smoke deliberately skips real product Registry,
 Start-Menu/Desktop, launcher-startup, and shell-context registration, so a real
 clean Windows Sandbox/VM install and shell-integration UX remain separate manual
 evidence.
