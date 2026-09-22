@@ -8790,6 +8790,11 @@ LPITEMIDLIST ExplorerCtrl::getFolderGroup(void) const
 
 void ExplorerCtrl::applyModernAppearance(void)
 {
+    // Keep the native Explorer association and FlatHeader metrics synchronized
+    // before applying per-folder colors. This preserves list semantics while
+    // ensuring theme/DPI transitions do not leave stale header typography.
+    refreshModernAppearance();
+
     if (XPR_IS_FALSE(mOptionApplied))
         return;
 
