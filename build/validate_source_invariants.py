@@ -199,6 +199,70 @@ def validate_modern_dialog_migration() -> list[str]:
     return errors
 
 
+def validate_custom_dialog_paint_regressions() -> list[str]:
+    """Keep migrated custom-paint dialogs on ThemePalette/DPI-aware paths."""
+
+    errors: list[str] = []
+    contracts = {
+        "cmd/about_dlg.cpp": {
+            "required": (
+                "ModernUI::getPalette",
+                "ModernUI::loadIconResource",
+                "ModernUI::scale",
+                "sPalette.mSurface",
+                "sPalette.mSeparator",
+                "sPalette.mText",
+            ),
+            "forbidden": (
+                "FillSolidRect(sRect, RGB(255,255,255))",
+                "LoadIcon(IDR_MAINFRAME)",
+            ),
+        },
+        "cmd/tip_dlg.cpp": {
+            "required": (
+                "ModernUI::getPalette",
+                "ModernUI::loadIconResource",
+                "ModernUI::scale",
+                "sPalette.mSurface",
+                "sPalette.mSeparator",
+                "sPalette.mText",
+            ),
+            "forbidden": (
+                "FillSolidRect(sRect, RGB(255,255,255))",
+                "LoadIcon(IDI_TIP)",
+            ),
+        },
+        "picture_viewer.cpp": {
+            "required": (
+                "ModernUI::getPalette",
+                "sPalette.mWindow",
+            ),
+            "forbidden": (
+                "FillSolidRect(sRect, RGB(255,255,255))",
+                "FillSolidRect(0, 0, sClientRect.Width(), sClientRect.Height(), RGB(255,255,255))",
+            ),
+        },
+    }
+
+    for rel_path, contract in contracts.items():
+        path = FXFILE_SRC / rel_path
+        try:
+            source = path.read_text(encoding="utf-8", errors="replace")
+        except OSError as exc:
+            errors.append(f"{path.relative_to(ROOT)}: cannot read: {exc}")
+            continue
+
+        for token in contract["required"]:
+            if token not in source:
+                errors.append(f"{path.relative_to(ROOT)}: missing custom-paint token {token}")
+
+        for token in contract["forbidden"]:
+            if token in source:
+                errors.append(f"{path.relative_to(ROOT)}: legacy custom-paint token returned: {token}")
+
+    return errors
+
+
 def validate_toolbar_custom_draw_regression() -> list[str]:
     """Prevent recurrence of the ToolbarWindow32 color-message compile failure."""
 
@@ -255,7 +319,7 @@ def validate_ui_resource_contracts() -> list[str]:
     def read_u32(data: bytes, offset: int) -> int:
         return int.from_bytes(data[offset:offset + 4], "little")
 
-    def bitmap_geometry(name: str) -> tuple[int, int, int] | None:
+    def bitmap_geometry(name: str):
         path = resource_dir / name
         try:
             data = path.read_bytes()
@@ -429,6 +493,7 @@ def main() -> int:
     errors.extend(validate_window_frame_theme_integration())
     errors.extend(validate_common_control_theme_integration())
     errors.extend(validate_modern_dialog_migration())
+    errors.extend(validate_custom_dialog_paint_regressions())
     errors.extend(validate_toolbar_custom_draw_regression())
     errors.extend(validate_ui_resource_contracts())
     errors.extend(validate_modern_ui_registration())
