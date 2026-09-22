@@ -532,6 +532,10 @@ def validate_functional_test_wiring() -> list[str]:
     test_source_path = ROOT / "src" / "fxfile-tests" / "functional_tests.cpp"
     pattern_path_test_path = ROOT / "src" / "fxfile-tests" / "pattern_path_tests.cpp"
     config_test_path = ROOT / "src" / "fxfile-tests" / "config_persistence_tests.cpp"
+    updater_test_path = ROOT / "src" / "fxfile-tests" / "updater_contract_tests.cpp"
+    app_ver_path = FXFILE_SRC / "app_ver.cpp"
+    upchecker_main_path = ROOT / "src" / "fxfile-upchecker" / "main_window.cpp"
+    metadata_path = ROOT / "src" / "fxfile-upchecker" / "meta_data_file.cpp"
     conf_file_path = ROOT / "src" / "base" / "conf_file.cpp"
 
     paths = (
@@ -545,6 +549,10 @@ def validate_functional_test_wiring() -> list[str]:
         pattern_path_test_path,
         config_test_path,
         conf_file_path,
+        updater_test_path,
+        app_ver_path,
+        upchecker_main_path,
+        metadata_path,
     )
 
     contents: dict[Path, str] = {}
@@ -566,6 +574,10 @@ def validate_functional_test_wiring() -> list[str]:
     pattern_path_test = contents[pattern_path_test_path]
     config_test = contents[config_test_path]
     conf_file_source = contents[conf_file_path]
+    updater_test = contents[updater_test_path]
+    app_ver_source = contents[app_ver_path]
+    upchecker_main = contents[upchecker_main_path]
+    metadata_source = contents[metadata_path]
 
     if "src/fxfile-tests/fxfile-tests.gyp:*" not in root_gyp:
         errors.append("fxfile.gyp: functional-test target is not in the solution dependency graph")
@@ -635,6 +647,8 @@ def validate_functional_test_wiring() -> list[str]:
         "'pattern_path_tests.cpp'",
         "'config_persistence_tests.cpp'",
         "'../base/conf_file.cpp'",
+        "'updater_contract_tests.cpp'",
+        "'../base/version_compare.cpp'",
         "'SubSystem': 1",
     )
     for token in required_gyp_tokens:
@@ -658,6 +672,7 @@ def validate_functional_test_wiring() -> list[str]:
         "testRenameTransformCore",
         "testPatternAndPathContracts",
         "testConfigPersistenceContracts",
+        "testUpdaterContracts",
         "rename_core::splitBaseFileNameAndExt",
         "replaceText(",
         "insertFromLast(",
@@ -709,6 +724,29 @@ def validate_functional_test_wiring() -> list[str]:
             errors.append(
                 f"src/base/conf_file.cpp: ConfFile flag initialization regressed near {token}"
             )
+
+    for token in (
+        "parseVersion",
+        "compareVersion",
+        "1, 99, 0",
+        "2, 0, 999",
+        "2.0.4-beta",
+    ):
+        if token not in updater_test:
+            errors.append(
+                f"src/fxfile-tests/updater_contract_tests.cpp: missing updater token {token}"
+            )
+
+    if "base::compareVersion(sCurrent, sRemote)" not in app_ver_source:
+        errors.append("src/fxfile/app_ver.cpp: version comparison no longer uses shared version core")
+
+    for token in ("base::parseVersion", "sCheckSucceeded = XPR_FALSE"):
+        if token not in upchecker_main:
+            errors.append(f"src/fxfile-upchecker/main_window.cpp: missing updater safety token {token}")
+
+    for token in ("parseVersion", "mProgram.empty()", "mNewUrl.empty()"):
+        if token not in metadata_source:
+            errors.append(f"src/fxfile-upchecker/meta_data_file.cpp: missing metadata validation token {token}")
 
     return errors
 
