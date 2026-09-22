@@ -520,7 +520,7 @@ exit /b %RESULT%
 echo Usage: local_ci.bat [quick^|test^|install^|policy^|x64^|x86^|release^|full]
 echo.
 echo   quick    Source invariant + deterministic regression preflight only.
-echo   test     Build and run isolated native filesystem functional regression.
+echo   test     Build and run isolated native product functional regression.
 echo   install  Inspect installer/shell contract; set FXFILE_INSTALLER_SMOKE=1 for isolated install/uninstall.
 echo   policy   Full vendored policy/readiness/conformance validation.
 echo   x64      Default. Release x64 build, functional regression, artifacts, launch smoke.

@@ -3,7 +3,7 @@ name: Windows Product Build
 # Temporary Actions budget pause through 2026-09-30.
 # No push/PR CI. Manual runs are opt-in and intentionally minimal.
 # build.bat runs the same source invariant/regression preflight before GYP,
-# including dialog/resource/DPI-icon, functional-test, and isolated installer-smoke wiring.
+# including dialog/resource/DPI-icon plus rename/filter/config/updater functional-test and isolated installer-smoke wiring.
 # Installer execution remains local/package-time because this minimal hosted workflow does not build packages.
 on:
   workflow_dispatch:
@@ -116,7 +116,7 @@ jobs:
             }
           }
 
-      - name: Run x64 filesystem and shell-contract functional regression
+      - name: Run x64 product functional regression
         shell: pwsh
         run: |
           & ".\bin\x64\fxfile-functional-tests.exe"
@@ -190,7 +190,7 @@ jobs:
             }
           }
 
-      - name: Run x86 filesystem and shell-contract functional regression
+      - name: Run x86 product functional regression
         shell: pwsh
         run: |
           foreach ($path in @(
