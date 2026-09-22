@@ -393,7 +393,7 @@ def validate_command_surface_contract() -> list[str]:
 
     for token in (
         "::FillRect(",
-        "sPalette.mSurface",
+        "sPalette.mChrome",
         "TBCDRF_NOEDGES",
         "TBCDRF_NOOFFSET",
     ):
@@ -402,7 +402,7 @@ def validate_command_surface_contract() -> list[str]:
 
     for token in (
         "::FillRect(",
-        "sPalette.mSurface",
+        "sPalette.mChrome",
         "TBCDRF_NOEDGES",
         "TBCDRF_NOOFFSET",
     ):
