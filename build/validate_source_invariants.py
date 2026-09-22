@@ -531,6 +531,8 @@ def validate_functional_test_wiring() -> list[str]:
     test_gyp_path = ROOT / "src" / "fxfile-tests" / "fxfile-tests.gyp"
     test_source_path = ROOT / "src" / "fxfile-tests" / "functional_tests.cpp"
     pattern_path_test_path = ROOT / "src" / "fxfile-tests" / "pattern_path_tests.cpp"
+    config_test_path = ROOT / "src" / "fxfile-tests" / "config_persistence_tests.cpp"
+    conf_file_path = ROOT / "src" / "base" / "conf_file.cpp"
 
     paths = (
         root_gyp_path,
@@ -541,6 +543,8 @@ def validate_functional_test_wiring() -> list[str]:
         test_gyp_path,
         test_source_path,
         pattern_path_test_path,
+        config_test_path,
+        conf_file_path,
     )
 
     contents: dict[Path, str] = {}
@@ -560,6 +564,8 @@ def validate_functional_test_wiring() -> list[str]:
     test_gyp = contents[test_gyp_path]
     test_source = contents[test_source_path]
     pattern_path_test = contents[pattern_path_test_path]
+    config_test = contents[config_test_path]
+    conf_file_source = contents[conf_file_path]
 
     if "src/fxfile-tests/fxfile-tests.gyp:*" not in root_gyp:
         errors.append("fxfile.gyp: functional-test target is not in the solution dependency graph")
@@ -627,6 +633,8 @@ def validate_functional_test_wiring() -> list[str]:
         "'../base/md5.c'",
         "'../base/fnmatch.cpp'",
         "'pattern_path_tests.cpp'",
+        "'config_persistence_tests.cpp'",
+        "'../base/conf_file.cpp'",
         "'SubSystem': 1",
     )
     for token in required_gyp_tokens:
@@ -649,6 +657,7 @@ def validate_functional_test_wiring() -> list[str]:
         "shellreg::buildCommandKey",
         "testRenameTransformCore",
         "testPatternAndPathContracts",
+        "testConfigPersistenceContracts",
         "rename_core::splitBaseFileNameAndExt",
         "replaceText(",
         "insertFromLast(",
@@ -675,6 +684,30 @@ def validate_functional_test_wiring() -> list[str]:
         if token not in pattern_path_test:
             errors.append(
                 f"src/fxfile-tests/pattern_path_tests.cpp: missing path/filter token {token}"
+            )
+
+    for token in (
+        "base::ConfFileEx",
+        "CharSetUtf8",
+        "setValueS",
+        "setValueI",
+        "setValueB",
+        "load()",
+        "getSectionCount",
+        "writeCorruptFile",
+    ):
+        if token not in config_test:
+            errors.append(
+                f"src/fxfile-tests/config_persistence_tests.cpp: missing config token {token}"
+            )
+
+    for token in (
+        "ConfFile::ConfFile(void)\n    : mFlags(0)",
+        ", mFlags(0)",
+    ):
+        if token not in conf_file_source:
+            errors.append(
+                f"src/base/conf_file.cpp: ConfFile flag initialization regressed near {token}"
             )
 
     return errors
