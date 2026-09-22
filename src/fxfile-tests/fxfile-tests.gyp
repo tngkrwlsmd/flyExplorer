@@ -188,6 +188,8 @@
                 '../base/conf_file_ex.h',
                 '../base/version_compare.cpp',
                 '../base/version_compare.h',
+                '../base/upchecker_command.cpp',
+                '../base/upchecker_command.h',
             ],
         },
     ],

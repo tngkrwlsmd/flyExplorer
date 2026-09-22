@@ -649,6 +649,7 @@ def validate_functional_test_wiring() -> list[str]:
         "'../base/conf_file.cpp'",
         "'updater_contract_tests.cpp'",
         "'../base/version_compare.cpp'",
+        "'../base/upchecker_command.cpp'",
         "'SubSystem': 1",
     )
     for token in required_gyp_tokens:
@@ -731,6 +732,9 @@ def validate_functional_test_wiring() -> list[str]:
         "1, 99, 0",
         "2, 0, 999",
         "2.0.4-beta",
+        "buildUpcheckerConfDirArgument",
+        "buildUpcheckerStartupCommand",
+        "--conf_dir=",
     ):
         if token not in updater_test:
             errors.append(
@@ -747,6 +751,32 @@ def validate_functional_test_wiring() -> list[str]:
     for token in ("parseVersion", "mProgram.empty()", "mNewUrl.empty()"):
         if token not in metadata_source:
             errors.append(f"src/fxfile-upchecker/meta_data_file.cpp: missing metadata validation token {token}")
+
+    upchecker_manager_path = FXFILE_SRC / "upchecker_manager.cpp"
+    command_core_path = ROOT / "src" / "base" / "upchecker_command.cpp"
+    try:
+        upchecker_manager = upchecker_manager_path.read_text(
+            encoding="utf-8", errors="replace"
+        )
+        command_core = command_core_path.read_text(
+            encoding="utf-8", errors="replace"
+        )
+    except OSError as exc:
+        errors.append(f"updater command wiring cannot be read: {exc}")
+    else:
+        for token in (
+            '#include "upchecker_command.h"',
+            "base::buildUpcheckerConfDirArgument",
+            "base::buildUpcheckerStartupCommand",
+        ):
+            if token not in upchecker_manager:
+                errors.append(
+                    f"src/fxfile/upchecker_manager.cpp: missing updater command token {token}"
+                )
+        if 'XPR_STRING_LITERAL("--conf_dir=\\\"")' not in command_core:
+            errors.append(
+                "src/base/upchecker_command.cpp: quoted conf-dir argument contract changed"
+            )
 
     return errors
 
