@@ -17,6 +17,7 @@
 #include "file_operation_core.h"
 #include "shell_registry_core.h"
 #include "cmd/rename_transform_core.h"
+#include "functional_test_groups.h"
 #include "crc32.h"
 #include "md5.h"
 
@@ -792,6 +793,7 @@ int _tmain(void)
     report(sState, "missing shell source failure", testMissingSourceFailure(sState));
     report(sState, "long legacy path FileIo round-trip", testLongLegacyPath(sState));
     report(sState, "rename/format transform core", testRenameTransformCore());
+    report(sState, "pattern/path contracts", fxfile::tests::testPatternAndPathContracts());
     report(sState, "CRC32/MD5 known vectors", testHashKnownVectors());
     report(sState, "shell context-menu command contract", testShellRegistryCommandContract());
     report(sState, "recursive shell delete", testRecursiveDelete(sState));
