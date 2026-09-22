@@ -539,22 +539,64 @@ void DrawModernCfgEditFrame(HWND aHwnd)
     if (XPR_IS_NULL(sDC))
         return;
 
-    RECT sWindowRect = {0};
-    ::GetWindowRect(aHwnd, &sWindowRect);
+    RECT sWindowScreen = {0};
+    ::GetWindowRect(aHwnd, &sWindowScreen);
+
+    RECT sWindowRect =
+    {
+        0,
+        0,
+        sWindowScreen.right - sWindowScreen.left,
+        sWindowScreen.bottom - sWindowScreen.top,
+    };
+
+    RECT sClientRect = {0};
+    ::GetClientRect(aHwnd, &sClientRect);
+    POINT sClientOrigin = {0, 0};
+    ::ClientToScreen(aHwnd, &sClientOrigin);
     ::OffsetRect(
-        &sWindowRect,
-        -sWindowRect.left,
-        -sWindowRect.top);
+        &sClientRect,
+        sClientOrigin.x - sWindowScreen.left,
+        sClientOrigin.y - sWindowScreen.top);
+
+    // Cover the entire native non-client edge first. A one-pixel overlay is
+    // not sufficient for classic/themed EDIT controls because WS_BORDER /
+    // WS_EX_CLIENTEDGE can own more than one bright pixel at some DPIs.
+    HBRUSH sSurfaceBrush = ::CreateSolidBrush(sPalette.mElevated);
+    if (XPR_IS_NOT_NULL(sSurfaceBrush))
+    {
+        RECT sBand = sWindowRect;
+        sBand.bottom = max(sWindowRect.top, sClientRect.top);
+        ::FillRect(sDC, &sBand, sSurfaceBrush);
+
+        sBand = sWindowRect;
+        sBand.top = min(sWindowRect.bottom, sClientRect.bottom);
+        ::FillRect(sDC, &sBand, sSurfaceBrush);
+
+        sBand = sWindowRect;
+        sBand.top = sClientRect.top;
+        sBand.right = max(sWindowRect.left, sClientRect.left);
+        sBand.bottom = sClientRect.bottom;
+        ::FillRect(sDC, &sBand, sSurfaceBrush);
+
+        sBand = sWindowRect;
+        sBand.left = min(sWindowRect.right, sClientRect.right);
+        sBand.top = sClientRect.top;
+        sBand.bottom = sClientRect.bottom;
+        ::FillRect(sDC, &sBand, sSurfaceBrush);
+
+        ::DeleteObject(sSurfaceBrush);
+    }
 
     const COLORREF sBorder =
         (::GetFocus() == aHwnd) ?
         sPalette.mFocus :
         sPalette.mSeparator;
-    HBRUSH sBrush = ::CreateSolidBrush(sBorder);
-    if (XPR_IS_NOT_NULL(sBrush))
+    HBRUSH sBorderBrush = ::CreateSolidBrush(sBorder);
+    if (XPR_IS_NOT_NULL(sBorderBrush))
     {
-        ::FrameRect(sDC, &sWindowRect, sBrush);
-        ::DeleteObject(sBrush);
+        ::FrameRect(sDC, &sWindowRect, sBorderBrush);
+        ::DeleteObject(sBorderBrush);
     }
 
     ::ReleaseDC(aHwnd, sDC);
@@ -785,15 +827,10 @@ LRESULT CALLBACK ModernGroupBoxSubclassProc(
             RECT sClientRect = {0};
             ::GetClientRect(aHwnd, &sClientRect);
 
-            // Resource group boxes are layout containers, not independent
-            // cards. Painting their whole rectangle as an elevated surface
-            // created large black islands and covered the page hierarchy.
-            ::SetDCBrushColor(sDC, sPalette.mCard);
-            ::FillRect(
-                sDC,
-                &sClientRect,
-                static_cast<HBRUSH>(::GetStockObject(DC_BRUSH)));
-
+            // Resource group boxes are section labels, not independent
+            // opaque cards. The parent page owns the background. Keeping this
+            // child transparent avoids covering sibling radio/check controls
+            // whose legacy RC z-order places them inside the group rectangle.
             xpr_tchar_t sText[256] = {0};
             ::GetWindowText(aHwnd, sText, XPR_COUNT_OF(sText));
 
@@ -1016,6 +1053,16 @@ void CfgDlg::applyModernAppearanceToChild(CWnd *aWnd, HFONT aPreviousFont)
             // those siblings, but an opaque owner-draw child can. Keep the
             // layout container at the bottom of the sibling z-order so radio
             // buttons/check boxes remain visible (notably Layout > Style).
+            const LONG_PTR sExStyle =
+                ::GetWindowLongPtr(aWnd->GetSafeHwnd(), GWL_EXSTYLE);
+            if ((sExStyle & WS_EX_TRANSPARENT) == 0)
+            {
+                ::SetWindowLongPtr(
+                    aWnd->GetSafeHwnd(),
+                    GWL_EXSTYLE,
+                    sExStyle | WS_EX_TRANSPARENT);
+            }
+
             ::SetWindowPos(
                 aWnd->GetSafeHwnd(),
                 HWND_BOTTOM,
