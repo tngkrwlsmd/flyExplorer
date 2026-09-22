@@ -13,6 +13,7 @@
 #include "program_ass.h"
 
 #include "gui/DragImage.h"
+#include "gui/ModernUI.h"
 
 #include "main_frame.h"
 #include "explorer_view.h"
@@ -27,6 +28,102 @@ namespace fxfile
 namespace
 {
 const COLORREF IL_COLOR_MASK = RGB(255,0,255);
+
+const xpr_sint_t kFluentToolbarFrames[] = {
+    0, 1, 2, 8, 12, 13, 14, 37, 38
+};
+
+const xpr_byte_t kFluentToolbarSmallMasks[][32] = {
+#include "res/fluent/generated_toolbar_masks_small.inc"
+};
+
+const xpr_byte_t kFluentToolbarLargeMasks[][61] = {
+#include "res/fluent/generated_toolbar_masks_large.inc"
+};
+
+HICON createFluentToolbarIcon(
+    const xpr_byte_t *aMask,
+    xpr_sint_t aCellSize,
+    COLORREF aColor)
+{
+    if (XPR_IS_NULL(aMask) || aCellSize <= 0)
+        return XPR_NULL;
+
+    HDC sScreenDcHandle = ::GetDC(XPR_NULL);
+    if (XPR_IS_NULL(sScreenDcHandle))
+        return XPR_NULL;
+
+    CDC *sScreenDc = CDC::FromHandle(sScreenDcHandle);
+    CDC sMemoryDc;
+    CBitmap sBitmap;
+
+    const xpr_bool_t sReady =
+        sMemoryDc.CreateCompatibleDC(sScreenDc) != FALSE &&
+        sBitmap.CreateCompatibleBitmap(sScreenDc, aCellSize, aCellSize) != FALSE ?
+        XPR_TRUE :
+        XPR_FALSE;
+
+    if (XPR_IS_FALSE(sReady))
+    {
+        ::ReleaseDC(XPR_NULL, sScreenDcHandle);
+        return XPR_NULL;
+    }
+
+    CBitmap *sOldBitmap = sMemoryDc.SelectObject(&sBitmap);
+    sMemoryDc.FillSolidRect(0, 0, aCellSize, aCellSize, IL_COLOR_MASK);
+
+    const xpr_sint_t sPixelCount = aCellSize * aCellSize;
+    for (xpr_sint_t i = 0; i < sPixelCount; ++i)
+    {
+        if ((aMask[i / 8] & (0x80 >> (i % 8))) == 0)
+            continue;
+
+        const xpr_sint_t sX = i % aCellSize;
+        const xpr_sint_t sY = i / aCellSize;
+        sMemoryDc.SetPixelV(sX, sY, aColor);
+    }
+
+    sMemoryDc.SelectObject(sOldBitmap);
+    ::ReleaseDC(XPR_NULL, sScreenDcHandle);
+
+    CImageList sImageList;
+    if (sImageList.Create(
+            aCellSize,
+            aCellSize,
+            ILC_COLOR32 | ILC_MASK,
+            1,
+            1) == FALSE)
+    {
+        return XPR_NULL;
+    }
+
+    if (sImageList.Add(&sBitmap, IL_COLOR_MASK) < 0)
+        return XPR_NULL;
+
+    return sImageList.ExtractIcon(0);
+}
+
+void replaceFluentToolbarFrame(
+    CImageList &aImageList,
+    xpr_sint_t aFrame,
+    const xpr_byte_t *aMask,
+    xpr_sint_t aCellSize,
+    COLORREF aColor)
+{
+    if (XPR_IS_NULL(aImageList.m_hImageList) ||
+        aFrame < 0 ||
+        aFrame >= aImageList.GetImageCount())
+    {
+        return;
+    }
+
+    HICON sIcon = createFluentToolbarIcon(aMask, aCellSize, aColor);
+    if (XPR_IS_NULL(sIcon))
+        return;
+
+    ::ImageList_ReplaceIcon(aImageList.m_hImageList, aFrame, sIcon);
+    ::DestroyIcon(sIcon);
+}
 
 const xpr_byte_t TBSTYLE_1 = TBSTYLE_BUTTON;
 const xpr_byte_t TBSTYLE_2 = TBSTYLE_SEP;
@@ -117,6 +214,42 @@ void MainToolBar::Init(void)
 
     xpr_sint_t sCount = sizeof(kTbButtons) / sizeof(kTbButtons[0]);
     SetButtons(sCount, kTbButtons);
+}
+
+void MainToolBar::OnImageListsReloaded()
+{
+    const ui::ThemePalette sPalette = ui::ModernUI::getPalette();
+    const xpr_bool_t sSmall =
+        GetIconType() == TBI_SMALL ? XPR_TRUE : XPR_FALSE;
+    const xpr_sint_t sCellSize = XPR_IS_TRUE(sSmall) ? 16 : 22;
+    const xpr_size_t sCount =
+        sizeof(kFluentToolbarFrames) / sizeof(kFluentToolbarFrames[0]);
+
+    for (xpr_size_t i = 0; i < sCount; ++i)
+    {
+        const xpr_byte_t *sMask =
+            XPR_IS_TRUE(sSmall) ?
+            kFluentToolbarSmallMasks[i] :
+            kFluentToolbarLargeMasks[i];
+        const xpr_sint_t sFrame = kFluentToolbarFrames[i];
+
+        replaceFluentToolbarFrame(
+            m_imageListCold,
+            sFrame,
+            sMask,
+            sCellSize,
+            sPalette.mText);
+
+        if (XPR_IS_NOT_NULL(m_imageListHot.m_hImageList))
+        {
+            replaceFluentToolbarFrame(
+                m_imageListHot,
+                sFrame,
+                sMask,
+                sCellSize,
+                sPalette.mText);
+        }
+    }
 }
 
 xpr_bool_t MainToolBar::HasButtonText(xpr_uint_t aId)
