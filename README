@@ -217,13 +217,29 @@ palette-backed rebar background/text/non-client borders for both menu and toolba
 rebars. BCMenu's actively used Windows8/Standard owner-draw popup paths also use
 ThemePalette in dark mode, while Light and High Contrast retain system/native
 colors. The exact-Windows-XP empty-theme compatibility path remains unchanged.
-Broader dialog modernization and icon asset modernization remain separate work.
+Broader dialog modernization now has shared coverage for the major reusable
+dialog families. CResizingDialog supplies current-DPI system typography,
+ThemePalette-backed dark surfaces/edit-list colors, common-control theme
+association, and settings/theme/DPI refresh to the resizable command-dialog
+family. TitleDlg applies the same foundation to create/rename/shortcut/file-list
+dialogs while keeping its custom descriptive header and drawing resource icons at
+a DPI-scaled 32 logical pixels. The configuration UI now shares the same contract
+through CfgDlg pages and CfgMainDlg, including palette-backed config-tree colors.
 
-The MenuBar/Rebar/Toolbar change has only static source review in this
-environment. Windows local_ci quick/x64 execution and actual Light/Dark/High
-Contrast, DPI, menu keyboard tracking, toolbar button/drop-down/chevron states,
-rebar gripper/band/resize rendering, tooltip appearance, and interactive behavior
-remain separate manual evidence and must not be treated as PASS.
+ModernUI's top-level frame helper now follows the actual ThemePalette light/dark
+state instead of requesting a dark frame for every non-High-Contrast window.
+ModernUI also exposes a DPI-aware resource-icon loader, and the command dialogs
+that owned the legacy IDR_MAINFRAME title icon now load that icon after HWND
+creation at the current monitor DPI. This modernizes icon loading/scaling only;
+the legacy .ico/bitmap artwork itself has not been redrawn or replaced.
+
+The dialog/icon changes have only static source review in this environment.
+Windows local_ci quick/x64 execution and actual Light/Dark/High Contrast,
+100/125/150/200% DPI, representative dialog controls, resize/config behavior,
+keyboard/IME behavior, and title-icon visual sharpness remain separate manual
+evidence and must not be treated as PASS. Direct-CDialog outliers outside the
+CResizingDialog/TitleDlg/CfgDlg families and actual icon/bitmap artwork refresh
+remain follow-up visual-modernization work.
 
 Generate the Visual Studio Solution
 -----------------------------------

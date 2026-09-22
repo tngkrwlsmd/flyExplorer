@@ -77,7 +77,7 @@
     }
   ],
   "review": {
-    "reviewed_revision": "85161d2d8b07b9d8d6337edfb9026d97f6c3a104",
+    "reviewed_revision": "fe30c448f95aeaa69f5322f5f5863c4c5cf47b8b",
     "reviewed_at": "2026-09-22",
     "reviewed_paths": [
       "README",
@@ -227,7 +227,15 @@
 - BCMenu owner-draw popup의 실제 활성 경로인 Windows8/Standard style만 ThemePalette-aware하게 변경했다. dark/non-HC에서 background/separator/normal text/disabled text/selection을 mSurface/mSeparator/mText/mSecondaryText/mSelection/mSelectionText로 처리하며 Light/High Contrast는 기존 system-color 경로를 유지한다. 사용되지 않는 legacy Office/Vista drawing path는 건드리지 않았다.
 - Menu/Rebar/Toolbar 구현 정적 범위 검토는 PASS: 변경 파일은 gui/rebar/MenuBar.h/.cpp, ToolBarEx.h/.cpp, SizableReBar.h/.cpp, gui/BCMenu.cpp에 한정되고 각 ModernUI 사용 translation unit의 direct include, handler declaration/definition/message-map 일치, toolbar/popup/rebar High Contrast fallback, active BCMenu draw path와 dark separator를 확인했다. generated project, ModernUI palette 구조, build/validate_source_invariants.py는 변경하지 않았다.
 - 이 실행 환경에서는 Windows/MSVC local_ci.bat quick 및 local_ci.bat x64를 실행하지 못했으므로 둘 다 NOT TESTED다. 실제 Windows Light/Dark/High Contrast, 100/125/150/200% DPI, menu hot/selected/disabled, accelerator/menu tracking, toolbar hot/checked/disabled/dropdown, chevron popup, rebar gripper/band border/resize, tooltip appearance와 interactive behavior는 NOT TESTED다.
-- 다음 UI 현대화 범위는 broader dialog modernization과 icon asset modernization을 별도 단위로 정리한다.
+- broader dialog modernization의 공통 기반을 완료했다. CResizingDialog는 검색/히스토리/드라이브/파일 작업/CRC/배치/동기화 등 다수 modeless/resizable command dialog가 공유하는 base로서 system UI font, ThemePalette surface/window background, WM_CTLCOLOR 기반 edit/list/static/button 색 보정, documented Explorer common-control association, settings/syscolor/theme/DPI refresh를 공통 제공한다. Light/High Contrast는 native/system rendering으로 fallback하며 기존 resize/layout, command routing, per-dialog custom font를 보존한다.
+- TitleDlg 기반(create/rename/shortcut/file-list 계열)은 기존 custom header ownership을 유지하면서 header background/text/separator를 ThemePalette로 전환하고 32 logical-pixel description icon을 current-DPI 크기로 로드/그린다. resource-ID icon은 HWND 생성 이후 ModernUI::loadIconResource로 로드하고 DPI 변경 시 다시 로드하며, caller가 전달한 shell/external HICON은 기존 ownership 계약을 유지한다.
+- 설정 UI는 CfgDlg 공통 page base와 CfgMainDlg host를 현대화했다. 약 30개의 CfgDlg-derived page는 공통 system font/dark surface/edit-list color/theme refresh를 상속하고, CfgMainDlg는 window-frame theme, palette-backed host surface, config TreeCtrl background/text/line 및 image-list background를 갱신한다. 기존 config tree 구조, apply/default semantics, dynamically-created page lifecycle은 변경하지 않았다.
+- ModernUI::applyWindowFrameTheme는 이제 실제 ThemePalette mDark 값을 따라 DWMWA_USE_IMMERSIVE_DARK_MODE를 true/false로 설정하여 Light mode에서 dark title bar를 강제하지 않는다. ModernUI::loadIconResource는 logical icon size를 current window DPI로 scale해서 LoadImage(IMAGE_ICON)로 로드하는 공통 helper다.
+- 기존 IDR_MAINFRAME title icon을 소유하던 CResizingDialog 계열 18개 command dialog는 constructor-time LoadIcon 대신 OnInitDialog 시점의 DPI-aware ModernUI::loadIconResource 경로로 전환했다. icon handle ownership/DestroyIcon 계약은 유지한다.
+- 이번 icon modernization은 resource artwork 자체를 새로 그리거나 교체한 작업이 아니라 DPI-aware loading/scaling 및 legacy title-icon 사용 경로 정리다. toolbar/config-tree/legacy bitmap strip 및 실제 .ico artwork 재디자인은 별도 visual-asset 작업으로 남는다.
+- dialog/icon 구현 정적 범위 검토는 PASS: ModernUI 사용 translation unit direct include, CResizingDialog/TitleDlg/CfgDlg/CfgMainDlg handler declaration/definition/message-map 연결, reusable brush lifetime, High Contrast fallback, current-palette frame mode, DPI-aware icon helper와 migrated title-icon call sites를 확인했다. generated project와 build/validate_source_invariants.py는 변경하지 않았다.
+- 이 실행 환경에서는 Windows/MSVC local_ci.bat quick 및 local_ci.bat x64를 실행하지 못했으므로 둘 다 NOT TESTED다. 실제 Windows Light/Dark/High Contrast, 100/125/150/200% DPI, representative resizing/title/config dialogs, edit/list/button/static rendering, title icon sharpness, focus/keyboard/IME, resize/config apply behavior는 NOT TESTED다.
+- 남은 UI modernization은 CResizingDialog/TitleDlg/CfgDlg 계층 밖의 direct CDialog outlier와 actual icon/bitmap artwork refresh를 별도 시각 검증 단위로 처리한다.
 
 ## Recommended verification
 
