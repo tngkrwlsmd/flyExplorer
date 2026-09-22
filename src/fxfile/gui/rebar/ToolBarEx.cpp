@@ -562,22 +562,8 @@ void CToolBarEx::ApplyModernAppearance()
     if (!::IsWindow(m_hWnd))
         return;
 
-    const fxfile::ui::ThemePalette sPalette = fxfile::ui::ModernUI::getPalette();
-
     if (!WinAppEx::GetInstance()->IsWinXP())
         fxfile::ui::ModernUI::applyExplorerControlTheme(m_hWnd);
-
-    const COLORREF sBackColor =
-        XPR_IS_TRUE(sPalette.mHighContrast) ?
-        ::GetSysColor(COLOR_BTNFACE) :
-        sPalette.mSurface;
-    const COLORREF sTextColor =
-        XPR_IS_TRUE(sPalette.mHighContrast) ?
-        ::GetSysColor(COLOR_BTNTEXT) :
-        sPalette.mText;
-
-    GetToolBarCtrl().SendMessage(TB_SETBKCOLOR, 0, sBackColor);
-    GetToolBarCtrl().SendMessage(TB_SETTEXTCOLOR, 0, sTextColor);
 
     CToolTipCtrl* sToolTip = GetToolBarCtrl().GetToolTips();
     if (sToolTip != NULL && ::IsWindow(sToolTip->m_hWnd))
@@ -1404,20 +1390,6 @@ int CToolBarPopup::OnCreate( LPCREATESTRUCT lpCreateStruct )
         if (sToolTip != NULL && ::IsWindow(sToolTip->m_hWnd))
             fxfile::ui::ModernUI::applyExplorerControlTheme(sToolTip->m_hWnd);
     }
-
-    const fxfile::ui::ThemePalette sPalette = fxfile::ui::ModernUI::getPalette();
-    m_tbCtrl.SendMessage(
-        TB_SETBKCOLOR,
-        0,
-        XPR_IS_TRUE(sPalette.mHighContrast) ?
-            ::GetSysColor(COLOR_BTNFACE) :
-            sPalette.mSurface);
-    m_tbCtrl.SendMessage(
-        TB_SETTEXTCOLOR,
-        0,
-        XPR_IS_TRUE(sPalette.mHighContrast) ?
-            ::GetSysColor(COLOR_BTNTEXT) :
-            sPalette.mText);
 
     // There could be only two modes, depending on text options
     // of the original toolbar: with or without text labels.
