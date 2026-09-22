@@ -9,6 +9,7 @@
 
 #include "stdafx.h"
 #include "format_insert.h"
+#include "rename_transform_core.h"
 #include "xml.h"
 
 #ifdef _DEBUG
@@ -66,34 +67,20 @@ void FormatInsert::rename(RenameContext &aContext) const
     switch (mPosType)
     {
     case InsertPosTypeAtFirst:
-        aContext.mNewFileName.insert(0, mString);
+        rename_core::insertAtFirst(aContext.mNewFileName, mString);
         break;
 
     case InsertPosTypeAtLast:
-        aContext.mNewFileName += mString;
+        rename_core::insertAtLast(aContext.mNewFileName, mString);
         break;
 
     case InsertPosTypeFromLast:
-        {
-            const xpr_size_t sLength = aContext.mNewFileName.length();
-            xpr_size_t sOffset = sLength - mPos;
-
-            if ((xpr_sint_t)sLength <= mPos)
-            {
-                sOffset = 0;
-            }
-
-            aContext.mNewFileName.insert(sOffset, mString);
-            break;
-        }
+        rename_core::insertFromLast(aContext.mNewFileName, mPos, mString);
+        break;
 
     default:
     case InsertPosTypeFromFirst:
-        {
-            xpr_sint_t sOffset = (mPos < 0) ? 0 : mPos;
-
-            aContext.mNewFileName.insert(sOffset, mString);
-        }
+        rename_core::insertFromFirst(aContext.mNewFileName, mPos, mString);
         break;
     }
 }
