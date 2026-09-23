@@ -1030,6 +1030,12 @@ xpr_bool_t SearchResultCtrl::canInvokeCommandSelf(const xpr_tchar_t *aVerb)
     xpr_bool_t sResult = XPR_FALSE;
 
     xpr_sint_t sIndex = GetSelectionMark();
+    if (sIndex < 0)
+    {
+        POSITION sPosition = GetFirstSelectedItemPosition();
+        if (XPR_IS_NOT_NULL(sPosition))
+            sIndex = GetNextSelectedItem(sPosition);
+    }
 
     if (_tcsicmp(aVerb, CMID_VERB_OPEN) == 0)
     {
@@ -1052,6 +1058,15 @@ void SearchResultCtrl::invokeCommandSelf(ContextMenu &aContextMenu, xpr_uint_t a
     XPR_ASSERT(aVerb != XPR_NULL);
 
     xpr_sint_t sIndex = GetSelectionMark();
+    if (sIndex < 0)
+    {
+        POSITION sPosition = GetFirstSelectedItemPosition();
+        if (XPR_IS_NOT_NULL(sPosition))
+            sIndex = GetNextSelectedItem(sPosition);
+    }
+
+    if (sIndex < 0)
+        return;
 
     if (aId == CMID_OPEN_PARENT_FOLDER)
     {
@@ -1342,7 +1357,16 @@ void SearchResultCtrl::execute(xpr_sint_t aIndex)
     if (aIndex == -1)
     {
         aIndex = GetSelectionMark();
+        if (aIndex < 0)
+        {
+            POSITION sPosition = GetFirstSelectedItemPosition();
+            if (XPR_IS_NOT_NULL(sPosition))
+                aIndex = GetNextSelectedItem(sPosition);
+        }
     }
+
+    if (aIndex < 0)
+        return;
 
     SrItemData *sSrItemData = (SrItemData *)GetItemData(aIndex);
     if (XPR_IS_NULL(sSrItemData))
