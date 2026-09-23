@@ -21,6 +21,7 @@
 
 #include "cmd/input_dlg.h"
 #include "command_string_table.h"
+#include "gui/ModernUI.h"
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -87,6 +88,8 @@ BEGIN_MESSAGE_MAP(FileScrapPane, super)
     ON_WM_PAINT()
     ON_WM_SETFOCUS()
     ON_WM_SETTINGCHANGE()
+    ON_WM_SYSCOLORCHANGE()
+    ON_MESSAGE(WM_THEMECHANGED, OnThemeChanged)
     ON_WM_INITMENUPOPUP()
     ON_WM_MENUCHAR()
     ON_WM_MEASUREITEM()
@@ -132,6 +135,20 @@ xpr_sint_t FileScrapPane::OnCreate(LPCREATESTRUCT lpCreateStruct)
             ::DestroyIcon(sIcon);
 
             mGroupComboBox->SetImageList(&mGroupImgList);
+            mGroupComboBox->SetFont(&mFont, XPR_TRUE);
+
+            const ui::ThemePalette sPalette = ui::ModernUI::getPalette();
+            if (XPR_IS_TRUE(sPalette.mDark) &&
+                XPR_IS_FALSE(sPalette.mHighContrast))
+            {
+                ui::ModernUI::resetControlTheme(
+                    mGroupComboBox->GetSafeHwnd());
+            }
+            else
+            {
+                ui::ModernUI::applyExplorerControlTheme(
+                    mGroupComboBox->GetSafeHwnd());
+            }
         }
         else
         {
@@ -604,14 +621,27 @@ void FileScrapPane::OnToolbarDropDown(NMHDR *aNmHdr, LRESULT *aLResult)
 
 void FileScrapPane::createFont(void)
 {
-    NONCLIENTMETRICS sNonClientMetrics = {0};
-    sNonClientMetrics.cbSize = sizeof(sNonClientMetrics);
-    ::SystemParametersInfo(SPI_GETNONCLIENTMETRICS, sizeof(sNonClientMetrics), &sNonClientMetrics, 0);
-
-    LOGFONT sLogFont = sNonClientMetrics.lfMenuFont;
+    LOGFONT sLogFont = {0};
+    if (XPR_IS_FALSE(ui::ModernUI::getUIFont(sLogFont, GetSafeHwnd())))
+    {
+        NONCLIENTMETRICS sNonClientMetrics = {0};
+        sNonClientMetrics.cbSize = sizeof(sNonClientMetrics);
+        ::SystemParametersInfo(
+            SPI_GETNONCLIENTMETRICS,
+            sizeof(sNonClientMetrics),
+            &sNonClientMetrics,
+            0);
+        sLogFont = sNonClientMetrics.lfMessageFont;
+    }
 
     mFont.CreateFontIndirect(&sLogFont);
     SetFont(&mFont, XPR_TRUE);
+
+    if (XPR_IS_NOT_NULL(mGroupComboBox) &&
+        XPR_IS_NOT_NULL(mGroupComboBox->GetSafeHwnd()))
+    {
+        mGroupComboBox->SetFont(&mFont, XPR_TRUE);
+    }
 }
 
 void FileScrapPane::recreateFont(void)
@@ -633,8 +663,15 @@ void FileScrapPane::OnPaint(void)
     CRect sClientRect;
     GetClientRect(&sClientRect);
 
-    COLORREF sTextColor = ::GetSysColor(COLOR_BTNTEXT);
-    COLORREF sBkgndColor = ::GetSysColor(COLOR_BTNFACE);
+    const ui::ThemePalette sPalette = ui::ModernUI::getPalette();
+    const COLORREF sTextColor =
+        XPR_IS_TRUE(sPalette.mHighContrast) ?
+        ::GetSysColor(COLOR_BTNTEXT) :
+        sPalette.mText;
+    const COLORREF sBkgndColor =
+        XPR_IS_TRUE(sPalette.mHighContrast) ?
+        ::GetSysColor(COLOR_BTNFACE) :
+        sPalette.mChrome;
 
     CDC sMemDC;
     sMemDC.CreateCompatibleDC(&sPaintDC);
@@ -666,9 +703,38 @@ void FileScrapPane::OnSettingChange(xpr_uint_t aFlags, const xpr_tchar_t *aSecti
 {
     recreateFont();
 
+    if (XPR_IS_NOT_NULL(mGroupComboBox) &&
+        XPR_IS_NOT_NULL(mGroupComboBox->GetSafeHwnd()))
+    {
+        const ui::ThemePalette sPalette = ui::ModernUI::getPalette();
+        if (XPR_IS_TRUE(sPalette.mDark) &&
+            XPR_IS_FALSE(sPalette.mHighContrast))
+        {
+            ui::ModernUI::resetControlTheme(mGroupComboBox->GetSafeHwnd());
+        }
+        else
+        {
+            ui::ModernUI::applyExplorerControlTheme(
+                mGroupComboBox->GetSafeHwnd());
+        }
+    }
+
     Invalidate();
+    recalcLayout();
 
     super::OnSettingChange(aFlags, aSection);
+}
+
+void FileScrapPane::OnSysColorChange(void)
+{
+    super::OnSysColorChange();
+    Invalidate();
+}
+
+LRESULT FileScrapPane::OnThemeChanged(WPARAM aWParam, LPARAM aLParam)
+{
+    Invalidate();
+    return 0;
 }
 
 FileScrapCtrl *FileScrapPane::getFileScrapCtrl(void) const
