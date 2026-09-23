@@ -77,7 +77,7 @@
     }
   ],
   "review": {
-    "reviewed_revision": "a7b22fd8332ed59da4e75558cb67d8ade6382183",
+    "reviewed_revision": "bd2a83a695ae2e80517c9e75a7323010c9263f53",
     "reviewed_at": "2026-09-23",
     "reviewed_paths": [
       "AGENTS.md",
@@ -303,7 +303,10 @@
 - `CModernDialog`, `CResizingDialog`, `TitleDlg`가 공유하는 child Edit/Combo/List/Tree/Tab 경로도 Dark/non-High-Contrast에서 Explorer themed painting을 disable하고 palette-owned surface를 유지한다. Light/System/High Contrast는 documented Explorer/system rendering 경로를 유지한다.
 - screenshot-driven follow-up에서 Preferences hang의 별도 root cause를 확인했다. `CfgDlg`가 GROUPBOX를 `HWND_BOTTOM`으로 이동하면서 live `GetNextWindow()` sibling chain을 순회해 복수 GROUPBOX에서 같은 HWND를 반복 방문할 수 있었다. 이제 각 parent의 child HWND를 먼저 snapshot한 뒤 z-order/style을 변경한다.
 - `ListCtrlEx` / `TreeCtrlEx`의 Vista-enhanced behavior와 visual theme ownership을 분리했다. Dark/non-High-Contrast에서는 Explorer association을 재도입하지 않으며, ListCtrlEx의 `WM_THEMECHANGED`는 repaint/header refresh만 하고 retheme하지 않는다.
-- top `CMenuBar`는 Dark path에서 `ToolbarWindow32`의 default text renderer에 의존하지 않고 ThemePalette 색으로 직접 text를 그린 뒤 `CDRF_SKIPDEFAULT`로 native black-text fallback을 차단한다.
+- top `CMenuBar`는 Dark path에서 `ToolbarWindow32`의 default text renderer에 의존하지 않고 ThemePalette 색으로 직접 text를 그린 뒤 `CDRF_SKIPDEFAULT`로 native black-text fallback을 차단한다. custom-draw `dwItemSpec`이 command id로 resolve되지 않는 legacy/index-shaped 경로도 button-index fallback으로 explicit text paint ownership을 유지한다.
+- Filtering settings list는 body/text-background/header를 ThemePalette로 직접 소유하며 historical pure-black default filter text만 Dark에서 automatic `mText`로 취급한다. `FlatHeaderCtrl`가 native white header를 대체한다.
+- AddressBar는 대응 `DrawItem`이 없던 legacy `CBS_OWNERDRAWFIXED`를 제거하고 outer ComboBoxEx의 `WM_CTLCOLOR`에서도 edit/list/static palette brush를 라우팅한다. 기존 inner ComboBox subclass 경로는 유지한다.
+- main toolbar는 disabled bitmap resource가 없는 Dark 상태에서 cold image list를 duplicate한 explicit disabled list를 사용하며 Fluent migrated frame은 `mSecondaryText` glyph로 교체해 Cut/Copy/Undo 같은 disabled command도 식별 가능하게 한다.
 - NSIS installer 자체는 Program Files/HKLM 작업 때문에 계속 elevated이지만 finish-page product run과 `.onInstSuccess` launcher auto-start를 제거했다. 설치된 fxfile/launcher는 이후 normal user shell/shortcut 또는 제품 설정 경로에서 시작해 product `asInvoker` contract가 elevated installer parent에 의해 우회되지 않도록 한다.
 - 위 회귀 경로에는 `build/validate_source_invariants.py`의 deterministic guard가 추가되어 있으며 installer smoke도 elevated auto-launch 부재를 검사한다. 상세 root cause와 commit mapping은 `docs/development/ERROR_HISTORY.md`에 기록되어 있다.
 - 최신 변경 이후 connector 기반 source inspection은 수행했지만 `python build/validate_source_invariants.py`, MSVC compile/link, `local_ci.bat x64`, standard-user/elevated-instance interop, Windows 11 Light/Dark/System/High Contrast 100/125/150/200% DPI visual/IME/runtime 검증은 이 환경에서 실행하지 않았다. 따라서 해당 evidence는 계속 **NOT TESTED**다.
