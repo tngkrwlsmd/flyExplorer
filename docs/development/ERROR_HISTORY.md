@@ -1464,3 +1464,36 @@
 - Connector source/validator audit after fix: PASS — contrast-floor helper exists and both menu renderer paths use it.
 - Windows rebuilt screenshot after `1ef8a78b`: **NOT RETESTED**.
 
+---
+
+## 2026-09-23 — Rebar print composition could overwrite the final MenuBar overlay
+
+**오류 발생**
+- 사용자가 revision `cf277791`를 실제 rebuild한 screenshot에서도 top menu text가 여전히 어둡다고 재현했다.
+- 해당 revision에는 Dark contrast-floor fallback RGB(238,238,238) / RGB(176,176,176)이 포함돼 있었지만 screenshot menu region에는 두 fallback 색이 한 픽셀도 나타나지 않았고 foreground 최대 채널은 약 109였다.
+
+**원인 진단**
+- palette/contrast 계산이 잘못된 것이 아니라 새 foreground가 최종 visible renderer가 아니었다.
+- `CMenuBar` toolbar는 rebar band child로 호스팅되며, normal `WM_PAINT` 이후에도 parent/rebar composition을 위한 `WM_PRINTCLIENT` 또는 client-inclusive `WM_PRINT` 경로가 native toolbar pixels를 다시 그릴 수 있다.
+- 기존 final overlay는 `WM_PAINT`에만 있었으므로 이 후속 합성 경로를 소유하지 못했다.
+- 동시에 top-level menu disabled 판정이 toolbar `TBSTATE_ENABLED`에 의존해 실제 `HMENU` state와 다를 여지도 있었다.
+
+**해결 방법**
+- `DrawFinalMenuOverlay(CDC &)`로 final text/background/state drawing을 단일화했다.
+- `OnPaint()`는 native toolbar paint 후 해당 overlay를 호출한다.
+- `CMenuBar::WindowProc()`는 base `CToolBar::WindowProc()`를 먼저 완료한 뒤 `WM_PRINTCLIENT`와 `WM_PRINT + PRF_CLIENT` HDC에도 동일 overlay를 마지막으로 적용한다.
+- top-level enabled/disabled 상태는 `m_pMenu->GetMenuState(..., MF_BYPOSITION)`의 `MF_DISABLED | MF_GRAYED`를 기준으로 판단한다.
+- `MenuBar.h`를 validator source map에 별도 등록해 header declaration과 cpp implementation contract를 분리했고, `LPARAM` print flags는 pointer-width를 유지한 채 검사한다.
+
+**재발 방지**
+- rebar/toolbar custom surfaces는 `WM_PAINT`만 final renderer로 가정하지 않고 `WM_PRINTCLIENT` / `WM_PRINT` composition contract도 함께 보호한다.
+- top-level menu availability는 toolbar command-update state 대신 source-of-truth `HMENU` item state로 판단한다.
+- validator에서 header token을 cpp source에서 찾지 않도록 source registration을 명시하고, function-local source-key completeness를 checkpoint에서 재검사한다.
+
+**검증 상태**
+- User rebuilt screenshot before fix: FAIL on revision `cf277791`.
+- Connector static cross-check after fix: PASS — common overlay, normal-paint call, post-base print-client/print calls, HMENU disabled-state lookup and contrast resolver all present.
+- Connector validator source-map cross-check: PASS — missing `contents["..."]` keys 0.
+- `python build/validate_source_invariants.py`: **NOT RETESTED** on the user's Windows checkout after `25856539`.
+- `local_ci.bat x64`, VS 2026 build and rebuilt runtime screenshot: **NOT RETESTED** after `25856539`.
+
