@@ -2684,6 +2684,7 @@ def validate_win11_stability_regressions() -> list[str]:
         "m_crColors[BTNST_COLOR_BK_IN]  = sPalette.mHover",
         "m_crColors[BTNST_COLOR_FG_OUT] = sPalette.mText",
         "pDC->SetTextColor(sPalette.mSecondaryText)",
+        "CBrush sBorderBrush(sPalette.mBorder);",
         "ON_MESSAGE(WM_THEMECHANGED, OnThemeChanged)",
         "SetDefaultColors(FALSE);",
     ):
@@ -2703,6 +2704,7 @@ def validate_win11_stability_regressions() -> list[str]:
         "m_clrBackground = sPalette.mElevated",
         "m_clrText = sPalette.mText",
         "fxfile::ui::ModernUI::getUIFont(sLogFont, GetSafeHwnd())",
+        "fxfile::ui::ModernUI::getUIFont(\n                sPopupLogFont,\n                GetSafeHwnd())",
     ):
         if token not in colour_picker:
             errors.append(
