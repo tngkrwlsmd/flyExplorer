@@ -3220,6 +3220,42 @@ def validate_win11_stability_regressions() -> list[str]:
                 f"src/fxfile/main_frame.cpp: app theme switch must refresh every UI-thread top-level window; missing {token}"
             )
 
+    main_frame_source = contents["main_frame"]
+    splitter_create_start = main_frame_source.find(
+        "CWnd *MainFrame::onSplitterPaneCreate"
+    )
+    splitter_create_end = main_frame_source.find(
+        "\nvoid MainFrame::onSplitterPaneDestroy",
+        splitter_create_start,
+    )
+    splitter_create_block = (
+        main_frame_source[splitter_create_start:splitter_create_end]
+        if splitter_create_start >= 0
+        and splitter_create_end > splitter_create_start
+        else ""
+    )
+    if not splitter_create_block:
+        errors.append(
+            "src/fxfile/main_frame.cpp: splitter pane creation block is missing"
+        )
+    else:
+        if "DWORD sStyle = WS_CHILD | WS_VISIBLE | WS_BORDER;" in splitter_create_block:
+            errors.append(
+                "src/fxfile/main_frame.cpp: modern Explorer/Folder views must not keep an unconditional WS_BORDER"
+            )
+        if splitter_create_block.count("DWORD sStyle = WS_CHILD | WS_VISIBLE;") < 2:
+            errors.append(
+                "src/fxfile/main_frame.cpp: Explorer/Folder modern borderless view styles are missing"
+            )
+        if splitter_create_block.count("if (WinAppEx::GetInstance()->IsWinXP())") < 2:
+            errors.append(
+                "src/fxfile/main_frame.cpp: legacy view border must be isolated to XP compatibility paths"
+            )
+        if splitter_create_block.count("sStyle |= WS_BORDER;") < 2:
+            errors.append(
+                "src/fxfile/main_frame.cpp: XP view-border compatibility contract is incomplete"
+            )
+
     for token in (
         "GetTextMetrics(&sTextMetric)",
         "sTextMetric.tmHeight",

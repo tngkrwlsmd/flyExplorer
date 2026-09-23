@@ -476,7 +476,9 @@ CWnd *MainFrame::onSplitterPaneCreate(Splitter &aSplitter, xpr_sint_t aRow, xpr_
 
             sFolderView->setObserver(dynamic_cast<FolderViewObserver *>(this));
 
-            DWORD sStyle = WS_CHILD | WS_VISIBLE | WS_BORDER;
+            DWORD sStyle = WS_CHILD | WS_VISIBLE;
+            if (WinAppEx::GetInstance()->IsWinXP())
+                sStyle |= WS_BORDER;
             xpr_uint_t sId = AFX_IDW_FOLDER_VIEW;
 
             if (sFolderView->Create(XPR_NULL, XPR_NULL, sStyle, CRect(0, 0, 0, 0), this, sId, XPR_NULL) == XPR_FALSE)
@@ -507,7 +509,9 @@ CWnd *MainFrame::onSplitterPaneCreate(Splitter &aSplitter, xpr_sint_t aRow, xpr_
     sExplorerView->setObserver(dynamic_cast<ExplorerViewObserver *>(this));
     sExplorerView->setViewIndex(sViewIndex);
 
-    DWORD sStyle = WS_CHILD | WS_VISIBLE | WS_BORDER;
+    DWORD sStyle = WS_CHILD | WS_VISIBLE;
+    if (WinAppEx::GetInstance()->IsWinXP())
+        sStyle |= WS_BORDER;
     xpr_uint_t sId = AFX_IDW_EXPLORER_VIEW + aRow * sMaxColumnCount + aColumn;
 
     if (sExplorerView->Create(XPR_NULL, XPR_NULL, sStyle, CRect(0, 0, 0, 0), this, sId, XPR_NULL) == XPR_FALSE)
