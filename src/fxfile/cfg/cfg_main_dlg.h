@@ -53,6 +53,7 @@ protected:
     static xpr_sint_t mLastShowCfg;
 
     xpr_bool_t mChanging;
+    xpr_bool_t mRefreshingModernAppearance;
 
     Option::Config mNewConfig;
 
