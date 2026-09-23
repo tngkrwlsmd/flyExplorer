@@ -303,6 +303,19 @@ xpr_sint_t MainFrame::OnCreate(LPCREATESTRUCT aCreateStruct)
     if (super::OnCreate(aCreateStruct) == -1)
         return -1;
 
+    // A normal-integrity second launch may need to activate an already
+    // elevated fxfile instance when single-process mode is enabled. UIPI
+    // blocks custom/registered messages from lower integrity by default, so
+    // explicitly allow only this data-free activation message on the main
+    // window. This keeps the hand-off working without elevating the caller.
+    CHANGEFILTERSTRUCT sMessageFilter = {0};
+    sMessageFilter.cbSize = sizeof(sMessageFilter);
+    ::ChangeWindowMessageFilterEx(
+        m_hWnd,
+        WM_SINGLE_PROCESS,
+        MSGFLT_ALLOW,
+        &sMessageFilter);
+
     ui::ModernUI::applyWindowFrameTheme(m_hWnd);
 
     if (mDropTarget.Register(this) == XPR_FALSE)
