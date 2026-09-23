@@ -909,6 +909,7 @@ CfgDlg::CfgDlg(xpr_uint_t aResourceId, CWnd *aParentWnd)
     , mObserver(XPR_NULL)
     , mSurfaceColor(CLR_INVALID)
     , mWindowColor(CLR_INVALID)
+    , mRefreshingModernAppearance(XPR_FALSE)
     , mResourceId(aResourceId), mCfgIndex(0)
 {
 }
@@ -1112,8 +1113,12 @@ void CfgDlg::applyModernAppearanceToChildren(HFONT aPreviousFont)
 
 void CfgDlg::refreshModernAppearance(void)
 {
-    if (XPR_IS_NULL(m_hWnd))
+    if (XPR_IS_NULL(m_hWnd) || XPR_IS_TRUE(mRefreshingModernAppearance))
         return;
+
+    // Child SetWindowTheme calls can synchronously emit WM_THEMECHANGED.
+    // Keep one refresh traversal active per settings page.
+    mRefreshingModernAppearance = XPR_TRUE;
 
     const ui::ThemePalette sPalette = ui::ModernUI::getPalette();
     const HFONT sPreviousFont = reinterpret_cast<HFONT>(
@@ -1159,6 +1164,8 @@ void CfgDlg::refreshModernAppearance(void)
         XPR_NULL,
         XPR_NULL,
         RDW_INVALIDATE | RDW_ERASE | RDW_ALLCHILDREN);
+
+    mRefreshingModernAppearance = XPR_FALSE;
 }
 
 xpr_bool_t CfgDlg::OnEraseBkgnd(CDC *aDC)
@@ -1221,7 +1228,7 @@ void CfgDlg::OnSysColorChange(void)
 LRESULT CfgDlg::OnThemeChanged(WPARAM aWParam, LPARAM aLParam)
 {
     refreshModernAppearance();
-    return Default();
+    return 0;
 }
 
 LRESULT CfgDlg::OnDpiChanged(WPARAM aWParam, LPARAM aLParam)
