@@ -129,6 +129,7 @@
 #include "ColourPickerXP.h"
 
 #include "MemDC.h"
+#include "ModernUI.h"
 
 #include <math.h>
 
@@ -735,6 +736,15 @@ LRESULT CColourPickerXP::OnMouseLeave(WPARAM wParam, LPARAM lParam)
 //***********************************************************************
 void CColourPickerXP::DrawHotArrow(BOOL bHot)
 {
+    const fxfile::ui::ThemePalette sPalette =
+        fxfile::ui::ModernUI::getPalette();
+    if (XPR_IS_TRUE(sPalette.mDark) &&
+        XPR_IS_FALSE(sPalette.mHighContrast))
+    {
+        Invalidate(FALSE);
+        return;
+    }
+
 #ifdef _THEME_H_
     if (m_xpCombo.IsAppThemed())
     {
@@ -764,6 +774,11 @@ void CColourPickerXP::DrawItem(LPDRAWITEMSTRUCT lpDrawItemStruct)
     CRect   rDraw    = lpDrawItemStruct->rcItem;
 	CRect	rArrow;
 	bool	bFocus   = (state & ODS_FOCUS) && ((state & ODS_SELECTED)==0);
+    const fxfile::ui::ThemePalette sPalette =
+        fxfile::ui::ModernUI::getPalette();
+    const bool bModernDark =
+        XPR_IS_TRUE(sPalette.mDark) &&
+        XPR_IS_FALSE(sPalette.mHighContrast);
 
 	SendMessage(WM_ERASEBKGND, (WPARAM)dcMem.GetSafeHdc());
 
@@ -786,7 +801,7 @@ void CColourPickerXP::DrawItem(LPDRAWITEMSTRUCT lpDrawItemStruct)
 	//**                  Draw Outer Edge
 	//******************************************************
 #ifdef _THEME_H_
-	if (m_xpButton.IsAppThemed())
+	if (m_xpButton.IsAppThemed() && !bModernDark)
 	{
 		if ((state & ODS_DISABLED) != 0 && m_bComboBoxStyle)
 		{
@@ -821,7 +836,17 @@ void CColourPickerXP::DrawItem(LPDRAWITEMSTRUCT lpDrawItemStruct)
 	else
 #endif
 	{
-		if(m_bComboBoxStyle)
+        if (bModernDark)
+        {
+            const COLORREF sBack =
+                (state & ODS_SELECTED) ?
+                sPalette.mPressed :
+                (m_bMouseOver ? sPalette.mHover : sPalette.mElevated);
+            dcMem.FillSolidRect(&rDraw, sBack);
+            dcMem.Draw3dRect(rDraw, sPalette.mBorder, sPalette.mBorder);
+            rDraw.DeflateRect(1, 1);
+        }
+		else if(m_bComboBoxStyle)
 		{
 			if ((state & ODS_DISABLED) == 0)
 				dcMem.FillSolidRect(&rDraw, ::GetSysColor(COLOR_WINDOW));
@@ -855,7 +880,7 @@ void CColourPickerXP::DrawItem(LPDRAWITEMSTRUCT lpDrawItemStruct)
 	if(m_bComboBoxStyle)
 	{
 #ifdef _THEME_H_
-		if (m_xpCombo.IsAppThemed())
+		if (m_xpCombo.IsAppThemed() && !bModernDark)
 		{
 			int nFrameState = 0;
 			if ((state & ODS_SELECTED) != 0 /*|| m_bPopupActive*/)
@@ -876,9 +901,27 @@ void CColourPickerXP::DrawItem(LPDRAWITEMSTRUCT lpDrawItemStruct)
 		{
 			rArrow.SetRect(rDraw.right-(rDraw.Height()), rDraw.top, rDraw.right, rDraw.bottom);
 
-			dcMem.DrawFrameControl(&rArrow, DFC_SCROLL, DFCS_SCROLLDOWN  | 
-								((state & ODS_SELECTED) ? DFCS_FLAT | DFCS_PUSHED : 0) |
-								((state & ODS_DISABLED) ? DFCS_INACTIVE : 0));
+            if (bModernDark)
+            {
+                const COLORREF sArrowColor =
+                    (state & ODS_DISABLED) ?
+                    sPalette.mSecondaryText :
+                    sPalette.mText;
+                CRect sGlyph(rArrow);
+                const int sInset = max(2, sGlyph.Width() / 3);
+                sGlyph.DeflateRect(sInset, sInset, sInset, sInset);
+                DrawArrow(&dcMem, &sGlyph, 0, sArrowColor);
+                dcMem.Draw3dRect(
+                    rArrow,
+                    sPalette.mSeparator,
+                    sPalette.mSeparator);
+            }
+            else
+            {
+			    dcMem.DrawFrameControl(&rArrow, DFC_SCROLL, DFCS_SCROLLDOWN  | 
+								    ((state & ODS_SELECTED) ? DFCS_FLAT | DFCS_PUSHED : 0) |
+								    ((state & ODS_DISABLED) ? DFCS_INACTIVE : 0));
+            }
 
 			rDraw.DeflateRect(1, 1, rArrow.Width(), 1);
 		}
@@ -888,7 +931,7 @@ void CColourPickerXP::DrawItem(LPDRAWITEMSTRUCT lpDrawItemStruct)
 	//**                  Draw Inner Edge (Disabled Combo-box)
 	//******************************************************
 #ifdef _THEME_H_
-	if (m_xpButton.IsAppThemed() && m_bComboBoxStyle)
+	if (m_xpButton.IsAppThemed() && !bModernDark && m_bComboBoxStyle)
 	{
 		if ((state & ODS_DISABLED) != 0)
 		{
@@ -910,8 +953,15 @@ void CColourPickerXP::DrawItem(LPDRAWITEMSTRUCT lpDrawItemStruct)
 
 		if(m_bComboBoxStyle)
 		{
-			COLORREF clFocus = ::GetSysColor(COLOR_HIGHLIGHT);
-			COLORREF clInvert = RGB(255-GetRValue(clFocus), 255-GetGValue(clFocus), 255-GetBValue(clFocus));
+            const COLORREF clFocus =
+                bModernDark ? sPalette.mFocus : ::GetSysColor(COLOR_HIGHLIGHT);
+            const COLORREF clInvert =
+                bModernDark ?
+                sPalette.mFocus :
+                RGB(
+                    255-GetRValue(clFocus),
+                    255-GetGValue(clFocus),
+                    255-GetBValue(clFocus));
 
 			rFocus.DeflateRect(1, 1);
 			dcMem.FillSolidRect(rFocus, clFocus);
@@ -937,21 +987,35 @@ void CColourPickerXP::DrawItem(LPDRAWITEMSTRUCT lpDrawItemStruct)
 		rArrow.top		= (rDraw.bottom + rDraw.top)/2 - g_ciArrowSizeY / 2;
 		rArrow.bottom	= (rDraw.bottom + rDraw.top)/2 + g_ciArrowSizeY / 2;
 
-		DrawArrow(&dcMem,
+		DrawArrow(
+            &dcMem,
 				&rArrow,
 				0,
-				(state & ODS_DISABLED) 
-				? ::GetSysColor(COLOR_GRAYTEXT) 
-				: RGB(0,0,0));
+            bModernDark ?
+                ((state & ODS_DISABLED) ?
+                    sPalette.mSecondaryText :
+                    sPalette.mText) :
+                ((state & ODS_DISABLED) ?
+                    ::GetSysColor(COLOR_GRAYTEXT) :
+                    RGB(0, 0, 0)));
 
 		rDraw.right = rArrow.left - ::GetSystemMetrics(SM_CXEDGE)/2 - 2;
 
 		//******************************************************
 		//**                   Draw Separator (Button Style)
 		//******************************************************
-		dcMem.DrawEdge(&rDraw,
-					EDGE_ETCHED,
-					BF_RIGHT | (m_bFlatMenus ? BF_FLAT : 0));
+        if (bModernDark)
+        {
+            CRect sSeparator(rDraw);
+            sSeparator.left = max(sSeparator.left, sSeparator.right - 1);
+            dcMem.FillSolidRect(&sSeparator, sPalette.mSeparator);
+        }
+        else
+        {
+		    dcMem.DrawEdge(&rDraw,
+					    EDGE_ETCHED,
+					    BF_RIGHT | (m_bFlatMenus ? BF_FLAT : 0));
+        }
 
 		rDraw.right -= (::GetSystemMetrics(SM_CXEDGE) * 2) + 1 ;
 	}
@@ -970,9 +1034,24 @@ void CColourPickerXP::DrawItem(LPDRAWITEMSTRUCT lpDrawItemStruct)
 						   ? m_DefaultColor
 						   : m_Color);
 
-		::FrameRect(dcMem.m_hDC,
-					&rcColor,
-					::GetSysColorBrush(bFocus && m_bComboBoxStyle ? COLOR_HIGHLIGHTTEXT : COLOR_WINDOWTEXT));
+        if (bModernDark)
+        {
+            CBrush sFrameBrush(
+                bFocus && m_bComboBoxStyle ?
+                sPalette.mFocus :
+                sPalette.mBorder);
+            dcMem.FrameRect(&rcColor, &sFrameBrush);
+        }
+        else
+        {
+		    ::FrameRect(
+                dcMem.m_hDC,
+					    &rcColor,
+					    ::GetSysColorBrush(
+                    bFocus && m_bComboBoxStyle ?
+                    COLOR_HIGHLIGHTTEXT :
+                    COLOR_WINDOWTEXT));
+        }
 
 		if(m_bComboBoxStyle)
 		{
@@ -1003,9 +1082,18 @@ void CColourPickerXP::DrawItem(LPDRAWITEMSTRUCT lpDrawItemStruct)
 			CFont *pOldFont = dcMem.SelectObject(GetFont());
 
 			dcMem.SetBkMode(TRANSPARENT);
-			
-			if (bFocus) 
+
+            if (bModernDark)
+            {
+                dcMem.SetTextColor(
+                    (state & ODS_DISABLED) ?
+                    sPalette.mSecondaryText :
+                    (bFocus ? sPalette.mSelectionText : sPalette.mText));
+            }
+			else if (bFocus) 
+			{
 				dcMem.SetTextColor(::GetSysColor(COLOR_HIGHLIGHTTEXT));
+            }
 
 			dcMem.DrawText(szTemp, rDraw, DT_SINGLELINE | DT_VCENTER | DT_END_ELLIPSIS | DT_NOPREFIX);
 
@@ -1173,30 +1261,53 @@ void CColourPopupXP::Initialise()
 	// Get all the colors I need
 	//
 
-	int nAlpha = 48;
-	m_clrBackground = ::GetSysColor (COLOR_MENU);
-	m_clrHiLightBorder = ::GetSysColor (COLOR_HIGHLIGHT);
-	m_clrHiLight = m_clrHiLightBorder;
-	if (m_bIsXP)
-		m_clrHiLight = ::GetSysColor (COLOR_MENUHILIGHT);
-	m_clrHiLightText = ::GetSysColor (COLOR_HIGHLIGHTTEXT);
-	m_clrText = ::GetSysColor (COLOR_MENUTEXT);
-	m_clrLoLight = RGB (
-		(GetRValue (m_clrBackground) * (255 - nAlpha) + 
-			GetRValue (m_clrHiLightBorder) * nAlpha) >> 8,
-		(GetGValue (m_clrBackground) * (255 - nAlpha) + 
-			GetGValue (m_clrHiLightBorder) * nAlpha) >> 8,
-		(GetBValue (m_clrBackground) * (255 - nAlpha) + 
-			GetBValue (m_clrHiLightBorder) * nAlpha) >> 8);
+    const fxfile::ui::ThemePalette sPalette =
+        fxfile::ui::ModernUI::getPalette();
+    if (XPR_IS_FALSE(sPalette.mHighContrast))
+    {
+        m_clrBackground = sPalette.mElevated;
+        m_clrHiLightBorder = sPalette.mFocus;
+        m_clrHiLight = sPalette.mHover;
+        m_clrHiLightText = sPalette.mText;
+        m_clrText = sPalette.mText;
+        m_clrLoLight = sPalette.mSurface;
+    }
+    else
+    {
+	    int nAlpha = 48;
+	    m_clrBackground = ::GetSysColor (COLOR_MENU);
+	    m_clrHiLightBorder = ::GetSysColor (COLOR_HIGHLIGHT);
+	    m_clrHiLight = m_clrHiLightBorder;
+	    if (m_bIsXP)
+		    m_clrHiLight = ::GetSysColor (COLOR_MENUHILIGHT);
+	    m_clrHiLightText = ::GetSysColor (COLOR_HIGHLIGHTTEXT);
+	    m_clrText = ::GetSysColor (COLOR_MENUTEXT);
+	    m_clrLoLight = RGB (
+		    (GetRValue (m_clrBackground) * (255 - nAlpha) + 
+			    GetRValue (m_clrHiLightBorder) * nAlpha) >> 8,
+		    (GetGValue (m_clrBackground) * (255 - nAlpha) + 
+			    GetGValue (m_clrHiLightBorder) * nAlpha) >> 8,
+		    (GetBValue (m_clrBackground) * (255 - nAlpha) + 
+			    GetBValue (m_clrHiLightBorder) * nAlpha) >> 8);
+    }
 
     // Idiot check: Make sure the colour square is at least 5 x 5;
     if (m_nBoxSize - 2*m_nMargin - 2 < 5) m_nBoxSize = 5 + 2*m_nMargin + 2;
 
     // Create the font
-    NONCLIENTMETRICS ncm;
-    ncm.cbSize = sizeof(NONCLIENTMETRICS);
-    VERIFY(SystemParametersInfo(SPI_GETNONCLIENTMETRICS, sizeof(NONCLIENTMETRICS), &ncm, 0));
-    m_Font.CreateFontIndirect(&(ncm.lfMessageFont));
+    LOGFONT sLogFont = {0};
+    if (XPR_IS_FALSE(fxfile::ui::ModernUI::getUIFont(sLogFont, GetSafeHwnd())))
+    {
+        NONCLIENTMETRICS ncm = {0};
+        ncm.cbSize = sizeof(NONCLIENTMETRICS);
+        VERIFY(SystemParametersInfo(
+            SPI_GETNONCLIENTMETRICS,
+            sizeof(NONCLIENTMETRICS),
+            &ncm,
+            0));
+        sLogFont = ncm.lfMessageFont;
+    }
+    m_Font.CreateFontIndirect(&sLogFont);
 
     // Create the palette
     struct {
