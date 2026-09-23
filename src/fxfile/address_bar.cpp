@@ -28,6 +28,8 @@ namespace
 {
 const UINT_PTR kAddressBarComboSubclassId = 1;
 const UINT_PTR kAddressBarEditSubclassId = 2;
+const xpr_tchar_t kAddressBarEditClientEdgeProp[] =
+    XPR_STRING_LITERAL("fxfile.AddressBar.HadClientEdge");
 
 // item type
 enum
@@ -1198,6 +1200,56 @@ void AddressBar::applyChildThemes(void)
             ui::ModernUI::resetControlTheme(sEdit->m_hWnd);
         else
             ui::ModernUI::applyExplorerControlTheme(sEdit->m_hWnd);
+
+        // The ComboBoxEx already has one palette-owned outer frame. Keeping
+        // the legacy Edit WS_EX_CLIENTEDGE creates the nested black/bright
+        // rectangle visible around the folder name. Remember the original
+        // state, remove it for the modern Light/Dark path, and restore it for
+        // High Contrast where Windows owns the complete control rendering.
+        LONG_PTR sEditExStyle =
+            ::GetWindowLongPtr(sEdit->m_hWnd, GWL_EXSTYLE);
+        HANDLE sHadClientEdge =
+            ::GetProp(sEdit->m_hWnd, kAddressBarEditClientEdgeProp);
+        if (XPR_IS_NULL(sHadClientEdge))
+        {
+            sHadClientEdge =
+                (sEditExStyle & WS_EX_CLIENTEDGE) != 0 ?
+                reinterpret_cast<HANDLE>(2) :
+                reinterpret_cast<HANDLE>(1);
+            ::SetProp(
+                sEdit->m_hWnd,
+                kAddressBarEditClientEdgeProp,
+                sHadClientEdge);
+        }
+
+        LONG_PTR sNewEditExStyle = sEditExStyle;
+        if (XPR_IS_TRUE(sPalette.mHighContrast))
+        {
+            if (sHadClientEdge == reinterpret_cast<HANDLE>(2))
+                sNewEditExStyle |= WS_EX_CLIENTEDGE;
+        }
+        else
+        {
+            sNewEditExStyle &= ~static_cast<LONG_PTR>(WS_EX_CLIENTEDGE);
+        }
+
+        if (sNewEditExStyle != sEditExStyle)
+        {
+            ::SetWindowLongPtr(
+                sEdit->m_hWnd,
+                GWL_EXSTYLE,
+                sNewEditExStyle);
+            ::SetWindowPos(
+                sEdit->m_hWnd,
+                XPR_NULL,
+                0,
+                0,
+                0,
+                0,
+                SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER |
+                    SWP_NOACTIVATE | SWP_FRAMECHANGED);
+        }
+
         const xpr_sint_t sTextMargin =
             ui::ModernUI::getAddressTextMargin(GetSafeHwnd());
         sEdit->SendMessage(
@@ -1391,6 +1443,24 @@ LRESULT CALLBACK AddressBar::ComboSubclassProc(
                 break;
             }
 
+        case WM_ERASEBKGND:
+            {
+                const ui::ThemePalette sPalette = ui::ModernUI::getPalette();
+                if (XPR_IS_FALSE(sPalette.mHighContrast) &&
+                    XPR_IS_NOT_NULL(sAddressBar->mBackgroundBrush.m_hObject))
+                {
+                    RECT sRect = {0};
+                    ::GetClientRect(aHwnd, &sRect);
+                    ::FillRect(
+                        reinterpret_cast<HDC>(aWParam),
+                        &sRect,
+                        static_cast<HBRUSH>(
+                            sAddressBar->mBackgroundBrush.GetSafeHandle()));
+                    return 1;
+                }
+                break;
+            }
+
         case WM_PAINT:
             {
                 // Keep the native ComboBox responsible for layout, hit-testing,
@@ -1455,6 +1525,24 @@ LRESULT CALLBACK AddressBar::EditSubclassProc(
     {
         switch (aMessage)
         {
+        case WM_ERASEBKGND:
+            {
+                const ui::ThemePalette sPalette = ui::ModernUI::getPalette();
+                if (XPR_IS_FALSE(sPalette.mHighContrast) &&
+                    XPR_IS_NOT_NULL(sAddressBar->mBackgroundBrush.m_hObject))
+                {
+                    RECT sRect = {0};
+                    ::GetClientRect(aHwnd, &sRect);
+                    ::FillRect(
+                        reinterpret_cast<HDC>(aWParam),
+                        &sRect,
+                        static_cast<HBRUSH>(
+                            sAddressBar->mBackgroundBrush.GetSafeHandle()));
+                    return 1;
+                }
+                break;
+            }
+
         case WM_SETFOCUS:
         case WM_KILLFOCUS:
             sAddressBar->redrawModernFrame();
@@ -1463,6 +1551,7 @@ LRESULT CALLBACK AddressBar::EditSubclassProc(
         case WM_NCDESTROY:
             if (sAddressBar->mEditHwnd == aHwnd)
                 sAddressBar->mEditHwnd = XPR_NULL;
+            ::RemoveProp(aHwnd, kAddressBarEditClientEdgeProp);
             ::RemoveWindowSubclass(aHwnd, AddressBar::EditSubclassProc, aSubclassId);
             break;
         }
