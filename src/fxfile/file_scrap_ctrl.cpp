@@ -823,13 +823,31 @@ void FileScrapCtrl::OnContextMenu(CWnd *aWnd, CPoint aPoint)
         {
             if (sWindowRect.PtInRect(aPoint) == XPR_FALSE)
             {
-                CRect sRect;
                 xpr_sint_t sFocus = GetSelectionMark();
-                GetItemRect(sFocus, sRect, LVIR_BOUNDS);
-                ClientToScreen(&sRect);
+                if (sFocus < 0)
+                {
+                    POSITION sPosition =
+                        GetFirstSelectedItemPosition();
+                    if (XPR_IS_NOT_NULL(sPosition))
+                        sFocus = GetNextSelectedItem(sPosition);
+                }
 
-                aPoint.x = sRect.left;
-                aPoint.y = sRect.bottom;
+                CRect sRect;
+                if (sFocus >= 0 &&
+                    GetItemRect(
+                        sFocus,
+                        sRect,
+                        LVIR_BOUNDS) != XPR_FALSE)
+                {
+                    ClientToScreen(&sRect);
+                    aPoint.x = sRect.left;
+                    aPoint.y = sRect.bottom;
+                }
+                else
+                {
+                    aPoint.x = sWindowRect.left;
+                    aPoint.y = sWindowRect.top;
+                }
             }
 
             xpr_uint_t sFlags = TPM_LEFTALIGN | TPM_RETURNCMD | TPM_RIGHTBUTTON;
@@ -1619,7 +1637,17 @@ void FileScrapCtrl::selectAll(void)
     for (xpr_sint_t i = 0; i < sCount; ++i)
         SetItemState(i, LVIS_SELECTED, LVIS_SELECTED);
 
-    SetItemState(nFocus, LVIS_SELECTED | LVIS_FOCUSED, LVIS_SELECTED | LVIS_FOCUSED);
+    if (nFocus < 0 && sCount > 0)
+        nFocus = 0;
+
+    if (0 <= nFocus && nFocus < sCount)
+    {
+        SetSelectionMark(nFocus);
+        SetItemState(
+            nFocus,
+            LVIS_SELECTED | LVIS_FOCUSED,
+            LVIS_SELECTED | LVIS_FOCUSED);
+    }
 }
 
 void FileScrapCtrl::unselectAll(void)
