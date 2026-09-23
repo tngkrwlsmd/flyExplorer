@@ -77,7 +77,7 @@
     }
   ],
   "review": {
-    "reviewed_revision": "4004ac3d3107fabc59461520ac6e0ff7c37c4d70",
+    "reviewed_revision": "97b42a8d81d64749616788b7031912706a2d6a8e",
     "reviewed_at": "2026-09-23",
     "reviewed_paths": [
       "AGENTS.md",
@@ -375,11 +375,12 @@ Status: **ACTIVE / user-reproduced runtime failures**. These items are the immed
    - `4004ac3d` changes both modern view styles to `WS_CHILD | WS_VISIBLE` and adds `WS_BORDER` only inside the WinXP compatibility path. The invariant rejects an unconditional view `WS_BORDER` and requires both XP guards.
    - Acceptance remains runtime/screenshot based: the ExplorerView/current-folder surface must blend into the surrounding Win11-style layout without a classic outer view frame.
 
-13. **Local CI final-menu-paint validator false positive — ACTIVE**
-   - User `local_ci.bat x64` on revision `7decaadee4a75bcd31f820dd84d3a3679fe4bb6d` fails source invariant/regression preflight with `final WM_PAINT text ownership missing token GetToolBarCtrl().GetButtonCount()`.
-   - Current `CMenuBar::OnPaint()` does acquire `CToolBarCtrl &sToolBarCtrl = GetToolBarCtrl();` and then calls `sToolBarCtrl.GetButtonCount()`; the validator is matching a nonexistent exact spelling instead of the renderer contract.
-   - Next fix: scope validation to `CMenuBar::OnPaint()` and verify semantic ownership steps (toolbar control acquisition, button count, per-button state/text/rect, chrome erase, final ThemePalette text draw) rather than one chained-call spelling.
-   - Acceptance: connector self-check must pass against current source, and the user's `local_ci.bat x64` must progress beyond source invariant/regression preflight.
+13. **Local CI final-menu-paint validator false positive — CODE FIXED / LOCAL CI NOT RETESTED**
+   - User `local_ci.bat x64` on revision `7decaadee4a75bcd31f820dd84d3a3679fe4bb6d` failed source invariant/regression preflight with `final WM_PAINT text ownership missing token GetToolBarCtrl().GetButtonCount()`.
+   - Root cause: `CMenuBar::OnPaint()` correctly acquires `CToolBarCtrl &sToolBarCtrl = GetToolBarCtrl();` and calls `sToolBarCtrl.GetButtonCount()`, but the validator required the nonexistent chained spelling `GetToolBarCtrl().GetButtonCount()`.
+   - `97b42a8d` scopes the check to the actual `CMenuBar::OnPaint()` block and validates semantic ownership steps: native-default-first, toolbar-control acquisition, button count, per-button state/text/rect retrieval, chrome erase, ThemePalette enabled/disabled colors and final `DrawText`.
+   - Connector-side reproduction against current `MenuBar.cpp` found the paint block and all required semantic steps with zero missing tokens; the stale chained-call requirement is absent.
+   - Acceptance still requires the user's rerun: `local_ci.bat x64` must pass source invariant/regression preflight and proceed to VS 2026 x64 generation/build.
 
 ### Development handoff rule
 

@@ -1398,3 +1398,38 @@
 - `python build/validate_source_invariants.py`: **NOT RETESTED** after `4004ac3d`.
 - Windows Release-x64-Unicode build/runtime screenshot after `4004ac3d`: **NOT RETESTED**.
 
+---
+
+## 2026-09-23 — Final MenuBar WM_PAINT invariant required a nonexistent chained spelling
+
+**오류 발생**
+- 사용자 `local_ci.bat x64`가 revision `7decaadee4a75bcd31f820dd84d3a3679fe4bb6d`에서 source invariant/regression preflight를 실행했고, `final WM_PAINT text ownership missing token GetToolBarCtrl().GetButtonCount()`로 종료됐다.
+- 로그상 이 failure는 프로젝트 생성/MSBuild 전에 발생했고 기존 x64 artifact가 이번 run에서 재빌드되지 않았다는 provenance warning도 정상적으로 출력됐다.
+
+**최초 실제 오류**
+- `CMenuBar::OnPaint()`의 실제 구현은 `CToolBarCtrl &sToolBarCtrl = GetToolBarCtrl();`로 control reference를 받은 뒤 `sToolBarCtrl.GetButtonCount()`를 호출한다.
+- validator는 renderer contract가 아니라 `GetToolBarCtrl().GetButtonCount()`라는 exact source spelling을 요구했다.
+- 기능적으로 동일하고 현재 source에 존재하는 구현을 validator가 잘못 거부한 false positive다.
+
+**원인 진단**
+- Root cause: safety property를 semantic operation sequence가 아니라 한 가지 C++ 표현식 spelling으로 고정했다.
+- 최근 runtime regression 대응 과정에서 validator가 구현 세부 토큰에 다시 과적합됐다.
+
+**해결 방법**
+- validator가 `CMenuBar::OnPaint()` 시작부터 `OnButtonDown()` 직전까지의 paint block을 별도로 추출한다.
+- 해당 block에서 native default paint, `CToolBarCtrl` acquisition, button count, per-button button/text/rect retrieval, chrome erase, enabled/disabled ThemePalette colors, final `DrawText`를 각각 검사한다.
+- `ON_WM_PAINT()` message-map contract는 file-level에서 별도로 유지한다.
+- nonexistent chained token `GetToolBarCtrl().GetButtonCount()` 요구는 제거했다.
+- connector self-check로 current `MenuBar.cpp` paint block에 필요한 semantic steps가 모두 존재하고 missing token이 0개임을 확인했다.
+
+**재발 방지**
+- validator는 동일 semantics를 표현하는 합법적인 refactor를 막는 chained/local-variable spelling에 의존하지 않는다.
+- renderer contract는 해당 function/block으로 scope하고 operation sequence를 확인한다.
+- 신규 validator는 current source에 동일 extraction/check를 즉시 재현해 false positive 여부를 checkpoint에서 확인한다.
+
+**검증 상태**
+- User local CI before fix: FAIL at source invariant/regression preflight on revision `7decaade`. fileciteturn1029file0L14-L18
+- Connector semantic-validator self-check after fix: PASS — paint block found, required steps missing 0, stale chained token absent.
+- `python build/validate_source_invariants.py`: **NOT RETESTED** on the user's Windows checkout after `97b42a8d`.
+- `local_ci.bat x64`, VS 2026 generation, Release-x64-Unicode compile/link/runtime smoke: **NOT RETESTED** after `97b42a8d`.
+
