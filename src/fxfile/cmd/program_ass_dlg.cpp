@@ -247,13 +247,18 @@ void ProgramAssDlg::getContextMenu(xpr_bool_t sRightClick)
     else
     {
         sTreeItem = mTreeCtrl.GetSelectedItem();
+        if (sTreeItem == XPR_NULL)
+            return;
 
         CRect sRect;
-        mTreeCtrl.GetItemRect(sTreeItem, sRect, XPR_TRUE);
+        if (mTreeCtrl.GetItemRect(sTreeItem, sRect, XPR_TRUE) == XPR_FALSE)
+            return;
+
         mTreeCtrl.ClientToScreen(&sRect);
-        if (!(sRect.left < sCursorPos.x && sCursorPos.x < sRect.right) || !(sRect.top < sCursorPos.y && sRect.bottom < sCursorPos.y))
+        if (!(sRect.left <= sCursorPos.x && sCursorPos.x < sRect.right) ||
+            !(sRect.top <= sCursorPos.y && sCursorPos.y < sRect.bottom))
         {
-            sCursorPos.x = sRect.left + (sRect.right-sRect.left)/2;
+            sCursorPos.x = sRect.left + (sRect.right - sRect.left) / 2;
             sCursorPos.y = sRect.bottom;
         }
     }
