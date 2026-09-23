@@ -399,25 +399,31 @@ void FolderCtrl::trackContextMenu(xpr_bool_t aRightClick)
 {
     HTREEITEM sTreeItem = XPR_NULL;
 
+    // Keep the popup anchor in screen coordinates. Hit-testing is the only
+    // operation that needs a client-coordinate copy.
     CPoint sPoint;
     ::GetCursorPos(&sPoint);
-    ScreenToClient(&sPoint);
 
     if (XPR_IS_TRUE(aRightClick))
     {
-        sTreeItem = HitTest(sPoint);
-        ClientToScreen(&sPoint);
+        CPoint sHitPoint(sPoint);
+        ScreenToClient(&sHitPoint);
+        sTreeItem = HitTest(sHitPoint);
     }
     else
     {
         sTreeItem = GetSelectedItem();
+        if (XPR_IS_NULL(sTreeItem))
+            return;
 
         CRect sRect;
-        GetItemRect(sTreeItem, sRect, XPR_TRUE);
+        if (GetItemRect(sTreeItem, sRect, XPR_TRUE) == XPR_FALSE)
+            return;
+
         ClientToScreen(&sRect);
-        if (!(sRect.left < sPoint.x && sPoint.x < sRect.right) || !(sRect.top < sPoint.y && sRect.bottom < sPoint.y))
+        if (sRect.PtInRect(sPoint) == XPR_FALSE)
         {
-            sPoint.x = sRect.left + (sRect.right-sRect.left)/2;
+            sPoint.x = sRect.left + (sRect.right - sRect.left) / 2;
             sPoint.y = sRect.bottom;
         }
     }
