@@ -100,6 +100,8 @@ public:
     static xpr_sint_t getDialogSectionSpacing(HWND aHwnd);
 
     static xpr_bool_t getUIFont(LOGFONT &aLogFont, HWND aHwnd);
+    static xpr_bool_t isSameFont(HFONT aFont, const LOGFONT &aLogFont);
+    static void applyDialogControlTheme(HWND aHwnd);
     static HICON loadIconResource(HINSTANCE aInstance, xpr_uint_t aResourceId, HWND aHwnd, xpr_sint_t aLogicalSize);
     static void setThemeMode(xpr_sint_t aThemeMode);
     static xpr_sint_t getThemeMode(void);
