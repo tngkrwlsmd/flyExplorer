@@ -77,7 +77,7 @@
     }
   ],
   "review": {
-    "reviewed_revision": "984d9191a92187e287cfa12f37e7d7f748474a3d",
+    "reviewed_revision": "f3112c5179780053a03fdb3ca1c2b94da3b4d526",
     "reviewed_at": "2026-09-23",
     "reviewed_paths": [
       "AGENTS.md",
@@ -307,6 +307,7 @@
 - Filtering settings list는 body/text-background/header를 ThemePalette로 직접 소유하며 historical pure-black default filter text만 Dark에서 automatic `mText`로 취급한다. `FlatHeaderCtrl`가 native white header를 대체한다.
 - AddressBar는 대응 `DrawItem`이 없던 legacy `CBS_OWNERDRAWFIXED`를 제거하고 outer ComboBoxEx의 `WM_CTLCOLOR`에서도 edit/list/static palette brush를 라우팅한다. 기존 inner ComboBox subclass 경로는 유지한다.
 - main toolbar는 disabled bitmap resource가 없는 Dark 상태에서 cold image list를 duplicate한 explicit disabled list를 사용하며 Fluent migrated frame은 `mSecondaryText` glyph로 교체해 Cut/Copy/Undo 같은 disabled command도 식별 가능하게 한다.
+- screenshot follow-up `984d9191` / `c9b9c69e`는 open Preferences까지 포함한 top-level theme refresh, final menu-text ownership, font/DPI-derived list-header height, legacy green ActivateBar collapse, focus-only AddressBar outline을 추가했다. `f3112c51`은 동일 동작의 unused callback/color parameter를 warning-clean 상태로 정리한다.
 - NSIS installer 자체는 Program Files/HKLM 작업 때문에 계속 elevated이지만 finish-page product run과 `.onInstSuccess` launcher auto-start를 제거했다. 설치된 fxfile/launcher는 이후 normal user shell/shortcut 또는 제품 설정 경로에서 시작해 product `asInvoker` contract가 elevated installer parent에 의해 우회되지 않도록 한다.
 - 위 회귀 경로에는 `build/validate_source_invariants.py`의 deterministic guard가 추가되어 있으며 installer smoke도 elevated auto-launch 부재를 검사한다. 상세 root cause와 commit mapping은 `docs/development/ERROR_HISTORY.md`에 기록되어 있다.
 - 최신 변경 이후 connector 기반 source inspection은 수행했지만 `python build/validate_source_invariants.py`, MSVC compile/link, `local_ci.bat x64`, standard-user/elevated-instance interop, Windows 11 Light/Dark/System/High Contrast 100/125/150/200% DPI visual/IME/runtime 검증은 이 환경에서 실행하지 않았다. 따라서 해당 evidence는 계속 **NOT TESTED**다.
@@ -323,10 +324,12 @@ Status: **ACTIVE / user-reproduced runtime failures**. These items are the immed
    - `984d9191` obtains menu text with `TB_GETBUTTONTEXT` by toolbar command id and keeps app-owned `DrawText` + `CDRF_SKIPDEFAULT`. Palette/custom-draw field values are not sufficient evidence; final screenshot/runtime output is the acceptance result.
 3. **File-list header vertical clipping — CODE FIXED / RUNTIME NOT TESTED**
    - `984d9191` derives the `이름 / 크기 / 종류 / 수정한 날짜` row height from current UI-font `TEXTMETRIC`, external leading and DPI-scaled vertical padding. Runtime screenshot evidence is still required.
-4. **Remove obsolete green separator/accent lines**
-   - Remove the bright green horizontal lines currently visible between command/navigation/content surfaces. Do not replace them with another accent color; use no line or a neutral ThemePalette separator only when structure genuinely requires one.
-5. **Remove white outline around the current-folder title (`내 문서`)**
-   - Match the supplied Windows 11 Explorer reference: the current-folder/title surface must not look like a legacy boxed edit/control. Preserve accessibility focus indication without a persistent white frame.
+4. **Remove obsolete green separator/accent lines — CODE FIXED / RUNTIME NOT TESTED**
+   - `c9b9c69e` collapses the legacy full-width `ActivateBar` to zero height outside High Contrast and stops painting `mActiveViewColor` on modern Light/Dark surfaces. High Contrast keeps an explicit selection cue, while normal pane activity remains represented by the tab/surface state.
+   - Runtime screenshot evidence is still required; any remaining bright horizontal accent keeps this item ACTIVE.
+5. **Remove white outline around the current-folder title (`내 문서`) — CODE FIXED / RUNTIME NOT TESTED**
+   - `c9b9c69e` changes `AddressBar::OnNcPaint()` so the idle edge uses the same `mElevated` color as the field surface and `mFocus` is drawn only while the address control actually owns focus.
+   - The supplied Windows 11 Explorer reference remains the visual acceptance target; a persistent idle outline keeps this item ACTIVE.
 
 ### Development handoff rule
 
