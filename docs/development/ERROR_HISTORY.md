@@ -619,6 +619,84 @@
 
 ---
 
+## 2026-09-23 — build 성공 후에도 legacy toolbar 상태가 Win11 command-bar 변경을 덮어씀
+
+**오류 발생**
+- 실행/환경: 사용자 Windows 11 실제 실행. C++ build 자체는 성공했지만 상단 toolbar의 작은 icon/legacy-looking command surface와 text 대비 문제가 그대로 보였다.
+- 새 기본값을 22px Fluent large icon으로 바꿔도 기존 사용자 화면이 즉시 달라지지 않았다.
+
+**최초 실제 오류**
+- `MainToolBar::Init()`은 기본 icon type을 `TBI_LARGE`로 설정하지만, `MainToolBar::load()`가 기존 `fxfile-toolbar.dat`의 persisted `TBI_SMALL` 값을 다시 적용했다.
+- ToolbarWindow32 custom draw는 ThemePalette의 `clrText`를 채우고 있었지만 `TBCDRF_USECDCOLORS` 및 highlighted-text/background-mode contract가 없어 hot/selected state에서 system color가 다시 개입할 수 있었다.
+
+**원인 진단**
+- Observed: old toolbar state file format은 text type, icon type, command IDs만 저장하며 version/migration marker가 없었다.
+- Root cause 1: source default 변경과 persisted user state migration을 동일한 것으로 취급했다.
+- Root cause 2: ToolbarWindow32가 custom-draw color fields를 실제 text rendering에 사용하도록 명시하는 return flag/state color wiring이 불완전했다.
+
+**해결 방법**
+- `src/fxfile/main_toolbar.cpp`: legacy-format file에서만 historical `TBI_SMALL`을 `TBI_LARGE`로 1회 migration한다.
+- 새 저장 파일에는 `kModernToolbarStateMarker`를 append한다. 기존 reader는 unknown command id로 무시하므로 layout format의 downgrade tolerance를 유지한다.
+- marker가 있는 새 파일에서는 사용자가 이후 명시적으로 Small을 선택한 경우 그대로 보존한다.
+- `ToolBarEx.cpp` / `MenuBar.cpp`: `TBCDRF_USECDCOLORS`, `clrTextHighlight`, transparent string background mode를 함께 설정해 normal/hot/selected text가 동일 ThemePalette를 사용하게 했다.
+
+**재발 방지**
+- `build/validate_source_invariants.py`가 one-time migration marker/read/write contract와 ToolbarWindow32 highlighted-text palette wiring을 검사한다.
+- default UI 값 변경 시 persisted legacy state가 startup에서 다시 덮어쓰는지 함께 확인한다. migration은 user preference를 영구 무시하지 않도록 version/marker를 둔다.
+
+**검증 상태**
+- Targeted static audit: PASS — branch source에서 marker read/write, legacy-only migration, TBCDRF_USECDCOLORS, highlighted text/transparent background wiring 확인.
+- `python build/validate_source_invariants.py`: NOT TESTED — connector 환경에는 repository checkout command 실행 경로가 없음.
+- Compile/link / functional regression / runtime visual: NOT TESTED after these commits. 사용자 Windows에서 `local_ci.bat x64` 및 실제 화면 재확인 필요.
+
+**관련 commit**
+- `e97d0258` — `ui: migrate legacy small toolbar icons`
+- `f01ddbea`, `e45778dd` — command/menu palette color ownership
+- `de06e5ff` — `fix: migrate toolbar icon size only once`
+- `fdfde0dd`, `4f6b51ec` — highlighted command/menu text palette
+- `b25b70e3`, `af48a099` — regression guards
+
+---
+
+## 2026-09-23 — AddressBar nested legacy edge와 standard-user config path가 build 성공 뒤 runtime 증상으로 남음
+
+**오류 발생**
+- 실행/환경: 사용자 Windows 11 실제 실행에서 build는 성공했지만 AddressBar 내부 folder/path 영역에 별도 사각 edge가 남고, 일반 사용자 권한 실행 경로에 대한 문제가 계속 보고됐다.
+- 이 항목은 두 runtime ownership 결함을 분리해 기록한다.
+
+**최초 실제 오류**
+- AddressBar outer ComboBoxEx는 palette-owned frame을 그리지만 child Edit의 legacy `WS_EX_CLIENTEDGE`가 그대로 남아 outer frame 안에 두 번째 native edge가 생길 수 있었다.
+- `ConfDir::load()`은 persisted `conf_home`이 존재하는 directory인지 여부만 사실상 신뢰했고, Program Files 아래 `%fxfile%\\conf`처럼 읽기는 가능하지만 standard user에게 쓰기 불가능한 legacy portable path를 정상 save target처럼 유지할 수 있었다.
+- `OptionManager::load()`은 configuration load 실패 시 즉시 default file을 저장하려 하므로 unwritable path에서는 startup/config initialization 흐름이 관리자 권한 여부에 따라 달라질 수 있었다.
+
+**원인 진단**
+- Root cause 1: AddressBar client/background paint와 child Edit non-client frame ownership을 분리해서 처리했다.
+- Root cause 2: configuration directory의 "존재함"과 "현재 token으로 실제 writable함"을 동일하게 취급했다.
+- 제한: 사용자의 실제 `.fxfile` 내용은 connector에서 읽지 않았으므로 해당 사용자의 persisted `conf_home` 값 자체는 미확인이다. 다만 위 경로 조건에서 발생하는 product defect는 source로 확인된다.
+
+**해결 방법**
+- `src/fxfile/address_bar.cpp`: non-High-Contrast에서 child Edit의 기존 `WS_EX_CLIENTEDGE` 상태를 기억한 뒤 제거하고, High Contrast에서만 원래 native edge를 복원한다. Combo/Edit background erase도 ThemePalette brush가 소유한다.
+- `src/fxfile/conf_dir.cpp`: configured/default config directory에 실제 probe file create/delete를 수행해 writable 여부를 확인한다.
+- 기존 persisted custom/portable path가 unwritable이면 `%AppData%\\fxfile\\conf`로 fallback하고, recovered path를 다시 descriptor에 저장해 다음 startup도 standard-user path를 사용하게 한다.
+
+**재발 방지**
+- source invariant가 AddressBar single-frame token, writable config probe/fallback/persist contract를 검사한다.
+- 설치 위치가 Program Files일 수 있는 desktop app에서는 user config writeability를 directory existence만으로 판단하지 않는다.
+- custom Dark frame을 소유하는 composite control은 child native non-client style까지 함께 audit한다.
+
+**검증 상태**
+- Targeted static audit: PASS — branch source에서 Edit edge removal/HC restore, writable probe, fallback/persist wiring 확인.
+- Compile/link / runtime standard-user startup / visual AddressBar: NOT TESTED after these commits.
+- settings theme refresh reentrancy guard도 branch에 포함되어 있으나 실제 crash stack evidence가 없어 별도 root cause로 확정하지 않는다.
+
+**관련 commit**
+- `6bd4ff31` — `fix: remove nested legacy address field frame`
+- `1a2dfe1d`, `b5055009` — standard-user config fallback
+- `673c2184` ~ `266603f2` — settings theme-refresh reentrancy guard
+- `c81f37df` — runtime UI fix guards
+
+---
+
 ## 오류를 예방하기 위한 일반 개발 규칙
 
 1. 새 header/API/macro는 소유 header를 직접 include한다. PCH/transitive include에 기대지 않는다.
