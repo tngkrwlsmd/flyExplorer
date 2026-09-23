@@ -77,7 +77,7 @@
     }
   ],
   "review": {
-    "reviewed_revision": "083de73456a3747296fb25ad2e140ceb0e0f92d2",
+    "reviewed_revision": "e6c3e2c7e548b3d0be70febebcbfa34519a21a75",
     "reviewed_at": "2026-09-23",
     "reviewed_paths": [
       "AGENTS.md",
@@ -337,11 +337,12 @@ Status: **ACTIVE / user-reproduced runtime failures**. These items are the immed
    - `a46dbadd` registers `FlatHeaderCtrl.cpp` as the `header` contract source and changes the local contents map to report a deterministic `missing source registration` invariant error rather than raising `KeyError` if a future source key is omitted.
    - Connector static cross-check after the change found no `contents["..."]` references missing from the function's `paths` map. Acceptance still requires a user rerun: `python build/validate_source_invariants.py` must complete without traceback and `local_ci.bat x64` must progress past source invariant/regression preflight.
 
-7. **MenuBar text remains too dark — ACTIVE / reproduced on rebuilt 80ccaea9**
-   - The user supplied a rebuilt `80ccaea9` screenshot. Command-bar icons and other recent changes are present, so this is current runtime evidence.
-   - In that screenshot another window is foreground, so fxfile is inactive. The active custom-draw path intentionally maps every enabled menu item to `mSecondaryText` when `m_bFrameActive == false`; this makes ordinary menu commands too dark even though custom draw is running.
-   - Next fix: enabled menu items use `ThemePalette.mText` regardless of frame activation. Only truly disabled menu items use `mSecondaryText`. Hover/pressed continues to use `mText`.
-   - Acceptance: menu labels stay clearly readable in both active and inactive Dark windows.
+7. **MenuBar text remains too dark — CODE FIXED / RUNTIME NOT RETESTED**
+   - Rebuilt `80ccaea9` runtime evidence showed fxfile behind another foreground window, and its enabled top-menu labels were still heavily dimmed.
+   - Root cause: the modern custom-draw branch explicitly selected `mSecondaryText` when either the command was disabled **or the frame was inactive**. That made ordinary enabled menu labels unnecessarily low-contrast even when custom draw was working exactly as written.
+   - `e6c3e2c7` removes frame activation from the color decision. Enabled menu commands now always use `ThemePalette.mText`; only genuinely disabled commands use `mSecondaryText`. Hover/pressed continues to use `mText`.
+   - The invariant rejects reintroduction of the `disabled || !m_bFrameActive` condition.
+   - Acceptance remains runtime based: labels must stay clearly readable in both active and inactive Dark windows.
 
 8. **Address/current-folder classic client edge remains — ACTIVE / reproduced on rebuilt 80ccaea9**
    - The rebuilt `80ccaea9` screenshot still shows a rectangular edge. Pixel inspection identifies the exact classic sunken pattern: two full-width top rows around RGB 160/105 and two bottom rows around RGB 227/255.

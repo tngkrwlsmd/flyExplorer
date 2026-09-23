@@ -1254,3 +1254,30 @@
 - Connector source/invariant audit after fix: PASS — replacement frame removed; remaining `PaintFlatAddressEdge` references are forbidden checks only.
 - Windows rebuilt screenshot after `083de734`: **NOT RETESTED**.
 
+---
+
+## 2026-09-23 — Inactive frame policy dimmed enabled Dark menu commands
+
+**오류 발생**
+- 사용자 rebuilt `80ccaea9` screenshot에서 상단 메뉴 text가 여전히 지나치게 어둡게 보였다.
+- screenshot에는 `build-revision.txt` 창이 foreground였으므로 fxfile frame은 inactive 상태였다.
+
+**최초 실제 오류**
+- modern `CMenuBar::OnCustomDraw()` text policy가 `(CDIS_DISABLED || !m_bFrameActive) ? mSecondaryText : mText`였다.
+- 따라서 command 자체가 enabled여도 top-level frame이 inactive이면 모든 menu text가 secondary contrast로 내려갔다.
+
+**원인 진단**
+- Root cause: command availability(disabled)와 frame activation(inactive)을 같은 low-contrast visual state로 취급했다.
+- 이 로직은 custom draw/reflection이 정상이어도 사용자 눈에는 "검은 메뉴 글자"처럼 보일 정도로 대비를 낮출 수 있었다.
+
+**해결 방법**
+- enabled menu item은 frame activation과 무관하게 `ThemePalette.mText`를 사용한다.
+- `CDIS_DISABLED` item만 `mSecondaryText`를 사용한다.
+- hover/pressed item은 기존대로 `mText`를 유지한다.
+- invariant는 `disabled || !m_bFrameActive` modern text condition 재도입을 금지한다.
+
+**검증 상태**
+- User rebuilt screenshot before fix: FAIL — inactive fxfile menu labels too dark.
+- Connector source audit after fix: PASS — enabled/disabled color split no longer depends on `m_bFrameActive`.
+- Windows rebuilt screenshot after `e6c3e2c7`: **NOT RETESTED**.
+
