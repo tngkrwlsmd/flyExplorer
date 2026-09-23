@@ -2459,6 +2459,7 @@ def validate_win11_stability_regressions() -> list[str]:
         "shell_registry": FXFILE_SRC / "shell_registry.cpp",
         "single_process": FXFILE_SRC / "single_process.cpp",
         "main_coolbar": FXFILE_SRC / "main_coolbar.cpp",
+        "main_frame": FXFILE_SRC / "main_frame.cpp",
         "file_scrap": FXFILE_SRC / "file_scrap_pane.cpp",
         "bookmark_wnd": FXFILE_SRC / "bookmark_wnd.cpp",
         "search_loc": FXFILE_SRC / "cmd" / "search_loc_dlg.cpp",
@@ -2507,6 +2508,38 @@ def validate_win11_stability_regressions() -> list[str]:
             errors.append(
                 f"src/fxfile/conf_dir.cpp: missing standard-user config fallback token {token}"
             )
+
+    main_frame = contents["main_frame"]
+    for token in (
+        'XPR_STRING_LITERAL("\\\\accel.fac")',
+        "ConfDir::instance().getSavePath(",
+        "::CopyFile(sOldPath, sSavePath, TRUE)",
+    ):
+        if token not in main_frame:
+            errors.append(
+                f"src/fxfile/main_frame.cpp: missing standard-user accel migration token {token}"
+            )
+    accel_pos = main_frame.find('XPR_STRING_LITERAL("\\\\accel.fac")')
+    if accel_pos >= 0:
+        accel_block = main_frame[accel_pos:accel_pos + 1800]
+        if "::MoveFile(sOldPath, sPath)" in accel_block:
+            errors.append(
+                "src/fxfile/main_frame.cpp: legacy accel migration must not rename from the install directory"
+            )
+
+    for token in (
+        "::CopyFile(sOldPath, sNewPath, FALSE)",
+        "if (::CopyFile(sOldPath, sNewPath, FALSE) == FALSE)",
+        "xpr::FileSys::remove(sOldPath);",
+    ):
+        if token not in conf_dir:
+            errors.append(
+                f"src/fxfile/conf_dir.cpp: missing protected-source config migration token {token}"
+            )
+    if "xpr::FileSys::rename(sOldPath, sNewPath);" in conf_dir:
+        errors.append(
+            "src/fxfile/conf_dir.cpp: config migration must not require rename/delete access to the old directory"
+        )
 
     shell_registry = contents["shell_registry"]
     for token in (
