@@ -50,6 +50,10 @@ IMPLEMENT_DYNAMIC( CToolBarEx, CToolBar )
 #define TBCDRF_NOBACKGROUND 0x00400000
 #endif
 
+#ifndef TBCDRF_USECDCOLORS
+#define TBCDRF_USECDCOLORS 0x00800000
+#endif
+
 namespace
 {
 void DrawRoundedToolbarState(
@@ -122,7 +126,8 @@ LRESULT ApplyDarkToolBarCustomDraw(
                 CDRF_DODEFAULT |
                 TBCDRF_NOEDGES |
                 TBCDRF_NOOFFSET |
-                TBCDRF_NOBACKGROUND;
+                TBCDRF_NOBACKGROUND |
+                TBCDRF_USECDCOLORS;
 
             aCustomDraw->clrBtnFace = sBackground;
             aCustomDraw->clrText =
