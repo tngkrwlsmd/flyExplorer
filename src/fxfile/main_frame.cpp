@@ -97,6 +97,46 @@ enum
     WM_TRAY_MESSAGE         = WM_USER + 1,
     WM_COMPARE_DIRS_STATUS  = WM_USER + 2,
 };
+
+BOOL CALLBACK RefreshThemeTopLevelWindow(HWND aHwnd, LPARAM aParam)
+{
+    if (::IsWindow(aHwnd) == FALSE)
+        return TRUE;
+
+    ui::ModernUI::applyWindowFrameTheme(aHwnd);
+
+    CWnd *sWnd = CWnd::FromHandle(aHwnd);
+    if (XPR_IS_NOT_NULL(sWnd))
+    {
+        sWnd->SendMessage(WM_SETTINGCHANGE, 0, 0);
+        sWnd->SendMessageToDescendants(
+            WM_SETTINGCHANGE,
+            0,
+            0,
+            TRUE,
+            TRUE);
+    }
+    else
+    {
+        ::SendMessage(aHwnd, WM_SETTINGCHANGE, 0, 0);
+    }
+
+    ::RedrawWindow(
+        aHwnd,
+        XPR_NULL,
+        XPR_NULL,
+        RDW_INVALIDATE | RDW_ERASE | RDW_FRAME | RDW_ALLCHILDREN);
+
+    return TRUE;
+}
+
+void RefreshThemeForCurrentThread(void)
+{
+    ::EnumThreadWindows(
+        ::GetCurrentThreadId(),
+        RefreshThemeTopLevelWindow,
+        0);
+}
 } // namespace anonymous
 
 MainFrame::MainFrame(void)
@@ -730,14 +770,13 @@ void MainFrame::setOption(Option &aOption)
     const xpr_sint_t sOldThemeMode = ui::ModernUI::getThemeMode();
     ui::ModernUI::setThemeMode(aOption.mConfig.mThemeMode);
 
-    if (sOldThemeMode != ui::ModernUI::getThemeMode() && ::IsWindow(m_hWnd))
+    if (sOldThemeMode != ui::ModernUI::getThemeMode())
     {
-        ui::ModernUI::applyWindowFrameTheme(m_hWnd);
-        SendMessageToDescendants(WM_SETTINGCHANGE, 0, 0, TRUE, TRUE);
-        RedrawWindow(
-            XPR_NULL,
-            XPR_NULL,
-            RDW_INVALIDATE | RDW_FRAME | RDW_ALLCHILDREN);
+        // Preferences and other owned dialogs are top-level windows, not
+        // descendants of MainFrame. Refresh every UI-thread top-level window
+        // and its descendants so one theme change cannot leave an already
+        // open dialog on the previous palette.
+        RefreshThemeForCurrentThread();
     }
 
     // tray

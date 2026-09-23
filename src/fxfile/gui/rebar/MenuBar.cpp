@@ -1681,26 +1681,37 @@ void CMenuBar::OnCustomDraw( NMHDR* pNMHDR, LRESULT* pResult )
                         lpNMCustomDraw->clrTextHighlight = sPalette.mText;
                     }
 
-                    // ToolbarWindow32 can still fall back to COLOR_BTNTEXT on
-                    // some Win11 states even when TBCDRF_USECDCOLORS is set.
-                    // The menu bar owns its Dark surface, so draw its text
-                    // explicitly with the same palette instead of depending
-                    // on the native toolbar text renderer.
-                    int sItemIndex =
-                        CommandToIndex(static_cast<UINT>(nmcd.dwItemSpec));
-                    if (sItemIndex < 0 &&
-                        nmcd.dwItemSpec <
-                            static_cast<DWORD_PTR>(
-                                GetToolBarCtrl().GetButtonCount()))
+                    // Do not infer the button index from NM_CUSTOMDRAW.
+                    // ToolbarWindow32 identifies an item by command id here;
+                    // query the actual toolbar text by that id so the app-owned
+                    // Dark renderer always has the final string.
+                    xpr_tchar_t sMenuText[256] = {0};
+                    LRESULT sTextLength = GetToolBarCtrl().SendMessage(
+                        TB_GETBUTTONTEXT,
+                        static_cast<WPARAM>(nmcd.dwItemSpec),
+                        reinterpret_cast<LPARAM>(sMenuText));
+
+                    if (sTextLength < 0 &&
+                        nmcd.dwItemSpec > IDBUTTON_SYSMENU &&
+                        nmcd.dwItemSpec <= IDBUTTON_LAST)
                     {
-                        sItemIndex = static_cast<int>(nmcd.dwItemSpec);
+                        const xpr_sint_t sItemIndex =
+                            static_cast<xpr_sint_t>(
+                                nmcd.dwItemSpec - IDBUTTON_SYSMENU);
+                        CString sFallbackText;
+                        GetButtonText(sItemIndex, sFallbackText);
+                        _tcsncpy(
+                            sMenuText,
+                            sFallbackText,
+                            XPR_COUNT_OF(sMenuText) - 1);
+                        sMenuText[XPR_COUNT_OF(sMenuText) - 1] =
+                            XPR_STRING_LITERAL('\0');
+                        sTextLength =
+                            static_cast<LRESULT>(_tcslen(sMenuText));
                     }
 
-                    if (sItemIndex >= 0)
+                    if (sTextLength >= 0)
                     {
-                        CString sMenuText;
-                        GetButtonText(sItemIndex, sMenuText);
-
                         RECT sTextRect = nmcd.rc;
                         const COLORREF sDrawTextColor =
                             ( !( uItemState & CDIS_DISABLED ) &&
@@ -1729,7 +1740,7 @@ void CMenuBar::OnCustomDraw( NMHDR* pNMHDR, LRESULT* pResult )
                         ::DrawText(
                             nmcd.hdc,
                             sMenuText,
-                            sMenuText.GetLength(),
+                            static_cast<xpr_sint_t>(sTextLength),
                             &sTextRect,
                             sTextFlags);
 

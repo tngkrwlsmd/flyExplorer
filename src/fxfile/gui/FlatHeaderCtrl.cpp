@@ -69,6 +69,9 @@ void FlatHeaderCtrl::initHeader(xpr_bool_t aBoldFont)
     mOffset =
         fxfile::ui::ModernUI::getListHeaderTextPadding(GetSafeHwnd());
     mBoldFont = aBoldFont;
+
+    if (::IsWindow(m_hWnd) != FALSE)
+        resizeWindow();
 }
 
 xpr_sint_t FlatHeaderCtrl::OnCreate(LPCREATESTRUCT aCreateStruct)
@@ -324,10 +327,39 @@ void FlatHeaderCtrl::resizeWindow(void)
     CRect sParentRect;
     mParentWnd->GetClientRect(&sParentRect);
 
-    CRect sWindowRect;
-    GetWindowRect(&sWindowRect);
+    const xpr_uint_t sDpi =
+        fxfile::ui::ModernUI::getDpi(GetSafeHwnd());
+    xpr_sint_t sRequiredHeight =
+        fxfile::ui::ModernUI::scale(24, sDpi);
 
-    SetWindowPos(XPR_NULL, 0, 0, sParentRect.Width(), sWindowRect.Height(), SWP_NOMOVE|SWP_FRAMECHANGED);
+    CClientDC sDC(this);
+    CFont *sOldFont = XPR_NULL;
+    if (XPR_IS_NOT_NULL(mFont.m_hObject))
+        sOldFont = sDC.SelectObject(&mFont);
+
+    TEXTMETRIC sTextMetric = {0};
+    if (sDC.GetTextMetrics(&sTextMetric) != FALSE)
+    {
+        const xpr_sint_t sVerticalPadding =
+            fxfile::ui::ModernUI::scale(8, sDpi);
+        sRequiredHeight = max(
+            sRequiredHeight,
+            static_cast<xpr_sint_t>(
+                sTextMetric.tmHeight +
+                sTextMetric.tmExternalLeading) +
+                sVerticalPadding);
+    }
+
+    if (XPR_IS_NOT_NULL(sOldFont))
+        sDC.SelectObject(sOldFont);
+
+    SetWindowPos(
+        XPR_NULL,
+        0,
+        0,
+        sParentRect.Width(),
+        sRequiredHeight,
+        SWP_NOMOVE | SWP_NOZORDER | SWP_NOACTIVATE | SWP_FRAMECHANGED);
 }
 
 xpr_bool_t FlatHeaderCtrl::OnEraseBkgnd(CDC *aDC)

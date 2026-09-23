@@ -2976,14 +2976,19 @@ def validate_win11_stability_regressions() -> list[str]:
             )
 
     for token in (
-        "nmcd.dwItemSpec <",
-        "GetToolBarCtrl().GetButtonCount()",
-        "sItemIndex = static_cast<int>(nmcd.dwItemSpec)",
+        "TB_GETBUTTONTEXT",
+        "nmcd.dwItemSpec > IDBUTTON_SYSMENU",
+        "nmcd.dwItemSpec <= IDBUTTON_LAST",
+        "*pResult = CDRF_SKIPDEFAULT",
     ):
         if token not in contents["menubar"]:
             errors.append(
-                f"src/fxfile/gui/rebar/MenuBar.cpp: missing direct-text item resolution token {token}"
+                f"src/fxfile/gui/rebar/MenuBar.cpp: missing final Dark text ownership token {token}"
             )
+    if "CommandToIndex(static_cast<UINT>(nmcd.dwItemSpec))" in contents["menubar"]:
+        errors.append(
+            "src/fxfile/gui/rebar/MenuBar.cpp: Dark text ownership must not depend on ambiguous custom-draw item indexing"
+        )
 
     for source_name in ("toolbar_cpp", "menubar"):
         for token in (
@@ -3029,6 +3034,29 @@ def validate_win11_stability_regressions() -> list[str]:
         errors.append(
             "src/fxfile/gui/rebar/MenuBar.cpp: menu bar must use the shared DPI-aware system UI font"
         )
+
+    for token in (
+        "EnumThreadWindows(",
+        "RefreshThemeTopLevelWindow",
+        "SendMessageToDescendants(",
+        "WM_SETTINGCHANGE",
+    ):
+        if token not in contents["main_frame"]:
+            errors.append(
+                f"src/fxfile/main_frame.cpp: app theme switch must refresh every UI-thread top-level window; missing {token}"
+            )
+
+    for token in (
+        "GetTextMetrics(&sTextMetric)",
+        "sTextMetric.tmHeight",
+        "sTextMetric.tmExternalLeading",
+        "ModernUI::scale(24, sDpi)",
+        "ModernUI::scale(8, sDpi)",
+    ):
+        if token not in contents["header"]:
+            errors.append(
+                f"src/fxfile/gui/FlatHeaderCtrl.cpp: font/DPI-derived header height missing token {token}"
+            )
 
     if "ui::ModernUI::getUIFont(sLogFont, GetSafeHwnd())" not in contents["contents"]:
         errors.append(

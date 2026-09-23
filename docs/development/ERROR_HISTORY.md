@@ -1023,3 +1023,33 @@
 - 변경 source self-check: PASS — palette list/header, no `CBS_OWNERDRAWFIXED`, outer `ON_WM_CTLCOLOR`, duplicated disabled image list + secondary Fluent glyph, menu index fallback을 commit 전 확인했다.
 - `python build/validate_source_invariants.py`, MSVC compile/link, `local_ci.bat x64`, 실제 Windows Light/Dark/System/High Contrast screenshot 및 toolbar enabled/disabled interaction: **NOT TESTED** in connector-only environment.
 
+---
+
+## 2026-09-23 — Theme switch split-brain, menu native text, list-header clipping
+
+**오류 발생**
+- 사용자 최신 screenshot에서 main window는 Dark인데 이미 열린 Preferences는 Light 상태로 남아 한 번의 theme switch가 UI 전체에 원자적으로 적용되지 않았다.
+- 같은 Dark main window의 top menu text는 계속 검정/짙은 native foreground로 보였고 file-list header의 `이름 / 크기 / 종류 / 수정한 날짜` 글자가 세로 방향으로 살짝 잘렸다.
+
+**최초 실제 오류**
+- `MainFrame::setOption()`은 theme mode 변경 시 `SendMessageToDescendants(WM_SETTINGCHANGE, ...)`만 호출했다. Preferences는 MainFrame child가 아니라 별도 top-level/owned window이므로 이 broadcast에서 구조적으로 제외됐다.
+- `CMenuBar::OnCustomDraw()`는 custom-draw `dwItemSpec`을 command/index로 해석한 뒤에만 app-owned `DrawText`를 실행했다. runtime screenshot은 해당 resolution branch가 최종 text ownership을 확보하지 못하고 ToolbarWindow32 native text fallback이 남는다는 evidence다.
+- `FlatHeaderCtrl::resizeWindow()`는 font가 바뀌어도 기존 header window height를 그대로 재사용했다. modern UI font/DPI가 legacy header height보다 큰 환경에서는 custom-drawn glyph의 상하가 clip될 수 있었다.
+
+**원인 진단**
+- Root cause 1: app theme mode는 process/global state인데 refresh scope는 MainFrame descendant tree로 제한했다.
+- Root cause 2: final renderer ownership을 command/index inference 성공 여부에 의존했다.
+- Root cause 3: typography를 modern font로 교체하면서 vertical control metric은 legacy window height에 남겼다.
+
+**해결 방법**
+- `main_frame.cpp`: current UI thread의 모든 top-level window를 `EnumThreadWindows`로 열거하고 frame theme, `WM_SETTINGCHANGE`, descendant refresh, full redraw를 한 theme-change transaction으로 적용한다. 이미 열린 Preferences/owned dialog도 같은 pass에 포함한다.
+- `MenuBar.cpp`: `TB_GETBUTTONTEXT`로 custom-draw item command id의 실제 toolbar text를 직접 조회하고 ThemePalette foreground로 그린 뒤 `CDRF_SKIPDEFAULT`로 native black-text fallback을 차단한다. legacy sequential menu id fallback만 보조 경로로 유지한다.
+- `FlatHeaderCtrl.cpp`: current UI font의 `TEXTMETRIC.tmHeight + tmExternalLeading`과 DPI-scaled vertical padding으로 header height를 매번 계산하고 font/theme/DPI refresh 시 재적용한다.
+- `validate_source_invariants.py`: top-level theme broadcast, toolbar-id text ownership, font/DPI-derived header height를 safety contract로 추가하고 ambiguous `CommandToIndex(dwItemSpec)` 의존을 금지한다.
+
+**검증 상태**
+- 사용자 screenshot: FAIL before fix — split Light/Dark Preferences, Dark menu black text, header vertical clipping 확인.
+- Connector source audit: PASS — 세 root cause를 현재 `main` source에서 확인했다.
+- Source contract self-check: PASS — top-level enumeration, `TB_GETBUTTONTEXT` + `CDRF_SKIPDEFAULT`, TEXTMETRIC/DPI height contract를 commit 전 확인했다.
+- Windows runtime theme switch, actual Dark menu foreground, header clipping screenshot, `python build/validate_source_invariants.py`, MSVC compile/link, `local_ci.bat x64`: **NOT TESTED** in connector-only environment.
+
