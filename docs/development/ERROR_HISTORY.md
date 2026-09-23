@@ -1172,3 +1172,38 @@
 - Source contract after fix: PASS by connector inspection.
 - Windows runtime screenshot after fix: **NOT RETESTED**.
 
+---
+
+## 2026-09-23 — AddressBar flat-edge implementation was rejected by stale invariant contracts
+
+**오류 발생**
+- 사용자 `local_ci.bat x64` 재실행은 source invariant/regression preflight까지 정상 진입했지만 `address: missing Win11 soft-surface token sPalette.mFocus`와 `palette-owned address frame painting is missing` 두 오류로 종료됐다.
+- 이 시점에는 project generation/MSVC compile이 시작되지 않았으므로 제품 C++ compile failure가 아니라 validator contract drift였다.
+
+**최초 실제 오류**
+- `validate_soft_surface_contract()`의 AddressBar required token이 여전히 `("sPalette.mElevated", "sPalette.mFocus")`였다.
+- `validate_win11_stability_regressions()`의 `AddressBar::OnNcPaint()` check는 `CWindowDC sDC(this);`가 함수 본문에 직접 존재해야 한다고 요구했다.
+- 그러나 `62ab7978`은 Win11 Explorer reference에 맞춰 persistent focus/white outline을 제거했고, non-client edge painting을 reusable `PaintFlatAddressEdge()` helper로 이동했다. 따라서 두 old assertions는 최신 구현과 직접 모순됐다.
+
+**원인 진단**
+- Root cause 1: renderer implementation을 바꿀 때 동일 feature를 검사하는 여러 validator function을 한 번에 갱신하지 않았다.
+- Root cause 2: safety property 대신 이전 구현의 local token(`sPalette.mFocus`, local `CWindowDC`)을 요구해 refactor-safe하지 않았다.
+- Root cause 3: logical work unit 종료 시 validator 전체의 positive/negative AddressBar requirements 간 모순을 검색하지 않았다.
+
+**해결 방법**
+- soft-surface AddressBar contract는 `sPalette.mElevated`와 `PaintFlatAddressEdge`를 요구한다.
+- Win11 AddressBar regression contract는 local DC variable 대신 `PaintFlatAddressEdge(m_hWnd, sPalette.mElevated)`를 요구한다.
+- 기존 negative contract는 유지한다: `AddressBar::OnNcPaint()`에서 `sPalette.mFocus`, `sPalette.mBorder`, `sFocused`가 다시 나타나면 regression으로 실패한다.
+- Connector static scan에서 validator의 `CWindowDC sDC(this)` requirement는 0개, `sPalette.mFocus` reference는 AddressBar `OnNcPaint()` forbidden check 1개만 남았음을 확인했다.
+
+**재발 방지**
+- UI renderer refactor 시 동일 component를 검사하는 모든 validator function을 검색해 positive/negative contract를 함께 갱신한다.
+- invariant는 helper 위치나 local variable보다 최종 ownership/safety property를 검사한다.
+- 서로 모순되는 required/forbidden token이 없는지 logical work unit checkpoint에서 component 단위로 재검색한다.
+
+**검증 상태**
+- User local CI before fix: FAIL — source invariant/regression preflight에서 두 stale AddressBar contract failure.
+- Connector validator audit after fix: PASS — stale positive requirements 제거, current flat-edge tokens 요구, contradictory AddressBar focus requirement 없음.
+- `python build/validate_source_invariants.py`: **NOT RETESTED** on the user's Windows checkout after `63081b85`.
+- `local_ci.bat x64`, VS 2026 project generation, Release-x64-Unicode compile/link/runtime smoke: **NOT RETESTED** after `63081b85`.
+

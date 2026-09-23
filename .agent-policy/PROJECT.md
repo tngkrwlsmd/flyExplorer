@@ -77,7 +77,7 @@
     }
   ],
   "review": {
-    "reviewed_revision": "62ab7978315bf3c7f19a35b474f4894538015ff3",
+    "reviewed_revision": "63081b85f25871b1e40c3b0dfaaa6049523b72bb",
     "reviewed_at": "2026-09-23",
     "reviewed_paths": [
       "AGENTS.md",
@@ -349,10 +349,11 @@ Status: **ACTIVE / user-reproduced runtime failures**. These items are the immed
    - `62ab7978` introduces `PaintFlatAddressEdge()` and reapplies the Dark `mElevated` edge after outer, ComboBox `WM_PAINT`/`WM_NCPAINT`, and Edit `WM_NCPAINT`. Persistent focus/white frame drawing is removed outside High Contrast.
    - Acceptance remains screenshot based: the idle current-folder row must have no bright outline while focus/edit/drop-down behavior remains usable.
 
-9. **Local CI address invariant drift — ACTIVE**
-   - User `local_ci.bat x64` on 2026-09-23 19:40 reaches source invariant/regression preflight and fails with `address: missing Win11 soft-surface token sPalette.mFocus` plus `palette-owned address frame painting is missing`.
-   - These checks are stale relative to `62ab7978`: the new Win11 address contract intentionally removes the persistent focus outline and delegates non-client painting to `PaintFlatAddressEdge()`, so requiring `sPalette.mFocus` and local `CWindowDC sDC(this)` contradicts the current implementation.
-   - Acceptance: the validator must require the current flat-edge ownership contract, must not require the removed focus-outline implementation, and the user's `local_ci.bat x64` must progress past source invariant/regression preflight. Until rerun, status is `CODE FIXED / LOCAL CI NOT RETESTED`.
+9. **Local CI address invariant drift — CODE FIXED / LOCAL CI NOT RETESTED**
+   - User `local_ci.bat x64` on 2026-09-23 19:40 reached source invariant/regression preflight and failed with `address: missing Win11 soft-surface token sPalette.mFocus` plus `palette-owned address frame painting is missing`.
+   - Root cause: two validator clauses still described the pre-`62ab7978` implementation. One required `sPalette.mFocus` in the AddressBar soft-surface contract even though persistent focus outline was intentionally removed; another required local `CWindowDC sDC(this)` even though frame painting moved into `PaintFlatAddressEdge()`.
+   - `63081b85` aligns both contracts with the current renderer: AddressBar soft-surface coverage now requires `sPalette.mElevated` + `PaintFlatAddressEdge`, and the Win11 regression check requires `PaintFlatAddressEdge(m_hWnd, sPalette.mElevated)`. A full validator scan confirms no remaining positive AddressBar requirement for `sPalette.mFocus` or `CWindowDC sDC(this)`; `sPalette.mFocus` now appears only as an explicit forbidden token in `OnNcPaint()`.
+   - Acceptance still requires the user's rerun: `local_ci.bat x64` must pass source invariant/regression preflight and continue into VS 2026 x64 project generation/build.
 
 ### Development handoff rule
 
