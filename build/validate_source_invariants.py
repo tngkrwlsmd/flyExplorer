@@ -2555,9 +2555,18 @@ def validate_win11_stability_regressions() -> list[str]:
         "explorer_ctrl": FXFILE_SRC / "explorer_ctrl.cpp",
         "cfg_filter": FXFILE_SRC / "cfg" / "cfg_appearance_filtering_dlg.cpp",
         "cfg_filter_h": FXFILE_SRC / "cfg" / "cfg_appearance_filtering_dlg.h",
+        "header": FXFILE_SRC / "gui" / "FlatHeaderCtrl.cpp",
     }
 
-    contents: dict[str, str] = {}
+    class ContractContents(dict[str, str]):
+        def __missing__(self, key: str) -> str:
+            errors.append(
+                "validate_win11_stability_regressions: "
+                f"missing source registration for contents[{key!r}]"
+            )
+            return ""
+
+    contents: ContractContents = ContractContents()
     for name, path in paths.items():
         try:
             contents[name] = path.read_text(encoding="utf-8", errors="replace")
