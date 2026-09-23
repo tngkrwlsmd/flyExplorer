@@ -92,7 +92,9 @@ xpr_bool_t HistoryDlg::OnInitDialog(void)
 
     //-----------------------------------------------------------------------------
 
-    if (mToolBar.Create(this) == XPR_FALSE)
+    if (mToolBar.Create(
+            this,
+            WS_CHILD | WS_VISIBLE | CBRS_TOP) == XPR_FALSE)
     {
         XPR_TRACE(XPR_STRING_LITERAL("Failed to create toolbar\n"));
         return -1;
