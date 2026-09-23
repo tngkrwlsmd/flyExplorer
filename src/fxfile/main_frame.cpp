@@ -308,13 +308,28 @@ xpr_sint_t MainFrame::OnCreate(LPCREATESTRUCT aCreateStruct)
     // blocks custom/registered messages from lower integrity by default, so
     // explicitly allow only this data-free activation message on the main
     // window. This keeps the hand-off working without elevating the caller.
-    CHANGEFILTERSTRUCT sMessageFilter = {0};
-    sMessageFilter.cbSize = sizeof(sMessageFilter);
-    ::ChangeWindowMessageFilterEx(
-        m_hWnd,
-        WM_SINGLE_PROCESS,
-        MSGFLT_ALLOW,
-        &sMessageFilter);
+    typedef BOOL (WINAPI *ChangeWindowMessageFilterExFunc)(
+        HWND,
+        UINT,
+        DWORD,
+        PVOID);
+
+    HMODULE sUser32 = ::GetModuleHandle(XPR_STRING_LITERAL("user32.dll"));
+    if (XPR_IS_NOT_NULL(sUser32))
+    {
+        ChangeWindowMessageFilterExFunc sChangeWindowMessageFilterEx =
+            reinterpret_cast<ChangeWindowMessageFilterExFunc>(
+                ::GetProcAddress(sUser32, "ChangeWindowMessageFilterEx"));
+        if (XPR_IS_NOT_NULL(sChangeWindowMessageFilterEx))
+        {
+            const DWORD kMessageFilterAllow = 1; // MSGFLT_ALLOW
+            sChangeWindowMessageFilterEx(
+                m_hWnd,
+                WM_SINGLE_PROCESS,
+                kMessageFilterAllow,
+                XPR_NULL);
+        }
+    }
 
     ui::ModernUI::applyWindowFrameTheme(m_hWnd);
 
