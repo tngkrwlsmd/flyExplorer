@@ -2601,7 +2601,13 @@ def validate_win11_stability_regressions() -> list[str]:
             )
 
     for token in (
+        "kAddressBarComboBorderProp",
+        "kAddressBarComboClientEdgeProp",
+        "kAddressBarEditBorderProp",
         "kAddressBarEditClientEdgeProp",
+        "sNewComboStyle &= ~static_cast<LONG_PTR>(WS_BORDER)",
+        "sNewComboExStyle &= ~static_cast<LONG_PTR>(WS_EX_CLIENTEDGE)",
+        "sNewEditStyle &= ~static_cast<LONG_PTR>(WS_BORDER)",
         "sNewEditExStyle &= ~static_cast<LONG_PTR>(WS_EX_CLIENTEDGE)",
         "SWP_FRAMECHANGED",
         "case WM_ERASEBKGND:",
