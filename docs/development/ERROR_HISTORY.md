@@ -1309,3 +1309,37 @@
 - Connector source/diff audit after fix: PASS — outer and inner client-paint post-pass installed; stale PaintFlat/focus contracts absent.
 - Windows rebuilt screenshot after `ea47b7b7`: **NOT RETESTED**.
 
+---
+
+## 2026-09-23 — Menu contrast invariant scanned legacy fallback and produced a false positive
+
+**오류 발생**
+- 사용자 `local_ci.bat x64`가 revision `277a64249c376d271a1684bf182cca1bfc9d25f6`에서 source invariant/regression preflight를 실행했고, `src/fxfile/gui/rebar/MenuBar.cpp: inactive frame must not dim enabled Dark menu text`로 종료됐다.
+- 로그에는 프로젝트 생성/MSBuild 전 preflight FAIL과 함께 기존 x64 artifact가 이번 run에서 재빌드되지 않았다는 provenance warning도 정상적으로 기록됐다.
+
+**최초 실제 오류**
+- modern Dark custom-draw branch는 이미 `(uItemState & CDIS_DISABLED) ? mSecondaryText : mText`로 수정돼 있었다.
+- 하지만 같은 `MenuBar.cpp`의 WinXP/system-color fallback branch에는 의도적으로 `!m_bFrameActive` 조건이 남아 있다.
+- validator가 component 전체 문자열에 대해 `(CDIS_DISABLED || !m_bFrameActive)`를 검색해서 legacy fallback까지 modern regression으로 오인했다.
+
+**원인 진단**
+- Root cause: renderer-specific safety property를 file-global token absence로 표현했다.
+- modern renderer와 legacy compatibility renderer가 한 함수에 공존하는데 validation scope를 구분하지 않았다.
+
+**해결 방법**
+- `validate_win11_stability_regressions()`에서 `CDDS_ITEMPREPAINT`의 modern non-High-Contrast branch 시작과 legacy `WinAppEx* pApp` fallback 시작을 찾아 `menu_modern_draw` block을 분리한다.
+- inactive-frame dimming prohibition과 enabled/disabled text-color required token 검사는 해당 modern block에만 적용한다.
+- modern block 자체를 찾지 못하면 별도의 deterministic invariant failure를 반환한다.
+- Connector-side self-check에서 modern block 발견, forbidden condition absent, required contrast tokens present를 확인했다. legacy file-global `!m_bFrameActive`는 compatibility code로 허용한다.
+
+**재발 방지**
+- 동일 파일에 modern/legacy renderer가 공존하는 경우 safety invariant는 해당 renderer block으로 scope한다.
+- legacy compatibility token의 존재 여부를 modern renderer regression 판단에 직접 사용하지 않는다.
+- validator 변경 시 current source를 대상으로 block extraction 자체를 self-check한다.
+
+**검증 상태**
+- User local CI before fix: FAIL at source invariant/regression preflight.
+- Connector scoped-validator self-check after fix: PASS.
+- `python build/validate_source_invariants.py`: **NOT RETESTED** on the user's Windows checkout after `53b2490a`.
+- `local_ci.bat x64`, VS 2026 project generation, Release-x64-Unicode compile/link/runtime smoke: **NOT RETESTED** after `53b2490a`.
+

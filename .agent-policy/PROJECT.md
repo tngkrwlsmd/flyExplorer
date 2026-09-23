@@ -77,7 +77,7 @@
     }
   ],
   "review": {
-    "reviewed_revision": "ea47b7b763fe494228041aa80b3d1d6d83b96748",
+    "reviewed_revision": "53b2490ad74bb9800e42152aa64e86cb4869fb8b",
     "reviewed_at": "2026-09-23",
     "reviewed_paths": [
       "AGENTS.md",
@@ -361,11 +361,12 @@ Status: **ACTIVE / user-reproduced runtime failures**. These items are the immed
    - This was added as process hardening after a failed preflight could leave an older `bin\\x64\\fxfile.exe` in place. It is **not** the explanation for the latest screenshot; the user confirmed they pulled `main` and rebuilt before reproducing it.
    - `a630bf19` logs the current Git revision, writes `bin\\x64\\build-revision.txt` after a successful x64 rebuild, and emits an explicit stale-artifact warning if x64 CI fails before rebuilding the executable.
 
-11. **Local CI menu contrast validator false positive — ACTIVE**
-   - User `local_ci.bat x64` on revision `277a64249c376d271a1684bf182cca1bfc9d25f6` fails source invariant/regression preflight with `inactive frame must not dim enabled Dark menu text`.
-   - Current source audit shows the modern Dark custom-draw branch already uses only `CDIS_DISABLED ? mSecondaryText : mText`. The remaining `!m_bFrameActive` checks are confined to legacy WinXP/system-color fallback code.
-   - Root cause under repair: the invariant scans the entire `MenuBar.cpp` file instead of the modern non-High-Contrast custom-draw block, so valid legacy fallback code triggers a false positive.
-   - Acceptance: scope the check to the modern Dark branch, verify the modern block contains no inactive-frame dimming condition, and ensure `local_ci.bat x64` progresses beyond source invariant/regression preflight. Until user rerun, status is `CODE FIXED / LOCAL CI NOT RETESTED`.
+11. **Local CI menu contrast validator false positive — CODE FIXED / LOCAL CI NOT RETESTED**
+   - User `local_ci.bat x64` on revision `277a64249c376d271a1684bf182cca1bfc9d25f6` failed source invariant/regression preflight with `inactive frame must not dim enabled Dark menu text`.
+   - Root cause: the invariant searched the entire `MenuBar.cpp` file, so legitimate legacy WinXP/system-color fallback branches containing `!m_bFrameActive` triggered the modern Dark renderer rule.
+   - `53b2490a` extracts only the modern non-High-Contrast `CDDS_ITEMPREPAINT` branch and applies the inactive-frame prohibition plus enabled/disabled contrast requirements to that block.
+   - Connector-side extraction against current `MenuBar.cpp`: modern block found, forbidden condition absent in modern block, required contrast tokens present, while the legacy whole-file condition remains allowed.
+   - Acceptance still requires the user's rerun: `local_ci.bat x64` must pass source invariant/regression preflight and continue into VS 2026 x64 generation/build.
 
 ### Development handoff rule
 
