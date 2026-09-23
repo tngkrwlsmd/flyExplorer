@@ -144,6 +144,39 @@ xpr_bool_t isDarkColor(COLORREF aColor)
 
 const xpr_tchar_t kThemeApplyGuardProp[] =
     XPR_STRING_LITERAL("fxfile.ModernUI.ThemeApplyGuard");
+const xpr_tchar_t kThemeAssociationProp[] =
+    XPR_STRING_LITERAL("fxfile.ModernUI.ThemeAssociation");
+
+enum ControlThemeAssociation
+{
+    ControlThemeAssociationExplorer = 1,
+    ControlThemeAssociationDefault  = 2,
+    ControlThemeAssociationDisabled = 3,
+};
+
+xpr_bool_t hasControlThemeAssociation(
+    HWND aHwnd,
+    ControlThemeAssociation aAssociation)
+{
+    return
+        ::GetProp(aHwnd, kThemeAssociationProp) ==
+        reinterpret_cast<HANDLE>(static_cast<INT_PTR>(aAssociation)) ?
+        XPR_TRUE :
+        XPR_FALSE;
+}
+
+void rememberControlThemeAssociation(
+    HWND aHwnd,
+    ControlThemeAssociation aAssociation)
+{
+    if (XPR_IS_NULL(aHwnd))
+        return;
+
+    ::SetProp(
+        aHwnd,
+        kThemeAssociationProp,
+        reinterpret_cast<HANDLE>(static_cast<INT_PTR>(aAssociation)));
+}
 
 xpr_bool_t beginControlThemeChange(HWND aHwnd)
 {
@@ -691,6 +724,21 @@ xpr_bool_t ModernUI::applyExplorerControlTheme(HWND aHwnd)
     if (XPR_IS_NULL(aHwnd) || ::IsWindow(aHwnd) == FALSE)
         return XPR_FALSE;
 
+    // A visual-style association remains attached to the HWND across normal
+    // WM_THEMECHANGED notifications. Repeating SetWindowTheme with the same
+    // association can generate another WM_THEMECHANGED and keep the UI thread
+    // in a self-sustaining message loop. Skip identical requests entirely.
+    const xpr_bool_t sHighContrast = isHighContrast();
+    const ControlThemeAssociation sDesiredAssociation =
+        XPR_IS_TRUE(sHighContrast) ?
+        ControlThemeAssociationDefault :
+        ControlThemeAssociationExplorer;
+    if (XPR_IS_TRUE(
+            hasControlThemeAssociation(aHwnd, sDesiredAssociation)))
+    {
+        return XPR_TRUE;
+    }
+
     // SetWindowTheme is documented, but resolving it dynamically keeps the
     // ModernUI foundation safe on systems where uxtheme is unavailable.
     HMODULE sUxTheme = ::LoadLibrary(XPR_STRING_LITERAL("uxtheme.dll"));
@@ -709,9 +757,6 @@ xpr_bool_t ModernUI::applyExplorerControlTheme(HWND aHwnd)
 
     if (XPR_IS_FALSE(beginControlThemeChange(aHwnd)))
     {
-        // The only expected false result for a valid control during theme
-        // application is a synchronous WM_THEMECHANGED re-entry. Treat that
-        // nested request as already satisfied by the outer operation.
         const xpr_bool_t sNested =
             XPR_IS_NOT_NULL(::GetProp(aHwnd, kThemeApplyGuardProp)) ?
             XPR_TRUE : XPR_FALSE;
@@ -723,8 +768,10 @@ xpr_bool_t ModernUI::applyExplorerControlTheme(HWND aHwnd)
     // The Explorer theme is a documented/common Win32 visual-style opt-in
     // already used by flyExplorer list/tree controls.
     const LPCWSTR sSubAppName =
-        XPR_IS_TRUE(isHighContrast()) ? XPR_NULL : L"Explorer";
+        XPR_IS_TRUE(sHighContrast) ? XPR_NULL : L"Explorer";
     const HRESULT sResult = sSetWindowTheme(aHwnd, sSubAppName, XPR_NULL);
+    if (SUCCEEDED(sResult))
+        rememberControlThemeAssociation(aHwnd, sDesiredAssociation);
 
     endControlThemeChange(aHwnd);
     ::FreeLibrary(sUxTheme);
@@ -735,6 +782,14 @@ xpr_bool_t ModernUI::resetControlTheme(HWND aHwnd)
 {
     if (XPR_IS_NULL(aHwnd) || ::IsWindow(aHwnd) == FALSE)
         return XPR_FALSE;
+
+    if (XPR_IS_TRUE(
+            hasControlThemeAssociation(
+                aHwnd,
+                ControlThemeAssociationDisabled)))
+    {
+        return XPR_TRUE;
+    }
 
     HMODULE sUxTheme = ::LoadLibrary(XPR_STRING_LITERAL("uxtheme.dll"));
     if (XPR_IS_NULL(sUxTheme))
@@ -759,12 +814,15 @@ xpr_bool_t ModernUI::resetControlTheme(HWND aHwnd)
         return sNested;
     }
 
-    // SetWindowTheme(hwnd, NULL, NULL) restores the default visual-style
-    // association; it does not disable themed painting. Dark surfaces that
-    // are fully owned by flyExplorer need the documented empty sub-app/sub-id
-    // contract so native light borders/backgrounds do not leak through custom
-    // palette rendering.
+    // The empty sub-app/sub-id contract disables themed painting for controls
+    // whose complete Dark surface is owned by flyExplorer.
     const HRESULT sResult = sSetWindowTheme(aHwnd, L"", L"");
+    if (SUCCEEDED(sResult))
+    {
+        rememberControlThemeAssociation(
+            aHwnd,
+            ControlThemeAssociationDisabled);
+    }
 
     endControlThemeChange(aHwnd);
     ::FreeLibrary(sUxTheme);
