@@ -77,7 +77,7 @@
     }
   ],
   "review": {
-    "reviewed_revision": "d48c9cb58a02ab6d14343e837ac4d49211a285f1",
+    "reviewed_revision": "4004ac3d3107fabc59461520ac6e0ff7c37c4d70",
     "reviewed_at": "2026-09-23",
     "reviewed_paths": [
       "AGENTS.md",
@@ -368,11 +368,12 @@ Status: **ACTIVE / user-reproduced runtime failures**. These items are the immed
    - Connector-side extraction against current `MenuBar.cpp`: modern block found, forbidden condition absent in modern block, required contrast tokens present, while the legacy whole-file condition remains allowed.
    - Acceptance still requires the user's rerun: `local_ci.bat x64` must pass source invariant/regression preflight and continue into VS 2026 x64 generation/build.
 
-12. **Current-folder row still reads as a boxed legacy view — ACTIVE / reproduced on rebuilt 03bc40ce**
-   - The current screenshot still shows a full-width classic edge immediately above/around the ExplorerPane/current-folder row even after AddressBar style/client-edge work.
-   - Source hierarchy audit corrected the earlier rebar hypothesis: `AddressBar` is a direct child of `ExplorerPane`, and `ExplorerPane` itself only fills `mWindow`.
-   - Actual root-cause target: `MainFrame::onSplitterPaneCreate()` creates both `ExplorerView` and `FolderView` with `WS_CHILD | WS_VISIBLE | WS_BORDER`. The ExplorerView border surrounds the entire view, so its top edge appears immediately above the current-folder row and makes the pane look boxed.
-   - Next fix: modern Windows create these views without `WS_BORDER`; keep the legacy border only on XP compatibility path. Acceptance: the ExplorerView/current-folder surface blends into the surrounding Win11-style layout without a classic outer view frame.
+12. **Current-folder row still reads as a boxed legacy view — CODE FIXED / RUNTIME NOT RETESTED**
+   - Rebuilt `03bc40ce` runtime evidence showed a full-width classic edge immediately above/around the ExplorerPane/current-folder row even after AddressBar style/client-edge work.
+   - Source hierarchy audit corrected the earlier rebar hypothesis: `AddressBar` is a direct child of `ExplorerPane`, `ExplorerPane` itself only fills `mWindow`, and the actual outer frame came from `MainFrame::onSplitterPaneCreate()`.
+   - Root cause: both `ExplorerView` and `FolderView` were created unconditionally with `WS_CHILD | WS_VISIBLE | WS_BORDER`. The ExplorerView window border surrounds the whole view, so its top edge appears immediately above the current-folder row and makes the pane look boxed.
+   - `4004ac3d` changes both modern view styles to `WS_CHILD | WS_VISIBLE` and adds `WS_BORDER` only inside the WinXP compatibility path. The invariant rejects an unconditional view `WS_BORDER` and requires both XP guards.
+   - Acceptance remains runtime/screenshot based: the ExplorerView/current-folder surface must blend into the surrounding Win11-style layout without a classic outer view frame.
 
 ### Development handoff rule
 

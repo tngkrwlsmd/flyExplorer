@@ -1370,3 +1370,31 @@
 - Connector diff/source audit after fix: PASS — declaration/message map/implementation/final renderer guard all present.
 - Windows rebuilt screenshot after `d48c9cb5`: **NOT RETESTED**.
 
+---
+
+## 2026-09-23 — ExplorerView legacy WS_BORDER framed the current-folder surface
+
+**오류 발생**
+- 사용자가 revision `03bc40ce`를 실제 rebuild한 screenshot에서도 `내 문서` current-folder row 위/주변에 full-width classic edge가 남아 있다고 재현했다.
+- AddressBar의 outer/inner border style, non-client paint, client-edge paint를 이미 다뤘는데도 선이 남았으므로 AddressBar 자체가 아닌 상위 window hierarchy를 다시 추적했다.
+
+**최초 실제 오류**
+- `AddressBar`는 `ExplorerPane`의 직접 child이며 `ExplorerPane::OnPaint()`는 `ThemePalette.mWindow` 배경만 채운다.
+- `MainFrame::onSplitterPaneCreate()`에서 `ExplorerView`와 `FolderView`를 모두 `WS_CHILD | WS_VISIBLE | WS_BORDER`로 생성하고 있었다.
+- 이 outer `WS_BORDER`가 ExplorerView 전체를 감싸기 때문에 view의 첫 UI row인 current-folder 영역 바로 위/주변에 classic frame으로 나타났다.
+
+**원인 진단**
+- Root cause: AddressBar 내부 renderer만 계속 좁혀 봤고, 실제 classic edge ownership이 한 단계 상위 `ExplorerView` window style에 있다는 점을 늦게 확인했다.
+- 기존 source invariant도 AddressBar/rebar의 border contract는 보호했지만 splitter가 생성하는 Explorer/Folder view의 unconditional `WS_BORDER`는 검사하지 않았다.
+
+**해결 방법**
+- modern Windows에서 `ExplorerView`와 `FolderView` 생성 style을 `WS_CHILD | WS_VISIBLE`로 변경한다.
+- WinXP compatibility path에서만 `sStyle |= WS_BORDER`를 유지한다.
+- invariant는 `onSplitterPaneCreate()` block을 scope하여 unconditional `WS_CHILD | WS_VISIBLE | WS_BORDER`를 금지하고, 두 modern borderless style과 두 XP guard를 요구한다.
+
+**검증 상태**
+- User rebuilt screenshot before fix: FAIL on revision `03bc40ce`.
+- Connector source/diff self-check after fix: PASS — unconditional borders 0, modern borderless styles 2, XP guards 2, XP border additions 2.
+- `python build/validate_source_invariants.py`: **NOT RETESTED** after `4004ac3d`.
+- Windows Release-x64-Unicode build/runtime screenshot after `4004ac3d`: **NOT RETESTED**.
+
