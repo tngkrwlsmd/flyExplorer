@@ -41,6 +41,7 @@ protected:
     void SetFont(CFont *aFont);
     void ensureBackgroundBrush(COLORREF aColor);
     void updateAppearance(void);
+    void updateFont(void);
 
 protected:
     BookmarkItem *mBookmarkItem;
