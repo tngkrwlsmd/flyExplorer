@@ -56,6 +56,7 @@ protected:
     CBrush   mWindowBrush;
     COLORREF mSurfaceColor;
     COLORREF mWindowColor;
+    xpr_bool_t mRefreshingModernAppearance;
 
     xpr_uint_t mResourceId;
     xpr_size_t mCfgIndex;
