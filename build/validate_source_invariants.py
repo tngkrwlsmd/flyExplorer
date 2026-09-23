@@ -2465,6 +2465,8 @@ def validate_win11_stability_regressions() -> list[str]:
         "search_loc": FXFILE_SRC / "cmd" / "search_loc_dlg.cpp",
         "drop_menu_button_h": FXFILE_SRC / "gui" / "DropMenuButton.h",
         "drop_menu_button_cpp": FXFILE_SRC / "gui" / "DropMenuButton.cpp",
+        "button_st_h": FXFILE_SRC / "gui" / "BtnST.h",
+        "button_st_cpp": FXFILE_SRC / "gui" / "BtnST.cpp",
     }
 
     contents: dict[str, str] = {}
@@ -2667,6 +2669,27 @@ def validate_win11_stability_regressions() -> list[str]:
         errors.append(
             "src/fxfile/gui/DropMenuButton.cpp: legacy black-arrow call returned"
         )
+
+    button_st_h = contents["button_st_h"]
+    button_st_cpp = contents["button_st_cpp"]
+    if "afx_msg LRESULT OnThemeChanged(WPARAM wParam, LPARAM lParam);" not in button_st_h:
+        errors.append(
+            "src/fxfile/gui/BtnST.h: modern button theme-change handler declaration is missing"
+        )
+    for token in (
+        '#include "ModernUI.h"',
+        "fxfile::ui::ModernUI::getPalette()",
+        "m_xpTheme.IsAppThemed() && !bModernDark",
+        "m_crColors[BTNST_COLOR_BK_IN]  = sPalette.mHover",
+        "m_crColors[BTNST_COLOR_FG_OUT] = sPalette.mText",
+        "pDC->SetTextColor(sPalette.mSecondaryText)",
+        "ON_MESSAGE(WM_THEMECHANGED, OnThemeChanged)",
+        "SetDefaultColors(FALSE);",
+    ):
+        if token not in button_st_cpp:
+            errors.append(
+                f"src/fxfile/gui/BtnST.cpp: missing palette-aware owner-draw button token {token}"
+            )
 
     modern_ui = contents["modern_ui"]
     for token in (
