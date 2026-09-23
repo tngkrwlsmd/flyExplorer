@@ -2560,6 +2560,7 @@ def validate_win11_stability_regressions() -> list[str]:
         "address": FXFILE_SRC / "address_bar.cpp",
         "main_toolbar": FXFILE_SRC / "main_toolbar.cpp",
         "menubar": FXFILE_SRC / "gui" / "rebar" / "MenuBar.cpp",
+        "menubar_h": FXFILE_SRC / "gui" / "rebar" / "MenuBar.h",
         "contents": FXFILE_SRC / "contents_wnd.cpp",
         "conf_dir": FXFILE_SRC / "conf_dir.cpp",
         "toolbar_cpp": FXFILE_SRC / "gui" / "rebar" / "ToolBarEx.cpp",
@@ -3152,8 +3153,12 @@ def validate_win11_stability_regressions() -> list[str]:
                     f"src/fxfile/gui/rebar/MenuBar.cpp: final menu overlay missing semantic step {token}"
                 )
 
+    if "virtual LRESULT WindowProc( UINT message, WPARAM wParam, LPARAM lParam );" not in contents["menubar_h"]:
+        errors.append(
+            "src/fxfile/gui/rebar/MenuBar.h: final rebar-print ownership WindowProc declaration is missing"
+        )
+
     for token in (
-        "virtual LRESULT WindowProc( UINT message, WPARAM wParam, LPARAM lParam );",
         "LRESULT CMenuBar::WindowProc(",
         "message == WM_PRINTCLIENT",
         "message == WM_PRINT",
