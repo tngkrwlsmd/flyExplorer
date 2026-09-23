@@ -495,6 +495,7 @@ def validate_command_surface_contract() -> list[str]:
         "dwReBarStyle |= RBS_BANDBORDERS | WS_BORDER;",
         "sPalette.mChrome",
         "resetControlTheme(m_rbCtrl.m_hWnd)",
+        "CWnd::ReflectLastMsg( pNMHDR->hwndFrom, pResult )",
         "return CControlBar::OnNotify( wParam, lParam, pResult );",
     ):
         if token not in contents["rebar_cpp"]:
@@ -513,6 +514,10 @@ def validate_command_surface_contract() -> list[str]:
     if "if ( wParam != 1 )" not in notify_block:
         errors.append(
             "src/fxfile/gui/rebar/SizableReBar.cpp: child-notification routing guard is missing"
+        )
+    if "CWnd::ReflectLastMsg( pNMHDR->hwndFrom, pResult )" not in notify_block:
+        errors.append(
+            "src/fxfile/gui/rebar/SizableReBar.cpp: child band notifications must explicitly reflect to the originating control"
         )
     if "return FALSE;" in notify_block:
         errors.append(

@@ -402,13 +402,20 @@ LRESULT CSizableReBar::WindowProc( UINT message, WPARAM wParam, LPARAM lParam )
 
 BOOL CSizableReBar::OnNotify( WPARAM wParam, LPARAM lParam, LRESULT* pResult )
 {
+    NMHDR* pNMHDR = reinterpret_cast<NMHDR*>(lParam);
+
     if ( wParam != 1 )
     {
-        // Notifications from toolbar/menu band children must go through the
-        // normal MFC notification path so ON_NOTIFY_REFLECT handlers on the
-        // child receive NM_CUSTOMDRAW/TBN_* messages. Returning FALSE here
-        // bypassed that routing and left native ToolbarWindow32 painting in
-        // control even though CMenuBar/CToolBarEx supplied custom draw code.
+        // Rebar band children use ON_NOTIFY_REFLECT for NM_CUSTOMDRAW/TBN_*.
+        // Do not depend on an indirect base-class route here: explicitly
+        // reflect the notification back to the originating child first.
+        if ( pNMHDR != 0 &&
+             pNMHDR->hwndFrom != 0 &&
+             CWnd::ReflectLastMsg( pNMHDR->hwndFrom, pResult ) )
+        {
+            return TRUE;
+        }
+
         return CControlBar::OnNotify( wParam, lParam, pResult );
     }
 
@@ -417,7 +424,6 @@ BOOL CSizableReBar::OnNotify( WPARAM wParam, LPARAM lParam, LRESULT* pResult )
     rbbi.fMask  = RBBIM_CHILD;
 
     // Let child windows handle certain messages
-    NMHDR* pNMHDR = ( NMHDR* )lParam;
     switch ( pNMHDR->code )
     {
         case RBN_HEIGHTCHANGE:
