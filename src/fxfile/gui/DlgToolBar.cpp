@@ -71,7 +71,9 @@ void DlgToolBar::enableToolTips(xpr_bool_t aEnable)
 
 xpr_bool_t DlgToolBar::createToolBar(CDialog *aDialog)
 {
-    if (Create(aDialog) == XPR_FALSE)
+    if (Create(
+            aDialog,
+            WS_CHILD | WS_VISIBLE | CBRS_TOP) == XPR_FALSE)
         return XPR_FALSE;
 
     CBitmap sBitmap;
