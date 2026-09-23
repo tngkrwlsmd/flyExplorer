@@ -2458,6 +2458,7 @@ def validate_win11_stability_regressions() -> list[str]:
         "cfg_page_cpp": FXFILE_SRC / "cfg" / "cfg_dlg.cpp",
         "shell_registry": FXFILE_SRC / "shell_registry.cpp",
         "single_process": FXFILE_SRC / "single_process.cpp",
+        "main_coolbar": FXFILE_SRC / "main_coolbar.cpp",
     }
 
     contents: dict[str, str] = {}
@@ -2532,6 +2533,19 @@ def validate_win11_stability_regressions() -> list[str]:
         errors.append(
             "src/fxfile/single_process.cpp: presence check must not require MUTEX_ALL_ACCESS"
         )
+
+    main_coolbar = contents["main_coolbar"]
+    toolbar_restore_pos = main_coolbar.find("if (mMainToolBar.load(sPath) == XPR_FALSE)")
+    for token in (
+        "mMainToolBar.UpdateToolbarSize();",
+        "mDriveToolBar.UpdateToolbarSize();",
+        "mBookmarkToolBar.UpdateToolbarSize();",
+    ):
+        token_pos = main_coolbar.find(token, toolbar_restore_pos)
+        if toolbar_restore_pos < 0 or token_pos < toolbar_restore_pos:
+            errors.append(
+                f"src/fxfile/main_coolbar.cpp: missing post-restore command-bar metric token {token}"
+            )
 
     modern_ui = contents["modern_ui"]
     for token in (
