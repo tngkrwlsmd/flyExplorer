@@ -392,10 +392,12 @@ Status: **ACTIVE / user-reproduced runtime failures**. These items are the immed
    - Acceptance remains unchanged: no ellipsized About tabs at normal DPI; toolbar hover is a subtle dark elevation rather than a white block; dark surfaces never render native black text; command labels use one UI font; Up-box and BCMenu/toolbar/drop-down secondary glyphs remain visible in Dark mode.
    - This user-reproduced item remains ACTIVE for runtime closure until matching Windows screenshots pass. Source/static/CI evidence alone is not visual PASS.
 
-15. **Local CI toolbar bitmap-size compile failure — ACTIVE / USER LOCAL CI FAIL 2026-09-24**
+15. **Local CI toolbar bitmap-size compile failure — CODE FIXED / LOCAL CI NOT RETESTED**
    - User local CI on revision `ec903d085d75f93fae7fead634d2c748ca88f765` passed source invariant/regression preflight and failed during `Release-x64-Unicode | x64` compilation at `src/fxfile/gui/rebar/ToolBarEx.cpp` because `TB_GETBITMAPSIZE` is not a declared Win32 toolbar message.
-   - Work goal: replace the invalid toolbar bitmap-size query with the supported toolbar image-list contract, preserve text/icon layout for list and non-list toolbar buttons, and add a deterministic invariant so the invalid message cannot be reintroduced.
-   - Acceptance: source invariant preflight must still pass and the user's local `Release-x64-Unicode | x64` build must progress beyond this compile error. Until rerun evidence is provided, status remains `CODE FIXED / LOCAL CI NOT RETESTED`.
+   - Root cause: the Dark toolbar post-paint code needed the current icon dimensions but queried them through a nonexistent toolbar message instead of the toolbar's image-list contract.
+   - Fix: `DrawFinalDarkToolbarItem()` now gets the normal image list with `TB_GETIMAGELIST` and reads its icon dimensions with `ImageList_GetIconSize()`; a missing image list safely leaves the dimensions at zero. The source invariant now forbids `TB_GETBITMAPSIZE` and requires the supported image-list query.
+   - Connector source cross-check after the change confirms the invalid token is absent from `ToolBarEx.cpp` and the supported query/guard are present. The user's Windows `Release-x64-Unicode | x64` build has not yet been rerun after this fix.
+   - Acceptance: source invariant preflight must still pass and the user's local build must progress beyond this compile error. Until rerun evidence is provided, status remains `CODE FIXED / LOCAL CI NOT RETESTED`.
 
 ### Development handoff rule
 

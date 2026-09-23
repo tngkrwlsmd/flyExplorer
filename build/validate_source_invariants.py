@@ -420,7 +420,7 @@ def validate_toolbar_custom_draw_regression() -> list[str]:
     # These messages belong to no supported ToolbarWindow32 contract. A previous
     # dark-mode change confused them with RB_SETBKCOLOR/RB_SETTEXTCOLOR and broke
     # the Visual Studio build with C2065 before runtime tests could start.
-    for token in ("TB_SETBKCOLOR", "TB_SETTEXTCOLOR"):
+    for token in ("TB_SETBKCOLOR", "TB_SETTEXTCOLOR", "TB_GETBITMAPSIZE"):
         if token in toolbar_code:
             errors.append(
                 f"{rel}: unsupported toolbar color message {token} reintroduced; "
@@ -433,6 +433,8 @@ def validate_toolbar_custom_draw_regression() -> list[str]:
         "CDDS_ITEMPOSTPAINT",
         "CDRF_NOTIFYPOSTPAINT",
         "TB_GETBUTTONTEXT",
+        "TB_GETIMAGELIST",
+        "ImageList_GetIconSize",
         "BTNS_WHOLEDROPDOWN",
         "sPalette.mHover",
         "sPalette.mPressed",

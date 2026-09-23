@@ -1536,3 +1536,31 @@
 - User runtime screenshots before fix: FAIL.
 - Source/connector audit after fix: implemented; Release-x64-Unicode compile/link/runtime smoke **PENDING**.
 - Matching Windows screenshot/runtime acceptance after fix: **NOT RETESTED**.
+
+
+---
+
+## 2026-09-24 — Dark toolbar post-paint used nonexistent TB_GETBITMAPSIZE
+
+**오류 발생**
+- 사용자 `local_ci.bat x64` 로그에서 revision `ec903d085d75f93fae7fead634d2c748ca88f765`의 source invariant/regression preflight는 PASS했지만 `Release-x64-Unicode | x64` MSVC compile이 `ToolBarEx.cpp`에서 C2065로 중단됐다.
+- 실패 식별자는 `TB_GETBITMAPSIZE`였다.
+
+**원인 진단**
+- Dark toolbar final post-paint가 text 영역을 계산하려고 toolbar bitmap 크기를 조회하면서 실제 ToolbarWindow32 API에 없는 `TB_GETBITMAPSIZE` 메시지를 사용했다.
+- 필요한 값은 toolbar의 현재 normal image list가 이미 소유하고 있으므로 별도 가상 toolbar message가 필요하지 않았다.
+
+**해결 방법**
+- `DrawFinalDarkToolbarItem()`에서 `TB_GETIMAGELIST`로 현재 normal image list를 얻고 `ImageList_GetIconSize()`로 icon width/height를 조회한다.
+- image list가 없거나 size query가 실패하면 width/height를 0으로 유지해 text-only toolbar button 경로가 안전하게 계속 동작하도록 했다.
+- 기존 list-style/non-list-style text rectangle 계산은 그대로 유지했다.
+
+**재발 방지**
+- `build/validate_source_invariants.py::validate_toolbar_custom_draw_regression()`의 unsupported toolbar-message 목록에 `TB_GETBITMAPSIZE`를 추가했다.
+- 동일 validator가 `TB_GETIMAGELIST`와 `ImageList_GetIconSize` 존재를 요구해 지원되는 image-list contract가 사라지지 않게 한다.
+
+**검증 상태**
+- User local CI before fix: source invariant/regression preflight **PASS**, Release-x64-Unicode x64 compile **FAIL** with C2065 at `ToolBarEx.cpp(278,17)`.
+- Connector source cross-check after fix: `ToolBarEx.cpp`에서 `TB_GETBITMAPSIZE` 없음, `TB_GETIMAGELIST` / `ImageList_GetIconSize` 있음.
+- `python build/validate_source_invariants.py`: **NOT RETESTED** after this fix.
+- User `local_ci.bat x64`: **NOT RETESTED** after this fix.

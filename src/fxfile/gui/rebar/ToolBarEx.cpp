@@ -271,17 +271,28 @@ void DrawFinalDarkToolbarItem(
             ::GetWindowLongPtr(
                 sHwnd,
                 GWL_STYLE));
-    const DWORD sBitmapSize =
-        static_cast<DWORD>(
+    xpr_sint_t sBitmapWidth = 0;
+    xpr_sint_t sBitmapHeight = 0;
+    HIMAGELIST sImageList =
+        reinterpret_cast<HIMAGELIST>(
             ::SendMessage(
                 sHwnd,
-                TB_GETBITMAPSIZE,
+                TB_GETIMAGELIST,
                 0,
                 0));
-    const xpr_sint_t sBitmapWidth =
-        LOWORD(sBitmapSize);
-    const xpr_sint_t sBitmapHeight =
-        HIWORD(sBitmapSize);
+    if (XPR_IS_NOT_NULL(sImageList))
+    {
+        xpr_sint_t sImageWidth = 0;
+        xpr_sint_t sImageHeight = 0;
+        if (::ImageList_GetIconSize(
+                sImageList,
+                &sImageWidth,
+                &sImageHeight) != FALSE)
+        {
+            sBitmapWidth = sImageWidth;
+            sBitmapHeight = sImageHeight;
+        }
+    }
 
     if ((sToolbarStyle & TBSTYLE_LIST) != 0)
     {
