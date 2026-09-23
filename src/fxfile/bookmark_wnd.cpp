@@ -60,14 +60,7 @@ xpr_sint_t BookmarkWnd::OnCreate(LPCREATESTRUCT lpCreateStruct)
     if (CStatic::OnCreate(lpCreateStruct) == -1)
         return -1;
 
-    CFont sFont;
-    NONCLIENTMETRICS sNonClientMetrics = {0};
-    sNonClientMetrics.cbSize = sizeof(NONCLIENTMETRICS);
-    ::SystemParametersInfo(SPI_GETNONCLIENTMETRICS, sizeof(NONCLIENTMETRICS), &sNonClientMetrics, 0);
-    sNonClientMetrics.lfMenuFont.lfUnderline = XPR_TRUE;
-    if (!sFont.CreateFontIndirect(&sNonClientMetrics.lfMenuFont))
-        sFont.CreateStockObject(DEFAULT_GUI_FONT);
-    SetFont(&sFont);
+    updateFont();
 
     mToolTipCtrl.Create(this);
     updateAppearance();
@@ -168,6 +161,30 @@ void BookmarkWnd::ensureBackgroundBrush(COLORREF aColor)
         mBackgroundColor = CLR_INVALID;
 }
 
+void BookmarkWnd::updateFont(void)
+{
+    LOGFONT sLogFont = {0};
+    if (XPR_IS_FALSE(ui::ModernUI::getUIFont(sLogFont, GetSafeHwnd())))
+    {
+        NONCLIENTMETRICS sNonClientMetrics = {0};
+        sNonClientMetrics.cbSize = sizeof(NONCLIENTMETRICS);
+        ::SystemParametersInfo(
+            SPI_GETNONCLIENTMETRICS,
+            sizeof(NONCLIENTMETRICS),
+            &sNonClientMetrics,
+            0);
+        sLogFont = sNonClientMetrics.lfMessageFont;
+    }
+
+    sLogFont.lfUnderline = XPR_TRUE;
+
+    CFont sFont;
+    if (sFont.CreateFontIndirect(&sLogFont) == XPR_FALSE)
+        sFont.CreateStockObject(DEFAULT_GUI_FONT);
+
+    SetFont(&sFont);
+}
+
 void BookmarkWnd::updateAppearance(void)
 {
     const ui::ThemePalette sPalette = ui::ModernUI::getPalette();
@@ -183,6 +200,7 @@ void BookmarkWnd::updateAppearance(void)
 void BookmarkWnd::OnSettingChange(xpr_uint_t aFlags, const xpr_tchar_t *aSection)
 {
     CStatic::OnSettingChange(aFlags, aSection);
+    updateFont();
     updateAppearance();
 }
 
