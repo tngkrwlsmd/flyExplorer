@@ -77,7 +77,7 @@
     }
   ],
   "review": {
-    "reviewed_revision": "f3112c5179780053a03fdb3ca1c2b94da3b4d526",
+    "reviewed_revision": "a46dbadddf053c91be185a978eb50d24e9a20ba2",
     "reviewed_at": "2026-09-23",
     "reviewed_paths": [
       "AGENTS.md",
@@ -331,10 +331,11 @@ Status: **ACTIVE / user-reproduced runtime failures**. These items are the immed
    - `c9b9c69e` changes `AddressBar::OnNcPaint()` so the idle edge uses the same `mElevated` color as the field surface and `mFocus` is drawn only while the address control actually owns focus.
    - The supplied Windows 11 Explorer reference remains the visual acceptance target; a persistent idle outline keeps this item ACTIVE.
 
-6. **Local CI preflight validator KeyError — ACTIVE**
+6. **Local CI preflight validator KeyError — CODE FIXED / LOCAL CI NOT RETESTED**
    - User local CI on 2026-09-23 reached source invariant/regression preflight and failed before project generation with `KeyError: 'header'` in `validate_win11_stability_regressions()`.
-   - Root cause under repair: the header-clipping regression guard reads `contents["header"]` but the function's `paths` map omitted `FlatHeaderCtrl.cpp`.
-   - Acceptance: `python build/validate_source_invariants.py` must complete without traceback and `local_ci.bat x64` must progress past source invariant/regression preflight. Until user reruns it, status remains `CODE FIXED / LOCAL CI NOT RETESTED`.
+   - Root cause: commit-time header-clipping regression coverage read `contents["header"]` but the function's `paths` map omitted `FlatHeaderCtrl.cpp`.
+   - `a46dbadd` registers `FlatHeaderCtrl.cpp` as the `header` contract source and changes the local contents map to report a deterministic `missing source registration` invariant error rather than raising `KeyError` if a future source key is omitted.
+   - Connector static cross-check after the change found no `contents["..."]` references missing from the function's `paths` map. Acceptance still requires a user rerun: `python build/validate_source_invariants.py` must complete without traceback and `local_ci.bat x64` must progress past source invariant/regression preflight.
 
 ### Development handoff rule
 

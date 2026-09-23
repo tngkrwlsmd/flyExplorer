@@ -1081,3 +1081,36 @@
 - Source contract self-check: PASS — non-HC zero-height stripe, neutral ActivateBar paint, idle `mElevated`/focused `mFocus` address frame을 commit 전 확인했다.
 - Windows runtime screenshot, keyboard-focus accessibility, High Contrast active-pane indication, `python build/validate_source_invariants.py`, MSVC compile/link, `local_ci.bat x64`: **NOT TESTED** in connector-only environment.
 
+---
+
+## 2026-09-23 — Win11 source invariant preflight crashed on missing `header` registration
+
+**오류 발생**
+- 사용자 `local_ci.bat x64` 실행이 Visual Studio 2026 x64 solution 생성 전 source invariant/regression preflight에서 종료됐다.
+- Python traceback은 `validate_win11_stability_regressions()`의 `contents["header"]` 접근에서 `KeyError: 'header'`를 보고했다. 따라서 이번 FAIL은 C++ compile/link 결과가 아니라 validator 자체의 integration 오류다.
+
+**최초 실제 오류**
+- 최근 file-list header clipping 회귀 guard가 `FlatHeaderCtrl.cpp`의 font/DPI metric token을 검사하도록 추가됐지만, 같은 함수의 `paths` map에는 `"header": FXFILE_SRC / "gui" / "FlatHeaderCtrl.cpp"` 등록이 빠져 있었다.
+- 그 결과 source file read 단계에서는 오류가 없었고, 뒤쪽 direct dictionary access에서 Python exception이 발생해 정상적인 invariant error reporting도 건너뛰었다.
+
+**원인 진단**
+- Root cause 1: 새 regression assertion과 해당 assertion의 source-registration 변경을 하나의 invariant contract로 검토하지 않았다.
+- Root cause 2: validator 내부 `contents`가 plain `dict`여서 source-registration 누락이 deterministic validation failure가 아니라 traceback으로 바뀌었다.
+- Root cause 3: 직전 UI 논리 작업 종료 시 validator 자체의 source-key completeness를 정적 대조하지 않았다.
+
+**해결 방법**
+- `build/validate_source_invariants.py`: `validate_win11_stability_regressions()`의 `paths`에 `FlatHeaderCtrl.cpp`를 `header` key로 등록했다.
+- 같은 함수의 contract contents map에 `__missing__` fallback을 추가해 향후 등록 누락이 발생하면 `missing source registration for contents[...] ` 오류를 누적하고 빈 source로 이어서 검사하도록 했다. 따라서 regression validator는 source integration 오류를 traceback이 아니라 일반 preflight failure로 보고한다.
+- Connector-side static cross-check로 해당 함수의 모든 literal `contents["..."]` key와 `paths` key를 대조했고 누락이 0개임을 확인했다.
+
+**재발 방지**
+- regression guard가 새 source key를 참조하면 같은 논리 작업에서 source path registration까지 함께 검토한다.
+- validator 내부 integration 실수는 Python exception으로 종료시키지 말고 deterministic validation error로 반환한다.
+- invariant 변경 checkpoint에는 최소한 function-local source-key/reference completeness 대조를 포함한다.
+
+**검증 상태**
+- 사용자 local CI before fix: FAIL — source invariant/regression preflight에서 `KeyError: 'header'`; project generation/MSVC compile은 시작되지 않음.
+- Connector source audit after fix: PASS — `header` source registration 존재, direct `contents["..."]` reference 대비 missing key 0개, defensive missing-key reporting 존재.
+- `python build/validate_source_invariants.py`: **NOT RETESTED** on the user's Windows checkout after this commit.
+- `local_ci.bat x64`, VS 2026 project generation, Release-x64-Unicode compile/link/runtime smoke: **NOT RETESTED** after this commit.
+
