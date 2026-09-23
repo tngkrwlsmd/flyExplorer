@@ -1111,7 +1111,7 @@ void CfgDlg::applyModernAppearanceToChildren(HFONT aPreviousFont)
     }
 }
 
-void CfgDlg::refreshModernAppearance(void)
+void CfgDlg::refreshModernAppearance(xpr_bool_t aRethemeControls)
 {
     if (XPR_IS_NULL(m_hWnd) || XPR_IS_TRUE(mRefreshingModernAppearance))
         return;
@@ -1159,7 +1159,8 @@ void CfgDlg::refreshModernAppearance(void)
     // Keep the page rectangular and let individual controls/surfaces own
     // their rounded geometry.
     ::SetWindowRgn(GetSafeHwnd(), XPR_NULL, TRUE);
-    applyModernAppearanceToChildren(sPreviousFont);
+    if (XPR_IS_TRUE(aRethemeControls))
+        applyModernAppearanceToChildren(sPreviousFont);
     RedrawWindow(
         XPR_NULL,
         XPR_NULL,
@@ -1227,7 +1228,10 @@ void CfgDlg::OnSysColorChange(void)
 
 LRESULT CfgDlg::OnThemeChanged(WPARAM aWParam, LPARAM aLParam)
 {
-    refreshModernAppearance();
+    // A page already owns its child theme associations after creation.
+    // Repainting on WM_THEMECHANGED is sufficient and avoids SetWindowTheme
+    // feeding another theme notification back into the settings hierarchy.
+    refreshModernAppearance(XPR_FALSE);
     return 0;
 }
 
