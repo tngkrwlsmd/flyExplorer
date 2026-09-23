@@ -1379,6 +1379,19 @@ BOOL CColourPopupXP::Create(CPoint p, COLORREF crColour, CWnd* pParentWnd,
 	if ( !bCreate )
 		return FALSE;
 
+    // Initialise() runs before the popup HWND exists, so its first font is a
+    // safe system-DPI fallback. Re-resolve the Windows UI font now that the
+    // popup has a real monitor/DPI context before measuring or painting text.
+    LOGFONT sPopupLogFont = {0};
+    if (XPR_IS_TRUE(
+            fxfile::ui::ModernUI::getUIFont(
+                sPopupLogFont,
+                GetSafeHwnd())))
+    {
+        m_Font.DeleteObject();
+        m_Font.CreateFontIndirect(&sPopupLogFont);
+    }
+
     // Store the Custom text
     if (szCustomText != NULL) 
         m_strCustomText = szCustomText;
