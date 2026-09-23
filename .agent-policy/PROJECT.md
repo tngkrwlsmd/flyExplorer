@@ -77,7 +77,7 @@
     }
   ],
   "review": {
-    "reviewed_revision": "c132100512a5c4179b5bccf7724d3730b0b3dbfc",
+    "reviewed_revision": "a7b22fd8332ed59da4e75558cb67d8ade6382183",
     "reviewed_at": "2026-09-23",
     "reviewed_paths": [
       "AGENTS.md",
@@ -294,7 +294,7 @@
 
 ## Current runtime stabilization state — 2026-09-23
 
-- runtime/UI 안정화 후속 52개 commit과 후속 공용-dialog/elevated-installer 수정이 `main`에 통합되었고, 현재 reviewed 제품/빌드/문서 상태는 `5104f99cab831ddac5bf9f3454a6ffe6969a5251`을 기준으로 한다.
+- runtime/UI 안정화 후속 52개 commit, 공용-dialog/elevated-installer 수정, screenshot-driven Preferences/menu 수정까지 `main`에 통합되었다. 현재 제품 코드 기준점은 `c132100512a5c4179b5bccf7724d3730b0b3dbfc`이고, 개발 지침 reviewed revision은 `a7b22fd8332ed59da4e75558cb67d8ade6382183`이다.
 - `ModernUI::applyExplorerControlTheme()` / `resetControlTheme()`는 HWND별 theme association 상태를 기억해 동일 `SetWindowTheme` 요청을 생략한다. `CfgMainDlg` / `CfgDlg`의 `WM_THEMECHANGED` 경로는 child theme association을 다시 순회하지 않고 palette/font/frame repaint 중심으로 동작해 message-queue 기반 재진입 위험을 낮춘다.
 - standard-user 경로는 machine-wide write 의존성을 줄였다. shell context menu는 `HKCU\\Software\\Classes\\Folder\\Shell`에 등록하고, single-process 존재 확인은 `SYNCHRONIZE`만 요청하며 minimal open의 `ERROR_ACCESS_DENIED`도 기존 named mutex 존재로 해석한다. legacy config/accelerator migration은 protected install path에서 source rename/move 대신 per-user destination copy를 사용한다.
 - elevated first instance와 normal-integrity second launch의 single-instance wake-up은 `ChangeWindowMessageFilterEx`를 동적으로 해석해 등록된 activation message만 허용한다. 이 경로는 input/command payload를 확장하지 않는다.
@@ -308,6 +308,19 @@
 - 위 회귀 경로에는 `build/validate_source_invariants.py`의 deterministic guard가 추가되어 있으며 installer smoke도 elevated auto-launch 부재를 검사한다. 상세 root cause와 commit mapping은 `docs/development/ERROR_HISTORY.md`에 기록되어 있다.
 - 최신 변경 이후 connector 기반 source inspection은 수행했지만 `python build/validate_source_invariants.py`, MSVC compile/link, `local_ci.bat x64`, standard-user/elevated-instance interop, Windows 11 Light/Dark/System/High Contrast 100/125/150/200% DPI visual/IME/runtime 검증은 이 환경에서 실행하지 않았다. 따라서 해당 evidence는 계속 **NOT TESTED**다.
 
+## Runtime regression acceptance protocol
+
+flyExplorer의 UI/runtime 결함은 source invariant나 commit 존재만으로 종결하지 않는다. 사용자 재현이 있는 경우 아래 acceptance case를 해당 변경 범위에 맞게 적용한다.
+
+- **Preferences hang:** `도구 -> 환경설정` 진입을 실제 Windows에서 반복해 UI thread가 멈추지 않고 첫 페이지가 표시되는지 확인한다. Dark/System 전환 또는 GROUPBOX/list/tree modernization을 건드린 변경이면 최소한 관련 theme 상태에서도 다시 연다. 실행하지 못하면 `CODE FIXED / RUNTIME NOT TESTED`로 남긴다.
+- **Dark command/menu visibility:** 사용자 screenshot에서 문제가 보인 surface는 최종 screenshot으로 재확인한다. palette/custom-draw field 값만으로 PASS하지 않으며 menu/toolbar text, icon/glyph, hover/pressed/focus가 실제 dark chrome 위에서 식별 가능해야 한다.
+- **Theme association/re-entry:** `WM_THEMECHANGED`, `WM_SETTINGCHANGE`, `SetWindowTheme` 관련 수정은 settings host/page뿐 아니라 `ListCtrlEx`, `TreeCtrlEx`, 공용 dialog base 등 같은 HWND를 다시 retheme할 수 있는 sibling/base 경로를 함께 검색한다. notification handler 내부에서 association 변경이 다시 시작되는지 확인한다.
+- **Enumeration + mutation:** child HWND/style/z-order를 변경하는 코드에서 sibling/child enumeration을 함께 수행하면 live `GetNextWindow` chain을 사용하지 않는다. 먼저 HWND snapshot을 만들거나 mutation과 traversal phase를 분리한다.
+- **Elevation:** 일반 사용자 shell에서 실행한 `fxfile.exe`가 non-elevated인지 확인하고, installer -> launcher -> fxfile, startup helper, shortcut/shell path를 각각 parent/token chain으로 본다. manifest의 `asInvoker`만으로 권한 PASS를 선언하지 않는다.
+- 동일 증상이 수정 후 다시 보고되면 기존 issue의 단순 재발로 간주하지 않고 새로운 runtime failure로 연다. 사용자 screenshot/dump/stack/process evidence가 이전 static PASS와 충돌하면 runtime evidence가 우선한다.
+- `build/validate_source_invariants.py`에는 구현 token 자체보다 원인 재도입을 막는 safety property를 넣는다. known-bad pattern은 가능하면 forbidden check로 만들고, guard 자체가 결함 패턴을 요구하지 않는지 변경 시 함께 검토한다.
+- 사용자에게 `fixed`/`resolved`라고 보고하려면 해당 증상의 acceptance case가 실제 runtime에서 PASS했거나 동등한 runtime evidence가 있어야 한다. compile/static만 확인한 경우 evidence level을 명시하고 runtime closure를 주장하지 않는다.
+
 ## Recommended verification
 
 0. **현재 활성 CI build 범위는 `Release-x64-Unicode | x64` 하나뿐이다.**
@@ -317,6 +330,8 @@
 4. compile/link 완료 판단은 `Release-x64-Unicode | x64` evidence만 사용한다. Debug/x86 결과를 요구하지 않으며 실행하지 않은 범위는 `NOT TESTED`로 둔다.
 5. **2026-09-30까지 GitHub Actions는 branch/main 반영만을 이유로 실행하지 않는다.** 사용자가 Actions 사용을 명시적으로 허용하더라도 현재 Windows build 범위는 Release x64 하나다.
 6. interactive UI/DPI/High Contrast/visual 결과와 clean Windows Registry/shell integration은 CI build와 별도의 수동 evidence로 구분한다.
+7. 사용자에게서 재현된 runtime 결함은 해당 사용자 행동을 acceptance case로 보존한다. 동일 증상을 직접 재실행하지 못한 경우 static/compile 결과와 무관하게 runtime 상태는 `NOT TESTED`다.
+8. UI hang 수정은 가능하면 UI thread stack/dump 또는 source상 유한성 증거와 반복 open/close runtime을 함께 확보한다. visual 수정은 최종 screenshot, elevation 수정은 실제 process/token state를 별도 evidence로 남긴다.
 
 ## Maintenance
 
