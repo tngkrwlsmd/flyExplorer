@@ -106,6 +106,8 @@ void CModernDialog::applyModernAppearanceToChild(CWnd *aWnd, HFONT aPreviousFont
         }
     }
 
+    fxfile::ui::ModernUI::applyDialogControlTheme(aWnd->GetSafeHwnd());
+
     CWnd *sChild = aWnd->GetWindow(GW_CHILD);
     while (XPR_IS_NOT_NULL(sChild))
     {
