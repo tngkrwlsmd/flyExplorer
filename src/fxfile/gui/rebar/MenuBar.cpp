@@ -44,16 +44,17 @@ static char THIS_FILE[]=__FILE__;
 
 namespace
 {
-void DrawRoundedMenuBarState(
-    LPNMTBCUSTOMDRAW aCustomDraw,
+void DrawRoundedMenuBarRect(
+    HDC aHdc,
+    HWND aHwnd,
+    const RECT &aSourceRect,
     COLORREF aFillColor)
 {
-    RECT sRect = aCustomDraw->nmcd.rc;
-    const HWND sHwnd = aCustomDraw->nmcd.hdr.hwndFrom;
+    RECT sRect = aSourceRect;
     const xpr_sint_t sInset =
-        max(1, fxfile::ui::ModernUI::scaleForWindow(3, sHwnd));
+        max(1, fxfile::ui::ModernUI::scaleForWindow(3, aHwnd));
     const xpr_sint_t sRadius =
-        fxfile::ui::ModernUI::getControlCornerRadius(sHwnd);
+        fxfile::ui::ModernUI::getControlCornerRadius(aHwnd);
 
     ::InflateRect(&sRect, -sInset, -sInset);
     if (sRect.right <= sRect.left || sRect.bottom <= sRect.top)
@@ -63,20 +64,31 @@ void DrawRoundedMenuBarState(
     if (XPR_IS_NULL(sBrush))
         return;
 
-    HGDIOBJ sOldBrush = ::SelectObject(aCustomDraw->nmcd.hdc, sBrush);
+    HGDIOBJ sOldBrush = ::SelectObject(aHdc, sBrush);
     HGDIOBJ sOldPen =
-        ::SelectObject(aCustomDraw->nmcd.hdc, ::GetStockObject(NULL_PEN));
+        ::SelectObject(aHdc, ::GetStockObject(NULL_PEN));
     ::RoundRect(
-        aCustomDraw->nmcd.hdc,
+        aHdc,
         sRect.left,
         sRect.top,
         sRect.right,
         sRect.bottom,
         sRadius * 2,
         sRadius * 2);
-    ::SelectObject(aCustomDraw->nmcd.hdc, sOldPen);
-    ::SelectObject(aCustomDraw->nmcd.hdc, sOldBrush);
+    ::SelectObject(aHdc, sOldPen);
+    ::SelectObject(aHdc, sOldBrush);
     ::DeleteObject(sBrush);
+}
+
+void DrawRoundedMenuBarState(
+    LPNMTBCUSTOMDRAW aCustomDraw,
+    COLORREF aFillColor)
+{
+    DrawRoundedMenuBarRect(
+        aCustomDraw->nmcd.hdc,
+        aCustomDraw->nmcd.hdr.hwndFrom,
+        aCustomDraw->nmcd.rc,
+        aFillColor);
 }
 } // namespace
 
@@ -1109,6 +1121,7 @@ BEGIN_MESSAGE_MAP(CMenuBar, CToolBar)
     //{{AFX_MSG_MAP(CMenuBar)
     ON_WM_CREATE()
     ON_WM_DESTROY()
+    ON_WM_PAINT()
     ON_WM_RBUTTONDOWN()
     ON_WM_LBUTTONDOWN()
     ON_WM_LBUTTONUP()
@@ -1174,6 +1187,121 @@ void CMenuBar::OnDestroy()
     CToolBar::OnDestroy();
 
     CloseTheme();
+}
+
+void CMenuBar::OnPaint()
+{
+    // Let ToolbarWindow32 keep layout, hit-testing, accessibility and any
+    // legacy/system buttons. Then take final ownership of textual menu pixels
+    // so native black text cannot survive after our draw pass.
+    CToolBar::Default();
+
+    const fxfile::ui::ThemePalette sPalette =
+        fxfile::ui::ModernUI::getPalette();
+    if (XPR_IS_TRUE(sPalette.mHighContrast) ||
+        WinAppEx::GetInstance()->IsWinXP())
+    {
+        return;
+    }
+
+    CClientDC sDC(this);
+    CFont *sOldFont = XPR_NULL;
+    if (XPR_IS_NOT_NULL(m_fontMenu.m_hObject))
+        sOldFont = sDC.SelectObject(&m_fontMenu);
+
+    sDC.SetBkMode(TRANSPARENT);
+
+    CToolBarCtrl &sToolBarCtrl = GetToolBarCtrl();
+    const xpr_sint_t sHotItem = sToolBarCtrl.GetHotItem();
+    const xpr_sint_t sButtonCount = sToolBarCtrl.GetButtonCount();
+    const LRESULT sUiState = SendMessage(WM_QUERYUISTATE, 0, 0);
+
+    for (xpr_sint_t sItemIndex = 0;
+         sItemIndex < sButtonCount;
+         ++sItemIndex)
+    {
+        TBBUTTON sButton = {0};
+        if (sToolBarCtrl.GetButton(sItemIndex, &sButton) == FALSE)
+            continue;
+
+        if (sButton.idCommand == IDBUTTON_SYSMENU ||
+            (sButton.fsStyle & TBSTYLE_SEP) != 0)
+        {
+            continue;
+        }
+
+        CString sMenuText;
+        GetButtonText(sItemIndex, sMenuText);
+        if (sMenuText.IsEmpty())
+            continue;
+
+        CRect sItemRect;
+        if (sToolBarCtrl.GetItemRect(sItemIndex, &sItemRect) == FALSE)
+            continue;
+
+        // Erase whatever native ToolbarWindow32 rendered for this textual
+        // button before drawing the app-owned final state/text.
+        sDC.FillSolidRect(&sItemRect, sPalette.mChrome);
+
+        const xpr_bool_t sDisabled =
+            (sButton.fsState & TBSTATE_ENABLED) == 0 ?
+            XPR_TRUE :
+            XPR_FALSE;
+        const xpr_bool_t sPressed =
+            (sButton.fsState & TBSTATE_PRESSED) != 0 ?
+            XPR_TRUE :
+            XPR_FALSE;
+        const xpr_bool_t sHot =
+            (sHotItem == sItemIndex ||
+             (m_bItemTracking && m_nItem == sItemIndex)) ?
+            XPR_TRUE :
+            XPR_FALSE;
+
+        if (XPR_IS_FALSE(sDisabled) &&
+            (XPR_IS_TRUE(sPressed) || XPR_IS_TRUE(sHot)))
+        {
+            DrawRoundedMenuBarRect(
+                sDC.GetSafeHdc(),
+                m_hWnd,
+                sItemRect,
+                XPR_IS_TRUE(sPressed) ?
+                    sPalette.mPressed :
+                    sPalette.mHover);
+        }
+
+        const COLORREF sTextColor =
+            XPR_IS_TRUE(sDisabled) ?
+            sPalette.mSecondaryText :
+            sPalette.mText;
+        sDC.SetTextColor(sTextColor);
+
+        UINT sTextFlags = DT_CENTER | DT_VCENTER | DT_SINGLELINE;
+        if ((sUiState & UISF_HIDEACCEL) != 0)
+            sTextFlags |= DT_HIDEPREFIX;
+
+        sDC.DrawText(
+            sMenuText,
+            &sItemRect,
+            sTextFlags);
+
+        if (GetFocus() == this &&
+            m_nItem == sItemIndex &&
+            (sUiState & UISF_HIDEFOCUS) == 0)
+        {
+            sDC.DrawFocusRect(&sItemRect);
+        }
+    }
+
+    if (XPR_IS_NOT_NULL(sOldFont))
+        sDC.SelectObject(sOldFont);
+
+    // MDI caption buttons are not normal textual toolbar items.
+    for (xpr_sint_t sIndex = 0;
+         sIndex <= m_aMenuBarButtons.GetUpperBound();
+         ++sIndex)
+    {
+        m_aMenuBarButtons[sIndex]->DrawButton(&sDC, m_bFrameActive);
+    }
 }
 
 bool CMenuBar::OnButtonDown( UINT nFlags, CPoint pt, bool bLeft )

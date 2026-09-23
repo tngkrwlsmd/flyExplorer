@@ -3099,6 +3099,22 @@ def validate_win11_stability_regressions() -> list[str]:
             )
 
     for token in (
+        "ON_WM_PAINT()",
+        "void CMenuBar::OnPaint()",
+        "CToolBar::Default();",
+        "GetToolBarCtrl().GetButtonCount()",
+        "GetButtonText(sItemIndex, sMenuText)",
+        "sDC.FillSolidRect(&sItemRect, sPalette.mChrome)",
+        "sPalette.mSecondaryText",
+        "sPalette.mText",
+        "sDC.DrawText(",
+    ):
+        if token not in contents["menubar"]:
+            errors.append(
+                f"src/fxfile/gui/rebar/MenuBar.cpp: final WM_PAINT text ownership missing token {token}"
+            )
+
+    for token in (
         "TB_GETBUTTONTEXT",
         "nmcd.dwItemSpec > IDBUTTON_SYSMENU",
         "nmcd.dwItemSpec <= IDBUTTON_LAST",
