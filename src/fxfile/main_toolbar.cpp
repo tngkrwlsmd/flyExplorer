@@ -581,6 +581,16 @@ xpr_bool_t MainToolBar::load(const xpr_tchar_t *aPath)
     if (XPR_RCODE_IS_ERROR(sRcode))
         return XPR_FALSE;
 
+    // Older profiles persisted the historical 16px icon default. Keeping
+    // that value makes the Win11 command bar look unchanged even after the
+    // Fluent 22px default is updated in Init(). Migrate the legacy persisted
+    // small setting to the current readable command-bar size.
+    if (sIconType == TBI_SMALL || XPR_IS_FALSE(IsIconTypeAvailable(sIconType)))
+        sIconType = TBI_LARGE;
+
+    if (XPR_IS_FALSE(IsTextTypeAvailable(sTextType)))
+        sTextType = TBT_RIGHT;
+
     SetIconType(sIconType, XPR_FALSE);
     SetTextType(sTextType, XPR_FALSE);
 
