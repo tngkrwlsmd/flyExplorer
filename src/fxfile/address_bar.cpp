@@ -26,41 +26,6 @@ namespace fxfile
 {
 namespace
 {
-void PaintFlatAddressEdge(HWND aHwnd, COLORREF aColor)
-{
-    if (XPR_IS_NULL(aHwnd) || ::IsWindow(aHwnd) == FALSE)
-        return;
-
-    HDC sDC = ::GetWindowDC(aHwnd);
-    if (XPR_IS_NULL(sDC))
-        return;
-
-    RECT sWindowRect = {0};
-    ::GetWindowRect(aHwnd, &sWindowRect);
-    ::OffsetRect(&sWindowRect, -sWindowRect.left, -sWindowRect.top);
-
-    const xpr_sint_t sThickness =
-        max(1, ui::ModernUI::scaleForWindow(2, aHwnd));
-    HBRUSH sBrush = ::CreateSolidBrush(aColor);
-    if (XPR_IS_NOT_NULL(sBrush))
-    {
-        RECT sEdgeRect = sWindowRect;
-        for (xpr_sint_t i = 0;
-             i < sThickness &&
-             sEdgeRect.right > sEdgeRect.left &&
-             sEdgeRect.bottom > sEdgeRect.top;
-             ++i)
-        {
-            ::FrameRect(sDC, &sEdgeRect, sBrush);
-            ::InflateRect(&sEdgeRect, -1, -1);
-        }
-
-        ::DeleteObject(sBrush);
-    }
-
-    ::ReleaseDC(aHwnd, sDC);
-}
-
 const UINT_PTR kAddressBarComboSubclassId = 1;
 const UINT_PTR kAddressBarEditSubclassId = 2;
 const xpr_tchar_t kAddressBarOuterBorderProp[] =
@@ -174,11 +139,9 @@ void AddressBar::OnNcPaint(void)
         return;
     }
 
-    // The Win11-style location field has no persistent bright outline.
-    // Cover the complete outer edge with the same surface color; keyboard
-    // focus remains discoverable through caret/selection rather than a
-    // legacy ComboBox frame.
-    PaintFlatAddressEdge(m_hWnd, sPalette.mElevated);
+    // Border/client-edge styles are removed by applyChildThemes().
+    // Do not paint a replacement frame in normal Light/Dark modes.
+    // The Win11 location field is intentionally flat while idle/focused.
 }
 
 HBRUSH AddressBar::OnCtlColor(
@@ -1690,30 +1653,26 @@ LRESULT CALLBACK AddressBar::ComboSubclassProc(
         case WM_PAINT:
             {
                 // Keep the native ComboBox responsible for layout, hit-testing,
-                // input and accessibility, then overwrite the final legacy
-                // edge because native painting can restore it after the outer
-                // ComboBoxEx frame has already been flattened.
+                // input and accessibility. Border styles are already removed;
+                // only the modern drop-down button overlay remains app-owned.
                 const LRESULT sResult =
                     ::DefSubclassProc(aHwnd, aMessage, aWParam, aLParam);
                 sAddressBar->drawModernComboButton(aHwnd);
-
-                const ui::ThemePalette sPalette =
-                    ui::ModernUI::getPalette();
-                if (XPR_IS_FALSE(sPalette.mHighContrast))
-                    PaintFlatAddressEdge(aHwnd, sPalette.mElevated);
-
                 return sResult;
             }
 
         case WM_NCPAINT:
             {
-                const LRESULT sResult =
-                    ::DefSubclassProc(aHwnd, aMessage, aWParam, aLParam);
                 const ui::ThemePalette sPalette =
                     ui::ModernUI::getPalette();
                 if (XPR_IS_FALSE(sPalette.mHighContrast))
-                    PaintFlatAddressEdge(aHwnd, sPalette.mElevated);
-                return sResult;
+                {
+                    // Suppress any legacy native edge that survives the style
+                    // removal. There is intentionally no replacement frame.
+                    return 0;
+                }
+
+                return ::DefSubclassProc(aHwnd, aMessage, aWParam, aLParam);
             }
 
         case WM_MOUSEMOVE:
@@ -1796,13 +1755,12 @@ LRESULT CALLBACK AddressBar::EditSubclassProc(
 
         case WM_NCPAINT:
             {
-                const LRESULT sResult =
-                    ::DefSubclassProc(aHwnd, aMessage, aWParam, aLParam);
                 const ui::ThemePalette sPalette =
                     ui::ModernUI::getPalette();
                 if (XPR_IS_FALSE(sPalette.mHighContrast))
-                    PaintFlatAddressEdge(aHwnd, sPalette.mElevated);
-                return sResult;
+                    return 0;
+
+                return ::DefSubclassProc(aHwnd, aMessage, aWParam, aLParam);
             }
 
         case WM_NCDESTROY:

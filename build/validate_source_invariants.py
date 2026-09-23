@@ -690,7 +690,7 @@ def validate_soft_surface_contract() -> list[str]:
         "rebar": ("sPalette.mChrome",),
         "address": (
             "sPalette.mElevated",
-            "PaintFlatAddressEdge",
+            "ON_WM_NCPAINT()",
         ),
         "cfg_main": (
             "ModernCfgButtonSubclassProc",
@@ -2969,17 +2969,14 @@ def validate_win11_stability_regressions() -> list[str]:
             errors.append(
                 "src/fxfile/address_bar.cpp: native non-client painting must be limited to High Contrast"
             )
-        if "PaintFlatAddressEdge(m_hWnd, sPalette.mElevated)" not in address_block:
-            errors.append(
-                "src/fxfile/address_bar.cpp: palette-owned address frame painting is missing"
-            )
-        for token in (
-            "PaintFlatAddressEdge(m_hWnd, sPalette.mElevated)",
-            "sPalette.mElevated",
+        for forbidden in (
+            "PaintFlatAddressEdge",
+            "FrameRect",
+            "CWindowDC",
         ):
-            if token not in address_block:
+            if forbidden in address_block:
                 errors.append(
-                    f"src/fxfile/address_bar.cpp: flat outer address edge missing token {token}"
+                    f"src/fxfile/address_bar.cpp: normal address non-client paint must remain frameless: {forbidden}"
                 )
         for forbidden in (
             "sPalette.mFocus",
@@ -2999,10 +2996,15 @@ def validate_win11_stability_regressions() -> list[str]:
         errors.append(
             "src/fxfile/address_bar.cpp: legacy owner-draw address style must not return without a DrawItem owner"
         )
+    if "PaintFlatAddressEdge" in address:
+        errors.append(
+            "src/fxfile/address_bar.cpp: replacement address frame must not return outside High Contrast"
+        )
+
     for token in (
-        "void PaintFlatAddressEdge(HWND aHwnd, COLORREF aColor)",
         "case WM_NCPAINT:",
-        "PaintFlatAddressEdge(aHwnd, sPalette.mElevated)",
+        "if (XPR_IS_FALSE(sPalette.mHighContrast))",
+        "return 0;",
         "ON_WM_CTLCOLOR()",
         "HBRUSH AddressBar::OnCtlColor",
         "handleComboCtlColor(",
