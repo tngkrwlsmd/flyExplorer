@@ -77,7 +77,7 @@
     }
   ],
   "review": {
-    "reviewed_revision": "5104f99cab831ddac5bf9f3454a6ffe6969a5251",
+    "reviewed_revision": "c132100512a5c4179b5bccf7724d3730b0b3dbfc",
     "reviewed_at": "2026-09-23",
     "reviewed_paths": [
       "AGENTS.md",
@@ -301,6 +301,9 @@
 - AddressBar는 non-High-Contrast에서 outer/ComboBox/Edit의 중첩 native border/client-edge를 제거하고 원래 상태를 HWND property로 기억해 High Contrast에서 복원한다. legacy coolbar state restore 뒤 main/drive/bookmark toolbar의 `UpdateToolbarSize()`를 다시 실행해 현재 command metric이 최종 geometry를 결정한다.
 - legacy owner-draw button/split-button/colour-picker/file-scrap/bookmark/search-location 경로는 `ThemePalette`와 `ModernUI::getUIFont`를 사용하도록 정리했다. Dark file-list filtering의 historical `*.*` + pure-black default는 automatic text로 처리하고, app-owned BCMenu check/radio glyph도 palette text/selection text를 사용한다. 사용자 지정 filter/background color와 High Contrast system ownership은 유지한다.
 - `CModernDialog`, `CResizingDialog`, `TitleDlg`가 공유하는 child Edit/Combo/List/Tree/Tab 경로도 Dark/non-High-Contrast에서 Explorer themed painting을 disable하고 palette-owned surface를 유지한다. Light/System/High Contrast는 documented Explorer/system rendering 경로를 유지한다.
+- screenshot-driven follow-up에서 Preferences hang의 별도 root cause를 확인했다. `CfgDlg`가 GROUPBOX를 `HWND_BOTTOM`으로 이동하면서 live `GetNextWindow()` sibling chain을 순회해 복수 GROUPBOX에서 같은 HWND를 반복 방문할 수 있었다. 이제 각 parent의 child HWND를 먼저 snapshot한 뒤 z-order/style을 변경한다.
+- `ListCtrlEx` / `TreeCtrlEx`의 Vista-enhanced behavior와 visual theme ownership을 분리했다. Dark/non-High-Contrast에서는 Explorer association을 재도입하지 않으며, ListCtrlEx의 `WM_THEMECHANGED`는 repaint/header refresh만 하고 retheme하지 않는다.
+- top `CMenuBar`는 Dark path에서 `ToolbarWindow32`의 default text renderer에 의존하지 않고 ThemePalette 색으로 직접 text를 그린 뒤 `CDRF_SKIPDEFAULT`로 native black-text fallback을 차단한다.
 - NSIS installer 자체는 Program Files/HKLM 작업 때문에 계속 elevated이지만 finish-page product run과 `.onInstSuccess` launcher auto-start를 제거했다. 설치된 fxfile/launcher는 이후 normal user shell/shortcut 또는 제품 설정 경로에서 시작해 product `asInvoker` contract가 elevated installer parent에 의해 우회되지 않도록 한다.
 - 위 회귀 경로에는 `build/validate_source_invariants.py`의 deterministic guard가 추가되어 있으며 installer smoke도 elevated auto-launch 부재를 검사한다. 상세 root cause와 commit mapping은 `docs/development/ERROR_HISTORY.md`에 기록되어 있다.
 - 최신 변경 이후 connector 기반 source inspection은 수행했지만 `python build/validate_source_invariants.py`, MSVC compile/link, `local_ci.bat x64`, standard-user/elevated-instance interop, Windows 11 Light/Dark/System/High Contrast 100/125/150/200% DPI visual/IME/runtime 검증은 이 환경에서 실행하지 않았다. 따라서 해당 evidence는 계속 **NOT TESTED**다.
