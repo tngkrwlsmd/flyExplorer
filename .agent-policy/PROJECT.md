@@ -77,7 +77,7 @@
     }
   ],
   "review": {
-    "reviewed_revision": "7c9b69f4a03b1cedf3030624b3b40d335c6071be",
+    "reviewed_revision": "25d41e7eb369ad894714cc3e32de5d2e8c217b73",
     "reviewed_at": "2026-09-23",
     "reviewed_paths": [
       "AGENTS.md",
@@ -254,7 +254,7 @@
 - CSizableReBar는 FrameWndEx menu rebar와 MainCoolBar toolbar rebar가 공유하는 실제 host이므로 공통 dark styling ownership을 맡는다. internal CReBarCtrl에 documented Explorer association을 적용하고 RB_SETBKCOLOR/RB_SETTEXTCOLOR를 ThemePalette/System color로 갱신하며, dark non-client sizing edge는 mBorder로 그린다. WM_SETTINGCHANGE / WM_SYSCOLORCHANGE / WM_THEMECHANGED에서 즉시 refresh한다.
 - BCMenu owner-draw popup의 실제 활성 경로인 Windows8/Standard style만 ThemePalette-aware하게 변경했다. dark/non-HC에서 background/separator/normal text/disabled text/selection을 mSurface/mSeparator/mText/mSecondaryText/mSelection/mSelectionText로 처리하며 Light/High Contrast는 기존 system-color 경로를 유지한다. 사용되지 않는 legacy Office/Vista drawing path는 건드리지 않았다.
 - Menu/Rebar/Toolbar 구현 정적 범위 검토는 PASS: 변경 파일은 gui/rebar/MenuBar.h/.cpp, ToolBarEx.h/.cpp, SizableReBar.h/.cpp, gui/BCMenu.cpp에 한정되고 각 ModernUI 사용 translation unit의 direct include, handler declaration/definition/message-map 일치, toolbar/popup/rebar High Contrast fallback, active BCMenu draw path와 dark separator를 확인했다. generated project, ModernUI palette 구조, build/validate_source_invariants.py는 변경하지 않았다.
-- 2026-09-22 사용자 로컬 full CI에서 발견된 ToolBarEx.cpp의 `TB_SETBKCOLOR`/`TB_SETTEXTCOLOR` C2065 compile regression은 제거되었고, 동일 식별자 재도입과 toolbar custom-draw wiring 손실을 `build/validate_source_invariants.py`가 정적으로 차단하도록 보강했다. 이후 업로드된 full 로그는 수정 전 Toolbar 소스를 계속 컴파일한 stale local checkout 결과였으므로 현재 `main`의 post-fix compile/runtime/package PASS evidence로 사용하지 않는다. 현재 `main`에 대한 fresh Windows `local_ci.bat x64`/`full`은 아직 NOT TESTED이며, 실제 Windows visual/interactive evidence도 별도다.
+- 2026-09-22 사용자 로컬 full CI에서 발견된 ToolBarEx.cpp의 `TB_SETBKCOLOR`/`TB_SETTEXTCOLOR` C2065 compile regression은 제거되었고, 동일 식별자 재도입과 toolbar custom-draw wiring 손실을 `build/validate_source_invariants.py`가 정적으로 차단하도록 보강했다. 이후 업로드된 full 로그는 수정 전 Toolbar 소스를 계속 컴파일한 stale local checkout 결과였으므로 현재 `main`의 post-fix compile/runtime/package PASS evidence로 사용하지 않는다. 현재 `main`에 대한 fresh Windows `local_ci.bat x64`는 아직 NOT TESTED이며, `full`/x86/package 범위는 사용자 지시로 비활성이다. 실제 Windows visual/interactive evidence도 별도다.
 - broader dialog modernization의 공통 기반을 완료했다. CResizingDialog는 검색/히스토리/드라이브/파일 작업/CRC/배치/동기화 등 다수 modeless/resizable command dialog가 공유하는 base로서 system UI font, ThemePalette surface/window background, WM_CTLCOLOR 기반 edit/list/static/button 색 보정, documented Explorer common-control association, settings/syscolor/theme/DPI refresh를 공통 제공한다. Light/High Contrast는 native/system rendering으로 fallback하며 기존 resize/layout, command routing, per-dialog custom font를 보존한다.
 - TitleDlg 기반(create/rename/shortcut/file-list 계열)은 기존 custom header ownership을 유지하면서 header background/text/separator를 ThemePalette로 전환하고 32 logical-pixel description icon을 current-DPI 크기로 로드/그린다. resource-ID icon은 HWND 생성 이후 ModernUI::loadIconResource로 로드하고 DPI 변경 시 다시 로드하며, caller가 전달한 shell/external HICON은 기존 ownership 계약을 유지한다.
 - 설정 UI는 CfgDlg 공통 page base와 CfgMainDlg host를 현대화했다. 약 30개의 CfgDlg-derived page는 공통 system font/dark surface/edit-list color/theme refresh를 상속하고, CfgMainDlg는 window-frame theme, palette-backed host surface, config TreeCtrl background/text/line 및 image-list background를 갱신한다. 기존 config tree 구조, apply/default semantics, dynamically-created page lifecycle은 변경하지 않았다.
@@ -290,6 +290,18 @@
 - 2026-09-22 추가 Windows 11 screenshot evidence에서 themed checkbox/radio label이 Dark card 위에서 어둡게 남는 문제가 확인됐다. CfgDlg의 WM_CTLCOLOR만으로 themed Button text ownership이 보장되지 않아 Dark/non-HC checkbox/radio의 WM_PAINT만 palette-backed subclass가 소유하도록 변경했다. click/check/radio/keyboard state는 native Button이 계속 처리하고 Light/High Contrast는 native paint로 fallback한다.
 - BCMenu의 app-owned popup은 기존 HMENU/owner-draw routing을 유지하면서 submenu에 system-provided `Segoe Fluent Icons`의 `ChevronRightSmall (E970)`을 사용하고, 해당 font가 없는 Windows 10 등에서는 동일 위치의 line-geometry chevron으로 fallback한다. popup padding/item-height/icon-gutter/shortcut-gap은 Explorer reference에 맞춰 과도한 legacy 여백을 줄였다. shell-owned IContextMenu path는 변경하지 않았다.
 - Microsoft Fluent UI System Icons의 MIT license와 canonical source SVG set을 `src/fxfile/res/fluent/`에 provenance와 함께 vendoring했다. 대표 set은 Back/Forward/Up/Search/Cut/Copy/Paste/New Folder/Settings이며 `COMMAND_ICON_MAP.md`와 `toolbar_manifest.json`이 기존 main-toolbar frame/command를 고정한다. Python standard-library-only generator는 네트워크 없이 공식 16px/20px SVG를 deterministic 1-bit mask include로 생성하고 `--check`로 stale artifact를 거부한다. MainToolBar는 해당 9개 frame만 기존 cold/hot image list에 같은 Fluent glyph로 overlay하고 hover/pressed surface는 기존 toolbar custom draw가 소유한다. theme/settings/syscolor 변화에서는 raw bitmap image list를 재로드한 뒤 현재 `ThemePalette.mText`로 overlay를 재적용한다. non-migrated frame, toolbar command ID/image index, small/large 선택 및 customization persistence는 변경하지 않았다. 실제 Windows compile/runtime/Light/Dark/System/High Contrast/DPI visual은 아직 NOT TESTED다.
+
+
+## Current runtime stabilization state — 2026-09-23
+
+- runtime/UI 안정화 후속 52개 commit이 `main`에 fast-forward로 통합되었고, 현재 기준 코드 상태는 `17938fd9cb55790453c2ec1f4f79948da9615495`까지의 제품 변경과 이후 문서 갱신을 포함한다.
+- `ModernUI::applyExplorerControlTheme()` / `resetControlTheme()`는 HWND별 theme association 상태를 기억해 동일 `SetWindowTheme` 요청을 생략한다. `CfgMainDlg` / `CfgDlg`의 `WM_THEMECHANGED` 경로는 child theme association을 다시 순회하지 않고 palette/font/frame repaint 중심으로 동작해 message-queue 기반 재진입 위험을 낮춘다.
+- standard-user 경로는 machine-wide write 의존성을 줄였다. shell context menu는 `HKCU\\Software\\Classes\\Folder\\Shell`에 등록하고, single-process 존재 확인은 `SYNCHRONIZE`만 요청하며 minimal open의 `ERROR_ACCESS_DENIED`도 기존 named mutex 존재로 해석한다. legacy config/accelerator migration은 protected install path에서 source rename/move 대신 per-user destination copy를 사용한다.
+- elevated first instance와 normal-integrity second launch의 single-instance wake-up은 `ChangeWindowMessageFilterEx`를 동적으로 해석해 등록된 activation message만 허용한다. 이 경로는 input/command payload를 확장하지 않는다.
+- AddressBar는 non-High-Contrast에서 outer/ComboBox/Edit의 중첩 native border/client-edge를 제거하고 원래 상태를 HWND property로 기억해 High Contrast에서 복원한다. legacy coolbar state restore 뒤 main/drive/bookmark toolbar의 `UpdateToolbarSize()`를 다시 실행해 현재 command metric이 최종 geometry를 결정한다.
+- legacy owner-draw button/split-button/colour-picker/file-scrap/bookmark/search-location 경로는 `ThemePalette`와 `ModernUI::getUIFont`를 사용하도록 정리했다. Dark file-list filtering의 historical `*.*` + pure-black default는 automatic text로 처리하고, app-owned BCMenu check/radio glyph도 palette text/selection text를 사용한다. 사용자 지정 filter/background color와 High Contrast system ownership은 유지한다.
+- 위 회귀 경로에는 `build/validate_source_invariants.py`의 deterministic guard가 추가되어 있으며 상세 root cause와 commit mapping은 `docs/development/ERROR_HISTORY.md`에 기록되어 있다.
+- 최신 변경 이후 connector 기반 source inspection은 수행했지만 `python build/validate_source_invariants.py`, MSVC compile/link, `local_ci.bat x64`, standard-user/elevated-instance interop, Windows 11 Light/Dark/System/High Contrast 100/125/150/200% DPI visual/IME/runtime 검증은 이 환경에서 실행하지 않았다. 따라서 해당 evidence는 계속 **NOT TESTED**다.
 
 ## Recommended verification
 
