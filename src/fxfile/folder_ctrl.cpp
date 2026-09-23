@@ -3054,10 +3054,7 @@ DROPEFFECT FolderCtrl::OnDragOver(COleDataObject *aOleDataObject, DWORD aKeyStat
 
                 ::GlobalUnlock(sStgMedium.hGlobal);
 
-                if (XPR_IS_NOT_NULL(sStgMedium.pUnkForRelease))
-                {
-                    ::ReleaseStgMedium(&sStgMedium);
-                }
+                ::ReleaseStgMedium(&sStgMedium);
             }
         }
 
