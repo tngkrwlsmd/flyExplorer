@@ -337,17 +337,16 @@ Status: **ACTIVE / user-reproduced runtime failures**. These items are the immed
    - `a46dbadd` registers `FlatHeaderCtrl.cpp` as the `header` contract source and changes the local contents map to report a deterministic `missing source registration` invariant error rather than raising `KeyError` if a future source key is omitted.
    - Connector static cross-check after the change found no `contents["..."]` references missing from the function's `paths` map. Acceptance still requires a user rerun: `python build/validate_source_invariants.py` must complete without traceback and `local_ci.bat x64` must progress past source invariant/regression preflight.
 
-7. **MenuBar custom draw still not visible — CODE FIXED / RUNTIME NOT RETESTED**
-   - Latest screenshot still showed black top-menu text even though `CMenuBar::OnCustomDraw()` contained ThemePalette `DrawText` + `CDRF_SKIPDEFAULT`.
-   - Root cause: `CSizableReBar::OnNotify()` returned `FALSE` for notifications whose `wParam != 1`. MenuBar/ToolBar children rely on MFC `ON_NOTIFY_REFLECT(NM_CUSTOMDRAW)`, so the rebar wrapper could bypass the child reflection path and leave native ToolbarWindow32 painting in control.
-   - `48155298` now delegates non-rebar notifications to `CControlBar::OnNotify(...)`, preserving normal MFC reflection. The invariant rejects a reintroduced `return FALSE;` in this block.
-   - Acceptance remains runtime/screenshot based: Dark top-menu text must render with the app palette before this item closes.
+7. **MenuBar custom draw still not visible — ACTIVE / user screenshot reproduced again**
+   - Latest rebuilt `main` screenshot still shows black top-menu text. The prior rebar-routing explanation was incomplete: `CMenuBar` is created from the frame and may later be reparented by the rebar band; relying on implicit MFC reflection remains too indirect for a user-reproduced failure.
+   - Next fix: for non-rebar `WM_NOTIFY/NM_CUSTOMDRAW`, `CSizableReBar::OnNotify()` must explicitly call `CWnd::ReflectLastMsg(hwndFrom, pResult)` before falling back to `CControlBar::OnNotify(...)`. This makes the final menu/toolbar custom-draw recipient deterministic instead of assuming base routing semantics.
+   - Acceptance: Dark top-menu text must render with the app palette in a rebuilt screenshot; source presence alone does not close this item.
 
-8. **Address/current-folder white outline still visible — CODE FIXED / RUNTIME NOT RETESTED**
-   - Latest screenshot still showed a bright persistent outline around the `내 문서` ComboBoxEx row.
-   - Root cause: changing only outer `AddressBar::OnNcPaint()` was insufficient because the inner native ComboBox/Edit can paint a final non-client/client edge after the outer frame is flattened.
-   - `62ab7978` introduces `PaintFlatAddressEdge()` and reapplies the Dark `mElevated` edge after outer, ComboBox `WM_PAINT`/`WM_NCPAINT`, and Edit `WM_NCPAINT`. Persistent focus/white frame drawing is removed outside High Contrast.
-   - Acceptance remains screenshot based: the idle current-folder row must have no bright outline while focus/edit/drop-down behavior remains usable.
+8. **Address/current-folder white outline still visible — ACTIVE / user screenshot reproduced again**
+   - Latest rebuilt `main` screenshot still shows a rectangular outline around the `내 문서` row.
+   - The current `PaintFlatAddressEdge(..., mElevated)` approach is itself visibly drawing a 2px rectangle whose color differs from the pane background. The correct Win11-style contract is **no persistent frame outside High Contrast**, not "paint a darker/lighter replacement frame".
+   - Next fix: keep border/client-edge styles removed, suppress non-client edge painting outside High Contrast, and stop drawing `PaintFlatAddressEdge` in outer/inner idle paint paths.
+   - Acceptance: the idle current-folder row has no visible rectangular outline while text, drop-down, focus/caret and High Contrast behavior remain usable.
 
 9. **Local CI address invariant drift — CODE FIXED / LOCAL CI NOT RETESTED**
    - User `local_ci.bat x64` on 2026-09-23 19:40 reached source invariant/regression preflight and failed with `address: missing Win11 soft-surface token sPalette.mFocus` plus `palette-owned address frame painting is missing`.
@@ -355,10 +354,9 @@ Status: **ACTIVE / user-reproduced runtime failures**. These items are the immed
    - `63081b85` aligns both contracts with the current renderer: AddressBar soft-surface coverage now requires `sPalette.mElevated` + `PaintFlatAddressEdge`, and the Win11 regression check requires `PaintFlatAddressEdge(m_hWnd, sPalette.mElevated)`. A full validator scan confirms no remaining positive AddressBar requirement for `sPalette.mFocus` or `CWindowDC sDC(this)`; `sPalette.mFocus` now appears only as an explicit forbidden token in `OnNcPaint()`.
    - Acceptance still requires the user's rerun: `local_ci.bat x64` must pass source invariant/regression preflight and continue into VS 2026 x64 project generation/build.
 
-10. **Prevent stale executable from masquerading as latest UI build — ACTIVE**
-   - A failed `local_ci.bat x64` preflight leaves the previous `bin\\x64\\fxfile.exe` in place. Launching that file after a pre-build FAIL can make an old UI binary look like the current source still has the same bug.
-   - Local CI must log the current Git revision, persist the revision that actually produced the x64 executable, and emit an explicit stale-binary warning when the run fails before rebuilding `fxfile.exe`.
-   - Acceptance: a pre-build failure clearly states that the existing executable was not rebuilt for the current revision; a successful x64 build writes a revision marker next to the binary.
+10. **Prevent stale executable from masquerading as latest UI build — CODE FIXED / process hardening**
+   - This was added as process hardening after a failed preflight could leave an older `bin\\x64\\fxfile.exe` in place. It is **not** the explanation for the latest screenshot; the user confirmed they pulled `main` and rebuilt before reproducing it.
+   - `a630bf19` logs the current Git revision, writes `bin\\x64\\build-revision.txt` after a successful x64 rebuild, and emits an explicit stale-artifact warning if x64 CI fails before rebuilding the executable.
 
 ### Development handoff rule
 
