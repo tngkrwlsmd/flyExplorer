@@ -26,6 +26,59 @@ namespace fxfile
 {
 namespace
 {
+void CoverClassicAddressClientEdge(HWND aHwnd, COLORREF aColor)
+{
+    if (XPR_IS_NULL(aHwnd) || ::IsWindow(aHwnd) == FALSE)
+        return;
+
+    HDC sDC = ::GetDC(aHwnd);
+    if (XPR_IS_NULL(sDC))
+        return;
+
+    RECT sClientRect = {0};
+    ::GetClientRect(aHwnd, &sClientRect);
+
+    const xpr_sint_t sThickness =
+        max(1, ui::ModernUI::scaleForWindow(2, aHwnd));
+    const xpr_sint_t sWidth =
+        max(0, sClientRect.right - sClientRect.left);
+    const xpr_sint_t sHeight =
+        max(0, sClientRect.bottom - sClientRect.top);
+
+    if (sWidth > 0 && sHeight > 0)
+    {
+        ::SetDCBrushColor(sDC, aColor);
+        HBRUSH sBrush =
+            static_cast<HBRUSH>(::GetStockObject(DC_BRUSH));
+
+        RECT sTop = sClientRect;
+        sTop.bottom = min(
+            sTop.bottom,
+            sTop.top + min(sThickness, sHeight));
+        ::FillRect(sDC, &sTop, sBrush);
+
+        RECT sBottom = sClientRect;
+        sBottom.top = max(
+            sBottom.top,
+            sBottom.bottom - min(sThickness, sHeight));
+        ::FillRect(sDC, &sBottom, sBrush);
+
+        RECT sLeft = sClientRect;
+        sLeft.right = min(
+            sLeft.right,
+            sLeft.left + min(sThickness, sWidth));
+        ::FillRect(sDC, &sLeft, sBrush);
+
+        RECT sRight = sClientRect;
+        sRight.left = max(
+            sRight.left,
+            sRight.right - min(sThickness, sWidth));
+        ::FillRect(sDC, &sRight, sBrush);
+    }
+
+    ::ReleaseDC(aHwnd, sDC);
+}
+
 const UINT_PTR kAddressBarComboSubclassId = 1;
 const UINT_PTR kAddressBarEditSubclassId = 2;
 const xpr_tchar_t kAddressBarOuterBorderProp[] =
@@ -84,6 +137,7 @@ AddressBar::~AddressBar(void)
 
 BEGIN_MESSAGE_MAP(AddressBar, CComboBoxEx)
     ON_WM_CREATE()
+    ON_WM_PAINT()
     ON_WM_NCPAINT()
     ON_WM_CTLCOLOR()
     ON_WM_SETTINGCHANGE()
@@ -128,6 +182,19 @@ xpr_sint_t AddressBar::OnCreate(LPCREATESTRUCT aCreateStruct)
     applyModernAppearance();
 
     return 0;
+}
+
+void AddressBar::OnPaint(void)
+{
+    // ComboBoxEx may draw the classic sunken 3-D edge inside its client
+    // paint even after WS_BORDER/WS_EX_CLIENTEDGE are removed. Let it keep
+    // its native layout/content behavior, then erase only those 2-DPI-pixel
+    // edge strips with the same field surface.
+    Default();
+
+    const ui::ThemePalette sPalette = ui::ModernUI::getPalette();
+    if (XPR_IS_FALSE(sPalette.mHighContrast))
+        CoverClassicAddressClientEdge(m_hWnd, sPalette.mElevated);
 }
 
 void AddressBar::OnNcPaint(void)
@@ -1653,10 +1720,20 @@ LRESULT CALLBACK AddressBar::ComboSubclassProc(
         case WM_PAINT:
             {
                 // Keep the native ComboBox responsible for layout, hit-testing,
-                // input and accessibility. Border styles are already removed;
-                // only the modern drop-down button overlay remains app-owned.
+                // input and accessibility, then cover only the classic client
+                // edge before drawing the modern drop-down button on top.
                 const LRESULT sResult =
                     ::DefSubclassProc(aHwnd, aMessage, aWParam, aLParam);
+
+                const ui::ThemePalette sPalette =
+                    ui::ModernUI::getPalette();
+                if (XPR_IS_FALSE(sPalette.mHighContrast))
+                {
+                    CoverClassicAddressClientEdge(
+                        aHwnd,
+                        sPalette.mElevated);
+                }
+
                 sAddressBar->drawModernComboButton(aHwnd);
                 return sResult;
             }

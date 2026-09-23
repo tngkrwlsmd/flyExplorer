@@ -690,7 +690,9 @@ def validate_soft_surface_contract() -> list[str]:
         "rebar": ("sPalette.mChrome",),
         "address": (
             "sPalette.mElevated",
+            "ON_WM_PAINT()",
             "ON_WM_NCPAINT()",
+            "CoverClassicAddressClientEdge",
         ),
         "cfg_main": (
             "ModernCfgButtonSubclassProc",
@@ -3001,7 +3003,40 @@ def validate_win11_stability_regressions() -> list[str]:
             "src/fxfile/address_bar.cpp: replacement address frame must not return outside High Contrast"
         )
 
+    address_paint_start = address.find("void AddressBar::OnPaint(void)")
+    address_paint_end = address.find("\n}", address_paint_start)
+    address_paint_block = (
+        address[address_paint_start:address_paint_end]
+        if address_paint_start >= 0 and address_paint_end > address_paint_start
+        else ""
+    )
     for token in (
+        "Default();",
+        "CoverClassicAddressClientEdge(m_hWnd, sPalette.mElevated)",
+        "XPR_IS_FALSE(sPalette.mHighContrast)",
+    ):
+        if token not in address_paint_block:
+            errors.append(
+                f"src/fxfile/address_bar.cpp: classic client-edge post-paint contract missing {token}"
+            )
+
+    for token in (
+        "void CoverClassicAddressClientEdge(HWND aHwnd, COLORREF aColor)",
+        "::GetClientRect(aHwnd, &sClientRect)",
+        "scaleForWindow(2, aHwnd)",
+        "::FillRect(sDC, &sTop, sBrush)",
+        "::FillRect(sDC, &sBottom, sBrush)",
+        "::FillRect(sDC, &sLeft, sBrush)",
+        "::FillRect(sDC, &sRight, sBrush)",
+    ):
+        if token not in address:
+            errors.append(
+                f"src/fxfile/address_bar.cpp: classic client-edge cover helper missing {token}"
+            )
+
+    for token in (
+        "case WM_PAINT:",
+        "CoverClassicAddressClientEdge(",
         "case WM_NCPAINT:",
         "if (XPR_IS_FALSE(sPalette.mHighContrast))",
         "return 0;",
