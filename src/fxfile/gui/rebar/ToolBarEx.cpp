@@ -91,6 +91,309 @@ void DrawRoundedToolbarState(
     ::DeleteObject(sBrush);
 }
 
+void DrawFinalDarkToolbarItem(
+    LPNMTBCUSTOMDRAW aCustomDraw,
+    COLORREF aBackground)
+{
+    if (XPR_IS_NULL(aCustomDraw))
+        return;
+
+    const HWND sHwnd = aCustomDraw->nmcd.hdr.hwndFrom;
+    if (XPR_IS_NULL(sHwnd))
+        return;
+
+    const xpr_uint_t sCommandId =
+        static_cast<xpr_uint_t>(aCustomDraw->nmcd.dwItemSpec);
+
+    TBBUTTONINFO sButtonInfo = {0};
+    sButtonInfo.cbSize = sizeof(sButtonInfo);
+    sButtonInfo.dwMask = TBIF_IMAGE | TBIF_STATE | TBIF_STYLE;
+    if (::SendMessage(
+            sHwnd,
+            TB_GETBUTTONINFO,
+            static_cast<WPARAM>(sCommandId),
+            reinterpret_cast<LPARAM>(&sButtonInfo)) < 0)
+    {
+        return;
+    }
+
+    const fxfile::ui::ThemePalette sPalette =
+        fxfile::ui::ModernUI::getPalette();
+    const UINT sItemState = aCustomDraw->nmcd.uItemState;
+    const xpr_bool_t sDisabled =
+        ((sItemState & CDIS_DISABLED) != 0 ||
+         (sButtonInfo.fsState & TBSTATE_ENABLED) == 0) ?
+        XPR_TRUE :
+        XPR_FALSE;
+    const xpr_bool_t sPressed =
+        (sItemState & (CDIS_SELECTED | CDIS_CHECKED)) != 0 ?
+        XPR_TRUE :
+        XPR_FALSE;
+    const xpr_bool_t sHot =
+        (sItemState & CDIS_HOT) != 0 ?
+        XPR_TRUE :
+        XPR_FALSE;
+
+    COLORREF sItemBackground = aBackground;
+    if (XPR_IS_FALSE(sDisabled))
+    {
+        if (XPR_IS_TRUE(sPressed))
+            sItemBackground = sPalette.mPressed;
+        else if (XPR_IS_TRUE(sHot))
+            sItemBackground = sPalette.mHover;
+    }
+
+    const COLORREF sForeground =
+        XPR_IS_TRUE(sDisabled) ?
+        sPalette.mSecondaryText :
+        sPalette.mText;
+
+    RECT sItemRect = aCustomDraw->nmcd.rc;
+    const xpr_bool_t sDropDown =
+        (sButtonInfo.fsStyle &
+         (TBSTYLE_DROPDOWN | BTNS_WHOLEDROPDOWN)) != 0 ?
+        XPR_TRUE :
+        XPR_FALSE;
+
+    const xpr_sint_t sDropWidth =
+        fxfile::ui::ModernUI::scaleForWindow(14, sHwnd);
+
+    if (XPR_IS_TRUE(sDropDown))
+    {
+        RECT sDropRect = sItemRect;
+        sDropRect.left = max(
+            sDropRect.left,
+            sDropRect.right - sDropWidth);
+
+        ::SetDCBrushColor(
+            aCustomDraw->nmcd.hdc,
+            sItemBackground);
+        ::FillRect(
+            aCustomDraw->nmcd.hdc,
+            &sDropRect,
+            static_cast<HBRUSH>(::GetStockObject(DC_BRUSH)));
+
+        if ((sButtonInfo.fsStyle & BTNS_WHOLEDROPDOWN) == 0)
+        {
+            RECT sSeparatorRect = sDropRect;
+            sSeparatorRect.right =
+                min(
+                    sSeparatorRect.right,
+                    sSeparatorRect.left +
+                        max(
+                            1,
+                            fxfile::ui::ModernUI::scaleForWindow(
+                                1,
+                                sHwnd)));
+            ::SetDCBrushColor(
+                aCustomDraw->nmcd.hdc,
+                sPalette.mSeparator);
+            ::FillRect(
+                aCustomDraw->nmcd.hdc,
+                &sSeparatorRect,
+                static_cast<HBRUSH>(::GetStockObject(DC_BRUSH)));
+        }
+
+        const xpr_sint_t sCenterX =
+            (sDropRect.left + sDropRect.right) / 2;
+        const xpr_sint_t sCenterY =
+            (sDropRect.top + sDropRect.bottom) / 2;
+        const xpr_sint_t sHalfWidth =
+            max(
+                2,
+                fxfile::ui::ModernUI::scaleForWindow(
+                    3,
+                    sHwnd));
+        const xpr_sint_t sOffset =
+            max(
+                1,
+                fxfile::ui::ModernUI::scaleForWindow(
+                    2,
+                    sHwnd));
+
+        HPEN sArrowPen =
+            ::CreatePen(
+                PS_SOLID,
+                max(
+                    1,
+                    fxfile::ui::ModernUI::scaleForWindow(
+                        1,
+                        sHwnd)),
+                sForeground);
+        if (XPR_IS_NOT_NULL(sArrowPen))
+        {
+            HGDIOBJ sOldPen =
+                ::SelectObject(
+                    aCustomDraw->nmcd.hdc,
+                    sArrowPen);
+            ::MoveToEx(
+                aCustomDraw->nmcd.hdc,
+                sCenterX - sHalfWidth,
+                sCenterY - sOffset,
+                XPR_NULL);
+            ::LineTo(
+                aCustomDraw->nmcd.hdc,
+                sCenterX,
+                sCenterY + sOffset);
+            ::LineTo(
+                aCustomDraw->nmcd.hdc,
+                sCenterX + sHalfWidth,
+                sCenterY - sOffset);
+            ::SelectObject(
+                aCustomDraw->nmcd.hdc,
+                sOldPen);
+            ::DeleteObject(sArrowPen);
+        }
+    }
+
+    if ((sButtonInfo.fsStyle & BTNS_SHOWTEXT) == 0)
+        return;
+
+    xpr_tchar_t sText[512] = {0};
+    const LRESULT sTextLength =
+        ::SendMessage(
+            sHwnd,
+            TB_GETBUTTONTEXT,
+            static_cast<WPARAM>(sCommandId),
+            reinterpret_cast<LPARAM>(sText));
+    if (sTextLength <= 0)
+        return;
+
+    RECT sTextRect = sItemRect;
+    const xpr_sint_t sPadding =
+        max(
+            2,
+            fxfile::ui::ModernUI::scaleForWindow(
+                4,
+                sHwnd));
+    const DWORD sToolbarStyle =
+        static_cast<DWORD>(
+            ::GetWindowLongPtr(
+                sHwnd,
+                GWL_STYLE));
+    const DWORD sBitmapSize =
+        static_cast<DWORD>(
+            ::SendMessage(
+                sHwnd,
+                TB_GETBITMAPSIZE,
+                0,
+                0));
+    const xpr_sint_t sBitmapWidth =
+        LOWORD(sBitmapSize);
+    const xpr_sint_t sBitmapHeight =
+        HIWORD(sBitmapSize);
+
+    if ((sToolbarStyle & TBSTYLE_LIST) != 0)
+    {
+        if (sButtonInfo.iImage >= 0)
+            sTextRect.left += sBitmapWidth + sPadding;
+        else
+            sTextRect.left += sPadding;
+
+        sTextRect.right -=
+            sPadding +
+            (XPR_IS_TRUE(sDropDown) ?
+                sDropWidth :
+                0);
+    }
+    else
+    {
+        sTextRect.left += sPadding;
+        sTextRect.right -=
+            sPadding +
+            (XPR_IS_TRUE(sDropDown) ?
+                sDropWidth :
+                0);
+
+        if (sButtonInfo.iImage >= 0)
+        {
+            sTextRect.top =
+                min(
+                    sTextRect.bottom,
+                    sTextRect.top +
+                        sBitmapHeight +
+                        max(
+                            1,
+                            fxfile::ui::ModernUI::scaleForWindow(
+                                2,
+                                sHwnd)));
+        }
+    }
+
+    if (sTextRect.right <= sTextRect.left ||
+        sTextRect.bottom <= sTextRect.top)
+    {
+        return;
+    }
+
+    // ToolbarWindow32 can still draw native black text even after custom-draw
+    // colors are supplied.  Erase only the text region after native painting
+    // and redraw it using the same UI font/palette as the rest of the app.
+    ::SetDCBrushColor(
+        aCustomDraw->nmcd.hdc,
+        sItemBackground);
+    ::FillRect(
+        aCustomDraw->nmcd.hdc,
+        &sTextRect,
+        static_cast<HBRUSH>(::GetStockObject(DC_BRUSH)));
+
+    HFONT sFont =
+        reinterpret_cast<HFONT>(
+            ::SendMessage(
+                sHwnd,
+                WM_GETFONT,
+                0,
+                0));
+    HGDIOBJ sOldFont = XPR_NULL;
+    if (XPR_IS_NOT_NULL(sFont))
+    {
+        sOldFont =
+            ::SelectObject(
+                aCustomDraw->nmcd.hdc,
+                sFont);
+    }
+
+    const int sOldMode =
+        ::SetBkMode(
+            aCustomDraw->nmcd.hdc,
+            TRANSPARENT);
+    const COLORREF sOldTextColor =
+        ::SetTextColor(
+            aCustomDraw->nmcd.hdc,
+            sForeground);
+
+    UINT sTextFlags =
+        DT_SINGLELINE |
+        DT_VCENTER |
+        DT_END_ELLIPSIS |
+        DT_NOPREFIX;
+    sTextFlags |=
+        (sToolbarStyle & TBSTYLE_LIST) != 0 ?
+        DT_LEFT :
+        DT_CENTER;
+
+    ::DrawText(
+        aCustomDraw->nmcd.hdc,
+        sText,
+        -1,
+        &sTextRect,
+        sTextFlags);
+
+    ::SetTextColor(
+        aCustomDraw->nmcd.hdc,
+        sOldTextColor);
+    ::SetBkMode(
+        aCustomDraw->nmcd.hdc,
+        sOldMode);
+
+    if (XPR_IS_NOT_NULL(sOldFont))
+    {
+        ::SelectObject(
+            aCustomDraw->nmcd.hdc,
+            sOldFont);
+    }
+}
+
 LRESULT ApplyDarkToolBarCustomDraw(
     LPNMTBCUSTOMDRAW aCustomDraw,
     xpr_bool_t aElevatedSurface = XPR_FALSE)
@@ -156,7 +459,19 @@ LRESULT ApplyDarkToolBarCustomDraw(
                 aCustomDraw->clrTextHighlight = sPalette.mText;
             }
 
-            return sResult;
+            // Native toolbar rendering is retained for image placement and
+            // accessibility, but text/drop-down glyph pixels are finalized
+            // after it paints so no black native text/arrow can leak onto a
+            // dark command surface.
+            return sResult | CDRF_NOTIFYPOSTPAINT;
+        }
+
+        case CDDS_ITEMPOSTPAINT:
+        {
+            DrawFinalDarkToolbarItem(
+                aCustomDraw,
+                sBackground);
+            return CDRF_DODEFAULT;
         }
 
         default:
@@ -328,14 +643,50 @@ void CToolBarEx::SetIconType( int nIconType, bool bUpdate /*=true*/ )
 
     if ( nIDHot != ( UINT )-1 ) // "hot" imagelist is optional
     {
-        lpResName = MAKEINTRESOURCE( nIDHot );
-        hInst = AfxFindResourceHandle( lpResName, RT_BITMAP );
-
         m_imageListHot.DeleteImageList();
-        VERIFY( m_imageListHot.Attach( ImageList_LoadImage( hInst, lpResName,
-            szIcon.cx, 0, m_clrMask, IMAGE_BITMAP, LR_CREATEDIBSECTION ) ) );
-        m_imageListHot.SetBkColor(CLR_NONE);
-        tbCtrl.SetHotImageList( &m_imageListHot );
+
+        const fxfile::ui::ThemePalette sPalette =
+            fxfile::ui::ModernUI::getPalette();
+        const xpr_bool_t sUseDarkHotCopy =
+            XPR_IS_TRUE(sPalette.mDark) &&
+            XPR_IS_FALSE(sPalette.mHighContrast) &&
+            XPR_IS_NOT_NULL(m_imageListCold.m_hImageList) ?
+            XPR_TRUE :
+            XPR_FALSE;
+
+        if (XPR_IS_TRUE(sUseDarkHotCopy))
+        {
+            // Legacy HOT bitmap strips contain bright hover artwork intended
+            // for classic/light toolbars.  On a Dark command bar this becomes
+            // the white block seen behind icons.  Keep the icon source stable
+            // and let ThemePalette custom draw provide the subtle hot surface.
+            HIMAGELIST sHotImageList =
+                ::ImageList_Duplicate(
+                    m_imageListCold.m_hImageList);
+            if (XPR_IS_NOT_NULL(sHotImageList))
+                m_imageListHot.Attach(sHotImageList);
+        }
+        else
+        {
+            lpResName = MAKEINTRESOURCE( nIDHot );
+            hInst = AfxFindResourceHandle( lpResName, RT_BITMAP );
+
+            m_imageListHot.Attach(
+                ImageList_LoadImage(
+                    hInst,
+                    lpResName,
+                    szIcon.cx,
+                    0,
+                    m_clrMask,
+                    IMAGE_BITMAP,
+                    LR_CREATEDIBSECTION));
+        }
+
+        if (XPR_IS_NOT_NULL(m_imageListHot.m_hImageList))
+        {
+            m_imageListHot.SetBkColor(CLR_NONE);
+            tbCtrl.SetHotImageList( &m_imageListHot );
+        }
     }
 
     m_imageListDisabled.DeleteImageList();
@@ -673,7 +1024,15 @@ void CToolBarEx::ApplyModernMetrics()
         MAKELPARAM(max(sCurrentButtonWidth, sButtonExtent), sButtonExtent));
 
     LOGFONT sLogFont = {0};
-    if (XPR_IS_TRUE(fxfile::ui::ModernUI::getUIFont(sLogFont, m_hWnd)))
+    if (XPR_IS_TRUE(
+            fxfile::ui::ModernUI::getUIFont(
+                sLogFont,
+                m_hWnd)) &&
+        XPR_IS_FALSE(
+            fxfile::ui::ModernUI::isSameFont(
+                reinterpret_cast<HFONT>(
+                    m_uiFont.GetSafeHandle()),
+                sLogFont)))
     {
         if (m_uiFont.m_hObject != NULL)
             m_uiFont.DeleteObject();
@@ -1568,7 +1927,19 @@ int CToolBarPopup::OnCreate( LPCREATESTRUCT lpCreateStruct )
     }
     else
     {
-        fxfile::ui::ModernUI::applyExplorerControlTheme(m_tbCtrl.m_hWnd);
+        const fxfile::ui::ThemePalette sPalette =
+            fxfile::ui::ModernUI::getPalette();
+        if (XPR_IS_TRUE(sPalette.mDark) &&
+            XPR_IS_FALSE(sPalette.mHighContrast))
+        {
+            fxfile::ui::ModernUI::resetControlTheme(
+                m_tbCtrl.m_hWnd);
+        }
+        else
+        {
+            fxfile::ui::ModernUI::applyExplorerControlTheme(
+                m_tbCtrl.m_hWnd);
+        }
 
         CToolTipCtrl* sToolTip = m_tbCtrl.GetToolTips();
         if (sToolTip != NULL && ::IsWindow(sToolTip->m_hWnd))
