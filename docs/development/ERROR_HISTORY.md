@@ -1433,3 +1433,34 @@
 - `python build/validate_source_invariants.py`: **NOT RETESTED** on the user's Windows checkout after `97b42a8d`.
 - `local_ci.bat x64`, VS 2026 generation, Release-x64-Unicode compile/link/runtime smoke: **NOT RETESTED** after `97b42a8d`.
 
+---
+
+## 2026-09-23 — Final menu renderer needed a Dark contrast floor
+
+**오류 발생**
+- 사용자가 revision `02d3b404`를 실제 rebuild한 screenshot에서도 top menu label이 dark chrome과 거의 섞여 보인다고 재현했다.
+- 최종 `CMenuBar::OnPaint()` post-pass가 이미 해당 revision에 포함돼 있었으므로 paint ownership만으로는 충분하지 않았다.
+
+**실제 픽셀 증거**
+- screenshot의 top command chrome은 약 RGB(43,43,43)이고 menu glyph의 dominant neutral pixels는 약 RGB(109,109,109)였다.
+- 따라서 최종 text output 자체의 대비가 부족했다.
+
+**원인 진단**
+- final renderer가 `ThemePalette.mText` / `mSecondaryText`를 그대로 신뢰했다.
+- system/UISettings-derived foreground가 app-owned Dark command surface에 비해 충분히 밝다는 별도 보장이 없었다.
+- custom draw와 WM_PAINT가 같은 palette color를 공유하므로 renderer ownership을 여러 번 강화해도 color input이 어두우면 결과는 계속 어둡다.
+
+**해결 방법**
+- `MenuBar.cpp`에 perceived-luma helper와 `ResolveMenuTextColor()`를 추가한다.
+- Light 또는 High Contrast에서는 기존 preferred palette text를 그대로 반환한다.
+- Dark에서는 `mChrome` 대비 luma delta를 검사한다.
+- enabled text는 delta가 부족하면 RGB(238,238,238), disabled text는 RGB(176,176,176)으로 보정한다.
+- final `CMenuBar::OnPaint()`와 modern custom-draw path가 동일 resolver를 사용하도록 통합한다.
+- invariant는 contrast helper, threshold/fallback colors, 두 renderer path의 resolver 사용을 요구한다.
+
+**검증 상태**
+- User rebuilt screenshot before fix: FAIL on revision `02d3b404`.
+- Screenshot pixel analysis before fix: chrome ~RGB(43), neutral menu text ~RGB(109).
+- Connector source/validator audit after fix: PASS — contrast-floor helper exists and both menu renderer paths use it.
+- Windows rebuilt screenshot after `1ef8a78b`: **NOT RETESTED**.
+

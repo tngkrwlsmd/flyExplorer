@@ -77,7 +77,7 @@
     }
   ],
   "review": {
-    "reviewed_revision": "97b42a8d81d64749616788b7031912706a2d6a8e",
+    "reviewed_revision": "1ef8a78bd2491e8ee8acb69379127db795f1d85b",
     "reviewed_at": "2026-09-23",
     "reviewed_paths": [
       "AGENTS.md",
@@ -337,11 +337,13 @@ Status: **ACTIVE / user-reproduced runtime failures**. These items are the immed
    - `a46dbadd` registers `FlatHeaderCtrl.cpp` as the `header` contract source and changes the local contents map to report a deterministic `missing source registration` invariant error rather than raising `KeyError` if a future source key is omitted.
    - Connector static cross-check after the change found no `contents["..."]` references missing from the function's `paths` map. Acceptance still requires a user rerun: `python build/validate_source_invariants.py` must complete without traceback and `local_ci.bat x64` must progress past source invariant/regression preflight.
 
-7. **MenuBar text remains too dark — ACTIVE / reproduced on rebuilt 02d3b404**
-   - The user supplied a screenshot whose `build-revision.txt` is `02d3b404aabab880260cff5740531ffeae8b4f94`, so the final `CMenuBar::OnPaint()` ownership code is present, yet the labels remain too dark.
-   - Screenshot pixel inspection shows the command chrome near RGB(43,43,43) while the dominant neutral menu-text pixels are only around RGB(109,109,109), confirming insufficient final contrast rather than a stale build.
-   - Current `OnPaint()` uses `ThemePalette.mText` directly. The next fix must enforce a readable Dark command-text contrast at the final renderer even if UISettings/system-derived `mText` is unexpectedly dim.
-   - Acceptance: enabled Dark menu labels must use a high-contrast foreground against `mChrome`; disabled labels may remain secondary but must still be legible.
+7. **MenuBar text remains too dark — CODE FIXED / RUNTIME NOT RETESTED**
+   - Rebuilt `02d3b404` runtime evidence showed the final `CMenuBar::OnPaint()` ownership code was present but the labels remained too dark.
+   - Screenshot pixel inspection measured command chrome near RGB(43,43,43) and dominant neutral menu-text pixels around RGB(109,109,109), confirming insufficient final contrast rather than stale code.
+   - Root cause: the final renderer trusted `ThemePalette.mText` / `mSecondaryText` without a command-surface contrast floor. A system/UISettings-derived preferred foreground can therefore be too dim for the app-owned Dark chrome.
+   - `1ef8a78b` adds `ResolveMenuTextColor()`: on Dark/non-High-Contrast it compares perceived luma against `mChrome` and keeps the preferred palette color only when the delta is sufficient. Otherwise enabled text falls back to RGB(238,238,238) and disabled text to RGB(176,176,176).
+   - Both `CMenuBar::OnPaint()` and the modern `NM_CUSTOMDRAW` path use the same resolver; Light and High Contrast preserve the preferred/system color.
+   - Acceptance remains runtime/screenshot based: enabled Dark menu labels must be clearly readable against command chrome.
 
 8. **Address/current-folder classic client edge remains — CODE FIXED / RUNTIME NOT RETESTED**
    - Rebuilt `80ccaea9` runtime evidence showed the classic rectangular edge. Screenshot pixel inspection identified a 2-row sunken client pattern: top rows around RGB 160/105 and bottom rows around RGB 227/255 across almost the full control width.
