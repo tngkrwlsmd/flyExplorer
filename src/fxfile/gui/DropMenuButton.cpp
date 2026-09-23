@@ -203,9 +203,25 @@ void CDropMenuButton::DrawItem(DRAWITEMSTRUCT* lpDIS)
     if (lpDIS->CtlType != ODT_BUTTON)
         return;
 
+    CFont sFallbackFont;
     CFont *pFont = GetFont();
     if (pFont == NULL || pFont->m_hObject == NULL)
-        pFont = CFont::FromHandle((HFONT)GetStockObject(DEFAULT_GUI_FONT));
+    {
+        LOGFONT sLogFont = {0};
+        if (XPR_IS_TRUE(
+                fxfile::ui::ModernUI::getUIFont(
+                    sLogFont,
+                    GetSafeHwnd())) &&
+            sFallbackFont.CreateFontIndirect(&sLogFont) != FALSE)
+        {
+            pFont = &sFallbackFont;
+        }
+        else
+        {
+            pFont = CFont::FromHandle(
+                static_cast<HFONT>(::GetStockObject(DEFAULT_GUI_FONT)));
+        }
+    }
 
     const fxfile::ui::ThemePalette sPalette =
         fxfile::ui::ModernUI::getPalette();
