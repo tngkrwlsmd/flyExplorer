@@ -5012,10 +5012,7 @@ DROPEFFECT ExplorerCtrl::OnDragOver(COleDataObject *aOleDataObject, DWORD aKeySt
 
                 ::GlobalUnlock(sStgMedium.hGlobal);
 
-                if (XPR_IS_NOT_NULL(sStgMedium.pUnkForRelease))
-                {
-                    ::ReleaseStgMedium(&sStgMedium);
-                }
+                ::ReleaseStgMedium(&sStgMedium);
             }
         }
 
