@@ -122,112 +122,177 @@ xpr_bool_t DoPaste(HWND               aHwnd,
                    xpr_uint_t         aMsg,
                    xpr_bool_t         aCopy)
 {
-    if (XPR_IS_NULL(aOleDataObject))
+    if (XPR_IS_NULL(aOleDataObject) ||
+        XPR_IS_NULL(aTarget) ||
+        aTarget[0] == XPR_STRING_LITERAL('\0'))
+    {
         return XPR_FALSE;
+    }
 
     xpr_bool_t sResult = XPR_FALSE;
 
     CWaitCursor sWaitCursor;
-    if (aOleDataObject->IsDataAvailable(aShellIDListClipFormat) == XPR_TRUE && aDropEffect == DROPEFFECT_LINK)
+    if (aOleDataObject->IsDataAvailable(aShellIDListClipFormat) == XPR_TRUE &&
+        aDropEffect == DROPEFFECT_LINK)
     {
         STGMEDIUM sStgMedium = {0};
-        FORMATETC sFormatEtc = {aShellIDListClipFormat, XPR_NULL, DVASPECT_CONTENT, -1, TYMED_HGLOBAL};
+        FORMATETC sFormatEtc =
+            {aShellIDListClipFormat, XPR_NULL, DVASPECT_CONTENT, -1, TYMED_HGLOBAL};
 
-        if (aOleDataObject->GetData(aShellIDListClipFormat, &sStgMedium, &sFormatEtc) == XPR_TRUE)
+        if (aOleDataObject->GetData(
+                aShellIDListClipFormat,
+                &sStgMedium,
+                &sFormatEtc) == XPR_TRUE)
         {
-            LPIDA sIda = (LPIDA)::GlobalLock(sStgMedium.hGlobal);
-            xpr_sint_t sCount = sIda->cidl;
+            LPIDA sIda =
+                (LPIDA)::GlobalLock(sStgMedium.hGlobal);
 
-            xpr_tchar_t *sMultipleSource = XPR_NULL;
-            xpr_tchar_t *sMultipleSourceEnum = XPR_NULL;
-            if (XPR_IS_NOT_NULL(aHwnd) && aMsg >= WM_USER)
+            if (XPR_IS_NOT_NULL(sIda))
             {
-                sMultipleSource = new xpr_tchar_t[(XPR_MAX_PATH + 1) * sCount + 1];
-                sMultipleSourceEnum = sMultipleSource;
-            }
+                const xpr_sint_t sCount = sIda->cidl;
 
-            xpr::string sName;
-            xpr_tchar_t sLink[XPR_MAX_PATH + 1];
-            xpr_size_t sColon;
-
-            LPITEMIDLIST sFullPidl = XPR_NULL; // fully-qualified PIDL
-            LPITEMIDLIST sFolderPidl = XPR_NULL; // folder PIDL
-            LPITEMIDLIST sItemPidl = XPR_NULL; // item PIDL
-
-            // get folder PIDL
-            sFolderPidl = (LPITEMIDLIST)(((xpr_byte_t *)sIda)+(sIda)->aoffset[0]);
-
-            LPSHELLFOLDER sDesktopShellFolder = XPR_NULL;
-            ::SHGetDesktopFolder(&sDesktopShellFolder);
-
-            LPSHELLFOLDER sShellFolder = XPR_NULL;
-            HRESULT sHResult = sDesktopShellFolder->BindToObject(sFolderPidl, XPR_NULL, IID_IShellFolder, (LPVOID *)&sShellFolder);
-            if (FAILED(sHResult) || XPR_IS_NULL(sShellFolder))
-            {
-                sShellFolder = sDesktopShellFolder;
-                sDesktopShellFolder = XPR_NULL;
-            }
-
-            xpr::string sLinkSuffix;
-            if (XPR_IS_NOT_NULL(aLinkSuffix))
-                sLinkSuffix = aLinkSuffix;
-            else
-                sLinkSuffix = XPR_STRING_LITERAL(" - Shortcut");
-
-            xpr_sint_t i;
-            for (i = 0; i < sCount; ++i)
-            {
-                // get item PIDL and get full-qualified PIDL
-                sItemPidl = (LPITEMIDLIST)((xpr_byte_t *)sIda + sIda->aoffset[i+1]);
-                sFullPidl = fxfile::base::Pidl::concat(sFolderPidl, sItemPidl);
-
-                GetName(sShellFolder, sItemPidl, SHGDN_INFOLDER, sName);
-
-                sColon = sName.find(XPR_STRING_LITERAL(':'));
-                if (sColon != xpr::string::npos)
-                    sName.erase(sColon, 1);
-
-                sName += sLinkSuffix;
-
-                if (SetNewPath(sLink, aTarget, sName.c_str(), XPR_STRING_LITERAL(".lnk")) == XPR_TRUE)
+                xpr_tchar_t *sMultipleSource = XPR_NULL;
+                xpr_tchar_t *sMultipleSourceEnum = XPR_NULL;
+                if (XPR_IS_NOT_NULL(aHwnd) && aMsg >= WM_USER)
                 {
-                    if (CreateShortcut(sLink, sFullPidl) == XPR_TRUE)
+                    sMultipleSource =
+                        new xpr_tchar_t[
+                            (XPR_MAX_PATH + 1) * sCount + 1];
+                    sMultipleSourceEnum = sMultipleSource;
+                }
+
+                LPSHELLFOLDER sDesktopShellFolder = XPR_NULL;
+                HRESULT sHResult =
+                    ::SHGetDesktopFolder(&sDesktopShellFolder);
+
+                LPSHELLFOLDER sShellFolder = XPR_NULL;
+                if (SUCCEEDED(sHResult) &&
+                    XPR_IS_NOT_NULL(sDesktopShellFolder))
+                {
+                    LPITEMIDLIST sFolderPidl =
+                        (LPITEMIDLIST)(
+                            (xpr_byte_t *)sIda +
+                            sIda->aoffset[0]);
+
+                    sHResult =
+                        sDesktopShellFolder->BindToObject(
+                            sFolderPidl,
+                            XPR_NULL,
+                            IID_IShellFolder,
+                            (LPVOID *)&sShellFolder);
+                    if (FAILED(sHResult) ||
+                        XPR_IS_NULL(sShellFolder))
                     {
-                        _tcscpy(sMultipleSourceEnum, sLink);
-                        sMultipleSourceEnum += _tcslen(sMultipleSourceEnum) + 1;
+                        sShellFolder = sDesktopShellFolder;
+                        sDesktopShellFolder = XPR_NULL;
+                    }
+
+                    xpr::string sLinkSuffix =
+                        XPR_IS_NOT_NULL(aLinkSuffix) ?
+                        aLinkSuffix :
+                        XPR_STRING_LITERAL(" - Shortcut");
+
+                    for (xpr_sint_t i = 0; i < sCount; ++i)
+                    {
+                        LPITEMIDLIST sItemPidl =
+                            (LPITEMIDLIST)(
+                                (xpr_byte_t *)sIda +
+                                sIda->aoffset[i + 1]);
+                        LPITEMIDLIST sFullPidl =
+                            fxfile::base::Pidl::concat(
+                                sFolderPidl,
+                                sItemPidl);
+
+                        if (XPR_IS_NOT_NULL(sFullPidl))
+                        {
+                            xpr::string sName;
+                            GetName(
+                                sShellFolder,
+                                sItemPidl,
+                                SHGDN_INFOLDER,
+                                sName);
+
+                            const xpr_size_t sColon =
+                                sName.find(
+                                    XPR_STRING_LITERAL(':'));
+                            if (sColon != xpr::string::npos)
+                                sName.erase(sColon, 1);
+
+                            sName += sLinkSuffix;
+
+                            xpr_tchar_t sLink[
+                                XPR_MAX_PATH + 1] = {0};
+                            if (SetNewPath(
+                                    sLink,
+                                    aTarget,
+                                    sName.c_str(),
+                                    XPR_STRING_LITERAL(".lnk")) == XPR_TRUE &&
+                                CreateShortcut(
+                                    sLink,
+                                    sFullPidl) == XPR_TRUE)
+                            {
+                                sResult = XPR_TRUE;
+
+                                if (XPR_IS_NOT_NULL(
+                                        sMultipleSourceEnum))
+                                {
+                                    _tcscpy(
+                                        sMultipleSourceEnum,
+                                        sLink);
+                                    sMultipleSourceEnum +=
+                                        _tcslen(
+                                            sMultipleSourceEnum) +
+                                        1;
+                                }
+                            }
+                        }
+
+                        COM_FREE(sFullPidl);
                     }
                 }
 
-                COM_FREE(sFullPidl);
+                if (XPR_IS_NOT_NULL(sMultipleSourceEnum))
+                    sMultipleSourceEnum[0] =
+                        XPR_STRING_LITERAL('\0');
+
+                if (XPR_IS_TRUE(sResult))
+                {
+                    ::SHChangeNotify(
+                        SHCNE_UPDATEDIR,
+                        SHCNF_PATH | SHCNF_FLUSH,
+                        (LPCVOID)aTarget,
+                        XPR_NULL);
+
+                    if (XPR_IS_NOT_NULL(sMultipleSource) &&
+                        XPR_IS_NOT_NULL(aHwnd) &&
+                        aMsg >= WM_USER)
+                    {
+                        PasteSelItems sPasteSelItems = {0};
+                        sPasteSelItems.mSource =
+                            sMultipleSource;
+                        sPasteSelItems.mTarget =
+                            aTarget;
+                        ::SendMessage(
+                            aHwnd,
+                            aMsg,
+                            (WPARAM)&sPasteSelItems,
+                            0);
+                    }
+                }
+
+                XPR_SAFE_DELETE_ARRAY(sMultipleSource);
+                COM_RELEASE(sShellFolder);
+                COM_RELEASE(sDesktopShellFolder);
+                ::GlobalUnlock(sStgMedium.hGlobal);
             }
 
-            sMultipleSourceEnum[0] = '\0'; // double end null
-
-            ::SHChangeNotify(SHCNE_UPDATEDIR, SHCNF_PATH | SHCNF_FLUSH, (LPCVOID)aTarget, XPR_NULL);
-
-            if (XPR_IS_NOT_NULL(sMultipleSource) && XPR_IS_NOT_NULL(sMultipleSourceEnum) && XPR_IS_NOT_NULL(aHwnd) && aMsg >= WM_USER)
-            {
-                PasteSelItems sPasteSelItems = {0};
-                sPasteSelItems.mSource = sMultipleSource;
-                sPasteSelItems.mTarget = aTarget;
-                ::SendMessage(aHwnd, aMsg, (WPARAM)&sPasteSelItems, 0);
-            }
-
-            XPR_SAFE_DELETE_ARRAY(sMultipleSource);
-            COM_RELEASE(sShellFolder);
-            COM_RELEASE(sDesktopShellFolder);
-            ::GlobalUnlock(sStgMedium.hGlobal);
-
-            if (XPR_IS_NOT_NULL(sStgMedium.pUnkForRelease))
-            {
-                ::ReleaseStgMedium(&sStgMedium);
-            }
+            ::ReleaseStgMedium(&sStgMedium);
         }
 
         return sResult;
     }
 
-    xpr_uint_t sFiles;
+    xpr_uint_t sFiles = 0;
     xpr_tchar_t *sMultipleSource = XPR_NULL;
     xpr_tchar_t *sMultipleSourceEnum = XPR_NULL;
     xpr_tchar_t *sTarget = XPR_NULL;
@@ -235,71 +300,125 @@ xpr_bool_t DoPaste(HWND               aHwnd,
     if (aOleDataObject->IsDataAvailable(aShellIDListClipFormat) == XPR_TRUE)
     {
         STGMEDIUM sStgMedium = {0};
-        FORMATETC sFormatEtc = {aShellIDListClipFormat, XPR_NULL, DVASPECT_CONTENT, -1, TYMED_HGLOBAL};
+        FORMATETC sFormatEtc =
+            {aShellIDListClipFormat, XPR_NULL, DVASPECT_CONTENT, -1, TYMED_HGLOBAL};
 
-        if (aOleDataObject->GetData(aShellIDListClipFormat, &sStgMedium, &sFormatEtc) == XPR_TRUE)
+        if (aOleDataObject->GetData(
+                aShellIDListClipFormat,
+                &sStgMedium,
+                &sFormatEtc) == XPR_TRUE)
         {
-            LPIDA sIda = (LPIDA)::GlobalLock(sStgMedium.hGlobal);
-            sFiles = sIda->cidl;
-
-            LPITEMIDLIST sFullPidl = XPR_NULL; // fully-qualified PIDL
-            LPITEMIDLIST sFolderPidl = XPR_NULL; // folder PIDL
-            LPITEMIDLIST sItemPidl = XPR_NULL; // item PIDL
-
-            // get folder PIDL
-            sFolderPidl = (LPITEMIDLIST)(((xpr_byte_t *)sIda)+(sIda)->aoffset[0]);
-
-            LPSHELLFOLDER sDesktopShellFolder = XPR_NULL;
-            ::SHGetDesktopFolder(&sDesktopShellFolder);
-
-            LPSHELLFOLDER sShellFolder = XPR_NULL;
-            HRESULT sHResult = sDesktopShellFolder->BindToObject(sFolderPidl, XPR_NULL, IID_IShellFolder, (LPVOID *)&sShellFolder);
-            if (FAILED(sHResult) || XPR_IS_NULL(sShellFolder))
+            LPIDA sIda =
+                (LPIDA)::GlobalLock(sStgMedium.hGlobal);
+            if (XPR_IS_NOT_NULL(sIda))
             {
-                sShellFolder = sDesktopShellFolder;
-                sDesktopShellFolder = XPR_NULL;
+                sFiles = sIda->cidl;
+
+                LPSHELLFOLDER sDesktopShellFolder =
+                    XPR_NULL;
+                HRESULT sHResult =
+                    ::SHGetDesktopFolder(
+                        &sDesktopShellFolder);
+
+                if (SUCCEEDED(sHResult) &&
+                    XPR_IS_NOT_NULL(sDesktopShellFolder) &&
+                    sFiles > 0)
+                {
+                    LPITEMIDLIST sFolderPidl =
+                        (LPITEMIDLIST)(
+                            (xpr_byte_t *)sIda +
+                            sIda->aoffset[0]);
+
+                    LPSHELLFOLDER sShellFolder =
+                        XPR_NULL;
+                    sHResult =
+                        sDesktopShellFolder->BindToObject(
+                            sFolderPidl,
+                            XPR_NULL,
+                            IID_IShellFolder,
+                            (LPVOID *)&sShellFolder);
+                    if (FAILED(sHResult) ||
+                        XPR_IS_NULL(sShellFolder))
+                    {
+                        sShellFolder =
+                            sDesktopShellFolder;
+                        sDesktopShellFolder =
+                            XPR_NULL;
+                    }
+
+                    sMultipleSource =
+                        new xpr_tchar_t[
+                            (XPR_MAX_PATH + 1) *
+                            sFiles +
+                            1];
+                    memset(
+                        sMultipleSource,
+                        0,
+                        sizeof(xpr_tchar_t) *
+                            ((XPR_MAX_PATH + 1) *
+                             sFiles +
+                             1));
+                    sMultipleSourceEnum =
+                        sMultipleSource;
+
+                    for (xpr_uint_t i = 0;
+                         i < sFiles;
+                         ++i)
+                    {
+                        LPITEMIDLIST sItemPidl =
+                            (LPITEMIDLIST)(
+                                (xpr_byte_t *)sIda +
+                                sIda->aoffset[i + 1]);
+
+                        xpr_tchar_t sPath[
+                            XPR_MAX_PATH + 1] = {0};
+                        if (SUCCEEDED(
+                                GetName(
+                                    sShellFolder,
+                                    sItemPidl,
+                                    SHGDN_FORPARSING,
+                                    sPath)))
+                        {
+                            _tcscpy(
+                                sMultipleSourceEnum,
+                                sPath);
+                            sMultipleSourceEnum +=
+                                _tcslen(
+                                    sMultipleSourceEnum) +
+                                1;
+                        }
+                    }
+
+                    sMultipleSourceEnum[0] =
+                        XPR_STRING_LITERAL('\0');
+                    sResult = XPR_TRUE;
+
+                    COM_RELEASE(sShellFolder);
+                }
+
+                COM_RELEASE(sDesktopShellFolder);
+                ::GlobalUnlock(sStgMedium.hGlobal);
             }
 
-            xpr_sint_t i;
-            xpr_tchar_t sPath[XPR_MAX_PATH + 1];
-            sMultipleSource = new xpr_tchar_t[(XPR_MAX_PATH + 1) * sFiles + 1];
-            memset(sMultipleSource, 0, sizeof(xpr_tchar_t) * (XPR_MAX_PATH + 1) * sFiles + sizeof(xpr_tchar_t));
-            sMultipleSourceEnum = sMultipleSource;
-
-            for (i = 0; i < (xpr_sint_t)sFiles; ++i)
-            {
-                // get item PIDL and get full-qualified PIDL
-                sItemPidl = (LPITEMIDLIST)(((xpr_byte_t *)sIda)+(sIda)->aoffset[i+1]);
-                GetName(sShellFolder, sItemPidl, SHGDN_FORPARSING, sPath);
-
-                _tcscpy(sMultipleSourceEnum, sPath);
-
-                sMultipleSourceEnum += _tcslen(sMultipleSourceEnum) + 1;
-            }
-
-            sMultipleSourceEnum[0] = '\0'; // double null end
-
-            COM_RELEASE(sShellFolder);
-            COM_RELEASE(sDesktopShellFolder);
-            ::GlobalUnlock(sStgMedium.hGlobal);
-
-            if (XPR_IS_NOT_NULL(sStgMedium.pUnkForRelease))
-            {
-                ::ReleaseStgMedium(&sStgMedium);
-            }
-
-            if (sFiles > 0)
-                sResult = XPR_TRUE;
+            ::ReleaseStgMedium(&sStgMedium);
         }
     }
 
     if (XPR_IS_FALSE(sResult) && aOleDataObject->IsDataAvailable(CF_HDROP) == XPR_TRUE)
     {
         // First, Get Global Data(CF_HDROP)
-        HDROP sDrop = (HDROP)aOleDataObject->GetGlobalData(CF_HDROP);
+        HDROP sDrop =
+            (HDROP)aOleDataObject->GetGlobalData(CF_HDROP);
 
-        sFiles = ::DragQueryFile(sDrop, 0xFFFFFFFF, XPR_NULL, 0); // 0xFFFFFFFF -1
-        if (sFiles > 0)
+        if (XPR_IS_NOT_NULL(sDrop))
+            sFiles =
+                ::DragQueryFile(
+                    sDrop,
+                    0xFFFFFFFF,
+                    XPR_NULL,
+                    0); // 0xFFFFFFFF = item count
+
+        if (XPR_IS_NOT_NULL(sDrop) && sFiles > 0)
         {
             xpr_sint_t i;
             xpr_tchar_t sPath[XPR_MAX_PATH + 1];
@@ -318,8 +437,11 @@ xpr_bool_t DoPaste(HWND               aHwnd,
             sMultipleSourceEnum[0] = '\0'; // double end null
         }
 
-        ::GlobalUnlock(sDrop);
-        ::DragFinish(sDrop);
+        if (XPR_IS_NOT_NULL(sDrop))
+        {
+            ::GlobalUnlock(sDrop);
+            ::DragFinish(sDrop);
+        }
 
         if (sFiles > 0)
             sResult = XPR_TRUE;
