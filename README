@@ -292,8 +292,13 @@ per-user destination, and the cross-integrity wake-up path allows only the
 registered activation message when the documented API is available. AddressBar
 nested borders, legacy coolbar sizing, owner-draw Dark colors/fonts, filtered
 list default text, and app-owned menu check/radio glyphs have matching source
-invariant guards. Root-cause and validation details are recorded in
-`docs/development/ERROR_HISTORY.md`.
+invariant guards. Shared ModernDialog/ResizingDialog/TitleDlg child controls now
+also disable Explorer themed painting in Dark/non-High-Contrast mode instead of
+mixing native light chrome with palette-owned surfaces. The elevated NSIS
+installer no longer starts fxfile or fxfile-launcher automatically; installed
+programs are launched later from the normal user shell/shortcuts so the
+application's `asInvoker` contract is preserved. Root-cause and validation
+details are recorded in `docs/development/ERROR_HISTORY.md`.
 
 Compile/link and runtime evidence for the current `main` still requires a fresh
 matching `local_ci.bat x64` run. The `full` profile, x86 compatibility, package

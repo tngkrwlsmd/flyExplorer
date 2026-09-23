@@ -248,7 +248,18 @@ void TitleDlg::applyModernAppearanceToChild(CWnd *aWnd, HFONT aPreviousFont)
         XPR_FALSE;
 
     if (XPR_IS_TRUE(sExplorerThemeControl))
-        ui::ModernUI::applyExplorerControlTheme(aWnd->GetSafeHwnd());
+    {
+        const ui::ThemePalette sPalette = ui::ModernUI::getPalette();
+        if (XPR_IS_TRUE(sPalette.mDark) &&
+            XPR_IS_FALSE(sPalette.mHighContrast))
+        {
+            ui::ModernUI::resetControlTheme(aWnd->GetSafeHwnd());
+        }
+        else
+        {
+            ui::ModernUI::applyExplorerControlTheme(aWnd->GetSafeHwnd());
+        }
+    }
 
     CWnd *sChild = aWnd->GetWindow(GW_CHILD);
     while (XPR_IS_NOT_NULL(sChild))

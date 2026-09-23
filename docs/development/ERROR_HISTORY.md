@@ -906,3 +906,39 @@
 - `60ce7b8e`, `c3e6e8c8` — owner-draw Windows UI font fallbacks
 - `188d1f6d` — drag-feedback Windows UI font
 - `7d4e8a35`, `d96347de` — regression guards
+
+---
+
+## 2026-09-23 — 공용 dialog Dark theme와 elevated installer 자동 실행이 이전 수정 범위 밖에 남아 있었음
+
+**오류 발생**
+- 최근 runtime/UI 안정화 커밋들을 `main`에 통합한 뒤에도 사용자가 기존 오류가 그대로 재현된다고 보고했다.
+- 이전 수정은 settings host/page의 theme 재진입과 제품 manifest/HKCU 권한 경로를 중심으로 닫았지만, 공용 dialog base와 실제 installer launch chain은 동일한 범위로 검증하지 않았다.
+
+**최초 실제 오류**
+- `CModernDialog`, `CResizingDialog`, `TitleDlg`의 child Edit/Combo/List/Tree/Tab 경로는 Dark/non-High-Contrast에서도 `applyExplorerControlTheme()`를 호출하고 있었다. 이 클래스들은 동시에 ThemePalette 기반 background/text를 직접 소유하므로 settings dialog에서 이미 제거한 native Explorer/light chrome 혼합이 다른 다이얼로그들에는 남아 있었다.
+- `dist/setup.nsi`는 `RequestExecutionLevel admin`인 elevated installer이면서 finish page에서 `fxfile.exe`를 실행할 수 있었고, `.onInstSuccess`에서는 `fxfile-launcher.exe`를 자동 시작했다. launcher의 hotkey path는 다시 `ShellExecute`로 `fxfile.exe`를 시작하므로 설치 직후 elevated parent token이 launcher와 후속 fxfile 실행에 이어질 수 있었다.
+- 기존 source invariant는 settings의 `refreshModernAppearance(XPR_FALSE)` 토큰과 product manifest의 `asInvoker`만 확인했고, 위 공용 dialog 3종의 Dark association 정책과 elevated installer auto-launch 부재는 검사하지 않았다.
+
+**원인 진단**
+- Root cause 1: 동일한 ModernUI 정책을 settings 전용 수정으로 닫고, 실제로 50개 이상의 command/resizable dialog가 공유하는 base class까지 확장하지 않았다.
+- Root cause 2: executable manifest 권한과 "누가 executable을 시작하는가"를 별개로 보지 않았다. `asInvoker`는 이미 elevated인 parent에서 시작된 child를 강제로 de-elevate하지 않는다.
+- Root cause 3: static regression guard가 수정된 파일의 token 존재만 확인해, 동일 증상을 만드는 다른 활성 경로를 탐지하지 못했다.
+
+**해결 방법**
+- `gui/ModernDialog.cpp`, `gui/ResizingDialog.cpp`, `cmd/title_dlg.cpp`: Explorer-theme 대상 child control은 Dark/non-High-Contrast에서 `resetControlTheme()`을 사용하고 Light/System/High Contrast에서는 기존 `applyExplorerControlTheme()` 경로를 유지한다. 기존 HWND association cache는 동일 요청 재적용을 계속 차단한다.
+- `dist/setup.nsi`: elevated installer의 finish-page product run과 `.onInstSuccess` launcher 자동 실행을 제거한다. 설치된 fxfile/launcher는 이후 정상 사용자 shell/shortcut 또는 앱 설정 경로에서 시작한다.
+- `build/validate_source_invariants.py`: 공용 dialog 3종에 Dark reset + HC fallback 계약을 추가하고, installer에서 finish-page run/`.onInstSuccess`/launcher ExecShell 재도입을 금지한다.
+- `build/installer_smoke.ps1`: 동일 elevated auto-launch 부재를 installer smoke contract inspection에서 직접 검사한다.
+
+**재발 방지**
+- custom Dark paint를 소유하는 공용 base class는 개별 dialog와 별도로 theme association ownership을 검증한다.
+- 권한 문제는 manifest만 보지 않고 installer/launcher/scheduled-startup 등 실제 parent launch chain까지 추적한다.
+- "수정된 경로"만 토큰 검사하지 말고 동일 base/active path의 sibling 구현도 invariant 범위에 포함한다.
+
+**검증 상태**
+- Connector source audit: PASS — 공용 dialog base의 기존 Explorer-theme 호출, installer elevated auto-launch chain, 기존 invariant 누락을 현재 `main` source에서 확인했다.
+- 변경 source self-check: PASS — 세 공용 base에 Dark reset/Light·HC Explorer fallback이 함께 존재하고 installer auto-launch token이 제거되도록 commit 전 검사했다.
+- `python build/validate_source_invariants.py`: NOT TESTED — connector 환경에는 repository checkout command 실행 경로가 없다.
+- MSVC compile/link, `local_ci.bat x64`, installer 실제 실행, 설치 직후 standard-user token 확인, Windows 11 Light/Dark/System/High Contrast 및 반복 dialog open/close runtime: NOT TESTED.
+

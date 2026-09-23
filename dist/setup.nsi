@@ -50,8 +50,10 @@ Var SMOKE_MODE
 
 !define MUI_FINISHPAGE_TITLE                 "$(TEXT_FINISHPAGE_TITLE)"
 !define MUI_FINISHPAGE_TEXT                  "$(TEXT_FINISHPAGE_TEXT)"
-!define MUI_FINISHPAGE_RUN_TEXT              "$(TEXT_FINISHPAGE_RUN_TEXT)"
-!define MUI_FINISHPAGE_RUN                   "$INSTDIR\fxfile.exe"
+# The installer is elevated to write Program Files/HKLM. Do not expose a
+# finish-page product launch here: a process started by the installer can
+# inherit the elevated token and make an asInvoker fxfile appear to require
+# administrator rights. Users launch fxfile later from a normal shell/shortcut.
 !define MUI_FINISHPAGE_SHOWREADME_TEXT       "$(TEXT_FINISHPAGE_SHOWREADME_TEXT)"
 !define MUI_FINISHPAGE_SHOWREADME            "$INSTDIR\readme.txt"
 
@@ -98,7 +100,6 @@ LangString TEXT_DESC_QUICKLAUNCH_SHORTCUT  ${LANG_KOREAN} "fxfile의 바로 가�
 
 LangString TEXT_FINISHPAGE_TITLE           ${LANG_KOREAN} "${PRODUCT_NAME} ${PRODUCT_VER} 설치 완료"
 LangString TEXT_FINISHPAGE_TEXT            ${LANG_KOREAN} "${PRODUCT_NAME} ${PRODUCT_VER}의 설치가 완료되었습니다. 설치 프로그램을 마치려면 '마침' 버튼을 눌러 주세요."
-LangString TEXT_FINISHPAGE_RUN_TEXT        ${LANG_KOREAN} "${PRODUCT_NAME} 실행하기(&R)"
 LangString TEXT_FINISHPAGE_SHOWREADME_TEXT ${LANG_KOREAN} "Readme 파일 보기(&S)"
 
 LangString TEXT_UN_OPTION_HEADER           ${LANG_KOREAN} "추가 제거 옵션"
@@ -178,13 +179,10 @@ Function .onInit
 
 FunctionEnd
 
-Function .onInstSuccess
-
-    StrCmp $SMOKE_MODE "1" OnInstSuccessDone
-        ExecShell "" "$INSTDIR\fxfile-launcher.exe"
-    OnInstSuccessDone:
-  
-FunctionEnd
+# Intentionally no .onInstSuccess launcher/product start. setup.exe runs
+# elevated, while fxfile.exe is deliberately asInvoker. Starting either
+# fxfile-launcher.exe or fxfile.exe here would keep the elevated parent token
+# alive and can cause subsequent hotkey launches to remain elevated.
 
 Function OptionEnterPage
 

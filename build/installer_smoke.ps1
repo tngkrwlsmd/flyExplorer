@@ -112,12 +112,21 @@ foreach ($token in @(
     'StrCmp $SMOKE_MODE "1" CreateUninstaller',
     'StrCmp $SMOKE_MODE "1" DesktopShortcutDone',
     'StrCmp $SMOKE_MODE "1" QuickLaunchShortcutDone',
-    'StrCmp $SMOKE_MODE "1" OnInstSuccessDone',
     'StrCmp $SMOKE_MODE "1" unSkipProcessKill',
     'StrCmp $SMOKE_MODE "1" unSmokeCleanup'
 )) {
     if (-not $setup.Contains($token)) {
         throw "setup.nsi is missing isolated installer-smoke contract: $token"
+    }
+} 
+
+foreach ($token in @(
+    '!define MUI_FINISHPAGE_RUN',
+    'Function .onInstSuccess',
+    'ExecShell "" "$INSTDIR\fxfile-launcher.exe"'
+)) {
+    if ($setup.Contains($token)) {
+        throw "setup.nsi must not auto-launch product code from the elevated installer: $token"
     }
 }
 

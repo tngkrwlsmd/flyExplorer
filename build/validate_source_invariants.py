@@ -2422,13 +2422,23 @@ def validate_installer_smoke_wiring() -> list[str]:
         'StrCmp $SMOKE_MODE "1" CreateUninstaller',
         'StrCmp $SMOKE_MODE "1" DesktopShortcutDone',
         'StrCmp $SMOKE_MODE "1" QuickLaunchShortcutDone',
-        'StrCmp $SMOKE_MODE "1" OnInstSuccessDone',
         'StrCmp $SMOKE_MODE "1" unSkipProcessKill',
         'StrCmp $SMOKE_MODE "1" unSmokeCleanup',
     )
     for token in setup_tokens:
         if token not in setup:
             errors.append(f"dist/setup.nsi: missing isolated installer token {token}")
+
+    for token in (
+        "!define MUI_FINISHPAGE_RUN",
+        "Function .onInstSuccess",
+        'ExecShell "" "$INSTDIR\\fxfile-launcher.exe"',
+    ):
+        if token in setup:
+            errors.append(
+                "dist/setup.nsi: elevated installer must not auto-launch "
+                f"fxfile/launcher via {token}"
+            )
 
     smoke_tokens = (
         "[switch]$ExecuteInstall",
@@ -2475,6 +2485,9 @@ def validate_win11_stability_regressions() -> list[str]:
         "cfg_main_cpp": FXFILE_SRC / "cfg" / "cfg_main_dlg.cpp",
         "cfg_page_h": FXFILE_SRC / "cfg" / "cfg_dlg.h",
         "cfg_page_cpp": FXFILE_SRC / "cfg" / "cfg_dlg.cpp",
+        "modern_dialog": FXFILE_SRC / "gui" / "ModernDialog.cpp",
+        "resizing_dialog": FXFILE_SRC / "gui" / "ResizingDialog.cpp",
+        "title_dialog": FXFILE_SRC / "cmd" / "title_dlg.cpp",
         "shell_registry": FXFILE_SRC / "shell_registry.cpp",
         "single_process": FXFILE_SRC / "single_process.cpp",
         "main_coolbar": FXFILE_SRC / "main_coolbar.cpp",
@@ -2951,6 +2964,23 @@ def validate_win11_stability_regressions() -> list[str]:
         errors.append(
             "src/fxfile/contents_wnd.cpp: legacy screen-DC title font DPI path returned"
         )
+
+    for source_name, source_path in (
+        ("modern_dialog", "src/fxfile/gui/ModernDialog.cpp"),
+        ("resizing_dialog", "src/fxfile/gui/ResizingDialog.cpp"),
+        ("title_dialog", "src/fxfile/cmd/title_dlg.cpp"),
+    ):
+        source = contents[source_name]
+        for token in (
+            "sPalette.mDark",
+            "sPalette.mHighContrast",
+            "resetControlTheme(aWnd->GetSafeHwnd())",
+            "applyExplorerControlTheme",
+        ):
+            if token not in source:
+                errors.append(
+                    f"{source_path}: common dialog Dark theme ownership missing token {token}"
+                )
 
     for source_name in ("cfg_main_h", "cfg_page_h"):
         if "mRefreshingModernAppearance" not in contents[source_name]:

@@ -174,7 +174,20 @@ void CResizingDialog::ApplyModernAppearanceToChild(CWnd *aWnd, HFONT aPreviousFo
         _tcsicmp(sClassName, _T("SysTabControl32")) == 0;
 
     if (sExplorerThemeControl)
-        fxfile::ui::ModernUI::applyExplorerControlTheme(aWnd->GetSafeHwnd());
+    {
+        const fxfile::ui::ThemePalette sPalette =
+            fxfile::ui::ModernUI::getPalette();
+        if (XPR_IS_TRUE(sPalette.mDark) &&
+            XPR_IS_FALSE(sPalette.mHighContrast))
+        {
+            fxfile::ui::ModernUI::resetControlTheme(aWnd->GetSafeHwnd());
+        }
+        else
+        {
+            fxfile::ui::ModernUI::applyExplorerControlTheme(
+                aWnd->GetSafeHwnd());
+        }
+    }
 
     CWnd *sChild = aWnd->GetWindow(GW_CHILD);
     while (sChild != NULL)
