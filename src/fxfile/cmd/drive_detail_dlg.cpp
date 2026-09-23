@@ -256,9 +256,24 @@ void DriveDetailDlg::setDrive(xpr_tchar_t aDrive)
     GetDlgItem(IDC_DRIVE_DRIVE)->SetWindowText(sText);
 
     SHFILEINFO sShFileInfo = {0};
-    SHGetFileInfo(sDrivePath, 0, &sShFileInfo, sizeof(SHFILEINFO), SHGFI_ICON);
-    mDriveIconHandle = sShFileInfo.hIcon;
-    ((CStatic *)GetDlgItem(IDC_DRIVE_ICON))->SetIcon(mDriveIconHandle);
+    HICON sOldDriveIcon = mDriveIconHandle;
+    mDriveIconHandle = XPR_NULL;
+
+    if (SHGetFileInfo(
+            sDrivePath,
+            0,
+            &sShFileInfo,
+            sizeof(SHFILEINFO),
+            SHGFI_ICON) != 0)
+    {
+        mDriveIconHandle = sShFileInfo.hIcon;
+    }
+
+    CStatic *sDriveIcon = (CStatic *)GetDlgItem(IDC_DRIVE_ICON);
+    if (XPR_IS_NOT_NULL(sDriveIcon))
+        sDriveIcon->SetIcon(mDriveIconHandle);
+
+    DESTROY_ICON(sOldDriveIcon);
 
     xpr_sint_t sDriveType = GetRootDriveType(aDrive);
     switch (sDriveType)
