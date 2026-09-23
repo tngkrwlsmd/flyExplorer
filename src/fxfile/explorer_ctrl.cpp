@@ -4772,7 +4772,19 @@ CImageList* ExplorerCtrl::createDragImageEx(LPPOINT aPoint)
     xpr_tchar_t sTitle[0xff] = {0};
     _stprintf(sTitle, gApp.loadFormatString(XPR_STRING_LITERAL("explorer_window.drag_drop.title"), XPR_STRING_LITERAL("%d")), GetSelectedCount());
     CFont sFont, *sOldFont;
-    sFont.CreateStockObject(DEFAULT_GUI_FONT);
+    LOGFONT sDragLogFont = {0};
+    if (XPR_IS_TRUE(
+            ui::ModernUI::getUIFont(
+                sDragLogFont,
+                GetSafeHwnd())) &&
+        sFont.CreateFontIndirect(&sDragLogFont) != XPR_FALSE)
+    {
+        // Use the current Windows UI font for transient drag feedback too.
+    }
+    else
+    {
+        sFont.CreateStockObject(DEFAULT_GUI_FONT);
+    }
     sOldFont = sDragDC.SelectObject(&sFont);
     sDragDC.SetBkMode(TRANSPARENT);
     sDragDC.SetTextColor(GetSysColor(COLOR_HIGHLIGHTTEXT));
