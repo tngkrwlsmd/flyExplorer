@@ -311,6 +311,30 @@
 - 위 회귀 경로에는 `build/validate_source_invariants.py`의 deterministic guard가 추가되어 있으며 installer smoke도 elevated auto-launch 부재를 검사한다. 상세 root cause와 commit mapping은 `docs/development/ERROR_HISTORY.md`에 기록되어 있다.
 - 최신 변경 이후 connector 기반 source inspection은 수행했지만 `python build/validate_source_invariants.py`, MSVC compile/link, `local_ci.bat x64`, standard-user/elevated-instance interop, Windows 11 Light/Dark/System/High Contrast 100/125/150/200% DPI visual/IME/runtime 검증은 이 환경에서 실행하지 않았다. 따라서 해당 evidence는 계속 **NOT TESTED**다.
 
+## Next Development Items — 2026-09-23 screenshot follow-up
+
+Status: **ACTIVE / user-reproduced runtime failures**. These items are the immediate development scope until closed by matching Windows runtime evidence.
+
+1. **Atomic Light/Dark/System theme switch**
+   - Changing app theme must update the main frame, open Preferences window, already-created settings pages, menu/toolbar/rebar/address/header/list/tree surfaces, cached brushes/fonts, and icon/image lists in one logical refresh.
+   - A partially updated frame/dialog is a failure even if reopening the window fixes it.
+2. **Remaining black text on Dark surfaces**
+   - Find every final renderer still producing black/native text over app-owned Dark chrome. Menu bar, settings navigation/pages, headers, statics, owner/custom-draw controls, disabled states and selected states are in scope.
+   - Palette/custom-draw field values are not sufficient evidence; final screenshot/runtime output is the acceptance result.
+3. **File-list header vertical clipping**
+   - The `이름 / 크기 / 종류 / 수정한 날짜` row must derive height/padding from the current UI font and DPI so glyph ascenders/descenders are not clipped.
+4. **Remove obsolete green separator/accent lines**
+   - Remove the bright green horizontal lines currently visible between command/navigation/content surfaces. Do not replace them with another accent color; use no line or a neutral ThemePalette separator only when structure genuinely requires one.
+5. **Remove white outline around the current-folder title (`내 문서`)**
+   - Match the supplied Windows 11 Explorer reference: the current-folder/title surface must not look like a legacy boxed edit/control. Preserve accessibility focus indication without a persistent white frame.
+
+### Development handoff rule
+
+- Every new user-requested development item is added to this section (or its successor) before implementation starts.
+- After each **logical work unit** is completed, immediately update `docs/development/ERROR_HISTORY.md` and this project state with problem/root cause/change/evidence status, then commit that unit to `main`.
+- Do not batch unrelated finished work while documentation lags behind the code.
+- A user-reproduced item stays ACTIVE until matching runtime/screenshot evidence passes. Source/static fixes without that evidence are reported as `CODE FIXED / RUNTIME NOT TESTED`.
+
 ## Runtime regression acceptance protocol
 
 flyExplorer의 UI/runtime 결함은 source invariant나 commit 존재만으로 종결하지 않는다. 사용자 재현이 있는 경우 아래 acceptance case를 해당 변경 범위에 맞게 적용한다.
