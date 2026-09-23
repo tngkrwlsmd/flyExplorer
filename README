@@ -281,12 +281,27 @@ by automated resource-contract checks.
 The shared dialog/icon modernization has source-level static coverage, and the
 preflight now includes deterministic regression guards for direct-dialog drift,
 custom-paint regressions, toolbar API/custom-draw wiring, and UI resource
-contracts. Compile/link, runtime, and package evidence for the current `main`
-still requires a fresh matching `local_ci.bat x64`/`full` run; static evidence
-must not be promoted to product PASS. Light/Dark/High Contrast,
-100/125/150/200% DPI, representative dialog controls, resize/config behavior,
-keyboard/IME behavior, and final artwork quality remain separate manual
-evidence.
+contracts.
+
+The 2026-09-23 runtime/UI stabilization pass is also integrated into `main`.
+Control-theme association changes are idempotent, settings `WM_THEMECHANGED`
+handling avoids reapplying child theme associations, shell registration is
+per-user under HKCU, single-instance detection no longer requires all-access
+mutex rights, protected-path configuration/accelerator migration copies into the
+per-user destination, and the cross-integrity wake-up path allows only the
+registered activation message when the documented API is available. AddressBar
+nested borders, legacy coolbar sizing, owner-draw Dark colors/fonts, filtered
+list default text, and app-owned menu check/radio glyphs have matching source
+invariant guards. Root-cause and validation details are recorded in
+`docs/development/ERROR_HISTORY.md`.
+
+Compile/link and runtime evidence for the current `main` still requires a fresh
+matching `local_ci.bat x64` run. The `full` profile, x86 compatibility, package
+validation, and installer execution remain inactive unless the user explicitly
+expands the validation scope. Static evidence must not be promoted to product
+PASS. Light/Dark/High Contrast, 100/125/150/200% DPI, representative dialog
+controls, standard-user/elevated-instance interop, resize/config behavior,
+keyboard/IME behavior, and final artwork quality remain separate manual evidence.
 
 Generate the Visual Studio Solution
 -----------------------------------
