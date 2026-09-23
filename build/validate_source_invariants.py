@@ -3417,6 +3417,13 @@ def validate_runtime_ui_audit_regressions() -> list[str]:
         "drive": FXFILE_SRC / "cmd" / "drive_dlg.cpp",
         "drive_detail": FXFILE_SRC / "cmd" / "drive_detail_dlg.cpp",
         "icon_list": FXFILE_SRC / "gui" / "IconList.cpp",
+        "clipboard": FXFILE_SRC / "clipboard.cpp",
+        "clipboard_cmd": FXFILE_SRC / "cmd" / "cmd_clipboard.cpp",
+        "rename_cmd": FXFILE_SRC / "cmd" / "cmd_rename.cpp",
+        "picture": FXFILE_SRC / "picture_viewer.cpp",
+        "file_scrap": FXFILE_SRC / "file_scrap_ctrl.cpp",
+        "search_result": FXFILE_SRC / "search_result_ctrl.cpp",
+        "accel": FXFILE_SRC / "cmd" / "accel_table_dlg.cpp",
     }
 
     contents: dict[str, str] = {}
@@ -3571,6 +3578,97 @@ def validate_runtime_ui_audit_regressions() -> list[str]:
         if token not in drive_detail:
             errors.append(
                 f"src/fxfile/cmd/drive_detail_dlg.cpp: drive-detail runtime guard missing {token}"
+            )
+
+    clipboard = contents["clipboard"]
+    for forbidden in (
+        "aClipFormat != 0",
+        "::DeleteObject(sBitmap);",
+        "XPR_IS_NOT_NULL(sStgMedium.pUnkForRelease)",
+    ):
+        if forbidden in clipboard:
+            errors.append(
+                f"src/fxfile/clipboard.cpp: clipboard ownership/error regression returned: {forbidden}"
+            )
+    for token in (
+        "DROPEFFECT *sDropEffectData",
+        "if (XPR_IS_NULL(sDropEffectData))",
+        "::ReleaseStgMedium(&sStgMedium);",
+        "return sResult;",
+    ):
+        if token not in clipboard:
+            errors.append(
+                f"src/fxfile/clipboard.cpp: clipboard runtime guard missing {token}"
+            )
+
+    clipboard_cmd = contents["clipboard_cmd"]
+    if "sSelCount >= 0" in clipboard_cmd:
+        errors.append(
+            "src/fxfile/cmd/cmd_clipboard.cpp: selected-item paste must not accept a zero selection"
+        )
+    for forbidden in (
+        "mFileDescriptorA, XPR_TRUE",
+    ):
+        if forbidden in clipboard_cmd:
+            errors.append(
+                f"src/fxfile/cmd/cmd_clipboard.cpp: Unicode paste descriptor regression returned: {forbidden}"
+            )
+    if clipboard_cmd.count("CommandParameterIdIsSelectedItem") < 2:
+        errors.append(
+            "src/fxfile/cmd/cmd_clipboard.cpp: regular and special paste must both honor selected-item routing"
+        )
+    for token in (
+        "mFileDescriptorW, XPR_TRUE",
+        "sExplorerCtrl = sMainFrame->getExplorerCtrl(sFolderCtrl);",
+        "if (XPR_IS_NULL(sExplorerCtrl))",
+    ):
+        if token not in clipboard_cmd:
+            errors.append(
+                f"src/fxfile/cmd/cmd_clipboard.cpp: clipboard routing guard missing {token}"
+            )
+
+    rename_cmd = contents["rename_cmd"]
+    for token in (
+        "gOpt->mConfig.mBatchRenameMultiSel == XPR_TRUE",
+        "if (sExplorerCtrl->GetSelectedCount() <= 0)",
+        "GetFirstSelectedItemPosition()",
+        "if (sSelIndex < 0)",
+    ):
+        if token not in rename_cmd:
+            errors.append(
+                f"src/fxfile/cmd/cmd_rename.cpp: rename selection guard missing {token}"
+            )
+
+    picture = contents["picture"]
+    if picture.count("if (sIndex >= 0)") < 2:
+        errors.append(
+            "src/fxfile/picture_viewer.cpp: both selected-picture paths must guard an invalid selection mark"
+        )
+
+    for source_name, source_path in (
+        ("file_scrap", "src/fxfile/file_scrap_ctrl.cpp"),
+        ("search_result", "src/fxfile/search_result_ctrl.cpp"),
+    ):
+        source = contents[source_name]
+        for token in (
+            "GetFirstSelectedItemPosition()",
+            "if (sIndex < 0)",
+        ):
+            if token not in source:
+                errors.append(
+                    f"{source_path}: selected-item fallback guard missing {token}"
+                )
+
+    accel = contents["accel"]
+    for token in (
+        "if (sCurSel == CB_ERR)",
+        "if (sCurSel == LB_ERR)",
+        "if (nComCurSel == LB_ERR || nKeyCurSel == LB_ERR)",
+        "if (mCount >= MAX_ACCEL)",
+    ):
+        if token not in accel:
+            errors.append(
+                f"src/fxfile/cmd/accel_table_dlg.cpp: accelerator selection/bounds guard missing {token}"
             )
 
     return errors
