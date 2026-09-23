@@ -445,30 +445,41 @@ void CButtonST::DrawItem(LPDRAWITEMSTRUCT lpDIS)
 		}
 		else
 		{
-			// Draw top-left borders
-			// White line
-			pOldPen = pDC->SelectObject(&penBtnHiLight);
-			pDC->MoveTo(itemRect.left, itemRect.bottom-1);
-			pDC->LineTo(itemRect.left, itemRect.top);
-			pDC->LineTo(itemRect.right, itemRect.top);
-			// Light gray line
-			pDC->SelectObject(pen3DLight);
-			pDC->MoveTo(itemRect.left+1, itemRect.bottom-1);
-			pDC->LineTo(itemRect.left+1, itemRect.top+1);
-			pDC->LineTo(itemRect.right, itemRect.top+1);
-			// Draw bottom-right borders
-			// Black line
-			pDC->SelectObject(pen3DDKShadow);
-			pDC->MoveTo(itemRect.left, itemRect.bottom-1);
-			pDC->LineTo(itemRect.right-1, itemRect.bottom-1);
-			pDC->LineTo(itemRect.right-1, itemRect.top-1);
-			// Dark gray line
-			pDC->SelectObject(penBtnShadow);
-			pDC->MoveTo(itemRect.left+1, itemRect.bottom-2);
-			pDC->LineTo(itemRect.right-2, itemRect.bottom-2);
-			pDC->LineTo(itemRect.right-2, itemRect.top);
-			//
-			pDC->SelectObject(pOldPen);
+            if (bModernDark)
+            {
+                // The legacy non-flat path used a bright Win32 3D bevel,
+                // which left a light/black frame on dark settings surfaces.
+                // Keep one neutral Windows 11-style outline instead.
+                CBrush sBorderBrush(sPalette.mBorder);
+                pDC->FrameRect(&itemRect, &sBorderBrush);
+            }
+            else
+            {
+			    // Draw top-left borders
+			    // White line
+			    pOldPen = pDC->SelectObject(&penBtnHiLight);
+			    pDC->MoveTo(itemRect.left, itemRect.bottom-1);
+			    pDC->LineTo(itemRect.left, itemRect.top);
+			    pDC->LineTo(itemRect.right, itemRect.top);
+			    // Light gray line
+			    pDC->SelectObject(pen3DLight);
+			    pDC->MoveTo(itemRect.left+1, itemRect.bottom-1);
+			    pDC->LineTo(itemRect.left+1, itemRect.top+1);
+			    pDC->LineTo(itemRect.right, itemRect.top+1);
+			    // Draw bottom-right borders
+			    // Black line
+			    pDC->SelectObject(pen3DDKShadow);
+			    pDC->MoveTo(itemRect.left, itemRect.bottom-1);
+			    pDC->LineTo(itemRect.right-1, itemRect.bottom-1);
+			    pDC->LineTo(itemRect.right-1, itemRect.top-1);
+			    // Dark gray line
+			    pDC->SelectObject(penBtnShadow);
+			    pDC->MoveTo(itemRect.left+1, itemRect.bottom-2);
+			    pDC->LineTo(itemRect.right-2, itemRect.bottom-2);
+			    pDC->LineTo(itemRect.right-2, itemRect.top);
+			    //
+			    pDC->SelectObject(pOldPen);
+            }
 		}
 	}
 
