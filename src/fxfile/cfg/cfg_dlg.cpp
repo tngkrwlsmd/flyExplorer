@@ -1031,6 +1031,16 @@ void CfgDlg::applyModernAppearanceToChild(CWnd *aWnd, HFONT aPreviousFont)
         }
     }
 
+    if (_tcsicmp(sClassName, XPR_STRING_LITERAL("SysListView32")) == 0 ||
+        _tcsicmp(sClassName, XPR_STRING_LITERAL("SysTreeView32")) == 0 ||
+        _tcsicmp(sClassName, XPR_STRING_LITERAL("SysTabControl32")) == 0)
+    {
+        // Refresh final palette-owned common-control colors as well as the
+        // visual-style association. This keeps blank list/tree/tab surfaces
+        // from retaining the previous theme after an in-place theme switch.
+        ui::ModernUI::applyDialogControlTheme(aWnd->GetSafeHwnd());
+    }
+
     if (_tcsicmp(sClassName, XPR_STRING_LITERAL("Edit")) == 0)
     {
         ::SetWindowSubclass(
