@@ -2580,6 +2580,14 @@ def validate_win11_stability_regressions() -> list[str]:
         errors.append(
             "src/fxfile/contents_wnd.cpp: contents pane must use the shared DPI-aware system UI font"
         )
+    if "ui::ModernUI::getDpi(GetSafeHwnd())" not in contents["contents"]:
+        errors.append(
+            "src/fxfile/contents_wnd.cpp: contents title font size must follow the current monitor DPI"
+        )
+    if "GetDeviceCaps(GetDC()->m_hDC, LOGPIXELSY)" in contents["contents"]:
+        errors.append(
+            "src/fxfile/contents_wnd.cpp: legacy screen-DC title font DPI path returned"
+        )
 
     return errors
 
