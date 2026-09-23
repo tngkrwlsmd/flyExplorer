@@ -2451,6 +2451,11 @@ def validate_win11_stability_regressions() -> list[str]:
         "menubar": FXFILE_SRC / "gui" / "rebar" / "MenuBar.cpp",
         "contents": FXFILE_SRC / "contents_wnd.cpp",
         "conf_dir": FXFILE_SRC / "conf_dir.cpp",
+        "toolbar_cpp": FXFILE_SRC / "gui" / "rebar" / "ToolBarEx.cpp",
+        "cfg_main_h": FXFILE_SRC / "cfg" / "cfg_main_dlg.h",
+        "cfg_main_cpp": FXFILE_SRC / "cfg" / "cfg_main_dlg.cpp",
+        "cfg_page_h": FXFILE_SRC / "cfg" / "cfg_dlg.h",
+        "cfg_page_cpp": FXFILE_SRC / "cfg" / "cfg_dlg.cpp",
     }
 
     contents: dict[str, str] = {}
@@ -2479,6 +2484,18 @@ def validate_win11_stability_regressions() -> list[str]:
         if token not in conf_dir:
             errors.append(
                 "src/fxfile/conf_dir.cpp: default writable configuration must remain under per-user AppData"
+            )
+
+    for token in (
+        "IsWritableConfDir",
+        "CreateFile(",
+        "CreateDirectoryLevel(sConfiguredDir)",
+        "IsWritableConfDir(sConfiguredDir)",
+        "IsWritableConfDir(sDefaultDir)",
+    ):
+        if token not in conf_dir:
+            errors.append(
+                f"src/fxfile/conf_dir.cpp: missing standard-user config fallback token {token}"
             )
 
     modern_ui = contents["modern_ui"]
@@ -2549,10 +2566,35 @@ def validate_win11_stability_regressions() -> list[str]:
                 "src/fxfile/address_bar.cpp: legacy native address frame is painting before the custom frame"
             )
 
+    for token in (
+        "kAddressBarEditClientEdgeProp",
+        "sNewEditExStyle &= ~static_cast<LONG_PTR>(WS_EX_CLIENTEDGE)",
+        "SWP_FRAMECHANGED",
+        "case WM_ERASEBKGND:",
+    ):
+        if token not in address:
+            errors.append(
+                f"src/fxfile/address_bar.cpp: missing single-frame dark address token {token}"
+            )
+
     if "TBI_LARGE, IL_COLOR_MASK);" not in contents["main_toolbar"]:
         errors.append(
             "src/fxfile/main_toolbar.cpp: default toolbar icon mode must remain the readable large Fluent size"
         )
+    for token in (
+        "if (sIconType == TBI_SMALL || XPR_IS_FALSE(IsIconTypeAvailable(sIconType)))",
+        "sIconType = TBI_LARGE;",
+    ):
+        if token not in contents["main_toolbar"]:
+            errors.append(
+                f"src/fxfile/main_toolbar.cpp: persisted legacy icon migration missing token {token}"
+            )
+
+    for source_name in ("toolbar_cpp", "menubar"):
+        if "TBCDRF_USECDCOLORS" not in contents[source_name]:
+            errors.append(
+                f"{source_name}: ToolbarWindow32 palette text colors are not explicitly enabled"
+            )
 
     horizontal_start = modern_ui.find(
         "xpr_sint_t ModernUI::getCommandHorizontalPadding(HWND aHwnd)"
@@ -2599,6 +2641,23 @@ def validate_win11_stability_regressions() -> list[str]:
         errors.append(
             "src/fxfile/contents_wnd.cpp: legacy screen-DC title font DPI path returned"
         )
+
+    for source_name in ("cfg_main_h", "cfg_page_h"):
+        if "mRefreshingModernAppearance" not in contents[source_name]:
+            errors.append(
+                f"{source_name}: settings theme refresh reentrancy guard field is missing"
+            )
+    for source_name in ("cfg_main_cpp", "cfg_page_cpp"):
+        source = contents[source_name]
+        for token in (
+            "XPR_IS_TRUE(mRefreshingModernAppearance)",
+            "mRefreshingModernAppearance = XPR_TRUE;",
+            "mRefreshingModernAppearance = XPR_FALSE;",
+        ):
+            if token not in source:
+                errors.append(
+                    f"{source_name}: settings theme refresh guard missing token {token}"
+                )
 
     return errors
 
