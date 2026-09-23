@@ -2871,8 +2871,15 @@ void BCMenu::AddFromToolBar(CToolBar* pToolBar, int nResourceID)
 
 BOOL BCMenu::Draw3DCheckmark(CDC *dc, const CRect& rc, BOOL bSelected, HBITMAP hbmCheck)
 {
-	if (!hbmCheck)	DrawCheckMark(dc,rc.left+4,rc.top+4,GetSysColor(COLOR_MENUTEXT));
-	else			DrawRadioDot(dc,rc.left+5,rc.top+4,GetSysColor(COLOR_MENUTEXT));
+    const fxfile::ui::ThemePalette sPalette =
+        fxfile::ui::ModernUI::getPalette();
+    const COLORREF sMarkColor =
+        XPR_IS_TRUE(sPalette.mHighContrast) ?
+        ::GetSysColor(bSelected ? COLOR_HIGHLIGHTTEXT : COLOR_MENUTEXT) :
+        (bSelected ? sPalette.mSelectionText : sPalette.mText);
+
+	if (!hbmCheck)	DrawCheckMark(dc,rc.left+4,rc.top+4,sMarkColor);
+	else			DrawRadioDot(dc,rc.left+5,rc.top+4,sMarkColor);
 	return TRUE;
 }
 
