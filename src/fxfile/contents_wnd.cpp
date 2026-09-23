@@ -929,10 +929,12 @@ void ContentsWnd::updateFont(void)
     if (mFullPathFont->CreateFontIndirect(&sLogFont) == XPR_FALSE)
         return;
 
-    sLogFont.lfHeight = MulDiv(
-        sLogFont.lfHeight,
-        ui::ModernUI::scaleForWindow(12, GetSafeHwnd()),
-        ui::ModernUI::scaleForWindow(9, GetSafeHwnd()));
+    // Preserve the historical 13-point title size, but derive it from the
+    // current monitor DPI instead of a process/global screen DC.
+    sLogFont.lfHeight = -::MulDiv(
+        13,
+        static_cast<xpr_sint_t>(ui::ModernUI::getDpi(GetSafeHwnd())),
+        72);
     if (mTitleFont->CreateFontIndirect(&sLogFont) == XPR_FALSE)
         return;
 }
