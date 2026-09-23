@@ -189,6 +189,8 @@ void CResizingDialog::ApplyModernAppearanceToChild(CWnd *aWnd, HFONT aPreviousFo
         }
     }
 
+    fxfile::ui::ModernUI::applyDialogControlTheme(aWnd->GetSafeHwnd());
+
     CWnd *sChild = aWnd->GetWindow(GW_CHILD);
     while (sChild != NULL)
     {
