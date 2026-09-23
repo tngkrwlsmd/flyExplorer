@@ -356,6 +356,29 @@ void CButtonST::DrawItem(LPDRAWITEMSTRUCT lpDIS)
 {
 	CDC*	pDC = CDC::FromHandle(lpDIS->hDC);
 
+    CFont sFallbackFont;
+    CFont *sDrawFont = GetFont();
+    if (sDrawFont == NULL || sDrawFont->m_hObject == NULL)
+    {
+        LOGFONT sLogFont = {0};
+        if (XPR_IS_TRUE(
+                fxfile::ui::ModernUI::getUIFont(
+                    sLogFont,
+                    GetSafeHwnd())) &&
+            sFallbackFont.CreateFontIndirect(&sLogFont) != FALSE)
+        {
+            sDrawFont = &sFallbackFont;
+        }
+        else
+        {
+            sDrawFont = CFont::FromHandle(
+                static_cast<HFONT>(::GetStockObject(DEFAULT_GUI_FONT)));
+        }
+    }
+
+    CFont *sOldDrawFont =
+        (sDrawFont != NULL) ? pDC->SelectObject(sDrawFont) : NULL;
+
     const fxfile::ui::ThemePalette sPalette =
         fxfile::ui::ModernUI::getPalette();
     const BOOL bModernDark =
@@ -586,6 +609,9 @@ void CButtonST::DrawItem(LPDRAWITEMSTRUCT lpDIS)
 			pDC->DrawFocusRect(&focusRect);
 		} // if
 	} // if
+
+    if (sOldDrawFont != NULL)
+        pDC->SelectObject(sOldDrawFont);
 } // End of DrawItem
 
 void CButtonST::DrawTheIcon(CDC* pDC, BOOL bHasTitle, RECT* rpItem, CRect* rpTitle, BOOL bIsPressed, BOOL bIsDisabled)
