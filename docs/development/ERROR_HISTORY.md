@@ -1207,3 +1207,26 @@
 - `python build/validate_source_invariants.py`: **NOT RETESTED** on the user's Windows checkout after `63081b85`.
 - `local_ci.bat x64`, VS 2026 project generation, Release-x64-Unicode compile/link/runtime smoke: **NOT RETESTED** after `63081b85`.
 
+---
+
+## 2026-09-23 — Command-bar child custom draw now uses explicit MFC reflection
+
+**오류 발생**
+- 사용자가 최신 `main`을 pull/rebuild한 뒤에도 Dark top-menu text가 검게 보인다고 재현했다.
+- `CMenuBar::OnCustomDraw()`에는 palette `DrawText` + `CDRF_SKIPDEFAULT`가 이미 존재했으므로, source token 존재만으로는 final renderer ownership을 설명하지 못했다.
+
+**최초 실제 오류**
+- `CSizableReBar::OnNotify()`는 child notification을 `CControlBar::OnNotify(...)`에 넘기도록 수정돼 있었지만, `CMenuBar` / `CToolBarEx`가 의존하는 `ON_NOTIFY_REFLECT`가 그 base path에서 반드시 실행된다는 것을 프로젝트 코드 수준에서 보장하지 않았다.
+- 사용자 runtime evidence가 계속 FAIL인 이상 implicit framework routing을 acceptance 근거로 사용할 수 없었다.
+
+**해결 방법**
+- non-rebar child notification은 `NMHDR::hwndFrom`을 기준으로 `CWnd::ReflectLastMsg(hwndFrom, pResult)`를 먼저 호출한다.
+- child가 reflected notification을 처리하면 즉시 TRUE를 반환한다.
+- 처리되지 않은 notification만 기존 `CControlBar::OnNotify(...)` 경로로 넘긴다.
+- invariant는 explicit `ReflectLastMsg` token을 요구하고 child-notification branch의 `return FALSE;`를 계속 금지한다.
+
+**검증 상태**
+- User rebuilt screenshot before this fix: FAIL — top menu text remains black.
+- Connector source audit after fix: PASS — explicit reflection is in the active `CSizableReBar::OnNotify()` child path.
+- Windows rebuilt screenshot after `aedb695c`: **NOT RETESTED**.
+

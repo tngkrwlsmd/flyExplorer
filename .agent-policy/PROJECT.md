@@ -77,7 +77,7 @@
     }
   ],
   "review": {
-    "reviewed_revision": "63081b85f25871b1e40c3b0dfaaa6049523b72bb",
+    "reviewed_revision": "aedb695c74a75bd5842fc0c5e9aad5cf42113e33",
     "reviewed_at": "2026-09-23",
     "reviewed_paths": [
       "AGENTS.md",
@@ -337,10 +337,11 @@ Status: **ACTIVE / user-reproduced runtime failures**. These items are the immed
    - `a46dbadd` registers `FlatHeaderCtrl.cpp` as the `header` contract source and changes the local contents map to report a deterministic `missing source registration` invariant error rather than raising `KeyError` if a future source key is omitted.
    - Connector static cross-check after the change found no `contents["..."]` references missing from the function's `paths` map. Acceptance still requires a user rerun: `python build/validate_source_invariants.py` must complete without traceback and `local_ci.bat x64` must progress past source invariant/regression preflight.
 
-7. **MenuBar custom draw still not visible — ACTIVE / user screenshot reproduced again**
-   - Latest rebuilt `main` screenshot still shows black top-menu text. The prior rebar-routing explanation was incomplete: `CMenuBar` is created from the frame and may later be reparented by the rebar band; relying on implicit MFC reflection remains too indirect for a user-reproduced failure.
-   - Next fix: for non-rebar `WM_NOTIFY/NM_CUSTOMDRAW`, `CSizableReBar::OnNotify()` must explicitly call `CWnd::ReflectLastMsg(hwndFrom, pResult)` before falling back to `CControlBar::OnNotify(...)`. This makes the final menu/toolbar custom-draw recipient deterministic instead of assuming base routing semantics.
-   - Acceptance: Dark top-menu text must render with the app palette in a rebuilt screenshot; source presence alone does not close this item.
+7. **MenuBar custom draw still not visible — CODE FIXED / RUNTIME NOT RETESTED**
+   - Latest rebuilt `main` screenshot still showed black top-menu text. The prior rebar-routing explanation was incomplete because relying on `CControlBar::OnNotify(...)` still left child reflection implicit.
+   - `aedb695c` makes child notification routing deterministic: non-rebar notifications are first sent through `CWnd::ReflectLastMsg(pNMHDR->hwndFrom, pResult)`, and only unhandled notifications fall back to `CControlBar::OnNotify(...)`.
+   - The invariant now requires this explicit reflection call and still rejects a `return FALSE;` bypass in the child-notification block.
+   - Acceptance remains runtime/screenshot based: Dark top-menu text must render with the app palette before this item closes.
 
 8. **Address/current-folder white outline still visible — ACTIVE / user screenshot reproduced again**
    - Latest rebuilt `main` screenshot still shows a rectangular outline around the `내 문서` row.
