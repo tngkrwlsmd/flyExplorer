@@ -4119,7 +4119,22 @@ void MainFrame::loadAccelTable(void)
         _tcscat(sOldPath, XPR_STRING_LITERAL("\\accel.fac"));
 
         if (IsExistFile(sOldPath) == XPR_TRUE)
-            ::MoveFile(sOldPath, sPath);
+        {
+            // Legacy releases stored accel.fac beside fxfile.exe. Installed
+            // copies may live under Program Files, where a standard user can
+            // read the legacy file but cannot delete/rename it. Migrate by
+            // copying into the current per-user configuration path instead of
+            // requiring write access to the installation directory.
+            xpr_tchar_t sSavePath[XPR_MAX_PATH + 1] = {0};
+            if (ConfDir::instance().getSavePath(
+                    ConfDir::TypeAccel,
+                    sSavePath,
+                    XPR_MAX_PATH) == XPR_TRUE &&
+                ::CopyFile(sOldPath, sSavePath, TRUE) != FALSE)
+            {
+                _tcscpy(sPath, sSavePath);
+            }
+        }
     }
 
     ACCEL sAccel[MAX_ACCEL];
