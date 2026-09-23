@@ -1660,6 +1660,9 @@ void CMenuBar::OnCustomDraw( NMHDR* pNMHDR, LRESULT* pResult )
                         ( ( uItemState & CDIS_DISABLED ) || !m_bFrameActive ) ?
                         sPalette.mSecondaryText :
                         sPalette.mText;
+                    lpNMCustomDraw->clrTextHighlight = lpNMCustomDraw->clrText;
+                    lpNMCustomDraw->nStringBkMode = TRANSPARENT;
+                    lpNMCustomDraw->nHLStringBkMode = TRANSPARENT;
 
                     if ( !( uItemState & CDIS_DISABLED ) &&
                          ( uItemState & ( CDIS_HOT | CDIS_SELECTED ) ) )
@@ -1673,6 +1676,7 @@ void CMenuBar::OnCustomDraw( NMHDR* pNMHDR, LRESULT* pResult )
                             sStateColor);
                         lpNMCustomDraw->clrHighlightHotTrack = sStateColor;
                         lpNMCustomDraw->clrText = sPalette.mText;
+                        lpNMCustomDraw->clrTextHighlight = sPalette.mText;
                     }
                 }
                 else
