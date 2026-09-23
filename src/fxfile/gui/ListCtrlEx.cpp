@@ -58,33 +58,40 @@ xpr_bool_t ListCtrlEx::isVistaEnhanced(void) const
 
 void ListCtrlEx::enableVistaEnhanced(xpr_bool_t aEnable)
 {
-    if (XPR_IS_TRUE(aEnable))
-    {
-        // enable explorer theme through the shared ModernUI foundation
-        fxfile::ui::ModernUI::applyExplorerControlTheme(m_hWnd);
-    }
-    else
-    {
-        // disable explorer theme
-        fxfile::ui::ModernUI::resetControlTheme(m_hWnd);
-    }
+    mVistaEnhanced = aEnable;
 
     DWORD sExStyle = GetExtendedStyle();
     sExStyle |= LVS_EX_DOUBLEBUFFER; // support from WinXP
     SetExtendedStyle(sExStyle);
 
-    mVistaEnhanced = aEnable;
+    refreshModernAppearance();
 }
 
-void ListCtrlEx::refreshModernAppearance(void)
+void ListCtrlEx::refreshModernAppearance(xpr_bool_t aRethemeControl)
 {
     if (XPR_IS_NULL(m_hWnd))
         return;
 
-    if (XPR_IS_TRUE(mVistaEnhanced))
-        fxfile::ui::ModernUI::applyExplorerControlTheme(m_hWnd);
-    else
-        fxfile::ui::ModernUI::resetControlTheme(m_hWnd);
+    if (XPR_IS_TRUE(aRethemeControl))
+    {
+        const fxfile::ui::ThemePalette sPalette =
+            fxfile::ui::ModernUI::getPalette();
+        const xpr_bool_t sOwnDarkSurface =
+            (XPR_IS_TRUE(sPalette.mDark) &&
+             XPR_IS_FALSE(sPalette.mHighContrast)) ?
+            XPR_TRUE :
+            XPR_FALSE;
+
+        if (XPR_IS_TRUE(mVistaEnhanced) &&
+            XPR_IS_FALSE(sOwnDarkSurface))
+        {
+            fxfile::ui::ModernUI::applyExplorerControlTheme(m_hWnd);
+        }
+        else
+        {
+            fxfile::ui::ModernUI::resetControlTheme(m_hWnd);
+        }
+    }
 
     if (XPR_IS_NOT_NULL(mHeaderCtrl) &&
         XPR_IS_NOT_NULL(mHeaderCtrl->m_hWnd))
@@ -146,7 +153,9 @@ LRESULT ListCtrlEx::OnDpiChanged(WPARAM aWParam, LPARAM aLParam)
 
 LRESULT ListCtrlEx::OnThemeChanged(WPARAM aWParam, LPARAM aLParam)
 {
-    refreshModernAppearance();
+    // SetWindowTheme can emit WM_THEMECHANGED. Repaint dependent surfaces,
+    // but do not issue another association change from inside the notification.
+    refreshModernAppearance(XPR_FALSE);
     return 0;
 }
 

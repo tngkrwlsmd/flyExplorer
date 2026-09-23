@@ -39,7 +39,7 @@ public:
 protected:
     xpr_bool_t subclassHeader(xpr_bool_t aBoldFont = XPR_FALSE);
     xpr_sint_t setSortImage(xpr_sint_t aColumn, xpr_bool_t aAscending);
-    void refreshModernAppearance(void);
+    void refreshModernAppearance(xpr_bool_t aRethemeControl = XPR_TRUE);
 
 protected:
     xpr_bool_t      mVistaEnhanced;

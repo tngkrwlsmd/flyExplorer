@@ -13,6 +13,8 @@
 
 #include "../gui/ModernUI.h"
 
+#include <vector>
+
 #ifdef _DEBUG
 #define new DEBUG_NEW
 #endif
@@ -29,6 +31,21 @@ const UINT_PTR kModernCfgComboSubclassId = 0x46474343; // 'FGCC'
 const UINT_PTR kModernCfgToggleSubclassId = 0x46474354; // 'FGCT'
 const UINT_PTR kModernCfgPushButtonSubclassId = 0x46474350; // 'FGCP'
 const UINT_PTR kModernCfgEditSubclassId = 0x46474345; // 'FGCE'
+
+void SnapshotChildWindows(HWND aParentHwnd, std::vector<HWND> &aChildHwnds)
+{
+    aChildHwnds.clear();
+
+    if (XPR_IS_NULL(aParentHwnd) || ::IsWindow(aParentHwnd) == FALSE)
+        return;
+
+    HWND sChildHwnd = ::GetWindow(aParentHwnd, GW_CHILD);
+    while (XPR_IS_NOT_NULL(sChildHwnd))
+    {
+        aChildHwnds.push_back(sChildHwnd);
+        sChildHwnd = ::GetWindow(sChildHwnd, GW_HWNDNEXT);
+    }
+}
 
 void DrawModernCfgCombo(HWND aHwnd)
 {
@@ -1091,23 +1108,40 @@ void CfgDlg::applyModernAppearanceToChild(CWnd *aWnd, HFONT aPreviousFont)
         }
     }
 
-    CWnd *sChild = aWnd->GetWindow(GW_CHILD);
-    while (XPR_IS_NOT_NULL(sChild))
+    // GROUPBOX modernization can move a child to HWND_BOTTOM. Walking the
+    // live sibling chain while changing z-order can revisit the same pair of
+    // group boxes forever. Snapshot child HWNDs before processing them.
+    std::vector<HWND> sChildHwnds;
+    SnapshotChildWindows(aWnd->GetSafeHwnd(), sChildHwnds);
+    for (std::vector<HWND>::const_iterator sIterator = sChildHwnds.begin();
+         sIterator != sChildHwnds.end();
+         ++sIterator)
     {
-        CWnd *sNextChild = sChild->GetNextWindow();
-        applyModernAppearanceToChild(sChild, aPreviousFont);
-        sChild = sNextChild;
+        if (::IsWindow(*sIterator) == FALSE)
+            continue;
+
+        CWnd *sChild = CWnd::FromHandle(*sIterator);
+        if (XPR_IS_NOT_NULL(sChild))
+            applyModernAppearanceToChild(sChild, aPreviousFont);
     }
 }
 
 void CfgDlg::applyModernAppearanceToChildren(HFONT aPreviousFont)
 {
-    CWnd *sChild = GetWindow(GW_CHILD);
-    while (XPR_IS_NOT_NULL(sChild))
+    // The direct child list must also be stable before GROUPBOX controls are
+    // sent to HWND_BOTTOM by applyModernAppearanceToChild().
+    std::vector<HWND> sChildHwnds;
+    SnapshotChildWindows(GetSafeHwnd(), sChildHwnds);
+    for (std::vector<HWND>::const_iterator sIterator = sChildHwnds.begin();
+         sIterator != sChildHwnds.end();
+         ++sIterator)
     {
-        CWnd *sNextChild = sChild->GetNextWindow();
-        applyModernAppearanceToChild(sChild, aPreviousFont);
-        sChild = sNextChild;
+        if (::IsWindow(*sIterator) == FALSE)
+            continue;
+
+        CWnd *sChild = CWnd::FromHandle(*sIterator);
+        if (XPR_IS_NOT_NULL(sChild))
+            applyModernAppearanceToChild(sChild, aPreviousFont);
     }
 }
 

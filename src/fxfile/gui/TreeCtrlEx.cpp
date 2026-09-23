@@ -116,15 +116,25 @@ void TreeCtrlEx::refreshVistaEnhancedTheme(void)
     if (XPR_IS_NULL(m_hWnd))
         return;
 
-    if (XPR_IS_TRUE(mVistaEnhanced))
+    const fxfile::ui::ThemePalette sPalette =
+        fxfile::ui::ModernUI::getPalette();
+    const xpr_bool_t sOwnDarkSurface =
+        (XPR_IS_TRUE(sPalette.mDark) &&
+         XPR_IS_FALSE(sPalette.mHighContrast)) ?
+        XPR_TRUE :
+        XPR_FALSE;
+
+    if (XPR_IS_TRUE(mVistaEnhanced) &&
+        XPR_IS_FALSE(sOwnDarkSurface))
     {
-        // Reapply the Explorer association so theme/High Contrast transitions
-        // use the current system rendering contract.
+        // Light/System and High Contrast keep the documented Explorer/system
+        // visual-style path.
         fxfile::ui::ModernUI::applyExplorerControlTheme(m_hWnd);
     }
     else
     {
-        // Preserve the explicit classic-theme disable contract.
+        // Dark mode is palette-owned. Do not reintroduce a light Explorer
+        // association just because enhanced tree behavior is enabled.
         fxfile::ui::ModernUI::resetControlTheme(m_hWnd);
     }
 }

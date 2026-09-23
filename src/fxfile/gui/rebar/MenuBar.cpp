@@ -1655,12 +1655,14 @@ void CMenuBar::OnCustomDraw( NMHDR* pNMHDR, LRESULT* pResult )
                         TBCDRF_NOBACKGROUND |
                         TBCDRF_USECDCOLORS;
 
-                    lpNMCustomDraw->clrBtnFace = sPalette.mChrome;
-                    lpNMCustomDraw->clrText =
+                    const COLORREF sTextColor =
                         ( ( uItemState & CDIS_DISABLED ) || !m_bFrameActive ) ?
                         sPalette.mSecondaryText :
                         sPalette.mText;
-                    lpNMCustomDraw->clrTextHighlight = lpNMCustomDraw->clrText;
+
+                    lpNMCustomDraw->clrBtnFace = sPalette.mChrome;
+                    lpNMCustomDraw->clrText = sTextColor;
+                    lpNMCustomDraw->clrTextHighlight = sTextColor;
                     lpNMCustomDraw->nStringBkMode = TRANSPARENT;
                     lpNMCustomDraw->nHLStringBkMode = TRANSPARENT;
 
@@ -1677,6 +1679,62 @@ void CMenuBar::OnCustomDraw( NMHDR* pNMHDR, LRESULT* pResult )
                         lpNMCustomDraw->clrHighlightHotTrack = sStateColor;
                         lpNMCustomDraw->clrText = sPalette.mText;
                         lpNMCustomDraw->clrTextHighlight = sPalette.mText;
+                    }
+
+                    // ToolbarWindow32 can still fall back to COLOR_BTNTEXT on
+                    // some Win11 states even when TBCDRF_USECDCOLORS is set.
+                    // The menu bar owns its Dark surface, so draw its text
+                    // explicitly with the same palette instead of depending
+                    // on the native toolbar text renderer.
+                    const int sItemIndex =
+                        CommandToIndex(static_cast<UINT>(nmcd.dwItemSpec));
+                    if (sItemIndex >= 0)
+                    {
+                        CString sMenuText;
+                        GetButtonText(sItemIndex, sMenuText);
+
+                        RECT sTextRect = nmcd.rc;
+                        const COLORREF sDrawTextColor =
+                            ( !( uItemState & CDIS_DISABLED ) &&
+                              ( uItemState & ( CDIS_HOT | CDIS_SELECTED ) ) ) ?
+                            sPalette.mText :
+                            sTextColor;
+
+                        HGDIOBJ sOldFont = XPR_NULL;
+                        if (XPR_IS_NOT_NULL(m_fontMenu.m_hObject))
+                        {
+                            sOldFont = ::SelectObject(
+                                nmcd.hdc,
+                                m_fontMenu.m_hObject);
+                        }
+
+                        ::SetBkMode(nmcd.hdc, TRANSPARENT);
+                        ::SetTextColor(nmcd.hdc, sDrawTextColor);
+
+                        UINT sTextFlags =
+                            DT_CENTER | DT_VCENTER | DT_SINGLELINE;
+                        const LRESULT sUiState =
+                            SendMessage(WM_QUERYUISTATE, 0, 0);
+                        if ((sUiState & UISF_HIDEACCEL) != 0)
+                            sTextFlags |= DT_HIDEPREFIX;
+
+                        ::DrawText(
+                            nmcd.hdc,
+                            sMenuText,
+                            sMenuText.GetLength(),
+                            &sTextRect,
+                            sTextFlags);
+
+                        if (XPR_IS_NOT_NULL(sOldFont))
+                            ::SelectObject(nmcd.hdc, sOldFont);
+
+                        if ((uItemState & CDIS_FOCUS) != 0 &&
+                            (sUiState & UISF_HIDEFOCUS) == 0)
+                        {
+                            ::DrawFocusRect(nmcd.hdc, &sTextRect);
+                        }
+
+                        *pResult = CDRF_SKIPDEFAULT;
                     }
                 }
                 else

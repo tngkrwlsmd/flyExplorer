@@ -261,6 +261,24 @@ def validate_common_control_theme_integration() -> list[str]:
         if re.search(r"(?<!ModernUI::)SetWindowTheme\s*\(", strip_comments(control_source)):
             errors.append(f"{control_path.relative_to(ROOT)}: direct SetWindowTheme call remains")
 
+        for token in (
+            "sPalette.mDark",
+            "sPalette.mHighContrast",
+            "ModernUI::resetControlTheme",
+        ):
+            if token not in control_source:
+                errors.append(
+                    f"{control_path.relative_to(ROOT)}: dark palette-owned theme contract missing {token}"
+                )
+
+    list_source = (FXFILE_SRC / "gui" / "ListCtrlEx.cpp").read_text(
+        encoding="utf-8", errors="replace"
+    )
+    if "refreshModernAppearance(XPR_FALSE);" not in list_source:
+        errors.append(
+            "src/fxfile/gui/ListCtrlEx.cpp: WM_THEMECHANGED must repaint without retheming"
+        )
+
     return errors
 
 
@@ -460,6 +478,9 @@ def validate_command_surface_contract() -> list[str]:
         "sPalette.mChrome",
         "TBCDRF_NOEDGES",
         "TBCDRF_NOOFFSET",
+        "::SetTextColor(nmcd.hdc, sDrawTextColor)",
+        "::DrawText(",
+        "CDRF_SKIPDEFAULT",
     ):
         if token not in contents["menubar"]:
             errors.append(f"src/fxfile/gui/rebar/MenuBar.cpp: missing flat menu-surface token {token}")
@@ -674,7 +695,9 @@ def validate_soft_surface_contract() -> list[str]:
             "RDW_FRAME",
             "WS_EX_TRANSPARENT",
             "HWND_BOTTOM",
-            "CWnd *sNextChild = sChild->GetNextWindow()",
+            "SnapshotChildWindows",
+            "std::vector<HWND> sChildHwnds",
+            "SnapshotChildWindows(GetSafeHwnd(), sChildHwnds)",
             "BM_GETCHECK",
             "CBS_DROPDOWNLIST",
             "CB_GETDROPPEDSTATE",
@@ -2981,6 +3004,21 @@ def validate_win11_stability_regressions() -> list[str]:
                 errors.append(
                     f"{source_path}: common dialog Dark theme ownership missing token {token}"
                 )
+
+    cfg_page = contents["cfg_page_cpp"]
+    for token in (
+        "SnapshotChildWindows",
+        "SnapshotChildWindows(aWnd->GetSafeHwnd(), sChildHwnds)",
+        "SnapshotChildWindows(GetSafeHwnd(), sChildHwnds)",
+    ):
+        if token not in cfg_page:
+            errors.append(
+                f"src/fxfile/cfg/cfg_dlg.cpp: stable child traversal missing token {token}"
+            )
+    if "CWnd *sNextChild = sChild->GetNextWindow()" in cfg_page:
+        errors.append(
+            "src/fxfile/cfg/cfg_dlg.cpp: live sibling traversal cannot be used while GROUPBOX z-order changes"
+        )
 
     for source_name in ("cfg_main_h", "cfg_page_h"):
         if "mRefreshingModernAppearance" not in contents[source_name]:

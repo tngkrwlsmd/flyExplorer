@@ -942,3 +942,43 @@
 - `python build/validate_source_invariants.py`: NOT TESTED — connector 환경에는 repository checkout command 실행 경로가 없다.
 - MSVC compile/link, `local_ci.bat x64`, installer 실제 실행, 설치 직후 standard-user token 확인, Windows 11 Light/Dark/System/High Contrast 및 반복 dialog open/close runtime: NOT TESTED.
 
+---
+
+## 2026-09-23 — Preferences 무한 순회와 Dark menu text fallback
+
+**오류 발생**
+- 사용자 실제 Windows 11 screenshot에서 상단 menu bar가 Dark chrome 위에 검은 글자를 그려 가독성이 무너졌고, `도구 -> 환경설정`을 열면 여전히 응답없음이 재현됐다.
+- screenshot title에는 `관리자: fxfile`도 남아 있어 실행 중인 기존 elevated instance/launcher 상태가 아직 정리되지 않았다는 evidence가 있었지만, 이번 hang 자체는 settings source에서 별도의 결정적 무한 순회 원인을 확인했다.
+
+**최초 실제 오류**
+- `CfgDlg::applyModernAppearanceToChild()`는 GROUPBOX를 owner-draw화한 뒤 `SetWindowPos(..., HWND_BOTTOM, ...)`으로 sibling z-order를 바꿨다.
+- 동시에 같은 함수와 `applyModernAppearanceToChildren()`가 live sibling chain에서 `GetNextWindow()`를 계속 따라갔다. 두 개 이상의 GROUPBOX가 있으면 현재 항목을 bottom으로 옮길 때 이전 GROUPBOX가 다시 다음 sibling이 되어 A -> B -> A -> B 형태로 반복 방문할 수 있었다. 초기 `CfgGeneralDlg` 자체가 여러 GROUPBOX를 포함하므로 Preferences open 직후 hang과 직접 일치한다.
+- `ListCtrlEx` / `TreeCtrlEx`의 Vista-enhanced 경로는 Dark 여부와 무관하게 Explorer theme association을 요구했다. settings parent는 Dark에서 같은 HWND를 `resetControlTheme()` 대상으로 취급하므로 control ownership도 서로 충돌했다.
+- `CMenuBar::OnCustomDraw()`는 palette `clrText`를 채웠지만 최종 glyph/text drawing은 ToolbarWindow32 기본 renderer에 남겨두었다. 실제 screenshot에서 Win11 renderer가 dark chrome 위에 검은 `COLOR_BTNTEXT` 계열로 fallback하는 결과가 확인됐다.
+- 기존 soft-surface invariant는 오히려 `CWnd *sNextChild = sChild->GetNextWindow()` token을 요구해 z-order 변경 중 live traversal 패턴을 보호하고 있었다.
+
+**원인 진단**
+- Root cause 1: paint/z-order mutation과 sibling enumeration을 같은 live list에서 수행했다.
+- Root cause 2: `mVistaEnhanced`를 visual-style ownership과 동일시해 palette-owned Dark surface에서도 Explorer association을 복원했다.
+- Root cause 3: custom draw color field 설정을 실제 text renderer ownership으로 오해했다. screenshot evidence는 field wiring만으로 최종 text color가 보장되지 않음을 보여줬다.
+- Root cause 4: regression guard가 실제 안전 속성이 아니라 당시 구현 token 자체를 고정했다.
+
+**해결 방법**
+- `cfg/cfg_dlg.cpp`: 각 parent의 direct child HWND를 `SnapshotChildWindows()`로 먼저 vector에 고정한 뒤 processing한다. GROUPBOX가 `HWND_BOTTOM`으로 이동해도 enumeration 순서는 더 이상 변하지 않는다.
+- `gui/ListCtrlEx.cpp`: Vista-enhanced list도 Dark/non-High-Contrast에서는 `resetControlTheme()`을 유지한다. `WM_THEMECHANGED`에서는 `refreshModernAppearance(XPR_FALSE)`로 repaint/header refresh만 수행하고 association을 다시 바꾸지 않는다.
+- `gui/TreeCtrlEx.cpp`: Vista-enhanced tree 역시 Dark/non-High-Contrast에서는 Explorer association을 강제하지 않는다.
+- `gui/rebar/MenuBar.cpp`: non-High-Contrast Win11 path에서 menu text를 ThemePalette color로 직접 `DrawText`하고 `CDRF_SKIPDEFAULT`로 native toolbar text fallback을 차단한다. keyboard accelerator/focus cue는 `WM_QUERYUISTATE`를 존중한다.
+- `build/validate_source_invariants.py`: stable child snapshot을 요구하고 live `GetNextWindow` traversal을 금지하며, List/Tree Dark ownership과 explicit menu text draw를 검사한다.
+
+**재발 방지**
+- child z-order/style을 바꾸는 traversal은 대상 HWND를 먼저 snapshot한다.
+- behavioral enhancement flag와 visual theme association ownership을 분리한다.
+- Dark owner-draw surface에서 native renderer의 color field만 설정한 경우 screenshot/runtime evidence 없이 readability PASS로 간주하지 않는다.
+- invariant는 구현 모양보다 안전 속성(안정된 enumeration, notification 중 no-retime, explicit text ownership)을 검사한다.
+
+**검증 상태**
+- 사용자 screenshot: FAIL before fix — 상단 menu text contrast 실패, Preferences 응답없음 재현.
+- Connector source audit: PASS — settings GROUPBOX live traversal cycle, List/Tree association conflict, menu native text ownership을 현재 `main`에서 확인했다.
+- 변경 source self-check: PASS — stable HWND snapshot, no-retime `WM_THEMECHANGED`, Dark list/tree reset, explicit menu `DrawText` token을 commit 전 확인했다.
+- `python build/validate_source_invariants.py`, MSVC compile/link, `local_ci.bat x64`, Windows 11 Preferences 반복 open/close 및 screenshot visual: NOT TESTED in connector-only environment.
+

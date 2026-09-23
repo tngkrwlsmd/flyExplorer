@@ -297,8 +297,13 @@ also disable Explorer themed painting in Dark/non-High-Contrast mode instead of
 mixing native light chrome with palette-owned surfaces. The elevated NSIS
 installer no longer starts fxfile or fxfile-launcher automatically; installed
 programs are launched later from the normal user shell/shortcuts so the
-application's `asInvoker` contract is preserved. Root-cause and validation
-details are recorded in `docs/development/ERROR_HISTORY.md`.
+application's `asInvoker` contract is preserved. A later screenshot-driven
+follow-up also made settings child traversal z-order-safe, stopped enhanced
+list/tree controls from restoring Explorer painting over palette-owned Dark
+surfaces, and moved the top menu text to explicit ThemePalette drawing so Win11
+cannot fall back to black `COLOR_BTNTEXT` on the dark command surface.
+Root-cause and validation details are recorded in
+`docs/development/ERROR_HISTORY.md`.
 
 Compile/link and runtime evidence for the current `main` still requires a fresh
 matching `local_ci.bat x64` run. The `full` profile, x86 compatibility, package
