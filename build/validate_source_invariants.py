@@ -3111,6 +3111,19 @@ def validate_win11_stability_regressions() -> list[str]:
         else ""
     )
 
+    for token in (
+        "xpr_sint_t GetPerceivedLuma(COLORREF aColor)",
+        "COLORREF ResolveMenuTextColor(",
+        "aPalette.mDark",
+        "sMinimumDelta =",
+        "RGB(176, 176, 176)",
+        "RGB(238, 238, 238)",
+    ):
+        if token not in menubar_source:
+            errors.append(
+                f"src/fxfile/gui/rebar/MenuBar.cpp: Dark menu contrast-floor helper missing {token}"
+            )
+
     if "ON_WM_PAINT()" not in menubar_source:
         errors.append(
             "src/fxfile/gui/rebar/MenuBar.cpp: final WM_PAINT ownership message map is missing"
@@ -3128,8 +3141,7 @@ def validate_win11_stability_regressions() -> list[str]:
             "GetButtonText(sItemIndex, sMenuText)",
             "sToolBarCtrl.GetItemRect(sItemIndex, &sItemRect)",
             "sDC.FillSolidRect(&sItemRect, sPalette.mChrome)",
-            "sPalette.mSecondaryText",
-            "sPalette.mText",
+            "ResolveMenuTextColor(sPalette, sDisabled)",
             "sDC.DrawText(",
         ):
             if token not in menu_paint_block:
@@ -3177,9 +3189,10 @@ def validate_win11_stability_regressions() -> list[str]:
             "src/fxfile/gui/rebar/MenuBar.cpp: inactive frame must not dim enabled Dark menu text"
         )
     for token in (
-        "( uItemState & CDIS_DISABLED ) ?",
-        "sPalette.mSecondaryText :",
-        "sPalette.mText;",
+        "ResolveMenuTextColor(",
+        "( uItemState & CDIS_DISABLED ) != 0 ?",
+        "XPR_TRUE",
+        "XPR_FALSE",
     ):
         if token not in menu_modern_draw:
             errors.append(

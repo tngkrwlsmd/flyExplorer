@@ -90,6 +90,48 @@ void DrawRoundedMenuBarState(
         aCustomDraw->nmcd.rc,
         aFillColor);
 }
+
+
+xpr_sint_t GetPerceivedLuma(COLORREF aColor)
+{
+    return (
+        GetRValue(aColor) * 299 +
+        GetGValue(aColor) * 587 +
+        GetBValue(aColor) * 114) / 1000;
+}
+
+COLORREF ResolveMenuTextColor(
+    const fxfile::ui::ThemePalette &aPalette,
+    xpr_bool_t aDisabled)
+{
+    const COLORREF sPreferred =
+        XPR_IS_TRUE(aDisabled) ?
+        aPalette.mSecondaryText :
+        aPalette.mText;
+
+    if (XPR_IS_FALSE(aPalette.mDark) ||
+        XPR_IS_TRUE(aPalette.mHighContrast))
+    {
+        return sPreferred;
+    }
+
+    const xpr_sint_t sBackgroundLuma =
+        GetPerceivedLuma(aPalette.mChrome);
+    const xpr_sint_t sTextLuma =
+        GetPerceivedLuma(sPreferred);
+    const xpr_sint_t sMinimumDelta =
+        XPR_IS_TRUE(aDisabled) ? 88 : 136;
+
+    if (sTextLuma - sBackgroundLuma >= sMinimumDelta)
+        return sPreferred;
+
+    // A documented/system-derived foreground can occasionally be too dim
+    // against our app-owned Dark chrome. The final menu renderer must keep
+    // ordinary commands clearly readable even in that case.
+    return XPR_IS_TRUE(aDisabled) ?
+        RGB(176, 176, 176) :
+        RGB(238, 238, 238);
+}
 } // namespace
 
 /////////////////////////////////////////////////////////////////////////////
@@ -1270,9 +1312,7 @@ void CMenuBar::OnPaint()
         }
 
         const COLORREF sTextColor =
-            XPR_IS_TRUE(sDisabled) ?
-            sPalette.mSecondaryText :
-            sPalette.mText;
+            ResolveMenuTextColor(sPalette, sDisabled);
         sDC.SetTextColor(sTextColor);
 
         UINT sTextFlags = DT_CENTER | DT_VCENTER | DT_SINGLELINE;
@@ -1787,9 +1827,11 @@ void CMenuBar::OnCustomDraw( NMHDR* pNMHDR, LRESULT* pResult )
                     // ordinary menu commands unreadable on Dark chrome.
                     // Only a genuinely disabled command uses secondary text.
                     const COLORREF sTextColor =
-                        ( uItemState & CDIS_DISABLED ) ?
-                        sPalette.mSecondaryText :
-                        sPalette.mText;
+                        ResolveMenuTextColor(
+                            sPalette,
+                            ( uItemState & CDIS_DISABLED ) != 0 ?
+                                XPR_TRUE :
+                                XPR_FALSE);
 
                     lpNMCustomDraw->clrBtnFace = sPalette.mChrome;
                     lpNMCustomDraw->clrText = sTextColor;
