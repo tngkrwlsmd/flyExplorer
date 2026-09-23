@@ -2528,6 +2528,22 @@ def validate_win11_stability_regressions() -> list[str]:
             )
 
     for token in (
+        "ChangeWindowMessageFilterExFunc",
+        '::GetModuleHandle(XPR_STRING_LITERAL("user32.dll"))',
+        '::GetProcAddress(sUser32, "ChangeWindowMessageFilterEx")',
+        "WM_SINGLE_PROCESS",
+        "kMessageFilterAllow = 1",
+    ):
+        if token not in main_frame:
+            errors.append(
+                f"src/fxfile/main_frame.cpp: missing cross-integrity single-instance handoff token {token}"
+            )
+    if "CHANGEFILTERSTRUCT sMessageFilter" in main_frame:
+        errors.append(
+            "src/fxfile/main_frame.cpp: single-instance handoff must remain compatible with legacy target headers"
+        )
+
+    for token in (
         "::CopyFile(sOldPath, sNewPath, FALSE)",
         "if (::CopyFile(sOldPath, sNewPath, FALSE) == FALSE)",
         "xpr::FileSys::remove(sOldPath);",
