@@ -1142,3 +1142,33 @@
 - Source contract after fix: PASS by connector inspection.
 - Windows runtime screenshot after fix: **NOT RETESTED**.
 
+---
+
+## 2026-09-23 — AddressBar inner native edge repainted after outer-frame flattening
+
+**오류 발생**
+- 사용자 최신 screenshot에서도 current-folder `내 문서` row가 밝은 흰색 outline으로 둘러싸여 있었다.
+- 이전 수정은 outer `AddressBar::OnNcPaint()`의 idle frame color만 바꿨지만 실제 화면은 변하지 않았다.
+
+**최초 실제 오류**
+- `AddressBar`는 outer `CComboBoxEx`, inner `ComboBox`, inner `Edit`의 복합 control이다.
+- outer style에서 `WS_BORDER` / `WS_EX_CLIENTEDGE`를 제거해도 inner native ComboBox/Edit는 자신의 paint/non-client paint 단계에서 edge를 다시 그릴 수 있었다.
+- 따라서 outer `OnNcPaint()`를 먼저 flatten해도 final renderer가 inner native control이면 screenshot에는 bright edge가 그대로 남는다.
+
+**원인 진단**
+- Root cause: composite control의 최종 paint ownership을 outer HWND만 기준으로 판단했다.
+- 이전 invariant도 outer frame color contract만 검사했고 inner ComboBox/Edit post-paint edge ownership은 보호하지 않았다.
+
+**해결 방법**
+- `address_bar.cpp`: `PaintFlatAddressEdge(HWND, COLORREF)`를 추가해 현재 DPI 기준 2px edge를 palette `mElevated`로 덮는다.
+- outer `AddressBar::OnNcPaint()`는 High Contrast 외에는 persistent focus/white outline을 그리지 않고 flat edge만 유지한다.
+- inner ComboBox는 native `WM_PAINT` 뒤와 `WM_NCPAINT` 뒤에 flat edge를 다시 적용한다.
+- inner Edit도 `WM_NCPAINT` 뒤에 flat edge를 적용해 native edge가 최종 renderer가 되지 않게 한다.
+- invariant는 focus/border outline 재도입을 금지하고 outer/inner flat-edge tokens를 요구한다.
+
+**검증 상태**
+- User screenshot before fix: FAIL — bright outline still present.
+- Connector source audit: PASS — outer-only ownership gap and inner native final-paint paths confirmed.
+- Source contract after fix: PASS by connector inspection.
+- Windows runtime screenshot after fix: **NOT RETESTED**.
+

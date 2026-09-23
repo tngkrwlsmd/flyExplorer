@@ -77,7 +77,7 @@
     }
   ],
   "review": {
-    "reviewed_revision": "481552984b39058522006d1986d5ba8410b142be",
+    "reviewed_revision": "62ab7978315bf3c7f19a35b474f4894538015ff3",
     "reviewed_at": "2026-09-23",
     "reviewed_paths": [
       "AGENTS.md",
@@ -343,10 +343,11 @@ Status: **ACTIVE / user-reproduced runtime failures**. These items are the immed
    - `48155298` now delegates non-rebar notifications to `CControlBar::OnNotify(...)`, preserving normal MFC reflection. The invariant rejects a reintroduced `return FALSE;` in this block.
    - Acceptance remains runtime/screenshot based: Dark top-menu text must render with the app palette before this item closes.
 
-8. **Address/current-folder white outline still visible — ACTIVE / user screenshot reproduced**
-   - Latest screenshot still shows a bright persistent outline around the `내 문서` ComboBoxEx row.
-   - Previous outer `AddressBar::OnNcPaint()` color changes are therefore insufficient. The next implementation must treat the inner native ComboBox post-paint edge as a separate final renderer and remove/cover that edge outside High Contrast.
-   - Acceptance: idle current-folder row has no persistent bright outline in the supplied Win11-style Dark reference; focus/input behavior must remain usable.
+8. **Address/current-folder white outline still visible — CODE FIXED / RUNTIME NOT RETESTED**
+   - Latest screenshot still showed a bright persistent outline around the `내 문서` ComboBoxEx row.
+   - Root cause: changing only outer `AddressBar::OnNcPaint()` was insufficient because the inner native ComboBox/Edit can paint a final non-client/client edge after the outer frame is flattened.
+   - `62ab7978` introduces `PaintFlatAddressEdge()` and reapplies the Dark `mElevated` edge after outer, ComboBox `WM_PAINT`/`WM_NCPAINT`, and Edit `WM_NCPAINT`. Persistent focus/white frame drawing is removed outside High Contrast.
+   - Acceptance remains screenshot based: the idle current-folder row must have no bright outline while focus/edit/drop-down behavior remains usable.
 
 ### Development handoff rule
 
