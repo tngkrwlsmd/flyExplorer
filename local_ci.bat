@@ -11,6 +11,11 @@ chcp 65001 >nul
 set "PROFILE=%~1"
 if "%PROFILE%"=="" set "PROFILE=x64"
 
+set "CURRENT_GIT_REVISION=UNKNOWN"
+for /f "usebackq delims=" %%G in (`git rev-parse HEAD 2^>nul`) do set "CURRENT_GIT_REVISION=%%G"
+set "X64_BINARY_REBUILT="
+set "X64_REVISION_MARKER=bin\x64\build-revision.txt"
+
 rem Active project CI scope (2026-09-23): Release-x64-Unicode | x64 only.
 rem Other profiles are retained as maintenance tools and must not be selected
 rem by an agent unless the user explicitly expands the validation scope.
@@ -30,6 +35,7 @@ set "MSBUILD_ERROR_LOG=%LOG_DIR%\msbuild-errors.tmp"
 >>"%LOCAL_CI_LOG%" echo Profile: %PROFILE%
 >>"%LOCAL_CI_LOG%" echo Started: %DATE% %TIME%
 >>"%LOCAL_CI_LOG%" echo Repository: %~dp0
+>>"%LOCAL_CI_LOG%" echo Revision: %CURRENT_GIT_REVISION%
 >>"%LOCAL_CI_LOG%" echo ============================================================
 
 echo [local-ci] Log = "%LOCAL_CI_LOG%"
@@ -280,6 +286,10 @@ if errorlevel 1 exit /b 1
 
 call :require_file "bin\x64\fxfile.exe"
 if errorlevel 1 exit /b 1
+set "X64_BINARY_REBUILT=1"
+> "%X64_REVISION_MARKER%" echo %CURRENT_GIT_REVISION%
+echo [local-ci] x64 artifact revision = %CURRENT_GIT_REVISION%
+>>"%LOCAL_CI_LOG%" echo x64 artifact revision = %CURRENT_GIT_REVISION%
 call :require_file "bin\x64\libxprw.dll"
 if errorlevel 1 exit /b 1
 call :require_file "bin\x64\fxfile-crash.dll"
@@ -530,6 +540,7 @@ exit /b 0
 :failed
 set "RESULT=%errorlevel%"
 if "%RESULT%"=="0" set "RESULT=1"
+if /I "%PROFILE%"=="x64" if not defined X64_BINARY_REBUILT call :warn_stale_x64_binary
 echo.
 echo ============================================================
 echo Local CI FAIL: %PROFILE% ^(exit %RESULT%^)
@@ -541,6 +552,20 @@ echo ============================================================
 del /q "%STEP_LOG%" "%MSBUILD_RAW_LOG%" "%MSBUILD_ERROR_LOG%" >nul 2>&1
 popd
 exit /b %RESULT%
+
+:warn_stale_x64_binary
+if not exist "bin\x64\fxfile.exe" exit /b 0
+set "LAST_BUILT_REVISION=UNKNOWN"
+if exist "%X64_REVISION_MARKER%" set /p LAST_BUILT_REVISION=<"%X64_REVISION_MARKER%"
+echo.
+echo WARNING: Existing bin\x64\fxfile.exe was NOT rebuilt by this local CI run.
+echo WARNING: Do not use that executable to validate revision %CURRENT_GIT_REVISION%.
+echo WARNING: Existing artifact revision marker: %LAST_BUILT_REVISION%
+>>"%LOCAL_CI_LOG%" echo.
+>>"%LOCAL_CI_LOG%" echo WARNING: Existing bin\x64\fxfile.exe was NOT rebuilt by this local CI run.
+>>"%LOCAL_CI_LOG%" echo WARNING: Current source revision: %CURRENT_GIT_REVISION%
+>>"%LOCAL_CI_LOG%" echo WARNING: Existing artifact revision marker: %LAST_BUILT_REVISION%
+exit /b 0
 
 :usage
 echo Usage: local_ci.bat [quick^|test^|install^|policy^|x64^|x86^|release^|full]

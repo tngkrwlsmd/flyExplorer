@@ -44,6 +44,9 @@ quick/test/install/policy도 특정 정적/기능/installer/policy 검증을 명
   = Release-x64-Unicode | x64 Rebuild + Functional Regression + Warning 검사 + 산출물 검사 + Runtime Smoke를 수행합니다.
   = 기존 obj를 재사용하지 않고 소스를 다시 컴파일합니다. 정상 MSBuild 진행 내역은 영구 로그에 저장하지 않고 확정된 build error만 기록합니다.
   = Rebuild 전에 bin 출력 파일 lock을 검사합니다. 이 저장소의 bin에서 실행한 flyExplorer가 있으면 종료한 뒤 다시 실행해야 하며 local CI가 사용자 프로세스를 강제 종료하지는 않습니다.
+  = 로그 시작 부분에 현재 Git revision을 기록합니다.
+  = x64 executable이 실제로 재빌드되면 bin\x64\build-revision.txt에 해당 Git revision을 기록합니다.
+  = preflight/생성 단계에서 실패해 기존 bin\x64\fxfile.exe가 남는 경우, 현재 source revision용으로 재빌드되지 않았다는 WARNING과 기존 artifact revision marker를 출력합니다. 이 경고가 나온 executable은 현재 UI 수정의 runtime evidence로 사용하면 안 됩니다.
   = 평소 개발 후 가장 자주 사용하면 되는 검증입니다.
 
 .\local_ci.bat x86
