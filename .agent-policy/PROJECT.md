@@ -368,10 +368,11 @@ Status: **ACTIVE / user-reproduced runtime failures**. These items are the immed
    - Connector-side extraction against current `MenuBar.cpp`: modern block found, forbidden condition absent in modern block, required contrast tokens present, while the legacy whole-file condition remains allowed.
    - Acceptance still requires the user's rerun: `local_ci.bat x64` must pass source invariant/regression preflight and continue into VS 2026 x64 generation/build.
 
-12. **Current-folder row still reads as a boxed legacy band — ACTIVE / reproduced on rebuilt 03bc40ce**
-   - The current screenshot still shows horizontal/rectangular band edges around the current-folder row even after AddressBar style and client-edge work.
-   - Pixel/location evidence now points above the AddressBar client itself, so the next root-cause pass must inspect `CSizableReBar` / `CControlBar` non-client sizing/borders and band container painting rather than adding another AddressBar frame overlay.
-   - Acceptance: the current-folder row blends into the surrounding Win11-style surface without classic two-tone/rebar borders.
+12. **Current-folder row still reads as a boxed legacy view — ACTIVE / reproduced on rebuilt 03bc40ce**
+   - The current screenshot still shows a full-width classic edge immediately above/around the ExplorerPane/current-folder row even after AddressBar style/client-edge work.
+   - Source hierarchy audit corrected the earlier rebar hypothesis: `AddressBar` is a direct child of `ExplorerPane`, and `ExplorerPane` itself only fills `mWindow`.
+   - Actual root-cause target: `MainFrame::onSplitterPaneCreate()` creates both `ExplorerView` and `FolderView` with `WS_CHILD | WS_VISIBLE | WS_BORDER`. The ExplorerView border surrounds the entire view, so its top edge appears immediately above the current-folder row and makes the pane look boxed.
+   - Next fix: modern Windows create these views without `WS_BORDER`; keep the legacy border only on XP compatibility path. Acceptance: the ExplorerView/current-folder surface blends into the surrounding Win11-style layout without a classic outer view frame.
 
 ### Development handoff rule
 
