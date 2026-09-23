@@ -740,8 +740,15 @@ void SearchLocDlg::OnPaint(void)
 {
     CPaintDC sPaintDc(this);
 
-    COLORREF sWndColor  = GetSysColor(COLOR_WINDOW);
-    COLORREF sBkgndColor = GetSysColor(COLOR_3DFACE);
+    const ui::ThemePalette sPalette = ui::ModernUI::getPalette();
+    const COLORREF sWndColor =
+        XPR_IS_TRUE(sPalette.mHighContrast) ?
+        ::GetSysColor(COLOR_WINDOW) :
+        sPalette.mElevated;
+    const COLORREF sBkgndColor =
+        XPR_IS_TRUE(sPalette.mHighContrast) ?
+        ::GetSysColor(COLOR_3DFACE) :
+        sPalette.mWindow;
 
     xpr_sint_t sTop = 0;
     {
@@ -765,7 +772,16 @@ void SearchLocDlg::OnPaint(void)
     sRect.bottom = sTop;
     sPaintDc.FillSolidRect(&sRect, sWndColor);
 
-    sPaintDc.DrawEdge(sRect, EDGE_ETCHED, BF_BOTTOM);
+    if (XPR_IS_TRUE(sPalette.mHighContrast))
+    {
+        sPaintDc.DrawEdge(sRect, EDGE_ETCHED, BF_BOTTOM);
+    }
+    else
+    {
+        CRect sSeparatorRect(sRect);
+        sSeparatorRect.top = max(sSeparatorRect.top, sSeparatorRect.bottom - 1);
+        sPaintDc.FillSolidRect(&sSeparatorRect, sPalette.mSeparator);
+    }
 
     sRect = sClientRect;
     sRect.top = sTop;
@@ -775,6 +791,13 @@ void SearchLocDlg::OnPaint(void)
 HBRUSH SearchLocDlg::OnCtlColor(CDC* pDC, CWnd* pWnd, xpr_uint_t nCtlColor)
 {
     HBRUSH sBrush = super::OnCtlColor(pDC, pWnd, nCtlColor);
+    const ui::ThemePalette sPalette = ui::ModernUI::getPalette();
+
+    // CResizingDialog owns Dark-mode text/background colors. Keep this legacy
+    // per-control override only for High Contrast/native rendering so black
+    // COLOR_WINDOWTEXT is never forced onto a dark palette surface.
+    if (XPR_IS_FALSE(sPalette.mHighContrast))
+        return sBrush;
 
     if (pWnd != XPR_NULL)
     {
