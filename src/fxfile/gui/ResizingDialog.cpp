@@ -219,7 +219,11 @@ void CResizingDialog::RefreshModernAppearance()
         SendMessage(WM_GETFONT, 0, 0));
 
     LOGFONT sLogFont = {0};
-    if (XPR_IS_TRUE(fxfile::ui::ModernUI::getUIFont(sLogFont, GetSafeHwnd())))
+    if (XPR_IS_TRUE(fxfile::ui::ModernUI::getUIFont(sLogFont, GetSafeHwnd())) &&
+        XPR_IS_FALSE(
+            fxfile::ui::ModernUI::isSameFont(
+                reinterpret_cast<HFONT>(m_uiFont.GetSafeHandle()),
+                sLogFont)))
     {
         if (m_uiFont.GetSafeHandle() != NULL)
             m_uiFont.DeleteObject();
