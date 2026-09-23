@@ -2656,6 +2656,7 @@ def validate_win11_stability_regressions() -> list[str]:
     for token in (
         '#include "ModernUI.h"',
         "fxfile::ui::ModernUI::getPalette()",
+        "fxfile::ui::ModernUI::getUIFont(",
         "m_xpTheme.IsAppThemed() && !bModernDark",
         "bModernDark ? sPalette.mText",
         "bDisabled ? sPalette.mSecondaryText : sPalette.mText",
@@ -2681,6 +2682,7 @@ def validate_win11_stability_regressions() -> list[str]:
     for token in (
         '#include "ModernUI.h"',
         "fxfile::ui::ModernUI::getPalette()",
+        "fxfile::ui::ModernUI::getUIFont(",
         "m_xpTheme.IsAppThemed() && !bModernDark",
         "m_crColors[BTNST_COLOR_BK_IN]  = sPalette.mHover",
         "m_crColors[BTNST_COLOR_FG_OUT] = sPalette.mText",
