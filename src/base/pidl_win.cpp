@@ -538,10 +538,7 @@ LPITEMIDLIST Pidl::getFullPidl(LPSHELLFOLDER aShellFolder, LPCITEMIDLIST aSimple
 
             ::GlobalUnlock(sStgMedium.hGlobal);
 
-            if (XPR_IS_NOT_NULL(sStgMedium.pUnkForRelease))
-            {
-                ::ReleaseStgMedium(&sStgMedium);
-            }
+            ::ReleaseStgMedium(&sStgMedium);
         }
 
         COM_RELEASE(sDataObject);
