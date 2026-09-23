@@ -121,6 +121,21 @@ C++ 변경에는 다음을 추가로 적용한다.
 - 재발 방지 규칙이 일반 개발 원칙으로 승격될 가치가 있으면 이 `AGENTS.md` 또는 `.agent-policy/PROJECT.md`에도 반영한다. 프로젝트 고유 사실은 `.agent-policy/PROJECT.md`, 실행 원칙은 `AGENTS.md`에 둔다.
 - 오류 기록에는 secret, 개인 경로의 불필요한 사용자명, access token, 계정 식별자 등 민감정보를 남기지 않는다. 경로가 필요하면 repository-relative 또는 일반화된 형태를 우선한다.
 
+### Runtime regression closure
+
+사용자에게 보이는 runtime 오류는 source patch나 static guard의 존재만으로 해결 완료로 판정하지 않는다. 다음 규칙은 hang, crash, visual regression, 권한/launcher 문제처럼 실제 Windows 실행 상태에 의존하는 결함에 적용한다.
+
+- 진단 시작 전에 **사용자 행동 → 관찰된 실패 → 기대 결과**를 한 개의 재현/acceptance case로 고정한다. 예: `도구 -> 환경설정`을 열었을 때 UI thread가 멈추지 않고 창이 표시되어야 한다.
+- 사용자 screenshot, hang/crash dump, runtime stack/log, 실제 process/token 상태가 source comment, 이전 commit message, static invariant와 충돌하면 **runtime evidence를 우선한다**. 문서나 guard가 PASS여도 사용자가 같은 실패를 재현하면 결함은 열린 상태다.
+- 이미 고쳤던 것과 같은 증상이 다시 보고되면 이전 root cause가 재발했다고 가정하지 않는다. **새로운 미해결 결함으로 취급하고 실제 entry point부터 end-to-end 실행 경로를 다시 추적한다.** 기존 `ERROR_HISTORY.md`는 후보를 제공할 뿐 결론을 대신하지 않는다.
+- hang은 주변 코드의 추정 원인만 보고 닫지 않는다. 가능하면 UI thread의 blocked/spinning 위치, synchronous message/re-entry, HWND/message enumeration, z-order/style mutation, lock/wait loop 등 **무한 대기 또는 반복을 직접 설명하는 경로**를 찾는다.
+- visual regression에서는 intermediate state가 아니라 **최종 픽셀/renderer ownership**이 기준이다. custom-draw color field나 palette 값이 올바르더라도 native renderer가 다른 색을 그리면 실패다. app-owned Dark surface는 최종 text/glyph/background renderer를 누가 소유하는지 확인한다.
+- elevation/launcher 문제는 executable manifest만 확인하지 말고 installer, launcher, shell/shortcut, startup helper를 포함한 **parent process/token launch chain**을 추적한다. `asInvoker`는 이미 elevated인 parent의 child를 de-elevate하지 않는다.
+- root cause를 한 위치에서 찾았으면 동일 base class, sibling implementation, caller/callee, helper의 다른 활성 경로에 같은 패턴이 남아 있는지 검색한다. 한 파일의 수정으로 같은 증상 계열 전체가 해결됐다고 추정하지 않는다.
+- regression guard는 현재 구현 문자열을 고정하기보다 **안전 속성**을 검사한다. 알려진 실패 패턴은 가능한 경우 forbidden/negative check로 막고, z-order 변경 중 live enumeration 금지처럼 원인이 다시 들어오면 실패하도록 만든다.
+- static invariant PASS, compile/link PASS, runtime PASS, visual PASS는 서로 대체하지 않는다. 특히 static PASS만 있는 runtime 결함은 **`CODE FIXED / RUNTIME NOT TESTED`** 수준으로만 보고하며, 같은 acceptance case의 runtime 재검증 전에는 `resolved`, `fixed`, `해결 완료`로 종결하지 않는다.
+- runtime 환경을 사용할 수 없으면 무엇을 확인했고 무엇을 확인하지 못했는지를 명확히 분리하고, 사용자가 재현한 실패를 상쇄하는 표현을 쓰지 않는다. 다음 검증자가 그대로 실행할 수 있도록 trigger, expected result, 필요한 환경을 남긴다.
+
 ## 7. Windows 11 UI modernization
 
 UI/UX 현대화 작업은 다음 원칙을 따른다.
