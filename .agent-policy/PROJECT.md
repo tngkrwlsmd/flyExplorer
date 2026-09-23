@@ -375,6 +375,12 @@ Status: **ACTIVE / user-reproduced runtime failures**. These items are the immed
    - `4004ac3d` changes both modern view styles to `WS_CHILD | WS_VISIBLE` and adds `WS_BORDER` only inside the WinXP compatibility path. The invariant rejects an unconditional view `WS_BORDER` and requires both XP guards.
    - Acceptance remains runtime/screenshot based: the ExplorerView/current-folder surface must blend into the surrounding Win11-style layout without a classic outer view frame.
 
+13. **Local CI final-menu-paint validator false positive — ACTIVE**
+   - User `local_ci.bat x64` on revision `7decaadee4a75bcd31f820dd84d3a3679fe4bb6d` fails source invariant/regression preflight with `final WM_PAINT text ownership missing token GetToolBarCtrl().GetButtonCount()`.
+   - Current `CMenuBar::OnPaint()` does acquire `CToolBarCtrl &sToolBarCtrl = GetToolBarCtrl();` and then calls `sToolBarCtrl.GetButtonCount()`; the validator is matching a nonexistent exact spelling instead of the renderer contract.
+   - Next fix: scope validation to `CMenuBar::OnPaint()` and verify semantic ownership steps (toolbar control acquisition, button count, per-button state/text/rect, chrome erase, final ThemePalette text draw) rather than one chained-call spelling.
+   - Acceptance: connector self-check must pass against current source, and the user's `local_ci.bat x64` must progress beyond source invariant/regression preflight.
+
 ### Development handoff rule
 
 - Every new user-requested development item is added to this section (or its successor) before implementation starts.
