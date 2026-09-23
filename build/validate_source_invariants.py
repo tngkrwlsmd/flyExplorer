@@ -2437,6 +2437,153 @@ def validate_installer_smoke_wiring() -> list[str]:
     return errors
 
 
+
+def validate_win11_stability_regressions() -> list[str]:
+    """Protect the Win11 startup/settings stability and readability fixes."""
+
+    errors: list[str] = []
+    paths = {
+        "manifest": FXFILE_SRC / "res" / "fxfile.exe.manifest",
+        "modern_ui": FXFILE_SRC / "gui" / "ModernUI.cpp",
+        "bookmark_set": FXFILE_SRC / "bookmark_set_wnd.cpp",
+        "address": FXFILE_SRC / "address_bar.cpp",
+        "main_toolbar": FXFILE_SRC / "main_toolbar.cpp",
+        "menubar": FXFILE_SRC / "gui" / "rebar" / "MenuBar.cpp",
+        "contents": FXFILE_SRC / "contents_wnd.cpp",
+    }
+
+    contents: dict[str, str] = {}
+    for name, path in paths.items():
+        try:
+            contents[name] = path.read_text(encoding="utf-8", errors="replace")
+        except OSError as exc:
+            errors.append(
+                f"{path.relative_to(ROOT)}: cannot read Win11 stability contract: {exc}"
+            )
+
+    if errors:
+        return errors
+
+    manifest = contents["manifest"]
+    if '<requestedExecutionLevel level="asInvoker" uiAccess="false"/>' not in manifest:
+        errors.append(
+            "src/fxfile/res/fxfile.exe.manifest: requestedExecutionLevel must remain asInvoker"
+        )
+
+    modern_ui = contents["modern_ui"]
+    for token in (
+        "kThemeApplyGuardProp",
+        "beginControlThemeChange",
+        "endControlThemeChange",
+        "::GetProp(aHwnd, kThemeApplyGuardProp)",
+        "::SetProp(",
+        "::RemoveProp(",
+    ):
+        if token not in modern_ui:
+            errors.append(
+                f"src/fxfile/gui/ModernUI.cpp: missing theme reentrancy guard token {token}"
+            )
+
+    if modern_ui.count("beginControlThemeChange(aHwnd)") < 2:
+        errors.append(
+            "src/fxfile/gui/ModernUI.cpp: both apply/reset control-theme paths must use the reentrancy guard"
+        )
+    if modern_ui.count("endControlThemeChange(aHwnd)") < 2:
+        errors.append(
+            "src/fxfile/gui/ModernUI.cpp: both apply/reset control-theme paths must release the reentrancy guard"
+        )
+
+    bookmark = contents["bookmark_set"]
+    bookmark_start = bookmark.find("LRESULT BookmarkSetWnd::OnThemeChanged")
+    bookmark_end = bookmark.find("\n}", bookmark_start)
+    bookmark_block = (
+        bookmark[bookmark_start:bookmark_end]
+        if bookmark_start >= 0 and bookmark_end > bookmark_start
+        else ""
+    )
+    if not bookmark_block:
+        errors.append(
+            "src/fxfile/bookmark_set_wnd.cpp: BookmarkSetWnd::OnThemeChanged block not found"
+        )
+    elif "applyExplorerControlTheme" in bookmark_block:
+        errors.append(
+            "src/fxfile/bookmark_set_wnd.cpp: WM_THEMECHANGED must not synchronously reapply SetWindowTheme"
+        )
+
+    address = contents["address"]
+    address_start = address.find("void AddressBar::OnNcPaint(void)")
+    address_end = address.find("\n}", address_start)
+    address_block = (
+        address[address_start:address_end]
+        if address_start >= 0 and address_end > address_start
+        else ""
+    )
+    if not address_block:
+        errors.append("src/fxfile/address_bar.cpp: AddressBar::OnNcPaint block not found")
+    else:
+        if "if (XPR_IS_TRUE(sPalette.mHighContrast))" not in address_block:
+            errors.append(
+                "src/fxfile/address_bar.cpp: address non-client paint must preserve High Contrast fallback"
+            )
+        if "Default();\n        return;" not in address_block:
+            errors.append(
+                "src/fxfile/address_bar.cpp: native non-client painting must be limited to High Contrast"
+            )
+        if "CWindowDC sDC(this);" not in address_block:
+            errors.append(
+                "src/fxfile/address_bar.cpp: palette-owned address frame painting is missing"
+            )
+        if "void AddressBar::OnNcPaint(void)\n{\n    Default();" in address:
+            errors.append(
+                "src/fxfile/address_bar.cpp: legacy native address frame is painting before the custom frame"
+            )
+
+    if "TBI_LARGE, IL_COLOR_MASK);" not in contents["main_toolbar"]:
+        errors.append(
+            "src/fxfile/main_toolbar.cpp: default toolbar icon mode must remain the readable large Fluent size"
+        )
+
+    horizontal_start = modern_ui.find(
+        "xpr_sint_t ModernUI::getCommandHorizontalPadding(HWND aHwnd)"
+    )
+    horizontal_end = modern_ui.find("\n}", horizontal_start)
+    horizontal_block = (
+        modern_ui[horizontal_start:horizontal_end]
+        if horizontal_start >= 0 and horizontal_end > horizontal_start
+        else ""
+    )
+    if "scaleForWindow(7, aHwnd)" not in horizontal_block:
+        errors.append(
+            "src/fxfile/gui/ModernUI.cpp: command horizontal padding regressed from the Win11 compact metric"
+        )
+
+    vertical_start = modern_ui.find(
+        "xpr_sint_t ModernUI::getCommandVerticalPadding(HWND aHwnd)"
+    )
+    vertical_end = modern_ui.find("\n}", vertical_start)
+    vertical_block = (
+        modern_ui[vertical_start:vertical_end]
+        if vertical_start >= 0 and vertical_end > vertical_start
+        else ""
+    )
+    if "scaleForWindow(6, aHwnd)" not in vertical_block:
+        errors.append(
+            "src/fxfile/gui/ModernUI.cpp: command vertical padding regressed from the Win11 compact metric"
+        )
+
+    if "ModernUI::getUIFont(sMenuFont, m_hWnd)" not in contents["menubar"]:
+        errors.append(
+            "src/fxfile/gui/rebar/MenuBar.cpp: menu bar must use the shared DPI-aware system UI font"
+        )
+
+    if "ui::ModernUI::getUIFont(sLogFont, GetSafeHwnd())" not in contents["contents"]:
+        errors.append(
+            "src/fxfile/contents_wnd.cpp: contents pane must use the shared DPI-aware system UI font"
+        )
+
+    return errors
+
+
 def validate_modern_ui_registration() -> list[str]:
     errors: list[str] = []
     gyp_path = ROOT / "src" / "fxfile" / "fxfile.gyp"
@@ -2490,6 +2637,7 @@ def main() -> int:
     errors.extend(validate_local_ci_warning_policy_wiring())
     errors.extend(validate_active_ci_scope_documentation())
     errors.extend(validate_installer_smoke_wiring())
+    errors.extend(validate_win11_stability_regressions())
     errors.extend(validate_modern_ui_registration())
 
     if errors:
