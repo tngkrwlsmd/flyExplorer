@@ -2456,6 +2456,7 @@ def validate_win11_stability_regressions() -> list[str]:
         "cfg_main_cpp": FXFILE_SRC / "cfg" / "cfg_main_dlg.cpp",
         "cfg_page_h": FXFILE_SRC / "cfg" / "cfg_dlg.h",
         "cfg_page_cpp": FXFILE_SRC / "cfg" / "cfg_dlg.cpp",
+        "shell_registry": FXFILE_SRC / "shell_registry.cpp",
     }
 
     contents: dict[str, str] = {}
@@ -2499,6 +2500,22 @@ def validate_win11_stability_regressions() -> list[str]:
             errors.append(
                 f"src/fxfile/conf_dir.cpp: missing standard-user config fallback token {token}"
             )
+
+    shell_registry = contents["shell_registry"]
+    for token in (
+        'XPR_STRING_LITERAL("Software\\\\Classes\\\\Folder\\\\Shell")',
+        "sRegKey.Create(HKEY_CURRENT_USER, kUserKeyName)",
+        "HKEY_CURRENT_USER,",
+        "KEY_READ | KEY_WRITE",
+    ):
+        if token not in shell_registry:
+            errors.append(
+                f"src/fxfile/shell_registry.cpp: missing per-user shell registration token {token}"
+            )
+    if "HKEY_CLASSES_ROOT" in shell_registry:
+        errors.append(
+            "src/fxfile/shell_registry.cpp: shell registration must not write through HKCR"
+        )
 
     modern_ui = contents["modern_ui"]
     for token in (
