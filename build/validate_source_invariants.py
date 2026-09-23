@@ -683,7 +683,10 @@ def validate_soft_surface_contract() -> list[str]:
             "sPalette.mPressed",
         ),
         "rebar": ("sPalette.mChrome",),
-        "address": ("sPalette.mElevated", "sPalette.mFocus"),
+        "address": (
+            "sPalette.mElevated",
+            "PaintFlatAddressEdge",
+        ),
         "cfg_main": (
             "ModernCfgButtonSubclassProc",
             "getSettingsNavRowHeight",
@@ -2961,7 +2964,7 @@ def validate_win11_stability_regressions() -> list[str]:
             errors.append(
                 "src/fxfile/address_bar.cpp: native non-client painting must be limited to High Contrast"
             )
-        if "CWindowDC sDC(this);" not in address_block:
+        if "PaintFlatAddressEdge(m_hWnd, sPalette.mElevated)" not in address_block:
             errors.append(
                 "src/fxfile/address_bar.cpp: palette-owned address frame painting is missing"
             )
