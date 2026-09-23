@@ -4146,13 +4146,23 @@ xpr_bool_t ExplorerCtrl::OnContextMenuShell(CWnd *aWnd, CPoint aPoint, CRect aWi
     {
         if (aWindowRect.PtInRect(aPoint) == XPR_FALSE)
         {
-            CRect sRect;
             xpr_sint_t sFocus = GetSelectionMark();
-            GetItemRect(sFocus, sRect, LVIR_BOUNDS);
-            ClientToScreen(&sRect);
-
-            aPoint.x = sRect.left;
-            aPoint.y = sRect.bottom;
+            CRect sRect;
+            if (sFocus >= 0 &&
+                GetItemRect(
+                    sFocus,
+                    sRect,
+                    LVIR_BOUNDS) != XPR_FALSE)
+            {
+                ClientToScreen(&sRect);
+                aPoint.x = sRect.left;
+                aPoint.y = sRect.bottom;
+            }
+            else
+            {
+                aPoint.x = aWindowRect.left;
+                aPoint.y = aWindowRect.top;
+            }
         }
 
         xpr_tchar_t sVerb[0xff] = {0};
@@ -4207,13 +4217,23 @@ xpr_bool_t ExplorerCtrl::OnContextMenuParent(CWnd *aWnd, CPoint aPoint, CRect aW
         {
             if (aWindowRect.PtInRect(aPoint) == XPR_FALSE)
             {
-                CRect sRect;
                 xpr_sint_t sFocus = GetSelectionMark();
-                GetItemRect(sFocus, sRect, LVIR_BOUNDS);
-                ClientToScreen(&sRect);
-
-                aPoint.x = sRect.left;
-                aPoint.y = sRect.bottom;
+                CRect sRect;
+                if (sFocus >= 0 &&
+                    GetItemRect(
+                        sFocus,
+                        sRect,
+                        LVIR_BOUNDS) != XPR_FALSE)
+                {
+                    ClientToScreen(&sRect);
+                    aPoint.x = sRect.left;
+                    aPoint.y = sRect.bottom;
+                }
+                else
+                {
+                    aPoint.x = aWindowRect.left;
+                    aPoint.y = aWindowRect.top;
+                }
             }
 
             ContextMenu sContextMenu(GetSafeHwnd());
@@ -4266,13 +4286,23 @@ xpr_bool_t ExplorerCtrl::OnContextMenuDrive(CWnd *aWnd, CPoint aPoint, CRect aWi
         {
             if (aWindowRect.PtInRect(aPoint) == XPR_FALSE)
             {
-                CRect sRect;
                 xpr_sint_t sFocus = GetSelectionMark();
-                GetItemRect(sFocus, sRect, LVIR_BOUNDS);
-                ClientToScreen(&sRect);
-
-                aPoint.x = sRect.left;
-                aPoint.y = sRect.bottom;
+                CRect sRect;
+                if (sFocus >= 0 &&
+                    GetItemRect(
+                        sFocus,
+                        sRect,
+                        LVIR_BOUNDS) != XPR_FALSE)
+                {
+                    ClientToScreen(&sRect);
+                    aPoint.x = sRect.left;
+                    aPoint.y = sRect.bottom;
+                }
+                else
+                {
+                    aPoint.x = aWindowRect.left;
+                    aPoint.y = aWindowRect.top;
+                }
             }
 
             ContextMenu sContextMenu(GetSafeHwnd());
@@ -6235,7 +6265,21 @@ void ExplorerCtrl::selectAll(void)
             SetItemState(i, LVIS_SELECTED, LVIS_SELECTED);
     }
 
-    SetItemState(sFocus, LVIS_SELECTED | LVIS_FOCUSED, LVIS_SELECTED | LVIS_FOCUSED);
+    if (sFocus < 0)
+    {
+        POSITION sPosition = GetFirstSelectedItemPosition();
+        if (XPR_IS_NOT_NULL(sPosition))
+            sFocus = GetNextSelectedItem(sPosition);
+    }
+
+    if (0 <= sFocus && sFocus < sCount)
+    {
+        SetSelectionMark(sFocus);
+        SetItemState(
+            sFocus,
+            LVIS_SELECTED | LVIS_FOCUSED,
+            LVIS_SELECTED | LVIS_FOCUSED);
+    }
 }
 
 void ExplorerCtrl::unselectAll(void)
