@@ -2468,6 +2468,7 @@ def validate_win11_stability_regressions() -> list[str]:
         "button_st_h": FXFILE_SRC / "gui" / "BtnST.h",
         "button_st_cpp": FXFILE_SRC / "gui" / "BtnST.cpp",
         "colour_picker": FXFILE_SRC / "gui" / "ColourPickerXP.cpp",
+        "explorer_ctrl": FXFILE_SRC / "explorer_ctrl.cpp",
     }
 
     contents: dict[str, str] = {}
@@ -2716,6 +2717,21 @@ def validate_win11_stability_regressions() -> list[str]:
         errors.append(
             "src/fxfile/gui/ColourPickerXP.cpp: colour-picker draw/popup contracts are missing"
         )
+
+    explorer_ctrl = contents["explorer_ctrl"]
+    drag_title_pos = explorer_ctrl.find(
+        'XPR_STRING_LITERAL("explorer_window.drag_drop.title")'
+    )
+    if drag_title_pos < 0:
+        errors.append(
+            "src/fxfile/explorer_ctrl.cpp: drag feedback title block is missing"
+        )
+    else:
+        drag_font_block = explorer_ctrl[drag_title_pos:drag_title_pos + 1500]
+        if "ui::ModernUI::getUIFont(" not in drag_font_block:
+            errors.append(
+                "src/fxfile/explorer_ctrl.cpp: drag feedback must use the current Windows UI font"
+            )
 
     modern_ui = contents["modern_ui"]
     for token in (
