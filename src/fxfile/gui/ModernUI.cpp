@@ -1232,8 +1232,13 @@ void drawDialogTab(HWND aHwnd)
         TabCtrl_GetItem(aHwnd, i, &sItem);
 
         RECT sTextRect = sItemRect;
+        // The native tab control already sizes items for its labels.  The
+        // former 8-DPI-pixel inset on both sides consumed too much of that
+        // native width and truncated short labels such as "License" and
+        // "Credits".  Keep only a small text inset; image-bearing tabs add
+        // their own image/text gap below.
         const xpr_sint_t sPadding =
-            ModernUI::scaleForWindow(8, aHwnd);
+            ModernUI::scaleForWindow(3, aHwnd);
         sTextRect.left += sPadding;
         sTextRect.right -= sPadding;
 
