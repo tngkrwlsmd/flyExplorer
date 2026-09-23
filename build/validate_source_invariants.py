@@ -1038,6 +1038,25 @@ def validate_popup_menu_contract() -> list[str]:
         if token not in bc_menu:
             errors.append(f"src/fxfile/gui/BCMenu.cpp: popup measurement token missing {token}")
 
+    checkmark_start = bc_menu.find("BOOL BCMenu::Draw3DCheckmark")
+    checkmark_end = bc_menu.find("\n}", checkmark_start)
+    checkmark_block = (
+        bc_menu[checkmark_start:checkmark_end]
+        if checkmark_start >= 0 and checkmark_end > checkmark_start
+        else ""
+    )
+    for token in (
+        "sPalette.mHighContrast",
+        "COLOR_HIGHLIGHTTEXT",
+        "sPalette.mSelectionText",
+        "sPalette.mText",
+        "sMarkColor",
+    ):
+        if token not in checkmark_block:
+            errors.append(
+                f"src/fxfile/gui/BCMenu.cpp: palette-aware menu checkmark missing token {token}"
+            )
+
     draw_state_signature = re.compile(
         r"::DrawState\s*\(\s*"
         r"aDC->m_hDC\s*,\s*"
@@ -2733,6 +2752,26 @@ def validate_win11_stability_regressions() -> list[str]:
         if "ui::ModernUI::getUIFont(" not in drag_font_block:
             errors.append(
                 "src/fxfile/explorer_ctrl.cpp: drag feedback must use the current Windows UI font"
+            )
+
+    filtering_pos = explorer_ctrl.find(
+        "if (mOption.mTextColorType == COLOR_TYPE_FILTERING)"
+    )
+    filtering_block = (
+        explorer_ctrl[filtering_pos:filtering_pos + 3200]
+        if filtering_pos >= 0
+        else ""
+    )
+    for token in (
+        'sFilterItem->mExts == XPR_STRING_LITERAL("*.*")',
+        "sFilterTextColor == RGB(0, 0, 0)",
+        "XPR_IS_FALSE(sPalette.mHighContrast)",
+        "sFilterTextColor = sPalette.mText;",
+        "mOption.mBkgndColorType == COLOR_TYPE_FILTERING",
+    ):
+        if token not in filtering_block:
+            errors.append(
+                f"src/fxfile/explorer_ctrl.cpp: dark filtering readability contract missing token {token}"
             )
 
     modern_ui = contents["modern_ui"]
