@@ -230,12 +230,19 @@ xpr_bool_t ConfDir::moveToNewConfDir(void)
 
         if (xpr::FileSys::exist(sOldPath) == XPR_TRUE)
         {
-            if (xpr::FileSys::exist(sNewPath) == XPR_TRUE)
-            {
-                xpr::FileSys::remove(sNewPath);
-            }
+            // Configuration may be moving away from a legacy portable
+            // directory under Program Files. Copying only requires read
+            // access to the old location and write access to the already
+            // validated destination. A rename would also require delete/write
+            // access to the old directory and therefore made this operation
+            // elevation-dependent.
+            if (::CopyFile(sOldPath, sNewPath, FALSE) == FALSE)
+                return XPR_FALSE;
 
-            xpr::FileSys::rename(sOldPath, sNewPath);
+            // Best-effort cleanup keeps normal writable-to-writable moves
+            // behaving like a move. Failure is intentionally non-fatal when
+            // the source lives in a protected installation directory.
+            xpr::FileSys::remove(sOldPath);
         }
     }
 
