@@ -6718,7 +6718,42 @@ void ExplorerCtrl::OnCustomdraw(NMHDR *aNmHdr, LRESULT *aResult)
                     GetName(sLvItemData->mShellFolder, sLvItemData->mPidl, SHGDN_FORPARSING, sParsing);
 
                 if (mOption.mTextColorType == COLOR_TYPE_FILTERING)
-                    sNmLvCustomDraw->clrText = sFileFilterMgr.getColor(sParsing, sLvItemData->mShellAttributes & SFGAO_FOLDER);
+                {
+                    const xpr_bool_t sFolder =
+                        XPR_TEST_BITS(
+                            sLvItemData->mShellAttributes,
+                            SFGAO_FOLDER) ?
+                        XPR_TRUE :
+                        XPR_FALSE;
+                    const xpr_sint_t sFilterIndex =
+                        sFileFilterMgr.getIndex(sParsing, sFolder);
+                    FilterItem *sFilterItem =
+                        sFileFilterMgr.getFilter(sFilterIndex);
+                    COLORREF sFilterTextColor =
+                        XPR_IS_NOT_NULL(sFilterItem) ?
+                        sFilterItem->mColor :
+                        ::GetSysColor(COLOR_WINDOWTEXT);
+
+                    const ui::ThemePalette sPalette =
+                        ui::ModernUI::getPalette();
+
+                    // The historical general-file rule is "*.*" + pure black.
+                    // That was readable on the old light list surface, but it
+                    // becomes black-on-dark when Filtering is selected as the
+                    // text-color mode. Treat only that legacy default value
+                    // (and a missing rule) as automatic text in app Dark;
+                    // preserve every other explicit filter color unchanged.
+                    if (XPR_IS_TRUE(sPalette.mDark) &&
+                        XPR_IS_FALSE(sPalette.mHighContrast) &&
+                        (XPR_IS_NULL(sFilterItem) ||
+                         (sFilterItem->mExts == XPR_STRING_LITERAL("*.*") &&
+                          sFilterTextColor == RGB(0, 0, 0))))
+                    {
+                        sFilterTextColor = sPalette.mText;
+                    }
+
+                    sNmLvCustomDraw->clrText = sFilterTextColor;
+                }
 
                 if (mOption.mBkgndColorType == COLOR_TYPE_FILTERING)
                     sNmLvCustomDraw->clrTextBk = sFileFilterMgr.getColor(sParsing, sLvItemData->mShellAttributes & SFGAO_FOLDER);
