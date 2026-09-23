@@ -198,7 +198,7 @@ void FileMergeDlg::OnItemUp(void)
         return;
 
     xpr_sint_t sIndex = mListCtrl.GetSelectionMark();
-    if (sIndex == 0)
+    if (sIndex <= 0)
         return;
 
     xpr_tchar_t sItem1[XPR_MAX_PATH + 1];
@@ -221,8 +221,11 @@ void FileMergeDlg::OnItemDown(void)
         return;
 
     xpr_sint_t sIndex = mListCtrl.GetSelectionMark();
-    if (sIndex == (mListCtrl.GetItemCount()-1))
+    if (sIndex < 0 ||
+        sIndex == (mListCtrl.GetItemCount()-1))
+    {
         return;
+    }
 
     xpr_tchar_t sItem1[XPR_MAX_PATH + 1];
     xpr_tchar_t sItem2[XPR_MAX_PATH + 1];
