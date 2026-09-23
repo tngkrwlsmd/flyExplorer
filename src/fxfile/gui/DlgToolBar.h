@@ -11,9 +11,11 @@
 #define __FXFILE_DLG_TOOL_BAR_H__
 #pragma once
 
-class DlgToolBar : public CToolBar
+#include "rebar/ToolBarEx.h"
+
+class DlgToolBar : public CToolBarEx
 {
-    typedef CToolBar super;
+    typedef CToolBarEx super;
 
 public:
     DlgToolBar(void);
