@@ -818,3 +818,58 @@
 7. 제품 build PASS와 CI orchestration PASS, runtime PASS, visual PASS는 서로 다른 evidence로 기록한다.
 8. Win32/MFC의 unsigned field와 signed DPI/metric/helper 값을 직접 비교하지 않는다. 값의 의미와 범위를 확인한 뒤 비교 경계에서 같은 타입으로 정규화한다.
 9. DPI-aware draw/layout fragment를 함수 간 이동할 때 HWND/DPI metric context의 선언과 fallback도 함께 이동한다. renderer는 다른 함수의 local setup을 암묵적으로 전제하지 않는다.
+
+
+## 2026-09-23 - Protected install-path migration and legacy owner-draw dark colors
+
+### Standard-user migration path
+
+**Occurrence**
+- Source review of the standard-user startup/configuration path found two legacy migrations that still assumed the source directory was writable.
+- This is relevant when an older portable profile or `accel.fac` is beside `fxfile.exe` under a protected installation directory such as Program Files.
+
+**First actual source error**
+- `ConfDir::moveToNewConfDir()` used a rename from the old configuration directory to the new per-user directory. Renaming requires delete/write access to the old directory.
+- `MainFrame::loadAccelTable()` used a move of legacy `accel.fac` out of the executable directory, which has the same protected-source write/delete requirement.
+
+**Cause**
+- The migration logic treated a readable legacy install directory as if it were also writable.
+- The current per-user destination was already designed to be writable, so requiring source deletion was unnecessary.
+
+**Fix**
+- Configuration migration now copies each existing file to the already validated destination and treats removal of the old source as best-effort cleanup.
+- Legacy `accel.fac` migration now copies into `ConfDir::TypeAccel` instead of moving the install-directory file.
+- The single-instance handoff also allows only the registered activation message through `ChangeWindowMessageFilterEx` when available, so a normal-integrity second launch does not need to elevate merely to wake an already elevated first instance.
+
+**Prevention**
+- `validate_source_invariants.py` checks that the legacy accel path uses `CopyFile`, configuration migration no longer uses `xpr::FileSys::rename`, and the cross-integrity handoff remains dynamically resolved for the legacy target headers.
+
+**Validation**
+- GitHub source review confirms the protected-source rename/move calls were replaced and the invariant contracts are present.
+- `python build/validate_source_invariants.py`, MSVC compile/link, standard-user launch, elevated/non-elevated handoff, and Windows runtime smoke are **NOT TESTED** in the connector-only environment.
+
+### Legacy owner-draw controls on Dark settings surfaces
+
+**Occurrence**
+- Source review found legacy owner-draw controls still selecting native light/system text and 3D colors while their parent settings surfaces were palette-owned Dark UI.
+- Affected reviewed controls included `CButtonST`, `CDropMenuButton`, `CColourPickerXP`, the file-scrap pane, bookmark labels, and the search-location dialog.
+
+**First actual source error**
+- Split-button arrows and owner-draw button borders retained hard-coded black/light-system paths.
+- The colour picker continued to use themed/light common-control painting and menu/system text colors in its owner-draw path.
+- File-scrap/search-location paint paths could select native button/window text colors independently of the app Dark palette.
+
+**Cause**
+- These controls predate the shared `ModernUI::ThemePalette` ownership model and were not fully covered by parent `WM_CTLCOLOR` handling because they paint their own text, borders, arrows, or popup cells.
+
+**Fix**
+- Owner-draw text, disabled text, border, focus, hover/pressed, separator, and arrow colors now use `ThemePalette` outside High Contrast.
+- The colour picker bypasses native light themed painting on app-owned Dark surfaces and uses the shared Windows UI font; its popup re-resolves that font after HWND creation so monitor DPI is available.
+- File-scrap/bookmark labels use `ModernUI::getUIFont`, while High Contrast retains system-owned colors.
+
+**Prevention**
+- Source-invariant checks guard the palette-aware owner-draw paths, colour-picker popup font path, and file-scrap/bookmark typography contracts.
+
+**Validation**
+- Connector-side source inspection confirms the new palette/font branches and matching declarations are present.
+- Windows 11 Light/Dark/System/High Contrast visual checks, 100/125/150/200% DPI checks, Korean text/IME checks, MSVC compile/link, and runtime behavior are **NOT TESTED** here.
