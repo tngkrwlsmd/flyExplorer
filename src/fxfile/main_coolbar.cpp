@@ -439,6 +439,14 @@ void MainCoolBar::loadStateFile(void)
         if (mMainToolBar.load(sPath) == XPR_FALSE)
             mMainToolBar.SetDefaultButtons();
     }
+
+    // The persisted coolbar file predates the Win11 command metrics and can
+    // restore narrow child extents after the toolbars have already calculated
+    // their modern sizes. Recalculate every toolbar after state restore so old
+    // band geometry cannot clip or crowd the current icon/button layout.
+    mMainToolBar.UpdateToolbarSize();
+    mDriveToolBar.UpdateToolbarSize();
+    mBookmarkToolBar.UpdateToolbarSize();
 }
 
 void MainCoolBar::saveStateFile(void)
