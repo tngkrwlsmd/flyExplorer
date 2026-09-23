@@ -2462,6 +2462,8 @@ def validate_win11_stability_regressions() -> list[str]:
         "file_scrap": FXFILE_SRC / "file_scrap_pane.cpp",
         "bookmark_wnd": FXFILE_SRC / "bookmark_wnd.cpp",
         "search_loc": FXFILE_SRC / "cmd" / "search_loc_dlg.cpp",
+        "drop_menu_button_h": FXFILE_SRC / "gui" / "DropMenuButton.h",
+        "drop_menu_button_cpp": FXFILE_SRC / "gui" / "DropMenuButton.cpp",
     }
 
     contents: dict[str, str] = {}
@@ -2591,6 +2593,31 @@ def validate_win11_stability_regressions() -> list[str]:
             errors.append(
                 f"src/fxfile/cmd/search_loc_dlg.cpp: missing palette-aware search-location token {token}"
             )
+
+    drop_menu_button_h = contents["drop_menu_button_h"]
+    drop_menu_button_cpp = contents["drop_menu_button_cpp"]
+    if "DrawArrow(CDC* pDC, CPoint aArrowTip, COLORREF aColor);" not in drop_menu_button_h:
+        errors.append(
+            "src/fxfile/gui/DropMenuButton.h: palette-aware arrow declaration is missing"
+        )
+    for token in (
+        '#include "ModernUI.h"',
+        "fxfile::ui::ModernUI::getPalette()",
+        "m_xpTheme.IsAppThemed() && !bModernDark",
+        "bModernDark ? sPalette.mText",
+        "bDisabled ? sPalette.mSecondaryText : sPalette.mText",
+        "DrawArrow(pDC, pt, sArrowColor)",
+        "COLORREF aColor)",
+        "pDC->SetPixel(ArrowTip, aColor)",
+    ):
+        if token not in drop_menu_button_cpp:
+            errors.append(
+                f"src/fxfile/gui/DropMenuButton.cpp: missing dark split-button token {token}"
+            )
+    if "DrawArrow(pDC,pt)" in drop_menu_button_cpp:
+        errors.append(
+            "src/fxfile/gui/DropMenuButton.cpp: legacy black-arrow call returned"
+        )
 
     modern_ui = contents["modern_ui"]
     for token in (
