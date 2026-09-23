@@ -137,7 +137,11 @@ void CModernDialog::refreshModernAppearance(void)
     fxfile::ui::ModernUI::applyWindowFrameTheme(m_hWnd);
 
     LOGFONT sLogFont = {0};
-    if (XPR_IS_TRUE(fxfile::ui::ModernUI::getUIFont(sLogFont, GetSafeHwnd())))
+    if (XPR_IS_TRUE(fxfile::ui::ModernUI::getUIFont(sLogFont, GetSafeHwnd())) &&
+        XPR_IS_FALSE(
+            fxfile::ui::ModernUI::isSameFont(
+                reinterpret_cast<HFONT>(mModernUIFont.GetSafeHandle()),
+                sLogFont)))
     {
         if (XPR_IS_NOT_NULL(mModernUIFont.m_hObject))
             mModernUIFont.DeleteObject();
