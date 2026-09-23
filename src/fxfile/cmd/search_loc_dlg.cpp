@@ -564,6 +564,9 @@ void SearchLocDlg::OnItemDelete(void)
         return;
 
     xpr_sint_t sIndex = mListCtrl.GetSelectionMark();
+    if (sIndex < 0)
+        return;
+
     mListCtrl.DeleteItem(sIndex);
 
     setLocPath();
@@ -587,10 +590,13 @@ void SearchLocDlg::OnItemMoveUp(void)
         return;
 
     xpr_sint_t sIndex = mListCtrl.GetSelectionMark();
-    if (sIndex == 0)
+    if (sIndex <= 0)
         return;
 
-    SearchUserLocItem *sSearchUserLocItem = (SearchUserLocItem *)mListCtrl.GetItemData(sIndex);
+    SearchUserLocItem *sSearchUserLocItem =
+        (SearchUserLocItem *)mListCtrl.GetItemData(sIndex);
+    if (XPR_IS_NULL(sSearchUserLocItem))
+        return;
     mListCtrl.SetItemData(sIndex, XPR_NULL);
     mListCtrl.DeleteItem(sIndex--);
 
@@ -606,10 +612,16 @@ void SearchLocDlg::OnItemMoveDown(void)
         return;
 
     xpr_sint_t sIndex = mListCtrl.GetSelectionMark();
-    if (sIndex == (mListCtrl.GetItemCount()-1))
+    if (sIndex < 0 ||
+        sIndex == (mListCtrl.GetItemCount()-1))
+    {
         return;
+    }
 
-    SearchUserLocItem *sSearchUserLocItem = (SearchUserLocItem *)mListCtrl.GetItemData(sIndex);
+    SearchUserLocItem *sSearchUserLocItem =
+        (SearchUserLocItem *)mListCtrl.GetItemData(sIndex);
+    if (XPR_IS_NULL(sSearchUserLocItem))
+        return;
     mListCtrl.SetItemData(sIndex, XPR_NULL);
     mListCtrl.DeleteItem(sIndex++);
 
