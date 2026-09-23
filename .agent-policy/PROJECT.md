@@ -337,12 +337,11 @@ Status: **ACTIVE / user-reproduced runtime failures**. These items are the immed
    - `a46dbadd` registers `FlatHeaderCtrl.cpp` as the `header` contract source and changes the local contents map to report a deterministic `missing source registration` invariant error rather than raising `KeyError` if a future source key is omitted.
    - Connector static cross-check after the change found no `contents["..."]` references missing from the function's `paths` map. Acceptance still requires a user rerun: `python build/validate_source_invariants.py` must complete without traceback and `local_ci.bat x64` must progress past source invariant/regression preflight.
 
-7. **MenuBar text remains too dark — CODE FIXED / RUNTIME NOT RETESTED**
-   - Rebuilt `80ccaea9` runtime evidence showed fxfile behind another foreground window, and its enabled top-menu labels were still heavily dimmed.
-   - Root cause: the modern custom-draw branch explicitly selected `mSecondaryText` when either the command was disabled **or the frame was inactive**. That made ordinary enabled menu labels unnecessarily low-contrast even when custom draw was working exactly as written.
-   - `e6c3e2c7` removes frame activation from the color decision. Enabled menu commands now always use `ThemePalette.mText`; only genuinely disabled commands use `mSecondaryText`. Hover/pressed continues to use `mText`.
-   - The invariant rejects reintroduction of the `disabled || !m_bFrameActive` condition.
-   - Acceptance remains runtime based: labels must stay clearly readable in both active and inactive Dark windows.
+7. **MenuBar text remains too dark — ACTIVE / reproduced on rebuilt 03bc40ce**
+   - The user supplied a screenshot whose `build-revision.txt` is `03bc40ce000a36205fecaba7e3c335cd074b95c5`, so the current source and validator fixes are present, yet top-menu labels remain visibly dark.
+   - Previous `NM_CUSTOMDRAW`/reflection/color-policy fixes therefore do not own the final pixels reliably enough.
+   - Next fix: add a non-High-Contrast `CMenuBar::OnPaint()` post-pass. Let native toolbar paint layout/hit-testing first, then repaint each textual menu-button rect with ThemePalette chrome/state background and draw the menu text with `mText` (or `mSecondaryText` only for disabled commands), finishing after native rendering.
+   - Acceptance: the final screenshot must show readable menu labels regardless of whether `NM_CUSTOMDRAW` fires or what ToolbarWindow32 does internally.
 
 8. **Address/current-folder classic client edge remains — CODE FIXED / RUNTIME NOT RETESTED**
    - Rebuilt `80ccaea9` runtime evidence showed the classic rectangular edge. Screenshot pixel inspection identified a 2-row sunken client pattern: top rows around RGB 160/105 and bottom rows around RGB 227/255 across almost the full control width.
@@ -367,6 +366,11 @@ Status: **ACTIVE / user-reproduced runtime failures**. These items are the immed
    - `53b2490a` extracts only the modern non-High-Contrast `CDDS_ITEMPREPAINT` branch and applies the inactive-frame prohibition plus enabled/disabled contrast requirements to that block.
    - Connector-side extraction against current `MenuBar.cpp`: modern block found, forbidden condition absent in modern block, required contrast tokens present, while the legacy whole-file condition remains allowed.
    - Acceptance still requires the user's rerun: `local_ci.bat x64` must pass source invariant/regression preflight and continue into VS 2026 x64 generation/build.
+
+12. **Current-folder row still reads as a boxed legacy band — ACTIVE / reproduced on rebuilt 03bc40ce**
+   - The current screenshot still shows horizontal/rectangular band edges around the current-folder row even after AddressBar style and client-edge work.
+   - Pixel/location evidence now points above the AddressBar client itself, so the next root-cause pass must inspect `CSizableReBar` / `CControlBar` non-client sizing/borders and band container painting rather than adding another AddressBar frame overlay.
+   - Acceptance: the current-folder row blends into the surrounding Win11-style surface without classic two-tone/rebar borders.
 
 ### Development handoff rule
 
