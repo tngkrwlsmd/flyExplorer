@@ -1655,8 +1655,11 @@ void CMenuBar::OnCustomDraw( NMHDR* pNMHDR, LRESULT* pResult )
                         TBCDRF_NOBACKGROUND |
                         TBCDRF_USECDCOLORS;
 
+                    // A background/inactive top-level window must not make
+                    // ordinary menu commands unreadable on Dark chrome.
+                    // Only a genuinely disabled command uses secondary text.
                     const COLORREF sTextColor =
-                        ( ( uItemState & CDIS_DISABLED ) || !m_bFrameActive ) ?
+                        ( uItemState & CDIS_DISABLED ) ?
                         sPalette.mSecondaryText :
                         sPalette.mText;
 

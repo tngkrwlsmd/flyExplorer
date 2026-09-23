@@ -3078,6 +3078,20 @@ def validate_win11_stability_regressions() -> list[str]:
             "src/fxfile/gui/rebar/MenuBar.cpp: Dark text ownership must not depend on ambiguous custom-draw item indexing"
         )
 
+    if "( ( uItemState & CDIS_DISABLED ) || !m_bFrameActive )" in contents["menubar"]:
+        errors.append(
+            "src/fxfile/gui/rebar/MenuBar.cpp: inactive frame must not dim enabled Dark menu text"
+        )
+    for token in (
+        "( uItemState & CDIS_DISABLED ) ?",
+        "sPalette.mSecondaryText :",
+        "sPalette.mText;",
+    ):
+        if token not in contents["menubar"]:
+            errors.append(
+                f"src/fxfile/gui/rebar/MenuBar.cpp: enabled/disabled Dark menu contrast contract missing {token}"
+            )
+
     for source_name in ("toolbar_cpp", "menubar"):
         for token in (
             "TBCDRF_USECDCOLORS",
