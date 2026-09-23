@@ -1343,3 +1343,30 @@
 - `python build/validate_source_invariants.py`: **NOT RETESTED** on the user's Windows checkout after `53b2490a`.
 - `local_ci.bat x64`, VS 2026 project generation, Release-x64-Unicode compile/link/runtime smoke: **NOT RETESTED** after `53b2490a`.
 
+---
+
+## 2026-09-23 — MenuBar final text ownership moved to WM_PAINT post-pass
+
+**오류 발생**
+- 사용자가 `03bc40ce`로 실제 rebuild한 screenshot에서도 top menu labels가 어둡게 남아 있었다.
+- custom draw source, explicit reflection, enabled/inactive color policy가 모두 최신 상태였으므로 `NM_CUSTOMDRAW`만으로 final pixel ownership을 보장할 수 없다는 runtime evidence가 됐다.
+
+**원인 진단**
+- ToolbarWindow32/native renderer가 custom-draw 결과 이후에도 최종 text pixels를 소유하거나, 일부 paint cycle에서 custom-draw 경로가 최종 draw가 아닐 수 있다.
+- 따라서 "custom draw handler가 존재하고 올바른 색을 설정함"은 화면 결과의 충분조건이 아니었다.
+
+**해결 방법**
+- `CMenuBar::OnPaint()`를 추가한다.
+- 먼저 `CToolBar::Default()`로 native layout/hit-testing/accessibility paint를 완료한다.
+- non-High-Contrast modern path에서 textual toolbar button을 index로 순회하고 각 button rect를 `ThemePalette.mChrome`으로 다시 지워 native text를 제거한다.
+- hot/pressed 상태는 ThemePalette hover/pressed surface로 다시 그린다.
+- enabled label은 `mText`, 실제 disabled label만 `mSecondaryText`로 마지막에 `DrawText`한다.
+- accelerator/focus cue를 `WM_QUERYUISTATE`와 기존 tracking state에 맞춰 유지한다.
+- MDI caption buttons도 post-pass 끝에서 기존 `CMenuBarButton::DrawButton()`으로 다시 그린다.
+- invariant는 `ON_WM_PAINT`, `CMenuBar::OnPaint`, native-default-first, per-button chrome erase, final `DrawText` ownership을 요구한다.
+
+**검증 상태**
+- User rebuilt screenshot before fix: FAIL on revision `03bc40ce`.
+- Connector diff/source audit after fix: PASS — declaration/message map/implementation/final renderer guard all present.
+- Windows rebuilt screenshot after `d48c9cb5`: **NOT RETESTED**.
+

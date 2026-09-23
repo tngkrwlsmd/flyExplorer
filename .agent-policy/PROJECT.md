@@ -77,7 +77,7 @@
     }
   ],
   "review": {
-    "reviewed_revision": "53b2490ad74bb9800e42152aa64e86cb4869fb8b",
+    "reviewed_revision": "d48c9cb58a02ab6d14343e837ac4d49211a285f1",
     "reviewed_at": "2026-09-23",
     "reviewed_paths": [
       "AGENTS.md",
@@ -337,11 +337,12 @@ Status: **ACTIVE / user-reproduced runtime failures**. These items are the immed
    - `a46dbadd` registers `FlatHeaderCtrl.cpp` as the `header` contract source and changes the local contents map to report a deterministic `missing source registration` invariant error rather than raising `KeyError` if a future source key is omitted.
    - Connector static cross-check after the change found no `contents["..."]` references missing from the function's `paths` map. Acceptance still requires a user rerun: `python build/validate_source_invariants.py` must complete without traceback and `local_ci.bat x64` must progress past source invariant/regression preflight.
 
-7. **MenuBar text remains too dark — ACTIVE / reproduced on rebuilt 03bc40ce**
-   - The user supplied a screenshot whose `build-revision.txt` is `03bc40ce000a36205fecaba7e3c335cd074b95c5`, so the current source and validator fixes are present, yet top-menu labels remain visibly dark.
-   - Previous `NM_CUSTOMDRAW`/reflection/color-policy fixes therefore do not own the final pixels reliably enough.
-   - Next fix: add a non-High-Contrast `CMenuBar::OnPaint()` post-pass. Let native toolbar paint layout/hit-testing first, then repaint each textual menu-button rect with ThemePalette chrome/state background and draw the menu text with `mText` (or `mSecondaryText` only for disabled commands), finishing after native rendering.
-   - Acceptance: the final screenshot must show readable menu labels regardless of whether `NM_CUSTOMDRAW` fires or what ToolbarWindow32 does internally.
+7. **MenuBar text remains too dark — CODE FIXED / RUNTIME NOT RETESTED**
+   - The rebuilt `03bc40ce` screenshot proved that the `NM_CUSTOMDRAW`/reflection/color-policy path still did not reliably own final pixels.
+   - `d48c9cb5` adds a non-High-Contrast `CMenuBar::OnPaint()` post-pass. ToolbarWindow32 performs its native paint first; then each textual menu-button rect is cleared back to ThemePalette chrome, hover/pressed state is redrawn, and the menu label is drawn last with `mText` or `mSecondaryText` only for actually disabled commands.
+   - This final pass uses toolbar button rectangles/text/state directly and therefore does not depend on `NM_CUSTOMDRAW` firing or on native text-color fields being honored.
+   - The invariant now requires the final `WM_PAINT` ownership tokens in addition to existing custom-draw guards.
+   - Acceptance remains runtime/screenshot based: menu labels must be visibly readable in active and inactive Dark windows.
 
 8. **Address/current-folder classic client edge remains — CODE FIXED / RUNTIME NOT RETESTED**
    - Rebuilt `80ccaea9` runtime evidence showed the classic rectangular edge. Screenshot pixel inspection identified a 2-row sunken client pattern: top rows around RGB 160/105 and bottom rows around RGB 227/255 across almost the full control width.
