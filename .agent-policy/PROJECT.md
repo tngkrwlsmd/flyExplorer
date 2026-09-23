@@ -77,7 +77,7 @@
     }
   ],
   "review": {
-    "reviewed_revision": "aedb695c74a75bd5842fc0c5e9aad5cf42113e33",
+    "reviewed_revision": "083de73456a3747296fb25ad2e140ceb0e0f92d2",
     "reviewed_at": "2026-09-23",
     "reviewed_paths": [
       "AGENTS.md",
@@ -343,11 +343,12 @@ Status: **ACTIVE / user-reproduced runtime failures**. These items are the immed
    - The invariant now requires this explicit reflection call and still rejects a `return FALSE;` bypass in the child-notification block.
    - Acceptance remains runtime/screenshot based: Dark top-menu text must render with the app palette before this item closes.
 
-8. **Address/current-folder white outline still visible — ACTIVE / user screenshot reproduced again**
-   - Latest rebuilt `main` screenshot still shows a rectangular outline around the `내 문서` row.
-   - The current `PaintFlatAddressEdge(..., mElevated)` approach is itself visibly drawing a 2px rectangle whose color differs from the pane background. The correct Win11-style contract is **no persistent frame outside High Contrast**, not "paint a darker/lighter replacement frame".
-   - Next fix: keep border/client-edge styles removed, suppress non-client edge painting outside High Contrast, and stop drawing `PaintFlatAddressEdge` in outer/inner idle paint paths.
-   - Acceptance: the idle current-folder row has no visible rectangular outline while text, drop-down, focus/caret and High Contrast behavior remain usable.
+8. **Address/current-folder white outline still visible — CODE FIXED / RUNTIME NOT RETESTED**
+   - Latest rebuilt `main` screenshot still showed a rectangular outline around the `내 문서` row.
+   - Root cause correction: the replacement `PaintFlatAddressEdge(..., mElevated)` introduced by the previous attempt was itself drawing a visible 2px rectangle. The correct Win11-style contract is no persistent frame outside High Contrast.
+   - `083de734` removes `PaintFlatAddressEdge` entirely. Outer `AddressBar::OnNcPaint()` does nothing outside High Contrast after styles are flattened; inner ComboBox/Edit `WM_NCPAINT` return 0 outside High Contrast so native legacy edges cannot reappear. High Contrast still delegates to native painting.
+   - The invariant now forbids any `PaintFlatAddressEdge` implementation/usage and requires the frameless non-client suppression path.
+   - Acceptance remains screenshot based: the idle current-folder row must have no visible rectangular outline while text, drop-down, focus/caret and High Contrast behavior remain usable.
 
 9. **Local CI address invariant drift — CODE FIXED / LOCAL CI NOT RETESTED**
    - User `local_ci.bat x64` on 2026-09-23 19:40 reached source invariant/regression preflight and failed with `address: missing Win11 soft-surface token sPalette.mFocus` plus `palette-owned address frame painting is missing`.

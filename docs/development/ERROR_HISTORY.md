@@ -1230,3 +1230,27 @@
 - Connector source audit after fix: PASS — explicit reflection is in the active `CSizableReBar::OnNotify()` child path.
 - Windows rebuilt screenshot after `aedb695c`: **NOT RETESTED**.
 
+---
+
+## 2026-09-23 — Replacement AddressBar frame itself remained visible
+
+**오류 발생**
+- 사용자가 최신 `main`을 pull/rebuild한 뒤에도 `내 문서` current-folder row의 rectangular outline이 그대로 보인다고 재현했다.
+- 이전 `PaintFlatAddressEdge(..., mElevated)` 방식은 native white edge를 가리는 목적이었지만 실제 screenshot에서는 그 replacement edge 자체가 지속적인 box로 보였다.
+
+**원인 진단**
+- Root cause: Win11-style acceptance target은 "다른 색으로 frame을 다시 그리기"가 아니라 **persistent frame 없음**인데, 이전 수정은 outer/inner HWND 모두에 2px replacement frame을 명시적으로 그렸다.
+- 즉 final renderer ownership은 앱이 가져왔지만 최종 시각 결과 자체가 요구사항과 달랐다.
+
+**해결 방법**
+- `PaintFlatAddressEdge()` helper와 모든 호출을 제거했다.
+- outer `AddressBar::OnNcPaint()`는 High Contrast에서만 `Default()`를 호출하고 일반 Light/Dark에서는 아무 replacement frame도 그리지 않는다.
+- inner ComboBox/Edit의 `WM_NCPAINT`는 non-High-Contrast에서 0을 반환해 legacy native edge를 억제한다.
+- existing `WS_BORDER` / `WS_EX_CLIENTEDGE` removal + `SWP_FRAMECHANGED` contract는 유지한다.
+- invariant는 `PaintFlatAddressEdge` 재도입을 금지하고 non-High-Contrast `WM_NCPAINT` suppression을 요구한다.
+
+**검증 상태**
+- User rebuilt screenshot before this fix: FAIL — current-folder row still boxed.
+- Connector source/invariant audit after fix: PASS — replacement frame removed; remaining `PaintFlatAddressEdge` references are forbidden checks only.
+- Windows rebuilt screenshot after `083de734`: **NOT RETESTED**.
+
