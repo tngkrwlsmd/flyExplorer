@@ -32,6 +32,44 @@ const xpr_tchar_t kDefConfDir    [] = XPR_STRING_LITERAL("%AppData%\\fxfile\\con
 
 const xpr_tchar_t kFxFileSection [] = XPR_STRING_LITERAL(".fxfile");
 const xpr_tchar_t kConfHomeKey   [] = XPR_STRING_LITERAL("conf_home");
+
+xpr_bool_t IsWritableConfDir(const xpr_tchar_t *aDir)
+{
+    if (XPR_IS_NULL(aDir) || aDir[0] == XPR_STRING_LITERAL('\0'))
+        return XPR_FALSE;
+
+    const DWORD sAttributes = ::GetFileAttributes(aDir);
+    if (sAttributes == INVALID_FILE_ATTRIBUTES ||
+        XPR_TEST_BITS(sAttributes, FILE_ATTRIBUTE_DIRECTORY) == XPR_FALSE)
+    {
+        return XPR_FALSE;
+    }
+
+    xpr_tchar_t sProbePath[XPR_MAX_PATH + 1] = {0};
+    _sntprintf(
+        sProbePath,
+        XPR_MAX_PATH,
+        XPR_STRING_LITERAL("%s\\.fxfile-write-test-%lu-%lu.tmp"),
+        aDir,
+        static_cast<xpr_ulong_t>(::GetCurrentProcessId()),
+        static_cast<xpr_ulong_t>(::GetTickCount()));
+    sProbePath[XPR_MAX_PATH] = XPR_STRING_LITERAL('\0');
+
+    HANDLE sProbeFile = ::CreateFile(
+        sProbePath,
+        GENERIC_WRITE,
+        FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+        XPR_NULL,
+        CREATE_NEW,
+        FILE_ATTRIBUTE_TEMPORARY,
+        XPR_NULL);
+    if (sProbeFile == INVALID_HANDLE_VALUE)
+        return XPR_FALSE;
+
+    ::CloseHandle(sProbeFile);
+    ::DeleteFile(sProbePath);
+    return XPR_TRUE;
+}
 } // namespace anonymous
 
 ConfDir::ConfDir(void)
@@ -147,13 +185,13 @@ xpr_bool_t ConfDir::getSaveDir(xpr_tchar_t *aDir, xpr_size_t aMaxLen) const
     if (getDir(aDir, aMaxLen) == XPR_FALSE)
         return XPR_FALSE;
 
-    if (IsExistFile(aDir) == XPR_TRUE)
-        return XPR_TRUE;
+    if (IsExistFile(aDir) == XPR_FALSE)
+    {
+        if (CreateDirectoryLevel(aDir) == XPR_FALSE)
+            return XPR_FALSE;
+    }
 
-    if (CreateDirectoryLevel(aDir) == XPR_FALSE)
-        return XPR_FALSE;
-
-    return XPR_TRUE;
+    return IsWritableConfDir(aDir);
 }
 
 void ConfDir::setBackup(void)
@@ -260,7 +298,19 @@ xpr_bool_t ConfDir::load(void)
             {
                 setConfDir(sValue);
 
-                sResult = XPR_TRUE;
+                // Old portable profiles may still point at %fxfile%\\conf.
+                // Once fxfile lives under Program Files that path is readable
+                // but not writable for a standard user. Verify the configured
+                // directory instead of treating mere existence as writable.
+                xpr_tchar_t sConfiguredDir[XPR_MAX_PATH + 1] = {0};
+                if (getDir(sConfiguredDir, XPR_MAX_PATH + 1) == XPR_TRUE)
+                {
+                    if (IsExistFile(sConfiguredDir) == XPR_FALSE)
+                        CreateDirectoryLevel(sConfiguredDir);
+
+                    if (IsWritableConfDir(sConfiguredDir) == XPR_TRUE)
+                        sResult = XPR_TRUE;
+                }
             }
         }
     }
@@ -272,7 +322,17 @@ xpr_bool_t ConfDir::load(void)
         {
             setConfDir(sDefConfDir);
 
-            sResult = XPR_TRUE;
+            xpr_tchar_t sDefaultDir[XPR_MAX_PATH + 1] = {0};
+            if (getDir(sDefaultDir, XPR_MAX_PATH + 1) == XPR_TRUE)
+            {
+                if (IsExistFile(sDefaultDir) == XPR_FALSE)
+                    CreateDirectoryLevel(sDefaultDir);
+
+                sResult =
+                    IsWritableConfDir(sDefaultDir) == XPR_TRUE ?
+                    XPR_TRUE :
+                    XPR_FALSE;
+            }
         }
     }
 
