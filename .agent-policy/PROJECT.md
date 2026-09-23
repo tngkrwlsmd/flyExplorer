@@ -361,6 +361,12 @@ Status: **ACTIVE / user-reproduced runtime failures**. These items are the immed
    - This was added as process hardening after a failed preflight could leave an older `bin\\x64\\fxfile.exe` in place. It is **not** the explanation for the latest screenshot; the user confirmed they pulled `main` and rebuilt before reproducing it.
    - `a630bf19` logs the current Git revision, writes `bin\\x64\\build-revision.txt` after a successful x64 rebuild, and emits an explicit stale-artifact warning if x64 CI fails before rebuilding the executable.
 
+11. **Local CI menu contrast validator false positive — ACTIVE**
+   - User `local_ci.bat x64` on revision `277a64249c376d271a1684bf182cca1bfc9d25f6` fails source invariant/regression preflight with `inactive frame must not dim enabled Dark menu text`.
+   - Current source audit shows the modern Dark custom-draw branch already uses only `CDIS_DISABLED ? mSecondaryText : mText`. The remaining `!m_bFrameActive` checks are confined to legacy WinXP/system-color fallback code.
+   - Root cause under repair: the invariant scans the entire `MenuBar.cpp` file instead of the modern non-High-Contrast custom-draw block, so valid legacy fallback code triggers a false positive.
+   - Acceptance: scope the check to the modern Dark branch, verify the modern block contains no inactive-frame dimming condition, and ensure `local_ci.bat x64` progresses beyond source invariant/regression preflight. Until user rerun, status is `CODE FIXED / LOCAL CI NOT RETESTED`.
+
 ### Development handoff rule
 
 - Every new user-requested development item is added to this section (or its successor) before implementation starts.
