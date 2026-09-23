@@ -2492,6 +2492,8 @@ def validate_win11_stability_regressions() -> list[str]:
         "CreateDirectoryLevel(sConfiguredDir)",
         "IsWritableConfDir(sConfiguredDir)",
         "IsWritableConfDir(sDefaultDir)",
+        "sPersistedConfHome",
+        "save();",
     ):
         if token not in conf_dir:
             errors.append(
@@ -2582,12 +2584,15 @@ def validate_win11_stability_regressions() -> list[str]:
             "src/fxfile/main_toolbar.cpp: default toolbar icon mode must remain the readable large Fluent size"
         )
     for token in (
-        "if (sIconType == TBI_SMALL || XPR_IS_FALSE(IsIconTypeAvailable(sIconType)))",
-        "sIconType = TBI_LARGE;",
+        "kModernToolbarStateMarker",
+        "sModernToolbarState = XPR_FALSE",
+        "sId == kModernToolbarStateMarker",
+        "XPR_IS_FALSE(sModernToolbarState) && sIconType == TBI_SMALL",
+        "sId = kModernToolbarStateMarker;",
     ):
         if token not in contents["main_toolbar"]:
             errors.append(
-                f"src/fxfile/main_toolbar.cpp: persisted legacy icon migration missing token {token}"
+                f"src/fxfile/main_toolbar.cpp: one-time legacy icon migration missing token {token}"
             )
 
     for source_name in ("toolbar_cpp", "menubar"):
