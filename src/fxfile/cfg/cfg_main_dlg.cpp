@@ -329,6 +329,24 @@ void EnsureModernCfgButtonHeight(
         aMinimumHeight,
         SWP_NOZORDER | SWP_NOACTIVATE);
 }
+
+void ShowLanguageRestartNoticeIfChanged(
+    const Option::Config &aOldConfig,
+    const Option::Config &aNewConfig,
+    CWnd *aOwner)
+{
+    if (_tcsicmp(aOldConfig.mLanguage, aNewConfig.mLanguage) == 0)
+        return;
+
+    const xpr_tchar_t *sMsg =
+        gApp.loadString(
+            XPR_STRING_LITERAL(
+                "popup.cfg.msg.apply_language_on_next_loading_time"));
+    if (XPR_IS_NOT_NULL(aOwner))
+        aOwner->MessageBox(sMsg, XPR_NULL, MB_OK | MB_ICONWARNING);
+    else
+        AfxMessageBox(sMsg, MB_OK | MB_ICONWARNING);
+}
 } // namespace
 
 xpr_sint_t CfgMainDlg::mLastShowCfg = 0;
@@ -979,6 +997,9 @@ HBRUSH CfgMainDlg::OnCtlColor(CDC* pDC, CWnd* pWnd, xpr_uint_t nCtlColor)
 
 void CfgMainDlg::OnDefault(void)
 {
+    Option::Config sOldConfig;
+    gOpt->copyConfig(sOldConfig);
+
     const xpr_tchar_t *sMsg = gApp.loadString(XPR_STRING_LITERAL("popup.cfg.msg.confirm_default"));
     xpr_sint_t sMsgId = MessageBox(sMsg, XPR_NULL, MB_OK | MB_ICONWARNING | MB_YESNO);
     if (sMsgId != IDYES)
@@ -1001,6 +1022,11 @@ void CfgMainDlg::OnDefault(void)
 
     // notify default option
     gOpt->notifyConfig();
+
+    ShowLanguageRestartNoticeIfChanged(
+        sOldConfig,
+        mNewConfig,
+        this);
 
     xpr_sint_t i;
     CfgItem *sCfgItem;
@@ -1031,6 +1057,9 @@ void CfgMainDlg::OnDefault(void)
 void CfgMainDlg::OnApply(void)
 {
     CWaitCursor sWaitCursor;
+
+    Option::Config sOldConfig;
+    gOpt->copyConfig(sOldConfig);
 
     CfgItem *sCfgItem;
     CfgDeque::iterator sIterator;
@@ -1064,6 +1093,11 @@ void CfgMainDlg::OnApply(void)
 
     // notify new option
     gOpt->notifyConfig();
+
+    ShowLanguageRestartNoticeIfChanged(
+        sOldConfig,
+        mNewConfig,
+        this);
 
     GetDlgItem(IDC_CFG_APPLY)->EnableWindow(XPR_FALSE);
 }
