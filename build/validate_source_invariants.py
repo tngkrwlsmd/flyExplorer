@@ -2801,10 +2801,14 @@ def validate_win11_stability_regressions() -> list[str]:
             )
 
     for token in (
+        "kAddressBarOuterBorderProp",
+        "kAddressBarOuterClientEdgeProp",
         "kAddressBarComboBorderProp",
         "kAddressBarComboClientEdgeProp",
         "kAddressBarEditBorderProp",
         "kAddressBarEditClientEdgeProp",
+        "sNewOuterStyle &= ~static_cast<LONG_PTR>(WS_BORDER)",
+        "sNewOuterExStyle &= ~static_cast<LONG_PTR>(WS_EX_CLIENTEDGE)",
         "sNewComboStyle &= ~static_cast<LONG_PTR>(WS_BORDER)",
         "sNewComboExStyle &= ~static_cast<LONG_PTR>(WS_EX_CLIENTEDGE)",
         "sNewEditStyle &= ~static_cast<LONG_PTR>(WS_BORDER)",
