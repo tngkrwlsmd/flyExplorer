@@ -3037,22 +3037,46 @@ DROPEFFECT FolderCtrl::OnDragOver(COleDataObject *aOleDataObject, DWORD aKeyStat
 
             if (aOleDataObject->GetData(sClipFormat.mShellIDList, &sStgMedium, &sFormatEtc) == XPR_TRUE)
             {
-                LPIDA sIda = (LPIDA)::GlobalLock(sStgMedium.hGlobal);
-                LPITEMIDLIST sPidl1 = (LPITEMIDLIST)(((xpr_byte_t *)sIda)+(sIda)->aoffset[0]);
-
-                xpr_tchar_t sPath[XPR_MAX_PATH + 1];
-                GetName(sPidl1, SHGDN_FORPARSING, sPath);
-
-                xpr_tchar_t sHitPath[XPR_MAX_PATH + 1];
-                LPTVITEMDATA sTvItemData = (LPTVITEMDATA)GetItemData(sTreeItem);
-                if (XPR_IS_NOT_NULL(sTvItemData))
+                LPIDA sIda =
+                    (LPIDA)::GlobalLock(
+                        sStgMedium.hGlobal);
+                if (XPR_IS_NOT_NULL(sIda))
                 {
-                    GetName(sTvItemData->mShellFolder, sTvItemData->mPidl, SHGDN_FORPARSING, sHitPath);
-                    if (sPath[0] == sHitPath[0])
-                        sCopy = XPR_FALSE;
-                }
+                    LPITEMIDLIST sPidl1 =
+                        (LPITEMIDLIST)(
+                            (xpr_byte_t *)sIda +
+                            sIda->aoffset[0]);
 
-                ::GlobalUnlock(sStgMedium.hGlobal);
+                    xpr_tchar_t sPath[
+                        XPR_MAX_PATH + 1] = {0};
+                    GetName(
+                        sPidl1,
+                        SHGDN_FORPARSING,
+                        sPath);
+
+                    xpr_tchar_t sHitPath[
+                        XPR_MAX_PATH + 1] = {0};
+                    LPTVITEMDATA sTvItemData =
+                        (LPTVITEMDATA)GetItemData(
+                            sTreeItem);
+                    if (XPR_IS_NOT_NULL(sTvItemData))
+                    {
+                        GetName(
+                            sTvItemData->mShellFolder,
+                            sTvItemData->mPidl,
+                            SHGDN_FORPARSING,
+                            sHitPath);
+                        if (sPath[0] !=
+                                XPR_STRING_LITERAL('\0') &&
+                            sPath[0] == sHitPath[0])
+                        {
+                            sCopy = XPR_FALSE;
+                        }
+                    }
+
+                    ::GlobalUnlock(
+                        sStgMedium.hGlobal);
+                }
 
                 ::ReleaseStgMedium(&sStgMedium);
             }
