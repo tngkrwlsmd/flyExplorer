@@ -383,11 +383,14 @@ Status: **ACTIVE / user-reproduced runtime failures**. These items are the immed
    - Connector-side reproduction against current `MenuBar.cpp` found the paint block and all required semantic steps with zero missing tokens; the stale chained-call requirement is absent.
    - Acceptance still requires the user's rerun: `local_ci.bat x64` must pass source invariant/regression preflight and proceed to VS 2026 x64 generation/build.
 
-14. **Dark command/popup typography and icon-state regressions — ACTIVE / USER REPRODUCED 2026-09-24**
-   - User runtime screenshots on current `main` show five remaining visual failures: About tab labels are clipped; toolbar hot-state rendering can become near-white and erase icon contrast; black text still appears on dark command surfaces; command-bar labels such as `뒤로` / `이름변경` do not share one UI-font contract; Up-box/popup/drop-down secondary controls and detail/submenu glyphs remain inconsistent or unreadable.
-   - Scope is not limited to the photographed controls. Audit the shared toolbar/menu/dialog renderers and all command-popup users so hover/pressed/disabled/text/icon/submenu states follow the same ThemePalette + system UI-font contract.
-   - Acceptance: no ellipsized About tabs at normal DPI; toolbar hover is a subtle dark elevation rather than a white block; dark surfaces never render native black text; command labels use one UI font; Up-box and BCMenu/toolbar/drop-down secondary glyphs remain visible in Dark mode.
-   - This user-reproduced item remains ACTIVE until matching Windows runtime screenshots pass. Source/static/CI evidence alone is not runtime closure.
+14. **Dark command/popup typography and icon-state regressions — CODE FIXED / RUNTIME NOT RETESTED**
+   - User runtime screenshots on current `main` showed five remaining visual failures: About tab labels were clipped; toolbar hot-state rendering could become near-white and erase icon contrast; black/native text still appeared on dark command surfaces; command-bar labels such as `뒤로` / `이름변경` did not share one final UI-font renderer; Up-box/popup/drop-down secondary controls and detail/submenu glyphs remained inconsistent or unreadable.
+   - Shared-root fixes: `ModernUI::drawDialogTab()` reduces the custom tab side inset from 8 to 3 DPI pixels; `CToolBarEx` duplicates the cold image list for Dark hot state instead of loading the legacy HOT strip, finalizes text/drop-down chevrons in `CDDS_ITEMPOSTPAINT`, uses the control's UI font, and resets native popup-toolbar theming in Dark mode.
+   - Visible dialog toolbars were audited. `HistoryDlg` (the Up-box implementation), `DriveDlg`, and the reusable `DlgToolBar` path now use `CToolBarEx`; the latter also covers the batch-rename dialog toolbar. This removes the remaining plain visible `CToolBar` dialog path apart from the separately-owned `CMenuBar`.
+   - `BCMenu` now forces the palette-owned modern renderer in Dark/non-High-Contrast even when the legacy “standard menu” option is enabled, so submenu/detail chevrons and menu text cannot fall back to black system colors. Existing `DropMenuButton` and `ColourPickerXP` Dark arrows were audited and already use ThemePalette foreground colors.
+   - Source invariant coverage now protects final toolbar post-paint ownership, dark hot-image behavior, compact tab padding, modern dialog-toolbar inheritance, and the Dark BCMenu renderer.
+   - Acceptance remains unchanged: no ellipsized About tabs at normal DPI; toolbar hover is a subtle dark elevation rather than a white block; dark surfaces never render native black text; command labels use one UI font; Up-box and BCMenu/toolbar/drop-down secondary glyphs remain visible in Dark mode.
+   - This user-reproduced item remains ACTIVE for runtime closure until matching Windows screenshots pass. Source/static/CI evidence alone is not visual PASS.
 
 ### Development handoff rule
 
