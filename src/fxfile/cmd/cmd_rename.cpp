@@ -69,7 +69,13 @@ xpr_sint_t RenameCommand::canExecute(CommandContext &aContext)
         }
         else
         {
-            sEnable = XPR_TRUE;
+            // With no selection, Rename is only meaningful when the configured
+            // multi-rename path intentionally targets all filesystem items.
+            sEnable =
+                (sExplorerCtrl->isFileSystemFolder() == XPR_TRUE &&
+                 gOpt->mConfig.mBatchRenameMultiSel == XPR_TRUE) ?
+                XPR_TRUE :
+                XPR_FALSE;
         }
     }
 
@@ -359,6 +365,16 @@ void RenameCommand::execute(CommandContext &aContext)
         else
         {
             xpr_sint_t sIndex = sSearchResultCtrl->GetSelectionMark();
+            if (sIndex < 0)
+            {
+                POSITION sPosition =
+                    sSearchResultCtrl->GetFirstSelectedItemPosition();
+                if (XPR_IS_NOT_NULL(sPosition))
+                    sIndex = sSearchResultCtrl->GetNextSelectedItem(sPosition);
+            }
+
+            if (sIndex < 0)
+                return;
 
             xpr_bool_t sResult = XPR_FALSE;
 
@@ -445,8 +461,24 @@ void RenameCommand::execute(CommandContext &aContext)
             }
         }
 
+        // The batch-all path above is the only supported zero-selection
+        // rename operation. Never pass -1 to EditLabel after that path falls
+        // through (for example, when the folder is empty).
+        if (sExplorerCtrl->GetSelectedCount() <= 0)
+            return;
+
         xpr_bool_t sRenamed = XPR_FALSE;
         xpr_sint_t sSelIndex = sExplorerCtrl->GetSelectionMark();
+        if (sSelIndex < 0)
+        {
+            POSITION sPosition =
+                sExplorerCtrl->GetFirstSelectedItemPosition();
+            if (XPR_IS_NOT_NULL(sPosition))
+                sSelIndex = sExplorerCtrl->GetNextSelectedItem(sPosition);
+        }
+
+        if (sSelIndex < 0)
+            return;
 
         if (gOpt->mConfig.mSingleRenameType == SINGLE_RENAME_TYPE_BY_POPUP)
         {
