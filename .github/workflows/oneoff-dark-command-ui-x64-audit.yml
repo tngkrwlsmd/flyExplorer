@@ -1,0 +1,109 @@
+name: One-off Dark Command UI x64 Audit
+
+on:
+  push:
+    branches:
+      - fix/dark-ui-command-audit-20260924
+
+permissions:
+  contents: read
+
+jobs:
+  release-x64:
+    runs-on: windows-2025-vs2026
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
+        with:
+          python-version: "3.14"
+
+      - name: Generate Visual Studio 2026 x64 solution with source regression preflight
+        shell: cmd
+        run: call build.bat 2026 x64
+
+      - name: Locate Visual Studio 2026 MSBuild
+        id: msbuild
+        shell: pwsh
+        run: |
+          $vswhere = Join-Path ${env:ProgramFiles(x86)} "Microsoft Visual Studio\Installer\vswhere.exe"
+          if (-not (Test-Path $vswhere)) {
+            throw "vswhere.exe was not found on the Visual Studio 2026 runner."
+          }
+          $installationPath = & $vswhere -latest -products * -requires Microsoft.Component.MSBuild -property installationPath
+          if (-not $installationPath) {
+            throw "Visual Studio installation with MSBuild was not found."
+          }
+          $msbuild = Join-Path $installationPath "MSBuild\Current\Bin\MSBuild.exe"
+          if (-not (Test-Path $msbuild)) {
+            throw "MSBuild.exe was not found at $msbuild."
+          }
+          "path=$msbuild" >> $env:GITHUB_OUTPUT
+
+      - name: Verify generated x64 contract
+        shell: pwsh
+        run: |
+          if (-not (Test-Path "fxfile.sln")) {
+            throw "fxfile.sln was not generated."
+          }
+          $solution = Get-Content "fxfile.sln" -Raw
+          if ($solution -notmatch [regex]::Escape("Release-x64-Unicode|x64")) {
+            throw "Release-x64-Unicode|x64 is missing from fxfile.sln."
+          }
+          $projects = Get-ChildItem "src" -Recurse -Filter "*.vcxproj"
+          if (-not ($projects | Select-String -SimpleMatch "<PlatformToolset>v145</PlatformToolset>")) {
+            throw "Generated projects do not contain the v145 platform toolset."
+          }
+          $mainProject = Get-Content "src\fxfile\fxfile.vcxproj" -Raw
+          if ($mainProject -notmatch "<UseOfMfc>Static</UseOfMfc>") {
+            throw "The main MFC project is missing UseOfMfc=Static."
+          }
+
+      - name: Build Release-x64-Unicode
+        shell: pwsh
+        env:
+          MSBUILD_PATH: ${{ steps.msbuild.outputs.path }}
+        run: |
+          $logPath = Join-Path $env:RUNNER_TEMP "fxfile-msbuild-x64.log"
+          & $env:MSBUILD_PATH "fxfile.sln" /m /nologo /verbosity:minimal /fl "/flp:logfile=$logPath;verbosity=normal" /p:Configuration=Release-x64-Unicode /p:Platform=x64
+          if ($LASTEXITCODE -ne 0) {
+            throw "Release-x64-Unicode MSBuild failed with exit code $LASTEXITCODE."
+          }
+
+      - name: Reject build warnings
+        shell: pwsh
+        run: |
+          $logPath = Join-Path $env:RUNNER_TEMP "fxfile-msbuild-x64.log"
+          $warnings = Select-String -Path $logPath -Pattern "\bwarning (?:C\d+|LNK\d+|MSB\d+):"
+          if ($warnings) {
+            throw "Release-x64-Unicode emitted $($warnings.Count) compiler/linker/MSBuild warning(s)."
+          }
+
+      - name: Verify x64 artifacts
+        shell: pwsh
+        run: |
+          foreach ($path in @(
+            "bin\x64\fxfile.exe",
+            "bin\x64\libxprw.dll",
+            "bin\x64\fxfile-crash.dll",
+            "bin\x64\fxfile-launcher.exe",
+            "bin\x64\fxfile-keyhook.dll",
+            "bin\x64\fxfile-functional-tests.exe"
+          )) {
+            if (-not (Test-Path -LiteralPath $path -PathType Leaf)) {
+              throw "Required Release-x64-Unicode artifact is missing: $path"
+            }
+          }
+
+      - name: Run x64 product functional regression
+        shell: pwsh
+        run: |
+          & ".\bin\x64\fxfile-functional-tests.exe"
+          if ($LASTEXITCODE -ne 0) {
+            throw "x64 functional regression failed with exit code $LASTEXITCODE."
+          }
+
+      - name: Run x64 launch smoke
+        shell: pwsh
+        run: |
+          & ".\build\runtime_smoke.ps1" -SourceDir "bin\x64" -Configuration "Release-x64-Unicode"
