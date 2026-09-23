@@ -134,6 +134,9 @@ LRESULT ApplyDarkToolBarCustomDraw(
                 (sItemState & CDIS_DISABLED) ?
                 sPalette.mSecondaryText :
                 sPalette.mText;
+            aCustomDraw->clrTextHighlight = aCustomDraw->clrText;
+            aCustomDraw->nStringBkMode = TRANSPARENT;
+            aCustomDraw->nHLStringBkMode = TRANSPARENT;
 
             if (!(sItemState & CDIS_DISABLED) &&
                 (sItemState & (CDIS_HOT | CDIS_SELECTED | CDIS_CHECKED)))
@@ -150,6 +153,7 @@ LRESULT ApplyDarkToolBarCustomDraw(
                 DrawRoundedToolbarState(aCustomDraw, sStateColor);
                 aCustomDraw->clrHighlightHotTrack = sStateColor;
                 aCustomDraw->clrText = sPalette.mText;
+                aCustomDraw->clrTextHighlight = sPalette.mText;
             }
 
             return sResult;
