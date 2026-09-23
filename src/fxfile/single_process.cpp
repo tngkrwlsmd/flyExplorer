@@ -26,15 +26,24 @@ HANDLE SingleProcess::mSingleProcessMutex = XPR_NULL;
 
 xpr_bool_t SingleProcess::check(void)
 {
-    HANDLE sSingleProcessMutex;
-
-    sSingleProcessMutex = ::OpenMutex(MUTEX_ALL_ACCESS, XPR_FALSE, kSingleProcessMutexName);
+    // Presence detection does not need MUTEX_ALL_ACCESS. Requesting all access
+    // can fail when an existing fxfile instance has a different integrity
+    // level, which made the result depend on whether the new process was
+    // elevated. SYNCHRONIZE is sufficient to open an existing mutex.
+    ::SetLastError(ERROR_SUCCESS);
+    HANDLE sSingleProcessMutex =
+        ::OpenMutex(SYNCHRONIZE, XPR_FALSE, kSingleProcessMutexName);
     if (XPR_IS_NOT_NULL(sSingleProcessMutex))
     {
+        ::CloseHandle(sSingleProcessMutex);
         return XPR_FALSE;
     }
 
-    CLOSE_HANDLE(sSingleProcessMutex);
+    // If Windows denies even the minimal open, the named object still exists.
+    // Treat it as an existing instance instead of incorrectly creating a
+    // second process solely because the integrity levels differ.
+    if (::GetLastError() == ERROR_ACCESS_DENIED)
+        return XPR_FALSE;
 
     return XPR_TRUE;
 }
