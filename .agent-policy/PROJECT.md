@@ -77,7 +77,7 @@
     }
   ],
   "review": {
-    "reviewed_revision": "e6c3e2c7e548b3d0be70febebcbfa34519a21a75",
+    "reviewed_revision": "ea47b7b763fe494228041aa80b3d1d6d83b96748",
     "reviewed_at": "2026-09-23",
     "reviewed_paths": [
       "AGENTS.md",
@@ -344,11 +344,12 @@ Status: **ACTIVE / user-reproduced runtime failures**. These items are the immed
    - The invariant rejects reintroduction of the `disabled || !m_bFrameActive` condition.
    - Acceptance remains runtime based: labels must stay clearly readable in both active and inactive Dark windows.
 
-8. **Address/current-folder classic client edge remains — ACTIVE / reproduced on rebuilt 80ccaea9**
-   - The rebuilt `80ccaea9` screenshot still shows a rectangular edge. Pixel inspection identifies the exact classic sunken pattern: two full-width top rows around RGB 160/105 and two bottom rows around RGB 227/255.
-   - This proves the remaining frame is not the removed app replacement edge and not solely `WM_NCPAINT`; it is classic ComboBox/ComboBoxEx client painting that occurs during `WM_PAINT`.
-   - Next fix: preserve native ComboBox behavior, but add an outer AddressBar `WM_PAINT` post-pass that covers only the 2-DPI-pixel classic client-edge strips with the field surface (`mElevated`). Do not reintroduce a contrasting frame.
-   - Acceptance: those classic 3D edge rows disappear while the current-folder surface, icon/text, dropdown button, focus/caret and High Contrast behavior remain intact.
+8. **Address/current-folder classic client edge remains — CODE FIXED / RUNTIME NOT RETESTED**
+   - Rebuilt `80ccaea9` runtime evidence showed the classic rectangular edge. Screenshot pixel inspection identified a 2-row sunken client pattern: top rows around RGB 160/105 and bottom rows around RGB 227/255 across almost the full control width.
+   - Root cause: `WS_BORDER` / `WS_EX_CLIENTEDGE` removal and `WM_NCPAINT` suppression were not sufficient because ComboBoxEx/ComboBox can render the classic 3-D edge during normal `WM_PAINT`.
+   - `ea47b7b7` adds `AddressBar::OnPaint()` and a narrow `CoverClassicAddressClientEdge()` post-pass. Native control painting still owns content/layout/accessibility; only the 2-DPI-pixel top/bottom/left/right client-edge strips are repainted with `mElevated`. The inner ComboBox applies the same post-pass before the custom dropdown button overlay.
+   - High Contrast does not use the cover pass. Existing border/client-edge style removal and non-client suppression remain in place.
+   - Acceptance remains runtime based: the classic 3-D rows must disappear without regressing current-folder icon/text, dropdown, focus/caret or High Contrast behavior.
 
 9. **Local CI address invariant drift — CODE FIXED / LOCAL CI NOT RETESTED**
    - User `local_ci.bat x64` on 2026-09-23 19:40 reached source invariant/regression preflight and failed with `address: missing Win11 soft-surface token sPalette.mFocus` plus `palette-owned address frame painting is missing`.

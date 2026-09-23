@@ -1281,3 +1281,31 @@
 - Connector source audit after fix: PASS — enabled/disabled color split no longer depends on `m_bFrameActive`.
 - Windows rebuilt screenshot after `e6c3e2c7`: **NOT RETESTED**.
 
+---
+
+## 2026-09-23 — Classic ComboBox client edge survived style and non-client suppression
+
+**오류 발생**
+- 사용자 rebuilt `80ccaea9` screenshot에서 current-folder row의 rectangular border가 계속 보였다.
+- screenshot 자체가 current revision provenance를 포함하므로 stale build 가설은 배제했다.
+
+**실제 픽셀 증거**
+- 주소창 영역의 full-width edge는 위쪽 약 RGB 160/160/160 + 105/105/105 두 줄, 아래쪽 약 RGB 227/227/227 + 255/255/255 두 줄로 나타났다.
+- 이는 app palette의 `mElevated` replacement frame이 아니라 classic sunken ComboBox 3-D client-edge 패턴이다.
+
+**원인 진단**
+- `WS_BORDER` / `WS_EX_CLIENTEDGE`를 outer/Combo/Edit에서 제거하고 `WM_NCPAINT`를 억제해도, ComboBoxEx/ComboBox native `WM_PAINT`가 client 영역 내부에 3-D edge를 그릴 수 있다.
+- 따라서 non-client ownership만 검증한 이전 수정은 최종 client renderer를 놓쳤다.
+
+**해결 방법**
+- `AddressBar::OnPaint()`를 추가해 native/default paint를 먼저 완료한 뒤, non-High-Contrast에서 client rect의 2-DPI-pixel top/bottom/left/right strip만 `ThemePalette.mElevated`로 덮는다.
+- nested ComboBox의 `WM_PAINT`도 native paint 뒤 동일 strip cover를 수행하고, 그 다음 modern dropdown button을 그린다.
+- helper는 `GetClientRect` + 네 개의 `FillRect` strip만 사용한다. `FrameRect`나 contrasting replacement frame은 사용하지 않는다.
+- High Contrast에서는 native painting을 그대로 유지한다.
+- invariant는 outer `ON_WM_PAINT`, helper token, four-strip fill, inner ComboBox post-paint cover를 요구한다.
+
+**검증 상태**
+- User rebuilt screenshot before fix: FAIL — classic 3-D edge visibly present on revision `80ccaea9`.
+- Connector source/diff audit after fix: PASS — outer and inner client-paint post-pass installed; stale PaintFlat/focus contracts absent.
+- Windows rebuilt screenshot after `ea47b7b7`: **NOT RETESTED**.
+
