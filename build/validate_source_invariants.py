@@ -3098,21 +3098,44 @@ def validate_win11_stability_regressions() -> list[str]:
                 f"src/fxfile/main_toolbar.cpp: one-time legacy icon migration missing token {token}"
             )
 
-    for token in (
-        "ON_WM_PAINT()",
-        "void CMenuBar::OnPaint()",
-        "CToolBar::Default();",
-        "GetToolBarCtrl().GetButtonCount()",
-        "GetButtonText(sItemIndex, sMenuText)",
-        "sDC.FillSolidRect(&sItemRect, sPalette.mChrome)",
-        "sPalette.mSecondaryText",
-        "sPalette.mText",
-        "sDC.DrawText(",
-    ):
-        if token not in contents["menubar"]:
-            errors.append(
-                f"src/fxfile/gui/rebar/MenuBar.cpp: final WM_PAINT text ownership missing token {token}"
-            )
+    menubar_source = contents["menubar"]
+    menu_paint_start = menubar_source.find("void CMenuBar::OnPaint()")
+    menu_paint_end = menubar_source.find(
+        "\nbool CMenuBar::OnButtonDown",
+        menu_paint_start,
+    )
+    menu_paint_block = (
+        menubar_source[menu_paint_start:menu_paint_end]
+        if menu_paint_start >= 0
+        and menu_paint_end > menu_paint_start
+        else ""
+    )
+
+    if "ON_WM_PAINT()" not in menubar_source:
+        errors.append(
+            "src/fxfile/gui/rebar/MenuBar.cpp: final WM_PAINT ownership message map is missing"
+        )
+    if not menu_paint_block:
+        errors.append(
+            "src/fxfile/gui/rebar/MenuBar.cpp: final WM_PAINT ownership block is missing"
+        )
+    else:
+        for token in (
+            "CToolBar::Default();",
+            "CToolBarCtrl &sToolBarCtrl = GetToolBarCtrl();",
+            "sToolBarCtrl.GetButtonCount()",
+            "sToolBarCtrl.GetButton(sItemIndex, &sButton)",
+            "GetButtonText(sItemIndex, sMenuText)",
+            "sToolBarCtrl.GetItemRect(sItemIndex, &sItemRect)",
+            "sDC.FillSolidRect(&sItemRect, sPalette.mChrome)",
+            "sPalette.mSecondaryText",
+            "sPalette.mText",
+            "sDC.DrawText(",
+        ):
+            if token not in menu_paint_block:
+                errors.append(
+                    f"src/fxfile/gui/rebar/MenuBar.cpp: final WM_PAINT text ownership missing semantic step {token}"
+                )
 
     for token in (
         "TB_GETBUTTONTEXT",
@@ -3129,7 +3152,6 @@ def validate_win11_stability_regressions() -> list[str]:
             "src/fxfile/gui/rebar/MenuBar.cpp: Dark text ownership must not depend on ambiguous custom-draw item indexing"
         )
 
-    menubar_source = contents["menubar"]
     menu_item_start = menubar_source.find("case CDDS_ITEMPREPAINT:")
     menu_modern_start = menubar_source.find(
         "if ( XPR_IS_FALSE(sPalette.mHighContrast) && !WinAppEx::GetInstance()->IsWinXP() )",
