@@ -13,6 +13,7 @@
 
 #include "history.h"
 #include "gui/ResizingDialog.h"
+#include "gui/rebar/ToolBarEx.h"
 
 namespace fxfile
 {
@@ -50,7 +51,7 @@ protected:
 protected:
     CImageList mTreeImgList;
 
-    CToolBar   mToolBar;
+    CToolBarEx mToolBar;
     CImageList mToolBarImgList;
 
     typedef std::deque<HistoryDisp *> HistoryDispDeque;
