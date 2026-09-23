@@ -28,6 +28,10 @@ namespace
 {
 const UINT_PTR kAddressBarComboSubclassId = 1;
 const UINT_PTR kAddressBarEditSubclassId = 2;
+const xpr_tchar_t kAddressBarOuterBorderProp[] =
+    XPR_STRING_LITERAL("fxfile.AddressBar.OuterHadBorder");
+const xpr_tchar_t kAddressBarOuterClientEdgeProp[] =
+    XPR_STRING_LITERAL("fxfile.AddressBar.OuterHadClientEdge");
 const xpr_tchar_t kAddressBarComboBorderProp[] =
     XPR_STRING_LITERAL("fxfile.AddressBar.ComboHadBorder");
 const xpr_tchar_t kAddressBarComboClientEdgeProp[] =
@@ -197,6 +201,12 @@ xpr_bool_t AddressBar::DestroyWindow(void)
     removeEditSubclass();
     removeComboSubclass();
     applyDisplayFont(XPR_NULL);
+
+    if (XPR_IS_NOT_NULL(m_hWnd))
+    {
+        ::RemoveProp(m_hWnd, kAddressBarOuterBorderProp);
+        ::RemoveProp(m_hWnd, kAddressBarOuterClientEdgeProp);
+    }
 
     if (XPR_IS_NOT_NULL(mBackgroundBrush.m_hObject))
         mBackgroundBrush.DeleteObject();
@@ -1179,6 +1189,69 @@ void AddressBar::applyChildThemes(void)
         return;
 
     const ui::ThemePalette sPalette = ui::ModernUI::getPalette();
+
+    // CComboBoxEx itself can acquire a native border/client edge depending on
+    // common-control creation/theme state. The address bar owns exactly one
+    // visible frame outside High Contrast, so preserve the original outer
+    // styles and suppress any native outer frame before child rendering.
+    LONG_PTR sOuterStyle = ::GetWindowLongPtr(m_hWnd, GWL_STYLE);
+    LONG_PTR sOuterExStyle = ::GetWindowLongPtr(m_hWnd, GWL_EXSTYLE);
+    HANDLE sOuterHadBorder = ::GetProp(m_hWnd, kAddressBarOuterBorderProp);
+    HANDLE sOuterHadClientEdge =
+        ::GetProp(m_hWnd, kAddressBarOuterClientEdgeProp);
+    if (XPR_IS_NULL(sOuterHadBorder))
+    {
+        sOuterHadBorder =
+            (sOuterStyle & WS_BORDER) != 0 ?
+            reinterpret_cast<HANDLE>(2) :
+            reinterpret_cast<HANDLE>(1);
+        ::SetProp(m_hWnd, kAddressBarOuterBorderProp, sOuterHadBorder);
+    }
+    if (XPR_IS_NULL(sOuterHadClientEdge))
+    {
+        sOuterHadClientEdge =
+            (sOuterExStyle & WS_EX_CLIENTEDGE) != 0 ?
+            reinterpret_cast<HANDLE>(2) :
+            reinterpret_cast<HANDLE>(1);
+        ::SetProp(
+            m_hWnd,
+            kAddressBarOuterClientEdgeProp,
+            sOuterHadClientEdge);
+    }
+
+    LONG_PTR sNewOuterStyle = sOuterStyle;
+    LONG_PTR sNewOuterExStyle = sOuterExStyle;
+    if (XPR_IS_TRUE(sPalette.mHighContrast))
+    {
+        if (sOuterHadBorder == reinterpret_cast<HANDLE>(2))
+            sNewOuterStyle |= WS_BORDER;
+        if (sOuterHadClientEdge == reinterpret_cast<HANDLE>(2))
+            sNewOuterExStyle |= WS_EX_CLIENTEDGE;
+    }
+    else
+    {
+        sNewOuterStyle &= ~static_cast<LONG_PTR>(WS_BORDER);
+        sNewOuterExStyle &= ~static_cast<LONG_PTR>(WS_EX_CLIENTEDGE);
+    }
+
+    if (sNewOuterStyle != sOuterStyle)
+        ::SetWindowLongPtr(m_hWnd, GWL_STYLE, sNewOuterStyle);
+    if (sNewOuterExStyle != sOuterExStyle)
+        ::SetWindowLongPtr(m_hWnd, GWL_EXSTYLE, sNewOuterExStyle);
+    if (sNewOuterStyle != sOuterStyle ||
+        sNewOuterExStyle != sOuterExStyle)
+    {
+        ::SetWindowPos(
+            m_hWnd,
+            XPR_NULL,
+            0,
+            0,
+            0,
+            0,
+            SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER |
+                SWP_NOACTIVATE | SWP_FRAMECHANGED);
+    }
+
     const xpr_bool_t sOwnDarkChrome =
         (XPR_IS_TRUE(sPalette.mDark) &&
          XPR_IS_FALSE(sPalette.mHighContrast)) ?
