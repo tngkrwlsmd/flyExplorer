@@ -155,10 +155,13 @@ void AddressBar::OnNcPaint(void)
         XPR_TRUE :
         XPR_FALSE;
 
+    // Windows 11 Explorer does not keep a bright box around the closed
+    // location field. Paint the idle non-client edge with the field surface
+    // itself and expose a border only while the address control has focus.
     const COLORREF sBorderColor =
         XPR_IS_TRUE(sFocused) ?
         sPalette.mFocus :
-        sPalette.mBorder;
+        sPalette.mElevated;
 
     ::SetDCBrushColor(sDC.GetSafeHdc(), sBorderColor);
     ::FrameRect(
@@ -1228,8 +1231,8 @@ void AddressBar::applyChildThemes(void)
     const ui::ThemePalette sPalette = ui::ModernUI::getPalette();
 
     // CComboBoxEx itself can acquire a native border/client edge depending on
-    // common-control creation/theme state. The address bar owns exactly one
-    // visible frame outside High Contrast, so preserve the original outer
+    // common-control creation/theme state. The modern address surface keeps
+    // only a focus frame outside High Contrast, so preserve the original outer
     // styles and suppress any native outer frame before child rendering.
     LONG_PTR sOuterStyle = ::GetWindowLongPtr(m_hWnd, GWL_STYLE);
     LONG_PTR sOuterExStyle = ::GetWindowLongPtr(m_hWnd, GWL_EXSTYLE);

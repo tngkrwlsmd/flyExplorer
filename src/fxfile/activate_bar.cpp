@@ -115,9 +115,12 @@ void ActivateBar::setActivateBackColor(COLORREF aBackColor)
         return;
 
     const ui::ThemePalette sPalette = ui::ModernUI::getPalette();
+    // The legacy user accent remains meaningful only when High Contrast owns
+    // the active-pane cue. Modern Light/Dark uses the selected tab/surface
+    // state instead of a full-width colored stripe.
     mBackColor = XPR_IS_TRUE(sPalette.mHighContrast) ?
         sPalette.mSelection :
-        aBackColor;
+        sPalette.mWindow;
 
     Invalidate(XPR_FALSE);
     UpdateWindow();
@@ -146,24 +149,12 @@ void ActivateBar::applyModernAppearance(void)
         else
             mBackColor = sPalette.mWindow;
     }
-    else if (XPR_IS_TRUE(mActivate))
-    {
-        // Preserve the user's configured active-pane color outside High Contrast.
-        mBackColor = gOpt->mConfig.mActiveViewColor;
-    }
-    else if (XPR_IS_TRUE(mLastActivated))
-    {
-        mBackColor = CalculateColor(
-            sPalette.mWindow,
-            gOpt->mConfig.mActiveViewColor,
-            150);
-    }
     else
     {
-        mBackColor = CalculateColor(
-            sPalette.mWindow,
-            sPalette.mSurface,
-            50);
+        // Do not paint the legacy full-width active-pane accent on the modern
+        // surface. ExplorerView collapses this bar outside High Contrast and
+        // TabCtrl keeps the pane-active state visible where tabs are shown.
+        mBackColor = sPalette.mWindow;
     }
 
     if (XPR_IS_NOT_NULL(m_hWnd))

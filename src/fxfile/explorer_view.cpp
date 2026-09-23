@@ -821,17 +821,32 @@ void ExplorerView::recalcLayout(void)
         }
     }
 
-    // activate bar
+    // The legacy full-width activation stripe is not part of the modern
+    // Explorer visual hierarchy. Keep it only for High Contrast, where a
+    // dedicated system-selection cue is useful for accessibility.
     if (XPR_IS_NOT_NULL(mActivateBar) && XPR_IS_NOT_NULL(mActivateBar->m_hWnd))
     {
+        const ui::ThemePalette sPalette = ui::ModernUI::getPalette();
+        const xpr_sint_t sActivateBarHeight =
+            XPR_IS_TRUE(sPalette.mHighContrast) ?
+            ui::ModernUI::getActivePaneIndicatorThickness(m_hWnd) :
+            0;
+
         CRect sActivateBarRect(sRect);
         sActivateBarRect.bottom =
-            sActivateBarRect.top +
-            ui::ModernUI::getActivePaneIndicatorThickness(m_hWnd);
+            sActivateBarRect.top + sActivateBarHeight;
 
-        ::DeferWindowPos(sHdwp, *mActivateBar, XPR_NULL, sActivateBarRect.left, sActivateBarRect.top, sActivateBarRect.Width(), sActivateBarRect.Height(), SWP_NOZORDER);
+        ::DeferWindowPos(
+            sHdwp,
+            *mActivateBar,
+            XPR_NULL,
+            sActivateBarRect.left,
+            sActivateBarRect.top,
+            sActivateBarRect.Width(),
+            sActivateBarRect.Height(),
+            SWP_NOZORDER);
 
-        sRect.top += sActivateBarRect.Height();
+        sRect.top += sActivateBarHeight;
     }
 
     // splitter

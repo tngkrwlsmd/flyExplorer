@@ -1053,3 +1053,31 @@
 - Source contract self-check: PASS — top-level enumeration, `TB_GETBUTTONTEXT` + `CDRF_SKIPDEFAULT`, TEXTMETRIC/DPI height contract를 commit 전 확인했다.
 - Windows runtime theme switch, actual Dark menu foreground, header clipping screenshot, `python build/validate_source_invariants.py`, MSVC compile/link, `local_ci.bat x64`: **NOT TESTED** in connector-only environment.
 
+---
+
+## 2026-09-23 — Legacy green active stripe and persistent address-field outline
+
+**오류 발생**
+- 사용자 최신 Windows 11 screenshot에서 탐색 pane 상단에 밝은 녹색 가로선이 계속 보였고, 현재 위치 `내 문서`를 표시하는 address field에는 포커스 여부와 무관한 밝은 사각 테두리가 남았다.
+- 사용자가 제공한 Windows 11 File Explorer reference에는 동일한 full-width green stripe나 persistent white location-box outline이 없다.
+
+**최초 실제 오류**
+- `ActivateBar::applyModernAppearance()`는 non-High-Contrast에서도 active pane이면 `gOpt->mConfig.mActiveViewColor`를 그대로 사용했다. 기본값 `DEF_ACTIVED_VIEW_COLOR`는 `RGB(48,192,48)`이고, `ExplorerView::recalcLayout()`가 이 컨트롤에 `getActivePaneIndicatorThickness()` 높이를 항상 할당해 screenshot의 녹색 full-width stripe가 만들어졌다.
+- `AddressBar::OnNcPaint()`는 non-High-Contrast idle 상태에서도 `ThemePalette.mBorder`로 전체 window `FrameRect`를 그렸다. nested native borders를 제거했더라도 이 app-owned frame 자체가 persistent white/bright outline으로 남았다.
+
+**원인 진단**
+- Root cause 1: legacy active-pane color option을 현대 tab/surface selection state와 중복해서 별도 horizontal accent로 계속 렌더링했다.
+- Root cause 2: address-bar modernization이 native double-border 제거에 집중하면서 app-owned outer frame은 normal state에서도 항상 보이게 유지했다.
+
+**해결 방법**
+- `activate_bar.cpp`: non-High-Contrast에서는 legacy configured active color를 더 이상 그리지 않고 surrounding `ThemePalette.mWindow`를 사용한다. High Contrast active state는 system-selection palette를 유지한다.
+- `explorer_view.cpp`: non-High-Contrast에서는 ActivateBar 높이를 0으로 collapse하고, High Contrast에서만 기존 active indicator thickness를 사용한다. TabCtrl의 pane-active selected surface는 그대로 유지한다.
+- `address_bar.cpp`: idle non-client edge는 field surface인 `mElevated`와 같은 색으로 그려 persistent outline을 없애고, 실제 keyboard/mouse focus일 때만 `mFocus` frame을 표시한다.
+- `validate_source_invariants.py`: non-HC active stripe collapse, legacy `mActiveViewColor` paint 금지, focus-only address border와 idle `mBorder` 금지를 regression contract로 추가한다.
+
+**검증 상태**
+- 사용자 screenshot: FAIL before fix — bright green full-width stripe와 persistent white `내 문서` outline 확인.
+- Connector source audit: PASS — `DEF_ACTIVED_VIEW_COLOR -> ActivateBar -> ExplorerView layout`, `AddressBar::OnNcPaint -> mBorder` 경로를 확인했다.
+- Source contract self-check: PASS — non-HC zero-height stripe, neutral ActivateBar paint, idle `mElevated`/focused `mFocus` address frame을 commit 전 확인했다.
+- Windows runtime screenshot, keyboard-focus accessibility, High Contrast active-pane indication, `python build/validate_source_invariants.py`, MSVC compile/link, `local_ci.bat x64`: **NOT TESTED** in connector-only environment.
+

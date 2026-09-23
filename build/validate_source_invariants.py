@@ -942,6 +942,35 @@ def validate_content_surface_contract() -> list[str]:
     if "getListHeaderTextPadding" not in contents["header"]:
         errors.append("src/fxfile/gui/FlatHeaderCtrl.cpp: shared list-header padding metric is not used")
 
+    activate_bar_source = (FXFILE_SRC / "activate_bar.cpp").read_text(
+        encoding="utf-8", errors="replace"
+    )
+    explorer_view_source = (FXFILE_SRC / "explorer_view.cpp").read_text(
+        encoding="utf-8", errors="replace"
+    )
+    for token in (
+        "mBackColor = sPalette.mWindow",
+        "mBackColor = sPalette.mSelection",
+    ):
+        if token not in activate_bar_source:
+            errors.append(
+                f"src/fxfile/activate_bar.cpp: modern activation stripe removal missing token {token}"
+            )
+    if "mBackColor = gOpt->mConfig.mActiveViewColor" in activate_bar_source:
+        errors.append(
+            "src/fxfile/activate_bar.cpp: legacy bright active-pane color must not paint modern Light/Dark surfaces"
+        )
+    for token in (
+        "sActivateBarHeight",
+        "sPalette.mHighContrast",
+        "sActivateBarHeight =",
+        "sRect.top += sActivateBarHeight",
+    ):
+        if token not in explorer_view_source:
+            errors.append(
+                f"src/fxfile/explorer_view.cpp: modern active-bar collapse missing token {token}"
+            )
+
     for token in (
         "refreshModernTreeStyle",
         "getTreeRowHeight",
@@ -2906,6 +2935,19 @@ def validate_win11_stability_regressions() -> list[str]:
         if "CWindowDC sDC(this);" not in address_block:
             errors.append(
                 "src/fxfile/address_bar.cpp: palette-owned address frame painting is missing"
+            )
+        for token in (
+            "sPalette.mFocus",
+            "sPalette.mElevated",
+            "XPR_IS_TRUE(sFocused)",
+        ):
+            if token not in address_block:
+                errors.append(
+                    f"src/fxfile/address_bar.cpp: focus-only address frame missing token {token}"
+                )
+        if "sPalette.mBorder" in address_block:
+            errors.append(
+                "src/fxfile/address_bar.cpp: idle address frame must not use persistent border color"
             )
         if "void AddressBar::OnNcPaint(void)\n{\n    Default();" in address:
             errors.append(
