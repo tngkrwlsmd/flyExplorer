@@ -626,7 +626,7 @@ void CfgMainDlg::applyModernAppearanceToChildren(HFONT aPreviousFont)
     }
 }
 
-void CfgMainDlg::refreshModernAppearance(void)
+void CfgMainDlg::refreshModernAppearance(xpr_bool_t aRethemeControls)
 {
     if (XPR_IS_NULL(m_hWnd) || XPR_IS_TRUE(mRefreshingModernAppearance))
         return;
@@ -676,7 +676,8 @@ void CfgMainDlg::refreshModernAppearance(void)
     }
 
     ui::ModernUI::applyWindowFrameTheme(GetSafeHwnd());
-    applyModernAppearanceToChildren(sPreviousFont);
+    if (XPR_IS_TRUE(aRethemeControls))
+        applyModernAppearanceToChildren(sPreviousFont);
 
     CWnd *sDescWnd = GetDlgItem(IDC_CFG_DESC);
     if (XPR_IS_NOT_NULL(sDescWnd) && XPR_IS_NOT_NULL(mHeaderFont.m_hObject))
@@ -740,7 +741,10 @@ void CfgMainDlg::OnSysColorChange(void)
 
 LRESULT CfgMainDlg::OnThemeChanged(WPARAM aWParam, LPARAM aLParam)
 {
-    refreshModernAppearance();
+    // SetWindowTheme itself can emit WM_THEMECHANGED. During this notification
+    // only refresh palette/font/frame state; do not walk the child tree and
+    // issue another round of theme-association calls.
+    refreshModernAppearance(XPR_FALSE);
     return 0;
 }
 
