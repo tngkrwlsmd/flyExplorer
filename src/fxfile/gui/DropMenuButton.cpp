@@ -10,6 +10,7 @@
 #endif
 
 #include "BCMenu.h"
+#include "ModernUI.h"
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -202,7 +203,15 @@ void CDropMenuButton::DrawItem(DRAWITEMSTRUCT* lpDIS)
     if (lpDIS->CtlType != ODT_BUTTON)
         return;
 
-    CFont *pFont = CFont::FromHandle((HFONT)GetStockObject(DEFAULT_GUI_FONT));
+    CFont *pFont = GetFont();
+    if (pFont == NULL || pFont->m_hObject == NULL)
+        pFont = CFont::FromHandle((HFONT)GetStockObject(DEFAULT_GUI_FONT));
+
+    const fxfile::ui::ThemePalette sPalette =
+        fxfile::ui::ModernUI::getPalette();
+    const BOOL bModernDark =
+        XPR_IS_TRUE(sPalette.mDark) &&
+        XPR_IS_FALSE(sPalette.mHighContrast);
 
     CDC dcMem;
     CBitmap bmp;
@@ -219,7 +228,7 @@ void CDropMenuButton::DrawItem(DRAWITEMSTRUCT* lpDIS)
     if (!m_xpTheme)
 		m_xpTheme.Open(GetSafeHwnd(), L"BUTTON");
 
-	if (m_xpTheme.IsAppThemed())
+	if (m_xpTheme.IsAppThemed() && !bModernDark)
     {
         // attempt to map owner draw states to theme pushbutton states
         int iState = PBS_NORMAL;
@@ -257,8 +266,14 @@ void CDropMenuButton::DrawItem(DRAWITEMSTRUCT* lpDIS)
         ////////////////////////////////////////
         // Button Background                  //
         ////////////////////////////////////////
-        CBrush brush(GetSysColor(COLOR_BTNFACE));
-        pDC->FillRect(trueRect,&brush);
+        const COLORREF sButtonBack =
+            bModernDark ?
+            ((m_bPushed || m_bMenuPushed) ?
+                sPalette.mPressed :
+                (m_bOverControl ? sPalette.mHover : sPalette.mElevated)) :
+            ::GetSysColor(COLOR_BTNFACE);
+        CBrush brush(sButtonBack);
+        pDC->FillRect(trueRect, &brush);
 
         if (m_bDefaultBtn)
             btnRect.DeflateRect(1,1);
@@ -276,7 +291,17 @@ void CDropMenuButton::DrawItem(DRAWITEMSTRUCT* lpDIS)
         // Button in a normal state           //
         ////////////////////////////////////////
         if (!m_bPushed || m_bMenuPushed)
-            pDC->DrawFrameControl(&btnRect,DFC_BUTTON,DFCS_BUTTONPUSH);
+        {
+            if (bModernDark)
+            {
+                CBrush sBorderBrush(sPalette.mBorder);
+                pDC->FrameRect(&btnRect, &sBorderBrush);
+            }
+            else
+            {
+                pDC->DrawFrameControl(&btnRect, DFC_BUTTON, DFCS_BUTTONPUSH);
+            }
+        }
 
 
         ////////////////////////////////////////
@@ -284,9 +309,25 @@ void CDropMenuButton::DrawItem(DRAWITEMSTRUCT* lpDIS)
         ////////////////////////////////////////
         if ((m_bDefaultBtn || m_bPushed) && !bDisabled)
         {
-            pDC->FrameRect(&lpDIS->rcItem,CBrush::FromHandle((HBRUSH)GetStockObject(BLACK_BRUSH)));
-            if (m_bPushed && !m_bMenuPushed)
-                pDC->FrameRect(&btnRect,CBrush::FromHandle((HBRUSH)GetStockObject(BLACK_BRUSH))); 
+            if (bModernDark)
+            {
+                CBrush sFocusBrush(sPalette.mFocus);
+                pDC->FrameRect(&lpDIS->rcItem, &sFocusBrush);
+                if (m_bPushed && !m_bMenuPushed)
+                    pDC->FrameRect(&btnRect, &sFocusBrush);
+            }
+            else
+            {
+                pDC->FrameRect(
+                    &lpDIS->rcItem,
+                    CBrush::FromHandle((HBRUSH)GetStockObject(BLACK_BRUSH)));
+                if (m_bPushed && !m_bMenuPushed)
+                {
+                    pDC->FrameRect(
+                        &btnRect,
+                        CBrush::FromHandle((HBRUSH)GetStockObject(BLACK_BRUSH)));
+                }
+            }
         }
 
 
@@ -295,7 +336,18 @@ void CDropMenuButton::DrawItem(DRAWITEMSTRUCT* lpDIS)
         ////////////////////////////////////////
         if (lpDIS->itemState & ODS_FOCUS || m_bPushed) 
         {
-            pDC->FrameRect(&lpDIS->rcItem,CBrush::FromHandle((HBRUSH)GetStockObject(BLACK_BRUSH)));
+            if (bModernDark)
+            {
+                CBrush sFocusBrush(sPalette.mFocus);
+                pDC->FrameRect(&lpDIS->rcItem, &sFocusBrush);
+            }
+            else
+            {
+                pDC->FrameRect(
+                    &lpDIS->rcItem,
+                    CBrush::FromHandle((HBRUSH)GetStockObject(BLACK_BRUSH)));
+            }
+
             if (!m_bMenuPushed)
                 pDC->DrawFocusRect(&rectFocus);
         }
@@ -339,22 +391,44 @@ void CDropMenuButton::DrawItem(DRAWITEMSTRUCT* lpDIS)
     CString strCaption;
     GetWindowText(strCaption);
     pDC->SetBkMode(TRANSPARENT);
-    pDC->SetBkColor(GetSysColor(COLOR_BTNFACE));
+    pDC->SetBkColor(
+        bModernDark ? sPalette.mElevated : ::GetSysColor(COLOR_BTNFACE));
 
     if (ODS_DISABLED & lpDIS->itemState)
     {
-        rectText.OffsetRect(1,1);
-        pDC->SetTextColor(GetSysColor(COLOR_WINDOW));
-        pDC->DrawText(strCaption,rectText,DT_SINGLELINE|DT_CENTER|DT_VCENTER);
+        if (bModernDark)
+        {
+            pDC->SetTextColor(sPalette.mSecondaryText);
+            pDC->DrawText(
+                strCaption,
+                rectText,
+                DT_SINGLELINE | DT_CENTER | DT_VCENTER);
+        }
+        else
+        {
+            rectText.OffsetRect(1,1);
+            pDC->SetTextColor(::GetSysColor(COLOR_WINDOW));
+            pDC->DrawText(
+                strCaption,
+                rectText,
+                DT_SINGLELINE | DT_CENTER | DT_VCENTER);
 
-        rectText.OffsetRect(-1,-1);
-        pDC->SetTextColor(GetSysColor(COLOR_GRAYTEXT));
-        pDC->DrawText(strCaption,rectText,DT_SINGLELINE|DT_CENTER|DT_VCENTER);
+            rectText.OffsetRect(-1,-1);
+            pDC->SetTextColor(::GetSysColor(COLOR_GRAYTEXT));
+            pDC->DrawText(
+                strCaption,
+                rectText,
+                DT_SINGLELINE | DT_CENTER | DT_VCENTER);
+        }
     }
     else
     {
-        pDC->SetTextColor(GetSysColor(COLOR_WINDOWTEXT));
-        pDC->DrawText(strCaption,rectText,DT_SINGLELINE|DT_CENTER|DT_VCENTER);
+        pDC->SetTextColor(
+            bModernDark ? sPalette.mText : ::GetSysColor(COLOR_WINDOWTEXT));
+        pDC->DrawText(
+            strCaption,
+            rectText,
+            DT_SINGLELINE | DT_CENTER | DT_VCENTER);
     }
 
 	pDC->SelectObject(pOldFont);
@@ -369,8 +443,14 @@ void CDropMenuButton::DrawItem(DRAWITEMSTRUCT* lpDIS)
     if (m_bSplit)
     {
 		CPen *pOldPen;
-        CPen brFace(PS_SOLID,1,GetSysColor(COLOR_3DSHADOW));
-        CPen brLite(PS_SOLID,1,GetSysColor(COLOR_3DHILIGHT));
+        CPen brFace(
+            PS_SOLID,
+            1,
+            bModernDark ? sPalette.mSeparator : ::GetSysColor(COLOR_3DSHADOW));
+        CPen brLite(
+            PS_SOLID,
+            1,
+            bModernDark ? sPalette.mSeparator : ::GetSysColor(COLOR_3DHILIGHT));
 
         pOldPen = pDC->SelectObject(&brFace);
         pDC->MoveTo(rectSplit.right, rectSplit.top);
@@ -392,17 +472,21 @@ void CDropMenuButton::DrawItem(DRAWITEMSTRUCT* lpDIS)
     CPoint pt(rectSplit.CenterPoint());
     pt += CPoint(m_bPushed,m_bPushed);
 
-    CPen penBlack(PS_SOLID, 1, bDisabled ? GetSysColor(COLOR_GRAYTEXT) : GetSysColor(COLOR_WINDOWTEXT));
-    CPen *pOldPen = pDC->SelectObject(&penBlack);
+    const COLORREF sArrowColor =
+        bModernDark ?
+        (bDisabled ? sPalette.mSecondaryText : sPalette.mText) :
+        ::GetSysColor(bDisabled ? COLOR_GRAYTEXT : COLOR_WINDOWTEXT);
+    CPen penArrow(PS_SOLID, 1, sArrowColor);
+    CPen *pOldPen = pDC->SelectObject(&penArrow);
     
-	DrawArrow(pDC,pt);
+	DrawArrow(pDC, pt, sArrowColor);
     
 	pDC->SelectObject(pOldPen);
 
     ////////////////////////////////////////
     // Drop down state                    //
     ////////////////////////////////////////
-    if (m_bMenuPushed && !bDisabled)
+    if (m_bMenuPushed && !bDisabled && !bModernDark)
     {    
         rectSplit.InflateRect(1,1);
         pDC->DrawEdge(rectSplit,BDR_SUNKENOUTER, BF_RECT);
@@ -423,12 +507,15 @@ void CDropMenuButton::DrawItem(DRAWITEMSTRUCT* lpDIS)
 // NT ALMOND    210100    1.0              Origin
 //
 ////////////////////////////////////////////////////////////////////////////////
-void CDropMenuButton::DrawArrow(CDC* pDC,CPoint ArrowTip)
+void CDropMenuButton::DrawArrow(
+    CDC* pDC,
+    CPoint aArrowTip,
+    COLORREF aColor)
 {
-
+  CPoint ArrowTip(aArrowTip);
   CPoint ptDest;
 
-  pDC->SetPixel(ArrowTip,RGB(0,0,0));
+  pDC->SetPixel(ArrowTip, aColor);
 
   ArrowTip -= CPoint(1,1);
   pDC->MoveTo(ArrowTip);
