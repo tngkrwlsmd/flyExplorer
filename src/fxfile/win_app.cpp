@@ -460,14 +460,6 @@ void WinApp::onChangedConfig(Option &aOption)
     // unregister shell registry for old language
     ShellRegistry::unregisterShell();
 
-    // popup warning message about language change
-    const fxfile::base::LanguagePack::Desc *sLoadedLanguagePackDesc = mLanguageTable->getLanguageDesc();
-    if (sLoadedLanguagePackDesc->mLanguage.compare_case(aOption.mConfig.mLanguage) != 0)
-    {
-        const xpr_tchar_t *sMsg = gApp.loadString(XPR_STRING_LITERAL("popup.cfg.msg.apply_language_on_next_loading_time"));
-        AfxMessageBox(sMsg, MB_OK | MB_ICONWARNING);
-    }
-
     // load language on runtime
     //loadLanguage(aOption.mConfig.mLanguage);
 
