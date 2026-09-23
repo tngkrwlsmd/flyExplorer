@@ -2596,10 +2596,16 @@ def validate_win11_stability_regressions() -> list[str]:
             )
 
     for source_name in ("toolbar_cpp", "menubar"):
-        if "TBCDRF_USECDCOLORS" not in contents[source_name]:
-            errors.append(
-                f"{source_name}: ToolbarWindow32 palette text colors are not explicitly enabled"
-            )
+        for token in (
+            "TBCDRF_USECDCOLORS",
+            "clrTextHighlight",
+            "nStringBkMode = TRANSPARENT",
+            "nHLStringBkMode = TRANSPARENT",
+        ):
+            if token not in contents[source_name]:
+                errors.append(
+                    f"{source_name}: ToolbarWindow32 palette text contract missing token {token}"
+                )
 
     horizontal_start = modern_ui.find(
         "xpr_sint_t ModernUI::getCommandHorizontalPadding(HWND aHwnd)"
