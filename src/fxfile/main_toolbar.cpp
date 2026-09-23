@@ -529,10 +529,7 @@ void MainToolBar::OnDrop(COleDataObject *aOleDataObject, DROPEFFECT aDropEffect,
         ::GlobalUnlock(sStgMedium.hGlobal);
     }
 
-    if (XPR_IS_NOT_NULL(sStgMedium.pUnkForRelease))
-    {
-        ::ReleaseStgMedium(&sStgMedium);
-    }
+    ::ReleaseStgMedium(&sStgMedium);
 }
 
 void MainToolBar::OnDropBookmark(LPITEMIDLIST aFullPidl)
