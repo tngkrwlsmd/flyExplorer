@@ -697,6 +697,116 @@
 
 ---
 
+## 2026-09-23 — 동일 control theme association 반복 적용이 settings/UI thread를 다시 막을 수 있었음
+
+**오류 발생**
+- 사용자 Windows 11 screenshot에서 `fxfile (응답 없음)` 상태가 다시 확인됐다.
+- 이전 WER/cdb evidence에서는 `uxtheme!SetWindowTheme -> ModernUI::applyExplorerControlTheme -> WM_THEMECHANGED handler`가 반복되는 stack이 관찰됐다.
+- 기존 수정은 `SetWindowTheme` 호출 중의 synchronous re-entry만 guard했기 때문에, 호출이 끝난 뒤 전달되는 후속 `WM_THEMECHANGED`가 동일 association을 다시 설정하는 경우를 막지 못했다.
+
+**최초 실제 오류**
+- `ModernUI::applyExplorerControlTheme()` / `resetControlTheme()`가 현재 HWND에 이미 같은 association이 적용돼 있는지를 기억하지 않았다.
+- settings host/page의 `OnThemeChanged`가 다시 전체 child tree를 순회하며 control theme helper를 호출했다.
+
+**원인 진단**
+- Root cause: "현재 SetWindowTheme call 안에 있는가"와 "이 HWND가 이미 원하는 theme association 상태인가"를 같은 문제로 취급했다.
+- synchronous call-stack recursion guard만으로는 message-queue를 거쳐 다시 발생하는 동일 association 적용 loop를 방지할 수 없다.
+
+**해결 방법**
+- `ModernUI.cpp`: HWND property에 Explorer/Default/Disabled association 상태를 기록하고 동일 association 요청은 `SetWindowTheme` 자체를 생략한다.
+- 기존 call-stack guard는 nested synchronous notification 방어용으로 유지한다.
+- `CfgMainDlg` / `CfgDlg`: `WM_THEMECHANGED`에서는 palette/font/frame repaint만 수행하고 child theme association을 다시 순회하지 않는다. 최초 생성/settings/system-color/DPI refresh에서는 기존 전체 적용 경로를 유지한다.
+
+**재발 방지**
+- source invariant가 theme-association state property, identical-request skip, settings의 `refreshModernAppearance(XPR_FALSE)` contract를 검사한다.
+- `WM_THEMECHANGED` handler에서 `SetWindowTheme`를 다시 호출하는 경로는 call-stack guard뿐 아니라 desired-state idempotence까지 확인한다.
+
+**검증 상태**
+- 이전 WER/cdb stack evidence: CONFIRMED — `SetWindowTheme` / `WM_THEMECHANGED` 반복 경로가 관찰됨.
+- Targeted static audit: PASS — desired association cache 및 settings paint-only notification 경로 확인.
+- `python build/validate_source_invariants.py`: NOT TESTED in connector environment.
+- Compile/link / Preferences 10회 open-close / runtime hang: NOT TESTED after this fix.
+
+**관련 commit**
+- `35594b5e` — `fix: make control theme changes idempotent`
+- `b66b7d82` — association regression guard
+- `b8bef073` ~ `deb887c1` — settings host/page paint-only theme notification
+- `9a0666cc` — settings refresh regression guard
+
+---
+
+## 2026-09-23 — standard-user 경로에 machine-wide shell registration과 과도한 mutex access가 남아 있었음
+
+**오류 발생**
+- 사용자에게 관리자 권한 없이 실행/설정하는 경로가 정상 동작하지 않는 문제가 계속 보고됐다.
+- manifest는 이미 `asInvoker`였고 configuration 기본 경로도 AppData였으므로, 남은 권한 의존 API를 추가 audit했다.
+
+**최초 실제 오류**
+- `ShellRegistry`가 `HKEY_CLASSES_ROOT\\Folder\\Shell`에 context-menu registration을 직접 쓰고 있었다.
+- `SingleProcess::check()`가 단순한 named mutex 존재 확인에 `MUTEX_ALL_ACCESS`를 요청하고 있었다.
+
+**원인 진단**
+- HKCR write는 merged machine/user class view에 대한 legacy registration 방식이며 standard-user settings 적용에서 권한 차이를 만들 수 있다.
+- named mutex 존재 확인에 all-access는 불필요하며, 기존 elevated instance와 standard-user instance 사이에서 access-denied를 "mutex가 없음"으로 오판할 수 있다.
+- 제한: screenshot의 `관리자:` 표시는 실행된 process가 elevated라는 evidence지만, elevation이 shortcut/AppCompat 설정에서 강제됐는지는 repository source만으로 확인할 수 없다.
+
+**해결 방법**
+- shell context menu는 `HKCU\\Software\\Classes\\Folder\\Shell` 아래 per-user registration으로 이동했다. Explorer의 HKCR merged view에서는 동일하게 노출된다.
+- single-process presence check는 `SYNCHRONIZE`만 요청하고, minimal open에서도 `ERROR_ACCESS_DENIED`이면 named object가 존재하는 것으로 처리한다.
+- 기존 `asInvoker` manifest와 AppData configuration contract는 유지한다.
+
+**재발 방지**
+- source invariant가 shell registration에서 HKCR write를 금지하고 HKCU Classes path를 요구한다.
+- mutex presence check에서 `MUTEX_ALL_ACCESS` 재도입을 금지한다.
+
+**검증 상태**
+- Targeted static audit: PASS — shell registry와 mutex access source contract 확인.
+- standard-user clean launch / elevated-existing-instance interop: NOT TESTED after this fix.
+- repository source에는 product manifest의 `requireAdministrator` / `highestAvailable` 설정이 없음.
+
+**관련 commit**
+- `253839b7` — `fix: register shell menu per user`
+- `e03f5155` — per-user shell regression guard
+- `1bdd46c2` — `fix: remove elevation-dependent mutex access`
+- `c0c3fd55` — standard-user mutex regression guard
+
+---
+
+## 2026-09-23 — AddressBar와 coolbar legacy child geometry가 Win11 surface를 다시 덮어씀
+
+**오류 발생**
+- 기존 AddressBar 수정 뒤에도 사용자 보고에서 folder/path field의 별도 사각 frame과 command icon layout 문제가 남았다.
+
+**최초 실제 오류**
+- 이전 AddressBar fix는 child Edit의 `WS_EX_CLIENTEDGE`만 제거했다. 내부 ComboBox와 Edit의 `WS_BORDER` 및 ComboBox의 `WS_EX_CLIENTEDGE`는 그대로 남을 수 있었다.
+- `MainCoolBar::loadStateFile()`은 Win11 command metrics가 계산된 뒤 legacy coolbar의 persisted `cx/cxMinChild` 값을 다시 적용했다. Main toolbar는 후속 load에서 자체 size refresh를 하지만 drive/bookmark band는 legacy geometry가 마지막 값이 될 수 있었다.
+
+**원인 진단**
+- composite address control에서 outer ComboBoxEx만 modern frame ownership을 가져야 하지만 nested child non-client styles를 완전히 제거하지 않았다.
+- command button/icon 크기 migration과 rebar band geometry migration을 별개 persistence layer로 보지 않았다.
+
+**해결 방법**
+- non-High-Contrast AddressBar에서 nested ComboBox/Edit의 `WS_BORDER`와 `WS_EX_CLIENTEDGE`를 모두 제거하고 original state를 HWND property에 보관한다.
+- High Contrast에서는 original native border state를 복원한다.
+- legacy coolbar state restore가 끝난 뒤 main/drive/bookmark toolbar 모두 `UpdateToolbarSize()`를 다시 실행해 current command metrics가 최종 band child size를 결정하도록 했다.
+
+**재발 방지**
+- source invariant가 ComboBox/Edit 양쪽 border/client-edge 제거와 High Contrast restore에 필요한 state token을 검사한다.
+- persisted rebar state restore 뒤 세 toolbar의 post-restore metric recalculation을 검사한다.
+
+**검증 상태**
+- Targeted static audit: PASS — nested border removal/restore 및 post-restore toolbar sizing source 확인.
+- Windows 11 AddressBar visual / command-bar icon spacing: NOT TESTED after this fix.
+- hung-window ghost screenshot의 회색/희미한 rendering은 정상-state palette evidence로 사용하지 않는다.
+
+**관련 commit**
+- `265161ab` — `fix: remove nested address control borders`
+- `7bb4a027` — AddressBar single-frame regression guard
+- `08186e67` — `ui: recalc command bars after legacy state restore`
+- `678ef5a0` — post-restore command-bar metric guard
+
+---
+
 ## 오류를 예방하기 위한 일반 개발 규칙
 
 1. 새 header/API/macro는 소유 header를 직접 include한다. PCH/transitive include에 기대지 않는다.
