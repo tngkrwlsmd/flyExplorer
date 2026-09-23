@@ -1497,3 +1497,42 @@
 - `python build/validate_source_invariants.py`: **NOT RETESTED** on the user's Windows checkout after `25856539`.
 - `local_ci.bat x64`, VS 2026 build and rebuilt runtime screenshot: **NOT RETESTED** after `25856539`.
 
+
+
+---
+
+## 2026-09-24 — Dark command hover, text, tab and popup rendering remained inconsistent
+
+**오류 발생**
+- 실제 Windows Dark screenshot에서 About의 `License` / `Credits` tab text가 ellipsis로 잘렸다.
+- main/file-scrap command toolbar의 icon hover가 밝은 legacy HOT bitmap으로 바뀌어 흰 box처럼 보이고 icon 대비가 사라졌다.
+- `뒤로`, `이름변경` 등 ToolbarWindow32 text와 drop-down secondary glyph가 app-owned Dark surface에서 native gray/black renderer와 UI font를 계속 사용할 수 있었다.
+- `위로 상자`와 Drive dialog는 dark dialog 안에 plain `CToolBar`를 유지해 toolbar strip/font/hot state가 공용 modern renderer와 달랐다.
+- legacy standard-menu option이 켜진 경우 BCMenu의 일부 submenu/detail glyph/text가 system-color renderer로 돌아갈 수 있었다.
+
+**원인 진단**
+- dialog tab custom renderer가 native tab item 폭 위에 좌우 8 DPI pixel padding을 추가해 짧은 tab label 자체의 가용 폭을 과도하게 줄였다.
+- `CToolBarEx::SetIconType()`가 Dark에서도 classic/light용 HOT bitmap strip을 그대로 load했다. Custom-draw hover background가 올바르더라도 hot image 자체의 밝은 artwork가 최종 pixel을 덮었다.
+- toolbar custom draw는 prepaint color만 공급하고 native toolbar에 text/drop-down glyph 최종 painting을 맡겨, system text/arrow color와 toolbar font가 Dark surface에 다시 나타날 수 있었다.
+- History/Drive/reusable dialog toolbar 경로가 공용 `CToolBarEx`를 우회했다.
+- BCMenu의 legacy standard renderer 선택은 app-owned Dark popup에서도 허용되어 있었다.
+
+**해결 방법**
+- `ModernUI::drawDialogTab()`의 text side inset을 8에서 3 DPI pixel로 줄여 native tab sizing과 custom padding이 중복되지 않게 했다.
+- Dark/non-High-Contrast에서 `CToolBarEx` hot image list는 cold image list를 duplicate하여 icon artwork를 바꾸지 않고 `ThemePalette.mHover/mPressed`만 상태 표시를 담당하게 했다.
+- `CDRF_NOTIFYPOSTPAINT` / `CDDS_ITEMPOSTPAINT` final pass를 추가해 native image/layout/accessibility는 유지하되 text area와 drop-down chevron은 ThemePalette + 현재 toolbar UI font로 마지막에 다시 그린다.
+- popup toolbar도 Dark에서 native Explorer theme association을 reset해 동일 custom renderer가 final surface를 소유하게 했다.
+- `CToolBarEx::ApplyModernMetrics()`는 동일 LOGFONT이면 HFONT를 불필요하게 재생성하지 않는다.
+- `HistoryDlg`, `DriveDlg`, `DlgToolBar`를 `CToolBarEx` 기반으로 통합했다. `DlgToolBar` 사용자인 batch rename도 같은 renderer를 자동으로 사용한다.
+- Dark/non-High-Contrast BCMenu는 legacy standard-menu 설정과 무관하게 `DrawItemWindows8Style()` palette renderer를 사용한다.
+- 기존 `DropMenuButton` / `ColourPickerXP`의 Dark arrow path는 ThemePalette text/secondary colors를 이미 사용하고 있음을 전수 확인했다.
+
+**재발 방지**
+- `build/validate_source_invariants.py`가 toolbar final post-paint ownership, cold→hot duplication, stable UI font, compact dialog-tab inset, visible dialog toolbar의 `CToolBarEx` inheritance, Dark BCMenu palette renderer를 검사한다.
+- toolbar/menu의 상태 배경과 icon/text/glyph final renderer를 별개 ownership으로 취급한다. palette field 값만 맞는 것으로 visual PASS를 선언하지 않는다.
+- 새로운 visible dialog toolbar는 plain `CToolBar`로 추가하지 않고 shared modern toolbar path를 사용한다.
+
+**검증 상태**
+- User runtime screenshots before fix: FAIL.
+- Source/connector audit after fix: implemented; Release-x64-Unicode compile/link/runtime smoke **PENDING**.
+- Matching Windows screenshot/runtime acceptance after fix: **NOT RETESTED**.
