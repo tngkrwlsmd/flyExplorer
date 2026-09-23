@@ -2502,6 +2502,21 @@ def validate_win11_stability_regressions() -> list[str]:
 
     modern_ui = contents["modern_ui"]
     for token in (
+        "kThemeAssociationProp",
+        "ControlThemeAssociationExplorer",
+        "ControlThemeAssociationDefault",
+        "ControlThemeAssociationDisabled",
+        "hasControlThemeAssociation",
+        "rememberControlThemeAssociation",
+        "hasControlThemeAssociation(aHwnd, sDesiredAssociation)",
+        "ControlThemeAssociationDisabled)))",
+    ):
+        if token not in modern_ui:
+            errors.append(
+                f"src/fxfile/gui/ModernUI.cpp: missing idempotent theme-association token {token}"
+            )
+
+    for token in (
         "kThemeApplyGuardProp",
         "beginControlThemeChange",
         "endControlThemeChange",
