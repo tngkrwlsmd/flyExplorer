@@ -873,3 +873,36 @@
 **Validation**
 - Connector-side source inspection confirms the new palette/font branches and matching declarations are present.
 - Windows 11 Light/Dark/System/High Contrast visual checks, 100/125/150/200% DPI checks, Korean text/IME checks, MSVC compile/link, and runtime behavior are **NOT TESTED** here.
+
+
+### Dark filtered list text and menu state glyphs
+
+**Occurrence**
+- Continued source audit of the reported Dark-mode black-text inconsistency found two paint paths that were still able to select black/system-menu foreground colors independently of the Dark palette.
+
+**First actual source error**
+- When file-list text color mode was `COLOR_TYPE_FILTERING`, the historical general-file `*.*` filter supplied `RGB(0, 0, 0)` directly to list-view custom draw. That legacy default is readable on a light surface but can become black-on-dark.
+- `BCMenu::Draw3DCheckmark()` always used `COLOR_MENUTEXT`, so app-owned checked/radio glyphs could remain dark even when the popup surface was Dark.
+
+**Cause**
+- Filter colors predate the app theme and encode the old light-surface general-file default as literal black rather than an automatic text semantic.
+- The legacy menu-state helper bypassed the newer `ThemePalette` text/selection colors.
+
+**Fix**
+- The file-list filtering path treats only the historical general-file signature (`*.*` + pure black) and a missing filter as automatic text in app Dark/non-High-Contrast, using `ThemePalette.mText`. Other explicit filter colors and all background-filter colors remain unchanged.
+- `BCMenu::Draw3DCheckmark()` now uses palette text/selection-text outside High Contrast and system menu/highlight text in High Contrast.
+- Legacy owner-draw buttons/split buttons also resolve `ModernUI::getUIFont` when they do not already have a control font, and drag feedback uses the same shared Windows UI font.
+
+**Prevention**
+- Source invariants guard the legacy `*.*` black-text fallback, preserve background-filter routing, require palette-aware menu check/radio glyphs, and require shared Windows UI font fallback for reviewed owner-draw/transient text paths.
+
+**Validation**
+- Connector-side source inspection confirms the targeted paint/font branches and invariant tokens are present.
+- `python build/validate_source_invariants.py`, MSVC compile/link, Windows 11 runtime Dark visual checks, user filtering-mode state, menu checked/radio rendering, DPI checks, and Korean text rendering are **NOT TESTED** in this connector-only environment.
+
+**Related commits**
+- `a45dbcb6` — `ui: keep legacy filtered text readable in dark mode`
+- `be135783` — `ui: keep menu checkmarks readable in dark mode`
+- `60ce7b8e`, `c3e6e8c8` — owner-draw Windows UI font fallbacks
+- `188d1f6d` — drag-feedback Windows UI font
+- `7d4e8a35`, `d96347de` — regression guards
