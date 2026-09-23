@@ -1114,3 +1114,31 @@
 - `python build/validate_source_invariants.py`: **NOT RETESTED** on the user's Windows checkout after this commit.
 - `local_ci.bat x64`, VS 2026 project generation, Release-x64-Unicode compile/link/runtime smoke: **NOT RETESTED** after this commit.
 
+---
+
+## 2026-09-23 — Rebar wrapper bypassed child toolbar/menu notification reflection
+
+**오류 발생**
+- 사용자 최신 screenshot에서도 Dark top menu text가 계속 검게 보였다.
+- `CMenuBar::OnCustomDraw()`에는 이미 ThemePalette text, explicit `DrawText`, `CDRF_SKIPDEFAULT`가 있었으므로 단순 색상 값 문제로 설명되지 않았다.
+
+**최초 실제 오류**
+- `CMenuBar`와 `CToolBarEx`는 `ON_NOTIFY_REFLECT(NM_CUSTOMDRAW, ...)`에 의존한다.
+- 그러나 부모 wrapper인 `CSizableReBar::OnNotify()`는 내부 rebar control의 id(`wParam == 1`)가 아니면 즉시 `return FALSE;`했다.
+- 따라서 child toolbar/menu notification이 MFC 기본 `CControlBar::OnNotify()` routing/reflection으로 전달되지 않을 수 있었고, 이 경우 모든 child custom-draw 코드는 source에 존재해도 runtime에서 최종 renderer가 되지 않는다.
+
+**원인 진단**
+- Root cause: wrapper control이 내부 rebar notification과 child-band notification을 같은 방식으로 차단했다.
+- 기존 regression guard는 child `NM_CUSTOMDRAW` handler token의 존재만 검사했고, 그 handler까지 notification이 실제로 도달하는 routing contract는 검사하지 않았다.
+
+**해결 방법**
+- `gui/rebar/SizableReBar.cpp`: `wParam != 1` child-band notification을 `CControlBar::OnNotify(wParam, lParam, pResult)`에 위임한다.
+- 내부 rebar(id 1)의 `RBN_*` handling은 기존 구현을 유지한다.
+- `build/validate_source_invariants.py`: command-surface contract가 base `OnNotify` delegation을 요구하고 해당 block의 `return FALSE;` 재도입을 금지한다.
+
+**검증 상태**
+- User screenshot before fix: FAIL — Dark menu text remains black.
+- Connector source audit: PASS — reflection bypassing branch and child `ON_NOTIFY_REFLECT` dependency confirmed.
+- Source contract after fix: PASS by connector inspection.
+- Windows runtime screenshot after fix: **NOT RETESTED**.
+
