@@ -12,6 +12,7 @@
 #pragma once
 
 #include "../file_filter.h"
+#include "../gui/FlatHeaderCtrl.h"
 
 #include "cfg_dlg.h"
 
@@ -36,8 +37,9 @@ protected:
     void selectItem(xpr_sint_t aIndex);
 
 protected:
-    CImageList mImageList;
-    CListCtrl  mListCtrl;
+    CImageList     mImageList;
+    CListCtrl      mListCtrl;
+    FlatHeaderCtrl mHeaderCtrl;
 
 public:
     virtual xpr_bool_t PreTranslateMessage(MSG* pMsg);

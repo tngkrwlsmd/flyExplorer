@@ -338,16 +338,34 @@ void CToolBarEx::SetIconType( int nIconType, bool bUpdate /*=true*/ )
         tbCtrl.SetHotImageList( &m_imageListHot );
     }
 
+    m_imageListDisabled.DeleteImageList();
     if ( nIDDisabled != ( UINT )-1 ) // "disabled" imagelist is optional
     {
         lpResName = MAKEINTRESOURCE( nIDDisabled );
         hInst = AfxFindResourceHandle( lpResName, RT_BITMAP );
 
-        m_imageListDisabled.DeleteImageList();
         VERIFY( m_imageListDisabled.Attach( ImageList_LoadImage( hInst, lpResName,
             szIcon.cx, 0, m_clrMask, IMAGE_BITMAP, LR_CREATEDIBSECTION ) ) );
         m_imageListDisabled.SetBkColor(CLR_NONE);
         tbCtrl.SetDisabledImageList( &m_imageListDisabled );
+    }
+    else
+    {
+        const fxfile::ui::ThemePalette sPalette =
+            fxfile::ui::ModernUI::getPalette();
+        if (XPR_IS_TRUE(sPalette.mDark) &&
+            XPR_IS_FALSE(sPalette.mHighContrast) &&
+            XPR_IS_NOT_NULL(m_imageListCold.m_hImageList))
+        {
+            HIMAGELIST sDisabledImageList =
+                ::ImageList_Duplicate(m_imageListCold.m_hImageList);
+            if (XPR_IS_NOT_NULL(sDisabledImageList))
+            {
+                m_imageListDisabled.Attach(sDisabledImageList);
+                m_imageListDisabled.SetBkColor(CLR_NONE);
+                tbCtrl.SetDisabledImageList(&m_imageListDisabled);
+            }
+        }
     }
 
     OnImageListsReloaded();

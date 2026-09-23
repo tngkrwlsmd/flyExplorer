@@ -1686,8 +1686,16 @@ void CMenuBar::OnCustomDraw( NMHDR* pNMHDR, LRESULT* pResult )
                     // The menu bar owns its Dark surface, so draw its text
                     // explicitly with the same palette instead of depending
                     // on the native toolbar text renderer.
-                    const int sItemIndex =
+                    int sItemIndex =
                         CommandToIndex(static_cast<UINT>(nmcd.dwItemSpec));
+                    if (sItemIndex < 0 &&
+                        nmcd.dwItemSpec <
+                            static_cast<DWORD_PTR>(
+                                GetToolBarCtrl().GetButtonCount()))
+                    {
+                        sItemIndex = static_cast<int>(nmcd.dwItemSpec);
+                    }
+
                     if (sItemIndex >= 0)
                     {
                         CString sMenuText;

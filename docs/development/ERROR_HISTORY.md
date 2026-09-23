@@ -982,3 +982,44 @@
 - 변경 source self-check: PASS — stable HWND snapshot, no-retime `WM_THEMECHANGED`, Dark list/tree reset, explicit menu `DrawText` token을 commit 전 확인했다.
 - `python build/validate_source_invariants.py`, MSVC compile/link, `local_ci.bat x64`, Windows 11 Preferences 반복 open/close 및 screenshot visual: NOT TESTED in connector-only environment.
 
+---
+
+## 2026-09-23 — Filtering white surface, address selection box, disabled toolbar glyphs
+
+**오류 발생**
+- 사용자 최신 Windows 11 screenshot에서 Dark settings의 Filtering list/header가 흰색으로 남고 일부 기본 filter text가 검게 표시됐다.
+- main window address field도 흰색 field와 현재 folder name 주위의 별도 검은 사각형을 보였고, Cut/Copy/Undo 등 실제 toolbar button은 존재하지만 disabled 상태에서 glyph가 보이지 않았다.
+- top menu text도 일부 상태에서 여전히 native black fallback이 관찰됐다.
+
+**최초 실제 오류**
+- `CfgAppearanceFilteringDlg`는 item custom draw에서 `FilterItem::mColor`만 설정하고 list background/text-background/header renderer는 전혀 Dark palette로 전환하지 않았다. historical default black filter도 그대로 출력했다.
+- `AddressBar`는 `CComboBoxEx`에 legacy `CBS_OWNERDRAWFIXED`를 설정했지만 대응 `DrawItem` owner가 없었다. 또한 child edit의 `WM_CTLCOLOREDIT`가 어느 parent HWND로 전달되는지에 따라 inner ComboBox subclass만으로는 palette brush routing이 보장되지 않았다.
+- `CToolBarEx::SetIconType()`는 main toolbar에 disabled bitmap resource가 없을 때 disabled image list를 제공하지 않았다. Dark mode는 ToolbarWindow32 theme를 disable하므로 native disabled synthesis에 맡긴 Cut/Copy/Undo glyph가 dark chrome에서 사실상 사라질 수 있었다.
+- `CMenuBar` explicit text path는 custom-draw `dwItemSpec`을 command id로만 해석했다. legacy/index-shaped notification에서는 item lookup이 실패해 native text renderer로 되돌아갈 수 있었다.
+
+**원인 진단**
+- Root cause 1: parent settings surface만 Dark를 소유하고 legacy child list/header의 final background renderer는 native light 상태로 남았다.
+- Root cause 2: composite address control의 border만 제거하고 closed-field owner-draw/style 및 실제 CTLCOLOR message parent를 끝까지 정리하지 않았다.
+- Root cause 3: enabled/hot icon overlay만 검증하고 disabled state의 image-list ownership을 검증하지 않았다.
+- Root cause 4: menu text 직접 그리기 자체는 추가했지만 item resolution failure가 native fallback을 다시 허용했다.
+
+**해결 방법**
+- `cfg_appearance_filtering_dlg.*`: list body에 ThemePalette background/text-background를 적용하고 `FlatHeaderCtrl`로 header를 palette-owned rendering으로 전환한다. legacy pure-black filter text만 Dark에서 automatic `mText`로 처리하고 explicit user colors는 유지한다. Dark list의 legacy native border/client-edge도 제거한다.
+- `address_bar.*`: unused `CBS_OWNERDRAWFIXED`를 제거하고 outer `AddressBar` 자체에 `WM_CTLCOLOR` handler를 추가해 Edit/ListBox/Static palette brush가 실제 message parent에서도 적용되도록 한다. 기존 child subclass routing은 fallback/inner-parent 경로로 유지한다.
+- `ToolBarEx.cpp`: disabled resource가 없는 Dark toolbar는 cold image list를 duplicate해 explicit disabled image list를 만든다.
+- `main_toolbar.cpp`: Fluent migrated frames의 disabled copy는 `ThemePalette.mSecondaryText` 색 glyph로 교체한다.
+- `MenuBar.cpp`: custom-draw `dwItemSpec`이 command id로 해석되지 않을 때 유효한 zero-based button index fallback을 사용해 explicit Dark text drawing을 유지한다.
+- `validate_source_invariants.py`: Filtering body/header palette, address no-owner-draw + outer CTLCOLOR, explicit disabled image list/Fluent disabled glyph, menu item fallback을 deterministic contract로 추가한다.
+
+**재발 방지**
+- Dark child control은 parent palette만 확인하지 말고 body/header/disabled/selection 등 각 최종 renderer state를 screenshot 기준으로 확인한다.
+- owner-draw style은 실제 DrawItem/custom-draw owner가 없으면 사용하지 않는다.
+- toolbar icon contract는 enabled/hot뿐 아니라 disabled/check/pressed state의 image source까지 포함한다.
+- composite control의 CTLCOLOR는 추정 parent가 아니라 실제 outer/inner parent 경로 모두에서 palette routing을 보장한다.
+
+**검증 상태**
+- 사용자 screenshot: FAIL before fix — Filtering white surface/black text, white address field/black folder rectangle, missing disabled toolbar glyphs, remaining black menu text 확인.
+- Connector source audit: PASS — 위 네 source ownership gap을 현재 `main`에서 확인했다.
+- 변경 source self-check: PASS — palette list/header, no `CBS_OWNERDRAWFIXED`, outer `ON_WM_CTLCOLOR`, duplicated disabled image list + secondary Fluent glyph, menu index fallback을 commit 전 확인했다.
+- `python build/validate_source_invariants.py`, MSVC compile/link, `local_ci.bat x64`, 실제 Windows Light/Dark/System/High Contrast screenshot 및 toolbar enabled/disabled interaction: **NOT TESTED** in connector-only environment.
+

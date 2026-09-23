@@ -177,6 +177,15 @@ void MainToolBar::OnImageListsReloaded()
         if (XPR_IS_NULL(sIcon))
             continue;
 
+        HICON sDisabledIcon = XPR_NULL;
+        if (XPR_IS_NOT_NULL(m_imageListDisabled.m_hImageList))
+        {
+            sDisabledIcon = ui::FluentCommandIcons::createIcon(
+                sEntry.mCommandId,
+                sCellSize,
+                sPalette.mSecondaryText);
+        }
+
         if (XPR_IS_NOT_NULL(m_imageListCold.m_hImageList) &&
             sEntry.mFrame < m_imageListCold.GetImageCount())
         {
@@ -195,6 +204,18 @@ void MainToolBar::OnImageListsReloaded()
                 sIcon);
         }
 
+        if (XPR_IS_NOT_NULL(sDisabledIcon) &&
+            XPR_IS_NOT_NULL(m_imageListDisabled.m_hImageList) &&
+            sEntry.mFrame < m_imageListDisabled.GetImageCount())
+        {
+            ::ImageList_ReplaceIcon(
+                m_imageListDisabled.m_hImageList,
+                sEntry.mFrame,
+                sDisabledIcon);
+        }
+
+        if (XPR_IS_NOT_NULL(sDisabledIcon))
+            ::DestroyIcon(sDisabledIcon);
         ::DestroyIcon(sIcon);
     }
 }

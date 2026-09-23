@@ -85,6 +85,7 @@ AddressBar::~AddressBar(void)
 BEGIN_MESSAGE_MAP(AddressBar, CComboBoxEx)
     ON_WM_CREATE()
     ON_WM_NCPAINT()
+    ON_WM_CTLCOLOR()
     ON_WM_SETTINGCHANGE()
     ON_WM_SYSCOLORCHANGE()
     ON_MESSAGE(WM_THEMECHANGED, OnThemeChanged)
@@ -111,7 +112,6 @@ xpr_bool_t AddressBar::Create(CWnd *aParentWnd, xpr_uint_t aId, const RECT &aRec
     sStyle |= WS_CLIPCHILDREN;
     sStyle |= CBS_DROPDOWN;
     sStyle |= CBS_AUTOHSCROLL;
-    sStyle |= CBS_OWNERDRAWFIXED;
 
     return CComboBoxEx::Create(sStyle, aRect, aParentWnd, aId);
 }
@@ -165,6 +165,43 @@ void AddressBar::OnNcPaint(void)
         sDC.GetSafeHdc(),
         &sWindowRect,
         static_cast<HBRUSH>(::GetStockObject(DC_BRUSH)));
+}
+
+HBRUSH AddressBar::OnCtlColor(
+    CDC *aDC,
+    CWnd *aWnd,
+    xpr_uint_t aCtlColor)
+{
+    xpr_uint_t sMessage = 0;
+    switch (aCtlColor)
+    {
+    case CTLCOLOR_EDIT:
+        sMessage = WM_CTLCOLOREDIT;
+        break;
+
+    case CTLCOLOR_LISTBOX:
+        sMessage = WM_CTLCOLORLISTBOX;
+        break;
+
+    case CTLCOLOR_STATIC:
+        sMessage = WM_CTLCOLORSTATIC;
+        break;
+
+    default:
+        break;
+    }
+
+    if (sMessage != 0 && XPR_IS_NOT_NULL(aDC))
+    {
+        const LRESULT sBrush = handleComboCtlColor(
+            sMessage,
+            aDC->GetSafeHdc(),
+            XPR_IS_NOT_NULL(aWnd) ? aWnd->GetSafeHwnd() : XPR_NULL);
+        if (sBrush != 0)
+            return reinterpret_cast<HBRUSH>(sBrush);
+    }
+
+    return CComboBoxEx::OnCtlColor(aDC, aWnd, aCtlColor);
 }
 
 void AddressBar::OnSettingChange(xpr_uint_t aFlags, const xpr_tchar_t *aSection)

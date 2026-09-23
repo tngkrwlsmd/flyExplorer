@@ -12,6 +12,7 @@
 
 #include "../img_list_manager.h"
 #include "../option.h"
+#include "../gui/ModernUI.h"
 #include "../resource.h"
 
 #include "filter_set_dlg.h"
@@ -66,6 +67,33 @@ xpr_bool_t CfgAppearanceFilteringDlg::OnInitDialog(void)
     mListCtrl.InsertColumn(1, gApp.loadString(XPR_STRING_LITERAL("popup.cfg.body.appearance.filter.list.column.extension")), LVCFMT_LEFT, 245, -1);
 
     mListCtrl.SetImageList(&SingletonManager::get<ImgListManager>().mCustomImgList16, LVSIL_SMALL);
+
+    const ui::ThemePalette sPalette = ui::ModernUI::getPalette();
+    const COLORREF sListBackground =
+        XPR_IS_TRUE(sPalette.mHighContrast) ?
+        sPalette.mWindow :
+        sPalette.mElevated;
+    mListCtrl.SetBkColor(sListBackground);
+    mListCtrl.SetTextBkColor(sListBackground);
+    mListCtrl.SetTextColor(sPalette.mText);
+
+    if (XPR_IS_TRUE(sPalette.mDark) &&
+        XPR_IS_FALSE(sPalette.mHighContrast))
+    {
+        mListCtrl.ModifyStyle(WS_BORDER, 0);
+        mListCtrl.ModifyStyleEx(
+            WS_EX_CLIENTEDGE,
+            0,
+            SWP_FRAMECHANGED);
+    }
+
+    HWND sHeaderHwnd = ListView_GetHeader(mListCtrl.GetSafeHwnd());
+    if (XPR_IS_NOT_NULL(sHeaderHwnd) &&
+        XPR_IS_NULL(mHeaderCtrl.m_hWnd) &&
+        mHeaderCtrl.SubclassWindow(sHeaderHwnd) != FALSE)
+    {
+        mHeaderCtrl.initHeader(XPR_FALSE);
+    }
 
     xpr_tchar_t sText[0xff] = {0};
     _stprintf(sText, gApp.loadFormatString(XPR_STRING_LITERAL("popup.cfg.body.appearance.filter.label.max_filter"), XPR_STRING_LITERAL("%d")), MAX_FILTER);
@@ -179,10 +207,36 @@ void CfgAppearanceFilteringDlg::OnCustomDrawList(NMHDR* pNMHDR, LRESULT* pResult
     }
     else if (pLVCD->nmcd.dwDrawStage == CDDS_ITEMPREPAINT)
     {
-        xpr_sint_t sIndex = (xpr_sint_t)pLVCD->nmcd.dwItemSpec;
+        const ui::ThemePalette sPalette = ui::ModernUI::getPalette();
+        const COLORREF sListBackground =
+            XPR_IS_TRUE(sPalette.mHighContrast) ?
+            sPalette.mWindow :
+            sPalette.mElevated;
+
+        pLVCD->clrTextBk = sListBackground;
+
         FilterItem *sFilterItem = (FilterItem *)pLVCD->nmcd.lItemlParam;
-        if (sFilterItem != XPR_NULL)
-            pLVCD->clrText = sFilterItem->mColor;
+        COLORREF sFilterTextColor =
+            XPR_IS_NOT_NULL(sFilterItem) ?
+            sFilterItem->mColor :
+            sPalette.mText;
+
+        if (XPR_IS_TRUE(sPalette.mDark) &&
+            XPR_IS_FALSE(sPalette.mHighContrast) &&
+            sFilterTextColor == RGB(0, 0, 0))
+        {
+            sFilterTextColor = sPalette.mText;
+        }
+
+        if ((pLVCD->nmcd.uItemState & CDIS_SELECTED) != 0)
+        {
+            pLVCD->clrText = sPalette.mSelectionText;
+            pLVCD->clrTextBk = sPalette.mSelection;
+        }
+        else
+        {
+            pLVCD->clrText = sFilterTextColor;
+        }
 
         *pResult = CDRF_DODEFAULT;
     }

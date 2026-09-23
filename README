@@ -302,8 +302,12 @@ follow-up also made settings child traversal z-order-safe, stopped enhanced
 list/tree controls from restoring Explorer painting over palette-owned Dark
 surfaces, and moved the top menu text to explicit ThemePalette drawing so Win11
 cannot fall back to black `COLOR_BTNTEXT` on the dark command surface.
-Root-cause and validation details are recorded in
-`docs/development/ERROR_HISTORY.md`.
+A subsequent screenshot pass also gives the Filtering settings list/header an
+explicit Dark palette, removes the legacy owner-draw address-field style while
+routing `WM_CTLCOLOR` through the real ComboBoxEx parent, and supplies an
+explicit Dark disabled image list so Cut/Copy/Undo and other disabled toolbar
+commands retain visible glyphs. Root-cause and validation details are recorded
+in `docs/development/ERROR_HISTORY.md`.
 
 Compile/link and runtime evidence for the current `main` still requires a fresh
 matching `local_ci.bat x64` run. The `full` profile, x86 compatibility, package

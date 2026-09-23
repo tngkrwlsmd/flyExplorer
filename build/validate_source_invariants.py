@@ -2524,6 +2524,8 @@ def validate_win11_stability_regressions() -> list[str]:
         "button_st_cpp": FXFILE_SRC / "gui" / "BtnST.cpp",
         "colour_picker": FXFILE_SRC / "gui" / "ColourPickerXP.cpp",
         "explorer_ctrl": FXFILE_SRC / "explorer_ctrl.cpp",
+        "cfg_filter": FXFILE_SRC / "cfg" / "cfg_appearance_filtering_dlg.cpp",
+        "cfg_filter_h": FXFILE_SRC / "cfg" / "cfg_appearance_filtering_dlg.h",
     }
 
     contents: dict[str, str] = {}
@@ -2790,6 +2792,23 @@ def validate_win11_stability_regressions() -> list[str]:
                 "src/fxfile/explorer_ctrl.cpp: drag feedback must use the current Windows UI font"
             )
 
+    cfg_filter = contents["cfg_filter"]
+    cfg_filter_h = contents["cfg_filter_h"]
+    for token in (
+        '#include "../gui/ModernUI.h"',
+        "mListCtrl.SetBkColor(sListBackground)",
+        "mListCtrl.SetTextBkColor(sListBackground)",
+        "sFilterTextColor == RGB(0, 0, 0)",
+        "sFilterTextColor = sPalette.mText;",
+        "FlatHeaderCtrl mHeaderCtrl",
+        "mHeaderCtrl.SubclassWindow(sHeaderHwnd)",
+    ):
+        source = cfg_filter_h if token == "FlatHeaderCtrl mHeaderCtrl" else cfg_filter
+        if token not in source:
+            errors.append(
+                f"settings filter list Dark surface contract missing token {token}"
+            )
+
     filtering_pos = explorer_ctrl.find(
         "if (mOption.mTextColorType == COLOR_TYPE_FILTERING)"
     )
@@ -2893,7 +2912,14 @@ def validate_win11_stability_regressions() -> list[str]:
                 "src/fxfile/address_bar.cpp: legacy native address frame is painting before the custom frame"
             )
 
+    if "CBS_OWNERDRAWFIXED" in address:
+        errors.append(
+            "src/fxfile/address_bar.cpp: legacy owner-draw address style must not return without a DrawItem owner"
+        )
     for token in (
+        "ON_WM_CTLCOLOR()",
+        "HBRUSH AddressBar::OnCtlColor",
+        "handleComboCtlColor(",
         "kAddressBarOuterBorderProp",
         "kAddressBarOuterClientEdgeProp",
         "kAddressBarComboBorderProp",
@@ -2914,6 +2940,25 @@ def validate_win11_stability_regressions() -> list[str]:
                 f"src/fxfile/address_bar.cpp: missing single-frame dark address token {token}"
             )
 
+    for token in (
+        "ImageList_Duplicate(m_imageListCold.m_hImageList)",
+        "SetDisabledImageList(&m_imageListDisabled)",
+    ):
+        if token not in contents["toolbar_cpp"]:
+            errors.append(
+                f"src/fxfile/gui/rebar/ToolBarEx.cpp: missing Dark disabled-icon fallback token {token}"
+            )
+
+    for token in (
+        "sPalette.mSecondaryText",
+        "m_imageListDisabled.m_hImageList",
+        "ImageList_ReplaceIcon(",
+    ):
+        if token not in contents["main_toolbar"]:
+            errors.append(
+                f"src/fxfile/main_toolbar.cpp: missing disabled Fluent icon token {token}"
+            )
+
     if "TBI_LARGE, IL_COLOR_MASK);" not in contents["main_toolbar"]:
         errors.append(
             "src/fxfile/main_toolbar.cpp: default toolbar icon mode must remain the readable large Fluent size"
@@ -2928,6 +2973,16 @@ def validate_win11_stability_regressions() -> list[str]:
         if token not in contents["main_toolbar"]:
             errors.append(
                 f"src/fxfile/main_toolbar.cpp: one-time legacy icon migration missing token {token}"
+            )
+
+    for token in (
+        "nmcd.dwItemSpec <",
+        "GetToolBarCtrl().GetButtonCount()",
+        "sItemIndex = static_cast<int>(nmcd.dwItemSpec)",
+    ):
+        if token not in contents["menubar"]:
+            errors.append(
+                f"src/fxfile/gui/rebar/MenuBar.cpp: missing direct-text item resolution token {token}"
             )
 
     for source_name in ("toolbar_cpp", "menubar"):

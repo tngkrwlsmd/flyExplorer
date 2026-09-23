@@ -127,6 +127,7 @@ protected:
     afx_msg void OnDeleteItem(NMHDR *aNmHdr, LRESULT *aResult);
     afx_msg xpr_sint_t OnCreate(LPCREATESTRUCT aCreateStruct);
     afx_msg void OnNcPaint(void);
+    afx_msg HBRUSH OnCtlColor(CDC *aDC, CWnd *aWnd, xpr_uint_t aCtlColor);
     afx_msg void OnSettingChange(xpr_uint_t aFlags, const xpr_tchar_t *aSection);
     afx_msg void OnSysColorChange(void);
     afx_msg LRESULT OnThemeChanged(WPARAM aWParam, LPARAM aLParam);
