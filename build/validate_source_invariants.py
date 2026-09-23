@@ -2467,6 +2467,7 @@ def validate_win11_stability_regressions() -> list[str]:
         "drop_menu_button_cpp": FXFILE_SRC / "gui" / "DropMenuButton.cpp",
         "button_st_h": FXFILE_SRC / "gui" / "BtnST.h",
         "button_st_cpp": FXFILE_SRC / "gui" / "BtnST.cpp",
+        "colour_picker": FXFILE_SRC / "gui" / "ColourPickerXP.cpp",
     }
 
     contents: dict[str, str] = {}
@@ -2690,6 +2691,29 @@ def validate_win11_stability_regressions() -> list[str]:
             errors.append(
                 f"src/fxfile/gui/BtnST.cpp: missing palette-aware owner-draw button token {token}"
             )
+
+    colour_picker = contents["colour_picker"]
+    for token in (
+        '#include "ModernUI.h"',
+        "const bool bModernDark =",
+        "m_xpButton.IsAppThemed() && !bModernDark",
+        "m_xpCombo.IsAppThemed() && !bModernDark",
+        "sPalette.mSecondaryText",
+        "sPalette.mSeparator",
+        "m_clrBackground = sPalette.mElevated",
+        "m_clrText = sPalette.mText",
+        "fxfile::ui::ModernUI::getUIFont(sLogFont, GetSafeHwnd())",
+    ):
+        if token not in colour_picker:
+            errors.append(
+                f"src/fxfile/gui/ColourPickerXP.cpp: missing palette-aware colour-picker token {token}"
+            )
+    draw_item_pos = colour_picker.find("void CColourPickerXP::DrawItem")
+    popup_init_pos = colour_picker.find("void CColourPopupXP::Initialise")
+    if draw_item_pos < 0 or popup_init_pos < draw_item_pos:
+        errors.append(
+            "src/fxfile/gui/ColourPickerXP.cpp: colour-picker draw/popup contracts are missing"
+        )
 
     modern_ui = contents["modern_ui"]
     for token in (
