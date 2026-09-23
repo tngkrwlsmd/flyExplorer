@@ -2702,6 +2702,8 @@ def validate_win11_stability_regressions() -> list[str]:
             "XPR_IS_TRUE(mRefreshingModernAppearance)",
             "mRefreshingModernAppearance = XPR_TRUE;",
             "mRefreshingModernAppearance = XPR_FALSE;",
+            "refreshModernAppearance(XPR_FALSE);",
+            "if (XPR_IS_TRUE(aRethemeControls))",
         ):
             if token not in source:
                 errors.append(
