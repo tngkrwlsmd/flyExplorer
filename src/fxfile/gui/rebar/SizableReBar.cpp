@@ -404,7 +404,12 @@ BOOL CSizableReBar::OnNotify( WPARAM wParam, LPARAM lParam, LRESULT* pResult )
 {
     if ( wParam != 1 )
     {
-        return FALSE;
+        // Notifications from toolbar/menu band children must go through the
+        // normal MFC notification path so ON_NOTIFY_REFLECT handlers on the
+        // child receive NM_CUSTOMDRAW/TBN_* messages. Returning FALSE here
+        // bypassed that routing and left native ToolbarWindow32 painting in
+        // control even though CMenuBar/CToolBarEx supplied custom draw code.
+        return CControlBar::OnNotify( wParam, lParam, pResult );
     }
 
     REBARBANDINFO rbbi;

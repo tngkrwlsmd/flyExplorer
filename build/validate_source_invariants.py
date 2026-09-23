@@ -495,9 +495,29 @@ def validate_command_surface_contract() -> list[str]:
         "dwReBarStyle |= RBS_BANDBORDERS | WS_BORDER;",
         "sPalette.mChrome",
         "resetControlTheme(m_rbCtrl.m_hWnd)",
+        "return CControlBar::OnNotify( wParam, lParam, pResult );",
     ):
         if token not in contents["rebar_cpp"]:
             errors.append(f"src/fxfile/gui/rebar/SizableReBar.cpp: missing modern rebar token {token}")
+
+    notify_start = contents["rebar_cpp"].find("BOOL CSizableReBar::OnNotify")
+    notify_end = contents["rebar_cpp"].find(
+        "\nvoid CSizableReBar::OnUpdateCmdUI",
+        notify_start,
+    )
+    notify_block = (
+        contents["rebar_cpp"][notify_start:notify_end]
+        if notify_start >= 0 and notify_end > notify_start
+        else ""
+    )
+    if "if ( wParam != 1 )" not in notify_block:
+        errors.append(
+            "src/fxfile/gui/rebar/SizableReBar.cpp: child-notification routing guard is missing"
+        )
+    if "return FALSE;" in notify_block:
+        errors.append(
+            "src/fxfile/gui/rebar/SizableReBar.cpp: child band notifications must not bypass MFC reflection"
+        )
 
     return errors
 
