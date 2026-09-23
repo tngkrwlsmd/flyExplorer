@@ -2460,6 +2460,8 @@ def validate_win11_stability_regressions() -> list[str]:
         "single_process": FXFILE_SRC / "single_process.cpp",
         "main_coolbar": FXFILE_SRC / "main_coolbar.cpp",
         "file_scrap": FXFILE_SRC / "file_scrap_pane.cpp",
+        "bookmark_wnd": FXFILE_SRC / "bookmark_wnd.cpp",
+        "search_loc": FXFILE_SRC / "cmd" / "search_loc_dlg.cpp",
     }
 
     contents: dict[str, str] = {}
@@ -2565,6 +2567,30 @@ def validate_win11_stability_regressions() -> list[str]:
         errors.append(
             "src/fxfile/file_scrap_pane.cpp: legacy fixed button-text color returned"
         )
+
+    bookmark_wnd = contents["bookmark_wnd"]
+    for token in (
+        "void BookmarkWnd::updateFont(void)",
+        "ui::ModernUI::getUIFont(sLogFont, GetSafeHwnd())",
+        "sLogFont.lfUnderline = XPR_TRUE;",
+        "updateFont();\n    updateAppearance();",
+    ):
+        if token not in bookmark_wnd:
+            errors.append(
+                f"src/fxfile/bookmark_wnd.cpp: missing system UI bookmark-font token {token}"
+            )
+
+    search_loc = contents["search_loc"]
+    for token in (
+        "const ui::ThemePalette sPalette = ui::ModernUI::getPalette();",
+        "sPalette.mElevated",
+        "sPalette.mSeparator",
+        "if (XPR_IS_FALSE(sPalette.mHighContrast))\n        return sBrush;",
+    ):
+        if token not in search_loc:
+            errors.append(
+                f"src/fxfile/cmd/search_loc_dlg.cpp: missing palette-aware search-location token {token}"
+            )
 
     modern_ui = contents["modern_ui"]
     for token in (
