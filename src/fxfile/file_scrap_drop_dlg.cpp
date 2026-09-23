@@ -503,36 +503,55 @@ void FileScrapDropDlg::OnDrop(COleDataObject *aOleDataObject, DROPEFFECT aDropEf
         // get folder PIDL
         sPidl1 = (LPITEMIDLIST)(((xpr_byte_t *)sIda)+(sIda)->aoffset[0]);
 
-        LPSHELLFOLDER sShellFolder = XPR_NULL, sShellFolderDesktop = XPR_NULL;
-        ::SHGetDesktopFolder(&sShellFolderDesktop);
-        HRESULT sHResult = sShellFolderDesktop->BindToObject(sPidl1, XPR_NULL, IID_IShellFolder, (LPVOID *)&sShellFolder);
-        if (FAILED(sHResult) || XPR_IS_NULL(sShellFolder))
+        LPSHELLFOLDER sShellFolder = XPR_NULL;
+        LPSHELLFOLDER sShellFolderDesktop = XPR_NULL;
+        HRESULT sHResult =
+            ::SHGetDesktopFolder(&sShellFolderDesktop);
+
+        if (SUCCEEDED(sHResult) &&
+            XPR_IS_NOT_NULL(sShellFolderDesktop))
         {
-            sShellFolder = sShellFolderDesktop;
-            sShellFolderDesktop = XPR_NULL;
-        }
-
-        LPCITEMIDLIST *sPidls = new LPCITEMIDLIST[sCount];
-
-        xpr_sint_t i;
-        xpr_sint_t sCount2 = 0;
-        for (i = 0; i < sCount; ++i)
-        {
-            // get item PIDL and get full-qualified PIDL
-            sPidl2 = (LPCITEMIDLIST)(((xpr_byte_t *)sIda)+(sIda)->aoffset[i+1]);
-
-            if (IsFileSystem(sShellFolder, sPidl2))
+            sHResult =
+                sShellFolderDesktop->BindToObject(
+                    sPidl1,
+                    XPR_NULL,
+                    IID_IShellFolder,
+                    (LPVOID *)&sShellFolder);
+            if (FAILED(sHResult) ||
+                XPR_IS_NULL(sShellFolder))
             {
-                sPidls[sCount2] = sPidl2;
-                sCount2++;
+                sShellFolder = sShellFolderDesktop;
+                sShellFolderDesktop = XPR_NULL;
             }
+
+            LPCITEMIDLIST *sPidls =
+                new LPCITEMIDLIST[sCount];
+
+            xpr_sint_t sCount2 = 0;
+            for (xpr_sint_t i = 0; i < sCount; ++i)
+            {
+                sPidl2 =
+                    (LPCITEMIDLIST)(
+                        (xpr_byte_t *)sIda +
+                        sIda->aoffset[i + 1]);
+
+                if (IsFileSystem(sShellFolder, sPidl2))
+                {
+                    sPidls[sCount2] = sPidl2;
+                    sCount2++;
+                }
+            }
+
+            FileScrap &sFileScrap =
+                FileScrap::instance();
+            sFileScrap.addItem(
+                sGroupId,
+                sShellFolder,
+                sPidls,
+                sCount2);
+
+            XPR_SAFE_DELETE_ARRAY(sPidls);
         }
-
-        FileScrap &sFileScrap = FileScrap::instance();
-
-        sFileScrap.addItem(sGroupId, sShellFolder, sPidls, sCount2);
-
-        XPR_SAFE_DELETE_ARRAY(sPidls);
 
         COM_RELEASE(sShellFolder);
         COM_RELEASE(sShellFolderDesktop);
