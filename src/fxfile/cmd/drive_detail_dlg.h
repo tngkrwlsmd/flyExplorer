@@ -45,6 +45,8 @@ protected:
     DECLARE_MESSAGE_MAP()
     virtual xpr_bool_t OnInitDialog(void);
     afx_msg void OnDestroy(void);
+    afx_msg xpr_bool_t OnEraseBkgnd(CDC *aDC);
+    afx_msg HBRUSH OnCtlColor(CDC *aDC, CWnd *aWnd, xpr_uint_t aCtlColor);
     afx_msg void OnSettingChange(xpr_uint_t aFlags, const xpr_tchar_t *aSection);
     afx_msg LRESULT OnDpiChanged(WPARAM aWParam, LPARAM aLParam);
     afx_msg LRESULT OnDpiChangedAfterParent(WPARAM aWParam, LPARAM aLParam);

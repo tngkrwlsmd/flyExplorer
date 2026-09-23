@@ -1031,6 +1031,16 @@ void CfgDlg::applyModernAppearanceToChild(CWnd *aWnd, HFONT aPreviousFont)
         }
     }
 
+    if (_tcsicmp(sClassName, XPR_STRING_LITERAL("SysListView32")) == 0 ||
+        _tcsicmp(sClassName, XPR_STRING_LITERAL("SysTreeView32")) == 0 ||
+        _tcsicmp(sClassName, XPR_STRING_LITERAL("SysTabControl32")) == 0)
+    {
+        // Refresh final palette-owned common-control colors as well as the
+        // visual-style association. This keeps blank list/tree/tab surfaces
+        // from retaining the previous theme after an in-place theme switch.
+        ui::ModernUI::applyDialogControlTheme(aWnd->GetSafeHwnd());
+    }
+
     if (_tcsicmp(sClassName, XPR_STRING_LITERAL("Edit")) == 0)
     {
         ::SetWindowSubclass(
@@ -1159,7 +1169,11 @@ void CfgDlg::refreshModernAppearance(xpr_bool_t aRethemeControls)
         SendMessage(WM_GETFONT, 0, 0));
 
     LOGFONT sLogFont = {0};
-    if (XPR_IS_TRUE(ui::ModernUI::getUIFont(sLogFont, GetSafeHwnd())))
+    if (XPR_IS_TRUE(ui::ModernUI::getUIFont(sLogFont, GetSafeHwnd())) &&
+        XPR_IS_FALSE(
+            ui::ModernUI::isSameFont(
+                reinterpret_cast<HFONT>(mUIFont.GetSafeHandle()),
+                sLogFont)))
     {
         if (XPR_IS_NOT_NULL(mUIFont.m_hObject))
             mUIFont.DeleteObject();

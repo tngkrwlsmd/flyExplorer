@@ -241,13 +241,24 @@ xpr_bool_t PictureViewer::OnInitDialog(void)
         if (sExplorerCtrl->GetSelectedCount() == 1)
         {
             xpr_sint_t sIndex = sExplorerCtrl->GetSelectionMark();
-            LPLVITEMDATA sLvItemData = (LPLVITEMDATA)sExplorerCtrl->GetItemData(sIndex);
-            if (sLvItemData != XPR_NULL && XPR_TEST_BITS(sLvItemData->mShellAttributes, SFGAO_FILESYSTEM))
+            if (sIndex >= 0)
             {
-                xpr_tchar_t sPath[XPR_MAX_PATH + 1] = {0};
-                GetName(sLvItemData->mShellFolder, sLvItemData->mPidl, SHGDN_FORPARSING, sPath);
+                LPLVITEMDATA sLvItemData =
+                    (LPLVITEMDATA)sExplorerCtrl->GetItemData(sIndex);
+                if (XPR_IS_NOT_NULL(sLvItemData) &&
+                    XPR_TEST_BITS(
+                        sLvItemData->mShellAttributes,
+                        SFGAO_FILESYSTEM))
+                {
+                    xpr_tchar_t sPath[XPR_MAX_PATH + 1] = {0};
+                    GetName(
+                        sLvItemData->mShellFolder,
+                        sLvItemData->mPidl,
+                        SHGDN_FORPARSING,
+                        sPath);
 
-                setPicture(sPath);
+                    setPicture(sPath);
+                }
             }
         }
     }
@@ -1003,13 +1014,24 @@ void PictureViewer::setDocking(xpr_bool_t aDocking)
         if (sExplorerCtrl->GetSelectedCount() == 1)
         {
             xpr_sint_t sIndex = sExplorerCtrl->GetSelectionMark();
-            LPLVITEMDATA sLvItemData = (LPLVITEMDATA)sExplorerCtrl->GetItemData(sIndex);
-            if (sLvItemData != XPR_NULL && XPR_TEST_BITS(sLvItemData->mShellAttributes, SFGAO_FILESYSTEM))
+            if (sIndex >= 0)
             {
-                xpr_tchar_t sPath[XPR_MAX_PATH + 1] = {0};
-                GetName(sLvItemData->mShellFolder, sLvItemData->mPidl, SHGDN_FORPARSING, sPath);
+                LPLVITEMDATA sLvItemData =
+                    (LPLVITEMDATA)sExplorerCtrl->GetItemData(sIndex);
+                if (XPR_IS_NOT_NULL(sLvItemData) &&
+                    XPR_TEST_BITS(
+                        sLvItemData->mShellAttributes,
+                        SFGAO_FILESYSTEM))
+                {
+                    xpr_tchar_t sPath[XPR_MAX_PATH + 1] = {0};
+                    GetName(
+                        sLvItemData->mShellFolder,
+                        sLvItemData->mPidl,
+                        SHGDN_FORPARSING,
+                        sPath);
 
-                setPicture(sPath);
+                    setPicture(sPath);
+                }
             }
         }
     }

@@ -9,6 +9,7 @@
 
 #include "stdafx.h"
 #include "IconList.h"
+#include "ModernUI.h"
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -167,10 +168,21 @@ void IconList::DrawItem(LPDRAWITEMSTRUCT aDrawItemStruct)
     xpr_sint_t sImage = sItem + mOffset;
     CRect sItemRect(aDrawItemStruct->rcItem);
 
-    sDC->FillSolidRect(sItemRect, ::GetSysColor(COLOR_WINDOW));
+    const fxfile::ui::ThemePalette sPalette =
+        fxfile::ui::ModernUI::getPalette();
+    const COLORREF sBackground =
+        XPR_IS_TRUE(sPalette.mHighContrast) ?
+        ::GetSysColor(COLOR_WINDOW) :
+        sPalette.mElevated;
+    const COLORREF sSelection =
+        XPR_IS_TRUE(sPalette.mHighContrast) ?
+        ::GetSysColor(COLOR_HIGHLIGHT) :
+        sPalette.mSelection;
 
-    if ((aDrawItemStruct->itemState & ODS_SELECTED))// && (aDrawItemStruct->itemAction & (ODA_SELECT | ODA_DRAWENTIRE)))
-        sDC->FillSolidRect(sItemRect, ::GetSysColor(COLOR_HIGHLIGHT));
+    sDC->FillSolidRect(sItemRect, sBackground);
+
+    if ((aDrawItemStruct->itemState & ODS_SELECTED))
+        sDC->FillSolidRect(sItemRect, sSelection);
 
     CPoint sPoint(sItemRect.TopLeft());
     sPoint.y += GAP;

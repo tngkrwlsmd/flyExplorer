@@ -399,25 +399,31 @@ void FolderCtrl::trackContextMenu(xpr_bool_t aRightClick)
 {
     HTREEITEM sTreeItem = XPR_NULL;
 
+    // Keep the popup anchor in screen coordinates. Hit-testing is the only
+    // operation that needs a client-coordinate copy.
     CPoint sPoint;
     ::GetCursorPos(&sPoint);
-    ScreenToClient(&sPoint);
 
     if (XPR_IS_TRUE(aRightClick))
     {
-        sTreeItem = HitTest(sPoint);
-        ClientToScreen(&sPoint);
+        CPoint sHitPoint(sPoint);
+        ScreenToClient(&sHitPoint);
+        sTreeItem = HitTest(sHitPoint);
     }
     else
     {
         sTreeItem = GetSelectedItem();
+        if (XPR_IS_NULL(sTreeItem))
+            return;
 
         CRect sRect;
-        GetItemRect(sTreeItem, sRect, XPR_TRUE);
+        if (GetItemRect(sTreeItem, sRect, XPR_TRUE) == XPR_FALSE)
+            return;
+
         ClientToScreen(&sRect);
-        if (!(sRect.left < sPoint.x && sPoint.x < sRect.right) || !(sRect.top < sPoint.y && sRect.bottom < sPoint.y))
+        if (sRect.PtInRect(sPoint) == XPR_FALSE)
         {
-            sPoint.x = sRect.left + (sRect.right-sRect.left)/2;
+            sPoint.x = sRect.left + (sRect.right - sRect.left) / 2;
             sPoint.y = sRect.bottom;
         }
     }
@@ -3031,27 +3037,48 @@ DROPEFFECT FolderCtrl::OnDragOver(COleDataObject *aOleDataObject, DWORD aKeyStat
 
             if (aOleDataObject->GetData(sClipFormat.mShellIDList, &sStgMedium, &sFormatEtc) == XPR_TRUE)
             {
-                LPIDA sIda = (LPIDA)::GlobalLock(sStgMedium.hGlobal);
-                LPITEMIDLIST sPidl1 = (LPITEMIDLIST)(((xpr_byte_t *)sIda)+(sIda)->aoffset[0]);
-
-                xpr_tchar_t sPath[XPR_MAX_PATH + 1];
-                GetName(sPidl1, SHGDN_FORPARSING, sPath);
-
-                xpr_tchar_t sHitPath[XPR_MAX_PATH + 1];
-                LPTVITEMDATA sTvItemData = (LPTVITEMDATA)GetItemData(sTreeItem);
-                if (XPR_IS_NOT_NULL(sTvItemData))
+                LPIDA sIda =
+                    (LPIDA)::GlobalLock(
+                        sStgMedium.hGlobal);
+                if (XPR_IS_NOT_NULL(sIda))
                 {
-                    GetName(sTvItemData->mShellFolder, sTvItemData->mPidl, SHGDN_FORPARSING, sHitPath);
-                    if (sPath[0] == sHitPath[0])
-                        sCopy = XPR_FALSE;
+                    LPITEMIDLIST sPidl1 =
+                        (LPITEMIDLIST)(
+                            (xpr_byte_t *)sIda +
+                            sIda->aoffset[0]);
+
+                    xpr_tchar_t sPath[
+                        XPR_MAX_PATH + 1] = {0};
+                    GetName(
+                        sPidl1,
+                        SHGDN_FORPARSING,
+                        sPath);
+
+                    xpr_tchar_t sHitPath[
+                        XPR_MAX_PATH + 1] = {0};
+                    LPTVITEMDATA sTvItemData =
+                        (LPTVITEMDATA)GetItemData(
+                            sTreeItem);
+                    if (XPR_IS_NOT_NULL(sTvItemData))
+                    {
+                        GetName(
+                            sTvItemData->mShellFolder,
+                            sTvItemData->mPidl,
+                            SHGDN_FORPARSING,
+                            sHitPath);
+                        if (sPath[0] !=
+                                XPR_STRING_LITERAL('\0') &&
+                            sPath[0] == sHitPath[0])
+                        {
+                            sCopy = XPR_FALSE;
+                        }
+                    }
+
+                    ::GlobalUnlock(
+                        sStgMedium.hGlobal);
                 }
 
-                ::GlobalUnlock(sStgMedium.hGlobal);
-
-                if (XPR_IS_NOT_NULL(sStgMedium.pUnkForRelease))
-                {
-                    ::ReleaseStgMedium(&sStgMedium);
-                }
+                ::ReleaseStgMedium(&sStgMedium);
             }
         }
 

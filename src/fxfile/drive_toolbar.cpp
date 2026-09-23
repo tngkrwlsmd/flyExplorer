@@ -710,10 +710,7 @@ void DriveToolBar::OnDrop(COleDataObject* pDataObject, DROPEFFECT aDropEffect, C
     else
         OnDropFileOperation(&sStgMedium, aDropEffect, mOldDrive);
 
-    if (XPR_IS_NOT_NULL(sStgMedium.pUnkForRelease))
-    {
-        ::ReleaseStgMedium(&sStgMedium);
-    }
+    ::ReleaseStgMedium(&sStgMedium);
 }
 
 void DriveToolBar::OnDropFileOperation(STGMEDIUM *pstg, DROPEFFECT aDropEffect, xpr_sint_t aDriveIndex)

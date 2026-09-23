@@ -295,7 +295,18 @@ bool AccelTableDlg::sortAllCommands(Command *aCommand1, Command *aCommand2)
 void AccelTableDlg::OnSelchangeCategory(void) 
 {
     xpr_sint_t sCurSel = mCategoryWnd.GetCurSel();
-    Category *sCategory = (Category *)mCategoryWnd.GetItemData(sCurSel);
+    if (sCurSel == CB_ERR)
+    {
+        clearCommands();
+        mCurKeysWnd.ResetContent();
+        GetDlgItem(IDC_ACCEL_BUTTON_REMOVE)->EnableWindow(XPR_FALSE);
+        return;
+    }
+
+    Category *sCategory =
+        (Category *)mCategoryWnd.GetItemData(sCurSel);
+    if (XPR_IS_NULL(sCategory))
+        return;
 
     xpr_sint_t sIndex;
     Command *sCommand;
@@ -438,9 +449,21 @@ void AccelTableDlg::fillRecursiveCategory(CommandList &aCommandList, CMenu *aMen
 void AccelTableDlg::OnSelchangeCommands(void) 
 {
     xpr_sint_t sCurSel = mCommandWnd.GetCurSel();
-    Command *sCommand = (Command *)mCommandWnd.GetItemData(sCurSel);
 
     mCurKeysWnd.ResetContent();
+    if (sCurSel == LB_ERR)
+    {
+        GetDlgItem(IDC_ACCEL_BUTTON_REMOVE)->EnableWindow(XPR_FALSE);
+        return;
+    }
+
+    Command *sCommand =
+        (Command *)mCommandWnd.GetItemData(sCurSel);
+    if (XPR_IS_NULL(sCommand))
+    {
+        GetDlgItem(IDC_ACCEL_BUTTON_REMOVE)->EnableWindow(XPR_FALSE);
+        return;
+    }
 
     xpr_sint_t  i, sIndex;
     xpr::string sKey;
@@ -648,9 +671,12 @@ void AccelTableDlg::OnAssign(void)
     }
 
     xpr_sint_t sCurSel = mCommandWnd.GetCurSel();
-    if (sCurSel >= 0)
+    if (sCurSel >= 0 && mCount < MAX_ACCEL)
     {
-        Command *sCommand = (Command *)mCommandWnd.GetItemData(sCurSel);
+        Command *sCommand =
+            (Command *)mCommandWnd.GetItemData(sCurSel);
+        if (XPR_IS_NULL(sCommand))
+            return;
 
         // Command ID
         mAccel[mCount].cmd = (xpr_ushort_t)sCommand->mId;
@@ -675,9 +701,16 @@ void AccelTableDlg::OnRemove(void)
 {
     xpr_sint_t nComCurSel = mCommandWnd.GetCurSel();
     xpr_sint_t nKeyCurSel = mCurKeysWnd.GetCurSel();
+    if (nComCurSel == LB_ERR || nKeyCurSel == LB_ERR)
+        return;
 
-    Command *sCommand = (Command *)mCommandWnd.GetItemData(nComCurSel);
-    DWORD sAccelKey = (DWORD)mCurKeysWnd.GetItemData(nKeyCurSel);
+    Command *sCommand =
+        (Command *)mCommandWnd.GetItemData(nComCurSel);
+    if (XPR_IS_NULL(sCommand))
+        return;
+
+    DWORD sAccelKey =
+        (DWORD)mCurKeysWnd.GetItemData(nKeyCurSel);
 
     xpr_sint_t i;
     xpr_byte_t sVirt = (xpr_byte_t)LOWORD(sAccelKey);
@@ -715,7 +748,13 @@ void AccelTableDlg::OnReset(void)
 
     xpr_sint_t i;
     xpr_sint_t sComCurSel = mCommandWnd.GetCurSel();
-    Command *sCommand = (Command *)mCommandWnd.GetItemData(sComCurSel);
+    if (sComCurSel == LB_ERR)
+        return;
+
+    Command *sCommand =
+        (Command *)mCommandWnd.GetItemData(sComCurSel);
+    if (XPR_IS_NULL(sCommand))
+        return;
 
     i = 0;
     while (i < mCount)
@@ -750,6 +789,9 @@ void AccelTableDlg::OnReset(void)
     {
         if (sAccel[i].cmd == sCommand->mId)
         {
+            if (mCount >= MAX_ACCEL)
+                break;
+
             mAccel[mCount].cmd   = sAccel[i].cmd;
             mAccel[mCount].fVirt = sAccel[i].fVirt;
             mAccel[mCount].key   = sAccel[i].key;

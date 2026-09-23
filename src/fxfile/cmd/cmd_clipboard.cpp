@@ -457,32 +457,35 @@ void ClipboardFilePasteCommand::execute(CommandContext &aContext)
 
             sExplorerCtrl = sMainFrame->getExplorerCtrl(sFolderCtrl);
 
-            if (IsPasteBitmap(&sOleDataObject) == XPR_TRUE)
+            if (XPR_IS_NOT_NULL(sExplorerCtrl))
             {
-                sResult = pasteNewBitmapFile(*sExplorerCtrl, sTargetDir, sDataObject, XPR_FALSE);
-                if (sResult != 0)
-                    return;
-            }
+                if (IsPasteBitmap(&sOleDataObject) == XPR_TRUE)
+                {
+                    sResult = pasteNewBitmapFile(*sExplorerCtrl, sTargetDir, sDataObject, XPR_FALSE);
+                    if (sResult != 0)
+                        return;
+                }
 
-            if (IsPasteDIB(&sOleDataObject) == XPR_TRUE)
-            {
-                sResult = pasteNewBitmapFile(*sExplorerCtrl, sTargetDir, sDataObject, XPR_TRUE);
-                if (sResult != 0)
-                    return;
-            }
+                if (IsPasteDIB(&sOleDataObject) == XPR_TRUE)
+                {
+                    sResult = pasteNewBitmapFile(*sExplorerCtrl, sTargetDir, sDataObject, XPR_TRUE);
+                    if (sResult != 0)
+                        return;
+                }
 
-            if (IsPasteUnicodeText(&sOleDataObject) == XPR_TRUE)
-            {
-                sResult = pasteNewTextFile(*sExplorerCtrl, sTargetDir, sDataObject, XPR_TRUE);
-                if (sResult != 0)
-                    return;
-            }
+                if (IsPasteUnicodeText(&sOleDataObject) == XPR_TRUE)
+                {
+                    sResult = pasteNewTextFile(*sExplorerCtrl, sTargetDir, sDataObject, XPR_TRUE);
+                    if (sResult != 0)
+                        return;
+                }
 
-            if (IsPasteText(&sOleDataObject) == XPR_TRUE)
-            {
-                sResult = pasteNewTextFile(*sExplorerCtrl, sTargetDir, sDataObject, XPR_FALSE);
-                if (sResult != 0)
-                    return;
+                if (IsPasteText(&sOleDataObject) == XPR_TRUE)
+                {
+                    sResult = pasteNewTextFile(*sExplorerCtrl, sTargetDir, sDataObject, XPR_FALSE);
+                    if (sResult != 0)
+                        return;
+                }
             }
         }
 
@@ -530,7 +533,7 @@ void ClipboardFilePasteCommand::execute(CommandContext &aContext)
             if (sSelItem == XPR_TRUE)
             {
                 xpr_sint_t sSelCount = sExplorerCtrl->GetSelectedCount();
-                if (sSelCount >= 0)
+                if (sSelCount > 0)
                 {
                     xpr_sint_t sIndex = sExplorerCtrl->GetSelectionMark();
 
@@ -576,7 +579,7 @@ void ClipboardFilePasteCommand::execute(CommandContext &aContext)
 
                 if (IsPasteInetUrl(&sOleDataObject, sClipFormat.mInetUrl, sClipFormat.mFileContents, sClipFormat.mFileDescriptorW) == XPR_TRUE)
                 {
-                    sResult = DoPasteInetUrl(sDataObject, sTargetDir, sClipFormat.mInetUrl, sClipFormat.mFileContents, sClipFormat.mFileDescriptorA, XPR_TRUE);
+                    sResult = DoPasteInetUrl(sDataObject, sTargetDir, sClipFormat.mInetUrl, sClipFormat.mFileContents, sClipFormat.mFileDescriptorW, XPR_TRUE);
                     if (sResult)
                         return;
                 }
@@ -590,7 +593,7 @@ void ClipboardFilePasteCommand::execute(CommandContext &aContext)
 
                 if (IsPasteFileContents(&sOleDataObject, sClipFormat.mFileContents, sClipFormat.mFileDescriptorW) == XPR_TRUE)
                 {
-                    sResult = DoPasteFileContents(sDataObject, sTargetDir, sClipFormat.mFileContents, sClipFormat.mFileDescriptorA, XPR_TRUE);
+                    sResult = DoPasteFileContents(sDataObject, sTargetDir, sClipFormat.mFileContents, sClipFormat.mFileDescriptorW, XPR_TRUE);
                     if (sResult)
                         return;
                 }
@@ -861,29 +864,64 @@ void ClipboardFileSpecialPasteCommand::execute(CommandContext &aContext)
 
                 if (sSpecialClipFormat == sClipFormat.mInetUrl)
                 {
-                    DoPasteInetUrl(sDataObject, sTargetDir, sClipFormat.mInetUrl, sClipFormat.mFileContents, sClipFormat.mFileDescriptorA, XPR_FALSE);
-                    DoPasteInetUrl(sDataObject, sTargetDir, sClipFormat.mInetUrl, sClipFormat.mFileContents, sClipFormat.mFileDescriptorW, XPR_TRUE);
+                    sResult = DoPasteInetUrl(
+                        sDataObject,
+                        sTargetDir,
+                        sClipFormat.mInetUrl,
+                        sClipFormat.mFileContents,
+                        sClipFormat.mFileDescriptorA,
+                        XPR_FALSE);
+                    if (sResult == 0)
+                    {
+                        DoPasteInetUrl(
+                            sDataObject,
+                            sTargetDir,
+                            sClipFormat.mInetUrl,
+                            sClipFormat.mFileContents,
+                            sClipFormat.mFileDescriptorW,
+                            XPR_TRUE);
+                    }
                 }
                 else if (sSpecialClipFormat == sClipFormat.mFileContents)
                 {
-                    DoPasteFileContents(sDataObject, sTargetDir, sClipFormat.mFileContents, sClipFormat.mFileDescriptorA, XPR_FALSE);
-                    DoPasteFileContents(sDataObject, sTargetDir, sClipFormat.mFileContents, sClipFormat.mFileDescriptorW, XPR_TRUE);
+                    sResult = DoPasteFileContents(
+                        sDataObject,
+                        sTargetDir,
+                        sClipFormat.mFileContents,
+                        sClipFormat.mFileDescriptorA,
+                        XPR_FALSE);
+                    if (sResult == 0)
+                    {
+                        DoPasteFileContents(
+                            sDataObject,
+                            sTargetDir,
+                            sClipFormat.mFileContents,
+                            sClipFormat.mFileDescriptorW,
+                            XPR_TRUE);
+                    }
                 }
-                else if (sSpecialClipFormat == CF_BITMAP)
+                else
                 {
-                    sResult = pasteNewBitmapFile(*sExplorerCtrl, sTargetDir, sDataObject, XPR_FALSE);
-                }
-                else if (sSpecialClipFormat == CF_DIB)
-                {
-                    sResult = pasteNewBitmapFile(*sExplorerCtrl, sTargetDir, sDataObject, XPR_TRUE);
-                }
-                else if (sSpecialClipFormat == CF_UNICODETEXT)
-                {
-                    sResult = pasteNewTextFile(*sExplorerCtrl, sTargetDir, sDataObject, XPR_TRUE);
-                }
-                else if (sSpecialClipFormat == CF_TEXT)
-                {
-                    sResult = pasteNewTextFile(*sExplorerCtrl, sTargetDir, sDataObject, XPR_FALSE);
+                    sExplorerCtrl = sMainFrame->getExplorerCtrl(sFolderCtrl);
+                    if (XPR_IS_NULL(sExplorerCtrl))
+                        return;
+
+                    if (sSpecialClipFormat == CF_BITMAP)
+                    {
+                        sResult = pasteNewBitmapFile(*sExplorerCtrl, sTargetDir, sDataObject, XPR_FALSE);
+                    }
+                    else if (sSpecialClipFormat == CF_DIB)
+                    {
+                        sResult = pasteNewBitmapFile(*sExplorerCtrl, sTargetDir, sDataObject, XPR_TRUE);
+                    }
+                    else if (sSpecialClipFormat == CF_UNICODETEXT)
+                    {
+                        sResult = pasteNewTextFile(*sExplorerCtrl, sTargetDir, sDataObject, XPR_TRUE);
+                    }
+                    else if (sSpecialClipFormat == CF_TEXT)
+                    {
+                        sResult = pasteNewTextFile(*sExplorerCtrl, sTargetDir, sDataObject, XPR_FALSE);
+                    }
                 }
             }
         }
@@ -944,6 +982,9 @@ void ClipboardFileSpecialPasteCommand::execute(CommandContext &aContext)
             return;
 
         xpr_bool_t sSelItem = XPR_FALSE;
+        if (sParameters != XPR_NULL)
+            sSelItem = (xpr_bool_t)(xpr_sintptr_t)sParameters->get(CommandParameterIdIsSelectedItem);
+
         xpr_tchar_t sTargetDir[XPR_MAX_PATH + 1] = {0};
         _tcscpy(sTargetDir, sExplorerCtrl->getCurPath());
 
@@ -953,7 +994,7 @@ void ClipboardFileSpecialPasteCommand::execute(CommandContext &aContext)
             if (XPR_IS_TRUE(sSelItem))
             {
                 xpr_sint_t sSelCount = sExplorerCtrl->GetSelectedCount();
-                if (sSelCount >= 0)
+                if (sSelCount > 0)
                 {
                     xpr_sint_t sIndex = sExplorerCtrl->GetSelectionMark();
                     LPLVITEMDATA sLvItemData = (LPLVITEMDATA)sExplorerCtrl->GetItemData(sIndex);
@@ -1007,13 +1048,41 @@ void ClipboardFileSpecialPasteCommand::execute(CommandContext &aContext)
             {
                 if (sSpecialClipFormat == sClipFormat.mInetUrl)
                 {
-                    DoPasteInetUrl(sDataObject, sTargetDir, sClipFormat.mInetUrl, sClipFormat.mFileContents, sClipFormat.mFileDescriptorA, XPR_FALSE);
-                    DoPasteInetUrl(sDataObject, sTargetDir, sClipFormat.mInetUrl, sClipFormat.mFileContents, sClipFormat.mFileDescriptorW, XPR_TRUE);
+                    sResult = DoPasteInetUrl(
+                        sDataObject,
+                        sTargetDir,
+                        sClipFormat.mInetUrl,
+                        sClipFormat.mFileContents,
+                        sClipFormat.mFileDescriptorA,
+                        XPR_FALSE);
+                    if (sResult == 0)
+                    {
+                        DoPasteInetUrl(
+                            sDataObject,
+                            sTargetDir,
+                            sClipFormat.mInetUrl,
+                            sClipFormat.mFileContents,
+                            sClipFormat.mFileDescriptorW,
+                            XPR_TRUE);
+                    }
                 }
                 else if (sSpecialClipFormat == sClipFormat.mFileContents)
                 {
-                    DoPasteFileContents(sDataObject, sTargetDir, sClipFormat.mFileContents, sClipFormat.mFileDescriptorA, XPR_FALSE);
-                    DoPasteFileContents(sDataObject, sTargetDir, sClipFormat.mFileContents, sClipFormat.mFileDescriptorW, XPR_TRUE);
+                    sResult = DoPasteFileContents(
+                        sDataObject,
+                        sTargetDir,
+                        sClipFormat.mFileContents,
+                        sClipFormat.mFileDescriptorA,
+                        XPR_FALSE);
+                    if (sResult == 0)
+                    {
+                        DoPasteFileContents(
+                            sDataObject,
+                            sTargetDir,
+                            sClipFormat.mFileContents,
+                            sClipFormat.mFileDescriptorW,
+                            XPR_TRUE);
+                    }
                 }
                 else if (sSpecialClipFormat == CF_BITMAP)
                 {

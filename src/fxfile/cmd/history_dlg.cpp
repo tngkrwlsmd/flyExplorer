@@ -62,7 +62,6 @@ BEGIN_MESSAGE_MAP(HistoryDlg, super)
     ON_WM_SIZE()
     ON_WM_DESTROY()
     ON_WM_CONTEXTMENU()
-    ON_WM_SIZE()
     ON_NOTIFY(NM_RCLICK,      IDC_HISTORY_TREE, OnRclickTree)
     ON_NOTIFY(NM_DBLCLK,      IDC_HISTORY_TREE, OnNMDblclkTree)
     ON_NOTIFY(TVN_SELCHANGED, IDC_HISTORY_TREE, OnTvnSelchangedTree)
@@ -351,13 +350,18 @@ void HistoryDlg::getContextMenu(xpr_bool_t sRightClick)
     else
     {
         sTreeItem = mTreeCtrl.GetSelectedItem();
+        if (sTreeItem == XPR_NULL)
+            return;
 
         CRect sRect;
-        mTreeCtrl.GetItemRect(sTreeItem, sRect, XPR_TRUE);
+        if (mTreeCtrl.GetItemRect(sTreeItem, sRect, XPR_TRUE) == XPR_FALSE)
+            return;
+
         mTreeCtrl.ClientToScreen(&sRect);
-        if (!(sRect.left < sCursorPoint.x && sCursorPoint.x < sRect.right) || !(sRect.top < sCursorPoint.y && sRect.bottom < sCursorPoint.y))
+        if (!(sRect.left <= sCursorPoint.x && sCursorPoint.x < sRect.right) ||
+            !(sRect.top <= sCursorPoint.y && sCursorPoint.y < sRect.bottom))
         {
-            sCursorPoint.x = sRect.left + (sRect.right-sRect.left)/2;
+            sCursorPoint.x = sRect.left + (sRect.right - sRect.left) / 2;
             sCursorPoint.y = sRect.bottom;
         }
     }

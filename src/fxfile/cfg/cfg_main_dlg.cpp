@@ -329,6 +329,24 @@ void EnsureModernCfgButtonHeight(
         aMinimumHeight,
         SWP_NOZORDER | SWP_NOACTIVATE);
 }
+
+void ShowLanguageRestartNoticeIfChanged(
+    const Option::Config &aOldConfig,
+    const Option::Config &aNewConfig,
+    CWnd *aOwner)
+{
+    if (_tcsicmp(aOldConfig.mLanguage, aNewConfig.mLanguage) == 0)
+        return;
+
+    const xpr_tchar_t *sMsg =
+        gApp.loadString(
+            XPR_STRING_LITERAL(
+                "popup.cfg.msg.apply_language_on_next_loading_time"));
+    if (XPR_IS_NOT_NULL(aOwner))
+        aOwner->MessageBox(sMsg, XPR_NULL, MB_OK | MB_ICONWARNING);
+    else
+        AfxMessageBox(sMsg, MB_OK | MB_ICONWARNING);
+}
 } // namespace
 
 xpr_sint_t CfgMainDlg::mLastShowCfg = 0;
@@ -643,16 +661,28 @@ void CfgMainDlg::refreshModernAppearance(xpr_bool_t aRethemeControls)
     LOGFONT sLogFont = {0};
     if (XPR_IS_TRUE(ui::ModernUI::getUIFont(sLogFont, GetSafeHwnd())))
     {
-        if (XPR_IS_NOT_NULL(mUIFont.m_hObject))
-            mUIFont.DeleteObject();
-        if (mUIFont.CreateFontIndirect(&sLogFont) == XPR_TRUE)
-            SetFont(&mUIFont, XPR_FALSE);
+        if (XPR_IS_FALSE(
+                ui::ModernUI::isSameFont(
+                    reinterpret_cast<HFONT>(mUIFont.GetSafeHandle()),
+                    sLogFont)))
+        {
+            if (XPR_IS_NOT_NULL(mUIFont.m_hObject))
+                mUIFont.DeleteObject();
+            if (mUIFont.CreateFontIndirect(&sLogFont) == XPR_TRUE)
+                SetFont(&mUIFont, XPR_FALSE);
+        }
 
         LOGFONT sHeaderLogFont = sLogFont;
         sHeaderLogFont.lfWeight = FW_SEMIBOLD;
-        if (XPR_IS_NOT_NULL(mHeaderFont.m_hObject))
-            mHeaderFont.DeleteObject();
-        mHeaderFont.CreateFontIndirect(&sHeaderLogFont);
+        if (XPR_IS_FALSE(
+                ui::ModernUI::isSameFont(
+                    reinterpret_cast<HFONT>(mHeaderFont.GetSafeHandle()),
+                    sHeaderLogFont)))
+        {
+            if (XPR_IS_NOT_NULL(mHeaderFont.m_hObject))
+                mHeaderFont.DeleteObject();
+            mHeaderFont.CreateFontIndirect(&sHeaderLogFont);
+        }
     }
 
     if (mSurfaceColor != sPalette.mElevated)
@@ -979,6 +1009,9 @@ HBRUSH CfgMainDlg::OnCtlColor(CDC* pDC, CWnd* pWnd, xpr_uint_t nCtlColor)
 
 void CfgMainDlg::OnDefault(void)
 {
+    Option::Config sOldConfig;
+    gOpt->copyConfig(sOldConfig);
+
     const xpr_tchar_t *sMsg = gApp.loadString(XPR_STRING_LITERAL("popup.cfg.msg.confirm_default"));
     xpr_sint_t sMsgId = MessageBox(sMsg, XPR_NULL, MB_OK | MB_ICONWARNING | MB_YESNO);
     if (sMsgId != IDYES)
@@ -1001,6 +1034,11 @@ void CfgMainDlg::OnDefault(void)
 
     // notify default option
     gOpt->notifyConfig();
+
+    ShowLanguageRestartNoticeIfChanged(
+        sOldConfig,
+        mNewConfig,
+        this);
 
     xpr_sint_t i;
     CfgItem *sCfgItem;
@@ -1031,6 +1069,9 @@ void CfgMainDlg::OnDefault(void)
 void CfgMainDlg::OnApply(void)
 {
     CWaitCursor sWaitCursor;
+
+    Option::Config sOldConfig;
+    gOpt->copyConfig(sOldConfig);
 
     CfgItem *sCfgItem;
     CfgDeque::iterator sIterator;
@@ -1064,6 +1105,11 @@ void CfgMainDlg::OnApply(void)
 
     // notify new option
     gOpt->notifyConfig();
+
+    ShowLanguageRestartNoticeIfChanged(
+        sOldConfig,
+        mNewConfig,
+        this);
 
     GetDlgItem(IDC_CFG_APPLY)->EnableWindow(XPR_FALSE);
 }

@@ -373,7 +373,13 @@ void BookmarkEditDlg::OnItemModify(void)
     if (mListCtrl.GetSelectedCount() > 0)
     {
         xpr_sint_t sIndex = mListCtrl.GetSelectionMark();
-        BookmarkItem *sBookmarkItem = (BookmarkItem *)mListCtrl.GetItemData(sIndex);
+        if (sIndex < 0)
+            return;
+
+        BookmarkItem *sBookmarkItem =
+            (BookmarkItem *)mListCtrl.GetItemData(sIndex);
+        if (XPR_IS_NULL(sBookmarkItem))
+            return;
 
         BookmarkItemEditDlg sDlg;
         sDlg.add(sBookmarkItem);
@@ -403,6 +409,9 @@ void BookmarkEditDlg::OnItemDelete(void)
     if (mListCtrl.GetSelectedCount() > 0)
     {
         xpr_sint_t sIndex = mListCtrl.GetSelectionMark();
+        if (sIndex < 0)
+            return;
+
         mListCtrl.DeleteItem(sIndex);
 
         xpr_sint_t sCount = mListCtrl.GetItemCount();
@@ -423,10 +432,13 @@ void BookmarkEditDlg::OnItemMoveUp(void)
     if (mListCtrl.GetSelectedCount() > 0)
     {
         xpr_sint_t sIndex = mListCtrl.GetSelectionMark();
-        if (sIndex == 0)
+        if (sIndex <= 0)
             return;
 
-        BookmarkItem *sBookmarkItem = (BookmarkItem *)mListCtrl.GetItemData(sIndex);
+        BookmarkItem *sBookmarkItem =
+            (BookmarkItem *)mListCtrl.GetItemData(sIndex);
+        if (XPR_IS_NULL(sBookmarkItem))
+            return;
         mListCtrl.SetItemData(sIndex, XPR_NULL);
         mListCtrl.DeleteItem(sIndex--);
 
@@ -441,10 +453,16 @@ void BookmarkEditDlg::OnItemMoveDown(void)
     if (mListCtrl.GetSelectedCount() > 0)
     {
         xpr_sint_t sIndex = mListCtrl.GetSelectionMark();
-        if (sIndex == (mListCtrl.GetItemCount()-1))
+        if (sIndex < 0 ||
+            sIndex == (mListCtrl.GetItemCount()-1))
+        {
             return;
+        }
 
-        BookmarkItem *sBookmarkItem = (BookmarkItem *)mListCtrl.GetItemData(sIndex);
+        BookmarkItem *sBookmarkItem =
+            (BookmarkItem *)mListCtrl.GetItemData(sIndex);
+        if (XPR_IS_NULL(sBookmarkItem))
+            return;
         mListCtrl.SetItemData(sIndex, XPR_NULL);
         mListCtrl.DeleteItem(sIndex++);
 

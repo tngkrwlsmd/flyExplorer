@@ -529,19 +529,28 @@ LPITEMIDLIST Pidl::getFullPidl(LPSHELLFOLDER aShellFolder, LPCITEMIDLIST aSimple
 
         if (SUCCEEDED(sComResult))
         {
-            LPIDA sPida = (LPIDA)::GlobalLock(sStgMedium.hGlobal);
-
-            LPCITEMIDLIST sFolderPidl = (LPCITEMIDLIST)((xpr_byte_t *)sPida + sPida->aoffset[0]);
-            LPCITEMIDLIST sChildPidl  = (LPCITEMIDLIST)((xpr_byte_t *)sPida + sPida->aoffset[1]);
-
-            sFullPidl = concat(sFolderPidl, sChildPidl);
-
-            ::GlobalUnlock(sStgMedium.hGlobal);
-
-            if (XPR_IS_NOT_NULL(sStgMedium.pUnkForRelease))
+            LPIDA sPida =
+                (LPIDA)::GlobalLock(sStgMedium.hGlobal);
+            if (XPR_IS_NOT_NULL(sPida))
             {
-                ::ReleaseStgMedium(&sStgMedium);
+                LPCITEMIDLIST sFolderPidl =
+                    (LPCITEMIDLIST)(
+                        (xpr_byte_t *)sPida +
+                        sPida->aoffset[0]);
+                LPCITEMIDLIST sChildPidl =
+                    (LPCITEMIDLIST)(
+                        (xpr_byte_t *)sPida +
+                        sPida->aoffset[1]);
+
+                sFullPidl =
+                    concat(
+                        sFolderPidl,
+                        sChildPidl);
+
+                ::GlobalUnlock(sStgMedium.hGlobal);
             }
+
+            ::ReleaseStgMedium(&sStgMedium);
         }
 
         COM_RELEASE(sDataObject);

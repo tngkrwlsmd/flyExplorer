@@ -261,6 +261,8 @@ void TitleDlg::applyModernAppearanceToChild(CWnd *aWnd, HFONT aPreviousFont)
         }
     }
 
+    ui::ModernUI::applyDialogControlTheme(aWnd->GetSafeHwnd());
+
     CWnd *sChild = aWnd->GetWindow(GW_CHILD);
     while (XPR_IS_NOT_NULL(sChild))
     {
@@ -302,7 +304,11 @@ void TitleDlg::refreshModernAppearance(void)
         SendMessage(WM_GETFONT, 0, 0));
 
     LOGFONT sLogFont = {0};
-    if (XPR_IS_TRUE(ui::ModernUI::getUIFont(sLogFont, GetSafeHwnd())))
+    if (XPR_IS_TRUE(ui::ModernUI::getUIFont(sLogFont, GetSafeHwnd())) &&
+        XPR_IS_FALSE(
+            ui::ModernUI::isSameFont(
+                reinterpret_cast<HFONT>(mUIFont.GetSafeHandle()),
+                sLogFont)))
     {
         if (XPR_IS_NOT_NULL(mUIFont.m_hObject))
             mUIFont.DeleteObject();

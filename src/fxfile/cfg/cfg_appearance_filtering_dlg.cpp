@@ -230,8 +230,15 @@ void CfgAppearanceFilteringDlg::OnCustomDrawList(NMHDR* pNMHDR, LRESULT* pResult
 
         if ((pLVCD->nmcd.uItemState & CDIS_SELECTED) != 0)
         {
+            const xpr_bool_t sFocused =
+                (::GetFocus() == mListCtrl.GetSafeHwnd()) ?
+                XPR_TRUE :
+                XPR_FALSE;
             pLVCD->clrText = sPalette.mSelectionText;
-            pLVCD->clrTextBk = sPalette.mSelection;
+            pLVCD->clrTextBk =
+                XPR_IS_TRUE(sFocused) ?
+                sPalette.mSelection :
+                sPalette.mInactiveSelection;
         }
         else
         {
@@ -249,7 +256,7 @@ void CfgAppearanceFilteringDlg::OnListAdd(void)
     FilterItem *sFilterItem;
 
     sCount = mListCtrl.GetItemCount();
-    if (sCount > MAX_FILTER)
+    if (sCount >= MAX_FILTER)
     {
         xpr_tchar_t sMsg[0xff] = {0};
         _stprintf(sMsg, gApp.loadFormatString(XPR_STRING_LITERAL("popup.cfg.body.appearance.filter.msg.excess_max_count"), XPR_STRING_LITERAL("%d")), MAX_FILTER);
@@ -423,10 +430,23 @@ xpr_sint_t CfgAppearanceFilteringDlg::addFilterItem(FilterItem *aFilterItem)
 
 void CfgAppearanceFilteringDlg::selectItem(xpr_sint_t aIndex)
 {
+    if (aIndex < 0 || aIndex >= mListCtrl.GetItemCount())
+        return;
+
+    // LVS_SINGLESEL is a user-interaction contract; programmatic state writes
+    // can otherwise leave stale selected rows behind after reorder/default
+    // operations. Clear selection/focus explicitly before selecting one row.
+    mListCtrl.SetItemState(
+        -1,
+        0,
+        LVIS_FOCUSED | LVIS_SELECTED);
     mListCtrl.SetFocus();
     mListCtrl.EnsureVisible(aIndex, XPR_TRUE);
     mListCtrl.SetSelectionMark(aIndex);
-    mListCtrl.SetItemState(aIndex, LVIS_FOCUSED | LVIS_SELECTED, LVIS_FOCUSED | LVIS_SELECTED);
+    mListCtrl.SetItemState(
+        aIndex,
+        LVIS_FOCUSED | LVIS_SELECTED,
+        LVIS_FOCUSED | LVIS_SELECTED);
 }
 
 void CfgAppearanceFilteringDlg::OnDeleteitemList(NMHDR* pNMHDR, LRESULT* pResult) 

@@ -16,6 +16,34 @@
 
 namespace fxfile
 {
+namespace
+{
+xpr_bool_t WriteFileExact(
+    HANDLE aFile,
+    const void *aData,
+    DWORD aSize)
+{
+    if (aSize == 0)
+        return XPR_TRUE;
+
+    if (aFile == INVALID_HANDLE_VALUE || XPR_IS_NULL(aData))
+        return XPR_FALSE;
+
+    DWORD sWrittenBytes = 0;
+    if (::WriteFile(
+            aFile,
+            aData,
+            aSize,
+            &sWrittenBytes,
+            XPR_NULL) == FALSE)
+    {
+        return XPR_FALSE;
+    }
+
+    return sWrittenBytes == aSize ? XPR_TRUE : XPR_FALSE;
+}
+} // namespace
+
 // reference : https://msdn.microsoft.com/ko-kr/library/windows/desktop/dd145119%28v=vs.85%29.aspx?f=255&MSPPError=-2147217396
 BITMAPINFO *CreateBitmapInfoStruct(HBITMAP aBitmap)
 {
@@ -77,29 +105,42 @@ xpr_bool_t WriteBitmapFile(const xpr_tchar_t *aFile, BITMAPINFO *aBitmapInfo)
             FILE_ATTRIBUTE_NORMAL,
             (HANDLE)XPR_NULL);
 
-        sResult = (sFile != INVALID_HANDLE_VALUE);
-
-        if (XPR_IS_TRUE(sResult))
+        if (sFile != INVALID_HANDLE_VALUE)
         {
-            DWORD sWrittenBytes;
-
-            BITMAPFILEHEADER sBitmapFileHeader;
+            BITMAPFILEHEADER sBitmapFileHeader = {0};
             sBitmapFileHeader.bfType = 0x4d42; // 0x42 = "B" 0x4d = "M"
             sBitmapFileHeader.bfSize = (DWORD)(sizeof(BITMAPFILEHEADER) + sBitmapInfoHeader->biSize + sBitmapInfoHeader->biClrUsed * sizeof(RGBQUAD) + sBitmapInfoHeader->biSizeImage);
             sBitmapFileHeader.bfReserved1 = 0;
             sBitmapFileHeader.bfReserved2 = 0;
-            sBitmapFileHeader.bfOffBits = (DWORD)sizeof(BITMAPFILEHEADER) + sBitmapInfoHeader->biSize + sBitmapInfoHeader->biClrUsed * sizeof (RGBQUAD);
+            sBitmapFileHeader.bfOffBits = (DWORD)sizeof(BITMAPFILEHEADER) + sBitmapInfoHeader->biSize + sBitmapInfoHeader->biClrUsed * sizeof(RGBQUAD);
 
-            // BITMAPFILEHEADER
-            ::WriteFile(sFile, (LPVOID)&sBitmapFileHeader, sizeof(BITMAPFILEHEADER), (LPDWORD)&sWrittenBytes,  XPR_NULL);
+            const DWORD sBitmapInfoSize =
+                (DWORD)(sizeof(BITMAPINFOHEADER) +
+                        sBitmapInfoHeader->biClrUsed * sizeof(RGBQUAD));
 
-            // BITMAPINFOHEADER
-            ::WriteFile(sFile, (LPVOID) sBitmapInfoHeader, sizeof(BITMAPINFOHEADER) + sBitmapInfoHeader->biClrUsed * sizeof(RGBQUAD), (LPDWORD)&sWrittenBytes, XPR_NULL);
-
-            // bitmap image
-            ::WriteFile(sFile, (xpr_char_t *)sBits, (xpr_sint_t)sBitmapInfoHeader->biSizeImage, (LPDWORD)&sWrittenBytes,XPR_NULL);
+            sResult =
+                XPR_IS_TRUE(
+                    WriteFileExact(
+                        sFile,
+                        &sBitmapFileHeader,
+                        sizeof(BITMAPFILEHEADER))) &&
+                XPR_IS_TRUE(
+                    WriteFileExact(
+                        sFile,
+                        sBitmapInfoHeader,
+                        sBitmapInfoSize)) &&
+                XPR_IS_TRUE(
+                    WriteFileExact(
+                        sFile,
+                        sBits,
+                        sBitmapInfoHeader->biSizeImage)) ?
+                XPR_TRUE :
+                XPR_FALSE;
 
             ::CloseHandle(sFile);
+
+            if (XPR_IS_FALSE(sResult))
+                ::DeleteFile(aFile);
         }
     }
 
@@ -131,29 +172,42 @@ xpr_bool_t WriteBitmapFile(const xpr_tchar_t *aFile, BITMAPINFO *aBitmapInfo, HB
             FILE_ATTRIBUTE_NORMAL,
             (HANDLE)XPR_NULL);
 
-        sResult = (sFile != INVALID_HANDLE_VALUE) ? XPR_TRUE : XPR_FALSE;
-
-        if (XPR_IS_TRUE(sResult))
+        if (sFile != INVALID_HANDLE_VALUE)
         {
-            DWORD sWrittenBytes;
-
-            BITMAPFILEHEADER sBitmapFileHeader;
+            BITMAPFILEHEADER sBitmapFileHeader = {0};
             sBitmapFileHeader.bfType = 0x4d42; // 0x42 = "B" 0x4d = "M"
             sBitmapFileHeader.bfSize = (DWORD)(sizeof(BITMAPFILEHEADER) + sBitmapInfoHeader->biSize + sBitmapInfoHeader->biClrUsed * sizeof(RGBQUAD) + sBitmapInfoHeader->biSizeImage);
             sBitmapFileHeader.bfReserved1 = 0;
             sBitmapFileHeader.bfReserved2 = 0;
-            sBitmapFileHeader.bfOffBits = (DWORD)sizeof(BITMAPFILEHEADER) + sBitmapInfoHeader->biSize + sBitmapInfoHeader->biClrUsed * sizeof (RGBQUAD);
+            sBitmapFileHeader.bfOffBits = (DWORD)sizeof(BITMAPFILEHEADER) + sBitmapInfoHeader->biSize + sBitmapInfoHeader->biClrUsed * sizeof(RGBQUAD);
 
-            // BITMAPFILEHEADER
-            ::WriteFile(sFile, (LPVOID)&sBitmapFileHeader, sizeof(BITMAPFILEHEADER), (LPDWORD)&sWrittenBytes,  XPR_NULL);
+            const DWORD sBitmapInfoSize =
+                (DWORD)(sizeof(BITMAPINFOHEADER) +
+                        sBitmapInfoHeader->biClrUsed * sizeof(RGBQUAD));
 
-            // BITMAPINFOHEADER
-            ::WriteFile(sFile, (LPVOID)sBitmapInfoHeader, sizeof(BITMAPINFOHEADER) + sBitmapInfoHeader->biClrUsed * sizeof(RGBQUAD), (LPDWORD)&sWrittenBytes, XPR_NULL);
-
-            // bitmap image
-            ::WriteFile(sFile, (xpr_char_t *)sBits, (xpr_sint_t)sBitmapInfoHeader->biSizeImage, (LPDWORD)&sWrittenBytes, XPR_NULL);
+            sResult =
+                XPR_IS_TRUE(
+                    WriteFileExact(
+                        sFile,
+                        &sBitmapFileHeader,
+                        sizeof(BITMAPFILEHEADER))) &&
+                XPR_IS_TRUE(
+                    WriteFileExact(
+                        sFile,
+                        sBitmapInfoHeader,
+                        sBitmapInfoSize)) &&
+                XPR_IS_TRUE(
+                    WriteFileExact(
+                        sFile,
+                        sBits,
+                        sBitmapInfoHeader->biSizeImage)) ?
+                XPR_TRUE :
+                XPR_FALSE;
 
             ::CloseHandle(sFile);
+
+            if (XPR_IS_FALSE(sResult))
+                ::DeleteFile(aFile);
         }
     }
 
@@ -177,7 +231,7 @@ xpr_bool_t WriteBitmapFile(const xpr_tchar_t *aFile, HBITMAP aBitmap, HDC aDC)
         free(sBitmapInfo);
     }
 
-    return XPR_TRUE;
+    return sResult;
 }
 
 xpr_bool_t WriteBitmapFile(const xpr_tchar_t *aFile, HDC aDC, LPCRECT aRect)
@@ -192,19 +246,38 @@ xpr_bool_t WriteBitmapFile(const xpr_tchar_t *aFile, HDC aDC, LPCRECT aRect)
     CRect sRect(aRect);
 
     CDC sMemDC;
-    sMemDC.CreateCompatibleDC(sDC);
+    if (sMemDC.CreateCompatibleDC(sDC) == XPR_FALSE)
+        return XPR_FALSE;
 
     CBitmap sBitmap;
-    sBitmap.CreateCompatibleBitmap(sDC, sRect.Width(), sRect.Height());
+    if (sBitmap.CreateCompatibleBitmap(
+            sDC,
+            sRect.Width(),
+            sRect.Height()) == XPR_FALSE)
+    {
+        return XPR_FALSE;
+    }
 
     CBitmap *sOldBitmap = sMemDC.SelectObject(&sBitmap);
+    if (XPR_IS_NULL(sOldBitmap))
+        return XPR_FALSE;
 
-    sMemDC.BitBlt(0, 0, sRect.Width(), sRect.Height(), sDC, 0, 0, SRCCOPY);
-
-    WriteBitmapFile(aFile, sBitmap, aDC);
+    xpr_bool_t sResult = XPR_FALSE;
+    if (sMemDC.BitBlt(
+            0,
+            0,
+            sRect.Width(),
+            sRect.Height(),
+            sDC,
+            0,
+            0,
+            SRCCOPY) != XPR_FALSE)
+    {
+        sResult = WriteBitmapFile(aFile, sBitmap, aDC);
+    }
 
     sMemDC.SelectObject(sOldBitmap);
 
-    return XPR_TRUE;
+    return sResult;
 }
 } // namespace fxfile

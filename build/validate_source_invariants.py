@@ -3397,6 +3397,283 @@ def validate_win11_stability_regressions() -> list[str]:
     return errors
 
 
+
+def validate_runtime_ui_audit_regressions() -> list[str]:
+    """Protect screenshot-driven dialog/theme and interaction regressions."""
+
+    errors: list[str] = []
+    paths = {
+        "modern_h": FXFILE_SRC / "gui" / "ModernUI.h",
+        "modern_cpp": FXFILE_SRC / "gui" / "ModernUI.cpp",
+        "modern_dialog": FXFILE_SRC / "gui" / "ModernDialog.cpp",
+        "resizing_dialog": FXFILE_SRC / "gui" / "ResizingDialog.cpp",
+        "title_dialog": FXFILE_SRC / "cmd" / "title_dlg.cpp",
+        "cfg_main": FXFILE_SRC / "cfg" / "cfg_main_dlg.cpp",
+        "cfg_page": FXFILE_SRC / "cfg" / "cfg_dlg.cpp",
+        "cfg_filter": FXFILE_SRC / "cfg" / "cfg_appearance_filtering_dlg.cpp",
+        "win_app": FXFILE_SRC / "win_app.cpp",
+        "history": FXFILE_SRC / "cmd" / "history_dlg.cpp",
+        "program_ass": FXFILE_SRC / "cmd" / "program_ass_dlg.cpp",
+        "drive": FXFILE_SRC / "cmd" / "drive_dlg.cpp",
+        "drive_detail": FXFILE_SRC / "cmd" / "drive_detail_dlg.cpp",
+        "icon_list": FXFILE_SRC / "gui" / "IconList.cpp",
+        "clipboard": FXFILE_SRC / "clipboard.cpp",
+        "clipboard_cmd": FXFILE_SRC / "cmd" / "cmd_clipboard.cpp",
+        "rename_cmd": FXFILE_SRC / "cmd" / "cmd_rename.cpp",
+        "picture": FXFILE_SRC / "picture_viewer.cpp",
+        "file_scrap": FXFILE_SRC / "file_scrap_ctrl.cpp",
+        "search_result": FXFILE_SRC / "search_result_ctrl.cpp",
+        "accel": FXFILE_SRC / "cmd" / "accel_table_dlg.cpp",
+    }
+
+    contents: dict[str, str] = {}
+    for name, source_path in paths.items():
+        try:
+            contents[name] = source_path.read_text(
+                encoding="utf-8", errors="replace"
+            )
+        except OSError as exc:
+            errors.append(
+                f"{source_path.relative_to(ROOT)}: cannot read runtime UI audit contract: {exc}"
+            )
+
+    if errors:
+        return errors
+
+    modern_h = contents["modern_h"]
+    modern_cpp = contents["modern_cpp"]
+    for token in (
+        "isSameFont(HFONT aFont, const LOGFONT &aLogFont)",
+        "applyDialogControlTheme(HWND aHwnd)",
+    ):
+        if token not in modern_h:
+            errors.append(
+                f"src/fxfile/gui/ModernUI.h: missing shared dialog contract {token}"
+            )
+
+    for token in (
+        "DialogButtonSubclassProc",
+        "DialogTabSubclassProc",
+        "DialogEditSubclassProc",
+        "DialogComboSubclassProc",
+        "DialogGroupSubclassProc",
+        "SysListView32",
+        "SysTreeView32",
+        "ListView_SetTextColor",
+        "TreeView_SetTextColor",
+        "ModernUI::isSameFont",
+        "ModernUI::applyDialogControlTheme",
+    ):
+        if token not in modern_cpp:
+            errors.append(
+                f"src/fxfile/gui/ModernUI.cpp: missing shared dark-dialog ownership token {token}"
+            )
+
+    for source_name in (
+        "modern_dialog",
+        "resizing_dialog",
+        "title_dialog",
+    ):
+        source = contents[source_name]
+        if "applyDialogControlTheme(aWnd->GetSafeHwnd())" not in source:
+            errors.append(
+                f"{source_name}: shared dialog-control theme adapter is not applied recursively"
+            )
+        if "isSameFont(" not in source:
+            errors.append(
+                f"{source_name}: unchanged UI font must not be recreated on every theme refresh"
+            )
+
+    cfg_main = contents["cfg_main"]
+    for token in (
+        "ShowLanguageRestartNoticeIfChanged",
+        "_tcsicmp(aOldConfig.mLanguage, aNewConfig.mLanguage)",
+        "gOpt->copyConfig(sOldConfig);",
+        "isSameFont(",
+    ):
+        if token not in cfg_main:
+            errors.append(
+                f"src/fxfile/cfg/cfg_main_dlg.cpp: missing config apply regression guard {token}"
+            )
+
+    if "popup.cfg.msg.apply_language_on_next_loading_time" in contents["win_app"]:
+        errors.append(
+            "src/fxfile/win_app.cpp: language restart warning must not fire from every config notification"
+        )
+
+    cfg_filter = contents["cfg_filter"]
+    for token in (
+        "if (sCount >= MAX_FILTER)",
+        "mListCtrl.SetItemState(\n        -1,\n        0,",
+        "sPalette.mInactiveSelection",
+    ):
+        if token not in cfg_filter:
+            errors.append(
+                f"src/fxfile/cfg/cfg_appearance_filtering_dlg.cpp: missing single-selection/filter-bound guard {token}"
+            )
+
+    if "applyDialogControlTheme(aWnd->GetSafeHwnd())" not in contents["cfg_page"]:
+        errors.append(
+            "src/fxfile/cfg/cfg_dlg.cpp: list/tree/tab palette must refresh during in-place theme changes"
+        )
+
+    icon_list = contents["icon_list"]
+    for token in (
+        '#include "ModernUI.h"',
+        "ModernUI::getPalette()",
+        "sPalette.mElevated",
+        "sPalette.mSelection",
+    ):
+        if token not in icon_list:
+            errors.append(
+                f"src/fxfile/gui/IconList.cpp: owner-draw icon list theme token missing {token}"
+            )
+
+    history = contents["history"]
+    if history.count("ON_WM_SIZE()") != 1:
+        errors.append(
+            "src/fxfile/cmd/history_dlg.cpp: HistoryDlg must register WM_SIZE exactly once"
+        )
+    for token in (
+        "if (sTreeItem == XPR_NULL)\n            return;",
+        "if (mTreeCtrl.GetItemRect(sTreeItem, sRect, XPR_TRUE) == XPR_FALSE)",
+        "sCursorPoint.y < sRect.bottom",
+    ):
+        if token not in history:
+            errors.append(
+                f"src/fxfile/cmd/history_dlg.cpp: context-menu safety token missing {token}"
+            )
+
+    program_ass = contents["program_ass"]
+    for token in (
+        "if (sTreeItem == XPR_NULL)\n            return;",
+        "if (mTreeCtrl.GetItemRect(sTreeItem, sRect, XPR_TRUE) == XPR_FALSE)",
+        "sCursorPos.y < sRect.bottom",
+    ):
+        if token not in program_ass:
+            errors.append(
+                f"src/fxfile/cmd/program_ass_dlg.cpp: context-menu safety token missing {token}"
+            )
+
+    drive = contents["drive"]
+    for token in (
+        "if (sTreeItem == XPR_NULL)\n        return;",
+        "if (sDrive == 0)\n        return;",
+        "sText.length() > 2",
+    ):
+        if token not in drive:
+            errors.append(
+                f"src/fxfile/cmd/drive_dlg.cpp: drive selection safety token missing {token}"
+            )
+
+    drive_detail = contents["drive_detail"]
+    for token in (
+        "isSameFont(",
+        "applyDialogControlTheme(sControl->GetSafeHwnd())",
+        "OnEraseBkgnd",
+        "OnCtlColor",
+        "HICON sOldDriveIcon = mDriveIconHandle;",
+        "DESTROY_ICON(sOldDriveIcon);",
+    ):
+        if token not in drive_detail:
+            errors.append(
+                f"src/fxfile/cmd/drive_detail_dlg.cpp: drive-detail runtime guard missing {token}"
+            )
+
+    clipboard = contents["clipboard"]
+    for forbidden in (
+        "aClipFormat != 0",
+        "::DeleteObject(sBitmap);",
+        "XPR_IS_NOT_NULL(sStgMedium.pUnkForRelease)",
+    ):
+        if forbidden in clipboard:
+            errors.append(
+                f"src/fxfile/clipboard.cpp: clipboard ownership/error regression returned: {forbidden}"
+            )
+    for token in (
+        "DROPEFFECT *sDropEffectData",
+        "if (XPR_IS_NULL(sDropEffectData))",
+        "::ReleaseStgMedium(&sStgMedium);",
+        "return sResult;",
+    ):
+        if token not in clipboard:
+            errors.append(
+                f"src/fxfile/clipboard.cpp: clipboard runtime guard missing {token}"
+            )
+
+    clipboard_cmd = contents["clipboard_cmd"]
+    if "sSelCount >= 0" in clipboard_cmd:
+        errors.append(
+            "src/fxfile/cmd/cmd_clipboard.cpp: selected-item paste must not accept a zero selection"
+        )
+    for forbidden in (
+        "mFileDescriptorA, XPR_TRUE",
+    ):
+        if forbidden in clipboard_cmd:
+            errors.append(
+                f"src/fxfile/cmd/cmd_clipboard.cpp: Unicode paste descriptor regression returned: {forbidden}"
+            )
+    if clipboard_cmd.count("CommandParameterIdIsSelectedItem") < 2:
+        errors.append(
+            "src/fxfile/cmd/cmd_clipboard.cpp: regular and special paste must both honor selected-item routing"
+        )
+    for token in (
+        "mFileDescriptorW, XPR_TRUE",
+        "sExplorerCtrl = sMainFrame->getExplorerCtrl(sFolderCtrl);",
+        "if (XPR_IS_NULL(sExplorerCtrl))",
+    ):
+        if token not in clipboard_cmd:
+            errors.append(
+                f"src/fxfile/cmd/cmd_clipboard.cpp: clipboard routing guard missing {token}"
+            )
+
+    rename_cmd = contents["rename_cmd"]
+    for token in (
+        "gOpt->mConfig.mBatchRenameMultiSel == XPR_TRUE",
+        "if (sExplorerCtrl->GetSelectedCount() <= 0)",
+        "GetFirstSelectedItemPosition()",
+        "if (sSelIndex < 0)",
+    ):
+        if token not in rename_cmd:
+            errors.append(
+                f"src/fxfile/cmd/cmd_rename.cpp: rename selection guard missing {token}"
+            )
+
+    picture = contents["picture"]
+    if picture.count("if (sIndex >= 0)") < 2:
+        errors.append(
+            "src/fxfile/picture_viewer.cpp: both selected-picture paths must guard an invalid selection mark"
+        )
+
+    for source_name, source_path in (
+        ("file_scrap", "src/fxfile/file_scrap_ctrl.cpp"),
+        ("search_result", "src/fxfile/search_result_ctrl.cpp"),
+    ):
+        source = contents[source_name]
+        for token in (
+            "GetFirstSelectedItemPosition()",
+            "if (sIndex < 0)",
+        ):
+            if token not in source:
+                errors.append(
+                    f"{source_path}: selected-item fallback guard missing {token}"
+                )
+
+    accel = contents["accel"]
+    for token in (
+        "if (sCurSel == CB_ERR)",
+        "if (sCurSel == LB_ERR)",
+        "if (nComCurSel == LB_ERR || nKeyCurSel == LB_ERR)",
+        "if (mCount >= MAX_ACCEL)",
+    ):
+        if token not in accel:
+            errors.append(
+                f"src/fxfile/cmd/accel_table_dlg.cpp: accelerator selection/bounds guard missing {token}"
+            )
+
+    return errors
+
+
 def validate_modern_ui_registration() -> list[str]:
     errors: list[str] = []
     gyp_path = ROOT / "src" / "fxfile" / "fxfile.gyp"
@@ -3451,6 +3728,7 @@ def main() -> int:
     errors.extend(validate_active_ci_scope_documentation())
     errors.extend(validate_installer_smoke_wiring())
     errors.extend(validate_win11_stability_regressions())
+    errors.extend(validate_runtime_ui_audit_regressions())
     errors.extend(validate_modern_ui_registration())
 
     if errors:

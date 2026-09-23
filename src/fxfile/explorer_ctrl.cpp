@@ -4146,13 +4146,23 @@ xpr_bool_t ExplorerCtrl::OnContextMenuShell(CWnd *aWnd, CPoint aPoint, CRect aWi
     {
         if (aWindowRect.PtInRect(aPoint) == XPR_FALSE)
         {
-            CRect sRect;
             xpr_sint_t sFocus = GetSelectionMark();
-            GetItemRect(sFocus, sRect, LVIR_BOUNDS);
-            ClientToScreen(&sRect);
-
-            aPoint.x = sRect.left;
-            aPoint.y = sRect.bottom;
+            CRect sRect;
+            if (sFocus >= 0 &&
+                GetItemRect(
+                    sFocus,
+                    sRect,
+                    LVIR_BOUNDS) != XPR_FALSE)
+            {
+                ClientToScreen(&sRect);
+                aPoint.x = sRect.left;
+                aPoint.y = sRect.bottom;
+            }
+            else
+            {
+                aPoint.x = aWindowRect.left;
+                aPoint.y = aWindowRect.top;
+            }
         }
 
         xpr_tchar_t sVerb[0xff] = {0};
@@ -4207,13 +4217,23 @@ xpr_bool_t ExplorerCtrl::OnContextMenuParent(CWnd *aWnd, CPoint aPoint, CRect aW
         {
             if (aWindowRect.PtInRect(aPoint) == XPR_FALSE)
             {
-                CRect sRect;
                 xpr_sint_t sFocus = GetSelectionMark();
-                GetItemRect(sFocus, sRect, LVIR_BOUNDS);
-                ClientToScreen(&sRect);
-
-                aPoint.x = sRect.left;
-                aPoint.y = sRect.bottom;
+                CRect sRect;
+                if (sFocus >= 0 &&
+                    GetItemRect(
+                        sFocus,
+                        sRect,
+                        LVIR_BOUNDS) != XPR_FALSE)
+                {
+                    ClientToScreen(&sRect);
+                    aPoint.x = sRect.left;
+                    aPoint.y = sRect.bottom;
+                }
+                else
+                {
+                    aPoint.x = aWindowRect.left;
+                    aPoint.y = aWindowRect.top;
+                }
             }
 
             ContextMenu sContextMenu(GetSafeHwnd());
@@ -4266,13 +4286,23 @@ xpr_bool_t ExplorerCtrl::OnContextMenuDrive(CWnd *aWnd, CPoint aPoint, CRect aWi
         {
             if (aWindowRect.PtInRect(aPoint) == XPR_FALSE)
             {
-                CRect sRect;
                 xpr_sint_t sFocus = GetSelectionMark();
-                GetItemRect(sFocus, sRect, LVIR_BOUNDS);
-                ClientToScreen(&sRect);
-
-                aPoint.x = sRect.left;
-                aPoint.y = sRect.bottom;
+                CRect sRect;
+                if (sFocus >= 0 &&
+                    GetItemRect(
+                        sFocus,
+                        sRect,
+                        LVIR_BOUNDS) != XPR_FALSE)
+                {
+                    ClientToScreen(&sRect);
+                    aPoint.x = sRect.left;
+                    aPoint.y = sRect.bottom;
+                }
+                else
+                {
+                    aPoint.x = aWindowRect.left;
+                    aPoint.y = aWindowRect.top;
+                }
             }
 
             ContextMenu sContextMenu(GetSafeHwnd());
@@ -4324,7 +4354,7 @@ xpr_bool_t ExplorerCtrl::OnContextMenuShellBkgnd(CWnd *aWnd, CPoint aPoint, CRec
         IID_IShellFolder,
         reinterpret_cast<LPVOID*>(&sShellFolder));
 
-    if (SUCCEEDED(sHResult))
+    if (SUCCEEDED(sHResult) && XPR_IS_NOT_NULL(sShellFolder))
     {
         if (aWindowRect.PtInRect(aPoint) == XPR_FALSE)
         {
@@ -4338,7 +4368,7 @@ xpr_bool_t ExplorerCtrl::OnContextMenuShellBkgnd(CWnd *aWnd, CPoint aPoint, CRec
 
     COM_RELEASE(sShellFolder);
 
-    return XPR_TRUE;
+    return sResult;
 }
 
 xpr_bool_t ExplorerCtrl::OnContextMenuBkgnd(CWnd *aWnd, CPoint aPoint, CRect aWindowRect)
@@ -4451,7 +4481,7 @@ xpr_bool_t ExplorerCtrl::canInvokeCommandSelf(const xpr_tchar_t *aVerb)
         sResult = XPR_TRUE;
     }
 
-    return XPR_FALSE;
+    return sResult;
 }
 
 void ExplorerCtrl::invokeCommandSelf(ContextMenu &aContextMenu, const xpr_tchar_t *aVerb)
@@ -5000,22 +5030,38 @@ DROPEFFECT ExplorerCtrl::OnDragOver(COleDataObject *aOleDataObject, DWORD aKeySt
 
             if (aOleDataObject->GetData(sClipFormat.mShellIDList, &sStgMedium, &sFormatEtc) == XPR_TRUE)
             {
-                LPIDA sIda = (LPIDA)::GlobalLock(sStgMedium.hGlobal);
-                LPITEMIDLIST sPidl1 = (LPITEMIDLIST)(((xpr_byte_t *)sIda)+(sIda)->aoffset[0]);
-
-                xpr_tchar_t sPath[XPR_MAX_PATH + 1] = {0};
-                GetName(sPidl1, SHGDN_FORPARSING, sPath);
-
-                const xpr_tchar_t *sCurPath = getCurPath();
-                if (sPath[0] == sCurPath[0])
-                    sCopy = XPR_FALSE;
-
-                ::GlobalUnlock(sStgMedium.hGlobal);
-
-                if (XPR_IS_NOT_NULL(sStgMedium.pUnkForRelease))
+                LPIDA sIda =
+                    (LPIDA)::GlobalLock(
+                        sStgMedium.hGlobal);
+                if (XPR_IS_NOT_NULL(sIda))
                 {
-                    ::ReleaseStgMedium(&sStgMedium);
+                    LPITEMIDLIST sPidl1 =
+                        (LPITEMIDLIST)(
+                            (xpr_byte_t *)sIda +
+                            sIda->aoffset[0]);
+
+                    xpr_tchar_t sPath[
+                        XPR_MAX_PATH + 1] = {0};
+                    GetName(
+                        sPidl1,
+                        SHGDN_FORPARSING,
+                        sPath);
+
+                    const xpr_tchar_t *sCurPath =
+                        getCurPath();
+                    if (sPath[0] !=
+                            XPR_STRING_LITERAL('\0') &&
+                        XPR_IS_NOT_NULL(sCurPath) &&
+                        sPath[0] == sCurPath[0])
+                    {
+                        sCopy = XPR_FALSE;
+                    }
+
+                    ::GlobalUnlock(
+                        sStgMedium.hGlobal);
                 }
+
+                ::ReleaseStgMedium(&sStgMedium);
             }
         }
 
@@ -6219,7 +6265,21 @@ void ExplorerCtrl::selectAll(void)
             SetItemState(i, LVIS_SELECTED, LVIS_SELECTED);
     }
 
-    SetItemState(sFocus, LVIS_SELECTED | LVIS_FOCUSED, LVIS_SELECTED | LVIS_FOCUSED);
+    if (sFocus < 0)
+    {
+        POSITION sPosition = GetFirstSelectedItemPosition();
+        if (XPR_IS_NOT_NULL(sPosition))
+            sFocus = GetNextSelectedItem(sPosition);
+    }
+
+    if (0 <= sFocus && sFocus < sCount)
+    {
+        SetSelectionMark(sFocus);
+        SetItemState(
+            sFocus,
+            LVIS_SELECTED | LVIS_FOCUSED,
+            LVIS_SELECTED | LVIS_FOCUSED);
+    }
 }
 
 void ExplorerCtrl::unselectAll(void)
@@ -6840,7 +6900,9 @@ void ExplorerCtrl::OnCustomdrawThumbnail(LPNMLVCUSTOMDRAW aNmLvCustomDraw)
     xpr_sint_t   sOffset = sDC->GetTextExtent(XPR_STRING_LITERAL(" ")).cx * 2;
     const ui::ThemePalette sPalette = ui::ModernUI::getPalette();
 
-    LPLVITEMDATA sLvItemData = ((LPLVITEMDATA)aNmLvCustomDraw->nmcd.lItemlParam);
+    LPLVITEMDATA sRawLvItemData =
+        ((LPLVITEMDATA)aNmLvCustomDraw->nmcd.lItemlParam);
+    LPLVITEMDATA sLvItemData = sRawLvItemData;
     verifyItemData(&sLvItemData);
 
     TRACE(XPR_STRING_LITERAL("NM_CUSTOMDRAW=%d\n"), sItemIndex);
@@ -6875,7 +6937,7 @@ void ExplorerCtrl::OnCustomdrawThumbnail(LPNMLVCUSTOMDRAW aNmLvCustomDraw)
     sDC->FillSolidRect(sIconRect, sPalette.mSurface);
     sDC->Draw3dRect(sIconRect, sPalette.mBorder, sPalette.mBorder);
 
-    if (XPR_IS_FALSE(mOption.mParentFolder) || XPR_IS_NOT_NULL(sLvItemData))
+    if (XPR_IS_NOT_NULL(sLvItemData))
     {
         xpr_uint_t sThumbImageId = sLvItemData->mThumbImageId;
         if (sThumbImageId == Thumbnail::InvalidThumbImageId)
@@ -6921,10 +6983,9 @@ void ExplorerCtrl::OnCustomdrawThumbnail(LPNMLVCUSTOMDRAW aNmLvCustomDraw)
             mSmallImgList->Draw(sDC, sLvItem.iImage, sIconPoint, sFormat);
         }
     }
-    else
+    else if (XPR_IS_NOT_NULL(sRawLvItemData))
     {
-        LPLVITEMDATA sLvItemData2 = ((LPLVITEMDATA)aNmLvCustomDraw->nmcd.lItemlParam);
-        if (sLvItemData2->mItemType == IDT_PARENT)
+        if (sRawLvItemData->mItemType == IDT_PARENT)
         {
             const xpr_sint_t sIconSize =
                 ui::ModernUI::scaleForWindow(32, GetSafeHwnd());

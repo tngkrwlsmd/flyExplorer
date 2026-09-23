@@ -23,7 +23,7 @@ namespace fxfile
 {
 xpr_bool_t FillFormatEtc(LPFORMATETC aFormatEtc, CLIPFORMAT aClipFormat)
 {
-    if (XPR_IS_NULL(aFormatEtc) || aClipFormat != 0)
+    if (XPR_IS_NULL(aFormatEtc) || aClipFormat == 0)
         return XPR_FALSE;
 
     aFormatEtc->cfFormat = aClipFormat;
@@ -64,11 +64,27 @@ void SetClipboard(LPDATAOBJECT aDataObject, DROPEFFECT aDropEffect, CLIPFORMAT *
     sDataSource->CacheGlobalData(CF_HDROP, sStgMedium.hGlobal);
 
     // DropEffect
-    HGLOBAL sGlobal = ::GlobalAlloc(GHND | GMEM_SHARE, sizeof(DROPEFFECT));
-    DROPEFFECT *sDropEffect = (DROPEFFECT *)::GlobalLock(sGlobal);
-    *sDropEffect = aDropEffect;
-    ::GlobalUnlock(sGlobal);
-    sDataSource->CacheGlobalData(aClipFormat[1], sGlobal);
+    HGLOBAL sGlobal =
+        ::GlobalAlloc(
+            GHND | GMEM_SHARE,
+            sizeof(DROPEFFECT));
+    if (XPR_IS_NOT_NULL(sGlobal))
+    {
+        DROPEFFECT *sDropEffect =
+            (DROPEFFECT *)::GlobalLock(sGlobal);
+        if (XPR_IS_NOT_NULL(sDropEffect))
+        {
+            *sDropEffect = aDropEffect;
+            ::GlobalUnlock(sGlobal);
+            sDataSource->CacheGlobalData(
+                aClipFormat[1],
+                sGlobal);
+        }
+        else
+        {
+            ::GlobalFree(sGlobal);
+        }
+    }
 
     // FileName
     memset(&sStgMedium, 0, sizeof(STGMEDIUM));
@@ -104,8 +120,12 @@ xpr_bool_t DoPaste(HWND               aHwnd,
         if (XPR_IS_NULL(sGlobal))
             return XPR_FALSE;
 
-        sDropEffect = *((DROPEFFECT *)::GlobalLock(sGlobal));
+        DROPEFFECT *sDropEffectData =
+            (DROPEFFECT *)::GlobalLock(sGlobal);
+        if (XPR_IS_NULL(sDropEffectData))
+            return XPR_FALSE;
 
+        sDropEffect = *sDropEffectData;
         ::GlobalUnlock(sGlobal);
     }
 
@@ -122,112 +142,177 @@ xpr_bool_t DoPaste(HWND               aHwnd,
                    xpr_uint_t         aMsg,
                    xpr_bool_t         aCopy)
 {
-    if (XPR_IS_NULL(aOleDataObject))
+    if (XPR_IS_NULL(aOleDataObject) ||
+        XPR_IS_NULL(aTarget) ||
+        aTarget[0] == XPR_STRING_LITERAL('\0'))
+    {
         return XPR_FALSE;
+    }
 
     xpr_bool_t sResult = XPR_FALSE;
 
     CWaitCursor sWaitCursor;
-    if (aOleDataObject->IsDataAvailable(aShellIDListClipFormat) == XPR_TRUE && aDropEffect == DROPEFFECT_LINK)
+    if (aOleDataObject->IsDataAvailable(aShellIDListClipFormat) == XPR_TRUE &&
+        aDropEffect == DROPEFFECT_LINK)
     {
         STGMEDIUM sStgMedium = {0};
-        FORMATETC sFormatEtc = {aShellIDListClipFormat, XPR_NULL, DVASPECT_CONTENT, -1, TYMED_HGLOBAL};
+        FORMATETC sFormatEtc =
+            {aShellIDListClipFormat, XPR_NULL, DVASPECT_CONTENT, -1, TYMED_HGLOBAL};
 
-        if (aOleDataObject->GetData(aShellIDListClipFormat, &sStgMedium, &sFormatEtc) == XPR_TRUE)
+        if (aOleDataObject->GetData(
+                aShellIDListClipFormat,
+                &sStgMedium,
+                &sFormatEtc) == XPR_TRUE)
         {
-            LPIDA sIda = (LPIDA)::GlobalLock(sStgMedium.hGlobal);
-            xpr_sint_t sCount = sIda->cidl;
+            LPIDA sIda =
+                (LPIDA)::GlobalLock(sStgMedium.hGlobal);
 
-            xpr_tchar_t *sMultipleSource = XPR_NULL;
-            xpr_tchar_t *sMultipleSourceEnum = XPR_NULL;
-            if (XPR_IS_NOT_NULL(aHwnd) && aMsg >= WM_USER)
+            if (XPR_IS_NOT_NULL(sIda))
             {
-                sMultipleSource = new xpr_tchar_t[(XPR_MAX_PATH + 1) * sCount + 1];
-                sMultipleSourceEnum = sMultipleSource;
-            }
+                const xpr_sint_t sCount = sIda->cidl;
 
-            xpr::string sName;
-            xpr_tchar_t sLink[XPR_MAX_PATH + 1];
-            xpr_size_t sColon;
-
-            LPITEMIDLIST sFullPidl = XPR_NULL; // fully-qualified PIDL
-            LPITEMIDLIST sFolderPidl = XPR_NULL; // folder PIDL
-            LPITEMIDLIST sItemPidl = XPR_NULL; // item PIDL
-
-            // get folder PIDL
-            sFolderPidl = (LPITEMIDLIST)(((xpr_byte_t *)sIda)+(sIda)->aoffset[0]);
-
-            LPSHELLFOLDER sDesktopShellFolder = XPR_NULL;
-            ::SHGetDesktopFolder(&sDesktopShellFolder);
-
-            LPSHELLFOLDER sShellFolder = XPR_NULL;
-            HRESULT sHResult = sDesktopShellFolder->BindToObject(sFolderPidl, XPR_NULL, IID_IShellFolder, (LPVOID *)&sShellFolder);
-            if (FAILED(sHResult) || XPR_IS_NULL(sShellFolder))
-            {
-                sShellFolder = sDesktopShellFolder;
-                sDesktopShellFolder = XPR_NULL;
-            }
-
-            xpr::string sLinkSuffix;
-            if (XPR_IS_NOT_NULL(aLinkSuffix))
-                sLinkSuffix = aLinkSuffix;
-            else
-                sLinkSuffix = XPR_STRING_LITERAL(" - Shortcut");
-
-            xpr_sint_t i;
-            for (i = 0; i < sCount; ++i)
-            {
-                // get item PIDL and get full-qualified PIDL
-                sItemPidl = (LPITEMIDLIST)((xpr_byte_t *)sIda + sIda->aoffset[i+1]);
-                sFullPidl = fxfile::base::Pidl::concat(sFolderPidl, sItemPidl);
-
-                GetName(sShellFolder, sItemPidl, SHGDN_INFOLDER, sName);
-
-                sColon = sName.find(XPR_STRING_LITERAL(':'));
-                if (sColon != xpr::string::npos)
-                    sName.erase(sColon, 1);
-
-                sName += sLinkSuffix;
-
-                if (SetNewPath(sLink, aTarget, sName.c_str(), XPR_STRING_LITERAL(".lnk")) == XPR_TRUE)
+                xpr_tchar_t *sMultipleSource = XPR_NULL;
+                xpr_tchar_t *sMultipleSourceEnum = XPR_NULL;
+                if (XPR_IS_NOT_NULL(aHwnd) && aMsg >= WM_USER)
                 {
-                    if (CreateShortcut(sLink, sFullPidl) == XPR_TRUE)
+                    sMultipleSource =
+                        new xpr_tchar_t[
+                            (XPR_MAX_PATH + 1) * sCount + 1];
+                    sMultipleSourceEnum = sMultipleSource;
+                }
+
+                LPSHELLFOLDER sDesktopShellFolder = XPR_NULL;
+                HRESULT sHResult =
+                    ::SHGetDesktopFolder(&sDesktopShellFolder);
+
+                LPSHELLFOLDER sShellFolder = XPR_NULL;
+                if (SUCCEEDED(sHResult) &&
+                    XPR_IS_NOT_NULL(sDesktopShellFolder))
+                {
+                    LPITEMIDLIST sFolderPidl =
+                        (LPITEMIDLIST)(
+                            (xpr_byte_t *)sIda +
+                            sIda->aoffset[0]);
+
+                    sHResult =
+                        sDesktopShellFolder->BindToObject(
+                            sFolderPidl,
+                            XPR_NULL,
+                            IID_IShellFolder,
+                            (LPVOID *)&sShellFolder);
+                    if (FAILED(sHResult) ||
+                        XPR_IS_NULL(sShellFolder))
                     {
-                        _tcscpy(sMultipleSourceEnum, sLink);
-                        sMultipleSourceEnum += _tcslen(sMultipleSourceEnum) + 1;
+                        sShellFolder = sDesktopShellFolder;
+                        sDesktopShellFolder = XPR_NULL;
+                    }
+
+                    xpr::string sLinkSuffix =
+                        XPR_IS_NOT_NULL(aLinkSuffix) ?
+                        aLinkSuffix :
+                        XPR_STRING_LITERAL(" - Shortcut");
+
+                    for (xpr_sint_t i = 0; i < sCount; ++i)
+                    {
+                        LPITEMIDLIST sItemPidl =
+                            (LPITEMIDLIST)(
+                                (xpr_byte_t *)sIda +
+                                sIda->aoffset[i + 1]);
+                        LPITEMIDLIST sFullPidl =
+                            fxfile::base::Pidl::concat(
+                                sFolderPidl,
+                                sItemPidl);
+
+                        if (XPR_IS_NOT_NULL(sFullPidl))
+                        {
+                            xpr::string sName;
+                            GetName(
+                                sShellFolder,
+                                sItemPidl,
+                                SHGDN_INFOLDER,
+                                sName);
+
+                            const xpr_size_t sColon =
+                                sName.find(
+                                    XPR_STRING_LITERAL(':'));
+                            if (sColon != xpr::string::npos)
+                                sName.erase(sColon, 1);
+
+                            sName += sLinkSuffix;
+
+                            xpr_tchar_t sLink[
+                                XPR_MAX_PATH + 1] = {0};
+                            if (SetNewPath(
+                                    sLink,
+                                    aTarget,
+                                    sName.c_str(),
+                                    XPR_STRING_LITERAL(".lnk")) == XPR_TRUE &&
+                                CreateShortcut(
+                                    sLink,
+                                    sFullPidl) == XPR_TRUE)
+                            {
+                                sResult = XPR_TRUE;
+
+                                if (XPR_IS_NOT_NULL(
+                                        sMultipleSourceEnum))
+                                {
+                                    _tcscpy(
+                                        sMultipleSourceEnum,
+                                        sLink);
+                                    sMultipleSourceEnum +=
+                                        _tcslen(
+                                            sMultipleSourceEnum) +
+                                        1;
+                                }
+                            }
+                        }
+
+                        COM_FREE(sFullPidl);
                     }
                 }
 
-                COM_FREE(sFullPidl);
+                if (XPR_IS_NOT_NULL(sMultipleSourceEnum))
+                    sMultipleSourceEnum[0] =
+                        XPR_STRING_LITERAL('\0');
+
+                if (XPR_IS_TRUE(sResult))
+                {
+                    ::SHChangeNotify(
+                        SHCNE_UPDATEDIR,
+                        SHCNF_PATH | SHCNF_FLUSH,
+                        (LPCVOID)aTarget,
+                        XPR_NULL);
+
+                    if (XPR_IS_NOT_NULL(sMultipleSource) &&
+                        XPR_IS_NOT_NULL(aHwnd) &&
+                        aMsg >= WM_USER)
+                    {
+                        PasteSelItems sPasteSelItems = {0};
+                        sPasteSelItems.mSource =
+                            sMultipleSource;
+                        sPasteSelItems.mTarget =
+                            aTarget;
+                        ::SendMessage(
+                            aHwnd,
+                            aMsg,
+                            (WPARAM)&sPasteSelItems,
+                            0);
+                    }
+                }
+
+                XPR_SAFE_DELETE_ARRAY(sMultipleSource);
+                COM_RELEASE(sShellFolder);
+                COM_RELEASE(sDesktopShellFolder);
+                ::GlobalUnlock(sStgMedium.hGlobal);
             }
 
-            sMultipleSourceEnum[0] = '\0'; // double end null
-
-            ::SHChangeNotify(SHCNE_UPDATEDIR, SHCNF_PATH | SHCNF_FLUSH, (LPCVOID)aTarget, XPR_NULL);
-
-            if (XPR_IS_NOT_NULL(sMultipleSource) && XPR_IS_NOT_NULL(sMultipleSourceEnum) && XPR_IS_NOT_NULL(aHwnd) && aMsg >= WM_USER)
-            {
-                PasteSelItems sPasteSelItems = {0};
-                sPasteSelItems.mSource = sMultipleSource;
-                sPasteSelItems.mTarget = aTarget;
-                ::SendMessage(aHwnd, aMsg, (WPARAM)&sPasteSelItems, 0);
-            }
-
-            XPR_SAFE_DELETE_ARRAY(sMultipleSource);
-            COM_RELEASE(sShellFolder);
-            COM_RELEASE(sDesktopShellFolder);
-            ::GlobalUnlock(sStgMedium.hGlobal);
-
-            if (XPR_IS_NOT_NULL(sStgMedium.pUnkForRelease))
-            {
-                ::ReleaseStgMedium(&sStgMedium);
-            }
+            ::ReleaseStgMedium(&sStgMedium);
         }
 
         return sResult;
     }
 
-    xpr_uint_t sFiles;
+    xpr_uint_t sFiles = 0;
     xpr_tchar_t *sMultipleSource = XPR_NULL;
     xpr_tchar_t *sMultipleSourceEnum = XPR_NULL;
     xpr_tchar_t *sTarget = XPR_NULL;
@@ -235,71 +320,125 @@ xpr_bool_t DoPaste(HWND               aHwnd,
     if (aOleDataObject->IsDataAvailable(aShellIDListClipFormat) == XPR_TRUE)
     {
         STGMEDIUM sStgMedium = {0};
-        FORMATETC sFormatEtc = {aShellIDListClipFormat, XPR_NULL, DVASPECT_CONTENT, -1, TYMED_HGLOBAL};
+        FORMATETC sFormatEtc =
+            {aShellIDListClipFormat, XPR_NULL, DVASPECT_CONTENT, -1, TYMED_HGLOBAL};
 
-        if (aOleDataObject->GetData(aShellIDListClipFormat, &sStgMedium, &sFormatEtc) == XPR_TRUE)
+        if (aOleDataObject->GetData(
+                aShellIDListClipFormat,
+                &sStgMedium,
+                &sFormatEtc) == XPR_TRUE)
         {
-            LPIDA sIda = (LPIDA)::GlobalLock(sStgMedium.hGlobal);
-            sFiles = sIda->cidl;
-
-            LPITEMIDLIST sFullPidl = XPR_NULL; // fully-qualified PIDL
-            LPITEMIDLIST sFolderPidl = XPR_NULL; // folder PIDL
-            LPITEMIDLIST sItemPidl = XPR_NULL; // item PIDL
-
-            // get folder PIDL
-            sFolderPidl = (LPITEMIDLIST)(((xpr_byte_t *)sIda)+(sIda)->aoffset[0]);
-
-            LPSHELLFOLDER sDesktopShellFolder = XPR_NULL;
-            ::SHGetDesktopFolder(&sDesktopShellFolder);
-
-            LPSHELLFOLDER sShellFolder = XPR_NULL;
-            HRESULT sHResult = sDesktopShellFolder->BindToObject(sFolderPidl, XPR_NULL, IID_IShellFolder, (LPVOID *)&sShellFolder);
-            if (FAILED(sHResult) || XPR_IS_NULL(sShellFolder))
+            LPIDA sIda =
+                (LPIDA)::GlobalLock(sStgMedium.hGlobal);
+            if (XPR_IS_NOT_NULL(sIda))
             {
-                sShellFolder = sDesktopShellFolder;
-                sDesktopShellFolder = XPR_NULL;
+                sFiles = sIda->cidl;
+
+                LPSHELLFOLDER sDesktopShellFolder =
+                    XPR_NULL;
+                HRESULT sHResult =
+                    ::SHGetDesktopFolder(
+                        &sDesktopShellFolder);
+
+                if (SUCCEEDED(sHResult) &&
+                    XPR_IS_NOT_NULL(sDesktopShellFolder) &&
+                    sFiles > 0)
+                {
+                    LPITEMIDLIST sFolderPidl =
+                        (LPITEMIDLIST)(
+                            (xpr_byte_t *)sIda +
+                            sIda->aoffset[0]);
+
+                    LPSHELLFOLDER sShellFolder =
+                        XPR_NULL;
+                    sHResult =
+                        sDesktopShellFolder->BindToObject(
+                            sFolderPidl,
+                            XPR_NULL,
+                            IID_IShellFolder,
+                            (LPVOID *)&sShellFolder);
+                    if (FAILED(sHResult) ||
+                        XPR_IS_NULL(sShellFolder))
+                    {
+                        sShellFolder =
+                            sDesktopShellFolder;
+                        sDesktopShellFolder =
+                            XPR_NULL;
+                    }
+
+                    sMultipleSource =
+                        new xpr_tchar_t[
+                            (XPR_MAX_PATH + 1) *
+                            sFiles +
+                            1];
+                    memset(
+                        sMultipleSource,
+                        0,
+                        sizeof(xpr_tchar_t) *
+                            ((XPR_MAX_PATH + 1) *
+                             sFiles +
+                             1));
+                    sMultipleSourceEnum =
+                        sMultipleSource;
+
+                    for (xpr_uint_t i = 0;
+                         i < sFiles;
+                         ++i)
+                    {
+                        LPITEMIDLIST sItemPidl =
+                            (LPITEMIDLIST)(
+                                (xpr_byte_t *)sIda +
+                                sIda->aoffset[i + 1]);
+
+                        xpr_tchar_t sPath[
+                            XPR_MAX_PATH + 1] = {0};
+                        if (SUCCEEDED(
+                                GetName(
+                                    sShellFolder,
+                                    sItemPidl,
+                                    SHGDN_FORPARSING,
+                                    sPath)))
+                        {
+                            _tcscpy(
+                                sMultipleSourceEnum,
+                                sPath);
+                            sMultipleSourceEnum +=
+                                _tcslen(
+                                    sMultipleSourceEnum) +
+                                1;
+                        }
+                    }
+
+                    sMultipleSourceEnum[0] =
+                        XPR_STRING_LITERAL('\0');
+                    sResult = XPR_TRUE;
+
+                    COM_RELEASE(sShellFolder);
+                }
+
+                COM_RELEASE(sDesktopShellFolder);
+                ::GlobalUnlock(sStgMedium.hGlobal);
             }
 
-            xpr_sint_t i;
-            xpr_tchar_t sPath[XPR_MAX_PATH + 1];
-            sMultipleSource = new xpr_tchar_t[(XPR_MAX_PATH + 1) * sFiles + 1];
-            memset(sMultipleSource, 0, sizeof(xpr_tchar_t) * (XPR_MAX_PATH + 1) * sFiles + sizeof(xpr_tchar_t));
-            sMultipleSourceEnum = sMultipleSource;
-
-            for (i = 0; i < (xpr_sint_t)sFiles; ++i)
-            {
-                // get item PIDL and get full-qualified PIDL
-                sItemPidl = (LPITEMIDLIST)(((xpr_byte_t *)sIda)+(sIda)->aoffset[i+1]);
-                GetName(sShellFolder, sItemPidl, SHGDN_FORPARSING, sPath);
-
-                _tcscpy(sMultipleSourceEnum, sPath);
-
-                sMultipleSourceEnum += _tcslen(sMultipleSourceEnum) + 1;
-            }
-
-            sMultipleSourceEnum[0] = '\0'; // double null end
-
-            COM_RELEASE(sShellFolder);
-            COM_RELEASE(sDesktopShellFolder);
-            ::GlobalUnlock(sStgMedium.hGlobal);
-
-            if (XPR_IS_NOT_NULL(sStgMedium.pUnkForRelease))
-            {
-                ::ReleaseStgMedium(&sStgMedium);
-            }
-
-            if (sFiles > 0)
-                sResult = XPR_TRUE;
+            ::ReleaseStgMedium(&sStgMedium);
         }
     }
 
     if (XPR_IS_FALSE(sResult) && aOleDataObject->IsDataAvailable(CF_HDROP) == XPR_TRUE)
     {
         // First, Get Global Data(CF_HDROP)
-        HDROP sDrop = (HDROP)aOleDataObject->GetGlobalData(CF_HDROP);
+        HDROP sDrop =
+            (HDROP)aOleDataObject->GetGlobalData(CF_HDROP);
 
-        sFiles = ::DragQueryFile(sDrop, 0xFFFFFFFF, XPR_NULL, 0); // 0xFFFFFFFF -1
-        if (sFiles > 0)
+        if (XPR_IS_NOT_NULL(sDrop))
+            sFiles =
+                ::DragQueryFile(
+                    sDrop,
+                    0xFFFFFFFF,
+                    XPR_NULL,
+                    0); // 0xFFFFFFFF = item count
+
+        if (XPR_IS_NOT_NULL(sDrop) && sFiles > 0)
         {
             xpr_sint_t i;
             xpr_tchar_t sPath[XPR_MAX_PATH + 1];
@@ -318,8 +457,11 @@ xpr_bool_t DoPaste(HWND               aHwnd,
             sMultipleSourceEnum[0] = '\0'; // double end null
         }
 
-        ::GlobalUnlock(sDrop);
-        ::DragFinish(sDrop);
+        if (XPR_IS_NOT_NULL(sDrop))
+        {
+            ::GlobalUnlock(sDrop);
+            ::DragFinish(sDrop);
+        }
 
         if (sFiles > 0)
             sResult = XPR_TRUE;
@@ -412,112 +554,171 @@ xpr_bool_t DoPasteText(LPDATAOBJECT aDataObject, const xpr_tchar_t *aPath)
 
     xpr_bool_t sResult = XPR_FALSE;
 
-    FORMATETC sTextFormatEtc = { CF_TEXT, XPR_NULL, DVASPECT_CONTENT, -1, TYMED_HGLOBAL };
+    FORMATETC sTextFormatEtc =
+        { CF_TEXT, XPR_NULL, DVASPECT_CONTENT, -1, TYMED_HGLOBAL };
 
-    HRESULT sComResult;
-    STGMEDIUM sStgMedium = {0,};
-    sComResult = aDataObject->GetData(&sTextFormatEtc, &sStgMedium);
-
-    if (SUCCEEDED(sComResult))
-    {
-        xpr_char_t *aText = (xpr_char_t *)::GlobalLock(sStgMedium.hGlobal);
-        if (XPR_IS_NOT_NULL(aText))
-        {
-            xpr_sint_t sSize = (xpr_sint_t)::GlobalSize(sStgMedium.hGlobal);
-
-            xpr_rcode_t sRcode;
-            xpr_ssize_t sWritten;
-            xpr_sint_t sOpenMode;
-            xpr::FileIo sFileIo;
-
-            sOpenMode = xpr::FileIo::OpenModeCreate | xpr::FileIo::OpenModeTruncate | xpr::FileIo::OpenModeWriteOnly;
-            sRcode = sFileIo.open(aPath, sOpenMode);
-            if (XPR_RCODE_IS_SUCCESS(sRcode))
-            {
-                sRcode = sFileIo.write(aText, sSize - 1, &sWritten);
-
-                sFileIo.close();
-
-                ::SHChangeNotify(SHCNE_CREATE, SHCNF_PATH | SHCNF_FLUSH, aPath, XPR_NULL);
-                sResult = XPR_TRUE;
-            }
-
-            ::GlobalUnlock(sStgMedium.hGlobal);
-        }
-
-        if (XPR_IS_NOT_NULL(sStgMedium.pUnkForRelease))
-        {
-            ::ReleaseStgMedium(&sStgMedium);
-        }
-    }
-
-    return sResult;
-}
-
-xpr_bool_t DoPasteUnicodeText(LPDATAOBJECT aDataObject, const xpr_tchar_t *aPath)
-{
-    if (XPR_IS_NULL(aDataObject) || XPR_IS_NULL(aPath))
-        return XPR_FALSE;
-
-    xpr_bool_t sResult = XPR_FALSE;
-
-    FORMATETC sTextFormatEtc = { CF_UNICODETEXT, XPR_NULL, DVASPECT_CONTENT, -1, TYMED_HGLOBAL };
-
-    HRESULT sComResult;
-    STGMEDIUM sStgMedium = {0,};
-    sComResult = aDataObject->GetData(&sTextFormatEtc, &sStgMedium);
-
-    if (SUCCEEDED(sComResult))
-    {
-        xpr_wchar_t *aText = (xpr_wchar_t *)::GlobalLock(sStgMedium.hGlobal);
-        if (XPR_IS_NOT_NULL(aText))
-        {
-            xpr_sint_t sSize = (xpr_sint_t)::GlobalSize(sStgMedium.hGlobal);
-
-            xpr_rcode_t sRcode;
-            xpr_ssize_t sWritten;
-            xpr_sint_t sOpenMode;
-            xpr::FileIo sFileIo;
-
-            sOpenMode = xpr::FileIo::OpenModeCreate | xpr::FileIo::OpenModeTruncate | xpr::FileIo::OpenModeWriteOnly;
-            sRcode = sFileIo.open(aPath, sOpenMode);
-            if (XPR_RCODE_IS_SUCCESS(sRcode))
-            {
-                xpr_ushort_t sUnicodeBOM = 0xFEFF;
-                sRcode = sFileIo.write(&sUnicodeBOM, 2, &sWritten);
-
-                sRcode = sFileIo.write(aText, sSize - 1, &sWritten);
-
-                sFileIo.close();
-
-                ::SHChangeNotify(SHCNE_CREATE, SHCNF_PATH | SHCNF_FLUSH, aPath, XPR_NULL);
-                sResult = XPR_TRUE;
-            }
-
-            ::GlobalUnlock(sStgMedium.hGlobal);
-        }
-
-        if (XPR_IS_NOT_NULL(sStgMedium.pUnkForRelease))
-        {
-            ::ReleaseStgMedium(&sStgMedium);
-        }
-    }
-
-    return sResult;
-}
-
-xpr_bool_t DoPasteBitmap(LPDATAOBJECT aDataObject, const xpr_tchar_t *aPath)
-{
-    if (XPR_IS_NULL(aDataObject) || XPR_IS_NULL(aPath))
-        return XPR_FALSE;
-
-    xpr_bool_t sResult = XPR_FALSE;
-
-    FORMATETC sBitmapFormatEtc = { CF_BITMAP, XPR_NULL, DVASPECT_CONTENT, -1, TYMED_GDI };
-
-    HRESULT sComResult;
     STGMEDIUM sStgMedium = {0};
-    sComResult = aDataObject->GetData(&sBitmapFormatEtc, &sStgMedium);
+    const HRESULT sComResult =
+        aDataObject->GetData(&sTextFormatEtc, &sStgMedium);
+
+    if (SUCCEEDED(sComResult))
+    {
+        xpr_char_t *sText =
+            (xpr_char_t *)::GlobalLock(sStgMedium.hGlobal);
+        if (XPR_IS_NOT_NULL(sText))
+        {
+            const xpr_ssize_t sTextBytes =
+                (xpr_ssize_t)strlen(sText);
+            xpr_sint_t sOpenMode =
+                xpr::FileIo::OpenModeCreate |
+                xpr::FileIo::OpenModeTruncate |
+                xpr::FileIo::OpenModeWriteOnly;
+            xpr::FileIo sFileIo;
+
+            xpr_rcode_t sRcode = sFileIo.open(aPath, sOpenMode);
+            if (XPR_RCODE_IS_SUCCESS(sRcode))
+            {
+                xpr_ssize_t sWritten = 0;
+                if (sTextBytes == 0)
+                {
+                    sResult = XPR_TRUE;
+                }
+                else
+                {
+                    sRcode =
+                        sFileIo.write(
+                            sText,
+                            sTextBytes,
+                            &sWritten);
+                    if (XPR_RCODE_IS_SUCCESS(sRcode) &&
+                        sWritten == sTextBytes)
+                    {
+                        sResult = XPR_TRUE;
+                    }
+                }
+
+                sFileIo.close();
+
+                if (XPR_IS_FALSE(sResult))
+                    ::DeleteFile(aPath);
+            }
+
+            ::GlobalUnlock(sStgMedium.hGlobal);
+        }
+
+        ::ReleaseStgMedium(&sStgMedium);
+    }
+
+    if (XPR_IS_TRUE(sResult))
+        ::SHChangeNotify(
+            SHCNE_CREATE,
+            SHCNF_PATH | SHCNF_FLUSH,
+            aPath,
+            XPR_NULL);
+
+    return sResult;
+}
+
+xpr_bool_t DoPasteUnicodeText(
+    LPDATAOBJECT aDataObject,
+    const xpr_tchar_t *aPath)
+{
+    if (XPR_IS_NULL(aDataObject) || XPR_IS_NULL(aPath))
+        return XPR_FALSE;
+
+    xpr_bool_t sResult = XPR_FALSE;
+
+    FORMATETC sTextFormatEtc =
+        { CF_UNICODETEXT, XPR_NULL, DVASPECT_CONTENT, -1, TYMED_HGLOBAL };
+
+    STGMEDIUM sStgMedium = {0};
+    const HRESULT sComResult =
+        aDataObject->GetData(&sTextFormatEtc, &sStgMedium);
+
+    if (SUCCEEDED(sComResult))
+    {
+        xpr_wchar_t *sText =
+            (xpr_wchar_t *)::GlobalLock(sStgMedium.hGlobal);
+        if (XPR_IS_NOT_NULL(sText))
+        {
+            const xpr_ssize_t sTextBytes =
+                (xpr_ssize_t)(wcslen(sText) * sizeof(xpr_wchar_t));
+            xpr_sint_t sOpenMode =
+                xpr::FileIo::OpenModeCreate |
+                xpr::FileIo::OpenModeTruncate |
+                xpr::FileIo::OpenModeWriteOnly;
+            xpr::FileIo sFileIo;
+
+            xpr_rcode_t sRcode = sFileIo.open(aPath, sOpenMode);
+            if (XPR_RCODE_IS_SUCCESS(sRcode))
+            {
+                xpr_ushort_t sUnicodeBom = 0xFEFF;
+                xpr_ssize_t sWritten = 0;
+                sRcode =
+                    sFileIo.write(
+                        &sUnicodeBom,
+                        sizeof(sUnicodeBom),
+                        &sWritten);
+                xpr_bool_t sWriteSucceeded =
+                    XPR_RCODE_IS_SUCCESS(sRcode) &&
+                    sWritten == sizeof(sUnicodeBom) ?
+                    XPR_TRUE :
+                    XPR_FALSE;
+
+                if (XPR_IS_TRUE(sWriteSucceeded) &&
+                    sTextBytes > 0)
+                {
+                    sWritten = 0;
+                    sRcode =
+                        sFileIo.write(
+                            sText,
+                            sTextBytes,
+                            &sWritten);
+                    sWriteSucceeded =
+                        XPR_RCODE_IS_SUCCESS(sRcode) &&
+                        sWritten == sTextBytes ?
+                        XPR_TRUE :
+                        XPR_FALSE;
+                }
+
+                sFileIo.close();
+                sResult = sWriteSucceeded;
+
+                if (XPR_IS_FALSE(sResult))
+                    ::DeleteFile(aPath);
+            }
+
+            ::GlobalUnlock(sStgMedium.hGlobal);
+        }
+
+        ::ReleaseStgMedium(&sStgMedium);
+    }
+
+    if (XPR_IS_TRUE(sResult))
+        ::SHChangeNotify(
+            SHCNE_CREATE,
+            SHCNF_PATH | SHCNF_FLUSH,
+            aPath,
+            XPR_NULL);
+
+    return sResult;
+}
+
+xpr_bool_t DoPasteBitmap(
+    LPDATAOBJECT aDataObject,
+    const xpr_tchar_t *aPath)
+{
+    if (XPR_IS_NULL(aDataObject) || XPR_IS_NULL(aPath))
+        return XPR_FALSE;
+
+    xpr_bool_t sResult = XPR_FALSE;
+
+    FORMATETC sBitmapFormatEtc =
+        { CF_BITMAP, XPR_NULL, DVASPECT_CONTENT, -1, TYMED_GDI };
+
+    STGMEDIUM sStgMedium = {0};
+    const HRESULT sComResult =
+        aDataObject->GetData(&sBitmapFormatEtc, &sStgMedium);
 
     if (SUCCEEDED(sComResult))
     {
@@ -526,57 +727,71 @@ xpr_bool_t DoPasteBitmap(LPDATAOBJECT aDataObject, const xpr_tchar_t *aPath)
         {
             HWND sHwnd = ::GetDesktopWindow();
             HDC sDC = ::GetDC(sHwnd);
-
-            WriteBitmapFile((xpr_tchar_t *)aPath, sBitmap, sDC);
-
-            ::ReleaseDC(sHwnd, sDC);
-
-            ::SHChangeNotify(SHCNE_CREATE, SHCNF_PATH | SHCNF_FLUSH, aPath, XPR_NULL);
-            sResult = XPR_TRUE;
-
-            ::DeleteObject(sBitmap);
+            if (XPR_IS_NOT_NULL(sDC))
+            {
+                sResult =
+                    WriteBitmapFile(
+                        aPath,
+                        sBitmap,
+                        sDC);
+                ::ReleaseDC(sHwnd, sDC);
+            }
         }
 
-        if (XPR_IS_NOT_NULL(sStgMedium.pUnkForRelease))
-        {
-            ::ReleaseStgMedium(&sStgMedium);
-        }
+        // The STGMEDIUM returned by IDataObject owns the bitmap even when
+        // pUnkForRelease is NULL. ReleaseStgMedium handles both ownership
+        // forms; deleting hBitmap directly would double-free delegated media.
+        ::ReleaseStgMedium(&sStgMedium);
     }
+
+    if (XPR_IS_TRUE(sResult))
+        ::SHChangeNotify(
+            SHCNE_CREATE,
+            SHCNF_PATH | SHCNF_FLUSH,
+            aPath,
+            XPR_NULL);
 
     return sResult;
 }
 
-xpr_bool_t DoPasteDIB(LPDATAOBJECT aDataObject, const xpr_tchar_t *aPath)
+xpr_bool_t DoPasteDIB(
+    LPDATAOBJECT aDataObject,
+    const xpr_tchar_t *aPath)
 {
     if (XPR_IS_NULL(aDataObject) || XPR_IS_NULL(aPath))
         return XPR_FALSE;
 
     xpr_bool_t sResult = XPR_FALSE;
 
-    FORMATETC sDibFormatEtc = { CF_DIB, XPR_NULL, DVASPECT_CONTENT, -1, TYMED_HGLOBAL };
+    FORMATETC sDibFormatEtc =
+        { CF_DIB, XPR_NULL, DVASPECT_CONTENT, -1, TYMED_HGLOBAL };
 
-    HRESULT sComResult;
     STGMEDIUM sStgMedium = {0};
-    sComResult = aDataObject->GetData(&sDibFormatEtc, &sStgMedium);
+    const HRESULT sComResult =
+        aDataObject->GetData(&sDibFormatEtc, &sStgMedium);
 
     if (SUCCEEDED(sComResult))
     {
-        LPBITMAPINFO sBitmapInfo = (LPBITMAPINFO)::GlobalLock(sStgMedium.hGlobal);
+        LPBITMAPINFO sBitmapInfo =
+            (LPBITMAPINFO)::GlobalLock(sStgMedium.hGlobal);
         if (XPR_IS_NOT_NULL(sBitmapInfo))
         {
-            WriteBitmapFile((xpr_tchar_t *)aPath, sBitmapInfo);
-
-            ::SHChangeNotify(SHCNE_CREATE, SHCNF_PATH | SHCNF_FLUSH, aPath, XPR_NULL);
-            sResult = XPR_TRUE;
-
+            sResult =
+                WriteBitmapFile(
+                    aPath,
+                    sBitmapInfo);
             ::GlobalUnlock(sStgMedium.hGlobal);
         }
 
-        if (XPR_IS_NOT_NULL(sStgMedium.pUnkForRelease))
-        {
-            ::ReleaseStgMedium(&sStgMedium);
-        }
+        ::ReleaseStgMedium(&sStgMedium);
     }
+
+    if (XPR_IS_TRUE(sResult))
+        ::SHChangeNotify(
+            SHCNE_CREATE,
+            SHCNF_PATH | SHCNF_FLUSH,
+            aPath,
+            XPR_NULL);
 
     return sResult;
 }
@@ -599,8 +814,12 @@ xpr_bool_t GetPreferredDropEffect(COleDataObject *aOleDataObject, CLIPFORMAT aPr
     if (XPR_IS_NULL(sGlobal))
         return XPR_FALSE;
 
-    aDropEffect = *((DROPEFFECT *)::GlobalLock(sGlobal));
+    DROPEFFECT *sDropEffectData =
+        (DROPEFFECT *)::GlobalLock(sGlobal);
+    if (XPR_IS_NULL(sDropEffectData))
+        return XPR_FALSE;
 
+    aDropEffect = *sDropEffectData;
     ::GlobalUnlock(sGlobal);
 
     return XPR_TRUE;
@@ -678,145 +897,218 @@ xpr_bool_t IsPasteInetUrl(COleDataObject *aOleDataObject, CLIPFORMAT aInetUrlCli
     return XPR_FALSE;
 }
 
-xpr_bool_t DoPasteInetUrl(LPDATAOBJECT aDataObject, xpr_tchar_t *aDir, CLIPFORMAT aInetUrlClipFormat, CLIPFORMAT aFileContentsClipFormat, CLIPFORMAT aFileDescriptorClipFormat, xpr_bool_t aUnicode)
+xpr_bool_t DoPasteInetUrl(
+    LPDATAOBJECT aDataObject,
+    xpr_tchar_t *aDir,
+    CLIPFORMAT aInetUrlClipFormat,
+    CLIPFORMAT aFileContentsClipFormat,
+    CLIPFORMAT aFileDescriptorClipFormat,
+    xpr_bool_t aUnicode)
 {
     if (XPR_IS_NULL(aDataObject) || XPR_IS_NULL(aDir))
         return XPR_FALSE;
 
     xpr_bool_t sResult = XPR_FALSE;
 
-    FORMATETC sInetUrlFormatEtc    = { aInetUrlClipFormat,        XPR_NULL, DVASPECT_CONTENT, -1, TYMED_HGLOBAL };
-    FORMATETC sDescriptorFormatEtc = { aFileDescriptorClipFormat, XPR_NULL, DVASPECT_CONTENT, -1, TYMED_HGLOBAL };
-    FORMATETC sContentsFormatEtc   = { aFileContentsClipFormat,   XPR_NULL, DVASPECT_CONTENT, -1, TYMED_HGLOBAL };
+    FORMATETC sInetUrlFormatEtc =
+        { aInetUrlClipFormat, XPR_NULL, DVASPECT_CONTENT, -1, TYMED_HGLOBAL };
+    FORMATETC sDescriptorFormatEtc =
+        { aFileDescriptorClipFormat, XPR_NULL, DVASPECT_CONTENT, -1, TYMED_HGLOBAL };
+    FORMATETC sContentsFormatEtc =
+        { aFileContentsClipFormat, XPR_NULL, DVASPECT_CONTENT, -1, TYMED_HGLOBAL | TYMED_ISTREAM };
 
     STGMEDIUM sInetUrlStgMedium = {0};
     STGMEDIUM sDescriptorStgMedium = {0};
 
-    HRESULT sHResult, sHResult2;
-    sHResult  = aDataObject->GetData(&sInetUrlFormatEtc, &sInetUrlStgMedium);
-    sHResult2 = aDataObject->GetData(&sDescriptorFormatEtc, &sDescriptorStgMedium);
+    const HRESULT sInetResult =
+        aDataObject->GetData(
+            &sInetUrlFormatEtc,
+            &sInetUrlStgMedium);
+    const HRESULT sDescriptorResult =
+        aDataObject->GetData(
+            &sDescriptorFormatEtc,
+            &sDescriptorStgMedium);
 
-    if (SUCCEEDED(sHResult) && SUCCEEDED(sHResult2) && XPR_IS_NOT_NULL(sInetUrlStgMedium.hGlobal) && XPR_IS_NOT_NULL(sDescriptorStgMedium.hGlobal))
+    xpr_tchar_t *sUrl = XPR_NULL;
+    FILEGROUPDESCRIPTORA *sFileGroupDescA = XPR_NULL;
+    FILEGROUPDESCRIPTORW *sFileGroupDescW = XPR_NULL;
+
+    if (SUCCEEDED(sInetResult) &&
+        SUCCEEDED(sDescriptorResult) &&
+        XPR_IS_NOT_NULL(sInetUrlStgMedium.hGlobal) &&
+        XPR_IS_NOT_NULL(sDescriptorStgMedium.hGlobal))
     {
-        xpr_tchar_t *sUrl;
-        FILEDESCRIPTORA *sFileDescA = XPR_NULL;
-        FILEDESCRIPTORW *sFileDescW = XPR_NULL;
-        FILEGROUPDESCRIPTORA *sFileGroupDescA = XPR_NULL;
-        FILEGROUPDESCRIPTORW *sFileGroupDescW = XPR_NULL;
-
-        sUrl = (xpr_tchar_t *)::GlobalLock(sInetUrlStgMedium.hGlobal);
+        sUrl =
+            (xpr_tchar_t *)::GlobalLock(
+                sInetUrlStgMedium.hGlobal);
 
         if (XPR_IS_TRUE(aUnicode))
-            sFileGroupDescW = (FILEGROUPDESCRIPTORW *)::GlobalLock(sDescriptorStgMedium.hGlobal);
+        {
+            sFileGroupDescW =
+                (FILEGROUPDESCRIPTORW *)::GlobalLock(
+                    sDescriptorStgMedium.hGlobal);
+        }
         else
-            sFileGroupDescA = (FILEGROUPDESCRIPTORA *)::GlobalLock(sDescriptorStgMedium.hGlobal);
+        {
+            sFileGroupDescA =
+                (FILEGROUPDESCRIPTORA *)::GlobalLock(
+                    sDescriptorStgMedium.hGlobal);
+        }
 
-        if (XPR_IS_NOT_NULL(sUrl) && (XPR_IS_NOT_NULL(sFileGroupDescA) || XPR_IS_NOT_NULL(sFileGroupDescW)))
+        if (XPR_IS_NOT_NULL(sUrl) &&
+            (XPR_IS_NOT_NULL(sFileGroupDescA) ||
+             XPR_IS_NOT_NULL(sFileGroupDescW)))
         {
             RemoveLastSplit(aDir);
 
-            xpr_rcode_t sRcode;
-            xpr_ssize_t sWritten;
-            xpr_sint_t sOpenMode;
-            xpr::FileIo sFileIo;
+            const xpr_sint_t sCount =
+                XPR_IS_TRUE(aUnicode) ?
+                sFileGroupDescW->cItems :
+                sFileGroupDescA->cItems;
 
-            xpr_char_t *aText;
-            STGMEDIUM sStgMedium = {0};
-
-            xpr_sint_t i, sCount;
-            xpr_tchar_t sPath[XPR_MAX_PATH + 1] = {0};
-            xpr_tchar_t sFileName[XPR_MAX_PATH + 1] = {0};
-            xpr_tchar_t sExt[XPR_MAX_PATH + 1] = {0};
-            xpr_size_t sInputBytes;
-            xpr_size_t sOutputBytes;
-
-            sCount = XPR_IS_TRUE(aUnicode) ? sFileGroupDescW->cItems : sFileGroupDescA->cItems;
-            for (i = 0; i < sCount; ++i)
+            for (xpr_sint_t i = 0; i < sCount; ++i)
             {
+                FILEDESCRIPTORA *sFileDescA = XPR_NULL;
+                FILEDESCRIPTORW *sFileDescW = XPR_NULL;
                 if (XPR_IS_TRUE(aUnicode))
                     sFileDescW = &sFileGroupDescW->fgd[i];
                 else
                     sFileDescA = &sFileGroupDescA->fgd[i];
 
-                sContentsFormatEtc.lindex = i;
+                xpr_tchar_t sFileName[XPR_MAX_PATH + 1] = {0};
+                xpr_size_t sInputBytes =
+                    XPR_IS_TRUE(aUnicode) ?
+                    wcslen(sFileDescW->cFileName) * sizeof(xpr_wchar_t) :
+                    strlen(sFileDescA->cFileName) * sizeof(xpr_char_t);
+                xpr_size_t sOutputBytes =
+                    XPR_MAX_PATH * sizeof(xpr_tchar_t);
 
-                sHResult = aDataObject->GetData(&sContentsFormatEtc, &sStgMedium);
-                if (SUCCEEDED(sHResult) && XPR_IS_NOT_NULL(sStgMedium.hGlobal))
+                if (XPR_IS_TRUE(aUnicode))
                 {
-                    if (XPR_IS_TRUE(aUnicode))
-                    {
-                        sInputBytes = wcslen(sFileDescW->cFileName) * sizeof(xpr_wchar_t);
-                        sOutputBytes = XPR_MAX_PATH * sizeof(xpr_tchar_t);
-                        XPR_UTF16_TO_TCS(sFileDescW->cFileName, &sInputBytes, sFileName, &sOutputBytes);
-                        sFileName[sOutputBytes / sizeof(xpr_tchar_t)] = 0;
-                    }
-                    else
-                    {
-                        sInputBytes = strlen(sFileDescA->cFileName) * sizeof(xpr_char_t);
-                        sOutputBytes = XPR_MAX_PATH * sizeof(xpr_tchar_t);
-                        XPR_MBS_TO_TCS(sFileDescA->cFileName, &sInputBytes, sFileName, &sOutputBytes);
-                        sFileName[sOutputBytes / sizeof(xpr_tchar_t)] = 0;
-                    }
+                    XPR_UTF16_TO_TCS(
+                        sFileDescW->cFileName,
+                        &sInputBytes,
+                        sFileName,
+                        &sOutputBytes);
+                }
+                else
+                {
+                    XPR_MBS_TO_TCS(
+                        sFileDescA->cFileName,
+                        &sInputBytes,
+                        sFileName,
+                        &sOutputBytes);
+                }
+                sFileName[sOutputBytes / sizeof(xpr_tchar_t)] = 0;
 
-                    SplitFileNameExt(sFileName, sFileName, sExt);
+                xpr_tchar_t sExt[XPR_MAX_PATH + 1] = {0};
+                SplitFileNameExt(sFileName, sFileName, sExt);
 
-                    SetNewPath(sPath, aDir, sFileName, sExt);
+                xpr_tchar_t sPath[XPR_MAX_PATH + 1] = {0};
+                SetNewPath(sPath, aDir, sFileName, sExt);
 
-                    if (sStgMedium.tymed == TYMED_HGLOBAL)
+                sContentsFormatEtc.lindex = i;
+                STGMEDIUM sContentMedium = {0};
+                const HRESULT sContentResult =
+                    aDataObject->GetData(
+                        &sContentsFormatEtc,
+                        &sContentMedium);
+
+                if (SUCCEEDED(sContentResult))
+                {
+                    xpr_bool_t sFileSucceeded = XPR_FALSE;
+
+                    if (sContentMedium.tymed == TYMED_HGLOBAL &&
+                        XPR_IS_NOT_NULL(sContentMedium.hGlobal))
                     {
-                        aText = (xpr_char_t *)::GlobalLock(sStgMedium.hGlobal);
-                        if (XPR_IS_NOT_NULL(aText))
+                        xpr_char_t *sData =
+                            (xpr_char_t *)::GlobalLock(
+                                sContentMedium.hGlobal);
+                        if (XPR_IS_NOT_NULL(sData))
                         {
-                            sOpenMode = xpr::FileIo::OpenModeCreate | xpr::FileIo::OpenModeTruncate | xpr::FileIo::OpenModeWriteOnly;
-                            sRcode = sFileIo.open(sPath, sOpenMode);
-                            if (XPR_RCODE_IS_SUCCESS(sRcode))
+                            xpr_ssize_t sLength =
+                                XPR_IS_TRUE(aUnicode) ?
+                                (xpr_ssize_t)sFileDescW->nFileSizeLow :
+                                (xpr_ssize_t)sFileDescA->nFileSizeLow;
+                            if (sLength == 0)
                             {
-                                xpr_sint_t sLen = XPR_IS_TRUE(aUnicode) ? sFileDescW->nFileSizeLow : sFileDescA->nFileSizeLow;
-                                if (sLen == 0)
-                                    sLen = (xpr_sint_t)::GlobalSize(sStgMedium.hGlobal);
-
-                                sRcode = sFileIo.write(aText, sLen, &sWritten);
-
-                                sFileIo.close();
-
-                                ::SHChangeNotify(SHCNE_CREATE, SHCNF_PATH | SHCNF_FLUSH, sPath, XPR_NULL);
-                                sResult = XPR_TRUE;
+                                sLength =
+                                    (xpr_ssize_t)::GlobalSize(
+                                        sContentMedium.hGlobal);
                             }
 
-                            ::GlobalUnlock(sStgMedium.hGlobal);
+                            xpr::FileIo sFileIo;
+                            const xpr_sint_t sOpenMode =
+                                xpr::FileIo::OpenModeCreate |
+                                xpr::FileIo::OpenModeTruncate |
+                                xpr::FileIo::OpenModeWriteOnly;
+                            xpr_rcode_t sRcode =
+                                sFileIo.open(sPath, sOpenMode);
+                            if (XPR_RCODE_IS_SUCCESS(sRcode))
+                            {
+                                xpr_ssize_t sWritten = 0;
+                                sRcode =
+                                    sFileIo.write(
+                                        sData,
+                                        sLength,
+                                        &sWritten);
+                                sFileIo.close();
+
+                                if (XPR_RCODE_IS_SUCCESS(sRcode) &&
+                                    sWritten == sLength)
+                                {
+                                    sFileSucceeded = XPR_TRUE;
+                                }
+                                else
+                                {
+                                    ::DeleteFile(sPath);
+                                }
+                            }
+
+                            ::GlobalUnlock(sContentMedium.hGlobal);
                         }
                     }
-                    else if (sStgMedium.tymed == TYMED_ISTREAM)
+                    else if (sContentMedium.tymed == TYMED_ISTREAM &&
+                             XPR_IS_NOT_NULL(sContentMedium.pstm))
                     {
-                        sHResult = StreamToFile(sStgMedium.pstm, sPath);
-                        if (SUCCEEDED(sHResult))
+                        if (SUCCEEDED(
+                                StreamToFile(
+                                    sContentMedium.pstm,
+                                    sPath)))
                         {
-                            ::SHChangeNotify(SHCNE_CREATE, SHCNF_PATH | SHCNF_FLUSH, sPath, XPR_NULL);
-                            sResult = XPR_TRUE;
+                            sFileSucceeded = XPR_TRUE;
                         }
                     }
 
-                    if (XPR_IS_NOT_NULL(sStgMedium.pUnkForRelease))
+                    ::ReleaseStgMedium(&sContentMedium);
+
+                    if (XPR_IS_TRUE(sFileSucceeded))
                     {
-                        ::ReleaseStgMedium(&sStgMedium);
+                        ::SHChangeNotify(
+                            SHCNE_CREATE,
+                            SHCNF_PATH | SHCNF_FLUSH,
+                            sPath,
+                            XPR_NULL);
+                        sResult = XPR_TRUE;
                     }
                 }
             }
         }
-
-        if (XPR_IS_NOT_NULL(sUrl))
-            ::GlobalUnlock(sInetUrlStgMedium.hGlobal);
-
-        if (XPR_IS_NOT_NULL(sInetUrlStgMedium.pUnkForRelease))
-        {
-            ::ReleaseStgMedium(&sInetUrlStgMedium);
-        }
-
-        if (XPR_IS_NOT_NULL(sDescriptorStgMedium.pUnkForRelease))
-        {
-            ::ReleaseStgMedium(&sDescriptorStgMedium);
-        }
     }
+
+    if (XPR_IS_NOT_NULL(sUrl))
+        ::GlobalUnlock(sInetUrlStgMedium.hGlobal);
+
+    if (XPR_IS_NOT_NULL(sFileGroupDescA) ||
+        XPR_IS_NOT_NULL(sFileGroupDescW))
+    {
+        ::GlobalUnlock(sDescriptorStgMedium.hGlobal);
+    }
+
+    if (SUCCEEDED(sInetResult))
+        ::ReleaseStgMedium(&sInetUrlStgMedium);
+    if (SUCCEEDED(sDescriptorResult))
+        ::ReleaseStgMedium(&sDescriptorStgMedium);
 
     return sResult;
 }
@@ -839,112 +1131,152 @@ xpr_bool_t IsPasteFileContents(COleDataObject *aOleDataObject, CLIPFORMAT aFileC
 //
 // outlook
 //
-xpr_bool_t DoPasteFileContents(LPDATAOBJECT aDataObject, xpr_tchar_t *aDir, CLIPFORMAT aFileContentsClipFormat, CLIPFORMAT aFileDescriptorClipFormat, xpr_bool_t aUnicode)
+xpr_bool_t DoPasteFileContents(
+    LPDATAOBJECT aDataObject,
+    xpr_tchar_t *aDir,
+    CLIPFORMAT aFileContentsClipFormat,
+    CLIPFORMAT aFileDescriptorClipFormat,
+    xpr_bool_t aUnicode)
 {
     if (XPR_IS_NULL(aDataObject) || XPR_IS_NULL(aDir))
         return XPR_FALSE;
 
     xpr_bool_t sResult = XPR_FALSE;
 
-    // CFSTR_FILEDESCRIPTORW("FileGroupDescriptorW") - Not Supported in Unicode
-    // CFSTR_FILEDESCRIPTOR("FileGroupDescriptor") - Only Supported in Ansi/Unicode
-
-    FILEDESCRIPTORA *sFileDescA = XPR_NULL;
-    FILEDESCRIPTORW *sFileDescW = XPR_NULL;
     FILEGROUPDESCRIPTORA *sFileGroupDescA = XPR_NULL;
     FILEGROUPDESCRIPTORW *sFileGroupDescW = XPR_NULL;
 
-    FORMATETC sDescriptorFormatEtc = { aFileDescriptorClipFormat, XPR_NULL, DVASPECT_CONTENT, -1, TYMED_HGLOBAL };
-    FORMATETC sContentsFormatEtc   = { aFileContentsClipFormat,   XPR_NULL, DVASPECT_CONTENT, -1, TYMED_ISTREAM | TYMED_ISTORAGE };
+    FORMATETC sDescriptorFormatEtc =
+        { aFileDescriptorClipFormat, XPR_NULL, DVASPECT_CONTENT, -1, TYMED_HGLOBAL };
+    FORMATETC sContentsFormatEtc =
+        { aFileContentsClipFormat, XPR_NULL, DVASPECT_CONTENT, -1, TYMED_ISTREAM | TYMED_ISTORAGE };
 
-    HRESULT sHResult;
-    STGMEDIUM sStgMedium = {0};
-    sHResult = aDataObject->GetData(&sDescriptorFormatEtc, &sStgMedium);
+    STGMEDIUM sDescriptorMedium = {0};
+    const HRESULT sDescriptorResult =
+        aDataObject->GetData(
+            &sDescriptorFormatEtc,
+            &sDescriptorMedium);
 
-    if (XPR_IS_TRUE(aUnicode))
-        sFileGroupDescW = (FILEGROUPDESCRIPTORW *)::GlobalLock(sStgMedium.hGlobal);
-    else
-        sFileGroupDescA = (FILEGROUPDESCRIPTORA *)::GlobalLock(sStgMedium.hGlobal);
-
-    if ((SUCCEEDED(sHResult)) && (XPR_IS_NOT_NULL(sFileGroupDescA) || XPR_IS_NOT_NULL(sFileGroupDescW)))
+    if (SUCCEEDED(sDescriptorResult) &&
+        XPR_IS_NOT_NULL(sDescriptorMedium.hGlobal))
     {
-        RemoveLastSplit(aDir);
-
-        xpr_sint_t  i, sCount;
-        xpr_tchar_t sPath[XPR_MAX_PATH + 1] = {0};
-        xpr_tchar_t sFileName[XPR_MAX_PATH + 1] = {0};
-        xpr_tchar_t sExt[XPR_MAX_PATH + 1] = {0};
-        xpr_size_t  sInputBytes;
-        xpr_size_t  sOutputBytes;
-        STGMEDIUM   sFileStgMedium = {0,};
-
-        sCount = XPR_IS_TRUE(aUnicode) ? sFileGroupDescW->cItems : sFileGroupDescA->cItems;
-        for (i = 0; i < sCount; ++i)
+        if (XPR_IS_TRUE(aUnicode))
         {
-            if (XPR_IS_TRUE(aUnicode))
-                sFileDescW = &sFileGroupDescW->fgd[i];
-            else
-                sFileDescA = &sFileGroupDescA->fgd[i];
+            sFileGroupDescW =
+                (FILEGROUPDESCRIPTORW *)::GlobalLock(
+                    sDescriptorMedium.hGlobal);
+        }
+        else
+        {
+            sFileGroupDescA =
+                (FILEGROUPDESCRIPTORA *)::GlobalLock(
+                    sDescriptorMedium.hGlobal);
+        }
 
-            sContentsFormatEtc.lindex = i;
+        if (XPR_IS_NOT_NULL(sFileGroupDescA) ||
+            XPR_IS_NOT_NULL(sFileGroupDescW))
+        {
+            RemoveLastSplit(aDir);
 
-            sHResult = aDataObject->GetData(&sContentsFormatEtc, &sFileStgMedium);
-            if (SUCCEEDED(sHResult) && XPR_IS_NOT_NULL(sFileStgMedium.pstm))
+            const xpr_sint_t sCount =
+                XPR_IS_TRUE(aUnicode) ?
+                sFileGroupDescW->cItems :
+                sFileGroupDescA->cItems;
+
+            for (xpr_sint_t i = 0; i < sCount; ++i)
             {
+                FILEDESCRIPTORA *sFileDescA = XPR_NULL;
+                FILEDESCRIPTORW *sFileDescW = XPR_NULL;
+                if (XPR_IS_TRUE(aUnicode))
+                    sFileDescW = &sFileGroupDescW->fgd[i];
+                else
+                    sFileDescA = &sFileGroupDescA->fgd[i];
+
+                xpr_tchar_t sFileName[XPR_MAX_PATH + 1] = {0};
+                xpr_size_t sInputBytes =
+                    XPR_IS_TRUE(aUnicode) ?
+                    wcslen(sFileDescW->cFileName) * sizeof(xpr_wchar_t) :
+                    strlen(sFileDescA->cFileName) * sizeof(xpr_char_t);
+                xpr_size_t sOutputBytes =
+                    XPR_MAX_PATH * sizeof(xpr_tchar_t);
+
                 if (XPR_IS_TRUE(aUnicode))
                 {
-                    sInputBytes = wcslen(sFileDescW->cFileName) * sizeof(xpr_wchar_t);
-                    sOutputBytes = XPR_MAX_PATH * sizeof(xpr_tchar_t);
-                    XPR_UTF16_TO_TCS(sFileDescW->cFileName, &sInputBytes, sFileName, &sOutputBytes);
-                    sFileName[sOutputBytes / sizeof(xpr_tchar_t)] = 0;
+                    XPR_UTF16_TO_TCS(
+                        sFileDescW->cFileName,
+                        &sInputBytes,
+                        sFileName,
+                        &sOutputBytes);
                 }
                 else
                 {
-                    sInputBytes = strlen(sFileDescA->cFileName) * sizeof(xpr_char_t);
-                    sOutputBytes = XPR_MAX_PATH * sizeof(xpr_tchar_t);
-                    XPR_MBS_TO_TCS(sFileDescA->cFileName, &sInputBytes, sFileName, &sOutputBytes);
-                    sFileName[sOutputBytes / sizeof(xpr_tchar_t)] = 0;
+                    XPR_MBS_TO_TCS(
+                        sFileDescA->cFileName,
+                        &sInputBytes,
+                        sFileName,
+                        &sOutputBytes);
                 }
+                sFileName[sOutputBytes / sizeof(xpr_tchar_t)] = 0;
 
+                xpr_tchar_t sExt[XPR_MAX_PATH + 1] = {0};
                 SplitFileNameExt(sFileName, sFileName, sExt);
 
+                xpr_tchar_t sPath[XPR_MAX_PATH + 1] = {0};
                 SetNewPath(sPath, aDir, sFileName, sExt);
 
-                switch (sFileStgMedium.tymed)
+                sContentsFormatEtc.lindex = i;
+                STGMEDIUM sFileMedium = {0};
+                const HRESULT sFileResult =
+                    aDataObject->GetData(
+                        &sContentsFormatEtc,
+                        &sFileMedium);
+
+                if (SUCCEEDED(sFileResult))
                 {
-                case TYMED_ISTORAGE:
+                    HRESULT sSaveResult = E_FAIL;
+                    if (sFileMedium.tymed == TYMED_ISTORAGE &&
+                        XPR_IS_NOT_NULL(sFileMedium.pstg))
                     {
-                        sHResult = StorageToFile(sFileStgMedium.pstg, sPath);
-                        break;
+                        sSaveResult =
+                            StorageToFile(
+                                sFileMedium.pstg,
+                                sPath);
+                    }
+                    else if (sFileMedium.tymed == TYMED_ISTREAM &&
+                             XPR_IS_NOT_NULL(sFileMedium.pstm))
+                    {
+                        sSaveResult =
+                            StreamToFile(
+                                sFileMedium.pstm,
+                                sPath);
                     }
 
-                case TYMED_ISTREAM:
+                    ::ReleaseStgMedium(&sFileMedium);
+
+                    if (SUCCEEDED(sSaveResult))
                     {
-                        sHResult = StreamToFile(sFileStgMedium.pstm, sPath);
-                        break;
+                        ::SHChangeNotify(
+                            SHCNE_CREATE,
+                            SHCNF_PATH | SHCNF_FLUSH,
+                            sPath,
+                            XPR_NULL);
+                        sResult = XPR_TRUE;
                     }
-                }
-
-                if (SUCCEEDED(sHResult))
-                {
-                    ::SHChangeNotify(SHCNE_CREATE, SHCNF_PATH | SHCNF_FLUSH, sPath, XPR_NULL);
-                    sResult = XPR_TRUE;
-                }
-
-                if (XPR_IS_NOT_NULL(sFileStgMedium.pUnkForRelease))
-                {
-                    ::ReleaseStgMedium(&sFileStgMedium);
                 }
             }
         }
+
+        if (XPR_IS_NOT_NULL(sFileGroupDescA) ||
+            XPR_IS_NOT_NULL(sFileGroupDescW))
+        {
+            ::GlobalUnlock(sDescriptorMedium.hGlobal);
+        }
+
+        ::ReleaseStgMedium(&sDescriptorMedium);
     }
-
-    if (XPR_IS_NOT_NULL(sStgMedium.hGlobal))
-        ::GlobalUnlock(sStgMedium.hGlobal);
-
-    if (XPR_IS_NOT_NULL(sStgMedium.pUnkForRelease))
+    else if (SUCCEEDED(sDescriptorResult))
     {
-        ::ReleaseStgMedium(&sStgMedium);
+        ::ReleaseStgMedium(&sDescriptorMedium);
     }
 
     return sResult;

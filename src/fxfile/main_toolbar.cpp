@@ -495,6 +495,8 @@ void MainToolBar::OnDrop(COleDataObject *aOleDataObject, DROPEFFECT aDropEffect,
             // get item PIDL and get full-qualified PIDL
             sPidl2 = (LPITEMIDLIST)(((xpr_byte_t *)sIda)+(sIda)->aoffset[i+1]);
             sFullPidl = fxfile::base::Pidl::concat(sPidl1, sPidl2);
+            if (XPR_IS_NULL(sFullPidl))
+                continue;
 
             switch (sDragId)
             {
@@ -529,10 +531,7 @@ void MainToolBar::OnDrop(COleDataObject *aOleDataObject, DROPEFFECT aDropEffect,
         ::GlobalUnlock(sStgMedium.hGlobal);
     }
 
-    if (XPR_IS_NOT_NULL(sStgMedium.pUnkForRelease))
-    {
-        ::ReleaseStgMedium(&sStgMedium);
-    }
+    ::ReleaseStgMedium(&sStgMedium);
 }
 
 void MainToolBar::OnDropBookmark(LPITEMIDLIST aFullPidl)

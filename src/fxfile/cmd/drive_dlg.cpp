@@ -269,7 +269,7 @@ xpr_bool_t DriveDlg::PreTranslateMessage(MSG* pMsg)
             while (sTreeItem != XPR_NULL)
             {
                 sText = mTreeCtrl.GetItemText(sTreeItem);
-                if (sText[2] == sDrivePath[0])
+                if (sText.length() > 2 && sText[2] == sDrivePath[0])
                 {
                     mTreeCtrl.SelectItem(sTreeItem);
                     OnOK();
@@ -298,8 +298,12 @@ void DriveDlg::OnRclickDrvTree(NMHDR *pNMHDR, LRESULT *pResult)
 
     HTREEITEM sTreeItem;
     sTreeItem = mTreeCtrl.HitTest(sHitTest);
+    if (sTreeItem == XPR_NULL)
+        return;
 
     xpr_tchar_t sDrive = getDrive(sTreeItem);
+    if (sDrive == 0)
+        return;
 
     xpr_tchar_t sDrivePath[XPR_MAX_PATH + 1] = {0};
     _stprintf(sDrivePath, XPR_STRING_LITERAL("%c:\\"), sDrive);

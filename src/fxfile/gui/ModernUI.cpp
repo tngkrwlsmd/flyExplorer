@@ -200,6 +200,1151 @@ void endControlThemeChange(HWND aHwnd)
     if (XPR_IS_NOT_NULL(aHwnd))
         ::RemoveProp(aHwnd, kThemeApplyGuardProp);
 }
+
+const UINT_PTR kDialogButtonSubclassId = 0x46474442;   // 'FGDB'
+const UINT_PTR kDialogTabSubclassId = 0x46474454;      // 'FGDT'
+const UINT_PTR kDialogEditSubclassId = 0x46474445;     // 'FGDE'
+const UINT_PTR kDialogComboSubclassId = 0x46474443;    // 'FGDC'
+const UINT_PTR kDialogGroupSubclassId = 0x46474447;    // 'FGDG'
+
+HBRUSH getDialogParentBrush(HWND aHwnd, HDC aDC, UINT aCtlColorMessage)
+{
+    HWND sParent = ::GetParent(aHwnd);
+    if (XPR_IS_NULL(sParent))
+        return XPR_NULL;
+
+    return reinterpret_cast<HBRUSH>(
+        ::SendMessage(
+            sParent,
+            aCtlColorMessage,
+            reinterpret_cast<WPARAM>(aDC),
+            reinterpret_cast<LPARAM>(aHwnd)));
+}
+
+void fillDialogControlBackground(
+    HWND aHwnd,
+    HDC aDC,
+    const RECT &aRect,
+    COLORREF aFallback)
+{
+    HBRUSH sBrush =
+        getDialogParentBrush(aHwnd, aDC, WM_CTLCOLORBTN);
+    if (XPR_IS_NOT_NULL(sBrush) &&
+        sBrush != reinterpret_cast<HBRUSH>(::GetStockObject(NULL_BRUSH)))
+    {
+        ::FillRect(aDC, &aRect, sBrush);
+        return;
+    }
+
+    ::SetDCBrushColor(aDC, aFallback);
+    ::FillRect(
+        aDC,
+        &aRect,
+        static_cast<HBRUSH>(::GetStockObject(DC_BRUSH)));
+}
+
+xpr_bool_t isDialogToggleButton(DWORD aButtonType)
+{
+    return
+        aButtonType == BS_CHECKBOX ||
+        aButtonType == BS_AUTOCHECKBOX ||
+        aButtonType == BS_3STATE ||
+        aButtonType == BS_AUTO3STATE ||
+        aButtonType == BS_RADIOBUTTON ||
+        aButtonType == BS_AUTORADIOBUTTON ?
+        XPR_TRUE :
+        XPR_FALSE;
+}
+
+xpr_bool_t isDialogPushButton(DWORD aButtonType)
+{
+    return
+        aButtonType == BS_PUSHBUTTON ||
+        aButtonType == BS_DEFPUSHBUTTON ?
+        XPR_TRUE :
+        XPR_FALSE;
+}
+
+void drawDialogPushButton(HWND aHwnd)
+{
+    const ThemePalette sPalette = ModernUI::getPalette();
+    if (XPR_IS_FALSE(sPalette.mDark) ||
+        XPR_IS_TRUE(sPalette.mHighContrast))
+    {
+        return;
+    }
+
+    PAINTSTRUCT sPaint = {0};
+    HDC sDC = ::BeginPaint(aHwnd, &sPaint);
+    if (XPR_IS_NULL(sDC))
+        return;
+
+    RECT sRect = {0};
+    ::GetClientRect(aHwnd, &sRect);
+
+    const xpr_bool_t sEnabled =
+        ::IsWindowEnabled(aHwnd) != FALSE ? XPR_TRUE : XPR_FALSE;
+    const xpr_bool_t sFocused =
+        ::GetFocus() == aHwnd ? XPR_TRUE : XPR_FALSE;
+    const LRESULT sState = ::SendMessage(aHwnd, BM_GETSTATE, 0, 0);
+    const xpr_bool_t sPressed =
+        (sState & BST_PUSHED) != 0 ? XPR_TRUE : XPR_FALSE;
+
+    POINT sCursor = {0};
+    RECT sWindowRect = {0};
+    ::GetCursorPos(&sCursor);
+    ::GetWindowRect(aHwnd, &sWindowRect);
+    const xpr_bool_t sHot =
+        ::PtInRect(&sWindowRect, sCursor) != FALSE ?
+        XPR_TRUE :
+        XPR_FALSE;
+
+    COLORREF sFill =
+        XPR_IS_TRUE(sEnabled) ? sPalette.mElevated : sPalette.mCard;
+    COLORREF sText =
+        XPR_IS_TRUE(sEnabled) ? sPalette.mText : sPalette.mSecondaryText;
+    COLORREF sBorder =
+        XPR_IS_TRUE(sFocused) ? sPalette.mFocus : sPalette.mSeparator;
+
+    if (XPR_IS_TRUE(sEnabled))
+    {
+        if (XPR_IS_TRUE(sPressed))
+            sFill = sPalette.mPressed;
+        else if (XPR_IS_TRUE(sHot))
+            sFill = sPalette.mHover;
+    }
+
+    HBRUSH sBrush = ::CreateSolidBrush(sFill);
+    HPEN sPen = ::CreatePen(PS_SOLID, 1, sBorder);
+    if (XPR_IS_NOT_NULL(sBrush) && XPR_IS_NOT_NULL(sPen))
+    {
+        HGDIOBJ sOldBrush = ::SelectObject(sDC, sBrush);
+        HGDIOBJ sOldPen = ::SelectObject(sDC, sPen);
+        const xpr_sint_t sRadius =
+            ModernUI::getControlCornerRadius(aHwnd);
+        ::RoundRect(
+            sDC,
+            sRect.left,
+            sRect.top,
+            sRect.right,
+            sRect.bottom,
+            sRadius * 2,
+            sRadius * 2);
+        ::SelectObject(sDC, sOldPen);
+        ::SelectObject(sDC, sOldBrush);
+    }
+    if (XPR_IS_NOT_NULL(sPen))
+        ::DeleteObject(sPen);
+    if (XPR_IS_NOT_NULL(sBrush))
+        ::DeleteObject(sBrush);
+
+    xpr_tchar_t sLabel[512] = {0};
+    ::GetWindowText(aHwnd, sLabel, XPR_COUNT_OF(sLabel));
+    HFONT sFont = reinterpret_cast<HFONT>(
+        ::SendMessage(aHwnd, WM_GETFONT, 0, 0));
+    HGDIOBJ sOldFont = XPR_NULL;
+    if (XPR_IS_NOT_NULL(sFont))
+        sOldFont = ::SelectObject(sDC, sFont);
+
+    ::SetBkMode(sDC, TRANSPARENT);
+    ::SetTextColor(sDC, sText);
+    ::DrawText(
+        sDC,
+        sLabel,
+        -1,
+        &sRect,
+        DT_CENTER | DT_VCENTER | DT_SINGLELINE | DT_END_ELLIPSIS);
+
+    if (XPR_IS_NOT_NULL(sOldFont))
+        ::SelectObject(sDC, sOldFont);
+
+    ::EndPaint(aHwnd, &sPaint);
+}
+
+void drawDialogToggle(HWND aHwnd)
+{
+    const ThemePalette sPalette = ModernUI::getPalette();
+    if (XPR_IS_FALSE(sPalette.mDark) ||
+        XPR_IS_TRUE(sPalette.mHighContrast))
+    {
+        return;
+    }
+
+    const DWORD sButtonType =
+        static_cast<DWORD>(::GetWindowLongPtr(aHwnd, GWL_STYLE)) &
+        BS_TYPEMASK;
+    if (XPR_IS_FALSE(isDialogToggleButton(sButtonType)))
+        return;
+
+    PAINTSTRUCT sPaint = {0};
+    HDC sDC = ::BeginPaint(aHwnd, &sPaint);
+    if (XPR_IS_NULL(sDC))
+        return;
+
+    RECT sClientRect = {0};
+    ::GetClientRect(aHwnd, &sClientRect);
+    fillDialogControlBackground(
+        aHwnd,
+        sDC,
+        sClientRect,
+        sPalette.mSurface);
+
+    const xpr_bool_t sEnabled =
+        ::IsWindowEnabled(aHwnd) != FALSE ? XPR_TRUE : XPR_FALSE;
+    const xpr_bool_t sFocused =
+        ::GetFocus() == aHwnd ? XPR_TRUE : XPR_FALSE;
+    const LRESULT sState = ::SendMessage(aHwnd, BM_GETSTATE, 0, 0);
+    const xpr_bool_t sHot =
+        (sState & BST_HOT) != 0 ? XPR_TRUE : XPR_FALSE;
+    const LRESULT sCheck = ::SendMessage(aHwnd, BM_GETCHECK, 0, 0);
+
+    const xpr_sint_t sGlyphExtent =
+        max(12, ModernUI::scaleForWindow(14, aHwnd));
+    const xpr_sint_t sGap =
+        ModernUI::scaleForWindow(8, aHwnd);
+    const xpr_sint_t sTop =
+        max(0, (sClientRect.bottom - sClientRect.top - sGlyphExtent) / 2);
+
+    RECT sGlyphRect =
+    {
+        sClientRect.left,
+        sClientRect.top + sTop,
+        sClientRect.left + sGlyphExtent,
+        sClientRect.top + sTop + sGlyphExtent,
+    };
+
+    COLORREF sFill = sPalette.mElevated;
+    COLORREF sBorder =
+        XPR_IS_TRUE(sFocused) ? sPalette.mFocus : sPalette.mSeparator;
+    COLORREF sGlyph = sPalette.mText;
+    if (XPR_IS_FALSE(sEnabled))
+    {
+        sFill = sPalette.mCard;
+        sGlyph = sPalette.mSecondaryText;
+    }
+    else if (XPR_IS_TRUE(sHot))
+    {
+        sFill = sPalette.mHover;
+    }
+
+    if (sCheck == BST_CHECKED || sCheck == BST_INDETERMINATE)
+    {
+        sFill = sPalette.mSelection;
+        sBorder = sPalette.mSelection;
+        sGlyph = sPalette.mSelectionText;
+    }
+
+    const xpr_bool_t sRadio =
+        (sButtonType == BS_RADIOBUTTON ||
+         sButtonType == BS_AUTORADIOBUTTON) ?
+        XPR_TRUE :
+        XPR_FALSE;
+
+    HBRUSH sFillBrush = ::CreateSolidBrush(sFill);
+    HPEN sBorderPen = ::CreatePen(PS_SOLID, 1, sBorder);
+    if (XPR_IS_NOT_NULL(sFillBrush) && XPR_IS_NOT_NULL(sBorderPen))
+    {
+        HGDIOBJ sOldBrush = ::SelectObject(sDC, sFillBrush);
+        HGDIOBJ sOldPen = ::SelectObject(sDC, sBorderPen);
+        if (XPR_IS_TRUE(sRadio))
+        {
+            ::Ellipse(
+                sDC,
+                sGlyphRect.left,
+                sGlyphRect.top,
+                sGlyphRect.right,
+                sGlyphRect.bottom);
+        }
+        else
+        {
+            const xpr_sint_t sRadius =
+                max(2, ModernUI::scaleForWindow(3, aHwnd));
+            ::RoundRect(
+                sDC,
+                sGlyphRect.left,
+                sGlyphRect.top,
+                sGlyphRect.right,
+                sGlyphRect.bottom,
+                sRadius * 2,
+                sRadius * 2);
+        }
+        ::SelectObject(sDC, sOldPen);
+        ::SelectObject(sDC, sOldBrush);
+    }
+    if (XPR_IS_NOT_NULL(sBorderPen))
+        ::DeleteObject(sBorderPen);
+    if (XPR_IS_NOT_NULL(sFillBrush))
+        ::DeleteObject(sFillBrush);
+
+    if (sCheck == BST_CHECKED)
+    {
+        HPEN sGlyphPen = ::CreatePen(
+            PS_SOLID,
+            max(1, ModernUI::scaleForWindow(2, aHwnd)),
+            sGlyph);
+        if (XPR_IS_NOT_NULL(sGlyphPen))
+        {
+            HGDIOBJ sOldPen = ::SelectObject(sDC, sGlyphPen);
+            if (XPR_IS_TRUE(sRadio))
+            {
+                const xpr_sint_t sInset =
+                    max(3, ModernUI::scaleForWindow(4, aHwnd));
+                HBRUSH sDotBrush = ::CreateSolidBrush(sGlyph);
+                if (XPR_IS_NOT_NULL(sDotBrush))
+                {
+                    HGDIOBJ sOldBrush = ::SelectObject(sDC, sDotBrush);
+                    ::Ellipse(
+                        sDC,
+                        sGlyphRect.left + sInset,
+                        sGlyphRect.top + sInset,
+                        sGlyphRect.right - sInset,
+                        sGlyphRect.bottom - sInset);
+                    ::SelectObject(sDC, sOldBrush);
+                    ::DeleteObject(sDotBrush);
+                }
+            }
+            else
+            {
+                ::MoveToEx(
+                    sDC,
+                    sGlyphRect.left + (sGlyphExtent * 3 / 10),
+                    sGlyphRect.top + (sGlyphExtent * 5 / 10),
+                    XPR_NULL);
+                ::LineTo(
+                    sDC,
+                    sGlyphRect.left + (sGlyphExtent * 45 / 100),
+                    sGlyphRect.top + (sGlyphExtent * 65 / 100));
+                ::LineTo(
+                    sDC,
+                    sGlyphRect.left + (sGlyphExtent * 75 / 100),
+                    sGlyphRect.top + (sGlyphExtent * 35 / 100));
+            }
+            ::SelectObject(sDC, sOldPen);
+            ::DeleteObject(sGlyphPen);
+        }
+    }
+    else if (sCheck == BST_INDETERMINATE && XPR_IS_FALSE(sRadio))
+    {
+        RECT sMarkRect = sGlyphRect;
+        const xpr_sint_t sInset =
+            max(3, ModernUI::scaleForWindow(4, aHwnd));
+        ::InflateRect(&sMarkRect, -sInset, -sInset);
+        ::SetDCBrushColor(sDC, sGlyph);
+        ::FillRect(
+            sDC,
+            &sMarkRect,
+            static_cast<HBRUSH>(::GetStockObject(DC_BRUSH)));
+    }
+
+    xpr_tchar_t sText[512] = {0};
+    ::GetWindowText(aHwnd, sText, XPR_COUNT_OF(sText));
+    RECT sTextRect = sClientRect;
+    sTextRect.left = sGlyphRect.right + sGap;
+
+    HFONT sFont = reinterpret_cast<HFONT>(
+        ::SendMessage(aHwnd, WM_GETFONT, 0, 0));
+    HGDIOBJ sOldFont = XPR_NULL;
+    if (XPR_IS_NOT_NULL(sFont))
+        sOldFont = ::SelectObject(sDC, sFont);
+
+    ::SetBkMode(sDC, TRANSPARENT);
+    ::SetTextColor(
+        sDC,
+        XPR_IS_TRUE(sEnabled) ?
+        sPalette.mText :
+        sPalette.mSecondaryText);
+    ::DrawText(
+        sDC,
+        sText,
+        -1,
+        &sTextRect,
+        DT_LEFT | DT_VCENTER | DT_SINGLELINE | DT_END_ELLIPSIS);
+
+    if (XPR_IS_TRUE(sFocused))
+    {
+        RECT sFocusRect = sTextRect;
+        ::InflateRect(
+            &sFocusRect,
+            -max(1, ModernUI::scaleForWindow(1, aHwnd)),
+            -max(1, ModernUI::scaleForWindow(1, aHwnd)));
+        ::DrawFocusRect(sDC, &sFocusRect);
+    }
+
+    if (XPR_IS_NOT_NULL(sOldFont))
+        ::SelectObject(sDC, sOldFont);
+
+    ::EndPaint(aHwnd, &sPaint);
+}
+
+
+void drawDialogEditFrame(HWND aHwnd)
+{
+    const ThemePalette sPalette = ModernUI::getPalette();
+    if (XPR_IS_FALSE(sPalette.mDark) ||
+        XPR_IS_TRUE(sPalette.mHighContrast))
+    {
+        return;
+    }
+
+    HDC sDC = ::GetWindowDC(aHwnd);
+    if (XPR_IS_NULL(sDC))
+        return;
+
+    RECT sWindowScreen = {0};
+    ::GetWindowRect(aHwnd, &sWindowScreen);
+
+    RECT sWindowRect =
+    {
+        0,
+        0,
+        sWindowScreen.right - sWindowScreen.left,
+        sWindowScreen.bottom - sWindowScreen.top,
+    };
+
+    RECT sClientRect = {0};
+    ::GetClientRect(aHwnd, &sClientRect);
+    POINT sClientOrigin = {0, 0};
+    ::ClientToScreen(aHwnd, &sClientOrigin);
+    ::OffsetRect(
+        &sClientRect,
+        sClientOrigin.x - sWindowScreen.left,
+        sClientOrigin.y - sWindowScreen.top);
+
+    HBRUSH sSurfaceBrush = ::CreateSolidBrush(sPalette.mElevated);
+    if (XPR_IS_NOT_NULL(sSurfaceBrush))
+    {
+        RECT sBand = sWindowRect;
+        sBand.bottom = max(sWindowRect.top, sClientRect.top);
+        ::FillRect(sDC, &sBand, sSurfaceBrush);
+
+        sBand = sWindowRect;
+        sBand.top = min(sWindowRect.bottom, sClientRect.bottom);
+        ::FillRect(sDC, &sBand, sSurfaceBrush);
+
+        sBand = sWindowRect;
+        sBand.top = sClientRect.top;
+        sBand.right = max(sWindowRect.left, sClientRect.left);
+        sBand.bottom = sClientRect.bottom;
+        ::FillRect(sDC, &sBand, sSurfaceBrush);
+
+        sBand = sWindowRect;
+        sBand.left = min(sWindowRect.right, sClientRect.right);
+        sBand.top = sClientRect.top;
+        sBand.bottom = sClientRect.bottom;
+        ::FillRect(sDC, &sBand, sSurfaceBrush);
+
+        ::DeleteObject(sSurfaceBrush);
+    }
+
+    const COLORREF sBorder =
+        (::GetFocus() == aHwnd) ?
+        sPalette.mFocus :
+        sPalette.mSeparator;
+    HBRUSH sBorderBrush = ::CreateSolidBrush(sBorder);
+    if (XPR_IS_NOT_NULL(sBorderBrush))
+    {
+        ::FrameRect(sDC, &sWindowRect, sBorderBrush);
+        ::DeleteObject(sBorderBrush);
+    }
+
+    ::ReleaseDC(aHwnd, sDC);
+}
+
+LRESULT CALLBACK DialogEditSubclassProc(
+    HWND aHwnd,
+    UINT aMessage,
+    WPARAM aWParam,
+    LPARAM aLParam,
+    UINT_PTR aSubclassId,
+    DWORD_PTR)
+{
+    switch (aMessage)
+    {
+        case WM_NCPAINT:
+        {
+            const LRESULT sResult =
+                ::DefSubclassProc(aHwnd, aMessage, aWParam, aLParam);
+            drawDialogEditFrame(aHwnd);
+            return sResult;
+        }
+
+        case WM_SETFOCUS:
+        case WM_KILLFOCUS:
+        case WM_ENABLE:
+        case WM_THEMECHANGED:
+        case WM_SETTINGCHANGE:
+        case WM_SYSCOLORCHANGE:
+            ::RedrawWindow(
+                aHwnd,
+                XPR_NULL,
+                XPR_NULL,
+                RDW_INVALIDATE | RDW_FRAME);
+            break;
+
+        case WM_NCDESTROY:
+            ::RemoveWindowSubclass(
+                aHwnd,
+                DialogEditSubclassProc,
+                aSubclassId);
+            break;
+
+        default:
+            break;
+    }
+
+    return ::DefSubclassProc(aHwnd, aMessage, aWParam, aLParam);
+}
+
+void drawDialogCombo(HWND aHwnd)
+{
+    const LONG_PTR sStyle = ::GetWindowLongPtr(aHwnd, GWL_STYLE);
+    if ((sStyle & CBS_DROPDOWNLIST) != CBS_DROPDOWNLIST)
+        return;
+
+    const ThemePalette sPalette = ModernUI::getPalette();
+    if (XPR_IS_FALSE(sPalette.mDark) ||
+        XPR_IS_TRUE(sPalette.mHighContrast))
+    {
+        return;
+    }
+
+    COMBOBOXINFO sComboInfo = {0};
+    sComboInfo.cbSize = sizeof(COMBOBOXINFO);
+    if (::GetComboBoxInfo(aHwnd, &sComboInfo) == FALSE)
+        return;
+
+    HDC sDC = ::GetDC(aHwnd);
+    if (XPR_IS_NULL(sDC))
+        return;
+
+    RECT sClientRect = {0};
+    ::GetClientRect(aHwnd, &sClientRect);
+
+    const xpr_bool_t sEnabled =
+        ::IsWindowEnabled(aHwnd) != FALSE ? XPR_TRUE : XPR_FALSE;
+    const xpr_bool_t sFocused =
+        ::GetFocus() == aHwnd ? XPR_TRUE : XPR_FALSE;
+    const xpr_bool_t sDropped =
+        ::SendMessage(aHwnd, CB_GETDROPPEDSTATE, 0, 0) != FALSE ?
+        XPR_TRUE :
+        XPR_FALSE;
+
+    POINT sCursor = {0};
+    xpr_bool_t sHotButton = XPR_FALSE;
+    if (::GetCursorPos(&sCursor) != FALSE &&
+        ::ScreenToClient(aHwnd, &sCursor) != FALSE &&
+        ::PtInRect(&sComboInfo.rcButton, sCursor) != FALSE)
+    {
+        sHotButton = XPR_TRUE;
+    }
+
+    COLORREF sField =
+        XPR_IS_TRUE(sEnabled) ? sPalette.mElevated : sPalette.mCard;
+    COLORREF sText =
+        XPR_IS_TRUE(sEnabled) ? sPalette.mText : sPalette.mSecondaryText;
+    COLORREF sButton = sField;
+    if (XPR_IS_TRUE(sDropped))
+        sButton = sPalette.mPressed;
+    else if (XPR_IS_TRUE(sHotButton) && XPR_IS_TRUE(sEnabled))
+        sButton = sPalette.mHover;
+
+    ::SetDCBrushColor(sDC, sField);
+    ::FillRect(
+        sDC,
+        &sClientRect,
+        static_cast<HBRUSH>(::GetStockObject(DC_BRUSH)));
+
+    RECT sTextRect = sComboInfo.rcItem;
+    const xpr_sint_t sMargin =
+        ModernUI::getAddressTextMargin(aHwnd);
+    sTextRect.left += sMargin;
+    sTextRect.right -= sMargin;
+
+    xpr_tchar_t sLabel[256] = {0};
+    ::GetWindowText(aHwnd, sLabel, XPR_COUNT_OF(sLabel));
+
+    HFONT sFont = reinterpret_cast<HFONT>(
+        ::SendMessage(aHwnd, WM_GETFONT, 0, 0));
+    HGDIOBJ sOldFont = XPR_NULL;
+    if (XPR_IS_NOT_NULL(sFont))
+        sOldFont = ::SelectObject(sDC, sFont);
+
+    ::SetBkMode(sDC, TRANSPARENT);
+    ::SetTextColor(sDC, sText);
+    ::DrawText(
+        sDC,
+        sLabel,
+        -1,
+        &sTextRect,
+        DT_LEFT | DT_VCENTER | DT_SINGLELINE | DT_END_ELLIPSIS);
+
+    ::SetDCBrushColor(sDC, sButton);
+    ::FillRect(
+        sDC,
+        &sComboInfo.rcButton,
+        static_cast<HBRUSH>(::GetStockObject(DC_BRUSH)));
+
+    RECT sSeparator = sComboInfo.rcButton;
+    sSeparator.right =
+        sSeparator.left +
+        max(1, ModernUI::scaleForWindow(1, aHwnd));
+    ::SetDCBrushColor(sDC, sPalette.mSeparator);
+    ::FillRect(
+        sDC,
+        &sSeparator,
+        static_cast<HBRUSH>(::GetStockObject(DC_BRUSH)));
+
+    const xpr_sint_t sCenterX =
+        (sComboInfo.rcButton.left + sComboInfo.rcButton.right) / 2;
+    const xpr_sint_t sCenterY =
+        (sComboInfo.rcButton.top + sComboInfo.rcButton.bottom) / 2;
+    const xpr_sint_t sHalfWidth =
+        max(2, ModernUI::scaleForWindow(3, aHwnd));
+    const xpr_sint_t sOffset =
+        max(1, ModernUI::scaleForWindow(2, aHwnd));
+
+    HPEN sArrowPen = ::CreatePen(PS_SOLID, 1, sText);
+    if (XPR_IS_NOT_NULL(sArrowPen))
+    {
+        HGDIOBJ sOldPen = ::SelectObject(sDC, sArrowPen);
+        ::MoveToEx(
+            sDC,
+            sCenterX - sHalfWidth,
+            sCenterY - sOffset,
+            XPR_NULL);
+        ::LineTo(sDC, sCenterX, sCenterY + sOffset);
+        ::LineTo(
+            sDC,
+            sCenterX + sHalfWidth,
+            sCenterY - sOffset);
+        ::SelectObject(sDC, sOldPen);
+        ::DeleteObject(sArrowPen);
+    }
+
+    const COLORREF sBorder =
+        XPR_IS_TRUE(sFocused) ? sPalette.mFocus : sPalette.mSeparator;
+    ::SetDCBrushColor(sDC, sBorder);
+    ::FrameRect(
+        sDC,
+        &sClientRect,
+        static_cast<HBRUSH>(::GetStockObject(DC_BRUSH)));
+
+    if (XPR_IS_NOT_NULL(sOldFont))
+        ::SelectObject(sDC, sOldFont);
+
+    ::ReleaseDC(aHwnd, sDC);
+}
+
+LRESULT CALLBACK DialogComboSubclassProc(
+    HWND aHwnd,
+    UINT aMessage,
+    WPARAM aWParam,
+    LPARAM aLParam,
+    UINT_PTR aSubclassId,
+    DWORD_PTR)
+{
+    switch (aMessage)
+    {
+        case WM_PAINT:
+        {
+            const LRESULT sResult =
+                ::DefSubclassProc(aHwnd, aMessage, aWParam, aLParam);
+            drawDialogCombo(aHwnd);
+            return sResult;
+        }
+
+        case CB_SHOWDROPDOWN:
+        {
+            const LRESULT sResult =
+                ::DefSubclassProc(aHwnd, aMessage, aWParam, aLParam);
+
+            COMBOBOXINFO sComboInfo = {0};
+            sComboInfo.cbSize = sizeof(COMBOBOXINFO);
+            if (::GetComboBoxInfo(aHwnd, &sComboInfo) != FALSE &&
+                XPR_IS_NOT_NULL(sComboInfo.hwndList))
+            {
+                const ThemePalette sPalette = ModernUI::getPalette();
+                if (XPR_IS_TRUE(sPalette.mDark) &&
+                    XPR_IS_FALSE(sPalette.mHighContrast))
+                {
+                    ModernUI::resetControlTheme(sComboInfo.hwndList);
+                }
+                else
+                {
+                    ModernUI::applyExplorerControlTheme(
+                        sComboInfo.hwndList);
+                }
+                ::InvalidateRect(sComboInfo.hwndList, XPR_NULL, TRUE);
+            }
+
+            ::InvalidateRect(aHwnd, XPR_NULL, FALSE);
+            return sResult;
+        }
+
+        case WM_MOUSEMOVE:
+        {
+            TRACKMOUSEEVENT sTrack = {0};
+            sTrack.cbSize = sizeof(sTrack);
+            sTrack.dwFlags = TME_LEAVE;
+            sTrack.hwndTrack = aHwnd;
+            ::TrackMouseEvent(&sTrack);
+            ::InvalidateRect(aHwnd, XPR_NULL, FALSE);
+            break;
+        }
+
+        case WM_MOUSELEAVE:
+        case WM_ENABLE:
+        case WM_SETFOCUS:
+        case WM_KILLFOCUS:
+        case WM_THEMECHANGED:
+        case WM_SETTINGCHANGE:
+        case WM_SYSCOLORCHANGE:
+            ::InvalidateRect(aHwnd, XPR_NULL, FALSE);
+            break;
+
+        case WM_NCDESTROY:
+            ::RemoveWindowSubclass(
+                aHwnd,
+                DialogComboSubclassProc,
+                aSubclassId);
+            break;
+
+        default:
+            break;
+    }
+
+    return ::DefSubclassProc(aHwnd, aMessage, aWParam, aLParam);
+}
+
+void drawDialogGroupBox(HWND aHwnd)
+{
+    const ThemePalette sPalette = ModernUI::getPalette();
+    if (XPR_IS_FALSE(sPalette.mDark) ||
+        XPR_IS_TRUE(sPalette.mHighContrast))
+    {
+        return;
+    }
+
+    PAINTSTRUCT sPaint = {0};
+    HDC sDC = ::BeginPaint(aHwnd, &sPaint);
+    if (XPR_IS_NULL(sDC))
+        return;
+
+    RECT sRect = {0};
+    ::GetClientRect(aHwnd, &sRect);
+    fillDialogControlBackground(
+        aHwnd,
+        sDC,
+        sRect,
+        sPalette.mSurface);
+
+    xpr_tchar_t sText[256] = {0};
+    ::GetWindowText(aHwnd, sText, XPR_COUNT_OF(sText));
+
+    HFONT sFont = reinterpret_cast<HFONT>(
+        ::SendMessage(aHwnd, WM_GETFONT, 0, 0));
+    HGDIOBJ sOldFont = XPR_NULL;
+    if (XPR_IS_NOT_NULL(sFont))
+        sOldFont = ::SelectObject(sDC, sFont);
+
+    SIZE sTextSize = {0};
+    if (sText[0] != XPR_STRING_LITERAL('\0'))
+        ::GetTextExtentPoint32(sDC, sText, (int)_tcslen(sText), &sTextSize);
+
+    const xpr_sint_t sTextGap =
+        ModernUI::scaleForWindow(8, aHwnd);
+    const xpr_sint_t sTextInset =
+        ModernUI::scaleForWindow(8, aHwnd);
+    const xpr_sint_t sLineY =
+        max(1, (xpr_sint_t)(sTextSize.cy / 2));
+
+    HPEN sPen = ::CreatePen(PS_SOLID, 1, sPalette.mSeparator);
+    if (XPR_IS_NOT_NULL(sPen))
+    {
+        HGDIOBJ sOldPen = ::SelectObject(sDC, sPen);
+
+        ::MoveToEx(sDC, sRect.left, sLineY, XPR_NULL);
+        ::LineTo(sDC, sRect.left + sTextInset, sLineY);
+
+        const xpr_sint_t sTextRight =
+            sRect.left + sTextInset + sTextSize.cx + sTextGap;
+        ::MoveToEx(sDC, sTextRight, sLineY, XPR_NULL);
+        ::LineTo(sDC, sRect.right - 1, sLineY);
+        ::LineTo(sDC, sRect.right - 1, sRect.bottom - 1);
+        ::LineTo(sDC, sRect.left, sRect.bottom - 1);
+        ::LineTo(sDC, sRect.left, sLineY);
+
+        ::SelectObject(sDC, sOldPen);
+        ::DeleteObject(sPen);
+    }
+
+    RECT sTextRect = sRect;
+    sTextRect.left += sTextInset;
+    sTextRect.right = min(
+        sRect.right,
+        sTextRect.left + sTextSize.cx + sTextGap);
+    sTextRect.bottom = max(sTextSize.cy, sLineY * 2);
+
+    ::SetBkMode(sDC, TRANSPARENT);
+    ::SetTextColor(
+        sDC,
+        ::IsWindowEnabled(aHwnd) != FALSE ?
+        sPalette.mText :
+        sPalette.mSecondaryText);
+    ::DrawText(
+        sDC,
+        sText,
+        -1,
+        &sTextRect,
+        DT_LEFT | DT_TOP | DT_SINGLELINE | DT_END_ELLIPSIS);
+
+    if (XPR_IS_NOT_NULL(sOldFont))
+        ::SelectObject(sDC, sOldFont);
+
+    ::EndPaint(aHwnd, &sPaint);
+}
+
+LRESULT CALLBACK DialogGroupSubclassProc(
+    HWND aHwnd,
+    UINT aMessage,
+    WPARAM aWParam,
+    LPARAM aLParam,
+    UINT_PTR aSubclassId,
+    DWORD_PTR)
+{
+    switch (aMessage)
+    {
+        case WM_PAINT:
+        {
+            const ThemePalette sPalette = ModernUI::getPalette();
+            if (XPR_IS_TRUE(sPalette.mDark) &&
+                XPR_IS_FALSE(sPalette.mHighContrast))
+            {
+                drawDialogGroupBox(aHwnd);
+                return 0;
+            }
+            break;
+        }
+
+        case WM_ENABLE:
+        case WM_SETTEXT:
+        case WM_THEMECHANGED:
+        case WM_SETTINGCHANGE:
+        case WM_SYSCOLORCHANGE:
+            ::InvalidateRect(aHwnd, XPR_NULL, TRUE);
+            break;
+
+        case WM_NCDESTROY:
+            ::RemoveWindowSubclass(
+                aHwnd,
+                DialogGroupSubclassProc,
+                aSubclassId);
+            break;
+
+        default:
+            break;
+    }
+
+    return ::DefSubclassProc(aHwnd, aMessage, aWParam, aLParam);
+}
+
+LRESULT CALLBACK DialogButtonSubclassProc(
+    HWND aHwnd,
+    UINT aMessage,
+    WPARAM aWParam,
+    LPARAM aLParam,
+    UINT_PTR aSubclassId,
+    DWORD_PTR)
+{
+    const DWORD sButtonType =
+        static_cast<DWORD>(::GetWindowLongPtr(aHwnd, GWL_STYLE)) &
+        BS_TYPEMASK;
+
+    switch (aMessage)
+    {
+        case WM_PAINT:
+        {
+            const ThemePalette sPalette = ModernUI::getPalette();
+            if (XPR_IS_TRUE(sPalette.mDark) &&
+                XPR_IS_FALSE(sPalette.mHighContrast))
+            {
+                if (XPR_IS_TRUE(isDialogPushButton(sButtonType)))
+                    drawDialogPushButton(aHwnd);
+                else if (XPR_IS_TRUE(isDialogToggleButton(sButtonType)))
+                    drawDialogToggle(aHwnd);
+                else
+                    break;
+                return 0;
+            }
+            break;
+        }
+
+        case BM_SETCHECK:
+        case WM_SETTEXT:
+        {
+            const LRESULT sResult =
+                ::DefSubclassProc(aHwnd, aMessage, aWParam, aLParam);
+            ::InvalidateRect(aHwnd, XPR_NULL, TRUE);
+            return sResult;
+        }
+
+        case WM_MOUSEMOVE:
+        {
+            TRACKMOUSEEVENT sTrack = {0};
+            sTrack.cbSize = sizeof(sTrack);
+            sTrack.dwFlags = TME_LEAVE;
+            sTrack.hwndTrack = aHwnd;
+            ::TrackMouseEvent(&sTrack);
+            ::InvalidateRect(aHwnd, XPR_NULL, FALSE);
+            break;
+        }
+
+        case WM_MOUSELEAVE:
+        case WM_LBUTTONDOWN:
+        case WM_LBUTTONUP:
+        case WM_ENABLE:
+        case WM_SETFOCUS:
+        case WM_KILLFOCUS:
+        case WM_THEMECHANGED:
+        case WM_SETTINGCHANGE:
+        case WM_SYSCOLORCHANGE:
+            ::InvalidateRect(aHwnd, XPR_NULL, TRUE);
+            break;
+
+        case WM_NCDESTROY:
+            ::RemoveWindowSubclass(
+                aHwnd,
+                DialogButtonSubclassProc,
+                aSubclassId);
+            break;
+
+        default:
+            break;
+    }
+
+    return ::DefSubclassProc(aHwnd, aMessage, aWParam, aLParam);
+}
+
+void drawDialogTab(HWND aHwnd)
+{
+    const ThemePalette sPalette = ModernUI::getPalette();
+    if (XPR_IS_FALSE(sPalette.mDark) ||
+        XPR_IS_TRUE(sPalette.mHighContrast))
+    {
+        return;
+    }
+
+    PAINTSTRUCT sPaint = {0};
+    HDC sDC = ::BeginPaint(aHwnd, &sPaint);
+    if (XPR_IS_NULL(sDC))
+        return;
+
+    RECT sClientRect = {0};
+    ::GetClientRect(aHwnd, &sClientRect);
+
+    HBRUSH sParentBrush =
+        getDialogParentBrush(aHwnd, sDC, WM_CTLCOLORSTATIC);
+    if (XPR_IS_NOT_NULL(sParentBrush) &&
+        sParentBrush != reinterpret_cast<HBRUSH>(::GetStockObject(NULL_BRUSH)))
+    {
+        ::FillRect(sDC, &sClientRect, sParentBrush);
+    }
+    else
+    {
+        ::SetDCBrushColor(sDC, sPalette.mSurface);
+        ::FillRect(
+            sDC,
+            &sClientRect,
+            static_cast<HBRUSH>(::GetStockObject(DC_BRUSH)));
+    }
+
+    HFONT sFont = reinterpret_cast<HFONT>(
+        ::SendMessage(aHwnd, WM_GETFONT, 0, 0));
+    HGDIOBJ sOldFont = XPR_NULL;
+    if (XPR_IS_NOT_NULL(sFont))
+        sOldFont = ::SelectObject(sDC, sFont);
+
+    POINT sCursor = {0};
+    ::GetCursorPos(&sCursor);
+    ::ScreenToClient(aHwnd, &sCursor);
+
+    const xpr_sint_t sCount = TabCtrl_GetItemCount(aHwnd);
+    const xpr_sint_t sSelected = TabCtrl_GetCurSel(aHwnd);
+    HIMAGELIST sImageList = TabCtrl_GetImageList(aHwnd);
+
+    for (xpr_sint_t i = 0; i < sCount; ++i)
+    {
+        RECT sItemRect = {0};
+        if (TabCtrl_GetItemRect(aHwnd, i, &sItemRect) == FALSE)
+            continue;
+
+        const xpr_bool_t sCurrent =
+            i == sSelected ? XPR_TRUE : XPR_FALSE;
+        const xpr_bool_t sHot =
+            ::PtInRect(&sItemRect, sCursor) != FALSE ?
+            XPR_TRUE :
+            XPR_FALSE;
+
+        COLORREF sFill = sPalette.mSurface;
+        if (XPR_IS_TRUE(sCurrent))
+            sFill = sPalette.mElevated;
+        else if (XPR_IS_TRUE(sHot))
+            sFill = sPalette.mHover;
+
+        HBRUSH sBrush = ::CreateSolidBrush(sFill);
+        if (XPR_IS_NOT_NULL(sBrush))
+        {
+            const xpr_sint_t sRadius =
+                ModernUI::getControlCornerRadius(aHwnd);
+            HPEN sPen = ::CreatePen(
+                PS_SOLID,
+                1,
+                XPR_IS_TRUE(sCurrent) ?
+                sPalette.mSelection :
+                sPalette.mSeparator);
+            HGDIOBJ sOldBrush = ::SelectObject(sDC, sBrush);
+            HGDIOBJ sOldPen =
+                XPR_IS_NOT_NULL(sPen) ?
+                ::SelectObject(sDC, sPen) :
+                XPR_NULL;
+            ::RoundRect(
+                sDC,
+                sItemRect.left,
+                sItemRect.top,
+                sItemRect.right,
+                sItemRect.bottom,
+                sRadius * 2,
+                sRadius * 2);
+            if (XPR_IS_NOT_NULL(sOldPen))
+                ::SelectObject(sDC, sOldPen);
+            ::SelectObject(sDC, sOldBrush);
+            if (XPR_IS_NOT_NULL(sPen))
+                ::DeleteObject(sPen);
+            ::DeleteObject(sBrush);
+        }
+
+        xpr_tchar_t sText[256] = {0};
+        TCITEM sItem = {0};
+        sItem.mask = TCIF_TEXT | TCIF_IMAGE;
+        sItem.pszText = sText;
+        sItem.cchTextMax = XPR_COUNT_OF(sText);
+        sItem.iImage = -1;
+        TabCtrl_GetItem(aHwnd, i, &sItem);
+
+        RECT sTextRect = sItemRect;
+        const xpr_sint_t sPadding =
+            ModernUI::scaleForWindow(8, aHwnd);
+        sTextRect.left += sPadding;
+        sTextRect.right -= sPadding;
+
+        if (XPR_IS_NOT_NULL(sImageList) && sItem.iImage >= 0)
+        {
+            xpr_sint_t sCx = 0;
+            xpr_sint_t sCy = 0;
+            if (::ImageList_GetIconSize(sImageList, &sCx, &sCy) != FALSE)
+            {
+                const xpr_sint_t sY =
+                    sItemRect.top +
+                    ((sItemRect.bottom - sItemRect.top - sCy) / 2);
+                ::ImageList_Draw(
+                    sImageList,
+                    sItem.iImage,
+                    sDC,
+                    sTextRect.left,
+                    sY,
+                    ILD_TRANSPARENT);
+                sTextRect.left += sCx + sPadding;
+            }
+        }
+
+        ::SetBkMode(sDC, TRANSPARENT);
+        ::SetTextColor(sDC, sPalette.mText);
+        ::DrawText(
+            sDC,
+            sText,
+            -1,
+            &sTextRect,
+            DT_CENTER | DT_VCENTER | DT_SINGLELINE | DT_END_ELLIPSIS);
+    }
+
+    const xpr_sint_t sLineHeight =
+        max(1, ModernUI::scaleForWindow(1, aHwnd));
+    RECT sSeparator = sClientRect;
+    sSeparator.top = sSeparator.bottom - sLineHeight;
+    ::SetDCBrushColor(sDC, sPalette.mSeparator);
+    ::FillRect(
+        sDC,
+        &sSeparator,
+        static_cast<HBRUSH>(::GetStockObject(DC_BRUSH)));
+
+    if (XPR_IS_NOT_NULL(sOldFont))
+        ::SelectObject(sDC, sOldFont);
+
+    ::EndPaint(aHwnd, &sPaint);
+}
+
+LRESULT CALLBACK DialogTabSubclassProc(
+    HWND aHwnd,
+    UINT aMessage,
+    WPARAM aWParam,
+    LPARAM aLParam,
+    UINT_PTR aSubclassId,
+    DWORD_PTR)
+{
+    switch (aMessage)
+    {
+        case WM_PAINT:
+        {
+            const ThemePalette sPalette = ModernUI::getPalette();
+            if (XPR_IS_TRUE(sPalette.mDark) &&
+                XPR_IS_FALSE(sPalette.mHighContrast))
+            {
+                drawDialogTab(aHwnd);
+                return 0;
+            }
+            break;
+        }
+
+        case WM_MOUSEMOVE:
+        {
+            TRACKMOUSEEVENT sTrack = {0};
+            sTrack.cbSize = sizeof(sTrack);
+            sTrack.dwFlags = TME_LEAVE;
+            sTrack.hwndTrack = aHwnd;
+            ::TrackMouseEvent(&sTrack);
+            ::InvalidateRect(aHwnd, XPR_NULL, FALSE);
+            break;
+        }
+
+        case WM_MOUSELEAVE:
+        case WM_SETFOCUS:
+        case WM_KILLFOCUS:
+        case WM_THEMECHANGED:
+        case WM_SETTINGCHANGE:
+        case WM_SYSCOLORCHANGE:
+        case TCM_SETCURSEL:
+        case TCM_INSERTITEM:
+        case TCM_DELETEITEM:
+        {
+            const LRESULT sResult =
+                ::DefSubclassProc(aHwnd, aMessage, aWParam, aLParam);
+            ::InvalidateRect(aHwnd, XPR_NULL, TRUE);
+            return sResult;
+        }
+
+        case WM_NCDESTROY:
+            ::RemoveWindowSubclass(
+                aHwnd,
+                DialogTabSubclassProc,
+                aSubclassId);
+            break;
+
+        default:
+            break;
+    }
+
+    return ::DefSubclassProc(aHwnd, aMessage, aWParam, aLParam);
+}
 } // namespace anonymous
 
 xpr_uint_t ModernUI::getDpi(HWND aHwnd)
@@ -453,6 +1598,118 @@ xpr_bool_t ModernUI::getUIFont(LOGFONT &aLogFont, HWND aHwnd)
         return XPR_TRUE;
 
     return XPR_FALSE;
+}
+
+xpr_bool_t ModernUI::isSameFont(
+    HFONT aFont,
+    const LOGFONT &aLogFont)
+{
+    if (XPR_IS_NULL(aFont))
+        return XPR_FALSE;
+
+    LOGFONT sCurrent = {0};
+    if (::GetObject(aFont, sizeof(sCurrent), &sCurrent) == 0)
+        return XPR_FALSE;
+
+    return ::memcmp(&sCurrent, &aLogFont, sizeof(LOGFONT)) == 0 ?
+        XPR_TRUE :
+        XPR_FALSE;
+}
+
+void ModernUI::applyDialogControlTheme(HWND aHwnd)
+{
+    if (XPR_IS_NULL(aHwnd) || ::IsWindow(aHwnd) == FALSE)
+        return;
+
+    xpr_tchar_t sClassName[64] = {0};
+    ::GetClassName(aHwnd, sClassName, XPR_COUNT_OF(sClassName));
+
+    const ThemePalette sPalette = getPalette();
+
+    if (_tcsicmp(sClassName, XPR_STRING_LITERAL("Button")) == 0)
+    {
+        const DWORD sButtonType =
+            static_cast<DWORD>(::GetWindowLongPtr(aHwnd, GWL_STYLE)) &
+            BS_TYPEMASK;
+        if (XPR_IS_TRUE(isDialogPushButton(sButtonType)) ||
+            XPR_IS_TRUE(isDialogToggleButton(sButtonType)))
+        {
+            ::SetWindowSubclass(
+                aHwnd,
+                DialogButtonSubclassProc,
+                kDialogButtonSubclassId,
+                0);
+        }
+        else if (sButtonType == BS_GROUPBOX)
+        {
+            ::SetWindowSubclass(
+                aHwnd,
+                DialogGroupSubclassProc,
+                kDialogGroupSubclassId,
+                0);
+        }
+    }
+    else if (_tcsicmp(
+                 sClassName,
+                 XPR_STRING_LITERAL("Edit")) == 0)
+    {
+        ::SetWindowSubclass(
+            aHwnd,
+            DialogEditSubclassProc,
+            kDialogEditSubclassId,
+            0);
+    }
+    else if (_tcsicmp(
+                 sClassName,
+                 XPR_STRING_LITERAL("ComboBox")) == 0)
+    {
+        const LONG_PTR sStyle =
+            ::GetWindowLongPtr(aHwnd, GWL_STYLE);
+        if ((sStyle & CBS_DROPDOWNLIST) == CBS_DROPDOWNLIST)
+        {
+            ::SetWindowSubclass(
+                aHwnd,
+                DialogComboSubclassProc,
+                kDialogComboSubclassId,
+                0);
+        }
+    }
+    else if (_tcsicmp(
+                 sClassName,
+                 XPR_STRING_LITERAL("SysTabControl32")) == 0)
+    {
+        ::SetWindowSubclass(
+            aHwnd,
+            DialogTabSubclassProc,
+            kDialogTabSubclassId,
+            0);
+    }
+    else if (_tcsicmp(
+                 sClassName,
+                 XPR_STRING_LITERAL("SysListView32")) == 0)
+    {
+        const COLORREF sBackground =
+            XPR_IS_TRUE(sPalette.mHighContrast) ?
+            sPalette.mWindow :
+            sPalette.mElevated;
+        ListView_SetBkColor(aHwnd, sBackground);
+        ListView_SetTextBkColor(aHwnd, sBackground);
+        ListView_SetTextColor(aHwnd, sPalette.mText);
+    }
+    else if (_tcsicmp(
+                 sClassName,
+                 XPR_STRING_LITERAL("SysTreeView32")) == 0)
+    {
+        const COLORREF sBackground =
+            XPR_IS_TRUE(sPalette.mHighContrast) ?
+            sPalette.mWindow :
+            sPalette.mCard;
+        TreeView_SetBkColor(aHwnd, sBackground);
+        TreeView_SetTextColor(aHwnd, sPalette.mText);
+        TreeView_SetLineColor(aHwnd, sPalette.mSeparator);
+    }
+
+    ::InvalidateRect(aHwnd, XPR_NULL, TRUE);
 }
 
 HICON ModernUI::loadIconResource(

@@ -823,13 +823,31 @@ void FileScrapCtrl::OnContextMenu(CWnd *aWnd, CPoint aPoint)
         {
             if (sWindowRect.PtInRect(aPoint) == XPR_FALSE)
             {
-                CRect sRect;
                 xpr_sint_t sFocus = GetSelectionMark();
-                GetItemRect(sFocus, sRect, LVIR_BOUNDS);
-                ClientToScreen(&sRect);
+                if (sFocus < 0)
+                {
+                    POSITION sPosition =
+                        GetFirstSelectedItemPosition();
+                    if (XPR_IS_NOT_NULL(sPosition))
+                        sFocus = GetNextSelectedItem(sPosition);
+                }
 
-                aPoint.x = sRect.left;
-                aPoint.y = sRect.bottom;
+                CRect sRect;
+                if (sFocus >= 0 &&
+                    GetItemRect(
+                        sFocus,
+                        sRect,
+                        LVIR_BOUNDS) != XPR_FALSE)
+                {
+                    ClientToScreen(&sRect);
+                    aPoint.x = sRect.left;
+                    aPoint.y = sRect.bottom;
+                }
+                else
+                {
+                    aPoint.x = sWindowRect.left;
+                    aPoint.y = sWindowRect.top;
+                }
             }
 
             xpr_uint_t sFlags = TPM_LEFTALIGN | TPM_RETURNCMD | TPM_RIGHTBUTTON;
@@ -926,6 +944,15 @@ xpr_bool_t FileScrapCtrl::canInvokeCommandSelf(xpr_uint_t aId)
 void FileScrapCtrl::invokeCommandSelf(ContextMenu &aContextMenu, xpr_uint_t aId)
 {
     xpr_sint_t sIndex = GetSelectionMark();
+    if (sIndex < 0)
+    {
+        POSITION sPosition = GetFirstSelectedItemPosition();
+        if (XPR_IS_NOT_NULL(sPosition))
+            sIndex = GetNextSelectedItem(sPosition);
+    }
+
+    if (sIndex < 0)
+        return;
 
     if (aId == CMID_OPEN_PARENT_FOLDER)
     {
@@ -1201,7 +1228,16 @@ void FileScrapCtrl::execute(xpr_sint_t aIndex)
     if (aIndex == -1)
     {
         aIndex = GetSelectionMark();
+        if (aIndex < 0)
+        {
+            POSITION sPosition = GetFirstSelectedItemPosition();
+            if (XPR_IS_NOT_NULL(sPosition))
+                aIndex = GetNextSelectedItem(sPosition);
+        }
     }
+
+    if (aIndex < 0)
+        return;
 
     ItemData *sItemData = (ItemData *)GetItemData(aIndex);
     if (XPR_IS_NULL(sItemData))
@@ -1619,7 +1655,17 @@ void FileScrapCtrl::selectAll(void)
     for (xpr_sint_t i = 0; i < sCount; ++i)
         SetItemState(i, LVIS_SELECTED, LVIS_SELECTED);
 
-    SetItemState(nFocus, LVIS_SELECTED | LVIS_FOCUSED, LVIS_SELECTED | LVIS_FOCUSED);
+    if (nFocus < 0 && sCount > 0)
+        nFocus = 0;
+
+    if (0 <= nFocus && nFocus < sCount)
+    {
+        SetSelectionMark(nFocus);
+        SetItemState(
+            nFocus,
+            LVIS_SELECTED | LVIS_FOCUSED,
+            LVIS_SELECTED | LVIS_FOCUSED);
+    }
 }
 
 void FileScrapCtrl::unselectAll(void)
