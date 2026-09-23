@@ -49,7 +49,7 @@ protected:
 
 // Operations
 protected:
-    void DrawArrow(CDC* pDC,CPoint ArrowTip);
+    void DrawArrow(CDC* pDC, CPoint aArrowTip, COLORREF aColor);
     BOOL HitMenuBtn(CPoint point);
     BOOL OnMenuBtn();
 
