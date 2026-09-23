@@ -355,6 +355,11 @@ Status: **ACTIVE / user-reproduced runtime failures**. These items are the immed
    - `63081b85` aligns both contracts with the current renderer: AddressBar soft-surface coverage now requires `sPalette.mElevated` + `PaintFlatAddressEdge`, and the Win11 regression check requires `PaintFlatAddressEdge(m_hWnd, sPalette.mElevated)`. A full validator scan confirms no remaining positive AddressBar requirement for `sPalette.mFocus` or `CWindowDC sDC(this)`; `sPalette.mFocus` now appears only as an explicit forbidden token in `OnNcPaint()`.
    - Acceptance still requires the user's rerun: `local_ci.bat x64` must pass source invariant/regression preflight and continue into VS 2026 x64 project generation/build.
 
+10. **Prevent stale executable from masquerading as latest UI build — ACTIVE**
+   - A failed `local_ci.bat x64` preflight leaves the previous `bin\\x64\\fxfile.exe` in place. Launching that file after a pre-build FAIL can make an old UI binary look like the current source still has the same bug.
+   - Local CI must log the current Git revision, persist the revision that actually produced the x64 executable, and emit an explicit stale-binary warning when the run fails before rebuilding `fxfile.exe`.
+   - Acceptance: a pre-build failure clearly states that the existing executable was not rebuilt for the current revision; a successful x64 build writes a revision marker next to the binary.
+
 ### Development handoff rule
 
 - Every new user-requested development item is added to this section (or its successor) before implementation starts.
