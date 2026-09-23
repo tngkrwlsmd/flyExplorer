@@ -30,6 +30,12 @@ namespace
 {
 const COLORREF IL_COLOR_MASK = RGB(255,0,255);
 
+// Appended to fxfile-toolbar.dat by the modern command-bar writer. Older
+// readers treat it as an unknown command id and ignore it. The current reader
+// uses it only to distinguish a legacy persisted default-small profile from a
+// user explicitly choosing Small after the Win11 toolbar migration.
+const xpr_uint_t kModernToolbarStateMarker = 0xF7F11E02u;
+
 const struct FluentToolbarFrame
 {
     xpr_sint_t mFrame;
@@ -581,24 +587,24 @@ xpr_bool_t MainToolBar::load(const xpr_tchar_t *aPath)
     if (XPR_RCODE_IS_ERROR(sRcode))
         return XPR_FALSE;
 
-    // Older profiles persisted the historical 16px icon default. Keeping
-    // that value makes the Win11 command bar look unchanged even after the
-    // Fluent 22px default is updated in Init(). Migrate the legacy persisted
-    // small setting to the current readable command-bar size.
-    if (sIconType == TBI_SMALL || XPR_IS_FALSE(IsIconTypeAvailable(sIconType)))
-        sIconType = TBI_LARGE;
-
     if (XPR_IS_FALSE(IsTextTypeAvailable(sTextType)))
         sTextType = TBT_RIGHT;
 
-    SetIconType(sIconType, XPR_FALSE);
     SetTextType(sTextType, XPR_FALSE);
+
+    xpr_bool_t sModernToolbarState = XPR_FALSE;
 
     do
     {
         sRcode = sFileIo.read(&sId, sizeof(sId), &sReadSize);
         if (XPR_RCODE_IS_ERROR(sRcode) || sReadSize <= 0)
             break;
+
+        if (sId == kModernToolbarStateMarker)
+        {
+            sModernToolbarState = XPR_TRUE;
+            continue;
+        }
 
         if (sId == 0xffffffff)
             sId = 0;
@@ -610,6 +616,16 @@ xpr_bool_t MainToolBar::load(const xpr_tchar_t *aPath)
             sToolBarCtrl.AddButtons(1, &sTbButtons->tbinfo);
         }
     } while (XPR_RCODE_IS_SUCCESS(sRcode) && sReadSize > 0);
+
+    // Legacy profiles persisted the historical 16px default without a format
+    // marker. Migrate that old default exactly once. New-format files retain
+    // an explicit user choice of Small across restarts.
+    if (XPR_IS_FALSE(IsIconTypeAvailable(sIconType)))
+        sIconType = TBI_LARGE;
+    else if (XPR_IS_FALSE(sModernToolbarState) && sIconType == TBI_SMALL)
+        sIconType = TBI_LARGE;
+
+    SetIconType(sIconType, XPR_FALSE);
 
     sFileIo.close();
 
@@ -653,6 +669,9 @@ void MainToolBar::save(const xpr_tchar_t *aPath) const
 
         sRcode = sFileIo.write(&sId, sizeof(sId), &sWrittenSize);
     }
+
+    sId = kModernToolbarStateMarker;
+    sRcode = sFileIo.write(&sId, sizeof(sId), &sWrittenSize);
 
     sFileIo.close();
 }
