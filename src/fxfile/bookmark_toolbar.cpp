@@ -691,10 +691,7 @@ void BookmarkToolBar::OnDrop(COleDataObject *aOleDataObject, DROPEFFECT aDropEff
         }
     }
 
-    if (XPR_IS_NOT_NULL(sStgMedium.pUnkForRelease))
-    {
-        ::ReleaseStgMedium(&sStgMedium);
-    }
+    ::ReleaseStgMedium(&sStgMedium);
 }
 
 void BookmarkToolBar::OnDropFileOperation(STGMEDIUM *aStgMedium, DROPEFFECT aDropEffect, xpr_sint_t aBookmark)
