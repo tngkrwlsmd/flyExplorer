@@ -661,16 +661,28 @@ void CfgMainDlg::refreshModernAppearance(xpr_bool_t aRethemeControls)
     LOGFONT sLogFont = {0};
     if (XPR_IS_TRUE(ui::ModernUI::getUIFont(sLogFont, GetSafeHwnd())))
     {
-        if (XPR_IS_NOT_NULL(mUIFont.m_hObject))
-            mUIFont.DeleteObject();
-        if (mUIFont.CreateFontIndirect(&sLogFont) == XPR_TRUE)
-            SetFont(&mUIFont, XPR_FALSE);
+        if (XPR_IS_FALSE(
+                ui::ModernUI::isSameFont(
+                    reinterpret_cast<HFONT>(mUIFont.GetSafeHandle()),
+                    sLogFont)))
+        {
+            if (XPR_IS_NOT_NULL(mUIFont.m_hObject))
+                mUIFont.DeleteObject();
+            if (mUIFont.CreateFontIndirect(&sLogFont) == XPR_TRUE)
+                SetFont(&mUIFont, XPR_FALSE);
+        }
 
         LOGFONT sHeaderLogFont = sLogFont;
         sHeaderLogFont.lfWeight = FW_SEMIBOLD;
-        if (XPR_IS_NOT_NULL(mHeaderFont.m_hObject))
-            mHeaderFont.DeleteObject();
-        mHeaderFont.CreateFontIndirect(&sHeaderLogFont);
+        if (XPR_IS_FALSE(
+                ui::ModernUI::isSameFont(
+                    reinterpret_cast<HFONT>(mHeaderFont.GetSafeHandle()),
+                    sHeaderLogFont)))
+        {
+            if (XPR_IS_NOT_NULL(mHeaderFont.m_hObject))
+                mHeaderFont.DeleteObject();
+            mHeaderFont.CreateFontIndirect(&sHeaderLogFont);
+        }
     }
 
     if (mSurfaceColor != sPalette.mElevated)
