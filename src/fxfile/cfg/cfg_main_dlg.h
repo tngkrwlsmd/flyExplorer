@@ -69,7 +69,7 @@ protected:
     COLORREF   mWindowColor;
 
 protected:
-    void refreshModernAppearance(void);
+    void refreshModernAppearance(xpr_bool_t aRethemeControls = XPR_TRUE);
     void applyModernAppearanceToChildren(HFONT aPreviousFont);
     void applyModernAppearanceToChild(CWnd *aWnd, HFONT aPreviousFont);
 
