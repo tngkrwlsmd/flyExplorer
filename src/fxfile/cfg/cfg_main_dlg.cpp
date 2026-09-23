@@ -338,6 +338,7 @@ CfgMainDlg::CfgMainDlg(xpr_sint_t aInitShowCfg)
     , mInitShowCfg(aInitShowCfg)
     , mShowCfg(-1)
     , mChanging(XPR_FALSE)
+    , mRefreshingModernAppearance(XPR_FALSE)
     , mSurfaceColor(CLR_INVALID)
     , mWindowColor(CLR_INVALID)
 {
@@ -369,7 +370,6 @@ xpr_bool_t CfgMainDlg::OnInitDialog(void)
 {
     super::OnInitDialog();
 
-    refreshModernAppearance();
     mTreeCtrl.enableVistaEnhanced(XPR_TRUE);
 
     // Use a roomy, borderless navigation row similar to Windows 11 settings
@@ -628,8 +628,13 @@ void CfgMainDlg::applyModernAppearanceToChildren(HFONT aPreviousFont)
 
 void CfgMainDlg::refreshModernAppearance(void)
 {
-    if (XPR_IS_NULL(m_hWnd))
+    if (XPR_IS_NULL(m_hWnd) || XPR_IS_TRUE(mRefreshingModernAppearance))
         return;
+
+    // SetWindowTheme can synchronously deliver WM_THEMECHANGED while this
+    // routine is walking and retheming child controls. Prevent the settings
+    // shell from recursively starting another full child traversal.
+    mRefreshingModernAppearance = XPR_TRUE;
 
     const ui::ThemePalette sPalette = ui::ModernUI::getPalette();
     const HFONT sPreviousFont = reinterpret_cast<HFONT>(
@@ -703,6 +708,8 @@ void CfgMainDlg::refreshModernAppearance(void)
         XPR_NULL,
         XPR_NULL,
         RDW_INVALIDATE | RDW_ERASE | RDW_FRAME | RDW_ALLCHILDREN);
+
+    mRefreshingModernAppearance = XPR_FALSE;
 }
 
 xpr_bool_t CfgMainDlg::OnEraseBkgnd(CDC *aDC)
@@ -734,7 +741,7 @@ void CfgMainDlg::OnSysColorChange(void)
 LRESULT CfgMainDlg::OnThemeChanged(WPARAM aWParam, LPARAM aLParam)
 {
     refreshModernAppearance();
-    return Default();
+    return 0;
 }
 
 LRESULT CfgMainDlg::OnDpiChanged(WPARAM aWParam, LPARAM aLParam)
