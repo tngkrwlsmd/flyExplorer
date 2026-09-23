@@ -38,6 +38,8 @@ void DriveDetailDlg::DoDataExchange(CDataExchange* pDX)
 
 BEGIN_MESSAGE_MAP(DriveDetailDlg, super)
     ON_WM_DESTROY()
+    ON_WM_ERASEBKGND()
+    ON_WM_CTLCOLOR()
     ON_WM_SETTINGCHANGE()
     ON_MESSAGE(WM_DPICHANGED, OnDpiChanged)
     ON_MESSAGE(WM_DPICHANGED_AFTERPARENT, OnDpiChangedAfterParent)
@@ -69,16 +71,24 @@ xpr_bool_t DriveDetailDlg::OnInitDialog(void)
 
 void DriveDetailDlg::createUIFont(void)
 {
-    if (XPR_IS_NOT_NULL(mUIFont.m_hObject))
-        mUIFont.DeleteObject();
-
     LOGFONT sLogFont = {0};
     if (XPR_IS_TRUE(ui::ModernUI::getUIFont(sLogFont, GetSafeHwnd())))
     {
+        if (XPR_IS_TRUE(
+                ui::ModernUI::isSameFont(
+                    reinterpret_cast<HFONT>(mUIFont.GetSafeHandle()),
+                    sLogFont)))
+        {
+            return;
+        }
+
+        if (XPR_IS_NOT_NULL(mUIFont.m_hObject))
+            mUIFont.DeleteObject();
+
         if (mUIFont.CreateFontIndirect(&sLogFont) == XPR_FALSE)
             mUIFont.CreateStockObject(DEFAULT_GUI_FONT);
     }
-    else
+    else if (XPR_IS_NULL(mUIFont.m_hObject))
     {
         mUIFont.CreateStockObject(DEFAULT_GUI_FONT);
     }
@@ -115,7 +125,10 @@ void DriveDetailDlg::applyUIFont(void)
     {
         CWnd *sControl = GetDlgItem(sControlIds[i]);
         if (XPR_IS_NOT_NULL(sControl))
+        {
             sControl->SetFont(&mUIFont, XPR_FALSE);
+            ui::ModernUI::applyDialogControlTheme(sControl->GetSafeHwnd());
+        }
     }
 
     if (::IsWindow(mDrivePieCtrl.GetSafeHwnd()) == XPR_TRUE)
@@ -162,6 +175,48 @@ void DriveDetailDlg::OnDestroy(void)
 
     if (XPR_IS_NOT_NULL(mUIFont.m_hObject))
         mUIFont.DeleteObject();
+}
+
+xpr_bool_t DriveDetailDlg::OnEraseBkgnd(CDC *aDC)
+{
+    const ui::ThemePalette sPalette = ui::ModernUI::getPalette();
+    if (XPR_IS_FALSE(sPalette.mHighContrast))
+    {
+        CRect sClientRect;
+        GetClientRect(&sClientRect);
+        aDC->FillSolidRect(&sClientRect, sPalette.mCard);
+        return XPR_TRUE;
+    }
+
+    return super::OnEraseBkgnd(aDC);
+}
+
+HBRUSH DriveDetailDlg::OnCtlColor(
+    CDC *aDC,
+    CWnd *aWnd,
+    xpr_uint_t aCtlColor)
+{
+    const ui::ThemePalette sPalette = ui::ModernUI::getPalette();
+    if (XPR_IS_TRUE(sPalette.mHighContrast))
+        return super::OnCtlColor(aDC, aWnd, aCtlColor);
+
+    aDC->SetTextColor(
+        XPR_IS_NOT_NULL(aWnd) && XPR_IS_FALSE(aWnd->IsWindowEnabled()) ?
+        sPalette.mSecondaryText :
+        sPalette.mText);
+
+    const COLORREF sBackground =
+        (aCtlColor == CTLCOLOR_EDIT || aCtlColor == CTLCOLOR_LISTBOX) ?
+        sPalette.mElevated :
+        sPalette.mCard;
+
+    aDC->SetBkColor(sBackground);
+    aDC->SetBkMode(
+        (aCtlColor == CTLCOLOR_EDIT || aCtlColor == CTLCOLOR_LISTBOX) ?
+        OPAQUE :
+        TRANSPARENT);
+    ::SetDCBrushColor(aDC->GetSafeHdc(), sBackground);
+    return static_cast<HBRUSH>(::GetStockObject(DC_BRUSH));
 }
 
 void DriveDetailDlg::OnSettingChange(xpr_uint_t aFlags, const xpr_tchar_t *aSection)
