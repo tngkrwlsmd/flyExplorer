@@ -261,6 +261,8 @@ void TitleDlg::applyModernAppearanceToChild(CWnd *aWnd, HFONT aPreviousFont)
         }
     }
 
+    ui::ModernUI::applyDialogControlTheme(aWnd->GetSafeHwnd());
+
     CWnd *sChild = aWnd->GetWindow(GW_CHILD);
     while (XPR_IS_NOT_NULL(sChild))
     {
