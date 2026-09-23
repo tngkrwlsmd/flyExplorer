@@ -112,6 +112,7 @@ protected:
 	afx_msg void OnKillFocus(CWnd* pNewWnd);
 	afx_msg void OnMouseMove(UINT nFlags, CPoint point);
 	afx_msg void OnSysColorChange();
+	afx_msg LRESULT OnThemeChanged(WPARAM wParam, LPARAM lParam);
 	afx_msg BOOL OnClicked();
 	afx_msg void OnActivate(UINT nState, CWnd* pWndOther, BOOL bMinimized);
 	afx_msg void OnEnable(BOOL bEnable);
