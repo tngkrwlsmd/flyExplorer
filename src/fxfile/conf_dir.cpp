@@ -283,6 +283,7 @@ xpr_bool_t ConfDir::load(void)
     GetEnvRealPath(kFxFilePath, sPath);
 
     xpr_bool_t sResult = XPR_FALSE;
+    xpr_bool_t sPersistedConfHome = XPR_FALSE;
 
     fxfile::base::ConfFileEx sConfFile(sPath.c_str());
     if (sConfFile.load() == XPR_TRUE)
@@ -296,6 +297,7 @@ xpr_bool_t ConfDir::load(void)
             sValue = sConfFile.getValueS(sSection, kConfHomeKey, XPR_NULL);
             if (XPR_IS_NOT_NULL(sValue))
             {
+                sPersistedConfHome = XPR_TRUE;
                 setConfDir(sValue);
 
                 // Old portable profiles may still point at %fxfile%\\conf.
@@ -332,6 +334,15 @@ xpr_bool_t ConfDir::load(void)
                     IsWritableConfDir(sDefaultDir) == XPR_TRUE ?
                     XPR_TRUE :
                     XPR_FALSE;
+
+                // Persist only a recovered legacy/custom path. First-run users
+                // still use the implicit AppData default without an extra
+                // descriptor file.
+                if (XPR_IS_TRUE(sResult) &&
+                    XPR_IS_TRUE(sPersistedConfHome))
+                {
+                    save();
+                }
             }
         }
     }
