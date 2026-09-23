@@ -1488,10 +1488,27 @@ void BCMenu::drawText(
 
 void BCMenu::DrawItem(LPDRAWITEMSTRUCT lpDIS)
 {
-	if (mStandardMenuStyle == TRUE)
-		DrawItemStandardStyle(lpDIS);
-	else
-		DrawItemWindows8Style(lpDIS);
+    const fxfile::ui::ThemePalette sPalette =
+        fxfile::ui::ModernUI::getPalette();
+    const xpr_bool_t sModernDark =
+        XPR_IS_TRUE(sPalette.mDark) &&
+        XPR_IS_FALSE(sPalette.mHighContrast) ?
+        XPR_TRUE :
+        XPR_FALSE;
+
+    // The legacy "standard menu" renderer still delegates several glyph and
+    // text decisions to system colors.  That is acceptable for Light/High
+    // Contrast, but it can produce black submenu/detail glyphs on an app-owned
+    // Dark popup.  Dark mode therefore always uses the palette-owned renderer.
+    if (mStandardMenuStyle == TRUE &&
+        XPR_IS_FALSE(sModernDark))
+    {
+        DrawItemStandardStyle(lpDIS);
+    }
+    else
+    {
+        DrawItemWindows8Style(lpDIS);
+    }
 }
 
 void BCMenu::MeasureItem(LPMEASUREITEMSTRUCT lpMIS)
