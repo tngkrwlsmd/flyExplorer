@@ -1383,7 +1383,7 @@ LRESULT CMenuBar::WindowProc(
         XPR_FALSE;
     const xpr_bool_t sPrintWithClient =
         (message == WM_PRINT &&
-         (static_cast<DWORD>(lParam) & PRF_CLIENT) != 0) ?
+         (lParam & PRF_CLIENT) != 0) ?
         XPR_TRUE :
         XPR_FALSE;
 
