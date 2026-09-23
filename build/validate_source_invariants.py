@@ -429,6 +429,17 @@ def validate_toolbar_custom_draw_regression() -> list[str]:
 
     required_tokens = (
         "ApplyDarkToolBarCustomDraw",
+        "DrawFinalDarkToolbarItem",
+        "CDDS_ITEMPOSTPAINT",
+        "CDRF_NOTIFYPOSTPAINT",
+        "TB_GETBUTTONTEXT",
+        "BTNS_WHOLEDROPDOWN",
+        "sPalette.mHover",
+        "sPalette.mPressed",
+        "::ImageList_Duplicate(",
+        "m_imageListCold.m_hImageList",
+        "ModernUI::isSameFont",
+        "resetControlTheme(\n                m_tbCtrl.m_hWnd)",
         "ON_NOTIFY_REFLECT( NM_CUSTOMDRAW, OnCustomDraw )",
         "aCustomDraw->clrBtnFace",
         "aCustomDraw->clrText",
@@ -3424,6 +3435,11 @@ def validate_runtime_ui_audit_regressions() -> list[str]:
         "file_scrap": FXFILE_SRC / "file_scrap_ctrl.cpp",
         "search_result": FXFILE_SRC / "search_result_ctrl.cpp",
         "accel": FXFILE_SRC / "cmd" / "accel_table_dlg.cpp",
+        "toolbar": FXFILE_SRC / "gui" / "rebar" / "ToolBarEx.cpp",
+        "dlg_toolbar_h": FXFILE_SRC / "gui" / "DlgToolBar.h",
+        "history_h": FXFILE_SRC / "cmd" / "history_dlg.h",
+        "drive_h": FXFILE_SRC / "cmd" / "drive_dlg.h",
+        "bc_menu": FXFILE_SRC / "gui" / "BCMenu.cpp",
     }
 
     contents: dict[str, str] = {}
@@ -3669,6 +3685,65 @@ def validate_runtime_ui_audit_regressions() -> list[str]:
         if token not in accel:
             errors.append(
                 f"src/fxfile/cmd/accel_table_dlg.cpp: accelerator selection/bounds guard missing {token}"
+            )
+
+    # 2026-09-24 runtime screenshots: toolbar hot images became near-white,
+    # native black text/drop arrows leaked onto Dark surfaces, dialog command
+    # bars stayed classic, and short About tabs were ellipsized.
+    toolbar = contents["toolbar"]
+    for token in (
+        "DrawFinalDarkToolbarItem",
+        "CDRF_NOTIFYPOSTPAINT",
+        "CDDS_ITEMPOSTPAINT",
+        "TB_GETBUTTONTEXT",
+        "BTNS_WHOLEDROPDOWN",
+        "::ImageList_Duplicate(",
+        "m_imageListCold.m_hImageList",
+        "ModernUI::isSameFont",
+    ):
+        if token not in toolbar:
+            errors.append(
+                f"src/fxfile/gui/rebar/ToolBarEx.cpp: dark command runtime guard missing {token}"
+            )
+
+    if "ModernUI::scaleForWindow(8, aHwnd)" in modern_cpp[
+        modern_cpp.find("void drawDialogTab"):modern_cpp.find(
+            "LRESULT CALLBACK DialogTabSubclassProc"
+        )
+    ]:
+        errors.append(
+            "src/fxfile/gui/ModernUI.cpp: dialog tab renderer restored the clipping-prone 8px side inset"
+        )
+    if "ModernUI::scaleForWindow(3, aHwnd)" not in modern_cpp[
+        modern_cpp.find("void drawDialogTab"):modern_cpp.find(
+            "LRESULT CALLBACK DialogTabSubclassProc"
+        )
+    ]:
+        errors.append(
+            "src/fxfile/gui/ModernUI.cpp: compact dialog-tab text inset is missing"
+        )
+
+    for source_name, source_path in (
+        ("dlg_toolbar_h", "src/fxfile/gui/DlgToolBar.h"),
+        ("history_h", "src/fxfile/cmd/history_dlg.h"),
+        ("drive_h", "src/fxfile/cmd/drive_dlg.h"),
+    ):
+        source = contents[source_name]
+        if "CToolBarEx" not in source:
+            errors.append(
+                f"{source_path}: visible dialog toolbar must use the shared modern toolbar renderer"
+            )
+
+    bc_menu = contents["bc_menu"]
+    for token in (
+        "const xpr_bool_t sModernDark",
+        "mStandardMenuStyle == TRUE &&",
+        "XPR_IS_FALSE(sModernDark)",
+        "DrawItemWindows8Style(lpDIS)",
+    ):
+        if token not in bc_menu:
+            errors.append(
+                f"src/fxfile/gui/BCMenu.cpp: Dark popup palette-ownership guard missing {token}"
             )
 
     return errors
