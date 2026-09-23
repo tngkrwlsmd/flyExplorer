@@ -2966,18 +2966,22 @@ def validate_win11_stability_regressions() -> list[str]:
                 "src/fxfile/address_bar.cpp: palette-owned address frame painting is missing"
             )
         for token in (
-            "sPalette.mFocus",
+            "PaintFlatAddressEdge(m_hWnd, sPalette.mElevated)",
             "sPalette.mElevated",
-            "XPR_IS_TRUE(sFocused)",
         ):
             if token not in address_block:
                 errors.append(
-                    f"src/fxfile/address_bar.cpp: focus-only address frame missing token {token}"
+                    f"src/fxfile/address_bar.cpp: flat outer address edge missing token {token}"
                 )
-        if "sPalette.mBorder" in address_block:
-            errors.append(
-                "src/fxfile/address_bar.cpp: idle address frame must not use persistent border color"
-            )
+        for forbidden in (
+            "sPalette.mFocus",
+            "sPalette.mBorder",
+            "sFocused",
+        ):
+            if forbidden in address_block:
+                errors.append(
+                    f"src/fxfile/address_bar.cpp: persistent/focus address outline returned: {forbidden}"
+                )
         if "void AddressBar::OnNcPaint(void)\n{\n    Default();" in address:
             errors.append(
                 "src/fxfile/address_bar.cpp: legacy native address frame is painting before the custom frame"
@@ -2988,6 +2992,9 @@ def validate_win11_stability_regressions() -> list[str]:
             "src/fxfile/address_bar.cpp: legacy owner-draw address style must not return without a DrawItem owner"
         )
     for token in (
+        "void PaintFlatAddressEdge(HWND aHwnd, COLORREF aColor)",
+        "case WM_NCPAINT:",
+        "PaintFlatAddressEdge(aHwnd, sPalette.mElevated)",
         "ON_WM_CTLCOLOR()",
         "HBRUSH AddressBar::OnCtlColor",
         "handleComboCtlColor(",

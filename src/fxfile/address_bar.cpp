@@ -26,6 +26,41 @@ namespace fxfile
 {
 namespace
 {
+void PaintFlatAddressEdge(HWND aHwnd, COLORREF aColor)
+{
+    if (XPR_IS_NULL(aHwnd) || ::IsWindow(aHwnd) == FALSE)
+        return;
+
+    HDC sDC = ::GetWindowDC(aHwnd);
+    if (XPR_IS_NULL(sDC))
+        return;
+
+    RECT sWindowRect = {0};
+    ::GetWindowRect(aHwnd, &sWindowRect);
+    ::OffsetRect(&sWindowRect, -sWindowRect.left, -sWindowRect.top);
+
+    const xpr_sint_t sThickness =
+        max(1, ui::ModernUI::scaleForWindow(2, aHwnd));
+    HBRUSH sBrush = ::CreateSolidBrush(aColor);
+    if (XPR_IS_NOT_NULL(sBrush))
+    {
+        RECT sEdgeRect = sWindowRect;
+        for (xpr_sint_t i = 0;
+             i < sThickness &&
+             sEdgeRect.right > sEdgeRect.left &&
+             sEdgeRect.bottom > sEdgeRect.top;
+             ++i)
+        {
+            ::FrameRect(sDC, &sEdgeRect, sBrush);
+            ::InflateRect(&sEdgeRect, -1, -1);
+        }
+
+        ::DeleteObject(sBrush);
+    }
+
+    ::ReleaseDC(aHwnd, sDC);
+}
+
 const UINT_PTR kAddressBarComboSubclassId = 1;
 const UINT_PTR kAddressBarEditSubclassId = 2;
 const xpr_tchar_t kAddressBarOuterBorderProp[] =
@@ -139,35 +174,11 @@ void AddressBar::OnNcPaint(void)
         return;
     }
 
-    // The address control owns its non-client frame outside High Contrast.
-    // Letting the native/classic frame paint first leaves a second dark edge
-    // around the palette-owned ComboBoxEx in Dark mode.
-    CWindowDC sDC(this);
-    CRect sWindowRect;
-    GetWindowRect(&sWindowRect);
-    sWindowRect.OffsetRect(-sWindowRect.TopLeft());
-
-    HWND sFocusHwnd = ::GetFocus();
-    const xpr_bool_t sFocused =
-        (sFocusHwnd == m_hWnd ||
-         sFocusHwnd == mComboBoxHwnd ||
-         sFocusHwnd == mEditHwnd) ?
-        XPR_TRUE :
-        XPR_FALSE;
-
-    // Windows 11 Explorer does not keep a bright box around the closed
-    // location field. Paint the idle non-client edge with the field surface
-    // itself and expose a border only while the address control has focus.
-    const COLORREF sBorderColor =
-        XPR_IS_TRUE(sFocused) ?
-        sPalette.mFocus :
-        sPalette.mElevated;
-
-    ::SetDCBrushColor(sDC.GetSafeHdc(), sBorderColor);
-    ::FrameRect(
-        sDC.GetSafeHdc(),
-        &sWindowRect,
-        static_cast<HBRUSH>(::GetStockObject(DC_BRUSH)));
+    // The Win11-style location field has no persistent bright outline.
+    // Cover the complete outer edge with the same surface color; keyboard
+    // focus remains discoverable through caret/selection rather than a
+    // legacy ComboBox frame.
+    PaintFlatAddressEdge(m_hWnd, sPalette.mElevated);
 }
 
 HBRUSH AddressBar::OnCtlColor(
@@ -1679,11 +1690,29 @@ LRESULT CALLBACK AddressBar::ComboSubclassProc(
         case WM_PAINT:
             {
                 // Keep the native ComboBox responsible for layout, hit-testing,
-                // input and accessibility. Only replace the dark visual of the
-                // drop-down button after the native control has painted.
+                // input and accessibility, then overwrite the final legacy
+                // edge because native painting can restore it after the outer
+                // ComboBoxEx frame has already been flattened.
                 const LRESULT sResult =
                     ::DefSubclassProc(aHwnd, aMessage, aWParam, aLParam);
                 sAddressBar->drawModernComboButton(aHwnd);
+
+                const ui::ThemePalette sPalette =
+                    ui::ModernUI::getPalette();
+                if (XPR_IS_FALSE(sPalette.mHighContrast))
+                    PaintFlatAddressEdge(aHwnd, sPalette.mElevated);
+
+                return sResult;
+            }
+
+        case WM_NCPAINT:
+            {
+                const LRESULT sResult =
+                    ::DefSubclassProc(aHwnd, aMessage, aWParam, aLParam);
+                const ui::ThemePalette sPalette =
+                    ui::ModernUI::getPalette();
+                if (XPR_IS_FALSE(sPalette.mHighContrast))
+                    PaintFlatAddressEdge(aHwnd, sPalette.mElevated);
                 return sResult;
             }
 
@@ -1764,6 +1793,17 @@ LRESULT CALLBACK AddressBar::EditSubclassProc(
         case WM_KILLFOCUS:
             sAddressBar->redrawModernFrame();
             break;
+
+        case WM_NCPAINT:
+            {
+                const LRESULT sResult =
+                    ::DefSubclassProc(aHwnd, aMessage, aWParam, aLParam);
+                const ui::ThemePalette sPalette =
+                    ui::ModernUI::getPalette();
+                if (XPR_IS_FALSE(sPalette.mHighContrast))
+                    PaintFlatAddressEdge(aHwnd, sPalette.mElevated);
+                return sResult;
+            }
 
         case WM_NCDESTROY:
             if (sAddressBar->mEditHwnd == aHwnd)
