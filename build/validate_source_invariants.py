@@ -3113,7 +3113,28 @@ def validate_win11_stability_regressions() -> list[str]:
             "src/fxfile/gui/rebar/MenuBar.cpp: Dark text ownership must not depend on ambiguous custom-draw item indexing"
         )
 
-    if "( ( uItemState & CDIS_DISABLED ) || !m_bFrameActive )" in contents["menubar"]:
+    menubar_source = contents["menubar"]
+    menu_item_start = menubar_source.find("case CDDS_ITEMPREPAINT:")
+    menu_modern_start = menubar_source.find(
+        "if ( XPR_IS_FALSE(sPalette.mHighContrast) && !WinAppEx::GetInstance()->IsWinXP() )",
+        menu_item_start,
+    )
+    menu_legacy_start = menubar_source.find(
+        "\n                else\n                {\n                    WinAppEx* pApp",
+        menu_modern_start,
+    )
+    menu_modern_draw = (
+        menubar_source[menu_modern_start:menu_legacy_start]
+        if menu_item_start >= 0
+        and menu_modern_start >= 0
+        and menu_legacy_start > menu_modern_start
+        else ""
+    )
+    if not menu_modern_draw:
+        errors.append(
+            "src/fxfile/gui/rebar/MenuBar.cpp: modern Dark menu custom-draw block is missing"
+        )
+    if "( ( uItemState & CDIS_DISABLED ) || !m_bFrameActive )" in menu_modern_draw:
         errors.append(
             "src/fxfile/gui/rebar/MenuBar.cpp: inactive frame must not dim enabled Dark menu text"
         )
@@ -3122,7 +3143,7 @@ def validate_win11_stability_regressions() -> list[str]:
         "sPalette.mSecondaryText :",
         "sPalette.mText;",
     ):
-        if token not in contents["menubar"]:
+        if token not in menu_modern_draw:
             errors.append(
                 f"src/fxfile/gui/rebar/MenuBar.cpp: enabled/disabled Dark menu contrast contract missing {token}"
             )
