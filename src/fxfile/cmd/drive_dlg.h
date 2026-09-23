@@ -12,6 +12,7 @@
 #pragma once
 
 #include "gui/ResizingDialog.h"
+#include "gui/rebar/ToolBarEx.h"
 
 namespace fxfile
 {
@@ -33,7 +34,7 @@ protected:
     xpr_tchar_t getDrive(HTREEITEM aTreeItem);
 
 protected:
-    CToolBar mToolBar;
+    CToolBarEx mToolBar;
     CImageList mImgList;
 
     xpr_tchar_t mDrive;
