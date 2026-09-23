@@ -2450,6 +2450,7 @@ def validate_win11_stability_regressions() -> list[str]:
         "main_toolbar": FXFILE_SRC / "main_toolbar.cpp",
         "menubar": FXFILE_SRC / "gui" / "rebar" / "MenuBar.cpp",
         "contents": FXFILE_SRC / "contents_wnd.cpp",
+        "conf_dir": FXFILE_SRC / "conf_dir.cpp",
     }
 
     contents: dict[str, str] = {}
@@ -2469,6 +2470,16 @@ def validate_win11_stability_regressions() -> list[str]:
         errors.append(
             "src/fxfile/res/fxfile.exe.manifest: requestedExecutionLevel must remain asInvoker"
         )
+
+    conf_dir = contents["conf_dir"]
+    for token in (
+        'XPR_STRING_LITERAL("%AppData%\\\\fxfile\\\\")CFG_PATH_FILENAME',
+        'XPR_STRING_LITERAL("%AppData%\\\\fxfile\\\\conf")',
+    ):
+        if token not in conf_dir:
+            errors.append(
+                "src/fxfile/conf_dir.cpp: default writable configuration must remain under per-user AppData"
+            )
 
     modern_ui = contents["modern_ui"]
     for token in (
