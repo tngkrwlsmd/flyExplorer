@@ -337,18 +337,17 @@ Status: **ACTIVE / user-reproduced runtime failures**. These items are the immed
    - `a46dbadd` registers `FlatHeaderCtrl.cpp` as the `header` contract source and changes the local contents map to report a deterministic `missing source registration` invariant error rather than raising `KeyError` if a future source key is omitted.
    - Connector static cross-check after the change found no `contents["..."]` references missing from the function's `paths` map. Acceptance still requires a user rerun: `python build/validate_source_invariants.py` must complete without traceback and `local_ci.bat x64` must progress past source invariant/regression preflight.
 
-7. **MenuBar custom draw still not visible — CODE FIXED / RUNTIME NOT RETESTED**
-   - Latest rebuilt `main` screenshot still showed black top-menu text. The prior rebar-routing explanation was incomplete because relying on `CControlBar::OnNotify(...)` still left child reflection implicit.
-   - `aedb695c` makes child notification routing deterministic: non-rebar notifications are first sent through `CWnd::ReflectLastMsg(pNMHDR->hwndFrom, pResult)`, and only unhandled notifications fall back to `CControlBar::OnNotify(...)`.
-   - The invariant now requires this explicit reflection call and still rejects a `return FALSE;` bypass in the child-notification block.
-   - Acceptance remains runtime/screenshot based: Dark top-menu text must render with the app palette before this item closes.
+7. **MenuBar text remains too dark — ACTIVE / reproduced on rebuilt 80ccaea9**
+   - The user supplied a rebuilt `80ccaea9` screenshot. Command-bar icons and other recent changes are present, so this is current runtime evidence.
+   - In that screenshot another window is foreground, so fxfile is inactive. The active custom-draw path intentionally maps every enabled menu item to `mSecondaryText` when `m_bFrameActive == false`; this makes ordinary menu commands too dark even though custom draw is running.
+   - Next fix: enabled menu items use `ThemePalette.mText` regardless of frame activation. Only truly disabled menu items use `mSecondaryText`. Hover/pressed continues to use `mText`.
+   - Acceptance: menu labels stay clearly readable in both active and inactive Dark windows.
 
-8. **Address/current-folder white outline still visible — CODE FIXED / RUNTIME NOT RETESTED**
-   - Latest rebuilt `main` screenshot still showed a rectangular outline around the `내 문서` row.
-   - Root cause correction: the replacement `PaintFlatAddressEdge(..., mElevated)` introduced by the previous attempt was itself drawing a visible 2px rectangle. The correct Win11-style contract is no persistent frame outside High Contrast.
-   - `083de734` removes `PaintFlatAddressEdge` entirely. Outer `AddressBar::OnNcPaint()` does nothing outside High Contrast after styles are flattened; inner ComboBox/Edit `WM_NCPAINT` return 0 outside High Contrast so native legacy edges cannot reappear. High Contrast still delegates to native painting.
-   - The invariant now forbids any `PaintFlatAddressEdge` implementation/usage and requires the frameless non-client suppression path.
-   - Acceptance remains screenshot based: the idle current-folder row must have no visible rectangular outline while text, drop-down, focus/caret and High Contrast behavior remain usable.
+8. **Address/current-folder classic client edge remains — ACTIVE / reproduced on rebuilt 80ccaea9**
+   - The rebuilt `80ccaea9` screenshot still shows a rectangular edge. Pixel inspection identifies the exact classic sunken pattern: two full-width top rows around RGB 160/105 and two bottom rows around RGB 227/255.
+   - This proves the remaining frame is not the removed app replacement edge and not solely `WM_NCPAINT`; it is classic ComboBox/ComboBoxEx client painting that occurs during `WM_PAINT`.
+   - Next fix: preserve native ComboBox behavior, but add an outer AddressBar `WM_PAINT` post-pass that covers only the 2-DPI-pixel classic client-edge strips with the field surface (`mElevated`). Do not reintroduce a contrasting frame.
+   - Acceptance: those classic 3D edge rows disappear while the current-folder surface, icon/text, dropdown button, focus/caret and High Contrast behavior remain intact.
 
 9. **Local CI address invariant drift — CODE FIXED / LOCAL CI NOT RETESTED**
    - User `local_ci.bat x64` on 2026-09-23 19:40 reached source invariant/regression preflight and failed with `address: missing Win11 soft-surface token sPalette.mFocus` plus `palette-owned address frame painting is missing`.
