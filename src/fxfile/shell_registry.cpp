@@ -23,15 +23,19 @@ namespace fxfile
 {
 namespace
 {
-static const xpr_tchar_t kKeyName[] = XPR_STRING_LITERAL("Folder\\Shell");
+static const xpr_tchar_t kUserKeyName[] =
+    XPR_STRING_LITERAL("Software\\Classes\\Folder\\Shell");
 } // namespace anonymous
 
 void ShellRegistry::registerShell(void)
 {
     CRegKey sRegKey;
-    if (sRegKey.Open(HKEY_CLASSES_ROOT, kKeyName) == ERROR_SUCCESS)
+    if (sRegKey.Create(HKEY_CURRENT_USER, kUserKeyName) == ERROR_SUCCESS)
     {
-        // HKEY_CLASSES_ROOT\Folder\shell\open with fxfile\command
+        // Register under HKCU\Software\Classes so shell integration never
+        // requires elevation. HKCR is the merged view and Explorer will see
+        // this per-user Folder\shell entry normally.
+        //
         // (default) : "C:\Program Files\fxfile\fxfile.exe" "%1"
 
         xpr::string sModuleDir;
@@ -55,7 +59,10 @@ void ShellRegistry::registerShell(void)
 void ShellRegistry::unregisterShell(void)
 {
     CRegKey sRegKey;
-    if (sRegKey.Open(HKEY_CLASSES_ROOT, kKeyName) == ERROR_SUCCESS)
+    if (sRegKey.Open(
+            HKEY_CURRENT_USER,
+            kUserKeyName,
+            KEY_READ | KEY_WRITE) == ERROR_SUCCESS)
     {
         xpr::string sKey;
         shellreg::buildMenuKey(
