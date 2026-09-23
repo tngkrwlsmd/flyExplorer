@@ -331,6 +331,11 @@ Status: **ACTIVE / user-reproduced runtime failures**. These items are the immed
    - `c9b9c69e` changes `AddressBar::OnNcPaint()` so the idle edge uses the same `mElevated` color as the field surface and `mFocus` is drawn only while the address control actually owns focus.
    - The supplied Windows 11 Explorer reference remains the visual acceptance target; a persistent idle outline keeps this item ACTIVE.
 
+6. **Local CI preflight validator KeyError — ACTIVE**
+   - User local CI on 2026-09-23 reached source invariant/regression preflight and failed before project generation with `KeyError: 'header'` in `validate_win11_stability_regressions()`.
+   - Root cause under repair: the header-clipping regression guard reads `contents["header"]` but the function's `paths` map omitted `FlatHeaderCtrl.cpp`.
+   - Acceptance: `python build/validate_source_invariants.py` must complete without traceback and `local_ci.bat x64` must progress past source invariant/regression preflight. Until user reruns it, status remains `CODE FIXED / LOCAL CI NOT RETESTED`.
+
 ### Development handoff rule
 
 - Every new user-requested development item is added to this section (or its successor) before implementation starts.
