@@ -77,7 +77,7 @@
     }
   ],
   "review": {
-    "reviewed_revision": "25d41e7eb369ad894714cc3e32de5d2e8c217b73",
+    "reviewed_revision": "5104f99cab831ddac5bf9f3454a6ffe6969a5251",
     "reviewed_at": "2026-09-23",
     "reviewed_paths": [
       "AGENTS.md",
@@ -294,13 +294,15 @@
 
 ## Current runtime stabilization state — 2026-09-23
 
-- runtime/UI 안정화 후속 52개 commit이 `main`에 fast-forward로 통합되었고, 현재 기준 코드 상태는 `17938fd9cb55790453c2ec1f4f79948da9615495`까지의 제품 변경과 이후 문서 갱신을 포함한다.
+- runtime/UI 안정화 후속 52개 commit과 후속 공용-dialog/elevated-installer 수정이 `main`에 통합되었고, 현재 reviewed 제품/빌드/문서 상태는 `5104f99cab831ddac5bf9f3454a6ffe6969a5251`을 기준으로 한다.
 - `ModernUI::applyExplorerControlTheme()` / `resetControlTheme()`는 HWND별 theme association 상태를 기억해 동일 `SetWindowTheme` 요청을 생략한다. `CfgMainDlg` / `CfgDlg`의 `WM_THEMECHANGED` 경로는 child theme association을 다시 순회하지 않고 palette/font/frame repaint 중심으로 동작해 message-queue 기반 재진입 위험을 낮춘다.
 - standard-user 경로는 machine-wide write 의존성을 줄였다. shell context menu는 `HKCU\\Software\\Classes\\Folder\\Shell`에 등록하고, single-process 존재 확인은 `SYNCHRONIZE`만 요청하며 minimal open의 `ERROR_ACCESS_DENIED`도 기존 named mutex 존재로 해석한다. legacy config/accelerator migration은 protected install path에서 source rename/move 대신 per-user destination copy를 사용한다.
 - elevated first instance와 normal-integrity second launch의 single-instance wake-up은 `ChangeWindowMessageFilterEx`를 동적으로 해석해 등록된 activation message만 허용한다. 이 경로는 input/command payload를 확장하지 않는다.
 - AddressBar는 non-High-Contrast에서 outer/ComboBox/Edit의 중첩 native border/client-edge를 제거하고 원래 상태를 HWND property로 기억해 High Contrast에서 복원한다. legacy coolbar state restore 뒤 main/drive/bookmark toolbar의 `UpdateToolbarSize()`를 다시 실행해 현재 command metric이 최종 geometry를 결정한다.
 - legacy owner-draw button/split-button/colour-picker/file-scrap/bookmark/search-location 경로는 `ThemePalette`와 `ModernUI::getUIFont`를 사용하도록 정리했다. Dark file-list filtering의 historical `*.*` + pure-black default는 automatic text로 처리하고, app-owned BCMenu check/radio glyph도 palette text/selection text를 사용한다. 사용자 지정 filter/background color와 High Contrast system ownership은 유지한다.
-- 위 회귀 경로에는 `build/validate_source_invariants.py`의 deterministic guard가 추가되어 있으며 상세 root cause와 commit mapping은 `docs/development/ERROR_HISTORY.md`에 기록되어 있다.
+- `CModernDialog`, `CResizingDialog`, `TitleDlg`가 공유하는 child Edit/Combo/List/Tree/Tab 경로도 Dark/non-High-Contrast에서 Explorer themed painting을 disable하고 palette-owned surface를 유지한다. Light/System/High Contrast는 documented Explorer/system rendering 경로를 유지한다.
+- NSIS installer 자체는 Program Files/HKLM 작업 때문에 계속 elevated이지만 finish-page product run과 `.onInstSuccess` launcher auto-start를 제거했다. 설치된 fxfile/launcher는 이후 normal user shell/shortcut 또는 제품 설정 경로에서 시작해 product `asInvoker` contract가 elevated installer parent에 의해 우회되지 않도록 한다.
+- 위 회귀 경로에는 `build/validate_source_invariants.py`의 deterministic guard가 추가되어 있으며 installer smoke도 elevated auto-launch 부재를 검사한다. 상세 root cause와 commit mapping은 `docs/development/ERROR_HISTORY.md`에 기록되어 있다.
 - 최신 변경 이후 connector 기반 source inspection은 수행했지만 `python build/validate_source_invariants.py`, MSVC compile/link, `local_ci.bat x64`, standard-user/elevated-instance interop, Windows 11 Light/Dark/System/High Contrast 100/125/150/200% DPI visual/IME/runtime 검증은 이 환경에서 실행하지 않았다. 따라서 해당 evidence는 계속 **NOT TESTED**다.
 
 ## Recommended verification
