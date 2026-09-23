@@ -1231,13 +1231,33 @@ void CMenuBar::OnDestroy()
     CloseTheme();
 }
 
-void CMenuBar::OnPaint()
+xpr_bool_t CMenuBar::IsTopLevelMenuItemDisabled(
+    xpr_sint_t aItemIndex) const
 {
-    // Let ToolbarWindow32 keep layout, hit-testing, accessibility and any
-    // legacy/system buttons. Then take final ownership of textual menu pixels
-    // so native black text cannot survive after our draw pass.
-    CToolBar::Default();
+    if (aItemIndex <= 0 || XPR_IS_NULL(m_pMenu))
+        return XPR_FALSE;
 
+    const xpr_sint_t sMenuIndex = aItemIndex - 1;
+    if (sMenuIndex < 0 ||
+        sMenuIndex >= static_cast<xpr_sint_t>(m_pMenu->GetMenuItemCount()))
+    {
+        return XPR_FALSE;
+    }
+
+    const UINT sMenuState =
+        m_pMenu->GetMenuState(
+            static_cast<UINT>(sMenuIndex),
+            MF_BYPOSITION);
+    if (sMenuState == static_cast<UINT>(-1))
+        return XPR_FALSE;
+
+    return (sMenuState & (MF_DISABLED | MF_GRAYED)) != 0 ?
+        XPR_TRUE :
+        XPR_FALSE;
+}
+
+void CMenuBar::DrawFinalMenuOverlay(CDC &aDC)
+{
     const fxfile::ui::ThemePalette sPalette =
         fxfile::ui::ModernUI::getPalette();
     if (XPR_IS_TRUE(sPalette.mHighContrast) ||
@@ -1246,12 +1266,11 @@ void CMenuBar::OnPaint()
         return;
     }
 
-    CClientDC sDC(this);
     CFont *sOldFont = XPR_NULL;
     if (XPR_IS_NOT_NULL(m_fontMenu.m_hObject))
-        sOldFont = sDC.SelectObject(&m_fontMenu);
+        sOldFont = aDC.SelectObject(&m_fontMenu);
 
-    sDC.SetBkMode(TRANSPARENT);
+    aDC.SetBkMode(TRANSPARENT);
 
     CToolBarCtrl &sToolBarCtrl = GetToolBarCtrl();
     const xpr_sint_t sHotItem = sToolBarCtrl.GetHotItem();
@@ -1281,14 +1300,12 @@ void CMenuBar::OnPaint()
         if (sToolBarCtrl.GetItemRect(sItemIndex, &sItemRect) == FALSE)
             continue;
 
-        // Erase whatever native ToolbarWindow32 rendered for this textual
-        // button before drawing the app-owned final state/text.
-        sDC.FillSolidRect(&sItemRect, sPalette.mChrome);
+        // Always erase the native toolbar text first. This routine is called
+        // after both normal paint and rebar print/composition paths.
+        aDC.FillSolidRect(&sItemRect, sPalette.mChrome);
 
         const xpr_bool_t sDisabled =
-            (sButton.fsState & TBSTATE_ENABLED) == 0 ?
-            XPR_TRUE :
-            XPR_FALSE;
+            IsTopLevelMenuItemDisabled(sItemIndex);
         const xpr_bool_t sPressed =
             (sButton.fsState & TBSTATE_PRESSED) != 0 ?
             XPR_TRUE :
@@ -1303,7 +1320,7 @@ void CMenuBar::OnPaint()
             (XPR_IS_TRUE(sPressed) || XPR_IS_TRUE(sHot)))
         {
             DrawRoundedMenuBarRect(
-                sDC.GetSafeHdc(),
+                aDC.GetSafeHdc(),
                 m_hWnd,
                 sItemRect,
                 XPR_IS_TRUE(sPressed) ?
@@ -1313,13 +1330,13 @@ void CMenuBar::OnPaint()
 
         const COLORREF sTextColor =
             ResolveMenuTextColor(sPalette, sDisabled);
-        sDC.SetTextColor(sTextColor);
+        aDC.SetTextColor(sTextColor);
 
         UINT sTextFlags = DT_CENTER | DT_VCENTER | DT_SINGLELINE;
         if ((sUiState & UISF_HIDEACCEL) != 0)
             sTextFlags |= DT_HIDEPREFIX;
 
-        sDC.DrawText(
+        aDC.DrawText(
             sMenuText,
             &sItemRect,
             sTextFlags);
@@ -1328,20 +1345,59 @@ void CMenuBar::OnPaint()
             m_nItem == sItemIndex &&
             (sUiState & UISF_HIDEFOCUS) == 0)
         {
-            sDC.DrawFocusRect(&sItemRect);
+            aDC.DrawFocusRect(&sItemRect);
         }
     }
 
     if (XPR_IS_NOT_NULL(sOldFont))
-        sDC.SelectObject(sOldFont);
+        aDC.SelectObject(sOldFont);
 
-    // MDI caption buttons are not normal textual toolbar items.
     for (xpr_sint_t sIndex = 0;
          sIndex <= m_aMenuBarButtons.GetUpperBound();
          ++sIndex)
     {
-        m_aMenuBarButtons[sIndex]->DrawButton(&sDC, m_bFrameActive);
+        m_aMenuBarButtons[sIndex]->DrawButton(&aDC, m_bFrameActive);
     }
+}
+
+void CMenuBar::OnPaint()
+{
+    // Keep native toolbar layout/accessibility, then own the final pixels.
+    CToolBar::Default();
+
+    CClientDC sDC(this);
+    DrawFinalMenuOverlay(sDC);
+}
+
+LRESULT CMenuBar::WindowProc(
+    UINT message,
+    WPARAM wParam,
+    LPARAM lParam)
+{
+    const LRESULT sResult =
+        CToolBar::WindowProc(message, wParam, lParam);
+
+    const xpr_bool_t sPrintClient =
+        message == WM_PRINTCLIENT ?
+        XPR_TRUE :
+        XPR_FALSE;
+    const xpr_bool_t sPrintWithClient =
+        (message == WM_PRINT &&
+         (static_cast<DWORD>(lParam) & PRF_CLIENT) != 0) ?
+        XPR_TRUE :
+        XPR_FALSE;
+
+    if ((XPR_IS_TRUE(sPrintClient) ||
+         XPR_IS_TRUE(sPrintWithClient)) &&
+        wParam != 0)
+    {
+        CDC *sDC =
+            CDC::FromHandle(reinterpret_cast<HDC>(wParam));
+        if (XPR_IS_NOT_NULL(sDC))
+            DrawFinalMenuOverlay(*sDC);
+    }
+
+    return sResult;
 }
 
 bool CMenuBar::OnButtonDown( UINT nFlags, CPoint pt, bool bLeft )

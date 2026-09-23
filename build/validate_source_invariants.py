@@ -3099,15 +3099,17 @@ def validate_win11_stability_regressions() -> list[str]:
             )
 
     menubar_source = contents["menubar"]
-    menu_paint_start = menubar_source.find("void CMenuBar::OnPaint()")
-    menu_paint_end = menubar_source.find(
-        "\nbool CMenuBar::OnButtonDown",
-        menu_paint_start,
+    menu_overlay_start = menubar_source.find(
+        "void CMenuBar::DrawFinalMenuOverlay(CDC &aDC)"
     )
-    menu_paint_block = (
-        menubar_source[menu_paint_start:menu_paint_end]
-        if menu_paint_start >= 0
-        and menu_paint_end > menu_paint_start
+    menu_overlay_end = menubar_source.find(
+        "\nvoid CMenuBar::OnPaint()",
+        menu_overlay_start,
+    )
+    menu_overlay_block = (
+        menubar_source[menu_overlay_start:menu_overlay_end]
+        if menu_overlay_start >= 0
+        and menu_overlay_end > menu_overlay_start
         else ""
     )
 
@@ -3124,30 +3126,50 @@ def validate_win11_stability_regressions() -> list[str]:
                 f"src/fxfile/gui/rebar/MenuBar.cpp: Dark menu contrast-floor helper missing {token}"
             )
 
+
     if "ON_WM_PAINT()" not in menubar_source:
         errors.append(
             "src/fxfile/gui/rebar/MenuBar.cpp: final WM_PAINT ownership message map is missing"
         )
-    if not menu_paint_block:
+    if not menu_overlay_block:
         errors.append(
-            "src/fxfile/gui/rebar/MenuBar.cpp: final WM_PAINT ownership block is missing"
+            "src/fxfile/gui/rebar/MenuBar.cpp: final menu overlay block is missing"
         )
     else:
         for token in (
-            "CToolBar::Default();",
             "CToolBarCtrl &sToolBarCtrl = GetToolBarCtrl();",
             "sToolBarCtrl.GetButtonCount()",
             "sToolBarCtrl.GetButton(sItemIndex, &sButton)",
             "GetButtonText(sItemIndex, sMenuText)",
             "sToolBarCtrl.GetItemRect(sItemIndex, &sItemRect)",
-            "sDC.FillSolidRect(&sItemRect, sPalette.mChrome)",
+            "aDC.FillSolidRect(&sItemRect, sPalette.mChrome)",
+            "IsTopLevelMenuItemDisabled(sItemIndex)",
             "ResolveMenuTextColor(sPalette, sDisabled)",
-            "sDC.DrawText(",
+            "aDC.DrawText(",
         ):
-            if token not in menu_paint_block:
+            if token not in menu_overlay_block:
                 errors.append(
-                    f"src/fxfile/gui/rebar/MenuBar.cpp: final WM_PAINT text ownership missing semantic step {token}"
+                    f"src/fxfile/gui/rebar/MenuBar.cpp: final menu overlay missing semantic step {token}"
                 )
+
+    for token in (
+        "virtual LRESULT WindowProc( UINT message, WPARAM wParam, LPARAM lParam );",
+        "LRESULT CMenuBar::WindowProc(",
+        "message == WM_PRINTCLIENT",
+        "message == WM_PRINT",
+        "PRF_CLIENT",
+        "CToolBar::WindowProc(message, wParam, lParam)",
+        "DrawFinalMenuOverlay(*sDC)",
+        "DrawFinalMenuOverlay(sDC)",
+        "IsTopLevelMenuItemDisabled(",
+        "m_pMenu->GetMenuState(",
+        "MF_BYPOSITION",
+        "MF_DISABLED | MF_GRAYED",
+    ):
+        if token not in menubar_source:
+            errors.append(
+                f"src/fxfile/gui/rebar/MenuBar.cpp: final rebar-print/menu-state ownership missing token {token}"
+            )
 
     for token in (
         "TB_GETBUTTONTEXT",

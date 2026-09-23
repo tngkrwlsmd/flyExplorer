@@ -144,6 +144,7 @@ public:
 
     virtual void OnUpdateCmdUI( CFrameWnd* pTarget, BOOL bDisableIfNoHndler );
     virtual INT_PTR OnToolHitTest( CPoint point, TOOLINFO* pTI ) const;
+    virtual LRESULT WindowProc( UINT message, WPARAM wParam, LPARAM lParam );
 
 // Implementation
 protected:
@@ -158,6 +159,8 @@ protected:
     void ContinueTracking( bool bSelectFirst );
     void ExitTrackingMode();
     void ShowChevronMenu( int nItem );
+    void DrawFinalMenuOverlay( CDC &aDC );
+    xpr_bool_t IsTopLevelMenuItemDisabled( xpr_sint_t aItemIndex ) const;
     bool IsItemClipped( int nItem ) const;
     bool IsOverChevron( CPoint pt ) const;
     bool OnButtonDown( UINT nFlags, CPoint pt, bool bLeft );
