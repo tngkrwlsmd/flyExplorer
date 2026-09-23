@@ -98,7 +98,7 @@ enum
     WM_COMPARE_DIRS_STATUS  = WM_USER + 2,
 };
 
-BOOL CALLBACK RefreshThemeTopLevelWindow(HWND aHwnd, LPARAM aParam)
+BOOL CALLBACK RefreshThemeTopLevelWindow(HWND aHwnd, LPARAM /*aParam*/)
 {
     if (::IsWindow(aHwnd) == FALSE)
         return TRUE;

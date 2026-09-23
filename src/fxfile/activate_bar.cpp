@@ -109,7 +109,7 @@ xpr_bool_t ActivateBar::isActivated(void) const
     return mActivate;
 }
 
-void ActivateBar::setActivateBackColor(COLORREF aBackColor)
+void ActivateBar::setActivateBackColor(COLORREF /*aBackColor*/)
 {
     if (XPR_IS_FALSE(mActivate))
         return;
