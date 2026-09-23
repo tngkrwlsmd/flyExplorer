@@ -337,13 +337,12 @@ Status: **ACTIVE / user-reproduced runtime failures**. These items are the immed
    - `a46dbadd` registers `FlatHeaderCtrl.cpp` as the `header` contract source and changes the local contents map to report a deterministic `missing source registration` invariant error rather than raising `KeyError` if a future source key is omitted.
    - Connector static cross-check after the change found no `contents["..."]` references missing from the function's `paths` map. Acceptance still requires a user rerun: `python build/validate_source_invariants.py` must complete without traceback and `local_ci.bat x64` must progress past source invariant/regression preflight.
 
-7. **MenuBar text remains too dark — CODE FIXED / RUNTIME NOT RETESTED**
-   - Rebuilt `02d3b404` runtime evidence showed the final `CMenuBar::OnPaint()` ownership code was present but the labels remained too dark.
-   - Screenshot pixel inspection measured command chrome near RGB(43,43,43) and dominant neutral menu-text pixels around RGB(109,109,109), confirming insufficient final contrast rather than stale code.
-   - Root cause: the final renderer trusted `ThemePalette.mText` / `mSecondaryText` without a command-surface contrast floor. A system/UISettings-derived preferred foreground can therefore be too dim for the app-owned Dark chrome.
-   - `1ef8a78b` adds `ResolveMenuTextColor()`: on Dark/non-High-Contrast it compares perceived luma against `mChrome` and keeps the preferred palette color only when the delta is sufficient. Otherwise enabled text falls back to RGB(238,238,238) and disabled text to RGB(176,176,176).
-   - Both `CMenuBar::OnPaint()` and the modern `NM_CUSTOMDRAW` path use the same resolver; Light and High Contrast preserve the preferred/system color.
-   - Acceptance remains runtime/screenshot based: enabled Dark menu labels must be clearly readable against command chrome.
+7. **MenuBar text remains too dark — ACTIVE / reproduced on rebuilt cf277791**
+   - The user supplied a screenshot whose `build-revision.txt` is `cf277791e13ae782e92880b596e5b21441cf7c6f`, so the contrast-floor code is definitely present, yet the labels remain dark.
+   - Pixel inspection finds no enabled fallback RGB(238,238,238) and no disabled fallback RGB(176,176,176) in the menu-text region; the maximum foreground channel remains about 109. Therefore the new resolver is not the final visible renderer.
+   - Rebar hierarchy audit shows the toolbar becomes a child of the inner `CReBarCtrl`; a later `WM_PRINTCLIENT` / `WM_PRINT` composition pass can repaint native toolbar text after `CMenuBar::OnPaint()`.
+   - Next fix: extract one final menu overlay routine, invoke it after normal `WM_PAINT` and also after base `WM_PRINTCLIENT` / client-inclusive `WM_PRINT` processing, and derive top-level disabled state from the actual `HMENU` item state instead of toolbar `TBSTATE_ENABLED`.
+   - Acceptance: rebuilt Dark screenshot contains the high-contrast menu foreground and no longer shows native gray/black top-level labels.
 
 8. **Address/current-folder classic client edge remains — CODE FIXED / RUNTIME NOT RETESTED**
    - Rebuilt `80ccaea9` runtime evidence showed the classic rectangular edge. Screenshot pixel inspection identified a 2-row sunken client pattern: top rows around RGB 160/105 and bottom rows around RGB 227/255 across almost the full control width.
