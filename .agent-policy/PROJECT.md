@@ -337,6 +337,16 @@ Status: **ACTIVE / user-reproduced runtime failures**. These items are the immed
    - `a46dbadd` registers `FlatHeaderCtrl.cpp` as the `header` contract source and changes the local contents map to report a deterministic `missing source registration` invariant error rather than raising `KeyError` if a future source key is omitted.
    - Connector static cross-check after the change found no `contents["..."]` references missing from the function's `paths` map. Acceptance still requires a user rerun: `python build/validate_source_invariants.py` must complete without traceback and `local_ci.bat x64` must progress past source invariant/regression preflight.
 
+7. **MenuBar custom draw still not visible — ACTIVE / user screenshot reproduced**
+   - Latest screenshot still shows black top-menu text even though `CMenuBar::OnCustomDraw()` contains ThemePalette `DrawText` + `CDRF_SKIPDEFAULT`.
+   - Current root-cause target: `CSizableReBar::OnNotify()` returns `FALSE` immediately for notifications whose `wParam != 1`, while the MenuBar/ToolBar children rely on MFC `ON_NOTIFY_REFLECT(NM_CUSTOMDRAW)`. This can bypass child reflection entirely, making all previous menu custom-draw patches dead code at runtime.
+   - Acceptance: child toolbar/menu notifications must route through the MFC base notification path; screenshot must show non-black readable Dark menu text before this item closes.
+
+8. **Address/current-folder white outline still visible — ACTIVE / user screenshot reproduced**
+   - Latest screenshot still shows a bright persistent outline around the `내 문서` ComboBoxEx row.
+   - Previous outer `AddressBar::OnNcPaint()` color changes are therefore insufficient. The next implementation must treat the inner native ComboBox post-paint edge as a separate final renderer and remove/cover that edge outside High Contrast.
+   - Acceptance: idle current-folder row has no persistent bright outline in the supplied Win11-style Dark reference; focus/input behavior must remain usable.
+
 ### Development handoff rule
 
 - Every new user-requested development item is added to this section (or its successor) before implementation starts.
