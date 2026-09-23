@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "BtnST.h"
+#include "ModernUI.h"
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -85,6 +86,7 @@ BEGIN_MESSAGE_MAP(CButtonST, CButton)
 	ON_WM_KILLFOCUS()
 	ON_WM_MOUSEMOVE()
 	ON_WM_SYSCOLORCHANGE()
+    ON_MESSAGE(WM_THEMECHANGED, OnThemeChanged)
 	ON_CONTROL_REFLECT_EX(BN_CLICKED, OnClicked)
 	ON_WM_ACTIVATE()
 	ON_WM_ENABLE()
@@ -354,6 +356,12 @@ void CButtonST::DrawItem(LPDRAWITEMSTRUCT lpDIS)
 {
 	CDC*	pDC = CDC::FromHandle(lpDIS->hDC);
 
+    const fxfile::ui::ThemePalette sPalette =
+        fxfile::ui::ModernUI::getPalette();
+    const BOOL bModernDark =
+        XPR_IS_TRUE(sPalette.mDark) &&
+        XPR_IS_FALSE(sPalette.mHighContrast);
+
 	CPen	*pOldPen;
 
 	// Checkbox or Radiobutton style ?
@@ -379,7 +387,10 @@ void CButtonST::DrawItem(LPDRAWITEMSTRUCT lpDIS)
 	{
 		if (m_bIsFocused || (GetDefault() == TRUE))
 		{
-			CBrush br(RGB(0,0,0));  
+            CBrush br(
+                bModernDark ?
+                sPalette.mFocus :
+                RGB(0, 0, 0));
 			pDC->FrameRect(&itemRect, &br);
 			itemRect.DeflateRect(1, 1);
 		} // if
@@ -400,7 +411,7 @@ void CButtonST::DrawItem(LPDRAWITEMSTRUCT lpDIS)
 		{
 			if (m_bDrawBorder)
 			{
-				if (m_xpTheme.IsAppThemed())
+				if (m_xpTheme.IsAppThemed() && !bModernDark)
 					m_xpTheme.DrawBackground(*pDC, BP_PUSHBUTTON, PBS_PRESSED, &itemRect, NULL);
 				else
 					OnDrawBorder(pDC, &itemRect);
@@ -408,7 +419,10 @@ void CButtonST::DrawItem(LPDRAWITEMSTRUCT lpDIS)
 		}
 		else
 		{
-			CBrush brBtnShadow(GetSysColor(COLOR_BTNSHADOW));
+            CBrush brBtnShadow(
+                bModernDark ?
+                sPalette.mBorder :
+                ::GetSysColor(COLOR_BTNSHADOW));
 			pDC->FrameRect(&itemRect, &brBtnShadow);
 		}
 	}
@@ -423,7 +437,7 @@ void CButtonST::DrawItem(LPDRAWITEMSTRUCT lpDIS)
 		{
 			if (m_bMouseOnButton && m_bDrawBorder)
 			{
-				if (m_xpTheme.IsAppThemed())
+				if (m_xpTheme.IsAppThemed() && !bModernDark)
 					m_xpTheme.DrawBackground(*pDC, BP_PUSHBUTTON, PBS_HOT, &itemRect, NULL);
 				else
 					OnDrawBorder(pDC, &itemRect);
@@ -516,12 +530,24 @@ void CButtonST::DrawItem(LPDRAWITEMSTRUCT lpDIS)
 		*/
 		if (m_bIsDisabled)
 		{
-			captionRect.OffsetRect(1, 1);
-			pDC->SetTextColor(::GetSysColor(COLOR_3DHILIGHT));
-			pDC->DrawText(sTitle, -1, captionRect, DT_WORDBREAK | DT_CENTER);
-			captionRect.OffsetRect(-1, -1);
-			pDC->SetTextColor(::GetSysColor(COLOR_3DSHADOW));
-			pDC->DrawText(sTitle, -1, captionRect, DT_WORDBREAK | DT_CENTER);
+            if (bModernDark)
+            {
+                pDC->SetTextColor(sPalette.mSecondaryText);
+                pDC->DrawText(
+                    sTitle,
+                    -1,
+                    captionRect,
+                    DT_WORDBREAK | DT_CENTER);
+            }
+            else
+            {
+			    captionRect.OffsetRect(1, 1);
+			    pDC->SetTextColor(::GetSysColor(COLOR_3DHILIGHT));
+			    pDC->DrawText(sTitle, -1, captionRect, DT_WORDBREAK | DT_CENTER);
+			    captionRect.OffsetRect(-1, -1);
+			    pDC->SetTextColor(::GetSysColor(COLOR_3DSHADOW));
+			    pDC->DrawText(sTitle, -1, captionRect, DT_WORDBREAK | DT_CENTER);
+            }
 		} // if
 		else
 		{
@@ -774,9 +800,22 @@ void CButtonST::OnSysColorChange()
 {
 	CButton::OnSysColorChange();
 
+    SetDefaultColors(FALSE);
 	m_dcBk.DeleteDC();
-	m_bmpBk.DeleteObject();	
+	m_bmpBk.DeleteObject();
+    Invalidate(FALSE);
 } // End of OnSysColorChange
+
+LRESULT CButtonST::OnThemeChanged(WPARAM wParam, LPARAM lParam)
+{
+    SetDefaultColors(FALSE);
+
+    if (m_bXPTheme)
+        m_xpTheme.Open(GetSafeHwnd(), L"BUTTON");
+
+    Invalidate(FALSE);
+    return 0;
+}
 
 BOOL CButtonST::OnClicked() 
 {
@@ -1089,10 +1128,23 @@ void CButtonST::PrepareImageRect(BOOL bHasTitle, RECT* rpItem, CRect* rpTitle, B
 //
 DWORD CButtonST::SetDefaultColors(BOOL bRepaint)
 {
-	m_crColors[BTNST_COLOR_BK_IN]	= ::GetSysColor(COLOR_BTNFACE);
-	m_crColors[BTNST_COLOR_FG_IN]	= ::GetSysColor(COLOR_BTNTEXT);
-	m_crColors[BTNST_COLOR_BK_OUT]	= ::GetSysColor(COLOR_BTNFACE);
-	m_crColors[BTNST_COLOR_FG_OUT]	= ::GetSysColor(COLOR_BTNTEXT);
+    const fxfile::ui::ThemePalette sPalette =
+        fxfile::ui::ModernUI::getPalette();
+
+    if (XPR_IS_TRUE(sPalette.mHighContrast))
+    {
+	    m_crColors[BTNST_COLOR_BK_IN]  = ::GetSysColor(COLOR_BTNFACE);
+	    m_crColors[BTNST_COLOR_FG_IN]  = ::GetSysColor(COLOR_BTNTEXT);
+	    m_crColors[BTNST_COLOR_BK_OUT] = ::GetSysColor(COLOR_BTNFACE);
+	    m_crColors[BTNST_COLOR_FG_OUT] = ::GetSysColor(COLOR_BTNTEXT);
+    }
+    else
+    {
+        m_crColors[BTNST_COLOR_BK_IN]  = sPalette.mHover;
+        m_crColors[BTNST_COLOR_FG_IN]  = sPalette.mText;
+        m_crColors[BTNST_COLOR_BK_OUT] = sPalette.mElevated;
+        m_crColors[BTNST_COLOR_FG_OUT] = sPalette.mText;
+    }
 
 	if (bRepaint == TRUE)	Invalidate();
 
@@ -1265,15 +1317,25 @@ DWORD CButtonST::OnDrawBackground(CDC* pDC, LPCRECT pRect)
 //
 DWORD CButtonST::OnDrawBorder(CDC* pDC, LPCRECT pRect)
 {
-/*	if (m_bIsPressed)
-		pDC->Draw3dRect(pRect, RGB(0,0,0), RGB(255,255,255));
-	else
-		pDC->Draw3dRect(pRect, RGB(255,255,255), RGB(0,0,0));
-*/
+    const fxfile::ui::ThemePalette sPalette =
+        fxfile::ui::ModernUI::getPalette();
+    if (XPR_IS_TRUE(sPalette.mDark) &&
+        XPR_IS_FALSE(sPalette.mHighContrast))
+    {
+        pDC->Draw3dRect(pRect, sPalette.mBorder, sPalette.mBorder);
+        return BTNST_OK;
+    }
+
 	if (m_bIsPressed)
-		pDC->Draw3dRect(pRect, ::GetSysColor(COLOR_BTNSHADOW), ::GetSysColor(COLOR_BTNHILIGHT));
+		pDC->Draw3dRect(
+            pRect,
+            ::GetSysColor(COLOR_BTNSHADOW),
+            ::GetSysColor(COLOR_BTNHILIGHT));
 	else
-		pDC->Draw3dRect(pRect, ::GetSysColor(COLOR_BTNHILIGHT), ::GetSysColor(COLOR_BTNSHADOW));
+		pDC->Draw3dRect(
+            pRect,
+            ::GetSysColor(COLOR_BTNHILIGHT),
+            ::GetSysColor(COLOR_BTNSHADOW));
 
 	return BTNST_OK;
 } // End of OnDrawBorder
