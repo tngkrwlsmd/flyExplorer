@@ -2459,6 +2459,7 @@ def validate_win11_stability_regressions() -> list[str]:
         "shell_registry": FXFILE_SRC / "shell_registry.cpp",
         "single_process": FXFILE_SRC / "single_process.cpp",
         "main_coolbar": FXFILE_SRC / "main_coolbar.cpp",
+        "file_scrap": FXFILE_SRC / "file_scrap_pane.cpp",
     }
 
     contents: dict[str, str] = {}
@@ -2546,6 +2547,24 @@ def validate_win11_stability_regressions() -> list[str]:
             errors.append(
                 f"src/fxfile/main_coolbar.cpp: missing post-restore command-bar metric token {token}"
             )
+
+    file_scrap = contents["file_scrap"]
+    for token in (
+        '#include "gui/ModernUI.h"',
+        "ui::ModernUI::getUIFont(sLogFont, GetSafeHwnd())",
+        "const ui::ThemePalette sPalette = ui::ModernUI::getPalette();",
+        "sPalette.mText",
+        "sPalette.mChrome",
+        "ON_MESSAGE(WM_THEMECHANGED, OnThemeChanged)",
+    ):
+        if token not in file_scrap:
+            errors.append(
+                f"src/fxfile/file_scrap_pane.cpp: missing modern file-scrap surface token {token}"
+            )
+    if "COLORREF sTextColor = ::GetSysColor(COLOR_BTNTEXT);" in file_scrap:
+        errors.append(
+            "src/fxfile/file_scrap_pane.cpp: legacy fixed button-text color returned"
+        )
 
     modern_ui = contents["modern_ui"]
     for token in (
