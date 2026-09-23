@@ -944,6 +944,15 @@ xpr_bool_t FileScrapCtrl::canInvokeCommandSelf(xpr_uint_t aId)
 void FileScrapCtrl::invokeCommandSelf(ContextMenu &aContextMenu, xpr_uint_t aId)
 {
     xpr_sint_t sIndex = GetSelectionMark();
+    if (sIndex < 0)
+    {
+        POSITION sPosition = GetFirstSelectedItemPosition();
+        if (XPR_IS_NOT_NULL(sPosition))
+            sIndex = GetNextSelectedItem(sPosition);
+    }
+
+    if (sIndex < 0)
+        return;
 
     if (aId == CMID_OPEN_PARENT_FOLDER)
     {
@@ -1219,7 +1228,16 @@ void FileScrapCtrl::execute(xpr_sint_t aIndex)
     if (aIndex == -1)
     {
         aIndex = GetSelectionMark();
+        if (aIndex < 0)
+        {
+            POSITION sPosition = GetFirstSelectedItemPosition();
+            if (XPR_IS_NOT_NULL(sPosition))
+                aIndex = GetNextSelectedItem(sPosition);
+        }
     }
+
+    if (aIndex < 0)
+        return;
 
     ItemData *sItemData = (ItemData *)GetItemData(aIndex);
     if (XPR_IS_NULL(sItemData))
