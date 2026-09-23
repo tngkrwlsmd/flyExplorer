@@ -64,11 +64,27 @@ void SetClipboard(LPDATAOBJECT aDataObject, DROPEFFECT aDropEffect, CLIPFORMAT *
     sDataSource->CacheGlobalData(CF_HDROP, sStgMedium.hGlobal);
 
     // DropEffect
-    HGLOBAL sGlobal = ::GlobalAlloc(GHND | GMEM_SHARE, sizeof(DROPEFFECT));
-    DROPEFFECT *sDropEffect = (DROPEFFECT *)::GlobalLock(sGlobal);
-    *sDropEffect = aDropEffect;
-    ::GlobalUnlock(sGlobal);
-    sDataSource->CacheGlobalData(aClipFormat[1], sGlobal);
+    HGLOBAL sGlobal =
+        ::GlobalAlloc(
+            GHND | GMEM_SHARE,
+            sizeof(DROPEFFECT));
+    if (XPR_IS_NOT_NULL(sGlobal))
+    {
+        DROPEFFECT *sDropEffect =
+            (DROPEFFECT *)::GlobalLock(sGlobal);
+        if (XPR_IS_NOT_NULL(sDropEffect))
+        {
+            *sDropEffect = aDropEffect;
+            ::GlobalUnlock(sGlobal);
+            sDataSource->CacheGlobalData(
+                aClipFormat[1],
+                sGlobal);
+        }
+        else
+        {
+            ::GlobalFree(sGlobal);
+        }
+    }
 
     // FileName
     memset(&sStgMedium, 0, sizeof(STGMEDIUM));
@@ -104,8 +120,12 @@ xpr_bool_t DoPaste(HWND               aHwnd,
         if (XPR_IS_NULL(sGlobal))
             return XPR_FALSE;
 
-        sDropEffect = *((DROPEFFECT *)::GlobalLock(sGlobal));
+        DROPEFFECT *sDropEffectData =
+            (DROPEFFECT *)::GlobalLock(sGlobal);
+        if (XPR_IS_NULL(sDropEffectData))
+            return XPR_FALSE;
 
+        sDropEffect = *sDropEffectData;
         ::GlobalUnlock(sGlobal);
     }
 
@@ -794,8 +814,12 @@ xpr_bool_t GetPreferredDropEffect(COleDataObject *aOleDataObject, CLIPFORMAT aPr
     if (XPR_IS_NULL(sGlobal))
         return XPR_FALSE;
 
-    aDropEffect = *((DROPEFFECT *)::GlobalLock(sGlobal));
+    DROPEFFECT *sDropEffectData =
+        (DROPEFFECT *)::GlobalLock(sGlobal);
+    if (XPR_IS_NULL(sDropEffectData))
+        return XPR_FALSE;
 
+    aDropEffect = *sDropEffectData;
     ::GlobalUnlock(sGlobal);
 
     return XPR_TRUE;
