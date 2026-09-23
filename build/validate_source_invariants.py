@@ -2457,6 +2457,7 @@ def validate_win11_stability_regressions() -> list[str]:
         "cfg_page_h": FXFILE_SRC / "cfg" / "cfg_dlg.h",
         "cfg_page_cpp": FXFILE_SRC / "cfg" / "cfg_dlg.cpp",
         "shell_registry": FXFILE_SRC / "shell_registry.cpp",
+        "single_process": FXFILE_SRC / "single_process.cpp",
     }
 
     contents: dict[str, str] = {}
@@ -2515,6 +2516,21 @@ def validate_win11_stability_regressions() -> list[str]:
     if "HKEY_CLASSES_ROOT" in shell_registry:
         errors.append(
             "src/fxfile/shell_registry.cpp: shell registration must not write through HKCR"
+        )
+
+    single_process = contents["single_process"]
+    for token in (
+        "OpenMutex(SYNCHRONIZE",
+        "GetLastError() == ERROR_ACCESS_DENIED",
+        "::CloseHandle(sSingleProcessMutex)",
+    ):
+        if token not in single_process:
+            errors.append(
+                f"src/fxfile/single_process.cpp: missing standard-user mutex token {token}"
+            )
+    if "OpenMutex(MUTEX_ALL_ACCESS" in single_process:
+        errors.append(
+            "src/fxfile/single_process.cpp: presence check must not require MUTEX_ALL_ACCESS"
         )
 
     modern_ui = contents["modern_ui"]
