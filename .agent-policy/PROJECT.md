@@ -730,6 +730,15 @@ runtime UI audit. Static source/contract inspection is evidence only;
 the Windows acceptance paths and visual/DPI checks remain NOT RETESTED.
 The following metadata/history-only commit does not alter reviewed source.
 
+**UI-03/UI-07 source-only checkpoint (2026-09-24):** Search
+location nested color notification forwarding, dropdown theme
+association and localized current-folder text button were introduced.
+New-profile tab and '+' display defaults are enabled; existing persisted
+settings are not migrated. The static source-invariant guard was extended.
+Windows build, runtime/visual, DPI and High Contrast: NOT TESTED.
+UI-03 and UI-07 remain partial and other UI audit items stay OPEN.
+Hosted Actions: NOT RUN under the permanent per-run restriction.
+
 ### Development handoff rule
 
 - Every new user-requested development item is added to this section (or its successor) before implementation starts.

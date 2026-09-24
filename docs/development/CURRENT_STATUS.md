@@ -28,6 +28,15 @@ check.** Original main Dark text acceptance was visually rechecked on Windows
 11; the separate settings/search/scrollbar findings remain OPEN. The dated
 audit records the exact product revision, executable hash and untested cases.
 
+**2026-09-24 follow-up source-only checkpoint:** UI-03 nested search
+ComboBox Dark color forwarding, dropdown list retheming and a wider localized
+current-folder button are now in source. UI-07 new-profile defaults expose the
+existing single-tab strip and new-tab button without changing saved settings.
+These are partial changes; Windows build, runtime/visual, DPI/HC, search
+behavior and explicit tab-close affordance remain NOT TESTED/OPEN.
+UI-02/UI-05/UI-06/UI-08 remain unchanged and OPEN. Prior `bee95d9`
+build evidence does not apply to this new revision.
+
 ## Outstanding near-term work
 
 1. Address the reproduced settings-page visibility and Dark rendering issues

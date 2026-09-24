@@ -2753,3 +2753,30 @@ Source commits covered:
 Static tree/source-contract review: PASS. Windows compile after these two
 changes, matching UI-01 runtime path, UI-04 dialog layout/accessibility,
 DPI/High Contrast and final pixels: NOT RETESTED. GitHub Actions: NOT RUN.
+
+
+---
+
+## 2026-09-24 — UI-03 and UI-07 incremental source work
+
+**Observed:** The Windows audit found a bright inner search ComboBox field,
+a dark-on-dark current-location glyph, and hidden tab/+ affordances in a
+default new profile.
+
+**Cause identified in source:** SearchDlg uses ComboBoxEx with an internal
+combo whose edit/list color messages do not reliably reach the dialog's
+existing theme palette brush. The two tab display settings both defaulted
+to false for new installations.
+
+**Source change:** Subclass only the search location's nested combo,
+forward its Dark edit/list color messages to the existing dialog brush,
+and theme its native popup list on open. Replace the tiny legacy glyph
+with a wider localized current-folder action and tooltip. New-profile
+defaults show a single tab strip and the existing new-tab button;
+previously saved preferences remain unchanged. Add a regression guard.
+
+**Evidence:** Source-edit assertion and connector Git tree inspection only.
+Full Python validator, current-revision Windows compile/link, functional
+test, actual search/dialog and DPI/HC visual acceptance: NOT TESTED.
+UI-03/UI-07 remain partially open; other audit items remain open.
+GitHub Actions: NOT RUN; no per-run approval was given.

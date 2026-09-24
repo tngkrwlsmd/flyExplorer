@@ -4175,6 +4175,41 @@ def validate_release_stage_recovery() -> list[str]:
     return errors
 
 
+def validate_search_location_and_tab_discoverability() -> list[str]:
+    """Protect partial UI-03 nested field routing and UI-07 new-profile defaults."""
+    errors: list[str] = []
+    search = (FXFILE_SRC / "search_dlg.cpp").read_text(
+        encoding="utf-8", errors="replace"
+    )
+    resource = (FXFILE_SRC / "fxfile.rc").read_text(
+        encoding="utf-8", errors="replace"
+    )
+    option = (FXFILE_SRC / "option.cpp").read_text(
+        encoding="utf-8", errors="replace"
+    )
+    for token in (
+        "SearchLocationComboSubclassProc",
+        "WM_CTLCOLOREDIT",
+        "WM_CTLCOLORLISTBOX",
+        "::SetWindowSubclass(",
+        "kSearchLocationComboSubclassId",
+        "sDialogHwnd, aMessage, aWParam, aLParam",
+        "mCurLocButton.SetWindowText(sCurrentFolderLabel)",
+    ):
+        if token not in search:
+            errors.append(f"search location UI wiring missing: {token}")
+    if 'PUSHBUTTON      "Current folder",IDC_SEARCH_CUR_LOC,87,62,80,13' not in resource:
+        errors.append("search current-folder button layout missing")
+    for token in ("mTabShowOneTab", "mTabShowNewButton"):
+        if not any(
+            token in line and "(void *)XPR_TRUE" in line
+            for line in option.splitlines()
+            if "Option::mConfig." in line
+        ):
+            errors.append(f"tab discovery new-profile default missing: {token}")
+    return errors
+
+
 def validate_move_order_button_labels() -> list[str]:
     """Reject the mojibake arrow literals and require localized move labels."""
     errors: list[str] = []
@@ -4264,6 +4299,7 @@ def main() -> int:
     errors.extend(validate_active_ci_scope_documentation())
     errors.extend(validate_actions_storage_budget_contract())
     errors.extend(validate_installer_smoke_wiring())
+    errors.extend(validate_search_location_and_tab_discoverability())
     errors.extend(validate_move_order_button_labels())
     errors.extend(validate_html_help_package_source())
     errors.extend(validate_retired_updater_and_generated_projects())

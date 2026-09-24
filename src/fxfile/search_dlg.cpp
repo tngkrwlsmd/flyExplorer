@@ -25,6 +25,7 @@
 #include "dlg_state.h"
 #include "conf_dir.h"
 #include "size_format.h"
+#include "gui/ModernUI.h"
 
 #include "cmd/search_loc_dlg.h"
 
@@ -75,6 +76,72 @@ enum
 
 const xpr_size_t kPaneWidth[] = { 150, 150 };
 const CPoint     kAnimationOffset = CPoint(0, 40);
+
+// ComboBoxEx owns a nested combo; its edit/list colors do not reach the dialog.
+const UINT_PTR kSearchLocationComboSubclassId = 0x46534c43;
+
+LRESULT CALLBACK SearchLocationComboSubclassProc(
+    HWND aHwnd, UINT aMessage, WPARAM aWParam, LPARAM aLParam,
+    UINT_PTR aSubclassId, DWORD_PTR aRefData)
+{
+    switch (aMessage)
+    {
+        case WM_CTLCOLOREDIT:
+        case WM_CTLCOLORLISTBOX:
+        case WM_CTLCOLORSTATIC:
+        {
+            const ui::ThemePalette sPalette = ui::ModernUI::getPalette();
+            const HWND sDialogHwnd = reinterpret_cast<HWND>(aRefData);
+            if (XPR_IS_TRUE(sPalette.mDark) &&
+                XPR_IS_FALSE(sPalette.mHighContrast) &&
+                ::IsWindow(sDialogHwnd) != FALSE)
+            {
+                return ::SendMessage(
+                    sDialogHwnd, aMessage, aWParam, aLParam);
+            }
+            break;
+        }
+
+        case CB_SHOWDROPDOWN:
+        {
+            const LRESULT sResult =
+                ::DefSubclassProc(aHwnd, aMessage, aWParam, aLParam);
+            if (aWParam != 0)
+            {
+                COMBOBOXINFO sComboInfo = {0};
+                sComboInfo.cbSize = sizeof(sComboInfo);
+                if (::GetComboBoxInfo(aHwnd, &sComboInfo) != FALSE &&
+                    XPR_IS_NOT_NULL(sComboInfo.hwndList))
+                {
+                    const ui::ThemePalette sPalette =
+                        ui::ModernUI::getPalette();
+                    if (XPR_IS_TRUE(sPalette.mDark) &&
+                        XPR_IS_FALSE(sPalette.mHighContrast))
+                    {
+                        ui::ModernUI::resetControlTheme(sComboInfo.hwndList);
+                    }
+                    else
+                    {
+                        ui::ModernUI::applyExplorerControlTheme(
+                            sComboInfo.hwndList);
+                    }
+                    ::InvalidateRect(sComboInfo.hwndList, XPR_NULL, TRUE);
+                }
+            }
+            return sResult;
+        }
+
+        case WM_NCDESTROY:
+            ::RemoveWindowSubclass(
+                aHwnd, SearchLocationComboSubclassProc, aSubclassId);
+            break;
+
+        default:
+            break;
+    }
+    return ::DefSubclassProc(aHwnd, aMessage, aWParam, aLParam);
+}
+
 
 const xpr_tchar_t kDirCountKey [] = XPR_STRING_LITERAL("search_dir.dir_count");
 const xpr_tchar_t kDirKey      [] = XPR_STRING_LITERAL("search_dir.dir%d");
@@ -178,6 +245,18 @@ xpr_bool_t SearchDlg::OnInitDialog(void)
     ((CComboBox *)GetDlgItem(IDC_SEARCH_NAME))->LimitText(XPR_MAX_PATH);
     ((CEdit *)GetDlgItem(IDC_SEARCH_TEXT))->LimitText(XPR_MAX_PATH);
     pComboBoxEx->LimitText(XPR_MAX_PATH);
+
+    // Forward the inner combo's Dark edit/list colors to the existing brush.
+    CComboBox *sLocationCombo = mLocComboBox.GetComboBoxCtrl();
+    if (XPR_IS_NOT_NULL(sLocationCombo) &&
+        ::IsWindow(sLocationCombo->GetSafeHwnd()) != FALSE)
+    {
+        ::SetWindowSubclass(
+            sLocationCombo->GetSafeHwnd(),
+            SearchLocationComboSubclassProc,
+            kSearchLocationComboSubclassId,
+            reinterpret_cast<DWORD_PTR>(GetSafeHwnd()));
+    }
 
     xpr_sint_t sImage;
     xpr_sint_t sIndex = 0;
@@ -444,9 +523,12 @@ xpr_bool_t SearchDlg::OnInitDialog(void)
         mDlgState->load();
     }
 
-    mCurLocButton.SetTooltipText(gApp.loadString(XPR_STRING_LITERAL("popup.search.location.current_folder")));
-    mCurLocButton.DrawTransparent(XPR_TRUE);
-    mCurLocButton.SetIcon(IDI_EXPAND, IDI_EXPAND);
+    // Replace the unreadable Dark legacy icon with a localized action name.
+    const xpr_tchar_t *sCurrentFolderLabel =
+        gApp.loadString(XPR_STRING_LITERAL("popup.search.location.current_folder"));
+    mCurLocButton.SetTooltipText(sCurrentFolderLabel);
+    mCurLocButton.SetWindowText(sCurrentFolderLabel);
+    mCurLocButton.SetDefaultColors(TRUE);
 
     return XPR_TRUE;
 }

@@ -30,16 +30,26 @@ P1은 기능 오인 또는 읽기 어려움, P2는 사용성/시각 일관성 �
 | --- | --- | --- | --- |
 | UI-01 / P1 — **CODE UPDATED / RETEST OPEN** | 설정에서 일반을 본 뒤 모양 및 테마 → Light → 적용. 제목/선택은 모양 및 테마지만 본문이 일반 페이지로 바뀐다. 필터링을 클릭해도 제목만 바뀌고 일반 본문이 남는다. 창을 닫았다 재열면 필터링 본문이 정상 표시된다. | 2026-09-24 source fix: theme transaction 시작 시 HWND의 visible 상태를 snapshot하고 당시 visible이었던 HWND만 `WM_SETREDRAW(FALSE/TRUE)`로 freeze/thaw한다. 재시작/재열기 없이 선택된 페이지 하나만 표시되는지 동일 경로 runtime/visual 재검증이 남아 있다. | `main_frame.cpp::RefreshThemeForCurrentThread`, `cfg/cfg_main_dlg.cpp::showCfg/OnApply` |
 | UI-02 / P1 | System→Dark에서 긴 파일 목록, 폴더 tree, 설정 tree를 표시/스크롤하면 흰 바탕의 고전 스크롤바와 검은 화살표가 남는다. | thumb/track/화살표/교차 모서리까지 Dark와 조화. 휠·키보드·thumb drag·High Contrast 동작 보존. | `gui/ListCtrlEx.cpp::refreshModernAppearance`, folder tree 및 settings tree의 non-client rendering |
-| UI-03 / P1 | Dark에서 툴바 검색을 열면 찾는 위치 입력부는 흰 바탕/검은 글자이고 옆의 작은 `>>` 모양 버튼은 어두운 배경 위 검게 표시된다. 입력칸 앞쪽 아이콘도 경로와 매우 가깝다. | ComboBoxEx의 내부 edit/list, browse/current-location icon까지 읽을 수 있는 최종 색상과 여백. 정상·hover·focus·disabled 상태 각각 확인. | `search_dlg.cpp`의 `mLocComboBox`, `mCurLocButton` (`IDI_EXPAND`), 공통 dialog/combobox/button renderer |
+| UI-03 / P1 — **SOURCE PARTIAL / RETEST OPEN** | Dark에서 툴바 검색을 열면 찾는 위치 입력부는 흰 바탕/검은 글자이고 옆의 작은 `>>` 모양 버튼은 어두운 배경 위 검게 표시된다. 입력칸 앞쪽 아이콘도 경로와 매우 가깝다. | ComboBoxEx의 내부 edit/list, browse/current-location icon까지 읽을 수 있는 최종 색상과 여백. 정상·hover·focus·disabled 상태 각각 확인. | `search_dlg.cpp`의 `mLocComboBox`, `mCurLocButton` (`IDI_EXPAND`), 공통 dialog/combobox/button renderer |
 | UI-04 / P2 — **CODE UPDATED / VISUAL RETEST OPEN** | Light 설정 → 필터링에서 목록 아래의 두 작은 버튼이 정상적인 위/아래 화살표로 읽히지 않는 문자열처럼 보인다. 동일한 mojibake literal이 프로그램 연동 순서 버튼에도 있었다. | 2026-09-24 source fix: 두 페이지의 resource fallback을 `Up`/`Down`으로 바꾸고 버튼 폭을 26 DLU로 확장, runtime Korean label은 `위로`/`아래로`로 명시한다. 실제 DPI별 clipping/focus/accessibility name과 최종 미감은 재검증이 남아 있다. | `fxfile.rc`, `cfg_appearance_filtering_dlg.cpp`, `cfg_func_program_ass_dlg.cpp` |
 | UI-05 / P2 | main 상단은 좁은 명령 아이콘들이 밀집하고 드라이브/북마크 band에는 넓은 빈 공간이 남는다. 설정의 checkbox/radio/combobox 내부 간격은 다른 영역보다 좁다. | Windows 11 Explorer를 기준으로 font/행 높이/hit target/섹션 간격을 함께 조정. 기존 command, bitmap index, 정보 밀도 선택권 보존. | main toolbar/rebar, `ModernUI`, dialog resource/layout metrics |
 | UI-06 / P2 | Dark의 창/탭 popup 메뉴에 밝고 두꺼운 외곽선이 보인다. 창 메뉴는 현재 main 창 높이보다 길다. | 중립색 경계와 일관된 hover/disabled 상태. 짧은 화면에서도 모든 명령을 키보드/스크롤로 접근 가능. 기능을 삭제해 메뉴를 줄이지 않음. | app-owned `BCMenu`, command grouping/placement |
-| UI-07 / P2 | 단일 창에는 탭 추가/닫기 affordance가 보이지 않는다. 창 → 탭 → 새 탭으로 열면 탭 strip이 나타나지만 상시 `+`/닫기 표시가 눈에 띄지 않는다. `Ctrl+F4`로 테스트 탭은 정상 닫힌다. | 새 사용자도 탭 기능을 발견 가능. 선택/hover/focus/닫기 target을 구분하며 기존 shortcut과 single-tab 숨김 설정 의미 보존. | `tab_pane.cpp`, tab control, 창/탭 command UI |
+| UI-07 / P2 — **SOURCE PARTIAL / RETEST OPEN** | 단일 창에는 탭 추가/닫기 affordance가 보이지 않는다. 창 → 탭 → 새 탭으로 열면 탭 strip이 나타나지만 상시 `+`/닫기 표시가 눈에 띄지 않는다. `Ctrl+F4`로 테스트 탭은 정상 닫힌다. | 새 사용자도 탭 기능을 발견 가능. 선택/hover/focus/닫기 target을 구분하며 기존 shortcut과 single-tab 숨김 설정 의미 보존. | `tab_pane.cpp`, tab control, 창/탭 command UI |
 | UI-08 / P2 | 수직 듀얼 창에서 각 pane의 tree와 설명 영역이 반복되어 파일 목록 너비가 크게 줄고 열/수정 날짜가 잘린다. 주소는 현재 설정에서 마지막 폴더명 위주로 보인다. | 좁은 pane에서 정보 우선순위/최소 너비/설명 영역 크기 조절을 개선하고 활성 pane을 명확히 표시. 전체 경로 옵션과 고급 기능 보존; breadcrumb는 설계 후보. | `explorer_pane.cpp`, `explorer_view.cpp`, `splitter.cpp`, `address_bar.cpp` |
 
 UI-04의 원래 `¡è`/`¡é` literal은 filtering과 sibling program-association resource에서 제거했다. 두 페이지 모두 runtime localization으로 의미 있는 이동 방향 text를 설정한다. CODE UPDATED는 visual/accessibility PASS가 아니므로 실제 DPI/keyboard/screen-reader 확인은 남아 있다.
 
 필터 목록의 모든 채워진 행이 파랗게 보이는 현상도 관찰했다. 항목별 색상 표시인지 selection renderer 문제인지 확인하지 않았으므로 **추가 조사 후보**로만 둔다. 전부 선택됐다고 단정하지 않는다.
+
+### 후속 UI-03 / UI-07 소스 개선
+
+- UI-03: 검색 위치 ComboBoxEx의 실제 내부 edit/list 색상을 기존
+  CResizingDialog 다크 팔레트로 전달하고 드롭다운 list의 테마 연결을
+  열 때 갱신한다. 작은 검은 아이콘 대신 더 넓은 현재 폴더 텍스트
+  버튼을 사용한다. 실행·검색·시각·배율·고대비 재검증은 남아 있다.
+- UI-07: 새 설정 파일의 단일 탭과 '+' 버튼 기본 표시를 활성화한다.
+  기존 사용자 저장값은 변경하지 않는다. 닫기 버튼 추가와 실제 화면
+  검증은 미완료이므로 해당 항목을 완료 처리하지 않는다.
 
 ### UI-01의 진단 근거와 회귀 조건
 
