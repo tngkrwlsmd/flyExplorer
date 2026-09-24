@@ -4387,6 +4387,58 @@ def validate_tab_close_discoverability() -> list[str]:
     return errors
 
 
+def validate_bookmark_toolbar_direct_paint_and_print_owner() -> list[str]:
+    """UI-09: do not let toolbar WM_PRINT bypass the bookmark pixel owner."""
+    errors: list[str] = []
+    toolbar = (FXFILE_SRC / "gui" / "rebar" / "ToolBarEx.cpp").read_text(
+        encoding="utf-8", errors="replace"
+    )
+    for token in (
+        '#include "../../ctrl_id.h"',
+        "bool CanPaintOwnedBookmarkToolbar(HWND aToolbar)",
+        "::GetDlgCtrlID(aToolbar) != AFX_IDW_BOOKMARK_BAR",
+        "TB_GETBUTTONINFO",
+        "sInfo.iImage >= sImageCount",
+        "void PaintOwnedBookmarkToolbar(HWND aToolbar, HDC aHdc)",
+        "::SaveDC(aHdc)",
+        "::IntersectClipRect(",
+        "TB_GETITEMRECT",
+        "TB_GETHOTITEM",
+        "DrawOwnedToolbarItem(&sDraw, sPalette.mChrome)",
+        "::DrawFocusRect(aHdc, &sItemRect)",
+        "::RestoreDC(aHdc, sDcState)",
+    ):
+        if token not in toolbar:
+            errors.append(f"bookmark toolbar full pixel owner missing: {token}")
+
+    start = toolbar.find("LRESULT CToolBarEx::WindowProc(")
+    end = toolbar.find("BOOL CToolBarEx::OnNotify(", start)
+    proc = toolbar[start:end] if start >= 0 and end > start else ""
+    for token in (
+        "const xpr_bool_t sCandidate =",
+        "if (XPR_IS_TRUE(sCandidate))",
+        "CanPaintOwnedBookmarkToolbar(m_hWnd)",
+        "if (message == WM_PAINT)",
+        "CPaintDC sPaintDC(this)",
+        "message == WM_PRINTCLIENT",
+        "message == WM_PRINT && (lParam & PRF_CLIENT)",
+        "PaintOwnedBookmarkToolbar(",
+        "return 0;",
+    ):
+        if token not in proc:
+            errors.append(f"bookmark paint/print routing missing: {token}")
+    candidate_pos = proc.find("if (XPR_IS_TRUE(sCandidate))")
+    query_pos = proc.find("CanPaintOwnedBookmarkToolbar(m_hWnd)")
+    if candidate_pos < 0 or query_pos <= candidate_pos:
+        errors.append(
+            "bookmark paint/print owner must gate before synchronous TB_* "
+            "self-queries; otherwise WindowProc recurses for every message"
+        )
+    if "CToolBar::WindowProc( message, wParam, lParam )" not in proc:
+        errors.append("non-bookmark/High Contrast must retain native fallback")
+    return errors
+
+
 def validate_settings_single_visible_page_after_theme_apply() -> list[str]:
     """UI-01: both navigation and theme apply restore one visible page."""
     errors: list[str] = []
@@ -4578,6 +4630,7 @@ def main() -> int:
     errors.extend(validate_split_pane_column_and_contents_layout())
     errors.extend(validate_shared_tree_new_profile_default())
     errors.extend(validate_tab_close_discoverability())
+    errors.extend(validate_bookmark_toolbar_direct_paint_and_print_owner())
     errors.extend(validate_settings_single_visible_page_after_theme_apply())
     errors.extend(validate_search_location_icon_text_dpi_gap())
     errors.extend(validate_search_location_and_tab_discoverability())

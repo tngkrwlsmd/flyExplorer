@@ -157,6 +157,23 @@ visual fix claim. Full validator, current x64 compiler and Light/
 Dark/HC/DPI/hover toolbar pixel regression: **NOT TESTED**.
 UI-09 is SOURCE UPDATED / VISUAL RETEST OPEN.
 
+**2026-09-24 UI-09 repeat screenshot after 541cd0f3 — prior
+postpaint candidate did NOT resolve the visible ghost:**
+The user's repeat report supersedes the prior source-only hypothesis.
+The remaining unguarded renderer was the bookmark toolbar's WM_PAINT
+/ WM_PRINT / WM_PRINTCLIENT path: reflected NM_CUSTOMDRAW postpaint
+is not a guarantee for the rebar print/composition route. The new
+fix routes those final non-High-Contrast bookmark pixels directly
+through one full client renderer, including image-list glyphs, labels,
+button states and separators. It checks available icons before
+taking ownership; otherwise it retains the native fallback.
+High Contrast/native route, button commands, keyboard navigation,
+drag/drop and saved layout are unchanged. A source regression guard
+requires explicit direct paint and print ownership, not only
+NM_CUSTOMDRAW postpaint. The actual source-revision Windows x64 build
+and before/after screenshots (including hover, drag, DPI and
+print/rebar) are **NOT TESTED**. UI-09 remains RUNTIME OPEN.
+
 ## Outstanding near-term work
 
 1. Address the reproduced settings-page visibility and Dark rendering issues

@@ -46,6 +46,33 @@
   스크린샷 비교가 필요하다.
   **UI-09: SOURCE UPDATED / VISUAL RETEST OPEN.**
 
+## UI-09 재신고 — 사후 그리기 변경 후에도 잔상 유지
+
+사용자가 기존 \`541cd0f3\` 수정 후 동일한 잔상을 다시
+보고했다. 따라서 이전 Light 후처리 변경은 문제 해결
+증거가 아니며, 기존 가설만 반복하지 않는다.
+
+추가 소스 진단에서 \`CToolBarEx\`는
+\`NM_CUSTOMDRAW/CDDS_ITEMPOSTPAINT\`만 덮었으며
+native \`WM_PAINT\`와 rebar 합성용 \`WM_PRINT*\`를
+가로채지 않았다. 화면에는 전체 아이콘/글자 아래 같은
+X 좌표로 추가 표시 흔적이 있으므로, 독립 그리기
+경로를 제어해야 한다.
+
+이번 후보 변경은 북마크 밴드에 한정하여 WM_PAINT,
+WM_PRINT와 WM_PRINTCLIENT에서 공식 이미지 목록,
+toolbar item rect, 실제 상태를 읽어 전체 클라이언트
+영역을 직접 그린다. 아이콘 정보가 불완전하면 native
+경로로 되돌아가며, High Contrast는 처음부터 시스템
+그리기를 유지한다. 툴팁·버튼 명령·드래그 동작은
+그리기 경로 밖에 그대로 둔다.
+
+해당 재발 방지 검사는 사후 item paint뿐 아니라
+독립적인 print 경로까지 확인한다. 이는 이전
+재현 결과에 대응한 후속 소스 후보이며
+정확한 Win11 현재 빌드에서 동일 캡처를
+얻기 전까지 **UI-09 OPEN**이다.
+
 ## 실제 관찰된 개선 목록
 
 P1은 기능 오인 또는 읽기 어려움, P2는 사용성/시각 일관성 개선이다. 기대 결과는 Intended이며 관찰 결과와 구분한다. CODE UPDATED는 소스 수정만 뜻하며 matching runtime/visual evidence 전에는 CLOSED가 아니다.

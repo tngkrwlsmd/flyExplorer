@@ -3050,3 +3050,43 @@ Light/Dark/HC with hover/press and 100/125/150/200 DPI:
 NOT TESTED. The visual issue is OPEN pending reproduction
 comparison; prior build evidence does not apply to this revision.
 GitHub Actions: NOT RUN; per-run explicit approval remains required.
+
+
+---
+
+## 2026-09-24 — UI-09 repeated after Light full-item postpaint
+
+**User evidence:** The user reports the exact bookmark icon/label
+understrokes are still present after the previous full-item postpaint
+change. This is a regression FAIL for the earlier hypothesis, not
+evidence for a stale executable; the revised branch is not
+considered fixed by source-string tests.
+
+**Additional source path:** Existing CToolBarEx::WindowProc had no
+WM_PAINT or WM_PRINT/WM_PRINTCLIENT owner; its custom-draw route
+relied on postpaint reflected notifications. A rebar composes
+child toolbars via WM_PRINT, which can use another native pixel
+route. The duplicate glyph/label strokes at matching X positions
+are consistent with more than one image/text paint pass, though
+a Windows trace is still needed to establish exact root cause.
+
+**New source change:** For the bookmark band only, when not in
+High Contrast/legacy OS, intercept WM_PAINT and WM_PRINT* at the
+CToolBarEx owner before native ToolbarWindow32 paints. Fill the
+client clip and draw actual TB_GETITEMRECT/TB_GETBUTTON/
+TB_GETBUTTONINFO icons, texts, states, separators and visible
+keyboard focus using the existing ModernUI item painter. Before
+ownership, check that all native toolbar images can be rendered;
+otherwise preserve the existing native fallback. High Contrast,
+other toolbar bands and their commands/tooltips/drag semantics
+are untouched.
+
+**Prevention:** New source guard requires native paint and print
+interception in addition to the earlier Light/Dark unified
+postpaint check.
+
+**Evidence:** Source construction inspection only, NOT the actual
+revision-matched Windows compile, native tests, same-strip
+before/after Light/Dark/HC/DPI/focus/drag and rebar print pixel
+acceptance. UI-09 remains OPEN until direct evidence.
+GitHub Actions: NOT RUN without explicit approval for this run.

@@ -27,6 +27,7 @@
 #include "ToolBarEx.h"
 #include "WinAppEx.h"
 #include "../ModernUI.h"
+#include "../../ctrl_id.h"  // Bookmark band: scoped direct paint/print owner.
 
 #include <afxpriv.h>    // ON_MESSAGE_VOID()
 
@@ -537,6 +538,153 @@ void DrawOwnedToolbarItem(
     DrawFinalDarkToolbarItem(aCustomDraw, aBackground);
 }
 
+// The parent rebar may composite its children using WM_PRINT, bypassing the
+// reflected NM_CUSTOMDRAW postpaint path entirely. A postpaint-only fix cannot
+// remove a second native icon/text baseline in that composition path.
+//
+// The reported repeat occurs in the bookmark band. Keep the correction
+// scoped to that band: it has one existing normal image list and native
+// toolbar commands, but its final client pixels are app-owned. Other bands
+// retain their current renderer until independently reproduced/tested.
+bool CanPaintOwnedBookmarkToolbar(HWND aToolbar)
+{
+    if (::IsWindow(aToolbar) == FALSE ||
+        ::GetDlgCtrlID(aToolbar) != AFX_IDW_BOOKMARK_BAR)
+    {
+        return false;
+    }
+
+    const xpr_sint_t sCount =
+        static_cast<xpr_sint_t>(
+            ::SendMessage(aToolbar, TB_BUTTONCOUNT, 0, 0));
+    HIMAGELIST sImages =
+        reinterpret_cast<HIMAGELIST>(
+            ::SendMessage(aToolbar, TB_GETIMAGELIST, 0, 0));
+    const xpr_sint_t sImageCount =
+        XPR_IS_NOT_NULL(sImages) ?
+        ::ImageList_GetImageCount(sImages) : 0;
+
+    for (xpr_sint_t i = 0; i < sCount; ++i)
+    {
+        TBBUTTON sButton = {0};
+        if (::SendMessage(
+                aToolbar, TB_GETBUTTON, i,
+                reinterpret_cast<LPARAM>(&sButton)) == FALSE)
+        {
+            return false;
+        }
+        if ((sButton.fsStyle & BTNS_SEP) != 0)
+            continue;
+
+        TBBUTTONINFO sInfo = {0};
+        sInfo.cbSize = sizeof(sInfo);
+        sInfo.dwMask = TBIF_IMAGE | TBIF_STYLE;
+        if (::SendMessage(
+                aToolbar, TB_GETBUTTONINFO,
+                sButton.idCommand,
+                reinterpret_cast<LPARAM>(&sInfo)) < 0)
+        {
+            return false;
+        }
+        if (sInfo.iImage >= 0 && sInfo.iImage >= sImageCount)
+            return false;
+    }
+    return true;
+}
+
+void PaintOwnedBookmarkToolbar(HWND aToolbar, HDC aHdc)
+{
+    if (XPR_IS_NULL(aHdc))
+        return;
+
+    RECT sClientRect = {0};
+    ::GetClientRect(aToolbar, &sClientRect);
+    const int sDcState = ::SaveDC(aHdc);
+    if (sDcState == 0)
+        return;
+
+    ::IntersectClipRect(
+        aHdc,
+        sClientRect.left, sClientRect.top,
+        sClientRect.right, sClientRect.bottom);
+
+    const fxfile::ui::ThemePalette sPalette =
+        fxfile::ui::ModernUI::getPalette();
+    ::SetDCBrushColor(aHdc, sPalette.mChrome);
+    ::FillRect(
+        aHdc, &sClientRect,
+        static_cast<HBRUSH>(::GetStockObject(DC_BRUSH)));
+
+    const xpr_sint_t sHotItem = static_cast<xpr_sint_t>(
+        ::SendMessage(aToolbar, TB_GETHOTITEM, 0, 0));
+    const xpr_sint_t sCount = static_cast<xpr_sint_t>(
+        ::SendMessage(aToolbar, TB_BUTTONCOUNT, 0, 0));
+    const LRESULT sUiState =
+        ::SendMessage(aToolbar, WM_QUERYUISTATE, 0, 0);
+
+    for (xpr_sint_t i = 0; i < sCount; ++i)
+    {
+        TBBUTTON sButton = {0};
+        RECT sItemRect = {0};
+        if (::SendMessage(
+                aToolbar, TB_GETBUTTON, i,
+                reinterpret_cast<LPARAM>(&sButton)) == FALSE ||
+            (sButton.fsState & TBSTATE_HIDDEN) != 0 ||
+            ::SendMessage(
+                aToolbar, TB_GETITEMRECT, i,
+                reinterpret_cast<LPARAM>(&sItemRect)) == FALSE)
+        {
+            continue;
+        }
+
+        if ((sButton.fsStyle & BTNS_SEP) != 0)
+        {
+            const xpr_sint_t sMiddleX =
+                (sItemRect.left + sItemRect.right) / 2;
+            RECT sSeparator = {
+                sMiddleX,
+                sItemRect.top + fxfile::ui::ModernUI::scaleForWindow(8, aToolbar),
+                sMiddleX + max(1, fxfile::ui::ModernUI::scaleForWindow(1, aToolbar)),
+                sItemRect.bottom - fxfile::ui::ModernUI::scaleForWindow(8, aToolbar)
+            };
+            if (sSeparator.bottom > sSeparator.top)
+            {
+                ::SetDCBrushColor(aHdc, sPalette.mSeparator);
+                ::FillRect(
+                    aHdc, &sSeparator,
+                    static_cast<HBRUSH>(::GetStockObject(DC_BRUSH)));
+            }
+            continue;
+        }
+
+        NMTBCUSTOMDRAW sDraw = {0};
+        sDraw.nmcd.hdr.hwndFrom = aToolbar;
+        sDraw.nmcd.hdc = aHdc;
+        sDraw.nmcd.dwItemSpec = sButton.idCommand;
+        sDraw.nmcd.rc = sItemRect;
+        if ((sButton.fsState & TBSTATE_ENABLED) == 0)
+            sDraw.nmcd.uItemState |= CDIS_DISABLED;
+        if ((sButton.fsState & TBSTATE_PRESSED) != 0)
+            sDraw.nmcd.uItemState |= CDIS_SELECTED;
+        if ((sButton.fsState & TBSTATE_CHECKED) != 0)
+            sDraw.nmcd.uItemState |= CDIS_CHECKED;
+        if (sHotItem == i)
+            sDraw.nmcd.uItemState |= CDIS_HOT;
+
+        DrawOwnedToolbarItem(&sDraw, sPalette.mChrome);
+
+        // Native toolbar remains responsible for keyboard input/focus;
+        // mirror its visible focus cue in this app-owned pixel route.
+        if (::GetFocus() == aToolbar && sHotItem == i &&
+            (sUiState & UISF_HIDEFOCUS) == 0)
+        {
+            ::DrawFocusRect(aHdc, &sItemRect);
+        }
+    }
+
+    ::RestoreDC(aHdc, sDcState);
+}
+
 LRESULT ApplyDarkToolBarCustomDraw(
     LPNMTBCUSTOMDRAW aCustomDraw,
     xpr_bool_t aElevatedSurface = XPR_FALSE)
@@ -997,6 +1145,67 @@ void CToolBarEx::SaveState( LPCTSTR lpszProfileName )
 
 LRESULT CToolBarEx::WindowProc( UINT message, WPARAM wParam, LPARAM lParam )
 {
+    // Gate before calling CanPaintOwnedBookmarkToolbar(): it queries this
+    // HWND with TB_GETBUTTON/TB_BUTTONCOUNT, which synchronously re-enters
+    // WindowProc. All non-paint messages must take the original route.
+    const xpr_bool_t sPaintMessage =
+        message == WM_PAINT ? XPR_TRUE : XPR_FALSE;
+    const xpr_bool_t sPrintClient =
+        message == WM_PRINTCLIENT ||
+        (message == WM_PRINT && (lParam & PRF_CLIENT) != 0) ?
+        XPR_TRUE : XPR_FALSE;
+    const xpr_bool_t sCandidate =
+        XPR_IS_TRUE(sPaintMessage) || XPR_IS_TRUE(sPrintClient) ?
+        XPR_TRUE : XPR_FALSE;
+
+    xpr_bool_t sOwnBookmarkPixels = XPR_FALSE;
+    if (XPR_IS_TRUE(sCandidate))
+    {
+        const fxfile::ui::ThemePalette sPalette =
+            fxfile::ui::ModernUI::getPalette();
+        if (XPR_IS_FALSE(sPalette.mHighContrast) &&
+            !WinAppEx::GetInstance()->IsWinXP() &&
+            CanPaintOwnedBookmarkToolbar(m_hWnd))
+        {
+            sOwnBookmarkPixels = XPR_TRUE;
+        }
+    }
+
+    // WM_PRINT* is a separate rebar composition route, not a custom-draw
+    // item notification. WM_PAINT also must not call native ToolbarWindow32
+    // before the app renderer: the previous postpaint fix left two baselines.
+    if (XPR_IS_TRUE(sOwnBookmarkPixels))
+    {
+        if (message == WM_PAINT)
+        {
+            if (wParam != 0)
+            {
+                PaintOwnedBookmarkToolbar(
+                    m_hWnd, reinterpret_cast<HDC>(wParam));
+            }
+            else
+            {
+                CPaintDC sPaintDC(this);
+                PaintOwnedBookmarkToolbar(
+                    m_hWnd, sPaintDC.GetSafeHdc());
+            }
+            return 0;
+        }
+
+        if (XPR_IS_TRUE(sPrintClient) && wParam != 0)
+        {
+            if (message == WM_PRINT &&
+                (lParam & PRF_CHECKVISIBLE) != 0 &&
+                ::IsWindowVisible(m_hWnd) == FALSE)
+            {
+                return 0;
+            }
+            PaintOwnedBookmarkToolbar(
+                m_hWnd, reinterpret_cast<HDC>(wParam));
+            return 0;
+        }
+    }
+
     // Special handling for certain messages (forwarding to owner/parent)
     switch ( message )
     {

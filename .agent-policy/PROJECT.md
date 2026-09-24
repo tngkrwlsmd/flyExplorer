@@ -845,6 +845,26 @@ same bookmark strip screenshot and Light/Dark/HC/DPI/hover/focus
 regression: NOT TESTED. UI-09 remains VISUAL RETEST OPEN.
 Hosted Actions: NOT RUN under permanent per-run approval rule.
 
+**UI-09 repeated after 541cd0f3 (2026-09-24):**
+The user reports that the full-item Light postpaint candidate left
+the actual bookmark screenshot unchanged. Do not call that attempt
+successful or infer the latest binary was stale. A new source path
+handles bookmark WM_PAINT and rebar WM_PRINT/WM_PRINTCLIENT directly,
+bypassing native ToolbarWindow32 client painting for this one band
+when ModernUI owns its palette (Light/Dark, non-High-Contrast).
+The painter fills the full client rect, draws existing item icons,
+labels, states and separators and mirrors a keyboard focus rect.
+If the native icon list is incomplete or High Contrast/system
+ownership applies, it falls back to the existing native route.
+A new source guard checks the WM_PRINT and WM_PAINT owner explicitly.
+Windows current-revision x64 compilation, exact duplicated-row
+pixel reproduction and Light/Dark/HC/DPI/hover/print comparison:
+NOT TESTED. This remains an unverified fix candidate. User's new
+two screenshots in the interrupted turn were not returned as
+mountable/conversation files and their separate visual content
+must be inspected before making claims about them.
+GitHub Actions: NOT RUN without per-run authorization.
+
 ### Development handoff rule
 
 - Every new user-requested development item is added to this section (or its successor) before implementation starts.
