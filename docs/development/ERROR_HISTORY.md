@@ -2411,3 +2411,38 @@ Windows x64 build, x86 updater build/test, help compiler,
 portable ZIP production, installer/runtime UI or network/TLS
 security verification. The existing HTTP endpoint and third-party
 distribution/legal blockers remain OPEN. Hosted Actions: NOT RUN.
+
+---
+
+## 2026-09-24 — User-supplied Windows x64 compile failure: max macro in updater regression
+
+**Input/revision:** `local-ci(20260924-074151).log`, started 2026-09-24
+16:39:03 and finished 16:41:19 on `bc02a4a34df2ec5f6c20ccf76e80a24e5e6f67f5`.
+`local_ci.bat x64` generated the VS2026 v145 x64 solution after source
+invariant/regression preflight PASS. MSBuild Release-x64 FAIL followed.
+
+**First real error:** `src/fxfile-tests/updater_contract_tests.cpp(196,9)`
+C2589; later C2059 on the same macro-containing expression and C2143
+at the following brace are parser cascades, not independent causes.
+The log explicitly says the old `bin/x64/fxfile.exe` was NOT rebuilt;
+its revision marker was `6621ae2d9c1d30204a8981306f178045f467bdf8`.
+Do not use that stale artifact as a test of the current source.
+
+**Cause:** The newly added transfer-budget boundary case contained
+`std::numeric_limits<std::size_t>::max()` in a Windows translation
+unit that includes `windows.h`. A function-like `max` macro can
+expand that call before the C++ parser sees the namespace member.
+
+**Fix / prevention:** Use
+`(std::numeric_limits<std::size_t>::max)()` in the regression without
+altering the actual transfer-budget behavior. Update
+`validate_updater_download_budget()` to require the parenthesized
+expression and reject the Windows-unsafe original. Preserve the full
+nine-case native boundary suite.
+
+**Evidence:** In an isolated `g++ -std=c++11 -Wall -Wextra -Werror -pedantic`
+fixture with a Windows-style `max(a,b)` macro, the former spelling
+fails compilation and the protected spelling compiles and runs.
+The real Windows `local_ci.bat x64` profile on this new revision has
+**NOT** been rerun; x86 updater, Windows runtime and packaging likewise
+NOT TESTED. GitHub Actions: NOT RUN.

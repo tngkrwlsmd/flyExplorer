@@ -194,7 +194,7 @@ bool testUpdaterContracts(void)
         XPR_IS_TRUE(base::canAcceptUpdateMetadataChunk(sLimit + 1, 0, 0)) ||
         XPR_IS_TRUE(base::canAcceptUpdateMetadataChunk(0, 1, sLimit + 1)) ||
         XPR_IS_TRUE(base::canAcceptUpdateMetadataChunk(
-            0, std::numeric_limits<std::size_t>::max(), 2)) ||
+            0, (std::numeric_limits<std::size_t>::max)(), 2)) ||
         XPR_IS_TRUE(base::canAcceptUpdateMetadataChunk(100, 2, sLimit / 2)) ||
         XPR_IS_FALSE(base::canAcceptUpdateMetadataChunk(
             100, 2, (sLimit - 100) / 2)))

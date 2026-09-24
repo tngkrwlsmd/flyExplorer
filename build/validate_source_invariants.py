@@ -4184,9 +4184,16 @@ def validate_updater_download_budget() -> list[str]:
     for name in ("updater_gyp", "tests_gyp"):
         if "'../base/update_download_limits.h'" not in s[name]:
             errors.append(f"{paths[name]}: missing shared update download contract")
-    for token in ("#include \"update_download_limits.h\"", "std::numeric_limits<std::size_t>::max()"):
+    for token in ("#include \"update_download_limits.h\"", "(std::numeric_limits<std::size_t>::max)()"):
         if token not in s["tests"]:
             errors.append(f"updater_contract_tests.cpp: missing boundary case: {token}")
+    # Windows headers may define a function-like 'max' macro: reject
+    # the unparenthesized std::numeric_limits<...>::max() expression.
+    if "std::numeric_limits<std::size_t>::max()" in s["tests"]:
+        errors.append(
+            "updater_contract_tests.cpp: Windows max macro collision risk; "
+            "write (std::numeric_limits<std::size_t>::max)() instead"
+        )
     return errors
 
 
