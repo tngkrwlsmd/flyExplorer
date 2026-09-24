@@ -1821,3 +1821,38 @@
 - Repository source/GYP/package reference audit: **PASS (connector evidence)**.
 - PE import/ABI inspection: **NOT TESTED**.
 - Windows compile/runtime/package: **NOT TESTED**.
+
+---
+
+## 2026-09-24 — Final documentation reconciliation for UI/dependency audit
+
+**논리적 작업 단위 / commit**
+- Settings navigation disclosure + hierarchy: `608b166bf17d5847fcb14dfdfc4d4546d6770b86`.
+- Neutral transient hover/pressed palette: `2f84caccfaff6d116a8e75d1377ccf90ddd9fbd5`.
+- Transient-palette invariant regex correction found during post-commit review: `7c40d913163d84e90ec2b47cfcd0061d605f0958`.
+- Dependency/mixed-architecture audit: `12aa5fd5d334f2fb5cabe420bdf4d80964449715`.
+
+**최종 문서 대조**
+- `AGENTS.md` / `.agent-policy/AGENTS.md`: tool choice, source-of-truth, Git safety, runtime-evidence rules remain current; no change required.
+- `README.md`: build toolchain/default active build contract was not changed; no change required.
+- `LOCAL_CI_MANUAL.txt`: active `Release-x64-Unicode | x64` scope and Actions pause policy were not changed; no change required.
+- `.agent-policy/PROJECT.md`: user-reproduced settings/highlight items and dependency/architecture audit are current and keep runtime evidence open.
+- `docs/development/ERROR_HISTORY.md`: each completed logical unit records cause/change/prevention/evidence without promoting NOT TESTED to PASS.
+- `docs/development/DEPENDENCY_ARCH_AUDIT_20260924.md`: current dependency and mixed-architecture findings are recorded.
+
+**최종 connector/source cross-check**
+- `IDC_CFG_TREE` resource and runtime init both preserve root disclosure; expandable roots receive hierarchy emphasis: **PASS (source evidence)**.
+- `ThemePalette.mHover/mPressed` derive from neutral text/elevated colors rather than `mSelection`: **PASS (source evidence)**.
+- New validator guards are scoped to the settings init/resource contract and transient palette assignment property: **PASS (source inspection)**.
+- Existing Dark `CMenuBar` direct paint/print ownership and text contrast floor remain present: **PASS (source evidence)**.
+
+**미실행 검증**
+- `python build/validate_source_invariants.py`: **NOT TESTED** in an executable repository checkout.
+- Release-x64-Unicode | x64 compile/link, functional regression, runtime smoke: **NOT TESTED**.
+- Interactive runtime / Visual Dark / Visual Light / High Contrast / DPI: **NOT RETESTED**.
+- x86 / packaging / installer: **NOT TESTED** and outside the currently active scope.
+
+**main 반영 전 상태**
+- Work branch was compared against `main`: ahead 4, behind 0 at the reconciliation checkpoint.
+- `main` was still `bce54ce2a274a3f27e86f5f5871c9e2964c4c2cc` at that checkpoint.
+- Final branch/main fast-forward is performed only after this reconciliation commit is created.

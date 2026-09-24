@@ -423,6 +423,7 @@ Status: **ACTIVE / user-reproduced runtime failures**. These items are the immed
    - Fix: the settings tree now carries `TVS_LINESATROOT` in the resource and reinforces `TVS_HASBUTTONS | TVS_LINESATROOT` when the dialog initializes. Expandable root categories receive native `TVIS_BOLD` emphasis while preserving the existing tree hierarchy, keyboard behavior, icons, and expand-all startup behavior.
    - Recurrence guard: the source invariant locates the actual `IDC_CFG_TREE` resource line and requires the root disclosure styles, then scopes the runtime hierarchy check to `CfgMainDlg::OnInitDialog()` rather than requiring an unrelated exact call spelling.
    - Connector/source inspection after change: implementation and resource contract updated. Windows compile/runtime/Light/Dark/High Contrast/DPI visual evidence is **NOT TESTED**; this user-reproduced item remains ACTIVE until matching screenshots confirm the affordance is visible and usable.
+   - Implementation/documentation commit: `608b166bf17d5847fcb14dfdfc4d4546d6770b86`.
 
 19. **Transient icon/command highlight is overly accent-tinted — CODE FIXED / RUNTIME NOT RETESTED**
    - Latest user screenshot shows the active/hot command surface around toolbar icons as a conspicuous blue/light tile that is visually stronger than the icon and surrounding neutral Dark chrome.
@@ -431,6 +432,7 @@ Status: **ACTIVE / user-reproduced runtime failures**. These items are the immed
    - Existing `CToolBarEx` Dark hot-image protection remains intact: Dark duplicates the cold image list instead of loading legacy bright HOT artwork, while the neutral ThemePalette surface owns hover/pressed emphasis.
    - Recurrence guard: the Win11 stability validator extracts the actual `mHover`/`mPressed` blend assignments and rejects selection-accent derivation instead of requiring a particular numeric formula. The regex is intentionally scoped to those assignments and uses single regex escapes so valid assignments are recognized.
    - Connector/source inspection after change: shared palette owner updated. Windows compile/runtime/Light/Dark/High Contrast/DPI visual evidence is **NOT TESTED**; the user-reproduced visual issue remains ACTIVE until matching screenshots pass.
+   - Implementation/documentation commit: `2f84caccfaff6d116a8e75d1377ccf90ddd9fbd5`; post-diff invariant escaping correction: `7c40d913163d84e90ec2b47cfcd0061d605f0958`.
 
 20. **Legacy dependency + mixed-architecture audit — DOCUMENTED / MIGRATION NOT PERFORMED**
    - Repository tree/GYP/package/source audit is recorded in `docs/development/DEPENDENCY_ARCH_AUDIT_20260924.md`.
@@ -438,6 +440,7 @@ Status: **ACTIVE / user-reproduced runtime failures**. These items are the immed
    - `libxslt` and vendored gtest have no active flyExplorer build/source consumer observed in current code search and are cleanup candidates, not automatic deletion targets.
    - The updater remains the strongest x86/Multibyte coupling; launcher is a lower-risk candidate for a future isolated x64 feasibility unit.
    - No dependency update/removal or architecture change was performed. Binary import/ABI, Windows build, package and installer evidence remain NOT TESTED.
+   - Audit/documentation commit: `12aa5fd5d334f2fb5cabe420bdf4d80964449715`.
 
 ### Development handoff rule
 
@@ -451,7 +454,7 @@ Status: **ACTIVE / user-reproduced runtime failures**. These items are the immed
 flyExplorer의 UI/runtime 결함은 source invariant나 commit 존재만으로 종결하지 않는다. 사용자 재현이 있는 경우 아래 acceptance case를 해당 변경 범위에 맞게 적용한다.
 
 - **Preferences hang:** `도구 -> 환경설정` 진입을 실제 Windows에서 반복해 UI thread가 멈추지 않고 첫 페이지가 표시되는지 확인한다. Dark/System 전환 또는 GROUPBOX/list/tree modernization을 건드린 변경이면 최소한 관련 theme 상태에서도 다시 연다. 실행하지 못하면 `CODE FIXED / RUNTIME NOT TESTED`로 남긴다.
-- **Dark command/menu visibility:** 사용자 screenshot에서 문제가 보인 surface는 최종 screenshot으로 재확인한다. palette/custom-draw field 값만으로 PASS하지 않으며 menu/toolbar text, icon/glyph, hover/pressed/focus가 실제 dark chrome 위에서 식별 가능해야 한다.
+- **Dark command/menu visibility:** 사용자 screenshot에서 문제가 보인 surface는 최종 screenshot으로 재확인한다. palette/custom-draw field 값만으로 PASS하지 않으며 menu/toolbar text, icon/glyph, hover/pressed/focus가 실제 dark chrome 위에서 식별 가능해야 한다. stale executable을 current source evidence로 오인하지 않도록 가능하면 screenshot과 함께 `bin\x64\build-revision.txt`의 Git revision을 기록한다.
 - **Theme association/re-entry:** `WM_THEMECHANGED`, `WM_SETTINGCHANGE`, `SetWindowTheme` 관련 수정은 settings host/page뿐 아니라 `ListCtrlEx`, `TreeCtrlEx`, 공용 dialog base 등 같은 HWND를 다시 retheme할 수 있는 sibling/base 경로를 함께 검색한다. notification handler 내부에서 association 변경이 다시 시작되는지 확인한다.
 - **Enumeration + mutation:** child HWND/style/z-order를 변경하는 코드에서 sibling/child enumeration을 함께 수행하면 live `GetNextWindow` chain을 사용하지 않는다. 먼저 HWND snapshot을 만들거나 mutation과 traversal phase를 분리한다.
 - **Elevation:** 일반 사용자 shell에서 실행한 `fxfile.exe`가 non-elevated인지 확인하고, installer -> launcher -> fxfile, startup helper, shortcut/shell path를 각각 parent/token chain으로 본다. manifest의 `asInvoker`만으로 권한 PASS를 선언하지 않는다.
