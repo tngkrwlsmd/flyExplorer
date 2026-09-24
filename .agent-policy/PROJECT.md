@@ -473,6 +473,15 @@ Status: **ACTIVE / user-reproduced runtime failures**. These items are the immed
    - Runtime cause cannot be conclusively attributed without instrumented Windows pixel/notification trace; new x64 compile and matching Dark/Light/HC menu interaction screenshots remain NOT TESTED.
    - Logical-unit code/documentation commit: `aa3c2d05b76c6ff2d6dece824992b80d88b17505`.
 
+25. **GitHub Actions storage reached 90% of included allowance — PREVENTION CODED / ONE-TIME CLEANUP PENDING**
+   - GitHub billing alert reports 0.45 GB used of 0.5 GB included Actions storage. Repository inspection found 198 historical workflow runs; sampled successful legacy Windows runs retain duplicate non-expired `flyExplorer-release-package` artifacts around 62–63 MB each, while newer audit runs expose no stored artifact. Eight such packages alone are roughly enough to explain the warning.
+   - Current workflows already have no automatic push/PR trigger and no artifact-upload step, so simply changing the current build job would not reclaim the historical storage.
+   - Prevention: source invariant now rejects `actions/upload-artifact`, `actions/cache`, and `actions/upload-pages-artifact` in hosted workflows unless this policy is deliberately redesigned. Local/package validation remains the preferred evidence path during the budget pause.
+   - Cleanup tool: `build/actions_storage_cleanup.py` lists repository artifacts with a dry-run default, keeps the newest matching release package, can delete older duplicates only with `--apply`, and can lower repository artifact/log retention with `--retention-days`. It deliberately runs locally rather than creating another Actions run.
+   - One-time account action remains required because the connected GitHub tool exposes artifact reads but no artifact-delete/retention-write operation. Run the documented dry-run, review IDs/bytes, then apply with a GitHub token that has Actions write; retention change additionally needs repository Administration write (classic `repo` scope is also supported by GitHub).
+   - This repository fix cannot prove that every byte in the account-level warning comes from flyExplorer; billing storage is account-wide. After cleanup, recheck GitHub billing/usage and inspect other repositories only if the warning remains.
+   - Storage prevention/tool/documentation commit: `be27fe0e886f88896cba9cb58df45367adf69e02`; Python 3.9 compatibility correction: `57ac0fb07641d80ac1f8308d8586384944814a66`.
+
 ### Development handoff rule
 
 - Every new user-requested development item is added to this section (or its successor) before implementation starts.

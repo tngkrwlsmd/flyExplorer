@@ -1968,3 +1968,56 @@
 - 전체 Python validator 실행 및 Release-x64-Unicode | x64 local CI, native functional/smoke: NOT TESTED.
 - 실제 Windows Dark/Light/High Contrast/100%+high DPI/keyboard/interactive visual regression: NOT TESTED.
 - 본 커밋 이후 main 반영 여부는 merge 결과 확인으로만 보고한다. 시각적 이슈는 matching runtime screenshot 통과 전 CLOSED 금지.
+
+---
+
+## 2026-09-24 — GitHub Actions storage reached 90% of included quota
+
+**사용자 증거**
+- GitHub 알림에서 account Actions storage 0.45 GB / 0.5 GB(90%) 사용 경고가 확인됐다.
+
+**저장소 조사**
+- flyExplorer에는 Actions run history가 198건 남아 있다.
+- 현재 `.github/workflows/windows-build.yml`과 `policy-validation.yml`은 push/PR 자동 실행이 없고 explicit `workflow_dispatch`만 남아 있으며 현재 source에는 artifact upload step이 없다.
+- 과거 Windows success run을 표본 조회한 결과 `flyExplorer-release-package`가 약 62–63 MB씩 미만료 상태로 반복 보관돼 있다. 일부 run의 runtime/upchecker artifacts는 이미 expired였지만 release package는 남아 있었다.
+- 최근 one-off Release/Dark audit 두 run의 artifact list는 비어 있었다.
+
+**원인/판단**
+- 현재 workflow가 계속 새 storage를 생성하는 문제라기보다 과거 CI에서 반복 업로드한 release package의 retention이 누적된 것이 flyExplorer 측 주요 원인으로 보인다.
+- 8개의 63 MB package만으로 약 0.49 GiB이므로 알림 규모와 일치하지만, GitHub billing 경고는 account 단위이므로 flyExplorer가 100% 원인이라고 단정하지 않는다.
+
+**수정**
+- `build/actions_storage_cleanup.py`를 추가했다. 기본은 dry-run, 동일 이름 artifact 중 최신 1개 보존, `--apply` 때만 과거 중복을 DELETE하고 선택적으로 repository artifact/log retention을 변경한다.
+- cleanup 자체가 새 hosted run을 만들지 않도록 로컬 도구로 구현했다.
+- source invariant가 hosted workflow의 `actions/upload-artifact`, `actions/cache`, `actions/upload-pages-artifact` 재도입을 금지한다.
+- `LOCAL_CI_MANUAL.txt`에 dry-run/apply 및 token permission을 기록했다.
+
+**검증 상태**
+- GitHub connector repository/workflow/history/artifact sample audit: PASS.
+- Connected GitHub tool does not expose artifact DELETE or repository retention write, so historical storage reclamation itself: NOT APPLIED.
+- Cleanup script full live dry-run/apply with user token: NOT TESTED.
+- GitHub billing usage after cleanup: NOT TESTED.
+
+**Post-commit compatibility review**
+- 첫 cleanup-tool draft에 Python 3.10의 PEP 604 `|` union annotation이 들어간 것을 발견했다. flyExplorer의 documented minimum은 Python 3.9+이므로 main 반영 전에 `typing.Optional`/`Tuple`/`Dict` 표기로 수정했다.
+- validator가 cleanup script의 Python 3.9-compatible annotation contract도 확인하도록 보완했다.
+- 이 보정 commit 전 live GitHub API 실행은 하지 않았다.
+
+---
+
+## 2026-09-24 — Actions storage prevention final reconciliation
+
+**논리 작업 단위 commit**
+- storage growth prevention + local cleanup tool + documentation: `be27fe0e886f88896cba9cb58df45367adf69e02`.
+- Python 3.9 compatibility correction found during post-commit review: `57ac0fb07641d80ac1f8308d8586384944814a66`.
+
+**현재 repository contract**
+- hosted workflow는 explicit manual dispatch만 유지하고 `actions/upload-artifact`, `actions/cache`, `actions/upload-pages-artifact`를 사용하지 않는다.
+- source invariant가 이 hosted storage producer 재도입을 차단한다.
+- local cleanup은 기본 dry-run이며 `--apply` 없이는 삭제/retention 변경을 하지 않는다.
+- 동일 이름 `flyExplorer-release-package`는 기본적으로 최신 1개를 보존한다.
+
+**미완료 외부 작업**
+- 현재 연결된 GitHub connector에는 artifact DELETE 및 repository retention WRITE operation이 노출되지 않아 이미 저장된 historical package의 실제 삭제는 수행하지 못했다.
+- `build/actions_storage_cleanup.py`를 사용자 GitHub credential로 실행한 뒤 GitHub Billing/Usage가 감소했는지 확인해야 한다.
+- account-level storage가 여전히 높으면 flyExplorer 외 repository가 원인인지 추가 조사한다.

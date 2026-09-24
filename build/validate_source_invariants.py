@@ -2567,6 +2567,61 @@ def validate_active_ci_scope_documentation() -> list[str]:
     return errors
 
 
+def validate_actions_storage_budget_contract() -> list[str]:
+    """Prevent hosted CI artifact/cache storage from silently growing again."""
+
+    errors: list[str] = []
+    workflow_dir = ROOT / ".github" / "workflows"
+    cleanup_path = ROOT / "build" / "actions_storage_cleanup.py"
+
+    for path in sorted(workflow_dir.glob("*.yml")):
+        try:
+            source = path.read_text(encoding="utf-8", errors="replace")
+        except OSError as exc:
+            errors.append(
+                f"{path.relative_to(ROOT)}: cannot read Actions storage contract: {exc}"
+            )
+            continue
+
+        for forbidden in (
+            "actions/upload-artifact",
+            "actions/cache",
+            "actions/upload-pages-artifact",
+        ):
+            if forbidden in source:
+                errors.append(
+                    f"{path.relative_to(ROOT)}: hosted storage producer returned "
+                    f"{forbidden}; use local/package evidence or an explicitly "
+                    "approved short-lived exception"
+                )
+
+    try:
+        cleanup = cleanup_path.read_text(encoding="utf-8", errors="replace")
+    except OSError as exc:
+        errors.append(
+            f"{cleanup_path.relative_to(ROOT)}: Actions storage cleanup tool missing: {exc}"
+        )
+    else:
+        for token in (
+            "DRY RUN: no GitHub data was changed",
+            "--keep-newest",
+            "--retention-days",
+            "--apply",
+            "/actions/artifacts/",
+            "/actions/permissions/artifact-and-log-retention",
+            "flyExplorer-release-package",
+            "Optional[int]",
+            "Optional[Dict[str, object]]",
+        ):
+            if token not in cleanup:
+                errors.append(
+                    "build/actions_storage_cleanup.py: "
+                    f"missing safe storage-cleanup contract token {token}"
+                )
+
+    return errors
+
+
 def validate_installer_smoke_wiring() -> list[str]:
     """Protect the non-destructive installer/shell smoke contract."""
 
@@ -4090,6 +4145,7 @@ def main() -> int:
     errors.extend(validate_functional_test_wiring())
     errors.extend(validate_local_ci_warning_policy_wiring())
     errors.extend(validate_active_ci_scope_documentation())
+    errors.extend(validate_actions_storage_budget_contract())
     errors.extend(validate_installer_smoke_wiring())
     errors.extend(validate_win11_stability_regressions())
     errors.extend(validate_runtime_ui_audit_regressions())
