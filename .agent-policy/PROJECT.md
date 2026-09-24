@@ -515,6 +515,12 @@ Status: **ACTIVE / user-reproduced runtime failures**. These items are the immed
     - A bundled GFL SDK license in `CREDITS` has additional restrictions. Combined-installer rights, exact binary provenance and license compatibility remain NOT VERIFIED; external publication needs a separate documented review. See `docs/development/DISTRIBUTION_LICENSE_REVIEW.md`.
     - Static text and NSIS-script checks are the only new evidence. Windows NSIS compile/install/uninstall and legal verification: NOT TESTED. The precompiled CHM remains legacy until help regeneration work completes.
 
+31. **Generated HTML Help instead of stale shipped CHM — SOURCE UPDATED / WINDOWS COMPILATION NOT TESTED**
+    - The tracked, legacy `dist/fxfile.chm` was generated output rather than up-to-date source and is removed from Git; `.gitignore` now excludes it and disposable `dist/.htmlhelp-build/`. The Help command still uses `fxfile.chm` beside the executable, so installer functionality is preserved by requiring actual regeneration, not by removing the Help command.
+    - `docs/htmlhelp/flyExplorer.hhp` now targets `fxfile.chm`; `build/rebuild_htmlhelp.py` performs a source/TOC/index preflight, stages the repository's UTF-8 HTML topics and localized index into a disposable build directory, and invokes an independently installed Microsoft HTML Help Workshop compiler for `--build`. `dist/make_installer.bat` always rebuilds CHM, clears previous installer output and refuses a missing/invalid result; the source invariant invokes the read-only `--check` mode.
+    - Two broken legacy keyword-index topic references were repaired. The help landing page states the current `2.0.4-dev` Windows 10/11 development scope while marking old pages as historical; the historical about page now carries a warning rather than silently claiming old contact/compatibility information is current.
+    - Syntax, disposable staging and negative-path unit fixtures for the generation helper passed outside the connected repository. The exact full Windows HTML Help Workshop compile, generated CHM topic browsing, package/install/uninstall and actual product Help runtime were NOT TESTED. This work does not authorize GitHub Actions or external distribution; third-party licensing remains open in `docs/development/DISTRIBUTION_LICENSE_REVIEW.md`.
+
 ### Development handoff rule
 
 - Every new user-requested development item is added to this section (or its successor) before implementation starts.

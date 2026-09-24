@@ -418,8 +418,18 @@ After those builds are available under `bin`, run from the repository root:
     dist\package.bat
 
 Packaging uses the vendored `dist\7zip\7za.exe` and
-`dist\nsis\makensis.exe`, so the package build does not download an external
-NSIS toolchain. It creates:
+`dist\nsis\makensis.exe`. Creating an installer also requires an installed
+Microsoft HTML Help Workshop `hhc.exe`; specify its full path through
+`HHC_EXE` if it is not found in PATH or Program Files. No tools are downloaded.
+
+`docs/htmlhelp/` is the canonical help source. Run
+`python build\rebuild_htmlhelp.py --check` for a read-only source/index
+and packaging-wiring preflight. `--stage` builds a disposable staging tree
+in `dist\.htmlhelp-build`, normalizing legacy HTML encoding metadata.
+Every `dist\make_installer.bat` invocation (including those from
+`dist\package.bat`) runs `--build` first and checks for a freshly compiled
+CHM. A missing compiler or invalid result aborts packaging instead of
+reusing a stale binary. Generated `dist\fxfile.chm` is not tracked. It creates:
 
     dist\fxfile_v2.0.4-dev.exe
     dist\fxfile_v2.0.4-dev_x64_portable.zip
@@ -436,10 +446,12 @@ run or uploaded by GitHub Actions; build the required release configurations and
 run `dist\package.bat` plus `build\validate_package.ps1 -DistDir dist` locally
 when preparing a release.
 
-The installer stages the precompiled legacy `dist/fxfile.chm`.
-Editing `docs/htmlhelp/Html/flyExplorer/requirements.htm` does not regenerate
-that binary. Its user-facing help remains historical until a separately
-authorized Windows help/package rebuild and inspection are performed.
+The previously tracked, stale `dist/fxfile.chm` has been removed.
+The new landing page states the current development baseline and marks
+older reference topics as historical; actual Windows CHM compilation,
+legacy-topic visual inspection and installer tests remain NOT TESTED.
+The product Help command still needs a real generated `fxfile.chm`
+alongside the executable or in the installed payload.
 
 Package Build/Payload PASS is not clean-install evidence. The repository now
 contains `build\installer_smoke.ps1` plus an NSIS

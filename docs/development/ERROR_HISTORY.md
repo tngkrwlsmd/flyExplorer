@@ -2159,3 +2159,42 @@ this checkpoint until regenerated or excluded.
 **Evidence:** Text and installer-script consistency inspection: PASS.
 Legal/third-party rights, Windows installer, CHM binary, package and
 runtime: NOT TESTED. Hosted Actions: NOT RUN.
+
+---
+
+## 2026-09-24 — Stale tracked CHM replaced with fail-closed help generation
+
+**Observed error / requirement**
+- The previous `docs/htmlhelp/flyExplorer.hhp` compiled to
+  `flyExplorer.chm` while `dist/setup.nsi` and the running product
+  required `fxfile.chm`. The tracked `dist/fxfile.chm` was a legacy,
+  unregenerated binary despite updates to its requirements/license sources.
+- The keyword index also contained two broken topic links:
+  `html\\datetime.htm` and `html\\function\\using.htm`.
+
+**Correction / prevention**
+- Make the canonical HTML Help project output `fxfile.chm`, correct both
+  index targets, update the opening page with the current development
+  baseline and label the old feature/reference pages as historical.
+- Introduce offline `build/rebuild_htmlhelp.py --check/--stage/--build`;
+  stage source topics with corrected UTF-8 HTML charset metadata and
+  Korean CP949 project/index text only in generated staging. Compile
+  only with an existing Microsoft `hhc.exe`, validate the generated
+  CHM signature and fail closed without reusing a prior CHM.
+- Call the generator from every `dist/make_installer.bat` path and add
+  its `--check` to the source-invariant preflight. Ignore generated
+  CHM/staging and remove the old tracked `dist/fxfile.chm`.
+- Synchronize README, AGENTS, LOCAL_CI_MANUAL and the install-facing
+  README/licensing review; retain historical help source content.
+
+**Evidence / unresolved**
+- Generator Python syntax plus synthetic-source `--check`, `--stage`,
+  invalid-index rejection and no-compiler fail-closed behavior: PASS
+  (isolated disposable fixture only; not proof of real repository CHM).
+- Repository static index/source and packaging contract inspection:
+  source-level reviewed. Actual installed Windows `hhc.exe` run,
+  generated CHM topic navigation, x64 product Help runtime and installer/
+  package regression: NOT TESTED; historical feature pages remain
+  intentionally identified as historical. GitHub Actions: NOT RUN.
+- Third-party GFL SDK redistribution rights remain NOT VERIFIED; do
+  not publish a combined installer based on this cleanup alone.

@@ -25,6 +25,17 @@ Historical `dist/history.txt` and source-file attributions are retained.
 The vendored NSIS `COPYING` and active third-party runtime/source notices
 are not removed or rewritten.
 
+## HTML Help source and installer generation
+
+The old tracked `dist/fxfile.chm` was an out-of-date compiled copy and is
+no longer authoritative. `build/rebuild_htmlhelp.py --check` validates
+source/index/package contracts without modifying the tree, whereas
+`--build` needs Microsoft HTML Help Workshop and regenerates the installer
+CHM from the tracked help sources. The new landing page separates current
+development claims from historical topic pages. A missing compiler aborts
+packaging rather than reusing an old binary. Windows CHM compiler/installer
+results are NOT TESTED; this change does not resolve third-party rights.
+
 ## Outstanding tasks before public distribution
 
 - Identify current copyright/rightsholders and confirm that the repository

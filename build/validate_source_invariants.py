@@ -4147,6 +4147,28 @@ def validate_modern_ui_registration() -> list[str]:
     return errors
 
 
+def validate_html_help_package_source() -> list[str]:
+    """Check help input/topic links before any GYP generation or packaging."""
+    script = ROOT / "build" / "rebuild_htmlhelp.py"
+    try:
+        proc = subprocess.run(
+            [sys.executable, str(script), "--check"],
+            cwd=ROOT,
+            capture_output=True,
+            text=True,
+            timeout=30,
+            check=False,
+        )
+    except (OSError, subprocess.TimeoutExpired) as exc:
+        return [f"HTML Help source preflight unavailable: {exc}"]
+    if proc.returncode:
+        return [
+            "HTML Help source/prepackaging contract failed: "
+            + (proc.stderr.strip() or proc.stdout.strip() or str(proc.returncode))
+        ]
+    return []
+
+
 def main() -> int:
     errors = validate_translation_units()
     errors.extend(validate_modern_subclass_forwarding())
@@ -4170,6 +4192,7 @@ def main() -> int:
     errors.extend(validate_active_ci_scope_documentation())
     errors.extend(validate_actions_storage_budget_contract())
     errors.extend(validate_installer_smoke_wiring())
+    errors.extend(validate_html_help_package_source())
     errors.extend(validate_win11_stability_regressions())
     errors.extend(validate_runtime_ui_audit_regressions())
     errors.extend(validate_modern_ui_registration())

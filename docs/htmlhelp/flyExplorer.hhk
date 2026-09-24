@@ -6,221 +6,221 @@
 </HEAD><BODY>
 <UL>
 	<LI> <OBJECT type="text/sitemap">
-		<param name="Name" value="°Ë»öÇÏ±â">
+		<param name="Name" value="ê²€ìƒ‰í•˜ê¸°">
 		<param name="Local" value="html\function\search.htm">
 		</OBJECT>
 	<LI> <OBJECT type="text/sitemap">
-		<param name="Name" value="°øÀ¯ ÁßÀÎ ÇÁ·Î¼¼½º º¸±â">
+		<param name="Name" value="ê³µìœ  ì¤‘ì¸ í”„ë¡œì„¸ìŠ¤ ë³´ê¸°">
 		<param name="Local" value="html\function\process.htm">
 		</OBJECT>
 	<LI> <OBJECT type="text/sitemap">
-		<param name="Name" value="±×¸² º¸±â">
+		<param name="Name" value="ê·¸ë¦¼ ë³´ê¸°">
 		<param name="Local" value="html\function\imgviewer.htm">
 		</OBJECT>
 	<LI> <OBJECT type="text/sitemap">
-		<param name="Name" value="±âº» »ç¿ë¹ý">
+		<param name="Name" value="ê¸°ë³¸ ì‚¬ìš©ë²•">
 		<param name="Local" value="html\function\basic.htm">
 		</OBJECT>
 	<LI> <OBJECT type="text/sitemap">
-		<param name="Name" value="´ÜÃàÅ° È°¿ë">
+		<param name="Name" value="ë‹¨ì¶•í‚¤ í™œìš©">
 		<param name="Local" value="html\shortkey.htm">
 		</OBJECT>
 	<LI> <OBJECT type="text/sitemap">
-		<param name="Name" value="´ëÇÏ¿©">
+		<param name="Name" value="ëŒ€í•˜ì—¬">
 		<param name="Local" value="html\flyExplorer\about.htm">
 		<param name="WindowName" value="main">
 		</OBJECT>
 	<LI> <OBJECT type="text/sitemap">
-		<param name="Name" value="µµ½º ¸í·É ½ÇÇà">
+		<param name="Name" value="ë„ìŠ¤ ëª…ë ¹ ì‹¤í–‰">
 		<param name="Local" value="html\function\doscmd.htm">
 		</OBJECT>
 	<LI> <OBJECT type="text/sitemap">
-		<param name="Name" value="µå¶óÀÌºê µµ±¸">
+		<param name="Name" value="ë“œë¼ì´ë¸Œ ë„êµ¬">
 		<param name="Local" value="html\function\drive.htm">
 		</OBJECT>
 	<LI> <OBJECT type="text/sitemap">
-		<param name="Name" value="¸Þ´º - µµ±¸">
+		<param name="Name" value="ë©”ë‰´ - ë„êµ¬">
 		<param name="Local" value="html\menu\tool.htm">
 		</OBJECT>
 	<LI> <OBJECT type="text/sitemap">
-		<param name="Name" value="¸Þ´º - µµ¿ò¸»">
+		<param name="Name" value="ë©”ë‰´ - ë„ì›€ë§">
 		<param name="Local" value="html\menu\help.htm">
 		</OBJECT>
 	<LI> <OBJECT type="text/sitemap">
-		<param name="Name" value="¸Þ´º - º¸±â">
+		<param name="Name" value="ë©”ë‰´ - ë³´ê¸°">
 		<param name="Local" value="html\menu\view.htm">
 		</OBJECT>
 	<LI> <OBJECT type="text/sitemap">
-		<param name="Name" value="¸Þ´º - ÀÌµ¿">
+		<param name="Name" value="ë©”ë‰´ - ì´ë™">
 		<param name="Local" value="html\menu\go.htm">
 		</OBJECT>
 	<LI> <OBJECT type="text/sitemap">
-		<param name="Name" value="¸Þ´º - Ã¢">
+		<param name="Name" value="ë©”ë‰´ - ì°½">
 		<param name="Local" value="html\menu\window.htm">
 		</OBJECT>
 	<LI> <OBJECT type="text/sitemap">
-		<param name="Name" value="¸Þ´º - ÆíÁý">
+		<param name="Name" value="ë©”ë‰´ - íŽ¸ì§‘">
 		<param name="Local" value="html\menu\edit.htm">
 		</OBJECT>
 	<LI> <OBJECT type="text/sitemap">
-		<param name="Name" value="¸Þ´ºº° ±â´É µÑ·¯º¸±â">
+		<param name="Name" value="ë©”ë‰´ë³„ ê¸°ëŠ¥ ë‘˜ëŸ¬ë³´ê¸°">
 		<param name="Local" value="html\menu\menu.htm">
 		</OBJECT>
 	<LI> <OBJECT type="text/sitemap">
-		<param name="Name" value="»ç¿ëÀÚ ÀÎÅÍÆäÀÌ½º">
+		<param name="Name" value="ì‚¬ìš©ìž ì¸í„°íŽ˜ì´ìŠ¤">
 		<param name="Local" value="html\ui\ui.htm">
 		</OBJECT>
 	<LI> <OBJECT type="text/sitemap">
-		<param name="Name" value="»õ·Î¿î Á¡">
+		<param name="Name" value="ìƒˆë¡œìš´ ì ">
 		<param name="Local" value="html\whatsnews.htm">
 		</OBJECT>
 	<LI> <OBJECT type="text/sitemap">
-		<param name="Name" value="¼Ó¼º/³¯Â¥ ¹Ù²Ù±â">
-		<param name="Local" value="html\datetime.htm">
+		<param name="Name" value="ì†ì„±/ë‚ ì§œ ë°”ê¾¸ê¸°">
+		<param name="Local" value="html\function\datetime.htm">
 		</OBJECT>
 	<LI> <OBJECT type="text/sitemap">
-		<param name="Name" value="½ºÅ¸ÀÏ ¿É¼Ç">
+		<param name="Name" value="ìŠ¤íƒ€ì¼ ì˜µì…˜">
 		<param name="Local" value="html\function\style.htm">
 		</OBJECT>
 	<LI> <OBJECT type="text/sitemap">
-		<param name="Name" value="½Ã½ºÅÛ ¿ä±¸ »çÇ×">
+		<param name="Name" value="ì‹œìŠ¤í…œ ìš”êµ¬ ì‚¬í•­">
 		<param name="Local" value="html\flyExplorer\requirements.htm">
 		</OBJECT>
 	<LI> <OBJECT type="text/sitemap">
-		<param name="Name" value="½ÃÀÛÇÕ½Ã´Ù!">
+		<param name="Name" value="ì‹œìž‘í•©ì‹œë‹¤!">
 		<param name="Local" value="html\start.htm">
 		</OBJECT>
 	<LI> <OBJECT type="text/sitemap">
-		<param name="Name" value="¿¬°á Ç×¸ñ">
+		<param name="Name" value="ì—°ê²° í•­ëª©">
 		<param name="Local" value="html\function\link.htm">
 		</OBJECT>
 	<LI> <OBJECT type="text/sitemap">
-		<param name="Name" value="ÀÌ¹ÌÁö Æ÷¸ä ¹Ù²Ù±â">
+		<param name="Name" value="ì´ë¯¸ì§€ í¬ë©§ ë°”ê¾¸ê¸°">
 		<param name="Local" value="html\function\imgcvt.htm">
 		</OBJECT>
 	<LI> <OBJECT type="text/sitemap">
-		<param name="Name" value="ÀÎ¼âÇÏ±â">
+		<param name="Name" value="ì¸ì‡„í•˜ê¸°">
 		<param name="Local" value="html\function\print.htm">
 		</OBJECT>
 	<LI> <OBJECT type="text/sitemap">
-		<param name="Name" value="Ã¢ ºÐÇÒ">
+		<param name="Name" value="ì°½ ë¶„í• ">
 		<param name="Local" value="html\function\split.htm">
 		</OBJECT>
 	<LI> <OBJECT type="text/sitemap">
-		<param name="Name" value="ÅØ½ºÆ® ¹®¼­ ÇÕÄ¡±â">
+		<param name="Name" value="í…ìŠ¤íŠ¸ ë¬¸ì„œ í•©ì¹˜ê¸°">
 		<param name="Local" value="html\function\textjoin.htm">
 		</OBJECT>
 	<LI> <OBJECT type="text/sitemap">
-		<param name="Name" value="ÅØ½ºÆ® ¹®¼­·Î ³»º¸³»±â">
+		<param name="Name" value="í…ìŠ¤íŠ¸ ë¬¸ì„œë¡œ ë‚´ë³´ë‚´ê¸°">
 		<param name="Local" value="html\function\textout.htm">
 		</OBJECT>
 	<LI> <OBJECT type="text/sitemap">
-		<param name="Name" value="Æ¯Â¡ µÑ·¯º¸±â">
+		<param name="Name" value="íŠ¹ì§• ë‘˜ëŸ¬ë³´ê¸°">
 		<param name="Local" value="html\flyExplorer\overview.htm">
 		</OBJECT>
 	<LI> <OBJECT type="text/sitemap">
-		<param name="Name" value="Æ¯Â¡ÀûÀÎ ±â´É µÑ·¯º¸±â">
-		<param name="Local" value="html\function\using.htm">
+		<param name="Name" value="íŠ¹ì§•ì ì¸ ê¸°ëŠ¥ ë‘˜ëŸ¬ë³´ê¸°">
+		<param name="Local" value="html\function\function.htm">
 		</OBJECT>
 	<LI> <OBJECT type="text/sitemap">
-		<param name="Name" value="ÆÄÀÏ - ÆÄÀÏ">
+		<param name="Name" value="íŒŒì¼ - íŒŒì¼">
 		<param name="Local" value="html\menu\file.htm">
 		</OBJECT>
 	<LI> <OBJECT type="text/sitemap">
-		<param name="Name" value="ÆÄÀÏ ¼öÁýÇÔ">
+		<param name="Name" value="íŒŒì¼ ìˆ˜ì§‘í•¨">
 		<param name="Local" value="html\function\fileclt.htm">
 		</OBJECT>
 	<LI> <OBJECT type="text/sitemap">
-		<param name="Name" value="ÆÄÀÏ ÀÌ¸§ ¹Ù²Ù±â">
+		<param name="Name" value="íŒŒì¼ ì´ë¦„ ë°”ê¾¸ê¸°">
 		<param name="Local" value="html\function\rename.htm">
 		</OBJECT>
 	<LI> <OBJECT type="text/sitemap">
-		<param name="Name" value="ÇÊÅÍ¸µ ±â´É">
+		<param name="Name" value="í•„í„°ë§ ê¸°ëŠ¥">
 		<param name="Local" value="html\function\filtering.htm">
 		</OBJECT>
 	<LI> <OBJECT type="text/sitemap">
-		<param name="Name" value="È¯°æ º¯¼ö">
-		<param name="Name" value="È¯°æ º¯¼ö">
+		<param name="Name" value="í™˜ê²½ ë³€ìˆ˜">
+		<param name="Name" value="í™˜ê²½ ë³€ìˆ˜">
 		<param name="Local" value="html\function\envariable.htm">
 		</OBJECT>
 	<LI> <OBJECT type="text/sitemap">
-		<param name="Name" value="È¯°æ ¼³Á¤">
+		<param name="Name" value="í™˜ê²½ ì„¤ì •">
 		<param name="Local" value="html\config\config.htm">
 		</OBJECT>
 	<LI> <OBJECT type="text/sitemap">
-		<param name="Name" value="È¯°æ ¼³Á¤ - °í±Þ">
+		<param name="Name" value="í™˜ê²½ ì„¤ì • - ê³ ê¸‰">
 		<param name="Local" value="html\config\advanced.htm">
 		</OBJECT>
 	<LI> <OBJECT type="text/sitemap">
-		<param name="Name" value="È¯°æ ¼³Á¤ - ±â´É">
+		<param name="Name" value="í™˜ê²½ ì„¤ì • - ê¸°ëŠ¥">
 		<param name="Local" value="html\config\function.htm">
 		</OBJECT>
 	<LI> <OBJECT type="text/sitemap">
-		<param name="Name" value="È¯°æ ¼³Á¤ - ±â´É - µå·¡±× µå·Ó">
+		<param name="Name" value="í™˜ê²½ ì„¤ì • - ê¸°ëŠ¥ - ë“œëž˜ê·¸ ë“œë¡­">
 		<param name="Local" value="html\config\func_dragdrop.htm">
 		</OBJECT>
 	<LI> <OBJECT type="text/sitemap">
-		<param name="Name" value="È¯°æ ¼³Á¤ - ±â´É - ºÐÇÒ Ã¢">
+		<param name="Name" value="í™˜ê²½ ì„¤ì • - ê¸°ëŠ¥ - ë¶„í•  ì°½">
 		<param name="Local" value="html\config\func_splitview.htm">
 		</OBJECT>
 	<LI> <OBJECT type="text/sitemap">
-		<param name="Name" value="È¯°æ ¼³Á¤ - ±â´É - ¿¬°á Ç×¸ñ">
+		<param name="Name" value="í™˜ê²½ ì„¤ì • - ê¸°ëŠ¥ - ì—°ê²° í•­ëª©">
 		<param name="Local" value="html\config\func_link.htm">
 		</OBJECT>
 	<LI> <OBJECT type="text/sitemap">
-		<param name="Name" value="È¯°æ ¼³Á¤ - ±â´É - ÀÌ¸§ ¹Ù²Ù±â">
+		<param name="Name" value="í™˜ê²½ ì„¤ì • - ê¸°ëŠ¥ - ì´ë¦„ ë°”ê¾¸ê¸°">
 		<param name="Local" value="html\config\func_rename.htm">
 		</OBJECT>
 	<LI> <OBJECT type="text/sitemap">
-		<param name="Name" value="È¯°æ ¼³Á¤ - ±â´É - ÀÚµ¿ °»½Å">
+		<param name="Name" value="í™˜ê²½ ì„¤ì • - ê¸°ëŠ¥ - ìžë™ ê°±ì‹ ">
 		<param name="Local" value="html\config\func_refresh.htm">
 		</OBJECT>
 	<LI> <OBJECT type="text/sitemap">
-		<param name="Name" value="È¯°æ ¼³Á¤ - ±â´É - ÆÄÀÏ ¼öÁý">
+		<param name="Name" value="í™˜ê²½ ì„¤ì • - ê¸°ëŠ¥ - íŒŒì¼ ìˆ˜ì§‘">
 		<param name="Local" value="html\config\func_fileclt.htm">
 		</OBJECT>
 	<LI> <OBJECT type="text/sitemap">
-		<param name="Name" value="È¯°æ ¼³Á¤ - ½ºÅ¸ÀÏ">
+		<param name="Name" value="í™˜ê²½ ì„¤ì • - ìŠ¤íƒ€ì¼">
 		<param name="Local" value="html\config\style.htm">
 		</OBJECT>
 	<LI> <OBJECT type="text/sitemap">
-		<param name="Name" value="È¯°æ ¼³Á¤ - ÀÏ¹Ý">
+		<param name="Name" value="í™˜ê²½ ì„¤ì • - ì¼ë°˜">
 		<param name="Local" value="html\config\general.htm">
 		</OBJECT>
 	<LI> <OBJECT type="text/sitemap">
-		<param name="Name" value="È¯°æ ¼³Á¤ - ÄÁÅÙÃ÷">
+		<param name="Name" value="í™˜ê²½ ì„¤ì • - ì»¨í…ì¸ ">
 		<param name="Local" value="html\config\contents.htm">
 		</OBJECT>
 	<LI> <OBJECT type="text/sitemap">
-		<param name="Name" value="È¯°æ ¼³Á¤ - Å½»öÃ¢">
+		<param name="Name" value="í™˜ê²½ ì„¤ì • - íƒìƒ‰ì°½">
 		<param name="Local" value="html\config\explorer.htm">
 		</OBJECT>
 	<LI> <OBJECT type="text/sitemap">
-		<param name="Name" value="È¯°æ ¼³Á¤ - Å½»öÃ¢ - º¸±â ¼³Á¤">
+		<param name="Name" value="í™˜ê²½ ì„¤ì • - íƒìƒ‰ì°½ - ë³´ê¸° ì„¤ì •">
 		<param name="Local" value="html\config\explorer_viewset.htm">
 		</OBJECT>
 	<LI> <OBJECT type="text/sitemap">
-		<param name="Name" value="È¯°æ ¼³Á¤ - Å½»öÃ¢ - ½æ³×ÀÏ">
+		<param name="Name" value="í™˜ê²½ ì„¤ì • - íƒìƒ‰ì°½ - ì¸ë„¤ì¼">
 		<param name="Local" value="html\config\explorer_thumbnail.htm">
 		</OBJECT>
 	<LI> <OBJECT type="text/sitemap">
-		<param name="Name" value="È¯°æ ¼³Á¤ - Å½»öÃ¢ - Ã¢ #1">
+		<param name="Name" value="í™˜ê²½ ì„¤ì • - íƒìƒ‰ì°½ - ì°½ #1">
 		<param name="Local" value="html\config\explorer_window1.htm">
 		</OBJECT>
 	<LI> <OBJECT type="text/sitemap">
-		<param name="Name" value="È¯°æ ¼³Á¤ - Å½»öÃ¢ - Ã¢ #2">
+		<param name="Name" value="í™˜ê²½ ì„¤ì • - íƒìƒ‰ì°½ - ì°½ #2">
 		<param name="Local" value="html\config\explorer_window2.htm">
 		</OBJECT>
 	<LI> <OBJECT type="text/sitemap">
-		<param name="Name" value="È¯°æ ¼³Á¤ - Å½»öÃ¢ - Ç¥½Ã">
+		<param name="Name" value="í™˜ê²½ ì„¤ì • - íƒìƒ‰ì°½ - í‘œì‹œ">
 		<param name="Local" value="html\config\explorer_display.htm">
 		</OBJECT>
 	<LI> <OBJECT type="text/sitemap">
-		<param name="Name" value="È¯°æ ¼³Á¤ - Å½»öÃ¢ - ÇÊÅÍ¸µ">
+		<param name="Name" value="í™˜ê²½ ì„¤ì • - íƒìƒ‰ì°½ - í•„í„°ë§">
 		<param name="Local" value="html\config\explorer_filtering.htm">
 		</OBJECT>
 	<LI> <OBJECT type="text/sitemap">
-		<param name="Name" value="È¯°æ ¼³Á¤ - Ç¥½Ã">
+		<param name="Name" value="í™˜ê²½ ì„¤ì • - í‘œì‹œ">
 		<param name="Local" value="html\config\display.htm">
 		</OBJECT>
 	<LI> <OBJECT type="text/sitemap">

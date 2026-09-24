@@ -27,6 +27,10 @@ ipch/
 /dist/fxfile_v*_portable.zip
 /dist/SHA256SUMS.txt
 
+# Compiled help and temporary, reproducible HTML Help Workshop staging
+/dist/fxfile.chm
+/dist/.htmlhelp-build/
+
 # Local CI and developer logs
 /logs/*
 !/logs/.gitkeep

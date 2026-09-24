@@ -56,6 +56,10 @@ quick/test/install/policy도 특정 정적/기능/installer/policy 검증을 명
 .\local_ci.bat release
   = 보존된 release/package profile입니다. 현재 활성 CI에서는 실행하지 않습니다.
   = 사용자가 범위를 명시적으로 확대한 경우에만 x64 + x86 Release + package/installer 검증을 수행합니다.
+  = 매 installer 빌드는 docs/htmlhelp/ 원본에서 fxfile.chm을 새로 생성합니다.
+    Windows HTML Help Workshop hhc.exe 또는 환경변수 HHC_EXE가 필요합니다.
+    컴파일에 실패하면 이전 CHM을 재사용하지 않고 패키징이 실패합니다.
+    별도의 읽기 전용 사전 검사: python build\rebuild_htmlhelp.py --check.
 
 .\local_ci.bat full
   = 보존된 전체 검증 profile입니다. 현재 활성 CI에서는 실행하지 않습니다.
