@@ -1658,3 +1658,30 @@
 - Repository-wide source text-color audit: **PASS (static/source evidence)** for identified direct-draw call sites.
 - Connector source cross-check after fix: Dark print path returns before native ToolbarWindow32 paint.
 - Rebuilt Windows runtime screenshot after fix: **NOT RETESTED**.
+
+
+---
+
+## 2026-09-24 — DWM title bar could switch before frozen client controls
+
+**오류 발생**
+- theme-switch screenshot에서 fxfile 제목 표시줄은 이미 Dark인데 menu/toolbar/explorer content는 아직 Light이고, 동시에 Preferences frame/body만 먼저 Dark가 되는 비동기적인 전환 형태가 확인됐다.
+
+**원인 진단**
+- logical unit 17-A는 redraw를 freeze했지만 refresh transaction 안에서 top-level frame theme를 descendant setting refresh보다 먼저 적용했다.
+- DWM non-client rendering은 child HWND의 `WM_SETREDRAW(FALSE)`와 별개로 즉시 반영될 수 있으므로 제목 표시줄만 먼저 새 theme로 보일 가능성이 남았다.
+- 또한 top-level `WM_SETTINGCHANGE` handler 자체도 `applyWindowFrameTheme()`를 호출하므로 top-level notification을 descendant보다 먼저 보내면 같은 문제가 재발한다.
+
+**해결 방법**
+- snapshot에 `mChildWindows`를 별도로 유지한다.
+- freeze 후 descendant HWND만 먼저 `WM_SETTINGCHANGE` 처리하여 새 palette/theme-association/font state를 준비한다.
+- descendant state가 끝난 후 모든 top-level DWM frame theme를 적용한다.
+- 그 다음 top-level HWND 자체의 `WM_SETTINGCHANGE`를 처리하고, reverse thaw와 final redraw를 수행한다.
+
+**재발 방지**
+- source invariant가 `mChildWindows` 존재와 `child refresh -> applyWindowFrameTheme -> top-level refresh` 순서를 위치 기반으로 검증한다.
+
+**검증 상태**
+- User runtime screenshot before fix: **FAIL** — title/frame theme changed before client surfaces.
+- Connector source cross-check after fix: child-first/frame-second/top-level-last transaction ordering present.
+- Rebuilt Windows runtime theme-switch screenshot: **NOT RETESTED**.

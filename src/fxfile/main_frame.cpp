@@ -101,6 +101,7 @@ enum
 struct ThemeRefreshSnapshot
 {
     std::vector<HWND> mTopLevelWindows;
+    std::vector<HWND> mChildWindows;
     std::vector<HWND> mWindows;
 };
 
@@ -114,6 +115,7 @@ BOOL CALLBACK CollectThemeChildWindow(HWND aHwnd, LPARAM aParam)
         return TRUE;
     }
 
+    sSnapshot->mChildWindows.push_back(aHwnd);
     sSnapshot->mWindows.push_back(aHwnd);
     return TRUE;
 }
@@ -163,8 +165,19 @@ void RefreshThemeForCurrentThread(void)
     }
 
     // The global ModernUI theme mode has already been changed by setOption().
-    // Apply top-level frame state first, then let every snapshotted HWND
-    // rebuild palette/font/theme-association state against that one mode.
+    // Refresh descendants first while every top-level frame is still on the
+    // old DWM appearance. This prevents the title bar from visibly switching
+    // before the client controls have consumed the new palette.
+    for (std::vector<HWND>::const_iterator sIterator =
+             sSnapshot.mChildWindows.begin();
+         sIterator != sSnapshot.mChildWindows.end();
+         ++sIterator)
+    {
+        if (::IsWindow(*sIterator) != FALSE)
+            ::SendMessage(*sIterator, WM_SETTINGCHANGE, 0, 0);
+    }
+
+    // Change all non-client frames only after descendant state is ready.
     for (std::vector<HWND>::const_iterator sIterator =
              sSnapshot.mTopLevelWindows.begin();
          sIterator != sSnapshot.mTopLevelWindows.end();
@@ -174,9 +187,13 @@ void RefreshThemeForCurrentThread(void)
             ui::ModernUI::applyWindowFrameTheme(*sIterator);
     }
 
+    // Finally refresh each top-level's own brushes/fonts/state. Its
+    // WM_SETTINGCHANGE handler may repeat applyWindowFrameTheme(), but by now
+    // the DWM frame is already on the final mode and descendants are frozen
+    // with their final palette, so no mixed phase can become visible.
     for (std::vector<HWND>::const_iterator sIterator =
-             sSnapshot.mWindows.begin();
-         sIterator != sSnapshot.mWindows.end();
+             sSnapshot.mTopLevelWindows.begin();
+         sIterator != sSnapshot.mTopLevelWindows.end();
          ++sIterator)
     {
         if (::IsWindow(*sIterator) != FALSE)

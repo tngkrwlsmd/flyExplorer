@@ -3362,6 +3362,7 @@ def validate_win11_stability_regressions() -> list[str]:
         "struct ThemeRefreshSnapshot",
         "CollectThemeTopLevelWindow",
         "CollectThemeChildWindow",
+        "std::vector<HWND> mChildWindows",
         "EnumThreadWindows(",
         "EnumChildWindows(",
         "WM_SETREDRAW, FALSE",
@@ -3375,6 +3376,44 @@ def validate_win11_stability_regressions() -> list[str]:
             errors.append(
                 f"src/fxfile/main_frame.cpp: atomic app-theme refresh contract missing {token}"
             )
+    theme_refresh_start = contents["main_frame"].find(
+        "void RefreshThemeForCurrentThread(void)"
+    )
+    theme_refresh_end = contents["main_frame"].find(
+        "\n} // namespace anonymous",
+        theme_refresh_start,
+    )
+    theme_refresh_block = (
+        contents["main_frame"][theme_refresh_start:theme_refresh_end]
+        if theme_refresh_start >= 0
+        and theme_refresh_end > theme_refresh_start
+        else ""
+    )
+    if not theme_refresh_block:
+        errors.append(
+            "src/fxfile/main_frame.cpp: atomic theme refresh implementation block is missing"
+        )
+    else:
+        child_refresh_pos = theme_refresh_block.find(
+            "sSnapshot.mChildWindows.begin()"
+        )
+        frame_refresh_pos = theme_refresh_block.find(
+            "ui::ModernUI::applyWindowFrameTheme(*sIterator)"
+        )
+        top_refresh_pos = theme_refresh_block.find(
+            "sSnapshot.mTopLevelWindows.begin()",
+            frame_refresh_pos + 1,
+        )
+        if (
+            child_refresh_pos < 0
+            or frame_refresh_pos < 0
+            or top_refresh_pos < 0
+            or not (child_refresh_pos < frame_refresh_pos < top_refresh_pos)
+        ):
+            errors.append(
+                "src/fxfile/main_frame.cpp: theme switch must refresh children before DWM frames and top-level WM_SETTINGCHANGE"
+            )
+
     for forbidden in (
         "RefreshThemeTopLevelWindow",
         "SendMessageToDescendants(\n            WM_SETTINGCHANGE",
