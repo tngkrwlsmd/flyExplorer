@@ -2248,3 +2248,31 @@ No remaining tracked help source references the removed frameset assets.
 External bookmarks/manual workflows cannot be ruled out. Fresh
 Windows `hhc.exe`/CHM topic browsing, x64 compile/runtime and installer
 checks: NOT TESTED. GitHub Actions: NOT RUN.
+
+---
+
+## 2026-09-24 — Current-development user guide and historical-help labelling
+
+**Observed:** Existing HTML Help covers many old menu, screenshot, keyboard,
+feature and release-documentation topics, but the previous new landing page
+only warned globally that they were historical. It did not provide an
+actual current-version user-oriented guide. The old support topic still
+made unverified website and future-support promises.
+
+**Scoped changes:** Add `Html/current_development.htm` describing only
+observed repository functionality and the active Windows x64 development
+scope. Link it from `Html/start.htm`, `flyExplorer.hhc` and
+`flyExplorer.hhk`, and validate the required page/index references
+through `build/rebuild_htmlhelp.py --check`. Mark older menu, UI screenshot,
+shortcut, overview, configuration, feature and prior-release index pages
+as historical; preserve their detailed records. Replace stale support
+promises with transparent contact-status guidance. Add the inventory and
+acceptance plan to `docs/development/HELP_CONTENT_AUDIT.md`.
+
+**Evidence:** Source implementations and README were cross-checked for
+appearance modes, navigation, tab settings and runtime icon mappings;
+textual cross-link and source-contract preflight can be inspected.
+Windows HTML Help compiler, built CHM layout, per-page contemporary
+user interactions, localized shortcuts and visual/accessibility
+acceptance: NOT TESTED. GitHub Actions: NOT RUN. Remaining old detailed
+pages are not represented as fully modernized.

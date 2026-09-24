@@ -447,9 +447,17 @@ run `dist\package.bat` plus `build\validate_package.ps1 -DistDir dist` locally
 when preparing a release.
 
 The previously tracked, stale `dist/fxfile.chm` has been removed.
-The new landing page states the current development baseline and marks
-older reference topics as historical; actual Windows CHM compilation,
-legacy-topic visual inspection and installer tests remain NOT TESTED.
+The help landing page links to
+`docs/htmlhelp/Html/current_development.htm`, a focused current-source-based
+guide for navigation, active toolbar commands and System/Light/Dark theme
+configuration. Historical release notes, screenshots, shortcut tables,
+configuration and menu indexes are visibly labelled as legacy references;
+the old support-page promises have been replaced with a verified-status
+notice. Most detailed historical topics have not yet undergone
+a current runtime/source-by-source rewrite. See
+`docs/development/HELP_CONTENT_AUDIT.md` for the outstanding review scope.
+Actual Windows CHM compilation, legacy-topic visual inspection and
+installer tests remain NOT TESTED.
 The product Help command still needs a real generated `fxfile.chm`
 alongside the executable or in the installed payload.
 

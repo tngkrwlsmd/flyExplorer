@@ -546,6 +546,12 @@ were not executed in this step.
     - Delete exactly those four obsolete root frameset assets and add a negative source preflight to `build/rebuild_htmlhelp.py` so accidental resurrection fails early. Keep `docs/htmlhelp/Html/style.css`, the nested config stylesheet, all help topics and binary/source assets.
     - Reconcile `docs/development/DEPENDENCY_ARCH_AUDIT_20260924.md` with an explicit top-level current state: 222 prior vendor/duplicate/SDK-extra files removed; original audit retained as historical evidence. Help/compiler/Windows installer, native build and external/manual references are NOT TESTED. Document completion in `ERROR_HISTORY.md`.
 
+33. **Source-backed user help first-pass modernization — CURRENT GUIDE ADDED / LEGACY TOPICS OPEN**
+    - Add `Html/current_development.htm` covering the observed Windows 10/11 Release-x64-Unicode development target, pane/tab/address and core command wiring, selectable System/Light/Dark appearance configuration, and explicit outstanding Windows visual/runtime limitations. Anchor it in the start page and CHM TOC/index; make `build/rebuild_htmlhelp.py --check` require all three.
+    - Clearly label historical screenshots, keyboard shortcuts, older release notes, old settings/menus/features and overview as older references instead of inventing a full current UI match. Replace unsupported promises in the outdated support page with an evidence-based contact-status disclosure. Keep all original historical feature tables and screenshots available in Git and existing help pages.
+    - `docs/development/HELP_CONTENT_AUDIT.md` inventories modernized versus historical topics and the actual on-Windows acceptance work remaining. README and installer readme point readers to the new current guide.
+    - Source inspection and link/document consistency: static reviewed. Generated Windows CHM display, high-contrast/Light/Dark UI screenshots, shortcuts across user settings, installer and actual product runtime: NOT TESTED.
+
 ### Development handoff rule
 
 - Every new user-requested development item is added to this section (or its successor) before implementation starts.

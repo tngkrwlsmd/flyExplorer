@@ -6,6 +6,10 @@
 </HEAD><BODY>
 <UL>
 	<LI> <OBJECT type="text/sitemap">
+		<param name="Name" value="fxfile 2.0.4-dev 현재 사용 안내">
+		<param name="Local" value="html\current_development.htm">
+		</OBJECT>
+	<LI> <OBJECT type="text/sitemap">
 		<param name="Name" value="검색하기">
 		<param name="Local" value="html\function\search.htm">
 		</OBJECT>

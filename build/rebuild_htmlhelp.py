@@ -46,6 +46,7 @@ def check_sources() -> list[Path]:
         SOURCE / "flyExplorer.hhk",
         TOPIC,
         SOURCE / "Html" / "license.htm",
+        SOURCE / "Html" / "current_development.htm",
         SOURCE / "Html" / "flyExplorer" / "requirements.htm",
     )
     for path in required:
@@ -66,6 +67,12 @@ def check_sources() -> list[Path]:
     start = read_source(TOPIC)
     if "2.0.4-dev" not in start or "이전 버전" not in start:
         raise HelpBuildError("help landing page must disclose its current version and legacy topics")
+    current_page = read_source(SOURCE / "Html" / "current_development.htm")
+    if "2.0.4-dev" not in current_page or "Windows 10/11" not in current_page:
+        raise HelpBuildError("current user-guide source must identify active scope")
+    for index_name in ("flyExplorer.hhc", "flyExplorer.hhk"):
+        if "html\\current_development.htm" not in read_source(SOURCE / index_name):
+            raise HelpBuildError(index_name + " must index the current user guide")
     license_page = read_source(SOURCE / "Html" / "license.htm")
     if "GNU GPL" not in license_page or "GFL SDK" not in license_page:
         raise HelpBuildError("HTML Help application and third-party license notices are missing")
