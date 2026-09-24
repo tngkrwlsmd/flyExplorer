@@ -2446,3 +2446,20 @@ fails compilation and the protected spelling compiles and runs.
 The real Windows `local_ci.bat x64` profile on this new revision has
 **NOT** been rerun; x86 updater, Windows runtime and packaging likewise
 NOT TESTED. GitHub Actions: NOT RUN.
+
+---
+
+## 2026-09-24 — Reviewed source snapshot after Windows max-macro fix
+
+After the original user-supplied x64 log failed on `bc02a4a`, source
+commit `752345b1bc76b7cf7601366e3548462c368d158e` replaced the macro-colliding updater regression call
+and registered a source invariant against the original expression.
+The review metadata now points to that exact code snapshot; no new
+review paths were needed because both changed code and preflight were
+already among the 66 reviewed paths. This subsequent metadata/history
+commit changes only the project tracking and append-only evidence.
+Independent C++11 Windows-style macro reproduction: expected unsafe
+compile FAIL, protected spelling compile/run PASS.
+The complete Windows `local_ci.bat x64` profile on the new revision
+has NOT BEEN RE-RUN. Do not mark the defect/runtime closed or use the
+prior unrebuilt executable as evidence. GitHub Actions: NOT RUN.

@@ -79,7 +79,7 @@
     }
   ],
   "review": {
-    "reviewed_revision": "d594643e94002d6301a6720a83d4c56e888b5fd1",
+    "reviewed_revision": "752345b1bc76b7cf7601366e3548462c368d158e",
     "reviewed_at": "2026-09-24",
     "reviewed_paths": [
       ".github/workflows/policy-validation.yml",
@@ -151,6 +151,7 @@
     ]
   }
 }
+
 
 
 ```
@@ -616,6 +617,16 @@ server verification and public release rights: NOT TESTED / NOT VERIFIED.
     - User-provided `local-ci(20260924-074151).log` from `bc02a4a34df2ec5f6c20ccf76e80a24e5e6f67f5` shows the source invariant preflight PASS and VS2026/v145 solution generation, followed by first actual MSBuild `C2589` at `src/fxfile-tests/updater_contract_tests.cpp(196,9)`, then `C2059` and `C2143` cascades; overall x64 profile FAIL. The prior `bin/x64/fxfile.exe` was **not** rebuilt (artifact marker `6621ae2d9c1d30204a8981306f178045f467bdf8`).
     - Root cause: the updater transfer-budget regression used `std::numeric_limits<std::size_t>::max()` after `windows.h`, where the Windows function-like `max` macro can collide with the standard library member. Change only the native regression expression to `(std::numeric_limits<std::size_t>::max)()` and update the source invariant to require the Windows-safe spelling and forbid the original one.
     - An isolated C++11 test with a Windows-style `max(a,b)` macro reproduces the original compile failure and compiles the protected spelling with warnings-as-errors. No Windows toolchain or user machine was accessed during this fix. **Status: CODE FIXED / REPRODUCING WINDOWS x64 PROFILE NOT RETESTED.** Keep existing native regressions and updater security follow-ups open.
+
+**Windows x64 max-macro regression correction review checkpoint
+(2026-09-24):** `752345b1bc76b7cf7601366e3548462c368d158e` is the reviewed source snapshot for the minimal
+native updater-regression expression correction and the negative
+source-invariant preventing unprotected `numeric_limits::max()`.
+The user's original `bc02a4a` Windows x64 attempt FAILED, and its
+binary remained at `6621ae2`. A local cross-platform macro
+reproducer validates the protected spelling, but the **new revision
+has not passed a user-matched Windows rebuild**. The following review
+metadata/history-only commit does not change reviewed source paths.
 
 ### Development handoff rule
 
