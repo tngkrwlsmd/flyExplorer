@@ -2992,20 +2992,70 @@ def validate_win11_stability_regressions() -> list[str]:
 
     cfg_filter = contents["cfg_filter"]
     cfg_filter_h = contents["cfg_filter_h"]
+    # Check the actual function owners, not the pre-UI-10 initializer or
+    # black-only Dark workaround. The old positive token check blocked the
+    # 2026-09-24 Light/Dark contrast fix before compilation.
     for token in (
         '#include "../gui/ModernUI.h"',
-        "mListCtrl.SetBkColor(sListBackground)",
-        "mListCtrl.SetTextBkColor(sListBackground)",
-        "sFilterTextColor == RGB(0, 0, 0)",
-        "sFilterTextColor = sPalette.mText;",
-        "FlatHeaderCtrl mHeaderCtrl",
         "mHeaderCtrl.SubclassWindow(sHeaderHwnd)",
     ):
-        source = cfg_filter_h if token == "FlatHeaderCtrl mHeaderCtrl" else cfg_filter
-        if token not in source:
+        if token not in cfg_filter:
             errors.append(
-                f"settings filter list Dark surface contract missing token {token}"
+                f"settings filter list theme ownership missing token {token}"
             )
+    if "FlatHeaderCtrl mHeaderCtrl" not in cfg_filter_h:
+        errors.append("settings filter list themed header ownership missing")
+
+    refresh_start = cfg_filter.find(
+        "void CfgAppearanceFilteringDlg::refreshFilteringListColors("
+    )
+    refresh_end = cfg_filter.find(
+        "void CfgAppearanceFilteringDlg::OnSettingChange(", refresh_start
+    )
+    refresh = (
+        cfg_filter[refresh_start:refresh_end]
+        if refresh_start >= 0 and refresh_end > refresh_start
+        else ""
+    )
+    for token in (
+        "mListCtrl.SetBkColor(sBackground)",
+        "mListCtrl.SetTextBkColor(sBackground)",
+        "mListCtrl.SetTextColor(sPalette.mText)",
+        "sPalette.mHighContrast",
+        "sPalette.mWindow : sPalette.mElevated",
+    ):
+        if token not in refresh:
+            errors.append(
+                f"settings filter list refresh owner missing token {token}"
+            )
+
+    draw_start = cfg_filter.find(
+        "void CfgAppearanceFilteringDlg::OnCustomDrawList("
+    )
+    draw_end = cfg_filter.find(
+        "void CfgAppearanceFilteringDlg::OnListAdd(", draw_start
+    )
+    item_draw = (
+        cfg_filter[draw_start:draw_end]
+        if draw_start >= 0 and draw_end > draw_start
+        else ""
+    )
+    for token in (
+        "sFilterItem->mColor",
+        "sFilterTextColor = ResolveVisibleFilterTextColor(",
+        "sListBackground, sPalette",
+        "sPalette.mSelectionText",
+        "sPalette.mInactiveSelection",
+    ):
+        if token not in item_draw:
+            errors.append(
+                f"settings filter list current draw contract missing {token}"
+            )
+    if "sFilterTextColor == RGB(0, 0, 0)" in item_draw:
+        errors.append(
+            "settings filter list cannot regress to the black-only Dark "
+            "exception that left Light filtering text unreadable"
+        )
 
     filtering_pos = explorer_ctrl.find(
         "if (mOption.mTextColorType == COLOR_TYPE_FILTERING)"

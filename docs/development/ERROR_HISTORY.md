@@ -3187,3 +3187,41 @@ layout/wrap and saved-state interaction, multiple DPI and
 keyboard/accessibility: NOT TESTED. Both are still runtime
 OPEN. UI-02 bright native scrollbar is outside this fix.
 GitHub Actions: NOT RUN pending individually requested approval.
+
+
+---
+
+## 2026-09-24 — Supplied local x64 log: obsolete filter validator blocks new UI fix
+
+**Evidence:** User uploaded `local-ci(20260924-130832).log`,
+revision `eebc68db3c5852bced3b0d04abc13dfba2a5e456`.
+`build/validate_source_invariants.py` failed with four missing
+legacy filtering statements: two list background assignments
+using the removed local `sListBackground`, plus the explicit
+black-only Dark condition and direct text-color substitution.
+The run stopped before generating the VS2026 solution, so no
+new compiler error was observed. It warns that `bin/x64/fxfile.exe`
+was not rebuilt and its existing revision marker is `468ee555`.
+
+**Why:** A prior Win11 stability regression guard asserted
+obsolete implementation snippets instead of the current safety
+contract. The actual UI-10 source moved native ListView color
+updates into `refreshFilteringListColors` and replaced the
+black-only special case with theme-independent contrast checking
+inside `OnCustomDrawList`. Reintroducing the old snippets would
+undo the visual fix and contradict the newer UI-10 validator.
+
+**Correction:** Replace the old filtering token checks with
+function-scoped assertions of the real theme-refresh owner,
+subclassed header, retained High Contrast/default text, user
+filter RGB input, contrast resolver, and selected/inactive row
+colors. Add a negative assertion prohibiting the original
+black-only Dark exception. Keep the dedicated newer UI-10
+contrast regression guard intact.
+
+**Limits:** Source construction/guard review is not a successful
+local Windows test. Re-run `local_ci.bat x64` at the new SHA,
+inspect its revision marker, and only then compare current
+Light/Dark filtering and bookmark screenshots. CI, build and
+UI-09/UI-10 runtime acceptance remain OPEN; GitHub Actions
+not run because no separate per-run permission exists.

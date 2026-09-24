@@ -917,6 +917,23 @@ DPI 100/125/150/200, native keyboard and HC: NOT TESTED.
 UI-09/UI-10 pending acceptance, UI-02 native scrollbar OPEN.
 GitHub Actions NOT RUN (individual prior approval needed).
 
+**Local x64 preflight blocker after UI-09/UI-10 follow-up
+(2026-09-24):** User's log `local-ci(20260924-130832).log` at
+`eebc68d` reports four stale Win11 filter invariant assertions and
+stops BEFORE solution generation or VS compilation. Old validator
+required exact `sListBackground` initializer statements and the
+old RGB(0,0,0)-only Dark workaround; the improved current source
+intentionally moved native list colors to `refreshFilteringListColors`
+and made `OnCustomDrawList` contrast-aware for both Light/Dark.
+Update the original validator to follow real function boundaries
+and reject the known-bad workaround; do not alter functioning UI
+code to satisfy old literal snippets. Keep the newer UI-10
+contrast guard active. Uploaded log identifies stale installed
+`bin\x64\fxfile.exe` marker `468ee555`, NOT current source.
+Current-revision Windows `local_ci.bat x64`, x64 compilation,
+native tests and same-user Light/Dark screen acceptance remain
+NOT TESTED until a new run. Hosted Actions NOT RUN.
+
 ### Development handoff rule
 
 - Every new user-requested development item is added to this section (or its successor) before implementation starts.

@@ -225,6 +225,24 @@ new Light/Dark screenshots, 100/125/150/200% DPI, keyboard and
 High Contrast: NOT TESTED. Filtering UI-10 and bookmark UI-09
 remain RUNTIME VISUAL RETEST OPEN; UI-02 scrollbar remains OPEN.
 
+**2026-09-24 local x64 preflight regression on eebc68d (user log):**
+The uploaded `local-ci(20260924-130832).log` stopped at the source
+invariant preflight, before solution generation or compilation.
+The old Win11 filter-list guard still demanded four code fragments
+removed intentionally by the new Light/Dark contrast implementation:
+the former `sListBackground` initializer assignments and the
+black-only Dark fallback. This is a stale *validation contract*,
+not evidence of a new Visual Studio compile error. The revised
+guard checks the real `refreshFilteringListColors` and
+`OnCustomDrawList` owners, preserves header, selection, and High
+Contrast checks, and forbids the black-only regression. The dedicated
+UI-10 contrast validator is unchanged. The log explicitly says
+`bin/x64/fxfile.exe` was **not rebuilt** and still has revision
+`468ee555`; therefore the newly reported screenshots cannot
+validate the eebc68d executable without a successful new build.
+The fix is source-reviewed only; rerun `local_ci.bat x64` on
+the new revision before claiming build success or closing UI-09/10.
+
 ## Outstanding near-term work
 
 1. Address the reproduced settings-page visibility and Dark rendering issues
