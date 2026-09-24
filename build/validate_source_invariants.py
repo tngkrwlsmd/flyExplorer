@@ -4449,6 +4449,39 @@ def validate_filter_list_theme_contrast_regression() -> list[str]:
     header = (FXFILE_SRC / "cfg" / "cfg_appearance_filtering_dlg.h").read_text(
         encoding="utf-8", errors="replace"
     )
+
+
+    # The inactive selected list in the Light screenshot had a pale blue
+    # row background but used the active selection's white foreground.
+    # The persisted per-filter RGB contrast check cannot fix that path,
+    # because selected rows bypass sFilterTextColor altogether.
+    draw_start = source.find("void CfgAppearanceFilteringDlg::OnCustomDrawList(")
+    draw_end = source.find("void CfgAppearanceFilteringDlg::OnListAdd(", draw_start)
+    draw = (
+        source[draw_start:draw_end]
+        if draw_start >= 0 and draw_end > draw_start
+        else ""
+    )
+    # Guard the foreground conditional as a UNIT: all component color
+    # tokens appeared elsewhere and token-only checks missed this defect.
+    if not re.search(
+        r"pLVCD->clrText\s*=\s*XPR_IS_TRUE\(sFocused\)\s*\?\s*"
+        r"sPalette\.mSelectionText\s*:\s*sPalette\.mText\s*;",
+        draw,
+    ):
+        errors.append(
+            "filter list must pair inactive selection with normal palette "
+            "text; white highlight text is unreadable on pale inactive fill"
+        )
+    if not re.search(
+        r"pLVCD->clrTextBk\s*=\s*XPR_IS_TRUE\(sFocused\)\s*\?\s*"
+        r"sPalette\.mSelection\s*:\s*sPalette\.mInactiveSelection\s*;",
+        draw,
+    ):
+        errors.append("filter list must retain active/inactive row backgrounds")
+    if "pLVCD->clrText = sPalette.mSelectionText;" in draw:
+        errors.append("old always-white selected-row foreground reintroduced")
+
     for token in (
         "#include <cmath>",
         "ListColorLuminance(COLORREF aColor)",

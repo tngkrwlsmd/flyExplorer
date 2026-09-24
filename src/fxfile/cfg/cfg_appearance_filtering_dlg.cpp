@@ -323,7 +323,13 @@ void CfgAppearanceFilteringDlg::OnCustomDrawList(NMHDR* pNMHDR, LRESULT* pResult
                 (::GetFocus() == mListCtrl.GetSafeHwnd()) ?
                 XPR_TRUE :
                 XPR_FALSE;
-            pLVCD->clrText = sPalette.mSelectionText;
+            // An unfocused selected row has a neutral, pale inactive
+            // background in Light mode. COLOR_HIGHLIGHTTEXT (usually white)
+            // belongs only on the *active* highlight, not that surface.
+            pLVCD->clrText =
+                XPR_IS_TRUE(sFocused) ?
+                sPalette.mSelectionText :
+                sPalette.mText;
             pLVCD->clrTextBk =
                 XPR_IS_TRUE(sFocused) ?
                 sPalette.mSelection :

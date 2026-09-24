@@ -259,6 +259,26 @@ This checkpoint is SOURCE-CORRECTED only; a revision-matched x64
 build, native tests and user-screen Light/Dark/HC acceptance
 remain **NOT YET RETESTED**. UI-09/UI-10 are still runtime OPEN.
 
+**2026-09-24 remaining Light filtering list issue (source-level
+selected-row path):** The owner explicitly reports a successful latest
+build yet still observes the same Light filtering screenshot. Stop
+attributing the result to a stale executable. A second foreground
+path in `CfgAppearanceFilteringDlg::OnCustomDrawList` bypassed the
+previous per-filter contrast resolver: every `CDIS_SELECTED` item,
+including when the list itself was UNFOCUSED, used
+`mSelectionText` (usually white). An unfocused selection instead
+uses `mInactiveSelection` (very pale blue on Light), so white
+text remains invisible. Correct the pairing: active selection
+foreground `mSelectionText`, inactive selection foreground
+`mText`. No per-filter stored colors or filtering semantics
+change; the WCAG resolver continues to handle normal rows.
+Extend the regression guard for this independently observed
+selected-state branch. This is source diagnosis/fix only:
+revision-matched Windows execution, High Contrast/Light/Dark
+screenshots and toolbar UI-09 remain OPEN. The separate bookmark
+ghosting report is accepted as a current-binary failure; prior
+renderer/band hypotheses are not runtime-proven.
+
 ## Outstanding near-term work
 
 1. Address the reproduced settings-page visibility and Dark rendering issues

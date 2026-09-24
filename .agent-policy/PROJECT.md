@@ -951,6 +951,25 @@ method does not fix C2065. Source repair reviewed, but a fresh
 revision-matched x64 compiler run and the original screenshot
 acceptance remain NOT TESTED. Hosted Actions NOT RUN.
 
+**Post-build persistent UI-10 screenshot (2026-09-24):**
+Owner explicitly confirms latest code was rebuilt and the Light
+filter list / bookmark strip are STILL WRONG. Do not ask again
+for git pull/artifact markers as an assumed root cause. Source
+review found the Light list uses TWO foreground paths: the
+4.5:1 resolver applies only to unselected rows, while selected
+rows hard-coded mSelectionText even if the list has no focus
+and background is pale mInactiveSelection. Change only the
+unfocused-selection foreground to ThemePalette.mText,
+retaining active highlight foreground, contrast resolver,
+saved filter RGB and HC palette priority. Add an independent
+regression guard for that state/foreground pairing. The
+bookmark screenshot's repeated icon+label slivers are also
+accepted as persistent at the user's current binary; prior
+layout and redundant painting guesses require an actual
+runtime geometry/paint trace before another unverified
+renderer rewrite. No revision-matched Windows visual
+acceptance in this environment. GitHub Actions not run.
+
 ### Development handoff rule
 
 - Every new user-requested development item is added to this section (or its successor) before implementation starts.

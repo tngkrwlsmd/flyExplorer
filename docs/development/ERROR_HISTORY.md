@@ -3263,3 +3263,39 @@ compiler C2065 FAIL are directly observed. Source correction and
 guard checks are static only; NO new local x64 compile, native
 tests, Light/Dark/HC screenshots or Actions run. Request a
 new `local_ci.bat x64` log at the next revision before closure.
+
+
+---
+
+## 2026-09-24 — Owner confirms successful current rebuild, Light filtering persists
+
+**Runtime evidence:** The owner specifically states the latest
+source was built successfully and the same Light filtering
+text and bookmark icon/text ghost screenshot persist. Reject
+the prior suggestion that an old artifact alone explains
+the report; do not demand another git pull/revision check
+without separate reason.
+
+**Source defect found:** The earlier 4.5:1 contrast-aware
+filter-color path in `OnCustomDrawList` only executes for
+nonselected rows. When `CDIS_SELECTED`, the implementation
+always set `mSelectionText` (often white) even when the
+filter list itself was unfocused; in that state the same
+branch used pale `mInactiveSelection` as its background.
+This yields white on pale blue in explicit Light mode even
+with the resolver in place.
+
+**Targeted change:** Pair focused selection with
+mSelectionText/mSelection; unfocused selection with
+mText/mInactiveSelection. No persisted per-filter RGB
+changes or broader palette hacks. Extend the UI-10
+negative regression check for this second paint path.
+
+**Verification:** Source logic and conditional pairing
+inspected. The user's persistent current-binary failure
+is accepted as real. A Windows build with this new source
+and actual Light/Dark/HC visual acceptance has NOT been
+run by the agent. UI-10 remains RUNTIME OPEN; UI-09
+bookmark ghosting remains OPEN until paint/geometry
+trace or equivalent strong evidence. GitHub Actions
+not run without explicit per-run approval.
