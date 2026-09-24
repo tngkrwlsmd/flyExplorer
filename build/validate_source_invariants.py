@@ -2668,6 +2668,24 @@ def validate_win11_stability_regressions() -> list[str]:
     if errors:
         return errors
 
+    modern_ui = contents["modern_ui"]
+    for state_name in ("mHover", "mPressed"):
+        state_match = re.search(
+            rf"sPalette\\.{state_name}\\s*=\\s*blendColor\\((?P<body>.*?)\\);",
+            modern_ui,
+            re.DOTALL,
+        )
+        if state_match is None:
+            errors.append(
+                "src/fxfile/gui/ModernUI.cpp: "
+                f"transient {state_name} palette assignment is missing"
+            )
+        elif "sPalette.mSelection" in state_match.group("body"):
+            errors.append(
+                "src/fxfile/gui/ModernUI.cpp: "
+                f"transient {state_name} must not derive from accent selection color"
+            )
+
     manifest = contents["manifest"]
     if '<requestedExecutionLevel level="asInvoker" uiAccess="false"/>' not in manifest:
         errors.append(

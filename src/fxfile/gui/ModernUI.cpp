@@ -1870,14 +1870,21 @@ ThemePalette ModernUI::getPalette(void)
             sPalette.mWindow,
             sPalette.mText,
             sCardLift);
+        // Hover/pressed are transient command/control states, not content
+        // selection. Keep them neutral like current Windows 11 command
+        // surfaces; mSelection/mFocus remain the accent-bearing semantics.
+        const xpr_uint_t sHoverTextLift =
+            XPR_IS_TRUE(sPalette.mDark) ? 6 : 4;
+        const xpr_uint_t sPressedTextLift =
+            XPR_IS_TRUE(sPalette.mDark) ? 11 : 7;
         sPalette.mHover = blendColor(
             sPalette.mElevated,
-            sPalette.mSelection,
-            10);
+            sPalette.mText,
+            sHoverTextLift);
         sPalette.mPressed = blendColor(
             sPalette.mElevated,
-            sPalette.mSelection,
-            18);
+            sPalette.mText,
+            sPressedTextLift);
         sPalette.mInactiveSelection = blendColor(
             sPalette.mSurface,
             sPalette.mSelection,

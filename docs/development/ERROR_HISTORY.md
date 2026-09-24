@@ -1747,3 +1747,35 @@
 - Release-x64-Unicode | x64 compile/link: **NOT TESTED**.
 - Interactive/Visual Light/Dark/High Contrast/DPI: **NOT RETESTED**.
 - 사용자 재현 항목이므로 matching runtime screenshot 전까지 CLOSED로 처리하지 않는다.
+
+---
+
+## 2026-09-24 — Shared hover/pressed palette overused the selection accent
+
+**오류 발생**
+- 사용자 runtime screenshot에서 Dark command toolbar의 active/hot icon 영역이 주변 chrome보다 지나치게 밝고 푸른 타일처럼 강조됐다.
+- 강조 배경이 command icon보다 강해 Windows 11 계열의 중성 command surface와 이질적으로 보였다.
+
+**전수 조사**
+- `mHover`/`mPressed` 사용처를 toolbar, menubar, tab, settings, split/drop button, header, folder/content controls까지 확인했다.
+- `CToolBarEx`는 이미 Dark에서 legacy HOT bitmap strip을 사용하지 않고 cold image list를 복제하므로, 남은 공통 tint source는 `ThemePalette`의 transient state 색이었다.
+
+**첫 실제 source 오류 / 원인**
+- non-High-Contrast `ModernUI::getPalette()`가 `mHover`와 `mPressed`를 `mElevated`와 `mSelection`의 blend로 만들었다.
+- `mSelection`은 선택 의미의 system accent color이므로 같은 값을 transient hover/pressed에도 섞으면서 blue/accent tint가 여러 UI surface로 전파됐다.
+
+**해결 방법**
+- `mHover`와 `mPressed`를 `mElevated` + `mText`의 작은 Light/Dark-specific lift로 변경해 중성 command/control state로 분리했다.
+- 실제 selection/focus는 기존 `mSelection`/`mFocus`를 유지한다.
+- High Contrast는 기존대로 system selection colors가 최종 ownership을 가진다.
+
+**재발 방지**
+- validator는 `mHover`/`mPressed`의 실제 `blendColor()` assignment block을 추출하고 그 body가 `mSelection`에 의존하면 실패한다.
+- 특정 RGB나 blend percentage 자체를 고정하지 않아 향후 palette tuning은 허용하면서 selection accent가 transient state로 다시 새는 known-bad property만 차단한다.
+
+**검증 상태**
+- Connector/source audit: **PASS** — shared palette와 property-level regression guard가 함께 변경됐다.
+- `python build/validate_source_invariants.py`: **NOT TESTED** — 현재 세션에는 실행 가능한 Windows checkout이 없다.
+- Release-x64-Unicode | x64 compile/link: **NOT TESTED**.
+- Interactive/Visual Light/Dark/High Contrast/DPI: **NOT RETESTED**.
+- 사용자 재현 visual issue이므로 matching runtime screenshot 전까지 CLOSED로 처리하지 않는다.

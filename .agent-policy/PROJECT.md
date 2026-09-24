@@ -424,6 +424,14 @@ Status: **ACTIVE / user-reproduced runtime failures**. These items are the immed
    - Recurrence guard: the source invariant locates the actual `IDC_CFG_TREE` resource line and requires the root disclosure styles, then scopes the runtime hierarchy check to `CfgMainDlg::OnInitDialog()` rather than requiring an unrelated exact call spelling.
    - Connector/source inspection after change: implementation and resource contract updated. Windows compile/runtime/Light/Dark/High Contrast/DPI visual evidence is **NOT TESTED**; this user-reproduced item remains ACTIVE until matching screenshots confirm the affordance is visible and usable.
 
+19. **Transient icon/command highlight is overly accent-tinted — CODE FIXED / RUNTIME NOT RETESTED**
+   - Latest user screenshot shows the active/hot command surface around toolbar icons as a conspicuous blue/light tile that is visually stronger than the icon and surrounding neutral Dark chrome.
+   - Cross-control audit found the shared cause in `ModernUI::getPalette()`: non-High-Contrast `mHover` and `mPressed` were blended from `mSelection`, so the system accent selection color propagated into toolbar, menubar, tabs, settings controls, split buttons, and other shared transient states.
+   - Fix: `mHover` and `mPressed` now derive from `mElevated` + `mText` with small Light/Dark-specific lifts. Actual selection and focus semantics keep `mSelection`/`mFocus`, and High Contrast still maps transient states to the system selection colors.
+   - Existing `CToolBarEx` Dark hot-image protection remains intact: Dark duplicates the cold image list instead of loading legacy bright HOT artwork, while the neutral ThemePalette surface owns hover/pressed emphasis.
+   - Recurrence guard: the Win11 stability validator extracts the actual `mHover`/`mPressed` blend assignments and rejects selection-accent derivation instead of requiring a particular numeric formula.
+   - Connector/source inspection after change: shared palette owner updated. Windows compile/runtime/Light/Dark/High Contrast/DPI visual evidence is **NOT TESTED**; the user-reproduced visual issue remains ACTIVE until matching screenshots pass.
+
 ### Development handoff rule
 
 - Every new user-requested development item is added to this section (or its successor) before implementation starts.
