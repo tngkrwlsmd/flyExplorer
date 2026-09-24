@@ -1714,3 +1714,36 @@
 - Connector source audit: MenuBar/ToolBarEx association parity and Dark all-print ownership implemented.
 - Full local `python build/validate_source_invariants.py`: **NOT EXECUTED** in this session because the container could not resolve github.com to materialize a checkout.
 - Rebuilt Windows runtime screenshot: **NOT RETESTED**.
+
+---
+
+## 2026-09-24 — Settings navigation hid root expand/collapse affordance
+
+**오류 발생**
+- 사용자 runtime screenshot에서 환경설정의 왼쪽 navigation이 사실상 한 단계 목록처럼 보였다.
+- `일반`, `모양 및 테마`, `기능`, `고급`은 하위 page를 가진 parent이지만 펼치기/접기 가능 여부를 사용자가 알아차리기 어려웠다.
+
+**첫 실제 source 오류**
+- `IDD_CFG_MAIN`의 `IDC_CFG_TREE`에는 `TVS_HASBUTTONS`가 있었지만 root-level disclosure를 표시하는 `TVS_LINESATROOT`가 없었다.
+- `TreeCtrlEx::enableVistaEnhanced()`는 full-row/track-select와 extended expando behavior를 설정하지만 root disclosure style 자체를 추가하지 않는다.
+
+**원인**
+- hierarchy 의미는 데이터 구조에 존재했지만 resource/runtime style contract에 root affordance가 빠져 있었다.
+- borderless card + full-row selection으로 현대화하면서 root/leaf 구분을 보강하지 않아 정보 구조가 더 평평하게 보였다.
+
+**해결 방법**
+- `fxfile.rc`의 settings tree resource에 `TVS_LINESATROOT`를 추가했다.
+- `CfgMainDlg::OnInitDialog()`에서도 `TVS_HASBUTTONS | TVS_LINESATROOT`를 명시해 Dark에서 Explorer theme association을 reset해도 disclosure contract가 유지되게 했다.
+- child를 가진 root category에는 native `TVIS_BOLD`를 적용해 custom text renderer를 하나 더 만들지 않고 parent/leaf hierarchy를 강화했다.
+- 기존 expand-all startup, selection, keyboard, icon mapping은 유지한다.
+
+**재발 방지**
+- validator는 실제 `IDC_CFG_TREE` resource line을 찾아 `TVS_HASBUTTONS`와 `TVS_LINESATROOT`를 검사한다.
+- runtime hierarchy check는 `CfgMainDlg::OnInitDialog()` block에 범위를 제한하고 root disclosure와 parent emphasis를 확인한다.
+
+**검증 상태**
+- Connector/source audit: **PASS** — resource/runtime disclosure contract와 scoped invariant가 함께 변경됐다.
+- `python build/validate_source_invariants.py`: **NOT TESTED** — 현재 세션에는 실행 가능한 Windows checkout이 없다.
+- Release-x64-Unicode | x64 compile/link: **NOT TESTED**.
+- Interactive/Visual Light/Dark/High Contrast/DPI: **NOT RETESTED**.
+- 사용자 재현 항목이므로 matching runtime screenshot 전까지 CLOSED로 처리하지 않는다.

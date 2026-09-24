@@ -417,6 +417,13 @@ Status: **ACTIVE / user-reproduced runtime failures**. These items are the immed
    - Logical unit 17-D complete: `CMenuBar` now mirrors `CToolBarEx` theme-association ownership—Dark disables the native ToolbarWindow32 uxtheme association, Light/High Contrast restores Explorer/default association, and tooltip theming is refreshed. Dark also owns every `WM_PRINT`/`WM_PRINTCLIENT` variant before native code, not only `PRF_CLIENT` print calls.
    - Source invariants now enforce direct Dark `WM_PAINT`, early-return Dark `WM_PRINT*`, menu-bar theme-association reset/restore, and child-state -> DWM-frame -> top-level-state ordering. Runtime screenshot closure is required after rebuild.
 
+18. **Settings navigation hierarchy/disclosure is not discoverable — CODE FIXED / RUNTIME NOT RETESTED**
+   - Latest user screenshot shows the left settings navigation as a flat list even though `일반`, `모양 및 테마`, `기능`, and `고급` own child pages. The user could not tell that those rows were expandable.
+   - Root cause: `IDC_CFG_TREE` had `TVS_HASBUTTONS` but not `TVS_LINESATROOT`. Win32 tree-view root expand/collapse affordances therefore were not part of the resource contract, and the modernized borderless/full-row presentation further reduced the visible parent/leaf distinction.
+   - Fix: the settings tree now carries `TVS_LINESATROOT` in the resource and reinforces `TVS_HASBUTTONS | TVS_LINESATROOT` when the dialog initializes. Expandable root categories receive native `TVIS_BOLD` emphasis while preserving the existing tree hierarchy, keyboard behavior, icons, and expand-all startup behavior.
+   - Recurrence guard: the source invariant locates the actual `IDC_CFG_TREE` resource line and requires the root disclosure styles, then scopes the runtime hierarchy check to `CfgMainDlg::OnInitDialog()` rather than requiring an unrelated exact call spelling.
+   - Connector/source inspection after change: implementation and resource contract updated. Windows compile/runtime/Light/Dark/High Contrast/DPI visual evidence is **NOT TESTED**; this user-reproduced item remains ACTIVE until matching screenshots confirm the affordance is visible and usable.
+
 ### Development handoff rule
 
 - Every new user-requested development item is added to this section (or its successor) before implementation starts.

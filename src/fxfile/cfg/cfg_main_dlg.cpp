@@ -390,6 +390,14 @@ xpr_bool_t CfgMainDlg::OnInitDialog(void)
 
     mTreeCtrl.enableVistaEnhanced(XPR_TRUE);
 
+    // Root categories are real expandable nodes. Keep the standard tree
+    // disclosure contract explicit because Dark mode intentionally removes
+    // the Explorer visual-style association from this HWND.
+    mTreeCtrl.ModifyStyle(
+        0,
+        TVS_HASBUTTONS | TVS_LINESATROOT |
+        TVS_FULLROWSELECT | TVS_TRACKSELECT);
+
     // Use a roomy, borderless navigation row similar to Windows 11 settings
     // surfaces while preserving the existing tree hierarchy and icons.
     const xpr_sint_t sModernItemHeight =
@@ -464,7 +472,13 @@ xpr_bool_t CfgMainDlg::OnInitDialog(void)
     while (sTreeItem != XPR_NULL)
     {
         if (mTreeCtrl.ItemHasChildren(sTreeItem) == XPR_TRUE)
+        {
+            // Parent categories carry the navigation hierarchy. Native bold
+            // state survives Light/Dark/High Contrast and makes them distinct
+            // from leaf pages without inventing a second custom text renderer.
+            mTreeCtrl.SetItemState(sTreeItem, TVIS_BOLD, TVIS_BOLD);
             mTreeCtrl.Expand(sTreeItem, TVE_EXPAND);
+        }
 
         sTreeItem = mTreeCtrl.GetNextSiblingItem(sTreeItem);
     }
