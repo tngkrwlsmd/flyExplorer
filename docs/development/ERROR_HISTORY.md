@@ -2976,3 +2976,34 @@ source preflight, Windows x64 build, runtime typing/search,
 Light/Dark/HC, keyboard/IME and DPI-final pixels: NOT TESTED.
 UI-03 stays OPEN pending direct acceptance. GitHub Actions:
 NOT RUN without run-specific authorization.
+
+
+---
+
+## 2026-09-24 — UI-01 settings single-page visibility reinforcement
+
+**Original observed runtime symptom:** General -> Appearance ->
+Light Apply -> Filtering could update navigation text while the
+earlier General page body remained visible until settings was closed
+and reopened. An earlier source checkpoint prevented theme redraw
+from thawing previously hidden HWNDs; matching Windows runtime
+evidence on the new revision was still missing.
+
+**Further source risk:** showCfg hid only the previous mShowCfg
+page. A stale visible third page would remain after navigation.
+Option notification synchronously refreshes UI-thread windows,
+including the currently open settings dialog.
+
+**Source change:** Reconcile visibility across all created settings
+pages during navigation using each page HWND's own WS_VISIBLE bit,
+then reassert the invariant after config/theme notification. Show
+the selected page only if unexpectedly hidden. No settings page,
+stored preference or navigation command was removed.
+
+**Prevention:** Add a negative source guard checking the new helper
+and rejecting the old selection-only hiding path.
+
+**Evidence:** Source structure only. Complete Python preflight,
+VS2026 x64 compile, original user click sequence, Light/Dark/HC,
+keyboard focus and DPI final screenshots: NOT TESTED. UI-01 is
+NOT CLOSED. GitHub Actions: NOT RUN absent individual approval.

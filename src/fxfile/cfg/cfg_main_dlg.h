@@ -31,6 +31,7 @@ public:
 
 protected:
     xpr_bool_t showCfg(xpr_sint_t aCfgIndex);
+    void hideInactiveCfgPages(xpr_sint_t aActiveCfgIndex);
     void showCfgByTree(xpr_sint_t aCfgIndex);
     xpr_sint_t addCfgItem(xpr_sint_t aImage, xpr_sint_t aParent, CfgDlg *aCfgDlg, const xpr_tchar_t *aText);
 

@@ -815,6 +815,18 @@ Actual source-revision Windows build, search execution, theme transition,
 keyboard/IME/DPI/HC and final pixels: NOT TESTED; UI-03 remains OPEN.
 Hosted Actions: NOT RUN.
 
+**UI-01 single visible created-page reinforcement (2026-09-24):**
+CfgMainDlg navigation now hides every already-created nonselected
+settings page with its own WS_VISIBLE bit. After synchronous config
+notification and theme refresh, it reconciles that invariant again
+and restores the selected page only if needed, avoiding an extra
+focus change. This supplements the preexisting visible-only
+WM_SETREDRAW snapshot. A negative source guard forbids the previous
+selection-only hide pattern. Windows x64 compiler, original General ->
+Appearance -> Light -> Apply -> Filtering acceptance, keyboard focus,
+High Contrast and varied DPI: NOT TESTED. UI-01 remains runtime OPEN.
+Hosted Actions: NOT RUN.
+
 ### Development handoff rule
 
 - Every new user-requested development item is added to this section (or its successor) before implementation starts.

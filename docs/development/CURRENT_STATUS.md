@@ -124,6 +124,20 @@ dropdown is visually correct; focus/hover/keyboard, location search,
 OS High Contrast and mixed-DPI screenshots are **NOT TESTED**.
 UI-03 remains **PARTIAL / RUNTIME VISUAL RETEST OPEN**.
 
+**UI-01 one-page visibility reinforcement (2026-09-24):**
+Settings navigation now hides every other *created* page rather than
+only the previously selected index. Following synchronous theme/config
+notification, it reasserts the selected-page visibility contract,
+showing the selected page only if the HWND is unexpectedly hidden.
+Own WS_VISIBLE flags are checked independently from ancestor visibility.
+The existing theme transaction snapshot remains in place, and saved
+settings, navigation IDs, modified flags and focus handling are not
+intentionally changed. A negative source guard rejects the old
+selection-only hide loop. The exact Windows sequence (General ->
+Appearance -> Light -> Apply -> Filtering), focus preservation,
+repeated switches and current-revision x64 compilation: NOT TESTED.
+UI-01 remains CODE UPDATED / MATCHING RUNTIME RETEST OPEN.
+
 ## Outstanding near-term work
 
 1. Address the reproduced settings-page visibility and Dark rendering issues

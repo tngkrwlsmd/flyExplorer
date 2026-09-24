@@ -4374,6 +4374,35 @@ def validate_tab_close_discoverability() -> list[str]:
     return errors
 
 
+def validate_settings_single_visible_page_after_theme_apply() -> list[str]:
+    """UI-01: both navigation and theme apply restore one visible page."""
+    errors: list[str] = []
+    source = (FXFILE_SRC / "cfg" / "cfg_main_dlg.cpp").read_text(
+        encoding="utf-8", errors="replace"
+    )
+    header = (FXFILE_SRC / "cfg" / "cfg_main_dlg.h").read_text(
+        encoding="utf-8", errors="replace"
+    )
+    for token in (
+        "void CfgMainDlg::hideInactiveCfgPages(xpr_sint_t aActiveCfgIndex)",
+        "i == aActiveCfgIndex",
+        "::GetWindowLongPtr(sOtherHwnd, GWL_STYLE) & WS_VISIBLE",
+        "sOtherItem->mCfgDlg->ShowWindow(SW_HIDE)",
+        "hideInactiveCfgPages(aCfgIndex)",
+        "hideInactiveCfgPages(mShowCfg)",
+        "sActiveItem->mCfgDlg->ShowWindow(SW_SHOW)",
+    ):
+        if token not in source:
+            errors.append(f"settings one-page visibility contract missing: {token}")
+    if "void hideInactiveCfgPages(xpr_sint_t aActiveCfgIndex);" not in header:
+        errors.append("settings page visibility declaration missing")
+    start = source.find("xpr_bool_t CfgMainDlg::showCfg(")
+    end = source.find("void CfgMainDlg::applyModernAppearanceToChild(", start)
+    if start < 0 or end <= start or "if (mShowCfg != -1)" in source[start:end]:
+        errors.append("settings navigation returned to selection-only hiding")
+    return errors
+
+
 def validate_search_location_icon_text_dpi_gap() -> list[str]:
     """UI-03: maintain a readable native location icon/text gap at each DPI."""
     errors: list[str] = []
@@ -4536,6 +4565,7 @@ def main() -> int:
     errors.extend(validate_split_pane_column_and_contents_layout())
     errors.extend(validate_shared_tree_new_profile_default())
     errors.extend(validate_tab_close_discoverability())
+    errors.extend(validate_settings_single_visible_page_after_theme_apply())
     errors.extend(validate_search_location_icon_text_dpi_gap())
     errors.extend(validate_search_location_and_tab_discoverability())
     errors.extend(validate_move_order_button_labels())

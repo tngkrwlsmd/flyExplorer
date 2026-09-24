@@ -608,6 +608,33 @@ xpr_sint_t CfgMainDlg::addCfgItem(xpr_sint_t aImage, xpr_sint_t aParent, CfgDlg 
     return (xpr_sint_t)mCfgDeque.size() - 1;
 }
 
+void CfgMainDlg::hideInactiveCfgPages(xpr_sint_t aActiveCfgIndex)
+{
+    // Reconcile every created page, not just the previous selection.
+    // The page HWND's own visibility bit is independent of ancestor state.
+    for (xpr_sint_t i = 0;
+         i < static_cast<xpr_sint_t>(mCfgDeque.size());
+         ++i)
+    {
+        if (i == aActiveCfgIndex)
+            continue;
+
+        CfgItem *sOtherItem = mCfgDeque[i];
+        if (XPR_IS_NULL(sOtherItem) ||
+            XPR_IS_NULL(sOtherItem->mCfgDlg))
+        {
+            continue;
+        }
+
+        HWND sOtherHwnd = sOtherItem->mCfgDlg->GetSafeHwnd();
+        if (::IsWindow(sOtherHwnd) != FALSE &&
+            (::GetWindowLongPtr(sOtherHwnd, GWL_STYLE) & WS_VISIBLE) != 0)
+        {
+            sOtherItem->mCfgDlg->ShowWindow(SW_HIDE);
+        }
+    }
+}
+
 xpr_bool_t CfgMainDlg::showCfg(xpr_sint_t aCfgIndex)
 {
     if (!FXFILE_STL_IS_INDEXABLE(aCfgIndex, mCfgDeque))
@@ -615,17 +642,8 @@ xpr_bool_t CfgMainDlg::showCfg(xpr_sint_t aCfgIndex)
 
     CfgItem *sCfgItem = mCfgDeque[aCfgIndex];
 
-    // hide
-    if (mShowCfg != -1)
-    {
-        if (FXFILE_STL_IS_INDEXABLE(mShowCfg, mCfgDeque))
-        {
-            CfgItem *sOldCfgItem = mCfgDeque[mShowCfg];
-
-            if (sOldCfgItem->mCfgDlg->m_hWnd != XPR_NULL)
-                sOldCfgItem->mCfgDlg->ShowWindow(SW_HIDE);
-        }
-    }
+    // Navigation must leave no other created page visibly overlapping.
+    hideInactiveCfgPages(aCfgIndex);
 
     // show
     if (sCfgItem->mCfgDlg->m_hWnd == XPR_NULL)
@@ -1282,6 +1300,24 @@ void CfgMainDlg::OnApply(void)
 
     // notify new option
     gOpt->notifyConfig();
+
+    // Theme notifications synchronously refresh all windows; restore the
+    // selected-page visibility invariant without moving focus unnecessarily.
+    if (FXFILE_STL_IS_INDEXABLE(mShowCfg, mCfgDeque))
+    {
+        hideInactiveCfgPages(mShowCfg);
+        CfgItem *sActiveItem = mCfgDeque[mShowCfg];
+        if (XPR_IS_NOT_NULL(sActiveItem) &&
+            XPR_IS_NOT_NULL(sActiveItem->mCfgDlg))
+        {
+            const HWND sActiveHwnd = sActiveItem->mCfgDlg->GetSafeHwnd();
+            if (::IsWindow(sActiveHwnd) != FALSE &&
+                (::GetWindowLongPtr(sActiveHwnd, GWL_STYLE) & WS_VISIBLE) == 0)
+            {
+                sActiveItem->mCfgDlg->ShowWindow(SW_SHOW);
+            }
+        }
+    }
 
     ShowLanguageRestartNoticeIfChanged(
         sOldConfig,
