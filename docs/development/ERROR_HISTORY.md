@@ -1856,3 +1856,32 @@
 - Work branch was compared against `main`: ahead 4, behind 0 at the reconciliation checkpoint.
 - `main` was still `bce54ce2a274a3f27e86f5f5871c9e2964c4c2cc` at that checkpoint.
 - Final branch/main fast-forward is performed only after this reconciliation commit is created.
+
+---
+
+## 2026-09-24 — Settings navigation disclosure was both required and forbidden by source invariants
+
+**오류 발생**
+- 사용자 `local_ci.bat x64` 실행이 revision `7558639752dccc2bafb4822d3152044a4cdc379f`에서 source invariant/regression preflight 단계에서 즉시 실패했다.
+- 실제 오류: `src/fxfile/fxfile.rc: legacy configuration navigation token returned TVS_LINESATROOT`.
+- preflight 실패 때문에 Visual Studio solution generation/build는 시작되지 않았고 기존 `bin\x64\fxfile.exe`는 이전 revision `bce54ce2a274a3f27e86f5f5871c9e2964c4c2cc` 산출물 그대로 남았다.
+
+**첫 실제 원인**
+- `validate_configuration_shell_contract()`의 과거 negative rule이 `TVS_HASLINES`, `TVS_LINESATROOT`, `WS_BORDER | WS_HSCROLL`를 모두 legacy token으로 금지하고 있었다.
+- 반면 settings discoverability 수정에서는 `TVS_LINESATROOT`를 root expand/collapse affordance의 필수 contract로 도입했고, 새 invariant도 resource/runtime에서 이를 요구했다.
+- 같은 source property를 한 validator에서는 금지하고 다른 validator에서는 요구하는 self-contradictory guard가 만들어졌다.
+
+**해결 방법**
+- 오래된 forbidden set에서 `TVS_LINESATROOT`만 제거했다.
+- `TVS_HASLINES`와 classic `WS_BORDER | WS_HSCROLL` 금지는 그대로 유지한다.
+- 신규 settings-navigation invariant의 `TVS_HASBUTTONS + TVS_LINESATROOT` positive requirement와 `OnInitDialog()` scoped runtime-style guard는 유지한다.
+
+**재발 방지**
+- negative rule 바로 위에 `TVS_LINESATROOT`의 현재 semantic ownership을 설명해, root disclosure가 legacy ornament와 다시 혼동되지 않도록 했다.
+- 새 UI contract를 추가할 때 동일 property가 기존 forbidden/required rule 양쪽에 있는지 post-change validator audit 대상으로 본다.
+
+**검증 상태**
+- User local CI revision `7558639752dccc2bafb4822d3152044a4cdc379f`: **FAIL at source invariant preflight**.
+- Connector source cross-check after fix: contradictory forbidden token removed; positive disclosure guards preserved: **PASS (source evidence)**.
+- Rerun `local_ci.bat x64`: **NOT RETESTED**.
+- Compile/link/functional/runtime/visual: **NOT TESTED** because the failing run stopped before project generation/build.

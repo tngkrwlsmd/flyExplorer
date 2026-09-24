@@ -442,6 +442,13 @@ Status: **ACTIVE / user-reproduced runtime failures**. These items are the immed
    - No dependency update/removal or architecture change was performed. Binary import/ABI, Windows build, package and installer evidence remain NOT TESTED.
    - Audit/documentation commit: `12aa5fd5d334f2fb5cabe420bdf4d80964449715`.
 
+21. **Settings navigation invariant conflict — CODE FIXED / LOCAL CI NOT RETESTED**
+   - User `local_ci.bat x64` on merged revision `7558639752dccc2bafb4822d3152044a4cdc379f` failed source invariant/regression preflight before project generation with `legacy configuration navigation token returned TVS_LINESATROOT`.
+   - Root cause: logical unit 18 intentionally made `TVS_LINESATROOT` part of the modern root-disclosure contract, and the newer scoped invariant positively required it, but the older `validate_configuration_shell_contract()` still classified the same style as a forbidden legacy token.
+   - Fix: `TVS_LINESATROOT` is removed only from the old forbidden-token set. `TVS_HASLINES` and the classic bordered/scrolling shell remain forbidden, while the dedicated resource/runtime settings-navigation guards continue to require root disclosure.
+   - Prevention: the validator now documents the ownership boundary next to the negative rule so a style cannot silently remain both required and forbidden. The positive settings-navigation contract remains the source of truth for root disclosure.
+   - Acceptance: rerun `local_ci.bat x64`; source invariant/regression preflight must pass and CI must proceed into VS 2026 x64 solution generation/build. Until that rerun exists, status remains `CODE FIXED / LOCAL CI NOT RETESTED`.
+
 ### Development handoff rule
 
 - Every new user-requested development item is added to this section (or its successor) before implementation starts.

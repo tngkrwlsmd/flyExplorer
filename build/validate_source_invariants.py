@@ -578,7 +578,11 @@ def validate_configuration_shell_contract() -> list[str]:
         if token not in cfg_resource:
             errors.append(f"src/fxfile/fxfile.rc: modern configuration-shell token missing {token}")
 
-    for legacy_token in ("TVS_HASLINES", "TVS_LINESATROOT", "WS_BORDER | WS_HSCROLL"):
+    # Root disclosure via TVS_LINESATROOT is an intentional modern settings
+    # contract. Only the old line ornament and classic bordered/scrolling shell
+    # remain forbidden here; the dedicated settings-navigation invariant below
+    # positively requires TVS_LINESATROOT.
+    for legacy_token in ("TVS_HASLINES", "WS_BORDER | WS_HSCROLL"):
         if legacy_token in cfg_resource:
             errors.append(f"src/fxfile/fxfile.rc: legacy configuration navigation token returned {legacy_token}")
 
