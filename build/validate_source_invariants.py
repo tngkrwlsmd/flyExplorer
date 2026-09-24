@@ -2678,7 +2678,7 @@ def validate_win11_stability_regressions() -> list[str]:
         return errors
 
     toolbar_source = contents["toolbar_cpp"]
-    owned_start = toolbar_source.find("void DrawOwnedDarkToolbarItem(")
+    owned_start = toolbar_source.find("void DrawOwnedToolbarItem(")
     owned_end = toolbar_source.find(
         "LRESULT ApplyDarkToolBarCustomDraw(", owned_start
     )
@@ -2697,14 +2697,27 @@ def validate_win11_stability_regressions() -> list[str]:
         else ""
     )
     if (
-        "DrawOwnedDarkToolbarItem(aCustomDraw, sBackground)" not in postpaint
+        "DrawOwnedToolbarItem(aCustomDraw, sBackground)" not in postpaint
         or "ImageList_DrawEx(" not in owned
         or "FillRect(" not in owned
         or "DrawFinalDarkToolbarItem(aCustomDraw, aBackground)" not in owned
     ):
         errors.append(
-            "toolbar: dark item final ownership must cover the entire "
-            "native highlight tile, icon, text and dropdown"
+            "toolbar: Light/Dark final ownership must cover the entire "
+            "native icon, text, dropdown and highlight tile"
+        )
+
+    # Regression observed in the user's Light-looking bookmark-band image:
+    # the former Light-only partial overlay kept the bottom of the native
+    # image/text visible below the app-owned upper glyphs.
+    if (
+        "if (XPR_IS_TRUE(sPalette.mDark))" in postpaint
+        or "DrawFinalDarkToolbarItem(aCustomDraw, sBackground)" in postpaint
+        or postpaint.count("DrawOwnedToolbarItem(aCustomDraw, sBackground)") != 1
+    ):
+        errors.append(
+            "toolbar: Light and Dark must share one full-item postpaint; "
+            "the Light text-only overlay causes ghost icons/text"
         )
 
     modern_ui = contents["modern_ui"]

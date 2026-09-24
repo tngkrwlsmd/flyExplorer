@@ -22,6 +22,30 @@
 | 제한 | 검색 실행·결과/취소, 파일 복사·이동·삭제, shell context menu, drag/drop, installer/CHM, Windows 10, High Contrast, mixed-DPI, 화면 읽기 프로그램: NOT TESTED |
 | GitHub Actions | NOT RUN; 실행별 사용자 명시적 지시 규칙 유지 |
 
+## 사용자 제공 추가 화면 — UI-09 (북마크 도구 모음 잔상)
+
+- 2026-09-24 사용자 스크린샷에서 Light처럼 보이는
+  바탕 화면·라이브러리·내 문서·음악·사진·동영상·네트워크
+  바로가기 아이콘 아래에 짧은 색상 줄, 한국어 레이블
+  아래에는 검은 잔상 조각이 각각 반복된다.
+  이 화면은 이전 x64 PASS 기록의 이미지가 아니며,
+  본문과 하단 잔상은 실제 사용자 화면 근거이다.
+- 소스 진단 후보: ToolBarEx의 \`CDDS_ITEMPOSTPAINT\`는
+  Dark에서만 버튼 전체를 지우고 다시 그렸고,
+  Light에서는 \`DrawFinalDarkToolbarItem\`으로 text/dropdown
+  사각형만 지워 그려 native 아이콘·글자 일부가 남을 수 있었다.
+- 해당 비고대비 Light도 Dark와 동일한 버튼 전체
+  최종 렌더러를 사용하도록 연결했다.
+  앱 테마 팔레트로 배경·hover/pressed·아이콘·레이블·화살표를
+  완전히 그리며 기능·이미지 목록·키보드·tooltip·고대비는
+  유지한다. 정적 검사에서는 이전 Light 부분 오버레이로
+  돌아가지 못하게 한다.
+- 이는 일관된 소스 수정으로, 원인 확정이나 완료 판정은
+  재빌드한 Windows 11의 정확히 같은 바로가기 밴드
+  Light/Dark/고대비, 100/125/150/200%와 hover/pressed
+  스크린샷 비교가 필요하다.
+  **UI-09: SOURCE UPDATED / VISUAL RETEST OPEN.**
+
 ## 실제 관찰된 개선 목록
 
 P1은 기능 오인 또는 읽기 어려움, P2는 사용성/시각 일관성 개선이다. 기대 결과는 Intended이며 관찰 결과와 구분한다. CODE UPDATED는 소스 수정만 뜻하며 matching runtime/visual evidence 전에는 CLOSED가 아니다.

@@ -3007,3 +3007,46 @@ and rejecting the old selection-only hiding path.
 VS2026 x64 compile, original user click sequence, Light/Dark/HC,
 keyboard focus and DPI final screenshots: NOT TESTED. UI-01 is
 NOT CLOSED. GitHub Actions: NOT RUN absent individual approval.
+
+
+---
+
+## 2026-09-24 — UI-09 bookmark strip icon/text baseline ghosts
+
+**User evidence:** The user attached a close crop of the Windows
+bookmark strip. Repeated short icon-colored underlines are visible
+under Desktop/Libraries/Documents/Music/Pictures/Videos/Network,
+with isolated dark fragments beneath their Korean captions.
+The strip uses a Light-looking background. This is current user
+visual evidence of a defect, not a successful acceptance screenshot.
+
+**Source diagnosis candidate:** In ToolBarEx's custom-draw final
+CDDS_ITEMPOSTPAINT, Dark previously called DrawOwnedDarkToolbarItem,
+which fills the full item and redraws its ImageList icon, state,
+caption and dropdown. Light took DrawFinalDarkToolbarItem only,
+clearing/replacing the much smaller text/dropdown rectangles while
+native rendering retained control of the remaining icon and/or
+caption tail. Differing native/ModernUI text/icon positions could
+produce the screenshot's two fragmented baselines. Pixel-trace
+confirmation of this precise root cause has NOT been obtained.
+
+**Source change:** Use the existing full-item owner for both
+non-High-Contrast Light and Dark, renamed DrawOwnedToolbarItem to
+reflect its responsibility. Native ToolbarWindow32 still manages
+bookmark commands, hit-testing, focus/keyboard behavior, tooltips
+and image-list data; the app owns only the final visual pixels.
+High Contrast and legacy system branches retain native painting.
+No icon/command mapping or stored profile data changed.
+
+**Recurrence prevention:** Extend the scoped existing toolbar
+source guard to require exactly one complete-item postpaint path
+and explicitly reject the old conditional Light text-only pass;
+keep the whole-item fill, ImageList redraw and text/glyph checks.
+
+**Evidence state:** Connector-reviewed source construction only.
+Full local Python source preflight, VS2026 Release-x64-Unicode build,
+native functional suite, actual exact-user-strip rendering in
+Light/Dark/HC with hover/press and 100/125/150/200 DPI:
+NOT TESTED. The visual issue is OPEN pending reproduction
+comparison; prior build evidence does not apply to this revision.
+GitHub Actions: NOT RUN; per-run explicit approval remains required.

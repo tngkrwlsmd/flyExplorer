@@ -138,6 +138,25 @@ Appearance -> Light -> Apply -> Filtering), focus preservation,
 repeated switches and current-revision x64 compilation: NOT TESTED.
 UI-01 remains CODE UPDATED / MATCHING RUNTIME RETEST OPEN.
 
+**2026-09-24 user screenshot — bookmark-toolbar ghost icon/text
+(UI-09, source candidate implemented, visual acceptance open):**
+The supplied narrow Light-looking toolbar image shows clipped colored
+strokes beneath Desktop/Libraries/Documents/media shortcut icons and
+short black fragments beneath their Korean captions. The source had
+a full-button postpaint owner for Dark but a text/dropdown-only
+postpaint overlay for Light, leaving native icon and text pixels
+outside the smaller overlay rectangle. The non-High-Contrast Light
+path now reuses the existing complete owner for the entire button,
+including palette fill, image-list icon, label, and dropdown.
+Command IDs, bookmark data, native keyboard/tooltips/accessibility,
+saved layout and High Contrast native rendering remain unchanged.
+The original Dark full-item ownership guard now checks both Light
+and Dark and forbids the former partial Light branch. This is an
+inferred source root-cause candidate, not a revision-matched Windows
+visual fix claim. Full validator, current x64 compiler and Light/
+Dark/HC/DPI/hover toolbar pixel regression: **NOT TESTED**.
+UI-09 is SOURCE UPDATED / VISUAL RETEST OPEN.
+
 ## Outstanding near-term work
 
 1. Address the reproduced settings-page visibility and Dark rendering issues

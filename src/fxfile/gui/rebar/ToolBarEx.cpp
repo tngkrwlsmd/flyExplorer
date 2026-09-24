@@ -406,7 +406,12 @@ void DrawFinalDarkToolbarItem(
 }
 
 
-void DrawOwnedDarkToolbarItem(
+// Own the *complete* final button in both Light and Dark. Previously Light
+// repainted only the label, leaving a second clipped native icon/text baseline
+// beneath the app-owned one (visible as colored and black short underlines
+// in the bookmark toolbar). Native ToolbarWindow32 still owns commands,
+// hit-testing, keyboard handling and accessibility, not the final pixels.
+void DrawOwnedToolbarItem(
     LPNMTBCUSTOMDRAW aCustomDraw,
     COLORREF aBackground)
 {
@@ -606,10 +611,11 @@ LRESULT ApplyDarkToolBarCustomDraw(
 
         case CDDS_ITEMPOSTPAINT:
         {
-            if (XPR_IS_TRUE(sPalette.mDark))
-                DrawOwnedDarkToolbarItem(aCustomDraw, sBackground);
-            else
-                DrawFinalDarkToolbarItem(aCustomDraw, sBackground);
+            // Light and Dark require identical final pixel ownership.
+            // A text-only Light overlay leaves the native icon/text tail
+            // un-erased when system toolbar metrics differ from our font.
+            // High Contrast and legacy XP still take the native path above.
+            DrawOwnedToolbarItem(aCustomDraw, sBackground);
             return CDRF_DODEFAULT;
         }
 

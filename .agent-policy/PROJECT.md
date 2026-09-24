@@ -827,6 +827,24 @@ Appearance -> Light -> Apply -> Filtering acceptance, keyboard focus,
 High Contrast and varied DPI: NOT TESTED. UI-01 remains runtime OPEN.
 Hosted Actions: NOT RUN.
 
+**UI-09 user screenshot / bookmark toolbar ghost strokes
+(2026-09-24):** The user-supplied image shows short colored remnants
+below every bookmark icon and black glyph fragments beneath the
+Korean labels on a Light-looking command background. Source review
+identified a plausible renderer-ownership asymmetry:
+ApplyDarkToolBarCustomDraw used complete-item postpaint only in
+Dark, but Light called DrawFinalDarkToolbarItem, which erases only
+the smaller caption/dropdown rectangles after native painting.
+The Light branch now uses the same complete palette-backed owner,
+renamed DrawOwnedToolbarItem, with the existing native image list
+and button semantics preserved. The negative source guard forbids
+a new Light text-only postpaint; HC/legacy native handling is
+unchanged. This is a likely source root cause, not proof of an
+exact runtime fix. Rev-matched Release-x64-Unicode, full validator,
+same bookmark strip screenshot and Light/Dark/HC/DPI/hover/focus
+regression: NOT TESTED. UI-09 remains VISUAL RETEST OPEN.
+Hosted Actions: NOT RUN under permanent per-run approval rule.
+
 ### Development handoff rule
 
 - Every new user-requested development item is added to this section (or its successor) before implementation starts.
