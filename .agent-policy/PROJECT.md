@@ -432,6 +432,13 @@ Status: **ACTIVE / user-reproduced runtime failures**. These items are the immed
    - Recurrence guard: the Win11 stability validator extracts the actual `mHover`/`mPressed` blend assignments and rejects selection-accent derivation instead of requiring a particular numeric formula. The regex is intentionally scoped to those assignments and uses single regex escapes so valid assignments are recognized.
    - Connector/source inspection after change: shared palette owner updated. Windows compile/runtime/Light/Dark/High Contrast/DPI visual evidence is **NOT TESTED**; the user-reproduced visual issue remains ACTIVE until matching screenshots pass.
 
+20. **Legacy dependency + mixed-architecture audit — DOCUMENTED / MIGRATION NOT PERFORMED**
+   - Repository tree/GYP/package/source audit is recorded in `docs/development/DEPENDENCY_ARCH_AUDIT_20260924.md`.
+   - Active prebuilt/ABI dependencies (GFL, libxml2, iconv, libcurl and MinGW runtime) mean the current mixed architecture is not safely collapsible to all-x64 without staged migration evidence.
+   - `libxslt` and vendored gtest have no active flyExplorer build/source consumer observed in current code search and are cleanup candidates, not automatic deletion targets.
+   - The updater remains the strongest x86/Multibyte coupling; launcher is a lower-risk candidate for a future isolated x64 feasibility unit.
+   - No dependency update/removal or architecture change was performed. Binary import/ABI, Windows build, package and installer evidence remain NOT TESTED.
+
 ### Development handoff rule
 
 - Every new user-requested development item is added to this section (or its successor) before implementation starts.

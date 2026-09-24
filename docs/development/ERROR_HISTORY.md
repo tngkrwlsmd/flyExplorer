@@ -1798,3 +1798,26 @@
 **검증 상태**
 - Sample regex match against the intended assignment shape: **PASS**.
 - Repository `python build/validate_source_invariants.py`: **NOT TESTED** — 실행 가능한 Windows checkout 없음.
+
+---
+
+## 2026-09-24 — Legacy dependency and mixed-architecture audit
+
+**조사 목적**
+- 오래된 vendored library와 x64 + Win32 helper 구조를 '오래됐으니 교체' 방식으로 다루지 않고 실제 GYP/source/package dependency를 기준으로 분류했다.
+
+**관찰 결과**
+- GFL, libxml2, iconv, libcurl, MinGW runtime은 현재 source/link/runtime packaging에서 실제 사용된다.
+- zlib은 crash component의 source-built target과 libxml2 계열 runtime DLL이라는 서로 다른 형태로 존재한다.
+- VLD는 leak-detection용 개발 의존성이지만 release copy path도 남아 있어 별도 staging 검증이 필요하다.
+- vendored gtest와 libxslt는 현재 flyExplorer GYP/production source consumer가 검색되지 않았지만, 동적/외부 수동 consumer 가능성을 확인하기 전에는 삭제 근거가 충분하지 않다.
+- keyhook/launcher/upchecker의 Win32 유지에는 기존 helper/packaging 계약이 연결돼 있고, 특히 upchecker는 prebuilt network/XML/charset runtime과 결합돼 있다.
+
+**결정**
+- 이번 unit에서는 dependency 삭제/업그레이드나 helper x64 전환을 수행하지 않는다.
+- 근거와 단계별 migration 후보를 `docs/development/DEPENDENCY_ARCH_AUDIT_20260924.md`에 기록했다.
+
+**검증 상태**
+- Repository source/GYP/package reference audit: **PASS (connector evidence)**.
+- PE import/ABI inspection: **NOT TESTED**.
+- Windows compile/runtime/package: **NOT TESTED**.
