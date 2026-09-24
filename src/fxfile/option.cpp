@@ -70,7 +70,7 @@ static const OptionKey gMainOptionKeys[] =
 {
     { XPR_STRING_LITERAL("main.window.position"),                              OptionKey::TypeRect,    &Option::mMain.mWindowRect,                     (void *)new CRect(-1,-1,-1,-1)         },
     { XPR_STRING_LITERAL("main.window.status"),                                OptionKey::TypeInteger, &Option::mMain.mWindowStatus,                   (void *)XPR_FALSE                      },
-    { XPR_STRING_LITERAL("main.folder_tree.mode"),                             OptionKey::TypeBoolean, &Option::mMain.mSingleFolderPaneMode,           (void *)XPR_FALSE                      },
+    { XPR_STRING_LITERAL("main.folder_tree.mode"),                             OptionKey::TypeBoolean, &Option::mMain.mSingleFolderPaneMode,           (void *)XPR_TRUE                      },
     { XPR_STRING_LITERAL("main.single_folder_tree.show"),                      OptionKey::TypeBoolean, &Option::mMain.mShowSingleFolderPane,           (void *)XPR_TRUE                       },
     { XPR_STRING_LITERAL("main.single_folder_tree.size"),                      OptionKey::TypeInteger, &Option::mMain.mSingleFolderPaneSize,           (void *)DEF_FOLDER_PANE_SIZE           },
     { XPR_STRING_LITERAL("main.single_folder_tree.left_side"),                 OptionKey::TypeBoolean, &Option::mMain.mLeftSingleFolderPane,           (void *)XPR_TRUE                       },

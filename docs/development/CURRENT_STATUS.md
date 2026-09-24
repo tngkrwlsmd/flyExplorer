@@ -35,7 +35,8 @@ existing single-tab strip and new-tab button without changing saved settings.
 These are partial changes; Windows build, runtime/visual, DPI/HC, search
 behavior and a newly added close-tab glyph still require revision-matched
 Windows runtime/visual acceptance.
-UI-02/UI-05/UI-06/UI-08 remain unchanged and OPEN. Prior `bee95d9`
+UI-02/UI-05/UI-06 remained unchanged in that checkpoint;
+UI-08 receives a separate new-profile-only partial change below. Prior `bee95d9`
 build evidence does not apply to this new revision.
 
 **Additional UI-07 source checkpoint (2026-09-24):**
@@ -48,6 +49,17 @@ tab indices, old profile options and high-contrast palette routing are
 retained. This is source work only: compile, release-on-close behavior,
 narrow layouts, hover/focus and actual final pixels are NOT TESTED.
 UI-07 remains OPEN until Windows acceptance.
+
+**Additional UI-08 source checkpoint (2026-09-24):**
+The already-supported shared folder-tree mode becomes the default for
+new profiles, avoiding duplicate trees when a user splits the view
+vertically. Existing saved pane configurations, individual-tree mode,
+folder-tree visibility controls, file lists, shortcuts and information
+panels remain available. This is a limited initial-layout change, not
+dynamic narrow-pane adaptation. A source guard confirms the existing
+shared/per-view owner paths. Current-revision Windows build, clean-profile
+first launch, split-pane resizing, layout persistence and visual evidence:
+NOT TESTED. UI-08 remains OPEN for the broader acceptance case.
 
 ## Outstanding near-term work
 

@@ -4175,6 +4175,43 @@ def validate_release_stage_recovery() -> list[str]:
     return errors
 
 
+def validate_shared_tree_new_profile_default() -> list[str]:
+    """UI-08: new profiles use the existing shared tree in split layouts."""
+    errors: list[str] = []
+    option = (FXFILE_SRC / "option.cpp").read_text(
+        encoding="utf-8", errors="replace"
+    )
+    frame = (FXFILE_SRC / "main_frame.cpp").read_text(
+        encoding="utf-8", errors="replace"
+    )
+    view = (FXFILE_SRC / "explorer_view.cpp").read_text(
+        encoding="utf-8", errors="replace"
+    )
+    if not any(
+        '"main.folder_tree.mode"' in line
+        and "mSingleFolderPaneMode" in line
+        and "(void *)XPR_TRUE" in line
+        for line in option.splitlines()
+    ):
+        errors.append("new profiles must default to the existing shared folder tree")
+    if not all(
+        token in frame for token in (
+            "mSingleFolderPaneMode",
+            "mSingleFolderSplitter.split(1, 2)",
+            "MainFrame::setSingleFolderPaneMode",
+        )
+    ):
+        errors.append("shared-tree frame lifecycle contract missing")
+    if not all(
+        token in view for token in (
+            "XPR_IS_FALSE(gOpt->mMain.mSingleFolderPaneMode)",
+            "XPR_IS_TRUE(gOpt->mMain.mSingleFolderPaneMode)",
+        )
+    ):
+        errors.append("per-view/shared folder-tree selection contract missing")
+    return errors
+
+
 def validate_tab_close_discoverability() -> list[str]:
     """Protect tooltip, hit target and the existing command dispatch."""
     errors: list[str] = []
@@ -4333,6 +4370,7 @@ def main() -> int:
     errors.extend(validate_active_ci_scope_documentation())
     errors.extend(validate_actions_storage_budget_contract())
     errors.extend(validate_installer_smoke_wiring())
+    errors.extend(validate_shared_tree_new_profile_default())
     errors.extend(validate_tab_close_discoverability())
     errors.extend(validate_search_location_and_tab_discoverability())
     errors.extend(validate_move_order_button_labels())

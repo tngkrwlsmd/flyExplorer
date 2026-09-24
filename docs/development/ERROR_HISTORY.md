@@ -2808,3 +2808,27 @@ tree/compare only. Python validator execution, Visual Studio x64
 compile/link, real close interaction, tooltip and DPI/Light/Dark/High
 Contrast screenshots: NOT TESTED. UI-07 remains OPEN. GitHub Actions:
 NOT RUN because the individual run was not authorized.
+
+
+---
+
+## 2026-09-24 — UI-08 new-profile shared folder-tree initial layout
+
+**Observed:** The Windows UI audit found repeated folder trees across
+vertical split panes and reduced space for file columns. The product
+already has a shared-tree mode and per-view tree controls, but its new
+profile setting defaulted to individual trees.
+
+**Source change:** Change only the new-profile default for
+`main.folder_tree.mode` to select the existing shared tree. Existing
+stored layout preferences still override the default, and switching
+back to individual trees remains supported. No file manager features,
+information panels or tree controls were removed. Add a source guard
+for the shared/per-view routing contract.
+
+**Verification boundary:** Source construction assertions only. The
+Python preflight and VS2026 x64 build have not run for the new revision.
+Windows clean-profile, pre-existing profile, vertical split/resize,
+settings persistence, multi-monitor/DPI and UI visual interaction
+remain NOT TESTED. UI-08 is partial and stays OPEN; no GitHub Actions
+run was authorized.

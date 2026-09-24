@@ -750,6 +750,17 @@ missing hit/dispatch wiring. The previous UI-07 new-profile defaults
 remain in place. Windows compile/runtime/visual/accessibility/DPI/HC:
 NOT TESTED; UI-07 closure still OPEN. Hosted Actions: NOT RUN.
 
+**UI-08 new-profile shared-tree source checkpoint (2026-09-24):**
+The existing shared folder-tree architecture becomes the initial
+default for newly created profiles, reducing duplicate tree width in
+vertical split views. No migration of saved profiles or change to
+per-view tree availability, information content or command semantics.
+The existing frame/view routing remains the implementation owner;
+a new static regression guard checks the default and owner wiring.
+Actual Windows new-profile, previous-profile, split/resize, persistence
+and light/dark/DPI visuals: NOT TESTED. UI-08 remains partially OPEN.
+Hosted Actions: NOT RUN.
+
 ### Development handoff rule
 
 - Every new user-requested development item is added to this section (or its successor) before implementation starts.

@@ -35,7 +35,7 @@ P1은 기능 오인 또는 읽기 어려움, P2는 사용성/시각 일관성 �
 | UI-05 / P2 | main 상단은 좁은 명령 아이콘들이 밀집하고 드라이브/북마크 band에는 넓은 빈 공간이 남는다. 설정의 checkbox/radio/combobox 내부 간격은 다른 영역보다 좁다. | Windows 11 Explorer를 기준으로 font/행 높이/hit target/섹션 간격을 함께 조정. 기존 command, bitmap index, 정보 밀도 선택권 보존. | main toolbar/rebar, `ModernUI`, dialog resource/layout metrics |
 | UI-06 / P2 | Dark의 창/탭 popup 메뉴에 밝고 두꺼운 외곽선이 보인다. 창 메뉴는 현재 main 창 높이보다 길다. | 중립색 경계와 일관된 hover/disabled 상태. 짧은 화면에서도 모든 명령을 키보드/스크롤로 접근 가능. 기능을 삭제해 메뉴를 줄이지 않음. | app-owned `BCMenu`, command grouping/placement |
 | UI-07 / P2 — **SOURCE UPDATED / VISUAL RETEST OPEN** | 단일 창에는 탭 추가/닫기 affordance가 보이지 않는다. 창 → 탭 → 새 탭으로 열면 탭 strip이 나타나지만 상시 `+`/닫기 표시가 눈에 띄지 않는다. `Ctrl+F4`로 테스트 탭은 정상 닫힌다. | 새 사용자도 탭 기능을 발견 가능. 선택/hover/focus/닫기 target을 구분하며 기존 shortcut과 single-tab 숨김 설정 의미 보존. | `tab_pane.cpp`, tab control, 창/탭 command UI |
-| UI-08 / P2 | 수직 듀얼 창에서 각 pane의 tree와 설명 영역이 반복되어 파일 목록 너비가 크게 줄고 열/수정 날짜가 잘린다. 주소는 현재 설정에서 마지막 폴더명 위주로 보인다. | 좁은 pane에서 정보 우선순위/최소 너비/설명 영역 크기 조절을 개선하고 활성 pane을 명확히 표시. 전체 경로 옵션과 고급 기능 보존; breadcrumb는 설계 후보. | `explorer_pane.cpp`, `explorer_view.cpp`, `splitter.cpp`, `address_bar.cpp` |
+| UI-08 / P2 — **SOURCE PARTIAL / VISUAL RETEST OPEN** | 수직 듀얼 창에서 각 pane의 tree와 설명 영역이 반복되어 파일 목록 너비가 크게 줄고 열/수정 날짜가 잘린다. 주소는 현재 설정에서 마지막 폴더명 위주로 보인다. | 좁은 pane에서 정보 우선순위/최소 너비/설명 영역 크기 조절을 개선하고 활성 pane을 명확히 표시. 전체 경로 옵션과 고급 기능 보존; breadcrumb는 설계 후보. | `explorer_pane.cpp`, `explorer_view.cpp`, `splitter.cpp`, `address_bar.cpp` |
 
 UI-04의 원래 `¡è`/`¡é` literal은 filtering과 sibling program-association resource에서 제거했다. 두 페이지 모두 runtime localization으로 의미 있는 이동 방향 text를 설정한다. CODE UPDATED는 visual/accessibility PASS가 아니므로 실제 DPI/keyboard/screen-reader 확인은 남아 있다.
 
@@ -63,6 +63,20 @@ UI-04의 원래 `¡è`/`¡é` literal은 filtering과 sibling program-associatio
   탭, 탭 드래그, 탭 축소, 닫기 취소, Light/Dark/High Contrast,
   100/125/150/200% 배율 및 접근성 이름을 만족하는지는
   **NOT TESTED / RETEST OPEN**이다.
+
+### UI-08 후속 source checkpoint: 새 프로필 공유 폴더 트리
+
+신규 프로필에서 이미 구현된 '공유 폴더 트리' 모드를 기본값으로
+선택하도록 바꾸었다. 수직 분할 시 각 pane에 반복되는 폴더 트리
+대신 공용 트리를 사용하는 초기 배치 개선이다. 저장된 기존 사용자
+설정, 개별 트리 모드와 표시 설정은 그대로 유지한다. 파일 목록이나
+정보 영역을 임의로 삭제하지 않는다.
+
+이 변경은 화면 폭에 따른 자동 적응, 최소 너비, 정보 영역 크기,
+활성 pane 식별 또는 전체 경로/브레드크럼 설계를 구현하지 않는다.
+새 설정과 기존 설정 각각에서 단일/수직/수평 분할·창 크기 변경·
+탭 전환·설정 저장/복구를 실제 Windows에서 점검하기 전에는
+UI-08 완료로 판단하지 않는다.
 
 ### UI-01의 진단 근거와 회귀 조건
 
