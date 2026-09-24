@@ -51,6 +51,15 @@ def check_sources() -> list[Path]:
     for path in required:
         if not path.is_file():
             raise HelpBuildError("missing HTML Help source: " + str(path.relative_to(ROOT)))
+    # A former frameset preview hard-coded a past developer's E: drive and
+    # referenced a different compiled CHM name. These four root-level
+    # files are not part of the canonical Html/ help topic tree.
+    obsolete_preview = ("index.htm", "left.htm", "main.htm", "style.css")
+    present = [name for name in obsolete_preview if (SOURCE / name).exists()]
+    if present:
+        raise HelpBuildError(
+            "remove obsolete frame-preview help inputs: " + ", ".join(present)
+        )
     project = read_source(required[0])
     if "Compiled file=fxfile.chm" not in project or "Default topic=html\\start.htm" not in project:
         raise HelpBuildError("HTML Help project must target fxfile.chm and html\\start.htm")

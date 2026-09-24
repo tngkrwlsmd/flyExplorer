@@ -2219,3 +2219,32 @@ Verification: GitHub source-tree diff and changed-path inspection: PASS.
 The vendored policy/readiness CLI and Windows/full release tests: NOT RUN.
 The actual Microsoft HTML Help Workshop output and release rights:
 NOT VERIFIED; do not elevate this metadata update to a runtime PASS.
+
+---
+
+## 2026-09-24 — Four unused root HTML frameset files retired
+
+**Observed:** The root `docs/htmlhelp/index.htm`, `left.htm` and
+`main.htm` implement a legacy browser frameset. The latter two refer
+to an absolute former developer workstation path and the old
+`flyExplorer.chm`; the root `style.css` is their unused companion.
+All 79 other tracked HTML Help HTML/CSS/HHP/HHC/HHK files were inspected
+for relative `href/src` links into the four proposed removals. No
+surviving help source reference was found. The actual product calls the
+Windows HTML Help API against generated `fxfile.chm` and the canonical
+help project starts at `Html/start.htm`.
+
+**Change:** Remove only the four obsolete frameset assets; retain
+`docs/htmlhelp/Html/style.css` and `Html/config/style.css`.
+Reject these obsolete root inputs in the read-only HTML Help
+source preflight to avoid accidentally shipping them later.
+The dependency audit now distinguishes 222 prior completed vendor-file
+removals from historical recommendations and documents current active
+third-party library dependencies.
+
+**Verification:** Checked canonical help manifest/TOC/index,
+79 remaining textual HTML Help sources and product Help command source.
+No remaining tracked help source references the removed frameset assets.
+External bookmarks/manual workflows cannot be ruled out. Fresh
+Windows `hhc.exe`/CHM topic browsing, x64 compile/runtime and installer
+checks: NOT TESTED. GitHub Actions: NOT RUN.

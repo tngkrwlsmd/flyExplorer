@@ -541,6 +541,11 @@ repository/source inspection only: policy readiness CLI, Windows HTML Help
 compiler, native product regression, installer and third-party legal review
 were not executed in this step.
 
+32. **Unused HTML frameset preview removal and dependency audit current-state update — SOURCE UPDATED / WINDOWS HELP NOT TESTED**
+    - `docs/htmlhelp/index.htm`, `left.htm`, `main.htm` and the root `style.css` formed a former frameset viewer referencing a past developer's local `E:` path and `flyExplorer.chm`. All 79 remaining help topic/CSS/index/project files were scanned for relative `href/src` references; none pointed at these four files. The actual HTML Help HHP/HHC/HHK and the product `HtmlHelp` call target `fxfile.chm` instead.
+    - Delete exactly those four obsolete root frameset assets and add a negative source preflight to `build/rebuild_htmlhelp.py` so accidental resurrection fails early. Keep `docs/htmlhelp/Html/style.css`, the nested config stylesheet, all help topics and binary/source assets.
+    - Reconcile `docs/development/DEPENDENCY_ARCH_AUDIT_20260924.md` with an explicit top-level current state: 222 prior vendor/duplicate/SDK-extra files removed; original audit retained as historical evidence. Help/compiler/Windows installer, native build and external/manual references are NOT TESTED. Document completion in `ERROR_HISTORY.md`.
+
 ### Development handoff rule
 
 - Every new user-requested development item is added to this section (or its successor) before implementation starts.

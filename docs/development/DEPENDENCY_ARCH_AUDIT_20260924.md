@@ -1,5 +1,29 @@
 # Dependency and Mixed-Architecture Audit — 2026-09-24
 
+## Current repository inventory after cleanup (2026-09-24)
+
+**This section is the present-state summary.** The dated findings and
+recommendations below are historical evidence from before cleanup; in
+particular, their `gtest` and `libxslt` "removal candidate" wording is no
+longer an outstanding task.
+
+| Dependency or asset | Observed repository state | Remaining decision/evidence |
+| --- | --- | --- |
+| `lib/gtest/` | REMOVED (41 tracked files) | No consumer found in tracked first-party GYP/scripts; external/manual consumption not ruled out. Restore through Git history if needed. |
+| `lib/libxslt/` | REMOVED (52 tracked files) | `libxml2` remains active and separate; external consumers not ruled out. |
+| `lib/zlib/bin/` | REMOVED (16 files, identical tracked blobs to corresponding `lib/zlib/lib/` files) | Vendored zlib source/include and XML `zlib1.dll` remain active. |
+| Vendored NSIS developer examples/help/GUI extras | REMOVED (113 tracked files) | `dist/nsis/makensis.exe` and compiler runtime dependencies remain. Windows installer compile NOT TESTED. |
+| GFL SDK, libxml2, iconv, curl, MinGW runtime | RETAINED | Exact runtime ABI, provenance and bundled redistribution rights remain open; see `DISTRIBUTION_LICENSE_REVIEW.md`. |
+| Visual Leak Detector (VLD) | RETAINED | Debug/development dependency; release staging minimization still requires package checks. |
+| Legacy four-file root HTML frameset preview | REMOVED (separate help-docs cleanup) | All 79 remaining HTML/CSS/index project files were inspected for relative `href/src` references to it; none found. This does not prove external bookmarks or historical local use. Canonical `Html/start.htm`, HHP/HHC/HHK and product CHM command remain unchanged. |
+
+The dependency/vendor cleanup removed **222 tracked files** (93 unused vendor,
+16 identical zlib binaries and 113 unused NSIS developer files). The
+four-file obsolete HTML frameset cleanup is separate. No third-party library
+was upgraded or active x86 helper re-architected. **No new Windows build,
+package, ABI or installer verification is claimed for these cleanups.**
+
+
 ## Scope and evidence level
 
 This audit records repository-observed dependency and architecture facts for the current VS 2026/v145 build. It does not treat age alone as permission to upgrade or delete a dependency.
