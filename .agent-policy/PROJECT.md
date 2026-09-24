@@ -82,11 +82,12 @@ LICENSE/CREDITS는 변경하지 않고 외부 배포 법적 확인은 보류한�
     }
   ],
   "review": {
-    "reviewed_revision": "752345b1bc76b7cf7601366e3548462c368d158e",
+    "reviewed_revision": "3dfbf2daae22ba25820da888cea2ce09cc4bc4a1",
     "reviewed_at": "2026-09-24",
     "reviewed_paths": [
       ".github/workflows/policy-validation.yml",
       ".github/workflows/windows-build.yml",
+      ".gitignore",
       "AGENTS.md",
       "build.bat",
       "build/common.gypi",
@@ -97,6 +98,7 @@ LICENSE/CREDITS는 변경하지 않고 외부 배포 법적 확인은 보류한�
       "build/runtime_smoke.ps1",
       "build/validate_package.ps1",
       "build/validate_source_invariants.py",
+      "copy_lib.bat",
       "CREDITS",
       "dist/copy.bat",
       "dist/history.txt",
@@ -137,18 +139,35 @@ LICENSE/CREDITS는 변경하지 않고 외부 배포 법적 확인은 보류한�
       "src/fxfile-keyhook",
       "src/fxfile-launcher",
       "src/fxfile-tests",
+      "src/fxfile-tests/functional_test_groups.h",
+      "src/fxfile-tests/functional_tests.cpp",
       "src/fxfile-tests/fxfile-tests.gyp",
+      "src/fxfile/app_ver.cpp",
+      "src/fxfile/app_ver.h",
+      "src/fxfile/cfg/cfg_adv_dlg.cpp",
       "src/fxfile/cfg/cfg_dlg.cpp",
       "src/fxfile/cfg/cfg_main_dlg.cpp",
+      "src/fxfile/cmd/about_tab_info_dlg.cpp",
+      "src/fxfile/cmd/about_tab_info_dlg.h",
+      "src/fxfile/conf_dir.cpp",
+      "src/fxfile/conf_dir.h",
+      "src/fxfile/fxfile.gyp",
+      "src/fxfile/fxfile.rc",
       "src/fxfile/gui/BCMenu.cpp",
       "src/fxfile/gui/FluentCommandIcons.cpp",
       "src/fxfile/gui/FluentCommandIcons.h",
+      "src/fxfile/Languages/Korean.xml",
+      "src/fxfile/option.cpp",
+      "src/fxfile/option.h",
       "src/fxfile/res/fluent/COMMAND_ICON_MAP.md",
       "src/fxfile/res/fluent/toolbar_manifest.json",
+      "src/fxfile/resource.h",
+      "src/fxfile/win_app.cpp",
       "src/xpr"
     ]
   }
 }
+
 
 
 
@@ -636,6 +655,24 @@ metadata/history-only commit does not change reviewed source paths.
     - `dist/copy.bat` now checks all 39 remaining required runtime binaries and language input before staging, copies without `xcopy /c`, checks every error and replaces generated bin only when its temporary stage is complete.
     - `dist/package.bat` clears only generated release names before work, creates the installer before portable-only document staging and removes partial names on failure. Direct `make_portable.bat` removes stale ZIP names even on missing tools/help failures. Package/isolated installer smoke reject updater reintroduction; normal Help/CHM and license notices remain intact.
     - Full 3-arch packaging is a separate opt-in/manual validation scope; Windows batch, actual ZIP and NSIS installer/uninstall have not been executed in this work unit. The default permitted local CI remains `local_ci.bat x64`, with hosted GitHub Actions strictly disabled until user per-run explicit instruction.
+
+**Owner-directed updater retirement / packaging review checkpoint
+(2026-09-24):** Reviewed source revision `3dfbf2daae22ba25820da888cea2ce09cc4bc4a1` removes 48 obsolete
+tracked files (updater tree, updater-only base/test/dependency files,
+five generated VS filters and two unused zlib VC projects) and updates
+43 active sources, validators and documentation. `reviewed_paths`
+now covers affected application, UI, build, test, package and help
+sources. The next review-metadata commit changes only PROJECT.md and
+the append-only ERROR_HISTORY, neither among reviewed paths.
+
+Source-tree and targeted contract review: no active updater module or
+tracked generated VS projects, manual-only CI intact, main GYP/fixer
+and installer safety contracts retained, package staging checks fail
+closed. These static results do not constitute a new Windows build,
+test, CHM compilation, actual package or installer run. The owner
+reports their previous build works, but this new revision is not yet
+revision-matched Windows tested. Root LICENSE/CREDITS unchanged;
+public redistribution permissions remain unverified.
 
 ### Development handoff rule
 

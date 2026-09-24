@@ -2524,3 +2524,32 @@ Windows CMD staging, multi-architecture compiler, hhc.exe, NSIS, ZIP,
 installed payload and uninstall: NOT TESTED. Public redistribution
 rights are not established by successful local packaging. GitHub
 Actions: NOT RUN.
+
+---
+
+## 2026-09-24 — Reviewed implementation snapshot after updater retirement
+
+Source implementation commit `3dfbf2daae22ba25820da888cea2ce09cc4bc4a1` retired the active Win32
+updater and the updater-only libcurl, base helpers and native regression.
+It also deleted the five tracked generated Visual Studio filter files
+and the two obsolete vendored zlib project files and hardened release
+staging. Scope: 48 tracked deletions and 43 active file modifications.
+The root LICENSE/CREDITS notices, GFL image SDK, Win32 launcher/keyhook,
+historical diagnostic entries and manual-only Actions controls remain.
+
+Project review source baseline updated from
+`752345b1bc76b7cf7601366e3548462c368d158e` to
+`3dfbf2daae22ba25820da888cea2ce09cc4bc4a1` and reviewed paths expanded from 61 to 79, including new
+product, source, UI and packaging inputs. This next metadata commit only
+updates `PROJECT.md` and this historical evidence log; it does not
+alter the reviewed source snapshot.
+
+**Evidence:** Source-tree path checks and targeted source/build/package
+contract inspection PASS. A revision-matched Windows Visual Studio build,
+native functional run, real three-architecture staging, HTML Help compile,
+portable ZIP generation, NSIS installer install/uninstall and actual UI
+were NOT TESTED in this work unit. The owner reports their preceding
+local build was working; the older user log's updater-only C++ error
+no longer pertains to the retired test but is retained as history.
+Old personal Windows HKCU updater startup entries are not modified by
+a Git commit. Hosted GitHub Actions: NOT RUN.
