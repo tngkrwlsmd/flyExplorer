@@ -4175,6 +4175,50 @@ def validate_release_stage_recovery() -> list[str]:
     return errors
 
 
+def validate_move_order_button_labels() -> list[str]:
+    """Reject the mojibake arrow literals and require localized move labels."""
+    errors: list[str] = []
+    rc_path = FXFILE_SRC / "fxfile.rc"
+    lang_path = FXFILE_SRC / "Languages" / "Korean.xml"
+    filter_path = FXFILE_SRC / "cfg" / "cfg_appearance_filtering_dlg.cpp"
+    program_path = FXFILE_SRC / "cfg" / "cfg_func_program_ass_dlg.cpp"
+    try:
+        rc = rc_path.read_text(encoding="utf-8", errors="replace")
+        lang = lang_path.read_text(encoding="utf-8", errors="replace")
+        filtering = filter_path.read_text(encoding="utf-8", errors="replace")
+        program = program_path.read_text(encoding="utf-8", errors="replace")
+    except OSError as exc:
+        return [f"move-order button label guard: cannot read source: {exc}"]
+
+    for token in ('"¡è"', '"¡é"'):
+        if token in rc:
+            errors.append(
+                f"src/fxfile/fxfile.rc: mojibake move-order caption returned: {token}"
+            )
+
+    required = (
+        "popup.cfg.body.appearance.filter.button.move_up",
+        "popup.cfg.body.appearance.filter.button.move_down",
+        "popup.cfg.body.function.program_ass.button.move_up",
+        "popup.cfg.body.function.program_ass.button.move_down",
+    )
+    for token in required:
+        if token not in lang:
+            errors.append(f"src/fxfile/Languages/Korean.xml: missing move label {token}")
+
+    for token in required[:2]:
+        if token not in filtering:
+            errors.append(
+                f"cfg_appearance_filtering_dlg.cpp: missing localized move label {token}"
+            )
+    for token in required[2:]:
+        if token not in program:
+            errors.append(
+                f"cfg_func_program_ass_dlg.cpp: missing localized move label {token}"
+            )
+    return errors
+
+
 def validate_html_help_package_source() -> list[str]:
     """Check help input/topic links before any GYP generation or packaging."""
     script = ROOT / "build" / "rebuild_htmlhelp.py"
@@ -4220,6 +4264,7 @@ def main() -> int:
     errors.extend(validate_active_ci_scope_documentation())
     errors.extend(validate_actions_storage_budget_contract())
     errors.extend(validate_installer_smoke_wiring())
+    errors.extend(validate_move_order_button_labels())
     errors.extend(validate_html_help_package_source())
     errors.extend(validate_retired_updater_and_generated_projects())
     errors.extend(validate_release_stage_recovery())

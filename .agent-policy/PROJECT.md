@@ -710,6 +710,12 @@ installer, UI and fresh product build: NOT TESTED. Hosted Actions: NOT RUN.
     - `validate_source_invariants.py` now requires the captured visibility state and requires both redraw calls to be visibility-gated; returning to the old plain `std::vector<HWND> mWindows` snapshot is rejected.
     - Static source contract: reviewed. The exact Windows acceptance sequence (General → Appearance/Theme → Light/System/Dark Apply → Filtering, without dialog reopen) and focus/visible-page count: NOT RETESTED. Do not mark UI-01 closed until runtime and visual evidence pass.
 
+39. **UI-04 reorder controls used mojibake glyph captions — CODE UPDATED / WINDOWS VISUAL RETEST REQUIRED**
+    - The UI audit found `¡è` / `¡é` literals on filtering reorder buttons. A sibling search found the same literals in program-association reorder controls.
+    - Replace resource fallbacks with readable ASCII `Up`/`Down`, widen both compact buttons from 15/16 DLU to 26 DLU, and set the runtime labels from Korean localization keys (`위로`/`아래로`) so the visible text is descriptive rather than encoding/font-dependent glyphs.
+    - Apply the same correction to both filtering and program-association pages. Source invariant rejects the mojibake literals and requires all four localization/wiring keys.
+    - Static source contract: reviewed. Windows dialog layout, text clipping, keyboard focus/accessibility exposure and 100/125/150/200% DPI visuals: NOT RETESTED.
+
 ### Development handoff rule
 
 - Every new user-requested development item is added to this section (or its successor) before implementation starts.

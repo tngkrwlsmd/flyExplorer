@@ -75,6 +75,8 @@ xpr_bool_t CfgFuncProgramAssDlg::OnInitDialog(void)
 
     SetDlgItemText(IDC_CFG_PROGRAM_ASS_LABEL_LIST,   gApp.loadString(XPR_STRING_LITERAL("popup.cfg.body.function.program_ass.label.list")));
     SetDlgItemText(IDC_CFG_PROGRAM_ASS_DEFAULT,      gApp.loadString(XPR_STRING_LITERAL("popup.cfg.body.function.program_ass.button.default")));
+    SetDlgItemText(IDC_CFG_PROGRAM_ASS_ITEM_UP,      gApp.loadString(XPR_STRING_LITERAL("popup.cfg.body.function.program_ass.button.move_up")));
+    SetDlgItemText(IDC_CFG_PROGRAM_ASS_ITEM_DOWN,    gApp.loadString(XPR_STRING_LITERAL("popup.cfg.body.function.program_ass.button.move_down")));
     SetDlgItemText(IDC_CFG_PROGRAM_ASS_ITEM_ADD,     gApp.loadString(XPR_STRING_LITERAL("popup.cfg.body.function.program_ass.button.add")));
     SetDlgItemText(IDC_CFG_PROGRAM_ASS_ITEM_MODIFY,  gApp.loadString(XPR_STRING_LITERAL("popup.cfg.body.function.program_ass.button.modify")));
     SetDlgItemText(IDC_CFG_PROGRAM_ASS_ITEM_DELETE,  gApp.loadString(XPR_STRING_LITERAL("popup.cfg.body.function.program_ass.button.delete")));

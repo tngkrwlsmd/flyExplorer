@@ -2704,3 +2704,30 @@ contract is forbidden.
 the exact General → Appearance/Theme → Apply → Filtering runtime path,
 visible-page count, focus and final pixels: NOT RETESTED. GitHub Actions:
 NOT RUN.
+
+---
+
+## 2026-09-24 — UI-04 mojibake reorder button labels
+
+**Observed:** The Windows UI audit showed the two filtering reorder buttons as
+unreadable character-like labels. Source inspection found literal
+`¡è`/`¡é` captions in that resource and the same pair on the sibling
+program-association reorder page. Neither page replaced those captions from
+the language table during initialization.
+
+**Cause:** The resource depended on legacy encoded glyph bytes instead of
+semantic localized text. Rendering therefore depended on resource encoding
+and font interpretation, and the button name itself did not clearly express
+its action.
+
+**Fix:** Replace both resource pairs with readable `Up`/`Down` fallbacks,
+widen the compact controls to 26 DLU, add Korean `위로`/`아래로` strings,
+and set them explicitly in each page's `OnInitDialog`. No reorder behavior,
+list data or command ID changed.
+
+**Prevention:** Source invariant rejects either mojibake literal and requires
+the four localization keys in both the language table and owning dialogs.
+
+**Verification:** Static source/wiring inspection: PASS. Windows compile,
+actual filtering/program-association dialog layout, DPI clipping, keyboard
+focus and accessibility/visual result: NOT RETESTED. GitHub Actions: NOT RUN.

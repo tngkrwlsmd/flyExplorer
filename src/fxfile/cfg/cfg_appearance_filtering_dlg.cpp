@@ -101,6 +101,8 @@ xpr_bool_t CfgAppearanceFilteringDlg::OnInitDialog(void)
 
     SetDlgItemText(IDC_CFG_FILTER_LABEL_LIST,       gApp.loadString(XPR_STRING_LITERAL("popup.cfg.body.appearance.filter.label.list")));
     SetDlgItemText(IDC_CFG_FILTER_DEFAULT,          gApp.loadString(XPR_STRING_LITERAL("popup.cfg.body.appearance.filter.button.default")));
+    SetDlgItemText(IDC_CFG_FILTER_ITEM_UP,          gApp.loadString(XPR_STRING_LITERAL("popup.cfg.body.appearance.filter.button.move_up")));
+    SetDlgItemText(IDC_CFG_FILTER_ITEM_DOWN,        gApp.loadString(XPR_STRING_LITERAL("popup.cfg.body.appearance.filter.button.move_down")));
     SetDlgItemText(IDC_CFG_FILTER_ADD,              gApp.loadString(XPR_STRING_LITERAL("popup.cfg.body.appearance.filter.button.add")));
     SetDlgItemText(IDC_CFG_FILTER_MODIFY,           gApp.loadString(XPR_STRING_LITERAL("popup.cfg.body.appearance.filter.button.modify")));
     SetDlgItemText(IDC_CFG_FILTER_DELETE,           gApp.loadString(XPR_STRING_LITERAL("popup.cfg.body.appearance.filter.button.delete")));

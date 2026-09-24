@@ -31,7 +31,9 @@ audit records the exact product revision, executable hash and untested cases.
 ## Outstanding near-term work
 
 1. Address the reproduced settings-page visibility and Dark rendering issues
-   in the UI audit. Current x64 compile/regression has passed at `bee95d9`;
+   in the UI audit. UI-01 and the UI-04 mojibake reorder-label path now have
+   source fixes with runtime/visual retest still required. Current x64
+   compile/regression has passed at `bee95d9`;
    regenerate and inspect the CHM and validate the installer in an isolated environment.
    Keep compiler, visual, runtime, installer and third-party licensing
    evidence separate. Non-default x86/release/full profiles need user

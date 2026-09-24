@@ -1539,6 +1539,8 @@
             <String ID="popup.cfg.body.appearance.filter.list.column.extension">확장자</String>
             <String ID="popup.cfg.body.appearance.filter.label.max_filter">제한 개수: %1%개</String>
             <String ID="popup.cfg.body.appearance.filter.button.default">기본값 복원(&amp;R)</String>
+            <String ID="popup.cfg.body.appearance.filter.button.move_up">위로</String>
+            <String ID="popup.cfg.body.appearance.filter.button.move_down">아래로</String>
             <String ID="popup.cfg.body.appearance.filter.button.add">추가(&amp;A)</String>
             <String ID="popup.cfg.body.appearance.filter.button.modify">수정(&amp;M)</String>
             <String ID="popup.cfg.body.appearance.filter.button.delete">삭제(&amp;D)</String>
@@ -1656,6 +1658,8 @@
             <String ID="popup.cfg.body.function.program_ass.list.column.program">프로그램</String>
             <String ID="popup.cfg.body.function.program_ass.label.limit_count">제한 개수: %1%개</String>
             <String ID="popup.cfg.body.function.program_ass.button.default">기본값 복원(&amp;R)</String>
+            <String ID="popup.cfg.body.function.program_ass.button.move_up">위로</String>
+            <String ID="popup.cfg.body.function.program_ass.button.move_down">아래로</String>
             <String ID="popup.cfg.body.function.program_ass.button.add">추가(&amp;A)</String>
             <String ID="popup.cfg.body.function.program_ass.button.modify">수정(&amp;M)</String>
             <String ID="popup.cfg.body.function.program_ass.button.delete">삭제(&amp;D)</String>
