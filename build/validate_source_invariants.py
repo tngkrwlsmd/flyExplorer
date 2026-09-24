@@ -3156,6 +3156,8 @@ def validate_win11_stability_regressions() -> list[str]:
             "sToolBarCtrl.GetButton(sItemIndex, &sButton)",
             "GetButtonText(sItemIndex, sMenuText)",
             "sToolBarCtrl.GetItemRect(sItemIndex, &sItemRect)",
+            "sButton.idCommand == IDBUTTON_SYSMENU",
+            "::DrawIconEx(",
             "aDC.FillSolidRect(&sItemRect, sPalette.mChrome)",
             "IsTopLevelMenuItemDisabled(sItemIndex)",
             "ResolveMenuTextColor(sPalette, sDisabled)",
@@ -3164,6 +3166,35 @@ def validate_win11_stability_regressions() -> list[str]:
             if token not in menu_overlay_block:
                 errors.append(
                     f"src/fxfile/gui/rebar/MenuBar.cpp: final menu overlay missing semantic step {token}"
+                )
+
+    menu_paint_start = menubar_source.find("void CMenuBar::OnPaint()")
+    menu_paint_end = menubar_source.find(
+        "\nLRESULT CMenuBar::WindowProc(",
+        menu_paint_start,
+    )
+    menu_paint_block = (
+        menubar_source[menu_paint_start:menu_paint_end]
+        if menu_paint_start >= 0
+        and menu_paint_end > menu_paint_start
+        else ""
+    )
+    if not menu_paint_block:
+        errors.append(
+            "src/fxfile/gui/rebar/MenuBar.cpp: WM_PAINT final-ownership block is missing"
+        )
+    else:
+        for token in (
+            "const xpr_bool_t sOwnDarkSurface",
+            "XPR_IS_TRUE(sPalette.mDark)",
+            "CPaintDC sDC(this);",
+            "sDC.FillSolidRect(&sClientRect, sPalette.mChrome);",
+            "DrawFinalMenuOverlay(sDC);",
+            "return;",
+        ):
+            if token not in menu_paint_block:
+                errors.append(
+                    f"src/fxfile/gui/rebar/MenuBar.cpp: Dark WM_PAINT ownership missing {token}"
                 )
 
     if "virtual LRESULT WindowProc( UINT message, WPARAM wParam, LPARAM lParam );" not in contents["menubar_h"]:
@@ -3177,6 +3208,8 @@ def validate_win11_stability_regressions() -> list[str]:
         "message == WM_PRINT",
         "PRF_CLIENT",
         "CToolBar::WindowProc(message, wParam, lParam)",
+        "sDC->FillSolidRect(",
+        "sPalette.mChrome",
         "DrawFinalMenuOverlay(*sDC)",
         "DrawFinalMenuOverlay(sDC)",
         "IsTopLevelMenuItemDisabled(",

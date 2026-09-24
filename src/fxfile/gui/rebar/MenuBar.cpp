@@ -1285,19 +1285,66 @@ void CMenuBar::DrawFinalMenuOverlay(CDC &aDC)
         if (sToolBarCtrl.GetButton(sItemIndex, &sButton) == FALSE)
             continue;
 
-        if (sButton.idCommand == IDBUTTON_SYSMENU ||
-            (sButton.fsStyle & TBSTYLE_SEP) != 0)
+        if ((sButton.fsStyle & TBSTYLE_SEP) != 0)
+            continue;
+
+        CRect sItemRect;
+        if (sToolBarCtrl.GetItemRect(sItemIndex, &sItemRect) == FALSE)
+            continue;
+
+        if (sButton.idCommand == IDBUTTON_SYSMENU)
         {
+            aDC.FillSolidRect(&sItemRect, sPalette.mChrome);
+
+            if (::IsWindow(m_hWndMDIChild) != FALSE)
+            {
+#if defined(_WIN64)
+                HICON sIcon =
+                    reinterpret_cast<HICON>(
+                        static_cast<intptr_t>(
+                            ::GetClassLong(
+                                m_hWndMDIChild,
+                                GCLP_HICONSM)));
+#else
+                HICON sIcon =
+                    reinterpret_cast<HICON>(
+                        static_cast<intptr_t>(
+                            ::GetClassLong(
+                                m_hWndMDIChild,
+                                GCL_HICONSM)));
+#endif
+                if (XPR_IS_NOT_NULL(sIcon))
+                {
+                    const xpr_sint_t sIconSize =
+                        min(
+                            sItemRect.Width(),
+                            sItemRect.Height());
+                    const xpr_sint_t sIconX =
+                        sItemRect.left +
+                        (sItemRect.Width() - sIconSize) / 2;
+                    const xpr_sint_t sIconY =
+                        sItemRect.top +
+                        (sItemRect.Height() - sIconSize) / 2;
+
+                    ::DrawIconEx(
+                        aDC.GetSafeHdc(),
+                        sIconX,
+                        sIconY,
+                        sIcon,
+                        sIconSize,
+                        sIconSize,
+                        0,
+                        XPR_NULL,
+                        DI_NORMAL);
+                }
+            }
+
             continue;
         }
 
         CString sMenuText;
         GetButtonText(sItemIndex, sMenuText);
         if (sMenuText.IsEmpty())
-            continue;
-
-        CRect sItemRect;
-        if (sToolBarCtrl.GetItemRect(sItemIndex, &sItemRect) == FALSE)
             continue;
 
         // Always erase the native toolbar text first. This routine is called
@@ -1362,7 +1409,32 @@ void CMenuBar::DrawFinalMenuOverlay(CDC &aDC)
 
 void CMenuBar::OnPaint()
 {
-    // Keep native toolbar layout/accessibility, then own the final pixels.
+    const fxfile::ui::ThemePalette sPalette =
+        fxfile::ui::ModernUI::getPalette();
+    const xpr_bool_t sOwnDarkSurface =
+        XPR_IS_TRUE(sPalette.mDark) &&
+        XPR_IS_FALSE(sPalette.mHighContrast) &&
+        !WinAppEx::GetInstance()->IsWinXP() ?
+        XPR_TRUE :
+        XPR_FALSE;
+
+    if (XPR_IS_TRUE(sOwnDarkSurface))
+    {
+        // Do not let ToolbarWindow32 paint native menu text in Dark mode.
+        // The previous native-first/final-overlay approach could still leave
+        // a later black system-text pass visible on the rebar-composited
+        // surface. Validate the WM_PAINT region, erase the entire client
+        // surface, and draw every visible menu pixel ourselves.
+        CPaintDC sDC(this);
+        CRect sClientRect;
+        GetClientRect(&sClientRect);
+        sDC.FillSolidRect(&sClientRect, sPalette.mChrome);
+        DrawFinalMenuOverlay(sDC);
+        return;
+    }
+
+    // Light / High Contrast keep native semantics, then use the shared overlay
+    // for consistent font/layout without changing system accessibility colors.
     CToolBar::Default();
 
     CClientDC sDC(this);
@@ -1394,7 +1466,22 @@ LRESULT CMenuBar::WindowProc(
         CDC *sDC =
             CDC::FromHandle(reinterpret_cast<HDC>(wParam));
         if (XPR_IS_NOT_NULL(sDC))
+        {
+            const fxfile::ui::ThemePalette sPalette =
+                fxfile::ui::ModernUI::getPalette();
+            if (XPR_IS_TRUE(sPalette.mDark) &&
+                XPR_IS_FALSE(sPalette.mHighContrast) &&
+                !WinAppEx::GetInstance()->IsWinXP())
+            {
+                CRect sClientRect;
+                GetClientRect(&sClientRect);
+                sDC->FillSolidRect(
+                    &sClientRect,
+                    sPalette.mChrome);
+            }
+
             DrawFinalMenuOverlay(*sDC);
+        }
     }
 
     return sResult;

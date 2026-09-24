@@ -399,11 +399,12 @@ Status: **ACTIVE / user-reproduced runtime failures**. These items are the immed
    - Connector source cross-check after the change confirms the invalid token is absent from `ToolBarEx.cpp` and the supported query/guard are present. The user's Windows `Release-x64-Unicode | x64` build has not yet been rerun after this fix.
    - Acceptance: source invariant preflight must still pass and the user's local build must progress beyond this compile error. Until rerun evidence is provided, status remains `CODE FIXED / LOCAL CI NOT RETESTED`.
 
-16. **Dark top-level menu text remains black — ACTIVE / USER REPRODUCED 2026-09-24**
-   - User runtime screenshots on current `main` show the top-level menu labels (`파일/편집/이동/보기/도구/창/도움말`) still painted black on the Dark command surface, while the corresponding Light surface is readable.
-   - Work goal: remove the remaining native ToolbarWindow32 text-paint ownership from the Dark menu-bar WM_PAINT/print path so the app palette owns the final background, font, text color, hover/pressed state, and MDI system button pixels.
-   - Acceptance: in Dark mode every top-level menu label is visibly light on the dark chrome with no later native repaint restoring black text; Light and High Contrast retain their existing system/native behavior.
-   - This user-reproduced item remains ACTIVE until a rebuilt Windows screenshot confirms the Dark top-level menu text is readable.
+16. **Dark top-level menu text remains black — CODE FIXED / RUNTIME NOT RETESTED**
+   - User runtime screenshots on current `main` showed the top-level menu labels (`파일/편집/이동/보기/도구/창/도움말`) still painted black on the Dark command surface, while the corresponding Light surface was readable.
+   - Root cause: `CMenuBar::OnPaint()` still invoked the native ToolbarWindow32 paint first and attempted to cover it afterward. The rebar/composition path could subsequently expose a native black text pass, so palette values and a final overlay were not sufficient evidence of final pixel ownership.
+   - Fix: Dark/non-High-Contrast `WM_PAINT` now skips native toolbar painting entirely, validates the paint region with `CPaintDC`, fills the whole client surface with `ThemePalette.mChrome`, and draws every top-level menu label through `DrawFinalMenuOverlay()`. The overlay now also owns the MDI system-menu icon. Rebar `WM_PRINTCLIENT/WM_PRINT` composition clears the full Dark client surface before the same overlay.
+   - Light and High Contrast keep the native-first path. Source invariants now require the Dark direct-paint branch, full print-surface clear, and system-menu icon ownership.
+   - Acceptance: in Dark mode every top-level menu label must be visibly light on dark chrome with no later native repaint restoring black text. A rebuilt Windows screenshot is still required, so this remains `CODE FIXED / RUNTIME NOT RETESTED`.
 
 ### Development handoff rule
 

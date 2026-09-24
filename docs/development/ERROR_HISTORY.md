@@ -1564,3 +1564,35 @@
 - Connector source cross-check after fix: `ToolBarEx.cpp`에서 `TB_GETBITMAPSIZE` 없음, `TB_GETIMAGELIST` / `ImageList_GetIconSize` 있음.
 - `python build/validate_source_invariants.py`: **NOT RETESTED** after this fix.
 - User `local_ci.bat x64`: **NOT RETESTED** after this fix.
+
+
+---
+
+## 2026-09-24 — Dark top-level menu remained black after custom-draw/overlay fixes
+
+**오류 발생**
+- 사용자 재빌드 screenshot에서 Light 메뉴바는 정상이나 Dark 메뉴바의 `파일/편집/이동/보기/도구/창/도움말` 글자가 계속 검은색으로 표시됐다.
+- 같은 창의 나머지 command/rebar surface는 Dark palette를 적용받고 있어 최상단 `CMenuBar`의 최종 text pixel ownership만 실패한 상태였다.
+
+**원인 진단**
+- `CMenuBar::OnCustomDraw()`와 `DrawFinalMenuOverlay()`는 ThemePalette text color를 사용하고 있었지만 `OnPaint()`가 먼저 `CToolBar::Default()`를 호출했다.
+- 즉 Dark에서도 ToolbarWindow32 native renderer가 먼저 text를 그린 뒤 app overlay로 덮는 구조였다. rebar의 composition/print 경로에서는 native text pass가 다시 최종 surface에 노출될 여지가 있었고, 실제 screenshot의 검은 글씨가 그 증거였다.
+- palette 값 자체는 정상이므로 색상 계산을 다시 조정하는 것으로는 해결되지 않는다. Dark 메뉴바에서 native text painter를 최종 경로에서 제거해야 한다.
+
+**해결 방법**
+- Dark/non-High-Contrast `CMenuBar::OnPaint()`는 `CToolBar::Default()`를 호출하지 않는다.
+- `CPaintDC`로 WM_PAINT update region을 정상 소모하고 전체 client rect를 `ThemePalette.mChrome`으로 채운 뒤 `DrawFinalMenuOverlay()`만으로 menu text/hot/pressed/focus를 그린다.
+- native paint를 건너뛰어도 MDI maximized child의 system-menu icon이 사라지지 않도록 `DrawFinalMenuOverlay()`가 `IDBUTTON_SYSMENU` icon까지 직접 그린다.
+- `WM_PRINTCLIENT` / `WM_PRINT + PRF_CLIENT` 경로도 Dark에서는 전체 client surface를 chrome으로 다시 지운 뒤 같은 overlay를 적용한다.
+- Light/High Contrast는 기존 native-first path를 유지한다.
+
+**재발 방지**
+- source invariant가 Dark `OnPaint()`의 `sOwnDarkSurface`, `CPaintDC`, full-client chrome fill, overlay 호출과 early return을 요구한다.
+- final overlay contract에 `IDBUTTON_SYSMENU` / `DrawIconEx` ownership을 추가한다.
+- rebar print/composition path가 Dark client rect 전체를 `mChrome`으로 지운 뒤 overlay하는지도 고정한다.
+- Dark command surface에서 “native first + recolor later”를 최종 text ownership으로 인정하지 않는다.
+
+**검증 상태**
+- User runtime screenshot before fix: **FAIL** — Dark top-level menu text black.
+- Connector source cross-check after fix: direct Dark WM_PAINT ownership, full print clear, MDI system icon ownership and invariant guards present.
+- Rebuilt Windows runtime screenshot after fix: **NOT RETESTED**.
