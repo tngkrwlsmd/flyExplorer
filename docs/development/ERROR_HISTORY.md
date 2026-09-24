@@ -2670,3 +2670,37 @@ black text on Dark is now visibly readable on this Windows 11 binary.
 That specific visual acceptance PASS does not close the remaining bright
 scrollbars or the search dialog's white location edit/black legacy glyph.
 Those observations and their owner candidates are OPEN in the audit.
+
+---
+
+## 2026-09-24 — UI-01 hidden settings page exposed by theme redraw transaction
+
+**Observed:** The execution audit on the current Windows 11 x64 build showed
+that after General was visited, applying a theme from Appearance/Theme could
+leave the tree/title on the newly selected page while General content was
+visible. Closing/reopening the configuration dialog restored the expected
+page.
+
+**First source-level cause:** `RefreshThemeForCurrentThread()` collected
+hidden child HWNDs together with visible windows, sent `WM_SETREDRAW(FALSE)`
+to all of them, and later sent `WM_SETREDRAW(TRUE)` to all. For the default
+window procedure this message can change the `WS_VISIBLE` style. A hidden
+configuration child therefore had a credible path to become visible during
+the theme transaction.
+
+**Fix:** Capture effective visibility for every HWND before the transaction.
+Only HWNDs that were visible at snapshot time are frozen and thawed. Hidden
+children still receive the palette/theme notifications so their future paint
+state is current, but are not redraw-enabled. Preserve the prior snapshot
+enumeration and descendant/frame/top-level ordering to avoid restoring the
+earlier re-entrancy/flicker regressions.
+
+**Prevention:** Source invariant now requires `ThemeRefreshWindowState`,
+`mWasVisible`, the visibility capture, and a nearby visibility guard for
+both `WM_SETREDRAW` calls; the former plain `std::vector<HWND> mWindows`
+contract is forbidden.
+
+**Verification:** Static source/invariant inspection: PASS. Windows compile,
+the exact General → Appearance/Theme → Apply → Filtering runtime path,
+visible-page count, focus and final pixels: NOT RETESTED. GitHub Actions:
+NOT RUN.

@@ -2,7 +2,7 @@
 
 ## 기준과 검증 범위
 
-사용자 요청: 실제 프로그램을 조작하여 UI/UX 및 최신 Windows 호환성 개선 목록을 개발 지침에 남긴다. 이번 작업은 **조사·문서화**이며 아래 미해결 항목의 제품 코드는 수정하지 않았다.
+사용자 요청: 실제 프로그램을 조작하여 UI/UX 및 최신 Windows 호환성 개선 목록을 개발 지침에 남긴다. 최초 작성은 **조사·문서화**였으며, 이후 구현 시 각 항목에 CODE UPDATED / RETEST OPEN 같은 상태를 개별 기록한다.
 
 - Source: 원격 `main`을 fast-forward한 `bee95d96a0150734ac247ed34e52ffe3bb1f4d92`.
 - Binary: 해당 소스로 `local_ci.bat x64`를 실행한 `bin/x64/fxfile.exe`. `build-revision.txt` 일치 확인.
@@ -24,11 +24,11 @@
 
 ## 실제 관찰된 개선 목록
 
-P1은 기능 오인 또는 읽기 어려움, P2는 사용성/시각 일관성 개선이다. 모든 항목은 OPEN이다. 기대 결과는 Intended이며 관찰 결과와 구분한다.
+P1은 기능 오인 또는 읽기 어려움, P2는 사용성/시각 일관성 개선이다. 기대 결과는 Intended이며 관찰 결과와 구분한다. CODE UPDATED는 소스 수정만 뜻하며 matching runtime/visual evidence 전에는 CLOSED가 아니다.
 
 | ID / 우선순위 | 사용자 행동 → 관찰된 결과 | 기대 결과 / 완료 기준 | 우선 조사할 owner |
 | --- | --- | --- | --- |
-| UI-01 / P1 | 설정에서 일반을 본 뒤 모양 및 테마 → Light → 적용. 제목/선택은 모양 및 테마지만 본문이 일반 페이지로 바뀐다. 필터링을 클릭해도 제목만 바뀌고 일반 본문이 남는다. 창을 닫았다 재열면 필터링 본문이 정상 표시된다. | 재시작/재열기 없이 선택된 페이지 하나만 표시. System/Light/Dark 전환 전후 제목·내용·포커스가 일치하고 숨긴 페이지는 숨김 유지. | `main_frame.cpp::RefreshThemeForCurrentThread`, `cfg/cfg_main_dlg.cpp::showCfg/OnApply` |
+| UI-01 / P1 — **CODE UPDATED / RETEST OPEN** | 설정에서 일반을 본 뒤 모양 및 테마 → Light → 적용. 제목/선택은 모양 및 테마지만 본문이 일반 페이지로 바뀐다. 필터링을 클릭해도 제목만 바뀌고 일반 본문이 남는다. 창을 닫았다 재열면 필터링 본문이 정상 표시된다. | 2026-09-24 source fix: theme transaction 시작 시 HWND의 visible 상태를 snapshot하고 당시 visible이었던 HWND만 `WM_SETREDRAW(FALSE/TRUE)`로 freeze/thaw한다. 재시작/재열기 없이 선택된 페이지 하나만 표시되는지 동일 경로 runtime/visual 재검증이 남아 있다. | `main_frame.cpp::RefreshThemeForCurrentThread`, `cfg/cfg_main_dlg.cpp::showCfg/OnApply` |
 | UI-02 / P1 | System→Dark에서 긴 파일 목록, 폴더 tree, 설정 tree를 표시/스크롤하면 흰 바탕의 고전 스크롤바와 검은 화살표가 남는다. | thumb/track/화살표/교차 모서리까지 Dark와 조화. 휠·키보드·thumb drag·High Contrast 동작 보존. | `gui/ListCtrlEx.cpp::refreshModernAppearance`, folder tree 및 settings tree의 non-client rendering |
 | UI-03 / P1 | Dark에서 툴바 검색을 열면 찾는 위치 입력부는 흰 바탕/검은 글자이고 옆의 작은 `>>` 모양 버튼은 어두운 배경 위 검게 표시된다. 입력칸 앞쪽 아이콘도 경로와 매우 가깝다. | ComboBoxEx의 내부 edit/list, browse/current-location icon까지 읽을 수 있는 최종 색상과 여백. 정상·hover·focus·disabled 상태 각각 확인. | `search_dlg.cpp`의 `mLocComboBox`, `mCurLocButton` (`IDI_EXPAND`), 공통 dialog/combobox/button renderer |
 | UI-04 / P2 | Light 설정 → 필터링에서 목록 아래의 두 작은 버튼이 정상적인 위/아래 화살표로 읽히지 않는 문자열처럼 보인다. | 순서 변경 방향을 즉시 식별. 명확한 아이콘과 접근성 이름/tooltip을 제공하고 DPI/언어 변경에도 잘리지 않음. | `fxfile.rc`의 `IDC_CFG_FILTER_ITEM_UP/DOWN` (15×14 DLU), `cfg_appearance_filtering_dlg.cpp::OnItemUp/OnItemDown` |

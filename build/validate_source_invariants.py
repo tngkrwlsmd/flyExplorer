@@ -3500,15 +3500,20 @@ def validate_win11_stability_regressions() -> list[str]:
         )
 
     for token in (
+        "struct ThemeRefreshWindowState",
         "struct ThemeRefreshSnapshot",
         "CollectThemeTopLevelWindow",
         "CollectThemeChildWindow",
-        "std::vector<HWND> mChildWindows",
+        "CollectThemeWindowState",
+        "std::vector<HWND>                    mChildWindows",
+        "std::vector<ThemeRefreshWindowState> mWindows",
+        "mWasVisible",
+        "::IsWindowVisible(aHwnd)",
         "EnumThreadWindows(",
         "EnumChildWindows(",
         "WM_SETREDRAW, FALSE",
         "WM_SETREDRAW, TRUE",
-        "std::vector<HWND>::const_reverse_iterator",
+        "std::vector<ThemeRefreshWindowState>::const_reverse_iterator",
         "ui::ModernUI::applyWindowFrameTheme(*sIterator)",
         "::SendMessage(*sIterator, WM_SETTINGCHANGE, 0, 0)",
         "RDW_ALLCHILDREN",
@@ -3558,10 +3563,26 @@ def validate_win11_stability_regressions() -> list[str]:
     for forbidden in (
         "RefreshThemeTopLevelWindow",
         "SendMessageToDescendants(\n            WM_SETTINGCHANGE",
+        "std::vector<HWND> mWindows",
     ):
         if forbidden in contents["main_frame"]:
             errors.append(
-                f"src/fxfile/main_frame.cpp: sequential theme-refresh regression returned: {forbidden}"
+                f"src/fxfile/main_frame.cpp: sequential/visibility theme-refresh regression returned: {forbidden}"
+            )
+
+    for redraw_call in (
+        "::SendMessage(sIterator->mHwnd, WM_SETREDRAW, FALSE, 0)",
+        "::SendMessage(sIterator->mHwnd, WM_SETREDRAW, TRUE, 0)",
+    ):
+        redraw_pos = theme_refresh_block.find(redraw_call)
+        visible_pos = theme_refresh_block.rfind(
+            "XPR_IS_TRUE(sIterator->mWasVisible)",
+            0,
+            redraw_pos,
+        )
+        if redraw_pos < 0 or visible_pos < 0 or (redraw_pos - visible_pos) > 300:
+            errors.append(
+                "src/fxfile/main_frame.cpp: theme redraw must be gated by the captured visible state"
             )
 
     main_frame_source = contents["main_frame"]

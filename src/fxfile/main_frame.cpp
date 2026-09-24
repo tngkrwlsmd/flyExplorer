@@ -98,12 +98,35 @@ enum
     WM_COMPARE_DIRS_STATUS  = WM_USER + 2,
 };
 
+struct ThemeRefreshWindowState
+{
+    HWND       mHwnd;
+    xpr_bool_t mWasVisible;
+};
+
 struct ThemeRefreshSnapshot
 {
-    std::vector<HWND> mTopLevelWindows;
-    std::vector<HWND> mChildWindows;
-    std::vector<HWND> mWindows;
+    std::vector<HWND>                    mTopLevelWindows;
+    std::vector<HWND>                    mChildWindows;
+    std::vector<ThemeRefreshWindowState> mWindows;
 };
+
+void CollectThemeWindowState(
+    ThemeRefreshSnapshot *aSnapshot,
+    HWND                  aHwnd)
+{
+    if (XPR_IS_NULL(aSnapshot) ||
+        ::IsWindow(aHwnd) == FALSE)
+    {
+        return;
+    }
+
+    ThemeRefreshWindowState sState = {0};
+    sState.mHwnd = aHwnd;
+    sState.mWasVisible =
+        (::IsWindowVisible(aHwnd) != FALSE) ? XPR_TRUE : XPR_FALSE;
+    aSnapshot->mWindows.push_back(sState);
+}
 
 BOOL CALLBACK CollectThemeChildWindow(HWND aHwnd, LPARAM aParam)
 {
@@ -116,7 +139,7 @@ BOOL CALLBACK CollectThemeChildWindow(HWND aHwnd, LPARAM aParam)
     }
 
     sSnapshot->mChildWindows.push_back(aHwnd);
-    sSnapshot->mWindows.push_back(aHwnd);
+    CollectThemeWindowState(sSnapshot, aHwnd);
     return TRUE;
 }
 
@@ -131,7 +154,7 @@ BOOL CALLBACK CollectThemeTopLevelWindow(HWND aHwnd, LPARAM aParam)
     }
 
     sSnapshot->mTopLevelWindows.push_back(aHwnd);
-    sSnapshot->mWindows.push_back(aHwnd);
+    CollectThemeWindowState(sSnapshot, aHwnd);
 
     ::EnumChildWindows(
         aHwnd,
@@ -155,13 +178,19 @@ void RefreshThemeForCurrentThread(void)
     // A theme switch is one visual transaction.  Freeze every HWND before
     // any handler sees the new palette so child UpdateWindow()/Invalidate()
     // calls cannot expose a half-Light/half-Dark intermediate frame.
-    for (std::vector<HWND>::const_iterator sIterator =
+    for (std::vector<ThemeRefreshWindowState>::const_iterator sIterator =
              sSnapshot.mWindows.begin();
          sIterator != sSnapshot.mWindows.end();
          ++sIterator)
     {
-        if (::IsWindow(*sIterator) != FALSE)
-            ::SendMessage(*sIterator, WM_SETREDRAW, FALSE, 0);
+        // DefWindowProc may remove/add WS_VISIBLE while handling
+        // WM_SETREDRAW. Hidden configuration pages do not need freezing;
+        // skipping them preserves their hidden state across theme changes.
+        if (XPR_IS_TRUE(sIterator->mWasVisible) &&
+            ::IsWindow(sIterator->mHwnd) != FALSE)
+        {
+            ::SendMessage(sIterator->mHwnd, WM_SETREDRAW, FALSE, 0);
+        }
     }
 
     // The global ModernUI theme mode has already been changed by setOption().
@@ -202,13 +231,16 @@ void RefreshThemeForCurrentThread(void)
 
     // Thaw children before their top-level owners.  No painting is requested
     // until every HWND has already processed the new theme.
-    for (std::vector<HWND>::const_reverse_iterator sIterator =
+    for (std::vector<ThemeRefreshWindowState>::const_reverse_iterator sIterator =
              sSnapshot.mWindows.rbegin();
          sIterator != sSnapshot.mWindows.rend();
          ++sIterator)
     {
-        if (::IsWindow(*sIterator) != FALSE)
-            ::SendMessage(*sIterator, WM_SETREDRAW, TRUE, 0);
+        if (XPR_IS_TRUE(sIterator->mWasVisible) &&
+            ::IsWindow(sIterator->mHwnd) != FALSE)
+        {
+            ::SendMessage(sIterator->mHwnd, WM_SETREDRAW, TRUE, 0);
+        }
     }
 
     for (std::vector<HWND>::const_iterator sIterator =

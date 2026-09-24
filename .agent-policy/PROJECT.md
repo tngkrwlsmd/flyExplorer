@@ -704,6 +704,12 @@ does not change any reviewed source path. Static positive/negative
 source-contract checks PASS; Windows cmd rename/rollback, full packaging,
 installer, UI and fresh product build: NOT TESTED. Hosted Actions: NOT RUN.
 
+38. **UI-01 configuration page visibility after theme switch — CODE UPDATED / WINDOWS RUNTIME RETEST REQUIRED**
+    - The 2026-09-24 execution audit observed that after visiting General then Appearance/Theme and applying Light, the settings title/tree selection could change while the General body remained visible. Source inspection identified the app-wide theme transaction sending `WM_SETREDRAW(FALSE/TRUE)` to hidden child HWNDs.
+    - Preserve effective visibility before the transaction and only freeze/thaw HWNDs that were visible at snapshot time. Hidden configuration pages still receive theme state notifications, but are never sent the redraw-enable message that can restore `WS_VISIBLE`. Keep the existing snapshot-first order and child → frame → top-level refresh ordering.
+    - `validate_source_invariants.py` now requires the captured visibility state and requires both redraw calls to be visibility-gated; returning to the old plain `std::vector<HWND> mWindows` snapshot is rejected.
+    - Static source contract: reviewed. The exact Windows acceptance sequence (General → Appearance/Theme → Light/System/Dark Apply → Filtering, without dialog reopen) and focus/visible-page count: NOT RETESTED. Do not mark UI-01 closed until runtime and visual evidence pass.
+
 ### Development handoff rule
 
 - Every new user-requested development item is added to this section (or its successor) before implementation starts.
