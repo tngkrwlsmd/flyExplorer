@@ -2585,3 +2585,23 @@ full three-architecture package run or installer/runtime test was
 performed. Full automatic updater code and obsolete generated VS
 project files were already absent before this work unit. GitHub
 Actions were NOT RUN.
+
+---
+
+## 2026-09-24 — Remove stale live updater migration recommendation
+
+**Observed:** The current-status page still listed future `updater x86
+isolation` despite the now-retired updater source and dependency
+having been removed from the current repository. The dated dependency
+audit deliberately preserves its earlier architecture observations
+as historical evidence.
+
+**Change:** Correct only the live near-term recommendation to cover
+remaining runtime dependency ABI, optional launcher x64 feasibility,
+and VLD release staging. Preserve dated dependency analysis and all
+historical failure records. No product code or test scope changed.
+
+**Verification:** Compared current `main` file inventory and the
+live-status wording. Documentation consistency inspected; no
+Windows build, generated CHM, ZIP or installer test performed.
+GitHub Actions: NOT RUN.

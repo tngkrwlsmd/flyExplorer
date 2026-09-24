@@ -680,6 +680,10 @@ public redistribution permissions remain unverified.
     - Add a source-invariant negative guard against eager `bin` deletion and enforce backup/activate/restore ordering, ignored backup path and no `package.bat` eager cleanup. Update README/AGENTS/CURRENT_STATUS and append the failure analysis to ERROR_HISTORY.
     - Source-level contract checks can establish wiring but no Windows cmd rename, file-lock failure injection, actual three-architecture package build or installed runtime verification has run. Owner says existing app build works; no automatic update or tracked VS project outputs were restored.
 
+41. **Correct remaining live-status work after updater retirement — DOC ONLY**
+    - The live `CURRENT_STATUS.md` still proposed `updater x86 isolation` as future work even though explicit owner choice had removed all automatic updater code. Replace that stale suggestion with the still-applicable dependency ABI, optional Win32 launcher feasibility and VLD staging work. Keep the older dependency audit's pre-retirement analysis labelled as historical; do not erase failure history.
+    - Changes no application/build/package inputs. No new Windows or installer tests are claimed.
+
 ### Development handoff rule
 
 - Every new user-requested development item is added to this section (or its successor) before implementation starts.

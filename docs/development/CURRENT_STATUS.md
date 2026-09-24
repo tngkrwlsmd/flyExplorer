@@ -48,9 +48,10 @@ Light/Dark/High Contrast acceptance scenarios are reproduced successfully.
 5. Decide whether old `dist/history.txt` belongs in future installers.
    Until changed, ship it with an explicit **historical releases only**
    header; do not transform or delete its original history.
-6. Consider dependency ABI, updater x86 isolation and VLD release
-   staging only with direct build/package verification and
-   the architecture limits in the dependency audit.
+6. Consider the remaining dependency ABI checks, optional x64-launcher
+   feasibility study and VLD release staging only with direct build/package
+   verification and the architecture limits in the dependency audit.
+   The retired updater is not a migration candidate.
 
 ## Documentation ownership and history
 
