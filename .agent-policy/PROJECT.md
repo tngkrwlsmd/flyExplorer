@@ -406,6 +406,13 @@ Status: **ACTIVE / user-reproduced runtime failures**. These items are the immed
    - Light and High Contrast keep the native-first path. Source invariants now require the Dark direct-paint branch, full print-surface clear, and system-menu icon ownership.
    - Acceptance: in Dark mode every top-level menu label must be visibly light on dark chrome with no later native repaint restoring black text. A rebuilt Windows screenshot is still required, so this remains `CODE FIXED / RUNTIME NOT RETESTED`.
 
+17. **Theme switch atomic refresh + residual dark-text ownership — ACTIVE / USER REPRODUCED 2026-09-24**
+   - User runtime screenshots on revision `6fd81defc5f7bca63413a92507f21444cb84e044` show two coupled regressions: switching Light/Dark leaves mixed old/new surfaces during the transition, and several visible labels (especially the top-level menu and legacy content/detail surfaces) still render black/dim text on Dark backgrounds.
+   - Work goal: audit every theme-change propagation and final text-paint path used by the main frame, rebar/menu/toolbar chrome, Preferences, Explorer/detail/list/tree/static/link controls, and child/top-level dialogs; eliminate native/system-color repaint paths that can overwrite the current ThemePalette after an in-place switch.
+   - Required implementation rule: theme change must be applied as one UI transaction—update the global theme mode first, refresh every affected top-level/child window and control association, then invalidate/redraw once after descendants are updated. No child may repaint against the previous palette during the transition.
+   - Acceptance: Light -> Dark -> Light and Dark -> Light -> Dark switches do not expose mixed white/dark intermediate surfaces after the UI settles; all enabled Dark text remains visibly light, including top menu labels and legacy detail/static/link/list surfaces; Light/High Contrast keep correct system colors.
+   - Runtime screenshot closure is required after rebuild. Until then, status remains ACTIVE or CODE FIXED / RUNTIME NOT RETESTED as appropriate.
+
 ### Development handoff rule
 
 - Every new user-requested development item is added to this section (or its successor) before implementation starts.
