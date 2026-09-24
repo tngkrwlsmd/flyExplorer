@@ -79,7 +79,7 @@
     }
   ],
   "review": {
-    "reviewed_revision": "3e6a8914825c7527a0be1898a035a7004a598d60",
+    "reviewed_revision": "d594643e94002d6301a6720a83d4c56e888b5fd1",
     "reviewed_at": "2026-09-24",
     "reviewed_paths": [
       ".github/workflows/policy-validation.yml",
@@ -129,12 +129,17 @@
       "local_ci.bat",
       "README",
       "src/base",
+      "src/base/update_download_limits.h",
       "src/fxfile",
       "src/fxfile-crash",
       "src/fxfile-keyhook",
       "src/fxfile-launcher",
       "src/fxfile-tests",
+      "src/fxfile-tests/fxfile-tests.gyp",
+      "src/fxfile-tests/updater_contract_tests.cpp",
       "src/fxfile-upchecker",
+      "src/fxfile-upchecker/fxfile-upchecker.gyp",
+      "src/fxfile-upchecker/update_checker.cpp",
       "src/fxfile/cfg/cfg_dlg.cpp",
       "src/fxfile/cfg/cfg_main_dlg.cpp",
       "src/fxfile/gui/BCMenu.cpp",
@@ -146,6 +151,7 @@
     ]
   }
 }
+
 
 ```
 <!-- project-facts:end -->
@@ -593,6 +599,18 @@ installer PASS. Earlier review baselines above remain dated history.
     - A small pure header `src/base/update_download_limits.h` now enforces an overflow-safe cumulative 256 KiB metadata budget and is directly included by the Win32 upchecker and native test group. The callback reports actual written bytes so a failure or size excess aborts libcurl instead of parsing an incomplete/stale file. Add connect/total timeouts and fail-on-HTTP-error. Update both GYP source inventories and source-invariant guards.
     - Nine transfer-budget boundary cases (exact bound, remaining byte, overflow and zero-length behavior) pass in an isolated `g++ -std=c++11 -Wall -Wextra -Werror -pedantic` fixture. The Windows native test group contains equivalent cases but the actual Windows build, real libcurl transfer, disk failure/timeout and updater UI remain NOT TESTED.
     - **Not a full updater security upgrade:** the hard-coded `http://flychk.com` metadata URL is still untrusted and the old bundled curl/TLS binary and signed download chain were not migrated; no unverified HTTPS endpoint was invented. These are explicit follow-up blockers, not solved by transfer limits.
+
+**Packaging/updater source-review checkpoint (2026-09-24):** `d594643e94002d6301a6720a83d4c56e888b5fd1`
+contains the completed portable payload and updater transfer-limit work,
+following `cb3cdafb2d4521f35fcfadcd2acee6c6fe822b6c` (portable).
+The reviewed-path list now explicitly includes the updater implementation,
+its new pure budget contract, both GYP manifests and native boundary tests,
+in addition to existing packaging/readme/source-invariant paths. The follow-on
+metadata/history-only commit is outside these reviewed paths. Git-tree and
+contract inspection plus the exact-source-header isolated Linux C++11
+nine-case run are scoped static/pure-helper evidence. Windows upchecker,
+Microsoft Help Workshop, installer/portable generation, runtime UI, HTTPS
+server verification and public release rights: NOT TESTED / NOT VERIFIED.
 
 ### Development handoff rule
 

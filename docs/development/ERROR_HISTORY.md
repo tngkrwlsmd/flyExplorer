@@ -2388,3 +2388,26 @@ upchecker compile and actual curl network/disk-failure behavior: NOT TESTED.
 The existing old HTTP update endpoint and unsigned metadata remain
 untrusted and require independent server, TLS, provenance and release
 integrity work. No GitHub Actions runs.
+
+---
+
+## 2026-09-24 — Source review checkpoint after portable and updater improvements
+
+Reviewed implementation commits:
+- `cb3cdafb2d4521f35fcfadcd2acee6c6fe822b6c`: stage regenerated
+  help, user documents, custom icon assets and third-party notices into
+  each portable ZIP; require them in package validation.
+- `d594643e94002d6301a6720a83d4c56e888b5fd1`: make updater transfer budget overflow-safe and report
+  actual disk-write length, with basic timeout/HTTP-error options,
+  native test coverage and a source-invariant guard.
+
+Updated the project source-review baseline from
+`3e6a8914825c7527a0be1898a035a7004a598d60` to
+`d594643e94002d6301a6720a83d4c56e888b5fd1` and registered five additional updater/contract GYP/test paths.
+The final review-metadata/history-only commit does not alter those source
+paths. Isolated Linux C++11 budget tests: 9 PASS; static source/build
+wiring and negative contract mutations: PASS. Not executed: fresh
+Windows x64 build, x86 updater build/test, help compiler,
+portable ZIP production, installer/runtime UI or network/TLS
+security verification. The existing HTTP endpoint and third-party
+distribution/legal blockers remain OPEN. Hosted Actions: NOT RUN.
