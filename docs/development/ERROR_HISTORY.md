@@ -1885,3 +1885,86 @@
 - Connector source cross-check after fix: contradictory forbidden token removed; positive disclosure guards preserved: **PASS (source evidence)**.
 - Rerun `local_ci.bat x64`: **NOT RETESTED**.
 - Compile/link/functional/runtime/visual: **NOT TESTED** because the failing run stopped before project generation/build.
+
+---
+
+## 2026-09-24 — Fresh-build settings disclosure still invisible
+
+**사용자 증거**
+- `git pull` 후 다시 빌드한 설정 화면에도 root parent/leaf는 있지만 펼침·접힘 조작을 발견할 수 있는 화살표는 보이지 않는다. 과거 CI 실패 로그를 이 최신 runtime 증거의 stale-binary 근거로 사용한 것은 잘못이었다.
+
+**첫 source 원인**
+- `TreeCtrlEx::enableVistaEnhanced()`는 현대적인 borderless tree를 위해 `TVS_HASLINES`를 제거한다.
+- 이전 fix는 `TVS_LINESATROOT`와 `TVIS_BOLD`만 추가했고 최종 표시 픽셀과 클릭 동작을 보장하지 않았다.
+
+**수정**
+- 설정 navigation의 `CDDS_POSTPAINT`에서 root parent마다 expanded/collapsed에 맞춘 화살표를 아이콘 앞 독립 gutter에 직접 그린다.
+- custom glyph click에 `NM_CLICK`으로 collapse/expand를 연결한다. 원래 native button hit·텍스트 페이지 선택·keyboard 동작은 보존한다.
+- High Contrast에서는 system text 색상을 사용하고 tree native item renderer를 보존한다.
+- 스타일 token 존재만 검사하던 regression guard를 실제 postpaint/interaction 경로 확인으로 보완했다.
+
+**검증**
+- 사용자 제공 최신 설정 screenshot: 이전 구현에 대해 VISUAL FAIL.
+- 소스 변경: CONNECTOR DIFF REVIEW 대기/이후 확인.
+- `local_ci.bat x64`, interactive Dark/Light/HC/DPI: NOT TESTED. runtime screenshot 통과 전에는 CLOSED 금지.
+
+---
+
+## 2026-09-24 — Fresh-build dark toolbar kept native blue icon tile
+
+**증거**
+- 사용자는 pull 후 직접 빌드한 화면에서 밝은 청색 toolbar tile이 그대로 보임을 재현했다. 과거 stale-artifact 로그로 최신 runtime screenshot을 부정하지 않는다.
+
+**원인**
+- `ApplyDarkToolBarCustomDraw()`은 native toolbar item paint를 보존했고 `DrawFinalDarkToolbarItem()`은 text/dropdown만 다시 그렸다. 따라서 native hot/checked icon 배경은 그대로 노출될 수 있었다.
+
+**수정/예방**
+- Dark item postpaint에서 전체 item을 중성 배경으로 지우고 hot/pressed/checked state를 명시적으로 그리고 ImageList 아이콘, 기존 text/dropdown final draw를 수행한다.
+- 아이콘 데이터가 없는 특수 경로는 원본 native 아이콘을 지우지 않고 유지한다. Light/HC는 기존 owner 유지.
+- validator는 `DrawOwnedDarkToolbarItem`의 전체 배경/아이콘 redraw와 실제 postpaint 사용을 함수 범위에서 확인한다.
+
+**검증**
+- 이전 사용자 screenshot: VISUAL FAIL. 본 수정의 Release-x64-Unicode build/functional, interactive Dark/Light/HC/DPI: NOT TESTED. 현재 시각적 해결 완료로 기록 금지.
+
+---
+
+## 2026-09-24 — Fresh-build top-level Dark menu labels remain dim
+
+**사용자 증거**
+- 사용자가 git pull 후 직접 다시 빌드해 촬영한 Dark main window에서 상단 파일/편집/이동/보기/도구/창/도움말 label이 여전히 어둡다.
+- 앞서 제출된 preflight 실패 로그를 새 runtime screenshot의 stale-binary 증거로 취급한 것은 오류였으며 이 이슈를 새 runtime failure로 기록한다.
+
+**소스에서 발견된 추가 누출 가능 경로**
+- `CMenuBar::OnCustomDraw()`이 item draw만 요구하고 `CDDS_POSTPAINT` 전체 final overlay는 요청하지 않아 notification-driven native 후속 pixel을 제어하지 못했다.
+- toolbar text lookup 실패 시 item custom draw는 `CDRF_DODEFAULT`로 빠지고 `DrawFinalMenuOverlay()`는 빈 string을 건너뛰어 실제 HMENU title까지 확인하지 않았다.
+
+**수정**
+- modern menubar custom draw가 `CDRF_NOTIFYPOSTPAINT`를 요청하고 `CDDS_POSTPAINT`에서 Dark 전체 label overlay를 최종 출력하도록 했다.
+- toolbar 문자열이 없거나 빈 경우 `m_pMenu->GetMenuString()`을 조회하여 app-owned label을 복원한다.
+- Dark item 문자열 검색 실패는 black native text fallback 대신 neutral background + `CDRF_SKIPDEFAULT`로 안전하게 처리한다.
+- 기존 `WM_PAINT`/`WM_PRINT*` 직접 ownership과 High Contrast native/system renderer는 유지한다.
+
+**검증**
+- 사용자 제공 이전 구현 screenshot: VISUAL FAIL.
+- notification 경로가 사용자 화면의 직접 원인인지 Windows instrumented trace는 아직 없다. 신규 수정의 Release x64 compile/runtime/interactive/visual/HC/DPI: NOT TESTED. 실제 화면 확인 전 종결 금지.
+
+---
+
+## 2026-09-24 — Reconciliation of three fresh-build visual regressions
+
+**논리 작업 단위별 commit**
+- 설정 disclosure 실제 화살표/클릭: `4e8e8d63918ef73783b4b7f87a54e8469b73a122`.
+- Dark toolbar 전체 버튼/아이콘 최종 그림: `164c016bcbc7587cc3e21908de72e91f00ac21f6`.
+- Dark menubar notification 후속 repaint/문자열 fallback: `aa3c2d05b76c6ff2d6dece824992b80d88b17505`.
+
+**추가 정적 검토와 마감 보완**
+- 소스 교차검사에서 tree postpaint, 실제 chevron 클릭 handler/message map, toolbar 전체 item/icon redraw, menubar final custom postpaint/HMENU fallback 및 새 validator property guards가 모두 연결됨을 확인했다.
+- CMenu의 `GetMenuItemCount()`와 signed item index 비교를 명시적 signed cast로 정리해 컴파일 경고 가능성을 낮추고, custom chevron 클릭 후 tree invalidation으로 화살표 방향 갱신을 명시했다.
+- 과거 이슈 #16/#18/#19는 최신 사용자의 runtime screenshot과 모순되지 않도록 `PREVIOUS FIX VISUALLY FAILED`로 정정하고 새 이슈 #24/#22/#23에 연결했다.
+- AGENTS/README/LOCAL_CI_MANUAL/GYP/architecture 계약은 이번 UI 렌더러 변경 범위에서 바뀌지 않아 수정하지 않았다.
+
+**최종 검증 수준**
+- GitHub source/diff/validator contract cross-check: PASS (static source inspection only).
+- 전체 Python validator 실행 및 Release-x64-Unicode | x64 local CI, native functional/smoke: NOT TESTED.
+- 실제 Windows Dark/Light/High Contrast/100%+high DPI/keyboard/interactive visual regression: NOT TESTED.
+- 본 커밋 이후 main 반영 여부는 merge 결과 확인으로만 보고한다. 시각적 이슈는 matching runtime screenshot 통과 전 CLOSED 금지.

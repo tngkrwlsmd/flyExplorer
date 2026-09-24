@@ -405,6 +405,133 @@ void DrawFinalDarkToolbarItem(
     }
 }
 
+
+void DrawOwnedDarkToolbarItem(
+    LPNMTBCUSTOMDRAW aCustomDraw,
+    COLORREF aBackground)
+{
+    if (XPR_IS_NULL(aCustomDraw))
+        return;
+
+    const HWND sToolbar = aCustomDraw->nmcd.hdr.hwndFrom;
+    if (XPR_IS_NULL(sToolbar))
+        return;
+
+    TBBUTTONINFO sButton = {0};
+    sButton.cbSize = sizeof(sButton);
+    sButton.dwMask = TBIF_IMAGE | TBIF_STATE | TBIF_STYLE;
+    if (::SendMessage(
+            sToolbar,
+            TB_GETBUTTONINFO,
+            static_cast<WPARAM>(aCustomDraw->nmcd.dwItemSpec),
+            reinterpret_cast<LPARAM>(&sButton)) < 0)
+    {
+        DrawFinalDarkToolbarItem(aCustomDraw, aBackground);
+        return;
+    }
+
+    HIMAGELIST sImages = reinterpret_cast<HIMAGELIST>(
+        ::SendMessage(sToolbar, TB_GETIMAGELIST, 0, 0));
+    const xpr_bool_t sHasIcon =
+        sButton.iImage >= 0 ? XPR_TRUE : XPR_FALSE;
+    xpr_sint_t sIconWidth = 0;
+    xpr_sint_t sIconHeight = 0;
+    if (XPR_IS_TRUE(sHasIcon) &&
+        (XPR_IS_NULL(sImages) ||
+         sButton.iImage >= ::ImageList_GetImageCount(sImages) ||
+         ::ImageList_GetIconSize(
+             sImages, &sIconWidth, &sIconHeight) == FALSE))
+    {
+        // Preserve an unusual caller-owned icon rather than erase it.
+        DrawFinalDarkToolbarItem(aCustomDraw, aBackground);
+        return;
+    }
+
+    const fxfile::ui::ThemePalette sPalette =
+        fxfile::ui::ModernUI::getPalette();
+    const UINT sState = aCustomDraw->nmcd.uItemState;
+    const xpr_bool_t sDisabled =
+        ((sState & CDIS_DISABLED) != 0 ||
+         (sButton.fsState & TBSTATE_ENABLED) == 0) ?
+        XPR_TRUE : XPR_FALSE;
+    const xpr_bool_t sPressed =
+        (sState & (CDIS_SELECTED | CDIS_CHECKED)) != 0 ?
+        XPR_TRUE : XPR_FALSE;
+    const xpr_bool_t sHot =
+        (sState & CDIS_HOT) != 0 ? XPR_TRUE : XPR_FALSE;
+    const RECT sItemRect = aCustomDraw->nmcd.rc;
+
+    // Native ToolbarWindow32 leaves its accent-blue/light tile under the
+    // bitmap even though custom-draw foreground colors are correct.
+    // Own the entire final item and redraw image, label and dropdown.
+    ::SetDCBrushColor(aCustomDraw->nmcd.hdc, aBackground);
+    ::FillRect(
+        aCustomDraw->nmcd.hdc,
+        &sItemRect,
+        static_cast<HBRUSH>(::GetStockObject(DC_BRUSH)));
+    if (XPR_IS_FALSE(sDisabled) &&
+        (XPR_IS_TRUE(sPressed) || XPR_IS_TRUE(sHot)))
+    {
+        DrawRoundedToolbarState(
+            aCustomDraw,
+            XPR_IS_TRUE(sPressed) ?
+                sPalette.mPressed : sPalette.mHover);
+    }
+
+    if (XPR_IS_TRUE(sHasIcon))
+    {
+        if (XPR_IS_TRUE(sDisabled))
+        {
+            HIMAGELIST sDisabledImages = reinterpret_cast<HIMAGELIST>(
+                ::SendMessage(sToolbar, TB_GETDISABLEDIMAGELIST, 0, 0));
+            if (XPR_IS_NOT_NULL(sDisabledImages) &&
+                sButton.iImage < ::ImageList_GetImageCount(sDisabledImages))
+                sImages = sDisabledImages;
+        }
+
+        const xpr_bool_t sDropDown =
+            (sButton.fsStyle &
+             (TBSTYLE_DROPDOWN | BTNS_WHOLEDROPDOWN)) != 0 ?
+            XPR_TRUE : XPR_FALSE;
+        const xpr_sint_t sDropWidth =
+            XPR_IS_TRUE(sDropDown) ?
+            fxfile::ui::ModernUI::scaleForWindow(14, sToolbar) : 0;
+        const xpr_sint_t sPadding =
+            max(2, fxfile::ui::ModernUI::scaleForWindow(4, sToolbar));
+        const DWORD sStyle =
+            static_cast<DWORD>(::GetWindowLongPtr(sToolbar, GWL_STYLE));
+        const xpr_bool_t sHasText =
+            (sButton.fsStyle & BTNS_SHOWTEXT) != 0 ?
+            XPR_TRUE : XPR_FALSE;
+        xpr_sint_t sImageX = sItemRect.left + sPadding;
+        xpr_sint_t sImageY = sItemRect.top +
+            (sItemRect.bottom - sItemRect.top - sIconHeight) / 2;
+        if (XPR_IS_FALSE(sHasText) ||
+            (sStyle & TBSTYLE_LIST) == 0)
+        {
+            sImageX = sItemRect.left +
+                (sItemRect.right - sItemRect.left -
+                 sDropWidth - sIconWidth) / 2;
+            if (XPR_IS_TRUE(sHasText))
+                sImageY = sItemRect.top + sPadding;
+        }
+
+        ::ImageList_DrawEx(
+            sImages,
+            sButton.iImage,
+            aCustomDraw->nmcd.hdc,
+            sImageX,
+            sImageY,
+            sIconWidth,
+            sIconHeight,
+            CLR_NONE,
+            CLR_NONE,
+            ILD_TRANSPARENT);
+    }
+
+    DrawFinalDarkToolbarItem(aCustomDraw, aBackground);
+}
+
 LRESULT ApplyDarkToolBarCustomDraw(
     LPNMTBCUSTOMDRAW aCustomDraw,
     xpr_bool_t aElevatedSurface = XPR_FALSE)
@@ -479,9 +606,10 @@ LRESULT ApplyDarkToolBarCustomDraw(
 
         case CDDS_ITEMPOSTPAINT:
         {
-            DrawFinalDarkToolbarItem(
-                aCustomDraw,
-                sBackground);
+            if (XPR_IS_TRUE(sPalette.mDark))
+                DrawOwnedDarkToolbarItem(aCustomDraw, sBackground);
+            else
+                DrawFinalDarkToolbarItem(aCustomDraw, sBackground);
             return CDRF_DODEFAULT;
         }
 

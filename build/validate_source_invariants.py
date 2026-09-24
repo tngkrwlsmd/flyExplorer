@@ -2048,6 +2048,29 @@ def validate_ui_resource_contracts() -> list[str]:
                 "src/fxfile/cfg/cfg_main_dlg.cpp: expandable root categories lost hierarchy emphasis"
             )
 
+    # A style flag without an actually drawn/clickable disclosure control
+    # previously passed the static checks while failing the user screenshot.
+    cfg_draw_start = cfg_main.find("void CfgMainDlg::OnTreeCustomDraw(")
+    cfg_draw_end = cfg_main.find("HBRUSH CfgMainDlg::OnCtlColor(", cfg_draw_start)
+    cfg_draw_block = (
+        cfg_main[cfg_draw_start:cfg_draw_end]
+        if cfg_draw_start >= 0 and cfg_draw_end > cfg_draw_start
+        else ""
+    )
+    for required in ("CDDS_POSTPAINT", "DrawSettingsDisclosureChevron"):
+        if required not in cfg_draw_block:
+            errors.append(
+                "settings navigation: visible disclosure postpaint path missing "
+                + required
+            )
+    if (
+        "ON_NOTIFY(NM_CLICK, IDC_CFG_TREE, OnTreeClick)" not in cfg_main
+        or "TVE_COLLAPSE : TVE_EXPAND" not in cfg_main
+    ):
+        errors.append(
+            "settings navigation: visible disclosure click/expand behavior missing"
+        )
+
     for token in (
         "RefreshCfgTreeImageList",
         "sBitmap.LoadBitmap(IDB_CONFIG_TREE)",
@@ -2672,6 +2695,36 @@ def validate_win11_stability_regressions() -> list[str]:
     if errors:
         return errors
 
+    toolbar_source = contents["toolbar_cpp"]
+    owned_start = toolbar_source.find("void DrawOwnedDarkToolbarItem(")
+    owned_end = toolbar_source.find(
+        "LRESULT ApplyDarkToolBarCustomDraw(", owned_start
+    )
+    owned = (
+        toolbar_source[owned_start:owned_end]
+        if owned_start >= 0 and owned_end > owned_start
+        else ""
+    )
+    postpaint_start = toolbar_source.find(
+        "case CDDS_ITEMPOSTPAINT:", owned_end
+    )
+    postpaint_end = toolbar_source.find("default:", postpaint_start)
+    postpaint = (
+        toolbar_source[postpaint_start:postpaint_end]
+        if postpaint_start >= 0 and postpaint_end > postpaint_start
+        else ""
+    )
+    if (
+        "DrawOwnedDarkToolbarItem(aCustomDraw, sBackground)" not in postpaint
+        or "ImageList_DrawEx(" not in owned
+        or "FillRect(" not in owned
+        or "DrawFinalDarkToolbarItem(aCustomDraw, aBackground)" not in owned
+    ):
+        errors.append(
+            "toolbar: dark item final ownership must cover the entire "
+            "native highlight tile, icon, text and dropdown"
+        )
+
     modern_ui = contents["modern_ui"]
     for state_name in ("mHover", "mPressed"):
         state_match = re.search(
@@ -3235,6 +3288,26 @@ def validate_win11_stability_regressions() -> list[str]:
                 errors.append(
                     f"src/fxfile/gui/rebar/MenuBar.cpp: final menu overlay missing semantic step {token}"
                 )
+
+    menu_custom_start = menubar_source.find(
+        "void CMenuBar::OnCustomDraw("
+    )
+    menu_custom = (
+        menubar_source[menu_custom_start:]
+        if menu_custom_start >= 0 else ""
+    )
+    for token in (
+        "case CDDS_POSTPAINT:",
+        "CDRF_NOTIFYPOSTPAINT",
+        "DrawFinalMenuOverlay(*sDC)",
+        "GetMenuString(",
+        "CDRF_SKIPDEFAULT",
+    ):
+        if token not in menu_custom:
+            errors.append(
+                "menubar: Dark final custom-draw or fallback "
+                f"ownership path missing {token}"
+            )
 
     menu_paint_start = menubar_source.find("void CMenuBar::OnPaint()")
     menu_paint_end = menubar_source.find(
