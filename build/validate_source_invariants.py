@@ -1998,6 +1998,52 @@ def validate_ui_resource_contracts() -> list[str]:
                 "src/fxfile/file_scrap_toolbar.cpp: toolbar frame/command order changed"
             )
 
+    cfg_tree_resource_line = next(
+        (
+            line
+            for line in rc.splitlines()
+            if "IDC_CFG_TREE" in line and "SysTreeView32" in line
+        ),
+        "",
+    )
+    if not cfg_tree_resource_line:
+        errors.append(
+            "src/fxfile/fxfile.rc: settings navigation tree resource is missing"
+        )
+    else:
+        for style in ("TVS_HASBUTTONS", "TVS_LINESATROOT"):
+            if style not in cfg_tree_resource_line:
+                errors.append(
+                    "src/fxfile/fxfile.rc: settings navigation must expose "
+                    f"root disclosure affordance via {style}"
+                )
+
+    cfg_init_start = cfg_main.find(
+        "xpr_bool_t CfgMainDlg::OnInitDialog(void)"
+    )
+    cfg_init_end = cfg_main.find(
+        "\nxpr_sint_t CfgMainDlg::addCfgItem",
+        cfg_init_start,
+    )
+    cfg_init_block = (
+        cfg_main[cfg_init_start:cfg_init_end]
+        if cfg_init_start >= 0 and cfg_init_end > cfg_init_start
+        else ""
+    )
+    if not cfg_init_block:
+        errors.append(
+            "src/fxfile/cfg/cfg_main_dlg.cpp: settings initialization block is missing"
+        )
+    else:
+        if "TVS_LINESATROOT" not in cfg_init_block:
+            errors.append(
+                "src/fxfile/cfg/cfg_main_dlg.cpp: root disclosure style is not reinforced at runtime"
+            )
+        if "TVIS_BOLD" not in cfg_init_block:
+            errors.append(
+                "src/fxfile/cfg/cfg_main_dlg.cpp: expandable root categories lost hierarchy emphasis"
+            )
+
     for token in (
         "RefreshCfgTreeImageList",
         "sBitmap.LoadBitmap(IDB_CONFIG_TREE)",
@@ -2621,6 +2667,24 @@ def validate_win11_stability_regressions() -> list[str]:
 
     if errors:
         return errors
+
+    modern_ui = contents["modern_ui"]
+    for state_name in ("mHover", "mPressed"):
+        state_match = re.search(
+            rf"sPalette\.{state_name}\s*=\s*blendColor\((?P<body>.*?)\);",
+            modern_ui,
+            re.DOTALL,
+        )
+        if state_match is None:
+            errors.append(
+                "src/fxfile/gui/ModernUI.cpp: "
+                f"transient {state_name} palette assignment is missing"
+            )
+        elif "sPalette.mSelection" in state_match.group("body"):
+            errors.append(
+                "src/fxfile/gui/ModernUI.cpp: "
+                f"transient {state_name} must not derive from accent selection color"
+            )
 
     manifest = contents["manifest"]
     if '<requestedExecutionLevel level="asInvoker" uiAccess="false"/>' not in manifest:

@@ -1714,3 +1714,145 @@
 - Connector source audit: MenuBar/ToolBarEx association parity and Dark all-print ownership implemented.
 - Full local `python build/validate_source_invariants.py`: **NOT EXECUTED** in this session because the container could not resolve github.com to materialize a checkout.
 - Rebuilt Windows runtime screenshot: **NOT RETESTED**.
+
+---
+
+## 2026-09-24 — Settings navigation hid root expand/collapse affordance
+
+**오류 발생**
+- 사용자 runtime screenshot에서 환경설정의 왼쪽 navigation이 사실상 한 단계 목록처럼 보였다.
+- `일반`, `모양 및 테마`, `기능`, `고급`은 하위 page를 가진 parent이지만 펼치기/접기 가능 여부를 사용자가 알아차리기 어려웠다.
+
+**첫 실제 source 오류**
+- `IDD_CFG_MAIN`의 `IDC_CFG_TREE`에는 `TVS_HASBUTTONS`가 있었지만 root-level disclosure를 표시하는 `TVS_LINESATROOT`가 없었다.
+- `TreeCtrlEx::enableVistaEnhanced()`는 full-row/track-select와 extended expando behavior를 설정하지만 root disclosure style 자체를 추가하지 않는다.
+
+**원인**
+- hierarchy 의미는 데이터 구조에 존재했지만 resource/runtime style contract에 root affordance가 빠져 있었다.
+- borderless card + full-row selection으로 현대화하면서 root/leaf 구분을 보강하지 않아 정보 구조가 더 평평하게 보였다.
+
+**해결 방법**
+- `fxfile.rc`의 settings tree resource에 `TVS_LINESATROOT`를 추가했다.
+- `CfgMainDlg::OnInitDialog()`에서도 `TVS_HASBUTTONS | TVS_LINESATROOT`를 명시해 Dark에서 Explorer theme association을 reset해도 disclosure contract가 유지되게 했다.
+- child를 가진 root category에는 native `TVIS_BOLD`를 적용해 custom text renderer를 하나 더 만들지 않고 parent/leaf hierarchy를 강화했다.
+- 기존 expand-all startup, selection, keyboard, icon mapping은 유지한다.
+
+**재발 방지**
+- validator는 실제 `IDC_CFG_TREE` resource line을 찾아 `TVS_HASBUTTONS`와 `TVS_LINESATROOT`를 검사한다.
+- runtime hierarchy check는 `CfgMainDlg::OnInitDialog()` block에 범위를 제한하고 root disclosure와 parent emphasis를 확인한다.
+
+**검증 상태**
+- Connector/source audit: **PASS** — resource/runtime disclosure contract와 scoped invariant가 함께 변경됐다.
+- `python build/validate_source_invariants.py`: **NOT TESTED** — 현재 세션에는 실행 가능한 Windows checkout이 없다.
+- Release-x64-Unicode | x64 compile/link: **NOT TESTED**.
+- Interactive/Visual Light/Dark/High Contrast/DPI: **NOT RETESTED**.
+- 사용자 재현 항목이므로 matching runtime screenshot 전까지 CLOSED로 처리하지 않는다.
+
+---
+
+## 2026-09-24 — Shared hover/pressed palette overused the selection accent
+
+**오류 발생**
+- 사용자 runtime screenshot에서 Dark command toolbar의 active/hot icon 영역이 주변 chrome보다 지나치게 밝고 푸른 타일처럼 강조됐다.
+- 강조 배경이 command icon보다 강해 Windows 11 계열의 중성 command surface와 이질적으로 보였다.
+
+**전수 조사**
+- `mHover`/`mPressed` 사용처를 toolbar, menubar, tab, settings, split/drop button, header, folder/content controls까지 확인했다.
+- `CToolBarEx`는 이미 Dark에서 legacy HOT bitmap strip을 사용하지 않고 cold image list를 복제하므로, 남은 공통 tint source는 `ThemePalette`의 transient state 색이었다.
+
+**첫 실제 source 오류 / 원인**
+- non-High-Contrast `ModernUI::getPalette()`가 `mHover`와 `mPressed`를 `mElevated`와 `mSelection`의 blend로 만들었다.
+- `mSelection`은 선택 의미의 system accent color이므로 같은 값을 transient hover/pressed에도 섞으면서 blue/accent tint가 여러 UI surface로 전파됐다.
+
+**해결 방법**
+- `mHover`와 `mPressed`를 `mElevated` + `mText`의 작은 Light/Dark-specific lift로 변경해 중성 command/control state로 분리했다.
+- 실제 selection/focus는 기존 `mSelection`/`mFocus`를 유지한다.
+- High Contrast는 기존대로 system selection colors가 최종 ownership을 가진다.
+
+**재발 방지**
+- validator는 `mHover`/`mPressed`의 실제 `blendColor()` assignment block을 추출하고 그 body가 `mSelection`에 의존하면 실패한다.
+- 특정 RGB나 blend percentage 자체를 고정하지 않아 향후 palette tuning은 허용하면서 selection accent가 transient state로 다시 새는 known-bad property만 차단한다.
+
+**검증 상태**
+- Connector/source audit: **PASS** — shared palette와 property-level regression guard가 함께 변경됐다.
+- `python build/validate_source_invariants.py`: **NOT TESTED** — 현재 세션에는 실행 가능한 Windows checkout이 없다.
+- Release-x64-Unicode | x64 compile/link: **NOT TESTED**.
+- Interactive/Visual Light/Dark/High Contrast/DPI: **NOT RETESTED**.
+- 사용자 재현 visual issue이므로 matching runtime screenshot 전까지 CLOSED로 처리하지 않는다.
+
+---
+
+## 2026-09-24 — Transient-palette invariant regex was over-escaped
+
+**오류 발견**
+- logical unit 19의 post-commit diff review에서 새 `mHover`/`mPressed` regression guard가 Python raw regex 안에 이중 backslash를 기록한 것이 확인됐다.
+
+**원인**
+- GitHub blob 생성용 JavaScript 문자열과 Python raw string의 escaping 층을 혼동해 `\.`/`\s`가 아니라 소스에 `\\.`/`\\s`가 들어갔다.
+- 이 상태에서는 정상 `sPalette.mHover = blendColor(...)` assignment를 찾지 못해 false failure가 날 수 있다.
+
+**해결 / 예방**
+- Python source regex를 `sPalette\.{state_name}\s*=\s*blendColor...` 형태의 단일 regex escape로 바로잡았다.
+- post-commit source를 다시 fetch해 실제 저장된 문자열을 확인하는 절차를 이 logical unit에 적용했다.
+
+**검증 상태**
+- Sample regex match against the intended assignment shape: **PASS**.
+- Repository `python build/validate_source_invariants.py`: **NOT TESTED** — 실행 가능한 Windows checkout 없음.
+
+---
+
+## 2026-09-24 — Legacy dependency and mixed-architecture audit
+
+**조사 목적**
+- 오래된 vendored library와 x64 + Win32 helper 구조를 '오래됐으니 교체' 방식으로 다루지 않고 실제 GYP/source/package dependency를 기준으로 분류했다.
+
+**관찰 결과**
+- GFL, libxml2, iconv, libcurl, MinGW runtime은 현재 source/link/runtime packaging에서 실제 사용된다.
+- zlib은 crash component의 source-built target과 libxml2 계열 runtime DLL이라는 서로 다른 형태로 존재한다.
+- VLD는 leak-detection용 개발 의존성이지만 release copy path도 남아 있어 별도 staging 검증이 필요하다.
+- vendored gtest와 libxslt는 현재 flyExplorer GYP/production source consumer가 검색되지 않았지만, 동적/외부 수동 consumer 가능성을 확인하기 전에는 삭제 근거가 충분하지 않다.
+- keyhook/launcher/upchecker의 Win32 유지에는 기존 helper/packaging 계약이 연결돼 있고, 특히 upchecker는 prebuilt network/XML/charset runtime과 결합돼 있다.
+
+**결정**
+- 이번 unit에서는 dependency 삭제/업그레이드나 helper x64 전환을 수행하지 않는다.
+- 근거와 단계별 migration 후보를 `docs/development/DEPENDENCY_ARCH_AUDIT_20260924.md`에 기록했다.
+
+**검증 상태**
+- Repository source/GYP/package reference audit: **PASS (connector evidence)**.
+- PE import/ABI inspection: **NOT TESTED**.
+- Windows compile/runtime/package: **NOT TESTED**.
+
+---
+
+## 2026-09-24 — Final documentation reconciliation for UI/dependency audit
+
+**논리적 작업 단위 / commit**
+- Settings navigation disclosure + hierarchy: `608b166bf17d5847fcb14dfdfc4d4546d6770b86`.
+- Neutral transient hover/pressed palette: `2f84caccfaff6d116a8e75d1377ccf90ddd9fbd5`.
+- Transient-palette invariant regex correction found during post-commit review: `7c40d913163d84e90ec2b47cfcd0061d605f0958`.
+- Dependency/mixed-architecture audit: `12aa5fd5d334f2fb5cabe420bdf4d80964449715`.
+
+**최종 문서 대조**
+- `AGENTS.md` / `.agent-policy/AGENTS.md`: tool choice, source-of-truth, Git safety, runtime-evidence rules remain current; no change required.
+- `README.md`: build toolchain/default active build contract was not changed; no change required.
+- `LOCAL_CI_MANUAL.txt`: active `Release-x64-Unicode | x64` scope and Actions pause policy were not changed; no change required.
+- `.agent-policy/PROJECT.md`: user-reproduced settings/highlight items and dependency/architecture audit are current and keep runtime evidence open.
+- `docs/development/ERROR_HISTORY.md`: each completed logical unit records cause/change/prevention/evidence without promoting NOT TESTED to PASS.
+- `docs/development/DEPENDENCY_ARCH_AUDIT_20260924.md`: current dependency and mixed-architecture findings are recorded.
+
+**최종 connector/source cross-check**
+- `IDC_CFG_TREE` resource and runtime init both preserve root disclosure; expandable roots receive hierarchy emphasis: **PASS (source evidence)**.
+- `ThemePalette.mHover/mPressed` derive from neutral text/elevated colors rather than `mSelection`: **PASS (source evidence)**.
+- New validator guards are scoped to the settings init/resource contract and transient palette assignment property: **PASS (source inspection)**.
+- Existing Dark `CMenuBar` direct paint/print ownership and text contrast floor remain present: **PASS (source evidence)**.
+
+**미실행 검증**
+- `python build/validate_source_invariants.py`: **NOT TESTED** in an executable repository checkout.
+- Release-x64-Unicode | x64 compile/link, functional regression, runtime smoke: **NOT TESTED**.
+- Interactive runtime / Visual Dark / Visual Light / High Contrast / DPI: **NOT RETESTED**.
+- x86 / packaging / installer: **NOT TESTED** and outside the currently active scope.
+
+**main 반영 전 상태**
+- Work branch was compared against `main`: ahead 4, behind 0 at the reconciliation checkpoint.
+- `main` was still `bce54ce2a274a3f27e86f5f5871c9e2964c4c2cc` at that checkpoint.
+- Final branch/main fast-forward is performed only after this reconciliation commit is created.
