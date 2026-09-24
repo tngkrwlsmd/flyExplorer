@@ -2307,3 +2307,23 @@ PROJECT/ERROR_HISTORY obligation.
 history-body preservation: static inspected. New Windows compile, CHM
 generation, installer/runtime, third-party licensing: NOT TESTED.
 GitHub Actions: NOT RUN.
+
+---
+
+## 2026-09-24 — Reviewed paths refreshed after documentation maintenance
+
+Following source-and-document snapshot `3e6a8914825c7527a0be1898a035a7004a598d60`, review metadata
+now includes the preserved `dist/history.txt`, the new
+`CURRENT_STATUS.md` and `HELP_CONTENT_AUDIT.md`, the newly authored
+current user-help HTML topic, and the formerly misleading historical
+help entry-point pages. The earlier baseline
+`f18503301b289eea504cfe07eb96c13b442e5748` remains a dated
+snapshot in prior entries, not the current review baseline.
+The separate metadata commit changes only `PROJECT.md` and this
+historical evidence document; neither is in the project's
+`reviewed_paths` list.
+
+Static Git tree/path coverage and internal CHM topic/index references:
+source inspected. Windows policy/readiness CLI, HTML Help Workshop,
+full product build/runtime, visual acceptance and installer:
+NOT TESTED. Hosted GitHub Actions: NOT RUN.

@@ -79,61 +79,74 @@
     }
   ],
   "review": {
-    "reviewed_revision": "f18503301b289eea504cfe07eb96c13b442e5748",
+    "reviewed_revision": "3e6a8914825c7527a0be1898a035a7004a598d60",
     "reviewed_at": "2026-09-24",
     "reviewed_paths": [
-      "AGENTS.md",
-      "LICENSE",
-      "CREDITS",
-      "README",
-      "LOCAL_CI_MANUAL.txt",
-      "build.bat",
-      "local_ci.bat",
-      "build/common.gypi",
-      "build/fix_solution_configs.py",
-      "build/validate_source_invariants.py",
-      "build/rebuild_htmlhelp.py",
       ".github/workflows/policy-validation.yml",
       ".github/workflows/windows-build.yml",
-      "build/runtime_smoke.ps1",
+      "AGENTS.md",
+      "build.bat",
+      "build/common.gypi",
+      "build/fix_solution_configs.py",
+      "build/generate_fluent_toolbar_assets.py",
       "build/installer_smoke.ps1",
+      "build/rebuild_htmlhelp.py",
+      "build/runtime_smoke.ps1",
       "build/validate_package.ps1",
-      "dist/package.bat",
+      "build/validate_source_invariants.py",
+      "CREDITS",
       "dist/copy.bat",
-      "dist/make_portable.bat",
-      "dist/make_installer.bat",
-      "dist/setup.nsi",
+      "dist/history.txt",
       "dist/license.txt",
+      "dist/make_installer.bat",
+      "dist/make_portable.bat",
+      "dist/package.bat",
+      "dist/readme.txt",
+      "dist/setup.nsi",
+      "docs/development/CURRENT_STATUS.md",
+      "docs/development/DEPENDENCY_ARCH_AUDIT_20260924.md",
+      "docs/development/DISTRIBUTION_LICENSE_REVIEW.md",
+      "docs/development/HELP_CONTENT_AUDIT.md",
+      "docs/development/WIN11_EXPLORER_UI_REFERENCE.md",
+      "docs/htmlhelp/flyExplorer.hhk",
+      "docs/htmlhelp/flyExplorer.hhp",
+      "docs/htmlhelp/Html/config/config.htm",
+      "docs/htmlhelp/Html/current_development.htm",
+      "docs/htmlhelp/Html/flyExplorer/about.htm",
+      "docs/htmlhelp/Html/flyExplorer/overview.htm",
+      "docs/htmlhelp/Html/flyExplorer/requirements.htm",
+      "docs/htmlhelp/Html/function/function.htm",
+      "docs/htmlhelp/Html/license.htm",
+      "docs/htmlhelp/Html/menu/menu.htm",
+      "docs/htmlhelp/Html/shortkey.htm",
+      "docs/htmlhelp/Html/start.htm",
+      "docs/htmlhelp/Html/support.htm",
+      "docs/htmlhelp/Html/ui/ui.htm",
+      "docs/htmlhelp/Html/whatsnews.htm",
       "fxfile.gyp",
+      "LICENSE",
+      "LOCAL_CI_MANUAL.txt",
+      "local_ci.bat",
+      "README",
       "src/base",
       "src/fxfile",
-      "src/fxfile/gui/FluentCommandIcons.cpp",
-      "src/fxfile/gui/FluentCommandIcons.h",
-      "src/fxfile/gui/BCMenu.cpp",
-      "src/fxfile/cfg/cfg_dlg.cpp",
-      "src/fxfile/cfg/cfg_main_dlg.cpp",
-      "src/fxfile/res/fluent/toolbar_manifest.json",
-      "src/fxfile/res/fluent/COMMAND_ICON_MAP.md",
-      "build/generate_fluent_toolbar_assets.py",
-      "src/fxfile-tests",
-      "src/xpr",
       "src/fxfile-crash",
       "src/fxfile-keyhook",
       "src/fxfile-launcher",
+      "src/fxfile-tests",
       "src/fxfile-upchecker",
-      "docs/development/WIN11_EXPLORER_UI_REFERENCE.md",
-      "docs/development/DEPENDENCY_ARCH_AUDIT_20260924.md",
-      "dist/readme.txt",
-      "docs/htmlhelp/Html/flyExplorer/requirements.htm",
-      "docs/htmlhelp/flyExplorer.hhp",
-      "docs/htmlhelp/flyExplorer.hhk",
-      "docs/htmlhelp/Html/start.htm",
-      "docs/htmlhelp/Html/license.htm",
-      "docs/htmlhelp/Html/flyExplorer/about.htm",
-      "docs/development/DISTRIBUTION_LICENSE_REVIEW.md"
+      "src/fxfile/cfg/cfg_dlg.cpp",
+      "src/fxfile/cfg/cfg_main_dlg.cpp",
+      "src/fxfile/gui/BCMenu.cpp",
+      "src/fxfile/gui/FluentCommandIcons.cpp",
+      "src/fxfile/gui/FluentCommandIcons.h",
+      "src/fxfile/res/fluent/COMMAND_ICON_MAP.md",
+      "src/fxfile/res/fluent/toolbar_manifest.json",
+      "src/xpr"
     ]
   }
 }
+
 ```
 <!-- project-facts:end -->
 
@@ -556,6 +569,18 @@ were not executed in this step.
     - `docs/development/CURRENT_STATUS.md` is the concise current implementation/evidence/open-work entry point. `ERROR_HISTORY.md` stays the complete append-only error/verification history; existing diagnosis and historical run records are never discarded or rewritten to suggest current PASS.
     - `dist/history.txt` remains installed as an original release-history artifact but is visibly labelled as historical, not the changelog of 2.0.4-dev. README links the current summary and the existing error-history archive.
     - On finishing each logical unit, maintain the PROJECT issue state and ERROR_HISTORY evidence record and update the CURRENT_STATUS page whenever its described facts, risks or evidence have changed. No Windows build or installer was run for the status-document maintenance.
+
+**Documentation maintenance source-review checkpoint (2026-09-24):**
+`3e6a8914825c7527a0be1898a035a7004a598d60` is the repository source/documentation snapshot after root
+frameset removal, dependency-audit current-state reconciliation, the
+first source-backed user guide, legacy-topic warnings and separation of
+current status from append-only history. The maintained review paths
+now include the new current-guide and status/audit files, updated old
+help entry points and installed historical release notes. The next
+metadata/history-only commit does not modify the reviewed-path snapshot.
+Git tree, links and changed-path inspection are static evidence, NOT a
+policy/readiness CLI, Windows help compiler, product runtime or
+installer PASS. Earlier review baselines above remain dated history.
 
 ### Development handoff rule
 
