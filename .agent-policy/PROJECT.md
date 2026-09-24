@@ -79,10 +79,12 @@
     }
   ],
   "review": {
-    "reviewed_revision": "5e3d8d4ad85e03b5cbe4db3d4457b0058c16687b",
+    "reviewed_revision": "f18503301b289eea504cfe07eb96c13b442e5748",
     "reviewed_at": "2026-09-24",
     "reviewed_paths": [
       "AGENTS.md",
+      "LICENSE",
+      "CREDITS",
       "README",
       "LOCAL_CI_MANUAL.txt",
       "build.bat",
@@ -90,6 +92,7 @@
       "build/common.gypi",
       "build/fix_solution_configs.py",
       "build/validate_source_invariants.py",
+      "build/rebuild_htmlhelp.py",
       ".github/workflows/policy-validation.yml",
       ".github/workflows/windows-build.yml",
       "build/runtime_smoke.ps1",
@@ -100,6 +103,7 @@
       "dist/make_portable.bat",
       "dist/make_installer.bat",
       "dist/setup.nsi",
+      "dist/license.txt",
       "fxfile.gyp",
       "src/base",
       "src/fxfile",
@@ -120,7 +124,13 @@
       "docs/development/WIN11_EXPLORER_UI_REFERENCE.md",
       "docs/development/DEPENDENCY_ARCH_AUDIT_20260924.md",
       "dist/readme.txt",
-      "docs/htmlhelp/Html/flyExplorer/requirements.htm"
+      "docs/htmlhelp/Html/flyExplorer/requirements.htm",
+      "docs/htmlhelp/flyExplorer.hhp",
+      "docs/htmlhelp/flyExplorer.hhk",
+      "docs/htmlhelp/Html/start.htm",
+      "docs/htmlhelp/Html/license.htm",
+      "docs/htmlhelp/Html/flyExplorer/about.htm",
+      "docs/development/DISTRIBUTION_LICENSE_REVIEW.md"
     ]
   }
 }
@@ -520,6 +530,16 @@ Status: **ACTIVE / user-reproduced runtime failures**. These items are the immed
     - `docs/htmlhelp/flyExplorer.hhp` now targets `fxfile.chm`; `build/rebuild_htmlhelp.py` performs a source/TOC/index preflight, stages the repository's UTF-8 HTML topics and localized index into a disposable build directory, and invokes an independently installed Microsoft HTML Help Workshop compiler for `--build`. `dist/make_installer.bat` always rebuilds CHM, clears previous installer output and refuses a missing/invalid result; the source invariant invokes the read-only `--check` mode.
     - Two broken legacy keyword-index topic references were repaired. The help landing page states the current `2.0.4-dev` Windows 10/11 development scope while marking old pages as historical; the historical about page now carries a warning rather than silently claiming old contact/compatibility information is current.
     - Syntax, disposable staging and negative-path unit fixtures for the generation helper passed outside the connected repository. The exact full Windows HTML Help Workshop compile, generated CHM topic browsing, package/install/uninstall and actual product Help runtime were NOT TESTED. This work does not authorize GitHub Actions or external distribution; third-party licensing remains open in `docs/development/DISTRIBUTION_LICENSE_REVIEW.md`.
+
+**Help/source-review checkpoint (2026-09-24):** code/documentation commit
+`f18503301b289eea504cfe07eb96c13b442e5748` is the reviewed source snapshot after the unused-dependency,
+installer-license and help-generation changes. The reviewed-path list now
+includes the canonical generator, help/project/index, installer license,
+third-party credits and release-license review. The subsequent documentation
+metadata commit does not change those reviewed source paths. This is
+repository/source inspection only: policy readiness CLI, Windows HTML Help
+compiler, native product regression, installer and third-party legal review
+were not executed in this step.
 
 ### Development handoff rule
 

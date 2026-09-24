@@ -2198,3 +2198,24 @@ runtime: NOT TESTED. Hosted Actions: NOT RUN.
   intentionally identified as historical. GitHub Actions: NOT RUN.
 - Third-party GFL SDK redistribution rights remain NOT VERIFIED; do
   not publish a combined installer based on this cleanup alone.
+
+---
+
+## 2026-09-24 — Reviewed-path metadata after help source generation checkpoint
+
+After `f18503301b289eea504cfe07eb96c13b442e5748`, compared the earlier recorded review snapshot
+`5e3d8d4ad85e03b5cbe4db3d4457b0058c16687b` with the current source
+checkpoint (5 later commits, 243 changed files including intentional
+vendor-file deletions). Existing reviewed paths touched by the cleanup:
+AGENTS.md, LOCAL_CI_MANUAL.txt, README, source invariants, installer build
+script and NSIS input, distribution README and dependency audit. Added
+direct review-path coverage for the help generator, HHP/HHK/start and
+license/about topics, CREDITS, root LICENSE and installer licensing
+documentation. `PROJECT.md` now records `f18503301b289eea504cfe07eb96c13b442e5748` as the
+source-review revision; this metadata/history-only commit is outside the
+tracked review-source paths.
+
+Verification: GitHub source-tree diff and changed-path inspection: PASS.
+The vendored policy/readiness CLI and Windows/full release tests: NOT RUN.
+The actual Microsoft HTML Help Workshop output and release rights:
+NOT VERIFIED; do not elevate this metadata update to a runtime PASS.
