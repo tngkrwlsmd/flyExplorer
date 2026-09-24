@@ -504,6 +504,11 @@ Status: **ACTIVE / user-reproduced runtime failures**. These items are the immed
     - External/manual consumers cannot be disproved through repository-only inspection. First-party source/script references: static reviewed; native Windows x64 compile/test and x86/package/installer equivalence: NOT TESTED. The dependency audit and error history contain the scoped outcome.
     - This is a first cleanup checkpoint; subsequent duplicate-file and installer/help work must be independently documented and checked.
 
+29. **Duplicate zlib / NSIS developer-only payload cleanup — STATIC INSPECTION ONLY**
+    - All 16 tracked binaries in `lib/zlib/bin/` are byte-identical Git blobs to the corresponding `lib/zlib/lib/` files. The first-party build/packaging scripts have no dependency on `lib/zlib/bin/`; active vendored crash zlib source/include and libxml2-supplied `zlib1.dll` remain.
+    - No current first-party packaging path references vendored `dist/nsis/Docs/` or `Examples/`, `NSIS.chm`, `NSIS.chw`, standalone `NSIS.exe` or interactive `makensisw.exe`. Remove only these vendor/developer extras. Preserve `dist/nsis/makensis.exe`, `COPYING`, `Include`, `Contrib`, `Plugins`, `Stubs`, `Bin` and installer assets/macros.
+    - Static Git blob and first-party script reference inspection: PASS. Actual NSIS/Windows installer generation, local x64 compile/test and any external manually invoked NSIS GUI use: NOT TESTED. Restore removed optional tools from Git if external workflows require them.
+
 ### Development handoff rule
 
 - Every new user-requested development item is added to this section (or its successor) before implementation starts.

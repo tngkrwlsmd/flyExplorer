@@ -2108,3 +2108,25 @@ available through Git history.
 **Verification:** Static manifest/script reference inspection: PASS.
 External/manual consumption: NOT PROVEN. Windows x64 compile/test, x86,
 runtime ABI, package/installer: NOT TESTED. No GitHub Actions run.
+
+---
+
+## 2026-09-24 — Identical zlib artifacts and unused NSIS SDK extras
+
+**Observation:** `lib/zlib/bin/` contains 16 files with exact matching Git
+blob IDs under `lib/zlib/lib/` (4,083,104 duplicate bytes). None of
+29 first-party GYP/build/validation/packaging entry points refers to
+`lib/zlib/bin/`. The active crash module compiles source from
+`lib/zlib/src/` and the packaged XML zlib runtime comes from
+`lib/libxml2/`.
+
+**Scoped cleanup:** Remove only the duplicated zlib `bin/` directory
+and non-build NSIS developer material (`Docs/`, `Examples/`, NSIS
+developer HTML help and standalone/GUI executables). Keep CLI
+`makensis.exe`, all compiler/runtime Includes/Contrib/Plugins/Stubs/Bin,
+bundled NSIS COPYING and the current `dist/setup.nsi` installer input.
+
+**Verification:** Static blob equality plus tracked first-party script
+reference audit: PASS. Windows NSIS package generation, installer/smoke,
+external developer scripts and Linux/Wine help regeneration: NOT TESTED.
+No GitHub Actions run.

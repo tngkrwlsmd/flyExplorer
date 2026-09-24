@@ -93,3 +93,12 @@ active `CREDITS` because its vendor package is no longer present.
 Historical notes here remain deliberately unchanged. External/manual
 consumers and a fresh Windows build/package are NOT TESTED. Restore from
 Git history if a previously untracked external dependency is established.
+
+## Subsequent duplicate/vendor SDK trim (2026-09-24)
+
+Remove `lib/zlib/bin/` only after checking all 16 files are exact Git
+blob duplicates of `lib/zlib/lib/`; leave source/include and active
+XML runtime untouched. Trim only NSIS vendor documentation, examples,
+help and unused interactive setup/GUI executables; retain CLI
+`makensis.exe` and required build compiler payload. This is static
+repository evidence only, not a tested NSIS build or installer run.
