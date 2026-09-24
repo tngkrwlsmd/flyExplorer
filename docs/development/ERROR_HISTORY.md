@@ -2731,3 +2731,25 @@ the four localization keys in both the language table and owning dialogs.
 **Verification:** Static source/wiring inspection: PASS. Windows compile,
 actual filtering/program-association dialog layout, DPI clipping, keyboard
 focus and accessibility/visual result: NOT RETESTED. GitHub Actions: NOT RUN.
+
+---
+
+## 2026-09-24 — Reviewed snapshot after UI-01 and UI-04 source fixes
+
+The project source-review baseline advances from `3f7560a31f39080baaa5db275bf2186c1a4760a0` to
+`dce54c6678111d0252191ffc7e272339b94a95b7`. The reviewed-path set now includes
+`src/fxfile/main_frame.cpp`,
+`src/fxfile/cfg/cfg_appearance_filtering_dlg.cpp`,
+`src/fxfile/cfg/cfg_func_program_ass_dlg.cpp` and
+`docs/development/UI_UX_AUDIT_20260924.md` in addition to the existing
+resource/language/invariant/status paths.
+
+Source commits covered:
+- `341f99c19f5730f41d1fb3726ce502457e93217b`: preserve hidden settings
+  page visibility during the app-wide theme redraw transaction.
+- `dce54c6678111d0252191ffc7e272339b94a95b7`: replace mojibake reorder labels in filtering and the sibling
+  program-association page with localized semantic text.
+
+Static tree/source-contract review: PASS. Windows compile after these two
+changes, matching UI-01 runtime path, UI-04 dialog layout/accessibility,
+DPI/High Contrast and final pixels: NOT RETESTED. GitHub Actions: NOT RUN.

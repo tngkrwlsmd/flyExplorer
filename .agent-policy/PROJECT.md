@@ -90,7 +90,7 @@ Windows 10/High Contrast/mixed-DPI/installer 검증으로 확대 해석하지 �
     }
   ],
   "review": {
-    "reviewed_revision": "3f7560a31f39080baaa5db275bf2186c1a4760a0",
+    "reviewed_revision": "dce54c6678111d0252191ffc7e272339b94a95b7",
     "reviewed_at": "2026-09-24",
     "reviewed_paths": [
       ".github/workflows/policy-validation.yml",
@@ -120,6 +120,7 @@ Windows 10/High Contrast/mixed-DPI/installer 검증으로 확대 해석하지 �
       "docs/development/DEPENDENCY_ARCH_AUDIT_20260924.md",
       "docs/development/DISTRIBUTION_LICENSE_REVIEW.md",
       "docs/development/HELP_CONTENT_AUDIT.md",
+      "docs/development/UI_UX_AUDIT_20260924.md",
       "docs/development/WIN11_EXPLORER_UI_REFERENCE.md",
       "docs/htmlhelp/flyExplorer.hhk",
       "docs/htmlhelp/flyExplorer.hhp",
@@ -153,7 +154,9 @@ Windows 10/High Contrast/mixed-DPI/installer 검증으로 확대 해석하지 �
       "src/fxfile/app_ver.cpp",
       "src/fxfile/app_ver.h",
       "src/fxfile/cfg/cfg_adv_dlg.cpp",
+      "src/fxfile/cfg/cfg_appearance_filtering_dlg.cpp",
       "src/fxfile/cfg/cfg_dlg.cpp",
+      "src/fxfile/cfg/cfg_func_program_ass_dlg.cpp",
       "src/fxfile/cfg/cfg_main_dlg.cpp",
       "src/fxfile/cmd/about_tab_info_dlg.cpp",
       "src/fxfile/cmd/about_tab_info_dlg.h",
@@ -165,6 +168,7 @@ Windows 10/High Contrast/mixed-DPI/installer 검증으로 확대 해석하지 �
       "src/fxfile/gui/FluentCommandIcons.cpp",
       "src/fxfile/gui/FluentCommandIcons.h",
       "src/fxfile/Languages/Korean.xml",
+      "src/fxfile/main_frame.cpp",
       "src/fxfile/option.cpp",
       "src/fxfile/option.h",
       "src/fxfile/res/fluent/COMMAND_ICON_MAP.md",
@@ -175,6 +179,7 @@ Windows 10/High Contrast/mixed-DPI/installer 검증으로 확대 해석하지 �
     ]
   }
 }
+
 
 
 
@@ -715,6 +720,15 @@ installer, UI and fresh product build: NOT TESTED. Hosted Actions: NOT RUN.
     - Replace resource fallbacks with readable ASCII `Up`/`Down`, widen both compact buttons from 15/16 DLU to 26 DLU, and set the runtime labels from Korean localization keys (`위로`/`아래로`) so the visible text is descriptive rather than encoding/font-dependent glyphs.
     - Apply the same correction to both filtering and program-association pages. Source invariant rejects the mojibake literals and requires all four localization/wiring keys.
     - Static source contract: reviewed. Windows dialog layout, text clipping, keyboard focus/accessibility exposure and 100/125/150/200% DPI visuals: NOT RETESTED.
+
+**UI audit implementation source-review checkpoint (2026-09-24):**
+`dce54c6678111d0252191ffc7e272339b94a95b7` is the reviewed source snapshot after the UI-01 hidden-page
+theme-transaction guard (`341f99c`) and UI-04 localized reorder-label
+cleanup (`dce54c6`). The reviewed-path set now explicitly
+includes the main-frame transaction owner, both reorder-page owners and the
+runtime UI audit. Static source/contract inspection is evidence only;
+the Windows acceptance paths and visual/DPI checks remain NOT RETESTED.
+The following metadata/history-only commit does not alter reviewed source.
 
 ### Development handoff rule
 
