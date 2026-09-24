@@ -2695,6 +2695,36 @@ def validate_win11_stability_regressions() -> list[str]:
     if errors:
         return errors
 
+    toolbar_source = contents["toolbar_cpp"]
+    owned_start = toolbar_source.find("void DrawOwnedDarkToolbarItem(")
+    owned_end = toolbar_source.find(
+        "LRESULT ApplyDarkToolBarCustomDraw(", owned_start
+    )
+    owned = (
+        toolbar_source[owned_start:owned_end]
+        if owned_start >= 0 and owned_end > owned_start
+        else ""
+    )
+    postpaint_start = toolbar_source.find(
+        "case CDDS_ITEMPOSTPAINT:", owned_end
+    )
+    postpaint_end = toolbar_source.find("default:", postpaint_start)
+    postpaint = (
+        toolbar_source[postpaint_start:postpaint_end]
+        if postpaint_start >= 0 and postpaint_end > postpaint_start
+        else ""
+    )
+    if (
+        "DrawOwnedDarkToolbarItem(aCustomDraw, sBackground)" not in postpaint
+        or "ImageList_DrawEx(" not in owned
+        or "FillRect(" not in owned
+        or "DrawFinalDarkToolbarItem(aCustomDraw, aBackground)" not in owned
+    ):
+        errors.append(
+            "toolbar: dark item final ownership must cover the entire "
+            "native highlight tile, icon, text and dropdown"
+        )
+
     modern_ui = contents["modern_ui"]
     for state_name in ("mHover", "mPressed"):
         state_match = re.search(

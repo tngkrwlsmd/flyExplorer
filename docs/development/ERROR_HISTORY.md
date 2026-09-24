@@ -1907,3 +1907,21 @@
 - 사용자 제공 최신 설정 screenshot: 이전 구현에 대해 VISUAL FAIL.
 - 소스 변경: CONNECTOR DIFF REVIEW 대기/이후 확인.
 - `local_ci.bat x64`, interactive Dark/Light/HC/DPI: NOT TESTED. runtime screenshot 통과 전에는 CLOSED 금지.
+
+---
+
+## 2026-09-24 — Fresh-build dark toolbar kept native blue icon tile
+
+**증거**
+- 사용자는 pull 후 직접 빌드한 화면에서 밝은 청색 toolbar tile이 그대로 보임을 재현했다. 과거 stale-artifact 로그로 최신 runtime screenshot을 부정하지 않는다.
+
+**원인**
+- `ApplyDarkToolBarCustomDraw()`은 native toolbar item paint를 보존했고 `DrawFinalDarkToolbarItem()`은 text/dropdown만 다시 그렸다. 따라서 native hot/checked icon 배경은 그대로 노출될 수 있었다.
+
+**수정/예방**
+- Dark item postpaint에서 전체 item을 중성 배경으로 지우고 hot/pressed/checked state를 명시적으로 그리고 ImageList 아이콘, 기존 text/dropdown final draw를 수행한다.
+- 아이콘 데이터가 없는 특수 경로는 원본 native 아이콘을 지우지 않고 유지한다. Light/HC는 기존 owner 유지.
+- validator는 `DrawOwnedDarkToolbarItem`의 전체 배경/아이콘 redraw와 실제 postpaint 사용을 함수 범위에서 확인한다.
+
+**검증**
+- 이전 사용자 screenshot: VISUAL FAIL. 본 수정의 Release-x64-Unicode build/functional, interactive Dark/Light/HC/DPI: NOT TESTED. 현재 시각적 해결 완료로 기록 금지.

@@ -456,6 +456,13 @@ Status: **ACTIVE / user-reproduced runtime failures**. These items are the immed
    - Recurrence guard: inspect the actual postpaint draw path and chevron click/expand path, not merely resource style tokens.
    - Evidence: latest user screenshots are a visual FAIL for the previous approach. Full x64 local CI, interactive Dark/Light/HC, DPI/keyboard/mouse screenshot for the new implementation: NOT TESTED.
 
+23. **Fresh-build toolbar hot/checked tile is still accent-bright — CODE FIXED / VISUAL RETEST REQUIRED**
+   - The user's fresh-build screenshots show a bright blue/light toolbar icon tile despite neutral `ThemePalette.mHover/mPressed`.
+   - Root cause: `ApplyDarkToolBarCustomDraw()` kept native item rendering and postpaint `DrawFinalDarkToolbarItem()` only erased text and dropdown regions, leaving the native icon/background tile behind.
+   - Fix: Dark postpaint now erases the complete item, redraws neutral rounded hot/checked state and ImageList icon, then finishes text and dropdown glyph. For unsupported icon-list cases it retains the native image rather than blanking it. Light/High Contrast ownership is unchanged.
+   - Prevention: the scoped validator inspects complete-item fill, ImageList redraw and the actual Dark postpaint call, not palette tokens alone.
+   - Current user screenshot is VISUAL FAIL for the old path; new x64 compile/runtime/visual, including main/drive/bookmark and popup toolbars: NOT TESTED until rerun.
+
 ### Development handoff rule
 
 - Every new user-requested development item is added to this section (or its successor) before implementation starts.
