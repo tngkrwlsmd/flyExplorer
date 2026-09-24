@@ -4175,6 +4175,43 @@ def validate_release_stage_recovery() -> list[str]:
     return errors
 
 
+def validate_fresh_profile_command_band_and_settings_spacing() -> list[str]:
+    """UI-05: compact default rebar rows, larger settings navigation targets."""
+    errors: list[str] = []
+    coolbar = (FXFILE_SRC / "main_coolbar.cpp").read_text(
+        encoding="utf-8", errors="replace"
+    )
+    modern = (FXFILE_SRC / "gui" / "ModernUI.cpp").read_text(
+        encoding="utf-8", errors="replace"
+    )
+    # Inspect only each band's default construction, not saved-user layout.
+    for title, expect_break in (
+        ("&Toolbar", True),
+        ("&Drivebar", True),
+        ("&Bookmarkbar", False),
+    ):
+        pattern = re.compile(
+            r"sStyle\s*=\s*(RBBS_BREAK\s*\|\s*)?RBBS_USECHEVRON;"
+            r"\s*if\s*\(AddBar\([^;]*?"
+            + re.escape('XPR_STRING_LITERAL("' + title + '")'),
+            re.DOTALL,
+        )
+        match = pattern.search(coolbar)
+        if match is None:
+            errors.append(f"default coolbar band wiring missing: {title}")
+        elif bool(match.group(1)) != expect_break:
+            errors.append(f"default coolbar break flag mismatch: {title}")
+    for token in (
+        "loadStateFile();",
+        "setWrapable(AFX_IDW_BOOKMARK_BAR, gOpt->mMain.mBookmarkBarMultiLine)",
+        "return scaleForWindow(38, aHwnd);",
+        "return scaleForWindow(16, aHwnd);",
+    ):
+        if token not in coolbar + modern:
+            errors.append(f"UI-05 layout/persistence metric missing: {token}")
+    return errors
+
+
 def validate_app_popup_work_area_and_brush_lifetime() -> list[str]:
     """UI-06: cap popup/submenu heights and restore transient Dark background."""
     errors: list[str] = []
@@ -4425,6 +4462,7 @@ def main() -> int:
     errors.extend(validate_active_ci_scope_documentation())
     errors.extend(validate_actions_storage_budget_contract())
     errors.extend(validate_installer_smoke_wiring())
+    errors.extend(validate_fresh_profile_command_band_and_settings_spacing())
     errors.extend(validate_app_popup_work_area_and_brush_lifetime())
     errors.extend(validate_split_pane_column_and_contents_layout())
     errors.extend(validate_shared_tree_new_profile_default())

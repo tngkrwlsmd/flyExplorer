@@ -105,7 +105,11 @@ xpr_bool_t MainCoolBar::createBands(void)
         return XPR_FALSE;
     }
 
-    sStyle = RBBS_BREAK | RBBS_USECHEVRON;
+    // Let the short drive and bookmark bands share the second row on a
+    // fresh profile instead of reserving two mostly empty full-width rows.
+    // Rebar still wraps naturally on narrow monitors; the persisted band
+    // order/BREAK flags restored by loadStateFile remain authoritative.
+    sStyle = RBBS_USECHEVRON;
     if (AddBar(&mBookmarkToolBar, XPR_NULL, XPR_NULL, sStyle, XPR_STRING_LITERAL("&Bookmarkbar"), false) == XPR_FALSE)
     {
         XPR_TRACE(XPR_STRING_LITERAL("Failed to add rebar\n"));

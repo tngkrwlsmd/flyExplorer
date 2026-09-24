@@ -1534,7 +1534,9 @@ xpr_sint_t ModernUI::getMenuBarItemHeight(HWND aHwnd)
 
 xpr_sint_t ModernUI::getSettingsNavRowHeight(HWND aHwnd)
 {
-    return scaleForWindow(34, aHwnd);
+    // Match the standard navigation touch target without changing tree
+    // hierarchy, scrolling, image-list indices or keyboard focus.
+    return scaleForWindow(38, aHwnd);
 }
 
 xpr_sint_t ModernUI::getSettingsPanelPadding(HWND aHwnd)
@@ -1549,7 +1551,9 @@ xpr_sint_t ModernUI::getDialogControlHeight(HWND aHwnd)
 
 xpr_sint_t ModernUI::getDialogSectionSpacing(HWND aHwnd)
 {
-    return scaleForWindow(12, aHwnd);
+    // Separate the preference-page breadcrumb/description from its controls.
+    // Do not resize fixed-layout checkboxes within their legacy resources.
+    return scaleForWindow(16, aHwnd);
 }
 
 xpr_bool_t ModernUI::getUIFont(LOGFONT &aLogFont, HWND aHwnd)

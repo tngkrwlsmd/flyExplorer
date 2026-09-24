@@ -87,6 +87,19 @@ Current-revision Windows compiler/runtime (small-monitor overflow,
 keyboard/submenu, Light/Dark/HC screenshots): NOT TESTED. UI-06 remains
 **PARTIAL / VISUAL RETEST OPEN**.
 
+**UI-05 default command-band / settings spacing source checkpoint
+(2026-09-24):** On a fresh profile the bookmark band no longer forces
+a separate rebar row after the drive band. Both retain their chevrons,
+normal narrow-window wrapping and explicit user-configurable multiline
+modes. Previously persisted band order/BREAK settings still restore
+from the existing coolbar file. Settings navigation row minimum rises
+from 34 to 38 DPI-scaled units; separation between the description
+and body rises from 12 to 16, without expanding overlapping controls
+inside fixed legacy resources. A static contract guards the default
+band flags, persistence and metrics. Other command grouping and
+per-dialog control spacing require visual design/test; UI-05 is
+**PARTIAL / WINDOWS VISUAL RETEST OPEN**.
+
 ## Outstanding near-term work
 
 1. Address the reproduced settings-page visibility and Dark rendering issues

@@ -783,6 +783,17 @@ claimed fixed. Guard added. Windows x64 compile, native menu scrolling,
 keyboard, varying menu heights, Light/Dark/HC screenshots: NOT TESTED.
 Hosted Actions: NOT RUN. UI-06 remains partially OPEN.
 
+**UI-05 fresh-profile bands and settings whitespace (2026-09-24):**
+Bookmark no longer forces its own new rebar row after the Drive row on
+fresh profiles. All bands retain chevrons; existing `loadStateFile`
+overrides initial BREAK flags and toolbar customization/multiline
+options are unchanged. Settings navigation minimum row height is now
+38 scaled pixels versus 34, while section gap is 16 versus 12; nested
+legacy child controls are not resized blindly. Static guard added.
+Windows compile/current-revision runtime, fresh/persisted rebar layouts,
+overflow keyboard accessibility and all DPI screenshots: NOT TESTED.
+UI-05 remains partially OPEN. Hosted Actions: NOT RUN.
+
 ### Development handoff rule
 
 - Every new user-requested development item is added to this section (or its successor) before implementation starts.

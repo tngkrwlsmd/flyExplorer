@@ -2887,3 +2887,34 @@ repository source wiring. Full Python validator, x64 compiler,
 actual work-area overflow/scroll, keyboard access, Light/Dark/HC
 and outer-border screenshots: NOT TESTED. UI-06 partial and OPEN.
 GitHub Actions: NOT RUN under the individual approval rule.
+
+
+---
+
+## 2026-09-24 — UI-05 fresh rebar packing and settings whitespace
+
+**Observed:** Initial Windows 11 UI audit found dense main-command
+glyphs alongside separate drive/bookmark bands with large unused
+horizontal space, and comparatively tight configuration-page
+description/navigation spacing.
+
+**Source cause:** In MainCoolBar::createBands each of the three bands
+explicitly set RBBS_BREAK; bookmark always started a third row even
+when the previous Drive band had room. Settings navigation used
+34 DPI-scaled rows and 12-unit section spacing.
+
+**Change:** A fresh profile lets the bookmark band share the Drive row
+when Windows rebar layout has enough width, retaining wrapping/
+chevrons and all commands. Persisted rebar band breaks and user
+multiline controls still override defaults. The shared ModernUI
+navigation row and settings-section spacing become 38 and 16
+DPI-scaled units; fixed-layout legacy child controls were left intact.
+
+**Prevention:** A source regression guard checks the band BREAK
+contract, the existing load/wrapping routes and shared spacing.
+
+**Evidence:** Source-only construction checks. Actual Windows x64
+compile, new and saved layout, 100/125/150/200% DPI, compact-window
+overflow, keyboard accessibility and final visual presentation:
+NOT TESTED. UI-05 remains partial; any remaining per-dialog spacing
+work requires measured runtime geometry. GitHub Actions: NOT RUN.

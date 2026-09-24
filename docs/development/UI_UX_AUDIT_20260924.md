@@ -107,6 +107,23 @@ UI-08 완료로 판단하지 않는다.
   Windows 실제 화면·작은 모니터·하위 메뉴·키보드·고대비
   검증이 남아 있다. UI-06은 **SOURCE PARTIAL / RETEST OPEN**.
 
+### UI-05 후속 소스 변경 — 초기 명령 밴드와 설정 여백
+
+- 신규 기본 배치에서 북마크와 드라이브 밴드가 가능한 경우
+  동일한 두 번째 줄의 빈 공간을 나눠 쓰게 한다. 기존 메인
+  명령 바와 드라이브의 줄 구분은 유지한다. 작은 화면에서는
+  공식 rebar wrapping/chevron이 동작하고, 북마크·드라이브의
+  사용자 멀티라인 선택권은 그대로다.
+- 저장된 coolbar 배치가 있으면 기존 `loadStateFile` 경로가
+  사용자 band 순서/줄 구분을 우선 적용한다.
+- 설정 탐색 tree의 기본 행 높이는 34→38 DPI-scaled 단위,
+  설명과 설정 본문 사이 공간은 12→16으로 조정한다.
+  legacy child dialog 안의 checkbox/combobox를 무작정 키워
+  겹치게 만들지는 않는다.
+- 실제 현재 source Windows x64 컴파일, 신규/기존 저장
+  레이아웃·작은 창·배율별 커맨드 도달성·접근성·스크린샷
+  은 아직 미수행. UI-05는 **SOURCE PARTIAL / RETEST OPEN**.
+
 ### UI-01의 진단 근거와 회귀 조건
 
 **Observed source:** `ThemeRefreshSnapshot`은 hidden child를 포함한 HWND를 모으고, visibility 보존 없이 모두에게 `WM_SETREDRAW(FALSE)` 후 `WM_SETREDRAW(TRUE)`를 보낸다. `showCfg()`는 `mShowCfg`가 가리키는 기존 페이지만 숨긴다.
