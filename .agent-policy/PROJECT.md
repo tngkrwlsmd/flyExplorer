@@ -761,6 +761,17 @@ Actual Windows new-profile, previous-profile, split/resize, persistence
 and light/dark/DPI visuals: NOT TESTED. UI-08 remains partially OPEN.
 Hosted Actions: NOT RUN.
 
+**UI-08 narrow-pane source follow-up (2026-09-24):**
+Fixed OnCreateClient's command-line column override assigning rows
+instead of columns, and replaced ExplorerPane's fixed Contents-sidebar
+reservation with a per-layout DPI-aware width budget. Both Contents
+data and the list remain present; saved style, old-profile visibility,
+per-view tree configuration and commands are unchanged. Source invariant
+now forbids the old wrong column assignment and fixed margin wiring.
+No revision-matched Windows compilation, split interaction, RTL,
+High Contrast, visual/DPI or configuration persistence test was run;
+UI-08 runtime/visual closure remains OPEN. Hosted Actions: NOT RUN.
+
 ### Development handoff rule
 
 - Every new user-requested development item is added to this section (or its successor) before implementation starts.

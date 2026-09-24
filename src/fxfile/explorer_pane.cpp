@@ -354,16 +354,49 @@ void ExplorerPane::recalcLayout(void)
     // contents window
     if (XPR_IS_NOT_NULL(mContentsWnd) && XPR_IS_NOT_NULL(mContentsWnd->m_hWnd))
     {
+        // Keep the saved Contents style intact, but do not reserve a fixed
+        // 200-DIP sidebar in every half-width explorer pane. The same contents
+        // window stays visible and gains its full width when the pane expands.
+        CRect sContentsMargin(mMarginRect);
+        if (mContentsStyle == CONTENTS_EXPLORER &&
+            sContentsMargin.left > 0)
+        {
+            const xpr_sint_t sPreferredWidth =
+                ui::ModernUI::scaleForWindow(sContentsMargin.left, GetSafeHwnd());
+            const xpr_sint_t sMinListWidth =
+                ui::ModernUI::scaleForWindow(280, GetSafeHwnd());
+            const xpr_sint_t sMinContentsWidth =
+                ui::ModernUI::scaleForWindow(96, GetSafeHwnd());
+            const xpr_sint_t sWidthBudget =
+                max(sMinContentsWidth, sRect.Width() - sMinListWidth);
+
+            // On extremely small panes both surfaces share the available
+            // space; never produce a negative file-list rectangle.
+            sContentsMargin.left = min(
+                sPreferredWidth,
+                min(sWidthBudget, max(0, sRect.Width() / 3)));
+        }
+        else if (sContentsMargin.top > 0)
+        {
+            sContentsMargin.top =
+                ui::ModernUI::scaleForWindow(sContentsMargin.top, GetSafeHwnd());
+        }
+
         CRect sContentsWndRect(sRect);
-        if (mMarginRect.left > 0) sContentsWndRect.right  = sContentsWndRect.left + mMarginRect.left;
-        if (mMarginRect.top  > 0) sContentsWndRect.bottom = sContentsWndRect.top  + mMarginRect.top;
+        if (sContentsMargin.left > 0)
+            sContentsWndRect.right = sContentsWndRect.left + sContentsMargin.left;
+        if (sContentsMargin.top > 0)
+            sContentsWndRect.bottom = sContentsWndRect.top + sContentsMargin.top;
 
-        ::DeferWindowPos(sHdwp, *mContentsWnd, XPR_NULL, sContentsWndRect.left, sContentsWndRect.top, sContentsWndRect.Width(), sContentsWndRect.Height(), SWP_NOZORDER);
+        ::DeferWindowPos(
+            sHdwp, *mContentsWnd, XPR_NULL,
+            sContentsWndRect.left, sContentsWndRect.top,
+            sContentsWndRect.Width(), sContentsWndRect.Height(), SWP_NOZORDER);
 
-        sRect.left   += mMarginRect.left;
-        sRect.top    += mMarginRect.top;
-        sRect.right  -= mMarginRect.right;
-        sRect.bottom -= mMarginRect.bottom;
+        sRect.left   += sContentsMargin.left;
+        sRect.top    += sContentsMargin.top;
+        sRect.right  -= sContentsMargin.right;
+        sRect.bottom -= sContentsMargin.bottom;
     }
 
     // explorer control

@@ -61,6 +61,18 @@ shared/per-view owner paths. Current-revision Windows build, clean-profile
 first launch, split-pane resizing, layout persistence and visual evidence:
 NOT TESTED. UI-08 remains OPEN for the broader acceptance case.
 
+**Follow-up UI-08 source checkpoint (2026-09-24):**
+Fixed the existing command-line split-column override: it had assigned
+`sRowCount` instead of `sColumnCount`. The explorer-style Contents
+sidebar now adapts to current pane width and DPI, reserving approximately
+280 logical pixels for file columns where available; very narrow panes
+share their remaining width without a negative list rectangle. The
+Contents window, all displayed data, user-selected mode and individual
+tree option remain intact. This is source/layout work only: the actual
+Windows x64 build, command-line launch, splitter dragging, layout
+persistence, light/dark/mixed-DPI and accessibility: **NOT TESTED**.
+UI-08 remains **PARTIAL / RUNTIME RETEST OPEN**.
+
 ## Outstanding near-term work
 
 1. Address the reproduced settings-page visibility and Dark rendering issues

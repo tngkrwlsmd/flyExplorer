@@ -2832,3 +2832,30 @@ Windows clean-profile, pre-existing profile, vertical split/resize,
 settings persistence, multi-monitor/DPI and UI visual interaction
 remain NOT TESTED. UI-08 is partial and stays OPEN; no GitHub Actions
 run was authorized.
+
+
+---
+
+## 2026-09-24 — UI-08 split column override and narrow Contents layout
+
+**Observed in source:** MainFrame::OnCreateClient read both launch
+split dimensions but incorrectly stored the column override into
+`sRowCount`. ExplorerPane::recalcLayout unconditionally reserved the
+same 200-unit explorer-style Contents width in narrow and wide panes,
+which compounded the observed split-pane file column truncation.
+
+**Changes:** Assign a valid command-line column override to
+`sColumnCount` without modifying the row override. Reserve DPI-scaled
+Contents space dynamically based on current pane width, leaving room
+for list columns where possible and proportionally sharing very small
+panes. No information panel, tree mode, file data or user preference
+was removed; the previous new-profile shared tree remains the default.
+
+**Regression prevention:** A source validator checks the column
+assignment, adaptive margin owner and absence of the fixed subtraction.
+
+**Evidence:** Source inspection and static change construction only.
+Complete Python preflight, Release-x64-Unicode compilation, native
+regression suite, command-line split, small-pane geometry, High
+Contrast/DPI and Windows visual acceptance: NOT TESTED.
+UI-08 remains partial. Hosted Actions: NOT RUN under per-run restriction.

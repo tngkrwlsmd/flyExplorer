@@ -78,6 +78,20 @@ UI-04의 원래 `¡è`/`¡é` literal은 filtering과 sibling program-associatio
 탭 전환·설정 저장/복구를 실제 Windows에서 점검하기 전에는
 UI-08 완료로 판단하지 않는다.
 
+### UI-08 추가 후속 소스 수정 — 분할 열과 좁은 창
+
+- `main_frame.cpp::OnCreateClient`의 실행 인자 열 분할 값이
+  행 분할 변수에 잘못 저장되는 오류를 열 분할 변수로 수정했다.
+  저장된 분할 설정 또는 사용자가 지정한 행 수는 변경하지 않는다.
+- `ExplorerPane::recalcLayout`에서 설명 영역이 기본 200 DLU에
+  고정되지 않고 현재 pane 너비와 DPI에 따라 너비를 조정한다.
+  설명 영역과 파일 목록 모두 유지하고, 좁은 창에서는 설명 영역
+  너비를 최대 약 1/3 수준으로 제한한다. 기본/개별/공용 폴더
+  트리 옵션과 콘텐츠 스타일 설정은 유지한다.
+- 실제 Windows 분할 인자, 좁은 두 개 창, 설정 복원, 내용 가독성,
+  100/125/150/200% 배율 및 화면 판독기 증거는 아직 없다.
+  UI-08은 **SOURCE IMPROVED / RUNTIME RETEST OPEN**이다.
+
 ### UI-01의 진단 근거와 회귀 조건
 
 **Observed source:** `ThemeRefreshSnapshot`은 hidden child를 포함한 HWND를 모으고, visibility 보존 없이 모두에게 `WM_SETREDRAW(FALSE)` 후 `WM_SETREDRAW(TRUE)`를 보낸다. `showCfg()`는 `mShowCfg`가 가리키는 기존 페이지만 숨긴다.

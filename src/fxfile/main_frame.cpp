@@ -550,8 +550,9 @@ xpr_bool_t MainFrame::OnCreateClient(LPCREATESTRUCT aCreateStruct, CCreateContex
         if (XPR_IS_RANGE(1, sCmdRowCount, MAX_VIEW_SPLIT_ROW))
             sRowCount = sCmdRowCount;
 
+        // A command-line column override must not overwrite the row count.
         if (XPR_IS_RANGE(1, sCmdColumnCount, MAX_VIEW_SPLIT_COLUMN))
-            sRowCount = sCmdColumnCount;
+            sColumnCount = sCmdColumnCount;
     }
 
     if (!XPR_IS_RANGE(1, sRowCount, MAX_VIEW_SPLIT_ROW))

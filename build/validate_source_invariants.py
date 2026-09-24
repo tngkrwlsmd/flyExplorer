@@ -4175,6 +4175,37 @@ def validate_release_stage_recovery() -> list[str]:
     return errors
 
 
+def validate_split_pane_column_and_contents_layout() -> list[str]:
+    """UI-08: command-line split columns and adaptive contents margins."""
+    errors: list[str] = []
+    frame = (FXFILE_SRC / "main_frame.cpp").read_text(
+        encoding="utf-8", errors="replace"
+    )
+    pane = (FXFILE_SRC / "explorer_pane.cpp").read_text(
+        encoding="utf-8", errors="replace"
+    )
+    column_override = re.search(
+        r"if\s*\(XPR_IS_RANGE\(1,\s*sCmdColumnCount,\s*MAX_VIEW_SPLIT_COLUMN\)\)"
+        r"\s*sColumnCount\s*=\s*sCmdColumnCount\s*;",
+        frame,
+    )
+    if not column_override:
+        errors.append("split column override must assign sColumnCount, not sRowCount")
+    for token in (
+        "sContentsMargin(mMarginRect)",
+        "sPreferredWidth",
+        "sMinListWidth",
+        "sMinContentsWidth",
+        "sRect.Width() / 3",
+        "sRect.left   += sContentsMargin.left",
+    ):
+        if token not in pane:
+            errors.append(f"adaptive split-pane contents layout missing: {token}")
+    if "sRect.left   += mMarginRect.left" in pane:
+        errors.append("fixed-width Contents margin reintroduced in split pane")
+    return errors
+
+
 def validate_shared_tree_new_profile_default() -> list[str]:
     """UI-08: new profiles use the existing shared tree in split layouts."""
     errors: list[str] = []
@@ -4370,6 +4401,7 @@ def main() -> int:
     errors.extend(validate_active_ci_scope_documentation())
     errors.extend(validate_actions_storage_budget_contract())
     errors.extend(validate_installer_smoke_wiring())
+    errors.extend(validate_split_pane_column_and_contents_layout())
     errors.extend(validate_shared_tree_new_profile_default())
     errors.extend(validate_tab_close_discoverability())
     errors.extend(validate_search_location_and_tab_discoverability())
