@@ -2671,7 +2671,7 @@ def validate_win11_stability_regressions() -> list[str]:
     modern_ui = contents["modern_ui"]
     for state_name in ("mHover", "mPressed"):
         state_match = re.search(
-            rf"sPalette\\.{state_name}\\s*=\\s*blendColor\\((?P<body>.*?)\\);",
+            rf"sPalette\.{state_name}\s*=\s*blendColor\((?P<body>.*?)\);",
             modern_ui,
             re.DOTALL,
         )

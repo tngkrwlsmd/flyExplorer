@@ -429,7 +429,7 @@ Status: **ACTIVE / user-reproduced runtime failures**. These items are the immed
    - Cross-control audit found the shared cause in `ModernUI::getPalette()`: non-High-Contrast `mHover` and `mPressed` were blended from `mSelection`, so the system accent selection color propagated into toolbar, menubar, tabs, settings controls, split buttons, and other shared transient states.
    - Fix: `mHover` and `mPressed` now derive from `mElevated` + `mText` with small Light/Dark-specific lifts. Actual selection and focus semantics keep `mSelection`/`mFocus`, and High Contrast still maps transient states to the system selection colors.
    - Existing `CToolBarEx` Dark hot-image protection remains intact: Dark duplicates the cold image list instead of loading legacy bright HOT artwork, while the neutral ThemePalette surface owns hover/pressed emphasis.
-   - Recurrence guard: the Win11 stability validator extracts the actual `mHover`/`mPressed` blend assignments and rejects selection-accent derivation instead of requiring a particular numeric formula.
+   - Recurrence guard: the Win11 stability validator extracts the actual `mHover`/`mPressed` blend assignments and rejects selection-accent derivation instead of requiring a particular numeric formula. The regex is intentionally scoped to those assignments and uses single regex escapes so valid assignments are recognized.
    - Connector/source inspection after change: shared palette owner updated. Windows compile/runtime/Light/Dark/High Contrast/DPI visual evidence is **NOT TESTED**; the user-reproduced visual issue remains ACTIVE until matching screenshots pass.
 
 ### Development handoff rule

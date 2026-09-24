@@ -1779,3 +1779,22 @@
 - Release-x64-Unicode | x64 compile/link: **NOT TESTED**.
 - Interactive/Visual Light/Dark/High Contrast/DPI: **NOT RETESTED**.
 - 사용자 재현 visual issue이므로 matching runtime screenshot 전까지 CLOSED로 처리하지 않는다.
+
+---
+
+## 2026-09-24 — Transient-palette invariant regex was over-escaped
+
+**오류 발견**
+- logical unit 19의 post-commit diff review에서 새 `mHover`/`mPressed` regression guard가 Python raw regex 안에 이중 backslash를 기록한 것이 확인됐다.
+
+**원인**
+- GitHub blob 생성용 JavaScript 문자열과 Python raw string의 escaping 층을 혼동해 `\.`/`\s`가 아니라 소스에 `\\.`/`\\s`가 들어갔다.
+- 이 상태에서는 정상 `sPalette.mHover = blendColor(...)` assignment를 찾지 못해 false failure가 날 수 있다.
+
+**해결 / 예방**
+- Python source regex를 `sPalette\.{state_name}\s*=\s*blendColor...` 형태의 단일 regex escape로 바로잡았다.
+- post-commit source를 다시 fetch해 실제 저장된 문자열을 확인하는 절차를 이 logical unit에 적용했다.
+
+**검증 상태**
+- Sample regex match against the intended assignment shape: **PASS**.
+- Repository `python build/validate_source_invariants.py`: **NOT TESTED** — 실행 가능한 Windows checkout 없음.
