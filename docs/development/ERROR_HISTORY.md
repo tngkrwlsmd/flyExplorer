@@ -2780,3 +2780,31 @@ Full Python validator, current-revision Windows compile/link, functional
 test, actual search/dialog and DPI/HC visual acceptance: NOT TESTED.
 UI-03/UI-07 remain partially open; other audit items remain open.
 GitHub Actions: NOT RUN; no per-run approval was given.
+
+
+---
+
+## 2026-09-24 — UI-07 visible tab-close glyph source follow-up
+
+**Observed:** The existing custom tab strip did not show an obvious
+close control, although Ctrl+F4, configurable double click and context
+menus already supported tab closing.
+
+**Source change:** Reuse the existing previously unused per-tab close
+rectangle. Reserve space for a DPI-scaled 'X' within sufficiently wide
+tabs; paint it for selected/hovered tabs using ThemePalette. Use a
+separate press/release state so a close click cannot initiate tab drag
+or activate an unrelated tab. Release over the same close target
+dispatches through the existing `ID_WINDOW_TAB_CLOSE` command, including
+existing close confirmation. The localized existing close command
+supplies the tooltip. Narrow tab fallback and stored preferences are
+unchanged.
+
+**Prevention:** Added static wiring checks for paint/hit/observer/command
+integration, not a claim of actual runtime acceptance.
+
+**Evidence:** Connector-side source construction assertions and Git
+tree/compare only. Python validator execution, Visual Studio x64
+compile/link, real close interaction, tooltip and DPI/Light/Dark/High
+Contrast screenshots: NOT TESTED. UI-07 remains OPEN. GitHub Actions:
+NOT RUN because the individual run was not authorized.

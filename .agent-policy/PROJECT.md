@@ -739,6 +739,17 @@ Windows build, runtime/visual, DPI and High Contrast: NOT TESTED.
 UI-03 and UI-07 remain partial and other UI audit items stay OPEN.
 Hosted Actions: NOT RUN under the permanent per-run restriction.
 
+**UI-07 close-affordance source follow-up (2026-09-24):**
+The custom TabCtrl now reserves a wide-enough tab close target, paints
+its glyph from ThemePalette at the current DPI, distinguishes click
+press/release from drag, shows a localized close tooltip, and dispatches
+through the existing ExplorerView tab-close command path. Narrow tabs
+keep current keyboard/context-menu closing; saved visibility preferences
+and tab indices are unchanged. A static guard was added to reject
+missing hit/dispatch wiring. The previous UI-07 new-profile defaults
+remain in place. Windows compile/runtime/visual/accessibility/DPI/HC:
+NOT TESTED; UI-07 closure still OPEN. Hosted Actions: NOT RUN.
+
 ### Development handoff rule
 
 - Every new user-requested development item is added to this section (or its successor) before implementation starts.

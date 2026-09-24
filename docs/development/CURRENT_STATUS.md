@@ -33,9 +33,21 @@ ComboBox Dark color forwarding, dropdown list retheming and a wider localized
 current-folder button are now in source. UI-07 new-profile defaults expose the
 existing single-tab strip and new-tab button without changing saved settings.
 These are partial changes; Windows build, runtime/visual, DPI/HC, search
-behavior and explicit tab-close affordance remain NOT TESTED/OPEN.
+behavior and a newly added close-tab glyph still require revision-matched
+Windows runtime/visual acceptance.
 UI-02/UI-05/UI-06/UI-08 remain unchanged and OPEN. Prior `bee95d9`
 build evidence does not apply to this new revision.
+
+**Additional UI-07 source checkpoint (2026-09-24):**
+The existing custom tab control now reserves a DPI-scaled close target
+for sufficiently wide tabs and paints a palette-backed close glyph on
+the selected or hovered tab. Pointer release within the same tab uses
+the existing tab-close command/confirmation path; the existing localized
+close command string supplies its tooltip. Existing keyboard shortcuts,
+tab indices, old profile options and high-contrast palette routing are
+retained. This is source work only: compile, release-on-close behavior,
+narrow layouts, hover/focus and actual final pixels are NOT TESTED.
+UI-07 remains OPEN until Windows acceptance.
 
 ## Outstanding near-term work
 

@@ -4175,6 +4175,40 @@ def validate_release_stage_recovery() -> list[str]:
     return errors
 
 
+def validate_tab_close_discoverability() -> list[str]:
+    """Protect tooltip, hit target and the existing command dispatch."""
+    errors: list[str] = []
+    tab = (FXFILE_SRC / "gui" / "TabCtrl.cpp").read_text(
+        encoding="utf-8", errors="replace"
+    )
+    observer = (FXFILE_SRC / "gui" / "TabCtrlObserver.h").read_text(
+        encoding="utf-8", errors="replace"
+    )
+    view = (FXFILE_SRC / "explorer_view.cpp").read_text(
+        encoding="utf-8", errors="replace"
+    )
+    for token in (
+        "mCloseRect.SetRect(",
+        "sTabTextRect.right += sCloseExtent + sCloseMargin",
+        "mClosePressedTab = sTabHover",
+        "mObserver->onTabCloseButton(*this, sCloseTab)",
+        "kCloseTabToolTipId",
+        "mCloseButtonToolTipText.c_str()",
+    ):
+        if token not in tab:
+            errors.append(f"tab close discoverability wiring missing: {token}")
+    if "onTabCloseButton(TabCtrl &aTabCtrl, xpr_size_t aTab)" not in observer:
+        errors.append("tab close observer contract missing")
+    if not all(
+        token in view for token in (
+            "void ExplorerView::onTabCloseButton",
+            "gFrame->executeCommand(ID_WINDOW_TAB_CLOSE, XPR_NULL, &sParameters)",
+        )
+    ):
+        errors.append("tab close must reuse the existing command dispatcher")
+    return errors
+
+
 def validate_search_location_and_tab_discoverability() -> list[str]:
     """Protect partial UI-03 nested field routing and UI-07 new-profile defaults."""
     errors: list[str] = []
@@ -4299,6 +4333,7 @@ def main() -> int:
     errors.extend(validate_active_ci_scope_documentation())
     errors.extend(validate_actions_storage_budget_contract())
     errors.extend(validate_installer_smoke_wiring())
+    errors.extend(validate_tab_close_discoverability())
     errors.extend(validate_search_location_and_tab_discoverability())
     errors.extend(validate_move_order_button_labels())
     errors.extend(validate_html_help_package_source())

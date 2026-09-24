@@ -551,6 +551,7 @@ void ExplorerView::setChangedOption(Option &aOption)
 
     const xpr_tchar_t *aNewButtonToolTipText = gApp.loadString(XPR_STRING_LITERAL("tab.tooltip.new_tab"));
     mTabCtrl->showNewButton(gOpt->mConfig.mTabShowNewButton, aNewButtonToolTipText);
+    mTabCtrl->setCloseButtonToolTip(gApp.loadString(XPR_STRING_LITERAL("cmd.window.tab.close")));
 
     xpr_bool_t sShowTabCtrl = XPR_IS_TRUE(gOpt->mConfig.mTabShowOneTab);
     if (XPR_IS_FALSE(gOpt->mConfig.mTabShowOneTab) && sTabCount > 1)
@@ -1138,6 +1139,7 @@ xpr_bool_t ExplorerView::createTabCtrl(void)
 
     const xpr_tchar_t *aNewButtonToolTipText = gApp.loadString(XPR_STRING_LITERAL("tab.tooltip.new_tab"));
     mTabCtrl->showNewButton(gOpt->mConfig.mTabShowNewButton, aNewButtonToolTipText);
+    mTabCtrl->setCloseButtonToolTip(gApp.loadString(XPR_STRING_LITERAL("cmd.window.tab.close")));
 
     //HICON sIcon = AfxGetApp()->LoadIcon(IDI_TAB_NEW);
     HICON sIcon = (HICON)::LoadImage(AfxGetApp()->m_hInstance, MAKEINTRESOURCE(IDI_TAB_NEW), IMAGE_ICON, 0, 0, 0);
@@ -2394,6 +2396,14 @@ void ExplorerView::onTabContextMenu(TabCtrl &aTabCtrl, xpr_size_t aTab, const PO
             sPopupMenu->TrackPopupMenu(TPM_LEFTALIGN | TPM_RIGHTBUTTON, aPoint, AfxGetMainWnd());
         }
     }
+}
+
+void ExplorerView::onTabCloseButton(TabCtrl &aTabCtrl, xpr_size_t aTab)
+{
+    // Preserve the existing close command's confirmation and tab semantics.
+    cmd::CommandParameters sParameters;
+    sParameters.set(cmd::CommandParameterIdTab, (void *)aTab);
+    gFrame->executeCommand(ID_WINDOW_TAB_CLOSE, XPR_NULL, &sParameters);
 }
 
 void ExplorerView::onTabNewButton(TabCtrl &aTabCtrl)

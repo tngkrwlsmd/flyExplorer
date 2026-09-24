@@ -29,6 +29,7 @@ const xpr_sint_t kDragDist           = 8;
 const xpr_sint_t kBarLineHeight      = 1;
 const xpr_sint_t kInactivedTabOffset = 2;
 const xpr_uint_t kNewTabToolTipId    = 0xfffffffe;
+const xpr_uint_t kCloseTabToolTipId  = 0xfffffffd;
 
 const xpr_tchar_t kClassName[] = XPR_STRING_LITERAL("TabCtrl");
 } // namespace anonymous
@@ -49,7 +50,7 @@ TabCtrl::TabCtrl(void)
     , mImageList(XPR_NULL)
     , mShowNewButton(XPR_FALSE), mNewButtonIcon(XPR_NULL), mNewButtonRect(CRect(0,0,0,0)), mNewButtonHover(XPR_FALSE), mNewButtonPressed(XPR_FALSE), mNewButtonPressedLeave(XPR_FALSE)
     , mPaneActive(XPR_FALSE)
-    , mSetCapture(XPR_FALSE), mTabHover(InvalidTab)
+    , mSetCapture(XPR_FALSE), mTabHover(InvalidTab), mClosePressedTab(InvalidTab)
     , mDragMove(XPR_FALSE), mDragTab(InvalidTab), mDragBegunPoint(0,0), mDragBegun(XPR_FALSE), mDragBegunTab(InvalidTab)
 {
 }
@@ -192,6 +193,12 @@ void TabCtrl::showNewButton(xpr_bool_t aShowNewButton, const xpr_tchar_t *aToolT
     recalcLayout();
 }
 
+void TabCtrl::setCloseButtonToolTip(const xpr_tchar_t *aToolTipText)
+{
+    mCloseButtonToolTipText = XPR_IS_NOT_NULL(aToolTipText) ?
+        aToolTipText : XPR_STRING_LITERAL("");
+}
+
 void TabCtrl::setTabIcon(HICON aNewButtonIcon)
 {
     mNewButtonIcon = aNewButtonIcon;
@@ -222,6 +229,8 @@ xpr_size_t TabCtrl::insertTab(xpr_size_t aTab, const xpr_tchar_t *aText, xpr_sin
     TabItem *sTabItem = new TabItem;
     if (XPR_IS_NULL(sTabItem))
         return InvalidTab;
+
+    sTabItem->mCloseRect.SetRectEmpty();
 
     if (XPR_IS_NOT_NULL(aText))
         sTabItem->mText = aText;
@@ -579,6 +588,8 @@ void TabCtrl::recalcLayout(xpr_bool_t aRedraw)
     const xpr_sint_t sIconOffset = fxfile::ui::ModernUI::scale(kIconOffset, sDpi);
     const xpr_sint_t sBarLineHeight = max(1, fxfile::ui::ModernUI::scale(kBarLineHeight, sDpi));
     const xpr_sint_t sInactiveTabOffset = fxfile::ui::ModernUI::scale(kInactivedTabOffset, sDpi);
+    const xpr_sint_t sCloseExtent = max(12, fxfile::ui::ModernUI::scale(14, sDpi));
+    const xpr_sint_t sCloseMargin = max(4, fxfile::ui::ModernUI::scale(6, sDpi));
 
     CRect sClientRect;
     GetClientRect(&sClientRect);
@@ -706,6 +717,8 @@ void TabCtrl::recalcLayout(xpr_bool_t aRedraw)
                 DT_CALCRECT | DT_LEFT | DT_VCENTER | DT_SINGLELINE);
 
             sTabTextRect.right += sTextOffset.left + sTextOffset.right;
+            // Reserve a stable close target rather than shifting text on hover.
+            sTabTextRect.right += sCloseExtent + sCloseMargin;
 
             if (XPR_IS_RANGE(0, sTabItem->mImageIndex, sImageListCount - 1))
             {
@@ -787,6 +800,28 @@ void TabCtrl::recalcLayout(xpr_bool_t aRedraw)
             sLastTabRect = sTabItem->mTabRect;
 
             sTabLeft += sAutoFitWidth;
+        }
+    }
+
+    // Keep close targets inside their owning tab, never in the adjacent tab.
+    // Very narrow tabs retain the existing keyboard/context-menu close paths.
+    sIterator = mTabDeque.begin();
+    for (; sIterator != mTabDeque.end(); ++sIterator)
+    {
+        sTabItem = *sIterator;
+        sTabItem->mCloseRect.SetRectEmpty();
+        const CRect &sTabRect = sTabItem->mTabRect;
+        if (sTabRect.Width() >=
+            sCloseExtent + (sCloseMargin * 2) +
+            fxfile::ui::ModernUI::scale(28, sDpi))
+        {
+            const xpr_sint_t sCloseTop =
+                sTabRect.top + (sTabRect.Height() - sCloseExtent) / 2;
+            sTabItem->mCloseRect.SetRect(
+                sTabRect.right - sCloseMargin - sCloseExtent,
+                sCloseTop,
+                sTabRect.right - sCloseMargin,
+                sCloseTop + sCloseExtent);
         }
     }
 
@@ -941,6 +976,12 @@ void TabCtrl::OnPaint(void)
 
         CRect sTabTextRect(sTabButtonRect);
         sTabTextRect.DeflateRect(sTextOffset);
+        if (sTabItem->mCloseRect.IsRectEmpty() == FALSE)
+        {
+            sTabTextRect.right = min(
+                sTabTextRect.right,
+                sTabItem->mCloseRect.left - sIconOffset);
+        }
 
         if (XPR_IS_NOT_NULL(mImageList) &&
             XPR_IS_RANGE(0, sTabItem->mImageIndex, sImageListCount - 1))
@@ -968,6 +1009,36 @@ void TabCtrl::OnPaint(void)
             sTabTextRect,
             DT_LEFT | DT_VCENTER | DT_SINGLELINE | DT_END_ELLIPSIS);
         sMemDC.SelectObject(sOldFont);
+
+        // A palette-owned, DPI-scaled close glyph on selected/hovered tabs.
+        // It is separate from text and does not change existing tab indices.
+        if ((XPR_IS_TRUE(sSelected) || XPR_IS_TRUE(sHovered)) &&
+            sTabItem->mCloseRect.IsRectEmpty() == FALSE)
+        {
+            CRect sCloseRect(sTabItem->mCloseRect);
+            CPoint sCursor(0, 0);
+            const xpr_bool_t sCloseHot =
+                (::GetCursorPos(&sCursor) != FALSE &&
+                 ::ScreenToClient(m_hWnd, &sCursor) != FALSE &&
+                 sCloseRect.PtInRect(sCursor) != FALSE) ?
+                XPR_TRUE : XPR_FALSE;
+            if (XPR_IS_TRUE(sCloseHot))
+                sMemDC.FillSolidRect(&sCloseRect, sPalette.mHover);
+
+            const xpr_sint_t sGlyphInset =
+                max(3, fxfile::ui::ModernUI::scale(4, sDpi));
+            sCloseRect.DeflateRect(sGlyphInset, sGlyphInset);
+            CPen sClosePen(
+                PS_SOLID,
+                max(1, fxfile::ui::ModernUI::scale(1, sDpi)),
+                sTextColor);
+            CPen *sOldClosePen = sMemDC.SelectObject(&sClosePen);
+            sMemDC.MoveTo(sCloseRect.left, sCloseRect.top);
+            sMemDC.LineTo(sCloseRect.right, sCloseRect.bottom);
+            sMemDC.MoveTo(sCloseRect.right, sCloseRect.top);
+            sMemDC.LineTo(sCloseRect.left, sCloseRect.bottom);
+            sMemDC.SelectObject(sOldClosePen);
+        }
     }
 
     if (XPR_IS_TRUE(mShowNewButton))
@@ -1075,6 +1146,12 @@ void TabCtrl::OnLButtonDblClk(xpr_uint_t aFlags, CPoint aPoint)
     if (XPR_IS_NOT_NULL(mObserver))
     {
         xpr_size_t sTabHover = hitTest(aPoint);
+        TabItem *sTabItem = getTabItem(sTabHover);
+        if (XPR_IS_NOT_NULL(sTabItem) &&
+            sTabItem->mCloseRect.PtInRect(aPoint) != FALSE)
+        {
+            return;
+        }
 
         mObserver->onTabDoubleClicked(*this, sTabHover);
     }
@@ -1085,7 +1162,21 @@ void TabCtrl::OnLButtonDblClk(xpr_uint_t aFlags, CPoint aPoint)
 void TabCtrl::OnLButtonDown(xpr_uint_t aFlags, CPoint aPoint)
 {
     xpr_size_t sTabHover       = hitTest(aPoint);
-    xpr_bool_t sNewButtonHover = mNewButtonRect.PtInRect(aPoint);
+    xpr_bool_t sNewButtonHover =
+        XPR_IS_TRUE(mShowNewButton) && mNewButtonRect.PtInRect(aPoint);
+
+    TabItem *sCloseItem = getTabItem(sTabHover);
+    if (XPR_IS_NOT_NULL(sCloseItem) &&
+        sCloseItem->mCloseRect.PtInRect(aPoint) != FALSE)
+    {
+        mClosePressedTab = sTabHover;
+        mTabHover = sTabHover;
+        SetCapture();
+        mSetCapture = XPR_TRUE;
+        Invalidate(XPR_FALSE);
+        super::OnLButtonDown(aFlags, aPoint);
+        return;
+    }
 
     if (sTabHover != InvalidTab)
     {
@@ -1120,7 +1211,20 @@ void TabCtrl::OnLButtonDown(xpr_uint_t aFlags, CPoint aPoint)
 void TabCtrl::OnMouseMove(xpr_uint_t aFlags, CPoint aPoint)
 {
     xpr_size_t sTabHover       = hitTest(aPoint);
-    xpr_bool_t sNewButtonHover = mNewButtonRect.PtInRect(aPoint);
+    xpr_bool_t sNewButtonHover =
+        XPR_IS_TRUE(mShowNewButton) && mNewButtonRect.PtInRect(aPoint);
+
+    if (mClosePressedTab != InvalidTab)
+    {
+        TabItem *sCloseItem = getTabItem(mClosePressedTab);
+        mTabHover =
+            XPR_IS_NOT_NULL(sCloseItem) &&
+            sCloseItem->mCloseRect.PtInRect(aPoint) != FALSE ?
+            mClosePressedTab : InvalidTab;
+        Invalidate(XPR_FALSE);
+        super::OnMouseMove(aFlags, aPoint);
+        return;
+    }
 
     if (XPR_IS_FALSE(mDragBegun))
     {
@@ -1235,7 +1339,30 @@ void TabCtrl::OnMouseMove(xpr_uint_t aFlags, CPoint aPoint)
 
 void TabCtrl::OnLButtonUp(xpr_uint_t aFlags, CPoint aPoint)
 {
-    xpr_bool_t sNewButtonHover = mNewButtonRect.PtInRect(aPoint);
+    if (mClosePressedTab != InvalidTab)
+    {
+        const xpr_size_t sCloseTab = mClosePressedTab;
+        TabItem *sCloseItem = getTabItem(sCloseTab);
+        const xpr_bool_t sReleaseInside =
+            XPR_IS_NOT_NULL(sCloseItem) &&
+            sCloseItem->mCloseRect.PtInRect(aPoint) != FALSE ?
+            XPR_TRUE : XPR_FALSE;
+
+        mClosePressedTab = InvalidTab;
+        mTabHover = InvalidTab;
+        mSetCapture = XPR_FALSE;
+        if (::GetCapture() == GetSafeHwnd())
+            ReleaseCapture();
+        if (XPR_IS_TRUE(sReleaseInside) && XPR_IS_NOT_NULL(mObserver))
+            mObserver->onTabCloseButton(*this, sCloseTab);
+
+        Invalidate(XPR_FALSE);
+        super::OnLButtonUp(aFlags, aPoint);
+        return;
+    }
+
+    xpr_bool_t sNewButtonHover =
+        XPR_IS_TRUE(mShowNewButton) && mNewButtonRect.PtInRect(aPoint);
 
     if (XPR_IS_TRUE(mSetCapture))
     {
@@ -1278,6 +1405,7 @@ void TabCtrl::OnCaptureChanged(CWnd *aWnd)
             mNewButtonHover        = XPR_FALSE;
             mNewButtonPressed      = XPR_FALSE;
             mNewButtonPressedLeave = XPR_FALSE;
+            mClosePressedTab = InvalidTab;
 
             mSetCapture = XPR_FALSE;
             Invalidate(XPR_FALSE);
@@ -1334,11 +1462,20 @@ INT_PTR TabCtrl::OnToolHitTest(CPoint aPoint, TOOLINFO *aToolInfo) const
         XPR_ASSERT(sTabItem != XPR_NULL);
 
         aToolInfo->hwnd     = *this;
-        aToolInfo->uId      = sTab;
-        aToolInfo->rect     = sTabItem->mTabRect;
+        if (sTabItem->mCloseRect.PtInRect(aPoint) != FALSE)
+        {
+            aToolInfo->uId  = kCloseTabToolTipId;
+            aToolInfo->rect = sTabItem->mCloseRect;
+        }
+        else
+        {
+            aToolInfo->uId  = sTab;
+            aToolInfo->rect = sTabItem->mTabRect;
+        }
         aToolInfo->lpszText = LPSTR_TEXTCALLBACK;
     }
-    else if (mNewButtonRect.PtInRect(aPoint) == XPR_TRUE)
+    else if (XPR_IS_TRUE(mShowNewButton) &&
+             mNewButtonRect.PtInRect(aPoint) == XPR_TRUE)
     {
         aToolInfo->hwnd     = *this;
         aToolInfo->uId      = kNewTabToolTipId;
@@ -1369,7 +1506,12 @@ xpr_bool_t TabCtrl::OnNotify(WPARAM aWParam, LPARAM aLParam, LRESULT *aResult)
     {
         LPNMTTDISPINFO sNMTTDispInfo = (LPNMTTDISPINFO)aLParam;
 
-        if (sNMTTDispInfo->hdr.idFrom == kNewTabToolTipId)
+        if (sNMTTDispInfo->hdr.idFrom == kCloseTabToolTipId)
+        {
+            sNMTTDispInfo->lpszText =
+                (xpr_tchar_t *)mCloseButtonToolTipText.c_str();
+        }
+        else if (sNMTTDispInfo->hdr.idFrom == kNewTabToolTipId)
         {
             sNMTTDispInfo->lpszText = (xpr_tchar_t *)mNewButtonToolTipText.c_str();
         }

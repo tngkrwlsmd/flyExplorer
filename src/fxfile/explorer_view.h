@@ -190,6 +190,7 @@ protected:
     virtual void       onTabDoubleClicked(TabCtrl &aTabCtrl, xpr_size_t aTab);
     virtual void       onTabContextMenu(TabCtrl &aTabCtrl, xpr_size_t aTab, const POINT &aPoint);
     virtual void       onTabNewButton(TabCtrl &aTabCtrl);
+    virtual void       onTabCloseButton(TabCtrl &aTabCtrl, xpr_size_t aTab);
     virtual xpr_bool_t onTabToolTip(TabCtrl &aTabCtrl, xpr_size_t aTab, xpr::string &aToolTipText);
     virtual void       onSetFocus(TabCtrl &aTabCtrl);
 

@@ -34,7 +34,7 @@ P1은 기능 오인 또는 읽기 어려움, P2는 사용성/시각 일관성 �
 | UI-04 / P2 — **CODE UPDATED / VISUAL RETEST OPEN** | Light 설정 → 필터링에서 목록 아래의 두 작은 버튼이 정상적인 위/아래 화살표로 읽히지 않는 문자열처럼 보인다. 동일한 mojibake literal이 프로그램 연동 순서 버튼에도 있었다. | 2026-09-24 source fix: 두 페이지의 resource fallback을 `Up`/`Down`으로 바꾸고 버튼 폭을 26 DLU로 확장, runtime Korean label은 `위로`/`아래로`로 명시한다. 실제 DPI별 clipping/focus/accessibility name과 최종 미감은 재검증이 남아 있다. | `fxfile.rc`, `cfg_appearance_filtering_dlg.cpp`, `cfg_func_program_ass_dlg.cpp` |
 | UI-05 / P2 | main 상단은 좁은 명령 아이콘들이 밀집하고 드라이브/북마크 band에는 넓은 빈 공간이 남는다. 설정의 checkbox/radio/combobox 내부 간격은 다른 영역보다 좁다. | Windows 11 Explorer를 기준으로 font/행 높이/hit target/섹션 간격을 함께 조정. 기존 command, bitmap index, 정보 밀도 선택권 보존. | main toolbar/rebar, `ModernUI`, dialog resource/layout metrics |
 | UI-06 / P2 | Dark의 창/탭 popup 메뉴에 밝고 두꺼운 외곽선이 보인다. 창 메뉴는 현재 main 창 높이보다 길다. | 중립색 경계와 일관된 hover/disabled 상태. 짧은 화면에서도 모든 명령을 키보드/스크롤로 접근 가능. 기능을 삭제해 메뉴를 줄이지 않음. | app-owned `BCMenu`, command grouping/placement |
-| UI-07 / P2 — **SOURCE PARTIAL / RETEST OPEN** | 단일 창에는 탭 추가/닫기 affordance가 보이지 않는다. 창 → 탭 → 새 탭으로 열면 탭 strip이 나타나지만 상시 `+`/닫기 표시가 눈에 띄지 않는다. `Ctrl+F4`로 테스트 탭은 정상 닫힌다. | 새 사용자도 탭 기능을 발견 가능. 선택/hover/focus/닫기 target을 구분하며 기존 shortcut과 single-tab 숨김 설정 의미 보존. | `tab_pane.cpp`, tab control, 창/탭 command UI |
+| UI-07 / P2 — **SOURCE UPDATED / VISUAL RETEST OPEN** | 단일 창에는 탭 추가/닫기 affordance가 보이지 않는다. 창 → 탭 → 새 탭으로 열면 탭 strip이 나타나지만 상시 `+`/닫기 표시가 눈에 띄지 않는다. `Ctrl+F4`로 테스트 탭은 정상 닫힌다. | 새 사용자도 탭 기능을 발견 가능. 선택/hover/focus/닫기 target을 구분하며 기존 shortcut과 single-tab 숨김 설정 의미 보존. | `tab_pane.cpp`, tab control, 창/탭 command UI |
 | UI-08 / P2 | 수직 듀얼 창에서 각 pane의 tree와 설명 영역이 반복되어 파일 목록 너비가 크게 줄고 열/수정 날짜가 잘린다. 주소는 현재 설정에서 마지막 폴더명 위주로 보인다. | 좁은 pane에서 정보 우선순위/최소 너비/설명 영역 크기 조절을 개선하고 활성 pane을 명확히 표시. 전체 경로 옵션과 고급 기능 보존; breadcrumb는 설계 후보. | `explorer_pane.cpp`, `explorer_view.cpp`, `splitter.cpp`, `address_bar.cpp` |
 
 UI-04의 원래 `¡è`/`¡é` literal은 filtering과 sibling program-association resource에서 제거했다. 두 페이지 모두 runtime localization으로 의미 있는 이동 방향 text를 설정한다. CODE UPDATED는 visual/accessibility PASS가 아니므로 실제 DPI/keyboard/screen-reader 확인은 남아 있다.
@@ -50,6 +50,19 @@ UI-04의 원래 `¡è`/`¡é` literal은 filtering과 sibling program-associatio
 - UI-07: 새 설정 파일의 단일 탭과 '+' 버튼 기본 표시를 활성화한다.
   기존 사용자 저장값은 변경하지 않는다. 닫기 버튼 추가와 실제 화면
   검증은 미완료이므로 해당 항목을 완료 처리하지 않는다.
+
+### UI-07 후속 소스 개선: 닫기 발견성
+
+- 선택한 탭이나 마우스를 올린 탭에서 DPI 배율에 따른 'X' 닫기
+  표시를 추가했다. 탭 안에 충분한 폭이 있을 때만 그리며 좁은
+  탭에서는 기존 키보드·상황별 메뉴로 닫을 수 있다.
+- 닫기 누름과 놓음을 구분하고 같은 탭의 X 영역에서 놓았을 때만
+  기존 `ID_WINDOW_TAB_CLOSE` 명령을 실행해 확인 설정과 동작을
+  재사용한다. Tooltip은 기존 현지화된 닫기 명령 문자열을 쓴다.
+- 이 변경이 실제 Windows에서 올바르게 빌드되는지, 한 개·여러 개
+  탭, 탭 드래그, 탭 축소, 닫기 취소, Light/Dark/High Contrast,
+  100/125/150/200% 배율 및 접근성 이름을 만족하는지는
+  **NOT TESTED / RETEST OPEN**이다.
 
 ### UI-01의 진단 근거와 회귀 조건
 

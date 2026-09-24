@@ -37,6 +37,7 @@ public:
     void setPaneActive(xpr_bool_t aActive);
     void enableDragMove(xpr_bool_t aDragMove);
     void showNewButton(xpr_bool_t aShowNewButton, const xpr_tchar_t *aToolTipText);
+    void setCloseButtonToolTip(const xpr_tchar_t *aToolTipText);
     void setTabIcon(HICON aNewButtonId);
 
 public:
@@ -91,6 +92,7 @@ protected:
     xpr_bool_t  mPaneActive;
     xpr_bool_t  mSetCapture;
     xpr_size_t  mTabHover;
+    xpr_size_t  mClosePressedTab;
     xpr_bool_t  mDragMove;
     xpr_size_t  mDragTab;
     xpr_bool_t  mDragBegun;
@@ -104,6 +106,7 @@ protected:
     BOOL        mNewButtonPressed;
     BOOL        mNewButtonPressedLeave;
     xpr::string mNewButtonToolTipText;
+    xpr::string mCloseButtonToolTipText;
 
     CXPTheme    mXPTheme;
 
