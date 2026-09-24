@@ -1446,9 +1446,6 @@ LRESULT CMenuBar::WindowProc(
     WPARAM wParam,
     LPARAM lParam)
 {
-    const LRESULT sResult =
-        CToolBar::WindowProc(message, wParam, lParam);
-
     const xpr_bool_t sPrintClient =
         message == WM_PRINTCLIENT ?
         XPR_TRUE :
@@ -1458,30 +1455,60 @@ LRESULT CMenuBar::WindowProc(
          (lParam & PRF_CLIENT) != 0) ?
         XPR_TRUE :
         XPR_FALSE;
-
-    if ((XPR_IS_TRUE(sPrintClient) ||
+    const xpr_bool_t sPrintSurface =
+        (XPR_IS_TRUE(sPrintClient) ||
          XPR_IS_TRUE(sPrintWithClient)) &&
-        wParam != 0)
+        wParam != 0 ?
+        XPR_TRUE :
+        XPR_FALSE;
+
+    if (XPR_IS_TRUE(sPrintSurface))
     {
-        CDC *sDC =
-            CDC::FromHandle(reinterpret_cast<HDC>(wParam));
-        if (XPR_IS_NOT_NULL(sDC))
+        const fxfile::ui::ThemePalette sPalette =
+            fxfile::ui::ModernUI::getPalette();
+        const xpr_bool_t sOwnDarkSurface =
+            XPR_IS_TRUE(sPalette.mDark) &&
+            XPR_IS_FALSE(sPalette.mHighContrast) &&
+            !WinAppEx::GetInstance()->IsWinXP() ?
+            XPR_TRUE :
+            XPR_FALSE;
+
+        if (XPR_IS_TRUE(sOwnDarkSurface))
         {
-            const fxfile::ui::ThemePalette sPalette =
-                fxfile::ui::ModernUI::getPalette();
-            if (XPR_IS_TRUE(sPalette.mDark) &&
-                XPR_IS_FALSE(sPalette.mHighContrast) &&
-                !WinAppEx::GetInstance()->IsWinXP())
+            // Rebar composition reaches a child toolbar through WM_PRINT*.
+            // Calling ToolbarWindow32 first here reintroduces native black
+            // menu text even though WM_PAINT itself is palette-owned.  In
+            // Dark mode own the print surface before native code can draw.
+            CDC *sDC =
+                CDC::FromHandle(
+                    reinterpret_cast<HDC>(wParam));
+            if (XPR_IS_NOT_NULL(sDC))
             {
                 CRect sClientRect;
                 GetClientRect(&sClientRect);
                 sDC->FillSolidRect(
                     &sClientRect,
                     sPalette.mChrome);
+                DrawFinalMenuOverlay(*sDC);
             }
 
-            DrawFinalMenuOverlay(*sDC);
+            return 0;
         }
+    }
+
+    const LRESULT sResult =
+        CToolBar::WindowProc(message, wParam, lParam);
+
+    // Light keeps the native print path for system integration, then applies
+    // the shared overlay for consistent font/layout. High Contrast exits from
+    // DrawFinalMenuOverlay and therefore remains fully system-owned.
+    if (XPR_IS_TRUE(sPrintSurface))
+    {
+        CDC *sDC =
+            CDC::FromHandle(
+                reinterpret_cast<HDC>(wParam));
+        if (XPR_IS_NOT_NULL(sDC))
+            DrawFinalMenuOverlay(*sDC);
     }
 
     return sResult;

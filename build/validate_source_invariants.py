@@ -3207,10 +3207,13 @@ def validate_win11_stability_regressions() -> list[str]:
         "message == WM_PRINTCLIENT",
         "message == WM_PRINT",
         "PRF_CLIENT",
-        "CToolBar::WindowProc(message, wParam, lParam)",
+        "const xpr_bool_t sPrintSurface",
+        "const xpr_bool_t sOwnDarkSurface",
         "sDC->FillSolidRect(",
         "sPalette.mChrome",
         "DrawFinalMenuOverlay(*sDC)",
+        "return 0;",
+        "CToolBar::WindowProc(message, wParam, lParam)",
         "DrawFinalMenuOverlay(sDC)",
         "IsTopLevelMenuItemDisabled(",
         "m_pMenu->GetMenuState(",
@@ -3220,6 +3223,44 @@ def validate_win11_stability_regressions() -> list[str]:
         if token not in menubar_source:
             errors.append(
                 f"src/fxfile/gui/rebar/MenuBar.cpp: final rebar-print/menu-state ownership missing token {token}"
+            )
+
+    menu_window_proc_start = menubar_source.find(
+        "LRESULT CMenuBar::WindowProc("
+    )
+    menu_window_proc_end = menubar_source.find(
+        "\nbool CMenuBar::OnButtonDown",
+        menu_window_proc_start,
+    )
+    menu_window_proc_block = (
+        menubar_source[menu_window_proc_start:menu_window_proc_end]
+        if menu_window_proc_start >= 0
+        and menu_window_proc_end > menu_window_proc_start
+        else ""
+    )
+    if not menu_window_proc_block:
+        errors.append(
+            "src/fxfile/gui/rebar/MenuBar.cpp: menu print WindowProc block is missing"
+        )
+    else:
+        dark_owner_pos = menu_window_proc_block.find(
+            "if (XPR_IS_TRUE(sOwnDarkSurface))"
+        )
+        native_print_pos = menu_window_proc_block.find(
+            "CToolBar::WindowProc(message, wParam, lParam)"
+        )
+        early_return_pos = menu_window_proc_block.find(
+            "return 0;",
+            dark_owner_pos,
+        )
+        if (
+            dark_owner_pos < 0
+            or native_print_pos < 0
+            or early_return_pos < 0
+            or not (dark_owner_pos < early_return_pos < native_print_pos)
+        ):
+            errors.append(
+                "src/fxfile/gui/rebar/MenuBar.cpp: Dark WM_PRINT ownership must return before native ToolbarWindow32 painting"
             )
 
     for token in (

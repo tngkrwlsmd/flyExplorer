@@ -1624,3 +1624,37 @@
 - User runtime screenshot before fix: **FAIL** — mixed Light/Dark transition visible.
 - Connector source cross-check after fix: atomic snapshot/freeze/apply/thaw/invalidate contract present.
 - Rebuilt Windows runtime theme-switch screenshot after fix: **NOT RETESTED**.
+
+
+---
+
+## 2026-09-24 — Rebar WM_PRINT path still restored black top-menu text
+
+**오류 발생**
+- revision `6fd81defc5f7bca63413a92507f21444cb84e044` runtime screenshot에서도 Dark 최상단 `파일/편집/이동/보기/도구/창/도움말` 글자가 어둡게 남았다.
+- 같은 화면의 list/content text와 toolbar glyph는 Dark palette를 사용하고 있어 palette 자체의 `mText` 계산 문제는 아니었다.
+
+**전수 조사**
+- `src/fxfile`의 `SetTextColor()` 사용 파일 전체와 `COLOR_WINDOWTEXT`, `COLOR_BTNTEXT`, `COLOR_MENUTEXT`, `COLOR_GRAYTEXT`, direct black RGB 사용을 검색했다.
+- `BtnST`, `DropMenuButton`, `ColourPickerXP`, `BCMenu`, `CustomizeDialog`, `SearchLocDlg`, list/tree/header/status/tab/address/content controls는 Dark에서 ThemePalette를 사용하고, system text color는 High Contrast/Light fallback 또는 사용자 색 기본값에 한정되어 있음을 확인했다.
+- 실제 재현과 일치하는 미해결 경로는 `CMenuBar::WindowProc()`의 rebar print composition이었다.
+
+**원인 진단**
+- Dark `WM_PAINT`는 이미 native toolbar paint를 건너뛰었지만 `WindowProc()`은 `WM_PRINTCLIENT` / `WM_PRINT + PRF_CLIENT`에서 항상 먼저 `CToolBar::WindowProc()`를 호출했다.
+- rebar는 자식 band를 합성할 때 이 print 경로를 사용하므로 ToolbarWindow32가 검은 native menu text를 먼저 그릴 수 있었다. 뒤 overlay 방식은 실제 runtime에서 최종 pixel ownership을 보장하지 못했다.
+
+**해결 방법**
+- print message 여부를 native 호출 전에 판정한다.
+- Dark/non-High-Contrast에서는 target HDC 전체 client rect를 `ThemePalette.mChrome`으로 지우고 `DrawFinalMenuOverlay()`로 text/state/system-menu icon을 그린 뒤 즉시 `return 0`한다.
+- 따라서 Dark rebar composition에서는 `CToolBar::WindowProc()`가 아예 실행되지 않는다.
+- Light는 native print 후 shared overlay를 유지하고 High Contrast는 overlay가 즉시 빠져 system rendering을 그대로 사용한다.
+
+**재발 방지**
+- source invariant가 Dark print-owner branch의 위치와 early return 순서를 검사한다. `sOwnDarkSurface -> return 0 -> CToolBar::WindowProc` 순서가 깨지면 실패한다.
+- direct `WM_PAINT`와 rebar `WM_PRINT*`를 별개의 final-pixel ownership 경로로 검증한다.
+
+**검증 상태**
+- User runtime screenshot before fix: **FAIL** — Dark top-level menu text still dark.
+- Repository-wide source text-color audit: **PASS (static/source evidence)** for identified direct-draw call sites.
+- Connector source cross-check after fix: Dark print path returns before native ToolbarWindow32 paint.
+- Rebuilt Windows runtime screenshot after fix: **NOT RETESTED**.
