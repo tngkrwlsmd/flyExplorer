@@ -82,7 +82,7 @@ LICENSE/CREDITS는 변경하지 않고 외부 배포 법적 확인은 보류한�
     }
   ],
   "review": {
-    "reviewed_revision": "3dfbf2daae22ba25820da888cea2ce09cc4bc4a1",
+    "reviewed_revision": "3f7560a31f39080baaa5db275bf2186c1a4760a0",
     "reviewed_at": "2026-09-24",
     "reviewed_paths": [
       ".github/workflows/policy-validation.yml",
@@ -167,6 +167,7 @@ LICENSE/CREDITS는 변경하지 않고 외부 배포 법적 확인은 보류한�
     ]
   }
 }
+
 
 
 
@@ -683,6 +684,17 @@ public redistribution permissions remain unverified.
 41. **Correct remaining live-status work after updater retirement — DOC ONLY**
     - The live `CURRENT_STATUS.md` still proposed `updater x86 isolation` as future work even though explicit owner choice had removed all automatic updater code. Replace that stale suggestion with the still-applicable dependency ABI, optional Win32 launcher feasibility and VLD staging work. Keep the older dependency audit's pre-retirement analysis labelled as historical; do not erase failure history.
     - Changes no application/build/package inputs. No new Windows or installer tests are claimed.
+
+**Release staging recovery and live-status review checkpoint
+(2026-09-24):** `3f7560a31f39080baaa5db275bf2186c1a4760a0` is the reviewed snapshot after the same-directory
+`dist/bin` backup/activate/rollback safeguard and correction of the
+stale live updater-migration recommendation. The 79 previously reviewed
+paths already cover `dist/copy.bat`, `build/validate_source_invariants.py`,
+`.gitignore`, root `AGENTS.md`, README and CURRENT_STATUS, so no new
+review path was necessary. The following metadata/history-only commit
+does not change any reviewed source path. Static positive/negative
+source-contract checks PASS; Windows cmd rename/rollback, full packaging,
+installer, UI and fresh product build: NOT TESTED. Hosted Actions: NOT RUN.
 
 ### Development handoff rule
 

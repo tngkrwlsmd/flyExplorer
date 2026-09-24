@@ -2605,3 +2605,22 @@ historical failure records. No product code or test scope changed.
 live-status wording. Documentation consistency inspected; no
 Windows build, generated CHM, ZIP or installer test performed.
 GitHub Actions: NOT RUN.
+
+---
+
+## 2026-09-24 — Refreshed review snapshot for release-stage rollback
+
+Source snapshot `3f7560a31f39080baaa5db275bf2186c1a4760a0` includes the follow-up safeguard for existing
+`dist/bin` on package-stage activation failure, ignored backup storage,
+negative source preflight and updated live status. Earlier retirement
+snapshot `3dfbf2daae22ba25820da888cea2ce09cc4bc4a1` remains
+historical review evidence. `PROJECT.md`'s machine-readable review
+revision is now the new snapshot; the existing 79 paths cover every
+new source/documentation edit. This metadata-only follow-up changes
+only PROJECT.md and this append-only error-history document.
+
+Evidence: Git tree/path inventory and staged recovery source contract
+(including negative mutation scenarios) PASS. Real Windows cmd
+rename/rollback under locks/permissions, x64 product build,
+three-architecture package generation, HTML Help Workshop and
+NSIS installer installation: NOT TESTED. No GitHub Actions ran.
