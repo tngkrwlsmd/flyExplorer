@@ -463,6 +463,13 @@ Status: **ACTIVE / user-reproduced runtime failures**. These items are the immed
    - Prevention: the scoped validator inspects complete-item fill, ImageList redraw and the actual Dark postpaint call, not palette tokens alone.
    - Current user screenshot is VISUAL FAIL for the old path; new x64 compile/runtime/visual, including main/drive/bookmark and popup toolbars: NOT TESTED until rerun.
 
+24. **Fresh-build top-level Dark menubar text is still dim/black — CODE FIXED / VISUAL RETEST REQUIRED**
+   - User supplied fresh-build Dark main-window screenshots after `git pull`; top-level `파일/편집/이동/보기/도구/창/도움말` remains visibly dim/black. Do not dismiss this runtime evidence using an unrelated earlier failed local-CI artifact marker.
+   - Source audit found an additional unprotected rendering path: `CMenuBar::OnCustomDraw()` requested per-item drawing but no `CDDS_POSTPAINT` final overlay, and its app-owned item draw fell through to native default when text lookup failed. `DrawFinalMenuOverlay()` itself skipped labels on an empty toolbar-string lookup without consulting the actual HMENU.
+   - Fix: custom-draw now requests a final postpaint overlay when ToolbarWindow32 uses notification-driven painting, with `m_pMenu->GetMenuString()` fallback in both overlay and item paths. Dark item lookup failures are not allowed to fall back to black native painting.
+   - Existing Dark direct `WM_PAINT` and early `WM_PRINT*` final ownership remain in force. High Contrast and Light native semantics are preserved.
+   - Runtime cause cannot be conclusively attributed without instrumented Windows pixel/notification trace; new x64 compile and matching Dark/Light/HC menu interaction screenshots remain NOT TESTED.
+
 ### Development handoff rule
 
 - Every new user-requested development item is added to this section (or its successor) before implementation starts.

@@ -1380,6 +1380,16 @@ void CMenuBar::DrawFinalMenuOverlay(CDC &aDC)
 
         CString sMenuText;
         GetButtonText(sItemIndex, sMenuText);
+        if (sMenuText.IsEmpty() &&
+            XPR_IS_NOT_NULL(m_pMenu) &&
+            sItemIndex > 0 &&
+            sItemIndex - 1 < m_pMenu->GetMenuItemCount())
+        {
+            // Use the actual HMENU label if a toolbar-string lookup fails.
+            // A blank app-owned overlay otherwise exposes native black text.
+            m_pMenu->GetMenuString(
+                sItemIndex - 1, sMenuText, MF_BYPOSITION);
+        }
         if (sMenuText.IsEmpty())
             continue;
 
@@ -1997,7 +2007,26 @@ void CMenuBar::OnCustomDraw( NMHDR* pNMHDR, LRESULT* pResult )
                     static_cast<HBRUSH>(::GetStockObject(DC_BRUSH)) );
             }
 
-            *pResult = CDRF_NOTIFYITEMDRAW;
+            *pResult = CDRF_NOTIFYITEMDRAW | CDRF_NOTIFYPOSTPAINT;
+            break;
+        }
+
+        case CDDS_POSTPAINT:
+        {
+            // If ToolbarWindow32 paints through a notification path rather
+            // than WM_PAINT/WM_PRINT*, the application must still provide
+            // the *last* visible text pass in Dark mode.
+            const fxfile::ui::ThemePalette sPalette =
+                fxfile::ui::ModernUI::getPalette();
+            if (XPR_IS_TRUE(sPalette.mDark) &&
+                XPR_IS_FALSE(sPalette.mHighContrast) &&
+                !WinAppEx::GetInstance()->IsWinXP())
+            {
+                CDC *sDC = CDC::FromHandle(nmcd.hdc);
+                if (XPR_IS_NOT_NULL(sDC))
+                    DrawFinalMenuOverlay(*sDC);
+            }
+            *pResult = CDRF_DODEFAULT;
             break;
         }
 
@@ -2083,7 +2112,7 @@ void CMenuBar::OnCustomDraw( NMHDR* pNMHDR, LRESULT* pResult )
                         static_cast<WPARAM>(nmcd.dwItemSpec),
                         reinterpret_cast<LPARAM>(sMenuText));
 
-                    if (sTextLength < 0 &&
+                    if (sTextLength <= 0 &&
                         nmcd.dwItemSpec > IDBUTTON_SYSMENU &&
                         nmcd.dwItemSpec <= IDBUTTON_LAST)
                     {
@@ -2092,6 +2121,15 @@ void CMenuBar::OnCustomDraw( NMHDR* pNMHDR, LRESULT* pResult )
                                 nmcd.dwItemSpec - IDBUTTON_SYSMENU);
                         CString sFallbackText;
                         GetButtonText(sItemIndex, sFallbackText);
+                        if (sFallbackText.IsEmpty() &&
+                            XPR_IS_NOT_NULL(m_pMenu) &&
+                            sItemIndex - 1 < m_pMenu->GetMenuItemCount())
+                        {
+                            m_pMenu->GetMenuString(
+                                sItemIndex - 1,
+                                sFallbackText,
+                                MF_BYPOSITION);
+                        }
                         _tcsncpy(
                             sMenuText,
                             sFallbackText,
@@ -2145,6 +2183,18 @@ void CMenuBar::OnCustomDraw( NMHDR* pNMHDR, LRESULT* pResult )
                             ::DrawFocusRect(nmcd.hdc, &sTextRect);
                         }
 
+                        *pResult = CDRF_SKIPDEFAULT;
+                    }
+                    else if (XPR_IS_TRUE(sPalette.mDark))
+                    {
+                        // Never let native ToolbarWindow32 paint a black
+                        // fallback glyph if its text lookup is unavailable.
+                        ::SetDCBrushColor(nmcd.hdc, sPalette.mChrome);
+                        ::FillRect(
+                            nmcd.hdc,
+                            &nmcd.rc,
+                            static_cast<HBRUSH>(
+                                ::GetStockObject(DC_BRUSH)));
                         *pResult = CDRF_SKIPDEFAULT;
                     }
                 }

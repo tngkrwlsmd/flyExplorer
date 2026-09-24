@@ -3289,6 +3289,26 @@ def validate_win11_stability_regressions() -> list[str]:
                     f"src/fxfile/gui/rebar/MenuBar.cpp: final menu overlay missing semantic step {token}"
                 )
 
+    menu_custom_start = menubar_source.find(
+        "void CMenuBar::OnCustomDraw("
+    )
+    menu_custom = (
+        menubar_source[menu_custom_start:]
+        if menu_custom_start >= 0 else ""
+    )
+    for token in (
+        "case CDDS_POSTPAINT:",
+        "CDRF_NOTIFYPOSTPAINT",
+        "DrawFinalMenuOverlay(*sDC)",
+        "GetMenuString(",
+        "CDRF_SKIPDEFAULT",
+    ):
+        if token not in menu_custom:
+            errors.append(
+                "menubar: Dark final custom-draw or fallback "
+                f"ownership path missing {token}"
+            )
+
     menu_paint_start = menubar_source.find("void CMenuBar::OnPaint()")
     menu_paint_end = menubar_source.find(
         "\nLRESULT CMenuBar::WindowProc(",

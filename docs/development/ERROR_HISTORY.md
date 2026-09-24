@@ -1925,3 +1925,25 @@
 
 **검증**
 - 이전 사용자 screenshot: VISUAL FAIL. 본 수정의 Release-x64-Unicode build/functional, interactive Dark/Light/HC/DPI: NOT TESTED. 현재 시각적 해결 완료로 기록 금지.
+
+---
+
+## 2026-09-24 — Fresh-build top-level Dark menu labels remain dim
+
+**사용자 증거**
+- 사용자가 git pull 후 직접 다시 빌드해 촬영한 Dark main window에서 상단 파일/편집/이동/보기/도구/창/도움말 label이 여전히 어둡다.
+- 앞서 제출된 preflight 실패 로그를 새 runtime screenshot의 stale-binary 증거로 취급한 것은 오류였으며 이 이슈를 새 runtime failure로 기록한다.
+
+**소스에서 발견된 추가 누출 가능 경로**
+- `CMenuBar::OnCustomDraw()`이 item draw만 요구하고 `CDDS_POSTPAINT` 전체 final overlay는 요청하지 않아 notification-driven native 후속 pixel을 제어하지 못했다.
+- toolbar text lookup 실패 시 item custom draw는 `CDRF_DODEFAULT`로 빠지고 `DrawFinalMenuOverlay()`는 빈 string을 건너뛰어 실제 HMENU title까지 확인하지 않았다.
+
+**수정**
+- modern menubar custom draw가 `CDRF_NOTIFYPOSTPAINT`를 요청하고 `CDDS_POSTPAINT`에서 Dark 전체 label overlay를 최종 출력하도록 했다.
+- toolbar 문자열이 없거나 빈 경우 `m_pMenu->GetMenuString()`을 조회하여 app-owned label을 복원한다.
+- Dark item 문자열 검색 실패는 black native text fallback 대신 neutral background + `CDRF_SKIPDEFAULT`로 안전하게 처리한다.
+- 기존 `WM_PAINT`/`WM_PRINT*` 직접 ownership과 High Contrast native/system renderer는 유지한다.
+
+**검증**
+- 사용자 제공 이전 구현 screenshot: VISUAL FAIL.
+- notification 경로가 사용자 화면의 직접 원인인지 Windows instrumented trace는 아직 없다. 신규 수정의 Release x64 compile/runtime/interactive/visual/HC/DPI: NOT TESTED. 실제 화면 확인 전 종결 금지.
