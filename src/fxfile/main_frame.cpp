@@ -98,44 +98,119 @@ enum
     WM_COMPARE_DIRS_STATUS  = WM_USER + 2,
 };
 
-BOOL CALLBACK RefreshThemeTopLevelWindow(HWND aHwnd, LPARAM /*aParam*/)
+struct ThemeRefreshSnapshot
 {
-    if (::IsWindow(aHwnd) == FALSE)
+    std::vector<HWND> mTopLevelWindows;
+    std::vector<HWND> mWindows;
+};
+
+BOOL CALLBACK CollectThemeChildWindow(HWND aHwnd, LPARAM aParam)
+{
+    ThemeRefreshSnapshot *sSnapshot =
+        reinterpret_cast<ThemeRefreshSnapshot *>(aParam);
+    if (XPR_IS_NULL(sSnapshot) ||
+        ::IsWindow(aHwnd) == FALSE)
+    {
         return TRUE;
-
-    ui::ModernUI::applyWindowFrameTheme(aHwnd);
-
-    CWnd *sWnd = CWnd::FromHandle(aHwnd);
-    if (XPR_IS_NOT_NULL(sWnd))
-    {
-        sWnd->SendMessage(WM_SETTINGCHANGE, 0, 0);
-        sWnd->SendMessageToDescendants(
-            WM_SETTINGCHANGE,
-            0,
-            0,
-            TRUE,
-            TRUE);
-    }
-    else
-    {
-        ::SendMessage(aHwnd, WM_SETTINGCHANGE, 0, 0);
     }
 
-    ::RedrawWindow(
+    sSnapshot->mWindows.push_back(aHwnd);
+    return TRUE;
+}
+
+BOOL CALLBACK CollectThemeTopLevelWindow(HWND aHwnd, LPARAM aParam)
+{
+    ThemeRefreshSnapshot *sSnapshot =
+        reinterpret_cast<ThemeRefreshSnapshot *>(aParam);
+    if (XPR_IS_NULL(sSnapshot) ||
+        ::IsWindow(aHwnd) == FALSE)
+    {
+        return TRUE;
+    }
+
+    sSnapshot->mTopLevelWindows.push_back(aHwnd);
+    sSnapshot->mWindows.push_back(aHwnd);
+
+    ::EnumChildWindows(
         aHwnd,
-        XPR_NULL,
-        XPR_NULL,
-        RDW_INVALIDATE | RDW_ERASE | RDW_FRAME | RDW_ALLCHILDREN);
+        CollectThemeChildWindow,
+        aParam);
 
     return TRUE;
 }
 
 void RefreshThemeForCurrentThread(void)
 {
+    ThemeRefreshSnapshot sSnapshot;
     ::EnumThreadWindows(
         ::GetCurrentThreadId(),
-        RefreshThemeTopLevelWindow,
-        0);
+        CollectThemeTopLevelWindow,
+        reinterpret_cast<LPARAM>(&sSnapshot));
+
+    if (sSnapshot.mTopLevelWindows.empty())
+        return;
+
+    // A theme switch is one visual transaction.  Freeze every HWND before
+    // any handler sees the new palette so child UpdateWindow()/Invalidate()
+    // calls cannot expose a half-Light/half-Dark intermediate frame.
+    for (std::vector<HWND>::const_iterator sIterator =
+             sSnapshot.mWindows.begin();
+         sIterator != sSnapshot.mWindows.end();
+         ++sIterator)
+    {
+        if (::IsWindow(*sIterator) != FALSE)
+            ::SendMessage(*sIterator, WM_SETREDRAW, FALSE, 0);
+    }
+
+    // The global ModernUI theme mode has already been changed by setOption().
+    // Apply top-level frame state first, then let every snapshotted HWND
+    // rebuild palette/font/theme-association state against that one mode.
+    for (std::vector<HWND>::const_iterator sIterator =
+             sSnapshot.mTopLevelWindows.begin();
+         sIterator != sSnapshot.mTopLevelWindows.end();
+         ++sIterator)
+    {
+        if (::IsWindow(*sIterator) != FALSE)
+            ui::ModernUI::applyWindowFrameTheme(*sIterator);
+    }
+
+    for (std::vector<HWND>::const_iterator sIterator =
+             sSnapshot.mWindows.begin();
+         sIterator != sSnapshot.mWindows.end();
+         ++sIterator)
+    {
+        if (::IsWindow(*sIterator) != FALSE)
+            ::SendMessage(*sIterator, WM_SETTINGCHANGE, 0, 0);
+    }
+
+    // Thaw children before their top-level owners.  No painting is requested
+    // until every HWND has already processed the new theme.
+    for (std::vector<HWND>::const_reverse_iterator sIterator =
+             sSnapshot.mWindows.rbegin();
+         sIterator != sSnapshot.mWindows.rend();
+         ++sIterator)
+    {
+        if (::IsWindow(*sIterator) != FALSE)
+            ::SendMessage(*sIterator, WM_SETREDRAW, TRUE, 0);
+    }
+
+    for (std::vector<HWND>::const_iterator sIterator =
+             sSnapshot.mTopLevelWindows.begin();
+         sIterator != sSnapshot.mTopLevelWindows.end();
+         ++sIterator)
+    {
+        if (::IsWindow(*sIterator) == FALSE)
+            continue;
+
+        ::RedrawWindow(
+            *sIterator,
+            XPR_NULL,
+            XPR_NULL,
+            RDW_INVALIDATE |
+            RDW_ERASE |
+            RDW_FRAME |
+            RDW_ALLCHILDREN);
+    }
 }
 } // namespace anonymous
 

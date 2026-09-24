@@ -3318,14 +3318,29 @@ def validate_win11_stability_regressions() -> list[str]:
         )
 
     for token in (
+        "struct ThemeRefreshSnapshot",
+        "CollectThemeTopLevelWindow",
+        "CollectThemeChildWindow",
         "EnumThreadWindows(",
-        "RefreshThemeTopLevelWindow",
-        "SendMessageToDescendants(",
-        "WM_SETTINGCHANGE",
+        "EnumChildWindows(",
+        "WM_SETREDRAW, FALSE",
+        "WM_SETREDRAW, TRUE",
+        "std::vector<HWND>::const_reverse_iterator",
+        "ui::ModernUI::applyWindowFrameTheme(*sIterator)",
+        "::SendMessage(*sIterator, WM_SETTINGCHANGE, 0, 0)",
+        "RDW_ALLCHILDREN",
     ):
         if token not in contents["main_frame"]:
             errors.append(
-                f"src/fxfile/main_frame.cpp: app theme switch must refresh every UI-thread top-level window; missing {token}"
+                f"src/fxfile/main_frame.cpp: atomic app-theme refresh contract missing {token}"
+            )
+    for forbidden in (
+        "RefreshThemeTopLevelWindow",
+        "SendMessageToDescendants(\n            WM_SETTINGCHANGE",
+    ):
+        if forbidden in contents["main_frame"]:
+            errors.append(
+                f"src/fxfile/main_frame.cpp: sequential theme-refresh regression returned: {forbidden}"
             )
 
     main_frame_source = contents["main_frame"]

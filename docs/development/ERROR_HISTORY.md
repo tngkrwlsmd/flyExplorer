@@ -1596,3 +1596,31 @@
 - User runtime screenshot before fix: **FAIL** — Dark top-level menu text black.
 - Connector source cross-check after fix: direct Dark WM_PAINT ownership, full print clear, MDI system icon ownership and invariant guards present.
 - Rebuilt Windows runtime screenshot after fix: **NOT RETESTED**.
+
+
+---
+
+## 2026-09-24 — App theme switch exposed mixed Light/Dark intermediate surfaces
+
+**오류 발생**
+- 사용자 runtime screenshot에서 Light/Dark 전환 직후 환경설정 창이 먼저 검어지고 내부 page/control은 이전 상태로 남거나, main frame 일부 chrome/content가 서로 다른 theme phase로 보이는 전환 오류가 확인됐다.
+
+**원인 진단**
+- `MainFrame::setOption()`은 global theme mode를 먼저 변경했지만 `RefreshThemeForCurrentThread()`가 `EnumThreadWindows()` callback 안에서 각 top-level window를 즉시 `WM_SETTINGCHANGE` 처리하고 바로 `RedrawWindow()`했다.
+- 따라서 Preferences, MainFrame, owned dialogs가 순차적으로 화면에 새 palette를 노출했다. 각 handler 내부의 `Invalidate()` / `UpdateWindow()`까지 실행될 수 있어 하나의 theme switch가 여러 visible repaint phase로 분리됐다.
+- child window 집합도 사전에 고정하지 않았기 때문에 parent/child refresh 순서에 따라 이전 palette pixel이 잠시 남을 수 있었다.
+
+**해결 방법**
+- UI-thread top-level window와 모든 descendant HWND를 먼저 `ThemeRefreshSnapshot`에 수집한다.
+- 어떤 theme notification도 보내기 전에 snapshot 전체에 `WM_SETREDRAW(FALSE)`를 적용한다.
+- redraw가 잠긴 동안 top-level DWM frame theme를 적용하고, snapshot의 모든 HWND가 동일한 새 global theme mode를 기준으로 `WM_SETTINGCHANGE`를 처리하게 한다.
+- child/descendant부터 reverse order로 `WM_SETREDRAW(TRUE)`를 복구한 뒤, 모든 state update가 끝난 후에만 top-level window를 `RDW_ALLCHILDREN`으로 invalidate한다.
+
+**재발 방지**
+- source invariant는 `ThemeRefreshSnapshot`, top-level/child snapshot, redraw freeze/thaw, reverse thaw, 새 theme frame 적용, descendant setting notification을 요구한다.
+- 과거의 즉시 repaint callback `RefreshThemeTopLevelWindow` 및 top-level마다 `SendMessageToDescendants()`를 수행하는 sequential refresh pattern을 금지한다.
+
+**검증 상태**
+- User runtime screenshot before fix: **FAIL** — mixed Light/Dark transition visible.
+- Connector source cross-check after fix: atomic snapshot/freeze/apply/thaw/invalidate contract present.
+- Rebuilt Windows runtime theme-switch screenshot after fix: **NOT RETESTED**.
