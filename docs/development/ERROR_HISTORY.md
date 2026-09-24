@@ -2327,3 +2327,36 @@ Static Git tree/path coverage and internal CHM topic/index references:
 source inspected. Windows policy/readiness CLI, HTML Help Workshop,
 full product build/runtime, visual acceptance and installer:
 NOT TESTED. Hosted GitHub Actions: NOT RUN.
+
+---
+
+## 2026-09-24 — Portable ZIP omitted product Help and licensing resources
+
+**Error / evidence:** The old `dist/make_portable.bat` archived only each
+`dist/bin/<architecture>` runtime tree. `dist/copy.bat` supplied runtime
+DLLs and language packs but not `fxfile.chm`, root-level custom icon
+bitmap resources or installer-facing application/third-party notices.
+The product Help command calls Windows HtmlHelp with the generated
+`fxfile.chm` path, and the NSIS installer explicitly includes these
+non-runtime files. Consequently the existing portable package source
+contract omitted resources available in the installer.
+
+**Root cause:** Installer packaging and portable packaging owned separate
+file-copy lists; only the installer invoked fresh HTML Help compilation.
+The release validator checked binaries/architectures but not a portable
+CHM or its user-facing notices.
+
+**Fix / prevention:** Each direct `make_portable.bat` now regenerates CHM
+from canonical source, fails closed, stages the CHM, 16/32px optional
+file-list icon assets, application license, current `CREDITS` as
+`third_party_notices.txt`, readme and preserved legacy history into
+each architecture's ZIP root. The standalone installer retains its own
+fresh rebuild. `validate_package.ps1` requires all assets in staging
+and archives and checks the CHM ITSF signature. HTML Help static preflight
+rejects missing portable and validator wiring.
+
+**Evidence:** Repository source cross-check/structural contracts:
+source inspected. Windows `hhc.exe`, batch/7zip/package validator on a
+real three-architecture build, actual installed and portable product Help:
+NOT TESTED. Neither updater server security nor GFL/public distribution
+rights were changed. GitHub Actions: NOT RUN.

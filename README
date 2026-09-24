@@ -435,7 +435,16 @@ in `dist\.htmlhelp-build`, normalizing legacy HTML encoding metadata.
 Every `dist\make_installer.bat` invocation (including those from
 `dist\package.bat`) runs `--build` first and checks for a freshly compiled
 CHM. A missing compiler or invalid result aborts packaging instead of
-reusing a stale binary. Generated `dist\fxfile.chm` is not tracked. It creates:
+reusing a stale binary. `dist\make_portable.bat` now independently
+regenerates the same help for direct portable builds and stages
+`fxfile.chm`, file-list custom icon bitmaps, application license,
+current `CREDITS` as third-party notices, readme and historical change
+log next to each portable `fxfile.exe`. The current combined
+`dist\package.bat` build compiles help for both portable and installer
+paths independently (a deliberate safety-first duplication).
+`build\validate_package.ps1` checks all three archives and staged
+assets, including CHM signatures; any failed/missing item rejects the
+package. Generated `dist\fxfile.chm` is not tracked. It creates:
 
     dist\fxfile_v2.0.4-dev.exe
     dist\fxfile_v2.0.4-dev_x64_portable.zip

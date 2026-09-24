@@ -86,6 +86,18 @@ def check_sources() -> list[Path]:
     script = read_source(ROOT / "dist" / "make_installer.bat")
     if "rebuild_htmlhelp.py" not in script or "--build" not in script:
         raise HelpBuildError("installer script does not force a fresh compiled help build")
+    portable = read_source(ROOT / "dist" / "make_portable.bat")
+    if "rebuild_htmlhelp.py" not in portable or "--build" not in portable:
+        raise HelpBuildError("portable script must regenerate CHM before ZIP creation")
+    if portable.find("rebuild_htmlhelp.py") > portable.find("call :archive"):
+        raise HelpBuildError("portable script creates archives before help regeneration")
+    for asset in ("fxfile.chm", "custom_image_list_16.bmp", "custom_image_list_32.bmp",
+                  "license.txt", "readme.txt", "history.txt", "third_party_notices.txt"):
+        if asset not in portable:
+            raise HelpBuildError("portable script is missing its asset contract: " + asset)
+    package_validator = read_source(ROOT / "build" / "validate_package.ps1")
+    if "$portableAncillaryFiles" not in package_validator or "Assert-ChmHeader" not in package_validator:
+        raise HelpBuildError("package validator does not check portable help and documentation")
     if "/dist/fxfile.chm" not in read_source(ROOT / ".gitignore"):
         raise HelpBuildError("generated CHM must be ignored rather than tracked")
     return sorted(path for path in SOURCE.rglob("*") if path.is_file())

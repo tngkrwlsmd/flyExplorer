@@ -582,6 +582,12 @@ Git tree, links and changed-path inspection are static evidence, NOT a
 policy/readiness CLI, Windows help compiler, product runtime or
 installer PASS. Earlier review baselines above remain dated history.
 
+35. **Portable release omitted its required Help and user/license assets — SOURCE UPDATED / WINDOWS PACKAGE NOT TESTED**
+    - `dist/make_portable.bat` formerly compressed only each `dist/bin/<arch>` tree. The product Help command uses a sibling `fxfile.chm`, while `dist/setup.nsi` separately shipped CHM, license, `CREDITS`, readme, historical changelog and custom image-list bitmaps. The three portable ZIPs would therefore omit Help and these user-facing assets.
+    - Direct portable entrypoint now forces a fresh HTML Help source compile, fails closed if compilation fails, then stages exactly the required existing assets beside each `fxfile.exe` before archive creation. Installer invocation retains its independent fresh-CHM rule. No vendored binary, updater endpoint, support claim, license rights or x86 helper contract is modified.
+    - Package validator now requires assets in each staging tree and ZIP, validates `ITSF` signatures on both compiled-CHM copies, and existing common-binary/PE/collision checks remain. `build/rebuild_htmlhelp.py --check` guards portable/help/validator wiring. README, distribution readme, CURRENT_STATUS and ERROR_HISTORY are updated in the same unit.
+    - This is a source-level packaging fix only. Windows cmd/7-Zip/HTML Help Workshop generation, portable startup/Help browsing, x64 release and x86 package variants: NOT TESTED. Do not publicly distribute bundled GFL SDK without independent licensing review.
+
 ### Development handoff rule
 
 - Every new user-requested development item is added to this section (or its successor) before implementation starts.

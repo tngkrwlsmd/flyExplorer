@@ -55,6 +55,17 @@ $upcheckerFiles = @(
     "upchecker/zlib1.dll"
 )
 
+# Portable assets must be next to fxfile.exe, not merely in the installer.
+$portableAncillaryFiles = @(
+    "fxfile.chm",
+    "custom_image_list_16.bmp",
+    "custom_image_list_32.bmp",
+    "license.txt",
+    "readme.txt",
+    "history.txt",
+    "third_party_notices.txt"
+)
+
 $forbiddenExtensions = @(".pdb", ".obj", ".lib", ".vcxproj", ".sln")
 
 function Assert-File {
@@ -64,6 +75,32 @@ function Assert-File {
     }
     if ((Get-Item -LiteralPath $Path).Length -le 0) {
         throw "$Description is empty: $Path"
+    }
+}
+
+function Assert-ChmHeader {
+    param(
+        [System.IO.Stream]$Stream,
+        [string]$Description,
+        [long]$UncompressedLength
+    )
+    if ($UncompressedLength -lt 4096) {
+        throw "$Description is too short to be a usable CHM."
+    }
+    [byte[]]$signature = @(0, 0, 0, 0)
+    $offset = 0
+    while ($offset -lt 4) {
+        $read = $Stream.Read($signature, $offset, 4 - $offset)
+        if ($read -le 0) {
+            throw "$Description ended before its CHM signature."
+        }
+        $offset += $read
+    }
+    if ($signature[0] -ne 0x49 -or
+        $signature[1] -ne 0x54 -or
+        $signature[2] -ne 0x53 -or
+        $signature[3] -ne 0x46) {
+        throw "$Description does not start with ITSF (compiled CHM)."
     }
 }
 
@@ -151,8 +188,16 @@ foreach ($config in $configurations) {
         throw "Package staging directory is missing: $stage"
     }
 
-    foreach ($relative in $commonFiles + @($config.Xpr) + $upcheckerFiles) {
+    foreach ($relative in $commonFiles + @($config.Xpr) + $upcheckerFiles + $portableAncillaryFiles) {
         Assert-File (Join-Path $stage ($relative -replace "/", "\")) "$($config.Name) package payload"
+    }
+
+    $stageChm = [System.IO.File]::OpenRead((Join-Path $stage "fxfile.chm"))
+    try {
+        Assert-ChmHeader $stageChm "$($config.Name) staged help" $stageChm.Length
+    }
+    finally {
+        $stageChm.Dispose()
     }
 
     $mainExe = Join-Path $stage "fxfile.exe"
@@ -213,6 +258,20 @@ foreach ($config in $configurations) {
 
         $entryNames = @($entries | ForEach-Object { Normalize-ZipPath $_.FullName })
 
+        $helpEntry = @($entries | Where-Object {
+            (Normalize-ZipPath $_.FullName) -ceq "fxfile.chm"
+        })
+        if ($helpEntry.Count -ne 1) {
+            throw "$($config.Name) archive must contain exactly one compiled help file."
+        }
+        $helpStream = $helpEntry[0].Open()
+        try {
+            Assert-ChmHeader $helpStream "$($config.Name) archive help" $helpEntry[0].Length
+        }
+        finally {
+            $helpStream.Dispose()
+        }
+
         $mainEntry = @($entries | Where-Object {
             (Normalize-ZipPath $_.FullName) -ceq "fxfile.exe"
         })
@@ -259,7 +318,7 @@ foreach ($config in $configurations) {
             throw "$($config.Name) portable archive contains stale fxfile-updater.exe."
         }
 
-        foreach ($relative in $commonFiles + @($config.Xpr) + $upcheckerFiles) {
+        foreach ($relative in $commonFiles + @($config.Xpr) + $upcheckerFiles + $portableAncillaryFiles) {
             $expected = Normalize-ZipPath $relative
             if ($entryNames -cnotcontains $expected) {
                 $caseInsensitiveMatch = @($entryNames | Where-Object { $_ -ieq $expected })
