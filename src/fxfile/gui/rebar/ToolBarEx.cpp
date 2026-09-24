@@ -1608,9 +1608,24 @@ void CToolBarPopup::SetPosition( UINT nFlags, CPoint pt, CRect& rcExclude )
         ( nFlags & TPM_VCENTERALIGN ) ? ( pt.y - rc.Height() / 2 ) :
         ( nFlags & TPM_BOTTOMALIGN  ) ? ( pt.y - rc.Height() ) : pt.y );
 
-    // Make sure we don't exceed screen dimensions
+    // Keep the app-owned chevron popup inside the *anchor monitor's work
+    // area*, not the virtual desktop (which includes taskbars and other
+    // monitors). The legacy desktop bounds remain a safe fallback.
     CRect rcDesktop;
-    GetDesktopWindow()->GetWindowRect( rcDesktop );
+    GetDesktopWindow()->GetWindowRect(rcDesktop);
+
+    MONITORINFO sMonitorInfo = {0};
+    sMonitorInfo.cbSize = sizeof(sMonitorInfo);
+    HMONITOR sMonitor = ::MonitorFromPoint(pt, MONITOR_DEFAULTTONEAREST);
+    if (sMonitor != NULL &&
+        ::GetMonitorInfo(sMonitor, &sMonitorInfo) != FALSE)
+    {
+        rcDesktop.SetRect(
+            sMonitorInfo.rcWork.left,
+            sMonitorInfo.rcWork.top,
+            sMonitorInfo.rcWork.right,
+            sMonitorInfo.rcWork.bottom);
+    }
 
     rc.OffsetRect(
         min( rcDesktop.right  - rc.right,  0 ),
@@ -1666,7 +1681,7 @@ void CToolBarPopup::SetPosition( UINT nFlags, CPoint pt, CRect& rcExclude )
             rcRight.OffsetRect( nRight, 0 );
 
             bool bLeft = false;
-            if ( ( rcLeft.left >= rcDesktop.top ) && ( rcRight.right <= rcDesktop.right ) )
+            if ( ( rcLeft.left >= rcDesktop.left ) && ( rcRight.right <= rcDesktop.right ) )
             {
                 bLeft = ( nLeft < nRight );
             }
@@ -2232,9 +2247,9 @@ void CToolBarPopup::OnNcPaint()
 {
     if ( m_bFlatMenu )
     {
-        CWindowDC dc( this );
-        DrawBorder( &dc );
-        ReleaseDC( &dc );
+        CWindowDC dc(this);
+        DrawBorder(&dc);
+        // CWindowDC owns this HDC and releases it at scope exit.
     }
     else
     {

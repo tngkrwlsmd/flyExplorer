@@ -100,6 +100,19 @@ band flags, persistence and metrics. Other command grouping and
 per-dialog control spacing require visual design/test; UI-05 is
 **PARTIAL / WINDOWS VISUAL RETEST OPEN**.
 
+**UI-06 chevron-popup position/paint follow-up (2026-09-24):**
+The app-owned custom toolbar overflow popup now clamps to the anchor
+monitor's *work area* (multi-monitor/taskbar aware) instead of the
+entire desktop, and uses the correct left coordinate when choosing
+horizontal placement around an excluded control rectangle. Its
+`CWindowDC` now has one RAII release rather than an extra manual
+`ReleaseDC`. A negative source regression guard covers both bugs.
+Actual current-revision Windows build, large custom popups taller
+than the available work area, keyboard/hover, taskbar on alternate
+edges, multi-monitor DPI and final border pixels: **NOT TESTED**.
+UI-06 remains **PARTIAL / RETEST OPEN**, and OS-owned native menu
+outer border is intentionally untouched.
+
 ## Outstanding near-term work
 
 1. Address the reproduced settings-page visibility and Dark rendering issues

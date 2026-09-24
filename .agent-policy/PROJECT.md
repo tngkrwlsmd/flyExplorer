@@ -794,6 +794,17 @@ Windows compile/current-revision runtime, fresh/persisted rebar layouts,
 overflow keyboard accessibility and all DPI screenshots: NOT TESTED.
 UI-05 remains partially OPEN. Hosted Actions: NOT RUN.
 
+**UI-06 toolbar-popup work-area/RAII source follow-up
+(2026-09-24):** The custom chevron popup uses documented
+MonitorFromPoint/GetMonitorInfo.rcWork with the previous desktop bounds
+as a fallback, fixes a left-vs-top bounds comparison in horizontal
+exclusion handling, and no longer calls ReleaseDC on a scoped
+CWindowDC in its nonclient painter. Negative source guard added.
+Windows x64 compile/launch, very tall custom popup scrolling,
+alternate taskbar edges, multi-monitor/DPI, HC/Light/Dark final
+pixels: NOT TESTED. OS-native outer menu border remains OPEN.
+Hosted Actions: NOT RUN under per-run restriction.
+
 ### Development handoff rule
 
 - Every new user-requested development item is added to this section (or its successor) before implementation starts.

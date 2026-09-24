@@ -124,6 +124,22 @@ UI-08 완료로 판단하지 않는다.
   레이아웃·작은 창·배율별 커맨드 도달성·접근성·스크린샷
   은 아직 미수행. UI-05는 **SOURCE PARTIAL / RETEST OPEN**.
 
+### UI-06 추가 소스 수정 — 자체 도구 모음의 넘침 팝업
+
+- `CToolBarPopup::SetPosition`은 가상 바탕 화면이 아니라
+  팝업이 열린 모니터의 작업 영역을 공식
+  `MonitorFromPoint`/`GetMonitorInfo`로 조회해 위치를 조정한다.
+  조회 실패 시 기존 바탕 화면 크기를 사용한다.
+- 좌/우 대안 위치의 유효성을 확인할 때 사용되던
+  `rcLeft.left >= rcDesktop.top` 오타를
+  `rcDesktop.left`와 비교하도록 수정했다.
+- `OnNcPaint`에서 `CWindowDC` 자동 수명 해제에
+  `ReleaseDC`를 추가로 수행하던 부분도 제거했다.
+- 이는 자체 chevron 팝업 수정이다. 기본 Windows 메뉴
+  테두리나 화면보다 큰 자체 팝업의 스크롤 지원까지
+  완료했다는 의미는 아니다. 실행·다중 모니터·고대비
+  검증 전까지 **UI-06 PARTIAL / RETEST OPEN**이다.
+
 ### UI-01의 진단 근거와 회귀 조건
 
 **Observed source:** `ThemeRefreshSnapshot`은 hidden child를 포함한 HWND를 모으고, visibility 보존 없이 모두에게 `WM_SETREDRAW(FALSE)` 후 `WM_SETREDRAW(TRUE)`를 보낸다. `showCfg()`는 `mShowCfg`가 가리키는 기존 페이지만 숨긴다.

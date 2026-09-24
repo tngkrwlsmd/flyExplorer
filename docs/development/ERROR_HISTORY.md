@@ -2918,3 +2918,33 @@ compile, new and saved layout, 100/125/150/200% DPI, compact-window
 overflow, keyboard accessibility and final visual presentation:
 NOT TESTED. UI-05 remains partial; any remaining per-dialog spacing
 work requires measured runtime geometry. GitHub Actions: NOT RUN.
+
+
+---
+
+## 2026-09-24 — UI-06 custom chevron popup monitor and DC fixes
+
+**Observed in source:** The custom toolbar overflow popup previously
+clamped its location against desktop bounds, including taskbar space
+and potentially another monitor. Its horizontal popup exclusion
+fallback compared a left coordinate to a top coordinate. The
+nonclient painter constructed a scoped CWindowDC and also explicitly
+called ReleaseDC on the same wrapper.
+
+**Source change:** Derive the popup bounding rectangle from the
+anchor monitor's documented work area with a desktop fallback,
+correct the horizontal left-boundary comparison, and leave the
+scoped CWindowDC to release its DC exactly once. No commands,
+keyboard mapping or theme associations changed.
+
+**Prevention:** Source validator checks anchor monitor placement,
+forbids the wrong-coordinate condition and the manual double
+release in the specific OnNcPaint owner.
+
+**Evidence boundary:** Source inspection and construction assertions
+only; full Python preflight, current VS2026 Release-x64-Unicode build,
+real chevron popup/multi-monitor/taskbar placement, native keyboard,
+High Contrast, DPI and screenshot tests: NOT TESTED. Custom popup
+height beyond work-area remains an open design/test case; OS menu
+nonclient border is still not considered repaired. GitHub Actions:
+NOT RUN, as no execution-specific authorization was provided.

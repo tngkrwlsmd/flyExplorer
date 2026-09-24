@@ -4175,6 +4175,42 @@ def validate_release_stage_recovery() -> list[str]:
     return errors
 
 
+def validate_toolbar_popup_work_area_and_dc_lifetime() -> list[str]:
+    """UI-06: place the owned overflow popup on its anchor monitor."""
+    errors: list[str] = []
+    toolbar = (FXFILE_SRC / "gui" / "rebar" / "ToolBarEx.cpp").read_text(
+        encoding="utf-8", errors="replace"
+    )
+    start = toolbar.find("void CToolBarPopup::SetPosition(")
+    end = toolbar.find("void CToolBarPopup::Show(", start)
+    if start < 0 or end <= start:
+        return ["toolbar chevron popup placement owner missing"]
+    placement = toolbar[start:end]
+    for token in (
+        "::MonitorFromPoint(pt, MONITOR_DEFAULTTONEAREST)",
+        "::GetMonitorInfo(sMonitor, &sMonitorInfo)",
+        "rcDesktop.SetRect(",
+        "sMonitorInfo.rcWork.left",
+        "sMonitorInfo.rcWork.bottom",
+        "rcLeft.left >= rcDesktop.left",
+    ):
+        if token not in placement:
+            errors.append(f"anchor-monitor popup placement missing: {token}")
+    if "rcLeft.left >= rcDesktop.top" in placement:
+        errors.append("horizontal popup placement must compare against left, not top")
+    paint_start = toolbar.find("void CToolBarPopup::OnNcPaint(")
+    paint_end = toolbar.find("LRESULT CToolBarPopup::OnPrint(", paint_start)
+    if paint_start < 0 or paint_end <= paint_start:
+        errors.append("toolbar non-client popup paint owner missing")
+    else:
+        paint = toolbar[paint_start:paint_end]
+        if "CWindowDC dc(this)" not in paint or "DrawBorder(&dc)" not in paint:
+            errors.append("toolbar popup non-client border drawing missing")
+        if "ReleaseDC(&dc)" in paint or "ReleaseDC( &dc )" in paint:
+            errors.append("CWindowDC must not be manually released twice")
+    return errors
+
+
 def validate_fresh_profile_command_band_and_settings_spacing() -> list[str]:
     """UI-05: compact default rebar rows, larger settings navigation targets."""
     errors: list[str] = []
@@ -4462,6 +4498,7 @@ def main() -> int:
     errors.extend(validate_active_ci_scope_documentation())
     errors.extend(validate_actions_storage_budget_contract())
     errors.extend(validate_installer_smoke_wiring())
+    errors.extend(validate_toolbar_popup_work_area_and_dc_lifetime())
     errors.extend(validate_fresh_profile_command_band_and_settings_spacing())
     errors.extend(validate_app_popup_work_area_and_brush_lifetime())
     errors.extend(validate_split_pane_column_and_contents_layout())
