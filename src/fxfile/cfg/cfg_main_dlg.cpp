@@ -1144,6 +1144,7 @@ void CfgMainDlg::OnTreeClick(NMHDR* /*pNMHDR*/, LRESULT* pResult)
                     sItem->mTreeItem, TVIS_EXPANDED) & TVIS_EXPANDED) ?
                 TVE_COLLAPSE : TVE_EXPAND;
             mTreeCtrl.Expand(sItem->mTreeItem, sAction);
+            mTreeCtrl.Invalidate(FALSE); // Refresh expanded/collapsed glyph.
             return;
         }
     }

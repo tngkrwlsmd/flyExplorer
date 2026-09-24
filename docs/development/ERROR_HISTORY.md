@@ -1947,3 +1947,24 @@
 **검증**
 - 사용자 제공 이전 구현 screenshot: VISUAL FAIL.
 - notification 경로가 사용자 화면의 직접 원인인지 Windows instrumented trace는 아직 없다. 신규 수정의 Release x64 compile/runtime/interactive/visual/HC/DPI: NOT TESTED. 실제 화면 확인 전 종결 금지.
+
+---
+
+## 2026-09-24 — Reconciliation of three fresh-build visual regressions
+
+**논리 작업 단위별 commit**
+- 설정 disclosure 실제 화살표/클릭: `4e8e8d63918ef73783b4b7f87a54e8469b73a122`.
+- Dark toolbar 전체 버튼/아이콘 최종 그림: `164c016bcbc7587cc3e21908de72e91f00ac21f6`.
+- Dark menubar notification 후속 repaint/문자열 fallback: `aa3c2d05b76c6ff2d6dece824992b80d88b17505`.
+
+**추가 정적 검토와 마감 보완**
+- 소스 교차검사에서 tree postpaint, 실제 chevron 클릭 handler/message map, toolbar 전체 item/icon redraw, menubar final custom postpaint/HMENU fallback 및 새 validator property guards가 모두 연결됨을 확인했다.
+- CMenu의 `GetMenuItemCount()`와 signed item index 비교를 명시적 signed cast로 정리해 컴파일 경고 가능성을 낮추고, custom chevron 클릭 후 tree invalidation으로 화살표 방향 갱신을 명시했다.
+- 과거 이슈 #16/#18/#19는 최신 사용자의 runtime screenshot과 모순되지 않도록 `PREVIOUS FIX VISUALLY FAILED`로 정정하고 새 이슈 #24/#22/#23에 연결했다.
+- AGENTS/README/LOCAL_CI_MANUAL/GYP/architecture 계약은 이번 UI 렌더러 변경 범위에서 바뀌지 않아 수정하지 않았다.
+
+**최종 검증 수준**
+- GitHub source/diff/validator contract cross-check: PASS (static source inspection only).
+- 전체 Python validator 실행 및 Release-x64-Unicode | x64 local CI, native functional/smoke: NOT TESTED.
+- 실제 Windows Dark/Light/High Contrast/100%+high DPI/keyboard/interactive visual regression: NOT TESTED.
+- 본 커밋 이후 main 반영 여부는 merge 결과 확인으로만 보고한다. 시각적 이슈는 matching runtime screenshot 통과 전 CLOSED 금지.

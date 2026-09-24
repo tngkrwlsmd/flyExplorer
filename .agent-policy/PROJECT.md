@@ -399,7 +399,7 @@ Status: **ACTIVE / user-reproduced runtime failures**. These items are the immed
    - Connector source cross-check after the change confirms the invalid token is absent from `ToolBarEx.cpp` and the supported query/guard are present. The user's Windows `Release-x64-Unicode | x64` build has not yet been rerun after this fix.
    - Acceptance: source invariant preflight must still pass and the user's local build must progress beyond this compile error. Until rerun evidence is provided, status remains `CODE FIXED / LOCAL CI NOT RETESTED`.
 
-16. **Dark top-level menu text remains black — CODE FIXED / RUNTIME NOT RETESTED**
+16. **Dark top-level menu text remains black — PREVIOUS FIX VISUALLY FAILED / SEE NEW ISSUE 24**
    - User runtime screenshots on current `main` showed the top-level menu labels (`파일/편집/이동/보기/도구/창/도움말`) still painted black on the Dark command surface, while the corresponding Light surface was readable.
    - Root cause: `CMenuBar::OnPaint()` still invoked the native ToolbarWindow32 paint first and attempted to cover it afterward. The rebar/composition path could subsequently expose a native black text pass, so palette values and a final overlay were not sufficient evidence of final pixel ownership.
    - Fix: Dark/non-High-Contrast `WM_PAINT` now skips native toolbar painting entirely, validates the paint region with `CPaintDC`, fills the whole client surface with `ThemePalette.mChrome`, and draws every top-level menu label through `DrawFinalMenuOverlay()`. The overlay now also owns the MDI system-menu icon. Rebar `WM_PRINTCLIENT/WM_PRINT` composition clears the full Dark client surface before the same overlay.
@@ -417,7 +417,7 @@ Status: **ACTIVE / user-reproduced runtime failures**. These items are the immed
    - Logical unit 17-D complete: `CMenuBar` now mirrors `CToolBarEx` theme-association ownership—Dark disables the native ToolbarWindow32 uxtheme association, Light/High Contrast restores Explorer/default association, and tooltip theming is refreshed. Dark also owns every `WM_PRINT`/`WM_PRINTCLIENT` variant before native code, not only `PRF_CLIENT` print calls.
    - Source invariants now enforce direct Dark `WM_PAINT`, early-return Dark `WM_PRINT*`, menu-bar theme-association reset/restore, and child-state -> DWM-frame -> top-level-state ordering. Runtime screenshot closure is required after rebuild.
 
-18. **Settings navigation hierarchy/disclosure is not discoverable — CODE FIXED / RUNTIME NOT RETESTED**
+18. **Settings navigation hierarchy/disclosure is not discoverable — PREVIOUS FIX VISUALLY FAILED / SEE NEW ISSUE 22**
    - Latest user screenshot shows the left settings navigation as a flat list even though `일반`, `모양 및 테마`, `기능`, and `고급` own child pages. The user could not tell that those rows were expandable.
    - Root cause: `IDC_CFG_TREE` had `TVS_HASBUTTONS` but not `TVS_LINESATROOT`. Win32 tree-view root expand/collapse affordances therefore were not part of the resource contract, and the modernized borderless/full-row presentation further reduced the visible parent/leaf distinction.
    - Fix: the settings tree now carries `TVS_LINESATROOT` in the resource and reinforces `TVS_HASBUTTONS | TVS_LINESATROOT` when the dialog initializes. Expandable root categories receive native `TVIS_BOLD` emphasis while preserving the existing tree hierarchy, keyboard behavior, icons, and expand-all startup behavior.
@@ -425,7 +425,7 @@ Status: **ACTIVE / user-reproduced runtime failures**. These items are the immed
    - Connector/source inspection after change: implementation and resource contract updated. Windows compile/runtime/Light/Dark/High Contrast/DPI visual evidence is **NOT TESTED**; this user-reproduced item remains ACTIVE until matching screenshots confirm the affordance is visible and usable.
    - Implementation/documentation commit: `608b166bf17d5847fcb14dfdfc4d4546d6770b86`.
 
-19. **Transient icon/command highlight is overly accent-tinted — CODE FIXED / RUNTIME NOT RETESTED**
+19. **Transient icon/command highlight is overly accent-tinted — PREVIOUS FIX VISUALLY FAILED / SEE NEW ISSUE 23**
    - Latest user screenshot shows the active/hot command surface around toolbar icons as a conspicuous blue/light tile that is visually stronger than the icon and surrounding neutral Dark chrome.
    - Cross-control audit found the shared cause in `ModernUI::getPalette()`: non-High-Contrast `mHover` and `mPressed` were blended from `mSelection`, so the system accent selection color propagated into toolbar, menubar, tabs, settings controls, split buttons, and other shared transient states.
    - Fix: `mHover` and `mPressed` now derive from `mElevated` + `mText` with small Light/Dark-specific lifts. Actual selection and focus semantics keep `mSelection`/`mFocus`, and High Contrast still maps transient states to the system selection colors.
@@ -455,6 +455,7 @@ Status: **ACTIVE / user-reproduced runtime failures**. These items are the immed
    - Fix: `CfgMainDlg::OnTreeCustomDraw()` uses postpaint to draw an explicit direction-aware root chevron in the icon's leading gutter for expanded and collapsed parents, including system foreground in High Contrast. The new `NM_CLICK` handler toggles when this custom chevron is clicked; native button hits and ordinary page selection/keyboard semantics remain native.
    - Recurrence guard: inspect the actual postpaint draw path and chevron click/expand path, not merely resource style tokens.
    - Evidence: latest user screenshots are a visual FAIL for the previous approach. Full x64 local CI, interactive Dark/Light/HC, DPI/keyboard/mouse screenshot for the new implementation: NOT TESTED.
+   - Logical-unit code/documentation commit: `4e8e8d63918ef73783b4b7f87a54e8469b73a122`.
 
 23. **Fresh-build toolbar hot/checked tile is still accent-bright — CODE FIXED / VISUAL RETEST REQUIRED**
    - The user's fresh-build screenshots show a bright blue/light toolbar icon tile despite neutral `ThemePalette.mHover/mPressed`.
@@ -462,6 +463,7 @@ Status: **ACTIVE / user-reproduced runtime failures**. These items are the immed
    - Fix: Dark postpaint now erases the complete item, redraws neutral rounded hot/checked state and ImageList icon, then finishes text and dropdown glyph. For unsupported icon-list cases it retains the native image rather than blanking it. Light/High Contrast ownership is unchanged.
    - Prevention: the scoped validator inspects complete-item fill, ImageList redraw and the actual Dark postpaint call, not palette tokens alone.
    - Current user screenshot is VISUAL FAIL for the old path; new x64 compile/runtime/visual, including main/drive/bookmark and popup toolbars: NOT TESTED until rerun.
+   - Logical-unit code/documentation commit: `164c016bcbc7587cc3e21908de72e91f00ac21f6`.
 
 24. **Fresh-build top-level Dark menubar text is still dim/black — CODE FIXED / VISUAL RETEST REQUIRED**
    - User supplied fresh-build Dark main-window screenshots after `git pull`; top-level `파일/편집/이동/보기/도구/창/도움말` remains visibly dim/black. Do not dismiss this runtime evidence using an unrelated earlier failed local-CI artifact marker.
@@ -469,6 +471,7 @@ Status: **ACTIVE / user-reproduced runtime failures**. These items are the immed
    - Fix: custom-draw now requests a final postpaint overlay when ToolbarWindow32 uses notification-driven painting, with `m_pMenu->GetMenuString()` fallback in both overlay and item paths. Dark item lookup failures are not allowed to fall back to black native painting.
    - Existing Dark direct `WM_PAINT` and early `WM_PRINT*` final ownership remain in force. High Contrast and Light native semantics are preserved.
    - Runtime cause cannot be conclusively attributed without instrumented Windows pixel/notification trace; new x64 compile and matching Dark/Light/HC menu interaction screenshots remain NOT TESTED.
+   - Logical-unit code/documentation commit: `aa3c2d05b76c6ff2d6dece824992b80d88b17505`.
 
 ### Development handoff rule
 

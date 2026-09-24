@@ -1383,7 +1383,7 @@ void CMenuBar::DrawFinalMenuOverlay(CDC &aDC)
         if (sMenuText.IsEmpty() &&
             XPR_IS_NOT_NULL(m_pMenu) &&
             sItemIndex > 0 &&
-            sItemIndex - 1 < m_pMenu->GetMenuItemCount())
+            sItemIndex - 1 < static_cast<xpr_sint_t>(m_pMenu->GetMenuItemCount()))
         {
             // Use the actual HMENU label if a toolbar-string lookup fails.
             // A blank app-owned overlay otherwise exposes native black text.
@@ -2123,7 +2123,7 @@ void CMenuBar::OnCustomDraw( NMHDR* pNMHDR, LRESULT* pResult )
                         GetButtonText(sItemIndex, sFallbackText);
                         if (sFallbackText.IsEmpty() &&
                             XPR_IS_NOT_NULL(m_pMenu) &&
-                            sItemIndex - 1 < m_pMenu->GetMenuItemCount())
+                            sItemIndex - 1 < static_cast<xpr_sint_t>(m_pMenu->GetMenuItemCount()))
                         {
                             m_pMenu->GetMenuString(
                                 sItemIndex - 1,
