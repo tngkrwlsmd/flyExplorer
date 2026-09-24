@@ -399,6 +399,12 @@ Status: **ACTIVE / user-reproduced runtime failures**. These items are the immed
    - Connector source cross-check after the change confirms the invalid token is absent from `ToolBarEx.cpp` and the supported query/guard are present. The user's Windows `Release-x64-Unicode | x64` build has not yet been rerun after this fix.
    - Acceptance: source invariant preflight must still pass and the user's local build must progress beyond this compile error. Until rerun evidence is provided, status remains `CODE FIXED / LOCAL CI NOT RETESTED`.
 
+16. **Dark top-level menu text remains black — ACTIVE / USER REPRODUCED 2026-09-24**
+   - User runtime screenshots on current `main` show the top-level menu labels (`파일/편집/이동/보기/도구/창/도움말`) still painted black on the Dark command surface, while the corresponding Light surface is readable.
+   - Work goal: remove the remaining native ToolbarWindow32 text-paint ownership from the Dark menu-bar WM_PAINT/print path so the app palette owns the final background, font, text color, hover/pressed state, and MDI system button pixels.
+   - Acceptance: in Dark mode every top-level menu label is visibly light on the dark chrome with no later native repaint restoring black text; Light and High Contrast retain their existing system/native behavior.
+   - This user-reproduced item remains ACTIVE until a rebuilt Windows screenshot confirms the Dark top-level menu text is readable.
+
 ### Development handoff rule
 
 - Every new user-requested development item is added to this section (or its successor) before implementation starts.
