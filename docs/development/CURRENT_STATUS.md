@@ -73,6 +73,20 @@ Windows x64 build, command-line launch, splitter dragging, layout
 persistence, light/dark/mixed-DPI and accessibility: **NOT TESTED**.
 UI-08 remains **PARTIAL / RUNTIME RETEST OPEN**.
 
+**UI-06 menu-height / client-background source checkpoint (2026-09-24):**
+BCMenu app-owned popups and their pre-existing submenus now use the
+documented `MENUINFO` max-height setting based on the popup monitor's
+work area so Windows can provide native overflow scrolling without
+dropping commands. In Dark/non-High-Contrast only, an elevated palette
+brush covers the native client background; original menu settings
+are restored and the transient brush is destroyed when tracking ends.
+High Contrast and shell-owned context menus are not recolored.
+**Native non-client outer menu frame color is still OS-owned** and
+must not be claimed fixed from the client background alone.
+Current-revision Windows compiler/runtime (small-monitor overflow,
+keyboard/submenu, Light/Dark/HC screenshots): NOT TESTED. UI-06 remains
+**PARTIAL / VISUAL RETEST OPEN**.
+
 ## Outstanding near-term work
 
 1. Address the reproduced settings-page visibility and Dark rendering issues

@@ -4175,6 +4175,30 @@ def validate_release_stage_recovery() -> list[str]:
     return errors
 
 
+def validate_app_popup_work_area_and_brush_lifetime() -> list[str]:
+    """UI-06: cap popup/submenu heights and restore transient Dark background."""
+    errors: list[str] = []
+    menu = (FXFILE_SRC / "gui" / "BCMenu.cpp").read_text(
+        encoding="utf-8", errors="replace"
+    )
+    for token in (
+        "class ScopedPopupMenuAppearance",
+        "::MonitorFromPoint(",
+        "MONITOR_DEFAULTTONEAREST",
+        "sMonitorInfo.rcWork.bottom - sMonitorInfo.rcWork.top",
+        "MIM_MAXHEIGHT | MIM_BACKGROUND",
+        "min(sBefore.cyMax, sWorkLimit)",
+        "::GetSubMenu(aMenu, i)",
+        "::SetMenuInfo(sIterator->mMenu, &sIterator->mBefore)",
+        "::DeleteObject(mBackground)",
+        "sPalette.mHighContrast",
+        "ScopedPopupMenuAppearance sAppearance(m_hMenu, sMetricHwnd, sAnchor)",
+    ):
+        if token not in menu:
+            errors.append(f"app-owned popup work-area/brush guard missing: {token}")
+    return errors
+
+
 def validate_split_pane_column_and_contents_layout() -> list[str]:
     """UI-08: command-line split columns and adaptive contents margins."""
     errors: list[str] = []
@@ -4401,6 +4425,7 @@ def main() -> int:
     errors.extend(validate_active_ci_scope_documentation())
     errors.extend(validate_actions_storage_budget_contract())
     errors.extend(validate_installer_smoke_wiring())
+    errors.extend(validate_app_popup_work_area_and_brush_lifetime())
     errors.extend(validate_split_pane_column_and_contents_layout())
     errors.extend(validate_shared_tree_new_profile_default())
     errors.extend(validate_tab_close_discoverability())

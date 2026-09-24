@@ -92,6 +92,21 @@ UI-08 완료로 판단하지 않는다.
   100/125/150/200% 배율 및 화면 판독기 증거는 아직 없다.
   UI-08은 **SOURCE IMPROVED / RUNTIME RETEST OPEN**이다.
 
+### UI-06 후속 소스 변경 — 화면 높이 내 메뉴 접근
+
+- app-owned `BCMenu::TrackPopupMenu`는 Win32 공식 `MENUINFO`의
+  최대 높이를 표시 위치의 모니터 작업 영역에 맞게 임시 지정한다.
+  기존 하위 메뉴에도 적용하고, 메뉴를 닫으면 종전 설정으로
+  복원한다. 메뉴 항목을 제거하지 않으며 초과 부분의 표시/스크롤은
+  Windows 기본 팝업 메뉴에 위임한다.
+- Dark·비고대비 상태에서는 메뉴 내부 배경 브러시를 기존 팔레트
+  색상으로 임시 지정한다. 브러시 수명은 팝업 추적 구간에 묶고,
+  고대비·외부 셸 메뉴는 변경하지 않는다.
+- 외곽선은 Win32 기본 비클라이언트 렌더러 소유이므로 배경 수정
+  자체를 밝은 테두리 문제의 완전한 해결로 기록하지 않는다.
+  Windows 실제 화면·작은 모니터·하위 메뉴·키보드·고대비
+  검증이 남아 있다. UI-06은 **SOURCE PARTIAL / RETEST OPEN**.
+
 ### UI-01의 진단 근거와 회귀 조건
 
 **Observed source:** `ThemeRefreshSnapshot`은 hidden child를 포함한 HWND를 모으고, visibility 보존 없이 모두에게 `WM_SETREDRAW(FALSE)` 후 `WM_SETREDRAW(TRUE)`를 보낸다. `showCfg()`는 `mShowCfg`가 가리키는 기존 페이지만 숨긴다.

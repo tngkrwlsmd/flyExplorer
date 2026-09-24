@@ -32,6 +32,7 @@
 #include "ModernUI.h"
 #include "FluentCommandIcons.h"        // BCMenu class declaration
 #include <afxpriv.h>       //SK: makes A2W and other spiffy AFX macros work
+#include <vector>          // scoped restore of per-menu Win32 appearance
 
 #include "gdi.h"
 #include "../option.h"
@@ -150,6 +151,119 @@ xpr_bool_t HasSegoeFluentIcons(HDC aDC)
         0);
     return sFound != FALSE ? XPR_TRUE : XPR_FALSE;
 }
+
+// MENUINFO is a documented API: cap each app-owned popup/submenu to the
+// monitor work area so Windows supplies native menu scrolling on small
+// displays. In Dark mode the client background uses the same palette as
+// the owner-drawn rows. Do not subclass a system/shell menu HWND or assume
+// ownership of Windows' non-client popup border.
+class ScopedPopupMenuAppearance
+{
+public:
+    ScopedPopupMenuAppearance(
+        HMENU aMenu, HWND aMetricHwnd, const POINT &aAnchor)
+        : mBackground(XPR_NULL)
+        , mMaxHeight(0)
+    {
+        MONITORINFO sMonitorInfo = {0};
+        sMonitorInfo.cbSize = sizeof(sMonitorInfo);
+        HMONITOR sMonitor = ::MonitorFromPoint(
+            aAnchor, MONITOR_DEFAULTTONEAREST);
+        if (XPR_IS_NOT_NULL(sMonitor) &&
+            ::GetMonitorInfo(sMonitor, &sMonitorInfo) != FALSE)
+        {
+            const xpr_sint_t sWorkHeight =
+                sMonitorInfo.rcWork.bottom - sMonitorInfo.rcWork.top;
+            const xpr_sint_t sEdgeMargin =
+                fxfile::ui::ModernUI::scaleForWindow(12, aMetricHwnd);
+            mMaxHeight = max(1, sWorkHeight - (sEdgeMargin * 2));
+        }
+
+        const fxfile::ui::ThemePalette sPalette =
+            fxfile::ui::ModernUI::getPalette();
+        if (XPR_IS_TRUE(sPalette.mDark) &&
+            XPR_IS_FALSE(sPalette.mHighContrast))
+        {
+            mBackground = ::CreateSolidBrush(sPalette.mElevated);
+        }
+
+        applyToExistingMenuTree(aMenu);
+    }
+
+    ~ScopedPopupMenuAppearance()
+    {
+        // Restore every preexisting submenu before releasing the brush.
+        // A popup can be tracked again with a different System/Light/Dark
+        // palette without retaining a dead GDI handle.
+        for (std::vector<MenuState>::reverse_iterator sIterator =
+                 mPrevious.rbegin();
+             sIterator != mPrevious.rend(); ++sIterator)
+        {
+            if (::IsMenu(sIterator->mMenu) != FALSE)
+                ::SetMenuInfo(sIterator->mMenu, &sIterator->mBefore);
+        }
+
+        if (XPR_IS_NOT_NULL(mBackground))
+            ::DeleteObject(mBackground);
+    }
+
+private:
+    struct MenuState
+    {
+        HMENU mMenu;
+        MENUINFO mBefore;
+    };
+
+    void applyToExistingMenuTree(HMENU aMenu)
+    {
+        if (::IsMenu(aMenu) == FALSE)
+            return;
+
+        MENUINFO sBefore = {0};
+        sBefore.cbSize = sizeof(sBefore);
+        sBefore.fMask = MIM_MAXHEIGHT | MIM_BACKGROUND;
+        if (::GetMenuInfo(aMenu, &sBefore) == FALSE)
+            return;
+
+        MENUINFO sDesired = sBefore;
+        sDesired.fMask = 0;
+        if (mMaxHeight > 0)
+        {
+            sDesired.fMask |= MIM_MAXHEIGHT;
+            const UINT sWorkLimit = static_cast<UINT>(mMaxHeight);
+            sDesired.cyMax =
+                sBefore.cyMax != 0 ?
+                min(sBefore.cyMax, sWorkLimit) : sWorkLimit;
+        }
+        if (XPR_IS_NOT_NULL(mBackground))
+        {
+            sDesired.fMask |= MIM_BACKGROUND;
+            sDesired.hbrBack = mBackground;
+        }
+
+        if (sDesired.fMask != 0 &&
+            ::SetMenuInfo(aMenu, &sDesired) != FALSE)
+        {
+            MenuState sState = {0};
+            sState.mMenu = aMenu;
+            sState.mBefore = sBefore;
+            mPrevious.push_back(sState);
+        }
+
+        const int sItems = ::GetMenuItemCount(aMenu);
+        for (int i = 0; i < sItems; ++i)
+        {
+            HMENU sSubmenu = ::GetSubMenu(aMenu, i);
+            if (XPR_IS_NOT_NULL(sSubmenu))
+                applyToExistingMenuTree(sSubmenu);
+        }
+    }
+
+private:
+    std::vector<MenuState> mPrevious;
+    HBRUSH mBackground;
+    xpr_sint_t mMaxHeight;
+};
 } // namespace
 
 IMPLEMENT_DYNCREATE(BCMenu, CMenu)
@@ -3157,8 +3271,16 @@ BOOL BCMenu::TrackPopupMenu(UINT nFlags, CPoint pt, CWnd* pWnd, LPCRECT lpRect /
 
 BOOL BCMenu::TrackPopupMenu(UINT nFlags, int x, int y, CWnd* pWnd, LPCRECT lpRect /*= 0*/)
 {
-	if (mAnimationMenu == FALSE)
-		nFlags |= 0x4000L;
+    if (mAnimationMenu == FALSE)
+        nFlags |= 0x4000L;
 
-	return CMenu::TrackPopupMenu(nFlags, x, y, pWnd, lpRect);
+    CWnd *sMainWnd = AfxGetMainWnd();
+    HWND sMetricHwnd =
+        XPR_IS_NOT_NULL(pWnd) && ::IsWindow(pWnd->GetSafeHwnd()) != FALSE ?
+        pWnd->GetSafeHwnd() :
+        (XPR_IS_NOT_NULL(sMainWnd) ?
+            sMainWnd->GetSafeHwnd() : ::GetDesktopWindow());
+    const POINT sAnchor = {x, y};
+    ScopedPopupMenuAppearance sAppearance(m_hMenu, sMetricHwnd, sAnchor);
+    return CMenu::TrackPopupMenu(nFlags, x, y, pWnd, lpRect);
 }

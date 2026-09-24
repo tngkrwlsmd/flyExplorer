@@ -2859,3 +2859,31 @@ Complete Python preflight, Release-x64-Unicode compilation, native
 regression suite, command-line split, small-pane geometry, High
 Contrast/DPI and Windows visual acceptance: NOT TESTED.
 UI-08 remains partial. Hosted Actions: NOT RUN under per-run restriction.
+
+
+---
+
+## 2026-09-24 — UI-06 tall app-menu / Dark popup source work
+
+**Observed:** The documented Windows UI audit recorded app-owned
+Window/Tab menus taller than the main client, with a bright Dark
+popup outline. The earlier BCMenu::TrackPopupMenu did not bound
+menu height or explicitly set the native menu-client background.
+
+**Source change:** Add scoped documented MENUINFO configuration for
+each existing app-owned popup and submenu, limiting maximum height
+to its monitor work area so the OS supplies overflow scrolling.
+Dark/non-High-Contrast client background uses a temporary
+ThemePalette elevated-color brush. Prior per-menu background/height
+values are restored before the brush is destroyed; High Contrast
+and shell-owned menus retain system behavior. The native outer popup
+border is not changed and cannot be declared repaired on this evidence.
+
+**Prevention:** A source guard checks monitor work area, the MIM flags,
+submenu traversal, state restoration, brush lifetime and HC bypass.
+
+**Evidence:** Reviewed supported Windows MENUINFO behavior and
+repository source wiring. Full Python validator, x64 compiler,
+actual work-area overflow/scroll, keyboard access, Light/Dark/HC
+and outer-border screenshots: NOT TESTED. UI-06 partial and OPEN.
+GitHub Actions: NOT RUN under the individual approval rule.

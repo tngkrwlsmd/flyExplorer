@@ -772,6 +772,17 @@ No revision-matched Windows compilation, split interaction, RTL,
 High Contrast, visual/DPI or configuration persistence test was run;
 UI-08 runtime/visual closure remains OPEN. Hosted Actions: NOT RUN.
 
+**UI-06 app-owned popup source checkpoint (2026-09-24):**
+ScopedPopupMenuAppearance limits BCMenu root/existing submenus via
+documented MIM_MAXHEIGHT to the active monitor work area; Dark-only
+MIM_BACKGROUND uses existing elevated palette. Prior MENUINFO values
+are restored before the temporary HBRUSH is destroyed. Native Win32
+overflow keeps every item; no shell-menu subclassing/private API was
+introduced. The native non-client border remains OS-owned and is not
+claimed fixed. Guard added. Windows x64 compile, native menu scrolling,
+keyboard, varying menu heights, Light/Dark/HC screenshots: NOT TESTED.
+Hosted Actions: NOT RUN. UI-06 remains partially OPEN.
+
 ### Development handoff rule
 
 - Every new user-requested development item is added to this section (or its successor) before implementation starts.
