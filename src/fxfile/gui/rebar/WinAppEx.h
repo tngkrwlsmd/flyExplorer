@@ -48,6 +48,7 @@ public:
         osWin2K,
         osWinXP,
         osUnknown,
+        osWinModern, // Supported Windows 10/11; distinct from XP-only painting.
     };
 
 // Construction
@@ -70,6 +71,7 @@ public:
     bool IsWinNT() const;
     bool IsWin2K() const;
     bool IsWinXP() const;
+    bool IsWinXPOrLater() const;
 
     bool GetMenuAnimation() const;
     bool GetMenuUnderlines() const;
@@ -119,13 +121,15 @@ inline WinAppEx* WinAppEx::GetInstance()
 inline WinAppEx::EOs WinAppEx::GetOs() const
     { return m_eOs; }
 inline bool WinAppEx::IsWin50() const
-    { return ( m_eOs == osWin98 || m_eOs == osWin2K || m_eOs == osWinXP ); }
+    { return ( m_eOs == osWin98 || m_eOs == osWin2K || m_eOs == osWinXP || m_eOs == osWinModern ); }
 inline bool WinAppEx::IsWinNT() const
-    { return ( m_eOs == osWinNT || m_eOs == osWin2K || m_eOs == osWinXP ); }
+    { return ( m_eOs == osWinNT || m_eOs == osWin2K || m_eOs == osWinXP || m_eOs == osWinModern ); }
 inline bool WinAppEx::IsWin2K() const
-    { return ( m_eOs == osWin2K || m_eOs == osWinXP ); }
+    { return ( m_eOs == osWin2K || m_eOs == osWinXP || m_eOs == osWinModern ); }
 inline bool WinAppEx::IsWinXP() const
     { return ( m_eOs == osWinXP ); }
+inline bool WinAppEx::IsWinXPOrLater() const
+    { return ( m_eOs == osWinXP || m_eOs == osWinModern ); }
 inline const NONCLIENTMETRICS& WinAppEx::GetNonClientMetrics() const
     { return m_info; }
 

@@ -2021,3 +2021,33 @@
 - 현재 연결된 GitHub connector에는 artifact DELETE 및 repository retention WRITE operation이 노출되지 않아 이미 저장된 historical package의 실제 삭제는 수행하지 못했다.
 - `build/actions_storage_cleanup.py`를 사용자 GitHub credential로 실행한 뒤 GitHub Billing/Usage가 감소했는지 확인해야 한다.
 - account-level storage가 여전히 높으면 flyExplorer 외 repository가 원인인지 추가 조사한다.
+
+---
+
+## 2026-09-24 — Supported Windows was classified as XP, bypassing all modern command painters
+
+**재현 / acceptance case**
+- Windows 11에서 Dark 모드로 실행 → top menu, main command, drive 및 bookmark toolbar 이름이 검게 표시됨 → 각 이름이 Dark palette의 밝은 foreground로 읽혀야 한다. Light와 High Contrast의 기존 분기는 보존한다.
+- 사용자 screenshot과 수정 전 `bin/x64/fxfile.exe`의 직접 실행 화면에서 동일 실패를 확인했다.
+
+**최초 실제 오류 / 원인**
+- `WinAppEx` 생성자가 지원 OS인 Windows 10/11을 `m_eOs = osWinXP`로 고정했다. `IsWinXP()`가 항상 true여서 `ApplyDarkToolBarCustomDraw`, menu paint/print/overlay 및 toolbar theme association의 modern 분기가 모두 실행되지 않았다.
+- 기존 painter의 palette/notification/postpaint 코드가 존재해도 진입 조건에서 배제됐다. 같은 판정에 의존하는 rebar/splitter border와 popup 경로도 함께 확인했다.
+- 이 고정값은 `5ac5cfe`의 legacy OS probing 제거에서 도입됐다. 실제 screenshot을 stale binary 또는 별도 renderer overwrite로 단정하지 않는다.
+
+**해결 / 재발 방지**
+- `osWinModern`을 추가해 지원 Windows와 XP-only presentation을 분리했다. `IsWin50`, `IsWinNT`, `IsWin2K`의 modern API capability는 true로 유지한다.
+- flat-menu system parameter 조회/검증은 `IsWinXPOrLater()`로 분리해 초기화와 기존 menu capability를 유지한다. OS version API나 새 dependency는 추가하지 않는다.
+- source preflight에 modern OS의 XP 오분류 금지, capability 유지 및 flat-menu 초기화 조건 검사를 추가했다. 수정 전 source에서 FAIL, 수정 후 PASS를 확인했다.
+
+**검증 상태**
+- 수정 전 Windows 11 Dark 시각 재현: FAIL (검은 menu/toolbar label 직접 관찰).
+- Source invariant/regression preflight 및 policy bundle validation: PASS.
+- policy development readiness: documented PASS / source-evidence FAIL — 기존 PROJECT.md reviewed revision 이후 reviewed paths가 변경된 상태. 이번 product 오류와 별개다.
+- `local_ci.bat x64`: PASS WITH SKIPS — Release-x64-Unicode | x64 compile/link PASS, functional regression 17 passed / 0 failed. 기존 HKCU profile/startup 값 보호로 runtime smoke는 SKIPPED / NOT TESTED.
+- 검증 환경 복구: 첫 sandbox 실행은 batch Python discovery 실패, 다음 실행은 실행 중인 검증용 앱의 output lock으로 compile 전에 중단됐다. Python 경로를 지정하고 사용자에게 창 종료를 받은 뒤 동일 profile을 재실행해 위 결과를 얻었다. 빌드는 `40ac0f2` + 이번 working-tree source 변경 기준이다.
+- 수정 후 runtime/visual: NOT TESTED — 사용자가 Escape로 Computer Use를 중단하여 추가 UI 조작을 중지했다. 새 x64 binary에서 위 acceptance case와 Light/Dark 전환, menu/toolbar hover 및 High Contrast를 확인해야 한다.
+- GitHub Actions: NOT RUN (실행별 명시적 지시 없음).
+
+**관련 commit**
+- 이 항목과 함께 반영하는 `fix: Windows 10/11의 XP 오분류로 누락된 다크 렌더링 복구` commit.

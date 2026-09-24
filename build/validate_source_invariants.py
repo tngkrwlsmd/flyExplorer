@@ -403,6 +403,28 @@ def validate_custom_dialog_paint_regressions() -> list[str]:
     return errors
 
 
+def validate_supported_os_rendering_route() -> list[str]:
+    """Modern Windows must reach the modern painters, with legacy API capabilities intact."""
+
+    errors: list[str] = []
+    source = strip_comments((FXFILE_SRC / "gui/rebar/WinAppEx.cpp").read_text(encoding="utf-8"))
+    header = strip_comments((FXFILE_SRC / "gui/rebar/WinAppEx.h").read_text(encoding="utf-8"))
+    if re.search(r"m_eOs\s*=\s*osWinXP\s*;", source):
+        errors.append("WinAppEx: supported Windows must not be classified as XP; this bypasses dark painters")
+    if not re.search(r"m_eOs\s*=\s*osWinModern\s*;", source):
+        errors.append("WinAppEx: supported Windows 10/11 classification is missing")
+    for name in ("IsWin50", "IsWinNT", "IsWin2K", "IsWinXPOrLater"):
+        match = re.search(rf"inline bool WinAppEx::{name}\(\) const\s*\{{([^}}]+)\}}", header)
+        if not match or "osWinModern" not in match.group(1):
+            errors.append(f"WinAppEx: {name} must preserve modern Windows API capabilities")
+    exact_xp = re.search(r"inline bool WinAppEx::IsWinXP\(\) const\s*\{([^}]+)\}", header)
+    if not exact_xp or "osWinModern" in exact_xp.group(1):
+        errors.append("WinAppEx: XP-only presentation must not include modern Windows")
+    if "if ( IsWinXP() )" in source or "ASSERT( IsWinXP() )" in source:
+        errors.append("WinAppEx: flat-menu system parameters require the XP-or-later capability predicate")
+    return errors
+
+
 def validate_toolbar_custom_draw_regression() -> list[str]:
     """Prevent recurrence of the ToolbarWindow32 color-message compile failure."""
 
@@ -4133,6 +4155,7 @@ def main() -> int:
     errors.extend(validate_common_control_theme_integration())
     errors.extend(validate_modern_dialog_migration())
     errors.extend(validate_custom_dialog_paint_regressions())
+    errors.extend(validate_supported_os_rendering_route())
     errors.extend(validate_toolbar_custom_draw_regression())
     errors.extend(validate_command_surface_contract())
     errors.extend(validate_configuration_shell_contract())

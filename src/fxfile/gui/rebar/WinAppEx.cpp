@@ -53,9 +53,9 @@ IMPLEMENT_DYNAMIC(WinAppEx, CWinApp )
 
 WinAppEx::WinAppEx( LPCTSTR lpszAppName /*=0*/ ) : CWinApp( lpszAppName )
 {
-    // The supported Windows 10/11 range uses the newest behavior represented
-    // by this legacy compatibility enum.
-    m_eOs = osWinXP;
+    // XP-only presentation gates must be false on supported Windows 10/11.
+    // API availability is separate: IsWin50/IsWin2K/IsWinXPOrLater remain true.
+    m_eOs = osWinModern;
 
     m_bBitmappedMenus = IsWin50();
 
@@ -111,7 +111,7 @@ void WinAppEx::UpdateSystemParameters()
             VERIFY( ::SystemParametersInfo( SPI_GETUIEFFECTS, 0, &m_bUIEffects, 0 ) );
             VERIFY( ::SystemParametersInfo( SPI_GETMENUFADE, 0, &m_bMenuFade, 0 ) );
 
-            if ( IsWinXP() )
+            if ( IsWinXPOrLater() )
             {
                 VERIFY( ::SystemParametersInfo( SPI_GETFLATMENU, 0, &m_bFlatMenu, 0 ) );
             }
@@ -139,7 +139,7 @@ bool WinAppEx::GetMenuFade() const
 
 bool WinAppEx::GetFlatMenu() const
 {
-    ASSERT( IsWinXP() );
+    ASSERT( IsWinXPOrLater() );
     return ( m_bUIEffects && m_bFlatMenu );
 }
 
