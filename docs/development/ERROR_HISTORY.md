@@ -3225,3 +3225,41 @@ inspect its revision marker, and only then compare current
 Light/Dark filtering and bookmark screenshots. CI, build and
 UI-09/UI-10 runtime acceptance remain OPEN; GitHub Actions
 not run because no separate per-run permission exists.
+
+
+---
+
+## 2026-09-24 — Follow-up local x64 compiler C2065 after preflight repair
+
+**New evidence:** User uploaded `local-ci(20260924-132251).log`
+from `1a555babc7f6c50dade669ee5ec3a55cdaa74532`.
+Source-invariant/regression preflight reported PASS and the
+VS 2026/v145 x64 solution was generated, then the native
+Release x64 MSBuild FAILED at lines 117 and 118 of
+`cfg_appearance_filtering_dlg.cpp` with undeclared `sPalette`.
+This is a genuine compiler failure, distinct from the previous
+stale source-guard failure.
+
+**Source cause:** The earlier UI-10 change removed the local
+palette initialization from OnInitDialog together with outdated
+list background assignments, but left a Dark/non-High-Contrast
+border-style conditional that still referenced `sPalette`.
+The separate `refreshFilteringListColors` function's local
+palette cannot satisfy OnInitDialog's C++ scope.
+
+**Minimal correction:** Restore a local
+`const ui::ThemePalette sPalette = ui::ModernUI::getPalette();`
+immediately before the existing OnInitDialog border branch.
+Retain shared native list color refresh, header, and Light/Dark
+contrast-aware rendering as implemented; no settings migration.
+
+**Regression guard:** The dedicated UI-10 validator now checks
+the OnInitDialog function boundary and ensures the local palette
+declaration precedes its Dark-border use, forbidding an equivalent
+C2065 regression even if a palette declaration exists elsewhere.
+
+**Evidence status:** User's previous Windows preflight PASS and
+compiler C2065 FAIL are directly observed. Source correction and
+guard checks are static only; NO new local x64 compile, native
+tests, Light/Dark/HC screenshots or Actions run. Request a
+new `local_ci.bat x64` log at the next revision before closure.

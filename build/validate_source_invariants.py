@@ -4464,6 +4464,29 @@ def validate_filter_list_theme_contrast_regression() -> list[str]:
     ):
         if token not in source:
             errors.append(f"filter list contrast/retime guard missing: {token}")
+    # This guard must inspect the OnInitDialog scope, not merely find a
+    # palette declaration elsewhere in the file. The previous UI-10 edit
+    # removed the old initialization block yet left sPalette in its dark
+    # border condition, producing C2065 at the actual Windows compiler.
+    init_start = source.find("xpr_bool_t CfgAppearanceFilteringDlg::OnInitDialog(")
+    init_end = source.find(
+        "void CfgAppearanceFilteringDlg::refreshFilteringListColors(", init_start
+    )
+    init = (
+        source[init_start:init_end]
+        if init_start >= 0 and init_end > init_start
+        else ""
+    )
+    palette_decl = init.find(
+        "const ui::ThemePalette sPalette = ui::ModernUI::getPalette();"
+    )
+    border_condition = init.find("if (XPR_IS_TRUE(sPalette.mDark)")
+    if palette_decl < 0 or border_condition <= palette_decl:
+        errors.append(
+            "filter dialog OnInitDialog must declare the local palette "
+            "before the dark-border condition (C2065 regression)"
+        )
+
     for token in (
         "void refreshFilteringListColors(void);",
         "void OnSettingChange(",

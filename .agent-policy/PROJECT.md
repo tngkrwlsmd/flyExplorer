@@ -934,6 +934,23 @@ Current-revision Windows `local_ci.bat x64`, x64 compilation,
 native tests and same-user Light/Dark screen acceptance remain
 NOT TESTED until a new run. Hosted Actions NOT RUN.
 
+**Windows compiler regression follow-up (2026-09-24, log
+`local-ci(20260924-132251).log` at `1a555ba`):** The repaired
+preflight now PASSED and the Visual Studio 2026 solution generated,
+but native Release-x64-Unicode compilation STOPPED with C2065
+at filtering settings source lines 117/118: `sPalette` was
+undeclared in `CfgAppearanceFilteringDlg::OnInitDialog`.
+The UI-10 edit removed the old palette initializer with the
+obsolete native list-color block while leaving the independent
+Dark border branch. Restore a local `getPalette` declaration
+immediately before the border branch; keep color application
+in `refreshFilteringListColors` and preserve contrast-aware
+custom draw. Strengthen the UI-10 regression guard to inspect
+that local scope/declaration order; a palette defined in another
+method does not fix C2065. Source repair reviewed, but a fresh
+revision-matched x64 compiler run and the original screenshot
+acceptance remain NOT TESTED. Hosted Actions NOT RUN.
+
 ### Development handoff rule
 
 - Every new user-requested development item is added to this section (or its successor) before implementation starts.

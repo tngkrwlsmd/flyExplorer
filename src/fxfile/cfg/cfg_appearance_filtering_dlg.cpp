@@ -114,6 +114,9 @@ xpr_bool_t CfgAppearanceFilteringDlg::OnInitDialog(void)
 
     mListCtrl.SetImageList(&SingletonManager::get<ImgListManager>().mCustomImgList16, LVSIL_SMALL);
 
+    // The initial dark-border decision needs its own local palette. Native
+    // list text/background colors are handled by refreshFilteringListColors.
+    const ui::ThemePalette sPalette = ui::ModernUI::getPalette();
     if (XPR_IS_TRUE(sPalette.mDark) &&
         XPR_IS_FALSE(sPalette.mHighContrast))
     {

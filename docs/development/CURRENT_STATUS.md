@@ -243,6 +243,22 @@ validate the eebc68d executable without a successful new build.
 The fix is source-reviewed only; rerun `local_ci.bat x64` on
 the new revision before claiming build success or closing UI-09/10.
 
+**2026-09-24 x64 compiler follow-up on `1a555ba`:**
+The user's uploaded `local-ci(20260924-132251).log` confirms the
+full source-invariant preflight **PASS**, solution generation **PASS**,
+then MSBuild **FAIL** at `cfg_appearance_filtering_dlg.cpp:117,118`
+with C2065 undeclared `sPalette`. The previous UI-10 edit moved
+native list color setup into `refreshFilteringListColors` but
+accidentally removed the *other* local `sPalette` declaration that
+`OnInitDialog` still needs to choose Dark border style. Restore that
+single local `ui::ModernUI::getPalette()` declaration immediately
+before the border conditional without duplicating native list
+background logic. The new targeted regression guard checks declaration
+order inside `OnInitDialog`, not anywhere in the source file.
+This checkpoint is SOURCE-CORRECTED only; a revision-matched x64
+build, native tests and user-screen Light/Dark/HC acceptance
+remain **NOT YET RETESTED**. UI-09/UI-10 are still runtime OPEN.
+
 ## Outstanding near-term work
 
 1. Address the reproduced settings-page visibility and Dark rendering issues
