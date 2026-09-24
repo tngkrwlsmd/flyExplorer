@@ -51,8 +51,8 @@ application-icon frame contract. It also rejects the unsupported ToolbarWindow32
 `TB_SETBKCOLOR`/`TB_SETTEXTCOLOR` identifiers and verifies that toolbar
 dark-state colors remain routed through `NM_CUSTOMDRAW`/`NMTBCUSTOMDRAW`. The
 same preflight also protects native-test wiring for rename transforms,
-fnmatch/FilePath, ConfFile persistence, updater version/metadata/command
-contracts, and the isolated installer smoke path. It is a static check and does
+fnmatch/FilePath and ConfFile persistence, rejects reintroduced updater
+wiring, and guards the isolated installer smoke path. It is a static check and does
 not replace a Visual Studio compile/link build.
 
 Policy/readiness checks can be run with:
@@ -86,8 +86,8 @@ The Actions workflows are intentionally slim:
   v145/MFC contract, compiles and links the product, rejects compiler/linker/
   MSBuild warnings, verifies the core artifacts, runs the isolated native
   product functional regression (filesystem operations, rename,
-  pattern/path, config persistence, updater contracts, hash and shell-command
-  checks), and then runs the x64 launch smoke.
+  pattern/path, config persistence, hash and shell-command checks),
+  and then runs the x64 launch smoke.
 - The x86-compatibility workflow input is retained for future/manual use, but
   the current project CI scope does **not** permit enabling it unless the user
   explicitly expands the validation scope.
@@ -180,8 +180,8 @@ out of scope and verify at least:
    dropdown, and confirm basic autocomplete behavior.
 5. Tabs: create, switch, and close a tab.
 6. Window behavior: minimize, restore, resize, and maximize.
-7. Helpers: note launcher/keyhook/updater behavior without installing updates or
-   modifying shell integration.
+7. Helpers: verify launcher/keyhook behavior without modifying shell
+   integration; the retired updater is not part of the product.
 
 Record Windows Sandbox/clean-VM, interactive functional, and visual results
 separately from the hosted-runner launch smoke.
@@ -358,13 +358,11 @@ It now exposes the same x86/x64 solution configuration names as the real build
 projects so Visual Studio can load Release-x64-Unicode and Debug-x64-Unicode
 without configuration-mismatch errors.
 
-The main application, xpr, and crash module have native x64 configurations.
-The legacy updater, launcher, and keyboard-hook helper are intentionally Win32
-projects. When an x64 solution is generated, build\fix_solution_configs.py
-maps the launcher and keyboard hook to Win32. The updater is kept loadable but
-is not built as part of an x64 solution build because it depends on the x86
-multibyte xpr library. Build Release-x86-Multibyte when you need the updater
-for packaging. The root aggregate project is also excluded from Build Solution
+The main application, xpr and crash module have native x64 configurations.
+The launcher and keyboard-hook helper remain Win32; the post-generation
+fixer maps them to Win32 in the x64 solution. The automatic updater/checker,
+its network dependency and its settings have been removed. The root
+aggregate project remains excluded from Build Solution
 because all real projects are already listed individually.
 
 If you previously generated fxfile.sln with Visual Studio 2015/v140 or with an
@@ -388,8 +386,6 @@ For the recommended 64-bit release build, select:
 
 Then run "Build Solution" in Visual Studio. The x64 build produces the main
 application, x64 xpr/crash modules, and the Win32 launcher/keyhook helpers.
-The updater is intentionally deferred; build Release-x86-Multibyte separately
-when preparing a full distribution.
 
 The main executable is generated under:
 
@@ -414,10 +410,11 @@ After a successful Release-x64-Unicode build, run:
 Distribution
 ------------
 The `dist` directory contains the release staging, portable-package, and NSIS
-installer scripts. A full package requires all three verified release builds:
-`Release-x64-Unicode | x64`, `Release-x86-Unicode | Win32`, and
-`Release-x86-Multibyte | Win32`; the multibyte build provides the Win32 update
-checker that is staged under each platform's `upchecker` directory.
+installer scripts. The existing three-architecture package requires all
+three verified release builds: `Release-x64-Unicode | x64`,
+`Release-x86-Unicode | Win32` and `Release-x86-Multibyte | Win32`.
+No updater is built or packaged. The x86 configurations are optional
+compatibility profiles outside the normal local x64 CI run.
 
 After those builds are available under `bin`, run from the repository root:
 
@@ -439,9 +436,11 @@ reusing a stale binary. `dist\make_portable.bat` now independently
 regenerates the same help for direct portable builds and stages
 `fxfile.chm`, file-list custom icon bitmaps, application license,
 current `CREDITS` as third-party notices, readme and historical change
-log next to each portable `fxfile.exe`. The current combined
-`dist\package.bat` build compiles help for both portable and installer
-paths independently (a deliberate safety-first duplication).
+log next to each portable `fxfile.exe`. The combined `dist\package.bat` assembles the installer before staging
+portable-only extras and compiles help separately for both entrypoints.
+Required release files are preflighted before the staging tree is replaced;
+any packaging failure deletes newly produced output names so that partial
+or stale installer/ZIP outputs cannot be mistaken for valid packages.
 `build\validate_package.ps1` checks all three archives and staged
 assets, including CHM signatures; any failed/missing item rejects the
 package. Generated `dist\fxfile.chm` is not tracked. It creates:
@@ -452,8 +451,8 @@ package. Generated `dist\fxfile.chm` is not tracked. It creates:
     dist\fxfile_v2.0.4-dev_x86_multibyte_portable.zip
 
 `build\validate_package.ps1` validates the staged runtime trees and portable
-ZIP payloads, verifies the expected main executable and x86 upchecker PE
-architecture, rejects wrong XPR runtimes, stale updater names, nested staging,
+ZIP payloads, verifies each main executable's PE architecture,
+rejects wrong XPR runtimes, any reintroduced updater payload, nested staging,
 unsafe/archive-traversal paths, duplicate or case-colliding entries and
 development artifacts such as PDB/OBJ/LIB/project files, and checks that the
 NSIS installer was actually produced. Packaging is no longer
@@ -481,7 +480,8 @@ contains `build\installer_smoke.ps1` plus an NSIS
 `/FXFILE_SMOKE=<temp-dir>` mode. The default smoke only inspects that safety
 contract. With `FXFILE_INSTALLER_SMOKE=1` in an elevated local shell,
 `local_ci.bat install`/release/full may install only into a temporary directory,
-verify the installed payload and main/upchecker architecture, run the protected
+verify the installed payload and main executable architecture, reject
+the retired updater directory, run the protected
 runtime smoke, confirm Registry/shell/startup plus Desktop/Start-Menu/Quick
 Launch and temporary profile sentinels did not change, preserve pre-existing
 fxfile processes and sibling files, silently uninstall, and verify cleanup. That isolated smoke deliberately skips real product Registry,
@@ -505,8 +505,12 @@ can be publicly redistributed; generating a local package is not proof of
 permission. The installer license notice reflects the application license,
 and installs a current copy of `CREDITS` as third-party notices. See
 `docs/development/DISTRIBUTION_LICENSE_REVIEW.md` for unresolved release
-requirements. Neither this repository cleanup nor prior build evidence
-establishes external distribution clearance.
+requirements. This repository is presently maintained for the owner's personal local
+use. Root `LICENSE` and `CREDITS` are preserved without assuming any
+additional permissions; if distribution becomes relevant, obtain the
+separate license review before publishing combined binaries.
+Neither local compilation nor the feature cleanup establishes external
+distribution clearance.
 
 Contact
 -------

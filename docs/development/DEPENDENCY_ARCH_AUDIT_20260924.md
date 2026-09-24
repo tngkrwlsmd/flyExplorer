@@ -13,7 +13,7 @@ longer an outstanding task.
 | `lib/libxslt/` | REMOVED (52 tracked files) | `libxml2` remains active and separate; external consumers not ruled out. |
 | `lib/zlib/bin/` | REMOVED (16 files, identical tracked blobs to corresponding `lib/zlib/lib/` files) | Vendored zlib source/include and XML `zlib1.dll` remain active. |
 | Vendored NSIS developer examples/help/GUI extras | REMOVED (113 tracked files) | `dist/nsis/makensis.exe` and compiler runtime dependencies remain. Windows installer compile NOT TESTED. |
-| GFL SDK, libxml2, iconv, curl, MinGW runtime | RETAINED | Exact runtime ABI, provenance and bundled redistribution rights remain open; see `DISTRIBUTION_LICENSE_REVIEW.md`. |
+| GFL SDK, libxml2, iconv, MinGW runtime | RETAINED (GFL SDK still used for image preview/viewing) | Exact runtime ABI, provenance and bundled redistribution rights remain open; see `DISTRIBUTION_LICENSE_REVIEW.md`. |
 | Visual Leak Detector (VLD) | RETAINED | Debug/development dependency; release staging minimization still requires package checks. |
 | Legacy four-file root HTML frameset preview | REMOVED (separate help-docs cleanup) | All 79 remaining HTML/CSS/index project files were inspected for relative `href/src` references to it; none found. This does not prove external bookmarks or historical local use. Canonical `Html/start.htm`, HHP/HHC/HHK and product CHM command remain unchanged. |
 
@@ -23,6 +23,21 @@ four-file obsolete HTML frameset cleanup is separate. No third-party library
 was upgraded or active x86 helper re-architected. **No new Windows build,
 package, ABI or installer verification is claimed for these cleanups.**
 
+
+## Retired updater and build-project follow-up (2026-09-24)
+
+The owner requested complete removal of automatic updates for personal local use.
+The Win32 checker project, application startup/About/settings integration,
+updater-specific base utilities and regression tests were retired together with
+the now-unused vendored libcurl tree. No replacement network updater is included.
+The three legacy release architecture profiles remain available for compatibility,
+but no x86 updater helper is required. Runtime and release ABI migration were not
+performed. Legacy update-specific references in the dated analysis below are
+historical findings, **not** current implementation guidance.
+Five tracked generated `*.vcxproj.filters` files and two obsolete vendored zlib
+Visual Studio project files were also retired. GYP remains authoritative.
+Actual Windows compiler/package/installer verification of this removal is
+NOT TESTED in this work unit.
 
 ## Scope and evidence level
 

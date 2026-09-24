@@ -21,9 +21,6 @@
 
 #include <atlbase.h>
 
-#include "upchecker_def.h"
-#include "update_info_manager.h"
-#include "upchecker_manager.h"
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -36,19 +33,8 @@ namespace fxfile
 {
 namespace cmd
 {
-namespace
-{
-// user defined timer
-enum
-{
-    kTimerIdUpdateCheckFirst = 100,
-    kTimerIdUpdateCheck,
-};
-} // namespace anonymous
-
 AboutTabInfoDlg::AboutTabInfoDlg(void)
     : super(IDD_ABOUT_TAB_ABOUT)
-    , mUpdateInfoManager(XPR_NULL)
 {
 }
 
@@ -58,11 +44,8 @@ void AboutTabInfoDlg::DoDataExchange(CDataExchange* pDX)
 }
 
 BEGIN_MESSAGE_MAP(AboutTabInfoDlg, super)
-    ON_WM_DESTROY()
-    ON_WM_TIMER()
     ON_BN_CLICKED(IDC_ABOUT_REPORT,   OnReport)
     ON_BN_CLICKED(IDC_ABOUT_SYSTEM,   OnSystem)
-    ON_BN_CLICKED(IDC_ABOUT_DOWNLOAD, OnDownload)
 END_MESSAGE_MAP()
 
 xpr_bool_t AboutTabInfoDlg::OnInitDialog(void) 
@@ -93,117 +76,7 @@ xpr_bool_t AboutTabInfoDlg::OnInitDialog(void)
     SetDlgItemText(IDOK,                   gApp.loadString(XPR_STRING_LITERAL("popup.common.button.ok")));
     SetDlgItemText(IDC_ABOUT_SYSTEM,       gApp.loadString(XPR_STRING_LITERAL("popup.about.tab.info.button.system_info")));
     SetDlgItemText(IDC_ABOUT_REPORT,       gApp.loadString(XPR_STRING_LITERAL("popup.about.tab.info.button.report")));
-    SetDlgItemText(IDC_ABOUT_DOWNLOAD,     gApp.loadString(XPR_STRING_LITERAL("popup.about.tab.info.button.download")));
-    SetDlgItemText(IDC_ABOUT_CHECK_STATUS, gApp.loadString(XPR_STRING_LITERAL("popup.about.tab.info.label.check_status.checking")));
-
-    // disable download button
-    GetDlgItem(IDC_ABOUT_DOWNLOAD)->EnableWindow(XPR_FALSE);
-
-    if (XPR_IS_TRUE(gOpt->mConfig.mUpdateCheckEnable))
-    {
-        // start update check timer
-        SetTimer(kTimerIdUpdateCheckFirst, 0, XPR_NULL);
-    }
-    else
-    {
-        GetDlgItem(IDC_ABOUT_CHECK_STATUS)->ShowWindow(SW_HIDE);
-        GetDlgItem(IDC_ABOUT_DOWNLOAD    )->ShowWindow(SW_HIDE);
-    }
-
     return XPR_TRUE;
-}
-
-void AboutTabInfoDlg::OnDestroy(void) 
-{
-    // stop update check timer
-    KillTimer(kTimerIdUpdateCheckFirst);
-    KillTimer(kTimerIdUpdateCheck);
-
-    XPR_SAFE_DELETE(mUpdateInfoManager);
-
-    super::OnDestroy();
-}
-
-void AboutTabInfoDlg::OnTimer(UINT_PTR aIdEvent)
-{
-    if (aIdEvent == kTimerIdUpdateCheckFirst ||
-        aIdEvent == kTimerIdUpdateCheck)
-    {
-        if (aIdEvent == kTimerIdUpdateCheckFirst)
-        {
-            KillTimer(aIdEvent);
-            SetTimer(kTimerIdUpdateCheck, 300, XPR_NULL);
-        }
-
-        xpr_rcode_t sRcode;
-        xpr_tchar_t sStatus[0xff];
-        xpr_tchar_t sNewVer[0xff];
-        xpr_bool_t  sIsLastedVer = XPR_TRUE;
-        UpdateInfo  sUpdateInfo = {0};
-        xpr::string sUpdateHomeDir;
-
-        if (XPR_IS_NULL(mUpdateInfoManager))
-        {
-            if (UpdateInfoManager::getDefaultUpdateHomeDir(sUpdateHomeDir) == XPR_FALSE)
-            {
-                return;
-            }
-
-            mUpdateInfoManager = new UpdateInfoManager;
-            mUpdateInfoManager->setUpdateHomeDir(sUpdateHomeDir);
-
-            sRcode = mUpdateInfoManager->openUpdateInfo();
-            if (XPR_RCODE_IS_ERROR(sRcode))
-            {
-                XPR_SAFE_DELETE(mUpdateInfoManager);
-
-                UpcheckerManager::checkNow();
-                return;
-            }
-        }
-
-        if (XPR_IS_NOT_NULL(mUpdateInfoManager))
-        {
-            sRcode = mUpdateInfoManager->readUpdateInfo(sUpdateInfo);
-            if (XPR_RCODE_IS_SUCCESS(sRcode))
-            {
-                switch (sUpdateInfo.mStatus)
-                {
-                case kUpdateStatusCheckInProgress:
-                    SetDlgItemText(IDC_ABOUT_CHECK_STATUS, gApp.loadString(XPR_STRING_LITERAL("popup.about.tab.info.label.check_status.checking")));
-                    break;
-
-                case kUpdateStatusCheckFailed:
-                    SetDlgItemText(IDC_ABOUT_CHECK_STATUS, gApp.loadString(XPR_STRING_LITERAL("popup.about.tab.info.label.check_status.check_failed")));
-
-                    XPR_SAFE_DELETE(mUpdateInfoManager); // for recheck
-                    break;
-
-                case kUpdateStatusChecked:
-                    sIsLastedVer = isLastedVer(sUpdateInfo.mMajorVer, sUpdateInfo.mMinorVer, sUpdateInfo.mPatchVer);
-                    if (XPR_IS_TRUE(sIsLastedVer))
-                    {
-                        _stprintf(sStatus, gApp.loadString(XPR_STRING_LITERAL("popup.about.tab.info.label.check_status.latest_version")));
-                        SetDlgItemText(IDC_ABOUT_CHECK_STATUS, sStatus);
-                    }
-                    else
-                    {
-                        getAppVer(sNewVer, sUpdateInfo.mMajorVer, sUpdateInfo.mMinorVer, sUpdateInfo.mPatchVer);
-
-                        _stprintf(sStatus, gApp.loadFormatString(XPR_STRING_LITERAL("popup.about.tab.info.label.check_status.new_version"), XPR_STRING_LITERAL("%s")), sNewVer);
-                        SetDlgItemText(IDC_ABOUT_CHECK_STATUS, sStatus);
-
-                        GetDlgItem(IDC_ABOUT_DOWNLOAD)->EnableWindow(XPR_TRUE);
-                    }
-
-                    KillTimer(aIdEvent);
-                    break;
-                }
-            }
-        }
-    }
-
-    CWnd::OnTimer(aIdEvent);
 }
 
 void AboutTabInfoDlg::OnReport(void) 
@@ -266,21 +139,5 @@ void AboutTabInfoDlg::OnSystem(void)
     ShellExecute(XPR_NULL, XPR_STRING_LITERAL("open"), XPR_STRING_LITERAL("msinfo32.exe"), XPR_NULL, XPR_NULL, 0);
 }
 
-void AboutTabInfoDlg::OnDownload(void)
-{
-    xpr_rcode_t sRcode;
-    UpdateInfo  sUpdateInfo = {0};
-
-    sRcode = mUpdateInfoManager->readUpdateInfo(sUpdateInfo);
-    if (XPR_RCODE_IS_SUCCESS(sRcode))
-    {
-        if (sUpdateInfo.mStatus == kUpdateStatusChecked)
-        {
-            xpr::string sNewUrl(sUpdateInfo.mNewUrl);
-
-            ::ShellExecute(XPR_NULL, XPR_STRING_LITERAL("open"), sNewUrl.c_str(), XPR_NULL, XPR_NULL, SW_SHOW);
-        }
-    }
-}
 } // namespace cmd
 } // namespace fxfile

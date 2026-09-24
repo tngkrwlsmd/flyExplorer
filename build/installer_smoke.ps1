@@ -204,15 +204,10 @@ try {
         "fxfile-launcher.exe",
         "fxfile-keyhook.dll",
         "Uninstall.exe",
-        "upchecker\fxfile-upchecker.exe",
-        "upchecker\dbghelp.dll",
-        "upchecker\libcurl.dll",
-        "upchecker\libgcc_s_sjlj-1.dll",
-        "upchecker\libiconv-2.dll",
-        "upchecker\libwinpthread-1.dll",
-        "upchecker\libxml2-2.dll",
-        "upchecker\libxpr.dll",
-        "upchecker\zlib1.dll"
+        "fxfile.chm",
+        "license.txt",
+        "third_party_notices.txt",
+        "readme.txt",
     )
     foreach ($relative in $requiredPayload) {
         Assert-File (Join-Path $installDir $relative) "installed payload"
@@ -231,11 +226,8 @@ try {
         throw ("Installed fxfile.exe architecture mismatch: expected 0x{0:X4}, got 0x{1:X4}" -f $expectedMainMachine, $mainMachine)
     }
 
-    $upcheckerPath = Join-Path $installDir "upchecker\fxfile-upchecker.exe"
-    Assert-File $upcheckerPath "installed updater helper"
-    $upcheckerMachine = Get-PeMachine $upcheckerPath
-    if ($upcheckerMachine -ne 0x014C) {
-        throw ("Installed upchecker architecture mismatch: expected x86 0x014C, got 0x{0:X4}" -f $upcheckerMachine)
+    if (Test-Path -LiteralPath (Join-Path $installDir "upchecker")) {
+        throw "The retired updater directory must not be installed."
     }
 
     $xpr = @(

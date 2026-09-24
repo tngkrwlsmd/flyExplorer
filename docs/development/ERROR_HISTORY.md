@@ -2463,3 +2463,64 @@ compile FAIL, protected spelling compile/run PASS.
 The complete Windows `local_ci.bat x64` profile on the new revision
 has NOT BEEN RE-RUN. Do not mark the defect/runtime closed or use the
 prior unrebuilt executable as evidence. GitHub Actions: NOT RUN.
+
+---
+
+## 2026-09-24 — Owner-directed retirement of auto updater and tracked build artifacts
+
+**Observed problem / request:** Automatic updates were present in a
+separate Win32 checker project, the app's startup/registry hooks, About
+download/status dialog, advanced preference and saved default, bundled
+libcurl, native regression, GYP graph and copied package payload. Earlier
+x64 logs failed on the updater-only regression, now obsolete for the
+owner's stated personal-use configuration. Five generated
+`*.vcxproj.filters` files were nevertheless tracked despite the existing
+`.gitignore`; two old vendored zlib VC project files were unused by GYP.
+
+**Changes:** Remove all active updater implementation, supporting-only
+libcurl, test and UI/translation/resource/GYP wiring. Keep the application's
+ordinary version display and independent launcher/keyhook. Delete the
+five generated filters and two old vendor projects from Git tracking;
+keep the ignore rules. Preserve prior Windows user startup/profile state
+and retain the uninstall-only legacy `upchecker/` directory cleanup
+for earlier installations. Personal local use is the owner's intention;
+existing GPL/GFL notices and unresolved public redistribution checks
+remain unchanged.
+
+**Prevention:** Read-only source-invariant check now rejects the retired
+source/dependency and accidentally tracked generated project files.
+Previously recorded updater fixes remain historical, not an outstanding
+requirement to reintroduce the feature.
+
+**Evidence:** Canonical source/GYP/resource references examined and
+the proposed Git tree inspected. The owner reports their current
+pre-removal build succeeds, but no revision-matched *post-retirement*
+Windows compiler, runtime, installed cleanup or release-packaging result
+has been provided. GitHub Actions: NOT RUN.
+
+---
+
+## 2026-09-24 — Packaging silently ignored required copy errors and retained stale outputs
+
+**Observed cause:** Former `dist/copy.bat` executed required xcopy
+commands with the `/c` continue-after-errors flag and checked no copy
+exit code. A partial three-architecture release stage could survive.
+Previously generated installer/ZIP names could remain after a later
+packaging failure. Portable-specific CHM/notices were also nested under
+each architecture before the installer was generated, duplicating
+installer input assets.
+
+**Fix / prevention:** Check 39 remaining architecture-specific runtime
+binaries and the Korean language source before staging. Stage into
+`.package-stage`, verify every copy, promote only after full success.
+Remove generated release file names before combined builds and on any
+failure. Assemble installer before portable-only extras and leave the
+standalone portable builder fail-closed. Validate main architecture,
+normal notices and no retired updater in staged archives/installer smoke;
+retain protected user-state snapshots.
+
+**Evidence:** Static source and target-path contract review; actual
+Windows CMD staging, multi-architecture compiler, hhc.exe, NSIS, ZIP,
+installed payload and uninstall: NOT TESTED. Public redistribution
+rights are not established by successful local packaging. GitHub
+Actions: NOT RUN.

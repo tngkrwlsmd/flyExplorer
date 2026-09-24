@@ -43,18 +43,6 @@ $commonFiles = @(
     "zlib1.dll"
 )
 
-$upcheckerFiles = @(
-    "upchecker/fxfile-upchecker.exe",
-    "upchecker/dbghelp.dll",
-    "upchecker/libcurl.dll",
-    "upchecker/libgcc_s_sjlj-1.dll",
-    "upchecker/libiconv-2.dll",
-    "upchecker/libwinpthread-1.dll",
-    "upchecker/libxml2-2.dll",
-    "upchecker/libxpr.dll",
-    "upchecker/zlib1.dll"
-)
-
 # Portable assets must be next to fxfile.exe, not merely in the installer.
 $portableAncillaryFiles = @(
     "fxfile.chm",
@@ -188,7 +176,7 @@ foreach ($config in $configurations) {
         throw "Package staging directory is missing: $stage"
     }
 
-    foreach ($relative in $commonFiles + @($config.Xpr) + $upcheckerFiles + $portableAncillaryFiles) {
+    foreach ($relative in $commonFiles + @($config.Xpr) + $portableAncillaryFiles) {
         Assert-File (Join-Path $stage ($relative -replace "/", "\")) "$($config.Name) package payload"
     }
 
@@ -204,12 +192,6 @@ foreach ($config in $configurations) {
     $mainMachine = Get-PeMachine $mainExe "$($config.Name) fxfile.exe"
     if ($mainMachine -ne $config.Machine) {
         throw ("$($config.Name) fxfile.exe architecture mismatch: expected 0x{0:X4}, got 0x{1:X4}" -f $config.Machine, $mainMachine)
-    }
-
-    $upcheckerExe = Join-Path $stage "upchecker\fxfile-upchecker.exe"
-    $upcheckerMachine = Get-PeMachine $upcheckerExe "$($config.Name) upchecker"
-    if ($upcheckerMachine -ne 0x014C) {
-        throw ("$($config.Name) upchecker architecture mismatch: expected x86 0x014C, got 0x{0:X4}" -f $upcheckerMachine)
     }
 
     $languages = @(Get-ChildItem -LiteralPath (Join-Path $stage "Languages") -Filter "*.xml" -File -ErrorAction SilentlyContinue)
@@ -229,7 +211,8 @@ foreach ($config in $configurations) {
     }
 
     $staleStage = @(Get-ChildItem -LiteralPath $stage -Recurse -File | Where-Object {
-        $_.Name -ieq "fxfile-updater.exe"
+        $_.Name -match '^fxfile-(?:upchecker|updater)\.exe$' -or
+        $_.FullName.Substring($stage.Length).TrimStart([char[]]'\/') -match '^(?:upchecker|updater)[\\/]'
     })
     if ($staleStage.Count -gt 0) {
         throw "Stale updater payload found in $($config.Name) staging: $($staleStage.FullName -join ', ')"
@@ -283,17 +266,6 @@ foreach ($config in $configurations) {
             throw ("$($config.Name) archive fxfile.exe architecture mismatch: expected 0x{0:X4}, got 0x{1:X4}" -f $config.Machine, $mainZipMachine)
         }
 
-        $upcheckerEntry = @($entries | Where-Object {
-            (Normalize-ZipPath $_.FullName) -ceq "upchecker/fxfile-upchecker.exe"
-        })
-        if ($upcheckerEntry.Count -ne 1) {
-            throw "$($config.Name) portable archive must contain exactly one upchecker/fxfile-upchecker.exe."
-        }
-        $upcheckerZipMachine = Get-ZipEntryPeMachine $upcheckerEntry[0] "$($config.Name) archive upchecker"
-        if ($upcheckerZipMachine -ne 0x014C) {
-            throw ("$($config.Name) archive upchecker architecture mismatch: expected x86 0x014C, got 0x{0:X4}" -f $upcheckerZipMachine)
-        }
-
         $duplicateNames = @(
             $entryNames |
                 Group-Object { $_.ToLowerInvariant() } |
@@ -314,11 +286,15 @@ foreach ($config in $configurations) {
             }
         }
 
-        if (@($entryNames | Where-Object { [System.IO.Path]::GetFileName($_) -ieq "fxfile-updater.exe" }).Count -gt 0) {
-            throw "$($config.Name) portable archive contains stale fxfile-updater.exe."
+        $retiredUpdaterEntries = @($entryNames | Where-Object {
+            $_ -match '^(?:upchecker|updater)/' -or
+            [System.IO.Path]::GetFileName($_) -match '^fxfile-(?:upchecker|updater)\.exe$'
+        })
+        if ($retiredUpdaterEntries.Count -gt 0) {
+            throw "$($config.Name) portable archive contains retired updater payload: $($retiredUpdaterEntries -join ', ')"
         }
 
-        foreach ($relative in $commonFiles + @($config.Xpr) + $upcheckerFiles + $portableAncillaryFiles) {
+        foreach ($relative in $commonFiles + @($config.Xpr) + $portableAncillaryFiles) {
             $expected = Normalize-ZipPath $relative
             if ($entryNames -cnotcontains $expected) {
                 $caseInsensitiveMatch = @($entryNames | Where-Object { $_ -ieq $expected })
@@ -374,7 +350,7 @@ foreach ($token in @(
     }
 }
 
-foreach ($stale in @("fxfile-updater.exe", "\updater\")) {
+foreach ($stale in @("fxfile-updater.exe", "fxfile-upchecker.exe")) {
     if ($setup.Contains($stale)) {
         throw "setup.nsi still references stale updater contract: $stale"
     }

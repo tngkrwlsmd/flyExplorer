@@ -42,7 +42,6 @@ call :copy_newer "lib\libxml2\bin\zlib1.dll" "bin\x86-multibyte" || exit /b 1
 call :copy_newer "lib\libxml2\bin\zlib1.dll" "bin\x86-unicode" || exit /b 1
 call :copy_newer "lib\libxml2\bin64\zlib1.dll" "bin\x64" || exit /b 1
 
-call :copy_newer "lib\libcurl\bin\libcurl.dll" "bin" || exit /b 1
 
 call :copy_newer "lib\vld\bin\Win32\vld_x86.dll" "bin" || exit /b 1
 call :copy_newer "lib\vld\bin\Win32\dbghelp.dll" "bin" || exit /b 1

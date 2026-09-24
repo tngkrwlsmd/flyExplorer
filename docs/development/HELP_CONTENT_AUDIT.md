@@ -64,3 +64,12 @@
 **Verification status:** first-pass repository source/topic consistency
 reviewed; full detailed-page verification, Windows compiler, installed
 help browsing and UI visual acceptance: NOT TESTED.
+
+## Retired automatic update (2026-09-24)
+
+Automatic update checking and its download/status controls are intentionally
+absent from the current product. Detailed historical screenshots/settings
+pages that mention the old updater are reference-only and must not
+be presented as existing features. No new network updater is planned by
+this work unit. All other outstanding per-page runtime checks above remain
+open.

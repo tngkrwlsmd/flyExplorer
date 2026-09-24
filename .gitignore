@@ -23,6 +23,7 @@ ipch/
 
 # Distribution staging and generated packages
 /dist/bin/
+/dist/.package-stage/
 /dist/fxfile_v*.exe
 /dist/fxfile_v*_portable.zip
 /dist/SHA256SUMS.txt

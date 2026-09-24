@@ -15,14 +15,6 @@
 
 namespace fxfile
 {
-namespace base
-{
-class UpdateInfoManager;
-} // namespace base
-} // namespace fxfile
-
-namespace fxfile
-{
 namespace cmd
 {
 class AboutTabInfoDlg : public AboutTabDlg
@@ -33,19 +25,13 @@ public:
     AboutTabInfoDlg(void);
 
 protected:
-    fxfile::base::UpdateInfoManager *mUpdateInfoManager;
-
-protected:
     virtual void DoDataExchange(CDataExchange* pDX);    // DDX/DDV support
 
 protected:
     DECLARE_MESSAGE_MAP()
     virtual xpr_bool_t OnInitDialog(void);
-    afx_msg void OnDestroy(void);
-    afx_msg void OnTimer(UINT_PTR aIdEvent);
     afx_msg void OnReport(void);
     afx_msg void OnSystem(void);
-    afx_msg void OnDownload(void);
 };
 } // namespace cmd
 } // namespace fxfile

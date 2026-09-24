@@ -357,10 +357,6 @@ call :require_file "bin\x86-multibyte\fxfile-launcher.exe"
 if errorlevel 1 exit /b 1
 call :require_file "bin\x86-multibyte\fxfile-keyhook.dll"
 if errorlevel 1 exit /b 1
-call :require_file "bin\x86-multibyte\upchecker\fxfile-upchecker.exe"
-if errorlevel 1 exit /b 1
-call :require_file "bin\x64\upchecker\fxfile-upchecker.exe"
-if errorlevel 1 exit /b 1
 
 call :run_functional_tests "Release-x86-Multibyte" "Win32" "bin\x86-multibyte\fxfile-functional-tests.exe" "Release x86 Multibyte functional regression"
 if errorlevel 1 exit /b 1
@@ -374,8 +370,6 @@ if errorlevel 1 exit /b 1
 call :require_file "bin\x86-unicode\fxfile.exe"
 if errorlevel 1 exit /b 1
 call :require_file "bin\x86-multibyte\fxfile.exe"
-if errorlevel 1 exit /b 1
-call :require_file "bin\x64\upchecker\fxfile-upchecker.exe"
 if errorlevel 1 exit /b 1
 
 call "dist\package.bat" >"%STEP_LOG%" 2>&1

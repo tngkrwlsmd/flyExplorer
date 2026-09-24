@@ -33,7 +33,6 @@ void getAppVer(xpr_tchar_t *aAppVer);
 void getAppVer(xpr_tchar_t *aAppVer, xpr_sint_t aMajorVer, xpr_sint_t aMinorVer, xpr_sint_t aPatchVer);
 void getFullAppVer(xpr_tchar_t *aAppVer);
 
-xpr_bool_t isLastedVer(xpr_sint_t aMajorVer, xpr_sint_t aMinorVer, xpr_sint_t aPatchVer);
 } // namespace fxfile
 
 #endif // __FXFILE_APP_VER_H__

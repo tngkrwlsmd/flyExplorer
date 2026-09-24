@@ -1082,8 +1082,6 @@ BEGIN
                     "Button",BS_AUTOCHECKBOX | BS_FLAT | WS_TABSTOP,8,131,241,10
     PUSHBUTTON      "Cl&ear recently executed file list",IDC_CFG_ADV_REMOVE_RECENT_FILELIST,78,227,112,14
     PUSHBUTTON      "Default(&R)",IDC_CFG_ADV_DEFAULT,192,227,63,14
-    CONTROL         "&Enable to check the new version",IDC_CFG_ADV_UPDATE_ENABLE,
-                    "Button",BS_AUTOCHECKBOX | BS_FLAT | WS_TABSTOP,0,164,254,10
 END
 
 IDD_CFG_APPEARANCE_FOLDER_LAYOUT DIALOGEX 0, 0, 255, 241
@@ -1649,8 +1647,6 @@ BEGIN
     LTEXT           "...",IDC_ABOUT_WINDOWS,7,31,168,8
     LTEXT           "Homepage: http://www.flychk.com",IDC_STATIC,7,53,116,8
     LTEXT           "E-mail: flychk@flychk.com",IDC_STATIC,7,64,88,8
-    PUSHBUTTON      "&Download",IDC_ABOUT_DOWNLOAD,7,135,64,14,WS_GROUP
-    LTEXT           "Checking for up-to-date...",IDC_ABOUT_CHECK_STATUS,7,124,272,8
     LTEXT           "fxfile",IDC_ABOUT_PROGRAM,7,7,176,8
     CONTROL         "",IDC_STATIC,"Static",SS_ETCHEDHORZ,7,46,272,1
 END

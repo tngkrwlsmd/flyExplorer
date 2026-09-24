@@ -2135,12 +2135,6 @@ def validate_functional_test_wiring() -> list[str]:
     test_source_path = ROOT / "src" / "fxfile-tests" / "functional_tests.cpp"
     pattern_path_test_path = ROOT / "src" / "fxfile-tests" / "pattern_path_tests.cpp"
     config_test_path = ROOT / "src" / "fxfile-tests" / "config_persistence_tests.cpp"
-    updater_test_path = ROOT / "src" / "fxfile-tests" / "updater_contract_tests.cpp"
-    app_ver_path = FXFILE_SRC / "app_ver.cpp"
-    upchecker_main_path = ROOT / "src" / "fxfile-upchecker" / "main_window.cpp"
-    metadata_path = ROOT / "src" / "fxfile-upchecker" / "meta_data_file.cpp"
-    metadata_core_path = ROOT / "src" / "base" / "update_metadata.h"
-    upchecker_gyp_path = ROOT / "src" / "fxfile-upchecker" / "fxfile-upchecker.gyp"
     conf_file_path = ROOT / "src" / "base" / "conf_file.cpp"
 
     paths = (
@@ -2154,12 +2148,6 @@ def validate_functional_test_wiring() -> list[str]:
         pattern_path_test_path,
         config_test_path,
         conf_file_path,
-        updater_test_path,
-        app_ver_path,
-        upchecker_main_path,
-        metadata_path,
-        metadata_core_path,
-        upchecker_gyp_path,
     )
 
     contents: dict[Path, str] = {}
@@ -2181,12 +2169,6 @@ def validate_functional_test_wiring() -> list[str]:
     pattern_path_test = contents[pattern_path_test_path]
     config_test = contents[config_test_path]
     conf_file_source = contents[conf_file_path]
-    updater_test = contents[updater_test_path]
-    app_ver_source = contents[app_ver_path]
-    upchecker_main = contents[upchecker_main_path]
-    metadata_source = contents[metadata_path]
-    metadata_core = contents[metadata_core_path]
-    upchecker_gyp = contents[upchecker_gyp_path]
 
     if "src/fxfile-tests/fxfile-tests.gyp:*" not in root_gyp:
         errors.append("fxfile.gyp: functional-test target is not in the solution dependency graph")
@@ -2258,10 +2240,6 @@ def validate_functional_test_wiring() -> list[str]:
         "'pattern_path_tests.cpp'",
         "'config_persistence_tests.cpp'",
         "'../base/conf_file.cpp'",
-        "'updater_contract_tests.cpp'",
-        "'../base/version_compare.cpp'",
-        "'../base/upchecker_command.cpp'",
-        "'../base/update_metadata.h'",
         "'SubSystem': 1",
     )
     for token in required_gyp_tokens:
@@ -2287,7 +2265,6 @@ def validate_functional_test_wiring() -> list[str]:
         "testRenameTransformCore",
         "testPatternAndPathContracts",
         "testConfigPersistenceContracts",
-        "testUpdaterContracts",
         "rename_core::splitBaseFileNameAndExt",
         "replaceText(",
         "insertFromLast(",
@@ -2338,78 +2315,6 @@ def validate_functional_test_wiring() -> list[str]:
         if token not in conf_file_source:
             errors.append(
                 f"src/base/conf_file.cpp: ConfFile flag initialization regressed near {token}"
-            )
-
-    for token in (
-        "parseVersion",
-        "compareVersion",
-        "1, 99, 0",
-        "2, 0, 999",
-        "2.0.4-beta",
-        "buildUpcheckerConfDirArgument",
-        "buildUpcheckerStartupCommand",
-        "--conf_dir=",
-        "parseUpdateMetadataFile",
-        "2.0.4-beta",
-    ):
-        if token not in updater_test:
-            errors.append(
-                f"src/fxfile-tests/updater_contract_tests.cpp: missing updater token {token}"
-            )
-
-    if "base::compareVersion(sCurrent, sRemote)" not in app_ver_source:
-        errors.append("src/fxfile/app_ver.cpp: version comparison no longer uses shared version core")
-
-    for token in ("base::parseVersion", "sCheckSucceeded = XPR_FALSE"):
-        if token not in upchecker_main:
-            errors.append(f"src/fxfile-upchecker/main_window.cpp: missing updater safety token {token}")
-
-    if "base::parseUpdateMetadataFile" not in metadata_source:
-        errors.append(
-            "src/fxfile-upchecker/meta_data_file.cpp: production metadata parser no longer delegates to shared core"
-        )
-
-    for token in (
-        "ConfFileEx",
-        "kFlagLock",
-        "mProgram.empty()",
-        "mNewUrl.empty()",
-        "parseVersion",
-    ):
-        if token not in metadata_core:
-            errors.append(
-                f"src/base/update_metadata.h: missing metadata parser token {token}"
-            )
-
-    if "'../base/update_metadata.h'" not in upchecker_gyp:
-        errors.append(
-            "src/fxfile-upchecker/fxfile-upchecker.gyp: shared update metadata contract is not registered"
-        )
-
-    upchecker_manager_path = FXFILE_SRC / "upchecker_manager.cpp"
-    command_core_path = ROOT / "src" / "base" / "upchecker_command.cpp"
-    try:
-        upchecker_manager = upchecker_manager_path.read_text(
-            encoding="utf-8", errors="replace"
-        )
-        command_core = command_core_path.read_text(
-            encoding="utf-8", errors="replace"
-        )
-    except OSError as exc:
-        errors.append(f"updater command wiring cannot be read: {exc}")
-    else:
-        for token in (
-            '#include "upchecker_command.h"',
-            "base::buildUpcheckerConfDirArgument",
-            "base::buildUpcheckerStartupCommand",
-        ):
-            if token not in upchecker_manager:
-                errors.append(
-                    f"src/fxfile/upchecker_manager.cpp: missing updater command token {token}"
-                )
-        if 'XPR_STRING_LITERAL("--conf_dir=\\\"")' not in command_core:
-            errors.append(
-                "src/base/upchecker_command.cpp: quoted conf-dir argument contract changed"
             )
 
     return errors
@@ -4147,53 +4052,74 @@ def validate_modern_ui_registration() -> list[str]:
     return errors
 
 
-def validate_updater_download_budget() -> list[str]:
-    """Guard the updater's size/write failure contract and test wiring."""
+def validate_retired_updater_and_generated_projects() -> list[str]:
+    """Require the retired updater and obsolete tracked project files to stay out."""
     errors: list[str] = []
-    paths = {
-        "header": ROOT / "src" / "base" / "update_download_limits.h",
-        "updater": ROOT / "src" / "fxfile-upchecker" / "update_checker.cpp",
-        "updater_gyp": ROOT / "src" / "fxfile-upchecker" / "fxfile-upchecker.gyp",
-        "tests": ROOT / "src" / "fxfile-tests" / "updater_contract_tests.cpp",
-        "tests_gyp": ROOT / "src" / "fxfile-tests" / "fxfile-tests.gyp",
-    }
+    removed = (
+        ROOT / "src" / "fxfile-upchecker",
+        ROOT / "src" / "fxfile-tests" / "updater_contract_tests.cpp",
+        ROOT / "src" / "fxfile" / "upchecker_manager.cpp",
+        ROOT / "src" / "fxfile" / "upchecker_manager.h",
+        ROOT / "src" / "base" / "upchecker_command.cpp",
+        ROOT / "src" / "base" / "upchecker_command.h",
+        ROOT / "src" / "base" / "upchecker_def.h",
+        ROOT / "src" / "base" / "update_info_manager.cpp",
+        ROOT / "src" / "base" / "update_info_manager.h",
+        ROOT / "src" / "base" / "update_metadata.h",
+        ROOT / "src" / "base" / "update_download_limits.h",
+        ROOT / "src" / "base" / "version_compare.cpp",
+        ROOT / "src" / "base" / "version_compare.h",
+        ROOT / "lib" / "libcurl",
+    )
+    for path in removed:
+        # Old checkouts can still have *ignored generated* project files in
+        # the retired updater directory. Do not block the source preflight
+        # just because build.bat has not cleaned those files yet.
+        if path.is_dir():
+            remaining = [
+                item for item in path.rglob("*")
+                if item.is_file() and not (
+                    item.name.endswith((".vcxproj", ".vcxproj.filters",
+                                        ".vcxproj.user", ".sln"))
+                )
+            ]
+            if remaining:
+                errors.append(
+                    "retired updater source/dependency remains: "
+                    + str(remaining[0].relative_to(ROOT))
+                )
+        elif path.exists():
+            errors.append(
+                f"retired updater source/dependency remains: {path.relative_to(ROOT)}"
+            )
+
+    root_gyp = (ROOT / "fxfile.gyp").read_text(encoding="utf-8")
+    app_gyp = (FXFILE_SRC / "fxfile.gyp").read_text(encoding="utf-8")
+    tests_gyp = (ROOT / "src" / "fxfile-tests" / "fxfile-tests.gyp").read_text(encoding="utf-8")
+    option = (FXFILE_SRC / "option.cpp").read_text(encoding="utf-8")
+    for name, source in (
+        ("fxfile.gyp", root_gyp),
+        ("src/fxfile/fxfile.gyp", app_gyp),
+        ("src/fxfile-tests/fxfile-tests.gyp", tests_gyp),
+        ("src/fxfile/option.cpp", option),
+    ):
+        for token in ("upchecker", "updater_contract_tests", "update_check.enable"):
+            if token in source.lower():
+                errors.append(f"{name}: retired automatic update token returned: {token}")
+
+    # Git tracking, rather than mere existence, distinguishes generated
+    # projects in a developer's build directory from committed source files.
     try:
-        s = {name: path.read_text(encoding="utf-8") for name, path in paths.items()}
-    except OSError as exc:
-        return [f"updater download budget guard: missing source: {exc}"]
-    if "kMaxUpdateMetadataBytes = 256u * 1024u" not in s["header"] or (
-        "(kMaxUpdateMetadataBytes - aCompletedBytes) / aElementCount"
-        not in s["header"]
-    ):
-        errors.append("updater metadata size bound or overflow check is missing")
-    u = strip_comments(s["updater"])
-    for token in (
-        '#include "update_download_limits.h"',
-        "base::canAcceptUpdateMetadataChunk(",
-        "mDownloadedBytes = 0;",
-        "mDownloadedBytes += sWrittenBufferSize;",
-        "return sWrittenBufferSize;",
-        "CURLOPT_CONNECTTIMEOUT",
-        "CURLOPT_TIMEOUT",
-        "CURLOPT_FAILONERROR",
-    ):
-        if token not in u:
-            errors.append(f"update_checker.cpp: required transfer guard missing: {token}")
-    if "return sBufferSize;" in u:
-        errors.append("update_checker.cpp: callback must not claim all bytes on failed disk writes")
-    for name in ("updater_gyp", "tests_gyp"):
-        if "'../base/update_download_limits.h'" not in s[name]:
-            errors.append(f"{paths[name]}: missing shared update download contract")
-    for token in ("#include \"update_download_limits.h\"", "(std::numeric_limits<std::size_t>::max)()"):
-        if token not in s["tests"]:
-            errors.append(f"updater_contract_tests.cpp: missing boundary case: {token}")
-    # Windows headers may define a function-like 'max' macro: reject
-    # the unparenthesized std::numeric_limits<...>::max() expression.
-    if "std::numeric_limits<std::size_t>::max()" in s["tests"]:
-        errors.append(
-            "updater_contract_tests.cpp: Windows max macro collision risk; "
-            "write (std::numeric_limits<std::size_t>::max)() instead"
+        proc = subprocess.run(
+            ["git", "ls-files", "--", "*.vcxproj", "*.vcxproj.filters",
+             "*.vcxproj.user", "*.sln", "lib/zlib/*.vcproj"],
+            cwd=ROOT, capture_output=True, text=True, check=False, timeout=15,
         )
+    except (OSError, subprocess.TimeoutExpired):
+        return errors
+    if proc.returncode == 0 and proc.stdout.strip():
+        errors.append("generated/obsolete project files remain tracked: "
+                      + proc.stdout.strip().replace("\n", ", "))
     return errors
 
 
@@ -4243,7 +4169,7 @@ def main() -> int:
     errors.extend(validate_actions_storage_budget_contract())
     errors.extend(validate_installer_smoke_wiring())
     errors.extend(validate_html_help_package_source())
-    errors.extend(validate_updater_download_budget())
+    errors.extend(validate_retired_updater_and_generated_projects())
     errors.extend(validate_win11_stability_regressions())
     errors.extend(validate_runtime_ui_audit_regressions())
     errors.extend(validate_modern_ui_registration())

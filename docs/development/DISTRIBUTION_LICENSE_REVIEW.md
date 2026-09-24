@@ -36,6 +36,17 @@ development claims from historical topic pages. A missing compiler aborts
 packaging rather than reusing an old binary. Windows CHM compiler/installer
 results are NOT TESTED; this change does not resolve third-party rights.
 
+## Owner's current use decision (2026-09-24)
+
+The owner currently intends **personal, local use only**, not a public
+combined installer or a relicensing effort. Preserve root `LICENSE` and
+the vendor notices in `CREDITS` without suggesting that this choice
+grants new commercial or public redistribution rights. The GFL SDK remains
+an active part of image handling. The old network updater and dedicated
+vendored libcurl were removed, so libcurl no longer belongs to the active
+bundled-dependency audit. Revisit this section only if distribution plans
+change or new third-party components are incorporated.
+
 ## Outstanding tasks before public distribution
 
 - Identify current copyright/rightsholders and confirm that the repository
@@ -43,7 +54,7 @@ results are NOT TESTED; this change does not resolve third-party rights.
 - Obtain current GFL SDK redistribution rights, including the program's
   built-in thumbnail, image-viewer and image-converter usage, and assess
   compatibility of distribution terms for a combined installer.
-- Inventory exact bundled libxml2, iconv, libcurl, MinGW and other third-party
+- Inventory exact bundled libxml2, iconv, MinGW and other third-party
   binaries; verify versions, original license texts, provenance, applicable
   notice/source obligations and any architecture-specific requirements.
 - Review whether the root repository should carry the complete GPL license

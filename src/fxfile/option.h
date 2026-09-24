@@ -318,8 +318,6 @@ public:
         xpr_bool_t      mLauncherWinStartup;
         xpr_ushort_t    mLauncherGlobalHotKey;
 
-        // update check
-        xpr_bool_t      mUpdateCheckEnable;
     } mConfig;
 
 protected:

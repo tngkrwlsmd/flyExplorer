@@ -261,7 +261,6 @@ Section "" SecCopyUI
 
     FindProcDLL::KillProc "fxfile.exe"
     FindProcDLL::KillProc "fxfile-launcher.exe"
-    FindProcDLL::KillProc "fxfile-upchecker.exe"
 
     FindProcLoopfxfile:
         FindProcDLL::FindProc "fxfile.exe"
@@ -276,13 +275,6 @@ Section "" SecCopyUI
         IntCmp $R0 0 FindProcLoopfxfilelauncherDone
         Goto FindProcLoopfxfilelauncher
     FindProcLoopfxfilelauncherDone:
-
-    FindProcLoopfxfileupdater:
-        FindProcDLL::FindProc "fxfile-upchecker.exe"
-
-        IntCmp $R0 0 FindProcLoopfxfileupdaterDone
-        Goto FindProcLoopfxfileupdater
-    FindProcLoopfxfileupdaterDone:
 
     SkipInstallProcessKill:
 
@@ -327,7 +319,6 @@ Section "" SecCopyUI
     WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\fxfile" "InstallLocation" "$INSTDIR"
     WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\fxfile" "Publisher"       "flychk (Leon Lee)"
     WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\fxfile" "URLInfoAbout"    "http://flychk.com"
-    WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\fxfile" "URLUpdateInfo"   "http://flychk.com"
 
     !insertmacro MUI_STARTMENU_WRITE_BEGIN Application
     
@@ -393,7 +384,6 @@ Section "Uninstall"
 
     FindProcDLL::KillProc "fxfile.exe"
     FindProcDLL::KillProc "fxfile-launcher.exe"
-    FindProcDLL::KillProc "fxfile-upchecker.exe"
 
     unFindProcLoopfxfile:
         FindProcDLL::FindProc "fxfile.exe"
@@ -408,13 +398,6 @@ Section "Uninstall"
         IntCmp $R0 0 unFindProcLoopLauncherDone
         goto unFindProcLoopLauncher
     unFindProcLoopLauncherDone:
-
-    unFindProcLoopUpdater:
-        FindProcDLL::FindProc "fxfile-upchecker.exe"
-
-        IntCmp $R0 0 unFindProcLoopUpdaterDone
-        goto unFindProcLoopUpdater
-    unFindProcLoopUpdaterDone:
 
     unSkipProcessKill:
     

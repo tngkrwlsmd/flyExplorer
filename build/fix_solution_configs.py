@@ -10,16 +10,13 @@ import xml.etree.ElementTree as ET
 from pathlib import Path
 
 WIN32_HELPER_PROJECTS = {
-    r"src\fxfile-upchecker\fxfile-upchecker.vcxproj",
     r"src\fxfile-launcher\fxfile-launcher.vcxproj",
     r"src\fxfile-keyhook\fxfile-keyhook.vcxproj",
 }
 MFC_PROJECTS = {
     r"src\fxfile\fxfile.vcxproj",
     r"src\fxfile-launcher\fxfile-launcher.vcxproj",
-    r"src\fxfile-upchecker\fxfile-upchecker.vcxproj",
 }
-UPCHECKER_PROJECT = r"src\fxfile-upchecker\fxfile-upchecker.vcxproj"
 XPR_PROJECT = r"src\xpr\xpr.vcxproj"
 AGGREGATE_PROJECT = r"fxfile.vcxproj"
 
@@ -47,10 +44,6 @@ PRODUCT_TARGET_NAMES = {
     r"src\fxfile-keyhook\fxfile-keyhook.vcxproj": {
         "debug-x86": "fxfile-keyhook_dbg",
         "release-x86": "fxfile-keyhook",
-    },
-    r"src\fxfile-upchecker\fxfile-upchecker.vcxproj": {
-        "debug-x86": "fxfile-upchecker_dbg",
-        "release-x86": "fxfile-upchecker",
     },
 }
 
@@ -89,11 +82,6 @@ def helper_configuration(solution_configuration: str) -> str | None:
 
 def is_x64_configuration(solution_configuration: str) -> bool:
     return "|x64" in solution_configuration.lower()
-
-
-def is_x86_multibyte_configuration(solution_configuration: str) -> bool:
-    name = solution_configuration.strip().lower()
-    return "x86-multibyte|win32" in name
 
 
 def qualify(tag: str, namespace: str) -> str:
@@ -287,7 +275,6 @@ def main() -> int:
 
     helper_paths = {normalize_project_path(path) for path in WIN32_HELPER_PROJECTS}
     mfc_paths = {normalize_project_path(path) for path in MFC_PROJECTS}
-    upchecker_path = normalize_project_path(UPCHECKER_PROJECT)
     xpr_path = normalize_project_path(XPR_PROJECT)
     aggregate_path = normalize_project_path(AGGREGATE_PROJECT)
 
@@ -308,7 +295,6 @@ def main() -> int:
         return 1
 
     helper_guids = {project_guids[path] for path in helper_paths}
-    upchecker_guid = project_guids[upchecker_path]
     aggregate_guid = project_guids[aggregate_path]
 
     has_x64_solution_configuration = False
@@ -320,7 +306,6 @@ def main() -> int:
 
     patched_lines: list[str] = []
     mapped_count = 0
-    skipped_upchecker = 0
     skipped_aggregate = 0
 
     for line in lines:
@@ -341,17 +326,6 @@ def main() -> int:
             continue
 
         if guid in helper_guids:
-            # The updater links against the x86 multibyte xpr import library.
-            # Build it only from x86-multibyte solution configurations; Unicode
-            # and x64 product builds use libxprw and must not schedule it.
-            if (
-                guid == upchecker_guid
-                and entry_type == "Build.0"
-                and not is_x86_multibyte_configuration(solution_configuration)
-            ):
-                skipped_upchecker += 1
-                continue
-
             mapped = helper_configuration(solution_configuration)
             if mapped:
                 newline = match.group(6) or ""
@@ -363,7 +337,6 @@ def main() -> int:
 
         patched_lines.append(line)
 
-    invalid_updater_builds: list[str] = []
     invalid_aggregate_builds: list[str] = []
     for line in patched_lines:
         match = CONFIG_RE.match(line)
@@ -374,24 +347,8 @@ def main() -> int:
         configuration = match.group(3)
         entry_type = match.group(4)
 
-        if (
-            guid == upchecker_guid
-            and entry_type == "Build.0"
-            and not is_x86_multibyte_configuration(configuration)
-        ):
-            invalid_updater_builds.append(configuration)
-
         if guid == aggregate_guid and entry_type == "Build.0":
             invalid_aggregate_builds.append(configuration)
-
-    if invalid_updater_builds:
-        print(
-            "ERROR: Updater is still enabled for non-multibyte solution configurations:",
-            file=sys.stderr,
-        )
-        for configuration in invalid_updater_builds:
-            print(f"  {configuration}", file=sys.stderr)
-        return 1
 
     if invalid_aggregate_builds:
         print(
@@ -455,8 +412,6 @@ def main() -> int:
     for path in sorted(WIN32_HELPER_PROJECTS):
         print(f"  {path}")
     print(f"Updated {mapped_count} helper configuration mappings.")
-    print(f"Skipped {skipped_upchecker} non-multibyte updater build mappings.")
-    print("Verified updater builds are restricted to x86-multibyte solution configurations.")
     print(f"Skipped {skipped_aggregate} aggregate-project build mappings.")
     print("Verified the root aggregate project is excluded from Build Solution.")
     print(f"Applied static MFC settings to {len(MFC_PROJECTS)} projects ({mfc_changed} configurations updated).")

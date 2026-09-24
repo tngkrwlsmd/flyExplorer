@@ -5,10 +5,21 @@ pushd "%~dp0" || exit /b 1
 set "version=2.0.4-dev"
 set "sevenzip=%CD%\7zip\7za.exe"
 
+
+for %%F in (
+    "fxfile_v%version%_x64_portable.zip"
+    "fxfile_v%version%_x86_unicode_portable.zip"
+    "fxfile_v%version%_x86_multibyte_portable.zip"
+) do (
+    if exist "%%~F" del /q "%%~F"
+    if exist "%%~F" (
+        echo ERROR: Could not remove stale portable output %%~F.
+        goto :error
+    )
+)
 if not exist "%sevenzip%" (
     echo ERROR: 7-Zip command line tool is missing: %sevenzip%
-    popd
-    exit /b 1
+    goto :error
 )
 
 rem A portable archive must never ship without the help that the Help command opens.
@@ -20,22 +31,13 @@ if defined PYTHON (
 )
 if errorlevel 1 (
     echo ERROR: Unable to create fresh portable help; refusing incomplete ZIPs.
-    popd
-    exit /b 1
+    goto :error
 )
 if not exist "fxfile.chm" (
     echo ERROR: Missing freshly compiled portable help.
-    popd
-    exit /b 1
+    goto :error
 )
 
-for %%F in (
-    "fxfile_v%version%_x64_portable.zip"
-    "fxfile_v%version%_x86_unicode_portable.zip"
-    "fxfile_v%version%_x86_multibyte_portable.zip"
-) do (
-    if exist "%%~F" del /q "%%~F"
-)
 
 rem Keep portable documentation and file-list icon assets next to fxfile.exe.
 for %%D in ("bin\x64" "bin\x86-unicode" "bin\x86-multibyte") do (
@@ -109,6 +111,12 @@ exit /b 0
 
 :error
 set "result=%errorlevel%"
+rem A partially created archive must never survive a failed run.
+for %%F in (
+    "fxfile_v%version%_x64_portable.zip"
+    "fxfile_v%version%_x86_unicode_portable.zip"
+    "fxfile_v%version%_x86_multibyte_portable.zip"
+) do if exist "%%~F" del /q "%%~F"
 if "%result%"=="0" set "result=1"
 popd
 exit /b %result%

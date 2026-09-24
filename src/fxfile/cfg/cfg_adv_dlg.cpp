@@ -58,7 +58,6 @@ xpr_bool_t CfgAdvDlg::OnInitDialog(void)
     SetDlgItemText(IDC_CFG_ADV_TRAY_SHOW_WHEN_MINIMIZING,            gApp.loadString(XPR_STRING_LITERAL("popup.cfg.body.advanced.check.system_tray_show_tray_when_minimizing")));
     SetDlgItemText(IDC_CFG_ADV_TRAY_OPEN_INIT_FOLDER_WHEN_RESTORING, gApp.loadString(XPR_STRING_LITERAL("popup.cfg.body.advanced.check.system_tray_open_init_folder_when_restoring")));
     SetDlgItemText(IDC_CFG_ADV_TRAY_RESTORE_ON_ONE_CLICK,            gApp.loadString(XPR_STRING_LITERAL("popup.cfg.body.advanced.check.system_tray_restore_on_one_click")));
-    SetDlgItemText(IDC_CFG_ADV_UPDATE_ENABLE,                        gApp.loadString(XPR_STRING_LITERAL("popup.cfg.body.advanced.check.update_enable")));
     SetDlgItemText(IDC_CFG_ADV_REMOVE_RECENT_FILELIST,               gApp.loadString(XPR_STRING_LITERAL("popup.cfg.body.advanced.button.remove_recent_file_list")));
     SetDlgItemText(IDC_CFG_ADV_DEFAULT,                              gApp.loadString(XPR_STRING_LITERAL("popup.cfg.body.advanced.button.restore_to_default")));
 
@@ -77,7 +76,6 @@ void CfgAdvDlg::onInit(const Option::Config &aConfig)
     ((CButton *)GetDlgItem(IDC_CFG_ADV_TRAY_SHOW_WHEN_MINIMIZING           ))->SetCheck(aConfig.mTrayOnMinmize);
     ((CButton *)GetDlgItem(IDC_CFG_ADV_TRAY_OPEN_INIT_FOLDER_WHEN_RESTORING))->SetCheck(aConfig.mTrayRestoreInitFolder);
     ((CButton *)GetDlgItem(IDC_CFG_ADV_TRAY_RESTORE_ON_ONE_CLICK           ))->SetCheck(aConfig.mTrayOneClick);
-    ((CButton *)GetDlgItem(IDC_CFG_ADV_UPDATE_ENABLE                       ))->SetCheck(aConfig.mUpdateCheckEnable);
 
     OnTray();
 }
@@ -93,7 +91,6 @@ void CfgAdvDlg::onApply(Option::Config &aConfig)
     aConfig.mTrayOnMinmize         = ((CButton *)GetDlgItem(IDC_CFG_ADV_TRAY_SHOW_WHEN_MINIMIZING           ))->GetCheck();
     aConfig.mTrayRestoreInitFolder = ((CButton *)GetDlgItem(IDC_CFG_ADV_TRAY_OPEN_INIT_FOLDER_WHEN_RESTORING))->GetCheck();
     aConfig.mTrayOneClick          = ((CButton *)GetDlgItem(IDC_CFG_ADV_TRAY_RESTORE_ON_ONE_CLICK           ))->GetCheck();
-    aConfig.mUpdateCheckEnable     = ((CButton *)GetDlgItem(IDC_CFG_ADV_UPDATE_ENABLE                       ))->GetCheck();
 }
 
 void CfgAdvDlg::OnTray(void)
@@ -115,7 +112,6 @@ void CfgAdvDlg::OnDefault(void)
     ((CButton *)GetDlgItem(IDC_CFG_ADV_TRAY_SHOW_WHEN_MINIMIZING           ))->SetCheck(XPR_FALSE);
     ((CButton *)GetDlgItem(IDC_CFG_ADV_TRAY_OPEN_INIT_FOLDER_WHEN_RESTORING))->SetCheck(XPR_FALSE);
     ((CButton *)GetDlgItem(IDC_CFG_ADV_TRAY_RESTORE_ON_ONE_CLICK           ))->SetCheck(XPR_FALSE);
-    ((CButton *)GetDlgItem(IDC_CFG_ADV_UPDATE_ENABLE                       ))->SetCheck(XPR_TRUE);
 
     setModified();
 }

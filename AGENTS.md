@@ -68,7 +68,7 @@
 
 - `fxfile`, `xpr`, `fxfile-crash`: native x64 구성을 가짐
 - `fxfile-keyhook`, `fxfile-launcher`: x64 solution에서 Win32 helper로 매핑
-- `fxfile-upchecker`: x64 solution build에서는 의도적으로 제외되고, 배포 시 x86 multibyte 구성에서 별도 빌드
+- 자동 업데이트 체계(`fxfile-upchecker`)는 제거됨. 종전 설치본의 Windows 시작 프로그램 잔여 항목은 새 빌드에 포함하지 않으며 사용자 상태를 임의로 삭제하지 않는다.
 - 루트 `fxfile.vcxproj`: aggregate project이며 실제 Build Solution 대상에서 제외
 
 이 구조를 근거 없이 전부 x64로 통일하지 않는다. 특히 bundled third-party library의 architecture를 먼저 확인한다.
@@ -181,7 +181,7 @@ UI/UX 현대화 작업은 다음 원칙을 따른다.
 5. **기한 없이 그 개별 실행에 대한 사용자 명시적 지시가 없는 한 GitHub Actions를 실행하지 않는다.** branch/main 반영을 실행 근거로 삼지 않으며 별도 승인 없는 실행 범위 확대도 금지한다.
 6. interactive 기능, DPI/High Contrast/visual 변경과 clean-install/Registry/shell integration은 CI build matrix와 별개의 수동 evidence로 구분한다.
 
-별도 native product functional regression target `src/fxfile-tests/fxfile-tests.gyp`가 존재한다. 이 suite는 OS temp fixture에서 production `xpr::FileSys/FileIo`/SHFileOperation seam, rename transform core, `fnmatch`/`xpr::FilePath`, UTF-8 `ConfFileEx` persistence, updater version/metadata/command quoting contract, CRC32/MD5 구현, ShellRegistry command/key 조립을 직접 검증한다. 현재 기본/에이전트 CI는 `local_ci.bat x64` 및 동일 범위의 `Release-x64-Unicode | x64` remote job만 대상으로 하며 native functional regression과 x64 launch smoke는 그 profile 안에서 실행된다. x86 compatibility/Debug/package/policy profile은 구현을 보존하지만 사용자 명시적 범위 확대 전에는 실행하지 않는다. clean Windows의 실제 product registration과 interactive/visual regression evidence는 별도다.
+별도 native product functional regression target `src/fxfile-tests/fxfile-tests.gyp`가 존재한다. 이 suite는 OS temp fixture에서 production `xpr::FileSys/FileIo`/SHFileOperation seam, rename transform core, `fnmatch`/`xpr::FilePath`, UTF-8 `ConfFileEx` persistence, CRC32/MD5 구현, ShellRegistry command/key 조립을 직접 검증한다. 현재 기본/에이전트 CI는 `local_ci.bat x64` 및 동일 범위의 `Release-x64-Unicode | x64` remote job만 대상으로 하며 native functional regression과 x64 launch smoke는 그 profile 안에서 실행된다. x86 compatibility/Debug/package/policy profile은 구현을 보존하지만 사용자 명시적 범위 확대 전에는 실행하지 않는다. clean Windows의 실제 product registration과 interactive/visual regression evidence는 별도다.
 
 버그 수정은 가능하면 재현 가능한 regression check를 추가하되, repository에 존재하지 않는 대규모 테스트 프레임워크를 단일 수정 때문에 도입하지 않는다.
 

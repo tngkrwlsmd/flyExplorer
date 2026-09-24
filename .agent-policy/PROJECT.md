@@ -5,6 +5,14 @@
 
 **최신 실행 정책 (2026-09-24):** GitHub Actions는 기한 없이 사용자에게 개별 실행을 명확히 지시받은 경우만 허용한다. `Source Validation`, `Windows Product Build`의 수동 workflow는 준비 상태로 보존하지만 push/PR 등 자동 트리거 및 무허가 수동 dispatch는 금지한다. 9월 30일까지 예산 일시 중단이라고 적힌 아래 기존 기록은 역사적이며 최신 정책보다 우선하지 않는다. 계정 예산이나 날짜가 바뀌어도 자동 해제되지 않는다. 기본은 로컬 `local_ci.bat x64`, 미실행 hosted 검증은 `NOT TESTED`다.
 
+**현재 유지보수 결정 (2026-09-24):** 소유자 요청으로 자동 업데이트는
+제품·UI·GYP·패키지·전용 libcurl에서 제거한다. 아래의 이전 단계별
+updater hardening/혼합-아키텍처 updater 설명은 **역사적 작업 기록**이며
+현재 구성으로 해석하지 않는다. 종전 설치 환경의 Windows 시작 프로그램
+등록값/프로필은 자동으로 지우지 않는다. 로컬 개인 사용을 유지하며
+LICENSE/CREDITS는 변경하지 않고 외부 배포 법적 확인은 보류한다.
+현재 사실의 간결한 기준은 `docs/development/CURRENT_STATUS.md`다.
+
 <!-- project-facts:start -->
 ```json
 {
@@ -71,11 +79,6 @@
       "name": "fxfile-launcher",
       "path": "src/fxfile-launcher",
       "responsibility": "Win32 launcher/tray helper"
-    },
-    {
-      "name": "fxfile-upchecker",
-      "path": "src/fxfile-upchecker",
-      "responsibility": "Legacy Win32 update-check helper; built separately for packaging"
     }
   ],
   "review": {
@@ -129,17 +132,12 @@
       "local_ci.bat",
       "README",
       "src/base",
-      "src/base/update_download_limits.h",
       "src/fxfile",
       "src/fxfile-crash",
       "src/fxfile-keyhook",
       "src/fxfile-launcher",
       "src/fxfile-tests",
       "src/fxfile-tests/fxfile-tests.gyp",
-      "src/fxfile-tests/updater_contract_tests.cpp",
-      "src/fxfile-upchecker",
-      "src/fxfile-upchecker/fxfile-upchecker.gyp",
-      "src/fxfile-upchecker/update_checker.cpp",
       "src/fxfile/cfg/cfg_dlg.cpp",
       "src/fxfile/cfg/cfg_main_dlg.cpp",
       "src/fxfile/gui/BCMenu.cpp",
@@ -151,6 +149,7 @@
     ]
   }
 }
+
 
 
 
@@ -174,7 +173,6 @@
 | Crash handler | `src/fxfile-crash` | x64 DLL |
 | Key hook | `src/fxfile-keyhook` | Win32 helper |
 | Launcher | `src/fxfile-launcher` | Win32 helper |
-| Update checker | `src/fxfile-upchecker` | Win32 helper; x64 solution build에서는 제외 |
 
 ## Source of Truth
 
@@ -188,10 +186,10 @@
 | 패키징 | `dist/package.bat`, `dist/copy.bat`, `dist/make_portable.bat`, `dist/make_installer.bat`, `dist/setup.nsi` | Contract / Observed | x64/x86 staging, portable ZIP 3종, vendored NSIS installer |
 | 개발 환경 문서 | `README` | Intended / Observed | 실제 build evidence와 함께 해석 |
 | 제품 빌드 CI | `.github/workflows/windows-build.yml` | Contract / Evidence | automatic trigger 중지; explicit `run_ci`에서 Release x64 build/warning/artifact/native functional regression/x64 smoke 실행, `run_x86_compat`에서 x86 Unicode/Multibyte compile/artifact/native functional regression 추가 |
-| native functional regression | `src/fxfile-tests/fxfile-tests.gyp`, `src/fxfile-tests/*.cpp` | Contract / Evidence | OS temp fixture에서 xpr FileSys/FileIo/SHFileOperation, rename transform, fnmatch/FilePath, UTF-8 ConfFileEx persistence, updater version/metadata/command quoting, CRC32/MD5, ShellRegistry command/key contract 검증 |
+| native functional regression | `src/fxfile-tests/fxfile-tests.gyp`, `src/fxfile-tests/*.cpp` | Contract / Evidence | OS temp fixture에서 xpr FileSys/FileIo/SHFileOperation, rename transform, fnmatch/FilePath, UTF-8 ConfFileEx persistence, CRC32/MD5, ShellRegistry command/key contract 검증 |
 | runtime smoke | `build/runtime_smoke.ps1` | Contract / Evidence | 임시 staged runtime + isolated conf_dir에서 process/main-window/stability 검증 |
-| installer smoke | `build/installer_smoke.ps1`, `dist/setup.nsi` | Contract / Evidence | 기본 safety-contract inspection; elevated + FXFILE_INSTALLER_SMOKE=1에서 temp install/runtime/uninstall, main/upchecker architecture, protected Registry/shortcut/startup/profile snapshot 비변경, 기존 fxfile process/sibling sentinel 보존 검증 |
-| package validation | `build/validate_package.ps1` | Contract / Evidence | staging/portable payload, main/upchecker PE architecture, XPR runtime/architecture staging, stale updater, ZIP traversal/duplicate/casing/development-artifact, installer output + installer-smoke wiring 검증 |
+| installer smoke | `build/installer_smoke.ps1`, `dist/setup.nsi` | Contract / Evidence | 기본 safety-contract inspection; elevated + FXFILE_INSTALLER_SMOKE=1에서 temp install/runtime/uninstall, main PE architecture와 제거된 updater payload의 부재, protected Registry/shortcut/startup/profile snapshot 비변경, 기존 fxfile process/sibling sentinel 보존 검증 |
+| package validation | `build/validate_package.ps1` | Contract / Evidence | staging/portable payload, main PE architecture, retired updater 부재, XPR runtime/architecture staging, ZIP traversal/duplicate/casing/development-artifact, installer output + installer-smoke wiring 검증 |
 | build/runtime 결과 | GitHub Actions build log, Visual Studio build log, hosted-runner launch smoke, Windows Sandbox/VM smoke | Evidence | compile/link, hosted runtime, clean-runtime evidence를 분리 |
 | 오류 진단/재발 방지 이력 | `docs/development/ERROR_HISTORY.md` | Evidence / Intended | 확정된 오류의 발생→최초 실제 오류→원인→해결→재발 방지→검증 상태를 기록; 반복 가능성이 있으면 invariant/regression/preflight로 승격 |
 
@@ -627,6 +625,17 @@ binary remained at `6621ae2`. A local cross-platform macro
 reproducer validates the protected spelling, but the **new revision
 has not passed a user-matched Windows rebuild**. The following review
 metadata/history-only commit does not change reviewed source paths.
+
+38. **Retire all automatic update functionality — SOURCE UPDATED / WINDOWS BUILD NOT TESTED**
+    - The user requests complete automatic-update removal. Delete the Win32 checker project/source, product startup manager and About/version download flows, update preference/resource/translation, updater-only base helpers and native regression. Preserve application version display and normal window UpdateWindow/UpdateData methods. Remove the now-orphaned vendored libcurl; preserve the GFL SDK and other actually used binaries.
+    - Remove the updater GYP graph/mixed helper special case, generated project filters, dedicated CI/packaging payload requirements and outdated current documents. Keep legacy uninstall cleanup only for past installed `upchecker/`; never wipe prior user HKCU startup entries automatically.
+    - Change `validate_source_invariants.py` to reject resurrected updater source/dependencies and accidental tracked generated VS project outputs. Change the authoritative current component inventory and historical override rather than rewriting previous diagnosis.
+    - Windows compile/Light-Dark/runtime, prior-user startup migration and installed smoke: NOT TESTED. User reports their present build works but no revision-matched removal build log was supplied.
+
+39. **Package fail-closed staging and retired updater absence — SOURCE UPDATED / WINDOWS PACKAGING NOT TESTED**
+    - `dist/copy.bat` now checks all 39 remaining required runtime binaries and language input before staging, copies without `xcopy /c`, checks every error and replaces generated bin only when its temporary stage is complete.
+    - `dist/package.bat` clears only generated release names before work, creates the installer before portable-only document staging and removes partial names on failure. Direct `make_portable.bat` removes stale ZIP names even on missing tools/help failures. Package/isolated installer smoke reject updater reintroduction; normal Help/CHM and license notices remain intact.
+    - Full 3-arch packaging is a separate opt-in/manual validation scope; Windows batch, actual ZIP and NSIS installer/uninstall have not been executed in this work unit. The default permitted local CI remains `local_ci.bat x64`, with hosted GitHub Actions strictly disabled until user per-run explicit instruction.
 
 ### Development handoff rule
 

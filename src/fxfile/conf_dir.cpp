@@ -266,7 +266,6 @@ const xpr_tchar_t *ConfDir::getFileName(xpr_sint_t aType)
     case TypeThumbnailData:  return XPR_STRING_LITERAL("fxfile-thumbnail.dat");
     case TypeThumbnailIndex: return XPR_STRING_LITERAL("fxfile-thumbnail.idx");
     case TypeLauncher:       return XPR_STRING_LITERAL("fxfile-launcher.conf");
-    case TypeUpchecker:      return XPR_STRING_LITERAL("fxfile-upchecker.conf");
     }
 
     return XPR_NULL;

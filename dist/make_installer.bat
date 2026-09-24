@@ -7,6 +7,11 @@ set "output=fxfile_v2.0.4-dev.exe"
 
 rem Fail closed: a failed build must never leave an older installer to publish.
 if exist "%output%" del /q "%output%"
+if exist "%output%" (
+    echo ERROR: Could not remove existing installer output.
+    popd
+    exit /b 1
+)
 
 rem Every invocation (including direct make_installer.bat) requires fresh help.
 rem PYTHON, when set, must point to the Python 3 executable path.
@@ -36,6 +41,8 @@ if not exist "%makensis%" (
 set "result=%errorlevel%"
 if not "%result%"=="0" (
     echo ERROR: makensis failed with exit code %result%.
+    rem Never leave a partial binary under the official output name.
+    if exist "%output%" del /q "%output%"
     popd
     exit /b %result%
 )

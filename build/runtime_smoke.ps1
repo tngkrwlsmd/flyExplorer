@@ -108,7 +108,6 @@ try {
 
     Write-Utf16Config -Path (Join-Path $confDir "fxfile.conf") -Lines @(
         "[config]",
-        "config.update_check.enable = 0",
         "config.global_hotkey.enable = 0",
         "config.global_hotkey.show_tray = 0",
         "config.global_hotkey.windows_startup = 0",
@@ -205,7 +204,7 @@ finally {
         }
     }
 
-    foreach ($valueName in @("fxfile-launcher", "fxfile-upchecker")) {
+    foreach ($valueName in @("fxfile-launcher")) {
         Remove-ItemProperty -Path $runKey -Name $valueName -ErrorAction SilentlyContinue
     }
 
