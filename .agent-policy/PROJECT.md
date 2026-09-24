@@ -480,6 +480,7 @@ Status: **ACTIVE / user-reproduced runtime failures**. These items are the immed
    - Cleanup tool: `build/actions_storage_cleanup.py` lists repository artifacts with a dry-run default, keeps the newest matching release package, can delete older duplicates only with `--apply`, and can lower repository artifact/log retention with `--retention-days`. It deliberately runs locally rather than creating another Actions run.
    - One-time account action remains required because the connected GitHub tool exposes artifact reads but no artifact-delete/retention-write operation. Run the documented dry-run, review IDs/bytes, then apply with a GitHub token that has Actions write; retention change additionally needs repository Administration write (classic `repo` scope is also supported by GitHub).
    - This repository fix cannot prove that every byte in the account-level warning comes from flyExplorer; billing storage is account-wide. After cleanup, recheck GitHub billing/usage and inspect other repositories only if the warning remains.
+   - Storage prevention/tool/documentation commit: `be27fe0e886f88896cba9cb58df45367adf69e02`; Python 3.9 compatibility correction: `57ac0fb07641d80ac1f8308d8586384944814a66`.
 
 ### Development handoff rule
 
