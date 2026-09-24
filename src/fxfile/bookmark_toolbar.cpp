@@ -123,9 +123,14 @@ LRESULT BookmarkToolBar::OnBookmarkAsyncIcon(WPARAM wParam, LPARAM lParam)
 
 void BookmarkToolBar::createBookmarkBar(void)
 {
-    mInit = XPR_TRUE;
-
-    BookmarkMgr::instance().regAsyncIcon(*this, WM_BOOKMARK_ASYNC_ICON);
+    // Re-show/reinitialize may reach this path more than once. Subscribe
+    // once per visible lifetime; the idempotent rebuild below handles
+    // layout, icons and the current bookmark manager contents each time.
+    if (mInit == XPR_FALSE)
+    {
+        mInit = XPR_TRUE;
+        BookmarkMgr::instance().regAsyncIcon(*this, WM_BOOKMARK_ASYNC_ICON);
+    }
 
     setBookmark();
 }
@@ -209,6 +214,14 @@ void BookmarkToolBar::setBookmark(void)
     if (mInit == XPR_FALSE)
         return;
 
+    // TB_INSERTBUTTON does not replace an item: reinserting bookmarks
+    // without clearing leaves a second complete set of buttons. In a
+    // wrapped or partially clipped rebar, that set can surface as the
+    // repeated bottom slivers seen under the icons and Korean labels.
+    // Rebuild exactly one button per BookmarkMgr item every time.
+    SetRedraw(XPR_FALSE);
+    deleteAllButtons();
+
     if (mImgList.m_hImageList != XPR_NULL)
         mImgList.DeleteImageList();
 
@@ -216,18 +229,19 @@ void BookmarkToolBar::setBookmark(void)
     GetToolBarCtrl().SetImageList(&mImgList);
 
     BookmarkMgr &sBookmarkMgr = BookmarkMgr::instance();
-
-    xpr_sint_t sCount = sBookmarkMgr.getCount();
+    const xpr_sint_t sCount = sBookmarkMgr.getCount();
     if (sCount > 0)
     {
         sBookmarkMgr.getAllIcon();
 
-        xpr_sint_t i;
-        for (i = 0; i < sCount; ++i)
+        for (xpr_sint_t i = 0; i < sCount; ++i)
             addBookmarkButton(i, sBookmarkMgr.getBookmark(i));
     }
 
+    XPR_ASSERT(GetToolBarCtrl().GetButtonCount() == sCount);
+
     ApplyModernMetrics();
+    SetRedraw(XPR_TRUE);
     UpdateToolbarSize();
 }
 
@@ -1049,21 +1063,8 @@ void BookmarkToolBar::updateBookmarkButton(xpr_sint_t aIndex)
 
 void BookmarkToolBar::updateBookmarkButton(void)
 {
-    CToolBarCtrl &sToolBarCtrl = GetToolBarCtrl();
-
-    xpr_sint_t i;
-    xpr_sint_t sCount;
-
-    sCount = sToolBarCtrl.GetButtonCount();
-    for (i = sCount - 1; i >= 0; --i)
-        sToolBarCtrl.DeleteButton(i);
-
-    if (mImgList.m_hImageList != XPR_NULL)
-        mImgList.DeleteImageList();
-
-    mImgList.Create(16, 16, ILC_COLOR32 | ILC_MASK, -1, -1);
-    GetToolBarCtrl().SetImageList(&mImgList);
-
+    // setBookmark owns the complete clear/repopulate transaction. Avoid
+    // rebuilding the same image list twice or leaving old buttons behind.
     setBookmark();
 }
 

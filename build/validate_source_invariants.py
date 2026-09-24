@@ -4387,6 +4387,51 @@ def validate_tab_close_discoverability() -> list[str]:
     return errors
 
 
+def validate_bookmark_toolbar_idempotent_rebuild() -> list[str]:
+    """UI-09: repeated bookmark initialization must not duplicate a row."""
+    errors: list[str] = []
+    source = (FXFILE_SRC / "bookmark_toolbar.cpp").read_text(
+        encoding="utf-8", errors="replace"
+    )
+    start = source.find("void BookmarkToolBar::setBookmark(void)")
+    end = source.find("xpr_bool_t BookmarkToolBar::OnNotify(", start)
+    body = source[start:end] if start >= 0 and end > start else ""
+    if not body:
+        return ["bookmark toolbar rebuild owner missing"]
+    clear = body.find("deleteAllButtons();")
+    first_insert = body.find("addBookmarkButton(i, sBookmarkMgr.getBookmark(i))")
+    create_list = body.find("mImgList.Create(16, 16, ILC_COLOR32")
+    if clear < 0 or create_list <= clear or first_insert <= create_list:
+        errors.append(
+            "bookmark rebuild must clear existing buttons before recreating "
+            "the image list and inserting bookmarks"
+        )
+    for token in (
+        "SetRedraw(XPR_FALSE)",
+        "SetRedraw(XPR_TRUE)",
+        "XPR_ASSERT(GetToolBarCtrl().GetButtonCount() == sCount)",
+    ):
+        if token not in body:
+            errors.append(f"bookmark full rebuild missing {token}")
+
+    create_start = source.find("void BookmarkToolBar::createBookmarkBar(void)")
+    create_end = source.find("void BookmarkToolBar::destroyBookmarkBar(", create_start)
+    create = source[create_start:create_end] if create_end > create_start >= 0 else ""
+    if "if (mInit == XPR_FALSE)" not in create or (
+        "BookmarkMgr::instance().regAsyncIcon" not in create
+    ):
+        errors.append("bookmark async observer must register once per visible lifetime")
+
+    update_start = source.find("void BookmarkToolBar::updateBookmarkButton(void)")
+    update_end = source.find("xpr_bool_t BookmarkToolBar::PreTranslateMessage(", update_start)
+    update = source[update_start:update_end] if update_end > update_start >= 0 else ""
+    if "setBookmark();" not in update or (
+        "DeleteButton" in update or "mImgList.Create" in update
+    ):
+        errors.append("bookmark full update must reuse the single rebuild owner")
+    return errors
+
+
 def validate_bookmark_toolbar_direct_paint_and_print_owner() -> list[str]:
     """UI-09: do not let toolbar WM_PRINT bypass the bookmark pixel owner."""
     errors: list[str] = []
@@ -4630,6 +4675,7 @@ def main() -> int:
     errors.extend(validate_split_pane_column_and_contents_layout())
     errors.extend(validate_shared_tree_new_profile_default())
     errors.extend(validate_tab_close_discoverability())
+    errors.extend(validate_bookmark_toolbar_idempotent_rebuild())
     errors.extend(validate_bookmark_toolbar_direct_paint_and_print_owner())
     errors.extend(validate_settings_single_visible_page_after_theme_apply())
     errors.extend(validate_search_location_icon_text_dpi_gap())

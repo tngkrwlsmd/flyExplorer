@@ -3090,3 +3090,46 @@ revision-matched Windows compile, native tests, same-strip
 before/after Light/Dark/HC/DPI/focus/drag and rebar print pixel
 acceptance. UI-09 remains OPEN until direct evidence.
 GitHub Actions: NOT RUN without explicit approval for this run.
+
+
+---
+
+## 2026-09-24 — UI-09 native bookmark button accumulation found
+
+**User evidence/context:** The previous Light full-item postpaint
+did not remove the duplicated icon/label fragments. After adding
+a separate WM_PAINT/WM_PRINT owner, further examination uncovered
+a native *button lifecycle* bug that pure painting changes cannot
+resolve when multiple rows contain duplicate real buttons.
+
+**Source defect:** BookmarkToolBar::setBookmark used TB_INSERTBUTTON
+at manager indices on every call without deleting prior native
+items. If the method runs again while the toolbar is populated,
+the native button count exceeds BookmarkMgr::getCount and a
+wrapped/clipped extra row could carry the same shortcut icons and
+labels. createBookmarkBar also registered async icon updates on
+every invocation, and updateBookmarkButton(void) recreated its
+image list before calling setBookmark, which recreated it again.
+The call pattern on the actual user's machine is not observed;
+this is a verified source-level accumulation vulnerability,
+not proof that this specific screenshot was caused by it.
+
+**Source change:** Make setBookmark an idempotent full rebuild:
+disable redraw, remove all existing native buttons, recreate the
+native icon list once, insert exactly one button per manager
+bookmark and assert the final button count in debug builds.
+Make updateBookmarkButton(void) delegate to that sole owner;
+register the asynchronous observer only once per visible
+lifetime. Keep per-index insert and shell path processing intact.
+
+**Prevention:** Add a source guard checking delete-before-insert,
+the single list owner, registration and final-count assertion.
+This complements the separate WM_PRINT/WM_PAINT safeguard
+without claiming a native runtime pass.
+
+**Evidence:** Source inspection/construction only. Full source
+invariant script, Visual Studio Release x64 build, toolbar button
+count at observed failure, drag/click/visibility/wrap/DPI/HC and
+final matching Windows screenshot: NOT TESTED. The user's visual
+issue remains OPEN pending direct evidence. GitHub Actions:
+NOT RUN without run-specific approval.

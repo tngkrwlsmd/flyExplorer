@@ -865,6 +865,25 @@ mountable/conversation files and their separate visual content
 must be inspected before making claims about them.
 GitHub Actions: NOT RUN without per-run authorization.
 
+**UI-09 bookmark button idempotence (2026-09-24):**
+Separate from the paint/print-path hypothesis, source inspection
+found that BookmarkToolBar::setBookmark repeatedly TB_INSERTBUTTONed
+the complete manager list without clearing existing toolbar items.
+A second initialization could duplicate the whole shortcut sequence;
+a clipped wrapped row is consistent with the repeated icon and
+caption fragments, although native runtime item counts are not
+yet available. setBookmark now owns the entire button/image-list
+clear/rebuild under SetRedraw, inserts exactly one native button
+per manager item and debug-asserts final count. updateBookmarkButton
+delegates to this owner instead of doing a redundant prior image-
+list rebuild. Async icon registration is once per visible lifetime.
+Retain the prior app-owned paint/print source change as an independent
+unverified rendering safeguard; DO NOT assert either mechanism
+resolved this user's UI without revision-matched screenshots and
+native button count evidence. Guard added. Windows compiler,
+click/drag/wrap/visibility/HC/DPI and runtime count:
+NOT TESTED. GitHub Actions: NOT RUN.
+
 ### Development handoff rule
 
 - Every new user-requested development item is added to this section (or its successor) before implementation starts.

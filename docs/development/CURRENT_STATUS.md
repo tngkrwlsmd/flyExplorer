@@ -174,6 +174,25 @@ NM_CUSTOMDRAW postpaint. The actual source-revision Windows x64 build
 and before/after screenshots (including hover, drag, DPI and
 print/rebar) are **NOT TESTED**. UI-09 remains RUNTIME OPEN.
 
+**2026-09-24 UI-09 second diagnostic track: idempotent bookmark buttons.**
+Closer source review found an independent concrete data/layout defect:
+BookmarkToolBar::setBookmark inserted every manager item via
+TB_INSERTBUTTON without first deleting existing buttons. If this
+initialization runs again with the old toolbar still populated, the
+control holds duplicate commands and can expose a partly clipped
+second row. A full update also deleted and recreated an image
+list redundantly before calling setBookmark, which recreated it
+again. The source now makes setBookmark the only full rebuild owner,
+clears existing buttons first, inserts exactly one per manager item
+and checks the final native button count in debug builds. Re-show
+registers asynchronous icon updates only once per visible lifetime.
+This complements the new bookmark-specific paint/print owner rather
+than asserting which path caused the user's exact screenshot.
+Source structure checks were constructed. Revision-matched Windows
+compiler, actual toolbar count at reproduction, 100/125/150/200%
+DPI, visibility toggling, wrap/chevron and final screenshots:
+NOT TESTED. UI-09 remains OPEN.
+
 ## Outstanding near-term work
 
 1. Address the reproduced settings-page visibility and Dark rendering issues
