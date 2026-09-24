@@ -13,6 +13,14 @@ updater hardening/혼합-아키텍처 updater 설명은 **역사적 작업 기�
 LICENSE/CREDITS는 변경하지 않고 외부 배포 법적 확인은 보류한다.
 현재 사실의 간결한 기준은 `docs/development/CURRENT_STATUS.md`다.
 
+**실행 점검 (2026-09-24):** `bee95d9` 소스의 `local_ci.bat x64`는
+compile/link 및 native regression 16/0 PASS, 사용자 HKCU 보호로 자동
+runtime smoke SKIPPED다. 실제 창 점검에서 원래 main Dark 검은 글자
+신고 범위는 재검증 PASS였지만 설정 테마 적용 후 본문 불일치, 밝은
+스크롤바, 검색 창의 혼합 색상은 OPEN이다. 재현·인수 조건과 source-only
+OS 호환성 과제의 owner는 `docs/development/UI_UX_AUDIT_20260924.md`다.
+Windows 10/High Contrast/mixed-DPI/installer 검증으로 확대 해석하지 않는다.
+
 <!-- project-facts:start -->
 ```json
 {

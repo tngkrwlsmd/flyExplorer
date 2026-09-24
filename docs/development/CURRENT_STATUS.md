@@ -12,27 +12,27 @@ For the chronological diagnosis and original evidence, retain and use
 | Subject | Current observed state | Evidence limit |
 | --- | --- | --- |
 | Product | fxfile/flyExplorer 2.0.4-dev; Windows 10/11 active development; native Release-x64-Unicode is the default build path | Not a formal minimum-OS or general release compatibility guarantee |
-| Build system | Visual Studio 2026/v145, GYP-generated solution, repo-local build/preflight scripts | No fresh x64 compile of this current documentation/cleanup revision |
-| Historical user-supplied x64 log (2026-09-24, `bc02a4a`) | Former native updater test compiled with a Windows `max` macro collision and that run FAILED. That entire updater feature/test is now removed by explicit owner choice. | Owner reports their current build is working, but no revision-matched post-removal Windows build log is attached to this source cleanup. Do not use the old failure as a current-branch result. |
+| Build system | Visual Studio 2026/v145, GYP-generated solution; fresh `local_ci.bat x64` on product revision `bee95d9`: source preflight, Release x64 compile/link PASS; native functional regression 16 passed / 0 failed | PASS WITH SKIPS: automated runtime smoke skipped to preserve existing HKCU state; clean-profile startup NOT TESTED |
+| Historical user-supplied x64 log (2026-09-24, `bc02a4a`) | Former native updater test compiled with a Windows `max` macro collision and that run FAILED. That entire updater feature/test is now removed by explicit owner choice. | Superseded for current compile evidence by the post-removal `bee95d9` x64 PASS. Preserve the old failure as historical evidence. |
 | Earlier local x64 test | On the parent of product commit `6b18c58f` plus then-uncommitted OS-rendering fix: Release x64 compile/link PASS and native functional tests 17 passed / 0 failed | Overall PASS WITH SKIPS; startup smoke skipped for user HKCU preservation; not a revision-matched test of current `main` |
-| Dark/Light/High Contrast UI | Theme selection and `osWinModern` rendering route implemented in source | Post-fix actual Windows 10/11 visual/screenshots and interaction acceptance remain NOT TESTED |
+| Dark/Light/High Contrast UI | Actual Windows 11 inspection of `bee95d9`: original main-menu/toolbar/drive/bookmark Dark text now readable; settings open, address navigation, new/close tab and dual/single pane transitions exercised | OPEN: theme Apply displays the wrong settings body, bright Dark scrollbars, mixed search-dialog colors and other UX issues. See [`UI_UX_AUDIT_20260924.md`](UI_UX_AUDIT_20260924.md). Windows 10, High Contrast and mixed-DPI remain NOT TESTED |
 | Help / portable completeness | Canonical `docs/htmlhelp/` source remains the build input. Full packaging now validates 39 required runtime payloads across the three existing architectures before staged replacement, reserves the previous staged bin for rollback during activation, generates the installer before portable extras and clears partial/stale release outputs on failure; archives still carry fresh CHM and notices. | Static code/path inspection only; Windows directory-rename/rollback injection, HTML Help Workshop, NSIS/ZIP execution and installed/portable Help: NOT TESTED. |
 | User guidance | `Html/current_development.htm` is the current source-grounded guide; old detailed reference pages are retained with prominent legacy entry-point labels | Full per-topic source/runtime rewrite still OPEN; track it in [`HELP_CONTENT_AUDIT.md`](HELP_CONTENT_AUDIT.md) |
 | Distribution | Personal/local use only is the current owner's intent. Root GPL and third-party CREDITS notices remain unchanged and bundled; installer/portable paths now reject partially copied or missing release files. | No public redistribution permission is claimed. Third-party permissions (especially GFL) remain UNVERIFIED; Windows package generation on this revision NOT TESTED. |
 | GitHub Actions | Manual workflow-only; each actual run requires a separate explicit user instruction with no expiry to this restriction | No Actions invoked in documentation/vendor/help cleanup |
-| Automatic updates | **REMOVED FROM SOURCE AND NEW PACKAGES:** retired checker project/network dependency, application startup integration, update settings/About download, native updater regression and packaging payload. | Static structural source/package review only. Previous user-provided x64 log concerned now-removed updater regression. New revision Windows build, old-install migration and full packaging: NOT TESTED. |
-| Prior repository cleanup | Removed unused `gtest` (41) and `libxslt` (52) files, 16 byte-identical zlib binaries, 113 non-build NSIS developer assets, 4 dead root HTML frameset inputs, plus the retired updater module, dedicated libcurl vendor tree and obsolete generated project files | Source and Git tree inspection only; fresh Windows compile/package and external manual consumer checks NOT TESTED |
+| Automatic updates | **REMOVED FROM SOURCE AND NEW PACKAGE DEFINITIONS:** retired checker project/network dependency, application startup integration, update settings/About download, native updater regression and packaging payload. | Post-removal x64 compile/regression PASS at `bee95d9`; old-install migration and full packaging NOT TESTED. Existing startup values were preserved. |
+| Prior repository cleanup | Removed unused `gtest` (41) and `libxslt` (52) files, 16 byte-identical zlib binaries, 113 non-build NSIS developer assets, 4 dead root HTML frameset inputs, plus the retired updater module, dedicated libcurl vendor tree and obsolete generated project files | Post-cleanup x64 compile/regression PASS at `bee95d9`; packaging and external manual consumer checks NOT TESTED |
 
-**Do not call the application/runtime defect closed based solely on source or
-static checks.** The last product code OS-routing fix remains
-`CODE FIXED / POST-FIX VISUAL RETEST REQUIRED` until the reported Windows
-Light/Dark/High Contrast acceptance scenarios are reproduced successfully.
+**Do not call all runtime defects closed based on a build or a narrow visual
+check.** Original main Dark text acceptance was visually rechecked on Windows
+11; the separate settings/search/scrollbar findings remain OPEN. The dated
+audit records the exact product revision, executable hash and untested cases.
 
 ## Outstanding near-term work
 
-1. In a Windows development environment, run the authorized local static
-   preflight and current x64 compile/regression, regenerate and inspect
-   the CHM, and validate the current installer in an isolated environment.
+1. Address the reproduced settings-page visibility and Dark rendering issues
+   in the UI audit. Current x64 compile/regression has passed at `bee95d9`;
+   regenerate and inspect the CHM and validate the installer in an isolated environment.
    Keep compiler, visual, runtime, installer and third-party licensing
    evidence separate. Non-default x86/release/full profiles need user
    scope expansion; hosted Actions need per-run explicit approval.
@@ -64,6 +64,7 @@ Light/Dark/High Contrast acceptance scenarios are reproduced successfully.
 | `ERROR_HISTORY.md` | **Preserved, append-only historical evidence**, including context-specific test outcomes and errors |
 | `DEPENDENCY_ARCH_AUDIT_20260924.md` | Current inventory summary followed by the immutable dated audit and cleanup checkpoints |
 | `HELP_CONTENT_AUDIT.md` | Current help scope, legacy detailed-topic inventory and Windows user-help acceptance tasks |
+| `UI_UX_AUDIT_20260924.md` | Revision-matched interactive observations, open UI findings, source-only OS compatibility candidates and reproduction/acceptance cases |
 | `DISTRIBUTION_LICENSE_REVIEW.md` | Observed license contradictions and unfinished third-party distribution checks |
 | Root `LICENSE` and `CREDITS` | Existing application and third-party license notices; never rewrite on the basis of assumptions |
 

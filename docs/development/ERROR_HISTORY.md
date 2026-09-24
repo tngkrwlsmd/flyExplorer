@@ -2624,3 +2624,49 @@ Evidence: Git tree/path inventory and staged recovery source contract
 rename/rollback under locks/permissions, x64 product build,
 three-architecture package generation, HTML Help Workshop and
 NSIS installer installation: NOT TESTED. No GitHub Actions ran.
+
+---
+
+## 2026-09-24 — Runtime audit: theme Apply exposes the wrong settings body (OPEN)
+
+**Occurrence / first actual failure:** On a freshly built `bee95d9` x64
+binary, open General, select Appearance/Theme, change System (Dark) to
+Light and press Apply. Navigation and heading still identify Appearance,
+but the body displays General controls. Selecting Filtering changes the
+heading while General remains visible. Closing/reopening settings restores
+the selected page. This is a settled-screen failure, not only a transient
+theme paint frame. The same symptom observed before remote sync was
+reproduced after the revision-matched rebuild.
+
+**Diagnosis:** `RefreshThemeForCurrentThread` snapshots hidden descendants
+as well as visible windows, then sends unconditional `WM_SETREDRAW(TRUE)`.
+The documented DefWindowProc behavior can add `WS_VISIBLE` to hidden windows.
+`CfgMainDlg::showCfg` hides only its tracked previous page. These source/API
+facts form a plausible causal path; per-HWND style/stack evidence has not
+been collected, so a sole root cause is not yet conclusively established.
+See [Microsoft WM_SETREDRAW](https://learn.microsoft.com/en-us/windows/win32/gdi/wm-setredraw).
+
+**Remedy / prevention:** Product fix NOT IMPLEMENTED in this audit.
+Reopening settings is the observed workaround. Preserve original visibility
+through theme refresh and check sibling owners before implementing a fix;
+add a guard for hidden-page preservation and run the same Apply/next-page
+case. Do not replace runtime acceptance with static implementation strings.
+
+**Verification:** `local_ci.bat x64` on `bee95d9`: source preflight and
+compile/link PASS; native functional regression 16 passed / 0 failed;
+automated startup smoke SKIPPED for existing HKCU preservation. Actual
+Windows 11 main launch/navigation/tab/pane interactions exercised, but this
+settings acceptance case FAILS and remains OPEN. No Actions ran.
+
+**Related commits / follow-up:** `6b18c58f` is the earlier modern OS routing
+fix; this new runtime issue must not be labelled its same root cause.
+Audit baseline `bee95d96a0150734ac247ed34e52ffe3bb1f4d92`;
+the documentation commit containing this entry records the new finding.
+Detailed steps, executable hash, other visual findings and untested scope:
+[`UI_UX_AUDIT_20260924.md`](UI_UX_AUDIT_20260924.md).
+
+**Additional post-fix evidence:** Original main-menu/toolbar/drive/bookmark
+black text on Dark is now visibly readable on this Windows 11 binary.
+That specific visual acceptance PASS does not close the remaining bright
+scrollbars or the search dialog's white location edit/black legacy glyph.
+Those observations and their owner candidates are OPEN in the audit.

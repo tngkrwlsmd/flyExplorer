@@ -158,6 +158,14 @@ UI/UX 현대화 작업은 다음 원칙을 따른다.
 - UI 구조 변경은 screenshot/실행 evidence로 확인하고, functional regression과 visual regression을 구분한다.
 - 기능을 단순히 숨기거나 삭제해서 현대적으로 보이게 만드는 것은 사용자가 명시적으로 요구한 경우에만 한다.
 
+### 실행 기반 UI/UX 점검
+
+- 현재 실행 점검 목록과 재현/인수 조건은 [`docs/development/UI_UX_AUDIT_20260924.md`](docs/development/UI_UX_AUDIT_20260924.md)를 따른다. 실제 관찰 결함과 source-only 호환성 후보를 구분하고 수정 후 해당 항목의 검증 상태를 갱신한다.
+- 테마 일괄 갱신은 원래 hidden/visible 상태와 선택된 설정 페이지를 보존해야 한다. `WM_SETREDRAW`의 `WS_VISIBLE` 부작용을 고려하고, 적용 후 제목·본문·포커스가 일치하는지 재열기 없이 확인한다.
+- Dark 검증은 text뿐 아니라 non-client scrollbar, ComboBoxEx 내부 edit/list, legacy glyph, popup 경계까지 포함한다. documented API와 기존 accessibility 계약을 유지하며 최종 renderer별 evidence를 남긴다.
+- 문자로 화살표를 흉내 낸 resource는 인코딩/폰트 의존성을 확인한다. 작은 버튼은 의미 있는 접근성 이름과 잘리지 않는 glyph/label을 제공하고 DPI·언어 변경 시 검사한다.
+- 최신 OS 호환성 변경은 manifest 하나나 API 이름 교체로 완료 판정하지 않는다. long path, Known Folder, file-operation adapter는 caller/callee와 취소·부분 실패 의미까지 검증하고 기존 multi-pane/tab/shortcut을 보존한다.
+
 ## 8. 검증
 
 ### Permanent GitHub Actions restriction — explicit user instruction per run only
