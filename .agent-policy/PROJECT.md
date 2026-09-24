@@ -884,6 +884,39 @@ native button count evidence. Guard added. Windows compiler,
 click/drag/wrap/visibility/HC/DPI and runtime count:
 NOT TESTED. GitHub Actions: NOT RUN.
 
+**User screenshot follow-up: Light filtering color and bookmark
+bottom-row fragments (2026-09-24).** Source confirmed that
+CfgAppearanceFilteringDlg's custom draw only replaced an exact
+black filter RGB on Dark; configured white/pale RGB was not
+contrast-checked against the Light elevated surface. A local
+WCAG 4.5:1 relative-luminance check now falls back to the active
+ThemePalette text only for insufficient on-screen contrast,
+without modifying saved filter data. ListView background/text
+and the existing header repaint are refreshed on setting/theme/
+system color changes; High Contrast always uses system palette
+text. This is a source fix candidate, not a Windows runtime pass.
+
+The earlier UI-05 experiment merged the default Drive and
+Bookmark bands, creating a plausible layout source of the
+new screenshot's clipped secondary icon/label row. Reverse this
+compaction. Bookmark gets its independent RBBS_BREAK at
+construction and again after persisted band style is loaded,
+using the existing setWrapable owner; toolbar commands,
+bookmark items, choice of wrap/chevron and current-session
+band movement remain. This intentionally overrides saved
+same-row bookmark placement on the next application start,
+and should be verified with both previously persisted
+and new-profile layouts. Existing pixel-owner and
+button-idempotence fixes remain, but none may be called
+visually successful until tested together.
+
+Source guards were extended for 4.5:1/each-theme ownership
+and the saved band reset. Same-revision full Python source
+preflight, Windows Release x64 compile, exact user screenshots,
+DPI 100/125/150/200, native keyboard and HC: NOT TESTED.
+UI-09/UI-10 pending acceptance, UI-02 native scrollbar OPEN.
+GitHub Actions NOT RUN (individual prior approval needed).
+
 ### Development handoff rule
 
 - Every new user-requested development item is added to this section (or its successor) before implementation starts.

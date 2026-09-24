@@ -15,6 +15,8 @@
 #include "../gui/ModernUI.h"
 #include "../resource.h"
 
+#include <cmath>  // WCAG relative luminance, display-only filter text contrast
+
 #include "filter_set_dlg.h"
 
 #ifdef _DEBUG
@@ -25,6 +27,47 @@ namespace fxfile
 {
 namespace cfg
 {
+namespace
+{
+double ListColorLinearChannel(BYTE aChannel)
+{
+    const double sChannel = static_cast<double>(aChannel) / 255.0;
+    return sChannel <= 0.04045 ?
+        sChannel / 12.92 :
+        std::pow((sChannel + 0.055) / 1.055, 2.4);
+}
+
+double ListColorLuminance(COLORREF aColor)
+{
+    return 0.2126 * ListColorLinearChannel(GetRValue(aColor)) +
+           0.7152 * ListColorLinearChannel(GetGValue(aColor)) +
+           0.0722 * ListColorLinearChannel(GetBValue(aColor));
+}
+
+COLORREF ResolveVisibleFilterTextColor(
+    COLORREF aConfiguredColor,
+    COLORREF aBackground,
+    const ui::ThemePalette &aPalette)
+{
+    // The saved per-filter color is data, not a theme foreground.
+    // Never modify the model just to make one theme legible.
+    if (XPR_IS_TRUE(aPalette.mHighContrast))
+        return aPalette.mText;
+
+    const double sForeground = ListColorLuminance(aConfiguredColor);
+    const double sBackground = ListColorLuminance(aBackground);
+    const double sContrast =
+        (max(sForeground, sBackground) + 0.05) /
+        (min(sForeground, sBackground) + 0.05);
+
+    // Pale custom colors on a Light elevated row (or black on Dark) can
+    // be indistinguishable. Use the current palette text only for
+    // insufficient on-screen contrast; keep the persisted custom color.
+    return sContrast >= 4.5 ?
+        aConfiguredColor : aPalette.mText;
+}
+} // namespace
+
 CfgAppearanceFilteringDlg::CfgAppearanceFilteringDlg(void)
     : super(IDD_CFG_APPEARANCE_FILTERING, XPR_NULL)
 {
@@ -38,6 +81,9 @@ void CfgAppearanceFilteringDlg::DoDataExchange(CDataExchange* pDX)
 
 BEGIN_MESSAGE_MAP(CfgAppearanceFilteringDlg, super)
     ON_WM_DESTROY()
+    ON_WM_SETTINGCHANGE()
+    ON_WM_SYSCOLORCHANGE()
+    ON_MESSAGE(WM_THEMECHANGED, OnThemeChanged)
     ON_BN_CLICKED(IDC_CFG_FILTER_ADD,              OnListAdd)
     ON_BN_CLICKED(IDC_CFG_FILTER_MODIFY,           OnListModify)
     ON_BN_CLICKED(IDC_CFG_FILTER_DELETE,           OnListDelete)
@@ -68,15 +114,6 @@ xpr_bool_t CfgAppearanceFilteringDlg::OnInitDialog(void)
 
     mListCtrl.SetImageList(&SingletonManager::get<ImgListManager>().mCustomImgList16, LVSIL_SMALL);
 
-    const ui::ThemePalette sPalette = ui::ModernUI::getPalette();
-    const COLORREF sListBackground =
-        XPR_IS_TRUE(sPalette.mHighContrast) ?
-        sPalette.mWindow :
-        sPalette.mElevated;
-    mListCtrl.SetBkColor(sListBackground);
-    mListCtrl.SetTextBkColor(sListBackground);
-    mListCtrl.SetTextColor(sPalette.mText);
-
     if (XPR_IS_TRUE(sPalette.mDark) &&
         XPR_IS_FALSE(sPalette.mHighContrast))
     {
@@ -95,6 +132,8 @@ xpr_bool_t CfgAppearanceFilteringDlg::OnInitDialog(void)
         mHeaderCtrl.initHeader(XPR_FALSE);
     }
 
+    refreshFilteringListColors();
+
     xpr_tchar_t sText[0xff] = {0};
     _stprintf(sText, gApp.loadFormatString(XPR_STRING_LITERAL("popup.cfg.body.appearance.filter.label.max_filter"), XPR_STRING_LITERAL("%d")), MAX_FILTER);
     SetDlgItemText(IDC_CFG_FILTER_LABEL_MAX_FILTER, sText);
@@ -108,6 +147,51 @@ xpr_bool_t CfgAppearanceFilteringDlg::OnInitDialog(void)
     SetDlgItemText(IDC_CFG_FILTER_DELETE,           gApp.loadString(XPR_STRING_LITERAL("popup.cfg.body.appearance.filter.button.delete")));
 
     return XPR_TRUE;
+}
+
+void CfgAppearanceFilteringDlg::refreshFilteringListColors(void)
+{
+    if (::IsWindow(mListCtrl.GetSafeHwnd()) == FALSE)
+        return;
+
+    const ui::ThemePalette sPalette = ui::ModernUI::getPalette();
+    const COLORREF sBackground =
+        XPR_IS_TRUE(sPalette.mHighContrast) ?
+        sPalette.mWindow : sPalette.mElevated;
+
+    // The inherited settings-theme refresh re-associates child controls,
+    // but it must also refresh native ListView text/background values.
+    mListCtrl.SetBkColor(sBackground);
+    mListCtrl.SetTextBkColor(sBackground);
+    mListCtrl.SetTextColor(sPalette.mText);
+    mListCtrl.RedrawWindow(
+        XPR_NULL,
+        XPR_NULL,
+        RDW_INVALIDATE | RDW_ERASE | RDW_ALLCHILDREN);
+
+    if (::IsWindow(mHeaderCtrl.GetSafeHwnd()) != FALSE)
+        mHeaderCtrl.Invalidate(XPR_FALSE);
+}
+
+void CfgAppearanceFilteringDlg::OnSettingChange(
+    xpr_uint_t aFlags, const xpr_tchar_t *aSection)
+{
+    super::OnSettingChange(aFlags, aSection);
+    refreshFilteringListColors();
+}
+
+void CfgAppearanceFilteringDlg::OnSysColorChange(void)
+{
+    super::OnSysColorChange();
+    refreshFilteringListColors();
+}
+
+LRESULT CfgAppearanceFilteringDlg::OnThemeChanged(
+    WPARAM aWParam, LPARAM aLParam)
+{
+    const LRESULT sResult = super::OnThemeChanged(aWParam, aLParam);
+    refreshFilteringListColors();
+    return sResult;
 }
 
 void CfgAppearanceFilteringDlg::OnDestroy(void)
@@ -223,12 +307,12 @@ void CfgAppearanceFilteringDlg::OnCustomDrawList(NMHDR* pNMHDR, LRESULT* pResult
             sFilterItem->mColor :
             sPalette.mText;
 
-        if (XPR_IS_TRUE(sPalette.mDark) &&
-            XPR_IS_FALSE(sPalette.mHighContrast) &&
-            sFilterTextColor == RGB(0, 0, 0))
-        {
-            sFilterTextColor = sPalette.mText;
-        }
+        // Per-filter RGB is user data and may have been chosen for
+        // the opposite theme. Contrast-check against the *actual* row
+        // background every paint, rather than special-casing only black
+        // in Dark mode (which left white/pale text invisible in Light).
+        sFilterTextColor = ResolveVisibleFilterTextColor(
+            sFilterTextColor, sListBackground, sPalette);
 
         if ((pLVCD->nmcd.uItemState & CDIS_SELECTED) != 0)
         {

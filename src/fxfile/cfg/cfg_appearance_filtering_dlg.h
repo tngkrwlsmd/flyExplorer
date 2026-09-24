@@ -35,6 +35,7 @@ protected:
     xpr_sint_t insertFilterItem(xpr_sint_t aIndex, FilterItem *aFilterItem);
     xpr_sint_t addFilterItem(FilterItem *aFilterItem);
     void selectItem(xpr_sint_t aIndex);
+    void refreshFilteringListColors(void);
 
 protected:
     CImageList     mImageList;
@@ -51,6 +52,9 @@ protected:
     DECLARE_MESSAGE_MAP()
     virtual xpr_bool_t OnInitDialog(void);
     afx_msg void OnDestroy(void);
+    afx_msg void OnSettingChange(xpr_uint_t aFlags, const xpr_tchar_t *aSection);
+    afx_msg void OnSysColorChange(void);
+    afx_msg LRESULT OnThemeChanged(WPARAM aWParam, LPARAM aLParam);
     afx_msg void OnListAdd(void);
     afx_msg void OnListModify(void);
     afx_msg void OnListDelete(void);

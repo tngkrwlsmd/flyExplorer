@@ -3133,3 +3133,57 @@ count at observed failure, drag/click/visibility/wrap/DPI/HC and
 final matching Windows screenshot: NOT TESTED. The user's visual
 issue remains OPEN pending direct evidence. GitHub Actions:
 NOT RUN without run-specific approval.
+
+
+---
+
+## 2026-09-24 — Reproduced Light filtering text and bookmark band fragments
+
+**New user evidence:** The newly supplied Light/Dark Filtering-page
+screenshots show near-white per-filter names/extensions on a pale
+Light list; the Dark list is legible but still has a bright native
+scrollbar in settings navigation. The bookmark strip crop shows
+short icon-colored and text fragments below nearly every first-row
+shortcut even after previously proposed toolbar painter/button
+lifecycle changes. Do not treat those changes as proven visual fixes.
+
+**Source finding, filtering:** CfgAppearanceFilteringDlg's list
+item custom draw used each persisted FilterItem::mColor as a text
+color, except only RGB(0,0,0) was replaced in Dark. White and
+other pale configured colors could have insufficient contrast on
+Light. Initialization applied ListView colors only once;
+theme-refresh ownership lived in the parent dialog.
+
+**Fix candidate, filtering:** Compare each per-filter color with
+the current ThemePalette elevated list background using relative
+luminance and WCAG 4.5:1 contrast. Only on-screen foreground uses
+palette text when contrast fails; stored filter RGB remains
+untouched. High Contrast always uses system palette foreground.
+Synchronize ListView text/background and repaint header on
+settings/theme/system-color messages; leave inherited dialog
+theme re-entrancy protection intact.
+
+**Source finding, bookmark:** Earlier UI-05 compaction defaulted
+Bookmark to a shared Drive band row. Persisted REBARBANDINFO
+fStyle is restored from disk and supersedes fresh defaults.
+The combination is a plausible contributor to narrow toolbar
+rows and clipped wrap/partial second-row fragments. No Windows
+native geometry trace has proven this the sole cause.
+
+**Fix candidate, bookmark:** Restore independent bookmark
+RBBS_BREAK default, and enforce that break in the existing
+setWrapable layout owner after saved state restoration.
+This intentionally corrects old saved same-row Bookmark
+layout on startup; current session still supports rebar
+interaction. Keep bookmarks, button commands, wrap/chevron
+setting, shared owner-draw and full rebuild intact. Extend
+existing source guard's default bookmark-break expectation
+and persisted layout check.
+
+**Verification limits:** GitHub source/structure checks only.
+Full Python invariant execution, Windows native build, exact
+current Light/Dark/HC screenshot reproduction, bookmark
+layout/wrap and saved-state interaction, multiple DPI and
+keyboard/accessibility: NOT TESTED. Both are still runtime
+OPEN. UI-02 bright native scrollbar is outside this fix.
+GitHub Actions: NOT RUN pending individually requested approval.

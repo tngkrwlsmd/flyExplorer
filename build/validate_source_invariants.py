@@ -4233,11 +4233,12 @@ def validate_fresh_profile_command_band_and_settings_spacing() -> list[str]:
     modern = (FXFILE_SRC / "gui" / "ModernUI.cpp").read_text(
         encoding="utf-8", errors="replace"
     )
-    # Inspect only each band's default construction, not saved-user layout.
+    # Bookmark now gets an independent default row and fixes old saved
+    # same-row layouts when the existing setWrapable path runs.
     for title, expect_break in (
         ("&Toolbar", True),
         ("&Drivebar", True),
-        ("&Bookmarkbar", False),
+        ("&Bookmarkbar", True),
     ):
         pattern = re.compile(
             r"sStyle\s*=\s*(RBBS_BREAK\s*\|\s*)?RBBS_USECHEVRON;"
@@ -4252,6 +4253,8 @@ def validate_fresh_profile_command_band_and_settings_spacing() -> list[str]:
             errors.append(f"default coolbar break flag mismatch: {title}")
     for token in (
         "loadStateFile();",
+        "if (aBandId == AFX_IDW_BOOKMARK_BAR)",
+        "sRebarBandInfo.fStyle |= RBBS_BREAK;",
         "setWrapable(AFX_IDW_BOOKMARK_BAR, gOpt->mMain.mBookmarkBarMultiLine)",
         "return scaleForWindow(38, aHwnd);",
         "return scaleForWindow(16, aHwnd);",
@@ -4384,6 +4387,43 @@ def validate_tab_close_discoverability() -> list[str]:
         )
     ):
         errors.append("tab close must reuse the existing command dispatcher")
+    return errors
+
+
+def validate_filter_list_theme_contrast_regression() -> list[str]:
+    """UI-10: per-filter text must remain legible in Light and Dark."""
+    errors: list[str] = []
+    source = (FXFILE_SRC / "cfg" / "cfg_appearance_filtering_dlg.cpp").read_text(
+        encoding="utf-8", errors="replace"
+    )
+    header = (FXFILE_SRC / "cfg" / "cfg_appearance_filtering_dlg.h").read_text(
+        encoding="utf-8", errors="replace"
+    )
+    for token in (
+        "#include <cmath>",
+        "ListColorLuminance(COLORREF aColor)",
+        "ResolveVisibleFilterTextColor(",
+        "sContrast >= 4.5",
+        "aPalette.mHighContrast",
+        "sFilterTextColor = ResolveVisibleFilterTextColor(",
+        "refreshFilteringListColors();",
+        "mListCtrl.SetTextColor(sPalette.mText)",
+        "ON_WM_SETTINGCHANGE()",
+        "ON_WM_SYSCOLORCHANGE()",
+        "ON_MESSAGE(WM_THEMECHANGED, OnThemeChanged)",
+    ):
+        if token not in source:
+            errors.append(f"filter list contrast/retime guard missing: {token}")
+    for token in (
+        "void refreshFilteringListColors(void);",
+        "void OnSettingChange(",
+        "void OnSysColorChange(",
+        "LRESULT OnThemeChanged(",
+    ):
+        if token not in header:
+            errors.append(f"filter list theme declaration missing: {token}")
+    if "sFilterTextColor == RGB(0, 0, 0)" in source:
+        errors.append("old black-only Dark exception left Light colors invisible")
     return errors
 
 
@@ -4675,6 +4715,7 @@ def main() -> int:
     errors.extend(validate_split_pane_column_and_contents_layout())
     errors.extend(validate_shared_tree_new_profile_default())
     errors.extend(validate_tab_close_discoverability())
+    errors.extend(validate_filter_list_theme_contrast_regression())
     errors.extend(validate_bookmark_toolbar_idempotent_rebuild())
     errors.extend(validate_bookmark_toolbar_direct_paint_and_print_owner())
     errors.extend(validate_settings_single_visible_page_after_theme_apply())

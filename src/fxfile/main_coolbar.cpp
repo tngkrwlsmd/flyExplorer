@@ -105,11 +105,11 @@ xpr_bool_t MainCoolBar::createBands(void)
         return XPR_FALSE;
     }
 
-    // Let the short drive and bookmark bands share the second row on a
-    // fresh profile instead of reserving two mostly empty full-width rows.
-    // Rebar still wraps naturally on narrow monitors; the persisted band
-    // order/BREAK flags restored by loadStateFile remain authoritative.
-    sStyle = RBBS_USECHEVRON;
+    // Sharing the drive row can constrain bookmark width during the
+    // first toolbar AutoSize and expose clipped wrapped button content.
+    // Give the bookmark band its own row; chevrons still preserve access
+    // on narrow windows. Existing bookmarks and toolbar commands remain.
+    sStyle = RBBS_BREAK | RBBS_USECHEVRON;
     if (AddBar(&mBookmarkToolBar, XPR_NULL, XPR_NULL, sStyle, XPR_STRING_LITERAL("&Bookmarkbar"), false) == XPR_FALSE)
     {
         XPR_TRACE(XPR_STRING_LITERAL("Failed to add rebar\n"));
@@ -292,6 +292,12 @@ void MainCoolBar::setWrapable(xpr_uint_t aBandId, xpr_bool_t aWrapable)
             {
                 sRebarBandInfo.fMask &= ~RBBIM_CHILD;
                 sRebarBandInfo.fMask |= RBBIM_IDEALSIZE;
+
+                // Also correct stored same-row layouts from the previous
+                // shared-band default. A saved BREAK flag otherwise
+                // overrides the new-band construction at startup.
+                if (aBandId == AFX_IDW_BOOKMARK_BAR)
+                    sRebarBandInfo.fStyle |= RBBS_BREAK;
 
                 if (XPR_IS_TRUE(aWrapable))
                 {

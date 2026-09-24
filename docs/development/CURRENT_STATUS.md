@@ -193,6 +193,38 @@ compiler, actual toolbar count at reproduction, 100/125/150/200%
 DPI, visibility toggling, wrap/chevron and final screenshots:
 NOT TESTED. UI-09 remains OPEN.
 
+**2026-09-24 follow-up after new user Light/Dark screenshots —
+filtering list contrast and bookmark row layout (source checkpoint):**
+The two settings screenshots confirm per-filter text is nearly
+invisible on the Light elevated background; the Dark screenshot
+also shows native bright scrollbar chrome that remains a separate
+UI-02 issue. CfgAppearanceFilteringDlg previously corrected only
+exact black on Dark; its user-configured pale/white filter colors
+were drawn unchanged against the Light surface. The list custom
+draw now evaluates WCAG relative luminance/contrast (4.5:1) for
+each configured color against the current Light/Dark row background
+and uses the active palette foreground only if inadequate.
+Persisted filter RGB preferences and the actual filter semantics
+are unchanged. The page reapplies native ListView text/background
+and header invalidation after settings/theme/system-color change.
+
+The repeated bookmark screenshot still shows colored icon and
+caption fragments along the lower edge after earlier pixel-owner
+and idempotent-button changes. A layout risk introduced by this
+project's own UI-05 band compaction is now reversed: the bookmark
+band again starts an independent rebar row and setWrapable also
+corrects persisted same-row band styles that otherwise override
+the fresh-profile change. Existing toolbar data and chevron/
+multiline options remain available, but this correction does
+override previously saved bookmark same-row positioning on launch;
+users can rearrange bands during the session.
+
+Source structure checks: constructed for these two owners. Full
+source-invariants execution, current Windows compiler, exact
+new Light/Dark screenshots, 100/125/150/200% DPI, keyboard and
+High Contrast: NOT TESTED. Filtering UI-10 and bookmark UI-09
+remain RUNTIME VISUAL RETEST OPEN; UI-02 scrollbar remains OPEN.
+
 ## Outstanding near-term work
 
 1. Address the reproduced settings-page visibility and Dark rendering issues
