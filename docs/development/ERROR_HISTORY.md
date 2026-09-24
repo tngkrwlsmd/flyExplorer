@@ -1,5 +1,12 @@
 # flyExplorer Error Diagnosis / Prevention History
 
+> **Chronological evidence archive (preserved):** Some entries describe past
+> source snapshots and scoped test runs; they are not assertions that current
+> `main` has passed the same tests. For active project status, evidence limits
+> and currently outstanding work, read [`CURRENT_STATUS.md`](CURRENT_STATUS.md)
+> and `.agent-policy/PROJECT.md`. Retain historical failures, diagnosis and
+> test provenance when updating the live summary.
+
 이 문서는 확정된 오류를 단순 수정으로 끝내지 않고, 다음 진단을 빠르게 하고 같은 계열의 결함을 사전에 막기 위한 프로젝트 기록이다.
 
 ## 기록 원칙
@@ -2276,3 +2283,27 @@ Windows HTML Help compiler, built CHM layout, per-page contemporary
 user interactions, localized shortcuts and visual/accessibility
 acceptance: NOT TESTED. GitHub Actions: NOT RUN. Remaining old detailed
 pages are not represented as fully modernized.
+
+---
+
+## 2026-09-24 — Separate current status from preserved historical evidence
+
+**Observed:** `ERROR_HISTORY.md` is an append-only evidence archive covering
+multiple product and documentation revisions. The installer-visible
+`dist/history.txt` begins with a 2010 release, so placing these records
+next to live requirements without explicit scope risks confusing
+historical evidence with a verified current build.
+
+**Change:** Add `docs/development/CURRENT_STATUS.md` as the short live
+status, open-work and evidence-level entry point; link it from README and
+the head of this history without deleting or rewriting prior diagnosis.
+Clearly label `dist/history.txt` as historical while preserving its
+entire original release record and present installer wiring. Extend
+`PROJECT.md` handoff instructions so each completed unit updates this
+status summary whenever relevant, alongside its existing
+PROJECT/ERROR_HISTORY obligation.
+
+**Evidence:** Repository documentation cross-reference and original
+history-body preservation: static inspected. New Windows compile, CHM
+generation, installer/runtime, third-party licensing: NOT TESTED.
+GitHub Actions: NOT RUN.

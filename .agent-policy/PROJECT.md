@@ -552,11 +552,17 @@ were not executed in this step.
     - `docs/development/HELP_CONTENT_AUDIT.md` inventories modernized versus historical topics and the actual on-Windows acceptance work remaining. README and installer readme point readers to the new current guide.
     - Source inspection and link/document consistency: static reviewed. Generated Windows CHM display, high-contrast/Light/Dark UI screenshots, shortcuts across user settings, installer and actual product runtime: NOT TESTED.
 
+34. **Live status versus historical evidence — DOCS SEGREGATED / NO BUILD RETEST**
+    - `docs/development/CURRENT_STATUS.md` is the concise current implementation/evidence/open-work entry point. `ERROR_HISTORY.md` stays the complete append-only error/verification history; existing diagnosis and historical run records are never discarded or rewritten to suggest current PASS.
+    - `dist/history.txt` remains installed as an original release-history artifact but is visibly labelled as historical, not the changelog of 2.0.4-dev. README links the current summary and the existing error-history archive.
+    - On finishing each logical unit, maintain the PROJECT issue state and ERROR_HISTORY evidence record and update the CURRENT_STATUS page whenever its described facts, risks or evidence have changed. No Windows build or installer was run for the status-document maintenance.
+
 ### Development handoff rule
 
 - Every new user-requested development item is added to this section (or its successor) before implementation starts.
 - After each **logical work unit** is completed, immediately update `docs/development/ERROR_HISTORY.md` and this project state with problem/root cause/change/evidence status, then commit that unit to `main`.
 - Do not batch unrelated finished work while documentation lags behind the code.
+- Also update `docs/development/CURRENT_STATUS.md` in the same logical work unit whenever the current baseline, completed items, active blockers or validation evidence change; do not substitute or truncate the complete historical ERROR_HISTORY.
 - A user-reproduced item stays ACTIVE until matching runtime/screenshot evidence passes. Source/static fixes without that evidence are reported as `CODE FIXED / RUNTIME NOT TESTED`.
 
 ## Runtime regression acceptance protocol

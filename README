@@ -7,6 +7,12 @@ Overview
 --------
 fxfile (formerly flyExplorer) is a free, open source file manager for Microsoft Windows.
 
+For the current implementation/evidence summary and open tasks, see
+`docs/development/CURRENT_STATUS.md`. Chronological historical diagnostics
+remain in `docs/development/ERROR_HISTORY.md`; the current user guide is
+`docs/htmlhelp/Html/current_development.htm` (older detailed pages are
+labelled as historical until independently verified).
+
 Modern Build Environment
 ------------------------
 The default build path targets Visual Studio 2026 and the v145 platform toolset.
