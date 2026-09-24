@@ -3,6 +3,8 @@
 이 파일은 universal-agent-docs의 PROJECT template을 flyExplorer에 맞게 채운 Validated-profile 프로젝트 지도다.
 상세 제품 명세를 복제하지 않고 실제 Source of Truth 위치와 현재 확인된 build/runtime 사실을 기록한다.
 
+**최신 실행 정책 (2026-09-24):** GitHub Actions는 기한 없이 사용자에게 개별 실행을 명확히 지시받은 경우만 허용한다. `Source Validation`, `Windows Product Build`의 수동 workflow는 준비 상태로 보존하지만 push/PR 등 자동 트리거 및 무허가 수동 dispatch는 금지한다. 9월 30일까지 예산 일시 중단이라고 적힌 아래 기존 기록은 역사적이며 최신 정책보다 우선하지 않는다. 계정 예산이나 날짜가 바뀌어도 자동 해제되지 않는다. 기본은 로컬 `local_ci.bat x64`, 미실행 hosted 검증은 `NOT TESTED`다.
+
 <!-- project-facts:start -->
 ```json
 {
@@ -509,7 +511,7 @@ flyExplorer의 UI/runtime 결함은 source invariant나 commit 존재만으로 �
 2. `Debug-x64-Unicode | x64`, x86 Unicode/Multibyte, `local_ci.bat x86`, `local_ci.bat release`, `local_ci.bat full` 및 Actions `run_x86_compat`는 현재 비활성 범위다. 사용자가 명시적으로 다시 허용하기 전에는 실행하지 않는다.
 3. `quick/test/install/policy`, packaging/installer/clean-VM 검증은 기능을 보존하지만 기본 CI matrix가 아니다. 해당 범위를 사용자가 요청하거나 그 변경 자체를 검증할 때만 별도 evidence로 수행한다.
 4. compile/link 완료 판단은 `Release-x64-Unicode | x64` evidence만 사용한다. Debug/x86 결과를 요구하지 않으며 실행하지 않은 범위는 `NOT TESTED`로 둔다.
-5. **2026-09-30까지 GitHub Actions는 branch/main 반영만을 이유로 실행하지 않는다.** 사용자가 Actions 사용을 명시적으로 허용하더라도 현재 Windows build 범위는 Release x64 하나다.
+5. **기한 없이 사용자에게 그 개별 실행을 명시적으로 지시받지 않으면 GitHub Actions를 실행하지 않는다.** 사용자가 Actions 사용을 명시적으로 허용하더라도 현재 Windows build 범위는 Release x64 하나다.
 6. interactive UI/DPI/High Contrast/visual 결과와 clean Windows Registry/shell integration은 CI build와 별도의 수동 evidence로 구분한다.
 7. 사용자에게서 재현된 runtime 결함은 해당 사용자 행동을 acceptance case로 보존한다. 동일 증상을 직접 재실행하지 못한 경우 static/compile 결과와 무관하게 runtime 상태는 `NOT TESTED`다.
 8. UI hang 수정은 가능하면 UI thread stack/dump 또는 source상 유한성 증거와 반복 open/close runtime을 함께 확보한다. visual 수정은 최종 screenshot, elevation 수정은 실제 process/token state를 별도 evidence로 남긴다.

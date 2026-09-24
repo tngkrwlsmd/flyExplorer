@@ -1,14 +1,14 @@
 name: Source Validation
 
-# Temporary Actions budget pause through 2026-09-30.
-# No push/PR CI. Manual runs require an explicit budget override.
+# Permanent restriction: no GitHub Actions run without explicit user instruction per run.
+# No push/PR CI. Keep definitions manual only with default-disabled jobs.
 # The static preflight includes deterministic known-regression guards,
 # including dialog/resource/DPI-icon, rename/filter/config/updater functional-test, and isolated installer-smoke wiring.
 on:
   workflow_dispatch:
     inputs:
       run_ci:
-        description: "Budget override: run source validation before 2026-10-01"
+        description: "Explicit user approval required for this individual validation run"
         required: false
         default: false
         type: boolean

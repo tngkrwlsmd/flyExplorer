@@ -94,7 +94,7 @@ policy/full 실행 시 사용하는 Python 가상환경:
 
 GitHub Actions 저장 공간 관리
 --------------------------
-hosted Actions는 현재 budget pause 중이며 workflow에서 artifact/cache 업로드를 하지 않습니다.
+hosted Actions는 기한 없이 실행별 사용자 명시 지시가 없는 한 실행 금지입니다. 준비된 workflow는 수동 실행 전용이며 자동 복구하지 않습니다. workflow의 artifact/cache 업로드도 없습니다.
 `build/validate_source_invariants.py`는 `actions/upload-artifact`, `actions/cache`,
 `actions/upload-pages-artifact`가 hosted workflow에 다시 추가되면 실패합니다.
 

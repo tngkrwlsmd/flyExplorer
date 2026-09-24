@@ -158,15 +158,14 @@ UI/UX 현대화 작업은 다음 원칙을 따른다.
 
 ## 8. 검증
 
-### Temporary GitHub Actions budget pause — 2026-09-22 through 2026-09-30
+### Permanent GitHub Actions restriction — explicit user instruction per run only
 
-- GitHub Actions의 자동 `push`/`pull_request` CI는 사용량 보호를 위해 일시 중지한다.
-- 2026-10-01 전에는 일반 개발 checkpoint, branch, main 반영을 이유로 Actions를 수동 실행하지 않는다.
-- 사용자가 해당 실행에서 Actions 비용 사용을 명시적으로 허용한 경우에만 workflow의 `run_ci` budget override를 켤 수 있다.
-- **현재 활성 CI build 범위(2026-09-23 사용자 지시)는 `Release-x64-Unicode | x64` 하나뿐이다.** 로컬에서는 `local_ci.bat x64`만 사용한다. Debug x64, x86 Unicode/Multibyte, `local_ci.bat release`, `local_ci.bat full`, GitHub Actions의 `run_x86_compat`는 사용자가 범위를 다시 넓히라고 명시하기 전에는 실행하지 않는다. 해당 profile/job 구현은 향후 수동 호환성/릴리스 검증 자산으로 보존만 한다.
-- pause 기간에는 `python build/validate_source_invariants.py` 같은 로컬/정적 검증과 가능한 로컬 빌드를 우선한다. Windows compile/runtime/package를 실제로 실행하지 못했으면 `NOT TESTED`로 기록한다.
-- 테스트/검증 스크립트 자체는 비용 절감 목적으로 삭제하지 않는다. 비용은 remote Actions 실행을 막아 절감하고, 검증 자산은 다음 재개 시점까지 보존한다.
-- 2026-10-01 이후에도 자동 CI를 기계적으로 되살리지 않는다. Actions 예산을 확인한 뒤 필요한 최소 matrix와 trigger를 명시적으로 재검토하고 복구한다.
+- **기간 제한 없이 사용자가 그 개별 실행을 분명히 지시한 경우 외에는 GitHub Actions를 실행하지 않는다.** push/PR/schedule 등 자동 실행이나 agent의 수동 dispatch/재실행도 금지한다.
+- 10월 도래, 월간 예산 초기화, 이전 허가, 일반 개발/검증/commit/main 반영 요청은 새로운 Actions 실행 허가가 아니다.
+- 기존 workflow 정의는 `workflow_dispatch` 전용으로 보존하고 `run_ci`를 기본 false로 유지한다. 실행별 명시적 승인 없이 true로 바꾸거나 호출하지 않는다. 자동 trigger는 복구하지 않는다.
+- 로컬 검증은 현재 `local_ci.bat x64` / `Release-x64-Unicode | x64`만 기본 범위다. 다른 profile 및 hosted matrix는 사용자 별도 요청 없이는 실행하지 않는다.
+- 정적/로컬 검증을 우선하고 실제 미실행 compile/runtime/visual/hosted CI는 `NOT TESTED`로 보고한다. branch/main CI PASS를 일반 완료 조건으로 요구하지 않는다.
+- 이 무기한 정책이 아래의 2026-09-30까지 임시 중단이라고 기록된 모든 역사적 문구보다 우선한다.
 
 검증은 변경 범위에 맞춰 단계적으로 수행하고, 정적 검사·컴파일/링크·호스티드 실행·클린 환경 검증을 서로 다른 evidence로 기록한다.
 
@@ -177,7 +176,7 @@ UI/UX 현대화 작업은 다음 원칙을 따른다.
 2. `Debug-x64-Unicode | x64`, x86 Unicode/Multibyte, `local_ci.bat x86`, `local_ci.bat release`, `local_ci.bat full`은 현재 CI 범위가 아니다. 사용자가 명시적으로 범위를 다시 넓히기 전에는 agent가 실행하지 않는다.
 3. `local_ci.bat quick/test/install/policy`와 packaging/installer script는 기능 자체를 보존하지만 현재 기본 CI matrix가 아니다. 특정 정적/installer/policy 작업을 사용자가 요청했거나 그 범위의 검증이 명시적으로 필요한 경우에만 별도 evidence로 실행한다.
 4. GitHub Actions도 remote 실행이 허용된 경우 `release-x64`만 사용한다. `run_x86_compat`는 현재 정책상 켜지 않는다.
-5. 2026-09-30까지는 branch/main 반영만을 이유로 GitHub Actions를 요구하거나 실행하지 않는다. 사용자가 Actions 비용 사용을 명시적으로 허용한 경우에도 현재 build 범위는 `Release-x64-Unicode | x64` 하나다.
+5. **기한 없이 그 개별 실행에 대한 사용자 명시적 지시가 없는 한 GitHub Actions를 실행하지 않는다.** branch/main 반영을 실행 근거로 삼지 않으며 별도 승인 없는 실행 범위 확대도 금지한다.
 6. interactive 기능, DPI/High Contrast/visual 변경과 clean-install/Registry/shell integration은 CI build matrix와 별개의 수동 evidence로 구분한다.
 
 별도 native product functional regression target `src/fxfile-tests/fxfile-tests.gyp`가 존재한다. 이 suite는 OS temp fixture에서 production `xpr::FileSys/FileIo`/SHFileOperation seam, rename transform core, `fnmatch`/`xpr::FilePath`, UTF-8 `ConfFileEx` persistence, updater version/metadata/command quoting contract, CRC32/MD5 구현, ShellRegistry command/key 조립을 직접 검증한다. 현재 기본/에이전트 CI는 `local_ci.bat x64` 및 동일 범위의 `Release-x64-Unicode | x64` remote job만 대상으로 하며 native functional regression과 x64 launch smoke는 그 profile 안에서 실행된다. x86 compatibility/Debug/package/policy profile은 구현을 보존하지만 사용자 명시적 범위 확대 전에는 실행하지 않는다. clean Windows의 실제 product registration과 interactive/visual regression evidence는 별도다.
