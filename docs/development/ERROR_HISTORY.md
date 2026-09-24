@@ -2051,3 +2051,42 @@
 
 **관련 commit**
 - 이 항목과 함께 반영하는 `fix: Windows 10/11의 XP 오분류로 누락된 다크 렌더링 복구` commit.
+
+---
+
+## 2026-09-24 — Documentation alignment after supported-Windows OS fix
+
+**Scope and baseline**
+- Product code remains at `6b18c58f`. Documentation-only source checkpoint:
+  `5e3d8d4ad85e03b5cbe4db3d4457b0058c16687b` (README, Windows 11 UI reference, distribution README,
+  legacy HTML system-requirements source, dependency audit follow-up).
+- The accompanying PROJECT documentation checkpoint updates its source-review
+  revision to the preceding documentation commit; no product source, GYP,
+  build or GitHub Actions workflow is modified.
+
+**Corrections**
+- Replaced README's expired 2026-09-30 CI-pause/restart language with the
+  permanent per-run user-approval restriction already enforced by AGENTS,
+  LOCAL_CI_MANUAL and manual-only workflow definitions.
+- Separated `6b18c58f` parent-plus-working-tree x64 build/functional
+  evidence (PASS WITH SKIPS, launch SKIPPED) from unverified post-fix interactive
+  Dark/Light/High Contrast visual results.
+- Reconciled the Windows 11 UI reference's pre-generator roadmap with the
+  standard-library deterministic 23-command Fluent pipeline and kept the
+  historical 51-frame bitmap fallback distinction.
+- Replaced outdated Win98/IE5/minimum-hardware claims in installer-facing
+  readme and HTML requirements *source* with the documented active development
+  and CI scope. Original product features and old history/credits were retained.
+- Appended post-audit evidence without rewriting the dependency audit's
+  original "NOT TESTED" results.
+
+**Open limitation / evidence**
+- The installer stages existing binary `dist/fxfile.chm`. That compiled
+  legacy help was NOT REGENERATED; its included requirements may still be old.
+  Regeneration and package/installer inspection require a separate, explicitly
+  authorized Windows packaging validation unit.
+- Static source/text consistency checks and source-path presence checks were
+  performed through the repository connector. Policy/readiness CLI, C++ builds,
+  product runtime, installer/package and visual tests were NOT RUN in this
+  documentation-only synchronization. The historical local build results above
+  are not new tests for this commit.

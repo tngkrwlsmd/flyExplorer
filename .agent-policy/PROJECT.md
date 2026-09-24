@@ -79,8 +79,8 @@
     }
   ],
   "review": {
-    "reviewed_revision": "258565392e21c8f372714b4f96a687e707d6dee7",
-    "reviewed_at": "2026-09-23",
+    "reviewed_revision": "5e3d8d4ad85e03b5cbe4db3d4457b0058c16687b",
+    "reviewed_at": "2026-09-24",
     "reviewed_paths": [
       "AGENTS.md",
       "README",
@@ -116,7 +116,11 @@
       "src/fxfile-crash",
       "src/fxfile-keyhook",
       "src/fxfile-launcher",
-      "src/fxfile-upchecker"
+      "src/fxfile-upchecker",
+      "docs/development/WIN11_EXPLORER_UI_REFERENCE.md",
+      "docs/development/DEPENDENCY_ARCH_AUDIT_20260924.md",
+      "dist/readme.txt",
+      "docs/htmlhelp/Html/flyExplorer/requirements.htm"
     ]
   }
 }
@@ -183,7 +187,7 @@
 - updater는 x64 Build Solution에서 의도적으로 제외한다.
 - native product functional regression suite가 존재한다. `src/fxfile-tests/fxfile-tests.gyp`의 executable은 production xpr FileSys/FileIo, SHFileOperation seam, CRC32/MD5, ShellRegistry command/key core를 직접 사용하고 fixture는 OS temp 아래에서 생성/정리한다.
 - native functional-test executable은 product와 동일하게 `xpr::initialize()` 성공 후 production XPR API를 사용하고 모든 정상/fixture-setup 실패 종료 경로에서 `xpr::finalize()`를 호출한다. source invariant가 이 lifecycle token을 guard한다.
-- GitHub Actions budget 보호를 위해 2026-09-22부터 2026-09-30까지 `Source Validation`과 `Windows Product Build`의 automatic push/PR trigger를 중지했다. 수동 dispatch도 `run_ci` explicit override 없이는 job이 실행되지 않는다. Windows는 Release x64만 기본 실행하며 x86 compatibility는 추가 `run_x86_compat` 입력이 필요하다; Debug x64와 package/upload job은 Actions에서 제거했다.
+- [과거 정책 기록: 2026-09-24 영구 실행별 승인 정책으로 대체됨] GitHub Actions budget 보호를 위해 2026-09-22부터 2026-09-30까지 `Source Validation`과 `Windows Product Build`의 automatic push/PR trigger를 중지했다. 수동 dispatch도 `run_ci` explicit override 없이는 job이 실행되지 않는다. Windows는 Release x64만 기본 실행하며 x86 compatibility는 추가 `run_x86_compat` 입력이 필요하다; Debug x64와 package/upload job은 Actions에서 제거했다.
 - budget pause 기간에는 branch/main CI PASS를 완료 조건으로 요구하지 않는다. `local_ci.bat`을 로컬 검증 진입점으로 사용하고 실제 수행한 profile의 결과만 Evidence로 기록한다. 수행하지 않은 compile/runtime/package/visual 검증은 `NOT TESTED`로 남긴다. 검증 스크립트는 삭제하지 않고 재개 시점까지 보존한다.
 - `local_ci.bat`은 redirected Python stdout을 UTF-8로 강제한다. Windows ANSI code page가 CP949 등일 때 policy/readiness/conformance 출력의 Unicode 문장부호로 `UnicodeEncodeError`가 발생하지 않도록 하기 위한 로컬 검증 contract다.
 - 로컬 CI의 영구 로그는 `logs/local-ci/local-ci.log` 하나만 사용한다. 실행 시작 시 이전 local CI `.log`를 정리하고 단계별 임시 capture 파일은 종료 시 삭제한다. 간단한 프로필 사용법은 루트 `LOCAL_CI_MANUAL.txt`를 Source of Truth로 둔다.
@@ -205,7 +209,7 @@
 - GitHub-hosted Windows runner의 기본 remote runtime evidence는 x64 Unicode launch smoke 하나만 유지한다. smoke는 staged runtime을 임시 디렉터리에 복사하고 isolated `--conf_dir`로 `fxfile.exe`를 시작한 뒤 top-level main window와 short stability window를 확인한다. x86 launch smoke는 Actions 비용 절감을 위해 제거했다.
 - hosted runner에는 Visual Studio와 여러 system runtime이 이미 설치되어 있으므로 이 결과는 clean Windows Sandbox/VM evidence가 아니다. Windows Sandbox/clean VM, interactive functional smoke, visual regression은 아직 자동화하지 않는다.
 - `build/validate_source_invariants.py`가 C++ cross-cutting dependency와 ModernUI integration의 빠른 static preflight를 제공하며, 알려진 product regression도 함께 차단한다. 현재 ToolbarWindow32에 존재하지 않는 `TB_SETBKCOLOR`/`TB_SETTEXTCOLOR` 재도입을 거부하고 `NM_CUSTOMDRAW`/`NMTBCUSTOMDRAW` 기반 dark-state color wiring이 유지되는지 검사한다.
-- `.agent-policy/`에는 upstream `universal-agent-docs` revision `cc250a63994f1d9d4fcfdbb2bab9b622230bf8c6`의 validated policy bundle을 vendor한다. policy/readiness/conformance 검증 자산은 `local_ci.bat policy/full`에 보존되어 있지만 현재 활성 CI 범위에는 포함하지 않는다. 사용자가 해당 범위를 명시적으로 요청할 때만 실행한다. 2026-09-30까지 Actions 자동 trigger는 계속 중지되어 있고 수동 실행도 explicit budget override 없이는 실행하지 않는다.
+- `.agent-policy/`에는 upstream `universal-agent-docs` revision `cc250a63994f1d9d4fcfdbb2bab9b622230bf8c6`의 validated policy bundle을 vendor한다. policy/readiness/conformance 검증 자산은 `local_ci.bat policy/full`에 보존되어 있지만 현재 활성 CI 범위에는 포함하지 않는다. 사용자가 해당 범위를 명시적으로 요청할 때만 실행한다. [과거 상태 기록] 2026-09-30까지의 일시 중단 안내는 현재 유효하지 않다. 현행 정책상 자동 trigger는 무기한 중단되며, 개별 Actions 실행은 그 실행에 대한 사용자 명시적 지시와 해당 workflow override가 모두 필요하다.
 - Profile C runtime enforcement는 설치되어 있지 않다.
 - 2026-09-22 이후 UI 현대화의 장기 reference target은 **현재 Windows 11 기본 파일 탐색기**다. MFC/multi-pane/tab/file-operation semantics는 유지하되 main frame chrome, command bar, navigation/address/tab, list/tree/content, popup/context, dialog 순으로 Windows 11 Explorer의 visual hierarchy, spacing, typography, neutral surface, hover/focus/selection 상태에 근접시키는 것을 기본 개발 방향으로 삼는다. System/Light/Dark 앱 테마 선택을 제품 기능으로 유지하며 High Contrast가 항상 우선한다.
 - UI 구현 우선순위는 **Microsoft 공식/public asset → documented Windows API → Windows system theme/font/color/metric → documented Win32/MFC customization → 필요한 최소 custom drawing** 순이다. 기존 ModernUI custom drawing은 유지 자체가 목적이 아니며, 공식 Microsoft 자산/API보다 시각적으로 불리하거나 중복되면 기능 계약을 보존하는 범위에서 교체한다.
@@ -256,7 +260,7 @@
 - CSizableReBar는 FrameWndEx menu rebar와 MainCoolBar toolbar rebar가 공유하는 실제 host이므로 공통 dark styling ownership을 맡는다. internal CReBarCtrl에 documented Explorer association을 적용하고 RB_SETBKCOLOR/RB_SETTEXTCOLOR를 ThemePalette/System color로 갱신하며, dark non-client sizing edge는 mBorder로 그린다. WM_SETTINGCHANGE / WM_SYSCOLORCHANGE / WM_THEMECHANGED에서 즉시 refresh한다.
 - BCMenu owner-draw popup의 실제 활성 경로인 Windows8/Standard style만 ThemePalette-aware하게 변경했다. dark/non-HC에서 background/separator/normal text/disabled text/selection을 mSurface/mSeparator/mText/mSecondaryText/mSelection/mSelectionText로 처리하며 Light/High Contrast는 기존 system-color 경로를 유지한다. 사용되지 않는 legacy Office/Vista drawing path는 건드리지 않았다.
 - Menu/Rebar/Toolbar 구현 정적 범위 검토는 PASS: 변경 파일은 gui/rebar/MenuBar.h/.cpp, ToolBarEx.h/.cpp, SizableReBar.h/.cpp, gui/BCMenu.cpp에 한정되고 각 ModernUI 사용 translation unit의 direct include, handler declaration/definition/message-map 일치, toolbar/popup/rebar High Contrast fallback, active BCMenu draw path와 dark separator를 확인했다. generated project, ModernUI palette 구조, build/validate_source_invariants.py는 변경하지 않았다.
-- 2026-09-22 사용자 로컬 full CI에서 발견된 ToolBarEx.cpp의 `TB_SETBKCOLOR`/`TB_SETTEXTCOLOR` C2065 compile regression은 제거되었고, 동일 식별자 재도입과 toolbar custom-draw wiring 손실을 `build/validate_source_invariants.py`가 정적으로 차단하도록 보강했다. 이후 업로드된 full 로그는 수정 전 Toolbar 소스를 계속 컴파일한 stale local checkout 결과였으므로 현재 `main`의 post-fix compile/runtime/package PASS evidence로 사용하지 않는다. 현재 `main`에 대한 fresh Windows `local_ci.bat x64`는 아직 NOT TESTED이며, `full`/x86/package 범위는 사용자 지시로 비활성이다. 실제 Windows visual/interactive evidence도 별도다.
+- 2026-09-22 사용자 로컬 full CI에서 발견된 ToolBarEx.cpp의 `TB_SETBKCOLOR`/`TB_SETTEXTCOLOR` C2065 compile regression은 제거되었고, 동일 식별자 재도입과 toolbar custom-draw wiring 손실을 `build/validate_source_invariants.py`가 정적으로 차단하도록 보강했다. 이후 업로드된 full 로그는 수정 전 Toolbar 소스를 계속 컴파일한 stale local checkout 결과였으므로 현재 `main`의 post-fix compile/runtime/package PASS evidence로 사용하지 않는다. 이 2026-09-22 단계에서의 fresh Windows `local_ci.bat x64`는 NOT TESTED였으며 (2026-09-24 `6b18c58f` 변경 기준의 이후 x64 빌드 기록은 아래 항목 26 참조),, `full`/x86/package 범위는 사용자 지시로 비활성이다. 실제 Windows visual/interactive evidence도 별도다.
 - broader dialog modernization의 공통 기반을 완료했다. CResizingDialog는 검색/히스토리/드라이브/파일 작업/CRC/배치/동기화 등 다수 modeless/resizable command dialog가 공유하는 base로서 system UI font, ThemePalette surface/window background, WM_CTLCOLOR 기반 edit/list/static/button 색 보정, documented Explorer common-control association, settings/syscolor/theme/DPI refresh를 공통 제공한다. Light/High Contrast는 native/system rendering으로 fallback하며 기존 resize/layout, command routing, per-dialog custom font를 보존한다.
 - TitleDlg 기반(create/rename/shortcut/file-list 계열)은 기존 custom header ownership을 유지하면서 header background/text/separator를 ThemePalette로 전환하고 32 logical-pixel description icon을 current-DPI 크기로 로드/그린다. resource-ID icon은 HWND 생성 이후 ModernUI::loadIconResource로 로드하고 DPI 변경 시 다시 로드하며, caller가 전달한 shell/external HICON은 기존 ownership 계약을 유지한다.
 - 설정 UI는 CfgDlg 공통 page base와 CfgMainDlg host를 현대화했다. 약 30개의 CfgDlg-derived page는 공통 system font/dark surface/edit-list color/theme refresh를 상속하고, CfgMainDlg는 window-frame theme, palette-backed host surface, config TreeCtrl background/text/line 및 image-list background를 갱신한다. 기존 config tree 구조, apply/default semantics, dynamically-created page lifecycle은 변경하지 않았다.
@@ -268,7 +272,7 @@
 - native functional regression은 filesystem/hash/shell contract에서 확장되어 batch-rename transform core, `fnmatch`/`xpr::FilePath`, UTF-8 `ConfFileEx` round-trip/default/corrupt input, updater strict version 비교/metadata parser/conf-dir+startup quoting을 production implementation으로 검증하도록 구성됐다. 이 과정에서 `ConfFile::mFlags` constructor 초기화, version compare ordering, malformed updater version 처리, updater metadata 필수 필드, conf-dir quoting, rename boundary input을 수정하고 회귀를 추가했다.
 - package validation은 main executable과 모든 package의 Win32 upchecker PE machine을 확인하고 wrong XPR runtime, stale `fxfile-updater.exe`, nested architecture staging, unsafe ZIP path, duplicate/case-colliding entry, 개발 산출물 혼입을 차단한다. isolated installer smoke는 install/uninstall 전후 Registry뿐 아니라 shortcut/startup/profile snapshot, pre-existing fxfile process, sibling sentinel과 installed architecture를 보호한다.
 - 이번 범위의 자동화 가능한 product functional regression, updater/release/package/installer hardening, shell-command contract, direct-dialog/DPI icon/resource regression 보강은 구현 완료했다. toolbar/config-tree strip은 기능 index를 보존하기 위해 구조를 유지하며 실제 시각 재디자인과 최종 visual acceptance는 별도 manual/design evidence로 남는다.
-- 이 실행 환경에서는 Windows/MSVC `local_ci.bat quick`/`test`/`install`/`x64`/`x86`/`release`/`full`을 실제 실행하지 못했으므로 현재 `main`의 compile/link/functional/runtime/package/install evidence는 NOT TESTED다. 실제 제품 Registry shell registration, clean Windows install/uninstall, Light/Dark/High Contrast/DPI/interactive 검증도 별도 Manual / NOT TESTED evidence다.
+- [해당 단계의 과거 증거] 그 실행 환경에서는 Windows/MSVC `local_ci.bat quick`/`test`/`install`/`x64`/`x86`/`release`/`full`을 실행하지 못했으므로 당시 compile/link/functional/runtime/package/install evidence는 NOT TESTED였다. 이후 `6b18c58f`에 기록된 x64 컴파일/기능 검증은 항목 26에서 구분하며 설치/시각 검증으로 확대하지 않는다. 실제 제품 Registry shell registration, clean Windows install/uninstall, Light/Dark/High Contrast/DPI/interactive 검증도 별도 Manual / NOT TESTED evidence다.
 - Win11 content-surface refinement에서는 기존 Phase 2/3의 TabCtrl/ListCtrlEx/FolderCtrl/StatusBar modern path를 재작성하지 않고 공통 DPI metric을 ModernUI로 집중시켰다. tree row/indent, list-header padding, tab height/padding, pane separator, active-pane indicator가 shared metric을 사용하며 main/single-folder/explorer splitters의 layout thickness도 동일 contract를 따른다.
 - ListCtrlEx는 settings/system-color/theme/DPI 전환 때 Explorer common-control association과 FlatHeaderCtrl font/padding을 다시 동기화한다. ExplorerCtrl의 기존 per-folder palette/filter/thumbnail/custom-color semantics는 유지하며 native list selection/column resize/reorder/sort ownership을 재구현하지 않는다.
 - FolderCtrl modern Light/Dark path는 `TVS_HASLINES` legacy hierarchy line을 제거하되 `TVS_HASBUTTONS`, edit/select/drag/navigation semantics를 유지한다. classic-theme option 또는 High Contrast에서는 tree line을 복원하고 system/native rendering을 우선한다.
@@ -291,7 +295,7 @@
 - 테마는 기존에 View > Theme와 환경 설정 > Appearance root에 모두 존재했지만 Korean tree label이 단순히 '표시'라 발견하기 어려웠다. Korean settings tree label을 '모양 및 테마'로 명확화했다.
 - 2026-09-22 추가 Windows 11 screenshot evidence에서 themed checkbox/radio label이 Dark card 위에서 어둡게 남는 문제가 확인됐다. CfgDlg의 WM_CTLCOLOR만으로 themed Button text ownership이 보장되지 않아 Dark/non-HC checkbox/radio의 WM_PAINT만 palette-backed subclass가 소유하도록 변경했다. click/check/radio/keyboard state는 native Button이 계속 처리하고 Light/High Contrast는 native paint로 fallback한다.
 - BCMenu의 app-owned popup은 기존 HMENU/owner-draw routing을 유지하면서 submenu에 system-provided `Segoe Fluent Icons`의 `ChevronRightSmall (E970)`을 사용하고, 해당 font가 없는 Windows 10 등에서는 동일 위치의 line-geometry chevron으로 fallback한다. popup padding/item-height/icon-gutter/shortcut-gap은 Explorer reference에 맞춰 과도한 legacy 여백을 줄였다. shell-owned IContextMenu path는 변경하지 않았다.
-- Microsoft Fluent UI System Icons의 MIT license와 canonical source SVG set을 `src/fxfile/res/fluent/`에 provenance와 함께 vendoring했다. 대표 set은 Back/Forward/Up/Search/Cut/Copy/Paste/New Folder/Settings이며 `COMMAND_ICON_MAP.md`와 `toolbar_manifest.json`이 기존 main-toolbar frame/command를 고정한다. Python standard-library-only generator는 네트워크 없이 공식 16px/20px SVG를 deterministic 1-bit mask include로 생성하고 `--check`로 stale artifact를 거부한다. MainToolBar는 해당 9개 frame만 기존 cold/hot image list에 같은 Fluent glyph로 overlay하고 hover/pressed surface는 기존 toolbar custom draw가 소유한다. theme/settings/syscolor 변화에서는 raw bitmap image list를 재로드한 뒤 현재 `ThemePalette.mText`로 overlay를 재적용한다. non-migrated frame, toolbar command ID/image index, small/large 선택 및 customization persistence는 변경하지 않았다. 실제 Windows compile/runtime/Light/Dark/System/High Contrast/DPI visual은 아직 NOT TESTED다.
+- Microsoft Fluent UI System Icons의 MIT license와 canonical source SVG set을 `src/fxfile/res/fluent/`에 provenance와 함께 vendoring했다. 대표 set은 Back/Forward/Up/Search/Cut/Copy/Paste/New Folder/Settings이며 `COMMAND_ICON_MAP.md`와 `toolbar_manifest.json`이 기존 main-toolbar frame/command를 고정한다. Python standard-library-only generator는 네트워크 없이 공식 16px/20px SVG를 deterministic 1-bit mask include로 생성하고 `--check`로 stale artifact를 거부한다. [이 문단은 최초 9개 프레임 프로토타입 기록이다; 현재 적용 범위는 아래 23개 런타임 매핑 및 `COMMAND_ICON_MAP.md` 참조.] 최초 MainToolBar는 해당 9개 frame만 기존 cold/hot image list에 같은 Fluent glyph로 overlay하고 hover/pressed surface는 기존 toolbar custom draw가 소유한다. theme/settings/syscolor 변화에서는 raw bitmap image list를 재로드한 뒤 현재 `ThemePalette.mText`로 overlay를 재적용한다. non-migrated frame, toolbar command ID/image index, small/large 선택 및 customization persistence는 변경하지 않았다. 실제 Windows compile/runtime/Light/Dark/System/High Contrast/DPI visual은 아직 NOT TESTED다.
 
 
 ## Current runtime stabilization state — 2026-09-23
@@ -483,6 +487,17 @@ Status: **ACTIVE / user-reproduced runtime failures**. These items are the immed
    - One-time account action remains required because the connected GitHub tool exposes artifact reads but no artifact-delete/retention-write operation. Run the documented dry-run, review IDs/bytes, then apply with a GitHub token that has Actions write; retention change additionally needs repository Administration write (classic `repo` scope is also supported by GitHub).
    - This repository fix cannot prove that every byte in the account-level warning comes from flyExplorer; billing storage is account-wide. After cleanup, recheck GitHub billing/usage and inspect other repositories only if the warning remains.
    - Storage prevention/tool/documentation commit: `be27fe0e886f88896cba9cb58df45367adf69e02`; Python 3.9 compatibility correction: `57ac0fb07641d80ac1f8308d8586384944814a66`.
+
+26. **Supported Windows entered XP-only rendering branches — CODE FIXED / POST-FIX VISUAL RETEST REQUIRED**
+    - Latest product source commit: `6b18c58f379e293b113a1a008c79e372e7453e06`. `WinAppEx` now initializes `osWinModern`, reserves `IsWinXP()` for legacy presentation and uses `IsWinXPOrLater()` for flat-menu capability checks. The source invariant guards the OS-routing contract.
+    - Source preflight and policy bundle validation are recorded as PASS in the associated `ERROR_HISTORY.md` entry. The local `local_ci.bat x64` run on the parent source plus then-uncommitted fix is recorded as PASS WITH SKIPS: Release-x64-Unicode compile/link PASS, native regression 17 passed / 0 failed, launch smoke SKIPPED because existing HKCU settings were preserved.
+    - A fresh post-commit revision-matched x64 build and interactive Windows 10/11 Dark/Light/High Contrast menu/toolbar screenshot acceptance remain NOT TESTED. This later build record supersedes earlier historical "no x64 build" statements only for its explicitly documented scope; previous UI issue 22/23/24 screenshot closure remains open.
+
+27. **Documentation synchronization — SOURCE UPDATED / COMPILED HELP NOT REGENERATED**
+    - Documentation-only commit `5e3d8d4ad85e03b5cbe4db3d4457b0058c16687b` corrected the indefinite per-run Actions rule in README, distinguished latest scoped local CI evidence, aligned the implemented 23-command Fluent asset pipeline, and refreshed the installer README / HTML requirements source without claiming untested minimum hardware or legacy Windows compatibility.
+    - The installer still embeds precompiled `dist/fxfile.chm`. Its HTML requirements source was updated but the binary was not regenerated; installer-facing CHM content remains legacy until a separately authorized Windows help/package rebuild and validation checkpoint. Do not call the CHM current.
+    - The 2026-09-24 dependency audit retains its historical NOT TESTED findings, with a labeled post-audit note referencing the later x64 build record. Bundled binary imports/ABI, x86 compatibility and package/installer results remain unverified.
+    - `reviewed_revision` marks the documentation-only source snapshot `5e3d8d4ad85e03b5cbe4db3d4457b0058c16687b`; this PROJECT update and ERROR_HISTORY reconciliation are outside `reviewed_paths`. Actual vendored-policy/readiness commands have not been run as part of this documentation-only sync.
 
 ### Development handoff rule
 
