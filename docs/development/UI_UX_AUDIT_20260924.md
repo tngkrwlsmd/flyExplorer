@@ -140,6 +140,20 @@ UI-08 완료로 판단하지 않는다.
   완료했다는 의미는 아니다. 실행·다중 모니터·고대비
   검증 전까지 **UI-06 PARTIAL / RETEST OPEN**이다.
 
+### UI-03 후속 소스 변경 — 검색 위치 아이콘과 글자 간격
+
+- `SearchDlg`의 ComboBoxEx 내부 편집 HWND에 공식
+  `EM_SETMARGINS / EC_LEFTMARGIN`을 적용해, 현재 DPI에서
+  아이콘 뒤의 입력 글자가 붙어 보이지 않도록 여유를 준다.
+  기존 이미지 목록, 경로 자동 완성, 텍스트 선택, 스크롤은
+  변경하지 않는다.
+- 설정한 물리 여백은 `WM_DPICHANGED`에서 기본 dialog
+  처리 후 다시 계산한다. 오른쪽 기본 마진은 변경하지 않는다.
+- 이는 검색 창 UI-03의 추가 소스 개선일 뿐, 실제 Dark
+  콤보·드롭다운 전체의 최종 표시 문제를 완료 처리한 것이
+  아니다. 여러 DPI·고대비·포커스·실제 검색은 여전히
+  **NOT TESTED / RETEST OPEN**이다.
+
 ### UI-01의 진단 근거와 회귀 조건
 
 **Observed source:** `ThemeRefreshSnapshot`은 hidden child를 포함한 HWND를 모으고, visibility 보존 없이 모두에게 `WM_SETREDRAW(FALSE)` 후 `WM_SETREDRAW(TRUE)`를 보낸다. `showCfg()`는 `mShowCfg`가 가리키는 기존 페이지만 숨긴다.

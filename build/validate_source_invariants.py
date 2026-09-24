@@ -4374,6 +4374,38 @@ def validate_tab_close_discoverability() -> list[str]:
     return errors
 
 
+def validate_search_location_icon_text_dpi_gap() -> list[str]:
+    """UI-03: maintain a readable native location icon/text gap at each DPI."""
+    errors: list[str] = []
+    source = (FXFILE_SRC / "search_dlg.cpp").read_text(
+        encoding="utf-8", errors="replace"
+    )
+    header = (FXFILE_SRC / "search_dlg.h").read_text(
+        encoding="utf-8", errors="replace"
+    )
+    for token in (
+        "updateLocationEditMargin();",
+        "CEdit *sLocationEdit = mLocComboBox.GetEditCtrl();",
+        "ui::ModernUI::scaleForWindow(6, GetSafeHwnd())",
+        "EM_SETMARGINS",
+        "EC_LEFTMARGIN",
+        "ON_MESSAGE(WM_DPICHANGED, OnDpiChanged)",
+        "const LRESULT sResult = super::OnDpiChanged(aWParam, aLParam)",
+    ):
+        if token not in source:
+            errors.append(f"search location DPI gap wiring missing: {token}")
+    if not all(
+        token in header for token in (
+            "void updateLocationEditMargin(void);",
+            "LRESULT OnDpiChanged(WPARAM aWParam, LPARAM aLParam);",
+        )
+    ):
+        errors.append("search dialog DPI gap owner declarations missing")
+    if "mLocComboBox.SetImageList(&mLocImageList)" not in source:
+        errors.append("search location native icon image list must be preserved")
+    return errors
+
+
 def validate_search_location_and_tab_discoverability() -> list[str]:
     """Protect partial UI-03 nested field routing and UI-07 new-profile defaults."""
     errors: list[str] = []
@@ -4504,6 +4536,7 @@ def main() -> int:
     errors.extend(validate_split_pane_column_and_contents_layout())
     errors.extend(validate_shared_tree_new_profile_default())
     errors.extend(validate_tab_close_discoverability())
+    errors.extend(validate_search_location_icon_text_dpi_gap())
     errors.extend(validate_search_location_and_tab_discoverability())
     errors.extend(validate_move_order_button_labels())
     errors.extend(validate_html_help_package_source())

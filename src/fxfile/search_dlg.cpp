@@ -196,6 +196,7 @@ BEGIN_MESSAGE_MAP(SearchDlg, super)
     ON_BN_CLICKED(IDC_SEARCH_START,   OnStart)
     ON_COMMAND(ID_TOOL_FILE_SEARCH,   OnFileSearch)
     ON_MESSAGE(WM_FINALIZE, OnFinalize)
+    ON_MESSAGE(WM_DPICHANGED, OnDpiChanged)
 END_MESSAGE_MAP()
 
 xpr_bool_t SearchDlg::OnInitDialog(void) 
@@ -245,6 +246,7 @@ xpr_bool_t SearchDlg::OnInitDialog(void)
     ((CComboBox *)GetDlgItem(IDC_SEARCH_NAME))->LimitText(XPR_MAX_PATH);
     ((CEdit *)GetDlgItem(IDC_SEARCH_TEXT))->LimitText(XPR_MAX_PATH);
     pComboBoxEx->LimitText(XPR_MAX_PATH);
+    updateLocationEditMargin();
 
     // Forward the inner combo's Dark edit/list colors to the existing brush.
     CComboBox *sLocationCombo = mLocComboBox.GetComboBoxCtrl();
@@ -531,6 +533,34 @@ xpr_bool_t SearchDlg::OnInitDialog(void)
     mCurLocButton.SetDefaultColors(TRUE);
 
     return XPR_TRUE;
+}
+
+void SearchDlg::updateLocationEditMargin(void)
+{
+    CEdit *sLocationEdit = mLocComboBox.GetEditCtrl();
+    if (XPR_IS_NULL(sLocationEdit) ||
+        ::IsWindow(sLocationEdit->GetSafeHwnd()) == FALSE)
+    {
+        return;
+    }
+
+    // ComboBoxEx reserves the native icon area outside its inner edit.
+    // Add a small DPI-aware edit inset so the location text does not touch
+    // the icon; preserve the default right edge and horizontal scrolling.
+    const xpr_sint_t sLeftMargin =
+        ui::ModernUI::scaleForWindow(6, GetSafeHwnd());
+    ::SendMessage(
+        sLocationEdit->GetSafeHwnd(),
+        EM_SETMARGINS,
+        EC_LEFTMARGIN,
+        MAKELPARAM(sLeftMargin, 0));
+}
+
+LRESULT SearchDlg::OnDpiChanged(WPARAM aWParam, LPARAM aLParam)
+{
+    const LRESULT sResult = super::OnDpiChanged(aWParam, aLParam);
+    updateLocationEditMargin();
+    return sResult;
 }
 
 void SearchDlg::OnDestroy(void) 

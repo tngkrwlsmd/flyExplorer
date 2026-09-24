@@ -113,6 +113,17 @@ edges, multi-monitor DPI and final border pixels: **NOT TESTED**.
 UI-06 remains **PARTIAL / RETEST OPEN**, and OS-owned native menu
 outer border is intentionally untouched.
 
+**UI-03 native location text inset (2026-09-24):**
+The search dialog now sets a documented `EM_SETMARGINS` left inset
+on its actual nested ComboBoxEx edit HWND, scaled to the current
+dialog DPI. It reapplies the inset after the base dialog DPI-change
+handler, leaving native location icons, right margin, text selection,
+autocomplete and horizontal scrolling intact. A source wiring guard
+checks init/DPI pathways. This is not proof that the Dark nested edit/
+dropdown is visually correct; focus/hover/keyboard, location search,
+OS High Contrast and mixed-DPI screenshots are **NOT TESTED**.
+UI-03 remains **PARTIAL / RUNTIME VISUAL RETEST OPEN**.
+
 ## Outstanding near-term work
 
 1. Address the reproduced settings-page visibility and Dark rendering issues

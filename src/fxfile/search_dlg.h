@@ -55,6 +55,7 @@ public:
 
 protected:
     void enableWindow(xpr_bool_t aEnable);
+    void updateLocationEditMargin(void);
     void getStatusNumberFormat(xpr_tchar_t *aItemCountText,
                                xpr_size_t   aMaxItemCountTextLen,
                                xpr_tchar_t *aElapsedMinuteTimeText,
@@ -113,6 +114,7 @@ protected:
     afx_msg void OnFileSearch(void);
     afx_msg void OnCurLocation(void);
     afx_msg LRESULT OnFinalize(WPARAM wParam, LPARAM lParam);
+    afx_msg LRESULT OnDpiChanged(WPARAM aWParam, LPARAM aLParam);
 };
 } // namespace fxfile
 

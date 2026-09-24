@@ -2948,3 +2948,31 @@ High Contrast, DPI and screenshot tests: NOT TESTED. Custom popup
 height beyond work-area remains an open design/test case; OS menu
 nonclient border is still not considered repaired. GitHub Actions:
 NOT RUN, as no execution-specific authorization was provided.
+
+
+---
+
+## 2026-09-24 — UI-03 ComboBoxEx location icon/text spacing
+
+**Observed:** The interactive Windows audit reported the search
+location icon pressed too close to the editable path text as well
+as the distinct bright Dark field and unreadable legacy button.
+
+**Source ownership:** SearchDlg uses a native ComboBoxEx image list
+plus an inner editable HWND; changing its containing dialog spacing
+cannot directly control text padding inside the native edit.
+
+**Source change:** Use documented EM_SETMARGINS with EC_LEFTMARGIN
+on the actual inner edit to introduce a small DPI-scaled icon/text
+gap. Recalculate this gap after forwarding WM_DPICHANGED to the
+existing CResizingDialog handler. Do not change the native icon
+list, horizontal editing behavior, autocomplete or the right margin.
+
+**Prevention:** Source validator now checks the init/DPI/declaration
+chain and retains the native icon list contract.
+
+**Evidence:** Source-construction assertions only. Full Python
+source preflight, Windows x64 build, runtime typing/search,
+Light/Dark/HC, keyboard/IME and DPI-final pixels: NOT TESTED.
+UI-03 stays OPEN pending direct acceptance. GitHub Actions:
+NOT RUN without run-specific authorization.

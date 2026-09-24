@@ -805,6 +805,16 @@ alternate taskbar edges, multi-monitor/DPI, HC/Light/Dark final
 pixels: NOT TESTED. OS-native outer menu border remains OPEN.
 Hosted Actions: NOT RUN under per-run restriction.
 
+**UI-03 nested location text inset (2026-09-24):**
+After creating ComboBoxEx's internal edit, SearchDlg adds a modest
+DPI-scaled documented EM_SETMARGINS left inset for icon/text separation,
+and reapplies it after the inherited WM_DPICHANGED handler. Existing
+image lists, shell autocomplete, selection and right edit margin remain
+unchanged. A static guard checks the init/handler path and declarations.
+Actual source-revision Windows build, search execution, theme transition,
+keyboard/IME/DPI/HC and final pixels: NOT TESTED; UI-03 remains OPEN.
+Hosted Actions: NOT RUN.
+
 ### Development handoff rule
 
 - Every new user-requested development item is added to this section (or its successor) before implementation starts.
