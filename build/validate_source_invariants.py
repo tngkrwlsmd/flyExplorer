@@ -2048,6 +2048,29 @@ def validate_ui_resource_contracts() -> list[str]:
                 "src/fxfile/cfg/cfg_main_dlg.cpp: expandable root categories lost hierarchy emphasis"
             )
 
+    # A style flag without an actually drawn/clickable disclosure control
+    # previously passed the static checks while failing the user screenshot.
+    cfg_draw_start = cfg_main.find("void CfgMainDlg::OnTreeCustomDraw(")
+    cfg_draw_end = cfg_main.find("HBRUSH CfgMainDlg::OnCtlColor(", cfg_draw_start)
+    cfg_draw_block = (
+        cfg_main[cfg_draw_start:cfg_draw_end]
+        if cfg_draw_start >= 0 and cfg_draw_end > cfg_draw_start
+        else ""
+    )
+    for required in ("CDDS_POSTPAINT", "DrawSettingsDisclosureChevron"):
+        if required not in cfg_draw_block:
+            errors.append(
+                "settings navigation: visible disclosure postpaint path missing "
+                + required
+            )
+    if (
+        "ON_NOTIFY(NM_CLICK, IDC_CFG_TREE, OnTreeClick)" not in cfg_main
+        or "TVE_COLLAPSE : TVE_EXPAND" not in cfg_main
+    ):
+        errors.append(
+            "settings navigation: visible disclosure click/expand behavior missing"
+        )
+
     for token in (
         "RefreshCfgTreeImageList",
         "sBitmap.LoadBitmap(IDB_CONFIG_TREE)",

@@ -449,6 +449,13 @@ Status: **ACTIVE / user-reproduced runtime failures**. These items are the immed
    - Prevention: the validator now documents the ownership boundary next to the negative rule so a style cannot silently remain both required and forbidden. The positive settings-navigation contract remains the source of truth for root disclosure.
    - Acceptance: rerun `local_ci.bat x64`; source invariant/regression preflight must pass and CI must proceed into VS 2026 x64 solution generation/build. Until that rerun exists, status remains `CODE FIXED / LOCAL CI NOT RETESTED`.
 
+22. **User-confirmed persistent settings disclosure failure after fresh build — CODE FIXED / VISUAL RETEST REQUIRED**
+   - User reports `git pull` followed immediately by a fresh build; the new settings screenshot shows root parents and nested pages but no discoverable disclosure chevrons. Do not infer a stale artifact from the earlier failed CI log.
+   - Root cause in source: `TreeCtrlEx::enableVistaEnhanced()` deliberately removes `TVS_HASLINES` while native `TVS_LINESATROOT` alone does not guarantee a visible root expando in the custom Dark tree. `TVIS_BOLD` communicates hierarchy but not the expansion action.
+   - Fix: `CfgMainDlg::OnTreeCustomDraw()` uses postpaint to draw an explicit direction-aware root chevron in the icon's leading gutter for expanded and collapsed parents, including system foreground in High Contrast. The new `NM_CLICK` handler toggles when this custom chevron is clicked; native button hits and ordinary page selection/keyboard semantics remain native.
+   - Recurrence guard: inspect the actual postpaint draw path and chevron click/expand path, not merely resource style tokens.
+   - Evidence: latest user screenshots are a visual FAIL for the previous approach. Full x64 local CI, interactive Dark/Light/HC, DPI/keyboard/mouse screenshot for the new implementation: NOT TESTED.
+
 ### Development handoff rule
 
 - Every new user-requested development item is added to this section (or its successor) before implementation starts.

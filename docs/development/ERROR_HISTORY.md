@@ -1885,3 +1885,25 @@
 - Connector source cross-check after fix: contradictory forbidden token removed; positive disclosure guards preserved: **PASS (source evidence)**.
 - Rerun `local_ci.bat x64`: **NOT RETESTED**.
 - Compile/link/functional/runtime/visual: **NOT TESTED** because the failing run stopped before project generation/build.
+
+---
+
+## 2026-09-24 — Fresh-build settings disclosure still invisible
+
+**사용자 증거**
+- `git pull` 후 다시 빌드한 설정 화면에도 root parent/leaf는 있지만 펼침·접힘 조작을 발견할 수 있는 화살표는 보이지 않는다. 과거 CI 실패 로그를 이 최신 runtime 증거의 stale-binary 근거로 사용한 것은 잘못이었다.
+
+**첫 source 원인**
+- `TreeCtrlEx::enableVistaEnhanced()`는 현대적인 borderless tree를 위해 `TVS_HASLINES`를 제거한다.
+- 이전 fix는 `TVS_LINESATROOT`와 `TVIS_BOLD`만 추가했고 최종 표시 픽셀과 클릭 동작을 보장하지 않았다.
+
+**수정**
+- 설정 navigation의 `CDDS_POSTPAINT`에서 root parent마다 expanded/collapsed에 맞춘 화살표를 아이콘 앞 독립 gutter에 직접 그린다.
+- custom glyph click에 `NM_CLICK`으로 collapse/expand를 연결한다. 원래 native button hit·텍스트 페이지 선택·keyboard 동작은 보존한다.
+- High Contrast에서는 system text 색상을 사용하고 tree native item renderer를 보존한다.
+- 스타일 token 존재만 검사하던 regression guard를 실제 postpaint/interaction 경로 확인으로 보완했다.
+
+**검증**
+- 사용자 제공 최신 설정 screenshot: 이전 구현에 대해 VISUAL FAIL.
+- 소스 변경: CONNECTOR DIFF REVIEW 대기/이후 확인.
+- `local_ci.bat x64`, interactive Dark/Light/HC/DPI: NOT TESTED. runtime screenshot 통과 전에는 CLOSED 금지.

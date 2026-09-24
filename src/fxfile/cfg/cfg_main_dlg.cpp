@@ -56,6 +56,90 @@ namespace
 {
 const UINT_PTR kModernCfgButtonSubclassId = 0x46474346; // 'FGCF'
 
+xpr_bool_t GetSettingsDisclosureRect(
+    CTreeCtrl &aTree,
+    HTREEITEM aItem,
+    CRect &aRect)
+{
+    if (XPR_IS_NULL(aItem) || aTree.ItemHasChildren(aItem) == XPR_FALSE)
+        return XPR_FALSE;
+
+    CRect sTextRect;
+    if (aTree.GetItemRect(aItem, &sTextRect, XPR_TRUE) == FALSE)
+        return XPR_FALSE;
+
+    xpr_sint_t sImageWidth =
+        ui::ModernUI::scaleForWindow(16, aTree.GetSafeHwnd());
+    CImageList *sImages = aTree.GetImageList(TVSIL_NORMAL);
+    if (XPR_IS_NOT_NULL(sImages))
+    {
+        xpr_sint_t sImageHeight = 0;
+        xpr_sint_t sActualWidth = 0;
+        if (::ImageList_GetIconSize(
+                sImages->GetSafeHandle(),
+                &sActualWidth,
+                &sImageHeight) != FALSE)
+            sImageWidth = sActualWidth;
+    }
+
+    // Reserve a separate gutter *before* the icon. TVS_LINESATROOT alone
+    // cannot reveal expandos when the modern tree drops TVS_HASLINES.
+    const xpr_sint_t sWidth =
+        ui::ModernUI::scaleForWindow(16, aTree.GetSafeHwnd());
+    const xpr_sint_t sGap =
+        ui::ModernUI::scaleForWindow(4, aTree.GetSafeHwnd());
+    aRect.left = sTextRect.left - sImageWidth - sGap - sWidth;
+    aRect.right = aRect.left + sWidth;
+    aRect.top = sTextRect.top +
+        (sTextRect.Height() - sWidth) / 2;
+    aRect.bottom = aRect.top + sWidth;
+
+    CRect sClient;
+    aTree.GetClientRect(&sClient);
+    return aRect.left >= sClient.left &&
+        aRect.right <= sClient.right &&
+        aRect.bottom > sClient.top &&
+        aRect.top < sClient.bottom ?
+        XPR_TRUE : XPR_FALSE;
+}
+
+void DrawSettingsDisclosureChevron(
+    HDC aDC,
+    const CRect &aRect,
+    xpr_bool_t aExpanded,
+    COLORREF aColor,
+    HWND aTreeHwnd)
+{
+    const xpr_sint_t sHalf =
+        max(2, ui::ModernUI::scaleForWindow(3, aTreeHwnd));
+    const xpr_sint_t sCenterX = aRect.CenterPoint().x;
+    const xpr_sint_t sCenterY = aRect.CenterPoint().y;
+
+    HPEN sPen = ::CreatePen(
+        PS_SOLID,
+        max(1, ui::ModernUI::scaleForWindow(2, aTreeHwnd)),
+        aColor);
+    if (XPR_IS_NULL(sPen))
+        return;
+
+    HGDIOBJ sPrevious = ::SelectObject(aDC, sPen);
+    if (XPR_IS_TRUE(aExpanded))
+    {
+        ::MoveToEx(aDC, sCenterX - sHalf, sCenterY - 1, XPR_NULL);
+        ::LineTo(aDC, sCenterX, sCenterY + sHalf - 1);
+        ::LineTo(aDC, sCenterX + sHalf, sCenterY - 1);
+    }
+    else
+    {
+        ::MoveToEx(aDC, sCenterX - 1, sCenterY - sHalf, XPR_NULL);
+        ::LineTo(aDC, sCenterX + sHalf - 1, sCenterY);
+        ::LineTo(aDC, sCenterX - 1, sCenterY + sHalf);
+    }
+    ::SelectObject(aDC, sPrevious);
+    ::DeleteObject(sPen);
+}
+
+
 struct CfgTreeFluentIcon
 {
     xpr_sint_t mImageIndex;
@@ -380,6 +464,7 @@ BEGIN_MESSAGE_MAP(CfgMainDlg, super)
     ON_MESSAGE(WM_DPICHANGED, OnDpiChanged)
     ON_NOTIFY(TVN_SELCHANGED, IDC_CFG_TREE, OnSelchangedTree)
     ON_NOTIFY(NM_CUSTOMDRAW, IDC_CFG_TREE, OnTreeCustomDraw)
+    ON_NOTIFY(NM_CLICK, IDC_CFG_TREE, OnTreeClick)
     ON_BN_CLICKED(IDC_CFG_DEFAULT, OnDefault)
     ON_BN_CLICKED(IDC_CFG_APPLY,   OnApply)
 END_MESSAGE_MAP()
@@ -939,6 +1024,48 @@ void CfgMainDlg::OnTreeCustomDraw(NMHDR* pNMHDR, LRESULT* pResult)
         reinterpret_cast<NMTVCUSTOMDRAW *>(pNMHDR);
     const ui::ThemePalette sPalette = ui::ModernUI::getPalette();
 
+    // The native expando can disappear in the borderless, line-free tree.
+    // Postpaint owns the actual visible chevron; native item text/icons and
+    // keyboard/tree expansion semantics remain untouched.
+    if (sCustomDraw->nmcd.dwDrawStage == CDDS_PREPAINT)
+    {
+        *pResult = XPR_IS_TRUE(sPalette.mHighContrast) ?
+            CDRF_NOTIFYPOSTPAINT :
+            (CDRF_NOTIFYITEMDRAW | CDRF_NOTIFYPOSTPAINT);
+        return;
+    }
+
+    if (sCustomDraw->nmcd.dwDrawStage == CDDS_POSTPAINT)
+    {
+        const COLORREF sChevronColor =
+            XPR_IS_TRUE(sPalette.mHighContrast) ?
+            ::GetSysColor(COLOR_WINDOWTEXT) :
+            sPalette.mText;
+        for (CfgDeque::const_iterator sIt = mCfgDeque.begin();
+             sIt != mCfgDeque.end(); ++sIt)
+        {
+            const CfgItem *sItem = *sIt;
+            if (XPR_IS_NULL(sItem) || sItem->mParent != -1)
+                continue;
+
+            CRect sChevronRect;
+            if (XPR_IS_FALSE(GetSettingsDisclosureRect(
+                    mTreeCtrl, sItem->mTreeItem, sChevronRect)))
+                continue;
+
+            DrawSettingsDisclosureChevron(
+                sCustomDraw->nmcd.hdc,
+                sChevronRect,
+                (mTreeCtrl.GetItemState(
+                    sItem->mTreeItem, TVIS_EXPANDED) & TVIS_EXPANDED) ?
+                    XPR_TRUE : XPR_FALSE,
+                sChevronColor,
+                mTreeCtrl.GetSafeHwnd());
+        }
+        *pResult = CDRF_DODEFAULT;
+        return;
+    }
+
     if (XPR_IS_TRUE(sPalette.mHighContrast))
     {
         *pResult = CDRF_DODEFAULT;
@@ -947,10 +1074,6 @@ void CfgMainDlg::OnTreeCustomDraw(NMHDR* pNMHDR, LRESULT* pResult)
 
     switch (sCustomDraw->nmcd.dwDrawStage)
     {
-        case CDDS_PREPAINT:
-            *pResult = CDRF_NOTIFYITEMDRAW;
-            return;
-
         case CDDS_ITEMPREPAINT:
         {
             const UINT sState = sCustomDraw->nmcd.uItemState;
@@ -984,6 +1107,45 @@ void CfgMainDlg::OnTreeCustomDraw(NMHDR* pNMHDR, LRESULT* pResult)
         default:
             *pResult = CDRF_DODEFAULT;
             return;
+    }
+}
+
+
+void CfgMainDlg::OnTreeClick(NMHDR* /*pNMHDR*/, LRESULT* pResult)
+{
+    *pResult = 0;
+
+    CPoint sCursor;
+    if (::GetCursorPos(&sCursor) == FALSE)
+        return;
+    mTreeCtrl.ScreenToClient(&sCursor);
+
+    UINT sNativeHit = 0;
+    mTreeCtrl.HitTest(sCursor, &sNativeHit);
+    if ((sNativeHit & TVHT_ONITEMBUTTON) != 0)
+        return; // The native tree already handled this expando click.
+
+    // Only the explicitly drawn gutter toggles expansion; clicking an icon
+    // or label still selects the settings page as before.
+    for (CfgDeque::const_iterator sIt = mCfgDeque.begin();
+         sIt != mCfgDeque.end(); ++sIt)
+    {
+        const CfgItem *sItem = *sIt;
+        if (XPR_IS_NULL(sItem) || sItem->mParent != -1)
+            continue;
+
+        CRect sChevronRect;
+        if (XPR_IS_TRUE(GetSettingsDisclosureRect(
+                mTreeCtrl, sItem->mTreeItem, sChevronRect)) &&
+            sChevronRect.PtInRect(sCursor))
+        {
+            const UINT sAction =
+                (mTreeCtrl.GetItemState(
+                    sItem->mTreeItem, TVIS_EXPANDED) & TVIS_EXPANDED) ?
+                TVE_COLLAPSE : TVE_EXPAND;
+            mTreeCtrl.Expand(sItem->mTreeItem, sAction);
+            return;
+        }
     }
 }
 
