@@ -460,9 +460,18 @@ The original project used a customized fxfile/gyp fork, Python 2.7.4, and
 Visual Studio 2015/v140. Those instructions are retained only in repository
 history; the default build path now targets Visual Studio 2026/v145.
 
-License
--------
-Read the LICENSE file.
+License and distribution review
+-------------------------------
+The application source is covered by the root `LICENSE` (GNU GPL version 3
+or later). Bundled third-party software has separate conditions preserved
+in `CREDITS`. In particular, the recorded GFL SDK terms require an
+independent authorization/compatibility check before a combined installer
+can be publicly redistributed; generating a local package is not proof of
+permission. The installer license notice reflects the application license,
+and installs a current copy of `CREDITS` as third-party notices. See
+`docs/development/DISTRIBUTION_LICENSE_REVIEW.md` for unresolved release
+requirements. Neither this repository cleanup nor prior build evidence
+establishes external distribution clearance.
 
 Contact
 -------

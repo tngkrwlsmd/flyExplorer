@@ -14,11 +14,14 @@
   버    전 : 2.0.4-dev (개발용 패키지; 공식 출시 버전 아님)
   배 포 일 : 현재 개발 버전의 공식 배포일 미확정 (2013-11-09는 과거 이력)
   제 작 자 : 이재광 (Leon Lee)
-  배포형태 : 프리웨어 (freeware)
+  배포형태 : 애플리케이션 소스 GPL-3.0-or-later (동봉된 제3자 구성요소는 별도 조건)
   전자우편 : flychk@flychk.com
   홈페이지 : http://www.flychk.com
 
   Copyright (c) 2001-2013 Leon Lee. All rights reserved.
+  주의: 포함된 GFL SDK 등 제3자 구성요소의 배포 권리는 소스 GPL 고지와 별도입니다.
+  공식 재배포 전에 third_party_notices.txt 및 개발 저장소의
+  docs/development/DISTRIBUTION_LICENSE_REVIEW.md를 확인해야 합니다.
 
 2. 소개
 

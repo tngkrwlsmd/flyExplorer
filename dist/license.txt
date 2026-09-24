@@ -1,18 +1,32 @@
+fxfile (formerly flyExplorer) â€” application license notice
 
-  flyExplorer ÃÖÁ¾ »ç¿ëÀÚ »ç¿ë±Ç °è¾à(EULA, End User License Agreement)
+Copyright (c) 2012 Leon Lee Author. All rights reserved.
 
-  ¼ÒÇÁÆ®¿ş¾î Á¦Ç°Àº ÀúÀÛ±Ç °ü·Ã¹ı°ú ±¹Á¦ ÀúÀÛ±Ç Çù¾àÀ» ºñ·ÔÇÏ¿©, ±âÅ¸ ÁöÀû Àç»ê±Ç¹ı ¹× Çù¾à¿¡ ÀÇÇØ º¸È£µË´Ï´Ù. ¼ÒÇÁÆ®¿ş¾î Á¦Ç°Àº ÆÇ¸ÅµÇ´Â °ÍÀÌ ¾Æ´Ï¶ó ±× »ç¿ëÀÌ Çã¿ëµÇ´Â °ÍÀÔ´Ï´Ù.
- 
-1. »ç¿ë±Ç Çã¿ë
- 
-  flyExplorer´Â ÆÄÀÏ °ü¸® ÇÁ·Î±×·¥À¸·Î ¹«·á ¼ÒÇÁÆ®¿ş¾îÀÔ´Ï´Ù. ÇÁ¸®¿ş¾î¶ó´Â ¶óÀÌ¼¾½º·Î ¹èÆ÷ÇÏ±â ¶§¹®¿¡ °³ÀÎ, ±â¾÷, ´ÜÃ¼, °ø°ø ±â°ü µî... ¾ğÁ¦ ¾îµğ¼­³ª »ç¿ëÇÏ°Å³ª ¹èÆ÷ÇÒ ¼ö ÀÖ½À´Ï´Ù. ´Ü, ÇÁ·Î±×·¥À» ÀÓÀÇÀûÀ¸·Î ¼öÁ¤ÇÏ¿© »ç¿ëÇÏ°Å³ª ¹èÆ÷ÇÒ ¼ö ¾ø½À´Ï´Ù. ¶ÇÇÑ, Á¦ÀÛÀÚÀÇ µ¿ÀÇ¾øÀÌ »ó¾÷ÀûÀÎ ¸ñÀûÀ¸·Î ¹èÆ÷ÇÒ ¼ö ¾ø½À´Ï´Ù.
+The flyExplorer/fxfile application source code is described in the
+repository's root LICENSE file as free software licensed under the GNU
+General Public License, version 3 or (at your option) any later version.
+You may redistribute and modify the application under that license's
+conditions. There is no warranty; see the license for the full terms.
 
-2. »ç¿ëÀÚÀÇ Ã¥ÀÓ
+GNU GPL version 3: https://www.gnu.org/licenses/gpl-3.0.html
+The repository's canonical application license notice: LICENSE
 
-  flyExplorer¸¦ ÀÌ¿ëÇØ ÆÄÀÏ °ü¸® Áß ¹ß»ıµÇ´Â ¾î¶°ÇÑ ¼ÕÇØµµ Ã¥ÀÓÀ» ÁöÁö ¾ÊÀ½À» ¹àÈü´Ï´Ù. »ç¿ëÀÚµéÀÌ ¾î¶² ÆÄÀÏÀ» °¡Áö°í °ü¸®ÇÏ´ÂÁö ¾Ë ¼ö ¾øÀ» »Ó´õ·¯ ÇÁ¸®¿ş¾îÀÌ±â ¶§¹®¿¡ ±ÍÇÏÀÇ ÀüÀûÀÎ Ã¥ÀÓÀÌ¸ç, ±¹³» ¶Ç´Â ±¹¿Ü ÀúÀÛ±Ç¹ı ¹× ±× ¿Ü ÇØ´ç ¹ıÀ» ÁØ¼öÇÏ´Â °Í ¶ÇÇÑ ±ÍÇÏÀÇ ÀüÀûÀÎ Ã¥ÀÓÀÔ´Ï´Ù.
+IMPORTANT â€” Third-party components and public distribution:
+This application also includes separately licensed components. This
+application notice does not override their conditions or establish
+permission to redistribute any combined binary package. In particular,
+the vendored GFL SDK license text preserved in CREDITS describes
+non-commercial/private-use restrictions and requires contact for
+commercial use/distribution. See the installed
+third_party_notices.txt (copied from the repository CREDITS).
 
-3. °è¾àÀÇ Á¾·á
+The compatibility and redistribution rights for the full bundled
+installer have NOT been verified. Do not treat generating a local
+installer or seeing the GNU GPL notice as authorization for public
+release. Obtain a specific license/provenance review and any necessary
+third-party permissions before publishing this package.
 
-  ±ÍÇÏ°¡ º» »ç¿ë±Ç °è¾àÀ» ÁØ¼öÇÏÁö ¾Ê´Â °æ¿ì, flyExplorer´Â ¿©Å¸ ±Ç¸®¸¦ Ä§ÇØÇÏÁö ¾Ê°í µ¿ÀÇ °è¾àÀ» Á¾·áÇÒ ¼ö ÀÖ½À´Ï´Ù. ±×·¯ÇÑ °æ¿ì ±ÍÇÏ´Â º» Á¦Ç°ÀÇ º¹»çº»À» ¸ğµÎ ÆÄ±âÇØ¾ß ÇÕ´Ï´Ù.
-
-Copyright (C) 2001-2013 Leon Lee. All rights reserved.
+The previous pre-GPL freeware EULA, which forbade modification and
+commercial redistribution of the application, is superseded for the
+application by the canonical root LICENSE notice. Historical releases
+and third-party packages may have their own terms.

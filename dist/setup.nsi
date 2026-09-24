@@ -91,7 +91,7 @@ LangString TEXT_WELCOMEPAGE_TEXT           ${LANG_KOREAN} "이 프로그램은 �
 
 LangString TEXT_OPTION_HEADER              ${LANG_KOREAN} "버전 선택"
 LangString TEXT_OPTION_HEADER_DESC         ${LANG_KOREAN} "설치하고자 하는 버전을 선택하여 주십시오."
-LangString TEXT_OPTION_TEXT                ${LANG_KOREAN} "64bit 버전은 윈도우즈 64bit인 경우에만 설치 가능하고 32bit Unicode 버전은 윈도우즈 NT 계열, 32bit Multibyte는 모든 윈도우에서 설치 가능합니다. 윈도우즈 NT, 2000, XP, 2003, Vista, 2008, 7, 8, 2012, 8.1 이상에서는 64bit 또는 32bit Unicode 버전을 권장합니다."
+LangString TEXT_OPTION_TEXT                ${LANG_KOREAN} "현재 기본 개발/검증 대상은 Windows 10/11의 64bit Unicode 구성입니다. 제공되는 x86 Unicode/Multibyte 구성 및 과거 Windows 버전의 실행 호환성은 현재 기본 검증 범위에서 확인되지 않았습니다."
 
 LangString TEXT_DESKTOP_SHORTCUT           ${LANG_KOREAN} "바탕 화면에 바로 가기 만들기"
 LangString TEXT_QUICKLAUNCH_SHORTCUT       ${LANG_KOREAN} "빠른 실행에 바로 가기 만들기"
@@ -294,6 +294,8 @@ Section "" SecCopyUI
     File "custom_image_list_16.bmp"
     File "custom_image_list_32.bmp"
     File "license.txt"
+    # Current CREDITS also contains applicable third-party redistribution notices.
+    File /oname=third_party_notices.txt "..\CREDITS"
     File "readme.txt"
     File "history.txt"
 
@@ -338,6 +340,7 @@ Section "" SecCopyUI
         CreateShortCut  "$SMPROGRAMS\$STARTMENU_FOLDER\Readme.lnk" "$INSTDIR\readme.txt"
         CreateShortCut  "$SMPROGRAMS\$STARTMENU_FOLDER\History.lnk" "$INSTDIR\history.txt"
         CreateShortCut  "$SMPROGRAMS\$STARTMENU_FOLDER\License.lnk" "$INSTDIR\license.txt"
+        CreateShortCut  "$SMPROGRAMS\$STARTMENU_FOLDER\Third Party Notices.lnk" "$INSTDIR\third_party_notices.txt"
         CreateShortCut  "$SMPROGRAMS\$STARTMENU_FOLDER\Uninstall.lnk" "$INSTDIR\Uninstall.exe"
   
     !insertmacro MUI_STARTMENU_WRITE_END
@@ -442,6 +445,7 @@ Section "Uninstall"
     Delete "$INSTDIR\readme.txt"
     Delete "$INSTDIR\history.txt"
     Delete "$INSTDIR\license.txt"
+    Delete "$INSTDIR\third_party_notices.txt"
     RMDir /r "$INSTDIR\Languages"
     RMDir /r "$INSTDIR\upchecker"
 
@@ -483,6 +487,7 @@ Section "Uninstall"
         Delete "$SMPROGRAMS\$MUI_TEMP\readme.lnk"
         Delete "$SMPROGRAMS\$MUI_TEMP\history.lnk"
         Delete "$SMPROGRAMS\$MUI_TEMP\license.lnk"
+        Delete "$SMPROGRAMS\$MUI_TEMP\Third Party Notices.lnk"
         Delete "$SMPROGRAMS\$MUI_TEMP\Uninstall.lnk"
         Delete "$DESKTOP\fxfile.lnk"
         Delete "$QUICKLAUNCH\fxfile.lnk"

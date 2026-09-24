@@ -509,6 +509,12 @@ Status: **ACTIVE / user-reproduced runtime failures**. These items are the immed
     - No current first-party packaging path references vendored `dist/nsis/Docs/` or `Examples/`, `NSIS.chm`, `NSIS.chw`, standalone `NSIS.exe` or interactive `makensisw.exe`. Remove only these vendor/developer extras. Preserve `dist/nsis/makensis.exe`, `COPYING`, `Include`, `Contrib`, `Plugins`, `Stubs`, `Bin` and installer assets/macros.
     - Static Git blob and first-party script reference inspection: PASS. Actual NSIS/Windows installer generation, local x64 compile/test and any external manually invoked NSIS GUI use: NOT TESTED. Restore removed optional tools from Git if external workflows require them.
 
+30. **Installer license and third-party notice reconciliation — SOURCE UPDATED / REDISTRIBUTION NOT VERIFIED**
+    - Installer-visible `dist/license.txt` and `docs/htmlhelp/Html/license.htm` now refer to the application's existing root GPL-3.0-or-later notice instead of the contradictory legacy freeware modification/commercial-distribution prohibition. No application license rights are newly granted.
+    - `dist/setup.nsi` installs the current `CREDITS` as `third_party_notices.txt`, exposes a Start Menu shortcut and removes both on uninstall. Old unsupported-OS installer messaging is replaced with the active development scope. `dist/readme.txt` and README explain the licensing distinction.
+    - A bundled GFL SDK license in `CREDITS` has additional restrictions. Combined-installer rights, exact binary provenance and license compatibility remain NOT VERIFIED; external publication needs a separate documented review. See `docs/development/DISTRIBUTION_LICENSE_REVIEW.md`.
+    - Static text and NSIS-script checks are the only new evidence. Windows NSIS compile/install/uninstall and legal verification: NOT TESTED. The precompiled CHM remains legacy until help regeneration work completes.
+
 ### Development handoff rule
 
 - Every new user-requested development item is added to this section (or its successor) before implementation starts.

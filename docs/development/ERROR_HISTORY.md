@@ -2130,3 +2130,32 @@ bundled NSIS COPYING and the current `dist/setup.nsi` installer input.
 reference audit: PASS. Windows NSIS package generation, installer/smoke,
 external developer scripts and Linux/Wine help regeneration: NOT TESTED.
 No GitHub Actions run.
+
+---
+
+## 2026-09-24 — Installer-facing GPL notice versus legacy freeware EULA
+
+**Observed conflict:** Root `LICENSE` states that the application source is
+GPL version 3 or later. `dist/license.txt` and the legacy HTML help
+previously asserted freeware terms forbidding modification and restricting
+commercial redistribution. Both notices were presented as current, and
+the installer did not separately expose the current `CREDITS` text.
+
+**Scoped correction:** Replace both old application-facing notices with
+references to the existing GPL license; do not invent new grant language.
+Install the current `CREDITS` under `third_party_notices.txt` with
+a Start Menu link and uninstall removal; update installer OS-selection
+disclosure, distribution README and root README. Maintain historical
+attributions and all active third-party license text.
+
+**Unresolved distribution blocker:** The GFL SDK terms recorded in
+`CREDITS` impose separate restrictions; legality/compatibility of the
+combined product installer, source entitlement and binary provenance
+are NOT VERIFIED. See the newly created
+`docs/development/DISTRIBUTION_LICENSE_REVIEW.md` before public release.
+The previous precompiled `dist/fxfile.chm` still contains old content at
+this checkpoint until regenerated or excluded.
+
+**Evidence:** Text and installer-script consistency inspection: PASS.
+Legal/third-party rights, Windows installer, CHM binary, package and
+runtime: NOT TESTED. Hosted Actions: NOT RUN.
