@@ -2610,6 +2610,8 @@ def validate_actions_storage_budget_contract() -> list[str]:
             "/actions/artifacts/",
             "/actions/permissions/artifact-and-log-retention",
             "flyExplorer-release-package",
+            "Optional[int]",
+            "Optional[Dict[str, object]]",
         ):
             if token not in cleanup:
                 errors.append(

@@ -17,8 +17,7 @@ import urllib.error
 import urllib.parse
 import urllib.request
 from dataclasses import dataclass
-from datetime import datetime
-from typing import Iterable
+from typing import Dict, Iterable, Optional, Tuple
 
 API_VERSION = "2026-03-10"
 DEFAULT_REPO = "tngkrwlsmd/flyExplorer"
@@ -33,10 +32,10 @@ class Artifact:
     created_at: str
     expires_at: str
     expired: bool
-    workflow_run_id: int | None
+    workflow_run_id: Optional[int]
 
     @property
-    def created_sort_key(self) -> tuple[str, int]:
+    def created_sort_key(self) -> Tuple[str, int]:
         return (self.created_at, self.artifact_id)
 
 
@@ -52,8 +51,8 @@ class GitHubApi:
         self,
         method: str,
         path: str,
-        body: dict[str, object] | None = None,
-    ) -> tuple[int, object | None]:
+        body: Optional[Dict[str, object]] = None,
+    ) -> Tuple[int, Optional[object]]:
         data = None if body is None else json.dumps(body).encode("utf-8")
         request = urllib.request.Request(
             self.base + path,
@@ -122,7 +121,7 @@ class GitHubApi:
             page += 1
         return artifacts
 
-    def get_retention_days(self) -> tuple[int, int | None]:
+    def get_retention_days(self) -> tuple[int, Optional[int]]:
         _, payload = self._request(
             "GET", "/actions/permissions/artifact-and-log-retention"
         )
@@ -156,7 +155,7 @@ def select_deletions(
     artifacts: Iterable[Artifact],
     names: set[str],
     keep_newest: int,
-) -> tuple[list[Artifact], list[Artifact]]:
+) -> Tuple[list[Artifact], list[Artifact]]:
     candidates = [
         artifact
         for artifact in artifacts

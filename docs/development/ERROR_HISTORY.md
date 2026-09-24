@@ -1997,3 +1997,8 @@
 - Connected GitHub tool does not expose artifact DELETE or repository retention write, so historical storage reclamation itself: NOT APPLIED.
 - Cleanup script full live dry-run/apply with user token: NOT TESTED.
 - GitHub billing usage after cleanup: NOT TESTED.
+
+**Post-commit compatibility review**
+- 첫 cleanup-tool draft에 Python 3.10의 PEP 604 `|` union annotation이 들어간 것을 발견했다. flyExplorer의 documented minimum은 Python 3.9+이므로 main 반영 전에 `typing.Optional`/`Tuple`/`Dict` 표기로 수정했다.
+- validator가 cleanup script의 Python 3.9-compatible annotation contract도 확인하도록 보완했다.
+- 이 보정 commit 전 live GitHub API 실행은 하지 않았다.
