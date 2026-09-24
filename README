@@ -56,17 +56,19 @@ Policy/readiness checks can be run with:
     python .agent-policy/scripts/validate.py --project-root . --readiness development
     python .agent-policy/scripts/conformance.py
 
-These checks remain available, but automatic GitHub Actions CI is temporarily
-paused through 2026-09-30 to conserve the repository Actions budget. During the
-pause, do not manually dispatch CI unless the user explicitly approves spending
-Actions minutes. A policy/static PASS must not be reported as a product compile,
-integration, or runtime PASS.
+These checks remain available for local/manual use. GitHub Actions execution is
+restricted indefinitely: every individual run requires an explicit instruction
+from the user for that run. The previous 2026-09-30 budget-pause date does not
+authorize automatic restart or manual dispatch. A policy/static PASS must not
+be reported as a product compile, integration, or runtime PASS.
 
 Windows Product Build CI
 ------------------------
-Automatic push/pull-request triggers are disabled through 2026-09-30. A manual
-dispatch must explicitly enable the `run_ci` budget override. On or after
-2026-10-01, review the Actions budget before restoring any automatic trigger.
+Automatic push/pull-request triggers remain disabled without an expiration date.
+Do not restore them merely because a date passes or a budget resets. Each
+manual dispatch requires the user's explicit instruction for that individual
+run as well as the `run_ci` override; prior approval, commits and pushes do
+not count as permission.
 
 The Actions workflows are intentionally slim:
 
@@ -309,13 +311,20 @@ explicit Dark disabled image list so Cut/Copy/Undo and other disabled toolbar
 commands retain visible glyphs. Root-cause and validation details are recorded
 in `docs/development/ERROR_HISTORY.md`.
 
-Compile/link and runtime evidence for the current `main` still requires a fresh
-matching `local_ci.bat x64` run. The `full` profile, x86 compatibility, package
-validation, and installer execution remain inactive unless the user explicitly
-expands the validation scope. Static evidence must not be promoted to product
-PASS. Light/Dark/High Contrast, 100/125/150/200% DPI, representative dialog
-controls, standard-user/elevated-instance interop, resize/config behavior,
-keyboard/IME behavior, and final artwork quality remain separate manual evidence.
+Latest recorded evidence (2026-09-24): `6b18c58f` corrected an OS-classification
+bug that previously routed supported Windows 10/11 through XP-only painters.
+The error history records a local `local_ci.bat x64` run using the parent
+revision plus that then-uncommitted fix: Release-x64-Unicode compile/link PASS,
+native functional regression 17 passed / 0 failed. Its result was PASS WITH
+SKIPS because existing HKCU settings caused launch smoke to be SKIPPED / NOT
+TESTED. This is not a post-commit revision-matched run; fresh build evidence
+for the current checkout and corrected Dark/Light/High Contrast interactive
+visual results still require separate confirmation. The `full` profile, x86
+compatibility, package validation and installer execution remain inactive
+unless the user explicitly expands validation scope. Static, compile/link,
+launch, interactive and visual results must remain distinct; DPI at
+100/125/150/200%, dialogs, standard/elevated interoperability, resize,
+keyboard/IME and final artwork remain separate manual evidence.
 
 Generate the Visual Studio Solution
 -----------------------------------
@@ -426,6 +435,11 @@ NSIS installer was actually produced. Packaging is no longer
 run or uploaded by GitHub Actions; build the required release configurations and
 run `dist\package.bat` plus `build\validate_package.ps1 -DistDir dist` locally
 when preparing a release.
+
+The installer stages the precompiled legacy `dist/fxfile.chm`.
+Editing `docs/htmlhelp/Html/flyExplorer/requirements.htm` does not regenerate
+that binary. Its user-facing help remains historical until a separately
+authorized Windows help/package rebuild and inspection are performed.
 
 Package Build/Payload PASS is not clean-install evidence. The repository now
 contains `build\installer_smoke.ps1` plus an NSIS

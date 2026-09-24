@@ -54,12 +54,11 @@ Private Explorer APIs, undocumented dark-theme strings, and resource extraction 
 - Windows App SDK / WinUI XAML Islands: too much runtime/build surface for the current MFC modernization checkpoint.
 - Mica/Acrylic as a blanket fix: opaque MFC content means it does not solve button/menu/text theming by itself.
 - Explorer private implementation/resource reuse: unsupported and intentionally outside project policy.
-- A new SVG rasterizer dependency: the canonical Fluent SVG set and command/frame mapping are established first. Runtime bitmap replacement waits until a converter can be pinned with verified license, deterministic 16/22-pixel output, offline Windows developer availability, and no normal-build network dependency.
+- A new third-party SVG rasterizer dependency: not adopted. The repository already uses the standard-library-only `build/generate_fluent_toolbar_assets.py` to generate deterministic 16/22-pixel masks from a deliberately limited vendored SVG subset, with unsupported SVG syntax rejected. It requires no network access.
 
-## Fluent asset prototype
+## Fluent asset pipeline (implemented)
 
-`src/fxfile/res/fluent/` contains the Microsoft MIT license, a representative canonical SVG source set for Back/Forward/Up/Search/Cut/Copy/Paste/New Folder/Settings, and `COMMAND_ICON_MAP.md` mapping those semantics onto existing flyExplorer command/frame contracts.
-The SVG sources are registered in canonical `fxfile.gyp`, but the runtime toolbar bitmap contract remains unchanged until a deterministic rasterization step is selected and verified against the existing 16/22-pixel 51-frame invariants.
+`src/fxfile/res/fluent/` contains the vendored Microsoft MIT license, 16/20-pixel Regular SVG source files and `toolbar_manifest.json` for 23 runtime command IDs. `COMMAND_ICON_MAP.md` documents the mapping. Canonical `fxfile.gyp` registers the assets and generated output. The offline deterministic Python generator emits 16/22-pixel theme-neutral mask fragments, whose reproducibility is checked by source invariants. `FluentCommandIcons` uses them at runtime for all 21 default main-toolbar commands plus optional History/Settings and corresponding app-owned menu/settings overlays. The original 51-frame bitmap/index contract remains for non-migrated items, persisted indices and legacy/High Contrast fallback.
 
 ## Implemented convergence checkpoint
 
@@ -69,3 +68,14 @@ The SVG sources are registered in canonical `fxfile.gyp`, but the runtime toolba
 - Popup shared metrics were tightened from the earlier oversized legacy proportions; shell-owned IContextMenu rendering/routing remains untouched.
 - The Fluent SVG/manifest pipeline is now an active runtime replacement for 23 command IDs: all 21 Main Toolbar commands enabled by default plus optional History and Settings. Main Toolbar and app-owned BCMenu share `FluentCommandIcons`; settings navigation overlays 17 strong semantic matches while preserving the historical bitmap fallback and High Contrast path.
 - Dark settings ComboBox drop-down ListBox handles reset the Explorer visual-style association after `CB_SHOWDROPDOWN`, allowing the existing palette CTLCOLOR path to own list text/background while preserving native dropdown/keyboard behavior.
+
+## Current supported-Windows rendering status (2026-09-24)
+
+`6b18c58f` adds `WinAppEx::osWinModern` so supported Windows 10/11 no
+longer enters XP-only presentation branches, while `IsWinXPOrLater()`
+preserves legacy API-capability checks. The source invariant now guards the
+classification and capability mapping. Local x64 build/functional evidence
+for the change is recorded as PASS WITH SKIPS, not matching post-fix
+interactive Dark/Light/High Contrast visual evidence. Keep the issue open
+until rebuilt Windows screenshots verify the original acceptance case;
+see `docs/development/ERROR_HISTORY.md`.

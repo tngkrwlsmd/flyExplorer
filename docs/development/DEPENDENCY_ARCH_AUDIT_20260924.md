@@ -67,3 +67,15 @@ Current conclusion: mixed architecture is intentional and still has real ABI/run
 - Binary dependency/PE import audit: NOT TESTED.
 - Release-x64-Unicode compile/link: NOT TESTED.
 - x86 compatibility/package/installer: NOT TESTED by policy.
+
+## Post-audit verification note (2026-09-24; historical audit results retained)
+
+A later local `local_ci.bat x64` run for the `6b18c58f` OS-classification
+fix used its parent revision plus then-uncommitted source changes. The
+recorded result was Release-x64-Unicode compile/link PASS, native functional
+regression 17 passed / 0 failed, overall PASS WITH SKIPS because existing
+HKCU state prevented launch smoke. Post-fix interactive visual evidence
+remains NOT TESTED. This result does not retroactively change the build
+evidence available at the time of this dependency audit, nor validate
+third-party binary PE imports/ABI, x86 compatibility, packages or installers.
+See `docs/development/ERROR_HISTORY.md` for the precise record.
