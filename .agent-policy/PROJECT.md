@@ -674,6 +674,12 @@ reports their previous build works, but this new revision is not yet
 revision-matched Windows tested. Root LICENSE/CREDITS unchanged;
 public redistribution permissions remain unverified.
 
+40. **Preserve the previous staged release during final bin activation — SOURCE UPDATED / WINDOWS FAILURE INJECTION OPEN**
+    - Review of the updater-retirement/package cleanup found that `dist/copy.bat` successfully preflighted and copied 39 required runtime assets but then ran `rmdir /s /q "bin"` immediately before moving the ready `.package-stage` into place. A final rename failure could therefore destroy the previous valid generated staging tree.
+    - Reserve the existing generated `dist/bin` under ignored `dist/.package-backup` via same-directory rename only after the new stage is complete. Rename the new stage into place and, if that rename fails, restore the backup when safe. Reject any preexisting backup rather than overwriting it; remove the backup only after a successful activation. Keep protected user config and license files untouched.
+    - Add a source-invariant negative guard against eager `bin` deletion and enforce backup/activate/restore ordering, ignored backup path and no `package.bat` eager cleanup. Update README/AGENTS/CURRENT_STATUS and append the failure analysis to ERROR_HISTORY.
+    - Source-level contract checks can establish wiring but no Windows cmd rename, file-lock failure injection, actual three-architecture package build or installed runtime verification has run. Owner says existing app build works; no automatic update or tracked VS project outputs were restored.
+
 ### Development handoff rule
 
 - Every new user-requested development item is added to this section (or its successor) before implementation starts.

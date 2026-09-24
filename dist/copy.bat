@@ -2,6 +2,15 @@
 setlocal EnableExtensions
 pushd "%~dp0" || exit /b 1
 
+rem A backup from an interrupted previous run may be the only valid stage.
+rem Never overwrite or erase it; require an explicit manual recovery first.
+if exist ".package-backup" (
+    echo ERROR: Previous release bin backup exists: dist\.package-backup
+    echo Inspect bin and .package-backup manually before retrying.
+    popd
+    exit /b 1
+)
+
 rem Preflight every required release asset before touching the generated bin tree.
 rem No /c: required files must fail packaging rather than being ignored.
 call :require_input "..\bin\x86-multibyte\fxfile.exe"
@@ -174,10 +183,37 @@ xcopy "..\src\fxfile\Languages\*.xml" ".package-stage\x86-unicode\Languages\" /e
 if errorlevel 1 goto :error
 xcopy "..\src\fxfile\Languages\*.xml" ".package-stage\x64\Languages\" /e /r /y /i >nul
 if errorlevel 1 goto :error
-if exist "bin" rmdir /s /q "bin"
-if exist "bin" goto :error
-move ".package-stage" "bin" >nul
-if errorlevel 1 goto :error
+rem Commit only after every staged copy succeeded. Keep the old bin until
+rem the replacement is ready, and restore it if the second rename fails.
+if exist "bin" (
+    ren "bin" ".package-backup"
+    if errorlevel 1 (
+        echo ERROR: Existing bin could not be reserved; retaining it.
+        goto :error
+    )
+)
+ren ".package-stage" "bin"
+if errorlevel 1 (
+    echo ERROR: Could not activate the prepared bin tree.
+    if exist ".package-backup" (
+        if exist "bin" (
+            echo ERROR: Both bin and backup exist; refusing unsafe recovery.
+        ) else (
+            ren ".package-backup" "bin"
+            if errorlevel 1 (
+                echo ERROR: Recovery failed; previous bin remains in .package-backup.
+            )
+        )
+    )
+    goto :error
+)
+if exist ".package-backup" (
+    rmdir /s /q ".package-backup"
+    if exist ".package-backup" (
+        echo ERROR: Old backup could not be cleaned; inspect it before retrying.
+        goto :error
+    )
+)
 popd
 exit /b 0
 
@@ -200,6 +236,6 @@ exit /b 0
 set "result=%errorlevel%"
 if "%result%"=="0" set "result=1"
 if exist ".package-stage" rmdir /s /q ".package-stage"
-echo ERROR: Release staging failed. Existing bin tree was not replaced.
+echo ERROR: Release staging failed. Inspect bin and any .package-backup before retrying.
 popd
 exit /b %result%

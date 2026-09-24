@@ -4123,6 +4123,37 @@ def validate_retired_updater_and_generated_projects() -> list[str]:
     return errors
 
 
+def validate_release_stage_recovery() -> list[str]:
+    """Prevent deleting the last staged bin before its replacement activates."""
+    stage_path = ROOT / "dist" / "copy.bat"
+    package_path = ROOT / "dist" / "package.bat"
+    ignore_path = ROOT / ".gitignore"
+    try:
+        stage = stage_path.read_text(encoding="utf-8")
+        package = package_path.read_text(encoding="utf-8")
+        ignores = ignore_path.read_text(encoding="utf-8")
+    except OSError as exc:
+        return [f"release stage recovery contract cannot be read: {exc}"]
+
+    errors: list[str] = []
+    if 'rmdir /s /q "bin"' in stage:
+        errors.append("dist/copy.bat: old staged bin must not be deleted before activation")
+    backup = stage.find('ren "bin" ".package-backup"')
+    activate = stage.find('ren ".package-stage" "bin"')
+    restore = stage.find('ren ".package-backup" "bin"')
+    if not (0 <= backup < activate < restore):
+        errors.append("dist/copy.bat: backup/activate/rollback order is missing")
+    if (stage.find('if exist ".package-backup"') < 0 or
+            stage.find('if exist ".package-backup"') > stage.find('call :require_input') or
+            'if exist ".package-backup" (' not in stage[activate:]):
+        errors.append("dist/copy.bat: preexisting and failed-activation backup guards are missing")
+    if '/dist/.package-backup/' not in ignores:
+        errors.append(".gitignore: generated package backup must remain untracked")
+    if "call cleanup.bat" in package or "call copy.bat" not in package:
+        errors.append("dist/package.bat: staging must run without eager bin cleanup")
+    return errors
+
+
 def validate_html_help_package_source() -> list[str]:
     """Check help input/topic links before any GYP generation or packaging."""
     script = ROOT / "build" / "rebuild_htmlhelp.py"
@@ -4170,6 +4201,7 @@ def main() -> int:
     errors.extend(validate_installer_smoke_wiring())
     errors.extend(validate_html_help_package_source())
     errors.extend(validate_retired_updater_and_generated_projects())
+    errors.extend(validate_release_stage_recovery())
     errors.extend(validate_win11_stability_regressions())
     errors.extend(validate_runtime_ui_audit_regressions())
     errors.extend(validate_modern_ui_registration())

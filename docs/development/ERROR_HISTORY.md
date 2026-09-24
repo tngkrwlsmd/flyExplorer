@@ -2553,3 +2553,35 @@ local build was working; the older user log's updater-only C++ error
 no longer pertains to the retired test but is retained as history.
 Old personal Windows HKCU updater startup entries are not modified by
 a Git commit. Hosted GitHub Actions: NOT RUN.
+
+---
+
+## 2026-09-24 — Previous release staging lost if final rename failed
+
+**Observed risk:** Following the updater-removal packaging changes,
+`dist/copy.bat` validates the 39 required runtime files and creates
+`dist/.package-stage`. Its former final step deleted the existing
+`dist/bin` tree before attempting to move the newly prepared stage to
+`bin`. A failed second operation (file lock, permissions, unexpected
+directory collision) could lose the last known-good generated staging
+tree while reporting a package failure.
+
+**Root cause:** Input validation and copy failures were fail-closed,
+but final staging activation lacked a retained backup and rollback.
+
+**Change:** Fail if a prior `dist/.package-backup` remains (preserve
+it for manual recovery), reserve the old `bin` with a same-directory
+rename, activate `.package-stage` via rename, and attempt restoration
+when that second rename fails and the old path remains available.
+Remove the old backup only after successful activation. Ignore the
+backup in Git and enforce the ordering and absence of eager `bin`
+deletion through a negative source preflight. Original project/user
+preferences, root GPL and third-party credits are unchanged.
+
+**Verification:** Inspected the exact GitHub `main` batch source,
+package orchestration and static guard contracts and exercised
+negative mutation checks; no cmd.exe file-lock/permission injection,
+full three-architecture package run or installer/runtime test was
+performed. Full automatic updater code and obsolete generated VS
+project files were already absent before this work unit. GitHub
+Actions were NOT RUN.

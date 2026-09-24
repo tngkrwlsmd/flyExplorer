@@ -438,9 +438,15 @@ regenerates the same help for direct portable builds and stages
 current `CREDITS` as third-party notices, readme and historical change
 log next to each portable `fxfile.exe`. The combined `dist\package.bat` assembles the installer before staging
 portable-only extras and compiles help separately for both entrypoints.
-Required release files are preflighted before the staging tree is replaced;
-any packaging failure deletes newly produced output names so that partial
-or stale installer/ZIP outputs cannot be mistaken for valid packages.
+Required release files are preflighted before the staging tree is replaced.
+The previous generated `dist/bin` is renamed to an ignored
+`dist/.package-backup` only after staging succeeds; if activation fails,
+the script attempts to restore the previous `bin` without discarding it.
+A leftover backup blocks subsequent staging for explicit manual inspection.
+On normal success the old backup is removed. Any packaging failure deletes
+newly produced output names so partial or stale installer/ZIP outputs
+cannot be mistaken for valid packages. This is a source-level recovery
+contract, not a verified Windows package test.
 `build\validate_package.ps1` checks all three archives and staged
 assets, including CHM signatures; any failed/missing item rejects the
 package. Generated `dist\fxfile.chm` is not tracked. It creates:

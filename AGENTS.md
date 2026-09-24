@@ -48,7 +48,7 @@
 - `fxfile.sln`
 - `*.vcxproj`, `*.vcxproj.filters`, `*.vcxproj.user`
 - `bin/`, `obj/`, `tools/`
-- `dist/bin/`, `dist/SHA256SUMS.txt`, 생성 `dist/fxfile.chm`, `dist/.htmlhelp-build/` 및 생성 installer/portable archive
+- `dist/bin/`, 복구용 `dist/.package-backup/`, 임시 `dist/.package-stage/`, `dist/SHA256SUMS.txt`, 생성 `dist/fxfile.chm`, `dist/.htmlhelp-build/` 및 생성 installer/portable archive
 
 생성 프로젝트에 문제가 있으면 우선 GYP 또는 post-generation fixer를 수정하고 `build.bat`으로 재생성한다.
 설치 도움말은 `docs/htmlhelp/` 원본에서 `build/rebuild_htmlhelp.py --build`로 생성하며, 컴파일된 CHM을 원본처럼 커밋하거나 이전 버전 CHM을 패키징하지 않는다. `--check` 결과는 실제 Windows CHM 컴파일/설치 검증을 대체하지 않는다.
