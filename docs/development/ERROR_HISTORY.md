@@ -2090,3 +2090,21 @@
   product runtime, installer/package and visual tests were NOT RUN in this
   documentation-only synchronization. The historical local build results above
   are not new tests for this commit.
+
+---
+
+## 2026-09-24 — Reversible removal of unused vendored gtest/libxslt
+
+**Observed:** 29 tracked build/GYP/packaging/validation entry points were
+checked for direct references. None consume `lib/gtest/` or `lib/libxslt/`.
+The product's native functional regression is an in-repository test executable.
+
+**Change:** Dedicated cleanup removes 41 gtest files and 52 libxslt files;
+removes the gtest-only block from `CREDITS`; records the result in
+`PROJECT.md` and the dependency audit. Active `libxml2` and all other
+bundled binary requirements remain unchanged. Old analysis remains
+available through Git history.
+
+**Verification:** Static manifest/script reference inspection: PASS.
+External/manual consumption: NOT PROVEN. Windows x64 compile/test, x86,
+runtime ABI, package/installer: NOT TESTED. No GitHub Actions run.

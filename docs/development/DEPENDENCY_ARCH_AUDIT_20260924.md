@@ -79,3 +79,17 @@ remains NOT TESTED. This result does not retroactively change the build
 evidence available at the time of this dependency audit, nor validate
 third-party binary PE imports/ABI, x86 compatibility, packages or installers.
 See `docs/development/ERROR_HISTORY.md` for the precise record.
+
+## Follow-up cleanup checkpoint: unused vendor trees (2026-09-24)
+
+The original candidate assessment above is preserved as historical context.
+A separate first-party reference check covered 29 tracked build/GYP/script
+entry points and found no `gtest` or `libxslt` consumer. The native
+functional test project uses its in-tree tests rather than Google Test.
+The cleanup removes `lib/gtest/` (41 tracked files, 34.8 MB) and
+`lib/libxslt/` (52 tracked files, 9.0 MB) without touching active
+`libxml2` and updater dependencies; the gtest entry is removed from
+active `CREDITS` because its vendor package is no longer present.
+Historical notes here remain deliberately unchanged. External/manual
+consumers and a fresh Windows build/package are NOT TESTED. Restore from
+Git history if a previously untracked external dependency is established.

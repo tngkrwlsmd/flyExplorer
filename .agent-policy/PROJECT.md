@@ -499,6 +499,11 @@ Status: **ACTIVE / user-reproduced runtime failures**. These items are the immed
     - The 2026-09-24 dependency audit retains its historical NOT TESTED findings, with a labeled post-audit note referencing the later x64 build record. Bundled binary imports/ABI, x86 compatibility and package/installer results remain unverified.
     - `reviewed_revision` marks the documentation-only source snapshot `5e3d8d4ad85e03b5cbe4db3d4457b0058c16687b`; this PROJECT update and ERROR_HISTORY reconciliation are outside `reviewed_paths`. Actual vendored-policy/readiness commands have not been run as part of this documentation-only sync.
 
+28. **Unused vendored dependency cleanup — SOURCE TREE REMOVAL / WINDOWS BUILD NOT TESTED**
+    - The root/component GYP files and 29 first-party build, validation and packaging scripts have no active `gtest` or `libxslt` references; native functional tests use their in-repository test implementation. Remove vendored `lib/gtest/` (41 files) and `lib/libxslt/` (52 files) as a dedicated reversible cleanup unit, and remove the now-inapplicable gtest redistribution block from active `CREDITS`. `libxml2`, iconv, GFL, zlib, curl and the mixed-architecture helpers remain untouched.
+    - External/manual consumers cannot be disproved through repository-only inspection. First-party source/script references: static reviewed; native Windows x64 compile/test and x86/package/installer equivalence: NOT TESTED. The dependency audit and error history contain the scoped outcome.
+    - This is a first cleanup checkpoint; subsequent duplicate-file and installer/help work must be independently documented and checked.
+
 ### Development handoff rule
 
 - Every new user-requested development item is added to this section (or its successor) before implementation starts.
