@@ -159,6 +159,7 @@ protected:
     void ContinueTracking( bool bSelectFirst );
     void ExitTrackingMode();
     void ShowChevronMenu( int nItem );
+    void ApplyModernAppearance();
     void DrawFinalMenuOverlay( CDC &aDC );
     xpr_bool_t IsTopLevelMenuItemDisabled( xpr_sint_t aItemIndex ) const;
     bool IsItemClipped( int nItem ) const;

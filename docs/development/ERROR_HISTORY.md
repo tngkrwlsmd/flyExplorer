@@ -1685,3 +1685,32 @@
 - User runtime screenshot before fix: **FAIL** — title/frame theme changed before client surfaces.
 - Connector source cross-check after fix: child-first/frame-second/top-level-last transaction ordering present.
 - Rebuilt Windows runtime theme-switch screenshot: **NOT RETESTED**.
+
+
+---
+
+## 2026-09-24 — MenuBar still retained a native toolbar theme association
+
+**추가 전수 조사**
+- 공용 command toolbar인 `CToolBarEx`와 최상단 `CMenuBar`의 theme-association 처리 차이를 비교했다.
+- `CToolBarEx`는 Dark/non-High-Contrast에서 `ModernUI::resetControlTheme()`로 ToolbarWindow32의 native themed painter를 끊고, Light/High Contrast에서는 Explorer/default association을 복구한다.
+- `CMenuBar`는 같은 ToolbarWindow32 기반인데 이 처리가 전혀 없었고, `WM_PRINT`도 `PRF_CLIENT`가 있는 경우만 Dark ownership으로 분기했다.
+
+**원인 위험**
+- 최종 `WM_PAINT` / 일반 `WM_PRINTCLIENT`를 앱이 직접 그리더라도 CMenuBar HWND에 native visual-style association이 남으면 theme-change/custom-draw/print의 다른 변형에서 uxtheme가 다시 개입할 수 있다.
+- rebar/toolbar의 내부 print 호출이 항상 `PRF_CLIENT`를 포함한다고 가정할 근거도 없으므로 일부 `WM_PRINT` 조합은 native `CToolBar::WindowProc()`로 빠질 수 있었다.
+
+**해결 방법**
+- `CMenuBar::ApplyModernAppearance()`를 추가해 `CToolBarEx`와 동일하게 Dark에서는 `resetControlTheme()`, Light/High Contrast에서는 `applyExplorerControlTheme()`를 적용한다.
+- OnCreate, WM_SETTINGCHANGE, WM_SYSCOLORCHANGE, WM_THEMECHANGED에서 이 association을 갱신하고 tooltip도 Explorer theme를 재적용한다.
+- modern Windows의 WM_THEMECHANGED에서는 legacy Window theme handle을 새로 열지 않고 app-owned renderer를 유지한다.
+- Dark에서는 `WM_PRINTCLIENT`뿐 아니라 HDC가 제공된 모든 `WM_PRINT`를 native 호출 전에 직접 chrome + menu overlay로 그린 뒤 종료한다.
+
+**재발 방지**
+- source invariant가 MenuBar의 theme-association helper 선언/정의와 reset/restore 호출을 요구한다.
+- Dark print ownership 검사는 `WM_PRINTCLIENT`와 모든 `WM_PRINT` variant를 포함한다.
+
+**검증 상태**
+- Connector source audit: MenuBar/ToolBarEx association parity and Dark all-print ownership implemented.
+- Full local `python build/validate_source_invariants.py`: **NOT EXECUTED** in this session because the container could not resolve github.com to materialize a checkout.
+- Rebuilt Windows runtime screenshot: **NOT RETESTED**.

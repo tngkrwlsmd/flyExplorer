@@ -1221,6 +1221,7 @@ int CMenuBar::OnCreate( LPCREATESTRUCT lpCreateStruct )
             MAKELPARAM(LOWORD(sButtonSize), max((int)HIWORD(sButtonSize), sMenuHeight)));
     }
 
+    ApplyModernAppearance();
     return 0;
 }
 
@@ -1229,6 +1230,41 @@ void CMenuBar::OnDestroy()
     CToolBar::OnDestroy();
 
     CloseTheme();
+}
+
+void CMenuBar::ApplyModernAppearance()
+{
+    if (::IsWindow(m_hWnd) == FALSE ||
+        WinAppEx::GetInstance()->IsWinXP())
+    {
+        return;
+    }
+
+    const fxfile::ui::ThemePalette sPalette =
+        fxfile::ui::ModernUI::getPalette();
+
+    // Match CToolBarEx: Dark command surfaces must not keep a native themed
+    // ToolbarWindow32 painter attached to the HWND.  Even if an unexpected
+    // native paint/print path is reached, removing that association prevents
+    // uxtheme from reclaiming the final menu text/glyph pixels.
+    if (XPR_IS_TRUE(sPalette.mDark) &&
+        XPR_IS_FALSE(sPalette.mHighContrast))
+    {
+        fxfile::ui::ModernUI::resetControlTheme(m_hWnd);
+    }
+    else
+    {
+        fxfile::ui::ModernUI::applyExplorerControlTheme(m_hWnd);
+    }
+
+    CToolTipCtrl *sToolTip =
+        GetToolBarCtrl().GetToolTips();
+    if (XPR_IS_NOT_NULL(sToolTip) &&
+        ::IsWindow(sToolTip->GetSafeHwnd()) != FALSE)
+    {
+        fxfile::ui::ModernUI::applyExplorerControlTheme(
+            sToolTip->GetSafeHwnd());
+    }
 }
 
 xpr_bool_t CMenuBar::IsTopLevelMenuItemDisabled(
@@ -1455,6 +1491,12 @@ LRESULT CMenuBar::WindowProc(
          (lParam & PRF_CLIENT) != 0) ?
         XPR_TRUE :
         XPR_FALSE;
+    const xpr_bool_t sAnyPrint =
+        (message == WM_PRINTCLIENT ||
+         message == WM_PRINT) &&
+        wParam != 0 ?
+        XPR_TRUE :
+        XPR_FALSE;
     const xpr_bool_t sPrintSurface =
         (XPR_IS_TRUE(sPrintClient) ||
          XPR_IS_TRUE(sPrintWithClient)) &&
@@ -1462,7 +1504,7 @@ LRESULT CMenuBar::WindowProc(
         XPR_TRUE :
         XPR_FALSE;
 
-    if (XPR_IS_TRUE(sPrintSurface))
+    if (XPR_IS_TRUE(sAnyPrint))
     {
         const fxfile::ui::ThemePalette sPalette =
             fxfile::ui::ModernUI::getPalette();
@@ -1771,14 +1813,16 @@ void CMenuBar::OnSettingChange( UINT uFlags, LPCTSTR lpszSection )
     CToolBar::OnSettingChange( uFlags, lpszSection );
 
     UpdateMenuBar();
-    Invalidate();
+    ApplyModernAppearance();
+    Invalidate(FALSE);
 }
 
 void CMenuBar::OnSysColorChange()
 {
     CToolBar::OnSysColorChange();
 
-    Invalidate();
+    ApplyModernAppearance();
+    Invalidate(FALSE);
     UpdateWindow();
 }
 
@@ -1845,9 +1889,14 @@ LRESULT CMenuBar::OnReBarChevronPushed( WPARAM wParam, LPARAM lParam )
 LRESULT CMenuBar::OnThemeChanged( WPARAM /*wParam*/, LPARAM /*lParam*/ )
 {
     CloseTheme();
-    OpenTheme();
 
-    Invalidate();
+    if (WinAppEx::GetInstance()->IsWinXP())
+        OpenTheme();
+    else
+        ApplyModernAppearance();
+
+    UpdateMenuBar();
+    Invalidate(FALSE);
     UpdateWindow();
 
     return Default();

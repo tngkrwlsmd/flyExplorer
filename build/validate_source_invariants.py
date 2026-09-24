@@ -3197,6 +3197,21 @@ def validate_win11_stability_regressions() -> list[str]:
                     f"src/fxfile/gui/rebar/MenuBar.cpp: Dark WM_PAINT ownership missing {token}"
                 )
 
+    if "void ApplyModernAppearance();" not in contents["menubar_h"]:
+        errors.append(
+            "src/fxfile/gui/rebar/MenuBar.h: shared modern appearance helper declaration is missing"
+        )
+    for token in (
+        "void CMenuBar::ApplyModernAppearance()",
+        "ModernUI::resetControlTheme(m_hWnd)",
+        "ModernUI::applyExplorerControlTheme(m_hWnd)",
+        "ApplyModernAppearance();",
+    ):
+        if token not in contents["menubar"]:
+            errors.append(
+                f"src/fxfile/gui/rebar/MenuBar.cpp: menu-bar theme-association ownership missing token {token}"
+            )
+
     if "virtual LRESULT WindowProc( UINT message, WPARAM wParam, LPARAM lParam );" not in contents["menubar_h"]:
         errors.append(
             "src/fxfile/gui/rebar/MenuBar.h: final rebar-print ownership WindowProc declaration is missing"
@@ -3207,6 +3222,9 @@ def validate_win11_stability_regressions() -> list[str]:
         "message == WM_PRINTCLIENT",
         "message == WM_PRINT",
         "PRF_CLIENT",
+        "const xpr_bool_t sAnyPrint",
+        "message == WM_PRINTCLIENT ||",
+        "message == WM_PRINT)",
         "const xpr_bool_t sPrintSurface",
         "const xpr_bool_t sOwnDarkSurface",
         "sDC->FillSolidRect(",
