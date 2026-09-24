@@ -588,6 +588,12 @@ installer PASS. Earlier review baselines above remain dated history.
     - Package validator now requires assets in each staging tree and ZIP, validates `ITSF` signatures on both compiled-CHM copies, and existing common-binary/PE/collision checks remain. `build/rebuild_htmlhelp.py --check` guards portable/help/validator wiring. README, distribution readme, CURRENT_STATUS and ERROR_HISTORY are updated in the same unit.
     - This is a source-level packaging fix only. Windows cmd/7-Zip/HTML Help Workshop generation, portable startup/Help browsing, x64 release and x86 package variants: NOT TESTED. Do not publicly distribute bundled GFL SDK without independent licensing review.
 
+36. **Updater metadata transfer reliability — SOURCE FIXED / WINDOWS INTEGRATION NOT TESTED**
+    - A targeted inspection found that `UpdateChecker::downloadFile` always returned the requested callback length even when opening, writing or seeking the metadata file failed, letting libcurl report apparent transfer success. The callback also had no aggregate size limit, and requests had no explicit connect/overall timeout or HTTP error flag.
+    - A small pure header `src/base/update_download_limits.h` now enforces an overflow-safe cumulative 256 KiB metadata budget and is directly included by the Win32 upchecker and native test group. The callback reports actual written bytes so a failure or size excess aborts libcurl instead of parsing an incomplete/stale file. Add connect/total timeouts and fail-on-HTTP-error. Update both GYP source inventories and source-invariant guards.
+    - Nine transfer-budget boundary cases (exact bound, remaining byte, overflow and zero-length behavior) pass in an isolated `g++ -std=c++11 -Wall -Wextra -Werror -pedantic` fixture. The Windows native test group contains equivalent cases but the actual Windows build, real libcurl transfer, disk failure/timeout and updater UI remain NOT TESTED.
+    - **Not a full updater security upgrade:** the hard-coded `http://flychk.com` metadata URL is still untrusted and the old bundled curl/TLS binary and signed download chain were not migrated; no unverified HTTPS endpoint was invented. These are explicit follow-up blockers, not solved by transfer limits.
+
 ### Development handoff rule
 
 - Every new user-requested development item is added to this section (or its successor) before implementation starts.

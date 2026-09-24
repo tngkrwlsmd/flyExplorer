@@ -193,6 +193,7 @@
                 '../base/upchecker_command.cpp',
                 '../base/upchecker_command.h',
                 '../base/update_metadata.h',
+                '../base/update_download_limits.h',
             ],
         },
     ],

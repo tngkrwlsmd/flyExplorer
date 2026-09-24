@@ -11,6 +11,8 @@
 #include "version_compare.h"
 #include "upchecker_command.h"
 #include "update_metadata.h"
+#include "update_download_limits.h"
+#include <limits>
 #include "conf_file_ex.h"
 
 namespace fxfile
@@ -181,6 +183,25 @@ bool testUpdateMetadataParser(void)
 
 bool testUpdaterContracts(void)
 {
+    // Pure boundary checks also run in an isolated, platform-neutral C++
+    // fixture. The real Windows/libcurl callback still needs integration
+    // testing with disk failures and the deployed metadata server.
+    const std::size_t sLimit = base::kMaxUpdateMetadataBytes;
+    if (XPR_IS_FALSE(base::canAcceptUpdateMetadataChunk(0, 1, sLimit)) ||
+        XPR_IS_FALSE(base::canAcceptUpdateMetadataChunk(sLimit - 1, 1, 1)) ||
+        XPR_IS_FALSE(base::canAcceptUpdateMetadataChunk(sLimit, 0, 0)) ||
+        XPR_IS_TRUE(base::canAcceptUpdateMetadataChunk(sLimit, 1, 1)) ||
+        XPR_IS_TRUE(base::canAcceptUpdateMetadataChunk(sLimit + 1, 0, 0)) ||
+        XPR_IS_TRUE(base::canAcceptUpdateMetadataChunk(0, 1, sLimit + 1)) ||
+        XPR_IS_TRUE(base::canAcceptUpdateMetadataChunk(
+            0, std::numeric_limits<std::size_t>::max(), 2)) ||
+        XPR_IS_TRUE(base::canAcceptUpdateMetadataChunk(100, 2, sLimit / 2)) ||
+        XPR_IS_FALSE(base::canAcceptUpdateMetadataChunk(
+            100, 2, (sLimit - 100) / 2)))
+    {
+        return false;
+    }
+
     base::Version sVersion;
 
     if (XPR_IS_FALSE(

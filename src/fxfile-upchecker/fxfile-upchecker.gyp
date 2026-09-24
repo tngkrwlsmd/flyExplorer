@@ -167,6 +167,7 @@
                 '../base/update_info_manager.cpp',
                 '../base/update_info_manager.h',
                 '../base/update_metadata.h',
+                '../base/update_download_limits.h',
                 '../base/upchecker_def.h',
 
                 './main_window.cpp',

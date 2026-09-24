@@ -2360,3 +2360,31 @@ source inspected. Windows `hhc.exe`, batch/7zip/package validator on a
 real three-architecture build, actual installed and portable product Help:
 NOT TESTED. Neither updater server security nor GFL/public distribution
 rights were changed. GitHub Actions: NOT RUN.
+
+---
+
+## 2026-09-24 — Updater claimed successful writes despite disk failure
+
+**Observed defect:** The Win32 update checker supplied libcurl a disk-writing
+callback that returned `sBufferSize` regardless of the actual filesystem
+write result. A missing/unwritable full metadata file or short write could
+therefore be treated as an ordinary network transfer and fall through to
+metadata parsing. No aggregate metadata byte limit or timeout was set.
+
+**Root cause:** Curl callback return value used requested bytes, not the
+written-byte count, and local transfer state did not accumulate payload size.
+
+**Scoped fix:** Add the pure overflow-safe cumulative 256 KiB metadata budget;
+initialize and update per-transfer written bytes, return only actual writes
+from `UpdateChecker::downloadFile` and abort on oversized chunks. Add
+15-second connect / 45-second total timeouts and `CURLOPT_FAILONERROR`.
+Register the direct header in both updater and test GYP files, add native
+boundary assertions and a source-invariant guard against restoring the
+false success return path.
+
+**Evidence:** Nine isolated cross-platform C++11 boundary cases passed
+under g++ with warnings treated as errors. Windows native regression,
+upchecker compile and actual curl network/disk-failure behavior: NOT TESTED.
+The existing old HTTP update endpoint and unsigned metadata remain
+untrusted and require independent server, TLS, provenance and release
+integrity work. No GitHub Actions runs.

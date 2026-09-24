@@ -19,6 +19,7 @@ For the chronological diagnosis and original evidence, retain and use
 | User guidance | `Html/current_development.htm` is the current source-grounded guide; old detailed reference pages are retained with prominent legacy entry-point labels | Full per-topic source/runtime rewrite still OPEN; track it in [`HELP_CONTENT_AUDIT.md`](HELP_CONTENT_AUDIT.md) |
 | Distribution | Installer now distinguishes application GPL notice and separately installs current `CREDITS` as third-party notices | Bundled third-party permissions, particularly GFL SDK, and public redistribution compatibility: NOT VERIFIED; see [`DISTRIBUTION_LICENSE_REVIEW.md`](DISTRIBUTION_LICENSE_REVIEW.md) |
 | GitHub Actions | Manual workflow-only; each actual run requires a separate explicit user instruction with no expiry to this restriction | No Actions invoked in documentation/vendor/help cleanup |
+| Updater metadata transfer | A new 256 KiB overflow-safe transfer budget and truthful disk-write callback result prevent oversized/partially written metadata from being reported as a successful libcurl transfer. Basic connect/total timeouts and HTTP error reporting are configured. | Pure helper's 9 boundary cases passed an isolated Linux C++11 compile; Windows x86 updater build/real server/disk-failure integration: NOT TESTED. Existing hard-coded HTTP endpoint and unsigned metadata remain security blockers. |
 | Prior repository cleanup | Removed unused `gtest` (41) and `libxslt` (52) files, 16 byte-identical zlib binaries, 113 non-build NSIS developer assets, plus 4 dead root HTML frameset inputs | Source and Git tree inspection only; fresh Windows compile/package and external manual consumer checks NOT TESTED |
 
 **Do not call the application/runtime defect closed based solely on source or
@@ -37,12 +38,13 @@ Light/Dark/High Contrast acceptance scenarios are reproduced successfully.
 2. Source-check the legacy help detail pages against the actual
    application menus, language packs, settings tree, shortcuts and
    screenshots before claiming them current. No speculative remapping.
-3. Audit exact GFL SDK redistribution permissions and all included
+3. Verify/update the updater's hard-coded cleartext HTTP endpoint, installed libcurl TLS capabilities, signed release-metadata/download integrity and actual deployed server before enabling a release-grade update trust chain. The bounded-transfer fix alone does not authenticate metadata.
+4. Audit exact GFL SDK redistribution permissions and all included
    third-party binary provenance/requirements before public packaging.
-4. Decide whether old `dist/history.txt` belongs in future installers.
+5. Decide whether old `dist/history.txt` belongs in future installers.
    Until changed, ship it with an explicit **historical releases only**
    header; do not transform or delete its original history.
-5. Consider dependency ABI, updater x86 isolation and VLD release
+6. Consider dependency ABI, updater x86 isolation and VLD release
    staging only with direct build/package verification and
    the architecture limits in the dependency audit.
 

@@ -4147,6 +4147,49 @@ def validate_modern_ui_registration() -> list[str]:
     return errors
 
 
+def validate_updater_download_budget() -> list[str]:
+    """Guard the updater's size/write failure contract and test wiring."""
+    errors: list[str] = []
+    paths = {
+        "header": ROOT / "src" / "base" / "update_download_limits.h",
+        "updater": ROOT / "src" / "fxfile-upchecker" / "update_checker.cpp",
+        "updater_gyp": ROOT / "src" / "fxfile-upchecker" / "fxfile-upchecker.gyp",
+        "tests": ROOT / "src" / "fxfile-tests" / "updater_contract_tests.cpp",
+        "tests_gyp": ROOT / "src" / "fxfile-tests" / "fxfile-tests.gyp",
+    }
+    try:
+        s = {name: path.read_text(encoding="utf-8") for name, path in paths.items()}
+    except OSError as exc:
+        return [f"updater download budget guard: missing source: {exc}"]
+    if "kMaxUpdateMetadataBytes = 256u * 1024u" not in s["header"] or (
+        "(kMaxUpdateMetadataBytes - aCompletedBytes) / aElementCount"
+        not in s["header"]
+    ):
+        errors.append("updater metadata size bound or overflow check is missing")
+    u = strip_comments(s["updater"])
+    for token in (
+        '#include "update_download_limits.h"',
+        "base::canAcceptUpdateMetadataChunk(",
+        "mDownloadedBytes = 0;",
+        "mDownloadedBytes += sWrittenBufferSize;",
+        "return sWrittenBufferSize;",
+        "CURLOPT_CONNECTTIMEOUT",
+        "CURLOPT_TIMEOUT",
+        "CURLOPT_FAILONERROR",
+    ):
+        if token not in u:
+            errors.append(f"update_checker.cpp: required transfer guard missing: {token}")
+    if "return sBufferSize;" in u:
+        errors.append("update_checker.cpp: callback must not claim all bytes on failed disk writes")
+    for name in ("updater_gyp", "tests_gyp"):
+        if "'../base/update_download_limits.h'" not in s[name]:
+            errors.append(f"{paths[name]}: missing shared update download contract")
+    for token in ("#include \"update_download_limits.h\"", "std::numeric_limits<std::size_t>::max()"):
+        if token not in s["tests"]:
+            errors.append(f"updater_contract_tests.cpp: missing boundary case: {token}")
+    return errors
+
+
 def validate_html_help_package_source() -> list[str]:
     """Check help input/topic links before any GYP generation or packaging."""
     script = ROOT / "build" / "rebuild_htmlhelp.py"
@@ -4193,6 +4236,7 @@ def main() -> int:
     errors.extend(validate_actions_storage_budget_contract())
     errors.extend(validate_installer_smoke_wiring())
     errors.extend(validate_html_help_package_source())
+    errors.extend(validate_updater_download_budget())
     errors.extend(validate_win11_stability_regressions())
     errors.extend(validate_runtime_ui_audit_regressions())
     errors.extend(validate_modern_ui_registration())

@@ -9,6 +9,7 @@
 
 #include "stdafx.h"
 #include "update_checker.h"
+#include "update_download_limits.h"
 
 #include "conf_file_ex.h"
 #include "crc32.h"
@@ -61,15 +62,24 @@ struct DownloadFileData
     xpr_bool_t  mFirst;
     xpr_sint_t  mSleepTime;
     xpr::string mFilePath;
+    xpr_size_t mDownloadedBytes;
 };
 
 xpr_size_t UpdateChecker::downloadFile(void *aSource, xpr_size_t aSize, xpr_size_t aMemoryBlock, void *aUserData)
 {
-    const xpr_size_t  sBufferSize        = aSize * aMemoryBlock;
     xpr_size_t        sWrittenBufferSize = 0;
     DownloadFileData *sDownloadFileData  = (DownloadFileData *)aUserData;
 
     XPR_ASSERT(sDownloadFileData != XPR_NULL);
+    if (XPR_IS_NULL(sDownloadFileData) ||
+        XPR_IS_FALSE(base::canAcceptUpdateMetadataChunk(
+            sDownloadFileData->mDownloadedBytes, aSize, aMemoryBlock)))
+    {
+        // A short write makes libcurl abort instead of accepting a partial
+        // or oversized metadata file (including multiplication overflow).
+        return 0;
+    }
+    const xpr_size_t sBufferSize = aSize * aMemoryBlock;
 
     if (sBufferSize > 0)
     {
@@ -85,13 +95,11 @@ xpr_size_t UpdateChecker::downloadFile(void *aSource, xpr_size_t aSize, xpr_size
                 xpr_ssize_t sWrittenSize = 0;
 
                 sRcode = sFileIo.write(aSource, sBufferSize, &sWrittenSize);
-                if (XPR_RCODE_IS_SUCCESS(sRcode))
+                if (XPR_RCODE_IS_SUCCESS(sRcode) &&
+                    sWrittenSize >= 0 &&
+                    static_cast<xpr_size_t>(sWrittenSize) <= sBufferSize)
                 {
-                    sWrittenBufferSize = sWrittenSize;
-                }
-                else
-                {
-                    // error
+                    sWrittenBufferSize = static_cast<xpr_size_t>(sWrittenSize);
                 }
 
                 sFileIo.close();
@@ -101,7 +109,8 @@ xpr_size_t UpdateChecker::downloadFile(void *aSource, xpr_size_t aSize, xpr_size
                 // error
             }
 
-            sDownloadFileData->mFirst = XPR_FALSE;
+            if (sWrittenBufferSize == sBufferSize)
+                sDownloadFileData->mFirst = XPR_FALSE;
         }
         else
         {
@@ -115,13 +124,11 @@ xpr_size_t UpdateChecker::downloadFile(void *aSource, xpr_size_t aSize, xpr_size
                 if (XPR_RCODE_IS_SUCCESS(sRcode))
                 {
                     sRcode = sFileIo.write(aSource, sBufferSize, &sWrittenSize);
-                    if (XPR_RCODE_IS_SUCCESS(sRcode))
+                    if (XPR_RCODE_IS_SUCCESS(sRcode) &&
+                        sWrittenSize >= 0 &&
+                        static_cast<xpr_size_t>(sWrittenSize) <= sBufferSize)
                     {
-                        sWrittenBufferSize = sWrittenSize;
-                    }
-                    else
-                    {
-                        // error
+                        sWrittenBufferSize = static_cast<xpr_size_t>(sWrittenSize);
                     }
                 }
                 else
@@ -143,7 +150,8 @@ xpr_size_t UpdateChecker::downloadFile(void *aSource, xpr_size_t aSize, xpr_size
         }
     }
 
-    return sBufferSize;
+    sDownloadFileData->mDownloadedBytes += sWrittenBufferSize;
+    return sWrittenBufferSize;
 }
 
 /**
@@ -180,7 +188,14 @@ xpr_bool_t UpdateChecker::check(void)
     sDownloadFileData->mFirst     = XPR_TRUE;
     sDownloadFileData->mSleepTime = 1;
     sDownloadFileData->mFilePath  = mMetaFilePath;
+    sDownloadFileData->mDownloadedBytes = 0;
 
+    // The vendored curl is legacy. These options are supported by its API;
+    // HTTPS endpoint, TLS configuration and signed update provenance still
+    // require a separate server/library migration.
+    curl_easy_setopt(sCtx, CURLOPT_CONNECTTIMEOUT, 15L);
+    curl_easy_setopt(sCtx, CURLOPT_TIMEOUT,        45L);
+    curl_easy_setopt(sCtx, CURLOPT_FAILONERROR,    1L);
     curl_easy_setopt(sCtx, CURLOPT_NOPROGRESS,    XPR_TRUE);
     curl_easy_setopt(sCtx, CURLOPT_WRITEFUNCTION, downloadFile);
     curl_easy_setopt(sCtx, CURLOPT_URL,           sUrl.c_str());
