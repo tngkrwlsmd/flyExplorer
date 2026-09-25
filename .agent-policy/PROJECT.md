@@ -970,6 +970,26 @@ runtime geometry/paint trace before another unverified
 renderer rewrite. No revision-matched Windows visual
 acceptance in this environment. GitHub Actions not run.
 
+**2026-09-25 current-binary UI-09 failure (user-asserted):**
+The user confirms the repeated bookmark fragments persist after
+building and running latest main; do not ask them to repeat an old
+revision check. Previous light postpaint, direct WM_PAINT/WM_PRINT,
+idempotent bookmark rebuild and independent rebar-band updates
+are source changes but NOT runtime fixes by this evidence.
+Review identified independent native layout issues: nonwrapping
+bookmark toggle did not clear retained per-button TBSTATE_WRAP,
+and RBBIM_CHILDSIZE used an uninitialized REBARBANDINFO including
+cyMaxChild/cyIntegral. Source now clears wrap bits only when
+multiline is disabled, zero-initializes rebar child-size metadata,
+and clips bookmark-owned icon/text pixels to the first native item
+row after filling the full client. Existing chevrons, explicit
+multiline mode, commands and icon data remain intact. Dedicated
+guard added. This is a further source-level repair, NOT runtime
+closure; requires current x64 compiler and exact same user crop
+before reporting success. The Light filtering unfocused-selected
+fix in ef48a29 is separate and not yet runtime accepted here.
+Hosted GitHub Actions: NOT RUN, per-run approval still required.
+
 ### Development handoff rule
 
 - Every new user-requested development item is added to this section (or its successor) before implementation starts.

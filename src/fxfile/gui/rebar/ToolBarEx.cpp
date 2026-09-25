@@ -622,6 +622,39 @@ void PaintOwnedBookmarkToolbar(HWND aToolbar, HDC aHdc)
     const LRESULT sUiState =
         ::SendMessage(aToolbar, WM_QUERYUISTATE, 0, 0);
 
+    // The user screenshot shows a few pixels of a second copy of every
+    // icon and label below the bookmark row. A one-line bookmark toolbar
+    // must not paint beyond its first native button row, even when the
+    // child window is taller than that row while rebar recalculates.
+    // Background was already filled across the whole client above;
+    // this additional clip only limits item pixels, never hit testing.
+    if ((::GetWindowLongPtr(aToolbar, GWL_STYLE) & TBSTYLE_WRAPABLE) == 0)
+    {
+        for (xpr_sint_t i = 0; i < sCount; ++i)
+        {
+            TBBUTTON sButton = {0};
+            RECT sFirstItem = {0};
+            if (::SendMessage(
+                    aToolbar, TB_GETBUTTON, i,
+                    reinterpret_cast<LPARAM>(&sButton)) != FALSE &&
+                (sButton.fsState & TBSTATE_HIDDEN) == 0 &&
+                (sButton.fsStyle & BTNS_SEP) == 0 &&
+                ::SendMessage(
+                    aToolbar, TB_GETITEMRECT, i,
+                    reinterpret_cast<LPARAM>(&sFirstItem)) != FALSE &&
+                sFirstItem.bottom > sFirstItem.top)
+            {
+                ::IntersectClipRect(
+                    aHdc,
+                    sClientRect.left,
+                    sClientRect.top,
+                    sClientRect.right,
+                    min(sClientRect.bottom, sFirstItem.bottom));
+                break;
+            }
+        }
+    }
+
     for (xpr_sint_t i = 0; i < sCount; ++i)
     {
         TBBUTTON sButton = {0};

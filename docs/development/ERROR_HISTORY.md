@@ -3299,3 +3299,45 @@ run by the agent. UI-10 remains RUNTIME OPEN; UI-09
 bookmark ghosting remains OPEN until paint/geometry
 trace or equivalent strong evidence. GitHub Actions
 not run without explicit per-run approval.
+
+
+---
+
+## 2026-09-25 — User confirms latest build still has bookmark partial second row
+
+**User runtime evidence:** The user rejects the stale-executable
+explanation: they built and ran the latest version and the visible
+colored icon/text fragments remain. Earlier source claims did not
+establish actual Windows screenshot acceptance. Do not repeat old
+build-version questions or mark UI-09 fixed without matching visual
+evidence.
+
+**New source review:** In nonwrapping Bookmark mode,
+MainCoolBar::setWrapable removed window-level TBSTYLE_WRAPABLE but
+left TBSTATE_WRAP on native toolbar buttons, permitting stale row
+layout after earlier window resizing or mode switches.
+MainCoolBar::onUpdatedToolbarSize constructed REBARBANDINFO
+without initializing cyMaxChild/cyIntegral while passing
+RBBIM_CHILDSIZE. The bookmark-specific WM_PAINT/WM_PRINT
+owner painted across the entire client with no explicit
+nonwrapping first-row clip, making partial lower-row glyphs
+possible while the rebar child size is updated. The screenshot
+alone cannot prove which of these pathways is active.
+
+**Source corrections:** Clear retained native TBSTATE_WRAP only
+when disabling bookmark multiline mode, zero-initialize all
+REBARBANDINFO members and bound cyMaxChild, and clip owned
+bookmark icon/text painting to the first native row while
+still filling the full toolbar client background. Keep toolbar
+commands, accessibility, saved bookmark data, chevrons and
+intentional multiline setting. Add a regression source guard
+that inspects each owner and mutation order, rather than
+requiring arbitrary implementation snippets alone.
+
+**Evidence limits:** This is a source-level repair candidate,
+not a successful Windows test. No revision-matched Release
+x64 compiler, native runtime toolbar geometry trace,
+final identical screenshot or High Contrast/DPI acceptance
+was available via the connector. UI-09 remains OPEN until
+user-verified pixel result. Do not run GitHub Actions
+without individual explicit authorization.

@@ -4533,6 +4533,68 @@ def validate_filter_list_theme_contrast_regression() -> list[str]:
     return errors
 
 
+def validate_bookmark_first_row_geometry() -> list[str]:
+    """UI-09: no residual native second row in the nonwrapping bookmark band."""
+    errors: list[str] = []
+    coolbar = (FXFILE_SRC / "main_coolbar.cpp").read_text(
+        encoding="utf-8", errors="replace"
+    )
+    toolbar = (FXFILE_SRC / "gui" / "rebar" / "ToolBarEx.cpp").read_text(
+        encoding="utf-8", errors="replace"
+    )
+
+    toggle_start = coolbar.find("void MainCoolBar::setWrapable(")
+    toggle_end = coolbar.find("void MainCoolBar::onUpdatedToolbarSize(", toggle_start)
+    toggle = coolbar[toggle_start:toggle_end] if toggle_end > toggle_start >= 0 else ""
+    for token in (
+        "sToolBar->ModifyStyle(TBSTYLE_WRAPABLE, 0)",
+        "if (aBandId == AFX_IDW_BOOKMARK_BAR)",
+        "TBIF_BYINDEX | TBIF_STATE",
+        "(sButton.fsState & TBSTATE_WRAP) != 0",
+        "sButton.fsState &= ~TBSTATE_WRAP",
+        "sBookmarkCtrl.SetButtonInfo(i, &sButton)",
+        "sRebarBandInfo.fStyle |= RBBS_USECHEVRON",
+    ):
+        if token not in toggle:
+            errors.append(f"bookmark single-line native wrap reset missing: {token}")
+    # No per-button wrap mutation belongs in the multiline-enabled branch.
+    enabled = toggle.find("if (XPR_IS_TRUE(aWrapable))")
+    disabled = toggle.find("sToolBar->ModifyStyle(TBSTYLE_WRAPABLE, 0)")
+    reset = toggle.find("sButton.fsState &= ~TBSTATE_WRAP")
+    if enabled < 0 or disabled <= enabled or reset <= disabled:
+        errors.append("bookmark TBSTATE_WRAP reset must be limited to nonwrap mode")
+
+    band_start = coolbar.find("void MainCoolBar::onUpdatedToolbarSize(")
+    band_end = coolbar.find("void MainCoolBar::OnSysColorChange(", band_start)
+    band = coolbar[band_start:band_end] if band_end > band_start >= 0 else ""
+    for token in (
+        "REBARBANDINFO sRebarBandInfo = {0}",
+        "RBBIM_CHILDSIZE | RBBIM_IDEALSIZE",
+        "sRebarBandInfo.cyMaxChild = sRebarBandInfo.cyMinChild",
+    ):
+        if token not in band:
+            errors.append(f"rebar child height initialization missing: {token}")
+
+    painter_start = toolbar.find("void PaintOwnedBookmarkToolbar(")
+    painter_end = toolbar.find("LRESULT ApplyDarkToolBarCustomDraw(", painter_start)
+    painter = (
+        toolbar[painter_start:painter_end]
+        if painter_end > painter_start >= 0
+        else ""
+    )
+    for token in (
+        "(::GetWindowLongPtr(aToolbar, GWL_STYLE) & TBSTYLE_WRAPABLE) == 0",
+        "TB_GETITEMRECT",
+        "min(sClientRect.bottom, sFirstItem.bottom)",
+        "::IntersectClipRect(",
+    ):
+        if token not in painter:
+            errors.append(f"nonwrapping bookmark paint bounds missing: {token}")
+    if painter.find("::FillRect(") > painter.find("sFirstItem.bottom"):
+        errors.append("bookmark full-client background must precede row clipping")
+    return errors
+
+
 def validate_bookmark_toolbar_idempotent_rebuild() -> list[str]:
     """UI-09: repeated bookmark initialization must not duplicate a row."""
     errors: list[str] = []
@@ -4822,6 +4884,7 @@ def main() -> int:
     errors.extend(validate_shared_tree_new_profile_default())
     errors.extend(validate_tab_close_discoverability())
     errors.extend(validate_filter_list_theme_contrast_regression())
+    errors.extend(validate_bookmark_first_row_geometry())
     errors.extend(validate_bookmark_toolbar_idempotent_rebuild())
     errors.extend(validate_bookmark_toolbar_direct_paint_and_print_owner())
     errors.extend(validate_settings_single_visible_page_after_theme_apply())

@@ -310,6 +310,32 @@ void MainCoolBar::setWrapable(xpr_uint_t aBandId, xpr_bool_t aWrapable)
                 {
                     sToolBar->ModifyStyle(TBSTYLE_WRAPABLE, 0);
 
+                    if (aBandId == AFX_IDW_BOOKMARK_BAR)
+                    {
+                        // A toolbar can retain per-button TBSTATE_WRAP bits
+                        // after its window-level wrap style is removed.
+                        // Clearing only TBSTYLE_WRAPABLE leaves a partial
+                        // native second row visible below our 40-DIP band.
+                        // Do not change this state in user-enabled multiline
+                        // mode; chevrons handle nonwrapping overflow.
+                        CToolBarCtrl &sBookmarkCtrl =
+                            sToolBar->GetToolBarCtrl();
+                        const xpr_sint_t sButtonCount =
+                            sBookmarkCtrl.GetButtonCount();
+                        for (xpr_sint_t i = 0; i < sButtonCount; ++i)
+                        {
+                            TBBUTTONINFO sButton = {0};
+                            sButton.cbSize = sizeof(sButton);
+                            sButton.dwMask = TBIF_BYINDEX | TBIF_STATE;
+                            if (sBookmarkCtrl.GetButtonInfo(i, &sButton) >= 0 &&
+                                (sButton.fsState & TBSTATE_WRAP) != 0)
+                            {
+                                sButton.fsState &= ~TBSTATE_WRAP;
+                                sBookmarkCtrl.SetButtonInfo(i, &sButton);
+                            }
+                        }
+                    }
+
                     CSize sToolBarHorzMinSize;
                     sToolBarHorzMinSize = sToolBar->CalcDynamicLayout(-1, 0);
 
@@ -367,7 +393,10 @@ void MainCoolBar::onUpdatedToolbarSize(CToolBarEx &theToolBar)
     // Modify parent band info accordingly. A single-row band uses the shared
     // command-bar height so main/drive/bookmark surfaces align vertically,
     // while wrapped toolbars retain their larger native calculated height.
-    REBARBANDINFO sRebarBandInfo;
+    // RBBIM_CHILDSIZE also consumes cyMaxChild and cyIntegral. Both
+    // were previously uninitialized stack data; in the nonwrapping case
+    // that can permit an inconsistent/partially exposed second row.
+    REBARBANDINFO sRebarBandInfo = {0};
     sRebarBandInfo.cbSize     = sizeof(sRebarBandInfo);
     sRebarBandInfo.fMask      = RBBIM_CHILDSIZE | RBBIM_IDEALSIZE;
     sRebarBandInfo.cxIdeal    = cxIdeal;
@@ -375,6 +404,7 @@ void MainCoolBar::onUpdatedToolbarSize(CToolBarEx &theToolBar)
     sRebarBandInfo.cyMinChild = max(
         cyChild,
         ui::ModernUI::getCommandBarHeight(theToolBar.GetSafeHwnd()));
+    sRebarBandInfo.cyMaxChild = sRebarBandInfo.cyMinChild;
     VERIFY(sReBarCtrl.SetBandInfo(sBandIndex, &sRebarBandInfo));
 }
 

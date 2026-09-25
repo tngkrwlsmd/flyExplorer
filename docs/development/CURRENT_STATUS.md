@@ -279,6 +279,28 @@ screenshots and toolbar UI-09 remain OPEN. The separate bookmark
 ghosting report is accepted as a current-binary failure; prior
 renderer/band hypotheses are not runtime-proven.
 
+**2026-09-25 UI-09 user-confirmed still failing on a built current revision:**
+The user explicitly reports that they already built and ran the latest code
+and the bookmark icon/text lower-row fragments remain. Do not request the
+same source/executable-version check again or represent earlier custom
+paint, idempotent rebuild, or default band placement changes as runtime
+success. Inspecting the toolbar source reveals two additional native
+layout vulnerabilities: the no-wrap transition clears
+`TBSTYLE_WRAPABLE` but never clears retained per-button `TBSTATE_WRAP`,
+and `onUpdatedToolbarSize` passes `RBBIM_CHILDSIZE` with
+uninitialized `cyMaxChild` and `cyIntegral`. The nonwrapping bookmark
+path now clears per-button wrap bits, initializes the entire
+REBARBANDINFO, and constrains manual glyph/text painting to the first
+native item row (after filling the entire client surface). The user's
+multiline-enabled mode remains available. A dedicated negative source
+guard checks the native wrap reset, zero-init and first-row pixel clip.
+The repo main commit contains only source-level candidates: no Windows
+compilation, actual `TB_GETITEMRECT` trace or final screenshot
+acceptance was available in this environment. The user-reproduced
+UI-09 remains **OPEN** until matching runtime evidence. The separate
+unfocused-selected Light filter-row defect received its own
+source adjustment at `ef48a29` and also awaits screenshot acceptance.
+
 ## Outstanding near-term work
 
 1. Address the reproduced settings-page visibility and Dark rendering issues
