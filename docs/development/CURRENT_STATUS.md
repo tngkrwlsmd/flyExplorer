@@ -1,4 +1,4 @@
-# flyExplorer — current project status (2026-09-24)
+# flyExplorer — current project status (2026-09-25)
 
 **Purpose:** Fast, current-state entry point for maintainers and development
 agents. This is an evidence-labelled summary, not a replacement for source,
@@ -300,6 +300,20 @@ acceptance was available in this environment. The user-reproduced
 UI-09 remains **OPEN** until matching runtime evidence. The separate
 unfocused-selected Light filter-row defect received its own
 source adjustment at `ef48a29` and also awaits screenshot acceptance.
+
+**2026-09-25 UI-09 source checkpoint after screenshot at `5a8fc7e`:**
+The screenshot and displayed build revision match the previous source-only
+repair, yet the bookmark icon/label fragments persist. A new *unverified*
+candidate changes the bookmark-only non-High-Contrast paint gate: transient
+asynchronous icon availability can no longer switch the whole toolbar back
+to native painting, and nonwrapping drawing now skips any item not in the
+first native button row (as well as preserving the existing row clip).
+Static source inspection identified both paths; neither has been shown by
+a Windows trace to cause the reproduced pixels. This main checkpoint is
+CODE CHANGED / WINDOWS COMPILER, NATIVE RUNTIME AND VISUAL NOT TESTED;
+the current user-reproduced UI-09 remains **OPEN**. Collect per-button
+`TB_GETITEMRECT`, painting-route and same-screen screenshot evidence.
+No GitHub Actions were run as part of this checkpoint.
 
 ## Outstanding near-term work
 

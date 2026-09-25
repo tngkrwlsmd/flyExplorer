@@ -990,6 +990,21 @@ before reporting success. The Light filtering unfocused-selected
 fix in ef48a29 is separate and not yet runtime accepted here.
 Hosted GitHub Actions: NOT RUN, per-run approval still required.
 
+**2026-09-25 UI-09 follow-up requested for direct main (post-`5a8fc7e`):**
+The user supplied a screenshot with `build-revision.txt` at
+`5a8fc7eedd45ac2da924a9ead13d914fbb8e5c78` showing that bookmark
+icon/label slivers still appear. This is the same current-binary failure;
+do not repeat the stale-executable hypothesis. The next narrowly scoped
+source candidate makes bookmark paint ownership independent of transient
+async icon-list metadata and rejects items outside the first native row in
+nonwrapping mode, in addition to the existing first-row clip. Regressions
+now forbid icon-metadata-based whole-band paint fallbacks and require the
+off-row item guard. These are independently observable source weaknesses,
+not a confirmed explanation for the screenshot. User-requested direct-to-main
+source checkpoint only: current Windows x64 build, real button-geometry/paint
+trace, Light/Dark/High Contrast and matching screenshot remain NOT TESTED;
+UI-09 stays OPEN pending same-screen runtime acceptance. No Actions dispatch.
+
 ### Development handoff rule
 
 - Every new user-requested development item is added to this section (or its successor) before implementation starts.

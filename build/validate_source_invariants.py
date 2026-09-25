@@ -4586,6 +4586,8 @@ def validate_bookmark_first_row_geometry() -> list[str]:
         "(::GetWindowLongPtr(aToolbar, GWL_STYLE) & TBSTYLE_WRAPABLE) == 0",
         "TB_GETITEMRECT",
         "min(sClientRect.bottom, sFirstItem.bottom)",
+        "sItemRect.top != sFirstRowTop",
+        "XPR_IS_FALSE(sHaveFirstRow)",
         "::IntersectClipRect(",
     ):
         if token not in painter:
@@ -4650,8 +4652,6 @@ def validate_bookmark_toolbar_direct_paint_and_print_owner() -> list[str]:
         '#include "../../ctrl_id.h"',
         "bool CanPaintOwnedBookmarkToolbar(HWND aToolbar)",
         "::GetDlgCtrlID(aToolbar) != AFX_IDW_BOOKMARK_BAR",
-        "TB_GETBUTTONINFO",
-        "sInfo.iImage >= sImageCount",
         "void PaintOwnedBookmarkToolbar(HWND aToolbar, HDC aHdc)",
         "::SaveDC(aHdc)",
         "::IntersectClipRect(",
@@ -4663,6 +4663,14 @@ def validate_bookmark_toolbar_direct_paint_and_print_owner() -> list[str]:
     ):
         if token not in toolbar:
             errors.append(f"bookmark toolbar full pixel owner missing: {token}")
+
+    gate_start = toolbar.find("bool CanPaintOwnedBookmarkToolbar(HWND aToolbar)")
+    gate_end = toolbar.find("void PaintOwnedBookmarkToolbar(", gate_start)
+    gate = toolbar[gate_start:gate_end] if gate_start >= 0 and gate_end > gate_start else ""
+    if not gate or "TB_GETBUTTONINFO" in gate or "TB_BUTTONCOUNT" in gate:
+        errors.append(
+            "bookmark paint eligibility must not depend on transient icon metadata"
+        )
 
     start = toolbar.find("LRESULT CToolBarEx::WindowProc(")
     end = toolbar.find("BOOL CToolBarEx::OnNotify(", start)
@@ -4684,8 +4692,7 @@ def validate_bookmark_toolbar_direct_paint_and_print_owner() -> list[str]:
     query_pos = proc.find("CanPaintOwnedBookmarkToolbar(m_hWnd)")
     if candidate_pos < 0 or query_pos <= candidate_pos:
         errors.append(
-            "bookmark paint/print owner must gate before synchronous TB_* "
-            "self-queries; otherwise WindowProc recurses for every message"
+            "bookmark ownership check must occur only for paint/print messages"
         )
     if "CToolBar::WindowProc( message, wParam, lParam )" not in proc:
         errors.append("non-bookmark/High Contrast must retain native fallback")

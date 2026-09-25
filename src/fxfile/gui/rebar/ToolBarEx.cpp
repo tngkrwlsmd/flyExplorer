@@ -554,41 +554,9 @@ bool CanPaintOwnedBookmarkToolbar(HWND aToolbar)
         return false;
     }
 
-    const xpr_sint_t sCount =
-        static_cast<xpr_sint_t>(
-            ::SendMessage(aToolbar, TB_BUTTONCOUNT, 0, 0));
-    HIMAGELIST sImages =
-        reinterpret_cast<HIMAGELIST>(
-            ::SendMessage(aToolbar, TB_GETIMAGELIST, 0, 0));
-    const xpr_sint_t sImageCount =
-        XPR_IS_NOT_NULL(sImages) ?
-        ::ImageList_GetImageCount(sImages) : 0;
-
-    for (xpr_sint_t i = 0; i < sCount; ++i)
-    {
-        TBBUTTON sButton = {0};
-        if (::SendMessage(
-                aToolbar, TB_GETBUTTON, i,
-                reinterpret_cast<LPARAM>(&sButton)) == FALSE)
-        {
-            return false;
-        }
-        if ((sButton.fsStyle & BTNS_SEP) != 0)
-            continue;
-
-        TBBUTTONINFO sInfo = {0};
-        sInfo.cbSize = sizeof(sInfo);
-        sInfo.dwMask = TBIF_IMAGE | TBIF_STYLE;
-        if (::SendMessage(
-                aToolbar, TB_GETBUTTONINFO,
-                sButton.idCommand,
-                reinterpret_cast<LPARAM>(&sInfo)) < 0)
-        {
-            return false;
-        }
-        if (sInfo.iImage >= 0 && sInfo.iImage >= sImageCount)
-            return false;
-    }
+    // Asynchronous icon loading must not switch the whole bookmark band
+    // between native and app-owned full-surface paint. A transient missing
+    // image is handled by the existing per-item renderer instead.
     return true;
 }
 
@@ -622,13 +590,15 @@ void PaintOwnedBookmarkToolbar(HWND aToolbar, HDC aHdc)
     const LRESULT sUiState =
         ::SendMessage(aToolbar, WM_QUERYUISTATE, 0, 0);
 
-    // The user screenshot shows a few pixels of a second copy of every
-    // icon and label below the bookmark row. A one-line bookmark toolbar
-    // must not paint beyond its first native button row, even when the
-    // child window is taller than that row while rebar recalculates.
-    // Background was already filled across the whole client above;
-    // this additional clip only limits item pixels, never hit testing.
-    if ((::GetWindowLongPtr(aToolbar, GWL_STYLE) & TBSTYLE_WRAPABLE) == 0)
+    // In nonwrapping mode, restrict both item eligibility and DC clipping
+    // to the first native row. A clip alone can admit fragments from a
+    // partially overlapping second-row item during layout transitions.
+    const xpr_bool_t sSingleRow =
+        (::GetWindowLongPtr(aToolbar, GWL_STYLE) & TBSTYLE_WRAPABLE) == 0 ?
+        XPR_TRUE : XPR_FALSE;
+    xpr_bool_t sHaveFirstRow = XPR_FALSE;
+    xpr_sint_t sFirstRowTop = 0;
+    if (XPR_IS_TRUE(sSingleRow))
     {
         for (xpr_sint_t i = 0; i < sCount; ++i)
         {
@@ -644,6 +614,8 @@ void PaintOwnedBookmarkToolbar(HWND aToolbar, HDC aHdc)
                     reinterpret_cast<LPARAM>(&sFirstItem)) != FALSE &&
                 sFirstItem.bottom > sFirstItem.top)
             {
+                sFirstRowTop = sFirstItem.top;
+                sHaveFirstRow = XPR_TRUE;
                 ::IntersectClipRect(
                     aHdc,
                     sClientRect.left,
@@ -666,6 +638,15 @@ void PaintOwnedBookmarkToolbar(HWND aToolbar, HDC aHdc)
             ::SendMessage(
                 aToolbar, TB_GETITEMRECT, i,
                 reinterpret_cast<LPARAM>(&sItemRect)) == FALSE)
+        {
+            continue;
+        }
+
+        // Ignore every other native row, even if its rectangle overlaps
+        // the clipping boundary by a few pixels.
+        if (XPR_IS_TRUE(sSingleRow) &&
+            (XPR_IS_FALSE(sHaveFirstRow) ||
+             sItemRect.top != sFirstRowTop))
         {
             continue;
         }
@@ -1178,9 +1159,8 @@ void CToolBarEx::SaveState( LPCTSTR lpszProfileName )
 
 LRESULT CToolBarEx::WindowProc( UINT message, WPARAM wParam, LPARAM lParam )
 {
-    // Gate before calling CanPaintOwnedBookmarkToolbar(): it queries this
-    // HWND with TB_GETBUTTON/TB_BUTTONCOUNT, which synchronously re-enters
-    // WindowProc. All non-paint messages must take the original route.
+    // Keep non-paint messages on the original route. Bookmark renderer
+    // eligibility is HWND-only, independent of asynchronous image state.
     const xpr_bool_t sPaintMessage =
         message == WM_PAINT ? XPR_TRUE : XPR_FALSE;
     const xpr_bool_t sPrintClient =

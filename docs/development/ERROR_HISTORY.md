@@ -3341,3 +3341,43 @@ final identical screenshot or High Contrast/DPI acceptance
 was available via the connector. UI-09 remains OPEN until
 user-verified pixel result. Do not run GitHub Actions
 without individual explicit authorization.
+---
+
+## 2026-09-25 — UI-09 subsequent source candidate committed at owner's request
+
+**Problem/evidence:** The user provided a Windows screenshot with
+`build-revision.txt=5a8fc7eedd45ac2da924a9ead13d914fbb8e5c78`; bookmark
+icon/text fragments remain after the prior no-wrap state, rebar size and
+first-row clipping changes. Prior source-only fixes cannot close UI-09.
+
+**Source observations, not established runtime root cause:**
+`CanPaintOwnedBookmarkToolbar` inspected asynchronously populated
+image-list metadata before choosing the entire toolbar paint owner.
+Unavailable image metadata could fall back to native whole-bar drawing
+for one frame. Separately, `PaintOwnedBookmarkToolbar` clipped the
+nonwrapping view to the first row's bottom but did not reject a second-row
+button whose rectangle might partly overlap that clip.
+
+**Narrow source candidate:** The bookmark-only paint eligibility check now
+depends on valid HWND/command-bar ID rather than transient icon readiness;
+the existing per-item renderer continues to handle missing icons.
+Nonwrapping bookmark drawing records the first native item's row origin
+and skips all off-row items before drawing, while preserving the
+full-client background repaint and first-row clip. Existing multiline,
+high-contrast native fallback, command routing and saved bookmarks are
+not intentionally changed. This change does not establish that either
+candidate explains the screenshot.
+
+**Regression:** Updated `validate_bookmark_first_row_geometry` requires
+the off-row rejection, and `validate_bookmark_toolbar_direct_paint_and_print_owner`
+rejects metadata-dependent whole-toolbar eligibility. Earlier guards
+remain in place.
+
+**Evidence and limits:** Changes were reviewed against the exact inspected
+source revision and targeted source/synthetic assertions were exercised
+outside a Windows build. The complete repository preflight, Release
+x64 compile/link, functional regression, actual toolbar HWND geometry/
+WM_PAINT/WM_PRINT traces, identical screenshot and Light/Dark/High Contrast/
+DPI acceptance were NOT TESTED in this environment. Icon-loading interim
+appearance and ordinary multiline/chevron behavior still require runtime
+checking. UI-09 stays OPEN. GitHub Actions were not invoked.
