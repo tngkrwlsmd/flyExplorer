@@ -3381,3 +3381,35 @@ WM_PAINT/WM_PRINT traces, identical screenshot and Light/Dark/High Contrast/
 DPI acceptance were NOT TESTED in this environment. Icon-loading interim
 appearance and ordinary multiline/chevron behavior still require runtime
 checking. UI-09 stays OPEN. GitHub Actions were not invoked.
+---
+
+## 2026-09-25 — UI-09 user geometry evidence; optional internal trace
+
+**New observed evidence:** The owner supplied `fxfile-ui09-geometry.txt`
+collected on Windows: bookmark `ToolbarWindow32` ID 54 has eight visible
+buttons, `TB_GETROWS=1`, no button `TBSTATE_WRAP`, and all eight
+`TB_GETITEMRECT` rectangles are on the same y=0..22 row. Its client
+rect is 1315x40 and Rebar allocates a 40px band. Drive items also
+measure 22px inside a 40px child, while main-toolbar items are 28px
+inside a 40px child. The 18px bookmark gap is a measurement, not yet a
+proven cause of the icon/text fragments; previous native second-row
+assumptions are contradicted by the captured state.
+
+**Change:** On the owner's request, commit opt-in runtime
+instrumentation before further speculative fixes. The bookmark-only
+`ToolBarEx.cpp` helper writes numeric metrics, button rectangles,
+style/wrap flags and paint/print route/clip state before/after
+`ApplyModernMetrics`, `AutoSize` and the Rebar observer and on the
+initial owned painting paths. It runs only when the process starts
+with `FXFILE_UI09_TRACE=1` and writes to
+`%TEMP%\\fxfile-ui09-<PID>.log`; no bookmark labels or destinations.
+The instrumentation has a 700-line cap, does not change button geometry
+or actual painting, and is not enabled for normal users.
+A static source guard verifies the opt-in and stage placement.
+
+**Evidence limits:** Static source property checks were performed
+before the direct main checkpoint. This environment did NOT run the
+complete repository preflight, Windows Release-x64-Unicode build,
+native UI trace, real paint-order analysis, same-screen visual
+acceptance or optional DPI/High Contrast checks. UI-09 stays OPEN.
+No GitHub Actions dispatched.

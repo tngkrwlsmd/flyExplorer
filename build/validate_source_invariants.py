@@ -4533,6 +4533,34 @@ def validate_filter_list_theme_contrast_regression() -> list[str]:
     return errors
 
 
+def validate_ui09_opt_in_geometry_trace() -> list[str]:
+    """Ensure temporary UI-09 instrumentation is opt-in and non-invasive."""
+    source = (FXFILE_SRC / "gui" / "rebar" / "ToolBarEx.cpp").read_text(
+        encoding="utf-8", errors="replace"
+    )
+    errors: list[str] = []
+    begin = source.find("bool Ui09TraceEnabled()")
+    end = source.find("void DrawRoundedToolbarState(", begin)
+    diagnostic = source[begin:end] if begin >= 0 and end > begin else ""
+    if not diagnostic or "FXFILE_UI09_TRACE" not in diagnostic:
+        errors.append("UI-09 trace must require explicit environment opt-in")
+    if "Ui09TraceEnabled()" not in diagnostic or "Ui09TraceLine" not in diagnostic:
+        errors.append("UI-09 trace must not write unless explicitly enabled")
+    if "sButton.idCommand" not in diagnostic or "TB_GETITEMRECT" not in diagnostic:
+        errors.append("UI-09 trace must capture native per-button geometry")
+    # Do not infer UI correctness from this trace or require implementation
+    # geometry. Each report must remain evidence-labeled.
+    for stage in (
+        '"metrics-before"', '"metrics-after"', '"autosize-before"',
+        '"autosize-after"', '"rebar-observer-after"', '"paint-route-owned"',
+        '"paint-route-native"', '"owned-paint-entry"',
+        '"owned-after-row-clip"',
+    ):
+        if stage not in source:
+            errors.append(f"UI-09 trace stage missing: {stage}")
+    return errors
+
+
 def validate_bookmark_first_row_geometry() -> list[str]:
     """UI-09: no residual native second row in the nonwrapping bookmark band."""
     errors: list[str] = []
@@ -4891,6 +4919,7 @@ def main() -> int:
     errors.extend(validate_shared_tree_new_profile_default())
     errors.extend(validate_tab_close_discoverability())
     errors.extend(validate_filter_list_theme_contrast_regression())
+    errors.extend(validate_ui09_opt_in_geometry_trace())
     errors.extend(validate_bookmark_first_row_geometry())
     errors.extend(validate_bookmark_toolbar_idempotent_rebuild())
     errors.extend(validate_bookmark_toolbar_direct_paint_and_print_owner())

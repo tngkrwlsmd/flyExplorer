@@ -315,6 +315,24 @@ the current user-reproduced UI-09 remains **OPEN**. Collect per-button
 `TB_GETITEMRECT`, painting-route and same-screen screenshot evidence.
 No GitHub Actions were run as part of this checkpoint.
 
+**2026-09-25 UI-09 instrumentation-only checkpoint after external HWND trace:**
+An owner-provided geometry snapshot of the previous `f18468a8` executable
+records 8 bookmark items, exactly 1 row, no `TBSTATE_WRAP`, native item
+rectangles with 22px height and a Rebar child with 40px client height.
+This rules out an actual native second row in the captured state, but
+does not establish whether the 18px gap creates the photographed slivers.
+At the owner's request this main checkpoint first adds **opt-in internal
+measurements, not another guessed render fix**: when launched with
+`FXFILE_UI09_TRACE=1`, the bookmark-only code records before/after
+ModernUI metrics, before/after native autosize, after parent Rebar
+notification, and direct/native paint route and HDC clip geometry.
+Only numeric HWND, button IDs, flags and rectangles are logged to
+`%TEMP%\\fxfile-ui09-<PID>.log`; no bookmark targets or labels.
+The default path neither writes this file nor changes render/sizing
+behavior. This snapshot still needs a revision-matched Windows x64
+compiler run and an actual user trace. UI-09 remains **OPEN**.
+GitHub Actions was NOT RUN.
+
 ## Outstanding near-term work
 
 1. Address the reproduced settings-page visibility and Dark rendering issues

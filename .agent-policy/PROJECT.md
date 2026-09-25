@@ -1005,6 +1005,18 @@ source checkpoint only: current Windows x64 build, real button-geometry/paint
 trace, Light/Dark/High Contrast and matching screenshot remain NOT TESTED;
 UI-09 stays OPEN pending same-screen runtime acceptance. No Actions dispatch.
 
+**2026-09-25 UI-09 owner-requested direct-main trace checkpoint:**
+The user's real Windows toolbar dump contradicts the suspected native
+second row: bookmark ID 54 has eight items in a single 22px native
+row, no wrap bits, but a 40px Rebar child. Main/drive bands also have
+shorter native items than their child bounds. The root pixel cause
+is still unknown. As explicitly requested, add an opt-in
+`FXFILE_UI09_TRACE=1` bookmark-only lifecycle/paint trace directly
+to main before choosing another correction. It logs anonymous numeric
+geometry and drawing path to the current user's temp directory only.
+Current x64 build, same-screen trace/visual acceptance: NOT TESTED.
+UI-09 OPEN, GitHub Actions NOT RUN.
+
 ### Development handoff rule
 
 - Every new user-requested development item is added to this section (or its successor) before implementation starts.
