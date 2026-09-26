@@ -43,7 +43,13 @@ public:
     }
 };
 
+// A registered message cannot overlap an existing MFC/extension WM_APP ID.
+static const UINT sDeferredCompactMessage =
+    ::RegisterWindowMessage(XPR_STRING_LITERAL(
+        "flyExplorer.DeferredCoolbarCompaction.v2"));
+
 BEGIN_MESSAGE_MAP(MainCoolBar, CSizableReBar)
+    ON_REGISTERED_MESSAGE(sDeferredCompactMessage, OnDeferredCompact)
     ON_WM_SIZE()
     ON_WM_SYSCOLORCHANGE()
     ON_WM_WINDOWPOSCHANGED()
@@ -51,6 +57,8 @@ BEGIN_MESSAGE_MAP(MainCoolBar, CSizableReBar)
 END_MESSAGE_MAP()
 
 MainCoolBar::MainCoolBar(void)
+    : mDefaultCompactPending(XPR_FALSE)
+    , mDefaultCompactPosted(XPR_FALSE)
 {
 }
 
@@ -122,7 +130,7 @@ xpr_bool_t MainCoolBar::createBands(void)
     mDriveToolBar.UpdateToolbarSize();
     mBookmarkToolBar.UpdateToolbarSize();
 
-    loadStateFile();
+    const xpr_bool_t sSavedCoolBar = loadStateFile();
 
     // Dynamic Creation
     if (XPR_IS_FALSE(gOpt->mMain.mDriveBar))
@@ -140,6 +148,24 @@ xpr_bool_t MainCoolBar::createBands(void)
 
     setWrapable(AFX_IDW_BOOKMARK_BAR, gOpt->mMain.mBookmarkBarMultiLine);
     setWrapable(AFX_IDW_DRIVE_BAR,    gOpt->mMain.mDriveBarMultiLine);
+
+    // UI-05: keep the three isolated initial rows while the native bars
+    // acquire their actual geometry. Schedule *one* asynchronous fit check
+    // only on a fresh profile. No layout changes are made from WM_SIZE.
+    mDefaultCompactPending =
+        XPR_IS_FALSE(sSavedCoolBar) &&
+        XPR_IS_FALSE(gOpt->mMain.mDriveBarMultiLine) &&
+        XPR_IS_FALSE(gOpt->mMain.mBookmarkBarMultiLine) ?
+        XPR_TRUE : XPR_FALSE;
+    if (XPR_IS_TRUE(mDefaultCompactPending) &&
+        sDeferredCompactMessage != 0)
+    {
+        CRect sClient;
+        GetClientRect(&sClient);
+        if (sClient.Width() > 0 &&
+            PostMessage(sDeferredCompactMessage))
+            mDefaultCompactPosted = XPR_TRUE;
+    }
 
     return 0;
 }
@@ -176,6 +202,80 @@ void MainCoolBar::OnSize(xpr_uint_t nType, xpr_sint_t cx, xpr_sint_t cy)
             }
         }
     }
+
+    // UI-05: a nonzero size is the earliest valid cue to enqueue the
+    // one-shot fit check. Never run SetBandInfo/RecalcLayout synchronously
+    // inside OnSize (that can re-enter OnSize via Rebar notifications).
+    if (cx > 0 && sDeferredCompactMessage != 0 &&
+        XPR_IS_TRUE(mDefaultCompactPending) &&
+        XPR_IS_FALSE(mDefaultCompactPosted))
+    {
+        if (PostMessage(sDeferredCompactMessage))
+            mDefaultCompactPosted = XPR_TRUE;
+    }
+}
+
+LRESULT MainCoolBar::OnDeferredCompact(WPARAM, LPARAM)
+{
+    mDefaultCompactPosted = XPR_FALSE;
+    if (XPR_IS_FALSE(mDefaultCompactPending) || !::IsWindow(m_hWnd))
+        return 0;
+
+    CReBarCtrl &sBands = GetReBarCtrl();
+    const xpr_sint_t sDrive = sBands.IDToIndex(AFX_IDW_DRIVE_BAR);
+    const xpr_sint_t sBookmark = sBands.IDToIndex(AFX_IDW_BOOKMARK_BAR);
+    if (sDrive < 0 || sBookmark != sDrive + 1 ||
+        XPR_IS_FALSE(isBandVislble(AFX_IDW_DRIVE_BAR)) ||
+        XPR_IS_FALSE(isBandVislble(AFX_IDW_BOOKMARK_BAR)) ||
+        XPR_IS_TRUE(gOpt->mMain.mDriveBarMultiLine) ||
+        XPR_IS_TRUE(gOpt->mMain.mBookmarkBarMultiLine))
+    {
+        mDefaultCompactPending = XPR_FALSE;
+        return 0;
+    }
+
+    RebarBandInfo sDriveBand;
+    RebarBandInfo sBookmarkBand;
+    sDriveBand.fMask = RBBIM_IDEALSIZE;
+    sBookmarkBand.fMask = RBBIM_IDEALSIZE | RBBIM_STYLE;
+    if (XPR_IS_FALSE(sBands.GetBandInfo(sDrive, &sDriveBand)) ||
+        XPR_IS_FALSE(sBands.GetBandInfo(sBookmark, &sBookmarkBand)))
+    {
+        mDefaultCompactPending = XPR_FALSE;
+        return 0;
+    }
+
+    // A zero ideal size means a toolbar has not completed its native
+    // AutoSize. Leave the default layout alone; a later WM_SIZE may
+    // enqueue one more attempt when actual dimensions become available.
+    if (sDriveBand.cxIdeal == 0 || sBookmarkBand.cxIdeal == 0)
+        return 0;
+
+    // Attempt at most once after both native bars are measured; if the
+    // first usable frame is narrow, retain separate rows permanently.
+    mDefaultCompactPending = XPR_FALSE;
+    CRect sClient;
+    sBands.GetClientRect(&sClient);
+    const xpr_sint_t sSlack =
+        ui::ModernUI::scaleForWindow(48, GetSafeHwnd());
+    const xpr_sint_t sAvailable =
+        max(0, sClient.Width() - sSlack);
+    if (sDriveBand.cxIdeal >= static_cast<UINT>(sAvailable) ||
+        sBookmarkBand.cxIdeal >=
+            static_cast<UINT>(sAvailable) - sDriveBand.cxIdeal)
+        return 0;
+
+    // The handler is a posted message, never a child of WM_SIZE.
+    // The pending bit is already clear before this can emit new size
+    // notifications. All saved or user-selected row layouts are preserved.
+    sBookmarkBand.fStyle &= ~RBBS_BREAK;
+    if (sBands.SetBandInfo(sBookmark, &sBookmarkBand))
+    {
+        CFrameWnd *sFrame = GetParentFrame();
+        if (sFrame != NULL)
+            sFrame->RecalcLayout();
+    }
+    return 0;
 }
 
 xpr_sint_t MainCoolBar::getToolbarText(void) const
@@ -296,7 +396,8 @@ void MainCoolBar::setWrapable(xpr_uint_t aBandId, xpr_bool_t aWrapable)
                 // Also correct stored same-row layouts from the previous
                 // shared-band default. A saved BREAK flag otherwise
                 // overrides the new-band construction at startup.
-                if (aBandId == AFX_IDW_BOOKMARK_BAR)
+                if (aBandId == AFX_IDW_BOOKMARK_BAR &&
+                    XPR_IS_TRUE(aWrapable))
                     sRebarBandInfo.fStyle |= RBBS_BREAK;
 
                 if (XPR_IS_TRUE(aWrapable))
@@ -452,14 +553,15 @@ void MainCoolBar::saveState(void)
     //mMainToolBar.SaveState(XPR_STRING_LITERAL("FrameWnd"), XPR_STRING_LITERAL("MainToolBar"));
 }
 
-void MainCoolBar::loadStateFile(void)
+xpr_bool_t MainCoolBar::loadStateFile(void)
 {
+    xpr_bool_t sSavedCoolBar = XPR_FALSE;
     // CSizableReBar
     {
         xpr_tchar_t sPath[XPR_MAX_PATH + 1] = {0};
         ConfDir::instance().getLoadPath(ConfDir::TypeCoolBar, sPath, XPR_MAX_PATH);
 
-        loadStateFile(sPath);
+        sSavedCoolBar = loadStateFile(sPath);
     }
 
     CReBarCtrl &sReBarCtrl = GetReBarCtrl();
@@ -487,6 +589,7 @@ void MainCoolBar::loadStateFile(void)
     mMainToolBar.UpdateToolbarSize();
     mDriveToolBar.UpdateToolbarSize();
     mBookmarkToolBar.UpdateToolbarSize();
+    return sSavedCoolBar;
 }
 
 void MainCoolBar::saveStateFile(void)

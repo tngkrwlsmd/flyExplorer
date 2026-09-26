@@ -44,6 +44,10 @@ protected:
 protected:
     xpr_bool_t      mVistaEnhanced;
     FlatHeaderCtrl *mHeaderCtrl;
+    // Set only during explicit theme refresh, never from WM_NCPAINT.
+    xpr_bool_t mDarkScrollbars;
+    xpr_bool_t mScrollbarPaintQueued;
+    xpr_bool_t mScrollbarPainting;
 
 protected:
     virtual LRESULT WindowProc(xpr_uint_t message, WPARAM wParam, LPARAM lParam);

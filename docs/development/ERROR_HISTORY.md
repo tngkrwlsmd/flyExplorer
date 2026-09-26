@@ -3585,3 +3585,54 @@ GitHub Actions는 실행하지 않았다.
   drag/drop, Light/Dark 및 UI-09를 재검증하기 전 HANG-01은 OPEN이다.
 - **관련 commit:** 진단 baseline 882030a. 이번 필터 수정·회귀 guard와 개발 상태 문서를 함께 main 반영하는 체크포인트.
   이 항목을 추가한 커밋이 해당 소스 기준이며 빌드/실행 PASS를 의미하지 않는다.
+
+---
+
+## 2026-09-26 — UI-02/05 후속 설계: 비동기 페인트와 첫 배치 한 번만 조정
+
+- **배경:** 앞선 `a720dab4` 구현은 스크롤바를
+  네이티브 `WM_NCPAINT` 처리 직후 그렸고,
+  `MainCoolBar::OnSize` 내부에서
+  `SetBandInfo` 및 부모 재배치를 실행했다.
+  이후 HANG-01 신고로 두 변경을 격리했지만
+  실제 Windows 덤프에서 확인된 HANG-01
+  경로는 별도의 OLE paint starvation이었다.
+  해당 OLE 필터 수정은 건드리지 않는다.
+- **UI-02 코드:** 공개 native 스크롤바
+  지오메트리는 계속 사용하지만 실제
+  `GetWindowDC`는 별도 등록·예약 메시지에서만
+  호출한다. NC/scroll native 메시지가
+  정상 반환한 이후 1개만 `PostMessage`
+  하며 그리는 도중 재예약을 막는다.
+  사용자 입력과 High Contrast는 Windows
+  기본 구현으로 유지한다.
+- **UI-05 코드:** 초기 3개 행은 분리하고
+  완성된 native `cxIdeal` 값을 기준으로
+  예약 메시지에서 최초 한 차례만
+  결합을 시도한다. 저장된 기존 배치,
+  사용자 다중 행, 좁은 창 설정을
+  자동 교체하지 않는다. `OnSize`
+  본문에는 행 변경/부모 `RecalcLayout`
+  경로를 넣지 않는다.
+- **UI-11/12/13/14:** 기존 수정 코드를
+  재검토하고 변경 없이 유지했다.
+  특히 저장된 날짜 열 폭은 사용자
+  설정이므로 225-DIP 기본값으로
+  강제 이동시키지 않았다.
+- **재발 방지:** `validate_main_window_hang_stabilization`
+  검사는 제거된 구형 동기 경로 금지를
+  유지하면서 새 지연 메시지,
+  coalescing·재진입·고대비 보호,
+  저장된 Rebar 상태 보존,
+  이전 UI-09 및 UI-14 구현을
+  확인하도록 변경했다.
+- **검증 범위:** repo 소스 계약과
+  제한적인 부정 테스트만 실행.
+  통합 Release x64 컴파일/링크,
+  `local_ci.bat x64` 전체, 실제
+  화면 최종 픽셀, 스크롤 thumb drag,
+  저장된 프로필/새 프로필, UI-09,
+  DPI와 고대비는 **NOT TESTED**.
+  이 커밋을 실제 화면 해결 완료로
+  해석하지 않는다. GitHub Actions는
+  실행하지 않았다.

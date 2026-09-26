@@ -50,6 +50,31 @@ OLE 등록 실패 처리와 AfxOleTerm 소유권, busy/retry 동작은 유지한
 않는다. 다음 검증은 동일 프로필 시작·1분 응답성·탐색·종료·OLE drag/drop 및
 UI-09 동시 확인이다. 현행 상세 상태와 근거는 CURRENT_STATUS/ERROR_HISTORY를 따른다.
 
+**2026-09-26 UI-02·05 동작 재설계 (코드 적용·런타임 수용 대기):**
+사용자는 앞선 HANG-01이 해결됐다고 보고했다.
+기존 WinApp bounded OLE message-pump
+수정은 유지한다. 네이티브 스크롤바
+직접 `WM_NCPAINT` 중 재그리기 대신
+공개 `GetScrollBarInfo` 지오메트리와
+단일 등록 `PostMessage` 지연 작업을
+이용한다. 실제 `GetWindowDC`는
+해당 별도 메시지에서만 호출하고
+중첩 알림을 합친다. High Contrast 및
+기본 스크롤 명령은 Windows가 담당한다.
+UI-05는 `OnSize` 내부의 직접
+밴드 변경을 금지한 채 초기 독립행,
+새 사용자 첫 배치의 측정값에 따른
+단 한 번의 예약된 결합으로 구현했다.
+기존 저장 상태·단일/다중 행 설정과
+UI-09의 MFC 이전/이후 영역 손상 수정은
+보존한다. UI-11/12/13/14 기존
+소스 개선은 중복 변경하지 않는다.
+동기 스크롤바·OnSize 재진입 패턴을
+방지하는 소스 계약을 추가했다.
+**실제 Windows x64 통합 빌드와
+UI 최종 픽셀/응답성 재검증은 NOT TESTED**.
+GitHub Actions 실행 없음.
+
 <!-- project-facts:start -->
 ```json
 {

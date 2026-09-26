@@ -53,13 +53,19 @@ protected:
     void loadState(void);
     void saveState(void);
 
-    void loadStateFile(void);
+    xpr_bool_t loadStateFile(void);
 
     xpr_bool_t loadStateFile(const xpr_tchar_t *aPath);
     void saveStateFile(const xpr_tchar_t *aPath);
 
 protected:
+    // First-use only: never auto-rearrange saved or manually configured rows.
+    xpr_bool_t mDefaultCompactPending;
+    xpr_bool_t mDefaultCompactPosted;
+
+protected:
     DECLARE_MESSAGE_MAP()
+    afx_msg LRESULT OnDeferredCompact(WPARAM, LPARAM);
     afx_msg void OnSize(xpr_uint_t nType, xpr_sint_t cx, xpr_sint_t cy);
     afx_msg void OnSysColorChange(void);
     afx_msg void OnWindowPosChanged(WINDOWPOS FAR* lpwndpos);

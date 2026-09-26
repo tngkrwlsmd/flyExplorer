@@ -7,6 +7,50 @@ Update this page after each logical work unit that changes its facts.
 For the chronological diagnosis and original evidence, retain and use
 [`ERROR_HISTORY.md`](ERROR_HISTORY.md) rather than moving/deleting entries.
 
+**2026-09-26 UI-02·05 후속 코드 — 비동기 방식으로 재설계 / WINDOWS RUNTIME NOT TESTED:**
+사용자는 HANG-01 문제가 해결됐다고 보고하며 이전 UI 점검 목록의
+처리를 요청했다. 현재 소스의 HANG-01 OLE paint starvation
+수정은 그대로 보존했다. 과거 UI-02/05 자동 처리의
+동기적 비클라이언트 그리기 및 OnSize 중 부모
+RecalcLayout 경로를 재도입하지 않았다.
+
+- UI-02: 공개 `GetScrollBarInfo`로 실제 네이티브
+  스크롤바의 위치·thumb·화살표 상태를 읽어
+  Dark에서만 그리는 코드가 있다. 리스트/트리
+  `WM_NCPAINT`·스크롤 이벤트에서는 그리지 않고,
+  기존 Windows 메시지를 처리한 후 등록된 별도
+  `PostMessage` 하나로 작업을 합쳐 실행한다.
+  그리는 중 재진입 요청을 거부하고 Light 및
+  High Contrast에서는 OS 출력을 유지한다.
+  사용자 스크롤 위치·hit-test·드래그를 바꾸지 않는다.
+- UI-05: 초기에 세 도구 모음을 독립 행으로
+  생성하고 native 크기 계산이 끝난 후,
+  저장된 배치가 없는 첫 실행·단일행·가시 상태에서
+  두 이상 폭과 48-DIP 여유가 실제로 맞는 경우만
+  드라이브/북마크 행 결합을 한 차례 시도한다.
+  `OnSize`에서는 메시지 예약만 하며 실제
+  `SetBandInfo`·`RecalcLayout` 호출은 별도
+  예약 메시지로 분리했다. 기존 배치 파일·
+  다중 행·사용자 조작과 UI-09 변경은 보존한다.
+- UI-11/12/13: 앞선 새 기본 열 너비,
+  트리 전체명 툴팁, 가변 정보창 배치 수정은
+  현재 `main`에서 확인됐고 중복 수정하지 않았다.
+  저장된 기존 140px 열 너비는 임의 변경하지 않는다.
+- UI-14: 혼합 방식의 헤더 그리기/좁은 정렬 표시
+  기존 개선을 유지한다. 당시 화면만으로
+  포커스 표시 문제는 확정되지 않았다.
+
+정적 계약은 동기 그리기·OnSize 내부 재배치
+재도입을 금지하고 기존 UI-09 및 UI-11~14
+회귀 검사를 유지한다. **새로 결합한 소스의
+Windows Release x64 컴파일/링크, 실제 Dark
+스크롤바 마지막 픽셀, 기존/새 프로필 UI-05
+배치, 100/125/150/200% DPI·High Contrast,
+같은 사용자 화면의 전체 UI 수용 검증은
+이 작업 환경에서 NOT TESTED**다.
+사용자 설정을 초기화하거나 GitHub Actions를
+실행하지 않았다.
+
 ## Active baseline and verified scope
 
 **2026-09-26 HANG-01 실행 진단 후 수정 후보 — BUILD / RUNTIME NOT TESTED:**

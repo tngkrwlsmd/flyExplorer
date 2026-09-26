@@ -4313,11 +4313,11 @@ def validate_toolbar_popup_work_area_and_dc_lifetime() -> list[str]:
 
 
 def validate_main_window_hang_stabilization() -> list[str]:
-    """Prevent unverified UI-02/05 event/resize hooks from returning during hang isolation.
+    """Guard non-reentrant UI-02 and UI-05 while retaining the OLE fix.
 
-    The owner's Windows screenshot establishes an unresponsive frame, not a
-    proven stack root. This is a source-level rollback guard, NOT a runtime
-    claim. UI-14 header safety checks remain independently enabled.
+    This checker verifies source contracts only. Windows scrollbar geometry,
+    actual dark pixels, responsiveness and saved Rebar layouts still need
+    revision-matched native runtime acceptance.
     """
     errors: list[str] = []
 
@@ -4329,75 +4329,122 @@ def validate_main_window_hang_stabilization() -> list[str]:
     modern = read("gui/ModernUI.cpp")
     modern_h = read("gui/ModernUI.h")
     listing = read("gui/ListCtrlEx.cpp")
+    listing_h = read("gui/ListCtrlEx.h")
     tree = read("gui/TreeCtrlEx.cpp")
     tree_h = read("gui/TreeCtrlEx.h")
     coolbar = read("main_coolbar.cpp")
     coolbar_h = read("main_coolbar.h")
     header = read("gui/FlatHeaderCtrl.cpp")
 
-    # UI-02 is not considered solved by the removed experimental non-client
-    # overpaint. In particular, reintroducing GetWindowDC from native paint
-    # and scrollbar messages needs new runtime proof and explicit review.
-    if ("paintDarkNativeScrollbars(" in modern or
-            "paintDarkNativeScrollbars(" in modern_h or
-            "paintDarkNativeScrollbars(" in listing or
-            "paintDarkNativeScrollbars(" in tree):
-        errors.append(
-            "HANG-01: unverified post-native Dark scrollbar overpaint returned"
-        )
-
-    # The original controls still process their normal Windows messages.
-    listing_start = listing.find("LRESULT ListCtrlEx::WindowProc(")
-    listing_body = listing[listing_start:] if listing_start >= 0 else ""
-    if ("super::WindowProc(" not in listing_body or
-            "WM_SETREDRAW" not in listing_body):
-        errors.append("HANG-01: original list native message path missing")
-
-    # UI-05's OnSize -> SetBandInfo -> RecalcLayout path was unverified in
-    # the merged binary. Preserve the old independent default Rebar bands,
-    # the saved user arrangement, and explicit multiline/chevron behavior.
-    if "mDefaultCompactPending" in coolbar or "mDefaultCompactPending" in coolbar_h:
-        errors.append(
-            "HANG-01: unverified OnSize auto-compact state returned"
-        )
-    size_start = coolbar.find("void MainCoolBar::OnSize(")
-    size_end = coolbar.find("xpr_sint_t MainCoolBar::getToolbarText(", size_start)
-    size_body = (
-        coolbar[size_start:size_end]
-        if size_start >= 0 and size_end > size_start
-        else ""
-    )
-    if (not size_body or "CSizableReBar::OnSize(" not in size_body or
-            "SetBandInfo(" in size_body or "RecalcLayout(" in size_body):
-        errors.append(
-            "HANG-01: do not synchronously mutate Rebar bands and recalc "
-            "the parent from MainCoolBar::OnSize during stabilization"
-        )
-    if coolbar.count("sStyle = RBBS_BREAK | RBBS_USECHEVRON;") < 3:
-        errors.append("HANG-01: independent initial Rebar rows not preserved")
-    wrap_start = coolbar.find("void MainCoolBar::setWrapable(")
-    wrap_end = coolbar.find("void MainCoolBar::onUpdatedToolbarSize(", wrap_start)
-    wrap = (
-        coolbar[wrap_start:wrap_end]
-        if wrap_start >= 0 and wrap_end > wrap_start
-        else ""
-    )
-    if not all(token in wrap for token in (
-        "TBSTYLE_WRAPABLE", "RBBS_USECHEVRON",
-        "sButton.fsState &= ~TBSTATE_WRAP"
+    # UI-02: asynchronous, coalesced output can never acquire GetWindowDC
+    # or query scroll geometry from inside the native WM_NCPAINT handler.
+    entry = modern[modern.find("void ModernUI::paintDarkNativeScrollbars("):
+                   modern.find("xpr_bool_t ModernUI::applyExplorerControlTheme(")]
+    if not all(s in entry for s in (
+        "GetScrollBarInfo(aHwnd, OBJID_VSCROLL",
+        "GetScrollBarInfo(aHwnd, OBJID_HSCROLL",
+        "GetWindowDC(aHwnd)", "ReleaseDC(aHwnd, sDC)",
+        "XPR_IS_FALSE(sPalette.mDark)",
+        "XPR_IS_TRUE(sPalette.mHighContrast)",
+        "static thread_local bool sPainting",
     )):
-        errors.append("HANG-01: explicit toolbar wrapping controls changed")
+        errors.append("UI-02 documented Dark/non-High-Contrast scrollbar geometry missing")
+    if not all(s in modern for s in (
+        "::RegisterWindowMessage(", "getDeferredDarkScrollbarMessage",
+    )) or not all(s in modern_h for s in (
+        "getDeferredDarkScrollbarMessage", "paintDarkNativeScrollbars",
+    )):
+        errors.append("UI-02 registered deferred rendering contract missing")
+    if any(s in modern for s in (
+        'L"DarkMode_Explorer"', 'L"DarkMode_CFD"',
+        "SetPreferredAppMode", "AllowDarkModeForWindow",
+    )):
+        errors.append("UI-02 may not rely on undocumented Windows theming")
 
-    # Do not conflate this rollback with the separate UI-14 header changes.
-    if not all(token in header for token in (
+    for label, source, header_path in (
+        ("list", listing, listing_h),
+        ("tree", tree, tree_h),
+    ):
+        begin = source.find(
+            "ListCtrlEx::WindowProc(" if label == "list"
+            else "TreeCtrlEx::WindowProc("
+        )
+        body = source[begin:] if begin >= 0 else ""
+        if not all(s in body for s in (
+            "super::WindowProc(", "getDeferredDarkScrollbarMessage()",
+            "PostMessage(sPaintMessage)", "mScrollbarPaintQueued",
+            "mScrollbarPainting", "WM_NCPAINT", "WM_VSCROLL",
+            "WM_HSCROLL", "paintDarkNativeScrollbars(m_hWnd)",
+        )):
+            errors.append(f"UI-02 {label}: native-first coalesced paint route missing")
+        if any(s in body for s in (
+            "GetWindowDC(", "GetScrollBarInfo(", "WM_NCHITTEST",
+        )):
+            errors.append(f"UI-02 {label}: synchronous NC draw/input override forbidden")
+        if not all(s in header_path for s in (
+            "mDarkScrollbars", "mScrollbarPaintQueued", "mScrollbarPainting",
+        )):
+            errors.append(f"UI-02 {label}: reentrant/coalesced paint state missing")
+
+    # UI-05: a new profile can compact only once after native startup
+    # AutoSize; a saved profile or multiline setting never auto-rearranges.
+    if not all(s in coolbar for s in (
+        "sSavedCoolBar = loadStateFile()",
+        "XPR_IS_FALSE(sSavedCoolBar)",
+        "sDeferredCompactMessage",
+        "ON_REGISTERED_MESSAGE(sDeferredCompactMessage, OnDeferredCompact)",
+        "mDefaultCompactPosted",
+        "scaleForWindow(48,",
+        "sBookmarkBand.cxIdeal",
+        "sBookmarkBand.fStyle &= ~RBBS_BREAK",
+    )) or not all(s in coolbar_h for s in (
+        "mDefaultCompactPending", "mDefaultCompactPosted",
+        "OnDeferredCompact(WPARAM, LPARAM)",
+        "xpr_bool_t loadStateFile(void)",
+    )):
+        errors.append("UI-05 new-profile-only, deferred fit/persist contract missing")
+
+    size_begin = coolbar.find("void MainCoolBar::OnSize(")
+    size_end = coolbar.find("LRESULT MainCoolBar::OnDeferredCompact(", size_begin)
+    size = coolbar[size_begin:size_end] if size_begin >= 0 and size_end > size_begin else ""
+    if not all(s in size for s in (
+        "CSizableReBar::OnSize(", "PostMessage(sDeferredCompactMessage)",
+    )) or "SetBandInfo(" in size or "RecalcLayout();" in size:
+        errors.append("UI-05 must NEVER synchronously mutate Rebar from OnSize")
+
+    after = coolbar[size_end:coolbar.find("xpr_sint_t MainCoolBar::getToolbarText(", size_end)]
+    if not after or after.rfind("mDefaultCompactPending = XPR_FALSE;") > after.find(
+        "sBands.SetBandInfo(sBookmark, &sBookmarkBand)"
+    ):
+        errors.append("UI-05 pending bit must be clear before any deferred band mutation")
+    if not all(s in after for s in (
+        "XPR_IS_FALSE(isBandVislble(AFX_IDW_DRIVE_BAR))",
+        "XPR_IS_FALSE(isBandVislble(AFX_IDW_BOOKMARK_BAR))",
+        "gOpt->mMain.mBookmarkBarMultiLine",
+        "gOpt->mMain.mDriveBarMultiLine",
+        "sDriveBand.cxIdeal", "sBookmarkBand.cxIdeal",
+    )):
+        errors.append("UI-05 compact fit must honor visibility, multiline and measured widths")
+    if coolbar.count("sStyle = RBBS_BREAK | RBBS_USECHEVRON;") < 3:
+        errors.append("UI-05 initial independent Rebar layout not preserved")
+    if not all(s in coolbar for s in (
+        "sButton.fsState &= ~TBSTATE_WRAP",
+        "if (aBandId == AFX_IDW_BOOKMARK_BAR &&",
+        "XPR_IS_TRUE(aWrapable)",
+    )):
+        errors.append("UI-05 explicit multiline and UI-09 no-wrap contract changed")
+
+    # UI-11/12/13 are independently covered by
+    # validate_light_dark_main_view_sizing; UI-14 mixed-header path remains.
+    if not all(s in header for s in (
         "(sItem.fmt & HDF_OWNERDRAW) == 0",
         "XPR_IS_TRUE(mMouseHover) &&",
-        "aItemRect.Width() >= 4 * mOffset + sArrowHeight"
+        "aItemRect.Width() >= 4 * mOffset + sArrowHeight",
     )):
-        errors.append("UI-14: mixed owner/native header safety regressed")
-    if "virtual LRESULT WindowProc(" in tree_h and (
-            "paintDarkNativeScrollbars(" in tree):
-        errors.append("HANG-01: tree non-client hook must remain disabled")
+        errors.append("UI-14 mixed native/owner-draw header regression")
+
+    # The unrelated bounded OLE message pump fix must remain in
+    # win_app.cpp (already protected by its own source invariant).
     return errors
 
 

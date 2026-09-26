@@ -159,6 +159,22 @@ UI/UX 현대화 작업은 다음 원칙을 따른다.
 - UI 구조 변경은 screenshot/실행 evidence로 확인하고, functional regression과 visual regression을 구분한다.
 - 기능을 단순히 숨기거나 삭제해서 현대적으로 보이게 만드는 것은 사용자가 명시적으로 요구한 경우에만 한다.
 
+### UI-02/05 2026-09-26 non-reentrant update rule
+
+The HANG-01 shell/COM repaint starvation was independently diagnosed;
+do not equate rollback of experimental UI-02/05 with its runtime fix.
+For the new UI-02 non-client scrollbar paint, only a coalesced posted
+message may acquire the window DC; `WM_NCPAINT` or scrollbar input
+handlers only invoke the original native control and schedule one job.
+Do not query WinRT palette or change HWND theme associations from inside
+`WM_NCPAINT`, and preserve native input/High Contrast. For UI-05 the
+Rebar `WM_SIZE` handler must never synchronously change a band or
+recalculate its parent. After startup native sizing, a separate one-shot
+registered message may combine new unsaved single-line bars only when
+ideal width plus DPI-scaled slack fits. Saved layout is authoritative.
+Retain UI-09 old/new command-update damage invalidation.
+Static checks alone do not close runtime/visual complaints.
+
 ### Light/Dark main-window screenshot review (2026-09-26)
 
 When new owner screenshots show the same main window in Light and Dark, compare each surface against the **same window size, folder/view configuration, build revision and DPI** before claiming a theme-specific regression. A screenshot alone does not establish the current binary SHA, a runtime sequence, actual focus/hover state or system DPI. Keep observed pixels distinct from a design concern, a code-level hypothesis and completed runtime verification. Do not commit user screenshots with personal folder names; record generalized reproduction conditions and acceptance cases in the UI audit.

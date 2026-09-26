@@ -49,8 +49,12 @@ public:
 
 protected:
     xpr_bool_t mVistaEnhanced;
+    xpr_bool_t mDarkScrollbars;
+    xpr_bool_t mScrollbarPaintQueued;
+    xpr_bool_t mScrollbarPainting;
 
 protected:
+    virtual LRESULT WindowProc(UINT aMessage, WPARAM aWParam, LPARAM aLParam);
     DECLARE_MESSAGE_MAP()
 };
 

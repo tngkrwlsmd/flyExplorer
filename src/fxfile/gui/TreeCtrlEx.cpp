@@ -17,6 +17,9 @@
 
 TreeCtrlEx::TreeCtrlEx(void)
     : mVistaEnhanced(XPR_FALSE)
+    , mDarkScrollbars(XPR_FALSE)
+    , mScrollbarPaintQueued(XPR_FALSE)
+    , mScrollbarPainting(XPR_FALSE)
 {
 }
 
@@ -123,6 +126,9 @@ void TreeCtrlEx::refreshVistaEnhancedTheme(void)
          XPR_IS_FALSE(sPalette.mHighContrast)) ?
         XPR_TRUE :
         XPR_FALSE;
+    mDarkScrollbars = sOwnDarkSurface;
+    if (XPR_IS_FALSE(mDarkScrollbars))
+        mScrollbarPaintQueued = XPR_FALSE;
 
     if (XPR_IS_TRUE(mVistaEnhanced) &&
         XPR_IS_FALSE(sOwnDarkSurface))
@@ -137,6 +143,60 @@ void TreeCtrlEx::refreshVistaEnhancedTheme(void)
         // association just because enhanced tree behavior is enabled.
         fxfile::ui::ModernUI::resetControlTheme(m_hWnd);
     }
+    ::RedrawWindow(m_hWnd, NULL, NULL, RDW_INVALIDATE | RDW_FRAME);
+}
+
+LRESULT TreeCtrlEx::WindowProc(UINT aMessage, WPARAM aWParam, LPARAM aLParam)
+{
+    const UINT sPaintMessage =
+        fxfile::ui::ModernUI::getDeferredDarkScrollbarMessage();
+    if (sPaintMessage != 0 && aMessage == sPaintMessage)
+    {
+        mScrollbarPaintQueued = XPR_FALSE;
+        if (XPR_IS_TRUE(mDarkScrollbars) &&
+            XPR_IS_FALSE(mScrollbarPainting) && ::IsWindow(m_hWnd))
+        {
+            mScrollbarPainting = XPR_TRUE;
+            fxfile::ui::ModernUI::paintDarkNativeScrollbars(m_hWnd);
+            mScrollbarPainting = XPR_FALSE;
+        }
+        return 0;
+    }
+
+    const LRESULT sResult = super::WindowProc(
+        aMessage, aWParam, aLParam);
+
+    // Refresh the cached draw owner only on theme/setting transitions.
+    // Do not query the WinRT palette from WM_NCPAINT or native scroll input.
+    if ((aMessage == WM_THEMECHANGED ||
+         aMessage == WM_SYSCOLORCHANGE ||
+         aMessage == WM_SETTINGCHANGE) && ::IsWindow(m_hWnd))
+    {
+        const fxfile::ui::ThemePalette sPalette =
+            fxfile::ui::ModernUI::getPalette();
+        mDarkScrollbars =
+            XPR_IS_TRUE(sPalette.mDark) &&
+            XPR_IS_FALSE(sPalette.mHighContrast) ?
+            XPR_TRUE : XPR_FALSE;
+        if (XPR_IS_FALSE(mDarkScrollbars))
+            mScrollbarPaintQueued = XPR_FALSE;
+        ::RedrawWindow(m_hWnd, NULL, NULL, RDW_INVALIDATE | RDW_FRAME);
+    }
+
+    if (sPaintMessage != 0 && ::IsWindow(m_hWnd) &&
+        XPR_IS_TRUE(mDarkScrollbars) &&
+        XPR_IS_FALSE(mScrollbarPaintQueued) &&
+        XPR_IS_FALSE(mScrollbarPainting) &&
+        ((::GetWindowLongPtr(m_hWnd, GWL_STYLE) &
+            (WS_VSCROLL | WS_HSCROLL)) != 0) &&
+        (aMessage == WM_NCPAINT || aMessage == WM_VSCROLL ||
+         aMessage == WM_HSCROLL || aMessage == WM_NCLBUTTONUP ||
+         aMessage == WM_NCMOUSEMOVE || aMessage == WM_SIZE))
+    {
+        if (PostMessage(sPaintMessage))
+            mScrollbarPaintQueued = XPR_TRUE;
+    }
+    return sResult;
 }
 
 DWORD TreeCtrlEx::GetExtendedStyle() const

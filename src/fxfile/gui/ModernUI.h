@@ -109,6 +109,10 @@ public:
     static xpr_bool_t isHighContrast(void);
     static xpr_bool_t applyWindowFrameTheme(HWND aHwnd);
     static xpr_bool_t applyRoundedWindowRegion(HWND aHwnd, xpr_sint_t aLogicalRadius);
+    // UI-02: the native control still owns scrolling and hit testing.
+    // Overlay drawing occurs only from a coalesced, posted message.
+    static UINT getDeferredDarkScrollbarMessage(void);
+    static void paintDarkNativeScrollbars(HWND aHwnd);
     static xpr_bool_t applyExplorerControlTheme(HWND aHwnd);
     static xpr_bool_t resetControlTheme(HWND aHwnd);
 
