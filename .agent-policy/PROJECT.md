@@ -21,6 +21,24 @@ runtime smoke SKIPPED다. 실제 창 점검에서 원래 main Dark 검은 글자
 OS 호환성 과제의 owner는 `docs/development/UI_UX_AUDIT_20260924.md`다.
 Windows 10/High Contrast/mixed-DPI/installer 검증으로 확대 해석하지 않는다.
 
+**2026-09-26 백업 병합에 따른 최신 UI-09 사실:**
+`backup/local-work-20260926`의 실제 Windows
+진단에서 명령 UI 갱신으로 북마크 아이템이
+36px→22px로 축소되는 동안 MFC가 새 영역만
+무효화하여 잔상 픽셀을 남기는 문제가 확인됐다.
+변경 전후 사각형의 합집합을 무효화한 진단 빌드에서
+실제 동일 화면의 잔상 소멸을 관찰했다.
+임시 `FXFILE_UI09_TRACE` writer는 백업 제품
+코드에서 제거되었다. 아래의 이전 추적기 수집
+지시는 당시 이력으로만 취급한다.
+기존 main UI-02·05·11·12·13·14를 함께 유지한
+병합 결과의 Windows x64 전체 빌드/시각 회귀는
+NOT TESTED다. 특히 UI-05 신규 기본 rebar
+행 결합과 UI-09 수정의 공존을 확인해야 한다.
+백업 브랜치는 그대로 두고 생성된 `.pyc`는
+main의 버전 관리 대상에 포함하지 않는다.
+GitHub Actions는 실행하지 않는다.
+
 <!-- project-facts:start -->
 ```json
 {

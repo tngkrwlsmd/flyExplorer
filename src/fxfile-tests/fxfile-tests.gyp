@@ -170,6 +170,7 @@
                 'functional_tests.cpp',
                 'functional_test_groups.h',
                 'pattern_path_tests.cpp',
+                'toolbar_layout_tests.cpp',
                 'config_persistence_tests.cpp',
                 '../fxfile/file_operation_core.cpp',
                 '../fxfile/file_operation_core.h',

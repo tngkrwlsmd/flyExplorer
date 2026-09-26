@@ -25,6 +25,7 @@
 #include "CustomizeDialog.h"
 #include "SizableReBar.h"
 #include "ToolBarEx.h"
+#include "ToolbarLayoutDamage.h"
 #include "WinAppEx.h"
 #include "../ModernUI.h"
 #include "../../ctrl_id.h"  // Bookmark band: scoped direct paint/print owner.
@@ -57,149 +58,6 @@ IMPLEMENT_DYNAMIC( CToolBarEx, CToolBar )
 
 namespace
 {
-// UI-09: opt-in, metadata-only diagnostic trace. Enabled only when the
-// launching process has FXFILE_UI09_TRACE=1. No bookmark names or paths.
-bool Ui09TraceEnabled()
-{
-    static const bool sEnabled = []() -> bool
-    {
-        wchar_t sValue[8] = {0};
-        return ::GetEnvironmentVariableW(
-            L"FXFILE_UI09_TRACE", sValue, _countof(sValue)) == 1 &&
-            sValue[0] == L'1';
-    }();
-    return sEnabled;
-}
-
-void Ui09TraceLine(const char *aText)
-{
-    if (!Ui09TraceEnabled() || aText == NULL)
-        return;
-
-    static volatile LONG sLines = 0;
-    if (::InterlockedIncrement(&sLines) > 700)
-        return;
-
-    wchar_t sTempPath[MAX_PATH] = {0};
-    const DWORD sTempLength =
-        ::GetTempPathW(_countof(sTempPath), sTempPath);
-    if (sTempLength == 0 || sTempLength >= _countof(sTempPath))
-        return;
-
-    wchar_t sTracePath[MAX_PATH] = {0};
-    if (_snwprintf_s(
-            sTracePath, _countof(sTracePath), _TRUNCATE,
-            L"%lsfxfile-ui09-%lu.log",
-            sTempPath, ::GetCurrentProcessId()) < 0)
-    {
-        return;
-    }
-
-    HANDLE sFile = ::CreateFileW(
-        sTracePath, FILE_APPEND_DATA,
-        FILE_SHARE_READ | FILE_SHARE_WRITE,
-        NULL, OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
-    if (sFile == INVALID_HANDLE_VALUE)
-        return;
-
-    DWORD sWritten = 0;
-    ::WriteFile(
-        sFile, aText, static_cast<DWORD>(strlen(aText)),
-        &sWritten, NULL);
-    ::CloseHandle(sFile);
-}
-
-void Ui09TraceSnapshot(const char *aStage, HWND aToolbar, HDC aHdc = NULL)
-{
-    if (!Ui09TraceEnabled() || !::IsWindow(aToolbar) ||
-        ::GetDlgCtrlID(aToolbar) != AFX_IDW_BOOKMARK_BAR)
-    {
-        return;
-    }
-
-    // The user's actual HWND snapshot has 8 items, 1 row, no WRAP bits,
-    // an item height of 22px and a child height of 40px. Measure each
-    // native transition rather than inferring a second row from pixels.
-    RECT sClient = {0};
-    ::GetClientRect(aToolbar, &sClient);
-    const DWORD sButtonSize = static_cast<DWORD>(
-        ::SendMessage(aToolbar, TB_GETBUTTONSIZE, 0, 0));
-    const int sCount = static_cast<int>(
-        ::SendMessage(aToolbar, TB_BUTTONCOUNT, 0, 0));
-    const int sRows = static_cast<int>(
-        ::SendMessage(aToolbar, TB_GETROWS, 0, 0));
-
-    REBARBANDINFO sBand = {0};
-    sBand.cbSize = sizeof(sBand);
-    sBand.fMask = RBBIM_STYLE | RBBIM_SIZE |
-                  RBBIM_CHILDSIZE | RBBIM_IDEALSIZE;
-    HWND sParent = ::GetParent(aToolbar);
-    const int sBandIndex = sParent != NULL ?
-        static_cast<int>(::SendMessage(
-            sParent, RB_IDTOINDEX,
-            static_cast<WPARAM>(::GetDlgCtrlID(aToolbar)), 0)) : -1;
-    const bool sHasBand = sBandIndex >= 0 &&
-        ::SendMessage(
-            sParent, RB_GETBANDINFO,
-            static_cast<WPARAM>(sBandIndex),
-            reinterpret_cast<LPARAM>(&sBand)) != 0;
-
-    RECT sClip = {-1, -1, -1, -1};
-    POINT sViewport = {0, 0};
-    if (aHdc != NULL)
-    {
-        ::GetClipBox(aHdc, &sClip);
-        ::GetViewportOrgEx(aHdc, &sViewport);
-    }
-
-    char sLine[800] = {0};
-    _snprintf_s(
-        sLine, _countof(sLine), _TRUNCATE,
-        "tick=%lu stage=%s hwnd=%p style=0x%Ix "
-        "client=%ldx%ld button=%ux%u count=%d rows=%d "
-        "bandIndex=%d bandWidth=%u cyMin=%u cyMax=%u "
-        "clip=(%ld,%ld,%ld,%ld) viewport=(%ld,%ld)\r\n",
-        ::GetTickCount(), aStage, aToolbar,
-        static_cast<size_t>(::GetWindowLongPtr(aToolbar, GWL_STYLE)),
-        sClient.right - sClient.left,
-        sClient.bottom - sClient.top,
-        LOWORD(sButtonSize), HIWORD(sButtonSize), sCount, sRows,
-        sBandIndex,
-        sHasBand ? sBand.cx : 0u,
-        sHasBand ? sBand.cyMinChild : 0u,
-        sHasBand ? sBand.cyMaxChild : 0u,
-        sClip.left, sClip.top, sClip.right, sClip.bottom,
-        sViewport.x, sViewport.y);
-    Ui09TraceLine(sLine);
-
-    // Record native layout only; never log names, targets or icon pixels.
-    for (int i = 0; i < sCount && i < 16; ++i)
-    {
-        TBBUTTON sButton = {0};
-        RECT sRect = {0};
-        if (::SendMessage(
-                aToolbar, TB_GETBUTTON, i,
-                reinterpret_cast<LPARAM>(&sButton)) == FALSE)
-        {
-            continue;
-        }
-        const BOOL sRectOk = static_cast<BOOL>(
-            ::SendMessage(
-                aToolbar, TB_GETITEMRECT, i,
-                reinterpret_cast<LPARAM>(&sRect)));
-        _snprintf_s(
-            sLine, _countof(sLine), _TRUNCATE,
-            "  item=%d command=%d state=0x%02X style=0x%02X "
-            "rectOk=%d rect=(%ld,%ld,%ld,%ld)\r\n",
-            i, sButton.idCommand,
-            static_cast<unsigned int>(sButton.fsState),
-            static_cast<unsigned int>(sButton.fsStyle),
-            static_cast<int>(sRectOk),
-            sRect.left, sRect.top, sRect.right, sRect.bottom);
-        Ui09TraceLine(sLine);
-    }
-}
-
 void DrawRoundedToolbarState(
     LPNMTBCUSTOMDRAW aCustomDraw,
     COLORREF aFillColor)
@@ -681,9 +539,9 @@ void DrawOwnedToolbarItem(
     DrawFinalDarkToolbarItem(aCustomDraw, aBackground);
 }
 
-// The parent rebar may composite its children using WM_PRINT, bypassing the
-// reflected NM_CUSTOMDRAW postpaint path entirely. A postpaint-only fix cannot
-// remove a second native icon/text baseline in that composition path.
+// Preserve the established bookmark client renderer for both WM_PAINT and
+// rebar WM_PRINT composition. UI-09 was caused by incomplete invalidation
+// after native geometry changes, not by a second native paint in this route.
 //
 // The reported repeat occurs in the bookmark band. Keep the correction
 // scoped to that band: it has one existing normal image list and native
@@ -708,7 +566,6 @@ void PaintOwnedBookmarkToolbar(HWND aToolbar, HDC aHdc)
     if (XPR_IS_NULL(aHdc))
         return;
 
-    Ui09TraceSnapshot("owned-paint-entry", aToolbar, aHdc);
 
     RECT sClientRect = {0};
     ::GetClientRect(aToolbar, &sClientRect);
@@ -772,7 +629,6 @@ void PaintOwnedBookmarkToolbar(HWND aToolbar, HDC aHdc)
         }
     }
 
-    Ui09TraceSnapshot("owned-after-row-clip", aToolbar, aHdc);
 
     for (xpr_sint_t i = 0; i < sCount; ++i)
     {
@@ -1304,6 +1160,39 @@ void CToolBarEx::SaveState( LPCTSTR lpszProfileName )
 /////////////////////////////////////////////////////////////////////////////
 // Overrides
 
+void CToolBarEx::OnUpdateCmdUI(CFrameWnd* pTarget, BOOL bDisableIfNoHndler)
+{
+    if (GetDlgCtrlID() != AFX_IDW_BOOKMARK_BAR)
+    {
+        CToolBar::OnUpdateCmdUI(pTarget, bDisableIfNoHndler);
+        return;
+    }
+
+    // MFC's CToolCmdUI calls _SetButton (delete/reinsert) even when only
+    // the check style changes. Comctl32 can then recalculate item geometry.
+    // _SetButton invalidates ONLY the new rectangle: a shrinking button
+    // leaves its old icon/text pixels outside the next paint DC's clip.
+    auto snapshot = [this]() -> std::vector<RECT>
+    {
+        CToolBarCtrl &ctrl = GetToolBarCtrl();
+        std::vector<RECT> rects(ctrl.GetButtonCount());
+        for (size_t i = 0; i < rects.size(); ++i)
+        {
+            RECT rect = {0, 0, 0, 0};
+            ctrl.GetItemRect(static_cast<int>(i), &rect);
+            rects[i] = rect;
+        }
+        return rects;
+    };
+    const std::vector<RECT> before = snapshot();
+    CToolBar::OnUpdateCmdUI(pTarget, bDisableIfNoHndler);
+    const RECT damage = fxfile::ui::toolbarLayoutDamage(before, snapshot());
+    if (!::IsRectEmpty(&damage))
+    {
+        InvalidateRect(&damage, TRUE);
+    }
+}
+
 LRESULT CToolBarEx::WindowProc( UINT message, WPARAM wParam, LPARAM lParam )
 {
     // Keep non-paint messages on the original route. Bookmark renderer
@@ -1331,21 +1220,9 @@ LRESULT CToolBarEx::WindowProc( UINT message, WPARAM wParam, LPARAM lParam )
         }
     }
 
-    // Trace the chosen path before rendering; a geometry-only external
-    // snapshot cannot identify duplicate native/app-owned paint messages.
-    if (XPR_IS_TRUE(sCandidate) && Ui09TraceEnabled())
-    {
-        static volatile LONG sPaintSamples = 0;
-        if (::InterlockedIncrement(&sPaintSamples) <= 12)
-            Ui09TraceSnapshot(
-                XPR_IS_TRUE(sOwnBookmarkPixels) ?
-                    "paint-route-owned" : "paint-route-native",
-                m_hWnd);
-    }
-
     // WM_PRINT* is a separate rebar composition route, not a custom-draw
-    // item notification. WM_PAINT also must not call native ToolbarWindow32
-    // before the app renderer: the previous postpaint fix left two baselines.
+    // item notification. Keep one client renderer on both routes; do not
+    // invoke native ToolbarWindow32 painting as an additional pass.
     if (XPR_IS_TRUE(sOwnBookmarkPixels))
     {
         if (message == WM_PAINT)
@@ -1536,7 +1413,6 @@ void CToolBarEx::ApplyModernMetrics()
         fxfile::ui::ModernUI::getCommandButtonExtent(m_hWnd);
 
     CToolBarCtrl &sToolBarCtrl = GetToolBarCtrl();
-    Ui09TraceSnapshot("metrics-before", m_hWnd);
     sToolBarCtrl.SendMessage(
         TB_SETPADDING,
         0,
@@ -1567,7 +1443,6 @@ void CToolBarEx::ApplyModernMetrics()
         if (m_uiFont.CreateFontIndirect(&sLogFont))
             SetFont(&m_uiFont, FALSE);
     }
-    Ui09TraceSnapshot("metrics-after", m_hWnd);
 }
 
 void CToolBarEx::ApplyModernAppearance()
@@ -1600,13 +1475,10 @@ void CToolBarEx::ApplyModernAppearance()
 void CToolBarEx::UpdateToolbarSize()
 {
     CToolBarCtrl& tbCtrl = GetToolBarCtrl();
-    Ui09TraceSnapshot("autosize-before", m_hWnd);
     tbCtrl.AutoSize();
-    Ui09TraceSnapshot("autosize-after", m_hWnd);
 
     if (m_pObserver != NULL)
         m_pObserver->onUpdatedToolbarSize(*this);
-    Ui09TraceSnapshot("rebar-observer-after", m_hWnd);
 
     Invalidate();   // visual feedback
 }

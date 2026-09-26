@@ -12,6 +12,7 @@ namespace tests
 {
 bool testPatternAndPathContracts(void);
 bool testConfigPersistenceContracts(void);
+bool testToolbarLayoutDamage(void);
 } // namespace tests
 } // namespace fxfile
 

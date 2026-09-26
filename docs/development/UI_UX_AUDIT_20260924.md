@@ -24,6 +24,21 @@
 
 ## 사용자 제공 추가 화면 — UI-09 (북마크 도구 모음 잔상)
 
+**2026-09-26 병합 시점 최신 확인:** 아래 과거 가설보다
+실제 Windows에서 계측된 36px→22px 명령 UI 갱신
+이전 영역 무효화 누락을 현재 원인 근거로 적용한다.
+수정한 진단 빌드에서 동일 테마 전환 경로의 잔상이
+사라졌으나 새 main과 UI-05 행 결합을 포함한
+병합 바이너리는 아직 실행 검증되지 않았다.
+임시 추적 코드도 최종 백업 소스에서 제거되었다.
+
+**2026-09-26 후속 실행 진단:** 테마 적용 후 36px로 그린 버튼을 MFC command
+update가 22px로 축소하면서 새 영역만 invalidate하는 경로가 확인됐다.
+진단 빌드에서 이전/새 영역을 함께 무효화하자 동일 화면의 잔상이 사라졌다.
+최종 빌드 검증 상태와 항목별 evidence는
+[UI09_ROOT_CAUSE_20260926.md](UI09_ROOT_CAUSE_20260926.md)를 따른다.
+아래 기록은 이전 시점의 가설/검증 한계를 보존한 역사이며 현재 결론을 대신하지 않는다.
+
 - 2026-09-24 사용자 스크린샷에서 Light처럼 보이는
   바탕 화면·라이브러리·내 문서·음악·사진·동영상·네트워크
   바로가기 아이콘 아래에 짧은 색상 줄, 한국어 레이블
@@ -338,6 +353,11 @@ UI-14: The global header mCallDrawItem flag previously assumed every header cell
 UI-09 remains OPEN: prior screenshot showed slivers at a revision that was actually built. The native Windows geometry was one 22px item row within a 40px child, not a native second row. The current FXFILE_UI09_TRACE=1 internal paint/size tracing still needs a revision-matched run to identify the final owner; new rebar grouping is delayed and slack-guarded but is NOT a verified remedy.
 
 A source invariant validate_remaining_main_window_source_candidates now checks documented native geometry, accessibility-preserving owner order, new-profile-only rebar layout and mixed header safeguards. No Windows local_ci.bat x64, same-screen UI-02/05/09/14 runtime, 100/125/150/200% DPI or High Contrast execution has been performed. GitHub Actions was not executed.
+
+**참고:** 위에 기록된 과거 단계의
+`FXFILE_UI09_TRACE=1` 수집 지시는 현재
+통합 소스에 해당하지 않는다. 제품 임시 추적
+writer는 백업에서 원인 확인 후 제거되었다.
 
 ## 코드로 확인한 현대 Windows 호환성 과제
 

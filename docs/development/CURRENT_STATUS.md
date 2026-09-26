@@ -1,4 +1,4 @@
-# flyExplorer — current project status (2026-09-25)
+# flyExplorer — current project status (2026-09-26)
 
 **Purpose:** Fast, current-state entry point for maintainers and development
 agents. This is an evidence-labelled summary, not a replacement for source,
@@ -8,6 +8,26 @@ For the chronological diagnosis and original evidence, retain and use
 [`ERROR_HISTORY.md`](ERROR_HISTORY.md) rather than moving/deleting entries.
 
 ## Active baseline and verified scope
+
+**최신 UI-09 실행 근거 및 병합 상태 (2026-09-26):**
+백업 브랜치의 실제 Windows 진단은 설정에서 테마를
+변경할 때 MFC 명령 UI 갱신으로 버튼 높이가
+36px에서 22px로 축소되면서 변경 후의 사각형만
+무효화되어 기존 아이콘/텍스트 하단이 남는 것을
+계측했다. 명령 갱신 이전/이후의 버튼 좌표를
+비교하여 이전·새 영역 모두 무효화하는 수정으로
+**진단 빌드에서는 동일 화면의 잔상이 사라졌다.**
+백업 브랜치에 기록된 진단 빌드의 Windows
+Release-x64 컴파일/링크 PASS 및 native regression
+17 passed / 0 failed는 그 당시 증거다.
+최종 백업 소스에서는 임시
+`FXFILE_UI09_TRACE=1` 기록 코드가 제거됐다.
+현재 `main`에 보존된 UI-02·05·11·12·13·14 변경과
+함께 사용하는 이 **병합 커밋의 전체 Windows 빌드,
+테마 전환 및 UI-05 행 결합 회귀 검증은 아직 NOT TESTED**다.
+아래 임시 추적기 추가 관련 내용은 당시 작업 기록이며
+현행 소스 사용 지침이 아니다.
+근거: [실제 UI-09 원인 진단](UI09_ROOT_CAUSE_20260926.md).
 
 | Subject | Current observed state | Evidence limit |
 | --- | --- | --- |
