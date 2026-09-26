@@ -131,6 +131,7 @@ C++ 변경에는 다음을 추가로 적용한다.
 - 사용자 screenshot, hang/crash dump, runtime stack/log, 실제 process/token 상태가 source comment, 이전 commit message, static invariant와 충돌하면 **runtime evidence를 우선한다**. 문서나 guard가 PASS여도 사용자가 같은 실패를 재현하면 결함은 열린 상태다.
 - 이미 고쳤던 것과 같은 증상이 다시 보고되면 이전 root cause가 재발했다고 가정하지 않는다. **새로운 미해결 결함으로 취급하고 실제 entry point부터 end-to-end 실행 경로를 다시 추적한다.** 기존 `ERROR_HISTORY.md`는 후보를 제공할 뿐 결론을 대신하지 않는다.
 - hang은 주변 코드의 추정 원인만 보고 닫지 않는다. 가능하면 UI thread의 blocked/spinning 위치, synchronous message/re-entry, HWND/message enumeration, z-order/style mutation, lock/wait loop 등 **무한 대기 또는 반복을 직접 설명하는 경로**를 찾는다.
+- Shell/COM 대기 중의 hang은 메시지 필터도 조사한다. `WM_PAINT` 처리 중 다시 COM 대기에 들어가면 같은 HWND의 paint가 계속 pending일 수 있으므로 큐가 빌 때까지 무제한 dispatch하지 않는다. 콜백의 처리량·재진입을 제한하고 OLE 등록/해제 수명과 기존 busy/retry 동작을 보존한다. 반복 스택과 메시지 대상 확인은 수정 근거이며, 수정 바이너리의 정상 시작·탐색·종료 검증을 대신하지 않는다.
 - visual regression에서는 intermediate state가 아니라 **최종 픽셀/renderer ownership**이 기준이다. custom-draw color field나 palette 값이 올바르더라도 native renderer가 다른 색을 그리면 실패다. app-owned Dark surface는 최종 text/glyph/background renderer를 누가 소유하는지 확인한다.
 - elevation/launcher 문제는 executable manifest만 확인하지 말고 installer, launcher, shell/shortcut, startup helper를 포함한 **parent process/token launch chain**을 추적한다. `asInvoker`는 이미 elevated인 parent의 child를 de-elevate하지 않는다.
 - root cause를 한 위치에서 찾았으면 동일 base class, sibling implementation, caller/callee, helper의 다른 활성 경로에 같은 패턴이 남아 있는지 검색한다. 한 파일의 수정으로 같은 증상 계열 전체가 해결됐다고 추정하지 않는다.

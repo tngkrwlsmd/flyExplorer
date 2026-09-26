@@ -31,39 +31,24 @@ Windows 10/High Contrast/mixed-DPI/installer 검증으로 확대 해석하지 �
 임시 `FXFILE_UI09_TRACE` writer는 백업 제품
 코드에서 제거되었다. 아래의 이전 추적기 수집
 지시는 당시 이력으로만 취급한다.
-기존 main UI-02·05·11·12·13·14를 함께 유지한
-병합 결과의 Windows x64 전체 빌드/시각 회귀는
-NOT TESTED다. 특히 UI-05 신규 기본 rebar
-행 결합과 UI-09 수정의 공존을 확인해야 한다.
-백업 브랜치는 그대로 두고 생성된 `.pyc`는
-main의 버전 관리 대상에 포함하지 않는다.
-GitHub Actions는 실행하지 않는다.
+UI-09 damage fix와 UI-11/12/13/14는 유지한다. UI-02 native scrollbar
+후처리와 UI-05 자동 rebar 행 결합은 `882030a`에서 격리되어 현재 보류다.
+백업 브랜치는 유지하며 생성된 `.pyc`는 버전 관리하지 않는다.
 
-**2026-09-26 HANG-01 안정화 체크포인트 — 아래
-UI-02/05 구현 성공 메모보다 우선한다:**
-사용자 추가 Light 화면에 `(응답 없음)`과
-비어 있는 트리/목록이 나타났다. 리비전·덤프가
-없어 UI-02 비클라이언트 `GetWindowDC`
-후처리 또는 UI-05 `OnSize` 내부의 동기
-Rebar/부모 레이아웃 변경이 실제 원인인지는
-아직 알 수 없다. 둘 다 검증 없이
-`main`으로 이동한 고위험 변경이므로
-백업 `cd915a0`과 동일한 관련 소스
-7개로 선택적 롤백하고 안전성이 확인될
-때까지 UI-02/05 신규 동작은 보류한다.
-기존 사용자 설정을 건드리지 않으며
-UI-09의 검증된 원인에 대응한 코드·
-native 테스트, UI-11/12/13 및
-UI-14 header 변경을 유지한다.
-정적 회귀 검사에 미검증 event/resize
-후처리의 재도입 금지를 등록하되
-이는 런타임 검증이 아니다.
-새 `main`의 x64 빌드·원래 응답 없음
-재현 검사 및 UI-09·DPI 검증은
-**NOT TESTED**이다. 원인 확정에는
-해당 빌드의 UI 스레드 덤프 또는
-재현 가능한 실행 추적이 필요하다.
-GitHub Actions는 실행하지 않는다.
+**2026-09-26 HANG-01 최신 상태 — 수정 코드 반영 / BUILD·RUNTIME NOT TESTED:**
+`882030a` 사용자 빌드에서도 빈 트리/목록과 시작 중 응답 중단을 재현했다.
+따라서 앞선 UI-02/05 격리는 해결 완료가 아니다. 반복 UI 스레드 스택은
+native 목록 아이콘 그리기 → Shell/thumbcache COM 대기 → MFC
+`COleMessageFilter::OnMessagePending`의 paint 순회를 가리켰고,
+프레임의 WM_PAINT 대상은 같은 UI 스레드의 SysListView32였다.
+`win_app.cpp`의 앱 소유 필터는 콜백당 paint 하나만 처리하고 재진입을 막는다.
+OLE 등록 실패 처리와 AfxOleTerm 소유권, busy/retry 동작은 유지한다.
+추가 Shell 서버 지연 여부와 수정 후 정상 실행은 아직 확인하지 않았다.
+정적 preflight 및 네 가지 실패 패턴 mutation 검사는 PASS이며, 사용자 요청에
+따라 이번 수정의 빌드는 사용자가 수행한다. main push는 빌드/실행 PASS를
+뜻하지 않는다. 사용자 설정과 UI-09 수정을 유지하고 GitHub Actions는 실행하지
+않는다. 다음 검증은 동일 프로필 시작·1분 응답성·탐색·종료·OLE drag/drop 및
+UI-09 동시 확인이다. 현행 상세 상태와 근거는 CURRENT_STATUS/ERROR_HISTORY를 따른다.
 
 <!-- project-facts:start -->
 ```json

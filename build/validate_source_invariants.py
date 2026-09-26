@@ -57,6 +57,39 @@ def strip_comments(text: str) -> str:
     return LINE_COMMENT_RE.sub("", BLOCK_COMMENT_RE.sub("", text))
 
 
+def validate_ole_pending_paint_budget(source: str | None = None) -> list[str]:
+    """Reject a drain-until-empty pump that can starve Shell COM completion.
+
+    Static evidence only: the native control can keep WM_PAINT pending while
+    its outer paint waits on COM. This does not prove Shell server liveness.
+    """
+    if source is None:
+        source = (FXFILE_SRC / "win_app.cpp").read_text(encoding="utf-8")
+    code = strip_comments(source)
+    start = code.find("virtual BOOL OnMessagePending(")
+    end = code.find("\nprivate:", start)
+    callback = code[start:end] if 0 <= start < end else ""
+    errors: list[str] = []
+    if not callback or re.search(r"\b(?:while|for|do|goto|OnMessagePending)\s*(?:\(|;)",
+                                 callback[callback.find("{") + 1:]):
+        errors.append("OLE pending-paint callback must not loop, recurse, or call the unbounded MFC base pump")
+    if (callback.count("::DispatchMessage(") != 1 or
+            callback.count("::PeekMessage(") != 1 or
+            "WM_PAINT, WM_PAINT, PM_REMOVE | PM_NOYIELD" not in callback or
+            "if (mDispatchingPaint)" not in callback or
+            "~DispatchScope(void) { mActive = FALSE; }" not in callback):
+        errors.append("OLE callback must have one paint-only dispatch and scoped reentry protection")
+    init = code[code.find("WinApp::InitInstance("):]
+    install = init.find("new StartupOleMessageFilter")
+    register = init.find("if (!m_pMessageFilter->Register())")
+    controls = init.find("AfxEnableControlContainer()")
+    if not (0 <= install < register < controls) or "m_pMessageFilter = sMessageFilter;" not in init:
+        errors.append("Bounded OLE filter must be owned by CWinThread and registered before Shell/UI startup")
+    if "afxole.h" not in direct_include_basenames(source):
+        errors.append("OLE filter owner must directly include afxole.h")
+    return errors
+
+
 def direct_include_basenames(text: str) -> set[str]:
     return {Path(match).name for match in INCLUDE_RE.findall(text)}
 
@@ -5043,6 +5076,7 @@ def validate_html_help_package_source() -> list[str]:
 
 def main() -> int:
     errors = validate_translation_units()
+    errors.extend(validate_ole_pending_paint_budget())
     errors.extend(validate_modern_subclass_forwarding())
     errors.extend(validate_window_frame_theme_integration())
     errors.extend(validate_theme_mode_contract())

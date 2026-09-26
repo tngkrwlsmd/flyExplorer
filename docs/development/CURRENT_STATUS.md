@@ -9,35 +9,28 @@ For the chronological diagnosis and original evidence, retain and use
 
 ## Active baseline and verified scope
 
-**2026-09-26 HANG-01 긴급 안정화 후보 (이 항목이 아래 UI-02/05 과거 메모보다 최신):**
-사용자가 제출한 Light 화면에서 제목에 `(응답 없음)`이 표시되고
-폴더 트리/파일 목록이 비어 있는 현상을 확인했다. 스크린샷에
-실행 바이너리 리비전, UI 스레드 스택/덤프, 재현 조작 및 DPI가
-없으므로 실제 교착·반복 호출 원인이나 특정 커밋의 책임은
-아직 **미확정**이다. 최근 병합된 두 미검증 런타임 경로인
-UI-02의 native WM_NCPAINT/scroll 이후 `GetWindowDC` 재그리기와
-UI-05의 `MainCoolBar::OnSize` 내부 `SetBandInfo`→
-`RecalcLayout` 자동 행 결합을 우선 격리했다.
-관련 파일 7개를 **실제 Windows x64 진단 빌드 이력이 있는
-`cd915a0` 백업 커밋과 동일한 바이트**로 되돌린다.
-별도 UI-09의 MFC 명령 상태 변경 이전/이후 좌표
-무효화 수정과 native 테스트, 기존 UI-11/12/13,
-UI-14 변경은 보존한다. 이전 저장된 Rebar 설정과
-북마크 데이터는 삭제/변경하지 않는다.
-UI-02 밝은 Dark 스크롤바와 UI-05 자동 압축은
-**기능 보류(OPEN)**이고, UI-14 역시 실행 검증되지 않았다.
-새 정적 회귀 검사는 이 두 미검증 이벤트·배치
-경로의 무심코 재도입을 막는다.
-**이번 안정화 커밋의 Windows 빌드, 해당 실제 화면의
-응답성 및 UI-09 동시 검증은 NOT TESTED**다.
-최신 `main`에서 `local_ci.bat x64` 이후 동일
-내 문서/테마/창 크기로 정상 폴더 트리와
-파일 목록이 로딩되고 최소 1분 동안 UI가
-응답하는지 확인해야 한다. 계속 멈춘다면
-작업 관리자에서 응답 없는 프로세스의
-덤프를 확보하여 UI 스레드 대기/반복 위치를
-분석한다. 사용자 기존 설정은 유지한다.
-GitHub Actions는 실행하지 않는다.
+**2026-09-26 HANG-01 실행 진단 후 수정 후보 — BUILD / RUNTIME NOT TESTED:**
+사용자가 빌드한 `882030a` 실행 파일로 동일한 시작 화면의 빈 트리/목록과
+응답 중단을 재현했다. UI-02/05 격리 이후에도 재현되므로 이전 격리를
+해결로 취급하지 않는다. 로컬 덤프와 반복 UI 스레드 스택에서
+`WinApp::InitInstance → UpdateWindow → ListCtrlEx::WindowProc → native
+image list → SHDefExtractIconW → thumbcache/CoCreateInstance → COM wait →
+COleMessageFilter::OnMessagePending`을 확인했다. 메시지 필터의 프레임에서
+`WM_PAINT` 대상이 동일 UI 스레드의 `SysListView32`임을 확인했다.
+MFC 기본 구현은 `PeekMessage(WM_PAINT)`가 빌 때까지 무제한 순회한다.
+이 반복이 COM 대기로 복귀하지 못하는 starvation 경로를 수정하기 위해
+앱 소유 OLE 필터가 콜백당 paint 하나만 처리하고 중첩 paint dispatch를
+막도록 했다. native update region을 강제로 지우거나 아이콘을 생략하지 않는다.
+OLE 필터의 나머지 busy/retry 정책과 CWinThread/AfxOleTerm 소유권은 유지한다.
+Shell 서버 자체의 별도 지연/장애 유무와 수정 후 응답성은 아직 미검증이다.
+
+사용자 요청에 따라 **이번 변경의 빌드·새 바이너리 실행은 하지 않는다**.
+source preflight PASS, 무제한 순회/base-pump 호출/설치 누락/재진입 보호 누락의
+4개 mutation 검출 PASS. 이 정적 evidence는 빌드/실행 검증과 별개다. 사용자가 빌드한 후
+동일 폴더/설정에서 목록·트리·아이콘 로딩, 1분 이상 응답성, 폴더 이동,
+종료, UI-09 북마크 잔상, Light/Dark 및 OLE 드래그 앤 드롭을 재검증해야 한다.
+UI-02/05 격리 및 기존 UI-09 damage fix는 유지한다. 사용자 설정은 변경하지
+않았으며 GitHub Actions는 실행하지 않는다. 상세 근거는 ERROR_HISTORY 참조.
 
 **최신 UI-09 실행 근거 및 병합 상태 (2026-09-26):**
 백업 브랜치의 실제 Windows 진단은 설정에서 테마를
@@ -52,9 +45,9 @@ Release-x64 컴파일/링크 PASS 및 native regression
 17 passed / 0 failed는 그 당시 증거다.
 최종 백업 소스에서는 임시
 `FXFILE_UI09_TRACE=1` 기록 코드가 제거됐다.
-현재 `main`에 보존된 UI-02·05·11·12·13·14 변경과
-함께 사용하는 이 **병합 커밋의 전체 Windows 빌드,
-테마 전환 및 UI-05 행 결합 회귀 검증은 아직 NOT TESTED**다.
+현재 UI-02/05의 미검증 후처리·자동 행 결합은 격리되어 있고,
+UI-09 damage fix와 UI-11/12/13/14는 유지한다. HANG-01 필터 변경을
+포함한 새 소스의 전체 Windows 빌드·응답성·테마 전환 회귀는 NOT TESTED다.
 아래 임시 추적기 추가 관련 내용은 당시 작업 기록이며
 현행 소스 사용 지침이 아니다.
 근거: [실제 UI-09 원인 진단](UI09_ROOT_CAUSE_20260926.md).

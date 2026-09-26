@@ -3551,3 +3551,37 @@ GitHub Actions는 실행하지 않았다.
   관련 수정 커밋은 해당 안정화 체크포인트.
   GitHub Actions 미실행.
 
+
+
+## 2026-09-26 — HANG-01: 시작 중 Shell COM 대기의 MFC paint pump starvation
+
+- **오류 발생:** UI-02/05 경로를 격리한 `882030a`를 사용자가 빌드한 뒤에도
+  시작 화면의 트리/목록이 비고 응답하지 않음. 기존 설정 그대로 실행하여 재현.
+- **최초 실제 오류 / Observed:** 로컬 minidump와 여러 UI 스레드 샘플에서
+  `WinApp::InitInstance/UpdateWindow → ListCtrlEx::WindowProc → native list/image
+  rendering → SHDefExtractIconW → thumbcache → CoCreateInstance/COM wait →
+  COleMessageFilter::OnMessagePending`이 지속됨. 마지막 함수 내부 PeekMessage와
+  DispatchMessage 사이에서 CPU를 사용함. 프레임의 MSG.message는 WM_PAINT이고,
+  MSG.hwnd는 같은 UI 스레드의 SysListView32임을 네이티브 클래스 조회로 확인.
+  덤프·스택은 ignored logs에만 보관하며 사용자 경로/메모리를 저장소에 올리지 않음.
+- **원인 진단:** 설치된 VS MFC `olemsgf.cpp`의 OnMessagePending은 WM_PAINT 큐가
+  빌 때까지 순회한다. 이미 목록 paint 안에서 Shell COM을 기다리는데 같은 목록의
+  paint가 계속 pending이면 이 루프는 COM에 제어를 돌려주지 않는다. 실제 스택이
+  이 루프에 머무름을 확인했으며, 북마크/rebar/scrollbar 프레임은 해당 스택에 없다.
+  native control 내부에서 update region을 유지하는 세부 분기와 Shell 서버 자체의
+  별도 지연 여부는 미확정이다. 특정 아이콘/셸 확장 제품의 책임을 추정하지 않는다.
+- **수정:** win_app.cpp의 앱 소유 COleMessageFilter 파생 클래스에서 paint를
+  콜백당 최대 하나만 dispatch하고 scope guard로 재진입을 막는다. 그 후 COM이
+  완료/대기 판단을 계속할 수 있다. 기존 필터를 revoke/delete한 뒤 새 필터를
+  등록하며, 등록 실패는 OLE 초기화 실패로 처리한다. AfxOleTerm이 필터를 정리한다.
+  busy/retry 정책, native painting/update region, 사용자 데이터, UI-09 수정은 보존.
+- **재발 방지:** source preflight가 무제한 loop/base-pump 호출, 다중 dispatch,
+  재진입 보호 누락, UI 생성 뒤 필터 등록을 거부한다. source mutation으로
+  if→while, base-pump 호출 추가 및 설치 누락의 검출을 별도 확인한다.
+- **검증 상태:** 수정 전 Windows 재현/스택 확보 완료. 수정 후 source preflight PASS,
+  무제한 순회/base-pump 호출/설치 누락/재진입 보호 누락 4개 mutation 검출 PASS. 사용자 빌드 지시에 따라
+  compile/link, native suite, 수정 바이너리 runtime/visual은 NOT TESTED.
+  동일 시작 조건의 트리/목록/아이콘 로딩, 1분 이상 응답성, 탐색/종료, OLE
+  drag/drop, Light/Dark 및 UI-09를 재검증하기 전 HANG-01은 OPEN이다.
+- **관련 commit:** 진단 baseline 882030a. 이번 필터 수정·회귀 guard와 개발 상태 문서를 함께 main 반영하는 체크포인트.
+  이 항목을 추가한 커밋이 해당 소스 기준이며 빌드/실행 PASS를 의미하지 않는다.

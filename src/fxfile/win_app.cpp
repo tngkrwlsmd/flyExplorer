@@ -9,6 +9,7 @@
 
 #include "stdafx.h"
 #include "win_app.h"
+#include <afxole.h>
 
 #include "language_table.h"
 #include "language_pack.h"
@@ -48,6 +49,39 @@ namespace fxfile
 {
 namespace
 {
+class StartupOleMessageFilter : public COleMessageFilter
+{
+public:
+    StartupOleMessageFilter(void) : mDispatchingPaint(FALSE) {}
+
+    virtual BOOL OnMessagePending(const MSG *) override
+    {
+        // Shell image-list drawing can wait for COM inside WM_PAINT. The
+        // native list view can then leave that same paint pending until its
+        // outer paint returns. MFC's drain-until-empty loop never returns to
+        // COM in that case. Dispatch at most one paint per COM callback.
+        if (mDispatchingPaint)
+            return FALSE;
+
+        MSG sMessage = {0};
+        if (!::PeekMessage(&sMessage, NULL, WM_PAINT, WM_PAINT, PM_REMOVE | PM_NOYIELD))
+            return FALSE;
+
+        struct DispatchScope
+        {
+            BOOL &mActive;
+            explicit DispatchScope(BOOL &aActive) : mActive(aActive) { mActive = TRUE; }
+            ~DispatchScope(void) { mActive = FALSE; }
+        } sDispatchScope(mDispatchingPaint);
+
+        ::DispatchMessage(&sMessage);
+        return TRUE;
+    }
+
+private:
+    BOOL mDispatchingPaint;
+};
+
 #if (XPR_CFG_COMPILER_MSVC && XPR_CFG_COMPILER_VER < 1700)
 // reference: https://svn.boost.org/trac/boost/ticket/5582
 void freeTypeinfoMemory(void)
@@ -112,6 +146,18 @@ xpr_bool_t WinApp::InitInstance(void)
     // Initialize OLE libraries
     if (AfxOleInit() == XPR_FALSE)
     {
+        AfxMessageBox(IDP_OLE_INIT_FAILED);
+        return XPR_FALSE;
+    }
+
+    // CWinThread/AfxOleTerm owns this filter, including failed startup and
+    // normal shutdown. Retain the standard OLE busy/retry/drag-drop policy.
+    COleMessageFilter *sMessageFilter = new StartupOleMessageFilter;
+    delete m_pMessageFilter; // COleMessageFilter's destructor revokes it.
+    m_pMessageFilter = sMessageFilter;
+    if (!m_pMessageFilter->Register())
+    {
+        AfxOleTerm();
         AfxMessageBox(IDP_OLE_INIT_FAILED);
         return XPR_FALSE;
     }
