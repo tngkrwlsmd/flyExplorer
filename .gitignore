@@ -36,3 +36,37 @@ ipch/
 # Local CI and developer logs
 /logs/*
 !/logs/.gitkeep
+
+# Python bytecode, analysis/test caches, and local virtual environments
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+htmlcov/
+.venv/
+venv/
+
+# Visual Studio / MSBuild additional intermediates
+*.obj
+*.pch
+*.ipch
+*.pdb
+*.ilk
+*.idb
+*.tlog/
+*.lastbuildstate
+*.aps
+*.VC.db-*
+
+# Local developer logs, editor swap files, and OS metadata
+*.log
+*.tmp
+*.swp
+*.swo
+*~
+.idea/
+.DS_Store
+Thumbs.db
