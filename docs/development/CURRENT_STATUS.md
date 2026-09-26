@@ -333,6 +333,23 @@ behavior. This snapshot still needs a revision-matched Windows x64
 compiler run and an actual user trace. UI-09 remains **OPEN**.
 GitHub Actions was NOT RUN.
 
+**2026-09-26 user Light/Dark main-window screenshot review — DOCUMENTED ONLY:**
+Two owner screenshots of the same Documents main view show bright native-looking
+file-list/tree scrollbars on Dark (additional UI-02 evidence), dense upper command
+grouping and unused adjacent band space (UI-05 design review), truncated
+single-pane modification dates despite wide unused right-side file-list space
+(new UI-11), a narrow tree with cut-off long names/small expansion glyphs
+(new UI-12), and dense folder information/bookmark-link wrapping (new UI-13).
+File-list header spacing and a text-level focus cue need interactive assessment,
+not a declared bug (UI-14 candidate). The old bookmark-sliver pattern is not
+clearly discernible in these two images; this does NOT overturn the prior
+revision-matched failure or close UI-09. See
+`docs/development/UI_UX_AUDIT_20260924.md` for observed versus proposed
+behaviors and exact acceptance tests. No build revision, DPI or interactive
+sequence was visible in these screenshots. This documentation checkpoint made
+no application code changes; Windows build/runtime/visual acceptance remains
+NOT TESTED. GitHub Actions NOT RUN.
+
 ## Outstanding near-term work
 
 1. Address the reproduced settings-page visibility and Dark rendering issues

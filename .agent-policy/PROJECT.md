@@ -1017,6 +1017,24 @@ geometry and drawing path to the current user's temp directory only.
 Current x64 build, same-screen trace/visual acceptance: NOT TESTED.
 UI-09 OPEN, GitHub Actions NOT RUN.
 
+**2026-09-26 new owner Light/Dark main-screen comparison — guidance only:**
+Owner screenshots show the same main file-list view in both app themes,
+but neither binary SHA nor actual DPI is displayed. Record UI-02's bright
+Dark file-list/tree scrollbars and UI-05's dense commands versus unused
+drive/bookmark-band width; add UI-11 for single-pane modification dates
+ellipsized despite broad unused list width, UI-12 for clipped long
+navigation labels/small expansion glyphs and UI-13 for the dense narrow
+folder-information/bookmark-link panel. UI-14 (header spacing/focus cue)
+remains an unverified appearance candidate, not an established regression.
+Screenshots do not clearly reproduce the older UI-09 slivers; maintain the
+prior positive user runtime evidence and the 8-button/1-row HWND report,
+and keep UI-09 OPEN until the exact acceptance path is retested.
+`AGENTS.md` now requires evidence-labeled cross-theme screenshots and
+`docs/development/UI_UX_AUDIT_20260924.md` owns the observation,
+preservation rules, affected controls and acceptance matrix.
+This checkpoint changes instructions/docs only: no program build or
+new Windows interactive verification, and no GitHub Actions execution.
+
 ### Development handoff rule
 
 - Every new user-requested development item is added to this section (or its successor) before implementation starts.

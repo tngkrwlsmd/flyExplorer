@@ -158,6 +158,19 @@ UI/UX 현대화 작업은 다음 원칙을 따른다.
 - UI 구조 변경은 screenshot/실행 evidence로 확인하고, functional regression과 visual regression을 구분한다.
 - 기능을 단순히 숨기거나 삭제해서 현대적으로 보이게 만드는 것은 사용자가 명시적으로 요구한 경우에만 한다.
 
+### Light/Dark main-window screenshot review (2026-09-26)
+
+When new owner screenshots show the same main window in Light and Dark, compare each surface against the **same window size, folder/view configuration, build revision and DPI** before claiming a theme-specific regression. A screenshot alone does not establish the current binary SHA, a runtime sequence, actual focus/hover state or system DPI. Keep observed pixels distinct from a design concern, a code-level hypothesis and completed runtime verification. Do not commit user screenshots with personal folder names; record generalized reproduction conditions and acceptance cases in the UI audit.
+
+- **Native scrollbar and intersections:** inspect file-list vertical tracks/thumb/arrows, tree horizontal/vertical tracks and bottom-right junctions in Dark as well as Light/System/High Contrast. Do not claim Dark support from client palette changes alone; identify the final native/non-client painting owner and preserve wheel, keyboard, drag and accessibility.
+- **Single-pane file-list columns:** test default and persisted user column widths separately. If date/time text is ellipsized while substantial unused width remains, inspect sizing/allocation rather than enlarging all columns indiscriminately; preserve manual widths, sorting, split-pane constraints, long names and Korean locale formats.
+- **Navigation and detail-panel density:** assess long Korean/English tree labels, expansion glyph and selected/hover/focus contrast; in the folder-information panel check wrapping, bookmark link spacing and available list width at narrow and wide sizes. Do not remove the user's bookmarks, explanations or navigation features to gain whitespace.
+- **Command-area density:** compare compact commands with large unoccupied drive/bookmark-band space and distinguish design preference from broken layout. Maintain the user's rebar position, icon/text and explicit multiline settings, command IDs, shortcuts, tooltips and chevrons.
+- **Header and interaction cues:** review file-list header font/row bounds and focus/selected/hover cues in both themes, but do not infer a clipped header or wrong selection from a still image alone. Use the same focus action and native rectangle/paint evidence for contested pixels.
+- **UI-09 is independent:** a screenshot with no *obvious* bookmark sliver is not a verified fix. Keep earlier user reproduction and the measured 8-item/1-row, 22px-button/40px-child HWND evidence; close only after matching runtime/visual acceptance. The opt-in `FXFILE_UI09_TRACE=1` path remains available but is not proof until an actual trace is collected.
+
+Track screenshot-specific observations, proposed UX adjustments, severity, owner candidates, preservation constraints and test matrix in `docs/development/UI_UX_AUDIT_20260924.md`. Do not promote the newly observed single-pane issues to code fixes without evidence or treat them as resolved by unrelated UI-08 split-pane changes.
+
 ### 실행 기반 UI/UX 점검
 
 - 현재 실행 점검 목록과 재현/인수 조건은 [`docs/development/UI_UX_AUDIT_20260924.md`](docs/development/UI_UX_AUDIT_20260924.md)를 따른다. 실제 관찰 결함과 source-only 호환성 후보를 구분하고 수정 후 해당 항목의 검증 상태를 갱신한다.
