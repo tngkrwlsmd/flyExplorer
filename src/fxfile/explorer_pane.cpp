@@ -54,7 +54,7 @@ namespace
 const xpr_tchar_t kClassName[] = XPR_STRING_LITERAL("ExplorerPane");
 
 #define MAX_CONTENTS_SHOW_SEL_ITEMS      17
-#define CONTENTS_EXPLORER_STYLE_WIDTH   200
+#define CONTENTS_EXPLORER_STYLE_WIDTH   224
 #define CONTENTS_BASIC_STYLE_HEIGHT      36
 
 //
@@ -366,7 +366,7 @@ void ExplorerPane::recalcLayout(void)
             const xpr_sint_t sMinListWidth =
                 ui::ModernUI::scaleForWindow(280, GetSafeHwnd());
             const xpr_sint_t sMinContentsWidth =
-                ui::ModernUI::scaleForWindow(96, GetSafeHwnd());
+                ui::ModernUI::scaleForWindow(120, GetSafeHwnd());
             const xpr_sint_t sWidthBudget =
                 max(sMinContentsWidth, sRect.Width() - sMinListWidth);
 

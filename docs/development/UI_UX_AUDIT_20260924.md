@@ -315,6 +315,18 @@ UI-08 완료로 판단하지 않는다.
 
 **검증 매트릭스:** 같은 리비전의 프로그램·같은 폴더·동일한 창/패널 크기에서 두 테마를 비교하고, Light/Dark/System·High Contrast 및 100/125/150/200% DPI를 각각 *실행한 범위만* PASS로 기록한다. 기본 사용자 설정과 기존 설정 파일의 결과를 나누며 긴 폴더명/한국어 날짜/북마크 항목을 포함한다. Windows 컴파일, interactive UX, 선택/hover/focus, 스크롤 조작 및 동일 조건 최종 화면은 이 문서 변경으로 실행되지 않았다: **NOT TESTED**. UI-09 및 기존 항목의 상태는 위 화면만으로 종료하지 않는다.
 
+### 2026-09-26 UI-11 / UI-12 / UI-13 first source correction (runtime acceptance pending)
+
+**UI-11:** The original default `ExplorerCtrl` modified-date column width was 140 physical pixels. A new default FOLDER_DEFAULT layout and the re-enabled default modified-date column now use a 225 logical-pixel base scaled to that list HWND's current DPI. Already loaded/persisted column widths, user order, per-folder layouts and manual resizing are intentionally not migrated. A former user profile showing the screenshot may still have its original narrow column, so absence of ellipsis on an existing profile is NOT TESTED.
+
+**UI-12:** The tree now enables documented native `TVS_INFOTIP` and answers `TVN_GETINFOTIP` with the full displayed tree-item label. Existing horizontal scrolling, saved tree width, folder selection, keyboard, native expand glyphs, drag/drop and item editing are otherwise unchanged. Actual tooltip visibility, timing, clipping and high-contrast behavior require Windows verification.
+
+**UI-13:** The optional Explorer-style folder information pane paints its title, dividers and bookmark heading within its actual client width instead of to fixed 200/198px coordinates. Its preferred width grows from 200 to 224 logical px; the narrow-layout minimum budget increases from 96 to 120 logical px only when space permits. The original one-third pane cap and 280 logical-px list budget remain. Bookmark links use 5px vertical separation (previously 2) through their shared position/scroll-height constant. It is still possible for very long names and narrow windows to require user resizing or scrolling: no blanket guarantee of zero truncation is made.
+
+`validate_light_dark_main_view_sizing` checks that these source-level contracts stay connected. Actual Windows Release-x64-Unicode compilation, real Light/Dark/System/High Contrast screenshots, 100/125/150/200% DPI, existing-user settings, live tooltip/hit regions and pane resize behavior have **NOT BEEN TESTED** by this source checkpoint.
+
+**Other screenshot items:** UI-02 remains OPEN: OS-owned native list/tree scrollbar painting cannot safely be declared fixed from a client palette change, and no unsupported Windows private theme strings or behavior-breaking overlay are added here. UI-05 remains PARTIAL: separate Rebar rows were introduced while diagnosing UI-09 and saved user positioning/chevron and multiline must be inspected before regrouping to reduce unused width. UI-14 remains an unconfirmed focus/header appearance candidate because font-metric header sizing already exists. UI-09 remains OPEN despite the lack of clear slivers in the later pair of photographs; compare with the old reproduced screenshot using the opt-in trace where needed. GitHub Actions were NOT RUN.
+
 ## 코드로 확인한 현대 Windows 호환성 과제
 
 아래는 source debt/설계 후보이며 이번 실행에서 해당 동작 실패를 재현한 목록이 아니다. API가 오래됐다는 이유만으로 전체 교체하지 않는다.

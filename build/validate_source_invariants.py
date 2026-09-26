@@ -4338,6 +4338,62 @@ def validate_app_popup_work_area_and_brush_lifetime() -> list[str]:
     return errors
 
 
+def validate_light_dark_main_view_sizing() -> list[str]:
+    """UI-11/12/13: first-use date width, native name discovery and adaptive sidebar."""
+    errors: list[str] = []
+    explorer = (FXFILE_SRC / "explorer_ctrl.cpp").read_text(encoding="utf-8", errors="replace")
+    tree = (FXFILE_SRC / "folder_ctrl.cpp").read_text(encoding="utf-8", errors="replace")
+    tree_h = (FXFILE_SRC / "folder_ctrl.h").read_text(encoding="utf-8", errors="replace")
+    contents = (FXFILE_SRC / "contents_wnd.cpp").read_text(encoding="utf-8", errors="replace")
+    pane = (FXFILE_SRC / "explorer_pane.cpp").read_text(encoding="utf-8", errors="replace")
+    bookmark = (FXFILE_SRC / "bookmark_set_wnd.cpp").read_text(encoding="utf-8", errors="replace")
+
+    # An initial 140px modified-date column truncated localized timestamps.
+    if not re.search(
+        r'explorer_window\.column\.modified_time"\),\s*LVCFMT_LEFT,\s*225,\s*XPR_TRUE',
+        explorer,
+    ):
+        errors.append("UI-11 default modified-date column width must fit localized timestamps")
+    first_use = explorer[explorer.find("void ExplorerCtrl::loadFolderLayout("):
+                         explorer.find("void ExplorerCtrl::loadFolderLayout(void)")]
+    if not all(x in first_use for x in (
+        "sLoadDefault", "mFolderType == FOLDER_DEFAULT",
+        "mColumnItem[j].mWidth", "scaleForWindow("
+    )):
+        errors.append("UI-11 only first-use default layout should DPI-scale date width")
+    if "sLvColumn.cx = ui::ModernUI::scaleForWindow(" not in explorer:
+        errors.append("UI-11 newly enabled date column must honor DPI")
+
+    if not all(x in tree for x in (
+        "TVS_INFOTIP", "ON_NOTIFY_REFLECT(TVN_GETINFOTIP,",
+        "FolderCtrl::OnGetInfoTip(", "GetItemText(sInfo->hItem)", "_tcsncpy_s("
+    )) or "OnGetInfoTip(NMHDR *aNmHdr, LRESULT *aResult)" not in tree_h:
+        errors.append("UI-12 native full-name tree infotip is not wired")
+
+    paint = contents[contents.find("void ContentsWnd::OnPaint("):
+                     contents.find("xpr_bool_t ContentsWnd::OnEraseBkgnd(")]
+    if not all(x in paint for x in (
+        "sClientRect.right, sClientRect.top+60",
+        "max(62, sClientRect.right-8)",
+        "max(10, sClientRect.right-8)",
+        "sMemDc.LineTo(sClientRect.right,"
+    )):
+        errors.append("UI-13 information pane must paint within its real client")
+    if "200, sClientRect.top+60" in paint or "sBookmarkTextTop, 200," in paint:
+        errors.append("UI-13 old fixed-width information pane painting returned")
+    if not all(x in pane for x in (
+        "CONTENTS_EXPLORER_STYLE_WIDTH   224",
+        "scaleForWindow(120, GetSafeHwnd())",
+        "sMinListWidth", "sRect.Width() / 3"
+    )):
+        errors.append("UI-13 info width must remain adaptive with a minimum list budget")
+    if not all(x in bookmark for x in (
+        "OFFSET_HEIGHT = 5", "sScrollInfo.nMax", "sTextSize.cy += OFFSET_HEIGHT"
+    )):
+        errors.append("UI-13 link spacing and scrollbar increments must stay synchronized")
+    return errors
+
+
 def validate_split_pane_column_and_contents_layout() -> list[str]:
     """UI-08: command-line split columns and adaptive contents margins."""
     errors: list[str] = []
@@ -4915,6 +4971,7 @@ def main() -> int:
     errors.extend(validate_toolbar_popup_work_area_and_dc_lifetime())
     errors.extend(validate_fresh_profile_command_band_and_settings_spacing())
     errors.extend(validate_app_popup_work_area_and_brush_lifetime())
+    errors.extend(validate_light_dark_main_view_sizing())
     errors.extend(validate_split_pane_column_and_contents_layout())
     errors.extend(validate_shared_tree_new_profile_default())
     errors.extend(validate_tab_close_discoverability())

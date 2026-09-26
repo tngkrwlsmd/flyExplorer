@@ -167,6 +167,7 @@ BEGIN_MESSAGE_MAP(FolderCtrl, super)
     ON_NOTIFY_REFLECT(TVN_ITEMEXPANDED,   OnItemExpanded)
     ON_NOTIFY_REFLECT(TVN_DELETEITEM,     OnDeleteitem)
     ON_NOTIFY_REFLECT(TVN_GETDISPINFO,    OnGetdispinfo)
+    ON_NOTIFY_REFLECT(TVN_GETINFOTIP,     OnGetInfoTip)
     ON_NOTIFY_REFLECT(TVN_SELCHANGING,    OnSelchanging)
     ON_NOTIFY_REFLECT(TVN_BEGINLABELEDIT, OnBeginlabeledit)
     ON_NOTIFY_REFLECT(TVN_ENDLABELEDIT,   OnEndlabeledit)
@@ -208,6 +209,8 @@ xpr_bool_t FolderCtrl::PreCreateWindow(CREATESTRUCT &aCreateStruct)
     aCreateStruct.style |= TVS_HASBUTTONS;
     aCreateStruct.style |= TVS_SHOWSELALWAYS;
     aCreateStruct.style |= TVS_EDITLABELS;
+    // Long navigation labels remain reachable with their full native text.
+    aCreateStruct.style |= TVS_INFOTIP;
     aCreateStruct.style |= TVS_NONEVENHEIGHT;
 
     return super::PreCreateWindow(aCreateStruct);
@@ -1309,6 +1312,20 @@ void FolderCtrl::beginDragDrop(NM_TREEVIEW* sNmTreeView)
 
         COM_RELEASE(sDataObject);
     }
+}
+
+void FolderCtrl::OnGetInfoTip(NMHDR *aNmHdr, LRESULT *aResult)
+{
+    *aResult = 0;
+    NMTVGETINFOTIP *sInfo = reinterpret_cast<NMTVGETINFOTIP *>(aNmHdr);
+    if (sInfo == XPR_NULL || sInfo->hItem == XPR_NULL ||
+        sInfo->pszText == XPR_NULL || sInfo->cchTextMax <= 0)
+        return;
+
+    const CString sLabel = GetItemText(sInfo->hItem);
+    _tcsncpy_s(
+        sInfo->pszText, sInfo->cchTextMax,
+        static_cast<LPCTSTR>(sLabel), _TRUNCATE);
 }
 
 void FolderCtrl::OnGetdispinfo(NMHDR *aNmHdr, LRESULT *aResult) 

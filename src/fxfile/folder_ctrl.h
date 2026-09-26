@@ -247,6 +247,7 @@ protected:
     afx_msg void OnItemExpanded(NMHDR *aNmHdr, LRESULT *aResult);
     afx_msg void OnDeleteitem(NMHDR *aNmHdr, LRESULT *aResult);
     afx_msg void OnGetdispinfo(NMHDR *aNmHdr, LRESULT *aResult);
+    afx_msg void OnGetInfoTip(NMHDR *aNmHdr, LRESULT *aResult);
     afx_msg void OnSetFocus(CWnd* pOldWnd);
     afx_msg void OnKeyDown(xpr_uint_t nChar, xpr_uint_t nRepCnt, xpr_uint_t nFlags);
     afx_msg void OnKillFocus(CWnd* pNewWnd);

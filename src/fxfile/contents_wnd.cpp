@@ -169,7 +169,10 @@ void ContentsWnd::OnPaint(void)
     // contents picture
     if (gOpt->mConfig.mContentsStyle == CONTENTS_EXPLORER)
     {
-        CRect sContentsRect(0, sClientRect.top, 200, sClientRect.top+60);
+        // The parent adapts ContentsWnd width for narrow/split views. Use
+        // its actual client rect, not the original fixed 200px drawing.
+        CRect sContentsRect(
+            0, sClientRect.top, sClientRect.right, sClientRect.top+60);
 
         // background
         sMemDc.FillSolidRect(sContentsRect, sSurfaceColor);
@@ -179,10 +182,10 @@ void ContentsWnd::OnPaint(void)
         CPen *sOldPen = sMemDc.SelectObject(&sPen);
 
         sMemDc.MoveTo(0, sClientRect.top+60);
-        sMemDc.LineTo(200, sClientRect.top+60);
+        sMemDc.LineTo(sClientRect.right, sClientRect.top+60);
 
         sMemDc.MoveTo(0, sClientRect.top+61);
-        sMemDc.LineTo(200, sClientRect.top+61);
+        sMemDc.LineTo(sClientRect.right, sClientRect.top+61);
 
         sMemDc.SelectObject(sOldPen);
         sPen.DeleteObject();
@@ -222,12 +225,22 @@ void ContentsWnd::OnPaint(void)
         CFont *sOldFont = sMemDc.SelectObject(mTitleFont);
         if (gOpt->mConfig.mContentsStyle == CONTENTS_EXPLORER)
         {
-            sMemDc.DrawText(mFolderName.c_str(), CRect(62, sClientRect.top+7, 198, sClientRect.top+60), DT_LEFT | DT_END_ELLIPSIS | DT_WORDBREAK | DT_EDITCONTROL | DT_NOPREFIX);
+            sMemDc.DrawText(
+                mFolderName.c_str(),
+                CRect(62, sClientRect.top+7,
+                    max(62, sClientRect.right-8), sClientRect.top+60),
+                DT_LEFT | DT_END_ELLIPSIS | DT_WORDBREAK |
+                DT_EDITCONTROL | DT_NOPREFIX);
             sDesc = sClientRect.top+72;
         }
         else
         {
-            sMemDc.DrawText(mFolderName.c_str(), CRect(42, sClientRect.top-3, 500, sClientRect.top+38), DT_SINGLELINE | DT_VCENTER | DT_LEFT | DT_END_ELLIPSIS | DT_NOPREFIX);
+            sMemDc.DrawText(
+                mFolderName.c_str(),
+                CRect(42, sClientRect.top-3,
+                    max(42, sClientRect.right-8), sClientRect.top+38),
+                DT_SINGLELINE | DT_VCENTER | DT_LEFT |
+                DT_END_ELLIPSIS | DT_NOPREFIX);
         }
         sMemDc.SelectObject(sOldFont);
 
@@ -244,7 +257,9 @@ void ContentsWnd::OnPaint(void)
                 _stprintf(sBookmark, XPR_STRING_LITERAL("%s:"), gApp.loadString(XPR_STRING_LITERAL("contents.bookmark")));
 
                 CSize sSize = sMemDc.GetTextExtent(mFolderName.c_str());
-                CRect sBookmarkRect(10, sBookmarkTextTop, 200, sBookmarkTextTop+sSize.cy);
+                CRect sBookmarkRect(
+                    10, sBookmarkTextTop,
+                    max(10, sClientRect.right-8), sBookmarkTextTop+sSize.cy);
 
                 sMemDc.DrawText(sBookmark, sBookmarkRect, DT_LEFT);
                 if (mBookmarkTop != (sBookmarkTextTop+sSize.cy))

@@ -26,7 +26,8 @@ namespace
 {
 const xpr_tchar_t kClassName[] = XPR_STRING_LITERAL("BookmarkSetWnd");
 const xpr_sint_t OFFSET_MARGIN = 5;
-const xpr_sint_t OFFSET_HEIGHT = 2;
+// Bookmark vertical layout and scroll extent must use the same gap.
+const xpr_sint_t OFFSET_HEIGHT = 5;
 
 //
 // control id

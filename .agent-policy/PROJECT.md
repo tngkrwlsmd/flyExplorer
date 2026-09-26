@@ -1035,6 +1035,22 @@ preservation rules, affected controls and acceptance matrix.
 This checkpoint changes instructions/docs only: no program build or
 new Windows interactive verification, and no GitHub Actions execution.
 
+**2026-09-26 UI-11/12/13 first owner-screenshot source checkpoint:**
+After comparing the Light/Dark screenshots, the default 140px date
+column was increased to 225 logical px only for new default layouts
+and newly enabled default modified-time columns, using current HWND
+DPI scaling. Old user/per-folder widths remain unchanged. Native tree
+full-name infotips now handle clipped labels without replacing existing
+horizontal scrolling or folder tree settings. Adaptive information-pane
+title/divider/bookmark heading bounds now follow real client width, with
+224px preferred, 120px conditional minimum and consistent 5px bookmark
+vertical gap while retaining minimum file-list width protection.
+Dedicated targeted source guard added. This checkpoint does NOT
+resolve OS-native Dark scrollbars (UI-02), reorder existing Rebar bands
+(UI-05), claim the header candidate (UI-14) is established, or close
+UI-09. UI-11/12/13 are SOURCE UPDATED / WINDOWS COMPILER AND FINAL
+VISUAL NOT TESTED. No GitHub Actions dispatch.
+
 ### Development handoff rule
 
 - Every new user-requested development item is added to this section (or its successor) before implementation starts.

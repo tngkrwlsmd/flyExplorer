@@ -350,6 +350,22 @@ sequence was visible in these screenshots. This documentation checkpoint made
 no application code changes; Windows build/runtime/visual acceptance remains
 NOT TESTED. GitHub Actions NOT RUN.
 
+**2026-09-26 screenshot implementation checkpoint — UI-11/12/13 SOURCE CHANGED, RUNTIME OPEN:**
+The default modified-time column was statically 140px; new FOLDER_DEFAULT
+layouts and newly enabled date columns now use 225 logical px scaled to the
+list HWND DPI. Saved user/per-folder column widths remain untouched.
+FolderCtrl adds native TVS_INFOTIP full display-name callback while preserving
+native horizontal scrolling and existing tree layout preferences. The adaptive
+ContentsWnd renders header/bookmark text within its actual client instead
+of fixed 200/198px bounds, chooses 224 logical px preferred width and 120px
+conditional minimum, and shares a 5px bookmark link gap with scrolling.
+An additional source invariant protects the linked behavior. This commit
+does not change native non-client scrollbar painting (UI-02), force Rebar
+regrouping (UI-05), or claim an unverified header defect is fixed (UI-14);
+all remain OPEN/PARTIAL as tracked in the UI audit. Existing-profile
+UI-11 behavior and native light/dark/UI-09 screenshot acceptance, current
+Windows build, runtime and DPI verification: NOT TESTED. No Actions run.
+
 ## Outstanding near-term work
 
 1. Address the reproduced settings-page visibility and Dark rendering issues

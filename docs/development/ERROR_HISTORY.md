@@ -3413,3 +3413,43 @@ complete repository preflight, Windows Release-x64-Unicode build,
 native UI trace, real paint-order analysis, same-screen visual
 acceptance or optional DPI/High Contrast checks. UI-09 stays OPEN.
 No GitHub Actions dispatched.
+---
+
+## 2026-09-26 — Light/Dark screen review: initial UI-11/12/13 code corrections
+
+**Observed report:** A matched-looking pair of user-provided Light/Dark
+screenshots shows many truncated modification dates with unused list space,
+clipped long tree labels and a densely wrapped optional folder information
+sidebar. The images do not display build revision, actual DPI or the user
+interaction sequence and alone cannot establish a header/focus defect.
+
+**Source evidence:** `ExplorerCtrl::mDefColumnDefault` initializes the
+modified-time width to 140px. Folder layouts store individual widths,
+so widening an already saved column without permission would destroy
+the user's preference. FolderCtrl did not implement native full-name
+infotips. ContentsWnd rendered header, separator and bookmark-heading
+pixels against fixed 200/198px coordinates despite its parent having
+an adaptive narrow/split pane layout.
+
+**Targeted changes:** First-use default modification dates now start at
+225 DPI-scaled logical pixels and enabling that default date column uses
+the same scaling. Existing per-folder and user-saved widths remain intact.
+Enable `TVS_INFOTIP` and return the item's full displayed label while
+retaining the native horizontal tree scroll. Draw folder title, separator
+and bookmark heading using the actual information-pane client width;
+increase preferred width to 224, conditional minimum to 120, and the
+bookmarks' shared vertical/scrolling gap to 5px. Retain the original
+narrow-pane one-third cap, list minimum-width budget and user settings.
+
+**Regression:** `validate_light_dark_main_view_sizing` guards first-use
+width, native tooltip wiring and client-relative panel geometry, and
+checks link scrolling uses the same row separation.
+
+**Limits:** Source inspection and targeted source safety checks, NOT a
+confirmed runtime repair. Repository-wide preflight, native
+Release-x64-Unicode compile/link, real Dark scrollbar painter, test of
+previously saved 140px widths, actual tree tooltip, DPI, keyboard,
+High Contrast and user screenshot acceptance: NOT TESTED. UI-02 remains
+OPEN (native non-client scrollbar owner), UI-05 PARTIAL (saved Rebar
+layout/chevron/multiline constraints), UI-14 unconfirmed, UI-09 OPEN.
+No GitHub Actions were executed.
