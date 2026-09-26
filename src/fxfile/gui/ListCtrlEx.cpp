@@ -100,9 +100,7 @@ void ListCtrlEx::refreshModernAppearance(xpr_bool_t aRethemeControl)
         mHeaderCtrl->Invalidate(XPR_FALSE);
     }
 
-    // Non-client scrollbars are painted by Windows, not the client palette.
-    // Force their frame to be refreshed when the app changes theme.
-    RedrawWindow(XPR_NULL, XPR_NULL, RDW_INVALIDATE | RDW_FRAME);
+    Invalidate(XPR_FALSE);
 }
 
 xpr_bool_t ListCtrlEx::subclassHeader(xpr_bool_t aBoldFont)
@@ -164,13 +162,6 @@ LRESULT ListCtrlEx::OnThemeChanged(WPARAM aWParam, LPARAM aLParam)
 LRESULT ListCtrlEx::WindowProc(xpr_uint_t msg, WPARAM wParam, LPARAM lParam) 
 {
     LRESULT lResult = super::WindowProc(msg, wParam, lParam);
-
-    // UI-02: let the native list do layout/hit testing and then match only
-    // its exposed scrollbar pixels in Dark (never in High Contrast).
-    if (msg == WM_NCPAINT || msg == WM_VSCROLL ||
-        msg == WM_HSCROLL || msg == WM_MOUSEWHEEL ||
-        msg == WM_NCLBUTTONUP || msg == WM_NCMOUSEMOVE)
-        fxfile::ui::ModernUI::paintDarkNativeScrollbars(m_hWnd);
 
     if (msg == WM_SETREDRAW)
     {

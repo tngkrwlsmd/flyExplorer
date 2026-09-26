@@ -42,7 +42,6 @@ public:
 
 protected:
     void refreshVistaEnhancedTheme(void);
-    virtual LRESULT WindowProc(UINT aMessage, WPARAM aWParam, LPARAM aLParam);
 
 public:
     DWORD GetExtendedStyle() const;

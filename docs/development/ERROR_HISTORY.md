@@ -3505,3 +3505,49 @@ Not tested: full repository preflight, MSVC Release x64 compile/link, real scrol
 이 병합 시점에는 새로운 Windows 빌드나
 실행 화면 확인을 수행하지 않았다.
 GitHub Actions는 실행하지 않았다.
+---
+
+## 2026-09-26 — HANG-01 새 사용자 화면: 내 문서에서 fxfile 응답 없음
+
+- **발생/관찰:** 첨부한 Light 메인 화면의 창 제목에 `(응답 없음)`이
+  표시되고 탐색 트리/파일 목록이 비어 있다. 이전의
+  UI-09 북마크 색상 잔상과는 다른 **런타임 중단 신고**다.
+  스크린샷만으로 빌드 리비전·DPI·마지막 입력·
+  UI 스레드 호출 스택은 확인할 수 없다.
+- **코드에서 확인된 신규 후보:** 앞서 Windows 실행 증거 없이
+  합쳐진 UI-02는 ListCtrlEx/TreeCtrlEx 네이티브 처리 뒤
+  `ModernUI::paintDarkNativeScrollbars`를 호출하며 이 경로에서
+  `GetWindowDC`와 `GetScrollBarInfo`를 사용한다. UI-05는
+  새 사용자 프로필에서 `MainCoolBar::OnSize` 안의
+  `SetBandInfo` 및 부모 `RecalcLayout` 호출로 배치를 변경한다.
+  두 경로 모두 메시지 재진입/레이아웃 연쇄 가능성 때문에
+  조사 대상이지만, **어느 경로가 실제 중단을 만들었는지는
+  스택/실행 로그가 없어 입증하지 못했다.**
+- **안정화 변경:** 위 두 실험적인 UI 경로의 파일 7개를
+  Windows x64 실행 이력이 있는 백업 `cd915a0`의
+  바이트로 선택적으로 복원했다. 정상 운영에 필요한
+  기존 리스트/트리 네이티브 메시지 처리와 기본
+  독립 Rebar 행을 되살렸다. 다른 변경을 전부
+  `git reset`하지 않았다. 특히 실제 Windows
+  진단으로 뒷받침된 UI-09의 MFC
+  `CToolBarEx::OnUpdateCmdUI` 이전/이후 damage
+  계산·native 회귀 검사, UI-11/12/13 및
+  별도의 UI-14 header 코드는 유지했다.
+- **재발 방지:** `validate_main_window_hang_stabilization`은
+  문제 후보였던 Dark non-client post-paint 재도입,
+  `OnSize` 동기적 밴드 변경/부모 재레이아웃,
+  UI-09 줄바꿈 및 UI-14 header 계약 보존을 검사한다.
+  이 검사는 런타임 교착 원인 확정이나
+  실제 화면 응답성 검사를 대체하지 않는다.
+- **검증 경계:** 관련 GitHub 원격 blob 비교 및
+  정적 속성/부정 테스트로 복원 범위를 검사할 수
+  있으나 이번 환경에는 해당 프로젝트의 Windows
+  빌드 실행 환경과 사용자 설정/재현 과정이 없다.
+  `local_ci.bat x64`, 실제 프로그램 시작과 1분 이상
+  내 문서 탐색/크기 변경/Light↔Dark, 기존 프로필과
+  별도 새 프로필, UI-09 잔상 회귀는 **NOT TESTED**.
+  같은 화면에서 중단이 계속된다면 프로세스
+  덤프/스택을 확보해 최종 원인을 식별한다.
+  관련 수정 커밋은 해당 안정화 체크포인트.
+  GitHub Actions 미실행.
+

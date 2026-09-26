@@ -53,14 +53,10 @@ protected:
     void loadState(void);
     void saveState(void);
 
-    xpr_bool_t loadStateFile(void);
+    void loadStateFile(void);
 
     xpr_bool_t loadStateFile(const xpr_tchar_t *aPath);
     void saveStateFile(const xpr_tchar_t *aPath);
-
-protected:
-    // New profiles only: deferred until first usable measured Rebar size.
-    xpr_bool_t mDefaultCompactPending;
 
 protected:
     DECLARE_MESSAGE_MAP()
