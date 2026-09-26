@@ -137,6 +137,20 @@ void TreeCtrlEx::refreshVistaEnhancedTheme(void)
         // association just because enhanced tree behavior is enabled.
         fxfile::ui::ModernUI::resetControlTheme(m_hWnd);
     }
+    // Theme association changes require a new native scrollbar frame.
+    ::RedrawWindow(m_hWnd, NULL, NULL, RDW_INVALIDATE | RDW_FRAME);
+}
+
+LRESULT TreeCtrlEx::WindowProc(UINT aMessage, WPARAM aWParam, LPARAM aLParam)
+{
+    const LRESULT sResult = super::WindowProc(aMessage, aWParam, aLParam);
+    // UI-02: keep the real tree scrollbar HWND behavior and draw only
+    // the exposed non-client surface after the native control.
+    if (aMessage == WM_NCPAINT || aMessage == WM_VSCROLL ||
+        aMessage == WM_HSCROLL || aMessage == WM_MOUSEWHEEL ||
+        aMessage == WM_NCLBUTTONUP || aMessage == WM_NCMOUSEMOVE)
+        fxfile::ui::ModernUI::paintDarkNativeScrollbars(m_hWnd);
+    return sResult;
 }
 
 DWORD TreeCtrlEx::GetExtendedStyle() const

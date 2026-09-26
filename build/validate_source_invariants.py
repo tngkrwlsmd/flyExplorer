@@ -4274,6 +4274,85 @@ def validate_toolbar_popup_work_area_and_dc_lifetime() -> list[str]:
     return errors
 
 
+def validate_remaining_main_window_source_candidates() -> list[str]:
+    """UI-02/05/14: source safeguards only; native Windows acceptance separate."""
+    errors: list[str] = []
+    def read(name: str) -> str:
+        return (FXFILE_SRC / name).read_text(encoding="utf-8", errors="replace")
+
+    modern = read("gui/ModernUI.cpp")
+    modern_h = read("gui/ModernUI.h")
+    ls = read("gui/ListCtrlEx.cpp")
+    tree = read("gui/TreeCtrlEx.cpp")
+    tree_h = read("gui/TreeCtrlEx.h")
+    bar = read("main_coolbar.cpp")
+    bar_h = read("main_coolbar.h")
+    header = read("gui/FlatHeaderCtrl.cpp")
+
+    begin = modern.find("void ModernUI::paintDarkNativeScrollbars(")
+    end = modern.find("xpr_bool_t ModernUI::applyExplorerControlTheme(", begin)
+    entry = modern[begin:end] if begin >= 0 and end > begin else ""
+    part_begin = modern.find("void PaintDarkScrollBarPart(")
+    part = modern[part_begin:begin] if part_begin >= 0 and begin > part_begin else ""
+    if "paintDarkNativeScrollbars(HWND aHwnd)" not in modern_h or not all(
+        x in entry for x in (
+            "XPR_IS_FALSE(sPalette.mDark)",
+            "XPR_IS_TRUE(sPalette.mHighContrast)",
+            "GetScrollBarInfo(aHwnd, OBJID_VSCROLL",
+            "GetScrollBarInfo(aHwnd, OBJID_HSCROLL",
+            "GetWindowDC(aHwnd)", "ReleaseDC(aHwnd, sDC)",
+            "static thread_local bool sPainting"
+        )
+    ) or not all(x in part for x in (
+        "rcScrollBar", "dxyLineButton", "xyThumbTop",
+        "xyThumbBottom", "STATE_SYSTEM_INVISIBLE"
+    )):
+        errors.append("UI-02 must paint measured public/native non-client scrollbar geometry in Dark only")
+    if any(x in modern for x in (
+        'L"DarkMode_Explorer"', 'L"DarkMode_CFD"',
+        "SetPreferredAppMode", "AllowDarkModeForWindow"
+    )):
+        errors.append("UI-02 must avoid undocumented Windows theming")
+    for label, owner in (("list", ls), ("tree", tree)):
+        begin = owner.find("WindowProc(")
+        body = owner[begin:] if begin >= 0 else ""
+        if not all(x in body for x in (
+            "super::WindowProc(", "WM_NCPAINT",
+            "WM_VSCROLL", "WM_HSCROLL",
+            "paintDarkNativeScrollbars(m_hWnd)"
+        )):
+            errors.append(f"UI-02 {label} must paint after the native message owner")
+        if "WM_NCHITTEST" in body or "ShowScrollBar(" in body:
+            errors.append(f"UI-02 {label} must not take over native input")
+    if "virtual LRESULT WindowProc(" not in tree_h:
+        errors.append("UI-02 tree window proc direct declaration missing")
+
+    if not all(x in bar for x in (
+        "sHasSavedCoolBar = loadStateFile()",
+        "XPR_IS_FALSE(sHasSavedCoolBar)",
+        "mDefaultCompactPending = XPR_FALSE;",
+        "RBBIM_IDEALSIZE | RBBIM_STYLE",
+        "sDriveBand.cxIdeal", "sBookmarkBand.cxIdeal",
+        "scaleForWindow(48,", "sBookmarkBand.fStyle &= ~RBBS_BREAK"
+    )) or "mDefaultCompactPending" not in bar_h:
+        errors.append("UI-05 measured new-profile-only band grouping contract missing")
+    toggle = bar[bar.find("void MainCoolBar::setWrapable("):
+                 bar.find("void MainCoolBar::onUpdatedToolbarSize(")]
+    if not all(x in toggle for x in (
+        "XPR_IS_TRUE(aWrapable)", "sRebarBandInfo.fStyle |= RBBS_BREAK;",
+        "sButton.fsState &= ~TBSTATE_WRAP"
+    )):
+        errors.append("UI-05 must preserve multiline and UI-09 native no-wrap reset")
+
+    if not all(x in header for x in (
+        "(sItem.fmt & HDF_OWNERDRAW) == 0",
+        "XPR_IS_TRUE(mMouseHover) &&",
+        "aItemRect.Width() >= 4 * mOffset + sArrowHeight"
+    )):
+        errors.append("UI-14 mixed owner/native header palette and clipped sort glyphs missing")
+    return errors
+
+
 def validate_fresh_profile_command_band_and_settings_spacing() -> list[str]:
     """UI-05: compact default rebar rows, larger settings navigation targets."""
     errors: list[str] = []
@@ -4283,8 +4362,8 @@ def validate_fresh_profile_command_band_and_settings_spacing() -> list[str]:
     modern = (FXFILE_SRC / "gui" / "ModernUI.cpp").read_text(
         encoding="utf-8", errors="replace"
     )
-    # Bookmark now gets an independent default row and fixes old saved
-    # same-row layouts when the existing setWrapable path runs.
+    # The original three default bands initialize independently. New unsaved
+    # profiles may share drive/bookmark later, after measured native AutoSize.
     for title, expect_break in (
         ("&Toolbar", True),
         ("&Drivebar", True),
@@ -4969,6 +5048,7 @@ def main() -> int:
     errors.extend(validate_actions_storage_budget_contract())
     errors.extend(validate_installer_smoke_wiring())
     errors.extend(validate_toolbar_popup_work_area_and_dc_lifetime())
+    errors.extend(validate_remaining_main_window_source_candidates())
     errors.extend(validate_fresh_profile_command_band_and_settings_spacing())
     errors.extend(validate_app_popup_work_area_and_brush_lifetime())
     errors.extend(validate_light_dark_main_view_sizing())

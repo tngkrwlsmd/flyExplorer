@@ -1051,6 +1051,8 @@ resolve OS-native Dark scrollbars (UI-02), reorder existing Rebar bands
 UI-09. UI-11/12/13 are SOURCE UPDATED / WINDOWS COMPILER AND FINAL
 VISUAL NOT TESTED. No GitHub Actions dispatch.
 
+2026-09-26 UI-02/05/14 source checkpoint: Dark native list/tree scrollbars now use public measured GetScrollBarInfo/WindowDC after native events with High Contrast bypass and no replacement of input/accessibility. Only new unsaved single-line drive/bookmark bars can auto-share after post-AutoSize ideal widths fit with 48-DIP slack; saved rebar layout and explicit multiline are preserved. Header final drawing now completes mixed native/owner-draw columns and excludes sort triangles that do not fit. Added targeted regression source checker. These changes require actual Windows compiler, DPI and owner-screenshot visual verification. UI-09 still OPEN; collect FXFILE_UI09_TRACE=1 internal paint route before declaring its pixel root cause. No Actions run.
+
 ### Development handoff rule
 
 - Every new user-requested development item is added to this section (or its successor) before implementation starts.

@@ -211,7 +211,10 @@ void FlatHeaderCtrl::drawItem(CDC *aDC, CRect aItemRect, xpr_uint_t aState, xpr_
         aDC->DrawText(sText, -1, sTextArea, sFormat);
     }
 
-    if (aIndex == mSortColumn)
+    // Do not draw a sorting glyph beyond an extremely narrow resized
+    // column, where it could bleed into the neighboring header cell.
+    if (aIndex == mSortColumn &&
+        aItemRect.Width() >= 4 * mOffset + sArrowHeight)
     {
         const xpr_sint_t sCenterX = aItemRect.right - (mOffset * 2);
         const xpr_sint_t sCenterY = aItemRect.top + aItemRect.Height() / 2;
@@ -282,7 +285,10 @@ void FlatHeaderCtrl::drawFlatBorder(CDC *aDC)
             CRect sItemRect;
             if (GetItemRect(i, &sItemRect) == XPR_TRUE)
             {
-                drawItem(aDC, sItemRect, 0, i);
+                drawItem(
+                    aDC, sItemRect,
+                    XPR_IS_TRUE(mMouseHover) && i == mMouseHoverColumn ?
+                        ODS_HOTLIGHT : 0, i);
                 sTotalWidth = max(sTotalWidth, sItemRect.right);
             }
         }
@@ -296,7 +302,24 @@ void FlatHeaderCtrl::drawFlatBorder(CDC *aDC)
         {
             CRect sItemRect;
             if (GetItemRect(i, &sItemRect) == XPR_TRUE)
+            {
                 sTotalWidth = max(sTotalWidth, sItemRect.right);
+                // UI-14: a newly added non-owner-draw column can coexist
+                // with owner-draw sorted headers. Native paints it in the
+                // system theme; finish its pixels ourselves so one native
+                // header cannot keep a light background in Dark mode.
+                HD_ITEM sItem = {0};
+                sItem.mask = HDI_FORMAT;
+                if (GetItem(i, &sItem) &&
+                    (sItem.fmt & HDF_OWNERDRAW) == 0)
+                {
+                    drawItem(
+                        aDC, sItemRect,
+                        XPR_IS_TRUE(mMouseHover) &&
+                            i == mMouseHoverColumn ?
+                            ODS_HOTLIGHT : 0, i);
+                }
+            }
         }
     }
 

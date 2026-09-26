@@ -111,6 +111,9 @@ public:
     static xpr_bool_t applyRoundedWindowRegion(HWND aHwnd, xpr_sint_t aLogicalRadius);
     static xpr_bool_t applyExplorerControlTheme(HWND aHwnd);
     static xpr_bool_t resetControlTheme(HWND aHwnd);
+    // UI-02: paint only the native non-client scrollbar pixels. Windows
+    // continues to own hit testing, thumb tracking and accessibility.
+    static void paintDarkNativeScrollbars(HWND aHwnd);
 
 private:
     ModernUI(void);

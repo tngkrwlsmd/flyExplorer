@@ -3453,3 +3453,14 @@ High Contrast and user screenshot acceptance: NOT TESTED. UI-02 remains
 OPEN (native non-client scrollbar owner), UI-05 PARTIAL (saved Rebar
 layout/chevron/multiline constraints), UI-14 unconfirmed, UI-09 OPEN.
 No GitHub Actions were executed.
+---
+
+## 2026-09-26: UI-02/05/14 code candidates and UI-09 open verification
+
+User evidence: Dark screenshot had white list/tree native scrollbars; toolbar command row dense against sparse drive/bookmark rows; header and focus concern was only provisional. Previous UI-09 user reproduction and native 8-item, 1-row geometry remain valid separate evidence.
+
+Source candidates: UI-02 draws actual GetScrollBarInfo non-client rectangles/state after OS list/tree processing in Dark, bypasses High Contrast and preserves real Windows scrollbar scrolling/input/accessibility without private theming. UI-05 preserves user-saved Rebar grouping; new unsaved single-line drive/bookmark bands combine only after native AutoSize and a measured client fit with 48-DIP slack. UI-14 completes mixed native/owner-draw cells in the shared header paint path and bounds narrow sort arrows. UI-09 owns no new speculative renderer changes; the previous opt-in internal trace remains.
+
+Regression: validate_remaining_main_window_source_candidates checks source ownership constraints, documented geometry, conditional grouping, no-wrap protection and final mixed-header palette. This check is NOT native Windows acceptance.
+
+Not tested: full repository preflight, MSVC Release x64 compile/link, real scroll/drag/keyboard, saved/new CoolBar, actual header focus interaction, High Contrast, mixed DPI and UI-09 same-screen trace and screenshot. UI-02/05/14 = CODE UPDATED, NOT VISUALLY VERIFIED; UI-09 = OPEN. No Actions dispatched.

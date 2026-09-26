@@ -327,6 +327,18 @@ UI-08 완료로 판단하지 않는다.
 
 **Other screenshot items:** UI-02 remains OPEN: OS-owned native list/tree scrollbar painting cannot safely be declared fixed from a client palette change, and no unsupported Windows private theme strings or behavior-breaking overlay are added here. UI-05 remains PARTIAL: separate Rebar rows were introduced while diagnosing UI-09 and saved user positioning/chevron and multiline must be inspected before regrouping to reduce unused width. UI-14 remains an unconfirmed focus/header appearance candidate because font-metric header sizing already exists. UI-09 remains OPEN despite the lack of clear slivers in the later pair of photographs; compare with the old reproduced screenshot using the opt-in trace where needed. GitHub Actions were NOT RUN.
 
+### 2026-09-26 remaining issues: UI-02/05/14 source improvements, UI-09 unchanged
+
+UI-02: The list/tree palette does not own standard non-client scrollbar pixels. A Dark-only and High-Contrast-safe ModernUI helper now uses documented GetScrollBarInfo to obtain the actual native vertical/horizontal scrollbar, arrow states, thumb and intersection rectangles, then draws only those pixels through GetWindowDC *after* the native control processes non-client and scroll events. The OS still owns hit tests, accessibility, mouse drag, keyboard and scroll range. No undocumented Windows dark theme names or exports were used. The native event ordering, speed of thumb drag, Theme transitions and actual Light/Dark/High Contrast screenshot have NOT BEEN TESTED.
+
+UI-05: The three independent initial bands remain until native AutoSize completes. For *new profiles without a saved CoolBar file only*, single-line visible adjacent drive and bookmark bands may share their row when measured cxIdeal widths fit the Rebar client with 48 DPI-scaled logical pixels of extra room. The pending flag is cleared before mutation to prevent layout re-entry. Loaded manual band position/row choices are authoritative, and explicit multiline bookmarks still occupy a separate row. These are scoped code changes; saved/new/multiline/resize visual behavior is NOT TESTED.
+
+UI-14: The global header mCallDrawItem flag previously assumed every header cell was owner-draw if at least one sent DrawItem. Mixed owner/native headers could leave a native light cell in Dark. After native paint, the final painter now colors only the remaining non-owner-draw cells; the manual path includes hover and sort glyphs are suppressed when a user-resized column is too narrow. The screenshot's specific header/focus concern itself remains UNCONFIRMED pending interaction.
+
+UI-09 remains OPEN: prior screenshot showed slivers at a revision that was actually built. The native Windows geometry was one 22px item row within a 40px child, not a native second row. The current FXFILE_UI09_TRACE=1 internal paint/size tracing still needs a revision-matched run to identify the final owner; new rebar grouping is delayed and slack-guarded but is NOT a verified remedy.
+
+A source invariant validate_remaining_main_window_source_candidates now checks documented native geometry, accessibility-preserving owner order, new-profile-only rebar layout and mixed header safeguards. No Windows local_ci.bat x64, same-screen UI-02/05/09/14 runtime, 100/125/150/200% DPI or High Contrast execution has been performed. GitHub Actions was not executed.
+
 ## 코드로 확인한 현대 Windows 호환성 과제
 
 아래는 source debt/설계 후보이며 이번 실행에서 해당 동작 실패를 재현한 목록이 아니다. API가 오래됐다는 이유만으로 전체 교체하지 않는다.

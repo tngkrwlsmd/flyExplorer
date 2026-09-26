@@ -366,6 +366,8 @@ all remain OPEN/PARTIAL as tracked in the UI audit. Existing-profile
 UI-11 behavior and native light/dark/UI-09 screenshot acceptance, current
 Windows build, runtime and DPI verification: NOT TESTED. No Actions run.
 
+2026-09-26 source checkpoint for remaining screenshot issues: UI-02 uses public GetScrollBarInfo-based list/tree Dark non-client scrollbar post-paint with native input preserved and High Contrast bypass. UI-05 only on new, unsaved, single-line profiles can combine drive/bookmark after measured native widths and 48-DIP slack fit the Rebar client; saved custom layout persists. UI-14 mixed owner/native header final painting and narrow sort glyph bounds are hardened, but the reported visual concern is unconfirmed. These are CODE UPDATED / WINDOWS COMPILE AND FINAL VISUAL NOT TESTED; do not close UI-02/05/14 yet. UI-09 still OPEN pending original-screen internal FXFILE_UI09_TRACE=1 ownership data. No GitHub Actions run.
+
 ## Outstanding near-term work
 
 1. Address the reproduced settings-page visibility and Dark rendering issues
