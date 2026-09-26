@@ -96,6 +96,7 @@ public:
     protected:
     virtual LRESULT WindowProc(UINT message, WPARAM wParam, LPARAM lParam);
     virtual BOOL OnNotify(WPARAM wParam, LPARAM lParam, LRESULT* pResult);
+    virtual void OnUpdateCmdUI(CFrameWnd* pTarget, BOOL bDisableIfNoHndler);
     //}}AFX_VIRTUAL
 
     virtual BOOL HasButtonText( UINT nID );

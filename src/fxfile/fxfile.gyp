@@ -369,6 +369,7 @@
                 './gui/rebar/SizableReBar.h',
                 './gui/rebar/ToolBarEx.cpp',
                 './gui/rebar/ToolBarEx.h',
+                './gui/rebar/ToolbarLayoutDamage.h',
                 './gui/rebar/WinAppEx.cpp',
                 './gui/rebar/WinAppEx.h',
 

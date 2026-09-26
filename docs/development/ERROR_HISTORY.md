@@ -3413,3 +3413,30 @@ complete repository preflight, Windows Release-x64-Unicode build,
 native UI trace, real paint-order analysis, same-screen visual
 acceptance or optional DPI/High Contrast checks. UI-09 stays OPEN.
 No GitHub Actions dispatched.
+
+
+## 2026-09-26 — UI-09: MFC command update omits vacated toolbar pixels
+
+- **발생 / 최초 실제 실패:** `dca62af` 기반 실제 Windows 실행에서 8개 북마크,
+  1행, WRAP 없음에도 테마 적용 뒤 아이콘/텍스트 하단 잔상이 재현됐다.
+  paint trace의 item 높이/DC clip은 `36/(0,0,1313,40)` 다음에
+  `22/(0,0,572,22)`였으므로 이전 하단 픽셀이 다음 update region 밖에 있었다.
+- **원인 진단:** MFC `CToolCmdUI::SetCheck(FALSE)`는 checkbox style을 추가하고
+  `_SetButton`의 delete/reinsert를 거친다. native control이 높이를 재계산하지만
+  MFC는 새 `TB_GETITEMRECT`만 invalidate한다. 계측한 `OnUpdateCmdUI` 직전
+  36px, 직후 22px가 직접 증거다. 같은 실패의 native custom-draw 중복 호출은
+  관찰되지 않았다. 이전 wrap/Rebar/first-row 수정으로는 이 damage 누락을 고칠 수 없다.
+- **해결 방법:** bookmark에 한해 inherited command update 전후 native geometry를
+  비교하고, 변경된 항목의 old/new footprint를 invalidate한다. 실제 drawing과
+  command semantics, multiline/overflow/tooltip/drag/drop은 그대로 보존한다.
+  별도 renderer, 전체 repaint, 강제 높이를 추가하지 않는다. 임시 trace는 제거한다.
+- **재발 방지:** 공유 `ToolbarLayoutDamage.h`를 native functional suite에서
+  축소/확장/이동/행 위치 변경/추가/삭제/동일 좌표로 검사한다. 변경 없는 먼 항목이
+  damage를 넓히지 않는 것도 검사한다. 96/120/144/192 좌표 검사는 실제 DPI visual
+  검증과 구분한다. preflight는 실제 command seam/test 연결과 direct include를
+  보호하고 이 경계의 임의 repaint/resize 및 임시 trace 재도입을 금지한다.
+- **검증 상태:** 진단 빌드의 x64 compile/link PASS, native regression 17/0,
+  동일 Light→Dark 화면의 잔상 소멸 직접 확인. 최종 검증은
+  [UI-09 실행 보고서](UI09_ROOT_CAUSE_20260926.md)에 갱신한다.
+  자동 smoke는 사용자 HKCU 보호로 SKIPPED이며 Actions는 실행하지 않았다.
+- **관련 commit:** 이 항목과 제품 수정의 동일 checkpoint (`git log --grep="bookmark geometry damage"`).

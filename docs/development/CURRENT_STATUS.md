@@ -1,4 +1,4 @@
-# flyExplorer — current project status (2026-09-25)
+# flyExplorer — current project status (2026-09-26)
 
 **Purpose:** Fast, current-state entry point for maintainers and development
 agents. This is an evidence-labelled summary, not a replacement for source,
@@ -8,6 +8,14 @@ For the chronological diagnosis and original evidence, retain and use
 [`ERROR_HISTORY.md`](ERROR_HISTORY.md) rather than moving/deleting entries.
 
 ## Active baseline and verified scope
+
+**UI-09 current investigation (2026-09-26):** the matching bookmark fragments
+were reproduced after a theme change. Runtime traces prove that MFC command UI
+update changes native item height from 36 to 22px while invalidating only the
+new rectangle. A scoped old/new geometry invalidation fix removed the fragments
+in the diagnostic build. Final trace-free build and extended interaction checks
+are in progress; see [the root-cause evidence](UI09_ROOT_CAUSE_20260926.md).
+Earlier UI-09 hypotheses below are historical, not the current diagnosis.
 
 | Subject | Current observed state | Evidence limit |
 | --- | --- | --- |
