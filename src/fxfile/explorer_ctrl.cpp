@@ -244,7 +244,7 @@ ExplorerCtrl::~ExplorerCtrl(void)
 
 ExplorerCtrl::DefColumnInfo ExplorerCtrl::mDefColumnDefault[] = 
 {
-    { xpr::GuidNone, 0, XPR_STRING_LITERAL("explorer_window.column.name"),             LVCFMT_LEFT,  150, XPR_TRUE  },
+    { xpr::GuidNone, 0, XPR_STRING_LITERAL("explorer_window.column.name"),             LVCFMT_LEFT,  280, XPR_TRUE  },
     { xpr::GuidNone, 1, XPR_STRING_LITERAL("explorer_window.column.size"),             LVCFMT_RIGHT,  80, XPR_TRUE  },
     { xpr::GuidNone, 2, XPR_STRING_LITERAL("explorer_window.column.type"),             LVCFMT_LEFT,  150, XPR_TRUE  },
     { xpr::GuidNone, 3, XPR_STRING_LITERAL("explorer_window.column.modified_time"),    LVCFMT_LEFT,  225, XPR_TRUE  },
@@ -1971,9 +1971,11 @@ xpr_sint_t ExplorerCtrl::addColumn(ColumnId *aColumnId, xpr_sint_t aInsert)
         sLvColumn.pszText = (xpr_tchar_t *)gApp.loadString(mDefColumnInfo[aColumnId->mPropertyId].mNameStringId);
         sLvColumn.fmt     = mDefColumnInfo[aColumnId->mPropertyId].mFormat;
         sLvColumn.cx      = mDefColumnInfo[aColumnId->mPropertyId].mWidth;
-        // UI-11: only the default modification-date column needs room for
-        // localized date/time; re-enabling it must honor current monitor DPI.
-        if (mFolderType == FOLDER_DEFAULT && aColumnId->mPropertyId == 3)
+        // Apply HWND DPI to newly enabled default name and date columns.
+        // Existing per-folder/user widths are loaded without migration.
+        if (mFolderType == FOLDER_DEFAULT &&
+            (aColumnId->mPropertyId == 0 ||
+             aColumnId->mPropertyId == 3))
             sLvColumn.cx = ui::ModernUI::scaleForWindow(
                 sLvColumn.cx, GetSafeHwnd());
     }
@@ -2221,11 +2223,11 @@ void ExplorerCtrl::loadFolderLayout(xpr_sint_t &aDefColumnCount, DefColumnInfo *
                 continue;
 
             mFolderLayout->mColumnItem[j].mWidth      = (*aDefColumnInfo)[i].mWidth;
-            // Only new default folder layouts use the expanded width.
-            // Existing persisted layouts (including manually sized columns)
-            // follow their stored widths without an implicit migration.
+            // Only first-use default layouts use expanded name/date widths.
+            // Saved user column widths and sort/order are never overwritten.
             if (mFolderType == FOLDER_DEFAULT &&
-                (*aDefColumnInfo)[i].mPropertyId == 3)
+                ((*aDefColumnInfo)[i].mPropertyId == 0 ||
+                 (*aDefColumnInfo)[i].mPropertyId == 3))
             {
                 mFolderLayout->mColumnItem[j].mWidth =
                     ui::ModernUI::scaleForWindow(

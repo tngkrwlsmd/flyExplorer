@@ -66,6 +66,121 @@ COLORREF ResolveVisibleFilterTextColor(
     return sContrast >= 4.5 ?
         aConfiguredColor : aPalette.mText;
 }
+
+COLORREF MutedFilterSelectionColor(
+    const ui::ThemePalette &aPalette, xpr_bool_t aFocused)
+{
+    // Selected filtering rules should be discoverable, not a solid blue
+    // highlight. High Contrast continues to use the native list renderer.
+    const xpr_sint_t sWeight = XPR_IS_TRUE(aFocused) ? 12 : 6;
+    const COLORREF sBase = aPalette.mElevated;
+    const COLORREF sAccent = aPalette.mSelection;
+    return RGB(
+        (GetRValue(sBase) * (100 - sWeight) +
+            GetRValue(sAccent) * sWeight) / 100,
+        (GetGValue(sBase) * (100 - sWeight) +
+            GetGValue(sAccent) * sWeight) / 100,
+        (GetBValue(sBase) * (100 - sWeight) +
+            GetBValue(sAccent) * sWeight) / 100);
+}
+
+xpr_bool_t DrawMutedFilterSelection(
+    CListCtrl &aList, NMLVCUSTOMDRAW &aDraw, const FilterItem &aFilter,
+    const ui::ThemePalette &aPalette)
+{
+    // Keep native selection state, keyboard navigation and accessibility.
+    // Draw only the selected pixels. Never toggle LVIS_SELECTED in paint.
+    const xpr_sint_t sIndex =
+        static_cast<xpr_sint_t>(aDraw.nmcd.dwItemSpec);
+    CRect sRow;
+    CRect sLabel;
+    CRect sIcon;
+    CRect sExtensions;
+    if (aList.GetItemRect(sIndex, &sRow, LVIR_BOUNDS) == FALSE ||
+        aList.GetItemRect(sIndex, &sLabel, LVIR_LABEL) == FALSE ||
+        aList.GetSubItemRect(sIndex, 1, LVIR_BOUNDS, sExtensions) == FALSE)
+        return XPR_FALSE;
+
+    const xpr_bool_t sHaveIconRect =
+        aList.GetItemRect(sIndex, &sIcon, LVIR_ICON) != FALSE ?
+        XPR_TRUE : XPR_FALSE;
+
+    CRect sClient;
+    aList.GetClientRect(&sClient);
+    CRect sSelected(sRow);
+    sSelected.right = max(sSelected.right, sExtensions.right);
+    sSelected.IntersectRect(sSelected, sClient);
+    if (sSelected.IsRectEmpty())
+        return XPR_FALSE;
+
+    const xpr_bool_t sFocused =
+        ::GetFocus() == aList.GetSafeHwnd() ? XPR_TRUE : XPR_FALSE;
+    const COLORREF sFill = MutedFilterSelectionColor(
+        aPalette, sFocused);
+    const COLORREF sText = ResolveVisibleFilterTextColor(
+        aFilter.mColor, sFill, aPalette);
+    HDC sDC = aDraw.nmcd.hdc;
+    const int sSaved = ::SaveDC(sDC);
+    if (sSaved == 0)
+        return XPR_FALSE;
+
+    ::IntersectClipRect(
+        sDC, sSelected.left, sSelected.top,
+        sSelected.right, sSelected.bottom);
+    HBRUSH sBrush = ::CreateSolidBrush(sFill);
+    if (sBrush != NULL)
+    {
+        ::FillRect(sDC, &sSelected, sBrush);
+        ::DeleteObject(sBrush);
+    }
+    const HFONT sFont = reinterpret_cast<HFONT>(
+        aList.SendMessage(WM_GETFONT));
+    if (sFont != NULL)
+        ::SelectObject(sDC, sFont);
+    ::SetBkMode(sDC, TRANSPARENT);
+    ::SetTextColor(sDC, sText);
+
+    const xpr_sint_t sInset = max(
+        3, ui::ModernUI::scaleForWindow(4, aList.GetSafeHwnd()));
+    CImageList *sImages = aList.GetImageList(LVSIL_SMALL);
+    if (sImages != NULL && aFilter.mIconIndex >= 0 &&
+        XPR_IS_TRUE(sHaveIconRect))
+    {
+        CDC *sPaintDC = CDC::FromHandle(sDC);
+        sImages->Draw(
+            sPaintDC, aFilter.mIconIndex,
+            CPoint(sIcon.left, sIcon.top), ILD_TRANSPARENT);
+    }
+
+    // Use native label/subitem coordinates even when horizontally scrolled.
+    sLabel.right = min(sExtensions.left, sLabel.right);
+    sLabel.right = max(sLabel.left, sLabel.right - sInset);
+    sExtensions.left += sInset;
+    sExtensions.right -= sInset;
+    const xpr_uint_t sFormat =
+        DT_SINGLELINE | DT_VCENTER | DT_END_ELLIPSIS | DT_NOPREFIX | DT_LEFT;
+    if (sLabel.right > sLabel.left)
+        ::DrawText(sDC, aFilter.mName.c_str(), -1, &sLabel, sFormat);
+    if (sExtensions.right > sExtensions.left)
+        ::DrawText(sDC, aFilter.mExts.c_str(), -1, &sExtensions, sFormat);
+
+    // A thin neutral focus cue replaces the native bright highlight.
+    if (XPR_IS_TRUE(sFocused) &&
+        (aDraw.nmcd.uItemState & CDIS_FOCUS) != 0)
+    {
+        CRect sOutline(sSelected);
+        sOutline.DeflateRect(0, 0, 1, 1);
+        HBRUSH sBorder = ::CreateSolidBrush(aPalette.mBorder);
+        if (sBorder != NULL)
+        {
+            ::FrameRect(sDC, &sOutline, sBorder);
+            ::DeleteObject(sBorder);
+        }
+    }
+    ::RestoreDC(sDC, sSaved);
+    return XPR_TRUE;
+}
+
 } // namespace
 
 CfgAppearanceFilteringDlg::CfgAppearanceFilteringDlg(void)
@@ -316,6 +431,19 @@ void CfgAppearanceFilteringDlg::OnCustomDrawList(NMHDR* pNMHDR, LRESULT* pResult
         // in Dark mode (which left white/pale text invisible in Light).
         sFilterTextColor = ResolveVisibleFilterTextColor(
             sFilterTextColor, sListBackground, sPalette);
+
+        // Native ListView selection ignores clrTextBk and repaints a strong
+        // blue highlight. In normal themes, draw subtle rows ourselves while
+        // retaining native selection state and the High Contrast OS renderer.
+        if ((pLVCD->nmcd.uItemState & CDIS_SELECTED) != 0 &&
+            XPR_IS_FALSE(sPalette.mHighContrast) &&
+            XPR_IS_NOT_NULL(sFilterItem) &&
+            XPR_IS_TRUE(DrawMutedFilterSelection(
+                mListCtrl, *pLVCD, *sFilterItem, sPalette)))
+        {
+            *pResult = CDRF_SKIPDEFAULT;
+            return;
+        }
 
         if ((pLVCD->nmcd.uItemState & CDIS_SELECTED) != 0)
         {

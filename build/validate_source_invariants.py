@@ -4512,6 +4512,97 @@ def validate_app_popup_work_area_and_brush_lifetime() -> list[str]:
     return errors
 
 
+def validate_muted_filter_preview_and_default_name_width() -> list[str]:
+    """Preview selection and new-default filename-width source regression."""
+    errors: list[str] = []
+    filtering = (FXFILE_SRC / "cfg" /
+                 "cfg_appearance_filtering_dlg.cpp").read_text(
+                     encoding="utf-8", errors="replace")
+    explorer = (FXFILE_SRC / "explorer_ctrl.cpp").read_text(
+        encoding="utf-8", errors="replace")
+
+    helper_begin = filtering.find("xpr_bool_t DrawMutedFilterSelection(")
+    helper_end = filtering.find("} // namespace", helper_begin)
+    helper = (filtering[helper_begin:helper_end]
+              if helper_begin >= 0 and helper_end > helper_begin else "")
+    mix_begin = filtering.find("COLORREF MutedFilterSelectionColor(")
+    mix_end = filtering.find("xpr_bool_t DrawMutedFilterSelection(", mix_begin)
+    mix = (filtering[mix_begin:mix_end]
+           if mix_begin >= 0 and mix_end > mix_begin else "")
+    draw_begin = filtering.find("void CfgAppearanceFilteringDlg::OnCustomDrawList(")
+    draw_end = filtering.find("void CfgAppearanceFilteringDlg::OnListAdd(", draw_begin)
+    draw = (filtering[draw_begin:draw_end]
+            if draw_begin >= 0 and draw_end > draw_begin else "")
+
+    if not all(x in mix for x in (
+        "sWeight = XPR_IS_TRUE(aFocused) ? 12 : 6",
+        "aPalette.mElevated", "aPalette.mSelection",
+    )):
+        errors.append("filtering: selection preview must be a subtle palette blend")
+    if not all(x in helper for x in (
+        "GetItemRect(sIndex, &sRow, LVIR_BOUNDS)",
+        "GetItemRect(sIndex, &sLabel, LVIR_LABEL)",
+        "GetSubItemRect(sIndex, 1, LVIR_BOUNDS, sExtensions)",
+        "GetImageList(LVSIL_SMALL)", "aFilter.mIconIndex",
+        "aFilter.mName.c_str()", "aFilter.mExts.c_str()",
+        "ResolveVisibleFilterTextColor(", "CDIS_FOCUS",
+        "::FillRect(", "::RestoreDC(sDC, sSaved)",
+    )) or any(x in helper for x in (
+        "SetItemState(", "LVIS_SELECTED,", "DeleteItem(",
+    )):
+        errors.append("filtering: selected paint must preserve icons, text, state and focus")
+    selected_start = draw.find("DrawMutedFilterSelection(")
+    native_start = draw.find("pLVCD->clrText =")
+    if selected_start < 0 or native_start < selected_start or not all(
+        x in draw[:native_start] for x in (
+            "XPR_IS_FALSE(sPalette.mHighContrast)",
+            "CDRF_SKIPDEFAULT", "return;",
+        )
+    ):
+        errors.append("filtering: own selected pixels but retain native High Contrast")
+    block_begin = explorer.find(
+        "ExplorerCtrl::DefColumnInfo ExplorerCtrl::mDefColumnDefault[]")
+    block_end = explorer.find(
+        "ExplorerCtrl::DefColumnInfo ExplorerCtrl::mDefColumnComputer[]",
+        block_begin)
+    default_block = (explorer[block_begin:block_end]
+                     if block_begin >= 0 and block_end > block_begin else "")
+    name = next((line for line in default_block.splitlines()
+                 if 'explorer_window.column.name' in line), "")
+    date = next((line for line in default_block.splitlines()
+                 if 'explorer_window.column.modified_time' in line), "")
+    if not re.search(r"LVCFMT_LEFT,\s*280,\s*XPR_TRUE", name):
+        errors.append("new FOLDER_DEFAULT name width must be 280 logical pixels")
+    if not re.search(r"LVCFMT_LEFT,\s*225,\s*XPR_TRUE", date):
+        errors.append("localized default modification date must retain 225 width")
+    load_begin = explorer.find("void ExplorerCtrl::loadFolderLayout(")
+    load_end = explorer.find("void ExplorerCtrl::loadFolderLayout(void)", load_begin)
+    load = explorer[load_begin:load_end] if load_begin >= 0 and load_end > load_begin else ""
+    if not all(x in load for x in (
+        "XPR_IS_TRUE(sLoadDefault)",
+        "(*aDefColumnInfo)[i].mPropertyId == 0",
+        "(*aDefColumnInfo)[i].mPropertyId == 3",
+        "ui::ModernUI::scaleForWindow(",
+    )):
+        errors.append("new default width must not migrate persisted user widths")
+    modern = (FXFILE_SRC / "gui" / "ModernUI.cpp").read_text(
+        encoding="utf-8", errors="replace")
+    scrollbar_begin = modern.find("void PaintDarkScrollBarPart(")
+    scrollbar_end = modern.find(
+        "void ModernUI::paintDarkNativeScrollbars(", scrollbar_begin)
+    scrollbar = (modern[scrollbar_begin:scrollbar_end]
+                 if scrollbar_begin >= 0 and scrollbar_end > scrollbar_begin
+                 else "")
+    # SCROLLBARINFO index 1 is top/right and 5 bottom/left.
+    # Correct arrow state handling does not solve native thumb drag repaint.
+    if not all(x in scrollbar for x in (
+        "aVertical ? (sIndex == 0 ? 1 : 5)",
+        "(sIndex == 0 ? 5 : 1)",
+    )):
+        errors.append("UI-02 scrollbar arrow state mapping must match orientation")
+    return errors
+
+
 def validate_light_dark_main_view_sizing() -> list[str]:
     """UI-11/12/13: first-use date width, native name discovery and adaptive sidebar."""
     errors: list[str] = []
@@ -5149,6 +5240,7 @@ def main() -> int:
     errors.extend(validate_main_window_hang_stabilization())
     errors.extend(validate_fresh_profile_command_band_and_settings_spacing())
     errors.extend(validate_app_popup_work_area_and_brush_lifetime())
+    errors.extend(validate_muted_filter_preview_and_default_name_width())
     errors.extend(validate_light_dark_main_view_sizing())
     errors.extend(validate_split_pane_column_and_contents_layout())
     errors.extend(validate_shared_tree_new_profile_default())

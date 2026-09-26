@@ -2039,7 +2039,12 @@ void PaintDarkScrollBarPart(
                 if (sIndex == 0) sButton.right = sBar.left + sButtonExtent;
                 else sButton.left = sBar.right - sButtonExtent;
             }
-            const DWORD sState = aInfo.rgstate[sIndex == 0 ? 1 : 5];
+            // SCROLLBARINFO index 1 is top/right; index 5 is bottom/left.
+            // The native horizontal bar's left/right arrow states are
+            // reversed relative to the vertical bar's top/bottom arrows.
+            const DWORD sState = aInfo.rgstate[
+                aVertical ? (sIndex == 0 ? 1 : 5) :
+                            (sIndex == 0 ? 5 : 1)];
             ::SetDCBrushColor(
                 aDC, (sState & STATE_SYSTEM_PRESSED) != 0 ?
                     aPalette.mPressed : aPalette.mChrome);
