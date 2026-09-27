@@ -17,7 +17,6 @@
     <AppContainerApplication>false</AppContainerApplication>
     <AppxPackage>false</AppxPackage>
     <WindowsPackageType>None</WindowsPackageType>
-    <TargetFramework>uap10.0</TargetFramework>
     <WindowsAppSDKSelfContained>false</WindowsAppSDKSelfContained>
     <ApplicationType>Windows Store</ApplicationType>
     <ApplicationTypeRevision>10.0</ApplicationTypeRevision>

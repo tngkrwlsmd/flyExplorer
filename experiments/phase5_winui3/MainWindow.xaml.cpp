@@ -89,8 +89,8 @@ namespace winrt::FlyExplorerWinUI3NavPoC::implementation
     void MainWindow::RunRealProductCommand(std::uint32_t id)
     {
         const bool handled = mProductBridge.SendNavCommand(id);
-        RefreshBridge(handled ? L"Actual product command handled" :
-                                L"Product command rejected or unavailable");
+        const wchar_t* caption = handled ? L"Actual product command handled" : L"Product command rejected or unavailable";
+        RefreshBridge(hstring(std::wstring(caption) + L" ID=" + std::to_wstring(id)));
     }
 
     void MainWindow::Refresh(hstring const& status)

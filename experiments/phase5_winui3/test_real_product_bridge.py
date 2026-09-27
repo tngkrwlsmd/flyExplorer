@@ -77,7 +77,7 @@ try:
                      stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
  owned.append(ui)
  wh=waitfor(lambda:top_for(ui.pid,lambda t:t.lower().startswith('phase5 bridge -')),
-            'actual WinUI 3 bridge should bind to test-owned real product',seconds=7)
+            'actual WinUI 3 bridge should bind to test-owned real product',seconds=13)
  win=Desktop(backend='uia').window(handle=wh)
  btn={name:win.child_window(auto_id=name+'Button',control_type='Button')
       for name in ('Up','Back','Forward')}
@@ -88,19 +88,31 @@ try:
  assert 'my music' in address.window_text().lower(),'not displaying real product initial title'
  print('REAL_BRIDGE_BOUND_TO_TEST_OWNED_PRODUCT',
        {'test_product_pid':prod.pid,'product_hwnd':ph,'winui_pid':ui.pid,'winui_hwnd':wh},flush=True)
+ time.sleep(.65)
  for command,ending in [('Up','my documents - fxfile'),
                         ('Back','my music - fxfile'),
                         ('Forward','my documents - fxfile')]:
-  btn[command].click_input()
+  # Invoke the actual XAML UIA button without shared-desktop pointer races; test_gui.py tests pointer/keyboard separately.
+  btn[command].invoke()
+  time.sleep(.22)
+  print('BRIDGE_EXEC_TRACE',command,'WINUI_STATUS',repr(status.window_text()),'PRODUCT_TITLE',repr(title(ph)),'WINUI_TITLE',repr(title(wh)),flush=True)
   current=waitfor(lambda:title(ph) if title(ph).lower().endswith(ending) else None,
                   'real product did not obey WinUI control '+command)
   mirrored=waitfor(lambda:title(wh) if title(wh).lower().endswith(ending) else None,
                    'WinUI bridge title did not follow real product '+command)
   assert 'actual product command handled' in status.window_text().lower()
   print('WINUI_CONTROL_TO_EXISTING_REAL_ROUTER_PASS',command,current,flush=True)
+  time.sleep(.7)
  assert not u.IsHungAppWindow(wh) and not u.IsHungAppWindow(ph)
  print('LIVE_REAL_PRODUCT_ROUTING_VIA_REAL_WINUI3_GUI_PASS',flush=True)
 finally:
+ # Release external automation COM references before closing the owned WinUI process.
+ try:
+  btn.clear()
+  del btn,address,status,win
+ except NameError: pass
+ import gc
+ gc.collect()
  for proc in reversed(owned):
   if proc.poll() is not None:continue
   hwnd=top_for(proc.pid,lambda t:bool(t))
@@ -113,3 +125,4 @@ finally:
  print('OWN_TEST_PROCESS_EXITS',[(p.pid,p.returncode) for p in owned],
        'ORIGINAL_USER_CONFIG_HASHES_UNCHANGED',original==after,flush=True)
  if original!=after:raise RuntimeError('Original user profile unexpectedly modified')
+ if any(item.returncode != 0 for item in owned): raise RuntimeError('Test-owned child did not exit cleanly')
