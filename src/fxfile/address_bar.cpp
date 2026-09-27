@@ -186,6 +186,8 @@ xpr_sint_t AddressBar::OnCreate(LPCREATESTRUCT aCreateStruct)
 
 void AddressBar::OnPaint(void)
 {
+    // Blend the location field with its surrounding command chrome rather
+    // than painting a contrasting full-width raised rectangle.
     // ComboBoxEx may draw the classic sunken 3-D edge inside its client
     // paint even after WS_BORDER/WS_EX_CLIENTEDGE are removed. Let it keep
     // its native layout/content behavior, then erase only those 2-DPI-pixel
@@ -194,7 +196,7 @@ void AddressBar::OnPaint(void)
 
     const ui::ThemePalette sPalette = ui::ModernUI::getPalette();
     if (XPR_IS_FALSE(sPalette.mHighContrast))
-        CoverClassicAddressClientEdge(m_hWnd, sPalette.mElevated);
+        CoverClassicAddressClientEdge(m_hWnd, sPalette.mChrome);
 }
 
 void AddressBar::OnNcPaint(void)
@@ -1161,7 +1163,7 @@ void AddressBar::applyModernAppearance(void)
         if (XPR_IS_NOT_NULL(mBackgroundBrush.m_hObject))
             mBackgroundBrush.DeleteObject();
 
-        mBackgroundBrush.CreateSolidBrush(sPalette.mElevated);
+        mBackgroundBrush.CreateSolidBrush(sPalette.mChrome);
     }
     else if (XPR_IS_NOT_NULL(mBackgroundBrush.m_hObject))
     {
@@ -1538,7 +1540,7 @@ LRESULT AddressBar::handleComboCtlColor(xpr_uint_t aMessage, HDC aDC, HWND aCont
     const ui::ThemePalette sPalette = ui::ModernUI::getPalette();
 
     // High Contrast keeps the native/system rendering path. Light and Dark
-    // share the same palette contract so the address field stays visually
+    // share the same chrome surface so the address field stays visually
     // aligned with the surrounding navigation surface.
     if (XPR_IS_TRUE(sPalette.mHighContrast))
         return 0;
@@ -1558,7 +1560,7 @@ LRESULT AddressBar::handleComboCtlColor(xpr_uint_t aMessage, HDC aDC, HWND aCont
         sTextColor = sPalette.mSecondaryText;
 
     ::SetTextColor(aDC, sTextColor);
-    ::SetBkColor(aDC, sPalette.mElevated);
+    ::SetBkColor(aDC, sPalette.mChrome);
     ::SetBkMode(aDC, OPAQUE);
 
     return reinterpret_cast<LRESULT>((HBRUSH)mBackgroundBrush.GetSafeHandle());
@@ -1608,7 +1610,7 @@ void AddressBar::drawModernComboButton(HWND aComboHwnd)
         XPR_TRUE :
         XPR_FALSE;
 
-    COLORREF sFillColor = sPalette.mElevated;
+    COLORREF sFillColor = sPalette.mChrome;
     COLORREF sArrowColor = sPalette.mText;
     if (XPR_IS_FALSE(sEnabled))
     {
@@ -1731,7 +1733,7 @@ LRESULT CALLBACK AddressBar::ComboSubclassProc(
                 {
                     CoverClassicAddressClientEdge(
                         aHwnd,
-                        sPalette.mElevated);
+                        sPalette.mChrome);
                 }
 
                 sAddressBar->drawModernComboButton(aHwnd);

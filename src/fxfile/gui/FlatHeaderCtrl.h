@@ -27,6 +27,7 @@ public:
 
 protected:
     void drawItem(CDC *aDC, CRect aItemRect, xpr_uint_t aState, xpr_sint_t aIndex);
+    xpr_sint_t getRequiredHeight(void);
 
 protected:
     xpr_bool_t  mCallDrawItem;
@@ -55,6 +56,7 @@ protected:
     DECLARE_MESSAGE_MAP()
     afx_msg xpr_sint_t OnCreate(LPCREATESTRUCT lpCreateStruct);
     afx_msg void OnWindowPosChanged(WINDOWPOS FAR *aWindowPos);
+    afx_msg LRESULT OnHeaderLayout(WPARAM aWParam, LPARAM aLParam);
     afx_msg void OnPaint(void);
     afx_msg xpr_bool_t OnEraseBkgnd(CDC *aDC);
     afx_msg void OnMouseMove(xpr_uint_t aFlags, CPoint aPoint);

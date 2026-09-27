@@ -766,7 +766,7 @@ def validate_soft_surface_contract() -> list[str]:
         ),
         "rebar": ("sPalette.mChrome",),
         "address": (
-            "sPalette.mElevated",
+            "sPalette.mChrome",
             "ON_WM_PAINT()",
             "ON_WM_NCPAINT()",
             "CoverClassicAddressClientEdge",
@@ -3230,7 +3230,7 @@ def validate_win11_stability_regressions() -> list[str]:
     )
     for token in (
         "Default();",
-        "CoverClassicAddressClientEdge(m_hWnd, sPalette.mElevated)",
+        "CoverClassicAddressClientEdge(m_hWnd, sPalette.mChrome)",
         "XPR_IS_FALSE(sPalette.mHighContrast)",
     ):
         if token not in address_paint_block:
@@ -3723,11 +3723,14 @@ def validate_win11_stability_regressions() -> list[str]:
             )
 
     for token in (
-        "GetTextMetrics(&sTextMetric)",
-        "sTextMetric.tmHeight",
-        "sTextMetric.tmExternalLeading",
-        "ModernUI::scale(24, sDpi)",
-        "ModernUI::scale(8, sDpi)",
+        "ON_MESSAGE(HDM_LAYOUT, OnHeaderLayout)",
+        "sLayout->pwpos->cy = sRequiredHeight;",
+        "sLayout->prc->top += sRequiredHeight - sNativeHeight;",
+        "GetTextMetrics(&sMetrics)",
+        "sMetrics.tmHeight",
+        "sMetrics.tmExternalLeading",
+        "ModernUI::scale(28, sDpi)",
+        "ModernUI::scale(12, sDpi)",
     ):
         if token not in contents["header"]:
             errors.append(
@@ -5501,6 +5504,30 @@ def validate_explorer_tab_width_contract(tab_source: str | None = None) -> list[
     ]
 
 
+def validate_header_address_surface() -> list[str]:
+    """User-reported header clipping and full-width address box regression."""
+    header = (FXFILE_SRC / "gui" / "FlatHeaderCtrl.cpp").read_text(encoding="utf-8")
+    header_h = (FXFILE_SRC / "gui" / "FlatHeaderCtrl.h").read_text(encoding="utf-8")
+    address = (FXFILE_SRC / "address_bar.cpp").read_text(encoding="utf-8")
+    checks = (
+        ("native header layout hook", "ON_MESSAGE(HDM_LAYOUT, OnHeaderLayout)" in header),
+        ("header layout declaration", "OnHeaderLayout(WPARAM" in header_h),
+        ("configured header text metrics", "sMetrics.tmHeight + sMetrics.tmExternalLeading" in header),
+        ("font-scaled vertical clearance", "scale(12, sDpi)" in header),
+        ("native layout reserves header height", "sLayout->pwpos->cy = sRequiredHeight;" in header),
+        ("list view content shifted by header delta",
+         "sLayout->prc->top += sRequiredHeight - sNativeHeight;" in header),
+        ("outer combo paints matching chrome", "CoverClassicAddressClientEdge(m_hWnd, sPalette.mChrome)" in address),
+        ("inner combo paints matching chrome", "sPalette.mChrome);\n" in address and "aHwnd," in address),
+        ("address child text paints matching chrome", "::SetBkColor(aDC, sPalette.mChrome)" in address),
+        ("address background brush matches chrome",
+         "mBackgroundBrush.CreateSolidBrush(sPalette.mChrome)" in address),
+        ("address palette no longer raises full-width box", "sPalette.mElevated" not in address),
+        ("high contrast native path preserved", "if (XPR_IS_TRUE(sPalette.mHighContrast))" in address),
+    )
+    return ["Header/address: missing " + label for label, ok in checks if not ok]
+
+
 def main() -> int:
     errors = validate_translation_units()
     errors.extend(validate_ole_pending_paint_budget())
@@ -5551,6 +5578,7 @@ def main() -> int:
     errors.extend(validate_win11_stability_regressions())
     errors.extend(validate_runtime_smoke_ps51_contract())
     errors.extend(validate_explorer_tab_width_contract())
+    errors.extend(validate_header_address_surface())
     errors.extend(validate_visual_ui_evidence_contract())
     errors.extend(validate_runtime_ui_audit_regressions())
     errors.extend(validate_modern_ui_registration())

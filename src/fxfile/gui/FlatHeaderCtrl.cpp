@@ -40,6 +40,7 @@ BEGIN_MESSAGE_MAP(FlatHeaderCtrl, CHeaderCtrl)
     ON_WM_PAINT()
     ON_WM_CREATE()
     ON_WM_WINDOWPOSCHANGED()
+    ON_MESSAGE(HDM_LAYOUT, OnHeaderLayout)
     ON_WM_MOUSEMOVE()
     ON_WM_SETTINGCHANGE()
     ON_MESSAGE(WM_DPICHANGED,   OnDpiChanged)
@@ -342,6 +343,58 @@ void FlatHeaderCtrl::OnWindowPosChanged(WINDOWPOS FAR *aWindowPos)
     Invalidate(XPR_FALSE);
 }
 
+xpr_sint_t FlatHeaderCtrl::getRequiredHeight(void)
+{
+    const xpr_uint_t sDpi = fxfile::ui::ModernUI::getDpi(GetSafeHwnd());
+    xpr_sint_t sRequiredHeight =
+        fxfile::ui::ModernUI::scale(28, sDpi);
+
+    // Use the actual configured header font, not the common control's
+    // old system-font height (the user can enlarge Windows text).
+    CClientDC sDC(this);
+    CFont *sOldFont = XPR_NULL;
+    if (XPR_IS_NOT_NULL(mFont.m_hObject))
+        sOldFont = sDC.SelectObject(&mFont);
+
+    TEXTMETRIC sMetrics = {0};
+    if (sDC.GetTextMetrics(&sMetrics) != FALSE)
+    {
+        const xpr_sint_t sPadding =
+            fxfile::ui::ModernUI::scale(12, sDpi);
+        sRequiredHeight = max(
+            sRequiredHeight,
+            static_cast<xpr_sint_t>(
+                sMetrics.tmHeight + sMetrics.tmExternalLeading) +
+                sPadding);
+    }
+
+    if (XPR_IS_NOT_NULL(sOldFont))
+        sDC.SelectObject(sOldFont);
+    return sRequiredHeight;
+}
+
+LRESULT FlatHeaderCtrl::OnHeaderLayout(WPARAM aWParam, LPARAM aLParam)
+{
+    // SysListView32 lays out its native header with HDM_LAYOUT and then
+    // immediately overwrites a manually resized header. Reserve the same
+    // measured height in the LIST VIEW's content rectangle as well.
+    const LRESULT sResult = DefWindowProc(HDM_LAYOUT, aWParam, aLParam);
+    HDLAYOUT *sLayout = reinterpret_cast<HDLAYOUT *>(aLParam);
+    if (sResult != 0 && XPR_IS_NOT_NULL(sLayout) &&
+        XPR_IS_NOT_NULL(sLayout->prc) &&
+        XPR_IS_NOT_NULL(sLayout->pwpos))
+    {
+        const xpr_sint_t sRequiredHeight = getRequiredHeight();
+        const xpr_sint_t sNativeHeight = sLayout->pwpos->cy;
+        if (sRequiredHeight > sNativeHeight)
+        {
+            sLayout->pwpos->cy = sRequiredHeight;
+            sLayout->prc->top += sRequiredHeight - sNativeHeight;
+        }
+    }
+    return sResult;
+}
+
 void FlatHeaderCtrl::resizeWindow(void)
 {
     ASSERT_VALID(this);
@@ -349,39 +402,12 @@ void FlatHeaderCtrl::resizeWindow(void)
 
     CRect sParentRect;
     mParentWnd->GetClientRect(&sParentRect);
-
-    const xpr_uint_t sDpi =
-        fxfile::ui::ModernUI::getDpi(GetSafeHwnd());
-    xpr_sint_t sRequiredHeight =
-        fxfile::ui::ModernUI::scale(24, sDpi);
-
-    CClientDC sDC(this);
-    CFont *sOldFont = XPR_NULL;
-    if (XPR_IS_NOT_NULL(mFont.m_hObject))
-        sOldFont = sDC.SelectObject(&mFont);
-
-    TEXTMETRIC sTextMetric = {0};
-    if (sDC.GetTextMetrics(&sTextMetric) != FALSE)
-    {
-        const xpr_sint_t sVerticalPadding =
-            fxfile::ui::ModernUI::scale(8, sDpi);
-        sRequiredHeight = max(
-            sRequiredHeight,
-            static_cast<xpr_sint_t>(
-                sTextMetric.tmHeight +
-                sTextMetric.tmExternalLeading) +
-                sVerticalPadding);
-    }
-
-    if (XPR_IS_NOT_NULL(sOldFont))
-        sDC.SelectObject(sOldFont);
-
     SetWindowPos(
         XPR_NULL,
         0,
         0,
         sParentRect.Width(),
-        sRequiredHeight,
+        getRequiredHeight(),
         SWP_NOMOVE | SWP_NOZORDER | SWP_NOACTIVATE | SWP_FRAMECHANGED);
 }
 
