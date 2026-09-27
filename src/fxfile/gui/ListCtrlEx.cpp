@@ -12,6 +12,7 @@
 
 #include "FlatHeaderCtrl.h"
 #include "ModernUI.h"
+#include "DarkScrollbarLayer.h"
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -49,6 +50,8 @@ xpr_sint_t ListCtrlEx::OnCreate(LPCREATESTRUCT aCreateStruct)
 
 void ListCtrlEx::OnDestroy(void)
 {
+    // Stop independent opaque presentation before the native HWND is lost.
+    fxfile::ui::DarkScrollbarLayer::disable(m_hWnd);
     super::OnDestroy();
 
     XPR_SAFE_DELETE(mHeaderCtrl);
@@ -109,6 +112,12 @@ void ListCtrlEx::refreshModernAppearance(xpr_bool_t aRethemeControl)
     // Repainting the frame is safe here: this is a theme transaction, not
     // a non-client paint handler. The native control still owns input.
     RedrawWindow(XPR_NULL, XPR_NULL, RDW_INVALIDATE | RDW_FRAME);
+
+    // Posted NC overpainting alone cannot win against native modal tracking.
+    if (XPR_IS_TRUE(mDarkScrollbars))
+        fxfile::ui::DarkScrollbarLayer::enable(m_hWnd, sPalette);
+    else
+        fxfile::ui::DarkScrollbarLayer::disable(m_hWnd);
 }
 
 xpr_bool_t ListCtrlEx::subclassHeader(xpr_bool_t aBoldFont)
