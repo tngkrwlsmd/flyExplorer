@@ -3674,3 +3674,56 @@ UI-02에는 검증되지 않은 덮어 그리기
 고대비·DPI/기존 프로필 시각 검증은
 NOT TESTED다. GitHub Actions 미실행.
 
+
+---
+
+## 2026-09-27 — Windows PowerShell 5.1 runtime smoke ArgumentList 호환성 오류
+
+**오류 발생**
+- 사용자가 revision `ff0352957686a8895e885bc3103eed3a65d6702b`에서 `local_ci.bat x64` 실행.
+- 빌드 도구와 x64 artifacts는 확인됐고 native functional regression은 17 passed / 0 failed.
+- 그러나 Release x64 runtime smoke에서 PowerShell 예외가 발생해 전체 local CI는 exit 1로 종료됨.
+
+**최초 실제 오류**
+- `build/runtime_smoke.ps1`의 `ProcessStartInfo.ArgumentList` 접근에서
+  `The property 'ArgumentList' cannot be found on this object`
+  (`PropertyNotFoundStrict`)가 발생.
+- 시작 코드 예외이므로 실제 제품의 main window 생성 또는 안정성 실패 증거가 아님.
+  실행 단계는 이번 실패에서 **NOT TESTED**.
+
+**원인 진단**
+- `local_ci.bat`은 기본 `powershell.exe`로 smoke script를 실행하며 Windows
+  PowerShell 5.1/.NET Framework의 `ProcessStartInfo`에는 `ArgumentList`
+  속성이 없다. 별도로 cleanup에서 사용하던 `Process.Kill(bool)` 역시
+  .NET Framework 경로에서 호출할 수 없으므로 후속 종료 오류 가능성이 있었다.
+
+**해결 방법**
+- `build/runtime_smoke.ps1`: 생성한 구성/합성 fixture 경로를 인용한
+  `ProcessStartInfo.Arguments` 문자열로 시작 인자를 전달한다.
+- 프로세스 종료는 .NET `Kill(bool)` overload가 실제 존재할 때만 사용하고,
+  Windows PowerShell 5.1에서는 Windows 기본 `taskkill /T /F`로 자식까지
+  종료한다. 시간 제한, 사용자 HKCU 상태 감지/거부, 합성 fixture 격리 및
+  임시 파일 정리 경로를 유지한다.
+
+**재발 방지**
+- `build/validate_source_invariants.py::validate_runtime_smoke_ps51_contract`
+  는 WinPS5.1에서 지원하지 않는 `ArgumentList`의 재도입을 거부하고
+  인자 quoting/호환 cleanup/기존 사용자 프로필 보호를 점검한다.
+- `build/test_runtime_smoke_ps51_contract.py`에 원래 source를 변형한
+  compatibility regression 검사를 추가했다. PowerShell 7의 API 가용성을
+  Windows PowerShell 5.1에서 동일하다고 가정하지 않는다.
+
+**검증 상태**
+- 사용자 수정 전 `ff035295`: source invariant PASS, x64 빌드/필수 artifact
+  확인, functional regression 17/0 PASS, runtime smoke FAIL (orchestration).
+- 이 수정 checkpoint: 스크립트/source contract 검토 및 신규 검증 코드 반영.
+  사용자 Windows PowerShell 5.1에서 동일 `local_ci.bat x64` 재실행:
+  **NOT RETESTED**. 새로운 수정 revision의 x64 compile/link 및 실제 프로그램
+  launch/visual evidence도 **NOT TESTED**.
+- 기존 사용자 데이터를 이용한 테스트를 위해 startup/profiles 보호를
+  제거해서는 안 된다. GitHub Actions는 실행하지 않았다.
+
+**관련 commit**
+- `4e5bf4bc` — `fix(ci): support Windows PowerShell 5.1 runtime smoke process APIs`
+- `90481d66` — `test(ci): reject .NET Core-only APIs in Windows PowerShell runtime smoke`
+- `8b7fb5c1` — `test(ci): mutation-check Windows PowerShell runtime smoke regression contract`
