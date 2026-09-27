@@ -5538,6 +5538,36 @@ def validate_header_address_surface() -> list[str]:
     return ["Header/address: missing " + label for label, ok in checks if not ok]
 
 
+def validate_phase3_navigation_visual(nav_source: str | None = None) -> list[str]:
+    """Keep Phase3 native navigation visual changes out of customized bars."""
+    if nav_source is None:
+        nav_source = (FXFILE_SRC / "gui" / "rebar" / "ToolBarEx.cpp").read_text(
+            encoding="utf-8")
+    required = (
+        ("main toolbar only", "::GetDlgCtrlID(aToolbar) == AFX_IDW_TOOLBAR"),
+        ("back command retained", "aCommandId == ID_GO_BACK"),
+        ("forward command retained", "aCommandId == ID_GO_FORWARD"),
+        ("up command retained", "aCommandId == ID_GO_UP"),
+        ("below-image user text unchanged",
+         "XPR_IS_TRUE(sText) && XPR_IS_FALSE(sList)"),
+        ("native history arrow clearance", "aItem.right - aItem.left - sDrop"),
+        ("clamp to real native width/height", "min(sAvailable, sHeight)"),
+        ("scale Fluent visual target", "getCommandButtonExtent(aToolbar)"),
+        ("reject narrow/hidden tile", "if (sExtent <= 0)"),
+        ("native label beyond icon", "sNavTile.right +"),
+        ("hot state only in tile", "aCustomDraw->nmcd.rc = sNavTile;"),
+        ("restore original item rect", "aCustomDraw->nmcd.rc = sSavedRect;"),
+        ("center actual icon in tile", "sImageX = sNavTile.left +"),
+        ("nav label does not inherit broad hover surface",
+         "XPR_IS_TRUE(sPrimaryNavVisual) ? aBackground : sItemBackground"),
+        ("native history arrow separately tracks hover",
+         "::PtInRect(&sDropRect, sCursor)"),
+        ("native button final renderer remains", "DrawFinalDarkToolbarItem"),
+    )
+    return ["Phase3 navigation: missing " + label
+            for label, needle in required if needle not in nav_source]
+
+
 def main() -> int:
     errors = validate_translation_units()
     errors.extend(validate_ole_pending_paint_budget())
@@ -5589,6 +5619,7 @@ def main() -> int:
     errors.extend(validate_runtime_smoke_ps51_contract())
     errors.extend(validate_explorer_tab_width_contract())
     errors.extend(validate_header_address_surface())
+    errors.extend(validate_phase3_navigation_visual())
     errors.extend(validate_visual_ui_evidence_contract())
     errors.extend(validate_runtime_ui_audit_regressions())
     errors.extend(validate_modern_ui_registration())

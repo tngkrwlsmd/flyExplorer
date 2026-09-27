@@ -21,6 +21,7 @@
 /////////////////////////////////////////////////////////////////////////////
 
 #include "stdafx.h"
+#include "../../resource.h"
 #include "Resource.h"
 #include "CustomizeDialog.h"
 #include "SizableReBar.h"
@@ -93,6 +94,55 @@ void DrawRoundedToolbarState(
     ::DeleteObject(sBrush);
 }
 
+// Keep these visual metrics scoped to native main-toolbar navigation.
+// User-saved bar order, text/icon mode, history dropdowns and command
+// hit rectangles remain owned by ToolbarWindow32.
+xpr_bool_t IsPrimaryNavigationCommand(HWND aToolbar, xpr_uint_t aCommandId)
+{
+    return ::GetDlgCtrlID(aToolbar) == AFX_IDW_TOOLBAR &&
+        (aCommandId == ID_GO_BACK ||
+         aCommandId == ID_GO_FORWARD ||
+         aCommandId == ID_GO_UP) ? XPR_TRUE : XPR_FALSE;
+}
+
+xpr_bool_t GetPrimaryNavigationTile(
+    HWND aToolbar, xpr_uint_t aCommandId,
+    const TBBUTTONINFO &aButton, const RECT &aItem, RECT &aTile)
+{
+    if (XPR_IS_FALSE(IsPrimaryNavigationCommand(aToolbar, aCommandId)))
+        return XPR_FALSE;
+
+    const xpr_bool_t sText =
+        (aButton.fsStyle & BTNS_SHOWTEXT) != 0 ? XPR_TRUE : XPR_FALSE;
+    const xpr_bool_t sList =
+        (::GetWindowLongPtr(aToolbar, GWL_STYLE) & TBSTYLE_LIST) != 0 ?
+        XPR_TRUE : XPR_FALSE;
+    // Do not overlap a user-selected label below the navigation icon.
+    if (XPR_IS_TRUE(sText) && XPR_IS_FALSE(sList))
+        return XPR_FALSE;
+
+    const xpr_sint_t sDrop =
+        (aButton.fsStyle & (TBSTYLE_DROPDOWN | BTNS_WHOLEDROPDOWN)) != 0 ?
+        fxfile::ui::ModernUI::scaleForWindow(14, aToolbar) : 0;
+    const xpr_sint_t sAvailable =
+        max(0, aItem.right - aItem.left - sDrop);
+    const xpr_sint_t sHeight =
+        max(0, aItem.bottom - aItem.top);
+    const xpr_sint_t sExtent = min(
+        fxfile::ui::ModernUI::getCommandButtonExtent(aToolbar),
+        min(sAvailable, sHeight));
+    if (sExtent <= 0)
+        return XPR_FALSE;
+
+    const xpr_sint_t sX =
+        (XPR_IS_TRUE(sText) && XPR_IS_TRUE(sList)) ?
+        aItem.left : aItem.left + (sAvailable - sExtent) / 2;
+    const xpr_sint_t sY =
+        aItem.top + (sHeight - sExtent) / 2;
+    ::SetRect(&aTile, sX, sY, sX + sExtent, sY + sExtent);
+    return XPR_TRUE;
+}
+
 void DrawFinalDarkToolbarItem(
     LPNMTBCUSTOMDRAW aCustomDraw,
     COLORREF aBackground)
@@ -151,6 +201,12 @@ void DrawFinalDarkToolbarItem(
         sPalette.mText;
 
     RECT sItemRect = aCustomDraw->nmcd.rc;
+    RECT sNavigationRect = {0};
+    const xpr_bool_t sPrimaryNavVisual =
+        sButtonInfo.iImage >= 0 ?
+        GetPrimaryNavigationTile(
+            sHwnd, sCommandId, sButtonInfo, sItemRect, sNavigationRect) :
+        XPR_FALSE;
     const xpr_bool_t sDropDown =
         (sButtonInfo.fsStyle &
          (TBSTYLE_DROPDOWN | BTNS_WHOLEDROPDOWN)) != 0 ?
@@ -167,9 +223,26 @@ void DrawFinalDarkToolbarItem(
             sDropRect.left,
             sDropRect.right - sDropWidth);
 
+        COLORREF sDropBackground = sItemBackground;
+        if (XPR_IS_TRUE(sPrimaryNavVisual))
+        {
+            // Hover over the history arrow is independent from hovering
+            // the Back/Forward/Up icon or optional saved text label.
+            sDropBackground = aBackground;
+            POINT sCursor = {0};
+            if (XPR_IS_FALSE(sDisabled) &&
+                ::GetCursorPos(&sCursor) != FALSE &&
+                ::ScreenToClient(sHwnd, &sCursor) != FALSE &&
+                ::PtInRect(&sDropRect, sCursor) != FALSE)
+            {
+                sDropBackground =
+                    XPR_IS_TRUE(sPressed) ?
+                    sPalette.mPressed : sPalette.mHover;
+            }
+        }
         ::SetDCBrushColor(
             aCustomDraw->nmcd.hdc,
-            sItemBackground);
+            sDropBackground);
         ::FillRect(
             aCustomDraw->nmcd.hdc,
             &sDropRect,
@@ -303,6 +376,18 @@ void DrawFinalDarkToolbarItem(
         else
             sTextRect.left += sPadding;
 
+        RECT sNavTile = {0};
+        if (sButtonInfo.iImage >= 0 &&
+            XPR_IS_TRUE(GetPrimaryNavigationTile(
+                sHwnd, sCommandId, sButtonInfo, sItemRect, sNavTile)))
+        {
+            // Keep the saved "text right" label beyond its icon target.
+            sTextRect.left = max(
+                sTextRect.left,
+                sNavTile.right +
+                    fxfile::ui::ModernUI::scaleForWindow(2, sHwnd));
+        }
+
         sTextRect.right -=
             sPadding +
             (XPR_IS_TRUE(sDropDown) ?
@@ -344,7 +429,7 @@ void DrawFinalDarkToolbarItem(
     // and redraw it using the same UI font/palette as the rest of the app.
     ::SetDCBrushColor(
         aCustomDraw->nmcd.hdc,
-        sItemBackground);
+        XPR_IS_TRUE(sPrimaryNavVisual) ? aBackground : sItemBackground);
     ::FillRect(
         aCustomDraw->nmcd.hdc,
         &sTextRect,
@@ -467,6 +552,14 @@ void DrawOwnedToolbarItem(
     const xpr_bool_t sHot =
         (sState & CDIS_HOT) != 0 ? XPR_TRUE : XPR_FALSE;
     const RECT sItemRect = aCustomDraw->nmcd.rc;
+    RECT sNavTile = {0};
+    const xpr_bool_t sNavVisual =
+        XPR_IS_TRUE(sHasIcon) ?
+        GetPrimaryNavigationTile(
+            sToolbar,
+            static_cast<xpr_uint_t>(aCustomDraw->nmcd.dwItemSpec),
+            sButton, sItemRect, sNavTile) :
+        XPR_FALSE;
 
     // Native ToolbarWindow32 leaves its accent-blue/light tile under the
     // bitmap even though custom-draw foreground colors are correct.
@@ -479,10 +572,23 @@ void DrawOwnedToolbarItem(
     if (XPR_IS_FALSE(sDisabled) &&
         (XPR_IS_TRUE(sPressed) || XPR_IS_TRUE(sHot)))
     {
-        DrawRoundedToolbarState(
-            aCustomDraw,
-            XPR_IS_TRUE(sPressed) ?
-                sPalette.mPressed : sPalette.mHover);
+        if (XPR_IS_TRUE(sNavVisual))
+        {
+            const RECT sSavedRect = aCustomDraw->nmcd.rc;
+            aCustomDraw->nmcd.rc = sNavTile;
+            DrawRoundedToolbarState(
+                aCustomDraw,
+                XPR_IS_TRUE(sPressed) ?
+                    sPalette.mPressed : sPalette.mHover);
+            aCustomDraw->nmcd.rc = sSavedRect;
+        }
+        else
+        {
+            DrawRoundedToolbarState(
+                aCustomDraw,
+                XPR_IS_TRUE(sPressed) ?
+                    sPalette.mPressed : sPalette.mHover);
+        }
     }
 
     if (XPR_IS_TRUE(sHasIcon))
@@ -521,6 +627,14 @@ void DrawOwnedToolbarItem(
                  sDropWidth - sIconWidth) / 2;
             if (XPR_IS_TRUE(sHasText))
                 sImageY = sItemRect.top + sPadding;
+        }
+
+        if (XPR_IS_TRUE(sNavVisual))
+        {
+            sImageX = sNavTile.left +
+                (sNavTile.right - sNavTile.left - sIconWidth) / 2;
+            sImageY = sNavTile.top +
+                (sNavTile.bottom - sNavTile.top - sIconHeight) / 2;
         }
 
         ::ImageList_DrawEx(
