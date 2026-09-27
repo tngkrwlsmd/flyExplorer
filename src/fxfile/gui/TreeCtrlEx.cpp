@@ -10,6 +10,7 @@
 #include "stdafx.h"
 #include "TreeCtrlEx.h"
 #include "ModernUI.h"
+#include "DarkScrollbarLayer.h"
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -144,10 +145,18 @@ void TreeCtrlEx::refreshVistaEnhancedTheme(void)
         fxfile::ui::ModernUI::resetControlTheme(m_hWnd);
     }
     ::RedrawWindow(m_hWnd, NULL, NULL, RDW_INVALIDATE | RDW_FRAME);
+
+    if (XPR_IS_TRUE(mDarkScrollbars))
+        fxfile::ui::DarkScrollbarLayer::enable(m_hWnd, sPalette);
+    else
+        fxfile::ui::DarkScrollbarLayer::disable(m_hWnd);
 }
 
 LRESULT TreeCtrlEx::WindowProc(UINT aMessage, WPARAM aWParam, LPARAM aLParam)
 {
+    if (aMessage == WM_DESTROY)
+        fxfile::ui::DarkScrollbarLayer::disable(m_hWnd);
+
     const UINT sPaintMessage =
         fxfile::ui::ModernUI::getDeferredDarkScrollbarMessage();
     if (sPaintMessage != 0 && aMessage == sPaintMessage)
@@ -181,6 +190,10 @@ LRESULT TreeCtrlEx::WindowProc(UINT aMessage, WPARAM aWParam, LPARAM aLParam)
         if (XPR_IS_FALSE(mDarkScrollbars))
             mScrollbarPaintQueued = XPR_FALSE;
         ::RedrawWindow(m_hWnd, NULL, NULL, RDW_INVALIDATE | RDW_FRAME);
+        if (XPR_IS_TRUE(mDarkScrollbars))
+            fxfile::ui::DarkScrollbarLayer::enable(m_hWnd, sPalette);
+        else
+            fxfile::ui::DarkScrollbarLayer::disable(m_hWnd);
     }
 
     if (sPaintMessage != 0 && ::IsWindow(m_hWnd) &&
