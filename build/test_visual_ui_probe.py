@@ -5,7 +5,7 @@ from pathlib import Path
 
 from PIL import Image
 
-from visual_ui_probe import Rect, ScrollInfo, drag_points, compare
+from visual_ui_probe import Rect, ScrollInfo, drag_points, compare, bright_neutral_ratio
 
 
 class VisualProbeTests(unittest.TestCase):
@@ -51,6 +51,20 @@ class VisualProbeTests(unittest.TestCase):
             result = compare(p / "a.png", p / "b.png", p / "diff.png", 12)
             self.assertEqual(result["changed_pixels"], 16)
             self.assertEqual(result["status"], "REVIEW_REQUIRED")
+
+    def test_bright_neutral_detection(self):
+        with tempfile.TemporaryDirectory() as folder:
+            image = Path(folder) / "frame.png"
+            Image.new("RGB", (4, 4), (230, 229, 228)).save(image)
+            self.assertEqual(bright_neutral_ratio(image, (0, 0, 4, 4)), 1.0)
+            self.assertEqual(bright_neutral_ratio(image, (-3, -2, 4, 4)), 1.0)
+
+    def test_brightness_invalid_roi_rejected(self):
+        with tempfile.TemporaryDirectory() as folder:
+            image = Path(folder) / "frame.png"
+            Image.new("RGB", (4, 4), (0, 0, 0)).save(image)
+            with self.assertRaises(ValueError):
+                bright_neutral_ratio(image, (8, 8, 9, 9))
 
     def test_misaligned_dimensions_are_rejected(self):
         with tempfile.TemporaryDirectory() as folder:
