@@ -7,6 +7,25 @@ Update this page after each logical work unit that changes its facts.
 For the chronological diagnosis and original evidence, retain and use
 [`ERROR_HISTORY.md`](ERROR_HISTORY.md) rather than moving/deleting entries.
 
+**2026-09-27 사용자 x64 빌드 보고 — COMPILE/FUNCTIONAL PASS, SMOKE SCRIPT RETEST OPEN:**
+사용자가 `ff0352957686a8895e885bc3103eed3a65d6702b`에서 `local_ci.bat x64`
+실행 결과를 공유했다. VS 2026/v145 솔루션 생성·소스 정적 검사 및
+필수 x64 산출물 확인은 PASS이며 native functional regression은
+**17 passed / 0 failed**다. 그러나 이어진 runtime smoke는 제품 창 생성
+검사 전에 Windows PowerShell 5.1/.NET Framework에서 지원되지 않는
+`ProcessStartInfo.ArgumentList` 속성 접근으로 즉시 종료되어
+전체 local CI 결과는 **FAIL (CI 실행 스크립트 호환성)**이었다.
+
+`build/runtime_smoke.ps1`을 WinPS5.1에서 사용 가능한 인자 API와
+프로세스 트리 종료 방식으로 변경하고 호환성 source guard 및 회귀
+검사를 추가했다. 최종 수정본에 대한 사용자 Windows 재실행과
+최신 revision 일치 x64 재빌드, 실제 창 표시/안정성은 여전히
+**NOT RETESTED**다. 앞선 `ff035295`의 compile/functional PASS를
+새 commit의 실행 검증으로 자동 승격하지 않는다. UI-02 등
+시각적 결함은 그대로 OPEN/RETEST OPEN이며 GitHub Actions는
+실행하지 않는다. 진단과 변경 범위는
+[오류 이력](ERROR_HISTORY.md)의 2026-09-27 PowerShell smoke 항목 참조.
+
 **2026-09-27 Native UI evidence preparation — TOOLING ADDED / PRODUCT VISUAL NOT TESTED:**
 채팅에서 실제 Windows UI를 검증하는 반복 작업을 준비하기 위해 별도
 `build/visual_ui_probe.py` 및 순수 `build/test_visual_ui_probe.py` 테스트와
@@ -19,7 +38,7 @@ For the chronological diagnosis and original evidence, retain and use
 픽셀 차이만으로 UI 결함의 해결이나 실패를 단정하지 않는다.
 정적 source preflight에 해당 안전 계약도 연결했다.
 
-**현재 체크포인트는 제품 C++ 렌더링을 변경하지 않았다.** 현재 채팅에는
+**해당 UI 수집기 체크포인트는 제품 C++ 렌더링을 변경하지 않았다.** 당시 채팅에는
 연결된 Windows 테스트 기기가 없으므로 신규 소스의 Windows x64
 컴파일·최신 바이너리 실행·실제 화면 관찰은 **NOT TESTED**다.
 기존 UI-02는 여전히 **OPEN**, UI-09 및 UI-01/03~14의 해당 항목은
