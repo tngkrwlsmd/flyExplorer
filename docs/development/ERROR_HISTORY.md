@@ -3727,3 +3727,46 @@ NOT TESTED다. GitHub Actions 미실행.
 - `4e5bf4bc` — `fix(ci): support Windows PowerShell 5.1 runtime smoke process APIs`
 - `90481d66` — `test(ci): reject .NET Core-only APIs in Windows PowerShell runtime smoke`
 - `8b7fb5c1` — `test(ci): mutation-check Windows PowerShell runtime smoke regression contract`
+
+---
+
+## 2026-09-27 — UI-05 새 창 너비 증가 후 compact 미적용 및 북마크 chevron 밀림
+
+**오류 발생**
+- 실제 Windows 11 / 96 DPI / Dark, 격리된 신규 프로필·합성 파일 205개.
+- 기존 e59aed97 창 800×600에서는 도구 모음 밴드가 분리되어 안전했으나 1920×1032로 최대화한 후에도 드라이브와 북마크가 개별 행으로 남음.
+- 1차 패치 fe5e49d에서는 최대화 시 결합되지만 기존 전체 행 폭을 유지하던 드라이브 밴드가 북마크를 가려 오른쪽 chevron만 보임.
+
+**최초 실제 오류**
+- 초기 폭 한 차례만 확인하는 one-shot pending 플래그가 좁은 첫 프레임에서 꺼짐.
+- 최초 결합안은 북마크 RBBS_BREAK만 해제하고 이미 전체 rebar 폭으로 계산된 드라이브 cx를 다시 배분하지 않음.
+- 실제 screenshot과 WinApp UI 구조에서 문제 확인. 추측으로 PASS하지 않음.
+
+**원인 진단**
+- OnDeferredCompact에서 좁은 창의 미달 판정이 이후 넓어진 창 재시도를 영구히 차단.
+- 결합 후 레이아웃은 rebar band별 현재 cx를 사용하므로 BREAK만 제거하면 북마크가 화면 오른쪽 밖으로 밀릴 수 있음.
+- OnSize 안의 직접 SetBandInfo/RecalcLayout은 과거 rebar 재진입 중단 문제를 유발할 수 있으므로 사용하지 않음.
+
+**해결 방법**
+- src/fxfile/main_coolbar.cpp/.h: 저장된 레이아웃이 없는 신규 프로필에서만 크기 증가 watermark를 갱신하고 예약 메시지로 재측정.
+- rebar ideal/header 폭에 DPI-scaled 여유를 더한 실제 드라이브/북마크 목표 폭으로 두 밴드의 cx를 각각 분배하고 나서 부모 레이아웃 갱신.
+- native band mutation 직전에 pending을 해제하고 실패 시에만 재시도를 허용해 reentrant 반복 작업을 방지.
+- RBN_BEGINDRAG 이후 자동 결합을 취소하여 사용자가 직접 재배치한 밴드를 다시 옮기지 않음.
+
+**재발 방지**
+- build/validate_source_invariants.py: 새 프로필 전용, 폭 증가 재시도, 밴드별 실제 폭 분배, 두 native mutation 실패 복구, OnSize의 동기적 레이아웃 금지.
+- build/test_ui05_compaction_retry.py: 위 조건 중 하나씩 제거한 음성 변형 포함 11개 독립 회귀 검사.
+- 좁은 최초 창과 큰 화면에서의 실제 캡처 및 저장 배치 재오픈 검증을 수행.
+
+**검증 상태**
+- 3aab666 후보: Windows Release x64 build PASS, source preflight PASS, 17/0 native functional PASS, 11/0 UI-05 전용 mutation PASS.
+- Windows 격리 신규 프로필 800×600→1920×1032: 같은 행의 드라이브+북마크 직접 표시 확인, 응답 정상.
+- 격리 저장 프로필 재오픈: 저장 rebar BREAK 플래그 보존, 1920×1032에서 같은 행으로 표시, 정상 종료.
+- local_ci runtime smoke는 기존 사용자 HKCU 보호로 SKIPPED: PASS_WITH_SKIPS; 이 단계에 대해서는 자동 시작 검사 완료로 보고하지 않음.
+- UI-02 별도 96 DPI Dark 한정 드래그 12+12 프레임 밝아짐 불관측. 다른 DPI/테마에서 UI-02는 OPEN.
+- 125/150/200% DPI, Light/High Contrast, 모든 수동 설정 및 복잡한 기존 배치는 NOT TESTED.
+- GitHub Actions NOT RUN; 이후 최종 documentation commit에서 전체 local_ci 재수행 결과는 CURRENT_STATUS.md에 갱신.
+
+**관련 commit**
+- 3aab666e — UI-05 듀얼 밴드 폭 보정 및 회귀 검사를 포함하는 실기 검증 후보.
+- 전체 브랜치: ui/live-windows-ui05-20260927.
