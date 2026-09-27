@@ -4448,6 +4448,69 @@ def validate_main_window_hang_stabilization() -> list[str]:
     return errors
 
 
+def validate_fresh_profile_compaction_retry_contract(
+    coolbar: str | None = None, header: str | None = None
+) -> list[str]:
+    """UI-05: allow one posted fresh-profile fit check per increased width.
+
+    A narrow first window must not permanently disable a compact fit after
+    maximize. A manual rebar drag or loaded user layout still owns the rows.
+    No synchronous SetBandInfo/RecalcLayout from WM_SIZE is permitted.
+    """
+    if coolbar is None:
+        coolbar = (FXFILE_SRC / "main_coolbar.cpp").read_text(encoding="utf-8")
+    if header is None:
+        header = (FXFILE_SRC / "main_coolbar.h").read_text(encoding="utf-8")
+    code = strip_comments(coolbar)
+
+    def scope(start: str, end: str) -> str:
+        a = code.find(start)
+        b = code.find(end, a + len(start)) if a >= 0 else -1
+        return code[a:b] if a >= 0 and b > a else ""
+
+    on_size = scope("void MainCoolBar::OnSize(", "LRESULT MainCoolBar::OnDeferredCompact(")
+    deferred = scope("LRESULT MainCoolBar::OnDeferredCompact(", "xpr_sint_t MainCoolBar::getToolbarText(")
+    on_notify = scope("BOOL MainCoolBar::OnNotify(", "void MainCoolBar::OnDestroy(")
+    errors: list[str] = []
+    if "mLastDefaultCompactWidth;" not in header or "mLastDefaultCompactWidth(0)" not in code:
+        errors.append("UI-05: measured fresh-profile width watermark is missing")
+    if "XPR_IS_FALSE(sSavedCoolBar)" not in code:
+        errors.append("UI-05: persisted layouts must disable automatic compaction")
+    if not on_size or not all(token in on_size for token in (
+        "sClient.Width() > mLastDefaultCompactWidth",
+        "XPR_IS_TRUE(mDefaultCompactPending)",
+        "XPR_IS_FALSE(mDefaultCompactPosted)",
+        "PostMessage(sDeferredCompactMessage)",
+    )):
+        errors.append("UI-05: growing-width WM_SIZE must only enqueue one deferred retry")
+    if "SetBandInfo(" in on_size or "RecalcLayout(" in on_size:
+        errors.append("UI-05: WM_SIZE must not synchronously rearrange bands")
+    if not deferred or not all(token in deferred for token in (
+        "sDriveBand.cxIdeal == 0 || sBookmarkBand.cxIdeal == 0",
+        "sClient.Width() <= mLastDefaultCompactWidth",
+        "mLastDefaultCompactWidth = sClient.Width();",
+        "sBookmarkBand.fStyle &= ~RBBS_BREAK;",
+        "if (sBands.SetBandInfo(sBookmark, &sBookmarkBand))",
+    )):
+        errors.append("UI-05: native measured deferred fit/width retry is missing")
+    # Reject a stale one-shot reset *before* the fit and SetBandInfo succeed.
+    success = deferred.find("if (sBands.SetBandInfo(sBookmark, &sBookmarkBand))")
+    if success < 0 or "mDefaultCompactPending = XPR_FALSE;" not in deferred[success:]:
+        errors.append("UI-05: stop retries only after successful compact SetBandInfo")
+    if "mDefaultCompactPending = XPR_FALSE;" in deferred[
+        deferred.find("mLastDefaultCompactWidth = sClient.Width();"):
+        success if success >= 0 else len(deferred)
+    ]:
+        errors.append("UI-05: failed narrow fit must remain eligible after a wider resize")
+    if not on_notify or not all(token in on_notify for token in (
+        "RBN_BEGINDRAG",
+        "mDefaultCompactPending = XPR_FALSE;",
+        "CSizableReBar::OnNotify(wParam, lParam, pResult)",
+    )):
+        errors.append("UI-05: user manual rebar drag must cancel default compaction")
+    return errors
+
+
 def validate_fresh_profile_command_band_and_settings_spacing() -> list[str]:
     """UI-05: compact default rebar rows, larger settings navigation targets."""
     errors: list[str] = []
@@ -5352,6 +5415,7 @@ def main() -> int:
     errors.extend(validate_installer_smoke_wiring())
     errors.extend(validate_toolbar_popup_work_area_and_dc_lifetime())
     errors.extend(validate_main_window_hang_stabilization())
+    errors.extend(validate_fresh_profile_compaction_retry_contract())
     errors.extend(validate_fresh_profile_command_band_and_settings_spacing())
     errors.extend(validate_app_popup_work_area_and_brush_lifetime())
     errors.extend(validate_muted_filter_preview_and_default_name_width())
