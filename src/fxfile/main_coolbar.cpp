@@ -296,13 +296,19 @@ LRESULT MainCoolBar::OnDeferredCompact(WPARAM, LPARAM)
     // The handler is a posted message, never a child of WM_SIZE.
     // The pending bit is already clear before this can emit new size
     // notifications. All saved or user-selected row layouts are preserved.
+    // Clear before native mutation: SetBandInfo can synchronously emit size
+    // notifications. Restore eligibility only if native mutation fails.
     sBookmarkBand.fStyle &= ~RBBS_BREAK;
+    mDefaultCompactPending = XPR_FALSE;
     if (sBands.SetBandInfo(sBookmark, &sBookmarkBand))
     {
-        mDefaultCompactPending = XPR_FALSE;
         CFrameWnd *sFrame = GetParentFrame();
         if (sFrame != NULL)
             sFrame->RecalcLayout();
+    }
+    else
+    {
+        mDefaultCompactPending = XPR_TRUE;
     }
     return 0;
 }
