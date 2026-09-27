@@ -8,6 +8,7 @@
 #include "stdafx.h"
 #include "DarkScrollbarLayer.h"
 
+#include <cstring>
 #include <map>
 #include <mutex>
 #include <process.h>
@@ -284,7 +285,7 @@ void placeLayer(LayerWindow &aLayer, HWND aOwner, const RECT &aRect,
         sStateChanged = sOld.xyThumbTop != aInfo->xyThumbTop ||
             sOld.xyThumbBottom != aInfo->xyThumbBottom ||
             sOld.dxyLineButton != aInfo->dxyLineButton ||
-            ::memcmp(sOld.rgstate, aInfo->rgstate,
+            std::memcmp(sOld.rgstate, aInfo->rgstate,
                      sizeof(sOld.rgstate)) != 0;
     }
     if (!ensureLayer(aLayer, aOwner))
