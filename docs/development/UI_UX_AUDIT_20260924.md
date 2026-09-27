@@ -1,5 +1,16 @@
 # 실행 기반 UI/UX 점검 — 2026-09-24
 
+## 2026-09-27 user screenshot follow-up: native list header and address chrome
+
+- User-provided Dark and Light crops show a compressed-looking file-list header and an unnaturally contrasted full-width location box. These original screenshots have not been committed and the user's exact custom font/DPI/profile has not been reproduced.
+- The clean baseline on the connected Windows 11 VM exposed a 24px native SysHeader32 and a 36px ComboBoxEx32. A manually resized header was not a sufficient long-term guarantee: native SysListView32 can renegotiate its header placement through HDM_LAYOUT.
+- Scoped product source 03a68baff006f5d58cca304b7d0b36cc9ce28b49 adds a font/DPI-measured 28-DIP minimum through HDM_LAYOUT **and** adjusts the list content reservation by the exact increased header height. The existing header owner-draw, sort glyph bounds and High Contrast colors remain.
+- The address field's outer ComboBoxEx32, nested ComboBox/edit brush, classic-edge cover and dark dropdown idle fill share the surrounding mChrome palette instead of drawing a full-width mElevated stripe. Native field input, autocomplete, dropdown, accessibility and High Contrast fallback stay owned by Windows.
+- Native Windows Release-x64-Unicode compile/link passed and 17/0 functional tests passed; official HKCU-sensitive runtime smoke remained SKIPPED. New scoped invariant tests: 6 PASS; full preflight PASS.
+- Isolated synthetic My Documents fixture, 1150px wide window, Dark and Light: actual header/window coordinates and mouse operations recorded by logs/header-address-retest/verify-gui.py; both after-theme screenshots and a narrow Dark capture are retained locally in ignored logs, not published. Original user custom settings, other DPI values and actual OS High Contrast remain NOT TESTED on this revision. Do not claim their exact screenshot is independently reproduced.
+- Tested binary SHA: 03a68baff006f5d58cca304b7d0b36cc9ce28b49. Any following documentation-only commit does not require rebuilding the identical product C++ source but changes the overall git revision marker.
+
+
 ## 2026-09-27 UI-02 사용자 화면 재신고: native final pixel ownership 확인
 
 - 사용자 화면: 앱 Dark임에도 파일 목록에 밝은 회색 native scrollbar 노출.
