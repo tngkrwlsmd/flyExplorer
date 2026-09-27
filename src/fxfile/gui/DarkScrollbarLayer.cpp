@@ -377,17 +377,17 @@ void updateBar(HWND aTarget, HWND aOwner, bool aVertical,
 
 // Do not include <mutex>: the legacy src/base/stdint.h suppresses INTMAX_MAX
 // in C++ after the PCH, which breaks MSVC's <ratio>/<mutex> headers.
-// Windows' native SRW lock also avoids a CRT-dependent GUI worker lock.
+// Windows' CRITICAL_SECTION also supports the legacy targetver.h baseline.
 class LayerLock
 {
 public:
-    explicit LayerLock(SRWLOCK &aLock) : mLock(aLock)
+    explicit LayerLock(CRITICAL_SECTION &aLock) : mLock(aLock)
     {
-        ::AcquireSRWLockExclusive(&mLock);
+        ::EnterCriticalSection(&mLock);
     }
-    ~LayerLock() { ::ReleaseSRWLockExclusive(&mLock); }
+    ~LayerLock() { ::LeaveCriticalSection(&mLock); }
 private:
-    SRWLOCK &mLock;
+    CRITICAL_SECTION &mLock;
     LayerLock(const LayerLock &);
     LayerLock &operator=(const LayerLock &);
 };
@@ -398,7 +398,7 @@ public:
     LayerManager()
         : mWake(::CreateEvent(NULL, FALSE, FALSE, NULL)), mStarted(false)
     {
-        ::InitializeSRWLock(&mMutex);
+        ::InitializeCriticalSection(&mMutex);
     }
 
     void enable(HWND aWindow, const ThemePalette &aPalette)
@@ -528,7 +528,7 @@ private:
         }
     }
 
-    SRWLOCK mMutex;
+    CRITICAL_SECTION mMutex;
     std::map<HWND, ThemePalette> mTargets;
     HANDLE mWake;
     bool mStarted;
