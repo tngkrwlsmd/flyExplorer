@@ -7,6 +7,26 @@ Update this page after each logical work unit that changes its facts.
 For the chronological diagnosis and original evidence, retain and use
 [`ERROR_HISTORY.md`](ERROR_HISTORY.md) rather than moving/deleting entries.
 
+**2026-09-27 Native UI evidence preparation — TOOLING ADDED / PRODUCT VISUAL NOT TESTED:**
+채팅에서 실제 Windows UI를 검증하는 반복 작업을 준비하기 위해 별도
+`build/visual_ui_probe.py` 및 순수 `build/test_visual_ui_probe.py` 테스트와
+[실행 및 검증 절차](UI_VISUAL_RETEST.md)를 추가했다. 사용자의 개인 설정과
+데이터를 수정하지 않도록 격리된 합성 fixture를 요구하고,
+`build-revision.txt`와 Git HEAD가 일치하지 않으면 스크린샷 수집을
+거부한다. 스크롤바 대상은 공개 `GetScrollBarInfo`로 좌표를 얻어
+실제 마우스 드래그 중 12개 프레임과 thumb 위치를 기록한다. 밝은
+네이티브 스크롤바 의심 프레임은 탐지 후보로 표시하되,
+픽셀 차이만으로 UI 결함의 해결이나 실패를 단정하지 않는다.
+정적 source preflight에 해당 안전 계약도 연결했다.
+
+**현재 체크포인트는 제품 C++ 렌더링을 변경하지 않았다.** 현재 채팅에는
+연결된 Windows 테스트 기기가 없으므로 신규 소스의 Windows x64
+컴파일·최신 바이너리 실행·실제 화면 관찰은 **NOT TESTED**다.
+기존 UI-02는 여전히 **OPEN**, UI-09 및 UI-01/03~14의 해당 항목은
+각기 종전 근거 수준의 **RUNTIME/VISUAL RETEST OPEN**으로 유지한다.
+자동 GitHub Actions를 실행하거나 제한된 x86/배포 범위를 확장하지
+않았다. 전체 UI 해결 완료로 보고하지 않는다.
+
 **2026-09-26 UI-02·05 후속 코드 — 비동기 방식으로 재설계 / WINDOWS RUNTIME NOT TESTED:**
 사용자는 HANG-01 문제가 해결됐다고 보고하며 이전 UI 점검 목록의
 처리를 요청했다. 현재 소스의 HANG-01 OLE paint starvation
