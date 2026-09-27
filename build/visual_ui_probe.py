@@ -119,6 +119,25 @@ def compare(before, after, output, tolerance):
         return {"changed_pixels": changed, "total_pixels": a.width * a.height,
                 "status": "REVIEW_REQUIRED" if changed else "NO_DIFFERENCE_NOT_VISUAL_PASS"}
 
+def bright_neutral_ratio(image_path, bounds):
+    """Flag likely native light surfaces, never declare a visual failure alone."""
+    from PIL import Image
+    with Image.open(image_path) as image:
+        image = image.convert("RGB")
+        left, top, right, bottom = bounds
+        left, top = max(0, left), max(0, top)
+        right, bottom = min(image.width, right), min(image.height, bottom)
+        if left >= right or top >= bottom:
+            raise ValueError("Native scrollbar ROI is outside the captured control")
+        pixels = image.crop((left, top, right, bottom)).tobytes()
+        bright = sum(
+            min(pixels[i:i + 3]) >= 210 and
+            max(pixels[i:i + 3]) - min(pixels[i:i + 3]) <= 24
+            for i in range(0, len(pixels), 3)
+        )
+        return bright / ((right - left) * (bottom - top))
+
+
 def run(args):
     if platform.system() != "Windows":
         raise RuntimeError("Windows interactive desktop is required")
@@ -156,7 +175,12 @@ def run(args):
         info = scrollbar(target, vertical)
         start, end = drag_points(info, vertical)
         bbox = rect_of(target)
+        bar = info.rcScrollBar
+        roi = (bar.left - bbox[0], bar.top - bbox[1],
+               bar.right - bbox[0], bar.bottom - bbox[1])
         capture(bbox, output / "before.png")
+        initial_bright_ratio = bright_neutral_ratio(output / "before.png", roi)
+        bright_ratios = []
         thumbs = []
         mouse.press(button="left", coords=start)
         try:
@@ -164,12 +188,19 @@ def run(args):
                 point = tuple(round(start[j] + (end[j] - start[j]) * (i + 1) / 12) for j in (0, 1))
                 mouse.move(coords=point)
                 time.sleep(0.06)
-                capture(bbox, output / f"drag-{i:02d}.png")
+                frame_file = output / f"drag-{i:02d}.png"
+                capture(bbox, frame_file)
+                bright_ratios.append(bright_neutral_ratio(frame_file, roi))
                 thumbs.append(scrollbar(target, vertical).xyThumbTop)
         finally:
             mouse.release(button="left", coords=end)
         capture(bbox, output / "after.png")
-        manifest.update({"control": args.control, "orientation": args.orientation,
+        suspicious = sum(ratio > 0.35 and ratio - initial_bright_ratio > 0.15
+                         for ratio in bright_ratios)
+        manifest.update({"initial_bright_ratio": initial_bright_ratio,
+                         "drag_bright_ratios": bright_ratios,
+                         "possible_native_brightening_frames": suspicious,
+                         "control": args.control, "orientation": args.orientation,
                          "start": start, "end": end, "thumb_positions": thumbs,
                          "scrollbar_screen_rect": [info.rcScrollBar.left, info.rcScrollBar.top,
                                                    info.rcScrollBar.right, info.rcScrollBar.bottom]})
