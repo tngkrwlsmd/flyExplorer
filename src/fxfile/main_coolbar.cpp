@@ -59,6 +59,7 @@ END_MESSAGE_MAP()
 MainCoolBar::MainCoolBar(void)
     : mDefaultCompactPending(XPR_FALSE)
     , mDefaultCompactPosted(XPR_FALSE)
+    , mLastDefaultCompactWidth(0)
 {
 }
 
@@ -152,6 +153,7 @@ xpr_bool_t MainCoolBar::createBands(void)
     // UI-05: keep the three isolated initial rows while the native bars
     // acquire their actual geometry. Schedule *one* asynchronous fit check
     // only on a fresh profile. No layout changes are made from WM_SIZE.
+    mLastDefaultCompactWidth = 0;
     mDefaultCompactPending =
         XPR_IS_FALSE(sSavedCoolBar) &&
         XPR_IS_FALSE(gOpt->mMain.mDriveBarMultiLine) &&
@@ -168,6 +170,19 @@ xpr_bool_t MainCoolBar::createBands(void)
     }
 
     return 0;
+}
+
+BOOL MainCoolBar::OnNotify(WPARAM wParam, LPARAM lParam, LRESULT* pResult)
+{
+    // Once the user starts a manual rebar drag, never automatically
+    // rearrange this session's fresh-profile bands on a later resize.
+    if (wParam == 1 && lParam != 0)
+    {
+        const NMHDR *sHeader = reinterpret_cast<const NMHDR *>(lParam);
+        if (sHeader->code == RBN_BEGINDRAG)
+            mDefaultCompactPending = XPR_FALSE;
+    }
+    return CSizableReBar::OnNotify(wParam, lParam, pResult);
 }
 
 void MainCoolBar::OnDestroy(void) 
@@ -206,7 +221,13 @@ void MainCoolBar::OnSize(xpr_uint_t nType, xpr_sint_t cx, xpr_sint_t cy)
     // UI-05: a nonzero size is the earliest valid cue to enqueue the
     // one-shot fit check. Never run SetBandInfo/RecalcLayout synchronously
     // inside OnSize (that can re-enter OnSize via Rebar notifications).
-    if (cx > 0 && sDeferredCompactMessage != 0 &&
+    // A narrow first frame must not make the default rows permanent:
+    // only reconsider a larger *measured* width, asynchronously. Using a
+    // width watermark prevents a same-size WM_SIZE/posted-message storm.
+    CRect sClient;
+    sReBarCtrl.GetClientRect(&sClient);
+    if (cx > 0 && sClient.Width() > mLastDefaultCompactWidth &&
+        sDeferredCompactMessage != 0 &&
         XPR_IS_TRUE(mDefaultCompactPending) &&
         XPR_IS_FALSE(mDefaultCompactPosted))
     {
@@ -251,11 +272,18 @@ LRESULT MainCoolBar::OnDeferredCompact(WPARAM, LPARAM)
     if (sDriveBand.cxIdeal == 0 || sBookmarkBand.cxIdeal == 0)
         return 0;
 
-    // Attempt at most once after both native bars are measured; if the
-    // first usable frame is narrow, retain separate rows permanently.
-    mDefaultCompactPending = XPR_FALSE;
+    // A smaller first frame must not prevent a later wider fresh-profile
+    // frame from fitting. Never retry the same width; preserve manual rows.
+    if ((sBookmarkBand.fStyle & RBBS_BREAK) == 0)
+    {
+        mDefaultCompactPending = XPR_FALSE;
+        return 0;
+    }
     CRect sClient;
     sBands.GetClientRect(&sClient);
+    if (sClient.Width() <= mLastDefaultCompactWidth)
+        return 0;
+    mLastDefaultCompactWidth = sClient.Width();
     const xpr_sint_t sSlack =
         ui::ModernUI::scaleForWindow(48, GetSafeHwnd());
     const xpr_sint_t sAvailable =
@@ -271,6 +299,7 @@ LRESULT MainCoolBar::OnDeferredCompact(WPARAM, LPARAM)
     sBookmarkBand.fStyle &= ~RBBS_BREAK;
     if (sBands.SetBandInfo(sBookmark, &sBookmarkBand))
     {
+        mDefaultCompactPending = XPR_FALSE;
         CFrameWnd *sFrame = GetParentFrame();
         if (sFrame != NULL)
             sFrame->RecalcLayout();
