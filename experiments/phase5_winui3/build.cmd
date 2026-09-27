@@ -1,5 +1,8 @@
 @echo off
 setlocal
+rem Preserve reproducible, tracked project templates: root repository ignores generated vcxproj files.
+if not exist "%~dp0FlyExplorerWinUI3NavPoC.vcxproj" copy /y "%~dp0FlyExplorerWinUI3NavPoC.project-template.xml" "%~dp0FlyExplorerWinUI3NavPoC.vcxproj" >nul || exit /b 6
+if not exist "%~dp0FlyExplorerWinUI3NavPoC.vcxproj.filters" copy /y "%~dp0FlyExplorerWinUI3NavPoC.filters-template.xml" "%~dp0FlyExplorerWinUI3NavPoC.vcxproj.filters" >nul || exit /b 7
 set "ROOT=%~dp0..\..\"
 set "VS=C:\Program Files\Microsoft Visual Studio\18\Community"
 if not exist "%VS%\MSBuild\Current\Bin\MSBuild.exe" exit /b 3
