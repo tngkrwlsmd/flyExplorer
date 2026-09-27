@@ -10,7 +10,6 @@
 
 #include <cstring>
 #include <map>
-#include <mutex>
 #include <process.h>
 #include <oleacc.h>
 
@@ -376,12 +375,30 @@ void updateBar(HWND aTarget, HWND aOwner, bool aVertical,
     placeLayer(aLayer, aOwner, sInfo.rcScrollBar, aPalette, &sInfo);
 }
 
+// Do not include <mutex>: the legacy src/base/stdint.h suppresses INTMAX_MAX
+// in C++ after the PCH, which breaks MSVC's <ratio>/<mutex> headers.
+// Windows' native SRW lock also avoids a CRT-dependent GUI worker lock.
+class LayerLock
+{
+public:
+    explicit LayerLock(SRWLOCK &aLock) : mLock(aLock)
+    {
+        ::AcquireSRWLockExclusive(&mLock);
+    }
+    ~LayerLock() { ::ReleaseSRWLockExclusive(&mLock); }
+private:
+    SRWLOCK &mLock;
+    LayerLock(const LayerLock &);
+    LayerLock &operator=(const LayerLock &);
+};
+
 class LayerManager
 {
 public:
     LayerManager()
         : mWake(::CreateEvent(NULL, FALSE, FALSE, NULL)), mStarted(false)
     {
+        ::InitializeSRWLock(&mMutex);
     }
 
     void enable(HWND aWindow, const ThemePalette &aPalette)
@@ -389,7 +406,7 @@ public:
         if (::IsWindow(aWindow) == FALSE || mWake == NULL)
             return;
         {
-            std::lock_guard<std::mutex> sGuard(mMutex);
+            LayerLock sGuard(mMutex);
             mTargets[aWindow] = aPalette;
             if (!mStarted)
             {
@@ -412,7 +429,7 @@ public:
         if (mWake == NULL)
             return;
         {
-            std::lock_guard<std::mutex> sGuard(mMutex);
+            LayerLock sGuard(mMutex);
             mTargets.erase(aWindow);
         }
         ::SetEvent(mWake);
@@ -449,7 +466,7 @@ private:
             }
             std::map<HWND, ThemePalette> sCurrent;
             {
-                std::lock_guard<std::mutex> sGuard(mMutex);
+                LayerLock sGuard(mMutex);
                 sCurrent = mTargets;
             }
             for (std::map<HWND, TargetLayers>::iterator sIt =
@@ -511,7 +528,7 @@ private:
         }
     }
 
-    std::mutex mMutex;
+    SRWLOCK mMutex;
     std::map<HWND, ThemePalette> mTargets;
     HANDLE mWake;
     bool mStarted;
