@@ -29,4 +29,4 @@ Neither the cost of shipping this interprocess test bridge nor the mature MFC ap
 3. Verify real 125/150/200 DPI and OS High Contrast in an independent account/VM, plus same-folder side-by-side Windows 11 Explorer visuals, keyboard/IME/accessibility, runtime/installer/rollback costs and measurable responsiveness.
 4. Only with equivalent **production-relevant** feature and cost evidence consider incremental MFC work, a limited hybrid host or staged UI replacement. **No framework transition is approved or supported by this limited proof.**
 
-No product source, binary, original user UI settings, registry setup or GitHub Actions workflows were changed by this work.
+No product source, executable or original six UI configuration files were changed. No system registry configuration changes were intentionally performed, but comprehensive HKCU preservation was not independently verified. No GitHub Actions workflows were dispatched.
