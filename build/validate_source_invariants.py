@@ -5212,6 +5212,66 @@ def validate_html_help_package_source() -> list[str]:
     return []
 
 
+def validate_visual_ui_evidence_contract() -> list[str]:
+    """Protect truthful native UI capture without requiring test-only packages.
+
+    This is a static gate only. The interactive Windows program, frame pixels,
+    and local Python/Pillow tests need their own revision-matched evidence.
+    """
+    errors: list[str] = []
+    paths = {
+        "probe": ROOT / "build" / "visual_ui_probe.py",
+        "tests": ROOT / "build" / "test_visual_ui_probe.py",
+        "playbook": ROOT / "docs" / "development" / "UI_VISUAL_RETEST.md",
+    }
+    sources: dict[str, str] = {}
+    for name, path in paths.items():
+        try:
+            sources[name] = path.read_text(encoding="utf-8")
+        except OSError as exc:
+            errors.append(
+                f"{path.relative_to(ROOT)}: missing visual evidence contract: {exc}"
+            )
+    if errors:
+        return errors
+    # Revision and privacy gates must remain before capture. Avoid brittle
+    # implementation-shape assertions: the safety/evidence properties matter.
+    for token in (
+        '"build-revision.txt"',
+        '"git", "rev-parse", "HEAD"',
+        'if revision != head:',
+        'if not args.synthetic_fixture:',
+        '"INCONCLUSIVE_NO_THUMB_MOVEMENT"',
+        '"CAPTURED_REVIEW_REQUIRED"',
+        '"NO_DIFFERENCE_NOT_VISUAL_PASS"',
+        '"REVIEW_REQUIRED"',
+        '"possible_native_brightening_frames"',
+        'mouse.press(button="left",',
+        'mouse.release(button="left",',
+    ):
+        if token not in sources["probe"]:
+            errors.append(f"visual evidence probe missing safety token: {token}")
+    for token in (
+        "test_invalid_scrollbar_geometry_rejected",
+        "test_equal_images_are_not_visual_pass",
+        "test_misaligned_dimensions_are_rejected",
+        "test_bright_neutral_detection",
+        "test_brightness_invalid_roi_rejected",
+    ):
+        if token not in sources["tests"]:
+            errors.append(f"visual evidence isolated tests missing: {token}")
+    for token in (
+        "local_ci.bat x64",
+        "synthetic",
+        "UI-02",
+        "NOT TESTED",
+        "High Contrast",
+    ):
+        if token not in sources["playbook"]:
+            errors.append(f"visual evidence playbook missing: {token}")
+    return errors
+
+
 def main() -> int:
     errors = validate_translation_units()
     errors.extend(validate_ole_pending_paint_budget())
@@ -5258,6 +5318,7 @@ def main() -> int:
     errors.extend(validate_retired_updater_and_generated_projects())
     errors.extend(validate_release_stage_recovery())
     errors.extend(validate_win11_stability_regressions())
+    errors.extend(validate_visual_ui_evidence_contract())
     errors.extend(validate_runtime_ui_audit_regressions())
     errors.extend(validate_modern_ui_registration())
 
