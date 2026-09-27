@@ -15,6 +15,32 @@ param(
 $ErrorActionPreference = "Stop"
 Set-StrictMode -Version Latest
 
+function Stop-SmokeProcessTree {
+    param(
+        [Parameter(Mandatory = $true)]
+        [System.Diagnostics.Process]$Target
+    )
+
+    # PowerShell 7 uses the .NET process-tree overload. Windows PowerShell
+    # 5.1 cannot call Kill(bool), so retain tree cleanup via taskkill /T.
+    $treeKill = [System.Diagnostics.Process].GetMethod(
+        "Kill", [System.Type[]] @([bool]))
+    if ($null -ne $treeKill) {
+        $Target.Kill($true)
+        return
+    }
+
+    $taskkill = Join-Path $env:SystemRoot "System32\taskkill.exe"
+    Require-Path $taskkill "Windows process-tree cleanup tool"
+    & $taskkill /T /F /PID $Target.Id | Out-Null
+    if ($LASTEXITCODE -ne 0) {
+        $Target.Refresh()
+        if (-not $Target.HasExited) {
+            throw "taskkill could not stop smoke-test process tree with PID $($Target.Id)."
+        }
+    }
+}
+
 function Require-Path {
     param([string]$Path, [string]$Description)
 
@@ -121,8 +147,10 @@ try {
     $startInfo.FileName = $exe
     $startInfo.WorkingDirectory = $runtimeDir
     $startInfo.UseShellExecute = $false
-    $startInfo.ArgumentList.Add("--conf_dir=$confDir")
-    $startInfo.ArgumentList.Add($testDir)
+    # local_ci.bat runs powershell.exe (Windows PowerShell 5.1 / .NET Framework).
+    # Arguments exists on both runtimes; ArgumentList exists only on newer .NET.
+    # Both paths are generated child folders (no trailing backslash/quote).
+    $startInfo.Arguments = ('--conf_dir="{0}" "{1}"' -f $confDir, $testDir)
 
     $process = [System.Diagnostics.Process]::new()
     $process.StartInfo = $startInfo
@@ -184,7 +212,7 @@ finally {
             if (-not $process.HasExited) {
                 $null = $process.CloseMainWindow()
                 if (-not $process.WaitForExit(5000)) {
-                    $process.Kill($true)
+                    Stop-SmokeProcessTree -Target $process
                     $process.WaitForExit(5000) | Out-Null
                 }
             }
@@ -193,7 +221,7 @@ finally {
             Write-Warning "Failed to stop smoke-test process cleanly: $($_.Exception.Message)"
             try {
                 if (-not $process.HasExited) {
-                    $process.Kill($true)
+                    Stop-SmokeProcessTree -Target $process
                 }
             }
             catch {
