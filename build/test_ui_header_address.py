@@ -21,6 +21,15 @@ class HeaderAddressRules(unittest.TestCase):
         s=(ROOT/"src/fxfile/address_bar.cpp").read_text(encoding="utf-8")
         self.assertEqual(0,s.count("sPalette.mElevated"))
         self.assertGreaterEqual(s.count("sPalette.mChrome"),5)
+    def test_round_address_frame_and_native_combo_repaint(self):
+        s=(ROOT/"src/fxfile/address_bar.cpp").read_text(encoding="utf-8")
+        self.assertIn("ModernUI::getControlCornerRadius(aHwnd)",s)
+        self.assertIn("::ExtSelectClipRgn(sDC, sRounded, RGN_DIFF)",s)
+        self.assertEqual(3,s.count("PaintRoundedAddressFrame("))
+    def test_rounded_address_never_overrides_high_contrast(self):
+        s=(ROOT/"src/fxfile/address_bar.cpp").read_text(encoding="utf-8")
+        self.assertIn("XPR_IS_TRUE(aPalette.mHighContrast)",s)
+        self.assertIn("PaintRoundedAddressFrame(m_hWnd, sPalette);",s)
     def test_native_high_contrast_mode_remains(self):
         s=(ROOT/"src/fxfile/address_bar.cpp").read_text(encoding="utf-8")
         self.assertIn("if (XPR_IS_TRUE(sPalette.mHighContrast))",s)

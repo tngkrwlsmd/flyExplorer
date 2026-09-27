@@ -5523,6 +5523,16 @@ def validate_header_address_surface() -> list[str]:
         ("address background brush matches chrome",
          "mBackgroundBrush.CreateSolidBrush(sPalette.mChrome)" in address),
         ("address palette no longer raises full-width box", "sPalette.mElevated" not in address),
+        ("rounded native field uses Fluent corner metric",
+         "ModernUI::getControlCornerRadius(aHwnd)" in address),
+        ("rounded mask hides native square corners",
+         "::ExtSelectClipRgn(sDC, sRounded, RGN_DIFF)" in address),
+        ("rounded frame is drawn after native combo dropdown",
+         "PaintRoundedAddressFrame(aHwnd, sPalette);" in address),
+        ("outer combo reasserts rounded shape after native paint",
+         "PaintRoundedAddressFrame(m_hWnd, sPalette);" in address),
+        ("rounded chrome preserves OS High Contrast",
+         "XPR_IS_TRUE(aPalette.mHighContrast)" in address),
         ("high contrast native path preserved", "if (XPR_IS_TRUE(sPalette.mHighContrast))" in address),
     )
     return ["Header/address: missing " + label for label, ok in checks if not ok]

@@ -79,6 +79,70 @@ void CoverClassicAddressClientEdge(HWND aHwnd, COLORREF aColor)
     ::ReleaseDC(aHwnd, sDC);
 }
 
+// Draw the quiet, rounded Windows 11 location field without replacing
+// the native ComboBoxEx edit, drop-down, focus, IME or accessibility.
+void PaintRoundedAddressFrame(HWND aHwnd, const ui::ThemePalette &aPalette)
+{
+    if (XPR_IS_NULL(aHwnd) || ::IsWindow(aHwnd) == FALSE ||
+        XPR_IS_TRUE(aPalette.mHighContrast))
+        return;
+
+    RECT sRect = {0};
+    ::GetClientRect(aHwnd, &sRect);
+    const xpr_sint_t sWidth = sRect.right - sRect.left;
+    const xpr_sint_t sHeight = sRect.bottom - sRect.top;
+    if (sWidth <= 0 || sHeight <= 0)
+        return;
+
+    const xpr_sint_t sRadius = min(
+        ui::ModernUI::getControlCornerRadius(aHwnd),
+        min(sWidth, sHeight) / 2);
+    if (sRadius <= 0)
+        return;
+
+    HDC sDC = ::GetDC(aHwnd);
+    if (XPR_IS_NULL(sDC))
+        return;
+
+    const xpr_sint_t sDiameter = 2 * sRadius;
+    HRGN sRounded = ::CreateRoundRectRgn(
+        0, 0, sWidth, sHeight, sDiameter, sDiameter);
+    if (XPR_IS_NOT_NULL(sRounded))
+    {
+        // Native ComboBox can repaint its outer square corners on hover
+        // or text edits. Mask just the pixels outside the rounded field.
+        const xpr_sint_t sSavedDC = ::SaveDC(sDC);
+        if (sSavedDC != 0)
+        {
+            if (::ExtSelectClipRgn(sDC, sRounded, RGN_DIFF) != ERROR)
+            {
+                ::SetDCBrushColor(sDC, aPalette.mSurface);
+                ::FillRect(
+                    sDC, &sRect,
+                    static_cast<HBRUSH>(::GetStockObject(DC_BRUSH)));
+            }
+            ::RestoreDC(sDC, sSavedDC);
+        }
+        ::DeleteObject(sRounded);
+    }
+
+    HPEN sPen = ::CreatePen(
+        PS_SOLID,
+        max(1, ui::ModernUI::scaleForWindow(1, aHwnd)),
+        aPalette.mSeparator);
+    if (XPR_IS_NOT_NULL(sPen))
+    {
+        HGDIOBJ sOldPen = ::SelectObject(sDC, sPen);
+        HGDIOBJ sOldBrush =
+            ::SelectObject(sDC, ::GetStockObject(HOLLOW_BRUSH));
+        ::RoundRect(sDC, 0, 0, sWidth, sHeight, sDiameter, sDiameter);
+        ::SelectObject(sDC, sOldBrush);
+        ::SelectObject(sDC, sOldPen);
+        ::DeleteObject(sPen);
+    }
+    ::ReleaseDC(aHwnd, sDC);
+}
+
 const UINT_PTR kAddressBarComboSubclassId = 1;
 const UINT_PTR kAddressBarEditSubclassId = 2;
 const xpr_tchar_t kAddressBarOuterBorderProp[] =
@@ -196,7 +260,10 @@ void AddressBar::OnPaint(void)
 
     const ui::ThemePalette sPalette = ui::ModernUI::getPalette();
     if (XPR_IS_FALSE(sPalette.mHighContrast))
+    {
         CoverClassicAddressClientEdge(m_hWnd, sPalette.mChrome);
+        PaintRoundedAddressFrame(m_hWnd, sPalette);
+    }
 }
 
 void AddressBar::OnNcPaint(void)
@@ -1737,6 +1804,10 @@ LRESULT CALLBACK AddressBar::ComboSubclassProc(
                 }
 
                 sAddressBar->drawModernComboButton(aHwnd);
+                // Draw last so the native arrow/button cannot restore
+                // square right corners on a themed dropdown repaint.
+                if (XPR_IS_FALSE(sPalette.mHighContrast))
+                    PaintRoundedAddressFrame(aHwnd, sPalette);
                 return sResult;
             }
 
