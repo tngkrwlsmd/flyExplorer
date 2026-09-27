@@ -4489,25 +4489,38 @@ def validate_fresh_profile_compaction_retry_contract(
         "sDriveBand.cxIdeal == 0 || sBookmarkBand.cxIdeal == 0",
         "sClient.Width() <= mLastDefaultCompactWidth",
         "mLastDefaultCompactWidth = sClient.Width();",
+        "sDriveBand.fMask = RBBIM_IDEALSIZE | RBBIM_HEADERSIZE;",
+        "sBookmarkBand.cxIdeal + sBookmarkBand.cxHeader + sBandInset",
+        "sDriveBand.cxIdeal + sDriveBand.cxHeader + sBandInset",
         "sBookmarkBand.fStyle &= ~RBBS_BREAK;",
-        "if (sBands.SetBandInfo(sBookmark, &sBookmarkBand))",
+        "sBookmarkBand.fMask = RBBIM_STYLE | RBBIM_SIZE;",
+        "sBookmarkBand.cx = sBookmarkWidth;",
+        "sDriveBand.fMask = RBBIM_SIZE;",
+        "sDriveBand.cx = sDriveWidth;",
+        "if (!sBands.SetBandInfo(sBookmark, &sBookmarkBand))",
+        "if (!sBands.SetBandInfo(sDrive, &sDriveBand))",
     )):
-        errors.append("UI-05: native measured deferred fit/width retry is missing")
-    # Stop before SetBandInfo, which may synchronously emit WM_SIZE, but only
-    # *after* a wide-enough frame passes the fit check. On mutation failure,
-    # restore eligibility for a future larger window instead of busy-posting.
-    success = deferred.find("if (sBands.SetBandInfo(sBookmark, &sBookmarkBand))")
-    fit = deferred.find("if (sDriveBand.cxIdeal >= static_cast<UINT>(sAvailable)")
-    reset = deferred.rfind("mDefaultCompactPending = XPR_FALSE;", 0, success)
-    if success < 0 or fit < 0 or not fit < reset < success:
-        errors.append("UI-05: clear pending only after fit and before native SetBandInfo")
+        errors.append("UI-05: measured dual-band width allocation or deferred retry missing")
+    # Stop before *either* SetBandInfo, which can synchronously emit WM_SIZE,
+    # only after enough measured space exists. Do not force a compact layout
+    # after native rejection or on a smaller initial window.
+    first_mutation = deferred.find("if (!sBands.SetBandInfo(sBookmark, &sBookmarkBand))")
+    second_mutation = deferred.find("if (!sBands.SetBandInfo(sDrive, &sDriveBand))")
+    fit = deferred.find("if (sDriveWidth >= static_cast<UINT>(sAvailable)")
+    reset = deferred.rfind("mDefaultCompactPending = XPR_FALSE;", 0, first_mutation)
+    if (first_mutation < 0 or second_mutation < 0 or fit < 0 or not (
+        fit < reset < first_mutation < second_mutation
+    )):
+        errors.append("UI-05: clear pending after measured fit, before both native mutations")
     width = deferred.find("mLastDefaultCompactWidth = sClient.Width();")
     if width >= 0 and fit > width and (
         "mDefaultCompactPending = XPR_FALSE;" in deferred[width:fit]
     ):
         errors.append("UI-05: failed narrow fit must remain eligible after wider resize")
-    if success >= 0 and "mDefaultCompactPending = XPR_TRUE;" not in deferred[success:]:
-        errors.append("UI-05: recover retry eligibility if native SetBandInfo fails")
+    if first_mutation >= 0 and deferred[first_mutation:].count(
+        "mDefaultCompactPending = XPR_TRUE;"
+    ) < 2:
+        errors.append("UI-05: both native band mutation failures must restore retry")
     if not on_notify or not all(token in on_notify for token in (
         "RBN_BEGINDRAG",
         "mDefaultCompactPending = XPR_FALSE;",
