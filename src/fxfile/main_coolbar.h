@@ -62,8 +62,12 @@ protected:
     // First-use only: never auto-rearrange saved or manually configured rows.
     xpr_bool_t mDefaultCompactPending;
     xpr_bool_t mDefaultCompactPosted;
+    // Do not repeatedly retry an initially narrow layout at the same width.
+    xpr_sint_t mLastDefaultCompactWidth;
 
 protected:
+    // A manual rebar drag takes ownership of the default row arrangement.
+    virtual BOOL OnNotify(WPARAM wParam, LPARAM lParam, LRESULT* pResult);
     DECLARE_MESSAGE_MAP()
     afx_msg LRESULT OnDeferredCompact(WPARAM, LPARAM);
     afx_msg void OnSize(xpr_uint_t nType, xpr_sint_t cx, xpr_sint_t cy);
