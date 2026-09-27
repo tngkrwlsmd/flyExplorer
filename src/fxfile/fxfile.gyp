@@ -324,6 +324,8 @@
                 './gui/gdi.h',
                 './gui/IconList.cpp',
                 './gui/IconList.h',
+                './gui/DarkScrollbarLayer.cpp',
+                './gui/DarkScrollbarLayer.h',
                 './gui/ListCtrlEx.cpp',
                 './gui/ListCtrlEx.h',
                 './gui/ListCtrlPrint.cpp',
