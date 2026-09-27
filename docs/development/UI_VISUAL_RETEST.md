@@ -40,7 +40,11 @@ The probe saves screenshots and manifest.json to local logs/visual-ui.
 Existing gitignore rules exclude the log directory. UI-02 captures twelve
 pressed frames plus native scrollbar/drag geometry, actual thumb movement,
 source revision, executable SHA-256 and DPI. Missing thumb motion produces
-INCONCLUSIVE_NO_THUMB_MOVEMENT. Comparison returns REVIEW_REQUIRED or
+INCONCLUSIVE_NO_THUMB_MOVEMENT.
+The manifest also records initial_bright_ratio, drag_bright_ratios and
+possible_native_brightening_frames. This threshold is a **heuristic triage**
+for suspected reappearance of an OS-bright scrollbar during thumb tracking,
+not a validated image classifier and never sufficient to assign FAIL/PASS. Comparison returns REVIEW_REQUIRED or
 NO_DIFFERENCE_NOT_VISUAL_PASS. Neither establishes visual PASS.
 
 ## Revision-matched acceptance cases
