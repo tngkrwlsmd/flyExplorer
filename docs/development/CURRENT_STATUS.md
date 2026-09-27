@@ -7,6 +7,40 @@ Update this page after each logical work unit that changes its facts.
 For the chronological diagnosis and original evidence, retain and use
 [`ERROR_HISTORY.md`](ERROR_HISTORY.md) rather than moving/deleting entries.
 
+**2026-09-27 실제 Windows UI-05 새 프로필 후속 — 96 DPI DARK RUNTIME/VISUAL PASS, 기타 DPI RETEST OPEN:**
+Remote Desktop Commander/WinApp CLI가 연결된 Windows에서 격리된 합성
+프로필과 합성 폴더·파일 205개만 사용하여 실기 화면을 검사했다.
+최초 e59aed97의 800×600 신규 창은 세 rebar 밴드가 따로 존재하고,
+1920×1032로 최대화해도 드라이브와 북마크가 계속 별도 행으로 남았다.
+최초 UI-05 리사이즈 재시도 수정 fe5e49d의 화면에서는 동일 행으로
+합쳐졌으나 드라이브 밴드가 거의 전폭을 유지해 북마크가 오른쪽
+chevron에 숨겨졌다. 이는 실제 화면에서 확인한 두 번째 결함이다.
+
+후속 3aab666 소스는 저장된 레이아웃/사용자 밴드 드래그를 존중하면서
+**더 넓어진 신규 프로필 창에서만**, 예약 메시지로 실제 rebar ideal/header
+폭을 측정하고 각각의 밴드에 폭을 배분한다. WM_SIZE에서는
+SetBandInfo/부모 RecalcLayout을 직접 호출하지 않는다.
+실제 3aab666 x64 Windows 빌드 후 800×600→1920×1032에서 드라이브와
+북마크가 정상적인 하나의 둘째 행에 직접 표시되며 프로그램 응답 상태가
+정상인 것을 screenshot·WinApp UI 트리로 확인했다.
+정적 전체 preflight PASS, 신규 UI-05 mutation 검사는 **11 PASS**,
+local_ci.bat x64 빌드와 native 기능 검사는 **17 PASS / 0 FAIL**다.
+단 **runtime smoke는 기존 HKCU 사용자 상태 보호 때문에 SKIPPED**;
+실기 UI 실행은 별도 격리 프로필로 확인했다. 125/150/200% DPI,
+Light/High Contrast, 기존의 복잡한 사용자 저장 밴드와 도구 모음 드래그
+상호작용은 **RETEST OPEN**이다. 이 범위 밖의 UI-01/03~14 및 다른
+설치 환경의 문제를 완료로 승격하지 않는다.
+
+동일 후보 바이너리의 **96 DPI Dark 합성 fixture**에서 UI-02 파일 목록
+세로/트리 가로 스크롤바를 각각 12프레임 실제 드래그했다. 손잡이
+위치는 이동했고 해당 캡처의 밝은 중성 픽셀 비율은 전 프레임 **0.0**;
+원격 테스트 시스템에서 밝아짐은 재현되지 않았다. 다른 배율/Windows
+시각 스타일과 사용자가 과거 제공한 실패 화면은 아직 설명되지 않아
+**UI-02 전체 OPEN / 해당 한정 재현 NOT OBSERVED**로 유지한다.
+캡처·manifest는 개인 설정을 포함하지 않고 검사 PC의 무추적
+logs/visual-ui/에 보관했으며, 기존 사용자의 main-window.png와
+HKCU 설정은 건드리지 않았다. GitHub Actions는 실행하지 않았다.
+
 **2026-09-27 사용자 x64 빌드 보고 — COMPILE/FUNCTIONAL PASS, SMOKE SCRIPT RETEST OPEN:**
 사용자가 `ff0352957686a8895e885bc3103eed3a65d6702b`에서 `local_ci.bat x64`
 실행 결과를 공유했다. VS 2026/v145 솔루션 생성·소스 정적 검사 및
