@@ -1,4 +1,4 @@
-# flyExplorer — current project status (2026-09-26)
+# flyExplorer — current project status (2026-09-27)
 
 **Purpose:** Fast, current-state entry point for maintainers and development
 agents. This is an evidence-labelled summary, not a replacement for source,
