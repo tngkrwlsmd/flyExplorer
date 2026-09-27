@@ -1,6 +1,7 @@
 #pragma once
 #include "MainWindow.g.h"
 #include "NavigationModel.h"
+#include "ProductCommandBridge.h"
 
 namespace winrt::FlyExplorerWinUI3NavPoC::implementation
 {
@@ -17,6 +18,10 @@ namespace winrt::FlyExplorerWinUI3NavPoC::implementation
 
     private:
         NavigationModel mNavigation;
+        ProductCommandBridge mProductBridge;
+        bool TryAttachExplicitProductTestProcess();
+        void RunRealProductCommand(std::uint32_t id);
+        void RefreshBridge(winrt::hstring const& status);
         void Refresh(winrt::hstring const& status = L"");
     };
 }
