@@ -7,6 +7,7 @@
 #include "stdafx.h"
 #include "ModernUI.h"
 #include <oleacc.h> // Documented OBJID_* scrollbar constants
+#include <vector>
 
 #include <roapi.h>
 #include <winstring.h>
@@ -2130,79 +2131,443 @@ void PaintDarkScrollBarPart(
         }
     }
 }
+// UI-02: separate owner-attached layered windows own the final Dark
+// scrollbar pixels. Their hit testing is transparent, so USER32 still owns
+// the native WS_*SCROLL input, range, focus, accessibility and thumb tracking.
+// In contrast, painting the target's nonclient DC loses to native modal draws.
+const wchar_t kDarkScrollbarOverlayClass[] =
+    L"flyExplorer.DarkScrollbarOverlay.v1";
+
+struct DarkScrollbarEntry
+{
+    HWND mTarget;
+    HWND mVerticalPopup;
+    HWND mHorizontalPopup;
+    HWND mCornerPopup;
+    ThemePalette mPalette;
+    SCROLLBARINFO mLastVertical;
+    SCROLLBARINFO mLastHorizontal;
+    RECT mLastCorner;
+    bool mVerticalValid;
+    bool mHorizontalValid;
+    bool mCornerValid;
+    bool mForce;
+};
+
+static thread_local std::vector<DarkScrollbarEntry> sDarkScrollbarEntries;
+static thread_local HHOOK sDarkScrollbarCallRetHook = NULL;
+static thread_local HHOOK sDarkScrollbarFilterHook = NULL;
+static thread_local bool sDarkScrollbarUpdating = false;
+
+LRESULT CALLBACK DarkScrollbarPopupProc(
+    HWND aHwnd, UINT aMessage, WPARAM aWParam, LPARAM aLParam)
+{
+    // Same-thread HTTRANSPARENT and layered WS_EX_TRANSPARENT were verified
+    // together while real native thumbs moved under a pinned opaque popup.
+    if (aMessage == WM_NCHITTEST)
+        return HTTRANSPARENT;
+    if (aMessage == WM_MOUSEACTIVATE)
+        return MA_NOACTIVATE;
+    return ::DefWindowProcW(aHwnd, aMessage, aWParam, aLParam);
+}
+
+bool EnsureDarkScrollbarPopupClass()
+{
+    static bool sRegistered = false;
+    if (sRegistered)
+        return true;
+
+    WNDCLASSW sClass = {0};
+    sClass.hInstance = ::GetModuleHandleW(NULL);
+    sClass.lpfnWndProc = DarkScrollbarPopupProc;
+    sClass.lpszClassName = kDarkScrollbarOverlayClass;
+    if (::RegisterClassW(&sClass) == 0 &&
+        ::GetLastError() != ERROR_CLASS_ALREADY_EXISTS)
+        return false;
+    sRegistered = true;
+    return true;
+}
+
+void HideDarkScrollbarPopup(HWND aPopup)
+{
+    if (::IsWindow(aPopup))
+        ::ShowWindow(aPopup, SW_HIDE);
+}
+
+HWND EnsureDarkScrollbarPopup(HWND aTarget, HWND &aPopup)
+{
+    if (::IsWindow(aPopup))
+        return aPopup;
+    if (!EnsureDarkScrollbarPopupClass())
+        return NULL;
+    HWND sRoot = ::GetAncestor(aTarget, GA_ROOT);
+    if (sRoot == NULL)
+        return NULL;
+    aPopup = ::CreateWindowExW(
+        WS_EX_LAYERED | WS_EX_TRANSPARENT |
+            WS_EX_NOACTIVATE | WS_EX_TOOLWINDOW,
+        kDarkScrollbarOverlayClass, L"", WS_POPUP,
+        0, 0, 1, 1, sRoot, NULL, ::GetModuleHandleW(NULL), NULL);
+    return aPopup;
+}
+
+// Create one premultiplied-alpha opaque surface in the overlay's own HWND.
+// USER32 can repaint the native scrollbar without overwriting these pixels.
+bool ComposeDarkScrollbarPopup(
+    HWND aPopup, const RECT &aScreenRect,
+    const SCROLLBARINFO *aScrollbar,
+    const ThemePalette &aPalette, bool aVertical)
+{
+    const int sWidth = aScreenRect.right - aScreenRect.left;
+    const int sHeight = aScreenRect.bottom - aScreenRect.top;
+    if (sWidth <= 0 || sHeight <= 0 ||
+        sWidth > 8192 || sHeight > 8192)
+        return false;
+    HDC sScreen = ::GetDC(NULL);
+    HDC sMemory = sScreen ? ::CreateCompatibleDC(sScreen) : NULL;
+    BITMAPINFO sBitmapInfo = {0};
+    sBitmapInfo.bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
+    sBitmapInfo.bmiHeader.biWidth = sWidth;
+    sBitmapInfo.bmiHeader.biHeight = -sHeight;
+    sBitmapInfo.bmiHeader.biPlanes = 1;
+    sBitmapInfo.bmiHeader.biBitCount = 32;
+    void *sPixels = NULL;
+    HBITMAP sBitmap = sMemory ?
+        ::CreateDIBSection(sScreen, &sBitmapInfo, DIB_RGB_COLORS,
+            &sPixels, NULL, 0) : NULL;
+
+    bool sComposed = false;
+    if (sBitmap != NULL && sPixels != NULL)
+    {
+        HGDIOBJ sOldBitmap = ::SelectObject(sMemory, sBitmap);
+        if (aScrollbar != NULL)
+        {
+            PaintDarkScrollBarPart(
+                sMemory, *aScrollbar, aScrollbar->rcScrollBar,
+                aPalette, aVertical);
+        }
+        else
+        {
+            RECT sFill = {0, 0, sWidth, sHeight};
+            ::SetDCBrushColor(sMemory, aPalette.mSurface);
+            ::FillRect(sMemory, &sFill,
+                static_cast<HBRUSH>(::GetStockObject(DC_BRUSH)));
+        }
+
+        // GDI's RGB renderer leaves DIB alpha unset. This popup is entirely
+        // opaque, so set all alpha bytes after drawing its native geometry.
+        DWORD *sPixels32 = static_cast<DWORD *>(sPixels);
+        const size_t sPixelCount =
+            static_cast<size_t>(sWidth) * static_cast<size_t>(sHeight);
+        for (size_t i = 0; i < sPixelCount; ++i)
+            sPixels32[i] |= 0xFF000000u;
+
+        POINT sDestination = {aScreenRect.left, aScreenRect.top};
+        POINT sOrigin = {0, 0};
+        SIZE sSize = {sWidth, sHeight};
+        BLENDFUNCTION sBlend = {AC_SRC_OVER, 0, 255, AC_SRC_ALPHA};
+        sComposed =
+            ::UpdateLayeredWindow(
+                aPopup, sScreen, &sDestination, &sSize, sMemory,
+                &sOrigin, 0, &sBlend, ULW_ALPHA) != FALSE;
+        ::SelectObject(sMemory, sOldBitmap);
+        ::DeleteObject(sBitmap);
+    }
+
+    if (sMemory != NULL)
+        ::DeleteDC(sMemory);
+    if (sScreen != NULL)
+        ::ReleaseDC(NULL, sScreen);
+    if (sComposed)
+        ::SetWindowPos(
+            aPopup, HWND_TOP, aScreenRect.left, aScreenRect.top,
+            sWidth, sHeight, SWP_NOACTIVATE | SWP_SHOWWINDOW);
+    else
+        HideDarkScrollbarPopup(aPopup);
+    return sComposed;
+}
+
+bool SameScrollbarSnapshot(
+    const SCROLLBARINFO &aLeft, const SCROLLBARINFO &aRight)
+{
+    return ::EqualRect(
+        &aLeft.rcScrollBar, &aRight.rcScrollBar) != FALSE &&
+        aLeft.dxyLineButton == aRight.dxyLineButton &&
+        aLeft.xyThumbTop == aRight.xyThumbTop &&
+        aLeft.xyThumbBottom == aRight.xyThumbBottom &&
+        aLeft.rgstate[0] == aRight.rgstate[0] &&
+        aLeft.rgstate[1] == aRight.rgstate[1] &&
+        aLeft.rgstate[3] == aRight.rgstate[3] &&
+        aLeft.rgstate[5] == aRight.rgstate[5];
+}
+
+bool SyncDarkScrollbarPart(
+    DarkScrollbarEntry &aEntry, bool aVertical)
+{
+    SCROLLBARINFO sInfo = {0};
+    sInfo.cbSize = sizeof(sInfo);
+    const LONG sObject = aVertical ? OBJID_VSCROLL : OBJID_HSCROLL;
+    HWND &sPopup =
+        aVertical ? aEntry.mVerticalPopup : aEntry.mHorizontalPopup;
+    SCROLLBARINFO &sPrevious =
+        aVertical ? aEntry.mLastVertical : aEntry.mLastHorizontal;
+    bool &sValid =
+        aVertical ? aEntry.mVerticalValid : aEntry.mHorizontalValid;
+    const DWORD sStyle = static_cast<DWORD>(
+        ::GetWindowLongPtr(aEntry.mTarget, GWL_STYLE));
+    const bool sVisible =
+        (sStyle & (aVertical ? WS_VSCROLL : WS_HSCROLL)) != 0 &&
+        ::GetScrollBarInfo(aEntry.mTarget, sObject, &sInfo) != FALSE &&
+        (sInfo.rgstate[0] &
+            (STATE_SYSTEM_INVISIBLE | STATE_SYSTEM_OFFSCREEN)) == 0;
+
+    if (!sVisible)
+    {
+        HideDarkScrollbarPopup(sPopup);
+        sValid = false;
+        return false;
+    }
+
+    if (sValid && !aEntry.mForce &&
+        ::IsWindowVisible(sPopup) &&
+        SameScrollbarSnapshot(sInfo, sPrevious))
+        return true;
+    if (EnsureDarkScrollbarPopup(aEntry.mTarget, sPopup) == NULL)
+        return false;
+    if (!ComposeDarkScrollbarPopup(
+            sPopup, sInfo.rcScrollBar, &sInfo, aEntry.mPalette,
+            aVertical))
+    {
+        sValid = false;
+        return false;
+    }
+    sPrevious = sInfo;
+    sValid = true;
+    return true;
+}
+
+void SyncDarkScrollbarEntry(DarkScrollbarEntry &aEntry)
+{
+    if (!::IsWindow(aEntry.mTarget) ||
+        !::IsWindowVisible(aEntry.mTarget))
+    {
+        HideDarkScrollbarPopup(aEntry.mVerticalPopup);
+        HideDarkScrollbarPopup(aEntry.mHorizontalPopup);
+        HideDarkScrollbarPopup(aEntry.mCornerPopup);
+        aEntry.mVerticalValid = false;
+        aEntry.mHorizontalValid = false;
+        aEntry.mCornerValid = false;
+        return;
+    }
+
+    const bool sVertical = SyncDarkScrollbarPart(aEntry, true);
+    const bool sHorizontal = SyncDarkScrollbarPart(aEntry, false);
+    if (sVertical && sHorizontal)
+    {
+        RECT sCorner = {
+            aEntry.mLastVertical.rcScrollBar.left,
+            aEntry.mLastHorizontal.rcScrollBar.top,
+            aEntry.mLastVertical.rcScrollBar.right,
+            aEntry.mLastHorizontal.rcScrollBar.bottom
+        };
+        if (sCorner.right > sCorner.left &&
+            sCorner.bottom > sCorner.top)
+        {
+            if (!aEntry.mCornerValid || aEntry.mForce ||
+                ::IsWindowVisible(aEntry.mCornerPopup) == FALSE ||
+                ::EqualRect(&aEntry.mLastCorner, &sCorner) == FALSE)
+            {
+                if (EnsureDarkScrollbarPopup(
+                        aEntry.mTarget, aEntry.mCornerPopup) != NULL &&
+                    ComposeDarkScrollbarPopup(
+                        aEntry.mCornerPopup, sCorner, NULL,
+                        aEntry.mPalette, true))
+                {
+                    aEntry.mLastCorner = sCorner;
+                    aEntry.mCornerValid = true;
+                }
+                else
+                    aEntry.mCornerValid = false;
+            }
+        }
+        else
+        {
+            HideDarkScrollbarPopup(aEntry.mCornerPopup);
+            aEntry.mCornerValid = false;
+        }
+    }
+    else
+    {
+        HideDarkScrollbarPopup(aEntry.mCornerPopup);
+        aEntry.mCornerValid = false;
+    }
+    aEntry.mForce = false;
+}
+
+void SyncDarkScrollbarEntries(void)
+{
+    if (sDarkScrollbarUpdating)
+        return;
+    sDarkScrollbarUpdating = true;
+    for (size_t i = 0; i < sDarkScrollbarEntries.size(); ++i)
+        SyncDarkScrollbarEntry(sDarkScrollbarEntries[i]);
+    sDarkScrollbarUpdating = false;
+}
+
+LRESULT CALLBACK DarkScrollbarCallRet(
+    int aCode, WPARAM aWParam, LPARAM aLParam)
+{
+    if (aCode >= 0 && aLParam != 0 && !sDarkScrollbarUpdating)
+    {
+        const CWPRETSTRUCT *sEvent =
+            reinterpret_cast<const CWPRETSTRUCT *>(aLParam);
+        const UINT sMsg = sEvent->message;
+        const bool sVisibilityOrPosition =
+            sMsg == WM_WINDOWPOSCHANGED ||
+            sMsg == WM_MOVE || sMsg == WM_SHOWWINDOW;
+        const bool sNativeScroll =
+            sMsg == WM_VSCROLL || sMsg == WM_HSCROLL ||
+            sMsg == WM_NCPAINT || sMsg == WM_NCLBUTTONUP;
+        bool sRelevant = false;
+        for (size_t i = 0; i < sDarkScrollbarEntries.size(); ++i)
+        {
+            const HWND sTarget = sDarkScrollbarEntries[i].mTarget;
+            if ((sEvent->hwnd == sTarget &&
+                 (sVisibilityOrPosition || sNativeScroll)) ||
+                (sVisibilityOrPosition &&
+                 ::IsChild(sEvent->hwnd, sTarget)))
+            {
+                sRelevant = true;
+                break;
+            }
+        }
+        if (sRelevant)
+            SyncDarkScrollbarEntries();
+    }
+    return ::CallNextHookEx(
+        sDarkScrollbarCallRetHook, aCode, aWParam, aLParam);
+}
+
+LRESULT CALLBACK DarkScrollbarModalFilter(
+    int aCode, WPARAM aWParam, LPARAM aLParam)
+{
+    // Native thumb tracking has its own modal message loop. Unlike a
+    // deferred PostMessage, this documented thread hook still sees input.
+    if (aCode == MSGF_SCROLLBAR && aLParam != 0 &&
+        !sDarkScrollbarUpdating)
+    {
+        const MSG *sMsg = reinterpret_cast<const MSG *>(aLParam);
+        if (sMsg->message == WM_MOUSEMOVE ||
+            sMsg->message == WM_LBUTTONUP ||
+            sMsg->message == WM_NCMOUSEMOVE)
+            SyncDarkScrollbarEntries();
+    }
+    return ::CallNextHookEx(
+        sDarkScrollbarFilterHook, aCode, aWParam, aLParam);
+}
+
+void StartDarkScrollbarHooks(void)
+{
+    if (sDarkScrollbarCallRetHook == NULL)
+        sDarkScrollbarCallRetHook = ::SetWindowsHookExW(
+            WH_CALLWNDPROCRET, DarkScrollbarCallRet,
+            NULL, ::GetCurrentThreadId());
+    if (sDarkScrollbarFilterHook == NULL)
+        sDarkScrollbarFilterHook = ::SetWindowsHookExW(
+            WH_MSGFILTER, DarkScrollbarModalFilter,
+            NULL, ::GetCurrentThreadId());
+}
+
+void StopDarkScrollbarHooks(void)
+{
+    if (sDarkScrollbarCallRetHook != NULL)
+        ::UnhookWindowsHookEx(sDarkScrollbarCallRetHook);
+    if (sDarkScrollbarFilterHook != NULL)
+        ::UnhookWindowsHookEx(sDarkScrollbarFilterHook);
+    sDarkScrollbarCallRetHook = NULL;
+    sDarkScrollbarFilterHook = NULL;
+}
+
+DarkScrollbarEntry *FindDarkScrollbarEntry(HWND aTarget)
+{
+    for (size_t i = 0; i < sDarkScrollbarEntries.size(); ++i)
+        if (sDarkScrollbarEntries[i].mTarget == aTarget)
+            return &sDarkScrollbarEntries[i];
+    return NULL;
+}
+
+void RemoveDarkScrollbarEntry(HWND aTarget)
+{
+    if (sDarkScrollbarUpdating)
+        return;
+    sDarkScrollbarUpdating = true;
+    for (std::vector<DarkScrollbarEntry>::iterator it =
+            sDarkScrollbarEntries.begin();
+         it != sDarkScrollbarEntries.end(); ++it)
+    {
+        if (it->mTarget == aTarget)
+        {
+            if (::IsWindow(it->mVerticalPopup))
+                ::DestroyWindow(it->mVerticalPopup);
+            if (::IsWindow(it->mHorizontalPopup))
+                ::DestroyWindow(it->mHorizontalPopup);
+            if (::IsWindow(it->mCornerPopup))
+                ::DestroyWindow(it->mCornerPopup);
+            sDarkScrollbarEntries.erase(it);
+            break;
+        }
+    }
+    if (sDarkScrollbarEntries.empty())
+        StopDarkScrollbarHooks();
+    sDarkScrollbarUpdating = false;
+}
+
+
 } // namespace
 
-void ModernUI::paintDarkNativeScrollbars(HWND aHwnd)
+void ModernUI::configureDarkScrollbarOverlay(
+    HWND aHwnd, const ThemePalette *aPalette)
 {
     if (!::IsWindow(aHwnd))
         return;
 
-    const ThemePalette sPalette = getPalette();
-    if (XPR_IS_FALSE(sPalette.mDark) ||
-        XPR_IS_TRUE(sPalette.mHighContrast))
-        return;
-
-    // Guard GetWindowDC/GetScrollBarInfo against nested non-client messages.
-    static thread_local bool sPainting = false;
-    if (sPainting)
-        return;
-    sPainting = true;
-
-    SCROLLBARINFO sVertical = {0};
-    SCROLLBARINFO sHorizontal = {0};
-    sVertical.cbSize = sizeof(sVertical);
-    sHorizontal.cbSize = sizeof(sHorizontal);
-    const DWORD sStyle = static_cast<DWORD>(
-        ::GetWindowLongPtr(aHwnd, GWL_STYLE));
-    const bool sHaveVertical = (sStyle & WS_VSCROLL) != 0 &&
-        ::GetScrollBarInfo(aHwnd, OBJID_VSCROLL, &sVertical) != FALSE &&
-        (sVertical.rgstate[0] & STATE_SYSTEM_INVISIBLE) == 0;
-    const bool sHaveHorizontal = (sStyle & WS_HSCROLL) != 0 &&
-        ::GetScrollBarInfo(aHwnd, OBJID_HSCROLL, &sHorizontal) != FALSE &&
-        (sHorizontal.rgstate[0] & STATE_SYSTEM_INVISIBLE) == 0;
-
-    if (sHaveVertical || sHaveHorizontal)
+    if (aPalette == NULL ||
+        XPR_IS_FALSE(aPalette->mDark) ||
+        XPR_IS_TRUE(aPalette->mHighContrast))
     {
-        RECT sWindowRect = {0};
-        ::GetWindowRect(aHwnd, &sWindowRect);
-        HDC sDC = ::GetWindowDC(aHwnd);
-        if (sDC != NULL)
-        {
-            const int sSaved = ::SaveDC(sDC);
-            if (sHaveVertical)
-                PaintDarkScrollBarPart(
-                    sDC, sVertical, sWindowRect, sPalette, true);
-            if (sHaveHorizontal)
-                PaintDarkScrollBarPart(
-                    sDC, sHorizontal, sWindowRect, sPalette, false);
-            if (sHaveVertical && sHaveHorizontal)
-            {
-                RECT sCorner = {
-                    sVertical.rcScrollBar.left - sWindowRect.left,
-                    sHorizontal.rcScrollBar.top - sWindowRect.top,
-                    sVertical.rcScrollBar.right - sWindowRect.left,
-                    sHorizontal.rcScrollBar.bottom - sWindowRect.top
-                };
-                const int sWidth = sWindowRect.right - sWindowRect.left;
-                const int sHeight = sWindowRect.bottom - sWindowRect.top;
-                sCorner.left = max(0, sCorner.left);
-                sCorner.top = max(0, sCorner.top);
-                sCorner.right = min(sWidth, sCorner.right);
-                sCorner.bottom = min(sHeight, sCorner.bottom);
-                if (sCorner.right > sCorner.left &&
-                    sCorner.bottom > sCorner.top)
-                {
-                    ::SetDCBrushColor(sDC, sPalette.mSurface);
-                    ::FillRect(sDC, &sCorner,
-                        static_cast<HBRUSH>(::GetStockObject(DC_BRUSH)));
-                }
-            }
-            if (sSaved != 0)
-                ::RestoreDC(sDC, sSaved);
-            ::ReleaseDC(aHwnd, sDC);
-        }
+        RemoveDarkScrollbarEntry(aHwnd);
+        return;
     }
-    sPainting = false;
+
+    DarkScrollbarEntry *sEntry = FindDarkScrollbarEntry(aHwnd);
+    if (sEntry == NULL)
+    {
+        DarkScrollbarEntry sNew = {0};
+        sNew.mTarget = aHwnd;
+        sNew.mPalette = *aPalette;
+        sNew.mForce = true;
+        sDarkScrollbarEntries.push_back(sNew);
+        StartDarkScrollbarHooks();
+    }
+    else
+    {
+        sEntry->mPalette = *aPalette;
+        sEntry->mForce = true;
+    }
+    SyncDarkScrollbarEntries();
+}
+
+void ModernUI::removeDarkScrollbarOverlay(HWND aHwnd)
+{
+    RemoveDarkScrollbarEntry(aHwnd);
+}
+
+void ModernUI::paintDarkNativeScrollbars(HWND aHwnd)
+{
+    // The existing native-first coalesced message now refreshes separately
+    // composited Dark pixels rather than painting the native nonclient DC.
+    if (::IsWindow(aHwnd) && FindDarkScrollbarEntry(aHwnd) != NULL)
+        SyncDarkScrollbarEntries();
 }
 
 UINT ModernUI::getDeferredDarkScrollbarMessage(void)

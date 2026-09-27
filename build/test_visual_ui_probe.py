@@ -1,14 +1,23 @@
 """Pure regression checks for visual evidence geometry and image comparison."""
 import tempfile
 import unittest
+from unittest.mock import patch
 from pathlib import Path
 
 from PIL import Image
 
-from visual_ui_probe import Rect, ScrollInfo, drag_points, compare, bright_neutral_ratio
+from visual_ui_probe import Rect, ScrollInfo, drag_points, compare, bright_neutral_ratio, capture
 
 
 class VisualProbeTests(unittest.TestCase):
+    def test_capture_includes_owned_layered_scrollbar_windows(self):
+        with patch("PIL.ImageGrab.grab") as grab:
+            capture((0, 0, 8, 8), "layered-test.png")
+            grab.assert_called_once_with(
+                bbox=(0, 0, 8, 8), include_layered_windows=True)
+            grab.return_value.save.assert_called_once_with(
+                "layered-test.png")
+
     def test_vertical_scrollbar_drag_stays_on_track(self):
         s = ScrollInfo()
         s.rcScrollBar = Rect(100, 200, 118, 600)

@@ -49,6 +49,7 @@ xpr_sint_t ListCtrlEx::OnCreate(LPCREATESTRUCT aCreateStruct)
 
 void ListCtrlEx::OnDestroy(void)
 {
+    fxfile::ui::ModernUI::removeDarkScrollbarOverlay(m_hWnd);
     super::OnDestroy();
 
     XPR_SAFE_DELETE(mHeaderCtrl);
@@ -105,6 +106,8 @@ void ListCtrlEx::refreshModernAppearance(xpr_bool_t aRethemeControl)
         mHeaderCtrl->Invalidate(XPR_FALSE);
     }
 
+    fxfile::ui::ModernUI::configureDarkScrollbarOverlay(
+        m_hWnd, XPR_IS_TRUE(mDarkScrollbars) ? &sPalette : NULL);
     Invalidate(XPR_FALSE);
     // Repainting the frame is safe here: this is a theme transaction, not
     // a non-client paint handler. The native control still owns input.

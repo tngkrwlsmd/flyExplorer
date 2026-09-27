@@ -3770,3 +3770,62 @@ NOT TESTED다. GitHub Actions 미실행.
 **관련 commit**
 - 3aab666e — UI-05 듀얼 밴드 폭 보정 및 회귀 검사를 포함하는 실기 검증 후보.
 - 전체 브랜치: ui/live-windows-ui05-20260927.
+
+---
+
+## 2026-09-27 — UI-02 user screenshot: native Dark scrollbar final-pixel ownership
+
+**오류 발생**
+- 사용자 화면: Dark 앱의 파일 목록 오른쪽이 native 밝은 scrollbar임.
+- 비교 VM: Windows Dark 96 DPI이므로 기존 버전도 native scrollbar가
+  Dark로 보여 원래 사용자 OS-밝음 증상을 완전히 복제하지 못함.
+- 기존 probe bright_ratio=0이던 것만으로 사용자 버그를 닫은 것은 잘못됨.
+
+**최초 실제 오류**
+- 기존 UI02 implementation은 native NC scrollbar를 지연 GDI
+  GetWindowDC로 덮어 그림. 별도 child layered popup으로 실험할 때도
+  native thumb modal tracking 도중 덮개가 OS paint에 가려짐.
+- OS ScrollBarInfo thumb는 이동하므로 문제는 범위/입력 소유권이 아니라
+  OS가 attached nonclient scrollbar의 최종 paint를 다시 담당하는 것.
+
+**원인 진단**
+- 실기: GUI 스레드의 root-owned layered WS_POPUP에
+  WS_EX_TRANSPARENT/NOACTIVATE를 지정하고 HTTRANSPARENT로 input을
+  원래 리스트에 전달하면 OS의 drag modal loop 중에도 자체
+  compositor 화면이 유지됨. 임시 opaque tint를 실제 mouse drag로
+  8회 계측: 매 프레임 보인 popup thumb와 native xyThumbTop 오차
+  약 1px, thumb 23→172 정상 이동. 외부 별도 프로세스 투명창은
+  같은-thread pass-through 조건을 충족하지 않아 입력을 방해함.
+
+**해결 방법**
+- ModernUI에 list/tree별 native geometry 기반 layered pixel owner와
+  documented thread WH_CALLWNDPROCRET + WH_MSGFILTER MSGF_SCROLLBAR
+  tracking hook을 추가. 기존 native scroll input/wheel/accessibility는
+  바꾸지 않고, 저장된 rebar/기존 HANG-01 OLE 코드는 변경하지 않음.
+- popup 은 숨겨진 컨트롤에서 감추고 theme switch/destroy에서 제거.
+- final source에서 임시 opaque tint/독립 diagnostic header 완전 삭제.
+- visual_ui_probe는 popup을 독립 앱 창으로 찾지 않으며
+  layered_windows를 포함해서 캡처하도록 보정.
+
+**재발 방지**
+- source invariant에서 GetWindowDC final-pixel overlay 재도입 거부,
+  layered compositor/transparent native input/hooks/lifecycle 검사.
+- UI02 negative mutation 테스트 15개 및 layered capture 테스트 포함
+  visual collector 테스트 9개.
+- 기존 OS Dark 한정 밝기 0 결과로 다른 사용자 Windows 문제를
+  닫지 않으며 가능한 동일 환경 실기·원본 화면 retest 필수.
+
+**검증 상태**
+- 초기 candidate의 Windows x64 compile/link, native functional 17/0
+  PASS, automatic runtime smoke SKIPPED (real existing HKCU protection).
+- 격리 synthetic profile의 임시 tinted C++ 실제 8-frame
+  thumb drag와 per-frame native geometry sync 직접 확인.
+- 최종 source는 tint 제거 후 preflight 및 UI02 15 / collector 9 PASS.
+  최종 commit revision의 local_ci/revision-matched clean GUI는
+  별도 최종 빌드 로그 및 보고에서 확인; 이 기록만으로 PASS 아님.
+- 사용자 OS와 동일한 Light-OS+Dark-app 대비, 다중 DPI, High Contrast,
+  다양한 테마 전환/복수창은 별도 runtime 확인 전 RETEST OPEN.
+- GitHub Actions NOT RUN.
+
+**관련 branch**
+- ui/ui02-final-pixel-20260927 (final commit는 브랜치 검증 후 생성)

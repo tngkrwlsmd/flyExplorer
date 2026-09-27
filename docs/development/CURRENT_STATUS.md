@@ -7,6 +7,41 @@ Update this page after each logical work unit that changes its facts.
 For the chronological diagnosis and original evidence, retain and use
 [`ERROR_HISTORY.md`](ERROR_HISTORY.md) rather than moving/deleting entries.
 
+**2026-09-27 UI-02 final-pixel redesign — Windows Dark 96-DPI
+DIAGNOSTIC PASS / FINAL REVISION AND USER ENVIRONMENT RETEST OPEN:**
+사용자의 원래 Dark 파일 목록에는 밝은 native scrollbar가 여전히 노출된다.
+기존 GetWindowDC/지연 PostMessage 방식은 native thumb modal tracking 동안
+OS의 최종 픽셀 소유권을 확보하지 못한다. 연결된 VM은 OS도 Dark이므로
+원래 OS-밝음 증상 자체가 이 VM의 기존 바이너리에서는 재현되지 않았다.
+다만 격리 VM 실험에서 별도 child layered overlay는 drag 때 OS에 가려졌고,
+**동일 UI thread의 root-owned/비활성/HTTRANSPARENT layered popup**은
+native thumb drag 입력을 방해하지 않고 8프레임 내내 덮개가 유지됐다.
+
+같은 Windows VM에서 중간 C++ 구현을 x64 compile/link하고 native regression
+17 PASS/0 FAIL, local_ci 결과 PASS_WITH_SKIPS(HKCU 보호에 따른 runtime smoke
+SKIP)를 얻었다. 일시적 diagnostic RGB tint를 넣은 테스트 빌드는
+실제 8프레임 thumb drag에서 popup 자체의 track이 항상 7420 픽셀,
+각 프레임 native xyThumbTop과 popup thumb 위치가 1px 이내로 일치했고
+native thumb가 23→172로 이동했다. 이 test tint는 source에서 **삭제**했다.
+따라서 이는 검증 당시 source snapshot의 원인 진단 evidence이며,
+이후 최종 commit을 대상으로 한 별도 full CI/UI 재검증 없이
+최종 release visual PASS라고 승격하지 않는다.
+
+새 C++ 구현은 ListCtrlEx/TreeCtrlEx별 overlay lifecycle을 ModernUI에 두고
+SCROLLBARINFO geometry, WS_EX_LAYERED|WS_EX_TRANSPARENT,
+WH_CALLWNDPROCRET와 native MSGF_SCROLLBAR thread hook으로 기존 input을
+보존하면서 layered 최종 색상을 추적한다. 동기적 NC 그리기와 timer는 없다.
+새 source mutation 회귀 15개 및 layer 캡처를 포함한 visual collector
+9개 테스트는 PASS, 전체 static preflight PASS. 모든 새 overlay window는
+destroy/theme/visibility lifecycle에서 정리되도록 보호한다.
+
+다음 검증은 최종 git SHA와 x64 executable marker가 일치하는 상태에서
+Dark 96-DPI list/tree drag, wheel/keyboard, Light/System, UI-05/UI-09 및
+종료/재실행을 반복 검사한다. 원래 사용자 OS/monitor 설정에서 동일
+스크린샷 재검증, High Contrast와 125/150/200% DPI는 여전히 OPEN이다.
+코드가 같은 증상을 수정했다고 전역 사용자 환경에서 단정하지 않는다.
+GitHub Actions는 별도 개별 승인 없이 실행하지 않는다.
+
 **2026-09-27 실제 Windows UI-05 새 프로필 후속 — 96 DPI DARK RUNTIME/VISUAL PASS, 기타 DPI RETEST OPEN:**
 Remote Desktop Commander/WinApp CLI가 연결된 Windows에서 격리된 합성
 프로필과 합성 폴더·파일 205개만 사용하여 실기 화면을 검사했다.

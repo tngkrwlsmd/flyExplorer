@@ -56,6 +56,12 @@ def find_hwnd(exe, child_class=None, window_title=None):
             if name.value == child_class:
                 matches.append(int(hwnd))
         else:
+            # Each final-pixel scrollbar is its own nonactivating owned popup,
+            # not an independent flyExplorer main window.
+            cls = ctypes.create_unicode_buffer(128)
+            u.GetClassNameW(hwnd, cls, len(cls))
+            if cls.value == "flyExplorer.DarkScrollbarOverlay.v1":
+                return True
             pid = wintypes.DWORD()
             u.GetWindowThreadProcessId(hwnd, ctypes.byref(pid))
             try:
@@ -104,7 +110,9 @@ def drag_points(info, vertical):
 
 def capture(bbox, filename):
     from PIL import ImageGrab
-    ImageGrab.grab(bbox=bbox).save(filename)
+    # An app-owned layered popup must be part of screenshot evidence:
+    # Win32 native NC screenshots alone can contradict the visible pixels.
+    ImageGrab.grab(bbox=bbox, include_layered_windows=True).save(filename)
 
 def compare(before, after, output, tolerance):
     from PIL import Image, ImageChops

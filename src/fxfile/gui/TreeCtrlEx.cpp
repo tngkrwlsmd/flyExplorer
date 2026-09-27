@@ -143,11 +143,15 @@ void TreeCtrlEx::refreshVistaEnhancedTheme(void)
         // association just because enhanced tree behavior is enabled.
         fxfile::ui::ModernUI::resetControlTheme(m_hWnd);
     }
+    fxfile::ui::ModernUI::configureDarkScrollbarOverlay(
+        m_hWnd, XPR_IS_TRUE(mDarkScrollbars) ? &sPalette : NULL);
     ::RedrawWindow(m_hWnd, NULL, NULL, RDW_INVALIDATE | RDW_FRAME);
 }
 
 LRESULT TreeCtrlEx::WindowProc(UINT aMessage, WPARAM aWParam, LPARAM aLParam)
 {
+    if (aMessage == WM_NCDESTROY)
+        fxfile::ui::ModernUI::removeDarkScrollbarOverlay(m_hWnd);
     const UINT sPaintMessage =
         fxfile::ui::ModernUI::getDeferredDarkScrollbarMessage();
     if (sPaintMessage != 0 && aMessage == sPaintMessage)
@@ -180,6 +184,8 @@ LRESULT TreeCtrlEx::WindowProc(UINT aMessage, WPARAM aWParam, LPARAM aLParam)
             XPR_TRUE : XPR_FALSE;
         if (XPR_IS_FALSE(mDarkScrollbars))
             mScrollbarPaintQueued = XPR_FALSE;
+        fxfile::ui::ModernUI::configureDarkScrollbarOverlay(
+            m_hWnd, XPR_IS_TRUE(mDarkScrollbars) ? &sPalette : NULL);
         ::RedrawWindow(m_hWnd, NULL, NULL, RDW_INVALIDATE | RDW_FRAME);
     }
 

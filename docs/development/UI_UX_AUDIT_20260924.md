@@ -1,5 +1,24 @@
 # 실행 기반 UI/UX 점검 — 2026-09-24
 
+## 2026-09-27 UI-02 사용자 화면 재신고: native final pixel ownership 확인
+
+- 사용자 화면: 앱 Dark임에도 파일 목록에 밝은 회색 native scrollbar 노출.
+- 연결 VM: native OS Dark / 96 DPI. 원본 버전에서 사용자가 본
+  OS-밝은 native track 현상은 해당 VM에서 직접 재현되지 않음.
+- Win32 원인 검사: 기존 attached scrollbar의 GetWindowDC 지연 GDI
+  덮어쓰기는 native scrollbar modal tracking의 최종 픽셀 소유권 없음.
+  외부 Python의 child layered overlay는 drag 중 native NC paint에 가려짐.
+- 동일 UI-thread owned transparent layered popup의 독립 diagnostic은
+  8프레임 내내 track을 덮었으며 native thumb 이동이 유지됨.
+- 중간 C++ test tint 빌드의 실제 native thumb 값과 overlay 위치가
+  매 프레임 1px 차이로 추종했음(23→172). diagnostic tint는 release
+  후보 source에서 완전히 제거. 최종 revision-specific binary retest는
+  해당 git commit 후 별도 수행/로그 보관해야 함.
+- UI-02 사용자의 원래 Windows/설정까지 COMPLETE로 간주하지 않음.
+  High Contrast/DPI 차이 및 사용자 동일 화면 재검증 RETEST OPEN.
+- 근거는 해당 Windows PC의 무추적 logs/ui02-*와 공식 local CI.
+  제품 수정과 진단 이미지가 포함된 개인 자료는 저장소에 첨부하지 않음.
+
 ## 2026-09-27 실제 Windows UI-05 새 프로필 배치 검증 및 UI-02 부분 재현
 
 - 장치: Win11 x64 VM, 96 DPI, Dark, 일치한 소스/바이너리 3aab666.

@@ -36,6 +36,15 @@ py build\visual_ui_probe.py snapshot --synthetic-fixture --label UI10_filter_lig
 py build\visual_ui_probe.py compare baseline.png current.png --output logs\visual-ui\ui09-diff.png
 ~~~
 
+For current UI-02 the native NC attached scrollbar remains the input and
+accessibility owner while an app-owned, same-thread, nonactivating layered
+popup owns final Dark pixels. Screenshot capture explicitly uses
+include_layered_windows=True; window discovery ignores those overlay
+popup windows so they cannot be mistaken for separate fxfile main windows.
+Inspect screenshot + matching native SCROLLBARINFO thumb data together;
+a zero bright_ratio still does **not** close a user-reported bug.
+Track wheel/keyboard, hide/show, theme switch and popup destruction too.
+
 The probe saves screenshots and manifest.json to local logs/visual-ui.
 Existing gitignore rules exclude the log directory. UI-02 captures twelve
 pressed frames plus native scrollbar/drag geometry, actual thumb movement,
@@ -66,9 +75,11 @@ establish responsiveness, keyboard behavior, accessibility or drag/drop PASS.
 
 ## Remaining blocker
 
-No Windows device is currently connected to this chat. The latest product
-revision has no new Windows build or final-pixel runtime evidence from this
-checkpoint. This tool enables a connected Windows agent to collect evidence
-later; until then unresolved cases remain OPEN or SOURCE UPDATED / RETEST OPEN.
+A Windows device was later connected and same-thread UI-02 layered-popup
+diagnostic successfully kept independently colored pixels during native
+mouse thumb tracking, with no observed native input interruption. This
+does not establish every OS theme/DPI or the original user's machine as
+PASS. Use revision-matched binary/fixture/manifest and inspect actual
+intermediate frames before promoting any remaining RETEST OPEN cases.
 Record findings in the existing UI audit and preserve ERROR_HISTORY chronology.
 Do not dispatch hosted Actions implicitly.

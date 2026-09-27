@@ -4312,6 +4312,72 @@ def validate_toolbar_popup_work_area_and_dc_lifetime() -> list[str]:
     return errors
 
 
+def validate_ui02_layered_scrollbar_contract(
+    modern: str | None = None,
+    header: str | None = None,
+    listing: str | None = None,
+    tree: str | None = None,
+    probe: str | None = None,
+) -> list[str]:
+    """Final pixel ownership and native-input preservation for UI-02."""
+    base = FXFILE_SRC / "gui"
+    if modern is None:
+        modern = (base / "ModernUI.cpp").read_text(encoding="utf-8")
+    if header is None:
+        header = (base / "ModernUI.h").read_text(encoding="utf-8")
+    if listing is None:
+        listing = (base / "ListCtrlEx.cpp").read_text(encoding="utf-8")
+    if tree is None:
+        tree = (base / "TreeCtrlEx.cpp").read_text(encoding="utf-8")
+    if probe is None:
+        probe = (ROOT / "build" / "visual_ui_probe.py").read_text(
+            encoding="utf-8")
+    errors: list[str] = []
+    renderer = modern[
+        modern.find("// UI-02: separate owner-attached layered windows"):
+        modern.find("UINT ModernUI::getDeferredDarkScrollbarMessage(")]
+    requirements = (
+        "GetScrollBarInfo(aEntry.mTarget, sObject, &sInfo)",
+        "WS_EX_LAYERED | WS_EX_TRANSPARENT",
+        "return HTTRANSPARENT;", "return MA_NOACTIVATE;", "::UpdateLayeredWindow(",
+        "AC_SRC_ALPHA", "PaintDarkScrollBarPart(",
+        "WH_CALLWNDPROCRET", "WH_MSGFILTER", "MSGF_SCROLLBAR",
+        "WM_WINDOWPOSCHANGED", "::IsChild(sEvent->hwnd, sTarget)",
+        "STATE_SYSTEM_INVISIBLE | STATE_SYSTEM_OFFSCREEN",
+        "StopDarkScrollbarHooks()", "void RemoveDarkScrollbarEntry(HWND aTarget)",
+        "mPalette = *aPalette", "mHighContrast",
+    )
+    if not all(x in renderer for x in requirements) or not all(
+        x in renderer for x in (
+            "!::IsWindowVisible(aEntry.mTarget)",
+            "HideDarkScrollbarPopup(aEntry.mVerticalPopup)",
+            "HideDarkScrollbarPopup(aEntry.mHorizontalPopup)",
+            "sDarkScrollbarUpdating",
+        )
+    ):
+        errors.append("UI-02: layered compositor/hooks/visibility invariant broken")
+    if ("GetWindowDC(" in renderer or "FXFILE_UI02_DIAG_TINT" in modern
+        or "FXFILE_UI02_DIAG_POPUP" in listing):
+        errors.append("UI-02: obsolete native overlay or local diagnostic leaked")
+    if not all(x in header for x in (
+        "configureDarkScrollbarOverlay(", "removeDarkScrollbarOverlay(",
+    )):
+        errors.append("UI-02: theme transition/cleanup API missing")
+    if not all(x in listing for x in (
+        "configureDarkScrollbarOverlay(", "removeDarkScrollbarOverlay(m_hWnd)",
+    )) or not all(x in tree for x in (
+        "configureDarkScrollbarOverlay(", "removeDarkScrollbarOverlay(m_hWnd)",
+        "aMessage == WM_NCDESTROY",
+    )):
+        errors.append("UI-02: list/tree must set theme and destroy popup")
+    if not all(x in probe for x in (
+        "include_layered_windows=True",
+        'cls.value == "flyExplorer.DarkScrollbarOverlay.v1"',
+    )):
+        errors.append("UI-02: collector must capture and exclude popup windows")
+    return errors
+
+
 def validate_main_window_hang_stabilization() -> list[str]:
     """Guard non-reentrant UI-02 and UI-05 while retaining the OLE fix.
 
@@ -4336,26 +4402,33 @@ def validate_main_window_hang_stabilization() -> list[str]:
     coolbar_h = read("main_coolbar.h")
     header = read("gui/FlatHeaderCtrl.cpp")
 
-    # UI-02: asynchronous, coalesced output can never acquire GetWindowDC
-    # or query scroll geometry from inside the native WM_NCPAINT handler.
-    entry = modern[modern.find("void ModernUI::paintDarkNativeScrollbars("):
-                   modern.find("xpr_bool_t ModernUI::applyExplorerControlTheme(")]
-    if not all(s in entry for s in (
-        "GetScrollBarInfo(aHwnd, OBJID_VSCROLL",
-        "GetScrollBarInfo(aHwnd, OBJID_HSCROLL",
-        "GetWindowDC(aHwnd)", "ReleaseDC(aHwnd, sDC)",
-        "XPR_IS_FALSE(sPalette.mDark)",
-        "XPR_IS_TRUE(sPalette.mHighContrast)",
-        "static thread_local bool sPainting",
+    # UI-02: final Dark pixels come from an owned layered transparent popup.
+    # Native scroll range, scroll messages and hit testing stay with USER32.
+    entry = modern[modern.find("void PaintDarkScrollBarPart("):
+                   modern.find("UINT ModernUI::getDeferredDarkScrollbarMessage(")]
+    if not all(token in entry for token in (
+        "GetScrollBarInfo(aEntry.mTarget, sObject, &sInfo)",
+        "WS_EX_LAYERED | WS_EX_TRANSPARENT",
+        "HTTRANSPARENT", "MA_NOACTIVATE",
+        "::UpdateLayeredWindow(", "AC_SRC_ALPHA",
+        "WH_MSGFILTER", "MSGF_SCROLLBAR", "WH_CALLWNDPROCRET",
+        "WM_WINDOWPOSCHANGED", "sDarkScrollbarUpdating",
+        "STATE_SYSTEM_INVISIBLE | STATE_SYSTEM_OFFSCREEN",
+        "RemoveDarkScrollbarEntry(",
     )):
-        errors.append("UI-02 documented Dark/non-High-Contrast scrollbar geometry missing")
-    if not all(s in modern for s in (
-        "::RegisterWindowMessage(", "getDeferredDarkScrollbarMessage",
-    )) or not all(s in modern_h for s in (
+        errors.append("UI-02 persistent native-transparent layered output contract missing")
+    if "GetWindowDC(" in entry:
+        errors.append("UI-02 must not repaint target native nonclient DC")
+    if not all(token in modern_h for token in (
+        "configureDarkScrollbarOverlay(", "removeDarkScrollbarOverlay(",
         "getDeferredDarkScrollbarMessage", "paintDarkNativeScrollbars",
     )):
-        errors.append("UI-02 registered deferred rendering contract missing")
-    if any(s in modern for s in (
+        errors.append("UI-02 layered lifecycle/deferred message API missing")
+    if not all(token in modern for token in (
+        "::RegisterWindowMessage(", "getDeferredDarkScrollbarMessage",
+    )):
+        errors.append("UI-02 registered deferred refresh contract missing")
+    if any(token in modern for token in (
         'L"DarkMode_Explorer"', 'L"DarkMode_CFD"',
         "SetPreferredAppMode", "AllowDarkModeForWindow",
     )):
@@ -5433,6 +5506,7 @@ def main() -> int:
     errors.extend(validate_actions_storage_budget_contract())
     errors.extend(validate_installer_smoke_wiring())
     errors.extend(validate_toolbar_popup_work_area_and_dc_lifetime())
+    errors.extend(validate_ui02_layered_scrollbar_contract())
     errors.extend(validate_main_window_hang_stabilization())
     errors.extend(validate_fresh_profile_compaction_retry_contract())
     errors.extend(validate_fresh_profile_command_band_and_settings_spacing())
