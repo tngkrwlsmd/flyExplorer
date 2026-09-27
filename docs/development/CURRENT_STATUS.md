@@ -1,6 +1,9 @@
 # flyExplorer — current project status (2026-09-27)
 
 
+**2026-09-27 Phase4 partial evidence (actual 96 DPI pass; migration undecided):** Revalidated unchanged production executable 6d1f763 with an isolated four-file user UI copy, synthetic folder and real 96 DPI: preserved three 1175x40 and one 1175x21 toolbar bands, 28px native header, 36px address; original settings hashes equal and isolated exit 0. Phase3 same-revision synthetic Dark/Light/System evidence reused; other real DPIs, actual OS High Contrast and complete HKCU/profile isolation remain NOT TESTED, protected-user runtime smoke SKIPPED. No new confirmed product defect, no speculative product edit or rebuild. Isolated experiment branch ad561271 compiled and live-tested C++/WinRT Foundation + Win32 navigation controls, NOT WinUI 3 and NOT product engine integration. Actual WinUI 3 development tools and equal-feature UI comparison require a later approved bounded experiment. Details: UI_FRAMEWORK_PHASE4_EVALUATION.md and UI_UX_AUDIT_20260924.md.
+
+
 **2026-09-27 UI/UX Phase 3 — primary native navigation (synthetic and guarded saved-layout replica):** Built and visually exercised product revision 6d1f76388b0b8326568478ce35814aba1eb69a0e on connected Windows 11 x64. Back/Forward/Up keep their native commands and user-saved toolbar layout while gaining a scoped, DPI-scaled icon/hover target and independent history-arrow hover. Local compile/link and 17/0 functional checks PASS, focused source tests and preflight PASS; protected-HKCU smoke SKIPPED. Real synthetic mouse navigation/hover and Dark/Light/System GUI checks PASS. A partial copy of the saved user profile four saved UI files preserved measured native toolbar/header/address geometry with unmodified originals, but complete live personal profile/HKCU, High Contrast and other DPI conditions remain RETEST OPEN. See UI_UX_AUDIT_20260924.md for scoped evidence and limitations.
 
 
