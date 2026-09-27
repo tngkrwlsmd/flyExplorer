@@ -257,8 +257,11 @@ LRESULT MainCoolBar::OnDeferredCompact(WPARAM, LPARAM)
 
     RebarBandInfo sDriveBand;
     RebarBandInfo sBookmarkBand;
-    sDriveBand.fMask = RBBIM_IDEALSIZE;
-    sBookmarkBand.fMask = RBBIM_IDEALSIZE | RBBIM_STYLE;
+    // A full-width, single-band drive row retains a large native 'cx'.
+    // Read the real rebar header/gripper extents before sharing the row.
+    sDriveBand.fMask = RBBIM_IDEALSIZE | RBBIM_HEADERSIZE;
+    sBookmarkBand.fMask =
+        RBBIM_IDEALSIZE | RBBIM_STYLE | RBBIM_HEADERSIZE;
     if (XPR_IS_FALSE(sBands.GetBandInfo(sDrive, &sDriveBand)) ||
         XPR_IS_FALSE(sBands.GetBandInfo(sBookmark, &sBookmarkBand)))
     {
@@ -288,9 +291,14 @@ LRESULT MainCoolBar::OnDeferredCompact(WPARAM, LPARAM)
         ui::ModernUI::scaleForWindow(48, GetSafeHwnd());
     const xpr_sint_t sAvailable =
         max(0, sClient.Width() - sSlack);
-    if (sDriveBand.cxIdeal >= static_cast<UINT>(sAvailable) ||
-        sBookmarkBand.cxIdeal >=
-            static_cast<UINT>(sAvailable) - sDriveBand.cxIdeal)
+    const UINT sBandInset = static_cast<UINT>(
+        ui::ModernUI::scaleForWindow(16, GetSafeHwnd()));
+    const UINT sDriveWidth =
+        sDriveBand.cxIdeal + sDriveBand.cxHeader + sBandInset;
+    const UINT sBookmarkWidth =
+        sBookmarkBand.cxIdeal + sBookmarkBand.cxHeader + sBandInset;
+    if (sDriveWidth >= static_cast<UINT>(sAvailable) ||
+        sBookmarkWidth >= static_cast<UINT>(sAvailable) - sDriveWidth)
         return 0;
 
     // The handler is a posted message, never a child of WM_SIZE.
@@ -298,18 +306,32 @@ LRESULT MainCoolBar::OnDeferredCompact(WPARAM, LPARAM)
     // notifications. All saved or user-selected row layouts are preserved.
     // Clear before native mutation: SetBandInfo can synchronously emit size
     // notifications. Restore eligibility only if native mutation fails.
+    // Clearing BREAK alone leaves the old full-row drive band occupying
+    // almost all pixels. Reserve both measured widths before recomputing
+    // the parent layout so bookmarks remain directly visible.
     sBookmarkBand.fStyle &= ~RBBS_BREAK;
+    sBookmarkBand.fMask = RBBIM_STYLE | RBBIM_SIZE;
+    sBookmarkBand.cx = sBookmarkWidth;
+    sDriveBand.fMask = RBBIM_SIZE;
+    sDriveBand.cx = sDriveWidth;
     mDefaultCompactPending = XPR_FALSE;
-    if (sBands.SetBandInfo(sBookmark, &sBookmarkBand))
-    {
-        CFrameWnd *sFrame = GetParentFrame();
-        if (sFrame != NULL)
-            sFrame->RecalcLayout();
-    }
-    else
+    if (!sBands.SetBandInfo(sBookmark, &sBookmarkBand))
     {
         mDefaultCompactPending = XPR_TRUE;
+        return 0;
     }
+    if (!sBands.SetBandInfo(sDrive, &sDriveBand))
+    {
+        // Avoid leaving the bookmarks trapped at the right edge if native
+        // rebar refuses the drive resize. Restore the separate safe row.
+        sBookmarkBand.fStyle |= RBBS_BREAK;
+        sBands.SetBandInfo(sBookmark, &sBookmarkBand);
+        mDefaultCompactPending = XPR_TRUE;
+        return 0;
+    }
+    CFrameWnd *sFrame = GetParentFrame();
+    if (sFrame != NULL)
+        sFrame->RecalcLayout();
     return 0;
 }
 
