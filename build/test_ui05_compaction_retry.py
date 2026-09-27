@@ -56,6 +56,24 @@ class FreshProfileCompactionRetryTests(unittest.TestCase):
     def test_saved_user_layout_must_not_auto_compact(self):
         self.check_mutation("XPR_IS_FALSE(sSavedCoolBar)", "XPR_IS_TRUE(sSavedCoolBar)")
 
+    def test_drive_width_must_be_allocated_not_left_full_row(self):
+        self.check_mutation(
+            "sDriveBand.cx = sDriveWidth;",
+            "sDriveBand.cx = sClient.Width();",
+        )
+
+    def test_bookmark_width_must_be_allocated_before_compacting(self):
+        self.check_mutation(
+            "sBookmarkBand.cx = sBookmarkWidth;",
+            "sBookmarkBand.cx = 0;",
+        )
+
+    def test_both_mutations_must_be_checked(self):
+        self.check_mutation(
+            "if (!sBands.SetBandInfo(sDrive, &sDriveBand))",
+            "if (sBands.SetBandInfo(sDrive, &sDriveBand))",
+        )
+
     def test_no_synchronous_band_relayout_during_wm_size(self):
         self.check_mutation(
             "CSizableReBar::OnSize(nType, cx, cy);",
