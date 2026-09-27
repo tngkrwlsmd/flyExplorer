@@ -558,3 +558,10 @@ NOT TESTED다. 세 항목 모두 동일 화면의
 4. OS-01~04는 개별 변경 단위로 분리하여 기존 파일 처리 semantics와 fallback을 검증한 뒤 도입.
 
 모든 수정은 Static PASS / Compile·Link PASS / Runtime PASS / Visual PASS를 따로 남긴다. 제품 코드가 바뀌면 현재 허용된 `local_ci.bat x64`를 수행하고 해당 UI case를 재실행한다. 확대 검증이 필요한 Windows 10/High Contrast/DPI/clean installer는 실제 수행 전까지 NOT TESTED를 유지한다.
+
+
+## 2026-09-27 Phase 1: Explorer-reference tab title readability
+
+- Observed on connected Windows 11 at identical 1240 x 790 geometry and current Dark mode using the same synthetic fixture (30 folders and 175 files): Explorer displays the complete FXUI_Synthetic_Root title; baseline flyExplorer's 150-DIP tab truncates it. Local captures: logs/phase1/ in isolated worktree.
+- Scoped product change: default tab size to 232 logical pixels; cap the active tab by remaining width after the new-tab button; distribute nonnegative remaining fixed-width among other tabs. Do not change file operations, main toolbar bands, tab IDs or saved user settings.
+- Acceptance: complete synthetic folder title, usable close/new-tab controls at wide width, narrow and multitab window layout without hangs. Revision-matched Windows build and isolated real GUI retest still required at source-change checkpoint. Other top command area gaps remain a future task.

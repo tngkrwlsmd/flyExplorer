@@ -1,5 +1,8 @@
 # flyExplorer — current project status (2026-09-27)
 
+
+**2026-09-27 UI/UX Phase 1 candidate:** Same-PC Windows Explorer comparison identified that the old 150-DIP flyExplorer tab truncates FXUI_Synthetic_Root at 1240 x 790 while native Explorer displays the full folder name. Scoped candidate widens the default tab to 232 DIP and bounds the active tab and multitab width under resizing. This candidate requires revision-matched native x64 build and actual GUI interaction evidence before acceptance. See UI_UX_AUDIT_20260924.md.
+
 **Purpose:** Fast, current-state entry point for maintainers and development
 agents. This is an evidence-labelled summary, not a replacement for source,
 build scripts, the project policy, or an independently executed test.

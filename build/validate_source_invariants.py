@@ -5481,6 +5481,26 @@ def validate_runtime_smoke_ps51_contract(source: str | None = None) -> list[str]
     return errors
 
 
+def validate_explorer_tab_width_contract(tab_source: str | None = None) -> list[str]:
+    """Phase1: Explorer-like tab width and nonnegative narrow/multitab layout."""
+    if tab_source is None:
+        tab_source = (FXFILE_SRC / "gui" / "TabCtrl.cpp").read_text(encoding="utf-8")
+    checks = (
+        ("default tab width", "kDefaultTabSize     = 232;"),
+        ("reserve new-tab button", "sWidth -= sNewButtonIconSize.cx + sIconOffset * 2;"),
+        ("narrow-window cap", "sCurrentTabSize = min(max(0, sWidth), sDefaultTabSize);"),
+        ("remaining multitab width", "(sWidth - sCurrentTabSize) /"),
+        ("nonnegative multitab ratio", "if (sAvgTabSize < 0.0)"),
+        ("active tab bound", "sTabItem->mTabRect.right  = sTabLeft + sCurrentTabSize;"),
+        ("advance by actual width", "sLeft += sCurrentTabSize;"),
+    )
+    return [
+        "Phase1 tab width: missing " + label
+        for label, token in checks
+        if token not in tab_source
+    ]
+
+
 def main() -> int:
     errors = validate_translation_units()
     errors.extend(validate_ole_pending_paint_budget())
@@ -5530,6 +5550,7 @@ def main() -> int:
     errors.extend(validate_release_stage_recovery())
     errors.extend(validate_win11_stability_regressions())
     errors.extend(validate_runtime_smoke_ps51_contract())
+    errors.extend(validate_explorer_tab_width_contract())
     errors.extend(validate_visual_ui_evidence_contract())
     errors.extend(validate_runtime_ui_audit_regressions())
     errors.extend(validate_modern_ui_registration())

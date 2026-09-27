@@ -21,7 +21,7 @@
 
 namespace
 {
-const xpr_sint_t kDefaultTabSize     = 150;
+const xpr_sint_t kDefaultTabSize     = 232;
 const CRect      kTabOffset          = CRect(3, 2, 3, 0);
 const CRect      kTextOffset         = CRect(5, 2, 5, 2);
 const xpr_sint_t kIconOffset         = 5;
@@ -614,6 +614,9 @@ void TabCtrl::recalcLayout(xpr_bool_t aRedraw)
         sWidth -= sTabOffset.right;
     }
 
+    // Fit a 232-DIP Explorer-like tab without consuming new-button space.
+    const xpr_sint_t sCurrentTabSize = min(max(0, sWidth), sDefaultTabSize);
+
     xpr_sint_t sIconWidth = 0;
     xpr_sint_t sIconHeight = 0;
     xpr_sint_t sImageListCount = 0;
@@ -638,13 +641,15 @@ void TabCtrl::recalcLayout(xpr_bool_t aRedraw)
 
         if (mTabDeque.size() > 1)
         {
-            sAvgTabSize = (xpr_double_t)(sWidth - sDefaultTabSize) / (xpr_double_t)(mTabDeque.size() - 1);
+            sAvgTabSize = (xpr_double_t)(sWidth - sCurrentTabSize) / (xpr_double_t)(mTabDeque.size() - 1);
+            if (sAvgTabSize < 0.0)
+                sAvgTabSize = 0.0;
             if (sAvgTabSize >= sDefaultTabSize)
                 sAvgTabSize = sDefaultTabSize;
         }
         else
         {
-            sAvgTabSize = min(sWidth, sDefaultTabSize);
+            sAvgTabSize = sCurrentTabSize;
         }
 
         sIterator = mTabDeque.begin();
@@ -657,11 +662,11 @@ void TabCtrl::recalcLayout(xpr_bool_t aRedraw)
             if (i == mCurTab)
             {
                 sTabItem->mTabRect.left   = sTabLeft;
-                sTabItem->mTabRect.right  = sTabLeft + sDefaultTabSize;
+                sTabItem->mTabRect.right  = sTabLeft + sCurrentTabSize;
                 sTabItem->mTabRect.top    = sTop;
                 sTabItem->mTabRect.bottom = sBottom;
 
-                sLeft += sDefaultTabSize;
+                sLeft += sCurrentTabSize;
             }
             else
             {
