@@ -638,6 +638,7 @@ Windows build, runtime and DPI verification: NOT TESTED. No Actions run.
 | `DEPENDENCY_ARCH_AUDIT_20260924.md` | Current inventory summary followed by the immutable dated audit and cleanup checkpoints |
 | `HELP_CONTENT_AUDIT.md` | Current help scope, legacy detailed-topic inventory and Windows user-help acceptance tasks |
 | `UI_UX_AUDIT_20260924.md` | Revision-matched interactive observations, open UI findings, source-only OS compatibility candidates and reproduction/acceptance cases |
+| `UI_UX_DESIGN_GUIDE.md` | **Required future UI/UX design and validation standards:** Windows 11 Explorer reference, Microsoft Fluent/Windows UI Kit/WinUI 3 Gallery, MFC preservation and optional isolated WinUI prototype |
 | `DISTRIBUTION_LICENSE_REVIEW.md` | Observed license contradictions and unfinished third-party distribution checks |
 | Root `LICENSE` and `CREDITS` | Existing application and third-party license notices; never rewrite on the basis of assumptions |
 

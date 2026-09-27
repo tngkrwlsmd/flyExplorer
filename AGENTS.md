@@ -160,6 +160,13 @@ C++ 변경에는 다음을 추가로 적용한다.
 
 ## 7. Windows 11 UI modernization
 
+**모든 UI/UX 변경은 [필수 UI/UX 디자인·구현·검증 지침](docs/development/UI_UX_DESIGN_GUIDE.md)을 먼저 적용한다.** 이 문서는 Windows 11 기본 파일 탐색기를 최종 비교 대상으로 삼고, [Microsoft Fluent Design](https://learn.microsoft.com/en-us/windows/apps/design/), [Windows UI Kit for Figma](https://learn.microsoft.com/en-us/windows/apps/design/downloads/), [WinUI 3 Gallery](https://github.com/microsoft/WinUI-Gallery)의 각 역할을 정의한다. 실제 실행한 Windows 탐색기와 동일한 OS 버전·테마·DPI·창 크기·동일/합성 폴더 조건에서 기준 화면을 수집한다.
+
+- **프레임워크 결정:** 기존 MFC 제품과 file-manager 기능은 기본적으로 보존한다. WinUI 3은 전체 재작성이나 자동 이행이 아닌 **별도 실험 브랜치의 C++/WinRT 메인 화면 소규모 시제품**으로 먼저 검증하고, 기존 기능 재사용·셸 통합·상호작용·배포·성능의 측정 결과 없이 제품으로 도입하지 않는다. 부분 통합(XAML Islands)은 지원 플랫폼·포커스·DPI·배포 계약을 확인한 뒤 선택적으로 평가한다.
+- **화면의 최종 근거:** 공식 kit/갤러리는 디자인·컨트롤 참고 자료일 뿐 파일 탐색기 전체의 완성 도면은 아니다. 동일 조건의 실제 Explorer 화면과 flyExplorer를 비교하며, 픽셀 차이만으로 합격을 선언하지 않고 hover/pressed/selection/focus·드래그·키보드·접근성·기능 보존까지 판정한다.
+- **기능·사용자 상태 보호:** multi-pane/tab/bookmark/shortcut, native shell/menu/file operations, 기존 개인 설정 및 저장된 도구 모음·열 너비를 디자인을 이유로 숨기거나 초기화하지 않는다. System/Light/Dark, High Contrast, 국제화·DPI를 유지한다.
+- **증거와 범위:** 검증한 OS·DPI·테마·실행 바이너리 revision과 변경 전후 화면/조작 근거를 해당 UI audit에 기록한다. 시제품의 visual PASS를 제품 기능·마이그레이션 PASS로 승격하지 않는다. 사용자 승인 없는 대규모 프레임워크 전환, 자동 GitHub Actions 실행 및 개인 파일 스크린샷 커밋은 하지 않는다. 기존 [개발 효율 지침](docs/development/AGENT_EFFICIENCY.md)으로 검증 목표를 제한한다.
+
 UI/UX 현대화 작업은 다음 원칙을 따른다.
 
 - **장기 UI 기준선은 현재 Windows 11 기본 파일 탐색기다.** MFC를 유지하더라도 main frame chrome, command bar, navigation/address surface, tab, file list/header, folder tree, status surface의 시각적 위계·여백·상태 표현은 Windows 11 Explorer와 비교하며 개선한다.
