@@ -5272,6 +5272,60 @@ def validate_visual_ui_evidence_contract() -> list[str]:
     return errors
 
 
+def validate_runtime_smoke_ps51_contract(source: str | None = None) -> list[str]:
+    """Guard runtime smoke's Windows PowerShell 5.1/.NET Framework API path.
+
+    local_ci.bat intentionally invokes powershell.exe rather than pwsh.
+    Source-level evidence cannot substitute for a Windows startup run.
+    """
+    if source is None:
+        path = ROOT / "build" / "runtime_smoke.ps1"
+        try:
+            source = path.read_text(encoding="utf-8")
+        except OSError as exc:
+            return [f"build/runtime_smoke.ps1 cannot be inspected: {exc}"]
+
+    errors: list[str] = []
+    if re.search(r"\bstartInfo\s*\.\s*ArgumentList\b", source):
+        errors.append(
+            "runtime smoke: ProcessStartInfo.ArgumentList is unavailable "
+            "in Windows PowerShell 5.1; use quoted Arguments instead"
+        )
+    if "$startInfo.Arguments =" not in source or (
+        """'--conf_dir="{0}" "{1}"'""" not in source
+    ):
+        errors.append(
+            "runtime smoke: generated config and fixture paths need quoted "
+            "ProcessStartInfo.Arguments for Windows PowerShell 5.1"
+        )
+    if not all(token in source for token in (
+        "function Stop-SmokeProcessTree {",
+        "[System.Diagnostics.Process].GetMethod(",
+        "& $taskkill /T /F /PID $Target.Id",
+        "$Target.Kill($true)",
+    )):
+        errors.append(
+            "runtime smoke: guarded process-tree cleanup is required on "
+            "both Windows PowerShell 5.1 and PowerShell 7"
+        )
+    if source.count("Stop-SmokeProcessTree -Target $process") != 2:
+        errors.append(
+            "runtime smoke: both timeout and exception cleanup paths must "
+            "use the compatible process-tree cleanup helper"
+        )
+    if not all(token in source for token in (
+        'if ($blockingUserState.Count -gt 0)',
+        'if ($SkipIfUserStateExists)',
+        'exit 3',
+        'if (Test-Path -LiteralPath $smokeRoot)',
+    )):
+        errors.append(
+            "runtime smoke: user-state skip and temporary fixture cleanup "
+            "must remain in place"
+        )
+    return errors
+
+
 def main() -> int:
     errors = validate_translation_units()
     errors.extend(validate_ole_pending_paint_budget())
@@ -5318,6 +5372,7 @@ def main() -> int:
     errors.extend(validate_retired_updater_and_generated_projects())
     errors.extend(validate_release_stage_recovery())
     errors.extend(validate_win11_stability_regressions())
+    errors.extend(validate_runtime_smoke_ps51_contract())
     errors.extend(validate_visual_ui_evidence_contract())
     errors.extend(validate_runtime_ui_audit_regressions())
     errors.extend(validate_modern_ui_registration())
