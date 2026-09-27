@@ -37,7 +37,7 @@ def rect_of(hwnd):
         raise RuntimeError("GetWindowRect failed")
     return (r.left, r.top, r.right, r.bottom)
 
-def find_hwnd(exe, child_class=None):
+def find_hwnd(exe, child_class=None, window_title=None):
     import psutil
     u = ctypes.windll.user32
     cb_type = ctypes.WINFUNCTYPE(wintypes.BOOL, wintypes.HWND, wintypes.LPARAM)
@@ -45,6 +45,7 @@ def find_hwnd(exe, child_class=None):
     u.IsWindowVisible.argtypes = (wintypes.HWND,)
     u.GetWindowThreadProcessId.argtypes = (wintypes.HWND, ctypes.POINTER(wintypes.DWORD))
     u.GetClassNameW.argtypes = (wintypes.HWND, wintypes.LPWSTR, ctypes.c_int)
+    u.GetWindowTextW.argtypes = (wintypes.HWND, wintypes.LPWSTR, ctypes.c_int)
     @cb_type
     def visit(hwnd, unused):
         if not u.IsWindowVisible(hwnd):
@@ -59,7 +60,10 @@ def find_hwnd(exe, child_class=None):
             u.GetWindowThreadProcessId(hwnd, ctypes.byref(pid))
             try:
                 if os.path.normcase(psutil.Process(pid.value).exe()) == os.path.normcase(str(exe)):
-                    matches.append(int(hwnd))
+                    title = ctypes.create_unicode_buffer(512)
+                    u.GetWindowTextW(hwnd, title, len(title))
+                    if not window_title or window_title.casefold() in title.value.casefold():
+                        matches.append(int(hwnd))
             except (psutil.Error, OSError):
                 pass
         return True
@@ -128,10 +132,18 @@ def run(args):
     head = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT, text=True).strip()
     if revision != head:
         raise RuntimeError(f"Stale build {revision}; checkout {head}")
-    parent = find_hwnd(exe)
+    parent = find_hwnd(exe, window_title=args.window_title)
     output = ROOT / "logs" / "visual-ui" / datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S-%f")
     output.mkdir(parents=True, exist_ok=False)
-    manifest = {"revision": revision, "exe_sha256": hashlib.sha256(exe.read_bytes()).hexdigest(),
+    u = ctypes.windll.user32
+    if hasattr(u, "GetDpiForWindow"):
+        u.GetDpiForWindow.argtypes = (wintypes.HWND,)
+        u.GetDpiForWindow.restype = wintypes.UINT
+        dpi = u.GetDpiForWindow(parent)
+    else:
+        dpi = None
+    manifest = {"revision": revision, "dpi": dpi,
+                "exe_sha256": hashlib.sha256(exe.read_bytes()).hexdigest(),
                 "timestamp_utc": datetime.now(timezone.utc).isoformat(),
                 "label": args.label, "status": "CAPTURED_REVIEW_REQUIRED"}
     if args.action == "snapshot":
@@ -173,6 +185,7 @@ def main():
         p = sub.add_parser(name)
         p.add_argument("--exe", type=Path, default=ROOT / "bin" / "x64" / "fxfile.exe")
         p.add_argument("--synthetic-fixture", action="store_true")
+        p.add_argument("--window-title", help="Select a visible dialog/main window by localized title")
         p.add_argument("--label", required=True, help="Case ID, not a personal file name")
         if name == "ui02":
             p.add_argument("--control", choices=("list", "tree"), required=True)
