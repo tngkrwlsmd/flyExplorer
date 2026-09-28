@@ -4,7 +4,7 @@ The opt-in DLL is loaded INSIDE the real product's existing MFC UI process.
 from pathlib import Path
 import ctypes as C,hashlib,os,re,shutil,subprocess,tempfile,time
 from ctypes import wintypes as W
-from pywinauto import Desktop,mouse
+from pywinauto import Desktop,mouse,keyboard
 
 folder=Path(__file__).resolve().parent
 repo=folder.parents[1]
@@ -119,6 +119,18 @@ try:
   eventually(lambda:'dll-focus-'+command.lower() in trace.read_text(errors='replace'),
              'XAML focus did not reach '+command)
   print('REAL_PRODUCT_COMMAND_VIA_IN_PROCESS_MFC_WINUI_PASS',command,observed,flush=True)
+ # Keyboard activation through the real XAML button and the MFC message loop.
+ controls['Back'].set_focus()
+ keyboard.send_keys('{ENTER}')
+ eventually(lambda:title(hwnd) if title(hwnd).lower().endswith('my music - fxfile') else None,
+            'keyboard ENTER on XAML Back did not reach product')
+ keyboard.send_keys('{TAB}')
+ eventually(lambda:controls['Forward'].has_keyboard_focus(),
+            'TAB did not move XAML focus Back -> Forward')
+ keyboard.send_keys('{ENTER}')
+ eventually(lambda:title(hwnd) if title(hwnd).lower().endswith('my documents - fxfile') else None,
+            'keyboard ENTER on tab-focused XAML Forward did not reach product')
+ print('REAL_PRODUCT_IN_PROCESS_KEYBOARD_TAB_ENTER_PASS',flush=True)
  assert not u.IsHungAppWindow(hwnd)
  host=frame.rectangle()
  assert u.MoveWindow(hwnd,host.left,host.top,host.width()+90,host.height()+60,True)

@@ -23,8 +23,8 @@ Shell drag/drop, DPI/High Contrast coverage, packaging, or installer behavior.
 
 The opt-in island now visibly loads its actual WinUI 3 Back, Forward and Up
 buttons **inside the real product's MFC MainFrame, in the same process and UI
-thread**. Real XAML pointer clicks and focus events dispatch the three original
-WM_COMMAND IDs through the unchanged native CommandContext/ExplorerCtrl path.
+thread**. Real XAML pointer clicks plus Back→Forward Tab traversal and Enter activation
+dispatch the original WM_COMMAND IDs through the unchanged native CommandContext/ExplorerCtrl path.
 The native MainFrame remains responsible for the file engine and history.
 The child island responds to MFC resizing. Its current folder display is a
 TextBlock, NOT an editable path control.

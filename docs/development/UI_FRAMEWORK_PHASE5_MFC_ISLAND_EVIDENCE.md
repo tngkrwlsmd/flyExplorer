@@ -25,7 +25,7 @@ tabs, saved toolbar geometry or the existing address editor.
 | Experimental DLL Debug x64 / actual product Release-x64-Unicode x64 | Both compiled and linked; existing MSB8029 build directory warnings remain |
 | Same PID, same UI-thread-hosted MFC child / actual XAML UIA buttons | PASS in an explicitly test-owned real product |
 | Existing product Up / Back / Forward navigation | PASS via pointer activation and native command return/title trace |
-| WinUI button focus, native MFC resize and responsiveness | PASS at actual 96 DPI using UIA-derived button bounds |
+| WinUI button pointer focus, Back→Forward Tab traversal, Enter activation, native MFC resize and responsiveness | PASS at actual 96 DPI using UIA-derived button bounds |
 | Product exit and XAML resource teardown | PASS, exit 0, no forced process stop in corrected tests |
 | Original six personal UI config files (SHA256) | Identical before and after each isolated run |
 | Source invariant preflight | PASS |
@@ -36,8 +36,8 @@ An initial strict same-process integration PASS was followed by three
 consecutive additional PASS runs. After removing unused prototype sources
 and rebuilding the experiment DLL, a strict PASS was obtained again;
 the last updated UIA-geometry test also passed. These successful runs
-span minor test-harness/source cleanup revisions. The latest test directly
-checked actual WinUI UIA button identities and real pointer click positions;
+span minor test-harness/source cleanup revisions. The latest test directly checked actual WinUI UIA button identities, real
+pointer click positions, Back→Forward Tab traversal and Enter activation;
 its real host DPI was 96. Separate native-only and island-enabled processes
 also exited 0 in three additional *paired* isolated sampling runs.
 All checks used cloned private settings and synthetic filesystem fixtures.
@@ -114,9 +114,9 @@ private configuration data were not committed.
 There is **no evidence-based framework migration verdict** yet. The minimum
 next experiment is to isolate the DLL's TextBox fault with valid WinUI
 resource/PRI initialization, then validate editable address and real active-
-pane read-only state without changing the proven native engine. Keyboard
-Tab traversal, pointer edge cases, DPI/HC, drag/drop and packaged deployment
-need their own tests before selective integration reaches production.
+pane read-only state without changing the proven native engine. Broader keyboard traversal/accelerators, pointer edge cases, DPI/HC, drag/drop
+and packaged deployment need their own tests before selective integration
+reaches production.
 
 Validated commands, for the **experiment branch only**:
 - `experiments/phase5_island_bridge/build.cmd` (Debug x64 DLL)
