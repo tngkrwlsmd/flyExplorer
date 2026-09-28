@@ -24,7 +24,7 @@ class ColumnSetDlg : public CModernDialog
     typedef CModernDialog super;
 
 public:
-    ColumnSetDlg(void);
+    explicit ColumnSetDlg(CWnd *aParentWnd = XPR_NULL);
     virtual ~ColumnSetDlg(void);
 
 public:

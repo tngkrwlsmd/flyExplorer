@@ -208,6 +208,32 @@ const UINT_PTR kDialogTabSubclassId = 0x46474454;      // 'FGDT'
 const UINT_PTR kDialogEditSubclassId = 0x46474445;     // 'FGDE'
 const UINT_PTR kDialogComboSubclassId = 0x46474443;    // 'FGDC'
 const UINT_PTR kDialogGroupSubclassId = 0x46474447;    // 'FGDG'
+const UINT_PTR kDialogScrollSubclassId = 0x46474453;   // 'FGDS'
+
+LRESULT CALLBACK DialogScrollableSubclassProc(
+    HWND aHwnd, UINT aMessage, WPARAM aWParam, LPARAM aLParam,
+    UINT_PTR aSubclassId, DWORD_PTR)
+{
+    if (aMessage == WM_NCDESTROY)
+    {
+        ::RemoveWindowSubclass(
+            aHwnd, DialogScrollableSubclassProc, aSubclassId);
+        ModernUI::removeDarkScrollbarOverlay(aHwnd);
+    }
+    return ::DefSubclassProc(aHwnd, aMessage, aWParam, aLParam);
+}
+
+BOOL CALLBACK CloseOwnedDropdownProc(HWND aHwnd, LPARAM)
+{
+    xpr_tchar_t sClassName[64] = {0};
+    ::GetClassName(aHwnd, sClassName, XPR_COUNT_OF(sClassName));
+    if (_tcsicmp(sClassName, XPR_STRING_LITERAL("ComboBox")) == 0 &&
+        ::SendMessage(aHwnd, CB_GETDROPPEDSTATE, 0, 0) != FALSE)
+    {
+        ::SendMessage(aHwnd, CB_SHOWDROPDOWN, FALSE, 0);
+    }
+    return TRUE;
+}
 
 HBRUSH getDialogParentBrush(HWND aHwnd, HDC aDC, UINT aCtlColorMessage)
 {
@@ -1627,6 +1653,17 @@ xpr_bool_t ModernUI::isSameFont(
         XPR_FALSE;
 }
 
+void ModernUI::dismissOwnedDropdowns(HWND aDialogHwnd)
+{
+    if (!::IsWindow(aDialogHwnd))
+        return;
+    HWND sOwner = ::GetWindow(aDialogHwnd, GW_OWNER);
+    if (!::IsWindow(sOwner))
+        return;
+    // EnumChildWindows includes the native ComboBox inside each ComboBoxEx.
+    ::EnumChildWindows(sOwner, CloseOwnedDropdownProc, 0);
+}
+
 void ModernUI::applyDialogControlTheme(HWND aHwnd)
 {
     if (XPR_IS_NULL(aHwnd) || ::IsWindow(aHwnd) == FALSE)
@@ -1720,6 +1757,27 @@ void ModernUI::applyDialogControlTheme(HWND aHwnd)
         TreeView_SetLineColor(aHwnd, sPalette.mSeparator);
     }
 
+    const bool sListOrTree =
+        _tcsicmp(sClassName, XPR_STRING_LITERAL("SysListView32")) == 0 ||
+        _tcsicmp(sClassName, XPR_STRING_LITERAL("SysTreeView32")) == 0 ||
+        _tcsicmp(sClassName, XPR_STRING_LITERAL("ListBox")) == 0;
+    const bool sScrollableEdit =
+        _tcsicmp(sClassName, XPR_STRING_LITERAL("Edit")) == 0 &&
+        (::GetWindowLongPtr(aHwnd, GWL_STYLE) &
+            (WS_VSCROLL | WS_HSCROLL)) != 0;
+    if (sListOrTree || sScrollableEdit)
+    {
+        const bool sDark = XPR_IS_TRUE(sPalette.mDark) &&
+            XPR_IS_FALSE(sPalette.mHighContrast);
+        if (sDark)
+            ::SetWindowSubclass(aHwnd, DialogScrollableSubclassProc,
+                kDialogScrollSubclassId, 0);
+        ModernUI::configureDarkScrollbarOverlay(
+            aHwnd, sDark ? &sPalette : NULL);
+        if (!sDark)
+            ::RemoveWindowSubclass(aHwnd,
+                DialogScrollableSubclassProc, kDialogScrollSubclassId);
+    }
     ::InvalidateRect(aHwnd, XPR_NULL, TRUE);
 }
 
@@ -2153,6 +2211,7 @@ struct DarkScrollbarEntry
     bool mCornerValid;
     bool mForce;
     bool mPopupTopMost;
+    HWND mPopupHostRoot;
 };
 
 static thread_local std::vector<DarkScrollbarEntry> sDarkScrollbarEntries;
@@ -2350,8 +2409,23 @@ bool SyncDarkScrollbarPart(
 
 void SyncDarkScrollbarEntry(DarkScrollbarEntry &aEntry)
 {
+    // ComboLBox is a desktop-owned popup: GA_ROOTOWNER does NOT identify
+    // the containing MFC window. The address control passes its real host.
+    const HWND sRootOwner =
+        ::IsWindow(aEntry.mPopupHostRoot) ?
+            aEntry.mPopupHostRoot :
+            ::GetAncestor(aEntry.mTarget, GA_ROOTOWNER);
+    const HWND sForeground = ::GetForegroundWindow();
+    const HWND sTargetRoot =
+        ::GetAncestor(aEntry.mTarget, GA_ROOT);
+    const bool sPopupOccluded =
+        aEntry.mPopupTopMost &&
+        ((::IsWindow(sRootOwner) &&
+          !::IsWindowEnabled(sRootOwner)) ||
+         (sForeground != NULL && sForeground != sRootOwner &&
+          sForeground != sTargetRoot));
     if (!::IsWindow(aEntry.mTarget) ||
-        !::IsWindowVisible(aEntry.mTarget))
+        !::IsWindowVisible(aEntry.mTarget) || sPopupOccluded)
     {
         HideDarkScrollbarPopup(aEntry.mVerticalPopup);
         HideDarkScrollbarPopup(aEntry.mHorizontalPopup);
@@ -2430,6 +2504,9 @@ LRESULT CALLBACK DarkScrollbarCallRet(
         const bool sNativeScroll =
             sMsg == WM_VSCROLL || sMsg == WM_HSCROLL ||
             sMsg == WM_NCPAINT || sMsg == WM_NCLBUTTONUP;
+        const bool sOwnerState =
+            sMsg == WM_ENABLE || sMsg == WM_ACTIVATE ||
+            sMsg == WM_ACTIVATEAPP;
         bool sRelevant = false;
         for (size_t i = 0; i < sDarkScrollbarEntries.size(); ++i)
         {
@@ -2437,7 +2514,13 @@ LRESULT CALLBACK DarkScrollbarCallRet(
             if ((sEvent->hwnd == sTarget &&
                  (sVisibilityOrPosition || sNativeScroll)) ||
                 (sVisibilityOrPosition &&
-                 ::IsChild(sEvent->hwnd, sTarget)))
+                 ::IsChild(sEvent->hwnd, sTarget)) ||
+                (sOwnerState &&
+                 sDarkScrollbarEntries[i].mPopupTopMost &&
+                 sEvent->hwnd ==
+                    (::IsWindow(sDarkScrollbarEntries[i].mPopupHostRoot) ?
+                        sDarkScrollbarEntries[i].mPopupHostRoot :
+                        ::GetAncestor(sTarget, GA_ROOTOWNER))))
             {
                 sRelevant = true;
                 break;
@@ -2529,7 +2612,7 @@ void RemoveDarkScrollbarEntry(HWND aTarget)
 
 void ModernUI::configureDarkScrollbarOverlay(
     HWND aHwnd, const ThemePalette *aPalette,
-    xpr_bool_t aPopupTopMost)
+    xpr_bool_t aPopupTopMost, HWND aPopupHost)
 {
     if (!::IsWindow(aHwnd))
         return;
@@ -2549,6 +2632,9 @@ void ModernUI::configureDarkScrollbarOverlay(
         sNew.mTarget = aHwnd;
         sNew.mPalette = *aPalette;
         sNew.mPopupTopMost = XPR_IS_TRUE(aPopupTopMost);
+        sNew.mPopupHostRoot =
+            ::IsWindow(aPopupHost) ?
+                ::GetAncestor(aPopupHost, GA_ROOT) : NULL;
         sNew.mForce = true;
         sDarkScrollbarEntries.push_back(sNew);
         StartDarkScrollbarHooks();
@@ -2557,6 +2643,9 @@ void ModernUI::configureDarkScrollbarOverlay(
     {
         sEntry->mPalette = *aPalette;
         sEntry->mPopupTopMost = XPR_IS_TRUE(aPopupTopMost);
+        sEntry->mPopupHostRoot =
+            ::IsWindow(aPopupHost) ?
+                ::GetAncestor(aPopupHost, GA_ROOT) : NULL;
         sEntry->mForce = true;
     }
     SyncDarkScrollbarEntries();

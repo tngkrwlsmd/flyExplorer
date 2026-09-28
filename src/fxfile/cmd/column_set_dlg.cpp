@@ -9,6 +9,9 @@
 
 #include "stdafx.h"
 #include "column_set_dlg.h"
+#include "../gui/ModernUI.h"
+#include "main_frame.h"
+#include "address_bar.h"
 
 #include "resource.h"
 
@@ -20,8 +23,8 @@ namespace fxfile
 {
 namespace cmd
 {
-ColumnSetDlg::ColumnSetDlg(void)
-    : super(IDD_COLUMN_SET, XPR_NULL)
+ColumnSetDlg::ColumnSetDlg(CWnd *aParentWnd)
+    : super(IDD_COLUMN_SET, aParentWnd)
     , mShellFolder2(XPR_NULL)
     , mAvgCharWidth(6)
 {
@@ -172,6 +175,50 @@ xpr_bool_t ColumnSetDlg::OnInitDialog(void)
     SetDlgItemText(IDOK,                     gApp.loadString(XPR_STRING_LITERAL("popup.common.button.ok")));
     SetDlgItemText(IDCANCEL,                 gApp.loadString(XPR_STRING_LITERAL("popup.common.button.cancel")));
 
+    // The base dialog was themed before this dynamically populated list.
+    // Re-apply the current palette and attach the shared native scrollbar.
+    const ui::ThemePalette sPalette = ui::ModernUI::getPalette();
+    if (XPR_IS_TRUE(sPalette.mDark) &&
+        XPR_IS_FALSE(sPalette.mHighContrast))
+    {
+        mListCtrl.SetBkColor(sPalette.mElevated);
+        mListCtrl.SetTextBkColor(sPalette.mElevated);
+        mListCtrl.SetTextColor(sPalette.mText);
+    }
+    ui::ModernUI::applyDialogControlTheme(mListCtrl.m_hWnd);
+
+    // The original centered modal straddled the address row. Keep it below
+    // the active address bar when the current monitor has enough usable room.
+    // On smaller displays preserve standard MFC placement rather than
+    // clipping the modal or forcing it off-screen.
+    MainFrame *sFrame = dynamic_cast<MainFrame *>(GetOwner());
+    AddressBar *sAddress = sFrame ? sFrame->getAddressBar(-1) : XPR_NULL;
+    if (sAddress && ::IsWindowVisible(sAddress->GetSafeHwnd()))
+    {
+        CRect sAddressRect;
+        CRect sDialogRect;
+        sAddress->GetWindowRect(&sAddressRect);
+        GetWindowRect(&sDialogRect);
+        const xpr_sint_t sGap =
+            ui::ModernUI::scaleForWindow(10, m_hWnd);
+        const xpr_sint_t sBelow = sAddressRect.bottom + sGap;
+        const bool sHorizontallyIntersects =
+            sDialogRect.left < sAddressRect.right &&
+            sAddressRect.left < sDialogRect.right;
+        MONITORINFO sMonitor = {0};
+        sMonitor.cbSize = sizeof(sMonitor);
+        const HMONITOR sScreen =
+            ::MonitorFromWindow(m_hWnd, MONITOR_DEFAULTTONEAREST);
+        if (sHorizontallyIntersects &&
+            sDialogRect.top < sBelow && sScreen &&
+            ::GetMonitorInfo(sScreen, &sMonitor) &&
+            sBelow + sDialogRect.Height() <=
+                sMonitor.rcWork.bottom - sGap)
+        {
+            SetWindowPos(XPR_NULL, sDialogRect.left, sBelow,
+                0, 0, SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE);
+        }
+    }
     return XPR_TRUE;
 }
 

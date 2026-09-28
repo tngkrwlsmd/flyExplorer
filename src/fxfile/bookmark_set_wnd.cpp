@@ -102,11 +102,16 @@ xpr_sint_t BookmarkSetWnd::OnCreate(LPCREATESTRUCT lpCreateStruct)
         return -1;
 
     ui::ModernUI::applyExplorerControlTheme(m_hWnd);
+    const ui::ThemePalette sPalette = ui::ModernUI::getPalette();
+    ui::ModernUI::configureDarkScrollbarOverlay(
+        m_hWnd, XPR_IS_TRUE(sPalette.mDark) &&
+        XPR_IS_FALSE(sPalette.mHighContrast) ? &sPalette : NULL);
     return 0;
 }
 
 void BookmarkSetWnd::OnDestroy(void) 
 {
+    ui::ModernUI::removeDarkScrollbarOverlay(m_hWnd);
     super::OnDestroy();
 
     if (mBookmarkWnd != XPR_NULL)
@@ -127,6 +132,10 @@ void BookmarkSetWnd::OnSettingChange(xpr_uint_t uFlags, const xpr_tchar_t *lpszS
     super::OnSettingChange(uFlags, lpszSection);
 
     ui::ModernUI::applyExplorerControlTheme(m_hWnd);
+    const ui::ThemePalette sPalette = ui::ModernUI::getPalette();
+    ui::ModernUI::configureDarkScrollbarOverlay(
+        m_hWnd, XPR_IS_TRUE(sPalette.mDark) &&
+        XPR_IS_FALSE(sPalette.mHighContrast) ? &sPalette : NULL);
     RedrawWindow(XPR_NULL, XPR_NULL, RDW_INVALIDATE | RDW_ERASE | RDW_ALLCHILDREN);
 }
 
@@ -135,6 +144,10 @@ void BookmarkSetWnd::OnSysColorChange(void)
     super::OnSysColorChange();
 
     ui::ModernUI::applyExplorerControlTheme(m_hWnd);
+    const ui::ThemePalette sPalette = ui::ModernUI::getPalette();
+    ui::ModernUI::configureDarkScrollbarOverlay(
+        m_hWnd, XPR_IS_TRUE(sPalette.mDark) &&
+        XPR_IS_FALSE(sPalette.mHighContrast) ? &sPalette : NULL);
     RedrawWindow(XPR_NULL, XPR_NULL, RDW_INVALIDATE | RDW_ERASE | RDW_ALLCHILDREN);
 }
 
@@ -143,6 +156,10 @@ LRESULT BookmarkSetWnd::OnThemeChanged(WPARAM aWParam, LPARAM aLParam)
     // WM_THEMECHANGED is also emitted synchronously by SetWindowTheme. Do not
     // reapply the Explorer association from inside this notification; doing so
     // used to recurse during startup/settings initialization.
+    const ui::ThemePalette sPalette = ui::ModernUI::getPalette();
+    ui::ModernUI::configureDarkScrollbarOverlay(
+        m_hWnd, XPR_IS_TRUE(sPalette.mDark) &&
+        XPR_IS_FALSE(sPalette.mHighContrast) ? &sPalette : NULL);
     RedrawWindow(XPR_NULL, XPR_NULL, RDW_INVALIDATE | RDW_ERASE | RDW_ALLCHILDREN);
     return 0;
 }

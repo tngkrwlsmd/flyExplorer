@@ -684,3 +684,20 @@ native functional regression 17/0. Actual higher DPI and OS High Contrast
 runtime acceptance remain untested. This is independent of the opt-in
 WinUI 3 Phase 5 experiment; see
 docs/development/UI_ADDRESS_DROPDOWN_DARK_EVIDENCE.md.
+
+
+## 2026-09-28 scrollbar and address/column modal follow-up
+
+Completed native MFC scrollbar source inventory and added lifecycle-managed
+scroll overlays for modern dialog list/tree/listbox and scrollable edit
+children, plus BookmarkSetWnd's custom native viewport. AddressBar's
+topmost popup now carries the actual MFC host for occlusion checks;
+CModernDialog closes open owner dropdowns when the modal initializes.
+The column selection dialog also moves below the active address bar
+when monitor workspace permits; 96-DPI Dark/Light geometry checks
+confirmed a 10-pixel non-overlap gap.
+Owned Dark/Light 96-DPI GUI regressions passed native list scrolling,
+modal/address isolation, exit 0 and all six original user config hashes.
+Native functional regression: 17/0. Actual higher DPI and Windows High
+Contrast screen tests remain unverified. See
+docs/development/UI_SCROLLBAR_MODAL_OVERLAP_AUDIT_20260928.md.

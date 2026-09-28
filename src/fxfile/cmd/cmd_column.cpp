@@ -95,7 +95,7 @@ void ColumnSetCommand::execute(CommandContext &aContext)
 
         xpr_sint_t sAvgCharWidth = ShellColumnManager::getAvgCharWidth(sExplorerCtrl);
 
-        ColumnSetDlg sDlg;
+        ColumnSetDlg sDlg(sMainFrame);
         sDlg.setShellFolder2(sShellFolder2);
         sDlg.setAvgCharWidth(sAvgCharWidth);
         sDlg.setColumnList(sColumnList);
