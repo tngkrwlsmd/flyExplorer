@@ -189,6 +189,7 @@ AddressBar::AddressBar(void)
     mDisplayFont    = XPR_NULL;
     mComboBoxHwnd   = XPR_NULL;
     mEditHwnd       = XPR_NULL;
+    mDropdownHwnd   = XPR_NULL;
 
     mShcnDesktopId  = 0;
     mShcnComputerId = 0;
@@ -348,6 +349,9 @@ LRESULT AddressBar::OnDpiChanged(WPARAM aWParam, LPARAM aLParam)
 
 xpr_bool_t AddressBar::DestroyWindow(void)
 {
+    removeDropdownSubclass();
+    if (::IsWindow(m_hWnd))
+        ::RemoveWindowSubclass(m_hWnd, AddressBar::OuterSubclassProc, 0xF111);
     removeEditSubclass();
     removeComboSubclass();
     applyDisplayFont(XPR_NULL);
@@ -1222,6 +1226,8 @@ void AddressBar::applyModernAppearance(void)
 
     installComboSubclass();
     installEditSubclass();
+    ::SetWindowSubclass(m_hWnd, AddressBar::OuterSubclassProc,
+        0xF111, reinterpret_cast<DWORD_PTR>(this));
 
     const ui::ThemePalette sPalette = ui::ModernUI::getPalette();
 
@@ -1239,6 +1245,7 @@ void AddressBar::applyModernAppearance(void)
 
     updateMetrics();
     applyChildThemes();
+    installDropdownSubclass();
 
     RedrawWindow(XPR_NULL, XPR_NULL, RDW_INVALIDATE | RDW_ERASE | RDW_FRAME | RDW_ALLCHILDREN);
 }
@@ -1323,6 +1330,204 @@ void AddressBar::removeEditSubclass(void)
     }
 
     mEditHwnd = XPR_NULL;
+}
+
+xpr_bool_t AddressBar::drawDarkDropdownItem(const DRAWITEMSTRUCT *aItem)
+{
+    const ui::ThemePalette sPalette = ui::ModernUI::getPalette();
+    if (!aItem || aItem->CtlType != ODT_COMBOBOX ||
+        aItem->hwndItem != mComboBoxHwnd ||
+        aItem->itemID == static_cast<UINT>(-1) ||
+        (aItem->itemState & ODS_COMBOBOXEDIT) != 0 ||
+        XPR_IS_FALSE(sPalette.mDark) ||
+        XPR_IS_TRUE(sPalette.mHighContrast))
+        return XPR_FALSE;
+
+    xpr_tchar_t sText[XPR_MAX_PATH + 1] = {0};
+    COMBOBOXEXITEM sItem = {0};
+    sItem.mask = CBEIF_TEXT | CBEIF_IMAGE |
+        CBEIF_SELECTEDIMAGE | CBEIF_INDENT;
+    sItem.iItem = aItem->itemID;
+    sItem.pszText = sText;
+    sItem.cchTextMax = _countof(sText);
+    if (::SendMessage(m_hWnd, CBEM_GETITEM, 0,
+            reinterpret_cast<LPARAM>(&sItem)) == FALSE)
+        return XPR_FALSE;
+
+    const bool sSelected = (aItem->itemState & ODS_SELECTED) != 0;
+    const COLORREF sBackground =
+        sSelected ? sPalette.mSelection : sPalette.mChrome;
+    const int sSavedDC = ::SaveDC(aItem->hDC);
+    ::IntersectClipRect(aItem->hDC,
+        aItem->rcItem.left, aItem->rcItem.top,
+        aItem->rcItem.right, aItem->rcItem.bottom);
+    ::SetDCBrushColor(aItem->hDC, sBackground);
+    ::FillRect(aItem->hDC, &aItem->rcItem,
+        reinterpret_cast<HBRUSH>(::GetStockObject(DC_BRUSH)));
+
+    const xpr_sint_t sMargin =
+        ui::ModernUI::scaleForWindow(5, m_hWnd);
+    const xpr_sint_t sIndent =
+        ui::ModernUI::scaleForWindow(18, m_hWnd);
+    int sX = aItem->rcItem.left + sMargin +
+        max(0, sItem.iIndent) * sIndent;
+    if (mSmallImgList && mSmallImgList->GetSafeHandle())
+    {
+        HIMAGELIST sImages = reinterpret_cast<HIMAGELIST>(
+            mSmallImgList->GetSafeHandle());
+        const int sImage = sSelected &&
+            sItem.iSelectedImage >= 0 ?
+                sItem.iSelectedImage : sItem.iImage;
+        int sImageWidth = 0, sImageHeight = 0;
+        if (::ImageList_GetIconSize(
+                sImages, &sImageWidth, &sImageHeight) &&
+            sImage >= 0 && sImage < ::ImageList_GetImageCount(sImages))
+        {
+            ::ImageList_Draw(sImages, sImage, aItem->hDC,
+                sX, aItem->rcItem.top +
+                    max(0, (aItem->rcItem.bottom -
+                        aItem->rcItem.top - sImageHeight) / 2),
+                ILD_TRANSPARENT);
+            sX += sImageWidth + sMargin;
+        }
+    }
+
+    RECT sTextRect = aItem->rcItem;
+    sTextRect.left = min(sTextRect.right, sX);
+    sTextRect.right = max(sTextRect.left,
+        sTextRect.right - sMargin);
+    ::SetBkMode(aItem->hDC, TRANSPARENT);
+    ::SetTextColor(aItem->hDC, sPalette.mText);
+    HFONT sFont = reinterpret_cast<HFONT>(
+        ::SendMessage(mComboBoxHwnd, WM_GETFONT, 0, 0));
+    if (sFont)
+        ::SelectObject(aItem->hDC, sFont);
+    ::DrawText(aItem->hDC, sText, -1, &sTextRect,
+        DT_SINGLELINE | DT_VCENTER | DT_NOPREFIX | DT_END_ELLIPSIS);
+    if ((aItem->itemState & ODS_FOCUS) != 0)
+        ::DrawFocusRect(aItem->hDC, &aItem->rcItem);
+    ::RestoreDC(aItem->hDC, sSavedDC);
+    return XPR_TRUE;
+}
+
+LRESULT CALLBACK AddressBar::OuterSubclassProc(
+    HWND aHwnd, UINT aMessage, WPARAM aWParam, LPARAM aLParam,
+    UINT_PTR aSubclassId, DWORD_PTR aRefData)
+{
+    AddressBar *sBar = reinterpret_cast<AddressBar *>(aRefData);
+    if (sBar && aMessage == WM_COMMAND &&
+        HIWORD(aWParam) == CBN_DROPDOWN &&
+        reinterpret_cast<HWND>(aLParam) == sBar->mComboBoxHwnd)
+    {
+        const LRESULT sResult =
+            ::DefSubclassProc(aHwnd, aMessage, aWParam, aLParam);
+        sBar->installDropdownSubclass();
+        return sResult;
+    }
+    if (sBar && aMessage == WM_DRAWITEM &&
+        sBar->drawDarkDropdownItem(
+            reinterpret_cast<const DRAWITEMSTRUCT *>(aLParam)))
+        return TRUE;
+    if (aMessage == WM_NCDESTROY)
+        ::RemoveWindowSubclass(
+            aHwnd, AddressBar::OuterSubclassProc, aSubclassId);
+    return ::DefSubclassProc(aHwnd, aMessage, aWParam, aLParam);
+}
+
+void AddressBar::installDropdownSubclass(void)
+{
+    CComboBox *sCombo = GetComboBoxCtrl();
+    if (!sCombo || !::IsWindow(sCombo->GetSafeHwnd()))
+        return;
+    COMBOBOXINFO sInfo = {0};
+    sInfo.cbSize = sizeof(sInfo);
+    if (!::GetComboBoxInfo(sCombo->GetSafeHwnd(), &sInfo) ||
+        !::IsWindow(sInfo.hwndList))
+        return;
+
+    if (mDropdownHwnd != sInfo.hwndList)
+    {
+        removeDropdownSubclass();
+        if (!::SetWindowSubclass(sInfo.hwndList,
+                AddressBar::DropdownSubclassProc, 0xF110, (DWORD_PTR)this))
+            return;
+        mDropdownHwnd = sInfo.hwndList;
+    }
+
+    const ui::ThemePalette sPalette = ui::ModernUI::getPalette();
+    // ComboLBox can change from a desktop child to a popup as it opens.
+    // Recreate an early overlay AFTER it is visible so its owner/z-order
+    // is derived from the current popup root, not the desktop.
+    if (::IsWindowVisible(mDropdownHwnd))
+        ui::ModernUI::removeDarkScrollbarOverlay(mDropdownHwnd);
+    // Reuse the existing layered scrollbar compositor; USER32 still owns
+    // the native list's scrollbar range, hit tests and drag interactions.
+    ui::ModernUI::configureDarkScrollbarOverlay(
+        mDropdownHwnd,
+        XPR_IS_TRUE(sPalette.mDark) &&
+        XPR_IS_FALSE(sPalette.mHighContrast) ? &sPalette : NULL,
+        XPR_TRUE); // ComboLBox must composite above native popup.
+}
+
+void AddressBar::removeDropdownSubclass(void)
+{
+    if (!mDropdownHwnd)
+        return;
+    ui::ModernUI::removeDarkScrollbarOverlay(mDropdownHwnd);
+    if (::IsWindow(mDropdownHwnd))
+        ::RemoveWindowSubclass(
+            mDropdownHwnd, AddressBar::DropdownSubclassProc, 0xF110);
+    mDropdownHwnd = XPR_NULL;
+}
+
+LRESULT CALLBACK AddressBar::DropdownSubclassProc(
+    HWND aHwnd, UINT aMessage, WPARAM aWParam, LPARAM aLParam,
+    UINT_PTR aSubclassId, DWORD_PTR aRefData)
+{
+    AddressBar *sBar = reinterpret_cast<AddressBar *>(aRefData);
+    if (sBar)
+    {
+        if (aMessage == WM_ERASEBKGND)
+        {
+            const ui::ThemePalette sPalette = ui::ModernUI::getPalette();
+            if (XPR_IS_TRUE(sPalette.mDark) &&
+                XPR_IS_FALSE(sPalette.mHighContrast) &&
+                sBar->mBackgroundBrush.GetSafeHandle())
+            {
+                RECT sRect = {0};
+                ::GetClientRect(aHwnd, &sRect);
+                ::FillRect(reinterpret_cast<HDC>(aWParam), &sRect,
+                    (HBRUSH)sBar->mBackgroundBrush.GetSafeHandle());
+                return 1;
+            }
+        }
+        else if (aMessage == WM_SHOWWINDOW && aWParam)
+        {
+            const LRESULT sResult =
+                ::DefSubclassProc(aHwnd, aMessage, aWParam, aLParam);
+            const ui::ThemePalette sPalette = ui::ModernUI::getPalette();
+            ui::ModernUI::removeDarkScrollbarOverlay(aHwnd);
+            ui::ModernUI::configureDarkScrollbarOverlay(
+                aHwnd, XPR_IS_TRUE(sPalette.mDark) &&
+                XPR_IS_FALSE(sPalette.mHighContrast) ? &sPalette : NULL,
+                XPR_TRUE);
+            return sResult;
+        }
+        else if (aMessage == WM_SHOWWINDOW && !aWParam)
+        {
+            // Destroy the transparent topmost overlay when popup closes.
+            ui::ModernUI::removeDarkScrollbarOverlay(aHwnd);
+        }
+        else if (aMessage == WM_NCDESTROY)
+        {
+            ui::ModernUI::removeDarkScrollbarOverlay(aHwnd);
+            if (sBar->mDropdownHwnd == aHwnd)
+                sBar->mDropdownHwnd = XPR_NULL;
+            ::RemoveWindowSubclass(
+                aHwnd, AddressBar::DropdownSubclassProc, aSubclassId);
+        }
+    }
+    return ::DefSubclassProc(aHwnd, aMessage, aWParam, aLParam);
 }
 
 void AddressBar::redrawModernFrame(void)
@@ -1755,6 +1960,15 @@ LRESULT CALLBACK AddressBar::ComboSubclassProc(
     {
         switch (aMessage)
         {
+        case CB_SHOWDROPDOWN:
+            {
+                const LRESULT sResult =
+                    ::DefSubclassProc(aHwnd, aMessage, aWParam, aLParam);
+                if (aWParam)
+                    sAddressBar->installDropdownSubclass();
+                return sResult;
+            }
+
         case WM_CTLCOLOREDIT:
         case WM_CTLCOLORLISTBOX:
         case WM_CTLCOLORSTATIC:
@@ -2112,6 +2326,7 @@ void AddressBar::OnDropdown(void)
     // The native ComboBox may create its list window lazily. Refresh the
     // documented theme association after the drop-down HWND is available.
     applyChildThemes();
+    installDropdownSubclass();
 }
 
 LRESULT AddressBar::OnShcnDesktop(WPARAM wParam, LPARAM lParam)

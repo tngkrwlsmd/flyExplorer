@@ -671,3 +671,16 @@ Windows build, runtime and DPI verification: NOT TESTED. No Actions run.
 When source, build output or runtime evidence contradicts a summary,
 correct this page and `PROJECT.md` during the same logical work unit.
 Keep the historical evidence that led to earlier conclusions intact.
+
+
+## 2026-09-28 native AddressBar drop-down Dark fix
+
+The existing MFC address drop-down now draws its own dark list items and
+uses the UI-02 click-through native scrollbar overlay with popup-scoped
+z-order and hide-time cleanup. Verified at actual 96 DPI with synthetic
+Dark and Light popup screenshots, scrollbar pointer clicks, unchanged
+original six config hashes, incremental Release-x64-Unicode build and
+native functional regression 17/0. Actual higher DPI and OS High Contrast
+runtime acceptance remain untested. This is independent of the opt-in
+WinUI 3 Phase 5 experiment; see
+docs/development/UI_ADDRESS_DROPDOWN_DARK_EVIDENCE.md.

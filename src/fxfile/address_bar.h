@@ -48,6 +48,12 @@ protected:
     void installComboSubclass(void);
     void removeComboSubclass(void);
     void installEditSubclass(void);
+    void installDropdownSubclass(void);
+    xpr_bool_t drawDarkDropdownItem(const DRAWITEMSTRUCT *aItem);
+    static LRESULT CALLBACK OuterSubclassProc(
+        HWND aHwnd, UINT aMessage, WPARAM aWParam, LPARAM aLParam,
+        UINT_PTR aSubclassId, DWORD_PTR aRefData);
+    void removeDropdownSubclass(void);
     void removeEditSubclass(void);
     void applyChildThemes(void);
     void redrawModernFrame(void);
@@ -60,6 +66,9 @@ protected:
         LPARAM aLParam,
         UINT_PTR aSubclassId,
         DWORD_PTR aRefData);
+    static LRESULT CALLBACK DropdownSubclassProc(
+        HWND aHwnd, UINT aMessage, WPARAM aWParam, LPARAM aLParam,
+        UINT_PTR aSubclassId, DWORD_PTR aRefData);
     static LRESULT CALLBACK EditSubclassProc(
         HWND aHwnd,
         UINT aMessage,
@@ -113,6 +122,7 @@ protected:
     CBrush         mBackgroundBrush;
     HWND           mComboBoxHwnd;
     HWND           mEditHwnd;
+    HWND           mDropdownHwnd;
 
     xpr_uint_t    mShcnDesktopId;
     xpr_uint_t    mShcnComputerId;
