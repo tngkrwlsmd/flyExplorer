@@ -12,8 +12,12 @@ class CommandContract(unittest.TestCase):
             "if (XPR_IS_TRUE(mTemporaryCompact))",
             "sCoolBarState.cx = mPreviousDriveWidth",
             "sCoolBarState.cx = mPreviousBookmarkWidth",
-            "sBookmarkBand.cxIdeal + sBookmarkBand.cxHeader"):
+            "aBookmark.cxIdeal + aBookmark.cxHeader"):
    self.assertIn(t,s)
+  self.assertIn("sBookmarkFull < sBookmarkMinimum",s)
+  self.assertIn("sAvailable - sBookmarkMinimum",s)
+  self.assertIn("(sBookmarkBand.fStyle & RBBS_USECHEVRON) == 0",s)
+  self.assertNotIn("Uxh04Trace",s)
   self.assertNotIn("gOpt->mMain.mDriveBar = ",s.split(
      "xpr_bool_t MainCoolBar::toggleTemporaryCompact",1)[1].split(
        "void MainCoolBar::setWrapable",1)[0])
@@ -24,6 +28,6 @@ class CommandContract(unittest.TestCase):
       ("cmd/cmd_main_gui.cpp","ToolCompactRowsCommand::execute"),
       ("command_string_table.cpp","cmd.tools.compact_rows"),
       ("Languages/Korean.xml","cmd.tools.compact_rows"),
-      ("fxfile.rc","Compact &drive/bookmark rows")):
+      ("fxfile.rc","Compact drive/bookmark rows (&J)")):
    self.assertIn(needle,(R/f).read_text(encoding="utf-8-sig"))
 if __name__=="__main__":unittest.main()

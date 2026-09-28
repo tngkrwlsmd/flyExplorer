@@ -29,7 +29,7 @@ Baseline private screenshots/logs:
 Both baseline owned processes exited normally and original six
 configuration hashes were unchanged.
 
-## 2. Draft, opt-in change (not product-ready)
+## 2. Historical first WIP checkpoint (superseded; not product-ready)
 
 Prototype introduces a checkable menu command under **View > Tools**,
 a candidate explicit reversible temporary compaction of adjacent
@@ -49,7 +49,7 @@ validated:** the target GUI did not successfully enter the compact
 state, so real end-to-end restoration and saving while compact were
 not exercised.
 
-## 3. Distinguishing actual-GUI failure and next mandatory gate
+## 3. Historical initial GUI failure (diagnosis now completed below)
 
 The actual user-input test launched the **saved** layout at 750px,
 pressed Alt+V with owned-window focus, opened its native Tools submenu,
@@ -93,3 +93,102 @@ High Contrast and actual >96 DPI are separate NOT TESTED gates.
 **Branch handling:** preserve this candidate **locally only**; do not
 push or merge UXH-04 to main until all scoped real GUI and regression
 gates pass. Existing main UXH-01/02/03 remain untouched.
+
+
+## 4. Confirmed native fit root cause and improved draft
+
+Test-owned **in-process** native diagnostics showed both multiline
+settings off, both bands visible, adjacent indexes 2 and 3 of 4,
+bookmark style 641 including BREAK and USECHEVRON. Native drive
+cxIdeal=421, bookmark cxIdeal=572; the respective calculated full
+widths including headers/insets were **446px + 597px = 1043px**.
+The old command demanded that sum fit within an available **686px**
+at 750px window width or **1036px** at 1100px width, disabling the
+real menu command at BOTH window sizes. All temporary product-side
+diagnostics were removed after verifying these actual values.
+
+The corrected opt-in algorithm requires two eligible visible
+nonwrapping chevron-enabled adjacent native bands and reserves
+48 DIP of chrome while allocating at least 180 scaled px Drive
+and 200 scaled px Bookmark. It permits the native existing
+chevron to display overflowing bookmarks instead of demanding
+that every button fit side-by-side. It leaves the automatic
+fresh-profile layout policy unchanged, does not remove commands,
+and does not overwrite the persisted band arrangement.
+
+Actual owned Windows 11 96-DPI **Dark**: clicking the real,
+enabled native View > Tools > Compact menu item (ID 33049) reduced
+the toolbar rebar from **141px to 101px**; physically selecting
+it again restored **141px**. A separate **Light** run passed the
+same pointer compact/restore sequence. Closing a separate owned
+process with compact mode still active wrote the **exact same
+copied original coolbar configuration bytes** as before launch.
+All successful GUI sessions exited normally and the six original
+user configuration files remained hash-identical.
+
+## 5. Verified owner-drawn Bookmark chevron
+
+The legacy rebar overflow is **not** a conventional Win32 #32768
+menu, so the first external automation's class assumption
+incorrectly classified the existing UI as missing. After a real
+click on the right-edge chevron in the 750px compact layout,
+the corrected owned GUI test observed an independent native
+**Afx** popup HWND with actual geometry (790,197,870,294),
+a live native child ToolbarWindow32 at (791,198,869,293),
+and named UI Automation CheckBox entries including Korean
+My Documents/Music/Pictures/Videos. The popup screenshot and
+full child/UIA inspection remain LOCAL only under ignored logs.
+The popup was dismissed without invoking potentially
+user-configured bookmark targets. Thus the popup and its
+accessible entries are observed, but actually invoking **every**
+overflow bookmark remains NOT TESTED.
+
+## 6. Remaining critical keyboard blocker ? do not merge
+
+The owner-drawn Tools submenu exposes command 33049 by native
+ID/rectangle, but a direct new J mnemonic did NOT apply
+compaction. The standard GetMenuStringW result is empty for
+this owner-drawn item; presence of a J label in resources
+must NOT be mistaken for working keyboard access.
+
+A second physical keyboard-only experiment used END/UP/UP/ENTER
+after opening the submenu. It still left the rebar at **141px**,
+and this experiment altered only the test-owned copied
+coolbar serialization, consistent with selecting some other
+toolbar operation. The actual dispatched command has NOT
+been established. This attempt failed its own test and does
+NOT establish a keyboard route or saved-layout preservation
+for keyboard actions. Do NOT repeat blind positional Enter.
+A safe follow-up must first observe the exact highlighted
+native ID 33049 using menu state before any Enter, and
+only then test actual keyboard activation. Otherwise dismiss
+the menu with Escape without modifying the copied profile.
+Preserve the user profile and baseline main throughout.
+
+## 7. Other successfully completed scoped gates
+
+- Updated candidate incremental x64 Release-x64-Unicode build PASS.
+- Source invariants, existing UI-05 fresh-profile negative
+  compaction guards, new UXH-04 command source contract PASS.
+- Native functional regressions **17 PASS, 0 FAIL**.
+- Fresh-profile default retained its measured 101px rebar at
+  both actual 750px and 1100px; originals untouched.
+- Last tested candidate Release executable SHA256
+  \`8CF631B0B057E371F833A21104241CCA2630DE9A2AA891787868F34732EB8AE8\`.
+- Dark/Light pointer, existing custom bookmark chevron popup,
+  and test-owned save-while-compact PASS.
+- Keyboard submenu dispatch **FAILED**, therefore UXH-04
+  remains **UNMERGED and local only**. This cannot count as
+  a complete UI/UX change or an approved product release.
+
+Key local-only logs: uxh04-fixed-real-menu-exercise.log,
+uxh04-final-retry-light.log, uxh04-final-retry-save.log,
+uxh04-scoped-final-chevron.log,
+uxh04-scoped-final-keyboard.log,
+uxh04-scoped-source-invariants.log,
+uxh04-scoped-source-ui05.log,
+uxh04-scoped-source-command.log,
+uxh04-scoped-source-native.log.
+Actual other DPI, Windows High Contrast, physical screen-reader
+listening, and per-item activation in every overflow popup
+remain independently NOT TESTED. No GitHub Actions runs.

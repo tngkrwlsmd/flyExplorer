@@ -445,6 +445,44 @@ xpr_bool_t MainCoolBar::isTemporaryCompact(void) const
     return mTemporaryCompact;
 }
 
+// The saved toolbar may contain more commands than fit even in a wide
+// window. Existing nonwrapping RBBS_USECHEVRON bands keep those commands
+// reachable. An *explicit* compact choice must reserve a usable minimum
+// for EACH bar, not require both full ideal widths plus large spare space.
+static xpr_bool_t CalculateOptInBandWidths(
+    HWND aHwnd,
+    xpr_sint_t aClientWidth,
+    const REBARBANDINFO &aDrive,
+    const REBARBANDINFO &aBookmark,
+    UINT *aDriveWidth,
+    UINT *aBookmarkWidth)
+{
+    if (XPR_IS_NULL(aDriveWidth) || XPR_IS_NULL(aBookmarkWidth))
+        return XPR_FALSE;
+    const UINT sDriveMinimum = static_cast<UINT>(
+        ui::ModernUI::scaleForWindow(180, aHwnd));
+    const UINT sBookmarkMinimum = static_cast<UINT>(
+        ui::ModernUI::scaleForWindow(200, aHwnd));
+    const UINT sInset = static_cast<UINT>(
+        ui::ModernUI::scaleForWindow(16, aHwnd));
+    const UINT sAvailable = static_cast<UINT>(
+        max(0, aClientWidth -
+            ui::ModernUI::scaleForWindow(48, aHwnd)));
+    const UINT sDriveFull =
+        aDrive.cxIdeal + aDrive.cxHeader + sInset;
+    const UINT sBookmarkFull =
+        aBookmark.cxIdeal + aBookmark.cxHeader + sInset;
+    if (sAvailable < sDriveMinimum + sBookmarkMinimum ||
+        sDriveFull < sDriveMinimum ||
+        sBookmarkFull < sBookmarkMinimum)
+        return XPR_FALSE;
+    *aDriveWidth = min(sDriveFull, sAvailable - sBookmarkMinimum);
+    *aBookmarkWidth = min(sBookmarkFull, sAvailable - *aDriveWidth);
+    return *aDriveWidth >= sDriveMinimum &&
+           *aBookmarkWidth >= sBookmarkMinimum ?
+           XPR_TRUE : XPR_FALSE;
+}
+
 xpr_bool_t MainCoolBar::canToggleTemporaryCompact(void)
 {
     if (XPR_IS_TRUE(mTemporaryCompact))
@@ -463,29 +501,22 @@ xpr_bool_t MainCoolBar::canToggleTemporaryCompact(void)
 
     RebarBandInfo sDriveBand;
     RebarBandInfo sBookmarkBand;
-    sDriveBand.fMask = RBBIM_IDEALSIZE | RBBIM_HEADERSIZE;
-    sBookmarkBand.fMask =
-        RBBIM_IDEALSIZE | RBBIM_HEADERSIZE | RBBIM_STYLE;
+    sDriveBand.fMask = RBBIM_IDEALSIZE | RBBIM_HEADERSIZE | RBBIM_STYLE;
+    sBookmarkBand.fMask = RBBIM_IDEALSIZE | RBBIM_HEADERSIZE | RBBIM_STYLE;
     if (XPR_IS_FALSE(sBands.GetBandInfo(sDrive, &sDriveBand)) ||
         XPR_IS_FALSE(sBands.GetBandInfo(sBookmark, &sBookmarkBand)) ||
         (sBookmarkBand.fStyle & RBBS_BREAK) == 0 ||
+        (sDriveBand.fStyle & RBBS_USECHEVRON) == 0 ||
+        (sBookmarkBand.fStyle & RBBS_USECHEVRON) == 0 ||
         sDriveBand.cxIdeal == 0 || sBookmarkBand.cxIdeal == 0)
         return XPR_FALSE;
 
     CRect sClient;
     sBands.GetClientRect(&sClient);
-    const xpr_sint_t sAvailable = max(
-        0, sClient.Width() -
-        ui::ModernUI::scaleForWindow(48, GetSafeHwnd()));
-    const UINT sInset = static_cast<UINT>(
-        ui::ModernUI::scaleForWindow(16, GetSafeHwnd()));
-    const UINT sDriveWidth =
-        sDriveBand.cxIdeal + sDriveBand.cxHeader + sInset;
-    const UINT sBookmarkWidth =
-        sBookmarkBand.cxIdeal + sBookmarkBand.cxHeader + sInset;
-    return sDriveWidth < static_cast<UINT>(sAvailable) &&
-           sBookmarkWidth < static_cast<UINT>(sAvailable) - sDriveWidth ?
-           XPR_TRUE : XPR_FALSE;
+    UINT sDriveWidth = 0;
+    UINT sBookmarkWidth = 0;
+    return CalculateOptInBandWidths(GetSafeHwnd(),sClient.Width(),
+        sDriveBand,sBookmarkBand,&sDriveWidth,&sBookmarkWidth);
 }
 
 xpr_bool_t MainCoolBar::toggleTemporaryCompact(void)
@@ -524,12 +555,14 @@ xpr_bool_t MainCoolBar::toggleTemporaryCompact(void)
     {
         if (XPR_IS_FALSE(canToggleTemporaryCompact()))
             return XPR_FALSE;
-        const UINT sInset = static_cast<UINT>(
-            ui::ModernUI::scaleForWindow(16, GetSafeHwnd()));
-        const UINT sDriveWidth =
-            sDriveBand.cxIdeal + sDriveBand.cxHeader + sInset;
-        const UINT sBookmarkWidth =
-            sBookmarkBand.cxIdeal + sBookmarkBand.cxHeader + sInset;
+        CRect sClient;
+        sBands.GetClientRect(&sClient);
+        UINT sDriveWidth = 0;
+        UINT sBookmarkWidth = 0;
+        if (XPR_IS_FALSE(CalculateOptInBandWidths(
+            GetSafeHwnd(),sClient.Width(),sDriveBand,sBookmarkBand,
+            &sDriveWidth,&sBookmarkWidth)))
+            return XPR_FALSE;
         mPreviousDriveStyle = sDriveBand.fStyle;
         mPreviousBookmarkStyle = sBookmarkBand.fStyle;
         mPreviousDriveWidth = sDriveBand.cx;
