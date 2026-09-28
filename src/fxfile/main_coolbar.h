@@ -38,6 +38,11 @@ public:
     xpr_bool_t isWrapable(xpr_uint_t aId);
     void setWrapable(xpr_uint_t aId, xpr_bool_t aWrapable);
 
+    // Explicit, runtime-only toolbar-row compaction. A saved layout stays
+    // untouched even if the user exits while compact mode is active.
+    xpr_bool_t canToggleTemporaryCompact(void);
+    xpr_bool_t isTemporaryCompact(void) const;
+    xpr_bool_t toggleTemporaryCompact(void);
     void saveStateFile(void);
 
 public:
@@ -64,6 +69,11 @@ protected:
     xpr_bool_t mDefaultCompactPosted;
     // Do not repeatedly retry an initially narrow layout at the same width.
     xpr_sint_t mLastDefaultCompactWidth;
+    xpr_bool_t mTemporaryCompact;
+    UINT mPreviousDriveStyle;
+    UINT mPreviousBookmarkStyle;
+    UINT mPreviousDriveWidth;
+    UINT mPreviousBookmarkWidth;
 
 protected:
     // A manual rebar drag takes ownership of the default row arrangement.

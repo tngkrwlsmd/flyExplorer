@@ -1632,6 +1632,7 @@
 #define ID_VIEW_THEME_SYSTEM            33046
 #define ID_VIEW_THEME_LIGHT             33047
 #define ID_VIEW_THEME_DARK              33048
+#define ID_VIEW_TOOL_COMPACT_ROWS       33049
 #define ID_VIEW_STYLE                   33100
 #define ID_VIEW_STYLE_EXTRA_LARGE_ICONS 33101
 #define ID_VIEW_STYLE_MEDIUM_ICONS      33102

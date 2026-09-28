@@ -309,6 +309,23 @@ void ToolLockCommand::execute(CommandContext &aContext)
     sMainFrame->m_wndReBar.Lock(!sMainFrame->m_wndReBar.IsLocked());
 }
 
+xpr_sint_t ToolCompactRowsCommand::canExecute(CommandContext &aContext)
+{
+    FXFILE_COMMAND_DECLARE_CTRL;
+    if (XPR_IS_FALSE(sMainFrame->m_wndReBar.canToggleTemporaryCompact()))
+        return StateDisable;
+    xpr_sint_t sState = StateEnable;
+    if (XPR_IS_TRUE(sMainFrame->m_wndReBar.isTemporaryCompact()))
+        sState |= StateCheck;
+    return sState;
+}
+
+void ToolCompactRowsCommand::execute(CommandContext &aContext)
+{
+    FXFILE_COMMAND_DECLARE_CTRL;
+    sMainFrame->m_wndReBar.toggleTemporaryCompact();
+}
+
 xpr_sint_t ToolBarCustomizeCommand::canExecute(CommandContext &aContext)
 {
     return StateEnable;

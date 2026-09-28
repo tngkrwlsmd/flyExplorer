@@ -2429,6 +2429,7 @@ BEGIN
             MENUITEM "Display the bookmark into multiple li&nes", ID_VIEW_BOOKMARKBAR_WRAPABLE
             MENUITEM "&Refresh bookmarks",          ID_VIEW_BOOKMARKBAR_REFRESH
             MENUITEM SEPARATOR
+            MENUITEM "Compact &drive/bookmark rows", ID_VIEW_TOOL_COMPACT_ROWS
             MENUITEM "&Lock the toolbars",          ID_VIEW_TOOL_LOCK
             MENUITEM "&Customize...",               ID_VIEW_TOOLBAR_CUSTOMIZE
         END
