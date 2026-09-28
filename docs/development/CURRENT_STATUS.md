@@ -701,3 +701,17 @@ modal/address isolation, exit 0 and all six original user config hashes.
 Native functional regression: 17/0. Actual higher DPI and Windows High
 Contrast screen tests remain unverified. See
 docs/development/UI_SCROLLBAR_MODAL_OVERLAP_AUDIT_20260928.md.
+
+
+## 2026-09-28 Choose-details native dark header and width-field fix
+
+ColumnSetDlg now reuses FlatHeaderCtrl for its previously bright raw
+SysListView32 header. Resize-grip cues are scoped to this dialog.
+Its numeric column-width field is enlarged, edged, contrast-emphasized
+and labeled with px. On the connected Windows 11 machine at 96 DPI,
+both Dark and Light owned GUI tests passed real header pointer resizing
+(170 to 192 px), native selected width display (280), physical Ctrl+A
+editing (128), header color, modal/address isolation, normal exit and
+original six user-settings hashes. Higher DPI and actual High Contrast
+GUI acceptance remain unverified; see
+docs/development/UI_COLUMN_DETAILS_HEADER_EVIDENCE_20260928.md.

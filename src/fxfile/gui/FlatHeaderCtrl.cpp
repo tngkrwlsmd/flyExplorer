@@ -27,6 +27,7 @@ FlatHeaderCtrl::FlatHeaderCtrl(void)
     , mParentWnd(XPR_NULL)
     , mDragging(XPR_FALSE)
     , mTracking(XPR_FALSE)
+    , mResizeGripHints(XPR_FALSE)
     , mMouseHover(XPR_FALSE)
     , mMouseHoverColumn(-1)
 {
@@ -50,6 +51,13 @@ BEGIN_MESSAGE_MAP(FlatHeaderCtrl, CHeaderCtrl)
     ON_NOTIFY_REFLECT(HDN_BEGINDRAG, OnHdnBegindrag)
     ON_NOTIFY_REFLECT(HDN_ENDDRAG,   OnHdnEnddrag)
 END_MESSAGE_MAP()
+
+void FlatHeaderCtrl::enableResizeGripHints(xpr_bool_t aEnabled)
+{
+    mResizeGripHints = aEnabled;
+    if (::IsWindow(GetSafeHwnd()))
+        Invalidate(XPR_FALSE);
+}
 
 void FlatHeaderCtrl::initHeader(xpr_bool_t aBoldFont)
 {
@@ -187,7 +195,32 @@ void FlatHeaderCtrl::drawItem(CDC *aDC, CRect aItemRect, xpr_uint_t aState, xpr_
     sSeparatorRect.top += sSeparatorInset;
     sSeparatorRect.bottom -= sSeparatorInset;
     if (sSeparatorRect.top < sSeparatorRect.bottom)
-        aDC->FillSolidRect(sSeparatorRect, sPalette.mSeparator);
+        aDC->FillSolidRect(sSeparatorRect,
+            XPR_IS_TRUE(mResizeGripHints) &&
+            XPR_IS_FALSE(sPalette.mHighContrast) ?
+                sPalette.mSecondaryText : sPalette.mSeparator);
+
+    // Visual-only grip cues: the original SysHeader32 owns drag hit tests.
+    if (XPR_IS_TRUE(mResizeGripHints) &&
+        XPR_IS_FALSE(sPalette.mHighContrast) &&
+        aItemRect.Width() >= fxfile::ui::ModernUI::scale(32, sDpi))
+    {
+        const xpr_sint_t sMarkSize =
+            max(1, fxfile::ui::ModernUI::scale(2, sDpi));
+        const xpr_sint_t sMarkGap =
+            max(2, fxfile::ui::ModernUI::scale(4, sDpi));
+        const xpr_sint_t sInset =
+            max(4, fxfile::ui::ModernUI::scale(6, sDpi));
+        for (xpr_sint_t i = -1; i <= 1; ++i)
+        {
+            const xpr_sint_t sY =
+                aItemRect.CenterPoint().y + i * sMarkGap;
+            CRect sGrip(
+                aItemRect.right - sInset - sMarkSize,
+                sY, aItemRect.right - sInset, sY + sMarkSize);
+            aDC->FillSolidRect(sGrip, sPalette.mSecondaryText);
+        }
+    }
 
     CRect sTextArea(aItemRect);
     if (aIndex == mSortColumn)

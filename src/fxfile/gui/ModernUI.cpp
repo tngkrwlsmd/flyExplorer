@@ -208,6 +208,8 @@ const UINT_PTR kDialogTabSubclassId = 0x46474454;      // 'FGDT'
 const UINT_PTR kDialogEditSubclassId = 0x46474445;     // 'FGDE'
 const UINT_PTR kDialogComboSubclassId = 0x46474443;    // 'FGDC'
 const UINT_PTR kDialogGroupSubclassId = 0x46474447;    // 'FGDG'
+const wchar_t kDialogEmphasizedEditProperty[] =
+    L"flyExplorer.ModernDialog.EmphasizedEdit";
 const UINT_PTR kDialogScrollSubclassId = 0x46474453;   // 'FGDS'
 
 LRESULT CALLBACK DialogScrollableSubclassProc(
@@ -667,7 +669,8 @@ void drawDialogEditFrame(HWND aHwnd)
     const COLORREF sBorder =
         (::GetFocus() == aHwnd) ?
         sPalette.mFocus :
-        sPalette.mSeparator;
+        (::GetPropW(aHwnd, kDialogEmphasizedEditProperty) != NULL ?
+            sPalette.mSecondaryText : sPalette.mSeparator);
     HBRUSH sBorderBrush = ::CreateSolidBrush(sBorder);
     if (XPR_IS_NOT_NULL(sBorderBrush))
     {
@@ -710,6 +713,7 @@ LRESULT CALLBACK DialogEditSubclassProc(
             break;
 
         case WM_NCDESTROY:
+            ::RemovePropW(aHwnd, kDialogEmphasizedEditProperty);
             ::RemoveWindowSubclass(
                 aHwnd,
                 DialogEditSubclassProc,
@@ -1662,6 +1666,15 @@ void ModernUI::dismissOwnedDropdowns(HWND aDialogHwnd)
         return;
     // EnumChildWindows includes the native ComboBox inside each ComboBoxEx.
     ::EnumChildWindows(sOwner, CloseOwnedDropdownProc, 0);
+}
+
+void ModernUI::emphasizeDialogEdit(HWND aHwnd)
+{
+    if (!::IsWindow(aHwnd))
+        return;
+    ::SetPropW(aHwnd, kDialogEmphasizedEditProperty,
+        reinterpret_cast<HANDLE>(1));
+    ::RedrawWindow(aHwnd, NULL, NULL, RDW_INVALIDATE | RDW_FRAME);
 }
 
 void ModernUI::applyDialogControlTheme(HWND aHwnd)

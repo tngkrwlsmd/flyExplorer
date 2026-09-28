@@ -100,6 +100,24 @@ xpr_bool_t ColumnSetDlg::OnInitDialog(void)
     mListCtrl.InsertColumn(0, gApp.loadString(XPR_STRING_LITERAL("popup.column_set.list.column.name")),  LVCFMT_LEFT,  170, -1);
     mListCtrl.InsertColumn(1, gApp.loadString(XPR_STRING_LITERAL("popup.column_set.list.column.width")), LVCFMT_RIGHT,  70, -1);
 
+    // Reuse the existing native palette-aware header, preserving real
+    // SysHeader32 drag sizing rather than drawing a fake static heading.
+    CHeaderCtrl *sHeader = mListCtrl.GetHeaderCtrl();
+    if (sHeader && ::IsWindow(sHeader->GetSafeHwnd()) &&
+        mColumnHeader.SubclassWindow(sHeader->GetSafeHwnd()))
+    {
+        mColumnHeader.ModifyStyle(0, HDS_FULLDRAG);
+        mColumnHeader.enableResizeGripHints(XPR_TRUE);
+        mColumnHeader.initHeader(XPR_FALSE);
+    }
+
+    CWnd *sWidth = GetDlgItem(IDC_COLUMN_WIDTH);
+    if (sWidth && ::IsWindow(sWidth->GetSafeHwnd()))
+    {
+        sWidth->ModifyStyleEx(0, WS_EX_CLIENTEDGE, SWP_FRAMECHANGED);
+        ui::ModernUI::emphasizeDialogEdit(sWidth->GetSafeHwnd());
+    }
+
     if (mShellFolder2 != XPR_NULL)
     {
         xpr_sint_t i;

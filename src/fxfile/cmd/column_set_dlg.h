@@ -12,6 +12,7 @@
 #pragma once
 
 #include "../gui/ModernDialog.h"
+#include "../gui/FlatHeaderCtrl.h"
 
 #include "folder_layout.h"
 
@@ -53,6 +54,7 @@ protected:
 
 protected:
     CListCtrl mListCtrl;
+    FlatHeaderCtrl mColumnHeader;
 
 protected:
     virtual void DoDataExchange(CDataExchange* pDX);

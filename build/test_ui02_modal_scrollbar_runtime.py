@@ -155,6 +155,65 @@ try:
  print("MODAL_LIST_DARK_SAMPLE_RATIO",round(dark_ratio,3),"MODE",MODE,flush=True)
  if MODE=="dark":assert dark_ratio>.5,"modal list retains white surface in Dark"
  else:assert dark_ratio<.25,"modal list unexpectedly dark in Light"
+
+ # Read the real separate SysHeader32 screen area: checking the list alone
+ # previously missed an all-white header in the shipped dark dialog.
+ user.SendMessageW.restype=c.c_ssize_t
+ header=int(user.SendMessageW(lv,0x101f,0,0)) # LVM_GETHEADER
+ assert header and cls(header)=="SysHeader32","real list header missing"
+ hr=rect(header)
+ hp=ImageGrab.grab(bbox=hr).convert("RGB")
+ hp.save(folder/("column-header-"+MODE+".png"))
+ hs=[hp.getpixel((x,y)) for y in range(2,max(3,hp.height-2),3)
+     for x in range(10,max(11,hp.width-12),9)]
+ hratio=sum(max(rgb)<110 for rgb in hs)/len(hs)
+ print("MODAL_HEADER_DARK_SAMPLE_RATIO",round(hratio,3),"MODE",MODE,
+       "HEADER_RECT",hr,flush=True)
+ if MODE=="dark":assert hratio>.6,"column header remains bright in Dark"
+ else:assert hratio<.25,"light-mode header unexpectedly dark"
+
+ width_id=int(re.search(r"(?m)^#define\s+IDC_COLUMN_WIDTH\s+(\d+)",resource).group(1))
+ edit=int(user.GetDlgItem(dlg,width_id))
+ assert edit and cls(edit)=="Edit","selected column width input missing"
+ ext=user.GetWindowLongW(edit,-20)&0xffffffff
+ user.GetPropW.argtypes=(w.HWND,c.c_wchar_p);user.GetPropW.restype=c.c_void_p
+ emphasized=bool(user.GetPropW(edit,"flyExplorer.ModernDialog.EmphasizedEdit"))
+ print("WIDTH_EDIT_CLIENT_EDGE",bool(ext&0x200),
+       "CONTRAST_EMPHASIS",emphasized,"WIDTH_PIXEL",rect(edit)[2]-rect(edit)[0],
+       flush=True)
+ assert ext&0x200 and emphasized, "numeric width input has no visible bordered style"
+ assert rect(edit)[2]-rect(edit)[0]>=65, "numeric edit too narrow"
+
+ # Pointer-select a real row, ensure its stored width is shown in the
+ # edit field, then verify ordinary physical Ctrl+A/numeric typing works.
+ from pywinauto import mouse, keyboard
+ mouse.click(coords=(lr[0]+60,hr[3]+11))
+ time.sleep(.2)
+ shown=c.create_unicode_buffer(80)
+ user.SendMessageW(edit,0x000D,80,c.addressof(shown)) # WM_GETTEXT marshals cross-process
+ print("SELECTED_COLUMN_WIDTH_DISPLAY",repr(shown.value),"MODE",MODE,flush=True)
+ assert shown.value.isdecimal(),"native row selection did not populate width"
+ er=rect(edit)
+ mouse.click(coords=((er[0]+er[2])//2,(er[1]+er[3])//2))
+ keyboard.send_keys("^a128",pause=.04)
+ time.sleep(.2)
+ user.SendMessageW(edit,0x000D,80,c.addressof(shown)) # WM_GETTEXT marshals cross-process
+ print("PHYSICAL_WIDTH_EDIT_AFTER_CTRL_A",repr(shown.value),"MODE",MODE,flush=True)
+ assert shown.value=="128","numeric width input cannot be edited with Ctrl+A"
+
+ # A real pointer drag must change the native header's first column width.
+ from pywinauto import mouse
+ w_before=int(user.SendMessageW(lv,0x101d,0,0)) # LVM_GETCOLUMNWIDTH
+ boundary=(hr[0]+w_before-1,(hr[1]+hr[3])//2)
+ mouse.press(button="left",coords=boundary)
+ mouse.move(coords=(boundary[0]+22,boundary[1]))
+ time.sleep(.15)
+ mouse.release(button="left",coords=(boundary[0]+22,boundary[1]))
+ time.sleep(.25)
+ w_after=int(user.SendMessageW(lv,0x101d,0,0))
+ print("NATIVE_HEADER_DRAG_WIDTH",w_before,w_after,"MODE",MODE,flush=True)
+ assert w_after>=w_before+8, "native header resize divider not draggable"
+
  scroll=ScrollInfo();scroll.size=c.sizeof(scroll)
  assert user.GetScrollBarInfo(lv,-5,c.byref(scroll)),"modal native vertical scrollbar not available"
  lb=(scroll.rc.left,scroll.rc.top,scroll.rc.right,scroll.rc.bottom)

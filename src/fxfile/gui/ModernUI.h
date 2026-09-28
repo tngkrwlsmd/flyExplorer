@@ -102,6 +102,7 @@ public:
     static xpr_bool_t getUIFont(LOGFONT &aLogFont, HWND aHwnd);
     static xpr_bool_t isSameFont(HFONT aFont, const LOGFONT &aLogFont);
     static void applyDialogControlTheme(HWND aHwnd);
+    static void emphasizeDialogEdit(HWND aHwnd);
     // A new owned modal must not leave an open address dropdown on screen.
     static void dismissOwnedDropdowns(HWND aDialogHwnd);
     static HICON loadIconResource(HINSTANCE aInstance, xpr_uint_t aResourceId, HWND aHwnd, xpr_sint_t aLogicalSize);

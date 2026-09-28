@@ -21,6 +21,7 @@ public:
 
 public:
     void initHeader(xpr_bool_t aBoldFont);
+    void enableResizeGripHints(xpr_bool_t aEnabled);
     xpr_sint_t setSortImage(xpr_sint_t aColumn, xpr_bool_t aAscending);
     void drawFlatBorder(CDC *aDC);
     void resizeWindow(void);
@@ -43,6 +44,7 @@ protected:
 
     xpr_bool_t  mDragging;
     xpr_bool_t  mTracking;
+    xpr_bool_t  mResizeGripHints;
     xpr_bool_t  mMouseHover;
     xpr_sint_t  mMouseHoverColumn;
 
