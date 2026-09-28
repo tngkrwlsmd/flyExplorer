@@ -7,6 +7,8 @@
 #include <winrt/Windows.Graphics.h>
 #include <MddBootstrap.h>
 #include <WindowsAppSDK-VersionInfo.h>
+#include <Microsoft.UI.Dispatching.Interop.h>
+#include <roapi.h>
 #pragma comment(lib, "Microsoft.WindowsAppRuntime.Bootstrap.lib")
 #include "../../src/fxfile/resource.h"
 #include <string>
@@ -26,66 +28,103 @@ static void Trace(char const* message) {
     WriteFile(f,"\r\n",2,&size,nullptr);
     CloseHandle(f);
 }
+
+// An island host has an existing native message pump. Initialize the runtime
+// and dispatcher first; creating DesktopWindowXamlSource before UIElement
+// implicitly initializes the XAML framework on this same thread.
+static winrt::Microsoft::UI::Dispatching::DispatcherQueueController s_queue{nullptr};
+static bool s_bootstrapped=false;
+static HRESULT s_roInitialize=E_FAIL;
+
+static bool InitializeRuntime() {
+    if (s_queue) return true;
+    try {
+        APTTYPE apt{}; APTTYPEQUALIFIER qualifier{};
+        HRESULT aptHr=::CoGetApartmentType(&apt,&qualifier);
+        auto aptEvidence=std::string("dll-runtime-apartment hr=")+
+            std::to_string(static_cast<long long>(aptHr))+
+            " type="+std::to_string(static_cast<int>(apt));
+        Trace(aptEvidence.c_str());
+        s_roInitialize=::RoInitialize(RO_INIT_SINGLETHREADED);
+        Trace((std::string("dll-runtime-roinitialize hr=")+
+              std::to_string(static_cast<long long>(s_roInitialize))).c_str());
+        if (FAILED(s_roInitialize)) return false;
+        PACKAGE_VERSION minimum{};
+        minimum.Version=WINDOWSAPPSDK_RUNTIME_VERSION_UINT64;
+        HRESULT bootstrap=MddBootstrapInitialize2(WINDOWSAPPSDK_RELEASE_MAJORMINOR,
+            WINDOWSAPPSDK_RELEASE_VERSION_TAG_W,minimum,
+            MddBootstrapInitializeOptions_None);
+        if (FAILED(bootstrap)) return false;
+        s_bootstrapped=true;
+        Trace("dll-runtime-after-bootstrap");
+        s_queue=winrt::Microsoft::UI::Dispatching::DispatcherQueueController::CreateOnCurrentThread();
+        Trace("dll-runtime-after-dispatcher");
+        Trace("dll-runtime-source-first");
+        return true;
+    } catch (winrt::hresult_error const& error) {
+        auto reason=std::string("dll-runtime-failed-HRESULT=")+
+            std::to_string(error.code().value)+" message="+winrt::to_string(error.message());
+        Trace(reason.c_str());
+        return false;
+    }
+}
+
 class NavIsland final {
     HWND m_parent{};
-    winrt::Microsoft::UI::Dispatching::DispatcherQueueController m_queue{nullptr};
-    ui::Application m_app{nullptr};
     ui::Hosting::DesktopWindowXamlSource m_source{nullptr};
     ctl::Button m_up{nullptr}, m_back{nullptr}, m_forward{nullptr};
-    ctl::TextBox m_title{nullptr};
+    // The experimental read-only TextBox caused a runtime fault during XAML
+    // loading here; a display-only label is sufficient for this scoped PoC.
+    ctl::TextBlock m_title{nullptr};
     ctl::TextBlock m_status{nullptr};
 public:
     explicit NavIsland(HWND parent):m_parent(parent){}
     bool Create() {
         try {
-            // An ordinary MFC executable has no Windows App SDK package graph.
-            // Only this explicitly opted-in DLL initializes its pinned runtime.
-            Trace("dll-before-bootstrap");
-            PACKAGE_VERSION minimum{};
-            minimum.Version=WINDOWSAPPSDK_RUNTIME_VERSION_UINT64;
-            HRESULT bootstrap=MddBootstrapInitialize2(WINDOWSAPPSDK_RELEASE_MAJORMINOR,
-                WINDOWSAPPSDK_RELEASE_VERSION_TAG_W,minimum,
-                MddBootstrapInitializeOptions_None);
-            if (FAILED(bootstrap)) {
-                auto reason=std::string("dll-bootstrap-failed-HRESULT=")
-                           +std::to_string(bootstrap);
-                Trace(reason.c_str());
+            if (!s_queue) {
+                Trace("dll-create-before-runtime-initialize");
                 return false;
             }
-            Trace("dll-after-bootstrap");
-            Trace("dll-before-dispatcher");
-            m_queue=winrt::Microsoft::UI::Dispatching::DispatcherQueueController::CreateOnCurrentThread();
-            Trace("dll-after-dispatcher");
-            // Source-first initialization avoids loading an App.xaml resource
-            // URI from the foreign MFC executable (its PRI has no WinUI page).
-            Trace("dll-creating-source-without-declarative-app");
+            Trace("dll-creating-source");
             m_source=ui::Hosting::DesktopWindowXamlSource();
             m_source.Initialize(winrt::Microsoft::UI::GetWindowIdFromWindow(m_parent));
             Trace("dll-source-attached");
             ctl::StackPanel root;
             root.Padding(ui::ThicknessHelper::FromUniformLength(10));
             root.Spacing(7);
+            root.Loaded([](auto const&,auto const&){Trace("dll-root-loaded");});
+            root.SizeChanged([](auto const&,ui::SizeChangedEventArgs const& e){
+                auto s=e.NewSize();
+                auto evidence=std::string("dll-root-size=")+std::to_string(s.Width)+
+                              "x"+std::to_string(s.Height);
+                Trace(evidence.c_str());
+            });
             ctl::StackPanel row;
             row.Orientation(ctl::Orientation::Horizontal);
             row.Spacing(7);
             m_up=ctl::Button();
             m_up.Content(winrt::box_value(L"Up"));
+            m_up.Width(72); m_up.Height(36);
             ui::Automation::AutomationProperties::SetAutomationId(m_up,L"Phase5IslandUpButton");
             m_back=ctl::Button();
             m_back.Content(winrt::box_value(L"Back"));
+            m_back.Width(72); m_back.Height(36);
             ui::Automation::AutomationProperties::SetAutomationId(m_back,L"Phase5IslandBackButton");
             m_forward=ctl::Button();
             m_forward.Content(winrt::box_value(L"Forward"));
+            m_forward.Width(72); m_forward.Height(36);
             ui::Automation::AutomationProperties::SetAutomationId(m_forward,L"Phase5IslandForwardButton");
-            m_title=ctl::TextBox();
-            m_title.IsReadOnly(true);
+            m_title=ctl::TextBlock();
             m_title.MinWidth(340);
-            ui::Automation::AutomationProperties::SetAutomationId(m_title,L"Phase5IslandAddressBox");
+            ui::Automation::AutomationProperties::SetAutomationId(m_title,L"Phase5IslandCurrentFolderText");
             m_status=ctl::TextBlock();
             ui::Automation::AutomationProperties::SetAutomationId(m_status,L"Phase5IslandStatusText");
             m_up.Click([this](auto const&,auto const&){Send(ID_GO_UP);});
             m_back.Click([this](auto const&,auto const&){Send(ID_GO_BACK);});
             m_forward.Click([this](auto const&,auto const&){Send(ID_GO_FORWARD);});
+            m_up.GotFocus([](auto const&,auto const&){Trace("dll-focus-up");});
+            m_back.GotFocus([](auto const&,auto const&){Trace("dll-focus-back");});
+            m_forward.GotFocus([](auto const&,auto const&){Trace("dll-focus-forward");});
             row.Children().Append(m_back);
             row.Children().Append(m_forward);
             row.Children().Append(m_up);
@@ -117,6 +156,9 @@ public:
         ::GetWindowThreadProcessId(m_parent,&pid);
         if (pid!=::GetCurrentProcessId()) return;
         LRESULT result=::SendMessageW(m_parent,WM_COMMAND,MAKEWPARAM(id,0),0);
+        auto evidence=std::string("dll-command=")+std::to_string(id)+
+                      " result="+std::to_string(static_cast<long long>(result));
+        Trace(evidence.c_str());
         Refresh(result?L"Actual product command handled":L"Product command unavailable");
     }
     void Resize(int x,int y,int width,int height) {
@@ -127,8 +169,12 @@ public:
                 x,y,width,height});
             HWND island=winrt::Microsoft::UI::GetWindowFromWindowId(bridge.WindowId());
             if (island && ::IsChild(m_parent,island)) {
+                LONG_PTR style=::GetWindowLongPtrW(island,GWL_STYLE);
+                ::SetWindowLongPtrW(island,GWL_STYLE,
+                    style|WS_CHILD|WS_VISIBLE|WS_TABSTOP);
                 ::SetWindowPos(island,HWND_TOP,0,0,0,0,
-                               SWP_NOMOVE|SWP_NOSIZE|SWP_NOACTIVATE|SWP_SHOWWINDOW);
+                               SWP_NOMOVE|SWP_NOSIZE|SWP_NOACTIVATE|
+                               SWP_SHOWWINDOW|SWP_FRAMECHANGED);
                 auto evidence=std::string("dll-island-hwnd=")+
                     std::to_string(reinterpret_cast<uintptr_t>(island))+
                     " visible="+std::to_string(::IsWindowVisible(island));
@@ -138,21 +184,25 @@ public:
     }
     void Close() {
         Trace("dll-close-enter");
-        // Close the hosting source before releasing child UI references.
-        // The former explicit Content(nullptr) reproducibly crashed the
-        // test-owned product and must not be treated as successful teardown.
-        if (m_source) {m_source.Close();m_source=nullptr;}
-        Trace("dll-close-after-source-close");
+        // The runtime objects outlive every island and are shut down only
+        // after the host MFC message loop exits.
+        if (m_source) {
+            m_source.Content(nullptr);
+            Trace("dll-close-after-content-detach");
+        }
         m_status=nullptr; m_title=nullptr;
         m_up=nullptr;m_back=nullptr;m_forward=nullptr;
-        m_app=nullptr;
-        // Releasing dispatcher ownership must not block the host MFC WM_DESTROY.
-        m_queue=nullptr;
+        Trace("dll-close-after-control-release");
+        if (m_source) {m_source.Close();m_source=nullptr;}
+        Trace("dll-close-after-source-close");
         Trace("dll-close-complete");
     }
 };
 static NavIsland* s_island=nullptr;
 
+extern "C" __declspec(dllexport) BOOL WINAPI FlyIslandInitialize() {
+    return InitializeRuntime() ? TRUE : FALSE;
+}
 extern "C" __declspec(dllexport) BOOL WINAPI FlyIslandCreate(HWND hwnd) {
     if (s_island || !::IsWindow(hwnd)) return FALSE;
     DWORD pid{};
@@ -167,8 +217,29 @@ extern "C" __declspec(dllexport) void WINAPI FlyIslandResize(
     int x,int y,int width,int height) {
     if (s_island) s_island->Resize(x,y,width,height);
 }
+extern "C" __declspec(dllexport) BOOL WINAPI FlyIslandPreTranslate(MSG const* message) {
+    if (!s_island || !message) return FALSE;
+    // Resolve only after the Windows App SDK bootstrap has initialized the
+    // framework graph. A static call would make this bridge DLL depend on
+    // Microsoft.UI.Windowing.Core.dll before its own bootstrap can run.
+    typedef BOOL (__stdcall *PreTranslateFn)(MSG const*);
+    HMODULE module=::GetModuleHandleW(L"Microsoft.UI.Windowing.Core.dll");
+    if (!module) return FALSE;
+    auto fn=reinterpret_cast<PreTranslateFn>(
+        ::GetProcAddress(module,"ContentPreTranslateMessage"));
+    return fn ? fn(message) : FALSE;
+}
 extern "C" __declspec(dllexport) void WINAPI FlyIslandDestroy() {
     NavIsland* was=s_island;
     s_island=nullptr;
     if (was) {was->Close();delete was;}
+}
+extern "C" __declspec(dllexport) void WINAPI FlyIslandShutdown() {
+    if (s_island) return;
+    Trace("dll-runtime-shutdown-enter");
+    // No standalone WinUI Application is created in the native host.
+    if (s_queue) {s_queue.ShutdownQueue();s_queue=nullptr;}
+    if (s_bootstrapped) {MddBootstrapShutdown();s_bootstrapped=false;}
+    if (SUCCEEDED(s_roInitialize)) {::RoUninitialize();s_roInitialize=E_FAIL;}
+    Trace("dll-runtime-shutdown-complete");
 }

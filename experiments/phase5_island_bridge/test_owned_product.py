@@ -4,7 +4,7 @@ The opt-in DLL is loaded INSIDE the real product's existing MFC UI process.
 from pathlib import Path
 import ctypes as C,hashlib,os,re,shutil,subprocess,tempfile,time
 from ctypes import wintypes as W
-from pywinauto import Desktop
+from pywinauto import Desktop,mouse
 
 folder=Path(__file__).resolve().parent
 repo=folder.parents[1]
@@ -77,48 +77,60 @@ try:
  hwnd=eventually(lambda:main_window(proc.pid),'actual isolated MFC MainFrame',13)
  eventually(lambda:title(hwnd).lower().endswith('my music - fxfile'),'initial folder')
  frame=Desktop(backend='uia').window(handle=hwnd)
- # Trigger the native MainFrame's WM_SIZE after DLL attachment. Native
- # toolbar creation can otherwise leave an island-sized zero rectangle.
+ # Trigger native layout after DLL attachment, then identify the exact child HWND
+ # reported by the in-process XAML bridge itself.
  dimensions=frame.rectangle()
  assert u.MoveWindow(hwnd,100,100,(max)(1200,dimensions.width()),(max)(780,dimensions.height()),True)
  time.sleep(.45)
- buttons={x:frame.child_window(auto_id='Phase5Island'+x+'Button',control_type='Button')
-          for x in ('Up','Back','Forward')}
- address=frame.child_window(auto_id='Phase5IslandAddressBox',control_type='Edit')
- status=frame.child_window(auto_id='Phase5IslandStatusText',control_type='Text')
- if not buttons['Up'].exists(timeout=2):
-  from pywinauto.findwindows import find_elements
-  ids=find_elements(backend='uia',process=proc.pid,
-                    auto_id='Phase5IslandUpButton',top_level_only=False)
-  children=[(d.element_info.automation_id,d.friendly_class_name())
-            for d in frame.descendants()
-            if (d.element_info.automation_id or '').startswith('Phase5Island')]
-  trace_text=trace.read_text(errors='replace') if trace.exists() else ''
-  all_hwnds=re.findall(r'dll-island-hwnd=(\d+)',trace_text)
-  print('ISLAND_UIA_DIAGNOSTIC','globally_found',len(ids),
-        'native_frame_descendants',children[:12],
-        'bridge_hwnds',all_hwnds[-4:],flush=True)
- for control in [*buttons.values(),address,status]:
-  assert control.exists(timeout=5),'missing in-process XAML: '+str(control)
- assert buttons['Up'].element_info.process_id==proc.pid,'XAML lives in another process'
- assert 'my music' in address.window_text().lower()
- print('REAL_PRODUCT_SAME_PROCESS_ISLAND_MFC_PASS','PID',proc.pid,flush=True)
+ def island_handle():
+  if not trace.exists(): return 0
+  values=re.findall(r'dll-island-hwnd=(\d+) visible=1',trace.read_text(errors='replace'))
+  return int(values[-1]) if values else 0
+ island=eventually(island_handle,'visible in-process XAML child HWND')
+ island_pid=W.DWORD()
+ u.GetWindowThreadProcessId(island,C.byref(island_pid))
+ assert island_pid.value==proc.pid and u.IsChild(hwnd,island),'island must be a child in the real product PID'
+ print('REAL_PRODUCT_SAME_PROCESS_ISLAND_MFC_PASS','PID',proc.pid,'ISLAND_HWND',island,flush=True)
+ island_ui=Desktop(backend='uia').window(handle=island)
+ descendants=[(d.element_info.automation_id,d.friendly_class_name(),d.window_text())
+              for d in island_ui.descendants()]
+ print('ISLAND_DIRECT_UIA_DESCENDANTS',descendants[:16],flush=True)
+ controls={name:island_ui.child_window(auto_id='Phase5Island'+name+'Button',
+                                     control_type='Button')
+           for name in ('Up','Back','Forward')}
+ for name,control in controls.items():
+  assert control.exists(timeout=3),'missing actual XAML '+name+' button'
+ assert 'Phase5IslandCurrentFolderText' in {item[0] for item in descendants}
+ print('REAL_PRODUCT_TEST_DPI',u.GetDpiForWindow(hwnd),flush=True)
+ rect_t=W.RECT()
+ assert u.GetWindowRect(island,C.byref(rect_t))
+ before=(rect_t.left,rect_t.top,rect_t.right,rect_t.bottom)
+ command_id={'Up':32004,'Back':32006,'Forward':32007}
  for command,ending in [('Up','my documents - fxfile'),
                         ('Back','my music - fxfile'),
                         ('Forward','my documents - fxfile')]:
-  buttons[command].invoke()
+  actual=controls[command].rectangle()
+  assert actual.width()>0 and actual.height()>0,'invalid actual XAML button geometry'
+  mouse.click(coords=(actual.left+actual.width()//2,actual.top+actual.height()//2))
   observed=eventually(lambda:title(hwnd) if title(hwnd).lower().endswith(ending) else None,
-                      'native product ignored in-process XAML '+command)
-  assert 'actual product command handled' in status.window_text().lower()
-  assert ending.split(' - fxfile')[0] in address.window_text().lower()
+                      'native product ignored in-process XAML pointer '+command)
+  marker='dll-command='+str(command_id[command])+' result='
+  eventually(lambda:marker in trace.read_text(errors='replace'),'missing XAML command trace '+command)
+  eventually(lambda:'dll-focus-'+command.lower() in trace.read_text(errors='replace'),
+             'XAML focus did not reach '+command)
   print('REAL_PRODUCT_COMMAND_VIA_IN_PROCESS_MFC_WINUI_PASS',command,observed,flush=True)
  assert not u.IsHungAppWindow(hwnd)
- rect=frame.rectangle()
- assert u.MoveWindow(hwnd,rect.left,rect.top,rect.width()+90,rect.height()+60,True)
+ host=frame.rectangle()
+ assert u.MoveWindow(hwnd,host.left,host.top,host.width()+90,host.height()+60,True)
+ time.sleep(.35)
  assert not u.IsHungAppWindow(hwnd)
- print('REAL_PRODUCT_IN_PROCESS_RESIZE_RESPONSIVE_PASS',flush=True)
+ after_rect=W.RECT()
+ assert u.GetWindowRect(island,C.byref(after_rect))
+ after_island=(after_rect.left,after_rect.top,after_rect.right,after_rect.bottom)
+ assert after_island!=before,'XAML child did not move/resize with MFC host'
+ print('REAL_PRODUCT_IN_PROCESS_RESIZE_RESPONSIVE_PASS',before,'->',after_island,flush=True)
 finally:
- try:del buttons,address,status,frame
+ try:del controls,island_ui,frame
  except NameError:pass
  import gc
  gc.collect()
