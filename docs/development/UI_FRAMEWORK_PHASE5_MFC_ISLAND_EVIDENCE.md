@@ -63,7 +63,7 @@ are released from WinApp::ExitInstance **after the MFC message loop exits**.
 The observed real product and plain Win32 test both then exited cleanly.
 The experiment still retains the opt-in DLL mapped until process exit.
 
-## 2026-09-28 TextBox isolation: explicit NOT FIXED / DO NOT MERGE
+## Initial TextBox failure isolation (historical, before host PRI staging)
 
 The dedicated `experiments/phase5-textbox-isolation-20260928` branch adds
 explicitly opt-in `plain`, `resources` and `app` diagnostic modes. Ordinary
@@ -165,3 +165,47 @@ Validated commands, for the **experiment branch only**:
 GitHub Actions were **not** dispatched. The full `local_ci.bat x64` profile,
 installer, clean PC, complete HKCU, 125/150/200% DPI and actual OS High
 Contrast remain unverified.
+
+## Verified opt-in native-host PRI staging (2026-09-28)
+
+Following the initial failure modes above, makepri dump confirmed the
+bridge's DLL-output FlyExplorerIslandBridge.pri embeds App.xbf under the
+FlyExplorerIslandBridge resource map, while generated App.xaml.g.h requests
+ms-appx:///FlyExplorerIslandBridge/App.xaml. Direct root-local resources
+and generated App initialization WITHOUT native-host PRI both failed.
+By contrast, temporarily staging that same compiled PRI as resources.pri
+beside the experimental native host executable BEFORE constructing its
+generated WinUI App made the same read-only TextBox load and exit cleanly.
+
+The experiment subsequently made only the app-mode test TextBox editable
+and equipped test_owned_product.py to stage the PRI with pre-existing-file
+refusal, matching SHA256 verification and guaranteed verified-copy cleanup.
+No default product path stages a PRI or loads the diagnostic App.
+
+The incremental Debug-x64 DLL build passed. THREE consecutive full
+test-owned app-mode runs passed at actual 96 DPI: a real WinUI TextBox UIA
+Edit control; UIA-clearing the synthetic initial text followed by real
+keyboard typing and exact UIA value Phase5-Input-20260928; existing
+Up/Back/Forward pointer navigation and Back/Tab/Forward/Enter keyboard
+path; MFC island resize; product exit zero with no forced termination;
+unchanged hashes of all six original user config files; and complete
+removal of the temporarily staged host PRI after EACH test. The separate
+normal TextBlock-island regression also passed. Python syntax and source
+invariants passed. The native product engine and executable were
+unchanged during this focused experiment.
+
+This is direct evidence that the observed native-host resource-location
+gap plus generated XAML App initialization caused the previously blocked
+control-load path in the tested environment. The historical plain and
+direct-resource modes still fail without that combination. This does
+not prove that simply shipping a DLL-private PRI works on other hosts.
+
+A separate initial Ctrl+A attempt did not replace the original TextBox
+content, so full keyboard editing and shortcut routing remain OPEN;
+the passing physical typing check intentionally clears a synthetic field
+with UIA first. Editable native address commit/cancel, live active-pane
+state, formal shipping resource deployment, full HKCU isolation,
+higher DPI/OS High Contrast and clean-machine reproducibility remain
+NOT TESTED. Merge decision: retain experimental product integration
+and diagnostic code off main. This evidence may inform a future
+safe resource-packaging and native address-adapter implementation.

@@ -160,7 +160,7 @@ public:
                 Trace("dll-textbox-create-enter");
                 m_textBoxProbe = ctl::TextBox();
                 Trace("dll-textbox-create-complete");
-                m_textBoxProbe.IsReadOnly(true);
+                m_textBoxProbe.IsReadOnly(!appProbe);
                 m_textBoxProbe.Text(L"Isolated WinUI 3 TextBox probe");
                 ui::Automation::AutomationProperties::SetAutomationId(
                     m_textBoxProbe, L"Phase5IslandDiagnosticTextBox");

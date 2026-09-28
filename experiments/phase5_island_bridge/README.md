@@ -60,7 +60,7 @@ production-grade performance figure.
 Evidence and remaining limitations:
 [Phase 5 same-process MFC island evidence](../../docs/development/UI_FRAMEWORK_PHASE5_MFC_ISLAND_EVIDENCE.md).
 
-## Opt-in TextBox isolation — observed failure, not a completed fix (2026-09-28)
+## Historical TextBox failures before host PRI staging
 
 The ordinary same-process island still uses a TextBlock and never constructs the
 diagnostic TextBox. The new `FLYEXP_PHASE5_DIAG_TEXTBOX` environment variable is
@@ -124,3 +124,43 @@ initialization/registration blocker, not a verified unique root cause or fix.
 No experimental TextBox code belongs in `main` until the test-owned Windows
 runtime gate passes. Neither complete user HKCU isolation nor other DPIs,
 High Contrast, installer and release packaging were tested in this diagnostic.
+
+## Verified host PRI location and editable TextBox (2026-09-28)
+
+The generated bridge PRI was valid but absent from the separate native
+host's resource discovery directory. The Windows SDK makepri dump confirmed
+an embedded FlyExplorerIslandBridge/App.xbf resource and map
+ms-appx://FlyExplorerIslandBridge, matching the generated App loader's
+ms-appx:///FlyExplorerIslandBridge/App.xaml URI. The old DLL-private
+FlyExplorerIslandBridge.pri location alone was not sufficient.
+
+Under the explicitly enabled diagnostic app mode, copy the generated PRI
+as resources.pri beside the separately built experimental fxfile.exe
+BEFORE constructing the generated App with InitializeComponent(). This
+combination made the previous TextBox load failure disappear on the tested
+unpackaged Windows 11 native host. The ordinary default TextBlock island
+does not construct the App or diagnostic TextBox.
+
+The owned test harness now performs this staging only for the opt-in app
+mode. It refuses to replace an existing host resources.pri, checks SHA256,
+and removes only its own verified copy in finally cleanup. This is NOT
+normal-product packaging or a change to the installed application.
+
+The changed Debug-x64 bridge DLL compiled successfully. Three consecutive
+full app-mode runs on the connected 96-DPI Windows 11 PC each passed real
+WinUI TextBox UIA identity, UIA-cleared synthetic field followed by actual
+keyboard-typed Phase5-Input-20260928, actual product Up/Back/Forward,
+existing Back/Tab/Forward/Enter, resize, exit code zero, all six original
+configuration SHA256 checks and temporary PRI removal. A separate normal
+TextBlock-mode regression also passed. Python syntax and source invariants
+passed. No product C++ files or native product binary changed.
+
+The three earlier diagnostic failures (plain, direct root resources,
+generated App without host PRI) remain useful historical comparisons.
+One early Ctrl+A attempt inserted text before the old content rather
+than replacing it; the successful typing test clears the synthetic
+field via UIA first. Complete Ctrl+A/IME editing semantics, real address
+commit/cancel, active-pane synchronization, shipping PRI wiring,
+higher-DPI/High-Contrast and clean-machine deployment are NOT validated.
+Keep the test-only experimental integration off main until those
+product-facing contracts have independent evidence.

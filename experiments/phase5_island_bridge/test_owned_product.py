@@ -73,7 +73,19 @@ def eventually(fn,description,timeout=9):
  raise AssertionError(description+'; DLL trace='+trace.read_text(errors='replace') if trace.exists() else description)
 proc=None
 hwnd=None
+staged_pri=False
+pri_target=product.parent/'resources.pri'
+pri_source=dll.parent/'FlyExplorerIslandBridge.pri'
 try:
+ if textbox_mode=='app':
+  # This is only the separately built experimental product binary directory,
+  # never the user's normal product installation or original configuration.
+  assert pri_source.is_file(),'generated WinUI PRI missing'
+  assert not pri_target.exists(),'refuse to overwrite any host resources.pri'
+  staged_pri=True
+  shutil.copy2(pri_source,pri_target)
+  assert hashlib.sha256(pri_target.read_bytes()).digest()==hashlib.sha256(pri_source.read_bytes()).digest()
+  print('EXPERIMENTAL_HOST_PRI_STAGED',flush=True)
  proc=subprocess.Popen([str(product),'--conf_dir',str(copy),str(fixture)],
                        cwd=str(work),env=env,stdin=subprocess.DEVNULL,
                        stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
@@ -111,6 +123,16 @@ try:
                                 control_type='Edit')
   assert probe.exists(timeout=3),'test-only WinUI TextBox UIA edit missing'
   assert 'isolated' in probe.window_text().lower(),'test-only TextBox initial text missing'
+  if textbox_mode=='app':
+   # UIA clears only the synthetic field; subsequent characters must
+   # arrive as actual keyboard input through the MFC-hosted XAML island.
+   probe.set_edit_text('')
+   probe.set_focus()
+   assert probe.has_keyboard_focus(),'WinUI TextBox not focused for keyboard test'
+   keyboard.send_keys('Phase5-Input-20260928',with_spaces=True)
+   eventually(lambda:probe.window_text()=='Phase5-Input-20260928',
+              'editable WinUI TextBox failed keyboard text entry')
+   print('REAL_PRODUCT_EDITABLE_TEXTBOX_TYPED_PASS',textbox_mode,flush=True)
   print('REAL_PRODUCT_ISOLATED_TEXTBOX_LOAD_UIA_PASS',textbox_mode,flush=True)
  print('REAL_PRODUCT_TEST_DPI',u.GetDpiForWindow(hwnd),flush=True)
  rect_t=W.RECT()
@@ -169,5 +191,10 @@ finally:
  print('ORIGINAL_SIX_USER_CONFIG_HASHES_UNCHANGED',after==original,
        'PRODUCT_EXIT',None if proc is None else proc.returncode,
        'DLL_TRACE',trace.read_text(errors='replace') if trace.exists() else 'missing',flush=True)
+ if staged_pri:
+  # Restore the experimental output directory even on GUI test failure.
+  assert pri_target.is_file() and hashlib.sha256(pri_target.read_bytes()).digest()==hashlib.sha256(pri_source.read_bytes()).digest(),'staged PRI unexpectedly changed; preserve for inspection'
+  pri_target.unlink()
+  print('EXPERIMENTAL_HOST_PRI_REMOVED',not pri_target.exists(),flush=True)
  assert after==original,'Original user configuration was modified'
  if proc is not None:assert proc.returncode==0,'Owned product did not exit cleanly'
