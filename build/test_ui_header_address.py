@@ -34,4 +34,37 @@ class HeaderAddressRules(unittest.TestCase):
         s=(ROOT/"src/fxfile/address_bar.cpp").read_text(encoding="utf-8")
         self.assertIn("if (XPR_IS_TRUE(sPalette.mHighContrast))",s)
         self.assertIn("return ::DefSubclassProc(aHwnd, aMessage, aWParam, aLParam);",s)
+    def test_address_dropdown_uses_dark_palette_for_native_items(self):
+        s = (ROOT/"src/fxfile/address_bar.cpp").read_text(encoding="utf-8")
+        item = s.split("AddressBar::drawDarkDropdownItem(", 1)[1].split(
+            "AddressBar::OuterSubclassProc(", 1)[0]
+        self.assertIn("CBEIF_TEXT | CBEIF_IMAGE", item)
+        self.assertIn("sPalette.mChrome", item)
+        self.assertIn("sPalette.mSelection", item)
+        self.assertIn("sPalette.mText", item)
+        self.assertIn("sPalette.mHighContrast", item)
+        self.assertIn("ODS_COMBOBOXEDIT", item)
+
+    def test_address_dropdown_reuses_scrollbar_overlay_without_replacing_input(self):
+        cpp = (ROOT/"src/fxfile/address_bar.cpp").read_text(encoding="utf-8")
+        header = (ROOT/"src/fxfile/address_bar.h").read_text(encoding="utf-8")
+        section = cpp.split("void AddressBar::installDropdownSubclass(",1)[1].split(
+            "void AddressBar::removeDropdownSubclass(",1)[0]
+        self.assertIn("::GetComboBoxInfo(", section)
+        self.assertIn("::SetWindowSubclass(", section)
+        self.assertIn("configureDarkScrollbarOverlay(", section)
+        self.assertIn("sPalette.mHighContrast", section)
+        self.assertIn("case CB_SHOWDROPDOWN:",cpp)
+        self.assertIn("removeDarkScrollbarOverlay(mDropdownHwnd)",cpp)
+        self.assertIn("mDropdownHwnd",header)
+
+    def test_address_popup_topmost_overlay_is_scoped_and_cleans_up(self):
+        header=(ROOT/"src/fxfile/gui/ModernUI.h").read_text(encoding="utf-8")
+        renderer=(ROOT/"src/fxfile/gui/ModernUI.cpp").read_text(encoding="utf-8")
+        address=(ROOT/"src/fxfile/address_bar.cpp").read_text(encoding="utf-8")
+        self.assertIn("aPopupTopMost = XPR_FALSE",header)
+        self.assertIn("aPopupTopMost ? HWND_TOPMOST : HWND_TOP",renderer)
+        self.assertIn("WM_SHOWWINDOW && !aWParam",address)
+        self.assertIn("removeDarkScrollbarOverlay(aHwnd)",address)
+
 if __name__=="__main__":unittest.main()

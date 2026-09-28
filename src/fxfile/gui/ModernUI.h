@@ -114,7 +114,8 @@ public:
     static UINT getDeferredDarkScrollbarMessage(void);
     static void paintDarkNativeScrollbars(HWND aHwnd);
     static void configureDarkScrollbarOverlay(
-        HWND aHwnd, const ThemePalette *aPalette);
+        HWND aHwnd, const ThemePalette *aPalette,
+        xpr_bool_t aPopupTopMost = XPR_FALSE);
     static void removeDarkScrollbarOverlay(HWND aHwnd);
     static xpr_bool_t applyExplorerControlTheme(HWND aHwnd);
     static xpr_bool_t resetControlTheme(HWND aHwnd);

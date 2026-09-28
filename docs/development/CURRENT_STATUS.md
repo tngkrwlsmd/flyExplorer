@@ -1,4 +1,15 @@
-# flyExplorer — current project status (2026-09-27)
+# flyExplorer — current project status (2026-09-28)
+
+**Latest 2026-09-28 Phase5 strict bridge teardown correction — 96-DPI isolated regression PASS, integration still experimental:** After reproducing the strict bridge failure, runtime HWND enumeration established that the WinUI 3 process owns both its actual main window and a second visible notification-host window. The Python test's cleanup `top_for(pid, lambda title: bool(title))` required exactly one visible titled window and therefore silently chose no HWND and never sent WinUI WM_CLOSE. A diagnostic with short-lived UIA subprocesses still failed, so the earlier UIA-lifetime hypothesis was rejected. The isolated experiment test now retains the already-validated product MainFrame and WinUI main HWNDs, confirms each belongs to the corresponding test-owned PID, and closes exactly that HWND.
+
+The unchanged existing WinUI Debug x64 and production binaries were exercised on the connected Windows 11 machine at real 96 DPI. The fixed strict bridge test passed once and then **three consecutive repeats**: actual Up/Back/Forward commands, real product and reflected WinUI titles/status, clean exit code 0 for both owned processes, and unchanged SHA256 hashes of all six original user settings files per run. The separate actual WinUI 3 mouse/keyboard standalone GUI regression also PASSED and exited 0. Python syntax and git diff checks passed. Only the experiment's test harness and its README changed; no product source, binary or original user settings changed. Experiment revision: [277951e4134449734ad0ee5b26103703f8728e31](https://github.com/tngkrwlsmd/flyExplorer/commit/277951e4134449734ad0ee5b26103703f8728e31) on `experiments/phase5-real-winui3-20260928` (NOT merged to main). The older strict-teardown FAIL reports below are historical and superseded **only for this observed harness defect**. Same-process WinUI hosting, active-pane/address/Shell parity, full HKCU isolation, actual 125/150/200% DPI, OS High Contrast, clean-machine reproducibility, production packaging and framework lifetime-cost comparison remain NOT TESTED. GitHub Actions were not dispatched. See UI_FRAMEWORK_PHASE5_COMMAND_BRIDGE_EVIDENCE.md.
+
+
+
+**Later Phase5 native NuGet checkpoint, 2026-09-28:** The isolated WinUI3 Debug|x64 build now PASSES normal NuGet native asset resolution (native,Version=v0.0) and full compile/link WITHOUT bypass, superseding earlier mismatch/bypass reports. The actual 96-DPI standalone UI pointer/keyboard regression PASSES with clean exit. An explicitly test-owned WinUI3 UIA InvokePattern bridge sent real product Up/Back/Forward commands and original six config hashes matched, but its strict cleanup regression currently FAILS because the owned WinUI3 helper sometimes times out and must be terminated. Prior pointer automation also intermittently missed a Back event. Product source/executable unchanged; same-process XAML Islands, full integration, fresh-machine deployment and actual higher DPI/OS High Contrast remain untested. Experiment commit ddff6a3397e3c2ade38f1a173a6567366ec9ac84; details UI_FRAMEWORK_PHASE5_COMMAND_BRIDGE_EVIDENCE.md.
+
+
+**2026-09-28 Phase5 continued: real product command bridge tested; product unchanged.** An isolated, explicitly test-owned WinUI 3 XAML prototype now forwards allowlisted scalar Up/Back/Forward commands from actual UI Automation clicks to a private-profile real product MainFrame through existing CommandContext/ExplorerCtrl routing, without editing the product. Native real-product and real WinUI GUI tests plus experiment x64 compilation passed at 96 DPI; both test-owned processes exited 0 and original six config hashes matched. The experiment is e845eb45f3bd3cf978bbecaecf7984dc6f0d22a0 on experiments/phase5-real-winui3-20260928 ONLY. This is cross-process proof, NOT same-process integration or active-pane state/address parity. Ordinary VS18 NuGet UAP/native asset resolution remains unresolved; prototype-only build bypass still required. Higher real DPIs, actual OS High Contrast, complete profile/HKCU, Shell/multi-pane parity and lifecycle-cost comparison remain NOT TESTED. See UI_FRAMEWORK_PHASE5_COMMAND_BRIDGE_EVIDENCE.md.
 
 
 **2026-09-27 Phase4 partial evidence (actual 96 DPI pass; migration undecided):** Revalidated unchanged production executable 6d1f763 with an isolated four-file user UI copy, synthetic folder and real 96 DPI: preserved three 1175x40 and one 1175x21 toolbar bands, 28px native header, 36px address; original settings hashes equal and isolated exit 0. Phase3 same-revision synthetic Dark/Light/System evidence reused; other real DPIs, actual OS High Contrast and complete HKCU/profile isolation remain NOT TESTED, protected-user runtime smoke SKIPPED. No new confirmed product defect, no speculative product edit or rebuild. Isolated experiment branch ad561271 compiled and live-tested C++/WinRT Foundation + Win32 navigation controls, NOT WinUI 3 and NOT product engine integration. Actual WinUI 3 development tools and equal-feature UI comparison require a later approved bounded experiment. Details: UI_FRAMEWORK_PHASE4_EVALUATION.md and UI_UX_AUDIT_20260924.md.
@@ -660,3 +671,16 @@ Windows build, runtime and DPI verification: NOT TESTED. No Actions run.
 When source, build output or runtime evidence contradicts a summary,
 correct this page and `PROJECT.md` during the same logical work unit.
 Keep the historical evidence that led to earlier conclusions intact.
+
+
+## 2026-09-28 native AddressBar drop-down Dark fix
+
+The existing MFC address drop-down now draws its own dark list items and
+uses the UI-02 click-through native scrollbar overlay with popup-scoped
+z-order and hide-time cleanup. Verified at actual 96 DPI with synthetic
+Dark and Light popup screenshots, scrollbar pointer clicks, unchanged
+original six config hashes, incremental Release-x64-Unicode build and
+native functional regression 17/0. Actual higher DPI and OS High Contrast
+runtime acceptance remain untested. This is independent of the opt-in
+WinUI 3 Phase 5 experiment; see
+docs/development/UI_ADDRESS_DROPDOWN_DARK_EVIDENCE.md.

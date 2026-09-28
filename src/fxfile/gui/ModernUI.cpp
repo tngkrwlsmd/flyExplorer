@@ -2152,6 +2152,7 @@ struct DarkScrollbarEntry
     bool mHorizontalValid;
     bool mCornerValid;
     bool mForce;
+    bool mPopupTopMost;
 };
 
 static thread_local std::vector<DarkScrollbarEntry> sDarkScrollbarEntries;
@@ -2216,7 +2217,7 @@ HWND EnsureDarkScrollbarPopup(HWND aTarget, HWND &aPopup)
 bool ComposeDarkScrollbarPopup(
     HWND aPopup, const RECT &aScreenRect,
     const SCROLLBARINFO *aScrollbar,
-    const ThemePalette &aPalette, bool aVertical)
+    const ThemePalette &aPalette, bool aVertical, bool aPopupTopMost)
 {
     const int sWidth = aScreenRect.right - aScreenRect.left;
     const int sHeight = aScreenRect.bottom - aScreenRect.top;
@@ -2280,7 +2281,8 @@ bool ComposeDarkScrollbarPopup(
         ::ReleaseDC(NULL, sScreen);
     if (sComposed)
         ::SetWindowPos(
-            aPopup, HWND_TOP, aScreenRect.left, aScreenRect.top,
+            aPopup, aPopupTopMost ? HWND_TOPMOST : HWND_TOP,
+            aScreenRect.left, aScreenRect.top,
             sWidth, sHeight, SWP_NOACTIVATE | SWP_SHOWWINDOW);
     else
         HideDarkScrollbarPopup(aPopup);
@@ -2336,7 +2338,7 @@ bool SyncDarkScrollbarPart(
         return false;
     if (!ComposeDarkScrollbarPopup(
             sPopup, sInfo.rcScrollBar, &sInfo, aEntry.mPalette,
-            aVertical))
+            aVertical, aEntry.mPopupTopMost))
     {
         sValid = false;
         return false;
@@ -2381,7 +2383,7 @@ void SyncDarkScrollbarEntry(DarkScrollbarEntry &aEntry)
                         aEntry.mTarget, aEntry.mCornerPopup) != NULL &&
                     ComposeDarkScrollbarPopup(
                         aEntry.mCornerPopup, sCorner, NULL,
-                        aEntry.mPalette, true))
+                        aEntry.mPalette, true, aEntry.mPopupTopMost))
                 {
                     aEntry.mLastCorner = sCorner;
                     aEntry.mCornerValid = true;
@@ -2526,7 +2528,8 @@ void RemoveDarkScrollbarEntry(HWND aTarget)
 } // namespace
 
 void ModernUI::configureDarkScrollbarOverlay(
-    HWND aHwnd, const ThemePalette *aPalette)
+    HWND aHwnd, const ThemePalette *aPalette,
+    xpr_bool_t aPopupTopMost)
 {
     if (!::IsWindow(aHwnd))
         return;
@@ -2545,6 +2548,7 @@ void ModernUI::configureDarkScrollbarOverlay(
         DarkScrollbarEntry sNew = {0};
         sNew.mTarget = aHwnd;
         sNew.mPalette = *aPalette;
+        sNew.mPopupTopMost = XPR_IS_TRUE(aPopupTopMost);
         sNew.mForce = true;
         sDarkScrollbarEntries.push_back(sNew);
         StartDarkScrollbarHooks();
@@ -2552,6 +2556,7 @@ void ModernUI::configureDarkScrollbarOverlay(
     else
     {
         sEntry->mPalette = *aPalette;
+        sEntry->mPopupTopMost = XPR_IS_TRUE(aPopupTopMost);
         sEntry->mForce = true;
     }
     SyncDarkScrollbarEntries();
