@@ -1,14 +1,38 @@
 # flyExplorer — current development state (2026-09-28)
 
 > Reviewed baseline: local and remote main
-> \`f2958d70b6a2714b061bc5215ecce3a9f707d0b3\`, **before this
-> docs-only change**. To identify the new current commit, run
-> \`git rev-parse main\`. Last separately tested native product change:
-> \`4f1a407cca0162080a5449f2d7772b69b3ca32c5\`.
+> cd96de0bc8fba13a7cfeee4e5f9da9a6dc30c7c5, before
+> this UXH-06/07 review change. To identify the current
+> commit, run git rev-parse main. Latest separately
+> verified native UI product revision at review time:
+> cd96de0bc8fba13a7cfeee4e5f9da9a6dc30c7c5
+> (UXH-05 scoped accessibility and clean Release).
 > Start with the [development index](README.md); the full prior
 > 767-line status is [archived unchanged](CURRENT_STATUS_HISTORY_20260928.md).
 
 ## 1. Latest state, constraints and next work
+
+**2026-09-28 UXH-06/07 review complete, no new feature:**
+Existing Search provides saved named multi-location scopes,
+current-folder selection, editable scope and query history.
+An isolated actual 96-DPI native GUI retained all 165
+characters typed into a 240px search-scope edit; the
+owner-drawn group label and native visual scrolling
+are NOT separately certified. An actual isolated 1x2
+Last Tabs profile restored distinct owned folders,
+accepted physical Ctrl+T and saved/restored its
+2/1 pane tab counts in a second real process.
+Original six user-config SHA256 hashes remained
+unchanged. [UXH-06/07 feasibility](UI_PHASE6_UXH06_07_FEASIBILITY_20260928.md).
+Duplicate saved scopes and redundant last-session
+presets were not implemented. New recent scopes,
+readable full-path presentation and multiple NAMED
+workspaces remain potential separately scoped user
+needs, not completed product features. No new
+Release build is claimed for this assessment.
+Next: isolated real UXH-05 spoken reader and
+DPI/High Contrast, and separate Phase 5 productization.
+
 
 **2026-09-28 UXH-05 scoped actual accessibility accepted:**
 The custom drawn TabCtrl was actually unnamed/childless

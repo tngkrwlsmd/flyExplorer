@@ -129,6 +129,26 @@ do not mark that check passed.
 
 **인수 조건:** 각 탭의 이름·선택 상태·추가/닫기 의미가 접근 가능한 API를 통해 노출되고 키보드로 동일 업무를 수행할 수 있다. 접근성 검사 없이 소스만 고쳐 PASS 처리하지 않는다.
 
+**UXH-06/07 existing-feature feasibility reviewed
+2026-09-28; NO NEW FEATURE IMPLEMENTED:**
+An owned native GUI preserved an exact 165-character
+synthetic path in the search scope's 240px edit and
+populated the real scope combo with a test-owned
+saved user group. Exact owner-drawn label and visual
+scroll evidence remains unavailable. The existing
+named saved scope manager and current-folder action
+must not be duplicated. Separately, a private 1x2
+profile with Last Tabs restored two distinct paths,
+accepted real Ctrl+T, saved 2/1 tabs and restored
+them in a second process. Last Tabs is one latest
+state, NOT multiple named workspaces. Successful
+isolated runs left all six original setting hashes
+unchanged. [Scoped actual feature-overlap evidence](UI_PHASE6_UXH06_07_FEASIBILITY_20260928.md).
+Potential full-path readout, recent scope history
+and multiple named snapshots require demonstrated
+user need and independent accessibility/privacy
+or restore-compatibility acceptance.
+
 ### UXH-06 · P3 제안 · 긴 검색 범위의 위치 확인 및 재사용
 
 **OBSERVED:** 실제 파일 검색의 초기 검색 위치는 활성 테스트용 폴더와 일치했으며, 긴 절대 경로는 현재 콤보의 폭 때문에 일부만 표시됐다. 검색 위치가 잘못됐다는 증거는 없다.

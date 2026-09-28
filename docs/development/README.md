@@ -47,6 +47,11 @@ a single unsupported release qualification.
   keyboard/pointer restoration, saved layout protection; higher
   actual DPI/High Contrast remain untested.
 
+- [Phase 6 UXH-06/07 native feature-overlap review](UI_PHASE6_UXH06_07_FEASIBILITY_20260928.md):
+  owned 96-DPI long search path retention and
+  real 1x2 Last Tabs exit/relaunch proof; no new
+  feature without user evidence and acceptance.
+
 - [Phase 6 custom tab native UIA/MSAA accessibility](UI_PHASE6_UXH05_TAB_ACCESSIBILITY_EVIDENCE_20260928.md):
   scoped actual 96-DPI Dark/Light named tab/close/new
   semantic actions and keyboard acceptance; separate

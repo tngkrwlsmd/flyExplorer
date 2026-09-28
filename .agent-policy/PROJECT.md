@@ -25,10 +25,15 @@ complete legacy dialog acceptance are NOT TESTED.
 
 Current native UX state and next priorities are in the [seven-item hands-on backlog](../docs/development/UI_UX_HANDS_ON_BACKLOG_20260928.md),
 after scoped UXH-01/02 and real 96-DPI UXH-03 acceptance;
-UXH-04 is now scoped accepted (reversible compact toolbars,\nphysical J mnemonic, old-language fallback and native overflow).\nUXH-05 now has scoped real-GUI native MFC UIA/MSAA
-provider evidence; spoken reader, Tab/F6, other DPI and
-actual High Contrast remain open. Next UXH-06/07
-feasibility is separate. See the development index.
+UXH-04 is scoped accepted (reversible native compact
+toolbars, physical J mnemonic and existing language fallback).
+UXH-05 has scoped real-GUI native MFC UIA/MSAA evidence;
+spoken reader, Tab/F6 and actual DPI/High Contrast
+remain open. UXH-06/07 existing-feature feasibility
+was reviewed with actual owned long search scope and
+multi-pane Last Tabs session restart evidence.
+No new UXH-06/07 product feature was implemented;
+see the development index.
 HANG-01 and specific
 UI-01/UI-09 original-scenario acceptance remain open.
 Separate WinUI 3 productization branch

@@ -130,3 +130,23 @@ Actual UIA/MSAA presence does not prove spoken reader,
 real High Contrast or larger DPI. Separately examine
 physical Tab/F6 focus traversal and UIA InvokePattern.
 See [UXH-05 scoped proof](UI_PHASE6_UXH05_TAB_ACCESSIBILITY_EVIDENCE_20260928.md).
+
+## 11. UXH-06/07: reuse existing scope and session behavior
+
+A long search-scope value may be fully preserved
+without fitting visibly inside the search combo.
+Distinguish value retention from full-path
+presentation and screen-reader accessibility.
+Prefer the existing named saved-scope manager and
+current-folder action over a duplicate feature.
+Any new recent-scope list requires deletion and
+privacy policies, plus proof of incremental value.
+
+Per-view Last Tabs startup already restores the
+latest tab/pane session in a real native process.
+Do not mislabel the latest session as a collection
+of multiple named workspace snapshots. A real
+multiple-named-preset feature requires demonstrated
+user workflows, non-destructive restore policies,
+schema migration and explicit compatibility tests.
+See [UXH-06/07 actual feasibility](UI_PHASE6_UXH06_07_FEASIBILITY_20260928.md).
