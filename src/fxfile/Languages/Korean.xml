@@ -1830,6 +1830,10 @@
             <String ID="popup.search.label.name">검색할 파일 및 폴더(&amp;N):</String>
             <String ID="popup.search.label.text">포함하는 텍스트(&amp;X):</String>
             <String ID="popup.search.label.location">찾는 위치(&amp;L):</String>
+            <String ID="popup.search.button.full_scope">?? ??(&amp;F)</String>
+            <String ID="popup.search.label.recent_locations">?? ?? ??:</String>
+            <String ID="popup.search.button.clear_recent">?? ???(&amp;L)</String>
+            <String ID="popup.search.check.remember_location">????(&amp;M)</String>
             <String ID="popup.search.button.search">검색 시작(&amp;S)</String>
             <String ID="popup.search.button.stop">검색 중지(&amp;T)</String>
             <String ID="popup.search.button.close">닫기(&amp;C)</String>

@@ -47,6 +47,11 @@ a single unsupported release qualification.
   keyboard/pointer restoration, saved layout protection; higher
   actual DPI/High Contrast remain untested.
 
+- [UXH-06 explicit recent scopes and full-path preview, WIP](UI_PHASE6_UXH06_NEW_FEATURE_WIP_20260928.md):
+  built scoped product change with initial isolated real GUI
+  proof; normal-restart persistence/clear and Dark/Light
+  acceptance pending active input desktop. NOT MERGED.
+
 - [Phase 6 UXH-06/07 native feature-overlap review](UI_PHASE6_UXH06_07_FEASIBILITY_20260928.md):
   owned 96-DPI long search path retention and
   real 1x2 Last Tabs exit/relaunch proof; no new
