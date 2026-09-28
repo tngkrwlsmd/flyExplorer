@@ -13,6 +13,7 @@
 #include "../../src/fxfile/resource.h"
 #include <string>
 #include <cstring>
+#include <cwchar>
 using namespace winrt;
 namespace ui=winrt::Microsoft::UI::Xaml;
 namespace ctl=winrt::Microsoft::UI::Xaml::Controls;
@@ -77,6 +78,8 @@ class NavIsland final {
     // loading here; a display-only label is sufficient for this scoped PoC.
     ctl::TextBlock m_title{nullptr};
     ctl::TextBlock m_status{nullptr};
+    // Test-only: unchanged normal-path control tree unless explicitly enabled.
+    ctl::TextBox m_textBoxProbe{nullptr};
 public:
     explicit NavIsland(HWND parent):m_parent(parent){}
     bool Create() {
@@ -92,6 +95,19 @@ public:
             ctl::StackPanel root;
             root.Padding(ui::ThicknessHelper::FromUniformLength(10));
             root.Spacing(7);
+            // Explicit opt-in diagnostic. The current normal product path is
+            // unchanged. Compare default resources to a per-island dictionary.
+            wchar_t probeMode[16]{};
+            ::GetEnvironmentVariableW(L"FLYEXP_PHASE5_DIAG_TEXTBOX",
+                probeMode, _countof(probeMode));
+            bool const plainProbe = ::wcscmp(probeMode, L"plain") == 0;
+            bool const resourceProbe = ::wcscmp(probeMode, L"resources") == 0;
+            if (resourceProbe) {
+                Trace("dll-textbox-resource-merge-enter");
+                root.Resources().MergedDictionaries().Append(
+                    ctl::XamlControlsResources());
+                Trace("dll-textbox-resource-merge-complete");
+            }
             root.Loaded([](auto const&,auto const&){Trace("dll-root-loaded");});
             root.SizeChanged([](auto const&,ui::SizeChangedEventArgs const& e){
                 auto s=e.NewSize();
@@ -130,8 +146,23 @@ public:
             row.Children().Append(m_up);
             row.Children().Append(m_title);
             root.Children().Append(row);
+            if (plainProbe || resourceProbe) {
+                Trace("dll-textbox-create-enter");
+                m_textBoxProbe = ctl::TextBox();
+                Trace("dll-textbox-create-complete");
+                m_textBoxProbe.IsReadOnly(true);
+                m_textBoxProbe.Text(L"Isolated WinUI 3 TextBox probe");
+                ui::Automation::AutomationProperties::SetAutomationId(
+                    m_textBoxProbe, L"Phase5IslandDiagnosticTextBox");
+                m_textBoxProbe.Loaded([](auto const&, auto const&) {
+                    Trace("dll-textbox-loaded");
+                });
+                root.Children().Append(m_textBoxProbe);
+                Trace("dll-textbox-appended");
+            }
             root.Children().Append(m_status);
             m_source.Content(root);
+            Trace("dll-island-content-set");
             Refresh(L"Test-only same-process product adapter ready");
             Trace("dll-island-ready");
             return true;
@@ -190,6 +221,7 @@ public:
             m_source.Content(nullptr);
             Trace("dll-close-after-content-detach");
         }
+        m_textBoxProbe=nullptr;
         m_status=nullptr; m_title=nullptr;
         m_up=nullptr;m_back=nullptr;m_forward=nullptr;
         Trace("dll-close-after-control-release");
