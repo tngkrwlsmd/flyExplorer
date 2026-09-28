@@ -59,3 +59,44 @@ production-grade performance figure.
 
 Evidence and remaining limitations:
 [Phase 5 same-process MFC island evidence](../../docs/development/UI_FRAMEWORK_PHASE5_MFC_ISLAND_EVIDENCE.md).
+
+## Opt-in TextBox isolation (experimental source; runtime NOT YET verified)
+
+The ordinary same-process island still uses a TextBlock and never constructs the
+diagnostic TextBox. The new `FLYEXP_PHASE5_DIAG_TEXTBOX` environment variable is
+only meaningful together with the existing, explicit test-only DLL activation:
+- Unset: original production test path, unchanged.
+- `plain`: create a read-only TextBox without additional island resources to
+  capture the existing failure under identical initialization and teardown.
+- `resources`: merge an explicit `XamlControlsResources` dictionary into the
+  island root before constructing the same read-only TextBox. Compare with
+  `plain` to isolate whether missing effective WinUI styles/resources matter.
+
+On the connected Windows 11 test PC, incrementally build this experimental DLL
+using `build.cmd`, retaining logs locally and inspecting only exit/error summary.
+Then, using the existing private-profile test-owned harness:
+
+```powershell
+Remove-Item Env:FLYEXP_PHASE5_DIAG_TEXTBOX -ErrorAction SilentlyContinue
+python test_owned_product.py
+$env:FLYEXP_PHASE5_DIAG_TEXTBOX = 'resources'
+python test_owned_product.py
+# Only if distinguishing the resource hypothesis is still necessary:
+$env:FLYEXP_PHASE5_DIAG_TEXTBOX = 'plain'
+python test_owned_product.py
+Remove-Item Env:FLYEXP_PHASE5_DIAG_TEXTBOX -ErrorAction SilentlyContinue
+```
+
+Both diagnostic modes trace control creation, root/individual Loaded events and
+XAML detach. A successful diagnostic must show the TextBox's actual UIA Edit
+identity, navigate via existing Up/Back/Forward and Tab/Enter, resize, cleanly
+exit 0, and leave the original six configuration hashes unchanged. A mode
+that fails must remain **FAIL**; an exception, missing UIA tree, incomplete
+cleanup or forced termination cannot be counted as success. Re-run the passing
+configuration if the first sample passes to establish stability.
+
+Microsoft's host and control-resource guidance motivates this **hypothesis**,
+not a confirmed fix. If `resources` still fails, next inspect the first real
+HRESULT/faulting native stack and effective resource/PRI and XAML metadata
+availability. Avoid speculative rewrites of the product. No experimental
+TextBox code belongs in `main` until the test-owned Windows runtime gate passes.
