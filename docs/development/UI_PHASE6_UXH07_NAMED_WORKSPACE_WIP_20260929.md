@@ -111,3 +111,84 @@ Standalone full screen-reader spoken output, actual
 UXH-06 remains a separate untouched WIP branch and
 WinUI 3 is in its original independent worktree.
 Do not assert any unperformed acceptance result.
+
+
+## Final 2026-09-29 continued review: real negative and isolated safety
+
+STATUS: LOCAL WIP ONLY; no main merge or remote push.
+This section supersedes earlier pending-test descriptions but
+preserves their original failures. Tested current compiled
+Release-x64-Unicode executable SHA256: 5D4F23F4ADC29F124450E8ED551CE4CA995166382BBA2E3802CF863FCE304D4A.
+
+TEST FIXTURE FIX: Earlier synthetic bad-row replacement did
+not change the serialized value. The revised test checks every
+mutation against the actual saved schema before GUI input.
+The accidentally spawned owned child was identified by its
+parent and exclusively locked private workspace marker and
+closed without touching unrelated user processes.
+
+REAL NATIVE FILE ERRORS: logs/uxh07-final-reason-revision-negative.log
+records six invalid inputs rejected with real native warnings:
+empty, wrong schema, zero-row pane, missing first tab,
+nonexistent folder and oversized file. The real test-owned
+affirmative UIA control was distinguished from the
+titlebar Close button, and invoked by physical mouse
+or owned-foreground physical Enter when necessary.
+The previous posted WM_COMMAND/IDOK failure remains
+historical evidence, not a product PASS. All six
+original user configuration SHA256 values remained
+unchanged, current pane stayed intact, and the owned
+process exited normally.
+
+LATEST POSITIVE GUI: logs/uxh07-reasoned-second-workspace-real-gui.log
+verifies two distinct named saved files opened into
+separate owned native child processes with 1x2 and
+2/1 per-pane tabs; the original window was unchanged.
+Both child private configurations used marker protection,
+copied toolbars, and were deleted after normal exit.
+The original six user settings remained unchanged.
+Earlier Korean/legacy real keyboard menu access and
+physical submenu mouse selection remain valid for
+unchanged menu paths; a mouse-only path all the
+way from the top-level View menu remains unverified.
+
+ISOLATED REAL-APP ORPHAN SAFETY: The owned runtime test
+build/test_ui_uxh07_orphan_isolated_runtime.py overrides
+TEMP/TMP/APPDATA in its exclusively private environment.
+logs/uxh07-isolated-orphan-final-retested.log proves
+the real app deleted a synthetic marked 72-hour orphan,
+preserved an exclusively locked live-session marker,
+ignored a test-owned junction and preserved its external
+test-owned sentinel. The GUI-owned app exited normally,
+all synthetic test fixtures were removed and six
+original settings hashes stayed identical. Earlier
+test-only failures were a mistyped path index and
+selecting a non-main test-owned HWND; these were
+corrected, not recorded as product failures.
+
+STILL BLOCKING: An intermittent real second-workspace
+launch failed with Could not protect isolated workspace
+session, as documented in
+logs/uxh07-latest-second-prespawn-diagnostic.log.
+The reason is not established. A subsequent scoped
+Release revision reports a numeric marker-failure
+code if the failure recurs, and its complete
+two-workspace real GUI run passed; that success is
+not a root-cause fix or repeatability proof.
+Wrong-extension selection through the native dialog
+and any required fully mouse-only top-level menu
+traversal are not yet accepted. Real other DPI,
+High Contrast and screen-reader speech remain
+separate untested UXH-05 environmental work.
+
+Current-source tests: Release build PASS, scoped
+source contract PASS, source invariants PASS,
+Korean translation XML PASS, both test harnesses
+compile, native functional 17 PASS / 0 FAIL,
+six-case real negative GUI PASS, two named
+positive GUI PASS, controlled orphan safety PASS.
+Keep this branch local and unmerged until the
+outstanding reliability and acceptance gates
+are resolved. UXH-06 and the WinUI 3 experimental
+worktree remain untouched; no manual GitHub
+Actions were triggered.

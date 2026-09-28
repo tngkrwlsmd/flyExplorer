@@ -65,18 +65,28 @@ inline HANDLE lockMarker(LPCTSTR dir) {
     }
     return h;
 }
-inline bool writeMarker(LPCTSTR dir) {
-    if (!ownedDir(dir)) return false;
+inline bool writeMarker(LPCTSTR dir, DWORD *reason = NULL) {
+    if (reason) *reason=0;
+    if (!ownedDir(dir)) {
+        if (reason) *reason=1; // exact temp directory ownership check
+        return false;
+    }
     CString file=path(dir,marker());
     HANDLE h=::CreateFile(file,GENERIC_WRITE,0,NULL,CREATE_NEW,
                          FILE_ATTRIBUTE_NORMAL,NULL);
-    if (h==INVALID_HANDLE_VALUE) return false;
+    if (h==INVALID_HANDLE_VALUE) {
+        if (reason) *reason=1000+::GetLastError();
+        return false;
+    }
     DWORD n=0;
     size_t size=strlen(magic());
     bool ok=::WriteFile(h,magic(),static_cast<DWORD>(size),&n,NULL)!=0
             && n==size && ::FlushFileBuffers(h)!=0;
     ::CloseHandle(h);
-    if (!ok) ::DeleteFile(file);
+    if (!ok) {
+        if (reason) *reason=2;
+        ::DeleteFile(file);
+    }
     return ok;
 }
 inline bool cleanup(LPCTSTR dir) {

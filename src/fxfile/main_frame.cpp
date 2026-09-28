@@ -1543,7 +1543,8 @@ void MainFrame::OnOpenWorkspace(void)
             XPR_STRING_LITERAL("Workspaces"),MB_OK | MB_ICONWARNING);
         return;
     }
-    if (!workspace_session::writeMarker(sUnique))
+    DWORD sMarkerReason=0;
+    if (!workspace_session::writeMarker(sUnique,&sMarkerReason))
     {
         for (size_t i=0; i<_countof(sOptional); ++i)
             ::DeleteFile(workspace_session::path(sUnique,
@@ -1551,8 +1552,11 @@ void MainFrame::OnOpenWorkspace(void)
         ::DeleteFile(sIsolatedMain);
         ::DeleteFile(sIsolatedCfg);
         ::RemoveDirectory(sUnique);
-        MessageBox(XPR_STRING_LITERAL(
-            "Could not protect isolated workspace session."),
+        CString sDiagnostic;
+        sDiagnostic.Format(XPR_STRING_LITERAL(
+            "Could not protect isolated workspace session (error %lu)."),
+            sMarkerReason);
+        MessageBox(sDiagnostic,
             XPR_STRING_LITERAL("Workspaces"),MB_OK|MB_ICONWARNING);
         return;
     }

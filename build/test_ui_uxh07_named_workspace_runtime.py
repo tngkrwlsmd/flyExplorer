@@ -260,6 +260,17 @@ try:
    if len(possible)==1:
     child=possible[0];break
    time.sleep(.13)
+  if child is None:
+   warns=[]
+   for h in en(p.pid,True):
+    if cls(h)=="#32770" and u.IsWindowVisible(h):
+     try:
+      labels=[x.element_info.name.encode("ascii","backslashreplace").decode()
+        for x in Desktop(backend="uia").window(handle=h).descendants()
+        if x.element_info.control_type=="Text"]
+     except Exception:labels=[]
+     warns.append((title(h).encode("ascii","backslashreplace").decode(),labels))
+   print("VALID_WORKSPACE_OPEN_NOT_SPAWNED_MODAL_DIAGNOSTIC",warns,flush=True)
   assert child,"owned parent failed to spawn distinct workspace process"
   check_child_isolation(child)
   childmain=frame(child.pid)
@@ -291,19 +302,27 @@ try:
    child=None;childmain=0
    base=workspace.read_text(encoding="utf-16")
    target=str(left)
+   # Verify that every malformed synthetic fixture actually changes
+   # the correctly parsed value before opening any native dialog.
+   def rewrite(key,value):
+    pattern=r"(?m)^([ \t]*"+re.escape(key)+r"[ \t]*=[ \t]*)[^\r\n]*"
+    changed,count=re.subn(pattern,lambda m:m.group(1)+value,base)
+    assert count==1 and changed!=base,("invalid fixture not modified",key,count)
+    assert re.search(r"(?m)^"+re.escape(key)+r"[ \t]*=[ \t]*"+re.escape(value)+r"$",changed),key
+    return changed
+   new_schema=rewrite("schema","2")
+   new_row=rewrite("main.view.row_count","0")
+   missing_tab=rewrite("main.view1.tab1.path","")
+   missing_folder=base.replace(target,str(home/"does-not-exist-uxh07"))
+   assert missing_folder!=base
    malformed=[
     ("empty",b""),
-    ("unknown-schema",base.replace("schema = 1","schema = 2").encode("utf-16")),
-    ("bad-row",base.replace("main.view.row_count = 1",
-                            "main.view.row_count = 0").encode("utf-16")),
-    ("missing-tab",re.sub(r"(?m)^\s*main.view1.tab1.path\s*=\s*[^\r\n]*",
-                    "",base).encode("utf-16")),
-    ("missing-folder",base.replace(target,str(home/"does-not-exist-uxh07")).encode("utf-16")),
+    ("unknown-schema",new_schema.encode("utf-16")),
+    ("bad-row",new_row.encode("utf-16")),
+    ("missing-tab",missing_tab.encode("utf-16")),
+    ("missing-folder",missing_folder.encode("utf-16")),
     ("oversize",b"x"*1048577)]
-   assert malformed[1][1]!=workspace.read_bytes()
-   assert malformed[2][1]!=workspace.read_bytes()
-   assert malformed[3][1]!=workspace.read_bytes()
-   assert malformed[4][1]!=workspace.read_bytes()
+   print("SIX_INVALID_FIXTURES_CHECKED_BEFORE_GUI=True",flush=True)
    for name,blob in malformed:
     path=home/("bad-"+name+".fxworkspace")
     path.write_bytes(blob)
@@ -329,14 +348,55 @@ try:
     assert labels,("empty validation warning",name)
     print("REAL_INVALID_WORKSPACE_WARNING",name,
       [v.encode("ascii","backslashreplace").decode()[:95] for v in labels],flush=True)
-    # This is the *test-owned* warning, not an arbitrary desktop dialog.
-    u.PostMessageW(warning,0x111,1,0)
-    for _ in range(45):
+    # Only the verified TEST-OWNED warning's actual OK button may be
+    # clicked. Posting WM_COMMAND(IDOK) to a MFC MessageBox is not
+    # equivalent to physical mouse input and failed in the baseline.
+    wrapper=Desktop(backend="uia").window(handle=warning)
+    buttons=[x for x in wrapper.descendants() if
+      x.element_info.control_type=="Button" and x.is_visible()
+      and x.is_enabled()]
+    print("OWNED_WARNING_BUTTONS",name,
+      [(x.element_info.name.encode("ascii","backslashreplace").decode()[:80],
+        x.element_info.automation_id) for x in buttons],flush=True)
+    # Identify the real native affirmative button by observed UIA ID
+    # 2; the separate title-bar Close button has no automation ID.
+    # Avoid localized text in the remote test source, which can be
+    # transcoded by PowerShell on this specific development machine.
+    ok=[x for x in buttons if x.element_info.automation_id=="2"]
+    assert len(ok)==1,("expected unique native affirmative control",
+      name,[(x.element_info.name.encode("ascii","backslashreplace").decode(),
+             x.element_info.automation_id) for x in buttons])
+    assert u.GetForegroundWindow()==warning,(
+       "do not click until the expected test-owned warning is foreground",
+       name,u.GetForegroundWindow(),warning)
+    ok[0].click_input()
+    for _ in range(55):
      if not u.IsWindow(warning) or not u.IsWindowVisible(warning):break
      time.sleep(.08)
-    assert not u.IsWindowVisible(warning),("warning did not close",name)
+    if u.IsWindow(warning) and u.IsWindowVisible(warning):
+     # On this owned Windows 11 desktop a mouse click can occasionally
+     # leave the same modal visible. Use a *real physical Enter* only
+     # if that exact verified test-owned dialog still has the foreground.
+     assert u.GetForegroundWindow()==warning,(
+        "ambiguous active window after owned OK click; refuse keyboard",
+        name,u.GetForegroundWindow(),warning)
+     keyboard.send_keys("{ENTER}",pause=.06)
+     for _ in range(50):
+      if not u.IsWindow(warning) or not u.IsWindowVisible(warning):break
+      time.sleep(.08)
+    assert not u.IsWindowVisible(warning),(
+       "physical button AND foreground-confirmed Enter failed",name)
     assert tabs(main)==first,("invalid workspace touched active tabs",name)
-    assert child is None,("invalid workspace unexpectedly spawned child",name)
+    unexpected=[]
+    for q in psutil.process_iter(["name"]):
+     try:
+      if q.pid not in before_fly and q.pid!=p.pid and q.ppid()==p.pid:
+       if (q.info["name"] or "").lower()=="fxfile.exe":
+        unexpected.append(q.pid)
+     except(psutil.NoSuchProcess,psutil.AccessDenied):pass
+    assert not unexpected,("invalid fixture spawned a real app child",name,
+                           unexpected)
+    assert child is None
    print("SIX_INVALID_WORKSPACE_FILES_REJECTED_BY_REAL_NATIVE_DIALOGS=True",
          flush=True)
   print("WORKSPACE_REAL_NATIVE_SAVE_OPEN_DIALOGS_COMPLETE=True",flush=True)
@@ -397,6 +457,17 @@ try:
      except (psutil.NoSuchProcess,psutil.AccessDenied):pass
     if len(possibles)==1:child=possibles[0];break
     time.sleep(.13)
+   if child is None:
+    warnings=[]
+    for h in en(p.pid,True):
+     if cls(h)=="#32770" and u.IsWindowVisible(h):
+      try:
+       labels=[x.element_info.name.encode("ascii","backslashreplace").decode()
+        for x in Desktop(backend="uia").window(handle=h).descendants()
+        if x.element_info.control_type=="Text"]
+      except Exception:labels=[]
+      warnings.append((title(h).encode("ascii","backslashreplace").decode(),labels))
+    print("SECOND_WORKSPACE_NOT_SPAWNED_NATIVE_DIALOGS",warnings,flush=True)
    assert child,"second named workspace did not open separate window"
    check_child_isolation(child)
    childmain=frame(child.pid)
@@ -409,6 +480,29 @@ try:
    assert tabs(main)==later,"second workspace replaced original window"
    print("SECOND_NAMED_WORKSPACE_GUI_RESTORED_DIFFERENT_2_1_TABS=True",flush=True)
 finally:
+ if p:
+  for q in psutil.process_iter(["name"]):
+   try:
+    if q.pid==p.pid or q.pid in before_fly or q.ppid()!=p.pid:
+     continue
+    if (q.info["name"] or "").lower()!="fxfile.exe":
+     continue
+    argv=q.cmdline()
+    if "--conf_dir" not in argv:continue
+    private=Path(argv[argv.index("--conf_dir")+1])
+    if not (private.name.lower().startswith("fxw") and
+      private.suffix==".tmp" and
+      (private/"fxfile-workspace-owned.marker").is_file()):
+     continue
+    wins=[h for h in en(q.pid,True) if
+      title(h).endswith(" - fxfile") and u.IsWindow(h)]
+    if len(wins)==1:
+     u.PostMessageW(wins[0],0x10,0,0)
+     try:q.wait(timeout=12)
+     except psutil.TimeoutExpired:
+      q.terminate();q.wait(timeout=5)
+     print("ONLY_TEST_SPAWNED_UNEXPECTED_CHILD_CLOSED",q.pid,flush=True)
+   except(psutil.NoSuchProcess,psutil.AccessDenied):pass
  if child and child.is_running():
   if childmain and u.IsWindow(childmain):
    u.PostMessageW(childmain,0x10,0,0)
