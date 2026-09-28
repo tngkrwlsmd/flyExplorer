@@ -3,6 +3,39 @@
 이 파일은 universal-agent-docs의 PROJECT template을 flyExplorer에 맞게 채운 Validated-profile 프로젝트 지도다.
 상세 제품 명세를 복제하지 않고 실제 Source of Truth 위치와 현재 확인된 build/runtime 사실을 기록한다.
 
+## Current reviewed handoff — 2026-09-28
+
+This flyExplorer-specific snapshot supersedes prior *status
+interpretations*, not permanent permission or vendor rules.
+Start at the [development documentation index](../docs/development/README.md)
+and [concise current status](../docs/development/CURRENT_STATUS.md).
+At this review the main baseline before a docs-only commit was
+\`f2958d70b6a2714b061bc5215ecce3a9f707d0b3\`; use
+\`git rev-parse main\` for the updated branch tip.
+
+Latest independently verified native product code commit:
+\`4f1a407cca0162080a5449f2d7772b69b3ca32c5\`.
+At actual 96 DPI, native Dark/Light list/tree scrollbars,
+popup/modal separation, native column Dark header and bounded
+newly entered non-pinned width passed scoped owned GUI checks.
+Release-x64-Unicode incremental build and native regression
+17/0 were recorded at that code revision; real
+125/150/200% DPI, High Contrast, clean-machine install and
+complete legacy dialog acceptance are NOT TESTED.
+
+Next native UX work is the [seven-item hands-on backlog](../docs/development/UI_UX_HANDS_ON_BACKLOG_20260928.md),
+starting with the bright Dark-mode bookmark CHotKeyCtrl and
+redundant bright Search completion modal. HANG-01 and specific
+UI-01/UI-09 original-scenario acceptance remain open.
+Separate WinUI 3 productization branch
+\`experiments/phase5-productization-20260928\`, observed HEAD
+\`7ceeab515bc90089d1220d608059d254c374a339\`,
+remains UNMERGED. Its owned PRI staging is not formal deployment;
+IME, Shell namespace, other real DPI, OS High Contrast and clean-PC
+runtime readiness are incomplete.
+The older 2026-09-24/26 statements below remain historical
+checkpoints, not newer PASS claims.
+
 **최신 실행 정책 (2026-09-24):** GitHub Actions는 기한 없이 사용자에게 개별 실행을 명확히 지시받은 경우만 허용한다. `Source Validation`, `Windows Product Build`의 수동 workflow는 준비 상태로 보존하지만 push/PR 등 자동 트리거 및 무허가 수동 dispatch는 금지한다. 9월 30일까지 예산 일시 중단이라고 적힌 아래 기존 기록은 역사적이며 최신 정책보다 우선하지 않는다. 계정 예산이나 날짜가 바뀌어도 자동 해제되지 않는다. 기본은 로컬 `local_ci.bat x64`, 미실행 hosted 검증은 `NOT TESTED`다.
 
 **현재 유지보수 결정 (2026-09-24):** 소유자 요청으로 자동 업데이트는

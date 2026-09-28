@@ -1,0 +1,79 @@
+# flyExplorer development documentation index
+
+> Entry point for maintainers and agents. Reviewed against \`main\`
+> baseline \`f2958d70b6a2714b061bc5215ecce3a9f707d0b3\`
+> **before this documentation-only commit**; use \`git rev-parse main\`
+> to identify the subsequent tip. Read [current status](CURRENT_STATUS.md)
+> first rather than interpreting a historic test as a current PASS.
+
+## 1. Required instructions and active work
+
+| When | Document and responsibility |
+| --- | --- |
+| Every repository-changing task | [Root AGENTS](../../AGENTS.md), then [vendored policy](../../.agent-policy/AGENTS.md); preserve the vendor core. |
+| Managing build/log/GUI tool calls | [Agent efficiency](AGENT_EFFICIENCY.md), including budgets, minimum validation and final-only build log capture. |
+| Reviewing architecture and project facts | [Editable project facts](../../.agent-policy/PROJECT.md). |
+| Finding live branch, verified work and open tasks | [Concise CURRENT_STATUS](CURRENT_STATUS.md); authoritative entry point. |
+| Choosing native UX work | [Evidence-labelled hands-on backlog](UI_UX_HANDS_ON_BACKLOG_20260928.md) and [design/acceptance policy](UI_UX_DESIGN_GUIDE.md). |
+| Diagnosing known failures | [Append-only error history](ERROR_HISTORY.md), including the original failed checkpoints. |
+
+## 2. Native MFC UI, visual review and regression evidence
+
+| Focus | Document / use |
+| --- | --- |
+| Historical UI issue IDs and old screenshots | [2026-09-24 UI audit](UI_UX_AUDIT_20260924.md): dated observations, not today's open-work list. |
+| How to validate actual Windows UI | [Visual retest workflow](UI_VISUAL_RETEST.md): owned processes, screenshots and evidence levels. |
+| External Windows 11 design references | [Explorer reference policy](WIN11_EXPLORER_UI_REFERENCE.md): UI sources and adoption limits. |
+| Address dropdown original Dark defect | [Dropdown-specific evidence](UI_ADDRESS_DROPDOWN_DARK_EVIDENCE.md): original narrow popup fix. |
+| Native scrollbar source inventory and modal overlap | [Scroll/modal audit](UI_SCROLLBAR_MODAL_OVERLAP_AUDIT_20260928.md): control coverage, popup ownership and lifecycle. |
+| Column header, divider and numeric field | [Column GUI evidence](UI_COLUMN_DETAILS_HEADER_EVIDENCE_20260928.md): dedicated native dialog acceptance. |
+| Latest actual DPI/theming and width bounds | [MFC 96-DPI Windows regression](UI_WINDOWS11_DPI_CONTRAST_20260928_EVIDENCE.md): real 120/144/192 DPI and OS High Contrast explicitly NOT TESTED. |
+| Previous bookmark toolbar redraw defect | [UI-09 root-cause evidence](UI09_ROOT_CAUSE_20260926.md): not a full original-user retest. |
+
+These are separate, revision-scoped evidence documents. Do not
+combine historic Debug/source-only or different-DPI results into
+a single unsupported release qualification.
+
+## 3. UI framework decision and optional experimental work
+
+| Stage | Source / restriction |
+| --- | --- |
+| Choosing MFC, hybrid or staged replacement | [Framework migration decision gates](UI_FRAMEWORK_DECISION_POLICY.md); WinUI 3 adoption is not mandatory. |
+| Previous DPI/WinRT technical feasibility | [Phase 4 evaluation](UI_FRAMEWORK_PHASE4_EVALUATION.md). |
+| Historical separate-process strict command bridge | [Phase 5 bridge report](UI_FRAMEWORK_PHASE5_COMMAND_BRIDGE_EVIDENCE.md); the original shutdown failure was subsequently fixed in the test harness. |
+| Unmerged MFC-host WinUI 3 island | [Experiment-only island report](https://github.com/tngkrwlsmd/flyExplorer/blob/experiments/phase5-productization-20260928/docs/development/UI_FRAMEWORK_PHASE5_MFC_ISLAND_EVIDENCE.md), branch \`experiments/phase5-productization-20260928\` (reviewed \`7ceeab515bc90089d1220d608059d254c374a339\`). |
+| Experimental TextBox/address/PRI staging | [Experiment-only PRI/address report](https://github.com/tngkrwlsmd/flyExplorer/blob/experiments/phase5-productization-20260928/docs/development/UI_FRAMEWORK_PHASE5_ADDRESS_PRI_EVIDENCE.md). Temporary host PRI placement is NOT formal installer or clean-PC readiness. |
+
+The two experiment-only reports are intentionally NOT copied
+into \`main\`, because their opt-in productization code remains
+unmerged and the required installer/runtime/IME/DPI acceptance
+is incomplete.
+
+## 4. Build, distribution and user help
+
+| Purpose | Owner |
+| --- | --- |
+| Building the native product and running local CI | Root [build README](../../README), \`LOCAL_CI_MANUAL.txt\` and mandatory AGENTS; recommended VS2026 v145 Release-x64-Unicode / x64. |
+| Dependency architecture and ABI | [Dependency audit](DEPENDENCY_ARCH_AUDIT_20260924.md). |
+| Packaging and third-party redistribution | [Distribution/license review](DISTRIBUTION_LICENSE_REVIEW.md) and root LICENSE/CREDITS; GFL/third-party authorization remains an open review. |
+| User help maintenance and acceptance | [Help content audit](HELP_CONTENT_AUDIT.md) and [HTML Help source tree](../htmlhelp/); passing the source inventory does not establish current content or installed CHM usability. |
+
+## 5. Historical retention and update rules
+
+- The old 767-line status, including superseded 'latest' claims
+  and intermediate failures, is archived as a **byte-exact copy**:
+  [CURRENT_STATUS_HISTORY_20260928.md](CURRENT_STATUS_HISTORY_20260928.md).
+  The new [current status](CURRENT_STATUS.md) alone owns live tasks.
+- [ERROR_HISTORY](ERROR_HISTORY.md), the early
+  [UI audit](UI_UX_AUDIT_20260924.md), original targeted evidence
+  and unmerged WinUI experiments retain unique facts. No original
+  development document was proven safely redundant; **0 deletions**.
+- Keep [AGENTS](../../AGENTS.md) and [efficiency policy](AGENT_EFFICIENCY.md)
+  for mandatory workflow, [.agent-policy/PROJECT.md](../../.agent-policy/PROJECT.md)
+  for project facts, [hands-on backlog](UI_UX_HANDS_ON_BACKLOG_20260928.md)
+  for upcoming UI tasks, and individual evidence files for
+  revision-specific tests. Append failures to ERROR_HISTORY.
+  Do not edit the upstream-pinned \`.agent-policy\` core.
+- Update this index when files move/appear. Before any future
+  deletion, prove that all substantive facts and consumers
+  have an authoritative replacement and fix every inbound link.

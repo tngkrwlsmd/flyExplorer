@@ -522,3 +522,10 @@ Contact
 -------
 Web site: http://www.flychk.com
 E-mail:   flychk@flychk.com
+
+Development documentation
+-------------------------
+
+Start with the [development documentation index](docs/development/README.md)
+for current product status, build rules, UI/UX backlog, source-based
+and actual GUI evidence, and historical experiment records.

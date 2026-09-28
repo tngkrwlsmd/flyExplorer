@@ -37,6 +37,11 @@
 
 ## 3. flyExplorer source of truth
 
+Start at the [development documentation index](docs/development/README.md)
+and [concise current status](docs/development/CURRENT_STATUS.md) before
+using older dated project summaries as evidence.
+
+
 다음 파일을 빌드 구조의 우선 Source of Truth로 본다.
 
 - `fxfile.gyp`

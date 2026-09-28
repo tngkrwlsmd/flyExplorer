@@ -621,3 +621,16 @@ For additional isolated real-product observations, source-supported
 candidate causes, priorities and explicit NOT TESTED boundaries, see
 [the new product-wide UX development backlog](UI_UX_HANDS_ON_BACKLOG_20260928.md).
 The earlier screen-reproduction history and its original status remain above.
+
+## 2026-09-28 Phase 5 correction: strict bridge harness shutdown
+
+The earlier Phase 5 strict shutdown failure was later traced to
+test-harness HWND selection, NOT independently shown to be a
+WinUI 3 product shutdown defect. The corrected owned strict
+bridge then passed repeated actual 96-DPI Up/Back/Forward
+and clean child-process exits. See the later
+[main bridge evidence](UI_FRAMEWORK_PHASE5_COMMAND_BRIDGE_EVIDENCE.md)
+for precise revisions and boundaries. Same-process product
+shipping and PRI installer redistribution are separate,
+unfinished experiment-only tasks linked from
+[the current status](CURRENT_STATUS.md).
