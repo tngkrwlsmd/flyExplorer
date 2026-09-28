@@ -2433,6 +2433,11 @@ BEGIN
             MENUITEM "&Lock the toolbars",          ID_VIEW_TOOL_LOCK
             MENUITEM "&Customize...",               ID_VIEW_TOOLBAR_CUSTOMIZE
         END
+        POPUP "&Workspaces"
+        BEGIN
+            MENUITEM "&Save named workspace...",    ID_VIEW_WORKSPACE_SAVE
+            MENUITEM "&Open named workspace in new window...", ID_VIEW_WORKSPACE_OPEN
+        END
         POPUP "cmd.theme.popup"
         BEGIN
             MENUITEM "&System default",                ID_VIEW_THEME_SYSTEM
