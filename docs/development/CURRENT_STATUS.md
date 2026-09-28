@@ -10,6 +10,26 @@
 
 ## 1. Latest state, constraints and next work
 
+**2026-09-28 UXH-05 scoped actual accessibility accepted:**
+The custom drawn TabCtrl was actually unnamed/childless
+in UIA and MSAA despite working native tab shortcuts.
+A minimal native MFC IAccessible provider now supplies
+full named/selected tabs and selected-close/new buttons,
+accessible focus/geometry/default actions and native events.
+Owned actual Dark and Light 96-DPI Ctrl+T/Ctrl+Tab/Ctrl+W,
+MSAA select/new/close and focused Right/Home/End passed.
+Final clean Release x64 SHA256 CCB5050EC1AE316CB3D6C4728A1DDF9A724D3319DA40305CC5880B4A422ABB10, source invariants
+and native 17 PASS/0 FAIL; original six user settings
+unchanged. Full [UXH-05 scoped evidence](UI_PHASE6_UXH05_TAB_ACCESSIBILITY_EVIDENCE_20260928.md).
+Actual speech reader, High Contrast, other DPI, direct
+UIA InvokePattern and wider Tab/F6 focus are NOT TESTED;
+physical Tab/F6 did not move focus from a test-focused
+tab in the owned single-pane profile. Treat this as
+scoped native interface acceptance only, not full
+accessibility certification. Next: UXH-06/07 feasibility
+and independent isolated accessibility environment work.
+
+
 **Phase 6 UXH-04 scoped acceptance (2026-09-28):** Explicit
 reversible native Drive/Bookmark toolbar-row compaction is now
 real-GUI verified at actual 96 DPI on the isolated Windows 11

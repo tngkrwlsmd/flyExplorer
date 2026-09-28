@@ -115,3 +115,18 @@ native tooltip popup was not exposed during either baseline
 or compact automated hover and needs a separate manual
 screen-reader assessment. See
 [scoped evidence](UI_PHASE6_UXH04_EVIDENCE_20260928.md).
+
+## 10. Native custom-tab accessibility (UXH-05)
+
+Keep MFC's custom tab control and the original explorer
+selection/observer structure. Use the existing native
+active-accessibility bridge to expose complete tab names,
+selected/focused states, named selected-close/new
+buttons, real geometry/default actions and native
+reorder/name/selection/focus events. Preserve ordinary
+Ctrl+T/Ctrl+W/Ctrl+Tab and Shift+Ctrl+Tab; focused
+arrow/Home/End should retain tab-strip keyboard focus.
+Actual UIA/MSAA presence does not prove spoken reader,
+real High Contrast or larger DPI. Separately examine
+physical Tab/F6 focus traversal and UIA InvokePattern.
+See [UXH-05 scoped proof](UI_PHASE6_UXH05_TAB_ACCESSIBILITY_EVIDENCE_20260928.md).

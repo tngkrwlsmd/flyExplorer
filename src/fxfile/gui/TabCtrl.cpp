@@ -13,6 +13,7 @@
 #include "TabCtrlObserver.h"
 #include "ModernUI.h"
 #include "gdi.h"
+#include <oleacc.h>
 #include <math.h>
 
 #ifdef _DEBUG
@@ -64,6 +65,7 @@ xpr_bool_t TabCtrl::Create(CWnd *aParentWnd, xpr_uint_t aId, const RECT &aRect)
     DWORD sStyle = 0;
     sStyle |= WS_VISIBLE;
     sStyle |= WS_CHILD;
+    sStyle |= WS_TABSTOP; // allow keyboard focus without new global shortcuts
     sStyle |= WS_CLIPSIBLINGS;
     sStyle |= WS_CLIPCHILDREN;
 
@@ -111,6 +113,8 @@ BEGIN_MESSAGE_MAP(TabCtrl, super)
     ON_WM_CAPTURECHANGED()
     ON_WM_CONTEXTMENU()
     ON_WM_SETFOCUS()
+    ON_WM_KILLFOCUS()
+    ON_WM_KEYDOWN()
 END_MESSAGE_MAP()
 
 xpr_sint_t TabCtrl::OnCreate(LPCREATESTRUCT aCreateStruct)
@@ -118,6 +122,9 @@ xpr_sint_t TabCtrl::OnCreate(LPCREATESTRUCT aCreateStruct)
     if (super::OnCreate(aCreateStruct) == -1)
         return -1;
 
+    // Enable MFC's native WM_GETOBJECT / IAccessible support only for
+    // this custom window. Tab elements remain drawn and owned as before.
+    EnableActiveAccessibility();
     mXPTheme.Open(m_hWnd, XPR_WIDE_STRING_LITERAL("TAB"));
 
     createFont();
@@ -191,6 +198,9 @@ void TabCtrl::showNewButton(xpr_bool_t aShowNewButton, const xpr_tchar_t *aToolT
     }
 
     recalcLayout();
+    if (::IsWindow(GetSafeHwnd()))
+        ::NotifyWinEvent(EVENT_OBJECT_REORDER,
+            GetSafeHwnd(), OBJID_CLIENT, CHILDID_SELF);
 }
 
 void TabCtrl::setCloseButtonToolTip(const xpr_tchar_t *aToolTipText)
@@ -257,6 +267,9 @@ xpr_size_t TabCtrl::insertTabItem(xpr_size_t aTab, TabItem *aTabItem, xpr_bool_t
     }
 
     recalcLayout();
+    if (::IsWindow(GetSafeHwnd()))
+        ::NotifyWinEvent(EVENT_OBJECT_REORDER,
+            GetSafeHwnd(), OBJID_CLIENT, CHILDID_SELF);
 
     if (XPR_IS_TRUE(aNotifyObserver) && XPR_IS_NOT_NULL(mObserver))
     {
@@ -264,6 +277,294 @@ xpr_size_t TabCtrl::insertTabItem(xpr_size_t aTab, TabItem *aTabItem, xpr_bool_t
     }
 
     return aTab;
+}
+
+// Virtual MSAA children reuse the existing, drawn TabCtrl layout and
+// event/command semantics. Child IDs 1..N are tabs; an additional close
+// action exists for the visible selected-tab close glyph, followed by
+// the optional existing new-tab glyph.
+TabCtrl::AccessiblePart TabCtrl::getAccessiblePart(
+    long aChildId, xpr_size_t &aTab) const
+{
+    aTab = InvalidTab;
+    if (aChildId == CHILDID_SELF)
+        return AccessibleSelf;
+    if (aChildId < 1)
+        return AccessibleInvalid;
+    if (static_cast<xpr_size_t>(aChildId) <= mTabDeque.size())
+    {
+        aTab = static_cast<xpr_size_t>(aChildId - 1);
+        return AccessibleTab;
+    }
+    long sNext = static_cast<long>(mTabDeque.size()) + 1;
+    TabItem *sSelected = getTabItem(mCurTab);
+    if (sSelected != NULL &&
+        sSelected->mCloseRect.IsRectEmpty() == FALSE)
+    {
+        if (aChildId == sNext)
+        {
+            aTab = mCurTab;
+            return AccessibleSelectedClose;
+        }
+        ++sNext;
+    }
+    if (XPR_IS_TRUE(mShowNewButton) &&
+        mNewButtonRect.IsRectEmpty() == FALSE &&
+        aChildId == sNext)
+        return AccessibleNew;
+    return AccessibleInvalid;
+}
+
+long TabCtrl::getAccessibleChildCount(void) const
+{
+    long sCount = static_cast<long>(mTabDeque.size());
+    TabItem *sSelected = getTabItem(mCurTab);
+    if (sSelected != NULL &&
+        sSelected->mCloseRect.IsRectEmpty() == FALSE)
+        ++sCount;
+    if (XPR_IS_TRUE(mShowNewButton) &&
+        mNewButtonRect.IsRectEmpty() == FALSE)
+        ++sCount;
+    return sCount;
+}
+
+HRESULT TabCtrl::get_accChildCount(long *aChildCount)
+{
+    if (aChildCount == NULL)
+        return E_INVALIDARG;
+    *aChildCount = getAccessibleChildCount();
+    return S_OK;
+}
+
+HRESULT TabCtrl::get_accName(VARIANT aChild, BSTR *aName)
+{
+    if (aName == NULL || aChild.vt != VT_I4)
+        return E_INVALIDARG;
+    *aName = NULL;
+    xpr_size_t sTab = InvalidTab;
+    const AccessiblePart sPart = getAccessiblePart(aChild.lVal, sTab);
+    xpr::string sName;
+    switch (sPart)
+    {
+    case AccessibleSelf:
+        sName = XPR_STRING_LITERAL("File tabs");
+        break;
+    case AccessibleTab:
+        sName = getTabItem(sTab)->mText;
+        break;
+    case AccessibleSelectedClose:
+        sName = mCloseButtonToolTipText.empty() ?
+            XPR_STRING_LITERAL("Close tab") : mCloseButtonToolTipText;
+        sName += XPR_STRING_LITERAL(": ");
+        sName += getTabItem(sTab)->mText;
+        break;
+    case AccessibleNew:
+        sName = mNewButtonToolTipText.empty() ?
+            XPR_STRING_LITERAL("New tab") : mNewButtonToolTipText;
+        break;
+    default:
+        return E_INVALIDARG;
+    }
+    *aName = ::SysAllocString(sName.c_str());
+    return *aName != NULL ? S_OK : E_OUTOFMEMORY;
+}
+
+HRESULT TabCtrl::get_accRole(VARIANT aChild, VARIANT *aRole)
+{
+    if (aRole == NULL || aChild.vt != VT_I4)
+        return E_INVALIDARG;
+    ::VariantInit(aRole);
+    xpr_size_t sTab = InvalidTab;
+    const AccessiblePart sPart = getAccessiblePart(aChild.lVal, sTab);
+    if (sPart == AccessibleInvalid)
+        return E_INVALIDARG;
+    aRole->vt = VT_I4;
+    aRole->lVal = sPart == AccessibleSelf ? ROLE_SYSTEM_PAGETABLIST :
+        sPart == AccessibleTab ? ROLE_SYSTEM_PAGETAB :
+        ROLE_SYSTEM_PUSHBUTTON;
+    return S_OK;
+}
+
+HRESULT TabCtrl::get_accState(VARIANT aChild, VARIANT *aState)
+{
+    if (aState == NULL || aChild.vt != VT_I4)
+        return E_INVALIDARG;
+    ::VariantInit(aState);
+    xpr_size_t sTab = InvalidTab;
+    const AccessiblePart sPart = getAccessiblePart(aChild.lVal, sTab);
+    if (sPart == AccessibleInvalid)
+        return E_INVALIDARG;
+    aState->vt = VT_I4;
+    aState->lVal = STATE_SYSTEM_FOCUSABLE;
+    if (sPart == AccessibleTab)
+    {
+        aState->lVal |= STATE_SYSTEM_SELECTABLE;
+        if (mCurTab == sTab)
+        {
+            aState->lVal |= STATE_SYSTEM_SELECTED;
+            if (::GetFocus() == GetSafeHwnd())
+                aState->lVal |= STATE_SYSTEM_FOCUSED;
+        }
+    }
+    else if (sPart == AccessibleSelf)
+    {
+        if (::GetFocus() == GetSafeHwnd())
+            aState->lVal |= STATE_SYSTEM_FOCUSED;
+    }
+    return S_OK;
+}
+
+HRESULT TabCtrl::get_accSelection(VARIANT *aSelection)
+{
+    if (aSelection == NULL)
+        return E_INVALIDARG;
+    ::VariantInit(aSelection);
+    if (getTabItem(mCurTab) == NULL)
+        return S_FALSE;
+    aSelection->vt = VT_I4;
+    aSelection->lVal = static_cast<long>(mCurTab) + 1;
+    return S_OK;
+}
+
+HRESULT TabCtrl::get_accFocus(VARIANT *aFocus)
+{
+    if (aFocus == NULL)
+        return E_INVALIDARG;
+    ::VariantInit(aFocus);
+    if (::GetFocus() != GetSafeHwnd())
+        return S_FALSE;
+    aFocus->vt = VT_I4;
+    aFocus->lVal = getTabItem(mCurTab) == NULL ?
+        CHILDID_SELF : static_cast<long>(mCurTab) + 1;
+    return S_OK;
+}
+
+HRESULT TabCtrl::get_accDefaultAction(VARIANT aChild, BSTR *aAction)
+{
+    if (aAction == NULL || aChild.vt != VT_I4)
+        return E_INVALIDARG;
+    *aAction = NULL;
+    xpr_size_t sTab = InvalidTab;
+    const AccessiblePart sPart = getAccessiblePart(aChild.lVal, sTab);
+    const wchar_t *sName = sPart == AccessibleTab ? L"Select" :
+        sPart == AccessibleSelectedClose ? L"Close" :
+        sPart == AccessibleNew ? L"New tab" : NULL;
+    if (sName == NULL)
+        return S_FALSE;
+    *aAction = ::SysAllocString(sName);
+    return *aAction != NULL ? S_OK : E_OUTOFMEMORY;
+}
+
+HRESULT TabCtrl::accSelect(long aFlags, VARIANT aChild)
+{
+    if (aChild.vt != VT_I4)
+        return E_INVALIDARG;
+    xpr_size_t sTab = InvalidTab;
+    if (getAccessiblePart(aChild.lVal, sTab) != AccessibleTab)
+        return E_INVALIDARG;
+    if ((aFlags & (SELFLAG_TAKEFOCUS | SELFLAG_TAKESELECTION)) == 0)
+        return E_INVALIDARG;
+    if ((aFlags & SELFLAG_TAKESELECTION) != 0 &&
+        XPR_IS_FALSE(setCurTab(sTab)))
+        return S_FALSE;
+    if ((aFlags & SELFLAG_TAKEFOCUS) != 0)
+        SetFocus();
+    return S_OK;
+}
+
+HRESULT TabCtrl::accLocation(
+    long *aLeft, long *aTop, long *aWidth, long *aHeight,
+    VARIANT aChild)
+{
+    if (aLeft == NULL || aTop == NULL || aWidth == NULL ||
+        aHeight == NULL || aChild.vt != VT_I4)
+        return E_INVALIDARG;
+    xpr_size_t sTab = InvalidTab;
+    const AccessiblePart sPart = getAccessiblePart(aChild.lVal, sTab);
+    CRect sRect;
+    if (sPart == AccessibleSelf)
+    {
+        GetWindowRect(&sRect);
+    }
+    else if (sPart == AccessibleTab)
+    {
+        sRect = getTabItem(sTab)->mTabRect;
+        ClientToScreen(&sRect);
+    }
+    else if (sPart == AccessibleSelectedClose)
+    {
+        sRect = getTabItem(sTab)->mCloseRect;
+        ClientToScreen(&sRect);
+    }
+    else if (sPart == AccessibleNew)
+    {
+        sRect = mNewButtonRect;
+        ClientToScreen(&sRect);
+    }
+    else
+    {
+        return E_INVALIDARG;
+    }
+    *aLeft = sRect.left;
+    *aTop = sRect.top;
+    *aWidth = max(0, sRect.Width());
+    *aHeight = max(0, sRect.Height());
+    return S_OK;
+}
+
+HRESULT TabCtrl::accHitTest(
+    long aScreenX, long aScreenY, VARIANT *aChild)
+{
+    if (aChild == NULL)
+        return E_INVALIDARG;
+    ::VariantInit(aChild);
+    CPoint sPoint(aScreenX, aScreenY);
+    ScreenToClient(&sPoint);
+    xpr_size_t sTab = InvalidTab;
+    TabItem *sSelected = getTabItem(mCurTab);
+    if (sSelected != NULL &&
+        sSelected->mCloseRect.IsRectEmpty() == FALSE &&
+        sSelected->mCloseRect.PtInRect(sPoint))
+    {
+        aChild->vt = VT_I4;
+        aChild->lVal = static_cast<long>(mTabDeque.size()) + 1;
+        return S_OK;
+    }
+    if (XPR_IS_TRUE(mShowNewButton) &&
+        mNewButtonRect.PtInRect(sPoint))
+    {
+        aChild->vt = VT_I4;
+        aChild->lVal = getAccessibleChildCount();
+        return S_OK;
+    }
+    sTab = hitTest(sPoint);
+    aChild->vt = VT_I4;
+    aChild->lVal = sTab == InvalidTab ?
+        CHILDID_SELF : static_cast<long>(sTab) + 1;
+    return S_OK;
+}
+
+HRESULT TabCtrl::accDoDefaultAction(VARIANT aChild)
+{
+    if (aChild.vt != VT_I4)
+        return E_INVALIDARG;
+    xpr_size_t sTab = InvalidTab;
+    const AccessiblePart sPart = getAccessiblePart(aChild.lVal, sTab);
+    if (sPart == AccessibleTab)
+        return XPR_IS_TRUE(setCurTab(sTab)) ? S_OK : S_FALSE;
+    if (mObserver == NULL)
+        return S_FALSE;
+    if (sPart == AccessibleSelectedClose)
+    {
+        mObserver->onTabCloseButton(*this, sTab);
+        return S_OK;
+    }
+    if (sPart == AccessibleNew)
+    {
+        mObserver->onTabNewButton(*this);
+        return S_OK;
+    }
+    return E_INVALIDARG;
 }
 
 xpr_size_t TabCtrl::getTabCount(void) const
@@ -367,6 +668,13 @@ xpr_bool_t TabCtrl::setCurTab(xpr_size_t aTab)
     mCurTab = aTab;
 
     recalcLayout();
+    if (::IsWindow(GetSafeHwnd()))
+    {
+        ::NotifyWinEvent(EVENT_OBJECT_REORDER,
+            GetSafeHwnd(), OBJID_CLIENT, CHILDID_SELF);
+        ::NotifyWinEvent(EVENT_OBJECT_SELECTION,
+            GetSafeHwnd(), OBJID_CLIENT, static_cast<LONG>(aTab) + 1);
+    }
 
     if (XPR_IS_NOT_NULL(mObserver))
     {
@@ -392,6 +700,9 @@ xpr_bool_t TabCtrl::setTab(xpr_size_t aTab, const xpr_tchar_t *aText, xpr_sint_t
     sTabItem->mImageIndex = aImageIndex;
 
     recalcLayout();
+    if (::IsWindow(GetSafeHwnd()))
+        ::NotifyWinEvent(EVENT_OBJECT_NAMECHANGE,
+            GetSafeHwnd(), OBJID_CLIENT, static_cast<LONG>(aTab) + 1);
 
     return XPR_TRUE;
 }
@@ -408,6 +719,9 @@ xpr_bool_t TabCtrl::setTabText(xpr_size_t aTab, const xpr_tchar_t *aText)
     sTabItem->mText = aText;
 
     recalcLayout();
+    if (::IsWindow(GetSafeHwnd()))
+        ::NotifyWinEvent(EVENT_OBJECT_NAMECHANGE,
+            GetSafeHwnd(), OBJID_CLIENT, static_cast<LONG>(aTab) + 1);
 
     return XPR_TRUE;
 }
@@ -523,6 +837,17 @@ xpr_bool_t TabCtrl::removeTab(xpr_size_t aTab)
         }
     }
 
+    // Child identifiers can shift when a tab closes. Refresh the
+    // accessible collection AFTER mCurTab and the observer are updated.
+    if (::IsWindow(GetSafeHwnd()))
+    {
+        ::NotifyWinEvent(EVENT_OBJECT_REORDER,
+            GetSafeHwnd(), OBJID_CLIENT, CHILDID_SELF);
+        if (getTabItem(mCurTab) != NULL)
+            ::NotifyWinEvent(EVENT_OBJECT_SELECTION,
+                GetSafeHwnd(), OBJID_CLIENT,
+                static_cast<LONG>(mCurTab) + 1);
+    }
     return XPR_TRUE;
 }
 
@@ -555,6 +880,9 @@ void TabCtrl::removeAllTabs(void)
     }
 
     mCurTab = InvalidTab;
+    if (::IsWindow(GetSafeHwnd()))
+        ::NotifyWinEvent(EVENT_OBJECT_REORDER,
+            GetSafeHwnd(), OBJID_CLIENT, CHILDID_SELF);
 
     if (XPR_IS_NOT_NULL(mObserver))
     {
@@ -1044,6 +1372,14 @@ void TabCtrl::OnPaint(void)
             sMemDC.LineTo(sCloseRect.left, sCloseRect.bottom);
             sMemDC.SelectObject(sOldClosePen);
         }
+        if (XPR_IS_TRUE(sSelected) &&
+            ::GetFocus() == GetSafeHwnd())
+        {
+            CRect sFocusRect(sTabButtonRect);
+            sFocusRect.DeflateRect(sTabInset + 1, sTabInset + 1);
+            if (!sFocusRect.IsRectEmpty())
+                sMemDC.DrawFocusRect(&sFocusRect);
+        }
     }
 
     if (XPR_IS_TRUE(mShowNewButton))
@@ -1439,11 +1775,53 @@ void TabCtrl::OnContextMenu(CWnd *aWnd, CPoint aPoint)
 void TabCtrl::OnSetFocus(CWnd *aOldWnd)
 {
     super::OnSetFocus(aOldWnd);
+    Invalidate(FALSE);
+    if (getTabItem(mCurTab) != NULL)
+        ::NotifyWinEvent(EVENT_OBJECT_FOCUS,
+            GetSafeHwnd(), OBJID_CLIENT, static_cast<LONG>(mCurTab) + 1);
 
     if (XPR_IS_NOT_NULL(mObserver))
     {
         mObserver->onSetFocus(*this);
     }
+}
+
+void TabCtrl::OnKillFocus(CWnd *aNewWnd)
+{
+    super::OnKillFocus(aNewWnd);
+    Invalidate(FALSE);
+}
+
+void TabCtrl::OnKeyDown(
+    xpr_uint_t aChar, xpr_uint_t aRep, xpr_uint_t aFlags)
+{
+    if (getTabItem(mCurTab) != NULL && mTabDeque.size() > 1)
+    {
+        xpr_size_t sTab = mCurTab;
+        if (aChar == VK_LEFT)
+            sTab = mCurTab == 0 ? mTabDeque.size() - 1 : mCurTab - 1;
+        else if (aChar == VK_RIGHT)
+            sTab = mCurTab + 1 >= mTabDeque.size() ? 0 : mCurTab + 1;
+        else if (aChar == VK_HOME)
+            sTab = 0;
+        else if (aChar == VK_END)
+            sTab = mTabDeque.size() - 1;
+        else
+        {
+            super::OnKeyDown(aChar, aRep, aFlags);
+            return;
+        }
+        if (XPR_IS_TRUE(setCurTab(sTab)))
+        {
+            // Regular tab changes focus their destination file list.
+            // Explicit arrow/Home/End navigation on this tab strip must
+            // retain the strip focus for subsequent keyboard selection.
+            SetFocus();
+            Invalidate(FALSE);
+        }
+        return;
+    }
+    super::OnKeyDown(aChar, aRep, aFlags);
 }
 
 CToolTipCtrl *TabCtrl::getToolTipCtrl(void) const

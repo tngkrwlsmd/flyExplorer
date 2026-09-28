@@ -107,6 +107,20 @@ NOT TESTED. UXH-05 is the next native acceptance task.
 
 **인수 조건:** 작은 창에서도 자주 쓰는 명령을 찾고 더보기 메뉴의 전체 명령에 키보드/마우스로 도달할 수 있어야 한다. 단순히 기능을 숨기거나 삭제하지 않는다.
 
+**2026-09-28 UXH-05 SCOPED ACCEPTED:** Native MFC
+IAccessible now exposes real named and selected TabItems,
+the selected-tab Close and optional New button, focus,
+selection, geometry, real default actions and events.
+Dark/Light 96-DPI owned physical keyboard/IAccessible
+actions passed with clean Release, source guards and
+native 17/0. Original settings hashes unchanged.
+See [scoped acceptance](UI_PHASE6_UXH05_TAB_ACCESSIBILITY_EVIDENCE_20260928.md).
+Spoken screen-reader session, actual High Contrast and
+125/150/200% DPI, UIA InvokePattern and wider Tab/F6
+focus routing remain open. Physical Tab/F6 did not
+move a test-focused tab in the owned single-pane setup;
+do not mark that check passed.
+
 ### UXH-05 · P2 조사 · 커스텀 탭 접근성 정보
 
 **OBSERVED:** 새 탭 명령 이후 실제 탭 영역의 픽셀 변화가 있었지만, 이번 UIA 자동화 호출에서 커스텀 TabCtrl의 하위 TabItem 목록은 비어 있었다. 네이티브 TCM_GETITEMCOUNT도 이 커스텀 컨트롤의 항목 수를 알려주지 않았다. **화면낭독기가 실제로 사용 불가하다고 판단할 증거는 아니다.**
