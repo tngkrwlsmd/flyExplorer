@@ -43,6 +43,14 @@ real DPI were not individually exercised and remain OPEN.
 
 **인수 조건:** 다크/라이트와 실제 High Contrast에서 배경·글자·포커스의 가독성 확보, 조합키 입력과 해제 및 기존 설정 보존. 실행하지 못한 테마는 NOT TESTED.
 
+**2026-09-28 experimental progress (NOT IN MAIN):** On the
+local work branch fix/uxh02-search-success-nonmodal-20260928,
+zero/one/three-result actual owned search GUI and the retained
+wrong-location error dialog passed. Active cancellation, result
+navigation and actual screen-reader announcement are NOT TESTED;
+this candidate is NOT COMPLETE and must not be merged yet.
+See [partial evidence](UI_PHASE6_SEARCH_NONMODAL_PARTIAL_20260928.md).
+
 ### UXH-02 · P2 · 파일 검색 완료 알림의 불필요한 모달 및 테마 차이
 
 **OBSERVED:** 임시 폴더에서 파일 한 개를 즉시 찾았고, 검색 창 하단에도 결과 건수와 시간이 나오지만, 위에 **밝은 Windows 정보 MessageBox**가 추가 표시돼 확인 클릭을 요구한다. 실제 캡처 ux-private-search-result.png와 search_dlg.cpp의 완료 메시지 호출을 각각 확인했다.

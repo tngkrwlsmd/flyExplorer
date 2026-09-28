@@ -1494,35 +1494,12 @@ LRESULT SearchDlg::OnFinalize(WPARAM wParam, LPARAM lParam)
     mStatusBar.setPaneText(0, sStatusText);
     mStatusBar.setDynamicPaneText(1, sStatusElapsedTimeText, 0);
 
-    xpr_tchar_t sItemCountText[0xff] = {0};
-    xpr_tchar_t sElapsedMinuteTimeText[0xff] = {0};
-    xpr_tchar_t sElapsedSecondTimeText[0xff] = {0};
-
-    getStatusNumberFormat(
-        sItemCountText, XPR_COUNT_OF(sItemCountText) - 1,
-        sElapsedMinuteTimeText, XPR_COUNT_OF(sElapsedMinuteTimeText) - 1,
-        sElapsedSecondTimeText, XPR_COUNT_OF(sElapsedSecondTimeText) - 1);
-
-    xpr::string sMsg;
-    if (sElapsedMinuteTimeText[0] == 0)
-    {
-        sMsg.format(
-            gApp.loadFormatString(XPR_STRING_LITERAL("popup.search.msg.search_result"),
-            XPR_STRING_LITERAL("%s,%s")),
-            sItemCountText,
-            sElapsedSecondTimeText);
-    }
-    else
-    {
-        sMsg.format(
-            gApp.loadFormatString(XPR_STRING_LITERAL("popup.search.msg.search_long_result"),
-            XPR_STRING_LITERAL("%s,%s,%s")),
-            sItemCountText,
-            sElapsedMinuteTimeText,
-            sElapsedSecondTimeText);
-    }
-
-    MessageBox(sMsg.c_str(), XPR_NULL, MB_OK | MB_ICONINFORMATION);
+    // Existing result and elapsed-time status panes already report
+    // successful completion. Do not interrupt the result workflow with
+    // a duplicate, system-light native information modal.
+    if (::IsWindow(mStatusBar.GetSafeHwnd()))
+        ::NotifyWinEvent(EVENT_OBJECT_NAMECHANGE,
+            mStatusBar.GetSafeHwnd(), OBJID_CLIENT, CHILDID_SELF);
 
     return 0;
 }
