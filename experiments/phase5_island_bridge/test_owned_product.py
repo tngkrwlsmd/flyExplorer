@@ -13,6 +13,9 @@ dll=folder/'x64/Debug/FlyExplorerIslandBridge/FlyExplorerIslandBridge.dll'
 source=Path(os.environ['APPDATA'])/'fxfile'/'conf'
 names=('fxfile.conf','fxfile-main.conf','fxfile-toolbar.dat',
        'fxfile-coolbar.dat','fxfile-dlg_state.conf','fxfile-folder_layout.conf')
+# Optional crash-isolation modes; never enable in ordinary product tests.
+textbox_mode=os.environ.get('FLYEXP_PHASE5_DIAG_TEXTBOX','')
+assert textbox_mode in ('','plain','resources'),'invalid TextBox diagnostic mode'
 assert product.is_file() and dll.is_file(),'build both isolated products before running'
 assert source.is_dir() and all((source/f).is_file() for f in names),'read-only profile prerequisite'
 original={f:hashlib.sha256((source/f).read_bytes()).hexdigest() for f in names}
@@ -101,6 +104,14 @@ try:
  for name,control in controls.items():
   assert control.exists(timeout=3),'missing actual XAML '+name+' button'
  assert 'Phase5IslandCurrentFolderText' in {item[0] for item in descendants}
+ if textbox_mode:
+  eventually(lambda:trace.exists() and 'dll-textbox-loaded' in trace.read_text(errors='replace'),
+             'test-only WinUI TextBox never loaded',9)
+  probe=island_ui.child_window(auto_id='Phase5IslandDiagnosticTextBox',
+                                control_type='Edit')
+  assert probe.exists(timeout=3),'test-only WinUI TextBox UIA edit missing'
+  assert 'isolated' in probe.window_text().lower(),'test-only TextBox initial text missing'
+  print('REAL_PRODUCT_ISOLATED_TEXTBOX_LOAD_UIA_PASS',textbox_mode,flush=True)
  print('REAL_PRODUCT_TEST_DPI',u.GetDpiForWindow(hwnd),flush=True)
  rect_t=W.RECT()
  assert u.GetWindowRect(island,C.byref(rect_t))
@@ -141,6 +152,7 @@ try:
  after_island=(after_rect.left,after_rect.top,after_rect.right,after_rect.bottom)
  assert after_island!=before,'XAML child did not move/resize with MFC host'
  print('REAL_PRODUCT_IN_PROCESS_RESIZE_RESPONSIVE_PASS',before,'->',after_island,flush=True)
+ if textbox_mode:print('REAL_PRODUCT_TEXTBOX_DIAGNOSTIC_END_TO_END_PASS',textbox_mode,flush=True)
 finally:
  try:del controls,island_ui,frame
  except NameError:pass
