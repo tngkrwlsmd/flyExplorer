@@ -89,6 +89,60 @@ namespace
 xpr_uint_t WM_TASK_RESTARTED = ::RegisterWindowMessage(XPR_STRING_LITERAL("TaskbarCreated"));
 xpr_uint_t WM_SINGLE_PROCESS = SingleProcess::getMsg();
 
+// Phase 5 experiment only: opt-in, test-owned DLL attaches WinUI 3 to this
+// *actual* MFC MainFrame. Unset environment variable leaves product unchanged.
+typedef BOOL (WINAPI *TestIslandCreate)(HWND);
+typedef void (WINAPI *TestIslandResize)(int,int,int,int);
+typedef void (WINAPI *TestIslandDestroy)();
+static HMODULE sTestIslandDll = NULL;
+static TestIslandResize sTestIslandResize = NULL;
+static TestIslandDestroy sTestIslandDestroy = NULL;
+static bool sTestIslandReady = false;
+static void AttachTestIsland(HWND mainHwnd)
+{
+    wchar_t dllPath[32768] = {};
+    DWORD count = ::GetEnvironmentVariableW(L"FLYEXP_PHASE5_TEST_ISLAND_DLL",
+                                          dllPath, _countof(dllPath));
+    if (count == 0 || count >= _countof(dllPath)) return;
+    const wchar_t *basename = wcsrchr(dllPath, L'\\');
+    if (!basename || _wcsicmp(basename + 1,
+                             L"FlyExplorerIslandBridge.dll") != 0) return;
+    HMODULE module = ::LoadLibraryExW(dllPath, NULL,
+        LOAD_LIBRARY_SEARCH_DLL_LOAD_DIR | LOAD_LIBRARY_SEARCH_DEFAULT_DIRS);
+    if (!module) {::OutputDebugStringW(L"Phase5 test island DLL load failed");return;}
+    TestIslandCreate create = reinterpret_cast<TestIslandCreate>(
+        ::GetProcAddress(module, "FlyIslandCreate"));
+    TestIslandResize resize = reinterpret_cast<TestIslandResize>(
+        ::GetProcAddress(module, "FlyIslandResize"));
+    TestIslandDestroy destroy = reinterpret_cast<TestIslandDestroy>(
+        ::GetProcAddress(module, "FlyIslandDestroy"));
+    if (!create || !resize || !destroy || !create(mainHwnd)) {
+        ::OutputDebugStringW(L"Phase5 test island initialize failed");
+        // Do not unload a DLL after partial XAML initialization on this thread.
+        return;
+    }
+    sTestIslandDll = module;
+    sTestIslandResize = resize;
+    sTestIslandDestroy = destroy;
+    sTestIslandReady = true;
+    RECT client = {};
+    ::GetClientRect(mainHwnd, &client);
+    int width = (std::min)(static_cast<int>(client.right), 760);
+    int height = (std::min)(static_cast<int>(client.bottom), 145);
+    resize((std::max)(0, static_cast<int>(client.right)-width),
+           (std::max)(0, static_cast<int>(client.bottom)-height),
+           width, height);
+}
+static void DetachTestIsland()
+{
+    if (!sTestIslandReady || !sTestIslandDestroy) return;
+    sTestIslandDestroy();
+    sTestIslandReady = false;
+    sTestIslandResize = NULL;
+    sTestIslandDestroy = NULL;
+    // DLL remains mapped until process exit: never unload live XAML code.
+}
+
 //
 // user defined message
 //
@@ -523,6 +577,8 @@ xpr_sint_t MainFrame::OnCreate(LPCREATESTRUCT aCreateStruct)
     sRemovableDevice.create();
     sRemovableDevice.registerObserver(this);
 
+    // Explicitly test-scoped; no global install, shell hook or normal UI change.
+    AttachTestIsland(m_hWnd);
     return 0;
 }
 
@@ -775,8 +831,9 @@ LRESULT MainFrame::OnThemeChanged(WPARAM aWParam, LPARAM aLParam)
 
 void MainFrame::OnDestroy(void)
 {
+    // Fallback for WM_DESTROY not preceded by regular WM_CLOSE.
+    DetachTestIsland();
     destroy();
-
     super::OnDestroy();
 }
 
@@ -1083,8 +1140,18 @@ xpr_bool_t MainFrame::OnEraseBkgnd(CDC *aDC)
 void MainFrame::OnSize(xpr_uint_t aType, xpr_sint_t cx, xpr_sint_t cy)
 {
     super::OnSize(aType, cx, cy);
-
     recalcLayout(aType);
+    if (sTestIslandReady && sTestIslandResize && aType != SIZE_MINIMIZED)
+    {
+        // Temporary overlay in an isolated process; do not alter saved bars.
+        CRect client;
+        GetClientRect(&client);
+        xpr_sint_t width = (std::min)(client.Width(), 760);
+        xpr_sint_t height = (std::min)(client.Height(), 145);
+        sTestIslandResize((std::max)(0, client.Width()-width),
+                          (std::max)(0, client.Height()-height),
+                          width, height);
+    }
 }
 
 // reference: CWnd::RepositionBars(...)
@@ -1285,7 +1352,9 @@ void MainFrame::OnClose(void)
     if (confirmToClose() == XPR_TRUE)
     {
         saveOption();
-
+        // Destroy the test island while the native MFC owner HWND is alive.
+        // WM_DESTROY can be too late once MFC closes child HWNDs.
+        DetachTestIsland();
         super::OnClose();
     }
 }
