@@ -64,6 +64,7 @@ def waitfor(f,description,seconds=6):
  raise AssertionError(description+' last='+str(last))
 owned=[]
 prod=None;ui=None
+ph=wh=0
 try:
  prod=subprocess.Popen([str(product),'--conf_dir',str(copy),str(fixture)],cwd=str(work),env=env,
                        stdin=subprocess.DEVNULL,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
@@ -115,8 +116,17 @@ finally:
  gc.collect()
  for proc in reversed(owned):
   if proc.poll() is not None:continue
-  hwnd=top_for(proc.pid,lambda t:bool(t))
-  if hwnd:u.PostMessageW(hwnd,0x10,0,0)
+  # The WinUI process also has a visible notification-host HWND. A generic
+  # "one visible titled window" search can find two and silently post nothing.
+  # Close the exact main HWND validated earlier for this test-owned process.
+  hwnd=wh if proc is ui else ph if proc is prod else 0
+  owner=W.DWORD()
+  if hwnd and u.IsWindow(hwnd):
+   u.GetWindowThreadProcessId(hwnd,C.byref(owner))
+  if hwnd and owner.value==proc.pid:
+   assert u.PostMessageW(hwnd,0x10,0,0), 'WM_CLOSE post failed for owned main window'
+  else:
+   print('OWNED_MAIN_WINDOW_NOT_AVAILABLE_AT_CLOSE',proc.pid,flush=True)
   try:proc.wait(timeout=8)
   except subprocess.TimeoutExpired:
    proc.terminate();proc.wait(timeout=5)
