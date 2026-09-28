@@ -240,6 +240,49 @@ xpr_bool_t ColumnSetDlg::OnInitDialog(void)
     return XPR_TRUE;
 }
 
+xpr_sint_t ColumnSetDlg::readEditedColumnWidth(
+    xpr_sint_t aPreviousWidth)
+{
+    // Keep legacy widths if the user has not changed the number, but do not
+    // allow a newly entered zero to silently make a visible column vanish.
+    const xpr_sint_t sMinimum =
+        max(24, ui::ModernUI::scaleForWindow(24, m_hWnd));
+    const xpr_sint_t sMaximum =
+        max(sMinimum, ui::ModernUI::scaleForWindow(4096, m_hWnd));
+    xpr_tchar_t sInput[64] = {0};
+    const xpr_sint_t sLength =
+        GetDlgItemText(IDC_COLUMN_WIDTH, sInput, _countof(sInput));
+
+    xpr_sint_t sWidth = 0;
+    xpr_bool_t sValid = sLength > 0 ? XPR_TRUE : XPR_FALSE;
+    for (xpr_sint_t i = 0; i < sLength; ++i)
+    {
+        if (sInput[i] < XPR_STRING_LITERAL('0') ||
+            sInput[i] > XPR_STRING_LITERAL('9'))
+        {
+            sValid = XPR_FALSE;
+            break;
+        }
+        // Saturate during parsing so extremely long numeric input cannot
+        // overflow even before the final width limit is applied.
+        sWidth = min(sMaximum + 1,
+            sWidth * 10 + (sInput[i] - XPR_STRING_LITERAL('0')));
+    }
+    if (XPR_IS_FALSE(sValid))
+    {
+        SetDlgItemInt(IDC_COLUMN_WIDTH, aPreviousWidth, XPR_FALSE);
+        return aPreviousWidth;
+    }
+    if (sWidth == aPreviousWidth)
+        return aPreviousWidth;
+
+    const xpr_sint_t sClamped =
+        max(sMinimum, min(sMaximum, sWidth));
+    if (sClamped != sWidth)
+        SetDlgItemInt(IDC_COLUMN_WIDTH, sClamped, XPR_FALSE);
+    return sClamped;
+}
+
 void ColumnSetDlg::OnOK(void)
 {
     xpr_sint_t sIndex;
@@ -251,7 +294,8 @@ void ColumnSetDlg::OnOK(void)
         sColumnItemData = (ColumnItemData *)mListCtrl.GetItemData(sIndex);
         if (sColumnItemData != XPR_NULL)
         {
-            sColumnItemData->mWidth = GetDlgItemInt(IDC_COLUMN_WIDTH, XPR_FALSE);
+            sColumnItemData->mWidth =
+                readEditedColumnWidth(sColumnItemData->mWidth);
 
             mListCtrl.Invalidate(XPR_FALSE);
             mListCtrl.UpdateWindow();
@@ -460,7 +504,8 @@ void ColumnSetDlg::OnLvnItemchangedList(NMHDR *pNMHDR, LRESULT *pResult)
             sColumnItemData = (ColumnItemData *)mListCtrl.GetItemData(sIndex);
             if (sColumnItemData != XPR_NULL)
             {
-                sColumnItemData->mWidth = GetDlgItemInt(IDC_COLUMN_WIDTH, XPR_FALSE);
+                sColumnItemData->mWidth =
+                readEditedColumnWidth(sColumnItemData->mWidth);
 
                 mListCtrl.Invalidate(XPR_FALSE);
                 mListCtrl.UpdateWindow();
@@ -503,7 +548,8 @@ void ColumnSetDlg::OnItemUp(void)
     ColumnItemData *sColumnItemData = (ColumnItemData *)mListCtrl.GetItemData(sIndex);
     if (sColumnItemData != XPR_NULL)
     {
-        sColumnItemData->mWidth = GetDlgItemInt(IDC_COLUMN_WIDTH, XPR_FALSE);
+        sColumnItemData->mWidth =
+                readEditedColumnWidth(sColumnItemData->mWidth);
         sColumnItemData->mUse   = mListCtrl.GetCheck(sIndex);
     }
 
@@ -533,7 +579,8 @@ void ColumnSetDlg::OnItemDown(void)
     ColumnItemData *sColumnItemData = (ColumnItemData *)mListCtrl.GetItemData(sIndex);
     if (sColumnItemData != XPR_NULL)
     {
-        sColumnItemData->mWidth = GetDlgItemInt(IDC_COLUMN_WIDTH, XPR_FALSE);
+        sColumnItemData->mWidth =
+                readEditedColumnWidth(sColumnItemData->mWidth);
         sColumnItemData->mUse   = mListCtrl.GetCheck(sIndex);
     }
 

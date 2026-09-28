@@ -715,3 +715,27 @@ editing (128), header color, modal/address isolation, normal exit and
 original six user-settings hashes. Higher DPI and actual High Contrast
 GUI acceptance remain unverified; see
 docs/development/UI_COLUMN_DETAILS_HEADER_EVIDENCE_20260928.md.
+
+
+## 2026-09-28 Windows 11 MFC DPI/theme UI regression (scoped)
+
+Connected Windows 11 single-monitor 96-DPI owned GUI: actual native
+main list/tree vertical+horizontal pointer scrolling, main-list
+vertical thumb/track/wheel, native address/modal popup cleanup, Dark
+and Light column headers, divider and numeric input, live Light to
+Dark to Light, and 790px compact main layout all passed. Original
+six user settings hashes and global desktop DPI/HC-off state matched.
+
+A REAL visible non-pinned column width 80->0 bug was reproduced.
+Newly entered 0 now commits at 24px, 99999 at 4096px at actual
+96 DPI; physical alphabetic input is rejected by ES_NUMBER.
+The four assignment paths share DPI-scaled normalization while
+unedited historic values remain unchanged. Incremental Release
+build, six source tests, invariants and native functions 17/0 PASS.
+
+Actual 120/144/192 DPI and real Windows High Contrast GUI remain
+NOT TESTED: only one live 96-DPI user monitor and no isolated VM
+were available; global display/theme settings were not changed.
+Other legacy raw dialog/BookmarkSetWnd screen acceptance also
+remains open. Exact test limits and audit:
+docs/development/UI_WINDOWS11_DPI_CONTRAST_20260928_EVIDENCE.md.

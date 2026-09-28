@@ -40,6 +40,7 @@ protected:
     xpr_sint_t addList(ColumnItemData *aColumnItemData);
     xpr_sint_t insertList(xpr_sint_t aIndex, ColumnItemData *aColumnItemData);
     void selectItem(xpr_sint_t aIndex);
+    xpr_sint_t readEditedColumnWidth(xpr_sint_t aPreviousWidth);
 
 protected:
     LPSHELLFOLDER2 mShellFolder2;
