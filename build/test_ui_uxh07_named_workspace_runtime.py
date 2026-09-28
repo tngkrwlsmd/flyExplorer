@@ -70,17 +70,117 @@ def frame(pid):
   if len(x)==1:return x[0]
   time.sleep(.10)
  raise AssertionError("test-owned main frame missing")
+def invoke_workspace_menu(which,mode):
+ # Actual foreground physical key or pointer activation, NEVER
+ # blindly use menu positions as a keyboard Enter command.
+ target=33052 if which=="save" else 33053
+ assert u.IsWindow(main)
+ # Match previously validated UXH-04 owner-drawn menu's focus path.
+ bounds=rect(main)
+ mouse.click(coords=(bounds[0]+170,bounds[1]+14))
+ assert u.GetForegroundWindow()==main
+ root_before={h for h in en(p.pid,True)
+              if cls(h)=="#32768" and u.IsWindowVisible(h)}
+ keyboard.send_keys("%v",pause=.09)
+ time.sleep(.28)
+ new=[h for h in en(p.pid,True) if
+      cls(h)=="#32768" and u.IsWindowVisible(h) and h not in root_before]
+ if not new:
+  print("WORKSPACE_ALT_V_SAFE_DIAGNOSTIC",
+     "BEFORE",len(root_before),
+     "AFTER",[(cls(h),title(h)) for h in en(p.pid,True)
+       if cls(h)=="#32768"],
+     "FOREGROUND",u.GetForegroundWindow()==main,flush=True)
+ assert new,"physical Alt+V did not open owned View menu"
+ root=int(u.SendMessageW(new[-1],0x01E1,0,0))
+ u.GetMenuItemCount.argtypes=(w.HMENU,)
+ u.GetMenuItemCount.restype=c.c_int
+ u.GetSubMenu.argtypes=(w.HMENU,c.c_int)
+ u.GetSubMenu.restype=w.HMENU
+ u.GetMenuItemID.argtypes=(w.HMENU,c.c_int)
+ u.GetMenuItemID.restype=w.UINT
+ u.GetMenuState.argtypes=(w.HMENU,w.UINT,w.UINT)
+ u.GetMenuState.restype=w.UINT
+ u.GetMenuItemRect.argtypes=(w.HWND,w.HMENU,w.UINT,c.POINTER(RECT))
+ u.GetMenuItemRect.restype=w.BOOL
+ matches=[]
+ for i in range(u.GetMenuItemCount(root)):
+  sub=u.GetSubMenu(root,i)
+  if not sub:continue
+  sub=int(sub)
+  ids=[u.GetMenuItemID(sub,j) for j in range(u.GetMenuItemCount(sub))]
+  if ids.count(33052)==1 and ids.count(33053)==1:matches.append((i,sub))
+ assert len(matches)==1,("workspace submenu not uniquely owned",matches)
+ index,sub=matches[0]
+ assert not (int(u.GetMenuState(sub,target,0))&3),("disabled native command",target)
+ print("WORKSPACE_REAL_NATIVE_MENU_COMMAND_IDS_VERIFIED",which,
+       mode,"SUBMENU_POSITION",index,flush=True)
+ if mode=="keyboard":
+  keyboard.send_keys("w",pause=.09)
+  time.sleep(.21)
+  visible=[h for h in en(p.pid,True) if cls(h)=="#32768"
+          and u.IsWindowVisible(h) and h not in new]
+  assert visible,"physical W did not open verified Workspaces submenu"
+  menu=int(u.SendMessageW(visible[-1],0x01E1,0,0))
+  ids=[u.GetMenuItemID(menu,j) for j in range(u.GetMenuItemCount(menu))]
+  assert ids.count(target)==1,("opened unexpected W submenu",ids,target)
+  keyboard.send_keys("s" if target==33052 else "o",pause=.085)
+  print("WORKSPACE_VERIFIED_REAL_PHYSICAL_MNEMONIC_DISPATCH",which,flush=True)
+ else:
+  bound=RECT()
+  assert u.GetMenuItemRect(main,root,index,c.byref(bound))
+  mouse.move(coords=((bound.left+bound.right)//2,(bound.top+bound.bottom)//2))
+  time.sleep(.4)
+  visible=[h for h in en(p.pid,True) if cls(h)=="#32768"
+           and u.IsWindowVisible(h) and h not in new]
+  assert visible,"physical pointer hover did not open submenu"
+  actual=int(u.SendMessageW(visible[-1],0x01E1,0,0))
+  ids=[u.GetMenuItemID(actual,j) for j in range(u.GetMenuItemCount(actual))]
+  assert ids.count(target)==1,("pointer displayed unexpected submenu",ids)
+  leaf=RECT()
+  idx=ids.index(target)
+  assert u.GetMenuItemRect(main,actual,idx,c.byref(leaf))
+  mouse.click(coords=((leaf.left+leaf.right)//2,(leaf.top+leaf.bottom)//2))
+  print("WORKSPACE_VERIFIED_REAL_PHYSICAL_POINTER_DISPATCH",which,flush=True)
+ time.sleep(.28)
 def tabs(m):
  return [[x.element_info.name for x in Desktop(backend="uia").window(handle=h).descendants()
     if x.element_info.control_type=="TabItem"]
    for h in en(m) if cls(h)=="TabCtrl" and u.IsWindowVisible(h)]
 def dialog(pid,m,when,timeout=80):
  for _ in range(timeout):
-  ds=[h for h in en(pid,True) if h!=m and cls(h)=="#32770" and u.IsWindowVisible(h)]
-  if ds:return ds[0]
+  ds=[h for h in en(pid,True) if h!=m and cls(h)=="#32770"
+      and u.IsWindowVisible(h) and title(h)!="Workspaces"]
+  for h in ds:
+   try:
+    fields=[x for x in Desktop(backend="uia").window(handle=h).descendants()
+      if x.is_visible() and x.element_info.control_type=="Edit"
+      and x.element_info.name.strip().endswith(":")]
+    if len(fields)==1:return h
+   except Exception:pass
   time.sleep(.1)
  raise AssertionError(when+" file dialog did not open")
 p=None;main=0;child=None;childmain=0
+u.SendMessageW.argtypes=(w.HWND,w.UINT,w.WPARAM,w.LPARAM)
+u.SendMessageW.restype=c.c_ssize_t
+owned_child_dirs=[]
+def check_child_isolation(q):
+ cmd=q.cmdline()
+ assert "--conf_dir" in cmd,cmd
+ folder=Path(cmd[cmd.index("--conf_dir")+1])
+ assert folder.name.startswith("fxw") and folder.suffix==".tmp"
+ assert (folder/"fxfile-workspace-owned.marker").is_file()
+ for opt in ("fxfile-toolbar.dat","fxfile-coolbar.dat"):
+  assert (folder/opt).read_bytes()==(conf/opt).read_bytes(),opt
+ owned_child_dirs.append(folder)
+ print("OWNED_CHILD_PRIVATE_MARKER_AND_CUSTOM_TOOLBARS_COPIED=True",flush=True)
+def assert_child_cleaned(folder):
+ for _ in range(65):
+  if not folder.exists():break
+  time.sleep(.1)
+ assert not folder.exists(),("private session still present after normal exit",
+                            [p.name for p in folder.iterdir()] if folder.exists() else [])
+ print("OWNED_CHILD_PRIVATE_CONFIG_REMOVED_AFTER_EXIT=True",flush=True)
 before_fly={v.pid for v in psutil.process_iter(["name"])
             if (v.info["name"] or "").lower()=="fxfile.exe"}
 try:
@@ -94,7 +194,10 @@ try:
    [x.startswith("Workspace Owned") for x in pane] for pane in first],flush=True)
  assert len(first)==2 and sorted([left.name,right.name])==sorted([x for pane in first for x in pane])
  workspace=home/"test-named-workspace.fxworkspace"
- assert u.PostMessageW(main,0x111,33052,0)
+ (invoke_workspace_menu("save", "keyboard" if
+    "--menu-keyboard" in sys.argv else "pointer") if
+    ("--menu-keyboard" in sys.argv or "--menu-pointer" in sys.argv)
+    else u.PostMessageW(main,0x111,33052,0))
  h=dialog(p.pid,main,"Save")
  print("REAL_NATIVE_SAVE_DIALOG",cls(h),title(h).encode("ascii","backslashreplace").decode(),flush=True)
  controls=[(x.element_info.control_type,x.element_info.name) for x in
@@ -127,7 +230,10 @@ try:
        "HAS_MAIN",("[main]" in contents),
        "HAS_SCHEMA",("[workspace]" in contents),flush=True)
   assert all(k in contents for k in ("[workspace]","schema = 1",left.name,right.name))
-  assert u.PostMessageW(main,0x111,33053,0)
+  (invoke_workspace_menu("open", "keyboard" if
+    "--menu-keyboard" in sys.argv else "pointer") if
+    ("--menu-keyboard" in sys.argv or "--menu-pointer" in sys.argv)
+    else u.PostMessageW(main,0x111,33053,0))
   opened=dialog(p.pid,main,"Open")
   print("REAL_NATIVE_OPEN_DIALOG",cls(opened),title(opened).encode("ascii","backslashreplace").decode(),flush=True)
   edits=[x for x in Desktop(backend="uia").window(handle=opened).descendants()
@@ -155,6 +261,7 @@ try:
     child=possible[0];break
    time.sleep(.13)
   assert child,"owned parent failed to spawn distinct workspace process"
+  check_child_isolation(child)
   childmain=frame(child.pid)
   actual=[]
   for _ in range(70):
@@ -176,10 +283,67 @@ try:
   print("WORKSPACE_NEW_WINDOW_DISTINCT_PID",child.pid!=p.pid,flush=True)
   print("ORIGINAL_WINDOW_TABS_AFTER_OPEN",tabs(main),flush=True)
   assert tabs(main)==first,"opening workspace altered current pane state"
+  if "--negative" in sys.argv:
+   if childmain and u.IsWindow(childmain):
+    u.PostMessageW(childmain,0x10,0,0)
+   if child:child.wait(timeout=12)
+   if owned_child_dirs:assert_child_cleaned(owned_child_dirs[-1])
+   child=None;childmain=0
+   base=workspace.read_text(encoding="utf-16")
+   target=str(left)
+   malformed=[
+    ("empty",b""),
+    ("unknown-schema",base.replace("schema = 1","schema = 2").encode("utf-16")),
+    ("bad-row",base.replace("main.view.row_count = 1",
+                            "main.view.row_count = 0").encode("utf-16")),
+    ("missing-tab",re.sub(r"(?m)^\s*main.view1.tab1.path\s*=\s*[^\r\n]*",
+                    "",base).encode("utf-16")),
+    ("missing-folder",base.replace(target,str(home/"does-not-exist-uxh07")).encode("utf-16")),
+    ("oversize",b"x"*1048577)]
+   assert malformed[1][1]!=workspace.read_bytes()
+   assert malformed[2][1]!=workspace.read_bytes()
+   assert malformed[3][1]!=workspace.read_bytes()
+   assert malformed[4][1]!=workspace.read_bytes()
+   for name,blob in malformed:
+    path=home/("bad-"+name+".fxworkspace")
+    path.write_bytes(blob)
+    assert u.PostMessageW(main,0x111,33053,0)
+    opened=dialog(p.pid,main,"invalid "+name)
+    edits=[x for x in Desktop(backend="uia").window(handle=opened).descendants()
+       if x.is_visible() and x.element_info.control_type=="Edit"
+       and x.element_info.name.strip().endswith(":")]
+    assert len(edits)==1,("invalid native file-name edit",name)
+    edits[0].set_edit_text(str(path));edits[0].set_focus()
+    keyboard.send_keys("{ENTER}")
+    warning=None
+    for _ in range(85):
+     matches=[h for h in en(p.pid,True)
+         if cls(h)=="#32770" and u.IsWindowVisible(h)
+         and title(h)=="Workspaces"]
+     if matches:warning=matches[0];break
+     time.sleep(.09)
+    assert warning,("no warning for malformed user workspace",name)
+    labels=[x.element_info.name for x in
+       Desktop(backend="uia").window(handle=warning).descendants()
+       if x.element_info.control_type=="Text"]
+    assert labels,("empty validation warning",name)
+    print("REAL_INVALID_WORKSPACE_WARNING",name,
+      [v.encode("ascii","backslashreplace").decode()[:95] for v in labels],flush=True)
+    # This is the *test-owned* warning, not an arbitrary desktop dialog.
+    u.PostMessageW(warning,0x111,1,0)
+    for _ in range(45):
+     if not u.IsWindow(warning) or not u.IsWindowVisible(warning):break
+     time.sleep(.08)
+    assert not u.IsWindowVisible(warning),("warning did not close",name)
+    assert tabs(main)==first,("invalid workspace touched active tabs",name)
+    assert child is None,("invalid workspace unexpectedly spawned child",name)
+   print("SIX_INVALID_WORKSPACE_FILES_REJECTED_BY_REAL_NATIVE_DIALOGS=True",
+         flush=True)
   print("WORKSPACE_REAL_NATIVE_SAVE_OPEN_DIALOGS_COMPLETE=True",flush=True)
   if "--multiple" in sys.argv:
    if childmain and u.IsWindow(childmain):u.PostMessageW(childmain,0x10,0,0)
    if child:child.wait(timeout=12)
+   if owned_child_dirs: assert_child_cleaned(owned_child_dirs[-1])
    child=None;childmain=0
    active=next(h for h in en(main)
      if cls(h)=="TabCtrl" and u.IsWindowVisible(h))
@@ -192,7 +356,10 @@ try:
     time.sleep(.12)
    assert sorted(len(q) for q in later)==[1,2],later
    second=home/"second-distinct-named.fxworkspace"
-   assert u.PostMessageW(main,0x111,33052,0)
+   (invoke_workspace_menu("save", "keyboard" if
+    "--menu-keyboard" in sys.argv else "pointer") if
+    ("--menu-keyboard" in sys.argv or "--menu-pointer" in sys.argv)
+    else u.PostMessageW(main,0x111,33052,0))
    save=dialog(p.pid,main,"second Save")
    edits=[x for x in Desktop(backend="uia").window(handle=save).descendants()
       if x.is_visible() and x.element_info.control_type=="Edit"
@@ -208,7 +375,10 @@ try:
    assert workspace.read_bytes()!=second.read_bytes(),(
         "two named snapshots must differ when active tabs differ")
    print("TWO_DISTINCT_NAMED_FILES_WITH_DIFFERENT_TAB_LAYOUTS=True",flush=True)
-   assert u.PostMessageW(main,0x111,33053,0)
+   (invoke_workspace_menu("open", "keyboard" if
+    "--menu-keyboard" in sys.argv else "pointer") if
+    ("--menu-keyboard" in sys.argv or "--menu-pointer" in sys.argv)
+    else u.PostMessageW(main,0x111,33053,0))
    op=dialog(p.pid,main,"second Open")
    edits=[x for x in Desktop(backend="uia").window(handle=op).descendants()
       if x.is_visible() and x.element_info.control_type=="Edit"
@@ -228,6 +398,7 @@ try:
     if len(possibles)==1:child=possibles[0];break
     time.sleep(.13)
    assert child,"second named workspace did not open separate window"
+   check_child_isolation(child)
    childmain=frame(child.pid)
    result=[]
    for _ in range(70):
@@ -247,6 +418,7 @@ finally:
    child.terminate();child.wait(timeout=5)
   print("OWNED_WORKSPACE_CHILD_EXIT",child.returncode if hasattr(child,"returncode")
         else child.wait(timeout=1),flush=True)
+  if owned_child_dirs: assert_child_cleaned(owned_child_dirs[-1])
  if p and p.poll() is None:
   if main and u.IsWindow(main):u.PostMessageW(main,0x10,0,0)
   try:p.wait(timeout=13)

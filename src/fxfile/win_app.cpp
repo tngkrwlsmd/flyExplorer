@@ -28,6 +28,7 @@
 #include "option.h"
 #include "option_manager.h"
 #include "conf_dir.h"
+#include "workspace_session.h"
 #include "app_ver.h"
 #include "command_string_table.h"
 #include "shell_registry.h"
@@ -49,6 +50,9 @@ namespace fxfile
 {
 namespace
 {
+// Lifetime lock prevents a future orphan scan from touching live sessions.
+HANDLE gWorkspaceMarkerLock = INVALID_HANDLE_VALUE;
+CString gWorkspaceOwnedDir;
 class StartupOleMessageFilter : public COleMessageFilter
 {
 public:
@@ -246,11 +250,18 @@ xpr_bool_t WinApp::InitInstance(void)
     if (sConfDirToLoad.empty() == false)
     {
         sConfDir.setConfDir(sConfDirToLoad.c_str(), XPR_TRUE);
+        // Owned workspace launcher supplies an absolute --conf_dir.
+        // ConfDir::getDir is intentionally protected.
+        gWorkspaceMarkerLock=workspace_session::lockMarker(
+            sConfDirToLoad.c_str());
+        if (gWorkspaceMarkerLock!=INVALID_HANDLE_VALUE)
+            gWorkspaceOwnedDir=sConfDirToLoad.c_str();
     }
-    else
-    {
+    // Only exact, owner-marked temporary dirs that are at least 24 h
+    // old and NOT locked by a live child are eligible for orphan reaping.
+    workspace_session::reapStale();
+    if (sConfDirToLoad.empty() == true)
         sConfDir.load();
-    }
 
     // load options from file or load default option if configuration file does not exist
     OptionManager &sOptionManager = OptionManager::instance();
@@ -351,6 +362,16 @@ xpr_sint_t WinApp::ExitInstance(void)
     // save main option
     if (OptionManager::isInstance() == XPR_TRUE)
         OptionManager::instance().saveMainOption();
+    // MainFrame::OnClose and OptionManager have completed their saves.
+    // Only the exact marker-locked, testable owned workspace session
+    // may be cleaned. Ordinary --conf_dir users are never touched.
+    if (gWorkspaceMarkerLock!=INVALID_HANDLE_VALUE)
+    {
+        ::CloseHandle(gWorkspaceMarkerLock);
+        gWorkspaceMarkerLock=INVALID_HANDLE_VALUE;
+        workspace_session::cleanup(gWorkspaceOwnedDir);
+        gWorkspaceOwnedDir.Empty();
+    }
 
     // destroy drive shell change notify
     DriveShcn &sDriveShcn = DriveShcn::instance();

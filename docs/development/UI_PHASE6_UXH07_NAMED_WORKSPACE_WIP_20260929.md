@@ -3,6 +3,8 @@
 Branch: fix/uxh07-named-workspaces-20260928.
 Baseline main: 463f6ffd5bef6c78e3fdcf97dc51d6cb68038122.
 STATUS: WIP. NOT MERGED, NOT PUBLISHED AS A FINISHED FEATURE.
+The earlier open-gate list is historical; see the latest continuation
+section at the end for newly resolved items and still-blocking tests.
 
 Current product branch adds optional View > Workspaces
 Save As and Open in New Window native commands. The
@@ -47,3 +49,65 @@ New source contract and accepted owned tests are
 branch-only and do not alter the accepted main product.
 Other isolated UXH-06 and WinUI 3 branches are untouched.
 No manual GitHub Actions were executed.
+
+
+## Latest 2026-09-29 continuation results
+
+**Still WIP, do not merge.** Native lifecycle now uses an exact
+owner-marked TEMP/fxw????.tmp directory with a marker locked by
+the live child, bounded 24-hour orphan reclamation on a later
+startup, reparse-point rejection, an explicit allowable filename
+list and nonrecursive cleanup. Existing toolbar/coolbar,
+bookmarks, dialogs and saved-scope settings are copied privately
+when present. The normal-exit cleanup and actual file copies
+were verified on two separate owned child processes using two
+different named workspace files and actual native save/open
+dialogs. Source adds warnings for bad file size/type, pane count,
+first/subsequent missing folders and unreasonable tab selection.
+
+Real logs uxh07-post-cleanup-native-multiple.log confirm both
+owned children cleaned their distinct temporary configuration
+folders after normal exit. Logs uxh07-physical-old-language-menu-v3.log
+and uxh07-physical-pointer-old-pack.log confirm real native
+keyboard mnemonic and physical pointer submenu actions after
+checking exact live menu command IDs. For pointer tests, the
+parent View menu was opened using physical Alt+V, not by an
+end-to-end mouse-only traversal. After staging the updated
+Korean.xml through the canonical language copy, log
+uxh07-physical-korean-keyboard.log confirms both real keyboard
+actions again. Each accepted owned test preserved the original
+six configuration SHA256 values and exited normally.
+
+The LATEST C++ change extends path and selected-index checks
+to every serialized tab, with a bound of 64 tabs per pane.
+Its current compiled Release x64 executable SHA256 is:
+6022C8375990E6F13E2692E31BF12312798869AEBCAC4158510A4E7435A97DCA
+The prior two-snapshot positive GUI results were observed
+before that last extra validation edit and do not count as
+a full final-binary positive retest.
+
+A real native empty workspace triggered the expected
+Invalid workspace file size or type warning on the latest
+compiled source. Six-case invalid-file automation did NOT
+complete: the test-side posted WM_COMMAND/IDOK did not
+dismiss this native warning, and a second test retry
+confirmed that the same warning remained visible.
+This is a test harness dismissal blocker, not proof that
+other input validation failed. The remaining malformed
+schema, empty/missing tab, bad split, absent real folder,
+oversize, wrong extension and negative child-spawn checks
+remain unaccepted. A focus-confirmed real Enter or actual
+test-owned dialog button click should replace the attempted
+posted command before repeating the batch.
+
+Before main: rerun full two-snapshot save/open with the
+latest executable; finish every real negative case and
+ensure original foreground tabs and six hashes unchanged;
+test owned synthetic aged crash-orphan cleanup and a
+live locked/reparse negative guard; complete a fully
+mouse-only top-level View menu traversal if required.
+Standalone full screen-reader spoken output, actual
+125/150/200 DPI and Windows High Contrast are NOT TESTED.
+UXH-06 remains a separate untouched WIP branch and
+WinUI 3 is in its original independent worktree.
+Do not assert any unperformed acceptance result.

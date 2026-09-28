@@ -190,6 +190,8 @@ void CommandStringTable::loadCommands(void)
     mCommandString[ID_VIEW_BOOKMARKBAR_REFRESH]       = XPR_STRING_LITERAL("cmd.bookmark_bar.refresh");
     mCommandString[ID_VIEW_TOOL_LOCK]                 = XPR_STRING_LITERAL("cmd.tools.lock");
     mCommandString[ID_VIEW_TOOL_COMPACT_ROWS]         = XPR_STRING_LITERAL("cmd.tools.compact_rows");
+    mCommandString[ID_VIEW_WORKSPACE_SAVE]            = XPR_STRING_LITERAL("cmd.workspace.save");
+    mCommandString[ID_VIEW_WORKSPACE_OPEN]            = XPR_STRING_LITERAL("cmd.workspace.open");
     mCommandString[ID_VIEW_TOOLBAR_CUSTOMIZE]         = XPR_STRING_LITERAL("cmd.tool_bar.customize");
     mCommandString[ID_VIEW_THEME_SYSTEM]               = XPR_STRING_LITERAL("cmd.theme.system");
     mCommandString[ID_VIEW_THEME_LIGHT]                = XPR_STRING_LITERAL("cmd.theme.light");

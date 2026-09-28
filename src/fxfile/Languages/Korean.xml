@@ -217,6 +217,9 @@
             <String ID="cmd.bookmark_bar.wrapable">북마크 여러 줄로 표시(&amp;N)</String>
             <String ID="cmd.bookmark_bar.refresh">북마크 새로 고침(&amp;R)</String>
             <String ID="cmd.tools.lock">도구 이동 잠금(&amp;L)</String>
+            <String ID="cmd.workspace.popup">?? ??(&amp;W)</String>
+            <String ID="cmd.workspace.save">?? ?? ??(&amp;S)...</String>
+            <String ID="cmd.workspace.open">?? ?? ? ??? ??(&amp;O)...</String>
             <String ID="cmd.tools.compact_rows">드라이브/북마크 도구 모음 한 줄로(&amp;J)</String>
             <String ID="cmd.tool_bar.customize">사용자 지정(&amp;C)...</String>
             <String ID="cmd.theme.popup">테마(&amp;H)</String>

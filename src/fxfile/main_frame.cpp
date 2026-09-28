@@ -51,6 +51,7 @@
 #include "wait_dlg.h"
 #include "option_manager.h"
 #include "conf_dir.h"
+#include "workspace_session.h"
 #include "conf_file_ex.h"
 #include <vector>
 #include "print_preview_view_ex.h"
@@ -1338,14 +1339,24 @@ void MainFrame::OnOpenWorkspace(void)
     CString sFile(sDialog.GetPathName());
     if (sFile.Right(12).CompareNoCase(
         XPR_STRING_LITERAL(".fxworkspace")) != 0)
+    {
+        MessageBox(XPR_STRING_LITERAL("Choose a .fxworkspace file."),
+            XPR_STRING_LITERAL("Workspaces"),MB_OK|MB_ICONWARNING);
         return;
+    }
     WIN32_FILE_ATTRIBUTE_DATA sInfo = {0};
     if (::GetFileAttributesEx(sFile, GetFileExInfoStandard,
                               &sInfo) == FALSE ||
-        (sInfo.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0 ||
+        (sInfo.dwFileAttributes & (FILE_ATTRIBUTE_DIRECTORY |
+                                 FILE_ATTRIBUTE_REPARSE_POINT)) != 0 ||
         sInfo.nFileSizeHigh != 0 ||
-        sInfo.nFileSizeLow > 1048576)
+        sInfo.nFileSizeLow > 1048576 ||
+        sInfo.nFileSizeLow == 0)
+    {
+        MessageBox(XPR_STRING_LITERAL("Invalid workspace file size or type."),
+            XPR_STRING_LITERAL("Workspaces"),MB_OK|MB_ICONWARNING);
         return;
+    }
     fxfile::base::ConfFileEx sSnapshot((LPCTSTR)sFile);
     if (sSnapshot.load() == XPR_FALSE ||
         sSnapshot.getValueI(XPR_STRING_LITERAL("workspace"),
@@ -1366,20 +1377,64 @@ void MainFrame::OnOpenWorkspace(void)
         sRows > MAX_VIEW_SPLIT_ROW ||
         sColumns > MAX_VIEW_SPLIT_COLUMN ||
         sRows * sColumns > MAX_VIEW_SPLIT)
-        return;
-    for (xpr_sint_t i = 0; i < sRows * sColumns; ++i)
     {
-        xpr_tchar_t sKey[80] = {0};
-        _stprintf(sKey,XPR_STRING_LITERAL(
-            "main.view%d.tab1.path"),i+1);
-        const xpr_tchar_t *sTab = sSnapshot.getValueS(
-            XPR_STRING_LITERAL("main"),sKey,XPR_NULL);
-        if (sTab == XPR_NULL || sTab[0] == 0)
+        MessageBox(XPR_STRING_LITERAL("Invalid workspace pane layout."),
+            XPR_STRING_LITERAL("Workspaces"),MB_OK|MB_ICONWARNING);
+        return;
+    }
+    for (xpr_sint_t i=0; i<sRows*sColumns; ++i)
+    {
+        xpr_sint_t count=0;
+        for (xpr_sint_t tab=1; tab<=64; ++tab)
+        {
+            xpr_tchar_t key[80]={0};
+            _stprintf(key,XPR_STRING_LITERAL(
+                "main.view%d.tab%d.path"),i+1,tab);
+            const xpr_tchar_t *value=sSnapshot.getValueS(
+                XPR_STRING_LITERAL("main"),key,XPR_NULL);
+            if (value==XPR_NULL || value[0]==0)
+            {
+                if (tab==1)
+                {
+                    MessageBox(XPR_STRING_LITERAL(
+                        "Workspace is missing a pane's first tab."),
+                        XPR_STRING_LITERAL("Workspaces"),
+                        MB_OK|MB_ICONWARNING);
+                    return;
+                }
+                break;
+            }
+            if (_tcsncmp(value,XPR_STRING_LITERAL("::"),2)!=0)
+            {
+                DWORD attrs=::GetFileAttributes(value);
+                if (attrs==INVALID_FILE_ATTRIBUTES ||
+                    (attrs & FILE_ATTRIBUTE_DIRECTORY)==0)
+                {
+                    MessageBox(XPR_STRING_LITERAL(
+                       "Workspace refers to a folder that is not available."),
+                       XPR_STRING_LITERAL("Workspaces"),
+                       MB_OK|MB_ICONWARNING);
+                    return;
+                }
+            }
+            ++count;
+        }
+        xpr_tchar_t last[80]={0};
+        _stprintf(last,XPR_STRING_LITERAL(
+            "main.view%d.tab65.path"),i+1);
+        xpr_tchar_t selected[80]={0};
+        _stprintf(selected,XPR_STRING_LITERAL(
+            "main.view%d.current_tab"),i+1);
+        xpr_sint_t selectedTab=sSnapshot.getValueI(
+             XPR_STRING_LITERAL("main"),selected,0);
+        if (sSnapshot.getValueS(XPR_STRING_LITERAL("main"),
+             last,XPR_NULL)!=XPR_NULL ||
+            selectedTab<0 || selectedTab>=count)
         {
             MessageBox(XPR_STRING_LITERAL(
-               "Workspace is missing a pane's first tab."),
-               XPR_STRING_LITERAL("Workspaces"),
-               MB_OK | MB_ICONWARNING);
+                "Workspace has too many tabs or invalid selection."),
+                XPR_STRING_LITERAL("Workspaces"),
+                MB_OK|MB_ICONWARNING);
             return;
         }
     }
@@ -1407,6 +1462,44 @@ void MainFrame::OnOpenWorkspace(void)
         ::CopyFile(sCurrentCfg,sIsolatedCfg,FALSE) != FALSE;
     sReady = sReady &&
         (::CopyFile(sFile,sIsolatedMain,FALSE) != FALSE);
+    // User customization is independently COPIED to the private child,
+    // never shared for writes with the original live configuration.
+    const xpr_sint_t sOptional[] = {
+        ConfDir::TypeBookmark,ConfDir::TypeFileScrap,
+        ConfDir::TypeSearchDir,ConfDir::TypeFolderLayout,
+        ConfDir::TypeDlgState,ConfDir::TypeAccel,
+        ConfDir::TypeCoolBar,ConfDir::TypeToolBar
+    };
+    // ConfDir::getFileName is protected; map only these fixed,
+    // explicitly inherited file types, never arbitrary paths.
+    const xpr_tchar_t *sOptionalNames[] = {
+        XPR_STRING_LITERAL("fxfile-bookmark.conf"),
+        XPR_STRING_LITERAL("fxfile-file_scrap.conf"),
+        XPR_STRING_LITERAL("fxfile-search_dir.conf"),
+        XPR_STRING_LITERAL("fxfile-folder_layout.conf"),
+        XPR_STRING_LITERAL("fxfile-dlg_state.conf"),
+        XPR_STRING_LITERAL("fxfile-accel.dat"),
+        XPR_STRING_LITERAL("fxfile-coolbar.dat"),
+        XPR_STRING_LITERAL("fxfile-toolbar.dat")
+    };
+    for (size_t i=0; i<_countof(sOptional) && sReady; ++i)
+    {
+        xpr_tchar_t source[MAX_PATH]={0};
+        if (ConfDir::instance().getLoadPath(sOptional[i],source,
+                                            _countof(source))==FALSE)
+            continue;
+        DWORD attrs=::GetFileAttributes(source);
+        if (attrs==INVALID_FILE_ATTRIBUTES) continue;
+        if ((attrs & (FILE_ATTRIBUTE_DIRECTORY |
+                      FILE_ATTRIBUTE_REPARSE_POINT))!=0)
+        {
+            sReady=false;
+            break;
+        }
+        CString dest=workspace_session::path(sUnique,
+                         sOptionalNames[i]);
+        sReady=::CopyFile(source,dest,TRUE)!=FALSE;
+    }
     if (sReady)
     {
         fxfile::base::ConfFileEx sCfg((LPCTSTR)sIsolatedCfg);
@@ -1439,6 +1532,9 @@ void MainFrame::OnOpenWorkspace(void)
     }
     if (!sReady)
     {
+        for (size_t i=0; i<_countof(sOptional); ++i)
+            ::DeleteFile(workspace_session::path(sUnique,
+                         sOptionalNames[i]));
         ::DeleteFile(sIsolatedMain);
         ::DeleteFile(sIsolatedCfg);
         ::RemoveDirectory(sUnique);
@@ -1447,9 +1543,25 @@ void MainFrame::OnOpenWorkspace(void)
             XPR_STRING_LITERAL("Workspaces"),MB_OK | MB_ICONWARNING);
         return;
     }
+    if (!workspace_session::writeMarker(sUnique))
+    {
+        for (size_t i=0; i<_countof(sOptional); ++i)
+            ::DeleteFile(workspace_session::path(sUnique,
+                         sOptionalNames[i]));
+        ::DeleteFile(sIsolatedMain);
+        ::DeleteFile(sIsolatedCfg);
+        ::RemoveDirectory(sUnique);
+        MessageBox(XPR_STRING_LITERAL(
+            "Could not protect isolated workspace session."),
+            XPR_STRING_LITERAL("Workspaces"),MB_OK|MB_ICONWARNING);
+        return;
+    }
     xpr_tchar_t sExecutable[MAX_PATH] = {0};
     if (::GetModuleFileName(XPR_NULL,sExecutable,MAX_PATH) == 0)
+    {
+        workspace_session::cleanup(sUnique);
         return;
+    }
     CString sCommand;
     sCommand.Format(
       XPR_STRING_LITERAL("\"%s\" --conf_dir \"%s\""),
@@ -1468,9 +1580,7 @@ void MainFrame::OnOpenWorkspace(void)
     }
     else
     {
-        ::DeleteFile(sIsolatedMain);
-        ::DeleteFile(sIsolatedCfg);
-        ::RemoveDirectory(sUnique);
+        workspace_session::cleanup(sUnique);
         MessageBox(XPR_STRING_LITERAL(
             "Unable to launch isolated workspace window."),
             XPR_STRING_LITERAL("Workspaces"),MB_OK | MB_ICONWARNING);
@@ -1615,7 +1725,17 @@ void MainFrame::OnInitMenuPopup(CMenu *aPopupMenu, xpr_uint_t aIndex, xpr_bool_t
                     // if sId(xpr_uint_t) is -1, it's sub-menu.
                     sBCPopupMenu->GetMenuText(i, sMenuText, MF_BYPOSITION);
 
-                    sString = gApp.loadString(sMenuText);
+                    if (sMenuText==XPR_STRING_LITERAL("&Workspaces"))
+                    {
+                        sString=gApp.loadString(
+                            XPR_STRING_LITERAL("cmd.workspace.popup"));
+                        if (sString==XPR_NULL ||
+                            _tcscmp(sString,
+                              XPR_STRING_LITERAL("cmd.workspace.popup"))==0)
+                            sString=XPR_STRING_LITERAL("&Workspaces");
+                    }
+                    else
+                        sString=gApp.loadString(sMenuText);
                     sBCPopupMenu->SetMenuText(i, (xpr_tchar_t *)sString, MF_BYPOSITION);
                 }
                 else
@@ -1634,6 +1754,16 @@ void MainFrame::OnInitMenuPopup(CMenu *aPopupMenu, xpr_uint_t aIndex, xpr_bool_t
                             sString = XPR_STRING_LITERAL(
                                 "Compact drive/bookmark rows (&J)");
 
+                        if (sId==ID_VIEW_WORKSPACE_SAVE &&
+                            (sString==XPR_NULL ||
+                             _tcscmp(sString,sStringId)==0))
+                            sString=XPR_STRING_LITERAL(
+                                "&Save named workspace...");
+                        if (sId==ID_VIEW_WORKSPACE_OPEN &&
+                            (sString==XPR_NULL ||
+                             _tcscmp(sString,sStringId)==0))
+                            sString=XPR_STRING_LITERAL(
+                                "&Open named workspace in new window...");
                         sBCPopupMenu->SetMenuText(sId, (xpr_tchar_t *)sString, MF_BYCOMMAND);
                     }
                 }

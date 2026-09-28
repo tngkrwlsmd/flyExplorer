@@ -14,6 +14,14 @@ class NativeWorkspaceContract(unittest.TestCase):
                "INIT_TYPE_LAST_TAB","config.global_hotkey.enable",
                "gOpt->saveMainOption(sSnapshot)","::CreateProcess"):
    self.assertIn(text,s)
+ def test_marker_cleanup_safety_guards(self):
+  h=(r/"src/fxfile/workspace_session.h").read_text(encoding="utf-8")
+  app=(r/"src/fxfile/win_app.cpp").read_text(encoding="utf-8-sig")
+  for required in ("lockMarker","cleanup","reapStale",
+    "FILE_ATTRIBUTE_REPARSE_POINT","864000000000ULL",
+    "allowedFile","fxfile-workspace-owned.marker"):
+   self.assertIn(required,h)
+  self.assertIn("workspace_session::cleanup(gWorkspaceOwnedDir)",app)
  def test_owned_native_dialogs(self):
   t=(r/"build/test_ui_uxh07_named_workspace_runtime.py").read_text(encoding="utf-8")
   for x in ("SECOND_NAMED_WORKSPACE_GUI_RESTORED_DIFFERENT_2_1_TABS",
