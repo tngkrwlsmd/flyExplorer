@@ -739,3 +739,29 @@ were available; global display/theme settings were not changed.
 Other legacy raw dialog/BookmarkSetWnd screen acceptance also
 remains open. Exact test limits and audit:
 docs/development/UI_WINDOWS11_DPI_CONTRAST_20260928_EVIDENCE.md.
+
+## 2026-09-28 whole-product owned hands-on UX audit (documentation only)
+
+On main 4f1a407c, an isolated 96-DPI Dark-mode Release app was used for real
+tab creation/close affordances, typed address and Back/Forward/Up, 1->2->1
+ExplorerPane layout, Settings, Bookmark Edit, Search, native blank-list
+context menu and a 750px compact command surface. A separate exact-name
+search displayed one matching private file. A real New Folder action
+created a folder ONLY in the disposable owned fixture. The corrected
+exploration and independent search/create probes preserved all six
+original config hashes and exited normally.
+
+New observed visual/UX follow-up: the bookmark dialog's CHotKeyCtrl remains
+bright under Dark; an immediate successful search invokes a bright,
+additional native completion MessageBox despite an existing result count.
+Split-pane repeated information panels and compact command discovery
+are UX candidates, not confirmed feature breakages. Empty child UIA
+enumeration of the custom TabCtrl requires MSAA/keyboard investigation,
+not an accessibility failure verdict. File copy/move/delete, heavyweight
+Shell/cloud integration and additional real DPI/High Contrast were NOT
+TESTED in this exploratory pass.
+
+Prioritized owners, non-duplication requirements, actual evidence and
+acceptance cases are recorded in
+docs/development/UI_UX_HANDS_ON_BACKLOG_20260928.md. No production code
+or the separate Phase 5 WinUI experimentation branch was modified.
