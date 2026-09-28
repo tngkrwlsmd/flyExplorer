@@ -246,6 +246,19 @@ xpr_bool_t StatusBar::setPaneText(xpr_size_t aIndex, const xpr_tchar_t *aText)
     return XPR_TRUE;
 }
 
+void StatusBar::announceAccessibleStatus(const xpr_tchar_t *aText)
+{
+    if (XPR_IS_NULL(aText) || !::IsWindow(m_hWnd))
+        return;
+    // WM_SETTEXT is overridden by this class to replace visual pane 0.
+    // Call only the native default procedure to store the accessibility
+    // name without altering either already-rendered status pane.
+    ::DefWindowProc(m_hWnd, WM_SETTEXT, 0,
+        reinterpret_cast<LPARAM>(aText));
+    ::NotifyWinEvent(EVENT_OBJECT_NAMECHANGE,
+        m_hWnd, OBJID_CLIENT, CHILDID_SELF);
+}
+
 xpr_bool_t StatusBar::setDynamicPaneText(xpr_sint_t aIndex, const xpr_tchar_t *aText, xpr_sint_t aOffset)
 {
     if (XPR_IS_NULL(aText))

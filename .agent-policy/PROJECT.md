@@ -23,9 +23,9 @@ Release-x64-Unicode incremental build and native regression
 125/150/200% DPI, High Contrast, clean-machine install and
 complete legacy dialog acceptance are NOT TESTED.
 
-Next native UX work is the [seven-item hands-on backlog](../docs/development/UI_UX_HANDS_ON_BACKLOG_20260928.md),
-starting with the bright Dark-mode bookmark CHotKeyCtrl and
-redundant bright Search completion modal. HANG-01 and specific
+Current native UX state and next priorities are in the [seven-item hands-on backlog](../docs/development/UI_UX_HANDS_ON_BACKLOG_20260928.md),
+after scoped 96-DPI UXH-01/02 fixes; next UXH-03/04/05 remain.
+HANG-01 and specific
 UI-01/UI-09 original-scenario acceptance remain open.
 Separate WinUI 3 productization branch
 \`experiments/phase5-productization-20260928\`, observed HEAD

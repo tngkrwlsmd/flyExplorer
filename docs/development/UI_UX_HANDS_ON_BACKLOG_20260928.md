@@ -43,13 +43,16 @@ real DPI were not individually exercised and remain OPEN.
 
 **인수 조건:** 다크/라이트와 실제 High Contrast에서 배경·글자·포커스의 가독성 확보, 조합키 입력과 해제 및 기존 설정 보존. 실행하지 못한 테마는 NOT TESTED.
 
-**2026-09-28 experimental progress (NOT IN MAIN):** On the
-local work branch fix/uxh02-search-success-nonmodal-20260928,
-zero/one/three-result actual owned search GUI and the retained
-wrong-location error dialog passed. Active cancellation, result
-navigation and actual screen-reader announcement are NOT TESTED;
-this candidate is NOT COMPLETE and must not be merged yet.
-See [partial evidence](UI_PHASE6_SEARCH_NONMODAL_PARTIAL_20260928.md).
+**2026-09-28 scoped UXH-02 accepted:** Actual owned 96-DPI
+Dark/Light zero/one/three-result and invalid-location GUI passed,
+along with real pointer Stop during active content search,
+native Open parent folder for an owned result, readable UIA
+completion status and an actual Windows name-change event.
+Scoped Release, source and native 17/0 passed; all six original
+user configuration hashes were preserved.
+See [UXH-02 final evidence](UI_PHASE6_SEARCH_NONMODAL_EVIDENCE_20260928.md).
+High Contrast, other real DPI and physical screen-reader listening
+remain separately NOT TESTED.
 
 ### UXH-02 · P2 · 파일 검색 완료 알림의 불필요한 모달 및 테마 차이
 

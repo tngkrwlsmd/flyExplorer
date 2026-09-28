@@ -36,6 +36,8 @@ public:
     xpr_size_t insertPane(xpr_size_t aIndex, xpr_size_t aPaneId, const xpr_tchar_t *aText, HICON aIcon = XPR_NULL, void *aData = XPR_NULL);
     xpr_bool_t setPaneSize(xpr_size_t aIndex, xpr_size_t aSize, xpr_size_t aMinSize);
     xpr_bool_t setPaneText(xpr_size_t aIndex, const xpr_tchar_t *aText);
+    // Publish an accessible name without changing the visible pane 0 text.
+    void announceAccessibleStatus(const xpr_tchar_t *aText);
     xpr_bool_t setDynamicPaneText(xpr_sint_t aIndex, const xpr_tchar_t *aText, xpr_sint_t aOffset);
     xpr_bool_t setPaneIcon(xpr_size_t aIndex, HICON aIcon);
     xpr_bool_t setPaneData(xpr_size_t aIndex, void *aData);

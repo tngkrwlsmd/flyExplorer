@@ -38,6 +38,10 @@ a single unsupported release qualification.
   actual 96-DPI bookmark dialog, native Ctrl+2 and light fallback;
   other hotkey screens and real High Contrast remain open.
 
+- [Phase 6 accepted native Search completion](UI_PHASE6_SEARCH_NONMODAL_EVIDENCE_20260928.md):
+  real Dark/Light count/error, physical active Stop, actual
+  parent-folder navigation and a readable Windows event/UIA summary.
+
 ## 3. UI framework decision and optional experimental work
 
 | Stage | Source / restriction |

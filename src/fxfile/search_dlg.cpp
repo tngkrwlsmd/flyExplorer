@@ -1494,12 +1494,17 @@ LRESULT SearchDlg::OnFinalize(WPARAM wParam, LPARAM lParam)
     mStatusBar.setPaneText(0, sStatusText);
     mStatusBar.setDynamicPaneText(1, sStatusElapsedTimeText, 0);
 
-    // Existing result and elapsed-time status panes already report
-    // successful completion. Do not interrupt the result workflow with
-    // a duplicate, system-light native information modal.
+    // The custom StatusBar paints its own panes but has no native
+    // accessible pane-name provider. Expose both completed values as
+    // its accessible HWND name via the StatusBar-specific native path.
+    // Do not reintroduce a duplicate normal-success modal.
     if (::IsWindow(mStatusBar.GetSafeHwnd()))
-        ::NotifyWinEvent(EVENT_OBJECT_NAMECHANGE,
-            mStatusBar.GetSafeHwnd(), OBJID_CLIENT, CHILDID_SELF);
+    {
+        xpr::string sAccessibleSummary;
+        sAccessibleSummary.format(XPR_STRING_LITERAL("%s %s"),
+            sStatusText, sStatusElapsedTimeText);
+        mStatusBar.announceAccessibleStatus(sAccessibleSummary.c_str());
+    }
 
     return 0;
 }

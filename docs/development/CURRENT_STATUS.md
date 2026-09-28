@@ -10,6 +10,22 @@
 
 ## 1. Latest state, constraints and next work
 
+**New Phase 6 UXH-02 verified handoff (2026-09-28):** Normal
+Search completion no longer opens a duplicate light information
+modal. Actual 96-DPI owned Dark/Light 0/1/3 and invalid-location
+GUI, physically stopped real active content search, an owned file
+result's native Open parent folder pointer flow, and an accessible
+native Windows event/UIA-readable summary all PASS. Release x64
+and native 17/0 PASS, original six user hashes unchanged.
+Binary SHA256 22D0568AB047E4A08F690B7461FB7D63E2B90A23E447BE03650D8818B2559575.
+[Full UXH-02 evidence](UI_PHASE6_SEARCH_NONMODAL_EVIDENCE_20260928.md).
+The next MFC UX implementation/verification sequence starts at
+UXH-03 (split-pane information density), UXH-04 (compact command
+surface), and UXH-05 (actual tab accessibility investigation).
+Real other DPI, OS High Contrast and live screen-reader listening
+are not yet accepted.
+
+
 **Phase 6 UXH-01 follow-up (2026-09-28):** Bookmark
 CHotKeyCtrl's native bright client in explicit Dark was
 confirmed and fixed through ModernUI's shared native hotkey
@@ -17,7 +33,7 @@ subclass, preserving actual Ctrl+2 keyboard semantics.
 Actual owned 96-DPI Dark/Light GUI, incremental Release x64
 and native functional 17/0 passed. Details:
 [hotkey theme evidence](UI_PHASE6_HOTKEY_THEME_EVIDENCE_20260928.md).
-The outstanding next native UX item is UXH-02 search completion;
+The UXH-02 native Search work is now scoped accepted;
 other hotkey-setting windows and real High Contrast are not
 individually GUI-accepted yet. Prior snapshot facts below
 refer to the earlier reviewed baseline.
@@ -44,8 +60,8 @@ certification.
 items](UI_UX_HANDS_ON_BACKLOG_20260928.md). The native bookmark
 shortcut field originally observed in UXH-01 is fixed and GUI-tested
 at actual 96 DPI Dark/Light; individual other hotkey dialogs remain
-unverified. Next review the redundant bright success message during
-Search (UXH-02). Narrow split-pane layouts, compact command
+unverified. UXH-02's duplicate Search completion is now fixed;
+next measure split-pane layouts and compact command
 discoverability and custom TabCtrl accessibility need targeted
 measurement/verification, not ungrounded implementation.
 

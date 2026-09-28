@@ -9,7 +9,11 @@ class SearchCompletion(unittest.TestCase):
       "void SearchDlg::getStatusNumberFormat",1)[0]
   self.assertIn("mStatusBar.setPaneText(0, sStatusText)",seg)
   self.assertIn("mStatusBar.setDynamicPaneText(1, sStatusElapsedTimeText",seg)
-  self.assertIn("NotifyWinEvent(EVENT_OBJECT_NAMECHANGE",seg)
+  self.assertIn("mStatusBar.announceAccessibleStatus(",seg)
+  native=(p.parent/"gui/StatusBar.cpp").read_text(encoding="utf-8-sig")
+  self.assertIn("::DefWindowProc(m_hWnd, WM_SETTEXT",native)
+  self.assertIn("NotifyWinEvent(EVENT_OBJECT_NAMECHANGE",native)
+  self.assertIn("setPaneText(0, sText)",native)
   self.assertNotIn("MessageBox(",seg)
   self.assertIn("popup.search.msg.wrong_location",s)
   self.assertIn("MessageBox(sMsg, XPR_NULL, MB_OK | MB_ICONSTOP)",s)

@@ -65,3 +65,14 @@ UI 수정 또는 시제품 승인 전에 **단 하나의 정의된 acceptance ca
 - **완료 규칙:** 해당 과제의 재현 조건, 예상 사용자 이익, 최소 수정 범위, 실제 조작 및 시각·접근성 인수 조건, Release 빌드/관련 네이티브 회귀와 설정 보존을 명시한다. 문서에 제안으로 등록했다는 이유만으로 제품 결함을 수정 완료로 처리하지 않는다.
 
 AGENT_EFFICIENCY.md의 기존 호출 예산과 빌드 출력 제한을 유지한다. GitHub Actions는 개별 실행에 대한 명시적 승인 없이 실행하지 않는다.
+
+## 7. Custom native StatusBar accessibility (2026-09-28)
+
+Our gui/StatusBar intercepts WM_SETTEXT as a command to update
+*visible pane 0*. For completion announcements, use
+StatusBar::announceAccessibleStatus rather than ordinary
+SetWindowText, to preserve the visual panes and publish a
+separate readable native window name with an OS name-change
+event. Test visible status text, real external WinEvent delivery,
+UIA Name and keyboard/pointer flow as separate gates.
+Do not claim live screen-reader listening without testing it.
