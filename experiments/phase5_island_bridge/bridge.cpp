@@ -96,6 +96,16 @@ class NavIsland final {
     ctl::TextBlock m_status{nullptr};
     // Test-only: unchanged normal-path control tree unless explicitly enabled.
     ctl::TextBox m_textBoxProbe{nullptr};
+    bool m_editing = false;
+    bool m_pendingNativeUpdate = false;
+    bool m_dirtyEdit = false;
+    std::wstring m_lastNativeText;
+    bool m_settingNativeText = false;
+    bool m_buttonCallbacksAttached = false;
+    bool m_textboxCallbacksAttached = false;
+    winrt::event_token m_upClickToken{}, m_backClickToken{}, m_forwardClickToken{};
+    winrt::event_token m_textboxGotFocusToken{}, m_textboxLostFocusToken{},
+                       m_textboxKeyDownToken{}, m_textboxTextChangedToken{};
 public:
     explicit NavIsland(HWND parent):m_parent(parent){}
     bool Create() {
@@ -152,9 +162,10 @@ public:
             ui::Automation::AutomationProperties::SetAutomationId(m_title,L"Phase5IslandCurrentFolderText");
             m_status=ctl::TextBlock();
             ui::Automation::AutomationProperties::SetAutomationId(m_status,L"Phase5IslandStatusText");
-            m_up.Click([this](auto const&,auto const&){Send(ID_GO_UP);});
-            m_back.Click([this](auto const&,auto const&){Send(ID_GO_BACK);});
-            m_forward.Click([this](auto const&,auto const&){Send(ID_GO_FORWARD);});
+            m_upClickToken = m_up.Click([this](auto const&,auto const&){Send(ID_GO_UP);});
+            m_backClickToken = m_back.Click([this](auto const&,auto const&){Send(ID_GO_BACK);});
+            m_forwardClickToken = m_forward.Click([this](auto const&,auto const&){Send(ID_GO_FORWARD);});
+            m_buttonCallbacksAttached = true;
             m_up.GotFocus([](auto const&,auto const&){Trace("dll-focus-up");});
             m_back.GotFocus([](auto const&,auto const&){Trace("dll-focus-back");});
             m_forward.GotFocus([](auto const&,auto const&){Trace("dll-focus-forward");});
@@ -171,7 +182,27 @@ public:
                 m_textBoxProbe.Text(L"Isolated WinUI 3 TextBox probe");
                 ui::Automation::AutomationProperties::SetAutomationId(
                     m_textBoxProbe, L"Phase5IslandDiagnosticTextBox");
-                m_textBoxProbe.KeyDown([this](auto const&,ui::Input::KeyRoutedEventArgs const& event) {
+                m_textboxGotFocusToken = m_textBoxProbe.GotFocus([this](auto const&,auto const&) {
+                    m_editing = true;
+                    m_dirtyEdit = m_textBoxProbe &&
+                        std::wstring(m_textBoxProbe.Text().c_str()) != m_lastNativeText;
+                });
+                m_textboxLostFocusToken = m_textBoxProbe.LostFocus([this](auto const&,auto const&) {
+                    m_editing = false;
+                    m_dirtyEdit = false;
+                    if (m_pendingNativeUpdate) Refresh(L"Native active folder updated");
+                });
+                m_textboxTextChangedToken = m_textBoxProbe.TextChanged(
+                    [this](auto const&, auto const&) {
+                        // WinUI may deliver TextChanged after a native-driven
+                        // setter returns; compare current text with its native
+                        // reference rather than treating deferred notification
+                        // itself as proof of human editing.
+                        if (m_editing && !m_settingNativeText)
+                            m_dirtyEdit = m_textBoxProbe &&
+                                std::wstring(m_textBoxProbe.Text().c_str()) != m_lastNativeText;
+                    });
+                m_textboxKeyDownToken = m_textBoxProbe.KeyDown([this](auto const&,ui::Input::KeyRoutedEventArgs const& event) {
                     auto key=event.Key();
                     if (key==winrt::Windows::System::VirtualKey::A &&
                         (::GetKeyState(VK_CONTROL) & 0x8000) != 0) {
@@ -181,14 +212,15 @@ public:
                     } else if (key==winrt::Windows::System::VirtualKey::Enter) {
                         bool ok=s_navigateActivePath &&
                             s_navigateActivePath(m_parent,m_textBoxProbe.Text().c_str());
-                        if (ok) Refresh(L"Address navigation handled by active native pane");
+                        if (ok) Refresh(L"Address navigation handled by active native pane", true);
                         else m_status.Text(L"Address navigation rejected or no active native pane");
                         event.Handled(true);
                     } else if (key==winrt::Windows::System::VirtualKey::Escape) {
-                        Refresh(L"Address edit cancelled");
+                        Refresh(L"Address edit cancelled", true);
                         event.Handled(true);
                     }
                 });
+                m_textboxCallbacksAttached = true;
                 m_textBoxProbe.Loaded([](auto const&, auto const&) {
                     Trace("dll-textbox-loaded");
                 });
@@ -209,17 +241,39 @@ public:
             return false;
         }
     }
-    void Refresh(wchar_t const* message) {
+    void Refresh(wchar_t const* message, bool forceEdit = false) {
         if (!m_title) return;
         wchar_t title[1024]{};
         ::GetWindowTextW(m_parent,title,_countof(title));
         m_title.Text(title);
         if (m_textBoxProbe && s_readActivePath) {
+            if (m_editing && m_dirtyEdit && !forceEdit) {
+                m_pendingNativeUpdate = true;
+                Trace("dll-address-edit-preserved");
+                m_status.Text(L"Native folder changed while editing");
+                return;
+            }
+            m_pendingNativeUpdate = false;
             wchar_t active[32768]{};
             if (s_readActivePath(m_parent, active, _countof(active))) {
+                m_lastNativeText.assign(active);
+                m_settingNativeText = true;
                 m_textBoxProbe.Text(active);
+                m_settingNativeText = false;
+                m_dirtyEdit = false;
                 Trace("dll-address-active-pane-refreshed");
-            } else Trace("dll-address-active-pane-unavailable");
+            } else {
+                // Never display the previous filesystem path for an unsupported
+                // Shell virtual folder. The original MFC address remains live.
+                m_lastNativeText.clear();
+                m_settingNativeText = true;
+                m_textBoxProbe.Text(L"");
+                m_settingNativeText = false;
+                m_dirtyEdit = false;
+                m_status.Text(L"Use the existing MFC address for this non-filesystem location");
+                Trace("dll-address-active-pane-unavailable");
+                return;
+            }
         }
         m_status.Text(message);
     }
@@ -269,6 +323,24 @@ public:
     }
     void Close() {
         Trace("dll-close-enter");
+        // Revoke callbacks that captured this BEFORE XAML detach/focus changes
+        // or deferred framework shutdown can dispatch another event.
+        if (m_textboxCallbacksAttached && m_textBoxProbe) {
+            m_textBoxProbe.GotFocus(m_textboxGotFocusToken);
+            m_textBoxProbe.LostFocus(m_textboxLostFocusToken);
+            m_textBoxProbe.KeyDown(m_textboxKeyDownToken);
+            m_textBoxProbe.TextChanged(m_textboxTextChangedToken);
+            m_textboxCallbacksAttached = false;
+        }
+        if (m_buttonCallbacksAttached && m_up && m_back && m_forward) {
+            m_up.Click(m_upClickToken);
+            m_back.Click(m_backClickToken);
+            m_forward.Click(m_forwardClickToken);
+            m_buttonCallbacksAttached = false;
+        }
+        m_editing = false;
+        m_pendingNativeUpdate = false;
+        m_dirtyEdit = false;
         // The runtime objects outlive every island and are shut down only
         // after the host MFC message loop exits.
         if (m_source) {
@@ -304,6 +376,9 @@ extern "C" __declspec(dllexport) void WINAPI FlyIslandBindAdapter(
     s_readActivePath=read;
     s_navigateActivePath=navigate;
     if (s_island) s_island->Refresh(L"Test-only native active-pane adapter ready");
+}
+extern "C" __declspec(dllexport) void WINAPI FlyIslandRefreshPath() {
+    if (s_island) s_island->Refresh(L"Native active pane changed");
 }
 extern "C" __declspec(dllexport) void WINAPI FlyIslandResize(
     int x,int y,int width,int height) {

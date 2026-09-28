@@ -10,12 +10,15 @@ from stage_test_host import stage_test_host
 folder=Path(__file__).resolve().parent
 repo=folder.parents[1]
 product=repo/'bin/x64/fxfile.exe'
-dll=folder/'x64/Debug/FlyExplorerIslandBridge/FlyExplorerIslandBridge.dll'
+build_mode=os.environ.get('FLYEXP_PHASE5_BUILD_CONFIG','Debug')
+assert build_mode in ('Debug','Release'),"invalid isolated WinUI build configuration"
+dll=folder/'x64'/build_mode/'FlyExplorerIslandBridge'/'FlyExplorerIslandBridge.dll'
 source=Path(os.environ['APPDATA'])/'fxfile'/'conf'
 names=('fxfile.conf','fxfile-main.conf','fxfile-toolbar.dat',
        'fxfile-coolbar.dat','fxfile-dlg_state.conf','fxfile-folder_layout.conf')
 # Optional crash-isolation modes; never enable in ordinary product tests.
 textbox_mode=os.environ.get('FLYEXP_PHASE5_DIAG_TEXTBOX','')
+extra_ui=os.environ.get('FLYEXP_PHASE5_EXTRA_UI_GATES','')=='1'
 assert textbox_mode in ('','plain','resources','app'),'invalid TextBox diagnostic mode'
 assert product.is_file() and dll.is_file(),'build both isolated products before running'
 assert source.is_dir() and all((source/f).is_file() for f in names),'read-only profile prerequisite'
@@ -80,9 +83,11 @@ owned_product=product
 try:
  if textbox_mode=='app':
   # No write to normal product bin directory: create a disposable host image.
-  owned_product,pri_target=stage_test_host(product,pri_source,work/'packaged-host')
+  owned_product,pri_target=stage_test_host(
+      product,pri_source,work/'packaged-host',bridge_dll=dll)
   assert owned_product.parent != product.parent
-  print('EXPERIMENTAL_HOST_PRI_STAGED',flush=True)
+  env['FLYEXP_PHASE5_TEST_ISLAND_DLL']=str(owned_product.parent/dll.name)
+  print('EXPERIMENTAL_HOST_PRI_AND_BRIDGE_STAGED',build_mode,flush=True)
  proc=subprocess.Popen([str(owned_product),'--conf_dir',str(copy),str(fixture)],
                        cwd=str(work),env=env,stdin=subprocess.DEVNULL,
                        stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
@@ -133,6 +138,56 @@ try:
    eventually(lambda:probe.window_text().lower()==str(fixture).lower(),
               'Escape failed to cancel edit and restore active pane address')
    print('REAL_PRODUCT_EDITABLE_TEXTBOX_ESCAPE_PASS',flush=True)
+   # Native MFC-issued navigation must update the XAML TextBox without
+   # requiring any WinUI button command.
+   controls['Up'].set_focus()
+   assert u.PostMessageW(hwnd,0x111,32004,0),'native MFC Up post failed'
+   eventually(lambda:title(hwnd).lower().endswith('my documents - fxfile'),
+              'external native MFC Up command did not navigate')
+   eventually(lambda:probe.window_text().lower()==str(fixture.parent).lower(),
+              'external native navigation did not update XAML address')
+   print('REAL_PRODUCT_EXTERNAL_MFC_NAV_TO_XAML_SYNC_PASS',flush=True)
+   assert u.PostMessageW(hwnd,0x111,32006,0),'native MFC Back post failed'
+   eventually(lambda:title(hwnd).lower().endswith('my music - fxfile'),
+              'external native MFC Back command did not navigate')
+   eventually(lambda:probe.window_text().lower()==str(fixture).lower(),
+              'external native Back did not update XAML address')
+   print('REAL_PRODUCT_EXTERNAL_MFC_BACK_SYNC_PASS',flush=True)
+   # A focused but unchanged address must still track native navigation.
+   probe.set_focus()
+   assert u.PostMessageW(hwnd,0x111,32004,0),'clean-focus native Up post failed'
+   eventually(lambda:probe.window_text().lower()==str(fixture.parent).lower(),
+              'focused but unmodified address failed native path refresh')
+   assert u.PostMessageW(hwnd,0x111,32006,0),'clean-focus native Back post failed'
+   eventually(lambda:probe.window_text().lower()==str(fixture).lower(),
+              'focused but unmodified address failed native Back refresh')
+   print('REAL_PRODUCT_PRISTINE_FOCUS_STILL_SYNCS_NATIVE_PASS',flush=True)
+   # A native folder change must not overwrite an in-progress text edit
+   # while the actual WinUI TextBox remains focused.
+   probe.set_focus()
+   keyboard.send_keys('^a')
+   keyboard.send_keys('Draft-Not-A-Folder',with_spaces=True)
+   eventually(lambda:probe.window_text()=='Draft-Not-A-Folder',
+              'unable to start editable address draft')
+   assert probe.has_keyboard_focus(),'lost TextBox focus before external change'
+   assert u.PostMessageW(hwnd,0x111,32004,0),'external Up while editing failed'
+   eventually(lambda:title(hwnd).lower().endswith('my documents - fxfile'),
+              'native folder failed to change during address edit')
+   if probe.has_keyboard_focus():
+    assert probe.window_text()=='Draft-Not-A-Folder', (
+           'native pane change silently overwrote focused user input')
+    print('REAL_PRODUCT_DRAFT_SURVIVES_NATIVE_CHANGE_PASS',flush=True)
+   else:
+    print('REAL_PRODUCT_DRAFT_SURVIVES_NATIVE_CHANGE_NOT_TESTED_FOCUS_MOVED',flush=True)
+   probe.set_focus()
+   keyboard.send_keys('{ESC}')
+   eventually(lambda:probe.window_text().lower()==str(fixture.parent).lower(),
+              'Escape failed to restore latest native path after edit')
+   print('REAL_PRODUCT_DRAFT_ESCAPE_RESTORES_LATEST_PANE_PASS',flush=True)
+   controls['Back'].set_focus()
+   assert u.PostMessageW(hwnd,0x111,32006,0),'restore native Back failed'
+   eventually(lambda:probe.window_text().lower()==str(fixture).lower(),
+              'native Back did not restore test fixture before UI command tests')
   else:
    assert 'isolated' in probe.window_text().lower(),'diagnostic TextBox initial text missing'
   print('REAL_PRODUCT_ISOLATED_TEXTBOX_LOAD_UIA_PASS',textbox_mode,flush=True)
@@ -179,6 +234,101 @@ try:
   eventually(lambda:probe.window_text().lower()==str(fixture).lower(),
              'address not refreshed after native navigation')
   print('REAL_PRODUCT_ADDRESS_ENTER_NATIVE_ENGINE_PASS',flush=True)
+  if extra_ui:
+   long_ok=True
+   if os.environ.get('FLYEXP_PHASE5_RUN_LONG_KEYS','')=='1':
+    # Separate synthetic keyboard-injection reliability from UIA ValuePattern.
+    probe.set_focus()
+    keyboard.send_keys('^a')
+    keyboard.send_keys(str(fixture),with_spaces=True,pause=0.035)
+    time.sleep(.25)
+    typed=probe.window_text()
+    long_ok=typed.lower()==str(fixture).lower()
+    print('LONG_PATH_RATE_LIMITED_KEY_EVENT_RESULT',long_ok,
+          'actual_length',len(typed),'expected_length',len(str(fixture)),flush=True)
+    if not long_ok:
+     import difflib
+     changes=[(tag,str(fixture)[i:j],typed[k:l])
+              for tag,i,j,k,l in difflib.SequenceMatcher(
+                  None,str(fixture),typed).get_opcodes() if tag!='equal']
+     print('LONG_INPUT_MISMATCH_EDITS',changes[:9],flush=True)
+     # Compare the default Unicode VK_PACKET injector with native virtual-key
+     # translation. Missing separators alone must not trigger a product edit.
+     probe.set_edit_text('')
+     probe.set_focus()
+     keyboard.send_keys(str(fixture),with_spaces=True,
+                        pause=0.035,vk_packet=False)
+     time.sleep(.2)
+     physical_vk=probe.window_text()
+     vk_ok=physical_vk.lower()==str(fixture).lower()
+     print('LONG_PATH_NATIVE_VK_EVENT_RESULT',vk_ok,
+           'actual_length',len(physical_vk),'expected_length',len(str(fixture)),
+           flush=True)
+     long_ok=vk_ok
+    # Restore synthetic field for subsequent independent product path gates.
+    probe.set_edit_text(str(fixture))
+    controls['Up'].set_focus()
+    eventually(lambda:probe.window_text().lower()==str(fixture).lower(),
+               'synthetic address not restored after long-input diagnosis')
+   status=island_ui.child_window(auto_id='Phase5IslandStatusText',
+                                  control_type='Text')
+   invalid=str(fixture)+'\\__phase5_missing_test_directory__'
+   probe.set_edit_text(invalid)
+   probe.set_focus()
+   keyboard.send_keys('{ENTER}')
+   eventually(lambda:'rejected' in status.window_text().lower(),
+              'invalid native path did not show an explicit rejection')
+   assert title(hwnd).lower().endswith('my music - fxfile')
+   keyboard.send_keys('{ESC}')
+   eventually(lambda:probe.window_text().lower()==str(fixture).lower(),
+              'invalid address Escape failed to restore active pane')
+   print('REAL_PRODUCT_INVALID_LOCAL_PATH_REJECT_AND_RESTORE_PASS',flush=True)
+
+   # Open a separate native tab, navigate only that active tab through the
+   # existing C++ engine, and switch between two distinct real tab paths.
+   controls['Up'].set_focus()
+   assert u.PostMessageW(hwnd,0x111,35012,0),'native new tab dispatch failed'
+   time.sleep(.45)
+   probe.set_edit_text(str(fixture.parent))
+   probe.set_focus()
+   keyboard.send_keys('{ENTER}')
+   eventually(lambda:title(hwnd).lower().endswith('my documents - fxfile'),
+              'new native tab cannot navigate through WinUI address')
+   controls['Up'].set_focus()
+   assert u.PostMessageW(hwnd,0x111,35021,0),'native previous tab failed'
+   eventually(lambda:title(hwnd).lower().endswith('my music - fxfile'),
+              'switching to original tab did not restore original folder')
+   eventually(lambda:probe.window_text().lower()==str(fixture).lower(),
+              'address not synced after previous tab')
+   assert u.PostMessageW(hwnd,0x111,35022,0),'native next tab failed'
+   eventually(lambda:title(hwnd).lower().endswith('my documents - fxfile'),
+              'switching to new tab did not restore its folder')
+   eventually(lambda:probe.window_text().lower()==str(fixture.parent).lower(),
+              'address not synced after next tab')
+   print('REAL_PRODUCT_NATIVE_TAB_SWITCH_ADDRESS_SYNC_PASS',flush=True)
+
+   # The real splitter activates one of two native ExplorerViews; native
+   # window-next/previous must refresh the address of the active pane.
+   assert u.PostMessageW(hwnd,0x111,35003,0),'split 1x2 dispatch failed'
+   time.sleep(.65)
+   controls['Up'].set_focus()
+   assert u.PostMessageW(hwnd,0x111,35000,0),'next native pane dispatch failed'
+   time.sleep(.4)
+   probe.set_edit_text(str(fixture))
+   probe.set_focus()
+   keyboard.send_keys('{ENTER}')
+   eventually(lambda:probe.window_text().lower()==str(fixture).lower(),
+              'cannot navigate second active native pane')
+   controls['Up'].set_focus()
+   assert u.PostMessageW(hwnd,0x111,35001,0),'previous native pane dispatch failed'
+   eventually(lambda:probe.window_text().lower()==str(fixture.parent).lower(),
+              'switching to other pane did not restore its own address')
+   assert u.PostMessageW(hwnd,0x111,35000,0),'next native pane second dispatch failed'
+   eventually(lambda:probe.window_text().lower()==str(fixture).lower(),
+              'returning to second pane did not restore its own address')
+   print('REAL_PRODUCT_NATIVE_MULTI_PANE_ADDRESS_SYNC_PASS',flush=True)
+   if not long_ok:raise AssertionError(
+      'rate-limited Win32 keyboard event injection still dropped long path characters')
  assert not u.IsHungAppWindow(hwnd)
  host=frame.rectangle()
  assert u.MoveWindow(hwnd,host.left,host.top,host.width()+90,host.height()+60,True)

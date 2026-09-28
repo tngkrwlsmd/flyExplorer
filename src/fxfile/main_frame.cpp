@@ -86,6 +86,7 @@ namespace
 #define DEFAULT_WINDOW_WIDTH  800
 #define DEFAULT_WINDOW_HEIGHT 600
 
+static const UINT WM_TEST_ISLAND_PATH_CHANGED = WM_APP + 0x3A7;
 xpr_uint_t WM_TASK_RESTARTED = ::RegisterWindowMessage(XPR_STRING_LITERAL("TaskbarCreated"));
 xpr_uint_t WM_SINGLE_PROCESS = SingleProcess::getMsg();
 
@@ -100,6 +101,8 @@ typedef void (WINAPI *TestIslandShutdown)();
 typedef BOOL (WINAPI *TestIslandReadPath)(HWND, wchar_t *, DWORD);
 typedef BOOL (WINAPI *TestIslandNavigatePath)(HWND, wchar_t const *);
 typedef void (WINAPI *TestIslandBindAdapter)(TestIslandReadPath, TestIslandNavigatePath);
+typedef void (WINAPI *TestIslandRefreshPath)();
+static TestIslandRefreshPath sTestIslandRefreshPath = NULL;
 static TestIslandBindAdapter sTestIslandBindAdapter = NULL;
 static HMODULE sTestIslandDll = NULL;
 static TestIslandCreate sTestIslandCreate = NULL;
@@ -121,6 +124,10 @@ static BOOL WINAPI TestIslandReadActivePath(HWND hwnd, wchar_t *out, DWORD capac
     MainFrame *frame = TestIslandFrameFor(hwnd);
     ExplorerCtrl *explorer = frame ? frame->getExplorerCtrl(-1) : NULL;
     if (!explorer || !explorer->getCurPath()) return FALSE;
+    const DWORD attrs = ::GetFileAttributesW(explorer->getCurPath());
+    if (attrs == INVALID_FILE_ATTRIBUTES ||
+        !(attrs & FILE_ATTRIBUTE_DIRECTORY))
+        return FALSE; // Native MFC bar retains Shell virtual-folder support.
     size_t count = wcslen(explorer->getCurPath());
     if (count == 0 || count >= capacity) return FALSE;
     wmemcpy(out, explorer->getCurPath(), count + 1);
@@ -166,9 +173,11 @@ static void PrepareTestIslandRuntime()
         ::GetProcAddress(module, "FlyIslandDestroy"));
     sTestIslandShutdown = reinterpret_cast<TestIslandShutdown>(
         ::GetProcAddress(module, "FlyIslandShutdown"));
+    sTestIslandRefreshPath = reinterpret_cast<TestIslandRefreshPath>(
+        ::GetProcAddress(module, "FlyIslandRefreshPath"));
     sTestIslandBindAdapter = reinterpret_cast<TestIslandBindAdapter>(
         ::GetProcAddress(module, "FlyIslandBindAdapter"));
-    if (!initialize || !sTestIslandBindAdapter || !sTestIslandCreate || !sTestIslandResize ||
+    if (!initialize || !sTestIslandRefreshPath || !sTestIslandBindAdapter || !sTestIslandCreate || !sTestIslandResize ||
         !sTestIslandPreTranslate || !sTestIslandDestroy ||
         !sTestIslandShutdown || !initialize()) {
         ::OutputDebugStringW(L"Phase5 test island runtime initialize failed");
@@ -531,6 +540,7 @@ BEGIN_MESSAGE_MAP(MainFrame, super)
     ON_UPDATE_COMMAND_UI_RANGE(ID_VIEW_THEME_SYSTEM, ID_VIEW_THEME_DARK, OnUpdateViewThemeMode)
     ON_MESSAGE(WM_DPICHANGED, OnDpiChanged)
     ON_MESSAGE(WM_THEMECHANGED, OnThemeChanged)
+    ON_MESSAGE(WM_TEST_ISLAND_PATH_CHANGED, OnTestIslandPathChanged)
     ON_WM_CLOSE()
     ON_WM_SETFOCUS()
     ON_WM_SYSCOMMAND()
@@ -833,6 +843,7 @@ void MainFrame::onSplitterActivedPane(Splitter &aSplitter, xpr_sint_t aRow, xpr_
 
         sExplorerView->setActivateBarStatus(sActive, sLastActived);
     }
+    if (sTestIslandReady) PostMessage(WM_TEST_ISLAND_PATH_CHANGED);
 }
 
 void MainFrame::OnSettingChange(xpr_uint_t aFlags, const xpr_tchar_t *aSection)
@@ -5199,6 +5210,19 @@ void MainFrame::onMoveFocus(FolderView &aFolderView, xpr_sint_t aCurWnd)
 void MainFrame::onMoveFocus(ExplorerView &aExplorerView, xpr_sint_t aCurWnd)
 {
     moveFocus(aCurWnd);
+}
+
+void MainFrame::onActivePathChanged(ExplorerView &view)
+{
+    if (sTestIslandReady && getExplorerView(-1) == &view)
+        PostMessage(WM_TEST_ISLAND_PATH_CHANGED);
+}
+
+LRESULT MainFrame::OnTestIslandPathChanged(WPARAM, LPARAM)
+{
+    if (sTestIslandReady && sTestIslandRefreshPath)
+        sTestIslandRefreshPath();
+    return 0;
 }
 
 void MainFrame::OnSetPreviewMode(xpr_bool_t aPreview, CPrintPreviewState *aState)

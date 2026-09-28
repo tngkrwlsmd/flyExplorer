@@ -187,3 +187,32 @@ commit/cancel, active-pane synchronization, shipping PRI wiring,
 higher-DPI/High-Contrast and clean-machine deployment are NOT validated.
 Keep the test-only experimental integration off main until those
 product-facing contracts have independent evidence.
+
+
+## Opt-in Release resource-package and active-pane experiment (2026-09-28)
+
+build.cmd defaults to Debug and now accepts build.cmd Release. Its
+Release x64 build emits FlyExplorerIslandBridge.dll, its generated PRI,
+Microsoft.WindowsAppRuntime.Bootstrap.dll and Microsoft.Web.WebView2.Core.dll.
+The owned-process test runner supports FLYEXP_PHASE5_BUILD_CONFIG=Release and,
+in opt-in app mode, stages all four native files beside a disposable copy
+of the product executable. The existing product binary directory, existing
+resource indexes and original user settings are not overwritten.
+
+dist/copy.bat now offers an explicitly experimental, DEFAULT-OFF
+FLYEXP_PHASE5_INCLUDE_WINUI=1 option. Its preflight checks for all four
+Release files and rejects a pre-existing native resources.pri BEFORE
+transactional x64-only staging. Default packaging does not include WinUI.
+The x86 package paths are unchanged. Four isolated batch staging contracts
+check default mode, opt-in mode, prior-index conflicts and a missing DLL.
+A real installed NSIS build and clean-machine Windows App SDK dependency
+smoke have NOT been executed; do not ship this option yet.
+
+Actual native folder/tab/pane events now refresh the island's synthetic
+editable field without polling. A focused but unchanged field follows
+native changes; a genuinely dirty edit survives them until Escape restores
+the latest real active location. Non-filesystem Shell locations are
+delegated to the still-active MFC address surface instead of displaying
+a stale previous local path. All runtime claims and unresolved keyboard,
+DPI, High Contrast, IME and installer gates are documented separately in
+docs/development/UI_FRAMEWORK_PHASE5_PRODUCTIZATION_EVIDENCE.md.

@@ -93,6 +93,22 @@ call :require_input "..\bin\x64\zlib1.dll"
 if errorlevel 1 goto :error
 call :require_input "..\src\fxfile\Languages\Korean.xml"
 if errorlevel 1 goto :error
+rem Optional, x64-only WinUI package experiment; DEFAULT is unchanged.
+rem Validate all companions BEFORE touching staged release output.
+if /I "%FLYEXP_PHASE5_INCLUDE_WINUI%"=="1" (
+    if exist "..\bin\x64\resources.pri" (
+        echo ERROR: Existing native resources.pri must not be replaced.
+        goto :error
+    )
+    call :require_input "..\experiments\phase5_island_bridge\x64\Release\FlyExplorerIslandBridge\FlyExplorerIslandBridge.dll"
+    if errorlevel 1 goto :error
+    call :require_input "..\experiments\phase5_island_bridge\x64\Release\FlyExplorerIslandBridge\FlyExplorerIslandBridge.pri"
+    if errorlevel 1 goto :error
+    call :require_input "..\experiments\phase5_island_bridge\x64\Release\FlyExplorerIslandBridge\Microsoft.WindowsAppRuntime.Bootstrap.dll"
+    if errorlevel 1 goto :error
+    call :require_input "..\experiments\phase5_island_bridge\x64\Release\FlyExplorerIslandBridge\Microsoft.Web.WebView2.Core.dll"
+    if errorlevel 1 goto :error
+)
 
 if exist ".package-stage" rmdir /s /q ".package-stage"
 if exist ".package-stage" goto :error
@@ -177,6 +193,18 @@ call :copy_required "..\bin\x64\libxprw.dll" ".package-stage\x64\libxprw.dll"
 if errorlevel 1 goto :error
 call :copy_required "..\bin\x64\zlib1.dll" ".package-stage\x64\zlib1.dll"
 if errorlevel 1 goto :error
+if /I "%FLYEXP_PHASE5_INCLUDE_WINUI%"=="1" (
+    rem The host executable searches resources.pri beside fxfile.exe.
+    rem Explicit opt-in and x64 only. Never copy into source bin or HKCU.
+    call :copy_required "..\experiments\phase5_island_bridge\x64\Release\FlyExplorerIslandBridge\FlyExplorerIslandBridge.dll" ".package-stage\x64\FlyExplorerIslandBridge.dll"
+    if errorlevel 1 goto :error
+    call :copy_required "..\experiments\phase5_island_bridge\x64\Release\FlyExplorerIslandBridge\FlyExplorerIslandBridge.pri" ".package-stage\x64\resources.pri"
+    if errorlevel 1 goto :error
+    call :copy_required "..\experiments\phase5_island_bridge\x64\Release\FlyExplorerIslandBridge\Microsoft.WindowsAppRuntime.Bootstrap.dll" ".package-stage\x64\Microsoft.WindowsAppRuntime.Bootstrap.dll"
+    if errorlevel 1 goto :error
+    call :copy_required "..\experiments\phase5_island_bridge\x64\Release\FlyExplorerIslandBridge\Microsoft.Web.WebView2.Core.dll" ".package-stage\x64\Microsoft.Web.WebView2.Core.dll"
+    if errorlevel 1 goto :error
+)
 xcopy "..\src\fxfile\Languages\*.xml" ".package-stage\x86-multibyte\Languages\" /e /r /y /i >nul
 if errorlevel 1 goto :error
 xcopy "..\src\fxfile\Languages\*.xml" ".package-stage\x86-unicode\Languages\" /e /r /y /i >nul

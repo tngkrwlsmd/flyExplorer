@@ -3,9 +3,14 @@ from pathlib import Path
 import ctypes as c, hashlib, json, os, re, shutil, subprocess, tempfile, time
 from ctypes import wintypes as w
 import psutil
+from stage_test_host import stage_test_host
 repo=Path(__file__).resolve().parents[2]
 product=repo/"bin/x64/fxfile.exe"
-dll=repo/"experiments/phase5_island_bridge/x64/Debug/FlyExplorerIslandBridge/FlyExplorerIslandBridge.dll"
+build_mode=os.environ.get("FLYEXP_PHASE5_BUILD_CONFIG","Debug")
+assert build_mode in ("Debug","Release")
+with_address=os.environ.get("FLYEXP_PHASE5_BENCH_WITH_ADDRESS","")=="1"
+dll=repo/"experiments"/"phase5_island_bridge"/"x64"/build_mode/"FlyExplorerIslandBridge"/"FlyExplorerIslandBridge.dll"
+assert dll.is_file()
 source=Path(os.environ["APPDATA"])/"fxfile"/"conf"
 names=("fxfile.conf","fxfile-main.conf","fxfile-toolbar.dat",
        "fxfile-coolbar.dat","fxfile-dlg_state.conf","fxfile-folder_layout.conf")
@@ -52,13 +57,23 @@ for round_id in range(1,4):
         env={**os.environ,"APPDATA":str(appdata)}
         env.pop("FLYEXP_PHASE5_TEST_ISLAND_DLL",None)
         env.pop("FLYEXP_MFC_DLL_TRACE",None)
+        env.pop("FLYEXP_PHASE5_DIAG_TEXTBOX",None)
+        run_product=product
+        if with_address:
+            # Both modes run identical disposable Release host contents:
+            # only the island mode opts in to loading the bridge.
+            run_product,staged_pri=stage_test_host(
+                product,dll.parent/"FlyExplorerIslandBridge.pri",
+                work/"packaged-host",bridge_dll=dll)
         if mode=="island":
-            env["FLYEXP_PHASE5_TEST_ISLAND_DLL"]=str(dll)
+            env["FLYEXP_PHASE5_TEST_ISLAND_DLL"]=str(
+                (run_product.parent/dll.name) if with_address else dll)
             env["FLYEXP_MFC_DLL_TRACE"]=str(trace)
+            if with_address:env["FLYEXP_PHASE5_DIAG_TEXTBOX"]="app"
         p=None
         try:
             t0=time.perf_counter()
-            p=subprocess.Popen([str(product),"--conf_dir",str(config),str(fixture)],
+            p=subprocess.Popen([str(run_product),"--conf_dir",str(config),str(fixture)],
                                cwd=str(work),env=env,stdin=subprocess.DEVNULL,
                                stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
             deadline=time.monotonic()+14
@@ -77,7 +92,9 @@ for round_id in range(1,4):
                 assert ready_s is not None,"Island XAML root did not load"
             time.sleep(.8)
             stats=psutil.Process(p.pid).memory_info()
-            record={"round":round_id,"mode":mode,"frame_visible_s":round(frame_s,3),
+            record={"round":round_id,"mode":mode,"build":build_mode,
+                    "address_app":with_address,
+                    "frame_visible_s":round(frame_s,3),
                     "island_root_loaded_s":None if ready_s is None else round(ready_s,3),
                     "rss_mib":round(stats.rss/1048576,2),
                     "private_mib":round(stats.private/1048576,2),
