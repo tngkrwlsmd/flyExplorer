@@ -60,6 +60,29 @@ production-grade performance figure.
 Evidence and remaining limitations:
 [Phase 5 same-process MFC island evidence](../../docs/development/UI_FRAMEWORK_PHASE5_MFC_ISLAND_EVIDENCE.md).
 
+## Native-host PRI staging and editable address integration (2026-09-28)
+
+On the dedicated `experiments/phase5-address-pri-20260928` branch, the
+test-only `stage_test_host.py` now creates an isolated native executable
+directory (copied exe, required app-local DLLs/Languages and generated
+`resources.pri`). The regular product output and user installation are
+not modified. The opt-in App-mode island displays the real MFC active
+ExplorerCtrl path, handles native Ctrl+A selection for its focused editable
+TextBox, cancels with Escape and sends validated local-directory input
+to the existing ExplorerCtrl on keyboard Enter.
+
+THREE strict real 96-DPI app-mode tests passed, including actual short
+keyboard editing, active-path display, UI Automation insertion of a
+long synthetic absolute path followed by physical Enter, actual native
+navigation, normal shutdown and six original user config hash checks.
+The original TextBlock-only regression and native functional suite
+(17/0) also passed. Fully physical typing of a long absolute path,
+continuous updates for native pane switching, virtual Shell namespace,
+shipping installer PRI wiring, non-100% DPI and High Contrast remain
+unverified. **No experimental product code should be merged to main yet.**
+
+[Focused PRI and address integration evidence](../../docs/development/UI_FRAMEWORK_PHASE5_ADDRESS_PRI_EVIDENCE.md).
+
 ## Historical TextBox failures before host PRI staging
 
 The ordinary same-process island still uses a TextBlock and never constructs the

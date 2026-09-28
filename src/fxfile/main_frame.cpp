@@ -97,6 +97,10 @@ typedef void (WINAPI *TestIslandResize)(int,int,int,int);
 typedef BOOL (WINAPI *TestIslandPreTranslate)(MSG const *);
 typedef void (WINAPI *TestIslandDestroy)();
 typedef void (WINAPI *TestIslandShutdown)();
+typedef BOOL (WINAPI *TestIslandReadPath)(HWND, wchar_t *, DWORD);
+typedef BOOL (WINAPI *TestIslandNavigatePath)(HWND, wchar_t const *);
+typedef void (WINAPI *TestIslandBindAdapter)(TestIslandReadPath, TestIslandNavigatePath);
+static TestIslandBindAdapter sTestIslandBindAdapter = NULL;
 static HMODULE sTestIslandDll = NULL;
 static TestIslandCreate sTestIslandCreate = NULL;
 static TestIslandResize sTestIslandResize = NULL;
@@ -104,6 +108,39 @@ static TestIslandPreTranslate sTestIslandPreTranslate = NULL;
 static TestIslandDestroy sTestIslandDestroy = NULL;
 static TestIslandShutdown sTestIslandShutdown = NULL;
 static bool sTestIslandReady = false;
+// Test-only callbacks run synchronously on the existing MFC UI thread.
+static MainFrame *TestIslandFrameFor(HWND hwnd)
+{
+    if (::GetCurrentThreadId() != ::GetWindowThreadProcessId(hwnd, NULL)) return NULL;
+    return dynamic_cast<MainFrame *>(CWnd::FromHandlePermanent(hwnd));
+}
+static BOOL WINAPI TestIslandReadActivePath(HWND hwnd, wchar_t *out, DWORD capacity)
+{
+    if (!out || capacity == 0) return FALSE;
+    out[0] = 0;
+    MainFrame *frame = TestIslandFrameFor(hwnd);
+    ExplorerCtrl *explorer = frame ? frame->getExplorerCtrl(-1) : NULL;
+    if (!explorer || !explorer->getCurPath()) return FALSE;
+    size_t count = wcslen(explorer->getCurPath());
+    if (count == 0 || count >= capacity) return FALSE;
+    wmemcpy(out, explorer->getCurPath(), count + 1);
+    return TRUE;
+}
+static BOOL WINAPI TestIslandNavigateActivePath(HWND hwnd, wchar_t const *path)
+{
+    if (!path || !path[0] || wcslen(path) >= 32768) return FALSE;
+    DWORD attributes = ::GetFileAttributesW(path);
+    if (attributes == INVALID_FILE_ATTRIBUTES || !(attributes & FILE_ATTRIBUTE_DIRECTORY)) return FALSE;
+    MainFrame *frame = TestIslandFrameFor(hwnd);
+    ExplorerCtrl *explorer = frame ? frame->getExplorerCtrl(-1) : NULL;
+    if (!explorer) return FALSE;
+    // Match ExplorerView's existing shell-PIDL ownership contract.
+    LPITEMIDLIST pidl = fxfile::base::Pidl::create(path);
+    if (!pidl) return FALSE;
+    if (explorer->explore(pidl) == XPR_TRUE) return TRUE;
+    COM_FREE(pidl);
+    return FALSE;
+}
 static void PrepareTestIslandRuntime()
 {
     if (sTestIslandDll) return;
@@ -129,7 +166,9 @@ static void PrepareTestIslandRuntime()
         ::GetProcAddress(module, "FlyIslandDestroy"));
     sTestIslandShutdown = reinterpret_cast<TestIslandShutdown>(
         ::GetProcAddress(module, "FlyIslandShutdown"));
-    if (!initialize || !sTestIslandCreate || !sTestIslandResize ||
+    sTestIslandBindAdapter = reinterpret_cast<TestIslandBindAdapter>(
+        ::GetProcAddress(module, "FlyIslandBindAdapter"));
+    if (!initialize || !sTestIslandBindAdapter || !sTestIslandCreate || !sTestIslandResize ||
         !sTestIslandPreTranslate || !sTestIslandDestroy ||
         !sTestIslandShutdown || !initialize()) {
         ::OutputDebugStringW(L"Phase5 test island runtime initialize failed");
@@ -142,6 +181,7 @@ static void AttachTestIsland(HWND mainHwnd)
     if (!sTestIslandDll || !sTestIslandCreate || !sTestIslandResize ||
         !sTestIslandCreate(mainHwnd)) return;
     sTestIslandReady = true;
+    sTestIslandBindAdapter(&TestIslandReadActivePath, &TestIslandNavigateActivePath);
     RECT client = {};
     ::GetClientRect(mainHwnd, &client);
     int width = (std::min)(static_cast<int>(client.right), 760);

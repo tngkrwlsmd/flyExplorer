@@ -5,6 +5,7 @@ from pathlib import Path
 import ctypes as C,hashlib,os,re,shutil,subprocess,tempfile,time
 from ctypes import wintypes as W
 from pywinauto import Desktop,mouse,keyboard
+from stage_test_host import stage_test_host
 
 folder=Path(__file__).resolve().parent
 repo=folder.parents[1]
@@ -73,20 +74,16 @@ def eventually(fn,description,timeout=9):
  raise AssertionError(description+'; DLL trace='+trace.read_text(errors='replace') if trace.exists() else description)
 proc=None
 hwnd=None
-staged_pri=False
-pri_target=product.parent/'resources.pri'
+pri_target=None
 pri_source=dll.parent/'FlyExplorerIslandBridge.pri'
+owned_product=product
 try:
  if textbox_mode=='app':
-  # This is only the separately built experimental product binary directory,
-  # never the user's normal product installation or original configuration.
-  assert pri_source.is_file(),'generated WinUI PRI missing'
-  assert not pri_target.exists(),'refuse to overwrite any host resources.pri'
-  staged_pri=True
-  shutil.copy2(pri_source,pri_target)
-  assert hashlib.sha256(pri_target.read_bytes()).digest()==hashlib.sha256(pri_source.read_bytes()).digest()
+  # No write to normal product bin directory: create a disposable host image.
+  owned_product,pri_target=stage_test_host(product,pri_source,work/'packaged-host')
+  assert owned_product.parent != product.parent
   print('EXPERIMENTAL_HOST_PRI_STAGED',flush=True)
- proc=subprocess.Popen([str(product),'--conf_dir',str(copy),str(fixture)],
+ proc=subprocess.Popen([str(owned_product),'--conf_dir',str(copy),str(fixture)],
                        cwd=str(work),env=env,stdin=subprocess.DEVNULL,
                        stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
  hwnd=eventually(lambda:main_window(proc.pid),'actual isolated MFC MainFrame',13)
@@ -122,17 +119,22 @@ try:
   probe=island_ui.child_window(auto_id='Phase5IslandDiagnosticTextBox',
                                 control_type='Edit')
   assert probe.exists(timeout=3),'test-only WinUI TextBox UIA edit missing'
-  assert 'isolated' in probe.window_text().lower(),'test-only TextBox initial text missing'
   if textbox_mode=='app':
-   # UIA clears only the synthetic field; subsequent characters must
-   # arrive as actual keyboard input through the MFC-hosted XAML island.
-   probe.set_edit_text('')
+   eventually(lambda:probe.window_text().lower()==str(fixture).lower(),
+              'editable TextBox not bound to real active pane')
+   print('REAL_PRODUCT_ACTIVE_PANE_ADDRESS_SYNC_PASS',flush=True)
    probe.set_focus()
-   assert probe.has_keyboard_focus(),'WinUI TextBox not focused for keyboard test'
+   keyboard.send_keys('^a')
    keyboard.send_keys('Phase5-Input-20260928',with_spaces=True)
    eventually(lambda:probe.window_text()=='Phase5-Input-20260928',
-              'editable WinUI TextBox failed keyboard text entry')
-   print('REAL_PRODUCT_EDITABLE_TEXTBOX_TYPED_PASS',textbox_mode,flush=True)
+              'WinUI TextBox Ctrl+A failed to replace initial native address')
+   print('REAL_PRODUCT_EDITABLE_TEXTBOX_CTRL_A_PASS',flush=True)
+   keyboard.send_keys('{ESC}')
+   eventually(lambda:probe.window_text().lower()==str(fixture).lower(),
+              'Escape failed to cancel edit and restore active pane address')
+   print('REAL_PRODUCT_EDITABLE_TEXTBOX_ESCAPE_PASS',flush=True)
+  else:
+   assert 'isolated' in probe.window_text().lower(),'diagnostic TextBox initial text missing'
   print('REAL_PRODUCT_ISOLATED_TEXTBOX_LOAD_UIA_PASS',textbox_mode,flush=True)
  print('REAL_PRODUCT_TEST_DPI',u.GetDpiForWindow(hwnd),flush=True)
  rect_t=W.RECT()
@@ -164,6 +166,19 @@ try:
  eventually(lambda:title(hwnd) if title(hwnd).lower().endswith('my documents - fxfile') else None,
             'keyboard ENTER on tab-focused XAML Forward did not reach product')
  print('REAL_PRODUCT_IN_PROCESS_KEYBOARD_TAB_ENTER_PASS',flush=True)
+ if textbox_mode=='app':
+  # UIA ValuePattern sets the long synthetic absolute path exactly;
+  # physical keyboard editing and Ctrl+A/Esc are exercised separately above.
+  probe.set_edit_text(str(fixture))
+  probe.set_focus()
+  eventually(lambda:probe.window_text().lower()==str(fixture).lower(),
+             'WinUI TextBox did not accept target folder path')
+  keyboard.send_keys('{ENTER}')
+  eventually(lambda:title(hwnd).lower().endswith('my music - fxfile'),
+             'native engine did not navigate from WinUI address Enter')
+  eventually(lambda:probe.window_text().lower()==str(fixture).lower(),
+             'address not refreshed after native navigation')
+  print('REAL_PRODUCT_ADDRESS_ENTER_NATIVE_ENGINE_PASS',flush=True)
  assert not u.IsHungAppWindow(hwnd)
  host=frame.rectangle()
  assert u.MoveWindow(hwnd,host.left,host.top,host.width()+90,host.height()+60,True)
@@ -191,10 +206,11 @@ finally:
  print('ORIGINAL_SIX_USER_CONFIG_HASHES_UNCHANGED',after==original,
        'PRODUCT_EXIT',None if proc is None else proc.returncode,
        'DLL_TRACE',trace.read_text(errors='replace') if trace.exists() else 'missing',flush=True)
- if staged_pri:
-  # Restore the experimental output directory even on GUI test failure.
-  assert pri_target.is_file() and hashlib.sha256(pri_target.read_bytes()).digest()==hashlib.sha256(pri_source.read_bytes()).digest(),'staged PRI unexpectedly changed; preserve for inspection'
-  pri_target.unlink()
-  print('EXPERIMENTAL_HOST_PRI_REMOVED',not pri_target.exists(),flush=True)
+ if pri_target is not None:
+  # The disposable owned host retains its PRI for postmortem test evidence,
+  # while neither normal product output nor any user installation is touched.
+  assert pri_target.is_file() and hashlib.sha256(pri_target.read_bytes()).digest()==hashlib.sha256(pri_source.read_bytes()).digest(),'owned-host PRI unexpectedly modified'
+  print('EXPERIMENTAL_HOST_PRI_ISOLATED',owned_product.parent != product.parent,flush=True)
+  assert not (product.parent/'resources.pri').exists(),'unexpected normal-product PRI'
  assert after==original,'Original user configuration was modified'
  if proc is not None:assert proc.returncode==0,'Owned product did not exit cleanly'

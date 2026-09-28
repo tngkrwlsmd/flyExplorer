@@ -4,6 +4,8 @@
 #include <winrt/Microsoft.UI.Content.h>
 #include <winrt/Microsoft.UI.Interop.h>
 #include <winrt/Microsoft.UI.Xaml.Automation.h>
+#include <winrt/Microsoft.UI.Xaml.Input.h>
+#include <winrt/Windows.System.h>
 #include <winrt/Windows.Graphics.h>
 #include <MddBootstrap.h>
 #include <WindowsAppSDK-VersionInfo.h>
@@ -37,6 +39,11 @@ static winrt::Microsoft::UI::Dispatching::DispatcherQueueController s_queue{null
 static ui::Application s_diagnosticApp{nullptr};
 static bool s_bootstrapped=false;
 static HRESULT s_roInitialize=E_FAIL;
+// Test-only native product callbacks: keep the engine and active-pane logic in MFC.
+using ReadActivePath = BOOL (WINAPI *)(HWND, wchar_t *, DWORD);
+using NavigateActivePath = BOOL (WINAPI *)(HWND, wchar_t const *);
+static ReadActivePath s_readActivePath = nullptr;
+static NavigateActivePath s_navigateActivePath = nullptr;
 
 static bool InitializeRuntime() {
     if (s_queue) return true;
@@ -164,6 +171,24 @@ public:
                 m_textBoxProbe.Text(L"Isolated WinUI 3 TextBox probe");
                 ui::Automation::AutomationProperties::SetAutomationId(
                     m_textBoxProbe, L"Phase5IslandDiagnosticTextBox");
+                m_textBoxProbe.KeyDown([this](auto const&,ui::Input::KeyRoutedEventArgs const& event) {
+                    auto key=event.Key();
+                    if (key==winrt::Windows::System::VirtualKey::A &&
+                        (::GetKeyState(VK_CONTROL) & 0x8000) != 0) {
+                        Trace("dll-textbox-control-a-keydown");
+                        m_textBoxProbe.SelectAll();
+                        event.Handled(true);
+                    } else if (key==winrt::Windows::System::VirtualKey::Enter) {
+                        bool ok=s_navigateActivePath &&
+                            s_navigateActivePath(m_parent,m_textBoxProbe.Text().c_str());
+                        if (ok) Refresh(L"Address navigation handled by active native pane");
+                        else m_status.Text(L"Address navigation rejected or no active native pane");
+                        event.Handled(true);
+                    } else if (key==winrt::Windows::System::VirtualKey::Escape) {
+                        Refresh(L"Address edit cancelled");
+                        event.Handled(true);
+                    }
+                });
                 m_textBoxProbe.Loaded([](auto const&, auto const&) {
                     Trace("dll-textbox-loaded");
                 });
@@ -189,6 +214,13 @@ public:
         wchar_t title[1024]{};
         ::GetWindowTextW(m_parent,title,_countof(title));
         m_title.Text(title);
+        if (m_textBoxProbe && s_readActivePath) {
+            wchar_t active[32768]{};
+            if (s_readActivePath(m_parent, active, _countof(active))) {
+                m_textBoxProbe.Text(active);
+                Trace("dll-address-active-pane-refreshed");
+            } else Trace("dll-address-active-pane-unavailable");
+        }
         m_status.Text(message);
     }
     void Send(UINT id) {
@@ -201,6 +233,18 @@ public:
                       " result="+std::to_string(static_cast<long long>(result));
         Trace(evidence.c_str());
         Refresh(result?L"Actual product command handled":L"Product command unavailable");
+    }
+    bool TrySelectAll(MSG const* msg) {
+        if (!msg || !m_textBoxProbe || m_textBoxProbe.IsReadOnly() ||
+            msg->message!=WM_KEYDOWN || msg->wParam!='A' ||
+            (::GetKeyState(VK_CONTROL)&0x8000)==0) return false;
+        Trace("dll-native-ctrl-a-candidate");
+        if (m_textBoxProbe.FocusState()==ui::FocusState::Unfocused) return false;
+        // The native MFC accelerator path can consume Ctrl+A before XAML
+        // KeyDown. Handle it only when the opt-in diagnostic edit has focus.
+        m_textBoxProbe.SelectAll();
+        Trace("dll-native-ctrl-a-selectall");
+        return true;
     }
     void Resize(int x,int y,int width,int height) {
         if (m_source && width>0 && height>0) {
@@ -255,12 +299,19 @@ extern "C" __declspec(dllexport) BOOL WINAPI FlyIslandCreate(HWND hwnd) {
     s_island=candidate;
     return TRUE;
 }
+extern "C" __declspec(dllexport) void WINAPI FlyIslandBindAdapter(
+    ReadActivePath read, NavigateActivePath navigate) {
+    s_readActivePath=read;
+    s_navigateActivePath=navigate;
+    if (s_island) s_island->Refresh(L"Test-only native active-pane adapter ready");
+}
 extern "C" __declspec(dllexport) void WINAPI FlyIslandResize(
     int x,int y,int width,int height) {
     if (s_island) s_island->Resize(x,y,width,height);
 }
 extern "C" __declspec(dllexport) BOOL WINAPI FlyIslandPreTranslate(MSG const* message) {
     if (!s_island || !message) return FALSE;
+    if (s_island->TrySelectAll(message)) return TRUE;
     // Resolve only after the Windows App SDK bootstrap has initialized the
     // framework graph. A static call would make this bridge DLL depend on
     // Microsoft.UI.Windowing.Core.dll before its own bootstrap can run.
@@ -275,6 +326,8 @@ extern "C" __declspec(dllexport) void WINAPI FlyIslandDestroy() {
     NavIsland* was=s_island;
     s_island=nullptr;
     if (was) {was->Close();delete was;}
+    s_readActivePath=nullptr;
+    s_navigateActivePath=nullptr;
 }
 extern "C" __declspec(dllexport) void WINAPI FlyIslandShutdown() {
     if (s_island) return;
