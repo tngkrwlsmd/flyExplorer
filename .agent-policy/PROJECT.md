@@ -24,7 +24,8 @@ Release-x64-Unicode incremental build and native regression
 complete legacy dialog acceptance are NOT TESTED.
 
 Current native UX state and next priorities are in the [seven-item hands-on backlog](../docs/development/UI_UX_HANDS_ON_BACKLOG_20260928.md),
-after scoped 96-DPI UXH-01/02 fixes; next UXH-03/04/05 remain.
+after scoped UXH-01/02 and real 96-DPI UXH-03 acceptance;
+next UXH-04/05 remain. See UXH-03 evidence in the index.
 HANG-01 and specific
 UI-01/UI-09 original-scenario acceptance remain open.
 Separate WinUI 3 productization branch

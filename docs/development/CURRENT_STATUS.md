@@ -10,6 +10,24 @@
 
 ## 1. Latest state, constraints and next work
 
+**Latest Phase 6 UXH-03 scoped acceptance (2026-09-28):** Existing
+per-pane Explorer info sidebar now automatically becomes a compact
+36-DIP horizontal folder summary only when a narrow pane would
+leave under 280 scaled px for the file list. At actual 96 DPI
+Dark/Light in a 750-px 1x2 window, each native file list gained
+88 px (178/176 -> 266/264 px). A 750-px 2x2, restored 1100-px
+1x2 and 1200-px 2x2, and 1-pane layout passed physical geometry
+checks; actual Win+Up/Down and title-bar double-click
+expanded/restored the original full sidebar. Preserved the
+owned info-bar setting, bookmark child state and six original
+user configuration hashes. Scoped x64 Release, source/scrollbar/
+address checks and native 17/0 passed. See
+[UXH-03 responsive pane evidence](UI_PHASE6_UXH03_RESPONSIVE_PANE_20260928.md).
+Next independently execute UXH-04 compact command access and
+UXH-05 real tab accessibility. Actual higher DPI/High Contrast
+remain NOT TESTED for this change.
+
+
 **New Phase 6 UXH-02 verified handoff (2026-09-28):** Normal
 Search completion no longer opens a duplicate light information
 modal. Actual 96-DPI owned Dark/Light 0/1/3 and invalid-location
@@ -19,9 +37,8 @@ native Windows event/UIA-readable summary all PASS. Release x64
 and native 17/0 PASS, original six user hashes unchanged.
 Binary SHA256 22D0568AB047E4A08F690B7461FB7D63E2B90A23E447BE03650D8818B2559575.
 [Full UXH-02 evidence](UI_PHASE6_SEARCH_NONMODAL_EVIDENCE_20260928.md).
-The next MFC UX implementation/verification sequence starts at
-UXH-03 (split-pane information density), UXH-04 (compact command
-surface), and UXH-05 (actual tab accessibility investigation).
+The UXH-03 layout is now scoped accepted; subsequent UX
+work covers UXH-04 compact commands and UXH-05 tab accessibility.
 Real other DPI, OS High Contrast and live screen-reader listening
 are not yet accepted.
 
@@ -61,7 +78,7 @@ items](UI_UX_HANDS_ON_BACKLOG_20260928.md). The native bookmark
 shortcut field originally observed in UXH-01 is fixed and GUI-tested
 at actual 96 DPI Dark/Light; individual other hotkey dialogs remain
 unverified. UXH-02's duplicate Search completion is now fixed;
-next measure split-pane layouts and compact command
+UXH-03 narrow panes are now improved; next review compact command
 discoverability and custom TabCtrl accessibility need targeted
 measurement/verification, not ungrounded implementation.
 

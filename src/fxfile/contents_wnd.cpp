@@ -45,6 +45,7 @@ ContentsWnd::ContentsWnd(void)
     , mTitleFont(XPR_NULL), mTextFont(XPR_NULL), mFileNameFont(XPR_NULL), mFullPathFont(XPR_NULL)
     , mBookmarkSetWnd(XPR_NULL)
     , mEnabledBookmark(XPR_FALSE)
+    , mCompactLayout(XPR_FALSE)
     , mBookmarkTop(0)
 {
 }
@@ -143,6 +144,27 @@ LRESULT ContentsWnd::OnThemeChanged(WPARAM aWParam, LPARAM aLParam)
     return 0;
 }
 
+void ContentsWnd::setCompactLayout(xpr_bool_t aCompact)
+{
+    if (mCompactLayout == aCompact)
+        return;
+    mCompactLayout = aCompact;
+    if (XPR_IS_NOT_NULL(mBookmarkSetWnd) &&
+        ::IsWindow(mBookmarkSetWnd->GetSafeHwnd()))
+    {
+        // Prevent off-screen bookmark controls from receiving focus in
+        // compact mode; retain the child, data and saved preferences.
+        if (XPR_IS_TRUE(mCompactLayout))
+            mBookmarkSetWnd->ShowWindow(SW_HIDE);
+        else if (XPR_IS_TRUE(mEnabledBookmark))
+        {
+            mBookmarkSetWnd->ShowWindow(SW_SHOWNA);
+            updateBookmarkPosition();
+        }
+    }
+    Invalidate(FALSE);
+}
+
 void ContentsWnd::OnPaint(void) 
 {
     CPaintDC sPaintDc(this); // device context for painting
@@ -153,11 +175,18 @@ void ContentsWnd::OnPaint(void)
     MemDC sMemDc(&sPaintDc);
 
     const ui::ThemePalette sPalette = ui::ModernUI::getPalette();
+    // Use the existing 36-DIP Basic drawing for a pane that is too
+    // narrow for both a sidebar and a readable native file-list column.
+    // Never mutate gOpt: a wide pane immediately recovers Explorer info.
+    const xpr_sint_t sContentsStyle =
+        (XPR_IS_TRUE(mCompactLayout) &&
+         gOpt->mConfig.mContentsStyle == CONTENTS_EXPLORER) ?
+        CONTENTS_BASIC : gOpt->mConfig.mContentsStyle;
 
     const COLORREF sWindowColor = sPalette.mWindow;
     const COLORREF sSurfaceColor = sPalette.mSurface;
 
-    if (gOpt->mConfig.mContentsStyle == CONTENTS_BASIC)
+    if (sContentsStyle == CONTENTS_BASIC)
         sMemDc.FillSolidRect(&sClientRect, sSurfaceColor);
     else
         sMemDc.FillSolidRect(&sClientRect, sWindowColor);
@@ -167,7 +196,7 @@ void ContentsWnd::OnPaint(void)
     sMemDc.SetTextColor(sPalette.mText);
 
     // contents picture
-    if (gOpt->mConfig.mContentsStyle == CONTENTS_EXPLORER)
+    if (sContentsStyle == CONTENTS_EXPLORER)
     {
         // The parent adapts ContentsWnd width for narrow/split views. Use
         // its actual client rect, not the original fixed 200px drawing.
@@ -209,21 +238,21 @@ void ContentsWnd::OnPaint(void)
     }
 
     // folder icon
-    if (gOpt->mConfig.mContentsStyle != CONTENTS_NONE)
+    if (sContentsStyle != CONTENTS_NONE)
     {
         if (mFolderIcon != XPR_NULL)
         {
-            if (gOpt->mConfig.mContentsStyle == CONTENTS_BASIC) sMemDc.DrawIcon(5,  sClientRect.top+2,  mFolderIcon);
+            if (sContentsStyle == CONTENTS_BASIC) sMemDc.DrawIcon(5,  sClientRect.top+2,  mFolderIcon);
             else                                                sMemDc.DrawIcon(16, sClientRect.top+14, mFolderIcon);
         }
     }
 
-    if (gOpt->mConfig.mContentsStyle != CONTENTS_NONE)
+    if (sContentsStyle != CONTENTS_NONE)
     {
         // current folder
         xpr_sint_t sDesc = 0;
         CFont *sOldFont = sMemDc.SelectObject(mTitleFont);
-        if (gOpt->mConfig.mContentsStyle == CONTENTS_EXPLORER)
+        if (sContentsStyle == CONTENTS_EXPLORER)
         {
             sMemDc.DrawText(
                 mFolderName.c_str(),
@@ -244,7 +273,7 @@ void ContentsWnd::OnPaint(void)
         }
         sMemDc.SelectObject(sOldFont);
 
-        if (gOpt->mConfig.mContentsStyle == CONTENTS_EXPLORER)
+        if (sContentsStyle == CONTENTS_EXPLORER)
         {
             // description
             xpr_sint_t sBookmarkTextTop = drawItem(&sMemDc, sDesc);
@@ -879,6 +908,9 @@ void ContentsWnd::updateBookmark(void)
     }
 
     mBookmarkSetWnd->updateBookmark();
+    if (XPR_IS_TRUE(mCompactLayout) &&
+        ::IsWindow(mBookmarkSetWnd->GetSafeHwnd()))
+        mBookmarkSetWnd->ShowWindow(SW_HIDE);
 }
 
 void ContentsWnd::updateBookmark(xpr_sint_t aTop)
@@ -904,7 +936,12 @@ void ContentsWnd::updateBookmarkPosition(void)
 void ContentsWnd::enableBookmark(xpr_bool_t aEnable)
 {
     if (mBookmarkSetWnd != XPR_NULL)
+    {
         mBookmarkSetWnd->enableBookmark(aEnable);
+        if (XPR_IS_TRUE(mCompactLayout) &&
+            ::IsWindow(mBookmarkSetWnd->GetSafeHwnd()))
+            mBookmarkSetWnd->ShowWindow(SW_HIDE);
+    }
 
     mEnabledBookmark = aEnable;
 }

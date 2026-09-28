@@ -42,6 +42,11 @@ a single unsupported release qualification.
   real Dark/Light count/error, physical active Stop, actual
   parent-folder navigation and a readable Windows event/UIA summary.
 
+- [Phase 6 responsive narrow per-pane info](UI_PHASE6_UXH03_RESPONSIVE_PANE_20260928.md):
+  actual 96-DPI Dark/Light 1x2/2x2 and 750-px file-width measurement,
+  keyboard/pointer restoration, saved layout protection; higher
+  actual DPI/High Contrast remain untested.
+
 ## 3. UI framework decision and optional experimental work
 
 | Stage | Source / restriction |

@@ -76,3 +76,20 @@ separate readable native window name with an OS name-change
 event. Test visible status text, real external WinEvent delivery,
 UIA Name and keyboard/pointer flow as separate gates.
 Do not claim live screen-reader listening without testing it.
+
+## 8. Responsive native per-pane information (UXH-03, 2026-09-28)
+
+Preserve a user's saved global Explorer info-bar style and
+individual pane folder/bookmark data. Only while the available
+**native file-list width** would fall under 280 DPI-scaled pixels,
+draw the *same per-pane ContentsWnd* as the existing 36-DIP
+Basic-like horizontal folder summary; hide off-screen bookmark
+controls from keyboard focus instead of destroying them. Restore
+the full Explorer vertical sidebar and bookmark controls
+automatically on resize. Do not mutate global settings, forcibly
+reset custom file-list columns, or share one pane's folder summary
+with another pane. The 750-px 1x2 result is measured, not a
+guarantee about real 120/144/192-DPI or High Contrast acceptance.
+[Measured UXH-03 acceptance](UI_PHASE6_UXH03_RESPONSIVE_PANE_20260928.md).
+At 750-px 2x2 the height of file-list rows remains constrained;
+treat UXH-04 global toolbar density as an independent improvement.

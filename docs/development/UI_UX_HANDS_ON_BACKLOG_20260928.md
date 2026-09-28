@@ -62,6 +62,19 @@ remain separately NOT TESTED.
 
 **인수 조건:** 0/1/다수 결과, 긴 검색·중단·오류를 구분하고 결과 접근성, 키보드 포커스 및 스크린리더 알림을 확인한다. 검색 엔진·검색 위치의 의미를 변경하지 않는다.
 
+**2026-09-28 UXH-03 scoped ACCEPTED:** Actual owned 96-DPI
+Dark/Light GUI measured 750-px 1x2 file-list width improving
+from 178/176 to 266/264 px with automatic 36-DIP horizontal
+folder summaries, wide-mode sidebar/bookmark restoration,
+750-px 2x2, actual keyboard Win+Up/Down and pointer title-bar
+double-click resizing. Original user settings and the saved
+per-pane information choice stayed intact; x64 Release,
+source and native 17/0 passed. See
+[actual UXH-03 acceptance](UI_PHASE6_UXH03_RESPONSIVE_PANE_20260928.md).
+Other real DPI/High Contrast remain separate NOT TESTED gates.
+Next native implementation is UXH-04; UXH-05 is a
+separate real-accessibility investigation.
+
 ### UXH-03 · P2 · 다중 탐색 영역의 중복 정보 패널과 가로 공간 부족
 
 **OBSERVED:** 1×2 pane 분할에서 폴더 설명·북마크 정보 패널이 양쪽에 반복돼 실제 파일 목록 폭이 좁고 긴 파일명·설명 텍스트가 잘린다. 750px 창에서도 밀도가 높다. 기존 UI-08 및 UI-11과 연계하며 이미 해결된 다른 UI-02 항목으로 혼동하지 않는다.
