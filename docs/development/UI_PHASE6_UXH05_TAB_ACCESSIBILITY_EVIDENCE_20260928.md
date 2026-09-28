@@ -104,3 +104,32 @@ and copies of the six original settings, and did not
 edit personal files. The WinUI 3 experimental worktree,
 user main-window.png and manually triggered GitHub
 Actions were not involved.
+
+
+## Residual direct UIA verification (2026-09-28)
+
+An external UI Automation client in a real 96-DPI
+owned Windows 11 session found and **invoked** native
+InvokePattern on New and selected Close buttons.
+The live accessible child count changed **5 -> 6 -> 5**
+after actual new and close commands. No synthetic
+WM_COMMAND was used. The test-owned process exited 0
+and all six original settings SHA256 hashes matched.
+Read-only Windows APIs reported 96 DPI, High Contrast OFF.
+
+Repro command: python build/test_ui_uxh05_residual_runtime.py
+--invoke-probe --invoke-actions --env-inventory
+--assert-accessibility. Ignored full log:
+logs/uxh05-real-uia-invoke-new-close.log.
+
+An optional private 1x2 focus-route experiment spawned
+two native tab controls but could not acquire stable
+test-owned foreground tab focus from the external client.
+That attempt is **INCONCLUSIVE / NOT TESTED** for
+multi-pane Tab/F6; an isolated diagnostic returned nonzero
+and original user configuration remained unchanged.
+The failing probe was NOT added to the accepted test.
+Narrator spoken-output, independent WinEvent listener,
+real 125/150/200% DPI and High Contrast remain NOT TESTED:
+no known safe VM was available and the global original
+desktop was not altered.

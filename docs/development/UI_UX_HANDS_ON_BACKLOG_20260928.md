@@ -121,6 +121,13 @@ focus routing remain open. Physical Tab/F6 did not
 move a test-focused tab in the owned single-pane setup;
 do not mark that check passed.
 
+**2026-09-28 UXH-05 additional acceptance:**
+Actual external UIA InvokePattern New/Close passed
+owned native tab count 5->6->5. Six original settings
+remained unchanged. Spoken reader, physical other DPI,
+actual High Contrast and full multi-pane Tab/F6 remain
+NOT TESTED; see UXH-05 evidence addendum.
+
 ### UXH-05 · P2 조사 · 커스텀 탭 접근성 정보
 
 **OBSERVED:** 새 탭 명령 이후 실제 탭 영역의 픽셀 변화가 있었지만, 이번 UIA 자동화 호출에서 커스텀 TabCtrl의 하위 TabItem 목록은 비어 있었다. 네이티브 TCM_GETITEMCOUNT도 이 커스텀 컨트롤의 항목 수를 알려주지 않았다. **화면낭독기가 실제로 사용 불가하다고 판단할 증거는 아니다.**

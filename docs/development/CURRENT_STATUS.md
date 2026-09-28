@@ -12,6 +12,17 @@
 
 ## 1. Latest state, constraints and next work
 
+**UXH-05 residual direct UIA actions (2026-09-28):**
+An isolated 96-DPI external client physically invoked
+New and selected Close via actual UIA InvokePattern;
+MSAA child count changed 5->6->5, the owned process
+exited 0 and six original configuration hashes matched.
+The prior direct UIA action gap is now tested.
+Real High Contrast/other DPI, spoken Narrator and
+full Tab/F6 multi-pane traversal remain NOT TESTED.
+[UXH-05 additional evidence](UI_PHASE6_UXH05_TAB_ACCESSIBILITY_EVIDENCE_20260928.md).
+
+
 **2026-09-28 UXH-06/07 review complete, no new feature:**
 Existing Search provides saved named multi-location scopes,
 current-folder selection, editable scope and query history.
