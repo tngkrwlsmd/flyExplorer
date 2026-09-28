@@ -8,6 +8,7 @@
 #include "ModernUI.h"
 #include <oleacc.h> // Documented OBJID_* scrollbar constants
 #include <vector>
+#include <string>
 
 #include <roapi.h>
 #include <winstring.h>
@@ -206,6 +207,7 @@ void endControlThemeChange(HWND aHwnd)
 const UINT_PTR kDialogButtonSubclassId = 0x46474442;   // 'FGDB'
 const UINT_PTR kDialogTabSubclassId = 0x46474454;      // 'FGDT'
 const UINT_PTR kDialogEditSubclassId = 0x46474445;     // 'FGDE'
+const UINT_PTR kDialogHotKeySubclassId = 0x4647484B;   // 'FGHK'
 const UINT_PTR kDialogComboSubclassId = 0x46474443;    // 'FGDC'
 const UINT_PTR kDialogGroupSubclassId = 0x46474447;    // 'FGDG'
 const wchar_t kDialogEmphasizedEditProperty[] =
@@ -724,6 +726,144 @@ LRESULT CALLBACK DialogEditSubclassProc(
             break;
     }
 
+    return ::DefSubclassProc(aHwnd, aMessage, aWParam, aLParam);
+}
+
+// The common-controls hotkey class does not use the dialog's
+// CTLCOLOR_EDIT brush. Keep its native HKM and keyboard processing;
+// only supply its missing dark client pixels and focus affordance.
+void drawDialogHotKey(HWND aHwnd)
+{
+    const ThemePalette sPalette = ModernUI::getPalette();
+    if (XPR_IS_FALSE(sPalette.mDark) ||
+        XPR_IS_TRUE(sPalette.mHighContrast))
+        return;
+    PAINTSTRUCT sPaint = {0};
+    HDC sDC = ::BeginPaint(aHwnd, &sPaint);
+    if (XPR_IS_NULL(sDC))
+        return;
+    RECT sRect = {0};
+    ::GetClientRect(aHwnd, &sRect);
+    ::SetDCBrushColor(sDC, sPalette.mElevated);
+    ::FillRect(sDC, &sRect,
+        static_cast<HBRUSH>(::GetStockObject(DC_BRUSH)));
+
+    const WORD sShortcut = static_cast<WORD>(
+        ::SendMessage(aHwnd, HKM_GETHOTKEY, 0, 0));
+    const WORD sModifiers = HIBYTE(sShortcut);
+    const UINT sVirtualKey = LOBYTE(sShortcut);
+    std::wstring sName;
+    if (sVirtualKey != 0)
+    {
+        if ((sModifiers & HOTKEYF_CONTROL) != 0)
+            sName += L"Ctrl + ";
+        if ((sModifiers & HOTKEYF_SHIFT) != 0)
+            sName += L"Shift + ";
+        if ((sModifiers & HOTKEYF_ALT) != 0)
+            sName += L"Alt + ";
+        wchar_t sKeyName[64] = {0};
+        const UINT sScan = ::MapVirtualKeyW(
+            sVirtualKey, MAPVK_VK_TO_VSC);
+        // Extended navigation keys need bit 24 for the proper label.
+        const LONG sKeyParam = static_cast<LONG>(
+            (sScan << 16) |
+            (((sModifiers & HOTKEYF_EXT) != 0) ? (1 << 24) : 0));
+        if (::GetKeyNameTextW(
+                sKeyParam, sKeyName, _countof(sKeyName)) > 0)
+            sName += sKeyName;
+        else
+        {
+            wchar_t sFallback[16] = {0};
+            ::wsprintfW(sFallback, L"0x%02X", sVirtualKey);
+            sName += sFallback;
+        }
+    }
+
+    RECT sTextRect = sRect;
+    sTextRect.left += ModernUI::scaleForWindow(5, aHwnd);
+    sTextRect.right -= ModernUI::scaleForWindow(4, aHwnd);
+    HFONT sFont = reinterpret_cast<HFONT>(
+        ::SendMessage(aHwnd, WM_GETFONT, 0, 0));
+    HGDIOBJ sOldFont = sFont != NULL ?
+        ::SelectObject(sDC, sFont) : NULL;
+    ::SetBkMode(sDC, TRANSPARENT);
+    ::SetTextColor(sDC, ::IsWindowEnabled(aHwnd) ?
+        sPalette.mText : sPalette.mSecondaryText);
+    ::DrawTextW(sDC, sName.c_str(), static_cast<int>(sName.size()),
+        &sTextRect, DT_LEFT | DT_VCENTER | DT_SINGLELINE |
+        DT_END_ELLIPSIS | DT_NOPREFIX);
+    if (sOldFont != NULL)
+        ::SelectObject(sDC, sOldFont);
+    if (::GetFocus() == aHwnd)
+    {
+        // A visible focus cue, without replacing the native hotkey
+        // window or touching its keyboard / accessible state.
+        HBRUSH sFocusBrush = ::CreateSolidBrush(sPalette.mFocus);
+        if (sFocusBrush != NULL)
+        {
+            ::FrameRect(sDC, &sRect, sFocusBrush);
+            ::DeleteObject(sFocusBrush);
+        }
+    }
+    ::EndPaint(aHwnd, &sPaint);
+}
+
+LRESULT CALLBACK DialogHotKeySubclassProc(
+    HWND aHwnd, UINT aMessage, WPARAM aWParam, LPARAM aLParam,
+    UINT_PTR aSubclassId, DWORD_PTR)
+{
+    switch (aMessage)
+    {
+        case WM_PAINT:
+        {
+            const ThemePalette sPalette = ModernUI::getPalette();
+            if (XPR_IS_TRUE(sPalette.mDark) &&
+                XPR_IS_FALSE(sPalette.mHighContrast))
+            {
+                drawDialogHotKey(aHwnd);
+                return 0;
+            }
+            break;
+        }
+        case WM_ERASEBKGND:
+        {
+            const ThemePalette sPalette = ModernUI::getPalette();
+            if (XPR_IS_TRUE(sPalette.mDark) &&
+                XPR_IS_FALSE(sPalette.mHighContrast))
+                return TRUE;
+            break;
+        }
+        case HKM_SETHOTKEY:
+        case WM_KEYDOWN:
+        case WM_SYSKEYDOWN:
+        case WM_KEYUP:
+        case WM_SYSKEYUP:
+        case WM_SETFOCUS:
+        case WM_KILLFOCUS:
+        case WM_ENABLE:
+        case WM_THEMECHANGED:
+        case WM_SETTINGCHANGE:
+        case WM_SYSCOLORCHANGE:
+        {
+            const LRESULT sResult =
+                ::DefSubclassProc(aHwnd, aMessage, aWParam, aLParam);
+            ::InvalidateRect(aHwnd, NULL, FALSE);
+            return sResult;
+        }
+        case WM_NCPAINT:
+        {
+            const LRESULT sResult =
+                ::DefSubclassProc(aHwnd, aMessage, aWParam, aLParam);
+            drawDialogEditFrame(aHwnd);
+            return sResult;
+        }
+        case WM_NCDESTROY:
+            ::RemoveWindowSubclass(
+                aHwnd, DialogHotKeySubclassProc, aSubclassId);
+            break;
+        default:
+            break;
+    }
     return ::DefSubclassProc(aHwnd, aMessage, aWParam, aLParam);
 }
 
@@ -1719,6 +1859,13 @@ void ModernUI::applyDialogControlTheme(HWND aHwnd)
             DialogEditSubclassProc,
             kDialogEditSubclassId,
             0);
+    }
+    else if (_tcsicmp(
+                 sClassName,
+                 XPR_STRING_LITERAL("msctls_hotkey32")) == 0)
+    {
+        ::SetWindowSubclass(aHwnd,
+            DialogHotKeySubclassProc, kDialogHotKeySubclassId, 0);
     }
     else if (_tcsicmp(
                  sClassName,

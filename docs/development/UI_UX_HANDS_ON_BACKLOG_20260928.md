@@ -27,6 +27,14 @@
 
 ## 2. 재현된 시각·사용성 개선 항목
 
+**2026-09-28 scoped implementation status:** UXH-01's originally
+observed bookmark hotkey Dark field was fixed and accepted on
+the actual owned 96-DPI Dark/Light GUI with native Ctrl+2;
+Release build and 17/0 native regressions PASS.
+[Dedicated evidence](UI_PHASE6_HOTKEY_THEME_EVIDENCE_20260928.md).
+Other hotkey-setting screens, actual High Contrast and higher
+real DPI were not individually exercised and remain OPEN.
+
 ### UXH-01 · P1 · 북마크 단축키 입력 컨트롤의 다크 모드 불일치
 
 **OBSERVED:** 다크 모드 북마크 항목 편집 창에서 일반 입력란은 어둡지만 **단축키 입력 칸 하나가 흰색**으로 표시된다. 실제 캡처 ux-bookmark.png에서 확인했다. bookmark_item_edit_dlg.h는 CHotKeyCtrl을 사용하고, ModernUI의 공통 대화상자 테마 처리에는 해당 네이티브 클래스의 명시적 처리가 없다(**SOURCE ONLY** 후보 원인).

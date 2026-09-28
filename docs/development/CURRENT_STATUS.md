@@ -10,6 +10,19 @@
 
 ## 1. Latest state, constraints and next work
 
+**Phase 6 UXH-01 follow-up (2026-09-28):** Bookmark
+CHotKeyCtrl's native bright client in explicit Dark was
+confirmed and fixed through ModernUI's shared native hotkey
+subclass, preserving actual Ctrl+2 keyboard semantics.
+Actual owned 96-DPI Dark/Light GUI, incremental Release x64
+and native functional 17/0 passed. Details:
+[hotkey theme evidence](UI_PHASE6_HOTKEY_THEME_EVIDENCE_20260928.md).
+The outstanding next native UX item is UXH-02 search completion;
+other hotkey-setting windows and real High Contrast are not
+individually GUI-accepted yet. Prior snapshot facts below
+refer to the earlier reviewed baseline.
+
+
 **Current product:** \`main\` remains the native MFC/C++ multi-pane file
 manager. The optional WinUI 3 same-process integration has NOT been
 merged or made available to ordinary users. GitHub Actions require
@@ -28,9 +41,10 @@ tested product revision. This is not an all-environments product
 certification.
 
 **Immediate UI backlog:** [seven evidence-labelled hands-on
-items](UI_UX_HANDS_ON_BACKLOG_20260928.md). First reproduce and scope
-the bright native bookmark shortcut field under Dark (UXH-01);
-separately review the redundant bright success message during
+items](UI_UX_HANDS_ON_BACKLOG_20260928.md). The native bookmark
+shortcut field originally observed in UXH-01 is fixed and GUI-tested
+at actual 96 DPI Dark/Light; individual other hotkey dialogs remain
+unverified. Next review the redundant bright success message during
 Search (UXH-02). Narrow split-pane layouts, compact command
 discoverability and custom TabCtrl accessibility need targeted
 measurement/verification, not ungrounded implementation.

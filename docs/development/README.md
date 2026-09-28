@@ -34,6 +34,10 @@ These are separate, revision-scoped evidence documents. Do not
 combine historic Debug/source-only or different-DPI results into
 a single unsupported release qualification.
 
+- [Phase 6 native hotkey Dark fix](UI_PHASE6_HOTKEY_THEME_EVIDENCE_20260928.md):
+  actual 96-DPI bookmark dialog, native Ctrl+2 and light fallback;
+  other hotkey screens and real High Contrast remain open.
+
 ## 3. UI framework decision and optional experimental work
 
 | Stage | Source / restriction |
