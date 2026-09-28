@@ -63,6 +63,42 @@ are released from WinApp::ExitInstance **after the MFC message loop exits**.
 The observed real product and plain Win32 test both then exited cleanly.
 The experiment still retains the opt-in DLL mapped until process exit.
 
+## 2026-09-28 TextBox isolation: explicit NOT FIXED / DO NOT MERGE
+
+The dedicated `experiments/phase5-textbox-isolation-20260928` branch adds
+explicitly opt-in `plain`, `resources` and `app` diagnostic modes. Ordinary
+startup leaves the proven read-only TextBlock island unchanged.
+
+On the connected Windows 11 machine, the diagnostic DLL's incremental Debug x64
+build passed. A normal same-process MFC/WinUI 3 baseline passed with native
+navigation, keyboard Tab/Enter, clean exit 0 and all six original config SHA256
+hashes intact after the diagnostic changes. Three distinct opt-in trials showed:
+
+| Trial | Direct runtime result | Interpretation |
+| --- | --- | --- |
+| Plain read-only TextBox | Child HWND visible but real XAML buttons/UIA tree missing; product exited `0xC0000005` in teardown | Reproduced earlier failed load/cleanup; not a pass |
+| Direct root `XamlControlsResources` | Fails before TextBox construction, `0x80004005` / `AcrylicBackgroundFillColorDefaultBrush` missing; product itself exits 0 | Root-local resource merge alone is insufficient |
+| Generated WinUI App + `InitializeComponent()` | Fails before island creation with `0x802B000A` XAML parse error; product itself exits 0 | Generated app resource activation also fails in existing host |
+
+Every diagnostic returned **test FAIL**; original six configuration hashes
+remained unchanged even when the owned product crashed. Generated project
+outputs contain `FlyExplorerIslandBridge.pri` beside the DLL, while the
+generated App code requests `ms-appx:///FlyExplorerIslandBridge/App.xaml`.
+The current DLL host does not provide demonstrated working application-level
+resource/metadata registration for WinUI controls with richer templates.
+Missing effective XAML resources/metadata is the leading integration boundary,
+**not yet a proven complete root cause**. It is not evidence that TextBox is
+universally broken in WinUI 3. See the Windows App SDK
+[islands sample](https://github.com/microsoft/WindowsAppSDK-Samples/tree/main/Samples/Islands)
+and [hosting guidance](https://learn.microsoft.com/en-us/windows/apps/desktop/modernize/host-controls-existing-desktop-apps).
+
+**Merge decision:** no experimental TextBox changes to `main`. Keep the
+independently validated normal island baseline and the crash-isolation modes
+on experimental branches. A subsequent focused experiment must establish
+proper generated XAML/PRI resource registration in a native host before
+rerunning read-only/editable TextBox, UIA input, repeated clean shutdown and
+user settings preservation. Do not infer other-DPI or installer readiness.
+
 ## Bounded local startup and memory comparison
 
 Two independent batches of three paired sequential runs each used the

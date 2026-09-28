@@ -15,7 +15,7 @@ names=('fxfile.conf','fxfile-main.conf','fxfile-toolbar.dat',
        'fxfile-coolbar.dat','fxfile-dlg_state.conf','fxfile-folder_layout.conf')
 # Optional crash-isolation modes; never enable in ordinary product tests.
 textbox_mode=os.environ.get('FLYEXP_PHASE5_DIAG_TEXTBOX','')
-assert textbox_mode in ('','plain','resources'),'invalid TextBox diagnostic mode'
+assert textbox_mode in ('','plain','resources','app'),'invalid TextBox diagnostic mode'
 assert product.is_file() and dll.is_file(),'build both isolated products before running'
 assert source.is_dir() and all((source/f).is_file() for f in names),'read-only profile prerequisite'
 original={f:hashlib.sha256((source/f).read_bytes()).hexdigest() for f in names}

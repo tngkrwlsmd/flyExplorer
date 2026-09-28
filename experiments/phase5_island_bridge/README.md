@@ -60,7 +60,7 @@ production-grade performance figure.
 Evidence and remaining limitations:
 [Phase 5 same-process MFC island evidence](../../docs/development/UI_FRAMEWORK_PHASE5_MFC_ISLAND_EVIDENCE.md).
 
-## Opt-in TextBox isolation (experimental source; runtime NOT YET verified)
+## Opt-in TextBox isolation — observed failure, not a completed fix (2026-09-28)
 
 The ordinary same-process island still uses a TextBlock and never constructs the
 diagnostic TextBox. The new `FLYEXP_PHASE5_DIAG_TEXTBOX` environment variable is
@@ -71,6 +71,8 @@ only meaningful together with the existing, explicit test-only DLL activation:
 - `resources`: merge an explicit `XamlControlsResources` dictionary into the
   island root before constructing the same read-only TextBox. Compare with
   `plain` to isolate whether missing effective WinUI styles/resources matter.
+- `app`: create the generated WinUI `App` with `InitializeComponent()` before
+  the island, attempting to load the project's compiled App.xaml resources.
 
 On the connected Windows 11 test PC, incrementally build this experimental DLL
 using `build.cmd`, retaining logs locally and inspecting only exit/error summary.
@@ -81,13 +83,16 @@ Remove-Item Env:FLYEXP_PHASE5_DIAG_TEXTBOX -ErrorAction SilentlyContinue
 python test_owned_product.py
 $env:FLYEXP_PHASE5_DIAG_TEXTBOX = 'resources'
 python test_owned_product.py
+# Reproduce the separate generated-App resource registration failure if needed:
+$env:FLYEXP_PHASE5_DIAG_TEXTBOX = 'app'
+python test_owned_product.py
 # Only if distinguishing the resource hypothesis is still necessary:
 $env:FLYEXP_PHASE5_DIAG_TEXTBOX = 'plain'
 python test_owned_product.py
 Remove-Item Env:FLYEXP_PHASE5_DIAG_TEXTBOX -ErrorAction SilentlyContinue
 ```
 
-Both diagnostic modes trace control creation, root/individual Loaded events and
+All three opt-in modes trace initialization/control creation and, where reached, Loaded events and
 XAML detach. A successful diagnostic must show the TextBox's actual UIA Edit
 identity, navigate via existing Up/Back/Forward and Tab/Enter, resize, cleanly
 exit 0, and leave the original six configuration hashes unchanged. A mode
@@ -98,5 +103,24 @@ configuration if the first sample passes to establish stability.
 Microsoft's host and control-resource guidance motivates this **hypothesis**,
 not a confirmed fix. If `resources` still fails, next inspect the first real
 HRESULT/faulting native stack and effective resource/PRI and XAML metadata
-availability. Avoid speculative rewrites of the product. No experimental
-TextBox code belongs in `main` until the test-owned Windows runtime gate passes.
+availability. Avoid speculative rewrites of the product.
+
+**Actual connected-PC evidence:** Debug x64 DLL built successfully. Normal
+TextBlock island retested PASS (native navigation, Tab/Enter, exit 0, original
+six configuration hashes unchanged). The `plain` mode reproduced missing XAML
+button/UIA controls and 0xC0000005 product termination during XAML cleanup;
+all original config hashes remained unchanged. The `resources` mode failed
+*before TextBox construction* while instantiating `XamlControlsResources`:
+HRESULT 0x80004005, missing `AcrylicBackgroundFillColorDefaultBrush`; the
+product itself exited 0, but the island did not attach. The `app` mode failed
+*before island creation* in generated `App.InitializeComponent()` with XAML
+parse HRESULT 0x802B000A. The test correctly returned FAIL for all three
+experimental modes. The compiled `FlyExplorerIslandBridge.pri` is present
+beside the DLL, while the generated app resource URI is
+`ms-appx:///FlyExplorerIslandBridge/App.xaml`; effective host resource/metadata
+registration remains unverified. These observations establish a resource
+initialization/registration blocker, not a verified unique root cause or fix.
+
+No experimental TextBox code belongs in `main` until the test-owned Windows
+runtime gate passes. Neither complete user HKCU isolation nor other DPIs,
+High Contrast, installer and release packaging were tested in this diagnostic.

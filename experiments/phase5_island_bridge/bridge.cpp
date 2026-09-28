@@ -34,6 +34,7 @@ static void Trace(char const* message) {
 // and dispatcher first; creating DesktopWindowXamlSource before UIElement
 // implicitly initializes the XAML framework on this same thread.
 static winrt::Microsoft::UI::Dispatching::DispatcherQueueController s_queue{nullptr};
+static ui::Application s_diagnosticApp{nullptr};
 static bool s_bootstrapped=false;
 static HRESULT s_roInitialize=E_FAIL;
 
@@ -60,6 +61,14 @@ static bool InitializeRuntime() {
         Trace("dll-runtime-after-bootstrap");
         s_queue=winrt::Microsoft::UI::Dispatching::DispatcherQueueController::CreateOnCurrentThread();
         Trace("dll-runtime-after-dispatcher");
+        wchar_t diagnosticMode[16]{};
+        ::GetEnvironmentVariableW(L"FLYEXP_PHASE5_DIAG_TEXTBOX",
+            diagnosticMode, _countof(diagnosticMode));
+        if (::wcscmp(diagnosticMode,L"app")==0) {
+            Trace("dll-diagnostic-generated-app-enter");
+            s_diagnosticApp=winrt::make<winrt::FlyExplorerIslandBridge::implementation::App>();
+            Trace("dll-diagnostic-generated-app-complete");
+        }
         Trace("dll-runtime-source-first");
         return true;
     } catch (winrt::hresult_error const& error) {
@@ -102,6 +111,7 @@ public:
                 probeMode, _countof(probeMode));
             bool const plainProbe = ::wcscmp(probeMode, L"plain") == 0;
             bool const resourceProbe = ::wcscmp(probeMode, L"resources") == 0;
+            bool const appProbe = ::wcscmp(probeMode, L"app") == 0;
             if (resourceProbe) {
                 Trace("dll-textbox-resource-merge-enter");
                 root.Resources().MergedDictionaries().Append(
@@ -146,7 +156,7 @@ public:
             row.Children().Append(m_up);
             row.Children().Append(m_title);
             root.Children().Append(row);
-            if (plainProbe || resourceProbe) {
+            if (plainProbe || resourceProbe || appProbe) {
                 Trace("dll-textbox-create-enter");
                 m_textBoxProbe = ctl::TextBox();
                 Trace("dll-textbox-create-complete");
@@ -269,7 +279,13 @@ extern "C" __declspec(dllexport) void WINAPI FlyIslandDestroy() {
 extern "C" __declspec(dllexport) void WINAPI FlyIslandShutdown() {
     if (s_island) return;
     Trace("dll-runtime-shutdown-enter");
-    // No standalone WinUI Application is created in the native host.
+    // The generated App exists only in the explicitly enabled diagnostic mode.
+    if (s_diagnosticApp) {
+        Trace("dll-diagnostic-app-exit-enter");
+        s_diagnosticApp.Exit();
+        s_diagnosticApp=nullptr;
+        Trace("dll-diagnostic-app-exit-complete");
+    }
     if (s_queue) {s_queue.ShutdownQueue();s_queue=nullptr;}
     if (s_bootstrapped) {MddBootstrapShutdown();s_bootstrapped=false;}
     if (SUCCEEDED(s_roInitialize)) {::RoUninitialize();s_roInitialize=E_FAIL;}
