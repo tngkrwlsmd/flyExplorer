@@ -72,8 +72,8 @@ per-pane information choice stayed intact; x64 Release,
 source and native 17/0 passed. See
 [actual UXH-03 acceptance](UI_PHASE6_UXH03_RESPONSIVE_PANE_20260928.md).
 Other real DPI/High Contrast remain separate NOT TESTED gates.
-Next native implementation is UXH-04; UXH-05 is a
-separate real-accessibility investigation.
+UXH-04 subsequently passed scoped acceptance; UXH-05 is
+next as a separate real-accessibility investigation.
 
 ### UXH-03 · P2 · 다중 탐색 영역의 중복 정보 패널과 가로 공간 부족
 
@@ -82,6 +82,22 @@ separate real-accessibility investigation.
 **개발 지시:** 이미 제공되는 pane별 패널 표시·폭·저장 설정부터 확인한다. 없는 기능이 입증되면 pane별 빠른 접기, 최소 폭과 적응형 정보 배치 또는 명시적 공유 패널을 작은 시제품으로 비교한다. 기본 열 폭과 저장된 사용자 폭을 강제 초기화하지 않는다.
 
 **인수 조건:** 1×2·2×2·750px·일반 창에서 실제 파일명 가용 폭 개선, 활성 pane에 대응하는 정보 표시, 레이아웃·탭·설정 보존, 키보드 및 마우스로 복원 가능.
+
+**2026-09-28 UXH-04 scoped ACCEPTED:** Optional native
+Drive/Bookmark compression reduces an owned 750px saved
+141px rebar to 101px, and real pointer or J keyboard restores
+141px; physical keyboard acceptance also passed at 1100px
+and in Light mode. Localized J fallback works with old
+language packs and the Korean source/deployment was updated.
+Test-owned overflow bookmarks actually navigated, all 28
+main-toolbar native buttons and accessible labels were
+preserved, and a separate keyboard compact/exit/relaunch
+restored the original saved native layout. Clean Release,
+source/UI-05 safeguards and native functional 17/0 PASS.
+See [UXH-04 acceptance](UI_PHASE6_UXH04_EVIDENCE_20260928.md).
+Physical tooltip-popup accessibility remained unverified
+before and after, with High Contrast and other DPI also
+NOT TESTED. UXH-05 is the next native acceptance task.
 
 ### UXH-04 · P2 · 작은 창의 명령 도구 모음 발견성
 

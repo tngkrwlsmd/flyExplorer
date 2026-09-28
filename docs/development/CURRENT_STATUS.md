@@ -10,6 +10,29 @@
 
 ## 1. Latest state, constraints and next work
 
+**Phase 6 UXH-04 scoped acceptance (2026-09-28):** Explicit
+reversible native Drive/Bookmark toolbar-row compaction is now
+real-GUI verified at actual 96 DPI on the isolated Windows 11
+test desktop. Saved four visual rows of height **141 px** become
+**101 px** only after an explicit View > Tools command;
+actual keyboard J and real pointer restore to 141. The prior
+owner-drawn J failure was an absent deployed language key; a
+single-command fallback now works with old packs and the source
+Korean XML was fixed and staged. A private 12-item bookmark
+fixture proved the existing MFC chevron can actually open its
+owned folder. Actual keyboard-compact -> exit -> relaunch in
+the *same owned copied settings* restored 141px and retained
+the original coolbar bytes. Final clean Release SHA256
+\`08D6B6D17713D4C258C4DEFFE4DBA02C66B449DD87E098164E2DDF1C666EA26E\`; source checks and native 17/0 PASS. Detailed
+[UXH-04 final evidence](UI_PHASE6_UXH04_EVIDENCE_20260928.md).
+All tests owned their process; original user config six hashes
+unchanged. Native tooltip-popup accessibility was **not**
+observed either before or after this change; a listening session
+and actual other DPI / High Contrast remain NOT TESTED.
+Next UX work: UXH-05 custom tab accessibility verification,
+then UXH-06/07 capability-overlap review.
+
+
 **Latest Phase 6 UXH-03 scoped acceptance (2026-09-28):** Existing
 per-pane Explorer info sidebar now automatically becomes a compact
 36-DIP horizontal folder summary only when a narrow pane would
@@ -23,8 +46,8 @@ owned info-bar setting, bookmark child state and six original
 user configuration hashes. Scoped x64 Release, source/scrollbar/
 address checks and native 17/0 passed. See
 [UXH-03 responsive pane evidence](UI_PHASE6_UXH03_RESPONSIVE_PANE_20260928.md).
-Next independently execute UXH-04 compact command access and
-UXH-05 real tab accessibility. Actual higher DPI/High Contrast
+UXH-04 was subsequently accepted with the narrow localization
+fallback; next independently investigate UXH-05 tab accessibility. Actual higher DPI/High Contrast
 remain NOT TESTED for this change.
 
 
@@ -38,7 +61,7 @@ and native 17/0 PASS, original six user hashes unchanged.
 Binary SHA256 22D0568AB047E4A08F690B7461FB7D63E2B90A23E447BE03650D8818B2559575.
 [Full UXH-02 evidence](UI_PHASE6_SEARCH_NONMODAL_EVIDENCE_20260928.md).
 The UXH-03 layout is now scoped accepted; subsequent UX
-work covers UXH-04 compact commands and UXH-05 tab accessibility.
+work now moves to UXH-05 tab accessibility after UXH-04 acceptance.
 Real other DPI, OS High Contrast and live screen-reader listening
 are not yet accepted.
 

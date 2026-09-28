@@ -21,6 +21,17 @@ class CommandContract(unittest.TestCase):
   self.assertNotIn("gOpt->mMain.mDriveBar = ",s.split(
      "xpr_bool_t MainCoolBar::toggleTemporaryCompact",1)[1].split(
        "void MainCoolBar::setWrapable",1)[0])
+ def test_missing_language_pack_mnemonic_fallback(self):
+  src=(R/"main_frame.cpp").read_text(encoding="utf-8-sig")
+  self.assertIn("sId == ID_VIEW_TOOL_COMPACT_ROWS",src)
+  self.assertIn("_tcscmp(sString, sStringId) == 0",src)
+  self.assertIn("Compact drive/bookmark rows (&J)",src)
+  self.assertNotIn("Uxh04MenuTrace",src)
+  korean=(R/"Languages/Korean.xml").read_text(encoding="utf-8-sig")
+  self.assertIn("cmd.tools.compact_rows",korean)
+  self.assertIn("(&amp;J)",korean)
+  import xml.etree.ElementTree as ET
+  ET.fromstring(korean)
  def test_menu_router_translation(self):
   for f,needle in (
       ("resource.h","ID_VIEW_TOOL_COMPACT_ROWS"),

@@ -1,6 +1,10 @@
-# Phase 6 UXH-04: compact command rows ? in-progress branch evidence
+# Phase 6 UXH-04: opt-in compact toolbar rows ? final scoped evidence
 
-**STATUS: NOT ACCEPTED / NOT MERGED TO MAIN.** This evidence belongs
+**CURRENT STATUS (2026-09-28): SCOPED ACCEPTED, eligible for main.**
+The historical WIP sections 1-7 below preserve intermediate failures
+**as failures at their original revisions**, not current open blockers.
+Read the final acceptance and remaining environment limitations in
+section 8 first. This evidence originally belonged
 only to local branch `fix/uxh04-optin-temporary-compact-20260928`, based on main
 `68fe5cbe86694e23c853b802e29c3841a1d4e236`.
 Separate WinUI 3 experimental worktree and user files remain untouched.
@@ -143,7 +147,7 @@ user-configured bookmark targets. Thus the popup and its
 accessible entries are observed, but actually invoking **every**
 overflow bookmark remains NOT TESTED.
 
-## 6. Remaining critical keyboard blocker ? do not merge
+## 6. Historical keyboard blocker (subsequently resolved)
 
 The owner-drawn Tools submenu exposes command 33049 by native
 ID/rectangle, but a direct new J mnemonic did NOT apply
@@ -165,7 +169,7 @@ only then test actual keyboard activation. Otherwise dismiss
 the menu with Escape without modifying the copied profile.
 Preserve the user profile and baseline main throughout.
 
-## 7. Other successfully completed scoped gates
+## 7. Historical intermediate scoped gates
 
 - Updated candidate incremental x64 Release-x64-Unicode build PASS.
 - Source invariants, existing UI-05 fresh-profile negative
@@ -192,3 +196,82 @@ uxh04-scoped-source-native.log.
 Actual other DPI, Windows High Contrast, physical screen-reader
 listening, and per-item activation in every overflow popup
 remain independently NOT TESTED. No GitHub Actions runs.
+
+
+## 8. Final tested correction and merge acceptance (2026-09-28)
+
+**Resolved root cause:** The owner-drawn BCMenu initially contained a
+valid \`&J\` access key, but on popup initialization the application
+retranslated it through the new \`cmd.tools.compact_rows\` resource
+key. The source Korean.xml contained the entry, while the existing
+deployed \`bin/x64/Languages/Korean.xml\` did not. The missing
+localization lookup returned the **22-character resource key itself**,
+replacing the mnemonic-bearing label. In controlled test-only
+in-process tracing, the second popup initialization had no
+accelerator, and a physical \`J\` generated a menu-char result of zero.
+All such temporary product-side diagnostic code was **removed** before
+the final Release build.
+
+**Narrow product fix:** In \`MainFrame::OnInitMenuPopup\`, only the
+new command ID 33049 retains its resource fallback
+\`Compact drive/bookmark rows (&J)\` when a language lookup returns
+the key itself or NULL. The Korean source translation was restored
+to the actual localized name and \`(&J)\` using valid UTF-8 XML, then
+staged with the existing canonical \`copy_languages.bat\`. No
+legacy owner-drawn menu implementation, command routing or global
+accelerator was changed. Both **older missing-key language staging**
+and **updated Korean deployment** passed actual physical J keyboard
+tests. Updated-language in-process observations showed second
+popup mnemonic J (code 74) and the actual WM_MENUCHAR result
+**position 16 / MNC_EXECUTE (2)**. The exact native command ID
+**33049** and non-disabled state were checked before sending J;
+blind positional Enter testing was removed from the final harness.
+
+**Final clean incremental Release x64 SHA256:** \`08D6B6D17713D4C258C4DEFFE4DBA02C66B449DD87E098164E2DDF1C666EA26E\`.
+
+| Final actual owned Windows 11 test, 96 DPI | Result |
+| --- | --- |
+| Dark 750px / 1100px, physical J compress and J restore | PASS; 141 -> 101 -> 141 at each width |
+| Light 750px, physical J compress and J restore | PASS; 141 -> 101 -> 141 |
+| Light 750px, physical pointer compact and restore | PASS; 141 -> 101 -> 141 |
+| Dark 750px, pointer click and 12 private bookmarks | PASS; owned bookmark #03 selected from the real MFC chevron and its own private directory opened; restored 141 |
+| Dark 750px, native main-toolbar command/accessibility invariant | PASS; 28 native buttons and six UIA-labelled controls unchanged before/after |
+| Physical J compress, exit **still compact**, new owned process launched with the SAME copied settings | PASS; observed actual restored **141px** toolbar geometry and exact serialized pre-test custom coolbar bytes |
+| Fresh isolated toolbar layout, 750px and 1100px | PASS; existing shared-row 101px default unchanged |
+| Per-run original user configuration six SHA256 hashes / owned process clean exit | PASS |
+| UXH-04 source contract, legacy UI-05 guards and source invariants | PASS |
+| Existing native functional suite on final Release binary | **17 PASS / 0 FAIL** |
+
+All final runs used test-owned processes, six copied private
+configuration files and controlled fixture folders. No user
+bookmark was invoked: the chevron test generated an additional
+owned 12-item UTF-16 bookmark config whose destinations all lived
+inside that run's private fixture. The exact saved custom
+coolbar file remained byte-identical after normal pointer and
+keyboard sessions, including a real post-exit relaunch.
+
+**Access/limitations:** The original custom menu's generic
+GetMenuStringW remains empty, as expected for this owner-drawn
+implementation. The functional physical J path, exact command
+ID check, named UIA main-toolbar buttons and real privately-owned
+bookmark overflow invocation were tested independently.
+An independent real mouse-hover probe did **not** expose a native
+tooltip popup either before or after compaction; the existing
+tooltip's visual/audio accessibility is thus NOT VERIFIED, despite
+no detectable change to native button counts or UIA button names.
+A full screen-reader listening session, actual 125/150/200% DPI
+and actual Windows High Contrast also remain **NOT TESTED**.
+None is described as a PASS. This narrowly scoped improvement
+does not claim broad OS accessibility certification.
+
+Complete full-output logs and owned GUI images are preserved
+locally (ignored \`logs/uxh04-accepted-final-*.log\`,
+\`logs/uxh04-owned-*\`) and are intentionally not committed.
+This branch changes MFC UI code and Korean source localization,
+but **does not merge** the unrelated WinUI 3 experiment.
+
+Once the validated fast-forward to \`main\` is completed, the
+active development state is governed by
+[CURRENT_STATUS.md](CURRENT_STATUS.md) and the
+[UX backlog](UI_UX_HANDS_ON_BACKLOG_20260928.md), not the
+historical WIP statements in sections 1-7.

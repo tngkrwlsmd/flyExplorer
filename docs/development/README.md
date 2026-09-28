@@ -47,6 +47,12 @@ a single unsupported release qualification.
   keyboard/pointer restoration, saved layout protection; higher
   actual DPI/High Contrast remain untested.
 
+- [Phase 6 opt-in compact native toolbar rows](UI_PHASE6_UXH04_EVIDENCE_20260928.md):
+  actual 96-DPI pointer/J keyboard, old/new Korean-language
+  fallback, owned bookmark overflow, preserved serialized custom
+  layout and physical restart proof; tooltip screen-reader
+  acceptance and other actual DPI/High Contrast remain open.
+
 ## 3. UI framework decision and optional experimental work
 
 | Stage | Source / restriction |

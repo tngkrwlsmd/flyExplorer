@@ -25,7 +25,7 @@ complete legacy dialog acceptance are NOT TESTED.
 
 Current native UX state and next priorities are in the [seven-item hands-on backlog](../docs/development/UI_UX_HANDS_ON_BACKLOG_20260928.md),
 after scoped UXH-01/02 and real 96-DPI UXH-03 acceptance;
-next UXH-04/05 remain. See UXH-03 evidence in the index.
+UXH-04 is now scoped accepted (reversible compact toolbars,\nphysical J mnemonic, old-language fallback and native overflow).\nNext UXH-05 remains. See evidence in the development index.
 HANG-01 and specific
 UI-01/UI-09 original-scenario acceptance remain open.
 Separate WinUI 3 productization branch

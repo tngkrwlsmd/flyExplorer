@@ -21,6 +21,19 @@ original_saved_band=(cp/"fxfile-coolbar.dat").read_bytes()
 if "--fresh" in sys.argv:(cp/"fxfile-coolbar.dat").unlink()
 (folder/"appdata").mkdir()
 for i in range(3):(fixture/("command-layout-test-%d.txt"%i)).write_text("owned",encoding="utf-8")
+owned_bookmarks={}
+if "--owned-bookmarks" in sys.argv:
+ for i in range(1,13):
+  target=fixture/("uxh04-owned-%02d"%i)
+  target.mkdir()
+  owned_bookmarks["UXH04 Owned %02d"%i]=target
+ lines=["[bookmark]"]
+ for i,(name,path) in enumerate(owned_bookmarks.items(),1):
+  lines += ["bookmark.item%d.name = %s"%(i,name),
+            "bookmark.item%d.path = %s"%(i,path)]
+ (cp/"fxfile-bookmark.conf").write_text(
+     "\n".join(lines)+"\n",encoding="utf-16")
+ print("OWNED_SYNTHETIC_BOOKMARK_PATHS",len(owned_bookmarks),flush=True)
 u=c.windll.user32
 CALLBACK=c.WINFUNCTYPE(w.BOOL,w.HWND,w.LPARAM)
 class RECT(c.Structure):_fields_=[(k,c.c_long) for k in ("left","top","right","bottom")]
@@ -54,9 +67,7 @@ def ht(r):return r[3]-r[1]
 proc=None;main=0
 try:
  proc=subprocess.Popen([str(R/"bin/x64/fxfile.exe"),"--conf_dir",str(cp),str(fixture)],cwd=folder,
-  env={**os.environ,"APPDATA":str(folder/"appdata"),
-       **({"FX_UXH04_DIAG":str(folder/"native-fit.log")}
-          if "--diagnose" in sys.argv else {})},
+  env={**os.environ,"APPDATA":str(folder/"appdata")},
   stdin=subprocess.DEVNULL,
   stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
  for _ in range(100):
@@ -89,7 +100,7 @@ try:
   for _,r,h in rebars:
    num=int(u.SendMessageW(h,0x40C,0,0))
    print("REBAR_BAND_COUNT",num,"RECT",r,"HEIGHT",ht(r),flush=True)
-  if outer==750 or ("--diagnose" in sys.argv and outer==1100):
+  if outer==750 or (outer==1100 and ("--diagnose" in sys.argv or "--wide" in sys.argv)):
    from pywinauto import Desktop
    visible=[]
    for control in Desktop(backend="uia").window(handle=main).descendants():
@@ -209,16 +220,16 @@ try:
       assert "&J" in label.value.upper(),label.value
      else:
       print("OWNERDRAW_NATIVE_MENU_TEXT_EMPTY=TEST_ACTUAL_J_KEY",flush=True)
-     # This owner-drawn menu does not currently dispatch the new J
-     # mnemonic; keyboard-only access through the native ordered
-     # menu uses the checked last-three command IDs instead.
-     assert positions[0]+2==u.GetMenuItemCount(mh)-1
-     assert u.GetMenuItemID(mh,positions[0]+1)==33017
-     assert u.GetMenuItemID(mh,positions[0]+2)==33018
-     keyboard.send_keys("{END}{UP}{UP}{ENTER}",pause=.065)
-     time.sleep(.5)
-     print("REAL_PHYSICAL_KEYBOARD_MENU_NAVIGATION_EXECUTED=True",
-           flush=True)
+     # Owner-drawn text is unavailable through GetMenuStringW.
+     # Check the exact live native command ID and enabled state,
+     # then use ONLY its declared physical J menu mnemonic.
+     u.GetMenuState.argtypes=(w.HMENU,w.UINT,w.UINT)
+     u.GetMenuState.restype=w.UINT
+     state=int(u.GetMenuState(mh,33049,0))
+     assert not state&3,("refuse disabled native command",hex(state))
+     keyboard.send_keys("j",pause=.095)
+     time.sleep(.55)
+     print("REAL_PHYSICAL_KEYBOARD_J_MENU_COMMAND_EXECUTED=True",flush=True)
     def assert_overflow():
      # Only use pointer-free cross-process Win32 reads. The bookmark
      # toolbar's right-end rebar chevron is visibly present in actual
@@ -256,9 +267,29 @@ try:
         print("CHEVRON_UIA_UNAVAILABLE",repr(exc)[:90],flush=True)
        ImageGrab.grab(bbox=q,include_layered_windows=True).save(
          folder/"actual-chevron-popup.png")
+       if "--owned-bookmarks" in sys.argv:
+        checkboxes=[x for x in Desktop(backend="uia").window(
+          handle=custom[0]).descendants()
+          if x.is_visible() and x.element_info.name in owned_bookmarks]
+        print("ACTUAL_OWNED_BOOKMARK_OVERFLOW_ITEMS",
+              [x.element_info.name for x in checkboxes],flush=True)
+        assert checkboxes,"no synthetic bookmark in native overflow"
+        target_item=checkboxes[0]
+        target_path=owned_bookmarks[target_item.element_info.name]
+        target_item.click_input()
+        switched=False
+        for _ in range(55):
+         if target_path.name.lower() in title(main).lower():
+          switched=True;break
+         time.sleep(.1)
+        assert switched,("synthetic bookmark did not navigate",
+              str(target_path),title(main))
+        print("OWNED_REAL_BOOKMARK_OVERFLOW_NAVIGATION_PASS=True",
+              target_path.name,flush=True)
+       else:
+        keyboard.send_keys("{ESC}")
+        time.sleep(.17)
        clicked=True
-       keyboard.send_keys("{ESC}")
-       time.sleep(.17)
        break
       if not pops:
        visibles=[(cl(h),title(h)[:36],rect(h)) for h in en(proc.pid,True)
@@ -282,6 +313,52 @@ try:
     rebar_hwnd=rebars[0][2]
     rebar_height=lambda:ht(rect(rebar_hwnd))
     assert rebar_height()==141,("saved layout baseline changed",rebar_height())
+    if "--command-audit" in sys.argv:
+     from pywinauto import mouse
+     main_bars=[h for k,bb,h in toolbar
+        if k=="ToolbarWindow32" and bb[1]==rebars[0][1][1]+21]
+     assert len(main_bars)==1,("main native toolbar ambiguous",main_bars)
+     actual_mainbar=main_bars[0]
+     u.SendMessageW.argtypes=(w.HWND,w.UINT,w.WPARAM,w.LPARAM)
+     u.SendMessageW.restype=c.c_ssize_t
+     def actual_main_buttons():
+      children=Desktop(backend="uia").window(
+         handle=actual_mainbar).descendants()
+      return [x for x in children
+          if x.is_visible() and x.element_info.name and
+          x.element_info.control_type in ("Button","SplitButton")]
+     original_buttons=actual_main_buttons()
+     orig_names=sorted(x.element_info.name for x in original_buttons)
+     original_count=int(u.SendMessageW(actual_mainbar,0x418,0,0))
+     print("REAL_MAIN_TOOLBAR_BEFORE",
+           original_count,
+           [n.encode("ascii","backslashreplace").decode() for n in orig_names],
+           flush=True)
+     assert original_count>=8 and len(orig_names)>=4
+     def actual_tooltip(button):
+      bounds=button.rectangle()
+      mouse.move(coords=((bounds.left+bounds.right)//2,
+                         (bounds.top+bounds.bottom)//2))
+      for _ in range(16):
+       hints=[h for h in en(proc.pid,True)
+          if cl(h).lower()=="tooltips_class32" and u.IsWindowVisible(h)]
+       if hints:
+        names=[]
+        for h in hints:
+         try:
+          names.append(Desktop(backend="uia").window(
+                     handle=h).element_info.name)
+         except Exception:names.append(title(h))
+        print("ACTUAL_HOVER_TOOLTIP_WINDOWS",len(hints),
+              [x.encode("ascii","backslashreplace").decode()
+               for x in names],flush=True)
+        return names
+       time.sleep(.12)
+      print("ACTUAL_HOVER_TOOLTIP_NOT_EXPOSED",flush=True)
+      return None
+     first_button=next((x for x in original_buttons if x.is_enabled()),
+                       original_buttons[0])
+     tip_before=actual_tooltip(first_button)
     if "--keyboard" in sys.argv:
      keyboard_compact_menu()
     else:
@@ -291,6 +368,29 @@ try:
      continue
     print("REAL_COMPACTED_REBAR_HEIGHT",rebar_height(),flush=True)
     assert rebar_height()==101,("user-click compact mode did not free row",rebar_height())
+    if "--command-audit" in sys.argv:
+     compressed_buttons=actual_main_buttons()
+     compressed_names=sorted(x.element_info.name
+                             for x in compressed_buttons)
+     compressed_count=int(u.SendMessageW(actual_mainbar,0x418,0,0))
+     print("REAL_MAIN_TOOLBAR_AFTER",
+           compressed_count,
+           [n.encode("ascii","backslashreplace").decode()
+            for n in compressed_names],flush=True)
+     assert compressed_count==original_count and compressed_names==orig_names,(
+        "main native toolbar commands lost or renamed after compaction",
+        original_count,compressed_count,orig_names,compressed_names)
+     same_button=next((x for x in compressed_buttons
+                       if x.element_info.name==first_button.element_info.name),
+                      compressed_buttons[0])
+     tip_after=actual_tooltip(same_button)
+     assert bool(tip_before)==bool(tip_after),(
+        "existing native toolbar tooltip availability changed",
+        tip_before,tip_after)
+     if tip_before and tip_after:
+      assert tip_before==tip_after,"native tooltip contents changed"
+     print("UXH04_NATIVE_MAIN_COMMANDS_AND_BASELINE_TOOLTIP_UNCHANGED_PASS=True",
+           "NATIVE_TOOLTIP_EXPOSED",bool(tip_after),flush=True)
     if "--chevron" in sys.argv:
      assert_overflow()
     if "--exercise" in sys.argv:
@@ -300,7 +400,7 @@ try:
       click_compact_menu()
      print("REAL_RESTORED_REBAR_HEIGHT",rebar_height(),flush=True)
      assert rebar_height()==141,("second user click failed to restore",rebar_height())
-     print("UXH04_ACTUAL_POINTER_MENU_TOGGLE_AND_RESTORE_PASS=True",flush=True)
+     print("UXH04_ACTUAL_"+("KEYBOARD" if "--keyboard" in sys.argv else "POINTER")+"_MENU_TOGGLE_AND_RESTORE_PASS=True",flush=True)
     else:
      print("UXH04_ACTUAL_POINTER_COMPACT_LEFT_ACTIVE_UNTIL_EXIT=True",flush=True)
 
@@ -311,6 +411,42 @@ finally:
   if main and u.IsWindow(main):u.PostMessageW(main,0x10,0,0)
   try:proc.wait(timeout=14)
   except subprocess.TimeoutExpired:proc.terminate();proc.wait(timeout=4)
+ if ("--relaunch" in sys.argv and "--persist" in sys.argv and
+     "--keyboard" in sys.argv and proc and proc.returncode==0):
+  reproc=None;rem=0
+  try:
+   reproc=subprocess.Popen(
+    [str(R/"bin/x64/fxfile.exe"),"--conf_dir",str(cp),str(fixture)],
+    cwd=folder,env={**os.environ,"APPDATA":str(folder/"appdata")},
+    stdin=subprocess.DEVNULL,stdout=subprocess.DEVNULL,
+    stderr=subprocess.DEVNULL)
+   for _ in range(100):
+    wins=[h for h in en(reproc.pid,True) if title(h).endswith(" - fxfile")]
+    if len(wins)==1:rem=wins[0];break
+    time.sleep(.1)
+   assert rem,"owned relaunch main frame absent"
+   u.ShowWindow(rem,9)
+   assert u.SetWindowPos(rem,0,65,65,750,550,0x0004)
+   restored=None
+   for _ in range(60):
+    bars=[h for h in en(rem) if cl(h)=="ReBarWindow32"
+          and u.IsWindowVisible(h)]
+    if len(bars)==1:
+     restored=ht(rect(bars[0]))
+     if restored==141:break
+    time.sleep(.12)
+   assert restored==141,("relaunch did not restore saved rows",restored)
+   assert (cp/"fxfile-coolbar.dat").read_bytes()==original_saved_band
+   print("UXH04_ACTUAL_KEYBOARD_COMPACT_RELAUNCH_GUI_RESTORED_141_PASS=True",
+         flush=True)
+  finally:
+   if reproc and reproc.poll() is None:
+    if rem and u.IsWindow(rem):u.PostMessageW(rem,0x10,0,0)
+    try:reproc.wait(timeout=14)
+    except subprocess.TimeoutExpired:reproc.terminate();reproc.wait(timeout=5)
+   assert reproc and reproc.returncode==0,(
+     "owned relaunch clean exit failed",
+     reproc.returncode if reproc else None)
  after={n:hashlib.sha256((src/n).read_bytes()).hexdigest() for n in names}
  copy_saved=(cp/"fxfile-coolbar.dat").read_bytes()
  if "--exercise" in sys.argv or "--persist" in sys.argv or "--diagnose" in sys.argv:
@@ -318,10 +454,5 @@ finally:
         copy_saved==original_saved_band,flush=True)
   assert copy_saved==original_saved_band,(
       "temporary compact mode must not persist or erase custom band layout")
- if "--diagnose" in sys.argv and (folder/"native-fit.log").is_file():
-  source=(folder/"native-fit.log").read_text(encoding="ascii")
-  for line in source.splitlines():
-   if line.startswith(("pref","ids","bands","styles","fit")):
-    print("OWNED_INPROCESS_NATIVE",line,flush=True)
  print("ORIGINAL_SETTINGS_IDENTICAL",after==before,"OWNED_EXIT",proc.returncode if proc else None,flush=True)
  assert after==before and proc is not None and proc.returncode==0

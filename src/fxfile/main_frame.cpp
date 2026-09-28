@@ -1417,6 +1417,15 @@ void MainFrame::OnInitMenuPopup(CMenu *aPopupMenu, xpr_uint_t aIndex, xpr_bool_t
                     if (sStringId != XPR_NULL)
                     {
                         sString = gApp.loadString(sStringId);
+                        // New optional menu strings can be absent from
+                        // existing installed language packs. loadString
+                        // then returns the ID itself: never replace the
+                        // native menu's actual &J mnemonic with that ID.
+                        if (sId == ID_VIEW_TOOL_COMPACT_ROWS &&
+                            (XPR_IS_NULL(sString) ||
+                             _tcscmp(sString, sStringId) == 0))
+                            sString = XPR_STRING_LITERAL(
+                                "Compact drive/bookmark rows (&J)");
 
                         sBCPopupMenu->SetMenuText(sId, (xpr_tchar_t *)sString, MF_BYCOMMAND);
                     }

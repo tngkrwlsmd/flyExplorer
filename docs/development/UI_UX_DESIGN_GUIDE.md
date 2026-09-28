@@ -93,3 +93,25 @@ guarantee about real 120/144/192-DPI or High Contrast acceptance.
 [Measured UXH-03 acceptance](UI_PHASE6_UXH03_RESPONSIVE_PANE_20260928.md).
 At 750-px 2x2 the height of file-list rows remains constrained;
 treat UXH-04 global toolbar density as an independent improvement.
+
+## 9. Opt-in compact native toolbar rows (UXH-04, 2026-09-28)
+
+Do not reset a stored ReBar arrangement to obtain more file-list
+height. Offer a *reversible user-triggered* compact layout only
+when the relevant adjacent Drive/Bookmark bands are visible,
+not user-configured as multiline, and can each retain a safe
+native minimum plus existing chevron overflow. Persist the
+original band width/style fields while the temporary compact
+mode is on, and restore the saved visible geometry on the
+next launch. Validate physical pointer AND keyboard command
+selection (exact native command ID before key), real privately
+owned overflow-item invocation, dark/light, and same copied
+profile restart. Any newly introduced localized command needs
+a safe mnemonic-bearing fallback with older installed language
+files. The custom native menu's GetMenuStringW may be empty;
+do not invent an index-based positional Enter workaround.
+Native toolbar UIA labels were retained during UXH-04; a
+native tooltip popup was not exposed during either baseline
+or compact automated hover and needs a separate manual
+screen-reader assessment. See
+[scoped evidence](UI_PHASE6_UXH04_EVIDENCE_20260928.md).
