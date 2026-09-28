@@ -69,6 +69,14 @@ The independent native AddressBar Dark fix on main is a separate change.
   private, +0.072s to visible frame. This is a six-process local sample,
   not a formal system-wide performance guarantee; XAML root became ready
   after the main frame in island mode.
+- Follow-on post-input-fix Release performance: THREE additional paired
+  native/WinUI runs on the same Windows 11 host, each with its own disposable
+  Release executable and exactly matched original config hashes. Native
+  medians: 1.039s to frame, 45.30 MiB RSS and 10.14 MiB private; optional
+  WinUI App/TextBox medians: 1.114s to frame, 88.13 MiB RSS and 27.05 MiB
+  private. Differences of the observed medians were +0.075s, +42.83 MiB
+  RSS and +16.91 MiB private. Six processes total is a small, local sample,
+  not an installer-level or clean-machine performance guarantee.
 - The isolated Windows batch-package contract runs passed FOUR cases:
   default native stage unchanged; opted-in x64 Release DLL, PRI and
   companion staged; existing native PRI refused without destroying the
@@ -83,17 +91,41 @@ The independent native AddressBar Dark fix on main is a separate change.
 
 ## Important open issues and deployment boundaries
 
-Long absolute-path key injection is NOT VERIFIED: in an isolated 119-char
-synthetic path both default Unicode-packet and rate-limited native-key
-pywinauto injection yielded 110 characters. A diff showed precisely the
-nine backslash separators missing. The tool's key parser itself represents
-each separator as an event, but tests have not determined whether the
-failure occurs in automation, native MFC message routing or XAML text
-translation. A comparative normal MFC Edit automation probe was inconclusive
-because its Win32 automation attach failed; it does not establish a root
-cause. Earlier short-string keyboard editing and UIA ValuePattern setting
-of the exact long path plus physical-key simulation of Enter did pass.
-Do not treat UIA ValuePattern as proof of a physically typed long path.
+The earlier 119-character physical keyboard test reproduced loss of all nine
+backslash path separators (110 characters) under both Unicode-packet and
+native-key automation in the MFC-hosted island. A separate test-owned Tk
+text entry accepted the same long path under Unicode injection, and the
+independently built standalone WinUI 3 TextBox accepted a single backslash
+under BOTH injection modes. Instrumented MFC/WinUI-host traces showed the
+island's InputSiteWindowClass received WM_CHAR 92 and KeyDown 220, while
+ContentPreTranslateMessage returned FALSE and TextChanged did not reflect
+the backslash. A letter character did produce a text change in the same
+host. The issue was in the host-side secondary MFC message handling, not
+a general inability of the standalone WinUI TextBox to accept backslashes.
+
+CORRECTION: MainFrame::PreTranslateMessage continues calling the WinUI
+ContentPreTranslateMessage bridge first. Only while the explicit
+test-owned island is active, messages targeting InputSiteWindowClass
+that remain unhandled are now returned to normal Windows dispatch
+instead of falling through the unrelated MFC main-frame accelerator
+path. The default MFC path remains unchanged when the island is absent.
+A direct owned GUI control test confirmed Unicode-packet and native
+virtual-key slash insertion after this narrow change.
+
+With the Release product rebuilt, the existing real-product harness
+first passed exact physical typing of all 119 characters including all
+nine backslashes. After removing ALL temporary diagnostics and rebuilding
+the release WinUI DLL, TWO more consecutive test-owned full Release
+app-mode runs passed exact physical typing (119/119) AND actual
+physical-keyboard Enter, which navigated from the parent folder into
+the target via the original native ExplorerCtrl. Those runs also passed
+native pane/tab synchronization, invalid-path handling, UI focus and
+exit code zero, with the original six configuration hashes unchanged.
+A separate default Release TextBlock-island regression passed.
+Native source/address-routing tests and all four optional package-stage
+contract scenarios also passed. This proves the specific real 96-DPI
+physical long-path regression is resolved in the observed experiment;
+it is not proof of every keyboard layout or input method.
 
 Clipboard paste with exact global user-state preservation, Korean IME
 composition, Shell virtual-folder GUI fallback, High Contrast on the OS,
@@ -105,9 +137,10 @@ a real signed NSIS installer or an end-to-end installed-app smoke.
 
 ## main merge decision
 
-B (user-enabled WinUI feature): HOLD because long keyboard path entry,
-real installer/runtime prerequisites and cross-environment GUI integration
-gates remain open. A (test-only default-disabled source): also HOLD for
+B (user-enabled WinUI feature): HOLD because real installer/runtime
+prerequisites, additional keyboard/IME layouts and cross-environment GUI
+integration gates remain open. The observed 119-character physical input
+and native Enter regression is now PASS; do not count it as an open item. A (test-only default-disabled source): also HOLD for
 now rather than adding unfinished diagnostics and extra ABI/deployment
 obligations to the canonical native product. Preserve proven changes
 on the named experimental branch, keep independently validated MFC UI

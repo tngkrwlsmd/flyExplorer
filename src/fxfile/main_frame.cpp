@@ -3181,6 +3181,15 @@ xpr_bool_t MainFrame::PreTranslateMessage(MSG *aMsg)
     static xpr_tchar_t sClassName[MAX_CLASS_NAME + 1] = {0};
     sClassName[0] = XPR_STRING_LITERAL('\0');
 
+    // The island has already received its ContentPreTranslateMessage call.
+    // When it leaves text input unhandled, do not pass its native input-site
+    // messages into MFC's unrelated main-frame keyboard accelerators.
+    if (sTestIslandReady && aMsg && ::IsWindow(aMsg->hwnd) &&
+        ::GetClassName(aMsg->hwnd, sClassName, MAX_CLASS_NAME) != 0 &&
+        _tcsicmp(sClassName,
+            XPR_STRING_LITERAL("InputSiteWindowClass")) == 0)
+        return XPR_FALSE;
+
     if (aMsg->message == WM_SYSKEYDOWN || aMsg->message == WM_KEYDOWN)
     {
         DWORD sVKey = (DWORD)aMsg->wParam;

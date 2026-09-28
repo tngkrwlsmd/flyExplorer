@@ -216,3 +216,29 @@ delegated to the still-active MFC address surface instead of displaying
 a stale previous local path. All runtime claims and unresolved keyboard,
 DPI, High Contrast, IME and installer gates are documented separately in
 docs/development/UI_FRAMEWORK_PHASE5_PRODUCTIZATION_EVIDENCE.md.
+
+
+## InputSiteWindowClass physical path-key routing: follow-on verified fix
+
+The previous address-integration write-up describes historical testing,
+before the later host message fix. In the release-only, explicit opt-in
+island, the native MFC MainFrame must NOT reprocess XAML input-site
+characters that ContentPreTranslateMessage left unhandled. The narrow
+InputSiteWindowClass branch in MainFrame::PreTranslateMessage now returns
+to normal Windows dispatch when an island is attached; MFC behavior
+without the island is unchanged.
+
+A standalone WinUI 3 TextBox and an independently owned native Tk entry
+accepted backslashes under comparable Unicode-key tests, while the
+old hosted island did not. With this routing correction, the existing
+FLYEXP_PHASE5_RUN_LONG_KEYS=1 / FLYEXP_PHASE5_EXTRA_UI_GATES=1 /
+FLYEXP_PHASE5_BUILD_CONFIG=Release / FLYEXP_PHASE5_DIAG_TEXTBOX=app
+test-owned run typed the exact 119-character synthetic path, including
+all nine backslashes. TWO consecutive fully strengthened Release runs,
+after reverting temporary logging and rebuilding the bridge, also used
+physical Enter to navigate the real active native ExplorerCtrl.
+Each run preserved the original six user-config file SHA256 checks and
+exited normally. The default Release TextBlock-island baseline passed.
+This does not establish Korean IME, clipboard state preservation,
+different real DPI or clean-machine installer readiness. See the
+productization evidence document for exact limits and the hold decision.

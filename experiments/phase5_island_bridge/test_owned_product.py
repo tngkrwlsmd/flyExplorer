@@ -237,7 +237,14 @@ try:
   if extra_ui:
    long_ok=True
    if os.environ.get('FLYEXP_PHASE5_RUN_LONG_KEYS','')=='1':
-    # Separate synthetic keyboard-injection reliability from UIA ValuePattern.
+    # Start in the parent so that a complete keyboard-entered path must
+    # actually navigate the native product to the target, not merely match
+    # a pre-existing address in the field.
+    controls['Up'].click_input()
+    eventually(lambda:title(hwnd).lower().endswith('my documents - fxfile'),
+               'native Up before physical long-address test failed')
+    eventually(lambda:probe.window_text().lower()==str(fixture.parent).lower(),
+               'native Up did not synchronize address before keyboard input')
     probe.set_focus()
     keyboard.send_keys('^a')
     keyboard.send_keys(str(fixture),with_spaces=True,pause=0.035)
@@ -265,6 +272,15 @@ try:
            'actual_length',len(physical_vk),'expected_length',len(str(fixture)),
            flush=True)
      long_ok=vk_ok
+    if long_ok:
+     # This Enter acts on the exact path typed with actual keyboard events.
+     keyboard.send_keys('{ENTER}')
+     eventually(lambda:title(hwnd).lower().endswith('my music - fxfile'),
+                'fully keyboard-typed long address did not navigate native engine')
+     eventually(lambda:probe.window_text().lower()==str(fixture).lower(),
+                'XAML path did not refresh after keyboard-only long address')
+     print('REAL_PRODUCT_PHYSICAL_LONG_PATH_ENTER_NATIVE_ENGINE_PASS',
+           len(str(fixture)),flush=True)
     # Restore synthetic field for subsequent independent product path gates.
     probe.set_edit_text(str(fixture))
     controls['Up'].set_focus()

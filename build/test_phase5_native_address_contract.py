@@ -29,6 +29,18 @@ class TestPhase5NativeAddressContract(unittest.TestCase):
         self.assertIn("sTestIslandRefreshPath();", self.frame)
         self.assertIn("FlyIslandRefreshPath()", self.bridge)
 
+    def test_test_owned_xaml_inputsite_skips_native_mfc_accelerators(self):
+        # The bridge calls ContentPreTranslateMessage first; when it leaves a
+        # XAML input-site character for dispatch, MFC must not re-interpret it
+        # as a native main-frame shortcut. This is opt-in island behavior.
+        pre = self.frame.split("xpr_bool_t MainFrame::PreTranslateMessage(", 1)[1].split(
+            "void MainFrame::popupWorkingFolderMenu(", 1)[0]
+        self.assertIn("PreTranslateTestIsland(aMsg)",pre)
+        self.assertIn("sTestIslandReady && aMsg",pre)
+        self.assertIn('XPR_STRING_LITERAL("InputSiteWindowClass")',pre)
+        self.assertIn("return XPR_FALSE;",pre)
+        self.assertLess(pre.index("InputSiteWindowClass"),pre.index("super::PreTranslateMessage(aMsg)"))
+
     def test_native_engine_retained_and_shell_fallback_guarded(self):
         self.assertIn("TestIslandFrameFor(HWND hwnd)", self.frame)
         self.assertIn("::GetCurrentThreadId()", self.frame)

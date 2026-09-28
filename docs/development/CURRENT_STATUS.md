@@ -684,3 +684,18 @@ native functional regression 17/0. Actual higher DPI and OS High Contrast
 runtime acceptance remain untested. This is independent of the opt-in
 WinUI 3 Phase 5 experiment; see
 docs/development/UI_ADDRESS_DROPDOWN_DARK_EVIDENCE.md.
+
+
+## 2026-09-28 Phase5 physical long-path input fix (EXPERIMENT ONLY)
+
+On experiments/phase5-productization-20260928, the opt-in MFC-hosted
+WinUI 3 InputSiteWindowClass was excluded from secondary MFC main-frame
+accelerator preprocessing after the Windows App SDK pretranslation.
+Repeated Release test-owned GUI runs physically typed all 119 synthetic
+path characters including all nine backslashes, then used a real
+keyboard Enter to navigate the existing native ExplorerCtrl.
+The default release TextBlock-island baseline and original six config
+hash checks passed. Release packaging-stage contracts have only
+isolated tests; IME, actual higher DPI/High Contrast, dependency license
+review, clean-machine install/uninstall and complete HKCU isolation
+remain unverified. The feature is NOT merged into main.
