@@ -2,7 +2,9 @@
 
 Date: 2026-09-29.
 
-**LATEST M1.7 scoped update (after the M1.6 standalone experiment):** [Actual WinUI two-lane native helper supervision, private Job timeout/restart, separate native watcher and full real Debug/Release GUI acceptance](WINUI3_M17_PANE_PROCESS_SUPERVISOR_20260929.md). The helper is now truly used by the isolated WinUI preview, NOT the default MFC product. The independent helper inherits the user's Windows token; it has not been certified against real hostile third-party extensions. The earlier M1.6 *helper-only* statements below are historical.
+**LATEST M1.8 scoped update:** The separate WinUI preview now has explanatory bounded-timeout and invalid UNC failure UI, a dedicated Shell namespace notification registration thread and test-owned COM fault/loopback GUI evidence. No real broken third-party extension or external virtual provider emission has been verified. See [M1.8 scoped evidence](WINUI3_M18_SHELL_STABILITY_20260929.md).
+
+**HISTORICAL M1.7 scoped update (after the M1.6 standalone experiment):** [Actual WinUI two-lane native helper supervision, private Job timeout/restart, separate native watcher and full real Debug/Release GUI acceptance](WINUI3_M17_PANE_PROCESS_SUPERVISOR_20260929.md). The helper is now truly used by the isolated WinUI preview, NOT the default MFC product. The independent helper inherits the user's Windows token; it has not been certified against real hostile third-party extensions. The earlier M1.6 *helper-only* statements below are historical.
 
 **Historical M1.6 scoped update:** [Current actual risk audit and isolated process-helper proof](WINUI3_M16_SHELL_PROCESS_ISOLATION_20260929.md). The helper's Debug/Release and test-owned dual-lane watchdog/recovery proof PASS, but the actual WinUI UI STILL runs the old in-process STA; do not infer GUI process isolation or real extension crash recovery from this experiment. Historical M1.5 results and subsequent worktree notes below remain revision-scoped.
 

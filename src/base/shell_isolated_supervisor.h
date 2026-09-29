@@ -17,6 +17,9 @@ struct IsolatedResult {
     Snapshot snapshot;
     std::wstring filesystemPath; // computed inside the isolated child
     bool recovered=false;
+    bool timedOut=false;
+    bool networkRequest=false;
+    std::uint32_t attempts=0;
 };
 using IsolatedCallback=std::function<void(IsolatedResult)>;
 class IsolatedShellSupervisor final {
@@ -35,6 +38,9 @@ public:
     // Opt-in, test-owned synthetic timeout; not reachable by typing a path.
     std::uint64_t submitOwnedTestDelay(int pane,std::uint64_t route,
                                       std::wstring recoveryFolder);
+    // Test-only self-contained COM object, never a registered Shell extension.
+    std::uint64_t submitOwnedComDelay(int pane,std::uint64_t route,
+                                     std::wstring recoveryFolder,bool exhaust=false);
 #endif
 private:
     struct State;

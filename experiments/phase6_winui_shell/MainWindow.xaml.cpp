@@ -57,6 +57,13 @@ namespace winrt::FlyExplorerWinUIShell::implementation
                     if(auto ui=weak.get())ui->OnNativeChange(route,token);
                 });
             });
+        mShellWatcher=std::make_unique<
+            fxfile::directorychange::ShellNamespaceWatcher>(
+            [weak,dispatch](std::uint64_t route,std::uint64_t token) {
+                dispatch.TryEnqueue([weak,route,token] {
+                    if(auto ui=weak.get())ui->OnNativeChange(route,token);
+                });
+            });
         // Exact sibling of THIS preview binary, never a PATH lookup or
         // arbitrary installed product/Explorer process.
         wchar_t module[32768]{};
@@ -74,8 +81,26 @@ namespace winrt::FlyExplorerWinUIShell::implementation
             throw winrt::hresult_error(E_FAIL,L"Owned Shell helper startup failed");
         if(!mWatcher->start())
             throw winrt::hresult_error(E_FAIL,L"Independent native watcher startup failed");
+        if(!mShellWatcher->start())
+            throw winrt::hresult_error(E_FAIL,L"Shell namespace watcher startup failed");
         const auto initial=StartFolder().native();
         bool testLeftDelay=false;
+        bool testLeftComDelay=false;
+#if defined(_DEBUG)
+        wchar_t notifyFlag[8]{};
+        if(::GetEnvironmentVariableW(
+             L"FLY_M18_OWNED_SHELL_NOTIFY",notifyFlag,8)==3 &&
+             !wcscmp(notifyFlag,L"YES")){
+            int argc=0;
+            auto argv=::CommandLineToArgvW(::GetCommandLineW(),&argc);
+            if(argv){
+                for(int i=2;i<argc;++i)
+                    if(!wcscmp(argv[i],L"--m18-owned-shell-notification"))
+                        mOwnedShellNotifyTest=true;
+                ::LocalFree(argv);
+            }
+        }
+#endif
 #if defined(_DEBUG)
         // Only a user-owned isolated test process explicitly opting in
         // can inject a synthetic slow helper. No UI path string triggers it.
@@ -92,6 +117,22 @@ namespace winrt::FlyExplorerWinUIShell::implementation
                 ::LocalFree(argv);
             }
         }
+        wchar_t comFlag[8]{};
+        if(::GetEnvironmentVariableW(
+             L"FLY_M18_OWNED_COM_TEST_ONLY",comFlag,8)==3 &&
+             !wcscmp(comFlag,L"YES")){
+            int argc=0;
+            auto argv=::CommandLineToArgvW(::GetCommandLineW(),&argc);
+            if(argv){
+                for(int i=2;i<argc;++i) {
+                    if(!wcscmp(argv[i],L"--m18-test-left-com-hang"))
+                        testLeftComDelay=true;
+                    if(!wcscmp(argv[i],L"--m18-test-exhaust-com-on-virtual"))
+                        mOwnedComExhaustOnVirtual=true;
+                }
+                ::LocalFree(argv);
+            }
+        }
 #endif
         for(int side=0;side!=2;++side) {
             auto& pane=mPanes[side];
@@ -102,6 +143,11 @@ namespace winrt::FlyExplorerWinUIShell::implementation
 #if defined(_DEBUG)
             if(side==0 && testLeftDelay){
                 pane.pending[0]=mSupervisor->submitOwnedTestDelay(
+                    0,pane.routeIds[0],initial);
+                continue;
+            }
+            if(side==0 && testLeftComDelay){
+                pane.pending[0]=mSupervisor->submitOwnedComDelay(
                     0,pane.routeIds[0],initial);
                 continue;
             }
@@ -121,6 +167,7 @@ namespace winrt::FlyExplorerWinUIShell::implementation
         // by get_weak(), route tokens, and closed DispatcherQueue.
         if(mSupervisor)mSupervisor->shutdown();
         if(mWatcher)mWatcher->shutdown();
+        if(mShellWatcher)mShellWatcher->shutdown();
     }
     int32_t MainWindow::MyProperty() {return 0;}
     void MainWindow::MyProperty(int32_t) {}
@@ -141,7 +188,15 @@ namespace winrt::FlyExplorerWinUIShell::implementation
     {
         auto& pane=mPanes[side];
         const auto route=pane.routeIds[pane.active];
-        const auto id=mSupervisor->submitParsing(side,route,std::move(path));
+        std::uint64_t id=0;
+#if defined(_DEBUG)
+        if(mOwnedComExhaustOnVirtual && side==0 &&
+           path==L"shell:MyComputerFolder")
+            id=mSupervisor->submitOwnedComDelay(
+                side,route,std::move(path),true);
+        else
+#endif
+            id=mSupervisor->submitParsing(side,route,std::move(path));
         if(id) {
             // At most one outstanding helper operation per active pane.
             // Clear the canceled prior tab's UI pending marker too.
@@ -181,12 +236,17 @@ namespace winrt::FlyExplorerWinUIShell::implementation
            path==mWatchedPaths[side])return;
         if(mWatchedRoutes[side])
             mWatcher->unwatch(mWatchedRoutes[side]);
+            mShellWatcher->unwatch(mWatchedRoutes[side]);
         mWatchedRoutes[side]=0;
         mWatchTokens[side]=0;
         mWatchedPaths[side].clear();
-        if(!path.empty()) {
+        const auto& location=pane.tabs[pane.active].snapshot().folder;
+        if(!path.empty() || location.valid()) {
             const auto token=mNextWatchToken++;
-            mWatcher->watch(route,token,path);
+            if(!path.empty() && !(mOwnedShellNotifyTest && side==0))
+                mWatcher->watch(route,token,path);
+            else if(location.valid())
+                mShellWatcher->watch(route,token,location.get());
             mWatchedRoutes[side]=route;
             mWatchTokens[side]=token;
             mWatchedPaths[side]=std::move(path);
@@ -201,8 +261,20 @@ namespace winrt::FlyExplorerWinUIShell::implementation
                    pane.pending[i]!=result.request)continue;
                 pane.pending[i]=0;
                 if(FAILED(result.hr)) {
-                    if(i==pane.active)
-                        StatusText().Text(L"Shell operation failed; old folder preserved");
+                    if(i==pane.active) {
+                        if(result.timedOut)
+                            StatusText().Text(
+                                L"Shell folder did not respond after two 4.5-second attempts. "
+                                L"Previous folder preserved; retry or choose another folder.");
+                        else if(result.networkRequest)
+                            StatusText().Text(
+                                L"Network folder unavailable or access denied. "
+                                L"Previous folder preserved.");
+                        else
+                            StatusText().Text(
+                                L"Shell folder could not be opened. "
+                                L"Previous folder preserved.");
+                    }
                     return;
                 }
                 using Action=fxfile::shellnav::NavigationAction;
@@ -220,7 +292,7 @@ namespace winrt::FlyExplorerWinUIShell::implementation
                         Refresh(result.recovered?
                             L"Native Shell helper recovered from owned timeout":
                             result.action==Action::Refresh?
-                            L"Native Shell helper: filesystem changes refreshed":
+                            L"Native Shell helper: folder change notifications refreshed":
                             L"Native Shell helper: isolated folder loaded");
                         UpdateWatch(side,true);
                     }else RefreshTabs(side);

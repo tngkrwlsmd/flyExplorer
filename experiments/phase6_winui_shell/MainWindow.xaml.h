@@ -4,6 +4,7 @@
 #include "../../src/base/shell_async_worker.h"
 #include "../../src/base/shell_isolated_supervisor.h"
 #include "../../src/base/directory_watcher.h"
+#include "../../src/base/shell_namespace_watcher.h"
 #include <array>
 #include <vector>
 #include <filesystem>
@@ -56,6 +57,9 @@ namespace winrt::FlyExplorerWinUIShell::implementation
         bool mPopulatingTabs = false;
         std::unique_ptr<fxfile::shellnav::IsolatedShellSupervisor> mSupervisor;
         std::unique_ptr<fxfile::directorychange::DirectoryWatcher> mWatcher;
+        std::unique_ptr<fxfile::directorychange::ShellNamespaceWatcher> mShellWatcher;
+        bool mOwnedShellNotifyTest=false;
+        bool mOwnedComExhaustOnVirtual=false;
         std::uint64_t mNextRoute=1,mNextWatchToken=1;
         std::array<std::uint64_t,2> mWatchedRoutes{},mWatchTokens{};
         std::array<std::wstring,2> mWatchedPaths{};

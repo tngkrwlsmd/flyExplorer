@@ -1,5 +1,7 @@
 # M1.7: real WinUI 3 per-pane Shell process supervision and standalone filesystem watches
 
+**Later M1.8 milestone:** See [owned COM and loopback-network failure UX plus separate Shell namespace subscriptions](WINUI3_M18_SHELL_STABILITY_20260929.md). The following M1.7 record is revision-scoped and predates the notification implementation. Real third-party extension and external virtual-provider events remain unverified.
+
 Date: 2026-09-29. Worktree: `C:\dev\flyExplorer-winui3-migration`; base HEAD `a829fd1`. This is a scoped **experimental WinUI preview integration**. The production MFC file manager, profile, registry, DPI and user windows were not changed.
 
 ## Implemented (actual source)

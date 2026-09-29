@@ -1,6 +1,12 @@
 # flyExplorer — current project status (2026-09-28 baseline; 2026-09-29 migration-branch addendum)
 
-## Latest 2026-09-29: M1.7 actual WinUI 3 per-pane Shell-process isolation — scoped GUI PASS
+## Latest 2026-09-29: M1.8 Shell timeout, owned COM/UNC faults and virtual notifications — SCOPED PASS
+
+The experimental WinUI preview now distinguishes exhausted two-attempt Shell timeout failures from inaccessible UNC path errors while retaining its last accepted folder. In actual owned Debug GUI tests, a disposable native helper ran a self-contained 30-second blocking IUnknown COM method: the other pane continued and the affected helper was terminated and restarted. A separate owned GUI run exhausted BOTH 4.5-second COM helper attempts and verified the actionable timeout message and unchanged left/right folder lists. An invalid, read-only LOCAL loopback UNC path was rejected with the network-specific message and last good pane retained. No third-party extension was installed, and no actual remote SMB failure was exercised.
+
+A private ShellNamespaceWatcher now subscribes to selected virtual-folder absolute PIDLs on an independent hidden-window message thread. The real notification-to-WinUI refresh path passed using an event for a disposable OWNED local folder, while normal virtual This PC navigation and filesystem create/delete watches still passed. A genuine dynamic This PC or third-party virtual namespace event is NOT yet verified. Final Debug/Release x64 builds, owned GUI, Release native helper/Job checks and 14/14 focused source checks PASS; six original user-setting SHA256 hashes unchanged. Default MFC product source unchanged; its earlier 20/0 PASS_WITH_SKIPS is historical, NOT rerun. See [M1.8 exact scope and evidence](WINUI3_M18_SHELL_STABILITY_20260929.md). Current work is local, not pushed/merged or shipped.
+
+## Historical 2026-09-29: M1.7 actual WinUI 3 per-pane Shell-process isolation — scoped GUI PASS
 
 The local WinUI migration preview now REALLY routes Shell navigation through a native C++ **two-lane supervised out-of-process** reader. Each lane creates an exact owned, same-config sibling child in its own private KILL_ON_JOB_CLOSE Job; a 4.5s helper deadline has at most one automatic retry and cannot affect the other pane's owned child. WinUI rejects obsolete route/request tokens and only accepts bounded, checked snapshot/PIDL bytes; no COM interfaces travel between processes. Real filesystem change watching is now a separate **COM-free Win32 thread**, no longer tied to the Shell navigation STA; filesystem paths come from the child rather than UI-thread SHGetPathFromIDListEx. The old in-process async worker was removed from the WinUI project, but remains unchanged for legacy native tests.
 

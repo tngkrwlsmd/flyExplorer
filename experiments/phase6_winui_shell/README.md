@@ -1,3 +1,9 @@
+# WinUI 3 full UI migration — M1.8 isolated Shell stability
+
+The preview retains its native two-lane private helper Jobs and independent filesystem watcher. M1.8 adds distinct exhausted-timeout and invalid UNC error messages without discarding the active folder, plus an independent hidden-window Shell notification subscription for selected virtual PIDLs. Actual owned GUI tests passed a test-only blocked COM method, both exhausted retries, an invalid localhost UNC, and a Shell event confined to a synthetic owned folder. Actual external third-party provider and virtual-folder changes remain unverified. See [M1.8 scoped verification](../../docs/development/WINUI3_M18_SHELL_STABILITY_20260929.md).
+
+## Historical M1.7 integration
+
 # WinUI 3 full UI migration — M1.7 actual isolated-process Shell preview
 
 **Latest, revision-scoped:** The real WinUI navigation path now uses a native **two-lane C++ supervisor**, one test-preview-owned read-only Shell child per active-pane request (at most two simultaneous children), with bounded timeout/private Windows Job termination and one restart. A standalone **COM-free Win32 watcher thread** handles selected filesystem-pane changes independently of hung Shell helpers; paths are computed in the child, never by UI-thread SHGetPathFromIDListEx. The Debug GUI successfully tested a blocked owned LEFT child while RIGHT continued and LEFT recovered; ordinary Release GUI and native create/delete watching passed, unchanged six user hashes, static 12/12. This preview is still not the default MFC product and is not a restricted-token security sandbox. [M1.7 verification and known limits](../../docs/development/WINUI3_M17_PANE_PROCESS_SUPERVISOR_20260929.md).

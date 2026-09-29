@@ -41,6 +41,8 @@ struct Work {
     std::vector<unsigned char> pidl;
 #if defined(_DEBUG)
     bool ownedDelay=false;
+    bool ownedComDelay=false;
+    bool ownedComExhaust=false;
 #endif
 };
 struct Reader {
@@ -283,6 +285,35 @@ std::uint64_t IsolatedShellSupervisor::submitOwnedTestDelay(
         return st->nextTicket-1;
     }catch(...){return 0;}
 }
+std::uint64_t IsolatedShellSupervisor::submitOwnedComDelay(
+    int side,std::uint64_t route,std::wstring folder,bool exhaust){
+    wchar_t env[8]{};
+    if(::GetEnvironmentVariableW(
+        L"FLY_M18_OWNED_COM_TEST_ONLY",env,8)!=3 ||
+        wcscmp(env,L"YES")||side<0||side>1||!route||
+        folder.empty()||folder.size()>kMaxPathUnits)return 0;
+    auto st=state_;
+    if(!st)return 0;
+    try {
+        std::lock_guard<std::mutex> lock(st->lock);
+        if(st->stopped||!st->started)return 0;
+        Work item;
+        item.route=route;item.request=st->nextTicket++;
+        item.path=std::move(folder);
+        item.ownedComDelay=true;
+        item.ownedComExhaust=exhaust;
+        auto lane=st->lanes[side];
+        {
+            std::lock_guard<std::mutex> guard(lane->mutex);
+            lane->generation=item.request;
+            lane->pending=std::move(item);
+            if(lane->activeJob)
+                ::TerminateJobObject(lane->activeJob,ERROR_CANCELLED);
+        }
+        ::SetEvent(lane->wake);
+        return st->nextTicket-1;
+    }catch(...){return 0;}
+}
 #endif
 void IsolatedShellSupervisor::shutdown() noexcept{
     auto st=std::move(state_);
@@ -365,7 +396,13 @@ Attempt oneAttempt(
     startup.StartupInfo.hStdError=childErr.h;
     startup.lpAttributeList=list;
     std::wstring args=L"\""+executable+L"\"";
-    if(artificialBlock)args+=L" --test-block";
+    if(artificialBlock) {
+#if defined(_DEBUG)
+        args+=job.ownedComDelay?L" --test-com-block":L" --test-block";
+#else
+        args+=L" --test-block";
+#endif
+    }
     std::vector<wchar_t> mutableArgs(args.begin(),args.end());
     mutableArgs.push_back(0);
     PROCESS_INFORMATION process{};
@@ -538,21 +575,27 @@ void IsolatedShellSupervisor::runLane(std::shared_ptr<State> st,
         IsolatedResult result;
         result.route=item.route;result.request=item.request;
         result.action=item.action;
+        result.networkRequest=(item.type==kPath &&
+            item.path.size()>=2 && item.path[0]==L'\\' &&
+            item.path[1]==L'\\');
         try{
             for(DWORD attempt=0;attempt<kMaxAttempts;++attempt){
                 if(!current(lane,item))break;
                 bool testBlock=false;
 #if defined(_DEBUG)
-                testBlock=item.ownedDelay&&attempt==0;
+                testBlock=((item.ownedDelay||item.ownedComDelay)&&attempt==0)
+                    ||(item.ownedComDelay&&item.ownedComExhaust);
 #endif
                 auto outcome=oneAttempt(
                     lane,item,st->executable,testBlock);
                 if(outcome.canceled||!current(lane,item))break;
+                result.attempts=attempt+1;
                 if(outcome.timeout&&attempt+1<kMaxAttempts){
                     result.recovered=true;
                     continue;
                 }
                 result.hr=outcome.hr;
+                result.timedOut=outcome.timeout;
                 if(SUCCEEDED(result.hr)){
                     result.snapshot=std::move(outcome.snapshot);
                     result.filesystemPath=std::move(outcome.path);

@@ -10,6 +10,21 @@
 #include <string>
 #include <vector>
 #include <new>
+// No registry writes or third-party extension installation: the test object
+// has a real IUnknown COM vtable and blocks on its own STA in QueryInterface.
+struct OwnedBlockingCom final : IUnknown {
+    ULONG refs=1;
+    HRESULT STDMETHODCALLTYPE QueryInterface(REFIID iid,void** out) override {
+        if(!out)return E_POINTER;
+        *out=nullptr;
+        if(iid!=IID_IUnknown)return E_NOINTERFACE;
+        ::Sleep(30000);
+        *out=this;AddRef();
+        return S_OK;
+    }
+    ULONG STDMETHODCALLTYPE AddRef() override {return ++refs;}
+    ULONG STDMETHODCALLTYPE Release() override {return --refs;}
+};
 #pragma comment(lib,"shell32.lib")
 #pragma comment(lib,"shlwapi.lib")
 #pragma comment(lib,"ole32.lib")
@@ -104,6 +119,21 @@ int wmain(int argc,wchar_t** argv) {
             L"FLY_M16_OWNED_TEST_ONLY",flag,16);
         if(len!=3||wcscmp(flag,L"YES"))return 16;
         ::Sleep(30000);return 42;
+    }
+    if(argc==2&&!wcscmp(argv[1],L"--test-com-block")){
+        wchar_t flag[16]{};
+        const auto len=::GetEnvironmentVariableW(
+            L"FLY_M18_OWNED_COM_TEST_ONLY",flag,16);
+        if(len!=3||wcscmp(flag,L"YES"))return 16;
+        const auto hr=::CoInitializeEx(nullptr,COINIT_APARTMENTTHREADED);
+        if(FAILED(hr))return 17;
+        OwnedBlockingCom object;
+        IUnknown* queried=nullptr;
+        object.QueryInterface(IID_IUnknown,
+                              reinterpret_cast<void**>(&queried));
+        if(queried)queried->Release();
+        ::CoUninitialize();
+        return 42;
     }
     if(argc!=1)return 2;
     const auto input=::GetStdHandle(STD_INPUT_HANDLE);

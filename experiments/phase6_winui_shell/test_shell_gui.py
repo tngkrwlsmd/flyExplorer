@@ -62,11 +62,26 @@ try:
  env={**os.environ,"APPDATA":str(appdata),"LOCALAPPDATA":str(localdata),
       "TEMP":str(temp),"TMP":str(temp)}
  owned_block=os.environ.get("FLY_M17_OWNED_HANG")=="YES"
- if owned_block:
-  assert CONFIG=="Debug","synthetic hang is compiled only for Debug"
-  env["FLY_M16_OWNED_TEST_ONLY"]="YES"
+ owned_com=os.environ.get("FLY_M18_OWNED_COM_HANG")=="YES"
+ owned_notify=os.environ.get("FLY_M18_OWNED_SHELL_NOTIFY")=="YES"
+ owned_exhaust=os.environ.get("FLY_M18_EXHAUST_TIMEOUT")=="YES"
+ loopback_unc=os.environ.get("FLY_M18_LOOPBACK_UNC")=="YES"
+ assert not (owned_block and owned_com)
+ if owned_block or owned_com:
+  assert CONFIG=="Debug","owned fault injection is Debug-only"
+ if owned_block:env["FLY_M16_OWNED_TEST_ONLY"]="YES"
+ if owned_com or owned_exhaust:
+  env["FLY_M18_OWNED_COM_TEST_ONLY"]="YES"
+ if owned_notify:
+  assert CONFIG=="Debug","owned namespace event test is Debug-only"
+  env["FLY_M18_OWNED_SHELL_NOTIFY"]="YES"
  args=[str(EXE),str(left)]
  if owned_block:args.append("--m17-test-left-helper-hang")
+ if owned_com:args.append("--m18-test-left-com-hang")
+ if owned_exhaust:
+  assert CONFIG=="Debug","exhausted COM probe is Debug-only"
+  args.append("--m18-test-exhaust-com-on-virtual")
+ if owned_notify:args.append("--m18-owned-shell-notification")
  p=subprocess.Popen(args,cwd=EXE.parent,env=env,
    stdin=subprocess.DEVNULL,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
  def main():
@@ -102,7 +117,7 @@ try:
    "UI-independent native core/helper was not active at startup",
    element("StatusText").window_text())
  print("ACTUAL_CPP_NATIVE_CORE_NULL_CONTRACT_LINKED",True,flush=True)
- if owned_block:
+ if owned_block or owned_com:
   eventually(lambda:any("Nested" in e.window_text()
       for e in element("RightFiles").descendants()),
       "right pane stalled when LEFT owned helper blocked",3)
@@ -114,6 +129,8 @@ try:
       element("StatusText").window_text().lower(),
       "left helper timeout and restart never reached real WinUI",13)
   print("REAL_WINUI_LEFT_HELPER_TIMEOUT_AND_AUTOMATIC_RESTART",True,flush=True)
+  if owned_com:
+   print("REAL_WINUI_OWNED_COM_VTABLE_STALL_RECOVERED",True,flush=True)
  eventually(lambda:str(left).lower() in element("AddressBox").get_value().lower(),
             "first COM worker result not dispatched to the WinUI thread",12)
  # Two TabView pane controls are genuinely visible; they are not MFC.
@@ -122,24 +139,63 @@ try:
      for e in element("LeftFiles").descendants()),
      "async native Shell directory items never displayed",12)
  print("REAL_FILE_LIST_IN_LEFT_PANE",True,flush=True)
- # No refresh button, timer or direct UI-thread enumeration is used:
- # Create a genuinely test-owned file AFTER the per-pane native
- # FindFirstChangeNotification registration has had time to start.
- time.sleep(.35)
- watcher=left/"native-auto-change-marker.txt"
- watcher.write_text("test-owned only",encoding="utf-8")
- eventually(lambda:any("native-auto-change-marker.txt" in e.window_text()
-     for e in element("LeftFiles").descendants()),
-     "native directory watcher did not refresh the real WinUI ListView",12)
- print("REAL_NATIVE_WATCHER_AUTO_REFRESH_WITHOUT_MANUAL_ACTION",True,flush=True)
- # A second independent invalidation must remove a vanished item from
- # the real list. The watcher is rearmed/replaced after each snapshot.
- time.sleep(.55)
- watcher.unlink()
- eventually(lambda:not any("native-auto-change-marker.txt" in e.window_text()
-     for e in element("LeftFiles").descendants()),
-     "native watcher failed to remove deleted owned file",12)
- print("REAL_NATIVE_WATCHER_CREATE_AND_DELETE_AUTO_REFRESH",True,flush=True)
+ if owned_exhaust:
+  # Both COM attempts hang only inside test-owned helpers, AFTER a real
+  # initial local folder has been committed. Check actual failure UX.
+  safe_click(element("PrimaryPaneTitle"))
+  address=element("AddressBox")
+  address.set_edit_text("shell:MyComputerFolder")
+  ensure_owned_focus()
+  address.type_keys("{ENTER}",set_foreground=True)
+  eventually(lambda:"did not respond after two 4.5-second attempts" in
+      element("StatusText").window_text().lower(),
+      "exhausted COM child requests gave no meaningful error",14)
+  assert any("Nested" in x.window_text()
+      for x in element("LeftFiles").descendants())
+  assert any("Nested" in x.window_text()
+      for x in element("RightFiles").descendants())
+  print("REAL_WINUI_BOTH_COM_TIMEOUTS_EXHAUSTED_PREVIOUS_FOLDERS_PRESERVED",
+        True,flush=True)
+  safe_click(element("PrimaryPaneTitle"))
+  eventually(lambda:str(left).lower() in element("AddressBox").get_value().lower(),
+      "exhausted COM request discarded the old selected folder")
+ if owned_notify:
+  # Only an OWNED synthetic filesystem folder receives this Shell event.
+  # Virtual This PC registration is enabled in the app but NOT faked globally.
+  shell=c.WinDLL("shell32",use_last_error=True)
+  shell.SHChangeNotify.argtypes=[c.c_long,c.c_uint,c.c_void_p,c.c_void_p]
+  owned_path=c.c_wchar_p(str(left))
+  time.sleep(.45)
+  for attempt in range(4):
+   shell.SHChangeNotify(0x1000,0x0005,
+                        c.cast(owned_path,c.c_void_p),None)
+   try:
+    eventually(lambda:"folder change notifications refreshed" in
+        element("StatusText").window_text().lower(),
+        "owned Shell notification did not reach WinUI",1.25)
+    break
+   except AssertionError:
+    if attempt==3:raise
+  print("REAL_WINUI_OWNED_SHELL_NAMESPACE_EVENT_REFRESH",True,flush=True)
+ else:
+  # No refresh button, timer or direct UI-thread enumeration is used:
+  # Create a genuinely test-owned file AFTER the per-pane native
+  # FindFirstChangeNotification registration has had time to start.
+  time.sleep(.35)
+  watcher=left/"native-auto-change-marker.txt"
+  watcher.write_text("test-owned only",encoding="utf-8")
+  eventually(lambda:any("native-auto-change-marker.txt" in e.window_text()
+      for e in element("LeftFiles").descendants()),
+      "native directory watcher did not refresh the real WinUI ListView",12)
+  print("REAL_NATIVE_WATCHER_AUTO_REFRESH_WITHOUT_MANUAL_ACTION",True,flush=True)
+  # A second independent invalidation must remove a vanished item from
+  # the real list. The watcher is rearmed/replaced after each snapshot.
+  time.sleep(.55)
+  watcher.unlink()
+  eventually(lambda:not any("native-auto-change-marker.txt" in e.window_text()
+      for e in element("LeftFiles").descendants()),
+      "native watcher failed to remove deleted owned file",12)
+  print("REAL_NATIVE_WATCHER_CREATE_AND_DELETE_AUTO_REFRESH",True,flush=True)
  # A real ListView double click must use the item's OWNED absolute Shell
  # PIDL, not a filesystem-only address shim.
  navitems=[e for e in element("LeftFiles").descendants()
@@ -294,6 +350,22 @@ try:
  eventually(lambda:str(right).lower() in element("AddressBox").get_value().lower(),
             "native virtual Shell Back did not recover preceding folder")
  print("REAL_NATIVE_VIRTUAL_TO_LOCAL_SHELL_HISTORY",True,flush=True)
+ if loopback_unc:
+  # Nonexistent share on 127.0.0.1; no network configuration or live share changed.
+  safe_click(element("SecondaryPaneTitle"))
+  ensure_owned_focus()
+  bad=element("AddressBox")
+  bad.set_edit_text(r"\\127.0.0.1\flyexplorer-m18-owned-no-share")
+  ensure_owned_focus()
+  bad.type_keys("{ENTER}",set_foreground=True)
+  eventually(lambda:any(x in element("StatusText").window_text().lower()
+      for x in ("network folder unavailable","did not respond after two")),
+      "owned loopback UNC error did not explain the failure",15)
+  assert any("Secondary" in row.window_text()
+      for row in element("RightFiles").descendants()),(
+      "failed loopback UNC changed previously accepted right folder")
+  print("REAL_WINUI_LOOPBACK_UNC_REJECTED_WITH_PRIOR_FOLDER_PRESERVED",
+        element("StatusText").window_text(),flush=True)
  safe_click(element("PrimaryPaneTitle"))
  rect=win.rectangle()
  assert rect.width()>400 and rect.height()>260

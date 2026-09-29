@@ -75,5 +75,42 @@ class RealWinUIIsolationContract(unittest.TestCase):
         self.assertIn("REAL_WINUI_RIGHT_PANE_PROGRESS_WHILE_LEFT_HELPER_BLOCKED",harness)
         self.assertIn("REAL_WINUI_LEFT_HELPER_TIMEOUT_AND_AUTOMATIC_RESTART",harness)
 
+    def test_m18_shell_namespace_notification_separate_from_shell_helpers(self):
+        watch=read(SRC/"shell_namespace_watcher.cpp")
+        host=read(UI/"MainWindow.xaml.cpp")
+        project=read(UI/"FlyExplorerWinUIShell.project-template.xml")
+        harness=read(UI/"test_shell_gui.py")
+        for token in ("SHChangeNotifyRegister","SHChangeNotification_Lock",
+                      "SHChangeNotification_Unlock","SHChangeNotifyDeregister",
+                      "MsgWaitForMultipleObjectsEx","HWND_MESSAGE",
+                      "found->second.token==token"):
+            self.assertIn(token,watch)
+        self.assertNotIn("EnumObjects(",watch)
+        self.assertNotIn("SHParseDisplayName(",watch)
+        self.assertIn("shell_namespace_watcher.cpp",project)
+        self.assertIn("mShellWatcher->watch(",host)
+        self.assertIn("mShellWatcher->unwatch(",host)
+        self.assertIn("FLY_M18_OWNED_SHELL_NOTIFY",harness)
+        self.assertIn("REAL_WINUI_OWNED_SHELL_NAMESPACE_EVENT_REFRESH",harness)
+
+    def test_m18_com_stall_and_network_or_timeout_errors_are_bounded(self):
+        helper=read(ISO/"FlyShellIsolationHelper.cpp")
+        native=read(SRC/"shell_isolated_supervisor.cpp")
+        ui=read(UI/"MainWindow.xaml.cpp")
+        harness=read(UI/"test_shell_gui.py")
+        self.assertIn("OwnedBlockingCom",helper)
+        self.assertIn("FLY_M18_OWNED_COM_TEST_ONLY",helper)
+        self.assertIn("ownedComDelay",native)
+        self.assertIn("result.networkRequest=",native)
+        self.assertIn("result.timedOut=outcome.timeout",native)
+        self.assertIn("two 4.5-second attempts",ui)
+        self.assertIn("Network folder unavailable or access denied",ui)
+        self.assertIn("REAL_WINUI_OWNED_COM_VTABLE_STALL_RECOVERED",harness)
+        self.assertIn("REAL_WINUI_LOOPBACK_UNC_REJECTED_WITH_PRIOR_FOLDER_PRESERVED",harness)
+        self.assertIn("FLY_M18_EXHAUST_TIMEOUT",harness)
+        self.assertIn("mOwnedComExhaustOnVirtual",ui)
+        self.assertIn("item.ownedComExhaust",native)
+        self.assertIn("REAL_WINUI_BOTH_COM_TIMEOUTS_EXHAUSTED_PREVIOUS_FOLDERS_PRESERVED",harness)
+
 if __name__=="__main__":
     unittest.main()
