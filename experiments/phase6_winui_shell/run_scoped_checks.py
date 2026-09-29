@@ -26,6 +26,7 @@ CONTRACTS = [
     "build/test_ui02_layered_scrollbar.py",
     "build/test_ui02_scrollbar_coverage.py",
     "build/test_ui02_owned_harness_safety_contract.py",
+    "build/test_dev_artifact_cleanup.py",
 ]
 OWNED_FLAGS = ("FLY_M19_OWNED_FEATURES", "FLY_M20_OWNED_SHELL",
                "FLY_M21_OWNED_FEATURES", "FLY_M22_OWNED_FEATURES",
@@ -47,7 +48,7 @@ def execute(label, command, timeout, env, tag):
             code = 124
             output.write("\nTIMEOUT: bounded local subprocess terminated\n")
     content = path.read_text(encoding="utf-8", errors="replace")
-    summary = re.findall(r"Ran \d+ tests.*|^OK$|^FAILED.*", content, re.M)
+    summary = re.findall(r"Ran \d+ tests.*|^OK(?: \([^\n]*\))?$|^FAILED.*", content, re.M)
     if not summary:
         summary = [line for line in content.splitlines()
                    if line.startswith(("REAL_M23_", "OWNED_WINUI_SHELL_EXIT",
