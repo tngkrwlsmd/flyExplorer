@@ -56,6 +56,15 @@
                     Click="OnSaveWorkspace" AutomationProperties.Name="새 작업 공간 저장"/>
             <Button x:Name="OpenWorkspaceButton" Content="새 창에서 열기"
                     Click="OnOpenWorkspace" AutomationProperties.Name="작업 공간을 새 창에서 열기"/>
+            <Button x:Uid="SaveSessionAction" x:Name="SaveSessionButton" Content="현재 세션 기억"
+                    Click="OnSavePrivateSession"
+                    AutomationProperties.Name="현재 폴더 탭 및 화면 설정을 개인 프로필에 저장"/>
+            <Button x:Uid="RestoreSessionAction" x:Name="RestoreSessionButton" Content="저장된 세션 복원"
+                    Click="OnRestorePrivateSession"
+                    AutomationProperties.Name="저장된 개인 탐색 세션 불러오기"/>
+            <Button x:Uid="ClearSessionAction" x:Name="ClearSessionButton" Content="기억 삭제"
+                    Click="OnClearPrivateSession"
+                    AutomationProperties.Name="저장된 개인 탐색 세션 지우기"/>
             <TextBlock Text="기존 파일은 덮어쓰지 않습니다"
                        Opacity="0.65" VerticalAlignment="Center"/>
         </StackPanel>
@@ -96,7 +105,7 @@
         <Grid Grid.Row="5" Padding="10,0,10,0" ColumnSpacing="9">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="185"/>
-                <ColumnDefinition Width="*"/>
+                <ColumnDefinition x:Name="PrimaryColumn" Width="*"/>
                 <ColumnDefinition Width="1"/>
                 <ColumnDefinition x:Name="SecondaryColumn" Width="*"/>
             </Grid.ColumnDefinitions>
@@ -117,12 +126,22 @@
                 <ListView x:Name="LeftFiles" Grid.Row="2" IsDoubleTapEnabled="True"
                           SelectionMode="Multiple" DoubleTapped="OnLeftFileDoubleTapped"
                           KeyDown="OnLeftFileKeyDown" RightTapped="OnFileRightTapped"
+                          AllowDrop="True" CanDragItems="True" CanReorderItems="False"
+                          DragOver="OnFileDragOver" Drop="OnFileDrop"
+                          DragItemsStarting="OnFileDragItemsStarting"
                           AutomationProperties.Name="왼쪽 폴더 내용">
                     <ListView.ContextFlyout>
                         <MenuFlyout>
                             <MenuFlyoutItem Text="복사" Click="OnCopySelected"/>
                             <MenuFlyoutItem Text="이동" Click="OnMoveSelected"/>
                             <MenuFlyoutItem Text="이름 변경" Click="OnRenameSelected"/>
+                            <MenuFlyoutSeparator/>
+                            <MenuFlyoutItem Text="Windows 클립보드로 복사"
+                                Click="OnWindowsCopy"/>
+                            <MenuFlyoutItem Text="Windows 클립보드로 잘라내기"
+                                Click="OnWindowsCut"/>
+                            <MenuFlyoutItem Text="Windows 클립보드에서 붙여넣기"
+                                Click="OnWindowsPaste"/>
                             <MenuFlyoutItem Text="휴지통" Click="OnRecycleSelected"/>
                         </MenuFlyout>
                     </ListView.ContextFlyout>
@@ -145,12 +164,22 @@
                 <ListView x:Name="RightFiles" Grid.Row="2" IsDoubleTapEnabled="True"
                           SelectionMode="Multiple" DoubleTapped="OnRightFileDoubleTapped"
                           KeyDown="OnRightFileKeyDown" RightTapped="OnFileRightTapped"
+                          AllowDrop="True" CanDragItems="True" CanReorderItems="False"
+                          DragOver="OnFileDragOver" Drop="OnFileDrop"
+                          DragItemsStarting="OnFileDragItemsStarting"
                           AutomationProperties.Name="오른쪽 폴더 내용">
                     <ListView.ContextFlyout>
                         <MenuFlyout>
                             <MenuFlyoutItem Text="복사" Click="OnCopySelected"/>
                             <MenuFlyoutItem Text="이동" Click="OnMoveSelected"/>
                             <MenuFlyoutItem Text="이름 변경" Click="OnRenameSelected"/>
+                            <MenuFlyoutSeparator/>
+                            <MenuFlyoutItem Text="Windows 클립보드로 복사"
+                                Click="OnWindowsCopy"/>
+                            <MenuFlyoutItem Text="Windows 클립보드로 잘라내기"
+                                Click="OnWindowsCut"/>
+                            <MenuFlyoutItem Text="Windows 클립보드에서 붙여넣기"
+                                Click="OnWindowsPaste"/>
                             <MenuFlyoutItem Text="휴지통" Click="OnRecycleSelected"/>
                         </MenuFlyout>
                     </ListView.ContextFlyout>

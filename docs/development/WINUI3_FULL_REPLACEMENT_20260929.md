@@ -1,5 +1,8 @@
 # flyExplorer full WinUI 3 UI replacement ? dedicated migration worktree
 
+**M2.3 단계별 통합 (2026-09-29):** 독립 WinUI가 실제 클립보드 CF_HDROP와 명시적 개인 프로필 세션 저장/자동 복원 코드를 포함한다. 한글·사용자 설정 격리/native Debug·Release 및 소유 Debug·Release 세션 UIA가 검증됐다. **드래그는 소스와 컴파일만 완료, 물리 소유 GUI 자동화 실패**로 아직 수용되지 않았다. 외부 Shell 메뉴·실제 휴지통/복구·OS 클립보드 실사용 격리 시험, 전면 .resw, 아이콘/열·설치/되돌리기 및 MFC 동등성은 미완료. [범위와 정확한 증거](WINUI3_M23_CLIPBOARD_SESSION_DRAG_STAGING_20260929.md).
+
+
 **M2.2 최종 범위:** 독립 WinUI에서 ko-KR 기본 FileToolbar/StatusFooter, Shell 복사·이동 및 휴지통 명시 확인, 로컬 메타데이터·다중 선택/정렬과 초기 리소스화를 구현. 동일 코드 Debug·Release 실기 통합 GUI 및 통제된 Debug M1.8 Shell 장애 재검증 완료. 실제 휴지통 승인/되돌리기, OS 클립보드, 외부 Shell/원격 SMB, 제품 전체 UI/설치·회귀는 미완료. [M2.2 검증 및 동등성 작업표](WINUI3_M22_SHELL_OPERATIONS_KOREAN_20260929.md).
 
 

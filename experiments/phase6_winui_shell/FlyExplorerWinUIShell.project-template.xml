@@ -13,7 +13,6 @@
       have a name that matches the .winmd
     -->
     <TargetName>$(RootNamespace)</TargetName>
-    <DefaultLanguage>en-US</DefaultLanguage>
     <MinimumVisualStudioVersion>16.0</MinimumVisualStudioVersion>
     <AppContainerApplication>false</AppContainerApplication>
     <AppxPackage>false</AppxPackage>
@@ -132,6 +131,8 @@
       <DependentUpon>StatusFooter.xaml</DependentUpon>
     </ClInclude>
     <ClInclude Include="..\..\src\base\shell_transfer_core.h" />
+    <ClInclude Include="..\..\src\base\shell_clipboard_core.h" />
+    <ClInclude Include="..\..\src\base\preview_session.h" />
     <ClInclude Include="MainWindow.xaml.h">
       <DependentUpon>MainWindow.xaml</DependentUpon>
     </ClInclude>
@@ -178,6 +179,18 @@
     </ClCompile>
     <ClCompile Include="m22_transfers.cpp">
       <PrecompiledHeader>Use</PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="m23_session.cpp">
+      <PrecompiledHeader>Use</PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="m23_drag.cpp">
+      <PrecompiledHeader>Use</PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="..\..\src\base\preview_session.cpp">
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="..\..\src\base\shell_clipboard_core.cpp">
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="..\..\src\base\shell_transfer_core.cpp">
       <PrecompiledHeader>NotUsing</PrecompiledHeader>

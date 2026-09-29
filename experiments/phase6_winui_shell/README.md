@@ -1,5 +1,8 @@
 # WinUI 3 full UI migration — M1.8 isolated Shell stability
 
+**M2.3 단계별 통합 (2026-09-29):** M2.3에서 한국어 기본 WinUI의 Windows CF_HDROP/Preferred DropEffect 읽기·쓰기 사용자 명령과 제한된 개인 세션 저장·시작 시 복원·삭제를 연결했다. 전역 클립보드는 별도 테스트에서 건드리지 않는다. Native fixture는 m23/build.cmd Debug|Release 및 FLY_M23_CONFIG=... m23/test_native.py를 사용한다. FLY_M23_OWNED_FEATURES=YES는 합성 폴더·별도 사설 프로필의 실제 WinUI 세션 UIA를 검사하고, FLY_M23_OWNED_DRAG_TEST=YES 물리 드래그 진단은 현재 **실패/미검증**으로 별도 유지한다. [M2.3 범위](../../docs/development/WINUI3_M23_CLIPBOARD_SESSION_DRAG_STAGING_20260929.md).
+
+
 **M2.2 acceptance:** 기본 언어 ko-KR의 분리된 파일 도구 모음/상태 화면, 초기 .resw, 네이티브 Shell 복사·이동·명시적 휴지통 확인 및 비동기 로컬 메타데이터/다중 선택/정렬 구현. 소유 환경의 Debug·Release M1.9~M2.2 통합 실기 GUI와 Debug 통제 장애 재현 PASS, 독립 네이티브 각 18/18 및 소스 79/79 PASS. 실제 휴지통 삭제·외부 확장/네트워크·완전한 MFC 동등성 검증은 남아 있음. [M2.2 독립 증거](../../docs/development/WINUI3_M22_SHELL_OPERATIONS_KOREAN_20260929.md).
 
 

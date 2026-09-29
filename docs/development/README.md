@@ -1,5 +1,8 @@
 # flyExplorer development documentation index
 
+**M2.3 단계별 통합 (2026-09-29):** [M2.3 Windows 파일 클립보드 공통 계약, 개인 세션·재실행 복원, 실험적 드래그의 별도 검증 현황 및 후속 MFC 동등성 작업](WINUI3_M23_CLIPBOARD_SESSION_DRAG_STAGING_20260929.md). 원본 사용자 클립보드/휴지통을 자동 검사에서 조작하지 않았으며 컴파일과 실제 UIA PASS를 구분한다.
+
+
 **M2.2 최신 검증:** 한국어 기본 독립 WinUI 재사용 파일 도구 모음/상태 화면, 공통 Shell 파일 작업, 다중 선택·정렬과 초기 .resw. Debug·Release 실제 통합 M1.9~M2.2 GUI, 네이티브 각 18/18, 소스 79/79, 통제된 Debug Shell 장애 회귀 PASS. 전체 제품 동등성이나 실제 휴지통 삭제가 검증된 것은 아님. [정확한 증거/미완료 범위](WINUI3_M22_SHELL_OPERATIONS_KOREAN_20260929.md).
 
 

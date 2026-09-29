@@ -148,7 +148,8 @@ winrt::fire_and_forget MainWindow::ConfirmCollision(fxfile::shelltransfer::Reque
  if(co_await dialog.ShowAsync()!=ContentDialogResult::Primary)co_return;
  const auto& source=mModel.panes[mModel.activePane];
  if(source.pending[source.active]||
-    source.filesystemPaths[source.active]!=req.sourceParent){
+    (source.filesystemPaths[source.active]!=req.sourceParent&&
+     source.filesystemPaths[source.active]!=req.destination)){
   StatusText().Text(L"확인하는 동안 원본 폴더가 변경됐습니다. 다시 선택하세요.");
   co_return;
  }
@@ -165,6 +166,18 @@ void MainWindow::StartTransfer(fxfile::shelltransfer::Request request){
  auto const& pane=mModel.panes[side];
  const auto tab=pane.active,route=pane.routeIds[tab];
  const auto originalParent=request.sourceParent;
+ const auto originalVisibleFolder=pane.filesystemPaths[tab];
+ // Clipboard sources may be external to either visible pane. The
+ // destination is the active pane and must be refreshed independently.
+ const bool sourceIsVisible=originalVisibleFolder==originalParent;
+ const bool destinationIsVisible=
+    request.kind!=fxfile::shelltransfer::Kind::Recycle&&
+    originalVisibleFolder==request.destination;
+ if(!sourceIsVisible&&!destinationIsVisible){
+  StatusText().Text(L"현재 창이 원본이나 대상 폴더와 일치하지 않습니다.");
+  mTransferProgress.reset();
+  return;
+ }
  SetFileButtonsBusy(true,true);
  StatusText().Text(L"Windows Shell에서 파일 작업을 처리하고 있습니다...");
  auto weak=get_weak();
@@ -181,9 +194,11 @@ void MainWindow::StartTransfer(fxfile::shelltransfer::Request request){
  timer.Start();
  try{
   std::thread([weak,dispatch,progress,request=std::move(request),
-               epoch,side,tab,route,originalParent]() mutable{
+               epoch,side,tab,route,originalParent,
+               originalVisibleFolder,sourceIsVisible,destinationIsVisible]() mutable{
    const auto result=fxfile::shelltransfer::execute(request,*progress);
    dispatch.TryEnqueue([weak,progress,epoch,side,tab,route,originalParent,
+                        originalVisibleFolder,sourceIsVisible,destinationIsVisible,
                         result,request=std::move(request)]() mutable{
     if(auto ui=weak.get()){
      if(ui->mTransferEpoch!=epoch||ui->mTransferProgress!=progress)return;
@@ -194,7 +209,7 @@ void MainWindow::StartTransfer(fxfile::shelltransfer::Request request){
      // Native data mutation is a user-approved action. A stale callback
      // must not update an unrelated pane/tab after user navigation.
      if(tab>=pane.routeIds.size()||pane.routeIds[tab]!=route||
-        pane.filesystemPaths[tab]!=originalParent||pane.active!=tab){
+        pane.filesystemPaths[tab]!=originalVisibleFolder||pane.active!=tab){
       ui->StatusText().Text(L"파일 작업 종료: 작업 이후 화면이 변경됐습니다.");
       return;
      }
@@ -218,7 +233,8 @@ void MainWindow::StartTransfer(fxfile::shelltransfer::Request request){
      if(request.kind!=fxfile::shelltransfer::Kind::Recycle){
       auto const& other=ui->mModel.panes[1-side];
       if(!other.pending[other.active]&&
-          other.filesystemPaths[other.active]==request.destination){
+          (other.filesystemPaths[other.active]==request.destination||
+           other.filesystemPaths[other.active]==request.sourceParent)){
        ui->QueuePidl(1-side,
          fxfile::shellnav::Location(other.tabs[other.active].snapshot().folder),
          fxfile::shellnav::NavigationAction::Refresh);
@@ -233,6 +249,92 @@ void MainWindow::StartTransfer(fxfile::shelltransfer::Request request){
   SetFileButtonsBusy(false,false);
   StatusText().Text(L"별도 Shell 파일 작업 스레드를 시작하지 못했습니다.");
  }
+}
+bool MainWindow::CopySelectedToWindowsClipboard(int side,bool cut){
+ auto const& pane=mModel.panes[side];
+ if(pane.pending[pane.active]||pane.filesystemPaths[pane.active].empty()){
+  StatusText().Text(L"폴더를 완전히 불러온 후 항목을 선택하세요.");return false;
+ }
+ const auto view=side==0?LeftFiles():RightFiles();
+ const auto& entries=pane.tabs[pane.active].snapshot().children;
+ fxfile::shellclipboard::Payload item{};
+ item.move=cut;
+ for(auto const& selected:view.SelectedItems()){
+  auto const row=selected.try_as<ListViewItem>();
+  if(!row||!row.Tag())return false;
+  auto const index=winrt::unbox_value<uint32_t>(row.Tag());
+  if(index>=entries.size()||!entries[index].isFileSystem())return false;
+  item.paths.push_back(entries[index].parsingName);
+  if(item.paths.size()>32)return false;
+ }
+ if(!fxfile::shellclipboard::valid(item)){
+  StatusText().Text(L"Windows 클립보드에 넣을 파일 1~32개를 선택하세요.");
+  return false;
+ }
+ // OpenClipboard owner must be a live app-owned HWND. GetActiveWindow()
+ // addresses only windows attached to THIS UI thread. If the event is
+ // somehow dispatched in the background, do NOT take the user's clipboard.
+ HWND hwnd=::GetActiveWindow();
+ DWORD ownerPid=0;
+ if(hwnd)::GetWindowThreadProcessId(hwnd,&ownerPid);
+ if(!hwnd||ownerPid!=::GetCurrentProcessId()){
+  StatusText().Text(L"현재 WinUI 창을 활성화한 후 다시 시도하세요.");
+  return false;
+ }
+ const auto err=fxfile::shellclipboard::write(hwnd,item);
+ if(err!=ERROR_SUCCESS){
+  StatusText().Text(L"Windows 클립보드에 파일 목록을 쓰지 못했습니다.");
+  return false;
+ }
+ StatusText().Text(cut?
+  L"선택한 파일을 Windows 클립보드에 잘라내기로 저장했습니다.":
+  L"선택한 파일을 Windows 클립보드에 복사했습니다.");
+ return true;
+}
+void MainWindow::PasteFromWindowsClipboard(){
+ if(mFileOperationPending){
+  StatusText().Text(L"이전 파일 작업이 끝난 후 붙여넣으세요.");return;
+ }
+ const auto& pane=mModel.panes[mModel.activePane];
+ if(pane.pending[pane.active]||pane.filesystemPaths[pane.active].empty()){
+  StatusText().Text(L"먼저 실제 대상 폴더를 불러오세요.");return;
+ }
+ fxfile::shellclipboard::Payload data;
+ if(fxfile::shellclipboard::read(data)!=ERROR_SUCCESS){
+  StatusText().Text(L"Windows 클립보드에 지원하는 로컬 파일 목록이 없습니다.");
+  return;
+ }
+ // M2.3 accepted native core supports ONE verified source parent per
+ // operation. Do NOT try to silently copy arbitrary mixed origin folders.
+ std::filesystem::path origin(data.paths.front());
+ auto const parent=origin.parent_path().native();
+ for(auto const& full:data.paths)
+  if(!std::filesystem::path(full).has_parent_path()||
+      ::CompareStringOrdinal(
+        std::filesystem::path(full).parent_path().c_str(),-1,
+        parent.c_str(),-1,TRUE)!=CSTR_EQUAL){
+   StatusText().Text(
+     L"서로 다른 원본 폴더에서 복사한 항목은 한 번에 붙여넣을 수 없습니다.");
+   return;
+  }
+ fxfile::shelltransfer::Request request{};
+ request.kind=data.move?fxfile::shelltransfer::Kind::Move:
+                        fxfile::shelltransfer::Kind::Copy;
+ request.sourceParent=parent;
+ request.destination=pane.filesystemPaths[pane.active];
+ request.sources=std::move(data.paths);
+ // The common C++ layer always revalidates every current source and
+ // destination path immediately before COM STA Shell mutation.
+ StartTransfer(std::move(request));
+}
+void MainWindow::OnWindowsCopy(IInspectable const&,RoutedEventArgs const&){
+ CopySelectedToWindowsClipboard(mModel.activePane,false);
+}
+void MainWindow::OnWindowsCut(IInspectable const&,RoutedEventArgs const&){
+ CopySelectedToWindowsClipboard(mModel.activePane,true);
+}
+void MainWindow::OnWindowsPaste(IInspectable const&,RoutedEventArgs const&){
+ PasteFromWindowsClipboard();
 }
 void MainWindow::StartInternalPaste(){
  if(mClipboardSources.empty()||mFileOperationPending){
@@ -261,27 +363,12 @@ void MainWindow::HandleFileShortcut(
  }
  if(ctrl&&(vk==Windows::System::VirtualKey::C||
            vk==Windows::System::VirtualKey::X)){
-  auto const& pane=mModel.panes[side];
-  auto const& items=pane.tabs[pane.active].snapshot().children;
-  std::vector<std::wstring> picked{};
-  for(auto const& value:view.SelectedItems()){
-   auto row=value.try_as<ListViewItem>();
-   if(!row||!row.Tag())return;
-   auto index=winrt::unbox_value<uint32_t>(row.Tag());
-   if(index>=items.size()||!items[index].isFileSystem())return;
-   picked.push_back(items[index].parsingName);
-  }
-  if(picked.empty()||picked.size()>32)return;
-  mClipboardSources=std::move(picked);
-  mClipboardParent=pane.filesystemPaths[pane.active];
-  mClipboardMove=vk==Windows::System::VirtualKey::X;
-  StatusText().Text(mClipboardMove?
-   L"앱 내부에서 이동할 항목을 선택했습니다. Ctrl+V로 붙여넣으세요.":
-   L"앱 내부에서 복사할 항목을 선택했습니다. Ctrl+V로 붙여넣으세요.");
+  CopySelectedToWindowsClipboard(
+    side,vk==Windows::System::VirtualKey::X);
   args.Handled(true);return;
  }
  if(ctrl&&vk==Windows::System::VirtualKey::V){
-  StartInternalPaste();args.Handled(true);return;
+  PasteFromWindowsClipboard();args.Handled(true);return;
  }
  if(vk==Windows::System::VirtualKey::F5){
   RunTransfer(fxfile::shelltransfer::Kind::Copy);args.Handled(true);return;

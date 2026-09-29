@@ -1,11 +1,36 @@
 <?xml version="1.0" encoding="utf-8"?>
 <root>
-  <resheader name="resmimetype"><value>text/microsoft-resx</value></resheader>
-  <resheader name="version"><value>2.0</value></resheader>
-  <resheader name="reader"><value>System.Resources.ResXResourceReader, System.Windows.Forms</value></resheader>
-  <resheader name="writer"><value>System.Resources.ResXResourceWriter, System.Windows.Forms</value></resheader>
-  <data name="CopyAction.Content" xml:space="preserve"><value>복사 →</value></data>
-  <data name="MoveAction.Content" xml:space="preserve"><value>이동 →</value></data>
-  <data name="RecycleAction.Content" xml:space="preserve"><value>휴지통</value></data>
-  <data name="CancelAction.Content" xml:space="preserve"><value>취소</value></data>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms</value>
+  </resheader>
+  <data name="CopyAction.Content" xml:space="preserve">
+    <value>복사 →</value>
+  </data>
+  <data name="MoveAction.Content" xml:space="preserve">
+    <value>이동 →</value>
+  </data>
+  <data name="RecycleAction.Content" xml:space="preserve">
+    <value>휴지통</value>
+  </data>
+  <data name="CancelAction.Content" xml:space="preserve">
+    <value>취소</value>
+  </data>
+  <data name="SaveSessionAction.Content" xml:space="preserve">
+    <value>현재 세션 기억</value>
+  </data>
+  <data name="RestoreSessionAction.Content" xml:space="preserve">
+    <value>저장된 세션 복원</value>
+  </data>
+  <data name="ClearSessionAction.Content" xml:space="preserve">
+    <value>기억 삭제</value>
+  </data>
 </root>

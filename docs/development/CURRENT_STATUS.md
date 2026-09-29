@@ -1,5 +1,8 @@
 # flyExplorer — current project status (2026-09-28 baseline; 2026-09-29 migration-branch addendum)
 
+**M2.3 단계별 통합 (2026-09-29):** 기본 언어 ko-KR 독립 WinUI에 Windows CF_HDROP/Preferred DropEffect 공통 C++ 계약 및 사용자 명령, 격리된 개인 세션의 명시 저장·시작 시 자동 복원·기록 삭제, 화면 크기/정렬/탭 복원 범위를 추가했다. WinUI Debug·Release 소스 일치 빌드 성공, 현재 통합 소스 97/97·격리 native Debug/Release 각각 26/26 통과. 원래 M1.8 통제 장애의 COM/namespace/루프백 UNC 및 연속 두 번 시간 초과 Debug 실기 회귀도 통과. M1.9~M2.3 소유 Debug·Release 실제 GUI에서 명시 저장, 새 정확한 소유 프로세스의 두 폴더 자동 복원·삭제까지 통과했다. 시스템 전체 클립보드의 실제 읽기·쓰기는 사용자 소유 데이터 보호를 위해 자동 시험하지 않았고, 마우스로 실행한 내부 드래그 GUI 진단은 실패하여 드래그 동작을 **미검증** 상태로 유지한다. OS 외부 드래그, 실제 휴지통 삭제/복원, 유형·아이콘·컬럼·Windows Shell 확장 메뉴 등 아직 M2.3 후속 게이트이다. [구현, 증거 수준과 상세 동등성 표](WINUI3_M23_CLIPBOARD_SESSION_DRAG_STAGING_20260929.md). 기본 MFC main 미수정.
+
+
 **M2.2 최종 검증 (2026-09-29):** 독립 WinUI FileToolbar/StatusFooter, ko-KR 일부 .resw, COM STA Shell 복사·이동·휴지통 확인 계약, 비동기 로컬 파일 메타데이터 및 다중 선택·정렬을 구현. 소유 임시 경로의 독립 네이티브 Debug·Release 각 18/18, 통합 소스 79/79, 실제 M1.9~M2.2 **Debug·Release 통합 GUI 모두 통과**, 기존 M1.8의 통제된 COM/Shell 알림/루프백 UNC·두 번 시간 초과 Debug 회귀 통과. 원본 사용자 설정 6개, 기본 MFC main 및 원본 사용자 스크린샷 보호. [M2.2 정확한 검증과 남은 기능 동등성](WINUI3_M22_SHELL_OPERATIONS_KOREAN_20260929.md).
 
 

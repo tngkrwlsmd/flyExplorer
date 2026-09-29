@@ -26,6 +26,8 @@ owned=Path(tempfile.mkdtemp(prefix="shell-owned-",dir=base))
 left=owned/"Left";right=owned/"Right";inner=left/"Nested";rightinner=right/"Secondary"
 for folder in (inner,rightinner):folder.mkdir(parents=True,exist_ok=True)
 (left/"readme.txt").write_text("owned synthetic only",encoding="utf-8")
+if os.environ.get("FLY_M23_OWNED_FEATURES")=="YES":
+ (left/"끌기.txt").write_text("owned M23 drag-copy",encoding="utf-8")
 if os.environ.get("FLY_M22_OWNED_FEATURES")=="YES":
  for name,value in (
    ("복사본.txt","owned copied"),
@@ -395,6 +397,11 @@ try:
   from test_m22_gui import run as m22_run
   m22_run(win=win,element=element,safe_click=safe_click,
           focus=ensure_owned_focus,eventually=eventually,left=left,right=right)
+ if os.environ.get("FLY_M23_OWNED_FEATURES")=="YES":
+  from test_m23_gui import run as m23_run
+  m23_run(win=win,element=element,safe_click=safe_click,
+          focus=ensure_owned_focus,eventually=eventually,
+          left=left,right=right,localdata=localdata,env=env,exe=EXE)
  safe_click(element("PrimaryPaneTitle"))
  rect=win.rectangle()
  assert rect.width()>400 and rect.height()>260

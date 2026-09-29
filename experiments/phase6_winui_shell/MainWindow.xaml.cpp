@@ -206,6 +206,7 @@ namespace winrt::FlyExplorerWinUIShell::implementation
             L"독립 Shell 탐색 준비 중 · 파일 작업은 명시적 요청만 처리합니다.":
             L"기본 파일 작업 엔진을 연결하지 못했습니다.");
         InitializeM19();
+        InitializePrivateSession();
     }
     MainWindow::~MainWindow()
     {
@@ -535,6 +536,13 @@ namespace winrt::FlyExplorerWinUIShell::implementation
             }
             row.Content(winrt::box_value(hstring(label)));
             row.Tag(winrt::box_value(static_cast<uint32_t>(index)));
+            row.CanDrag(true);
+            const auto weak=get_weak();
+            row.DragStarting([weak,side](
+                Microsoft::UI::Xaml::UIElement const& sender,
+                Microsoft::UI::Xaml::DragStartingEventArgs const& args){
+                if(auto ui=weak.get())ui->OnFileRowDragStarting(side,sender,args);
+            });
             view.Items().Append(row);
             if(!item.parsingName.empty()&&
                std::find(selected.begin(),selected.end(),item.parsingName)

@@ -4037,3 +4037,13 @@ Initial remote Python writes from Windows PowerShell lost Hangul because the inp
 ## 2026-09-29: M2.2 최종 통합 GUI 다중 선택 재현 및 해결
 
 독립 집중 Debug GUI에서는 Ctrl 물리 클릭으로 다중 선택 복사가 성공했으나, M1.9~M2.1 GUI 테스트를 먼저 수행한 통합 환경에서는 UIA의 물리 클릭 보조 키 처리·이전 선택 상태가 달라 두 파일 동시 선택 테스트가 재현되지 않았다. 단순히 이전 선택을 지우는 것만으로는 해결되지 않았으므로 GUI 자동화의 두 번째 선택 명령을 UIA SelectionItem.AddToSelection()으로 변경하고 첫 번째 항목은 SelectionItem.Select()를 사용했다. 재현 가능한 실제 소유 Debug·Release 통합 GUI가 모두 통과해 이전 실패 로그와 구분했다. 공통 소스 계약에도 동일 UIA 선택 경로 확인을 포함했으며 **제품 코드의 별도 선택 상태 우회는 추가하지 않았다.** 해당 과정의 실제 선택 대상은 모두 자동 생성한 로컬 소유 파일로 제한했다.
+
+
+## 2026-09-29: M2.3 중복 기본 언어·개인 세션 컴파일러 매크로·드래그 실기 미검증
+
+1. 기존 WinUI MSBuild template은 ^DefaultLanguage=ko-KR^와 뒤쪽 ^DefaultLanguage=en-US^를 중복 지정했다. 마지막 영어 지정이 선행 한국어를 무력화할 수 있어 후자를 제거하고 한국어 기본 언어 하나만 남겼다. 정적 소스 계약에서 중복 등록을 거부한다.
+2. 첫 개인 세션 WinUI C++ 컴파일에서 Win32 header의 ^max^ 매크로와 C++ 서로 다른 타입의 ^auto a,b^ 합병 선언 때문에 실제 C2589/C3538이 발생했다. ^(std::max)(...)^ 및 각각 타입 추론된 선언으로 수정하고 실 Debug 재빌드 후 실제 소유 GUI 세션 저장·두 번째 프로세스 복원·삭제를 확인했다. 최초 오류 로그는 로컬 무시된 ^logs/m23^의 별도 실제 파일로 보존한다.
+3. 양쪽 WinUI 파일 목록의 XAML ^CanDragItems^ 및 리스트 항목의 ^CanDrag^와 Drop handler는 Debug에서 컴파일됐지만, 원격 테스트가 자체 소유 창 안의 한국어 파일을 자동 물리 마우스로 왼쪽→오른쪽으로 드래그해 복사하려던 실기 시험은 **기본 핸들러와 직접 ListViewItem 핸들러 모두 실패**했다. 마우스 좌표 및 StatusText UIA 진단을 보존했으며, WinUI DragStarting/Drop 이벤트가 실제 호출됐는지 코드 결함인지 자동화 한계인지 아직 판정할 자료가 부족하다. 미검증 상태의 물리 드래그는 별도 ^FLY_M23_OWNED_DRAG_TEST=YES^ 진단 플래그에서만 시행하고 공통 Shell/세션 수용 시험의 PASS에 섞지 않는다. 실제 Explorer→WinUI 및 WinUI→Explorer 상호 운용/외부 확장 역시 NOT TESTED다.
+4. 전역 Windows 클립보드를 실제로 건드리면 사용자 클립보드 값과 형식을 잃을 위험이 있어, CF_HDROP in-memory wire 검증·합성 로컬 실제 Shell 복사만 기본 native 시험으로 삼고 실제 OS 명령은 별도 격리 Windows 사용자 컨텍스트가 확보될 때 검증한다. 전역 휴지통 실제 삭제·복원도 동일하게 미완료 게이트로 유지한다.
+
+세부 구현 범위 및 검증 등급: [M2.3 단계별 통합](WINUI3_M23_CLIPBOARD_SESSION_DRAG_STAGING_20260929.md).

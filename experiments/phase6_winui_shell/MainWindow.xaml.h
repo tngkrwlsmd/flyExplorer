@@ -5,7 +5,9 @@
 #include "FileToolbar.xaml.h"
 #include "StatusFooter.xaml.h"
 #include "../../src/base/shell_transfer_core.h"
+#include "../../src/base/shell_clipboard_core.h"
 #include "../../src/base/preview_preferences.h"
+#include "../../src/base/preview_session.h"
 #include "../../src/base/file_command_core.h"
 #include <mutex>
 #include "../../src/base/shell_navigation_core.h"
@@ -68,12 +70,27 @@ namespace winrt::FlyExplorerWinUIShell::implementation
         void OnClearSearchRecent(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
         void OnCreateFolder(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
         void OnRenameSelected(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
+        void OnWindowsCopy(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
+        void OnWindowsCut(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
+        void OnWindowsPaste(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
+        void OnSavePrivateSession(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
+        void OnRestorePrivateSession(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
+        void OnClearPrivateSession(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
         void OnCopySelected(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
         void OnMoveSelected(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
         void OnRecycleSelected(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
         void OnCancelTransfer(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
         void OnFileRightTapped(IInspectable const&,
             Microsoft::UI::Xaml::Input::RightTappedRoutedEventArgs const&);
+        void OnFileDragItemsStarting(IInspectable const&,
+            Microsoft::UI::Xaml::Controls::DragItemsStartingEventArgs const&);
+        void OnFileRowDragStarting(int side,
+            Microsoft::UI::Xaml::UIElement const&,
+            Microsoft::UI::Xaml::DragStartingEventArgs const&);
+        void OnFileDragOver(IInspectable const&,
+            Microsoft::UI::Xaml::DragEventArgs const&);
+        winrt::fire_and_forget OnFileDrop(IInspectable const&,
+            Microsoft::UI::Xaml::DragEventArgs const&);
         void RunTransfer(fxfile::shelltransfer::Kind);
         void UpdateSort(int selection);
 
@@ -128,12 +145,27 @@ namespace winrt::FlyExplorerWinUIShell::implementation
         std::shared_ptr<fxfile::shelltransfer::Progress> mTransferProgress;
         Microsoft::UI::Dispatching::DispatcherQueueTimer mTransferTimer{nullptr};
         std::uint64_t mTransferEpoch=0;
+        std::uint64_t mSessionEpoch=0;
+        std::shared_ptr<std::mutex> mSessionMutation=
+            std::make_shared<std::mutex>();
+        std::shared_ptr<std::atomic_uint64_t> mSessionRevision=
+            std::make_shared<std::atomic_uint64_t>(0);
+        void InitializePrivateSession();
+        void LoadPrivateSession();
         std::vector<std::wstring> mClipboardSources;
         std::wstring mClipboardParent;
         bool mClipboardMove=false;
+        std::wstring mPrivateDragToken,mPrivateDragParent;
+        std::vector<std::wstring> mPrivateDragSources;
+        std::uint64_t mPrivateDragRoute=0;
+        int mPrivateDragSide=-1;
+        bool mDropReading=false;
         void HandleFileShortcut(int side,
             Microsoft::UI::Xaml::Input::KeyRoutedEventArgs const& args);
         void StartInternalPaste();
+        bool CopySelectedToWindowsClipboard(int side,bool cut);
+        void PasteFromWindowsClipboard();
+
         void SetFileButtonsBusy(bool busy,bool cancellable);
         void StartTransfer(fxfile::shelltransfer::Request request);
         winrt::fire_and_forget ConfirmCollision(fxfile::shelltransfer::Request request);
