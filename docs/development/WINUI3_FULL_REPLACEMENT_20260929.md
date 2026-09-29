@@ -1,5 +1,7 @@
 # flyExplorer full WinUI 3 UI replacement ? dedicated migration worktree
 
+**2026-09-30 M2.3 소형 화면 후속(부분 수용):** 실제 작업 영역 경계·탐색 영역 부족을 수정한 WinUI Debug/Release 소유 M1.9~M2.3 통합 GUI가 범위 한정 통과했다. 실제 물리 드래그·전역 클립보드·휴지통·전체 제품 동등성은 남았다. [세부 근거](WINUI3_M23_FOLLOWUP_KOREAN_RESOURCES_DRAG_DIAGNOSTICS_20260929.md).
+
 **M2.3 후속 부분 구현:** 한국어 리소스 19개 추가, 드래그 진단 및 로컬 파일 유형 표시를 포함한다. 현재 범위의 소스 검사 102/102, WinUI Debug·Release 통합 소유 GUI는 통과했지만 드래그 이벤트 도달 여부와 전체 MFC 기능 동등성은 아직 확인되지 않았다. [M2.3 후속 세부 기록](WINUI3_M23_FOLLOWUP_KOREAN_RESOURCES_DRAG_DIAGNOSTICS_20260929.md).
 
 

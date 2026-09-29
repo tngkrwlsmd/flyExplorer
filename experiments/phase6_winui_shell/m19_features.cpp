@@ -1,5 +1,7 @@
 #include "pch.h"
 #include "MainWindow.xaml.h"
+#include <winrt/Microsoft.UI.Windowing.h>
+#include <winrt/Windows.Graphics.h>
 #include <shellapi.h>
 #include <algorithm>
 #include <atomic>
@@ -166,12 +168,30 @@ bool MainWindow::WorkspaceModel(
     }
     return true;
 }
+void MainWindow::EnsureExpandedPanelFits() {
+    // Expanded search/workspace panels must not consume the entire file pane
+    // on compact displays. Bound growth to the actual monitor work area.
+    const auto size=AppWindow().Size();
+    const auto position=AppWindow().Position();
+    const POINT center{position.X+size.Width/2,position.Y+size.Height/2};
+    MONITORINFO monitor{sizeof(monitor)};
+    if(!::GetMonitorInfoW(::MonitorFromPoint(center,MONITOR_DEFAULTTONEAREST),
+                          &monitor))return;
+    const int available=monitor.rcWork.bottom-position.Y-8;
+    const int desired=(std::min)(700,available);
+    if(desired>=560&&desired>size.Height+40){
+        try{AppWindow().Resize({size.Width,desired});}catch(...){
+            // The sidebar is independently scrollable when size is constrained.
+        }
+    }
+}
 void MainWindow::OnToggleWorkspaces(
     IInspectable const&,RoutedEventArgs const&) {
     const auto next=WorkspacePanel().Visibility()==Visibility::Collapsed?
                     Visibility::Visible:Visibility::Collapsed;
     SearchPanel().Visibility(Visibility::Collapsed);
     WorkspacePanel().Visibility(next);
+    if(next==Visibility::Visible)EnsureExpandedPanelFits();
     if(next==Visibility::Visible)
         StatusText().Text(L"작업 공간 파일의 절대 경로를 입력하세요.");
 }
@@ -286,6 +306,7 @@ void MainWindow::OnToggleSearch(
     WorkspacePanel().Visibility(Visibility::Collapsed);
     SearchPanel().Visibility(next);
     if(next==Visibility::Visible){
+        EnsureExpandedPanelFits();
         auto& pane=mModel.panes[static_cast<size_t>(mModel.activePane)];
         auto const& path=pane.filesystemPaths[pane.active];
         if(!path.empty())SearchScopeBox().Text(hstring(path));

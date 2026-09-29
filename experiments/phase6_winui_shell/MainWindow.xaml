@@ -47,26 +47,30 @@
 
         <local:FileToolbar x:Name="ToolbarView" Grid.Row="2"/>
         <StackPanel Grid.Row="3" x:Name="WorkspacePanel" Visibility="Collapsed"
-                    Orientation="Horizontal" Spacing="7" Padding="14,3,14,6">
-            <TextBlock Text="이름 있는 작업 공간:" VerticalAlignment="Center"/>
-            <TextBox x:Name="WorkspaceFileBox" Width="355"
-                     PlaceholderText=".fxworkspace 파일 전체 경로"
-                     AutomationProperties.Name="작업 공간 파일 경로"/>
-            <Button x:Uid="SaveWorkspaceButton" x:Name="SaveWorkspaceButton" Content="새로 저장"
-                    Click="OnSaveWorkspace" AutomationProperties.Name="새 작업 공간 저장"/>
-            <Button x:Uid="OpenWorkspaceButton" x:Name="OpenWorkspaceButton" Content="새 창에서 열기"
-                    Click="OnOpenWorkspace" AutomationProperties.Name="작업 공간을 새 창에서 열기"/>
-            <Button x:Uid="SaveSessionAction" x:Name="SaveSessionButton" Content="현재 세션 기억"
-                    Click="OnSavePrivateSession"
-                    AutomationProperties.Name="현재 폴더 탭 및 화면 설정을 개인 프로필에 저장"/>
-            <Button x:Uid="RestoreSessionAction" x:Name="RestoreSessionButton" Content="저장된 세션 복원"
-                    Click="OnRestorePrivateSession"
-                    AutomationProperties.Name="저장된 개인 탐색 세션 불러오기"/>
-            <Button x:Uid="ClearSessionAction" x:Name="ClearSessionButton" Content="기억 삭제"
-                    Click="OnClearPrivateSession"
-                    AutomationProperties.Name="저장된 개인 탐색 세션 지우기"/>
-            <TextBlock Text="기존 파일은 덮어쓰지 않습니다"
-                       Opacity="0.65" VerticalAlignment="Center"/>
+                    Orientation="Vertical" Spacing="7" Padding="14,3,14,6">
+            <StackPanel Orientation="Horizontal" Spacing="7">
+                <TextBlock Text="이름 있는 작업 공간:" VerticalAlignment="Center"/>
+                <TextBox x:Name="WorkspaceFileBox" Width="355"
+                         PlaceholderText=".fxworkspace 파일 전체 경로"
+                         AutomationProperties.Name="작업 공간 파일 경로"/>
+                <Button x:Uid="SaveWorkspaceButton" x:Name="SaveWorkspaceButton" Content="새로 저장"
+                        Click="OnSaveWorkspace" AutomationProperties.Name="새 작업 공간 저장"/>
+                <Button x:Uid="OpenWorkspaceButton" x:Name="OpenWorkspaceButton" Content="새 창에서 열기"
+                        Click="OnOpenWorkspace" AutomationProperties.Name="작업 공간을 새 창에서 열기"/>
+            </StackPanel>
+            <StackPanel Orientation="Horizontal" Spacing="7">
+                <Button x:Uid="SaveSessionAction" x:Name="SaveSessionButton" Content="현재 세션 기억"
+                        Click="OnSavePrivateSession"
+                        AutomationProperties.Name="현재 폴더 탭 및 화면 설정을 개인 프로필에 저장"/>
+                <Button x:Uid="RestoreSessionAction" x:Name="RestoreSessionButton" Content="저장된 세션 복원"
+                        Click="OnRestorePrivateSession"
+                        AutomationProperties.Name="저장된 개인 탐색 세션 불러오기"/>
+                <Button x:Uid="ClearSessionAction" x:Name="ClearSessionButton" Content="기억 삭제"
+                        Click="OnClearPrivateSession"
+                        AutomationProperties.Name="저장된 개인 탐색 세션 지우기"/>
+                <TextBlock Text="기존 파일은 덮어쓰지 않습니다"
+                           Opacity="0.65" VerticalAlignment="Center"/>
+            </StackPanel>
         </StackPanel>
         <StackPanel Grid.Row="4" x:Name="SearchPanel" Visibility="Collapsed"
                     Spacing="5" Padding="14,3,14,5">
@@ -99,7 +103,7 @@
                            VerticalAlignment="Center"
                            AutomationProperties.Name="검색 결과 요약"/>
             </StackPanel>
-            <ListView x:Name="SearchMatches" Height="94"
+            <ListView x:Name="SearchMatches" Height="64"
                       AutomationProperties.Name="일치하는 파일 경로"/>
         </StackPanel>
         <Grid Grid.Row="5" Padding="10,0,10,0" ColumnSpacing="9">

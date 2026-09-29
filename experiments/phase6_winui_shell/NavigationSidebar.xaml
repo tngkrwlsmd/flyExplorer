@@ -4,6 +4,8 @@
  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
             <Border CornerRadius="8"
                     Background="{ThemeResource LayerFillColorDefaultBrush}" Padding="8">
+                <ScrollViewer VerticalScrollMode="Enabled" VerticalScrollBarVisibility="Auto"
+                              HorizontalScrollMode="Disabled" HorizontalScrollBarVisibility="Disabled">
                 <StackPanel Spacing="8">
                     <TextBlock Text="탐색" FontSize="15" FontWeight="SemiBold" Margin="6,9,0,8"/>
                     <Button x:Uid="HomeButton" x:Name="HomeButton" Content="홈" HorizontalAlignment="Stretch" HorizontalContentAlignment="Left"
@@ -18,5 +20,6 @@
                     <TextBlock Text="독립 Shell 작업자 · 파일 변경 감지"
                                TextWrapping="Wrap" Opacity="0.60" FontSize="12" Margin="6,14,6,0"/>
                 </StackPanel>
+            </ScrollViewer>
             </Border>
 </UserControl>

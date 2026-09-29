@@ -74,6 +74,31 @@ class M23Followup(unittest.TestCase):
   self.assertIn("수동 드래그 판별 절차",doc)
   self.assertIn("NOT TESTED",doc)
 
+ def test_expanded_panels_preserve_accessible_panes_in_small_windows(self):
+  page=ET.parse(A/"MainWindow.xaml").getroot()
+  names="{http://schemas.microsoft.com/winfx/2006/xaml}Name"
+  workspace=next(e for e in page.iter() if e.get(names)=="WorkspacePanel")
+  lines=list(workspace)
+  self.assertEqual(2,len(lines))
+  self.assertTrue(all(e.tag.endswith("StackPanel") for e in lines))
+  self.assertTrue(any(e.get(names)=="ClearSessionButton" for e in lines[1].iter()))
+  self.assertTrue(any(e.get(names)=="SaveWorkspaceButton" for e in lines[0].iter()))
+  search=next(e for e in page.iter() if e.get(names)=="SearchMatches")
+  self.assertEqual("64",search.get("Height"))
+  sidebar=ET.parse(A/"NavigationSidebar.xaml").getroot()
+  self.assertTrue(any(e.tag.endswith("ScrollViewer") for e in sidebar.iter()))
+  native=source("m19_features.cpp")
+  self.assertIn("#include <winrt/Microsoft.UI.Windowing.h>",native)
+  self.assertIn("#include <winrt/Windows.Graphics.h>",native)
+  self.assertIn("EnsureExpandedPanelFits()",native)
+  self.assertIn("MonitorFromPoint(",native)
+  self.assertIn("monitor.rcWork.bottom-position.Y",native)
+  self.assertIn("desired>=560&&desired>size.Height+40",native)
+  self.assertNotIn("desired>=640",native)
+  harness=source("test_shell_gui.py")
+  self.assertIn("FLY_OWNED_COMPACT_MONITOR_CASE",harness)
+  self.assertIn("u.SetWindowPos(hwnd,None,78,78,960,519,0x0014)",harness)
+
  def test_type_classification_does_not_invoke_shell_extension_on_ui_thread(self):
   impl=source("MainWindow.xaml.cpp")
   self.assertIn('entry.typeLabel=L"폴더"',impl)

@@ -1,5 +1,7 @@
 # flyExplorer development documentation index
 
+**2026-09-30 소형 화면 WinUI 후속 검증:** [M2.3 후속](WINUI3_M23_FOLLOWUP_KOREAN_RESOURCES_DRAG_DIAGNOSTICS_20260929.md)에 634px 화면 확장 경계 수정, 검색/작업 공간 배치 개선, Debug·Release 소유 GUI 회귀 수용 범위와 아직 미검증인 물리 드래그를 기록했다.
+
 **M2.3 후속:** [한국어 리소스·파일 유형 표시·드래그 진단 및 부분 수용 결과](WINUI3_M23_FOLLOWUP_KOREAN_RESOURCES_DRAG_DIAGNOSTICS_20260929.md). 실제 소유 Debug·Release GUI와 소스 검사 102/102는 통과했으나, 물리 드래그와 전역 클립보드·휴지통 검증은 미완료다.
 
 

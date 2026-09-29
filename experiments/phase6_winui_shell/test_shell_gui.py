@@ -377,6 +377,17 @@ try:
       "failed loopback UNC changed previously accepted right folder")
   print("REAL_WINUI_LOOPBACK_UNC_REJECTED_WITH_PRIOR_FOLDER_PRESERVED",
         element("StatusText").window_text(),flush=True)
+ if os.environ.get("FLY_OWNED_COMPACT_MONITOR_CASE")=="YES":
+  # Reproduce the 720px work-area / y=78 / 634px free-height case
+  # with this exact owned HWND; no desktop/user window is repositioned.
+  assert os.environ.get("FLY_M19_OWNED_FEATURES")=="YES"
+  assert u.GetSystemMetrics(0)>=1100 and u.GetSystemMetrics(1)>=740
+  u.SetWindowPos.argtypes=[W.HWND,W.HWND,c.c_int,c.c_int,
+                            c.c_int,c.c_int,W.UINT]
+  assert u.SetWindowPos(hwnd,None,78,78,960,519,0x0014)
+  eventually(lambda:abs(win.rectangle().height()-519)<=3,
+             "owned compact-window placement did not take effect",5)
+  print("M20_OWNED_COMPACT_PRE_M19",str(win.rectangle()),flush=True)
  if os.environ.get("FLY_M19_OWNED_FEATURES")=="YES":
   from test_m19_winui_features import run as run_m19
   run_m19(p=p,win=win,element=element,safe_click=safe_click,
@@ -396,6 +407,16 @@ try:
       "owned M19 panel did not collapse: "+child,6)
   print("M20_TEST_OWNED_M19_PANELS_COLLAPSED",True,flush=True)
  if os.environ.get("FLY_M20_OWNED_SHELL")=="YES":
+  if os.environ.get("FLY_OWNED_LAYOUT_DIAG")=="YES":
+   observed=[]
+   for key in ("SearchPanelButton","SearchScopeBox","WorkspacePanelButton",
+               "ThisPCButton","SidebarView","LeftFiles","StatusText"):
+    try:
+     control=element(key).wrapper_object()
+     observed.append((key,str(control.rectangle()),control.is_visible()))
+    except Exception as err:
+     observed.append((key,type(err).__name__))
+   print("M20_PANEL_LAYOUT_PRETEST",str(win.rectangle()),observed,flush=True)
   from test_m20_shell_gui import run as m20_run
   m20_run(win=win,element=element,safe_click=safe_click,
           focus=ensure_owned_focus,eventually=eventually,owned=owned)

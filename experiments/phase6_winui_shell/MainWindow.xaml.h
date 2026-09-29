@@ -171,6 +171,7 @@ namespace winrt::FlyExplorerWinUIShell::implementation
         std::uint64_t mSearchEpoch=0;
         bool mPopulatingRecents=false;
         bool mRecentEdited=false;
+        void EnsureExpandedPanelFits();
         void InitializeM19();
         std::uint64_t mNextWatchToken=1;
         std::array<std::uint64_t,2> mWatchedRoutes{},mWatchTokens{};

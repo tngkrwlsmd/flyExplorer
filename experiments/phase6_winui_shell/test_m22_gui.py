@@ -31,12 +31,22 @@ def run(*,win,element,safe_click,focus,eventually,left,right):
  print("REAL_M23_LOCAL_KOREAN_EXTENSION_TYPE_IN_DETAIL_ROW",True,flush=True)
  print("REAL_M22_ASYNC_NATIVE_METADATA_KOREAN_SIZE_AND_SORT",True,flush=True)
  def select_one(name):
-  target=row("Left",name)
-  assert target is not None
-  focus();target.select()
-  eventually(lambda:sum(bool(x.is_selected()) for x in rows("Left"))==1 and
-            row("Left",name).is_selected(),
-            "UIA select-one retained stale prior multiple selection: "+name,10)
+  # A native watcher may replace the ListView rows between lookup and
+  # Select(). Resolve and verify a fresh peer within the same bounded retry.
+  def selected():
+   target=row("Left",name)
+   if target is None:return False
+   focus();target.select()
+   current=row("Left",name)
+   return current is not None and current.is_selected() and (
+     sum(bool(x.is_selected()) for x in rows("Left"))==1)
+  try:
+   eventually(selected,
+       "UIA select-one failed across native row refresh: "+name,12)
+  except AssertionError:
+   print("M22_SELECT_ONE_FAILED",name,"SOURCE_EXISTS",(left/name).exists(),
+         "ROWS",[x.window_text() for x in rows("Left")][:12],flush=True)
+   raise
  select_one("복사본.txt")
  row("Left","작은.txt").iface_selection_item.AddToSelection()
  eventually(lambda:sum(bool(x.is_selected()) for x in rows("Left"))>=2,
