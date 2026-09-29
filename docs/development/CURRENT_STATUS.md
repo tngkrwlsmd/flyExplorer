@@ -1,4 +1,147 @@
-# flyExplorer — current project status (2026-09-28)
+# flyExplorer — current project status (2026-09-28 baseline; 2026-09-29 migration-branch addendum)
+
+## Feature-branch publication checkpoint (2026-09-29)
+
+The dated M0, M1, M1.5 and cleanup notes below were written before branch publication; their references to a locally uncommitted branch describe the historical test-time state. Publishing this isolated migration checkpoint to a remote feature branch does **not** merge it into main, replace the current MFC product, release an installer or certify complete MFC feature parity. For the live commit and remote branch status, verify the current Git refs; the confirmed scoped build, GUI and unchanged-profile evidence remains indexed below.
+
+## Earlier 2026-09-29: verified Git/worktree and C:\dev cleanup
+
+Only two worktrees remain: the untouched dirty original UXH-07 tree and the still-uncommitted WinUI migration tree. Verified the real remote has only main and retained Phase5 productization; pruned 21 obsolete local remote-tracking refs and removed five strictly redundant local Phase5 branch names, with local rollback refs saved. The old CLEAN Phase5 worktree was removed after archiving 394 unique evidence files and relocating its complete pinned NuGet package cache into this migration worktree. The new WinUI Debug x64 build PASS was verified AFTER removing the old folder. See [exact inventory, archive checksums and rollback paths](LOCAL_GIT_WORKTREE_CLEANUP_20260929.md). No remote branch was deleted, no hosted Actions or push, and neither dirty active worktree was reset.
+
+## Earlier 2026-09-29: WinUI M1.5 async COM STA and shared file watching — SCOPED PASS
+
+**LOCAL ONLY; default MFC product NOT replaced.**
+Original MFC FileChangeWatcher and the independent
+WinUI 3 Shell worker now share a small MFC-free
+Win32 directory change bridge (Unicode and ANSI).
+WinUI folder navigation and enumeration run on a
+dedicated COM-initialized STA instead of blocking
+the XAML UI thread; results enter via a weak
+DispatcherQueue recipient. Stable per-tab routes,
+cooperative cancellation, stale result rejection,
+async native file-list refresh on creation/deletion
+and non-joining shutdown are implemented.
+
+Original MFC Release x64 local CI **20/0 native PASS**,
+overall **PASS WITH SKIPS** (official smoke skipped
+to protect pre-existing HKCU). Owned old MFC
+Go Up/Back/Forward GUI PASS, original six profile
+SHA256 hashes identical. Final legacy EXE:
+`B35F7ADC0768436851F8F485A70C0D042B5C70FBE9EDFF2E333C8CAE221CC835`.
+New WinUI Release x64 build PASS; real owned Win11
+96-DPI GUI PASS: native folder PIDL doubleclick,
+real virtual This PC, independent panes/tabs,
+actual automatic synthetic file create AND delete,
+rapid path supersession and closing tabs without
+resurrected results; exit 0, six original hashes
+identical. Final new Release EXE:
+`5944CB8DBAA4BB730F5E0D43DB3C7FA463B4701556644329192B95BBFA41D694`.
+
+First Release GUI pointer attempt FAILED when
+an existing Windows Explorer window covered the
+test WinUI. A failure screenshot established the
+test-input ownership fault; an owned foreground
+PID guard was added for real pointer/keyboard
+input. Same Release EXE then passed full GUI.
+Native blocked-*callback* shutdown test does NOT
+prove forced cancellation of hung third-party
+COM calls. Virtual Shell *change notifications*,
+full MFC advanced watcher extraction,
+slow network extension isolation, other DPI/HC,
+workspace and complete file operation parity
+remain NOT ACCEPTED. See
+[exact phase evidence and safety limits](WINUI3_ASYNC_SHELL_CHANGE_WORKER_20260929.md).
+
+## Historical 2026-09-29: shared native Windows Shell engine M1 PARTIAL, separately verified
+
+LOCAL/UNMERGED `migration/winui3-full-shell-20260929`
+at old Phase5 baseline `7ceeab5` with all new work
+uncommitted. A genuine MFC-independent native
+`src/base/shell_navigation_core.h/.cpp` implements
+Shell absolute-PIDL ownership, transactional
+enumeration, parsing, per-pane/tab history and
+cooperative cancellation. An old-SDK-compatible
+`shell_enum_bridge.cpp` shares the original
+`ShellEnumerator::enumerate` COM EnumObjects path
+with the new WinUI engine. The original
+`ExplorerCtrl : ListCtrlEx` still owns its UI
+and advanced legacy responsibilities: complete
+controller/view separation is NOT done.
+
+Existing MFC local CI x64 exit 0,
+Release native functional **18/0 PASS** (new
+shared Shell/PIDL/cancel/history case), official
+HKCU-sensitive smoke SKIPPED; total
+PASS_WITH_SKIPS. An additional test-owned
+real MFC GUI proved Go Up, Back, Forward
+through the original MainFrame/ExplorerCtrl;
+owned exit 0 and original six user config
+hashes identical. Legacy binary SHA256:
+`54C6F0C5584E957B8088670DB91414DB90A2D3BD3488B493D053177D5FD529D7`.
+
+Independent real WinUI 3 Debug and Release
+x64 builds PASS. New WinUI Release SHA256:
+`12EE36CB7DC6758A824D4EAA669CFA24E0C81E497022FC36508BD0C973729F18`.
+Real owned Win11 96-DPI Release GUI PASS:
+two independent native Shell pane/tab snapshots,
+physical folder-row doubleclick via full PIDL,
+local path/history, split mode, opening
+`shell:MyComputerFolder` and Back from
+the virtual Shell location. Own process exit 0,
+private fixture removed, six original config
+SHA256 hashes unchanged. Source contracts 4/4 PASS.
+[Precise logs, architecture, limits and remaining milestones](WINUI3_FULL_REPLACEMENT_20260929.md).
+
+Remaining mandatory work: full legacy
+ExplorerCtrl change notification/filtering
+and file operations extraction,
+asynchronous STA Shell work with interruption
+boundary and UI-thread dispatch, advanced
+native UI parity, settings/workspace compatibility,
+actual other DPI, OS HC/accessibility and
+deployment. Neither the MFC default nor
+other UXH-07 and Phase5 worktrees were
+changed; no hosted CI, merge or push.
+
+## Historical 2026-09-29 full WinUI 3 replacement: M0 local scoped acceptance only
+
+User-directed migration work is isolated in branch
+`migration/winui3-full-shell-20260929` (forked from
+experimental Phase5 commit `7ceeab5`) and a SEPARATE
+`C:\dev\flyExplorer-winui3-migration` worktree.
+The original UXH-07 dirty worktree, previous Phase5
+worktree, normal native product and real user data are
+untouched. No push, merge, installer or hosted CI.
+
+A separately named real C++/WinRT Windows App SDK WinUI 3
+executable now renders two independent TabView/ListView
+panes, optional split layout, per-tab read-only local
+folder history/address, add/close tabs and direct
+navigation controls. It also links the EXISTING
+UI-independent native file_operation_core.cpp, which
+is only safely tested with a rejected null request;
+NO user file operation is enabled yet. It does NOT
+embed or reuse any old MFC view.
+
+Actual Debug and Release x64 builds PASS. Final Release
+exe SHA256:
+`70080FECEA2AEDE6A545E5712CD2B6AD6E712BF0637D713C7FA661006D0C32C5`.
+The exact final Release binary passed independently owned
+real 96-DPI WinUI 3 GUI validation: two independent
+folder listings/paths, native-core contract, left tabs
+add/close, split toggle, physical address Enter/Back;
+normal process exit 0, complete owned test cleanup
+and unchanged SHA256 of SIX real original user settings
+files. Scoped source architecture contracts 3/3 PASS.
+This is **NOT a product replacement or a claim of parity**.
+The remaining M1-M6 migration stages are explicitly
+tracked in
+[full WinUI 3 replacement plan](WINUI3_FULL_REPLACEMENT_20260929.md).
+
+Historical Phase5 native-host experiments and all
+subsequent material below remain experiment-specific and
+must not be interpreted as M0 product integration.
+
 
 **Latest 2026-09-28 Phase5 strict bridge teardown correction — 96-DPI isolated regression PASS, integration still experimental:** After reproducing the strict bridge failure, runtime HWND enumeration established that the WinUI 3 process owns both its actual main window and a second visible notification-host window. The Python test's cleanup `top_for(pid, lambda title: bool(title))` required exactly one visible titled window and therefore silently chose no HWND and never sent WinUI WM_CLOSE. A diagnostic with short-lived UIA subprocesses still failed, so the earlier UIA-lifetime hypothesis was rejected. The isolated experiment test now retains the already-validated product MainFrame and WinUI main HWNDs, confirms each belongs to the corresponding test-owned PID, and closes exactly that HWND.
 

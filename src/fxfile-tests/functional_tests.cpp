@@ -12,9 +12,14 @@
 #include <cstring>
 #include <iostream>
 #include <vector>
+#include <memory>
+#include <atomic>
 
 #include "xpr.h"
 #include "file_operation_core.h"
+#include "shell_navigation_core.h"
+#include "shell_async_worker.h"
+#include "directory_change_bridge.h"
 #include "shell_registry_core.h"
 #include "cmd/rename_transform_core.h"
 #include "functional_test_groups.h"
@@ -790,6 +795,217 @@ bool testRecursiveDelete(TestState &aState)
 
     return removeTree(sTree);
 }
+// Native regression for the SAME MFC-free core used by the legacy Shell
+// enumerator and WinUI 3. Files are test-owned only.
+#if defined(XPR_CFG_UNICODE)
+bool testSharedNativeShellSession(TestState& state)
+{
+    const xpr::string root=
+        joinPath(state.mRoot,XPR_STRING_LITERAL("shell-native-root"));
+    const xpr::string child=
+        joinPath(root,XPR_STRING_LITERAL("shell-native-child"));
+    if(XPR_RCODE_IS_ERROR(xpr::FileSys::mkdir_recursive(child)))
+        return false;
+    const xpr::string payload=
+        joinPath(root,XPR_STRING_LITERAL("owned-native.txt"));
+    if(!writeBytes(payload,std::vector<xpr_uchar_t>(6,0x55)))
+        return false;
+    const HRESULT apt=::CoInitializeEx(nullptr,COINIT_APARTMENTTHREADED);
+    if(FAILED(apt))
+        return false;
+    bool ok=false;
+    {
+        fxfile::shellnav::Session session;
+        const HRESULT opened=session.open(std::wstring(root.c_str()));
+        if(opened==S_OK) {
+            fxfile::shellnav::Location baseline(
+                session.snapshot().folder.get());
+            const auto& original=session.snapshot().children;
+            bool sawChild=false,sawFile=false;
+            fxfile::shellnav::Location childId;
+            for(const auto& item:original) {
+                if(item.label==L"shell-native-child" && item.isFolder()) {
+                    childId=item.id;
+                    sawChild=true;
+                }
+                if(item.label==L"owned-native.txt" && !item.isFolder() &&
+                    item.isFileSystem())sawFile=true;
+            }
+            const HRESULT missing=session.open(
+                std::wstring(root.c_str())+
+                L"\\definitely-not-an-existing-shell-item-UXH");
+            const bool unmodified=FAILED(missing) &&
+                ::ILIsEqual(baseline.get(),session.snapshot().folder.get());
+            std::atomic_bool canceled(true);
+            fxfile::shellnav::Snapshot untouched;
+            untouched.parsingName=L"untouched";
+            const HRESULT canceledHr=fxfile::shellnav::enumerate(
+                session.snapshot().folder.get(),untouched,
+                SHCONTF_FOLDERS|SHCONTF_NONFOLDERS,100,&canceled);
+            const bool transactional=
+                canceledHr==HRESULT_FROM_WIN32(ERROR_CANCELLED) &&
+                untouched.parsingName==L"untouched";
+            bool history=false;
+            if(childId.valid() && session.open(childId.get())==S_OK) {
+                const bool childOpen=session.canBack() &&
+                    session.snapshot().parsingName.find(
+                        L"shell-native-child")!=std::wstring::npos;
+                const bool backed=session.back()==S_OK &&
+                    ::ILIsEqual(baseline.get(),session.snapshot().folder.get());
+                const bool forwarded=session.forward()==S_OK &&
+                    session.canBack();
+                const bool upped=session.up()==S_OK &&
+                    ::ILIsEqual(baseline.get(),session.snapshot().folder.get());
+                history=childOpen && backed && forwarded && upped;
+            }
+            ok=sawChild && sawFile && unmodified &&
+               transactional && history;
+        }
+    } // ensure all PIDLs and shell references die on their COM apartment
+    ::CoUninitialize();
+    return ok;
+}
+#endif
+
+bool testAsyncShellWorkerAndChangeBridge(TestState& state)
+{
+#if defined(XPR_CFG_UNICODE)
+    struct Observed final {
+        Observed():loaded(::CreateEventW(nullptr,TRUE,FALSE,nullptr)),
+                   changed(::CreateEventW(nullptr,TRUE,FALSE,nullptr)) {}
+        ~Observed() {
+            if(loaded)::CloseHandle(loaded);
+            if(changed)::CloseHandle(changed);
+        }
+        HANDLE loaded=nullptr,changed=nullptr;
+        std::atomic<DWORD> workerThread{0};
+        std::atomic<std::uint64_t> completed{0};
+        std::atomic_bool validItems{false};
+    };
+    const auto root=joinPath(state.mRoot,
+        XPR_STRING_LITERAL("async-native-root"));
+    const auto child=joinPath(root,XPR_STRING_LITERAL("native-subfolder"));
+    if(XPR_RCODE_IS_ERROR(xpr::FileSys::mkdir_recursive(child)))
+        return false;
+    const auto observed=std::make_shared<Observed>();
+    if(!observed->loaded || !observed->changed)return false;
+    const DWORD callerThread=::GetCurrentThreadId();
+    bool valid=false;
+    {
+        // Capture the shared test signal state BY VALUE. A detached
+        // in-flight callback can never reference freed stack/handles.
+        fxfile::shellnav::AsyncShellWorker background(
+            [observed](fxfile::shellnav::AsyncResult result) {
+                observed->workerThread.store(::GetCurrentThreadId());
+                if(result.hr==S_OK) {
+                    for(const auto& item:result.snapshot.children) {
+                        if(item.isFolder() &&
+                           item.label==L"native-subfolder")
+                            observed->validItems.store(true);
+                    }
+                    observed->completed.store(result.request);
+                    ::SetEvent(observed->loaded);
+                }
+            },
+            [observed](std::uint64_t route,std::uint64_t token) {
+                if(route==901 && token==42)
+                    ::SetEvent(observed->changed);
+            });
+        if(background.start()) {
+            const auto first=background.submitParsing(901,
+                std::wstring(root.c_str()));
+            const bool firstPass=first &&
+                ::WaitForSingleObject(observed->loaded,8000)==WAIT_OBJECT_0 &&
+                observed->completed.load()==first &&
+                observed->validItems.load() &&
+                observed->workerThread.load()!=callerThread;
+            if(firstPass) {
+                background.watch(901,42,std::wstring(root.c_str()));
+                ::Sleep(250);
+                bool received=false;
+                for(int attempt=0;attempt<9 && !received;++attempt) {
+                    xpr::string synthetic=joinPath(
+                        root,XPR_STRING_LITERAL("owned-change-"));
+                    synthetic+=(xpr_tchar_t)('0'+attempt);
+                    if(!writeBytes(synthetic,
+                        std::vector<xpr_uchar_t>(4,0x55)))break;
+                    received=::WaitForSingleObject(
+                        observed->changed,350)==WAIT_OBJECT_0;
+                }
+                ::ResetEvent(observed->loaded);
+                const auto stale=background.submitParsing(901,
+                    std::wstring(root.c_str())+
+                    L"\\missing-async-navigation-test-lookup");
+                const auto newest=background.submitParsing(901,
+                    std::wstring(root.c_str()));
+                const bool finalPass=stale && newest &&
+                    ::WaitForSingleObject(
+                        observed->loaded,8000)==WAIT_OBJECT_0 &&
+                    observed->completed.load()==newest;
+                valid=received && finalPass;
+            }
+        }
+        background.shutdown();
+    }
+    return valid;
+#else
+    return true;
+#endif
+}
+
+bool testAsyncWorkerNonBlockingShutdown(TestState& state)
+{
+#if defined(XPR_CFG_UNICODE)
+    struct Signals final {
+        HANDLE started=::CreateEventW(nullptr,TRUE,FALSE,nullptr);
+        HANDLE release=::CreateEventW(nullptr,TRUE,FALSE,nullptr);
+        HANDLE finished=::CreateEventW(nullptr,TRUE,FALSE,nullptr);
+        ~Signals() {
+            if(started)::CloseHandle(started);
+            if(release)::CloseHandle(release);
+            if(finished)::CloseHandle(finished);
+        }
+    };
+    const auto signals=std::make_shared<Signals>();
+    if(!signals->started || !signals->release || !signals->finished)
+        return false;
+    bool success=false;
+    {
+        fxfile::shellnav::AsyncShellWorker worker(
+            [signals](fxfile::shellnav::AsyncResult answer) {
+                if(answer.hr==S_OK) {
+                    ::SetEvent(signals->started);
+                    // Deliberately BLOCK this test-only callback, not an
+                    // actual third-party Shell extension or UI process.
+                    ::WaitForSingleObject(signals->release,2500);
+                    ::SetEvent(signals->finished);
+                }
+            },
+            [](std::uint64_t,std::uint64_t){});
+        if(worker.start()) {
+            const auto ticket=worker.submitParsing(2029,
+                std::wstring(state.mRoot.c_str()));
+            const bool entered=ticket &&
+                ::WaitForSingleObject(signals->started,8000)==WAIT_OBJECT_0;
+            if(entered) {
+                const ULONGLONG began=::GetTickCount64();
+                worker.shutdown();
+                const ULONGLONG elapsed=::GetTickCount64()-began;
+                ::SetEvent(signals->release);
+                success=elapsed<500 &&
+                    ::WaitForSingleObject(signals->finished,3000)==WAIT_OBJECT_0;
+            }else {
+                worker.shutdown();
+                ::SetEvent(signals->release);
+            }
+        }
+    }
+    return success;
+#else
+    return true;
+#endif
+}
+
 } // namespace
 
 int _tmain(void)
@@ -826,6 +1042,14 @@ int _tmain(void)
     report(sState, "CRC32/MD5 known vectors", testHashKnownVectors());
     report(sState, "shell context-menu command contract", testShellRegistryCommandContract());
     report(sState, "recursive shell delete", testRecursiveDelete(sState));
+    report(sState, "async STA Shell request and shared directory watcher",
+           testAsyncShellWorkerAndChangeBridge(sState));
+    report(sState, "async worker shutdown without waiting on blocked callback",
+           testAsyncWorkerNonBlockingShutdown(sState));
+#if defined(XPR_CFG_UNICODE)
+    report(sState, "shared native Shell session/PIDL/cancel/history",
+           testSharedNativeShellSession(sState));
+#endif
 
     if (!removeTree(sState.mRoot))
     {

@@ -9,6 +9,7 @@
 
 #include "stdafx.h"
 #include "shell_enumerator.h"
+#include "shell_navigation_core.h"
 #include "shell_item.h"
 #include "pidl_win.h"
 
@@ -50,7 +51,10 @@ xpr_bool_t ShellEnumerator::enumerate(HWND aHwnd, LPSHELLFOLDER aShellFolder, xp
 
     LPENUMIDLIST sEnumIdList = XPR_NULL;
 
-    sComResult = aShellFolder->EnumObjects(aHwnd, sFlags, &sEnumIdList);
+    // One native Shell enumeration entry point for both the original
+    // MFC ExplorerCtrl and the independent WinUI Session.
+    sComResult = fxfile::shellnav::openEnumeration(
+        aShellFolder, aHwnd, sFlags, &sEnumIdList);
 
     if (FAILED(sComResult))
     {

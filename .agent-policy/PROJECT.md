@@ -1,5 +1,87 @@
 # PROJECT.md — flyExplorer project facts, architecture, readiness
 
+**LATEST 2026-09-29 C:\dev worktree cleanup (after M1.5):** Only active dirty UXH-07 and local staged WinUI migration worktrees remain. The historical clean Phase5 worktree has been removed, but its exact source stays reachable from the retained real remote Phase5 productization branch. Preserved 394 unique historic log/evidence files in a locally SHA256/CRC-verified ignored ZIP and moved the 1,956-file pinned NuGet package cache into the migration worktree. The new WinUI Debug x64 build passed after old Phase5 removal. Pruned 21 obsolete local remote-tracking references and five redundant local ancestor branch names; none of the two actual remote branches was deleted. See [precise rollback refs, backup ZIP and safeguards](../docs/development/LOCAL_GIT_WORKTREE_CLEANUP_20260929.md). No user files, active local branch state, hosted CI or remote push were changed.
+
+**PRIOR LOCAL M1.5, 2026-09-29 — scoped async/change acceptance:**
+Isolated `migration/winui3-full-shell-20260929`
+now shares an MFC-free ANSI/Unicode directory
+change bridge between old FileChangeWatcher and
+a private, non-joining WinUI COM STA worker.
+Old MFC x64 local CI 20/0 PASS_WITH_SKIPS;
+real test-owned MFC GUI navigation PASS,
+final legacy SHA256
+`B35F7ADC0768436851F8F485A70C0D042B5C70FBE9EDFF2E333C8CAE221CC835`.
+New WinUI Release x64 real 96-DPI owned GUI
+PASS including async Shell navigation,
+filesystem auto-refresh after synthetic create
+AND delete, rapid latest-request-wins,
+tab close/virtual folder and cleanup.
+New Release SHA256:
+`5944CB8DBAA4BB730F5E0D43DB3C7FA463B4701556644329192B95BBFA41D694`.
+Both owned GUI runs preserved original SIX
+config file SHA256 hashes; source contracts
+5/5 PASS. First new Release pointer test
+was intercepted by a user Windows Explorer
+foreground window; owner/PID-gated test input
+fixed it and the SAME binary later passed.
+Blocking COM calls are NOT forcibly
+interruptible; virtual Shell change events,
+full old controller extraction, other DPI/HC,
+workspace/config parity and deployment
+remain NOT VERIFIED.
+[Exact scoped evidence](../docs/development/WINUI3_ASYNC_SHELL_CHANGE_WORKER_20260929.md).
+No hosted CI, push, merge or other worktree
+modification.
+
+**HISTORICAL PARTIAL M1 MIGRATION CHECKPOINT, 2026-09-29:**
+The same uncommitted isolated
+`migration/winui3-full-shell-20260929`
+branch now adds MFC-independent native
+Shell location/item PIDL sessions and
+shared old-compatible
+`shell_enum_bridge.cpp` that the ORIGINAL
+MFC ShellEnumerator and independent new
+WinUI 3 session both call.
+Native MFC local CI x64 18/0
+PASS_WITH_SKIPS; real MFC Go Up/Back/
+Forward isolated GUI exit 0. Final
+native MFC executable SHA256:
+`54C6F0C5584E957B8088670DB91414DB90A2D3BD3488B493D053177D5FD529D7`.
+WinUI 3 Release x64 actual 96-DPI
+owned GUI verified native PIDL
+doubleclick navigation and virtual
+This PC enumeration plus independent
+pane/tab history and process cleanup;
+original six user config hashes stayed
+identical. WinUI Release SHA256:
+`12EE36CB7DC6758A824D4EAA669CFA24E0C81E497022FC36508BD0C973729F18`.
+Source architecture contracts 4/4.
+**This is not complete ExplorerCtrl
+extraction, async Shell extension
+isolation, production replacement or
+M2-M6 acceptance.** See
+[real M1 partial evidence](../docs/development/WINUI3_FULL_REPLACEMENT_20260929.md).
+No other worktree overwrite, GitHub Actions,
+push or merge.
+
+**HISTORICAL M0, same migration worktree, 2026-09-29:** Full WinUI 3
+replacement requested. New separate local branch
+`migration/winui3-full-shell-20260929` is forked
+from clean Phase5 `7ceeab5`; its independent
+WinUI 3 shell M0 achieved two-pane/native TabView GUI
+and direct link to the existing UI-independent native
+file-operation-core NULL/error contract.
+Debug/Release x64 build PASS; final Release SHA256
+`70080FECEA2AEDE6A545E5712CD2B6AD6E712BF0637D713C7FA661006D0C32C5`
+and owned real 96-DPI GUI PASS, original six config hashes
+unchanged. NO full native Shell/file-manager parity or
+legacy product-default replacement is claimed.
+[Milestones and evidence](../docs/development/WINUI3_FULL_REPLACEMENT_20260929.md).
+No existing user settings, original UXH-07 branch,
+previous Phase5 branch, GitHub Actions or remote main
+were changed by this migration slice.
+
+
 이 파일은 universal-agent-docs의 PROJECT template을 flyExplorer에 맞게 채운 Validated-profile 프로젝트 지도다.
 상세 제품 명세를 복제하지 않고 실제 Source of Truth 위치와 현재 확인된 build/runtime 사실을 기록한다.
 

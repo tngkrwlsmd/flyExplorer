@@ -3829,3 +3829,50 @@ NOT TESTED다. GitHub Actions 미실행.
 
 **관련 branch**
 - ui/ui02-final-pixel-20260927 (final commit는 브랜치 검증 후 생성)
+
+## 2026-09-29: Independent WinUI3 shell event and UIA acceptance
+
+LOCAL dedicated migration branch only, not production.
+
+Initial C++/WinRT XAML build failed because the new shell declared a nonexistent TabViewSelectionChangedEventArgs and used an incompatible TabView sender. The generated WinUI TabView delegate requires an IInspectable sender and SelectionChangedEventArgs. Both signatures were corrected; independent Debug and Release x64 compilation/linking then passed.
+
+The first real GUI test saw a new tab appear on the wrong pane. A delayed programmatic TabView SelectionChanged had selected the right pane after startup; the model now ignores programmatic selection equal to its own state and has explicit accessible pane-activation buttons. Tab creation now copies the old path before vector insertion. Initial UIA split-toggle testing also had a test-only false failure: a collapsed RightFiles control disappeared from the automation tree rather than returning IsVisible false. The test correctly asserts absence and restored presence.
+
+Final standalone Release SHA256: 70080FECEA2AEDE6A545E5712CD2B6AD6E712BF0637D713C7FA661006D0C32C5. The exact compiled Release executable passed owned real 96-DPI WinUI3 GUI: two independent panes, per-pane local paths/listings, tab add/close, split toggle, real address Enter/Back and the direct native file_operation_core invalid-null API contract. Process exit 0, private fixture removed and six original user configuration SHA256 hashes identical. Source architecture contracts 3/3 passed. Detailed evidence: WINUI3_FULL_REPLACEMENT_20260929.md.
+
+M1-M6 core extraction, virtual Shell enumeration, real mutation operations, profile/installer parity, multi-DPI and accessibility remain NOT ACCEPTED. No hosted GitHub Actions or remote push.
+
+## 2026-09-29: M1 shared native Shell extraction, legacy PCH compatibility and GUI verification
+
+Branch: LOCAL/unmerged migration/winui3-full-shell-20260929, forked from old Phase5 7ceeab5. The other UXH-07 and Phase5 worktrees were left untouched.
+
+Observed coupling: native ExplorerCtrl inherits ListCtrlEx and owns MFC HWND/view state. Its real folder navigation resolves a Windows Shell folder and calls the existing base ShellEnumerator. ShellEnumerator mapped existing native folder/file and hidden/system options and directly called IShellFolder::EnumObjects with the original owner HWND.
+
+Extraction: the old ShellEnumerator now calls the shared pure Win32 shellnav::openEnumeration implemented in src/base/shell_enum_bridge.cpp. The same module is compiled directly into the new independent WinUI3 executable. Higher-level src/base/shell_navigation_core.cpp adds typed absolute PIDL ownership, Shell parsing/binding including virtual This PC, real child enumeration, snapshot identity, per-tab Back/Forward/Up, deterministic error rollback and cooperative atomic cancellation between COM calls. The new WinUI pane/tab state consumes these real sessions and passes the original owned absolute child PIDL when opening an actual folder-list row. Its prior standalone std::filesystem-only NavigationModel was removed from the new project.
+
+Compiler regression and correction: linking the entire new modern Shell session into the original MFC project initially failed. The original forced stdafx/PCH suppresses newer SHGetNameFromIDList, SHBindToObject and known-folder API declarations. No product-wide OS SDK defines were changed. The compatible low-level original EnumObjects bridge was split from the newer Session translation unit. The MFC product compiles ONLY the old-SDK-compatible bridge and the native functional test target compiles both modules; the separate new WinUI 3 project compiles both, independently of any MFC view.
+
+Actual verified results: original MFC local_ci.bat x64 exit 0, source and warning policy PASS, Release x64 compile/link PASS, native 18 passed / 0 failed including new real test-owned local Shell folder/PIDL clone, invalid-path rollback, atomic cancellation without replacement and forward/back/up history. Official runtime smoke SKIPPED due existing real HKCU. Separate isolated real MFC GUI opened synthetic child and executed actual native Go Up / Back / Forward through MainFrame/ExplorerCtrl and the common enumeration bridge, normal exit 0, six original config SHA256 values unchanged. Original MFC binary SHA256 54C6F0C5584E957B8088670DB91414DB90A2D3BD3488B493D053177D5FD529D7.
+
+New WinUI3 Debug/Release x64 compile and actual 96-DPI owned GUI PASS. Final new WinUI Release SHA256 12EE36CB7DC6758A824D4EAA669CFA24E0C81E497022FC36508BD0C973729F18. Its real owned GUI opened an actual Shell folder ListView row by absolute PIDL and navigated back; retained independent per-pane lists and history; opened shell:MyComputerFolder as a genuine virtual Shell PIDL and navigated back to the previously opened local folder. Owned exit 0 and fixture cleanup succeeded, original six SHA256 values unchanged. Static contract 4/4 PASS.
+
+Evidence: docs/development/WINUI3_FULL_REPLACEMENT_20260929.md; logs/m1-shared-enum-legacy-native-local-ci-v2.log; logs/m1-real-legacy-explorer-shared-enum-gui-v2.log; logs/m1-native-shell-winui-release-build.log; logs/m1-native-shell-winui-release-real-gui.log; logs/m1-final-arch-contract.log.
+
+Strictly incomplete: old ExplorerCtrl still owns MFC UI, view-specific filtering, file selection, change watchers, drag/drop and file-operation wiring. The new native Shell session currently enumerates at most 1200 entries SYNCHRONOUSLY on the current COM-initialized STA. Atomic cancellation does NOT interrupt an in-flight blocked Shell extension call. No async COM worker, production Windows Shell context menu/operation parity, advanced metadata or settings compatibility, other real DPI/HC/screen-reader certification or clean installer. Do not mark overall migration M1 complete or replace the user default app based on this bounded result.
+
+## 2026-09-29: Shared Win32 watcher extraction and dedicated Shell STA; native test header and real GUI input fixes
+
+Scoped to the local isolated WinUI3 migration worktree; not a production default replacement.
+
+Implemented MFC-free Unicode/ANSI directory change primitives in src/base/directory_change_bridge.h/.cpp, reused by the old FileChangeWatcher and new WinUI COM STA worker. The dedicated worker creates and destroys its COM folder/enumerator interfaces on a private STA, pumps its queue, rejects stale per-tab results and forwards only owned PIDL snapshots via weak WinUI DispatcherQueue. Active filesystem folders rearm native change watchers and asynchronously refresh the real WinUI ListView.
+
+First legacy native test compilation failed because the historical src/base/stdint.h shadowed the MSVC stdint.h but omitted INTMAX_MAX required by std::thread/ratio; the old native test compiler also rejected C++17 if-initializers. Corrected ONLY the new worker translation unit with a conditional Windows-appropriate LLONG_MAX fallback and C++14-compatible if syntax. The targeted suite and subsequent canonical local_ci.bat x64 both passed 20/0 native, Release build/link/source/warnings PASS; official HKCU-protecting smoke SKIPPED.
+
+An initial new WinUI Release GUI run failed on a folder doubleclick despite passing file create/delete native auto-refresh. Failure-time capture proved an existing user Windows Explorer window was in the foreground and covered the test-owned WinUI. Added an owned foreground PID guard before every real pointer and physical Enter action; abort rather than click a user window when focus is unavailable. The SAME exact compiled WinUI Release EXE then passed the guarded full GUI, including file create/delete auto-refresh, native full-PIDL row doubleclick, cancel/reissue, fast tab close, independent panes and virtual This PC. Both separately owned MFC/WinUI GUI tests exited 0 and left SIX original user config SHA256 hashes unchanged.
+
+Full binary SHAs, exact local logs, further architecture limitations and unverified OS environments: WINUI3_ASYNC_SHELL_CHANGE_WORKER_20260929.md. Nonblocking shutdown of a held TEST callback does not demonstrate forced interruption of a truly blocked third-party COM extension.
+
+
+## 2026-09-29: C:\dev Phase5 cleanup exposed implicit cross-worktree NuGet dependency
+
+While reducing duplicate worktrees, the migration WinUI build script was found to select the old historical Phase5 worktree's ignored pinned NuGet cache whenever that directory existed. Removing the old folder without correcting this would have introduced an external package-restore dependency and reduced offline reproducibility. The original old Phase5 branch was CLEAN, its source commit 7ceeab5 was retained on the real remote, and 394 unique historical log/sample evidence files were archived locally and verified with per-entry SHA256 plus ZIP CRC. Pinned NuGet packages (1,956 files) were atomically relocated and SHA-verified inside the current migration tree; the build script's cross-worktree fallback was removed. The old Phase5 worktree was then removed with the ordinary git worktree command (no force). A post-removal WinUI Debug x64 build passed using only the new local cache. No active dirty worktree, actual remote branch or running user program was deleted. Full rollback refs, archive hash, exact post-removal binary hash and status: LOCAL_GIT_WORKTREE_CLEANUP_20260929.md.

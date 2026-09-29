@@ -9,6 +9,7 @@
 
 #include "stdafx.h"
 #include "file_change_watcher.h"
+#include "directory_change_bridge.h"
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -88,10 +89,9 @@ FileChangeWatcher::WatchId FileChangeWatcher::registerWatch(WatchItem *aWatchIte
         FILE_NOTIFY_CHANGE_LAST_WRITE  |
         FILE_NOTIFY_CHANGE_SECURITY;
 
-    sNotifyHandle = ::FindFirstChangeNotification(
+    sNotifyHandle = fxfile::directorychange::open(
         sNewWatchItem->mPath.c_str(),
-        sNewWatchItem->mSubPath,
-        sNotifyFilter);
+        XPR_IS_TRUE(sNewWatchItem->mSubPath),sNotifyFilter);
 
     if (sNotifyHandle == INVALID_HANDLE_VALUE)
     {
@@ -141,7 +141,7 @@ void FileChangeWatcher::unregisterWatch(WatchId aWatchId)
         SetEvent(mEvent);
     }
 
-    ::FindCloseChangeNotification(sNotifyHandle);
+    fxfile::directorychange::close(sNotifyHandle);
 }
 
 void FileChangeWatcher::unregisterAllWatches(void)
@@ -157,7 +157,7 @@ void FileChangeWatcher::unregisterAllWatches(void)
         sNotifyHandle = sIterator->first;
         sWatchItem = sIterator->second;
 
-        ::FindCloseChangeNotification(sNotifyHandle);
+        fxfile::directorychange::close(sNotifyHandle);
         XPR_SAFE_DELETE(sWatchItem);
     }
 
@@ -250,7 +250,7 @@ xpr_sint_t FileChangeWatcher::runThread(xpr::Thread &aThread)
                 sIndex = sResult - WAIT_OBJECT_0;
                 sChangedNotify = sHandles[sIndex];
 
-                ::FindNextChangeNotification(sChangedNotify);
+                fxfile::directorychange::rearm(sChangedNotify);
 
                 if (sSignalSet.find(sChangedNotify) == sSignalSet.end())
                     sSignalSet.insert(sChangedNotify);

@@ -1,0 +1,77 @@
+#pragma once
+#include "MainWindow.g.h"
+#include "../../src/base/shell_navigation_core.h"
+#include "../../src/base/shell_async_worker.h"
+#include <array>
+#include <vector>
+#include <filesystem>
+
+namespace winrt::FlyExplorerWinUIShell::implementation
+{
+    struct MainWindow : MainWindowT<MainWindow>
+    {
+        MainWindow();
+        ~MainWindow();
+        int32_t MyProperty();
+        void MyProperty(int32_t value);
+
+        void OnBackClicked(IInspectable const&, Microsoft::UI::Xaml::RoutedEventArgs const&);
+        void OnForwardClicked(IInspectable const&, Microsoft::UI::Xaml::RoutedEventArgs const&);
+        void OnUpClicked(IInspectable const&, Microsoft::UI::Xaml::RoutedEventArgs const&);
+        void OnAddressKeyDown(IInspectable const&, Microsoft::UI::Xaml::Input::KeyRoutedEventArgs const&);
+        void OnNewTabClicked(IInspectable const&, Microsoft::UI::Xaml::RoutedEventArgs const&);
+        void OnCloseTabClicked(IInspectable const&, Microsoft::UI::Xaml::RoutedEventArgs const&);
+        void OnSplitClicked(IInspectable const&, Microsoft::UI::Xaml::RoutedEventArgs const&);
+        void OnActivateLeft(IInspectable const&, Microsoft::UI::Xaml::RoutedEventArgs const&);
+        void OnActivateRight(IInspectable const&, Microsoft::UI::Xaml::RoutedEventArgs const&);
+        void OnHomeClicked(IInspectable const&, Microsoft::UI::Xaml::RoutedEventArgs const&);
+        void OnDocumentsClicked(IInspectable const&, Microsoft::UI::Xaml::RoutedEventArgs const&);
+        void OnDownloadsClicked(IInspectable const&, Microsoft::UI::Xaml::RoutedEventArgs const&);
+        void OnLeftTabSelectionChanged(IInspectable const&,
+            Microsoft::UI::Xaml::Controls::SelectionChangedEventArgs const&);
+        void OnRightTabSelectionChanged(IInspectable const&,
+            Microsoft::UI::Xaml::Controls::SelectionChangedEventArgs const&);
+        void OnLeftFileDoubleTapped(IInspectable const&,
+            Microsoft::UI::Xaml::Input::DoubleTappedRoutedEventArgs const&);
+        void OnRightFileDoubleTapped(IInspectable const&,
+            Microsoft::UI::Xaml::Input::DoubleTappedRoutedEventArgs const&);
+        void OnLeftFileKeyDown(IInspectable const&,
+            Microsoft::UI::Xaml::Input::KeyRoutedEventArgs const&);
+        void OnRightFileKeyDown(IInspectable const&,
+            Microsoft::UI::Xaml::Input::KeyRoutedEventArgs const&);
+
+    private:
+        struct PaneState {
+            std::vector<fxfile::shellnav::Session> tabs;
+            std::vector<std::uint64_t> routeIds;
+            std::vector<std::uint64_t> pending;
+            size_t active = 0;
+        };
+        std::array<PaneState, 2> mPanes;
+        int mActivePane = 0;
+        bool mSplit = true;
+        bool mPopulatingTabs = false;
+        std::unique_ptr<fxfile::shellnav::AsyncShellWorker> mWorker;
+        std::uint64_t mNextRoute=1,mNextWatchToken=1;
+        std::array<std::uint64_t,2> mWatchedRoutes{},mWatchTokens{};
+        std::array<std::wstring,2> mWatchedPaths{};
+        void QueuePath(int side,std::wstring path);
+        void QueuePidl(int side,fxfile::shellnav::Location target,
+                       fxfile::shellnav::NavigationAction action);
+        void OnNativeResult(fxfile::shellnav::AsyncResult result);
+        void OnNativeChange(std::uint64_t route,std::uint64_t token);
+        void UpdateWatch(int side,bool force=false);
+        fxfile::shellnav::Session &Current();
+        std::filesystem::path HomePath() const;
+        void Refresh(winrt::hstring const& status = L"Ready");
+        void RefreshTabs(int side);
+        void FillFiles(int side);
+        bool OpenFolder(std::wstring const& path);
+        void ActivatePane(int side);
+        void OpenSelectedFolder(int side);
+    };
+}
+namespace winrt::FlyExplorerWinUIShell::factory_implementation
+{
+    struct MainWindow : MainWindowT<MainWindow, implementation::MainWindow> {};
+}
