@@ -61,8 +61,8 @@ void MainWindow::OnSavePrivateSession(
   data.paths[side]=snapshot.paths[side];
  }
  data.activeSide=static_cast<std::uint32_t>(mModel.activePane);
- data.sort={{static_cast<std::uint32_t>(mSortMode[0]),
-             static_cast<std::uint32_t>(mSortMode[1])}};
+ data.sort={{static_cast<std::uint32_t>(mFileLists[0].sortMode),
+             static_cast<std::uint32_t>(mFileLists[1].sortMode)}};
  try{
   const auto current=AppWindow().Size();
   data.width=static_cast<std::uint32_t>((std::max)(current.Width,0));
@@ -128,8 +128,8 @@ void MainWindow::LoadPrivateSession(){
      target.selected={{
          static_cast<size_t>(session->selected[0]),
          static_cast<size_t>(session->selected[1])}};
-     ui->mSortMode={{static_cast<int>(session->sort[0]),
-                     static_cast<int>(session->sort[1])}};
+     ui->mFileLists[0].sortMode=static_cast<int>(session->sort[0]);
+     ui->mFileLists[1].sortMode=static_cast<int>(session->sort[1]);
      ui->ApplyWorkspace(std::move(target));
      if(ui->mModel.split){
       const auto ratio=static_cast<double>(session->splitPermille);
@@ -138,7 +138,7 @@ void MainWindow::LoadPrivateSession(){
      }
      ui->mModel.dispatch(fxfile::explorerui::Command::ActivatePane,
          static_cast<int>(session->activeSide));
-     ui->fileBar()->SetSortIndex(ui->mSortMode[ui->mModel.activePane]);
+     ui->fileBar()->SetSortIndex(ui->mFileLists[ui->mModel.activePane].sortMode);
      try{
       ui->AppWindow().Resize({static_cast<int>(session->width),
                                static_cast<int>(session->height)});

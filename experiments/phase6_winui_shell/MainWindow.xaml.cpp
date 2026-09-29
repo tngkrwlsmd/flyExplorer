@@ -388,9 +388,7 @@ namespace winrt::FlyExplorerWinUIShell::implementation
         mPopulatingTabs=false;
     }
     void MainWindow::ClearFileDetails(int side){
-        ++mFileDetailEpoch[side];
-        mFileDetails[side].clear();
-        mFileDetailRoute[side]=0;
+        mFileLists[side].invalidate();
     }
     void MainWindow::ScheduleFileDetails(int side,bool force){
         auto const& pane=mModel.panes[side];
@@ -398,8 +396,7 @@ namespace winrt::FlyExplorerWinUIShell::implementation
         auto const route=pane.routeIds[pane.active];
         auto const tab=pane.active;
         auto const& items=pane.tabs[tab].snapshot().children;
-        if(!force&&mFileDetailRoute[side]==route&&
-            mFileDetailTab[side]==tab&&mFileDetails[side].size()==items.size())
+        if(!force&&mFileLists[side].isCurrent(route,tab,items.size()))
             return;
         auto const& folder=pane.filesystemPaths[tab];
         if(folder.size()<3||folder[1]!=L':'||folder[2]!=L'\\')return;
@@ -413,10 +410,7 @@ namespace winrt::FlyExplorerWinUIShell::implementation
             // never retain a Shell COM pointer on this worker.
             paths.push_back(item.isFileSystem()?item.parsingName:std::wstring{});
         }
-        const auto ticket=++mFileDetailEpoch[side];
-        mFileDetailRoute[side]=route;
-        mFileDetailTab[side]=tab;
-        mFileDetails[side].clear();
+        const auto ticket=mFileLists[side].begin(route,tab);
         auto dispatch=DispatcherQueue();
         auto weak=get_weak();
         try{
@@ -476,19 +470,18 @@ namespace winrt::FlyExplorerWinUIShell::implementation
                 dispatch.TryEnqueue([weak,payload,side,tab,route,ticket]{
                     if(auto ui=weak.get()){
                         auto const& pane=ui->mModel.panes[side];
-                        if(ui->mFileDetailEpoch[side]!=ticket||
+                        if(!ui->mFileLists[side].accepts(ticket,route,tab)||
                            pane.active!=tab||pane.pending[tab]||
                            pane.routeIds[tab]!=route||
                            pane.tabs[tab].snapshot().children.size()!=payload->size())
                             return; // never apply stale metadata to a new folder
-                        ui->mFileDetails[side]=std::move(*payload);
+                        ui->mFileLists[side].details=std::move(*payload);
                         ui->FillFiles(side);
                     }
                 });
             }).detach();
         }catch(...){
-            mFileDetails[side].clear();
-            mFileDetailRoute[side]=0;
+            mFileLists[side].invalidate();
         }
     }
     void MainWindow::FillFiles(int side)
@@ -501,20 +494,19 @@ namespace winrt::FlyExplorerWinUIShell::implementation
             auto row=old.try_as<ListViewItem>();
             if(!row||!row.Tag())continue;
             auto index=winrt::unbox_value<uint32_t>(row.Tag());
-            if(index<mRenderedFilePaths[side].size())
-                selected.push_back(mRenderedFilePaths[side][index]);
+            if(index<mFileLists[side].renderedPaths.size())
+                selected.push_back(mFileLists[side].renderedPaths[index]);
         }
         view.Items().Clear();
-        mRenderedFilePaths[side].clear();
-        mRenderedFilePaths[side].reserve(items.size());
+        mFileLists[side].renderedPaths.clear();
+        mFileLists[side].renderedPaths.reserve(items.size());
         for(auto const& item:items)
-            mRenderedFilePaths[side].push_back(item.parsingName);
-        const bool detailReady=mFileDetailRoute[side]==pane.routeIds[pane.active]&&
-             mFileDetailTab[side]==pane.active&&
-             mFileDetails[side].size()==items.size();
+            mFileLists[side].renderedPaths.push_back(item.parsingName);
+        const bool detailReady=mFileLists[side].isCurrent(
+             pane.routeIds[pane.active],pane.active,items.size());
         std::vector<size_t> order(items.size());
         std::iota(order.begin(),order.end(),size_t{0});
-        const int mode=mSortMode[side];
+        const int mode=mFileLists[side].sortMode;
         auto lessName=[&](size_t lhs,size_t rhs){
             const auto& a=items[lhs].label;
             const auto& b=items[rhs].label;
@@ -524,13 +516,13 @@ namespace winrt::FlyExplorerWinUIShell::implementation
             if(items[lhs].isFolder()!=items[rhs].isFolder())
                 return items[lhs].isFolder();
             if(detailReady&&mode==2){
-                const auto& x=mFileDetails[side][lhs];
-                const auto& y=mFileDetails[side][rhs];
+                const auto& x=mFileLists[side].details[lhs];
+                const auto& y=mFileLists[side].details[rhs];
                 if(x.sizeKnown!=y.sizeKnown)return x.sizeKnown;
                 if(x.sizeKnown&&x.bytes!=y.bytes)return x.bytes>y.bytes;
             }else if(detailReady&&mode==3){
-                const auto& x=mFileDetails[side][lhs];
-                const auto& y=mFileDetails[side][rhs];
+                const auto& x=mFileLists[side].details[lhs];
+                const auto& y=mFileLists[side].details[rhs];
                 if(x.dateKnown!=y.dateKnown)return x.dateKnown;
                 if(x.dateKnown&&x.modified!=y.modified)
                     return x.modified>y.modified;
@@ -543,7 +535,7 @@ namespace winrt::FlyExplorerWinUIShell::implementation
             auto label=std::wstring(item.isFolder()?L"[폴더]  ":L"[파일]  ")+
                        item.label;
             if(detailReady){
-                const auto& meta=mFileDetails[side][index];
+                const auto& meta=mFileLists[side].details[index];
                 if(!meta.typeLabel.empty())label+=L"   |   "+meta.typeLabel;
                 if(meta.sizeKnown)label+=L"   |   "+meta.bytesLabel;
                 if(meta.dateKnown)label+=L"   |   "+meta.dateLabel;

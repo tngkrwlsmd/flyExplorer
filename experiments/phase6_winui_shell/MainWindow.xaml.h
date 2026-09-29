@@ -4,6 +4,7 @@
 #include "NavigationSidebar.xaml.h"
 #include "FileToolbar.xaml.h"
 #include "StatusFooter.xaml.h"
+#include "file_list_state.h"
 #include "../../src/base/shell_transfer_core.h"
 #include "../../src/base/shell_clipboard_core.h"
 #include "../../src/base/preview_preferences.h"
@@ -126,21 +127,8 @@ namespace winrt::FlyExplorerWinUIShell::implementation
         Microsoft::UI::Xaml::Controls::TextBlock ActivePaneText(){
             return footer()->ActivePaneText();
         }
-        std::array<int,2> mSortMode{{0,0}};
-        struct FileDetail{
-            std::uint64_t bytes=0;
-            std::uint64_t modified=0;
-            std::wstring bytesLabel;
-            std::wstring typeLabel;
-            std::wstring dateLabel;
-            bool sizeKnown=false;
-            bool dateKnown=false;
-        };
-        std::array<std::vector<FileDetail>,2> mFileDetails;
-        std::array<std::vector<std::wstring>,2> mRenderedFilePaths;
-        std::array<std::uint64_t,2> mFileDetailRoute{};
-        std::array<std::uint64_t,2> mFileDetailEpoch{};
-        std::array<size_t,2> mFileDetailTab{};
+        using FileDetail=fxfile::previewlist::FileDetail;
+        std::array<fxfile::previewlist::PaneState,2> mFileLists{};
         void ScheduleFileDetails(int side,bool force=false);
         void ClearFileDetails(int side);
         std::shared_ptr<fxfile::shelltransfer::Progress> mTransferProgress;

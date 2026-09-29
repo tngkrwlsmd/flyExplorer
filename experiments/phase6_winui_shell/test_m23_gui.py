@@ -135,7 +135,25 @@ def run(*,win,element,safe_click,focus,eventually,
                 raise AssertionError("Exact owned auto-restored child failed to exit")
         assert child.returncode==0,child.returncode
     focus()
-    safe_click(element("ClearSessionButton"))
+    # Diagnose the original parent's real UIA state after an owned child exits.
+    # Never silently reopen/accept an unobservable control.
+    controls=("WorkspacePanelButton","WorkspaceFileBox",
+              "SaveSessionButton","RestoreSessionButton","ClearSessionButton")
+    observed={key:element(key).exists(timeout=.25) for key in controls}
+    print("M23_PARENT_AFTER_CHILD_PANEL_UIA",observed,
+          "WINDOW",win.rectangle(),flush=True)
+    assert observed["ClearSessionButton"], (
+      "original parent lost ClearSessionButton after owned child",observed)
+    button=element("ClearSessionButton").wrapper_object()
+    bounds=button.rectangle()
+    window_bounds=win.rectangle()
+    print("M23_CLEAR_BUTTON_BOUNDS",bounds,"PARENT",window_bounds,
+          "VISIBLE",button.is_visible(),flush=True)
+    if (bounds.right>window_bounds.right or
+        bounds.left<window_bounds.left or
+        bounds.bottom>window_bounds.bottom):
+        raise AssertionError("ClearSessionButton outside owned parent bounds")
+    safe_click(button)
     eventually(lambda:not profile.exists() and
         "지웠습니다" in element("StatusText").window_text(),
         "explicit opt-out failed to remove only the private session",14)

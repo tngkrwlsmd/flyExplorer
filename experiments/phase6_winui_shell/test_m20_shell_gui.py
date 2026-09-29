@@ -106,6 +106,12 @@ def run(*,win,element,safe_click,focus,eventually,owned):
        "shared C++ split-show did not restore two-pane command state",7)
     assert len([v for v in right_tabs.descendants()
        if v.element_info.control_type=="TabItem"])==prior_right
+    # After split restoration WinUI may rebuild the UIA subtree.
+    # Wait for the actual sidebar peer, never interpret absence as PASS.
+    eventually(lambda:element("ThisPCButton").exists(timeout=.25)
+       and element("ThisPCButton").is_visible(),
+       "This PC sidebar control never reappeared after pane restoration",9)
+    print("M20_POST_SPLIT_THISPC_READY",True,flush=True)
     safe_click(element("ThisPCButton"))
     # The worker resolves shell:MyComputerFolder into a native PIDL:
     # the address displays its absolute "::..." parsing name, NOT alias text.

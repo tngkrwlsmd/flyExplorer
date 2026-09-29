@@ -87,7 +87,7 @@ class M23Contracts(unittest.TestCase):
  def test_real_winui_tab_sort_split_window_active_restored(self):
   source=src(A+"m23_session.cpp")
   for name in ("WorkspaceModel","selected[0]","selected[1]",
-               "mSortMode","splitPermille","PrimaryColumn",
+               "mFileLists","splitPermille","PrimaryColumn",
                "SecondaryColumn","AppWindow().Resize","activeSide",
                "ApplyWorkspace","mSessionEpoch"):
    self.assertIn(name,source)

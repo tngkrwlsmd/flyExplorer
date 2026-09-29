@@ -133,6 +133,7 @@
     <ClInclude Include="..\..\src\base\shell_transfer_core.h" />
     <ClInclude Include="..\..\src\base\shell_clipboard_core.h" />
     <ClInclude Include="..\..\src\base\preview_session.h" />
+    <ClInclude Include="file_list_state.h" />
     <ClInclude Include="MainWindow.xaml.h">
       <DependentUpon>MainWindow.xaml</DependentUpon>
     </ClInclude>

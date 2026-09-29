@@ -4049,6 +4049,16 @@ Initial remote Python writes from Windows PowerShell lost Hangul because the inp
 세부 구현 범위 및 검증 등급: [M2.3 단계별 통합](WINUI3_M23_CLIPBOARD_SESSION_DRAG_STAGING_20260929.md).
 
 
-## 2026-09-29: M2.3 ?? ??? ??? ?? ?? ? ??? ???
+## 2026-09-29: M2.3 한국어 문구 손실 및 드래그 자동화 미도달 기록
 
-??? ?? ??? ?? ?? ?? ?? 7?? ???? ?? ??? UTF-8 ???? ????. ?? ?? ?? ??? ??? ?? Debug ??? ????? ?? ??, ?? ??, ?? ??, Drop ? ??? ??? ?? ?? ??? ?????? ?? ???? ???? ??? ?? ??? ????? ???. ?? ?? Shell ??? ???. ?? ??? ???? WinUI? ????? ???? ?? ??? ?? ????? ??? ???? ????, ?? ?? ?? ?? ?? ?? ?? ? ??? ??? ???. ?? ?? ??? Debug/Release ?? ?? GUI ? ?? ?? ?? ??, ?? 102/102? ?? ????. [??? ??](WINUI3_M23_FOLLOWUP_KOREAN_RESOURCES_DRAG_DIAGNOSTICS_20260929.md).
+M2.3 후속 작업에서 `m23_drag.cpp`의 오류 문구 7개가 이전 원격 UTF-8 전달 문제로 손상된 사실을 확인해 한국어로 복구했다. 재발 방지를 위해 소스 검사에 해당 오류 문구와 리소스 연결 검사를 추가했다. 테스트 소유 Debug 창에서 네 단계 진단을 추가하여 포인터 입력을 시도했으나, 실제 DragStarting·DragOver·Drop 이벤트 발생을 관찰하지 못했다. 코드 결함 또는 입력 자동화 한계를 구분할 근거가 없으므로 드래그는 미검증 상태다. 별도로 Debug·Release 통합 소유 GUI와 소스 검사 102/102는 다른 검증 대상에서 통과했다. [M2.3 후속 세부 기록](WINUI3_M23_FOLLOWUP_KOREAN_RESOURCES_DRAG_DIAGNOSTICS_20260929.md).
+
+
+## 2026-09-29: 단계 간 패널 잔존 시 This PC 자동화 요소 미노출
+
+**상태: OPEN / 원인 미확정.** 독립 WinUI 리팩터링 이후의 전체 M1.9~M2.3 소유 Debug GUI에서 M1.9의 작업 공간·검색 패널을 열어 둔 채 M2.0의 분할 창 숨김/복원을 실행하면, 실제 UIA에서 `ThisPCButton`을 찾지 못했다. 9초 동안 요소 재등장을 기다려도 미노출이 지속됐으며 테스트는 실패했다. 해당 실행의 다른 단계에서 원본 MFC 설정 6개는 보존됐고 소유 프로세스는 정상 종료했다. 반면 M2.0 단독 소유 Debug GUI와 M1.9 이후 두 패널을 명시적으로 닫은 M2.0 소유 Debug GUI에서는 동일 탐색·분할·This PC 조작을 통과했다. 따라서 단순 UIA 일시 지연으로 종결할 수 없고, 패널이 열린 상태의 실제 화면 배치/접근성 노출과 자동화 조건을 구분해야 한다. 이를 해결하지 않은 채 별도 패널 격리 시험 성공을 전체 UI 수용으로 승격하지 않는다. 상세 실패·비교 증거는 `logs/winui-scoped/20260929-222742-gui-Debug.log`, `isolated-m20-after-sidebar-failure.log` 및 `isolated-m19-m20-panels-closed.log`에 보존한다. 다음 담당자는 해당 상태의 실제 합성 화면과 접근성 트리 및 레이아웃 크기를 함께 확인한다.
+
+
+## 2026-09-29: M2.3 세션 복원 후 부모 창 기억 삭제 버튼 UIA 재검색 실패
+
+**상태: OPEN / 원인 미확정.** 동일한 개인 소유 폴더 및 별도 사용자 설정을 사용하는 WinUI Debug GUI에서 현재 세션을 실제 저장하고, 정확히 식별된 새 소유 프로세스가 좌우 두 폴더를 복원한 뒤 정상 종료할 때까지는 성공했다. 하지만 원래 부모 창의 `ClearSessionButton`을 자동화 도구가 클릭하려고 다시 검색하면 `pywinauto.timings.TimeoutError`와 `ElementNotFoundError`가 발생했다. M1.9/M2.0 패널을 제외하고 M2.1~M2.3만 시험했을 때와 M2.3 단독 집중 시험에서도 같은 현상을 관찰했으므로, M1.9 패널 잔존만이 원인이라고 해석할 수 없다. M2.3 집중 시험에서 원래 부모 창의 `WorkspacePanelButton`, `WorkspaceFileBox`, `SaveSessionButton`, `RestoreSessionButton`, `ClearSessionButton`는 모두 한 차례 UIA `exists()=True`로 관찰됐지만, 실제 `wrapper_object()` 재조회는 실패했다. 현재 증거만으로 화면 레이아웃, 포커스, UIA 래퍼 또는 제품 동작의 문제라고 단정할 수 없다. 모든 해당 소유 테스트에서는 원래 MFC 사용자 설정 6개가 보호되고 소유 프로세스가 정상 종료했다. 로컬 무시 로그: `logs/winui-scoped/20260929-223318-gui-Debug.log`, `isolated-m21-m22-m23-debug.log`, `isolated-m23-post-child-uia-diagnostic.log` 및 `isolated-m23-control-bounds.log`. 사람의 실제 소유 창 화면 및 UIA/컨트롤 실제 경계 측정을 결합한 단일 재현을 확보하기 전에는 해결 완료나 M2.3 통합 GUI PASS라고 보고하지 않는다.

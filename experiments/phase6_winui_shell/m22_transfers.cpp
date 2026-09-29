@@ -57,7 +57,7 @@ void MainWindow::OnFileRightTapped(
 }
 void MainWindow::UpdateSort(int selection){
  if(selection<0||selection>3)return;
- mSortMode[mModel.activePane]=selection;
+ mFileLists[mModel.activePane].sortMode=selection;
  FillFiles(mModel.activePane);
 }
 void MainWindow::RunTransfer(fxfile::shelltransfer::Kind kind){

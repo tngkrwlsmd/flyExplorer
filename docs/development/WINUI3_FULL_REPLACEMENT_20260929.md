@@ -1,6 +1,6 @@
 # flyExplorer full WinUI 3 UI replacement ? dedicated migration worktree
 
-**M2.3 ??:** ??? ??? 19? ? ?? ?? ?? ??, ?? ??? ?? ?? ??. Debug?Release M1.9~M2.3 ?? ?? GUI ?? PASS??? ??? ??? ?? ?? ??? ?? ??? ???. [M2.3 ?? ??/??](WINUI3_M23_FOLLOWUP_KOREAN_RESOURCES_DRAG_DIAGNOSTICS_20260929.md)
+**M2.3 후속 부분 구현:** 한국어 리소스 19개 추가, 드래그 진단 및 로컬 파일 유형 표시를 포함한다. 현재 범위의 소스 검사 102/102, WinUI Debug·Release 통합 소유 GUI는 통과했지만 드래그 이벤트 도달 여부와 전체 MFC 기능 동등성은 아직 확인되지 않았다. [M2.3 후속 세부 기록](WINUI3_M23_FOLLOWUP_KOREAN_RESOURCES_DRAG_DIAGNOSTICS_20260929.md).
 
 
 **M2.3 단계별 통합 (2026-09-29):** 독립 WinUI가 실제 클립보드 CF_HDROP와 명시적 개인 프로필 세션 저장/자동 복원 코드를 포함한다. 한글·사용자 설정 격리/native Debug·Release 및 소유 Debug·Release 세션 UIA가 검증됐다. **드래그는 소스와 컴파일만 완료, 물리 소유 GUI 자동화 실패**로 아직 수용되지 않았다. 외부 Shell 메뉴·실제 휴지통/복구·OS 클립보드 실사용 격리 시험, 전면 .resw, 아이콘/열·설치/되돌리기 및 MFC 동등성은 미완료. [범위와 정확한 증거](WINUI3_M23_CLIPBOARD_SESSION_DRAG_STAGING_20260929.md).

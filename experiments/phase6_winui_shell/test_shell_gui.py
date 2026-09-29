@@ -384,6 +384,17 @@ try:
           ownedwindows=ownedwindows,
           left=left,right=right,inner=inner,
           owned=owned,localdata=localdata,env=env,exe=EXE)
+ # Diagnostic only: distinguish a post-M19 expanded-panel layout from
+ # the same M20 native command test on an otherwise independent window.
+ if os.environ.get("FLY_M20_OWNED_COLLAPSE_M19_PANELS")=="YES":
+  assert os.environ.get("FLY_M19_OWNED_FEATURES")=="YES"
+  for button,child in (("SearchPanelButton","SearchScopeBox"),
+                       ("WorkspacePanelButton","WorkspaceFileBox")):
+   if element(child).exists(timeout=.3):
+    safe_click(element(button))
+    eventually(lambda:not element(child).exists(timeout=.2),
+      "owned M19 panel did not collapse: "+child,6)
+  print("M20_TEST_OWNED_M19_PANELS_COLLAPSED",True,flush=True)
  if os.environ.get("FLY_M20_OWNED_SHELL")=="YES":
   from test_m20_shell_gui import run as m20_run
   m20_run(win=win,element=element,safe_click=safe_click,

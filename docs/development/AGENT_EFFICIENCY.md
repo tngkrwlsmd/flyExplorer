@@ -50,6 +50,12 @@
 
 객관적인 timeout·정체·오류 증거가 있을 때만 한 차례 상태를 확인하고 최초 실제 오류 근처만 추가 확인한다. 추가 조회로 판단이 바뀌지 않으면 중단한다. 중간 로그의 무출력이나 `start_process`의 초기 PID 반환만으로 성공/실패를 추정하지 않는다. PowerShell 예시는 `& $buildCommand *> $localLog; $code=$LASTEXITCODE; Write-Output ('BUILD_EXIT=' + $code); if($code -ne 0){Select-String $localLog -Pattern 'error C[0-9]+|error LNK[0-9]+|error MSB[0-9]+|fatal error' | Select-Object -First 5}`와 같은 형태이며, 정상 성공은 필요한 최종 결과 몇 줄만 선택한다. 작업 성격에 맞게 로컬 로그와 패턴을 조정하되 전체 로그는 검사 요청 또는 실제 오류가 요구하지 않는 한 반환하지 않는다.
 
+### flyExplorer 독립 WinUI 검증 실행 예시
+
+`python experiments/phase6_winui_shell/run_scoped_checks.py source`는 관련 소스 계약을 검증한다. `build --configuration Debug`와 `gui --configuration Debug`는 해당 빌드와 격리된 GUI를 각각 실행한다. `full`은 소스 검사부터 Debug·Release 빌드와 소유 GUI까지 첫 실패에서 중단한다. 전체 로그는 Git 무시된 `logs/winui-scoped/`에 저장하고 최종 결과만 출력한다. 이미 동일 코드와 조건에서 검증된 단계는 다시 실행하지 않는다. 이 래퍼는 전역 클립보드·휴지통이나 실제 물리 드래그를 검증하지 않는다. 필요할 때만 `--isolate-feature-panels`를 추가해 각 기능별 테스트의 접혀 있는 패널 조건을 분리할 수 있으나, M1.9의 검색·작업 공간 패널을 열어 둔 상태에서 M2.0 분할 창을 복원하는 교차 기능 시험이 통과했다는 증거가 되지는 않는다.
+
+원격 PowerShell에서 Python에 한국어를 전달할 때 입력 인코딩을 명시적으로 UTF-8로 지정하고, 실제 파일의 UTF-8 디코딩과 변경된 문장의 회귀 검사를 수행한다. 콘솔 표시 손상만으로 파일 내용이 손상됐다고 단정하지 않는다.
+
 ## 4. 실패 분석과 재시도 제한
 
 실패하면 최초의 실제 오류와 실행 환경을 분석하고 구별 가능한 원인 가설을 세운다. 같은 명령을 조건 변경 없이 재시도하지 않는다. 실패 원인과 관계된 코드·설정·명령·환경을 변경한 후에만 재시도한다.

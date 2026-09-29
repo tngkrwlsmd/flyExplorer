@@ -26,6 +26,20 @@ class M23Followup(unittest.TestCase):
       self.assertEqual(lookup[key],value,key)
       found+=1
   self.assertGreaterEqual(found,15)
+ def test_latest_document_summaries_not_corrupted(self):
+  docs=R/"docs/development"
+  names=("CURRENT_STATUS.md","README.md",
+         "WINUI3_FULL_REPLACEMENT_20260929.md",
+         "ERROR_HISTORY.md",
+         "WINUI3_M23_FOLLOWUP_KOREAN_RESOURCES_DRAG_DIAGNOSTICS_20260929.md")
+  for name in names:
+   text=(docs/name).read_text(encoding="utf-8")
+   self.assertIn("M2.3 후속" if name!="ERROR_HISTORY.md" else "M2.3 한국어",text,name)
+   self.assertNotIn("M2.3 ??:",text[:500],name)
+   self.assertNotIn("M2.3 ?? ??:",text[:500],name)
+   self.assertNotIn("## ??",text[-500:],name)
+   self.assertNotIn(chr(0xfffd),text[:350],name)
+
  def test_fixed_seven_true_hangul_drop_failure_messages(self):
   drag=source("m23_drag.cpp")
   self.assertNotIn('StatusText().Text(L"?',drag)
@@ -36,6 +50,30 @@ class M23Followup(unittest.TestCase):
   s=source("m23_drag.cpp")
   self.assertIn('FLY_M23_OWNED_DRAG_TRACE',s)
   self.assertIn('traceOwnedDrag()',s)
+ def test_file_list_cache_has_one_per_pane_state_owner(self):
+  state=source("file_list_state.h")
+  window=source("MainWindow.xaml.h")
+  render=source("MainWindow.xaml.cpp")
+  for name in ("sortMode","details","renderedPaths","epoch",
+               "invalidate()","isCurrent(","accepts("):
+   self.assertIn(name,state)
+  self.assertIn("std::array<fxfile::previewlist::PaneState,2> mFileLists",window)
+  self.assertIn('ClInclude Include="file_list_state.h"',source("FlyExplorerWinUIShell.project-template.xml"))
+  self.assertNotIn("mFileDetails",window)
+  self.assertIn("mFileLists[side].begin(route,tab)",render)
+  self.assertIn("mFileLists[side].isCurrent(",render)
+  self.assertIn("mFileLists[side].accepts(ticket,route,tab)",render)
+
+ def test_owned_physical_drag_requires_manual_input_not_automatic_claim(self):
+  probe=source("manual_owned_drag_probe.py")
+  doc=(R/"docs/development"/
+       "WINUI3_M23_FOLLOWUP_KOREAN_RESOURCES_DRAG_DIAGNOSTICS_20260929.md").read_text(encoding="utf-8")
+  for item in ("FLY_M23_OWNED_DRAG_TRACE","tempfile.mkdtemp",
+               "stdin=subprocess.DEVNULL","OWNED_FILE_COPY=","NOT_OBSERVED"):
+   self.assertIn(item,probe)
+  self.assertIn("수동 드래그 판별 절차",doc)
+  self.assertIn("NOT TESTED",doc)
+
  def test_type_classification_does_not_invoke_shell_extension_on_ui_thread(self):
   impl=source("MainWindow.xaml.cpp")
   self.assertIn('entry.typeLabel=L"폴더"',impl)

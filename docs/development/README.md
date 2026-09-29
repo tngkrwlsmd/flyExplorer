@@ -1,6 +1,6 @@
 # flyExplorer development documentation index
 
-**M2.3 ?? ??:** ?? ??? ??? ?? ??? ??, ?? ?? ?? ??? ??; Debug?Release ?? ?? ?? PASS. ??/?? ???, ?? ????, ??? ?? ??? ???. [M2.3 ?? ??/??](WINUI3_M23_FOLLOWUP_KOREAN_RESOURCES_DRAG_DIAGNOSTICS_20260929.md)
+**M2.3 후속:** [한국어 리소스·파일 유형 표시·드래그 진단 및 부분 수용 결과](WINUI3_M23_FOLLOWUP_KOREAN_RESOURCES_DRAG_DIAGNOSTICS_20260929.md). 실제 소유 Debug·Release GUI와 소스 검사 102/102는 통과했으나, 물리 드래그와 전역 클립보드·휴지통 검증은 미완료다.
 
 
 **M2.3 단계별 통합 (2026-09-29):** [M2.3 Windows 파일 클립보드 공통 계약, 개인 세션·재실행 복원, 실험적 드래그의 별도 검증 현황 및 후속 MFC 동등성 작업](WINUI3_M23_CLIPBOARD_SESSION_DRAG_STAGING_20260929.md). 원본 사용자 클립보드/휴지통을 자동 검사에서 조작하지 않았으며 컴파일과 실제 UIA PASS를 구분한다.
