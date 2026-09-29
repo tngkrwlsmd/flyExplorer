@@ -1,5 +1,15 @@
 # flyExplorer — current project status (2026-09-28 baseline; 2026-09-29 migration-branch addendum)
 
+
+## CURRENT CROSS-BRANCH ALIGNMENT (2026-09-29) - documents only, no new code integration
+
+**After native mainline branch consolidation**, the last independently tested native `main` source commit before these documentation-only updates was `f074a6b1651dae6e9a1603465078310822a8f761`, with UXH-07 named workspaces, UXH-06 opt-in recent search scopes and the existing ModernUI solution superseding UI-02's older duplicate renderer. The native original-root x64 build passed **17/0 PASS WITH SKIPS** (live HKCU smoke deliberately skipped), combined 25/25 contracts and actual owned root UXH-06/Dark UI-02 GUI; additional isolated Light/Dark primary/modal tests passed. The original-root EXE SHA256 is `41D51B87E74C839C33124F22F63AC0C7379B61E0F32A12196D1459649AF81BAC`; six user settings and original screenshot were preserved.
+
+This branch remains the **separately tested, non-default M1.8 WinUI preview** at `eb7ee1a335484d88128bfcf117a4f857fbee4c60`, not yet source-merged or feature-reconciled with that newer mainline. Its own existing M1.8 paired Debug/Release/owned GUI and 14/14 architecture evidence stays valid ONLY for the migration revision. Exactly TWO active local/remote branches and two worktrees remain; old branch names were removed and unique history archived locally. [Current alignment and explicit future code/test gates](MIGRATION_MAINLINE_ALIGNMENT_20260929.md).
+
+**All older branch/worktree cleanup, uncommitted UXH-07 and earlier-phase notes below are revision-specific historical records, NOT the present mainline or migration branch state.** Real hostile external Shell extensions, live network SMB, external virtual namespace events, native/WinUI feature parity, physical other-DPI/HC/Narrator remain unverified.
+
+
 ## Latest 2026-09-29: M1.8 Shell timeout, owned COM/UNC faults and virtual notifications — SCOPED PASS
 
 The experimental WinUI preview now distinguishes exhausted two-attempt Shell timeout failures from inaccessible UNC path errors while retaining its last accepted folder. In actual owned Debug GUI tests, a disposable native helper ran a self-contained 30-second blocking IUnknown COM method: the other pane continued and the affected helper was terminated and restarted. A separate owned GUI run exhausted BOTH 4.5-second COM helper attempts and verified the actionable timeout message and unchanged left/right folder lists. An invalid, read-only LOCAL loopback UNC path was rejected with the network-specific message and last good pane retained. No third-party extension was installed, and no actual remote SMB failure was exercised.

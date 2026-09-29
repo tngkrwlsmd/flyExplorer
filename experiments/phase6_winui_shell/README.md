@@ -1,5 +1,8 @@
 # WinUI 3 full UI migration — M1.8 isolated Shell stability
 
+
+**CURRENT branch context:** This is a non-default M1.8 WinUI experimental preview at `eb7ee1a`, not a substitute for the now-merged native product `main` `f074a6b` (UXH-07 named workspaces, UXH-06 opt-in recent search locations, current ModernUI UI-02). These codebases are **not source-reconciled**, so neither shared feature parity nor a new combined build is claimed. Branch details and next integration gates: [migration/mainline alignment](../../docs/development/MIGRATION_MAINLINE_ALIGNMENT_20260929.md). Historical M1.8 test evidence below remains exact for this older migration revision.
+
 The preview retains its native two-lane private helper Jobs and independent filesystem watcher. M1.8 adds distinct exhausted-timeout and invalid UNC error messages without discarding the active folder, plus an independent hidden-window Shell notification subscription for selected virtual PIDLs. Actual owned GUI tests passed a test-only blocked COM method, both exhausted retries, an invalid localhost UNC, and a Shell event confined to a synthetic owned folder. Actual external third-party provider and virtual-folder changes remain unverified. See [M1.8 scoped verification](../../docs/development/WINUI3_M18_SHELL_STABILITY_20260929.md).
 
 ## Historical M1.7 integration

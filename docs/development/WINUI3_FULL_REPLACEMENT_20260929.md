@@ -2,6 +2,9 @@
 
 Date: 2026-09-29.
 
+**CURRENT post-main-consolidation baseline (docs-only):** The latest separately tested native `main` code-bearing baseline before this docs-only sync was `f074a6b` with merged UXH-07/UXH-06 and the current native ModernUI UI-02; the separately tested migration code-bearing baseline was `eb7ee1a` (M1.8) and has **NOT** been merged/rebased against the latest main source or declared production parity. Historical old Phase5 remote/UXH-07 feature-branch and dirty-worktree descriptions below are revision-scoped. Plan and validate the future native UXH-07 named-workspace and UXH-06 privacy/recent-search contract transfer separately; do not silently promote M1.8 fault tests to an untested combined tree. [Current branch state and reconciliation plan](MIGRATION_MAINLINE_ALIGNMENT_20260929.md).
+
+
 **LATEST M1.8 scoped update:** The separate WinUI preview now has explanatory bounded-timeout and invalid UNC failure UI, a dedicated Shell namespace notification registration thread and test-owned COM fault/loopback GUI evidence. No real broken third-party extension or external virtual provider emission has been verified. See [M1.8 scoped evidence](WINUI3_M18_SHELL_STABILITY_20260929.md).
 
 **HISTORICAL M1.7 scoped update (after the M1.6 standalone experiment):** [Actual WinUI two-lane native helper supervision, private Job timeout/restart, separate native watcher and full real Debug/Release GUI acceptance](WINUI3_M17_PANE_PROCESS_SUPERVISOR_20260929.md). The helper is now truly used by the isolated WinUI preview, NOT the default MFC product. The independent helper inherits the user's Windows token; it has not been certified against real hostile third-party extensions. The earlier M1.6 *helper-only* statements below are historical.
