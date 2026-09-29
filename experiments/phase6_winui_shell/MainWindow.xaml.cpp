@@ -42,28 +42,70 @@ namespace winrt::FlyExplorerWinUIShell::implementation
         // The worker owns NO MainWindow/WinRT UI object. Cross-apartment
         // notifications carry only owned native value snapshots/PIDLs and
         // enter the XAML thread through its actual DispatcherQueue.
-        mWorker=std::make_unique<fxfile::shellnav::AsyncShellWorker>(
-            [weak,dispatch](fxfile::shellnav::AsyncResult answer) {
-                auto envelope=std::make_shared<fxfile::shellnav::AsyncResult>(
+        mSupervisor=std::make_unique<fxfile::shellnav::IsolatedShellSupervisor>(
+            [weak,dispatch](fxfile::shellnav::IsolatedResult answer) {
+                auto envelope=std::make_shared<fxfile::shellnav::IsolatedResult>(
                     std::move(answer));
                 dispatch.TryEnqueue([weak,envelope] {
                     if(auto ui=weak.get())
                         ui->OnNativeResult(std::move(*envelope));
                 });
-            },
+            });
+        mWatcher=std::make_unique<fxfile::directorychange::DirectoryWatcher>(
             [weak,dispatch](std::uint64_t route,std::uint64_t token) {
                 dispatch.TryEnqueue([weak,route,token] {
                     if(auto ui=weak.get())ui->OnNativeChange(route,token);
                 });
             });
-        if(!mWorker->start())
-            throw winrt::hresult_error(E_FAIL,L"Native Shell STA startup failed");
+        // Exact sibling of THIS preview binary, never a PATH lookup or
+        // arbitrary installed product/Explorer process.
+        wchar_t module[32768]{};
+        const DWORD chars=::GetModuleFileNameW(nullptr,module,
+             static_cast<DWORD>(std::size(module)));
+        if(!chars || chars>=std::size(module))
+            throw winrt::hresult_error(E_FAIL,L"Own preview EXE path unavailable");
+        std::wstring helper(module,chars);
+        const auto last=helper.find_last_of(L"\\/");
+        if(last==std::wstring::npos)
+            throw winrt::hresult_error(E_FAIL,L"Invalid preview EXE path");
+        helper.resize(last+1);
+        helper+=L"FlyShellIsolationHelper.exe";
+        if(!mSupervisor->start(std::move(helper)))
+            throw winrt::hresult_error(E_FAIL,L"Owned Shell helper startup failed");
+        if(!mWatcher->start())
+            throw winrt::hresult_error(E_FAIL,L"Independent native watcher startup failed");
         const auto initial=StartFolder().native();
+        bool testLeftDelay=false;
+#if defined(_DEBUG)
+        // Only a user-owned isolated test process explicitly opting in
+        // can inject a synthetic slow helper. No UI path string triggers it.
+        wchar_t ownedFlag[8]{};
+        if(::GetEnvironmentVariableW(
+             L"FLY_M16_OWNED_TEST_ONLY",ownedFlag,8)==3 &&
+             !wcscmp(ownedFlag,L"YES")){
+            int argc=0;
+            auto argv=::CommandLineToArgvW(::GetCommandLineW(),&argc);
+            if(argv){
+                for(int i=2;i<argc;++i)
+                    if(!wcscmp(argv[i],L"--m17-test-left-helper-hang"))
+                        testLeftDelay=true;
+                ::LocalFree(argv);
+            }
+        }
+#endif
         for(int side=0;side!=2;++side) {
             auto& pane=mPanes[side];
             pane.tabs.emplace_back();
             pane.routeIds.push_back(mNextRoute++);
             pane.pending.push_back(0);
+            pane.filesystemPaths.emplace_back();
+#if defined(_DEBUG)
+            if(side==0 && testLeftDelay){
+                pane.pending[0]=mSupervisor->submitOwnedTestDelay(
+                    0,pane.routeIds[0],initial);
+                continue;
+            }
+#endif
             QueuePath(side,initial);
         }
         const bool nativeCoreLinked =
@@ -77,7 +119,8 @@ namespace winrt::FlyExplorerWinUIShell::implementation
         // Never join a Shell extension which might be blocked in COM.
         // Detached State owns all native handles. UI work is guarded
         // by get_weak(), route tokens, and closed DispatcherQueue.
-        if(mWorker)mWorker->shutdown();
+        if(mSupervisor)mSupervisor->shutdown();
+        if(mWatcher)mWatcher->shutdown();
     }
     int32_t MainWindow::MyProperty() {return 0;}
     void MainWindow::MyProperty(int32_t) {}
@@ -98,8 +141,11 @@ namespace winrt::FlyExplorerWinUIShell::implementation
     {
         auto& pane=mPanes[side];
         const auto route=pane.routeIds[pane.active];
-        const auto id=mWorker->submitParsing(route,std::move(path));
+        const auto id=mSupervisor->submitParsing(side,route,std::move(path));
         if(id) {
+            // At most one outstanding helper operation per active pane.
+            // Clear the canceled prior tab's UI pending marker too.
+            for(auto& previous:pane.pending)previous=0;
             pane.pending[pane.active]=id;
             StatusText().Text(L"Native Shell engine active: async STA loading");
         } else StatusText().Text(L"Shell worker could not queue location");
@@ -113,9 +159,12 @@ namespace winrt::FlyExplorerWinUIShell::implementation
             return;
         }
         auto& pane=mPanes[side];
-        const auto id=mWorker->submit(
-            pane.routeIds[pane.active],std::move(target),action);
+        const auto id=mSupervisor->submit(
+            side,pane.routeIds[pane.active],std::move(target),action);
         if(id) {
+            // At most one outstanding helper operation per active pane.
+            // Clear the canceled prior tab's UI pending marker too.
+            for(auto& previous:pane.pending)previous=0;
             pane.pending[pane.active]=id;
             StatusText().Text(L"Native Shell engine active: async STA loading");
         } else StatusText().Text(L"Shell worker could not queue request");
@@ -124,31 +173,26 @@ namespace winrt::FlyExplorerWinUIShell::implementation
     {
         auto& pane=mPanes[side];
         const auto route=pane.routeIds[pane.active];
-        std::wstring path;
-        if((side==0 || mSplit) &&
-           pane.tabs[pane.active].snapshot().folder.valid()) {
-            wchar_t buffer[32768]={};
-            if(::SHGetPathFromIDListEx(
-                 pane.tabs[pane.active].snapshot().folder.get(),
-                 buffer,static_cast<DWORD>(std::size(buffer)),0))
-                path=buffer;
-        }
+        // This path is computed by the disposable Shell helper and passed
+        // as a bounded wire value. No SHGetPathFromIDListEx on WinUI STA.
+        const std::wstring path=(side==0 || mSplit)?
+            pane.filesystemPaths[pane.active]:std::wstring{};
         if(!force && route==mWatchedRoutes[side] &&
            path==mWatchedPaths[side])return;
         if(mWatchedRoutes[side])
-            mWorker->unwatch(mWatchedRoutes[side]);
+            mWatcher->unwatch(mWatchedRoutes[side]);
         mWatchedRoutes[side]=0;
         mWatchTokens[side]=0;
         mWatchedPaths[side].clear();
         if(!path.empty()) {
             const auto token=mNextWatchToken++;
-            mWorker->watch(route,token,path);
+            mWatcher->watch(route,token,path);
             mWatchedRoutes[side]=route;
             mWatchTokens[side]=token;
             mWatchedPaths[side]=std::move(path);
         }
     }
-    void MainWindow::OnNativeResult(fxfile::shellnav::AsyncResult result)
+    void MainWindow::OnNativeResult(fxfile::shellnav::IsolatedResult result)
     {
         for(int side=0;side!=2;++side) {
             auto& pane=mPanes[side];
@@ -171,10 +215,13 @@ namespace winrt::FlyExplorerWinUIShell::implementation
                 const auto applied=pane.tabs[i].accept(
                     std::move(result.snapshot),action);
                 if(applied==S_OK) {
+                    pane.filesystemPaths[i]=std::move(result.filesystemPath);
                     if(i==pane.active) {
-                        Refresh(result.action==Action::Refresh?
-                            L"Native Shell engine active: changes refreshed asynchronously":
-                            L"Native Shell engine active: async folder loaded");
+                        Refresh(result.recovered?
+                            L"Native Shell helper recovered from owned timeout":
+                            result.action==Action::Refresh?
+                            L"Native Shell helper: filesystem changes refreshed":
+                            L"Native Shell helper: isolated folder loaded");
                         UpdateWatch(side,true);
                     }else RefreshTabs(side);
                 }else if(FAILED(applied)) {
@@ -341,6 +388,7 @@ namespace winrt::FlyExplorerWinUIShell::implementation
         pane.tabs.emplace_back();
         pane.routeIds.push_back(mNextRoute++);
         pane.pending.push_back(0);
+        pane.filesystemPaths.emplace_back();
         pane.active=pane.tabs.size()-1;
         QueuePidl(mActivePane,std::move(start),
                   fxfile::shellnav::NavigationAction::Open);
@@ -354,10 +402,12 @@ namespace winrt::FlyExplorerWinUIShell::implementation
             return;
         }
         const auto dropped=pane.routeIds[pane.active];
-        mWorker->forget(dropped);
+        mSupervisor->forget(dropped);
+        mWatcher->unwatch(dropped);
         pane.tabs.erase(pane.tabs.begin()+pane.active);
         pane.routeIds.erase(pane.routeIds.begin()+pane.active);
         pane.pending.erase(pane.pending.begin()+pane.active);
+        pane.filesystemPaths.erase(pane.filesystemPaths.begin()+pane.active);
         if (pane.active>=pane.tabs.size())pane.active=pane.tabs.size()-1;
         Refresh(L"Tab closed");
     }

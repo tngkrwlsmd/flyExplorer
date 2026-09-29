@@ -61,7 +61,13 @@ p=None;hwnd=None
 try:
  env={**os.environ,"APPDATA":str(appdata),"LOCALAPPDATA":str(localdata),
       "TEMP":str(temp),"TMP":str(temp)}
- p=subprocess.Popen([str(EXE),str(left)],cwd=EXE.parent,env=env,
+ owned_block=os.environ.get("FLY_M17_OWNED_HANG")=="YES"
+ if owned_block:
+  assert CONFIG=="Debug","synthetic hang is compiled only for Debug"
+  env["FLY_M16_OWNED_TEST_ONLY"]="YES"
+ args=[str(EXE),str(left)]
+ if owned_block:args.append("--m17-test-left-helper-hang")
+ p=subprocess.Popen(args,cwd=EXE.parent,env=env,
    stdin=subprocess.DEVNULL,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
  def main():
   return [(h,t) for h,t in ownedwindows(p.pid) if
@@ -90,10 +96,24 @@ try:
       "LeftTabs","RightTabs","LeftFiles","RightFiles","StatusText")
  for key in ids:assert element(key).exists(timeout=5),("Missing XAML control",key)
  print("REAL_WINUI_SHELL_CONTROLS",len(ids),"DUAL_PANES_AND_TABS=True",flush=True)
- assert "native shell engine active" in element("StatusText").window_text().lower(),(
-   "UI-independent native C++ core was not bound at actual startup",
+ startup_status=element("StatusText").window_text().lower()
+ assert ("native shell engine active" in startup_status or
+         "native shell helper:" in startup_status),(
+   "UI-independent native core/helper was not active at startup",
    element("StatusText").window_text())
  print("ACTUAL_CPP_NATIVE_CORE_NULL_CONTRACT_LINKED",True,flush=True)
+ if owned_block:
+  eventually(lambda:any("Nested" in e.window_text()
+      for e in element("RightFiles").descendants()),
+      "right pane stalled when LEFT owned helper blocked",3)
+  assert not any("Nested" in e.window_text()
+      for e in element("LeftFiles").descendants()),(
+      "left unexpectedly finished before test-owned block deadline")
+  print("REAL_WINUI_RIGHT_PANE_PROGRESS_WHILE_LEFT_HELPER_BLOCKED",True,flush=True)
+  eventually(lambda:"recovered from owned timeout" in
+      element("StatusText").window_text().lower(),
+      "left helper timeout and restart never reached real WinUI",13)
+  print("REAL_WINUI_LEFT_HELPER_TIMEOUT_AND_AUTOMATIC_RESTART",True,flush=True)
  eventually(lambda:str(left).lower() in element("AddressBox").get_value().lower(),
             "first COM worker result not dispatched to the WinUI thread",12)
  # Two TabView pane controls are genuinely visible; they are not MFC.
@@ -238,8 +258,11 @@ try:
  rightaddr.type_keys("{ENTER}",set_foreground=True)
  eventually(lambda:str(right).lower() in element("AddressBox").get_value().lower(),
             "right pane address entry")
+ # Typed address updates before out-of-process Shell response; require real rows.
+ eventually(lambda:any("Secondary" in e.window_text()
+     for e in element("RightFiles").descendants()),
+     "right helper did not deliver real independent pane entries",12)
  right_items=[e.window_text() for e in element("RightFiles").descendants()]
- assert any("Secondary" in x for x in right_items),right_items[:10]
  left_items=[e.window_text() for e in element("LeftFiles").descendants()]
  assert any("Nested" in x for x in left_items),left_items[:10]
  safe_click(element("PrimaryPaneTitle"))

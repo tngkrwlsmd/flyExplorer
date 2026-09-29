@@ -24,10 +24,15 @@ class IsolationContracts(unittest.TestCase):
     def test_strict_read_only_ipc_contract(self):
         h=source("FlyShellIsolationHelper.cpp")
         t=source("test_process_isolation.py")
-        for required in ("kMaxUnits=16384","kMaxItemUnits=4096",
-                         "kMaxPidl=65536","kMaxBody=4u*1024u*1024u",
-                         "sizeof(Reply)==28","exactRead","exactWrite",
-                         "ILGetSize","checksum(body.bytes)"):
+        wire=source(ROOT/"src/base/shell_isolation_wire.h")
+        for required in ("kVersion=2","kAbsolutePidl=2",
+                         "kMaxPathUnits=16384","kMaxPidl=65536",
+                         "kMaxBody=4u*1024u*1024u","sizeof(Reply)==28",
+                         "validPidl"):
+            self.assertIn(required,wire)
+        for required in ("exactRead","exactWrite","ILGetSize",
+                         "checksum(body.bytes.data(),body.bytes.size())",
+                         "SHGetPathFromIDListEx"):
             self.assertIn(required,h)
         for forbidden in ("DeleteFileW(","MoveFileW(","CopyFileW(",
                           "SHFileOperationW(","ShellExecuteW("):
@@ -46,8 +51,11 @@ class IsolationContracts(unittest.TestCase):
         self.assertIn("TerminateJobObject(slowjob",t)
         self.assertIn("OWNED_JOB_ONLY_TIMEOUT",t)
         self.assertIn("OWNED_JOB_KILL_ON_CLOSE",t)
-        self.assertIn("mWorker->submit",main)
-        self.assertNotIn("FlyShellIsolationHelper",main)
+        self.assertIn("mSupervisor->submit",main)
+        self.assertIn("FlyShellIsolationHelper.exe",main)
+        self.assertNotIn("mWorker->submit",main)
+        project=source(ROOT/"experiments/phase6_winui_shell/FlyExplorerWinUIShell.project-template.xml")
+        self.assertNotIn("shell_async_worker.cpp",project)
 
 if __name__=="__main__":
     unittest.main()

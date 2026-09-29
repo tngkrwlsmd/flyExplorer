@@ -2,7 +2,9 @@
 
 Date: 2026-09-29.
 
-**Later M1.6 scoped update:** [Current actual risk audit and isolated process-helper proof](WINUI3_M16_SHELL_PROCESS_ISOLATION_20260929.md). The helper's Debug/Release and test-owned dual-lane watchdog/recovery proof PASS, but the actual WinUI UI STILL runs the old in-process STA; do not infer GUI process isolation or real extension crash recovery from this experiment. Historical M1.5 results and subsequent worktree notes below remain revision-scoped.
+**LATEST M1.7 scoped update (after the M1.6 standalone experiment):** [Actual WinUI two-lane native helper supervision, private Job timeout/restart, separate native watcher and full real Debug/Release GUI acceptance](WINUI3_M17_PANE_PROCESS_SUPERVISOR_20260929.md). The helper is now truly used by the isolated WinUI preview, NOT the default MFC product. The independent helper inherits the user's Windows token; it has not been certified against real hostile third-party extensions. The earlier M1.6 *helper-only* statements below are historical.
+
+**Historical M1.6 scoped update:** [Current actual risk audit and isolated process-helper proof](WINUI3_M16_SHELL_PROCESS_ISOLATION_20260929.md). The helper's Debug/Release and test-owned dual-lane watchdog/recovery proof PASS, but the actual WinUI UI STILL runs the old in-process STA; do not infer GUI process isolation or real extension crash recovery from this experiment. Historical M1.5 results and subsequent worktree notes below remain revision-scoped.
 
 **Post-M1.5 housekeeping update:** The old Phase5 clean worktree was deliberately removed AFTER this earlier plan was written. Its remote productization source is retained, historical local-only evidence is safely archived, and the migration project now owns its own pinned NuGet cache. See [verified cleanup](LOCAL_GIT_WORKTREE_CLEANUP_20260929.md) for latest worktree truth; historical preservation statements below describe their original test-time state.
 

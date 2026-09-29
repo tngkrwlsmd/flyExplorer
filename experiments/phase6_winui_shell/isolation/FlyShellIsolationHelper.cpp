@@ -1,5 +1,7 @@
-// M1.6 experimental read-only Shell fault boundary (NOT a restricted-token sandbox).
+// M1.7 read-only Shell namespace helper. One request per exact owned process.
+// Fault boundary ONLY: inherits user token; not a security sandbox.
 #include "../../../src/base/shell_navigation_core.h"
+#include "../../../src/base/shell_isolation_wire.h"
 #include <windows.h>
 #include <shellapi.h>
 #include <shlwapi.h>
@@ -11,20 +13,8 @@
 #pragma comment(lib,"shell32.lib")
 #pragma comment(lib,"shlwapi.lib")
 #pragma comment(lib,"ole32.lib")
-
 namespace {
-constexpr std::uint32_t kMagic=0x314c5346; // FSL1 little endian
-constexpr std::uint32_t kVersion=1;
-constexpr std::uint32_t kMaxUnits=16384,kMaxItemUnits=4096;
-constexpr std::uint32_t kMaxPidl=65536,kMaxBody=4u*1024u*1024u;
-#pragma pack(push,1)
-struct Request {std::uint32_t magic,version,pathUnits;};
-struct Reply {std::uint32_t magic,version;std::int32_t hr;
-              std::uint32_t count,bodyBytes,checksum,flags;};
-#pragma pack(pop)
-static_assert(sizeof(Request)==12,"request protocol");
-static_assert(sizeof(Reply)==28,"reply protocol");
-
+using namespace fxfile::isolation;
 bool exactRead(HANDLE h,void* out,std::uint32_t n) {
     auto* p=static_cast<unsigned char*>(out);
     while(n) {
@@ -47,39 +37,44 @@ struct Buffer final {
     bool valid=true;
     std::vector<unsigned char> bytes;
     void append(const void* input,size_t len) {
-        if(!valid||len>kMaxBody||bytes.size()>kMaxBody-len){
+        if(!valid||len>kMaxBody||bytes.size()>kMaxBody-len) {
             valid=false;return;
         }
         const auto* ptr=static_cast<const unsigned char*>(input);
         bytes.insert(bytes.end(),ptr,ptr+len);
     }
     void u32(std::uint32_t n){append(&n,sizeof(n));}
-    void name(const std::wstring& s) {
-        if(s.size()>kMaxItemUnits){valid=false;return;}
+    void name(std::wstring const& s,size_t maxUnits=kMaxItemUnits) {
+        if(s.size()>maxUnits){valid=false;return;}
         u32(static_cast<std::uint32_t>(s.size()));
         if(!s.empty())append(s.data(),s.size()*sizeof(wchar_t));
     }
     void pidl(PCIDLIST_ABSOLUTE id) {
         if(!id){valid=false;return;}
         const auto n=::ILGetSize(id);
-        if(n<sizeof(USHORT)||n>kMaxPidl){valid=false;return;}
+        if(!validPidl(id,n)){valid=false;return;}
         u32(n);
         append(id,n);
     }
 };
-std::uint32_t checksum(const std::vector<unsigned char>& payload) {
-    std::uint32_t hash=2166136261u;
-    for(const auto b:payload)hash=(hash^b)*16777619u;
-    return hash;
-}
-bool answer(HANDLE pipe,HRESULT hr,const fxfile::shellnav::Snapshot* snap=nullptr) {
+bool answer(HANDLE pipe,HRESULT hr,
+            fxfile::shellnav::Snapshot const* snap=nullptr) {
     Buffer body;
     std::uint32_t n=0,flags=0;
     if(SUCCEEDED(hr)&&snap) {
         body.name(snap->displayName);
         body.name(snap->parsingName);
+        // SHGetPathFromIDListEx is called ONLY in this disposable child,
+        // never on the WinUI STA. Virtual folders legitimately use "".
+        wchar_t filesystem[32768]{};
+        std::wstring path;
+        if(::SHGetPathFromIDListEx(snap->folder.get(),filesystem,
+            static_cast<DWORD>(_countof(filesystem)),0))
+            path=filesystem;
+        if(path.size()>kMaxPathUnits)path.clear();
+        body.name(path,kMaxPathUnits);
         body.pidl(snap->folder.get());
-        for(const auto& item:snap->children){
+        for(auto const& item:snap->children){
             body.u32(static_cast<std::uint32_t>(item.attributes));
             body.name(item.label);
             body.name(item.parsingName);
@@ -89,20 +84,20 @@ bool answer(HANDLE pipe,HRESULT hr,const fxfile::shellnav::Snapshot* snap=nullpt
         if(snap->truncated)flags=1;
         if(!body.valid){
             hr=HRESULT_FROM_WIN32(ERROR_MORE_DATA);
-            body.bytes.clear();
-            n=flags=0;
+            body.bytes.clear();n=flags=0;
         }
     }
     Reply result{kMagic,kVersion,static_cast<std::int32_t>(hr),
                  n,static_cast<std::uint32_t>(body.bytes.size()),
-                 checksum(body.bytes),flags};
-    return exactWrite(pipe,&result,sizeof(result))&&
-           (body.bytes.empty()||exactWrite(pipe,body.bytes.data(),body.bytes.size()));
+                 checksum(body.bytes.data(),body.bytes.size()),flags};
+    return exactWrite(pipe,&result,sizeof(result)) &&
+           (body.bytes.empty()||
+           exactWrite(pipe,body.bytes.data(),body.bytes.size()));
 }
-}
+} // namespace
 
 int wmain(int argc,wchar_t** argv) {
-    // Only a test-owned launcher that sets this exact opt-in can delay a child.
+    // Only isolated regression launches set this environment & argument.
     if(argc==2&&!wcscmp(argv[1],L"--test-block")){
         wchar_t flag[16]{};
         const auto len=::GetEnvironmentVariableW(
@@ -117,18 +112,37 @@ int wmain(int argc,wchar_t** argv) {
        !output||output==INVALID_HANDLE_VALUE)return 3;
     Request req{};
     if(!exactRead(input,&req,sizeof(req))||
-       req.magic!=kMagic||req.version!=kVersion||
-       !req.pathUnits||req.pathUnits>kMaxUnits)return 4;
-    std::wstring path(req.pathUnits,L'\0');
-    if(!exactRead(input,&path[0],req.pathUnits*sizeof(wchar_t))||
-       path.find(L'\0')!=std::wstring::npos)return 5;
+       req.magic!=kMagic||req.version!=kVersion)return 4;
+    if((req.type==kPath && (!req.length||req.length>kMaxPathUnits)) ||
+       (req.type==kAbsolutePidl && (!req.length||req.length>kMaxPidl)) ||
+       (req.type!=kPath && req.type!=kAbsolutePidl))return 4;
+    std::wstring parsing;
+    std::vector<unsigned char> pidlBytes;
+    if(req.type==kPath){
+        parsing.resize(req.length);
+        if(!exactRead(input,&parsing[0],req.length*sizeof(wchar_t))||
+           parsing.find(L'\0')!=std::wstring::npos)return 5;
+    }else{
+        pidlBytes.resize(req.length);
+        if(!exactRead(input,pidlBytes.data(),req.length) ||
+           !validPidl(pidlBytes.data(),pidlBytes.size()))return 5;
+    }
+
     const auto apt=::CoInitializeEx(nullptr,
         COINIT_APARTMENTTHREADED|COINIT_DISABLE_OLE1DDE);
     if(FAILED(apt)){answer(output,apt);return 6;}
     bool sent=false;
     try {
         PIDLIST_ABSOLUTE raw=nullptr;
-        auto hr=::SHParseDisplayName(path.c_str(),nullptr,&raw,0,nullptr);
+        HRESULT hr=S_OK;
+        if(req.type==kPath)
+            hr=::SHParseDisplayName(parsing.c_str(),nullptr,&raw,0,nullptr);
+        else{
+            raw=static_cast<PIDLIST_ABSOLUTE>(
+                ::CoTaskMemAlloc(pidlBytes.size()));
+            if(raw)memcpy(raw,pidlBytes.data(),pidlBytes.size());
+            else hr=E_OUTOFMEMORY;
+        }
         fxfile::shellnav::Location requested;
         requested.reset(raw);
         fxfile::shellnav::Snapshot snap;
@@ -136,8 +150,7 @@ int wmain(int argc,wchar_t** argv) {
             hr=fxfile::shellnav::enumerate(
                 requested.get(),snap,SHCONTF_FOLDERS|SHCONTF_NONFOLDERS,1200);
         sent=answer(output,hr,SUCCEEDED(hr)?&snap:nullptr);
-        // Shell COM pointers stay inside this COM apartment and process.
-    }catch(const std::bad_alloc&){sent=answer(output,E_OUTOFMEMORY);}
+    }catch(std::bad_alloc const&){sent=answer(output,E_OUTOFMEMORY);}
      catch(...){sent=answer(output,E_FAIL);}
     ::CoUninitialize();
     return sent?0:7;

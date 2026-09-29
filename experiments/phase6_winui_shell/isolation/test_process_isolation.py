@@ -91,11 +91,14 @@ def launch(*args,extra_env=None):
     CHILDREN.append(process)
     return process
 
-def request(path):
+def request(path=None,pidl_bytes=None):
+    if pidl_bytes is not None:
+        assert pidl_valid(pidl_bytes)
+        return struct.pack("<IIII",MAGIC,2,2,len(pidl_bytes))+pidl_bytes
     raw=str(path).encode("utf-16le")
     units=len(raw)//2
     assert 0<units<=16384
-    return struct.pack("<III",MAGIC,1,units)+raw
+    return struct.pack("<IIII",MAGIC,2,1,units)+raw
 
 def pidl_valid(raw):
     off=0
@@ -109,7 +112,7 @@ def pidl_valid(raw):
 def parse(frame):
     if len(frame)<28:raise ValueError("short result")
     magic,version,hr,count,n,expected,flags=struct.unpack_from("<IIiIIII",frame)
-    if magic!=MAGIC or version!=1 or count>1200 or n>4*1024**2:
+    if magic!=MAGIC or version!=2 or count>1200 or n>4*1024**2:
         raise ValueError("result protocol bounds")
     if len(frame)!=28+n:raise ValueError("result frame length")
     body=frame[28:]
@@ -127,10 +130,10 @@ def parse(frame):
         value=struct.unpack_from("<I",body,off)[0]
         off+=4
         return value
-    def string():
+    def string(max_units=4096):
         nonlocal off
         units=u32()
-        if units>4096 or off+units*2>n:raise ValueError("string bounds")
+        if units>max_units or off+units*2>n:raise ValueError("string bounds")
         value=body[off:off+units*2].decode("utf-16le","strict")
         off+=units*2
         return value
@@ -142,7 +145,8 @@ def parse(frame):
         off+=sz
         if not pidl_valid(value):raise ValueError("malformed PIDL")
         return value
-    folder={"display":string(),"parsing":string(),"pidl":pidl()}
+    folder={"display":string(),"parsing":string(),
+            "filesystem_path":string(16384),"pidl":pidl()}
     items=[]
     for _ in range(count):
         attr=u32()
@@ -151,11 +155,11 @@ def parse(frame):
     if off!=n:raise ValueError("unconsumed data")
     return {"hr":hr,"folder":folder,"entries":items,"flags":flags}
 
-def roundtrip(folder,limit=12):
+def roundtrip(folder=None,limit=12,pidl_bytes=None):
     child=launch()
     job=job_for(child)
     started=time.monotonic()
-    out,_=child.communicate(request(folder),timeout=limit)
+    out,_=child.communicate(request(folder,pidl_bytes),timeout=limit)
     elapsed=time.monotonic()-started
     assert child.returncode==0,("helper failed",child.returncode)
     return parse(out),out,elapsed
@@ -179,11 +183,19 @@ try:
         e["name"]=="OwnedNested" and e["attributes"]&0x20000000
         for e in first["entries"])
     assert any(e["name"]=="owned.txt" for e in first["entries"])
+    assert first["folder"]["filesystem_path"].lower().endswith("left")
+    identical,_,_=roundtrip(pidl_bytes=first["folder"]["pidl"])
+    assert identical["hr"]==0 and set(e["name"] for e in identical["entries"])==set(
+        e["name"] for e in first["entries"])
     print("REAL_NATIVE_HELPER_LOCAL_COM_SHELL_ENUM_AND_PIDLS PASS",
           "items",len(first["entries"]),"elapsed_ms",round(sec*1000))
+    print("REAL_NATIVE_HELPER_ABSOLUTE_PIDL_REQUEST_PASS",True)
     virt,_,_=roundtrip("shell:MyComputerFolder")
     assert virt["hr"]==0 and virt["folder"]["pidl"]
-    assert len(virt["entries"])>0
+    assert len(virt["entries"])>0 and not virt["folder"]["filesystem_path"]
+    virtual_pidl,_,_=roundtrip(pidl_bytes=virt["folder"]["pidl"])
+    assert virtual_pidl["hr"]==0 and virtual_pidl["folder"]["pidl"]==virt["folder"]["pidl"]
+    print("REAL_NATIVE_HELPER_VIRTUAL_ABSOLUTE_PIDL_PASS",True)
     print("REAL_NATIVE_HELPER_VIRTUAL_THIS_PC PASS",
           "items",len(virt["entries"]))
     failure,_,_=roundtrip(left/"missing-does-not-exist")
@@ -197,11 +209,11 @@ try:
     print("HOST_PROTOCOL_REJECTS_TRUNCATED_OVERSIZE_CORRUPTED_FRAMES PASS")
     malformed=launch()
     job_for(malformed)
-    _,_=malformed.communicate(struct.pack("<III",MAGIC,1,16385),timeout=4)
+    _,_=malformed.communicate(struct.pack("<IIII",MAGIC,2,1,16385),timeout=4)
     assert malformed.returncode==4
     incomplete=launch()
     job_for(incomplete)
-    _,_=incomplete.communicate(struct.pack("<III",MAGIC,1,6)+b"x",timeout=4)
+    _,_=incomplete.communicate(struct.pack("<IIII",MAGIC,2,1,6)+b"x",timeout=4)
     assert incomplete.returncode==5
     print("HELPER_OVERSIZED_AND_TRUNCATED_REQUESTS_REJECTED PASS")
     # Start two independent lanes. The left one is deliberately *owned* and

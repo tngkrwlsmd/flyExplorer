@@ -1,5 +1,7 @@
 # M1.6 — Shell process isolation: verified risks and implementation boundary
 
+**SUPERSEDED BY ACTUAL M1.7 WINUI GUI INTEGRATION:** This file documents the earlier helper-only state at commit `a829fd1`. A subsequent local revision *does* connect a native two-lane C++ supervisor and standalone Win32 change watcher to the actual WinUI preview. Use [M1.7 real Debug/Release and owned GUI evidence](WINUI3_M17_PANE_PROCESS_SUPERVISOR_20260929.md) for current status, while retaining this M1.6 record as historical investigation/test evidence.
+
 Date: 2026-09-29. Source revision at investigation: `65a618837eddfd88a850477ba8023baa8d6a847a`, `migration/winui3-full-shell-20260929`. This document records *source-observed* findings, the chosen architecture and separate experiment acceptance. Do not treat a process experiment as production WinUI integration.
 
 ## Current implementation: source-observed risks

@@ -1,4 +1,8 @@
-# WinUI 3 full UI migration — M1.5 native async Shell preview
+# WinUI 3 full UI migration — M1.7 actual isolated-process Shell preview
+
+**Latest, revision-scoped:** The real WinUI navigation path now uses a native **two-lane C++ supervisor**, one test-preview-owned read-only Shell child per active-pane request (at most two simultaneous children), with bounded timeout/private Windows Job termination and one restart. A standalone **COM-free Win32 watcher thread** handles selected filesystem-pane changes independently of hung Shell helpers; paths are computed in the child, never by UI-thread SHGetPathFromIDListEx. The Debug GUI successfully tested a blocked owned LEFT child while RIGHT continued and LEFT recovered; ordinary Release GUI and native create/delete watching passed, unchanged six user hashes, static 12/12. This preview is still not the default MFC product and is not a restricted-token security sandbox. [M1.7 verification and known limits](../../docs/development/WINUI3_M17_PANE_PROCESS_SUPERVISOR_20260929.md).
+
+## Historical M1.5 design and tests (the old in-process worker is no longer linked to this preview)
 
 This is an independent **local, non-default** C++/WinRT executable in the separate migration worktree. The existing MFC product remains the safe fallback, and advanced file mutations are not enabled here.
 
