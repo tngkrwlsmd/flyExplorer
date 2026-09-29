@@ -1,16 +1,16 @@
 # flyExplorer development documentation index
 
+
+**CURRENT branch/release readiness (2026-09-29):** [Merged UXH-07/UXH-06/UI-02 native main, separate WinUI 3 M1.8, exact artifact hashes, retained evidence and open acceptance gates](BRANCH_AND_RELEASE_STATUS_20260929.md). Read this and [CURRENT_STATUS](CURRENT_STATUS.md) before interpreting the historical feature-only links below.
+
+
 **UI-02 branch-resolution evidence:** [Current ModernUI replaces obsolete dual-renderer branch; actual Light/Dark native controls, drag and modal GUI accepted](UI02_SUPERSEDED_MERGE_ACCEPTANCE_20260929.md). Corrected test-owned desktop clipping, old Last Tabs and a modal startup tip without modifying the real user profile.
 
 
 **Latest scoped legacy MFC integration:** [UXH-06 saved/recent search scopes ? real owned GUI and merged Release x64 acceptance](UXH06_MAIN_MERGE_ACCEPTANCE_20260929.md). Includes explicit opt-in persistence and opt-out privacy after restart; separate legacy scrollbar GUI work is reviewed independently.
 
 
-> Entry point for maintainers and agents. Reviewed against `main`
-> baseline `f2958d70b6a2714b061bc5215ecce3a9f707d0b3`
-> **before this documentation-only commit**; use `git rev-parse main`
-> to identify the subsequent tip. Read [current status](CURRENT_STATUS.md)
-> first rather than interpreting a historic test as a current PASS.
+> Current branch snapshot *before* this documentation-only update: `main` `f074a6b` and WinUI M1.8 `eb7ee1a`. For later revisions use `git rev-parse`, not the older `f2958d7` review baseline retained in historical reports. [Current consolidation record](BRANCH_AND_RELEASE_STATUS_20260929.md) is the primary entry point.
 
 ## 1. Required instructions and active work
 

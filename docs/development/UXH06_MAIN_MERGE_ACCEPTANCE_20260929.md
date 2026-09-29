@@ -1,5 +1,9 @@
 # UXH-06 scoped main-integration acceptance — 2026-09-29
 
+
+**POST-MERGE UPDATE:** UXH-06 was integrated at `2331c27`, then included in the UI-02 superseding merge; the last independently tested code-bearing main commit before this documentation-only sync was `f074a6b`. On the subsequently **rebuilt original root checkout**, native **17/0 PASS_WITH_SKIPS**, 25/25 combined contracts and test-owned full recent search/restart/clear/opt-out GUI passed. Exact ROOT EXE SHA256: `41D51B87E74C839C33124F22F63AC0C7379B61E0F32A12196D1459649AF81BAC`. The older `1EDC...` temporary candidate hash and references to unfinished UI-02 below are valid only for that earlier historical revision. [Current consolidation](BRANCH_AND_RELEASE_STATUS_20260929.md).
+
+
 This document records the merge candidate based on **main 4507c1f** and original local feature commit **a0c97d6**, validated in a separate temporary worktree, not in the user's live flyExplorer profile.
 
 ## Final actual acceptance

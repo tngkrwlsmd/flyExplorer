@@ -1,5 +1,15 @@
 # flyExplorer — current development state (2026-09-29 feature-branch checkpoint; 2026-09-28 main review)
 
+
+## CURRENT POST-MERGE STATUS - UXH-07, UXH-06, UI-02 and separate WinUI M1.8 (2026-09-29)
+
+The last independently rebuilt native source commit in the `main` lineage (immediately before this documentation-only update) is `f074a6b1651dae6e9a1603465078310822a8f761`, containing UXH-07 named workspaces, UXH-06 opt-in recent search scopes, and the **existing** ModernUI scrollbar solution. The old competing UI-02 `DarkScrollbarLayer` was intentionally superseded. On the actual rebuilt ROOT checkout, Release x64 native **17/0 PASS WITH SKIPS** (real HKCU smoke deliberately skipped), combined **25/25** focused source contracts, and actual owned UXH-06 and Dark UI-02 GUI passed. Additional isolated merged-candidate Light/Dark primary and modal GUI passed. Exact original-root executable SHA256 is `41D51B87E74C839C33124F22F63AC0C7379B61E0F32A12196D1459649AF81BAC`; the older candidate EXE hash below belongs to a **different build**. The six original user settings and untracked original screenshot remained unchanged.
+
+There are exactly **two active local and remote branches**: `main` and the independently tested, **not yet source-reconciled** WinUI 3 experiment `migration/winui3-full-shell-20260929` at `eb7ee1a335484d88128bfcf117a4f857fbee4c60`. Historical removed branches retain local archive refs. [Current authoritative branch, test-artifact and next-gate map](BRANCH_AND_RELEASE_STATUS_20260929.md).
+
+**All sections below are revision-scoped historical reports.** Earlier mentions of local-only, unmerged, candidate, dirty UXH-07 worktrees or in-progress old feature branches do NOT reflect the present mainline. Physical other-DPI/OS High Contrast/Narrator and genuinely broken external Shell/SMB/provider scenarios remain unverified.
+
+
 ## Latest 2026-09-29: UI-02 historic branch resolved with CURRENT ModernUI (owned GUI accepted)
 
 The old local UI-02 branch was compared to the independent, already integrated native ModernUI dark scrollbar compositor in main. The old cross-thread DarkScrollbarLayer would paint the same native scrollbars a second time and conflicted with ListCtrlEx and TreeCtrlEx, so the integration intentionally **retains the existing, proven ModernUI renderer** while connecting the old feature history as a documented superseding merge. No old layer was added to the product. On the exact Release-x64 compiled post-UXH-06 source, static negative/coverage tests 19/19 and strengthened owned GUI harness contracts 3/3 (**22/22 total**) passed.

@@ -1,5 +1,9 @@
 # UI-02 resolved as a superseding merge — 2026-09-29
 
+
+**POST-MERGE UPDATE:** This superseding merge is **committed/pushed** at the last separately tested native `main` source commit `f074a6b`. The old second `DarkScrollbarLayer` remains intentionally absent; its Git merge history and local archive refs remain. The rebuilt actual root checkout passed 17/0 native, 25/25 focused source checks, owned UXH-06 and Dark UI-02 GUI; separate integrated-candidate real Light/Dark primary and modal scrollbar GUI also passed. [Current consolidated build hashes, evidence and remaining environment limitations](BRANCH_AND_RELEASE_STATUS_20260929.md).
+
+
 **Decision:** Incorporate the old UI-02 feature branch's Git history into the current UXH-06 / UXH-07 `main` lineage, but **do not install a second, competing scrollbar painter**. Retain the currently compiled/tested shared `ModernUI` implementation and add corrected owned regression coverage.
 
 ## Why the old renderer was not ported verbatim
