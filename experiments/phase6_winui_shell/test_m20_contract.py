@@ -43,15 +43,20 @@ class ModelAndFullShell(unittest.TestCase):
   self.assertIn("mModel.markPending(side,next.first,id,false)",src)
  def test_winui_full_frame_has_light_dark_system_and_this_pc(self):
   xaml=source("experiments/phase6_winui_shell/MainWindow.xaml")
-  for x in ('x:Name="RootShell"','x:Name="ShellHeading"',
-            'x:Name="ThemePicker"','x:Name="ThemeStateText"',
-            '<ComboBoxItem Content="System"/>',
-            '<ComboBoxItem Content="Light"/>',
-            '<ComboBoxItem Content="Dark"/>',
-            'x:Name="ThisPCButton"'):
+  header=source("experiments/phase6_winui_shell/ShellHeader.xaml")
+  sidebar=source("experiments/phase6_winui_shell/NavigationSidebar.xaml")
+  for x in ('x:Name="RootShell"','x:Name="HeaderView"',
+            'x:Name="SidebarView"'):
    self.assertIn(x,xaml)
+  for x in ('x:Name="ShellHeading"','x:Name="ThemePicker"',
+            'x:Name="ThemeStateText"',
+            '<ComboBoxItem Content="시스템"/>',
+            '<ComboBoxItem Content="라이트"/>',
+            '<ComboBoxItem Content="다크"/>'):
+   self.assertIn(x,header)
+  self.assertIn('x:Name="ThisPCButton"',sidebar)
   code=source("experiments/phase6_winui_shell/m20_shell.cpp")
-  for x in ("RequestedTheme(preference)","OpenFolder(L\"shell:MyComputerFolder\")",
+  for x in ("RequestedTheme(chosen","OpenFolder(L\"shell:MyComputerFolder\")",
             "ElementTheme::Default","ElementTheme::Light",
             "ElementTheme::Dark"):
    self.assertIn(x,code)
@@ -64,7 +69,7 @@ class ModelAndFullShell(unittest.TestCase):
   harness=source("experiments/phase6_winui_shell/test_shell_gui.py")
   test=source("experiments/phase6_winui_shell/test_m20_shell_gui.py")
   self.assertIn("FLY_M20_OWNED_SHELL",harness)
-  for x in ("ImageGrab.grab","Theme: Dark","Theme: Light",
-            "Theme: System","REAL_M20_SHARED_NATIVE_COMMANDS"):
+  for x in ("ImageGrab.grab","테마: 다크","테마: 라이트",
+            "테마: 시스템","REAL_M20_SHARED_NATIVE_COMMANDS"):
    self.assertIn(x,test)
 if __name__=="__main__":unittest.main()

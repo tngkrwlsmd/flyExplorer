@@ -164,6 +164,7 @@ C++ 변경에는 다음을 추가로 적용한다.
 - runtime 환경을 사용할 수 없으면 무엇을 확인했고 무엇을 확인하지 못했는지를 명확히 분리하고, 사용자가 재현한 실패를 상쇄하는 표현을 쓰지 않는다. 다음 검증자가 그대로 실행할 수 있도록 trigger, expected result, 필요한 환경을 남긴다.
 
 ## 7. Windows 11 UI modernization
+- **Korean ko-KR is the owner-approved default app UI language:** All new app-owned WinUI visible text, accessible names, settings defaults, errors and Hangul file operations start in Korean even on non-Korean OS installations. Preserve real UTF-8 in remote editing and both C++ builds; verify real UIA text and final pixels, never accept ?? placeholders or corrupted terminal output as UI. Centralized resource bundles/other languages remain later release requirements. [M2.1 scoped Korean behavior](docs/development/WINUI3_M21_KOREAN_NATIVE_UI_COMPONENTS_20260929.md).
 
 **모든 UI/UX 변경은 [필수 UI/UX 디자인·구현·검증 지침](docs/development/UI_UX_DESIGN_GUIDE.md)을 먼저 적용한다.** 이 문서는 Windows 11 기본 파일 탐색기를 최종 비교 대상으로 삼고, [Microsoft Fluent Design](https://learn.microsoft.com/en-us/windows/apps/design/), [Windows UI Kit for Figma](https://learn.microsoft.com/en-us/windows/apps/design/downloads/), [WinUI 3 Gallery](https://github.com/microsoft/WinUI-Gallery)의 각 역할을 정의한다. 실제 실행한 Windows 탐색기와 동일한 OS 버전·테마·DPI·창 크기·동일/합성 폴더 조건에서 기준 화면을 수집한다.
 

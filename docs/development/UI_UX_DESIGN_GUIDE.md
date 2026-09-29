@@ -1,5 +1,8 @@
 # flyExplorer 필수 UI/UX 디자인·구현·검증 지침
 
+**Owner language direction:** Korean ko-KR is the default for all new WinUI app-owned labels, accessible names, feedback, settings and actual Hangul filename tests, independently of the OS locale. True Unicode must be checked in an actual GUI and persisted settings; do not accept literal ?? or garbled console output. Centralized localization resources and alternate languages are future parity gates. [Current M2.1 scope](WINUI3_M21_KOREAN_NATIVE_UI_COMPONENTS_20260929.md).
+
+
 > **적용:** flyExplorer의 화면 설계·실제 UI 구현·컨트롤/테마 수정·디자인 평가·WinUI 전환 검토 모두.
 > **지침 소유:** root [AGENTS.md](../../AGENTS.md)의 필수 Windows 11 UI 원칙을 구체화한다. 실제 증상/검증 상태는 [UI 실행 감사](UI_UX_AUDIT_20260924.md)와 [현재 상태](CURRENT_STATUS.md)에 별도로 기록한다.
 > **상태:** 향후 개발의 의도된 디자인 기준이다. 이 문서만 추가했다고 제품 UI가 수정되거나 Windows 실행 검증을 통과한 것은 아니다.

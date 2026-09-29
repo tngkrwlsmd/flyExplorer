@@ -86,7 +86,7 @@ try:
    stdin=subprocess.DEVNULL,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
  def main():
   return [(h,t) for h,t in ownedwindows(p.pid) if
-   "flyExplorer - WinUI 3 migration preview" in t]
+   "flyExplorer - WinUI 3" in t]
  eventually(lambda:len(main())==1 or p.poll() is not None,
             "WinUI 3 main window not discovered")
  assert p.poll() is None,("WinUI startup failed",p.returncode)
@@ -112,8 +112,8 @@ try:
  for key in ids:assert element(key).exists(timeout=5),("Missing XAML control",key)
  print("REAL_WINUI_SHELL_CONTROLS",len(ids),"DUAL_PANES_AND_TABS=True",flush=True)
  startup_status=element("StatusText").window_text().lower()
- assert ("native shell engine active" in startup_status or
-         "native shell helper:" in startup_status),(
+ assert ("독립 shell" in startup_status or
+         "독립 shell" in startup_status),(
    "UI-independent native core/helper was not active at startup",
    element("StatusText").window_text())
  print("ACTUAL_CPP_NATIVE_CORE_NULL_CONTRACT_LINKED",True,flush=True)
@@ -125,7 +125,7 @@ try:
       for e in element("LeftFiles").descendants()),(
       "left unexpectedly finished before test-owned block deadline")
   print("REAL_WINUI_RIGHT_PANE_PROGRESS_WHILE_LEFT_HELPER_BLOCKED",True,flush=True)
-  eventually(lambda:"recovered from owned timeout" in
+  eventually(lambda:"응답 지연 후 복구" in
       element("StatusText").window_text().lower(),
       "left helper timeout and restart never reached real WinUI",13)
   print("REAL_WINUI_LEFT_HELPER_TIMEOUT_AND_AUTOMATIC_RESTART",True,flush=True)
@@ -147,7 +147,7 @@ try:
   address.set_edit_text("shell:MyComputerFolder")
   ensure_owned_focus()
   address.type_keys("{ENTER}",set_foreground=True)
-  eventually(lambda:"did not respond after two 4.5-second attempts" in
+  eventually(lambda:"4.5초씩 두 번 응답하지" in
       element("StatusText").window_text().lower(),
       "exhausted COM child requests gave no meaningful error",14)
   assert any("Nested" in x.window_text()
@@ -170,7 +170,7 @@ try:
    shell.SHChangeNotify(0x1000,0x0005,
                         c.cast(owned_path,c.c_void_p),None)
    try:
-    eventually(lambda:"folder change notifications refreshed" in
+    eventually(lambda:"폴더 변경 알림을 반영" in
         element("StatusText").window_text().lower(),
         "owned Shell notification did not reach WinUI",1.25)
     break
@@ -269,10 +269,10 @@ try:
  rect=win.rectangle()
  ImageGrab.grab(bbox=(rect.left,rect.top,rect.right,rect.bottom),
                 include_layered_windows=True).save(base/"migration-split-diagnostic.png")
- eventually(lambda:element("SplitButton").window_text()=="Split panes",
+ eventually(lambda:element("SplitButton").window_text()=="분할 창",
             "single pane action failed")
  safe_click(element("SplitButton"))
- eventually(lambda:element("SplitButton").window_text()=="Single pane",
+ eventually(lambda:element("SplitButton").window_text()=="단일 창",
            "split restore failed")
  print("REAL_WINUI_SPLIT_TOGGLE",True,flush=True)
  address=element("AddressBox")
@@ -306,7 +306,7 @@ try:
  # Verify the SECOND panel has its own selected tab, list and history;
  # navigation there MUST NOT replace the left panel.
  safe_click(element("SecondaryPaneTitle"))
- eventually(lambda:"Right" in element("ActivePaneText").window_text(),
+ eventually(lambda:"오른쪽" in element("ActivePaneText").window_text(),
             "explicit right pane activation")
  rightaddr=element("AddressBox")
  rightaddr.set_edit_text(str(right))
@@ -329,7 +329,7 @@ try:
  # a virtual PIDL, not a std::filesystem directory. The new core must
  # accept the shell: alias, list Shell objects and preserve LEFT pane.
  safe_click(element("SecondaryPaneTitle"))
- eventually(lambda:"Right" in element("ActivePaneText").window_text(),
+ eventually(lambda:"오른쪽" in element("ActivePaneText").window_text(),
             "right activation for virtual Shell folder")
  virtual=element("AddressBox")
  virtual.set_edit_text("shell:MyComputerFolder")
@@ -359,7 +359,7 @@ try:
   ensure_owned_focus()
   bad.type_keys("{ENTER}",set_foreground=True)
   eventually(lambda:any(x in element("StatusText").window_text().lower()
-      for x in ("network folder unavailable","did not respond after two")),
+      for x in ("네트워크 폴더에 접근할 수 없거나","4.5초씩 두 번 응답하지")),
       "owned loopback UNC error did not explain the failure",15)
   assert any("Secondary" in row.window_text()
       for row in element("RightFiles").descendants()),(
@@ -377,6 +377,11 @@ try:
   from test_m20_shell_gui import run as m20_run
   m20_run(win=win,element=element,safe_click=safe_click,
           focus=ensure_owned_focus,eventually=eventually,owned=owned)
+ if os.environ.get("FLY_M21_OWNED_FEATURES")=="YES":
+  from test_m21_gui import run as m21_run
+  m21_run(p=p,win=win,element=element,safe_click=safe_click,
+          focus=ensure_owned_focus,eventually=eventually,
+          left=left,right=right,localdata=localdata,env=env,exe=EXE)
  safe_click(element("PrimaryPaneTitle"))
  rect=win.rectangle()
  assert rect.width()>400 and rect.height()>260

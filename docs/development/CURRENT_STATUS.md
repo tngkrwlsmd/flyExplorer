@@ -1,5 +1,8 @@
 # flyExplorer — current project status (2026-09-28 baseline; 2026-09-29 migration-branch addendum)
 
+**M2.1 KOREAN-DEFAULT FIRST SLICE:** The existing independent WinUI full window now embeds compiled reusable ShellHeader/NavigationSidebar controls, Korean-first main/workspace/search text, dedicated MFC-independent private ko-KR System/Light/Dark preferences, and guarded native create-folder/rename commands. Native Debug+Release 18/18, combined source 71/71, and source-matched actual Debug AND Release full M1.9+M2.0+M2.1 owned GUI PASS, including literal Korean System UIA, dark/light private restart and guarded actual Korean create/rename/non-overwrite. Renewed Debug M1.8 independent COM/private Job/owned Shell notification/loopback UNC and two-attempt fault GUIs PASS. Exact limits, the real corrected ?? theme bug and final integrated GUI gates: [M2.1 detailed evidence](WINUI3_M21_KOREAN_NATIVE_UI_COMPONENTS_20260929.md). The protected default MFC main remains unchanged.
+
+
 **M2.0 LATEST VERIFIED SCOPE:** Experimental WinUI native full-window main header, runtime System/Light/Dark and This PC, plus real `src/base/explorer_ui_state` pane/tab/route/request/command owner are compiled and verified in Debug. Owned actual Debug final theme pixels, split, tabs, virtual PIDL and Back PASS; independent native Debug 16/16 and combined source 64/64 PASS. Exact compiled Release x64 native 16/16, full Release real owned M1.9+M2.0 GUI and renewed M1.8 controlled COM/notification/two-timeout owned GUI also PASS; protected native `main` remains unchanged. [Exact scope and evidence](WINUI3_M20_FULL_WINDOW_NATIVE_COMMAND_MODEL_20260929.md).
 
 

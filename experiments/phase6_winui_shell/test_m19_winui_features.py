@@ -44,7 +44,7 @@ def run(*,p,win,element,safe_click,focus,eventually,ownedwindows,
         return results
     def ui_for_child(proc):
         boxes=ownedwindows(proc.pid)
-        return [h for h,t in boxes if "flyExplorer - WinUI 3 migration preview" in t]
+        return [h for h,t in boxes if "flyExplorer - WinUI 3" in t]
     def close_child(proc):
         if proc is None:return
         if not proc.is_running():return
@@ -177,8 +177,8 @@ def run(*,p,win,element,safe_click,focus,eventually,ownedwindows,
             target.write_bytes(data)
             edit.set_edit_text(str(target))
             safe_click(element("OpenWorkspaceButton"))
-            good(lambda:match("StatusText","rejected") or
-                match("StatusText","choose an absolute"),
+            good(lambda:match("StatusText","올바르지 않습니다") or
+                match("StatusText","절대 경로"),
                 "invalid workspace not rejected by actual WinUI Open: "+name,10)
             assert not children(),("invalid workspace launched a child",name)
             assert hashlib.sha256(first.read_bytes()).digest()==before
@@ -206,7 +206,7 @@ def run(*,p,win,element,safe_click,focus,eventually,ownedwindows,
         safe_click(element("SearchRunButton"))
         good(lambda:search_matches("readme.txt"),
              "real M1.9 file search failed to list owned matching filename",17)
-        good(lambda:match("SearchCountText","1 matching files"),
+        good(lambda:match("SearchCountText","검색 결과 1개"),
              "M1.9 search result summary missing",7)
         assert not recall.exists(),"Default unchecked search persisted a private path"
         print("REAL_M19_SEARCH_DEFAULT_OPT_OUT_NO_PERSISTENT_HISTORY",True,flush=True)
@@ -215,7 +215,7 @@ def run(*,p,win,element,safe_click,focus,eventually,ownedwindows,
         assert element("SearchRememberBox").get_toggle_state()==1
         safe_click(element("SearchRunButton"))
         good(recall.is_file,"opt-in recent search persisted no owned profile",12)
-        good(lambda:match("SearchCountText","1 matching files"),
+        good(lambda:match("SearchCountText","검색 결과 1개"),
              "M1.9 opted-in search did not finish",10)
         assert str(left) in recall.read_text(encoding="utf-16")
         assert str(right) not in recall.read_text(encoding="utf-16")
@@ -259,7 +259,7 @@ def run(*,p,win,element,safe_click,focus,eventually,ownedwindows,
             # explicit user-visible count is updated ONLY after the
             # asynchronous native load and Items().Append in the UI.
             count=restarted.child_window(auto_id="RecentCountText")
-            good(lambda:"2 saved" in count.window_text(),
+            good(lambda:"저장 2개" in count.window_text(),
                  "restarted WinUI failed to reload two opted-in scopes",12)
             print("REAL_M19_SEARCH_RESTART_RECENTS_LOADED",2,flush=True)
         finally:
@@ -278,7 +278,7 @@ def run(*,p,win,element,safe_click,focus,eventually,ownedwindows,
         good(lambda:recall.is_file() and
              recall.read_text(encoding="utf-16").strip()=="",
              "M1.9 Clear recent did not persist empty preview history",9)
-        good(lambda:"0 saved" in element("RecentCountText").window_text(),
+        good(lambda:"저장 0개" in element("RecentCountText").window_text(),
              "Clear recent did not update real WinUI count",6)
         assert str(left).lower() in element("SearchScopeBox").get_value().lower()
         print("REAL_M19_SEARCH_CLEAR_RETAINS_ACTIVE_FULL_SCOPE",True,flush=True)

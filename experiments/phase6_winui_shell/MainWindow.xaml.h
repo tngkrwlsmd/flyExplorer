@@ -1,5 +1,10 @@
 #pragma once
 #include "MainWindow.g.h"
+#include "ShellHeader.xaml.h"
+#include "NavigationSidebar.xaml.h"
+#include "../../src/base/preview_preferences.h"
+#include "../../src/base/file_command_core.h"
+#include <mutex>
 #include "../../src/base/shell_navigation_core.h"
 #include "../../src/base/explorer_ui_state.h"
 #include "../../src/base/shell_async_worker.h"
@@ -36,8 +41,8 @@ namespace winrt::FlyExplorerWinUIShell::implementation
         void OnDocumentsClicked(IInspectable const&, Microsoft::UI::Xaml::RoutedEventArgs const&);
         void OnDownloadsClicked(IInspectable const&, Microsoft::UI::Xaml::RoutedEventArgs const&);
         void OnThisPCClicked(IInspectable const&, Microsoft::UI::Xaml::RoutedEventArgs const&);
-        void OnThemeSelectionChanged(IInspectable const&,
-            Microsoft::UI::Xaml::Controls::SelectionChangedEventArgs const&);
+        void ApplyThemeChoice(int selection);
+        void ExecuteFileCommand(fxfile::filecommand::Kind kind);
         void OnLeftTabSelectionChanged(IInspectable const&,
             Microsoft::UI::Xaml::Controls::SelectionChangedEventArgs const&);
         void OnRightTabSelectionChanged(IInspectable const&,
@@ -58,9 +63,18 @@ namespace winrt::FlyExplorerWinUIShell::implementation
         void OnSelectSearchRecent(IInspectable const&,
             Microsoft::UI::Xaml::Controls::SelectionChangedEventArgs const&);
         void OnClearSearchRecent(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
+        void OnCreateFolder(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
+        void OnRenameSelected(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
 
     private:
         fxfile::explorerui::Model mModel;
+        fxfile::previewsettings::Preferences mPreferences{};
+        std::shared_ptr<std::mutex> mPreferencesWriteMutex=
+            std::make_shared<std::mutex>();
+        std::shared_ptr<std::atomic_uint64_t> mPreferencesRevision=
+            std::make_shared<std::atomic_uint64_t>(0);
+        bool mFileOperationPending=false;
+        std::uint64_t mFileOperationEpoch=0;
         bool mPopulatingTabs = false;
         std::unique_ptr<fxfile::shellnav::IsolatedShellSupervisor> mSupervisor;
         std::unique_ptr<fxfile::directorychange::DirectoryWatcher> mWatcher;

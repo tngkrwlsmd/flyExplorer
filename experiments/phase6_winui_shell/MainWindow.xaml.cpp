@@ -37,6 +37,32 @@ namespace winrt::FlyExplorerWinUIShell::implementation
     MainWindow::MainWindow()
     {
         InitializeComponent();
+        // Each reusable XAML control forwards intent; the window owns the
+        // shared native state/settings. Never attach a permanent MFC host.
+        const auto nativeWeak=get_weak();
+        winrt::get_self<winrt::FlyExplorerWinUIShell::implementation::NavigationSidebar>(
+            SidebarView())->SetNavigateCallback([nativeWeak](int target){
+            if(auto ui=nativeWeak.get()){
+                if(target==0)ui->OpenFolder(ui->HomePath().native());
+                else if(target==1)ui->OpenFolder(
+                    (ui->HomePath()/L"Documents").native());
+                else if(target==2)ui->OpenFolder(
+                    (ui->HomePath()/L"Downloads").native());
+                else if(target==3)ui->OpenFolder(L"shell:MyComputerFolder");
+            }
+        });
+        fxfile::previewsettings::load(mPreferences);
+        winrt::get_self<winrt::FlyExplorerWinUIShell::implementation::ShellHeader>(
+            HeaderView())->RestoreTheme(static_cast<int>(mPreferences.theme));
+        RootShell().RequestedTheme(
+            mPreferences.theme==fxfile::previewsettings::Theme::Dark?
+                ElementTheme::Dark:
+            mPreferences.theme==fxfile::previewsettings::Theme::Light?
+                ElementTheme::Light:ElementTheme::Default);
+        winrt::get_self<winrt::FlyExplorerWinUIShell::implementation::ShellHeader>(
+            HeaderView())->SetThemeCallback([nativeWeak](int selection){
+                if(auto ui=nativeWeak.get())ui->ApplyThemeChoice(selection);
+            });
         const auto dispatch=DispatcherQueue();
         const auto weak=get_weak();
         // The worker owns NO MainWindow/WinRT UI object. Cross-apartment
@@ -70,19 +96,19 @@ namespace winrt::FlyExplorerWinUIShell::implementation
         const DWORD chars=::GetModuleFileNameW(nullptr,module,
              static_cast<DWORD>(std::size(module)));
         if(!chars || chars>=std::size(module))
-            throw winrt::hresult_error(E_FAIL,L"Own preview EXE path unavailable");
+            throw winrt::hresult_error(E_FAIL,L"현재 실행 파일 경로를 확인할 수 없습니다.");
         std::wstring helper(module,chars);
         const auto last=helper.find_last_of(L"\\/");
         if(last==std::wstring::npos)
-            throw winrt::hresult_error(E_FAIL,L"Invalid preview EXE path");
+            throw winrt::hresult_error(E_FAIL,L"현재 실행 파일 경로가 올바르지 않습니다.");
         helper.resize(last+1);
         helper+=L"FlyShellIsolationHelper.exe";
         if(!mSupervisor->start(std::move(helper)))
-            throw winrt::hresult_error(E_FAIL,L"Owned Shell helper startup failed");
+            throw winrt::hresult_error(E_FAIL,L"독립 Shell 작업자를 시작할 수 없습니다.");
         if(!mWatcher->start())
-            throw winrt::hresult_error(E_FAIL,L"Independent native watcher startup failed");
+            throw winrt::hresult_error(E_FAIL,L"독립 파일 변경 감시를 시작할 수 없습니다.");
         if(!mShellWatcher->start())
-            throw winrt::hresult_error(E_FAIL,L"Shell namespace watcher startup failed");
+            throw winrt::hresult_error(E_FAIL,L"Shell 폴더 변경 감시를 시작할 수 없습니다.");
         const auto initial=StartFolder().native();
         bool testLeftDelay=false;
         bool testLeftComDelay=false;
@@ -153,8 +179,8 @@ namespace winrt::FlyExplorerWinUIShell::implementation
         const bool nativeCoreLinked =
             fxfile::fileop::execute(nullptr)==ERROR_INVALID_PARAMETER;
         Refresh(nativeCoreLinked?
-            L"Native Shell engine active: async STA loading; file mutations disabled":
-            L"Native file-operation null contract FAILED");
+            L"독립 Shell 탐색 준비 중 · 파일 작업은 명시적 요청만 처리합니다.":
+            L"기본 파일 작업 엔진을 연결하지 못했습니다.");
         InitializeM19();
     }
     MainWindow::~MainWindow()
@@ -199,15 +225,15 @@ namespace winrt::FlyExplorerWinUIShell::implementation
             // At most one outstanding helper operation per active pane.
             // Clear the canceled prior tab's UI pending marker too.
             mModel.markPending(side,pane.active,id,true);
-            StatusText().Text(L"Native Shell engine active: async STA loading");
-        } else StatusText().Text(L"Shell worker could not queue location");
+            StatusText().Text(L"독립 Shell 작업자가 폴더를 불러오는 중입니다.");
+        } else StatusText().Text(L"Shell 폴더 이동을 요청할 수 없습니다.");
     }
     void MainWindow::QueuePidl(
         int side,fxfile::shellnav::Location target,
         fxfile::shellnav::NavigationAction action)
     {
         if(!target.valid()) {
-            StatusText().Text(L"No Shell location for this command");
+            StatusText().Text(L"이 명령에 사용할 Shell 위치가 없습니다.");
             return;
         }
         auto& pane=mModel.panes[side];
@@ -217,8 +243,8 @@ namespace winrt::FlyExplorerWinUIShell::implementation
             // At most one outstanding helper operation per active pane.
             // Clear the canceled prior tab's UI pending marker too.
             mModel.markPending(side,pane.active,id,true);
-            StatusText().Text(L"Native Shell engine active: async STA loading");
-        } else StatusText().Text(L"Shell worker could not queue request");
+            StatusText().Text(L"독립 Shell 작업자가 폴더를 불러오는 중입니다.");
+        } else StatusText().Text(L"Shell 작업을 요청할 수 없습니다.");
     }
     void MainWindow::UpdateWatch(int side,bool force)
     {
@@ -262,16 +288,16 @@ namespace winrt::FlyExplorerWinUIShell::implementation
                     if(i==pane.active) {
                         if(result.timedOut)
                             StatusText().Text(
-                                L"Shell folder did not respond after two 4.5-second attempts. "
-                                L"Previous folder preserved; retry or choose another folder.");
+                                L"Shell 폴더가 4.5초씩 두 번 응답하지 않았습니다. "
+                                L"기존 폴더는 유지됩니다. 다시 시도하거나 다른 폴더를 선택하세요.");
                         else if(result.networkRequest)
                             StatusText().Text(
-                                L"Network folder unavailable or access denied. "
-                                L"Previous folder preserved.");
+                                L"네트워크 폴더에 접근할 수 없거나 권한이 없습니다. "
+                                L"기존 폴더는 유지됩니다.");
                         else
                             StatusText().Text(
-                                L"Shell folder could not be opened. "
-                                L"Previous folder preserved.");
+                                L"Shell 폴더를 열지 못했습니다. "
+                                L"기존 폴더는 유지됩니다.");
                     }
                     return;
                 }
@@ -288,15 +314,15 @@ namespace winrt::FlyExplorerWinUIShell::implementation
                     pane.filesystemPaths[i]=std::move(result.filesystemPath);
                     if(i==pane.active) {
                         Refresh(result.recovered?
-                            L"Native Shell helper recovered from owned timeout":
+                            L"독립 Shell 작업자가 응답 지연 후 복구됐습니다.":
                             result.action==Action::Refresh?
-                            L"Native Shell helper: folder change notifications refreshed":
-                            L"Native Shell helper: isolated folder loaded");
+                            L"폴더 변경 알림을 반영했습니다.":
+                            L"독립 Shell 작업자로 폴더를 불러왔습니다.");
                         UpdateWatch(side,true);
                     }else RefreshTabs(side);
                     QueueNextWorkspaceTab(side);
                 }else if(FAILED(applied)) {
-                    StatusText().Text(L"Stale Shell history result rejected");
+                    StatusText().Text(L"오래된 Shell 탐색 결과를 무시했습니다.");
                 }
                 return;
             }
@@ -354,10 +380,9 @@ namespace winrt::FlyExplorerWinUIShell::implementation
             const auto& entry=items[i];
             ListViewItem row;
             row.Content(winrt::box_value(hstring(
-                std::wstring(entry.isFolder()?L"[Folder]  ":L"[File]  ")+
+                std::wstring(entry.isFolder()?L"[폴더]  ":L"[파일]  ")+
                 entry.label)));
-            if(entry.isFolder())
-                row.Tag(winrt::box_value(static_cast<uint32_t>(i)));
+            row.Tag(winrt::box_value(static_cast<uint32_t>(i)));
             view.Items().Append(row);
         }
     }
@@ -372,13 +397,13 @@ namespace winrt::FlyExplorerWinUIShell::implementation
         BackButton().IsEnabled(nav.canBack() && !mModel.panes[mModel.activePane].pending[mModel.panes[mModel.activePane].active]);
         ForwardButton().IsEnabled(nav.canForward() && !mModel.panes[mModel.activePane].pending[mModel.panes[mModel.activePane].active]);
         UpButton().IsEnabled(nav.snapshot().folder.valid() && !ILIsEmpty(nav.snapshot().folder.get()));
-        ActivePaneText().Text(mModel.activePane==0?L"Active: Left":L"Active: Right");
+        ActivePaneText().Text(mModel.activePane==0?L"활성: 왼쪽":L"활성: 오른쪽");
         PrimaryPaneTitle().Content(winrt::box_value(
-            hstring(mModel.activePane==0?L"Left pane (active)":L"Left pane")));
+            hstring(mModel.activePane==0?L"왼쪽 창 (활성)":L"왼쪽 창")));
         SecondaryPaneTitle().Content(winrt::box_value(
-            hstring(mModel.activePane==1?L"Right pane (active)":L"Right pane")));
+            hstring(mModel.activePane==1?L"오른쪽 창 (활성)":L"오른쪽 창")));
         StatusText().Text(status);
-        Title(L"flyExplorer - WinUI 3 migration preview - "+
+        Title(L"flyExplorer - WinUI 3 전환 미리보기 - "+
             hstring(nav.snapshot().displayName));
         UpdateWatch(0);
         UpdateWatch(1);
@@ -399,18 +424,18 @@ namespace winrt::FlyExplorerWinUIShell::implementation
         BackButton().IsEnabled(nav.canBack() && !mModel.panes[mModel.activePane].pending[mModel.panes[mModel.activePane].active]);
         ForwardButton().IsEnabled(nav.canForward() && !mModel.panes[mModel.activePane].pending[mModel.panes[mModel.activePane].active]);
         UpButton().IsEnabled(nav.snapshot().folder.valid() && !ILIsEmpty(nav.snapshot().folder.get()));
-        ActivePaneText().Text(side==0?L"Active: Left":L"Active: Right");
+        ActivePaneText().Text(side==0?L"활성: 왼쪽":L"활성: 오른쪽");
         PrimaryPaneTitle().Content(winrt::box_value(
-            hstring(side==0?L"Left pane (active)":L"Left pane")));
+            hstring(side==0?L"왼쪽 창 (활성)":L"왼쪽 창")));
         SecondaryPaneTitle().Content(winrt::box_value(
-            hstring(side==1?L"Right pane (active)":L"Right pane")));
-        Title(L"flyExplorer - WinUI 3 migration preview - "+
+            hstring(side==1?L"오른쪽 창 (활성)":L"오른쪽 창")));
+        Title(L"flyExplorer - WinUI 3 전환 미리보기 - "+
               hstring(nav.snapshot().displayName));
     }
     void MainWindow::OnBackClicked(IInspectable const&,RoutedEventArgs const&)
     {
         if(!Current().canBack()) {
-            StatusText().Text(L"No previous folder in this tab");return;
+            StatusText().Text(L"이 탭에 이전 폴더가 없습니다.");return;
         }
         QueuePidl(mModel.activePane,Current().target(
             fxfile::shellnav::HistoryAction::Back),
@@ -419,7 +444,7 @@ namespace winrt::FlyExplorerWinUIShell::implementation
     void MainWindow::OnForwardClicked(IInspectable const&,RoutedEventArgs const&)
     {
         if(!Current().canForward()) {
-            StatusText().Text(L"No next folder in this tab");return;
+            StatusText().Text(L"이 탭에 다음 폴더가 없습니다.");return;
         }
         QueuePidl(mModel.activePane,Current().target(
             fxfile::shellnav::HistoryAction::Forward),
@@ -440,7 +465,7 @@ namespace winrt::FlyExplorerWinUIShell::implementation
         }
         else if (args.Key()==Windows::System::VirtualKey::Escape) {
             AddressBox().Text(hstring(Current().snapshot().parsingName));
-            StatusText().Text(L"Address edit canceled");
+            StatusText().Text(L"주소 입력을 취소했습니다.");
             args.Handled(true);
         }
     }
@@ -448,26 +473,26 @@ namespace winrt::FlyExplorerWinUIShell::implementation
     {
         auto& pane=mModel.panes[static_cast<size_t>(mModel.activePane)];
         if (pane.tabs.size()>=32) {
-            StatusText().Text(L"Maximum of 32 tabs per pane in preview");
+            StatusText().Text(L"창마다 탭은 최대 32개까지 지원합니다.");
             return;
         }
         fxfile::shellnav::Location start(
             pane.tabs[pane.active].snapshot().folder);
         if(!start.valid()) {
-            StatusText().Text(L"Wait for the initial Shell folder first");
+            StatusText().Text(L"먼저 현재 폴더를 불러와 주세요.");
             return;
         }
         if(!mModel.dispatch(fxfile::explorerui::Command::AddTab,
                             mModel.activePane).accepted)return;
         QueuePidl(mModel.activePane,std::move(start),
                   fxfile::shellnav::NavigationAction::Open);
-        Refresh(L"Native Shell engine active: new tab loading asynchronously");
+        Refresh(L"새 탭의 폴더를 불러오는 중입니다.");
     }
     void MainWindow::OnCloseTabClicked(IInspectable const&,RoutedEventArgs const&)
     {
         auto& pane=mModel.panes[static_cast<size_t>(mModel.activePane)];
         if (pane.tabs.size()<=1) {
-            StatusText().Text(L"Keep at least one tab in each pane");
+            StatusText().Text(L"각 창에는 탭을 최소 한 개 유지해야 합니다.");
             return;
         }
         const auto change=mModel.dispatch(
@@ -477,7 +502,7 @@ namespace winrt::FlyExplorerWinUIShell::implementation
         mWatcher->unwatch(change.releasedRoute);
         mShellWatcher->unwatch(change.releasedRoute);
         mRestoreQueue[static_cast<size_t>(mModel.activePane)].clear();
-        Refresh(L"Tab closed");
+        Refresh(L"탭을 닫았습니다.");
     }
     void MainWindow::OnSplitClicked(IInspectable const&,RoutedEventArgs const&)
     {
@@ -488,18 +513,18 @@ namespace winrt::FlyExplorerWinUIShell::implementation
         SecondaryColumn().Width(mModel.split?
             GridLength{1.0,GridUnitType::Star}:GridLength{0.0,GridUnitType::Pixel});
         SplitButton().Content(winrt::box_value(
-            hstring(mModel.split?L"Single pane":L"Split panes")));
-        Refresh(mModel.split?L"Two independent panes":L"Single pane; other state retained");
+            hstring(mModel.split?L"단일 창":L"분할 창")));
+        Refresh(mModel.split?L"두 창이 독립적으로 열렸습니다.":L"단일 창으로 표시합니다. 다른 창의 상태는 유지됩니다.");
     }
     void MainWindow::OnActivateLeft(IInspectable const&,RoutedEventArgs const&)
     {
         ActivatePane(0);
-        StatusText().Text(L"Left pane selected");
+        StatusText().Text(L"왼쪽 창을 선택했습니다.");
     }
     void MainWindow::OnActivateRight(IInspectable const&,RoutedEventArgs const&)
     {
         ActivatePane(1);
-        StatusText().Text(L"Right pane selected");
+        StatusText().Text(L"오른쪽 창을 선택했습니다.");
     }
     void MainWindow::OnHomeClicked(IInspectable const&,RoutedEventArgs const&)
     {
@@ -525,7 +550,7 @@ namespace winrt::FlyExplorerWinUIShell::implementation
         if (static_cast<size_t>(view.SelectedIndex())==pane.active)return;
         if(!mModel.dispatch(fxfile::explorerui::Command::SelectTab,0,
                  static_cast<size_t>(view.SelectedIndex())).accepted)return;
-        Refresh(L"Left tab selected");
+        Refresh(L"왼쪽 탭을 선택했습니다.");
     }
     void MainWindow::OnRightTabSelectionChanged(
         IInspectable const& sender,SelectionChangedEventArgs const&)
@@ -537,7 +562,7 @@ namespace winrt::FlyExplorerWinUIShell::implementation
         if (static_cast<size_t>(view.SelectedIndex())==pane.active)return;
         if(!mModel.dispatch(fxfile::explorerui::Command::SelectTab,1,
                  static_cast<size_t>(view.SelectedIndex())).accepted)return;
-        Refresh(L"Right tab selected");
+        Refresh(L"오른쪽 탭을 선택했습니다.");
     }
     void MainWindow::OpenSelectedFolder(int side)
     {

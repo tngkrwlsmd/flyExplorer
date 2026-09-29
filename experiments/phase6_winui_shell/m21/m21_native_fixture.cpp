@@ -1,0 +1,72 @@
+#include "../../../src/base/preview_preferences.h"
+#include "../../../src/base/file_command_core.h"
+#include <windows.h>
+#include <filesystem>
+#include <cstdio>
+using namespace fxfile;
+int wmain(int argc,wchar_t**argv){
+ setvbuf(stdout,nullptr,_IONBF,0);
+ if(argc!=2)return 2;
+ const std::filesystem::path root(argv[1]);
+ int pass=0,fail=0;
+ auto chk=[&](bool ok,const char*why){std::printf("M21_%s %s\n",ok?"PASS":"FAIL",why);
+   if(ok)++pass;else ++fail;};
+ previewsettings::Preferences pref{};
+ const auto config=previewsettings::privatePath();
+ chk(!config.empty()&&config.find(L"WinUI3Preview")!=std::wstring::npos,"isolated_preview_profile");
+ chk(!previewsettings::load(pref)&&pref.language==L"ko-KR"&&
+   pref.theme==previewsettings::Theme::System,"korean_system_default_without_settings");
+ pref.theme=previewsettings::Theme::Dark;
+ chk(previewsettings::save(pref)&&std::filesystem::exists(config),"atomic_save_ko_dark");
+ pref=previewsettings::Preferences{};
+ chk(previewsettings::load(pref)&&pref.theme==previewsettings::Theme::Dark&&
+   pref.language==L"ko-KR","reload_ko_dark");
+ pref.theme=previewsettings::Theme::Light;
+ chk(previewsettings::save(pref)&&previewsettings::load(pref)&&
+   pref.theme==previewsettings::Theme::Light,"atomic_light_update");
+ pref.language=L"en-US";
+ chk(!previewsettings::save(pref),"unsupported_locale_not_written");
+ pref=previewsettings::Preferences{};
+ chk(previewsettings::load(pref)&&pref.theme==previewsettings::Theme::Light&&
+   pref.language==L"ko-KR","failed_save_keeps_previous_data");
+ const auto dir=root/L"owned-directory";
+ std::filesystem::create_directory(dir);
+ filecommand::Request req;
+ req.parent=dir.native();req.name=L"새 폴더";
+ std::printf("M21_DEBUG_KOREAN_NAME_SAFE=%d PARENT_EXISTS=%d\\n",
+  (int)filecommand::validLeaf(req.name),(int)std::filesystem::is_directory(dir));
+ chk(filecommand::validLeaf(req.name)&&
+   filecommand::execute(req).error==ERROR_SUCCESS&&
+   std::filesystem::is_directory(dir/L"새 폴더"),"create_korean_folder");
+ chk(filecommand::execute(req).error==ERROR_ALREADY_EXISTS,
+   "never_overwrite_existing_directory");
+ req.name=L"..";
+ chk(!filecommand::validLeaf(req.name)&&
+   filecommand::execute(req).error==ERROR_INVALID_NAME,"deny_parent_traversal");
+ req.name=L"CON.txt";
+ chk(!filecommand::validLeaf(req.name)&&
+   filecommand::execute(req).error==ERROR_INVALID_NAME,"deny_reserved_device");
+ req.name=L"no/paths";
+ chk(!filecommand::validLeaf(req.name)&&
+   filecommand::execute(req).error==ERROR_INVALID_NAME,"deny_slash");
+ req.name=L"이름.";
+ chk(!filecommand::validLeaf(req.name)&&
+   filecommand::execute(req).error==ERROR_INVALID_NAME,"deny_trailing_period");
+ req.kind=filecommand::Kind::RenameSelected;
+ req.source=(dir/L"새 폴더").native();req.name=L"이름 변경";
+ chk(filecommand::execute(req).error==ERROR_SUCCESS&&
+    std::filesystem::is_directory(dir/L"이름 변경"),"rename_owned_korean_directory");
+ std::filesystem::create_directory(dir/L"대상 존재");
+ req.source=(dir/L"이름 변경").native();req.name=L"대상 존재";
+ chk(filecommand::execute(req).error!=ERROR_SUCCESS&&
+    std::filesystem::is_directory(dir/L"이름 변경")&&
+    std::filesystem::is_directory(dir/L"대상 존재"),"rename_never_replaces_existing");
+ req.source=(root/L"foreign-source").native();req.name=L"safe";
+ chk(filecommand::execute(req).error==ERROR_INVALID_NAME,"rename_source_must_be_child");
+ req.parent=L"shell:MyComputerFolder";
+ chk(filecommand::execute(req).error!=ERROR_SUCCESS,"reject_virtual_folder_mutations");
+ req.parent=dir.native();req.kind=static_cast<filecommand::Kind>(99);
+ chk(filecommand::execute(req).error==ERROR_INVALID_PARAMETER,"unknown_mutation_denied");
+ std::printf("M21_NATIVE_SUMMARY %d passed, %d failed.\n",pass,fail);
+ return fail?1:0;
+}

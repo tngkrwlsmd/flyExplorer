@@ -59,10 +59,10 @@ void MainWindow::InitializeM19(){
     }
     if(requested.empty())return;
     if(!absoluteFile(requested)){
-        StatusText().Text(L"Invalid absolute named-workspace path.");
+        StatusText().Text(L"작업 공간 파일의 절대 경로가 필요합니다.");
         return;
     }
-    StatusText().Text(L"Validating isolated named workspace...");
+    StatusText().Text(L"작업 공간 파일을 안전하게 검사하는 중입니다...");
     try {
         std::thread([weak,dispatch,requested=std::move(requested)]{
             auto prepared=std::make_shared<fxfile::preview::Workspace>();
@@ -73,12 +73,12 @@ void MainWindow::InitializeM19(){
                 if(auto ui=weak.get()){
                     if(good)ui->ApplyWorkspace(std::move(*prepared));
                     else ui->StatusText().Text(
-                        hstring(L"Named workspace rejected: "+*reason));
+                        hstring(L"작업 공간 파일이 올바르지 않습니다: "+*reason));
                 }
             });
         }).detach();
     }catch(...) {
-        StatusText().Text(L"Could not launch isolated workspace validation.");
+        StatusText().Text(L"작업 공간 파일 검사를 시작할 수 없습니다.");
     }
 }
 void MainWindow::ApplyWorkspace(fxfile::preview::Workspace&& doc) {
@@ -99,7 +99,7 @@ void MainWindow::ApplyWorkspace(fxfile::preview::Workspace&& doc) {
     std::array<size_t,2> selected{{doc.selected[0],
                                    doc.split?doc.selected[1]:0}};
     if(!mModel.reset(doc.split,counts,selected)){
-        StatusText().Text(L"Unsupported named workspace layout.");
+        StatusText().Text(L"지원하지 않는 작업 공간 배치입니다.");
         return;
     }
     SecondaryPane().Visibility(mModel.split?Visibility::Visible:Visibility::Collapsed);
@@ -107,7 +107,7 @@ void MainWindow::ApplyWorkspace(fxfile::preview::Workspace&& doc) {
     SecondaryColumn().Width(mModel.split?
         GridLength{1.0,GridUnitType::Star}:GridLength{0.0,GridUnitType::Pixel});
     SplitButton().Content(box_value(hstring(
-        mModel.split?L"Single pane":L"Split panes")));
+        mModel.split?L"단일 창":L"분할 창")));
     for(int side=0;side!=2;++side){
         const auto& paths=(!mModel.split && side==1)?
             doc.paths[0]:doc.paths[side];
@@ -121,7 +121,7 @@ void MainWindow::ApplyWorkspace(fxfile::preview::Workspace&& doc) {
             paths[doc.selected[0]]:paths[pane.active];
         QueuePath(side,initial); // nonblocking, same supervised lane
     }
-    Refresh(L"Restoring validated named workspace in this isolated window");
+    Refresh(L"검증한 작업 공간을 독립된 창에서 복원하는 중입니다.");
 }
 void MainWindow::QueueNextWorkspaceTab(int side) {
     auto& pane=mModel.panes[side];
@@ -149,16 +149,16 @@ bool MainWindow::WorkspaceModel(
         auto const& pane=mModel.panes[side];
         if(pane.tabs.empty()||pane.tabs.size()>32 ||
            pane.active>=pane.tabs.size()) {
-            reason=L"Unsupported tab layout.";return false;
+            reason=L"지원하지 않는 탭 배치입니다.";return false;
         }
         for(size_t i=0;i<pane.tabs.size();++i){
             if(pane.pending[i]){
-                reason=L"Wait until every folder finishes loading.";return false;
+                reason=L"모든 폴더가 로드될 때까지 기다려 주세요.";return false;
             }
             auto path=pane.filesystemPaths[i];
             if(path.empty())path=pane.tabs[i].snapshot().parsingName;
             if(path.empty()) {
-                reason=L"An unloaded tab cannot be saved.";return false;
+                reason=L"아직 로드되지 않은 탭은 저장할 수 없습니다.";return false;
             }
             target.paths[side].push_back(std::move(path));
         }
@@ -173,13 +173,13 @@ void MainWindow::OnToggleWorkspaces(
     SearchPanel().Visibility(Visibility::Collapsed);
     WorkspacePanel().Visibility(next);
     if(next==Visibility::Visible)
-        StatusText().Text(L"Choose an absolute .fxworkspace file path");
+        StatusText().Text(L"작업 공간 파일의 절대 경로를 입력하세요.");
 }
 void MainWindow::OnSaveWorkspace(
     IInspectable const&,RoutedEventArgs const&) {
     const auto file=std::wstring(WorkspaceFileBox().Text().c_str());
     if(!absoluteFile(file)){
-        StatusText().Text(L"Choose an absolute .fxworkspace filename.");
+        StatusText().Text(L"작업 공간 파일 이름을 절대 경로로 입력하세요.");
         return;
     }
     fxfile::preview::Workspace snapshot;
@@ -189,7 +189,7 @@ void MainWindow::OnSaveWorkspace(
     }
     const auto weak=get_weak();
     const auto dispatch=DispatcherQueue();
-    StatusText().Text(L"Saving new named workspace without overwriting...");
+    StatusText().Text(L"기존 파일을 덮어쓰지 않고 새 작업 공간을 저장하는 중입니다...");
     try {
         std::thread([weak,dispatch,file,doc=std::move(snapshot)]{
             std::wstring result;
@@ -197,29 +197,29 @@ void MainWindow::OnSaveWorkspace(
                 file,doc,result);
             dispatch.TryEnqueue([weak,saved,result=std::move(result)]{
                 if(auto ui=weak.get())ui->StatusText().Text(
-                    saved?L"Named workspace saved to the chosen file":
-                    hstring(L"Named workspace not saved: "+result));
+                    saved?L"선택한 파일에 작업 공간을 새로 저장했습니다.":
+                    hstring(L"작업 공간을 저장하지 못했습니다: "+result));
             });
         }).detach();
     }catch(...) {
-        StatusText().Text(L"Could not launch workspace writer.");
+        StatusText().Text(L"작업 공간 저장 작업을 시작할 수 없습니다.");
     }
 }
 void MainWindow::OnOpenWorkspace(
     IInspectable const&,RoutedEventArgs const&) {
     const auto file=std::wstring(WorkspaceFileBox().Text().c_str());
     if(!absoluteFile(file)){
-        StatusText().Text(L"Choose an absolute existing .fxworkspace file.");
+        StatusText().Text(L"존재하는 작업 공간 파일의 절대 경로를 입력하세요.");
         return;
     }
     const auto own=ownExecutable();
     if(own.empty()){
-        StatusText().Text(L"Cannot locate the private WinUI preview executable.");
+        StatusText().Text(L"현재 WinUI 실행 파일을 찾지 못했습니다.");
         return;
     }
     const auto weak=get_weak();
     const auto dispatch=DispatcherQueue();
-    StatusText().Text(L"Validating before opening a separate WinUI window...");
+    StatusText().Text(L"별도 WinUI 창을 열기 전에 파일을 검사하고 있습니다...");
     try {
         std::thread([weak,dispatch,file,own]{
             fxfile::preview::Workspace candidate;
@@ -251,18 +251,18 @@ void MainWindow::OnOpenWorkspace(
                 if(auto ui=weak.get()){
                     if(created)
                         ui->StatusText().Text(
-                          L"Named workspace opened in a separate WinUI process");
+                          L"작업 공간을 별도 WinUI 프로세스에서 열었습니다.");
                     else if(!valid)
                         ui->StatusText().Text(
-                          hstring(L"Named workspace rejected: "+reason));
+                          hstring(L"작업 공간 파일이 올바르지 않습니다: "+reason));
                     else ui->StatusText().Text(
-                          hstring(L"Could not start isolated workspace window: "+
+                          hstring(L"독립 작업 공간 창을 시작할 수 없습니다. 오류: "+
                                   std::to_wstring(failure)));
                 }
             });
         }).detach();
     }catch(...) {
-        StatusText().Text(L"Cannot start workspace validation worker.");
+        StatusText().Text(L"작업 공간 파일 검사 작업자를 시작할 수 없습니다.");
     }
 }
 void MainWindow::RefreshRecentSearchOptions(){
@@ -276,7 +276,7 @@ void MainWindow::RefreshRecentSearchOptions(){
     }
     SearchRecentBox().SelectedIndex(-1);
     RecentCountText().Text(hstring(
-        std::to_wstring(mRecentScopes.size())+L" saved"));
+        L"저장 "+std::to_wstring(mRecentScopes.size())+L"개"));
     mPopulatingRecents=false;
 }
 void MainWindow::OnToggleSearch(
@@ -289,7 +289,7 @@ void MainWindow::OnToggleSearch(
         auto& pane=mModel.panes[static_cast<size_t>(mModel.activePane)];
         auto const& path=pane.filesystemPaths[pane.active];
         if(!path.empty())SearchScopeBox().Text(hstring(path));
-        StatusText().Text(L"Read-only bounded filename search; remembering is opt-in");
+        StatusText().Text(L"제한된 파일 이름 검색 · 최근 위치 저장은 선택 사항입니다.");
     }
 }
 void MainWindow::OnRunSearch(
@@ -298,7 +298,7 @@ void MainWindow::OnRunSearch(
     const auto term=std::wstring(SearchTermBox().Text().c_str());
     if(scope.empty()||term.empty()||scope.size()>32700||term.size()>256) {
         StatusText().Text(
-           L"Enter a filesystem scope and a filename term (up to 256 characters).");
+           L"검색 폴더와 검색어를 입력하세요(최대 256자).");
         return;
     }
     if(mSearchCancel)mSearchCancel->store(true);
@@ -309,7 +309,7 @@ void MainWindow::OnRunSearch(
     const auto weak=get_weak();
     const auto dispatch=DispatcherQueue();
     SearchRunButton().IsEnabled(false);
-    SearchCountText().Text(L"Searching on an independent native thread...");
+    SearchCountText().Text(L"독립 스레드에서 파일 이름을 검색하고 있습니다...");
     SearchMatches().Items().Clear();
     try {
         std::thread([weak,dispatch,cancel,ticket,scope,term,remember]{
@@ -329,7 +329,7 @@ void MainWindow::OnRunSearch(
         }).detach();
     }catch(...){
         SearchRunButton().IsEnabled(true);
-        StatusText().Text(L"Could not start independent search thread.");
+        StatusText().Text(L"독립 검색 스레드를 시작할 수 없습니다.");
     }
 }
 void MainWindow::OnSearchCompleted(
@@ -337,9 +337,9 @@ void MainWindow::OnSearchCompleted(
     std::wstring const& scope,bool remember){
     if(result.canceled)return;
     if(!result.valid){
-        SearchCountText().Text(L"Invalid or inaccessible filesystem folder");
+        SearchCountText().Text(L"검색할 폴더가 올바르지 않거나 접근할 수 없습니다.");
         StatusText().Text(
-            L"Search rejected; previous recent locations were not modified");
+            L"검색을 시작할 수 없습니다. 최근 검색 위치는 변경하지 않았습니다.");
         return;
     }
     auto items=SearchMatches().Items();
@@ -350,22 +350,22 @@ void MainWindow::OnSearchCompleted(
         items.Append(row);
     }
     SearchCountText().Text(hstring(
-        L"Found "+std::to_wstring(result.count)+
-        (result.truncated?L" matching files (bounded partial search)":
-                          L" matching files")));
+        L"검색 결과 "+std::to_wstring(result.count)+
+        (result.truncated?L"개(제한된 일부 결과)":
+                          L"개")));
     if(remember){
         fxfile::preview::rememberScope(mRecentScopes,scope);
         mRecentEdited=true;
         RefreshRecentSearchOptions();
         if(!fxfile::preview::writeRecentScopes(mRecentScopes)) {
             StatusText().Text(
-                L"Search completed, but opted-in recent-location save failed.");
+                L"검색은 완료됐지만 선택한 최근 위치를 저장하지 못했습니다.");
             return;
         }
     }
     StatusText().Text(
-        remember?L"Search completed; opted-in location saved to preview profile":
-                 L"Search completed; location not remembered (default)");
+        remember?L"검색 완료 · 선택한 위치를 미리보기 프로필에 저장했습니다.":
+                 L"검색 완료 · 위치를 저장하지 않았습니다(기본값).");
 }
 void MainWindow::OnSelectSearchRecent(
     IInspectable const&,SelectionChangedEventArgs const&){
@@ -373,7 +373,7 @@ void MainWindow::OnSelectSearchRecent(
     const auto index=SearchRecentBox().SelectedIndex();
     if(index<0||static_cast<size_t>(index)>=mRecentScopes.size())return;
     SearchScopeBox().Text(hstring(mRecentScopes[static_cast<size_t>(index)]));
-    StatusText().Text(L"Selected prior opted-in search scope without saving");
+    StatusText().Text(L"저장된 위치를 선택했습니다. 기록은 변경하지 않았습니다.");
 }
 void MainWindow::OnClearSearchRecent(
     IInspectable const&,RoutedEventArgs const&){
@@ -381,7 +381,7 @@ void MainWindow::OnClearSearchRecent(
     mRecentEdited=true;
     RefreshRecentSearchOptions();
     if(fxfile::preview::writeRecentScopes(mRecentScopes))
-        StatusText().Text(L"Preview recent search locations cleared");
-    else StatusText().Text(L"Could not persist recent search clearing");
+        StatusText().Text(L"최근 검색 위치를 모두 지웠습니다.");
+    else StatusText().Text(L"최근 검색 위치 삭제를 저장하지 못했습니다.");
 }
 } // winrt::FlyExplorerWinUIShell::implementation

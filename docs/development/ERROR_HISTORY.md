@@ -64,12 +64,12 @@
 - MSBuild `BUILD_RESULT=0` 이후 warning 검사 분기로 들어간 상태였다.
 
 **원인 진단**
-- Observed: `local_ci.bat`의 quoted PowerShell `-Command` 내부 pipeline이 `$lines ^| Where-Object ... ^| ForEach-Object ...` 형태였다.
-- Root cause: `^|`는 cmd.exe 바깥 문맥용 escape인데 이미 큰따옴표로 감싼 PowerShell command 안에서 사용되어 PowerShell parser에 잘못된 토큰으로 전달됐다.
+- Observed: `local_ci.bat`의 quoted PowerShell `-Command` 내부 pipeline이 `$lines `| Where-Object ... `| ForEach-Object ...` 형태였다.
+- Root cause: ``|`는 cmd.exe 바깥 문맥용 escape인데 이미 큰따옴표로 감싼 PowerShell command 안에서 사용되어 PowerShell parser에 잘못된 토큰으로 전달됐다.
 
 **해결 방법**
 - 수정 파일: `local_ci.bat`
-- `^|`를 raw PowerShell pipe `|`로 변경했다.
+- ``|`를 raw PowerShell pipe `|`로 변경했다.
 - 영구 `local-ci.log`의 error-focused 정책과 shell의 일반 MSBuild 진행 출력은 그대로 유지했다.
 
 **재발 방지**
@@ -4022,3 +4022,8 @@ Final compiled M1.9 WinUI Debug/Release actual owned GUI, merged native MFC x64 
 - Real GUI harness initially assumed WinUI's `ThemePicker` accessible item count was exactly three; its provider reported four peers for three actual options, so that incidental UIA count is not the runtime contract. Actual System/Light/Dark UIA selection and rendered Light/Dark pixel difference passed for both Debug and Release.
 - The old test incorrectly assumed collapsed right-pane UIA elements remain queryable; actual WinUI removes that subtree from UIA when hidden, raising `ElementNotFoundError`. Corrected the test to check actual absence plus composited right-region pixel change; observed real owned pixel differences were 0.26 in Debug and 0.82 in Release.
 - A new This PC GUI probe expected an unresolved `computerfolder` alias, whereas the same isolated Shell helper resolves it into native virtual `::{...}` PIDL parsing text. The updated test verifies the real resolved virtual PIDL and physically performs Back. Debug and Release completed these scenarios without touching original settings.
+
+
+## 2026-09-29: M2.1 literal ?? runtime theme labels after partial UTF-8 repair
+
+Initial remote Python writes from Windows PowerShell lost Hangul because the input pipe was not explicitly UTF-8. The main/source text was reconstructed with true Unicode and explicit UTF-8 transport, but three literal `??` strings remained in `ShellHeader.xaml.cpp::ShowChoice()`. The actual owned Debug WinUI GUI exposed `ThemeStateText` as ASCII `??: ???`: this was a **real runtime localization bug**, not only PowerShell console mojibake. Corrected all three genuine Korean strings, consolidated project-wide `/utf-8` compiler options for Debug/Release and created a static source check forbidding this exact bad runtime text. The rebuilt actual owned Debug GUI returned genuine Unicode Korean System, passed Dark/Light/Dark private theme persistence, real second process Korean Dark restoration and guarded Korean-folder create/rename/duplicate non-overwrite; original six MFC user settings unchanged. Earlier failed GUI logs are NOT pass proof. The initial GUI test also assumed non-exposed outer UserControl UIA wrappers and incorrectly called `child_window` on a UIA wrapper; both test-only assumptions were fixed. An owned child inadvertently left running by the preliminary test was identified using exact developer build exe AND exact synthetic owned folder argument, then safely terminated. The final harness now terminates only its own spawned child even when discovery fails.

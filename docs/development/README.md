@@ -1,5 +1,8 @@
 # flyExplorer development documentation index
 
+**KOREAN-DEFAULT CURRENT M2.1:** [Reusable WinUI shell/sidebar, private Korean System/Light/Dark preferences, first bounded native file mutations, true Unicode incident and scoped tests](WINUI3_M21_KOREAN_NATIVE_UI_COMPONENTS_20260929.md).
+
+
 **CURRENT M2.0:** [Independent WinUI full-window main-shell and shared native command/state boundary](WINUI3_M20_FULL_WINDOW_NATIVE_COMMAND_MODEL_20260929.md). Previous M1.9 notes and neutral technology studies below are historical.
 
 

@@ -1,5 +1,8 @@
 # flyExplorer product UI directive — full WinUI 3 replacement (2026-09-29)
 
+**Mandatory Korean default (owner direction):** The final app-owned WinUI product defaults to ko-KR even on non-Korean Windows. Real Korean text/accessibility labels, keyboard/IME, Hangul filesystem handling, proper UTF-8 compiler/tool transport and eventual localized resources are required release gates. [Current M2.1 language implementation and genuine Unicode issue](WINUI3_M21_KOREAN_NATIVE_UI_COMPONENTS_20260929.md).
+
+
 **Decision status: owner-directed product goal. Implementation status: in progress, NOT production complete.**
 This decision supersedes earlier technology-neutral comparisons and earlier suggestions that a permanent MFC-hosted XAML Islands hybrid could be the product end state. MFC remains the supported existing product until release gates pass.
 

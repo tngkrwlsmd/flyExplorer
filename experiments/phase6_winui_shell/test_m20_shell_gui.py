@@ -25,12 +25,12 @@ def run(*,win,element,safe_click,focus,eventually,owned):
             include_layered_windows=True).convert("RGB")
     focus()
     picker.select(2)
-    eventually(lambda:element("ThemeStateText").window_text()=="Theme: Dark",
+    eventually(lambda:element("ThemeStateText").window_text()=="테마: 다크",
                "actual WinUI Dark selection not propagated to root")
     dark=surface()
     focus()
     picker.select(1)
-    eventually(lambda:element("ThemeStateText").window_text()=="Theme: Light",
+    eventually(lambda:element("ThemeStateText").window_text()=="테마: 라이트",
                "actual WinUI Light selection not propagated to root")
     light=surface()
     assert dark.size==light.size
@@ -51,7 +51,7 @@ def run(*,win,element,safe_click,focus,eventually,owned):
     print("REAL_M20_WINUI_DARK_LIGHT_FINAL_SHELL_PIXELS",True,flush=True)
     focus()
     picker.select(0)
-    eventually(lambda:element("ThemeStateText").window_text()=="Theme: System",
+    eventually(lambda:element("ThemeStateText").window_text()=="테마: 시스템",
                "System theme not restored")
     print("REAL_M20_SYSTEM_LIGHT_DARK_NATIVE_THEME_CHOICES",True,flush=True)
     # The old GUI harness has already completed both-pane, tab and PIDL
@@ -75,9 +75,9 @@ def run(*,win,element,safe_click,focus,eventually,owned):
        "shared C++ close-tab command did not update real WinUI",10)
     # The preceding M1.8 regression intentionally toggles split state;
     # assert the CURRENT real button state before exercising M2.0.
-    if "Split panes" in element("SplitButton").window_text():
+    if "분할 창" in element("SplitButton").window_text():
         safe_click(element("SplitButton"))
-    eventually(lambda:"Single pane" in element("SplitButton").window_text()
+    eventually(lambda:"단일 창" in element("SplitButton").window_text()
        and right_visible(),
        "failed to establish two-pane starting state for owned test",7)
     before_hide=surface()
@@ -85,7 +85,7 @@ def run(*,win,element,safe_click,focus,eventually,owned):
     print("M20_SPLIT_HIDE_IMMEDIATE_UIA",
           repr(element("SplitButton").window_text()),
           right_visible(),flush=True)
-    eventually(lambda:"Split panes" in element("SplitButton").window_text(),
+    eventually(lambda:"분할 창" in element("SplitButton").window_text(),
        "shared C++ split-hide command failed to update actual WinUI control",7)
     after_hide=surface()
     from PIL import ImageChops
@@ -102,7 +102,7 @@ def run(*,win,element,safe_click,focus,eventually,owned):
         "shared C++ split-hide failed rendered region / UIA disappearance",
         variance,right_visible())
     safe_click(element("SplitButton"))
-    eventually(lambda:"Single pane" in element("SplitButton").window_text(),
+    eventually(lambda:"단일 창" in element("SplitButton").window_text(),
        "shared C++ split-show did not restore two-pane command state",7)
     assert len([v for v in right_tabs.descendants()
        if v.element_info.control_type=="TabItem"])==prior_right

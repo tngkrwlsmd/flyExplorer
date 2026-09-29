@@ -1,5 +1,7 @@
 # flyExplorer full WinUI 3 UI replacement ? dedicated migration worktree
 
+**M2.1 KOREAN REUSABLE CONTROL AND NATIVE OPERATIONS SLICE:** Owner-approved default UI is Korean ko-KR independently of Windows language. Independent WinUI reusable header/sidebar now compile, real native private theme settings and guarded create-folder/rename operations are bound, and the actual earlier literal ?? runtime-theme bug has been corrected/verified in a rebuilt owned Debug window. Independently built native Debug/Release each pass 18/18, source guards 71/71, source-matched real owned Debug/Release combined M1.9-M2.1 GUI and renewed Debug controlled M1.8 fault replay all PASS; full product parity, packaging and real external provider/DPI/accessibility gates remain open. [Actual M2.1 implementation and precise remaining parity](WINUI3_M21_KOREAN_NATIVE_UI_COMPONENTS_20260929.md).
+
 **M2.0 FULL-WINDOW NATIVE MODEL CHECKPOINT:**
 The actual independent WinUI full-window now consumes the native C++ pane/tab command model, with a WinUI header, System/Light/Dark and This PC. Paired Debug and Release x64 builds, each native state 16/16 and real owned normal GUI passed; source checks 64/64. Remaining native advanced feature parity, physical DPI, accessibility and clean installer are still OPEN. [M2.0 scoped implementation and evidence](WINUI3_M20_FULL_WINDOW_NATIVE_COMMAND_MODEL_20260929.md). Older M1.9 status below is historical.
 
