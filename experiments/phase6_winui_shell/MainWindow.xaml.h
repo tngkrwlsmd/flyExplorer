@@ -131,6 +131,7 @@ namespace winrt::FlyExplorerWinUIShell::implementation
             std::uint64_t bytes=0;
             std::uint64_t modified=0;
             std::wstring bytesLabel;
+            std::wstring typeLabel;
             std::wstring dateLabel;
             bool sizeKnown=false;
             bool dateKnown=false;

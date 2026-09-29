@@ -48,8 +48,14 @@ def run(*,win,element,safe_click,focus,eventually,
             time.sleep(.12)
             mouse.move(coords=(origin.x+27,origin.y+18))
             time.sleep(.19)
+            if os.environ.get("FLY_M23_OWNED_DRAG_TRACE")=="YES":
+                print("M23_DRAG_TRACE_AFTER_START",
+                      element("StatusText").window_text().encode("unicode_escape").decode("ascii"),flush=True)
             mouse.move(coords=target)
             time.sleep(.20)
+            if os.environ.get("FLY_M23_OWNED_DRAG_TRACE")=="YES":
+                print("M23_DRAG_TRACE_OVER_TARGET",
+                      element("StatusText").window_text().encode("unicode_escape").decode("ascii"),flush=True)
         finally:
             mouse.release(button="left",coords=target)
         print("M23_DRAG_OWNED_COORDINATES",

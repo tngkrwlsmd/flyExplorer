@@ -12,13 +12,13 @@
             </Grid.ColumnDefinitions>
             <TextBlock Text="파일 작업" FontWeight="SemiBold"
                        VerticalAlignment="Center"/>
-            <TextBox x:Name="FileNameBox" Grid.Column="1"
+            <TextBox x:Uid="FileNameBox" x:Name="FileNameBox" Grid.Column="1"
                      PlaceholderText="새 이름을 입력하세요"
                      AutomationProperties.Name="새 폴더 또는 새 파일 이름"/>
-            <Button x:Name="CreateFolderButton" Grid.Column="2"
+            <Button x:Uid="CreateFolderButton" x:Name="CreateFolderButton" Grid.Column="2"
                     Content="새 폴더" Click="OnCreateFolder"
                     AutomationProperties.Name="현재 폴더에 새 폴더 만들기"/>
-            <Button x:Name="RenameButton" Grid.Column="3"
+            <Button x:Uid="RenameButton" x:Name="RenameButton" Grid.Column="3"
                     Content="이름 변경" Click="OnRenameSelected"
                     AutomationProperties.Name="선택된 파일 또는 폴더 이름 변경"/>
             <StackPanel Grid.Column="4" Orientation="Horizontal"
@@ -35,7 +35,7 @@
                 <Button x:Uid="CancelAction" x:Name="CancelButton"
                     Content="취소" Click="OnCancel" IsEnabled="False"
                     AutomationProperties.Name="진행 중인 Shell 파일 작업 취소"/>
-                <ComboBox x:Name="SortPicker" Header="정렬" Width="112"
+                <ComboBox x:Uid="SortPicker" x:Name="SortPicker" Header="정렬" Width="112"
                     SelectedIndex="0" SelectionChanged="OnSortChanged"
                     AutomationProperties.Name="현재 창 파일 정렬 방식">
                     <ComboBoxItem Content="이름 ↑"/>

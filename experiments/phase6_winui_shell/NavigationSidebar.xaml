@@ -6,13 +6,13 @@
                     Background="{ThemeResource LayerFillColorDefaultBrush}" Padding="8">
                 <StackPanel Spacing="8">
                     <TextBlock Text="탐색" FontSize="15" FontWeight="SemiBold" Margin="6,9,0,8"/>
-                    <Button x:Name="HomeButton" Content="홈" HorizontalAlignment="Stretch" HorizontalContentAlignment="Left"
+                    <Button x:Uid="HomeButton" x:Name="HomeButton" Content="홈" HorizontalAlignment="Stretch" HorizontalContentAlignment="Left"
                             Click="OnHomeClicked" AutomationProperties.Name="홈 폴더로 이동"/>
-                    <Button x:Name="DocumentsButton" Content="문서" HorizontalAlignment="Stretch"
+                    <Button x:Uid="DocumentsButton" x:Name="DocumentsButton" Content="문서" HorizontalAlignment="Stretch"
                             HorizontalContentAlignment="Left" Click="OnDocumentsClicked"/>
-                    <Button x:Name="DownloadsButton" Content="다운로드" HorizontalAlignment="Stretch"
+                    <Button x:Uid="DownloadsButton" x:Name="DownloadsButton" Content="다운로드" HorizontalAlignment="Stretch"
                             HorizontalContentAlignment="Left" Click="OnDownloadsClicked"/>
-                    <Button x:Name="ThisPCButton" Content="내 PC" HorizontalAlignment="Stretch"
+                    <Button x:Uid="ThisPCButton" x:Name="ThisPCButton" Content="내 PC" HorizontalAlignment="Stretch"
                             HorizontalContentAlignment="Left" Click="OnThisPCClicked"
                             AutomationProperties.Name="내 PC로 이동"/>
                     <TextBlock Text="독립 Shell 작업자 · 파일 변경 감지"

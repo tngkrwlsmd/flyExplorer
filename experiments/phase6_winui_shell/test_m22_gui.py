@@ -26,6 +26,9 @@ def run(*,win,element,safe_click,focus,eventually,left,right):
   little=next((i for i,s in enumerate(titles) if "작은.txt" in s),None)
   return big is not None and little is not None and big<little
  eventually(size_sorted,"real size sorting did not order files descending",10)
+ assert "txt 파일" in row("Left","큰.txt").window_text(), (
+     "real local extension type not displayed for Korean file")
+ print("REAL_M23_LOCAL_KOREAN_EXTENSION_TYPE_IN_DETAIL_ROW",True,flush=True)
  print("REAL_M22_ASYNC_NATIVE_METADATA_KOREAN_SIZE_AND_SORT",True,flush=True)
  def select_one(name):
   target=row("Left",name)

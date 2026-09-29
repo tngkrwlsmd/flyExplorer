@@ -128,6 +128,12 @@ class M23Contracts(unittest.TestCase):
   x=src(A+"MainWindow.xaml")
   self.assertEqual(x.count('DragItemsStarting="OnFileDragItemsStarting"'),2)
   self.assertEqual(x.count('Drop="OnFileDrop"'),2)
+ def test_all_drag_runtime_messages_are_genuine_korean(self):
+  code=src(A+"m23_drag.cpp")
+  self.assertNotIn('StatusText().Text(L"?',code)
+  for part in ("원본 폴더가 변경됐습니다","최대 32개",
+               "파일 놓기 데이터를 읽지 못했습니다"):
+   self.assertIn(part,code)
  def test_row_drag_is_compiled_and_physical_test_is_separate_gate(self):
   source=src(A+"MainWindow.xaml.cpp")
   drag=src(A+"m23_drag.cpp")

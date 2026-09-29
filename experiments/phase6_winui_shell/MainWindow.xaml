@@ -25,21 +25,21 @@
                 <ColumnDefinition Width="Auto"/>
             </Grid.ColumnDefinitions>
             <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="5">
-                <Button x:Name="BackButton" Content="&#x2190;" Height="38" MinWidth="42" ToolTipService.ToolTip="뒤로" Click="OnBackClicked"/>
-                <Button x:Name="ForwardButton" Content="&#x2192;" Height="38" MinWidth="42" ToolTipService.ToolTip="앞으로" Click="OnForwardClicked"/>
-                <Button x:Name="UpButton" Content="&#x2191;" Height="38" MinWidth="42" ToolTipService.ToolTip="상위 폴더" Click="OnUpClicked"/>
+                <Button x:Uid="BackButton" x:Name="BackButton" Content="&#x2190;" Height="38" MinWidth="42" ToolTipService.ToolTip="뒤로" Click="OnBackClicked"/>
+                <Button x:Uid="ForwardButton" x:Name="ForwardButton" Content="&#x2192;" Height="38" MinWidth="42" ToolTipService.ToolTip="앞으로" Click="OnForwardClicked"/>
+                <Button x:Uid="UpButton" x:Name="UpButton" Content="&#x2191;" Height="38" MinWidth="42" ToolTipService.ToolTip="상위 폴더" Click="OnUpClicked"/>
             </StackPanel>
             <TextBox x:Name="AddressBox" Grid.Column="1" Height="38"
                      PlaceholderText="폴더 경로를 입력하세요" KeyDown="OnAddressKeyDown"
                      AutomationProperties.Name="현재 폴더 주소"/>
             <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="6">
-                <Button x:Name="NewTabButton" Content="새 탭" Height="38" Click="OnNewTabClicked"/>
-                <Button x:Name="CloseTabButton" Content="탭 닫기" Height="38" Click="OnCloseTabClicked"/>
+                <Button x:Uid="NewTabButton" x:Name="NewTabButton" Content="새 탭" Height="38" Click="OnNewTabClicked"/>
+                <Button x:Uid="CloseTabButton" x:Name="CloseTabButton" Content="탭 닫기" Height="38" Click="OnCloseTabClicked"/>
                 <Button x:Name="SplitButton" Content="단일 창" Height="38" Click="OnSplitClicked"/>
-                <Button x:Name="WorkspacePanelButton" Content="작업 공간" Height="38"
+                <Button x:Uid="WorkspacePanelButton" x:Name="WorkspacePanelButton" Content="작업 공간" Height="38"
                         AutomationProperties.Name="작업 공간 열기"
                         Click="OnToggleWorkspaces"/>
-                <Button x:Name="SearchPanelButton" Content="검색" Height="38"
+                <Button x:Uid="SearchPanelButton" x:Name="SearchPanelButton" Content="검색" Height="38"
                         AutomationProperties.Name="파일 검색 열기"
                         Click="OnToggleSearch"/>
             </StackPanel>
@@ -52,9 +52,9 @@
             <TextBox x:Name="WorkspaceFileBox" Width="355"
                      PlaceholderText=".fxworkspace 파일 전체 경로"
                      AutomationProperties.Name="작업 공간 파일 경로"/>
-            <Button x:Name="SaveWorkspaceButton" Content="새로 저장"
+            <Button x:Uid="SaveWorkspaceButton" x:Name="SaveWorkspaceButton" Content="새로 저장"
                     Click="OnSaveWorkspace" AutomationProperties.Name="새 작업 공간 저장"/>
-            <Button x:Name="OpenWorkspaceButton" Content="새 창에서 열기"
+            <Button x:Uid="OpenWorkspaceButton" x:Name="OpenWorkspaceButton" Content="새 창에서 열기"
                     Click="OnOpenWorkspace" AutomationProperties.Name="작업 공간을 새 창에서 열기"/>
             <Button x:Uid="SaveSessionAction" x:Name="SaveSessionButton" Content="현재 세션 기억"
                     Click="OnSavePrivateSession"
@@ -81,7 +81,7 @@
                           Content="검색 위치 기억(선택)"
                           VerticalAlignment="Center"
                           AutomationProperties.Name="최근 검색 위치 저장 선택"/>
-                <Button x:Name="SearchRunButton" Content="파일 찾기"
+                <Button x:Uid="SearchRunButton" x:Name="SearchRunButton" Content="파일 찾기"
                         Click="OnRunSearch" AutomationProperties.Name="파일 이름 검색 실행"/>
             </StackPanel>
             <StackPanel Orientation="Horizontal" Spacing="7">
@@ -92,7 +92,7 @@
                           PlaceholderText="저장된 검색 위치 선택"
                           SelectionChanged="OnSelectSearchRecent"
                           AutomationProperties.Name="최근 검색 위치"/>
-                <Button x:Name="SearchClearButton" Content="최근 기록 지우기"
+                <Button x:Uid="SearchClearButton" x:Name="SearchClearButton" Content="최근 기록 지우기"
                         Click="OnClearSearchRecent"
                         AutomationProperties.Name="최근 검색 위치 지우기"/>
                 <TextBlock x:Name="SearchCountText" Text="제한된 파일 이름 검색 · 파일 변경 없음"

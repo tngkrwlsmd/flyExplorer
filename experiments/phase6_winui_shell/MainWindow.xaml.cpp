@@ -430,6 +430,19 @@ namespace winrt::FlyExplorerWinUIShell::implementation
                         GetFileExInfoStandard,&data))continue;
                     if(data.dwFileAttributes&FILE_ATTRIBUTE_REPARSE_POINT)continue;
                     auto& entry=details[i];
+                    // Pure filename extension classification on the
+                    // already validated local worker: no untrusted Shell
+                    // extension or COM type handler runs on the UI thread.
+                    if(data.dwFileAttributes&FILE_ATTRIBUTE_DIRECTORY)
+                        entry.typeLabel=L"폴더";
+                    else{
+                        const auto dot=paths[i].find_last_of(L'.');
+                        const auto slash=paths[i].find_last_of(L"\\/");
+                        entry.typeLabel=dot!=std::wstring::npos&&
+                             (slash==std::wstring::npos||dot>slash)&&
+                             dot+1<paths[i].size()&&paths[i].size()-dot<=17?
+                             paths[i].substr(dot+1)+L" 파일":L"파일";
+                    }
                     if(!(data.dwFileAttributes&FILE_ATTRIBUTE_DIRECTORY)){
                         entry.bytes=(static_cast<std::uint64_t>(
                             data.nFileSizeHigh)<<32)|data.nFileSizeLow;
@@ -531,6 +544,7 @@ namespace winrt::FlyExplorerWinUIShell::implementation
                        item.label;
             if(detailReady){
                 const auto& meta=mFileDetails[side][index];
+                if(!meta.typeLabel.empty())label+=L"   |   "+meta.typeLabel;
                 if(meta.sizeKnown)label+=L"   |   "+meta.bytesLabel;
                 if(meta.dateKnown)label+=L"   |   "+meta.dateLabel;
             }
