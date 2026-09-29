@@ -1,5 +1,8 @@
 # flyExplorer full WinUI 3 UI replacement ? dedicated migration worktree
 
+**M2.2 최종 범위:** 독립 WinUI에서 ko-KR 기본 FileToolbar/StatusFooter, Shell 복사·이동 및 휴지통 명시 확인, 로컬 메타데이터·다중 선택/정렬과 초기 리소스화를 구현. 동일 코드 Debug·Release 실기 통합 GUI 및 통제된 Debug M1.8 Shell 장애 재검증 완료. 실제 휴지통 승인/되돌리기, OS 클립보드, 외부 Shell/원격 SMB, 제품 전체 UI/설치·회귀는 미완료. [M2.2 검증 및 동등성 작업표](WINUI3_M22_SHELL_OPERATIONS_KOREAN_20260929.md).
+
+
 **M2.1 KOREAN REUSABLE CONTROL AND NATIVE OPERATIONS SLICE:** Owner-approved default UI is Korean ko-KR independently of Windows language. Independent WinUI reusable header/sidebar now compile, real native private theme settings and guarded create-folder/rename operations are bound, and the actual earlier literal ?? runtime-theme bug has been corrected/verified in a rebuilt owned Debug window. Independently built native Debug/Release each pass 18/18, source guards 71/71, source-matched real owned Debug/Release combined M1.9-M2.1 GUI and renewed Debug controlled M1.8 fault replay all PASS; full product parity, packaging and real external provider/DPI/accessibility gates remain open. [Actual M2.1 implementation and precise remaining parity](WINUI3_M21_KOREAN_NATIVE_UI_COMPONENTS_20260929.md).
 
 **M2.0 FULL-WINDOW NATIVE MODEL CHECKPOINT:**

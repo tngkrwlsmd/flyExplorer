@@ -72,8 +72,7 @@ void MainWindow::ExecuteFileCommand(fxfile::filecommand::Kind kind){
  const auto originalParent=request.parent;
  const auto ticket=++mFileOperationEpoch;
  mFileOperationPending=true;
- CreateFolderButton().IsEnabled(false);
- RenameButton().IsEnabled(false);
+ SetFileButtonsBusy(true,false);
  StatusText().Text(L"선택한 파일 작업을 별도 스레드에서 처리하는 중입니다...");
  auto dispatch=DispatcherQueue();
  auto weak=get_weak();
@@ -86,8 +85,7 @@ void MainWindow::ExecuteFileCommand(fxfile::filecommand::Kind kind){
              if(auto ui=weak.get()){
                  if(ui->mFileOperationEpoch!=ticket)return;
                  ui->mFileOperationPending=false;
-                 ui->CreateFolderButton().IsEnabled(true);
-                 ui->RenameButton().IsEnabled(true);
+                 ui->SetFileButtonsBusy(false,false);
                  const auto& pane=ui->mModel.panes[side];
                  // A committed filesystem mutation is not undone if the
                  // user closed/navigated the pane while IO was in flight.
@@ -112,8 +110,7 @@ void MainWindow::ExecuteFileCommand(fxfile::filecommand::Kind kind){
      }).detach();
  }catch(...){
      mFileOperationPending=false;
-     CreateFolderButton().IsEnabled(true);
-     RenameButton().IsEnabled(true);
+     SetFileButtonsBusy(false,false);
      StatusText().Text(L"파일 작업 스레드를 시작하지 못했습니다.");
  }
 }

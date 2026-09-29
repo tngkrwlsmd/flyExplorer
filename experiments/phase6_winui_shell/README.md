@@ -1,5 +1,8 @@
 # WinUI 3 full UI migration — M1.8 isolated Shell stability
 
+**M2.2 acceptance:** 기본 언어 ko-KR의 분리된 파일 도구 모음/상태 화면, 초기 .resw, 네이티브 Shell 복사·이동·명시적 휴지통 확인 및 비동기 로컬 메타데이터/다중 선택/정렬 구현. 소유 환경의 Debug·Release M1.9~M2.2 통합 실기 GUI와 Debug 통제 장애 재현 PASS, 독립 네이티브 각 18/18 및 소스 79/79 PASS. 실제 휴지통 삭제·외부 확장/네트워크·완전한 MFC 동등성 검증은 남아 있음. [M2.2 독립 증거](../../docs/development/WINUI3_M22_SHELL_OPERATIONS_KOREAN_20260929.md).
+
+
 **M2.1 KOREAN DEFAULT REUSABLE WINUI PREVIEW:** The independent full-window preview now actually compiles reusable ShellHeader/NavigationSidebar XAML controls, Korean text and a real runtime theme label, and uses MFC-/WinRT-independent native preview_preferences/file_command_core. The new controls report intents to the existing M2.0 model/window; default ko-KR/System preference is stored ONLY in the private WinUI3Preview local-appdata directory. Guarded actual native operations are create-folder and rename-selected, never delete or overwrite. Run a matching Debug/Release build with build.cmd, then separate M2.1 owned native contracts (m21/build.cmd and m21/test_native.py with FLY_M21_CONFIG) and GUI test_shell_gui.py with FLY_M21_OWNED_FEATURES=YES and matching FLY_MIGRATION_CONFIGURATION. Additional M1.9 and M2.0 owned checks are independent optional flags. [M2.1 exact acceptance and remaining scope](../../docs/development/WINUI3_M21_KOREAN_NATIVE_UI_COMPONENTS_20260929.md).
 
 **ACTIVE M2.0 WINUI-ONLY FULL-WINDOW SHELL:**

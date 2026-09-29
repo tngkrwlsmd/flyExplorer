@@ -1,0 +1,8 @@
+namespace FlyExplorerWinUIShell
+{
+ [default_interface]
+ runtimeclass StatusFooter : Microsoft.UI.Xaml.Controls.UserControl
+ {
+  StatusFooter();
+ }
+}

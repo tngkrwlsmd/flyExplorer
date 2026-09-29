@@ -7,7 +7,7 @@ class KoreanM21(unittest.TestCase):
  def test_default_korean_real_winui_control_resources(self):
   h=src("experiments/phase6_winui_shell/ShellHeader.xaml")
   n=src("experiments/phase6_winui_shell/NavigationSidebar.xaml")
-  main=src("experiments/phase6_winui_shell/MainWindow.xaml")
+  main=src("experiments/phase6_winui_shell/MainWindow.xaml")+src("experiments/phase6_winui_shell/FileToolbar.xaml")
   for word in ("\ud14c\ub9c8: \uc2dc\uc2a4\ud15c","\uc2dc\uc2a4\ud15c","\ub77c\uc774\ud2b8","\ub2e4\ud06c"):
    self.assertIn(word,h)
   for word in ("\ud0d0\uc0c9","\ub0b4 PC","\ubb38\uc11c"):

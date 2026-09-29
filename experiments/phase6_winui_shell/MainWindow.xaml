@@ -45,28 +45,7 @@
             </StackPanel>
         </Grid>
 
-        <Grid Grid.Row="2" Padding="14,3,14,8" ColumnSpacing="8">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="Auto"/>
-                <ColumnDefinition Width="180"/>
-                <ColumnDefinition Width="Auto"/>
-                <ColumnDefinition Width="Auto"/>
-                <ColumnDefinition Width="*"/>
-            </Grid.ColumnDefinitions>
-            <TextBlock Text="파일 작업" FontWeight="SemiBold"
-                       VerticalAlignment="Center"/>
-            <TextBox x:Name="FileNameBox" Grid.Column="1"
-                     PlaceholderText="새 이름을 입력하세요"
-                     AutomationProperties.Name="새 폴더 또는 새 파일 이름"/>
-            <Button x:Name="CreateFolderButton" Grid.Column="2"
-                    Content="새 폴더" Click="OnCreateFolder"
-                    AutomationProperties.Name="현재 폴더에 새 폴더 만들기"/>
-            <Button x:Name="RenameButton" Grid.Column="3"
-                    Content="이름 변경" Click="OnRenameSelected"
-                    AutomationProperties.Name="선택된 파일 또는 폴더 이름 변경"/>
-            <TextBlock Grid.Column="4" Text="삭제·덮어쓰기는 지원하지 않습니다"
-                       Opacity="0.65" VerticalAlignment="Center"/>
-        </Grid>
+        <local:FileToolbar x:Name="ToolbarView" Grid.Row="2"/>
         <StackPanel Grid.Row="3" x:Name="WorkspacePanel" Visibility="Collapsed"
                     Orientation="Horizontal" Spacing="7" Padding="14,3,14,6">
             <TextBlock Text="이름 있는 작업 공간:" VerticalAlignment="Center"/>
@@ -136,9 +115,18 @@
                          TabWidthMode="SizeToContent" SelectionChanged="OnLeftTabSelectionChanged"
                          AutomationProperties.Name="왼쪽 폴더 탭"/>
                 <ListView x:Name="LeftFiles" Grid.Row="2" IsDoubleTapEnabled="True"
-                          SelectionMode="Single" DoubleTapped="OnLeftFileDoubleTapped"
-                          KeyDown="OnLeftFileKeyDown"
-                          AutomationProperties.Name="왼쪽 폴더 내용"/>
+                          SelectionMode="Multiple" DoubleTapped="OnLeftFileDoubleTapped"
+                          KeyDown="OnLeftFileKeyDown" RightTapped="OnFileRightTapped"
+                          AutomationProperties.Name="왼쪽 폴더 내용">
+                    <ListView.ContextFlyout>
+                        <MenuFlyout>
+                            <MenuFlyoutItem Text="복사" Click="OnCopySelected"/>
+                            <MenuFlyoutItem Text="이동" Click="OnMoveSelected"/>
+                            <MenuFlyoutItem Text="이름 변경" Click="OnRenameSelected"/>
+                            <MenuFlyoutItem Text="휴지통" Click="OnRecycleSelected"/>
+                        </MenuFlyout>
+                    </ListView.ContextFlyout>
+                </ListView>
             </Grid>
             <Border x:Name="PaneDivider" Grid.Column="2" Background="{ThemeResource SystemControlForegroundBaseLowBrush}"/>
             <Grid x:Name="SecondaryPane" Grid.Column="3">
@@ -155,20 +143,20 @@
                          TabWidthMode="SizeToContent" SelectionChanged="OnRightTabSelectionChanged"
                          AutomationProperties.Name="오른쪽 폴더 탭"/>
                 <ListView x:Name="RightFiles" Grid.Row="2" IsDoubleTapEnabled="True"
-                          SelectionMode="Single" DoubleTapped="OnRightFileDoubleTapped"
-                          KeyDown="OnRightFileKeyDown"
-                          AutomationProperties.Name="오른쪽 폴더 내용"/>
+                          SelectionMode="Multiple" DoubleTapped="OnRightFileDoubleTapped"
+                          KeyDown="OnRightFileKeyDown" RightTapped="OnFileRightTapped"
+                          AutomationProperties.Name="오른쪽 폴더 내용">
+                    <ListView.ContextFlyout>
+                        <MenuFlyout>
+                            <MenuFlyoutItem Text="복사" Click="OnCopySelected"/>
+                            <MenuFlyoutItem Text="이동" Click="OnMoveSelected"/>
+                            <MenuFlyoutItem Text="이름 변경" Click="OnRenameSelected"/>
+                            <MenuFlyoutItem Text="휴지통" Click="OnRecycleSelected"/>
+                        </MenuFlyout>
+                    </ListView.ContextFlyout>
+                </ListView>
             </Grid>
         </Grid>
-        <Grid Grid.Row="6" Padding="14,8,14,10" ColumnSpacing="8">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="Auto"/>
-                <ColumnDefinition Width="*"/>
-            </Grid.ColumnDefinitions>
-            <TextBlock x:Name="ActivePaneText" Text="활성: 왼쪽" FontWeight="SemiBold" />
-            <TextBlock x:Name="StatusText" Grid.Column="1" Text="준비됨"
-                       TextTrimming="CharacterEllipsis"
-                       AutomationProperties.Name="탐색기 상태"/>
-        </Grid>
+        <local:StatusFooter x:Name="FooterView" Grid.Row="6"/>
     </Grid>
 </Window>

@@ -7,6 +7,9 @@
 #include "../../src/fxfile/file_operation_core.h"
 #include <algorithm>
 #include <cwchar>
+#include <thread>
+#include <numeric>
+#include <iterator>
 #include <system_error>
 #include <winrt/Windows.System.h>
 #include <winrt/Microsoft.UI.Xaml.Input.h>
@@ -63,6 +66,27 @@ namespace winrt::FlyExplorerWinUIShell::implementation
             HeaderView())->SetThemeCallback([nativeWeak](int selection){
                 if(auto ui=nativeWeak.get())ui->ApplyThemeChoice(selection);
             });
+        // Newly extracted real file toolbar and status footer share
+        // the M2.0 native command model; callbacks hold only weak UI refs.
+        fileBar()->SetAction([nativeWeak](int command){
+            if(auto ui=nativeWeak.get()){
+                if(command==0)ui->ExecuteFileCommand(
+                    fxfile::filecommand::Kind::CreateFolder);
+                else if(command==1)ui->ExecuteFileCommand(
+                    fxfile::filecommand::Kind::RenameSelected);
+                else if(command==2)ui->RunTransfer(
+                    fxfile::shelltransfer::Kind::Copy);
+                else if(command==3)ui->RunTransfer(
+                    fxfile::shelltransfer::Kind::Move);
+                else if(command==4)ui->RunTransfer(
+                    fxfile::shelltransfer::Kind::Recycle);
+                else if(command==5 && ui->mTransferProgress)
+                    ui->mTransferProgress->cancel.store(true);
+            }
+        });
+        fileBar()->SetSort([nativeWeak](int index){
+            if(auto ui=nativeWeak.get())ui->UpdateSort(index);
+        });
         const auto dispatch=DispatcherQueue();
         const auto weak=get_weak();
         // The worker owns NO MainWindow/WinRT UI object. Cross-apartment
@@ -185,6 +209,8 @@ namespace winrt::FlyExplorerWinUIShell::implementation
     }
     MainWindow::~MainWindow()
     {
+        if(mTransferProgress)mTransferProgress->cancel.store(true);
+        if(mTransferTimer)mTransferTimer.Stop();
         // Never join a Shell extension which might be blocked in COM.
         // Detached State owns all native handles. UI work is guarded
         // by get_weak(), route tokens, and closed DispatcherQueue.
@@ -313,6 +339,7 @@ namespace winrt::FlyExplorerWinUIShell::implementation
                 if(applied==S_OK) {
                     pane.filesystemPaths[i]=std::move(result.filesystemPath);
                     if(i==pane.active) {
+                        ClearFileDetails(side);
                         Refresh(result.recovered?
                             L"독립 Shell 작업자가 응답 지연 후 복구됐습니다.":
                             result.action==Action::Refresh?
@@ -359,31 +386,163 @@ namespace winrt::FlyExplorerWinUIShell::implementation
         view.SelectedIndex(static_cast<int32_t>(pane.active));
         mPopulatingTabs=false;
     }
+    void MainWindow::ClearFileDetails(int side){
+        ++mFileDetailEpoch[side];
+        mFileDetails[side].clear();
+        mFileDetailRoute[side]=0;
+    }
+    void MainWindow::ScheduleFileDetails(int side,bool force){
+        auto const& pane=mModel.panes[side];
+        if(pane.pending[pane.active])return;
+        auto const route=pane.routeIds[pane.active];
+        auto const tab=pane.active;
+        auto const& items=pane.tabs[tab].snapshot().children;
+        if(!force&&mFileDetailRoute[side]==route&&
+            mFileDetailTab[side]==tab&&mFileDetails[side].size()==items.size())
+            return;
+        auto const& folder=pane.filesystemPaths[tab];
+        if(folder.size()<3||folder[1]!=L':'||folder[2]!=L'\\')return;
+        if(items.size()>1200)return;
+        const std::wstring root=folder.substr(0,3);
+        if(::GetDriveTypeW(root.c_str())!=DRIVE_FIXED)return;
+        std::vector<std::wstring> paths{};
+        paths.reserve(items.size());
+        for(auto const& item:items){
+            // Values copied from the supervised native Shell snapshot;
+            // never retain a Shell COM pointer on this worker.
+            paths.push_back(item.isFileSystem()?item.parsingName:std::wstring{});
+        }
+        const auto ticket=++mFileDetailEpoch[side];
+        mFileDetailRoute[side]=route;
+        mFileDetailTab[side]=tab;
+        mFileDetails[side].clear();
+        auto dispatch=DispatcherQueue();
+        auto weak=get_weak();
+        try{
+            std::thread([side,tab,route,ticket,paths=std::move(paths),
+                         dispatch,weak]{
+                std::vector<FileDetail> details(paths.size());
+                for(size_t i=0;i<paths.size();++i){
+                    if(paths[i].empty()||paths[i].size()>32000)continue;
+                    WIN32_FILE_ATTRIBUTE_DATA data{};
+                    if(!::GetFileAttributesExW(paths[i].c_str(),
+                        GetFileExInfoStandard,&data))continue;
+                    if(data.dwFileAttributes&FILE_ATTRIBUTE_REPARSE_POINT)continue;
+                    auto& entry=details[i];
+                    if(!(data.dwFileAttributes&FILE_ATTRIBUTE_DIRECTORY)){
+                        entry.bytes=(static_cast<std::uint64_t>(
+                            data.nFileSizeHigh)<<32)|data.nFileSizeLow;
+                        entry.sizeKnown=true;
+                        entry.bytesLabel=entry.bytes<1024?
+                          std::to_wstring(entry.bytes)+L" B":
+                          entry.bytes<1048576?
+                          std::to_wstring(entry.bytes/1024)+L" KB":
+                          std::to_wstring(entry.bytes/1048576)+L" MB";
+                    }
+                    ULARGE_INTEGER timestamp{};
+                    timestamp.HighPart=data.ftLastWriteTime.dwHighDateTime;
+                    timestamp.LowPart=data.ftLastWriteTime.dwLowDateTime;
+                    entry.modified=timestamp.QuadPart;
+                    FILETIME local{};
+                    SYSTEMTIME stamp{};
+                    if(::FileTimeToLocalFileTime(&data.ftLastWriteTime,&local)&&
+                       ::FileTimeToSystemTime(&local,&stamp)){
+                        wchar_t date[32]{},time[24]{};
+                        if(::GetDateFormatEx(L"ko-KR",0,&stamp,
+                              L"yyyy-MM-dd",date,32,nullptr)&&
+                           ::GetTimeFormatEx(L"ko-KR",0,&stamp,
+                              L"HH:mm",time,24)){
+                            entry.dateLabel=std::wstring(date)+L" "+time;
+                            entry.dateKnown=true;
+                        }
+                    }
+                }
+                auto payload=std::make_shared<std::vector<FileDetail>>(
+                    std::move(details));
+                dispatch.TryEnqueue([weak,payload,side,tab,route,ticket]{
+                    if(auto ui=weak.get()){
+                        auto const& pane=ui->mModel.panes[side];
+                        if(ui->mFileDetailEpoch[side]!=ticket||
+                           pane.active!=tab||pane.pending[tab]||
+                           pane.routeIds[tab]!=route||
+                           pane.tabs[tab].snapshot().children.size()!=payload->size())
+                            return; // never apply stale metadata to a new folder
+                        ui->mFileDetails[side]=std::move(*payload);
+                        ui->FillFiles(side);
+                    }
+                });
+            }).detach();
+        }catch(...){
+            mFileDetails[side].clear();
+            mFileDetailRoute[side]=0;
+        }
+    }
     void MainWindow::FillFiles(int side)
     {
         auto view=side==0?LeftFiles():RightFiles();
-        view.Items().Clear();
         const auto& pane=mModel.panes[static_cast<size_t>(side)];
         const auto& items=pane.tabs[pane.active].snapshot().children;
-        // Keep each ListViewItem's Tag as the index into the owning
-        // per-tab Shell snapshot. Opening folders uses its FULL PIDL,
-        // not an unsafe or ambiguous virtual-folder display string.
-        std::vector<size_t> order;
-        order.reserve(items.size());
-        for(size_t i=0;i<items.size();++i)order.push_back(i);
-        std::sort(order.begin(),order.end(),[&](size_t a,size_t b) {
-            if(items[a].isFolder()!=items[b].isFolder())
-                return items[a].isFolder();
-            return items[a].label<items[b].label;
+        std::vector<std::wstring> selected;
+        for(auto const& old:view.SelectedItems()){
+            auto row=old.try_as<ListViewItem>();
+            if(!row||!row.Tag())continue;
+            auto index=winrt::unbox_value<uint32_t>(row.Tag());
+            if(index<mRenderedFilePaths[side].size())
+                selected.push_back(mRenderedFilePaths[side][index]);
+        }
+        view.Items().Clear();
+        mRenderedFilePaths[side].clear();
+        mRenderedFilePaths[side].reserve(items.size());
+        for(auto const& item:items)
+            mRenderedFilePaths[side].push_back(item.parsingName);
+        const bool detailReady=mFileDetailRoute[side]==pane.routeIds[pane.active]&&
+             mFileDetailTab[side]==pane.active&&
+             mFileDetails[side].size()==items.size();
+        std::vector<size_t> order(items.size());
+        std::iota(order.begin(),order.end(),size_t{0});
+        const int mode=mSortMode[side];
+        auto lessName=[&](size_t lhs,size_t rhs){
+            const auto& a=items[lhs].label;
+            const auto& b=items[rhs].label;
+            return ::CompareStringOrdinal(a.c_str(),-1,b.c_str(),-1,TRUE)==CSTR_LESS_THAN;
+        };
+        std::stable_sort(order.begin(),order.end(),[&](size_t lhs,size_t rhs){
+            if(items[lhs].isFolder()!=items[rhs].isFolder())
+                return items[lhs].isFolder();
+            if(detailReady&&mode==2){
+                const auto& x=mFileDetails[side][lhs];
+                const auto& y=mFileDetails[side][rhs];
+                if(x.sizeKnown!=y.sizeKnown)return x.sizeKnown;
+                if(x.sizeKnown&&x.bytes!=y.bytes)return x.bytes>y.bytes;
+            }else if(detailReady&&mode==3){
+                const auto& x=mFileDetails[side][lhs];
+                const auto& y=mFileDetails[side][rhs];
+                if(x.dateKnown!=y.dateKnown)return x.dateKnown;
+                if(x.dateKnown&&x.modified!=y.modified)
+                    return x.modified>y.modified;
+            }
+            return mode==1?lessName(rhs,lhs):lessName(lhs,rhs);
         });
-        for(const size_t i:order) {
-            const auto& entry=items[i];
+        for(const auto index:order){
+            const auto& item=items[index];
             ListViewItem row;
-            row.Content(winrt::box_value(hstring(
-                std::wstring(entry.isFolder()?L"[폴더]  ":L"[파일]  ")+
-                entry.label)));
-            row.Tag(winrt::box_value(static_cast<uint32_t>(i)));
+            auto label=std::wstring(item.isFolder()?L"[폴더]  ":L"[파일]  ")+
+                       item.label;
+            if(detailReady){
+                const auto& meta=mFileDetails[side][index];
+                if(meta.sizeKnown)label+=L"   |   "+meta.bytesLabel;
+                if(meta.dateKnown)label+=L"   |   "+meta.dateLabel;
+            }
+            row.Content(winrt::box_value(hstring(label)));
+            row.Tag(winrt::box_value(static_cast<uint32_t>(index)));
             view.Items().Append(row);
+            if(!item.parsingName.empty()&&
+               std::find(selected.begin(),selected.end(),item.parsingName)
+                  !=selected.end()){
+                // Restore selection by native parsing path, never stale
+                // pre-sort row index (including real multiple selection).
+                view.SelectedItems().Append(row);
+            }
         }
     }
     void MainWindow::Refresh(hstring const& status)
@@ -407,6 +566,8 @@ namespace winrt::FlyExplorerWinUIShell::implementation
             hstring(nav.snapshot().displayName));
         UpdateWatch(0);
         UpdateWatch(1);
+        ScheduleFileDetails(0);
+        ScheduleFileDetails(1);
     }
     bool MainWindow::OpenFolder(std::wstring const& path)
     {
@@ -591,14 +752,16 @@ namespace winrt::FlyExplorerWinUIShell::implementation
         IInspectable const&,Input::KeyRoutedEventArgs const& a)
     {
         if (a.Key()==Windows::System::VirtualKey::Enter) {
-            OpenSelectedFolder(0);a.Handled(true);
+            OpenSelectedFolder(0);a.Handled(true);return;
         }
+        HandleFileShortcut(0,a);
     }
     void MainWindow::OnRightFileKeyDown(
         IInspectable const&,Input::KeyRoutedEventArgs const& a)
     {
         if (a.Key()==Windows::System::VirtualKey::Enter) {
-            OpenSelectedFolder(1);a.Handled(true);
+            OpenSelectedFolder(1);a.Handled(true);return;
         }
+        HandleFileShortcut(1,a);
     }
 }

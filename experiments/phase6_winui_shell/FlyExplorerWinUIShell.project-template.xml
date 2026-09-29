@@ -7,6 +7,7 @@
     <ProjectGuid>{A79A2C56-8327-4C43-8CDD-4850D477F305}</ProjectGuid>
     <ProjectName>FlyExplorerWinUIShell</ProjectName>
     <RootNamespace>FlyExplorerWinUIShell</RootNamespace>
+    <DefaultLanguage>ko-KR</DefaultLanguage>
     <!--
       $(TargetName) should be same as $(RootNamespace) so that the produced binaries (.exe/.pri/etc.)
       have a name that matches the .winmd
@@ -124,6 +125,13 @@
     </ClInclude>
     <ClInclude Include="..\..\src\base\preview_preferences.h" />
     <ClInclude Include="..\..\src\base\file_command_core.h" />
+    <ClInclude Include="FileToolbar.xaml.h">
+      <DependentUpon>FileToolbar.xaml</DependentUpon>
+    </ClInclude>
+    <ClInclude Include="StatusFooter.xaml.h">
+      <DependentUpon>StatusFooter.xaml</DependentUpon>
+    </ClInclude>
+    <ClInclude Include="..\..\src\base\shell_transfer_core.h" />
     <ClInclude Include="MainWindow.xaml.h">
       <DependentUpon>MainWindow.xaml</DependentUpon>
     </ClInclude>
@@ -133,6 +141,9 @@
     <Page Include="MainWindow.xaml" />
     <Page Include="ShellHeader.xaml" />
     <Page Include="NavigationSidebar.xaml" />
+    <PRIResource Include="Strings\ko-KR\Resources.resw" />
+    <Page Include="FileToolbar.xaml" />
+    <Page Include="StatusFooter.xaml" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="pch.cpp">
@@ -158,6 +169,18 @@
     </ClCompile>
     <ClCompile Include="NavigationSidebar.xaml.cpp">
       <DependentUpon>NavigationSidebar.xaml</DependentUpon>
+    </ClCompile>
+    <ClCompile Include="FileToolbar.xaml.cpp">
+      <DependentUpon>FileToolbar.xaml</DependentUpon>
+    </ClCompile>
+    <ClCompile Include="StatusFooter.xaml.cpp">
+      <DependentUpon>StatusFooter.xaml</DependentUpon>
+    </ClCompile>
+    <ClCompile Include="m22_transfers.cpp">
+      <PrecompiledHeader>Use</PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="..\..\src\base\shell_transfer_core.cpp">
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="m21_commands.cpp">
       <PrecompiledHeader>Use</PrecompiledHeader>
@@ -202,6 +225,8 @@
   <ItemGroup>
     <Midl Include="ShellHeader.idl" />
     <Midl Include="NavigationSidebar.idl" />
+    <Midl Include="FileToolbar.idl" />
+    <Midl Include="StatusFooter.idl" />
     <Midl Include="MainWindow.idl">
       <SubType>Code</SubType>
       <DependentUpon>MainWindow.xaml</DependentUpon>

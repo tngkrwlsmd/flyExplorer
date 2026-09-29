@@ -26,6 +26,15 @@ owned=Path(tempfile.mkdtemp(prefix="shell-owned-",dir=base))
 left=owned/"Left";right=owned/"Right";inner=left/"Nested";rightinner=right/"Secondary"
 for folder in (inner,rightinner):folder.mkdir(parents=True,exist_ok=True)
 (left/"readme.txt").write_text("owned synthetic only",encoding="utf-8")
+if os.environ.get("FLY_M22_OWNED_FEATURES")=="YES":
+ for name,value in (
+   ("복사본.txt","owned copied"),
+   ("작은.txt","x"),
+   ("큰.txt","z"*12000),
+   ("이동.txt","owned moved"),
+   ("자료.txt","owned source")):
+  (left/name).write_text(value,encoding="utf-8")
+ (right/"자료.txt").write_text("preexisting right",encoding="utf-8")
 appdata=owned/"appdata";appdata.mkdir()
 localdata=owned/"localdata";localdata.mkdir()
 temp=owned/"tmp";temp.mkdir()
@@ -382,6 +391,10 @@ try:
   m21_run(p=p,win=win,element=element,safe_click=safe_click,
           focus=ensure_owned_focus,eventually=eventually,
           left=left,right=right,localdata=localdata,env=env,exe=EXE)
+ if os.environ.get("FLY_M22_OWNED_FEATURES")=="YES":
+  from test_m22_gui import run as m22_run
+  m22_run(win=win,element=element,safe_click=safe_click,
+          focus=ensure_owned_focus,eventually=eventually,left=left,right=right)
  safe_click(element("PrimaryPaneTitle"))
  rect=win.rectangle()
  assert rect.width()>400 and rect.height()>260

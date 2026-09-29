@@ -4027,3 +4027,13 @@ Final compiled M1.9 WinUI Debug/Release actual owned GUI, merged native MFC x64 
 ## 2026-09-29: M2.1 literal ?? runtime theme labels after partial UTF-8 repair
 
 Initial remote Python writes from Windows PowerShell lost Hangul because the input pipe was not explicitly UTF-8. The main/source text was reconstructed with true Unicode and explicit UTF-8 transport, but three literal `??` strings remained in `ShellHeader.xaml.cpp::ShowChoice()`. The actual owned Debug WinUI GUI exposed `ThemeStateText` as ASCII `??: ???`: this was a **real runtime localization bug**, not only PowerShell console mojibake. Corrected all three genuine Korean strings, consolidated project-wide `/utf-8` compiler options for Debug/Release and created a static source check forbidding this exact bad runtime text. The rebuilt actual owned Debug GUI returned genuine Unicode Korean System, passed Dark/Light/Dark private theme persistence, real second process Korean Dark restoration and guarded Korean-folder create/rename/duplicate non-overwrite; original six MFC user settings unchanged. Earlier failed GUI logs are NOT pass proof. The initial GUI test also assumed non-exposed outer UserControl UIA wrappers and incorrectly called `child_window` on a UIA wrapper; both test-only assumptions were fixed. An owned child inadvertently left running by the preliminary test was identified using exact developer build exe AND exact synthetic owned folder argument, then safely terminated. The final harness now terminates only its own spawned child even when discovery fails.
+
+
+## 2026-09-29: M2.2 소유 GUI 시험의 한글 파이프 및 다중 선택 하네스 오류
+
+초기 79개 소스 검사의 1건 실패는 구현의 `state_.cancel.load`와 테스트의 잘못된 `progress.cancel.load` 기대가 달랐던 **테스트 오류**로 수정했다. 원격 PowerShell→Python의 비 UTF-8 파이프는 소유 GUI 시험용 한글 파일명을 `???.txt`로 치환했다. 입력에 UTF-8 `$OutputEncoding`을 명시하고 실제 유니코드 소스와 생성되는 파일명으로 검증했다. Python UIA 첫 시험에는 지원하지 않는 `click_input(key=...)` 인자를 사용했다. 다음 실행에서는 의도적으로 성공시킨 다중 선택 상태를 다음 단일 파일 이동에도 남겨 충돌을 발생시켰다. 실제 설치된 UIA의 `pressed="ctrl"` 및 `ListItem.select()`로 서로 다른 작업의 선택 범위를 명확히 분리하고 다시 검증했다. 이 실패는 하네스 오류로 기록하며 초기 실패 로그를 최종 제품 PASS라고 설명하지 않는다. 사전 GUI 실행 실패가 만든 정확히 식별된 한 개 임시 소유 폴더만 검사 후 정리했고 기존 사용자 파일/임의 창을 변경하지 않았다.
+
+
+## 2026-09-29: M2.2 최종 통합 GUI 다중 선택 재현 및 해결
+
+독립 집중 Debug GUI에서는 Ctrl 물리 클릭으로 다중 선택 복사가 성공했으나, M1.9~M2.1 GUI 테스트를 먼저 수행한 통합 환경에서는 UIA의 물리 클릭 보조 키 처리·이전 선택 상태가 달라 두 파일 동시 선택 테스트가 재현되지 않았다. 단순히 이전 선택을 지우는 것만으로는 해결되지 않았으므로 GUI 자동화의 두 번째 선택 명령을 UIA SelectionItem.AddToSelection()으로 변경하고 첫 번째 항목은 SelectionItem.Select()를 사용했다. 재현 가능한 실제 소유 Debug·Release 통합 GUI가 모두 통과해 이전 실패 로그와 구분했다. 공통 소스 계약에도 동일 UIA 선택 경로 확인을 포함했으며 **제품 코드의 별도 선택 상태 우회는 추가하지 않았다.** 해당 과정의 실제 선택 대상은 모두 자동 생성한 로컬 소유 파일로 제한했다.

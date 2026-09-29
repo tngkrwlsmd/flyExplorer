@@ -1,5 +1,8 @@
 # flyExplorer — current project status (2026-09-28 baseline; 2026-09-29 migration-branch addendum)
 
+**M2.2 최종 검증 (2026-09-29):** 독립 WinUI FileToolbar/StatusFooter, ko-KR 일부 .resw, COM STA Shell 복사·이동·휴지통 확인 계약, 비동기 로컬 파일 메타데이터 및 다중 선택·정렬을 구현. 소유 임시 경로의 독립 네이티브 Debug·Release 각 18/18, 통합 소스 79/79, 실제 M1.9~M2.2 **Debug·Release 통합 GUI 모두 통과**, 기존 M1.8의 통제된 COM/Shell 알림/루프백 UNC·두 번 시간 초과 Debug 회귀 통과. 원본 사용자 설정 6개, 기본 MFC main 및 원본 사용자 스크린샷 보호. [M2.2 정확한 검증과 남은 기능 동등성](WINUI3_M22_SHELL_OPERATIONS_KOREAN_20260929.md).
+
+
 **M2.1 KOREAN-DEFAULT FIRST SLICE:** The existing independent WinUI full window now embeds compiled reusable ShellHeader/NavigationSidebar controls, Korean-first main/workspace/search text, dedicated MFC-independent private ko-KR System/Light/Dark preferences, and guarded native create-folder/rename commands. Native Debug+Release 18/18, combined source 71/71, and source-matched actual Debug AND Release full M1.9+M2.0+M2.1 owned GUI PASS, including literal Korean System UIA, dark/light private restart and guarded actual Korean create/rename/non-overwrite. Renewed Debug M1.8 independent COM/private Job/owned Shell notification/loopback UNC and two-attempt fault GUIs PASS. Exact limits, the real corrected ?? theme bug and final integrated GUI gates: [M2.1 detailed evidence](WINUI3_M21_KOREAN_NATIVE_UI_COMPONENTS_20260929.md). The protected default MFC main remains unchanged.
 
 

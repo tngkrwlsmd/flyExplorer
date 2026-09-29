@@ -2,6 +2,9 @@
 #include "MainWindow.g.h"
 #include "ShellHeader.xaml.h"
 #include "NavigationSidebar.xaml.h"
+#include "FileToolbar.xaml.h"
+#include "StatusFooter.xaml.h"
+#include "../../src/base/shell_transfer_core.h"
 #include "../../src/base/preview_preferences.h"
 #include "../../src/base/file_command_core.h"
 #include <mutex>
@@ -65,6 +68,14 @@ namespace winrt::FlyExplorerWinUIShell::implementation
         void OnClearSearchRecent(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
         void OnCreateFolder(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
         void OnRenameSelected(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
+        void OnCopySelected(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
+        void OnMoveSelected(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
+        void OnRecycleSelected(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
+        void OnCancelTransfer(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
+        void OnFileRightTapped(IInspectable const&,
+            Microsoft::UI::Xaml::Input::RightTappedRoutedEventArgs const&);
+        void RunTransfer(fxfile::shelltransfer::Kind);
+        void UpdateSort(int selection);
 
     private:
         fxfile::explorerui::Model mModel;
@@ -75,6 +86,58 @@ namespace winrt::FlyExplorerWinUIShell::implementation
             std::make_shared<std::atomic_uint64_t>(0);
         bool mFileOperationPending=false;
         std::uint64_t mFileOperationEpoch=0;
+        // Reusable XAML controls expose their inner primitives to the
+        // existing M2.1 callers without coupling native state to views.
+        winrt::FlyExplorerWinUIShell::implementation::FileToolbar* fileBar(){
+            return winrt::get_self<implementation::FileToolbar>(ToolbarView());
+        }
+        winrt::FlyExplorerWinUIShell::implementation::StatusFooter* footer(){
+            return winrt::get_self<implementation::StatusFooter>(FooterView());
+        }
+        Microsoft::UI::Xaml::Controls::TextBox FileNameBox(){
+            return fileBar()->FileNameBox();
+        }
+        Microsoft::UI::Xaml::Controls::Button CreateFolderButton(){
+            return fileBar()->CreateFolderButton();
+        }
+        Microsoft::UI::Xaml::Controls::Button RenameButton(){
+            return fileBar()->RenameButton();
+        }
+        Microsoft::UI::Xaml::Controls::TextBlock StatusText(){
+            return footer()->StatusText();
+        }
+        Microsoft::UI::Xaml::Controls::TextBlock ActivePaneText(){
+            return footer()->ActivePaneText();
+        }
+        std::array<int,2> mSortMode{{0,0}};
+        struct FileDetail{
+            std::uint64_t bytes=0;
+            std::uint64_t modified=0;
+            std::wstring bytesLabel;
+            std::wstring dateLabel;
+            bool sizeKnown=false;
+            bool dateKnown=false;
+        };
+        std::array<std::vector<FileDetail>,2> mFileDetails;
+        std::array<std::vector<std::wstring>,2> mRenderedFilePaths;
+        std::array<std::uint64_t,2> mFileDetailRoute{};
+        std::array<std::uint64_t,2> mFileDetailEpoch{};
+        std::array<size_t,2> mFileDetailTab{};
+        void ScheduleFileDetails(int side,bool force=false);
+        void ClearFileDetails(int side);
+        std::shared_ptr<fxfile::shelltransfer::Progress> mTransferProgress;
+        Microsoft::UI::Dispatching::DispatcherQueueTimer mTransferTimer{nullptr};
+        std::uint64_t mTransferEpoch=0;
+        std::vector<std::wstring> mClipboardSources;
+        std::wstring mClipboardParent;
+        bool mClipboardMove=false;
+        void HandleFileShortcut(int side,
+            Microsoft::UI::Xaml::Input::KeyRoutedEventArgs const& args);
+        void StartInternalPaste();
+        void SetFileButtonsBusy(bool busy,bool cancellable);
+        void StartTransfer(fxfile::shelltransfer::Request request);
+        winrt::fire_and_forget ConfirmCollision(fxfile::shelltransfer::Request request);
+        winrt::fire_and_forget ConfirmRecycle(fxfile::shelltransfer::Request request);
         bool mPopulatingTabs = false;
         std::unique_ptr<fxfile::shellnav::IsolatedShellSupervisor> mSupervisor;
         std::unique_ptr<fxfile::directorychange::DirectoryWatcher> mWatcher;
