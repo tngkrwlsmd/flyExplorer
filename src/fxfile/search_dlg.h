@@ -113,6 +113,9 @@ protected:
     afx_msg void OnTimer(UINT_PTR aIdEvent);
     afx_msg void OnFileSearch(void);
     afx_msg void OnCurLocation(void);
+    afx_msg void OnPreviewScope(void);
+    afx_msg void OnRecentLocation(void);
+    afx_msg void OnClearRecent(void);
     afx_msg LRESULT OnFinalize(WPARAM wParam, LPARAM lParam);
     afx_msg LRESULT OnDpiChanged(WPARAM aWParam, LPARAM aLParam);
 };

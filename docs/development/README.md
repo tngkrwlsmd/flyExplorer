@@ -1,8 +1,11 @@
 # flyExplorer development documentation index
 
-> Entry point for maintainers and agents. Reviewed against \`main\`
-> baseline \`f2958d70b6a2714b061bc5215ecce3a9f707d0b3\`
-> **before this documentation-only commit**; use \`git rev-parse main\`
+**Latest scoped legacy MFC integration:** [UXH-06 saved/recent search scopes ? real owned GUI and merged Release x64 acceptance](UXH06_MAIN_MERGE_ACCEPTANCE_20260929.md). Includes explicit opt-in persistence and opt-out privacy after restart; separate legacy scrollbar GUI work is reviewed independently.
+
+
+> Entry point for maintainers and agents. Reviewed against `main`
+> baseline `f2958d70b6a2714b061bc5215ecce3a9f707d0b3`
+> **before this documentation-only commit**; use `git rev-parse main`
 > to identify the subsequent tip. Read [current status](CURRENT_STATUS.md)
 > first rather than interpreting a historic test as a current PASS.
 
@@ -56,6 +59,11 @@ a single unsupported release qualification.
   actual 96-DPI Dark/Light 1x2/2x2 and 750-px file-width measurement,
   keyboard/pointer restoration, saved layout protection; higher
   actual DPI/High Contrast remain untested.
+
+- [UXH-06 explicit recent scopes and full-path preview, WIP](UI_PHASE6_UXH06_NEW_FEATURE_WIP_20260928.md):
+  built scoped product change with initial isolated real GUI
+  proof; normal-restart persistence/clear and Dark/Light
+  acceptance pending active input desktop. NOT MERGED.
 
 - [Phase 6 UXH-06/07 native feature-overlap review](UI_PHASE6_UXH06_07_FEASIBILITY_20260928.md):
   owned 96-DPI long search path retention and
