@@ -217,6 +217,10 @@
             <String ID="cmd.bookmark_bar.wrapable">북마크 여러 줄로 표시(&amp;N)</String>
             <String ID="cmd.bookmark_bar.refresh">북마크 새로 고침(&amp;R)</String>
             <String ID="cmd.tools.lock">도구 이동 잠금(&amp;L)</String>
+            <String ID="cmd.workspace.popup">작업 공간(&amp;W)</String>
+            <String ID="cmd.workspace.save">작업 공간 다른 이름으로 저장(&amp;S)...</String>
+            <String ID="cmd.workspace.open">작업 공간 새 창에서 열기(&amp;O)...</String>
+            <String ID="cmd.tools.compact_rows">드라이브/북마크 도구 모음 한 줄로(&amp;J)</String>
             <String ID="cmd.tool_bar.customize">사용자 지정(&amp;C)...</String>
             <String ID="cmd.theme.popup">테마(&amp;H)</String>
             <String ID="cmd.theme.system">시스템 기본값(&amp;S)</String>
@@ -1829,6 +1833,10 @@
             <String ID="popup.search.label.name">검색할 파일 및 폴더(&amp;N):</String>
             <String ID="popup.search.label.text">포함하는 텍스트(&amp;X):</String>
             <String ID="popup.search.label.location">찾는 위치(&amp;L):</String>
+            <String ID="popup.search.button.full_scope">?? ??(&amp;F)</String>
+            <String ID="popup.search.label.recent_locations">?? ?? ??:</String>
+            <String ID="popup.search.button.clear_recent">?? ???(&amp;L)</String>
+            <String ID="popup.search.check.remember_location">????(&amp;M)</String>
             <String ID="popup.search.button.search">검색 시작(&amp;S)</String>
             <String ID="popup.search.button.stop">검색 중지(&amp;T)</String>
             <String ID="popup.search.button.close">닫기(&amp;C)</String>

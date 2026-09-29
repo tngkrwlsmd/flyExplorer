@@ -253,6 +253,7 @@ BEGIN_MESSAGE_MAP(CCustomizeDialog, CWnd)
     ON_WM_DRAWITEM()
     ON_WM_MEASUREITEM()
     ON_WM_CTLCOLOR()
+    ON_WM_ERASEBKGND()
     ON_WM_SETTINGCHANGE()
     ON_WM_SYSCOLORCHANGE()
     //}}AFX_MSG_MAP
@@ -486,9 +487,42 @@ void CCustomizeDialog::OnMeasureItem( int nIDCtl, LPMEASUREITEMSTRUCT lpMeasureI
     CWnd::OnMeasureItem( nIDCtl, lpMeasureItemStruct );
 }
 
+BOOL CCustomizeDialog::OnEraseBkgnd(CDC* pDC)
+{
+    const fxfile::ui::ThemePalette sPalette =
+        fxfile::ui::ModernUI::getPalette();
+    if (XPR_IS_FALSE(sPalette.mDark) ||
+        XPR_IS_TRUE(sPalette.mHighContrast))
+        return CWnd::OnEraseBkgnd(pDC);
+
+    CRect sClient;
+    GetClientRect(&sClient);
+    pDC->FillSolidRect(&sClient, sPalette.mSurface);
+    return TRUE;
+}
+
 HBRUSH CCustomizeDialog::OnCtlColor( CDC* pDC, CWnd* pWnd, UINT nCtlColor )
 {
     HBRUSH hbr = CWnd::OnCtlColor( pDC, pWnd, nCtlColor );
+    const fxfile::ui::ThemePalette sPalette =
+        fxfile::ui::ModernUI::getPalette();
+    const bool sDark =
+        XPR_IS_TRUE(sPalette.mDark) &&
+        XPR_IS_FALSE(sPalette.mHighContrast);
+
+    // Windows creates the parent TB_CUSTOMIZE dialog internally, not
+    // through CModernDialog. Its static labels and dialog background
+    // must use the same palette as the appended modern options pane.
+    if (sDark && (nCtlColor == CTLCOLOR_DLG ||
+                  nCtlColor == CTLCOLOR_STATIC))
+    {
+        pDC->SetTextColor(sPalette.mText);
+        pDC->SetBkColor(sPalette.mSurface);
+        if (nCtlColor == CTLCOLOR_STATIC)
+            pDC->SetBkMode(TRANSPARENT);
+        if (XPR_IS_NOT_NULL(m_surfaceBrush.m_hObject))
+            return static_cast<HBRUSH>(m_surfaceBrush.GetSafeHandle());
+    }
 
     if ( nCtlColor == CTLCOLOR_LISTBOX )
     {
@@ -532,12 +566,40 @@ void CCustomizeDialog::RefreshModernAppearance()
             sPalette.mSurface : CLR_INVALID;
     }
 
+    const bool sDark =
+        XPR_IS_TRUE(sPalette.mDark) &&
+        XPR_IS_FALSE(sPalette.mHighContrast);
     const UINT sListIds[] = { IDC_LB_AVAILABLE, IDC_LB_CURRENT };
     for (xpr_size_t i = 0; i < XPR_COUNT_OF(sListIds); ++i)
     {
         CWnd *sList = GetDlgItem(sListIds[i]);
-        if (sList != NULL && ::IsWindow(sList->GetSafeHwnd()))
-            fxfile::ui::ModernUI::applyExplorerControlTheme(sList->GetSafeHwnd());
+        if (sList == NULL || !::IsWindow(sList->GetSafeHwnd()))
+            continue;
+
+        // TB_CUSTOMIZE is a native toolbar-created dialog, outside the
+        // normal CModernDialog traversal. Opt in both ListBoxes to the
+        // SAME scrollbar compositor used by other modern dialogs.
+        if (sDark)
+            fxfile::ui::ModernUI::resetControlTheme(sList->GetSafeHwnd());
+        else
+            fxfile::ui::ModernUI::applyExplorerControlTheme(
+                sList->GetSafeHwnd());
+        fxfile::ui::ModernUI::applyDialogControlTheme(
+            sList->GetSafeHwnd());
+    }
+
+    // The native dialog's direct buttons are also outside the modern
+    // child-dialog lifecycle. Do not restyle external Shell windows.
+    for (CWnd *sChild = GetWindow(GW_CHILD);
+         sChild != NULL;
+         sChild = sChild->GetNextWindow())
+    {
+        xpr_tchar_t sClassName[32]={0};
+        ::GetClassName(sChild->GetSafeHwnd(), sClassName,
+                       XPR_COUNT_OF(sClassName));
+        if (_tcsicmp(sClassName,XPR_STRING_LITERAL("Button")) == 0)
+            fxfile::ui::ModernUI::applyDialogControlTheme(
+                sChild->GetSafeHwnd());
     }
 
     RedrawWindow(XPR_NULL, XPR_NULL,

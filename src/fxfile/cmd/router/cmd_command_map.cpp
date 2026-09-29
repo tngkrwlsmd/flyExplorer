@@ -277,6 +277,7 @@ void CommandMap::map(CommandExecutor &aExecutor)
     aExecutor.bindCommand(ID_VIEW_BOOKMARKBAR_REFRESH,         new cmd::BookmarkBarRefreshCommand);
 
     aExecutor.bindCommand(ID_VIEW_TOOL_LOCK,                   new cmd::ToolLockCommand);
+    aExecutor.bindCommand(ID_VIEW_TOOL_COMPACT_ROWS,           new cmd::ToolCompactRowsCommand);
     aExecutor.bindCommand(ID_VIEW_TOOLBAR_CUSTOMIZE,           new cmd::ToolBarCustomizeCommand);
 
     aExecutor.bindCommand(ID_VIEW_FOLDER_TREE_NONE,            new cmd::NoneFolderPaneCommand);

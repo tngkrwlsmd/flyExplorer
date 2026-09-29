@@ -366,6 +366,13 @@ try:
       "failed loopback UNC changed previously accepted right folder")
   print("REAL_WINUI_LOOPBACK_UNC_REJECTED_WITH_PRIOR_FOLDER_PRESERVED",
         element("StatusText").window_text(),flush=True)
+ if os.environ.get("FLY_M19_OWNED_FEATURES")=="YES":
+  from test_m19_winui_features import run as run_m19
+  run_m19(p=p,win=win,element=element,safe_click=safe_click,
+          focus=ensure_owned_focus,eventually=eventually,
+          ownedwindows=ownedwindows,
+          left=left,right=right,inner=inner,
+          owned=owned,localdata=localdata,env=env,exe=EXE)
  safe_click(element("PrimaryPaneTitle"))
  rect=win.rectangle()
  assert rect.width()>400 and rect.height()>260

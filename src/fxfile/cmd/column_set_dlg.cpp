@@ -9,6 +9,9 @@
 
 #include "stdafx.h"
 #include "column_set_dlg.h"
+#include "../gui/ModernUI.h"
+#include "main_frame.h"
+#include "address_bar.h"
 
 #include "resource.h"
 
@@ -20,8 +23,8 @@ namespace fxfile
 {
 namespace cmd
 {
-ColumnSetDlg::ColumnSetDlg(void)
-    : super(IDD_COLUMN_SET, XPR_NULL)
+ColumnSetDlg::ColumnSetDlg(CWnd *aParentWnd)
+    : super(IDD_COLUMN_SET, aParentWnd)
     , mShellFolder2(XPR_NULL)
     , mAvgCharWidth(6)
 {
@@ -96,6 +99,24 @@ xpr_bool_t ColumnSetDlg::OnInitDialog(void)
 
     mListCtrl.InsertColumn(0, gApp.loadString(XPR_STRING_LITERAL("popup.column_set.list.column.name")),  LVCFMT_LEFT,  170, -1);
     mListCtrl.InsertColumn(1, gApp.loadString(XPR_STRING_LITERAL("popup.column_set.list.column.width")), LVCFMT_RIGHT,  70, -1);
+
+    // Reuse the existing native palette-aware header, preserving real
+    // SysHeader32 drag sizing rather than drawing a fake static heading.
+    CHeaderCtrl *sHeader = mListCtrl.GetHeaderCtrl();
+    if (sHeader && ::IsWindow(sHeader->GetSafeHwnd()) &&
+        mColumnHeader.SubclassWindow(sHeader->GetSafeHwnd()))
+    {
+        mColumnHeader.ModifyStyle(0, HDS_FULLDRAG);
+        mColumnHeader.enableResizeGripHints(XPR_TRUE);
+        mColumnHeader.initHeader(XPR_FALSE);
+    }
+
+    CWnd *sWidth = GetDlgItem(IDC_COLUMN_WIDTH);
+    if (sWidth && ::IsWindow(sWidth->GetSafeHwnd()))
+    {
+        sWidth->ModifyStyleEx(0, WS_EX_CLIENTEDGE, SWP_FRAMECHANGED);
+        ui::ModernUI::emphasizeDialogEdit(sWidth->GetSafeHwnd());
+    }
 
     if (mShellFolder2 != XPR_NULL)
     {
@@ -172,7 +193,94 @@ xpr_bool_t ColumnSetDlg::OnInitDialog(void)
     SetDlgItemText(IDOK,                     gApp.loadString(XPR_STRING_LITERAL("popup.common.button.ok")));
     SetDlgItemText(IDCANCEL,                 gApp.loadString(XPR_STRING_LITERAL("popup.common.button.cancel")));
 
+    // The base dialog was themed before this dynamically populated list.
+    // Re-apply the current palette and attach the shared native scrollbar.
+    const ui::ThemePalette sPalette = ui::ModernUI::getPalette();
+    if (XPR_IS_TRUE(sPalette.mDark) &&
+        XPR_IS_FALSE(sPalette.mHighContrast))
+    {
+        mListCtrl.SetBkColor(sPalette.mElevated);
+        mListCtrl.SetTextBkColor(sPalette.mElevated);
+        mListCtrl.SetTextColor(sPalette.mText);
+    }
+    ui::ModernUI::applyDialogControlTheme(mListCtrl.m_hWnd);
+
+    // The original centered modal straddled the address row. Keep it below
+    // the active address bar when the current monitor has enough usable room.
+    // On smaller displays preserve standard MFC placement rather than
+    // clipping the modal or forcing it off-screen.
+    MainFrame *sFrame = dynamic_cast<MainFrame *>(GetOwner());
+    AddressBar *sAddress = sFrame ? sFrame->getAddressBar(-1) : XPR_NULL;
+    if (sAddress && ::IsWindowVisible(sAddress->GetSafeHwnd()))
+    {
+        CRect sAddressRect;
+        CRect sDialogRect;
+        sAddress->GetWindowRect(&sAddressRect);
+        GetWindowRect(&sDialogRect);
+        const xpr_sint_t sGap =
+            ui::ModernUI::scaleForWindow(10, m_hWnd);
+        const xpr_sint_t sBelow = sAddressRect.bottom + sGap;
+        const bool sHorizontallyIntersects =
+            sDialogRect.left < sAddressRect.right &&
+            sAddressRect.left < sDialogRect.right;
+        MONITORINFO sMonitor = {0};
+        sMonitor.cbSize = sizeof(sMonitor);
+        const HMONITOR sScreen =
+            ::MonitorFromWindow(m_hWnd, MONITOR_DEFAULTTONEAREST);
+        if (sHorizontallyIntersects &&
+            sDialogRect.top < sBelow && sScreen &&
+            ::GetMonitorInfo(sScreen, &sMonitor) &&
+            sBelow + sDialogRect.Height() <=
+                sMonitor.rcWork.bottom - sGap)
+        {
+            SetWindowPos(XPR_NULL, sDialogRect.left, sBelow,
+                0, 0, SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE);
+        }
+    }
     return XPR_TRUE;
+}
+
+xpr_sint_t ColumnSetDlg::readEditedColumnWidth(
+    xpr_sint_t aPreviousWidth)
+{
+    // Keep legacy widths if the user has not changed the number, but do not
+    // allow a newly entered zero to silently make a visible column vanish.
+    const xpr_sint_t sMinimum =
+        max(24, ui::ModernUI::scaleForWindow(24, m_hWnd));
+    const xpr_sint_t sMaximum =
+        max(sMinimum, ui::ModernUI::scaleForWindow(4096, m_hWnd));
+    xpr_tchar_t sInput[64] = {0};
+    const xpr_sint_t sLength =
+        GetDlgItemText(IDC_COLUMN_WIDTH, sInput, _countof(sInput));
+
+    xpr_sint_t sWidth = 0;
+    xpr_bool_t sValid = sLength > 0 ? XPR_TRUE : XPR_FALSE;
+    for (xpr_sint_t i = 0; i < sLength; ++i)
+    {
+        if (sInput[i] < XPR_STRING_LITERAL('0') ||
+            sInput[i] > XPR_STRING_LITERAL('9'))
+        {
+            sValid = XPR_FALSE;
+            break;
+        }
+        // Saturate during parsing so extremely long numeric input cannot
+        // overflow even before the final width limit is applied.
+        sWidth = min(sMaximum + 1,
+            sWidth * 10 + (sInput[i] - XPR_STRING_LITERAL('0')));
+    }
+    if (XPR_IS_FALSE(sValid))
+    {
+        SetDlgItemInt(IDC_COLUMN_WIDTH, aPreviousWidth, XPR_FALSE);
+        return aPreviousWidth;
+    }
+    if (sWidth == aPreviousWidth)
+        return aPreviousWidth;
+
+    const xpr_sint_t sClamped =
+        max(sMinimum, min(sMaximum, sWidth));
+    if (sClamped != sWidth)
+        SetDlgItemInt(IDC_COLUMN_WIDTH, sClamped, XPR_FALSE);
+    return sClamped;
 }
 
 void ColumnSetDlg::OnOK(void)
@@ -186,7 +294,8 @@ void ColumnSetDlg::OnOK(void)
         sColumnItemData = (ColumnItemData *)mListCtrl.GetItemData(sIndex);
         if (sColumnItemData != XPR_NULL)
         {
-            sColumnItemData->mWidth = GetDlgItemInt(IDC_COLUMN_WIDTH, XPR_FALSE);
+            sColumnItemData->mWidth =
+                readEditedColumnWidth(sColumnItemData->mWidth);
 
             mListCtrl.Invalidate(XPR_FALSE);
             mListCtrl.UpdateWindow();
@@ -395,7 +504,8 @@ void ColumnSetDlg::OnLvnItemchangedList(NMHDR *pNMHDR, LRESULT *pResult)
             sColumnItemData = (ColumnItemData *)mListCtrl.GetItemData(sIndex);
             if (sColumnItemData != XPR_NULL)
             {
-                sColumnItemData->mWidth = GetDlgItemInt(IDC_COLUMN_WIDTH, XPR_FALSE);
+                sColumnItemData->mWidth =
+                readEditedColumnWidth(sColumnItemData->mWidth);
 
                 mListCtrl.Invalidate(XPR_FALSE);
                 mListCtrl.UpdateWindow();
@@ -438,7 +548,8 @@ void ColumnSetDlg::OnItemUp(void)
     ColumnItemData *sColumnItemData = (ColumnItemData *)mListCtrl.GetItemData(sIndex);
     if (sColumnItemData != XPR_NULL)
     {
-        sColumnItemData->mWidth = GetDlgItemInt(IDC_COLUMN_WIDTH, XPR_FALSE);
+        sColumnItemData->mWidth =
+                readEditedColumnWidth(sColumnItemData->mWidth);
         sColumnItemData->mUse   = mListCtrl.GetCheck(sIndex);
     }
 
@@ -468,7 +579,8 @@ void ColumnSetDlg::OnItemDown(void)
     ColumnItemData *sColumnItemData = (ColumnItemData *)mListCtrl.GetItemData(sIndex);
     if (sColumnItemData != XPR_NULL)
     {
-        sColumnItemData->mWidth = GetDlgItemInt(IDC_COLUMN_WIDTH, XPR_FALSE);
+        sColumnItemData->mWidth =
+                readEditedColumnWidth(sColumnItemData->mWidth);
         sColumnItemData->mUse   = mListCtrl.GetCheck(sIndex);
     }
 

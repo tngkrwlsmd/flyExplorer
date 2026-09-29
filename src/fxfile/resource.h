@@ -423,6 +423,12 @@
 #define IDC_BATCH_CREATE_FORMAT_NUMBER_END 1040
 #define IDC_PIC_CONV_OPTION_OFFSET      1040
 #define IDC_SEARCH_CUR_LOC              1040
+#define IDC_SEARCH_SCOPE_PREVIEW        1859
+#define IDC_SEARCH_SCOPE_FULL           1860
+#define IDC_SEARCH_RECENT_LABEL         1861
+#define IDC_SEARCH_RECENT               1862
+#define IDC_SEARCH_RECENT_CLEAR         1863
+#define IDC_SEARCH_REMEMBER             1864
 #define IDC_CFG_LAYOUT_SHOW_PATH_BAR    1040
 #define IDC_CFG_LANGUAGE_DESC_HOMEPAGE  1040
 #define IDC_NEW_NUMBER_COUNT            1041
@@ -1632,6 +1638,9 @@
 #define ID_VIEW_THEME_SYSTEM            33046
 #define ID_VIEW_THEME_LIGHT             33047
 #define ID_VIEW_THEME_DARK              33048
+#define ID_VIEW_TOOL_COMPACT_ROWS       33049
+#define ID_VIEW_WORKSPACE_SAVE           33052
+#define ID_VIEW_WORKSPACE_OPEN           33053
 #define ID_VIEW_STYLE                   33100
 #define ID_VIEW_STYLE_EXTRA_LARGE_ICONS 33101
 #define ID_VIEW_STYLE_MEDIUM_ICONS      33102
@@ -1874,7 +1883,7 @@
 #define _APS_3D_CONTROLS                     1
 #define _APS_NEXT_RESOURCE_VALUE        427
 #define _APS_NEXT_COMMAND_VALUE         50015
-#define _APS_NEXT_CONTROL_VALUE         1859
+#define _APS_NEXT_CONTROL_VALUE         1865
 #define _APS_NEXT_SYMED_VALUE           126
 #endif
 #endif

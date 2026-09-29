@@ -1,6 +1,20 @@
 # flyExplorer — current project status (2026-09-28 baseline; 2026-09-29 migration-branch addendum)
 
 
+## M1.9 FINAL RESUMED ACCEPTANCE ? separate preview, default native main unchanged
+
+Final imported M1.9 source passed actual merged MFC Release x64 native **20/0 PASS_WITH_SKIPS** (the existing user HKCU smoke remains intentionally SKIPPED), full owned MFC UXH-07/UXH-06 GUI and merged native UI-02 real Dark/Light primary and modal GUI. The WinUI preview itself passed **Debug + Release** full owned actual workspace/recent-search/independent Shell navigation GUI, **12/12 same-source native workspace/search contracts in each build**, combined **56/56** source/architecture checks, real MFC-produced safe workspace compatibility and M1.8 controlled fault/notification/two-timeout regression. Original six user-setting hashes and the original untracked screenshot remained unchanged. Last exact final WinUI binaries and precise missing full-parity gates: [M1.9 scoped acceptance](WINUI3_M19_MAINLINE_FEATURE_INTEGRATION_20260929.md). Older M1.9 preliminary and M1.8 pre-merge sections below are dated history, not current integration status.
+
+---
+
+## M1.9 CURRENT ACTUAL SOURCE IMPORT ? migration only (2026-09-29)
+
+Imported default native `main` `3a4d27c` into previously separate WinUI `34936ee`; preserved two-parent merge ancestry and both historical document histories while resolving three doc conflicts. Actual combined MFC source Release x64 local CI **20 passed / 0 failed, PASS WITH SKIPS** (live HKCU smoke intentionally SKIPPED). WinUI native XAML UI now supports a **bounded compatible subset** of UXH-07 UTF-16 schema1 named-workspace Save new/Open distinct process and independently queued selected/inactive tabs, and an **opt-in only** WinUI-private (not MFC-profile) bounded read-only UXH-06-like filename search/history. Native UI-02 ModernUI stays for MFC and WinUI uses native XAML scrollbars. Real owned Debug/Release GUI, actual MFC?WinUI workspace file two-way interoperability, native bridge 12/12 Debug+Release and combined architecture 20/20 PASS. Original six user settings unchanged. Separate later renewed Shell/Job/UNC failure tests are revision-specific. Full MFC search filters/history/layout and true third-party extension network/display accessibility certification remain OPEN. [M1.9 implementation and exact limits](WINUI3_M19_MAINLINE_FEATURE_INTEGRATION_20260929.md). **All earlier statements below that main has not been imported are historical pre-M1.9 status; default native main is still untouched and WinUI preview is NOT production-parity.**
+
+---
+
+
+
 ## CURRENT CROSS-BRANCH ALIGNMENT (2026-09-29) - documents only, no new code integration
 
 **After native mainline branch consolidation**, the last independently tested native `main` source commit before these documentation-only updates was `f074a6b1651dae6e9a1603465078310822a8f761`, with UXH-07 named workspaces, UXH-06 opt-in recent search scopes and the existing ModernUI solution superseding UI-02's older duplicate renderer. The native original-root x64 build passed **17/0 PASS WITH SKIPS** (live HKCU smoke deliberately skipped), combined 25/25 contracts and actual owned root UXH-06/Dark UI-02 GUI; additional isolated Light/Dark primary/modal tests passed. The original-root EXE SHA256 is `41D51B87E74C839C33124F22F63AC0C7379B61E0F32A12196D1459649AF81BAC`; six user settings and original screenshot were preserved.
@@ -176,296 +190,317 @@ must not be interpreted as M0 product integration.
 The unchanged existing WinUI Debug x64 and production binaries were exercised on the connected Windows 11 machine at real 96 DPI. The fixed strict bridge test passed once and then **three consecutive repeats**: actual Up/Back/Forward commands, real product and reflected WinUI titles/status, clean exit code 0 for both owned processes, and unchanged SHA256 hashes of all six original user settings files per run. The separate actual WinUI 3 mouse/keyboard standalone GUI regression also PASSED and exited 0. Python syntax and git diff checks passed. Only the experiment's test harness and its README changed; no product source, binary or original user settings changed. Experiment revision: [277951e4134449734ad0ee5b26103703f8728e31](https://github.com/tngkrwlsmd/flyExplorer/commit/277951e4134449734ad0ee5b26103703f8728e31) on `experiments/phase5-real-winui3-20260928` (NOT merged to main). The older strict-teardown FAIL reports below are historical and superseded **only for this observed harness defect**. Same-process WinUI hosting, active-pane/address/Shell parity, full HKCU isolation, actual 125/150/200% DPI, OS High Contrast, clean-machine reproducibility, production packaging and framework lifetime-cost comparison remain NOT TESTED. GitHub Actions were not dispatched. See UI_FRAMEWORK_PHASE5_COMMAND_BRIDGE_EVIDENCE.md.
 
 
+## CURRENT POST-MERGE STATUS - UXH-07, UXH-06, UI-02 and separate WinUI M1.8 (2026-09-29)
 
-**Later Phase5 native NuGet checkpoint, 2026-09-28:** The isolated WinUI3 Debug|x64 build now PASSES normal NuGet native asset resolution (native,Version=v0.0) and full compile/link WITHOUT bypass, superseding earlier mismatch/bypass reports. The actual 96-DPI standalone UI pointer/keyboard regression PASSES with clean exit. An explicitly test-owned WinUI3 UIA InvokePattern bridge sent real product Up/Back/Forward commands and original six config hashes matched, but its strict cleanup regression currently FAILS because the owned WinUI3 helper sometimes times out and must be terminated. Prior pointer automation also intermittently missed a Back event. Product source/executable unchanged; same-process XAML Islands, full integration, fresh-machine deployment and actual higher DPI/OS High Contrast remain untested. Experiment commit ddff6a3397e3c2ade38f1a173a6567366ec9ac84; details UI_FRAMEWORK_PHASE5_COMMAND_BRIDGE_EVIDENCE.md.
+The last independently rebuilt native source commit in the `main` lineage (immediately before this documentation-only update) is `f074a6b1651dae6e9a1603465078310822a8f761`, containing UXH-07 named workspaces, UXH-06 opt-in recent search scopes, and the **existing** ModernUI scrollbar solution. The old competing UI-02 `DarkScrollbarLayer` was intentionally superseded. On the actual rebuilt ROOT checkout, Release x64 native **17/0 PASS WITH SKIPS** (real HKCU smoke deliberately skipped), combined **25/25** focused source contracts, and actual owned UXH-06 and Dark UI-02 GUI passed. Additional isolated merged-candidate Light/Dark primary and modal GUI passed. Exact original-root executable SHA256 is `41D51B87E74C839C33124F22F63AC0C7379B61E0F32A12196D1459649AF81BAC`; the older candidate EXE hash below belongs to a **different build**. The six original user settings and untracked original screenshot remained unchanged.
 
+There are exactly **two active local and remote branches**: `main` and the independently tested, **not yet source-reconciled** WinUI 3 experiment `migration/winui3-full-shell-20260929` at `eb7ee1a335484d88128bfcf117a4f857fbee4c60`. Historical removed branches retain local archive refs. [Current authoritative branch, test-artifact and next-gate map](BRANCH_AND_RELEASE_STATUS_20260929.md).
 
-**2026-09-28 Phase5 continued: real product command bridge tested; product unchanged.** An isolated, explicitly test-owned WinUI 3 XAML prototype now forwards allowlisted scalar Up/Back/Forward commands from actual UI Automation clicks to a private-profile real product MainFrame through existing CommandContext/ExplorerCtrl routing, without editing the product. Native real-product and real WinUI GUI tests plus experiment x64 compilation passed at 96 DPI; both test-owned processes exited 0 and original six config hashes matched. The experiment is e845eb45f3bd3cf978bbecaecf7984dc6f0d22a0 on experiments/phase5-real-winui3-20260928 ONLY. This is cross-process proof, NOT same-process integration or active-pane state/address parity. Ordinary VS18 NuGet UAP/native asset resolution remains unresolved; prototype-only build bypass still required. Higher real DPIs, actual OS High Contrast, complete profile/HKCU, Shell/multi-pane parity and lifecycle-cost comparison remain NOT TESTED. See UI_FRAMEWORK_PHASE5_COMMAND_BRIDGE_EVIDENCE.md.
-
-
-**2026-09-27 Phase4 partial evidence (actual 96 DPI pass; migration undecided):** Revalidated unchanged production executable 6d1f763 with an isolated four-file user UI copy, synthetic folder and real 96 DPI: preserved three 1175x40 and one 1175x21 toolbar bands, 28px native header, 36px address; original settings hashes equal and isolated exit 0. Phase3 same-revision synthetic Dark/Light/System evidence reused; other real DPIs, actual OS High Contrast and complete HKCU/profile isolation remain NOT TESTED, protected-user runtime smoke SKIPPED. No new confirmed product defect, no speculative product edit or rebuild. Isolated experiment branch ad561271 compiled and live-tested C++/WinRT Foundation + Win32 navigation controls, NOT WinUI 3 and NOT product engine integration. Actual WinUI 3 development tools and equal-feature UI comparison require a later approved bounded experiment. Details: UI_FRAMEWORK_PHASE4_EVALUATION.md and UI_UX_AUDIT_20260924.md.
-
-
-**2026-09-27 UI/UX Phase 3 — primary native navigation (synthetic and guarded saved-layout replica):** Built and visually exercised product revision 6d1f76388b0b8326568478ce35814aba1eb69a0e on connected Windows 11 x64. Back/Forward/Up keep their native commands and user-saved toolbar layout while gaining a scoped, DPI-scaled icon/hover target and independent history-arrow hover. Local compile/link and 17/0 functional checks PASS, focused source tests and preflight PASS; protected-HKCU smoke SKIPPED. Real synthetic mouse navigation/hover and Dark/Light/System GUI checks PASS. A partial copy of the saved user profile four saved UI files preserved measured native toolbar/header/address geometry with unmodified originals, but complete live personal profile/HKCU, High Contrast and other DPI conditions remain RETEST OPEN. See UI_UX_AUDIT_20260924.md for scoped evidence and limitations.
+**All sections below are revision-scoped historical reports.** Earlier mentions of local-only, unmerged, candidate, dirty UXH-07 worktrees or in-progress old feature branches do NOT reflect the present mainline. Physical other-DPI/OS High Contrast/Narrator and genuinely broken external Shell/SMB/provider scenarios remain unverified.
 
 
-**2026-09-27 UI/UX Phase2 synthetic GUI PASS (real user profile RETEST OPEN):** The ComboBoxEx address surface is rounded using the existing Fluent metric while retaining native focus, editing, autocomplete, dropdown and High Contrast fallback. Product executable eb958777a7cb182606b4511672abf08f852a9daf passed Windows x64 compile/link, native 17/0 functional, source preflight and 8 focused tests. Isolated Dark/Light/System header and address keyboard focus, narrow Dark response and actual Light dropdown/Escape passed; official HKCU smoke skipped. Read-only real user config selects Light, but the saved personal layout and other DPI/High Contrast have not been tested. Local-only evidence is recorded in UI_UX_AUDIT_20260924.md.
+## Latest 2026-09-29: UI-02 historic branch resolved with CURRENT ModernUI (owned GUI accepted)
 
-**2026-09-27 user screenshot follow-up — list header/address: TESTED on synthetic VM, original user profile RETEST OPEN.** At product commit 03a68baff006f5d58cca304b7d0b36cc9ce28b49, native HDM_LAYOUT adjusts both the measured header height and file-list content reservation so the native header cannot shrink below 28 DIP during reflow; the address field shares command chrome rather than a visibly raised full-width background. Connected Windows Release-x64-Unicode compile/link and 17/0 native functional checks PASS; official startup smoke SKIPPED to avoid user HKCU. Six new targeted static tests and full source preflight PASS. Synthetic Dark and Light UI geometry, header click, editable location focus, responsive narrow Dark resizing and normal test-process shutdown were checked with local-only captures. The uploaded user's custom profile/DPI and OS High Contrast remain NOT TESTED. Detailed evidence: UI_UX_AUDIT_20260924.md. The product executable corresponds to 03a68baff006f5d58cca304b7d0b36cc9ce28b49, not the subsequent docs-only final commit.
+The old local UI-02 branch was compared to the independent, already integrated native ModernUI dark scrollbar compositor in main. The old cross-thread DarkScrollbarLayer would paint the same native scrollbars a second time and conflicted with ListCtrlEx and TreeCtrlEx, so the integration intentionally **retains the existing, proven ModernUI renderer** while connecting the old feature history as a documented superseding merge. No old layer was added to the product. On the exact Release-x64 compiled post-UXH-06 source, static negative/coverage tests 19/19 and strengthened owned GUI harness contracts 3/3 (**22/22 total**) passed.
+
+Earlier native input GUI failures reproduced in both Light and Dark because the old harness clicked an off-screen scrollbar (y=783 while work area ended at 714), inherited unrelated real-user Last Tabs into its own copied profile, and left a test-owned Tip of the Day modal intercepting physical pointer clicks. The corrected synthetic-profile test now fits the actual monitor work area, loads exactly 65 test-owned folders, physically dismisses only its own modal, and guards process-owned foreground input. **Actual native Light and Dark GUI both PASS:** tree and list vertical/horizontal scroll, native thumb drag, track page-click and the expected dark-only overlay. Separate actual Light and Dark modal-scroll GUI both PASS; every run preserves the original six user profile hashes and exits normally. No actual high DPI/High Contrast/Narrator certification. The source branch's unique old renderer is intentionally superseded, NOT copied verbatim. See [UI-02 exact conflict resolution and tested outcome](UI02_SUPERSEDED_MERGE_ACCEPTANCE_20260929.md).
 
 
+## Current 2026-09-29: UXH-06 recent search locations, merged candidate ACCEPTED in isolated worktree
 
-**2026-09-27 UI/UX Phase 1 verified tab title improvement:** Same-PC Windows Explorer comparison confirmed that the old 150-DIP flyExplorer tab truncated FXUI_Synthetic_Root at 1240 x 790 while Explorer showed the full title. At tested product source/binary revision 5db3f92b46bf38c2cea2ed0e12f06d199ecc86de, a scoped 232-DIP default and bounded narrow/multitab allocation built and linked on Windows VS 2026 x64, native functional regressions 17/0 PASS, source invariants PASS, 5 targeted source mutation tests PASS; official runtime smoke SKIPPED to protect the existing user HKCU. In an isolated synthetic GUI profile, the full original tab title was visibly readable, mouse-clicking New Tab opened a second tab, narrow resizing stayed responsive, and our test process exited normally. Keyboard-only input, Light/High Contrast and other DPI environments were not verified. Screenshots are retained locally (logs/phase1, ignored), not committed. The tested product commit is 5db3f92b46bf38c2cea2ed0e12f06d199ecc86de; any subsequent documentation-only final merge revision is not a separate rebuilt product executable. See UI_UX_AUDIT_20260924.md.
+On top of current `main` / UXH-07 revision `4507c1f`, the previously separate UXH-06 feature branch was integrated without source conflicts and the **current combined Release x64 Unicode** executable passed canonical local CI 17/0 `PASS_WITH_SKIPS` (user HKCU runtime smoke deliberately SKIPPED). Exact integrated binary SHA256: `1EDC8616E732B4E5DB277773A6D57D071960B2C74B2786EB5F01DB6778AFC8EE`. Real owned Windows 96-DPI search GUI confirmed a 182-character read-only full-scope view, a physically selected opt-in valid search persisting one recent directory through normal exit/restart, physical recent selection, Clear and empty restart, and a **second valid opt-out search remaining empty both immediately and after another restart**. All six original user-setting SHA256 hashes remained identical. Focused UXH-06 contracts 3/3 PASS after staging localized Korean.xml. Actual separately installed Korean pack, other physical DPI, OS High Contrast/Narrator remain unverified. Older "UXH-06 WIP" documents below describe the historical preintegration state. [Exact revision-scoped final UXH-06 acceptance](UXH06_MAIN_MERGE_ACCEPTANCE_20260929.md).
 
-**Purpose:** Fast, current-state entry point for maintainers and development
-agents. This is an evidence-labelled summary, not a replacement for source,
-build scripts, the project policy, or an independently executed test.
-Update this page after each logical work unit that changes its facts.
-For the chronological diagnosis and original evidence, retain and use
-[`ERROR_HISTORY.md`](ERROR_HISTORY.md) rather than moving/deleting entries.
 
-**2026-09-27 UI-02 final-pixel redesign — Windows Dark 96-DPI
-DIAGNOSTIC PASS / FINAL REVISION AND USER ENVIRONMENT RETEST OPEN:**
-사용자의 원래 Dark 파일 목록에는 밝은 native scrollbar가 여전히 노출된다.
-기존 GetWindowDC/지연 PostMessage 방식은 native thumb modal tracking 동안
-OS의 최종 픽셀 소유권을 확보하지 못한다. 연결된 VM은 OS도 Dark이므로
-원래 OS-밝음 증상 자체가 이 VM의 기존 바이너리에서는 재현되지 않았다.
-다만 격리 VM 실험에서 별도 child layered overlay는 drag 때 OS에 가려졌고,
-**동일 UI thread의 root-owned/비활성/HTTRANSPARENT layered popup**은
-native thumb drag 입력을 방해하지 않고 8프레임 내내 덮개가 유지됐다.
+## Latest: UXH-07 branch publication verification (2026-09-29)
 
-같은 Windows VM에서 중간 C++ 구현을 x64 compile/link하고 native regression
-17 PASS/0 FAIL, local_ci 결과 PASS_WITH_SKIPS(HKCU 보호에 따른 runtime smoke
-SKIP)를 얻었다. 일시적 diagnostic RGB tint를 넣은 테스트 빌드는
-실제 8프레임 thumb drag에서 popup 자체의 track이 항상 7420 픽셀,
-각 프레임 native xyThumbTop과 popup thumb 위치가 1px 이내로 일치했고
-native thumb가 23→172로 이동했다. 이 test tint는 source에서 **삭제**했다.
-따라서 이는 검증 당시 source snapshot의 원인 진단 evidence이며,
-이후 최종 commit을 대상으로 한 별도 full CI/UI 재검증 없이
-최종 release visual PASS라고 승격하지 않는다.
+The older “LOCAL ONLY / UNCOMMITTED” evidence below describes its original prepublication test snapshot. The actual freshly rebuilt local Release-x64-Unicode binary at this checkpoint was `E3E29B6F79DE34CA57F6B0C817E0200D507911687DB4DAF90B1D56CFA077A086`. Current local CI 17/0 PASS_WITH_SKIPS; new owned Windows GUI reverified eight invalid workspace warnings, two distinct named preset restorations after a normal restart, native Korean menu and dark scrollbar physical-wheel behavior, and isolated orphan protection. Original six user settings SHA256 hashes stayed identical across the tests. This is feature-branch evidence only, not merge/release or all-DPI/HC certification. See [exact revalidation and ignored log paths](UXH07_PUSH_VERIFICATION_20260929.md). Check live Git refs for the actual remote branch state.
 
-새 C++ 구현은 ListCtrlEx/TreeCtrlEx별 overlay lifecycle을 ModernUI에 두고
-SCROLLBARINFO geometry, WS_EX_LAYERED|WS_EX_TRANSPARENT,
-WH_CALLWNDPROCRET와 native MSGF_SCROLLBAR thread hook으로 기존 input을
-보존하면서 layered 최종 색상을 추적한다. 동기적 NC 그리기와 timer는 없다.
-새 source mutation 회귀 15개 및 layer 캡처를 포함한 visual collector
-9개 테스트는 PASS, 전체 static preflight PASS. 모든 새 overlay window는
-destroy/theme/visibility lifecycle에서 정리되도록 보호한다.
 
-다음 검증은 최종 git SHA와 x64 executable marker가 일치하는 상태에서
-Dark 96-DPI list/tree drag, wheel/keyboard, Light/System, UI-05/UI-09 및
-종료/재실행을 반복 검사한다. 원래 사용자 OS/monitor 설정에서 동일
-스크린샷 재검증, High Contrast와 125/150/200% DPI는 여전히 OPEN이다.
-코드가 같은 증상을 수정했다고 전역 사용자 환경에서 단정하지 않는다.
-GitHub Actions는 별도 개별 승인 없이 실행하지 않는다.
+> Reviewed baseline: local and remote main
+> cd96de0bc8fba13a7cfeee4e5f9da9a6dc30c7c5, before
+> this UXH-06/07 review change. To identify the current
+> commit, run git rev-parse main. Latest separately
+> verified native UI product revision at review time:
+> cd96de0bc8fba13a7cfeee4e5f9da9a6dc30c7c5
+> (UXH-05 scoped accessibility and clean Release).
+> Start with the [development index](README.md); the full prior
+> 767-line status is [archived unchanged](CURRENT_STATUS_HISTORY_20260928.md).
 
-**2026-09-27 실제 Windows UI-05 새 프로필 후속 — 96 DPI DARK RUNTIME/VISUAL PASS, 기타 DPI RETEST OPEN:**
-Remote Desktop Commander/WinApp CLI가 연결된 Windows에서 격리된 합성
-프로필과 합성 폴더·파일 205개만 사용하여 실기 화면을 검사했다.
-최초 e59aed97의 800×600 신규 창은 세 rebar 밴드가 따로 존재하고,
-1920×1032로 최대화해도 드라이브와 북마크가 계속 별도 행으로 남았다.
-최초 UI-05 리사이즈 재시도 수정 fe5e49d의 화면에서는 동일 행으로
-합쳐졌으나 드라이브 밴드가 거의 전폭을 유지해 북마크가 오른쪽
-chevron에 숨겨졌다. 이는 실제 화면에서 확인한 두 번째 결함이다.
+## 1. Latest state, constraints and next work
 
-후속 3aab666 소스는 저장된 레이아웃/사용자 밴드 드래그를 존중하면서
-**더 넓어진 신규 프로필 창에서만**, 예약 메시지로 실제 rebar ideal/header
-폭을 측정하고 각각의 밴드에 폭을 배분한다. WM_SIZE에서는
-SetBandInfo/부모 RecalcLayout을 직접 호출하지 않는다.
-실제 3aab666 x64 Windows 빌드 후 800×600→1920×1032에서 드라이브와
-북마크가 정상적인 하나의 둘째 행에 직접 표시되며 프로그램 응답 상태가
-정상인 것을 screenshot·WinApp UI 트리로 확인했다.
-정적 전체 preflight PASS, 신규 UI-05 mutation 검사는 **11 PASS**,
-local_ci.bat x64 빌드와 native 기능 검사는 **17 PASS / 0 FAIL**다.
-단 **runtime smoke는 기존 HKCU 사용자 상태 보호 때문에 SKIPPED**;
-실기 UI 실행은 별도 격리 프로필로 확인했다. 125/150/200% DPI,
-Light/High Contrast, 기존의 복잡한 사용자 저장 밴드와 도구 모음 드래그
-상호작용은 **RETEST OPEN**이다. 이 범위 밖의 UI-01/03~14 및 다른
-설치 환경의 문제를 완료로 승격하지 않는다.
+### Local 2026-09-29 Korean menu, submenu arrow and native toolbar Dark UI: SCOPED PASS
 
-동일 후보 바이너리의 **96 DPI Dark 합성 fixture**에서 UI-02 파일 목록
-세로/트리 가로 스크롤바를 각각 12프레임 실제 드래그했다. 손잡이
-위치는 이동했고 해당 캡처의 밝은 중성 픽셀 비율은 전 프레임 **0.0**;
-원격 테스트 시스템에서 밝아짐은 재현되지 않았다. 다른 배율/Windows
-시각 스타일과 사용자가 과거 제공한 실패 화면은 아직 설명되지 않아
-**UI-02 전체 OPEN / 해당 한정 재현 NOT OBSERVED**로 유지한다.
-캡처·manifest는 개인 설정을 포함하지 않고 검사 PC의 무추적
-logs/visual-ui/에 보관했으며, 기존 사용자의 main-window.png와
-HKCU 설정은 건드리지 않았다. GitHub Actions는 실행하지 않았다.
+LOCAL uncommitted branch only, not remote main. Canonical Korean Workspaces
+menu/Save/Open translation placeholders fixed; owner-drawn submenu arrows
+now use one high-contrast, larger, font-independent DPI-scaled chevron.
+Native toolbar Customize (outside normal ModernDialog inheritance) now
+enrolls both ListBoxes in the shared dark-scrollbar compositor and draws
+parent/static/buttons with the common palette. Final x64 binary SHA256:
+C0FF584E685E7DEEF6E3844AC7F0A55E2AA541DE0235B66F1BA7859826E64E79.
+Local x64 CI exit 0, native 17/0, overall PASS_WITH_SKIPS (official runtime
+smoke skipped due to existing HKCU state). Separate focused contract 3/3.
+Two owned actual Windows 11 GUI runs verified corrected Korean submenu,
+visible single arrows and both dark ListBox scrollbars; real mouse wheel
+moved native LB_GETTOPINDEX 0 to 9. All six original config hashes remained
+identical. Wider source audit inventoried 24 direct CWnd/CDialog bases but
+does NOT claim they are all defective. Actual other DPI, OS High Contrast,
+speech-reader and all other context/overflow menus remain NOT TESTED.
+[Detailed local evidence and remaining audit](UI_LEGACY_MENU_TOOLBAR_AUDIT_20260929.md).
 
-**2026-09-27 사용자 x64 빌드 보고 — COMPILE/FUNCTIONAL PASS, SMOKE SCRIPT RETEST OPEN:**
-사용자가 `ff0352957686a8895e885bc3103eed3a65d6702b`에서 `local_ci.bat x64`
-실행 결과를 공유했다. VS 2026/v145 솔루션 생성·소스 정적 검사 및
-필수 x64 산출물 확인은 PASS이며 native functional regression은
-**17 passed / 0 failed**다. 그러나 이어진 runtime smoke는 제품 창 생성
-검사 전에 Windows PowerShell 5.1/.NET Framework에서 지원되지 않는
-`ProcessStartInfo.ArgumentList` 속성 접근으로 즉시 종료되어
-전체 local CI 결과는 **FAIL (CI 실행 스크립트 호환성)**이었다.
 
-`build/runtime_smoke.ps1`을 WinPS5.1에서 사용 가능한 인자 API와
-프로세스 트리 종료 방식으로 변경하고 호환성 source guard 및 회귀
-검사를 추가했다. 최종 수정본에 대한 사용자 Windows 재실행과
-최신 revision 일치 x64 재빌드, 실제 창 표시/안정성은 여전히
-**NOT RETESTED**다. 앞선 `ff035295`의 compile/functional PASS를
-새 commit의 실행 검증으로 자동 승격하지 않는다. UI-02 등
-시각적 결함은 그대로 OPEN/RETEST OPEN이며 GitHub Actions는
-실행하지 않는다. 진단과 변경 범위는
-[오류 이력](ERROR_HISTORY.md)의 2026-09-27 PowerShell smoke 항목 참조.
+### Local UXH-07 named workspaces: scoped final acceptance (2026-09-29)
 
-**2026-09-27 Native UI evidence preparation — TOOLING ADDED / PRODUCT VISUAL NOT TESTED:**
-채팅에서 실제 Windows UI를 검증하는 반복 작업을 준비하기 위해 별도
-`build/visual_ui_probe.py` 및 순수 `build/test_visual_ui_probe.py` 테스트와
-[실행 및 검증 절차](UI_VISUAL_RETEST.md)를 추가했다. 사용자의 개인 설정과
-데이터를 수정하지 않도록 격리된 합성 fixture를 요구하고,
-`build-revision.txt`와 Git HEAD가 일치하지 않으면 스크린샷 수집을
-거부한다. 스크롤바 대상은 공개 `GetScrollBarInfo`로 좌표를 얻어
-실제 마우스 드래그 중 12개 프레임과 thumb 위치를 기록한다. 밝은
-네이티브 스크롤바 의심 프레임은 탐지 후보로 표시하되,
-픽셀 차이만으로 UI 결함의 해결이나 실패를 단정하지 않는다.
-정적 source preflight에 해당 안전 계약도 연결했다.
+**LOCAL ONLY, UNMERGED, UNCOMMITTED:** branch
+`fix/uxh07-named-workspaces-20260928` at HEAD `7cc0b46`
+(branch base `main` tracking ref `463f6ffd`). The 2026-09-28
+main review further below remains a HISTORICAL main-baseline
+description, not this local named-workspace implementation.
+Canonical detailed evidence:
+[UXH-07 local named-workspace record](UI_PHASE6_UXH07_NAMED_WORKSPACE_WIP_20260929.md).
 
-**해당 UI 수집기 체크포인트는 제품 C++ 렌더링을 변경하지 않았다.** 당시 채팅에는
-연결된 Windows 테스트 기기가 없으므로 신규 소스의 Windows x64
-컴파일·최신 바이너리 실행·실제 화면 관찰은 **NOT TESTED**다.
-기존 UI-02는 여전히 **OPEN**, UI-09 및 UI-01/03~14의 해당 항목은
-각기 종전 근거 수준의 **RUNTIME/VISUAL RETEST OPEN**으로 유지한다.
-자동 GitHub Actions를 실행하거나 제한된 x86/배포 범위를 확장하지
-않았다. 전체 UI 해결 완료로 보고하지 않는다.
+Final compiled and tested Release-x64-Unicode binary SHA256:
+`0873F600E45DC26BEF98948BF2B6DADBC013C1DC11633B614EED5B75BA2F091C`.
+One local `local_ci.bat x64` rebuilt the product, passed the
+warning policy, source preflight, and native functional
+17 passed / 0 failed; exit code 0, overall PASS_WITH_SKIPS.
+The automatic runtime smoke SKIPPED to preserve existing
+user HKCU/profile data; it is NOT a runtime-smoke PASS.
+Only the remote command process received its missing
+`ProgramFiles(x86)` and `TMP` environment variables;
+no persistent machine setting was changed.
 
-**2026-09-26 UI-02·05 후속 코드 — 비동기 방식으로 재설계 / WINDOWS RUNTIME NOT TESTED:**
-사용자는 HANG-01 문제가 해결됐다고 보고하며 이전 UI 점검 목록의
-처리를 요청했다. 현재 소스의 HANG-01 OLE paint starvation
-수정은 그대로 보존했다. 과거 UI-02/05 자동 처리의
-동기적 비클라이언트 그리기 및 OnSize 중 부모
-RecalcLayout 경로를 재도입하지 않았다.
+On that exact executable, owned Windows 11 GUI testing PASSED:
+eight malformed native file-dialog rejections;
+real keyboard menu Save/Open and a separate accepted
+physical-pointer submenu Save/Open repeat (top-level
+View opened with Alt+V), both named snapshots with
+different 1x2/2/1-tab layouts; full normal parent
+exit/restart, preserved Last Tabs, and reopening BOTH
+named files into distinct private child windows; and
+private 3-hex stale orphan reclamation with 4-hex locked
+live marker and reparse/junction external sentinel protection.
+All accepted tests preserved the six original user config
+SHA256 hashes and owned processes exited 0.
 
-- UI-02: 공개 `GetScrollBarInfo`로 실제 네이티브
-  스크롤바의 위치·thumb·화살표 상태를 읽어
-  Dark에서만 그리는 코드가 있다. 리스트/트리
-  `WM_NCPAINT`·스크롤 이벤트에서는 그리지 않고,
-  기존 Windows 메시지를 처리한 후 등록된 별도
-  `PostMessage` 하나로 작업을 합쳐 실행한다.
-  그리는 중 재진입 요청을 거부하고 Light 및
-  High Contrast에서는 OS 출력을 유지한다.
-  사용자 스크롤 위치·hit-test·드래그를 바꾸지 않는다.
-- UI-05: 초기에 세 도구 모음을 독립 행으로
-  생성하고 native 크기 계산이 끝난 후,
-  저장된 배치가 없는 첫 실행·단일행·가시 상태에서
-  두 이상 폭과 48-DIP 여유가 실제로 맞는 경우만
-  드라이브/북마크 행 결합을 한 차례 시도한다.
-  `OnSize`에서는 메시지 예약만 하며 실제
-  `SetBandInfo`·`RecalcLayout` 호출은 별도
-  예약 메시지로 분리했다. 기존 배치 파일·
-  다중 행·사용자 조작과 UI-09 변경은 보존한다.
-- UI-11/12/13: 앞선 새 기본 열 너비,
-  트리 전체명 툴팁, 가변 정보창 배치 수정은
-  현재 `main`에서 확인됐고 중복 수정하지 않았다.
-  저장된 기존 140px 열 너비는 임의 변경하지 않는다.
-- UI-14: 혼합 방식의 헤더 그리기/좁은 정렬 표시
-  기존 개선을 유지한다. 당시 화면만으로
-  포커스 표시 문제는 확정되지 않았다.
+Two previously open causes are now distinguished:
+(a) real intermittent owner-dir refusal arose because
+GetTempFileName sometimes yields 3-hex names but the
+safety guard assumed EXACTLY four; validation/reaping now
+accept strictly 1-4 hexadecimal digits with the same marker,
+reparse, age and allowlist safety; (b) apparent failure
+only after restart was a Python test defect checking
+`"fxw" in argv` (argv is a list of full arguments).
+The corrected test reads the exact `--conf_dir` argument
+and passed against the final binary. Temporary product
+diagnostic hooks were removed before final rebuild.
 
-정적 계약은 동기 그리기·OnSize 내부 재배치
-재도입을 금지하고 기존 UI-09 및 UI-11~14
-회귀 검사를 유지한다. **새로 결합한 소스의
-Windows Release x64 컴파일/링크, 실제 Dark
-스크롤바 마지막 픽셀, 기존/새 프로필 UI-05
-배치, 100/125/150/200% DPI·High Contrast,
-같은 사용자 화면의 전체 UI 수용 검증은
-이 작업 환경에서 NOT TESTED**다.
-사용자 설정을 초기화하거나 GitHub Actions를
-실행하지 않았다.
+Artifact `bin/x64/build-revision.txt` records `7cc0b46`,
+the current local HEAD, but source/document changes are
+uncommitted; the marker alone is NOT an exact committed
+source-content ID. Do not merge/push until a separate
+review and revision-aligned checkpoint are authorized.
+Full mouse-only top-level menu navigation, other real DPI,
+OS High Contrast, spoken screen-reader acceptance, hosted
+CI, clean-machine package/installer remain outside this
+scoped verification and are NOT TESTED. UXH-06/WinUI 3
+independent branches were not modified; GitHub Actions
+were not run.
 
-**2026-09-26 추가 사용자 화면 재현 — UI-02 OPEN, 이름/필터 선택 소스 수정, 전체 Windows 재검증 대기:**
-사용자 캡처는 Dark 스크롤바 손잡이를 드래그하면 여전히 밝은
-네이티브 색상이 나타나며, 목록 이름 열(기존 기본값 150px)이
-우측 빈 공간과 비교해 좁고, 필터링 설정 선택 항목이 Light/Dark에서
-과도하게 선명한 파란색이라고 보여 준다. 리비전과 DPI는 화면에서
-확인되지 않는다.
+**UXH-05 residual direct UIA actions (2026-09-28):**
+An isolated 96-DPI external client physically invoked
+New and selected Close via actual UIA InvokePattern;
+MSAA child count changed 5->6->5, the owned process
+exited 0 and six original configuration hashes matched.
+The prior direct UIA action gap is now tested.
+Real High Contrast/other DPI, spoken Narrator and
+full Tab/F6 multi-pane traversal remain NOT TESTED.
+[UXH-05 additional evidence](UI_PHASE6_UXH05_TAB_ACCESSIBILITY_EVIDENCE_20260928.md).
 
-UI-02의 현재 코드는 표준 Windows 비클라이언트 스크롤바를
-뒤늦게 덮어 그리는 방식이므로 네이티브 손잡이 추적 중
-최종 픽셀 소유권을 보장할 수 없다. **UI-02는 미해결**이다.
-다시 무조건 덮어 그리거나 반복 타이머·비공개 OS API를
-추가하지 않았다. 동일 바이너리의 드래그 중 WM_NCPAINT /
-WM_VSCROLL / WM_HSCROLL / 등록 지연 메시지 발생 순서를
-Windows에서 수집한 뒤 스크롤바 렌더링 소유 구조를
-재설계해야 한다.
 
-기본 새 폴더 레이아웃의 이름 너비를 150→280 논리 픽셀로
-넓히고 HWND DPI를 적용했다. 이미 저장된 열 너비와 열 순서,
-자동 열 너비 사용자 설정은 변경하지 않았다. 기존 사용자
-프로필의 좁은 열은 열 경계를 드래그하거나 파일 목록의
-기존 자동 열 너비 옵션을 사용해야 한다.
+**2026-09-28 UXH-06/07 review complete, no new feature:**
+Existing Search provides saved named multi-location scopes,
+current-folder selection, editable scope and query history.
+An isolated actual 96-DPI native GUI retained all 165
+characters typed into a 240px search-scope edit; the
+owner-drawn group label and native visual scrolling
+are NOT separately certified. An actual isolated 1x2
+Last Tabs profile restored distinct owned folders,
+accepted physical Ctrl+T and saved/restored its
+2/1 pane tab counts in a second real process.
+Original six user-config SHA256 hashes remained
+unchanged. [UXH-06/07 feasibility](UI_PHASE6_UXH06_07_FEASIBILITY_20260928.md).
+Duplicate saved scopes and redundant last-session
+presets were not implemented. New recent scopes,
+readable full-path presentation and multiple NAMED
+workspaces remain potential separately scoped user
+needs, not completed product features. No new
+Release build is claimed for this assessment.
+Next: isolated real UXH-05 spoken reader and
+DPI/High Contrast, and separate Phase 5 productization.
 
-필터 설정의 선택 표시에서는 일반 Light/Dark에서
-선택된 행의 최종 픽셀만 직접 그린다. 현재 팔레트 선택색
-12%(활성)·6%(비활성)와 기존 배경을 혼합하여 은은하게
-표시한다. 원래 아이콘·이름·확장자·설정된 글자 색의 대비,
-얇은 키보드 포커스를 보존하고 네이티브 선택 상태나
-사용자 필터 정의는 건드리지 않는다. High Contrast는
-기존 Windows 선택 렌더러를 그대로 사용한다.
 
-새 정적 회귀 검사를 추가했으며 OLE 응답 중단 수정 및
-UI-09 북마크 damage 수정은 변경하지 않았다.
-**이번 변경본의 Windows Release x64 컴파일, 실제
-다중 선택·드래그·고대비·DPI·기존 프로필 화면 확인은
-NOT TESTED**다. GitHub Actions 미실행.
+**2026-09-28 UXH-05 scoped actual accessibility accepted:**
+The custom drawn TabCtrl was actually unnamed/childless
+in UIA and MSAA despite working native tab shortcuts.
+A minimal native MFC IAccessible provider now supplies
+full named/selected tabs and selected-close/new buttons,
+accessible focus/geometry/default actions and native events.
+Owned actual Dark and Light 96-DPI Ctrl+T/Ctrl+Tab/Ctrl+W,
+MSAA select/new/close and focused Right/Home/End passed.
+Final clean Release x64 SHA256 CCB5050EC1AE316CB3D6C4728A1DDF9A724D3319DA40305CC5880B4A422ABB10, source invariants
+and native 17 PASS/0 FAIL; original six user settings
+unchanged. Full [UXH-05 scoped evidence](UI_PHASE6_UXH05_TAB_ACCESSIBILITY_EVIDENCE_20260928.md).
+Actual speech reader, High Contrast, other DPI, direct
+UIA InvokePattern and wider Tab/F6 focus are NOT TESTED;
+physical Tab/F6 did not move focus from a test-focused
+tab in the owned single-pane profile. Treat this as
+scoped native interface acceptance only, not full
+accessibility certification. Next: UXH-06/07 feasibility
+and independent isolated accessibility environment work.
 
-## Active baseline and verified scope
 
-**2026-09-26 HANG-01 실행 진단 후 수정 후보 — BUILD / RUNTIME NOT TESTED:**
-사용자가 빌드한 `882030a` 실행 파일로 동일한 시작 화면의 빈 트리/목록과
-응답 중단을 재현했다. UI-02/05 격리 이후에도 재현되므로 이전 격리를
-해결로 취급하지 않는다. 로컬 덤프와 반복 UI 스레드 스택에서
-`WinApp::InitInstance → UpdateWindow → ListCtrlEx::WindowProc → native
-image list → SHDefExtractIconW → thumbcache/CoCreateInstance → COM wait →
-COleMessageFilter::OnMessagePending`을 확인했다. 메시지 필터의 프레임에서
-`WM_PAINT` 대상이 동일 UI 스레드의 `SysListView32`임을 확인했다.
-MFC 기본 구현은 `PeekMessage(WM_PAINT)`가 빌 때까지 무제한 순회한다.
-이 반복이 COM 대기로 복귀하지 못하는 starvation 경로를 수정하기 위해
-앱 소유 OLE 필터가 콜백당 paint 하나만 처리하고 중첩 paint dispatch를
-막도록 했다. native update region을 강제로 지우거나 아이콘을 생략하지 않는다.
-OLE 필터의 나머지 busy/retry 정책과 CWinThread/AfxOleTerm 소유권은 유지한다.
-Shell 서버 자체의 별도 지연/장애 유무와 수정 후 응답성은 아직 미검증이다.
+**Phase 6 UXH-04 scoped acceptance (2026-09-28):** Explicit
+reversible native Drive/Bookmark toolbar-row compaction is now
+real-GUI verified at actual 96 DPI on the isolated Windows 11
+test desktop. Saved four visual rows of height **141 px** become
+**101 px** only after an explicit View > Tools command;
+actual keyboard J and real pointer restore to 141. The prior
+owner-drawn J failure was an absent deployed language key; a
+single-command fallback now works with old packs and the source
+Korean XML was fixed and staged. A private 12-item bookmark
+fixture proved the existing MFC chevron can actually open its
+owned folder. Actual keyboard-compact -> exit -> relaunch in
+the *same owned copied settings* restored 141px and retained
+the original coolbar bytes. Final clean Release SHA256
+\`08D6B6D17713D4C258C4DEFFE4DBA02C66B449DD87E098164E2DDF1C666EA26E\`; source checks and native 17/0 PASS. Detailed
+[UXH-04 final evidence](UI_PHASE6_UXH04_EVIDENCE_20260928.md).
+All tests owned their process; original user config six hashes
+unchanged. Native tooltip-popup accessibility was **not**
+observed either before or after this change; a listening session
+and actual other DPI / High Contrast remain NOT TESTED.
+Next UX work: UXH-05 custom tab accessibility verification,
+then UXH-06/07 capability-overlap review.
 
-사용자 요청에 따라 **이번 변경의 빌드·새 바이너리 실행은 하지 않는다**.
-source preflight PASS, 무제한 순회/base-pump 호출/설치 누락/재진입 보호 누락의
-4개 mutation 검출 PASS. 이 정적 evidence는 빌드/실행 검증과 별개다. 사용자가 빌드한 후
-동일 폴더/설정에서 목록·트리·아이콘 로딩, 1분 이상 응답성, 폴더 이동,
-종료, UI-09 북마크 잔상, Light/Dark 및 OLE 드래그 앤 드롭을 재검증해야 한다.
-UI-02/05 격리 및 기존 UI-09 damage fix는 유지한다. 사용자 설정은 변경하지
-않았으며 GitHub Actions는 실행하지 않는다. 상세 근거는 ERROR_HISTORY 참조.
 
-**최신 UI-09 실행 근거 및 병합 상태 (2026-09-26):**
-백업 브랜치의 실제 Windows 진단은 설정에서 테마를
-변경할 때 MFC 명령 UI 갱신으로 버튼 높이가
-36px에서 22px로 축소되면서 변경 후의 사각형만
-무효화되어 기존 아이콘/텍스트 하단이 남는 것을
-계측했다. 명령 갱신 이전/이후의 버튼 좌표를
-비교하여 이전·새 영역 모두 무효화하는 수정으로
-**진단 빌드에서는 동일 화면의 잔상이 사라졌다.**
-백업 브랜치에 기록된 진단 빌드의 Windows
-Release-x64 컴파일/링크 PASS 및 native regression
-17 passed / 0 failed는 그 당시 증거다.
-최종 백업 소스에서는 임시
-`FXFILE_UI09_TRACE=1` 기록 코드가 제거됐다.
-현재 UI-02/05의 미검증 후처리·자동 행 결합은 격리되어 있고,
-UI-09 damage fix와 UI-11/12/13/14는 유지한다. HANG-01 필터 변경을
-포함한 새 소스의 전체 Windows 빌드·응답성·테마 전환 회귀는 NOT TESTED다.
-아래 임시 추적기 추가 관련 내용은 당시 작업 기록이며
-현행 소스 사용 지침이 아니다.
-근거: [실제 UI-09 원인 진단](UI09_ROOT_CAUSE_20260926.md).
+**Latest Phase 6 UXH-03 scoped acceptance (2026-09-28):** Existing
+per-pane Explorer info sidebar now automatically becomes a compact
+36-DIP horizontal folder summary only when a narrow pane would
+leave under 280 scaled px for the file list. At actual 96 DPI
+Dark/Light in a 750-px 1x2 window, each native file list gained
+88 px (178/176 -> 266/264 px). A 750-px 2x2, restored 1100-px
+1x2 and 1200-px 2x2, and 1-pane layout passed physical geometry
+checks; actual Win+Up/Down and title-bar double-click
+expanded/restored the original full sidebar. Preserved the
+owned info-bar setting, bookmark child state and six original
+user configuration hashes. Scoped x64 Release, source/scrollbar/
+address checks and native 17/0 passed. See
+[UXH-03 responsive pane evidence](UI_PHASE6_UXH03_RESPONSIVE_PANE_20260928.md).
+UXH-04 was subsequently accepted with the narrow localization
+fallback; next independently investigate UXH-05 tab accessibility. Actual higher DPI/High Contrast
+remain NOT TESTED for this change.
 
-| Subject | Current observed state | Evidence limit |
+
+**New Phase 6 UXH-02 verified handoff (2026-09-28):** Normal
+Search completion no longer opens a duplicate light information
+modal. Actual 96-DPI owned Dark/Light 0/1/3 and invalid-location
+GUI, physically stopped real active content search, an owned file
+result's native Open parent folder pointer flow, and an accessible
+native Windows event/UIA-readable summary all PASS. Release x64
+and native 17/0 PASS, original six user hashes unchanged.
+Binary SHA256 22D0568AB047E4A08F690B7461FB7D63E2B90A23E447BE03650D8818B2559575.
+[Full UXH-02 evidence](UI_PHASE6_SEARCH_NONMODAL_EVIDENCE_20260928.md).
+The UXH-03 layout is now scoped accepted; subsequent UX
+work now moves to UXH-05 tab accessibility after UXH-04 acceptance.
+Real other DPI, OS High Contrast and live screen-reader listening
+are not yet accepted.
+
+
+**Phase 6 UXH-01 follow-up (2026-09-28):** Bookmark
+CHotKeyCtrl's native bright client in explicit Dark was
+confirmed and fixed through ModernUI's shared native hotkey
+subclass, preserving actual Ctrl+2 keyboard semantics.
+Actual owned 96-DPI Dark/Light GUI, incremental Release x64
+and native functional 17/0 passed. Details:
+[hotkey theme evidence](UI_PHASE6_HOTKEY_THEME_EVIDENCE_20260928.md).
+The UXH-02 native Search work is now scoped accepted;
+other hotkey-setting windows and real High Contrast are not
+individually GUI-accepted yet. Prior snapshot facts below
+refer to the earlier reviewed baseline.
+
+
+**Current product:** \`main\` remains the native MFC/C++ multi-pane file
+manager. The optional WinUI 3 same-process integration has NOT been
+merged or made available to ordinary users. GitHub Actions require
+explicit separate approval for each run.
+
+**Latest native fixes and evidence:** common native list/tree/dialog
+Dark scrollbar handling; lifecycle-aware address ComboBoxEx popup;
+non-overlapping column selection modal; native Dark column header,
+physical divider drag and an easier-to-read numeric field.
+Newly entered widths for non-pinned columns are bounded, at
+actual 96 DPI, to 24..4096px without silently migrating unchanged
+historic settings. Scoped Release-x64-Unicode incremental build,
+owned 96-DPI Dark/Light GUI, related source checks and native
+functional regression **17 PASS / 0 FAIL** were observed at the
+tested product revision. This is not an all-environments product
+certification.
+
+**Immediate UI backlog:** [seven evidence-labelled hands-on
+items](UI_UX_HANDS_ON_BACKLOG_20260928.md). The native bookmark
+shortcut field originally observed in UXH-01 is fixed and GUI-tested
+at actual 96 DPI Dark/Light; individual other hotkey dialogs remain
+unverified. UXH-02's duplicate Search completion is now fixed;
+UXH-03 narrow panes are now improved; next review compact command
+discoverability and custom TabCtrl accessibility need targeted
+measurement/verification, not ungrounded implementation.
+
+**Still open:** HANG-01 on its original Shell/loading conditions
+was not cleared by synthetic sample folders. Existing UI-01/UI-09
+require previously specified scenario retests. Actual 125%,
+150%, 200% display DPI, Windows High Contrast and specific older
+dialog scrollbars remain NOT TESTED. Clean-PC installer/uninstaller,
+complete Help topic acceptance and third-party/GFL distribution
+licensing are also open.
+
+**Experimental UI status:** Separate branch
+\`experiments/phase5-productization-20260928\`, worktree HEAD
+\`7ceeab515bc90089d1220d608059d254c374a339\` at review time.
+The historical cross-process strict-bridge teardown failure was
+resolved in the TEST HARNESS, with repeated 96-DPI bridge passes.
+Same-process MFC-host WinUI 3 with experimental TextBox, native
+commands and owned host PRI staging is promising experimental
+evidence, NOT a tested installer/runtime deployment contract.
+IME, Shell virtual namespaces, other real DPI, High Contrast and
+clean-PC runtime/redistribution gates remain open.
+See [main's historical bridge report](UI_FRAMEWORK_PHASE5_COMMAND_BRIDGE_EVIDENCE.md)
+and experiment-only
+[PRI/address report](https://github.com/tngkrwlsmd/flyExplorer/blob/experiments/phase5-productization-20260928/docs/development/UI_FRAMEWORK_PHASE5_ADDRESS_PRI_EVIDENCE.md)
+and [MFC-island report](https://github.com/tngkrwlsmd/flyExplorer/blob/experiments/phase5-productization-20260928/docs/development/UI_FRAMEWORK_PHASE5_MFC_ISLAND_EVIDENCE.md).
+Do not merge or enable WinUI 3 from documentation maintenance.
+
+**Next bounded tasks:** implement only a separately reproduced
+native UX candidate; acquire a disposable Windows test environment
+for outstanding actual DPI/High Contrast acceptance; and continue
+formal PRI build/package plus active-pane synchronization on the
+isolated WinUI 3 experiment only if specifically requested.
+
+## 2. Area-specific state and evidence
+
+| Area | Verified versus unverified | Read next |
 | --- | --- | --- |
-| Product | fxfile/flyExplorer 2.0.4-dev; Windows 10/11 active development; native Release-x64-Unicode is the default build path | Not a formal minimum-OS or general release compatibility guarantee |
-| Build system | Visual Studio 2026/v145, GYP-generated solution; fresh `local_ci.bat x64` on product revision `bee95d9`: source preflight, Release x64 compile/link PASS; native functional regression 16 passed / 0 failed | PASS WITH SKIPS: automated runtime smoke skipped to preserve existing HKCU state; clean-profile startup NOT TESTED |
-| Historical user-supplied x64 log (2026-09-24, `bc02a4a`) | Former native updater test compiled with a Windows `max` macro collision and that run FAILED. That entire updater feature/test is now removed by explicit owner choice. | Superseded for current compile evidence by the post-removal `bee95d9` x64 PASS. Preserve the old failure as historical evidence. |
-| Earlier local x64 test | On the parent of product commit `6b18c58f` plus then-uncommitted OS-rendering fix: Release x64 compile/link PASS and native functional tests 17 passed / 0 failed | Overall PASS WITH SKIPS; startup smoke skipped for user HKCU preservation; not a revision-matched test of current `main` |
-| Dark/Light/High Contrast UI | Actual Windows 11 inspection of `bee95d9`: original main-menu/toolbar/drive/bookmark Dark text now readable. UI-01 source now snapshots HWND visibility and only freezes/thaws windows that were visible before a theme transaction, preventing redraw-enable from exposing hidden settings pages. | UI-01 exact settings-page sequence on this source revision: NOT RETESTED. Bright Dark scrollbars, mixed search-dialog colors and the remaining UI/UX audit findings stay OPEN. Windows 10, High Contrast and mixed-DPI remain NOT TESTED. |
-| Help / portable completeness | Canonical `docs/htmlhelp/` source remains the build input. Full packaging now validates 39 required runtime payloads across the three existing architectures before staged replacement, reserves the previous staged bin for rollback during activation, generates the installer before portable extras and clears partial/stale release outputs on failure; archives still carry fresh CHM and notices. | Static code/path inspection only; Windows directory-rename/rollback injection, HTML Help Workshop, NSIS/ZIP execution and installed/portable Help: NOT TESTED. |
-| User guidance | `Html/current_development.htm` is the current source-grounded guide; old detailed reference pages are retained with prominent legacy entry-point labels | Full per-topic source/runtime rewrite still OPEN; track it in [`HELP_CONTENT_AUDIT.md`](HELP_CONTENT_AUDIT.md) |
-| Distribution | Personal/local use only is the current owner's intent. Root GPL and third-party CREDITS notices remain unchanged and bundled; installer/portable paths now reject partially copied or missing release files. | No public redistribution permission is claimed. Third-party permissions (especially GFL) remain UNVERIFIED; Windows package generation on this revision NOT TESTED. |
-| GitHub Actions | Manual workflow-only; each actual run requires a separate explicit user instruction with no expiry to this restriction | No Actions invoked in documentation/vendor/help cleanup |
-| Automatic updates | **REMOVED FROM SOURCE AND NEW PACKAGE DEFINITIONS:** retired checker project/network dependency, application startup integration, update settings/About download, native updater regression and packaging payload. | Post-removal x64 compile/regression PASS at `bee95d9`; old-install migration and full packaging NOT TESTED. Existing startup values were preserved. |
-| Prior repository cleanup | Removed unused `gtest` (41) and `libxslt` (52) files, 16 byte-identical zlib binaries, 113 non-build NSIS developer assets, 4 dead root HTML frameset inputs, plus the retired updater module, dedicated libcurl vendor tree and obsolete generated project files | Post-cleanup x64 compile/regression PASS at `bee95d9`; packaging and external manual consumer checks NOT TESTED |
+| Native engine and MFC controls | Latest scoped x64 native 17/0; owned 96-DPI Dark/Light GUI on listed controls, not other actual DPI/HC | [DPI/theme/input evidence](UI_WINDOWS11_DPI_CONTRAST_20260928_EVIDENCE.md), [native scrollbar inventory](UI_SCROLLBAR_MODAL_OVERLAP_AUDIT_20260928.md), [column header](UI_COLUMN_DETAILS_HEADER_EVIDENCE_20260928.md) |
+| Native UI follow-up | Seven candidate items; only specifically observed effects are confirmed | [Hands-on backlog](UI_UX_HANDS_ON_BACKLOG_20260928.md), [UI design policy](UI_UX_DESIGN_GUIDE.md) |
+| Historical instability | HANG-01, UI-01/09 full original-profile acceptance pending | [Error history](ERROR_HISTORY.md), [UI-09 cause](UI09_ROOT_CAUSE_20260926.md) |
+| Cross-process WinUI 3 | Strict test harness teardown resolved, not product integration | [Bridge evidence](UI_FRAMEWORK_PHASE5_COMMAND_BRIDGE_EVIDENCE.md) |
+| Same-process WinUI 3/PRI | Unmerged; owned test staging is not installer-ready | Experiment reports linked above and [framework decision gates](UI_FRAMEWORK_DECISION_POLICY.md) |
+| Build/dependencies/licensing | VS2026, MSVC v145, recommended Release-x64-Unicode; full install and rights review pending | [Dependency audit](DEPENDENCY_ARCH_AUDIT_20260924.md), [license review](DISTRIBUTION_LICENSE_REVIEW.md), root [build README](../../README) |
+| User help | Source/package structure previously checked, not a current-content or CHM runtime acceptance | [Help audit](HELP_CONTENT_AUDIT.md), [source topics](../htmlhelp/) |
 
-**Do not call all runtime defects closed based on a build or a narrow visual
-check.** Original main Dark text acceptance was visually rechecked on Windows
-11; the separate settings/search/scrollbar findings remain OPEN. The dated
-audit records the exact product revision, executable hash and untested cases.
+A PASS is always scoped to the revision, test environment and
+observed feature stated by its original evidence. Do not promote
+source-only, Debug or simulated checks to missing actual-OS PASS.
 
-**2026-09-24 follow-up source-only checkpoint:** UI-03 nested search
-ComboBox Dark color forwarding, dropdown list retheming and a wider localized
-current-folder button are now in source. UI-07 new-profile defaults expose the
-existing single-tab strip and new-tab button without changing saved settings.
-These are partial changes; Windows build, runtime/visual, DPI/HC, search
-behavior and a newly added close-tab glyph still require revision-matched
-Windows runtime/visual acceptance.
-UI-02/UI-05/UI-06 remained unchanged in that checkpoint;
-UI-08 receives a separate new-profile-only partial change below. Prior `bee95d9`
-build evidence does not apply to this new revision.
+## 3. Historical records and maintenance
 
 **Additional UI-07 source checkpoint (2026-09-24):**
 The existing custom tab control now reserves a DPI-scaled close target
@@ -870,3 +905,16 @@ hash checks passed. Release packaging-stage contracts have only
 isolated tests; IME, actual higher DPI/High Contrast, dependency license
 review, clean-machine install/uninstall and complete HKCU isolation
 remain unverified. The feature is NOT merged into main.
+
+### Imported mainline historical status references (2026-09-29)
+The previous CURRENT_STATUS contents, including superseded
+intermediate “latest” claims, are preserved **byte-for-byte**
+in [CURRENT_STATUS_HISTORY_20260928.md](CURRENT_STATUS_HISTORY_20260928.md).
+Treat old “next task” paragraphs as dated history, not live guidance.
+Use [ERROR_HISTORY.md](ERROR_HISTORY.md) for the original
+append-only diagnosis, [original UI audit](UI_UX_AUDIT_20260924.md)
+for earlier screenshots and issues, and [the index](README.md)
+to navigate the separate dated experiment/release evidence.
+Update this short page when branch status, accepted tests or open
+work changes; append detailed execution proof to an appropriate
+dated evidence document, not to the top of this summary.

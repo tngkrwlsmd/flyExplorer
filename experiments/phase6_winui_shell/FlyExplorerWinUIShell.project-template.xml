@@ -133,6 +133,15 @@
     <ClCompile Include="MainWindow.xaml.cpp">
       <DependentUpon>MainWindow.xaml</DependentUpon>
     </ClCompile>
+    <ClCompile Include="m19_workspace.cpp">
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="m19_search.cpp">
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="m19_features.cpp">
+      <PrecompiledHeader>Use</PrecompiledHeader>
+    </ClCompile>
     <!-- First directly reusable UI-independent component from native core;
          legacy ExplorerCtrl/MFC views are intentionally NOT linked. -->
     <ClCompile Include="..\..\src\fxfile\file_operation_core.cpp">

@@ -102,6 +102,9 @@ public:
     static xpr_bool_t getUIFont(LOGFONT &aLogFont, HWND aHwnd);
     static xpr_bool_t isSameFont(HFONT aFont, const LOGFONT &aLogFont);
     static void applyDialogControlTheme(HWND aHwnd);
+    static void emphasizeDialogEdit(HWND aHwnd);
+    // A new owned modal must not leave an open address dropdown on screen.
+    static void dismissOwnedDropdowns(HWND aDialogHwnd);
     static HICON loadIconResource(HINSTANCE aInstance, xpr_uint_t aResourceId, HWND aHwnd, xpr_sint_t aLogicalSize);
     static void setThemeMode(xpr_sint_t aThemeMode);
     static xpr_sint_t getThemeMode(void);
@@ -115,7 +118,8 @@ public:
     static void paintDarkNativeScrollbars(HWND aHwnd);
     static void configureDarkScrollbarOverlay(
         HWND aHwnd, const ThemePalette *aPalette,
-        xpr_bool_t aPopupTopMost = XPR_FALSE);
+        xpr_bool_t aPopupTopMost = XPR_FALSE,
+        HWND aPopupHost = XPR_NULL);
     static void removeDarkScrollbarOverlay(HWND aHwnd);
     static xpr_bool_t applyExplorerControlTheme(HWND aHwnd);
     static xpr_bool_t resetControlTheme(HWND aHwnd);

@@ -52,3 +52,101 @@ UI 수정 또는 시제품 승인 전에 **단 하나의 정의된 acceptance ca
 - 기존 [에이전트 개발 효율 규칙](AGENT_EFFICIENCY.md)의 도구 호출 예산, 기존 증거 재사용, 무의미한 로그/화면 반복 금지와 중단 기준을 그대로 적용한다.
 - 코드/리소스/GYP를 변경한 실제 제품 UI 작업에만 해당 로컬 Windows 빌드와 범위에 맞춘 런타임 검증을 요구한다. 이 지침만 편집하는 문서 작업에는 불필요한 제품 재빌드를 하지 않는다.
 - GitHub Actions는 해당 개별 실행에 대한 사용자 명시 지시 없이는 **수동·자동 모두 실행하지 않는다**. 이전 성공이나 main 반영 요청만으로 허용하지 않는다.
+
+## 6. 제품 전체 직접 사용 감사 및 개발 후보 관리 (2026-09-28)
+
+최신 실제 사용 관찰·기능 수정 후보·제안의 우선순위는 [2026-09-28 제품 직접 사용 백로그](UI_UX_HANDS_ON_BACKLOG_20260928.md)에서 관리한다. 과거 UI-01~UI-14 재현 기록은 [기존 UI 감사](UI_UX_AUDIT_20260924.md)에 보존하고, 동일 현상을 신규 결함처럼 다시 등록하지 않는다.
+
+- **증거 분리:** 실제 조작으로 관찰된 버그, 화면 밀도·작업 흐름의 사용성 마찰, 새로운 기능 제안, 소스에서만 추정한 후보, 실행하지 않은 검사를 다른 상태로 기록한다. GUI 접근성을 UIA 하위 항목 미검출 하나만으로 확정하지 말고 MSAA·실제 키보드·보조기술을 확인한다.
+- **사용 시나리오 우선:** 단일·분할 pane, 탭 추가와 닫기, 주소 탐색, 검색 완료·취소, 북마크/설정, 파일 생성, 선택/포커스와 실제 메뉴를 사용자 작업 순서로 묶어 확인한다. 성공 메시지의 추가 클릭이나 결과 중복 표시도 사용자 비용으로 평가한다.
+- **컨트롤 소유권:** 다크 모드에서 한 대화상자의 배경색만 확인하지 말고 CHotKeyCtrl 등 네이티브 예외, Shell/MessageBox의 별도 테마, ComboBoxEx 팝업과 스크롤바, 실제 High Contrast 회귀를 구분한다. 코드의 클래스 공통성은 다른 화면에서 결함이 관찰됐다는 증거가 아니다.
+- **좁은 화면과 분할 구성:** 도구 모음의 발견성, 정보 패널의 실제 점유 폭, 열 제목과 긴 파일명의 가용 폭을 함께 측정한다. 기존 저장된 사용자 열 폭·레이아웃·북마크·단축키를 무단 초기화하지 않는다. 기존 설정이 제공하는 기능을 조사한 다음 기능 추가를 결정한다.
+- **파일 작업의 안전:** 소유한 합성 테스트 폴더와 격리 설정을 사용한다. 전역 클립보드·휴지통·사용자 Shell 설정과 충돌하는 실험은 안전한 스냅샷/복구 절차가 준비되지 않으면 NOT TESTED로 유지한다.
+- **완료 규칙:** 해당 과제의 재현 조건, 예상 사용자 이익, 최소 수정 범위, 실제 조작 및 시각·접근성 인수 조건, Release 빌드/관련 네이티브 회귀와 설정 보존을 명시한다. 문서에 제안으로 등록했다는 이유만으로 제품 결함을 수정 완료로 처리하지 않는다.
+
+AGENT_EFFICIENCY.md의 기존 호출 예산과 빌드 출력 제한을 유지한다. GitHub Actions는 개별 실행에 대한 명시적 승인 없이 실행하지 않는다.
+
+## 7. Custom native StatusBar accessibility (2026-09-28)
+
+Our gui/StatusBar intercepts WM_SETTEXT as a command to update
+*visible pane 0*. For completion announcements, use
+StatusBar::announceAccessibleStatus rather than ordinary
+SetWindowText, to preserve the visual panes and publish a
+separate readable native window name with an OS name-change
+event. Test visible status text, real external WinEvent delivery,
+UIA Name and keyboard/pointer flow as separate gates.
+Do not claim live screen-reader listening without testing it.
+
+## 8. Responsive native per-pane information (UXH-03, 2026-09-28)
+
+Preserve a user's saved global Explorer info-bar style and
+individual pane folder/bookmark data. Only while the available
+**native file-list width** would fall under 280 DPI-scaled pixels,
+draw the *same per-pane ContentsWnd* as the existing 36-DIP
+Basic-like horizontal folder summary; hide off-screen bookmark
+controls from keyboard focus instead of destroying them. Restore
+the full Explorer vertical sidebar and bookmark controls
+automatically on resize. Do not mutate global settings, forcibly
+reset custom file-list columns, or share one pane's folder summary
+with another pane. The 750-px 1x2 result is measured, not a
+guarantee about real 120/144/192-DPI or High Contrast acceptance.
+[Measured UXH-03 acceptance](UI_PHASE6_UXH03_RESPONSIVE_PANE_20260928.md).
+At 750-px 2x2 the height of file-list rows remains constrained;
+treat UXH-04 global toolbar density as an independent improvement.
+
+## 9. Opt-in compact native toolbar rows (UXH-04, 2026-09-28)
+
+Do not reset a stored ReBar arrangement to obtain more file-list
+height. Offer a *reversible user-triggered* compact layout only
+when the relevant adjacent Drive/Bookmark bands are visible,
+not user-configured as multiline, and can each retain a safe
+native minimum plus existing chevron overflow. Persist the
+original band width/style fields while the temporary compact
+mode is on, and restore the saved visible geometry on the
+next launch. Validate physical pointer AND keyboard command
+selection (exact native command ID before key), real privately
+owned overflow-item invocation, dark/light, and same copied
+profile restart. Any newly introduced localized command needs
+a safe mnemonic-bearing fallback with older installed language
+files. The custom native menu's GetMenuStringW may be empty;
+do not invent an index-based positional Enter workaround.
+Native toolbar UIA labels were retained during UXH-04; a
+native tooltip popup was not exposed during either baseline
+or compact automated hover and needs a separate manual
+screen-reader assessment. See
+[scoped evidence](UI_PHASE6_UXH04_EVIDENCE_20260928.md).
+
+## 10. Native custom-tab accessibility (UXH-05)
+
+Keep MFC's custom tab control and the original explorer
+selection/observer structure. Use the existing native
+active-accessibility bridge to expose complete tab names,
+selected/focused states, named selected-close/new
+buttons, real geometry/default actions and native
+reorder/name/selection/focus events. Preserve ordinary
+Ctrl+T/Ctrl+W/Ctrl+Tab and Shift+Ctrl+Tab; focused
+arrow/Home/End should retain tab-strip keyboard focus.
+Actual UIA/MSAA presence does not prove spoken reader,
+real High Contrast or larger DPI. Separately examine
+physical Tab/F6 focus traversal and UIA InvokePattern.
+See [UXH-05 scoped proof](UI_PHASE6_UXH05_TAB_ACCESSIBILITY_EVIDENCE_20260928.md).
+
+## 11. UXH-06/07: reuse existing scope and session behavior
+
+A long search-scope value may be fully preserved
+without fitting visibly inside the search combo.
+Distinguish value retention from full-path
+presentation and screen-reader accessibility.
+Prefer the existing named saved-scope manager and
+current-folder action over a duplicate feature.
+Any new recent-scope list requires deletion and
+privacy policies, plus proof of incremental value.
+
+Per-view Last Tabs startup already restores the
+latest tab/pane session in a real native process.
+Do not mislabel the latest session as a collection
+of multiple named workspace snapshots. A real
+multiple-named-preset feature requires demonstrated
+user workflows, non-destructive restore policies,
+schema migration and explicit compatibility tests.
+See [UXH-06/07 actual feasibility](UI_PHASE6_UXH06_07_FEASIBILITY_20260928.md).

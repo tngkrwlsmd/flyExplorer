@@ -11,7 +11,12 @@ class MigrationContracts(unittest.TestCase):
   header=text("MainWindow.xaml.h")
   impl=text("MainWindow.xaml.cpp")
   self.assertEqual(xaml.count("<TabView "),2)
-  self.assertEqual(xaml.count("<ListView "),2)
+  # M1.9 adds a separate collapsible read-only search result ListView;
+  # preserve exactly two actual navigation panes.
+  self.assertEqual(xaml.count("<ListView "),3)
+  for actual_pane in ('LeftFiles','RightFiles'):
+   self.assertEqual(xaml.count('x:Name="'+actual_pane+'"'),1)
+  self.assertEqual(xaml.count('x:Name="SearchMatches"'),1)
   self.assertIn("SecondaryColumn",xaml)
   self.assertIn("ThemeResource ApplicationPageBackgroundThemeBrush",xaml)
   for n in ("AddressBox","LeftTabs","RightTabs","LeftFiles","RightFiles",

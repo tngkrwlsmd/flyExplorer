@@ -59,7 +59,36 @@ public:
     xpr_bool_t removeTab(xpr_size_t aTab);
     void       removeAllTabs(void);
 
+public:
+    // MFC's built-in IAccessible bridge exposes each drawn tab as a
+    // windowless MSAA child without replacing the existing CWnd.
+    virtual HRESULT get_accChildCount(long *aChildCount);
+    virtual HRESULT get_accName(VARIANT aChild, BSTR *aName);
+    virtual HRESULT get_accRole(VARIANT aChild, VARIANT *aRole);
+    virtual HRESULT get_accState(VARIANT aChild, VARIANT *aState);
+    virtual HRESULT get_accSelection(VARIANT *aSelection);
+    virtual HRESULT get_accFocus(VARIANT *aFocus);
+    virtual HRESULT get_accDefaultAction(VARIANT aChild, BSTR *aAction);
+    virtual HRESULT accSelect(long aFlags, VARIANT aChild);
+    virtual HRESULT accLocation(
+        long *aLeft, long *aTop, long *aWidth, long *aHeight,
+        VARIANT aChild);
+    virtual HRESULT accHitTest(
+        long aScreenX, long aScreenY, VARIANT *aChild);
+    virtual HRESULT accDoDefaultAction(VARIANT aChild);
+
 protected:
+    enum AccessiblePart
+    {
+        AccessibleInvalid,
+        AccessibleSelf,
+        AccessibleTab,
+        AccessibleSelectedClose,
+        AccessibleNew
+    };
+    AccessiblePart getAccessiblePart(
+        long aChildId, xpr_size_t &aTab) const;
+    long getAccessibleChildCount(void) const;
     struct TabItem;
 
     void createFont(void);
@@ -126,6 +155,8 @@ protected:
     afx_msg void OnCaptureChanged(CWnd *aWnd);
     afx_msg void OnContextMenu(CWnd *aWnd, CPoint aPoint);
     afx_msg void OnSetFocus(CWnd *aOldWnd);
+    afx_msg void OnKillFocus(CWnd *aNewWnd);
+    afx_msg void OnKeyDown(xpr_uint_t aChar, xpr_uint_t aRep, xpr_uint_t aFlags);
     virtual INT_PTR OnToolHitTest(CPoint aPoint, TOOLINFO *aToolInfo) const;
     virtual xpr_bool_t OnNotify(WPARAM aWParam, LPARAM aLParam, LRESULT *aResult);
     virtual LRESULT WindowProc(xpr_uint_t aMessage, WPARAM aWParam, LPARAM aLParam);

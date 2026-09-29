@@ -1466,7 +1466,7 @@ void AddressBar::installDropdownSubclass(void)
         mDropdownHwnd,
         XPR_IS_TRUE(sPalette.mDark) &&
         XPR_IS_FALSE(sPalette.mHighContrast) ? &sPalette : NULL,
-        XPR_TRUE); // ComboLBox must composite above native popup.
+        XPR_TRUE, m_hWnd); // Explicit real MFC host for modal occlusion.
 }
 
 void AddressBar::removeDropdownSubclass(void)
@@ -1510,7 +1510,7 @@ LRESULT CALLBACK AddressBar::DropdownSubclassProc(
             ui::ModernUI::configureDarkScrollbarOverlay(
                 aHwnd, XPR_IS_TRUE(sPalette.mDark) &&
                 XPR_IS_FALSE(sPalette.mHighContrast) ? &sPalette : NULL,
-                XPR_TRUE);
+                XPR_TRUE, sBar->m_hWnd);
             return sResult;
         }
         else if (aMessage == WM_SHOWWINDOW && !aWParam)

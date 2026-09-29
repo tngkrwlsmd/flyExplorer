@@ -358,6 +358,7 @@ void ExplorerPane::recalcLayout(void)
         // 200-DIP sidebar in every half-width explorer pane. The same contents
         // window stays visible and gains its full width when the pane expands.
         CRect sContentsMargin(mMarginRect);
+        xpr_bool_t sCompactContents = XPR_FALSE;
         if (mContentsStyle == CONTENTS_EXPLORER &&
             sContentsMargin.left > 0)
         {
@@ -375,6 +376,16 @@ void ExplorerPane::recalcLayout(void)
             sContentsMargin.left = min(
                 sPreferredWidth,
                 min(sWidthBudget, max(0, sRect.Width() / 3)));
+            if (sRect.Width() - sContentsMargin.left < sMinListWidth)
+            {
+                // Preserve all existing preferences and bookmark data:
+                // represent the SAME per-pane folder info horizontally
+                // when a vertical sidebar would squeeze the file list.
+                sCompactContents = XPR_TRUE;
+                sContentsMargin.left = 0;
+                sContentsMargin.top = ui::ModernUI::scaleForWindow(
+                    CONTENTS_BASIC_STYLE_HEIGHT, GetSafeHwnd());
+            }
         }
         else if (sContentsMargin.top > 0)
         {
@@ -382,6 +393,7 @@ void ExplorerPane::recalcLayout(void)
                 ui::ModernUI::scaleForWindow(sContentsMargin.top, GetSafeHwnd());
         }
 
+        mContentsWnd->setCompactLayout(sCompactContents);
         CRect sContentsWndRect(sRect);
         if (sContentsMargin.left > 0)
             sContentsWndRect.right = sContentsWndRect.left + sContentsMargin.left;

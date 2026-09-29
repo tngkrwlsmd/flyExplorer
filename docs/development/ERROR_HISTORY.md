@@ -3900,3 +3900,116 @@ This remains experimental preview fault containment and NOT a restricted-token s
 The preceding M1.7 supervisor was extended without changing the default MFC product. The private helper now has an explicit test-only, UNREGISTERED COM IUnknown object whose QueryInterface delays 30 seconds on the owned child STA. Real WinUI Debug GUI passed independent right-pane progress, exact left-helper Job timeout and recovery, and a separate TWO-attempt exhaustion test with readable failure status and both previously accepted folders intact. An invalid local-only loopback UNC safely produced network-specific failure feedback. A separate private Shell namespace notification HWND/message thread subscribes to selected virtual PIDLs; its actual WinUI callback/refresh passed for SHChangeNotify on a strictly test-owned local folder. This is not proof of an actual installed faulty third-party extension, inaccessible real remote SMB environment or actual external virtual namespace provider event.
 
 During acceptance the initial UNC Python harness inadvertently embedded a form-feed escape in place of the intended backslash. Its failure was TEST DATA, not a product failure. The corrected raw path was retested against the same built application and passed. The first new Debug compilation exposed a test-only command-line loop missing braces, causing a local variable to be referenced outside scope. It was corrected before final Debug/Release builds and GUI runs. Final current-source Debug and Release x64 build and actual owned GUI PASS; Debug COM/UNC/namespace combination PASS, separate two-exhausted-COM-attempt UI PASS, Release helper/Job PASS and 14/14 static PASS. All six original user profile hashes remained unchanged. Historical MFC native 20/0 PASS_WITH_SKIPS was reused, not executed in M1.8. Full logs and SHA256 evidence: WINUI3_M18_SHELL_STABILITY_20260929.md and ignored logs/m18. No hosted CI, push or merge.
+
+
+## 2026-09-29: UXH-07 variable-width Windows TEMP directory names
+
+**Observed failure:** Real second named-workspace Open
+intermittently showed an isolated owner-marker protection
+error (initially 1, later discriminated as code 14). An
+apparent additional restart-only failure also occurred
+during the extended automated GUI acceptance.
+
+**First confirmed product error and root cause:**
+The newly added `workspace_session::ownedDir` assumed
+`GetTempFileName` always produced exactly four hex
+digits in `fxw????.tmp`. 240 real Windows
+`GetTempFileNameW` calls in an exclusively private
+folder produced three-digit names including `fxw18F.tmp`.
+The valid generated directory then failed its own
+strict length check. The stale-orphan glob had the
+same erroneous four-character assumption.
+
+**Product correction:** Permit EXACT TEMP-root leaves
+of `fxw` + 1-4 hex digits + `.tmp`; enumerate
+`fxw*.tmp` for orphan candidates but retain the
+marker magic, exact filename allowlist, no recursion,
+24-hour age, exclusive active lock and reparse rejection.
+An independent legacy-parser input problem was separately
+bounded by rejecting odd-length/non-UTF-16-BOM named
+snapshot data before `ConfFileEx::load`.
+
+**Test-harness-only false failure:** The restart watcher
+checked `"fxw" in argv` where `argv` was a
+`psutil` command-token list. Real opt-in native
+evidence instead proved IDOK from the dialog, successful
+child CreateProcess and a living child. Replaced this
+with exact `--conf_dir` extraction and strict owned
+directory name validation. Removed temporary product
+instrumentation before final compilation. Do not
+attribute the old restart-only detection failure to
+the application.
+
+**Verification and prevention:** Final local x64 binary
+SHA256 `0873F600E45DC26BEF98948BF2B6DADBC013C1DC11633B614EED5B75BA2F091C`;
+canonical `local_ci.bat x64` exit 0, source checks and
+native 17/0 PASS, official smoke SKIPPED due to existing
+HKCU state. Eight real malformed GUI inputs PASS; two
+named native GUI Save/Open and normal parent restart
+with reopen of BOTH named files PASS; controlled
+three-hex stale orphan, four-hex locked live marker
+and reparse external-sentinel real-app safety PASS.
+All accepted owned tests preserved the original six
+configuration SHA256 values. Evidence and precise
+log paths: `UI_PHASE6_UXH07_NAMED_WORKSPACE_WIP_20260929.md`.
+
+**Build orchestration context:** The remote tool process
+did not expose `ProgramFiles(x86)` or `TMP`; the
+empty `TMP` triggered MSBuild MSB8029's temp-prefix
+check, not an observed product code defect. Restoring
+both variables ONLY for the local CI process eliminated
+the prior strict warning-policy failure; the clean
+full local CI result was PASS_WITH_SKIPS, not a
+successful official runtime smoke.
+
+**Scope remaining:** Real other DPI, OS High Contrast,
+spoken accessibility, clean installer/package, hosted
+CI, and fully mouse-only top-level menu routing were
+not part of this acceptance. No GitHub Actions,
+remote push, or merge was performed.
+\n## 2026-09-29: Korean Workspaces placeholders and unthemed legacy native toolbar Customize
+
+Observed: canonical Korean workspace labels contained literal question marks. Owner-drawn submenu chevrons were small/low contrast and native toolbar Customize appeared inconsistent with Dark mode, including legacy light ListBox scrollbars.
+
+Root causes: three literal corrupted Korean XML values; font-dependent 12-DIP menu glyph and 1-pixel fallback; native Windows TB_CUSTOMIZE parent bypassed common CModernDialog control traversal and applied Explorer visual theme to ListBoxes without the common scrollbar compositor, parent palette or direct button theme.
+
+Correction: repair all three labels retaining menu mnemonics, replace the glyph with a single native DPI-scaled two-stroke chevron and High Contrast system colors, and enroll native Customize parent and both ListBoxes in the existing shared ModernUI dark painting and scrollbar path. Canonical source invariant now requires this native glyph; three focused source contracts cover localization, glyph and Customize theme enrollment.
+
+Acceptance (local, uncommitted branch only): x64 executable SHA256 C0FF584E685E7DEEF6E3844AC7F0A55E2AA541DE0235B66F1BA7859826E64E79. Canonical local_ci.bat x64 exit 0, native functional 17 passed / 0 failed; overall PASS_WITH_SKIPS due to protected original HKCU runtime smoke. Two separate test-owned Windows 11 GUI runs displayed correct Korean submenu and new chevrons; native Customize showed dark scrollbars on both ListBoxes, and real wheel moved top index 0 to 9. Six original user-setting hashes were identical and owned processes exited 0.
+
+Wider source inventory found 24 direct CWnd/CDialog base declarations, many already themed or not actual dialogs. FolderPane, TabPane and CWindowScroller remain conditional GUI-review candidates, NOT diagnosed failures. Native popup overflow, other real DPI, OS High Contrast, spoken screen reader, additional app/UI routes and clean-machine deployment remain untested. Full logs, local screenshots and scope: UI_LEGACY_MENU_TOOLBAR_AUDIT_20260929.md. No GitHub Actions, remote push or branch merge.
+
+
+## 2026-09-29: UXH-06 isolated main integration and final real search privacy acceptance
+
+The original UXH-06 branch was merged without source conflicts into an isolated current-main/UXH-07 worktree. Canonical Release x64 Unicode local CI 17/0 PASS_WITH_SKIPS; its default HKCU runtime smoke was deliberately skipped because the user has an existing live profile. The actual owned 96-DPI GUI proved long full-scope text, opted-in single-directory search persistence after normal app restart, physical recent selection, Clear, restart empty and an additional **valid opt-out search** that was not recorded either immediately or after a further restart. All six original user's config SHA256 hashes were unchanged. An early pre-build UXH-06 contract test reported a missing generated `bin/x64/Languages/Korean.xml` because this brand-new worktree had no built binary/staged language files; the unchanged same focused contracts all passed after canonical build staged that file. This prebuild test setup error was NOT a product failure. Unrelated UI-02 dark/native scrollbar tests are being assessed separately because a tree-horizontal-pointer test reproduced the same direction discrepancy in BOTH Light and Dark, making the old extra dark renderer a questionable blind merge candidate. Exact UXH-06 acceptance and limits: UXH06_MAIN_MERGE_ACCEPTANCE_20260929.md.
+
+
+## 2026-09-29: UI-02 superseded renderer and owned native pointer-test environment failures
+
+The older unmerged UI-02 branch added a separate worker-thread DarkScrollbarLayer (560 C++ lines) on top of controls that current main had independently changed to use the already tested ModernUI per-HWND layered native overlay with modal WH_MSGFILTER/WH_CALLWNDPROCRET support and High Contrast escape. A direct merge had exactly two ListCtrlEx/TreeCtrlEx content conflicts. Rather than deploy two competing overlays, the integration intentionally resolves both controls to the known current ModernUI implementation, removes the old duplicate layer and its GYP entries from the resulting tree, and retains the old branch as a real merge parent for full historical provenance.
+
+A 96-DPI owned primary-scroll GUI script initially failed native tree pointer tests identically in Light and Dark, indicating the old dark-only renderer was not the root cause. On-machine diagnostic screenshots/geometry revealed (1) the hardcoded 730px test window at y70 placed the tree horizontal scrollbar at global y783 below the actual work-area bottom 714, (2) copied live-user Last Tabs could override the fixture directory, and (3) the owned app's default Tip of the Day #32770 modal sometimes intercepted mouse clicks while scroll HWNDs underneath still reported visible. The test was CORRECTED to clamp its owned frame to SPI_GETWORKAREA, replace only copied PRIVATE tab layout with the known 65-folder fixture and await its real ListView rows, physically dismiss only the exact test-owned modal, and require a matching owned foreground process before pointer input. Diagnostic screenshots remain ignored and the FINAL tracked regression harness does NOT capture desktop pixels.
+
+After these test-environment corrections the UNCHANGED current ModernUI product's actual Light and Dark primary GUI both passed native tree/list horizontal/vertical arrows, list thumb drag and track-click and dark-only overlay visuals. Its separate modal native-scroll GUI passed in both Light and Dark; original six user settings SHA256 unchanged, owned processes exited 0. Current ModernUI static source/negative contracts 19/19 plus three new harness-safety tests 3/3 PASS. Previously integrated UXH-06 Release-x64-Unicode source/binary hash and native 17/0 PASS_WITH_SKIPS remain applicable because UI-02 result modifies no production C++ source/GYP. This is not a claim of tested alternate physical DPI/HC/accessibility. See docs/development/UI02_SUPERSEDED_MERGE_ACCEPTANCE_20260929.md and ignored original/temporary logs/merge-20260929.
+
+## 2026-09-29: M1.9 actual mainline source import, scoped WinUI UXH feature support and owned real GUI diagnostics
+
+Latest native main 3a4d27c was actually merged into independent WinUI migration prior tip 34936ee, initially --no-commit with only three documentation conflicts in .agent-policy/PROJECT.md, docs/development/CURRENT_STATUS.md and this append-only ERROR_HISTORY.md; BOTH dated versions' historical content were preserved. Actual MFC sources auto-merged, canonical combined MFC Release x64 CI 20/0 PASS_WITH_SKIPS, real existing HKCU runtime smoke intentionally skipped. This is a migration-branch source merge, NOT a replacement for the protected native main.
+
+New preview-only native UTF-16 MFC workspace schema1 bounded subset and isolated separate-window GUI, plus separate bounded read-only filesystem filename search and explicit opt-in private WinUI LOCALAPPDATA recent scopes were implemented. Real owned Debug and Release WinUI GUI proved workspace save/restored selected and inactive tabs, bad schema/no unexpected child, CREATE_NEW refusal to overwrite, default-opt-out search history absence, long path opt-in persistence, restart/select/clear across processes and six actual original user configs unchanged. Actual bidirectional MFC GUI file dialog opened WinUI-exported schema in a private MFC child preserving prior parent state and actual MFC GUI exported a second schema file imported back into WinUI. These test only supported one/two-pane subset, not complete old MFC tab-history/full search filter/regex/content fidelity.
+
+Issues observed and corrected: separate M1.9 features translation unit originally omitted C++/WinRT XAML namespace imports (first Debug compile failed); after correction exact merged Debug/Release builds passed. Initial native recent reader reversed persistent history order by reinserting entries at the front; real compiled native contract exposed 11/12 and fix retained on-disk order, after which independently owned Debug/Release native bridge tests passed 12/12. Initial real GUI automation asserted TabView UIA rows too early and attempted to inspect WinUI ComboBox virtual popup children and item_texts placeholders as actual data; corrected to wait for real selected path/right pane, inspect model-backed recent count and verify full restored path and empty private UTF-16 file. Final actual scoped Debug/Release GUI and combined 20/20 source architecture checks passed.
+
+Latest M1.9 full results, logs, compile hashes and limits: WINUI3_M19_MAINLINE_FEATURE_INTEGRATION_20260929.md and ignored logs/m19. Full old MFC search/layout/operations and physical higher DPI/OS HC/Narrator/real hostile extensions/SMB remain UNVERIFIED. Do not re-label old M1.8 per-revision results as proof on the new merged source without specific new re-run logs. Original main and real user settings remain protected.
+
+
+## 2026-09-29: M1.9 resumed GUI assertion and owned virtual-folder diagnostic
+
+During resumed acceptance the **first new test** wrongly expected a selected tab **inside** an empty test-owned Nested directory to itself contain a list row named Nested. The actual WinUI model had correctly restored the selected second tab; the test now verifies the XAML active full address and exact two tab headers. Final owned Debug and Release GUI passed.
+
+A second preliminary TEST assertion searched collapsed WinUI ComboBox UIA descendants for loaded recent items. WinUI virtualizes its closed popup; real XAML `RecentCountText` and UIA `select(1)` showed the correct newest-first two item model, full prior scope restored without rewriting the file, and correctly persisted zero after Clear. One separate diagnostic Python synthetic file inadvertently expanded existing CRLF into a double-CR sequence on Windows, which made that **diagnostic-only** fixture invalid. A subsequent byte-exact UTF-16 BOM+CRLF synthetic fixture and full rebuilt GUI passed. No lost production history was demonstrated by those preliminary test errors.
+
+Initial independent interoperability attempted to open the **actual MFC-generated second workspace** directly: its selected second tab is a Windows virtual Shell alias to the connected user's Documents. This caused one read-only WinUI Shell **metadata enumeration of that real Documents folder during diagnosis**; no file content was opened or modified, and the original six MFC user setting files remained unchanged. To avoid repeated unowned folder access, final tests open the original genuine MFC-generated 1+1 workspace unmodified, but substitute ONLY the second real MFC-generated file's Documents virtual-tab target with a **test-owned local directory** in a temporary copy before launching either WinUI build. All remaining native-authored workspace schema keys and original two-tab selection remain intact. Final Debug and Release owned GUI and original six configuration hashes PASS. Separate earlier, entirely synthetic, real bidirectional WinUI?MFC native dialog and MFC?WinUI GUI proof remains intact; this safer extra test must not be misrepresented as unchanged virtual-Documents interoperability.
+
+Final compiled M1.9 WinUI Debug/Release actual owned GUI, merged native MFC x64 20/0 PASS_WITH_SKIPS (existing real HKCU smoke intentionally SKIPPED), own native UXH-07/UXH-06 and UI-02 Dark/Light primary/modal GUI, independent same-source M1.9 native 12/12 each config, combined source 56/56, Release native helper/Job and actual Debug M1.8 COM/namespace notification/local-loopback/two-timeout regression all passed. Two separate WinUI Release EXE hashes in historical M1.9 logs correspond to distinct actual builds; exact newer rebuilt hashes are in WINUI3_M19_MAINLINE_FEATURE_INTEGRATION_20260929.md. Default native main worktree and original untracked image were not modified.

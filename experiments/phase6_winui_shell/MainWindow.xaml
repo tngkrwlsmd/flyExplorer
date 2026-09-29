@@ -7,6 +7,8 @@
     <Grid Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
@@ -29,10 +31,63 @@
                 <Button x:Name="NewTabButton" Content="New tab" Height="38" Click="OnNewTabClicked"/>
                 <Button x:Name="CloseTabButton" Content="Close tab" Height="38" Click="OnCloseTabClicked"/>
                 <Button x:Name="SplitButton" Content="Single pane" Height="38" Click="OnSplitClicked"/>
+                <Button x:Name="WorkspacePanelButton" Content="Workspaces" Height="38"
+                        AutomationProperties.Name="Show named workspaces"
+                        Click="OnToggleWorkspaces"/>
+                <Button x:Name="SearchPanelButton" Content="Search" Height="38"
+                        AutomationProperties.Name="Show filesystem search"
+                        Click="OnToggleSearch"/>
             </StackPanel>
         </Grid>
 
-        <Grid Grid.Row="1" Padding="10,0,10,0" ColumnSpacing="9">
+        <StackPanel Grid.Row="1" x:Name="WorkspacePanel" Visibility="Collapsed"
+                    Orientation="Horizontal" Spacing="7" Padding="14,3,14,6">
+            <TextBlock Text="Named workspace:" VerticalAlignment="Center"/>
+            <TextBox x:Name="WorkspaceFileBox" Width="355"
+                     PlaceholderText="Full .fxworkspace file path"
+                     AutomationProperties.Name="Named workspace file path"/>
+            <Button x:Name="SaveWorkspaceButton" Content="Save new"
+                    Click="OnSaveWorkspace" AutomationProperties.Name="Save named workspace"/>
+            <Button x:Name="OpenWorkspaceButton" Content="Open new window"
+                    Click="OnOpenWorkspace" AutomationProperties.Name="Open named workspace in new window"/>
+            <TextBlock Text="Never overwrites an existing file"
+                       Opacity="0.65" VerticalAlignment="Center"/>
+        </StackPanel>
+        <StackPanel Grid.Row="2" x:Name="SearchPanel" Visibility="Collapsed"
+                    Spacing="5" Padding="14,3,14,5">
+            <StackPanel Orientation="Horizontal" Spacing="7">
+                <TextBox x:Name="SearchScopeBox" Width="315"
+                         PlaceholderText="Full search scope folder"
+                         AutomationProperties.Name="Full search scope"/>
+                <TextBox x:Name="SearchTermBox" Width="155"
+                         PlaceholderText="Filename contains"
+                         AutomationProperties.Name="Search filename query"/>
+                <CheckBox x:Name="SearchRememberBox" IsChecked="False"
+                          Content="Remember location (opt-in)"
+                          VerticalAlignment="Center"
+                          AutomationProperties.Name="Remember recent search location"/>
+                <Button x:Name="SearchRunButton" Content="Find files"
+                        Click="OnRunSearch" AutomationProperties.Name="Run filename search"/>
+            </StackPanel>
+            <StackPanel Orientation="Horizontal" Spacing="7">
+                <TextBlock Text="Recent locations:" VerticalAlignment="Center"/>
+                <TextBlock x:Name="RecentCountText" Text="0 saved" VerticalAlignment="Center"
+                           AutomationProperties.Name="Count of recent search locations"/>
+                <ComboBox x:Name="SearchRecentBox" Width="350"
+                          PlaceholderText="Select previous opted-in location"
+                          SelectionChanged="OnSelectSearchRecent"
+                          AutomationProperties.Name="Recent search locations"/>
+                <Button x:Name="SearchClearButton" Content="Clear recent"
+                        Click="OnClearSearchRecent"
+                        AutomationProperties.Name="Clear recent search locations"/>
+                <TextBlock x:Name="SearchCountText" Text="Bounded filename search; no file mutations"
+                           VerticalAlignment="Center"
+                           AutomationProperties.Name="Search result summary"/>
+            </StackPanel>
+            <ListView x:Name="SearchMatches" Height="94"
+                      AutomationProperties.Name="Matching file paths"/>
+        </StackPanel>
+        <Grid Grid.Row="3" Padding="10,0,10,0" ColumnSpacing="9">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="185"/>
                 <ColumnDefinition Width="*"/>
@@ -91,7 +146,7 @@
                           AutomationProperties.Name="Right folder contents"/>
             </Grid>
         </Grid>
-        <Grid Grid.Row="2" Padding="14,8,14,10" ColumnSpacing="8">
+        <Grid Grid.Row="4" Padding="14,8,14,10" ColumnSpacing="8">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="Auto"/>
                 <ColumnDefinition Width="*"/>

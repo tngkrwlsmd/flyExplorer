@@ -60,6 +60,11 @@ MainCoolBar::MainCoolBar(void)
     : mDefaultCompactPending(XPR_FALSE)
     , mDefaultCompactPosted(XPR_FALSE)
     , mLastDefaultCompactWidth(0)
+    , mTemporaryCompact(XPR_FALSE)
+    , mPreviousDriveStyle(0)
+    , mPreviousBookmarkStyle(0)
+    , mPreviousDriveWidth(0)
+    , mPreviousBookmarkWidth(0)
 {
 }
 
@@ -180,7 +185,12 @@ BOOL MainCoolBar::OnNotify(WPARAM wParam, LPARAM lParam, LRESULT* pResult)
     {
         const NMHDR *sHeader = reinterpret_cast<const NMHDR *>(lParam);
         if (sHeader->code == RBN_BEGINDRAG)
+        {
             mDefaultCompactPending = XPR_FALSE;
+            // An explicit manual drag supersedes a temporary arrangement:
+            // from here the user owns the visible toolbar geometry.
+            mTemporaryCompact = XPR_FALSE;
+        }
     }
     return CSizableReBar::OnNotify(wParam, lParam, pResult);
 }
@@ -430,8 +440,164 @@ xpr_bool_t MainCoolBar::isWrapable(xpr_uint_t aBandId)
     return sResult;
 }
 
+xpr_bool_t MainCoolBar::isTemporaryCompact(void) const
+{
+    return mTemporaryCompact;
+}
+
+// The saved toolbar may contain more commands than fit even in a wide
+// window. Existing nonwrapping RBBS_USECHEVRON bands keep those commands
+// reachable. An *explicit* compact choice must reserve a usable minimum
+// for EACH bar, not require both full ideal widths plus large spare space.
+static xpr_bool_t CalculateOptInBandWidths(
+    HWND aHwnd,
+    xpr_sint_t aClientWidth,
+    const REBARBANDINFO &aDrive,
+    const REBARBANDINFO &aBookmark,
+    UINT *aDriveWidth,
+    UINT *aBookmarkWidth)
+{
+    if (XPR_IS_NULL(aDriveWidth) || XPR_IS_NULL(aBookmarkWidth))
+        return XPR_FALSE;
+    const UINT sDriveMinimum = static_cast<UINT>(
+        ui::ModernUI::scaleForWindow(180, aHwnd));
+    const UINT sBookmarkMinimum = static_cast<UINT>(
+        ui::ModernUI::scaleForWindow(200, aHwnd));
+    const UINT sInset = static_cast<UINT>(
+        ui::ModernUI::scaleForWindow(16, aHwnd));
+    const UINT sAvailable = static_cast<UINT>(
+        max(0, aClientWidth -
+            ui::ModernUI::scaleForWindow(48, aHwnd)));
+    const UINT sDriveFull =
+        aDrive.cxIdeal + aDrive.cxHeader + sInset;
+    const UINT sBookmarkFull =
+        aBookmark.cxIdeal + aBookmark.cxHeader + sInset;
+    if (sAvailable < sDriveMinimum + sBookmarkMinimum ||
+        sDriveFull < sDriveMinimum ||
+        sBookmarkFull < sBookmarkMinimum)
+        return XPR_FALSE;
+    *aDriveWidth = min(sDriveFull, sAvailable - sBookmarkMinimum);
+    *aBookmarkWidth = min(sBookmarkFull, sAvailable - *aDriveWidth);
+    return *aDriveWidth >= sDriveMinimum &&
+           *aBookmarkWidth >= sBookmarkMinimum ?
+           XPR_TRUE : XPR_FALSE;
+}
+
+xpr_bool_t MainCoolBar::canToggleTemporaryCompact(void)
+{
+    if (XPR_IS_TRUE(mTemporaryCompact))
+        return XPR_TRUE;
+    if (XPR_IS_TRUE(gOpt->mMain.mDriveBarMultiLine) ||
+        XPR_IS_TRUE(gOpt->mMain.mBookmarkBarMultiLine) ||
+        XPR_IS_FALSE(isBandVislble(AFX_IDW_DRIVE_BAR)) ||
+        XPR_IS_FALSE(isBandVislble(AFX_IDW_BOOKMARK_BAR)))
+        return XPR_FALSE;
+
+    CReBarCtrl &sBands = GetReBarCtrl();
+    const xpr_sint_t sDrive = sBands.IDToIndex(AFX_IDW_DRIVE_BAR);
+    const xpr_sint_t sBookmark = sBands.IDToIndex(AFX_IDW_BOOKMARK_BAR);
+    if (sDrive < 0 || sBookmark != sDrive + 1)
+        return XPR_FALSE;
+
+    RebarBandInfo sDriveBand;
+    RebarBandInfo sBookmarkBand;
+    sDriveBand.fMask = RBBIM_IDEALSIZE | RBBIM_HEADERSIZE | RBBIM_STYLE;
+    sBookmarkBand.fMask = RBBIM_IDEALSIZE | RBBIM_HEADERSIZE | RBBIM_STYLE;
+    if (XPR_IS_FALSE(sBands.GetBandInfo(sDrive, &sDriveBand)) ||
+        XPR_IS_FALSE(sBands.GetBandInfo(sBookmark, &sBookmarkBand)) ||
+        (sBookmarkBand.fStyle & RBBS_BREAK) == 0 ||
+        (sDriveBand.fStyle & RBBS_USECHEVRON) == 0 ||
+        (sBookmarkBand.fStyle & RBBS_USECHEVRON) == 0 ||
+        sDriveBand.cxIdeal == 0 || sBookmarkBand.cxIdeal == 0)
+        return XPR_FALSE;
+
+    CRect sClient;
+    sBands.GetClientRect(&sClient);
+    UINT sDriveWidth = 0;
+    UINT sBookmarkWidth = 0;
+    return CalculateOptInBandWidths(GetSafeHwnd(),sClient.Width(),
+        sDriveBand,sBookmarkBand,&sDriveWidth,&sBookmarkWidth);
+}
+
+xpr_bool_t MainCoolBar::toggleTemporaryCompact(void)
+{
+    CReBarCtrl &sBands = GetReBarCtrl();
+    const xpr_sint_t sDrive = sBands.IDToIndex(AFX_IDW_DRIVE_BAR);
+    const xpr_sint_t sBookmark = sBands.IDToIndex(AFX_IDW_BOOKMARK_BAR);
+    if (sDrive < 0 || sBookmark != sDrive + 1)
+        return XPR_FALSE;
+
+    RebarBandInfo sDriveBand;
+    RebarBandInfo sBookmarkBand;
+    sDriveBand.fMask = RBBIM_IDEALSIZE | RBBIM_HEADERSIZE |
+        RBBIM_STYLE | RBBIM_SIZE;
+    sBookmarkBand.fMask = RBBIM_IDEALSIZE | RBBIM_HEADERSIZE |
+        RBBIM_STYLE | RBBIM_SIZE;
+    if (XPR_IS_FALSE(sBands.GetBandInfo(sDrive, &sDriveBand)) ||
+        XPR_IS_FALSE(sBands.GetBandInfo(sBookmark, &sBookmarkBand)))
+        return XPR_FALSE;
+
+    if (XPR_IS_TRUE(mTemporaryCompact))
+    {
+        // Restore the exact two original native bands, not defaults.
+        sBookmarkBand.fMask = RBBIM_STYLE | RBBIM_SIZE;
+        sBookmarkBand.fStyle = mPreviousBookmarkStyle;
+        sBookmarkBand.cx = mPreviousBookmarkWidth;
+        sDriveBand.fMask = RBBIM_STYLE | RBBIM_SIZE;
+        sDriveBand.fStyle = mPreviousDriveStyle;
+        sDriveBand.cx = mPreviousDriveWidth;
+        if (XPR_IS_FALSE(sBands.SetBandInfo(sBookmark, &sBookmarkBand)) ||
+            XPR_IS_FALSE(sBands.SetBandInfo(sDrive, &sDriveBand)))
+            return XPR_FALSE;
+        mTemporaryCompact = XPR_FALSE;
+    }
+    else
+    {
+        if (XPR_IS_FALSE(canToggleTemporaryCompact()))
+            return XPR_FALSE;
+        CRect sClient;
+        sBands.GetClientRect(&sClient);
+        UINT sDriveWidth = 0;
+        UINT sBookmarkWidth = 0;
+        if (XPR_IS_FALSE(CalculateOptInBandWidths(
+            GetSafeHwnd(),sClient.Width(),sDriveBand,sBookmarkBand,
+            &sDriveWidth,&sBookmarkWidth)))
+            return XPR_FALSE;
+        mPreviousDriveStyle = sDriveBand.fStyle;
+        mPreviousBookmarkStyle = sBookmarkBand.fStyle;
+        mPreviousDriveWidth = sDriveBand.cx;
+        mPreviousBookmarkWidth = sBookmarkBand.cx;
+        sBookmarkBand.fMask = RBBIM_STYLE | RBBIM_SIZE;
+        sBookmarkBand.fStyle &= ~RBBS_BREAK;
+        sBookmarkBand.cx = sBookmarkWidth;
+        sDriveBand.fMask = RBBIM_SIZE;
+        sDriveBand.cx = sDriveWidth;
+        // Reuse the native, previously validated shared-row sizing
+        // strategy; this is a user command, never synchronous WM_SIZE.
+        mDefaultCompactPending = XPR_FALSE;
+        if (XPR_IS_FALSE(sBands.SetBandInfo(sBookmark, &sBookmarkBand)))
+            return XPR_FALSE;
+        if (XPR_IS_FALSE(sBands.SetBandInfo(sDrive, &sDriveBand)))
+        {
+            sBookmarkBand.fStyle = mPreviousBookmarkStyle;
+            sBookmarkBand.cx = mPreviousBookmarkWidth;
+            sBands.SetBandInfo(sBookmark, &sBookmarkBand);
+            return XPR_FALSE;
+        }
+        mTemporaryCompact = XPR_TRUE;
+    }
+    CFrameWnd *sFrame = GetParentFrame();
+    if (sFrame != NULL)
+        sFrame->RecalcLayout();
+    return XPR_TRUE;
+}
+
 void MainCoolBar::setWrapable(xpr_uint_t aBandId, xpr_bool_t aWrapable)
 {
+    // A subsequent explicit multiline choice supersedes temporary
+    // compaction; never commit a transient shared-row layout instead.
+    if (XPR_IS_TRUE(mTemporaryCompact))
+        toggleTemporaryCompact();
     CReBarCtrl &sReBarCtrl = GetReBarCtrl();
 
     xpr_sint_t sBandIndex = sReBarCtrl.IDToIndex(aBandId);
@@ -778,6 +944,19 @@ void MainCoolBar::saveStateFile(const xpr_tchar_t *aPath)
         sCoolBarState.cx         = sRebarBandInfo.cx;
         sCoolBarState.fStyle     = sRebarBandInfo.fStyle;
         sCoolBarState.cxMinChild = sRebarBandInfo.cxMinChild;
+        if (XPR_IS_TRUE(mTemporaryCompact))
+        {
+            if (sCoolBarState.wID == AFX_IDW_DRIVE_BAR)
+            {
+                sCoolBarState.cx = mPreviousDriveWidth;
+                sCoolBarState.fStyle = mPreviousDriveStyle;
+            }
+            else if (sCoolBarState.wID == AFX_IDW_BOOKMARK_BAR)
+            {
+                sCoolBarState.cx = mPreviousBookmarkWidth;
+                sCoolBarState.fStyle = mPreviousBookmarkStyle;
+            }
+        }
         sRcode = sFileIo.write(&sCoolBarState, sCoolBarState.cbSize, &sWrittenSize);
         if (XPR_RCODE_IS_ERROR(sRcode))
             break;

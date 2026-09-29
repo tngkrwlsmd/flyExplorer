@@ -8,6 +8,7 @@
 #include "ModernUI.h"
 #include <oleacc.h> // Documented OBJID_* scrollbar constants
 #include <vector>
+#include <string>
 
 #include <roapi.h>
 #include <winstring.h>
@@ -206,8 +207,37 @@ void endControlThemeChange(HWND aHwnd)
 const UINT_PTR kDialogButtonSubclassId = 0x46474442;   // 'FGDB'
 const UINT_PTR kDialogTabSubclassId = 0x46474454;      // 'FGDT'
 const UINT_PTR kDialogEditSubclassId = 0x46474445;     // 'FGDE'
+const UINT_PTR kDialogHotKeySubclassId = 0x4647484B;   // 'FGHK'
 const UINT_PTR kDialogComboSubclassId = 0x46474443;    // 'FGDC'
 const UINT_PTR kDialogGroupSubclassId = 0x46474447;    // 'FGDG'
+const wchar_t kDialogEmphasizedEditProperty[] =
+    L"flyExplorer.ModernDialog.EmphasizedEdit";
+const UINT_PTR kDialogScrollSubclassId = 0x46474453;   // 'FGDS'
+
+LRESULT CALLBACK DialogScrollableSubclassProc(
+    HWND aHwnd, UINT aMessage, WPARAM aWParam, LPARAM aLParam,
+    UINT_PTR aSubclassId, DWORD_PTR)
+{
+    if (aMessage == WM_NCDESTROY)
+    {
+        ::RemoveWindowSubclass(
+            aHwnd, DialogScrollableSubclassProc, aSubclassId);
+        ModernUI::removeDarkScrollbarOverlay(aHwnd);
+    }
+    return ::DefSubclassProc(aHwnd, aMessage, aWParam, aLParam);
+}
+
+BOOL CALLBACK CloseOwnedDropdownProc(HWND aHwnd, LPARAM)
+{
+    xpr_tchar_t sClassName[64] = {0};
+    ::GetClassName(aHwnd, sClassName, XPR_COUNT_OF(sClassName));
+    if (_tcsicmp(sClassName, XPR_STRING_LITERAL("ComboBox")) == 0 &&
+        ::SendMessage(aHwnd, CB_GETDROPPEDSTATE, 0, 0) != FALSE)
+    {
+        ::SendMessage(aHwnd, CB_SHOWDROPDOWN, FALSE, 0);
+    }
+    return TRUE;
+}
 
 HBRUSH getDialogParentBrush(HWND aHwnd, HDC aDC, UINT aCtlColorMessage)
 {
@@ -641,7 +671,8 @@ void drawDialogEditFrame(HWND aHwnd)
     const COLORREF sBorder =
         (::GetFocus() == aHwnd) ?
         sPalette.mFocus :
-        sPalette.mSeparator;
+        (::GetPropW(aHwnd, kDialogEmphasizedEditProperty) != NULL ?
+            sPalette.mSecondaryText : sPalette.mSeparator);
     HBRUSH sBorderBrush = ::CreateSolidBrush(sBorder);
     if (XPR_IS_NOT_NULL(sBorderBrush))
     {
@@ -684,6 +715,7 @@ LRESULT CALLBACK DialogEditSubclassProc(
             break;
 
         case WM_NCDESTROY:
+            ::RemovePropW(aHwnd, kDialogEmphasizedEditProperty);
             ::RemoveWindowSubclass(
                 aHwnd,
                 DialogEditSubclassProc,
@@ -694,6 +726,144 @@ LRESULT CALLBACK DialogEditSubclassProc(
             break;
     }
 
+    return ::DefSubclassProc(aHwnd, aMessage, aWParam, aLParam);
+}
+
+// The common-controls hotkey class does not use the dialog's
+// CTLCOLOR_EDIT brush. Keep its native HKM and keyboard processing;
+// only supply its missing dark client pixels and focus affordance.
+void drawDialogHotKey(HWND aHwnd)
+{
+    const ThemePalette sPalette = ModernUI::getPalette();
+    if (XPR_IS_FALSE(sPalette.mDark) ||
+        XPR_IS_TRUE(sPalette.mHighContrast))
+        return;
+    PAINTSTRUCT sPaint = {0};
+    HDC sDC = ::BeginPaint(aHwnd, &sPaint);
+    if (XPR_IS_NULL(sDC))
+        return;
+    RECT sRect = {0};
+    ::GetClientRect(aHwnd, &sRect);
+    ::SetDCBrushColor(sDC, sPalette.mElevated);
+    ::FillRect(sDC, &sRect,
+        static_cast<HBRUSH>(::GetStockObject(DC_BRUSH)));
+
+    const WORD sShortcut = static_cast<WORD>(
+        ::SendMessage(aHwnd, HKM_GETHOTKEY, 0, 0));
+    const WORD sModifiers = HIBYTE(sShortcut);
+    const UINT sVirtualKey = LOBYTE(sShortcut);
+    std::wstring sName;
+    if (sVirtualKey != 0)
+    {
+        if ((sModifiers & HOTKEYF_CONTROL) != 0)
+            sName += L"Ctrl + ";
+        if ((sModifiers & HOTKEYF_SHIFT) != 0)
+            sName += L"Shift + ";
+        if ((sModifiers & HOTKEYF_ALT) != 0)
+            sName += L"Alt + ";
+        wchar_t sKeyName[64] = {0};
+        const UINT sScan = ::MapVirtualKeyW(
+            sVirtualKey, MAPVK_VK_TO_VSC);
+        // Extended navigation keys need bit 24 for the proper label.
+        const LONG sKeyParam = static_cast<LONG>(
+            (sScan << 16) |
+            (((sModifiers & HOTKEYF_EXT) != 0) ? (1 << 24) : 0));
+        if (::GetKeyNameTextW(
+                sKeyParam, sKeyName, _countof(sKeyName)) > 0)
+            sName += sKeyName;
+        else
+        {
+            wchar_t sFallback[16] = {0};
+            ::wsprintfW(sFallback, L"0x%02X", sVirtualKey);
+            sName += sFallback;
+        }
+    }
+
+    RECT sTextRect = sRect;
+    sTextRect.left += ModernUI::scaleForWindow(5, aHwnd);
+    sTextRect.right -= ModernUI::scaleForWindow(4, aHwnd);
+    HFONT sFont = reinterpret_cast<HFONT>(
+        ::SendMessage(aHwnd, WM_GETFONT, 0, 0));
+    HGDIOBJ sOldFont = sFont != NULL ?
+        ::SelectObject(sDC, sFont) : NULL;
+    ::SetBkMode(sDC, TRANSPARENT);
+    ::SetTextColor(sDC, ::IsWindowEnabled(aHwnd) ?
+        sPalette.mText : sPalette.mSecondaryText);
+    ::DrawTextW(sDC, sName.c_str(), static_cast<int>(sName.size()),
+        &sTextRect, DT_LEFT | DT_VCENTER | DT_SINGLELINE |
+        DT_END_ELLIPSIS | DT_NOPREFIX);
+    if (sOldFont != NULL)
+        ::SelectObject(sDC, sOldFont);
+    if (::GetFocus() == aHwnd)
+    {
+        // A visible focus cue, without replacing the native hotkey
+        // window or touching its keyboard / accessible state.
+        HBRUSH sFocusBrush = ::CreateSolidBrush(sPalette.mFocus);
+        if (sFocusBrush != NULL)
+        {
+            ::FrameRect(sDC, &sRect, sFocusBrush);
+            ::DeleteObject(sFocusBrush);
+        }
+    }
+    ::EndPaint(aHwnd, &sPaint);
+}
+
+LRESULT CALLBACK DialogHotKeySubclassProc(
+    HWND aHwnd, UINT aMessage, WPARAM aWParam, LPARAM aLParam,
+    UINT_PTR aSubclassId, DWORD_PTR)
+{
+    switch (aMessage)
+    {
+        case WM_PAINT:
+        {
+            const ThemePalette sPalette = ModernUI::getPalette();
+            if (XPR_IS_TRUE(sPalette.mDark) &&
+                XPR_IS_FALSE(sPalette.mHighContrast))
+            {
+                drawDialogHotKey(aHwnd);
+                return 0;
+            }
+            break;
+        }
+        case WM_ERASEBKGND:
+        {
+            const ThemePalette sPalette = ModernUI::getPalette();
+            if (XPR_IS_TRUE(sPalette.mDark) &&
+                XPR_IS_FALSE(sPalette.mHighContrast))
+                return TRUE;
+            break;
+        }
+        case HKM_SETHOTKEY:
+        case WM_KEYDOWN:
+        case WM_SYSKEYDOWN:
+        case WM_KEYUP:
+        case WM_SYSKEYUP:
+        case WM_SETFOCUS:
+        case WM_KILLFOCUS:
+        case WM_ENABLE:
+        case WM_THEMECHANGED:
+        case WM_SETTINGCHANGE:
+        case WM_SYSCOLORCHANGE:
+        {
+            const LRESULT sResult =
+                ::DefSubclassProc(aHwnd, aMessage, aWParam, aLParam);
+            ::InvalidateRect(aHwnd, NULL, FALSE);
+            return sResult;
+        }
+        case WM_NCPAINT:
+        {
+            const LRESULT sResult =
+                ::DefSubclassProc(aHwnd, aMessage, aWParam, aLParam);
+            drawDialogEditFrame(aHwnd);
+            return sResult;
+        }
+        case WM_NCDESTROY:
+            ::RemoveWindowSubclass(
+                aHwnd, DialogHotKeySubclassProc, aSubclassId);
+            break;
+        default:
+            break;
+    }
     return ::DefSubclassProc(aHwnd, aMessage, aWParam, aLParam);
 }
 
@@ -1627,6 +1797,26 @@ xpr_bool_t ModernUI::isSameFont(
         XPR_FALSE;
 }
 
+void ModernUI::dismissOwnedDropdowns(HWND aDialogHwnd)
+{
+    if (!::IsWindow(aDialogHwnd))
+        return;
+    HWND sOwner = ::GetWindow(aDialogHwnd, GW_OWNER);
+    if (!::IsWindow(sOwner))
+        return;
+    // EnumChildWindows includes the native ComboBox inside each ComboBoxEx.
+    ::EnumChildWindows(sOwner, CloseOwnedDropdownProc, 0);
+}
+
+void ModernUI::emphasizeDialogEdit(HWND aHwnd)
+{
+    if (!::IsWindow(aHwnd))
+        return;
+    ::SetPropW(aHwnd, kDialogEmphasizedEditProperty,
+        reinterpret_cast<HANDLE>(1));
+    ::RedrawWindow(aHwnd, NULL, NULL, RDW_INVALIDATE | RDW_FRAME);
+}
+
 void ModernUI::applyDialogControlTheme(HWND aHwnd)
 {
     if (XPR_IS_NULL(aHwnd) || ::IsWindow(aHwnd) == FALSE)
@@ -1669,6 +1859,13 @@ void ModernUI::applyDialogControlTheme(HWND aHwnd)
             DialogEditSubclassProc,
             kDialogEditSubclassId,
             0);
+    }
+    else if (_tcsicmp(
+                 sClassName,
+                 XPR_STRING_LITERAL("msctls_hotkey32")) == 0)
+    {
+        ::SetWindowSubclass(aHwnd,
+            DialogHotKeySubclassProc, kDialogHotKeySubclassId, 0);
     }
     else if (_tcsicmp(
                  sClassName,
@@ -1720,6 +1917,27 @@ void ModernUI::applyDialogControlTheme(HWND aHwnd)
         TreeView_SetLineColor(aHwnd, sPalette.mSeparator);
     }
 
+    const bool sListOrTree =
+        _tcsicmp(sClassName, XPR_STRING_LITERAL("SysListView32")) == 0 ||
+        _tcsicmp(sClassName, XPR_STRING_LITERAL("SysTreeView32")) == 0 ||
+        _tcsicmp(sClassName, XPR_STRING_LITERAL("ListBox")) == 0;
+    const bool sScrollableEdit =
+        _tcsicmp(sClassName, XPR_STRING_LITERAL("Edit")) == 0 &&
+        (::GetWindowLongPtr(aHwnd, GWL_STYLE) &
+            (WS_VSCROLL | WS_HSCROLL)) != 0;
+    if (sListOrTree || sScrollableEdit)
+    {
+        const bool sDark = XPR_IS_TRUE(sPalette.mDark) &&
+            XPR_IS_FALSE(sPalette.mHighContrast);
+        if (sDark)
+            ::SetWindowSubclass(aHwnd, DialogScrollableSubclassProc,
+                kDialogScrollSubclassId, 0);
+        ModernUI::configureDarkScrollbarOverlay(
+            aHwnd, sDark ? &sPalette : NULL);
+        if (!sDark)
+            ::RemoveWindowSubclass(aHwnd,
+                DialogScrollableSubclassProc, kDialogScrollSubclassId);
+    }
     ::InvalidateRect(aHwnd, XPR_NULL, TRUE);
 }
 
@@ -2153,6 +2371,7 @@ struct DarkScrollbarEntry
     bool mCornerValid;
     bool mForce;
     bool mPopupTopMost;
+    HWND mPopupHostRoot;
 };
 
 static thread_local std::vector<DarkScrollbarEntry> sDarkScrollbarEntries;
@@ -2350,8 +2569,23 @@ bool SyncDarkScrollbarPart(
 
 void SyncDarkScrollbarEntry(DarkScrollbarEntry &aEntry)
 {
+    // ComboLBox is a desktop-owned popup: GA_ROOTOWNER does NOT identify
+    // the containing MFC window. The address control passes its real host.
+    const HWND sRootOwner =
+        ::IsWindow(aEntry.mPopupHostRoot) ?
+            aEntry.mPopupHostRoot :
+            ::GetAncestor(aEntry.mTarget, GA_ROOTOWNER);
+    const HWND sForeground = ::GetForegroundWindow();
+    const HWND sTargetRoot =
+        ::GetAncestor(aEntry.mTarget, GA_ROOT);
+    const bool sPopupOccluded =
+        aEntry.mPopupTopMost &&
+        ((::IsWindow(sRootOwner) &&
+          !::IsWindowEnabled(sRootOwner)) ||
+         (sForeground != NULL && sForeground != sRootOwner &&
+          sForeground != sTargetRoot));
     if (!::IsWindow(aEntry.mTarget) ||
-        !::IsWindowVisible(aEntry.mTarget))
+        !::IsWindowVisible(aEntry.mTarget) || sPopupOccluded)
     {
         HideDarkScrollbarPopup(aEntry.mVerticalPopup);
         HideDarkScrollbarPopup(aEntry.mHorizontalPopup);
@@ -2430,6 +2664,9 @@ LRESULT CALLBACK DarkScrollbarCallRet(
         const bool sNativeScroll =
             sMsg == WM_VSCROLL || sMsg == WM_HSCROLL ||
             sMsg == WM_NCPAINT || sMsg == WM_NCLBUTTONUP;
+        const bool sOwnerState =
+            sMsg == WM_ENABLE || sMsg == WM_ACTIVATE ||
+            sMsg == WM_ACTIVATEAPP;
         bool sRelevant = false;
         for (size_t i = 0; i < sDarkScrollbarEntries.size(); ++i)
         {
@@ -2437,7 +2674,13 @@ LRESULT CALLBACK DarkScrollbarCallRet(
             if ((sEvent->hwnd == sTarget &&
                  (sVisibilityOrPosition || sNativeScroll)) ||
                 (sVisibilityOrPosition &&
-                 ::IsChild(sEvent->hwnd, sTarget)))
+                 ::IsChild(sEvent->hwnd, sTarget)) ||
+                (sOwnerState &&
+                 sDarkScrollbarEntries[i].mPopupTopMost &&
+                 sEvent->hwnd ==
+                    (::IsWindow(sDarkScrollbarEntries[i].mPopupHostRoot) ?
+                        sDarkScrollbarEntries[i].mPopupHostRoot :
+                        ::GetAncestor(sTarget, GA_ROOTOWNER))))
             {
                 sRelevant = true;
                 break;
@@ -2529,7 +2772,7 @@ void RemoveDarkScrollbarEntry(HWND aTarget)
 
 void ModernUI::configureDarkScrollbarOverlay(
     HWND aHwnd, const ThemePalette *aPalette,
-    xpr_bool_t aPopupTopMost)
+    xpr_bool_t aPopupTopMost, HWND aPopupHost)
 {
     if (!::IsWindow(aHwnd))
         return;
@@ -2549,6 +2792,9 @@ void ModernUI::configureDarkScrollbarOverlay(
         sNew.mTarget = aHwnd;
         sNew.mPalette = *aPalette;
         sNew.mPopupTopMost = XPR_IS_TRUE(aPopupTopMost);
+        sNew.mPopupHostRoot =
+            ::IsWindow(aPopupHost) ?
+                ::GetAncestor(aPopupHost, GA_ROOT) : NULL;
         sNew.mForce = true;
         sDarkScrollbarEntries.push_back(sNew);
         StartDarkScrollbarHooks();
@@ -2557,6 +2803,9 @@ void ModernUI::configureDarkScrollbarOverlay(
     {
         sEntry->mPalette = *aPalette;
         sEntry->mPopupTopMost = XPR_IS_TRUE(aPopupTopMost);
+        sEntry->mPopupHostRoot =
+            ::IsWindow(aPopupHost) ?
+                ::GetAncestor(aPopupHost, GA_ROOT) : NULL;
         sEntry->mForce = true;
     }
     SyncDarkScrollbarEntries();

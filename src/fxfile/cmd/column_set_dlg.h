@@ -12,6 +12,7 @@
 #pragma once
 
 #include "../gui/ModernDialog.h"
+#include "../gui/FlatHeaderCtrl.h"
 
 #include "folder_layout.h"
 
@@ -24,7 +25,7 @@ class ColumnSetDlg : public CModernDialog
     typedef CModernDialog super;
 
 public:
-    ColumnSetDlg(void);
+    explicit ColumnSetDlg(CWnd *aParentWnd = XPR_NULL);
     virtual ~ColumnSetDlg(void);
 
 public:
@@ -39,6 +40,7 @@ protected:
     xpr_sint_t addList(ColumnItemData *aColumnItemData);
     xpr_sint_t insertList(xpr_sint_t aIndex, ColumnItemData *aColumnItemData);
     void selectItem(xpr_sint_t aIndex);
+    xpr_sint_t readEditedColumnWidth(xpr_sint_t aPreviousWidth);
 
 protected:
     LPSHELLFOLDER2 mShellFolder2;
@@ -53,6 +55,7 @@ protected:
 
 protected:
     CListCtrl mListCtrl;
+    FlatHeaderCtrl mColumnHeader;
 
 protected:
     virtual void DoDataExchange(CDataExchange* pDX);

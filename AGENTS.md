@@ -37,6 +37,11 @@
 
 ## 3. flyExplorer source of truth
 
+Start at the [development documentation index](docs/development/README.md)
+and [concise current status](docs/development/CURRENT_STATUS.md) before
+using older dated project summaries as evidence.
+
+
 다음 파일을 빌드 구조의 우선 Source of Truth로 본다.
 
 - `fxfile.gyp`
@@ -221,6 +226,19 @@ Track screenshot-specific observations, proposed UX adjustments, severity, owner
 - Dark 검증은 text뿐 아니라 non-client scrollbar, ComboBoxEx 내부 edit/list, legacy glyph, popup 경계까지 포함한다. documented API와 기존 accessibility 계약을 유지하며 최종 renderer별 evidence를 남긴다.
 - 문자로 화살표를 흉내 낸 resource는 인코딩/폰트 의존성을 확인한다. 작은 버튼은 의미 있는 접근성 이름과 잘리지 않는 glyph/label을 제공하고 DPI·언어 변경 시 검사한다.
 - 최신 OS 호환성 변경은 manifest 하나나 API 이름 교체로 완료 판정하지 않는다. long path, Known Folder, file-operation adapter는 caller/callee와 취소·부분 실패 의미까지 검증하고 기존 multi-pane/tab/shortcut을 보존한다.
+
+### Full-product hands-on UX development gate (2026-09-28)
+
+Before beginning a new product UX feature or MFC UI bug fix, consult
+[the latest isolated product-wide UX backlog](docs/development/UI_UX_HANDS_ON_BACKLOG_20260928.md)
+as well as the historical UI_UX_AUDIT_20260924.md. Each task must
+distinguish an observed actual Windows defect, a source-only hypothesis,
+a proposed improvement, and a test not yet executed. Screen captures
+and a missing child UIA enumeration are not evidence that file operations
+or accessibility are broken. Preserve the original user's settings and
+pre-existing personal layout, test with an owned process and disposable
+files, and retain separate source, GUI, visual, and user-state evidence.
+Unrelated feature additions require their own scope and acceptance gates.
 
 ## 8. 검증
 

@@ -193,6 +193,9 @@ BEGIN_MESSAGE_MAP(SearchDlg, super)
     ON_CBN_SELCHANGE(IDC_SEARCH_LOC, OnSelchangeLocation)
     ON_NOTIFY(CBEN_DELETEITEM, IDC_SEARCH_LOC, OnDeleteitemLocation)
     ON_BN_CLICKED(IDC_SEARCH_CUR_LOC, OnCurLocation)
+    ON_BN_CLICKED(IDC_SEARCH_SCOPE_PREVIEW, OnPreviewScope)
+    ON_CBN_SELCHANGE(IDC_SEARCH_RECENT, OnRecentLocation)
+    ON_BN_CLICKED(IDC_SEARCH_RECENT_CLEAR, OnClearRecent)
     ON_BN_CLICKED(IDC_SEARCH_START,   OnStart)
     ON_COMMAND(ID_TOOL_FILE_SEARCH,   OnFileSearch)
     ON_MESSAGE(WM_FINALIZE, OnFinalize)
@@ -515,6 +518,10 @@ xpr_bool_t SearchDlg::OnInitDialog(void)
     {
         mDlgState->setDialog(this, XPR_TRUE);
         mDlgState->setComboBoxList(XPR_STRING_LITERAL("Search"), IDC_SEARCH_NAME);
+        // Reuse the existing bounded dialog-state list, but add entries
+        // ONLY when the user explicitly checks Remember before a valid search.
+        mDlgState->setComboBoxList(
+            XPR_STRING_LITERAL("RecentLocations"), IDC_SEARCH_RECENT);
         mDlgState->setEditCtrl(XPR_STRING_LITERAL("Text"),       IDC_SEARCH_TEXT);
         mDlgState->setCheckBox(XPR_STRING_LITERAL("Sub Folder"), IDC_SEARCH_SUBFOLDER);
         mDlgState->setCheckBox(XPR_STRING_LITERAL("Case"),       IDC_SEARCH_CASE);
@@ -531,6 +538,34 @@ xpr_bool_t SearchDlg::OnInitDialog(void)
     mCurLocButton.SetTooltipText(sCurrentFolderLabel);
     mCurLocButton.SetWindowText(sCurrentFolderLabel);
     mCurLocButton.SetDefaultColors(TRUE);
+
+    // Missing translations from older installed packs must never
+    // expose raw resource IDs in a working dialog.
+    struct Label { xpr_uint_t id; const xpr_tchar_t *key;
+                   const xpr_tchar_t *fallback; };
+    const Label sLabels[] = {
+      {IDC_SEARCH_SCOPE_PREVIEW,
+       XPR_STRING_LITERAL("popup.search.button.full_scope"),
+       XPR_STRING_LITERAL("Full &scope")},
+      {IDC_SEARCH_RECENT_LABEL,
+       XPR_STRING_LITERAL("popup.search.label.recent_locations"),
+       XPR_STRING_LITERAL("Recent locations:")},
+      {IDC_SEARCH_RECENT_CLEAR,
+       XPR_STRING_LITERAL("popup.search.button.clear_recent"),
+       XPR_STRING_LITERAL("C&lear")},
+      {IDC_SEARCH_REMEMBER,
+       XPR_STRING_LITERAL("popup.search.check.remember_location"),
+       XPR_STRING_LITERAL("Re&member")}};
+    for (xpr_size_t i = 0; i < XPR_COUNT_OF(sLabels); ++i)
+    {
+        const xpr_tchar_t *sLabel = gApp.loadString(sLabels[i].key);
+        SetDlgItemText(sLabels[i].id,
+            XPR_IS_NULL(sLabel) || _tcscmp(sLabel,sLabels[i].key) == 0 ?
+            sLabels[i].fallback : sLabel);
+    }
+    ((CButton *)GetDlgItem(IDC_SEARCH_REMEMBER))->SetCheck(BST_UNCHECKED);
+    ((CEdit *)GetDlgItem(IDC_SEARCH_SCOPE_FULL))->SetWindowText(
+        XPR_STRING_LITERAL(""));
 
     return XPR_TRUE;
 }
@@ -627,6 +662,42 @@ void SearchDlg::enableWindow(xpr_bool_t aEnable)
         if (aEnable == XPR_FALSE) sFlags |= MF_GRAYED;
         sMenu->EnableMenuItem(SC_CLOSE, sFlags);
     }
+}
+
+void SearchDlg::OnPreviewScope(void)
+{
+    CString sText;
+    if (mLocComboBox.GetEditCtrl() != NULL)
+        mLocComboBox.GetEditCtrl()->GetWindowText(sText);
+    // A keyboard-focusable, read-only multiline edit allows inspection
+    // and selection of the COMPLETE scope without clipboard mutation.
+    SetDlgItemText(IDC_SEARCH_SCOPE_FULL,sText);
+    GetDlgItem(IDC_SEARCH_SCOPE_FULL)->SetFocus();
+}
+
+void SearchDlg::OnRecentLocation(void)
+{
+    CComboBox *sRecent = (CComboBox *)GetDlgItem(IDC_SEARCH_RECENT);
+    const xpr_sint_t sIndex = sRecent->GetCurSel();
+    if (sIndex < 0 || mLocComboBox.GetEditCtrl() == NULL)
+        return;
+    CString sPath;
+    sRecent->GetLBText(sIndex,sPath);
+    // Selection of a recent entry is a typed custom location; do NOT
+    // treat it as one of ComboBoxEx's built-in Shell search-scope IDs.
+    mLocComboBox.SetCurSel(-1);
+    mLocComboBox.GetEditCtrl()->SetWindowText(sPath);
+    SetDlgItemText(IDC_SEARCH_SCOPE_FULL,sPath);
+    mLocComboBox.GetEditCtrl()->SetFocus();
+}
+
+void SearchDlg::OnClearRecent(void)
+{
+    // Only the new recent list is cleared. Existing named saved scopes,
+    // built-in locations and the active typed location are untouched.
+    CComboBox *sRecent = (CComboBox *)GetDlgItem(IDC_SEARCH_RECENT);
+    sRecent->ResetContent();
+    sRecent->SetCurSel(-1);
 }
 
 void SearchDlg::OnSelchangeLocation(void) 
@@ -1429,6 +1500,34 @@ void SearchDlg::OnStart(void)
     mSearchFile->setSearchParam(sParam);
     mSearchFile->setResultFunc(OnSearchResult, (LPARAM)sSearchResultCtrl);
 
+    // Explicit opt-in, filesystem-only, at most eight unique locations;
+    // never save the search name/text, exclusions, Shell virtual folders
+    // or named multi-location collections into this path-only history.
+    CButton *sRemember = (CButton *)GetDlgItem(IDC_SEARCH_REMEMBER);
+    if (sRemember != NULL && sRemember->GetCheck() == BST_CHECKED &&
+        sIncDirDeque.size() == 1 && sExcDirDeque.empty())
+    {
+        const xpr::string &sRecentPath = sIncDirDeque.front()->mPath;
+        const DWORD sAttrs = ::GetFileAttributes(sRecentPath.c_str());
+        if (sAttrs != INVALID_FILE_ATTRIBUTES &&
+            (sAttrs & FILE_ATTRIBUTE_DIRECTORY) != 0)
+        {
+            CComboBox *sRecent =
+                (CComboBox *)GetDlgItem(IDC_SEARCH_RECENT);
+            for (xpr_sint_t i = sRecent->GetCount() - 1; i >= 0; --i)
+            {
+                CString sOld;
+                sRecent->GetLBText(i,sOld);
+                if (sOld.CompareNoCase(sRecentPath.c_str()) == 0)
+                    sRecent->DeleteString(i);
+            }
+            sRecent->InsertString(0,sRecentPath.c_str());
+            while (sRecent->GetCount() > 8)
+                sRecent->DeleteString(sRecent->GetCount()-1);
+            sRecent->SetCurSel(0);
+        }
+    }
+
     sIterator = sIncDirDeque.begin();
     for (; sIterator != sIncDirDeque.end(); ++sIterator)
     {
@@ -1494,35 +1593,17 @@ LRESULT SearchDlg::OnFinalize(WPARAM wParam, LPARAM lParam)
     mStatusBar.setPaneText(0, sStatusText);
     mStatusBar.setDynamicPaneText(1, sStatusElapsedTimeText, 0);
 
-    xpr_tchar_t sItemCountText[0xff] = {0};
-    xpr_tchar_t sElapsedMinuteTimeText[0xff] = {0};
-    xpr_tchar_t sElapsedSecondTimeText[0xff] = {0};
-
-    getStatusNumberFormat(
-        sItemCountText, XPR_COUNT_OF(sItemCountText) - 1,
-        sElapsedMinuteTimeText, XPR_COUNT_OF(sElapsedMinuteTimeText) - 1,
-        sElapsedSecondTimeText, XPR_COUNT_OF(sElapsedSecondTimeText) - 1);
-
-    xpr::string sMsg;
-    if (sElapsedMinuteTimeText[0] == 0)
+    // The custom StatusBar paints its own panes but has no native
+    // accessible pane-name provider. Expose both completed values as
+    // its accessible HWND name via the StatusBar-specific native path.
+    // Do not reintroduce a duplicate normal-success modal.
+    if (::IsWindow(mStatusBar.GetSafeHwnd()))
     {
-        sMsg.format(
-            gApp.loadFormatString(XPR_STRING_LITERAL("popup.search.msg.search_result"),
-            XPR_STRING_LITERAL("%s,%s")),
-            sItemCountText,
-            sElapsedSecondTimeText);
+        xpr::string sAccessibleSummary;
+        sAccessibleSummary.format(XPR_STRING_LITERAL("%s %s"),
+            sStatusText, sStatusElapsedTimeText);
+        mStatusBar.announceAccessibleStatus(sAccessibleSummary.c_str());
     }
-    else
-    {
-        sMsg.format(
-            gApp.loadFormatString(XPR_STRING_LITERAL("popup.search.msg.search_long_result"),
-            XPR_STRING_LITERAL("%s,%s,%s")),
-            sItemCountText,
-            sElapsedMinuteTimeText,
-            sElapsedSecondTimeText);
-    }
-
-    MessageBox(sMsg.c_str(), XPR_NULL, MB_OK | MB_ICONINFORMATION);
 
     return 0;
 }

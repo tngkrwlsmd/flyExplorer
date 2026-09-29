@@ -1,3 +1,18 @@
+**M1.9 FINAL VERIFIED CURRENT CHECKPOINT (2026-09-29):** Isolated WinUI migration worktree ONLY. Imported current native `main` while preserving the default MFC main branch. Actual merged MFC x64 Release native **20/0 PASS_WITH_SKIPS**, test-owned original UXH-07/UXH-06 and merged Dark/Light UI-02 GUI PASS; WinUI **Debug+Release** real owned UXH-07 subset/workspace and privacy-default-off UXH-06 bounded search/recents GUI PASS; standalone native M1.9 **12/12 each configuration**, combined source **56/56** PASS. Verified a byte-exact genuinely MFC-produced workspace and another MFC-produced tab layout with its real-user virtual-Documents tab safely replaced by an owned folder; separately documented earlier fully synthetic bidirectional MFC/WinUI real GUI also passed. Real owned M1.8 helper COM-stall/loopback/namespace notification and both-timeouts replay PASS; six original configs and untracked original screenshot unchanged. Precise build SHA256 and incomplete native search, workspace and external-provider parity: [current scoped M1.9 evidence](../docs/development/WINUI3_M19_MAINLINE_FEATURE_INTEGRATION_20260929.md). Earlier provisional M1.9/M1.8 notes below are revision-scoped history.
+
+
+**M1.9 CURRENT ACTUAL SOURCE IMPORT (2026-09-29):** On isolated WinUI branch ONLY, imported default native `main` `3a4d27c` into prior WinUI `34936ee`, preserving dual Shell-process/Job isolation and watchers. Mainline native MFC Release x64 canonical CI **20/0 PASS_WITH_SKIPS** (real HKCU smoke SKIPPED). Actual preview work now includes bounded UXH-07 UTF-16 workspace new-file/new-process UI (both directions GUI-interoperable with current MFC in supported 1-2-pane subset) and privacy-default-off WinUI-private opt-in bounded filesystem filename search/recents inspired by UXH-06, plus native MFC ModernUI UI-02 without duplicating renderer. Actual scoped owned Debug/Release GUI PASS, native independent workspace/search Debug+Release 12/12, source architecture 20/20 and original six settings SHA256 unchanged. Advanced native MFC search filters/regex/content, full layouts/tab history/file mutations and actual hostile extensions/SMB remain NOT FULL PARITY. Older M1.8 branch-only status below is historical. [M1.9 details](../docs/development/WINUI3_M19_MAINLINE_FEATURE_INTEGRATION_20260929.md). Native default main not changed.
+
+---
+
+**CURRENT RECONCILED PROJECT STATE (2026-09-29):** The verified native code-bearing `main` baseline, immediately before this documentation-only sync, is `f074a6b1651dae6e9a1603465078310822a8f761` with UXH-07 named workspaces, UXH-06 opt-in recent search scopes and the current ModernUI UI-02 solution. Actual original-root x64 Release CI PASS, native **17/0 PASS_WITH_SKIPS** (live HKCU smoke **SKIPPED**), combined 25/25 source checks, test-owned UXH-06 and Dark UI-02 real GUI PASS; separately compiled integration candidate passed actual Light/Dark primary and modal UI-02 GUI. Final original-root executable SHA256: `41D51B87E74C839C33124F22F63AC0C7379B61E0F32A12196D1459649AF81BAC`. The independently tested, non-default WinUI 3 M1.8 branch `migration/winui3-full-shell-20260929` remains `eb7ee1a335484d88128bfcf117a4f857fbee4c60`, NOT yet reconciled with newer mainline UX features. Exactly two active local/remote branches and two worktrees remain; deleted older branch commits have archive refs. Six original user config hashes and the untracked original screenshot were preserved. [Current branch and proof map](../docs/development/BRANCH_AND_RELEASE_STATUS_20260929.md). Older pre-merge, local-only and dirty-worktree statements below are **HISTORICAL ONLY**. Non-96 DPI/OS HC/Narrator and actual external provider/SMB fault tests are still pending.
+
+---
+
+**2026-09-29 UI-02 SUPERSEDING INTEGRATION / SCOPED ACCEPTANCE:** The historic local UI-02 branch's separate DarkScrollbarLayer + independent popup worker conflicts with the already established shared native ModernUI Dark overlay in main, so the intended merge resolves ListCtrlEx and TreeCtrlEx in favor of the current compiled ModernUI implementation and omits the redundant old compositor/GYP additions. The old side-branch history is preserved as a merge parent rather than installing two competing overlays. ModernUI regression checks **19/19** plus new test-owned workarea/modal/foreground contracts **3/3** = **22/22 PASS**. After the physical GUI harness stopped clicking below the actual screen (tree native arrow at y783 vs work-area bottom 714), ignored borrowed Last Tabs by resetting ONLY synthetic config and physically dismissed ONLY its own Tip of the Day modal, actual owned native Light/Dark primary scrollbar GUI both PASS (tree/list H+V, thumb drag, page track); separate native Light/Dark modal-scroll GUI both PASS. Six original user setting hashes identical in every owned run. The current released-main candidate's proven Release-x64 binary remains unchanged by the UI-02 merge (only tests/docs change). See [UI-02 exact supersession and limitations](../docs/development/UI02_SUPERSEDED_MERGE_ACCEPTANCE_20260929.md). Check live Git refs to determine final publication; physical other DPI, real OS HC and Narrator NOT tested.
+
+**2026-09-29 UXH-06 POST-UXH-07 MERGE CANDIDATE ACCEPTED (ISOLATED WORKTREE):** Existing `main` revision `4507c1f` plus UXH-06 source compiled as exact Release x64 binary SHA256 `1EDC8616E732B4E5DB277773A6D57D071960B2C74B2786EB5F01DB6778AFC8EE`. Canonical x64 CI 17/0 `PASS_WITH_SKIPS` (user-profile HKCU runtime skipped), staged Korean source contract 3/3, actual 96-DPI test-owned GUI passed long full-scope preview, opt-in and persistence after restart, physical choice and clear, opt-out valid search still not recorded after restart. Original SIX user config hashes unchanged. This remains a scoped acceptance on the integration candidate until final Git refs confirm main publication; UI-02 physical tree-horizontal scrollbar checks are being assessed independently. See [UXH-06 exact merge evidence](../docs/development/UXH06_MAIN_MERGE_ACCEPTANCE_20260929.md).
+
 # PROJECT.md — flyExplorer project facts, architecture, readiness
 
 **CURRENT CROSS-BRANCH RECONCILIATION (2026-09-29):** Two active local and remote branches/worktrees only: default native `main` last independently tested code-bearing commit `f074a6b1651dae6e9a1603465078310822a8f761` and separate non-default experimental WinUI 3 `migration/winui3-full-shell-20260929` at `eb7ee1a335484d88128bfcf117a4f857fbee4c60`. Main has UXH-07 named workspaces, UXH-06 opt-in recent search scopes and shared ModernUI UI-02; its freshly rebuilt original root Release x64 native **17/0 PASS_WITH_SKIPS** (live HKCU smoke skipped), focused 25/25 and actual owned UXH-06/Dark UI-02 GUI PASS; additional isolated Light/Dark primary/modal GUI PASS. Migration's separate M1.8 paired Debug/Release, owned faults/virtual-event checks and 14/14 architecture tests remain revision-scoped; migration does **not yet incorporate** the newer mainline features or certify product parity. Old deleted branch names retain local archive refs, original six settings/user screenshot protected. Read [alignment and explicit future integration gates](../docs/development/MIGRATION_MAINLINE_ALIGNMENT_20260929.md) before the historical earlier M1.8/M1.7/dirty-UXH07 notes below.
@@ -90,9 +105,86 @@ No existing user settings, original UXH-07 branch,
 previous Phase5 branch, GitHub Actions or remote main
 were changed by this migration slice.
 
+**Historical mainline UXH-07 branch-only status retained from imported main (superseded by current M1.9 import):**
+**2026-09-29 latest local UXH-07 feature-branch publication checkpoint:** Fresh Release binary SHA256 `E3E29B6F79DE34CA57F6B0C817E0200D507911687DB4DAF90B1D56CFA077A086` from current source. Local x64 CI 17/0 PASS_WITH_SKIPS (user HKCU smoke SKIPPED), appearance/source contracts 3/3, real owned Windows 11 GUI reverified eight invalid native workspace files, two independent named presets across restart, native dark menu/scrollbars, and isolated owner-temp security. All six original user settings SHA256 unchanged. Prior “local uncommitted” status text below is a dated historical snapshot; check real Git refs for publication state. This is **not** a merge, a complete cross-DPI/HC acceptance, or a WinUI product switch. See [latest pre-push evidence](../docs/development/UXH07_PUSH_VERIFICATION_20260929.md).
+
 
 이 파일은 universal-agent-docs의 PROJECT template을 flyExplorer에 맞게 채운 Validated-profile 프로젝트 지도다.
 상세 제품 명세를 복제하지 않고 실제 Source of Truth 위치와 현재 확인된 build/runtime 사실을 기록한다.
+
+## Local 2026-09-29 native menu and legacy toolbar theme result
+
+The same uncommitted local UXH-07 branch has a scoped Korean popup,
+font-independent single submenu arrow, and native toolbar Customize
+Dark scrollbar/parent theme correction. Real isolated Windows 11 GUI
+and wheel were accepted on x64 SHA256
+C0FF584E685E7DEEF6E3844AC7F0A55E2AA541DE0235B66F1BA7859826E64E79;
+local CI 17/0 PASS_WITH_SKIPS; automatic runtime smoke and other real
+DPI/OS High Contrast/spoken reader were NOT TESTED. See
+[menu/legacy toolbar local audit](../docs/development/UI_LEGACY_MENU_TOOLBAR_AUDIT_20260929.md).
+No remote/main inclusion is implied.
+
+## Local named-workspace branch handoff (2026-09-29)
+
+LOCAL/UNMERGED `fix/uxh07-named-workspaces-20260928`
+at HEAD `7cc0b46` adds optional named workspace
+Save/Open in separate private windows. It is NOT the
+older 2026-09-28 main Last Tabs-only status described
+below and must not be treated as present in remote main.
+The latest uncommitted local Release x64 binary SHA256
+is `0873F600E45DC26BEF98948BF2B6DADBC013C1DC11633B614EED5B75BA2F091C`.
+Local CI PASS_WITH_SKIPS (official HKCU-sensitive runtime
+smoke skipped), native 17/0 and scoped actual owned
+negative, named restart, physical keyboard and orphan
+safety GUI checks PASS. The variable-width Windows
+TEMP hex-name ownership bug and restart-only test
+argv-list false failure were corrected. Complete
+evidence, remaining exclusions and exact local logs:
+[UXH-07 scoped record](../docs/development/UI_PHASE6_UXH07_NAMED_WORKSPACE_WIP_20260929.md).
+Do not infer main-branch inclusion, hosted CI, deployment,
+real other DPI or full accessibility certification.
+
+## Current reviewed handoff — 2026-09-28
+
+This flyExplorer-specific snapshot supersedes prior *status
+interpretations*, not permanent permission or vendor rules.
+Start at the [development documentation index](../docs/development/README.md)
+and [concise current status](../docs/development/CURRENT_STATUS.md).
+At this review the main baseline before a docs-only commit was
+\`f2958d70b6a2714b061bc5215ecce3a9f707d0b3\`; use
+\`git rev-parse main\` for the updated branch tip.
+
+Latest independently verified native product code commit:
+\`4f1a407cca0162080a5449f2d7772b69b3ca32c5\`.
+At actual 96 DPI, native Dark/Light list/tree scrollbars,
+popup/modal separation, native column Dark header and bounded
+newly entered non-pinned width passed scoped owned GUI checks.
+Release-x64-Unicode incremental build and native regression
+17/0 were recorded at that code revision; real
+125/150/200% DPI, High Contrast, clean-machine install and
+complete legacy dialog acceptance are NOT TESTED.
+
+Current native UX state and next priorities are in the [seven-item hands-on backlog](../docs/development/UI_UX_HANDS_ON_BACKLOG_20260928.md),
+after scoped UXH-01/02 and real 96-DPI UXH-03 acceptance;
+UXH-04 is scoped accepted (reversible native compact
+toolbars, physical J mnemonic and existing language fallback).
+UXH-05 has scoped real-GUI native MFC UIA/MSAA evidence;
+spoken reader, Tab/F6 and actual DPI/High Contrast
+remain open. UXH-06/07 existing-feature feasibility
+was reviewed with actual owned long search scope and
+multi-pane Last Tabs session restart evidence.
+No new UXH-06/07 product feature was implemented;
+see the development index.
+HANG-01 and specific
+UI-01/UI-09 original-scenario acceptance remain open.
+Separate WinUI 3 productization branch
+\`experiments/phase5-productization-20260928\`, observed HEAD
+\`7ceeab515bc90089d1220d608059d254c374a339\`,
+remains UNMERGED. Its owned PRI staging is not formal deployment;
+IME, Shell namespace, other real DPI, OS High Contrast and clean-PC
+runtime readiness are incomplete.
+The older 2026-09-24/26 statements below remain historical
+checkpoints, not newer PASS claims.
 
 **최신 실행 정책 (2026-09-24):** GitHub Actions는 기한 없이 사용자에게 개별 실행을 명확히 지시받은 경우만 허용한다. `Source Validation`, `Windows Product Build`의 수동 workflow는 준비 상태로 보존하지만 push/PR 등 자동 트리거 및 무허가 수동 dispatch는 금지한다. 9월 30일까지 예산 일시 중단이라고 적힌 아래 기존 기록은 역사적이며 최신 정책보다 우선하지 않는다. 계정 예산이나 날짜가 바뀌어도 자동 해제되지 않는다. 기본은 로컬 `local_ci.bat x64`, 미실행 hosted 검증은 `NOT TESTED`다.
 

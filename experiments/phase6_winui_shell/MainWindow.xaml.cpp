@@ -159,6 +159,7 @@ namespace winrt::FlyExplorerWinUIShell::implementation
         Refresh(nativeCoreLinked?
             L"Native Shell engine active: async STA loading; file mutations disabled":
             L"Native file-operation null contract FAILED");
+        InitializeM19();
     }
     MainWindow::~MainWindow()
     {
@@ -168,6 +169,7 @@ namespace winrt::FlyExplorerWinUIShell::implementation
         if(mSupervisor)mSupervisor->shutdown();
         if(mWatcher)mWatcher->shutdown();
         if(mShellWatcher)mShellWatcher->shutdown();
+        if(mSearchCancel)mSearchCancel->store(true);
     }
     int32_t MainWindow::MyProperty() {return 0;}
     void MainWindow::MyProperty(int32_t) {}
@@ -234,9 +236,10 @@ namespace winrt::FlyExplorerWinUIShell::implementation
             pane.filesystemPaths[pane.active]:std::wstring{};
         if(!force && route==mWatchedRoutes[side] &&
            path==mWatchedPaths[side])return;
-        if(mWatchedRoutes[side])
+        if(mWatchedRoutes[side]){
             mWatcher->unwatch(mWatchedRoutes[side]);
             mShellWatcher->unwatch(mWatchedRoutes[side]);
+        }
         mWatchedRoutes[side]=0;
         mWatchTokens[side]=0;
         mWatchedPaths[side].clear();
@@ -296,6 +299,7 @@ namespace winrt::FlyExplorerWinUIShell::implementation
                             L"Native Shell helper: isolated folder loaded");
                         UpdateWatch(side,true);
                     }else RefreshTabs(side);
+                    QueueNextWorkspaceTab(side);
                 }else if(FAILED(applied)) {
                     StatusText().Text(L"Stale Shell history result rejected");
                 }
@@ -387,6 +391,7 @@ namespace winrt::FlyExplorerWinUIShell::implementation
     bool MainWindow::OpenFolder(std::wstring const& path)
     {
         if(path.empty())return false;
+        mRestoreQueue[static_cast<size_t>(mActivePane)].clear();
         QueuePath(mActivePane,path);
         return true;
     }
@@ -476,6 +481,8 @@ namespace winrt::FlyExplorerWinUIShell::implementation
         const auto dropped=pane.routeIds[pane.active];
         mSupervisor->forget(dropped);
         mWatcher->unwatch(dropped);
+        mShellWatcher->unwatch(dropped);
+        mRestoreQueue[static_cast<size_t>(mActivePane)].clear();
         pane.tabs.erase(pane.tabs.begin()+pane.active);
         pane.routeIds.erase(pane.routeIds.begin()+pane.active);
         pane.pending.erase(pane.pending.begin()+pane.active);

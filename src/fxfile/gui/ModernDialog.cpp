@@ -49,6 +49,8 @@ END_MESSAGE_MAP()
 BOOL CModernDialog::OnInitDialog(void)
 {
     super::OnInitDialog();
+    // Close ComboBoxEx address/history popups when an owned modal opens.
+    fxfile::ui::ModernUI::dismissOwnedDropdowns(m_hWnd);
     refreshModernAppearance();
     return TRUE;
 }

@@ -1,5 +1,10 @@
 # flyExplorer full WinUI 3 UI replacement ? dedicated migration worktree
 
+**M1.9 ACTUAL IMPORT UPDATE:** The previously planned native `main` import is **already performed inside the separate migration branch**. Combined imported MFC Release x64/20 native PASS_WITH_SKIPS, new scoped preview UXH-07 workspace + UXH-06-like read-only opt-in recent search real GUI and actual MFC?WinUI workspace subset interchange passed. Original M1.8 isolated Shell helper/Job/watcher architecture preserved. Native default main remains untouched; WinUI is NOT full product parity (old full MFC multi-pane history/search file filters/regex/contents/operations/accessibility pending). [Current M1.9 evidence](WINUI3_M19_MAINLINE_FEATURE_INTEGRATION_20260929.md). Historical 'not imported' passages below are superseded.
+
+---
+
+
 Date: 2026-09-29.
 
 **CURRENT post-main-consolidation baseline (docs-only):** The latest separately tested native `main` code-bearing baseline before this docs-only sync was `f074a6b` with merged UXH-07/UXH-06 and the current native ModernUI UI-02; the separately tested migration code-bearing baseline was `eb7ee1a` (M1.8) and has **NOT** been merged/rebased against the latest main source or declared production parity. Historical old Phase5 remote/UXH-07 feature-branch and dirty-worktree descriptions below are revision-scoped. Plan and validate the future native UXH-07 named-workspace and UXH-06 privacy/recent-search contract transfer separately; do not silently promote M1.8 fault tests to an untested combined tree. [Current branch state and reconciliation plan](MIGRATION_MAINLINE_ALIGNMENT_20260929.md).

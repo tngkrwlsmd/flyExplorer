@@ -1,0 +1,34 @@
+# UI-02 resolved as a superseding merge — 2026-09-29
+
+
+**POST-MERGE UPDATE:** This superseding merge is **committed/pushed** at the last separately tested native `main` source commit `f074a6b`. The old second `DarkScrollbarLayer` remains intentionally absent; its Git merge history and local archive refs remain. The rebuilt actual root checkout passed 17/0 native, 25/25 focused source checks, owned UXH-06 and Dark UI-02 GUI; separate integrated-candidate real Light/Dark primary and modal scrollbar GUI also passed. [Current consolidated build hashes, evidence and remaining environment limitations](BRANCH_AND_RELEASE_STATUS_20260929.md).
+
+
+**Decision:** Incorporate the old UI-02 feature branch's Git history into the current UXH-06 / UXH-07 `main` lineage, but **do not install a second, competing scrollbar painter**. Retain the currently compiled/tested shared `ModernUI` implementation and add corrected owned regression coverage.
+
+## Why the old renderer was not ported verbatim
+
+The old `fix/ui02-layered-scrollbar-20260927` head `e6c3b80` diverged before the current `main` independently acquired a shared, cross-control `ModernUI` layered native scrollbar treatment. The old feature's unique additions comprised `DarkScrollbarLayer.cpp/.h` (a separate worker-owned popup layer), two GYP lines and calls in `ListCtrlEx.cpp` / `TreeCtrlEx.cpp`. The new/current renderer already has `configureDarkScrollbarOverlay`, `removeDarkScrollbarOverlay`, layered updates, modal `WH_MSGFILTER` native tracking and post-scroll hooks, and the system High Contrast bypass. Adding the old independent popup simultaneously would duplicate ownership of the same final scrollbar pixels, event lifecycle and cross-thread windows rather than provide additional proven functionality.
+
+The actual UI-02 merge had conflicts in **exactly two files**, `ListCtrlEx.cpp` and `TreeCtrlEx.cpp`. Both were intentionally resolved to their existing UXH-07/UXH-06 `main` implementation. The old branch's new `DarkScrollbarLayer` files and its build references were removed from the *merge result*, while the old branch itself remains accessible through the second parent and preserved archive refs. This is a **superseding merge**, not a claim that all code from the old feature was incorporated or that a third-party crash has been fixed.
+
+## Investigation: apparent dark and light native pointer failures
+
+The original primary-tree GUI harness intermittently claimed a tree horizontal/vertical pointer failure in **both Light and Dark**, despite unchanged native input source. Instrumentation on the actual Windows 11 monitor identified three separate *test-environment defects*:
+
+1. Hardcoding the owned main window to y=70/height=730 placed its native tree horizontal scrollbar at global y=783, **below the measured work-area bottom 714**. Mouse clicks could not hit an off-screen arrow. The new harness queries `SystemParametersInfo(SPI_GETWORKAREA)`, constrains window dimensions, and explicitly verifies the entire owned client remains within the physical work area.
+2. Copying a real user's old `fxfile-main.conf` allowed its stored Last Tabs path to override the harness's 65-folder fixture; observed screenshot showed a prior synthetic test directory instead. The harness now rewrites **only its copied private** `fxfile.conf` and `fxfile-main.conf` to select its own fixture, and waits for the actual native ListView item count of 65 before testing.
+3. An existing product feature, the Tip of the Day startup dialog, sometimes appeared as a modal over the **test-owned** file manager. The harness had previously checked visible scrollbar HWNDs underneath it while all physical pointer input was intercepted by the dialog. The corrected harness detects only the real launched process's matching native `#32770` dialog and the specific `IDC_TIP_SHOW_AT_STARTUP=1029` control. If present, it physically unchecks that dialog's checkbox and clicks **only its own** native OK button; then checks that it actually closed. It verifies the foreground window belongs to that test-owned process before further physical mouse input.
+
+Temporary diagnostic screenshots stayed exclusively in ignored local test logs and are **not staged or pushed**. The final harness does **not** capture the desktop. Its early failures were input/viewport/test-profile issues, **not** proof that Light or Dark native scrollbar input was broken.
+
+## Exact accepted native-source and actual GUI evidence
+
+- Current `main` ModernUI native-layer source/negative and cross-control coverage: **19/19 PASS** before harness hardening. With 3 added source contracts for private startup/focus/work-area safety, combined scoped tests **22/22 PASS** on the current tested product source.
+- The final corrected actual Windows 11 96-DPI synthetic-profile GUI passed **BOTH Light and Dark**: native tree vertical and horizontal pointer scroll, native list vertical and horizontal pointer scroll, visual Dark overlay present/Light absent, physical native vertical thumb drag and track page click, and normal test-owned process exit0. All original six user configuration SHA256 values remained identical in both runs.
+- Separate actual modal popup/native pointer GUI tests for **both Dark and Light** passed without the old independent renderer; modal native scrollbar position moved and both owned runs exited 0 with original six user hashes unchanged.
+- No new production C++ source or GYP file remains different from the previously **Release-x64-Unicode compiled** UXH-06 integrated main candidate, whose exact tested executable SHA256 is `1EDC8616E732B4E5DB277773A6D57D071960B2C74B2786EB5F01DB6778AFC8EE`. The prior canonical x64 native tests were **17/0 PASS WITH SKIPS** (live-profile smoke deliberately skipped). Do not claim a new compiler run occurred merely because the regression harness and merge documentation were added.
+
+Preserved locally ignored evidence (copied into original repository's `logs/merge-20260929` before temporary worktree cleanup): `ui02-light-FINAL-safe-owned-native-GUI.log`, `ui02-dark-FINAL-safe-owned-native-GUI.log`, `ui02-dark-modal-existing-modernui-real-gui.log`, `ui02-light-modal-existing-modernui-real-gui.log`, `ui02-final-modernui-plus-harness-static-contracts.log` and UXH-06 integrated Release/GUI test logs. Matching fixed source: `build/test_ui_primary_scrollbars_runtime.py` and added `build/test_ui02_owned_harness_safety_contract.py`.
+
+**Remaining honest limits:** These tests used one actual 96-DPI Windows 11 desktop. Physical 125/150/200% Windows scaling, real OS High Contrast mode and Narrator remain separate acceptance gates; private test simulation/source escape is not equivalent. The old UI-02 branch had no newly proven coverage for those conditions. The old branch's implementation is deliberately superseded; merging its parent relationship preserves its history for inspection and rollback, not a second live renderer.

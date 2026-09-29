@@ -128,6 +128,9 @@ public:
     xpr_bool_t Create(CWnd *aParentWnd, xpr_uint_t aId, const RECT &aRect);
 
 public:
+    // Temporary narrow-pane layout only; the saved global preference is
+    // not modified, and expanding the same pane restores its full panel.
+    void setCompactLayout(xpr_bool_t aCompact);
     void setContentsFolder(LPTVITEMDATA aTvItemData);
     void setContentsNormal(LPTVITEMDATA aTvItemData, xpr_bool_t aUpdate = XPR_FALSE);
     void setContentsSingleItem(LPLVITEMDATA aLvItemData, const xpr_tchar_t *aName = XPR_NULL, const xpr_tchar_t *aType = XPR_NULL, const xpr_tchar_t *aDate = XPR_NULL, const xpr_tchar_t *aSize = XPR_NULL, const xpr_tchar_t *aAttr = XPR_NULL);
@@ -163,6 +166,7 @@ protected:
     BookmarkSetWnd *mBookmarkSetWnd;
     xpr_sint_t      mBookmarkTop;
     xpr_bool_t      mEnabledBookmark;
+    xpr_bool_t      mCompactLayout;
 
     CFont          *mTitleFont;
     CFont          *mTextFont;

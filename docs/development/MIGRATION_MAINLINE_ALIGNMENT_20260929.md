@@ -1,5 +1,15 @@
 # Migration/mainline alignment - current branch snapshot (2026-09-29)
 
+**FINAL VERIFIED M1.9 ALIGNMENT** (2026-09-29): Actual latest native main source import and scoped WinUI feature implementation are COMPLETE on this independent preview branch; main remains the native default and was not altered. Final imported MFC x64 20/0 PASS_WITH_SKIPS, owned original UXH-07/UXH-06/UI-02 Dark/Light GUI PASS, WinUI Debug+Release real workspace/recent GUI PASS, independent same-source M1.9 Win32-only native 12/12 in each build, combined architecture/source 56/56 and preserved M1.8 controlled COM/timeout/watch/UNC GUI PASS. See [full actual M1.9 scoped acceptance, exact build hashes and outstanding non-parity](WINUI3_M19_MAINLINE_FEATURE_INTEGRATION_20260929.md). The previous unmerged planning paragraphs further below remain historical; genuine external provider and full MFC feature parity remain OPEN.
+
+
+## M1.9 CURRENT ACTUAL SOURCE IMPORT ? previous unmerged plan now superseded
+
+This file's historical no-merge M1.8 alignment was **implemented** as an actual two-parent source merge of latest default native `main` `3a4d27c` into independent migration `34936ee`. Combined native source Release x64 native 20/0 PASS_WITH_SKIPS, actual limited WinUI workspace and opt-in read-only search UI and MFC?WinUI workspace schema subset interchange passed, both original user configs and native main protected. [Exact M1.9 tested scope and remaining full-product migration](WINUI3_M19_MAINLINE_FEATURE_INTEGRATION_20260929.md). All older statements below that the source is not merged are historical; experimental WinUI is still not to be merged INTO default main.
+
+---
+
+
 This document updates **branch ownership and compatibility planning** only. The two source commit hashes below are last separately verified **code-bearing** baselines immediately before this documentation-only sync; documentation-only commits will advance Git tips without changing compiled source. The migration branch is NOT merged/rebased with the current native product, and this documentation-only change does NOT certify a new combined build, WinUI production replacement or a new M1.8 GUI run.
 
 ## Actual current branches and recovery refs

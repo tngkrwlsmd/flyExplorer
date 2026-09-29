@@ -290,6 +290,8 @@ protected:
     afx_msg xpr_bool_t OnEraseBkgnd(CDC *aDC);
     afx_msg void OnSize(xpr_uint_t aType, xpr_sint_t cx, xpr_sint_t cy);
     afx_msg void OnSettingChange(xpr_uint_t aFlags, const xpr_tchar_t *aSection);
+    afx_msg void OnSaveWorkspace(void);
+    afx_msg void OnOpenWorkspace(void);
     afx_msg void OnViewThemeMode(UINT aId);
     afx_msg void OnUpdateViewThemeMode(CCmdUI *aCmdUI);
     afx_msg LRESULT OnDpiChanged(WPARAM aWParam, LPARAM aLParam);
