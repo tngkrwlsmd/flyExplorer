@@ -167,7 +167,7 @@ C++ 변경에는 다음을 추가로 적용한다.
 
 **모든 UI/UX 변경은 [필수 UI/UX 디자인·구현·검증 지침](docs/development/UI_UX_DESIGN_GUIDE.md)을 먼저 적용한다.** 이 문서는 Windows 11 기본 파일 탐색기를 최종 비교 대상으로 삼고, [Microsoft Fluent Design](https://learn.microsoft.com/en-us/windows/apps/design/), [Windows UI Kit for Figma](https://learn.microsoft.com/en-us/windows/apps/design/downloads/), [WinUI 3 Gallery](https://github.com/microsoft/WinUI-Gallery)의 각 역할을 정의한다. 실제 실행한 Windows 탐색기와 동일한 OS 버전·테마·DPI·창 크기·동일/합성 폴더 조건에서 기준 화면을 수집한다.
 
-- **UI 기술 선택은 비용·품질 중심:** MFC 유지 또는 WinUI 3 전환을 의무화하지 않는다. 검증된 기존 C++ 파일 관리 기능과 사용자 설정을 보존하면서, 구현·검증·장기 유지보수 비용, Windows 11 UI 완성도, 성능, 접근성, 지원 OS, 배포 및 전환 위험을 비교하여 합리적인 구현 방식을 선택한다. 실제 판단은 [UI 기술 선택 지침](docs/development/UI_FRAMEWORK_DECISION_POLICY.md)에 따르며, 근거 없는 전체 재작성이나 기능 제거는 금지한다.
+- **OWNER-APPROVED FULL WINUI 3 UI GOAL:** Fully replace the app-owned MFC presentation with Windows App SDK WinUI 3 / C++/WinRT. The existing MFC main is a temporary stable product and regression baseline, not a competing UI destination. Reuse proven C++ services, user data schemas and isolated Shell workers. Follow [the full UI replacement directive](docs/development/WINUI3_FULL_MIGRATION_DIRECTIVE_20260929.md) and the updated [implementation gates](docs/development/UI_FRAMEWORK_DECISION_POLICY.md).
 - **화면의 최종 근거:** 공식 kit/갤러리는 디자인·컨트롤 참고 자료일 뿐 파일 탐색기 전체의 완성 도면은 아니다. 동일 조건의 실제 Explorer 화면과 flyExplorer를 비교하며, 픽셀 차이만으로 합격을 선언하지 않고 hover/pressed/selection/focus·드래그·키보드·접근성·기능 보존까지 판정한다.
 - **기능·사용자 상태 보호:** multi-pane/tab/bookmark/shortcut, native shell/menu/file operations, 기존 개인 설정 및 저장된 도구 모음·열 너비를 디자인을 이유로 숨기거나 초기화하지 않는다. System/Light/Dark, High Contrast, 국제화·DPI를 유지한다.
 - **증거와 범위:** 검증한 OS·DPI·테마·실행 바이너리 revision과 변경 전후 화면/조작 근거를 해당 UI audit에 기록한다. 시제품의 visual PASS를 제품 기능·마이그레이션 PASS로 승격하지 않는다. 사용자 승인 없는 대규모 프레임워크 전환, 자동 GitHub Actions 실행 및 개인 파일 스크린샷 커밋은 하지 않는다. 기존 [개발 효율 지침](docs/development/AGENT_EFFICIENCY.md)으로 검증 목표를 제한한다.
@@ -181,7 +181,7 @@ UI/UX 현대화 작업은 다음 원칙을 따른다.
 - dark UI는 순수 검정 한 장으로 평탄화하지 않고 Windows 11 Explorer처럼 window/surface/separator 계층이 구분되는 neutral dark palette를 사용한다. Light도 과도한 3D border와 legacy gray chrome을 줄인다.
 - UI checkpoint는 가능하면 같은 화면을 Windows 11 Explorer reference와 나란히 비교하고, command hit target, whitespace, typography, separator, selected/hover/focus contrast를 시각 evidence로 남긴다.
 - 핵심 file-manager 기능과 정보 밀도를 유지하면서 presentation layer를 현대화한다.
-- MFC를 영구 고정하거나 WinUI 3를 자동 도입하지 않는다. 현행 view/control/resource와 엔진 의존성을 파악한 뒤, 대표 화면의 격리 실험·비용 비교·기능 회귀 검증을 거쳐 필요할 때 단계적으로 전환한다.
+- **Incremental migration, complete WinUI destination:** Continue the existing independent WinUI executable using reusable native services and test each transferred screen. XAML Islands or MFC/WinUI hybrids are bounded integration or fallback experiments, not the final architecture. Do not retire MFC as default until the new full UI, accessibility, themes, DPI, file operations, deployment and rollback pass actual acceptance tests.
 - keyboard navigation, accelerator, context menu, drag/drop, multi-pane/tab workflow를 보존한다.
 - 시스템 font, DPI scaling, high-DPI icon sizing, light/dark theme, hover/focus state를 우선한다.
 - DPI-aware paint/layout fragment를 함수 간 이동하거나 새 renderer로 분리할 때 scale expression만 복사하지 말고 기준 HWND/DPI context의 선언·fallback·signedness까지 함께 점검한다. renderer는 다른 함수의 local metric context를 암묵적으로 전제하지 않는다.

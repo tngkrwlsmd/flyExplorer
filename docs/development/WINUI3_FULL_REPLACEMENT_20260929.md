@@ -1,5 +1,8 @@
 # flyExplorer full WinUI 3 UI replacement ? dedicated migration worktree
 
+**FULL WINUI 3 DECISION OVERRIDES HISTORICAL ALTERNATIVES:** The owner has committed to complete WinUI 3 app-owned presentation instead of a permanent MFC/XAML Islands hybrid. Advance the independently running M1.9 WinUI preview and native C++ engine; protect default MFC until feature parity, System/Light/Dark, high contrast, accessibility, stability, user settings and clean deployment/rollback are proved. Next: reusable full-window WinUI shell and shared state/command interface, NOT another long-lived MFC theme renderer. [Active project directive](WINUI3_FULL_MIGRATION_DIRECTIVE_20260929.md). This decision changes goals, not current code readiness.
+
+
 **M1.9 ACTUAL IMPORT UPDATE:** The previously planned native `main` import is **already performed inside the separate migration branch**. Combined imported MFC Release x64/20 native PASS_WITH_SKIPS, new scoped preview UXH-07 workspace + UXH-06-like read-only opt-in recent search real GUI and actual MFC?WinUI workspace subset interchange passed. Original M1.8 isolated Shell helper/Job/watcher architecture preserved. Native default main remains untouched; WinUI is NOT full product parity (old full MFC multi-pane history/search file filters/regex/contents/operations/accessibility pending). [Current M1.9 evidence](WINUI3_M19_MAINLINE_FEATURE_INTEGRATION_20260929.md). Historical 'not imported' passages below are superseded.
 
 ---

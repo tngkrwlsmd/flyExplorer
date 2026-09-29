@@ -17,11 +17,11 @@
 
 ## 2. 제품 현대화의 경계
 
-- **선택 원칙:** MFC는 필수 유지 대상이 아니며, WinUI 3도 필수 전환 대상이 아니다. 사용자 경험을 향상시키면서 총 개발·검증·운영·장기 유지보수 비용을 낮추는 쪽을 근거로 결정한다. 상세 의사결정 기준은 [UI 기술 선택 지침](UI_FRAMEWORK_DECISION_POLICY.md)을 따른다.
+- **Target already decided:** The owner has selected full WinUI 3 / Windows App SDK replacement for all app-owned UI. The current MFC binary is a temporary safe default and functional reference, not a permanent alternative. Preserve tested native C++ services, settings and user data. See [the full migration directive](WINUI3_FULL_MIGRATION_DIRECTIVE_20260929.md).
 - **보존할 대상:** 검증된 C++ 파일 관리 엔진과 다중 창/패널/탭, Windows Shell 연동, 컨텍스트 메뉴, 드래그 앤 드롭, 북마크, 단축키 및 사용자 데이터·설정을 보존한다. 엔진과 교체 가능한 프레젠테이션 계층의 경계를 먼저 식별한다.
-- **비교 가능한 대안:** 현행 MFC 개선, MFC/Win32와 WinUI의 점진적 혼합, WinUI 3 및 C++/WinRT 기반 UI 전환을 동등하게 검토한다. 다른 기술도 실증 가능한 비용·품질 이점이 있으면 비교할 수 있다.
+- **Compare implementation paths, not final frameworks:** Favor continuing the existing independent WinUI application with shared native C++ service contracts. An MFC XAML Island is permitted for a specifically bounded experiment if necessary; it must not become an indefinite dual-UI product. Reconsider the final technology only on a documented blocking constraint and new owner decision.
 - **작은 실험:** 결과를 예측만 하지 말고 동일한 주소/탐색/탭 흐름을 격리된 실험 브랜치에서 비교한다. 실제 개발 소요, native 기능 연결, 키보드·접근성, 테마/DPI, 성능, 설치 및 Windows 버전 호환성을 기록한다.
-- **전환 판단:** 대표 시제품과 실기 회귀 검증에서 장기적으로 유리한 영역은 기존 MFC 화면이라도 교체할 수 있다. 근거 없는 전면 재작성은 금지하며, 단계별 롤백 및 사용자 설정 마이그레이션 계획을 확보한다. 자료가 부족하면 현재 동작하는 구현을 임시 유지하고 최소 후속 검증 과제를 남긴다.
+- **Stage-gate each screen:** Continue the selected full replacement by proving native feature parity, real GUI behavior, themes, accessibility, DPI and reversibility. An unverified screen remains supported by the temporary MFC default rather than hiding the feature, rewriting tested backends or claiming WinUI production readiness.
 - **기술 혼합:** XAML Islands 등은 가능성을 자동 호환성으로 간주하지 않는다. 메시지/스레드/COM/HWND/포커스/드래그·드롭/DPI/배포 의존성을 실제 환경에서 확인한다.
 
 ## 3. 화면 설계 우선순위
