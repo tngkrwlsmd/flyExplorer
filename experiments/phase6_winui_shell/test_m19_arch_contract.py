@@ -88,14 +88,21 @@ class M19IntegrationContracts(unittest.TestCase):
    p=subprocess.run(["git",*a],cwd=root,capture_output=True,text=True,
       encoding="utf-8",errors="replace")
    return p.returncode,p.stdout.strip()
-  rc,main=git("rev-parse","main")
+  # M1.9 imported EXACT main 3a4d27c. Subsequent main cbffb48
+  # changed only documentation, so the product source ancestry is intact
+  # even though a docs-only tip is not our M1.9 merge parent.
+  original_main="3a4d27ce9de3a8b92f23c0b406fe8da195e82ec5"
+  rc,head=git("rev-parse","HEAD")
   self.assertEqual(rc,0)
-  _,head=git("rev-parse","HEAD")
-  status,_=git("merge-base","--is-ancestor",main,head)
-  if status:
-   code,merging=git("rev-parse","MERGE_HEAD")
-   self.assertEqual(code,0)
-   self.assertEqual(merging,main)
-  self.assertEqual(main,"3a4d27ce9de3a8b92f23c0b406fe8da195e82ec5")
+  code,_=git("merge-base","--is-ancestor",original_main,head)
+  self.assertEqual(code,0)
+  code,main=git("rev-parse","main")
+  self.assertEqual(code,0)
+  self.assertIn(main,(
+      original_main,"cbffb487635a94e625070d5bee9d5e6680006f12"))
+  code,files=git("diff","--name-only",original_main+".."+main)
+  self.assertEqual(code,0)
+  self.assertTrue(all(f=="AGENTS.md" or f.startswith("docs/") or
+             f==".agent-policy/PROJECT.md" for f in files.splitlines()),files)
 
 if __name__=="__main__":unittest.main()

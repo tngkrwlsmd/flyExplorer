@@ -22,8 +22,9 @@ class MigrationContracts(unittest.TestCase):
   for n in ("AddressBox","LeftTabs","RightTabs","LeftFiles","RightFiles",
             "NewTabButton","CloseTabButton","SplitButton"):
    self.assertIn('x:Name="'+n+'"',xaml)
-  self.assertIn("std::array<PaneState, 2>",header)
-  self.assertIn("pane.tabs.emplace_back();",impl)
+  self.assertIn("fxfile::explorerui::Model mModel",header)
+  self.assertIn("pane.tabs.emplace_back();",
+     (ROOT.parents[1]/"src/base/explorer_ui_state.cpp").read_text(encoding="utf-8-sig"))
   self.assertIn("OpenSelectedFolder(int side)",impl)
   self.assertIn("if (mPopulatingTabs",impl)
 
@@ -45,7 +46,7 @@ class MigrationContracts(unittest.TestCase):
   xaml=text("MainWindow.xaml")
   impl=text("MainWindow.xaml.cpp")
   build=text("build.cmd")
-  self.assertIn("Windows Shell namespace preview",xaml)
+  self.assertIn("Independent Shell workers",xaml)
   self.assertIn("file mutations disabled",impl)
   self.assertNotIn("std::filesystem::directory_iterator",impl)
   self.assertIn("QueuePidl(side,fxfile::shellnav::Location(entries[index].id)",impl)

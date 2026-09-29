@@ -1,6 +1,7 @@
 #pragma once
 #include "MainWindow.g.h"
 #include "../../src/base/shell_navigation_core.h"
+#include "../../src/base/explorer_ui_state.h"
 #include "../../src/base/shell_async_worker.h"
 #include "../../src/base/shell_isolated_supervisor.h"
 #include "../../src/base/directory_watcher.h"
@@ -34,6 +35,9 @@ namespace winrt::FlyExplorerWinUIShell::implementation
         void OnHomeClicked(IInspectable const&, Microsoft::UI::Xaml::RoutedEventArgs const&);
         void OnDocumentsClicked(IInspectable const&, Microsoft::UI::Xaml::RoutedEventArgs const&);
         void OnDownloadsClicked(IInspectable const&, Microsoft::UI::Xaml::RoutedEventArgs const&);
+        void OnThisPCClicked(IInspectable const&, Microsoft::UI::Xaml::RoutedEventArgs const&);
+        void OnThemeSelectionChanged(IInspectable const&,
+            Microsoft::UI::Xaml::Controls::SelectionChangedEventArgs const&);
         void OnLeftTabSelectionChanged(IInspectable const&,
             Microsoft::UI::Xaml::Controls::SelectionChangedEventArgs const&);
         void OnRightTabSelectionChanged(IInspectable const&,
@@ -56,16 +60,7 @@ namespace winrt::FlyExplorerWinUIShell::implementation
         void OnClearSearchRecent(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
 
     private:
-        struct PaneState {
-            std::vector<fxfile::shellnav::Session> tabs;
-            std::vector<std::uint64_t> routeIds;
-            std::vector<std::uint64_t> pending;
-            std::vector<std::wstring> filesystemPaths; // returned from child, not UI Shell calls
-            size_t active = 0;
-        };
-        std::array<PaneState, 2> mPanes;
-        int mActivePane = 0;
-        bool mSplit = true;
+        fxfile::explorerui::Model mModel;
         bool mPopulatingTabs = false;
         std::unique_ptr<fxfile::shellnav::IsolatedShellSupervisor> mSupervisor;
         std::unique_ptr<fxfile::directorychange::DirectoryWatcher> mWatcher;
@@ -79,7 +74,7 @@ namespace winrt::FlyExplorerWinUIShell::implementation
         bool mPopulatingRecents=false;
         bool mRecentEdited=false;
         void InitializeM19();
-        std::uint64_t mNextRoute=1,mNextWatchToken=1;
+        std::uint64_t mNextWatchToken=1;
         std::array<std::uint64_t,2> mWatchedRoutes{},mWatchTokens{};
         std::array<std::wstring,2> mWatchedPaths{};
         void QueuePath(int side,std::wstring path);

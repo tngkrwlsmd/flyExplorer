@@ -1,5 +1,9 @@
 # flyExplorer full WinUI 3 UI replacement ? dedicated migration worktree
 
+**M2.0 FULL-WINDOW NATIVE MODEL CHECKPOINT:**
+The actual independent WinUI full-window now consumes the native C++ pane/tab command model, with a WinUI header, System/Light/Dark and This PC. Paired Debug and Release x64 builds, each native state 16/16 and real owned normal GUI passed; source checks 64/64. Remaining native advanced feature parity, physical DPI, accessibility and clean installer are still OPEN. [M2.0 scoped implementation and evidence](WINUI3_M20_FULL_WINDOW_NATIVE_COMMAND_MODEL_20260929.md). Older M1.9 status below is historical.
+
+
 **FULL WINUI 3 DECISION OVERRIDES HISTORICAL ALTERNATIVES:** The owner has committed to complete WinUI 3 app-owned presentation instead of a permanent MFC/XAML Islands hybrid. Advance the independently running M1.9 WinUI preview and native C++ engine; protect default MFC until feature parity, System/Light/Dark, high contrast, accessibility, stability, user settings and clean deployment/rollback are proved. Next: reusable full-window WinUI shell and shared state/command interface, NOT another long-lived MFC theme renderer. [Active project directive](WINUI3_FULL_MIGRATION_DIRECTIVE_20260929.md). This decision changes goals, not current code readiness.
 
 

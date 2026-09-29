@@ -373,6 +373,10 @@ try:
           ownedwindows=ownedwindows,
           left=left,right=right,inner=inner,
           owned=owned,localdata=localdata,env=env,exe=EXE)
+ if os.environ.get("FLY_M20_OWNED_SHELL")=="YES":
+  from test_m20_shell_gui import run as m20_run
+  m20_run(win=win,element=element,safe_click=safe_click,
+          focus=ensure_owned_focus,eventually=eventually,owned=owned)
  safe_click(element("PrimaryPaneTitle"))
  rect=win.rectangle()
  assert rect.width()>400 and rect.height()>260

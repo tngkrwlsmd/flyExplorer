@@ -4,8 +4,10 @@
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     Title="flyExplorer - WinUI 3 migration preview">
-    <Grid Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
+    <Grid x:Name="RootShell"
+          Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
         <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
@@ -13,7 +15,44 @@
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <Grid Grid.Row="0" Padding="14,12,14,10" ColumnSpacing="8">
+        <!-- Own full-window WinUI shell, not an MFC/XAML Island. -->
+        <Grid Grid.Row="0" Padding="16,8,16,8" ColumnSpacing="12"
+              Background="{ThemeResource LayerFillColorDefaultBrush}">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+            <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="10"
+                        VerticalAlignment="Center">
+                <TextBlock x:Name="ShellHeading" Text="flyExplorer"
+                           FontSize="21" FontWeight="SemiBold"
+                           VerticalAlignment="Center"
+                           AutomationProperties.Name="WinUI flyExplorer main shell"/>
+                <Border CornerRadius="6" Padding="8,3"
+                        Background="{ThemeResource AccentFillColorSecondaryBrush}"
+                        VerticalAlignment="Center">
+                    <TextBlock Text="WINUI 3" FontSize="11"
+                               FontWeight="SemiBold"/>
+                </Border>
+                <TextBlock Text="Migration preview"
+                           VerticalAlignment="Center" Opacity="0.7"/>
+            </StackPanel>
+            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="9"
+                        VerticalAlignment="Center">
+                <TextBlock x:Name="ThemeStateText" Text="Theme: System"
+                           VerticalAlignment="Center"
+                           AutomationProperties.Name="Current WinUI theme"/>
+                <ComboBox x:Name="ThemePicker" Width="115" Header=""
+                          SelectedIndex="0"
+                          SelectionChanged="OnThemeSelectionChanged"
+                          AutomationProperties.Name="WinUI application theme">
+                    <ComboBoxItem Content="System"/>
+                    <ComboBoxItem Content="Light"/>
+                    <ComboBoxItem Content="Dark"/>
+                </ComboBox>
+            </StackPanel>
+        </Grid>
+        <Grid Grid.Row="1" Padding="14,8,14,8" ColumnSpacing="8">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="Auto"/>
                 <ColumnDefinition Width="*"/>
@@ -40,7 +79,7 @@
             </StackPanel>
         </Grid>
 
-        <StackPanel Grid.Row="1" x:Name="WorkspacePanel" Visibility="Collapsed"
+        <StackPanel Grid.Row="2" x:Name="WorkspacePanel" Visibility="Collapsed"
                     Orientation="Horizontal" Spacing="7" Padding="14,3,14,6">
             <TextBlock Text="Named workspace:" VerticalAlignment="Center"/>
             <TextBox x:Name="WorkspaceFileBox" Width="355"
@@ -53,7 +92,7 @@
             <TextBlock Text="Never overwrites an existing file"
                        Opacity="0.65" VerticalAlignment="Center"/>
         </StackPanel>
-        <StackPanel Grid.Row="2" x:Name="SearchPanel" Visibility="Collapsed"
+        <StackPanel Grid.Row="3" x:Name="SearchPanel" Visibility="Collapsed"
                     Spacing="5" Padding="14,3,14,5">
             <StackPanel Orientation="Horizontal" Spacing="7">
                 <TextBox x:Name="SearchScopeBox" Width="315"
@@ -87,7 +126,7 @@
             <ListView x:Name="SearchMatches" Height="94"
                       AutomationProperties.Name="Matching file paths"/>
         </StackPanel>
-        <Grid Grid.Row="3" Padding="10,0,10,0" ColumnSpacing="9">
+        <Grid Grid.Row="4" Padding="10,0,10,0" ColumnSpacing="9">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="185"/>
                 <ColumnDefinition Width="*"/>
@@ -104,7 +143,10 @@
                             HorizontalContentAlignment="Left" Click="OnDocumentsClicked"/>
                     <Button x:Name="DownloadsButton" Content="Downloads" HorizontalAlignment="Stretch"
                             HorizontalContentAlignment="Left" Click="OnDownloadsClicked"/>
-                    <TextBlock Text="Windows Shell namespace preview"
+                    <Button x:Name="ThisPCButton" Content="This PC" HorizontalAlignment="Stretch"
+                            HorizontalContentAlignment="Left" Click="OnThisPCClicked"
+                            AutomationProperties.Name="Navigate to This PC"/>
+                    <TextBlock Text="Independent Shell workers ? file changes"
                                TextWrapping="Wrap" Opacity="0.60" FontSize="12" Margin="6,14,6,0"/>
                 </StackPanel>
             </Border>
@@ -146,7 +188,7 @@
                           AutomationProperties.Name="Right folder contents"/>
             </Grid>
         </Grid>
-        <Grid Grid.Row="4" Padding="14,8,14,10" ColumnSpacing="8">
+        <Grid Grid.Row="5" Padding="14,8,14,10" ColumnSpacing="8">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="Auto"/>
                 <ColumnDefinition Width="*"/>

@@ -1,5 +1,8 @@
 # flyExplorer development documentation index
 
+**CURRENT M2.0:** [Independent WinUI full-window main-shell and shared native command/state boundary](WINUI3_M20_FULL_WINDOW_NATIVE_COMMAND_MODEL_20260929.md). Previous M1.9 notes and neutral technology studies below are historical.
+
+
 **CURRENT OWNER-APPROVED UI DIRECTIVE:** [Full WinUI 3 product destination, protected native C++ reuse, temporary MFC fallback, stepwise delivery and release gates](WINUI3_FULL_MIGRATION_DIRECTIVE_20260929.md). Older framework-neutral comparisons are historical; use this decision to prioritize subsequent UI work.
 
 **CURRENT ACTUAL M1.9 SOURCE IMPORT:** [Latest native main merged into separate WinUI with bounded workspace/search interoperability and exact limits](WINUI3_M19_MAINLINE_FEATURE_INTEGRATION_20260929.md). Prior M1.8 no-import plans below remain historical. Native default main is unchanged.

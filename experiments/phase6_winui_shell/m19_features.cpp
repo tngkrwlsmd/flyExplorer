@@ -85,7 +85,7 @@ void MainWindow::ApplyWorkspace(fxfile::preview::Workspace&& doc) {
     // Validated off-thread BEFORE replacing any live pane. On this child
     // instance only: never mutate a different WinUI or MFC window.
     for(int side=0;side!=2;++side){
-        for(auto route:mPanes[side].routeIds){
+        for(auto route:mModel.panes[side].routeIds){
             mSupervisor->forget(route);
             mWatcher->unwatch(route);
             mShellWatcher->unwatch(route);
@@ -93,40 +93,38 @@ void MainWindow::ApplyWorkspace(fxfile::preview::Workspace&& doc) {
         mRestoreQueue[side].clear();
         mWatchedRoutes[side]=mWatchTokens[side]=0;
         mWatchedPaths[side].clear();
-        mPanes[side]=PaneState{};
     }
-    mSplit=doc.split;
-    mActivePane=0;
-    SecondaryPane().Visibility(mSplit?Visibility::Visible:Visibility::Collapsed);
-    PaneDivider().Visibility(mSplit?Visibility::Visible:Visibility::Collapsed);
-    SecondaryColumn().Width(mSplit?
+    std::array<size_t,2> counts{{doc.paths[0].size(),
+                                 doc.split?doc.paths[1].size():1}};
+    std::array<size_t,2> selected{{doc.selected[0],
+                                   doc.split?doc.selected[1]:0}};
+    if(!mModel.reset(doc.split,counts,selected)){
+        StatusText().Text(L"Unsupported named workspace layout.");
+        return;
+    }
+    SecondaryPane().Visibility(mModel.split?Visibility::Visible:Visibility::Collapsed);
+    PaneDivider().Visibility(mModel.split?Visibility::Visible:Visibility::Collapsed);
+    SecondaryColumn().Width(mModel.split?
         GridLength{1.0,GridUnitType::Star}:GridLength{0.0,GridUnitType::Pixel});
     SplitButton().Content(box_value(hstring(
-        mSplit?L"Single pane":L"Split panes")));
+        mModel.split?L"Single pane":L"Split panes")));
     for(int side=0;side!=2;++side){
-        const auto& paths=(!mSplit && side==1)?
+        const auto& paths=(!mModel.split && side==1)?
             doc.paths[0]:doc.paths[side];
-        auto& pane=mPanes[side];
-        const size_t count=(!mSplit&&side==1)?1:paths.size();
-        for(size_t i=0;i<count;++i){
-            pane.tabs.emplace_back();
-            pane.routeIds.push_back(mNextRoute++);
-            pane.pending.push_back(0);
-            pane.filesystemPaths.emplace_back();
-        }
-        pane.active=(!mSplit&&side==1)?0:doc.selected[side];
+        auto& pane=mModel.panes[side];
+        const size_t count=pane.tabs.size();
         for(size_t i=0;i<count;++i){
             if(i==pane.active)continue;
             mRestoreQueue[side].emplace_back(i,paths[i]);
         }
-        const std::wstring initial=(!mSplit&&side==1)?
+        const std::wstring initial=(!mModel.split&&side==1)?
             paths[doc.selected[0]]:paths[pane.active];
         QueuePath(side,initial); // nonblocking, same supervised lane
     }
     Refresh(L"Restoring validated named workspace in this isolated window");
 }
 void MainWindow::QueueNextWorkspaceTab(int side) {
-    auto& pane=mPanes[side];
+    auto& pane=mModel.panes[side];
     auto& tasks=mRestoreQueue[side];
     if(std::any_of(pane.pending.begin(),pane.pending.end(),
                    [](std::uint64_t x){return x!=0;}))return;
@@ -137,7 +135,7 @@ void MainWindow::QueueNextWorkspaceTab(int side) {
         const auto id=mSupervisor->submitParsing(
             side,pane.routeIds[next.first],next.second);
         if(id) {
-            pane.pending[next.first]=id;
+            mModel.markPending(side,next.first,id,false);
             RefreshTabs(side);
             return;
         }
@@ -146,9 +144,9 @@ void MainWindow::QueueNextWorkspaceTab(int side) {
 bool MainWindow::WorkspaceModel(
     fxfile::preview::Workspace& target,std::wstring& reason) const {
     target=fxfile::preview::Workspace{};
-    target.split=mSplit;
-    for(int side=0;side<(mSplit?2:1);++side){
-        auto const& pane=mPanes[side];
+    target.split=mModel.split;
+    for(int side=0;side<(mModel.split?2:1);++side){
+        auto const& pane=mModel.panes[side];
         if(pane.tabs.empty()||pane.tabs.size()>32 ||
            pane.active>=pane.tabs.size()) {
             reason=L"Unsupported tab layout.";return false;
@@ -288,7 +286,7 @@ void MainWindow::OnToggleSearch(
     WorkspacePanel().Visibility(Visibility::Collapsed);
     SearchPanel().Visibility(next);
     if(next==Visibility::Visible){
-        auto& pane=mPanes[static_cast<size_t>(mActivePane)];
+        auto& pane=mModel.panes[static_cast<size_t>(mModel.activePane)];
         auto const& path=pane.filesystemPaths[pane.active];
         if(!path.empty())SearchScopeBox().Text(hstring(path));
         StatusText().Text(L"Read-only bounded filename search; remembering is opt-in");

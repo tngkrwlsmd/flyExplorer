@@ -135,11 +135,7 @@ namespace winrt::FlyExplorerWinUIShell::implementation
         }
 #endif
         for(int side=0;side!=2;++side) {
-            auto& pane=mPanes[side];
-            pane.tabs.emplace_back();
-            pane.routeIds.push_back(mNextRoute++);
-            pane.pending.push_back(0);
-            pane.filesystemPaths.emplace_back();
+            auto& pane=mModel.panes[side];
 #if defined(_DEBUG)
             if(side==0 && testLeftDelay){
                 pane.pending[0]=mSupervisor->submitOwnedTestDelay(
@@ -175,7 +171,7 @@ namespace winrt::FlyExplorerWinUIShell::implementation
     void MainWindow::MyProperty(int32_t) {}
     fxfile::shellnav::Session& MainWindow::Current()
     {
-        auto& pane=mPanes[static_cast<size_t>(mActivePane)];
+        auto& pane=mModel.panes[static_cast<size_t>(mModel.activePane)];
         return pane.tabs.at(pane.active);
     }
     std::filesystem::path MainWindow::HomePath() const
@@ -188,7 +184,7 @@ namespace winrt::FlyExplorerWinUIShell::implementation
     }
     void MainWindow::QueuePath(int side,std::wstring path)
     {
-        auto& pane=mPanes[side];
+        auto& pane=mModel.panes[side];
         const auto route=pane.routeIds[pane.active];
         std::uint64_t id=0;
 #if defined(_DEBUG)
@@ -202,8 +198,7 @@ namespace winrt::FlyExplorerWinUIShell::implementation
         if(id) {
             // At most one outstanding helper operation per active pane.
             // Clear the canceled prior tab's UI pending marker too.
-            for(auto& previous:pane.pending)previous=0;
-            pane.pending[pane.active]=id;
+            mModel.markPending(side,pane.active,id,true);
             StatusText().Text(L"Native Shell engine active: async STA loading");
         } else StatusText().Text(L"Shell worker could not queue location");
     }
@@ -215,24 +210,23 @@ namespace winrt::FlyExplorerWinUIShell::implementation
             StatusText().Text(L"No Shell location for this command");
             return;
         }
-        auto& pane=mPanes[side];
+        auto& pane=mModel.panes[side];
         const auto id=mSupervisor->submit(
             side,pane.routeIds[pane.active],std::move(target),action);
         if(id) {
             // At most one outstanding helper operation per active pane.
             // Clear the canceled prior tab's UI pending marker too.
-            for(auto& previous:pane.pending)previous=0;
-            pane.pending[pane.active]=id;
+            mModel.markPending(side,pane.active,id,true);
             StatusText().Text(L"Native Shell engine active: async STA loading");
         } else StatusText().Text(L"Shell worker could not queue request");
     }
     void MainWindow::UpdateWatch(int side,bool force)
     {
-        auto& pane=mPanes[side];
+        auto& pane=mModel.panes[side];
         const auto route=pane.routeIds[pane.active];
         // This path is computed by the disposable Shell helper and passed
         // as a bounded wire value. No SHGetPathFromIDListEx on WinUI STA.
-        const std::wstring path=(side==0 || mSplit)?
+        const std::wstring path=(side==0 || mModel.split)?
             pane.filesystemPaths[pane.active]:std::wstring{};
         if(!force && route==mWatchedRoutes[side] &&
            path==mWatchedPaths[side])return;
@@ -258,11 +252,12 @@ namespace winrt::FlyExplorerWinUIShell::implementation
     void MainWindow::OnNativeResult(fxfile::shellnav::IsolatedResult result)
     {
         for(int side=0;side!=2;++side) {
-            auto& pane=mPanes[side];
+            auto& pane=mModel.panes[side];
             for(size_t i=0;i<pane.routeIds.size();++i) {
                 if(pane.routeIds[i]!=result.route ||
                    pane.pending[i]!=result.request)continue;
-                pane.pending[i]=0;
+                if(!mModel.completeRequest(side,i,result.route,
+                                           result.request))continue;
                 if(FAILED(result.hr)) {
                     if(i==pane.active) {
                         if(result.timedOut)
@@ -312,7 +307,7 @@ namespace winrt::FlyExplorerWinUIShell::implementation
         for(int side=0;side!=2;++side) {
             if(route!=mWatchedRoutes[side] ||
                token!=mWatchTokens[side])continue;
-            auto& pane=mPanes[side];
+            auto& pane=mModel.panes[side];
             if(pane.routeIds[pane.active]!=route ||
                pane.pending[pane.active])return;
             QueuePidl(side,pane.tabs[pane.active].target(
@@ -324,7 +319,7 @@ namespace winrt::FlyExplorerWinUIShell::implementation
     void MainWindow::RefreshTabs(int side)
     {
         auto view=side==0?LeftTabs():RightTabs();
-        const auto& pane=mPanes[static_cast<size_t>(side)];
+        const auto& pane=mModel.panes[static_cast<size_t>(side)];
         mPopulatingTabs=true;
         view.TabItems().Clear();
         for (const auto& tab : pane.tabs) {
@@ -342,7 +337,7 @@ namespace winrt::FlyExplorerWinUIShell::implementation
     {
         auto view=side==0?LeftFiles():RightFiles();
         view.Items().Clear();
-        const auto& pane=mPanes[static_cast<size_t>(side)];
+        const auto& pane=mModel.panes[static_cast<size_t>(side)];
         const auto& items=pane.tabs[pane.active].snapshot().children;
         // Keep each ListViewItem's Tag as the index into the owning
         // per-tab Shell snapshot. Opening folders uses its FULL PIDL,
@@ -374,14 +369,14 @@ namespace winrt::FlyExplorerWinUIShell::implementation
         FillFiles(1);
         auto& nav=Current();
         AddressBox().Text(hstring(nav.snapshot().parsingName));
-        BackButton().IsEnabled(nav.canBack() && !mPanes[mActivePane].pending[mPanes[mActivePane].active]);
-        ForwardButton().IsEnabled(nav.canForward() && !mPanes[mActivePane].pending[mPanes[mActivePane].active]);
+        BackButton().IsEnabled(nav.canBack() && !mModel.panes[mModel.activePane].pending[mModel.panes[mModel.activePane].active]);
+        ForwardButton().IsEnabled(nav.canForward() && !mModel.panes[mModel.activePane].pending[mModel.panes[mModel.activePane].active]);
         UpButton().IsEnabled(nav.snapshot().folder.valid() && !ILIsEmpty(nav.snapshot().folder.get()));
-        ActivePaneText().Text(mActivePane==0?L"Active: Left":L"Active: Right");
+        ActivePaneText().Text(mModel.activePane==0?L"Active: Left":L"Active: Right");
         PrimaryPaneTitle().Content(winrt::box_value(
-            hstring(mActivePane==0?L"Left pane (active)":L"Left pane")));
+            hstring(mModel.activePane==0?L"Left pane (active)":L"Left pane")));
         SecondaryPaneTitle().Content(winrt::box_value(
-            hstring(mActivePane==1?L"Right pane (active)":L"Right pane")));
+            hstring(mModel.activePane==1?L"Right pane (active)":L"Right pane")));
         StatusText().Text(status);
         Title(L"flyExplorer - WinUI 3 migration preview - "+
             hstring(nav.snapshot().displayName));
@@ -391,18 +386,18 @@ namespace winrt::FlyExplorerWinUIShell::implementation
     bool MainWindow::OpenFolder(std::wstring const& path)
     {
         if(path.empty())return false;
-        mRestoreQueue[static_cast<size_t>(mActivePane)].clear();
-        QueuePath(mActivePane,path);
+        mRestoreQueue[static_cast<size_t>(mModel.activePane)].clear();
+        QueuePath(mModel.activePane,path);
         return true;
     }
     void MainWindow::ActivatePane(int side)
     {
-        if (side==1 && !mSplit) return;
-        mActivePane=side;
+        if(!mModel.dispatch(fxfile::explorerui::Command::ActivatePane,side)
+                    .accepted)return;
         const auto& nav=Current();
         AddressBox().Text(hstring(nav.snapshot().parsingName));
-        BackButton().IsEnabled(nav.canBack() && !mPanes[mActivePane].pending[mPanes[mActivePane].active]);
-        ForwardButton().IsEnabled(nav.canForward() && !mPanes[mActivePane].pending[mPanes[mActivePane].active]);
+        BackButton().IsEnabled(nav.canBack() && !mModel.panes[mModel.activePane].pending[mModel.panes[mModel.activePane].active]);
+        ForwardButton().IsEnabled(nav.canForward() && !mModel.panes[mModel.activePane].pending[mModel.panes[mModel.activePane].active]);
         UpButton().IsEnabled(nav.snapshot().folder.valid() && !ILIsEmpty(nav.snapshot().folder.get()));
         ActivePaneText().Text(side==0?L"Active: Left":L"Active: Right");
         PrimaryPaneTitle().Content(winrt::box_value(
@@ -417,7 +412,7 @@ namespace winrt::FlyExplorerWinUIShell::implementation
         if(!Current().canBack()) {
             StatusText().Text(L"No previous folder in this tab");return;
         }
-        QueuePidl(mActivePane,Current().target(
+        QueuePidl(mModel.activePane,Current().target(
             fxfile::shellnav::HistoryAction::Back),
             fxfile::shellnav::NavigationAction::Back);
     }
@@ -426,13 +421,13 @@ namespace winrt::FlyExplorerWinUIShell::implementation
         if(!Current().canForward()) {
             StatusText().Text(L"No next folder in this tab");return;
         }
-        QueuePidl(mActivePane,Current().target(
+        QueuePidl(mModel.activePane,Current().target(
             fxfile::shellnav::HistoryAction::Forward),
             fxfile::shellnav::NavigationAction::Forward);
     }
     void MainWindow::OnUpClicked(IInspectable const&,RoutedEventArgs const&)
     {
-        QueuePidl(mActivePane,Current().target(
+        QueuePidl(mModel.activePane,Current().target(
             fxfile::shellnav::HistoryAction::Up),
             fxfile::shellnav::NavigationAction::Up);
     }
@@ -451,7 +446,7 @@ namespace winrt::FlyExplorerWinUIShell::implementation
     }
     void MainWindow::OnNewTabClicked(IInspectable const&,RoutedEventArgs const&)
     {
-        auto& pane=mPanes[static_cast<size_t>(mActivePane)];
+        auto& pane=mModel.panes[static_cast<size_t>(mModel.activePane)];
         if (pane.tabs.size()>=32) {
             StatusText().Text(L"Maximum of 32 tabs per pane in preview");
             return;
@@ -462,45 +457,39 @@ namespace winrt::FlyExplorerWinUIShell::implementation
             StatusText().Text(L"Wait for the initial Shell folder first");
             return;
         }
-        pane.tabs.emplace_back();
-        pane.routeIds.push_back(mNextRoute++);
-        pane.pending.push_back(0);
-        pane.filesystemPaths.emplace_back();
-        pane.active=pane.tabs.size()-1;
-        QueuePidl(mActivePane,std::move(start),
+        if(!mModel.dispatch(fxfile::explorerui::Command::AddTab,
+                            mModel.activePane).accepted)return;
+        QueuePidl(mModel.activePane,std::move(start),
                   fxfile::shellnav::NavigationAction::Open);
         Refresh(L"Native Shell engine active: new tab loading asynchronously");
     }
     void MainWindow::OnCloseTabClicked(IInspectable const&,RoutedEventArgs const&)
     {
-        auto& pane=mPanes[static_cast<size_t>(mActivePane)];
+        auto& pane=mModel.panes[static_cast<size_t>(mModel.activePane)];
         if (pane.tabs.size()<=1) {
             StatusText().Text(L"Keep at least one tab in each pane");
             return;
         }
-        const auto dropped=pane.routeIds[pane.active];
-        mSupervisor->forget(dropped);
-        mWatcher->unwatch(dropped);
-        mShellWatcher->unwatch(dropped);
-        mRestoreQueue[static_cast<size_t>(mActivePane)].clear();
-        pane.tabs.erase(pane.tabs.begin()+pane.active);
-        pane.routeIds.erase(pane.routeIds.begin()+pane.active);
-        pane.pending.erase(pane.pending.begin()+pane.active);
-        pane.filesystemPaths.erase(pane.filesystemPaths.begin()+pane.active);
-        if (pane.active>=pane.tabs.size())pane.active=pane.tabs.size()-1;
+        const auto change=mModel.dispatch(
+            fxfile::explorerui::Command::CloseTab,mModel.activePane);
+        if(!change.accepted)return;
+        mSupervisor->forget(change.releasedRoute);
+        mWatcher->unwatch(change.releasedRoute);
+        mShellWatcher->unwatch(change.releasedRoute);
+        mRestoreQueue[static_cast<size_t>(mModel.activePane)].clear();
         Refresh(L"Tab closed");
     }
     void MainWindow::OnSplitClicked(IInspectable const&,RoutedEventArgs const&)
     {
-        mSplit=!mSplit;
-        if (!mSplit)mActivePane=0;
-        SecondaryPane().Visibility(mSplit?Visibility::Visible:Visibility::Collapsed);
-        PaneDivider().Visibility(mSplit?Visibility::Visible:Visibility::Collapsed);
-        SecondaryColumn().Width(mSplit?
+        if(!mModel.dispatch(fxfile::explorerui::Command::ToggleSplit)
+                  .accepted)return;
+        SecondaryPane().Visibility(mModel.split?Visibility::Visible:Visibility::Collapsed);
+        PaneDivider().Visibility(mModel.split?Visibility::Visible:Visibility::Collapsed);
+        SecondaryColumn().Width(mModel.split?
             GridLength{1.0,GridUnitType::Star}:GridLength{0.0,GridUnitType::Pixel});
         SplitButton().Content(winrt::box_value(
-            hstring(mSplit?L"Single pane":L"Split panes")));
-        Refresh(mSplit?L"Two independent panes":L"Single pane; other state retained");
+            hstring(mModel.split?L"Single pane":L"Split panes")));
+        Refresh(mModel.split?L"Two independent panes":L"Single pane; other state retained");
     }
     void MainWindow::OnActivateLeft(IInspectable const&,RoutedEventArgs const&)
     {
@@ -529,25 +518,25 @@ namespace winrt::FlyExplorerWinUIShell::implementation
     {
         auto view=sender.as<TabView>();
         if (mPopulatingTabs || view.SelectedIndex()<0) return;
-        auto& pane=mPanes[0];
+        auto& pane=mModel.panes[0];
         if (static_cast<size_t>(view.SelectedIndex())>=pane.tabs.size())return;
         // WinUI raises deferred SelectionChanged for programmatic strip
         // rebuilds. Only a DIFFERENT selected tab is user navigation.
         if (static_cast<size_t>(view.SelectedIndex())==pane.active)return;
-        pane.active=static_cast<size_t>(view.SelectedIndex());
-        mActivePane=0;
+        if(!mModel.dispatch(fxfile::explorerui::Command::SelectTab,0,
+                 static_cast<size_t>(view.SelectedIndex())).accepted)return;
         Refresh(L"Left tab selected");
     }
     void MainWindow::OnRightTabSelectionChanged(
         IInspectable const& sender,SelectionChangedEventArgs const&)
     {
         auto view=sender.as<TabView>();
-        if (mPopulatingTabs || view.SelectedIndex()<0 || !mSplit)return;
-        auto& pane=mPanes[1];
+        if (mPopulatingTabs || view.SelectedIndex()<0 || !mModel.split)return;
+        auto& pane=mModel.panes[1];
         if (static_cast<size_t>(view.SelectedIndex())>=pane.tabs.size())return;
         if (static_cast<size_t>(view.SelectedIndex())==pane.active)return;
-        pane.active=static_cast<size_t>(view.SelectedIndex());
-        mActivePane=1;
+        if(!mModel.dispatch(fxfile::explorerui::Command::SelectTab,1,
+                 static_cast<size_t>(view.SelectedIndex())).accepted)return;
         Refresh(L"Right tab selected");
     }
     void MainWindow::OpenSelectedFolder(int side)

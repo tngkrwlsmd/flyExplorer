@@ -1,5 +1,8 @@
 # flyExplorer — current project status (2026-09-28 baseline; 2026-09-29 migration-branch addendum)
 
+**M2.0 LATEST VERIFIED SCOPE:** Experimental WinUI native full-window main header, runtime System/Light/Dark and This PC, plus real `src/base/explorer_ui_state` pane/tab/route/request/command owner are compiled and verified in Debug. Owned actual Debug final theme pixels, split, tabs, virtual PIDL and Back PASS; independent native Debug 16/16 and combined source 64/64 PASS. Exact compiled Release x64 native 16/16, full Release real owned M1.9+M2.0 GUI and renewed M1.8 controlled COM/notification/two-timeout owned GUI also PASS; protected native `main` remains unchanged. [Exact scope and evidence](WINUI3_M20_FULL_WINDOW_NATIVE_COMMAND_MODEL_20260929.md).
+
+
 **OWNER-DECIDED FULL WINUI 3 PRODUCT GOAL:** All app-owned presentation is targeted for Windows App SDK WinUI 3 replacement with existing proven C++ core and isolated Shell workers. MFC is a temporary product/default and fallback until full functional, visual/theme, accessibility, data, install and rollback acceptance passes. A permanent MFC-hosted hybrid is not the target; older neutral comparisons and historical tests below do not override this decision. [Binding product UI directive](WINUI3_FULL_MIGRATION_DIRECTIVE_20260929.md). Last separately accepted code baselines at this decision: native main 3a4d27c and WinUI M1.9 e84741a. This documentation edit is NOT a new build or product release.
 
 
