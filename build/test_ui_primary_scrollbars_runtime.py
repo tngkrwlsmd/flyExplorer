@@ -25,6 +25,22 @@ for key in ("config.global_hotkey.enable","config.global_hotkey.show_tray",
 (conf/"fxfile.conf").write_bytes(settings.encode(enc))
 fixture=own/"fixture";fixture.mkdir()
 for n in range(65):(fixture/("owned-scrolling-folder-%03d" % n)).mkdir()
+# A borrowed real-user main.conf may contain Last Tabs paths from a different
+# session. Overwrite ONLY the copied PRIVATE profile with our exact synthetic
+# fixture, so this GUI test never navigates the user's previous directories.
+settings=(conf/"fxfile.conf").read_bytes().decode(enc)
+for key,value in (("config.view1.file_list.init_folder","3"),
+                  ("config.view2.file_list.init_folder","3")):
+ settings,count=re.subn(r"(?m)^(\s*"+re.escape(key)+r"\s*=\s*)[^\r\n]*",
+        lambda m:m.group(1)+value,settings)
+ if not count:
+  assert "[config]" in settings
+  settings=settings.replace("[config]","[config]\n"+key+" = "+value,1)
+(conf/"fxfile.conf").write_bytes(settings.encode(enc))
+(conf/"fxfile-main.conf").write_text("\n".join(("[main]",
+ "main.view.row_count = 1","main.view.column_count = 1",
+ "main.view1.current_tab = 0",
+ "main.view1.tab1.path = "+str(fixture),"")),encoding="utf-16")
 (own/"appdata").mkdir()
 u=c.windll.user32
 class RECT(c.Structure):
@@ -95,13 +111,84 @@ try:
  # At 96 DPI the test-owned main frame is resized to exercise post-layout
  # overlay coordinates; no system-wide DPI or display settings are changed.
  u.ShowWindow(main,9)
- assert u.SetWindowPos(main,0,65,70,980,730,0x0004),"owned window resize failed"
+ # Win32 can report a scrollbar "visible" when the lower edge of an owned
+ # main window extends BELOW the physical monitor work area. Previously
+ # the test clicked tree scrollbar y=783 on a desktop ending above that.
+ work=RECT()
+ u.SystemParametersInfoW.argtypes=(w.UINT,w.UINT,c.POINTER(RECT),w.UINT)
+ u.SystemParametersInfoW.restype=w.BOOL
+ assert u.SystemParametersInfoW(0x30,0,c.byref(work),0),"work area unavailable"
+ width=min(980,work.right-work.left-36)
+ height=min(680,work.bottom-work.top-45)
+ assert width>700 and height>460,("real desktop too small",width,height)
+ x=work.left+18;y=work.top+20
+ assert u.SetWindowPos(main,0,x,y,width,height,0x0004),"owned window resize failed"
  time.sleep(.45)
  assert rect(main)[2]-rect(main)[0] <= 1010
+ assert rect(main)[3] <= work.bottom-5,("owned native scroll control offscreen",
+     rect(main),work.bottom)
+ print("OWNED_MAIN_FITS_MONITOR_WORKAREA",(x,y,width,height),
+       "WORKAREA_BOTTOM",work.bottom,flush=True)
+ # Wait for the fixture's actual native list population BEFORE testing tree
+ # arrows, so a delayed startup restore does not re-layout a control mid-click.
+ lv=ctrls["SysListView32"]
+ count=0
+ for _ in range(105):
+  count=int(u.SendMessageW(lv,0x1004,0,0))
+  if count>=55:break
+  time.sleep(.1)
+ assert count>=55,("owned private fixture not selected",count,str(fixture))
+ print("PRIVATE_SYNTHETIC_SCOPED_LIST_ENTRIES",count,flush=True)
+ # Another *owned* top-level popup, Tip of the Day, is enabled by some
+ # copied profiles. If present it is MODAL and silently eats all scrollbar
+ # pointer input even while the underlying HWND/scrollbar reports VISIBLE.
+ # Dismiss only a dialog belonging to this exact test-owned process.
+ u.GetDlgItem.argtypes=(w.HWND,c.c_int)
+ u.GetDlgItem.restype=w.HWND
+ tip=next((h for h in all_windows(proc.pid)
+           if h!=main and klass(h)=="#32770" and u.GetDlgItem(h,1029)),0)
+ if tip:
+  check=u.GetDlgItem(tip,1029)
+  u.SetForegroundWindow.argtypes=(w.HWND,)
+  u.SetForegroundWindow(tip)
+  time.sleep(.12)
+  if u.SendMessageW(check,0xF0,0,0):
+   cb=rect(check)
+   mouse.click(coords=((cb[0]+cb[2])//2,(cb[1]+cb[3])//2))
+   time.sleep(.12)
+   assert u.SendMessageW(check,0xF0,0,0)==0
+  ok=u.GetDlgItem(tip,1)
+  assert ok,"owned Tip modal has no native OK button"
+  rr=rect(ok)
+  mouse.click(coords=((rr[0]+rr[2])//2,(rr[1]+rr[3])//2))
+  for _ in range(20):
+   if not u.IsWindow(tip):break
+   time.sleep(.1)
+  assert not u.IsWindow(tip),"test-owned startup modal failed to close"
+  print("OWNED_STARTUP_TIP_MODAL_PHYSICALLY_DISMISSED",True,flush=True)
+ # Never attempt native scrollbar physical input into an unfocused preview.
+ u.SetForegroundWindow.argtypes=(w.HWND,)
+ u.SetForegroundWindow.restype=w.BOOL
+ u.GetForegroundWindow.restype=w.HWND
+ u.SetForegroundWindow(main)
+ time.sleep(.18)
+ if pid(u.GetForegroundWindow())!=proc.pid:
+  window_rect=rect(main)
+  mouse.click(coords=((window_rect[0]+window_rect[2])//2,
+                       window_rect[1]+13))
+  time.sleep(.25)
+ assert pid(u.GetForegroundWindow())==proc.pid,(
+     "owned application has no foreground desktop for physical input")
  for name,hwnd in ctrls.items():
   assert u.IsWindow(hwnd) and u.IsWindowVisible(hwnd),name
   if name=="SysListView32":
-   assert u.SendMessageW(hwnd,0x1004,0,0)>=55,"owned synthetic entries not loaded"
+   # Actual directory population is asynchronous after process startup.
+   count=0
+   for _ in range(80):
+    count=int(u.SendMessageW(hwnd,0x1004,0,0))
+    if count>=55:break
+    time.sleep(.12)
+   assert count>=55,("owned synthetic fixture did not load",count,str(fixture))
   for bar,object_id,orient in ((1,-5,"VERT"),(0,-6,"HORZ")):
    si=SI();si.size=c.sizeof(SI)
    got=bool(u.GetScrollBarInfo(hwnd,object_id,c.byref(si)))

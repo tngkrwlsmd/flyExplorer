@@ -1,5 +1,8 @@
 # flyExplorer development documentation index
 
+**UI-02 branch-resolution evidence:** [Current ModernUI replaces obsolete dual-renderer branch; actual Light/Dark native controls, drag and modal GUI accepted](UI02_SUPERSEDED_MERGE_ACCEPTANCE_20260929.md). Corrected test-owned desktop clipping, old Last Tabs and a modal startup tip without modifying the real user profile.
+
+
 **Latest scoped legacy MFC integration:** [UXH-06 saved/recent search scopes ? real owned GUI and merged Release x64 acceptance](UXH06_MAIN_MERGE_ACCEPTANCE_20260929.md). Includes explicit opt-in persistence and opt-out privacy after restart; separate legacy scrollbar GUI work is reviewed independently.
 
 
