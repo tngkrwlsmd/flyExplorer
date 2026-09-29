@@ -260,7 +260,7 @@ xpr_bool_t WinApp::InitInstance(void)
     // Only exact, owner-marked temporary dirs that are at least 24 h
     // old and NOT locked by a live child are eligible for orphan reaping.
     workspace_session::reapStale();
-    if (sConfDirToLoad.empty() == true)
+    if (sConfDirToLoad.empty())
         sConfDir.load();
 
     // load options from file or load default option if configuration file does not exist

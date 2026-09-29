@@ -1171,9 +1171,9 @@ def validate_popup_menu_contract() -> list[str]:
         "getPopupShortcutGap",
         "MFT_RADIOCHECK",
         "drawSubmenuChevron",
-        "Segoe Fluent Icons",
-        "HasSegoeFluentIcons",
-        "0xE970",
+        "COLOR_HIGHLIGHTTEXT",
+        "scaleForWindow(5, sMetricHwnd)",
+        "scaleForWindow(2, sMetricHwnd)",
         "CPen sPen",
         "DrawState(",
         "DST_ICON | DSS_MONO",
@@ -1181,6 +1181,18 @@ def validate_popup_menu_contract() -> list[str]:
     ):
         if token not in modern_draw:
             errors.append(f"src/fxfile/gui/BCMenu.cpp: missing modern popup rendering token {token}")
+
+    chevron_start = modern_draw.find("void BCMenu::drawSubmenuChevron(")
+    chevron_end = modern_draw.find("void BCMenu::drawText(", chevron_start)
+    chevron = (
+        modern_draw[chevron_start:chevron_end]
+        if chevron_start >= 0 and chevron_end > chevron_start
+        else ""
+    )
+    if chevron.count("aDC->LineTo(") != 2 or "Segoe Fluent Icons" in chevron:
+        errors.append(
+            "src/fxfile/gui/BCMenu.cpp: submenu glyph must be a font-independent single two-stroke chevron"
+        )
 
     for legacy_token in ("DrawHorzGradient(", "DrawVertGradient(", "DrawEdge("):
         if legacy_token in modern_draw:

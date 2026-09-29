@@ -1,4 +1,9 @@
-# flyExplorer — current development state (2026-09-28)
+# flyExplorer — current development state (2026-09-29 feature-branch checkpoint; 2026-09-28 main review)
+
+## Latest: UXH-07 branch publication verification (2026-09-29)
+
+The older “LOCAL ONLY / UNCOMMITTED” evidence below describes its original prepublication test snapshot. The actual freshly rebuilt local Release-x64-Unicode binary at this checkpoint was `E3E29B6F79DE34CA57F6B0C817E0200D507911687DB4DAF90B1D56CFA077A086`. Current local CI 17/0 PASS_WITH_SKIPS; new owned Windows GUI reverified eight invalid workspace warnings, two distinct named preset restorations after a normal restart, native Korean menu and dark scrollbar physical-wheel behavior, and isolated orphan protection. Original six user settings SHA256 hashes stayed identical across the tests. This is feature-branch evidence only, not merge/release or all-DPI/HC certification. See [exact revalidation and ignored log paths](UXH07_PUSH_VERIFICATION_20260929.md). Check live Git refs for the actual remote branch state.
+
 
 > Reviewed baseline: local and remote main
 > cd96de0bc8fba13a7cfeee4e5f9da9a6dc30c7c5, before
@@ -11,6 +16,84 @@
 > 767-line status is [archived unchanged](CURRENT_STATUS_HISTORY_20260928.md).
 
 ## 1. Latest state, constraints and next work
+
+### Local 2026-09-29 Korean menu, submenu arrow and native toolbar Dark UI: SCOPED PASS
+
+LOCAL uncommitted branch only, not remote main. Canonical Korean Workspaces
+menu/Save/Open translation placeholders fixed; owner-drawn submenu arrows
+now use one high-contrast, larger, font-independent DPI-scaled chevron.
+Native toolbar Customize (outside normal ModernDialog inheritance) now
+enrolls both ListBoxes in the shared dark-scrollbar compositor and draws
+parent/static/buttons with the common palette. Final x64 binary SHA256:
+C0FF584E685E7DEEF6E3844AC7F0A55E2AA541DE0235B66F1BA7859826E64E79.
+Local x64 CI exit 0, native 17/0, overall PASS_WITH_SKIPS (official runtime
+smoke skipped due to existing HKCU state). Separate focused contract 3/3.
+Two owned actual Windows 11 GUI runs verified corrected Korean submenu,
+visible single arrows and both dark ListBox scrollbars; real mouse wheel
+moved native LB_GETTOPINDEX 0 to 9. All six original config hashes remained
+identical. Wider source audit inventoried 24 direct CWnd/CDialog bases but
+does NOT claim they are all defective. Actual other DPI, OS High Contrast,
+speech-reader and all other context/overflow menus remain NOT TESTED.
+[Detailed local evidence and remaining audit](UI_LEGACY_MENU_TOOLBAR_AUDIT_20260929.md).
+
+
+### Local UXH-07 named workspaces: scoped final acceptance (2026-09-29)
+
+**LOCAL ONLY, UNMERGED, UNCOMMITTED:** branch
+`fix/uxh07-named-workspaces-20260928` at HEAD `7cc0b46`
+(branch base `main` tracking ref `463f6ffd`). The 2026-09-28
+main review further below remains a HISTORICAL main-baseline
+description, not this local named-workspace implementation.
+Canonical detailed evidence:
+[UXH-07 local named-workspace record](UI_PHASE6_UXH07_NAMED_WORKSPACE_WIP_20260929.md).
+
+Final compiled and tested Release-x64-Unicode binary SHA256:
+`0873F600E45DC26BEF98948BF2B6DADBC013C1DC11633B614EED5B75BA2F091C`.
+One local `local_ci.bat x64` rebuilt the product, passed the
+warning policy, source preflight, and native functional
+17 passed / 0 failed; exit code 0, overall PASS_WITH_SKIPS.
+The automatic runtime smoke SKIPPED to preserve existing
+user HKCU/profile data; it is NOT a runtime-smoke PASS.
+Only the remote command process received its missing
+`ProgramFiles(x86)` and `TMP` environment variables;
+no persistent machine setting was changed.
+
+On that exact executable, owned Windows 11 GUI testing PASSED:
+eight malformed native file-dialog rejections;
+real keyboard menu Save/Open and a separate accepted
+physical-pointer submenu Save/Open repeat (top-level
+View opened with Alt+V), both named snapshots with
+different 1x2/2/1-tab layouts; full normal parent
+exit/restart, preserved Last Tabs, and reopening BOTH
+named files into distinct private child windows; and
+private 3-hex stale orphan reclamation with 4-hex locked
+live marker and reparse/junction external sentinel protection.
+All accepted tests preserved the six original user config
+SHA256 hashes and owned processes exited 0.
+
+Two previously open causes are now distinguished:
+(a) real intermittent owner-dir refusal arose because
+GetTempFileName sometimes yields 3-hex names but the
+safety guard assumed EXACTLY four; validation/reaping now
+accept strictly 1-4 hexadecimal digits with the same marker,
+reparse, age and allowlist safety; (b) apparent failure
+only after restart was a Python test defect checking
+`"fxw" in argv` (argv is a list of full arguments).
+The corrected test reads the exact `--conf_dir` argument
+and passed against the final binary. Temporary product
+diagnostic hooks were removed before final rebuild.
+
+Artifact `bin/x64/build-revision.txt` records `7cc0b46`,
+the current local HEAD, but source/document changes are
+uncommitted; the marker alone is NOT an exact committed
+source-content ID. Do not merge/push until a separate
+review and revision-aligned checkpoint are authorized.
+Full mouse-only top-level menu navigation, other real DPI,
+OS High Contrast, spoken screen-reader acceptance, hosted
+CI, clean-machine package/installer remain outside this
+scoped verification and are NOT TESTED. UXH-06/WinUI 3
+independent branches were not modified; GitHub Actions
+were not run.
 
 **UXH-05 residual direct UIA actions (2026-09-28):**
 An isolated 96-DPI external client physically invoked

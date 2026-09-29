@@ -121,37 +121,6 @@ BOOL BCMenu::mAnimationMenu     = FALSE;
 
 namespace
 {
-int CALLBACK DetectSegoeFluentIcons(
-    const LOGFONTW *,
-    const TEXTMETRICW *,
-    DWORD,
-    LPARAM aFound)
-{
-    BOOL *sFound = reinterpret_cast<BOOL *>(aFound);
-    if (sFound != XPR_NULL)
-        *sFound = TRUE;
-    return 0;
-}
-
-xpr_bool_t HasSegoeFluentIcons(HDC aDC)
-{
-    if (XPR_IS_NULL(aDC))
-        return XPR_FALSE;
-
-    LOGFONTW sLogFont = {0};
-    sLogFont.lfCharSet = DEFAULT_CHARSET;
-    wcscpy_s(sLogFont.lfFaceName, L"Segoe Fluent Icons");
-
-    BOOL sFound = FALSE;
-    ::EnumFontFamiliesExW(
-        aDC,
-        &sLogFont,
-        reinterpret_cast<FONTENUMPROCW>(DetectSegoeFluentIcons),
-        reinterpret_cast<LPARAM>(&sFound),
-        0);
-    return sFound != FALSE ? XPR_TRUE : XPR_FALSE;
-}
-
 // MENUINFO is a documented API: cap each app-owned popup/submenu to the
 // monitor work area so Windows supplies native menu scrolling on small
 // displays. In Dark mode the client background uses the same palette as
@@ -1433,60 +1402,34 @@ void BCMenu::drawSubmenuChevron(
 
     const fxfile::ui::ThemePalette sPalette =
         fxfile::ui::ModernUI::getPalette();
+    // One legible native '>' at any DPI, independent of installed
+    // icon fonts. Keep the existing 20-DIP submenu gutter and hit area.
+    const bool sHighContrast = XPR_IS_TRUE(sPalette.mHighContrast);
     const COLORREF sColor =
         (aItemState & ODS_GRAYED) ?
-        sPalette.mSecondaryText :
-        ((aItemState & ODS_SELECTED) ?
-            sPalette.mText :
-            sPalette.mSecondaryText);
+            (sHighContrast ? ::GetSysColor(COLOR_GRAYTEXT) :
+                             sPalette.mSecondaryText) :
+        (sHighContrast ?
+            ::GetSysColor((aItemState & ODS_SELECTED) ?
+                          COLOR_HIGHLIGHTTEXT : COLOR_MENUTEXT) :
+            sPalette.mText);
 
     const xpr_sint_t sTrailingWidth =
         fxfile::ui::ModernUI::scaleForWindow(20, sMetricHwnd);
     CRect sGlyphRect(aItemRect);
-    sGlyphRect.left = max(sGlyphRect.left, sGlyphRect.right - sTrailingWidth);
-
-    if (XPR_IS_TRUE(HasSegoeFluentIcons(aDC->m_hDC)))
-    {
-        LOGFONTW sLogFont = {0};
-        sLogFont.lfHeight =
-            -fxfile::ui::ModernUI::scaleForWindow(12, sMetricHwnd);
-        sLogFont.lfWeight = FW_NORMAL;
-        sLogFont.lfCharSet = DEFAULT_CHARSET;
-        wcscpy_s(sLogFont.lfFaceName, L"Segoe Fluent Icons");
-
-        HFONT sFont = ::CreateFontIndirectW(&sLogFont);
-        if (XPR_IS_NOT_NULL(sFont))
-        {
-            HGDIOBJ sOldFont = ::SelectObject(aDC->m_hDC, sFont);
-            const int sOldMode = ::SetBkMode(aDC->m_hDC, TRANSPARENT);
-            const COLORREF sOldColor = ::SetTextColor(aDC->m_hDC, sColor);
-            const wchar_t sChevron[] = { 0xE970, L'\0' };
-            ::DrawTextW(
-                aDC->m_hDC,
-                sChevron,
-                -1,
-                &sGlyphRect,
-                DT_CENTER | DT_VCENTER | DT_SINGLELINE | DT_NOPREFIX);
-            ::SetTextColor(aDC->m_hDC, sOldColor);
-            ::SetBkMode(aDC->m_hDC, sOldMode);
-            ::SelectObject(aDC->m_hDC, sOldFont);
-            ::DeleteObject(sFont);
-            return;
-        }
-    }
-
-    const xpr_sint_t sHalfHeight =
-        max(2, fxfile::ui::ModernUI::scaleForWindow(3, sMetricHwnd));
-    const xpr_sint_t sHalfWidth =
-        max(1, fxfile::ui::ModernUI::scaleForWindow(2, sMetricHwnd));
+    sGlyphRect.left = max(sGlyphRect.left,
+                           sGlyphRect.right - sTrailingWidth);
+    const xpr_sint_t sHalfHeight = max(
+        4, fxfile::ui::ModernUI::scaleForWindow(5, sMetricHwnd));
+    const xpr_sint_t sHalfWidth = max(
+        3, fxfile::ui::ModernUI::scaleForWindow(3, sMetricHwnd));
     const xpr_sint_t sCenterX =
         (sGlyphRect.left + sGlyphRect.right) / 2;
     const xpr_sint_t sCenterY =
         (sGlyphRect.top + sGlyphRect.bottom) / 2;
-
     CPen sPen(
         PS_SOLID,
-        max(1, fxfile::ui::ModernUI::scaleForWindow(1, sMetricHwnd)),
+        max(2, fxfile::ui::ModernUI::scaleForWindow(2, sMetricHwnd)),
         sColor);
     CPen *sOldPen = aDC->SelectObject(&sPen);
     aDC->MoveTo(sCenterX - sHalfWidth, sCenterY - sHalfHeight);

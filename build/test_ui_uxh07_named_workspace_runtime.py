@@ -321,10 +321,13 @@ try:
     ("bad-row",new_row.encode("utf-16")),
     ("missing-tab",missing_tab.encode("utf-16")),
     ("missing-folder",missing_folder.encode("utf-16")),
-    ("oversize",b"x"*1048577)]
-   print("SIX_INVALID_FIXTURES_CHECKED_BEFORE_GUI=True",flush=True)
+    ("oversize",b"x"*1048577),
+    ("truncated",base.encode("utf-16")[:23]),
+    ("wrong-extension",base.encode("utf-16"))]
+   print("INVALID_FIXTURES_CHECKED_BEFORE_GUI",len(malformed),flush=True)
    for name,blob in malformed:
-    path=home/("bad-"+name+".fxworkspace")
+    suffix=".txt" if name=="wrong-extension" else ".fxworkspace"
+    path=home/("bad-"+name+suffix)
     path.write_bytes(blob)
     assert u.PostMessageW(main,0x111,33053,0)
     opened=dialog(p.pid,main,"invalid "+name)
@@ -397,8 +400,8 @@ try:
     assert not unexpected,("invalid fixture spawned a real app child",name,
                            unexpected)
     assert child is None
-   print("SIX_INVALID_WORKSPACE_FILES_REJECTED_BY_REAL_NATIVE_DIALOGS=True",
-         flush=True)
+   print("INVALID_WORKSPACE_FILES_REJECTED_BY_REAL_NATIVE_DIALOGS",
+         len(malformed),flush=True)
   print("WORKSPACE_REAL_NATIVE_SAVE_OPEN_DIALOGS_COMPLETE=True",flush=True)
   if "--multiple" in sys.argv:
    if childmain and u.IsWindow(childmain):u.PostMessageW(childmain,0x10,0,0)
@@ -479,6 +482,111 @@ try:
    assert sorted(len(q) for q in result)==[1,2],result
    assert tabs(main)==later,"second workspace replaced original window"
    print("SECOND_NAMED_WORKSPACE_GUI_RESTORED_DIFFERENT_2_1_TABS=True",flush=True)
+   if "--restart" in sys.argv:
+    # Close both original owned windows normally, then reuse the
+    # SAME private conf directory in a different real parent process.
+    assert u.PostMessageW(childmain,0x10,0,0)
+    assert child.wait(timeout=14)==0
+    assert_child_cleaned(owned_child_dirs[-1])
+    child=None;childmain=0
+    assert u.PostMessageW(main,0x10,0,0)
+    assert p.wait(timeout=14)==0
+    p=subprocess.Popen([str(R/"bin/x64/fxfile.exe"),"--conf_dir",str(conf)],
+      cwd=home,env={**os.environ,"APPDATA":str(appdata)},
+      stdin=subprocess.DEVNULL,stdout=subprocess.DEVNULL,
+      stderr=subprocess.DEVNULL)
+    main=frame(p.pid);u.ShowWindow(main,9)
+    restored_parent=[]
+    for _ in range(65):
+     restored_parent=tabs(main)
+     if sorted(len(q) for q in restored_parent)==[1,2]:break
+     time.sleep(.12)
+    assert sorted(len(q) for q in restored_parent)==[1,2],(
+      "original Last Tabs session was not restored after parent restart",
+      restored_parent)
+    for path,expected in ((workspace,(1,1)),(second,(1,2))):
+     assert u.PostMessageW(main,0x111,33053,0)
+     op=dialog(p.pid,main,"restarted Open")
+     edits=[x for x in Desktop(backend="uia").window(handle=op).descendants()
+        if x.is_visible() and x.element_info.control_type=="Edit"
+        and x.element_info.name.strip().endswith(":")]
+     assert len(edits)==1
+     edits[0].set_edit_text(str(path));edits[0].set_focus()
+     actual_input=edits[0].iface_value.CurrentValue
+     assert path.is_file() and path.stat().st_size>0
+     print("RESTART_NATIVE_FILE_INPUT",
+           path.name,"EXACT",actual_input==str(path),
+           "BYTES",path.stat().st_size,flush=True)
+     assert actual_input==str(path),(
+       "real file name edit differs from test-owned snapshot",
+       actual_input,str(path))
+     if u.GetForegroundWindow()!=op:
+      bounds=edits[0].rectangle()
+      mouse.click(coords=((bounds.left+bounds.right)//2,
+                          (bounds.top+bounds.bottom)//2))
+     assert u.GetForegroundWindow()==op,(
+       "restarted native file dialog is not foreground; refuse blind Enter",
+       path.name,u.GetForegroundWindow(),op)
+     print("RESTARTED_DIALOG_FOREGROUND_CONFIRMED",path.name,flush=True)
+     open_buttons=[x for x in Desktop(backend="uia").window(handle=op).descendants()
+        if x.element_info.control_type=="Button" and x.is_visible()
+        and x.is_enabled() and x.element_info.automation_id=="1"]
+     assert len(open_buttons)==1,(
+       "test-owned native Open button not uniquely identified",
+       [(x.element_info.name.encode("ascii","backslashreplace").decode(),
+         x.element_info.automation_id)
+        for x in Desktop(backend="uia").window(handle=op).descendants()
+        if x.element_info.control_type=="Button" and x.is_visible()])
+     open_buttons[0].click_input()
+     print("RESTART_NATIVE_OPEN_BUTTON_PHYSICAL_CLICK",path.name,flush=True)
+     child=None
+     for _ in range(95):
+      possible=[]
+      for q in psutil.process_iter(["name"]):
+       try:
+        if (q.info["name"] or "").lower()=="fxfile.exe" and q.ppid()==p.pid:
+         argv=q.cmdline()
+         if "--conf_dir" not in argv:continue
+         private=Path(argv[argv.index("--conf_dir")+1])
+         if re.fullmatch(r"fxw[0-9a-fA-F]{1,4}\.tmp",private.name,re.I):
+          possible.append(q)
+       except (psutil.NoSuchProcess,psutil.AccessDenied):pass
+      if len(possible)==1:child=possible[0];break
+      time.sleep(.12)
+     if child is None:
+      dialogs=[]
+      for h in en(p.pid,True):
+       if cls(h)!="#32770" or not u.IsWindowVisible(h):continue
+       try:
+        labels=[x.element_info.name.encode("ascii","backslashreplace").decode()
+           for x in Desktop(backend="uia").window(handle=h).descendants()
+           if x.element_info.control_type=="Text"]
+       except Exception:labels=[]
+       dialogs.append((title(h).encode("ascii","backslashreplace").decode(),
+                       labels[:6]))
+      print("RESTARTED_PARENT_OPEN_DIAGNOSTIC",path.name,dialogs,
+            "NATIVE_DIALOG_VISIBLE",bool(u.IsWindowVisible(op)),
+            "NATIVE_DIALOG_FOREGROUND",u.GetForegroundWindow()==op,
+            "PARENT_EXIT",p.poll(),flush=True)
+
+     assert child,("restarted parent could not open named workspace",path.name)
+     check_child_isolation(child)
+     childmain=frame(child.pid)
+     actual=[]
+     for _ in range(70):
+      actual=tabs(childmain)
+      if sorted(len(q) for q in actual)==sorted(expected):break
+      time.sleep(.12)
+     assert sorted(len(q) for q in actual)==sorted(expected),(
+       "reopened workspace tab layout mismatch",path.name,actual)
+     assert tabs(main)==restored_parent,(
+       "named workspace replaced the restarted Last Tabs session",path.name)
+     assert u.PostMessageW(childmain,0x10,0,0)
+     assert child.wait(timeout=14)==0
+     assert_child_cleaned(owned_child_dirs[-1])
+     child=None;childmain=0
+    print("PARENT_NORMAL_RESTART_BOTH_NAMED_WORKSPACES_AND_LAST_TABS_PRESERVED=True",
+          flush=True)
 finally:
  if p:
   for q in psutil.process_iter(["name"]):

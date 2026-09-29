@@ -1,7 +1,42 @@
 # PROJECT.md — flyExplorer project facts, architecture, readiness
 
+**2026-09-29 latest local UXH-07 feature-branch publication checkpoint:** Fresh Release binary SHA256 `E3E29B6F79DE34CA57F6B0C817E0200D507911687DB4DAF90B1D56CFA077A086` from current source. Local x64 CI 17/0 PASS_WITH_SKIPS (user HKCU smoke SKIPPED), appearance/source contracts 3/3, real owned Windows 11 GUI reverified eight invalid native workspace files, two independent named presets across restart, native dark menu/scrollbars, and isolated owner-temp security. All six original user settings SHA256 unchanged. Prior “local uncommitted” status text below is a dated historical snapshot; check real Git refs for publication state. This is **not** a merge, a complete cross-DPI/HC acceptance, or a WinUI product switch. See [latest pre-push evidence](../docs/development/UXH07_PUSH_VERIFICATION_20260929.md).
+
+
 이 파일은 universal-agent-docs의 PROJECT template을 flyExplorer에 맞게 채운 Validated-profile 프로젝트 지도다.
 상세 제품 명세를 복제하지 않고 실제 Source of Truth 위치와 현재 확인된 build/runtime 사실을 기록한다.
+
+## Local 2026-09-29 native menu and legacy toolbar theme result
+
+The same uncommitted local UXH-07 branch has a scoped Korean popup,
+font-independent single submenu arrow, and native toolbar Customize
+Dark scrollbar/parent theme correction. Real isolated Windows 11 GUI
+and wheel were accepted on x64 SHA256
+C0FF584E685E7DEEF6E3844AC7F0A55E2AA541DE0235B66F1BA7859826E64E79;
+local CI 17/0 PASS_WITH_SKIPS; automatic runtime smoke and other real
+DPI/OS High Contrast/spoken reader were NOT TESTED. See
+[menu/legacy toolbar local audit](../docs/development/UI_LEGACY_MENU_TOOLBAR_AUDIT_20260929.md).
+No remote/main inclusion is implied.
+
+## Local named-workspace branch handoff (2026-09-29)
+
+LOCAL/UNMERGED `fix/uxh07-named-workspaces-20260928`
+at HEAD `7cc0b46` adds optional named workspace
+Save/Open in separate private windows. It is NOT the
+older 2026-09-28 main Last Tabs-only status described
+below and must not be treated as present in remote main.
+The latest uncommitted local Release x64 binary SHA256
+is `0873F600E45DC26BEF98948BF2B6DADBC013C1DC11633B614EED5B75BA2F091C`.
+Local CI PASS_WITH_SKIPS (official HKCU-sensitive runtime
+smoke skipped), native 17/0 and scoped actual owned
+negative, named restart, physical keyboard and orphan
+safety GUI checks PASS. The variable-width Windows
+TEMP hex-name ownership bug and restart-only test
+argv-list false failure were corrected. Complete
+evidence, remaining exclusions and exact local logs:
+[UXH-07 scoped record](../docs/development/UI_PHASE6_UXH07_NAMED_WORKSPACE_WIP_20260929.md).
+Do not infer main-branch inclusion, hosted CI, deployment,
+real other DPI or full accessibility certification.
 
 ## Current reviewed handoff — 2026-09-28
 

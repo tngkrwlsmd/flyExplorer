@@ -10,26 +10,54 @@ inline const char *magic() { return "flyExplorer-ephemeral-workspace-v1\n"; }
 inline CString path(LPCTSTR dir, LPCTSTR file) {
     CString result(dir); result += _T("\\"); result += file; return result;
 }
-inline bool ownedDir(LPCTSTR dir) {
-    if (!dir || !*dir) return false;
+inline bool ownedDir(LPCTSTR dir, DWORD *reason = NULL) {
+    if (reason) *reason=0;
+    if (!dir || !*dir) {
+        if (reason) *reason=11;
+        return false;
+    }
     TCHAR temp[MAX_PATH] = {0};
     DWORD n = ::GetTempPath(_countof(temp), temp);
-    if (!n || n >= _countof(temp)) return false;
+    if (!n || n >= _countof(temp)) {
+        if (reason) *reason=12;
+        return false;
+    }
     size_t root = _tcslen(temp);
-    if (_tcsnicmp(dir, temp, root)) return false;
+    if (_tcsnicmp(dir, temp, root)) {
+        if (reason) *reason=13;
+        return false;
+    }
     LPCTSTR leaf = dir + root;
-    if (_tcslen(leaf) != 11 || _tcsnicmp(leaf,_T("fxw"),3) ||
-        _tcsicmp(leaf+7,_T(".tmp"))) return false;
-    for (int i=3; i<7; ++i) {
+    // GetTempFileName may emit 1-4 hexadecimal digits without zero
+    // padding (observed fxw18F.tmp as well as fxw8B8E.tmp).
+    // Keep an exact owned prefix, 1-4 hex digits and .tmp suffix.
+    const size_t leafLength=_tcslen(leaf);
+    if (leafLength<8 || leafLength>11 ||
+        _tcsnicmp(leaf,_T("fxw"),3) ||
+        _tcsicmp(leaf+leafLength-4,_T(".tmp"))) {
+        if (reason) *reason=14;
+        return false;
+    }
+    for (size_t i=3; i<leafLength-4; ++i) {
         TCHAR c=leaf[i];
         if (!((c>=_T('0') && c<=_T('9')) ||
               (c>=_T('a') && c<=_T('f')) ||
-              (c>=_T('A') && c<=_T('F')))) return false;
+              (c>=_T('A') && c<=_T('F')))) {
+            if (reason) *reason=15;
+            return false;
+        }
     }
     DWORD attrs=::GetFileAttributes(dir);
-    return attrs!=INVALID_FILE_ATTRIBUTES &&
-           (attrs & FILE_ATTRIBUTE_DIRECTORY) &&
-           !(attrs & FILE_ATTRIBUTE_REPARSE_POINT);
+    if (attrs==INVALID_FILE_ATTRIBUTES) {
+        if (reason) *reason=16;
+        return false;
+    }
+    if (!(attrs & FILE_ATTRIBUTE_DIRECTORY) ||
+        (attrs & FILE_ATTRIBUTE_REPARSE_POINT)) {
+        if (reason) *reason=17;
+        return false;
+    }
+    return true;
 }
 inline bool allowedFile(LPCTSTR name) {
     static const TCHAR *allowed[] = {
@@ -67,8 +95,9 @@ inline HANDLE lockMarker(LPCTSTR dir) {
 }
 inline bool writeMarker(LPCTSTR dir, DWORD *reason = NULL) {
     if (reason) *reason=0;
-    if (!ownedDir(dir)) {
-        if (reason) *reason=1; // exact temp directory ownership check
+    DWORD ownershipReason=0;
+    if (!ownedDir(dir,&ownershipReason)) {
+        if (reason) *reason=ownershipReason;
         return false;
     }
     CString file=path(dir,marker());
@@ -136,7 +165,9 @@ inline void reapStale() {
     TCHAR temp[MAX_PATH]={0};
     DWORD n=::GetTempPath(_countof(temp),temp);
     if (!n || n>=_countof(temp)) return;
-    CString pattern(temp);pattern+=_T("fxw????.tmp");
+    // Enumerate variable-width GetTempFileName names, then require
+    // ownedDir, exact marker bytes, safe contents and stale unlocked age.
+    CString pattern(temp);pattern+=_T("fxw*.tmp");
     WIN32_FIND_DATA data={0};
     HANDLE finder=::FindFirstFile(pattern,&data);
     if (finder==INVALID_HANDLE_VALUE) return;

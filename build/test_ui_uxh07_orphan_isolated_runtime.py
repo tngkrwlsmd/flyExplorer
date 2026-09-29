@@ -37,9 +37,10 @@ p.write_bytes(t.encode(encoding))
  "main.view.row_count = 1\nmain.view.column_count = 1\n",
  encoding="utf-16")
 MARKER=b"flyExplorer-ephemeral-workspace-v1\n"
-def dname():
+def dname(digits=4):
+ assert 1<=digits<=4
  for _ in range(100):
-  result=temp/("fxw"+secrets.token_hex(2).upper()+".tmp")
+  result=temp/("fxw"+secrets.token_hex(2).upper()[-digits:]+".tmp")
   if not result.exists():
    result.mkdir()
    return result
@@ -49,8 +50,10 @@ def stage(path):
  (path/"fxfile.conf").write_text("test-owned-synthetic-only\n",encoding="utf-8")
  os.utime(path/"fxfile-workspace-owned.marker",
           (time.time()-72*3600,time.time()-72*3600))
-stale=dname();stage(stale)
-locked=dname();stage(locked)
+# Prove variable-width native temporary names are also recovered:
+# 3-hex stale marker, 4-hex live marker, both exclusively test-owned.
+stale=dname(3);stage(stale)
+locked=dname(4);stage(locked)
 # Verify locked marker cannot be acquired a second time by the app.
 kernel=c.windll.kernel32
 kernel.CreateFileW.argtypes=(w.LPCWSTR,w.DWORD,w.DWORD,c.c_void_p,
@@ -140,7 +143,7 @@ finally:
   linkpath.rmdir()
  for x in (locked,stale):
   if x.exists():
-   assert x.parent==temp and re.fullmatch("fxw[0-9A-Fa-f]{4}[.]tmp",x.name)
+   assert x.parent==temp and re.fullmatch("fxw[0-9A-Fa-f]{1,4}[.]tmp",x.name)
    shutil.rmtree(x)
  assert all(hashlib.sha256((original/n).read_bytes()).digest()==hashes[n]
             for n in six)

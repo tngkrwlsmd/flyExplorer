@@ -19,6 +19,16 @@
 
 ## 2. Native MFC UI, visual review and regression evidence
 
+- [UXH-07 branch publication revalidation (2026-09-29)](UXH07_PUSH_VERIFICATION_20260929.md): fresh latest Release x64 binary hash, canonical native 17/0 with protected smoke SKIP, actual GUI eight malformed fixtures, two named presets across restart, orphan safety, Korean menus and physical dark-scrollbar wheel. This is a feature-branch checkpoint, not a production release or whole-OS acceptance.
+
+
+- [Local Korean popup and legacy Customize dark/scrollbar audit (2026-09-29)](UI_LEGACY_MENU_TOOLBAR_AUDIT_20260929.md):
+  corrected real menu strings and scalable single chevrons; native toolbar
+  Dark list scrollbars physically exercised in owned GUI, source audit of
+  other legacy class candidates, exact binary and remaining OS limits.
+  LOCAL/unmerged, not evidence that every popup is fixed.
+
+
 | Focus | Document / use |
 | --- | --- |
 | Historical UI issue IDs and old screenshots | [2026-09-24 UI audit](UI_UX_AUDIT_20260924.md): dated observations, not today's open-work list. |
@@ -49,8 +59,16 @@ a single unsupported release qualification.
 
 - [Phase 6 UXH-06/07 native feature-overlap review](UI_PHASE6_UXH06_07_FEASIBILITY_20260928.md):
   owned 96-DPI long search path retention and
-  real 1x2 Last Tabs exit/relaunch proof; no new
-  feature without user evidence and acceptance.
+  real 1x2 Last Tabs exit/relaunch proof at the historical
+  main baseline; this is NOT the optional named-workspace feature.
+
+- [Local UXH-07 named workspace scoped acceptance](UI_PHASE6_UXH07_NAMED_WORKSPACE_WIP_20260929.md):
+  UNMERGED local branch only. After a verified variable-width
+  temporary-name fix and restart-test correction, the final locally
+  rebuilt x64 executable passed eight real invalid GUI inputs,
+  two named save/restore/restart GUI, isolated 3-hex orphan and
+  live-lock/reparse safety, and local CI PASS_WITH_SKIPS.
+  Real other DPI, OS High Contrast and spoken reader remain separate.
 
 - [Phase 6 custom tab native UIA/MSAA accessibility](UI_PHASE6_UXH05_TAB_ACCESSIBILITY_EVIDENCE_20260928.md):
   scoped actual 96-DPI Dark/Light named tab/close/new

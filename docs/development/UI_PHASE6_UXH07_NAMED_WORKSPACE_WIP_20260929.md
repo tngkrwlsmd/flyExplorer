@@ -2,9 +2,10 @@
 
 Branch: fix/uxh07-named-workspaces-20260928.
 Baseline main: 463f6ffd5bef6c78e3fdcf97dc51d6cb68038122.
-STATUS: WIP. NOT MERGED, NOT PUBLISHED AS A FINISHED FEATURE.
-The earlier open-gate list is historical; see the latest continuation
-section at the end for newly resolved items and still-blocking tests.
+STATUS: LOCAL SCOPED ACCEPTED after final 2026-09-29 verification.
+NOT MERGED OR PUBLISHED; uncommitted local code/document changes.
+Earlier WIP/open-gate sections are preserved as historical failures;
+the latest final-acceptance section at the end supersedes them.
 
 Current product branch adds optional View > Workspaces
 Save As and Open in New Window native commands. The
@@ -192,3 +193,169 @@ outstanding reliability and acceptance gates
 are resolved. UXH-06 and the WinUI 3 experimental
 worktree remain untouched; no manual GitHub
 Actions were triggered.
+
+## 2026-09-29 further local verification (supersedes final-ready claims)
+
+Branch HEAD remains 7cc0b46; the following targeted product,
+test-harness and diagnostic changes are UNCOMMITTED and UNMERGED.
+Final locally compiled Release-x64-Unicode executable SHA256:
+A06A04236D06EC36E4107B280D0E57A4E8F1CF614DD02409DAFA411F9B6B43E2.
+Do not promote the prior 5D4F23F4 binary's tests to this revision.
+
+An actual repeat of the prior binary reproduced the intermittent
+SECOND workspace refusal with native error 1 (ownedDir safety check);
+another run and subsequent successful runs did not. The
+workspace_session ownership guard now reports narrower reason codes
+11..17, but three actual diagnostic-binary repetitions did not
+reproduce the failure. NO ROOT CAUSE OR RELIABILITY FIX IS CLAIMED.
+
+A real malformed odd-byte UTF-16 fixture previously produced no
+expected warning and the test-owned parent exited nonzero. The
+loader now checks UTF-16 byte count and BOM BEFORE the legacy parser.
+On the FINAL executable, eight actual native GUI rejection cases
+passed: empty, wrong schema, invalid rows, missing first tab,
+nonexistent folder, oversize, truncated UTF-16 and wrong extension.
+No invalid child spawned; all six original settings hashes matched.
+Evidence: logs/uxh07-A06-final-eight-negative.log.
+
+Final-binary first-parent real GUI Save/Open again accepted TWO
+separately named files and their 1x2 and 2/1 pane-tab layouts,
+including exact owned child marker and copied customization.
+The original parent exited normally. In a NEW owned process using
+the SAME copied profile, native Last Tabs correctly restored 2/1.
+However, reopening the first named file after that restart
+FAILED acceptance: real native file dialog foreground and physical
+Open-button activation were confirmed, the dialog closed, but
+no persistent owned child or product warning was observed.
+The files remained on disk, the new parent exited 0 and original
+six hashes matched. Separate native Enter and pointer attempts
+showed the same outcome. Added user-visible errors to the prior
+silent TEMP/name/directory failure branches; they did not appear
+in the final controlled restart. Do NOT assert whether the file
+dialog canceled, an owned child briefly exited, or a different
+path failed without further distinguishing evidence.
+Evidence: logs/uxh07-silent-temp-restart-distinction.log.
+
+Final-binary controlled isolated TEMP GUI safety PASSED:
+72-hour marked orphan removed; exclusively locked live marker,
+test-owned junction and its outside sentinel preserved; test-owned
+fixtures removed and six original SHA256 values unchanged.
+Evidence: logs/uxh07-A06-final-orphan.log.
+Source invariants PASS, scoped contract 3/3 PASS and native
+functional 17/0 PASS for the final build. Targeted Release
+compile/link exit 0 with SEVEN MSB8029 warnings. The default
+local_ci.bat x64 was attempted but its warning policy FAILED
+on the earlier in-session revision; it was NOT a clean CI PASS
+for this final checkout. The existing bin/x64/build-revision.txt
+still records e84d893, not this uncommitted source revision.
+No revision-matched canonical CI/marker acceptance is claimed.
+
+REMAINING BLOCKERS: reproduce and identify intermittent owner-dir
+refusal; distinguish canceled file-dialog selection versus brief
+child exit after parent restart; secure repeatable successful
+reopen of both names after restart; resolve or separately scope
+the existing MSB8029 strict-CI warning/marker mismatch.
+Actual other-DPI, High Contrast and screen-reader listening remain
+independent environment gates. Preserve main-window.png untracked;
+do not merge, push or run GitHub Actions without separate approval.
+
+## Final scoped local acceptance (2026-09-29)
+
+This LATEST section supersedes all prior WIP/pending/failure
+assessments above without deleting the original negative
+diagnostics. Branch `fix/uxh07-named-workspaces-20260928`
+is LOCAL, unmerged and uncommitted at HEAD `7cc0b46`.
+Final exact Release x64 executable SHA256:
+`0873F600E45DC26BEF98948BF2B6DADBC013C1DC11633B614EED5B75BA2F091C`.
+
+CONFIRMED PRODUCT ROOT CAUSE: earlier native Save/Open
+intermittently displayed `Could not protect isolated workspace
+session` (generic reason 1; focused reason 14). The
+`workspace_session::ownedDir` guard required a four-hex
+`fxw????.tmp` leaf, but 240 test-owned REAL Windows
+`GetTempFileNameW` calls generated 3-digit names such as
+`fxw18F.tmp`. The native API does not always zero-pad to
+four digits. The owner guard now accepts ONLY `fxw` plus
+1-4 hexadecimal digits plus `.tmp` under the exact TEMP
+root. Orphan enumeration now uses `fxw*.tmp` but actual
+deletion still requires the exact valid owner marker,
+exclusive lock, stale age, direct allowlist, and reparse
+and nonrecursive checks. The isolated real-product orphan
+GUI test now uses a 3-hex 72-hour stale folder, a 4-hex
+exclusively locked live folder, and a test-owned reparse
+junction and external sentinel.
+
+CONFIRMED TEST-HARNESS FALSE FAILURE: earlier tests saw
+the native dialog close and reported no new owned child
+after a normal parent restart. Temporary opt-in LOCAL
+native tracing proved `DoModal==IDOK`, actual child
+`CreateProcess` success, and child still alive at 1.3 s.
+The restart-only watcher incorrectly used `"fxw" in argv`
+where `argv` is a list of full command-line tokens.
+The corrected watcher validates the concrete
+`--conf_dir` path with the strict owned 1-4 hex regex.
+It then accepted both separately named files after
+normal original parent exit, new parent startup and
+Last Tabs 2/1 restoration. All temporary product trace
+hooks and diagnostic waiting were REMOVED before the
+final clean build; only test-owned failure diagnostics
+remain in the test harness.
+
+Malformed UTF-16 robustness: an earlier odd-byte
+truncation did not produce an expected rejection.
+Before passing the file to the legacy config parser,
+the product now validates even byte length and UTF-16
+BOM. On the FINAL executable, real native GUI tests
+rejected eight owned invalid inputs: empty, wrong
+schema, invalid row count, missing first tab, missing
+folder, oversize, odd-byte truncated UTF-16 and
+wrong extension. No invalid child spawned; original
+parent tabs and all six original user config hashes
+remained unchanged. Log:
+`logs/uxh07-clean-ci-final-eight-invalid.log`.
+
+FINAL ACCEPTED VERIFICATION ON THIS BINARY:
+- `local_ci.bat x64` exit 0, warning policy PASS, source
+  preflight PASS, Release-x64-Unicode Rebuild PASS,
+  native product functional 17 passed / 0 failed,
+  overall PASS_WITH_SKIPS due to existing HKCU state
+  protecting the official runtime smoke. The remote
+  shell lacked `ProgramFiles(x86)` and `TMP`; setting
+  only these process-local variables corrected the
+  earlier path failure and spurious MSB8029 warnings.
+  Log: `logs/uxh07-canonical-local-ci-clean-env.log`.
+- Scoped UXH-07 contract 3/3 PASS, eight malformed
+  real native file-dialog cases PASS.
+- Real physical keyboard Save/Open menu path for BOTH
+  named files, 1x2/2/1 per-pane tab restoration,
+  normal parent restart and reopen of BOTH saved names,
+  original Last Tabs not replaced, private children
+  normally exited and owned configs removed: PASS.
+  Log: `logs/uxh07-clean-ci-final-restart-real-gui.log`.
+- A SECOND independent real GUI repetition on the SAME
+  final binary also passed: physical-pointer Workspaces
+  submenu Save/Open for both named files, normal parent
+  restart and reopening BOTH snapshots, unchanged six
+  original setting hashes and normal owned exits.
+  The top-level View menu was opened using physical
+  Alt+V, not a full mouse-only top-level traversal.
+  Log: `logs/uxh07-clean-ci-final-repeat-pointer-restart.log`.
+- Test-owned isolated 3-hex stale recovery, 4-hex live
+  marker preservation, ignored junction and preserved
+  external sentinel, owned process exit 0, all synthetic
+  fixtures removed: PASS.
+  Log: `logs/uxh07-clean-ci-final-orphan-variable-hex.log`.
+- All accepted GUI tests preserved the original six
+  user configuration SHA256 hashes.
+
+REMAINING EXPLICIT LIMITS, NOT THIS SCOPED CORE FAILURE:
+fully mouse-only top-level View menu traversal,
+real 125/150/200 DPI, OS High Contrast, spoken
+screen-reader verification, official HKCU-sensitive
+runtime smoke, hosted CI, clean-machine package and
+installer were NOT TESTED. The local binary's
+`build-revision.txt` equals HEAD `7cc0b46`
+but does not identify the still-uncommitted changes.
+`main-window.png` is pre-existing untracked user
+material and was not modified. No GitHub push,
+merge, release or GitHub Actions run occurred.

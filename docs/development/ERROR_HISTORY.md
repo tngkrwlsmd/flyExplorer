@@ -3829,3 +3829,80 @@ NOT TESTED다. GitHub Actions 미실행.
 
 **관련 branch**
 - ui/ui02-final-pixel-20260927 (final commit는 브랜치 검증 후 생성)
+
+## 2026-09-29: UXH-07 variable-width Windows TEMP directory names
+
+**Observed failure:** Real second named-workspace Open
+intermittently showed an isolated owner-marker protection
+error (initially 1, later discriminated as code 14). An
+apparent additional restart-only failure also occurred
+during the extended automated GUI acceptance.
+
+**First confirmed product error and root cause:**
+The newly added `workspace_session::ownedDir` assumed
+`GetTempFileName` always produced exactly four hex
+digits in `fxw????.tmp`. 240 real Windows
+`GetTempFileNameW` calls in an exclusively private
+folder produced three-digit names including `fxw18F.tmp`.
+The valid generated directory then failed its own
+strict length check. The stale-orphan glob had the
+same erroneous four-character assumption.
+
+**Product correction:** Permit EXACT TEMP-root leaves
+of `fxw` + 1-4 hex digits + `.tmp`; enumerate
+`fxw*.tmp` for orphan candidates but retain the
+marker magic, exact filename allowlist, no recursion,
+24-hour age, exclusive active lock and reparse rejection.
+An independent legacy-parser input problem was separately
+bounded by rejecting odd-length/non-UTF-16-BOM named
+snapshot data before `ConfFileEx::load`.
+
+**Test-harness-only false failure:** The restart watcher
+checked `"fxw" in argv` where `argv` was a
+`psutil` command-token list. Real opt-in native
+evidence instead proved IDOK from the dialog, successful
+child CreateProcess and a living child. Replaced this
+with exact `--conf_dir` extraction and strict owned
+directory name validation. Removed temporary product
+instrumentation before final compilation. Do not
+attribute the old restart-only detection failure to
+the application.
+
+**Verification and prevention:** Final local x64 binary
+SHA256 `0873F600E45DC26BEF98948BF2B6DADBC013C1DC11633B614EED5B75BA2F091C`;
+canonical `local_ci.bat x64` exit 0, source checks and
+native 17/0 PASS, official smoke SKIPPED due to existing
+HKCU state. Eight real malformed GUI inputs PASS; two
+named native GUI Save/Open and normal parent restart
+with reopen of BOTH named files PASS; controlled
+three-hex stale orphan, four-hex locked live marker
+and reparse external-sentinel real-app safety PASS.
+All accepted owned tests preserved the original six
+configuration SHA256 values. Evidence and precise
+log paths: `UI_PHASE6_UXH07_NAMED_WORKSPACE_WIP_20260929.md`.
+
+**Build orchestration context:** The remote tool process
+did not expose `ProgramFiles(x86)` or `TMP`; the
+empty `TMP` triggered MSBuild MSB8029's temp-prefix
+check, not an observed product code defect. Restoring
+both variables ONLY for the local CI process eliminated
+the prior strict warning-policy failure; the clean
+full local CI result was PASS_WITH_SKIPS, not a
+successful official runtime smoke.
+
+**Scope remaining:** Real other DPI, OS High Contrast,
+spoken accessibility, clean installer/package, hosted
+CI, and fully mouse-only top-level menu routing were
+not part of this acceptance. No GitHub Actions,
+remote push, or merge was performed.
+\n## 2026-09-29: Korean Workspaces placeholders and unthemed legacy native toolbar Customize
+
+Observed: canonical Korean workspace labels contained literal question marks. Owner-drawn submenu chevrons were small/low contrast and native toolbar Customize appeared inconsistent with Dark mode, including legacy light ListBox scrollbars.
+
+Root causes: three literal corrupted Korean XML values; font-dependent 12-DIP menu glyph and 1-pixel fallback; native Windows TB_CUSTOMIZE parent bypassed common CModernDialog control traversal and applied Explorer visual theme to ListBoxes without the common scrollbar compositor, parent palette or direct button theme.
+
+Correction: repair all three labels retaining menu mnemonics, replace the glyph with a single native DPI-scaled two-stroke chevron and High Contrast system colors, and enroll native Customize parent and both ListBoxes in the existing shared ModernUI dark painting and scrollbar path. Canonical source invariant now requires this native glyph; three focused source contracts cover localization, glyph and Customize theme enrollment.
+
+Acceptance (local, uncommitted branch only): x64 executable SHA256 C0FF584E685E7DEEF6E3844AC7F0A55E2AA541DE0235B66F1BA7859826E64E79. Canonical local_ci.bat x64 exit 0, native functional 17 passed / 0 failed; overall PASS_WITH_SKIPS due to protected original HKCU runtime smoke. Two separate test-owned Windows 11 GUI runs displayed correct Korean submenu and new chevrons; native Customize showed dark scrollbars on both ListBoxes, and real wheel moved top index 0 to 9. Six original user-setting hashes were identical and owned processes exited 0.
+
+Wider source inventory found 24 direct CWnd/CDialog base declarations, many already themed or not actual dialogs. FolderPane, TabPane and CWindowScroller remain conditional GUI-review candidates, NOT diagnosed failures. Native popup overflow, other real DPI, OS High Contrast, spoken screen reader, additional app/UI routes and clean-machine deployment remain untested. Full logs, local screenshots and scope: UI_LEGACY_MENU_TOOLBAR_AUDIT_20260929.md. No GitHub Actions, remote push or branch merge.

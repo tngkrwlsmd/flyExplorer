@@ -1357,6 +1357,32 @@ void MainFrame::OnOpenWorkspace(void)
             XPR_STRING_LITERAL("Workspaces"),MB_OK|MB_ICONWARNING);
         return;
     }
+    // Snapshots are written as UTF-16. Reject truncated odd-byte
+    // and non-UTF-16 files BEFORE invoking the legacy config parser.
+    bool sValidEncoding=false;
+    if (sInfo.nFileSizeLow>=4 && (sInfo.nFileSizeLow & 1)==0)
+    {
+        HANDLE sInput=::CreateFile(sFile,GENERIC_READ,FILE_SHARE_READ,
+                                 XPR_NULL,OPEN_EXISTING,
+                                 FILE_FLAG_OPEN_REPARSE_POINT,XPR_NULL);
+        if (sInput!=INVALID_HANDLE_VALUE)
+        {
+            BYTE sBom[2]={0};
+            DWORD sRead=0;
+            sValidEncoding=::ReadFile(sInput,sBom,sizeof(sBom),&sRead,
+                                      XPR_NULL)!=FALSE && sRead==2 &&
+                ((sBom[0]==0xff && sBom[1]==0xfe) ||
+                 (sBom[0]==0xfe && sBom[1]==0xff));
+            ::CloseHandle(sInput);
+        }
+    }
+    if (!sValidEncoding)
+    {
+        MessageBox(XPR_STRING_LITERAL("Invalid workspace encoding."),
+                   XPR_STRING_LITERAL("Workspaces"),
+                   MB_OK|MB_ICONWARNING);
+        return;
+    }
     fxfile::base::ConfFileEx sSnapshot((LPCTSTR)sFile);
     if (sSnapshot.load() == XPR_FALSE ||
         sSnapshot.getValueI(XPR_STRING_LITERAL("workspace"),
@@ -1443,12 +1469,37 @@ void MainFrame::OnOpenWorkspace(void)
     // overwriting the original user's main.conf or active window.
     xpr_tchar_t sTemp[MAX_PATH] = {0};
     xpr_tchar_t sUnique[MAX_PATH] = {0};
-    if (::GetTempPath(MAX_PATH,sTemp) == 0 ||
-        ::GetTempFileName(sTemp,XPR_STRING_LITERAL("fxw"),0,sUnique) == 0)
+    DWORD sTempLength=::GetTempPath(MAX_PATH,sTemp);
+    if (sTempLength==0 || sTempLength>=MAX_PATH)
+    {
+        MessageBox(XPR_STRING_LITERAL(
+            "Could not locate a usable temporary workspace folder."),
+            XPR_STRING_LITERAL("Workspaces"),MB_OK|MB_ICONWARNING);
         return;
-    ::DeleteFile(sUnique);
-    if (::CreateDirectory(sUnique,XPR_NULL) == FALSE)
+    }
+    if (::GetTempFileName(sTemp,XPR_STRING_LITERAL("fxw"),0,sUnique)==0)
+    {
+        DWORD sError=::GetLastError();
+        CString sDiagnostic;
+        sDiagnostic.Format(XPR_STRING_LITERAL(
+            "Could not create temporary workspace name (error %lu)."),
+            sError);
+        MessageBox(sDiagnostic,
+            XPR_STRING_LITERAL("Workspaces"),MB_OK|MB_ICONWARNING);
         return;
+    }
+    if (::DeleteFile(sUnique)==FALSE ||
+        ::CreateDirectory(sUnique,XPR_NULL)==FALSE)
+    {
+        DWORD sError=::GetLastError();
+        CString sDiagnostic;
+        sDiagnostic.Format(XPR_STRING_LITERAL(
+            "Could not create isolated workspace folder (error %lu)."),
+            sError);
+        MessageBox(sDiagnostic,
+            XPR_STRING_LITERAL("Workspaces"),MB_OK|MB_ICONWARNING);
+        return;
+    }
     CString sIsolatedMain(sUnique);
     sIsolatedMain += XPR_STRING_LITERAL("\\fxfile-main.conf");
     CString sIsolatedCfg(sUnique);
