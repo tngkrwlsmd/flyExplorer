@@ -21,6 +21,11 @@ CONTRACTS = [
     "experiments/phase6_winui_shell/test_m22_contract.py",
     "experiments/phase6_winui_shell/test_m23_contract.py",
     "experiments/phase6_winui_shell/test_m23_followup_contract.py",
+    "experiments/phase6_winui_shell/test_clipboard_manual_contract.py",
+    "experiments/phase6_winui_shell/test_registered_file_type_contract.py",
+    "experiments/phase6_winui_shell/test_recycle_owned_contract.py",
+    "experiments/phase6_winui_shell/test_large_folder_contract.py",
+    "experiments/phase6_winui_shell/test_portable_safety_contract.py",
     "build/test_ui_uxh07_workspace_contract.py",
     "build/test_ui_uxh06_recent_scope_contract.py",
     "build/test_ui02_layered_scrollbar.py",
@@ -114,8 +119,9 @@ def main():
                      env_to_use if stage.startswith("gui-") else env, tag)
         if rc != 0:
             return rc
-    print("SCOPED_CHECKS_COMPLETE=PASS; physical drag/global clipboard "
-          "and real recycle-bin mutation NOT TESTED", flush=True)
+    print("SCOPED_CHECKS_COMPLETE=PASS; physical drag and global clipboard "
+          "NOT TESTED by this runner; actual owned Recycle Bin has separate test",
+          flush=True)
     return 0
 if __name__ == "__main__":
     sys.exit(main())

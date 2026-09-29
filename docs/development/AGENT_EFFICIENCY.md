@@ -107,3 +107,5 @@ GUI 검증은 **입력 전달 → 내부 상태 변화 → 최종 사용자 화�
 최종 보고는 (1) 실제 변경·수행 결과, (2) 수행한 검증과 직접 증거, (3) 미검증·미해결 범위, (4) 꼭 필요한 후속 작업만 기술한다. 실패 원인에 영향 없는 호출·시도 횟수·진행 로그는 나열하지 않는다. 검증하지 않은 결과나 미반영 코드를 PASS/배포 완료로 보고하지 않는다.
 
 **모든 단계의 판단 기준:** 지금 하려는 행동이 새로운 근거를 얻거나 실제 문제를 해결하거나 반드시 필요한 검증을 완료하는 데 직접 기여하는가? 아니라면 생략한다. 단, 사용자 데이터 보호와 명시적으로 요구되는 승인 절차는 항상 유지한다.
+
+**UTF-8 pipeline regression (2026-09-30):** PowerShell-to-Python long inline scripts containing literal Korean produced a real `?.txt` test-source corruption on the remote Windows host. Never assume terminal output corruption is only cosmetic. Prefer versioned UTF-8 Python scripts, or ASCII Unicode escapes/character code points and `python -X utf8` for dynamically generated scripts. After touching Korean fixture names or UI labels, reopen the actual UTF-8 source bytes and include a bounded targeted regression check rejecting the actual replacement pattern. Do not use malformed GUI test input as proof of an application failure.

@@ -118,6 +118,7 @@
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
                     <RowDefinition Height="*"/>
                 </Grid.RowDefinitions>
                 <Button x:Name="PrimaryPaneTitle" Content="왼쪽 창" HorizontalAlignment="Left"
@@ -127,7 +128,18 @@
                          IsAddTabButtonVisible="False" CanDragTabs="False"
                          TabWidthMode="SizeToContent" SelectionChanged="OnLeftTabSelectionChanged"
                          AutomationProperties.Name="왼쪽 폴더 탭"/>
-                <ListView x:Name="LeftFiles" Grid.Row="2" IsDoubleTapEnabled="True"
+                <StackPanel Grid.Row="2" Orientation="Horizontal" Spacing="5"
+                            AutomationProperties.Name="왼쪽 파일 목록 열 조절">
+                    <TextBlock Text="이름 열 너비" VerticalAlignment="Center"/>
+                    <Slider x:Name="LeftNameWidthSlider" Minimum="120" Maximum="320"
+                            Value="168" StepFrequency="16" Width="92"
+                            ValueChanged="OnNameColumnWidthChanged"
+                            AutomationProperties.Name="왼쪽 이름 열 너비 조절"/>
+                    <TextBlock Text="이름 | Windows 유형 | 크기 | 수정 날짜"
+                               VerticalAlignment="Center" FontSize="11"
+                               TextTrimming="CharacterEllipsis"/>
+                </StackPanel>
+                <ListView x:Name="LeftFiles" Grid.Row="3" IsDoubleTapEnabled="True"
                           SelectionMode="Multiple" DoubleTapped="OnLeftFileDoubleTapped"
                           KeyDown="OnLeftFileKeyDown" RightTapped="OnFileRightTapped"
                           AllowDrop="True" CanDragItems="True" CanReorderItems="False"
@@ -156,6 +168,7 @@
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
                     <RowDefinition Height="*"/>
                 </Grid.RowDefinitions>
                 <Button x:Name="SecondaryPaneTitle" Content="오른쪽 창" HorizontalAlignment="Left"
@@ -165,7 +178,18 @@
                          IsAddTabButtonVisible="False" CanDragTabs="False"
                          TabWidthMode="SizeToContent" SelectionChanged="OnRightTabSelectionChanged"
                          AutomationProperties.Name="오른쪽 폴더 탭"/>
-                <ListView x:Name="RightFiles" Grid.Row="2" IsDoubleTapEnabled="True"
+                <StackPanel Grid.Row="2" Orientation="Horizontal" Spacing="5"
+                            AutomationProperties.Name="오른쪽 파일 목록 열 조절">
+                    <TextBlock Text="이름 열 너비" VerticalAlignment="Center"/>
+                    <Slider x:Name="RightNameWidthSlider" Minimum="120" Maximum="320"
+                            Value="168" StepFrequency="16" Width="92"
+                            ValueChanged="OnNameColumnWidthChanged"
+                            AutomationProperties.Name="오른쪽 이름 열 너비 조절"/>
+                    <TextBlock Text="이름 | Windows 유형 | 크기 | 수정 날짜"
+                               VerticalAlignment="Center" FontSize="11"
+                               TextTrimming="CharacterEllipsis"/>
+                </StackPanel>
+                <ListView x:Name="RightFiles" Grid.Row="3" IsDoubleTapEnabled="True"
                           SelectionMode="Multiple" DoubleTapped="OnRightFileDoubleTapped"
                           KeyDown="OnRightFileKeyDown" RightTapped="OnFileRightTapped"
                           AllowDrop="True" CanDragItems="True" CanReorderItems="False"

@@ -494,6 +494,7 @@ Attempt oneAttempt(
                 break;
             }
             DWORD available=0;
+            bool readProgress=false;
             if(!::PeekNamedPipe(hostOutRead.h,nullptr,0,nullptr,
                                &available,nullptr)){
                 if(::WaitForSingleObject(childProcess.h,0)!=WAIT_OBJECT_0){
@@ -513,6 +514,7 @@ Attempt oneAttempt(
                     bad=true;break;
                 }
                 frame.resize(start+received);
+                readProgress=(received!=0);
                 if(frame.size()>=sizeof(Reply) && !expected){
                     Reply header{};
                     std::memcpy(&header,frame.data(),sizeof(header));
@@ -526,9 +528,18 @@ Attempt oneAttempt(
             if(::WaitForSingleObject(childProcess.h,0)==WAIT_OBJECT_0){
                 DWORD exitCode=0;
                 ::GetExitCodeProcess(childProcess.h,&exitCode);
-                if(expected&&frame.size()==expected&&exitCode==0)
+                if(expected&&frame.size()==expected&&exitCode==0){
                     outcome.hr=parse(frame,outcome.snapshot,outcome.path);
-                else outcome.hr=HRESULT_FROM_WIN32(
+                    break;
+                }
+                // Exit is not EOF. A fast helper can finish generating a
+                // large response while the pipe still holds unread bytes.
+                // Continue bounded draining only after positive progress;
+                // an exited helper with an empty pipe and partial reply
+                // is a genuine broken response, never a success.
+                if(!bad&&exitCode==0&&readProgress&&
+                   (!expected||frame.size()<expected))continue;
+                outcome.hr=HRESULT_FROM_WIN32(
                     bad?ERROR_INVALID_DATA:ERROR_BROKEN_PIPE);
                 break;
             }

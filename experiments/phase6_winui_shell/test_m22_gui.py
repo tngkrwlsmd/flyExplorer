@@ -28,6 +28,52 @@ def run(*,win,element,safe_click,focus,eventually,left,right):
  eventually(size_sorted,"real size sorting did not order files descending",10)
  assert "txt 파일" in row("Left","큰.txt").window_text(), (
      "real local extension type not displayed for Korean file")
+ # App-owned icon/column UI must preserve the UIA accessible name while
+ # the independent helper returns the actual OS-registered friendly type.
+ eventually(lambda:row("Left","큰.txt") is not None and
+            "Windows 유형:" in row("Left","큰.txt").window_text(),
+            "isolated registered Windows type missing from real file row",12)
+ for control in ("LeftNameWidthSlider","RightNameWidthSlider"):
+  assert element(control).exists(timeout=3),control
+ width=element("LeftNameWidthSlider").wrapper_object()
+ width.iface_range_value.SetValue(216.0)
+ eventually(lambda:abs(
+     element("LeftNameWidthSlider").wrapper_object().iface_range_value.CurrentValue
+     -216.0)<1 and row("Left","큰.txt") is not None and
+     "Windows 유형:" in row("Left","큰.txt").window_text(),
+     "real pane column resize lost accessible name/type",12)
+ print("REAL_M23_OS_REGISTERED_TYPE_AND_ACCESSIBLE_RESIZABLE_COLUMNS",True,flush=True)
+ # Read-only accessibility/monitor audit of this exact test-owned HWND.
+ # Changing global High Contrast or per-monitor DPI is outside this test.
+ import ctypes
+ from ctypes import wintypes as WIN
+ user32=ctypes.WinDLL("user32",use_last_error=True)
+ user32.GetDpiForWindow.argtypes=[WIN.HWND]
+ user32.GetDpiForWindow.restype=WIN.UINT
+ dpi=user32.GetDpiForWindow(win.handle)
+ assert dpi>=96 and dpi<=384,("unexpected owned DPI",dpi)
+ class HighContrast(ctypes.Structure):
+  _fields_=[("cbSize",WIN.UINT),("dwFlags",WIN.DWORD),
+            ("lpszDefaultScheme",WIN.LPWSTR)]
+ contrast=HighContrast()
+ contrast.cbSize=ctypes.sizeof(contrast)
+ user32.SystemParametersInfoW.argtypes=(
+     WIN.UINT,WIN.UINT,ctypes.c_void_p,WIN.UINT)
+ user32.SystemParametersInfoW.restype=WIN.BOOL
+ assert user32.SystemParametersInfoW(
+     0x0042,contrast.cbSize,ctypes.byref(contrast),0)
+ for name in ("LeftFiles","RightFiles","LeftNameWidthSlider",
+              "RightNameWidthSlider"):
+  assert element(name).element_info.name,(
+     "owned WinUI control missing accessible name",name)
+ key=chr(0xD070)+".txt"
+ actual=row("Left",key)
+ assert actual is not None and key in actual.window_text()
+ print("REAL_M24_OWNED_FILE_ROW_AND_COLUMN_ACCESSIBLE_NAMES",True,flush=True)
+ print("M24_OWNED_ACTUAL_DPI",dpi,
+       "SYSTEM_HIGH_CONTRAST_CURRENTLY_ON",bool(contrast.dwFlags&1),
+       "ALTERNATE_DPI_AND_HIGH_CONTRAST_NOT_TESTED",True,flush=True)
+
  print("REAL_M23_LOCAL_KOREAN_EXTENSION_TYPE_IN_DETAIL_ROW",True,flush=True)
  print("REAL_M22_ASYNC_NATIVE_METADATA_KOREAN_SIZE_AND_SORT",True,flush=True)
  def select_one(name):

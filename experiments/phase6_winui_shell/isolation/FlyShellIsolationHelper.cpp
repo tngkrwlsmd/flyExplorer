@@ -135,6 +135,43 @@ int wmain(int argc,wchar_t** argv) {
         ::CoUninitialize();
         return 42;
     }
+    if(argc>=3&&!wcscmp(argv[1],L"--file-types")){
+        // Strict isolated one-shot type-name request. Only ASCII extensions
+        // from the app are accepted; do not parse paths or touch files.
+        if(argc>26)return 18;
+        auto output=::GetStdHandle(STD_OUTPUT_HANDLE);
+        if(!output||output==INVALID_HANDLE_VALUE)return 19;
+        for(int i=2;i<argc;++i){
+            std::wstring ext(argv[i]);
+            if(ext.size()<2||ext.size()>17||ext[0]!=L'.')return 20;
+            for(auto c:ext.substr(1))
+                if(!((c>=L'a'&&c<=L'z')||(c>=L'A'&&c<=L'Z')||
+                     (c>=L'0'&&c<=L'9')))return 21;
+            SHFILEINFOW info{};
+            auto result=::SHGetFileInfoW(ext.c_str(),FILE_ATTRIBUTE_NORMAL,
+                     &info,sizeof(info),
+                     SHGFI_USEFILEATTRIBUTES|SHGFI_TYPENAME);
+            std::wstring readable=result?info.szTypeName:L"";
+            if(readable.size()>79)readable.clear();
+            const int count=readable.empty()?0: ::WideCharToMultiByte(
+                CP_UTF8,WC_ERR_INVALID_CHARS,readable.data(),
+                static_cast<int>(readable.size()),nullptr,0,nullptr,nullptr);
+            if(count<0||count>320)return 22;
+            std::string line=std::to_string(i-2)+"\t";
+            if(count){
+                std::string utf8(static_cast<size_t>(count),'\0');
+                if(::WideCharToMultiByte(CP_UTF8,WC_ERR_INVALID_CHARS,
+                      readable.data(),static_cast<int>(readable.size()),
+                      utf8.data(),count,nullptr,nullptr)!=count)return 22;
+                line+=utf8;
+            }
+            line+="\n";
+            DWORD sent=0;
+            if(!::WriteFile(output,line.data(),static_cast<DWORD>(line.size()),
+                            &sent,nullptr)||sent!=line.size())return 23;
+        }
+        return 0;
+    }
     if(argc!=1)return 2;
     const auto input=::GetStdHandle(STD_INPUT_HANDLE);
     const auto output=::GetStdHandle(STD_OUTPUT_HANDLE);

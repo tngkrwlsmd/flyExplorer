@@ -81,6 +81,9 @@ namespace winrt::FlyExplorerWinUIShell::implementation
         void OnMoveSelected(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
         void OnRecycleSelected(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
         void OnCancelTransfer(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
+        void OnNameColumnWidthChanged(
+            IInspectable const&,
+            Microsoft::UI::Xaml::Controls::Primitives::RangeBaseValueChangedEventArgs const&);
         void OnFileRightTapped(IInspectable const&,
             Microsoft::UI::Xaml::Input::RightTappedRoutedEventArgs const&);
         void OnFileDragItemsStarting(IInspectable const&,
@@ -186,6 +189,7 @@ namespace winrt::FlyExplorerWinUIShell::implementation
         std::filesystem::path HomePath() const;
         void Refresh(winrt::hstring const& status = L"Ready");
         void RefreshTabs(int side);
+        bool mColumnControlsReady=false;
         void FillFiles(int side);
         bool OpenFolder(std::wstring const& path);
         void ActivatePane(int side);

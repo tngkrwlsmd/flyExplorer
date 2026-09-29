@@ -17,6 +17,7 @@ struct FileDetail final {
 };
 struct PaneState final {
     int sortMode=0;
+    double nameColumnWidth=168.0;
     std::vector<FileDetail> details;
     std::vector<std::wstring> renderedPaths;
     std::uint64_t route=0,epoch=0;

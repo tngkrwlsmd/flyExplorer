@@ -157,3 +157,5 @@ is incomplete.
 - Update this index when files move/appear. Before any future
   deletion, prove that all substantive facts and consumers
   have an authoritative replacement and fix every inbound link.
+
+- [M2.4 scoped WinUI Windows interoperability, real OS recycle and release readiness matrix](WINUI3_M24_SCOPED_WINDOWS_INTEGRATION_20260930.md)

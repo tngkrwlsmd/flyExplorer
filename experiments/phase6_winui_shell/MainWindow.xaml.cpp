@@ -1,5 +1,6 @@
 #include "pch.h"
 #include "MainWindow.xaml.h"
+#include "../../src/base/shell_assoc_type_core.h"
 #if __has_include("MainWindow.g.cpp")
 #include "MainWindow.g.cpp"
 #endif
@@ -7,12 +8,15 @@
 #include "../../src/fxfile/file_operation_core.h"
 #include <algorithm>
 #include <cwchar>
+#include <cwctype>
 #include <thread>
 #include <numeric>
 #include <iterator>
 #include <system_error>
 #include <winrt/Windows.System.h>
 #include <winrt/Microsoft.UI.Xaml.Input.h>
+#include <winrt/Microsoft.UI.Xaml.Automation.h>
+#include <winrt/Microsoft.UI.Xaml.Media.h>
 #pragma comment(lib, "shell32.lib")
 
 using namespace winrt;
@@ -40,6 +44,7 @@ namespace winrt::FlyExplorerWinUIShell::implementation
     MainWindow::MainWindow()
     {
         InitializeComponent();
+        mColumnControlsReady=true;
         // Each reusable XAML control forwards intent; the window owns the
         // shared native state/settings. Never attach a permanent MFC host.
         const auto nativeWeak=get_weak();
@@ -416,6 +421,32 @@ namespace winrt::FlyExplorerWinUIShell::implementation
         try{
             std::thread([side,tab,route,ticket,paths=std::move(paths),
                          dispatch,weak]{
+                // Batch 24 distinct registered extensions in one disposable
+                // helper subprocess. A timeout preserves the existing type
+                // fallback and cannot block the WinUI UI thread.
+                std::vector<std::wstring> extensions;
+                for(auto const& path:paths){
+                    const auto dot=path.find_last_of(L'.');
+                    const auto slash=path.find_last_of(L"\\/");
+                    if(dot==std::wstring::npos||
+                       (slash!=std::wstring::npos&&dot<slash))continue;
+                    auto ext=path.substr(dot);
+                    if(!fxfile::filetype::safeExtension(ext))continue;
+                    std::transform(ext.begin(),ext.end(),ext.begin(),
+                       [](wchar_t c){return static_cast<wchar_t>(::towlower(c));});
+                    if(std::find(extensions.begin(),extensions.end(),ext)==extensions.end()
+                         &&extensions.size()<24)extensions.push_back(ext);
+                }
+                std::unordered_map<std::wstring,std::wstring> windowsTypes;
+                if(!extensions.empty()){
+                    wchar_t exe[32768]{};
+                    const auto count=::GetModuleFileNameW(nullptr,exe,32768);
+                    if(count&&count<32768){
+                        auto helper=(std::filesystem::path(exe).parent_path()/
+                            L"FlyShellIsolationHelper.exe").native();
+                        windowsTypes=fxfile::filetype::query(helper,extensions,2500);
+                    }
+                }
                 std::vector<FileDetail> details(paths.size());
                 for(size_t i=0;i<paths.size();++i){
                     if(paths[i].empty()||paths[i].size()>32000)continue;
@@ -436,6 +467,15 @@ namespace winrt::FlyExplorerWinUIShell::implementation
                              (slash==std::wstring::npos||dot>slash)&&
                              dot+1<paths[i].size()&&paths[i].size()-dot<=17?
                              paths[i].substr(dot+1)+L" 파일":L"파일";
+                        if(dot!=std::wstring::npos&&
+                           (slash==std::wstring::npos||dot>slash)){
+                            auto ext=paths[i].substr(dot);
+                            std::transform(ext.begin(),ext.end(),ext.begin(),
+                               [](wchar_t c){return static_cast<wchar_t>(::towlower(c));});
+                            auto found=windowsTypes.find(ext);
+                            if(found!=windowsTypes.end()&&!found->second.empty())
+                                entry.typeLabel+=L" (Windows \uC720\uD615: "+found->second+L")";
+                        }
                     }
                     if(!(data.dwFileAttributes&FILE_ATTRIBUTE_DIRECTORY)){
                         entry.bytes=(static_cast<std::uint64_t>(
@@ -483,6 +523,20 @@ namespace winrt::FlyExplorerWinUIShell::implementation
         }catch(...){
             mFileLists[side].invalidate();
         }
+    }
+    void MainWindow::OnNameColumnWidthChanged(
+        IInspectable const& sender,
+        Microsoft::UI::Xaml::Controls::Primitives::RangeBaseValueChangedEventArgs const&){
+        auto slider=sender.try_as<Slider>();
+        if(!slider)return;
+        const auto name=slider.Name();
+        int side=name==L"LeftNameWidthSlider"?0:
+                 name==L"RightNameWidthSlider"?1:-1;
+        if(side<0)return;
+        auto width=slider.Value();
+        if(width<120||width>320)return;
+        mFileLists[side].nameColumnWidth=width;
+        if(mColumnControlsReady)FillFiles(side);
     }
     void MainWindow::FillFiles(int side)
     {
@@ -540,7 +594,42 @@ namespace winrt::FlyExplorerWinUIShell::implementation
                 if(meta.sizeKnown)label+=L"   |   "+meta.bytesLabel;
                 if(meta.dateKnown)label+=L"   |   "+meta.dateLabel;
             }
-            row.Content(winrt::box_value(hstring(label)));
+            Grid columns;
+            auto addColumn=[&](double width){
+                ColumnDefinition def;
+                def.Width(GridLength{width,GridUnitType::Pixel});
+                columns.ColumnDefinitions().Append(def);
+            };
+            addColumn(mFileLists[side].nameColumnWidth);
+            addColumn(165);addColumn(80);addColumn(155);
+            StackPanel nameCell;
+            nameCell.Orientation(Orientation::Horizontal);
+            nameCell.Spacing(6);
+            FontIcon glyph;
+            glyph.FontFamily(Microsoft::UI::Xaml::Media::FontFamily{
+                L"Segoe Fluent Icons"});
+            glyph.Glyph(hstring(item.isFolder()?L"\uE8B7":L"\uE8A5"));
+            nameCell.Children().Append(glyph);
+            TextBlock filename;
+            filename.Text(item.label);
+            filename.TextTrimming(TextTrimming::CharacterEllipsis);
+            nameCell.Children().Append(filename);
+            Grid::SetColumn(nameCell,0);
+            columns.Children().Append(nameCell);
+            auto addText=[&](std::wstring const& text,int col){
+                TextBlock field;
+                field.Text(hstring(text));
+                field.TextTrimming(TextTrimming::CharacterEllipsis);
+                Grid::SetColumn(field,col);
+                columns.Children().Append(field);
+            };
+            auto const* meta=detailReady?&mFileLists[side].details[index]:nullptr;
+            addText(meta?meta->typeLabel:L"",1);
+            addText(meta&&meta->sizeKnown?meta->bytesLabel:L"",2);
+            addText(meta&&meta->dateKnown?meta->dateLabel:L"",3);
+            row.Content(columns);
+            Microsoft::UI::Xaml::Automation::AutomationProperties::SetName(
+                row,hstring(label));
             row.Tag(winrt::box_value(static_cast<uint32_t>(index)));
             row.CanDrag(true);
             const auto weak=get_weak();
