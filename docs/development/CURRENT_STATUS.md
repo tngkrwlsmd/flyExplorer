@@ -1,6 +1,12 @@
 # flyExplorer — current project status (2026-09-28 baseline; 2026-09-29 migration-branch addendum)
 
-## Feature-branch publication checkpoint (2026-09-29)
+## Latest 2026-09-29: M1.6 investigation and owned process-isolation proof — scoped only
+
+On the separate WinUI migration branch, an actual source audit confirmed that the existing single in-process COM STA serializes both panes and its directory watches; an in-flight blocked Shell extension defeats cooperative cancellation and delays both panes. `SHGetPathFromIDListEx` also remains on the preview's UI thread. **These existing product issues are not yet fixed.** The architecture decision is to eventually isolate all untrusted Shell parsing/enumeration/name/attribute calls behind TWO bounded supervised processes (one per active pane), keep UI history and configuration in the host and decouple filesystem watches from stalled Shell work. File operations/context menus are out of scope. Full rationale and gates: [M1.6 process-isolation decision and exact proof](WINUI3_M16_SHELL_PROCESS_ISOLATION_20260929.md).
+
+A new read-only, UI-free `experiments/phase6_winui_shell/isolation` native helper compiles the actual shared Shell navigation engine into an independent Windows process. Debug and Release x64 builds PASS; **both** real Windows 11 process tests PASS: owned local and virtual This PC enumeration, bounded validated IPC, invalid/corrupt inputs, two concurrent helper lanes, test-owned 30-second block in one lane with the other still succeeding, bounded exact-child Job termination and fresh helper recovery, and automatic child reclamation upon private Job-handle closure. Original SIX user-settings SHA256 hashes remained unchanged; isolated 3/3 source and existing 5/5 architecture checks PASS. **Current WinUI GUI does NOT yet call this helper**; its native host supervisor, real blocking Shell extension tests and new GUI integration are next. Neither the default MFC product nor the remote branch was modified by this scoped local experiment.
+
+## Historical feature-branch publication checkpoint (2026-09-29)
 
 The dated M0, M1, M1.5 and cleanup notes below were written before branch publication; their references to a locally uncommitted branch describe the historical test-time state. Publishing this isolated migration checkpoint to a remote feature branch does **not** merge it into main, replace the current MFC product, release an installer or certify complete MFC feature parity. For the live commit and remote branch status, verify the current Git refs; the confirmed scoped build, GUI and unchanged-profile evidence remains indexed below.
 

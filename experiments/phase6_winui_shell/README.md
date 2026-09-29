@@ -28,3 +28,9 @@ A hostile third-party Shell extension can still block the **single worker STA** 
 Only selected filesystem folders get native auto-change watches (up to two). The old advanced watcher and CWnd ShellChangeNotify, virtual Shell change events, sorting/metadata/thumbnails, native file operations, named workspace settings parity, IME, actual alternate DPI/high contrast, screen reader and clean-machine installer require later integration and tests.
 
 Exact M1.5 source/build/GUI acceptance, known limitations, log paths and first Release pointer-test diagnosis: `docs/development/WINUI3_ASYNC_SHELL_CHANGE_WORKER_20260929.md`. Do not ship this preview as the default file manager or run hosted CI without an explicit per-run approval.
+
+## M1.6 bounded process-helper experiment (not yet wired to this GUI)
+
+The risk audit identified one serialized in-process Shell STA serving **both** panes plus filesystem watches; a genuinely stuck Shell COM call defeats cooperative cancellation. A **separate read-only native process helper** and test-owned Windows Job-object watchdog are now implemented under `isolation/`. That helper's Debug/Release x64 builds and direct two-process Windows tests passed local and virtual Shell enumeration, strict IPC/PIDL decoding, independent helper progress when the other is artificially blocked, targeted termination/restart and automatic private-job close reclamation.
+
+This **does not** change the runtime `MainWindow`: it still uses `AsyncShellWorker`. Do not report process isolation or true third-party Shell extension recovery in the GUI until a new native per-pane supervisor and owned WinUI GUI regression are implemented and verified. Run `python -m unittest isolation/test_contract.py` for isolated source checks and see `isolation/README.md` and `docs/development/WINUI3_M16_SHELL_PROCESS_ISOLATION_20260929.md` for exact test commands, risks and boundaries.
