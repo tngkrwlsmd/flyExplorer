@@ -1,5 +1,7 @@
 # flyExplorer development documentation index
 
+**CURRENT OWNER-APPROVED UI DIRECTIVE:** [Full WinUI 3 product destination, protected native C++ reuse, temporary MFC fallback, stepwise delivery and release gates](WINUI3_FULL_MIGRATION_DIRECTIVE_20260929.md). Older framework-neutral comparisons are historical; use this decision to prioritize subsequent UI work.
+
 
 **CURRENT branch/release readiness (2026-09-29):** [Merged UXH-07/UXH-06/UI-02 native main, separate WinUI 3 M1.8, exact artifact hashes, retained evidence and open acceptance gates](BRANCH_AND_RELEASE_STATUS_20260929.md). Read this and [CURRENT_STATUS](CURRENT_STATUS.md) before interpreting the historical feature-only links below.
 
