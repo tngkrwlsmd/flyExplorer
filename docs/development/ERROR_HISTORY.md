@@ -4125,10 +4125,16 @@ The M2.4 strict UIA right-click harness once timed out while looking for the app
 
 ## 2026-09-30: canonical-main cutover validation races and one nonreproduced child shutdown
 
-During final validation after relocating the accepted WinUI tree to `C:\devlyExplorer` / local `main`, the first source run correctly exposed a stale architecture test that still assumed `main` could only be the native baseline. The test was changed to verify ancestry of both the prior native-default `cbffb48` and accepted M2.6 `3476ecd` instead.
+During final validation after relocating the accepted WinUI tree to `C:\dev\flyExplorer` / local `main`, the first source run correctly exposed a stale architecture test that still assumed `main` could only be the native baseline. The test was changed to verify ancestry of both the prior native-default `cbffb48` and accepted M2.6 `3476ecd` instead.
 
 The first full Debug GUI timed out on the exact-owned M2.3 auto-restore child. The child/profile cleanup guards ran and the original six settings remained identical. A complete Debug rerun passed with no product-code change, so the event is retained as a nonreproduced timing anomaly rather than assigned a false single root cause.
 
 The first Release validation reached the M2.1 duplicate-create assertion after the successful rename had already queued a native Refresh. In optimized timing, that previous Refresh could update the status after the duplicate command and hide the duplicate error string even though no overwrite occurred. The test now waits for the exact prior Refresh status before issuing the duplicate command; the real filesystem non-overwrite assertion remains mandatory.
 
 A later Release attempt successfully restored the owned child Dark theme but that exact child returned Windows status `3221226107` during its immediate controlled shutdown. No product change was made; the final complete Release GUI rerun passed, including M2.1 create/rename/non-overwrite and M2.3 save/restore/clear. This shutdown code remains a recorded, nonreproduced anomaly rather than a claimed fixed defect.
+
+## 2026-09-30: clean-checkout source contract depended on ignored legacy MFC staging
+
+After the canonical-main cleanup removed ignored root `bin/` output, source validation failed because `build/test_ui_uxh06_recent_scope_contract.py` unconditionally opened `bin/x64/Languages/Korean.xml`. The file is generated legacy-MFC staging output and is not present on a clean checkout, so the source-only contract was incorrectly coupled to stale build artifacts.
+
+The contract now always validates the tracked `src/fxfile/Languages/Korean.xml` source and its required UXH-06 keys, while validating the legacy staged copy only when that generated file exists. No production source behavior changed. Final post-cleanup source validation passed 141 tests with one environmental skip (`logs/winui-scoped/20260930-172330-source.log`).

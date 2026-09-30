@@ -25,14 +25,20 @@ class RecentScopeContract(unittest.TestCase):
                "IDC_SEARCH_RECENT_CLEAR","CBS_DROPDOWNLIST"):
    self.assertIn(term,rc)
   self.assertIn("RecentLocations",cpp)
- def test_korean_staged_source(self):
+ def test_korean_source_and_optional_legacy_stage(self):
+  # bin/ is an ignored, generated legacy-MFC staging directory. Canonical
+  # WinUI main must pass source validation on a clean checkout without
+  # requiring stale native build output to be present.
   a=(R/"src/fxfile/Languages/Korean.xml").read_text(encoding="utf-8-sig")
-  b=(R/"bin/x64/Languages/Korean.xml").read_text(encoding="utf-8-sig")
-  ET.fromstring(a);ET.fromstring(b)
-  for key in ("popup.search.button.full_scope",
+  ET.fromstring(a)
+  keys=("popup.search.button.full_scope",
        "popup.search.label.recent_locations",
        "popup.search.button.clear_recent",
-       "popup.search.check.remember_location"):
-   self.assertIn(key,a)
-   self.assertIn(key,b)
+       "popup.search.check.remember_location")
+  for key in keys:self.assertIn(key,a)
+  staged=R/"bin/x64/Languages/Korean.xml"
+  if staged.is_file():
+   b=staged.read_text(encoding="utf-8-sig")
+   ET.fromstring(b)
+   for key in keys:self.assertIn(key,b)
 if __name__=="__main__":unittest.main()

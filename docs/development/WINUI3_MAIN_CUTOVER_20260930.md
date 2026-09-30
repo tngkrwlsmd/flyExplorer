@@ -19,11 +19,12 @@ This keeps the old native `main` commit reachable in normal Git history without 
 
 After final validation and remote publication:
 
-- canonical worktree: `C:\devlyExplorer`
+- canonical worktree: `C:\dev\flyExplorer`
 - canonical branch: `main`
 - active WinUI implementation: `experiments/phase6_winui_shell`
-- duplicate local worktree `C:\devlyExplorer-winui3-migration` is to be removed
-- local migration branch is to be deleted after it is confirmed merged into `main`
+- duplicate local worktree `C:\dev\flyExplorer-winui3-migration`: removed after remote main verification
+- local migration branch: removed after confirming it is an ancestor of `main`
+- historical remote `origin/migration/winui3-full-shell-20260929`: retained at accepted M2.6 tip `3476ecd` as non-default history
 
 The `experiments/phase6_winui_shell` path is now a historical source-layout name, not evidence that the implementation is non-main. A later source-layout refactor may move it, but branch cutover does not combine that large path move with the validated M2.6 checkpoint.
 
@@ -49,7 +50,7 @@ Until those are implemented and verified, describe `main` as the canonical WinUI
 
 ## Validation rule for this cutover
 
-Before pushing the new `main`, run from `C:\devlyExplorer`:
+Before pushing the new `main`, run from `C:\dev\flyExplorer`:
 
 1. official source preflight + full scoped source contracts;
 2. x64 Debug and Release WinUI builds;
@@ -60,7 +61,7 @@ After publication, verify remote `main` equals local `main`. Only then remove th
 
 ## Actual cutover validation from canonical main worktree
 
-All final acceptance commands below ran from `C:\devlyExplorer` while checked out on local `main`, after the WinUI tree had replaced the previous native-default tree.
+All final acceptance commands below ran from `C:\dev\flyExplorer` while checked out on local `main`, after the WinUI tree had replaced the previous native-default tree.
 
 - official source preflight: PASS
 - final source contracts: **141 run, OK, 1 environmental skip**
@@ -86,3 +87,25 @@ Three failures occurred while validating the relocated canonical main worktree a
 3. One Release run observed the previous successful rename Refresh landing after the duplicate-create command and replacing the short-lived duplicate error status. The owned harness now waits for that exact prior Refresh to settle before issuing the duplicate command, while retaining the actual no-overwrite filesystem assertion. A subsequent Release run then observed one exact-owned theme-restart child exit with `3221226107` after it had already displayed the expected restored Dark theme; this did not reproduce on the final full Release run and no product-code change was made for that shutdown anomaly.
 
 These observations do not change the known external release gaps listed above.
+
+## Local disk/worktree cleanup after publication
+
+After remote `main` was verified at `a8384a5ebeff38d3fd4bebb152abe78faf76f402`:
+
+- the duplicate migration worktree was removed: 4,036,524,880 bytes / 10,271 files before removal;
+- the local migration branch was deleted after confirming it was an ancestor of `main`;
+- only one local worktree/branch remains: `C:\dev\flyExplorer` / `main`;
+- 1,112,668,553 bytes of regenerable Release intermediates were removed with the checkpoint-guarded cleanup tool;
+- another 1,239,973,655 bytes of ignored generated content were removed, including stale native `bin/`/`obj/` outputs, generated WinUI project/XAML files, Python caches, helper intermediates and the redundant NuGet HTTP cache;
+- nominal deleted content across duplicate-worktree + generated cleanup was 6,389,167,088 bytes (about 5.95 GiB).
+- post-cleanup source validation initially exposed one legacy UXH-06 contract that incorrectly required ignored `bin/x64/Languages/Korean.xml`; the contract now validates the tracked Korean source on a clean checkout and validates the legacy staged copy only when that generated file exists. Final clean-checkout source validation: 141 OK, 1 environmental skip (`logs/winui-scoped/20260930-172330-source.log`).
+
+Deliberately retained:
+
+- active Debug intermediates for faster ongoing development;
+- final x64 Debug/Release WinUI binaries;
+- the ~1.14 GB NuGet package cache used by WinUI builds;
+- current scoped evidence logs;
+- the preserved pre-cutover user screenshot.
+
+After cleanup the canonical repository occupied about 2.54 GB, disk free space was about 49.86 GiB, and Git remained clean. The historical remote migration branch was not deleted.
