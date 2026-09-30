@@ -21,12 +21,12 @@ After final validation and remote publication:
 
 - canonical worktree: `C:\dev\flyExplorer`
 - canonical branch: `main`
-- active WinUI implementation: `experiments/phase6_winui_shell`
+- active WinUI implementation: `app/winui`
 - duplicate local worktree `C:\dev\flyExplorer-winui3-migration`: removed after remote main verification
 - local migration branch: removed after confirming it is an ancestor of `main`
 - historical remote `origin/migration/winui3-full-shell-20260929`: retained at accepted M2.6 tip `3476ecd` as non-default history
 
-The `experiments/phase6_winui_shell` path is now a historical source-layout name, not evidence that the implementation is non-main. A later source-layout refactor may move it, but branch cutover does not combine that large path move with the validated M2.6 checkpoint.
+The `app/winui` path is now a historical source-layout name, not evidence that the implementation is non-main. A later source-layout refactor may move it, but branch cutover does not combine that large path move with the validated M2.6 checkpoint.
 
 The pre-cutover untracked user screenshot `main-window.png` was not deleted. It was moved into ignored local evidence at `logs/preserved-user/main-window-pre-winui-cutover.png` with SHA256 `65A634A3B16696FB1E9AEB3DA21138EF36C7F19FA0DDCFE1BF3F6106F21BC909`.
 

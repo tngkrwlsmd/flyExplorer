@@ -1,531 +1,75 @@
-fxfile
-======
+flyExplorer
+===========
 
-Copyright (c) 2013 Leon Lee Author. All rights reserved.
+flyExplorer is a Windows file manager. The canonical product on `main` is now
+the C++/WinRT WinUI 3 application under `app/winui`.
 
-Overview
---------
-fxfile (formerly flyExplorer) is a free, open source file manager for Microsoft Windows.
+Quick start
+-----------
 
-For the current implementation/evidence summary and open tasks, see
-`docs/development/CURRENT_STATUS.md`. Chronological historical diagnostics
-remain in `docs/development/ERROR_HISTORY.md`; the current user guide is
-`docs/htmlhelp/Html/current_development.htm` (older detailed pages are
-labelled as historical until independently verified).
+Build Release:
 
-Modern Build Environment
-------------------------
-The default build path targets Visual Studio 2026 and the v145 platform toolset.
+    build.bat Release
 
-Required software:
+Run the built product:
 
-1. Visual Studio 2026
-   - Install the "Desktop development with C++" workload.
-   - Install MFC for the current MSVC v145 x64/x86 build tools.
-   - Install a current Windows 10/11 SDK.
-2. Python 3.9 or newer.
-3. Git.
+    run.bat Release
 
-The old Python 2.7.4 and Visual Studio 2015/v140 toolchain are no longer required
-for the default build path.
+Open a specific folder:
 
-Development Policy and Fast Preflight
--------------------------------------
-The repository vendors the validated `universal-agent-docs` policy bundle under
-`.agent-policy/`. Project-specific instructions remain in `AGENTS.md` and
-project facts in `.agent-policy/PROJECT.md`.
+    run.bat Release D:\
 
-Before a C++ checkpoint, run:
+Run source/contract checks:
 
-    python build/validate_source_invariants.py
+    test.bat source
 
-`build.bat` runs this preflight automatically before downloading tools,
-deleting stale generated projects, or running GYP. The current preflight checks
-direct header dependencies for cross-cutting ModernUI symbols, verifies the
-DPI/manifest integration points, and carries deterministic regression guards for
-known UI and product-integration failures. It prevents standard non-resizing dialogs from
-drifting back to direct `CDialog` inheritance outside the specialized allowlist,
-checks the ThemePalette/DPI wiring of custom-painted About/Tip/PictureViewer
-surfaces, and protects toolbar/config-tree bitmap frame geometry plus the
-application-icon frame contract. It also rejects the unsupported ToolbarWindow32
-`TB_SETBKCOLOR`/`TB_SETTEXTCOLOR` identifiers and verifies that toolbar
-dark-state colors remain routed through `NM_CUSTOMDRAW`/`NMTBCUSTOMDRAW`. The
-same preflight also protects native-test wiring for rename transforms,
-fnmatch/FilePath and ConfFile persistence, rejects reintroduced updater
-wiring, and guards the isolated installer smoke path. It is a static check and does
-not replace a Visual Studio compile/link build.
+Run the full owned Debug + Release validation sequence:
 
-Policy/readiness checks can be run with:
+    python -X utf8 tools\winui\run_checks.py full
 
-    python -m pip install --require-hashes --requirement .agent-policy/requirements.lock
-    python .agent-policy/scripts/validate.py
-    python .agent-policy/scripts/validate.py --project-root . --readiness development
-    python .agent-policy/scripts/conformance.py
-
-These checks remain available for local/manual use. GitHub Actions execution is
-restricted indefinitely: every individual run requires an explicit instruction
-from the user for that run. The previous 2026-09-30 budget-pause date does not
-authorize automatic restart or manual dispatch. A policy/static PASS must not
-be reported as a product compile, integration, or runtime PASS.
-
-Windows Product Build CI
-------------------------
-Automatic push/pull-request triggers remain disabled without an expiration date.
-Do not restore them merely because a date passes or a budget resets. Each
-manual dispatch requires the user's explicit instruction for that individual
-run as well as the `run_ci` override; prior approval, commits and pushes do
-not count as permission.
-
-The Actions workflows are intentionally slim:
-
-- `.github/workflows/policy-validation.yml` now runs only
-  `build/validate_source_invariants.py`. The fuller vendored-policy validation,
-  readiness, and conformance commands remain available for local/manual use.
-- `.github/workflows/windows-build.yml` defaults to one
-  `Release-x64-Unicode | x64` job. It regenerates the solution, checks the
-  v145/MFC contract, compiles and links the product, rejects compiler/linker/
-  MSBuild warnings, verifies the core artifacts, runs the isolated native
-  product functional regression (filesystem operations, rename,
-  pattern/path, config persistence, hash and shell-command checks),
-  and then runs the x64 launch smoke.
-- The x86-compatibility workflow input is retained for future/manual use, but
-  the current project CI scope does **not** permit enabling it unless the user
-  explicitly expands the validation scope.
-- Debug x64, x86 compatibility, package generation/validation, Actions artifact
-  staging/upload, and the previous full policy corpus are not part of the
-  active CI scope.
-
-A successful default Windows Product Build is Release-x64 compile/link, warning,
-artifact, and hosted-runner launch evidence only. GitHub's Windows runner already
-contains Visual Studio and other system software, so it is not clean-Windows
-Sandbox/VM evidence and does not replace interactive functional or visual
-regression testing.
-
-Local CI
---------
-The active development/CI build scope is currently **Release-x64-Unicode | x64
-only**. Use `local_ci.bat x64` (or the no-argument default, which is the same
-profile):
-
-    local_ci.bat
-    local_ci.bat x64
-
-The `x64` profile regenerates the VS 2026 x64 solution, runs the source
-invariant/regression preflight, **rebuilds Release-x64-Unicode from source**,
-runs the native functional regression, rejects compiler/linker/MSBuild warnings,
-verifies core artifacts, and runs the x64 launch smoke.
-
-Other profiles remain implemented as maintenance assets but are **not part of
-the active CI scope**. Do not run them for normal development unless the user
-explicitly expands the validation scope:
-
-    local_ci.bat quick
-    local_ci.bat test
-    local_ci.bat install
-    local_ci.bat policy
-    local_ci.bat x86
-    local_ci.bat release
-    local_ci.bat full
-
-In particular, Debug-x64, x86 Unicode/Multibyte, `release`, `full`, and the
-GitHub Actions x86-compatibility job are inactive by current project direction.
-The utility profiles are retained so they can be used for a specifically
-requested static, installer, policy, compatibility, or release investigation
-without reconstructing the tooling.
-
-Local CI deliberately uses MSBuild `Rebuild` rather than incremental `Build`
-so stale object files cannot hide CRT/configuration drift and compiled `.cpp`
-files remain visible in the console using MSBuild minimal verbosity (similar to
-ordinary Visual Studio build output), while the file logger keeps normal detail
-for diagnostics.
-
-The `policy`/`full` profiles create or reuse
-`%TEMP%\\flyExplorer-policy-venv` and install the locked policy dependencies
-there. This directory is an isolated Python virtual environment, not a log
-directory. Local CI writes one consolidated log to `logs\\local-ci\\local-ci.log` in the
-repository root; `logs/` is ignored by Git. Each run replaces the previous
-local CI log, and temporary capture files are deleted when the run finishes.
-See `LOCAL_CI_MANUAL.txt` for the short profile-by-profile usage guide.
-`local_ci.bat` forces redirected Python output to UTF-8 so readiness and
-conformance messages containing Unicode punctuation do not fail on Korean or
-other non-UTF-8 Windows ANSI code pages.
-MSBuild file-logger output is separately normalized from the Windows ANSI code
-page to BOM-less UTF-8 before it is printed and appended to `local-ci.log`, so
-localized Korean build messages do not corrupt the consolidated UTF-8 log.
-The local conformance invocation also suppresses only Python `zipfile`'s expected
-`Duplicate name` warning from the intentional duplicate-entry negative fixture;
-the duplicate-entry validation case itself still runs and must pass.
-Local CI does not publish artifacts or modify GitHub Actions state. On a developer
-machine, runtime smoke refuses to overwrite existing flyExplorer HKCU startup or
-profile state. When such state is present, `local_ci.bat` records that smoke as
-SKIPPED/NOT TESTED and continues the remaining local checks. Installer execution
-is also opt-in: without `FXFILE_INSTALLER_SMOKE=1`, or without an elevated token,
-the installer contract is inspected but actual install/uninstall is recorded as
-SKIPPED/NOT TESTED. GitHub-hosted launch smoke keeps the strict behavior and still
-fails on unexpected pre-existing state.
-
-Hosted runtime smoke can also be invoked manually after a build, for example:
-
-    pwsh -File build\runtime_smoke.ps1 -SourceDir bin\x64 -Configuration Release-x64-Unicode
-
-Manual Runtime Smoke Checklist
-------------------------------
-For an interactive Windows or Sandbox check, keep destructive file operations
-out of scope and verify at least:
-
-1. Startup: the main window appears and no crash/missing-DLL dialog is shown.
-2. Folder tree: expand Desktop, select a drive, and navigate to a test folder.
-3. File list: enter a child folder and navigate back to its parent.
-4. AddressBar: confirm the current path, type a test path, press Enter, open the
-   dropdown, and confirm basic autocomplete behavior.
-5. Tabs: create, switch, and close a tab.
-6. Window behavior: minimize, restore, resize, and maximize.
-7. Helpers: verify launcher/keyhook behavior without modifying shell
-   integration; the retired updater is not part of the product.
-
-Record Windows Sandbox/clean-VM, interactive functional, and visual results
-separately from the hosted-runner launch smoke.
-
-Windows 11 UI Modernization
+Canonical repository layout
 ---------------------------
-The current UI modernization keeps the MFC/Win32 architecture while reusing the
-shared `gui/ModernUI` DPI, system-typography, and system-palette foundation.
-The status-bar layer now uses the system UI font, 96-DPI logical pane metrics
-that are rescaled for the current monitor, flat ThemePalette-based
-background/text/separators, and settings/theme/DPI refresh handling.
 
-`ExplorerStatusBar` keeps its existing four-pane information contract and
-drive-properties double-click behavior. Its drive-usage progress remains the
-existing GDI `TextProgressCtrl`, but uses DPI-aware system typography,
-palette-derived fill/track/text colors, bounded percentage rendering, and
-DPI-scaled insets. Other StatusBar consumers share the generic typography,
-palette, and DPI metric fixes without adopting Explorer-specific progress
-styling.
+    app/winui/        WinUI 3 application, XAML, helper and project templates
+    src/base/         UI-independent native core reused by the WinUI product
+    tests/winui/      source contracts, owned GUI tests and native fixtures
+    tools/winui/      canonical local build/test orchestration
+    docs/             current and historical engineering documentation
+    legacy/mfc/       former MFC source, build, distribution and library tree
 
-The first dialog-specific modernization reference is `DriveDetailDlg`. It
-applies the current-DPI system UI font to its labels and value fields, preserves
-the existing bold percentage text in the shared `TextProgressCtrl`, refreshes
-typography and custom-control appearance for settings/theme/DPI notifications,
-and uses ThemePalette colors plus DPI-scaled metrics in `DrivePieCtrl`.
-Drive-data queries, localized strings, icon behavior, and the dialog's existing
-information structure remain unchanged.
+The old `experiments/phase6_winui_shell` product path no longer exists. Phase6
+is the product, so it lives under `app/winui`.
 
-The main top-level frame now opts into the documented Windows 11 DWM
-`DWMWA_USE_IMMERSIVE_DARK_MODE` window-frame behavior through a dynamically
-resolved ModernUI helper. The frame request is applied after creation and
-refreshed for settings/theme notifications; High Contrast keeps the existing
-light-frame fallback, and unsupported/down-level DWM calls fail without adding a
-load-time dependency.
+Build outputs
+-------------
 
-ModernUI now also provides common-control theme helpers that dynamically
-resolve the documented `SetWindowTheme` API. `applyExplorerControlTheme`
-applies the Windows Explorer visual-style association while High Contrast falls
-back to system control rendering, and `resetControlTheme` preserves explicit
-theme-disable behavior. `ListCtrlEx` and `TreeCtrlEx` now route their existing
-`enableVistaEnhanced` enable/disable contract through these helpers instead of
-calling `SetWindowTheme` directly.
+Release executable:
 
-MainFrame already reapplies its top-level frame theme and redraws child windows
-for settings/theme changes. The legacy rebar MenuBar and ToolBarEx keep their
-WinXP-only `SetWindowThemeXP(..., L"", L"")` behavior because an empty theme
-association is not equivalent to the Explorer sub-app theme; MenuBar reopens its
-theme handle on `WM_THEMECHANGED`, while ToolBarEx refreshes its modern metrics
-for DPI/settings/theme notifications.
+    app\winui\x64\Release\FlyExplorerWinUIShell\FlyExplorerWinUIShell.exe
 
-For the explorer file list/header styling, ModernUI now also reads the documented
-Windows Runtime UISettings foreground/background colors to reflect the user's app
-light/dark preference in ThemePalette. High Contrast stays on the system-color
-path, and unavailable WinRT activation or color queries fall back to the existing
-system-color palette. ExplorerCtrl's thumbnail/custom-draw colors and image-list
-background now share this palette contract, while FlatHeaderCtrl keeps its existing
-ThemePalette-based custom drawing.
+Debug executable:
 
-The main explorer dark-styling units now include file list/header, folder tree,
-AddressBar/edit/combo, auxiliary shell controls, and MenuBar/Rebar/Toolbar.
-MenuBar keeps its existing toolbar custom-draw/menu-tracking ownership while dark
-normal/hot/selected/disabled colors come from ThemePalette. CToolBarEx keeps the
-native ToolbarWindow32/image-list/command structure and applies the same palette
-to the main toolbar and chevron popup. The shared CSizableReBar host now supplies
-palette-backed rebar background/text/non-client borders for both menu and toolbar
-rebars. BCMenu's actively used Windows8/Standard owner-draw popup paths also use
-ThemePalette in dark mode, while Light and High Contrast retain system/native
-colors. The exact-Windows-XP empty-theme compatibility path remains unchanged.
-Broader dialog modernization now has shared coverage for the major reusable
-dialog families. CResizingDialog supplies current-DPI system typography,
-ThemePalette-backed dark surfaces/edit-list colors, common-control theme
-association, and settings/theme/DPI refresh to the resizable command-dialog
-family. TitleDlg applies the same foundation to create/rename/shortcut/file-list
-dialogs while keeping its custom descriptive header and drawing resource icons at
-a DPI-scaled 32 logical pixels. The configuration UI now shares the same contract
-through CfgDlg pages and CfgMainDlg, including palette-backed config-tree colors.
+    app\winui\x64\Debug\FlyExplorerWinUIShell\FlyExplorerWinUIShell.exe
 
-ModernUI's top-level frame helper now follows the actual ThemePalette light/dark
-state instead of requesting a dark frame for every non-High-Contrast window.
-ModernUI also exposes a DPI-aware resource-icon loader, and the command dialogs
-that owned the legacy IDR_MAINFRAME title icon now load that icon after HWND
-creation at the current monitor DPI. Standard non-resizing dialogs now share the
-new `CModernDialog` base for system typography, ThemePalette surfaces,
-common-control theme association, top-level frame theme, and
-settings/theme/DPI refresh. Specialized owners such as `CResizingDialog`,
-`TitleDlg`, `CfgDlg`/`CfgMainDlg`, and `DriveDetailDlg` keep their
-dedicated contracts.
+Do not copy only the EXE; the sibling WinUI resources and
+`FlyShellIsolationHelper.exe` are part of the runtime set.
 
-Custom-painted `AboutDlg`, `TipDlg`, `PictureViewer`, and toolbar customize
-surfaces now use ThemePalette/DPI-aware paths instead of fixed light-only
-backgrounds. The application `fxfile.ico` preserves its existing 16/32/48
-frames and adds a 32-bit 256px frame for high-DPI shell use. `tip.ico` and
-`shortcut.ico` now carry 32/40/48/64px frames, while `goup.ico` preserves its
-legacy 16/32 variants and adds 40/48/64px 32-bit frames. Parent-folder rendering
-uses the shared DPI-aware icon loader instead of fixed-size `LoadIcon` drawing.
-Main toolbar still preserves the historical 51-frame command/index and bitmap
-fallback contract, but a manifest-driven Microsoft Fluent registry now overlays
-23 command frames at runtime: every command enabled by default plus optional
-History and Settings. App-owned BCMenu reuses the same command-ID artwork, and
-the settings navigation tree overlays 17 strong semantic matches while retaining
-its 33-frame bitmap as High-Contrast/legacy fallback. Frame counts, cell geometry,
-mask format, RC/GYP registration and generated-mask determinism remain protected
-by automated resource-contract checks.
+Legacy MFC
+----------
 
-The shared dialog/icon modernization has source-level static coverage, and the
-preflight now includes deterministic regression guards for direct-dialog drift,
-custom-paint regressions, toolbar API/custom-draw wiring, and UI resource
-contracts.
+The previous MFC default remains recoverable from Git history (`cbffb48`).
+Its retained source/build/distribution/library material is quarantined under
+`legacy/mfc`. Current development must not add new product features there or
+revive Phase5. Exact old-product rebuilds should use the historical Git commit.
 
-The 2026-09-23 runtime/UI stabilization pass is also integrated into `main`.
-Control-theme association changes are idempotent, settings `WM_THEMECHANGED`
-handling avoids reapplying child theme associations, shell registration is
-per-user under HKCU, single-instance detection no longer requires all-access
-mutex rights, protected-path configuration/accelerator migration copies into the
-per-user destination, and the cross-integrity wake-up path allows only the
-registered activation message when the documented API is available. AddressBar
-nested borders, legacy coolbar sizing, owner-draw Dark colors/fonts, filtered
-list default text, and app-owned menu check/radio glyphs have matching source
-invariant guards. Shared ModernDialog/ResizingDialog/TitleDlg child controls now
-also disable Explorer themed painting in Dark/non-High-Contrast mode instead of
-mixing native light chrome with palette-owned surfaces. The elevated NSIS
-installer no longer starts fxfile or fxfile-launcher automatically; installed
-programs are launched later from the normal user shell/shortcuts so the
-application's `asInvoker` contract is preserved. A later screenshot-driven
-follow-up also made settings child traversal z-order-safe, stopped enhanced
-list/tree controls from restoring Explorer painting over palette-owned Dark
-surfaces, and moved the top menu text to explicit ThemePalette drawing so Win11
-cannot fall back to black `COLOR_BTNTEXT` on the dark command surface.
-A subsequent screenshot pass also gives the Filtering settings list/header an
-explicit Dark palette, removes the legacy owner-draw address-field style while
-routing `WM_CTLCOLOR` through the real ComboBoxEx parent, and supplies an
-explicit Dark disabled image list so Cut/Copy/Undo and other disabled toolbar
-commands retain visible glyphs. Root-cause and validation details are recorded
-in `docs/development/ERROR_HISTORY.md`.
+Development status
+------------------
 
-Latest recorded evidence (2026-09-24): `6b18c58f` corrected an OS-classification
-bug that previously routed supported Windows 10/11 through XP-only painters.
-The error history records a local `local_ci.bat x64` run using the parent
-revision plus that then-uncommitted fix: Release-x64-Unicode compile/link PASS,
-native functional regression 17 passed / 0 failed. Its result was PASS WITH
-SKIPS because existing HKCU settings caused launch smoke to be SKIPPED / NOT
-TESTED. This is not a post-commit revision-matched run; fresh build evidence
-for the current checkout and corrected Dark/Light/High Contrast interactive
-visual results still require separate confirmation. The `full` profile, x86
-compatibility, package validation and installer execution remain inactive
-unless the user explicitly expands validation scope. Static, compile/link,
-launch, interactive and visual results must remain distinct; DPI at
-100/125/150/200%, dialogs, standard/elevated interoperability, resize,
-keyboard/IME and final artwork remain separate manual evidence.
+See `docs/development/CURRENT_STATUS.md` for accepted functionality and open
+release gates. GitHub Actions remain opt-in/manual according to project policy;
+local commands above do not publish releases or change the default application.
 
-Generate the Visual Studio Solution
------------------------------------
-From a Command Prompt in the repository root:
-
-    build.bat
-
-The default is equivalent to:
-
-    build.bat 2026 x64
-
-On first run, build.bat automatically clones the pinned gyp-next version into:
-
-    tools\gyp-next
-
-gyp-next 0.22.2 supports Visual Studio 2026. The build script removes stale
-generated Visual Studio projects before regeneration and verifies that the new
-.vcxproj files use the v145 platform toolset. Because gyp-next no longer
-converts the legacy UseOfMFC attribute, the post-generation fixer writes the
-equivalent modern MSBuild UseOfMfc=Static setting into the MFC application
-projects.
-
-The root fxfile.vcxproj is an aggregate project used only to group the solution.
-It now exposes the same x86/x64 solution configuration names as the real build
-projects so Visual Studio can load Release-x64-Unicode and Debug-x64-Unicode
-without configuration-mismatch errors.
-
-The main application, xpr and crash module have native x64 configurations.
-The launcher and keyboard-hook helper remain Win32; the post-generation
-fixer maps them to Win32 in the x64 solution. The automatic updater/checker,
-its network dependency and its settings have been removed. The root
-aggregate project remains excluded from Build Solution
-because all real projects are already listed individually.
-
-If you previously generated fxfile.sln with Visual Studio 2015/v140 or with an
-older version of this build script, simply run:
-
-    build.bat
-
-again. Stale generated solution/project files, including the root aggregate
-fxfile.vcxproj, are removed automatically before regeneration.
-
-After generation, open:
-
-    fxfile.sln
-
-Build fxfile
-------------
-For the recommended 64-bit release build, select:
-
-    Configuration: Release-x64-Unicode
-    Platform:      x64
-
-Then run "Build Solution" in Visual Studio. The x64 build produces the main
-application, x64 xpr/crash modules, and the Win32 launcher/keyhook helpers.
-
-The main executable is generated under:
-
-    bin\x64\fxfile.exe
-
-Prepare Runtime Files
----------------------
-build.bat now prepares the bundled runtime libraries and language-resource
-directories automatically before you open the generated solution. The helper
-post-build steps also create their destination directories and run non-
-interactively.
-
-You can still refresh these files manually at any time:
-
-    copy_lib.bat
-    copy_languages.bat
-
-After a successful Release-x64-Unicode build, run:
-
-    bin\x64\fxfile.exe
-
-Distribution
-------------
-The `dist` directory contains the release staging, portable-package, and NSIS
-installer scripts. The existing three-architecture package requires all
-three verified release builds: `Release-x64-Unicode | x64`,
-`Release-x86-Unicode | Win32` and `Release-x86-Multibyte | Win32`.
-No updater is built or packaged. The x86 configurations are optional
-compatibility profiles outside the normal local x64 CI run.
-
-After those builds are available under `bin`, run from the repository root:
-
-    dist\package.bat
-
-Packaging uses the vendored `dist\7zip\7za.exe` and
-`dist\nsis\makensis.exe`. Creating an installer also requires an installed
-Microsoft HTML Help Workshop `hhc.exe`; specify its full path through
-`HHC_EXE` if it is not found in PATH or Program Files. No tools are downloaded.
-
-`docs/htmlhelp/` is the canonical help source. Run
-`python build\rebuild_htmlhelp.py --check` for a read-only source/index
-and packaging-wiring preflight. `--stage` builds a disposable staging tree
-in `dist\.htmlhelp-build`, normalizing legacy HTML encoding metadata.
-Every `dist\make_installer.bat` invocation (including those from
-`dist\package.bat`) runs `--build` first and checks for a freshly compiled
-CHM. A missing compiler or invalid result aborts packaging instead of
-reusing a stale binary. `dist\make_portable.bat` now independently
-regenerates the same help for direct portable builds and stages
-`fxfile.chm`, file-list custom icon bitmaps, application license,
-current `CREDITS` as third-party notices, readme and historical change
-log next to each portable `fxfile.exe`. The combined `dist\package.bat` assembles the installer before staging
-portable-only extras and compiles help separately for both entrypoints.
-Required release files are preflighted before the staging tree is replaced.
-The previous generated `dist/bin` is renamed to an ignored
-`dist/.package-backup` only after staging succeeds; if activation fails,
-the script attempts to restore the previous `bin` without discarding it.
-A leftover backup blocks subsequent staging for explicit manual inspection.
-On normal success the old backup is removed. Any packaging failure deletes
-newly produced output names so partial or stale installer/ZIP outputs
-cannot be mistaken for valid packages. This is a source-level recovery
-contract, not a verified Windows package test.
-`build\validate_package.ps1` checks all three archives and staged
-assets, including CHM signatures; any failed/missing item rejects the
-package. Generated `dist\fxfile.chm` is not tracked. It creates:
-
-    dist\fxfile_v2.0.4-dev.exe
-    dist\fxfile_v2.0.4-dev_x64_portable.zip
-    dist\fxfile_v2.0.4-dev_x86_unicode_portable.zip
-    dist\fxfile_v2.0.4-dev_x86_multibyte_portable.zip
-
-`build\validate_package.ps1` validates the staged runtime trees and portable
-ZIP payloads, verifies each main executable's PE architecture,
-rejects wrong XPR runtimes, any reintroduced updater payload, nested staging,
-unsafe/archive-traversal paths, duplicate or case-colliding entries and
-development artifacts such as PDB/OBJ/LIB/project files, and checks that the
-NSIS installer was actually produced. Packaging is no longer
-run or uploaded by GitHub Actions; build the required release configurations and
-run `dist\package.bat` plus `build\validate_package.ps1 -DistDir dist` locally
-when preparing a release.
-
-The previously tracked, stale `dist/fxfile.chm` has been removed.
-The help landing page links to
-`docs/htmlhelp/Html/current_development.htm`, a focused current-source-based
-guide for navigation, active toolbar commands and System/Light/Dark theme
-configuration. Historical release notes, screenshots, shortcut tables,
-configuration and menu indexes are visibly labelled as legacy references;
-the old support-page promises have been replaced with a verified-status
-notice. Most detailed historical topics have not yet undergone
-a current runtime/source-by-source rewrite. See
-`docs/development/HELP_CONTENT_AUDIT.md` for the outstanding review scope.
-Actual Windows CHM compilation, legacy-topic visual inspection and
-installer tests remain NOT TESTED.
-The product Help command still needs a real generated `fxfile.chm`
-alongside the executable or in the installed payload.
-
-Package Build/Payload PASS is not clean-install evidence. The repository now
-contains `build\installer_smoke.ps1` plus an NSIS
-`/FXFILE_SMOKE=<temp-dir>` mode. The default smoke only inspects that safety
-contract. With `FXFILE_INSTALLER_SMOKE=1` in an elevated local shell,
-`local_ci.bat install`/release/full may install only into a temporary directory,
-verify the installed payload and main executable architecture, reject
-the retired updater directory, run the protected
-runtime smoke, confirm Registry/shell/startup plus Desktop/Start-Menu/Quick
-Launch and temporary profile sentinels did not change, preserve pre-existing
-fxfile processes and sibling files, silently uninstall, and verify cleanup. That isolated smoke deliberately skips real product Registry,
-Start-Menu/Desktop, launcher-startup, and shell-context registration, so a real
-clean Windows Sandbox/VM install and shell-integration UX remain separate manual
-evidence.
-
-Legacy build
-------------
-The original project used a customized fxfile/gyp fork, Python 2.7.4, and
-Visual Studio 2015/v140. Those instructions are retained only in repository
-history; the default build path now targets Visual Studio 2026/v145.
-
-License and distribution review
--------------------------------
-The application source is covered by the root `LICENSE` (GNU GPL version 3
-or later). Bundled third-party software has separate conditions preserved
-in `CREDITS`. In particular, the recorded GFL SDK terms require an
-independent authorization/compatibility check before a combined installer
-can be publicly redistributed; generating a local package is not proof of
-permission. The installer license notice reflects the application license,
-and installs a current copy of `CREDITS` as third-party notices. See
-`docs/development/DISTRIBUTION_LICENSE_REVIEW.md` for unresolved release
-requirements. This repository is presently maintained for the owner's personal local
-use. Root `LICENSE` and `CREDITS` are preserved without assuming any
-additional permissions; if distribution becomes relevant, obtain the
-separate license review before publishing combined binaries.
-Neither local compilation nor the feature cleanup establishes external
-distribution clearance.
-
-Contact
+License
 -------
-Web site: http://www.flychk.com
-E-mail:   flychk@flychk.com
 
-Development documentation
--------------------------
-
-Start with the [development documentation index](docs/development/README.md)
-for current product status, build rules, UI/UX backlog, source-based
-and actual GUI evidence, and historical experiment records.
+See `LICENSE` and `CREDITS`.

@@ -1,6 +1,6 @@
 # AGENTS.md — flyExplorer project instructions
 
-**MAIN WINUI3 CUTOVER (2026-09-30):** The owner explicitly promoted the accepted Phase6 WinUI 3 implementation to the canonical `main` branch. This supersedes older instructions that treated native MFC `main` as the protected default product branch or required new UI work to remain on a separate migration branch. Active repository work now starts from `C:\dev\flyExplorer` / `main`; the MFC UI is legacy/reference only. Remaining installer, alternate-DPI/accessibility and physical-drag gaps remain open and must not be reported as certified. See [cutover record](docs/development/WINUI3_MAIN_CUTOVER_20260930.md). Canonical WinUI verification uses `experiments/phase6_winui_shell/run_scoped_checks.py`; old GYP/MFC build instructions below remain legacy/reference unless a task explicitly targets that native code.
+**MAIN WINUI3 CUTOVER (2026-09-30):** The owner explicitly promoted the accepted Phase6 WinUI 3 implementation to the canonical `main` branch. This supersedes older instructions that treated native MFC `main` as the protected default product branch or required new UI work to remain on a separate migration branch. Active repository work now starts from `C:\dev\flyExplorer` / `main`; the MFC UI is legacy/reference only. Remaining installer, alternate-DPI/accessibility and physical-drag gaps remain open and must not be reported as certified. See [cutover record](docs/development/WINUI3_MAIN_CUTOVER_20260930.md). Canonical WinUI verification uses `tools/winui/run_checks.py`; product code lives in `app/winui`, tests in `tests/winui`, and shared native code in `src/base`. Old GYP/MFC build instructions below remain legacy/reference unless a task explicitly targets that native code.
 
 
 > 이 문서는 flyExplorer 전용 project-specific instruction layer다.
@@ -40,6 +40,9 @@
 
 ## 3. flyExplorer source of truth
 
+**Current canonical WinUI source-of-truth override:** `app/winui/**`, `src/base/**`, `tests/winui/**`, `tools/winui/run_checks.py`, and root `build.bat`/`run.bat`/`test.bat` are the active product/build/test paths on `main`. The former MFC source/build/distribution/library material is quarantined under `legacy/mfc`; older path-specific instructions below are historical/reference only after the WinUI cutover. Do not route new product work back through them.
+
+
 Start at the [development documentation index](docs/development/README.md)
 and [concise current status](docs/development/CURRENT_STATUS.md) before
 using older dated project summaries as evidence.
@@ -70,6 +73,9 @@ using older dated project summaries as evidence.
 설치 도움말은 `docs/htmlhelp/` 원본에서 `build/rebuild_htmlhelp.py --build`로 생성하며, 컴파일된 CHM을 원본처럼 커밋하거나 이전 버전 CHM을 패키징하지 않는다. `--check` 결과는 실제 Windows CHM 컴파일/설치 검증을 대체하지 않는다.
 
 ## 4. Current build architecture
+
+**Canonical WinUI build override:** the supported product build is `build.bat Debug|Release`, which dispatches to `app/winui/build.cmd`. The native-MFC/GYP architecture described later in this section is historical/recovery context, not the default `main` build.
+
 
 기본 개발 경로는 다음과 같다.
 

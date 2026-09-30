@@ -18,8 +18,9 @@ ipch/
 /bin/
 /obj/
 
-# Local build toolchain downloaded by build setup
-/tools/
+# Local generated/downloaded tooling; canonical tools/winui is tracked
+/tools/gyp-next/
+/tools/logs/
 
 # Distribution staging and generated packages
 /dist/bin/

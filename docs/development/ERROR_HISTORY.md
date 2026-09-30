@@ -4138,3 +4138,20 @@ A later Release attempt successfully restored the owned child Dark theme but tha
 After the canonical-main cleanup removed ignored root `bin/` output, source validation failed because `build/test_ui_uxh06_recent_scope_contract.py` unconditionally opened `bin/x64/Languages/Korean.xml`. The file is generated legacy-MFC staging output and is not present on a clean checkout, so the source-only contract was incorrectly coupled to stale build artifacts.
 
 The contract now always validates the tracked `src/fxfile/Languages/Korean.xml` source and its required UXH-06 keys, while validating the legacy staged copy only when that generated file exists. No production source behavior changed. Final post-cleanup source validation passed 141 tests with one environmental skip (`logs/winui-scoped/20260930-172330-source.log`).
+
+## 2026-09-30: canonical WinUI repository move path assumptions
+
+During the move from `experiments/phase6_winui_shell` to `app/winui` and
+`tests/winui`, the first source run exposed path assumptions in the new runner
+and several source contracts. The runner initially resolved its repository root
+one level too shallow; after that was fixed, contracts still referred to GUI
+harnesses/native fixtures as though they lived beside the app. A first fresh
+compile also caught one remaining direct include of
+`src/fxfile/file_operation_core.h` after that seam had moved to `src/base`.
+
+These were repository-refactor defects, not accepted product-runtime failures.
+The fixes make app/test/root paths explicit, add a canonical structure contract,
+and build the shared file-operation seam only from `src/base`. Final canonical
+source checks are 4/4 structure + 107/107 WinUI contracts, fresh Debug/Release
+builds pass, and both full owned GUI configurations pass with original settings
+unchanged.
