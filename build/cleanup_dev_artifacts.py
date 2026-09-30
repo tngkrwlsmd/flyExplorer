@@ -1,4 +1,4 @@
-"""Opt-in cleanup for the migration worktree. Dry-run unless --apply.
+"""Opt-in cleanup for the canonical WinUI main worktree. Dry-run unless --apply.
 
 Never removes Debug intermediates, built executables, NuGet packages or evidence
 logs; only recognized, unreferenced old successful *source* check logs qualify.
@@ -15,7 +15,7 @@ import subprocess
 import sys
 
 ROOT = Path(__file__).resolve().parent.parent
-BRANCH = "migration/winui3-full-shell-20260929"
+BRANCH = "main"
 SOURCE_LOG = re.compile(
     r"^\d{8}-\d{6}-(?:source|official-source-preflight)\.log$")
 
@@ -127,7 +127,7 @@ def prune_candidates(log_dir, referenced, *, now, days=30, keep=2):
 
 def git_guard(checkpoint):
     if command("git", "branch", "--show-current") != BRANCH:
-        raise RuntimeError("Not on the migration branch.")
+        raise RuntimeError("Not on canonical main.")
     if command("git", "rev-parse", "HEAD") != checkpoint:
         raise RuntimeError("Checkpoint must exactly match current HEAD.")
     if command("git", "status", "--porcelain=v1", "-uall"):

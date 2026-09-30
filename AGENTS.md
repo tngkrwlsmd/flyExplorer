@@ -1,5 +1,8 @@
 # AGENTS.md — flyExplorer project instructions
 
+**MAIN WINUI3 CUTOVER (2026-09-30):** The owner explicitly promoted the accepted Phase6 WinUI 3 implementation to the canonical `main` branch. This supersedes older instructions that treated native MFC `main` as the protected default product branch or required new UI work to remain on a separate migration branch. Active repository work now starts from `C:\dev\flyExplorer` / `main`; the MFC UI is legacy/reference only. Remaining installer, alternate-DPI/accessibility and physical-drag gaps remain open and must not be reported as certified. See [cutover record](docs/development/WINUI3_MAIN_CUTOVER_20260930.md). Canonical WinUI verification uses `experiments/phase6_winui_shell/run_scoped_checks.py`; old GYP/MFC build instructions below remain legacy/reference unless a task explicitly targets that native code.
+
+
 > 이 문서는 flyExplorer 전용 project-specific instruction layer다.
 > `tngkrwlsmd/universal-agent-docs`의 validated policy bundle은 `.agent-policy/` 아래에 vendor하며, 기준 upstream revision은 `cc250a63994f1d9d4fcfdbb2bab9b622230bf8c6`이다.
 > 모든 repository-changing 작업은 이 문서와 함께 [`.agent-policy/AGENTS.md`](.agent-policy/AGENTS.md) 및 그 문서가 라우팅하는 정책을 읽고 적용한다.

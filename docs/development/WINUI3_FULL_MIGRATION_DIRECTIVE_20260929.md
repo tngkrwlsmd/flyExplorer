@@ -1,5 +1,8 @@
 # flyExplorer product UI directive — full WinUI 3 replacement (2026-09-29)
 
+**2026-09-30 owner cutover supersedes the staged branch rule:** The owner has now explicitly directed the accepted WinUI 3 implementation to become `main` immediately. Therefore earlier text below that says native MFC `main` remains the default until every release gate passes is historical for branch ownership. The unverified release gates themselves remain unverified and must still be reported honestly. [Cutover record](WINUI3_MAIN_CUTOVER_20260930.md).
+
+
 **Mandatory Korean default (owner direction):** The final app-owned WinUI product defaults to ko-KR even on non-Korean Windows. Real Korean text/accessibility labels, keyboard/IME, Hangul filesystem handling, proper UTF-8 compiler/tool transport and eventual localized resources are required release gates. [Current M2.1 language implementation and genuine Unicode issue](WINUI3_M21_KOREAN_NATIVE_UI_COMPONENTS_20260929.md).
 
 

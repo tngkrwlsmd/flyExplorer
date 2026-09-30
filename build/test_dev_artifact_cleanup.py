@@ -12,6 +12,9 @@ spec.loader.exec_module(tool)
 
 
 class CleanupSafety(unittest.TestCase):
+    def test_cleanup_is_bound_to_canonical_main_after_cutover(self):
+        self.assertEqual("main",tool.BRANCH)
+
     def test_release_selection_never_includes_debug_or_executable(self):
         with tempfile.TemporaryDirectory() as d:
             root=Path(d)

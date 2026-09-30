@@ -4122,3 +4122,13 @@ The M2.4 strict UIA right-click harness once timed out while looking for the app
 **Correction:** the C++ source now uses the ASCII-only universal character spelling `L"내 PC"` for both display and reverse address mapping. Debug and Release were rebuilt. A final owned Release visual probe read the UIA value as U+B0B4 + ` PC`, and full Debug/Release GUI subsequently passed native virtual This PC enumeration/history and existing regression suites.
 
 **Separate bounded harness refinement:** one direct shell GUI retry also hit the known watcher/UIA replacement window after foreground acquisition. The test now reacquires the exact owned `Nested` ListViewItem immediately after focus is secured and before the physical double click. It does not retry blind desktop coordinates or weaken the native navigation assertion.
+
+## 2026-09-30: canonical-main cutover validation races and one nonreproduced child shutdown
+
+During final validation after relocating the accepted WinUI tree to `C:\devlyExplorer` / local `main`, the first source run correctly exposed a stale architecture test that still assumed `main` could only be the native baseline. The test was changed to verify ancestry of both the prior native-default `cbffb48` and accepted M2.6 `3476ecd` instead.
+
+The first full Debug GUI timed out on the exact-owned M2.3 auto-restore child. The child/profile cleanup guards ran and the original six settings remained identical. A complete Debug rerun passed with no product-code change, so the event is retained as a nonreproduced timing anomaly rather than assigned a false single root cause.
+
+The first Release validation reached the M2.1 duplicate-create assertion after the successful rename had already queued a native Refresh. In optimized timing, that previous Refresh could update the status after the duplicate command and hide the duplicate error string even though no overwrite occurred. The test now waits for the exact prior Refresh status before issuing the duplicate command; the real filesystem non-overwrite assertion remains mandatory.
+
+A later Release attempt successfully restored the owned child Dark theme but that exact child returned Windows status `3221226107` during its immediate controlled shutdown. No product change was made; the final complete Release GUI rerun passed, including M2.1 create/rename/non-overwrite and M2.3 save/restore/clear. This shutdown code remains a recorded, nonreproduced anomaly rather than a claimed fixed defect.

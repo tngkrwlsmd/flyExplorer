@@ -82,27 +82,29 @@ class M19IntegrationContracts(unittest.TestCase):
                  "TerminateJobObject(lane->activeJob"):
    self.assertIn(needle,native)
 
- def test_main_import_is_actual_merge_or_pending_exact_merge(self):
+ def test_main_import_and_winui_cutover_lineage_are_preserved(self):
   root=str(R)
   def git(*a):
    p=subprocess.run(["git",*a],cwd=root,capture_output=True,text=True,
       encoding="utf-8",errors="replace")
    return p.returncode,p.stdout.strip()
-  # M1.9 imported EXACT main 3a4d27c. Subsequent main cbffb48
-  # changed only documentation, so the product source ancestry is intact
-  # even though a docs-only tip is not our M1.9 merge parent.
+  # M1.9 imported native main 3a4d27c. The owner later promoted the
+  # accepted WinUI tree to canonical main, while retaining the last
+  # native-default cbffb48 as an explicit merge parent for rollback/history.
   original_main="3a4d27ce9de3a8b92f23c0b406fe8da195e82ec5"
+  old_default="cbffb487635a94e625070d5bee9d5e6680006f12"
+  accepted_winui="3476ecd863b289244a06159fa59d719e9a48d49a"
   rc,head=git("rev-parse","HEAD")
   self.assertEqual(rc,0)
-  code,_=git("merge-base","--is-ancestor",original_main,head)
-  self.assertEqual(code,0)
   code,main=git("rev-parse","main")
   self.assertEqual(code,0)
-  self.assertIn(main,(
-      original_main,"cbffb487635a94e625070d5bee9d5e6680006f12"))
-  code,files=git("diff","--name-only",original_main+".."+main)
-  self.assertEqual(code,0)
-  self.assertTrue(all(f=="AGENTS.md" or f.startswith("docs/") or
-             f==".agent-policy/PROJECT.md" for f in files.splitlines()),files)
+  for required in (original_main,old_default,accepted_winui):
+   code,_=git("merge-base","--is-ancestor",required,main)
+   self.assertEqual(code,0,required)
+   code,_=git("merge-base","--is-ancestor",required,head)
+   self.assertEqual(code,0,required)
+  # The canonical main must no longer be the old native-default tip.
+  self.assertNotEqual(main,old_default)
+  self.assertNotEqual(main,original_main)
 
 if __name__=="__main__":unittest.main()

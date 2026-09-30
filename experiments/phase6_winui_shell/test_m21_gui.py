@@ -134,6 +134,12 @@ def run(*,p,win,element,safe_click,focus,eventually,left,right,localdata,env,exe
                       for row in element("LeftFiles").descendants()),
                "native Shell watcher did not refresh renamed folder",15)
     print("REAL_M21_NATIVE_RENAME_SELECTED_OWNED_KOREAN_FOLDER",True,flush=True)
+    # The successful rename queues one native Refresh. In optimized builds that
+    # owned refresh can land after the next command and replace its status text.
+    # Wait for that exact prior refresh to settle before asserting the duplicate
+    # create error; never weaken the actual non-overwrite filesystem assertion.
+    eventually(lambda:"폴더 변경 알림" in element("StatusText").window_text(),
+               "rename refresh did not settle before duplicate create",12)
     # A second attempt must never overwrite an existing folder.
     chosen.set_edit_text("이름 변경")
     safe_click(element("CreateFolderButton"))
