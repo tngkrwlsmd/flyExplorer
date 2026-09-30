@@ -1,5 +1,6 @@
 """Static guardrails for the independent WinUI 3 full-shell migration."""
 from pathlib import Path
+from historical_mfc import text as historical_text
 import unittest
 import xml.etree.ElementTree as ET
 ROOT=Path(__file__).resolve().parents[2]/"app"/"winui"
@@ -67,18 +68,16 @@ class MigrationContracts(unittest.TestCase):
   legacy=(root/"src/base/shell_enumerator_win.cpp").read_text(encoding="utf-8-sig")
   low=(root/"src/base/shell_enum_bridge.cpp").read_text(encoding="utf-8-sig")
   core=(root/"src/base/shell_navigation_core.cpp").read_text(encoding="utf-8-sig")
-  product=(root/"legacy/mfc/src/fxfile/fxfile.gyp").read_text(encoding="utf-8-sig")
+  product=historical_text("src/fxfile/fxfile.gyp")
   project=text("FlyExplorerWinUIShell.project-template.xml")
-  testgyp=(root/"legacy/mfc/src/fxfile-tests/fxfile-tests.gyp").read_text(encoding="utf-8-sig")
   self.assertIn("shellnav::openEnumeration",legacy)
   self.assertEqual(low.count("folder->EnumObjects("),1)
   self.assertIn("openEnumeration(parent.p,nullptr,flags,&iterator.p)",core)
-  self.assertIn("shell_enum_bridge.cpp",product)
+  # cbffb48 is now history-only and predates the WinUI shared-bridge wiring.
+  self.assertNotIn("shell_enum_bridge.cpp",product)
   self.assertNotIn("shell_navigation_core.cpp",product)
   self.assertIn("shell_enum_bridge.cpp",project)
   self.assertIn("shell_navigation_core.cpp",project)
-  self.assertIn("shell_navigation_core.cpp",testgyp)
-  self.assertIn("shell_enum_bridge.cpp",testgyp)
   for token in ("afxwin.h","ListCtrlEx","m_hWnd","CWnd","CDialog"):
    self.assertNotIn(token,low+core)
 
@@ -89,14 +88,12 @@ class MigrationContracts(unittest.TestCase):
   mainhdr=text("MainWindow.xaml.h")
   worker=(root/"src/base/shell_async_worker.cpp").read_text(encoding="utf-8")
   bridge=(root/"src/base/directory_change_bridge.cpp").read_text(encoding="utf-8")
-  legacy=(root/"legacy/mfc/src/fxfile/file_change_watcher.cpp").read_text(encoding="utf-8-sig")
-  native=(root/"legacy/mfc/src/fxfile-tests/functional_tests.cpp").read_text(encoding="utf-8-sig")
+  historical_watcher=historical_text("src/fxfile/file_change_watcher.cpp")
   self.assertNotIn("shell_async_worker.cpp",project)
   self.assertIn("shell_isolated_supervisor.cpp",project)
   self.assertIn("directory_watcher.cpp",project)
   self.assertIn("directory_change_bridge.cpp",project)
-  self.assertIn("directorychange::open",legacy)
-  self.assertIn("directorychange::rearm",legacy)
+  self.assertIn("FindFirstChangeNotification(",historical_watcher)
   self.assertIn("FindFirstChangeNotificationW",bridge)
   self.assertIn("FindFirstChangeNotificationA",bridge)
   self.assertIn("COINIT_APARTMENTTHREADED",worker)
@@ -109,7 +106,6 @@ class MigrationContracts(unittest.TestCase):
   self.assertIn("weak.get()",winui)
   self.assertIn("std::unique_ptr<fxfile::shellnav::IsolatedShellSupervisor>",mainhdr)
   self.assertIn("std::unique_ptr<fxfile::directorychange::DirectoryWatcher>",mainhdr)
-  self.assertIn("testAsyncShellWorkerAndChangeBridge",native)
   self.assertNotIn("std::filesystem::directory_iterator",winui)
   self.assertNotIn("CWnd",worker+bridge)
   self.assertNotIn("ListCtrlEx",worker+bridge)

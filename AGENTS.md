@@ -40,7 +40,7 @@
 
 ## 3. flyExplorer source of truth
 
-**Current canonical WinUI source-of-truth override:** `app/winui/**`, `src/base/**`, `tests/winui/**`, `tools/winui/run_checks.py`, and root `build.bat`/`run.bat`/`test.bat` are the active product/build/test paths on `main`. The former MFC source/build/distribution/library material is quarantined under `legacy/mfc`; older path-specific instructions below are historical/reference only after the WinUI cutover. Do not route new product work back through them.
+**Current canonical WinUI source-of-truth override:** `app/winui/**`, `src/base/**`, `tests/winui/**`, `tools/winui/run_checks.py`, and root `build.bat`/`run.bat`/`test.bat` are the active product/build/test paths on `main`. The former MFC source/build/distribution/library tree is absent from the current checkout and recoverable only from Git revision `cbffb48`; older path-specific instructions below are historical/reference only. Do not recreate a persistent legacy tree in `main`.
 
 
 Start at the [development documentation index](docs/development/README.md)

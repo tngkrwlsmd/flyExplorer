@@ -1,6 +1,7 @@
 """Canonical main-tree structure guard for the WinUI product."""
 from pathlib import Path
 import unittest
+from historical_mfc import revision_exists, exists as historical_exists
 
 ROOT=Path(__file__).resolve().parents[2]
 APP=ROOT/"app"/"winui"
@@ -13,6 +14,7 @@ class StructureContract(unittest.TestCase):
         self.assertTrue((ROOT/"clean.bat").is_file())
         self.assertTrue((ROOT/"tests/winui/test_shell_gui.py").is_file())
         self.assertTrue((ROOT/"tests/winui/paths.py").is_file())
+        self.assertTrue((ROOT/"tests/winui/historical_mfc.py").is_file())
         self.assertFalse((ROOT/"experiments").exists())
         for rel in ("x64","obj","Generated Files","FlyExplo.A79A2C56",
                     "helper/bin","helper/obj"):
@@ -46,21 +48,19 @@ class StructureContract(unittest.TestCase):
             self.assertNotIn(token,text)
         self.assertIn(r"..\..\src\base\file_operation_core.cpp",text)
 
-    def test_legacy_mfc_entry_points_are_quarantined(self):
-        legacy=ROOT/"legacy"/"mfc"
-        for name in ("build.bat","local_ci.bat","fxfile.gyp",
-                     "LOCAL_CI_MANUAL.txt","README.md"):
-            self.assertTrue((legacy/name).is_file(),name)
+    def test_retired_mfc_exists_only_in_git_history(self):
+        self.assertFalse((ROOT/"legacy").exists())
         self.assertFalse((ROOT/"local_ci.bat").exists())
         self.assertFalse((ROOT/"fxfile.gyp").exists())
         for name in ("build","dist","lib"):
             self.assertFalse((ROOT/name).exists(),name)
-            self.assertTrue((legacy/name).is_dir(),name)
         self.assertEqual(["base"],
             sorted(p.name for p in (ROOT/"src").iterdir() if p.is_dir()))
-        for name in ("fxfile","fxfile-crash","fxfile-keyhook",
-                     "fxfile-launcher","fxfile-tests","xpr"):
-            self.assertTrue((legacy/"src"/name).is_dir(),name)
+        self.assertTrue(revision_exists())
+        for path in ("src/fxfile/main_frame.cpp",
+                     "src/fxfile/search_dlg.cpp",
+                     "src/fxfile/bookmark.cpp"):
+            self.assertTrue(historical_exists(path),path)
 
 if __name__=="__main__":
     unittest.main()

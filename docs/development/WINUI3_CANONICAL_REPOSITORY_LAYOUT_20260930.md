@@ -10,7 +10,6 @@ behavior.
 - `src/base`: UI-independent native core
 - `tests/winui`: contracts, owned GUI probes, M1.9-M2.3 native fixtures
 - `tools/winui`: scoped local check runner
-- `legacy/mfc`: former MFC source plus its build/distribution/library tooling
 - `out`: ignored build outputs and intermediates; never product source
 - `.cache/nuget`: ignored NuGet package/HTTP/plugin cache
 - `logs`: ignored local validation evidence only
@@ -52,9 +51,10 @@ source tree.
 
 ## Deliberate non-goals
 
-This pass does not rewrite or delete old MFC history. Its retained local source
-and tooling are quarantined under `legacy/mfc`; exact runnable recovery remains
-the historical `cbffb48` commit. Phase5 remains retired.
+This pass does not rewrite or delete old MFC Git history. The current tree no
+longer contains any MFC source/build/distribution/library copy. Exact runnable
+recovery remains the historical `cbffb48` commit and should be performed in a
+separate recovery worktree. Phase5 remains retired.
 
 ## Validation evidence
 
@@ -108,3 +108,30 @@ Validation of the new boundary:
 
 The existing compiler/MSBuild warnings are unchanged; this pass is a path/layout
 cleanup, not warning remediation.
+
+## MFC current-tree retirement
+
+By explicit owner direction, the final local-copy cleanup removes `legacy/mfc`
+entirely from canonical `main`. Historical parity/source contracts that still
+need old implementation evidence read exact files from Git revision `cbffb48`
+through `tests/winui/historical_mfc.py`; they do not materialize or maintain a
+second MFC source tree.
+
+The obsolete MFC GUI-only harnesses that required a locally built `fxfile.exe`
+were also removed from the canonical WinUI test tree. Re-running those legacy
+GUI scenarios requires checking out `cbffb48` separately; they are not part of
+current-product validation.
+
+Final validation after deleting the local MFC tree:
+
+- canonical structure preflight: 4/4 PASS;
+- remaining source contracts: 103/103 PASS (`logs/winui-scoped/20260930-192440-source.log`);
+- fresh root Debug and Release builds: PASS from `out/winui/<Configuration>`;
+- full owned Debug GUI: PASS (`logs/winui-scoped/20260930-192558-gui-Debug.log`);
+- full owned Release GUI: PASS (`logs/winui-scoped/20260930-192712-gui-Release.log`);
+- both GUI runs reported the original six user-configuration SHA256 values identical.
+
+The first source run exposed two contracts that still expected post-baseline MFC
+working-tree wiring. They were corrected to distinguish the exact `cbffb48` Git
+baseline from current WinUI/shared-core behavior; no current product code was
+changed to satisfy those historical assumptions.

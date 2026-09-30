@@ -1,23 +1,23 @@
 """M1.9 source and integration contracts; real native/UI fixtures run separately."""
 from pathlib import Path
 import subprocess,unittest
+from historical_mfc import text as historical_text, exists as historical_exists
 R=Path(__file__).resolve().parents[2]
 UI=R/"app/winui"
-NATIVE=R/"legacy/mfc/src/fxfile"
 def text(p):return p.read_text(encoding="utf-8-sig")
 class M19IntegrationContracts(unittest.TestCase):
  def test_imported_main_workspace_and_recent_search_still_native(self):
-  m=text(NATIVE/"main_frame.cpp")
-  s=text(NATIVE/"search_dlg.cpp")
-  modern=text(NATIVE/"gui/ModernUI.cpp")
+  m=historical_text("src/fxfile/main_frame.cpp")
+  s=historical_text("src/fxfile/search_dlg.cpp")
+  modern=historical_text("src/fxfile/gui/ModernUI.cpp")
   self.assertIn("workspace_session.h",m)
   self.assertIn("void MainFrame::OnSaveWorkspace",m)
   self.assertIn("void MainFrame::OnOpenWorkspace",m)
   self.assertIn("IDC_SEARCH_REMEMBER",s)
   self.assertIn("RecentLocations",s)
   self.assertIn("Dark",modern)
-  self.assertTrue((NATIVE/"workspace_session.h").is_file())
-  self.assertFalse((NATIVE/"gui/DarkScrollbarLayer.cpp").exists())
+  self.assertTrue(historical_exists("src/fxfile/workspace_session.h"))
+  self.assertFalse(historical_exists("src/fxfile/gui/DarkScrollbarLayer.cpp"))
 
  def test_bounded_subset_of_mfc_workspace_utf16_safety(self):
   p=text(UI/"m19_workspace.cpp")

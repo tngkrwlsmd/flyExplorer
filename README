@@ -43,7 +43,6 @@ Canonical repository layout
     tests/winui/      source contracts, owned GUI tests and native fixtures
     tools/winui/      canonical local build/test orchestration
     docs/             current and historical engineering documentation
-    legacy/mfc/       former MFC source, build, distribution and library tree
     out/              ignored build products/intermediates
     .cache/nuget/     ignored NuGet cache
     logs/             ignored local validation evidence
@@ -67,13 +66,13 @@ Debug executable:
 Do not copy only the EXE; the sibling WinUI resources and
 `FlyShellIsolationHelper.exe` are part of the runtime set.
 
-Legacy MFC
-----------
+Retired MFC
+-----------
 
-The previous MFC default remains recoverable from Git history (`cbffb48`).
-Its retained source/build/distribution/library material is quarantined under
-`legacy/mfc`. Current development must not add new product features there or
-revive Phase5. Exact old-product rebuilds should use the historical Git commit.
+The previous MFC default exists only in Git history at `cbffb48`.
+No MFC source, build, distribution, library or runnable legacy test tree is
+retained in the current checkout. Exact old-product recovery/rebuild must use
+that historical commit in a separate worktree. Phase5 remains retired.
 
 Development status
 ------------------

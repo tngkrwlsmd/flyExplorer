@@ -2,13 +2,14 @@
 import subprocess
 import unittest
 from pathlib import Path
+from historical_mfc import text as historical_text
 
 ROOT=Path(__file__).resolve().parents[2]
 HERE=Path(__file__).resolve().parent
 def code(path):return (ROOT/path).read_text(encoding="utf-8-sig")
 class M19IntegrationContracts(unittest.TestCase):
     def test_native_main_workspace_schema_merged_without_replacing_mfc(self):
-        native=code("legacy/mfc/src/fxfile/main_frame.cpp")
+        native=historical_text("src/fxfile/main_frame.cpp")
         self.assertIn("MainFrame::OnSaveWorkspace",native)
         self.assertIn("MainFrame::OnOpenWorkspace",native)
         self.assertIn("workspace_session::writeMarker",native)
@@ -16,7 +17,7 @@ class M19IntegrationContracts(unittest.TestCase):
         self.assertIn("XPR_STRING_LITERAL(\"schema\"), 1",native)
 
     def test_native_main_explicit_search_history_merged(self):
-        native=code("legacy/mfc/src/fxfile/search_dlg.cpp")
+        native=historical_text("src/fxfile/search_dlg.cpp")
         self.assertIn("OnClearRecent",native)
         self.assertIn("OnRecentLocation",native)
         self.assertIn("IDC_SEARCH_REMEMBER",native)
