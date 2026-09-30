@@ -17,7 +17,7 @@ class FolderScaleContract(unittest.TestCase):
   self.assertIn("order.erase(std::remove_if(",app)
   self.assertIn("state.filteredCount=order.size()",app)
   self.assertIn('SetName(\n            button,hstring(',app)
-  self.assertIn('side==0?L"?? ? ?? ":L"??? ? ?? "',app)
+  self.assertIn('side==0?L"\\uC67C\\uCABD \\uB354 \\uD45C\\uC2DC ":L"\\uC624\\uB978\\uCABD \\uB354 \\uD45C\\uC2DC "',app)
   self.assertIn("if(mDetailCancel[side])mDetailCancel[side]->store(true);",app)
   self.assertIn("if(cancel->load())return; // prevent stale metadata",app)
   self.assertIn("thumbnailBudget<4",app)

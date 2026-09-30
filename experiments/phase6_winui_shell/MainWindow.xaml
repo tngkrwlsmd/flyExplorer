@@ -6,9 +6,34 @@
     xmlns:local="using:FlyExplorerWinUIShell"
     Title="flyExplorer - WinUI 3 전환 미리보기">
     <Grid x:Name="RootShell"
-          Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
+          Background="Transparent"
+          SizeChanged="OnShellSizeChanged">
+    <Grid.Resources>
+        <Style x:Key="ExplorerIconButtonStyle" TargetType="Button">
+            <Setter Property="Width" Value="36"/>
+            <Setter Property="Height" Value="34"/>
+            <Setter Property="Padding" Value="0"/>
+            <Setter Property="CornerRadius" Value="5"/>
+            <Setter Property="Background" Value="Transparent"/>
+        </Style>
+        <Style x:Key="ExplorerListItemStyle" TargetType="ListViewItem">
+            <Setter Property="MinHeight" Value="36"/>
+            <Setter Property="Padding" Value="8,2"/>
+            <Setter Property="Margin" Value="2,1"/>
+            <Setter Property="CornerRadius" Value="5"/>
+            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+        </Style>
+        <Style x:Key="ExplorerPaneTitleStyle" TargetType="Button">
+            <Setter Property="Height" Value="30"/>
+            <Setter Property="Padding" Value="8,2"/>
+            <Setter Property="CornerRadius" Value="4"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+        </Style>
+    </Grid.Resources>
         <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="44"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
@@ -18,34 +43,71 @@
         </Grid.RowDefinitions>
 
         <local:ShellHeader x:Name="HeaderView" Grid.Row="0"/>
-        <Grid Grid.Row="1" Padding="14,8,14,8" ColumnSpacing="8">
+        <local:FileToolbar x:Name="ToolbarView" Grid.Row="1"/>
+        <Grid Grid.Row="2" Padding="12,4,12,8" ColumnSpacing="7"
+              AutomationProperties.Name="&#xD0D0;&#xC0C9; &#xBC0F; &#xC8FC;&#xC18C; &#xD45C;&#xC2DC;&#xC904;">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="Auto"/>
                 <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="220"/>
                 <ColumnDefinition Width="Auto"/>
             </Grid.ColumnDefinitions>
-            <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="5">
-                <Button x:Uid="BackButton" x:Name="BackButton" Content="&#x2190;" Height="38" MinWidth="42" ToolTipService.ToolTip="뒤로" Click="OnBackClicked"/>
-                <Button x:Uid="ForwardButton" x:Name="ForwardButton" Content="&#x2192;" Height="38" MinWidth="42" ToolTipService.ToolTip="앞으로" Click="OnForwardClicked"/>
-                <Button x:Uid="UpButton" x:Name="UpButton" Content="&#x2191;" Height="38" MinWidth="42" ToolTipService.ToolTip="상위 폴더" Click="OnUpClicked"/>
+            <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="2">
+                <Button x:Name="BackButton" Style="{StaticResource ExplorerIconButtonStyle}"
+                        ToolTipService.ToolTip="&#xB4A4;&#xB85C;" Click="OnBackClicked"
+                        AutomationProperties.Name="&#xB4A4;&#xB85C;">
+                    <FontIcon Glyph="&#xE72B;" FontSize="15"/>
+                </Button>
+                <Button x:Name="ForwardButton" Style="{StaticResource ExplorerIconButtonStyle}"
+                        ToolTipService.ToolTip="&#xC55E;&#xC73C;&#xB85C;" Click="OnForwardClicked"
+                        AutomationProperties.Name="&#xC55E;&#xC73C;&#xB85C;">
+                    <FontIcon Glyph="&#xE72A;" FontSize="15"/>
+                </Button>
+                <Button x:Name="UpButton" Style="{StaticResource ExplorerIconButtonStyle}"
+                        ToolTipService.ToolTip="&#xC0C1;&#xC704; &#xD3F4;&#xB354;" Click="OnUpClicked"
+                        AutomationProperties.Name="&#xC0C1;&#xC704; &#xD3F4;&#xB354;">
+                    <FontIcon Glyph="&#xE74A;" FontSize="15"/>
+                </Button>
             </StackPanel>
-            <TextBox x:Name="AddressBox" Grid.Column="1" Height="38"
-                     PlaceholderText="폴더 경로를 입력하세요" KeyDown="OnAddressKeyDown"
-                     AutomationProperties.Name="현재 폴더 주소"/>
-            <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="6">
-                <Button x:Uid="NewTabButton" x:Name="NewTabButton" Content="새 탭" Height="38" Click="OnNewTabClicked"/>
-                <Button x:Uid="CloseTabButton" x:Name="CloseTabButton" Content="탭 닫기" Height="38" Click="OnCloseTabClicked"/>
-                <Button x:Name="SplitButton" Content="단일 창" Height="38" Click="OnSplitClicked"/>
-                <Button x:Uid="WorkspacePanelButton" x:Name="WorkspacePanelButton" Content="작업 공간" Height="38"
-                        AutomationProperties.Name="작업 공간 열기"
-                        Click="OnToggleWorkspaces"/>
-                <Button x:Uid="SearchPanelButton" x:Name="SearchPanelButton" Content="검색" Height="38"
-                        AutomationProperties.Name="파일 검색 열기"
-                        Click="OnToggleSearch"/>
+            <TextBox x:Name="AddressBox" Grid.Column="1" Height="34"
+                     PlaceholderText="&#xD3F4;&#xB354; &#xACBD;&#xB85C;&#xB97C; &#xC785;&#xB825;&#xD558;&#xC138;&#xC694;"
+                     KeyDown="OnAddressKeyDown"
+                     AutomationProperties.Name="&#xD604;&#xC7AC; &#xD3F4;&#xB354; &#xC8FC;&#xC18C;"/>
+            <TextBox x:Name="QuickSearchBox" Grid.Column="2" Height="34"
+                     PlaceholderText="&#xD604;&#xC7AC; &#xD3F4;&#xB354; &#xAC80;&#xC0C9;"
+                     KeyDown="OnQuickSearchKeyDown"
+                     AutomationProperties.Name="&#xD604;&#xC7AC; &#xD3F4;&#xB354; &#xAC80;&#xC0C9;&#xC5B4;"/>
+            <StackPanel Grid.Column="3" Orientation="Horizontal" Spacing="2">
+                <Button x:Name="NewTabButton" Style="{StaticResource ExplorerIconButtonStyle}"
+                        ToolTipService.ToolTip="&#xC0C8; &#xD0ED;" Click="OnNewTabClicked"
+                        AutomationProperties.Name="&#xC0C8; &#xD0ED;">
+                    <FontIcon Glyph="&#xE710;" FontSize="14"/>
+                </Button>
+                <Button x:Name="CloseTabButton" Style="{StaticResource ExplorerIconButtonStyle}"
+                        ToolTipService.ToolTip="&#xD0ED; &#xB2EB;&#xAE30;" Click="OnCloseTabClicked"
+                        AutomationProperties.Name="&#xD604;&#xC7AC; &#xD0ED; &#xB2EB;&#xAE30;">
+                    <FontIcon Glyph="&#xE711;" FontSize="14"/>
+                </Button>
+                <Button x:Name="SplitButton" Style="{StaticResource ExplorerIconButtonStyle}"
+                        ToolTipService.ToolTip="&#xB4C0;&#xC5BC; &#xD328;&#xB110; &#xC804;&#xD658;"
+                        Click="OnSplitClicked"
+                        AutomationProperties.Name="&#xB4C0;&#xC5BC; &#xD328;&#xB110; &#xC804;&#xD658;">
+                    <FontIcon Glyph="&#xE73F;" FontSize="14"/>
+                </Button>
+                <Button x:Name="WorkspacePanelButton" Style="{StaticResource ExplorerIconButtonStyle}"
+                        ToolTipService.ToolTip="&#xC791;&#xC5C5; &#xACF5;&#xAC04;"
+                        AutomationProperties.Name="&#xC791;&#xC5C5; &#xACF5;&#xAC04; &#xC5F4;&#xAE30;"
+                        Click="OnToggleWorkspaces">
+                    <FontIcon Glyph="&#xE821;" FontSize="14"/>
+                </Button>
+                <Button x:Name="SearchPanelButton" Style="{StaticResource ExplorerIconButtonStyle}"
+                        ToolTipService.ToolTip="&#xACE0;&#xAE09; &#xAC80;&#xC0C9;"
+                        AutomationProperties.Name="&#xD30C;&#xC77C; &#xAC80;&#xC0C9; &#xC5F4;&#xAE30;"
+                        Click="OnToggleSearch">
+                    <FontIcon Glyph="&#xE721;" FontSize="14"/>
+                </Button>
             </StackPanel>
         </Grid>
-
-        <local:FileToolbar x:Name="ToolbarView" Grid.Row="2"/>
         <StackPanel Grid.Row="3" x:Name="WorkspacePanel" Visibility="Collapsed"
                     Orientation="Vertical" Spacing="7" Padding="14,3,14,6">
             <StackPanel Orientation="Horizontal" Spacing="7">
@@ -106,50 +168,74 @@
             <ListView x:Name="SearchMatches" Height="64"
                       AutomationProperties.Name="일치하는 파일 경로"/>
         </StackPanel>
-        <Grid Grid.Row="5" Padding="10,0,10,0" ColumnSpacing="9">
+        <Grid Grid.Row="5" Padding="10,0,10,8" ColumnSpacing="8">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="185"/>
+                <ColumnDefinition x:Name="NavigationColumn" Width="188"/>
                 <ColumnDefinition x:Name="PrimaryColumn" Width="*"/>
                 <ColumnDefinition Width="1"/>
                 <ColumnDefinition x:Name="SecondaryColumn" Width="*"/>
             </Grid.ColumnDefinitions>
             <local:NavigationSidebar x:Name="SidebarView" Grid.Column="0"/>
-            <Grid x:Name="PrimaryPane" Grid.Column="1">
+            <Border x:Name="PrimaryPane" Grid.Column="1"
+                    CornerRadius="8" BorderThickness="1"
+                    BorderBrush="{ThemeResource SystemControlForegroundBaseLowBrush}"
+                    Background="{ThemeResource LayerFillColorDefaultBrush}">
+                <Grid>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="*"/>
                 </Grid.RowDefinitions>
-                <Button x:Name="PrimaryPaneTitle" Content="왼쪽 창" HorizontalAlignment="Left"
-                        AutomationProperties.Name="왼쪽 창 활성화" Click="OnActivateLeft"
-                        Margin="0,0,0,3"/>
+                <Button x:Name="PrimaryPaneTitle" Content="&#xC67C;&#xCABD; &#xCC3D;"
+                        Style="{StaticResource ExplorerPaneTitleStyle}"
+                        HorizontalAlignment="Left"
+                        AutomationProperties.Name="&#xC67C;&#xCABD; &#xCC3D; &#xD65C;&#xC131;&#xD654;" Click="OnActivateLeft"
+                        Margin="2,1,0,2"/>
                 <TextBox x:Name="LeftNameFilterBox" Grid.Row="0"
                          HorizontalAlignment="Right" Width="125"
                          MaxLength="64" TextChanged="OnNameFilterChanged"
-                         PlaceholderText="?? ??"
-                         AutomationProperties.Name="?? ?? ?? ??"/>
-                <TabView x:Name="LeftTabs" Grid.Row="1" Height="45"
+                         PlaceholderText="&#xC774;&#xB984; &#xD544;&#xD130;"
+                         AutomationProperties.Name="&#xC67C;&#xCABD; &#xD30C;&#xC77C; &#xC774;&#xB984; &#xD544;&#xD130;"/>
+                <TabView x:Name="LeftTabs" Grid.Row="1" Height="40"
                          IsAddTabButtonVisible="False" CanDragTabs="False"
                          TabWidthMode="SizeToContent" SelectionChanged="OnLeftTabSelectionChanged"
                          AutomationProperties.Name="왼쪽 폴더 탭"/>
-                <StackPanel Grid.Row="2" Orientation="Horizontal" Spacing="5"
-                            AutomationProperties.Name="왼쪽 파일 목록 열 조절">
-                    <TextBlock Text="이름 열 너비" VerticalAlignment="Center"/>
-                    <Slider x:Name="LeftNameWidthSlider" Minimum="120" Maximum="320"
-                            Value="168" StepFrequency="16" Width="92"
-                            ValueChanged="OnNameColumnWidthChanged"
-                            AutomationProperties.Name="왼쪽 이름 열 너비 조절"/>
-                    <Button x:Name="LeftLoadMoreButton" Content="+160" Visibility="Collapsed"
-                            MinWidth="54" Click="OnLoadMoreFiles"
-                            ToolTipService.ToolTip="Render next 160 files"
-                            AutomationProperties.Name="Left load 160 more files"/>
-                    <TextBlock Text="이름 | Windows 유형 | 크기 | 수정 날짜"
-                               VerticalAlignment="Center" FontSize="11"
-                               TextTrimming="CharacterEllipsis"/>
-                </StackPanel>
+                <Grid Grid.Row="2" Height="31" Margin="6,0,6,1"
+                      AutomationProperties.Name="&#xC67C;&#xCABD; &#xD30C;&#xC77C; &#xBAA9;&#xB85D; &#xC5F4; &#xBA38;&#xB9AC;&#xAE00;">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition x:Name="LeftNameHeaderColumn" Width="168"/>
+                        <ColumnDefinition Width="165"/>
+                        <ColumnDefinition Width="80"/>
+                        <ColumnDefinition Width="155"/>
+                    </Grid.ColumnDefinitions>
+                    <Grid Grid.Column="0" Margin="4,0,6,0">
+                        <TextBlock Text="&#xC774;&#xB984;" VerticalAlignment="Center"
+                                   FontWeight="SemiBold" FontSize="11"/>
+                        <StackPanel Orientation="Horizontal" Spacing="3"
+                                    HorizontalAlignment="Right" VerticalAlignment="Center">
+                            <Slider x:Name="LeftNameWidthSlider" Minimum="120" Maximum="320"
+                                    Value="168" StepFrequency="16" Width="46"
+                                    ValueChanged="OnNameColumnWidthChanged"
+                                    ToolTipService.ToolTip="&#xC774;&#xB984; &#xC5F4; &#xB108;&#xBE44;"
+                                    AutomationProperties.Name="&#xC67C;&#xCABD; &#xC774;&#xB984; &#xC5F4; &#xB108;&#xBE44; &#xC870;&#xC808;"/>
+                            <Button x:Name="LeftLoadMoreButton" Content="+160"
+                                    Visibility="Collapsed" MinWidth="46" Height="25"
+                                    Padding="5,0" Click="OnLoadMoreFiles"
+                                    ToolTipService.ToolTip="&#xB2E4;&#xC74C; 160&#xAC1C; &#xD45C;&#xC2DC;"
+                                    AutomationProperties.Name="&#xC67C;&#xCABD; &#xD30C;&#xC77C; 160&#xAC1C; &#xB354; &#xD45C;&#xC2DC;"/>
+                        </StackPanel>
+                    </Grid>
+                    <TextBlock Grid.Column="1" Text="&#xC720;&#xD615;" Margin="5,0"
+                               VerticalAlignment="Center" FontWeight="SemiBold" FontSize="11"/>
+                    <TextBlock Grid.Column="2" Text="&#xD06C;&#xAE30;" Margin="5,0"
+                               VerticalAlignment="Center" FontWeight="SemiBold" FontSize="11"/>
+                    <TextBlock Grid.Column="3" Text="&#xC218;&#xC815; &#xB0A0;&#xC9DC;" Margin="5,0"
+                               VerticalAlignment="Center" FontWeight="SemiBold" FontSize="11"/>
+                </Grid>
                 <ListView x:Name="LeftFiles" Grid.Row="3" IsDoubleTapEnabled="True"
-                          SelectionMode="Multiple" DoubleTapped="OnLeftFileDoubleTapped"
+                          ItemContainerStyle="{StaticResource ExplorerListItemStyle}"
+                           SelectionMode="Multiple" DoubleTapped="OnLeftFileDoubleTapped"
                           KeyDown="OnLeftFileKeyDown" RightTapped="OnFileRightTapped"
                           AllowDrop="True" CanDragItems="True" CanReorderItems="False"
                           DragOver="OnFileDragOver" Drop="OnFileDrop"
@@ -174,44 +260,69 @@
                         </MenuFlyout>
                     </ListView.ContextFlyout>
                 </ListView>
-            </Grid>
+                </Grid>
+            </Border>
             <Border x:Name="PaneDivider" Grid.Column="2" Background="{ThemeResource SystemControlForegroundBaseLowBrush}"/>
-            <Grid x:Name="SecondaryPane" Grid.Column="3">
+            <Border x:Name="SecondaryPane" Grid.Column="3"
+                    CornerRadius="8" BorderThickness="1"
+                    BorderBrush="{ThemeResource SystemControlForegroundBaseLowBrush}"
+                    Background="{ThemeResource LayerFillColorDefaultBrush}">
+                <Grid>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="*"/>
                 </Grid.RowDefinitions>
-                <Button x:Name="SecondaryPaneTitle" Content="오른쪽 창" HorizontalAlignment="Left"
-                        AutomationProperties.Name="오른쪽 창 활성화" Click="OnActivateRight"
-                        Margin="0,0,0,3"/>
+                <Button x:Name="SecondaryPaneTitle" Content="&#xC624;&#xB978;&#xCABD; &#xCC3D;"
+                        Style="{StaticResource ExplorerPaneTitleStyle}"
+                        HorizontalAlignment="Left"
+                        AutomationProperties.Name="&#xC624;&#xB978;&#xCABD; &#xCC3D; &#xD65C;&#xC131;&#xD654;" Click="OnActivateRight"
+                        Margin="2,1,0,2"/>
                 <TextBox x:Name="RightNameFilterBox" Grid.Row="0"
                          HorizontalAlignment="Right" Width="125"
                          MaxLength="64" TextChanged="OnNameFilterChanged"
-                         PlaceholderText="?? ??"
-                         AutomationProperties.Name="??? ?? ?? ??"/>
-                <TabView x:Name="RightTabs" Grid.Row="1" Height="45"
+                         PlaceholderText="&#xC774;&#xB984; &#xD544;&#xD130;"
+                         AutomationProperties.Name="&#xC624;&#xB978;&#xCABD; &#xD30C;&#xC77C; &#xC774;&#xB984; &#xD544;&#xD130;"/>
+                <TabView x:Name="RightTabs" Grid.Row="1" Height="40"
                          IsAddTabButtonVisible="False" CanDragTabs="False"
                          TabWidthMode="SizeToContent" SelectionChanged="OnRightTabSelectionChanged"
                          AutomationProperties.Name="오른쪽 폴더 탭"/>
-                <StackPanel Grid.Row="2" Orientation="Horizontal" Spacing="5"
-                            AutomationProperties.Name="오른쪽 파일 목록 열 조절">
-                    <TextBlock Text="이름 열 너비" VerticalAlignment="Center"/>
-                    <Slider x:Name="RightNameWidthSlider" Minimum="120" Maximum="320"
-                            Value="168" StepFrequency="16" Width="92"
-                            ValueChanged="OnNameColumnWidthChanged"
-                            AutomationProperties.Name="오른쪽 이름 열 너비 조절"/>
-                    <Button x:Name="RightLoadMoreButton" Content="+160" Visibility="Collapsed"
-                            MinWidth="54" Click="OnLoadMoreFiles"
-                            ToolTipService.ToolTip="Render next 160 files"
-                            AutomationProperties.Name="Right load 160 more files"/>
-                    <TextBlock Text="이름 | Windows 유형 | 크기 | 수정 날짜"
-                               VerticalAlignment="Center" FontSize="11"
-                               TextTrimming="CharacterEllipsis"/>
-                </StackPanel>
+                <Grid Grid.Row="2" Height="31" Margin="6,0,6,1"
+                      AutomationProperties.Name="&#xC624;&#xB978;&#xCABD; &#xD30C;&#xC77C; &#xBAA9;&#xB85D; &#xC5F4; &#xBA38;&#xB9AC;&#xAE00;">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition x:Name="RightNameHeaderColumn" Width="168"/>
+                        <ColumnDefinition Width="165"/>
+                        <ColumnDefinition Width="80"/>
+                        <ColumnDefinition Width="155"/>
+                    </Grid.ColumnDefinitions>
+                    <Grid Grid.Column="0" Margin="4,0,6,0">
+                        <TextBlock Text="&#xC774;&#xB984;" VerticalAlignment="Center"
+                                   FontWeight="SemiBold" FontSize="11"/>
+                        <StackPanel Orientation="Horizontal" Spacing="3"
+                                    HorizontalAlignment="Right" VerticalAlignment="Center">
+                            <Slider x:Name="RightNameWidthSlider" Minimum="120" Maximum="320"
+                                    Value="168" StepFrequency="16" Width="46"
+                                    ValueChanged="OnNameColumnWidthChanged"
+                                    ToolTipService.ToolTip="&#xC774;&#xB984; &#xC5F4; &#xB108;&#xBE44;"
+                                    AutomationProperties.Name="&#xC624;&#xB978;&#xCABD; &#xC774;&#xB984; &#xC5F4; &#xB108;&#xBE44; &#xC870;&#xC808;"/>
+                            <Button x:Name="RightLoadMoreButton" Content="+160"
+                                    Visibility="Collapsed" MinWidth="46" Height="25"
+                                    Padding="5,0" Click="OnLoadMoreFiles"
+                                    ToolTipService.ToolTip="&#xB2E4;&#xC74C; 160&#xAC1C; &#xD45C;&#xC2DC;"
+                                    AutomationProperties.Name="&#xC624;&#xB978;&#xCABD; &#xD30C;&#xC77C; 160&#xAC1C; &#xB354; &#xD45C;&#xC2DC;"/>
+                        </StackPanel>
+                    </Grid>
+                    <TextBlock Grid.Column="1" Text="&#xC720;&#xD615;" Margin="5,0"
+                               VerticalAlignment="Center" FontWeight="SemiBold" FontSize="11"/>
+                    <TextBlock Grid.Column="2" Text="&#xD06C;&#xAE30;" Margin="5,0"
+                               VerticalAlignment="Center" FontWeight="SemiBold" FontSize="11"/>
+                    <TextBlock Grid.Column="3" Text="&#xC218;&#xC815; &#xB0A0;&#xC9DC;" Margin="5,0"
+                               VerticalAlignment="Center" FontWeight="SemiBold" FontSize="11"/>
+                </Grid>
                 <ListView x:Name="RightFiles" Grid.Row="3" IsDoubleTapEnabled="True"
-                          SelectionMode="Multiple" DoubleTapped="OnRightFileDoubleTapped"
+                          ItemContainerStyle="{StaticResource ExplorerListItemStyle}"
+                           SelectionMode="Multiple" DoubleTapped="OnRightFileDoubleTapped"
                           KeyDown="OnRightFileKeyDown" RightTapped="OnFileRightTapped"
                           AllowDrop="True" CanDragItems="True" CanReorderItems="False"
                           DragOver="OnFileDragOver" Drop="OnFileDrop"
@@ -236,7 +347,8 @@
                         </MenuFlyout>
                     </ListView.ContextFlyout>
                 </ListView>
-            </Grid>
+                </Grid>
+            </Border>
         </Grid>
         <local:StatusFooter x:Name="FooterView" Grid.Row="6"/>
     </Grid>

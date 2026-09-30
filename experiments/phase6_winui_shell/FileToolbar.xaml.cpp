@@ -19,6 +19,15 @@ void FileToolbar::OnCreateFolder(IInspectable const&,RoutedEventArgs const&){
 void FileToolbar::OnRenameSelected(IInspectable const&,RoutedEventArgs const&){
  if(action_)action_(1);
 }
+void FileToolbar::OnWindowsCut(IInspectable const&,RoutedEventArgs const&){
+ if(action_)action_(6);
+}
+void FileToolbar::OnWindowsCopy(IInspectable const&,RoutedEventArgs const&){
+ if(action_)action_(7);
+}
+void FileToolbar::OnWindowsPaste(IInspectable const&,RoutedEventArgs const&){
+ if(action_)action_(8);
+}
 void FileToolbar::OnCopy(IInspectable const&,RoutedEventArgs const&){
  if(action_)action_(2);
 }

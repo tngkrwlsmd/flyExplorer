@@ -45,8 +45,14 @@ class RealFileListColumnContract(unittest.TestCase):
   impl=(A/"MainWindow.xaml.cpp").read_text(encoding="utf-8")
   state=(A/"file_list_state.h").read_text(encoding="utf-8")
   for item in ("LeftNameWidthSlider","RightNameWidthSlider",
-               "OnNameColumnWidthChanged","Windows \uC720\uD615"):
+               "OnNameColumnWidthChanged","LeftNameHeaderColumn",
+               "RightNameHeaderColumn"):
    self.assertIn(item,xml)
+  import xml.etree.ElementTree as ET
+  root=ET.parse(A/"MainWindow.xaml").getroot()
+  labels={value for element in root.iter() for value in element.attrib.values()}
+  for label in ("\uc774\ub984","\uc720\ud615","\ud06c\uae30","\uc218\uc815 \ub0a0\uc9dc"):
+   self.assertIn(label,labels)
   for item in ("mColumnControlsReady","nameColumnWidth","FontIcon glyph;",
                "Grid::SetColumn(field,col);","AutomationProperties::SetName(",
                "OnNameColumnWidthChanged("):

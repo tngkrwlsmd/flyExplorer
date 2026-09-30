@@ -38,6 +38,8 @@ namespace winrt::FlyExplorerWinUIShell::implementation
         void OnForwardClicked(IInspectable const&, Microsoft::UI::Xaml::RoutedEventArgs const&);
         void OnUpClicked(IInspectable const&, Microsoft::UI::Xaml::RoutedEventArgs const&);
         void OnAddressKeyDown(IInspectable const&, Microsoft::UI::Xaml::Input::KeyRoutedEventArgs const&);
+        void OnQuickSearchKeyDown(IInspectable const&, Microsoft::UI::Xaml::Input::KeyRoutedEventArgs const&);
+        void OnShellSizeChanged(IInspectable const&, Microsoft::UI::Xaml::SizeChangedEventArgs const&);
         void OnNewTabClicked(IInspectable const&, Microsoft::UI::Xaml::RoutedEventArgs const&);
         void OnCloseTabClicked(IInspectable const&, Microsoft::UI::Xaml::RoutedEventArgs const&);
         void OnSplitClicked(IInspectable const&, Microsoft::UI::Xaml::RoutedEventArgs const&);
@@ -124,10 +126,10 @@ namespace winrt::FlyExplorerWinUIShell::implementation
         Microsoft::UI::Xaml::Controls::TextBox FileNameBox(){
             return fileBar()->FileNameBox();
         }
-        Microsoft::UI::Xaml::Controls::Button CreateFolderButton(){
+        Microsoft::UI::Xaml::Controls::AppBarButton CreateFolderButton(){
             return fileBar()->CreateFolderButton();
         }
-        Microsoft::UI::Xaml::Controls::Button RenameButton(){
+        Microsoft::UI::Xaml::Controls::AppBarButton RenameButton(){
             return fileBar()->RenameButton();
         }
         Microsoft::UI::Xaml::Controls::TextBlock StatusText(){
@@ -202,6 +204,7 @@ namespace winrt::FlyExplorerWinUIShell::implementation
         void FillFiles(int side);
         bool OpenFolder(std::wstring const& path);
         void ActivatePane(int side);
+        void UpdateActivePaneChrome();
         void OpenSelectedFolder(int side);
         void ApplyWorkspace(fxfile::preview::Workspace&&);
         void QueueNextWorkspaceTab(int side);

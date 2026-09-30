@@ -42,7 +42,9 @@ class OwnedContextInvocationRegression(unittest.TestCase):
   self.assertIn("right=min(item.right,area.right)",probe)
   self.assertIn("top=max(item.top,area.top)",probe)
   self.assertIn("bottom=min(item.bottom,area.bottom)",probe)
-  self.assertIn('assert user.GetForegroundWindow()==hwnd',probe)
+  self.assertIn('def foreground_owned():',probe)
+  self.assertIn('pid.value==winui.pid',probe)
+  self.assertIn('if foreground_owned():',probe)
   self.assertIn('"--context-menu" in q.cmdline()',probe)
   self.assertIn('pid.value==child.pid',probe)
 

@@ -6,6 +6,7 @@ namespace winrt::FlyExplorerWinUIShell::implementation {
   ShellHeader();
   void SetThemeCallback(std::function<void(int)> handler);
   void RestoreTheme(int selection);
+  Microsoft::UI::Xaml::UIElement DragRegion(){ return TitleBarDragRegion(); }
   void OnThemeSelectionChanged(IInspectable const&,
       Microsoft::UI::Xaml::Controls::SelectionChangedEventArgs const&);
  private:

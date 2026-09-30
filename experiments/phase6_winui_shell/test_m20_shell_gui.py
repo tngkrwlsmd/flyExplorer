@@ -113,10 +113,17 @@ def run(*,win,element,safe_click,focus,eventually,owned):
        "This PC sidebar control never reappeared after pane restoration",9)
     print("M20_POST_SPLIT_THISPC_READY",True,flush=True)
     safe_click(element("ThisPCButton"))
-    # The worker resolves shell:MyComputerFolder into a native PIDL:
-    # the address displays its absolute "::..." parsing name, NOT alias text.
-    eventually(lambda:"::" in element("AddressBox").get_value(),
-        "new This PC button did not resolve a native virtual Shell PIDL",16)
+    # The worker still resolves shell:MyComputerFolder to a native PIDL,
+    # while M2.6 presents a Windows 11-style friendly address label.
+    eventually(lambda:element("AddressBox").get_value()=="내 PC",
+        "This PC did not commit the native virtual route with friendly address",16)
+    # M2.6 renders bounded capacity UI only for fixed/removable drive roots.
+    # The test workstation always has the local system drive; require one
+    # real nested ProgressBar rather than accepting source markup alone.
+    eventually(lambda:any(peer.element_info.control_type=="ProgressBar"
+        for peer in element("LeftFiles").descendants()),
+        "This PC local drive did not expose the Fluent capacity progress bar",12)
+    print("REAL_M26_THIS_PC_LOCAL_DRIVE_CAPACITY_CARD",True,flush=True)
     safe_click(element("BackButton"))
     eventually(lambda:element("AddressBox").get_value().lower()==before.lower(),
         "native per-tab history lost after This PC button",16)

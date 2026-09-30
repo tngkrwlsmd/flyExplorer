@@ -8,7 +8,7 @@ from ctypes import wintypes as w
 import hashlib,os,subprocess,sys,tempfile,time
 from pathlib import Path
 import psutil
-from pywinauto import Desktop
+from pywinauto import Desktop,keyboard
 
 LEGACY=("fxfile.conf","fxfile-main.conf","fxfile-toolbar.dat",
         "fxfile-coolbar.dat","fxfile-dlg_state.conf","fxfile-folder_layout.conf")
@@ -63,9 +63,18 @@ def main(config="Debug"):
      if x.element_info.control_type=="ListItem" and
         "context-test-owned.txt" in x.window_text()),None)
   eventually(lambda:row() is not None,"Owned file row unavailable")
-  win.set_focus()
-  assert user.GetForegroundWindow()==hwnd
-  row().select()
+  eventually(lambda:str(folder).lower() in
+             win.child_window(auto_id="AddressBox").get_value().lower(),
+             "Owned context fixture route did not commit",12)
+  def select_owned_row():
+   current=row()
+   if current is None:return False
+   win.set_focus()
+   if user.GetForegroundWindow()!=hwnd:return False
+   current.select()
+   refreshed=row()
+   return refreshed is not None and refreshed.is_selected()
+  eventually(select_owned_row,"Owned context row selection did not stabilize",8)
   # The ListViewItem may report a full content-width rectangle much
   # wider than the actual clipped viewport. Click only the verified
   # intersection of this owned row and its owned ListView, never the
@@ -83,9 +92,6 @@ def main(config="Debug"):
       "Owned file row not visible inside owned ListView viewport")
   click=(left+min(50,(right-left)//2),(top+bottom)//2)
   assert area.left<click[0]<area.right and area.top<click[1]<area.bottom
-  win.set_focus()
-  assert user.GetForegroundWindow()==hwnd
-  mouse.click(button="right",coords=click)
   def menu():
    # WinUI may host ContextFlyout in a top-level XAML popup HWND. Search
    # only exact owned-process windows; never inspect other applications.
@@ -96,9 +102,49 @@ def main(config="Debug"):
         if x.element_info.name=="Windows Shell isolated context menu")
     except Exception:pass
    return hits[0] if len(hits)==1 else None
+  def foreground_owned():
+   f=user.GetForegroundWindow()
+   if not f:return False
+   pid=w.DWORD()
+   user.GetWindowThreadProcessId(f,c.byref(pid))
+   return pid.value==winui.pid
+  def wait_app_menu(seconds):
+   end=time.monotonic()+seconds
+   while time.monotonic()<end:
+    hit=menu()
+    if hit is not None:return hit
+    time.sleep(.15)
+   return None
+  # Native watcher/UIA timing can replace the selected peer while the
+  # ContextFlyout is opening. Retry the exact clipped pointer gesture at
+  # most twice. Between attempts ESC is sent only when the exact owned
+  # WinUI process owns foreground; never dismiss or click a foreign menu.
+  for attempt in range(2):
+   if menu() is not None:break
+   eventually(select_owned_row,"Owned context row lost before right click",5)
+   item=row().rectangle()
+   area=win.child_window(auto_id="LeftFiles").rectangle()
+   left=max(item.left,area.left);right=min(item.right,area.right)
+   top=max(item.top,area.top);bottom=min(item.bottom,area.bottom)
+   assert right-left>30 and bottom-top>5
+   click=(left+min(50,(right-left)//2),(top+bottom)//2)
+   assert area.left<click[0]<area.right and area.top<click[1]<area.bottom
+   mouse.click(button="right",coords=click)
+   if wait_app_menu(2.3) is not None:break
+   if foreground_owned():
+    keyboard.send_keys("{ESC}")
+    time.sleep(.25)
+  if menu() is None:
+   eventually(select_owned_row,"Owned context row lost before keyboard fallback",5)
+   current=row()
+   assert current is not None
+   current.set_focus()
+   assert foreground_owned()
+   keyboard.send_keys("+{F10}")
+   print("OWNED_CONTEXT_KEYBOARD_FALLBACK_USED",True,flush=True)
   try:
    eventually(lambda:menu() is not None,
-              "Owned Shell menu launch item absent",7)
+              "Owned Shell menu launch item absent",6)
   except AssertionError:
    # Diagnostic only, no more synthetic coordinate drags/clicks.
    discovered=[]

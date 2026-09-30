@@ -66,8 +66,10 @@ def main(config="Debug"):
   assert 96<=initial_dpi<=384
   assert u.GetSystemMetrics(80)==1,"Unexpected monitor change during probe"
   named=("BackButton","ForwardButton","UpButton","AddressBox",
-         "LeftFiles","RightFiles","LeftNameWidthSlider",
-         "RightNameWidthSlider","SortPicker")
+         "QuickSearchBox","NewTabButton","CloseTabButton","SplitButton",
+         "LeftFiles","RightFiles","LeftNameFilterBox","RightNameFilterBox",
+         "LeftNameWidthSlider","RightNameWidthSlider","SortPicker",
+         "ThisPCButton")
   sizes=((960,634),(1100,680),(1240,710))
   for width,height in sizes:
    win.set_focus()
@@ -85,7 +87,15 @@ def main(config="Debug"):
    until(lambda:any(filename in x.window_text() for x in pane.descendants()
           if x.element_info.control_type=="ListItem"),
          "Owned Korean accessibility row missing")
-   print("REAL_OWNED_UIA_NINE_NAMED_CONTROLS_AND_RESPONSIVE_SIZE",
+   # Geometry confirms the Fluent hierarchy remains title/commands,
+   # address+search, then dual-pane content at each responsive size.
+   back=win.child_window(auto_id="BackButton").rectangle()
+   address_rect=win.child_window(auto_id="AddressBox").rectangle()
+   search_rect=win.child_window(auto_id="QuickSearchBox").rectangle()
+   left_rect=win.child_window(auto_id="LeftFiles").rectangle()
+   assert back.top<=address_rect.top<left_rect.top,(width,height,"vertical order")
+   assert address_rect.right<=search_rect.left+3,(width,height,"address/search order")
+   print("REAL_OWNED_M26_FLUENT_16_NAMED_CONTROLS_AND_RESPONSIVE_SIZE",
          width,height,True,flush=True)
   win.set_focus()
   assert u.GetForegroundWindow()==hwnd

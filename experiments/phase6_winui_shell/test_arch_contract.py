@@ -1,6 +1,7 @@
 """Static guardrails for the independent WinUI 3 full-shell migration."""
 from pathlib import Path
 import unittest
+import xml.etree.ElementTree as ET
 ROOT=Path(__file__).resolve().parent
 def text(name):
  return (ROOT/name).read_text(encoding="utf-8-sig")
@@ -18,7 +19,8 @@ class MigrationContracts(unittest.TestCase):
    self.assertEqual(xaml.count('x:Name="'+actual_pane+'"'),1)
   self.assertEqual(xaml.count('x:Name="SearchMatches"'),1)
   self.assertIn("SecondaryColumn",xaml)
-  self.assertIn("ThemeResource ApplicationPageBackgroundThemeBrush",xaml)
+  self.assertIn('Background="Transparent"',xaml)
+  self.assertIn("SystemBackdrop(Microsoft::UI::Xaml::Media::MicaBackdrop{}",impl)
   for n in ("AddressBox","LeftTabs","RightTabs","LeftFiles","RightFiles",
             "NewTabButton","CloseTabButton","SplitButton"):
    self.assertIn('x:Name="'+n+'"',xaml)
@@ -46,7 +48,10 @@ class MigrationContracts(unittest.TestCase):
   xaml=text("MainWindow.xaml")
   impl=text("MainWindow.xaml.cpp")
   build=text("build.cmd")
-  self.assertIn("독립 Shell 작업자",text("NavigationSidebar.xaml"))
+  nav=ET.parse(ROOT/"NavigationSidebar.xaml").getroot()
+  navtext=" ".join(e.get("Text","") for e in nav.iter())
+  self.assertIn("Shell",navtext)
+  self.assertIn("\ub3c5\ub9bd",navtext)
   self.assertTrue((ROOT.parents[1]/"src/base/file_command_core.cpp").is_file())
   self.assertNotIn("std::filesystem::directory_iterator",impl)
   self.assertIn("QueuePidl(side,fxfile::shellnav::Location(entries[index].id)",impl)

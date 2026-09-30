@@ -1,18 +1,28 @@
 """M2.1 architecture/source assertions; actual native and GUI run separately."""
 from pathlib import Path
 import unittest
+import xml.etree.ElementTree as ET
 R=Path(__file__).resolve().parents[2]
 def src(n):return (R/n).read_text(encoding="utf-8-sig")
 class KoreanM21(unittest.TestCase):
  def test_default_korean_real_winui_control_resources(self):
-  h=src("experiments/phase6_winui_shell/ShellHeader.xaml")
-  n=src("experiments/phase6_winui_shell/NavigationSidebar.xaml")
-  main=src("experiments/phase6_winui_shell/MainWindow.xaml")+src("experiments/phase6_winui_shell/FileToolbar.xaml")
-  for word in ("\ud14c\ub9c8: \uc2dc\uc2a4\ud15c","\uc2dc\uc2a4\ud15c","\ub77c\uc774\ud2b8","\ub2e4\ud06c"):
+  def values(rel):
+   root=ET.parse(R/rel).getroot()
+   # XML character entities are intentional in M2.6 to keep remote writes
+   # ASCII-stable; ElementTree returns the same real localized UI strings.
+   return "\n".join(value for e in root.iter()
+                     for value in e.attrib.values() if value)
+  h=values("experiments/phase6_winui_shell/ShellHeader.xaml")
+  n=values("experiments/phase6_winui_shell/NavigationSidebar.xaml")
+  main=values("experiments/phase6_winui_shell/MainWindow.xaml")+"\n"+values(
+       "experiments/phase6_winui_shell/FileToolbar.xaml")
+  for word in ("\ud14c\ub9c8: \uc2dc\uc2a4\ud15c","\uc2dc\uc2a4\ud15c",
+               "\ub77c\uc774\ud2b8","\ub2e4\ud06c"):
    self.assertIn(word,h)
   for word in ("\ud0d0\uc0c9","\ub0b4 PC","\ubb38\uc11c"):
    self.assertIn(word,n)
-  for word in ("\ud30c\uc77c \uc791\uc5c5","\uc0c8 \ud3f4\ub354","\uc774\ub984 \ubcc0\uacbd"):
+  for word in ("\ud30c\uc77c \uc791\uc5c5",
+               "\uc0c8 \ud3f4\ub354","\uc774\ub984 \ubcc0\uacbd"):
    self.assertIn(word,main)
  def test_no_mojibake_runtime_korean_theme_labels(self):
   cpp=src("experiments/phase6_winui_shell/ShellHeader.xaml.cpp")

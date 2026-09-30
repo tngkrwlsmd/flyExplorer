@@ -4114,3 +4114,11 @@ An initial test-owned real Windows Explorer and WinUI copy/cut four-direction si
 ## 2026-09-30: M2.5 context flyout historical miss reclassification
 
 The M2.4 strict UIA right-click harness once timed out while looking for the app-owned Shell-menu flyout entry. No provider verb was invoked and source/settings remained unchanged. With current M2.5 layout changes and freshly compiled binaries, the same bounded row/ListView-intersection harness passed twice consecutively on Debug and once on Release, launching the exact sibling `--context-menu` helper, confirming the popup's foreground PID, and cancelling via ESC. The original failure is retained rather than deleted; direct evidence is insufficient to prove whether the earlier miss was WinUI flyout activation timing or UIA enumeration. Current launch/cancel smoke is accepted; arbitrary third-party verb execution remains outside the acceptance boundary.
+
+## 2026-09-30: M2.6 friendly This PC literal text-pipeline corruption and UIA peer refresh
+
+**Observed:** the first M2.6 friendly This PC address implementation compiled and displayed `? PC` instead of Korean because a long PowerShell-to-Python source-generation command had already replaced the non-ASCII source character before Python wrote the C++ file. A real full GUI run then correctly failed its new friendly-address expectation. Source inspection with `unicode_escape` proved the C++ file contained ASCII `?`, not a terminal-display artifact.
+
+**Correction:** the C++ source now uses the ASCII-only universal character spelling `L"내 PC"` for both display and reverse address mapping. Debug and Release were rebuilt. A final owned Release visual probe read the UIA value as U+B0B4 + ` PC`, and full Debug/Release GUI subsequently passed native virtual This PC enumeration/history and existing regression suites.
+
+**Separate bounded harness refinement:** one direct shell GUI retry also hit the known watcher/UIA replacement window after foreground acquisition. The test now reacquires the exact owned `Nested` ListViewItem immediately after focus is secured and before the physical double click. It does not retry blind desktop coordinates or weaken the native navigation assertion.

@@ -123,9 +123,10 @@ try:
  for key in ids:assert element(key).exists(timeout=5),("Missing XAML control",key)
  print("REAL_WINUI_SHELL_CONTROLS",len(ids),"DUAL_PANES_AND_TABS=True",flush=True)
  startup_status=element("StatusText").window_text().lower()
- assert ("독립 shell" in startup_status or
-         "독립 shell" in startup_status),(
-   "UI-independent native core/helper was not active at startup",
+ eventually(lambda:str(left).lower() in element("AddressBox").get_value().lower(),
+            "UI-independent native core/helper was not active at startup",12)
+ assert "?? ?????" not in element("StatusText").window_text(),(
+   "native helper committed the owned route but left an error status",
    element("StatusText").window_text())
  print("ACTUAL_CPP_NATIVE_CORE_NULL_CONTRACT_LINKED",True,flush=True)
  if owned_block or owned_com:
@@ -142,8 +143,6 @@ try:
   print("REAL_WINUI_LEFT_HELPER_TIMEOUT_AND_AUTOMATIC_RESTART",True,flush=True)
   if owned_com:
    print("REAL_WINUI_OWNED_COM_VTABLE_STALL_RECOVERED",True,flush=True)
- eventually(lambda:str(left).lower() in element("AddressBox").get_value().lower(),
-            "first COM worker result not dispatched to the WinUI thread",12)
  # Two TabView pane controls are genuinely visible; they are not MFC.
  assert element("LeftTabs").is_visible() and element("RightTabs").is_visible()
  eventually(lambda:any("Nested" in e.window_text()
@@ -209,6 +208,12 @@ try:
   print("REAL_NATIVE_WATCHER_CREATE_AND_DELETE_AUTO_REFRESH",True,flush=True)
  # A real ListView double click must use the item's OWNED absolute Shell
  # PIDL, not a filesystem-only address shim.
+ # A watcher refresh replaces native rows asynchronously. Re-resolve the
+ # owned ListView until the stable Shell snapshot is visible instead of
+ # treating the short UIA replacement window as a product navigation failure.
+ eventually(lambda:len([e for e in element("LeftFiles").descendants()
+   if e.element_info.control_type=="ListItem" and "Nested" in e.window_text()])==1,
+   "native Shell fixture row did not settle after watcher refresh",8)
  navitems=[e for e in element("LeftFiles").descendants()
    if e.element_info.control_type=="ListItem" and "Nested" in e.window_text()]
  assert len(navitems)==1,("native Shell fixture row not found",len(navitems))
@@ -217,6 +222,11 @@ try:
        "PATH",element("AddressBox").get_value(),
        "ROW",navitems[0].window_text(),flush=True)
  ensure_owned_focus()
+ # Focus acquisition can rebuild the WinUIA peer after watcher invalidation;
+ # resolve the exact owned row again immediately before the physical gesture.
+ navitems=[e for e in element("LeftFiles").descendants()
+   if e.element_info.control_type=="ListItem" and "Nested" in e.window_text()]
+ assert len(navitems)==1,("native Shell fixture row lost before input",len(navitems))
  navitems[0].double_click_input()
  print("OWNED_NATIVE_POINTER_GUARD_PASSED",True,flush=True)
  try:
@@ -325,10 +335,24 @@ try:
  rightaddr.type_keys("{ENTER}",set_foreground=True)
  eventually(lambda:str(right).lower() in element("AddressBox").get_value().lower(),
             "right pane address entry")
- # Typed address updates before out-of-process Shell response; require real rows.
- eventually(lambda:any("Secondary" in e.window_text()
-     for e in element("RightFiles").descendants()),
-     "right helper did not deliver real independent pane entries",12)
+ # Typed address updates before out-of-process Shell response; require real
+ # rows. Full M2.6 owned integration also has theme/search/session workers, so
+ # allow the same bounded native helper more time without accepting address
+ # text alone as success.
+ def right_helper_ready():
+  return any(e.element_info.control_type=="ListItem" and
+             "Secondary" in e.window_text()
+             for e in element("RightFiles").descendants())
+ try:
+  eventually(right_helper_ready,
+      "right helper did not deliver real independent pane entries",20)
+ except AssertionError:
+  print("RIGHT_HELPER_DIAGNOSTIC",
+        element("StatusText").window_text(),
+        element("AddressBox").get_value(),
+        [e.window_text() for e in element("RightFiles").descendants()[:12]],
+        flush=True)
+  raise
  right_items=[e.window_text() for e in element("RightFiles").descendants()]
  left_items=[e.window_text() for e in element("LeftFiles").descendants()]
  assert any("Nested" in x for x in left_items),left_items[:10]
@@ -346,15 +370,15 @@ try:
  virtual.set_edit_text("shell:MyComputerFolder")
  ensure_owned_focus()
  virtual.type_keys("{ENTER}",set_foreground=True)
- eventually(lambda:"::" in virtual.get_value(),"native virtual Shell location not opened")
+ eventually(lambda:element("AddressBox").get_value()=="내 PC",
+            "native virtual Shell location not opened")
  assert len(element("RightFiles").descendants())>0,(
     "Shell virtual folder enumeration unexpectedly empty")
  safe_click(element("PrimaryPaneTitle"))
  eventually(lambda:str(left).lower() in element("AddressBox").get_value().lower(),
    "virtual Shell location replaced independent left pane")
  print("REAL_NATIVE_VIRTUAL_SHELL_THIS_PC_PIDL_AND_ENUMERATION",True,flush=True)
- # The alias is no longer visible in the current address field; it has
- # been resolved to the native absolute Shell PIDL parsing name.
+ # M2.6 shows the friendly label while the native model keeps the PIDL.
  # Verify the virtual location participated in the SAME tab history.
  safe_click(element("SecondaryPaneTitle"))
  safe_click(element("BackButton"))

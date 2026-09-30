@@ -113,7 +113,19 @@ def run(*,p,win,element,safe_click,focus,eventually,left,right,localdata,env,exe
                          "새 폴더" in entry.window_text()),None)
     eventually(lambda:find_row() is not None,
                "new owned Korean ListViewItem did not appear",12)
-    safe_click(find_row())
+    # A filesystem watcher can replace the row peer between lookup and the
+    # rename click, especially in optimized Release builds. Re-resolve and
+    # verify one selected owned row before invoking the existing command.
+    def select_created():
+        current=find_row()
+        if current is None:
+            return False
+        focus()
+        current.select()
+        refreshed=find_row()
+        return refreshed is not None and refreshed.is_selected()
+    eventually(select_created,
+               "owned Korean folder could not be selected after watcher refresh",10)
     safe_click(element("RenameButton"))
     renamed=left/"이름 변경"
     eventually(lambda:renamed.is_dir() and not created.exists(),

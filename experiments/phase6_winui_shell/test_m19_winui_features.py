@@ -252,14 +252,25 @@ def run(*,p,win,element,safe_click,focus,eventually,ownedwindows,
                  "isolated WinUI restart window missing",14)
             restarted=Desktop(backend="uia").window(
                 handle=ui_for_child(psutil.Process(restart.pid))[0])
-            search_btn=restarted.child_window(auto_id="SearchPanelButton")
-            search_btn.click_input()
+            def open_search_panel():
+                if restarted.child_window(
+                        auto_id="SearchScopeBox").exists(timeout=.15):
+                    return True
+                button=restarted.child_window(auto_id="SearchPanelButton")
+                if not button.exists(timeout=.15) or not button.is_visible():
+                    return False
+                restarted.set_focus()
+                button.click_input()
+                return restarted.child_window(
+                    auto_id="SearchScopeBox").exists(timeout=.25)
+            good(open_search_panel,
+                 "restarted WinUI advanced-search panel did not open",8)
             # WinUI ComboBox virtualizes its popup; closed-combo UIA
             # descendants can be empty even with real Items(). The
             # explicit user-visible count is updated ONLY after the
             # asynchronous native load and Items().Append in the UI.
-            count=restarted.child_window(auto_id="RecentCountText")
-            good(lambda:"저장 2개" in count.window_text(),
+            good(lambda:("\uc800\uc7a5 2\uac1c" in restarted.child_window(
+                     auto_id="RecentCountText").window_text()),
                  "restarted WinUI failed to reload two opted-in scopes",12)
             print("REAL_M19_SEARCH_RESTART_RECENTS_LOADED",2,flush=True)
         finally:

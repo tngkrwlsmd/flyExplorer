@@ -28,6 +28,23 @@ using namespace Microsoft::UI::Xaml;
 using namespace Microsoft::UI::Xaml::Controls;
 
 namespace {
+    std::wstring FriendlyAddress(std::wstring value)
+    {
+        auto lower=value;
+        std::transform(lower.begin(),lower.end(),lower.begin(),
+            [](wchar_t c){ return static_cast<wchar_t>(::towlower(c)); });
+        if(lower==L"shell:mycomputerfolder" ||
+           lower.find(L"20d04fe0-3aea-1069-a2d8-08002b30309d")!=std::wstring::npos)
+            return L"\uB0B4 PC";
+        return value;
+    }
+
+    std::wstring ResolveFriendlyAddress(std::wstring value)
+    {
+        if(value==L"\uB0B4 PC")return L"shell:MyComputerFolder";
+        return value;
+    }
+
     std::filesystem::path StartFolder()
     {
         int count=0;
@@ -48,6 +65,25 @@ namespace winrt::FlyExplorerWinUIShell::implementation
     MainWindow::MainWindow()
     {
         InitializeComponent();
+        // M2.6 uses the public WinUI 3 custom-titlebar/backdrop path only.
+        // The two independent pane TabViews intentionally remain in each pane
+        // instead of being collapsed into one Explorer tab strip.
+        try{
+            ExtendsContentIntoTitleBar(true);
+            auto titleHeader=winrt::get_self<
+                winrt::FlyExplorerWinUIShell::implementation::ShellHeader>(
+                    HeaderView());
+            SetTitleBar(titleHeader->DragRegion());
+            SystemBackdrop(Microsoft::UI::Xaml::Media::MicaBackdrop{});
+        }catch(...){
+            // Older/runtime-restricted hosts retain an opaque theme fallback.
+            try{
+                auto brush=Application::Current().Resources().Lookup(
+                    winrt::box_value(L"ApplicationPageBackgroundThemeBrush"))
+                    .try_as<Microsoft::UI::Xaml::Media::Brush>();
+                if(brush)RootShell().Background(brush);
+            }catch(...){ }
+        }
         mColumnControlsReady=true;
         // Each reusable XAML control forwards intent; the window owns the
         // shared native state/settings. Never attach a permanent MFC host.
@@ -61,6 +97,14 @@ namespace winrt::FlyExplorerWinUIShell::implementation
                 else if(target==2)ui->OpenFolder(
                     (ui->HomePath()/L"Downloads").native());
                 else if(target==3)ui->OpenFolder(L"shell:MyComputerFolder");
+                else if(target==4)ui->OpenFolder(
+                    (ui->HomePath()/L"Desktop").native());
+                else if(target==5)ui->OpenFolder(
+                    (ui->HomePath()/L"Pictures").native());
+                else if(target==6)ui->OpenFolder(
+                    (ui->HomePath()/L"Music").native());
+                else if(target==7)ui->OpenFolder(
+                    (ui->HomePath()/L"Videos").native());
             }
         });
         fxfile::previewsettings::load(mPreferences);
@@ -91,6 +135,12 @@ namespace winrt::FlyExplorerWinUIShell::implementation
                     fxfile::shelltransfer::Kind::Recycle);
                 else if(command==5 && ui->mTransferProgress)
                     ui->mTransferProgress->cancel.store(true);
+                else if(command==6)
+                    ui->CopySelectedToWindowsClipboard(ui->mModel.activePane,true);
+                else if(command==7)
+                    ui->CopySelectedToWindowsClipboard(ui->mModel.activePane,false);
+                else if(command==8)
+                    ui->PasteFromWindowsClipboard();
             }
         });
         fileBar()->SetSort([nativeWeak](int index){
@@ -600,6 +650,8 @@ namespace winrt::FlyExplorerWinUIShell::implementation
         auto width=slider.Value();
         if(width<120||width>320)return;
         mFileLists[side].nameColumnWidth=width;
+        auto header=side==0?LeftNameHeaderColumn():RightNameHeaderColumn();
+        header.Width(GridLength{width,GridUnitType::Pixel});
         if(mColumnControlsReady)FillFiles(side);
     }
     void MainWindow::OnNameFilterChanged(
@@ -712,7 +764,7 @@ namespace winrt::FlyExplorerWinUIShell::implementation
         button.Content(winrt::box_value(hstring(progress)));
         Microsoft::UI::Xaml::Automation::AutomationProperties::SetName(
             button,hstring(std::wstring(
-               side==0?L"?? ? ?? ":L"??? ? ?? ")+progress));
+               side==0?L"\uC67C\uCABD \uB354 \uD45C\uC2DC ":L"\uC624\uB978\uCABD \uB354 \uD45C\uC2DC ")+progress));
         for(size_t visible=0;visible<(std::min)(order.size(),state.visibleCount);++visible){
             const auto index=order[visible];
             const auto& item=items[index];
@@ -735,7 +787,20 @@ namespace winrt::FlyExplorerWinUIShell::implementation
             addColumn(165);addColumn(80);addColumn(155);
             StackPanel nameCell;
             nameCell.Orientation(Orientation::Horizontal);
-            nameCell.Spacing(6);
+            nameCell.Spacing(7);
+            nameCell.VerticalAlignment(VerticalAlignment::Center);
+            bool localDrive=false;
+            ULARGE_INTEGER freeBytes{},totalBytes{},freeTotal{};
+            const auto& parsing=item.parsingName;
+            if(parsing.size()==3&&parsing[1]==L':'&&
+               (parsing[2]==L'\\'||parsing[2]==L'/')){
+                const auto driveType=::GetDriveTypeW(parsing.c_str());
+                if((driveType==DRIVE_FIXED||driveType==DRIVE_REMOVABLE)&&
+                   ::GetDiskFreeSpaceExW(parsing.c_str(),&freeBytes,
+                                         &totalBytes,&freeTotal)&&
+                   totalBytes.QuadPart>0)
+                    localDrive=true;
+            }
             auto const* iconMeta=detailReady?
                 &mFileLists[side].details[index]:nullptr;
             bool actualVisual=false;
@@ -786,13 +851,38 @@ namespace winrt::FlyExplorerWinUIShell::implementation
                 FontIcon glyph;
                 glyph.FontFamily(Microsoft::UI::Xaml::Media::FontFamily{
                     L"Segoe Fluent Icons"});
-                glyph.Glyph(hstring(item.isFolder()?L"\uE8B7":L"\uE8A5"));
+                glyph.Glyph(hstring(localDrive?L"\uEDA2":
+                    item.isFolder()?L"\uE8B7":L"\uE8A5"));
+                glyph.FontSize(localDrive?20.0:16.0);
                 nameCell.Children().Append(glyph);
             }
             TextBlock filename;
             filename.Text(item.label);
             filename.TextTrimming(TextTrimming::CharacterEllipsis);
-            nameCell.Children().Append(filename);
+            if(localDrive){
+                StackPanel drive;
+                drive.Spacing(2);
+                drive.Children().Append(filename);
+                ProgressBar usage;
+                usage.Width((std::max)(115.0,
+                    mFileLists[side].nameColumnWidth-42.0));
+                usage.Height(3);
+                usage.Minimum(0);usage.Maximum(100);
+                const auto used=totalBytes.QuadPart-freeBytes.QuadPart;
+                usage.Value(static_cast<double>(used)*100.0/
+                            static_cast<double>(totalBytes.QuadPart));
+                drive.Children().Append(usage);
+                TextBlock capacity;
+                capacity.FontSize(10.0);
+                capacity.Opacity(0.62);
+                const auto gib=1024ull*1024ull*1024ull;
+                capacity.Text(hstring(std::to_wstring(
+                    freeBytes.QuadPart/gib)+L" GB 사용 가능 / "+
+                    std::to_wstring(totalBytes.QuadPart/gib)+L" GB"));
+                drive.Children().Append(capacity);
+                nameCell.Children().Append(drive);
+                row.MinHeight(58);
+            }else nameCell.Children().Append(filename);
             Grid::SetColumn(nameCell,0);
             columns.Children().Append(nameCell);
             auto addText=[&](std::wstring const& text,int col){
@@ -834,7 +924,7 @@ namespace winrt::FlyExplorerWinUIShell::implementation
         FillFiles(0);
         FillFiles(1);
         auto& nav=Current();
-        AddressBox().Text(hstring(nav.snapshot().parsingName));
+        AddressBox().Text(hstring(FriendlyAddress(nav.snapshot().parsingName)));
         BackButton().IsEnabled(nav.canBack() && !mModel.panes[mModel.activePane].pending[mModel.panes[mModel.activePane].active]);
         ForwardButton().IsEnabled(nav.canForward() && !mModel.panes[mModel.activePane].pending[mModel.panes[mModel.activePane].active]);
         UpButton().IsEnabled(nav.snapshot().folder.valid() && !ILIsEmpty(nav.snapshot().folder.get()));
@@ -843,9 +933,9 @@ namespace winrt::FlyExplorerWinUIShell::implementation
             hstring(mModel.activePane==0?L"왼쪽 창 (활성)":L"왼쪽 창")));
         SecondaryPaneTitle().Content(winrt::box_value(
             hstring(mModel.activePane==1?L"오른쪽 창 (활성)":L"오른쪽 창")));
+        UpdateActivePaneChrome();
         StatusText().Text(status);
-        Title(L"flyExplorer - WinUI 3 전환 미리보기 - "+
-            hstring(nav.snapshot().displayName));
+        Title(L"flyExplorer - WinUI 3 · "+hstring(nav.snapshot().displayName));
         UpdateWatch(0);
         UpdateWatch(1);
         ScheduleFileDetails(0);
@@ -863,7 +953,7 @@ namespace winrt::FlyExplorerWinUIShell::implementation
         if(!mModel.dispatch(fxfile::explorerui::Command::ActivatePane,side)
                     .accepted)return;
         const auto& nav=Current();
-        AddressBox().Text(hstring(nav.snapshot().parsingName));
+        AddressBox().Text(hstring(FriendlyAddress(nav.snapshot().parsingName)));
         BackButton().IsEnabled(nav.canBack() && !mModel.panes[mModel.activePane].pending[mModel.panes[mModel.activePane].active]);
         ForwardButton().IsEnabled(nav.canForward() && !mModel.panes[mModel.activePane].pending[mModel.panes[mModel.activePane].active]);
         UpButton().IsEnabled(nav.snapshot().folder.valid() && !ILIsEmpty(nav.snapshot().folder.get()));
@@ -872,8 +962,38 @@ namespace winrt::FlyExplorerWinUIShell::implementation
             hstring(side==0?L"왼쪽 창 (활성)":L"왼쪽 창")));
         SecondaryPaneTitle().Content(winrt::box_value(
             hstring(side==1?L"오른쪽 창 (활성)":L"오른쪽 창")));
-        Title(L"flyExplorer - WinUI 3 전환 미리보기 - "+
-              hstring(nav.snapshot().displayName));
+        UpdateActivePaneChrome();
+        Title(L"flyExplorer - WinUI 3 · "+hstring(nav.snapshot().displayName));
+    }
+    void MainWindow::UpdateActivePaneChrome()
+    {
+        const bool left=mModel.activePane==0;
+        PrimaryPane().BorderThickness(Thickness{1.0,1.0,1.0,1.0});
+        SecondaryPane().BorderThickness(Thickness{1.0,1.0,1.0,1.0});
+        PrimaryPane().Opacity(1.0);
+        SecondaryPane().Opacity(1.0);
+        PrimaryPaneTitle().Opacity(left?1.0:0.66);
+        SecondaryPaneTitle().Opacity(left?0.66:1.0);
+        try{
+            auto resources=Application::Current().Resources();
+            auto accent=resources.Lookup(winrt::box_value(
+                L"SystemControlHighlightAccentBrush")).try_as<
+                    Microsoft::UI::Xaml::Media::Brush>();
+            auto normal=resources.Lookup(winrt::box_value(
+                L"SystemControlForegroundBaseLowBrush")).try_as<
+                    Microsoft::UI::Xaml::Media::Brush>();
+            auto foreground=resources.Lookup(winrt::box_value(
+                L"TextFillColorPrimaryBrush")).try_as<
+                    Microsoft::UI::Xaml::Media::Brush>();
+            if(normal){
+                PrimaryPane().BorderBrush(normal);
+                SecondaryPane().BorderBrush(normal);
+            }
+            if(accent&&foreground){
+                PrimaryPaneTitle().Foreground(left?accent:foreground);
+                SecondaryPaneTitle().Foreground(left?foreground:accent);
+            }
+        }catch(...){ }
     }
     void MainWindow::OnBackClicked(IInspectable const&,RoutedEventArgs const&)
     {
@@ -903,14 +1023,47 @@ namespace winrt::FlyExplorerWinUIShell::implementation
                                      Input::KeyRoutedEventArgs const& args)
     {
         if (args.Key()==Windows::System::VirtualKey::Enter) {
-            OpenFolder(std::wstring(AddressBox().Text().c_str()));
+            OpenFolder(ResolveFriendlyAddress(std::wstring(AddressBox().Text().c_str())));
             args.Handled(true);
         }
         else if (args.Key()==Windows::System::VirtualKey::Escape) {
-            AddressBox().Text(hstring(Current().snapshot().parsingName));
+            AddressBox().Text(hstring(FriendlyAddress(Current().snapshot().parsingName)));
             StatusText().Text(L"주소 입력을 취소했습니다.");
             args.Handled(true);
         }
+    }
+    void MainWindow::OnQuickSearchKeyDown(IInspectable const&,
+        Input::KeyRoutedEventArgs const& args)
+    {
+        if(args.Key()!=Windows::System::VirtualKey::Enter)return;
+        const auto term=std::wstring(QuickSearchBox().Text().c_str());
+        if(term.empty()){
+            StatusText().Text(L"검색어를 입력하세요.");
+            args.Handled(true);
+            return;
+        }
+        auto& pane=mModel.panes[static_cast<size_t>(mModel.activePane)];
+        const auto& path=pane.filesystemPaths[pane.active];
+        if(path.empty()){
+            StatusText().Text(L"현재 파일 시스템 폴더에서만 빠른 검색을 실행할 수 있습니다.");
+            args.Handled(true);
+            return;
+        }
+        WorkspacePanel().Visibility(Visibility::Collapsed);
+        SearchPanel().Visibility(Visibility::Visible);
+        SearchScopeBox().Text(hstring(path));
+        SearchTermBox().Text(hstring(term));
+        EnsureExpandedPanelFits();
+        OnRunSearch(nullptr,nullptr);
+        args.Handled(true);
+    }
+    void MainWindow::OnShellSizeChanged(IInspectable const&,
+        SizeChangedEventArgs const& args)
+    {
+        const auto width=args.NewSize().Width;
+        NavigationColumn().Width(GridLength{
+            width<1040?156.0:188.0,GridUnitType::Pixel});
+        QuickSearchBox().Width(width<1060?150.0:220.0);
     }
     void MainWindow::OnNewTabClicked(IInspectable const&,RoutedEventArgs const&)
     {
@@ -955,8 +1108,12 @@ namespace winrt::FlyExplorerWinUIShell::implementation
         PaneDivider().Visibility(mModel.split?Visibility::Visible:Visibility::Collapsed);
         SecondaryColumn().Width(mModel.split?
             GridLength{1.0,GridUnitType::Star}:GridLength{0.0,GridUnitType::Pixel});
-        SplitButton().Content(winrt::box_value(
-            hstring(mModel.split?L"단일 창":L"분할 창")));
+        auto splitButton=SplitButton();
+        auto splitLabel=hstring(mModel.split?
+            L"\uB2E8\uC77C \uCC3D":L"\uBD84\uD560 \uCC3D");
+        Microsoft::UI::Xaml::Automation::AutomationProperties::SetName(
+            splitButton,splitLabel);
+        ToolTipService::SetToolTip(splitButton,winrt::box_value(splitLabel));
         Refresh(mModel.split?L"두 창이 독립적으로 열렸습니다.":L"단일 창으로 표시합니다. 다른 창의 상태는 유지됩니다.");
     }
     void MainWindow::OnActivateLeft(IInspectable const&,RoutedEventArgs const&)

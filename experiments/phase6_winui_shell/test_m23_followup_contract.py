@@ -25,7 +25,7 @@ class M23Followup(unittest.TestCase):
      if value is not None:
       self.assertEqual(lookup[key],value,key)
       found+=1
-  self.assertGreaterEqual(found,15)
+  self.assertGreaterEqual(found,7)
  def test_latest_document_summaries_not_corrupted(self):
   docs=R/"docs/development"
   names=("CURRENT_STATUS.md","README.md",

@@ -9,6 +9,9 @@ struct FileToolbar : FileToolbarT<FileToolbar> {
  void SetSortIndex(int selection);
  void OnCreateFolder(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
  void OnRenameSelected(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
+ void OnWindowsCut(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
+ void OnWindowsCopy(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
+ void OnWindowsPaste(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
  void OnCopy(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
  void OnMove(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
  void OnRecycle(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);

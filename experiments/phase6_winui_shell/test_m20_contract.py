@@ -1,6 +1,7 @@
 """M2.0 focused source/architecture contracts. Real GUI is separate."""
 from pathlib import Path
 import unittest
+import xml.etree.ElementTree as ET
 ROOT=Path(__file__).resolve().parents[2]
 def source(rel):return (ROOT/rel).read_text(encoding="utf-8-sig")
 class ModelAndFullShell(unittest.TestCase):
@@ -43,18 +44,22 @@ class ModelAndFullShell(unittest.TestCase):
   self.assertIn("mModel.markPending(side,next.first,id,false)",src)
  def test_winui_full_frame_has_light_dark_system_and_this_pc(self):
   xaml=source("experiments/phase6_winui_shell/MainWindow.xaml")
-  header=source("experiments/phase6_winui_shell/ShellHeader.xaml")
-  sidebar=source("experiments/phase6_winui_shell/NavigationSidebar.xaml")
+  header_path=ROOT/"experiments/phase6_winui_shell/ShellHeader.xaml"
+  sidebar_path=ROOT/"experiments/phase6_winui_shell/NavigationSidebar.xaml"
   for x in ('x:Name="RootShell"','x:Name="HeaderView"',
             'x:Name="SidebarView"'):
    self.assertIn(x,xaml)
-  for x in ('x:Name="ShellHeading"','x:Name="ThemePicker"',
-            'x:Name="ThemeStateText"',
-            '<ComboBoxItem Content="시스템"/>',
-            '<ComboBoxItem Content="라이트"/>',
-            '<ComboBoxItem Content="다크"/>'):
-   self.assertIn(x,header)
-  self.assertIn('x:Name="ThisPCButton"',sidebar)
+  ns="{http://schemas.microsoft.com/winfx/2006/xaml}Name"
+  header=ET.parse(header_path).getroot()
+  names={e.get(ns) for e in header.iter() if e.get(ns)}
+  for x in ("ShellHeading","ThemePicker","ThemeStateText"):
+   self.assertIn(x,names)
+  labels={e.get("Content") for e in header.iter() if e.get("Content")}
+  for x in ("\uc2dc\uc2a4\ud15c","\ub77c\uc774\ud2b8","\ub2e4\ud06c"):
+   self.assertIn(x,labels)
+  sidebar=ET.parse(sidebar_path).getroot()
+  side_names={e.get(ns) for e in sidebar.iter() if e.get(ns)}
+  self.assertIn("ThisPCButton",side_names)
   code=source("experiments/phase6_winui_shell/m20_shell.cpp")
   for x in ("RequestedTheme(chosen","OpenFolder(L\"shell:MyComputerFolder\")",
             "ElementTheme::Default","ElementTheme::Light",
