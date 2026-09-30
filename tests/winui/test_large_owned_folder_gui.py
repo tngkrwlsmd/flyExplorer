@@ -1,5 +1,6 @@
 """Actual 1,100-file WinUI navigation/sort probe with disposable owner PID."""
 from pathlib import Path
+from paths import ROOT, APP, app_exe
 import argparse
 import hashlib
 import os
@@ -32,9 +33,9 @@ def main():
     args=parser.parse_args()
     if os.name!="nt":
         return 2
-    here=Path(__file__).resolve().parents[2]/"app"/"winui"
-    root=here.parents[1]
-    exe=here/"x64"/args.configuration/"FlyExplorerWinUIShell"/"FlyExplorerWinUIShell.exe"
+    here=APP
+    root=ROOT
+    exe=app_exe(args.configuration)
     assert exe.is_file(),"Exact owned WinUI build missing"
     existing=Path(os.environ["APPDATA"])/"fxfile"/"conf"
     hashes={name:hashlib.sha256((existing/name).read_bytes()).digest()

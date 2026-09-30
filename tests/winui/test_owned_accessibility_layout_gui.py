@@ -3,6 +3,7 @@ import ctypes as c
 from ctypes import wintypes as w
 import hashlib,os,subprocess,sys,tempfile,time
 from pathlib import Path
+from paths import APP, app_exe
 import psutil
 from pywinauto import Desktop,keyboard
 
@@ -29,8 +30,8 @@ def until(f,msg,seconds=18):
   time.sleep(.2)
  raise AssertionError(msg)
 def main(config="Debug"):
- a=Path(__file__).resolve().parents[2]/"app"/"winui"
- exe=a/"x64"/config/"FlyExplorerWinUIShell"/"FlyExplorerWinUIShell.exe"
+ a=APP
+ exe=app_exe(config)
  assert exe.is_file()
  root=a.parents[1]/"logs"/"m24";root.mkdir(parents=True,exist_ok=True)
  own=Path(tempfile.mkdtemp(prefix="accessibility-owned-",dir=root))

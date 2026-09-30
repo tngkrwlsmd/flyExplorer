@@ -11,6 +11,7 @@ separate follow-up work, and is not asserted here.
 import ctypes as c
 from ctypes import wintypes as W
 from pathlib import Path
+from paths import ROOT, APP, app_exe
 import hashlib
 import os
 import psutil
@@ -21,8 +22,7 @@ import tempfile
 import time
 from pywinauto import Desktop
 
-ROOT=Path(__file__).resolve().parents[2]
-HERE=ROOT/"app"/"winui"
+HERE=APP
 owner_arg=os.environ.get("M19_NATIVE_WORKSPACE_OWNER","")
 assert owner_arg,"Explicit original test-owned MFC UXH07 fixture directory required"
 owner=Path(owner_arg).resolve()
@@ -35,7 +35,7 @@ assert all((conf/n).is_file() for n in NAMES)
 before={n:hashlib.sha256((conf/n).read_bytes()).hexdigest() for n in NAMES}
 configuration=os.environ.get("FLY_MIGRATION_CONFIGURATION","Debug")
 assert configuration in ("Debug","Release")
-exe=HERE/"x64"/configuration/"FlyExplorerWinUIShell"/"FlyExplorerWinUIShell.exe"
+exe=app_exe(configuration)
 assert exe.is_file()
 base=ROOT/"logs"/"m19"
 own=Path(tempfile.mkdtemp(prefix="m19-actual-mfc-schema-",dir=base))

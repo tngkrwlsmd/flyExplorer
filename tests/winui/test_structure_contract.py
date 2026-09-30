@@ -10,16 +10,27 @@ class StructureContract(unittest.TestCase):
         self.assertTrue((APP/"MainWindow.xaml").is_file())
         self.assertTrue((APP/"build.cmd").is_file())
         self.assertTrue((ROOT/"tools/winui/run_checks.py").is_file())
+        self.assertTrue((ROOT/"clean.bat").is_file())
         self.assertTrue((ROOT/"tests/winui/test_shell_gui.py").is_file())
+        self.assertTrue((ROOT/"tests/winui/paths.py").is_file())
         self.assertFalse((ROOT/"experiments").exists())
+        for rel in ("x64","obj","Generated Files","FlyExplo.A79A2C56",
+                    "helper/bin","helper/obj"):
+            self.assertFalse((APP/rel).exists(),rel)
 
     def test_root_commands_are_winui_first(self):
         build=(ROOT/"build.bat").read_text(encoding="utf-8-sig")
         run=(ROOT/"run.bat").read_text(encoding="utf-8-sig")
         test=(ROOT/"test.bat").read_text(encoding="utf-8-sig")
+        clean=(ROOT/"clean.bat").read_text(encoding="utf-8-sig")
         self.assertIn(r"app\winui\build.cmd",build)
-        self.assertIn(r"app\winui\x64",run)
+        self.assertIn(r"out\winui",run)
         self.assertIn(r"tools\winui\run_checks.py",test)
+        self.assertIn(r"%~dp0out",clean)
+        self.assertIn(r"%~dp0.cache",clean)
+        ignore=(ROOT/".gitignore").read_text(encoding="utf-8-sig")
+        self.assertIn("/out/",ignore)
+        self.assertIn("/.cache/",ignore)
         for body in (build,run,test):
             self.assertNotIn("phase6_winui_shell",body)
             self.assertNotIn("FLYEXP_PHASE5",body)

@@ -18,7 +18,7 @@ HERE=Path(__file__).resolve().parent
 ROOT=HERE.parents[2]
 CONFIG=os.environ.get("FLY_M16_CONFIG","Debug")
 assert CONFIG in ("Debug","Release")
-EXE=HERE/"bin"/"x64"/CONFIG/"FlyShellIsolationHelper.exe"
+EXE=ROOT/"out"/"helper"/CONFIG/"FlyShellIsolationHelper.exe"
 assert EXE.is_file(),EXE
 LOGROOT=ROOT/"logs"/"m16"
 LOGROOT.mkdir(parents=True,exist_ok=True)

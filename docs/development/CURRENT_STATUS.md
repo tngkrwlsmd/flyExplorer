@@ -1,5 +1,8 @@
 # flyExplorer — current project status (2026-09-28 baseline; 2026-09-29 migration-branch addendum)
 
+**OUT-OF-TREE BUILD LAYOUT (2026-09-30):** Canonical source/test/tool layout remains `app/winui` + `src/base` + `tests/winui` + `tools/winui`, while generated app/helper outputs now live only under ignored `out/` and NuGet cache under ignored `.cache/nuget`. Root `clean.bat` safely cleans build output/cache. Removed ~3.36 GiB of duplicated old in-source build trees/log-hosted package cache after new Debug+Release builds existed. Source/structure contracts PASS; fresh root Debug+Release builds PASS; full owned GUI from relocated binaries PASS in both configurations with six original config hashes identical. [Details](WINUI3_CANONICAL_REPOSITORY_LAYOUT_20260930.md).
+
+
 **CANONICAL PROJECT STRUCTURE (2026-09-30):** Product source moved from the obsolete experiment path to `app/winui`; tests to `tests/winui`; scoped orchestration to `tools/winui`. Root `build.bat`/`run.bat`/`test.bat` are now the supported entry points. The single WinUI-consumed `file_operation_core` seam moved into shared `src/base`, so active WinUI no longer compiles code from `src/fxfile`. The complete retained MFC source/build/distribution/library tree is quarantined under `legacy/mfc`; root `src` now contains only shared `base`. Exact runnable MFC recovery remains Git `cbffb48`. Validation after the move: canonical structure preflight 4/4 + remaining WinUI source contracts 103/103 (107 unique), fresh root Debug+Release builds, full owned Debug+Release GUI, Release responsive accessibility/2,300-item/context-popup checks all PASS; six original config hashes remained identical. Existing build warnings remain and no CI run was dispatched.
 
 

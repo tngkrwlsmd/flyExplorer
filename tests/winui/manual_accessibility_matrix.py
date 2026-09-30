@@ -8,6 +8,7 @@ enumeration is NOT a substitute for human Narrator announcement confirmation.
 import argparse,ctypes as c,hashlib,json,os,subprocess,sys,tempfile,time
 from ctypes import wintypes as w
 from pathlib import Path
+from paths import APP, app_exe
 import psutil
 from pywinauto import Desktop
 u=c.WinDLL("user32",use_last_error=True)
@@ -35,8 +36,8 @@ def main():
  if os.name!="nt" or not sys.stdin.isatty():
   print("BLOCKED: actual interactive test VM and human Narrator/IME required.")
   return 2
- a=Path(__file__).resolve().parents[2]/"app"/"winui"
- exe=a/"x64"/args.configuration/"FlyExplorerWinUIShell"/"FlyExplorerWinUIShell.exe"
+ a=APP
+ exe=app_exe(args.configuration)
  assert exe.is_file()
  real=Path(os.environ["APPDATA"])/"fxfile"/"conf"
  names=("fxfile.conf","fxfile-main.conf","fxfile-toolbar.dat",

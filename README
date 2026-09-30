@@ -23,6 +23,14 @@ Run source/contract checks:
 
     test.bat source
 
+Clean generated build output without touching source or evidence logs:
+
+    clean.bat build
+
+Remove the local package cache too (packages will be restored on next build):
+
+    clean.bat all
+
 Run the full owned Debug + Release validation sequence:
 
     python -X utf8 tools\winui\run_checks.py full
@@ -36,6 +44,9 @@ Canonical repository layout
     tools/winui/      canonical local build/test orchestration
     docs/             current and historical engineering documentation
     legacy/mfc/       former MFC source, build, distribution and library tree
+    out/              ignored build products/intermediates
+    .cache/nuget/     ignored NuGet cache
+    logs/             ignored local validation evidence
 
 The old `experiments/phase6_winui_shell` product path no longer exists. Phase6
 is the product, so it lives under `app/winui`.
@@ -43,13 +54,15 @@ is the product, so it lives under `app/winui`.
 Build outputs
 -------------
 
+Build products are intentionally kept out of `app/winui`.
+
 Release executable:
 
-    app\winui\x64\Release\FlyExplorerWinUIShell\FlyExplorerWinUIShell.exe
+    out\winui\Release\FlyExplorerWinUIShell.exe
 
 Debug executable:
 
-    app\winui\x64\Debug\FlyExplorerWinUIShell\FlyExplorerWinUIShell.exe
+    out\winui\Debug\FlyExplorerWinUIShell.exe
 
 Do not copy only the EXE; the sibling WinUI resources and
 `FlyShellIsolationHelper.exe` are part of the runtime set.

@@ -32,7 +32,7 @@ jobs:
       - name: Verify runtime set
         shell: pwsh
         run: |
-          $dir = "app\winui\x64\Release\FlyExplorerWinUIShell"
+          $dir = "out\winui\Release"
           $required = @(
             "$dir\FlyExplorerWinUIShell.exe",
             "$dir\FlyShellIsolationHelper.exe",

@@ -4,6 +4,8 @@ This directory contains the canonical Windows application on `main`.
 
 ## Build
 
+Build output is intentionally outside this source directory (`../../out`).
+
 From the repository root:
 
     build.bat Release
@@ -22,7 +24,7 @@ Use the repository root wrapper:
 
 The executable is generated at:
 
-    app\winui\x64\Release\FlyExplorerWinUIShell\FlyExplorerWinUIShell.exe
+    out\winui\Release\FlyExplorerWinUIShell.exe
 
 Do not copy only the EXE. The sibling resources and
 `FlyShellIsolationHelper.exe` are required runtime files.

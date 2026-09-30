@@ -9,6 +9,7 @@ from ctypes import wintypes as w
 import hashlib
 import os
 from pathlib import Path
+from paths import ROOT, APP, app_exe
 import subprocess
 import sys
 import tempfile
@@ -53,15 +54,15 @@ def main():
         print("BLOCKED: user clipboard is populated or inaccessible.")
         print("Do not clear your existing clipboard merely for automation.")
         return 2
-    here=Path(__file__).resolve().parents[2]/"app"/"winui"
-    exe=here/"x64"/"Debug"/"FlyExplorerWinUIShell"/"FlyExplorerWinUIShell.exe"
+    here=APP
+    exe=app_exe("Debug")
     if not exe.is_file():
         print("BLOCKED: build the Debug preview first.")
         return 2
     legacy=Path(os.environ["APPDATA"])/"fxfile"/"conf"
     original={n:hashlib.sha256((legacy/n).read_bytes()).digest()
               for n in LEGACY if (legacy/n).is_file()}
-    root=here.parents[1]/"logs"/"m23"
+    root=ROOT/"logs"/"m23"
     root.mkdir(parents=True,exist_ok=True)
     owned=Path(tempfile.mkdtemp(prefix="clipboard-owned-",dir=root))
     left,right=owned/"left",owned/"right"

@@ -1,5 +1,6 @@
 """Test-owned local Release output copy + launch (NOT installer certification)."""
 from pathlib import Path
+from paths import ROOT, APP, app_dir
 import hashlib
 import os
 import shutil
@@ -23,9 +24,9 @@ def until(f,label,seconds=22):
 def main():
     if os.name!="nt":
         return 2
-    here=Path(__file__).resolve().parents[2]/"app"/"winui"
-    root=here.parents[1]
-    release=here/"x64"/"Release"/"FlyExplorerWinUIShell"
+    here=APP
+    root=ROOT
+    release=app_dir("Release")
     expected=("FlyExplorerWinUIShell.exe","FlyShellIsolationHelper.exe",
               "FlyExplorerWinUIShell.pri","MainWindow.xbf")
     assert all((release/name).is_file() for name in expected)

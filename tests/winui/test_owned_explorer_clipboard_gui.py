@@ -12,6 +12,7 @@ from ctypes import wintypes as w
 import hashlib
 import os
 from pathlib import Path
+from paths import ROOT, APP, app_exe
 import shutil
 import subprocess
 import sys
@@ -115,9 +116,9 @@ def main():
     import win32com.client
     from pywinauto import Desktop
     pythoncom.CoInitialize()
-    a=Path(__file__).resolve().parents[2]/"app"/"winui"
-    root=a.parents[1]
-    exe=a/"x64"/args.configuration/"FlyExplorerWinUIShell"/"FlyExplorerWinUIShell.exe"
+    a=APP
+    root=ROOT
+    exe=app_exe(args.configuration)
     assert exe.is_file(),"Missing exact owned preview"
     mfc=Path(os.environ["APPDATA"])/"fxfile"/"conf"
     hashes={n:hashlib.sha256((mfc/n).read_bytes()).digest()

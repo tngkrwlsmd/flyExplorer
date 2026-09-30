@@ -3,6 +3,7 @@ import argparse
 import hashlib
 import os
 from pathlib import Path
+from paths import ROOT, APP, app_exe
 import subprocess
 import sys
 import tempfile
@@ -14,9 +15,9 @@ def main():
     if not sys.stdin.isatty():
         print("MANUAL_ONLY: interactive human console required; no GUI launched.")
         return 2
-    here=Path(__file__).resolve().parents[2]/"app"/"winui"
-    root=here.parents[1]
-    exe=here/"x64"/args.configuration/"FlyExplorerWinUIShell"/"FlyExplorerWinUIShell.exe"
+    here=APP
+    root=ROOT
+    exe=app_exe(args.configuration)
     assert exe.is_file(), "Compile the chosen configuration first."
     base=root/"logs"/"m23"
     base.mkdir(parents=True,exist_ok=True)

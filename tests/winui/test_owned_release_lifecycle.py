@@ -6,6 +6,7 @@ Only a unique test-owned run directory under logs/m24/lifecycle-owned-prior-v1 c
 import ctypes as c
 import hashlib,json,os,shutil,subprocess,sys,tempfile,time
 from pathlib import Path
+from paths import ROOT, APP, app_dir
 import psutil
 from pywinauto import Desktop
 
@@ -88,11 +89,11 @@ def launch(d,folder,env,sha256,label):
   wait_owned_stage_processes(d)
 
 def main():
- a=Path(__file__).resolve().parents[2]/"app"/"winui"
+ a=APP
  r=a.parents[1]
  root=r/"logs"/"m24"/"lifecycle-owned-prior-v1"
  v1=root/"v1"
- current=a/"x64"/"Release"/"FlyExplorerWinUIShell"
+ current=app_dir("Release")
  prior=json.loads((root/"v1-manifest.json").read_text(encoding="utf-8"))
  expected={name:digest for name,digest in prior}
  assert inventory(v1)==expected

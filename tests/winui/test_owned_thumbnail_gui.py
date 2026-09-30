@@ -3,6 +3,7 @@ import ctypes as c
 import hashlib
 import os
 from pathlib import Path
+from paths import ROOT, APP, app_exe
 import shutil
 import subprocess
 import sys
@@ -23,9 +24,9 @@ def until(fn,why,timeout=22):
   time.sleep(.24)
  raise AssertionError(why)
 def run(configuration="Debug"):
- here=Path(__file__).resolve().parents[2]/"app"/"winui"
- root=here.parents[1]
- exe=here/"x64"/configuration/"FlyExplorerWinUIShell"/"FlyExplorerWinUIShell.exe"
+ here=APP
+ root=ROOT
+ exe=app_exe(configuration)
  assert exe.is_file()
  real=Path(os.environ["APPDATA"])/"fxfile"/"conf"
  before={name:hashlib.sha256((real/name).read_bytes()).digest()

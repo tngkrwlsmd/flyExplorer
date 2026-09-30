@@ -1,5 +1,6 @@
 """Real, disposable WinUI 3 dual-pane shell acceptance (not product-parity certification)."""
 from pathlib import Path
+from paths import ROOT, APP, app_exe
 import ctypes as c, os, re, shutil, subprocess, tempfile, time, hashlib
 from ctypes import wintypes as W
 from pywinauto import Desktop
@@ -14,11 +15,10 @@ assert all((REAL_CONF/n).is_file() for n in PROTECTED_NAMES)
 ORIGINAL_HASHES={n:hashlib.sha256((REAL_CONF/n).read_bytes()).digest()
   for n in PROTECTED_NAMES}
 
-ROOT=Path(__file__).resolve().parents[2]
-HERE=ROOT/"app"/"winui"
+HERE=APP
 CONFIG=os.environ.get("FLY_MIGRATION_CONFIGURATION","Debug")
 assert CONFIG in ("Debug","Release")
-EXE=HERE/("x64/"+CONFIG+"/FlyExplorerWinUIShell/FlyExplorerWinUIShell.exe")
+EXE=app_exe(CONFIG)
 assert EXE.exists(),EXE
 base=ROOT/"logs/phase6-winui"
 base.mkdir(parents=True,exist_ok=True)

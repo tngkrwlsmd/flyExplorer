@@ -6,6 +6,7 @@ synthetic fixture only. On failure preserves the owned original folder for
 manual recovery and prints no other Recycle Bin item information.
 """
 from pathlib import Path
+from paths import ROOT, APP, app_exe
 import argparse
 import hashlib
 import os
@@ -72,9 +73,9 @@ def run():
     if count:
         print("BLOCKED: occupied Recycle Bin. No enumeration, no mutation.")
         return 2
-    here=Path(__file__).resolve().parents[2]/"app"/"winui"
-    root=here.parents[1]
-    exe=here/"x64"/args.configuration/"FlyExplorerWinUIShell"/"FlyExplorerWinUIShell.exe"
+    here=APP
+    root=ROOT
+    exe=app_exe(args.configuration)
     assert exe.is_file(),"Expected exact built preview binary"
     base=root/"logs"/"m23"
     base.mkdir(parents=True,exist_ok=True)
