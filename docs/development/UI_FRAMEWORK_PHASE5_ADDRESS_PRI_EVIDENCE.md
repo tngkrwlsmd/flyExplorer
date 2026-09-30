@@ -1,5 +1,8 @@
 # Phase 5 — native-host PRI deployment and editable address adapter (experiment)
 
+> **Historical evidence notice (2026-09-30):** Local Phase5 PoC source/runtime hooks were retired from the active WinUI migration branch. This report is intentionally preserved as evidence of the prior experiment. Recreate source from the retained `experiments/phase5-productization-20260928` branch if needed; do not treat the old local path as a current dependency. See [Phase5 retirement record](WINUI3_PHASE5_RETIREMENT_20260930.md).
+
+
 Date: 2026-09-28. Branch: `experiments/phase5-address-pri-20260928`.
 The experiment is **opt-in only**, not a shipping-product UI migration.
 

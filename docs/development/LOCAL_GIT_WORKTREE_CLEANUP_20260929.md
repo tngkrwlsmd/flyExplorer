@@ -20,3 +20,11 @@ This report records cleanup performed on the connected Windows 11 developer mach
 Full local rollback/evidence indexes are under ignored `logs/cleanup-20260929`: before/after refs, archived branch OIDs, evidence ZIP manifest with 394 SHA256 entries, NuGet relocation manifest and post-removal build log. The ZIP is **local-only**, not remotely backed up. No force reset, hosted Actions, push, merge, remote deletion or Git author impersonation occurred.
 
 To recreate the OLD clean historical Phase5 source in the future, create a fresh worktree from the retained `origin/experiments/phase5-productization-20260928`. The previous compiled outputs and duplicate NuGet HTTP cache were deliberately disposable; restore local-only historical test evidence from the ZIP only when needed.
+
+## 2026-09-30 follow-up: Phase5 tracked source retirement
+
+- Removed the remaining tracked local `experiments/phase5_winui3` and `experiments/phase5_island_bridge` trees from the active migration branch. Their combined size was negligible; this is architecture cleanup, not disk reclamation.
+- Removed the Phase5-only MFC address/island test and optional package test. Replaced them with a retirement/native-package regression contract.
+- Removed the `FLYEXP_PHASE5_INCLUDE_WINUI` branch from `dist/copy.bat`; native MFC staging remains transactional and unchanged in purpose.
+- Compared the migration MFC sources against protected `C:\devlyExplorer` and restored the five files whose only differences were the test-island adapter. The protected main worktree itself was not edited.
+- Historical Phase5 documents, `origin/experiments/phase5-productization-20260928`, and the verified evidence ZIP described above remain the recovery path. No remote branch was deleted.

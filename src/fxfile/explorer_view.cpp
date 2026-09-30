@@ -2312,7 +2312,6 @@ void ExplorerView::onTabChangedCurTab(TabCtrl &aTabCtrl, xpr_size_t aOldTab, xpr
     }
 
     recalcLayout();
-    if (mObserver) mObserver->onActivePathChanged(*this);
 }
 
 void ExplorerView::onTabRemove(TabCtrl &aTabCtrl, xpr_size_t aTab)
@@ -2776,7 +2775,6 @@ void ExplorerView::onExplored(TabPane &aTabPane, xpr_uint_t aId, LPITEMIDLIST aF
             gFrame->setMainTitle(aFullPidl);
         }
     }
-    if (mObserver) mObserver->onActivePathChanged(*this);
 }
 
 void ExplorerView::onSetFocus(TabPane &aTabPane)

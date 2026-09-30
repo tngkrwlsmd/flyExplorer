@@ -39,6 +39,7 @@ CONTRACTS = [
     "build/test_ui02_scrollbar_coverage.py",
     "build/test_ui02_owned_harness_safety_contract.py",
     "build/test_dev_artifact_cleanup.py",
+    "build/test_phase5_retirement_contract.py",
 ]
 OWNED_FLAGS = ("FLY_M19_OWNED_FEATURES", "FLY_M20_OWNED_SHELL",
                "FLY_M21_OWNED_FEATURES", "FLY_M22_OWNED_FEATURES",

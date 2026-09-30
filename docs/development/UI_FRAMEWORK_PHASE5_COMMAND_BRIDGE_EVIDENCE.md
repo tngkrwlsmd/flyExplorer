@@ -1,5 +1,8 @@
 # Phase 5 follow-up: real WinUI 3 controls to existing flyExplorer command routing
 
+> **Historical evidence notice (2026-09-30):** Local Phase5 PoC source/runtime hooks were retired from the active WinUI migration branch. This report is intentionally preserved as evidence of the prior experiment. Recreate source from the retained `experiments/phase5-productization-20260928` branch if needed; do not treat the old local path as a current dependency. See [Phase5 retirement record](WINUI3_PHASE5_RETIREMENT_20260930.md).
+
+
 Date: 2026-09-28. Production main and existing binary remain unchanged; production executable revision 6d1f76388b0b8326568478ce35814aba1eb69a0e. **Experiment-only** source: [phase5 experimental branch](https://github.com/tngkrwlsmd/flyExplorer/tree/experiments/phase5-real-winui3-20260928/experiments/phase5_winui3), commit e845eb45f3bd3cf978bbecaecf7984dc6f0d22a0. No actual WinUI replacement was merged into the product.
 
 ## Actual evidence

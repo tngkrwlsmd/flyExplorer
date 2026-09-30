@@ -1,5 +1,8 @@
 # Phase 5 — same-process MFC / actual WinUI 3 island evidence (2026-09-28)
 
+> **Historical evidence notice (2026-09-30):** Local Phase5 PoC source/runtime hooks were retired from the active WinUI migration branch. This report is intentionally preserved as evidence of the prior experiment. Recreate source from the retained `experiments/phase5-productization-20260928` branch if needed; do not treat the old local path as a current dependency. See [Phase5 retirement record](WINUI3_PHASE5_RETIREMENT_20260930.md).
+
+
 ## Scope and implementation boundary
 
 This is a **test-only**, explicitly enabled experiment on the connected Windows

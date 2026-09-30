@@ -114,7 +114,7 @@ a single unsupported release qualification.
   layout and physical restart proof; tooltip screen-reader
   acceptance and other actual DPI/High Contrast remain open.
 
-## 3. UI framework decision and optional experimental work
+## 3. Historical UI framework experiments (local Phase5 code retired)
 
 | Stage | Source / restriction |
 | --- | --- |
@@ -123,6 +123,9 @@ a single unsupported release qualification.
 | Historical separate-process strict command bridge | [Phase 5 bridge report](UI_FRAMEWORK_PHASE5_COMMAND_BRIDGE_EVIDENCE.md); the original shutdown failure was subsequently fixed in the test harness. |
 | Unmerged MFC-host WinUI 3 island | [Experiment-only island report](https://github.com/tngkrwlsmd/flyExplorer/blob/experiments/phase5-productization-20260928/docs/development/UI_FRAMEWORK_PHASE5_MFC_ISLAND_EVIDENCE.md), branch \`experiments/phase5-productization-20260928\` (reviewed \`7ceeab515bc90089d1220d608059d254c374a339\`). |
 | Experimental TextBox/address/PRI staging | [Experiment-only PRI/address report](https://github.com/tngkrwlsmd/flyExplorer/blob/experiments/phase5-productization-20260928/docs/development/UI_FRAMEWORK_PHASE5_ADDRESS_PRI_EVIDENCE.md). Temporary host PRI placement is NOT formal installer or clean-PC readiness. |
+
+The Phase5 reports above are retained as historical evidence, but their local PoC source, MFC test-island hooks and optional distribution payload were retired from the active migration worktree on 2026-09-30. Recovery remains possible from the retained historical branch/evidence archive. Do not treat those reports as a current dependency. See [Phase5 local code retirement](WINUI3_PHASE5_RETIREMENT_20260930.md).
+
 
 The two experiment-only reports are intentionally NOT copied
 into \`main\`, because their opt-in productization code remains

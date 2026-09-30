@@ -106,10 +106,6 @@ const xpr_tchar_t kPreviewSection[] = XPR_STRING_LITERAL("Settings");
 const xpr_tchar_t kPreviewEntry[]   = XPR_STRING_LITERAL("PreviewPages");
 } // namespace anonymous
 
-// Test-only same-process WinUI 3 island lifecycle entry from main_frame.cpp.
-// No-op in normal product runs without the explicit experiment environment.
-void shutdownTestIslandRuntimeAtAppExit(void);
-
 WinApp gApp;
 Option *gOpt;
 
@@ -400,9 +396,6 @@ xpr_sint_t WinApp::ExitInstance(void)
     //
     xpr::finalize();
 
-    // WinUI 3 DispatcherQueue shutdown is safe only after the host message
-    // loop ends. Never perform it in MainFrame::OnClose/destructor.
-    shutdownTestIslandRuntimeAtAppExit();
     return super::ExitInstance();
 }
 

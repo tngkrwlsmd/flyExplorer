@@ -89,136 +89,8 @@ namespace
 #define DEFAULT_WINDOW_WIDTH  800
 #define DEFAULT_WINDOW_HEIGHT 600
 
-static const UINT WM_TEST_ISLAND_PATH_CHANGED = WM_APP + 0x3A7;
 xpr_uint_t WM_TASK_RESTARTED = ::RegisterWindowMessage(XPR_STRING_LITERAL("TaskbarCreated"));
 xpr_uint_t WM_SINGLE_PROCESS = SingleProcess::getMsg();
-
-// Phase 5 experiment only: opt-in, test-owned DLL attaches WinUI 3 to this
-// *actual* MFC MainFrame. Unset environment variable leaves product unchanged.
-typedef BOOL (WINAPI *TestIslandInitialize)();
-typedef BOOL (WINAPI *TestIslandCreate)(HWND);
-typedef void (WINAPI *TestIslandResize)(int,int,int,int);
-typedef BOOL (WINAPI *TestIslandPreTranslate)(MSG const *);
-typedef void (WINAPI *TestIslandDestroy)();
-typedef void (WINAPI *TestIslandShutdown)();
-typedef BOOL (WINAPI *TestIslandReadPath)(HWND, wchar_t *, DWORD);
-typedef BOOL (WINAPI *TestIslandNavigatePath)(HWND, wchar_t const *);
-typedef void (WINAPI *TestIslandBindAdapter)(TestIslandReadPath, TestIslandNavigatePath);
-typedef void (WINAPI *TestIslandRefreshPath)();
-static TestIslandRefreshPath sTestIslandRefreshPath = NULL;
-static TestIslandBindAdapter sTestIslandBindAdapter = NULL;
-static HMODULE sTestIslandDll = NULL;
-static TestIslandCreate sTestIslandCreate = NULL;
-static TestIslandResize sTestIslandResize = NULL;
-static TestIslandPreTranslate sTestIslandPreTranslate = NULL;
-static TestIslandDestroy sTestIslandDestroy = NULL;
-static TestIslandShutdown sTestIslandShutdown = NULL;
-static bool sTestIslandReady = false;
-// Test-only callbacks run synchronously on the existing MFC UI thread.
-static MainFrame *TestIslandFrameFor(HWND hwnd)
-{
-    if (::GetCurrentThreadId() != ::GetWindowThreadProcessId(hwnd, NULL)) return NULL;
-    return dynamic_cast<MainFrame *>(CWnd::FromHandlePermanent(hwnd));
-}
-static BOOL WINAPI TestIslandReadActivePath(HWND hwnd, wchar_t *out, DWORD capacity)
-{
-    if (!out || capacity == 0) return FALSE;
-    out[0] = 0;
-    MainFrame *frame = TestIslandFrameFor(hwnd);
-    ExplorerCtrl *explorer = frame ? frame->getExplorerCtrl(-1) : NULL;
-    if (!explorer || !explorer->getCurPath()) return FALSE;
-    const DWORD attrs = ::GetFileAttributesW(explorer->getCurPath());
-    if (attrs == INVALID_FILE_ATTRIBUTES ||
-        !(attrs & FILE_ATTRIBUTE_DIRECTORY))
-        return FALSE; // Native MFC bar retains Shell virtual-folder support.
-    size_t count = wcslen(explorer->getCurPath());
-    if (count == 0 || count >= capacity) return FALSE;
-    wmemcpy(out, explorer->getCurPath(), count + 1);
-    return TRUE;
-}
-static BOOL WINAPI TestIslandNavigateActivePath(HWND hwnd, wchar_t const *path)
-{
-    if (!path || !path[0] || wcslen(path) >= 32768) return FALSE;
-    DWORD attributes = ::GetFileAttributesW(path);
-    if (attributes == INVALID_FILE_ATTRIBUTES || !(attributes & FILE_ATTRIBUTE_DIRECTORY)) return FALSE;
-    MainFrame *frame = TestIslandFrameFor(hwnd);
-    ExplorerCtrl *explorer = frame ? frame->getExplorerCtrl(-1) : NULL;
-    if (!explorer) return FALSE;
-    // Match ExplorerView's existing shell-PIDL ownership contract.
-    LPITEMIDLIST pidl = fxfile::base::Pidl::create(path);
-    if (!pidl) return FALSE;
-    if (explorer->explore(pidl) == XPR_TRUE) return TRUE;
-    COM_FREE(pidl);
-    return FALSE;
-}
-static void PrepareTestIslandRuntime()
-{
-    if (sTestIslandDll) return;
-    wchar_t dllPath[32768] = {};
-    DWORD count = ::GetEnvironmentVariableW(L"FLYEXP_PHASE5_TEST_ISLAND_DLL",
-                                          dllPath, _countof(dllPath));
-    if (count == 0 || count >= _countof(dllPath)) return;
-    const wchar_t *basename = wcsrchr(dllPath, L'\\');
-    if (!basename || _wcsicmp(basename + 1,
-                             L"FlyExplorerIslandBridge.dll") != 0) return;
-    HMODULE module = ::LoadLibraryExW(dllPath, NULL,
-        LOAD_LIBRARY_SEARCH_DLL_LOAD_DIR | LOAD_LIBRARY_SEARCH_DEFAULT_DIRS);
-    if (!module) {::OutputDebugStringW(L"Phase5 test island DLL load failed");return;}
-    TestIslandInitialize initialize = reinterpret_cast<TestIslandInitialize>(
-        ::GetProcAddress(module, "FlyIslandInitialize"));
-    sTestIslandCreate = reinterpret_cast<TestIslandCreate>(
-        ::GetProcAddress(module, "FlyIslandCreate"));
-    sTestIslandResize = reinterpret_cast<TestIslandResize>(
-        ::GetProcAddress(module, "FlyIslandResize"));
-    sTestIslandPreTranslate = reinterpret_cast<TestIslandPreTranslate>(
-        ::GetProcAddress(module, "FlyIslandPreTranslate"));
-    sTestIslandDestroy = reinterpret_cast<TestIslandDestroy>(
-        ::GetProcAddress(module, "FlyIslandDestroy"));
-    sTestIslandShutdown = reinterpret_cast<TestIslandShutdown>(
-        ::GetProcAddress(module, "FlyIslandShutdown"));
-    sTestIslandRefreshPath = reinterpret_cast<TestIslandRefreshPath>(
-        ::GetProcAddress(module, "FlyIslandRefreshPath"));
-    sTestIslandBindAdapter = reinterpret_cast<TestIslandBindAdapter>(
-        ::GetProcAddress(module, "FlyIslandBindAdapter"));
-    if (!initialize || !sTestIslandRefreshPath || !sTestIslandBindAdapter || !sTestIslandCreate || !sTestIslandResize ||
-        !sTestIslandPreTranslate || !sTestIslandDestroy ||
-        !sTestIslandShutdown || !initialize()) {
-        ::OutputDebugStringW(L"Phase5 test island runtime initialize failed");
-        return;
-    }
-    sTestIslandDll = module;
-}
-static void AttachTestIsland(HWND mainHwnd)
-{
-    if (!sTestIslandDll || !sTestIslandCreate || !sTestIslandResize ||
-        !sTestIslandCreate(mainHwnd)) return;
-    sTestIslandReady = true;
-    sTestIslandBindAdapter(&TestIslandReadActivePath, &TestIslandNavigateActivePath);
-    RECT client = {};
-    ::GetClientRect(mainHwnd, &client);
-    int width = (std::min)(static_cast<int>(client.right), 760);
-    int height = (std::min)(static_cast<int>(client.bottom), 145);
-    sTestIslandResize((std::max)(0, static_cast<int>(client.right)-width),
-                      (std::max)(0, static_cast<int>(client.bottom)-height),
-                      width, height);
-}
-static void DetachTestIsland()
-{
-    if (!sTestIslandReady || !sTestIslandDestroy) return;
-    sTestIslandDestroy();
-    sTestIslandReady = false;
-}
-static bool PreTranslateTestIsland(MSG const *message)
-{
-    return sTestIslandReady && sTestIslandPreTranslate &&
-           sTestIslandPreTranslate(message) != FALSE;
-}
-static void ShutdownTestIslandRuntime()
-{
-    if (sTestIslandReady) DetachTestIsland();
-    if (sTestIslandDll && sTestIslandShutdown) sTestIslandShutdown();
-    // Keep the test DLL mapped until process teardown.
-}
 
 //
 // user defined message
@@ -394,13 +266,6 @@ void RefreshThemeForCurrentThread(void)
 }
 } // namespace anonymous
 
-// The test-only Windows App SDK DispatcherQueue must stop after MFC's
-// message loop exits, not inside MainFrame destruction/WM_CLOSE.
-void shutdownTestIslandRuntimeAtAppExit(void)
-{
-    ShutdownTestIslandRuntime();
-}
-
 MainFrame::MainFrame(void)
     : mExit(XPR_FALSE)
     , mSysTray(XPR_NULL)
@@ -413,10 +278,6 @@ MainFrame::MainFrame(void)
     , mCommandExecutor(XPR_NULL)
     , mPreviewMode(XPR_FALSE)
 {
-    // Test-only WinUI runtime must exist before LoadFrame creates the native
-    // MainFrame HWND, matching the Windows App SDK island initialization order.
-    PrepareTestIslandRuntime();
-
     mSplitFullPidl[0] = XPR_NULL;
     mSplitFullPidl[1] = XPR_NULL;
 
@@ -430,9 +291,6 @@ MainFrame::~MainFrame(void)
     COM_FREE(mSplitFullPidl[1]);
 
     XPR_SAFE_DELETE(mCommandExecutor);
-
-    // The experiment runtime is shut down in WinApp::ExitInstance after
-    // the native MFC message pump has returned.
 }
 
 xpr_bool_t MainFrame::PreCreateWindow(CREATESTRUCT &aCreateStruct)
@@ -545,7 +403,6 @@ BEGIN_MESSAGE_MAP(MainFrame, super)
     ON_UPDATE_COMMAND_UI_RANGE(ID_VIEW_THEME_SYSTEM, ID_VIEW_THEME_DARK, OnUpdateViewThemeMode)
     ON_MESSAGE(WM_DPICHANGED, OnDpiChanged)
     ON_MESSAGE(WM_THEMECHANGED, OnThemeChanged)
-    ON_MESSAGE(WM_TEST_ISLAND_PATH_CHANGED, OnTestIslandPathChanged)
     ON_WM_CLOSE()
     ON_WM_SETFOCUS()
     ON_WM_SYSCOMMAND()
@@ -671,8 +528,6 @@ xpr_sint_t MainFrame::OnCreate(LPCREATESTRUCT aCreateStruct)
     sRemovableDevice.create();
     sRemovableDevice.registerObserver(this);
 
-    // Explicitly test-scoped; no global install, shell hook or normal UI change.
-    AttachTestIsland(m_hWnd);
     return 0;
 }
 
@@ -848,7 +703,6 @@ void MainFrame::onSplitterActivedPane(Splitter &aSplitter, xpr_sint_t aRow, xpr_
 
         sExplorerView->setActivateBarStatus(sActive, sLastActived);
     }
-    if (sTestIslandReady) PostMessage(WM_TEST_ISLAND_PATH_CHANGED);
 }
 
 void MainFrame::OnSettingChange(xpr_uint_t aFlags, const xpr_tchar_t *aSection)
@@ -926,9 +780,8 @@ LRESULT MainFrame::OnThemeChanged(WPARAM aWParam, LPARAM aLParam)
 
 void MainFrame::OnDestroy(void)
 {
-    // Fallback for WM_DESTROY not preceded by regular WM_CLOSE.
-    DetachTestIsland();
     destroy();
+
     super::OnDestroy();
 }
 
@@ -1235,18 +1088,8 @@ xpr_bool_t MainFrame::OnEraseBkgnd(CDC *aDC)
 void MainFrame::OnSize(xpr_uint_t aType, xpr_sint_t cx, xpr_sint_t cy)
 {
     super::OnSize(aType, cx, cy);
+
     recalcLayout(aType);
-    if (sTestIslandReady && sTestIslandResize && aType != SIZE_MINIMIZED)
-    {
-        // Temporary overlay in an isolated process; do not alter saved bars.
-        CRect client;
-        GetClientRect(&client);
-        xpr_sint_t width = (std::min)(client.Width(), 760);
-        xpr_sint_t height = (std::min)(client.Height(), 145);
-        sTestIslandResize((std::max)(0, client.Width()-width),
-                          (std::max)(0, client.Height()-height),
-                          width, height);
-    }
 }
 
 // reference: CWnd::RepositionBars(...)
@@ -1814,9 +1657,7 @@ void MainFrame::OnClose(void)
     if (confirmToClose() == XPR_TRUE)
     {
         saveOption();
-        // Destroy the test island while the native MFC owner HWND is alive.
-        // WM_DESTROY can be too late once MFC closes child HWNDs.
-        DetachTestIsland();
+
         super::OnClose();
     }
 }
@@ -3576,20 +3417,8 @@ xpr_bool_t MainFrame::OnCmdMsg(xpr_uint_t aId, xpr_sint_t aCode, void *aExtra, A
 
 xpr_bool_t MainFrame::PreTranslateMessage(MSG *aMsg) 
 {
-    if (PreTranslateTestIsland(aMsg))
-        return XPR_TRUE;
-
     static xpr_tchar_t sClassName[MAX_CLASS_NAME + 1] = {0};
     sClassName[0] = XPR_STRING_LITERAL('\0');
-
-    // The island has already received its ContentPreTranslateMessage call.
-    // When it leaves text input unhandled, do not pass its native input-site
-    // messages into MFC's unrelated main-frame keyboard accelerators.
-    if (sTestIslandReady && aMsg && ::IsWindow(aMsg->hwnd) &&
-        ::GetClassName(aMsg->hwnd, sClassName, MAX_CLASS_NAME) != 0 &&
-        _tcsicmp(sClassName,
-            XPR_STRING_LITERAL("InputSiteWindowClass")) == 0)
-        return XPR_FALSE;
 
     if (aMsg->message == WM_SYSKEYDOWN || aMsg->message == WM_KEYDOWN)
     {
@@ -5620,19 +5449,6 @@ void MainFrame::onMoveFocus(FolderView &aFolderView, xpr_sint_t aCurWnd)
 void MainFrame::onMoveFocus(ExplorerView &aExplorerView, xpr_sint_t aCurWnd)
 {
     moveFocus(aCurWnd);
-}
-
-void MainFrame::onActivePathChanged(ExplorerView &view)
-{
-    if (sTestIslandReady && getExplorerView(-1) == &view)
-        PostMessage(WM_TEST_ISLAND_PATH_CHANGED);
-}
-
-LRESULT MainFrame::OnTestIslandPathChanged(WPARAM, LPARAM)
-{
-    if (sTestIslandReady && sTestIslandRefreshPath)
-        sTestIslandRefreshPath();
-    return 0;
 }
 
 void MainFrame::OnSetPreviewMode(xpr_bool_t aPreview, CPrintPreviewState *aState)

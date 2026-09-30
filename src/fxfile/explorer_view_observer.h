@@ -19,8 +19,6 @@ class ExplorerViewObserver
 {
 public:
     virtual void onMoveFocus(ExplorerView &aExplorerView, xpr_sint_t aCurWnd) = 0;
-    // Event-driven: defer path reads until the native tab/pane state settles.
-    virtual void onActivePathChanged(ExplorerView &aExplorerView) {}
 };
 } // namespace fxfile
 

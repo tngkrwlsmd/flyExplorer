@@ -229,7 +229,6 @@ protected:
 
     // from ExplorerViewObserver
     virtual void onMoveFocus(ExplorerView &aExplorerView, xpr_sint_t aCurWnd);
-    virtual void onActivePathChanged(ExplorerView &aExplorerView);
 
     // from SearchDlgObserver
     virtual void onPostNcDestroy(SearchDlg &aSearchDlg);
@@ -296,7 +295,6 @@ protected:
     afx_msg void OnUpdateViewThemeMode(CCmdUI *aCmdUI);
     afx_msg LRESULT OnDpiChanged(WPARAM aWParam, LPARAM aLParam);
     afx_msg LRESULT OnThemeChanged(WPARAM aWParam, LPARAM aLParam);
-    afx_msg LRESULT OnTestIslandPathChanged(WPARAM aWParam, LPARAM aLParam);
     afx_msg void OnClose(void);
     afx_msg void OnSysCommand(xpr_uint_t aId, LPARAM lParam);
     afx_msg void OnMeasureItem(xpr_sint_t aIdCtl, LPMEASUREITEMSTRUCT aMeasureItemStruct);
