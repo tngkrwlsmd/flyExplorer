@@ -31,6 +31,7 @@ CONTRACTS = [
     "experiments/phase6_winui_shell/test_manual_accessibility_contract.py",
     "experiments/phase6_winui_shell/test_recycle_owned_contract.py",
     "experiments/phase6_winui_shell/test_large_folder_contract.py",
+    "experiments/phase6_winui_shell/test_m25_parity_contract.py",
     "experiments/phase6_winui_shell/test_portable_safety_contract.py",
     "build/test_ui_uxh07_workspace_contract.py",
     "build/test_ui_uxh06_recent_scope_contract.py",

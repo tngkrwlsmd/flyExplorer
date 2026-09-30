@@ -11,8 +11,8 @@ constexpr std::uint32_t kPath=1,kAbsolutePidl=2;
 constexpr std::uint32_t kMaxPathUnits=16384;
 constexpr std::uint32_t kMaxItemUnits=4096;
 constexpr std::uint32_t kMaxPidl=65536;
-constexpr std::uint32_t kMaxBody=4u*1024u*1024u;
-constexpr std::uint32_t kMaxEntries=1200;
+constexpr std::uint32_t kMaxBody=8u*1024u*1024u;
+constexpr std::uint32_t kMaxEntries=2600;
 #pragma pack(push,1)
 struct Request {
     std::uint32_t magic,version,type,length;

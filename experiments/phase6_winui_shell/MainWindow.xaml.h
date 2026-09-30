@@ -83,6 +83,10 @@ namespace winrt::FlyExplorerWinUIShell::implementation
         void OnMoveSelected(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
         void OnRecycleSelected(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
         void OnCancelTransfer(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
+        void OnNameFilterChanged(
+            IInspectable const&,
+            Microsoft::UI::Xaml::Controls::TextChangedEventArgs const&);
+        void OnLoadMoreFiles(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
         void OnNameColumnWidthChanged(
             IInspectable const&,
             Microsoft::UI::Xaml::Controls::Primitives::RangeBaseValueChangedEventArgs const&);
@@ -134,6 +138,9 @@ namespace winrt::FlyExplorerWinUIShell::implementation
         }
         using FileDetail=fxfile::previewlist::FileDetail;
         std::array<fxfile::previewlist::PaneState,2> mFileLists{};
+        // Incremental thumbnail requests must stop issuing new child
+        // Shell processes when navigation invalidates the native route.
+        std::array<std::shared_ptr<std::atomic_bool>,2> mDetailCancel{};
         void ScheduleFileDetails(int side,bool force=false);
         void ClearFileDetails(int side);
         std::shared_ptr<fxfile::shelltransfer::Progress> mTransferProgress;

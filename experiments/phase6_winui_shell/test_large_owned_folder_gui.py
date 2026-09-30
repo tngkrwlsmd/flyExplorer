@@ -26,6 +26,7 @@ def until(fn,label,timeout):
 
 def main():
     parser=argparse.ArgumentParser()
+    parser.add_argument("--items",type=int,choices=(1100,2300),default=1100)
     parser.add_argument("--configuration",choices=("Debug","Release"),
                         default="Debug")
     args=parser.parse_args()
@@ -41,9 +42,9 @@ def main():
     base=root/"logs"/"m23"
     base.mkdir(parents=True,exist_ok=True)
     owned=Path(tempfile.mkdtemp(prefix="large-owned-",dir=base))
-    folder=owned/"1100-files"
+    folder=owned/(str(args.items)+"-files")
     folder.mkdir()
-    for n in range(1100):
+    for n in range(args.items):
         (folder/f"bench-{n:04d}.txt").write_text(
             f"test-owned file {n}\n",encoding="utf-8")
     env=os.environ.copy()
@@ -93,14 +94,46 @@ def main():
         assert owner.value==process.pid
         assert ui.GetForegroundWindow()==parent.handle
         parent.child_window(auto_id="SortPicker").select(1)
-        until(lambda:"bench-1099.txt" in first_row(),
+        until(lambda:f"bench-{args.items-1:04d}.txt" in first_row(),
               "1,100-file name descending did not show the final owned file",20)
+        if args.items==2300:
+            from pywinauto import keyboard
+            more=parent.child_window(auto_id="LeftLoadMoreButton")
+            until(lambda:more.exists(timeout=.2) and
+                  "160/2300" in more.window_text(),
+                  "2300 native entries were not view-paged",8)
+            more.click_input()
+            until(lambda:"320/2300" in parent.child_window(
+                  auto_id="LeftLoadMoreButton").window_text(),
+                  "controlled extra page did not render",12)
+            filt=parent.child_window(auto_id="LeftNameFilterBox")
+            assert filt.exists(timeout=.2)
+            filt.set_edit_text("2299")
+            until(lambda:"bench-2299.txt" in first_row() and
+                  (not parent.child_window(
+                       auto_id="LeftLoadMoreButton").exists(timeout=.1) or
+                   not parent.child_window(
+                       auto_id="LeftLoadMoreButton").is_visible()),
+                  "native file-name filter must not mutate model or page",9)
+            filt.set_edit_text("")
+            until(lambda:"bench-2299.txt" in first_row(),
+                  "clearing pane filter failed to restore sorted native snapshot",10)
+            # Verify the new M2.5 shortcut from the owned file list, rather
+            # than only asserting source text. No global hotkey is registered.
+            files=parent.child_window(auto_id="LeftFiles")
+            files.set_focus()
+            keyboard.send_keys("^+f")
+            until(lambda:filt.has_keyboard_focus(),
+                  "Ctrl+Shift+F did not focus the owned pane name filter",5)
+            print("OWNED_2300_CTRL_SHIFT_F_FILTER_FOCUS",True,flush=True)
+            print("OWNED_2300_PROGRESSIVE_PAGE_FILTER_RESET",True,flush=True)
         assert (folder/"bench-0000.txt").read_text(encoding="utf-8").startswith(
             "test-owned")
         assert (folder/"bench-1099.txt").is_file()
-        print("OWNED_1100_LARGE_FOLDER_FIRST_RENDER_SECONDS",
+        print("OWNED_LARGE_FOLDER_ITEM_COUNT",args.items,flush=True)
+        print("OWNED_LARGE_FOLDER_FIRST_RENDER_SECONDS",
               round(first_elapsed,2),flush=True)
-        print("OWNED_1100_NATIVE_NAVIGATION_AND_NAME_SORT",True,flush=True)
+        print("OWNED_LARGE_FOLDER_NAVIGATION_AND_NAME_SORT",True,flush=True)
         success=True
     finally:
         if process.poll() is None:

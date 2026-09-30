@@ -112,7 +112,7 @@ def pidl_valid(raw):
 def parse(frame):
     if len(frame)<28:raise ValueError("short result")
     magic,version,hr,count,n,expected,flags=struct.unpack_from("<IIiIIII",frame)
-    if magic!=MAGIC or version!=2 or count>1200 or n>4*1024**2:
+    if magic!=MAGIC or version!=2 or count>2600 or n>8*1024**2:
         raise ValueError("result protocol bounds")
     if len(frame)!=28+n:raise ValueError("result frame length")
     body=frame[28:]

@@ -124,6 +124,11 @@
                 <Button x:Name="PrimaryPaneTitle" Content="왼쪽 창" HorizontalAlignment="Left"
                         AutomationProperties.Name="왼쪽 창 활성화" Click="OnActivateLeft"
                         Margin="0,0,0,3"/>
+                <TextBox x:Name="LeftNameFilterBox" Grid.Row="0"
+                         HorizontalAlignment="Right" Width="125"
+                         MaxLength="64" TextChanged="OnNameFilterChanged"
+                         PlaceholderText="?? ??"
+                         AutomationProperties.Name="?? ?? ?? ??"/>
                 <TabView x:Name="LeftTabs" Grid.Row="1" Height="45"
                          IsAddTabButtonVisible="False" CanDragTabs="False"
                          TabWidthMode="SizeToContent" SelectionChanged="OnLeftTabSelectionChanged"
@@ -135,6 +140,10 @@
                             Value="168" StepFrequency="16" Width="92"
                             ValueChanged="OnNameColumnWidthChanged"
                             AutomationProperties.Name="왼쪽 이름 열 너비 조절"/>
+                    <Button x:Name="LeftLoadMoreButton" Content="+160" Visibility="Collapsed"
+                            MinWidth="54" Click="OnLoadMoreFiles"
+                            ToolTipService.ToolTip="Render next 160 files"
+                            AutomationProperties.Name="Left load 160 more files"/>
                     <TextBlock Text="이름 | Windows 유형 | 크기 | 수정 날짜"
                                VerticalAlignment="Center" FontSize="11"
                                TextTrimming="CharacterEllipsis"/>
@@ -177,6 +186,11 @@
                 <Button x:Name="SecondaryPaneTitle" Content="오른쪽 창" HorizontalAlignment="Left"
                         AutomationProperties.Name="오른쪽 창 활성화" Click="OnActivateRight"
                         Margin="0,0,0,3"/>
+                <TextBox x:Name="RightNameFilterBox" Grid.Row="0"
+                         HorizontalAlignment="Right" Width="125"
+                         MaxLength="64" TextChanged="OnNameFilterChanged"
+                         PlaceholderText="?? ??"
+                         AutomationProperties.Name="??? ?? ?? ??"/>
                 <TabView x:Name="RightTabs" Grid.Row="1" Height="45"
                          IsAddTabButtonVisible="False" CanDragTabs="False"
                          TabWidthMode="SizeToContent" SelectionChanged="OnRightTabSelectionChanged"
@@ -188,6 +202,10 @@
                             Value="168" StepFrequency="16" Width="92"
                             ValueChanged="OnNameColumnWidthChanged"
                             AutomationProperties.Name="오른쪽 이름 열 너비 조절"/>
+                    <Button x:Name="RightLoadMoreButton" Content="+160" Visibility="Collapsed"
+                            MinWidth="54" Click="OnLoadMoreFiles"
+                            ToolTipService.ToolTip="Render next 160 files"
+                            AutomationProperties.Name="Right load 160 more files"/>
                     <TextBlock Text="이름 | Windows 유형 | 크기 | 수정 날짜"
                                VerticalAlignment="Center" FontSize="11"
                                TextTrimming="CharacterEllipsis"/>

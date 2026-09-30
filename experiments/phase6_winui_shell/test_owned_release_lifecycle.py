@@ -1,10 +1,10 @@
 """Real two-revision TEST-ONLY unpackaged Windows WinUI lifecycle.
 
 This is NOT a signed Windows installer or a clean-machine deployment gate.
-Only logs/m24/lifecycle-owned-prior-v1/{v1,installed,next,backup} can change.
+Only a unique test-owned run directory under logs/m24/lifecycle-owned-prior-v1 can change.
 """
 import ctypes as c
-import hashlib,json,os,shutil,subprocess,sys,time
+import hashlib,json,os,shutil,subprocess,sys,tempfile,time
 from pathlib import Path
 import psutil
 from pywinauto import Desktop
@@ -26,6 +26,31 @@ def copy_stage(source,dest,ignore_build=False):
   target.parent.mkdir(parents=True,exist_ok=True)
   shutil.copy2(p,target)
   assert sha(p)==sha(target)
+def wait_owned_stage_processes(stage,seconds=8):
+ root=stage.resolve()
+ end=time.monotonic()+seconds
+ def owned():
+  found=[]
+  for proc in psutil.process_iter(["pid","exe"]):
+   try:
+    exe=proc.info.get("exe")
+    if exe and Path(exe).resolve().is_relative_to(root):
+     found.append(proc)
+   except (psutil.Error,OSError,RuntimeError):
+    pass
+  return found
+ while time.monotonic()<end:
+  pending=owned()
+  if not pending:return
+  time.sleep(.2)
+ pending=owned()
+ for proc in pending:
+  try:proc.terminate()
+  except psutil.Error:pass
+ _,alive=psutil.wait_procs(pending,timeout=4)
+ if alive:
+  raise AssertionError("Exact private stage process still owns update files")
+
 def launch(d,folder,env,sha256,label):
  exe=d/"FlyExplorerWinUIShell.exe"
  assert exe.is_file() and sha(exe)==sha256
@@ -60,6 +85,7 @@ def launch(d,folder,env,sha256,label):
      p.terminate();p.wait(timeout=7)
    else:p.terminate();p.wait(timeout=7)
   assert p.returncode==0,"Preview did not exit cleanly"
+  wait_owned_stage_processes(d)
 
 def main():
  a=Path(__file__).resolve().parent
@@ -73,17 +99,16 @@ def main():
  old=expected["FlyExplorerWinUIShell.exe"]
  new=sha(current/"FlyExplorerWinUIShell.exe")
  assert old!=new,"Require two real distinct Windows Release binaries"
- installed,nxt,backup=[root/name for name in ("installed","next","backup")]
- for path in (installed,nxt,backup,root/"fixture"):
-  assert not path.exists(),str(path)+" already exists; no overwrite"
+ run=Path(tempfile.mkdtemp(prefix="lifecycle-run-owned-",dir=root))
+ installed,nxt,backup=[run/name for name in ("installed","next","backup")]
  mfc=Path(os.environ["APPDATA"])/"fxfile"/"conf"
  before={n:sha(mfc/n) for n in LEGACY if (mfc/n).is_file()}
- fixture=root/"fixture";fixture.mkdir()
+ fixture=run/"fixture";fixture.mkdir()
  (fixture/"lifecycle-owned.txt").write_text("exact owned binary upgrade",encoding="utf-8")
  env=os.environ.copy()
+ runtime=Path(tempfile.mkdtemp(prefix="runtime-owned-",dir=run))
  for k in ("APPDATA","LOCALAPPDATA","TEMP","TMP"):
-  path=root/("isolated-"+k.lower())
-  assert not path.exists()
+  path=runtime/k.lower()
   path.mkdir()
   env[k]=str(path)
  for k in ("FLY_M23_OWNED_SESSION","FLY_M23_OWNED_DRAG_TEST"):
@@ -111,7 +136,7 @@ def main():
   assert inventory(installed)==expected
   launch(installed,fixture,env,old,"v1-rollback")
   print("PRIVATE_EXACT_V1_BINARY_ROLLBACK_PASS",True,flush=True)
-  assert installed.parent==root and installed.name=="installed"
+  assert installed.parent==run and installed.name=="installed"
   assert (installed/".fly-owned-install-marker").is_file()
   shutil.rmtree(installed)
   print("PRIVATE_OWNED_RELEASE_UNINSTALL_PASS",not installed.exists(),flush=True)
@@ -126,10 +151,9 @@ def main():
   passed=True
  finally:
   if passed:
-   for path in (nxt,fixture):
-    assert path.parent==root
-    if path.exists() and not path.is_symlink():shutil.rmtree(path)
+   assert run.parent==root and run.name.startswith("lifecycle-run-owned-")
+   if run.exists() and not run.is_symlink():shutil.rmtree(run)
   else:
-   print("OWNED_LIFECYCLE_RECOVERY_FILES_RETAINED",root,flush=True)
+   print("OWNED_LIFECYCLE_RECOVERY_FILES_RETAINED",run,flush=True)
  return 0 if passed else 1
 if __name__=="__main__":sys.exit(main())

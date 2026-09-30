@@ -35,4 +35,15 @@ class ContextContract(unittest.TestCase):
   b=src("experiments/phase6_winui_shell/test_owned_thumbnail_gui.py")
   self.assertNotIn("InvokeCommand",a+b)
   self.assertNotIn("TrackPopupMenuEx",a+b)
+class OwnedContextInvocationRegression(unittest.TestCase):
+ def test_right_click_uses_only_intersection_of_owned_row_and_list(self):
+  probe=src("experiments/phase6_winui_shell/test_owned_context_menu_gui.py")
+  self.assertIn("left=max(item.left,area.left)",probe)
+  self.assertIn("right=min(item.right,area.right)",probe)
+  self.assertIn("top=max(item.top,area.top)",probe)
+  self.assertIn("bottom=min(item.bottom,area.bottom)",probe)
+  self.assertIn('assert user.GetForegroundWindow()==hwnd',probe)
+  self.assertIn('"--context-menu" in q.cmdline()',probe)
+  self.assertIn('pid.value==child.pid',probe)
+
 if __name__=="__main__":unittest.main()

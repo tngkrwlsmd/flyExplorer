@@ -522,7 +522,7 @@ int wmain(int argc,wchar_t** argv) {
         fxfile::shellnav::Snapshot snap;
         if(SUCCEEDED(hr))
             hr=fxfile::shellnav::enumerate(
-                requested.get(),snap,SHCONTF_FOLDERS|SHCONTF_NONFOLDERS,1200);
+                requested.get(),snap,SHCONTF_FOLDERS|SHCONTF_NONFOLDERS,kMaxEntries);
         sent=answer(output,hr,SUCCEEDED(hr)?&snap:nullptr);
     }catch(std::bad_alloc const&){sent=answer(output,E_OUTOFMEMORY);}
      catch(...){sent=answer(output,E_FAIL);}

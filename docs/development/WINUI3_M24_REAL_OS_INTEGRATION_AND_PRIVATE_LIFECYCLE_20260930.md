@@ -22,6 +22,8 @@ The exact native helper exposed 20 installed context-menu entries on an owned re
 
 ## Known unresolved issue: isolated context-menu UIA automation
 
+**M2.5 follow-up:** the same strict exact-owned launch/cancel harness subsequently passed twice in freshly compiled Debug and once in Release after the M2.5 layout/list changes. The old failure remains historical evidence and its single cause is not proven; current bounded popup+ESC smoke is PASS, while provider-verb execution/fault recovery remains untested.
+
 The native exact owned helper enumerated 20 installed context-menu entries on a synthetic TXT item and the earlier real Debug owned GUI opened the exact isolated Shell popup and safely closed it with ESC. These are direct but bounded execution observations, not proof that every GUI invocation path is reliable. A later, more restrictive owned-window UIA right-click harness, `experiments/phase6_winui_shell/test_owned_context_menu_gui.py`, reported `Owned Shell menu launch item absent` when resolving the app-owned flyout item; it logged an owned menu containing only the system entry in `logs/m24/20260930-final-owned-context-uiA-popup-diagnostic.log`. This did not change the test source file or any original MFC configuration. It remains **OPEN: determine whether flyout invocation/selection or pywinauto UIA re-resolution is at fault**; do not report the newer GUI harness as PASS or claim all shell extensions work. The diagnostic harness is committed for reproducibility but excluded from the automated PASS gate; a fresh exact owned-process GUI reproduction is required before closing this issue.
 
 ## Accessibility: actual connected desktop and honest VM/manual gates

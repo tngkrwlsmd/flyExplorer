@@ -24,7 +24,7 @@ class FileTypeContract(unittest.TestCase):
    self.assertIn(name,native)
  def test_app_uses_one_background_batch_with_generic_fallback(self):
   app=source("experiments/phase6_winui_shell/MainWindow.xaml.cpp")
-  self.assertIn('std::thread([side,tab,route,ticket,paths=',app)
+  self.assertIn('std::thread([side,tab,route,ticket,cancel,paths=',app)
   self.assertIn('fxfile::filetype::queryVisuals(',app)
   self.assertIn('if(!fxfile::filetype::safeExtension(ext))continue;',app)
   self.assertIn('entry.typeLabel',app)

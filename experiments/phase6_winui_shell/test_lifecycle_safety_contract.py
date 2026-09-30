@@ -10,6 +10,10 @@ class OwnedLifecycleContract(unittest.TestCase):
             "ORIGINAL_SIX_MFC_SETTINGS_IDENTICAL",
             '".fly-owned-install-marker"'):
    self.assertIn(x,BODY)
+  self.assertIn("tempfile.mkdtemp(prefix=\"lifecycle-run-owned-\",dir=root)",BODY)
+  self.assertIn('run.name.startswith("lifecycle-run-owned-")',BODY)
+  self.assertIn("wait_owned_stage_processes(d)",BODY)
+  self.assertIn("Path(exe).resolve().is_relative_to(root)",BODY)
   for forbidden in ("EmptyClipboard(","SHEmptyRecycleBinW","winreg.SetValue",
                     "Set-ItemProperty","msiexec","Add-AppxPackage"):
    self.assertNotIn(forbidden,BODY)

@@ -27,7 +27,7 @@ class IsolationContracts(unittest.TestCase):
         wire=source(ROOT/"src/base/shell_isolation_wire.h")
         for required in ("kVersion=2","kAbsolutePidl=2",
                          "kMaxPathUnits=16384","kMaxPidl=65536",
-                         "kMaxBody=4u*1024u*1024u","sizeof(Reply)==28",
+                         "kMaxBody=8u*1024u*1024u","sizeof(Reply)==28",
                          "validPidl"):
             self.assertIn(required,wire)
         for required in ("exactRead","exactWrite","ILGetSize",

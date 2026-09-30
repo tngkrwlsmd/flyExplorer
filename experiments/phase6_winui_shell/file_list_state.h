@@ -21,6 +21,13 @@ struct FileDetail final {
 struct PaneState final {
     int sortMode=0;
     double nameColumnWidth=168.0;
+    // Render a bounded first page; keep all items in a native snapshot.
+    // route/tab identity resets paging on navigation without stale UI rows.
+    std::wstring filenameFilter;
+    std::size_t filteredCount=0;
+    std::size_t visibleCount=160;
+    std::uint64_t visibleRoute=0;
+    std::size_t visibleTab=0;
     std::vector<FileDetail> details;
     std::vector<std::wstring> renderedPaths;
     std::uint64_t route=0,epoch=0;

@@ -419,6 +419,13 @@ void MainWindow::HandleFileShortcut(
  if(side!=mModel.activePane)ActivatePane(side);
  const auto vk=args.Key();
  const auto ctrl=(::GetKeyState(VK_CONTROL)&0x8000)!=0;
+ const auto shift=(::GetKeyState(VK_SHIFT)&0x8000)!=0;
+ if(ctrl&&shift&&vk==Windows::System::VirtualKey::F){
+  auto box=side==0?LeftNameFilterBox():RightNameFilterBox();
+  box.Focus(Microsoft::UI::Xaml::FocusState::Keyboard);
+  box.SelectAll();
+  args.Handled(true);return;
+ }
  auto view=side==0?LeftFiles():RightFiles();
  if(ctrl&&vk==Windows::System::VirtualKey::A){
   view.SelectAll();args.Handled(true);return;

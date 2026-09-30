@@ -397,6 +397,7 @@ namespace winrt::FlyExplorerWinUIShell::implementation
         mPopulatingTabs=false;
     }
     void MainWindow::ClearFileDetails(int side){
+        if(mDetailCancel[side])mDetailCancel[side]->store(true);
         mFileLists[side].invalidate();
     }
     void MainWindow::ScheduleFileDetails(int side,bool force){
@@ -419,11 +420,14 @@ namespace winrt::FlyExplorerWinUIShell::implementation
             // never retain a Shell COM pointer on this worker.
             paths.push_back(item.isFileSystem()?item.parsingName:std::wstring{});
         }
+        if(mDetailCancel[side])mDetailCancel[side]->store(true);
+        auto cancel=std::make_shared<std::atomic_bool>(false);
+        mDetailCancel[side]=cancel;
         const auto ticket=mFileLists[side].begin(route,tab);
         auto dispatch=DispatcherQueue();
         auto weak=get_weak();
         try{
-            std::thread([side,tab,route,ticket,paths=std::move(paths),
+            std::thread([side,tab,route,ticket,cancel,paths=std::move(paths),
                          dispatch,weak]{
                 // Batch 24 distinct registered extensions in one disposable
                 // helper subprocess. A timeout preserves the existing type
@@ -485,6 +489,7 @@ namespace winrt::FlyExplorerWinUIShell::implementation
                 std::vector<FileDetail> details(paths.size());
                 size_t thumbnailBudget=0;
                 for(size_t i=0;i<paths.size();++i){
+                    if(cancel->load())return; // prevent stale metadata child launch
                     if(paths[i].empty()||paths[i].size()>32000)continue;
                     WIN32_FILE_ATTRIBUTE_DATA data{};
                     if(!::GetFileAttributesExW(paths[i].c_str(),
@@ -527,6 +532,7 @@ namespace winrt::FlyExplorerWinUIShell::implementation
                             if(ext==L".png"||ext==L".jpg"||ext==L".jpeg"||
                                ext==L".bmp"||ext==L".webp"){
                                 ++thumbnailBudget;
+                                if(cancel->load())return;
                                 auto result=fxfile::thumbnail::query(
                                     visualHelper,paths[i],1800);
                                 if(result.valid()){
@@ -596,11 +602,55 @@ namespace winrt::FlyExplorerWinUIShell::implementation
         mFileLists[side].nameColumnWidth=width;
         if(mColumnControlsReady)FillFiles(side);
     }
+    void MainWindow::OnNameFilterChanged(
+        IInspectable const& sender,
+        Microsoft::UI::Xaml::Controls::TextChangedEventArgs const&){
+        if(!mColumnControlsReady)return;
+        const auto input=sender.try_as<TextBox>();
+        if(!input)return;
+        const auto name=input.Name();
+        const int side=name==L"LeftNameFilterBox"?0:
+                       name==L"RightNameFilterBox"?1:-1;
+        if(side<0)return;
+        auto text=std::wstring(input.Text().c_str());
+        if(text.size()>64)return;
+        auto& state=mFileLists[side];
+        if(state.filenameFilter==text)return;
+        state.filenameFilter=std::move(text);
+        state.visibleCount=160;
+        FillFiles(side); // Only the view changes. Shell model and stable tags do not.
+    }
+    void MainWindow::OnLoadMoreFiles(
+        IInspectable const& sender,Microsoft::UI::Xaml::RoutedEventArgs const&){
+        auto const button=sender.try_as<Button>();
+        if(!button)return;
+        const auto label=button.Name();
+        const int side=label==L"LeftLoadMoreButton"?0:
+                       label==L"RightLoadMoreButton"?1:-1;
+        if(side<0)return;
+        auto const& pane=mModel.panes[side];
+        if(pane.pending[pane.active])return;
+        auto& state=mFileLists[side];
+        if(state.visibleRoute!=pane.routeIds[pane.active]||
+           state.visibleTab!=pane.active)return;
+        const auto available=state.filteredCount;
+        if(state.visibleCount>=available)return;
+        state.visibleCount=(std::min)(available,state.visibleCount+160);
+        FillFiles(side); // Selection is restored using real parsing paths.
+    }
     void MainWindow::FillFiles(int side)
     {
         auto view=side==0?LeftFiles():RightFiles();
         const auto& pane=mModel.panes[static_cast<size_t>(side)];
         const auto& items=pane.tabs[pane.active].snapshot().children;
+        auto& state=mFileLists[side];
+        const auto nextRoute=pane.routeIds[pane.active];
+        if(state.visibleRoute!=nextRoute||state.visibleTab!=pane.active){
+            state.visibleRoute=nextRoute;
+            state.visibleTab=pane.active;
+            state.visibleCount=160;
+        }
+        auto button=side==0?LeftLoadMoreButton():RightLoadMoreButton();
         std::vector<std::wstring> selected;
         for(auto const& old:view.SelectedItems()){
             auto row=old.try_as<ListViewItem>();
@@ -641,7 +691,30 @@ namespace winrt::FlyExplorerWinUIShell::implementation
             }
             return mode==1?lessName(rhs,lhs):lessName(lhs,rhs);
         });
-        for(const auto index:order){
+        if(!state.filenameFilter.empty()){
+            auto matches=[&](size_t index){
+                auto const& label=items[index].label;
+                auto const& query=state.filenameFilter;
+                return std::search(label.begin(),label.end(),
+                    query.begin(),query.end(),[](wchar_t a,wchar_t b){
+                    return ::towlower(a)==::towlower(b);
+                })!=label.end();
+            };
+            order.erase(std::remove_if(order.begin(),order.end(),
+                [&](size_t index){return !matches(index);}),order.end());
+        }
+        state.filteredCount=order.size();
+        button.Visibility(order.size()>state.visibleCount?
+            Visibility::Visible:Visibility::Collapsed);
+        const auto progress=std::to_wstring(
+            (std::min)(order.size(),state.visibleCount))+
+            L"/"+std::to_wstring(order.size());
+        button.Content(winrt::box_value(hstring(progress)));
+        Microsoft::UI::Xaml::Automation::AutomationProperties::SetName(
+            button,hstring(std::wstring(
+               side==0?L"?? ? ?? ":L"??? ? ?? ")+progress));
+        for(size_t visible=0;visible<(std::min)(order.size(),state.visibleCount);++visible){
+            const auto index=order[visible];
             const auto& item=items[index];
             ListViewItem row;
             auto label=std::wstring(item.isFolder()?L"[폴더]  ":L"[파일]  ")+
