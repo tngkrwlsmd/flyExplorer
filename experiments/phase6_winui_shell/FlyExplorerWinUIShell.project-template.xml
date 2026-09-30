@@ -133,6 +133,8 @@
     <ClInclude Include="..\..\src\base\shell_transfer_core.h" />
     <ClInclude Include="..\..\src\base\shell_clipboard_core.h" />
     <ClInclude Include="..\..\src\base\shell_assoc_type_core.h" />
+    <ClInclude Include="..\..\src\base\shell_thumbnail_core.h" />
+    <ClInclude Include="..\..\src\base\shell_context_core.h" />
     <ClInclude Include="..\..\src\base\preview_session.h" />
     <ClInclude Include="file_list_state.h" />
     <ClInclude Include="MainWindow.xaml.h">
@@ -195,6 +197,12 @@
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="..\..\src\base\shell_assoc_type_core.cpp">
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="..\..\src\base\shell_thumbnail_core.cpp">
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="..\..\src\base\shell_context_core.cpp">
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="..\..\src\base\shell_transfer_core.cpp">

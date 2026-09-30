@@ -1,5 +1,6 @@
 #include "pch.h"
 #include "MainWindow.xaml.h"
+#include "../../src/base/shell_context_core.h"
 #include <winrt/Microsoft.UI.Xaml.Input.h>
 #include <winrt/Windows.System.h>
 #include <thread>
@@ -335,6 +336,67 @@ void MainWindow::OnWindowsCut(IInspectable const&,RoutedEventArgs const&){
 }
 void MainWindow::OnWindowsPaste(IInspectable const&,RoutedEventArgs const&){
  PasteFromWindowsClipboard();
+}
+void MainWindow::OnExternalWindowsContextMenu(
+ IInspectable const&,RoutedEventArgs const&){
+ if(mFileOperationPending){
+  StatusText().Text(L"Shell \uC791\uC5C5\uC774 \uB05D\uB09C \uB4A4 \uC2DC\uB3C4\uD558\uC138\uC694.");
+  return;
+ }
+ const auto side=mModel.activePane;
+ auto const& pane=mModel.panes[side];
+ if(pane.pending[pane.active]||pane.filesystemPaths[pane.active].empty())
+  return;
+ auto list=side==0?LeftFiles():RightFiles();
+ if(list.SelectedItems().Size()!=1){
+  StatusText().Text(L"\uC678\uBD80 Shell \uBA54\uB274\uB294 \uD56D\uBAA9 1\uAC1C\uB97C \uC120\uD0DD\uD558\uC138\uC694.");
+  return;
+ }
+ auto row=list.SelectedItems().GetAt(0).try_as<ListViewItem>();
+ if(!row||!row.Tag())return;
+ const auto index=winrt::unbox_value<uint32_t>(row.Tag());
+ auto const& items=pane.tabs[pane.active].snapshot().children;
+ if(index>=items.size()||!items[index].isFileSystem())return;
+ auto path=items[index].parsingName;
+ auto const value=std::filesystem::path(path);
+ if(!value.is_absolute()||value.lexically_normal().native()!=path||
+    path.size()>1024)return;
+ const auto root=value.root_path().native();
+ if(root.size()!=3||root[1]!=L':'||root[2]!=L'\\'||
+    ::GetDriveTypeW(root.c_str())!=DRIVE_FIXED)return;
+ const auto flags=::GetFileAttributesW(path.c_str());
+ if(flags==INVALID_FILE_ATTRIBUTES||
+    (flags&FILE_ATTRIBUTE_REPARSE_POINT))return;
+ HWND hwnd=::GetActiveWindow();
+ DWORD owner=0;
+ if(hwnd)::GetWindowThreadProcessId(hwnd,&owner);
+ if(!hwnd||owner!=::GetCurrentProcessId())return;
+ wchar_t exe[32768]{};
+ DWORD length=::GetModuleFileNameW(nullptr,exe,32768);
+ if(!length||length>=32768)return;
+ auto helper=(std::filesystem::path(exe).parent_path()/
+               L"FlyShellIsolationHelper.exe").native();
+ POINT cursor{};
+ if(!::GetCursorPos(&cursor))return;
+ auto dispatch=DispatcherQueue();
+ auto weak=get_weak();
+ StatusText().Text(L"Windows Shell \uD655\uC7A5 \uBA54\uB274\uB97C \uBD84\uB9AC\uB41C \uD504\uB85C\uC138\uC2A4\uC5D0\uC11C \uC5FD\uB2C8\uB2E4.");
+ try{
+  std::thread([helper=std::move(helper),path=std::move(path),
+               cursor,dispatch,weak]{
+    const DWORD code=fxfile::shellcontext::show(helper,path,cursor,45000);
+    dispatch.TryEnqueue([weak,code]{
+      if(auto ui=weak.get()){
+       if(code==0)ui->StatusText().Text(
+          L"Windows Shell \uD655\uC7A5 \uBA54\uB274\uAC00 \uC885\uB8CC\uB410\uC2B5\uB2C8\uB2E4.");
+       else ui->StatusText().Text(
+          L"Windows Shell \uD655\uC7A5 \uBA54\uB274\uB97C \uC644\uB8CC\uD558\uC9C0 \uBABB\uD588\uC2B5\uB2C8\uB2E4.");
+      }
+    });
+  }).detach();
+ }catch(...){
+  StatusText().Text(L"Shell \uBA54\uB274 \uB3C5\uB9BD \uC791\uC5C5\uC790\uB97C \uC2DC\uC791\uD558\uC9C0 \uBABB\uD588\uC2B5\uB2C8\uB2E4.");
+ }
 }
 void MainWindow::StartInternalPaste(){
  if(mClipboardSources.empty()||mFileOperationPending){

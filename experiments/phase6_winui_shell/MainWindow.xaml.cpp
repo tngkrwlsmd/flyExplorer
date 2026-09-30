@@ -1,6 +1,7 @@
 #include "pch.h"
 #include "MainWindow.xaml.h"
 #include "../../src/base/shell_assoc_type_core.h"
+#include "../../src/base/shell_thumbnail_core.h"
 #if __has_include("MainWindow.g.cpp")
 #include "MainWindow.g.cpp"
 #endif
@@ -17,6 +18,9 @@
 #include <winrt/Microsoft.UI.Xaml.Input.h>
 #include <winrt/Microsoft.UI.Xaml.Automation.h>
 #include <winrt/Microsoft.UI.Xaml.Media.h>
+#include <winrt/Microsoft.UI.Xaml.Media.Imaging.h>
+#include <robuffer.h>
+#include <cstring>
 #pragma comment(lib, "shell32.lib")
 
 using namespace winrt;
@@ -437,17 +441,49 @@ namespace winrt::FlyExplorerWinUIShell::implementation
                     if(std::find(extensions.begin(),extensions.end(),ext)==extensions.end()
                          &&extensions.size()<24)extensions.push_back(ext);
                 }
-                std::unordered_map<std::wstring,std::wstring> windowsTypes;
+                std::unordered_map<std::wstring,fxfile::filetype::Visual> windowsTypes;
+                std::wstring visualHelper;
                 if(!extensions.empty()){
                     wchar_t exe[32768]{};
                     const auto count=::GetModuleFileNameW(nullptr,exe,32768);
                     if(count&&count<32768){
-                        auto helper=(std::filesystem::path(exe).parent_path()/
+                        visualHelper=(std::filesystem::path(exe).parent_path()/
                             L"FlyShellIsolationHelper.exe").native();
-                        windowsTypes=fxfile::filetype::query(helper,extensions,2500);
+                        windowsTypes=fxfile::filetype::queryVisuals(
+                            visualHelper,extensions,2500);
+                        // A single slow registered extension can cause
+                        // the entire bounded batch to fall back. When that
+                        // happens, recover at most two distinct extensions
+                        // independently; never launch unbounded workers.
+                        std::vector<std::wstring> recover;
+                        if(windowsTypes.empty()){
+                            auto text=std::find(extensions.begin(),
+                                                extensions.end(),L".txt");
+                            if(text!=extensions.end())recover.push_back(*text);
+                            for(auto const& ext:extensions){
+                                if(recover.size()>=2)break;
+                                if(std::find(recover.begin(),recover.end(),ext)
+                                   ==recover.end())recover.push_back(ext);
+                            }
+                        }else{
+                            auto text=std::find(extensions.begin(),
+                                                extensions.end(),L".txt");
+                            if(text!=extensions.end()&&
+                               (windowsTypes.find(*text)==windowsTypes.end()||
+                                windowsTypes[*text].label.empty()))
+                                recover.push_back(*text);
+                        }
+                        for(auto const& ext:recover){
+                            auto one=fxfile::filetype::queryVisuals(
+                                visualHelper,{ext},1350);
+                            auto found=one.find(ext);
+                            if(found!=one.end())
+                                windowsTypes[ext]=std::move(found->second);
+                        }
                     }
                 }
                 std::vector<FileDetail> details(paths.size());
+                size_t thumbnailBudget=0;
                 for(size_t i=0;i<paths.size();++i){
                     if(paths[i].empty()||paths[i].size()>32000)continue;
                     WIN32_FILE_ATTRIBUTE_DATA data{};
@@ -473,11 +509,33 @@ namespace winrt::FlyExplorerWinUIShell::implementation
                             std::transform(ext.begin(),ext.end(),ext.begin(),
                                [](wchar_t c){return static_cast<wchar_t>(::towlower(c));});
                             auto found=windowsTypes.find(ext);
-                            if(found!=windowsTypes.end()&&!found->second.empty())
-                                entry.typeLabel+=L" (Windows \uC720\uD615: "+found->second+L")";
+                            if(found!=windowsTypes.end()){
+                                if(!found->second.label.empty())
+                                    entry.typeLabel+=L" (Windows \uC720\uD615: "+
+                                        found->second.label+L")";
+                                entry.iconBgra=found->second.bgra;
+                            }
                         }
                     }
                     if(!(data.dwFileAttributes&FILE_ATTRIBUTE_DIRECTORY)){
+                        if(!visualHelper.empty()&&thumbnailBudget<4&&
+                           data.nFileSizeHigh==0&&
+                           data.nFileSizeLow<=32*1024*1024){
+                            auto ext=std::filesystem::path(paths[i]).extension().native();
+                            std::transform(ext.begin(),ext.end(),ext.begin(),
+                              [](wchar_t c){return static_cast<wchar_t>(::towlower(c));});
+                            if(ext==L".png"||ext==L".jpg"||ext==L".jpeg"||
+                               ext==L".bmp"||ext==L".webp"){
+                                ++thumbnailBudget;
+                                auto result=fxfile::thumbnail::query(
+                                    visualHelper,paths[i],1800);
+                                if(result.valid()){
+                                    entry.thumbnailBgra=std::move(result.bgra);
+                                    entry.thumbnailWidth=result.width;
+                                    entry.thumbnailHeight=result.height;
+                                }
+                            }
+                        }
                         entry.bytes=(static_cast<std::uint64_t>(
                             data.nFileSizeHigh)<<32)|data.nFileSizeLow;
                         entry.sizeKnown=true;
@@ -605,11 +663,59 @@ namespace winrt::FlyExplorerWinUIShell::implementation
             StackPanel nameCell;
             nameCell.Orientation(Orientation::Horizontal);
             nameCell.Spacing(6);
-            FontIcon glyph;
-            glyph.FontFamily(Microsoft::UI::Xaml::Media::FontFamily{
-                L"Segoe Fluent Icons"});
-            glyph.Glyph(hstring(item.isFolder()?L"\uE8B7":L"\uE8A5"));
-            nameCell.Children().Append(glyph);
+            auto const* iconMeta=detailReady?
+                &mFileLists[side].details[index]:nullptr;
+            bool actualVisual=false;
+            if(!item.isFolder()&&iconMeta){
+                const auto& thumb=iconMeta->thumbnailBgra;
+                const bool realThumb=iconMeta->thumbnailWidth>=16&&
+                    iconMeta->thumbnailWidth<=128&&
+                    iconMeta->thumbnailHeight>=16&&
+                    iconMeta->thumbnailHeight<=128&&
+                    thumb.size()==static_cast<size_t>(
+                        iconMeta->thumbnailWidth)*iconMeta->thumbnailHeight*4;
+                const auto& data=realThumb?thumb:iconMeta->iconBgra;
+                const int width=realThumb?
+                    static_cast<int>(iconMeta->thumbnailWidth):16;
+                const int height=realThumb?
+                    static_cast<int>(iconMeta->thumbnailHeight):16;
+                if(data.size()==static_cast<size_t>(width)*height*4){
+                    try{
+                        Microsoft::UI::Xaml::Media::Imaging::WriteableBitmap pixels(
+                            width,height);
+                        auto backing=pixels.PixelBuffer();
+                        winrt::com_ptr<::Windows::Storage::Streams::IBufferByteAccess>
+                            access;
+                        if(SUCCEEDED(reinterpret_cast<::IUnknown*>(
+                            winrt::get_abi(backing))->QueryInterface(
+                                __uuidof(::Windows::Storage::Streams::IBufferByteAccess),
+                                access.put_void()))){
+                            BYTE* target=nullptr;
+                            if(SUCCEEDED(access->Buffer(&target))&&target){
+                                std::memcpy(target,data.data(),data.size());
+                                pixels.Invalidate();
+                                Image image;
+                                image.Source(pixels);
+                                image.Width(realThumb?40:16);
+                                image.Height(realThumb?40:16);
+                                Microsoft::UI::Xaml::Automation::AutomationProperties::
+                                    SetName(image,realThumb?
+                                        L"Windows Shell image thumbnail":
+                                        L"Windows system registered file icon");
+                                nameCell.Children().Append(image);
+                                actualVisual=true;
+                            }
+                        }
+                    }catch(...){actualVisual=false;}
+                }
+            }
+            if(!actualVisual){
+                FontIcon glyph;
+                glyph.FontFamily(Microsoft::UI::Xaml::Media::FontFamily{
+                    L"Segoe Fluent Icons"});
+                glyph.Glyph(hstring(item.isFolder()?L"\uE8B7":L"\uE8A5"));
+                nameCell.Children().Append(glyph);
+            }
             TextBlock filename;
             filename.Text(item.label);
             filename.TextTrimming(TextTrimming::CharacterEllipsis);

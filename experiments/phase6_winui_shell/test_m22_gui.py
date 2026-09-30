@@ -43,6 +43,18 @@ def run(*,win,element,safe_click,focus,eventually,left,right):
      "Windows 유형:" in row("Left","큰.txt").window_text(),
      "real pane column resize lost accessible name/type",12)
  print("REAL_M23_OS_REGISTERED_TYPE_AND_ACCESSIBLE_RESIZABLE_COLUMNS",True,flush=True)
+ # WinUI Image must originate from actual isolated, registered
+ # SHGetFileInfo icon bits, not merely from a generic FontIcon glyph.
+ from pywinauto import Desktop
+ icon_row=row("Left",chr(0xD070)+".txt")
+ assert icon_row is not None
+ eventually(lambda:any(
+     "Windows system registered file icon" in x.element_info.name
+     for x in row("Left",chr(0xD070)+".txt").descendants()
+     if x.element_info.control_type=="Image"),
+     "actual installed .txt system icon not rendered in WinUI",12)
+ print("REAL_M24_WINUI_ISOLATED_REGISTERED_SYSTEM_ICON_RENDERED",True,flush=True)
+
  # Read-only accessibility/monitor audit of this exact test-owned HWND.
  # Changing global High Contrast or per-monitor DPI is outside this test.
  import ctypes

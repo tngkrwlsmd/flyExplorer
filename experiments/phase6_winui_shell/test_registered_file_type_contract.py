@@ -17,13 +17,26 @@ class FileTypeContract(unittest.TestCase):
                'TerminateProcess(process.h','MB_ERR_INVALID_CHARS'):
    self.assertIn(item,native)
   self.assertIn('filename()!=L"FlyShellIsolationHelper.exe"',native)
+  for name in ('SHGFI_ICON|SHGFI_SMALLICON','DrawIconEx',
+               'DestroyIcon(info.hIcon)','CryptBinaryToStringA'):
+   self.assertIn(name,helper)
+  for name in ('queryVisuals','CryptStringToBinaryA','required==1024'):
+   self.assertIn(name,native)
  def test_app_uses_one_background_batch_with_generic_fallback(self):
   app=source("experiments/phase6_winui_shell/MainWindow.xaml.cpp")
   self.assertIn('std::thread([side,tab,route,ticket,paths=',app)
-  self.assertIn('fxfile::filetype::query(helper,extensions,2500)',app)
+  self.assertIn('fxfile::filetype::queryVisuals(',app)
   self.assertIn('if(!fxfile::filetype::safeExtension(ext))continue;',app)
   self.assertIn('entry.typeLabel',app)
   self.assertNotIn('SHGetFileInfoW',app)
+  self.assertIn("iconMeta->thumbnailBgra",app)
+  self.assertIn("thumbnailBudget<4",app)
+  self.assertIn("fxfile::thumbnail::query(",app)
+  self.assertIn("WriteableBitmap pixels(",app)
+  self.assertIn("IBufferByteAccess",app)
+  self.assertIn("recover.size()>=2",app)
+  self.assertIn("visualHelper,{ext},1350",app)
+  self.assertIn("Windows system registered file icon",app)
   project=source("experiments/phase6_winui_shell/FlyExplorerWinUIShell.project-template.xml")
   self.assertIn('shell_assoc_type_core.cpp',project)
 class RealFileListColumnContract(unittest.TestCase):

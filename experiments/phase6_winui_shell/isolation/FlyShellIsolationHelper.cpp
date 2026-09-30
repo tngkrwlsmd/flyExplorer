@@ -10,6 +10,16 @@
 #include <string>
 #include <vector>
 #include <new>
+#include <wincrypt.h>
+#include <shobjidl.h>
+#include <wrl/client.h>
+#include <filesystem>
+#include <cwctype>
+#include <cstdio>
+#include <algorithm>
+#include <string>
+#pragma comment(lib,"gdi32.lib")
+#pragma comment(lib,"crypt32.lib")
 // No registry writes or third-party extension installation: the test object
 // has a real IUnknown COM vtable and blocks on its own STA in QueryInterface.
 struct OwnedBlockingCom final : IUnknown {
@@ -111,6 +121,159 @@ bool answer(HANDLE pipe,HRESULT hr,
 }
 } // namespace
 
+namespace {
+IContextMenu2* currentMenuTwo=nullptr;
+IContextMenu3* currentMenuThree=nullptr;
+WNDPROC originalMenuProc=nullptr;
+LRESULT CALLBACK menuWindowProc(HWND h,UINT msg,WPARAM w,LPARAM l){
+ if(msg==WM_INITMENUPOPUP||msg==WM_DRAWITEM||
+    msg==WM_MEASUREITEM||msg==WM_MENUCHAR){
+  LRESULT result=0;
+  if(currentMenuThree&&SUCCEEDED(
+      currentMenuThree->HandleMenuMsg2(msg,w,l,&result)))
+      return result;
+  if(currentMenuTwo&&msg!=WM_MENUCHAR&&
+     SUCCEEDED(currentMenuTwo->HandleMenuMsg(msg,w,l)))
+     return 0;
+ }
+ return originalMenuProc?::CallWindowProcW(originalMenuProc,h,msg,w,l):
+                         ::DefWindowProcW(h,msg,w,l);
+}
+int inspectOrShowContext(bool inspect){
+ // Child reads one bounded UTF-16 path, optional x,y from an anonymous pipe.
+ HANDLE input=::GetStdHandle(STD_INPUT_HANDLE);
+ HANDLE output=::GetStdHandle(STD_OUTPUT_HANDLE);
+ if(!input||input==INVALID_HANDLE_VALUE)return 51;
+ std::uint32_t count=0;
+ if(!exactRead(input,&count,sizeof(count))||count<4||count>1024)return 52;
+ std::wstring source(count,L'\0');
+ if(!exactRead(input,source.data(),count*sizeof(wchar_t))||
+    source.find(L'\0')!=std::wstring::npos)return 53;
+ int x=0,y=0;
+ if(!inspect && (!exactRead(input,&x,4)||!exactRead(input,&y,4)))
+   return 54;
+ std::filesystem::path path(source);
+ if(!path.is_absolute()||path.lexically_normal().native()!=source)
+   return 55;
+ auto root=path.root_path().native();
+ if(root.size()!=3||root[1]!=L':'||root[2]!=L'\\'||
+    ::GetDriveTypeW(root.c_str())!=DRIVE_FIXED)return 56;
+ std::filesystem::path part=path.root_path();
+ for(auto it=path.begin();it!=path.end();++it){
+  if(*it==path.root_name()||*it==path.root_directory())continue;
+  part/=*it;
+  auto attr=::GetFileAttributesW(part.c_str());
+  if(attr==INVALID_FILE_ATTRIBUTES||
+     (attr&FILE_ATTRIBUTE_REPARSE_POINT))return 57;
+ }
+ const auto apt=::CoInitializeEx(
+     nullptr,COINIT_APARTMENTTHREADED|COINIT_DISABLE_OLE1DDE);
+ if(FAILED(apt))return 58;
+ int rc=59;
+ PIDLIST_ABSOLUTE absolute=nullptr;
+ HWND owner=nullptr;
+ HMENU popup=nullptr;
+ Microsoft::WRL::ComPtr<IContextMenu> menu;
+ Microsoft::WRL::ComPtr<IContextMenu2> two;
+ Microsoft::WRL::ComPtr<IContextMenu3> three;
+ try {
+  auto hr=::SHParseDisplayName(source.c_str(),nullptr,&absolute,0,nullptr);
+  if(SUCCEEDED(hr)&&absolute){
+   Microsoft::WRL::ComPtr<IShellFolder> folder;
+   PCUITEMID_CHILD child=nullptr;
+   hr=::SHBindToParent(absolute,IID_PPV_ARGS(&folder),&child);
+   if(SUCCEEDED(hr)&&folder&&child){
+    owner=::CreateWindowExW(WS_EX_TOOLWINDOW,L"STATIC",
+             L"flyExplorer Shell menu (test-owned child)",WS_POPUP,
+             x,y,1,1,nullptr,nullptr,::GetModuleHandleW(nullptr),nullptr);
+    if(owner){
+     PCUITEMID_CHILD children[]={child};
+     hr=folder->GetUIObjectOf(owner,1,children,IID_IContextMenu,
+                             nullptr,reinterpret_cast<void**>(
+                                 menu.GetAddressOf()));
+     if(SUCCEEDED(hr)&&menu){
+      popup=::CreatePopupMenu();
+      if(popup){
+       const HRESULT added=menu->QueryContextMenu(
+           popup,0,1,0x7fff,CMF_NORMAL);
+       if(SUCCEEDED(added)){
+        const int n=::GetMenuItemCount(popup);
+        if(n>0&&n<=200){
+         if(inspect){
+          if(output&&output!=INVALID_HANDLE_VALUE){
+           const auto line="OWNED_CONTEXT_ITEMS="+std::to_string(n)+"\n";
+           exactWrite(output,line.data(),line.size());
+          }
+          rc=0;
+         }else{
+          menu.As(&three);
+          menu.As(&two);
+          currentMenuThree=three.Get();
+          currentMenuTwo=two.Get();
+          ::SetLastError(0);
+          auto original=::SetWindowLongPtrW(owner,GWLP_WNDPROC,
+                             reinterpret_cast<LONG_PTR>(&menuWindowProc));
+          if(original){
+           originalMenuProc=reinterpret_cast<WNDPROC>(original);
+           ::ShowWindow(owner,SW_SHOWNA);
+           ::SetForegroundWindow(owner);
+           const UINT chosen=::TrackPopupMenuEx(popup,
+              TPM_RETURNCMD|TPM_RIGHTBUTTON|TPM_NONOTIFY,x,y,owner,nullptr);
+           ::PostMessageW(owner,WM_NULL,0,0);
+           rc=0; // Escape / clicking away is a valid cancel.
+           if(chosen>=1&&chosen<=0x7fff){
+            // Built-in file mutation must use flyExplorer's native
+            // guarded transfer/rename routes, not an opaque Shell verb.
+            char name[128]{};
+            const auto canonical=menu->GetCommandString(
+                chosen-1,GCS_VERBA,nullptr,name,sizeof(name));
+            // Fail closed if a provider supplies no stable canonical
+            // verb; never execute an unclassified built-in mutation
+            // outside our existing native Shell file-operation pipeline.
+            if(FAILED(canonical)||!name[0])rc=65;
+            else{
+             std::string verb(name);
+             std::transform(verb.begin(),verb.end(),verb.begin(),[](char c){
+              return (c>='A'&&c<='Z')?char(c-'A'+'a'):c;
+             });
+             if(verb=="delete"||verb=="rename"||verb=="copy"||
+                verb=="cut"||verb=="paste"||verb=="move")rc=65;
+            }
+            if(rc==0){
+             CMINVOKECOMMANDINFOEX args{};
+             args.cbSize=sizeof(args);
+             args.fMask=CMIC_MASK_UNICODE|CMIC_MASK_PTINVOKE;
+             args.hwnd=owner;
+             args.lpVerb=MAKEINTRESOURCEA(chosen-1);
+             args.lpVerbW=MAKEINTRESOURCEW(chosen-1);
+             args.nShow=SW_SHOWNORMAL;
+             args.ptInvoke={x,y};
+             if(FAILED(menu->InvokeCommand(
+                 reinterpret_cast<CMINVOKECOMMANDINFO*>(&args))))
+                 rc=66;
+            }
+           }
+           ::SetWindowLongPtrW(owner,GWLP_WNDPROC,original);
+           originalMenuProc=nullptr;
+           currentMenuThree=nullptr;
+           currentMenuTwo=nullptr;
+          }else rc=67;
+         }
+        }
+       }
+      }
+     }
+    }
+   }
+  }
+ }catch(...){rc=68;}
+ if(popup)::DestroyMenu(popup);
+ if(owner)::DestroyWindow(owner);
+ if(absolute)::CoTaskMemFree(absolute);
+ ::CoUninitialize();
+ return rc;
+}
+} // namespace
 int wmain(int argc,wchar_t** argv) {
     // Only isolated regression launches set this environment & argument.
     if(argc==2&&!wcscmp(argv[1],L"--test-block")){
@@ -135,7 +298,104 @@ int wmain(int argc,wchar_t** argv) {
         ::CoUninitialize();
         return 42;
     }
-    if(argc>=3&&!wcscmp(argv[1],L"--file-types")){
+    if(argc==2&&!wcscmp(argv[1],L"--context-inspect"))
+        return inspectOrShowContext(true);
+    if(argc==2&&!wcscmp(argv[1],L"--context-menu"))
+        return inspectOrShowContext(false);
+    if(argc==2&&!wcscmp(argv[1],L"--file-thumbnail")){
+        // Exact 1-shot thumbnail in a disposable Shell process. No file
+        // path is passed on the command line, no mutation of input files,
+        // no COM/third-party thumbnail provider on the WinUI STA.
+        HANDLE input=::GetStdHandle(STD_INPUT_HANDLE);
+        HANDLE output=::GetStdHandle(STD_OUTPUT_HANDLE);
+        if(!input||input==INVALID_HANDLE_VALUE||
+           !output||output==INVALID_HANDLE_VALUE)return 31;
+        std::uint32_t units=0;
+        if(!exactRead(input,&units,sizeof(units))||units<4||units>1024)
+            return 32;
+        std::wstring source(units,L'\0');
+        if(!exactRead(input,source.data(),units*sizeof(wchar_t))||
+           source.find(L'\0')!=std::wstring::npos)return 33;
+        std::filesystem::path path(source);
+        if(!path.is_absolute()||path.lexically_normal().native()!=source)
+            return 34;
+        auto root=path.root_path().native();
+        if(root.size()!=3||root[1]!=L':'||root[2]!=L'\\'||
+           ::GetDriveTypeW(root.c_str())!=DRIVE_FIXED)return 35;
+        auto ext=path.extension().native();
+        for(auto& c:ext)c=static_cast<wchar_t>(::towlower(c));
+        if(ext!=L".png"&&ext!=L".jpg"&&ext!=L".jpeg"&&
+           ext!=L".bmp"&&ext!=L".webp")return 36;
+        std::filesystem::path part=path.root_path();
+        for(auto it=path.begin();it!=path.end();++it){
+            if(*it==path.root_name()||*it==path.root_directory())continue;
+            part/=*it;
+            const auto flags=::GetFileAttributesW(part.c_str());
+            if(flags==INVALID_FILE_ATTRIBUTES||
+               (flags&FILE_ATTRIBUTE_REPARSE_POINT))return 37;
+        }
+        WIN32_FILE_ATTRIBUTE_DATA attrs{};
+        if(!::GetFileAttributesExW(path.c_str(),GetFileExInfoStandard,&attrs)||
+           (attrs.dwFileAttributes&FILE_ATTRIBUTE_DIRECTORY)||
+           attrs.nFileSizeHigh||attrs.nFileSizeLow>32*1024*1024)
+           return 38;
+        const auto apt=::CoInitializeEx(
+            nullptr,COINIT_APARTMENTTHREADED|COINIT_DISABLE_OLE1DDE);
+        if(FAILED(apt))return 39;
+        int resultCode=40;
+        try{
+            Microsoft::WRL::ComPtr<IShellItem> item;
+            if(SUCCEEDED(::SHCreateItemFromParsingName(
+                source.c_str(),nullptr,IID_PPV_ARGS(&item)))){
+                Microsoft::WRL::ComPtr<IShellItemImageFactory> factory;
+                if(SUCCEEDED(item.As(&factory))){
+                    HBITMAP bitmap=nullptr;
+                    SIZE requested{64,64};
+                    if(SUCCEEDED(factory->GetImage(
+                        requested,SIIGBF_THUMBNAILONLY|
+                        SIIGBF_BIGGERSIZEOK,&bitmap))&&bitmap){
+                        BITMAP bm{};
+                        if(::GetObjectW(bitmap,sizeof(bm),&bm)==sizeof(bm)&&
+                           bm.bmWidth>0&&bm.bmHeight>0&&
+                           bm.bmWidth<=128&&bm.bmHeight<=128){
+                            const auto width=static_cast<std::uint32_t>(bm.bmWidth);
+                            const auto height=static_cast<std::uint32_t>(bm.bmHeight);
+                            BITMAPINFO dib{};
+                            dib.bmiHeader.biSize=sizeof(BITMAPINFOHEADER);
+                            dib.bmiHeader.biWidth=bm.bmWidth;
+                            dib.bmiHeader.biHeight=-bm.bmHeight;
+                            dib.bmiHeader.biPlanes=1;
+                            dib.bmiHeader.biBitCount=32;
+                            dib.bmiHeader.biCompression=BI_RGB;
+                            std::vector<unsigned char> pixels(width*height*4);
+                            HDC screen=::GetDC(nullptr);
+                            if(screen&&::GetDIBits(screen,bitmap,0,height,
+                                pixels.data(),&dib,DIB_RGB_COLORS)==height){
+                                bool anyAlpha=false;
+                                for(size_t i=3;i<pixels.size();i+=4)
+                                   anyAlpha|=pixels[i]!=0;
+                                if(!anyAlpha)
+                                   for(size_t i=3;i<pixels.size();i+=4)
+                                      pixels[i]=255;
+                                const char magic[4]={'T','H','M','B'};
+                                if(exactWrite(output,magic,4)&&
+                                   exactWrite(output,&width,4)&&
+                                   exactWrite(output,&height,4)&&
+                                   exactWrite(output,pixels.data(),pixels.size()))
+                                    resultCode=0;
+                            }
+                            if(screen)::ReleaseDC(nullptr,screen);
+                        }
+                        ::DeleteObject(bitmap);
+                    }
+                }
+            }
+        }catch(...){resultCode=41;}
+        ::CoUninitialize();
+        return resultCode;
+    }
+    const bool requestVisuals=argc>=3&&!wcscmp(argv[1],L"--file-visuals");
+    if(requestVisuals || (argc>=3&&!wcscmp(argv[1],L"--file-types"))){
         // Strict isolated one-shot type-name request. Only ASCII extensions
         // from the app are accepted; do not parse paths or touch files.
         if(argc>26)return 18;
@@ -150,7 +410,8 @@ int wmain(int argc,wchar_t** argv) {
             SHFILEINFOW info{};
             auto result=::SHGetFileInfoW(ext.c_str(),FILE_ATTRIBUTE_NORMAL,
                      &info,sizeof(info),
-                     SHGFI_USEFILEATTRIBUTES|SHGFI_TYPENAME);
+                     SHGFI_USEFILEATTRIBUTES|SHGFI_TYPENAME|
+                     (requestVisuals?(SHGFI_ICON|SHGFI_SMALLICON):0));
             std::wstring readable=result?info.szTypeName:L"";
             if(readable.size()>79)readable.clear();
             const int count=readable.empty()?0: ::WideCharToMultiByte(
@@ -164,6 +425,52 @@ int wmain(int argc,wchar_t** argv) {
                       readable.data(),static_cast<int>(readable.size()),
                       utf8.data(),count,nullptr,nullptr)!=count)return 22;
                 line+=utf8;
+            }
+            if(requestVisuals){
+                // Encode exactly 16x16 premultiplied BGRA in the owned
+                // worker; UI receives pixels, never an untrusted HICON.
+                // Missing icon => empty field and a generic UI fallback.
+                line+="\t";
+                if(result&&info.hIcon){
+                    BITMAPINFO bitmap{};
+                    bitmap.bmiHeader.biSize=sizeof(BITMAPINFOHEADER);
+                    bitmap.bmiHeader.biWidth=16;
+                    bitmap.bmiHeader.biHeight=-16;
+                    bitmap.bmiHeader.biPlanes=1;
+                    bitmap.bmiHeader.biBitCount=32;
+                    bitmap.bmiHeader.biCompression=BI_RGB;
+                    void* raw=nullptr;
+                    HDC screen=::GetDC(nullptr);
+                    HDC memory=screen?::CreateCompatibleDC(screen):nullptr;
+                    HBITMAP image=memory?::CreateDIBSection(memory,
+                        &bitmap,DIB_RGB_COLORS,&raw,nullptr,0):nullptr;
+                    if(memory&&image&&raw){
+                        auto old=::SelectObject(memory,image);
+                        std::memset(raw,0,16*16*4);
+                        if(::DrawIconEx(memory,0,0,info.hIcon,16,16,
+                                        0,nullptr,DI_NORMAL)){
+                            DWORD required=0;
+                            ::CryptBinaryToStringA(static_cast<BYTE*>(raw),
+                                16*16*4,CRYPT_STRING_BASE64|
+                                CRYPT_STRING_NOCRLF,nullptr,&required);
+                            if(required>0&&required<2000){
+                                std::string encoded(required,'\0');
+                                if(::CryptBinaryToStringA(
+                                    static_cast<BYTE*>(raw),16*16*4,
+                                    CRYPT_STRING_BASE64|CRYPT_STRING_NOCRLF,
+                                    encoded.data(),&required)){
+                                    encoded.resize(std::strlen(encoded.c_str()));
+                                    line+=encoded;
+                                }
+                            }
+                        }
+                        ::SelectObject(memory,old);
+                    }
+                    if(image)::DeleteObject(image);
+                    if(memory)::DeleteDC(memory);
+                    if(screen)::ReleaseDC(nullptr,screen);
+                    ::DestroyIcon(info.hIcon);
+                }
             }
             line+="\n";
             DWORD sent=0;

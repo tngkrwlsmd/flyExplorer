@@ -11,6 +11,9 @@ struct FileDetail final {
     std::uint64_t modified=0;
     std::wstring bytesLabel;
     std::wstring typeLabel;
+    std::vector<unsigned char> iconBgra; // optional isolated 16x16 system icon
+    std::vector<unsigned char> thumbnailBgra;
+    std::uint32_t thumbnailWidth=0,thumbnailHeight=0;
     std::wstring dateLabel;
     bool sizeKnown=false;
     bool dateKnown=false;

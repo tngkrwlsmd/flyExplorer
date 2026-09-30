@@ -12,6 +12,15 @@ namespace fxfile::filetype {
 bool safeExtension(std::wstring const& ext) noexcept;
 // On failures or timeout returns an empty mapping. The caller's original
 // generic extension-based classification remains a valid safe fallback.
+struct Visual {
+    std::wstring label;
+    // Exactly 16x16 BGRA from a disposable OS Shell helper, or empty.
+    std::vector<unsigned char> bgra;
+};
+std::unordered_map<std::wstring,Visual> queryVisuals(
+    std::wstring const& ownedHelper,
+    std::vector<std::wstring> const& extensions,
+    DWORD timeoutMs=2500) noexcept;
 std::unordered_map<std::wstring,std::wstring> query(
     std::wstring const& ownedHelper,
     std::vector<std::wstring> const& extensions,

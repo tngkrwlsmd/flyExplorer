@@ -159,3 +159,4 @@ is incomplete.
   have an authoritative replacement and fix every inbound link.
 
 - [M2.4 scoped WinUI Windows interoperability, real OS recycle and release readiness matrix](WINUI3_M24_SCOPED_WINDOWS_INTEGRATION_20260930.md)
+- [M2.4 actual Windows clipboard, true icons and thumbnail, isolated context, accessibility and private two-build lifecycle](WINUI3_M24_REAL_OS_INTEGRATION_AND_PRIVATE_LIFECYCLE_20260930.md)

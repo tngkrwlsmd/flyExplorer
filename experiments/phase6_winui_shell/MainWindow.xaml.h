@@ -74,6 +74,8 @@ namespace winrt::FlyExplorerWinUIShell::implementation
         void OnWindowsCopy(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
         void OnWindowsCut(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
         void OnWindowsPaste(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
+        void OnExternalWindowsContextMenu(IInspectable const&,
+             Microsoft::UI::Xaml::RoutedEventArgs const&);
         void OnSavePrivateSession(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
         void OnRestorePrivateSession(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
         void OnClearPrivateSession(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);

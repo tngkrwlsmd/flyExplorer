@@ -4,6 +4,8 @@
 #include <chrono>
 #include <cwctype>
 #include <filesystem>
+#include <wincrypt.h>
+#pragma comment(lib,"crypt32.lib")
 #include <string>
 #include <utility>
 
@@ -43,10 +45,10 @@ std::wstring unicode(std::string const& source){
  return text;
 }
 }
-std::unordered_map<std::wstring,std::wstring> query(
+std::unordered_map<std::wstring,Visual> queryVisuals(
    std::wstring const& helper,std::vector<std::wstring> const& input,
    DWORD timeoutMs) noexcept{
- std::unordered_map<std::wstring,std::wstring> names;
+ std::unordered_map<std::wstring,Visual> names;
  try{
   namespace fs=std::filesystem;
   if(helper.empty()||input.empty()||input.size()>24||
@@ -62,7 +64,7 @@ std::unordered_map<std::wstring,std::wstring> query(
      return {};
    extensions.push_back(std::move(s));
   }
-  std::wstring cmd=L"\""+helper+L"\" --file-types";
+  std::wstring cmd=L"\""+helper+L"\" --file-visuals";
   for(auto const& ext:extensions)cmd+=L" "+ext;
   SECURITY_ATTRIBUTES sec{sizeof(sec),nullptr,TRUE};
   HANDLE read=nullptr,write=nullptr;
@@ -97,7 +99,7 @@ std::unordered_map<std::wstring,std::wstring> query(
     if(!::ReadFile(read,chunk,
           (std::min)(available,static_cast<DWORD>(sizeof(chunk))),
           &got,nullptr))return {};
-    if(out.size()+got>16384)return {};
+    if(out.size()+got>65536)return {};
     out.append(chunk,got);
     continue;
    }
@@ -121,7 +123,7 @@ std::unordered_map<std::wstring,std::wstring> query(
    DWORD got=0;
    if(!::ReadFile(read,chunk,
       (std::min)(available,static_cast<DWORD>(sizeof(chunk))),&got,nullptr)||
-      out.size()+got>16384)return {};
+      out.size()+got>65536)return {};
    out.append(chunk,got);
   }
   size_t cursor=0;
@@ -135,12 +137,38 @@ std::unordered_map<std::wstring,std::wstring> query(
        [](char ch){return ch>='0'&&ch<='9';}))return {};
    auto idx=static_cast<size_t>(std::stoul(number));
    if(idx>=extensions.size()||names.count(extensions[idx]))return {};
-   std::string value(out,tab+1,newline-tab-1);
-   auto readable=unicode(value);
-   if(!readable.empty())names[extensions[idx]]=std::move(readable);
+   const auto second=out.find('\t',tab+1);
+   if(second==std::string::npos||second>newline)return {};
+   Visual visual;
+   visual.label=unicode(out.substr(tab+1,second-tab-1));
+   const auto b64=out.substr(second+1,newline-second-1);
+   if(!b64.empty()&&b64.size()<2000){
+      DWORD required=0;
+      if(::CryptStringToBinaryA(b64.c_str(),
+          static_cast<DWORD>(b64.size()),CRYPT_STRING_BASE64,
+          nullptr,&required,nullptr,nullptr)&&required==1024){
+        visual.bgra.resize(required);
+        if(!::CryptStringToBinaryA(b64.c_str(),
+          static_cast<DWORD>(b64.size()),CRYPT_STRING_BASE64,
+          visual.bgra.data(),&required,nullptr,nullptr)||
+          required!=1024)visual.bgra.clear();
+      }
+   }
+   if(!visual.label.empty()||visual.bgra.size()==1024)
+      names[extensions[idx]]=std::move(visual);
    cursor=newline+1;
   }
  }catch(...){return {};}
+ return names;
+}
+std::unordered_map<std::wstring,std::wstring> query(
+   std::wstring const& helper,std::vector<std::wstring> const& input,
+   DWORD timeoutMs) noexcept {
+ auto visuals=queryVisuals(helper,input,timeoutMs);
+ std::unordered_map<std::wstring,std::wstring> names;
+ for(auto& item:visuals)
+  if(!item.second.label.empty())
+   names.emplace(std::move(item.first),std::move(item.second.label));
  return names;
 }
 } // namespace fxfile::filetype

@@ -159,6 +159,9 @@
                             <MenuFlyoutItem Text="Windows 클립보드에서 붙여넣기"
                                 Click="OnWindowsPaste"/>
                             <MenuFlyoutItem Text="휴지통" Click="OnRecycleSelected"/>
+                            <MenuFlyoutItem Text="Windows &#xD655;&#xC7A5; &#xCEE8;&#xD14D;&#xC2A4;&#xD2B8; &#xBA54;&#xB274;"
+                            AutomationProperties.Name="Windows Shell isolated context menu"
+                            Click="OnExternalWindowsContextMenu"/>
                         </MenuFlyout>
                     </ListView.ContextFlyout>
                 </ListView>
@@ -209,6 +212,9 @@
                             <MenuFlyoutItem Text="Windows 클립보드에서 붙여넣기"
                                 Click="OnWindowsPaste"/>
                             <MenuFlyoutItem Text="휴지통" Click="OnRecycleSelected"/>
+                            <MenuFlyoutItem Text="Windows &#xD655;&#xC7A5; &#xCEE8;&#xD14D;&#xC2A4;&#xD2B8; &#xBA54;&#xB274;"
+                            AutomationProperties.Name="Windows Shell isolated context menu"
+                            Click="OnExternalWindowsContextMenu"/>
                         </MenuFlyout>
                     </ListView.ContextFlyout>
                 </ListView>
