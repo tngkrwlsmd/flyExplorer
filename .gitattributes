@@ -1,0 +1,2 @@
+# Preserve upstream NuGet legal texts without rewriting vendor whitespace.
+packaging/licenses/nuget/** -whitespace

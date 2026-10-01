@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<UserControl x:Class="FlyExplorerWinUIShell.StatusFooter"
+<UserControl x:Class="FlyExplorer.StatusFooter"
  xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
         <Grid Padding="14,8,14,10" ColumnSpacing="8">

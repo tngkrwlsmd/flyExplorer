@@ -9,7 +9,7 @@
 using namespace winrt;
 using namespace Microsoft::UI::Xaml;
 using namespace Microsoft::UI::Xaml::Controls;
-namespace winrt::FlyExplorerWinUIShell::implementation {
+namespace winrt::FlyExplorer::implementation {
 namespace {
 hstring errorInKorean(DWORD err){
  switch(err){

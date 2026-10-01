@@ -6,8 +6,9 @@ class ManualOSMatrix(unittest.TestCase):
  def test_real_dpi_and_contrast_verified_before_human_ack(self):
   for token in ("--expected-scale","--contrast","GetDpiForWindow",
                 "current_hc()","sys.stdin.isatty()",
-                "Type YES only after real Narrator + IME checks",
-                "typed==korean+chr(0xC785)+chr(0xB825)"):
+                "Type YES only after Narrator + IME + owned rename checks",
+                "typed==renamed","(folder/renamed).is_file()",
+                '"actual_scale_percent"','"user_settings_preserved"'):
    self.assertIn(token,BODY)
   for forbidden in ("SPI_SETHIGHCONTRAST","ChangeDisplaySettingsEx",
                     "SetProcessDpiAwarenessContext","Narrator.exe"):

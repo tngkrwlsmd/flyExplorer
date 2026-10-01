@@ -165,7 +165,7 @@ def main():
             if Path(psutil.Process(preview.pid).exe()).resolve()!=exe.resolve():
                 raise AssertionError("WinUI process ownership mismatch")
             candidates=[v for v in Desktop(backend="uia").windows(process=preview.pid)
-                        if "flyExplorer - WinUI 3" in v.window_text()]
+                        if "flyExplorer" in v.window_text()]
             if len(candidates)!=1:return False
             winui=Desktop(backend="uia").window(handle=candidates[0].handle)
             return winui.child_window(auto_id="LeftFiles").exists(timeout=.2)

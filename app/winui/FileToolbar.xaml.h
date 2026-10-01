@@ -1,7 +1,7 @@
 #pragma once
 #include "FileToolbar.g.h"
 #include <functional>
-namespace winrt::FlyExplorerWinUIShell::implementation {
+namespace winrt::FlyExplorer::implementation {
 struct FileToolbar : FileToolbarT<FileToolbar> {
  FileToolbar();
  void SetAction(std::function<void(int)> action);
@@ -24,6 +24,6 @@ private:
  bool restoring_=false;
 };
 }
-namespace winrt::FlyExplorerWinUIShell::factory_implementation {
+namespace winrt::FlyExplorer::factory_implementation {
 struct FileToolbar : FileToolbarT<FileToolbar,implementation::FileToolbar>{};
 }

@@ -51,7 +51,7 @@ def main(config="Debug"):
    if winui.poll() is not None:return None
    assert Path(psutil.Process(winui.pid).exe()).resolve()==exe.resolve()
    matches=[q for q in Desktop(backend="uia").windows(process=winui.pid)
-            if "flyExplorer - WinUI 3" in q.window_text()]
+            if "flyExplorer" in q.window_text()]
    if len(matches)!=1:return None
    hwnd=matches[0].handle
    return Desktop(backend="uia").window(handle=hwnd)

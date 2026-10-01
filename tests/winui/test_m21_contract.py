@@ -31,17 +31,17 @@ class KoreanM21(unittest.TestCase):
    self.assertIn(word,cpp)
   self.assertNotIn("??:",cpp)
  def test_real_compiled_reusable_usercontrols_and_utf8(self):
-  project=src("app/winui/FlyExplorerWinUIShell.project-template.xml")
+  project=src("app/winui/flyExplorer.project-template.xml")
   for stem in ("ShellHeader","NavigationSidebar"):
    for ext in (".idl",".xaml",".xaml.cpp",".xaml.h"):
     self.assertIn(stem+ext,project)
   self.assertIn("/bigobj /utf-8",project)
-  for name in ("preview_preferences.cpp","file_command_core.cpp","m21_commands.cpp"):
+  for name in ("ui_preferences.cpp","file_command_core.cpp","m21_commands.cpp"):
    self.assertIn(name,project)
  def test_preview_settings_are_korean_and_separate_from_mfc_conf(self):
-  cpp=src("src/base/preview_preferences.cpp")
-  h=src("src/base/preview_preferences.h")
-  for token in ("WinUI3Preview","ui-preferences-v1.txt","ko-KR","GetTempFileNameW",
+  cpp=src("src/base/ui_preferences.cpp")
+  h=src("src/base/ui_preferences.h")
+  for token in ("flyExplorer","ui-preferences-v1.txt","ko-KR","GetTempFileNameW",
                 "MOVEFILE_WRITE_THROUGH","MOVEFILE_REPLACE_EXISTING"):
    self.assertIn(token,cpp+h)
   self.assertNotIn("fxfile\\\\conf",cpp+h)

@@ -3,12 +3,12 @@
 #include <thread>
 using namespace winrt;
 using namespace Microsoft::UI::Xaml;
-namespace winrt::FlyExplorerWinUIShell::implementation {
+namespace winrt::FlyExplorer::implementation {
 void MainWindow::OnThisPCClicked(IInspectable const&,RoutedEventArgs const&){
     OpenFolder(L"shell:MyComputerFolder");
 }
 void MainWindow::ApplyThemeChoice(int selection){
-    using Theme=fxfile::previewsettings::Theme;
+    using Theme=fxfile::uisettings::Theme;
     if(selection<0||selection>2)return;
     const auto chosen=selection==2?Theme::Dark:
                       selection==1?Theme::Light:Theme::System;
@@ -29,7 +29,7 @@ void MainWindow::ApplyThemeChoice(int selection){
         std::thread([pref,guard,revision,ticket,weak,dispatch]{
             std::lock_guard<std::mutex> lock(*guard);
             if(ticket!=revision->load())return;
-            const auto ok=fxfile::previewsettings::save(pref);
+            const auto ok=fxfile::uisettings::save(pref);
             if(!ok)dispatch.TryEnqueue([weak,revision,ticket]{
                 if(auto ui=weak.get())
                     if(ticket==revision->load())

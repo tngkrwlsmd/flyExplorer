@@ -1,7 +1,7 @@
 #pragma once
 #include "ShellHeader.g.h"
 #include <functional>
-namespace winrt::FlyExplorerWinUIShell::implementation {
+namespace winrt::FlyExplorer::implementation {
  struct ShellHeader : ShellHeaderT<ShellHeader> {
   ShellHeader();
   void SetThemeCallback(std::function<void(int)> handler);
@@ -15,6 +15,6 @@ namespace winrt::FlyExplorerWinUIShell::implementation {
   void ShowChoice(int);
  };
 }
-namespace winrt::FlyExplorerWinUIShell::factory_implementation {
+namespace winrt::FlyExplorer::factory_implementation {
  struct ShellHeader : ShellHeaderT<ShellHeader,implementation::ShellHeader>{};
 }

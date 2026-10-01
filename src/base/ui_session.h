@@ -4,7 +4,7 @@
 #include <cstdint>
 #include <string>
 #include <vector>
-namespace fxfile::previewsession {
+namespace fxfile::uisession {
 struct Session {
  bool split=true;
  std::array<std::vector<std::wstring>,2> paths;

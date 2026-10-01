@@ -1,7 +1,7 @@
 // M2.1: private, opt-in WinUI preview settings. Never touches MFC fxfile/conf.
 #pragma once
 #include <string>
-namespace fxfile::previewsettings {
+namespace fxfile::uisettings {
 enum class Theme { System, Light, Dark };
 struct Preferences { Theme theme=Theme::System; std::wstring language=L"ko-KR"; };
 std::wstring privatePath();

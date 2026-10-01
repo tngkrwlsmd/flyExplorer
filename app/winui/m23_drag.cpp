@@ -10,7 +10,7 @@ using namespace winrt;
 using namespace Microsoft::UI::Xaml;
 using namespace Microsoft::UI::Xaml::Controls;
 using namespace Windows::ApplicationModel::DataTransfer;
-namespace winrt::FlyExplorerWinUIShell::implementation {
+namespace winrt::FlyExplorer::implementation {
 namespace {
 constexpr wchar_t const* PrivateFormat=L"FlyExplorer.M23.OwnedListDrag.v1";
 bool traceOwnedDrag(){

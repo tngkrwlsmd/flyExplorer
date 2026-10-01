@@ -57,11 +57,11 @@ Build products are intentionally kept out of `app/winui`.
 
 Release executable:
 
-    out\winui\Release\FlyExplorerWinUIShell.exe
+    out\winui\Release\flyExplorer.exe
 
 Debug executable:
 
-    out\winui\Debug\FlyExplorerWinUIShell.exe
+    out\winui\Debug\flyExplorer.exe
 
 Do not copy only the EXE; the sibling WinUI resources and
 `FlyShellIsolationHelper.exe` are part of the runtime set.

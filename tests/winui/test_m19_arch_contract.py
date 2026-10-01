@@ -41,7 +41,7 @@ class M19IntegrationContracts(unittest.TestCase):
   for q in ("kMaxWalk=2500","kMaxDepth=5","kMaxResults=100",
             "kRecentMax=8","FindFirstFileExW",
             "FILE_ATTRIBUTE_REPARSE_POINT","LOCALAPPDATA",
-            "flyExplorer.WinUI3Preview","MOVEFILE_WRITE_THROUGH"):
+            "flyExplorer","MOVEFILE_WRITE_THROUGH"):
    self.assertIn(q,p)
   self.assertNotIn('L"APPDATA"',p)
   self.assertNotIn("ShellExecuteW",p)
@@ -71,7 +71,7 @@ class M19IntegrationContracts(unittest.TestCase):
   self.assertIn('Visibility="Collapsed"',xaml)
 
  def test_private_supervised_shell_protected_on_current_winui_template(self):
-  project=text(UI/"FlyExplorerWinUIShell.project-template.xml")
+  project=text(UI/"flyExplorer.project-template.xml")
   native=text(R/"src/base/shell_isolated_supervisor.cpp")
   for unit in ("m19_workspace.cpp","m19_search.cpp","m19_features.cpp",
                "shell_isolated_supervisor.cpp",

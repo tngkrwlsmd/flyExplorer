@@ -112,12 +112,12 @@ def run():
             if child.poll() is not None:
                 return False
             windows=[w for w in Desktop(backend="uia").windows(process=child.pid)
-                     if "flyExplorer - WinUI 3" in w.window_text()]
+                     if "flyExplorer" in w.window_text()]
             if len(windows)!=1:
                 return False
             import psutil
             if Path(psutil.Process(child.pid).exe()).resolve()!=exe.resolve():
-                raise AssertionError("Preview PID points to unexpected executable")
+                raise AssertionError("flyExplorer PID points to unexpected executable")
             matched=Desktop(backend="uia").window(handle=windows[0].handle)
             return matched.child_window(auto_id="LeftFiles").exists(timeout=.2)
         eventually(ready,"Owned preview never reached its own file list")

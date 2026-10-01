@@ -6,7 +6,7 @@
 using namespace winrt;
 using namespace Microsoft::UI::Xaml;
 using namespace Microsoft::UI::Xaml::Controls;
-namespace winrt::FlyExplorerWinUIShell::implementation {
+namespace winrt::FlyExplorer::implementation {
 FileToolbar::FileToolbar(){InitializeComponent();}
 void FileToolbar::SetAction(std::function<void(int)> action){action_=std::move(action);}
 void FileToolbar::SetSort(std::function<void(int)> sort){sort_=std::move(sort);}

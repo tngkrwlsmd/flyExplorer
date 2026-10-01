@@ -53,7 +53,7 @@ def wait_owned_stage_processes(stage,seconds=8):
   raise AssertionError("Exact private stage process still owns update files")
 
 def launch(d,folder,env,sha256,label):
- exe=d/"FlyExplorerWinUIShell.exe"
+ exe=d/"flyExplorer.exe"
  assert exe.is_file() and sha(exe)==sha256
  p=subprocess.Popen([str(exe),str(folder)],cwd=d,env=env)
  hwnd=None
@@ -62,9 +62,9 @@ def launch(d,folder,env,sha256,label):
   while time.monotonic()<end:
    if p.poll() is not None:break
    if Path(psutil.Process(p.pid).exe()).resolve()!=exe.resolve():
-    raise AssertionError("Preview ownership mismatch")
+    raise AssertionError("flyExplorer ownership mismatch")
    matches=[w for w in Desktop(backend="uia").windows(process=p.pid)
-            if "flyExplorer - WinUI 3" in w.window_text()]
+            if "flyExplorer" in w.window_text()]
    if len(matches)==1:
     hwnd=matches[0].handle
     pane=Desktop(backend="uia").window(handle=hwnd).child_window(
@@ -85,7 +85,7 @@ def launch(d,folder,env,sha256,label):
     except subprocess.TimeoutExpired:
      p.terminate();p.wait(timeout=7)
    else:p.terminate();p.wait(timeout=7)
-  assert p.returncode==0,"Preview did not exit cleanly"
+  assert p.returncode==0,"flyExplorer did not exit cleanly"
   wait_owned_stage_processes(d)
 
 def main():
@@ -97,8 +97,8 @@ def main():
  prior=json.loads((root/"v1-manifest.json").read_text(encoding="utf-8"))
  expected={name:digest for name,digest in prior}
  assert inventory(v1)==expected
- old=expected["FlyExplorerWinUIShell.exe"]
- new=sha(current/"FlyExplorerWinUIShell.exe")
+ old=expected["flyExplorer.exe"]
+ new=sha(current/"flyExplorer.exe")
  assert old!=new,"Require two real distinct Windows Release binaries"
  run=Path(tempfile.mkdtemp(prefix="lifecycle-run-owned-",dir=root))
  installed,nxt,backup=[run/name for name in ("installed","next","backup")]
@@ -123,14 +123,14 @@ def main():
   launch(installed,fixture,env,old,"v1-install")
   copy_stage(current,nxt,ignore_build=True)
   second=inventory(nxt)
-  assert second["FlyExplorerWinUIShell.exe"]==new
+  assert second["flyExplorer.exe"]==new
   assert (nxt/"Assets").is_dir()
   installed.rename(backup)
   nxt.rename(installed)
   (installed/".fly-owned-install-marker").write_text(
       "owned v2 test update",encoding="ascii")
   launch(installed,fixture,env,new,"v2-update")
-  assert sha(installed/"FlyExplorerWinUIShell.exe")==new
+  assert sha(installed/"flyExplorer.exe")==new
   print("PRIVATE_TWO_DIFFERENT_RELEASE_BUILD_UPDATE_PASS",True,flush=True)
   installed.rename(nxt)
   backup.rename(installed)

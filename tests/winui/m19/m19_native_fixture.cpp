@@ -117,7 +117,7 @@ int wmain(int argc,wchar_t** argv){
     expect(rejected==9,"NINE_MALFORMED_LEGACY_WORKSPACES_REJECTED");
     std::vector<std::wstring> recent;
     const auto privateFile=std::wstring(local)+
-            L"\\flyExplorer.WinUI3Preview\\recent-scopes-v1.txt";
+            L"\\flyExplorer\\recent-scopes-v1.txt";
     expect(::GetFileAttributesW(privateFile.c_str())==
            INVALID_FILE_ATTRIBUTES,
            "OPT_OUT_DOES_NOT_CREATE_PRIVATE_HISTORY");

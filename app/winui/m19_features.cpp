@@ -13,7 +13,7 @@
 using namespace winrt;
 using namespace Microsoft::UI::Xaml;
 using namespace Microsoft::UI::Xaml::Controls;
-namespace winrt::FlyExplorerWinUIShell::implementation {
+namespace winrt::FlyExplorer::implementation {
 namespace {
 bool absoluteFile(std::wstring const& path) {
     if(path.size()<3||path.size()>32700 ||
@@ -405,4 +405,4 @@ void MainWindow::OnClearSearchRecent(
         StatusText().Text(L"최근 검색 위치를 모두 지웠습니다.");
     else StatusText().Text(L"최근 검색 위치 삭제를 저장하지 못했습니다.");
 }
-} // winrt::FlyExplorerWinUIShell::implementation
+} // winrt::FlyExplorer::implementation

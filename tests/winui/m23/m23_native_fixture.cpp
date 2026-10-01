@@ -1,5 +1,5 @@
 #include "../../../src/base/shell_clipboard_core.h"
-#include "../../../src/base/preview_session.h"
+#include "../../../src/base/ui_session.h"
 #include "../../../src/base/shell_transfer_core.h"
 #include <windows.h>
 #include <shellapi.h>
@@ -86,18 +86,18 @@ int wmain(int argc,wchar_t**argv){
 
  // Private opt-in session is validated against existing test-owned local
  // directories only. Never write/read real user's original profile.
- previewsession::Session session{};
+ uisession::Session session{};
  session.split=true;
  session.paths[0]={left.native()};
  session.paths[1]={right.native()};
  session.width=1240;session.height=810;
  session.sort={{2,3}};
  session.selected={{0,0}};
- check(previewsession::valid(session),
+ check(uisession::valid(session),
        "private_session_existing_owned_local_korean_paths");
- check(previewsession::save(session),"atomic_private_session_save");
- previewsession::Session restoredSession{};
- check(previewsession::load(restoredSession)&&
+ check(uisession::save(session),"atomic_private_session_save");
+ uisession::Session restoredSession{};
+ check(uisession::load(restoredSession)&&
        restoredSession.paths==session.paths&&
        restoredSession.sort==session.sort&&
        restoredSession.width==session.width&&
@@ -105,24 +105,24 @@ int wmain(int argc,wchar_t**argv){
        "korean_session_roundtrip_size_sort_both_panes");
  auto rejectedSession=session;
  rejectedSession.width=10;
- check(!previewsession::save(rejectedSession),
+ check(!uisession::save(rejectedSession),
        "reject_out_of_bounds_window_without_overwrite");
  rejectedSession=session;
  rejectedSession.paths[0]={L"C:\\outside-m23-do-not-enumerate"};
- check(!previewsession::valid(rejectedSession),
+ check(!uisession::valid(rejectedSession),
        "reject_unowned_or_nonexistent_session_folder");
  rejectedSession=session;
  rejectedSession.paths[0].assign(9,left.native());
- check(!previewsession::valid(rejectedSession),
+ check(!uisession::valid(rejectedSession),
        "reject_more_than_eight_tabs_per_pane");
  rejectedSession=session;
  rejectedSession.sort[0]=99;
- check(!previewsession::valid(rejectedSession),
+ check(!uisession::valid(rejectedSession),
        "reject_unrecognized_saved_sort_mode");
- check(previewsession::clear(),
+ check(uisession::clear(),
        "delete_only_explicit_private_session_file");
- previewsession::Session empty{};
- check(!previewsession::load(empty),
+ uisession::Session empty{};
+ check(!uisession::load(empty),
        "cleared_session_is_not_implicitly_restored");
  std::printf("M23_NATIVE_SUMMARY %d passed, %d failed.\n",pass,fail);
  return fail?1:0;

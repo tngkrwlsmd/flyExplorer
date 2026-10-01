@@ -1,4 +1,4 @@
-namespace FlyExplorerWinUIShell
+namespace FlyExplorer
 {
  [default_interface]
  runtimeclass FileToolbar : Microsoft.UI.Xaml.Controls.UserControl

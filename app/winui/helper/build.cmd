@@ -8,7 +8,9 @@ set "HERE=%~dp0"
 set "ROOT=%HERE%..\..\..\"
 set "OUT=%ROOT%out\helper\%CONFIG%"
 set "OBJ=%ROOT%out\obj\helper\%CONFIG%"
-set "MSBUILD=C:\Program Files\Microsoft Visual Studio\18\Community\MSBuild\Current\Bin\MSBuild.exe"
+set "MSBUILD="
+for /f "usebackq delims=" %%I in (`python -X utf8 "%ROOT%tools\winui\resolve_msbuild.py"`) do set "MSBUILD=%%I"
+if not defined MSBUILD exit /b 3
 if not exist "%MSBUILD%" exit /b 3
 rem Do not edit generated .vcxproj: the tracked template is canonical.
 copy /y "%HERE%FlyShellIsolationHelper.project-template.xml" "%HERE%FlyShellIsolationHelper.vcxproj" >nul || exit /b 4

@@ -66,7 +66,7 @@ class ModelAndFullShell(unittest.TestCase):
             "ElementTheme::Dark"):
    self.assertIn(x,code)
  def test_actual_project_links_both_native_and_winui_shell(self):
-  xml=source("app/winui/FlyExplorerWinUIShell.project-template.xml")
+  xml=source("app/winui/flyExplorer.project-template.xml")
   for x in ("explorer_ui_state.cpp","m20_shell.cpp","m19_features.cpp",
             "shell_isolated_supervisor.cpp","directory_watcher.cpp"):
    self.assertIn(x,xml)

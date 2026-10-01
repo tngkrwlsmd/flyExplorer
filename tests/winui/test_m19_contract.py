@@ -25,7 +25,7 @@ class M19IntegrationContracts(unittest.TestCase):
         self.assertIn("RecentLocations",native)
 
     def test_preview_build_links_new_standalone_win32_features(self):
-        build=code("app/winui/FlyExplorerWinUIShell.project-template.xml")
+        build=code("app/winui/flyExplorer.project-template.xml")
         for name in ("m19_workspace.cpp","m19_search.cpp","m19_features.cpp",
                      "shell_isolated_supervisor.cpp","directory_watcher.cpp",
                      "shell_namespace_watcher.cpp"):

@@ -24,7 +24,7 @@ Use the repository root wrapper:
 
 The executable is generated at:
 
-    out\winui\Release\FlyExplorerWinUIShell.exe
+    out\winui\Release\flyExplorer.exe
 
 Do not copy only the EXE. The sibling resources and
 `FlyShellIsolationHelper.exe` are required runtime files.

@@ -44,7 +44,7 @@ def run(*,p,win,element,safe_click,focus,eventually,ownedwindows,
         return results
     def ui_for_child(proc):
         boxes=ownedwindows(proc.pid)
-        return [h for h,t in boxes if "flyExplorer - WinUI 3" in t]
+        return [h for h,t in boxes if "flyExplorer" in t]
     def close_child(proc):
         if proc is None:return
         if not proc.is_running():return
@@ -198,7 +198,7 @@ def run(*,p,win,element,safe_click,focus,eventually,ownedwindows,
         scope=element("SearchScopeBox")
         term=element("SearchTermBox")
         recents=element("SearchRecentBox")
-        recall=localdata/"flyExplorer.WinUI3Preview"/"recent-scopes-v1.txt"
+        recall=localdata/"flyExplorer"/"recent-scopes-v1.txt"
         assert not recall.exists(),"M1.9 initial test-owned recent history was not empty"
         assert element("SearchRememberBox").get_toggle_state()==0
         scope.set_edit_text(str(left))

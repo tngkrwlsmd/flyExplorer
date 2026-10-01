@@ -10,7 +10,7 @@ def app_dir(configuration: str) -> Path:
     return OUT/"winui"/configuration
 
 def app_exe(configuration: str) -> Path:
-    return app_dir(configuration)/"FlyExplorerWinUIShell.exe"
+    return app_dir(configuration)/"flyExplorer.exe"
 
 def helper_exe(configuration: str) -> Path:
     assert configuration in ("Debug","Release")

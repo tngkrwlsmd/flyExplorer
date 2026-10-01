@@ -1,6 +1,6 @@
 # M2.1 private Korean preferences and guarded native file command contracts
 
-These standalone owned tests compile exactly the same MFC-/WinRT-free native preview_preferences.cpp and file_command_core.cpp that the real independent WinUI window uses. The only supported commands in this preview slice are folder creation and rename of a specifically selected existing native filesystem entry, with no overwrite. The user-facing default language is ko-KR, not the host OS language. This fixture never accesses user documents or mutates any real legacy MFC configuration.
+These standalone owned tests compile exactly the same MFC-/WinRT-free native ui_preferences.cpp and file_command_core.cpp that the real independent WinUI window uses. The only supported commands in this preview slice are folder creation and rename of a specifically selected existing native filesystem entry, with no overwrite. The user-facing default language is ko-KR, not the host OS language. This fixture never accesses user documents or mutates any real legacy MFC configuration.
 
 From migration root run m21/build.cmd Debug and set FLY_M21_CONFIG=Debug before python -u m21/test_native.py; repeat with Release. Both compiled configurations pass 18/18 on disposable test-owned parent folders, actual Korean filenames, private atomic System/Light/Dark settings restart, invalid-name protections, no-overwrite and SHA256 comparison of the six original MFC settings. Generated build targets/logs and synthetic fixtures are local ignored evidence.
 

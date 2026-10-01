@@ -5,19 +5,18 @@
     <CppWinRTRootNamespaceAutoMerge>true</CppWinRTRootNamespaceAutoMerge>
     <MinimalCoreWin>true</MinimalCoreWin>
     <ProjectGuid>{A79A2C56-8327-4C43-8CDD-4850D477F305}</ProjectGuid>
-    <ProjectName>FlyExplorerWinUIShell</ProjectName>
-    <RootNamespace>FlyExplorerWinUIShell</RootNamespace>
+    <ProjectName>flyExplorer</ProjectName>
+    <RootNamespace>FlyExplorer</RootNamespace>
     <DefaultLanguage>ko-KR</DefaultLanguage>
     <!--
       $(TargetName) should be same as $(RootNamespace) so that the produced binaries (.exe/.pri/etc.)
       have a name that matches the .winmd
     -->
-    <TargetName>$(RootNamespace)</TargetName>
+    <TargetName>flyExplorer</TargetName>
     <MinimumVisualStudioVersion>16.0</MinimumVisualStudioVersion>
     <AppContainerApplication>false</AppContainerApplication>
     <AppxPackage>false</AppxPackage>
     <WindowsPackageType>None</WindowsPackageType>
-    <WindowsAppSDKSelfContained>false</WindowsAppSDKSelfContained>
     <ApplicationType>Windows Store</ApplicationType>
     <ApplicationTypeRevision>10.0</ApplicationTypeRevision>
     <WindowsTargetPlatformVersion>10.0.26100.0</WindowsTargetPlatformVersion>
@@ -63,11 +62,13 @@
   <PropertyGroup Condition="'$(Configuration)'=='Debug'" Label="Configuration">
     <UseDebugLibraries>true</UseDebugLibraries>
     <LinkIncremental>true</LinkIncremental>
+    <WindowsAppSDKSelfContained>false</WindowsAppSDKSelfContained>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)'=='Release'" Label="Configuration">
     <UseDebugLibraries>false</UseDebugLibraries>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <LinkIncremental>false</LinkIncremental>
+    <WindowsAppSDKSelfContained>true</WindowsAppSDKSelfContained>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">
@@ -96,6 +97,7 @@
   <ItemDefinitionGroup Condition="'$(Configuration)'=='Release'">
     <ClCompile>
       <PreprocessorDefinitions>NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
     </ClCompile>
     <Link>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
@@ -111,7 +113,11 @@
     <Manifest Include="app.manifest" />
   </ItemGroup>
   <ItemGroup>
+    <ResourceCompile Include="product.rc" />
+  </ItemGroup>
+  <ItemGroup>
     <ClInclude Include="pch.h" />
+    <ClInclude Include="product_version.h" />
     <ClInclude Include="..\..\src\base\shell_navigation_core.h" />
     <ClInclude Include="App.xaml.h">
       <DependentUpon>App.xaml</DependentUpon>
@@ -122,7 +128,7 @@
     <ClInclude Include="NavigationSidebar.xaml.h">
       <DependentUpon>NavigationSidebar.xaml</DependentUpon>
     </ClInclude>
-    <ClInclude Include="..\..\src\base\preview_preferences.h" />
+    <ClInclude Include="..\..\src\base\ui_preferences.h" />
     <ClInclude Include="..\..\src\base\file_command_core.h" />
     <ClInclude Include="FileToolbar.xaml.h">
       <DependentUpon>FileToolbar.xaml</DependentUpon>
@@ -135,7 +141,7 @@
     <ClInclude Include="..\..\src\base\shell_assoc_type_core.h" />
     <ClInclude Include="..\..\src\base\shell_thumbnail_core.h" />
     <ClInclude Include="..\..\src\base\shell_context_core.h" />
-    <ClInclude Include="..\..\src\base\preview_session.h" />
+    <ClInclude Include="..\..\src\base\ui_session.h" />
     <ClInclude Include="file_list_state.h" />
     <ClInclude Include="MainWindow.xaml.h">
       <DependentUpon>MainWindow.xaml</DependentUpon>
@@ -190,7 +196,7 @@
     <ClCompile Include="m23_drag.cpp">
       <PrecompiledHeader>Use</PrecompiledHeader>
     </ClCompile>
-    <ClCompile Include="..\..\src\base\preview_session.cpp">
+    <ClCompile Include="..\..\src\base\ui_session.cpp">
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="..\..\src\base\shell_clipboard_core.cpp">
@@ -211,7 +217,7 @@
     <ClCompile Include="m21_commands.cpp">
       <PrecompiledHeader>Use</PrecompiledHeader>
     </ClCompile>
-    <ClCompile Include="..\..\src\base\preview_preferences.cpp">
+    <ClCompile Include="..\..\src\base\ui_preferences.cpp">
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="..\..\src\base\file_command_core.cpp">

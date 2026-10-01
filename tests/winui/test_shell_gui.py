@@ -97,7 +97,7 @@ try:
    stdin=subprocess.DEVNULL,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
  def main():
   return [(h,t) for h,t in ownedwindows(p.pid) if
-   "flyExplorer - WinUI 3" in t]
+   "flyExplorer" in t]
  eventually(lambda:len(main())==1 or p.poll() is not None,
             "WinUI 3 main window not discovered")
  assert p.poll() is None,("WinUI startup failed",p.returncode)

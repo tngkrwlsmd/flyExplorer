@@ -25,6 +25,6 @@ class ThumbnailContract(unittest.TestCase):
                 'L"Windows Shell image thumbnail"',
                 'mFileLists[side].accepts(ticket,route,tab)'):
    self.assertIn(token,app)
-  template=src("app/winui/FlyExplorerWinUIShell.project-template.xml")
+  template=src("app/winui/flyExplorer.project-template.xml")
   self.assertIn("shell_thumbnail_core.cpp",template)
 if __name__=="__main__":unittest.main()

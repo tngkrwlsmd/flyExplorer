@@ -1,12 +1,12 @@
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
-#include "preview_session.h"
+#include "ui_session.h"
 #include <array>
 #include <vector>
 #include <filesystem>
 #include <algorithm>
 #include <cstring>
-namespace fxfile::previewsession {
+namespace fxfile::uisession {
 namespace {
 namespace fs=std::filesystem;
 constexpr size_t MaxSize=131072;
@@ -16,7 +16,7 @@ std::wstring folder() {
  const auto count=::GetEnvironmentVariableW(L"LOCALAPPDATA",
        buffer.data(),static_cast<DWORD>(buffer.size()));
  return count&&count<buffer.size()?
-    std::wstring(buffer.data(),count)+L"\\flyExplorer.WinUI3Preview":L"";
+    std::wstring(buffer.data(),count)+L"\\flyExplorer":L"";
 }
 bool allowed(std::wstring const& value){
  if(value.size()<3||value.size()>2048||value[1]!=L':'||

@@ -1,7 +1,7 @@
 #pragma once
 #include "NavigationSidebar.g.h"
 #include <functional>
-namespace winrt::FlyExplorerWinUIShell::implementation {
+namespace winrt::FlyExplorer::implementation {
  struct NavigationSidebar : NavigationSidebarT<NavigationSidebar> {
   NavigationSidebar();
   void SetNavigateCallback(std::function<void(int)> handler);
@@ -18,6 +18,6 @@ namespace winrt::FlyExplorerWinUIShell::implementation {
   std::function<void(int)> mHandler; // 0 home, 1 docs, 2 downloads, 3 This PC, 4..7 known profile folders
  };
 }
-namespace winrt::FlyExplorerWinUIShell::factory_implementation {
+namespace winrt::FlyExplorer::factory_implementation {
  struct NavigationSidebar : NavigationSidebarT<NavigationSidebar,implementation::NavigationSidebar>{};
 }

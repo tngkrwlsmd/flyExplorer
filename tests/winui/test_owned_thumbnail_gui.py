@@ -58,7 +58,7 @@ def run(configuration="Debug"):
    if Path(psutil.Process(process.pid).exe()).resolve()!=exe.resolve():
     raise AssertionError("Owned GUI process executable changed")
    matches=[v for v in Desktop(backend="uia").windows(process=process.pid)
-            if "flyExplorer - WinUI 3" in v.window_text()]
+            if "flyExplorer" in v.window_text()]
    if len(matches)!=1:return None
    ownedhwnd=matches[0].handle
    return Desktop(backend="uia").window(handle=ownedhwnd)

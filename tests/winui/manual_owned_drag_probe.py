@@ -46,6 +46,11 @@ def main():
     conf=Path(os.environ.get("APPDATA",""))/"fxfile"/"conf"
     before={n:hashlib.sha256((conf/n).read_bytes()).digest()
             for n in names if (conf/n).is_file()}
+    product=Path(os.environ.get("LOCALAPPDATA",""))/"flyExplorer"
+    def tree_hashes(root):
+        return {str(p.relative_to(root)):hashlib.sha256(p.read_bytes()).hexdigest()
+                for p in root.rglob("*") if p.is_file()} if root.is_dir() else {}
+    product_before=tree_hashes(product)
     process=subprocess.Popen([str(exe),str(left)],cwd=exe.parent,env=env,
                               stdin=subprocess.DEVNULL,
                               stdout=subprocess.DEVNULL,
@@ -58,9 +63,9 @@ def main():
     print("Hold the left mouse button on TEST_NAME in the left file list.")
     print("Move into the right file list and release. Observe the status")
     print("messages for list/row start, target over, and drop independently.")
-    print("Close ONLY this newly launched preview before continuing.")
+    print("Close ONLY this newly launched flyExplorer instance before continuing.")
     try:
-        input("After closing the preview, press Enter here: ")
+        input("After closing flyExplorer, press Enter here: ")
     except (EOFError, KeyboardInterrupt):
         if process.poll() is None:
             process.terminate()
@@ -78,11 +83,13 @@ def main():
                copied.read_bytes()==(left/name).read_bytes())
     print("OWNED_FILE_COPY="+("PASS" if copied_ok else "NOT_OBSERVED"),
           flush=True)
-    print("OWNED_PREVIEW_EXIT_ZERO",process.returncode==0,flush=True)
-    unchanged=all((conf/n).is_file() and
+    print("OWNED_FLYEXPLORER_EXIT_ZERO",process.returncode==0,flush=True)
+    legacy_unchanged=all((conf/n).is_file() and
                   hashlib.sha256((conf/n).read_bytes()).digest()==digest
                   for n,digest in before.items())
-    print("ORIGINAL_PRESENT_SETTINGS_UNCHANGED",unchanged,flush=True)
+    product_unchanged=tree_hashes(product)==product_before
+    unchanged=legacy_unchanged and product_unchanged
+    print("ORIGINAL_USER_SETTINGS_UNCHANGED",unchanged,flush=True)
     print("OWNED_EVIDENCE_DIR",owned,flush=True)
     print("Leave drag-event arrival UNVERIFIED unless you personally")
     print("observed the corresponding live status text.")

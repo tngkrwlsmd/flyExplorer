@@ -27,8 +27,8 @@ def main():
     here=APP
     root=ROOT
     release=app_dir("Release")
-    expected=("FlyExplorerWinUIShell.exe","FlyShellIsolationHelper.exe",
-              "FlyExplorerWinUIShell.pri","MainWindow.xbf")
+    expected=("flyExplorer.exe","FlyShellIsolationHelper.exe",
+              "flyExplorer.pri","MainWindow.xbf")
     assert all((release/name).is_file() for name in expected)
     real=Path(os.environ["APPDATA"])/"fxfile"/"conf"
     before={name:hashlib.sha256((real/name).read_bytes()).digest()
@@ -39,37 +39,23 @@ def main():
     package=owned/"preview-copy"
     package.mkdir()
     copied=[]
-    for file in release.iterdir():
-        assert not file.is_symlink(),"Linked content is never packaged"
-        if file.is_dir():
-            # Real MSBuild Release output includes a required XAML Assets
-            # directory. Copy only this exact known subtree, not arbitrary
-            # directories, links, or intermediate build output.
-            assert file.name=="Assets","Unexpected Release output directory"
-            for base,dirs,files in os.walk(file,followlinks=False):
-                for entry in dirs+files:
-                    candidate=Path(base)/entry
-                    assert not candidate.is_symlink() and not (
-                        hasattr(candidate,"is_junction") and
-                        candidate.is_junction()),"Linked packaged asset"
-                for name in files:
-                    src=Path(base)/name
-                    rel=src.relative_to(file)
-                    dst=package/"Assets"/rel
-                    dst.parent.mkdir(parents=True,exist_ok=True)
-                    shutil.copy2(src,dst)
-                    assert hashlib.sha256(dst.read_bytes()).digest()==(
-                           hashlib.sha256(src.read_bytes()).digest())
-                    copied.append(str(Path("Assets")/rel))
-            continue
-        assert file.is_file(),"Unexpected Release output item"
-        if file.suffix.lower() in (".pdb",".lib",".exp"):
-            continue
-        dest=package/file.name
-        shutil.copy2(file,dest)
-        assert hashlib.sha256(dest.read_bytes()).digest()==hashlib.sha256(
-            file.read_bytes()).digest()
-        copied.append(file.name)
+    for base,dirs,files in os.walk(release,followlinks=False):
+        for entry in dirs+files:
+            candidate=Path(base)/entry
+            assert not candidate.is_symlink() and not (
+                hasattr(candidate,"is_junction") and candidate.is_junction()),(
+                "Linked content is never packaged")
+        for name in files:
+            src=Path(base)/name
+            assert src.suffix.lower() not in (".pdb",".lib",".exp",".obj",".cpp",".h"),(
+                "Release output leaked a build/source artifact")
+            rel=src.relative_to(release)
+            dst=package/rel
+            dst.parent.mkdir(parents=True,exist_ok=True)
+            shutil.copy2(src,dst)
+            assert hashlib.sha256(dst.read_bytes()).digest()==hashlib.sha256(
+                src.read_bytes()).digest()
+            copied.append(str(rel))
     assert all((package/name).is_file() for name in expected)
     assert len(copied)>=10,"Incomplete copied preview runtime/resources"
     folder=owned/"source"
@@ -84,7 +70,7 @@ def main():
     for name in ("FLY_M23_OWNED_SESSION","FLY_M23_OWNED_DRAG_TEST",
                  "FLY_M22_OWNED_ACTUAL_RECYCLE"):
         env.pop(name,None)
-    exe=package/"FlyExplorerWinUIShell.exe"
+    exe=package/"flyExplorer.exe"
     import psutil
     from pywinauto import Desktop
     child=subprocess.Popen([str(exe),str(folder)],cwd=package,env=env)
@@ -98,7 +84,7 @@ def main():
             if Path(psutil.Process(child.pid).exe()).resolve()!=exe.resolve():
                 raise AssertionError("Owned Release preview PID mismatch")
             matches=[x for x in Desktop(backend="uia").windows(
-                process=child.pid) if "flyExplorer - WinUI 3" in x.window_text()]
+                process=child.pid) if "flyExplorer" in x.window_text()]
             if len(matches)!=1:
                 return False
             window=Desktop(backend="uia").window(handle=matches[0].handle)

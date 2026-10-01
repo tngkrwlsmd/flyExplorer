@@ -55,7 +55,7 @@ class IsolationContracts(unittest.TestCase):
         self.assertIn("mSupervisor->submit",main)
         self.assertIn("FlyShellIsolationHelper.exe",main)
         self.assertNotIn("mWorker->submit",main)
-        project=source(ROOT/"app/winui/FlyExplorerWinUIShell.project-template.xml")
+        project=source(ROOT/"app/winui/flyExplorer.project-template.xml")
         self.assertNotIn("shell_async_worker.cpp",project)
 
 if __name__=="__main__":

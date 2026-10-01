@@ -72,7 +72,7 @@ def main():
             if Path(psutil.Process(process.pid).exe()).resolve()!=exe.resolve():
                 raise AssertionError("Owned PID executable mismatch")
             windows=[x for x in Desktop(backend="uia").windows(process=process.pid)
-                     if "flyExplorer - WinUI 3" in x.window_text()]
+                     if "flyExplorer" in x.window_text()]
             if len(windows)!=1:
                 return False
             parent=Desktop(backend="uia").window(handle=windows[0].handle)

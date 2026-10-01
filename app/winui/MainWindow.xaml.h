@@ -7,8 +7,8 @@
 #include "file_list_state.h"
 #include "../../src/base/shell_transfer_core.h"
 #include "../../src/base/shell_clipboard_core.h"
-#include "../../src/base/preview_preferences.h"
-#include "../../src/base/preview_session.h"
+#include "../../src/base/ui_preferences.h"
+#include "../../src/base/ui_session.h"
 #include "../../src/base/file_command_core.h"
 #include <mutex>
 #include "../../src/base/shell_navigation_core.h"
@@ -25,7 +25,7 @@
 #include <vector>
 #include <filesystem>
 
-namespace winrt::FlyExplorerWinUIShell::implementation
+namespace winrt::FlyExplorer::implementation
 {
     struct MainWindow : MainWindowT<MainWindow>
     {
@@ -108,7 +108,7 @@ namespace winrt::FlyExplorerWinUIShell::implementation
 
     private:
         fxfile::explorerui::Model mModel;
-        fxfile::previewsettings::Preferences mPreferences{};
+        fxfile::uisettings::Preferences mPreferences{};
         std::shared_ptr<std::mutex> mPreferencesWriteMutex=
             std::make_shared<std::mutex>();
         std::shared_ptr<std::atomic_uint64_t> mPreferencesRevision=
@@ -117,10 +117,10 @@ namespace winrt::FlyExplorerWinUIShell::implementation
         std::uint64_t mFileOperationEpoch=0;
         // Reusable XAML controls expose their inner primitives to the
         // existing M2.1 callers without coupling native state to views.
-        winrt::FlyExplorerWinUIShell::implementation::FileToolbar* fileBar(){
+        winrt::FlyExplorer::implementation::FileToolbar* fileBar(){
             return winrt::get_self<implementation::FileToolbar>(ToolbarView());
         }
-        winrt::FlyExplorerWinUIShell::implementation::StatusFooter* footer(){
+        winrt::FlyExplorer::implementation::StatusFooter* footer(){
             return winrt::get_self<implementation::StatusFooter>(FooterView());
         }
         Microsoft::UI::Xaml::Controls::TextBox FileNameBox(){
@@ -214,7 +214,7 @@ namespace winrt::FlyExplorerWinUIShell::implementation
         bool WorkspaceModel(fxfile::preview::Workspace&,std::wstring& reason) const;
     };
 }
-namespace winrt::FlyExplorerWinUIShell::factory_implementation
+namespace winrt::FlyExplorer::factory_implementation
 {
     struct MainWindow : MainWindowT<MainWindow, implementation::MainWindow> {};
 }

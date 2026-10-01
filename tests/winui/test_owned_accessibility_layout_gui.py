@@ -56,7 +56,7 @@ def main(config="Debug"):
    if p.poll() is not None:return False
    assert Path(psutil.Process(p.pid).exe()).resolve()==exe.resolve()
    windows=[x for x in Desktop(backend="uia").windows(process=p.pid)
-            if "flyExplorer - WinUI 3" in x.window_text()]
+            if "flyExplorer" in x.window_text()]
    if len(windows)!=1:return False
    hwnd=windows[0].handle
    return Desktop(backend="uia").window(handle=hwnd).child_window(

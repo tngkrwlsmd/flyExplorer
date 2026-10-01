@@ -10,7 +10,7 @@
 using namespace winrt;
 using namespace Microsoft::UI::Xaml;
 using namespace Microsoft::UI::Xaml::Controls;
-namespace winrt::FlyExplorerWinUIShell::implementation {
+namespace winrt::FlyExplorer::implementation {
 namespace {
 bool defaultStartupOrOwnedOptIn(){
  int argc=0;
@@ -51,7 +51,7 @@ void MainWindow::OnSavePrivateSession(
   StatusText().Text(hstring(L"세션을 저장할 수 없습니다: "+why));
   return;
  }
- fxfile::previewsession::Session data{};
+ fxfile::uisession::Session data{};
  data.split=snapshot.split;
  data.selected[0]=static_cast<std::uint32_t>(snapshot.selected[0]);
  data.selected[1]=snapshot.split?
@@ -94,7 +94,7 @@ void MainWindow::OnSavePrivateSession(
   std::thread([data=std::move(data),ticket,lock,revision,weak,dispatch]{
    std::lock_guard<std::mutex> guarded(*lock);
    if(ticket!=revision->load())return;
-   const bool ok=fxfile::previewsession::save(data);
+   const bool ok=fxfile::uisession::save(data);
    dispatch.TryEnqueue([weak,ticket,ok]{
     if(auto ui=weak.get()){
      if(ticket!=ui->mSessionRevision->load())return;
@@ -112,8 +112,8 @@ void MainWindow::LoadPrivateSession(){
  auto dispatch=DispatcherQueue();
  try{
   std::thread([ticket,weak,dispatch]{
-   auto session=std::make_shared<fxfile::previewsession::Session>();
-   const bool ok=fxfile::previewsession::load(*session);
+   auto session=std::make_shared<fxfile::uisession::Session>();
+   const bool ok=fxfile::uisession::load(*session);
    dispatch.TryEnqueue([ticket,weak,session,ok]{
     if(auto ui=weak.get()){
      if(ticket!=ui->mSessionEpoch)return;
@@ -168,7 +168,7 @@ void MainWindow::OnClearPrivateSession(
   std::thread([ticket,lock,revision,weak,dispatch]{
    std::lock_guard<std::mutex> guarded(*lock);
    if(ticket!=revision->load())return;
-   const bool ok=fxfile::previewsession::clear();
+   const bool ok=fxfile::uisession::clear();
    dispatch.TryEnqueue([weak,ticket,ok]{
     if(auto ui=weak.get()){
      if(ticket!=ui->mSessionRevision->load())return;

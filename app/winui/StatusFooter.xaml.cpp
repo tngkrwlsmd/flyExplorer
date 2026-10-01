@@ -3,6 +3,6 @@
 #if __has_include("StatusFooter.g.cpp")
 #include "StatusFooter.g.cpp"
 #endif
-namespace winrt::FlyExplorerWinUIShell::implementation {
+namespace winrt::FlyExplorer::implementation {
 StatusFooter::StatusFooter(){InitializeComponent();}
 }

@@ -2,7 +2,7 @@
 
 #include "App.xaml.g.h"
 
-namespace winrt::FlyExplorerWinUIShell::implementation
+namespace winrt::FlyExplorer::implementation
 {
     struct App : AppT<App>
     {

@@ -27,7 +27,7 @@ class RealWinUIIsolationContract(unittest.TestCase):
     def test_helper_is_same_config_exact_sibling_and_protocol_validated(self):
         cmd=read(UI/"build.cmd")
         winui=read(UI/"MainWindow.xaml.cpp")
-        proj=read(UI/"FlyExplorerWinUIShell.project-template.xml")
+        proj=read(UI/"flyExplorer.project-template.xml")
         helper=read(ISO/"FlyShellIsolationHelper.cpp")
         supervisor=read(SRC/"shell_isolated_supervisor.cpp")
         for token in ("call \"%HERE%helper\\build.cmd\"",
@@ -79,7 +79,7 @@ class RealWinUIIsolationContract(unittest.TestCase):
     def test_m18_shell_namespace_notification_separate_from_shell_helpers(self):
         watch=read(SRC/"shell_namespace_watcher.cpp")
         host=read(UI/"MainWindow.xaml.cpp")
-        project=read(UI/"FlyExplorerWinUIShell.project-template.xml")
+        project=read(UI/"flyExplorer.project-template.xml")
         harness=read(TESTS/"test_shell_gui.py")
         for token in ("SHChangeNotifyRegister","SHChangeNotification_Lock",
                       "SHChangeNotification_Unlock","SHChangeNotifyDeregister",

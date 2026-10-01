@@ -37,7 +37,7 @@ class FileTypeContract(unittest.TestCase):
   self.assertIn("recover.size()>=2",app)
   self.assertIn("visualHelper,{ext},1350",app)
   self.assertIn("Windows system registered file icon",app)
-  project=source("app/winui/FlyExplorerWinUIShell.project-template.xml")
+  project=source("app/winui/flyExplorer.project-template.xml")
   self.assertIn('shell_assoc_type_core.cpp',project)
 class RealFileListColumnContract(unittest.TestCase):
  def test_name_type_size_date_columns_and_icon_do_not_break_uia(self):

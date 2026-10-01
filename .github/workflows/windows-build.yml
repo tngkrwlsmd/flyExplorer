@@ -34,9 +34,9 @@ jobs:
         run: |
           $dir = "out\winui\Release"
           $required = @(
-            "$dir\FlyExplorerWinUIShell.exe",
+            "$dir\flyExplorer.exe",
             "$dir\FlyShellIsolationHelper.exe",
-            "$dir\FlyExplorerWinUIShell.pri",
+            "$dir\flyExplorer.pri",
             "$dir\MainWindow.xbf"
           )
           foreach ($path in $required) {

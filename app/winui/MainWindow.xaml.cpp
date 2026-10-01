@@ -60,7 +60,7 @@ namespace {
 
 }
 
-namespace winrt::FlyExplorerWinUIShell::implementation
+namespace winrt::FlyExplorer::implementation
 {
     MainWindow::MainWindow()
     {
@@ -71,7 +71,7 @@ namespace winrt::FlyExplorerWinUIShell::implementation
         try{
             ExtendsContentIntoTitleBar(true);
             auto titleHeader=winrt::get_self<
-                winrt::FlyExplorerWinUIShell::implementation::ShellHeader>(
+                winrt::FlyExplorer::implementation::ShellHeader>(
                     HeaderView());
             SetTitleBar(titleHeader->DragRegion());
             SystemBackdrop(Microsoft::UI::Xaml::Media::MicaBackdrop{});
@@ -88,7 +88,7 @@ namespace winrt::FlyExplorerWinUIShell::implementation
         // Each reusable XAML control forwards intent; the window owns the
         // shared native state/settings. Never attach a permanent MFC host.
         const auto nativeWeak=get_weak();
-        winrt::get_self<winrt::FlyExplorerWinUIShell::implementation::NavigationSidebar>(
+        winrt::get_self<winrt::FlyExplorer::implementation::NavigationSidebar>(
             SidebarView())->SetNavigateCallback([nativeWeak](int target){
             if(auto ui=nativeWeak.get()){
                 if(target==0)ui->OpenFolder(ui->HomePath().native());
@@ -107,15 +107,15 @@ namespace winrt::FlyExplorerWinUIShell::implementation
                     (ui->HomePath()/L"Videos").native());
             }
         });
-        fxfile::previewsettings::load(mPreferences);
-        winrt::get_self<winrt::FlyExplorerWinUIShell::implementation::ShellHeader>(
+        fxfile::uisettings::load(mPreferences);
+        winrt::get_self<winrt::FlyExplorer::implementation::ShellHeader>(
             HeaderView())->RestoreTheme(static_cast<int>(mPreferences.theme));
         RootShell().RequestedTheme(
-            mPreferences.theme==fxfile::previewsettings::Theme::Dark?
+            mPreferences.theme==fxfile::uisettings::Theme::Dark?
                 ElementTheme::Dark:
-            mPreferences.theme==fxfile::previewsettings::Theme::Light?
+            mPreferences.theme==fxfile::uisettings::Theme::Light?
                 ElementTheme::Light:ElementTheme::Default);
-        winrt::get_self<winrt::FlyExplorerWinUIShell::implementation::ShellHeader>(
+        winrt::get_self<winrt::FlyExplorer::implementation::ShellHeader>(
             HeaderView())->SetThemeCallback([nativeWeak](int selection){
                 if(auto ui=nativeWeak.get())ui->ApplyThemeChoice(selection);
             });
@@ -935,7 +935,7 @@ namespace winrt::FlyExplorerWinUIShell::implementation
             hstring(mModel.activePane==1?L"오른쪽 창 (활성)":L"오른쪽 창")));
         UpdateActivePaneChrome();
         StatusText().Text(status);
-        Title(L"flyExplorer - WinUI 3 · "+hstring(nav.snapshot().displayName));
+        Title(L"flyExplorer · "+hstring(nav.snapshot().displayName));
         UpdateWatch(0);
         UpdateWatch(1);
         ScheduleFileDetails(0);
@@ -963,7 +963,7 @@ namespace winrt::FlyExplorerWinUIShell::implementation
         SecondaryPaneTitle().Content(winrt::box_value(
             hstring(side==1?L"오른쪽 창 (활성)":L"오른쪽 창")));
         UpdateActivePaneChrome();
-        Title(L"flyExplorer - WinUI 3 · "+hstring(nav.snapshot().displayName));
+        Title(L"flyExplorer · "+hstring(nav.snapshot().displayName));
     }
     void MainWindow::UpdateActivePaneChrome()
     {

@@ -44,7 +44,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="m21_native_fixture.cpp" />
-    <ClCompile Include="..\..\..\src\base\preview_preferences.cpp" />
+    <ClCompile Include="..\..\..\src\base\ui_preferences.cpp" />
     <ClCompile Include="..\..\..\src\base\file_command_core.cpp" />
   </ItemGroup>
   <ItemGroup>

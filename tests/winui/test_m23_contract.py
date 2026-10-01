@@ -48,7 +48,7 @@ class M23Contracts(unittest.TestCase):
    self.assertEqual(x.count(item),2)
   for method in ("OnWindowsCopy","OnWindowsCut","OnWindowsPaste"):
    self.assertIn(method,src(A+"MainWindow.xaml.h"))
-  self.assertIn("shell_clipboard_core.cpp",src(A+"FlyExplorerWinUIShell.project-template.xml"))
+  self.assertIn("shell_clipboard_core.cpp",src(A+"flyExplorer.project-template.xml"))
  def test_owned_native_never_touches_global_clipboard(self):
   s=src("tests/winui/m23/m23_native_fixture.cpp")
   self.assertNotIn("shellclipboard::write(",s)
@@ -57,11 +57,11 @@ class M23Contracts(unittest.TestCase):
  def test_no_broken_runtime_ko_and_default_korean_resources(self):
   s=src(A+"m22_transfers.cpp")
   self.assertNotIn('L"??',s)
-  p=src(A+"FlyExplorerWinUIShell.project-template.xml")
+  p=src(A+"flyExplorer.project-template.xml")
   self.assertIn("<DefaultLanguage>ko-KR</DefaultLanguage>",p)
 
  def test_m23_private_session_versioned_bounds_and_reparse_rejection(self):
-  body=src("src/base/preview_session.cpp")
+  body=src("src/base/ui_session.cpp")
   for token in ("FXSESS23","FILE_ATTRIBUTE_REPARSE_POINT",
                 "DRIVE_FIXED","MaxSize=131072","value.width<640",
                 "value.sort[0]>3","value.paths[0].size()>8",
@@ -70,8 +70,8 @@ class M23Contracts(unittest.TestCase):
     self.assertIn("'F','X','S','E','S','S','2','3'",body)
    else:self.assertIn(token,body)
  def test_session_profile_strict_and_isolated_from_legacy(self):
-  body=src("src/base/preview_session.cpp")
-  self.assertIn("flyExplorer.WinUI3Preview",body)
+  body=src("src/base/ui_session.cpp")
+  self.assertIn("flyExplorer",body)
   self.assertIn("winui-session-v1.bin",body)
   self.assertIn("MOVEFILE_WRITE_THROUGH",body)
   self.assertIn("MOVEFILE_REPLACE_EXISTING",body)
@@ -106,10 +106,10 @@ class M23Contracts(unittest.TestCase):
                 "PostMessageW"):
    self.assertIn(token,body)
  def test_session_native_m23_compiled_in_both_targets(self):
-  first=src(A+"FlyExplorerWinUIShell.project-template.xml")
+  first=src(A+"flyExplorer.project-template.xml")
   second=src("tests/winui/m23/FlyM23NativeContracts.project-template.xml")
-  self.assertIn("preview_session.cpp",first)
-  self.assertIn("preview_session.cpp",second)
+  self.assertIn("ui_session.cpp",first)
+  self.assertIn("ui_session.cpp",second)
   self.assertEqual(first.count("<DefaultLanguage>ko-KR</DefaultLanguage>"),1)
   self.assertNotIn("<DefaultLanguage>en-US</DefaultLanguage>",first)
  def test_session_gui_never_automates_global_clipboard_or_recycle(self):

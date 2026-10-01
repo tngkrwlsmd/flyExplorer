@@ -1,4 +1,4 @@
-namespace FlyExplorerWinUIShell
+namespace FlyExplorer
 {
     [default_interface]
     runtimeclass NavigationSidebar : Microsoft.UI.Xaml.Controls.UserControl

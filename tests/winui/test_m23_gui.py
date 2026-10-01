@@ -12,7 +12,7 @@ from pywinauto import Desktop
 def run(*,win,element,safe_click,focus,eventually,
         left,right,localdata,env,exe):
     assert left.is_dir() and right.is_dir() and left!=right
-    profile=localdata/"flyExplorer.WinUI3Preview"/"winui-session-v1.bin"
+    profile=localdata/"flyExplorer"/"winui-session-v1.bin"
     assert profile.parent.parent==localdata
     def visit(side,path,child):
         focus()
@@ -95,7 +95,7 @@ def run(*,win,element,safe_click,focus,eventually,
                 raise AssertionError("Foreign executable inherited owned PID")
             assert proc.cmdline()[1]==str(left)
             matches=[w for w in Desktop(backend="uia").windows(process=child.pid)
-                     if "flyExplorer - WinUI 3" in w.window_text()]
+                     if "flyExplorer" in w.window_text()]
             if len(matches)!=1:return False
             target=Desktop(backend="uia").window(handle=matches[0].handle)
             rightlist=target.child_window(auto_id="RightFiles")

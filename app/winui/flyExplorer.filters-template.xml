@@ -52,4 +52,12 @@
   </ItemGroup>
   <ItemGroup>
   </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="product.rc" />
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="Assets\flyExplorer.ico">
+      <Filter>Assets</Filter>
+    </Image>
+  </ItemGroup>
 </Project>

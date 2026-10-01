@@ -32,7 +32,7 @@ class MigrationContracts(unittest.TestCase):
   self.assertIn("if (mPopulatingTabs",impl)
 
  def test_separate_from_mfc_and_link_existing_native_file_core(self):
-  project=text("FlyExplorerWinUIShell.project-template.xml")
+  project=text("flyExplorer.project-template.xml")
   impl=text("MainWindow.xaml.cpp")
   self.assertIn("file_operation_core.cpp",project)
   self.assertIn("shell_navigation_core.cpp",project)
@@ -61,7 +61,7 @@ class MigrationContracts(unittest.TestCase):
   self.assertNotIn("MoveFile(",impl)
   self.assertIn("Canonical flyExplorer WinUI 3 product build",build)
   self.assertIn("project-template.xml",build)
-  self.assertIn("Configuration",text("FlyExplorerWinUIShell.project-template.xml"))
+  self.assertIn("Configuration",text("flyExplorer.project-template.xml"))
 
  def test_shared_native_enum_and_legacy_call_site(self):
   root=ROOT.parents[1]
@@ -69,7 +69,7 @@ class MigrationContracts(unittest.TestCase):
   low=(root/"src/base/shell_enum_bridge.cpp").read_text(encoding="utf-8-sig")
   core=(root/"src/base/shell_navigation_core.cpp").read_text(encoding="utf-8-sig")
   product=historical_text("src/fxfile/fxfile.gyp")
-  project=text("FlyExplorerWinUIShell.project-template.xml")
+  project=text("flyExplorer.project-template.xml")
   self.assertIn("shellnav::openEnumeration",legacy)
   self.assertEqual(low.count("folder->EnumObjects("),1)
   self.assertIn("openEnumeration(parent.p,nullptr,flags,&iterator.p)",core)
@@ -83,7 +83,7 @@ class MigrationContracts(unittest.TestCase):
 
  def test_async_sta_shared_directory_change_contract(self):
   root=ROOT.parents[1]
-  project=text("FlyExplorerWinUIShell.project-template.xml")
+  project=text("flyExplorer.project-template.xml")
   winui=text("MainWindow.xaml.cpp")
   mainhdr=text("MainWindow.xaml.h")
   worker=(root/"src/base/shell_async_worker.cpp").read_text(encoding="utf-8")

@@ -1,4 +1,4 @@
-#include "../../../src/base/preview_preferences.h"
+#include "../../../src/base/ui_preferences.h"
 #include "../../../src/base/file_command_core.h"
 #include <windows.h>
 #include <filesystem>
@@ -11,23 +11,23 @@ int wmain(int argc,wchar_t**argv){
  int pass=0,fail=0;
  auto chk=[&](bool ok,const char*why){std::printf("M21_%s %s\n",ok?"PASS":"FAIL",why);
    if(ok)++pass;else ++fail;};
- previewsettings::Preferences pref{};
- const auto config=previewsettings::privatePath();
- chk(!config.empty()&&config.find(L"WinUI3Preview")!=std::wstring::npos,"isolated_preview_profile");
- chk(!previewsettings::load(pref)&&pref.language==L"ko-KR"&&
-   pref.theme==previewsettings::Theme::System,"korean_system_default_without_settings");
- pref.theme=previewsettings::Theme::Dark;
- chk(previewsettings::save(pref)&&std::filesystem::exists(config),"atomic_save_ko_dark");
- pref=previewsettings::Preferences{};
- chk(previewsettings::load(pref)&&pref.theme==previewsettings::Theme::Dark&&
+ uisettings::Preferences pref{};
+ const auto config=uisettings::privatePath();
+ chk(!config.empty()&&config.find(L"flyExplorer")!=std::wstring::npos,"isolated_product_profile");
+ chk(!uisettings::load(pref)&&pref.language==L"ko-KR"&&
+   pref.theme==uisettings::Theme::System,"korean_system_default_without_settings");
+ pref.theme=uisettings::Theme::Dark;
+ chk(uisettings::save(pref)&&std::filesystem::exists(config),"atomic_save_ko_dark");
+ pref=uisettings::Preferences{};
+ chk(uisettings::load(pref)&&pref.theme==uisettings::Theme::Dark&&
    pref.language==L"ko-KR","reload_ko_dark");
- pref.theme=previewsettings::Theme::Light;
- chk(previewsettings::save(pref)&&previewsettings::load(pref)&&
-   pref.theme==previewsettings::Theme::Light,"atomic_light_update");
+ pref.theme=uisettings::Theme::Light;
+ chk(uisettings::save(pref)&&uisettings::load(pref)&&
+   pref.theme==uisettings::Theme::Light,"atomic_light_update");
  pref.language=L"en-US";
- chk(!previewsettings::save(pref),"unsupported_locale_not_written");
- pref=previewsettings::Preferences{};
- chk(previewsettings::load(pref)&&pref.theme==previewsettings::Theme::Light&&
+ chk(!uisettings::save(pref),"unsupported_locale_not_written");
+ pref=uisettings::Preferences{};
+ chk(uisettings::load(pref)&&pref.theme==uisettings::Theme::Light&&
    pref.language==L"ko-KR","failed_save_keeps_previous_data");
  const auto dir=root/L"owned-directory";
  std::filesystem::create_directory(dir);

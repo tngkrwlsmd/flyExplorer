@@ -58,7 +58,7 @@ class M23Followup(unittest.TestCase):
                "invalidate()","isCurrent(","accepts("):
    self.assertIn(name,state)
   self.assertIn("std::array<fxfile::previewlist::PaneState,2> mFileLists",window)
-  self.assertIn('ClInclude Include="file_list_state.h"',source("FlyExplorerWinUIShell.project-template.xml"))
+  self.assertIn('ClInclude Include="file_list_state.h"',source("flyExplorer.project-template.xml"))
   self.assertNotIn("mFileDetails",window)
   self.assertIn("mFileLists[side].begin(route,tab)",render)
   self.assertIn("mFileLists[side].isCurrent(",render)

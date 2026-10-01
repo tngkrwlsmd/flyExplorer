@@ -12,7 +12,7 @@ from pywinauto import Desktop
 
 def run(*,p,win,element,safe_click,focus,eventually,left,right,localdata,env,exe):
     assert left.is_dir() and right.is_dir() and left!=right
-    profile=localdata/"flyExplorer.WinUI3Preview"/"ui-preferences-v1.txt"
+    profile=localdata/"flyExplorer"/"ui-preferences-v1.txt"
     assert profile.parent.parent==localdata
     # Default UI strings and accessibility names must be *genuine* Hangul.
     for diagnostic_id in ("CreateFolderButton","RenameButton","ThemeStateText"):
@@ -58,7 +58,7 @@ def run(*,p,win,element,safe_click,focus,eventually,left,right,localdata,env,exe
             if Path(psutil.Process(child.pid).exe()).resolve()!=exe.resolve():
                 raise AssertionError("a foreign executable reused owned PID")
             matches=[w for w in Desktop(backend="uia").windows(process=child.pid)
-                     if "flyExplorer - WinUI 3" in w.window_text()]
+                     if "flyExplorer" in w.window_text()]
             if len(matches)!=1:return False
             selected=Desktop(backend="uia").window(handle=matches[0].handle).child_window(auto_id="ThemeStateText")
             if not selected.exists(timeout=.25):return False

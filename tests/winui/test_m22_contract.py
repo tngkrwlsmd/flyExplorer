@@ -36,7 +36,7 @@ class M22Contracts(unittest.TestCase):
   self.assertIn('select_one("복사본.txt")',harness)
   self.assertIn("iface_selection_item.AddToSelection()",harness)
  def test_project_compiles_both_native_and_new_reusable_controls(self):
-  xml=src(A+"FlyExplorerWinUIShell.project-template.xml")
+  xml=src(A+"flyExplorer.project-template.xml")
   for name in ("FileToolbar.xaml.cpp","StatusFooter.xaml.cpp",
                "m22_transfers.cpp","shell_transfer_core.cpp",
                "Strings\\ko-KR\\Resources.resw","/utf-8",

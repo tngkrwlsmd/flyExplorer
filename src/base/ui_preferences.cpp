@@ -1,16 +1,16 @@
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
-#include "preview_preferences.h"
+#include "ui_preferences.h"
 #include <array>
 #include <string>
-namespace fxfile::previewsettings {
+namespace fxfile::uisettings {
 namespace {
 std::wstring directory(){
  std::array<wchar_t,32768> buf{};
  const auto n=::GetEnvironmentVariableW(L"LOCALAPPDATA",buf.data(),
                                       static_cast<DWORD>(buf.size()));
  if(!n||n>=buf.size())return {};
- return std::wstring(buf.data(),n)+L"\\flyExplorer.WinUI3Preview";
+ return std::wstring(buf.data(),n)+L"\\flyExplorer";
 }
 std::string text(Theme theme){
  switch(theme){

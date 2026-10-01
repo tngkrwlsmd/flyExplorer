@@ -192,7 +192,7 @@ bool loadWorkspace(std::wstring const& path,Workspace& output,
                 break;
             }
             if(tab>kMaxTabs){
-                reason=L"Preview supports at most 32 tabs per pane.";return false;
+                reason=L"flyExplorer supports at most 32 tabs per pane.";return false;
             }
             prepared.paths[pane].push_back(found->second);
         }

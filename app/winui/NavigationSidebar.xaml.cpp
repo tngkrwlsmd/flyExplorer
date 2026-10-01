@@ -6,7 +6,7 @@
 using namespace winrt;
 using namespace Microsoft::UI::Xaml;
 using namespace Microsoft::UI::Xaml::Controls;
-namespace winrt::FlyExplorerWinUIShell::implementation {
+namespace winrt::FlyExplorer::implementation {
 NavigationSidebar::NavigationSidebar(){InitializeComponent();}
 void NavigationSidebar::SetNavigateCallback(std::function<void(int)> handler){
  mHandler=std::move(handler);

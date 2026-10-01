@@ -17,7 +17,7 @@ std::wstring recentFile(){
     const DWORD size=::GetEnvironmentVariableW(
         L"LOCALAPPDATA",base,static_cast<DWORD>(_countof(base)));
     if(!size||size>=_countof(base))return {};
-    return std::wstring(base)+L"\\flyExplorer.WinUI3Preview\\recent-scopes-v1.txt";
+    return std::wstring(base)+L"\\flyExplorer\\recent-scopes-v1.txt";
 }
 bool regularFolder(std::wstring const& path){
     if(path.empty()||path.size()>32700||path.find_first_of(L"\r\n")!=std::wstring::npos||
