@@ -2,6 +2,7 @@
 // Never invoke association or Shell extension code on the WinUI UI thread.
 #pragma once
 #include <windows.h>
+#include <cstdint>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -14,13 +15,14 @@ bool safeExtension(std::wstring const& ext) noexcept;
 // generic extension-based classification remains a valid safe fallback.
 struct Visual {
     std::wstring label;
-    // Exactly 16x16 BGRA from a disposable OS Shell helper, or empty.
+    // Square BGRA from a disposable OS Shell helper, or empty.
     std::vector<unsigned char> bgra;
+    std::uint32_t width=0,height=0;
 };
 std::unordered_map<std::wstring,Visual> queryVisuals(
     std::wstring const& ownedHelper,
     std::vector<std::wstring> const& extensions,
-    DWORD timeoutMs=2500) noexcept;
+    DWORD timeoutMs=2500,std::uint32_t requestedPixels=16) noexcept;
 std::unordered_map<std::wstring,std::wstring> query(
     std::wstring const& ownedHelper,
     std::vector<std::wstring> const& extensions,

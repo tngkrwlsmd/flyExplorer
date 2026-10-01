@@ -22,6 +22,7 @@ void MainWindow::ApplyThemeChoice(int selection){
 void MainWindow::UpdateView(int selection){
     if(selection<0||selection>3)return;const int side=mModel.activePane;
     mFileLists[side].viewMode=static_cast<FileViewMode>(selection);mPreferences.defaultViewMode=selection;
+    ScheduleFileDetails(side);
     fileBar()->SetViewIndex(selection);FillFiles(side);UpdateSelectionChrome();UpdateFooterSummary();PersistPreferences();
     static constexpr wchar_t const* names[]={L"\uC790\uC138\uD788",L"\uBAA9\uB85D",L"\uC791\uC740 \uC544\uC774\uCF58",L"\uBCF4\uD1B5 \uC544\uC774\uCF58"};
     StatusText().Text(hstring(std::wstring(L"\uBCF4\uAE30: ")+names[selection]));

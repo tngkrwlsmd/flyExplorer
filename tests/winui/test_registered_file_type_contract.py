@@ -10,17 +10,19 @@ class FileTypeContract(unittest.TestCase):
   helper=source("app/winui/helper/FlyShellIsolationHelper.cpp")
   native=source("src/base/shell_assoc_type_core.cpp")
   for item in ('L"--file-types"','SHGFI_USEFILEATTRIBUTES|SHGFI_TYPENAME',
-               'WriteFile(output,line.data()', 'argc>26'):
+               'WriteFile(output,line.data()', 'requestVisuals?27:26'):
    self.assertIn(item,helper)
   for item in ('safeExtension','input.size()>24','timeoutMs<100',
                'timeoutMs>10000','GetTickCount64','PeekNamedPipe',
                'TerminateProcess(process.h','MB_ERR_INVALID_CHARS'):
    self.assertIn(item,native)
   self.assertIn('filename()!=L"FlyShellIsolationHelper.exe"',native)
-  for name in ('SHGFI_ICON|SHGFI_SMALLICON','DrawIconEx',
+  for name in ('SHGFI_ICON','SHGFI_SMALLICON','SHGFI_LARGEICON',
+               'L".flyfolder"','visualPixels','DrawIconEx',
                'DestroyIcon(info.hIcon)','CryptBinaryToStringA'):
    self.assertIn(name,helper)
-  for name in ('queryVisuals','CryptStringToBinaryA','required==1024'):
+  for name in ('queryVisuals','requestedPixels','CryptStringToBinaryA',
+               'const auto expected=requestedPixels*requestedPixels*4'):
    self.assertIn(name,native)
  def test_app_uses_one_background_batch_with_generic_fallback(self):
   app=source("app/winui/MainWindow.xaml.cpp")
@@ -37,6 +39,10 @@ class FileTypeContract(unittest.TestCase):
   self.assertIn("recover.size()>=2",app)
   self.assertIn("visualHelper,{ext},1350",app)
   self.assertIn("Windows system registered file icon",app)
+  self.assertIn("Windows Shell folder icon",app)
+  self.assertIn('extensions{L".flyfolder"}',app)
+  self.assertIn("RasterizationScale()",app)
+  self.assertIn("requestedView==FileViewMode::MediumIcons",app)
   project=source("app/winui/flyExplorer.project-template.xml")
   self.assertIn('shell_assoc_type_core.cpp',project)
 class RealFileListColumnContract(unittest.TestCase):

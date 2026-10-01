@@ -15,5 +15,5 @@ struct Result {
 };
 Result query(std::wstring const& helper,
              std::wstring const& localImagePath,
-             DWORD timeoutMs=1800) noexcept;
+             DWORD timeoutMs=1800,std::uint32_t requestedPixels=64) noexcept;
 }

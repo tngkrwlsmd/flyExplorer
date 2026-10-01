@@ -47,13 +47,14 @@ bool localCandidate(std::wstring const& value) {
 }
 }
 Result query(std::wstring const& helper,std::wstring const& localImagePath,
-             DWORD timeoutMs) noexcept{
+             DWORD timeoutMs,std::uint32_t requestedPixels) noexcept{
  Result empty;
  Handle childRead,hostWrite,hostRead,childWrite,process,thread;
  bool childStarted=false;
  try{
   namespace fs=std::filesystem;
   if(!localCandidate(localImagePath)||timeoutMs<200||timeoutMs>10000||
+     requestedPixels<16||requestedPixels>128||
      !fs::path(helper).is_absolute()||
      fs::path(helper).filename()!=L"FlyShellIsolationHelper.exe"||
      !fs::is_regular_file(fs::path(helper)))return {};
@@ -83,7 +84,8 @@ Result query(std::wstring const& helper,std::wstring const& localImagePath,
     localImagePath.size());
   if(!exactWrite(hostWrite.value,&units,sizeof(units))||
      !exactWrite(hostWrite.value,localImagePath.data(),
-                 units*sizeof(wchar_t))){
+                 units*sizeof(wchar_t))||
+     !exactWrite(hostWrite.value,&requestedPixels,sizeof(requestedPixels))){
     ::TerminateProcess(process.value,ERROR_WRITE_FAULT);
     ::WaitForSingleObject(process.value,250);
     return {};

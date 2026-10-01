@@ -45,6 +45,11 @@ def run(configuration="Debug"):
   target=owned/key.lower()
   target.mkdir()
   env[key]=str(target)
+ pref=Path(env["LOCALAPPDATA"])/"flyExplorer"
+ pref.mkdir(parents=True,exist_ok=True)
+ (pref/"ui-preferences-v1.txt").write_text(
+     "schema=2\r\nlanguage=ko-KR\r\ntheme=dark\r\nview=medium-icons\r\n",
+     encoding="ascii",newline="")
  for key in ("FLY_M23_OWNED_DRAG_TEST","FLY_M23_OWNED_SESSION",
              "FLY_M23_OWNED_DRAG_TRACE"):
   env.pop(key,None)

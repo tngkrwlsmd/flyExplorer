@@ -181,6 +181,24 @@ class FluentShellContract(unittest.TestCase):
         self.assertIn('schema=2\\r\\nlanguage=ko-KR',prefs)
         self.assertIn('view="+viewName(view)',prefs)
 
+    def test_explorer_like_v6_isolated_shell_visual_contract(self):
+        impl=text("MainWindow.xaml.cpp")
+        state=text("file_list_state.h")
+        root=Path(__file__).resolve().parents[2]
+        assoc=(root/"src/base/shell_assoc_type_core.cpp").read_text(encoding="utf-8")
+        helper=(root/"app/winui/helper/FlyShellIsolationHelper.cpp").read_text(encoding="utf-8")
+        for token in ("visualPixels","iconWidth","iconHeight"):
+            self.assertIn(token,state)
+        for token in ("RasterizationScale()",'L".flyfolder"',
+                      "requestedView==FileViewMode::MediumIcons",
+                      "mFileLists[side].accepts(ticket,route,tab)"):
+            self.assertIn(token,impl)
+        self.assertNotIn("SHGetFileInfoW",impl)
+        self.assertIn("requestedPixels",assoc)
+        self.assertIn("visualQueryMutex",assoc)
+        self.assertIn("SHGFI_LARGEICON",helper)
+        self.assertIn("FILE_ATTRIBUTE_DIRECTORY",helper)
+
     def test_this_pc_local_drive_card_is_bounded_and_provider_safe(self):
         impl=text("MainWindow.xaml.cpp")
         for token in ("GetDriveTypeW","DRIVE_FIXED","DRIVE_REMOVABLE",

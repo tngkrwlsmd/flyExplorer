@@ -17,6 +17,7 @@
 #include <cwctype>
 #include <cstdio>
 #include <algorithm>
+#include <cstdlib>
 #include <string>
 #pragma comment(lib,"gdi32.lib")
 #pragma comment(lib,"crypt32.lib")
@@ -316,6 +317,9 @@ int wmain(int argc,wchar_t** argv) {
         std::wstring source(units,L'\0');
         if(!exactRead(input,source.data(),units*sizeof(wchar_t))||
            source.find(L'\0')!=std::wstring::npos)return 33;
+        std::uint32_t requestedPixels=0;
+        if(!exactRead(input,&requestedPixels,sizeof(requestedPixels))||
+           requestedPixels<16||requestedPixels>128)return 33;
         std::filesystem::path path(source);
         if(!path.is_absolute()||path.lexically_normal().native()!=source)
             return 34;
@@ -350,7 +354,8 @@ int wmain(int argc,wchar_t** argv) {
                 Microsoft::WRL::ComPtr<IShellItemImageFactory> factory;
                 if(SUCCEEDED(item.As(&factory))){
                     HBITMAP bitmap=nullptr;
-                    SIZE requested{64,64};
+                    SIZE requested{static_cast<LONG>(requestedPixels),
+                                   static_cast<LONG>(requestedPixels)};
                     if(SUCCEEDED(factory->GetImage(
                         requested,SIIGBF_THUMBNAILONLY|
                         SIIGBF_BIGGERSIZEOK,&bitmap))&&bitmap){
@@ -394,31 +399,42 @@ int wmain(int argc,wchar_t** argv) {
         ::CoUninitialize();
         return resultCode;
     }
-    const bool requestVisuals=argc>=3&&!wcscmp(argv[1],L"--file-visuals");
+    const bool requestVisuals=argc>=4&&!wcscmp(argv[1],L"--file-visuals");
     if(requestVisuals || (argc>=3&&!wcscmp(argv[1],L"--file-types"))){
         // Strict isolated one-shot type-name request. Only ASCII extensions
         // from the app are accepted; do not parse paths or touch files.
-        if(argc>26)return 18;
+        const int first=requestVisuals?3:2;
+        std::uint32_t visualPixels=16;
+        if(requestVisuals){
+            wchar_t* end=nullptr;
+            const auto parsed=::wcstoul(argv[2],&end,10);
+            if(!end||*end||parsed<16||parsed>64)return 18;
+            visualPixels=static_cast<std::uint32_t>(parsed);
+        }
+        if(argc>(requestVisuals?27:26))return 18;
         auto output=::GetStdHandle(STD_OUTPUT_HANDLE);
         if(!output||output==INVALID_HANDLE_VALUE)return 19;
-        for(int i=2;i<argc;++i){
+        for(int i=first;i<argc;++i){
             std::wstring ext(argv[i]);
             if(ext.size()<2||ext.size()>17||ext[0]!=L'.')return 20;
             for(auto c:ext.substr(1))
                 if(!((c>=L'a'&&c<=L'z')||(c>=L'A'&&c<=L'Z')||
                      (c>=L'0'&&c<=L'9')))return 21;
+            const bool folder=requestVisuals&&ext==L".flyfolder";
             SHFILEINFOW info{};
-            auto result=::SHGetFileInfoW(ext.c_str(),FILE_ATTRIBUTE_NORMAL,
+            auto result=::SHGetFileInfoW(folder?L"folder":ext.c_str(),
+                     folder?FILE_ATTRIBUTE_DIRECTORY:FILE_ATTRIBUTE_NORMAL,
                      &info,sizeof(info),
                      SHGFI_USEFILEATTRIBUTES|SHGFI_TYPENAME|
-                     (requestVisuals?(SHGFI_ICON|SHGFI_SMALLICON):0));
+                     (requestVisuals?(SHGFI_ICON|
+                       (visualPixels<=16?SHGFI_SMALLICON:SHGFI_LARGEICON)):0));
             std::wstring readable=result?info.szTypeName:L"";
             if(readable.size()>79)readable.clear();
             const int count=readable.empty()?0: ::WideCharToMultiByte(
                 CP_UTF8,WC_ERR_INVALID_CHARS,readable.data(),
                 static_cast<int>(readable.size()),nullptr,0,nullptr,nullptr);
             if(count<0||count>320)return 22;
-            std::string line=std::to_string(i-2)+"\t";
+            std::string line=std::to_string(i-first)+"\t";
             if(count){
                 std::string utf8(static_cast<size_t>(count),'\0');
                 if(::WideCharToMultiByte(CP_UTF8,WC_ERR_INVALID_CHARS,
@@ -427,15 +443,15 @@ int wmain(int argc,wchar_t** argv) {
                 line+=utf8;
             }
             if(requestVisuals){
-                // Encode exactly 16x16 premultiplied BGRA in the owned
-                // worker; UI receives pixels, never an untrusted HICON.
+                // Encode a bounded square BGRA visual in the owned worker;
+                // UI receives pixels, never an untrusted HICON.
                 // Missing icon => empty field and a generic UI fallback.
                 line+="\t";
                 if(result&&info.hIcon){
                     BITMAPINFO bitmap{};
                     bitmap.bmiHeader.biSize=sizeof(BITMAPINFOHEADER);
-                    bitmap.bmiHeader.biWidth=16;
-                    bitmap.bmiHeader.biHeight=-16;
+                    bitmap.bmiHeader.biWidth=static_cast<LONG>(visualPixels);
+                    bitmap.bmiHeader.biHeight=-static_cast<LONG>(visualPixels);
                     bitmap.bmiHeader.biPlanes=1;
                     bitmap.bmiHeader.biBitCount=32;
                     bitmap.bmiHeader.biCompression=BI_RGB;
@@ -446,17 +462,17 @@ int wmain(int argc,wchar_t** argv) {
                         &bitmap,DIB_RGB_COLORS,&raw,nullptr,0):nullptr;
                     if(memory&&image&&raw){
                         auto old=::SelectObject(memory,image);
-                        std::memset(raw,0,16*16*4);
-                        if(::DrawIconEx(memory,0,0,info.hIcon,16,16,
+                        std::memset(raw,0,visualPixels*visualPixels*4);
+                        if(::DrawIconEx(memory,0,0,info.hIcon,visualPixels,visualPixels,
                                         0,nullptr,DI_NORMAL)){
                             DWORD required=0;
                             ::CryptBinaryToStringA(static_cast<BYTE*>(raw),
-                                16*16*4,CRYPT_STRING_BASE64|
+                                visualPixels*visualPixels*4,CRYPT_STRING_BASE64|
                                 CRYPT_STRING_NOCRLF,nullptr,&required);
-                            if(required>0&&required<2000){
+                            if(required>0&&required<40000){
                                 std::string encoded(required,'\0');
                                 if(::CryptBinaryToStringA(
-                                    static_cast<BYTE*>(raw),16*16*4,
+                                    static_cast<BYTE*>(raw),visualPixels*visualPixels*4,
                                     CRYPT_STRING_BASE64|CRYPT_STRING_NOCRLF,
                                     encoded.data(),&required)){
                                     encoded.resize(std::strlen(encoded.c_str()));

@@ -397,3 +397,99 @@ An isolated parent+immediate-child-close reproduction was then run three times w
 3. The custom context menu remains a compact file-manager menu with an isolated Windows Shell escape hatch; full Explorer native menu composition is not part of v5.
 4. Alternate 125/150/200% DPI, High Contrast and live Narrator listening remain NOT TESTED in the current RDP environment.
 5. Large Icons and a richer thumbnail pipeline remain future features, not fabricated menu options.
+
+## Explorer-like v6 isolated Shell visuals / thumbnails
+
+v5 was checkpointed and pushed first as `99c4587fa19ef845f3fe429979100b06d18f44a0` (`feat: add Explorer-like file view modes`). v6 is intentionally left uncommitted for visual review.
+
+### Fresh Explorer visual reference
+
+A fresh same-machine Windows 11 File Explorer benchmark was captured at 972x720 / 96 DPI / Dark with the owned synthetic folder. After explicitly focusing the file surface before using Explorer's view shortcuts, UIA measured:
+
+- Details: about 24 px item rectangles / 28 px pitch, first item y=167.
+- List: about 434x32 items / 33 px pitch, first item y=142.
+- Small Icons: about 308x30 wrapped cells in two columns.
+- Medium Icons: about 74 px-wide cells with height varying by wrapped label.
+
+Explorer Medium visibly uses standard yellow Shell folders, the compressed-folder zipper artwork, registered PDF/text/image visuals, and image-oriented artwork where available.
+
+### v6 visual architecture
+
+v6 extends the existing isolation boundary rather than introducing a second visual subsystem:
+
+- The WinUI process never calls `SHGetFileInfoW`, `IShellItemImageFactory`, or third-party Shell visual providers synchronously.
+- Registered icons and the standard filesystem-folder visual are obtained by the existing disposable `FlyShellIsolationHelper.exe --file-visuals` path and returned as bounded BGRA pixels.
+- A private `.flyfolder` request key maps inside the helper to `FILE_ATTRIBUTE_DIRECTORY`; it is never exposed as a user extension or persisted state.
+- Image thumbnails continue through the separate one-shot `--file-thumbnail` helper path using `IShellItemImageFactory` only in the disposable child.
+- Visual requests are size-aware: Details/List target 16 DIP, Small Icons 20 DIP, Medium Icons 32 DIP. Physical request pixels derive from `XamlRoot.RasterizationScale()` and are bounded to 16..64 px. Medium image thumbnails target roughly 48 DIP and are bounded to 32..128 px.
+- `FileDetail` now carries icon dimensions with its BGRA bytes, so one metadata path serves Details/List/Small/Medium without assuming 16x16 input.
+- Medium Icons is the only mode that requests image thumbnails. Details/List/Small use system item icons.
+- Existing `mDetailCancel` and `mFileLists[side].accepts(ticket,route,tab)` guards remain authoritative for cancellation and stale-result rejection.
+- The two pane metadata workers share one process-local mutex only around the background registered-icon helper query. Direct production-function probing showed five 32x32 visuals returned correctly; simultaneous startup batches could otherwise cause one pane to take the safe fallback while the other completed. The mutex does not run on or block the WinUI thread.
+- No persistent visual database, disk cache, session field, or preference field was added.
+
+### Runtime visual results
+
+Final candidate SHA-256:
+
+`D8B2139EA5916AF42B93346BF986EF7A6F1722E8ABD59E03465AEB6906BB4423`
+
+At 972x720 / Dark / Medium Icons, both panes independently rendered:
+
+- `Documents`: 32x32 Windows Shell folder visual.
+- synthetic ZIP folder: 32x32 compressed-folder / zipper Shell artwork.
+- PDF: 32x32 registered Windows file icon.
+- JPG placeholder: 32x32 registered image-file icon when the synthetic placeholder is not a decodable image.
+- TXT: 32x32 registered Windows text-file icon.
+
+A separate owned fixture used a real 96x64 JPEG. In Medium Icons / Light, it rendered an actual `Windows Shell image thumbnail` (displayed about 40x26 while preserving aspect ratio), while an ordinary folder, ZIP and PDF continued to use their system visuals. This distinguishes thumbnail behavior from merely showing an association icon.
+
+The current v5 geometry is preserved:
+
+| Metric | Explorer reference | v5 | v6 |
+| --- | ---: | ---: | ---: |
+| Details file top | about 167 px item top / 136 px content region reference | 170 px | **170 px** |
+| Details row | about 28 px pitch | 32 px | **32 px** |
+| List row | about 32 px | 32 px | **32 px** |
+| Small Icons cell | about 308x30 single-pane | 180x34 dual-pane | **180x34 dual-pane** |
+| Medium Icons cell | about 74 px wide, variable height | 108x100 | **108x100** |
+| Medium visual | Shell artwork | generic/system mix | **32x32 isolated Shell visual; image thumbnail when valid** |
+
+The larger 108x100 Medium cell remains intentionally unchanged in v6 so visual-provider work does not destabilize the already accepted dual-pane layout. Tighter Explorer-like Medium geometry remains an OPEN presentation-polish item.
+
+### Pane / context / navigation / stale-result evidence
+
+- Concurrent initial visual requests in both panes returned complete folder/ZIP/PDF/JPG/TXT visuals after the background query lane was serialized.
+- Left Medium / Right Details remained independent; changing the right View did not change the left Medium cells.
+- 760x640 retained 108x100 Medium cells and the existing usable two-column-per-pane behavior.
+- The existing context menu still opened from a Medium item and retained copy, move, rename, Windows clipboard, Recycle Bin and isolated Windows Shell context-menu actions.
+- Rapid navigation from the benchmark folder into `Documents` completed successfully; after the route changed, the old `photo-sample.jpg` row was absent, confirming old-folder visual completion did not attach to the new route.
+- Light Medium and Dark Medium both rendered correctly on the same candidate family.
+
+### Lifecycle / helper safety
+
+The v5 early-shutdown regression gate was repeated after adding the extra visual work: parent open -> child visible -> immediate child WM_CLOSE, three times. Child exits were `0, 0, 0`; parent exit was `0`.
+
+After the visual acceptance processes exited, `FlyShellIsolationHelper.exe` orphan count was zero. The helper remains one-shot and timeout-bounded. No helper daemon or unbounded process pool was introduced.
+
+### v6 regression
+
+- canonical structure: 4/4 PASS.
+- source contracts: 120/120 PASS.
+- Release build: PASS.
+- Release GUI suite: PASS in 72.8 seconds.
+- real native watcher create/delete refresh: PASS.
+- rendered Dark/Light final-shell pixel check: PASS.
+- isolated registered system icon GUI contract: PASS.
+- second owned process private-session restore of both Korean panes: PASS.
+- normal owned shutdown: exit 0.
+- `ORIGINAL_SIX_USER_CONFIG_SHA256_IDENTICAL True`.
+
+### Remaining v6 gaps
+
+1. Medium cell geometry remains 108x100 rather than Explorer's tighter roughly 74 px-wide Medium layout; this is presentation polish, not a Shell-provider defect.
+2. `.flyfolder` intentionally returns the standard filesystem folder Shell visual. Path-specific Known Folder artwork is not yet requested individually.
+3. PDF thumbnail providers are not invoked by v6; PDF keeps its registered system icon. This avoids expanding third-party thumbnail-handler exposure beyond the bounded image policy.
+4. The synthetic benchmark `photo-sample.jpg` is only a layout placeholder, not a valid JPEG; it correctly falls back to its registered image-file icon. The separate valid owned JPEG proves the thumbnail route.
+5. No Large Icons mode was added.
+6. Actual 125/150/200% DPI, High Contrast and live Narrator listening remain NOT TESTED in the current RDP environment. Code-level visual request sizing is DPI-aware via `RasterizationScale`, but this is not a substitute for actual alternate-DPI certification.

@@ -15,13 +15,15 @@ class ThumbnailContract(unittest.TestCase):
   self.assertNotIn("SHGetFileInfoW",app)
  def test_bounded_worker_and_stale_route_guards_preserved(self):
   client=src("src/base/shell_thumbnail_core.cpp")
-  for token in ('timeoutMs<200','timeoutMs>10000','GetTickCount64',
+  for token in ('timeoutMs<200','timeoutMs>10000','requestedPixels<16',
+                'requestedPixels>128','GetTickCount64',
                 'PeekNamedPipe','TerminateProcess(process.value',
                 'filename()!=L"FlyShellIsolationHelper.exe"',
                 'width>128','height>128'):
    self.assertIn(token,client)
   app=src("app/winui/MainWindow.xaml.cpp")
-  for token in ('thumbnailBudget<4','fxfile::thumbnail::query(',
+  for token in ('thumbnailBudget<4','requestedView==FileViewMode::MediumIcons',
+                'fxfile::thumbnail::query(',
                 'L"Windows Shell image thumbnail"',
                 'mFileLists[side].accepts(ticket,route,tab)'):
    self.assertIn(token,app)

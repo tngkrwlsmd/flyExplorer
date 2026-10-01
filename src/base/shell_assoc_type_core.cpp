@@ -6,6 +6,7 @@
 #include <filesystem>
 #include <wincrypt.h>
 #pragma comment(lib,"crypt32.lib")
+#include <mutex>
 #include <string>
 #include <utility>
 
@@ -47,12 +48,17 @@ std::wstring unicode(std::string const& source){
 }
 std::unordered_map<std::wstring,Visual> queryVisuals(
    std::wstring const& helper,std::vector<std::wstring> const& input,
-   DWORD timeoutMs) noexcept{
+   DWORD timeoutMs,std::uint32_t requestedPixels) noexcept{
  std::unordered_map<std::wstring,Visual> names;
  try{
+  // SHGetFileInfo association/icon lookup can serialize internally. The two
+  // pane metadata workers therefore share one bounded helper-query lane;
+  // this never blocks the WinUI thread and avoids startup batch races.
+  static std::mutex visualQueryMutex;
+  std::lock_guard<std::mutex> visualQueryLock(visualQueryMutex);
   namespace fs=std::filesystem;
   if(helper.empty()||input.empty()||input.size()>24||
-     timeoutMs<100||timeoutMs>10000||
+     timeoutMs<100||timeoutMs>10000||requestedPixels<16||requestedPixels>64||
      !fs::path(helper).is_absolute()||
      fs::path(helper).filename()!=L"FlyShellIsolationHelper.exe"||
      !fs::is_regular_file(fs::path(helper)))return names;
@@ -64,7 +70,8 @@ std::unordered_map<std::wstring,Visual> queryVisuals(
      return {};
    extensions.push_back(std::move(s));
   }
-  std::wstring cmd=L"\""+helper+L"\" --file-visuals";
+  std::wstring cmd=L"\""+helper+L"\" --file-visuals "+
+                   std::to_wstring(requestedPixels);
   for(auto const& ext:extensions)cmd+=L" "+ext;
   SECURITY_ATTRIBUTES sec{sizeof(sec),nullptr,TRUE};
   HANDLE read=nullptr,write=nullptr;
@@ -99,7 +106,7 @@ std::unordered_map<std::wstring,Visual> queryVisuals(
     if(!::ReadFile(read,chunk,
           (std::min)(available,static_cast<DWORD>(sizeof(chunk))),
           &got,nullptr))return {};
-    if(out.size()+got>65536)return {};
+    if(out.size()+got>786432)return {};
     out.append(chunk,got);
     continue;
    }
@@ -123,7 +130,7 @@ std::unordered_map<std::wstring,Visual> queryVisuals(
    DWORD got=0;
    if(!::ReadFile(read,chunk,
       (std::min)(available,static_cast<DWORD>(sizeof(chunk))),&got,nullptr)||
-      out.size()+got>65536)return {};
+      out.size()+got>786432)return {};
    out.append(chunk,got);
   }
   size_t cursor=0;
@@ -142,19 +149,22 @@ std::unordered_map<std::wstring,Visual> queryVisuals(
    Visual visual;
    visual.label=unicode(out.substr(tab+1,second-tab-1));
    const auto b64=out.substr(second+1,newline-second-1);
-   if(!b64.empty()&&b64.size()<2000){
+   if(!b64.empty()&&b64.size()<40000){
       DWORD required=0;
+      const auto expected=requestedPixels*requestedPixels*4;
       if(::CryptStringToBinaryA(b64.c_str(),
           static_cast<DWORD>(b64.size()),CRYPT_STRING_BASE64,
-          nullptr,&required,nullptr,nullptr)&&required==1024){
+          nullptr,&required,nullptr,nullptr)&&required==expected){
         visual.bgra.resize(required);
         if(!::CryptStringToBinaryA(b64.c_str(),
           static_cast<DWORD>(b64.size()),CRYPT_STRING_BASE64,
           visual.bgra.data(),&required,nullptr,nullptr)||
-          required!=1024)visual.bgra.clear();
+          required!=expected)visual.bgra.clear();
+        else{visual.width=requestedPixels;visual.height=requestedPixels;}
       }
    }
-   if(!visual.label.empty()||visual.bgra.size()==1024)
+   if(!visual.label.empty()||visual.bgra.size()==
+        static_cast<size_t>(requestedPixels)*requestedPixels*4)
       names[extensions[idx]]=std::move(visual);
    cursor=newline+1;
   }

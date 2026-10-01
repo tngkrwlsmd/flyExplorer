@@ -502,8 +502,18 @@ namespace winrt::FlyExplorer::implementation
         auto const route=pane.routeIds[pane.active];
         auto const tab=pane.active;
         auto const& items=pane.tabs[tab].snapshot().children;
-        if(!force&&mFileLists[side].isCurrent(route,tab,items.size()))
-            return;
+        const auto requestedView=mFileLists[side].viewMode;
+        double raster=1.0;
+        try{if(auto xr=RootShell().XamlRoot())raster=xr.RasterizationScale();}
+        catch(...){raster=1.0;}
+        const std::uint32_t baseVisual=requestedView==FileViewMode::MediumIcons?32:
+            requestedView==FileViewMode::SmallIcons?20:16;
+        const auto visualPixels=static_cast<std::uint32_t>((std::min)(64.0,
+            (std::max)(16.0,baseVisual*raster+0.5)));
+        const auto thumbnailPixels=static_cast<std::uint32_t>((std::min)(128.0,
+            (std::max)(32.0,48.0*raster+0.5)));
+        if(!force&&mFileLists[side].isCurrent(route,tab,items.size())&&
+           mFileLists[side].visualPixels==visualPixels)return;
         auto const& folder=pane.filesystemPaths[tab];
         if(folder.size()<3||folder[1]!=L':'||folder[2]!=L'\\')return;
         if(items.size()>1200)return;
@@ -520,15 +530,16 @@ namespace winrt::FlyExplorer::implementation
         auto cancel=std::make_shared<std::atomic_bool>(false);
         mDetailCancel[side]=cancel;
         const auto ticket=mFileLists[side].begin(route,tab);
+        mFileLists[side].visualPixels=visualPixels;
         auto dispatch=DispatcherQueue();
         auto weak=get_weak();
         try{
             std::thread([side,tab,route,ticket,cancel,paths=std::move(paths),
-                         dispatch,weak]{
+                         dispatch,weak,requestedView,visualPixels,thumbnailPixels]{
                 // Batch 24 distinct registered extensions in one disposable
                 // helper subprocess. A timeout preserves the existing type
                 // fallback and cannot block the WinUI UI thread.
-                std::vector<std::wstring> extensions;
+                std::vector<std::wstring> extensions{L".flyfolder"};
                 for(auto const& path:paths){
                     const auto dot=path.find_last_of(L'.');
                     const auto slash=path.find_last_of(L"\\/");
@@ -550,7 +561,7 @@ namespace winrt::FlyExplorer::implementation
                         visualHelper=(std::filesystem::path(exe).parent_path()/
                             L"FlyShellIsolationHelper.exe").native();
                         windowsTypes=fxfile::filetype::queryVisuals(
-                            visualHelper,extensions,2500);
+                            visualHelper,extensions,2500,visualPixels);
                         // A single slow registered extension can cause
                         // the entire bounded batch to fall back. When that
                         // happens, recover at most two distinct extensions
@@ -575,7 +586,7 @@ namespace winrt::FlyExplorer::implementation
                         }
                         for(auto const& ext:recover){
                             auto one=fxfile::filetype::queryVisuals(
-                                visualHelper,{ext},1350);
+                                visualHelper,{ext},1350,visualPixels);
                             auto found=one.find(ext);
                             if(found!=one.end())
                                 windowsTypes[ext]=std::move(found->second);
@@ -595,9 +606,23 @@ namespace winrt::FlyExplorer::implementation
                     // Pure filename extension classification on the
                     // already validated local worker: no untrusted Shell
                     // extension or COM type handler runs on the UI thread.
-                    if(data.dwFileAttributes&FILE_ATTRIBUTE_DIRECTORY)
+                    if(data.dwFileAttributes&FILE_ATTRIBUTE_DIRECTORY){
+
                         entry.typeLabel=L"폴더";
-                    else{
+
+                        auto folder=windowsTypes.find(L".flyfolder");
+
+                        if(folder!=windowsTypes.end()&&!folder->second.bgra.empty()){
+
+                            entry.iconBgra=folder->second.bgra;
+
+                            entry.iconWidth=folder->second.width;
+
+                            entry.iconHeight=folder->second.height;
+
+                        }
+
+                    }else{
                         const auto dot=paths[i].find_last_of(L'.');
                         const auto slash=paths[i].find_last_of(L"\\/");
                         entry.typeLabel=dot!=std::wstring::npos&&
@@ -615,11 +640,14 @@ namespace winrt::FlyExplorer::implementation
                                     entry.typeLabel+=L" (Windows \uC720\uD615: "+
                                         found->second.label+L")";
                                 entry.iconBgra=found->second.bgra;
+                                entry.iconWidth=found->second.width;
+                                entry.iconHeight=found->second.height;
                             }
                         }
                     }
                     if(!(data.dwFileAttributes&FILE_ATTRIBUTE_DIRECTORY)){
-                        if(!visualHelper.empty()&&thumbnailBudget<4&&
+                        if(requestedView==FileViewMode::MediumIcons&&
+                           !visualHelper.empty()&&thumbnailBudget<4&&
                            data.nFileSizeHigh==0&&
                            data.nFileSizeLow<=32*1024*1024){
                             auto ext=std::filesystem::path(paths[i]).extension().native();
@@ -630,7 +658,7 @@ namespace winrt::FlyExplorer::implementation
                                 ++thumbnailBudget;
                                 if(cancel->load())return;
                                 auto result=fxfile::thumbnail::query(
-                                    visualHelper,paths[i],1800);
+                                    visualHelper,paths[i],1800,thumbnailPixels);
                                 if(result.valid()){
                                     entry.thumbnailBgra=std::move(result.bgra);
                                     entry.thumbnailWidth=result.width;
@@ -946,20 +974,12 @@ namespace winrt::FlyExplorer::implementation
             auto const* iconMeta=detailReady?
                 &mFileLists[side].details[index]:nullptr;
             bool actualVisual=false;
-            if(!item.isFolder()&&iconMeta){
-                const auto& thumb=iconMeta->thumbnailBgra;
-                const bool realThumb=iconMeta->thumbnailWidth>=16&&
-                    iconMeta->thumbnailWidth<=128&&
-                    iconMeta->thumbnailHeight>=16&&
-                    iconMeta->thumbnailHeight<=128&&
-                    thumb.size()==static_cast<size_t>(
-                        iconMeta->thumbnailWidth)*iconMeta->thumbnailHeight*4;
-                const auto& data=realThumb?thumb:iconMeta->iconBgra;
-                const int width=realThumb?
-                    static_cast<int>(iconMeta->thumbnailWidth):16;
-                const int height=realThumb?
-                    static_cast<int>(iconMeta->thumbnailHeight):16;
-                if(data.size()==static_cast<size_t>(width)*height*4){
+            if(iconMeta){
+                const auto& data=iconMeta->iconBgra;
+                const int width=static_cast<int>(iconMeta->iconWidth);
+                const int height=static_cast<int>(iconMeta->iconHeight);
+                if(width>=16&&height>=16&&
+                   data.size()==static_cast<size_t>(width)*height*4){
                     try{
                         Microsoft::UI::Xaml::Media::Imaging::WriteableBitmap pixels(
                             width,height);
@@ -976,11 +996,10 @@ namespace winrt::FlyExplorer::implementation
                                 pixels.Invalidate();
                                 Image image;
                                 image.Source(pixels);
-                                image.Width(realThumb?40:16);
-                                image.Height(realThumb?40:16);
+                                image.Width(16);image.Height(16);
                                 Microsoft::UI::Xaml::Automation::AutomationProperties::
-                                    SetName(image,realThumb?
-                                        L"Windows Shell image thumbnail":
+                                    SetName(image,item.isFolder()?
+                                        L"Windows Shell folder icon":
                                         L"Windows system registered file icon");
                                 nameCell.Children().Append(image);
                                 actualVisual=true;
@@ -1047,12 +1066,14 @@ namespace winrt::FlyExplorer::implementation
                 if(medium)cell.HorizontalAlignment(HorizontalAlignment::Center);
                 auto const* iconMeta=detailReady?&mFileLists[side].details[index]:nullptr;
                 bool actualVisual=false;bool realThumb=false;
-                if(!item.isFolder()&&iconMeta){
+                if(iconMeta){
                     const auto& thumb=iconMeta->thumbnailBgra;
                     realThumb=iconMeta->thumbnailWidth>=16&&iconMeta->thumbnailWidth<=128&&iconMeta->thumbnailHeight>=16&&iconMeta->thumbnailHeight<=128&&thumb.size()==static_cast<size_t>(iconMeta->thumbnailWidth)*iconMeta->thumbnailHeight*4;
                     const auto& data=medium&&realThumb?thumb:iconMeta->iconBgra;
-                    const int width=medium&&realThumb?static_cast<int>(iconMeta->thumbnailWidth):16;
-                    const int height=medium&&realThumb?static_cast<int>(iconMeta->thumbnailHeight):16;
+                    const int width=medium&&realThumb?static_cast<int>(iconMeta->thumbnailWidth):
+                        static_cast<int>(iconMeta->iconWidth);
+                    const int height=medium&&realThumb?static_cast<int>(iconMeta->thumbnailHeight):
+                        static_cast<int>(iconMeta->iconHeight);
                     if(data.size()==static_cast<size_t>(width)*height*4){
                         try{
                             Microsoft::UI::Xaml::Media::Imaging::WriteableBitmap pixels(width,height);auto backing=pixels.PixelBuffer();
@@ -1061,7 +1082,8 @@ namespace winrt::FlyExplorer::implementation
                                 BYTE* target=nullptr;if(SUCCEEDED(access->Buffer(&target))&&target){
                                     std::memcpy(target,data.data(),data.size());pixels.Invalidate();Image image;image.Source(pixels);
                                     const double targetSize=medium?(realThumb?40.0:32.0):(smallIcons?20.0:16.0);image.Width(targetSize);image.Height(targetSize);
-                                    Microsoft::UI::Xaml::Automation::AutomationProperties::SetName(image,realThumb?L"Windows Shell image thumbnail":L"Windows system registered file icon");
+                                    Microsoft::UI::Xaml::Automation::AutomationProperties::SetName(image,realThumb?L"Windows Shell image thumbnail":
+                                        item.isFolder()?L"Windows Shell folder icon":L"Windows system registered file icon");
                                     cell.Children().Append(image);actualVisual=true;
                                 }
                             }

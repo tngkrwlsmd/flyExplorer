@@ -12,7 +12,8 @@ struct FileDetail final {
     std::uint64_t modified=0;
     std::wstring bytesLabel;
     std::wstring typeLabel;
-    std::vector<unsigned char> iconBgra; // optional isolated 16x16 system icon
+    std::vector<unsigned char> iconBgra; // optional isolated system item icon
+    std::uint32_t iconWidth=0,iconHeight=0;
     std::vector<unsigned char> thumbnailBgra;
     std::uint32_t thumbnailWidth=0,thumbnailHeight=0;
     std::wstring dateLabel;
@@ -23,6 +24,7 @@ struct PaneState final {
     int sortMode=0;
     FileViewMode viewMode=FileViewMode::Details;
     int appliedItemsPanel=0; // 0=vertical XAML default, 1=small wrap, 2=medium wrap
+    std::uint32_t visualPixels=0; // DPI-scaled system visual size for current details
     double nameColumnWidth=168.0;
     // Render a bounded first page; keep all items in a native snapshot.
     // route/tab identity resets paging on navigation without stale UI rows.
@@ -38,6 +40,7 @@ struct PaneState final {
     void invalidate() noexcept {
         ++epoch;
         details.clear();
+        visualPixels=0;
         route=0;
     }
     std::uint64_t begin(std::uint64_t nextRoute,std::size_t nextTab) {
