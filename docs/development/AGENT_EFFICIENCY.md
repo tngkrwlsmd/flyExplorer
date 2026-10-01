@@ -22,6 +22,12 @@
 - **최소 검증:** 변경 파일에 한정된 정적 검사와 필요한 빌드/기능/실기 테스트를 선택한다. 서로 다른 commit/바이너리에서 얻은 결과를 최신 revision의 검증으로 착각하지 않는다. 필수 회귀가 하나라도 불충족이면 PASS로 합치지 않는다.
 - **비용 인식:** 플랫폼 사용량은 프로젝트 외 호출이 섞일 수 있으므로 에이전트가 화면의 월간 총량을 자기 작업의 정확한 호출 수라고 주장하지 않는다. 작업별 실제 호출 횟수는 실행 기록에서 가능한 범위만 측정하고 추정치임을 구분한다.
 
+### 검증된 논리 단위의 Git 반영 정책
+
+사용자가 해당 작업 범위에서 commit/push를 승인한 경우, **독립적으로 설명 가능하고 해당 상태만 checkout해도 필요한 검증을 통과하는 논리적 작업 단위가 완료되는 즉시** normal commit 후 `origin/main`에 push한다. milestone 끝까지 여러 검증 완료 단위를 로컬 working tree에 누적하지 않는다.
+
+반대로 build/source/targeted acceptance 실패, architecture migration 중간 상태, 임시 debug instrumentation, 알려진 correctness defect가 열린 상태, generated artifact가 포함된 상태는 commit/push하지 않는다. 각 단위마다 `git diff --check`, staged 파일 범위, 해당 단위에 필요한 검증 결과를 확인한 뒤 commit하고, normal push 후 fetch하여 `HEAD == origin/main`과 ahead/behind `0/0`을 확인한다. force push는 금지하며, 작업 중 `origin/main`이 예상치 않게 이동하면 자동으로 덮어쓰지 않고 먼저 원인을 분석한다. 작은 typo나 단순 진행 저장점은 별도 logical unit으로 취급하지 않는다.
+
 ### 호출 전략 v2 — polling 대신 완료 중심으로 실행
 
 최근 실제 WinUI 개발 기록에서 긴 빌드/GUI를 시작한 뒤 `read_process_output`의 무출력 조회와 별도 `start_process` 상태 probe(`WRAPPER_RUNNING`, `LOG_BYTES`, `JSON_READY`)를 번갈아 실행하는 패턴이 확인됐다. 이 패턴은 새 근거를 거의 만들지 않으면서 호출과 컨텍스트를 크게 소비하므로 다음을 **기본 실행 계약**으로 강제한다.
