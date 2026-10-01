@@ -23,20 +23,10 @@ def run(*,win,element,safe_click,focus,eventually,owned):
         rect=win.rectangle()
         return ImageGrab.grab(bbox=(rect.left,rect.top,rect.right,rect.bottom),
             include_layered_windows=True).convert("RGB")
-    focus()
-    picker.select(2)
-    eventually(lambda:element("ThemeStateText").window_text()=="테마: 다크",
-               "actual WinUI Dark selection not propagated to root")
-    dark=surface()
-    focus()
-    picker.select(1)
-    eventually(lambda:element("ThemeStateText").window_text()=="테마: 라이트",
-               "actual WinUI Light selection not propagated to root")
-    light=surface()
-    assert dark.size==light.size
-    # The Explorer-like v1 removes the old opaque card/chrome surfaces.
-    # Sample stable app-owned empty content/navigation areas instead of
-    # border/text pixels whose tone can remain close under Mica.
+    # The Explorer-like shell uses Mica/transparent surfaces. Theme selection
+    # updates synchronously, but the compositor may publish the new frame a
+    # little later. Wait for sampled app-owned pixels to settle rather than
+    # weakening the visual acceptance threshold or adding a fixed sleep.
     samples=[(int(rect.width()*0.38),int(rect.height()*0.78)),
              (int(rect.width()*0.72),int(rect.height()*0.78)),
              (min(80,rect.width()-3),int(rect.height()*0.78))]
@@ -46,9 +36,31 @@ def run(*,win,element,safe_click,focus,eventually,owned):
             block=im.crop((x,y,x+3,y+3))
             values.append(sum(ImageStat.Stat(block).mean)/3)
         return values
+    def settled_surface(label):
+        state={"last":None,"stable":0,"image":None}
+        def ready():
+            im=surface();values=brightness(im)
+            if state["last"] is not None and all(
+                    abs(now-before)<2 for now,before in zip(values,state["last"])):
+                state["stable"]+=1
+            else:state["stable"]=0
+            state["last"]=values;state["image"]=im
+            return state["stable"]>=2
+        eventually(ready,label)
+        return state["image"]
+    focus()
+    picker.select(2)
+    eventually(lambda:element("ThemeStateText").window_text()=="테마: 다크",
+               "actual WinUI Dark selection not propagated to root")
+    dark=settled_surface("Dark theme label changed before rendered shell settled")
+    focus()
+    picker.select(1)
+    eventually(lambda:element("ThemeStateText").window_text()=="테마: 라이트",
+               "actual WinUI Light selection not propagated to root")
+    light=settled_surface("Light theme label changed before rendered shell settled")
+    assert dark.size==light.size
     db=brightness(dark);lb=brightness(light)
-    # Transparent/Mica surfaces move less than the retired opaque cards, but
-    # a real theme switch must change every stable app-owned sample—not only
+    # A real theme switch must change every stable app-owned sample—not only
     # the hidden picker label or one antialiased edge.
     assert all(light-dark>20 for light,dark in zip(lb,db)),(
         "theme changed label but not the actual rendered shell",db,lb)

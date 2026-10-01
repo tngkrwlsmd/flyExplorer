@@ -186,3 +186,90 @@ Ignored evidence is under `logs/ui-benchmark-20261001/v3/`, including idle, sing
 - The footer status message currently remains visible alongside counts after ordinary navigation; further Explorer-style transient-message timing would be a separate behavior decision, not required for this v3 checkpoint.
 - Exact focus visuals at alternate DPI and High Contrast remain NOT TESTED in the current RDP environment.
 - The larger remaining Explorer visual gap is still the window-level title/tab/caption composition; it should remain a separate scope rather than being mixed into status/focus work.
+
+## Explorer-like v4 window title / caption chrome
+
+v3 was checkpointed and pushed first as commit `e9e095dc34de6aaec486f24a27c3402a9c299033` (`feat: polish Explorer-like status and selection states`). v4 is intentionally left as an uncommitted working-tree review candidate.
+
+### Fresh Windows 11 Explorer title reference
+
+A fresh same-machine Windows 11 Explorer reference was reacquired successfully through its actual `CabinetWClass` HWND at 972x720 / 96 DPI / Dark using the owned synthetic benchmark folder. The top-level geometry was:
+
+- Explorer TabView: y=2..40 (38 px).
+- Active Explorer tab: y=8..40.
+- Explorer navigation row buttons: y=48..80.
+- Explorer caption buttons: minimize 47 px, maximize 46 px, close 47 px, y=1..31.
+- Explorer file content remains approximately y=136 in the established reference.
+
+The v3 flyExplorer reference at the same 972x720 rectangle measured:
+
+- custom title root: y=1..39 (38 px);
+- navigation buttons: y=42..74;
+- caption buttons: 46/46/46 px, y=0..32;
+- file content: y=174.
+
+This confirmed that the OS caption geometry was already correct. The remaining gap was not caption rendering: Explorer uses a real functional window TabView while flyExplorer had a long non-functional drag strip containing app identity plus a secondary `파일 탐색기` label.
+
+### v4 design decision
+
+v4 deliberately does **not** add a fake top-level TabView. The existing left/right pane-local TabViews remain the only tabs. A real Explorer-style window tab would require independent dual-pane/history/workspace/session ownership and therefore remains a separate product milestone.
+
+Instead, v4 keeps the public WinUI custom-titlebar path (`ExtendsContentIntoTitleBar(true)` + `SetTitleBar(...)`) and polishes only the chrome:
+
+- title row/root reduced from 38 px to 34 px;
+- caption safe padding reduced from 154 to 142 DIPs while retaining a gap before the native caption buttons;
+- app folder glyph reduced 14 -> 13 and app-title typography reduced to 12 px / 0.82 opacity;
+- duplicate visible `파일 탐색기` drag-region text removed;
+- blank drag region retained with a 48 DIP minimum width;
+- title/content divider reduced from 0.38 to 0.20 opacity;
+- native minimize/maximize/close buttons remain OS-owned and are not redrawn.
+
+### v3 / v4 / Explorer geometry
+
+| Metric | Windows 11 Explorer | v3 | v4 |
+| --- | ---: | ---: | ---: |
+| title/tab chrome | 38 px functional TabView | 38 px custom title | **34 px compact title** |
+| navigation top | 48 px | 42 px | **38 px** |
+| file content top | about 136 px | 174 px | **170 px** |
+| caption widths | 47 / 46 / 47 px | 46 / 46 / 46 px | **46 / 46 / 46 px** |
+| caption height | 30 px | 32 px | **32 px** |
+| sidebar width | about 154 px | about 156 px | **about 156 px** |
+| row pitch | about 28 px | 32 px | **32 px** |
+
+The v4 Release binary used for runtime checks has SHA-256:
+
+`F2E887B9E2E280FDD2D40BB1E66F15B84496464064C45B37AF9386D40A5FF9E2`
+
+### v4 runtime checks
+
+- 972x720 Dark: title chrome rendered as a compact app-identity strip; `LeftFiles` and `RightFiles` begin at y=170.
+- 760x640 Dark: native caption buttons, navigation controls and both panes remain visible without overlap.
+- Maximized: layout remains stable; full Details columns return according to the existing responsive profile.
+- Live pointer drag on the blank title region moved the window from `(30,30)` to `(100,65)`.
+- Native caption maximize/restore returned from the maximized rect to the original 972x720 rect.
+- Double-clicking the blank custom title region maximized and a second double-click restored the window, using standard title-bar behavior.
+- Native minimize/close hover states were captured without replacing the OS caption visuals.
+- Address edit, Sort, Quick Search and pane-tab surfaces remained independently focusable/clickable; the title drag region did not intercept them.
+- Light and Dark both rendered on the same v4 binary.
+- High Contrast and alternate DPI remain NOT TESTED in the current RDP environment.
+
+### Theme GUI harness synchronization finding
+
+The first two full Release GUI attempts stopped at the M2.0 theme pixel assertion even though direct v4 Light/Dark runtime captures showed the complete shell switching correctly. Both failures produced the same transitional sample values immediately after `ThemeStateText` changed. The existing test synchronized on the hidden label and then captured the surface immediately, allowing the UI thread selection event to finish before the compositor published the new Mica/transparent frame.
+
+The harness was strengthened rather than relaxed: it now waits, within the existing `eventually` timeout, for app-owned sample pixels to settle across consecutive frames. The original visual acceptance threshold (`light - dark > 20` for every stable sample) is unchanged and no fixed sleep or timeout increase was introduced. The following full Release GUI run passed the actual rendered-shell pixel assertion.
+
+### v4 regression
+
+- canonical structure: 4/4 PASS.
+- source contracts: 118/118 PASS (new v4 title-chrome contract included).
+- Release build: PASS.
+- Release GUI suite: PASS in 68.0 seconds after compositor-aware theme synchronization.
+- `REAL_M20_WINUI_DARK_LIGHT_FINAL_SHELL_PIXELS True`.
+- dual pane, pane tabs, split/history, Korean create/rename, metadata/sort, opposite-pane transfers and private session restore remain PASS.
+- owned app exits normally.
+- `ORIGINAL_SIX_USER_CONFIG_SHA256_IDENTICAL True`.
+
+### Remaining title/chrome gap
+
+The primary remaining difference is intentional: Windows 11 Explorer has a real window-level TabView with independent tab state; flyExplorer does not. v4 does not fabricate this visually. If window-level tabs are pursued later, they should first define ownership of dual-pane navigation, histories, pane tabs, workspace/session persistence, close/reopen and crash restore. The current compact title bar is the preferred v4 endpoint until that functional design exists.

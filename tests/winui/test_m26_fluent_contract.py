@@ -30,6 +30,20 @@ class FluentShellContract(unittest.TestCase):
         self.assertIn("SystemBackdrop(Microsoft::UI::Xaml::Media::MicaBackdrop{}",impl)
         self.assertNotIn("DwmExtendFrameIntoClientArea",impl)
 
+    def test_explorer_like_v4_compact_title_chrome_without_fake_window_tabs(self):
+        main=text("MainWindow.xaml")
+        header=text("ShellHeader.xaml")
+        impl=text("MainWindow.xaml.cpp")
+        self.assertIn('x:Name="TitleBarRoot" Height="34" Padding="10,0,142,0"',header)
+        self.assertIn('x:Name="TitleBarDragRegion" Grid.Column="1" MinWidth="48"',header)
+        self.assertIn('x:Name="ShellHeading" Text="flyExplorer"',header)
+        self.assertIn('FontSize="12" FontWeight="Normal" Opacity="0.82"',header)
+        self.assertNotIn('<TabView',header)
+        self.assertEqual(main.count('<TabView '),2)
+        self.assertIn('<RowDefinition Height="34"/>',main)
+        self.assertIn("ExtendsContentIntoTitleBar(true)",impl)
+        self.assertIn("SetTitleBar(titleHeader->DragRegion())",impl)
+
     def test_explorer_command_address_search_and_overflow_surface(self):
         toolbar=text("FileToolbar.xaml")
         main=text("MainWindow.xaml")
