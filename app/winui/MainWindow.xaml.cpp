@@ -705,6 +705,8 @@ namespace winrt::FlyExplorer::implementation
         state.filenameFilter=std::move(text);
         state.visibleCount=160;
         FillFiles(side); // Only the view changes. Shell model and stable tags do not.
+        UpdateSelectionChrome();
+        if(side==mModel.activePane)UpdateFooterSummary();
     }
     void MainWindow::OnLoadMoreFiles(
         IInspectable const& sender,Microsoft::UI::Xaml::RoutedEventArgs const&){
@@ -755,6 +757,7 @@ namespace winrt::FlyExplorer::implementation
 
     void MainWindow::FillFiles(int side)
     {
+        mPopulatingFileLists=true;
         ApplyDetailColumnLayout(side);
         auto view=side==0?LeftFiles():RightFiles();
         const auto& pane=mModel.panes[static_cast<size_t>(side)];
@@ -978,9 +981,11 @@ namespace winrt::FlyExplorer::implementation
                   !=selected.end()){
                 // Restore selection by native parsing path, never stale
                 // pre-sort row index (including real multiple selection).
+                if(side!=mModel.activePane)row.Opacity(0.78);
                 view.SelectedItems().Append(row);
             }
         }
+        mPopulatingFileLists=false;
     }
     void MainWindow::Refresh(hstring const& status)
     {
@@ -1001,6 +1006,8 @@ namespace winrt::FlyExplorer::implementation
         SecondaryPaneTitle().Content(winrt::box_value(
             hstring(mModel.activePane==1?L"오른쪽 창 (활성)":L"오른쪽 창")));
         UpdateActivePaneChrome();
+        UpdateSelectionChrome();
+        UpdateFooterSummary();
         StatusText().Text(status);
         Title(L"flyExplorer · "+hstring(nav.snapshot().displayName));
         UpdateWatch(0);
@@ -1058,6 +1065,73 @@ namespace winrt::FlyExplorer::implementation
                 SecondaryPane().BorderBrush(!left&&accent?accent:normal);
             }
         }catch(...){ }
+    }
+    void MainWindow::UpdateSelectionChrome()
+    {
+        for(int side=0;side<2;++side){
+            auto view=side==0?LeftFiles():RightFiles();
+            for(auto const& item:view.Items()){
+                if(auto row=item.try_as<ListViewItem>())row.Opacity(1.0);
+            }
+            if(side!=mModel.activePane){
+                for(auto const& item:view.SelectedItems()){
+                    if(auto row=item.try_as<ListViewItem>())row.Opacity(0.78);
+                }
+            }
+        }
+    }
+    void MainWindow::UpdateCommandAvailability()
+    {
+        // Keep selection commands reachable to keyboard/UIA selection patterns.
+        // Each command validates the current native selection before mutating.
+        const bool ready=!mFileOperationPending;
+        fileBar()->WindowsCutButton().IsEnabled(ready);
+        fileBar()->WindowsCopyButton().IsEnabled(ready);
+        RenameButton().IsEnabled(ready);
+        fileBar()->RecycleButton().IsEnabled(ready);
+        fileBar()->CopyButton().IsEnabled(ready);
+        fileBar()->MoveButton().IsEnabled(ready);
+    }
+    void MainWindow::UpdateFooterSummary()
+    {
+        const int side=mModel.activePane;
+        auto view=side==0?LeftFiles():RightFiles();
+        const auto& pane=mModel.panes[side];
+        const auto& state=mFileLists[side];
+        std::size_t count=pane.tabs[pane.active].snapshot().children.size();
+        if(state.visibleRoute==pane.routeIds[pane.active]&&state.visibleTab==pane.active)
+            count=state.filteredCount;
+        const auto selected=view.SelectedItems().Size();
+        ItemCountText().Text(hstring(std::to_wstring(count)+L"\uAC1C \uD56D\uBAA9"));
+        SelectionCountText().Text(selected?
+            hstring(std::to_wstring(selected)+L"\uAC1C \uC120\uD0DD\uB428"):hstring{});
+        UpdateCommandAvailability();
+    }
+    void MainWindow::QueueSelectionPresentationUpdate()
+    {
+        const auto weak=get_weak();
+        DispatcherQueue().TryEnqueue([weak]{
+            if(auto ui=weak.get()){
+                ui->UpdateSelectionChrome();
+                ui->UpdateFooterSummary();
+            }
+        });
+    }
+    void MainWindow::OnFileSelectionChanged(IInspectable const& sender,
+        SelectionChangedEventArgs const&)
+    {
+        if(mPopulatingFileLists)return;
+        auto view=sender.try_as<ListView>();
+        if(!view)return;
+        UpdateSelectionChrome();
+        if((view==LeftFiles()&&mModel.activePane==0)||
+           (view==RightFiles()&&mModel.activePane==1))
+            UpdateFooterSummary();
+    }
+    void MainWindow::OnFileSelectionKeyUp(IInspectable const&,
+        Input::KeyRoutedEventArgs const&)
+    {
+        QueueSelectionPresentationUpdate();
     }
     void MainWindow::ToggleNameFilter(int side)
     {
@@ -1340,11 +1414,13 @@ namespace winrt::FlyExplorer::implementation
         IInspectable const&,Input::TappedRoutedEventArgs const&)
     {
         if(mModel.activePane!=0)ActivatePane(0);
+        QueueSelectionPresentationUpdate();
     }
     void MainWindow::OnRightPaneTapped(
         IInspectable const&,Input::TappedRoutedEventArgs const&)
     {
         if(mModel.activePane!=1)ActivatePane(1);
+        QueueSelectionPresentationUpdate();
     }
     void MainWindow::OnLeftFileKeyDown(
         IInspectable const&,Input::KeyRoutedEventArgs const& a)

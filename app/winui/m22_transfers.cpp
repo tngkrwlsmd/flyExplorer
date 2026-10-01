@@ -27,11 +27,9 @@ hstring errorInKorean(DWORD err){
 void MainWindow::SetFileButtonsBusy(bool busy,bool cancellable){
  mFileOperationPending=busy;
  CreateFolderButton().IsEnabled(!busy);
- RenameButton().IsEnabled(!busy);
- fileBar()->CopyButton().IsEnabled(!busy);
- fileBar()->MoveButton().IsEnabled(!busy);
- fileBar()->RecycleButton().IsEnabled(!busy);
+ fileBar()->WindowsPasteButton().IsEnabled(!busy);
  fileBar()->CancelButton().IsEnabled(busy&&cancellable);
+ UpdateCommandAvailability();
  if(!busy)fileBar()->OperationProgress().Value(0);
 }
 void MainWindow::OnCopySelected(IInspectable const&,RoutedEventArgs const&){
@@ -55,6 +53,7 @@ void MainWindow::OnFileRightTapped(
  if(!list)return;
  if(list==LeftFiles())ActivatePane(0);
  else if(list==RightFiles())ActivatePane(1);
+ QueueSelectionPresentationUpdate();
 }
 void MainWindow::UpdateSort(int selection){
  if(selection<0||selection>3)return;

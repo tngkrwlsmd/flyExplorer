@@ -8,6 +8,7 @@
             <Setter Property="MinWidth" Value="36"/>
             <Setter Property="MaxWidth" Value="36"/>
             <Setter Property="Height" Value="36"/>
+            <Setter Property="UseSystemFocusVisuals" Value="True"/>
         </Style>
         <Style x:Key="ExplorerSecondaryCommandButtonStyle" TargetType="AppBarButton"
                BasedOn="{StaticResource ExplorerCommandButtonStyle}">
@@ -21,6 +22,7 @@
             <Setter Property="Padding" Value="8,0"/>
             <Setter Property="CornerRadius" Value="4"/>
             <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="UseSystemFocusVisuals" Value="True"/>
         </Style>
     </UserControl.Resources>
     <Grid Height="42" Padding="10,0,10,1" ColumnSpacing="2">

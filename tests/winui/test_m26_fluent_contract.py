@@ -121,6 +121,21 @@ class FluentShellContract(unittest.TestCase):
         self.assertIn('Opacity="0"',header)
         self.assertNotIn("외부 Shell 작업은",nav)
 
+    def test_explorer_like_v3_status_selection_and_keyboard_focus_contract(self):
+        main=text("MainWindow.xaml")
+        toolbar=text("FileToolbar.xaml")
+        footer=text("StatusFooter.xaml")
+        impl=text("MainWindow.xaml.cpp")
+        for token in ('x:Name="ItemCountText"','x:Name="SelectionCountText"'):
+            self.assertIn(token,footer)
+        self.assertGreaterEqual(main.count('SelectionChanged="OnFileSelectionChanged"'),2)
+        self.assertIn("UpdateFooterSummary()",impl)
+        self.assertIn("UpdateSelectionChrome()",impl)
+        self.assertIn("QueueSelectionPresentationUpdate()",impl)
+        self.assertIn("side!=mModel.activePane",impl)
+        self.assertGreaterEqual(main.count('UseSystemFocusVisuals" Value="True"'),2)
+        self.assertGreaterEqual(toolbar.count('UseSystemFocusVisuals" Value="True"'),2)
+
     def test_this_pc_local_drive_card_is_bounded_and_provider_safe(self):
         impl=text("MainWindow.xaml.cpp")
         for token in ("GetDriveTypeW","DRIVE_FIXED","DRIVE_REMOVABLE",

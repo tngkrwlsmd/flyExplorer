@@ -141,3 +141,48 @@ The v2 candidate Release SHA-256 used for the runtime checks is:
 4. Exact keyboard-focus parity across every command/breadcrumb state was not independently pixel-certified; hover and pressed were verified.
 5. A fresh clean current-session Explorer screenshot set could not be reliably reacquired through the RDP UIA harness; the same-machine Explorer reference measurements captured for v1 remain the comparison baseline. Do not treat the failed capture harness as a product result.
 6. 125/150/200% DPI, High Contrast and live Narrator listening remain NOT TESTED in this RDP environment.
+
+## Explorer-like v3 status / selection / focus polish
+
+The v3 pass starts from pushed v2 commit `cd183e52ffe34ec99329506b7746e9ce0553a065` and deliberately leaves title/tab and view-mode architecture unchanged. Its scope is status-bar information hierarchy, active/inactive selection presentation, keyboard focus visuals, and command busy/disabled consistency.
+
+### v3 implementation
+
+- The footer now gives persistent user-facing context: active-pane item count on the left, selection count when non-zero, and transient operation/status text aligned to the right.
+- Selection count updates from real `SelectionChanged` events as well as the existing pane tap/keyboard presentation queue, so mouse, Ctrl multi-select, pane switching, and keyboard selection do not depend on an incidental KeyUp alone.
+- Selection in the inactive pane remains visible but is visually reduced (`Opacity=0.78`) rather than disappearing or retaining the same emphasis as the active pane.
+- Standard WinUI system keyboard focus visuals are explicitly retained on command buttons, navigation buttons and file rows. No custom high-contrast-hostile focus rectangle was introduced.
+- File-operation busy state continues to be the compatibility signal used by existing command automation; v3 does not redefine `CopyButton.IsEnabled()` as a no-selection proxy because owned clipboard tests use that state to observe transfer settling.
+- The footer keeps the existing `StatusText` and hidden `ActivePaneText` automation contracts while adding `ItemCountText` and `SelectionCountText`.
+
+### v3 runtime evidence
+
+Release SHA-256 used for this run:
+
+`56928A3F3C6687E0EEFEE3C401774F412D9574D8F809BC185AA28E6A76A75198`
+
+Owned synthetic-folder observations at 972x720 / 96 DPI:
+
+- Initial footer: `8개 항목`, no selection count.
+- Single mouse selection: `1개 선택됨`.
+- Ctrl multi-selection: `2개 선택됨`.
+- Switching to the right pane and selecting one item: footer changed to `1개 선택됨`; the previous two left-pane selections remained visible with reduced inactive emphasis.
+- Keyboard move in the active right list kept the footer at `1개 선택됨` and updated selection through the actual list selection event.
+- `SortButton.has_keyboard_focus()` and `MoreButton.has_keyboard_focus()` both reported true after programmatic keyboard focus; the actual product screenshots show the system focus outline.
+- Idle `CancelButton` and unavailable Forward navigation rendered disabled; no custom disabled visual override was added.
+
+Ignored evidence is under `logs/ui-benchmark-20261001/v3/`, including idle, single/multi-selection, inactive/active pane, keyboard selection, Sort/More keyboard focus, disabled-command, and metrics captures. No personal folders are used in the fixture.
+
+### v3 regression
+
+- canonical structure: 4/4 PASS.
+- source contracts: 117/117 PASS (one new v3 visual/status contract).
+- fresh Release build: PASS.
+- Release GUI suite: PASS in 65.9 seconds.
+- Existing dual-pane navigation, tabs/split/history, Korean create/rename, metadata/sort, opposite-pane transfers, private session auto-restore, normal shutdown and `ORIGINAL_SIX_USER_CONFIG_SHA256_IDENTICAL True` all remained PASS.
+
+### Remaining v3-adjacent polish
+
+- The footer status message currently remains visible alongside counts after ordinary navigation; further Explorer-style transient-message timing would be a separate behavior decision, not required for this v3 checkpoint.
+- Exact focus visuals at alternate DPI and High Contrast remain NOT TESTED in the current RDP environment.
+- The larger remaining Explorer visual gap is still the window-level title/tab/caption composition; it should remain a separate scope rather than being mixed into status/focus work.

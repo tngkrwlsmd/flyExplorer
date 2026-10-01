@@ -2,14 +2,23 @@
 <UserControl x:Class="FlyExplorer.StatusFooter"
  xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
-    <Grid MinHeight="24" Padding="10,3,10,4">
-        <!-- Kept in the tree for existing UIA/state contracts; active-pane state
-             is primarily indicated by the pane accent rather than status prose. -->
-        <TextBlock x:Name="ActivePaneText" Text="활성: 왼쪽"
+    <Grid MinHeight="24" Padding="10,3,10,4" ColumnSpacing="10">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="Auto"/>
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+        <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+            <TextBlock x:Name="ItemCountText" Text="0&#xAC1C; &#xD56D;&#xBAA9;"
+                       FontSize="11.5" AutomationProperties.Name="&#xD604;&#xC7AC; &#xCC3D; &#xD56D;&#xBAA9; &#xC218;"/>
+            <TextBlock x:Name="SelectionCountText" Text="" Opacity="0.72" FontSize="11.5"
+                       AutomationProperties.Name="&#xD604;&#xC7AC; &#xCC3D; &#xC120;&#xD0DD; &#xD56D;&#xBAA9; &#xC218;"/>
+        </StackPanel>
+        <!-- Existing GUI/accessibility contracts keep the operation/status announcement. -->
+        <TextBlock x:Name="StatusText" Grid.Column="1" Text="&#xC900;&#xBE44;&#xB428;"
+                   TextTrimming="CharacterEllipsis" TextAlignment="Right"
+                   HorizontalAlignment="Stretch" VerticalAlignment="Center"
+                   FontSize="11.5" Opacity="0.68" AutomationProperties.Name="&#xD0D0;&#xC0C9;&#xAE30; &#xC0C1;&#xD0DC;"/>
+        <TextBlock x:Name="ActivePaneText" Text="&#xD65C;&#xC131;: &#xC67C;&#xCABD;"
                    Width="1" Opacity="0" IsHitTestVisible="False"/>
-        <TextBlock x:Name="StatusText" Text="준비됨"
-                   TextTrimming="CharacterEllipsis"
-                   VerticalAlignment="Center" FontSize="11.5"
-                   AutomationProperties.Name="탐색기 상태"/>
     </Grid>
 </UserControl>

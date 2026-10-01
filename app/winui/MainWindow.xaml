@@ -15,6 +15,7 @@
             <Setter Property="Padding" Value="0"/>
             <Setter Property="CornerRadius" Value="5"/>
             <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="UseSystemFocusVisuals" Value="True"/>
         </Style>
         <Style x:Key="ExplorerListItemStyle" TargetType="ListViewItem">
             <Setter Property="MinHeight" Value="32"/>
@@ -22,6 +23,7 @@
             <Setter Property="Margin" Value="1,0"/>
             <Setter Property="CornerRadius" Value="5"/>
             <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+            <Setter Property="UseSystemFocusVisuals" Value="True"/>
         </Style>
         <Style x:Key="ExplorerPaneTitleStyle" TargetType="Button">
             <Setter Property="Height" Value="30"/>
@@ -257,6 +259,7 @@
                 <ListView x:Name="LeftFiles" Grid.Row="3" IsDoubleTapEnabled="True"
                           ItemContainerStyle="{StaticResource ExplorerListItemStyle}"
                            SelectionMode="Multiple" DoubleTapped="OnLeftFileDoubleTapped" Tapped="OnLeftPaneTapped"
+                          SelectionChanged="OnFileSelectionChanged" KeyUp="OnFileSelectionKeyUp"
 
                           KeyDown="OnLeftFileKeyDown" RightTapped="OnFileRightTapped"
                           AllowDrop="True" CanDragItems="True" CanReorderItems="False"
@@ -346,6 +349,7 @@
                 <ListView x:Name="RightFiles" Grid.Row="3" IsDoubleTapEnabled="True"
                           ItemContainerStyle="{StaticResource ExplorerListItemStyle}"
                            SelectionMode="Multiple" DoubleTapped="OnRightFileDoubleTapped" Tapped="OnRightPaneTapped"
+                          SelectionChanged="OnFileSelectionChanged" KeyUp="OnFileSelectionKeyUp"
 
                           KeyDown="OnRightFileKeyDown" RightTapped="OnFileRightTapped"
                           AllowDrop="True" CanDragItems="True" CanReorderItems="False"

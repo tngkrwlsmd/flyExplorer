@@ -104,6 +104,10 @@ namespace winrt::FlyExplorer::implementation
             Microsoft::UI::Xaml::Controls::Primitives::RangeBaseValueChangedEventArgs const&);
         void OnFileRightTapped(IInspectable const&,
             Microsoft::UI::Xaml::Input::RightTappedRoutedEventArgs const&);
+        void OnFileSelectionChanged(IInspectable const&,
+            Microsoft::UI::Xaml::Controls::SelectionChangedEventArgs const&);
+        void OnFileSelectionKeyUp(IInspectable const&,
+            Microsoft::UI::Xaml::Input::KeyRoutedEventArgs const&);
         void OnFileDragItemsStarting(IInspectable const&,
             Microsoft::UI::Xaml::Controls::DragItemsStartingEventArgs const&);
         void OnFileRowDragStarting(int side,
@@ -148,6 +152,12 @@ namespace winrt::FlyExplorer::implementation
         Microsoft::UI::Xaml::Controls::TextBlock ActivePaneText(){
             return footer()->ActivePaneText();
         }
+        Microsoft::UI::Xaml::Controls::TextBlock ItemCountText(){
+            return footer()->ItemCountText();
+        }
+        Microsoft::UI::Xaml::Controls::TextBlock SelectionCountText(){
+            return footer()->SelectionCountText();
+        }
         using FileDetail=fxfile::previewlist::FileDetail;
         std::array<fxfile::previewlist::PaneState,2> mFileLists{};
         // Incremental thumbnail requests must stop issuing new child
@@ -184,6 +194,11 @@ namespace winrt::FlyExplorer::implementation
         winrt::fire_and_forget ConfirmCollision(fxfile::shelltransfer::Request request);
         winrt::fire_and_forget ConfirmRecycle(fxfile::shelltransfer::Request request);
         bool mPopulatingTabs = false;
+        bool mPopulatingFileLists = false;
+        void UpdateFooterSummary();
+        void UpdateSelectionChrome();
+        void UpdateCommandAvailability();
+        void QueueSelectionPresentationUpdate();
         std::unique_ptr<fxfile::shellnav::IsolatedShellSupervisor> mSupervisor;
         std::unique_ptr<fxfile::directorychange::DirectoryWatcher> mWatcher;
         std::unique_ptr<fxfile::directorychange::ShellNamespaceWatcher> mShellWatcher;
