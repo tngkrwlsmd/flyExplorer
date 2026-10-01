@@ -133,7 +133,7 @@ namespace winrt::FlyExplorer::implementation
         });
         fxfile::uisettings::load(mPreferences);
         const auto initialView=(std::clamp)(mPreferences.defaultViewMode,0,3);
-        for(auto& state:mFileLists)state.viewMode=static_cast<FileViewMode>(initialView);
+        for(auto& state:ActiveWindowTab().fileLists)state.viewMode=static_cast<FileViewMode>(initialView);
         winrt::get_self<winrt::FlyExplorer::implementation::ShellHeader>(
             HeaderView())->RestoreTheme(static_cast<int>(mPreferences.theme));
         RootShell().RequestedTheme(
@@ -162,9 +162,9 @@ namespace winrt::FlyExplorer::implementation
                 else if(command==5 && ui->mTransferProgress)
                     ui->mTransferProgress->cancel.store(true);
                 else if(command==6)
-                    ui->CopySelectedToWindowsClipboard(ui->mModel.activePane,true);
+                    ui->CopySelectedToWindowsClipboard(ui->ActiveWindowTab().model.activePane,true);
                 else if(command==7)
-                    ui->CopySelectedToWindowsClipboard(ui->mModel.activePane,false);
+                    ui->CopySelectedToWindowsClipboard(ui->ActiveWindowTab().model.activePane,false);
                 else if(command==8)
                     ui->PasteFromWindowsClipboard();
                 else if(command==9)ui->ExecuteFileCommand(
@@ -286,7 +286,7 @@ namespace winrt::FlyExplorer::implementation
         }
 #endif
         for(int side=0;side!=2;++side) {
-            auto& pane=mModel.panes[side];
+            auto& pane=ActiveWindowTab().model.panes[side];
 #if defined(_DEBUG)
             if(side==0 && testLeftDelay){
                 pane.pending[0]=mSupervisor->submitOwnedTestDelay(
@@ -314,7 +314,7 @@ namespace winrt::FlyExplorer::implementation
         if(mTransferProgress)mTransferProgress->cancel.store(true);
         for(int side=0;side<2;++side){
             if(mDetailCancel[side])mDetailCancel[side]->store(true);
-            mFileLists[side].invalidate();
+            ActiveWindowTab().fileLists[side].invalidate();
         }
         if(mTransferTimer)mTransferTimer.Stop();
         // Never join a Shell extension which might be blocked in COM.
@@ -329,7 +329,7 @@ namespace winrt::FlyExplorer::implementation
     void MainWindow::MyProperty(int32_t) {}
     fxfile::shellnav::Session& MainWindow::Current()
     {
-        auto& pane=mModel.panes[static_cast<size_t>(mModel.activePane)];
+        auto& pane=ActiveWindowTab().model.panes[static_cast<size_t>(ActiveWindowTab().model.activePane)];
         return pane.tabs.at(pane.active);
     }
     std::filesystem::path MainWindow::HomePath() const
@@ -342,7 +342,7 @@ namespace winrt::FlyExplorer::implementation
     }
     void MainWindow::QueuePath(int side,std::wstring path)
     {
-        auto& pane=mModel.panes[side];
+        auto& pane=ActiveWindowTab().model.panes[side];
         const auto route=pane.routeIds[pane.active];
         std::uint64_t id=0;
 #if defined(_DEBUG)
@@ -356,7 +356,7 @@ namespace winrt::FlyExplorer::implementation
         if(id) {
             // At most one outstanding helper operation per active pane.
             // Clear the canceled prior tab's UI pending marker too.
-            mModel.markPending(side,pane.active,id,true);
+            ActiveWindowTab().model.markPending(side,pane.active,id,true);
             StatusText().Text(L"폴더를 불러오는 중입니다.");
         } else StatusText().Text(L"이 위치로 이동할 수 없습니다.");
     }
@@ -368,23 +368,23 @@ namespace winrt::FlyExplorer::implementation
             StatusText().Text(L"이 위치를 열 수 없습니다.");
             return;
         }
-        auto& pane=mModel.panes[side];
+        auto& pane=ActiveWindowTab().model.panes[side];
         const auto id=mSupervisor->submit(
             side,pane.routeIds[pane.active],std::move(target),action);
         if(id) {
             // At most one outstanding helper operation per active pane.
             // Clear the canceled prior tab's UI pending marker too.
-            mModel.markPending(side,pane.active,id,true);
+            ActiveWindowTab().model.markPending(side,pane.active,id,true);
             StatusText().Text(L"폴더를 불러오는 중입니다.");
         } else StatusText().Text(L"폴더를 불러올 수 없습니다.");
     }
     void MainWindow::UpdateWatch(int side,bool force)
     {
-        auto& pane=mModel.panes[side];
+        auto& pane=ActiveWindowTab().model.panes[side];
         const auto route=pane.routeIds[pane.active];
         // This path is computed by the disposable Shell helper and passed
         // as a bounded wire value. No SHGetPathFromIDListEx on WinUI STA.
-        const std::wstring path=(side==0 || mModel.split)?
+        const std::wstring path=(side==0 || ActiveWindowTab().model.split)?
             pane.filesystemPaths[pane.active]:std::wstring{};
         if(!force && route==mWatchedRoutes[side] &&
            path==mWatchedPaths[side])return;
@@ -410,11 +410,11 @@ namespace winrt::FlyExplorer::implementation
     void MainWindow::OnNativeResult(fxfile::shellnav::IsolatedResult result)
     {
         for(int side=0;side!=2;++side) {
-            auto& pane=mModel.panes[side];
+            auto& pane=ActiveWindowTab().model.panes[side];
             for(size_t i=0;i<pane.routeIds.size();++i) {
                 if(pane.routeIds[i]!=result.route ||
                    pane.pending[i]!=result.request)continue;
-                if(!mModel.completeRequest(side,i,result.route,
+                if(!ActiveWindowTab().model.completeRequest(side,i,result.route,
                                            result.request))continue;
                 if(FAILED(result.hr)) {
                     if(i==pane.active) {
@@ -466,7 +466,7 @@ namespace winrt::FlyExplorer::implementation
         for(int side=0;side!=2;++side) {
             if(route!=mWatchedRoutes[side] ||
                token!=mWatchTokens[side])continue;
-            auto& pane=mModel.panes[side];
+            auto& pane=ActiveWindowTab().model.panes[side];
             if(pane.routeIds[pane.active]!=route ||
                pane.pending[pane.active])return;
             QueuePidl(side,pane.tabs[pane.active].target(
@@ -478,7 +478,7 @@ namespace winrt::FlyExplorer::implementation
     void MainWindow::RefreshTabs(int side)
     {
         auto view=side==0?LeftTabs():RightTabs();
-        const auto& pane=mModel.panes[static_cast<size_t>(side)];
+        const auto& pane=ActiveWindowTab().model.panes[static_cast<size_t>(side)];
         mPopulatingTabs=true;
         view.TabItems().Clear();
         for (const auto& tab : pane.tabs) {
@@ -494,15 +494,15 @@ namespace winrt::FlyExplorer::implementation
     }
     void MainWindow::ClearFileDetails(int side){
         if(mDetailCancel[side])mDetailCancel[side]->store(true);
-        mFileLists[side].invalidate();
+        ActiveWindowTab().fileLists[side].invalidate();
     }
     void MainWindow::ScheduleFileDetails(int side,bool force){
-        auto const& pane=mModel.panes[side];
+        auto const& pane=ActiveWindowTab().model.panes[side];
         if(pane.pending[pane.active])return;
         auto const route=pane.routeIds[pane.active];
         auto const tab=pane.active;
         auto const& items=pane.tabs[tab].snapshot().children;
-        const auto requestedView=mFileLists[side].viewMode;
+        const auto requestedView=ActiveWindowTab().fileLists[side].viewMode;
         double raster=1.0;
         try{if(auto xr=RootShell().XamlRoot())raster=xr.RasterizationScale();}
         catch(...){raster=1.0;}
@@ -512,8 +512,8 @@ namespace winrt::FlyExplorer::implementation
             (std::max)(16.0,baseVisual*raster+0.5)));
         const auto thumbnailPixels=static_cast<std::uint32_t>((std::min)(128.0,
             (std::max)(32.0,48.0*raster+0.5)));
-        if(!force&&mFileLists[side].isCurrent(route,tab,items.size())&&
-           mFileLists[side].visualPixels==visualPixels)return;
+        if(!force&&ActiveWindowTab().fileLists[side].isCurrent(route,tab,items.size())&&
+           ActiveWindowTab().fileLists[side].visualPixels==visualPixels)return;
         auto const& folder=pane.filesystemPaths[tab];
         if(folder.size()<3||folder[1]!=L':'||folder[2]!=L'\\')return;
         if(items.size()>1200)return;
@@ -529,8 +529,8 @@ namespace winrt::FlyExplorer::implementation
         if(mDetailCancel[side])mDetailCancel[side]->store(true);
         auto cancel=std::make_shared<std::atomic_bool>(false);
         mDetailCancel[side]=cancel;
-        const auto ticket=mFileLists[side].begin(route,tab);
-        mFileLists[side].visualPixels=visualPixels;
+        const auto ticket=ActiveWindowTab().fileLists[side].begin(route,tab);
+        ActiveWindowTab().fileLists[side].visualPixels=visualPixels;
         auto dispatch=DispatcherQueue();
         auto weak=get_weak();
         try{
@@ -697,19 +697,19 @@ namespace winrt::FlyExplorer::implementation
                     std::move(details));
                 dispatch.TryEnqueue([weak,payload,side,tab,route,ticket]{
                     if(auto ui=weak.get()){
-                        auto const& pane=ui->mModel.panes[side];
-                        if(!ui->mFileLists[side].accepts(ticket,route,tab)||
+                        auto const& pane=ui->ActiveWindowTab().model.panes[side];
+                        if(!ui->ActiveWindowTab().fileLists[side].accepts(ticket,route,tab)||
                            pane.active!=tab||pane.pending[tab]||
                            pane.routeIds[tab]!=route||
                            pane.tabs[tab].snapshot().children.size()!=payload->size())
                             return; // never apply stale metadata to a new folder
-                        ui->mFileLists[side].details=std::move(*payload);
+                        ui->ActiveWindowTab().fileLists[side].details=std::move(*payload);
                         ui->FillFiles(side);
                     }
                 });
             }).detach();
         }catch(...){
-            mFileLists[side].invalidate();
+            ActiveWindowTab().fileLists[side].invalidate();
         }
     }
     void MainWindow::OnNameColumnWidthChanged(
@@ -723,7 +723,7 @@ namespace winrt::FlyExplorer::implementation
         if(side<0)return;
         auto width=slider.Value();
         if(width<120||width>320)return;
-        mFileLists[side].nameColumnWidth=width;
+        ActiveWindowTab().fileLists[side].nameColumnWidth=width;
         if(mColumnControlsReady)FillFiles(side);
     }
     void MainWindow::OnNameFilterChanged(
@@ -738,13 +738,13 @@ namespace winrt::FlyExplorer::implementation
         if(side<0)return;
         auto text=std::wstring(input.Text().c_str());
         if(text.size()>64)return;
-        auto& state=mFileLists[side];
+        auto& state=ActiveWindowTab().fileLists[side];
         if(state.filenameFilter==text)return;
         state.filenameFilter=std::move(text);
         state.visibleCount=160;
         FillFiles(side); // Only the view changes. Shell model and stable tags do not.
         UpdateSelectionChrome();
-        if(side==mModel.activePane)UpdateFooterSummary();
+        if(side==ActiveWindowTab().model.activePane)UpdateFooterSummary();
     }
     void MainWindow::OnLoadMoreFiles(
         IInspectable const& sender,Microsoft::UI::Xaml::RoutedEventArgs const&){
@@ -754,9 +754,9 @@ namespace winrt::FlyExplorer::implementation
         const int side=label==L"LeftLoadMoreButton"?0:
                        label==L"RightLoadMoreButton"?1:-1;
         if(side<0)return;
-        auto const& pane=mModel.panes[side];
+        auto const& pane=ActiveWindowTab().model.panes[side];
         if(pane.pending[pane.active])return;
-        auto& state=mFileLists[side];
+        auto& state=ActiveWindowTab().fileLists[side];
         if(state.visibleRoute!=pane.routeIds[pane.active]||
            state.visibleTab!=pane.active)return;
         const auto available=state.filteredCount;
@@ -768,7 +768,7 @@ namespace winrt::FlyExplorer::implementation
     {
         const double nav=mShellWidth<1040.0?156.0:188.0;
         const double content=(std::max)(0.0,mShellWidth-nav-17.0);
-        const double pane=mModel.split?(std::max)(0.0,(content-1.0)/2.0):content;
+        const double pane=ActiveWindowTab().model.split?(std::max)(0.0,(content-1.0)/2.0):content;
         if(pane<250.0)return 0;
         if(pane<340.0)return 1;
         if(pane<500.0)return 2;
@@ -777,7 +777,7 @@ namespace winrt::FlyExplorer::implementation
     std::array<GridLength,4> MainWindow::DetailColumnWidths(int side) const
     {
         const int profile=DetailLayoutProfile();
-        const auto user=mFileLists[side].nameColumnWidth;
+        const auto user=ActiveWindowTab().fileLists[side].nameColumnWidth;
         if(profile==0)return {GridLength{1.0,GridUnitType::Star},GridLength{0.0,GridUnitType::Pixel},GridLength{0.0,GridUnitType::Pixel},GridLength{0.0,GridUnitType::Pixel}};
         if(profile==1)return {GridLength{1.0,GridUnitType::Star},GridLength{0.0,GridUnitType::Pixel},GridLength{64.0,GridUnitType::Pixel},GridLength{0.0,GridUnitType::Pixel}};
         if(profile==2)return {GridLength{(std::min)(user,168.0),GridUnitType::Pixel},GridLength{1.0,GridUnitType::Star},GridLength{64.0,GridUnitType::Pixel},GridLength{0.0,GridUnitType::Pixel}};
@@ -797,7 +797,7 @@ namespace winrt::FlyExplorer::implementation
     {
         auto view=side==0?LeftFiles():RightFiles();
         auto header=side==0?LeftDetailsHeader():RightDetailsHeader();
-        const auto viewMode=mFileLists[side].viewMode;
+        const auto viewMode=ActiveWindowTab().fileLists[side].viewMode;
         const bool details=viewMode==FileViewMode::Details;
         header.Height(details?24.0:0.0);
         const auto visibility=details?Visibility::Visible:Visibility::Collapsed;
@@ -810,21 +810,21 @@ namespace winrt::FlyExplorer::implementation
         }
         const int panel=viewMode==FileViewMode::SmallIcons?1:
                         viewMode==FileViewMode::MediumIcons?2:0;
-        if(mFileLists[side].appliedItemsPanel!=panel){
+        if(ActiveWindowTab().fileLists[side].appliedItemsPanel!=panel){
             const wchar_t* key=panel==1?L"ExplorerSmallIconsItemsPanel":
                                panel==2?L"ExplorerMediumIconsItemsPanel":
                                         L"ExplorerVerticalItemsPanel";
             try{
                 view.ItemsPanel(RootShell().Resources().Lookup(
                     winrt::box_value(key)).as<ItemsPanelTemplate>());
-                mFileLists[side].appliedItemsPanel=panel;
+                ActiveWindowTab().fileLists[side].appliedItemsPanel=panel;
             }catch(...){ }
         }
         if(details)ApplyDetailColumnLayout(side);
     }
     void MainWindow::UpdateSortPresentation(int side)
     {
-        const int sort=mFileLists[side].sortMode;
+        const int sort=ActiveWindowTab().fileLists[side].sortMode;
         auto decorate=[&](Button const& button,std::wstring label,int asc,int desc){
             if(sort==asc)label+=L" \u2191";else if(sort==desc)label+=L" \u2193";
             button.Content(winrt::box_value(hstring(label)));
@@ -843,8 +843,8 @@ namespace winrt::FlyExplorer::implementation
         auto button=sender.try_as<Button>();if(!button||!button.Tag())return;
         const auto tag=std::wstring(winrt::unbox_value<hstring>(button.Tag()).c_str());
         if(tag.size()!=3||tag[1]!=L','||tag[0]<L'0'||tag[0]>L'1'||tag[2]<L'0'||tag[2]>L'3')return;
-        const int side=tag[0]-L'0',column=tag[2]-L'0';if(mModel.activePane!=side)ActivatePane(side);
-        const int current=mFileLists[side].sortMode;int next=0;
+        const int side=tag[0]-L'0',column=tag[2]-L'0';if(ActiveWindowTab().model.activePane!=side)ActivatePane(side);
+        const int current=ActiveWindowTab().fileLists[side].sortMode;int next=0;
         if(column==0)next=current==0?1:0;
         else if(column==1)next=current==4?5:4;
         else if(column==2)next=current==6?2:6;
@@ -858,9 +858,9 @@ namespace winrt::FlyExplorer::implementation
         UpdateViewPresentation(side);
         UpdateSortPresentation(side);
         auto view=side==0?LeftFiles():RightFiles();
-        const auto& pane=mModel.panes[static_cast<size_t>(side)];
+        const auto& pane=ActiveWindowTab().model.panes[static_cast<size_t>(side)];
         const auto& items=pane.tabs[pane.active].snapshot().children;
-        auto& state=mFileLists[side];
+        auto& state=ActiveWindowTab().fileLists[side];
         const auto nextRoute=pane.routeIds[pane.active];
         if(state.visibleRoute!=nextRoute||state.visibleTab!=pane.active){
             state.visibleRoute=nextRoute;
@@ -873,19 +873,19 @@ namespace winrt::FlyExplorer::implementation
             auto row=old.try_as<ListViewItem>();
             if(!row||!row.Tag())continue;
             auto index=winrt::unbox_value<uint32_t>(row.Tag());
-            if(index<mFileLists[side].renderedPaths.size())
-                selected.push_back(mFileLists[side].renderedPaths[index]);
+            if(index<ActiveWindowTab().fileLists[side].renderedPaths.size())
+                selected.push_back(ActiveWindowTab().fileLists[side].renderedPaths[index]);
         }
         view.Items().Clear();
-        mFileLists[side].renderedPaths.clear();
-        mFileLists[side].renderedPaths.reserve(items.size());
+        ActiveWindowTab().fileLists[side].renderedPaths.clear();
+        ActiveWindowTab().fileLists[side].renderedPaths.reserve(items.size());
         for(auto const& item:items)
-            mFileLists[side].renderedPaths.push_back(item.parsingName);
-        const bool detailReady=mFileLists[side].isCurrent(
+            ActiveWindowTab().fileLists[side].renderedPaths.push_back(item.parsingName);
+        const bool detailReady=ActiveWindowTab().fileLists[side].isCurrent(
              pane.routeIds[pane.active],pane.active,items.size());
         std::vector<size_t> order(items.size());
         std::iota(order.begin(),order.end(),size_t{0});
-        const int mode=mFileLists[side].sortMode;
+        const int mode=ActiveWindowTab().fileLists[side].sortMode;
         auto lessName=[&](size_t lhs,size_t rhs){
             const auto& a=items[lhs].label;
             const auto& b=items[rhs].label;
@@ -894,15 +894,15 @@ namespace winrt::FlyExplorer::implementation
         std::stable_sort(order.begin(),order.end(),[&](size_t lhs,size_t rhs){
             if(items[lhs].isFolder()!=items[rhs].isFolder())return items[lhs].isFolder();
             if(detailReady&&(mode==4||mode==5)){
-                const auto& a=mFileLists[side].details[lhs].typeLabel;const auto& b=mFileLists[side].details[rhs].typeLabel;
+                const auto& a=ActiveWindowTab().fileLists[side].details[lhs].typeLabel;const auto& b=ActiveWindowTab().fileLists[side].details[rhs].typeLabel;
                 const auto cmp=::CompareStringOrdinal(a.c_str(),-1,b.c_str(),-1,TRUE);
                 if(cmp!=CSTR_EQUAL)return mode==5?cmp==CSTR_GREATER_THAN:cmp==CSTR_LESS_THAN;
             }else if(detailReady&&(mode==2||mode==6)){
-                const auto& x=mFileLists[side].details[lhs];const auto& y=mFileLists[side].details[rhs];
+                const auto& x=ActiveWindowTab().fileLists[side].details[lhs];const auto& y=ActiveWindowTab().fileLists[side].details[rhs];
                 if(x.sizeKnown!=y.sizeKnown)return x.sizeKnown;
                 if(x.sizeKnown&&x.bytes!=y.bytes)return mode==2?x.bytes>y.bytes:x.bytes<y.bytes;
             }else if(detailReady&&(mode==3||mode==7)){
-                const auto& x=mFileLists[side].details[lhs];const auto& y=mFileLists[side].details[rhs];
+                const auto& x=ActiveWindowTab().fileLists[side].details[lhs];const auto& y=ActiveWindowTab().fileLists[side].details[rhs];
                 if(x.dateKnown!=y.dateKnown)return x.dateKnown;
                 if(x.dateKnown&&x.modified!=y.modified)return mode==3?x.modified>y.modified:x.modified<y.modified;
             }
@@ -940,7 +940,7 @@ namespace winrt::FlyExplorer::implementation
             auto label=std::wstring(item.isFolder()?L"[폴더]  ":L"[파일]  ")+
                        item.label;
             if(detailReady){
-                const auto& meta=mFileLists[side].details[index];
+                const auto& meta=ActiveWindowTab().fileLists[side].details[index];
                 if(!meta.typeLabel.empty())label+=L"   |   "+meta.typeLabel;
                 if(meta.sizeKnown)label+=L"   |   "+meta.bytesLabel;
                 if(meta.dateKnown)label+=L"   |   "+meta.dateLabel;
@@ -950,7 +950,7 @@ namespace winrt::FlyExplorer::implementation
             const auto widths=DetailColumnWidths(side);
             const int detailProfile=DetailLayoutProfile();
             const auto displayNameWidth=detailProfile>=2?
-                (detailProfile==2?(std::min)(mFileLists[side].nameColumnWidth,168.0):mFileLists[side].nameColumnWidth):168.0;
+                (detailProfile==2?(std::min)(ActiveWindowTab().fileLists[side].nameColumnWidth,168.0):ActiveWindowTab().fileLists[side].nameColumnWidth):168.0;
             auto addColumn=[&](GridLength const& width){
                 ColumnDefinition def;def.Width(width);columns.ColumnDefinitions().Append(def);
             };
@@ -972,7 +972,7 @@ namespace winrt::FlyExplorer::implementation
                     localDrive=true;
             }
             auto const* iconMeta=detailReady?
-                &mFileLists[side].details[index]:nullptr;
+                &ActiveWindowTab().fileLists[side].details[index]:nullptr;
             bool actualVisual=false;
             if(iconMeta){
                 const auto& data=iconMeta->iconBgra;
@@ -1053,7 +1053,7 @@ namespace winrt::FlyExplorer::implementation
                 Grid::SetColumn(field,col);
                 columns.Children().Append(field);
             };
-            auto const* meta=detailReady?&mFileLists[side].details[index]:nullptr;
+            auto const* meta=detailReady?&ActiveWindowTab().fileLists[side].details[index]:nullptr;
             addText(meta?meta->typeLabel:L"",1);
             addText(meta&&meta->sizeKnown?meta->bytesLabel:L"",2);
             addText(meta&&meta->dateKnown?meta->dateLabel:L"",3);
@@ -1064,7 +1064,7 @@ namespace winrt::FlyExplorer::implementation
                 StackPanel cell;cell.Orientation(medium?Orientation::Vertical:Orientation::Horizontal);
                 cell.Spacing(medium?5.0:7.0);cell.VerticalAlignment(VerticalAlignment::Center);
                 if(medium)cell.HorizontalAlignment(HorizontalAlignment::Center);
-                auto const* iconMeta=detailReady?&mFileLists[side].details[index]:nullptr;
+                auto const* iconMeta=detailReady?&ActiveWindowTab().fileLists[side].details[index]:nullptr;
                 bool actualVisual=false;bool realThumb=false;
                 if(iconMeta){
                     const auto& thumb=iconMeta->thumbnailBgra;
@@ -1124,7 +1124,7 @@ namespace winrt::FlyExplorer::implementation
                   !=selected.end()){
                 // Restore selection by native parsing path, never stale
                 // pre-sort row index (including real multiple selection).
-                if(side!=mModel.activePane)row.Opacity(0.78);
+                if(side!=ActiveWindowTab().model.activePane)row.Opacity(0.78);
                 view.SelectedItems().Append(row);
             }
         }
@@ -1140,20 +1140,20 @@ namespace winrt::FlyExplorer::implementation
         const auto address=nav.snapshot().parsingName;
         AddressBox().Text(hstring(FriendlyAddress(address)));
         UpdateBreadcrumb(address);
-        BackButton().IsEnabled(nav.canBack() && !mModel.panes[mModel.activePane].pending[mModel.panes[mModel.activePane].active]);
-        ForwardButton().IsEnabled(nav.canForward() && !mModel.panes[mModel.activePane].pending[mModel.panes[mModel.activePane].active]);
+        BackButton().IsEnabled(nav.canBack() && !ActiveWindowTab().model.panes[ActiveWindowTab().model.activePane].pending[ActiveWindowTab().model.panes[ActiveWindowTab().model.activePane].active]);
+        ForwardButton().IsEnabled(nav.canForward() && !ActiveWindowTab().model.panes[ActiveWindowTab().model.activePane].pending[ActiveWindowTab().model.panes[ActiveWindowTab().model.activePane].active]);
         UpButton().IsEnabled(nav.snapshot().folder.valid() && !ILIsEmpty(nav.snapshot().folder.get()));
-        ActivePaneText().Text(mModel.activePane==0?L"활성: 왼쪽":L"활성: 오른쪽");
+        ActivePaneText().Text(ActiveWindowTab().model.activePane==0?L"활성: 왼쪽":L"활성: 오른쪽");
         PrimaryPaneTitle().Content(winrt::box_value(
-            hstring(mModel.activePane==0?L"왼쪽 창 (활성)":L"왼쪽 창")));
+            hstring(ActiveWindowTab().model.activePane==0?L"왼쪽 창 (활성)":L"왼쪽 창")));
         SecondaryPaneTitle().Content(winrt::box_value(
-            hstring(mModel.activePane==1?L"오른쪽 창 (활성)":L"오른쪽 창")));
+            hstring(ActiveWindowTab().model.activePane==1?L"오른쪽 창 (활성)":L"오른쪽 창")));
         UpdateActivePaneChrome();
         UpdateSelectionChrome();
         UpdateFooterSummary();
-        fileBar()->SetSortIndex(mFileLists[mModel.activePane].sortMode);
-        fileBar()->SetViewIndex(static_cast<int>(mFileLists[mModel.activePane].viewMode));
-        UpdateSortPresentation(mModel.activePane);
+        fileBar()->SetSortIndex(ActiveWindowTab().fileLists[ActiveWindowTab().model.activePane].sortMode);
+        fileBar()->SetViewIndex(static_cast<int>(ActiveWindowTab().fileLists[ActiveWindowTab().model.activePane].viewMode));
+        UpdateSortPresentation(ActiveWindowTab().model.activePane);
         StatusText().Text(status);
         Title(L"flyExplorer · "+hstring(nav.snapshot().displayName));
         UpdateWatch(0);
@@ -1164,20 +1164,20 @@ namespace winrt::FlyExplorer::implementation
     bool MainWindow::OpenFolder(std::wstring const& path)
     {
         if(path.empty())return false;
-        mRestoreQueue[static_cast<size_t>(mModel.activePane)].clear();
-        QueuePath(mModel.activePane,path);
+        mRestoreQueue[static_cast<size_t>(ActiveWindowTab().model.activePane)].clear();
+        QueuePath(ActiveWindowTab().model.activePane,path);
         return true;
     }
     void MainWindow::ActivatePane(int side)
     {
-        if(!mModel.dispatch(fxfile::explorerui::Command::ActivatePane,side)
+        if(!ActiveWindowTab().model.dispatch(fxfile::explorerui::Command::ActivatePane,side)
                     .accepted)return;
         const auto& nav=Current();
         const auto address=nav.snapshot().parsingName;
         AddressBox().Text(hstring(FriendlyAddress(address)));
         UpdateBreadcrumb(address);
-        BackButton().IsEnabled(nav.canBack() && !mModel.panes[mModel.activePane].pending[mModel.panes[mModel.activePane].active]);
-        ForwardButton().IsEnabled(nav.canForward() && !mModel.panes[mModel.activePane].pending[mModel.panes[mModel.activePane].active]);
+        BackButton().IsEnabled(nav.canBack() && !ActiveWindowTab().model.panes[ActiveWindowTab().model.activePane].pending[ActiveWindowTab().model.panes[ActiveWindowTab().model.activePane].active]);
+        ForwardButton().IsEnabled(nav.canForward() && !ActiveWindowTab().model.panes[ActiveWindowTab().model.activePane].pending[ActiveWindowTab().model.panes[ActiveWindowTab().model.activePane].active]);
         UpButton().IsEnabled(nav.snapshot().folder.valid() && !ILIsEmpty(nav.snapshot().folder.get()));
         ActivePaneText().Text(side==0?L"활성: 왼쪽":L"활성: 오른쪽");
         PrimaryPaneTitle().Content(winrt::box_value(
@@ -1185,8 +1185,8 @@ namespace winrt::FlyExplorer::implementation
         SecondaryPaneTitle().Content(winrt::box_value(
             hstring(side==1?L"오른쪽 창 (활성)":L"오른쪽 창")));
         UpdateActivePaneChrome();
-        fileBar()->SetSortIndex(mFileLists[side].sortMode);
-        fileBar()->SetViewIndex(static_cast<int>(mFileLists[side].viewMode));
+        fileBar()->SetSortIndex(ActiveWindowTab().fileLists[side].sortMode);
+        fileBar()->SetViewIndex(static_cast<int>(ActiveWindowTab().fileLists[side].viewMode));
         UpdateSortPresentation(side);
         UpdateSelectionChrome();
         UpdateFooterSummary();
@@ -1194,7 +1194,7 @@ namespace winrt::FlyExplorer::implementation
     }
     void MainWindow::UpdateActivePaneChrome()
     {
-        const bool left=mModel.activePane==0;
+        const bool left=ActiveWindowTab().model.activePane==0;
         PrimaryPane().BorderThickness(Thickness{0.0,2.0,0.0,0.0});
         SecondaryPane().BorderThickness(Thickness{0.0,2.0,0.0,0.0});
         PrimaryPane().Opacity(1.0);
@@ -1224,7 +1224,7 @@ namespace winrt::FlyExplorer::implementation
             for(auto const& item:view.Items()){
                 if(auto row=item.try_as<ListViewItem>())row.Opacity(1.0);
             }
-            if(side!=mModel.activePane){
+            if(side!=ActiveWindowTab().model.activePane){
                 for(auto const& item:view.SelectedItems()){
                     if(auto row=item.try_as<ListViewItem>())row.Opacity(0.78);
                 }
@@ -1245,10 +1245,10 @@ namespace winrt::FlyExplorer::implementation
     }
     void MainWindow::UpdateFooterSummary()
     {
-        const int side=mModel.activePane;
+        const int side=ActiveWindowTab().model.activePane;
         auto view=side==0?LeftFiles():RightFiles();
-        const auto& pane=mModel.panes[side];
-        const auto& state=mFileLists[side];
+        const auto& pane=ActiveWindowTab().model.panes[side];
+        const auto& state=ActiveWindowTab().fileLists[side];
         std::size_t count=pane.tabs[pane.active].snapshot().children.size();
         if(state.visibleRoute==pane.routeIds[pane.active]&&state.visibleTab==pane.active)
             count=state.filteredCount;
@@ -1275,8 +1275,8 @@ namespace winrt::FlyExplorer::implementation
         auto view=sender.try_as<ListView>();
         if(!view)return;
         UpdateSelectionChrome();
-        if((view==LeftFiles()&&mModel.activePane==0)||
-           (view==RightFiles()&&mModel.activePane==1))
+        if((view==LeftFiles()&&ActiveWindowTab().model.activePane==0)||
+           (view==RightFiles()&&ActiveWindowTab().model.activePane==1))
             UpdateFooterSummary();
     }
     void MainWindow::OnFileSelectionKeyUp(IInspectable const&,
@@ -1304,7 +1304,7 @@ namespace winrt::FlyExplorer::implementation
         if(!Current().canBack()) {
             StatusText().Text(L"이 탭에 이전 폴더가 없습니다.");return;
         }
-        QueuePidl(mModel.activePane,Current().target(
+        QueuePidl(ActiveWindowTab().model.activePane,Current().target(
             fxfile::shellnav::HistoryAction::Back),
             fxfile::shellnav::NavigationAction::Back);
     }
@@ -1313,13 +1313,13 @@ namespace winrt::FlyExplorer::implementation
         if(!Current().canForward()) {
             StatusText().Text(L"이 탭에 다음 폴더가 없습니다.");return;
         }
-        QueuePidl(mModel.activePane,Current().target(
+        QueuePidl(ActiveWindowTab().model.activePane,Current().target(
             fxfile::shellnav::HistoryAction::Forward),
             fxfile::shellnav::NavigationAction::Forward);
     }
     void MainWindow::OnUpClicked(IInspectable const&,RoutedEventArgs const&)
     {
-        QueuePidl(mModel.activePane,Current().target(
+        QueuePidl(ActiveWindowTab().model.activePane,Current().target(
             fxfile::shellnav::HistoryAction::Up),
             fxfile::shellnav::NavigationAction::Up);
     }
@@ -1410,7 +1410,7 @@ namespace winrt::FlyExplorer::implementation
             args.Handled(true);
             return;
         }
-        auto& pane=mModel.panes[static_cast<size_t>(mModel.activePane)];
+        auto& pane=ActiveWindowTab().model.panes[static_cast<size_t>(ActiveWindowTab().model.activePane)];
         const auto& path=pane.filesystemPaths[pane.active];
         if(path.empty()){
             StatusText().Text(L"현재 파일 시스템 폴더에서만 빠른 검색을 실행할 수 있습니다.");
@@ -1435,13 +1435,13 @@ namespace winrt::FlyExplorer::implementation
         for(int side=0;side<2;++side){
             if(mDetailLayoutProfiles[side]!=profile){
                 mDetailLayoutProfiles[side]=profile;
-                if(mColumnControlsReady&&!mModel.panes[side].tabs.empty())FillFiles(side);
+                if(mColumnControlsReady&&!ActiveWindowTab().model.panes[side].tabs.empty())FillFiles(side);
             }else ApplyDetailColumnLayout(side);
         }
     }
     void MainWindow::OnNewTabClicked(IInspectable const&,RoutedEventArgs const&)
     {
-        auto& pane=mModel.panes[static_cast<size_t>(mModel.activePane)];
+        auto& pane=ActiveWindowTab().model.panes[static_cast<size_t>(ActiveWindowTab().model.activePane)];
         if (pane.tabs.size()>=32) {
             StatusText().Text(L"창마다 탭은 최대 32개까지 지원합니다.");
             return;
@@ -1452,43 +1452,43 @@ namespace winrt::FlyExplorer::implementation
             StatusText().Text(L"먼저 현재 폴더를 불러와 주세요.");
             return;
         }
-        if(!mModel.dispatch(fxfile::explorerui::Command::AddTab,
-                            mModel.activePane).accepted)return;
-        QueuePidl(mModel.activePane,std::move(start),
+        if(!ActiveWindowTab().model.dispatch(fxfile::explorerui::Command::AddTab,
+                            ActiveWindowTab().model.activePane).accepted)return;
+        QueuePidl(ActiveWindowTab().model.activePane,std::move(start),
                   fxfile::shellnav::NavigationAction::Open);
         Refresh(L"새 탭의 폴더를 불러오는 중입니다.");
     }
     void MainWindow::OnCloseTabClicked(IInspectable const&,RoutedEventArgs const&)
     {
-        auto& pane=mModel.panes[static_cast<size_t>(mModel.activePane)];
+        auto& pane=ActiveWindowTab().model.panes[static_cast<size_t>(ActiveWindowTab().model.activePane)];
         if (pane.tabs.size()<=1) {
             StatusText().Text(L"각 창에는 탭을 최소 한 개 유지해야 합니다.");
             return;
         }
-        const auto change=mModel.dispatch(
-            fxfile::explorerui::Command::CloseTab,mModel.activePane);
+        const auto change=ActiveWindowTab().model.dispatch(
+            fxfile::explorerui::Command::CloseTab,ActiveWindowTab().model.activePane);
         if(!change.accepted)return;
         mSupervisor->forget(change.releasedRoute);
         mWatcher->unwatch(change.releasedRoute);
         mShellWatcher->unwatch(change.releasedRoute);
-        mRestoreQueue[static_cast<size_t>(mModel.activePane)].clear();
+        mRestoreQueue[static_cast<size_t>(ActiveWindowTab().model.activePane)].clear();
         Refresh(L"탭을 닫았습니다.");
     }
     void MainWindow::OnSplitClicked(IInspectable const&,RoutedEventArgs const&)
     {
-        if(!mModel.dispatch(fxfile::explorerui::Command::ToggleSplit)
+        if(!ActiveWindowTab().model.dispatch(fxfile::explorerui::Command::ToggleSplit)
                   .accepted)return;
-        SecondaryPane().Visibility(mModel.split?Visibility::Visible:Visibility::Collapsed);
-        PaneDivider().Visibility(mModel.split?Visibility::Visible:Visibility::Collapsed);
-        SecondaryColumn().Width(mModel.split?
+        SecondaryPane().Visibility(ActiveWindowTab().model.split?Visibility::Visible:Visibility::Collapsed);
+        PaneDivider().Visibility(ActiveWindowTab().model.split?Visibility::Visible:Visibility::Collapsed);
+        SecondaryColumn().Width(ActiveWindowTab().model.split?
             GridLength{1.0,GridUnitType::Star}:GridLength{0.0,GridUnitType::Pixel});
         auto splitButton=SplitButton();
-        auto splitLabel=hstring(mModel.split?
+        auto splitLabel=hstring(ActiveWindowTab().model.split?
             L"\uB2E8\uC77C \uCC3D":L"\uBD84\uD560 \uCC3D");
         Microsoft::UI::Xaml::Automation::AutomationProperties::SetName(
             splitButton,splitLabel);
         ToolTipService::SetToolTip(splitButton,winrt::box_value(splitLabel));
-        Refresh(mModel.split?L"두 창이 독립적으로 열렸습니다.":L"단일 창으로 표시합니다. 다른 창의 상태는 유지됩니다.");
+        Refresh(ActiveWindowTab().model.split?L"두 창이 독립적으로 열렸습니다.":L"단일 창으로 표시합니다. 다른 창의 상태는 유지됩니다.");
     }
     void MainWindow::OnActivateLeft(IInspectable const&,RoutedEventArgs const&)
     {
@@ -1517,12 +1517,12 @@ namespace winrt::FlyExplorer::implementation
     {
         auto view=sender.as<TabView>();
         if (mPopulatingTabs || view.SelectedIndex()<0) return;
-        auto& pane=mModel.panes[0];
+        auto& pane=ActiveWindowTab().model.panes[0];
         if (static_cast<size_t>(view.SelectedIndex())>=pane.tabs.size())return;
         // WinUI raises deferred SelectionChanged for programmatic strip
         // rebuilds. Only a DIFFERENT selected tab is user navigation.
         if (static_cast<size_t>(view.SelectedIndex())==pane.active)return;
-        if(!mModel.dispatch(fxfile::explorerui::Command::SelectTab,0,
+        if(!ActiveWindowTab().model.dispatch(fxfile::explorerui::Command::SelectTab,0,
                  static_cast<size_t>(view.SelectedIndex())).accepted)return;
         Refresh(L"왼쪽 탭을 선택했습니다.");
     }
@@ -1530,11 +1530,11 @@ namespace winrt::FlyExplorer::implementation
         IInspectable const& sender,SelectionChangedEventArgs const&)
     {
         auto view=sender.as<TabView>();
-        if (mPopulatingTabs || view.SelectedIndex()<0 || !mModel.split)return;
-        auto& pane=mModel.panes[1];
+        if (mPopulatingTabs || view.SelectedIndex()<0 || !ActiveWindowTab().model.split)return;
+        auto& pane=ActiveWindowTab().model.panes[1];
         if (static_cast<size_t>(view.SelectedIndex())>=pane.tabs.size())return;
         if (static_cast<size_t>(view.SelectedIndex())==pane.active)return;
-        if(!mModel.dispatch(fxfile::explorerui::Command::SelectTab,1,
+        if(!ActiveWindowTab().model.dispatch(fxfile::explorerui::Command::SelectTab,1,
                  static_cast<size_t>(view.SelectedIndex())).accepted)return;
         Refresh(L"오른쪽 탭을 선택했습니다.");
     }
@@ -1564,13 +1564,13 @@ namespace winrt::FlyExplorer::implementation
     void MainWindow::OnLeftPaneTapped(
         IInspectable const&,Input::TappedRoutedEventArgs const&)
     {
-        if(mModel.activePane!=0)ActivatePane(0);
+        if(ActiveWindowTab().model.activePane!=0)ActivatePane(0);
         QueueSelectionPresentationUpdate();
     }
     void MainWindow::OnRightPaneTapped(
         IInspectable const&,Input::TappedRoutedEventArgs const&)
     {
-        if(mModel.activePane!=1)ActivatePane(1);
+        if(ActiveWindowTab().model.activePane!=1)ActivatePane(1);
         QueueSelectionPresentationUpdate();
     }
     void MainWindow::OnLeftFileKeyDown(

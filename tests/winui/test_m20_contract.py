@@ -20,7 +20,7 @@ class ModelAndFullShell(unittest.TestCase):
             "filesystemPaths","nextRoute_=1"):
    self.assertIn(v,h)
   ui=source("app/winui/MainWindow.xaml.h")
-  self.assertIn("fxfile::explorerui::Model mModel",ui)
+  self.assertIn("std::vector<fxfile::previewtabs::WindowTabState> mWindowTabs{1}",ui)
   self.assertNotIn("struct PaneState",ui)
  def test_all_real_tab_and_pane_commands_dispatch_through_native_model(self):
   cpp=source("app/winui/MainWindow.xaml.cpp")
@@ -31,17 +31,17 @@ class ModelAndFullShell(unittest.TestCase):
   self.assertNotIn("mNextRoute",cpp)
  def test_request_and_event_matching_keep_stale_helpers_out_of_ui(self):
   ui=source("app/winui/MainWindow.xaml.cpp")
-  self.assertIn("mModel.markPending(side,pane.active,id,true)",ui)
-  self.assertIn("mModel.completeRequest(side,i,result.route",ui)
+  self.assertIn("ActiveWindowTab().model.markPending(side,pane.active,id,true)",ui)
+  self.assertIn("ActiveWindowTab().model.completeRequest(side,i,result.route",ui)
   lib=source("src/base/explorer_ui_state.cpp")
   self.assertIn("pane.routeIds[tab]!=route",lib)
   self.assertIn("pane.pending[tab]!=request",lib)
   self.assertIn("nextRoute_++",lib)
  def test_workspace_reset_uses_native_model_and_still_owns_workers(self):
   src=source("app/winui/m19_features.cpp")
-  self.assertIn("mModel.reset(doc.split,counts,selected)",src)
+  self.assertIn("ActiveWindowTab().model.reset(doc.split,counts,selected)",src)
   self.assertIn("mSupervisor->forget(route)",src)
-  self.assertIn("mModel.markPending(side,next.first,id,false)",src)
+  self.assertIn("ActiveWindowTab().model.markPending(side,next.first,id,false)",src)
  def test_winui_full_frame_has_light_dark_system_and_this_pc(self):
   xaml=source("app/winui/MainWindow.xaml")
   header_path=ROOT/"app/winui/ShellHeader.xaml"

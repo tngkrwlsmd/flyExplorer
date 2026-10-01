@@ -60,9 +60,9 @@ void MainWindow::OnSavePrivateSession(
   if(!snapshot.split&&side==1)continue;
   data.paths[side]=snapshot.paths[side];
  }
- data.activeSide=static_cast<std::uint32_t>(mModel.activePane);
- data.sort={{static_cast<std::uint32_t>(mFileLists[0].sortMode),
-             static_cast<std::uint32_t>(mFileLists[1].sortMode)}};
+ data.activeSide=static_cast<std::uint32_t>(ActiveWindowTab().model.activePane);
+ data.sort={{static_cast<std::uint32_t>(ActiveWindowTab().fileLists[0].sortMode),
+             static_cast<std::uint32_t>(ActiveWindowTab().fileLists[1].sortMode)}};
  try{
   const auto current=AppWindow().Size();
   data.width=static_cast<std::uint32_t>((std::max)(current.Width,0));
@@ -70,7 +70,7 @@ void MainWindow::OnSavePrivateSession(
   const auto primary=PrimaryColumn().ActualWidth();
   const auto secondary=SecondaryColumn().ActualWidth();
   const auto total=primary+secondary;
-  if(mModel.split&&total>1)
+  if(ActiveWindowTab().model.split&&total>1)
    data.splitPermille=static_cast<std::uint32_t>(
        (std::clamp)(primary/total*1000.,300.,700.));
  }catch(...){
@@ -128,17 +128,17 @@ void MainWindow::LoadPrivateSession(){
      target.selected={{
          static_cast<size_t>(session->selected[0]),
          static_cast<size_t>(session->selected[1])}};
-     ui->mFileLists[0].sortMode=static_cast<int>(session->sort[0]);
-     ui->mFileLists[1].sortMode=static_cast<int>(session->sort[1]);
+     ui->ActiveWindowTab().fileLists[0].sortMode=static_cast<int>(session->sort[0]);
+     ui->ActiveWindowTab().fileLists[1].sortMode=static_cast<int>(session->sort[1]);
      ui->ApplyWorkspace(std::move(target));
-     if(ui->mModel.split){
+     if(ui->ActiveWindowTab().model.split){
       const auto ratio=static_cast<double>(session->splitPermille);
       ui->PrimaryColumn().Width(GridLength{ratio,GridUnitType::Star});
       ui->SecondaryColumn().Width(GridLength{1000.-ratio,GridUnitType::Star});
      }
-     ui->mModel.dispatch(fxfile::explorerui::Command::ActivatePane,
+     ui->ActiveWindowTab().model.dispatch(fxfile::explorerui::Command::ActivatePane,
          static_cast<int>(session->activeSide));
-     ui->fileBar()->SetSortIndex(ui->mFileLists[ui->mModel.activePane].sortMode);
+     ui->fileBar()->SetSortIndex(ui->ActiveWindowTab().fileLists[ui->ActiveWindowTab().model.activePane].sortMode);
      try{
       ui->AppWindow().Resize({static_cast<int>(session->width),
                                static_cast<int>(session->height)});

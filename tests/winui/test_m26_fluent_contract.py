@@ -146,7 +146,7 @@ class FluentShellContract(unittest.TestCase):
         self.assertIn("UpdateFooterSummary()",impl)
         self.assertIn("UpdateSelectionChrome()",impl)
         self.assertIn("QueueSelectionPresentationUpdate()",impl)
-        self.assertIn("side!=mModel.activePane",impl)
+        self.assertIn("side!=ActiveWindowTab().model.activePane",impl)
         self.assertGreaterEqual(main.count('UseSystemFocusVisuals" Value="True"'),2)
         self.assertGreaterEqual(toolbar.count('UseSystemFocusVisuals" Value="True"'),2)
 
@@ -165,9 +165,9 @@ class FluentShellContract(unittest.TestCase):
         self.assertIn("ExplorerSmallIconsItemsPanel",main)
         self.assertIn("ExplorerMediumIconsItemsPanel",main)
         self.assertIn("UpdateViewPresentation(int side)",impl)
-        self.assertIn("mFileLists[side].viewMode",impl)
+        self.assertIn("ActiveWindowTab().fileLists[side].viewMode",impl)
         self.assertIn("appliedItemsPanel",state)
-        self.assertIn("mFileLists[side].appliedItemsPanel!=panel",impl)
+        self.assertIn("ActiveWindowTab().fileLists[side].appliedItemsPanel!=panel",impl)
         self.assertIn("if(mDetailCancel[side])mDetailCancel[side]->store(true)",impl)
         self.assertIn("if(state.viewMode==FileViewMode::List){row.MinHeight(32)",impl)
         self.assertIn("row.KeyDown([weak,side]",impl)
@@ -180,6 +180,18 @@ class FluentShellContract(unittest.TestCase):
         self.assertIn("legacyText",prefs)
         self.assertIn('schema=2\\r\\nlanguage=ko-KR',prefs)
         self.assertIn('view="+viewName(view)',prefs)
+
+    def test_v7_window_tab_state_owns_workspace_without_xaml(self):
+        header=text("MainWindow.xaml.h")
+        state=text("window_tab_state.h")
+        self.assertIn("struct WindowTabState final",state)
+        self.assertIn("fxfile::explorerui::Model model",state)
+        self.assertIn("fileLists",state)
+        self.assertNotIn("Microsoft::UI::Xaml",state)
+        self.assertIn("mWindowTabs{1}",header)
+        self.assertIn("mActiveWindowTab=0",header)
+        self.assertIn("ActiveWindowTab()",header)
+        self.assertNotIn("fxfile::explorerui::Model mModel",header)
 
     def test_explorer_like_v61_icon_view_density_contract(self):
         main=text("MainWindow.xaml")
@@ -206,7 +218,7 @@ class FluentShellContract(unittest.TestCase):
             self.assertIn(token,state)
         for token in ("RasterizationScale()",'L".flyfolder"',
                       "requestedView==FileViewMode::MediumIcons",
-                      "mFileLists[side].accepts(ticket,route,tab)"):
+                      "ActiveWindowTab().fileLists[side].accepts(ticket,route,tab)"):
             self.assertIn(token,impl)
         self.assertNotIn("SHGetFileInfoW",impl)
         self.assertIn("requestedPixels",assoc)

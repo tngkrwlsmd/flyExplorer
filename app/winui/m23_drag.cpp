@@ -27,7 +27,7 @@ void MainWindow::OnFileDragItemsStarting(
  const int side=view==LeftFiles()?0:view==RightFiles()?1:-1;
  if(side<0||mFileOperationPending||args.Items().Size()==0||
     args.Items().Size()>32){args.Cancel(true);return;}
- auto const& pane=mModel.panes[side];
+ auto const& pane=ActiveWindowTab().model.panes[side];
  const auto tab=pane.active;
  if(pane.pending[tab]||pane.filesystemPaths[tab].empty()){
   args.Cancel(true);return;
@@ -63,7 +63,7 @@ void MainWindow::OnFileRowDragStarting(
  if(!row||!row.Tag()||side<0||side>1||mFileOperationPending){
   args.Cancel(true);return;
  }
- auto const& pane=mModel.panes[side];
+ auto const& pane=ActiveWindowTab().model.panes[side];
  const auto tab=pane.active;
  if(pane.pending[tab]||pane.filesystemPaths[tab].empty()){
   args.Cancel(true);return;
@@ -113,7 +113,7 @@ void MainWindow::OnFileDragOver(
  if(side<0||mFileOperationPending||mDropReading){
   args.AcceptedOperation(DataPackageOperation::None);return;
  }
- auto const& pane=mModel.panes[side];
+ auto const& pane=ActiveWindowTab().model.panes[side];
  if(pane.pending[pane.active]||pane.filesystemPaths[pane.active].empty()){
   args.AcceptedOperation(DataPackageOperation::None);return;
  }
@@ -133,7 +133,7 @@ fire_and_forget MainWindow::OnFileDrop(
  auto list=sender.try_as<ListView>();
  const int side=list==LeftFiles()?0:list==RightFiles()?1:-1;
  if(side<0||mFileOperationPending||mDropReading)co_return;
- auto const& target=mModel.panes[side];
+ auto const& target=ActiveWindowTab().model.panes[side];
  if(target.pending[target.active]||target.filesystemPaths[target.active].empty())
   co_return;
  const auto tab=target.active,route=target.routeIds[tab];
@@ -156,7 +156,7 @@ fire_and_forget MainWindow::OnFileDrop(
     StatusText().Text(L"다른 창에서 시작하지 않은 내부 파일 끌기를 거부했습니다.");
     mDropReading=false;deferral.Complete();co_return;
    }
-   auto const& source=mModel.panes[mPrivateDragSide];
+   auto const& source=ActiveWindowTab().model.panes[mPrivateDragSide];
    if(source.pending[source.active]||
       source.routeIds[source.active]!=mPrivateDragRoute||
       source.filesystemPaths[source.active]!=mPrivateDragParent){
@@ -191,7 +191,7 @@ fire_and_forget MainWindow::OnFileDrop(
   }else{
    mDropReading=false;deferral.Complete();co_return;
   }
-  const auto& live=mModel.panes[side];
+  const auto& live=ActiveWindowTab().model.panes[side];
   if(mFileOperationPending||live.active!=tab||
      live.pending[tab]||live.routeIds[tab]!=route||
      live.filesystemPaths[tab]!=destination){

@@ -57,18 +57,18 @@ void MainWindow::OnFileRightTapped(
 }
 void MainWindow::UpdateSort(int selection){
  if(selection<0||selection>7)return;
- mFileLists[mModel.activePane].sortMode=selection;
+ ActiveWindowTab().fileLists[ActiveWindowTab().model.activePane].sortMode=selection;
  fileBar()->SetSortIndex(selection);
- UpdateSortPresentation(mModel.activePane);
- FillFiles(mModel.activePane);
+ UpdateSortPresentation(ActiveWindowTab().model.activePane);
+ FillFiles(ActiveWindowTab().model.activePane);
 }
 void MainWindow::RunTransfer(fxfile::shelltransfer::Kind kind){
  if(mFileOperationPending){
   StatusText().Text(L"이전 파일 작업이 완료될 때까지 기다려 주세요.");
   return;
  }
- const int side=mModel.activePane;
- auto const& pane=mModel.panes[side];
+ const int side=ActiveWindowTab().model.activePane;
+ auto const& pane=ActiveWindowTab().model.panes[side];
  auto const tab=pane.active;
  if(pane.pending[tab]||pane.filesystemPaths[tab].empty()){
   StatusText().Text(L"실제 폴더를 완전히 불러온 후 파일 작업을 시작하세요.");
@@ -78,11 +78,11 @@ void MainWindow::RunTransfer(fxfile::shelltransfer::Kind kind){
  req.kind=kind;
  req.sourceParent=pane.filesystemPaths[tab];
  if(kind!=fxfile::shelltransfer::Kind::Recycle){
-  if(!mModel.split){
+  if(!ActiveWindowTab().model.split){
    StatusText().Text(L"좌우 창을 모두 연 뒤 반대쪽 폴더로 복사하거나 이동하세요.");
    return;
   }
-  const auto& other=mModel.panes[1-side];
+  const auto& other=ActiveWindowTab().model.panes[1-side];
   if(other.pending[other.active]||other.filesystemPaths[other.active].empty()){
    StatusText().Text(L"반대쪽 창의 실제 폴더를 먼저 불러오세요.");
    return;
@@ -127,7 +127,7 @@ winrt::fire_and_forget MainWindow::ConfirmRecycle(fxfile::shelltransfer::Request
  dialog.CloseButtonText(L"취소");
  dialog.DefaultButton(ContentDialogButton::Close);
  if(co_await dialog.ShowAsync()!=ContentDialogResult::Primary)co_return;
- const auto& pane=mModel.panes[mModel.activePane];
+ const auto& pane=ActiveWindowTab().model.panes[ActiveWindowTab().model.activePane];
  if(pane.pending[pane.active]||
     pane.filesystemPaths[pane.active]!=req.sourceParent){
   StatusText().Text(L"확인하는 동안 원본 폴더가 변경됐습니다. 다시 선택하세요.");
@@ -148,7 +148,7 @@ winrt::fire_and_forget MainWindow::ConfirmCollision(fxfile::shelltransfer::Reque
  dialog.CloseButtonText(L"취소");
  dialog.DefaultButton(ContentDialogButton::Close);
  if(co_await dialog.ShowAsync()!=ContentDialogResult::Primary)co_return;
- const auto& source=mModel.panes[mModel.activePane];
+ const auto& source=ActiveWindowTab().model.panes[ActiveWindowTab().model.activePane];
  if(source.pending[source.active]||
     (source.filesystemPaths[source.active]!=req.sourceParent&&
      source.filesystemPaths[source.active]!=req.destination)){
@@ -164,8 +164,8 @@ void MainWindow::StartTransfer(fxfile::shelltransfer::Request request){
  auto progress=std::make_shared<Progress>();
  mTransferProgress=progress;
  const auto epoch=++mTransferEpoch;
- auto const side=mModel.activePane;
- auto const& pane=mModel.panes[side];
+ auto const side=ActiveWindowTab().model.activePane;
+ auto const& pane=ActiveWindowTab().model.panes[side];
  const auto tab=pane.active,route=pane.routeIds[tab];
  const auto originalParent=request.sourceParent;
  const auto originalVisibleFolder=pane.filesystemPaths[tab];
@@ -207,7 +207,7 @@ void MainWindow::StartTransfer(fxfile::shelltransfer::Request request){
      if(ui->mTransferTimer)ui->mTransferTimer.Stop();
      ui->mTransferProgress.reset();
      ui->SetFileButtonsBusy(false,false);
-     auto const& pane=ui->mModel.panes[side];
+     auto const& pane=ui->ActiveWindowTab().model.panes[side];
      // Native data mutation is a user-approved action. A stale callback
      // must not update an unrelated pane/tab after user navigation.
      if(tab>=pane.routeIds.size()||pane.routeIds[tab]!=route||
@@ -233,7 +233,7 @@ void MainWindow::StartTransfer(fxfile::shelltransfer::Request request){
      // Independent watchers refresh the destination pane; force a
      // preview refresh if the other route is still active and stable.
      if(request.kind!=fxfile::shelltransfer::Kind::Recycle){
-      auto const& other=ui->mModel.panes[1-side];
+      auto const& other=ui->ActiveWindowTab().model.panes[1-side];
       if(!other.pending[other.active]&&
           (other.filesystemPaths[other.active]==request.destination||
            other.filesystemPaths[other.active]==request.sourceParent)){
@@ -253,7 +253,7 @@ void MainWindow::StartTransfer(fxfile::shelltransfer::Request request){
  }
 }
 bool MainWindow::CopySelectedToWindowsClipboard(int side,bool cut){
- auto const& pane=mModel.panes[side];
+ auto const& pane=ActiveWindowTab().model.panes[side];
  if(pane.pending[pane.active]||pane.filesystemPaths[pane.active].empty()){
   StatusText().Text(L"폴더를 완전히 불러온 후 항목을 선택하세요.");return false;
  }
@@ -297,7 +297,7 @@ void MainWindow::PasteFromWindowsClipboard(){
  if(mFileOperationPending){
   StatusText().Text(L"이전 파일 작업이 끝난 후 붙여넣으세요.");return;
  }
- const auto& pane=mModel.panes[mModel.activePane];
+ const auto& pane=ActiveWindowTab().model.panes[ActiveWindowTab().model.activePane];
  if(pane.pending[pane.active]||pane.filesystemPaths[pane.active].empty()){
   StatusText().Text(L"먼저 실제 대상 폴더를 불러오세요.");return;
  }
@@ -330,10 +330,10 @@ void MainWindow::PasteFromWindowsClipboard(){
  StartTransfer(std::move(request));
 }
 void MainWindow::OnWindowsCopy(IInspectable const&,RoutedEventArgs const&){
- CopySelectedToWindowsClipboard(mModel.activePane,false);
+ CopySelectedToWindowsClipboard(ActiveWindowTab().model.activePane,false);
 }
 void MainWindow::OnWindowsCut(IInspectable const&,RoutedEventArgs const&){
- CopySelectedToWindowsClipboard(mModel.activePane,true);
+ CopySelectedToWindowsClipboard(ActiveWindowTab().model.activePane,true);
 }
 void MainWindow::OnWindowsPaste(IInspectable const&,RoutedEventArgs const&){
  PasteFromWindowsClipboard();
@@ -344,8 +344,8 @@ void MainWindow::OnExternalWindowsContextMenu(
   StatusText().Text(L"Shell \uC791\uC5C5\uC774 \uB05D\uB09C \uB4A4 \uC2DC\uB3C4\uD558\uC138\uC694.");
   return;
  }
- const auto side=mModel.activePane;
- auto const& pane=mModel.panes[side];
+ const auto side=ActiveWindowTab().model.activePane;
+ auto const& pane=ActiveWindowTab().model.panes[side];
  if(pane.pending[pane.active]||pane.filesystemPaths[pane.active].empty())
   return;
  auto list=side==0?LeftFiles():RightFiles();
@@ -403,7 +403,7 @@ void MainWindow::StartInternalPaste(){
  if(mClipboardSources.empty()||mFileOperationPending){
   StatusText().Text(L"앱 내부에 붙여넣을 항목이 없습니다.");return;
  }
- auto const& pane=mModel.panes[mModel.activePane];
+ auto const& pane=ActiveWindowTab().model.panes[ActiveWindowTab().model.activePane];
  if(pane.pending[pane.active]||pane.filesystemPaths[pane.active].empty()){
   StatusText().Text(L"붙여넣을 대상 폴더를 먼저 불러오세요.");return;
  }
@@ -417,7 +417,7 @@ void MainWindow::StartInternalPaste(){
 }
 void MainWindow::HandleFileShortcut(
  int side,Microsoft::UI::Xaml::Input::KeyRoutedEventArgs const& args){
- if(side!=mModel.activePane)ActivatePane(side);
+ if(side!=ActiveWindowTab().model.activePane)ActivatePane(side);
  const auto vk=args.Key();
  const auto ctrl=(::GetKeyState(VK_CONTROL)&0x8000)!=0;
  const auto shift=(::GetKeyState(VK_SHIFT)&0x8000)!=0;

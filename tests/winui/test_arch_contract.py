@@ -25,7 +25,7 @@ class MigrationContracts(unittest.TestCase):
   for n in ("AddressBox","LeftTabs","RightTabs","LeftFiles","RightFiles",
             "NewTabButton","CloseTabButton","SplitButton"):
    self.assertIn('x:Name="'+n+'"',xaml)
-  self.assertIn("fxfile::explorerui::Model mModel",header)
+  self.assertIn("std::vector<fxfile::previewtabs::WindowTabState> mWindowTabs{1}",header)
   self.assertIn("pane.tabs.emplace_back();",
      (ROOT.parents[1]/"src/base/explorer_ui_state.cpp").read_text(encoding="utf-8-sig"))
   self.assertIn("OpenSelectedFolder(int side)",impl)

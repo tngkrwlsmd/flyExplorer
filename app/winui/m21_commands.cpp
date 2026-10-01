@@ -36,8 +36,8 @@ void MainWindow::BeginFileNameCommand(fxfile::filecommand::Kind kind){
  }
  std::wstring initial;
  if(kind==fxfile::filecommand::Kind::RenameSelected){
-  const int side=mModel.activePane;
-  auto& pane=mModel.panes[static_cast<size_t>(side)];
+  const int side=ActiveWindowTab().model.activePane;
+  auto& pane=ActiveWindowTab().model.panes[static_cast<size_t>(side)];
   const size_t tab=pane.active;
   const auto view=side==0?LeftFiles():RightFiles();
   const auto picked=view.SelectedItem();
@@ -65,8 +65,8 @@ void MainWindow::ExecuteFileCommand(fxfile::filecommand::Kind kind){
      StatusText().Text(L"이전 파일 작업이 완료될 때까지 기다려 주세요.");
      return;
  }
- const int side=mModel.activePane;
- auto& pane=mModel.panes[static_cast<size_t>(side)];
+ const int side=ActiveWindowTab().model.activePane;
+ auto& pane=ActiveWindowTab().model.panes[static_cast<size_t>(side)];
  const size_t tab=pane.active;
  if(pane.pending[tab]||pane.filesystemPaths[tab].empty()){
      StatusText().Text(L"파일 작업은 불러오기가 끝난 실제 폴더에서만 사용할 수 있습니다.");
@@ -117,7 +117,7 @@ void MainWindow::ExecuteFileCommand(fxfile::filecommand::Kind kind){
                  if(ui->mFileOperationEpoch!=ticket)return;
                  ui->mFileOperationPending=false;
                  ui->SetFileButtonsBusy(false,false);
-                 const auto& pane=ui->mModel.panes[side];
+                 const auto& pane=ui->ActiveWindowTab().model.panes[side];
                  // A committed filesystem mutation is not undone if the
                  // user closed/navigated the pane while IO was in flight.
                  // The stale result must NEVER mutate a different tab UI.

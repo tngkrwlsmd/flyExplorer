@@ -87,7 +87,7 @@ void MainWindow::ApplyWorkspace(fxfile::preview::Workspace&& doc) {
     // Validated off-thread BEFORE replacing any live pane. On this child
     // instance only: never mutate a different WinUI or MFC window.
     for(int side=0;side!=2;++side){
-        for(auto route:mModel.panes[side].routeIds){
+        for(auto route:ActiveWindowTab().model.panes[side].routeIds){
             mSupervisor->forget(route);
             mWatcher->unwatch(route);
             mShellWatcher->unwatch(route);
@@ -100,33 +100,33 @@ void MainWindow::ApplyWorkspace(fxfile::preview::Workspace&& doc) {
                                  doc.split?doc.paths[1].size():1}};
     std::array<size_t,2> selected{{doc.selected[0],
                                    doc.split?doc.selected[1]:0}};
-    if(!mModel.reset(doc.split,counts,selected)){
+    if(!ActiveWindowTab().model.reset(doc.split,counts,selected)){
         StatusText().Text(L"지원하지 않는 작업 공간 배치입니다.");
         return;
     }
-    SecondaryPane().Visibility(mModel.split?Visibility::Visible:Visibility::Collapsed);
-    PaneDivider().Visibility(mModel.split?Visibility::Visible:Visibility::Collapsed);
-    SecondaryColumn().Width(mModel.split?
+    SecondaryPane().Visibility(ActiveWindowTab().model.split?Visibility::Visible:Visibility::Collapsed);
+    PaneDivider().Visibility(ActiveWindowTab().model.split?Visibility::Visible:Visibility::Collapsed);
+    SecondaryColumn().Width(ActiveWindowTab().model.split?
         GridLength{1.0,GridUnitType::Star}:GridLength{0.0,GridUnitType::Pixel});
     SplitButton().Content(box_value(hstring(
-        mModel.split?L"단일 창":L"분할 창")));
+        ActiveWindowTab().model.split?L"단일 창":L"분할 창")));
     for(int side=0;side!=2;++side){
-        const auto& paths=(!mModel.split && side==1)?
+        const auto& paths=(!ActiveWindowTab().model.split && side==1)?
             doc.paths[0]:doc.paths[side];
-        auto& pane=mModel.panes[side];
+        auto& pane=ActiveWindowTab().model.panes[side];
         const size_t count=pane.tabs.size();
         for(size_t i=0;i<count;++i){
             if(i==pane.active)continue;
             mRestoreQueue[side].emplace_back(i,paths[i]);
         }
-        const std::wstring initial=(!mModel.split&&side==1)?
+        const std::wstring initial=(!ActiveWindowTab().model.split&&side==1)?
             paths[doc.selected[0]]:paths[pane.active];
         QueuePath(side,initial); // nonblocking, same supervised lane
     }
     Refresh(L"검증한 작업 공간을 독립된 창에서 복원하는 중입니다.");
 }
 void MainWindow::QueueNextWorkspaceTab(int side) {
-    auto& pane=mModel.panes[side];
+    auto& pane=ActiveWindowTab().model.panes[side];
     auto& tasks=mRestoreQueue[side];
     if(std::any_of(pane.pending.begin(),pane.pending.end(),
                    [](std::uint64_t x){return x!=0;}))return;
@@ -137,7 +137,7 @@ void MainWindow::QueueNextWorkspaceTab(int side) {
         const auto id=mSupervisor->submitParsing(
             side,pane.routeIds[next.first],next.second);
         if(id) {
-            mModel.markPending(side,next.first,id,false);
+            ActiveWindowTab().model.markPending(side,next.first,id,false);
             RefreshTabs(side);
             return;
         }
@@ -146,9 +146,9 @@ void MainWindow::QueueNextWorkspaceTab(int side) {
 bool MainWindow::WorkspaceModel(
     fxfile::preview::Workspace& target,std::wstring& reason) const {
     target=fxfile::preview::Workspace{};
-    target.split=mModel.split;
-    for(int side=0;side<(mModel.split?2:1);++side){
-        auto const& pane=mModel.panes[side];
+    target.split=ActiveWindowTab().model.split;
+    for(int side=0;side<(ActiveWindowTab().model.split?2:1);++side){
+        auto const& pane=ActiveWindowTab().model.panes[side];
         if(pane.tabs.empty()||pane.tabs.size()>32 ||
            pane.active>=pane.tabs.size()) {
             reason=L"지원하지 않는 탭 배치입니다.";return false;
@@ -307,7 +307,7 @@ void MainWindow::OnToggleSearch(
     SearchPanel().Visibility(next);
     if(next==Visibility::Visible){
         EnsureExpandedPanelFits();
-        auto& pane=mModel.panes[static_cast<size_t>(mModel.activePane)];
+        auto& pane=ActiveWindowTab().model.panes[static_cast<size_t>(ActiveWindowTab().model.activePane)];
         auto const& path=pane.filesystemPaths[pane.active];
         if(!path.empty())SearchScopeBox().Text(hstring(path));
         StatusText().Text(L"제한된 파일 이름 검색 · 최근 위치 저장은 선택 사항입니다.");

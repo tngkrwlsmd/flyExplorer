@@ -53,16 +53,17 @@ class M23Followup(unittest.TestCase):
  def test_file_list_cache_has_one_per_pane_state_owner(self):
   state=source("file_list_state.h")
   window=source("MainWindow.xaml.h")
+  owner=source("window_tab_state.h")
   render=source("MainWindow.xaml.cpp")
   for name in ("sortMode","details","renderedPaths","epoch",
                "invalidate()","isCurrent(","accepts("):
    self.assertIn(name,state)
-  self.assertIn("std::array<fxfile::previewlist::PaneState,2> mFileLists",window)
+  self.assertIn("std::array<fxfile::previewlist::PaneState,2> fileLists",owner)
   self.assertIn('ClInclude Include="file_list_state.h"',source("flyExplorer.project-template.xml"))
   self.assertNotIn("mFileDetails",window)
-  self.assertIn("mFileLists[side].begin(route,tab)",render)
-  self.assertIn("mFileLists[side].isCurrent(",render)
-  self.assertIn("mFileLists[side].accepts(ticket,route,tab)",render)
+  self.assertIn("ActiveWindowTab().fileLists[side].begin(route,tab)",render)
+  self.assertIn("ActiveWindowTab().fileLists[side].isCurrent(",render)
+  self.assertIn("ActiveWindowTab().fileLists[side].accepts(ticket,route,tab)",render)
 
  def test_owned_physical_drag_requires_manual_input_not_automatic_claim(self):
   probe=(R/"tests/winui/manual_owned_drag_probe.py").read_text(encoding="utf-8-sig")

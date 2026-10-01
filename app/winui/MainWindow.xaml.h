@@ -5,6 +5,7 @@
 #include "FileToolbar.xaml.h"
 #include "StatusFooter.xaml.h"
 #include "file_list_state.h"
+#include "window_tab_state.h"
 #include "../../src/base/shell_transfer_core.h"
 #include "../../src/base/shell_clipboard_core.h"
 #include "../../src/base/ui_preferences.h"
@@ -123,7 +124,14 @@ namespace winrt::FlyExplorer::implementation
         void OnHeaderSortClicked(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
 
     private:
-        fxfile::explorerui::Model mModel;
+        std::vector<fxfile::previewtabs::WindowTabState> mWindowTabs{1};
+        std::size_t mActiveWindowTab=0;
+        fxfile::previewtabs::WindowTabState& ActiveWindowTab(){
+            return mWindowTabs.at(mActiveWindowTab);
+        }
+        fxfile::previewtabs::WindowTabState const& ActiveWindowTab() const{
+            return mWindowTabs.at(mActiveWindowTab);
+        }
         fxfile::uisettings::Preferences mPreferences{};
         std::shared_ptr<std::mutex> mPreferencesWriteMutex=
             std::make_shared<std::mutex>();
@@ -162,7 +170,6 @@ namespace winrt::FlyExplorer::implementation
         }
         using FileDetail=fxfile::previewlist::FileDetail;
         using FileViewMode=fxfile::previewlist::FileViewMode;
-        std::array<fxfile::previewlist::PaneState,2> mFileLists{};
         // Incremental thumbnail requests must stop issuing new child
         // Shell processes when navigation invalidates the native route.
         std::array<std::shared_ptr<std::atomic_bool>,2> mDetailCancel{};
