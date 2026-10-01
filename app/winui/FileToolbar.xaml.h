@@ -24,15 +24,17 @@ struct FileToolbar : FileToolbarT<FileToolbar> {
  void OnThemeSystem(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
  void OnThemeLight(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
  void OnThemeDark(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
- void OnSortChanged(IInspectable const&,
-   Microsoft::UI::Xaml::Controls::SelectionChangedEventArgs const&);
+ void OnSortNameAscending(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
+ void OnSortNameDescending(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
+ void OnSortSizeDescending(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
+ void OnSortDateDescending(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
+ void OnSortChanged(IInspectable const&,Microsoft::UI::Xaml::Controls::SelectionChangedEventArgs const&);
 private:
+ void ChooseSort(int index);
  std::function<void(int)> action_;
  std::function<void(int)> sort_;
  bool restoring_=false;
  int pendingNameAction_=-1;
 };
 }
-namespace winrt::FlyExplorer::factory_implementation {
-struct FileToolbar : FileToolbarT<FileToolbar,implementation::FileToolbar>{};
-}
+namespace winrt::FlyExplorer::factory_implementation { struct FileToolbar : FileToolbarT<FileToolbar,implementation::FileToolbar>{}; }

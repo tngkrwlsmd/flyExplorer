@@ -92,3 +92,52 @@ For the 100% DPI v1 benchmark, the structural density target is **PASS**: the fi
 - The first two full GUI attempts stopped at M2.3 owned-session child restore. A direct isolated save/restore diagnostic proved both `Nested` and `Secondary` folders restored correctly with child exit 0. The integration harness was still physically clicking the now-retired 1x1 transparent pane-title affordance. Updating `test_m23_gui.py` to activate panes through the actual `LeftFiles`/`RightFiles` user surfaces preserved all assertions/timeouts; the following full Release GUI run passed, including exact owned child auto-restore.
 - Final GUI evidence includes normal owned shutdown and `ORIGINAL_SIX_USER_CONFIG_SHA256_IDENTICAL True`.
 - Physical drag/global clipboard, alternate DPI, High Contrast and live Narrator listening remain outside this v1 visual run.
+
+## Explorer-like v2 follow-up
+
+The v2 pass starts from commit `376c34c55d42526416b6b6f8171d1497083e099d` and keeps the v1 vertical-density acceptance intact while addressing the remaining command, breadcrumb, responsive-column and interaction-state gaps.
+
+### v2 implementation
+
+- Replaced the ordinary visible Sort ComboBox presentation with an Explorer-style `SortButton` flyout while retaining the `SortPicker` automation contract for existing owned tests and assistive automation.
+- Added a `ViewButton` flyout next to Sort and More. Details remains the current supported view rather than inventing a new backend view mode.
+- Reduced opposite-pane Copy/Move visual prominence with a smaller secondary-command style while preserving the direct commands and AutomationIds.
+- Replaced the lightweight address text presentation with clickable breadcrumb segment Buttons plus a dedicated edit affordance. Long filesystem paths collapse the front portion and retain the final hierarchy; typed raw-path edit remains available without rewriting navigation/history.
+- Added width-profiled Details columns. At approximately 760px split-window width, each pane prioritizes Name + Size and visually hides Type/Date rather than rendering an unusable 1-2-character Type column. Wider profiles progressively restore Type and Date.
+- Kept the 2px active-pane accent, 1px divider, 24px header and 32px row pitch. The divider opacity is reduced to keep the split boundary visible without reintroducing pane cards.
+- Reduced title-strip app-identity emphasis without adding another fake window-level tab strip.
+
+### v1 / v2 / Explorer geometry
+
+| Metric | Windows 11 Explorer reference | v1 | v2 |
+| --- | ---: | ---: | ---: |
+| file content top | about 136 px | 174 px | **174 px** |
+| row pitch | about 28 px | 32 px | **32 px** |
+| sidebar width at 972px | about 154 px | about 156 px | **156 px** |
+| address height | 32 px | 32 px | **32 px** |
+| command row height | about 46 px | 42 px | **42 px** |
+| 760px split visible metadata | n/a | Name + compressed Type + Size | **Name + Size** |
+
+The v2 candidate Release SHA-256 used for the runtime checks is:
+
+`89ECBDBC35ED4F9453B75932514DF1A40E607AE405BC7C5C54F80301BD33F8E6`
+
+### v2 runtime interaction evidence
+
+- 972x720: `LeftFiles` and `RightFiles` top remained y=174; row pitch remained 32px.
+- 760x640: both panes remained visible and usable; Type and Date were removed from the visual allocation so Name and Size retained meaningful width.
+- Breadcrumb UIA exposed the current filesystem hierarchy as interactive address-path Buttons. An actual click on the `logs` ancestor navigated to `C:\\dev\\flyExplorer\\logs` successfully.
+- Raw address edit state, command hover, command pressed, Sort flyout, View flyout and More flyout were captured from the actual product after minimizing unrelated Explorer windows so foreground pixels were not contaminated.
+- Sort flyout exposed name ascending/descending, size descending and modified-date descending while preserving the existing sort backend.
+- View flyout accurately reports Details as the currently supported view; it does not claim unsupported icon/list modes.
+- Light and Dark were both switched and rendered on the same v2 binary and synthetic fixture. High Contrast remains a separate NOT TESTED gate.
+- Release GUI regression: PASS in 67.1 seconds, including two-pane navigation, tab/split/history, Korean create/rename, transfer contracts, private-session auto-restore, normal shutdown and `ORIGINAL_SIX_USER_CONFIG_SHA256_IDENTICAL True`.
+
+### Current remaining visual gaps after v2
+
+1. The custom title strip is intentionally restrained but still simpler than the full Windows 11 Explorer window-level tab/caption composition. No extra fake tab layer was added.
+2. View currently exposes only the implemented Details mode. Additional view modes require a separate functional scope, not visual fabrication.
+3. The status footer still prioritizes current operation/status text rather than Explorer-style persistent item/selection counts; this remains an OPEN polish item.
+4. Exact keyboard-focus parity across every command/breadcrumb state was not independently pixel-certified; hover and pressed were verified.
+5. A fresh clean current-session Explorer screenshot set could not be reliably reacquired through the RDP UIA harness; the same-machine Explorer reference measurements captured for v1 remain the comparison baseline. Do not treat the failed capture harness as a product result.
+6. 125/150/200% DPI, High Contrast and live Narrator listening remain NOT TESTED in this RDP environment.

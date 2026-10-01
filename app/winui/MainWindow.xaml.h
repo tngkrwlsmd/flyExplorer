@@ -41,6 +41,7 @@ namespace winrt::FlyExplorer::implementation
         void OnAddressGotFocus(IInspectable const&, Microsoft::UI::Xaml::RoutedEventArgs const&);
         void OnAddressLostFocus(IInspectable const&, Microsoft::UI::Xaml::RoutedEventArgs const&);
         void OnAddressDisplayClicked(IInspectable const&, Microsoft::UI::Xaml::RoutedEventArgs const&);
+        void OnBreadcrumbSegmentClicked(IInspectable const&, Microsoft::UI::Xaml::RoutedEventArgs const&);
         void OnQuickSearchKeyDown(IInspectable const&, Microsoft::UI::Xaml::Input::KeyRoutedEventArgs const&);
         void OnShellSizeChanged(IInspectable const&, Microsoft::UI::Xaml::SizeChangedEventArgs const&);
         void OnNewTabClicked(IInspectable const&, Microsoft::UI::Xaml::RoutedEventArgs const&);
@@ -210,7 +211,12 @@ namespace winrt::FlyExplorer::implementation
         void Refresh(winrt::hstring const& status = L"Ready");
         void RefreshTabs(int side);
         bool mColumnControlsReady=false;
+        double mShellWidth=972.0;
+        std::array<int,2> mDetailLayoutProfiles{{-1,-1}};
+        int DetailLayoutProfile() const;
+        std::array<Microsoft::UI::Xaml::GridLength,4> DetailColumnWidths(int side) const;
         void ApplyDetailColumnLayout(int side);
+        void UpdateBreadcrumb(std::wstring const& address);
         void FillFiles(int side);
         bool OpenFolder(std::wstring const& path);
         void ActivatePane(int side);

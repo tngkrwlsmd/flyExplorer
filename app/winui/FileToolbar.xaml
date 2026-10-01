@@ -9,10 +9,25 @@
             <Setter Property="MaxWidth" Value="36"/>
             <Setter Property="Height" Value="36"/>
         </Style>
+        <Style x:Key="ExplorerSecondaryCommandButtonStyle" TargetType="AppBarButton"
+               BasedOn="{StaticResource ExplorerCommandButtonStyle}">
+            <Setter Property="Width" Value="32"/>
+            <Setter Property="MinWidth" Value="32"/>
+            <Setter Property="MaxWidth" Value="32"/>
+            <Setter Property="Opacity" Value="0.76"/>
+        </Style>
+        <Style x:Key="ExplorerFlyoutButtonStyle" TargetType="Button">
+            <Setter Property="Height" Value="32"/>
+            <Setter Property="Padding" Value="8,0"/>
+            <Setter Property="CornerRadius" Value="4"/>
+            <Setter Property="Background" Value="Transparent"/>
+        </Style>
     </UserControl.Resources>
-    <Grid Height="42" Padding="10,0,10,1" ColumnSpacing="6">
+    <Grid Height="42" Padding="10,0,10,1" ColumnSpacing="2">
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="*"/>
+            <ColumnDefinition Width="Auto"/>
+            <ColumnDefinition Width="Auto"/>
             <ColumnDefinition Width="Auto"/>
             <ColumnDefinition Width="Auto"/>
             <ColumnDefinition Width="Auto"/>
@@ -21,108 +36,44 @@
         <CommandBar x:Name="ExplorerCommandBar" Grid.Column="0" Height="40" MinHeight="40"
                     VerticalAlignment="Top" Background="Transparent" DefaultLabelPosition="Collapsed"
                     IsDynamicOverflowEnabled="True"
-                    AutomationProperties.Name="파일 작업 명령 모음">
+                    AutomationProperties.Name="&#xD30C;&#xC77C; &#xC791;&#xC5C5; &#xBA85;&#xB839; &#xBAA8;&#xC74C;">
             <CommandBar.PrimaryCommands>
                 <AppBarButton x:Name="CreateFolderButton" Style="{StaticResource ExplorerCommandButtonStyle}"
-                              Label="새로 만들기" ToolTipService.ToolTip="새 폴더"
-                              Click="OnCreateFolder"
-                              AutomationProperties.Name="현재 폴더에 새 폴더 만들기">
+                              Label="&#xC0C8;&#xB85C; &#xB9CC;&#xB4E4;&#xAE30;" ToolTipService.ToolTip="&#xC0C8; &#xD3F4;&#xB354;"
+                              Click="OnCreateFolder" AutomationProperties.Name="&#xD604;&#xC7AC; &#xD3F4;&#xB354;&#xC5D0; &#xC0C8; &#xD3F4;&#xB354; &#xB9CC;&#xB4E4;&#xAE30;">
                     <AppBarButton.Icon><FontIcon Glyph="&#xE8B7;"/></AppBarButton.Icon>
                 </AppBarButton>
                 <AppBarSeparator/>
-                <AppBarButton x:Name="WindowsCutButton" Style="{StaticResource ExplorerCommandButtonStyle}"
-                              Label="잘라내기" ToolTipService.ToolTip="잘라내기"
-                              Click="OnWindowsCut">
-                    <AppBarButton.Icon><FontIcon Glyph="&#xE8C6;"/></AppBarButton.Icon>
-                </AppBarButton>
-                <AppBarButton x:Name="WindowsCopyButton" Style="{StaticResource ExplorerCommandButtonStyle}"
-                              Label="복사" ToolTipService.ToolTip="복사"
-                              Click="OnWindowsCopy">
-                    <AppBarButton.Icon><FontIcon Glyph="&#xE8C8;"/></AppBarButton.Icon>
-                </AppBarButton>
-                <AppBarButton x:Name="WindowsPasteButton" Style="{StaticResource ExplorerCommandButtonStyle}"
-                              Label="붙여넣기" ToolTipService.ToolTip="붙여넣기"
-                              Click="OnWindowsPaste">
-                    <AppBarButton.Icon><FontIcon Glyph="&#xE77F;"/></AppBarButton.Icon>
-                </AppBarButton>
+                <AppBarButton x:Name="WindowsCutButton" Style="{StaticResource ExplorerCommandButtonStyle}" Label="&#xC798;&#xB77C;&#xB0B4;&#xAE30;" ToolTipService.ToolTip="&#xC798;&#xB77C;&#xB0B4;&#xAE30;" Click="OnWindowsCut"><AppBarButton.Icon><FontIcon Glyph="&#xE8C6;"/></AppBarButton.Icon></AppBarButton>
+                <AppBarButton x:Name="WindowsCopyButton" Style="{StaticResource ExplorerCommandButtonStyle}" Label="&#xBCF5;&#xC0AC;" ToolTipService.ToolTip="&#xBCF5;&#xC0AC;" Click="OnWindowsCopy"><AppBarButton.Icon><FontIcon Glyph="&#xE8C8;"/></AppBarButton.Icon></AppBarButton>
+                <AppBarButton x:Name="WindowsPasteButton" Style="{StaticResource ExplorerCommandButtonStyle}" Label="&#xBD99;&#xC5EC;&#xB123;&#xAE30;" ToolTipService.ToolTip="&#xBD99;&#xC5EC;&#xB123;&#xAE30;" Click="OnWindowsPaste"><AppBarButton.Icon><FontIcon Glyph="&#xE77F;"/></AppBarButton.Icon></AppBarButton>
                 <AppBarSeparator/>
-                <AppBarButton x:Name="RenameButton" Style="{StaticResource ExplorerCommandButtonStyle}"
-                              Label="이름 바꾸기" ToolTipService.ToolTip="이름 바꾸기"
-                              Click="OnRenameSelected"
-                              AutomationProperties.Name="선택된 파일 또는 폴더 이름 변경">
-                    <AppBarButton.Icon><FontIcon Glyph="&#xE8AC;"/></AppBarButton.Icon>
-                </AppBarButton>
-                <AppBarButton x:Name="RecycleButton" Style="{StaticResource ExplorerCommandButtonStyle}"
-                              Label="삭제" ToolTipService.ToolTip="휴지통으로 보내기"
-                              Click="OnRecycle"
-                              AutomationProperties.Name="선택한 항목을 확인 후 휴지통으로 보내기">
-                    <AppBarButton.Icon><FontIcon Glyph="&#xE74D;"/></AppBarButton.Icon>
-                </AppBarButton>
+                <AppBarButton x:Name="RenameButton" Style="{StaticResource ExplorerCommandButtonStyle}" Label="&#xC774;&#xB984; &#xBC14;&#xAFB8;&#xAE30;" ToolTipService.ToolTip="&#xC774;&#xB984; &#xBC14;&#xAFB8;&#xAE30;" Click="OnRenameSelected" AutomationProperties.Name="&#xC120;&#xD0DD;&#xB41C; &#xD30C;&#xC77C; &#xB610;&#xB294; &#xD3F4;&#xB354; &#xC774;&#xB984; &#xBCC0;&#xACBD;"><AppBarButton.Icon><FontIcon Glyph="&#xE8AC;"/></AppBarButton.Icon></AppBarButton>
+                <AppBarButton x:Name="RecycleButton" Style="{StaticResource ExplorerCommandButtonStyle}" Label="&#xC0AD;&#xC81C;" ToolTipService.ToolTip="&#xD734;&#xC9C0;&#xD1B5;&#xC73C;&#xB85C; &#xBCF4;&#xB0B4;&#xAE30;" Click="OnRecycle" AutomationProperties.Name="&#xC120;&#xD0DD;&#xD55C; &#xD56D;&#xBAA9;&#xC744; &#xD655;&#xC778; &#xD6C4; &#xD734;&#xC9C0;&#xD1B5;&#xC73C;&#xB85C; &#xBCF4;&#xB0B4;&#xAE30;"><AppBarButton.Icon><FontIcon Glyph="&#xE74D;"/></AppBarButton.Icon></AppBarButton>
                 <AppBarSeparator/>
-                <AppBarButton x:Name="CopyButton" Style="{StaticResource ExplorerCommandButtonStyle}"
-                              Label="반대쪽으로 복사" ToolTipService.ToolTip="반대쪽 창으로 복사"
-                              Click="OnCopy"
-                              AutomationProperties.Name="선택한 항목을 반대쪽 창으로 복사">
-                    <AppBarButton.Icon><FontIcon Glyph="&#xE8C8;"/></AppBarButton.Icon>
-                </AppBarButton>
-                <AppBarButton x:Name="MoveButton" Style="{StaticResource ExplorerCommandButtonStyle}"
-                              Label="반대쪽으로 이동" ToolTipService.ToolTip="반대쪽 창으로 이동"
-                              Click="OnMove"
-                              AutomationProperties.Name="선택한 항목을 반대쪽 창으로 이동">
-                    <AppBarButton.Icon><FontIcon Glyph="&#xE8DE;"/></AppBarButton.Icon>
-                </AppBarButton>
-                <AppBarButton x:Name="CancelButton" Style="{StaticResource ExplorerCommandButtonStyle}"
-                              Label="취소" ToolTipService.ToolTip="파일 작업 취소"
-                              Click="OnCancel" IsEnabled="False"
-                              AutomationProperties.Name="진행 중인 파일 작업 취소">
-                    <AppBarButton.Icon><FontIcon Glyph="&#xE711;"/></AppBarButton.Icon>
-                </AppBarButton>
+                <AppBarButton x:Name="CopyButton" Style="{StaticResource ExplorerSecondaryCommandButtonStyle}" Label="&#xBC18;&#xB300;&#xCABD;&#xC73C;&#xB85C; &#xBCF5;&#xC0AC;" ToolTipService.ToolTip="&#xBC18;&#xB300;&#xCABD; &#xCC3D;&#xC73C;&#xB85C; &#xBCF5;&#xC0AC;" Click="OnCopy" AutomationProperties.Name="&#xC120;&#xD0DD;&#xD55C; &#xD56D;&#xBAA9;&#xC744; &#xBC18;&#xB300;&#xCABD; &#xCC3D;&#xC73C;&#xB85C; &#xBCF5;&#xC0AC;"><AppBarButton.Icon><FontIcon Glyph="&#xE8C8;"/></AppBarButton.Icon></AppBarButton>
+                <AppBarButton x:Name="MoveButton" Style="{StaticResource ExplorerSecondaryCommandButtonStyle}" Label="&#xBC18;&#xB300;&#xCABD;&#xC73C;&#xB85C; &#xC774;&#xB3D9;" ToolTipService.ToolTip="&#xBC18;&#xB300;&#xCABD; &#xCC3D;&#xC73C;&#xB85C; &#xC774;&#xB3D9;" Click="OnMove" AutomationProperties.Name="&#xC120;&#xD0DD;&#xD55C; &#xD56D;&#xBAA9;&#xC744; &#xBC18;&#xB300;&#xCABD; &#xCC3D;&#xC73C;&#xB85C; &#xC774;&#xB3D9;"><AppBarButton.Icon><FontIcon Glyph="&#xE8DE;"/></AppBarButton.Icon></AppBarButton>
+                <AppBarButton x:Name="CancelButton" Style="{StaticResource ExplorerSecondaryCommandButtonStyle}" Label="&#xCDE8;&#xC18C;" ToolTipService.ToolTip="&#xD30C;&#xC77C; &#xC791;&#xC5C5; &#xCDE8;&#xC18C;" Click="OnCancel" IsEnabled="False" AutomationProperties.Name="&#xC9C4;&#xD589; &#xC911;&#xC778; &#xD30C;&#xC77C; &#xC791;&#xC5C5; &#xCDE8;&#xC18C;"><AppBarButton.Icon><FontIcon Glyph="&#xE711;"/></AppBarButton.Icon></AppBarButton>
             </CommandBar.PrimaryCommands>
         </CommandBar>
-
-        <!-- Kept in the visual tree for UIA/IME contracts, but only expands after
-             Create/Rename is invoked. It must not consume ordinary command chrome. -->
-        <TextBox x:Name="FileNameBox" Grid.Column="1" Width="1" MinWidth="0" Height="32"
-                 Opacity="0" IsHitTestVisible="False" IsTabStop="False"
-                 VerticalAlignment="Center" KeyDown="OnNameKeyDown"
-                 PlaceholderText="새 이름을 입력하세요"
-                 AutomationProperties.Name="새 폴더 또는 새 파일 이름"/>
-
-        <ComboBox x:Name="SortPicker" Grid.Column="2" Width="106" Height="32"
-                  SelectedIndex="0" SelectionChanged="OnSortChanged"
-                  AutomationProperties.Name="현재 창 파일 정렬 방식">
-            <ComboBoxItem Content="이름 ↑"/>
-            <ComboBoxItem Content="이름 ↓"/>
-            <ComboBoxItem Content="크기 ↓"/>
-            <ComboBoxItem Content="수정 날짜 ↓"/>
+        <TextBox x:Name="FileNameBox" Grid.Column="1" Width="1" MinWidth="0" Height="32" Opacity="0" IsHitTestVisible="False" IsTabStop="False" VerticalAlignment="Center" KeyDown="OnNameKeyDown" PlaceholderText="&#xC0C8; &#xC774;&#xB984;&#xC744; &#xC785;&#xB825;&#xD558;&#xC138;&#xC694;" AutomationProperties.Name="&#xC0C8; &#xD3F4;&#xB354; &#xB610;&#xB294; &#xC0C8; &#xD30C;&#xC77C; &#xC774;&#xB984;"/>
+        <!-- Retained for automation compatibility; ordinary users see SortButton. -->
+        <ComboBox x:Name="SortPicker" Grid.Column="2" Width="1" Height="1" Opacity="0.01" IsHitTestVisible="False" IsTabStop="False" SelectedIndex="0" SelectionChanged="OnSortChanged" AutomationProperties.Name="&#xD604;&#xC7AC; &#xCC3D; &#xD30C;&#xC77C; &#xC815;&#xB82C; &#xBC29;&#xC2DD;">
+            <ComboBoxItem Content="&#xC774;&#xB984; &#x2191;"/><ComboBoxItem Content="&#xC774;&#xB984; &#x2193;"/><ComboBoxItem Content="&#xD06C;&#xAE30; &#x2193;"/><ComboBoxItem Content="&#xC218;&#xC815; &#xB0A0;&#xC9DC; &#x2193;"/>
         </ComboBox>
-
-        <Button x:Name="MoreButton" Grid.Column="3" Width="32" Height="32"
-                Padding="0" Background="Transparent"
-                ToolTipService.ToolTip="더 보기"
-                AutomationProperties.Name="더 보기">
-            <FontIcon Glyph="&#xE712;" FontSize="16"/>
-            <Button.Flyout>
-                <MenuFlyout>
-                    <MenuFlyoutItem Text="왼쪽 이름 필터" Click="OnToggleLeftFilter"/>
-                    <MenuFlyoutItem Text="오른쪽 이름 필터" Click="OnToggleRightFilter"/>
-                    <MenuFlyoutSeparator/>
-                    <MenuFlyoutSubItem Text="테마">
-                        <MenuFlyoutItem Text="시스템" Click="OnThemeSystem"/>
-                        <MenuFlyoutItem Text="라이트" Click="OnThemeLight"/>
-                        <MenuFlyoutItem Text="다크" Click="OnThemeDark"/>
-                    </MenuFlyoutSubItem>
-                </MenuFlyout>
-            </Button.Flyout>
+        <Button x:Name="SortButton" Grid.Column="3" Width="70" Style="{StaticResource ExplorerFlyoutButtonStyle}" ToolTipService.ToolTip="&#xC815;&#xB82C;" AutomationProperties.Name="&#xC815;&#xB82C;">
+            <StackPanel Orientation="Horizontal" Spacing="5"><FontIcon Glyph="&#xE8CB;" FontSize="14"/><TextBlock Text="&#xC815;&#xB82C;"/></StackPanel>
+            <Button.Flyout><MenuFlyout><MenuFlyoutItem Text="&#xC774;&#xB984; &#xC624;&#xB984;&#xCC28;&#xC21C;" Click="OnSortNameAscending"/><MenuFlyoutItem Text="&#xC774;&#xB984; &#xB0B4;&#xB9BC;&#xCC28;&#xC21C;" Click="OnSortNameDescending"/><MenuFlyoutItem Text="&#xD06C;&#xAE30; &#xB0B4;&#xB9BC;&#xCC28;&#xC21C;" Click="OnSortSizeDescending"/><MenuFlyoutItem Text="&#xC218;&#xC815; &#xB0A0;&#xC9DC; &#xB0B4;&#xB9BC;&#xCC28;&#xC21C;" Click="OnSortDateDescending"/></MenuFlyout></Button.Flyout>
         </Button>
-
-        <ProgressBar x:Name="OperationProgress" Grid.Column="4" Width="56"
-                     Height="3" Minimum="0" Maximum="100" Value="0"
-                     VerticalAlignment="Center"
-                     AutomationProperties.Name="파일 작업 진행률"/>
-
-        <Border Grid.ColumnSpan="5" Height="1" VerticalAlignment="Bottom"
-                Background="{ThemeResource SystemControlForegroundBaseLowBrush}"
-                Opacity="0.38"/>
+        <Button x:Name="ViewButton" Grid.Column="4" Width="68" Style="{StaticResource ExplorerFlyoutButtonStyle}" ToolTipService.ToolTip="&#xBCF4;&#xAE30;" AutomationProperties.Name="&#xBCF4;&#xAE30;">
+            <StackPanel Orientation="Horizontal" Spacing="5"><FontIcon Glyph="&#xE8A9;" FontSize="14"/><TextBlock Text="&#xBCF4;&#xAE30;"/></StackPanel>
+            <Button.Flyout><MenuFlyout><ToggleMenuFlyoutItem Text="&#xC790;&#xC138;&#xD788;" IsChecked="True" IsEnabled="False"/></MenuFlyout></Button.Flyout>
+        </Button>
+        <Button x:Name="MoreButton" Grid.Column="5" Width="32" Height="32" Padding="0" Background="Transparent" CornerRadius="4" ToolTipService.ToolTip="&#xB354; &#xBCF4;&#xAE30;" AutomationProperties.Name="&#xB354; &#xBCF4;&#xAE30;">
+            <FontIcon Glyph="&#xE712;" FontSize="16"/>
+            <Button.Flyout><MenuFlyout><MenuFlyoutItem Text="&#xC67C;&#xCABD; &#xC774;&#xB984; &#xD544;&#xD130;" Click="OnToggleLeftFilter"/><MenuFlyoutItem Text="&#xC624;&#xB978;&#xCABD; &#xC774;&#xB984; &#xD544;&#xD130;" Click="OnToggleRightFilter"/><MenuFlyoutSeparator/><MenuFlyoutSubItem Text="&#xD14C;&#xB9C8;"><MenuFlyoutItem Text="&#xC2DC;&#xC2A4;&#xD15C;" Click="OnThemeSystem"/><MenuFlyoutItem Text="&#xB77C;&#xC774;&#xD2B8;" Click="OnThemeLight"/><MenuFlyoutItem Text="&#xB2E4;&#xD06C;" Click="OnThemeDark"/></MenuFlyoutSubItem></MenuFlyout></Button.Flyout>
+        </Button>
+        <ProgressBar x:Name="OperationProgress" Grid.Column="6" Width="48" Height="3" Minimum="0" Maximum="100" Value="0" VerticalAlignment="Center" AutomationProperties.Name="&#xD30C;&#xC77C; &#xC791;&#xC5C5; &#xC9C4;&#xD589;&#xB960;"/>
+        <Border Grid.ColumnSpan="7" Height="1" VerticalAlignment="Bottom" Background="{ThemeResource SystemControlForegroundBaseLowBrush}" Opacity="0.32"/>
     </Grid>
 </UserControl>

@@ -15,6 +15,7 @@
 #include <iterator>
 #include <system_error>
 #include <winrt/Windows.System.h>
+#include <winrt/Windows.UI.Text.h>
 #include <winrt/Microsoft.UI.Xaml.Input.h>
 #include <winrt/Microsoft.UI.Xaml.Automation.h>
 #include <winrt/Microsoft.UI.Xaml.Media.h>
@@ -723,20 +724,33 @@ namespace winrt::FlyExplorer::implementation
         state.visibleCount=(std::min)(available,state.visibleCount+160);
         FillFiles(side); // Selection is restored using real parsing paths.
     }
+    int MainWindow::DetailLayoutProfile() const
+    {
+        const double nav=mShellWidth<1040.0?156.0:188.0;
+        const double content=(std::max)(0.0,mShellWidth-nav-17.0);
+        const double pane=mModel.split?(std::max)(0.0,(content-1.0)/2.0):content;
+        if(pane<250.0)return 0;
+        if(pane<340.0)return 1;
+        if(pane<500.0)return 2;
+        return 3;
+    }
+    std::array<GridLength,4> MainWindow::DetailColumnWidths(int side) const
+    {
+        const int profile=DetailLayoutProfile();
+        const auto user=mFileLists[side].nameColumnWidth;
+        if(profile==0)return {GridLength{1.0,GridUnitType::Star},GridLength{0.0,GridUnitType::Pixel},GridLength{0.0,GridUnitType::Pixel},GridLength{0.0,GridUnitType::Pixel}};
+        if(profile==1)return {GridLength{1.0,GridUnitType::Star},GridLength{0.0,GridUnitType::Pixel},GridLength{64.0,GridUnitType::Pixel},GridLength{0.0,GridUnitType::Pixel}};
+        if(profile==2)return {GridLength{(std::min)(user,168.0),GridUnitType::Pixel},GridLength{1.0,GridUnitType::Star},GridLength{64.0,GridUnitType::Pixel},GridLength{0.0,GridUnitType::Pixel}};
+        return {GridLength{user,GridUnitType::Pixel},GridLength{1.0,GridUnitType::Star},GridLength{80.0,GridUnitType::Pixel},GridLength{155.0,GridUnitType::Pixel}};
+    }
     void MainWindow::ApplyDetailColumnLayout(int side)
     {
-        const bool compact=mModel.split;
-        const auto nameWidth=compact?
-            (std::min)(mFileLists[side].nameColumnWidth,168.0):
-            mFileLists[side].nameColumnWidth;
+        const auto widths=DetailColumnWidths(side);
         auto name=side==0?LeftNameHeaderColumn():RightNameHeaderColumn();
         auto type=side==0?LeftTypeHeaderColumn():RightTypeHeaderColumn();
         auto size=side==0?LeftSizeHeaderColumn():RightSizeHeaderColumn();
         auto date=side==0?LeftDateHeaderColumn():RightDateHeaderColumn();
-        name.Width(GridLength{nameWidth,GridUnitType::Pixel});
-        type.Width(GridLength{1.0,GridUnitType::Star});
-        size.Width(GridLength{compact?64.0:80.0,GridUnitType::Pixel});
-        date.Width(GridLength{compact?0.0:155.0,GridUnitType::Pixel});
+        name.Width(widths[0]);type.Width(widths[1]);size.Width(widths[2]);date.Width(widths[3]);
     }
 
     void MainWindow::FillFiles(int side)
@@ -828,19 +842,14 @@ namespace winrt::FlyExplorer::implementation
                 if(meta.dateKnown)label+=L"   |   "+meta.dateLabel;
             }
             Grid columns;
-            const bool compactDetails=mModel.split;
-            const auto displayNameWidth=compactDetails?
-                (std::min)(mFileLists[side].nameColumnWidth,168.0):
-                mFileLists[side].nameColumnWidth;
+            const auto widths=DetailColumnWidths(side);
+            const int detailProfile=DetailLayoutProfile();
+            const auto displayNameWidth=detailProfile>=2?
+                (detailProfile==2?(std::min)(mFileLists[side].nameColumnWidth,168.0):mFileLists[side].nameColumnWidth):168.0;
             auto addColumn=[&](GridLength const& width){
-                ColumnDefinition def;
-                def.Width(width);
-                columns.ColumnDefinitions().Append(def);
+                ColumnDefinition def;def.Width(width);columns.ColumnDefinitions().Append(def);
             };
-            addColumn(GridLength{displayNameWidth,GridUnitType::Pixel});
-            addColumn(GridLength{1.0,GridUnitType::Star});
-            addColumn(GridLength{compactDetails?64.0:80.0,GridUnitType::Pixel});
-            addColumn(GridLength{compactDetails?0.0:155.0,GridUnitType::Pixel});
+            for(auto const& width:widths)addColumn(width);
             StackPanel nameCell;
             nameCell.Orientation(Orientation::Horizontal);
             nameCell.Spacing(7);
@@ -982,7 +991,7 @@ namespace winrt::FlyExplorer::implementation
         auto& nav=Current();
         const auto address=nav.snapshot().parsingName;
         AddressBox().Text(hstring(FriendlyAddress(address)));
-        AddressDisplayText().Text(hstring(CompactAddress(address)));
+        UpdateBreadcrumb(address);
         BackButton().IsEnabled(nav.canBack() && !mModel.panes[mModel.activePane].pending[mModel.panes[mModel.activePane].active]);
         ForwardButton().IsEnabled(nav.canForward() && !mModel.panes[mModel.activePane].pending[mModel.panes[mModel.activePane].active]);
         UpButton().IsEnabled(nav.snapshot().folder.valid() && !ILIsEmpty(nav.snapshot().folder.get()));
@@ -1013,7 +1022,7 @@ namespace winrt::FlyExplorer::implementation
         const auto& nav=Current();
         const auto address=nav.snapshot().parsingName;
         AddressBox().Text(hstring(FriendlyAddress(address)));
-        AddressDisplayText().Text(hstring(CompactAddress(address)));
+        UpdateBreadcrumb(address);
         BackButton().IsEnabled(nav.canBack() && !mModel.panes[mModel.activePane].pending[mModel.panes[mModel.activePane].active]);
         ForwardButton().IsEnabled(nav.canForward() && !mModel.panes[mModel.activePane].pending[mModel.panes[mModel.activePane].active]);
         UpButton().IsEnabled(nav.snapshot().folder.valid() && !ILIsEmpty(nav.snapshot().folder.get()));
@@ -1101,7 +1110,7 @@ namespace winrt::FlyExplorer::implementation
         else if (args.Key()==Windows::System::VirtualKey::Escape) {
             const auto address=Current().snapshot().parsingName;
             AddressBox().Text(hstring(FriendlyAddress(address)));
-            AddressDisplayText().Text(hstring(CompactAddress(address)));
+            UpdateBreadcrumb(address);
             AddressBox().Opacity(0.0);
             AddressDisplayButton().Visibility(Visibility::Visible);
             StatusText().Text(L"주소 입력을 취소했습니다.");
@@ -1118,7 +1127,7 @@ namespace winrt::FlyExplorer::implementation
     {
         const auto address=Current().snapshot().parsingName;
         AddressBox().Text(hstring(FriendlyAddress(address)));
-        AddressDisplayText().Text(hstring(CompactAddress(address)));
+        UpdateBreadcrumb(address);
         AddressBox().Opacity(0.0);
         AddressDisplayButton().Visibility(Visibility::Visible);
     }
@@ -1128,6 +1137,43 @@ namespace winrt::FlyExplorer::implementation
         AddressBox().Opacity(1.0);
         AddressBox().Focus(FocusState::Programmatic);
         AddressBox().SelectAll();
+    }
+    void MainWindow::UpdateBreadcrumb(std::wstring const& address)
+    {
+        auto panel=BreadcrumbPanel();panel.Children().Clear();
+        struct Segment{std::wstring label,target;};std::vector<Segment> segments;
+        const auto friendly=FriendlyAddress(address);
+        if(address.rfind(L"shell:",0)==0||friendly!=address){segments.push_back({friendly,address});}
+        else{
+            try{
+                std::filesystem::path built;
+                for(auto const& part:std::filesystem::path(address)){
+                    built/=part;auto label=part.native();
+                    while(label.size()>1&&(label.back()==L'\\'||label.back()==L'/'))label.pop_back();
+                    if(!label.empty())segments.push_back({label,built.native()});
+                }
+            }catch(...){segments.push_back({friendly,address});}
+        }
+        auto add=[&](Segment const& seg,bool current){
+            Button button;button.Height(28);button.MinWidth(0);button.Padding(Thickness{6.0,0.0,6.0,0.0});
+            button.CornerRadius(CornerRadius{4.0});button.BorderThickness(Thickness{0.0});button.Background(nullptr);
+            button.Content(winrt::box_value(hstring(seg.label)));button.Tag(winrt::box_value(hstring(seg.target)));
+            button.FontWeight(current?Windows::UI::Text::FontWeights::SemiBold():Windows::UI::Text::FontWeights::Normal());
+            Microsoft::UI::Xaml::Automation::AutomationProperties::SetName(button,L"\uC8FC\uC18C \uACBD\uB85C: "+hstring(seg.label));
+            button.Click({this,&MainWindow::OnBreadcrumbSegmentClicked});panel.Children().Append(button);
+        };
+        auto separator=[&](){TextBlock glyph;glyph.Text(L"\u203A");glyph.Opacity(0.52);glyph.VerticalAlignment(VerticalAlignment::Center);panel.Children().Append(glyph);};
+        if(segments.empty())segments.push_back({friendly,address});
+        if(segments.size()>4){
+            add(segments.front(),false);separator();
+            Segment ellipsis{L"\u2026",segments[segments.size()-4].target};add(ellipsis,false);separator();
+            for(size_t i=segments.size()-3;i<segments.size();++i){add(segments[i],i+1==segments.size());if(i+1<segments.size())separator();}
+        }else for(size_t i=0;i<segments.size();++i){add(segments[i],i+1==segments.size());if(i+1<segments.size())separator();}
+    }
+    void MainWindow::OnBreadcrumbSegmentClicked(IInspectable const& sender,RoutedEventArgs const&)
+    {
+        auto button=sender.try_as<Button>();if(!button||!button.Tag())return;
+        OpenFolder(std::wstring(winrt::unbox_value<hstring>(button.Tag()).c_str()));
     }
     void MainWindow::OnQuickSearchKeyDown(IInspectable const&,
         Input::KeyRoutedEventArgs const& args)
@@ -1157,11 +1203,16 @@ namespace winrt::FlyExplorer::implementation
     void MainWindow::OnShellSizeChanged(IInspectable const&,
         SizeChangedEventArgs const& args)
     {
-        const auto width=args.NewSize().Width;
-        NavigationColumn().Width(GridLength{
-            width<1040?156.0:188.0,GridUnitType::Pixel});
-        QuickSearchBox().Width(width<1060?150.0:220.0);
-
+        const auto width=args.NewSize().Width;mShellWidth=width;
+        NavigationColumn().Width(GridLength{width<1040?156.0:188.0,GridUnitType::Pixel});
+        QuickSearchBox().Width(width<820?120.0:(width<1060?150.0:220.0));
+        const int profile=DetailLayoutProfile();
+        for(int side=0;side<2;++side){
+            if(mDetailLayoutProfiles[side]!=profile){
+                mDetailLayoutProfiles[side]=profile;
+                if(mColumnControlsReady&&!mModel.panes[side].tabs.empty())FillFiles(side);
+            }else ApplyDetailColumnLayout(side);
+        }
     }
     void MainWindow::OnNewTabClicked(IInspectable const&,RoutedEventArgs const&)
     {
