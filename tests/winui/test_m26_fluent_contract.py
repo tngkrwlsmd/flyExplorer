@@ -181,6 +181,21 @@ class FluentShellContract(unittest.TestCase):
         self.assertIn('schema=2\\r\\nlanguage=ko-KR',prefs)
         self.assertIn('view="+viewName(view)',prefs)
 
+    def test_explorer_like_v61_icon_view_density_contract(self):
+        main=text("MainWindow.xaml")
+        impl=text("MainWindow.xaml.cpp")
+        self.assertIn('ExplorerSmallIconsItemsPanel',main)
+        self.assertIn('ItemWidth="164" ItemHeight="34"',main)
+        self.assertIn('ExplorerMediumIconsItemsPanel',main)
+        self.assertIn('ItemWidth="96" ItemHeight="96"',main)
+        self.assertIn('row.Width(160);row.Height(32)',impl)
+        self.assertIn('row.Width(92);row.Height(92)',impl)
+        self.assertIn('filename.FontSize(12.0);filename.Width(84)',impl)
+        self.assertIn('filename.MaxLines(2)',impl)
+        self.assertIn('UseSystemFocusVisuals" Value="True"',main)
+        self.assertIn('row.MinHeight(32)',impl)
+        self.assertIn('header.Height(details?24.0:0.0)',impl)
+
     def test_explorer_like_v6_isolated_shell_visual_contract(self):
         impl=text("MainWindow.xaml.cpp")
         state=text("file_list_state.h")

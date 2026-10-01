@@ -1095,12 +1095,12 @@ namespace winrt::FlyExplorer::implementation
                     glyph.Glyph(hstring(item.isFolder()?L"\uE8B7":L"\uE8A5"));glyph.FontSize(medium?36.0:(smallIcons?20.0:16.0));cell.Children().Append(glyph);
                 }
                 TextBlock filename;filename.Text(item.label);
-                if(medium){filename.Width(96);filename.TextAlignment(TextAlignment::Center);filename.TextWrapping(TextWrapping::WrapWholeWords);filename.MaxLines(2);filename.TextTrimming(TextTrimming::CharacterEllipsis);}
-                else{filename.TextTrimming(TextTrimming::CharacterEllipsis);if(smallIcons)filename.Width(148);}
+                if(medium){filename.FontSize(12.0);filename.Width(84);filename.TextAlignment(TextAlignment::Center);filename.TextWrapping(TextWrapping::WrapWholeWords);filename.MaxLines(2);filename.TextTrimming(TextTrimming::CharacterEllipsis);}
+                else{filename.TextTrimming(TextTrimming::CharacterEllipsis);if(smallIcons){filename.FontSize(12.0);filename.Width(120);}}
                 cell.Children().Append(filename);row.Content(cell);
                 if(state.viewMode==FileViewMode::List){row.MinHeight(32);row.Padding(Thickness{5.0,0.0,5.0,0.0});}
-                else if(smallIcons){row.Width(180);row.Height(34);row.Padding(Thickness{5.0,0.0,5.0,0.0});}
-                else{row.Width(108);row.Height(100);row.Padding(Thickness{4.0});row.HorizontalContentAlignment(HorizontalAlignment::Center);}
+                else if(smallIcons){row.Width(160);row.Height(32);row.Padding(Thickness{5.0,0.0,5.0,0.0});}
+                else{row.Width(92);row.Height(92);row.Padding(Thickness{2.0});row.HorizontalContentAlignment(HorizontalAlignment::Center);}
             }
             Microsoft::UI::Xaml::Automation::AutomationProperties::SetName(
                 row,hstring(label));

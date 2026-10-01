@@ -493,3 +493,144 @@ After the visual acceptance processes exited, `FlyShellIsolationHelper.exe` orph
 4. The synthetic benchmark `photo-sample.jpg` is only a layout placeholder, not a valid JPEG; it correctly falls back to its registered image-file icon. The separate valid owned JPEG proves the thumbnail route.
 5. No Large Icons mode was added.
 6. Actual 125/150/200% DPI, High Contrast and live Narrator listening remain NOT TESTED in the current RDP environment. Code-level visual request sizing is DPI-aware via `RasterizationScale`, but this is not a substitute for actual alternate-DPI certification.
+
+
+## Explorer-like v6.1 Medium / Small icon-view density polish
+
+v6 was checkpointed and pushed before this work as `1f0f2ed42d5a42ffc632040ae74218fa23a5ddc1` (`feat: add isolated Explorer-like Shell visuals`). v6.1 remains an uncommitted review candidate.
+
+### Fresh Explorer Medium / Small reference
+
+A fresh same-machine Windows 11 Explorer reference was captured at 972x720 / 96 DPI / Dark using only the owned synthetic benchmark folder. The file surface was explicitly focused before the Explorer view shortcuts were issued.
+
+Observed UIA item geometry:
+
+- Medium Icons: fixed width about 74 px; heights varied with the wrapped label (68, 83, 98 and 113 px were observed).
+- Small Icons: about 308x30 px in the single-pane Explorer reference.
+- Explorer Medium keeps its 32-ish visual artwork compact and allows label height to vary more than flyExplorer's fixed dual-pane cells.
+
+The benchmark also captured real pointer hover, selected and keyboard-focus surfaces. v6.1 intentionally keeps WinUI's native ListViewItem hover/selection/focus renderer rather than drawing Explorer colors manually.
+
+### Candidate geometry comparison
+
+v6 started at a 108x100 Medium row inside a 112x104 wrap slot. Three narrower candidates were evaluated with real Release builds and runtime screenshots:
+
+| Candidate | Medium row | Wrap slot | 972px dual-pane result | 760px result | Decision |
+| --- | ---: | ---: | --- | --- | --- |
+| v6 baseline | 108x100 | 112x104 | roomy | 2 columns/pane | too loose compared with Explorer |
+| A | 96x92 | 100x96 | about 3 columns/pane | usable | safe but still leaves avoidable horizontal space |
+| B | 88x88 | 92x92 | 4 columns/pane | usable | label width became visibly cramped |
+| C | **92x92** | **96x96** | **4 columns/pane** | **2 columns/pane** | selected balance of density and readability |
+
+Candidate C is the v6.1 endpoint. Medium keeps the v6 32-DIP Shell visual request and bounded ~48-DIP image-thumbnail policy; presentation polish does not alter the isolation protocol.
+
+Medium filename presentation is now 12 px, centered, 84 px wide, max two lines, whole-word wrapping with character ellipsis. The smaller font lets ordinary labels such as Documents/Pictures read more naturally without increasing the cell.
+
+Small Icons changed from 180x34 to **160x32** rows inside a 164x34 wrap slot, with a 12 px filename and 120 px text box. A narrower 140/150 row was not pursued: at the current dual-pane width it would not create an additional column, while it would reduce useful filename width. The 160 px choice tightens the selection surface while preserving two practical columns per pane.
+
+### Runtime selection / hover / focus
+
+Actual Dark runtime captures verified:
+
+- pointer hover on an unselected Medium item;
+- selected Medium item using the native ListViewItem selected state;
+- system keyboard focus rectangle (no custom focus renderer was introduced);
+- simultaneous left/right selections with the active left selection at full opacity and the inactive right selection retained at the existing 0.78 opacity;
+- Small Icons pointer hover and keyboard-focus states;
+- Left=Medium / Right=Small independent presentation.
+
+Medium keyboard navigation was checked by actual focus owner rather than by SelectedItems (SelectionMode=Multiple does not necessarily move selection with arrow keys). The observed focus sequence included Pictures -> photo-sample.jpg -> Korean filename with Right/Down, Home to the first item, End to the last item, then Left/Up back through the grid. The existing row-level Enter path and the broader F2/Delete/selection command contracts remain on the same WinUI/native command routes.
+
+The existing context menu still opened from a Medium folder and retained copy, move, rename, Windows clipboard, Recycle Bin and the isolated Windows Shell context action. No context-menu redesign was introduced.
+
+### Responsive / theme / visual regression
+
+Final candidate SHA-256:
+
+`AC7A6B1BAC8CF6D175B8DD9906454957311BE67275B4BA022D116CC95A2DC5FA`
+
+Actual runtime geometry:
+
+| Metric | Explorer | v6 | v6.1 |
+| --- | ---: | ---: | ---: |
+| Medium cell width | about 74 px | 108 px | **92 px** |
+| Medium cell height | 68-113 px observed | 100 px | **92 px fixed** |
+| Medium visual | Shell artwork | 32 DIP | **32 DIP retained** |
+| Medium label lines | variable | max 2 | **max 2** |
+| Small cell | about 308x30 single-pane | 180x34 | **160x32 dual-pane** |
+| Details row | about 28 px pitch | 32 px | **32 px** |
+| Details file top | established reference about 136 px content region | 170 px | **170 px** |
+| Details header | Explorer Details header | 24 px | **24 px** |
+| List row | about 32 px | 32 px | **32 px** |
+| List file top | about 142 px first-item reference | 146 px | **146 px** |
+
+At 972x720, v6.1 Medium exposes four columns per pane for the eight-item fixture. At 760x640 it keeps two columns per pane without horizontal clipping. Maximized, the same fixed cells increase the usable column count rather than stretching into large gaps.
+
+A real 96x64 owned JPEG still rendered through the v6 isolated Shell thumbnail path (displayed about 40x26 while preserving aspect ratio). Folder/ZIP/PDF registered Shell visuals also remain unchanged. Dark Medium, Light Medium and Light Small were captured on the final binary.
+
+The synthetic Documents/Pictures entries are ordinary subdirectories named that way, not actual Windows Known Folder identities. They therefore do not provide evidence for path-specific Known Folder artwork. v6.1 leaves the standard isolated filesystem-folder visual in place rather than expanding PIDL/session contracts for a cosmetic distinction.
+
+### Stress / performance / lifecycle
+
+An ignored owned fixture with 200 text files plus four valid JPEGs was used for a bounded stress pass:
+
+- UI ready: about 950 ms on this machine/session;
+- initial virtualized UIA exposure: 56 rows;
+- process RSS sample: about 130 MB;
+- End-key response sample: about 284 ms;
+- ten actual View transitions (Details / Medium / Small combinations): 10/10 completed;
+- no helper accumulation was observed at the sampled transition points;
+- main owned process exit: 0;
+- helper orphan count after close: 0.
+
+The early-shutdown gate was repeated under the larger fixture with one parent held open and three children closed immediately after their file list became visible. Child exits were **0 / 0 / 0**, parent exit was **0**, final helper orphan count was **0**, and no owned flyExplorer process remained.
+
+One first full Release GUI attempt nevertheless re-observed the previously recorded nondeterministic M2.1 child-shutdown status `3221226107` (`0xC000027B`; WER faulting module CoreMessagingXP.dll with underlying `0x800710DD`) after the owned child had already restored its Dark preference. No product change was made in response. The same exact v6.1 binary had already passed the explicit 0/0/0 early-close stress gate and then passed one bounded full GUI rerun. This is therefore **not claimed fixed**; it remains a recorded nondeterministic lifecycle risk.
+
+### v6.1 regression
+
+- canonical structure: 4/4 PASS.
+- source contracts: **121/121 PASS**.
+- Release build: PASS.
+- final bounded Release GUI rerun: **PASS in 75.8 seconds**.
+- native watcher create/delete refresh: PASS.
+- Dark/Light rendered-shell pixel contract: PASS.
+- isolated registered Shell icon GUI contract: PASS.
+- Korean create/rename/non-overwrite: PASS.
+- metadata/sort/opposite-pane transfer: PASS.
+- private two-pane session restore/clear: PASS.
+- normal owned shell exit: 0.
+- `ORIGINAL_SIX_USER_CONFIG_SHA256_IDENTICAL True`.
+- physical drag and global clipboard remain outside this runner's coverage.
+
+### v7 state-ownership design note (design only)
+
+v6.1 does **not** implement window-level tabs, does not change the session schema, and does not make View persistence per-tab. The next functional-tab milestone should first settle ownership along this conceptual hierarchy:
+
+```text
+Window
+└── WindowTab[]
+    ├── LeftPane
+    │   └── PaneTab[]
+    └── RightPane
+        └── PaneTab[]
+```
+
+Proposed ownership boundaries for later design review:
+
+- **Window**: window-level tab collection, active WindowTab, window geometry and process/window lifetime.
+- **WindowTab**: active pane, split on/off and split ratio, workspace identity/restore metadata, two Pane owners.
+- **Pane**: pane-local tab collection and active PaneTab index.
+- **PaneTab**: current Shell location/path/PIDL identity, back/forward history, View mode, sort state and per-view column-width state.
+- Theme/language remain application preferences unless a separate requirement establishes per-window ownership.
+
+This model keeps navigation/history/View/sort state next to the pane tab that actually owns it while avoiding duplicate active-pane/split state in every child tab. A future v7 should define close/reopen/crash-restore semantics before changing the private session wire format.
+
+### Remaining gaps
+
+1. Medium is intentionally denser but is not a pixel clone of Explorer's variable-height 74 px cells; the fixed 92x92 cell is a dual-pane usability decision.
+2. Large Icons remains unimplemented.
+3. PDF thumbnail-provider scope was not expanded; registered PDF icon remains the policy.
+4. Path-specific Windows Known Folder artwork remains a later optional investigation.
+5. Actual 125/150/200% DPI, High Contrast and live Narrator listening remain **NOT TESTED** in the current RDP environment; code-level RasterizationScale support is not alternate-DPI certification.
+6. The nondeterministic CoreMessaging immediate-child shutdown anomaly described above remains a lifecycle risk even though the explicit 3-run gate and final full GUI rerun passed.

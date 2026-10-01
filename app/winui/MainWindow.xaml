@@ -38,8 +38,8 @@
             <Setter Property="UseSystemFocusVisuals" Value="True"/>
         </Style>
         <ItemsPanelTemplate x:Key="ExplorerVerticalItemsPanel"><ItemsStackPanel Orientation="Vertical"/></ItemsPanelTemplate>
-        <ItemsPanelTemplate x:Key="ExplorerSmallIconsItemsPanel"><ItemsWrapGrid Orientation="Horizontal" ItemWidth="184" ItemHeight="36"/></ItemsPanelTemplate>
-        <ItemsPanelTemplate x:Key="ExplorerMediumIconsItemsPanel"><ItemsWrapGrid Orientation="Horizontal" ItemWidth="112" ItemHeight="104"/></ItemsPanelTemplate>
+        <ItemsPanelTemplate x:Key="ExplorerSmallIconsItemsPanel"><ItemsWrapGrid Orientation="Horizontal" ItemWidth="164" ItemHeight="34"/></ItemsPanelTemplate>
+        <ItemsPanelTemplate x:Key="ExplorerMediumIconsItemsPanel"><ItemsWrapGrid Orientation="Horizontal" ItemWidth="96" ItemHeight="96"/></ItemsPanelTemplate>
         <Style x:Key="ExplorerPaneTitleStyle" TargetType="Button">
             <Setter Property="Height" Value="30"/>
             <Setter Property="Padding" Value="6,0"/>

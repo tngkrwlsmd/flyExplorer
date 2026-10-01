@@ -4155,3 +4155,12 @@ and build the shared file-operation seam only from `src/base`. Final canonical
 source checks are 4/4 structure + 107/107 WinUI contracts, fresh Debug/Release
 builds pass, and both full owned GUI configurations pass with original settings
 unchanged.
+
+
+## 2026-10-01: v6.1 validation re-observed the recorded CoreMessaging child-shutdown anomaly
+
+During the first full Release GUI validation of the v6.1 icon-density presentation candidate, the owned M2.1 child successfully restored its Korean Dark preference and then returned Windows status `3221226107` during controlled shutdown. Windows Error Reporting identified `CoreMessagingXP.dll` with exception `0xC000027B` and underlying `0x800710DD`. This matches the shutdown anomaly already recorded on 2026-09-30; the v6.1 geometry work does not establish a new causal root.
+
+No product patch or assertion weakening was made for this event. The same exact Release binary independently passed an owned stress gate with parent open plus three immediate child closes (child exits `0 / 0 / 0`, parent `0`, helper orphan `0`) and then passed one bounded full Release GUI rerun in 75.8 seconds, including normal owned exit and unchanged hashes for the original six user configuration files.
+
+Therefore this recurrence is retained as a **nondeterministic unresolved lifecycle risk**, not reported as fixed and not attributed to the Medium/Small geometry change without stronger evidence.
