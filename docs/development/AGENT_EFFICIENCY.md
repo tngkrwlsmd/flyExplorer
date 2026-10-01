@@ -22,6 +22,21 @@
 - **최소 검증:** 변경 파일에 한정된 정적 검사와 필요한 빌드/기능/실기 테스트를 선택한다. 서로 다른 commit/바이너리에서 얻은 결과를 최신 revision의 검증으로 착각하지 않는다. 필수 회귀가 하나라도 불충족이면 PASS로 합치지 않는다.
 - **비용 인식:** 플랫폼 사용량은 프로젝트 외 호출이 섞일 수 있으므로 에이전트가 화면의 월간 총량을 자기 작업의 정확한 호출 수라고 주장하지 않는다. 작업별 실제 호출 횟수는 실행 기록에서 가능한 범위만 측정하고 추정치임을 구분한다.
 
+### 호출 전략 v2 — polling 대신 완료 중심으로 실행
+
+최근 실제 WinUI 개발 기록에서 긴 빌드/GUI를 시작한 뒤 `read_process_output`의 무출력 조회와 별도 `start_process` 상태 probe(`WRAPPER_RUNNING`, `LOG_BYTES`, `JSON_READY`)를 번갈아 실행하는 패턴이 확인됐다. 이 패턴은 새 근거를 거의 만들지 않으면서 호출과 컨텍스트를 크게 소비하므로 다음을 **기본 실행 계약**으로 강제한다.
+
+1. **긴 작업은 start 1회 + blocking result read 1회를 기본으로 한다.** 빌드·GUI·stress처럼 예상 시간이 알려진 작업은 시작 전에 합리적인 완료 시간(예: 빌드 60~90초, 전체 GUI 90~120초)을 정하고, PID가 반환되면 그 시간대에 맞춘 `read_process_output` 한 번으로 완료 결과를 기다린다. 시작 직후 1~5초 간격의 `read_process_output`은 금지한다.
+2. **중간 상태 probe 금지.** 아직 예상 완료 시간 안에 있는 프로세스에 대해 별도의 PowerShell을 띄워 `Get-Process`, `WRAPPER_RUNNING`, `LOG_BYTES`, `JSON_READY`, 최신 로그 tail을 조회하지 않는다. blocking read가 실제 timeout되었거나 예상 완료 시간을 유의미하게 초과했고 정체 여부가 다음 행동을 바꿀 때만 상태 probe를 최대 한 번 허용한다.
+3. **무출력 polling은 실패 신호가 아니다.** `No output in requested range`를 받은 뒤 즉시 다른 상태 확인을 붙이지 않는다. 이미 지정한 blocking wait가 끝나기 전에는 기다린다. 같은 PID에 대한 무출력 read를 연속 두 번 수행하지 않는다.
+4. **완료 요약은 생산 명령이 직접 낸다.** build/test/stress 스크립트는 종료 시 `EXIT`, 핵심 PASS/FAIL, candidate SHA, 필요한 오류 한두 개를 한 번에 출력하도록 구성한다. 성공 후 별도 로그 tail, SHA 조회, process 조회를 연쇄하지 않는다. 동일 명령이 최종 SHA나 결과를 낼 수 있으면 그 안에서 출력한다.
+5. **소스 읽기는 narrow-first.** 위치를 알고 있는 함수·XAML resource·test contract는 `Select-String` 또는 줄 범위로 읽는다. 기본적으로 한 파일 전체 수백~수천 줄을 가져오지 않는다. 위치를 모를 때만 검색으로 후보를 찾고, 그 다음 필요한 함수 범위만 확장한다. 전체 파일 읽기는 구조 자체를 검토해야 할 때만 허용한다.
+6. **acceptance는 one-shot runner를 우선한다.** geometry/theme/selection/lifecycle처럼 같은 binary를 대상으로 하는 여러 runtime 확인은 가능한 한 하나의 유지 가능한 acceptance runner에 묶고, 끝에서 JSON 또는 짧은 sentinel summary 한 번을 출력한다. 거의 같은 inline Python을 조건만 바꿔 반복 생성하지 않는다. 후보 비교가 필요한 경우에도 의사결정을 실제로 바꾸는 후보만 실행하며, 기본적으로 `baseline + 최대 2개 후보 + final`을 넘기지 않는다.
+7. **동일 binary 증거를 재사용한다.** candidate SHA가 같고 환경·테스트 조건이 같으면 이미 확보한 build/source/runtime 결과를 다시 실행하지 않는다. presentation 변경처럼 특정 영역만 바뀌면 그 영역의 targeted acceptance를 먼저 수행하고, 전체 GUI는 최종 후보에서 한 번만 수행한다.
+8. **full GUI retry는 원인 확인 후 1회만 허용한다.** 첫 full GUI가 비결정적 lifecycle/환경 오류로 실패하면 먼저 최초 관련 오류와 WER/테스트 지점을 좁게 확인한다. 동일 binary의 별도 targeted gate가 원인을 구별해 주는 경우에만 bounded rerun을 한 번 허용한다. 두 번째도 같은 실패면 반복하지 말고 미해결 risk로 기록한다.
+9. **원격 inline 스크립트는 재사용 가능하게 유지한다.** 30줄 이상이거나 한글 fixture/복수 acceptance를 다루는 Python은 긴 PowerShell here-string을 매번 새로 보내기보다 ignore된 UTF-8 `.py` 파일 또는 기존 versioned test runner를 우선한다. 필요 시 ASCII Unicode escape와 `python -X utf8`를 사용한다. 인코딩 실패 때문에 전체 acceptance를 다시 돌리는 상황을 방지한다.
+10. **단계별 호출 목표:** 상태 확인/문서 수정 4~6회, source 수정+단일 build 8~12회, GUI 포함 일반 기능 작업 16~24회를 우선 목표로 한다. 기존 기본 상한(12/20/30)은 안전 차단선이지 목표치가 아니다. 목표를 넘기기 시작하면 새 호출이 실제로 결정을 바꾸는지 즉시 점검한다.
+
 ### 기본 실행 순서 — 최소 호출·필수 검증
 
 다음 순서를 모든 개발 작업의 기본값으로 적용한다. 각 단계의 범위는 실제 변경·위험·사용자 인수 조건에 비례해야 하며, 필수 검증을 생략하는 근거로 사용하지 않는다.
