@@ -19,7 +19,7 @@ CONTRACTS = [
     str((TESTS/"helper"/"test_contract.py").relative_to(ROOT)),
     str((TESTS/"helper"/"test_winui_integration_contract.py").relative_to(ROOT)),
 ]
-OWNED_FLAGS = ("FLY_M19_OWNED_FEATURES", "FLY_M20_OWNED_SHELL",
+OWNED_FLAGS = ("FLY_V7_WINDOW_TABS", "FLY_V7_WINDOW_TABS_ONLY", "FLY_M19_OWNED_FEATURES", "FLY_M20_OWNED_SHELL",
                "FLY_M21_OWNED_FEATURES", "FLY_M22_OWNED_FEATURES",
                "FLY_M23_OWNED_FEATURES")
 FAULT_FLAGS = ("FLY_M18_OWNED_COM_HANG", "FLY_M18_EXHAUST_TIMEOUT",

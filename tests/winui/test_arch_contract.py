@@ -16,6 +16,8 @@ class MigrationContracts(unittest.TestCase):
   # M1.9 adds a separate collapsible read-only search result ListView;
   # preserve exactly two actual navigation panes.
   self.assertEqual(xaml.count("<ListView "),3)
+  shell=(Path(__file__).resolve().parents[2]/"app/winui/ShellHeader.xaml").read_text(encoding="utf-8")
+  self.assertIn('x:Name="WindowTabStrip"',shell)
   for actual_pane in ('LeftFiles','RightFiles'):
    self.assertEqual(xaml.count('x:Name="'+actual_pane+'"'),1)
   self.assertEqual(xaml.count('x:Name="SearchMatches"'),1)

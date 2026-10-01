@@ -149,6 +149,12 @@ try:
      for e in element("LeftFiles").descendants()),
      "async native Shell directory items never displayed",12)
  print("REAL_FILE_LIST_IN_LEFT_PANE",True,flush=True)
+ if os.environ.get("FLY_V7_WINDOW_TABS_ONLY")=="YES":
+  from test_v7_window_tabs_gui import run as v7_tabs_run
+  v7_tabs_run(win=win,element=element,safe_click=safe_click,
+              focus=ensure_owned_focus,eventually=eventually,owned=owned)
+  print("REAL_V7_WINDOW_TABS_ONLY_COMPLETE",True,flush=True)
+  raise SystemExit(0)
  if owned_exhaust:
   # Both COM attempts hang only inside test-owned helpers, AFTER a real
   # initial local folder has been committed. Check actual failure UX.
@@ -326,8 +332,12 @@ try:
  assert element("RightFiles").is_visible()
  # Verify the SECOND panel has its own selected tab, list and history;
  # navigation there MUST NOT replace the left panel. The visual pane-title
- # button is intentionally retired; activate through the actual file surface.
- safe_click(element("RightFiles"))
+ # button is intentionally retired; activate through an actual file row when
+ # available so UIA does not land on ListView whitespace/scroll chrome.
+ right_surface=element("RightFiles")
+ right_item=next((x for x in right_surface.descendants()
+                  if x.element_info.control_type=="ListItem"),None)
+ safe_click(right_item or right_surface)
  eventually(lambda:"오른쪽" in element("ActivePaneText").window_text(),
             "explicit right pane activation")
  rightaddr=element("AddressBox")
@@ -445,6 +455,10 @@ try:
   from test_m20_shell_gui import run as m20_run
   m20_run(win=win,element=element,safe_click=safe_click,
           focus=ensure_owned_focus,eventually=eventually,owned=owned)
+ if os.environ.get("FLY_V7_WINDOW_TABS")=="YES":
+  from test_v7_window_tabs_gui import run as v7_tabs_run
+  v7_tabs_run(win=win,element=element,safe_click=safe_click,
+              focus=ensure_owned_focus,eventually=eventually,owned=owned)
  if os.environ.get("FLY_M21_OWNED_FEATURES")=="YES":
   from test_m21_gui import run as m21_run
   m21_run(p=p,win=win,element=element,safe_click=safe_click,

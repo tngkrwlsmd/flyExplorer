@@ -1,5 +1,6 @@
 #include "pch.h"
 #include "ShellHeader.xaml.h"
+#include <winrt/Microsoft.UI.Xaml.Automation.h>
 #if __has_include("ShellHeader.g.cpp")
 #include "ShellHeader.g.cpp"
 #endif
@@ -22,6 +23,39 @@ void ShellHeader::RestoreTheme(int selection){
  ThemePicker().SelectedIndex(selection);
  ShowChoice(selection);
  mRestoring=false;
+}
+
+void ShellHeader::SetWindowTabCallbacks(std::function<void()> add,
+    std::function<void(int)> activate,std::function<void(int)> close){
+ mAddWindowTab=std::move(add);mActivateWindowTab=std::move(activate);
+ mCloseWindowTab=std::move(close);
+}
+void ShellHeader::SetWindowTabs(std::vector<std::wstring> const& labels,int selected){
+ mRestoringTabs=true;
+ auto tabs=WindowTabStrip();tabs.TabItems().Clear();
+ for(size_t i=0;i<labels.size();++i){
+  TabViewItem item;item.Header(winrt::box_value(hstring(labels[i])));item.IsClosable(true);
+  Microsoft::UI::Xaml::Automation::AutomationProperties::SetName(
+      item,L"창 탭 "+hstring(labels[i]));
+  tabs.TabItems().Append(item);
+ }
+ tabs.SelectedIndex(labels.empty()?-1:(std::clamp)(selected,0,static_cast<int>(labels.size()-1)));
+ mRestoringTabs=false;
+}
+void ShellHeader::OnWindowTabAdd(TabView const&,IInspectable const&){
+ if(mAddWindowTab)mAddWindowTab();
+}
+void ShellHeader::OnWindowTabSelectionChanged(
+ IInspectable const& sender,SelectionChangedEventArgs const&){
+ if(mRestoringTabs)return;auto tabs=sender.try_as<TabView>();
+ if(tabs&&tabs.SelectedIndex()>=0&&mActivateWindowTab)mActivateWindowTab(tabs.SelectedIndex());
+}
+void ShellHeader::OnWindowTabCloseRequested(
+ TabView const& sender,TabViewTabCloseRequestedEventArgs const& args){
+ if(mRestoringTabs)return;int index=-1;
+ for(uint32_t i=0;i<sender.TabItems().Size();++i)
+  if(sender.TabItems().GetAt(i)==args.Tab()){index=static_cast<int>(i);break;}
+ if(index>=0&&mCloseWindowTab)mCloseWindowTab(index);
 }
 void ShellHeader::OnThemeSelectionChanged(
  IInspectable const& sender,SelectionChangedEventArgs const&){

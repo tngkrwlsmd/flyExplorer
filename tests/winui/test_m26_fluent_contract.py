@@ -35,10 +35,11 @@ class FluentShellContract(unittest.TestCase):
         header=text("ShellHeader.xaml")
         impl=text("MainWindow.xaml.cpp")
         self.assertIn('x:Name="TitleBarRoot" Height="34" Padding="10,0,142,0"',header)
-        self.assertIn('x:Name="TitleBarDragRegion" Grid.Column="1" MinWidth="48"',header)
+        self.assertIn('x:Name="WindowTabStrip" Grid.Column="1"',header)
+        self.assertIn('x:Name="TitleBarDragRegion" Grid.Column="2" MinWidth="48"',header)
         self.assertIn('x:Name="ShellHeading" Text="flyExplorer"',header)
         self.assertIn('FontSize="12" FontWeight="Normal" Opacity="0.82"',header)
-        self.assertNotIn('<TabView',header)
+        self.assertIn('<TabView',header)
         self.assertEqual(main.count('<TabView '),2)
         self.assertIn('<RowDefinition Height="34"/>',main)
         self.assertIn("ExtendsContentIntoTitleBar(true)",impl)
@@ -207,6 +208,22 @@ class FluentShellContract(unittest.TestCase):
         self.assertIn('UseSystemFocusVisuals" Value="True"',main)
         self.assertIn('row.MinHeight(32)',impl)
         self.assertIn('header.Height(details?24.0:0.0)',impl)
+
+    def test_v7_functional_window_tab_chrome_contract(self):
+        root=Path(__file__).resolve().parents[2]
+        shell=(root/"app/winui/ShellHeader.xaml").read_text(encoding="utf-8")
+        header=(root/"app/winui/ShellHeader.xaml.h").read_text(encoding="utf-8")
+        impl=text("MainWindow.xaml.cpp")
+        main=text("MainWindow.xaml")
+        self.assertIn('x:Name="WindowTabStrip"',shell)
+        self.assertIn('IsAddTabButtonVisible="True"',shell)
+        self.assertIn("SetWindowTabCallbacks",header)
+        for token in ('CreateWindowTab(L"shell:MyComputerFolder")',
+                      "ActivateWindowTab","CloseWindowTab","PreviewKeyDown",
+                      "GetKeyState(VK_CONTROL)","GetKeyState(VK_SHIFT)"):
+            self.assertIn(token,impl)
+        self.assertIn('x:Name="LeftTabs"',main)
+        self.assertIn('x:Name="RightTabs"',main)
 
     def test_explorer_like_v6_isolated_shell_visual_contract(self):
         impl=text("MainWindow.xaml.cpp")

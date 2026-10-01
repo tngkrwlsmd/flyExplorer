@@ -141,6 +141,8 @@ namespace winrt::FlyExplorer::implementation
         void SuspendActiveWindowTab();
         void ApplyActiveWindowTab(winrt::hstring const& status);
         void ReleaseWindowTabRoutes(fxfile::previewtabs::WindowTabState& state);
+        void RefreshWindowTabs();
+        std::wstring WindowTabLabel(fxfile::previewtabs::WindowTabState const&) const;
         fxfile::uisettings::Preferences mPreferences{};
         std::shared_ptr<std::mutex> mPreferencesWriteMutex=
             std::make_shared<std::mutex>();

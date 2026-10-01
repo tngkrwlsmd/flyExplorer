@@ -90,8 +90,8 @@ namespace winrt::FlyExplorer::implementation
     {
         InitializeComponent();
         // M2.6 uses the public WinUI 3 custom-titlebar/backdrop path only.
-        // The two independent pane TabViews intentionally remain in each pane
-        // instead of being collapsed into one Explorer tab strip.
+        // Pane-local folder TabViews remain inside each pane; the titlebar now
+        // hosts a separate functional WindowTab workspace strip.
         try{
             ExtendsContentIntoTitleBar(true);
             auto titleHeader=winrt::get_self<
@@ -112,6 +112,46 @@ namespace winrt::FlyExplorer::implementation
         // Each reusable XAML control forwards intent; the window owns the
         // shared native state/settings. Never attach a permanent MFC host.
         const auto nativeWeak=get_weak();
+        auto titleHeader=winrt::get_self<
+            winrt::FlyExplorer::implementation::ShellHeader>(HeaderView());
+        titleHeader->SetWindowTabCallbacks(
+            [nativeWeak]{if(auto ui=nativeWeak.get()){
+                if(ui->CreateWindowTab(L"shell:MyComputerFolder"))ui->RefreshWindowTabs();
+            }},
+            [nativeWeak](int index){if(auto ui=nativeWeak.get()){
+                if(ui->ActivateWindowTab(static_cast<size_t>(index)))ui->RefreshWindowTabs();
+            }},
+            [nativeWeak](int index){if(auto ui=nativeWeak.get()){
+                if(ui->mWindowTabs.size()==1){ui->Close();return;}
+                if(ui->CloseWindowTab(static_cast<size_t>(index)))ui->RefreshWindowTabs();
+            }});
+        RootShell().PreviewKeyDown(
+            Microsoft::UI::Xaml::Input::KeyEventHandler(
+            [nativeWeak](IInspectable const&,
+                Microsoft::UI::Xaml::Input::KeyRoutedEventArgs const& args){
+                const bool control=(::GetKeyState(VK_CONTROL)&0x8000)!=0;
+                if(!control)return;
+                const auto key=args.Key();
+                if(key!=Windows::System::VirtualKey::T&&
+                   key!=Windows::System::VirtualKey::W&&
+                   key!=Windows::System::VirtualKey::Tab)return;
+                if(auto ui=nativeWeak.get()){
+                    if(key==Windows::System::VirtualKey::T){
+                        if(ui->CreateWindowTab(L"shell:MyComputerFolder"))ui->RefreshWindowTabs();
+                    }else if(key==Windows::System::VirtualKey::W){
+                        if(ui->mWindowTabs.size()==1)ui->Close();
+                        else if(ui->CloseWindowTab(ui->mActiveWindowTab))ui->RefreshWindowTabs();
+                    }else if(ui->mWindowTabs.size()>1){
+                        const auto count=ui->mWindowTabs.size();
+                        const bool shift=(::GetKeyState(VK_SHIFT)&0x8000)!=0;
+                        const auto next=shift?(ui->mActiveWindowTab+count-1)%count:
+                            (ui->mActiveWindowTab+1)%count;
+                        if(ui->ActivateWindowTab(next))ui->RefreshWindowTabs();
+                    }
+                    args.Handled(true);
+                }
+            }));
+        RefreshWindowTabs();
         winrt::get_self<winrt::FlyExplorer::implementation::NavigationSidebar>(
             SidebarView())->SetNavigateCallback([nativeWeak](int target){
             if(auto ui=nativeWeak.get()){
@@ -1106,6 +1146,13 @@ namespace winrt::FlyExplorer::implementation
                 row,hstring(label));
             row.Tag(winrt::box_value(static_cast<uint32_t>(index)));
             const auto weak=get_weak();
+            row.Tapped([weak,side](IInspectable const&,
+                Microsoft::UI::Xaml::Input::TappedRoutedEventArgs const&){
+                if(auto ui=weak.get()){
+                    if(ui->ActiveWindowTab().model.activePane!=side)ui->ActivatePane(side);
+                    ui->QueueSelectionPresentationUpdate();
+                }
+            });
             row.KeyDown([weak,side](IInspectable const&,
                 Microsoft::UI::Xaml::Input::KeyRoutedEventArgs const& args){
                 if(args.Key()!=Windows::System::VirtualKey::Enter)return;
@@ -1129,6 +1176,30 @@ namespace winrt::FlyExplorer::implementation
             }
         }
         mPopulatingFileLists=false;
+    }
+    std::wstring MainWindow::WindowTabLabel(
+        fxfile::previewtabs::WindowTabState const& state) const
+    {
+        const int side=state.model.activePane;
+        auto const& pane=state.model.panes[side];
+        if(pane.active<pane.tabs.size()){
+            auto const& snap=pane.tabs[pane.active].snapshot();
+            if(!snap.displayName.empty())return snap.displayName;
+            if(!snap.parsingName.empty()){
+                try{
+                    auto name=std::filesystem::path(snap.parsingName).filename().native();
+                    if(!name.empty())return name;
+                }catch(...){ }
+            }
+        }
+        return L"새 창 탭";
+    }
+    void MainWindow::RefreshWindowTabs()
+    {
+        std::vector<std::wstring> labels;labels.reserve(mWindowTabs.size());
+        for(auto const& state:mWindowTabs)labels.push_back(WindowTabLabel(state));
+        winrt::get_self<winrt::FlyExplorer::implementation::ShellHeader>(HeaderView())
+            ->SetWindowTabs(labels,static_cast<int>(mActiveWindowTab));
     }
     void MainWindow::ReleaseWindowTabRoutes(
         fxfile::previewtabs::WindowTabState& state)
@@ -1260,6 +1331,7 @@ namespace winrt::FlyExplorer::implementation
         UpdateSortPresentation(ActiveWindowTab().model.activePane);
         StatusText().Text(status);
         Title(L"flyExplorer · "+hstring(nav.snapshot().displayName));
+        RefreshWindowTabs();
         UpdateWatch(0);
         UpdateWatch(1);
         ScheduleFileDetails(0);

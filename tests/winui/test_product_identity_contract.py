@@ -1,5 +1,6 @@
 """M2.7 final product identity is no longer a migration/preview shell."""
 from pathlib import Path
+import re
 import unittest
 import xml.etree.ElementTree as ET
 
@@ -45,8 +46,11 @@ class ProductIdentityContract(unittest.TestCase):
                     bodies.append(p.read_text(encoding="utf-8-sig",errors="replace"))
         body="\n".join(bodies)
         for token in ("FlyExplorerWinUIShell","WinUI3NavPoC",
-                      "phase6_winui_shell","Phase6","Preview","PoC","Migration"):
+                      "phase6_winui_shell","Phase6","PoC","Migration"):
             self.assertNotIn(token,body,token)
+        # Retired product identity used Preview as a standalone label. Do not
+        # reject legitimate WinUI API identifiers such as PreviewKeyDown.
+        self.assertIsNone(re.search(r"\bPreview\b",body),"Preview")
 
     def test_runtime_path_resolver_uses_final_executable_name(self):
         paths=(ROOT/"tests/winui/paths.py").read_text(encoding="utf-8")
