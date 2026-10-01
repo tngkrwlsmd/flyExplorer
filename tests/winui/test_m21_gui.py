@@ -33,14 +33,14 @@ def run(*,p,win,element,safe_click,focus,eventually,left,right,localdata,env,exe
     print("M21_THEME_LABEL_AFTER_SELECT",element("ThemeStateText").window_text().encode("unicode_escape").decode("ascii"),flush=True)
     eventually(lambda:element("ThemeStateText").window_text()=="테마: 다크",
                "native Korean dark UI string not rendered")
-    expected=b"schema=1\r\nlanguage=ko-KR\r\ntheme=dark\r\n"
+    expected=b"schema=2\r\nlanguage=ko-KR\r\ntheme=dark\r\nview=details\r\n"
     eventually(lambda:profile.is_file() and profile.read_bytes()==expected,
-               "native private Korean dark theme not atomically persisted",12)
+               "native private Korean dark theme + view default not atomically persisted",12)
     focus()
     picker.select(1)
     eventually(lambda:profile.read_bytes()==
-               b"schema=1\r\nlanguage=ko-KR\r\ntheme=light\r\n",
-               "native private light theme update not persisted",12)
+               b"schema=2\r\nlanguage=ko-KR\r\ntheme=light\r\nview=details\r\n",
+               "native private light theme + view default update not persisted",12)
     focus()
     picker.select(2)
     eventually(lambda:profile.read_bytes()==expected,

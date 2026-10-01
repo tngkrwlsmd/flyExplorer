@@ -150,6 +150,37 @@ class FluentShellContract(unittest.TestCase):
         self.assertGreaterEqual(main.count('UseSystemFocusVisuals" Value="True"'),2)
         self.assertGreaterEqual(toolbar.count('UseSystemFocusVisuals" Value="True"'),2)
 
+    def test_explorer_like_v5_real_view_modes_and_shared_sort_contract(self):
+        main=text("MainWindow.xaml")
+        impl=text("MainWindow.xaml.cpp")
+        toolbar=text("FileToolbar.xaml")
+        state=text("file_list_state.h")
+        prefs=text("../../src/base/ui_preferences.cpp")
+        prefh=text("../../src/base/ui_preferences.h")
+        self.assertIn("enum class FileViewMode : int { Details=0, List=1, SmallIcons=2, MediumIcons=3 }",state)
+        self.assertIn("FileViewMode viewMode=FileViewMode::Details",state)
+        for token in ('x:Name="ViewDetailsItem"','x:Name="ViewListItem"',
+                      'x:Name="ViewSmallIconsItem"','x:Name="ViewMediumIconsItem"'):
+            self.assertIn(token,toolbar)
+        self.assertIn("ExplorerSmallIconsItemsPanel",main)
+        self.assertIn("ExplorerMediumIconsItemsPanel",main)
+        self.assertIn("UpdateViewPresentation(int side)",impl)
+        self.assertIn("mFileLists[side].viewMode",impl)
+        self.assertIn("appliedItemsPanel",state)
+        self.assertIn("mFileLists[side].appliedItemsPanel!=panel",impl)
+        self.assertIn("if(mDetailCancel[side])mDetailCancel[side]->store(true)",impl)
+        self.assertIn("if(state.viewMode==FileViewMode::List){row.MinHeight(32)",impl)
+        self.assertIn("row.KeyDown([weak,side]",impl)
+        self.assertIn("ui->OpenSelectedFolder(side)",impl)
+        self.assertIn("mPreferences.defaultViewMode=selection",text("m20_shell.cpp"))
+        self.assertIn("OnHeaderSortClicked",main)
+        self.assertIn("UpdateSortPresentation(int side)",impl)
+        self.assertIn("selection<0||selection>7",text("m22_transfers.cpp"))
+        self.assertIn("defaultViewMode=0",prefh)
+        self.assertIn("legacyText",prefs)
+        self.assertIn('schema=2\\r\\nlanguage=ko-KR',prefs)
+        self.assertIn('view="+viewName(view)',prefs)
+
     def test_this_pc_local_drive_card_is_bounded_and_provider_safe(self):
         impl=text("MainWindow.xaml.cpp")
         for token in ("GetDriveTypeW","DRIVE_FIXED","DRIVE_REMOVABLE",

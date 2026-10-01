@@ -56,8 +56,10 @@ void MainWindow::OnFileRightTapped(
  QueueSelectionPresentationUpdate();
 }
 void MainWindow::UpdateSort(int selection){
- if(selection<0||selection>3)return;
+ if(selection<0||selection>7)return;
  mFileLists[mModel.activePane].sortMode=selection;
+ fileBar()->SetSortIndex(selection);
+ UpdateSortPresentation(mModel.activePane);
  FillFiles(mModel.activePane);
 }
 void MainWindow::RunTransfer(fxfile::shelltransfer::Kind kind){
@@ -437,6 +439,9 @@ void MainWindow::HandleFileShortcut(
  }
  if(ctrl&&vk==Windows::System::VirtualKey::V){
   PasteFromWindowsClipboard();args.Handled(true);return;
+ }
+ if(vk==Windows::System::VirtualKey::F2){
+  BeginFileNameCommand(fxfile::filecommand::Kind::RenameSelected);args.Handled(true);return;
  }
  if(vk==Windows::System::VirtualKey::F5){
   RunTransfer(fxfile::shelltransfer::Kind::Copy);args.Handled(true);return;

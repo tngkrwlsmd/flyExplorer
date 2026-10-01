@@ -132,6 +132,8 @@ namespace winrt::FlyExplorer::implementation
             }
         });
         fxfile::uisettings::load(mPreferences);
+        const auto initialView=(std::clamp)(mPreferences.defaultViewMode,0,3);
+        for(auto& state:mFileLists)state.viewMode=static_cast<FileViewMode>(initialView);
         winrt::get_self<winrt::FlyExplorer::implementation::ShellHeader>(
             HeaderView())->RestoreTheme(static_cast<int>(mPreferences.theme));
         RootShell().RequestedTheme(
@@ -182,6 +184,10 @@ namespace winrt::FlyExplorer::implementation
         fileBar()->SetSort([nativeWeak](int index){
             if(auto ui=nativeWeak.get())ui->UpdateSort(index);
         });
+        fileBar()->SetView([nativeWeak](int index){
+            if(auto ui=nativeWeak.get())ui->UpdateView(index);
+        });
+        fileBar()->SetViewIndex(initialView);
         const auto dispatch=DispatcherQueue();
         const auto weak=get_weak();
         // The worker owns NO MainWindow/WinRT UI object. Cross-apartment
@@ -306,6 +312,10 @@ namespace winrt::FlyExplorer::implementation
     MainWindow::~MainWindow()
     {
         if(mTransferProgress)mTransferProgress->cancel.store(true);
+        for(int side=0;side<2;++side){
+            if(mDetailCancel[side])mDetailCancel[side]->store(true);
+            mFileLists[side].invalidate();
+        }
         if(mTransferTimer)mTransferTimer.Stop();
         // Never join a Shell extension which might be blocked in COM.
         // Detached State owns all native handles. UI work is guarded
@@ -755,10 +765,70 @@ namespace winrt::FlyExplorer::implementation
         name.Width(widths[0]);type.Width(widths[1]);size.Width(widths[2]);date.Width(widths[3]);
     }
 
+    void MainWindow::UpdateViewPresentation(int side)
+    {
+        auto view=side==0?LeftFiles():RightFiles();
+        auto header=side==0?LeftDetailsHeader():RightDetailsHeader();
+        const auto viewMode=mFileLists[side].viewMode;
+        const bool details=viewMode==FileViewMode::Details;
+        header.Height(details?24.0:0.0);
+        const auto visibility=details?Visibility::Visible:Visibility::Collapsed;
+        if(side==0){
+            LeftNameSortButton().Visibility(visibility);LeftTypeSortButton().Visibility(visibility);
+            LeftSizeSortButton().Visibility(visibility);LeftDateSortButton().Visibility(visibility);
+        }else{
+            RightNameSortButton().Visibility(visibility);RightTypeSortButton().Visibility(visibility);
+            RightSizeSortButton().Visibility(visibility);RightDateSortButton().Visibility(visibility);
+        }
+        const int panel=viewMode==FileViewMode::SmallIcons?1:
+                        viewMode==FileViewMode::MediumIcons?2:0;
+        if(mFileLists[side].appliedItemsPanel!=panel){
+            const wchar_t* key=panel==1?L"ExplorerSmallIconsItemsPanel":
+                               panel==2?L"ExplorerMediumIconsItemsPanel":
+                                        L"ExplorerVerticalItemsPanel";
+            try{
+                view.ItemsPanel(RootShell().Resources().Lookup(
+                    winrt::box_value(key)).as<ItemsPanelTemplate>());
+                mFileLists[side].appliedItemsPanel=panel;
+            }catch(...){ }
+        }
+        if(details)ApplyDetailColumnLayout(side);
+    }
+    void MainWindow::UpdateSortPresentation(int side)
+    {
+        const int sort=mFileLists[side].sortMode;
+        auto decorate=[&](Button const& button,std::wstring label,int asc,int desc){
+            if(sort==asc)label+=L" \u2191";else if(sort==desc)label+=L" \u2193";
+            button.Content(winrt::box_value(hstring(label)));
+            Microsoft::UI::Xaml::Automation::AutomationProperties::SetName(button,hstring(label+L" \uC815\uB82C"));
+        };
+        if(side==0){
+            decorate(LeftNameSortButton(),L"\uC774\uB984",0,1);decorate(LeftTypeSortButton(),L"\uC720\uD615",4,5);
+            decorate(LeftSizeSortButton(),L"\uD06C\uAE30",6,2);decorate(LeftDateSortButton(),L"\uC218\uC815 \uB0A0\uC9DC",7,3);
+        }else{
+            decorate(RightNameSortButton(),L"\uC774\uB984",0,1);decorate(RightTypeSortButton(),L"\uC720\uD615",4,5);
+            decorate(RightSizeSortButton(),L"\uD06C\uAE30",6,2);decorate(RightDateSortButton(),L"\uC218\uC815 \uB0A0\uC9DC",7,3);
+        }
+    }
+    void MainWindow::OnHeaderSortClicked(IInspectable const& sender,RoutedEventArgs const&)
+    {
+        auto button=sender.try_as<Button>();if(!button||!button.Tag())return;
+        const auto tag=std::wstring(winrt::unbox_value<hstring>(button.Tag()).c_str());
+        if(tag.size()!=3||tag[1]!=L','||tag[0]<L'0'||tag[0]>L'1'||tag[2]<L'0'||tag[2]>L'3')return;
+        const int side=tag[0]-L'0',column=tag[2]-L'0';if(mModel.activePane!=side)ActivatePane(side);
+        const int current=mFileLists[side].sortMode;int next=0;
+        if(column==0)next=current==0?1:0;
+        else if(column==1)next=current==4?5:4;
+        else if(column==2)next=current==6?2:6;
+        else next=current==7?3:7;
+        UpdateSort(next);
+    }
+
     void MainWindow::FillFiles(int side)
     {
         mPopulatingFileLists=true;
-        ApplyDetailColumnLayout(side);
+        UpdateViewPresentation(side);
+        UpdateSortPresentation(side);
         auto view=side==0?LeftFiles():RightFiles();
         const auto& pane=mModel.panes[static_cast<size_t>(side)];
         const auto& items=pane.tabs[pane.active].snapshot().children;
@@ -794,19 +864,19 @@ namespace winrt::FlyExplorer::implementation
             return ::CompareStringOrdinal(a.c_str(),-1,b.c_str(),-1,TRUE)==CSTR_LESS_THAN;
         };
         std::stable_sort(order.begin(),order.end(),[&](size_t lhs,size_t rhs){
-            if(items[lhs].isFolder()!=items[rhs].isFolder())
-                return items[lhs].isFolder();
-            if(detailReady&&mode==2){
-                const auto& x=mFileLists[side].details[lhs];
-                const auto& y=mFileLists[side].details[rhs];
+            if(items[lhs].isFolder()!=items[rhs].isFolder())return items[lhs].isFolder();
+            if(detailReady&&(mode==4||mode==5)){
+                const auto& a=mFileLists[side].details[lhs].typeLabel;const auto& b=mFileLists[side].details[rhs].typeLabel;
+                const auto cmp=::CompareStringOrdinal(a.c_str(),-1,b.c_str(),-1,TRUE);
+                if(cmp!=CSTR_EQUAL)return mode==5?cmp==CSTR_GREATER_THAN:cmp==CSTR_LESS_THAN;
+            }else if(detailReady&&(mode==2||mode==6)){
+                const auto& x=mFileLists[side].details[lhs];const auto& y=mFileLists[side].details[rhs];
                 if(x.sizeKnown!=y.sizeKnown)return x.sizeKnown;
-                if(x.sizeKnown&&x.bytes!=y.bytes)return x.bytes>y.bytes;
-            }else if(detailReady&&mode==3){
-                const auto& x=mFileLists[side].details[lhs];
-                const auto& y=mFileLists[side].details[rhs];
+                if(x.sizeKnown&&x.bytes!=y.bytes)return mode==2?x.bytes>y.bytes:x.bytes<y.bytes;
+            }else if(detailReady&&(mode==3||mode==7)){
+                const auto& x=mFileLists[side].details[lhs];const auto& y=mFileLists[side].details[rhs];
                 if(x.dateKnown!=y.dateKnown)return x.dateKnown;
-                if(x.dateKnown&&x.modified!=y.modified)
-                    return x.modified>y.modified;
+                if(x.dateKnown&&x.modified!=y.modified)return mode==3?x.modified>y.modified:x.modified<y.modified;
             }
             return mode==1?lessName(rhs,lhs):lessName(lhs,rhs);
         });
@@ -825,6 +895,9 @@ namespace winrt::FlyExplorer::implementation
         state.filteredCount=order.size();
         button.Visibility(order.size()>state.visibleCount?
             Visibility::Visible:Visibility::Collapsed);
+        auto detailsHeader=side==0?LeftDetailsHeader():RightDetailsHeader();
+        if(state.viewMode!=FileViewMode::Details)
+            detailsHeader.Height(order.size()>state.visibleCount?24.0:0.0);
         const auto progress=std::to_wstring(
             (std::min)(order.size(),state.visibleCount))+
             L"/"+std::to_wstring(order.size());
@@ -844,6 +917,7 @@ namespace winrt::FlyExplorer::implementation
                 if(meta.sizeKnown)label+=L"   |   "+meta.bytesLabel;
                 if(meta.dateKnown)label+=L"   |   "+meta.dateLabel;
             }
+            if(state.viewMode==FileViewMode::Details){
             Grid columns;
             const auto widths=DetailColumnWidths(side);
             const int detailProfile=DetailLayoutProfile();
@@ -965,11 +1039,58 @@ namespace winrt::FlyExplorer::implementation
             addText(meta&&meta->sizeKnown?meta->bytesLabel:L"",2);
             addText(meta&&meta->dateKnown?meta->dateLabel:L"",3);
             row.Content(columns);
+            }else{
+                const bool medium=state.viewMode==FileViewMode::MediumIcons;
+                const bool smallIcons=state.viewMode==FileViewMode::SmallIcons;
+                StackPanel cell;cell.Orientation(medium?Orientation::Vertical:Orientation::Horizontal);
+                cell.Spacing(medium?5.0:7.0);cell.VerticalAlignment(VerticalAlignment::Center);
+                if(medium)cell.HorizontalAlignment(HorizontalAlignment::Center);
+                auto const* iconMeta=detailReady?&mFileLists[side].details[index]:nullptr;
+                bool actualVisual=false;bool realThumb=false;
+                if(!item.isFolder()&&iconMeta){
+                    const auto& thumb=iconMeta->thumbnailBgra;
+                    realThumb=iconMeta->thumbnailWidth>=16&&iconMeta->thumbnailWidth<=128&&iconMeta->thumbnailHeight>=16&&iconMeta->thumbnailHeight<=128&&thumb.size()==static_cast<size_t>(iconMeta->thumbnailWidth)*iconMeta->thumbnailHeight*4;
+                    const auto& data=medium&&realThumb?thumb:iconMeta->iconBgra;
+                    const int width=medium&&realThumb?static_cast<int>(iconMeta->thumbnailWidth):16;
+                    const int height=medium&&realThumb?static_cast<int>(iconMeta->thumbnailHeight):16;
+                    if(data.size()==static_cast<size_t>(width)*height*4){
+                        try{
+                            Microsoft::UI::Xaml::Media::Imaging::WriteableBitmap pixels(width,height);auto backing=pixels.PixelBuffer();
+                            winrt::com_ptr<::Windows::Storage::Streams::IBufferByteAccess> access;
+                            if(SUCCEEDED(reinterpret_cast<::IUnknown*>(winrt::get_abi(backing))->QueryInterface(__uuidof(::Windows::Storage::Streams::IBufferByteAccess),access.put_void()))){
+                                BYTE* target=nullptr;if(SUCCEEDED(access->Buffer(&target))&&target){
+                                    std::memcpy(target,data.data(),data.size());pixels.Invalidate();Image image;image.Source(pixels);
+                                    const double targetSize=medium?(realThumb?40.0:32.0):(smallIcons?20.0:16.0);image.Width(targetSize);image.Height(targetSize);
+                                    Microsoft::UI::Xaml::Automation::AutomationProperties::SetName(image,realThumb?L"Windows Shell image thumbnail":L"Windows system registered file icon");
+                                    cell.Children().Append(image);actualVisual=true;
+                                }
+                            }
+                        }catch(...){actualVisual=false;}
+                    }
+                }
+                if(!actualVisual){
+                    FontIcon glyph;glyph.FontFamily(Microsoft::UI::Xaml::Media::FontFamily{L"Segoe Fluent Icons"});
+                    glyph.Glyph(hstring(item.isFolder()?L"\uE8B7":L"\uE8A5"));glyph.FontSize(medium?36.0:(smallIcons?20.0:16.0));cell.Children().Append(glyph);
+                }
+                TextBlock filename;filename.Text(item.label);
+                if(medium){filename.Width(96);filename.TextAlignment(TextAlignment::Center);filename.TextWrapping(TextWrapping::WrapWholeWords);filename.MaxLines(2);filename.TextTrimming(TextTrimming::CharacterEllipsis);}
+                else{filename.TextTrimming(TextTrimming::CharacterEllipsis);if(smallIcons)filename.Width(148);}
+                cell.Children().Append(filename);row.Content(cell);
+                if(state.viewMode==FileViewMode::List){row.MinHeight(32);row.Padding(Thickness{5.0,0.0,5.0,0.0});}
+                else if(smallIcons){row.Width(180);row.Height(34);row.Padding(Thickness{5.0,0.0,5.0,0.0});}
+                else{row.Width(108);row.Height(100);row.Padding(Thickness{4.0});row.HorizontalContentAlignment(HorizontalAlignment::Center);}
+            }
             Microsoft::UI::Xaml::Automation::AutomationProperties::SetName(
                 row,hstring(label));
             row.Tag(winrt::box_value(static_cast<uint32_t>(index)));
-            row.CanDrag(true);
             const auto weak=get_weak();
+            row.KeyDown([weak,side](IInspectable const&,
+                Microsoft::UI::Xaml::Input::KeyRoutedEventArgs const& args){
+                if(args.Key()!=Windows::System::VirtualKey::Enter)return;
+                if(auto ui=weak.get())ui->OpenSelectedFolder(side);
+                args.Handled(true);
+            });
+            row.CanDrag(true);
             row.DragStarting([weak,side](
                 Microsoft::UI::Xaml::UIElement const& sender,
                 Microsoft::UI::Xaml::DragStartingEventArgs const& args){
@@ -1008,6 +1129,9 @@ namespace winrt::FlyExplorer::implementation
         UpdateActivePaneChrome();
         UpdateSelectionChrome();
         UpdateFooterSummary();
+        fileBar()->SetSortIndex(mFileLists[mModel.activePane].sortMode);
+        fileBar()->SetViewIndex(static_cast<int>(mFileLists[mModel.activePane].viewMode));
+        UpdateSortPresentation(mModel.activePane);
         StatusText().Text(status);
         Title(L"flyExplorer · "+hstring(nav.snapshot().displayName));
         UpdateWatch(0);
@@ -1039,6 +1163,11 @@ namespace winrt::FlyExplorer::implementation
         SecondaryPaneTitle().Content(winrt::box_value(
             hstring(side==1?L"오른쪽 창 (활성)":L"오른쪽 창")));
         UpdateActivePaneChrome();
+        fileBar()->SetSortIndex(mFileLists[side].sortMode);
+        fileBar()->SetViewIndex(static_cast<int>(mFileLists[side].viewMode));
+        UpdateSortPresentation(side);
+        UpdateSelectionChrome();
+        UpdateFooterSummary();
         Title(L"flyExplorer · "+hstring(nav.snapshot().displayName));
     }
     void MainWindow::UpdateActivePaneChrome()

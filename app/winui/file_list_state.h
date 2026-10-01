@@ -6,6 +6,7 @@
 #include <vector>
 
 namespace fxfile::previewlist {
+enum class FileViewMode : int { Details=0, List=1, SmallIcons=2, MediumIcons=3 };
 struct FileDetail final {
     std::uint64_t bytes=0;
     std::uint64_t modified=0;
@@ -20,6 +21,8 @@ struct FileDetail final {
 };
 struct PaneState final {
     int sortMode=0;
+    FileViewMode viewMode=FileViewMode::Details;
+    int appliedItemsPanel=0; // 0=vertical XAML default, 1=small wrap, 2=medium wrap
     double nameColumnWidth=168.0;
     // Render a bounded first page; keep all items in a native snapshot.
     // route/tab identity resets paging on navigation without stale UI rows.

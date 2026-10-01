@@ -61,15 +61,28 @@
         <TextBox x:Name="FileNameBox" Grid.Column="1" Width="1" MinWidth="0" Height="32" Opacity="0" IsHitTestVisible="False" IsTabStop="False" VerticalAlignment="Center" KeyDown="OnNameKeyDown" PlaceholderText="&#xC0C8; &#xC774;&#xB984;&#xC744; &#xC785;&#xB825;&#xD558;&#xC138;&#xC694;" AutomationProperties.Name="&#xC0C8; &#xD3F4;&#xB354; &#xB610;&#xB294; &#xC0C8; &#xD30C;&#xC77C; &#xC774;&#xB984;"/>
         <!-- Retained for automation compatibility; ordinary users see SortButton. -->
         <ComboBox x:Name="SortPicker" Grid.Column="2" Width="1" Height="1" Opacity="0.01" IsHitTestVisible="False" IsTabStop="False" SelectedIndex="0" SelectionChanged="OnSortChanged" AutomationProperties.Name="&#xD604;&#xC7AC; &#xCC3D; &#xD30C;&#xC77C; &#xC815;&#xB82C; &#xBC29;&#xC2DD;">
-            <ComboBoxItem Content="&#xC774;&#xB984; &#x2191;"/><ComboBoxItem Content="&#xC774;&#xB984; &#x2193;"/><ComboBoxItem Content="&#xD06C;&#xAE30; &#x2193;"/><ComboBoxItem Content="&#xC218;&#xC815; &#xB0A0;&#xC9DC; &#x2193;"/>
+            <ComboBoxItem Content="&#xC774;&#xB984; &#x2191;"/><ComboBoxItem Content="&#xC774;&#xB984; &#x2193;"/>
+            <ComboBoxItem Content="&#xD06C;&#xAE30; &#x2193;"/><ComboBoxItem Content="&#xC218;&#xC815; &#xB0A0;&#xC9DC; &#x2193;"/>
+            <ComboBoxItem Content="&#xC720;&#xD615; &#x2191;"/><ComboBoxItem Content="&#xC720;&#xD615; &#x2193;"/>
+            <ComboBoxItem Content="&#xD06C;&#xAE30; &#x2191;"/><ComboBoxItem Content="&#xC218;&#xC815; &#xB0A0;&#xC9DC; &#x2191;"/>
         </ComboBox>
         <Button x:Name="SortButton" Grid.Column="3" Width="70" Style="{StaticResource ExplorerFlyoutButtonStyle}" ToolTipService.ToolTip="&#xC815;&#xB82C;" AutomationProperties.Name="&#xC815;&#xB82C;">
             <StackPanel Orientation="Horizontal" Spacing="5"><FontIcon Glyph="&#xE8CB;" FontSize="14"/><TextBlock Text="&#xC815;&#xB82C;"/></StackPanel>
-            <Button.Flyout><MenuFlyout><MenuFlyoutItem Text="&#xC774;&#xB984; &#xC624;&#xB984;&#xCC28;&#xC21C;" Click="OnSortNameAscending"/><MenuFlyoutItem Text="&#xC774;&#xB984; &#xB0B4;&#xB9BC;&#xCC28;&#xC21C;" Click="OnSortNameDescending"/><MenuFlyoutItem Text="&#xD06C;&#xAE30; &#xB0B4;&#xB9BC;&#xCC28;&#xC21C;" Click="OnSortSizeDescending"/><MenuFlyoutItem Text="&#xC218;&#xC815; &#xB0A0;&#xC9DC; &#xB0B4;&#xB9BC;&#xCC28;&#xC21C;" Click="OnSortDateDescending"/></MenuFlyout></Button.Flyout>
+            <Button.Flyout><MenuFlyout>
+                <MenuFlyoutItem Text="&#xC774;&#xB984; &#xC624;&#xB984;&#xCC28;&#xC21C;" Click="OnSortNameAscending"/><MenuFlyoutItem Text="&#xC774;&#xB984; &#xB0B4;&#xB9BC;&#xCC28;&#xC21C;" Click="OnSortNameDescending"/>
+                <MenuFlyoutItem Text="&#xC720;&#xD615; &#xC624;&#xB984;&#xCC28;&#xC21C;" Click="OnSortTypeAscending"/><MenuFlyoutItem Text="&#xC720;&#xD615; &#xB0B4;&#xB9BC;&#xCC28;&#xC21C;" Click="OnSortTypeDescending"/>
+                <MenuFlyoutItem Text="&#xD06C;&#xAE30; &#xC624;&#xB984;&#xCC28;&#xC21C;" Click="OnSortSizeAscending"/><MenuFlyoutItem Text="&#xD06C;&#xAE30; &#xB0B4;&#xB9BC;&#xCC28;&#xC21C;" Click="OnSortSizeDescending"/>
+                <MenuFlyoutItem Text="&#xC218;&#xC815; &#xB0A0;&#xC9DC; &#xC624;&#xB984;&#xCC28;&#xC21C;" Click="OnSortDateAscending"/><MenuFlyoutItem Text="&#xC218;&#xC815; &#xB0A0;&#xC9DC; &#xB0B4;&#xB9BC;&#xCC28;&#xC21C;" Click="OnSortDateDescending"/>
+            </MenuFlyout></Button.Flyout>
         </Button>
         <Button x:Name="ViewButton" Grid.Column="4" Width="68" Style="{StaticResource ExplorerFlyoutButtonStyle}" ToolTipService.ToolTip="&#xBCF4;&#xAE30;" AutomationProperties.Name="&#xBCF4;&#xAE30;">
             <StackPanel Orientation="Horizontal" Spacing="5"><FontIcon Glyph="&#xE8A9;" FontSize="14"/><TextBlock Text="&#xBCF4;&#xAE30;"/></StackPanel>
-            <Button.Flyout><MenuFlyout><ToggleMenuFlyoutItem Text="&#xC790;&#xC138;&#xD788;" IsChecked="True" IsEnabled="False"/></MenuFlyout></Button.Flyout>
+            <Button.Flyout><MenuFlyout>
+                <ToggleMenuFlyoutItem x:Name="ViewDetailsItem" Text="&#xC790;&#xC138;&#xD788;" IsChecked="True" Click="OnViewDetails"/>
+                <ToggleMenuFlyoutItem x:Name="ViewListItem" Text="&#xBAA9;&#xB85D;" Click="OnViewList"/>
+                <ToggleMenuFlyoutItem x:Name="ViewSmallIconsItem" Text="&#xC791;&#xC740; &#xC544;&#xC774;&#xCF58;" Click="OnViewSmallIcons"/>
+                <ToggleMenuFlyoutItem x:Name="ViewMediumIconsItem" Text="&#xBCF4;&#xD1B5; &#xC544;&#xC774;&#xCF58;" Click="OnViewMediumIcons"/>
+            </MenuFlyout></Button.Flyout>
         </Button>
         <Button x:Name="MoreButton" Grid.Column="5" Width="32" Height="32" Padding="0" Background="Transparent" CornerRadius="4" ToolTipService.ToolTip="&#xB354; &#xBCF4;&#xAE30;" AutomationProperties.Name="&#xB354; &#xBCF4;&#xAE30;">
             <FontIcon Glyph="&#xE712;" FontSize="16"/>

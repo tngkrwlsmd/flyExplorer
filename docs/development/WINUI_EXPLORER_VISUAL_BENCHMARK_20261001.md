@@ -273,3 +273,127 @@ The harness was strengthened rather than relaxed: it now waits, within the exist
 ### Remaining title/chrome gap
 
 The primary remaining difference is intentional: Windows 11 Explorer has a real window-level TabView with independent tab state; flyExplorer does not. v4 does not fabricate this visually. If window-level tabs are pursued later, they should first define ownership of dual-pane navigation, histories, pane tabs, workspace/session persistence, close/reopen and crash restore. The current compact title bar is the preferred v4 endpoint until that functional design exists.
+
+## Explorer-like v5 file surface / real View modes
+
+v5 starts from pushed v4 commit `776be0588438fd119f2aad6e182440e426c64757` (`feat: refine Explorer-like window chrome`). The v5 working tree was already populated with a substantial View-mode draft when this pass began; those pre-existing changes were preserved and validated rather than replaced. v5 remains uncommitted for review.
+
+### Fresh Windows 11 Explorer View benchmark
+
+A fresh same-machine Windows 11 File Explorer benchmark was captured at 972x720 / 96 DPI / Dark using only the owned synthetic folder `logs/ui-benchmark-20261001/flyExplorer-UI-Benchmark`.
+
+Observed Explorer presentations:
+
+- Details: approximately 28 px row pitch with a visible column header; UIA item rectangles were about 24 px high.
+- List: compact single vertical list with approximately 32 px item height / 33 px pitch.
+- Small icons: wrapping icon+name layout; the captured single-pane Explorer placed two broad item columns with approximately 30 px item height.
+- Medium icons: wrapping larger-icon grid with filenames below; cell width was roughly 74 px and vertical size varied with wrapped labels.
+
+Ignored reference captures are `explorer-details.png`, `explorer-list.png`, `explorer-small-icons.png`, and `explorer-medium-icons.png` under `logs/ui-benchmark-20261001/v5/`.
+
+### v5 View architecture
+
+The supported product modes are now real presentation modes, not menu-only placeholders:
+
+- Details
+- List
+- Small Icons
+- Medium Icons
+
+Runtime View state is independent per left/right pane. For example, Left=List while Right=Details is supported and was verified. v5 deliberately does not expand the navigation/session schema to make View mode per-tab. Persistence uses the existing small private UI-preferences file as a global default View mode: changing a pane's View persists that selected mode as the next-launch default for both panes. Legacy schema-1 theme-only preference files remain accepted and map to Details. New writes use schema 2 with `view=details|list|small-icons|medium-icons`.
+
+This keeps restart behavior useful without changing the private session layout or navigation/tab ownership model.
+
+### Actual v5 geometry
+
+Final product geometry at 972x720 / 96 DPI:
+
+| Presentation | File-content top | Item geometry | Notes |
+| --- | ---: | --- | --- |
+| Details | 170 px | about 390x32 per pane row | Existing 24 px Details header retained |
+| List | 146 px | about 390x32 per pane row | Header collapsed; Explorer-matched 32 px row height |
+| Small Icons | 146 px | 180x34 cells | Two wrapped columns per ~390 px pane |
+| Medium Icons | 146 px | 108x100 cells | Three columns per pane at 972 px window |
+| Medium Icons @760x640 | 146 px | 108x100 cells | Two columns per pane; no horizontal clipping |
+
+Details therefore preserves the v4 acceptance line (`file top=170`, row=32). Non-Details modes recover the 24 px header space rather than increasing chrome.
+
+The final Release candidate SHA-256 after lifecycle stabilization is:
+
+`831BA0E83ABD77AABD6FB800346E4DEC15C5102456C746E9566FD8D98C266EE7`
+
+### Details header / shared sort state
+
+Details column headers are interactive sort buttons for Name, Type, Size and Modified Date. Header interaction and the command-bar Sort state share the same `sortMode` model. Runtime evidence showed:
+
+- initial Name header: ascending indicator;
+- clicking Name changed it to descending;
+- the retained SortPicker automation state simultaneously reported `이름 ↓`;
+- sort modes now cover name/type/size/date ascending and descending while retaining one common sorting implementation.
+
+The existing hidden column-width automation controls are retained; v5 does not expose the old sliders visually or introduce a new splitter backend.
+
+### Selection, pane independence and persistence
+
+Actual runtime checks established:
+
+- selection survives a Details -> List presentation change by native parsing path;
+- switching Left to List does not change Right, which remained Details with its header visible;
+- Ctrl+A in List selected all 8 synthetic items and the v3 footer updated to `8개 선택됨`;
+- View mode persistence wrote schema 2 with `view=list` and a restart rendered both panes with 32 px List rows as the configured global default;
+- Korean and long filenames remain rendered in all modes; Small Icons trims long names and Medium Icons uses a two-line bounded filename area.
+
+### Activation / keyboard / context menu
+
+The existing navigation and file-operation backends are shared by all View presentations. Freshly resolved List and Medium Icon folder rows successfully double-clicked into `Documents` through the same native Shell PIDL path.
+
+A real keyboard gap was found during v5 acceptance: focused ListViewItem controls consumed Enter before the parent ListView `KeyDown` handler could receive it. v5 adds a row-level Enter handler that delegates only to the existing `OpenSelectedFolder(side)` path; other keyboard shortcuts remain on the existing list command route. After the fix, `row.type_keys('{ENTER}')` navigated into `Documents` in both List and Medium Icons.
+
+The existing ListView context flyout also continues to work in v5. Runtime menu evidence included copy, move, rename, Windows clipboard cut/copy/paste, Recycle Bin, and the existing isolated Windows Shell context-menu entry. v5 does not replicate the Explorer context menu in new XAML architecture.
+
+### Icon / filename observations
+
+Registered file icons and the existing isolated thumbnail/metadata path are reused. Medium Icons visibly increases file visual size and uses a bounded two-line label. No new thumbnail pipeline was introduced.
+
+One visual gap remains intentionally open: filesystem folders (and Shell-folder-like items such as the synthetic ZIP folder) still use the generic Segoe Fluent folder glyph in these custom presentations rather than Explorer's registered yellow Shell folder artwork. Solving that cleanly should extend the existing isolated Shell visual provider rather than synchronously invoking Shell icon handlers on the UI thread.
+
+### Responsive / Light-Dark / performance
+
+- 760x640 Medium Icons preserves 108x100 cells and reduces the column count instead of shrinking filenames into unusable cells.
+- Light Details and Dark Details both render with file top 170 and 32 px rows.
+- ItemsPanel replacement is now performed only when the panel family actually changes (vertical / Small wrap / Medium wrap), not on every `FillFiles()` or async metadata completion.
+- Existing async metadata and watcher pipelines remain shared; v5 does not duplicate metadata work per View mode.
+
+### Shutdown lifecycle finding
+
+Two full GUI runs initially reproduced an owned M21 child shutdown crash (`0xC000027B`, CoreMessagingXP.dll) after the child had already restored the persisted Dark preference successfully. WER showed the same signature twice. The M21 child closes very early, while async metadata can still be in flight.
+
+The lifecycle fix is bounded to presentation/metadata teardown:
+
+- both pane metadata cancellation tokens are set during MainWindow destruction and their presentation state is invalidated;
+- ListView ItemsPanel is no longer reassigned on every refresh; only a real panel-family change replaces it.
+
+An isolated parent+immediate-child-close reproduction was then run three times with the same schema-2 Dark/Details profile. Child exits were `0, 0, 0` and the parent exit was `0`. The subsequent full Release GUI run passed.
+
+### v5 regression
+
+- canonical structure: 4/4 PASS.
+- source contracts: 119/119 PASS.
+- Release build: PASS.
+- final Release GUI suite: PASS in 67.5 seconds.
+- rendered Dark/Light shell pixel check: PASS.
+- native watcher create/delete refresh: PASS.
+- dual-pane navigation, tabs, split and history: PASS.
+- Korean create/rename and duplicate protection: PASS.
+- metadata/sort and opposite-pane copy/move: PASS.
+- private session save / second-process restore / clear: PASS.
+- normal owned shutdown: PASS.
+- `ORIGINAL_SIX_USER_CONFIG_SHA256_IDENTICAL True`.
+
+### Remaining v5 gaps / later scope
+
+1. Registered Shell folder artwork parity remains OPEN; generic folder glyphs are still visibly different from Explorer.
+2. v5 persistence is intentionally a global default View, not per-pane/per-tab session persistence. Per-tab ownership should be reconsidered together with a future navigation/window-tab state model rather than by expanding the private session schema ad hoc.
+3. The custom context menu remains a compact file-manager menu with an isolated Windows Shell escape hatch; full Explorer native menu composition is not part of v5.
+4. Alternate 125/150/200% DPI, High Contrast and live Narrator listening remain NOT TESTED in the current RDP environment.
+5. Large Icons and a richer thumbnail pipeline remain future features, not fabricated menu options.

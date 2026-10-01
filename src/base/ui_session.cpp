@@ -78,7 +78,7 @@ bool valid(Session const& value) noexcept{
   if(value.width<640||value.width>3200||
      value.height<420||value.height>2200||
      value.splitPermille<300||value.splitPermille>700||
-     value.sort[0]>3||value.sort[1]>3||
+     value.sort[0]>7||value.sort[1]>7||
      value.activeSide>1||(!value.split&&value.activeSide)||
      value.paths[0].empty()||value.paths[0].size()>8||
      value.paths[1].size()>8||

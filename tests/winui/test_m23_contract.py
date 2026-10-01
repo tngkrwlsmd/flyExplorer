@@ -64,7 +64,7 @@ class M23Contracts(unittest.TestCase):
   body=src("src/base/ui_session.cpp")
   for token in ("FXSESS23","FILE_ATTRIBUTE_REPARSE_POINT",
                 "DRIVE_FIXED","MaxSize=131072","value.width<640",
-                "value.sort[0]>3","value.paths[0].size()>8",
+                "value.sort[0]>7","value.paths[0].size()>8",
                 "checksum(bytes,bytes.size()-4)"):
    if token=="FXSESS23":
     self.assertIn("'F','X','S','E','S','S','2','3'",body)

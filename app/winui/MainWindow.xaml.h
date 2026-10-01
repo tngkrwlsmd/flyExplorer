@@ -119,6 +119,8 @@ namespace winrt::FlyExplorer::implementation
             Microsoft::UI::Xaml::DragEventArgs const&);
         void RunTransfer(fxfile::shelltransfer::Kind);
         void UpdateSort(int selection);
+        void UpdateView(int selection);
+        void OnHeaderSortClicked(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
 
     private:
         fxfile::explorerui::Model mModel;
@@ -159,6 +161,7 @@ namespace winrt::FlyExplorer::implementation
             return footer()->SelectionCountText();
         }
         using FileDetail=fxfile::previewlist::FileDetail;
+        using FileViewMode=fxfile::previewlist::FileViewMode;
         std::array<fxfile::previewlist::PaneState,2> mFileLists{};
         // Incremental thumbnail requests must stop issuing new child
         // Shell processes when navigation invalidates the native route.
@@ -196,6 +199,7 @@ namespace winrt::FlyExplorer::implementation
         bool mPopulatingTabs = false;
         bool mPopulatingFileLists = false;
         void UpdateFooterSummary();
+        void PersistPreferences();
         void UpdateSelectionChrome();
         void UpdateCommandAvailability();
         void QueueSelectionPresentationUpdate();
@@ -231,6 +235,8 @@ namespace winrt::FlyExplorer::implementation
         int DetailLayoutProfile() const;
         std::array<Microsoft::UI::Xaml::GridLength,4> DetailColumnWidths(int side) const;
         void ApplyDetailColumnLayout(int side);
+        void UpdateViewPresentation(int side);
+        void UpdateSortPresentation(int side);
         void UpdateBreadcrumb(std::wstring const& address);
         void FillFiles(int side);
         bool OpenFolder(std::wstring const& path);
