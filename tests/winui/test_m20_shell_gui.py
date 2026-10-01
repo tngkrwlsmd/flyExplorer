@@ -34,11 +34,12 @@ def run(*,win,element,safe_click,focus,eventually,owned):
                "actual WinUI Light selection not propagated to root")
     light=surface()
     assert dark.size==light.size
-    # Sample chrome and navigation/content away from changing list rows,
-    # not Windows titlebar or only dynamic text.
-    samples=[(int(rect.width()*0.36),int(rect.height()*0.14)),
-             (min(32,rect.width()-3),int(rect.height()*0.34)),
-             (min(34,rect.width()-3),int(rect.height()*0.53))]
+    # The Explorer-like v1 removes the old opaque card/chrome surfaces.
+    # Sample stable app-owned empty content/navigation areas instead of
+    # border/text pixels whose tone can remain close under Mica.
+    samples=[(int(rect.width()*0.38),int(rect.height()*0.78)),
+             (int(rect.width()*0.72),int(rect.height()*0.78)),
+             (min(80,rect.width()-3),int(rect.height()*0.78))]
     def brightness(im):
         values=[]
         for x,y in samples:
@@ -46,7 +47,10 @@ def run(*,win,element,safe_click,focus,eventually,owned):
             values.append(sum(ImageStat.Stat(block).mean)/3)
         return values
     db=brightness(dark);lb=brightness(light)
-    assert any(light-dark>30 for light,dark in zip(lb,db)),(
+    # Transparent/Mica surfaces move less than the retired opaque cards, but
+    # a real theme switch must change every stable app-owned sample—not only
+    # the hidden picker label or one antialiased edge.
+    assert all(light-dark>20 for light,dark in zip(lb,db)),(
         "theme changed label but not the actual rendered shell",db,lb)
     print("REAL_M20_WINUI_DARK_LIGHT_FINAL_SHELL_PIXELS",True,flush=True)
     focus()
@@ -57,7 +61,7 @@ def run(*,win,element,safe_click,focus,eventually,owned):
     # The old GUI harness has already completed both-pane, tab and PIDL
     # navigation. Verify the new native routed commands still preserve the
     # independent hidden right-pane state and accept full PIDL virtual nav.
-    safe_click(element("PrimaryPaneTitle"))
+    safe_click(element("LeftFiles"))
     before=element("AddressBox").get_value()
     left_tabs=element("LeftTabs")
     prior_left=len([v for v in left_tabs.descendants()

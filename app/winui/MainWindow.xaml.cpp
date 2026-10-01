@@ -39,6 +39,29 @@ namespace {
         return value;
     }
 
+    std::wstring CompactAddress(std::wstring const& value)
+    {
+        const auto friendly=FriendlyAddress(value);
+        if(friendly!=value || value.rfind(L"shell:",0)==0)return friendly;
+        try{
+            std::vector<std::wstring> parts;
+            for(auto const& part:std::filesystem::path(value)){
+                auto text=part.native();
+                if(text.empty()||text==L"\\")continue;
+                if(text.size()==3&&text[1]==L':'&&text[2]==L'\\')text.resize(2);
+                parts.push_back(std::move(text));
+            }
+            if(parts.empty())return friendly;
+            const auto start=parts.size()>3?parts.size()-3:0;
+            std::wstring result=start?L"\u2026  >  ":L"";
+            for(size_t i=start;i<parts.size();++i){
+                if(i!=start)result+=L"  >  ";
+                result+=parts[i];
+            }
+            return result;
+        }catch(...){return friendly;}
+    }
+
     std::wstring ResolveFriendlyAddress(std::wstring value)
     {
         if(value==L"\uB0B4 PC")return L"shell:MyComputerFolder";
@@ -123,9 +146,9 @@ namespace winrt::FlyExplorer::implementation
         // the M2.0 native command model; callbacks hold only weak UI refs.
         fileBar()->SetAction([nativeWeak](int command){
             if(auto ui=nativeWeak.get()){
-                if(command==0)ui->ExecuteFileCommand(
+                if(command==0)ui->BeginFileNameCommand(
                     fxfile::filecommand::Kind::CreateFolder);
-                else if(command==1)ui->ExecuteFileCommand(
+                else if(command==1)ui->BeginFileNameCommand(
                     fxfile::filecommand::Kind::RenameSelected);
                 else if(command==2)ui->RunTransfer(
                     fxfile::shelltransfer::Kind::Copy);
@@ -141,6 +164,18 @@ namespace winrt::FlyExplorer::implementation
                     ui->CopySelectedToWindowsClipboard(ui->mModel.activePane,false);
                 else if(command==8)
                     ui->PasteFromWindowsClipboard();
+                else if(command==9)ui->ExecuteFileCommand(
+                    fxfile::filecommand::Kind::CreateFolder);
+                else if(command==10)ui->ExecuteFileCommand(
+                    fxfile::filecommand::Kind::RenameSelected);
+                else if(command>=11&&command<=13){
+                    const int theme=command-11;
+                    ui->ApplyThemeChoice(theme);
+                    winrt::get_self<winrt::FlyExplorer::implementation::ShellHeader>(
+                        ui->HeaderView())->RestoreTheme(theme);
+                }
+                else if(command==14)ui->ToggleNameFilter(0);
+                else if(command==15)ui->ToggleNameFilter(1);
             }
         });
         fileBar()->SetSort([nativeWeak](int index){
@@ -311,15 +346,15 @@ namespace winrt::FlyExplorer::implementation
             // At most one outstanding helper operation per active pane.
             // Clear the canceled prior tab's UI pending marker too.
             mModel.markPending(side,pane.active,id,true);
-            StatusText().Text(L"독립 Shell 작업자가 폴더를 불러오는 중입니다.");
-        } else StatusText().Text(L"Shell 폴더 이동을 요청할 수 없습니다.");
+            StatusText().Text(L"폴더를 불러오는 중입니다.");
+        } else StatusText().Text(L"이 위치로 이동할 수 없습니다.");
     }
     void MainWindow::QueuePidl(
         int side,fxfile::shellnav::Location target,
         fxfile::shellnav::NavigationAction action)
     {
         if(!target.valid()) {
-            StatusText().Text(L"이 명령에 사용할 Shell 위치가 없습니다.");
+            StatusText().Text(L"이 위치를 열 수 없습니다.");
             return;
         }
         auto& pane=mModel.panes[side];
@@ -329,8 +364,8 @@ namespace winrt::FlyExplorer::implementation
             // At most one outstanding helper operation per active pane.
             // Clear the canceled prior tab's UI pending marker too.
             mModel.markPending(side,pane.active,id,true);
-            StatusText().Text(L"독립 Shell 작업자가 폴더를 불러오는 중입니다.");
-        } else StatusText().Text(L"Shell 작업을 요청할 수 없습니다.");
+            StatusText().Text(L"폴더를 불러오는 중입니다.");
+        } else StatusText().Text(L"폴더를 불러올 수 없습니다.");
     }
     void MainWindow::UpdateWatch(int side,bool force)
     {
@@ -401,15 +436,15 @@ namespace winrt::FlyExplorer::implementation
                     if(i==pane.active) {
                         ClearFileDetails(side);
                         Refresh(result.recovered?
-                            L"독립 Shell 작업자가 응답 지연 후 복구됐습니다.":
+                            L"응답 지연 후 폴더를 불러왔습니다.":
                             result.action==Action::Refresh?
                             L"폴더 변경 알림을 반영했습니다.":
-                            L"독립 Shell 작업자로 폴더를 불러왔습니다.");
+                            L"폴더를 불러왔습니다.");
                         UpdateWatch(side,true);
                     }else RefreshTabs(side);
                     QueueNextWorkspaceTab(side);
                 }else if(FAILED(applied)) {
-                    StatusText().Text(L"오래된 Shell 탐색 결과를 무시했습니다.");
+                    StatusText().Text(L"이전 탐색 결과를 무시했습니다.");
                 }
                 return;
             }
@@ -650,8 +685,6 @@ namespace winrt::FlyExplorer::implementation
         auto width=slider.Value();
         if(width<120||width>320)return;
         mFileLists[side].nameColumnWidth=width;
-        auto header=side==0?LeftNameHeaderColumn():RightNameHeaderColumn();
-        header.Width(GridLength{width,GridUnitType::Pixel});
         if(mColumnControlsReady)FillFiles(side);
     }
     void MainWindow::OnNameFilterChanged(
@@ -690,8 +723,25 @@ namespace winrt::FlyExplorer::implementation
         state.visibleCount=(std::min)(available,state.visibleCount+160);
         FillFiles(side); // Selection is restored using real parsing paths.
     }
+    void MainWindow::ApplyDetailColumnLayout(int side)
+    {
+        const bool compact=mModel.split;
+        const auto nameWidth=compact?
+            (std::min)(mFileLists[side].nameColumnWidth,168.0):
+            mFileLists[side].nameColumnWidth;
+        auto name=side==0?LeftNameHeaderColumn():RightNameHeaderColumn();
+        auto type=side==0?LeftTypeHeaderColumn():RightTypeHeaderColumn();
+        auto size=side==0?LeftSizeHeaderColumn():RightSizeHeaderColumn();
+        auto date=side==0?LeftDateHeaderColumn():RightDateHeaderColumn();
+        name.Width(GridLength{nameWidth,GridUnitType::Pixel});
+        type.Width(GridLength{1.0,GridUnitType::Star});
+        size.Width(GridLength{compact?64.0:80.0,GridUnitType::Pixel});
+        date.Width(GridLength{compact?0.0:155.0,GridUnitType::Pixel});
+    }
+
     void MainWindow::FillFiles(int side)
     {
+        ApplyDetailColumnLayout(side);
         auto view=side==0?LeftFiles():RightFiles();
         const auto& pane=mModel.panes[static_cast<size_t>(side)];
         const auto& items=pane.tabs[pane.active].snapshot().children;
@@ -778,13 +828,19 @@ namespace winrt::FlyExplorer::implementation
                 if(meta.dateKnown)label+=L"   |   "+meta.dateLabel;
             }
             Grid columns;
-            auto addColumn=[&](double width){
+            const bool compactDetails=mModel.split;
+            const auto displayNameWidth=compactDetails?
+                (std::min)(mFileLists[side].nameColumnWidth,168.0):
+                mFileLists[side].nameColumnWidth;
+            auto addColumn=[&](GridLength const& width){
                 ColumnDefinition def;
-                def.Width(GridLength{width,GridUnitType::Pixel});
+                def.Width(width);
                 columns.ColumnDefinitions().Append(def);
             };
-            addColumn(mFileLists[side].nameColumnWidth);
-            addColumn(165);addColumn(80);addColumn(155);
+            addColumn(GridLength{displayNameWidth,GridUnitType::Pixel});
+            addColumn(GridLength{1.0,GridUnitType::Star});
+            addColumn(GridLength{compactDetails?64.0:80.0,GridUnitType::Pixel});
+            addColumn(GridLength{compactDetails?0.0:155.0,GridUnitType::Pixel});
             StackPanel nameCell;
             nameCell.Orientation(Orientation::Horizontal);
             nameCell.Spacing(7);
@@ -865,7 +921,7 @@ namespace winrt::FlyExplorer::implementation
                 drive.Children().Append(filename);
                 ProgressBar usage;
                 usage.Width((std::max)(115.0,
-                    mFileLists[side].nameColumnWidth-42.0));
+                    displayNameWidth-42.0));
                 usage.Height(3);
                 usage.Minimum(0);usage.Maximum(100);
                 const auto used=totalBytes.QuadPart-freeBytes.QuadPart;
@@ -924,7 +980,9 @@ namespace winrt::FlyExplorer::implementation
         FillFiles(0);
         FillFiles(1);
         auto& nav=Current();
-        AddressBox().Text(hstring(FriendlyAddress(nav.snapshot().parsingName)));
+        const auto address=nav.snapshot().parsingName;
+        AddressBox().Text(hstring(FriendlyAddress(address)));
+        AddressDisplayText().Text(hstring(CompactAddress(address)));
         BackButton().IsEnabled(nav.canBack() && !mModel.panes[mModel.activePane].pending[mModel.panes[mModel.activePane].active]);
         ForwardButton().IsEnabled(nav.canForward() && !mModel.panes[mModel.activePane].pending[mModel.panes[mModel.activePane].active]);
         UpButton().IsEnabled(nav.snapshot().folder.valid() && !ILIsEmpty(nav.snapshot().folder.get()));
@@ -953,7 +1011,9 @@ namespace winrt::FlyExplorer::implementation
         if(!mModel.dispatch(fxfile::explorerui::Command::ActivatePane,side)
                     .accepted)return;
         const auto& nav=Current();
-        AddressBox().Text(hstring(FriendlyAddress(nav.snapshot().parsingName)));
+        const auto address=nav.snapshot().parsingName;
+        AddressBox().Text(hstring(FriendlyAddress(address)));
+        AddressDisplayText().Text(hstring(CompactAddress(address)));
         BackButton().IsEnabled(nav.canBack() && !mModel.panes[mModel.activePane].pending[mModel.panes[mModel.activePane].active]);
         ForwardButton().IsEnabled(nav.canForward() && !mModel.panes[mModel.activePane].pending[mModel.panes[mModel.activePane].active]);
         UpButton().IsEnabled(nav.snapshot().folder.valid() && !ILIsEmpty(nav.snapshot().folder.get()));
@@ -968,12 +1028,14 @@ namespace winrt::FlyExplorer::implementation
     void MainWindow::UpdateActivePaneChrome()
     {
         const bool left=mModel.activePane==0;
-        PrimaryPane().BorderThickness(Thickness{1.0,1.0,1.0,1.0});
-        SecondaryPane().BorderThickness(Thickness{1.0,1.0,1.0,1.0});
+        PrimaryPane().BorderThickness(Thickness{0.0,2.0,0.0,0.0});
+        SecondaryPane().BorderThickness(Thickness{0.0,2.0,0.0,0.0});
         PrimaryPane().Opacity(1.0);
         SecondaryPane().Opacity(1.0);
-        PrimaryPaneTitle().Opacity(left?1.0:0.66);
-        SecondaryPaneTitle().Opacity(left?0.66:1.0);
+        Microsoft::UI::Xaml::Automation::AutomationProperties::SetName(
+            PrimaryPane(),left?L"왼쪽 창 (활성)":L"왼쪽 창");
+        Microsoft::UI::Xaml::Automation::AutomationProperties::SetName(
+            SecondaryPane(),left?L"오른쪽 창":L"오른쪽 창 (활성)");
         try{
             auto resources=Application::Current().Resources();
             auto accent=resources.Lookup(winrt::box_value(
@@ -982,18 +1044,26 @@ namespace winrt::FlyExplorer::implementation
             auto normal=resources.Lookup(winrt::box_value(
                 L"SystemControlForegroundBaseLowBrush")).try_as<
                     Microsoft::UI::Xaml::Media::Brush>();
-            auto foreground=resources.Lookup(winrt::box_value(
-                L"TextFillColorPrimaryBrush")).try_as<
-                    Microsoft::UI::Xaml::Media::Brush>();
             if(normal){
-                PrimaryPane().BorderBrush(normal);
-                SecondaryPane().BorderBrush(normal);
-            }
-            if(accent&&foreground){
-                PrimaryPaneTitle().Foreground(left?accent:foreground);
-                SecondaryPaneTitle().Foreground(left?foreground:accent);
+                PrimaryPane().BorderBrush(left&&accent?accent:normal);
+                SecondaryPane().BorderBrush(!left&&accent?accent:normal);
             }
         }catch(...){ }
+    }
+    void MainWindow::ToggleNameFilter(int side)
+    {
+        auto box=side==0?LeftNameFilterBox():RightNameFilterBox();
+        const bool show=box.Opacity()<0.5;
+        if(show){
+            box.Width(125);box.Height(32);box.Opacity(1.0);
+            box.IsHitTestVisible(true);box.IsTabStop(true);
+            box.Focus(FocusState::Programmatic);box.SelectAll();
+            StatusText().Text(side==0?L"왼쪽 이름 필터를 표시했습니다.":L"오른쪽 이름 필터를 표시했습니다.");
+        }else{
+            box.Text(L"");box.Width(1);box.Height(1);box.Opacity(0.0);
+            box.IsHitTestVisible(false);box.IsTabStop(false);
+            StatusText().Text(L"이름 필터를 닫았습니다.");
+        }
     }
     void MainWindow::OnBackClicked(IInspectable const&,RoutedEventArgs const&)
     {
@@ -1024,13 +1094,40 @@ namespace winrt::FlyExplorer::implementation
     {
         if (args.Key()==Windows::System::VirtualKey::Enter) {
             OpenFolder(ResolveFriendlyAddress(std::wstring(AddressBox().Text().c_str())));
+            AddressBox().Opacity(0.0);
+            AddressDisplayButton().Visibility(Visibility::Visible);
             args.Handled(true);
         }
         else if (args.Key()==Windows::System::VirtualKey::Escape) {
-            AddressBox().Text(hstring(FriendlyAddress(Current().snapshot().parsingName)));
+            const auto address=Current().snapshot().parsingName;
+            AddressBox().Text(hstring(FriendlyAddress(address)));
+            AddressDisplayText().Text(hstring(CompactAddress(address)));
+            AddressBox().Opacity(0.0);
+            AddressDisplayButton().Visibility(Visibility::Visible);
             StatusText().Text(L"주소 입력을 취소했습니다.");
             args.Handled(true);
         }
+    }
+    void MainWindow::OnAddressGotFocus(IInspectable const&,RoutedEventArgs const&)
+    {
+        AddressDisplayButton().Visibility(Visibility::Collapsed);
+        AddressBox().Opacity(1.0);
+        AddressBox().SelectAll();
+    }
+    void MainWindow::OnAddressLostFocus(IInspectable const&,RoutedEventArgs const&)
+    {
+        const auto address=Current().snapshot().parsingName;
+        AddressBox().Text(hstring(FriendlyAddress(address)));
+        AddressDisplayText().Text(hstring(CompactAddress(address)));
+        AddressBox().Opacity(0.0);
+        AddressDisplayButton().Visibility(Visibility::Visible);
+    }
+    void MainWindow::OnAddressDisplayClicked(IInspectable const&,RoutedEventArgs const&)
+    {
+        AddressDisplayButton().Visibility(Visibility::Collapsed);
+        AddressBox().Opacity(1.0);
+        AddressBox().Focus(FocusState::Programmatic);
+        AddressBox().SelectAll();
     }
     void MainWindow::OnQuickSearchKeyDown(IInspectable const&,
         Input::KeyRoutedEventArgs const& args)
@@ -1064,6 +1161,7 @@ namespace winrt::FlyExplorer::implementation
         NavigationColumn().Width(GridLength{
             width<1040?156.0:188.0,GridUnitType::Pixel});
         QuickSearchBox().Width(width<1060?150.0:220.0);
+
     }
     void MainWindow::OnNewTabClicked(IInspectable const&,RoutedEventArgs const&)
     {
@@ -1187,6 +1285,16 @@ namespace winrt::FlyExplorer::implementation
     void MainWindow::OnRightFileDoubleTapped(
         IInspectable const&,Input::DoubleTappedRoutedEventArgs const&)
     {OpenSelectedFolder(1);}
+    void MainWindow::OnLeftPaneTapped(
+        IInspectable const&,Input::TappedRoutedEventArgs const&)
+    {
+        if(mModel.activePane!=0)ActivatePane(0);
+    }
+    void MainWindow::OnRightPaneTapped(
+        IInspectable const&,Input::TappedRoutedEventArgs const&)
+    {
+        if(mModel.activePane!=1)ActivatePane(1);
+    }
     void MainWindow::OnLeftFileKeyDown(
         IInspectable const&,Input::KeyRoutedEventArgs const& a)
     {

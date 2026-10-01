@@ -63,7 +63,7 @@ def run(*,p,win,element,safe_click,focus,eventually,ownedwindows,
 
     # Existing M1.8 GUI harness completed its dual-pane/virtual shell
     # regression. Its current RIGHT pane is back at its owned fixture.
-    safe_click(element("PrimaryPaneTitle"))
+    safe_click(element("LeftFiles"))
     good(lambda:str(left).lower() in element("AddressBox").get_value().lower(),
          "M1.9 parent left pane missing after M1.8 regression")
     saved_left=element("AddressBox").get_value()
@@ -182,7 +182,7 @@ def run(*,p,win,element,safe_click,focus,eventually,ownedwindows,
                 "invalid workspace not rejected by actual WinUI Open: "+name,10)
             assert not children(),("invalid workspace launched a child",name)
             assert hashlib.sha256(first.read_bytes()).digest()==before
-            safe_click(element("PrimaryPaneTitle"))
+            safe_click(element("LeftFiles"))
             assert str(left).lower() in element("AddressBox").get_value().lower()
         print("REAL_M19_SEVEN_INVALID_MFC_WORKSPACES_REJECTED_WITH_PARENT_PRESERVED",
               True,flush=True)

@@ -152,7 +152,7 @@ try:
  if owned_exhaust:
   # Both COM attempts hang only inside test-owned helpers, AFTER a real
   # initial local folder has been committed. Check actual failure UX.
-  safe_click(element("PrimaryPaneTitle"))
+  safe_click(element("LeftFiles"))
   address=element("AddressBox")
   address.set_edit_text("shell:MyComputerFolder")
   ensure_owned_focus()
@@ -166,7 +166,7 @@ try:
       for x in element("RightFiles").descendants())
   print("REAL_WINUI_BOTH_COM_TIMEOUTS_EXHAUSTED_PREVIOUS_FOLDERS_PRESERVED",
         True,flush=True)
-  safe_click(element("PrimaryPaneTitle"))
+  safe_click(element("LeftFiles"))
   eventually(lambda:str(left).lower() in element("AddressBox").get_value().lower(),
       "exhausted COM request discarded the old selected folder")
  if owned_notify:
@@ -325,8 +325,9 @@ try:
  print("REAL_ASYNC_LAST_REQUEST_WINS_AND_HISTORY",True,flush=True)
  assert element("RightFiles").is_visible()
  # Verify the SECOND panel has its own selected tab, list and history;
- # navigation there MUST NOT replace the left panel.
- safe_click(element("SecondaryPaneTitle"))
+ # navigation there MUST NOT replace the left panel. The visual pane-title
+ # button is intentionally retired; activate through the actual file surface.
+ safe_click(element("RightFiles"))
  eventually(lambda:"오른쪽" in element("ActivePaneText").window_text(),
             "explicit right pane activation")
  rightaddr=element("AddressBox")
@@ -356,14 +357,14 @@ try:
  right_items=[e.window_text() for e in element("RightFiles").descendants()]
  left_items=[e.window_text() for e in element("LeftFiles").descendants()]
  assert any("Nested" in x for x in left_items),left_items[:10]
- safe_click(element("PrimaryPaneTitle"))
+ safe_click(element("LeftFiles"))
  eventually(lambda:str(left).lower() in element("AddressBox").get_value().lower(),
             "left pane preserved while right navigation changed")
  print("REAL_WINUI_TWO_PANES_INDEPENDENT_PATHS_AND_FILES",True,flush=True)
  # Exercise the ACTUAL native Windows Shell namespace: This PC is
  # a virtual PIDL, not a std::filesystem directory. The new core must
  # accept the shell: alias, list Shell objects and preserve LEFT pane.
- safe_click(element("SecondaryPaneTitle"))
+ safe_click(element("RightFiles"))
  eventually(lambda:"오른쪽" in element("ActivePaneText").window_text(),
             "right activation for virtual Shell folder")
  virtual=element("AddressBox")
@@ -374,20 +375,20 @@ try:
             "native virtual Shell location not opened")
  assert len(element("RightFiles").descendants())>0,(
     "Shell virtual folder enumeration unexpectedly empty")
- safe_click(element("PrimaryPaneTitle"))
+ safe_click(element("LeftFiles"))
  eventually(lambda:str(left).lower() in element("AddressBox").get_value().lower(),
    "virtual Shell location replaced independent left pane")
  print("REAL_NATIVE_VIRTUAL_SHELL_THIS_PC_PIDL_AND_ENUMERATION",True,flush=True)
  # M2.6 shows the friendly label while the native model keeps the PIDL.
  # Verify the virtual location participated in the SAME tab history.
- safe_click(element("SecondaryPaneTitle"))
+ safe_click(element("RightFiles"))
  safe_click(element("BackButton"))
  eventually(lambda:str(right).lower() in element("AddressBox").get_value().lower(),
             "native virtual Shell Back did not recover preceding folder")
  print("REAL_NATIVE_VIRTUAL_TO_LOCAL_SHELL_HISTORY",True,flush=True)
  if loopback_unc:
   # Nonexistent share on 127.0.0.1; no network configuration or live share changed.
-  safe_click(element("SecondaryPaneTitle"))
+  safe_click(element("RightFiles"))
   ensure_owned_focus()
   bad=element("AddressBox")
   bad.set_edit_text(r"\\127.0.0.1\flyexplorer-m18-owned-no-share")
@@ -458,7 +459,7 @@ try:
   m23_run(win=win,element=element,safe_click=safe_click,
           focus=ensure_owned_focus,eventually=eventually,
           left=left,right=right,localdata=localdata,env=env,exe=EXE)
- safe_click(element("PrimaryPaneTitle"))
+ safe_click(element("LeftFiles"))
  rect=win.rectangle()
  assert rect.width()>400 and rect.height()>260
  img=base/"migration-first-shell-real-gui.png"

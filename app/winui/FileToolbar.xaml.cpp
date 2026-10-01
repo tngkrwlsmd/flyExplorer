@@ -3,6 +3,7 @@
 #if __has_include("FileToolbar.g.cpp")
 #include "FileToolbar.g.cpp"
 #endif
+#include <winrt/Windows.System.h>
 using namespace winrt;
 using namespace Microsoft::UI::Xaml;
 using namespace Microsoft::UI::Xaml::Controls;
@@ -13,11 +14,40 @@ void FileToolbar::SetSort(std::function<void(int)> sort){sort_=std::move(sort);}
 void FileToolbar::SetSortIndex(int value){
  restoring_=true;SortPicker().SelectedIndex(value);restoring_=false;
 }
+void FileToolbar::BeginNameEdit(int action,hstring const& initial){
+ pendingNameAction_=action;
+ auto box=FileNameBox();
+ box.Width(180);
+ box.Opacity(1.0);
+ box.IsHitTestVisible(true);
+ box.IsTabStop(true);
+ box.Text(initial);
+ box.PlaceholderText(action==0?L"새 폴더 이름":L"새 이름");
+ box.Focus(FocusState::Programmatic);
+ box.SelectAll();
+}
+void FileToolbar::EndNameEdit(){
+ pendingNameAction_=-1;
+ auto box=FileNameBox();
+ box.Text(L"");
+ box.Width(1);
+ box.Opacity(0.0);
+ box.IsHitTestVisible(false);
+ box.IsTabStop(false);
+}
 void FileToolbar::OnCreateFolder(IInspectable const&,RoutedEventArgs const&){
- if(action_)action_(0);
+ if(!action_)return;
+ const auto box=FileNameBox();
+ if((box.Opacity()>=0.5&&pendingNameAction_==0)||
+    (box.Opacity()<0.5&&!box.Text().empty()))action_(9);
+ else action_(0);
 }
 void FileToolbar::OnRenameSelected(IInspectable const&,RoutedEventArgs const&){
- if(action_)action_(1);
+ if(!action_)return;
+ const auto box=FileNameBox();
+ if((box.Opacity()>=0.5&&pendingNameAction_==1)||
+    (box.Opacity()<0.5&&!box.Text().empty()))action_(10);
+ else action_(1);
 }
 void FileToolbar::OnWindowsCut(IInspectable const&,RoutedEventArgs const&){
  if(action_)action_(6);
@@ -39,6 +69,31 @@ void FileToolbar::OnRecycle(IInspectable const&,RoutedEventArgs const&){
 }
 void FileToolbar::OnCancel(IInspectable const&,RoutedEventArgs const&){
  if(action_)action_(5);
+}
+void FileToolbar::OnNameKeyDown(IInspectable const&,
+ Microsoft::UI::Xaml::Input::KeyRoutedEventArgs const& args){
+ using winrt::Windows::System::VirtualKey;
+ if(args.Key()==VirtualKey::Escape){
+  EndNameEdit();args.Handled(true);return;
+ }
+ if(args.Key()!=VirtualKey::Enter||pendingNameAction_<0)return;
+ if(action_)action_(pendingNameAction_==0?9:10);
+ args.Handled(true);
+}
+void FileToolbar::OnToggleLeftFilter(IInspectable const&,RoutedEventArgs const&){
+ if(action_)action_(14);
+}
+void FileToolbar::OnToggleRightFilter(IInspectable const&,RoutedEventArgs const&){
+ if(action_)action_(15);
+}
+void FileToolbar::OnThemeSystem(IInspectable const&,RoutedEventArgs const&){
+ if(action_)action_(11);
+}
+void FileToolbar::OnThemeLight(IInspectable const&,RoutedEventArgs const&){
+ if(action_)action_(12);
+}
+void FileToolbar::OnThemeDark(IInspectable const&,RoutedEventArgs const&){
+ if(action_)action_(13);
 }
 void FileToolbar::OnSortChanged(IInspectable const& sender,
  SelectionChangedEventArgs const&){

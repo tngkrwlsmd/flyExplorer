@@ -16,7 +16,9 @@ def run(*,win,element,safe_click,focus,eventually,
     assert profile.parent.parent==localdata
     def visit(side,path,child):
         focus()
-        safe_click(element("PrimaryPaneTitle" if side==0 else "SecondaryPaneTitle"))
+        # Explorer-like v1 retires the visual pane-title button. Activate the
+        # pane through the real file surface that users can actually click.
+        safe_click(element("LeftFiles" if side==0 else "RightFiles"))
         box=element("AddressBox")
         box.set_edit_text(str(path))
         focus()

@@ -38,6 +38,9 @@ namespace winrt::FlyExplorer::implementation
         void OnForwardClicked(IInspectable const&, Microsoft::UI::Xaml::RoutedEventArgs const&);
         void OnUpClicked(IInspectable const&, Microsoft::UI::Xaml::RoutedEventArgs const&);
         void OnAddressKeyDown(IInspectable const&, Microsoft::UI::Xaml::Input::KeyRoutedEventArgs const&);
+        void OnAddressGotFocus(IInspectable const&, Microsoft::UI::Xaml::RoutedEventArgs const&);
+        void OnAddressLostFocus(IInspectable const&, Microsoft::UI::Xaml::RoutedEventArgs const&);
+        void OnAddressDisplayClicked(IInspectable const&, Microsoft::UI::Xaml::RoutedEventArgs const&);
         void OnQuickSearchKeyDown(IInspectable const&, Microsoft::UI::Xaml::Input::KeyRoutedEventArgs const&);
         void OnShellSizeChanged(IInspectable const&, Microsoft::UI::Xaml::SizeChangedEventArgs const&);
         void OnNewTabClicked(IInspectable const&, Microsoft::UI::Xaml::RoutedEventArgs const&);
@@ -51,6 +54,8 @@ namespace winrt::FlyExplorer::implementation
         void OnThisPCClicked(IInspectable const&, Microsoft::UI::Xaml::RoutedEventArgs const&);
         void ApplyThemeChoice(int selection);
         void ExecuteFileCommand(fxfile::filecommand::Kind kind);
+        void BeginFileNameCommand(fxfile::filecommand::Kind kind);
+        void ToggleNameFilter(int side);
         void OnLeftTabSelectionChanged(IInspectable const&,
             Microsoft::UI::Xaml::Controls::SelectionChangedEventArgs const&);
         void OnRightTabSelectionChanged(IInspectable const&,
@@ -59,6 +64,10 @@ namespace winrt::FlyExplorer::implementation
             Microsoft::UI::Xaml::Input::DoubleTappedRoutedEventArgs const&);
         void OnRightFileDoubleTapped(IInspectable const&,
             Microsoft::UI::Xaml::Input::DoubleTappedRoutedEventArgs const&);
+        void OnLeftPaneTapped(IInspectable const&,
+            Microsoft::UI::Xaml::Input::TappedRoutedEventArgs const&);
+        void OnRightPaneTapped(IInspectable const&,
+            Microsoft::UI::Xaml::Input::TappedRoutedEventArgs const&);
         void OnLeftFileKeyDown(IInspectable const&,
             Microsoft::UI::Xaml::Input::KeyRoutedEventArgs const&);
         void OnRightFileKeyDown(IInspectable const&,
@@ -201,6 +210,7 @@ namespace winrt::FlyExplorer::implementation
         void Refresh(winrt::hstring const& status = L"Ready");
         void RefreshTabs(int side);
         bool mColumnControlsReady=false;
+        void ApplyDetailColumnLayout(int side);
         void FillFiles(int side);
         bool OpenFolder(std::wstring const& path);
         void ActivatePane(int side);

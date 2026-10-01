@@ -4,8 +4,8 @@
  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
     <UserControl.Resources>
         <Style x:Key="ExplorerNavButtonStyle" TargetType="Button">
-            <Setter Property="MinHeight" Value="34"/>
-            <Setter Property="Padding" Value="9,5"/>
+            <Setter Property="MinHeight" Value="32"/>
+            <Setter Property="Padding" Value="8,4"/>
             <Setter Property="HorizontalAlignment" Value="Stretch"/>
             <Setter Property="HorizontalContentAlignment" Value="Left"/>
             <Setter Property="CornerRadius" Value="4"/>
@@ -13,85 +13,70 @@
             <Setter Property="Background" Value="Transparent"/>
         </Style>
     </UserControl.Resources>
-    <Border CornerRadius="8"
-            Background="{ThemeResource LayerFillColorDefaultBrush}"
-            BorderBrush="{ThemeResource SystemControlForegroundBaseLowBrush}"
-            BorderThickness="1" Padding="5">
+    <Border Background="Transparent" BorderThickness="0" Padding="4,3,5,3">
         <ScrollViewer VerticalScrollMode="Enabled" VerticalScrollBarVisibility="Auto"
                       HorizontalScrollMode="Disabled" HorizontalScrollBarVisibility="Disabled">
-            <StackPanel Spacing="2">
-                <TextBlock Text="&#xD0D0;&#xC0C9;" FontSize="12" FontWeight="SemiBold"
-                           Opacity="0.72" Margin="8,8,0,7"/>
+            <StackPanel Spacing="1">
+                <TextBlock Text="탐색" FontSize="11.5" FontWeight="SemiBold"
+                           Opacity="0.62" Margin="7,4,0,5"/>
                 <Button x:Name="HomeButton" Style="{StaticResource ExplorerNavButtonStyle}"
-                        Click="OnHomeClicked"
-                        AutomationProperties.Name="&#xD648;&#xC73C;&#xB85C; &#xC774;&#xB3D9;">
-                    <StackPanel Orientation="Horizontal" Spacing="10">
-                        <FontIcon Glyph="&#xE80F;" FontSize="16"/>
-                        <TextBlock Text="&#xD648;" VerticalAlignment="Center"/>
+                        Click="OnHomeClicked" AutomationProperties.Name="홈으로 이동">
+                    <StackPanel Orientation="Horizontal" Spacing="9">
+                        <FontIcon Glyph="&#xE80F;" FontSize="15"/>
+                        <TextBlock Text="홈" VerticalAlignment="Center"/>
                     </StackPanel>
                 </Button>
                 <Button x:Name="ThisPCButton" Style="{StaticResource ExplorerNavButtonStyle}"
-                        Click="OnThisPCClicked"
-                        AutomationProperties.Name="&#xB0B4; PC&#xB85C; &#xC774;&#xB3D9;">
-                    <StackPanel Orientation="Horizontal" Spacing="10">
-                        <FontIcon Glyph="&#xE7F8;" FontSize="16"/>
-                        <TextBlock Text="&#xB0B4; PC" VerticalAlignment="Center"/>
+                        Click="OnThisPCClicked" AutomationProperties.Name="내 PC로 이동">
+                    <StackPanel Orientation="Horizontal" Spacing="9">
+                        <FontIcon Glyph="&#xE7F8;" FontSize="15"/>
+                        <TextBlock Text="내 PC" VerticalAlignment="Center"/>
                     </StackPanel>
                 </Button>
                 <Rectangle Height="1" Margin="6,5"
                            Fill="{ThemeResource SystemControlForegroundBaseLowBrush}"/>
                 <Button x:Name="DesktopButton" Style="{StaticResource ExplorerNavButtonStyle}"
-                        Click="OnDesktopClicked"
-                        AutomationProperties.Name="&#xBC14;&#xD0D5; &#xD654;&#xBA74;&#xC73C;&#xB85C; &#xC774;&#xB3D9;">
-                    <StackPanel Orientation="Horizontal" Spacing="10">
-                        <FontIcon Glyph="&#xE7F4;" FontSize="16"/>
-                        <TextBlock Text="&#xBC14;&#xD0D5; &#xD654;&#xBA74;" VerticalAlignment="Center"/>
+                        Click="OnDesktopClicked" AutomationProperties.Name="바탕 화면으로 이동">
+                    <StackPanel Orientation="Horizontal" Spacing="9">
+                        <FontIcon Glyph="&#xE7F4;" FontSize="15"/>
+                        <TextBlock Text="바탕 화면" VerticalAlignment="Center"/>
                     </StackPanel>
                 </Button>
                 <Button x:Name="DownloadsButton" Style="{StaticResource ExplorerNavButtonStyle}"
-                        Click="OnDownloadsClicked"
-                        AutomationProperties.Name="&#xB2E4;&#xC6B4;&#xB85C;&#xB4DC;&#xB85C; &#xC774;&#xB3D9;">
-                    <StackPanel Orientation="Horizontal" Spacing="10">
-                        <FontIcon Glyph="&#xE896;" FontSize="16"/>
-                        <TextBlock Text="&#xB2E4;&#xC6B4;&#xB85C;&#xB4DC;" VerticalAlignment="Center"/>
+                        Click="OnDownloadsClicked" AutomationProperties.Name="다운로드로 이동">
+                    <StackPanel Orientation="Horizontal" Spacing="9">
+                        <FontIcon Glyph="&#xE896;" FontSize="15"/>
+                        <TextBlock Text="다운로드" VerticalAlignment="Center"/>
                     </StackPanel>
                 </Button>
                 <Button x:Name="DocumentsButton" Style="{StaticResource ExplorerNavButtonStyle}"
-                        Click="OnDocumentsClicked"
-                        AutomationProperties.Name="&#xBB38;&#xC11C;&#xB85C; &#xC774;&#xB3D9;">
-                    <StackPanel Orientation="Horizontal" Spacing="10">
-                        <FontIcon Glyph="&#xE8A5;" FontSize="16"/>
-                        <TextBlock Text="&#xBB38;&#xC11C;" VerticalAlignment="Center"/>
+                        Click="OnDocumentsClicked" AutomationProperties.Name="문서로 이동">
+                    <StackPanel Orientation="Horizontal" Spacing="9">
+                        <FontIcon Glyph="&#xE8A5;" FontSize="15"/>
+                        <TextBlock Text="문서" VerticalAlignment="Center"/>
                     </StackPanel>
                 </Button>
                 <Button x:Name="PicturesButton" Style="{StaticResource ExplorerNavButtonStyle}"
-                        Click="OnPicturesClicked"
-                        AutomationProperties.Name="&#xC0AC;&#xC9C4;&#xC73C;&#xB85C; &#xC774;&#xB3D9;">
-                    <StackPanel Orientation="Horizontal" Spacing="10">
-                        <FontIcon Glyph="&#xEB9F;" FontSize="16"/>
-                        <TextBlock Text="&#xC0AC;&#xC9C4;" VerticalAlignment="Center"/>
+                        Click="OnPicturesClicked" AutomationProperties.Name="사진으로 이동">
+                    <StackPanel Orientation="Horizontal" Spacing="9">
+                        <FontIcon Glyph="&#xEB9F;" FontSize="15"/>
+                        <TextBlock Text="사진" VerticalAlignment="Center"/>
                     </StackPanel>
                 </Button>
                 <Button x:Name="MusicButton" Style="{StaticResource ExplorerNavButtonStyle}"
-                        Click="OnMusicClicked"
-                        AutomationProperties.Name="&#xC74C;&#xC545;&#xC73C;&#xB85C; &#xC774;&#xB3D9;">
-                    <StackPanel Orientation="Horizontal" Spacing="10">
-                        <FontIcon Glyph="&#xE8D6;" FontSize="16"/>
-                        <TextBlock Text="&#xC74C;&#xC545;" VerticalAlignment="Center"/>
+                        Click="OnMusicClicked" AutomationProperties.Name="음악으로 이동">
+                    <StackPanel Orientation="Horizontal" Spacing="9">
+                        <FontIcon Glyph="&#xE8D6;" FontSize="15"/>
+                        <TextBlock Text="음악" VerticalAlignment="Center"/>
                     </StackPanel>
                 </Button>
                 <Button x:Name="VideosButton" Style="{StaticResource ExplorerNavButtonStyle}"
-                        Click="OnVideosClicked"
-                        AutomationProperties.Name="&#xB3D9;&#xC601;&#xC0C1;&#xC73C;&#xB85C; &#xC774;&#xB3D9;">
-                    <StackPanel Orientation="Horizontal" Spacing="10">
-                        <FontIcon Glyph="&#xE8B2;" FontSize="16"/>
-                        <TextBlock Text="&#xB3D9;&#xC601;&#xC0C1;" VerticalAlignment="Center"/>
+                        Click="OnVideosClicked" AutomationProperties.Name="동영상으로 이동">
+                    <StackPanel Orientation="Horizontal" Spacing="9">
+                        <FontIcon Glyph="&#xE8B2;" FontSize="15"/>
+                        <TextBlock Text="동영상" VerticalAlignment="Center"/>
                     </StackPanel>
                 </Button>
-
-                <TextBlock Text="&#xC678;&#xBD80; Shell &#xC791;&#xC5C5;&#xC740; &#xB3C5;&#xB9BD; &#xD504;&#xB85C;&#xC138;&#xC2A4;&#xC5D0;&#xC11C; &#xC81C;&#xD55C;&#xB429;&#xB2C8;&#xB2E4;"
-                           TextWrapping="Wrap" Opacity="0.52" FontSize="10.5"
-                           Margin="8,12,8,6"/>
             </StackPanel>
         </ScrollViewer>
     </Border>

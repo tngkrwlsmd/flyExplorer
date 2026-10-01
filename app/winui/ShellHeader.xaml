@@ -2,45 +2,44 @@
 <UserControl x:Class="FlyExplorer.ShellHeader"
  xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
-    <Grid x:Name="TitleBarRoot" Height="44" Padding="12,0,154,0"
-          Background="Transparent" ColumnSpacing="10"
-          AutomationProperties.Name="flyExplorer &#xC81C;&#xBAA9; &#xD45C;&#xC2DC;&#xC904;">
+    <Grid x:Name="TitleBarRoot" Height="38" Padding="10,0,154,0"
+          Background="Transparent" ColumnSpacing="8"
+          AutomationProperties.Name="flyExplorer 제목 표시줄">
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="Auto"/>
             <ColumnDefinition Width="*"/>
             <ColumnDefinition Width="Auto"/>
         </Grid.ColumnDefinitions>
-        <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="9"
+        <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="8"
                     VerticalAlignment="Center">
-            <FontIcon Glyph="&#xE8B7;" FontSize="16" AutomationProperties.Name="flyExplorer"/>
+            <FontIcon Glyph="&#xE8B7;" FontSize="15" AutomationProperties.Name="flyExplorer"/>
             <TextBlock x:Name="ShellHeading" Text="flyExplorer"
-                       FontSize="14" FontWeight="SemiBold" VerticalAlignment="Center"/>
-            <Border CornerRadius="6" Padding="7,2"
-                    Background="{ThemeResource AccentFillColorSecondaryBrush}">
-                <TextBlock Text="&#xB4C0;&#xC5BC; &#xD328;&#xB110;" FontSize="10"
-                           FontWeight="SemiBold"/>
-            </Border>
+                       FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center"/>
         </StackPanel>
         <Grid x:Name="TitleBarDragRegion" Grid.Column="1"
               Background="Transparent">
-            <TextBlock Text="&#xD30C;&#xC77C; &#xD0D0;&#xC0C9;&#xAE30;"
-                       VerticalAlignment="Center" Opacity="0.55" FontSize="12"/>
+            <TextBlock Text="파일 탐색기"
+                       VerticalAlignment="Center" Opacity="0.42" FontSize="11.5"/>
         </Grid>
-        <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="7"
+
+        <!-- Retained for persisted theme/UIA compatibility. Theme selection is
+             exposed from the command-bar More menu, not ordinary title chrome. -->
+        <StackPanel Grid.Column="2" Orientation="Horizontal" Width="1"
+                    Opacity="0" IsHitTestVisible="False"
                     VerticalAlignment="Center">
-            <TextBlock x:Name="ThemeStateText" Text="&#xD14C;&#xB9C8;: &#xC2DC;&#xC2A4;&#xD15C;"
-                       VerticalAlignment="Center" FontSize="11"
-                       AutomationProperties.Name="&#xD604;&#xC7AC; &#xD654;&#xBA74; &#xD14C;&#xB9C8;"/>
-            <ComboBox x:Name="ThemePicker" Width="92" Height="30" Header=""
-                      SelectedIndex="0" SelectionChanged="OnThemeSelectionChanged"
-                      AutomationProperties.Name="&#xD654;&#xBA74; &#xD14C;&#xB9C8; &#xC120;&#xD0DD;">
-                <ComboBoxItem Content="&#xC2DC;&#xC2A4;&#xD15C;"/>
-                <ComboBoxItem Content="&#xB77C;&#xC774;&#xD2B8;"/>
-                <ComboBoxItem Content="&#xB2E4;&#xD06C;"/>
+            <TextBlock x:Name="ThemeStateText" Text="테마: 시스템"
+                       AutomationProperties.Name="현재 화면 테마"/>
+            <ComboBox x:Name="ThemePicker" Width="1" Height="1"
+                      IsTabStop="False" SelectedIndex="0"
+                      SelectionChanged="OnThemeSelectionChanged"
+                      AutomationProperties.Name="화면 테마 선택">
+                <ComboBoxItem Content="시스템"/>
+                <ComboBoxItem Content="라이트"/>
+                <ComboBoxItem Content="다크"/>
             </ComboBox>
         </StackPanel>
         <Border Grid.ColumnSpan="3" Height="1" VerticalAlignment="Bottom"
                 Background="{ThemeResource SystemControlForegroundBaseLowBrush}"
-                Opacity="0.65"/>
+                Opacity="0.38"/>
     </Grid>
 </UserControl>

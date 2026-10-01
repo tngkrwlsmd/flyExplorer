@@ -81,9 +81,36 @@ class FluentShellContract(unittest.TestCase):
             self.assertIn('x:Name="'+n+'"',xaml)
         self.assertIn("ExplorerListItemStyle",xaml)
         self.assertIn("ExplorerPaneTitleStyle",xaml)
-        self.assertIn("header.Width(GridLength{width,GridUnitType::Pixel})",impl)
-        self.assertIn("PrimaryPane().BorderThickness(Thickness{1.0,1.0,1.0,1.0})",impl)
+        self.assertIn('Tapped="OnLeftPaneTapped"',xaml)
+        self.assertIn('Tapped="OnRightPaneTapped"',xaml)
+        for n in ("LeftTypeHeaderColumn","LeftSizeHeaderColumn","LeftDateHeaderColumn",
+                  "RightTypeHeaderColumn","RightSizeHeaderColumn","RightDateHeaderColumn"):
+            self.assertIn('x:Name="'+n+'"',xaml)
+        self.assertIn("ApplyDetailColumnLayout(int side)",impl)
+        self.assertIn("GridUnitType::Star",impl)
+        self.assertIn("compact?0.0:155.0",impl)
+        self.assertIn("PrimaryPane().BorderThickness(Thickness{0.0,2.0,0.0,0.0})",impl)
+        self.assertIn("SecondaryPane().BorderThickness(Thickness{0.0,2.0,0.0,0.0})",impl)
+        self.assertIn("AutomationProperties::SetName",impl)
         self.assertNotIn("left?2.0:1.0",impl)
+
+    def test_explorer_like_v1_removes_default_development_chrome(self):
+        main=text("MainWindow.xaml")
+        toolbar=text("FileToolbar.xaml")
+        header=text("ShellHeader.xaml")
+        nav=text("NavigationSidebar.xaml")
+        impl=text("MainWindow.xaml.cpp")
+        self.assertIn('x:Name="AddressDisplayButton"',main)
+        self.assertIn("CompactAddress",impl)
+        self.assertIn('x:Name="LeftTabs" Grid.Row="1" Height="28"',main)
+        self.assertIn('x:Name="RightTabs" Grid.Row="1" Height="28"',main)
+        self.assertGreaterEqual(main.count('Grid.Row="2" Height="24"'),2)
+        self.assertGreaterEqual(main.count('MinHeight="0" Opacity="0"'),4)
+        self.assertIn('x:Name="FileNameBox" Grid.Column="1" Width="1" MinWidth="0"',toolbar)
+        self.assertIn('x:Name="MoreButton"',toolbar)
+        self.assertIn('Width="1"',header)
+        self.assertIn('Opacity="0"',header)
+        self.assertNotIn("외부 Shell 작업은",nav)
 
     def test_this_pc_local_drive_card_is_bounded_and_provider_safe(self):
         impl=text("MainWindow.xaml.cpp")

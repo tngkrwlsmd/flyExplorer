@@ -23,11 +23,42 @@ hstring koreanError(DWORD code){
 }
 void MainWindow::OnCreateFolder(
  IInspectable const&,RoutedEventArgs const&){
- ExecuteFileCommand(fxfile::filecommand::Kind::CreateFolder);
+ BeginFileNameCommand(fxfile::filecommand::Kind::CreateFolder);
 }
 void MainWindow::OnRenameSelected(
  IInspectable const&,RoutedEventArgs const&){
- ExecuteFileCommand(fxfile::filecommand::Kind::RenameSelected);
+ BeginFileNameCommand(fxfile::filecommand::Kind::RenameSelected);
+}
+void MainWindow::BeginFileNameCommand(fxfile::filecommand::Kind kind){
+ if(mFileOperationPending){
+  StatusText().Text(L"이전 파일 작업이 완료될 때까지 기다려 주세요.");
+  return;
+ }
+ std::wstring initial;
+ if(kind==fxfile::filecommand::Kind::RenameSelected){
+  const int side=mModel.activePane;
+  auto& pane=mModel.panes[static_cast<size_t>(side)];
+  const size_t tab=pane.active;
+  const auto view=side==0?LeftFiles():RightFiles();
+  const auto picked=view.SelectedItem();
+  const auto row=picked.try_as<ListViewItem>();
+  if(!row||!row.Tag()){
+   StatusText().Text(L"이름을 변경할 파일 또는 폴더를 선택하세요.");
+   return;
+  }
+  const auto index=winrt::unbox_value<uint32_t>(row.Tag());
+  const auto& entries=pane.tabs[tab].snapshot().children;
+  if(index>=entries.size()||!entries[index].isFileSystem()||entries[index].parsingName.empty()){
+   StatusText().Text(L"이 항목은 이름을 변경할 수 없습니다.");
+   return;
+  }
+  try{initial=std::filesystem::path(entries[index].parsingName).filename().wstring();}
+  catch(...){initial=entries[index].label;}
+ }
+ fileBar()->BeginNameEdit(kind==fxfile::filecommand::Kind::CreateFolder?0:1,hstring(initial));
+ StatusText().Text(kind==fxfile::filecommand::Kind::CreateFolder?
+  L"새 폴더 이름을 입력하고 Enter를 누르세요.":
+  L"새 이름을 입력하고 Enter를 누르세요.");
 }
 void MainWindow::ExecuteFileCommand(fxfile::filecommand::Kind kind){
  if(mFileOperationPending){
@@ -97,7 +128,7 @@ void MainWindow::ExecuteFileCommand(fxfile::filecommand::Kind kind){
                      ui->StatusText().Text(koreanError(result.error));
                      return;
                  }
-                 ui->FileNameBox().Text(L"");
+                 ui->fileBar()->EndNameEdit();
                  ui->StatusText().Text(
                      kind==fxfile::filecommand::Kind::CreateFolder?
                      L"새 폴더를 만들었습니다.":L"이름을 변경했습니다.");

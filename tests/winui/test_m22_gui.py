@@ -1,7 +1,7 @@
 """Actual native WinUI GUI: use only owned fixtures, never confirm recycle."""
 def run(*,win,element,safe_click,focus,eventually,left,right):
  assert left.is_dir() and right.is_dir() and left!=right
- focus();safe_click(element("PrimaryPaneTitle"))
+ focus();safe_click(element("LeftFiles"))
  for name in ("CopyButton","MoveButton","RecycleButton","CancelButton","SortPicker","OperationProgress"):
   assert element(name).exists(timeout=4),name
  assert not element("CancelButton").is_enabled()
