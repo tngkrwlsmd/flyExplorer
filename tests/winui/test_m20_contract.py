@@ -20,7 +20,8 @@ class ModelAndFullShell(unittest.TestCase):
             "filesystemPaths","nextRoute_=1"):
    self.assertIn(v,h)
   ui=source("app/winui/MainWindow.xaml.h")
-  self.assertIn("std::vector<fxfile::previewtabs::WindowTabState> mWindowTabs{1}",ui)
+  self.assertIn("std::vector<fxfile::previewtabs::WindowTabState> mWindowTabs",ui)
+  self.assertIn("mNextWindowTabIdentity=1",ui)
   self.assertNotIn("struct PaneState",ui)
  def test_all_real_tab_and_pane_commands_dispatch_through_native_model(self):
   cpp=source("app/winui/MainWindow.xaml.cpp")
@@ -78,3 +79,19 @@ class ModelAndFullShell(unittest.TestCase):
             "테마: 시스템","REAL_M20_SHARED_NATIVE_COMMANDS"):
    self.assertIn(x,test)
 if __name__=="__main__":unittest.main()
+
+class V7WindowTabEngineContract(unittest.TestCase):
+ def test_v7_window_tab_route_namespace_and_engine(self):
+  root=Path(__file__).resolve().parents[2]
+  state=(root/"app/winui/window_tab_state.h").read_text(encoding="utf-8")
+  header=(root/"app/winui/MainWindow.xaml.h").read_text(encoding="utf-8")
+  impl=(root/"app/winui/MainWindow.xaml.cpp").read_text(encoding="utf-8")
+  core=(root/"src/base/explorer_ui_state.cpp").read_text(encoding="utf-8")
+  for token in ("kRouteStride","model(id*kRouteStride)"):
+   self.assertIn(token,state)
+  self.assertIn("Model::Model(std::uint64_t routeBase)",core)
+  for token in ("CreateWindowTab","ActivateWindowTab","CloseWindowTab",
+                "SuspendActiveWindowTab","ReleaseWindowTabRoutes"):
+   self.assertIn(token,header);self.assertIn("MainWindow::"+token,impl)
+  self.assertIn("mWatcher->unwatch(route)",impl)
+  self.assertIn("mSupervisor->forget(route)",impl)

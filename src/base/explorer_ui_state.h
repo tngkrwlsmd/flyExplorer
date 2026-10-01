@@ -23,7 +23,7 @@ struct Change final {
 };
 class Model final {
 public:
- Model();
+ explicit Model(std::uint64_t routeBase=0);
  std::array<Pane,2> panes;
  int activePane=0;
  bool split=true;

@@ -188,7 +188,7 @@ class FluentShellContract(unittest.TestCase):
         self.assertIn("fxfile::explorerui::Model model",state)
         self.assertIn("fileLists",state)
         self.assertNotIn("Microsoft::UI::Xaml",state)
-        self.assertIn("mWindowTabs{1}",header)
+        self.assertIn("mWindowTabs",header)
         self.assertIn("mActiveWindowTab=0",header)
         self.assertIn("ActiveWindowTab()",header)
         self.assertNotIn("fxfile::explorerui::Model mModel",header)

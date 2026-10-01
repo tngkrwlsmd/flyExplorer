@@ -11,7 +11,11 @@ bool shape(Pane const& p){
         p.filesystemPaths.size()==count&&p.active<count;
 }
 }
-Model::Model(){reset(true,{{1,1}},{{0,0}});}
+Model::Model(std::uint64_t routeBase){
+ if(routeBase>(std::numeric_limits<std::uint64_t>::max)()-4)routeBase=0;
+ nextRoute_=routeBase+1;
+ reset(true,{{1,1}},{{0,0}});
+}
 bool Model::invariant() const {
  return validSide(activePane)&&(split||activePane==0)&&
         shape(panes[0])&&shape(panes[1]);

@@ -124,14 +124,23 @@ namespace winrt::FlyExplorer::implementation
         void OnHeaderSortClicked(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
 
     private:
-        std::vector<fxfile::previewtabs::WindowTabState> mWindowTabs{1};
+        std::vector<fxfile::previewtabs::WindowTabState> mWindowTabs{
+            fxfile::previewtabs::WindowTabState{0}};
         std::size_t mActiveWindowTab=0;
+        std::uint64_t mNextWindowTabIdentity=1;
         fxfile::previewtabs::WindowTabState& ActiveWindowTab(){
             return mWindowTabs.at(mActiveWindowTab);
         }
         fxfile::previewtabs::WindowTabState const& ActiveWindowTab() const{
             return mWindowTabs.at(mActiveWindowTab);
         }
+        static constexpr std::size_t kMaxWindowTabs=10;
+        bool CreateWindowTab(std::wstring const& startPath);
+        bool ActivateWindowTab(std::size_t index);
+        bool CloseWindowTab(std::size_t index);
+        void SuspendActiveWindowTab();
+        void ApplyActiveWindowTab(winrt::hstring const& status);
+        void ReleaseWindowTabRoutes(fxfile::previewtabs::WindowTabState& state);
         fxfile::uisettings::Preferences mPreferences{};
         std::shared_ptr<std::mutex> mPreferencesWriteMutex=
             std::make_shared<std::mutex>();

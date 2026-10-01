@@ -1130,6 +1130,110 @@ namespace winrt::FlyExplorer::implementation
         }
         mPopulatingFileLists=false;
     }
+    void MainWindow::ReleaseWindowTabRoutes(
+        fxfile::previewtabs::WindowTabState& state)
+    {
+        for(int side=0;side<2;++side){
+            auto& pane=state.model.panes[side];
+            for(auto route:pane.routeIds){
+                if(mSupervisor)mSupervisor->forget(route);
+                if(mWatcher)mWatcher->unwatch(route);
+                if(mShellWatcher)mShellWatcher->unwatch(route);
+            }
+            for(auto& pending:pane.pending)pending=0;
+            state.fileLists[side].invalidate();
+        }
+    }
+    void MainWindow::SuspendActiveWindowTab()
+    {
+        auto& state=ActiveWindowTab();
+        for(int side=0;side<2;++side){
+            if(mDetailCancel[side])mDetailCancel[side]->store(true);
+            const auto& pane=state.model.panes[side];
+            for(auto route:pane.routeIds){
+                if(mWatcher)mWatcher->unwatch(route);
+                if(mShellWatcher)mShellWatcher->unwatch(route);
+            }
+            for(auto& pending:state.model.panes[side].pending)pending=0;
+            state.fileLists[side].invalidate();
+            mWatchedRoutes[side]=0;
+            mWatchTokens[side]=0;
+            mWatchedPaths[side].clear();
+            mRestoreQueue[side].clear();
+        }
+        if(state.model.split){
+            try{
+                const auto total=PrimaryColumn().ActualWidth()+SecondaryColumn().ActualWidth();
+                if(total>1)state.splitPermille=static_cast<std::uint32_t>(
+                    (std::clamp)(PrimaryColumn().ActualWidth()/total*1000.,300.,700.));
+            }catch(...){ }
+        }
+    }
+    void MainWindow::ApplyActiveWindowTab(hstring const& status)
+    {
+        auto& state=ActiveWindowTab();
+        const bool split=state.model.split;
+        SecondaryPane().Visibility(split?Visibility::Visible:Visibility::Collapsed);
+        PaneDivider().Visibility(split?Visibility::Visible:Visibility::Collapsed);
+        const auto ratio=static_cast<double>((std::clamp)(state.splitPermille,300u,700u));
+        PrimaryColumn().Width(GridLength{split?ratio:1000.0,GridUnitType::Star});
+        SecondaryColumn().Width(split?GridLength{1000.0-ratio,GridUnitType::Star}:
+            GridLength{0.0,GridUnitType::Pixel});
+        const auto splitLabel=hstring(split?L"\uB2E8\uC77C \uCC3D":L"\uBD84\uD560 \uCC3D");
+        Microsoft::UI::Xaml::Automation::AutomationProperties::SetName(SplitButton(),splitLabel);
+        ToolTipService::SetToolTip(SplitButton(),winrt::box_value(splitLabel));
+        mDetailLayoutProfiles={{-1,-1}};
+        Refresh(status);
+        for(int side=0;side<2;++side){
+            if(side==1&&!split)continue;
+            auto& pane=state.model.panes[side];
+            auto const& current=pane.tabs[pane.active].snapshot();
+            if(current.folder.valid()){
+                QueuePidl(side,fxfile::shellnav::Location(current.folder),
+                    fxfile::shellnav::NavigationAction::Refresh);
+            }
+        }
+    }
+    bool MainWindow::CreateWindowTab(std::wstring const& startPath)
+    {
+        if(mWindowTabs.size()>=kMaxWindowTabs||
+           mNextWindowTabIdentity>0xffffffffull)return false;
+        SuspendActiveWindowTab();
+        const auto identity=mNextWindowTabIdentity++;
+        mWindowTabs.emplace_back(identity);
+        mActiveWindowTab=mWindowTabs.size()-1;
+        const auto defaultView=static_cast<FileViewMode>(
+            (std::clamp)(mPreferences.defaultViewMode,0,3));
+        for(auto& list:ActiveWindowTab().fileLists)list.viewMode=defaultView;
+        ApplyActiveWindowTab(L"새 창 탭을 준비하는 중입니다.");
+        const auto seed=startPath.empty()?HomePath().native():startPath;
+        QueuePath(0,seed);
+        QueuePath(1,seed);
+        return true;
+    }
+    bool MainWindow::ActivateWindowTab(std::size_t index)
+    {
+        if(index>=mWindowTabs.size())return false;
+        if(index==mActiveWindowTab)return true;
+        SuspendActiveWindowTab();
+        mActiveWindowTab=index;
+        ApplyActiveWindowTab(L"창 탭을 전환했습니다.");
+        return true;
+    }
+    bool MainWindow::CloseWindowTab(std::size_t index)
+    {
+        if(mWindowTabs.size()<=1||index>=mWindowTabs.size())return false;
+        const bool closingActive=index==mActiveWindowTab;
+        if(closingActive)SuspendActiveWindowTab();
+        ReleaseWindowTabRoutes(mWindowTabs[index]);
+        mWindowTabs.erase(mWindowTabs.begin()+static_cast<std::ptrdiff_t>(index));
+        if(index<mActiveWindowTab)--mActiveWindowTab;
+        else if(closingActive){
+            if(mActiveWindowTab>=mWindowTabs.size())mActiveWindowTab=mWindowTabs.size()-1;
+            ApplyActiveWindowTab(L"창 탭을 닫았습니다.");
+        }
+        return true;
+    }
     void MainWindow::Refresh(hstring const& status)
     {
         RefreshTabs(0);
