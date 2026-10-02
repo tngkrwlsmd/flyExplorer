@@ -41,10 +41,34 @@ experiments/phase6 paths must not be used.
 
 ## GUI acceptance
 
-Use test-owned folders/processes and validate the requested behavior. For UI
-work distinguish input delivery, state change, and final composited pixels when
-visual acceptance matters. Use targeted acceptance first, then the smallest
-required regression.
+Use test-owned folders/processes and validate the requested behavior. Distinguish
+input delivery, state change and final composited pixels.
+
+For any user-visible UI change, final-pixel review is mandatory rather than
+optional:
+1. capture a controlled BEFORE screenshot from the actual current product;
+2. implement the change and run targeted functional GUI acceptance;
+3. capture like-for-like AFTER screenshot(s);
+4. visually review alignment, spacing, hierarchy, clipping/wrapping, density,
+   focus/selection/disabled readability, contrast/theme and relevant
+   narrow-window/dual-pane states;
+5. if the review finds a material regression, fix it and repeat capture/review;
+6. only then run the smallest required regression.
+
+Record revision/binary, theme, DPI/scale, window dimensions and fixture with the
+visual evidence. Keep screenshots in ignored evidence or CI artifacts unless a
+tracked fixture is explicitly required; never capture personal filenames or
+private desktop content.
+
+Functional GUI acceptance and visual acceptance are separate gates. A
+functional/UIA PASS with no screenshot review must be reported as
+`VISUAL ACCEPTANCE: NOT TESTED`, not as complete UI acceptance. Actual
+125/150/200% scaling, High Contrast, human Narrator/Korean IME and other
+environment-specific gates remain NOT TESTED unless they were really exercised.
+
+Behavior-preserving refactors that do not alter composited pixels do not require
+fresh screenshots; they still require the relevant GUI regression and normal
+process-exit evidence.
 
 ## Evidence reuse
 

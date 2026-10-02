@@ -145,6 +145,33 @@ public WinUI/Windows APIs only. Preserve flyExplorer's dual-pane model. See
 docs/development/UI_UX_DESIGN_GUIDE.md and
 docs/development/WIN11_EXPLORER_UI_REFERENCE.md.
 
+### Mandatory visual acceptance gate for user-visible UI changes
+
+Any change that alters user-visible XAML/layout, spacing, typography, colors,
+icons, command/navigation chrome, pane/list presentation, focus/selection/
+hover/disabled states, dialogs, menus or other composited pixels requires the
+visual QA loop in docs/development/UI_VISUAL_RETEST.md. Functional/UIA GUI PASS
+alone is not sufficient acceptance for such a change.
+
+For those changes:
+- capture a BEFORE screenshot from the actual current product under a controlled
+  test-owned fixture before the visual change;
+- capture AFTER screenshot(s) from the changed actual product under like-for-like
+  conditions (revision/binary, window size, theme, DPI/scale and fixture recorded);
+- inspect the pixels for alignment, spacing, hierarchy, clipping/wrapping,
+  density, focus/selection readability, theme/contrast and narrow-window/
+  dual-pane behavior;
+- compare BEFORE vs AFTER and classify intended vs unintended changes;
+- if a material visual defect is found, fix it, recapture and review again;
+- report functional GUI acceptance and visual acceptance separately.
+
+Do not claim a user-visible UI task fully accepted if the screenshot review was
+not performed. Report `VISUAL ACCEPTANCE: NOT TESTED` (or the precise blocked
+state) instead. Pure behavior-preserving architecture/refactor work with no
+composited-pixel change does not require new visual screenshots, but existing
+GUI regression requirements still apply. Screenshots must use test-owned data
+and must not expose or commit personal/private desktop content.
+
 ## External tools and CI
 
 Do not use chatgpt-codex-connector unless the user explicitly requests or
