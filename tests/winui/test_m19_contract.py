@@ -27,8 +27,8 @@ class M19IntegrationContracts(unittest.TestCase):
     def test_preview_build_links_new_standalone_win32_features(self):
         build=code("app/winui/flyExplorer.project-template.xml")
         for name in ("m19_workspace.cpp","m19_search.cpp","m19_features.cpp",
-                     "shell_isolated_supervisor.cpp","directory_watcher.cpp",
-                     "shell_namespace_watcher.cpp"):
+                     "search_controller.cpp","shell_isolated_supervisor.cpp",
+                     "directory_watcher.cpp","shell_namespace_watcher.cpp"):
             self.assertIn(name,build)
 
     def test_preview_workspace_never_mutates_mfc_user_conf(self):
@@ -54,10 +54,12 @@ class M19IntegrationContracts(unittest.TestCase):
 
     def test_preview_uses_bounded_native_search_and_weak_ui_dispatch(self):
         src=code("app/winui/m19_features.cpp")
-        self.assertIn("scanFiles(scope,term,cancel)",src)
+        controller=code("app/winui/search_controller.cpp")
+        self.assertIn("mSearchController.start(",src)
+        self.assertIn("scanFiles(",controller)
         self.assertIn("auto weak=get_weak()",src)
         self.assertIn("dispatch.TryEnqueue",src)
-        self.assertIn("mSearchCancel->store(true)",code(
+        self.assertIn("mSearchController.prepareForClose()",code(
           "app/winui/MainWindow.xaml.cpp"))
         self.assertIn("mShellNavigation->release(ActiveWindowTab().model)",src)
         self.assertIn("mShellNavigation->submitParsing(",src)

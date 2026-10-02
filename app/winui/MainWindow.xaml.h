@@ -9,6 +9,7 @@
 #include "session_coordinator.h"
 #include "shell_navigation_controller.h"
 #include "file_operation_controller.h"
+#include "search_controller.h"
 #include "../../src/base/shell_transfer_core.h"
 #include "../../src/base/shell_clipboard_core.h"
 #include "../../src/base/ui_preferences.h"
@@ -221,11 +222,8 @@ namespace winrt::FlyExplorer::implementation
         bool mOwnedShellNotifyTest=false;
         bool mOwnedComExhaustOnVirtual=false;
         std::array<std::deque<std::pair<size_t,std::wstring>>,2> mRestoreQueue{};
-        std::vector<std::wstring> mRecentScopes;
-        std::shared_ptr<std::atomic_bool> mSearchCancel;
-        std::uint64_t mSearchEpoch=0;
+        fxfile::previewsearch::SearchController mSearchController{};
         bool mPopulatingRecents=false;
-        bool mRecentEdited=false;
         void EnsureExpandedPanelFits();
         void InitializeM19();
         void QueuePath(int side,std::wstring path);
@@ -254,9 +252,10 @@ namespace winrt::FlyExplorer::implementation
         void OpenSelectedFolder(int side);
         void ApplyWorkspace(fxfile::preview::Workspace&&);
         void QueueNextWorkspaceTab(int side);
+        using SearchController=fxfile::previewsearch::SearchController;
+        SearchController::Context SearchContext();
         void RefreshRecentSearchOptions();
-        void OnSearchCompleted(fxfile::preview::SearchResults&&,
-                               std::wstring const& scope,bool remember);
+        void OnSearchCompleted(SearchController::Completion completion);
         bool WorkspaceModel(fxfile::preview::Workspace&,std::wstring& reason) const;
     };
 }

@@ -14,6 +14,7 @@ using namespace winrt;
 using namespace Microsoft::UI::Xaml;
 using namespace Microsoft::UI::Xaml::Controls;
 namespace winrt::FlyExplorer::implementation {
+using SearchController=fxfile::previewsearch::SearchController;
 namespace {
 bool absoluteFile(std::wstring const& path) {
     if(path.size()<3||path.size()>32700 ||
@@ -31,26 +32,31 @@ std::wstring ownExecutable() {
     return n&&n<_countof(buffer)?
            std::wstring(buffer,n):std::wstring{};
 }
+SearchController::Post searchPost(
+    Microsoft::UI::Dispatching::DispatcherQueue const& dispatch)
+{
+    return [dispatch](SearchController::UiTask task){
+        try{
+            return dispatch.TryEnqueue([
+                task=std::move(task)
+            ]() mutable {
+                task();
+            });
+        }catch(...){return false;}
+    };
+}
 }
 void MainWindow::InitializeM19(){
     const auto dispatch=DispatcherQueue();
     const auto weak=get_weak();
-    try {
-        // Reading preview-only recent scopes never touches legacy
-        // APPDATA\fxfile\conf and never blocks the XAML thread.
-        std::thread([weak,dispatch]{
-            auto items=std::make_shared<std::vector<std::wstring>>();
-            if(!fxfile::preview::readRecentScopes(*items))items->clear();
-            dispatch.TryEnqueue([weak,items]{
-                if(auto ui=weak.get()){
-                    if(!ui->mRecentEdited) {
-                        ui->mRecentScopes=std::move(*items);
-                        ui->RefreshRecentSearchOptions();
-                    }
-                }
-            });
-        }).detach();
-    }catch(...){}
+    // Reading preview-only recent scopes never touches legacy
+    // APPDATA\fxfile\conf and remains owned by SearchController off the UI thread.
+    (void)mSearchController.loadRecents(
+        searchPost(dispatch),
+        [weak](bool applied){
+            if(!applied)return;
+            if(auto ui=weak.get())ui->RefreshRecentSearchOptions();
+        });
     int count=0;
     auto argv=::CommandLineToArgvW(::GetCommandLineW(),&count);
     std::wstring requested;
@@ -276,18 +282,34 @@ void MainWindow::OnOpenWorkspace(
         StatusText().Text(L"작업 공간 파일 검사 작업자를 시작할 수 없습니다.");
     }
 }
+SearchController::Context MainWindow::SearchContext(){
+    SearchController::Context context{};
+    auto const& state=ActiveWindowTab();
+    context.windowIdentity=state.identity;
+    context.side=state.model.activePane;
+    auto const& pane=state.model.panes[static_cast<std::size_t>(context.side)];
+    context.tab=pane.active;
+    if(context.tab<pane.routeIds.size())
+        context.route=pane.routeIds[context.tab];
+    if(context.tab<pane.filesystemPaths.size())
+        context.paneFolder=pane.filesystemPaths[context.tab];
+    context.scope=std::wstring(SearchScopeBox().Text().c_str());
+    context.term=std::wstring(SearchTermBox().Text().c_str());
+    return context;
+}
 void MainWindow::RefreshRecentSearchOptions(){
     mPopulatingRecents=true;
+    const auto recent=mSearchController.recentScopes();
     auto items=SearchRecentBox().Items();
     items.Clear();
-    for(auto const& path:mRecentScopes){
+    for(auto const& path:recent){
         ComboBoxItem option;
         option.Content(box_value(hstring(path)));
         items.Append(option);
     }
     SearchRecentBox().SelectedIndex(-1);
     RecentCountText().Text(hstring(
-        L"저장 "+std::to_wstring(mRecentScopes.size())+L"개"));
+        L"저장 "+std::to_wstring(recent.size())+L"개"));
     mPopulatingRecents=false;
 }
 void MainWindow::OnToggleSearch(
@@ -296,103 +318,111 @@ void MainWindow::OnToggleSearch(
                     Visibility::Visible:Visibility::Collapsed;
     WorkspacePanel().Visibility(Visibility::Collapsed);
     SearchPanel().Visibility(next);
-    if(next==Visibility::Visible){
-        EnsureExpandedPanelFits();
-        auto& pane=ActiveWindowTab().model.panes[static_cast<size_t>(ActiveWindowTab().model.activePane)];
-        auto const& path=pane.filesystemPaths[pane.active];
-        if(!path.empty())SearchScopeBox().Text(hstring(path));
-        StatusText().Text(L"제한된 파일 이름 검색 · 최근 위치 저장은 선택 사항입니다.");
+    if(next==Visibility::Collapsed){
+        mSearchController.invalidate();
+        SearchRunButton().IsEnabled(true);
+        return;
     }
+    EnsureExpandedPanelFits();
+    auto& pane=ActiveWindowTab().model.panes[
+        static_cast<size_t>(ActiveWindowTab().model.activePane)];
+    auto const& path=pane.filesystemPaths[pane.active];
+    if(!path.empty())SearchScopeBox().Text(hstring(path));
+    StatusText().Text(L"제한된 파일 이름 검색 · 최근 위치 저장은 선택 사항입니다.");
 }
 void MainWindow::OnRunSearch(
     IInspectable const&,RoutedEventArgs const&) {
-    const auto scope=std::wstring(SearchScopeBox().Text().c_str());
-    const auto term=std::wstring(SearchTermBox().Text().c_str());
-    if(scope.empty()||term.empty()||scope.size()>32700||term.size()>256) {
-        StatusText().Text(
-           L"검색 폴더와 검색어를 입력하세요(최대 256자).");
+    SearchController::Request request{};
+    request.scope=std::wstring(SearchScopeBox().Text().c_str());
+    request.term=std::wstring(SearchTermBox().Text().c_str());
+    request.remember=SearchRememberBox().IsChecked().GetBoolean();
+    auto context=SearchContext();
+    const auto weak=get_weak();
+    const auto status=mSearchController.start(
+        std::move(request),std::move(context),
+        searchPost(DispatcherQueue()),
+        [weak](SearchController::Completion completion){
+            if(auto ui=weak.get())
+                ui->OnSearchCompleted(std::move(completion));
+        });
+    using Start=SearchController::StartStatus;
+    if(status==Start::Started){
+        SearchRunButton().IsEnabled(false);
+        SearchCountText().Text(
+            L"독립 스레드에서 파일 이름을 검색하고 있습니다...");
+        SearchMatches().Items().Clear();
         return;
     }
-    if(mSearchCancel)mSearchCancel->store(true);
-    auto cancel=std::make_shared<std::atomic_bool>(false);
-    mSearchCancel=cancel;
-    const auto ticket=++mSearchEpoch;
-    const bool remember=SearchRememberBox().IsChecked().GetBoolean();
-    const auto weak=get_weak();
-    const auto dispatch=DispatcherQueue();
-    SearchRunButton().IsEnabled(false);
-    SearchCountText().Text(L"독립 스레드에서 파일 이름을 검색하고 있습니다...");
-    SearchMatches().Items().Clear();
-    try {
-        std::thread([weak,dispatch,cancel,ticket,scope,term,remember]{
-            auto result=std::make_shared<fxfile::preview::SearchResults>();
-            try{*result=fxfile::preview::scanFiles(scope,term,cancel);}
-            catch(...){result->valid=false;}
-            dispatch.TryEnqueue(
-                [weak,cancel,ticket,scope,remember,result]{
-                    if(auto ui=weak.get()){
-                        if(ui->mSearchEpoch==ticket && !cancel->load()){
-                            ui->SearchRunButton().IsEnabled(true);
-                            ui->OnSearchCompleted(std::move(*result),
-                                                  scope,remember);
-                        }
-                    }
-                });
-        }).detach();
-    }catch(...){
-        SearchRunButton().IsEnabled(true);
+    SearchRunButton().IsEnabled(true);
+    if(status==Start::InvalidRequest){
+        StatusText().Text(
+           L"검색 폴더와 검색어를 입력하세요(최대 256자).");
+    }else if(status==Start::ThreadStartFailed){
         StatusText().Text(L"독립 검색 스레드를 시작할 수 없습니다.");
     }
 }
 void MainWindow::OnSearchCompleted(
-    fxfile::preview::SearchResults&& result,
-    std::wstring const& scope,bool remember){
-    if(result.canceled)return;
-    if(!result.valid){
-        SearchCountText().Text(L"검색할 폴더가 올바르지 않거나 접근할 수 없습니다.");
+    SearchController::Completion completion){
+    const auto accepted=mSearchController.accept(
+        completion,SearchContext());
+    using Disposition=SearchController::Disposition;
+    if(accepted.disposition==Disposition::Ignored)return;
+
+    SearchRunButton().IsEnabled(true);
+    if(accepted.disposition==Disposition::Canceled)return;
+    if(accepted.disposition==Disposition::StaleContext){
+        SearchCountText().Text(
+            L"검색 컨텍스트가 변경되어 이전 결과를 무시했습니다.");
+        StatusText().Text(
+            L"검색 중 폴더, 탭 또는 검색 입력이 변경됐습니다.");
+        return;
+    }
+    if(accepted.disposition==Disposition::Invalid){
+        SearchCountText().Text(
+            L"검색할 폴더가 올바르지 않거나 접근할 수 없습니다.");
         StatusText().Text(
             L"검색을 시작할 수 없습니다. 최근 검색 위치는 변경하지 않았습니다.");
         return;
     }
+
     auto items=SearchMatches().Items();
     items.Clear();
-    for(auto const& file:result.matches){
+    for(auto const& file:completion.result.matches){
         TextBlock row;
         row.Text(hstring(file));
         items.Append(row);
     }
     SearchCountText().Text(hstring(
-        L"검색 결과 "+std::to_wstring(result.count)+
-        (result.truncated?L"개(제한된 일부 결과)":
-                          L"개")));
-    if(remember){
-        fxfile::preview::rememberScope(mRecentScopes,scope);
-        mRecentEdited=true;
+        L"검색 결과 "+std::to_wstring(completion.result.count)+
+        (completion.result.truncated?L"개(제한된 일부 결과)":
+                                     L"개")));
+    if(completion.request.remember){
         RefreshRecentSearchOptions();
-        if(!fxfile::preview::writeRecentScopes(mRecentScopes)) {
+        if(!accepted.recentSaved){
             StatusText().Text(
                 L"검색은 완료됐지만 선택한 최근 위치를 저장하지 못했습니다.");
             return;
         }
     }
     StatusText().Text(
-        remember?L"검색 완료 · 선택한 위치를 미리보기 프로필에 저장했습니다.":
-                 L"검색 완료 · 위치를 저장하지 않았습니다(기본값).");
+        completion.request.remember?
+          L"검색 완료 · 선택한 위치를 미리보기 프로필에 저장했습니다.":
+          L"검색 완료 · 위치를 저장하지 않았습니다(기본값).");
 }
 void MainWindow::OnSelectSearchRecent(
     IInspectable const&,SelectionChangedEventArgs const&){
     if(mPopulatingRecents)return;
+    const auto recent=mSearchController.recentScopes();
     const auto index=SearchRecentBox().SelectedIndex();
-    if(index<0||static_cast<size_t>(index)>=mRecentScopes.size())return;
-    SearchScopeBox().Text(hstring(mRecentScopes[static_cast<size_t>(index)]));
+    if(index<0||static_cast<size_t>(index)>=recent.size())return;
+    SearchScopeBox().Text(hstring(recent[static_cast<size_t>(index)]));
     StatusText().Text(L"저장된 위치를 선택했습니다. 기록은 변경하지 않았습니다.");
 }
 void MainWindow::OnClearSearchRecent(
     IInspectable const&,RoutedEventArgs const&){
-    mRecentScopes.clear();
-    mRecentEdited=true;
+    const bool saved=mSearchController.clearRecent();
     RefreshRecentSearchOptions();
-    if(fxfile::preview::writeRecentScopes(mRecentScopes))
+    if(saved)
         StatusText().Text(L"최근 검색 위치를 모두 지웠습니다.");
     else StatusText().Text(L"최근 검색 위치 삭제를 저장하지 못했습니다.");
 }

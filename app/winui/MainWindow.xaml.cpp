@@ -361,7 +361,7 @@ namespace winrt::FlyExplorer::implementation
             for(auto& files:mWorkspace.state(i).fileLists)files.invalidate();
         try{if(mTransferTimer)mTransferTimer.Stop();}catch(...){}
         if(mShellNavigation)mShellNavigation->shutdown();
-        if(mSearchCancel)mSearchCancel->store(true);
+        mSearchController.prepareForClose();
     }
     MainWindow::~MainWindow()
     {
@@ -384,6 +384,7 @@ namespace winrt::FlyExplorer::implementation
     }
     void MainWindow::QueuePath(int side,std::wstring path)
     {
+        mSearchController.invalidate();
         auto& model=ActiveWindowTab().model;
         auto& pane=model.panes[side];
         std::uint64_t id=0;
@@ -403,6 +404,8 @@ namespace winrt::FlyExplorer::implementation
         int side,fxfile::shellnav::Location target,
         fxfile::shellnav::NavigationAction action)
     {
+        if(action!=fxfile::shellnav::NavigationAction::Refresh)
+            mSearchController.invalidate();
         if(!target.valid()) {
             StatusText().Text(L"이 위치를 열 수 없습니다.");
             return;
@@ -1163,6 +1166,7 @@ namespace winrt::FlyExplorer::implementation
     }
     void MainWindow::SuspendActiveWindowTab()
     {
+        mSearchController.invalidate();
         auto& state=ActiveWindowTab();
         mShellNavigation->suspend(state.model);
         for(int side=0;side<2;++side){
@@ -1280,6 +1284,7 @@ namespace winrt::FlyExplorer::implementation
     {
         if(!mWorkspace.dispatch(fxfile::explorerui::Command::ActivatePane,side)
                     .accepted)return;
+        mSearchController.invalidate();
         const auto& nav=Current();
         const auto address=nav.snapshot().parsingName;
         AddressBox().Text(hstring(FriendlyAddress(address)));
@@ -1576,6 +1581,7 @@ namespace winrt::FlyExplorer::implementation
         const auto change=mWorkspace.dispatch(
             fxfile::explorerui::Command::CloseTab,ActiveWindowTab().model.activePane);
         if(!change.accepted)return;
+        mSearchController.invalidate();
         mShellNavigation->forget(change.releasedRoute);
         mRestoreQueue[static_cast<size_t>(ActiveWindowTab().model.activePane)].clear();
         Refresh(L"탭을 닫았습니다.");
@@ -1630,6 +1636,7 @@ namespace winrt::FlyExplorer::implementation
         if (static_cast<size_t>(view.SelectedIndex())==pane.active)return;
         if(!mWorkspace.dispatch(fxfile::explorerui::Command::SelectTab,0,
                  static_cast<size_t>(view.SelectedIndex())).accepted)return;
+        mSearchController.invalidate();
         Refresh(L"왼쪽 탭을 선택했습니다.");
     }
     void MainWindow::OnRightTabSelectionChanged(
@@ -1642,6 +1649,7 @@ namespace winrt::FlyExplorer::implementation
         if (static_cast<size_t>(view.SelectedIndex())==pane.active)return;
         if(!mWorkspace.dispatch(fxfile::explorerui::Command::SelectTab,1,
                  static_cast<size_t>(view.SelectedIndex())).accepted)return;
+        mSearchController.invalidate();
         Refresh(L"오른쪽 탭을 선택했습니다.");
     }
     void MainWindow::OpenSelectedFolder(int side)

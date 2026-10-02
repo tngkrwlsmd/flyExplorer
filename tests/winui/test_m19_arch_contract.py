@@ -38,6 +38,7 @@ class M19IntegrationContracts(unittest.TestCase):
  def test_strict_opt_in_recent_locations_and_bounded_native_search(self):
   p=text(UI/"m19_search.cpp")
   f=text(UI/"m19_features.cpp")
+  controller=text(UI/"search_controller.cpp")
   for q in ("kMaxWalk=2500","kMaxDepth=5","kMaxResults=100",
             "kRecentMax=8","FindFirstFileExW",
             "FILE_ATTRIBUTE_REPARSE_POINT","LOCALAPPDATA",
@@ -46,10 +47,10 @@ class M19IntegrationContracts(unittest.TestCase):
   self.assertNotIn('L"APPDATA"',p)
   self.assertNotIn("ShellExecuteW",p)
   self.assertIn("SearchRememberBox().IsChecked().GetBoolean()",f)
-  self.assertIn("if(remember){",f)
-  self.assertIn("std::thread([weak,dispatch,cancel,ticket",f)
-  self.assertIn("readRecentScopes(*items)",f)
-  self.assertIn("mRecentEdited",f)
+  self.assertIn("completion.request.remember",f)
+  self.assertIn("scanFiles(",controller)
+  self.assertIn("readRecentScopes(loaded)",controller)
+  self.assertIn("recentRevision",controller)
 
  def test_ui_restores_selected_and_inactive_tabs_in_separate_process(self):
   f=text(UI/"m19_features.cpp")
@@ -62,7 +63,7 @@ class M19IntegrationContracts(unittest.TestCase):
             "saveWorkspaceNew","loadWorkspace"):
    self.assertIn(q,f)
   self.assertIn("QueueNextWorkspaceTab(completed.side)",core)
-  self.assertIn("if(mSearchCancel)mSearchCancel->store(true)",core)
+  self.assertIn("mSearchController.prepareForClose()",core)
   for id in ("WorkspacePanelButton","WorkspaceFileBox",
              "SaveWorkspaceButton","OpenWorkspaceButton",
              "SearchScopeBox","SearchRememberBox","SearchRecentBox",
@@ -74,7 +75,7 @@ class M19IntegrationContracts(unittest.TestCase):
   project=text(UI/"flyExplorer.project-template.xml")
   native=text(R/"src/base/shell_isolated_supervisor.cpp")
   for unit in ("m19_workspace.cpp","m19_search.cpp","m19_features.cpp",
-               "shell_isolated_supervisor.cpp",
+               "search_controller.cpp","shell_isolated_supervisor.cpp",
                "directory_watcher.cpp","shell_namespace_watcher.cpp"):
    self.assertIn(unit,project)
   self.assertNotIn("shell_async_worker.cpp",project)
