@@ -30,7 +30,7 @@ void MainWindow::OnRenameSelected(
  BeginFileNameCommand(fxfile::filecommand::Kind::RenameSelected);
 }
 void MainWindow::BeginFileNameCommand(fxfile::filecommand::Kind kind){
- if(mFileOperationPending){
+ if(mFileOperations.busy()){
   StatusText().Text(L"이전 파일 작업이 완료될 때까지 기다려 주세요.");
   return;
  }
@@ -61,7 +61,7 @@ void MainWindow::BeginFileNameCommand(fxfile::filecommand::Kind kind){
   L"새 이름을 입력하고 Enter를 누르세요.");
 }
 void MainWindow::ExecuteFileCommand(fxfile::filecommand::Kind kind){
- if(mFileOperationPending){
+ if(mFileOperations.busy()){
      StatusText().Text(L"이전 파일 작업이 완료될 때까지 기다려 주세요.");
      return;
  }
@@ -99,50 +99,51 @@ void MainWindow::ExecuteFileCommand(fxfile::filecommand::Kind kind){
      }
      request.source=entries[index].parsingName;
  }
- const auto route=pane.routeIds[tab];
- const auto originalParent=request.parent;
- const auto ticket=++mFileOperationEpoch;
- mFileOperationPending=true;
- SetFileButtonsBusy(true,false);
- StatusText().Text(L"선택한 파일 작업을 별도 스레드에서 처리하는 중입니다...");
  auto dispatch=DispatcherQueue();
+ FileOperationController::Post post=[dispatch](FileOperationController::UiTask task){
+     try{
+         return dispatch.TryEnqueue([task=std::move(task)]() mutable{task();});
+     }catch(...){return false;}
+ };
  auto weak=get_weak();
- try{
-     std::thread([weak,dispatch,side,tab,route,ticket,originalParent,
-                  request=std::move(request)]() mutable{
-         const auto result=fxfile::filecommand::execute(request);
-         dispatch.TryEnqueue([weak,side,tab,route,ticket,originalParent,
-                              kind=request.kind,result]{
-             if(auto ui=weak.get()){
-                 if(ui->mFileOperationEpoch!=ticket)return;
-                 ui->mFileOperationPending=false;
-                 ui->SetFileButtonsBusy(false,false);
-                 const auto& pane=ui->ActiveWindowTab().model.panes[side];
-                 // A committed filesystem mutation is not undone if the
-                 // user closed/navigated the pane while IO was in flight.
-                 // The stale result must NEVER mutate a different tab UI.
-                 if(tab>=pane.routeIds.size()||pane.routeIds[tab]!=route||
-                    pane.filesystemPaths[tab]!=originalParent||
-                    pane.active!=tab)return;
-                 if(result.error!=ERROR_SUCCESS){
-                     ui->StatusText().Text(koreanError(result.error));
-                     return;
-                 }
-                 ui->fileBar()->EndNameEdit();
-                 ui->StatusText().Text(
-                     kind==fxfile::filecommand::Kind::CreateFolder?
-                     L"새 폴더를 만들었습니다.":L"이름을 변경했습니다.");
-                 ui->QueuePidl(side,
-                   fxfile::shellnav::Location(
-                       pane.tabs[tab].snapshot().folder),
-                   fxfile::shellnav::NavigationAction::Refresh);
-             }
-         });
-     }).detach();
- }catch(...){
-     mFileOperationPending=false;
+ const auto status=mFileOperations.startFileCommand(
+     std::move(request),FileOperationContext(side),std::move(post),
+     [weak](FileOperationController::FileCommandCompletion completion){
+         if(auto ui=weak.get())ui->OnFileCommandCompleted(std::move(completion));
+     });
+ if(status==FileOperationController::StartStatus::Started){
+     SetFileButtonsBusy(true,false);
+     StatusText().Text(L"선택한 파일 작업을 별도 스레드에서 처리하는 중입니다...");
+ }else if(status==FileOperationController::StartStatus::Busy){
+     StatusText().Text(L"이전 파일 작업이 완료될 때까지 기다려 주세요.");
+ }else if(status==FileOperationController::StartStatus::InvalidVisibleContext){
+     StatusText().Text(L"파일 작업을 시작한 폴더가 변경됐습니다.");
+ }else{
      SetFileButtonsBusy(false,false);
      StatusText().Text(L"파일 작업 스레드를 시작하지 못했습니다.");
  }
 }
+void MainWindow::OnFileCommandCompleted(
+ FileOperationController::FileCommandCompletion completion){
+ using Disposition=FileOperationController::CommandDisposition;
+ const auto disposition=mFileOperations.acceptFileCommand(
+     completion,FileOperationContext(completion.context.side));
+ if(disposition==Disposition::Ignored)return;
+ SetFileButtonsBusy(false,false);
+ if(disposition==Disposition::StaleContext)return;
+ if(disposition==Disposition::Failed){
+     StatusText().Text(koreanError(completion.result.error));
+     return;
+ }
+ fileBar()->EndNameEdit();
+ StatusText().Text(
+     completion.kind==fxfile::filecommand::Kind::CreateFolder?
+     L"새 폴더를 만들었습니다.":L"이름을 변경했습니다.");
+ auto const& pane=ActiveWindowTab().model.panes[completion.context.side];
+ QueuePidl(completion.context.side,
+   fxfile::shellnav::Location(
+       pane.tabs[pane.active].snapshot().folder),
+   fxfile::shellnav::NavigationAction::Refresh);
+}
+
 }

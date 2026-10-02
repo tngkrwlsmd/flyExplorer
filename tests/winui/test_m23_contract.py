@@ -30,10 +30,12 @@ class M23Contracts(unittest.TestCase):
   self.assertIn("if(answer==ERROR_SUCCESS)answer=::GetLastError();",c)
  def test_os_paste_reuses_previously_verified_native_transfer(self):
   s=src(A+"m22_transfers.cpp")
+  controller=src(A+"file_operation_controller.cpp")
   for token in ("shellclipboard::read","StartTransfer(std::move(request))",
-                "shelltransfer::execute","CompareStringOrdinal",
-                "CopySelectedToWindowsClipboard","GetActiveWindow"):
+                "CompareStringOrdinal","CopySelectedToWindowsClipboard",
+                "GetActiveWindow"):
    self.assertIn(token,s)
+  self.assertIn("shelltransfer::execute",controller)
  def test_keyboard_standard_os_clipboard(self):
   s=src(A+"m22_transfers.cpp")
   self.assertIn("VirtualKey::C",s)

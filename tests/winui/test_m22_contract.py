@@ -38,7 +38,7 @@ class M22Contracts(unittest.TestCase):
  def test_project_compiles_both_native_and_new_reusable_controls(self):
   xml=src(A+"flyExplorer.project-template.xml")
   for name in ("FileToolbar.xaml.cpp","StatusFooter.xaml.cpp",
-               "m22_transfers.cpp","shell_transfer_core.cpp",
+               "file_operation_controller.cpp","m22_transfers.cpp","shell_transfer_core.cpp",
                "Strings\\ko-KR\\Resources.resw","/utf-8",
                "<DefaultLanguage>ko-KR</DefaultLanguage>"):
    self.assertIn(name,xml)
@@ -52,21 +52,23 @@ class M22Contracts(unittest.TestCase):
    self.assertTrue(any("\uac00"<=c<="\ud7a3" for c in values[text]))
  def test_real_gui_dispatch_uses_explicit_confirmation_and_async_progress(self):
   s=src(A+"m22_transfers.cpp")
+  controller=src(A+"file_operation_controller.cpp")
   for text in ("ContentDialog","ConfirmCollision","ConfirmRecycle",
-               "ContentDialogResult::Primary","Progress",
-               "OperationProgress().Value","mTransferProgress->cancel",
-               "shelltransfer::execute","get_weak","DispatcherQueue",
-               "pane.routeIds[tab]!=route"):
+               "ContentDialogResult::Primary","OperationProgress().Value",
+               "mFileOperations.cancel","get_weak","DispatcherQueue"):
    self.assertIn(text,s)
+  for text in ("shelltransfer::execute","state_->progress",
+               "completion.ticket!=state_->epoch","sameContext("):
+   self.assertIn(text,controller)
  def test_successful_transfer_always_refreshes_visible_touched_other_pane(self):
   source=src(A+"m22_transfers.cpp")
-  start=source.index("Watcher delivery may race with this completion")
-  end=source.index("bool MainWindow::CopySelectedToWindowsClipboard",start)
-  completion=source[start:end]
-  self.assertIn("ui->QueuePidl(1-side",completion)
-  self.assertIn("other.filesystemPaths[other.active]==request.destination",completion)
-  self.assertIn("other.filesystemPaths[other.active]==request.sourceParent",completion)
-  self.assertNotIn("!other.pending[other.active]",completion)
+  controller=src(A+"file_operation_controller.cpp")
+  self.assertIn("completion.touchedFolders.begin()",source)
+  self.assertIn("QueuePidl(side",source)
+  self.assertNotIn("!pane.pending[pane.active]",source)
+  self.assertIn("touched.push_back(request.sourceParent)",controller)
+  self.assertIn("touched.push_back(request.destination)",controller)
+  self.assertIn("TransferDisposition::Succeeded",controller)
 
  def test_shortcuts_and_context_menu_have_noninert_handlers(self):
   x=src(A+"MainWindow.xaml")

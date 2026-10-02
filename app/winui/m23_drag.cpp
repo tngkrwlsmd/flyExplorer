@@ -25,7 +25,7 @@ void MainWindow::OnFileDragItemsStarting(
  IInspectable const& sender,DragItemsStartingEventArgs const& args){
  auto view=sender.try_as<ListView>();
  const int side=view==LeftFiles()?0:view==RightFiles()?1:-1;
- if(side<0||mFileOperationPending||args.Items().Size()==0||
+ if(side<0||mFileOperations.busy()||args.Items().Size()==0||
     args.Items().Size()>32){args.Cancel(true);return;}
  auto const& pane=ActiveWindowTab().model.panes[side];
  const auto tab=pane.active;
@@ -60,7 +60,7 @@ void MainWindow::OnFileDragItemsStarting(
 void MainWindow::OnFileRowDragStarting(
  int side,UIElement const& sender,DragStartingEventArgs const& args){
  auto row=sender.try_as<ListViewItem>();
- if(!row||!row.Tag()||side<0||side>1||mFileOperationPending){
+ if(!row||!row.Tag()||side<0||side>1||mFileOperations.busy()){
   args.Cancel(true);return;
  }
  auto const& pane=ActiveWindowTab().model.panes[side];
@@ -110,7 +110,7 @@ void MainWindow::OnFileDragOver(
  IInspectable const& sender,DragEventArgs const& args){
  auto list=sender.try_as<ListView>();
  const int side=list==LeftFiles()?0:list==RightFiles()?1:-1;
- if(side<0||mFileOperationPending||mDropReading){
+ if(side<0||mFileOperations.busy()||mDropReading){
   args.AcceptedOperation(DataPackageOperation::None);return;
  }
  auto const& pane=ActiveWindowTab().model.panes[side];
@@ -132,7 +132,7 @@ fire_and_forget MainWindow::OnFileDrop(
  auto keep=get_strong(); // only while the user's drop is being interpreted
  auto list=sender.try_as<ListView>();
  const int side=list==LeftFiles()?0:list==RightFiles()?1:-1;
- if(side<0||mFileOperationPending||mDropReading)co_return;
+ if(side<0||mFileOperations.busy()||mDropReading)co_return;
  auto const& target=ActiveWindowTab().model.panes[side];
  if(target.pending[target.active]||target.filesystemPaths[target.active].empty())
   co_return;
@@ -192,7 +192,7 @@ fire_and_forget MainWindow::OnFileDrop(
    mDropReading=false;deferral.Complete();co_return;
   }
   const auto& live=ActiveWindowTab().model.panes[side];
-  if(mFileOperationPending||live.active!=tab||
+  if(mFileOperations.busy()||live.active!=tab||
      live.pending[tab]||live.routeIds[tab]!=route||
      live.filesystemPaths[tab]!=destination){
    StatusText().Text(L"파일을 놓는 동안 대상 폴더가 변경됐습니다.");

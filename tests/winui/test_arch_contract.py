@@ -93,6 +93,28 @@ class MigrationContracts(unittest.TestCase):
   self.assertNotIn("mWatcher->",impl)
   self.assertNotIn("mShellWatcher->",impl)
 
+ def test_file_operation_controller_owns_async_lifecycle(self):
+  project=text("flyExplorer.project-template.xml")
+  header=text("MainWindow.xaml.h")
+  transfer=text("m22_transfers.cpp")
+  commands=text("m21_commands.cpp")
+  controller=text("file_operation_controller.cpp")
+  controllerhdr=text("file_operation_controller.h")
+  self.assertIn("file_operation_controller.cpp",project)
+  self.assertIn("file_operation_controller.h",project)
+  self.assertIn("FileOperationController mFileOperations",header)
+  for token in ("mFileOperationPending","mFileOperationEpoch",
+                "mTransferProgress","mTransferEpoch"):
+   self.assertNotIn(token,header)
+  for token in ("shelltransfer::execute","filecommand::execute",
+                "state_->busy","state_->epoch","state_->progress",
+                "acceptTransfer(","acceptFileCommand(","prepareForClose"):
+   self.assertIn(token,controller+controllerhdr)
+  self.assertNotIn("shelltransfer::execute",transfer)
+  self.assertNotIn("filecommand::execute",commands)
+  self.assertIn("mFileOperations.requestTransfer",transfer)
+  self.assertIn("mFileOperations.startFileCommand",commands)
+
  def test_shared_native_enum_and_legacy_call_site(self):
   root=ROOT.parents[1]
   legacy=(root/"src/base/shell_enumerator_win.cpp").read_text(encoding="utf-8-sig")

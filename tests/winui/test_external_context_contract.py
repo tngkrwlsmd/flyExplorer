@@ -22,7 +22,7 @@ class ContextContract(unittest.TestCase):
                "ERROR_TIMEOUT","WaitForSingleObject","--context-menu"):
    self.assertIn(term,client)
   for term in ("OnExternalWindowsContextMenu",
-               "mFileOperationPending","items[index].isFileSystem()",
+               "mFileOperations.busy()","items[index].isFileSystem()",
                "root[1]!=L':'","shellcontext::show("):
    self.assertIn(term,app)
   self.assertNotIn("QueryContextMenu",app)

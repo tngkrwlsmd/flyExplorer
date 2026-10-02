@@ -206,8 +206,8 @@ namespace winrt::FlyExplorer::implementation
                     fxfile::shelltransfer::Kind::Move);
                 else if(command==4)ui->RunTransfer(
                     fxfile::shelltransfer::Kind::Recycle);
-                else if(command==5 && ui->mTransferProgress)
-                    ui->mTransferProgress->cancel.store(true);
+                else if(command==5 && ui->mFileOperations.cancellable())
+                    ui->mFileOperations.cancel();
                 else if(command==6)
                     ui->CopySelectedToWindowsClipboard(ui->ActiveWindowTab().model.activePane,true);
                 else if(command==7)
@@ -355,7 +355,7 @@ namespace winrt::FlyExplorer::implementation
         if(mClosing)return;
         mClosing=true;
         mSessionCoordinator.prepareForClose();
-        if(mTransferProgress)mTransferProgress->cancel.store(true);
+        mFileOperations.prepareForClose();
         for(auto& cancel:mDetailCancel)if(cancel)cancel->store(true);
         for(std::size_t i=0;i<mWorkspace.count();++i)
             for(auto& files:mWorkspace.state(i).fileLists)files.invalidate();
@@ -1343,7 +1343,7 @@ namespace winrt::FlyExplorer::implementation
     {
         // Keep selection commands reachable to keyboard/UIA selection patterns.
         // Each command validates the current native selection before mutating.
-        const bool ready=!mFileOperationPending;
+        const bool ready=!mFileOperations.busy();
         fileBar()->WindowsCutButton().IsEnabled(ready);
         fileBar()->WindowsCopyButton().IsEnabled(ready);
         RenameButton().IsEnabled(ready);

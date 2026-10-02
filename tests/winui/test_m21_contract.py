@@ -55,9 +55,12 @@ class KoreanM21(unittest.TestCase):
  def test_real_winui_uses_native_file_command_and_weak_async_dispatch(self):
   impl=src("app/winui/m21_commands.cpp")
   header=src("app/winui/MainWindow.xaml.h")
-  for token in ("filecommand::execute","mFileOperationEpoch","get_weak()",
+  controller=src("app/winui/file_operation_controller.cpp")
+  for token in ("mFileOperations.startFileCommand","get_weak()",
                 "DispatcherQueue()","CreateFolderButton","RenameButton"):
    self.assertIn(token,impl+header)
+  self.assertIn("filecommand::execute",controller)
+  self.assertNotIn("mFileOperationEpoch",header+impl)
  def test_actual_owned_gui_verifies_korean_and_restart_safety(self):
   test=src("tests/winui/test_m21_gui.py")
   harness=src("tests/winui/test_shell_gui.py")

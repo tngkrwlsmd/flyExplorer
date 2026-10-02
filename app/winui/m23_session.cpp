@@ -43,7 +43,7 @@ void MainWindow::InitializePrivateSession()
 void MainWindow::OnSavePrivateSession(
     IInspectable const&,RoutedEventArgs const&)
 {
-    if(mFileOperationPending){
+    if(mFileOperations.busy()){
         StatusText().Text(
             L"진행 중인 파일 작업이 끝난 후 세션을 저장하세요.");
         return;
@@ -111,7 +111,7 @@ void MainWindow::LoadPrivateSession()
         std::move(post),
         [weak](std::shared_ptr<SessionCoordinator::RestorePayload> payload){
             if(auto ui=weak.get()){
-                if(ui->mFileOperationPending)return;
+                if(ui->mFileOperations.busy())return;
                 ui->SuspendActiveWindowTab();
                 for(std::size_t i=0;i<ui->mWorkspace.count();++i){
                     ui->ReleaseWindowTabRoutes(ui->mWorkspace.state(i));
@@ -136,7 +136,7 @@ void MainWindow::LoadPrivateSession()
 void MainWindow::OnRestorePrivateSession(
     IInspectable const&,RoutedEventArgs const&)
 {
-    if(mFileOperationPending){
+    if(mFileOperations.busy()){
         StatusText().Text(
             L"진행 중인 작업이 끝난 후 세션을 복원하세요.");
         return;

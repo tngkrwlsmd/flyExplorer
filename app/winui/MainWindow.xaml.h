@@ -8,6 +8,7 @@
 #include "window_workspace_controller.h"
 #include "session_coordinator.h"
 #include "shell_navigation_controller.h"
+#include "file_operation_controller.h"
 #include "../../src/base/shell_transfer_core.h"
 #include "../../src/base/shell_clipboard_core.h"
 #include "../../src/base/ui_preferences.h"
@@ -143,8 +144,7 @@ namespace winrt::FlyExplorer::implementation
             std::make_shared<std::mutex>();
         std::shared_ptr<std::atomic_uint64_t> mPreferencesRevision=
             std::make_shared<std::atomic_uint64_t>(0);
-        bool mFileOperationPending=false;
-        std::uint64_t mFileOperationEpoch=0;
+        fxfile::previewops::FileOperationController mFileOperations{};
         // Reusable XAML controls expose their inner primitives to the
         // existing M2.1 callers without coupling native state to views.
         winrt::FlyExplorer::implementation::FileToolbar* fileBar(){
@@ -181,9 +181,7 @@ namespace winrt::FlyExplorer::implementation
         std::array<std::shared_ptr<std::atomic_bool>,2> mDetailCancel{};
         void ScheduleFileDetails(int side,bool force=false);
         void ClearFileDetails(int side);
-        std::shared_ptr<fxfile::shelltransfer::Progress> mTransferProgress;
         Microsoft::UI::Dispatching::DispatcherQueueTimer mTransferTimer{nullptr};
-        std::uint64_t mTransferEpoch=0;
         void InitializePrivateSession();
         void LoadPrivateSession();
         std::vector<std::wstring> mClipboardSources;
@@ -200,10 +198,16 @@ namespace winrt::FlyExplorer::implementation
         bool CopySelectedToWindowsClipboard(int side,bool cut);
         void PasteFromWindowsClipboard();
 
+        using FileOperationController=fxfile::previewops::FileOperationController;
+        FileOperationController::Context FileOperationContext(int side) const;
         void SetFileButtonsBusy(bool busy,bool cancellable);
         void StartTransfer(fxfile::shelltransfer::Request request);
-        winrt::fire_and_forget ConfirmCollision(fxfile::shelltransfer::Request request);
-        winrt::fire_and_forget ConfirmRecycle(fxfile::shelltransfer::Request request);
+        void ApplyTransferStartStatus(
+            FileOperationController::StartStatus status,std::size_t recycleCount=0);
+        void OnTransferCompleted(FileOperationController::TransferCompletion completion);
+        void OnFileCommandCompleted(FileOperationController::FileCommandCompletion completion);
+        winrt::fire_and_forget ConfirmCollision();
+        winrt::fire_and_forget ConfirmRecycle(std::size_t count);
         bool mPopulatingTabs = false;
         bool mSuppressWindowTabRefresh = false;
         bool mClosing = false;

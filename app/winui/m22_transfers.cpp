@@ -10,6 +10,7 @@ using namespace winrt;
 using namespace Microsoft::UI::Xaml;
 using namespace Microsoft::UI::Xaml::Controls;
 namespace winrt::FlyExplorer::implementation {
+using FileOperationController=fxfile::previewops::FileOperationController;
 namespace {
 hstring errorInKorean(DWORD err){
  switch(err){
@@ -25,7 +26,6 @@ hstring errorInKorean(DWORD err){
 }
 }
 void MainWindow::SetFileButtonsBusy(bool busy,bool cancellable){
- mFileOperationPending=busy;
  CreateFolderButton().IsEnabled(!busy);
  fileBar()->WindowsPasteButton().IsEnabled(!busy);
  fileBar()->CancelButton().IsEnabled(busy&&cancellable);
@@ -42,8 +42,8 @@ void MainWindow::OnRecycleSelected(IInspectable const&,RoutedEventArgs const&){
  RunTransfer(fxfile::shelltransfer::Kind::Recycle);
 }
 void MainWindow::OnCancelTransfer(IInspectable const&,RoutedEventArgs const&){
- if(mTransferProgress){
-  mTransferProgress->cancel.store(true);
+ if(mFileOperations.cancellable()){
+  mFileOperations.cancel();
   StatusText().Text(L"Shell 파일 작업 취소를 요청했습니다.");
  }
 }
@@ -63,7 +63,7 @@ void MainWindow::UpdateSort(int selection){
  FillFiles(ActiveWindowTab().model.activePane);
 }
 void MainWindow::RunTransfer(fxfile::shelltransfer::Kind kind){
- if(mFileOperationPending){
+ if(mFileOperations.busy()){
   StatusText().Text(L"이전 파일 작업이 완료될 때까지 기다려 주세요.");
   return;
  }
@@ -110,33 +110,99 @@ void MainWindow::RunTransfer(fxfile::shelltransfer::Kind kind){
   StatusText().Text(L"작업할 파일 또는 폴더를 선택하세요.");
   return;
  }
- if(kind==fxfile::shelltransfer::Kind::Recycle){
-  ConfirmRecycle(std::move(req));return;
- }
  StartTransfer(std::move(req));
 }
-winrt::fire_and_forget MainWindow::ConfirmRecycle(fxfile::shelltransfer::Request req){
+FileOperationController::Context MainWindow::FileOperationContext(int side) const{
+ FileOperationController::Context context{};
+ if(side<0||side>1)return context;
+ auto const& pane=ActiveWindowTab().model.panes[static_cast<std::size_t>(side)];
+ if(pane.active>=pane.routeIds.size()||
+    pane.active>=pane.filesystemPaths.size())return context;
+ context.side=side;
+ context.tab=pane.active;
+ context.route=pane.routeIds[pane.active];
+ context.visibleFolder=pane.filesystemPaths[pane.active];
+ return context;
+}
+namespace {
+FileOperationController::Post operationPost(
+ Microsoft::UI::Dispatching::DispatcherQueue const& dispatch){
+ return [dispatch](FileOperationController::UiTask task){
+  try{
+   return dispatch.TryEnqueue([task=std::move(task)]() mutable{task();});
+  }catch(...){return false;}
+ };
+}
+}
+void MainWindow::ApplyTransferStartStatus(
+ FileOperationController::StartStatus status,std::size_t recycleCount){
+ using Start=FileOperationController::StartStatus;
+ if(status==Start::Started){
+  SetFileButtonsBusy(true,true);
+  StatusText().Text(L"Windows Shell에서 파일 작업을 처리하고 있습니다...");
+  auto progress=mFileOperations.progress();
+  if(mTransferTimer)mTransferTimer.Stop();
+  auto timer=DispatcherQueue().CreateTimer();
+  mTransferTimer=timer;
+  timer.Interval(std::chrono::milliseconds(160));
+  auto weak=get_weak();
+  timer.Tick([weak,progress](auto const&,auto const&){
+   if(auto ui=weak.get())
+    if(progress&&ui->mFileOperations.progress()==progress)
+     ui->fileBar()->OperationProgress().Value(progress->percent.load());
+  });
+  timer.Start();
+  return;
+ }
+ if(status==Start::NeedsRecycleConfirmation){
+  ConfirmRecycle(recycleCount);
+  return;
+ }
+ if(status==Start::Busy)
+  StatusText().Text(L"이전 파일 작업이 완료될 때까지 기다려 주세요.");
+ else if(status==Start::InvalidVisibleContext)
+  StatusText().Text(L"현재 창이 원본이나 대상 폴더와 일치하지 않습니다.");
+ else if(status==Start::StaleConfirmation)
+  StatusText().Text(L"확인하는 동안 원본 또는 대상 폴더가 변경됐습니다. 다시 선택하세요.");
+ else if(status==Start::ThreadStartFailed){
+  SetFileButtonsBusy(false,false);
+  StatusText().Text(L"별도 Shell 파일 작업 스레드를 시작하지 못했습니다.");
+ }
+}
+void MainWindow::StartTransfer(fxfile::shelltransfer::Request request){
+ const auto side=ActiveWindowTab().model.activePane;
+ const auto count=request.sources.size();
+ auto weak=get_weak();
+ const auto status=mFileOperations.requestTransfer(
+  std::move(request),FileOperationContext(side),
+  operationPost(DispatcherQueue()),
+  [weak](FileOperationController::TransferCompletion completion){
+   if(auto ui=weak.get())ui->OnTransferCompleted(std::move(completion));
+  });
+ ApplyTransferStartStatus(status,count);
+}
+winrt::fire_and_forget MainWindow::ConfirmRecycle(std::size_t count){
  const auto keep=get_strong();
  ContentDialog dialog;
  dialog.XamlRoot(RootShell().XamlRoot());
  dialog.Title(winrt::box_value(hstring(L"휴지통으로 보내기")));
  dialog.Content(winrt::box_value(hstring(
-     L"선택한 항목 "+std::to_wstring(req.sources.size())+
+     L"선택한 항목 "+std::to_wstring(count)+
      L"개를 Windows 휴지통으로 이동할까요? 삭제할 항목을 확인하세요.")));
  dialog.PrimaryButtonText(L"휴지통으로 보내기");
  dialog.CloseButtonText(L"취소");
  dialog.DefaultButton(ContentDialogButton::Close);
- if(co_await dialog.ShowAsync()!=ContentDialogResult::Primary)co_return;
- const auto& pane=ActiveWindowTab().model.panes[ActiveWindowTab().model.activePane];
- if(pane.pending[pane.active]||
-    pane.filesystemPaths[pane.active]!=req.sourceParent){
-  StatusText().Text(L"확인하는 동안 원본 폴더가 변경됐습니다. 다시 선택하세요.");
-  co_return;
- }
- req.recycleConfirmed=true;
- StartTransfer(std::move(req));
+ const bool approved=co_await dialog.ShowAsync()==ContentDialogResult::Primary;
+ auto weak=get_weak();
+ const auto status=mFileOperations.confirmRecycle(
+  approved,FileOperationContext(ActiveWindowTab().model.activePane),
+  operationPost(DispatcherQueue()),
+  [weak](FileOperationController::TransferCompletion completion){
+   if(auto ui=weak.get())ui->OnTransferCompleted(std::move(completion));
+  });
+ ApplyTransferStartStatus(status,count);
 }
-winrt::fire_and_forget MainWindow::ConfirmCollision(fxfile::shelltransfer::Request req){
+winrt::fire_and_forget MainWindow::ConfirmCollision(){
  const auto keep=get_strong();
  ContentDialog dialog;
  dialog.XamlRoot(RootShell().XamlRoot());
@@ -147,112 +213,57 @@ winrt::fire_and_forget MainWindow::ConfirmCollision(fxfile::shelltransfer::Reque
  dialog.PrimaryButtonText(L"이름 변경 후 계속");
  dialog.CloseButtonText(L"취소");
  dialog.DefaultButton(ContentDialogButton::Close);
- if(co_await dialog.ShowAsync()!=ContentDialogResult::Primary)co_return;
- const auto& source=ActiveWindowTab().model.panes[ActiveWindowTab().model.activePane];
- if(source.pending[source.active]||
-    (source.filesystemPaths[source.active]!=req.sourceParent&&
-     source.filesystemPaths[source.active]!=req.destination)){
-  StatusText().Text(L"확인하는 동안 원본 폴더가 변경됐습니다. 다시 선택하세요.");
-  co_return;
- }
- req.collision=fxfile::shelltransfer::Collision::KeepBoth;
- StartTransfer(std::move(req));
+ const bool approved=co_await dialog.ShowAsync()==ContentDialogResult::Primary;
+ auto weak=get_weak();
+ const auto status=mFileOperations.confirmCollision(
+  approved,FileOperationContext(ActiveWindowTab().model.activePane),
+  operationPost(DispatcherQueue()),
+  [weak](FileOperationController::TransferCompletion completion){
+   if(auto ui=weak.get())ui->OnTransferCompleted(std::move(completion));
+  });
+ ApplyTransferStartStatus(status);
 }
-void MainWindow::StartTransfer(fxfile::shelltransfer::Request request){
- if(mFileOperationPending)return;
- using fxfile::shelltransfer::Progress;
- auto progress=std::make_shared<Progress>();
- mTransferProgress=progress;
- const auto epoch=++mTransferEpoch;
- auto const side=ActiveWindowTab().model.activePane;
- auto const& pane=ActiveWindowTab().model.panes[side];
- const auto tab=pane.active,route=pane.routeIds[tab];
- const auto originalParent=request.sourceParent;
- const auto originalVisibleFolder=pane.filesystemPaths[tab];
- // Clipboard sources may be external to either visible pane. The
- // destination is the active pane and must be refreshed independently.
- const bool sourceIsVisible=originalVisibleFolder==originalParent;
- const bool destinationIsVisible=
-    request.kind!=fxfile::shelltransfer::Kind::Recycle&&
-    originalVisibleFolder==request.destination;
- if(!sourceIsVisible&&!destinationIsVisible){
-  StatusText().Text(L"현재 창이 원본이나 대상 폴더와 일치하지 않습니다.");
-  mTransferProgress.reset();
+void MainWindow::OnTransferCompleted(
+ FileOperationController::TransferCompletion completion){
+ using Disposition=FileOperationController::TransferDisposition;
+ const auto disposition=mFileOperations.acceptTransfer(
+  completion,FileOperationContext(completion.context.side));
+ if(disposition==Disposition::Ignored)return;
+ if(mTransferTimer)mTransferTimer.Stop();
+ SetFileButtonsBusy(false,false);
+ if(disposition==Disposition::StaleContext){
+  StatusText().Text(L"파일 작업 종료: 작업 이후 화면이 변경됐습니다.");
   return;
  }
- SetFileButtonsBusy(true,true);
- StatusText().Text(L"Windows Shell에서 파일 작업을 처리하고 있습니다...");
- auto weak=get_weak();
- auto dispatch=DispatcherQueue();
- if(mTransferTimer)mTransferTimer.Stop();
- auto timer=dispatch.CreateTimer();
- mTransferTimer=timer;
- timer.Interval(std::chrono::milliseconds(160));
- timer.Tick([weak,progress](auto const&,auto const&){
-  if(auto ui=weak.get())
-   if(ui->mTransferProgress==progress)
-    ui->fileBar()->OperationProgress().Value(progress->percent.load());
- });
- timer.Start();
- try{
-  std::thread([weak,dispatch,progress,request=std::move(request),
-               epoch,side,tab,route,originalParent,
-               originalVisibleFolder,sourceIsVisible,destinationIsVisible]() mutable{
-   const auto result=fxfile::shelltransfer::execute(request,*progress);
-   dispatch.TryEnqueue([weak,progress,epoch,side,tab,route,originalParent,
-                        originalVisibleFolder,sourceIsVisible,destinationIsVisible,
-                        result,request=std::move(request)]() mutable{
-    if(auto ui=weak.get()){
-     if(ui->mTransferEpoch!=epoch||ui->mTransferProgress!=progress)return;
-     if(ui->mTransferTimer)ui->mTransferTimer.Stop();
-     ui->mTransferProgress.reset();
-     ui->SetFileButtonsBusy(false,false);
-     auto const& pane=ui->ActiveWindowTab().model.panes[side];
-     // Native data mutation is a user-approved action. A stale callback
-     // must not update an unrelated pane/tab after user navigation.
-     if(tab>=pane.routeIds.size()||pane.routeIds[tab]!=route||
-        pane.filesystemPaths[tab]!=originalVisibleFolder||pane.active!=tab){
-      ui->StatusText().Text(L"파일 작업 종료: 작업 이후 화면이 변경됐습니다.");
-      return;
-     }
-     if(result.error==ERROR_ALREADY_EXISTS&&!result.collisions.empty()&&
-        request.kind!=fxfile::shelltransfer::Kind::Recycle){
-      ui->ConfirmCollision(std::move(request));return;
-     }
-     if(result.error!=ERROR_SUCCESS){
-      ui->StatusText().Text(errorInKorean(result.error));return;
-     }
-     ui->StatusText().Text(
-      request.kind==fxfile::shelltransfer::Kind::Copy?
-        L"복사를 완료했습니다.":
-      request.kind==fxfile::shelltransfer::Kind::Move?
-        L"이동을 완료했습니다.":L"휴지통 이동을 완료했습니다.");
-     ui->QueuePidl(side,
-       fxfile::shellnav::Location(pane.tabs[tab].snapshot().folder),
-       fxfile::shellnav::NavigationAction::Refresh);
-     // Watcher delivery may race with this completion. If the other visible
-     // pane is a touched folder, always submit a fresh Refresh. QueuePidl/
-     // IsolatedShellSupervisor intentionally supersede an older request on the
-     // same pane and stale request IDs are rejected by the model, so skipping
-     // this refresh merely because another request is pending can lose the
-     // post-mutation destination update.
-     if(request.kind!=fxfile::shelltransfer::Kind::Recycle){
-      auto const& other=ui->ActiveWindowTab().model.panes[1-side];
-      if(other.filesystemPaths[other.active]==request.destination||
-         other.filesystemPaths[other.active]==request.sourceParent){
-       ui->QueuePidl(1-side,
-         fxfile::shellnav::Location(other.tabs[other.active].snapshot().folder),
-         fxfile::shellnav::NavigationAction::Refresh);
-      }
-     }
-    }
-   });
-  }).detach();
- }catch(...){
-  if(mTransferTimer)mTransferTimer.Stop();
-  mTransferProgress.reset();
-  SetFileButtonsBusy(false,false);
-  StatusText().Text(L"별도 Shell 파일 작업 스레드를 시작하지 못했습니다.");
+ if(disposition==Disposition::NeedsCollisionConfirmation){
+  ConfirmCollision();
+  return;
+ }
+ if(disposition==Disposition::Failed){
+  StatusText().Text(errorInKorean(completion.report.error));
+  return;
+ }
+ StatusText().Text(
+  completion.request.kind==fxfile::shelltransfer::Kind::Copy?
+    L"복사를 완료했습니다.":
+  completion.request.kind==fxfile::shelltransfer::Kind::Move?
+    L"이동을 완료했습니다.":L"휴지통 이동을 완료했습니다.");
+
+ // A watcher may already have a request in flight. Always submit a new
+ // Refresh for every currently visible touched folder; ShellNavigationController
+ // supersedes older same-pane work and the model rejects stale request IDs.
+ for(int side=0;side<2;++side){
+  if(side==1&&!ActiveWindowTab().model.split)continue;
+  auto const& pane=ActiveWindowTab().model.panes[side];
+  if(pane.active>=pane.filesystemPaths.size())continue;
+  const auto& visible=pane.filesystemPaths[pane.active];
+  const bool touched=std::any_of(
+   completion.touchedFolders.begin(),completion.touchedFolders.end(),
+   [&](std::wstring const& folder){return folder==visible;});
+  if(!touched)continue;
+  QueuePidl(side,
+   fxfile::shellnav::Location(pane.tabs[pane.active].snapshot().folder),
+   fxfile::shellnav::NavigationAction::Refresh);
  }
 }
 bool MainWindow::CopySelectedToWindowsClipboard(int side,bool cut){
@@ -297,7 +308,7 @@ bool MainWindow::CopySelectedToWindowsClipboard(int side,bool cut){
  return true;
 }
 void MainWindow::PasteFromWindowsClipboard(){
- if(mFileOperationPending){
+ if(mFileOperations.busy()){
   StatusText().Text(L"이전 파일 작업이 끝난 후 붙여넣으세요.");return;
  }
  const auto& pane=ActiveWindowTab().model.panes[ActiveWindowTab().model.activePane];
@@ -343,7 +354,7 @@ void MainWindow::OnWindowsPaste(IInspectable const&,RoutedEventArgs const&){
 }
 void MainWindow::OnExternalWindowsContextMenu(
  IInspectable const&,RoutedEventArgs const&){
- if(mFileOperationPending){
+ if(mFileOperations.busy()){
   StatusText().Text(L"Shell \uC791\uC5C5\uC774 \uB05D\uB09C \uB4A4 \uC2DC\uB3C4\uD558\uC138\uC694.");
   return;
  }
@@ -403,7 +414,7 @@ void MainWindow::OnExternalWindowsContextMenu(
  }
 }
 void MainWindow::StartInternalPaste(){
- if(mClipboardSources.empty()||mFileOperationPending){
+ if(mClipboardSources.empty()||mFileOperations.busy()){
   StatusText().Text(L"앱 내부에 붙여넣을 항목이 없습니다.");return;
  }
  auto const& pane=ActiveWindowTab().model.panes[ActiveWindowTab().model.activePane];
