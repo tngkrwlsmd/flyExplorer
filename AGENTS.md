@@ -136,8 +136,10 @@ Do not use chatgpt-codex-connector unless the user explicitly requests or
 permits it for the task. Normal GitHub connector/API access is allowed when
 appropriate.
 
-GitHub Actions workflows are manual-only by project policy. Do not dispatch
-hosted CI without explicit user approval.
+Project CI uses the repository-scoped self-hosted Windows runner. Pushes to
+main run Release + GUI validation automatically; workflow_dispatch remains
+available for targeted source/release/full checks. Do not introduce GitHub-
+hosted runners for project CI unless the user explicitly requests them.
 
 ## Git logical units
 
