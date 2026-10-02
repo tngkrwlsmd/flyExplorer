@@ -82,14 +82,15 @@ bootstrap configuration.
 
 ## Latest verified evidence
 
-On the current 2026-10-02 working revision:
+On code revision `6608e46f4265018283a9ccd2ea9cf7707dd1258e`, validated on 2026-10-02 by self-hosted
+Windows remote-task run `37005539258`:
 - canonical structure preflight: 4/4 PASS;
-- source contracts: 131/131 PASS;
+- source contracts: 143/143 PASS;
 - canonical Debug and Release app builds: PASS;
 - actual NuGet restore direct references and WinUI/XAML build assets: PASS;
-- M19-M23 native fixtures: Debug/Release compile PASS and runtime PASS;
-- Release GUI against an empty legacy %APPDATA% profile: PASS with
-  OWNED_WINUI_SHELL_EXIT 0 and legacy sentinel PRESENT 0;
+- M19-M23 native fixtures remain covered by the canonical source/GUI suite;
+- owned Debug and Release GUI validation: PASS with
+  OWNED_WINUI_SHELL_EXIT 0 and protected legacy configuration hashes identical;
 - pinned GUI dependencies pywinauto 0.6.9, Pillow 12.3.0 and psutil 7.2.2:
   validated on the self-hosted Windows runner;
 - current installer template materialization and setup build: PASS;

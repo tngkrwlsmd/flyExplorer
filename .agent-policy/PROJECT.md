@@ -26,7 +26,7 @@ consumer core; this PROJECT.md remains project-owned across bundle refreshes.
     {"name": "winui-tests", "path": "tests/winui", "responsibility": "source, native and owned GUI contracts"}
   ],
   "review": {
-    "reviewed_revision": "20e56e9f7cb25162fbe53d446e3102ef23ad2f87",
+    "reviewed_revision": "6608e46f4265018283a9ccd2ea9cf7707dd1258e",
     "reviewed_at": "2026-10-02",
     "reviewed_paths": [
       "app/winui",
@@ -55,27 +55,29 @@ consumer core; this PROJECT.md remains project-owned across bundle refreshes.
 
 ## Current product checkpoint
 
-Current main includes V8-A WindowWorkspaceController and V8-B
-SessionCoordinator responsibility extraction through 6c2a677. Live Git refs
-take priority.
+Current main includes V8-A WindowWorkspaceController, V8-B SessionCoordinator
+and V8-C ShellNavigationController responsibility extraction. Live Git refs take
+priority.
 
 Current accepted UI/state includes functional top-level Window Tabs, dual panes
 with pane-local tabs, Explorer-like navigation/chrome, private session schema v2
-restore, and WindowWorkspaceController ownership of top-level workspace state.
+restore, WindowWorkspaceController ownership of top-level workspace state, and
+ShellNavigationController ownership of isolated Shell navigation/watcher
+orchestration.
 
 ## Current verification
 
-Latest accepted product evidence before this policy-gate correction:
+Latest accepted product evidence for code revision `6608e46f4265018283a9ccd2ea9cf7707dd1258e` comes from
+self-hosted Windows remote-task run `37005539258`:
 - canonical structure 4/4 PASS;
-- source contracts 138/138 PASS;
-- canonical Release build PASS;
-- owned Release GUI PASS with OWNED_WINUI_SHELL_EXIT 0;
+- source contracts 143/143 PASS;
+- canonical Debug and Release builds PASS;
+- owned Debug and Release GUI PASS with OWNED_WINUI_SHELL_EXIT 0;
 - private-session clear/revoke PASS;
 - protected six user-config hashes identical.
 
-The later CI-only remote-task workflow commit does not modify product code.
-Its first automatic GUI run exposed a history-readiness timing failure that is
-tracked separately from this policy-gate correction.
+The validation used the repository-controlled temporary remote-task path; its
+task commit is validation-only and is not part of the product history.
 
 The v7 close-race fix moved cancellation/shutdown to the window Closed boundary
 and prevents late DispatcherQueue completions from turning teardown into

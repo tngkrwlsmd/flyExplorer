@@ -142,11 +142,16 @@ Serialization remains UI-independent in src/base.
 ### Facade / Proxy / Adapter — Shell integration
 
 IsolatedShellSupervisor is a bounded proxy/facade over helper processes and
-Shell calls. ShellNavigationController (or equivalent focused owner) should
-coordinate supervisor/watcher requests and adapt IsolatedResult/Snapshot values
-into workspace/presentation state.
+Shell calls. ShellNavigationController is the focused owner that coordinates
+supervisor/watcher requests and adapts IsolatedResult/Snapshot values into
+workspace state.
 
-Do not expose pipe, Job object or COM extension details to XAML handlers.
+The implemented controller owns the supervisor, filesystem watcher, Shell
+namespace watcher, watch route/token state, request submission, stale
+route/request completion checks and route release/suspend/shutdown lifecycle.
+MainWindow retains the DispatcherQueue/weak-UI handoff plus status and XAML
+projection only; pipe, Job object and COM extension details stay outside XAML
+handlers.
 
 ### Observer — watchers and asynchronous completion
 
@@ -188,15 +193,15 @@ The current/evolutionary direction is:
     MainWindow
       |-- WindowWorkspaceController  : IMPLEMENTED V8-A state/transition owner
       |-- SessionCoordinator          : IMPLEMENTED V8-B session caretaker/lifetime
-      |-- ShellNavigationController   : navigation, supervisor, watchers
+      |-- ShellNavigationController   : IMPLEMENTED V8-C navigation/supervisor/watchers
       |-- FileOperationController    : clipboard/transfer/collision/recycle
       '-- SearchController           : search request/cancel/recent state
 
-WindowWorkspaceController and SessionCoordinator are implemented. The remaining
-controller names are future extraction candidates, not implemented components
-and not a mandate for a big-bang rewrite. Create the next controller only when a coherent
-responsibility is being changed or extraction materially reduces coupling/race
-risk.
+WindowWorkspaceController, SessionCoordinator and ShellNavigationController are
+implemented. FileOperationController and SearchController remain future
+extraction candidates, not a mandate for a big-bang rewrite. Create the next
+controller only when a coherent responsibility is being changed or extraction
+materially reduces coupling/race risk.
 
 Controllers under app/winui may depend on WinUI only when presentation/
 DispatcherQueue coordination requires it. Move a component to src/base only
