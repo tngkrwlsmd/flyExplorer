@@ -33,7 +33,8 @@ Historical migration reports and legacy HTML Help are no longer kept in the
 working tree; Git history is their recovery source.
 
 See docs/development/CURRENT_STATUS.md for accepted functionality and open
-release gates. GitHub Actions remain manual/opt-in by project policy.
+release gates. Project CI runs on the repository-scoped self-hosted Windows
+runner; main pushes automatically run the normal Release + GUI validation.
 
 License
 -------
