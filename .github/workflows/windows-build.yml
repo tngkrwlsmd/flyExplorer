@@ -1,37 +1,111 @@
-name: Windows WinUI Build
+name: Windows VM Validation
 
 # Manual-only by project policy. Do not add push/pull_request triggers.
+# This workflow targets the repository-scoped interactive Windows VM runner.
 on:
   workflow_dispatch:
     inputs:
       run_ci:
-        description: "Explicit user approval required for this individual build"
+        description: "Explicit user approval required for this individual validation run"
         required: false
         default: false
         type: boolean
+      validation_scope:
+        description: "Validation scope"
+        required: true
+        default: "release-gui"
+        type: choice
+        options:
+          - source
+          - release
+          - release-gui
+          - full
 
 permissions:
   contents: read
 
 jobs:
-  release-x64:
+  windows-vm:
     if: ${{ inputs.run_ci }}
-    runs-on: windows-latest
-    timeout-minutes: 25
+    runs-on: [self-hosted, Windows, X64]
+    timeout-minutes: 30
+
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
-        with:
-          python-version: "3.14"
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - name: VM environment preflight
+        shell: powershell -NoLogo -NoProfile -ExecutionPolicy Bypass -Command ". '{0}'"
+        env:
+          VALIDATION_SCOPE: ${{ inputs.validation_scope }}
+        run: |
+          $ErrorActionPreference = "Stop"
+
+          Write-Host "Runner: $env:RUNNER_NAME"
+          Write-Host "Machine: $env:COMPUTERNAME"
+          Write-Host "User: $env:USERNAME"
+          Write-Host "Scope: $env:VALIDATION_SCOPE"
+
+          $pythonVersion = python -c "import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}')"
+          if ($LASTEXITCODE -ne 0) {
+            throw "Python is unavailable."
+          }
+          Write-Host "Python: $pythonVersion"
+          if (-not $pythonVersion.StartsWith("3.14.")) {
+            throw "flyExplorer VM expects Python 3.14.x; found $pythonVersion"
+          }
+
+          $msbuild = python -X utf8 tools\winui\resolve_msbuild.py
+          if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($msbuild)) {
+            throw "MSBuild resolver failed."
+          }
+          if (-not (Test-Path -LiteralPath $msbuild -PathType Leaf)) {
+            throw "Resolved MSBuild does not exist: $msbuild"
+          }
+          Write-Host "MSBuild: $msbuild"
+
+          if ($env:VALIDATION_SCOPE -in @("release-gui", "full")) {
+            python -c "import PIL, psutil, pywinauto; print('GUI Python dependencies: OK')"
+            if ($LASTEXITCODE -ne 0) {
+              throw "Pillow/psutil/pywinauto GUI dependencies are incomplete."
+            }
+
+            $explorer = Get-Process explorer -ErrorAction SilentlyContinue |
+              Where-Object { $_.SessionId -eq (Get-Process -Id $PID).SessionId } |
+              Select-Object -First 1
+
+            if (-not $explorer) {
+              throw "No interactive Explorer desktop found in the runner session."
+            }
+
+            Write-Host "Interactive desktop: Session $($explorer.SessionId)"
+          }
+
       - name: Source contracts
+        if: ${{ inputs.validation_scope == 'source' || inputs.validation_scope == 'release' || inputs.validation_scope == 'release-gui' }}
         shell: cmd
         run: test.bat source
+
       - name: Build canonical WinUI Release
+        if: ${{ inputs.validation_scope == 'release' || inputs.validation_scope == 'release-gui' }}
         shell: cmd
         run: build.bat Release
-      - name: Verify runtime set
-        shell: pwsh
+
+      - name: Run owned Release GUI validation
+        if: ${{ inputs.validation_scope == 'release-gui' }}
+        shell: cmd
+        run: python -X utf8 tools\winui\run_checks.py gui --configuration Release
+
+      - name: Run full Debug + Release validation
+        if: ${{ inputs.validation_scope == 'full' }}
+        shell: cmd
+        run: python -X utf8 tools\winui\run_checks.py full
+
+      - name: Verify Release runtime set
+        if: ${{ inputs.validation_scope != 'source' }}
+        shell: powershell -NoLogo -NoProfile -ExecutionPolicy Bypass -Command ". '{0}'"
         run: |
+          $ErrorActionPreference = "Stop"
           $dir = "out\winui\Release"
           $required = @(
             "$dir\flyExplorer.exe",
@@ -39,6 +113,33 @@ jobs:
             "$dir\flyExplorer.pri",
             "$dir\MainWindow.xbf"
           )
+
           foreach ($path in $required) {
-            if (-not (Test-Path $path)) { throw "Missing required WinUI artifact: $path" }
+            if (-not (Test-Path -LiteralPath $path -PathType Leaf)) {
+              throw "Missing required WinUI artifact: $path"
+            }
+          }
+
+          Write-Host "Release runtime set: OK"
+
+      - name: Print bounded failure evidence
+        if: failure()
+        shell: powershell -NoLogo -NoProfile -ExecutionPolicy Bypass -Command ". '{0}'"
+        run: |
+          $ErrorActionPreference = "Continue"
+          $logRoot = "logs\winui-scoped"
+
+          if (-not (Test-Path $logRoot)) {
+            Write-Host "No scoped validation logs were created."
+            exit 0
+          }
+
+          $logs = Get-ChildItem $logRoot -Filter "*.log" -File |
+            Sort-Object LastWriteTime -Descending |
+            Select-Object -First 3
+
+          foreach ($log in $logs) {
+            Write-Host ""
+            Write-Host "===== $($log.FullName) ====="
+            Get-Content $log.FullName -Tail 120
           }
