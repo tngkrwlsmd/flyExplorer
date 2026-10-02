@@ -21,6 +21,20 @@
 
 변경 결과 해석에 영향을 주는 baseline만 기록한다. 예: 시작 revision, 관련 schema/API contract, dependency/lockfile, test environment.
 
+### Evidence-aware execution budget (human guidance)
+
+모든 개발 에이전트는 실제 필요 작업을 수행하면서 **불필요한 도구 호출과 반복 검증을 차단**한다. 호출 횟수 절감 자체가 목표는 아니며 필수 안전 확인·승인·검증을 생략하지 않는다.
+
+- **계획과 재사용:** 작업을 시작할 때 실제 완료 조건, 이미 유효한 소스·로그·실행 증거, 남은 불확실성, 예상 도구 호출 예산 및 종료 기준을 정한다. 호출 결과가 다음 결정에 어떤 영향을 주는지 설명할 수 없으면 기본적으로 호출하지 않는다. 변경된 파일과 필요한 코드 범위만 확인한다.
+- **기본 예산:** consumer가 자체 지침에서 달리 지정하지 않았다면 문서·현황 조회 **12회**, 보통의 코드 수정·단일 빌드 **20회**, 실기 GUI 재현·디버깅 **30회**를 *요청당 기본 점검 상한*으로 사용한다. 독립된 하위 호출을 각각 세며 래퍼·병렬 호출로 숫자를 감추거나 같은 작업을 새 세션으로 나눠 예산을 초기화하지 않는다. 실제 호출을 셀 수 없는 환경에서는 근거 없는 정확한 수치를 주장하지 않는다.
+- **75% 재평가와 예산 소진:** 기본 예산의 75%에 이르면 기존 근거·미해결 항목·직접적인 해결 경로를 재검토한다. 상한에 이르면 새로운 탐색과 추측성 실험을 멈추고, 추가 호출이 꼭 필요한 이유와 예상량을 알려 사용자에게 범위 확장 동의를 받는다. 이미 시작한 필수 검증의 결과 확인, 승인된 작업의 안전한 종료 및 사용자 데이터 보호는 이 상한으로 막지 않는다. 예산 때문에 검증하지 못했다면 PASS라고 보고하지 않는다.
+- **긴 작업:** 빌드·테스트는 한 번 실행하고 가능하면 완료까지 기다린 후 종료 코드와 의미 있는 결과를 한 번에 확인한다. 같은 실행에 대해 프로세스 출력과 로그 끝을 짧은 간격으로 번갈아 조회하거나 새로운 정보 없이 계속 폴링하지 않는다. 무변화 조회는 원칙적으로 연속 한 차례를 넘기지 않는다. 새 오류·합리적인 완료 시점 경과·필수 후속 결정이 있을 때만 추가 조회하고 가능한 한 새 로그 구간만 읽는다.
+- **실패:** 최초의 실제 오류와 실행 조건을 먼저 분석한다. 같은 실패에 대해 조건·코드·가설을 바꾸지 않고 재시도하지 않는다. 동일 원인에 대한 재시도는 원칙적으로 **최대 두 차례**로 제한하고, 해결되지 않으면 접근법을 바꾸거나 확인된 blocker와 미검증 사항을 보고한다. 비멱등 외부 작업의 별도 retry 안전 규칙은 그대로 우선한다.
+- **시각적 검증:** 입력 이벤트 도달, 내부 상태 변화, 합성된 최종 화면은 각각 다른 증거다. 해석 기준 없는 연속 캡처·동일한 정지 화면 녹화·거듭 실패한 마우스 입력을 반복하지 않는다. 재현에 성공하고 요구한 화면·기능 검증이 충족되면 종료한다.
+- **보고:** 중요한 발견·차단 요인·필수 결정만 중간 보고하고, 최종에는 실제 변경, 수행한 검증, 미검증 범위와 필요한 후속 작업만 기술한다. 작은 진행 상황을 보고하려고 호출을 늘리지 않는다.
+
+이 절의 예산·폴링 제한은 **agent의 human-facing 실행 절차**다. `POLICY_CONTRACT.json`의 canonical operation·Effect/Exposure·승인 gate를 바꾸지 않으며, 실제 tool-call 계측·차단을 지원하는 trusted adapter가 별도로 구축되지 않았다면 **런타임 강제 제한으로 주장하지 않는다**. 프로젝트별 더 엄격한 지침이나 더 높은 안전·승인 요구는 그대로 적용한다.
+
 ### Tool opt-out / explicit tool consent
 
 사용자가 특정 도구나 connector를 금지하거나 명시적 opt-in으로 제한했다면 그 제한을 현재 작업의 tool-selection contract로 취급한다.
@@ -31,13 +45,13 @@
 - 제한된 도구가 정말 필요하면 사용자에게 그 도구의 사용을 별도로 명시해 달라고 요청한다.
 - 도구 금지 범위를 다른 도구에 임의로 확장하지 않는다. 제한 대상은 사용자가 지목한 도구·connector 범위 그대로 해석한다.
 
-범용 기본값으로 `chatgpt-codex-connector`는 명시적 opt-in 도구로 취급한다.
+명시적 opt-in으로 제한된 도구나 connector는 특정 제품명과 무관하게 같은 규칙을 적용한다.
 
 ```text
-chatgpt-codex-connector = DISABLED UNLESS EXPLICITLY REQUESTED
+explicit-opt-in tool/connector = DISABLED UNLESS EXPLICITLY REQUESTED
 ```
 
-따라서 "구현해", "수정해", "코드 리뷰해", "PR 확인해", "테스트해", "다음 작업 진행해" 같은 일반 개발 지시는 `chatgpt-codex-connector` 사용 허가가 아니다. 반대로 이 기본 제한은 일반 GitHub tooling이나 다른 connector를 자동으로 금지하지 않는다.
+따라서 "구현해", "수정해", "코드 리뷰해", "PR 확인해", "테스트해", "다음 작업 진행해" 같은 일반 개발 지시는 opt-in 제한 도구의 사용 허가가 아니다. 반대로 해당 제한을 일반 GitHub tooling이나 다른 connector로 자동 확장하지 않는다.
 
 이 절은 human-facing tool-selection guidance다. 실제 runtime에서 강제된다고 주장하려면 canonical contract, adapter/routing, enforcement test 등 별도의 machine evidence가 필요하다.
 
@@ -55,41 +69,17 @@ chatgpt-codex-connector = DISABLED UNLESS EXPLICITLY REQUESTED
 
 `test`, `build`, `seed`, `migration`, `sync`, `generate`, `install`이라는 이름만으로 안전성을 판단하지 않는다. 처음 보는 저장소의 lifecycle script, build plugin, test bootstrap, container entrypoint 등은 가능한 범위에서 정적으로 먼저 확인한다.
 
+명령 안에 다른 shell/interpreter 언어를 중첩할 때는 **현재 문자를 실제로 해석하는 parser 경계**를 구분한다. outer shell에서 필요한 escape를 quoted inner-language payload 안에 습관적으로 복제하지 않고, 반대로 inner-language quoting을 outer shell이 먼저 소비하지 않게 한다. 특히 shell → PowerShell/Python/SQL/JSON처럼 parser가 바뀌는 경계에서는 가능하면 최소 isolated command로 quoting/pipe/redirection 동작을 먼저 확인한다.
+
 ### Effect × Exposure
 
 위험을 단일 LOW/MEDIUM/HIGH로 축약하지 않는다.
 
-**Effect**
-
-- `L1 Read-only`: 파일/상태/로그 읽기와 분석. 상태를 바꾸지 않는다는 뜻일 뿐 자동으로 안전하지는 않다.
-- `L2 Reversible local change`: 로컬 코드·테스트·문서·임시 파일처럼 되돌리기 쉬운 변경.
-- `L3 Bounded external side effect`: feature branch push, 일반 외부 API write, 메시지 전송, 격리된 non-production 변경처럼 외부 상태를 바꾸지만 blast radius와 보상 경로가 제한적임.
-- `L4 Production/security/public/irreversible`: production deploy/DB write/delete, credential rotation, IAM 변경, destructive history, public publish, 사용자 데이터 삭제·대규모 이동 등.
-
-**Exposure**
-
-- `X0 Ordinary`: 공개 정보, 일반 로컬 소스, 비민감 테스트 데이터.
-- `X1 Internal`: 비공개 소스, 내부 로그·메타데이터 등 외부 공개는 부적절하나 일반 개발에서 다루는 범위.
-- `X2 Restricted`: production/customer data, 실제 credential 사용, private operational data, 의미 있는 유료 리소스.
-- `X3 Critical`: 고권한 credential, 규제·고민감 데이터, 대규모 production export, 넓은 tenant 범위, 매우 큰 비용/권한.
-
-**Action gate**
-
-- `AUTO`: 요청 범위와 command contract 안에서 자율 실행.
-- `AUTO_WITH_GUARDS`: 최소 범위, redaction, sandbox, preview, bounded output, cleanup 등 필요한 보호조치 후 실행.
-- `REQUIRE_EXPLICIT_APPROVAL`: action과 실제 target/environment/recipient가 구체적으로 승인된 경우에만 실행. 현재 요청이 이미 정확한 action을 승인했다면 사용자에게 같은 승인을 반복해서 요구하지 않되, runtime enforcement에서는 그 승인을 `APPROVAL_ASSERTION.schema.json`의 action-bound object로 표현해 다른 action/target으로 전용되지 않게 한다.
-- `PROHIBITED_WITHOUT_OVERRIDE`: 일반 task-level 요청으로는 실행하지 않는다. higher-authority runtime/org workflow에서 발급한 protected override와 정확한 사용자 승인 모두 필요하다.
-
-| Effect \ Exposure | X0 | X1 | X2 | X3 |
-|---|---|---|---|---|
-| L1 | AUTO | AUTO | AUTO_WITH_GUARDS | REQUIRE_EXPLICIT_APPROVAL |
-| L2 | AUTO | AUTO_WITH_GUARDS | REQUIRE_EXPLICIT_APPROVAL | PROHIBITED_WITHOUT_OVERRIDE |
-| L3 | REQUIRE_EXPLICIT_APPROVAL | REQUIRE_EXPLICIT_APPROVAL | REQUIRE_EXPLICIT_APPROVAL | PROHIBITED_WITHOUT_OVERRIDE |
-| L4 | REQUIRE_EXPLICIT_APPROVAL | REQUIRE_EXPLICIT_APPROVAL | REQUIRE_EXPLICIT_APPROVAL | PROHIBITED_WITHOUT_OVERRIDE |
+Machine-owned Effect/Exposure definitions, gate matrix, environment floors, canonical operation catalog, lifecycle metadata, approval/override binding reference는 [generated policy reference](docs/generated-policy-reference.md)에서 확인한다. 이 문서는 `POLICY_CONTRACT.json`의 deterministic projection이며 별도 Source of Truth가 아니다. 사람이 유지해야 하는 rationale, 절차와 예외 설명은 이 `POLICIES.md`가 계속 소유한다.
 
 경계가 불명확하면 더 높은 Effect/Exposure로 임시 분류하고 evidence로 낮춘다. matrix는 최소 gate이며 더 높은 instruction, 조직 정책, 법적 요구가 더 엄격하면 그쪽을 따른다.
 
-`POLICY_CONTRACT.json`의 canonical operation `effect_floor`는 runtime Effect 판정의 하한이다. target이나 실제 command를 본 뒤 더 높은 Effect로 올릴 수는 있지만 근거 없이 그보다 낮출 수 없다. Exposure는 adapter가 최종 X0~X3를 정하는 방식이 아니라 runtime context의 원시 사실에서 policy engine이 계산한다. 최소 입력 차원은 `data_classification`, `credential_class`, `tenant_scope`, `public_visibility`, `estimated_blast_radius`, `estimated_financial_impact`이며 environment floor와 함께 가장 높은 floor를 사용한다. 비용 차원은 `none/negligible/bounded/material/critical/unknown`을 사용하며 `material`은 최소 X2, `critical`은 X3로 취급한다. 각 차원의 명시적 `unknown`은 보수적 floor를 가지며, 선택적 adapter `declared_exposure`는 계산 결과를 **올릴 수만 있고 낮출 수 없다**. `requires_execution_policy=true`인 operation은 선택적 policy loading에서도 Execution 섹션을 자동 포함해 Effect × Exposure gate, command contract, retry/stop 규칙이 빠지지 않게 한다. 모든 `test.scenario.*` operation은 실제 시나리오 수행을 전제로 이 closure를 가져야 한다.
+`POLICY_CONTRACT.json`의 canonical operation `effect_floor`는 runtime Effect 판정의 하한이다. target이나 실제 command를 본 뒤 더 높은 Effect로 올릴 수는 있지만 근거 없이 그보다 낮출 수 없다. Exposure는 adapter가 최종 X0~X3를 정하는 방식이 아니라 runtime context의 원시 사실에서 policy engine이 계산한다. **required raw fact, 각 값의 floor, environment floor, context escalation, operation semantic requirement의 정확한 목록은 사람이 이 문서에 복제하지 않고 [generated policy reference](docs/generated-policy-reference.md)에서 확인한다.** 선택적 adapter `declared_exposure`는 policy-derived 결과를 올릴 수만 있고 낮출 수 없다. `requires_execution_policy=true`인 operation은 선택적 policy loading에서도 Execution 섹션을 자동 포함해 Effect × Exposure gate, command contract, retry/stop 규칙이 빠지지 않게 한다. 모든 `test.scenario.*` operation은 실제 시나리오 수행을 전제로 이 closure를 가져야 한다.
 
 ### Execution-boundary revalidation
 
@@ -112,13 +102,37 @@ chatgpt-codex-connector = DISABLED UNLESS EXPLICITLY REQUESTED
 
 `actual_action` 문자열은 defense-in-depth 용도로만 사용한다. 일반 alias parser의 mismatch는 warning으로 다루어 자연어 coverage가 실행 availability의 단일 병목이 되지 않게 한다. 대신 `terraform destroy`, `git reset --hard`, 재귀적 object delete처럼 오탐 가능성이 낮은 **high-confidence action signature**는 runtime actual operation에서 빠졌을 때 fail-closed한다. 문자열 parser가 모든 의미를 완벽히 추론할 수 있다고 가정하지 않으며, 구조화된 adapter semantics가 canonical source다.
 
-Effect 계산은 `max(operation effect_floor, runtime/context escalation)`이다. production 환경의 DB write/schema/destructive change, deploy/rollback, permission/credential/IAM change뿐 아니라 service restart, cloud resource mutation/delete, storage object delete, network configuration change도 L4로 승격한다. 또한 `package.publish`/`artifact.publish`가 `environment=public`이거나 `public_visibility=public_destination|bidirectional`이면 machine contract의 context rule이 L4로 승격한다. 격리된 non-production registry이고 public destination이 아니면 operation floor L3를 유지할 수 있다. Exposure는 environment와 각 raw fact dimension의 floor를 모두 모아 `max`로 계산한다. production과 unknown environment는 최소 X2이며, credential/regulated/broad-tenant/blast-radius/financial-impact facts는 그보다 높은 floor를 만들 수 있다. adapter의 declared Exposure가 더 낮아도 무시한다. L3/L4 또는 X2/X3는 concrete target이 없으면 실행 gate를 계산 완료한 것으로 취급하지 않는다. 계산 결과가 `REQUIRE_EXPLICIT_APPROVAL`이면 validator는 action digest를 생성해 승인 binding 근거를 제공하지만 issuer authority를 증명하지 않으며, `PROHIBITED_WITHOUT_OVERRIDE`이면 protected override authority와 정확한 task approval을 별도로 확인해야 한다.
+Effect 계산은 `max(operation effect_floor, runtime/context escalation)`이고 Exposure는 environment와 raw fact dimension의 floor를 모은 `max`다. **어떤 operation/environment/context가 어느 수준으로 승격되는지는 generated policy reference가 contract에서 직접 투영하며 이 문서는 그 목록을 수동 소유하지 않는다.** adapter의 declared Exposure가 더 낮아도 무시한다. 높은 Effect/Exposure처럼 machine contract가 concrete target을 요구하는 경우 target 없이 실행 gate를 완료한 것으로 취급하지 않는다. 계산 결과가 `REQUIRE_EXPLICIT_APPROVAL`이면 validator는 action digest를 생성해 승인 binding 근거를 제공하지만 issuer authority를 증명하지 않으며, `PROHIBITED_WITHOUT_OVERRIDE`이면 protected override authority와 정확한 task approval을 별도로 확인해야 한다.
+
+
+### Profile C runtime responsibility boundary
+
+Profile C는 이 policy bundle 자체가 모든 tool/API/shell을 가로채는 제품이라는 뜻이 아니라, **machine contract를 신뢰 가능한 실행 경계에 연결한 integration state**를 뜻한다. human-facing 책임 분리는 다음과 같다.
+
+- **planner/agent**는 canonical planned operation을 제안한다. planner의 텍스트나 자기 보고를 actual operation의 독립 증거로 사용하지 않는다.
+- **trusted runtime adapter/interceptor**는 실제 side effect 직전에 실행 surface를 가로채고, imminent action에서 actual canonical operation, affected resource, concrete target, environment와 raw exposure facts를 독립적으로 관찰·구성한다. 지원하지 못하거나 충분히 분류할 수 없는 action은 enforced surface에서 통과시키지 않는다.
+- **policy engine/reference validator**는 schema/canonical ID, plan↔actual coverage, Effect/Exposure, target requirement, action gate와 action digest를 계산하고 approval/override 객체의 exact binding·expiry·replay 조건을 검증한다. 이 계산만으로 adapter producer나 approval issuer의 identity/authority를 인증하거나 tool 실행을 물리적으로 차단할 수는 없다.
+- **higher-authority identity/transport layer**는 adapter assertion의 producer와 transport integrity, approval/override issuer의 조직 권한을 인증한다. schema-valid payload 자체를 신뢰 근거로 승격하지 않는다.
+- **atomic consumption ledger**는 실행 직전에 approval/override identity와 single-use execution nonce를 shared scope에서 원자적으로 소비한다. 여러 worker/process가 있는 환경에서도 동일 assertion을 두 번 성공시키지 않아야 하며 ledger가 불가용하거나 consumption 결과가 불확실하면 fail-closed한다.
+- **executor/tool boundary**는 현재 action에 필요한 gate가 충족되고 consumption이 성공한 뒤에만 실제 action을 실행한다. adapter가 관찰한 operation, target, environment, exposure facts, semantic details 또는 actual action이 바뀌면 digest를 다시 계산하고 이전 approval/override를 재사용하지 않는다.
+
+action digest는 **imminent action을 adapter가 관찰한 뒤, approval/override를 요청하기 전에** 계산한다. approval이 발급된 뒤 실행 의미가 달라지면 새 digest·새 nonce·새 binding이 필요하다.
+
+Profile C enforced surface에서는 최소한 다음 조건을 fail-closed로 처리한다.
+
+- actual operation이 canonical하지 않거나 planned operation에 포함되지 않음
+- runtime에서 금지된 opaque operation을 사용하거나 action 의미를 충분히 분류할 수 없음
+- contract가 요구하는 target, environment, raw exposure fact 또는 semantic detail이 없음
+- adapter producer/transport를 higher-authority boundary에서 신뢰할 수 없음
+- 필요한 approval/override가 없거나 issuer authority, digest, target, environment, correlation ID, nonce, expiry binding이 맞지 않음
+- single-use ledger의 atomic consumption이 실패했거나 replay로 확인됨
+- adapter가 intercept하지 못하는 surface를 enforced라고 표시하려 함
 
 ### Policy bundle integrity
 
 정책 번들이 자기 자신만 검증해서는 원본 정책 의미를 증명할 수 없다. `POLICIES.md`, contract/schema, validator가 함께 바뀌면 내부 consistency check만으로는 악의적 변경과 정상 release를 구분할 수 없기 때문이다. 무결성 계약은 두 층을 분리한다.
 
-- **core trust manifest**는 `AGENTS.md`, `POLICIES.md`, contract/schema, routing/runtime/approval/protected-override schema, validator/packager 등 정책 의미와 enforcement를 소유하는 core bytes를 SHA-256으로 고정한다. 소비 프로젝트가 수정하는 `PROJECT.md`는 제외한다.
+- **core trust manifest**는 `AGENTS.md`, `POLICIES.md`, contract/schema, routing/runtime/approval/protected-override schema, validator/packager 등 정책 의미와 enforcement를 소유하는 core bytes를 SHA-256으로 고정한다. 소비 프로젝트가 수정하는 `.agent-policy/PROJECT.md`는 제외한다. Upstream source template은 `templates/PROJECT.md`이며 root `PROJECT.md`는 compatibility mirror다.
 - **full release manifest**는 canonical distribution의 모든 파일과 ZIP artifact 자체를 SHA-256으로 고정한다. README/test 변조나 ZIP 재조립도 이 층에서 탐지한다.
 - 두 manifest는 검증 대상 ZIP 내부가 아니라 protected CI/release artifact, 조직 정책 저장소, 외부 서명 등 독립된 신뢰 경로에서 획득한다.
 - manifest hash 일치는 bytes integrity를 증명하지만 publisher identity나 조직 승인 자체를 증명하지 않는다. GitHub release workflow는 사전에 push된 strict SemVer tag를 release identity로 사용하고, full commit SHA로 pin한 `actions/attest`의 OIDC/Sigstore build provenance와 GitHub immutable release attestation을 함께 사용한다. 다른 배포 채널에서는 동등한 trusted channel 또는 cryptographic signature가 필요하다.
@@ -181,7 +195,7 @@ canonical operation ID는 adapter/runtime 소비자에게 공개되는 안정 AP
 
 ### Bootstrap
 
-`PROJECT.md`가 비어 있거나 stale하면 추측으로 `Confirmed`를 채우지 않는다. manifest/lockfile, build scripts, CI, container, migration/infrastructure, application entrypoint, tests, 공식 프로젝트 문서에서 근거를 수집한다. `scripts/validate.py --bootstrap-project <repo>`는 이 탐색을 보조해 별도 `PROJECT.inferred.md` 후보를 만들 수 있지만 자동 발견 fact는 모두 `Inferred`로 남고 기존 `PROJECT.md`를 기본적으로 덮어쓰지 않는다.
+Consumer의 canonical project facts 문서(`.agent-policy/PROJECT.md` 또는 `--project-file`로 지정한 문서)가 비어 있거나 stale하면 추측으로 `Confirmed`를 채우지 않는다. manifest/lockfile, build scripts, CI, container, migration/infrastructure, application entrypoint, tests, 공식 프로젝트 문서에서 근거를 수집한다. `scripts/validate.py --bootstrap-project <repo>`는 이 탐색을 보조해 별도 `PROJECT.inferred.md` 후보를 만들 수 있지만 자동 발견 fact는 모두 `Inferred`로 남고 기존 `PROJECT.md`를 기본적으로 덮어쓰지 않는다.
 
 프로젝트 fact는 `Confirmed / Inferred / Unknown / N/A`를 구분한다. 사람이 `Confirmed`라고 쓴 사실과 validator가 source evidence를 확인한 사실을 같은 것으로 취급하지 않는다. `reviewed_revision`과 `reviewed_at`을 함께 유지하며, 오래된 review timestamp는 구조가 맞더라도 freshness warning의 근거로 취급한다. facts가 의존하는 경로를 `reviewed_paths`에 명시한 경우에는 HEAD가 바뀌어도 그 경로들이 reviewed revision 이후 변하지 않았는지 확인해 무관한 commit 때문에 readiness가 불필요하게 깨지는 것을 줄일 수 있다. malformed project-facts 구조는 추측으로 보정하지 않고 명시적 validation failure로 표면화한다.
 
@@ -305,6 +319,7 @@ Bootstrap:
 - backward compatibility가 요구되는 API/schema/file/protocol 변경은 기존 consumer와 새 consumer의 공존 구간을 고려한다.
 - 임시 우회, silent fallback, broad exception swallowing, validation 완화로 증상을 숨기지 않는다.
 - generated code는 직접 편집보다 generator와 입력 Source of Truth를 우선하고, dependency 변경은 Dependencies 정책을 함께 적용한다.
+- compile/import 가능한 단위는 자신이 직접 사용하는 dependency를 가능한 범위에서 명시적으로 선언한다. PCH, transitive include/import, 우연한 global registration, 다른 target의 ambient configuration이 누락 dependency를 가리지 않게 하며, standalone test/tool target도 필요한 dependency/include/import를 스스로 소유하게 한다.
 - auth/data/file/deployment 등 전문 위험이 드러나면 해당 primary-owner 정책을 추가 적용한다.
 
 ### Completion boundary
@@ -474,7 +489,10 @@ MOCK PASS != REAL SYSTEM PASS
 
 1. **test / fixture / oracle 문제** — stale expectation, 잘못된 fixture, test-only bug
 2. **prerequisite / environment 문제** — runtime, service, credential, dependency, network, configuration
-3. **product defect** — 실제 contract/behavior 위반이 독립적으로 재현됨
+3. **build / CI orchestration 문제** — compiler/linker 자체보다 runner, wrapper, parser, logging, packaging, generated configuration이 실패
+4. **product defect** — 실제 contract/behavior 위반이 독립적으로 재현됨
+
+compiler/linker/test 로그에 다수 오류가 연쇄적으로 나타나면 개수를 독립 defect 수로 해석하지 않는다. 가능한 범위에서 **최초 actionable error → root cause → cascade**를 분리하고, 파생 오류보다 root cause를 먼저 수정한다. orchestration이 제품 build 결과를 잘못 보고할 수 있으면 제품 결과와 orchestration 결과를 별도 evidence로 남긴다.
 
 분류를 위해 assertion, permission, validation을 약화하지 않는다.
 
@@ -510,7 +528,15 @@ MOCK PASS != REAL SYSTEM PASS
 → regression PASS → 주변 관련 검증
 ```
 
-재현 테스트를 만들 수 없다면 이유와 대신 확보한 evidence를 보고한다.
+재현 방어선은 항상 runtime test일 필요는 없다. 같은 결함을 더 싸고 deterministic하게 막을 수 있다면 source invariant, schema/contract validation, lint/static check, build preflight, resource/ABI fingerprint 같은 guard를 우선하거나 regression test와 함께 둔다. 반대로 brittle한 literal token 검사처럼 정상 변형을 자주 거짓 실패시키는 guard는 parser/contract/behavior 기반 검사로 개선한다.
+
+재현 테스트나 자동 guard를 만들 수 없다면 이유와 대신 확보한 evidence를 보고한다.
+
+### Durable failure learning
+
+프로젝트가 오류 이력, incident log, postmortem, troubleshooting record의 canonical 위치를 정의했다면 반복되거나 진단 비용이 큰 실패를 그 위치에 남기고, 같은 실패 접근을 반복하기 전에 유사 사례를 먼저 조회한다.
+
+기록할 때는 가능한 범위에서 **증상/실행 조건 → 최초 실제 오류 → 확인된 root cause → 수정 → 재발 방지 → 검증 상태 → 관련 revision**을 구분한다. compiler/linker cascade 전체를 복제하기보다 root cause와 대표 evidence를 남기고, secret·개인정보·불필요한 개인 경로는 기록하지 않는다. 일회성 노이즈까지 모두 영구 문서화해 기록을 무용하게 만들지 말고, 재발 가능성·진단 비용·영향이 의미 있는 사례를 우선한다.
 
 ### Runner strategy
 
@@ -525,6 +551,15 @@ test all
 ```
 
 빠른 수정 루프에서는 fail-fast, 종합 QA에서는 keep-going이 유용할 수 있다. production target 감지 같은 안전 invariant 위반은 즉시 중단한다.
+
+### CI runner trust and failure evidence
+
+CI trust는 서비스 이름보다 실제 runner의 소유권·격리·credential/filesystem/network 권한으로 판단한다.
+
+- privileged self-hosted runner에는 trusted repository 입력만 자동 실행하고, fork PR·외부 수정 workflow/script 같은 untrusted code는 disposable/격리·최소권한 runner로 분리한다.
+- hosted/self-hosted 사용 승인·비용 정책은 프로젝트가 정하되, 같은 CI 서비스의 모든 job을 하나의 trust level로 취급하지 않는다.
+- runner shutdown/cancellation처럼 orchestration이 먼저 끊기면 곧바로 product defect로 단정하지 않고 [Failure classification](#failure-classification)을 적용한다.
+- 실패 evidence는 scoped log/test report/crash dump/app-window screenshot 등 필요한 자료만 bounded하게 보존한다. 전체 env/user directory/credential store/desktop을 기본 수집하지 않고 크기·개수·보존 기간과 secret 노출을 제한한다. artifact 업로드 성공은 원래 test/build PASS를 뜻하지 않는다.
 
 ### Coverage
 
