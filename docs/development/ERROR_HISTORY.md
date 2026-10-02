@@ -16,6 +16,26 @@ product state use CURRENT_STATUS.md.
 
 이 문서는 확정된 오류를 단순 수정으로 끝내지 않고, 다음 진단을 빠르게 하고 같은 계열의 결함을 사전에 막기 위한 프로젝트 기록이다.
 
+## 2026-10-02 — transfer completion could skip the destination refresh
+
+**Observed problem:** an owned multi-file copy completed on disk, but the
+opposite pane sometimes did not publish the copied rows before the next
+mutation. Full-suite failures moved between asynchronous UI boundaries while
+the process still exited normally.
+
+**Root cause:** `StartTransfer` refreshed the touched opposite pane only when
+`other.pending[other.active]` was zero. A watcher/navigation refresh already
+in flight therefore caused the deterministic post-transfer refresh to be
+skipped. If watcher delivery was coalesced or consumed by that older request,
+the destination UI could remain stale.
+
+**Fix / prevention:** after a successful non-Recycle transfer, always queue a
+Refresh for a currently visible opposite pane whose path is the source or
+destination. `IsolatedShellSupervisor::submit` already supersedes the previous
+same-pane request and `Model::completeRequest` rejects stale request IDs, so
+this preserves the existing bounded/stale-result safety while guaranteeing a
+post-mutation refresh.
+
 ## 기록 원칙
 
 - 새 항목은 **오류 발생 → 최초 실제 오류 → 원인 진단 → 해결 방법 → 재발 방지 → 검증 상태 → 관련 commit** 순서로 작성한다.

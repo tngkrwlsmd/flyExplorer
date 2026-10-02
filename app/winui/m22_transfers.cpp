@@ -230,13 +230,16 @@ void MainWindow::StartTransfer(fxfile::shelltransfer::Request request){
      ui->QueuePidl(side,
        fxfile::shellnav::Location(pane.tabs[tab].snapshot().folder),
        fxfile::shellnav::NavigationAction::Refresh);
-     // Independent watchers refresh the destination pane; force a
-     // preview refresh if the other route is still active and stable.
+     // Watcher delivery may race with this completion. If the other visible
+     // pane is a touched folder, always submit a fresh Refresh. QueuePidl/
+     // IsolatedShellSupervisor intentionally supersede an older request on the
+     // same pane and stale request IDs are rejected by the model, so skipping
+     // this refresh merely because another request is pending can lose the
+     // post-mutation destination update.
      if(request.kind!=fxfile::shelltransfer::Kind::Recycle){
       auto const& other=ui->ActiveWindowTab().model.panes[1-side];
-      if(!other.pending[other.active]&&
-          (other.filesystemPaths[other.active]==request.destination||
-           other.filesystemPaths[other.active]==request.sourceParent)){
+      if(other.filesystemPaths[other.active]==request.destination||
+         other.filesystemPaths[other.active]==request.sourceParent){
        ui->QueuePidl(1-side,
          fxfile::shellnav::Location(other.tabs[other.active].snapshot().folder),
          fxfile::shellnav::NavigationAction::Refresh);

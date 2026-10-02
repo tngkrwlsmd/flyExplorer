@@ -58,6 +58,16 @@ class M22Contracts(unittest.TestCase):
                "shelltransfer::execute","get_weak","DispatcherQueue",
                "pane.routeIds[tab]!=route"):
    self.assertIn(text,s)
+ def test_successful_transfer_always_refreshes_visible_touched_other_pane(self):
+  source=src(A+"m22_transfers.cpp")
+  start=source.index("Watcher delivery may race with this completion")
+  end=source.index("bool MainWindow::CopySelectedToWindowsClipboard",start)
+  completion=source[start:end]
+  self.assertIn("ui->QueuePidl(1-side",completion)
+  self.assertIn("other.filesystemPaths[other.active]==request.destination",completion)
+  self.assertIn("other.filesystemPaths[other.active]==request.sourceParent",completion)
+  self.assertNotIn("!other.pending[other.active]",completion)
+
  def test_shortcuts_and_context_menu_have_noninert_handlers(self):
   x=src(A+"MainWindow.xaml")
   m=src(A+"m22_transfers.cpp")
