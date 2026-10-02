@@ -3,6 +3,42 @@
 This file contains current project-specific facts only. Generic policy remains
 in the vendored .agent-policy core.
 
+Vendored generic policy provenance: tngkrwlsmd/universal-agent-docs commit
+bafb40f55dcb6aa15f432b391ba5487b87759e0e. Upstream-managed .agent-policy files are synchronized as one
+consumer core; this PROJECT.md remains project-owned across bundle refreshes.
+
+<!-- project-facts:start -->
+```json
+{
+  "profile": "consumer",
+  "facts": {
+    "repository_root": {"value": ".", "status": "Confirmed", "evidence": "path:."},
+    "primary_source": {"value": "app/winui", "status": "Confirmed", "evidence": "path:app/winui"},
+    "build_command": {"value": "build.bat Release", "status": "Confirmed", "evidence": "command-source:.github/workflows/windows-build.yml::build.bat Release"},
+    "test_command": {"value": "test.bat source", "status": "Confirmed", "evidence": "command-source:.github/workflows/windows-build.yml::test.bat source"},
+    "runtime": {"value": "Windows 11 / Visual Studio 18.x / Python 3.14.x", "status": "Confirmed", "evidence": "manual:project self-hosted Windows runner preflight and current build policy"},
+    "deploy_command": {"value": "", "status": "Unknown", "evidence": "manual:public deployment/signing remains an open gate"},
+    "deploy_target": {"value": "", "status": "Unknown", "evidence": "manual:public deployment target is not certified"}
+  },
+  "components": [
+    {"name": "winui-app", "path": "app/winui", "responsibility": "C++/WinRT WinUI 3 application"},
+    {"name": "base", "path": "src/base", "responsibility": "UI-independent native values and services"},
+    {"name": "winui-tests", "path": "tests/winui", "responsibility": "source, native and owned GUI contracts"}
+  ],
+  "review": {
+    "reviewed_revision": "50753e5a406f35aeb2aa949bb4672d3dc4e23c32",
+    "reviewed_at": "2026-10-02",
+    "reviewed_paths": [
+      "app/winui",
+      "src/base",
+      "build.bat",
+      "tests/winui/requirements-gui.txt"
+    ]
+  }
+}
+```
+<!-- project-facts:end -->
+
 ## Canonical product
 
 - Repository: tngkrwlsmd/flyExplorer.
@@ -19,23 +55,27 @@ in the vendored .agent-policy core.
 
 ## Current product checkpoint
 
-The latest product-code checkpoint before the 2026-10-02 documentation cleanup
-is eb76c37 (feat: persist window tab sessions). Live Git refs take priority.
+Current main includes the V8-A WindowWorkspaceController extraction introduced
+at 15764dc and the follow-up owned-GUI stabilization through 3c2a633. Live Git
+refs take priority.
 
 Current accepted UI/state includes functional top-level Window Tabs, dual panes
-with pane-local tabs, Explorer-like navigation/chrome and private session schema
-v2 that restores Window Tab/pane/tab/view/sort/column/history state.
+with pane-local tabs, Explorer-like navigation/chrome, private session schema v2
+restore, and WindowWorkspaceController ownership of top-level workspace state.
 
 ## Current verification
 
-Latest accepted 2026-10-02 evidence:
+Latest accepted product evidence before this policy-only synchronization:
 - canonical structure 4/4 PASS;
-- source contracts 125/125 PASS;
-- Release build PASS;
-- v7-only Release GUI PASS with normal exit 0;
-- isolated Korean create/watcher/restart GUI PASS;
-- final full Release GUI PASS in 95.2 seconds;
+- source contracts 132/132 PASS;
+- canonical Release build PASS;
+- owned Release GUI PASS with OWNED_WINUI_SHELL_EXIT 0;
+- private-session clear/revoke PASS;
 - protected six user-config hashes identical.
+
+The later 72a0288 workflow change exercised bounded failure artifact upload; its
+GUI failure did not change product code acceptance and remains separate CI/test
+evidence.
 
 The v7 close-race fix moved cancellation/shutdown to the window Closed boundary
 and prevents late DispatcherQueue completions from turning teardown into
@@ -59,9 +99,13 @@ and prevents late DispatcherQueue completions from turning teardown into
   active flyExplorer CI path by default.
 - The privileged self-hosted runner must not execute untrusted fork/PR code
   automatically.
-- Normal repository work prefers verified direct-main logical units; use a work
-  branch only when repository protection, explicit user direction, concurrent
-  work, or isolated integration testing makes one necessary.
+- Normal repository work intentionally overrides the generic branch-first
+  default: prefer verified direct-main logical units; use a work branch only
+  when repository protection, explicit user direction, concurrent work, or
+  isolated integration testing makes one necessary.
+- Vendored generic policy is validated as Profile B-style bundle/readiness/
+  conformance evidence in self-hosted CI. This does not claim Profile C runtime
+  enforcement.
 
 ## Open gates
 

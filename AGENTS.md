@@ -11,8 +11,10 @@ only from Git revision cbffb48. Do not recreate a persistent MFC/Phase5 tree on
 main.
 
 Higher-priority runtime/user instructions override this file. The vendored
-.agent-policy core remains authoritative for generic policy; project facts
-belong in .agent-policy/PROJECT.md.
+.agent-policy core is upstream-managed generic policy from
+tngkrwlsmd/universal-agent-docs; update that core atomically rather than
+hand-editing individual generic files. Project facts belong in
+.agent-policy/PROJECT.md, while flyExplorer-specific overrides belong here.
 
 ## Required current references
 
@@ -32,6 +34,7 @@ Supported root entry points:
     build.bat Debug|Release
     run.bat Debug|Release [path]
     test.bat source
+    test.bat policy
     clean.bat build|all
     python -X utf8 tools\winui\run_checks.py full
 
@@ -44,9 +47,11 @@ log rules.
 
 Canonical Windows full builds require Visual Studio/MSBuild 18.x, MSVC v145 x64
 tools and Windows SDK 10.0.26100.0. Do not claim VS 2022/v143 full-build support
-without a separately verified compatibility change. Source-only Python contracts
-are stdlib-only; GUI automation additionally requires the exact pins in
-tests/winui/requirements-gui.txt and an interactive Windows desktop.
+without a separately verified compatibility change. Product source-only Python
+contracts are stdlib-only. The separate policy gate uses the hash-locked
+.agent-policy/requirements.lock in a repo-local ignored .cache directory. GUI
+automation additionally requires the exact pins in tests/winui/requirements-gui.txt
+and an interactive Windows desktop.
 
 Debug is Windows App SDK framework-dependent. Release is self-contained, but the
 Release executable is not standalone: keep the complete out/winui/Release
@@ -158,8 +163,9 @@ untrusted PR validation is ever required.
 
 ## Git logical units
 
-If commit/push is approved for the task, prefer a verified logical unit directly
-on main. Use a separate work branch only when repository protection requires
+flyExplorer intentionally overrides the generic branch-first integration
+default in the vendored policy. If commit/push is approved for the task, prefer
+a verified logical unit directly on main. Use a separate work branch only when repository protection requires
 it, the user requests it, concurrent work would make direct-main unsafe, or the
 change needs isolated integration testing.
 

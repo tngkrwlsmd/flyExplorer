@@ -92,6 +92,10 @@ jobs:
             Write-Host "Interactive desktop: Session $($explorer.SessionId)"
           }
 
+      - name: Validate vendored agent policy
+        shell: cmd
+        run: test.bat policy
+
       - name: Source contracts
         if: ${{ env.VALIDATION_SCOPE == 'source' || env.VALIDATION_SCOPE == 'release' || env.VALIDATION_SCOPE == 'release-gui' }}
         shell: cmd
