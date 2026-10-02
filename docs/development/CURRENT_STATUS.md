@@ -82,10 +82,10 @@ bootstrap configuration.
 
 ## Latest verified evidence
 
-On code revision `1b504299d1541a599f65419e27ad899098ce4fe5`, validated on 2026-10-02 by self-hosted
-Windows remote-task run `37015301375`:
+On code revision `71d4fb284b43f65a19efb538395121f402974264`, validated on 2026-10-02 by self-hosted
+Windows remote-task run `37020993308`:
 - canonical structure preflight: 4/4 PASS;
-- source contracts: 144/144 PASS;
+- source contracts: 149/149 PASS;
 - canonical Debug and Release app builds: PASS;
 - actual NuGet restore direct references and WinUI/XAML build assets: PASS;
 - M19-M23 native fixtures remain covered by the canonical source/GUI suite;

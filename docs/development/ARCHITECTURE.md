@@ -195,13 +195,14 @@ The current/evolutionary direction is:
       |-- SessionCoordinator          : IMPLEMENTED V8-B session caretaker/lifetime
       |-- ShellNavigationController   : IMPLEMENTED V8-C navigation/supervisor/watchers
       |-- FileOperationController     : IMPLEMENTED V8-D transfer/file-command lifecycle
-      '-- SearchController            : search request/cancel/recent state
+      '-- SearchController            : IMPLEMENTED V8-E search/cancel/recent lifecycle
 
-WindowWorkspaceController, SessionCoordinator, ShellNavigationController and
-FileOperationController are implemented. SearchController remains the next
-future extraction candidate, not a mandate for a big-bang rewrite. Create the
-next controller only when a coherent responsibility is being changed or
-extraction materially reduces coupling/race risk.
+WindowWorkspaceController, SessionCoordinator, ShellNavigationController,
+FileOperationController and SearchController are implemented. The V8-A through
+V8-E controller-extraction cycle is complete. The next architecture step is a
+MainWindow post-extraction responsibility audit, not automatic creation of
+another controller. Add a new boundary only when the audit identifies a
+coherent remaining ownership/lifecycle problem.
 
 Controllers under app/winui may depend on WinUI only when presentation/
 DispatcherQueue coordination requires it. Move a component to src/base only

@@ -26,7 +26,7 @@ consumer core; this PROJECT.md remains project-owned across bundle refreshes.
     {"name": "winui-tests", "path": "tests/winui", "responsibility": "source, native and owned GUI contracts"}
   ],
   "review": {
-    "reviewed_revision": "1b504299d1541a599f65419e27ad899098ce4fe5",
+    "reviewed_revision": "71d4fb284b43f65a19efb538395121f402974264",
     "reviewed_at": "2026-10-02",
     "reviewed_paths": [
       "app/winui",
@@ -56,23 +56,26 @@ consumer core; this PROJECT.md remains project-owned across bundle refreshes.
 ## Current product checkpoint
 
 Current main includes V8-A WindowWorkspaceController, V8-B SessionCoordinator,
-V8-C ShellNavigationController and V8-D FileOperationController responsibility
-extraction. Live Git refs take priority.
+V8-C ShellNavigationController, V8-D FileOperationController and V8-E
+SearchController responsibility extraction. Live Git refs take priority.
 
 Current accepted UI/state includes functional top-level Window Tabs, dual panes
 with pane-local tabs, Explorer-like navigation/chrome, private session schema v2
 restore, WindowWorkspaceController ownership of top-level workspace state,
 ShellNavigationController ownership of isolated Shell navigation/watcher
-orchestration, and FileOperationController ownership of transfer/file-command
+orchestration, FileOperationController ownership of transfer/file-command
 worker lifecycle, cancellation, stale completion and collision/recycle
-continuations.
+continuations, and SearchController ownership of bounded search request
+identity, cooperative cancellation, stale completion rejection and recent-scope
+state/persistence. The V8-A through V8-E extraction cycle is complete; the next
+architecture step is a MainWindow post-extraction responsibility audit.
 
 ## Current verification
 
-Latest accepted product evidence for code revision `1b504299d1541a599f65419e27ad899098ce4fe5` comes from
-self-hosted Windows remote-task run `37015301375`:
+Latest accepted product evidence for code revision `71d4fb284b43f65a19efb538395121f402974264` comes from
+self-hosted Windows remote-task run `37020993308`:
 - canonical structure 4/4 PASS;
-- source contracts 144/144 PASS;
+- source contracts 149/149 PASS;
 - canonical Debug and Release builds PASS;
 - owned Debug and Release GUI PASS with OWNED_WINUI_SHELL_EXIT 0;
 - private-session clear/revoke PASS;
