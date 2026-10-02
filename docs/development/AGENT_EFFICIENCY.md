@@ -1,132 +1,73 @@
-# flyExplorer agent 개발 효율 및 불필요한 행동 방지 지침
+# Agent efficiency and verification policy
 
-> 적용 범위: flyExplorer를 수정·빌드·실행·테스트·문서화하거나 GitHub에 반영하는 모든 agent 작업.
-> `AGENTS.md`의 필수 프로젝트 실행 지침이며, 더 높은 권한의 지시와 안전·승인·정확성 규칙을 완화하지 않는다.
-> 이 규칙은 검증을 무조건 생략하거나 도구 호출 횟수만 기계적으로 줄이기 위한 것이 아니다.
+This policy is mandatory for repository-changing work.
 
-## 0. 필수 실행 게이트 — 모든 개발 에이전트가 먼저 적용
+## Before tool calls
 
-이 문서는 좋은 의도만 선언하는 권고가 아니라 `AGENTS.md`가 지정한 **작업 개시·반복·중단 절차**다. 독립적인 다른 agent·새 세션·원격 개발 도구에도 같은 기준을 적용한다.
+Define the completion condition, reusable evidence, minimum required
+verification and expected call budget.
 
-1. **도구 호출 전 계획:** 이 요청의 완료 조건, 이미 유효한 증거, 실제 필요한 명령·검증, 예상 총 도구 호출 수를 먼저 내부적으로 적는다. 이미 답을 알고 있거나 기존 기록으로 충분하면 도구를 호출하지 않는다.
-2. **기본 호출 예산:** 문서·설정·현황 확인은 **12회**, 일반적인 소스 수정과 단일 빌드는 **20회**, 실기 GUI 재현과 반복적인 제품 디버깅은 **30회**를 요청 한 건의 *기본 상한*으로 삼는다. 독립적인 GitHub/원격 명령/프로세스 조회/파일 읽기 등 실제 하위 호출을 각각 센다. 래퍼로 여러 호출을 묶어 횟수를 감추지 않는다. 숫자는 목표가 아니라 초과를 조기에 발견하는 차단 기준이다.
-3. **예산 75% 도달:** 반드시 내부 점검한다. 해결에 필요한 새 근거가 남았는지, 현재 접근으로 완료 가능한지, 이미 실행 중인 작업을 기다리면 되는지 확인한다. 진행 상황만 보고하려고 새 호출을 쓰지 않는다.
-4. **기본 상한 도달:** 기존 작업의 안전한 종료/정리와 이미 실행 중인 필수 검증의 결과 수집을 제외하고 **추가 탐색·새 스크립트·새 실험을 중지**한다. 남은 질문, 재사용한 증거, 그 이상의 호출이 꼭 필요한 이유와 예상 추가량을 사용자에게 간결하게 제시하고 추가 진행 동의를 받는다. 필요한 검증이 덜 끝났다면 완료로 보고하지 않는다. 사용자 데이터 보호·승인 절차는 예산보다 우선한다.
-5. **예산을 맞추기 위한 부정행위 금지:** 필수 검증을 생략하거나, 한 번의 래퍼에 무관한 호출을 수십 개 숨기거나, 별도 작업/세션으로 예산을 임의 초기화하지 않는다. 작업의 실제 범위가 다를 때만 그 사유를 기록해 새 작업으로 분리한다.
+Default ceilings per user request:
+- documentation/status task: 12 calls;
+- general source modification plus build: 20 calls;
+- real GUI/debug task: 30 calls.
 
-### 상황별 도구 실행 규칙
+These are safety ceilings, not targets. At 75% of a ceiling, re-evaluate the
+plan. Essential verification must not be skipped merely to hit a budget.
+Typical targets are 4-6 calls for docs/status, 8-12 for source plus one build,
+and 16-24 for GUI/debug work.
 
-- **빌드:** 같은 revision·configuration의 빌드는 한 번만 실행한다. 미리 실행 명령·로컬 로그 경로·합리적인 완료 대기/timeout·성공/실패 출력 필터를 정한다. `stdout`/`stderr` 전체를 로컬 파일로 리디렉션하고, 완료 후 도구 응답에는 종료 코드 및 최초 관련 오류 또는 최소 성공 요약만 표시한다. 파일명 나열·전체/tail 로그의 습관적 반환, 무출력 중간 폴링, 프로세스 상태와 로그 조회를 번갈아 호출하는 행위, 중복 빌드를 금지한다. 객관적 timeout/정체/새 오류가 확인될 때에만 추가 상태·관련 오류 문맥을 **최소 범위**로 읽는다.
-- **코드 탐색:** 기존 진단과 관련 함수가 알려져 있으면 그 부분만 열고 곧바로 수정/구별 검증으로 이동한다. 같은 파일을 다른 방식으로 반복 다운로드하지 않는다. 독립적으로 필요한 작은 조회는 한 번에 묶되 실제 하위 호출 수를 계산한다.
-- **GUI:** 대표적인 재현 한 건에 대해 대상 HWND·포커스·입력 도달·상태 변화·최종 합성 픽셀의 **필요한 프레임만** 확보한다. 한 입력 방법이 실패하면 먼저 가설과 관찰 방법을 바꾸며, 동일 화면을 반복 캡처하거나 거의 같은 임시 자동화 스크립트를 계속 생성하지 않는다. 구별력 없는 세 번째 실험은 금지한다.
-- **최소 검증:** 변경 파일에 한정된 정적 검사와 필요한 빌드/기능/실기 테스트를 선택한다. 서로 다른 commit/바이너리에서 얻은 결과를 최신 revision의 검증으로 착각하지 않는다. 필수 회귀가 하나라도 불충족이면 PASS로 합치지 않는다.
-- **비용 인식:** 플랫폼 사용량은 프로젝트 외 호출이 섞일 수 있으므로 에이전트가 화면의 월간 총량을 자기 작업의 정확한 호출 수라고 주장하지 않는다. 작업별 실제 호출 횟수는 실행 기록에서 가능한 범위만 측정하고 추정치임을 구분한다.
+## Reads and diagnosis
 
-### 검증된 논리 단위의 Git 반영 정책
+Read narrow-first. Do not repeatedly reread unchanged files/logs. Separate
+static/source, compile, runtime, GUI-state and final-pixel evidence.
 
-사용자가 해당 작업 범위에서 commit/push를 승인한 경우, **독립적으로 설명 가능하고 해당 상태만 checkout해도 필요한 검증을 통과하는 논리적 작업 단위가 완료되는 즉시** normal commit 후 `origin/main`에 push한다. milestone 끝까지 여러 검증 완료 단위를 로컬 working tree에 누적하지 않는다.
+For the same apparent failure cause, retry at most twice before changing the
+hypothesis. User-observed crashes/hangs/screens can outweigh stale comments or
+old PASS logs.
 
-반대로 build/source/targeted acceptance 실패, architecture migration 중간 상태, 임시 debug instrumentation, 알려진 correctness defect가 열린 상태, generated artifact가 포함된 상태는 commit/push하지 않는다. 각 단위마다 `git diff --check`, staged 파일 범위, 해당 단위에 필요한 검증 결과를 확인한 뒤 commit하고, normal push 후 fetch하여 `HEAD == origin/main`과 ahead/behind `0/0`을 확인한다. force push는 금지하며, 작업 중 `origin/main`이 예상치 않게 이동하면 자동으로 덮어쓰지 않고 먼저 원인을 분석한다. 작은 typo나 단순 진행 저장점은 별도 logical unit으로 취급하지 않는다.
+## Builds and long operations
 
-### 호출 전략 v2 — polling 대신 완료 중심으로 실행
+For the same revision/configuration, build once unless the first run was
+inconclusive for an identified reason. Keep full output in ignored local logs;
+surface only exit status plus the first relevant error or concise success.
 
-최근 실제 WinUI 개발 기록에서 긴 빌드/GUI를 시작한 뒤 `read_process_output`의 무출력 조회와 별도 `start_process` 상태 probe(`WRAPPER_RUNNING`, `LOG_BYTES`, `JSON_READY`)를 번갈아 실행하는 패턴이 확인됐다. 이 패턴은 새 근거를 거의 만들지 않으면서 호출과 컨텍스트를 크게 소비하므로 다음을 **기본 실행 계약**으로 강제한다.
+Prefer one start plus one final/blocking read. Do not poll every few seconds or
+alternate log-tail/process probes. Use one status probe only for a genuine
+timeout/stall question.
 
-1. **긴 작업은 start 1회 + blocking result read 1회를 기본으로 한다.** 빌드·GUI·stress처럼 예상 시간이 알려진 작업은 시작 전에 합리적인 완료 시간(예: 빌드 60~90초, 전체 GUI 90~120초)을 정하고, PID가 반환되면 그 시간대에 맞춘 `read_process_output` 한 번으로 완료 결과를 기다린다. 시작 직후 1~5초 간격의 `read_process_output`은 금지한다.
-2. **중간 상태 probe 금지.** 아직 예상 완료 시간 안에 있는 프로세스에 대해 별도의 PowerShell을 띄워 `Get-Process`, `WRAPPER_RUNNING`, `LOG_BYTES`, `JSON_READY`, 최신 로그 tail을 조회하지 않는다. blocking read가 실제 timeout되었거나 예상 완료 시간을 유의미하게 초과했고 정체 여부가 다음 행동을 바꿀 때만 상태 probe를 최대 한 번 허용한다.
-3. **무출력 polling은 실패 신호가 아니다.** `No output in requested range`를 받은 뒤 즉시 다른 상태 확인을 붙이지 않는다. 이미 지정한 blocking wait가 끝나기 전에는 기다린다. 같은 PID에 대한 무출력 read를 연속 두 번 수행하지 않는다.
-4. **완료 요약은 생산 명령이 직접 낸다.** build/test/stress 스크립트는 종료 시 `EXIT`, 핵심 PASS/FAIL, candidate SHA, 필요한 오류 한두 개를 한 번에 출력하도록 구성한다. 성공 후 별도 로그 tail, SHA 조회, process 조회를 연쇄하지 않는다. 동일 명령이 최종 SHA나 결과를 낼 수 있으면 그 안에서 출력한다.
-5. **소스 읽기는 narrow-first.** 위치를 알고 있는 함수·XAML resource·test contract는 `Select-String` 또는 줄 범위로 읽는다. 기본적으로 한 파일 전체 수백~수천 줄을 가져오지 않는다. 위치를 모를 때만 검색으로 후보를 찾고, 그 다음 필요한 함수 범위만 확장한다. 전체 파일 읽기는 구조 자체를 검토해야 할 때만 허용한다.
-6. **acceptance는 one-shot runner를 우선한다.** geometry/theme/selection/lifecycle처럼 같은 binary를 대상으로 하는 여러 runtime 확인은 가능한 한 하나의 유지 가능한 acceptance runner에 묶고, 끝에서 JSON 또는 짧은 sentinel summary 한 번을 출력한다. 거의 같은 inline Python을 조건만 바꿔 반복 생성하지 않는다. 후보 비교가 필요한 경우에도 의사결정을 실제로 바꾸는 후보만 실행하며, 기본적으로 `baseline + 최대 2개 후보 + final`을 넘기지 않는다.
-7. **동일 binary 증거를 재사용한다.** candidate SHA가 같고 환경·테스트 조건이 같으면 이미 확보한 build/source/runtime 결과를 다시 실행하지 않는다. presentation 변경처럼 특정 영역만 바뀌면 그 영역의 targeted acceptance를 먼저 수행하고, 전체 GUI는 최종 후보에서 한 번만 수행한다.
-8. **full GUI retry는 원인 확인 후 1회만 허용한다.** 첫 full GUI가 비결정적 lifecycle/환경 오류로 실패하면 먼저 최초 관련 오류와 WER/테스트 지점을 좁게 확인한다. 동일 binary의 별도 targeted gate가 원인을 구별해 주는 경우에만 bounded rerun을 한 번 허용한다. 두 번째도 같은 실패면 반복하지 말고 미해결 risk로 기록한다.
-9. **원격 inline 스크립트는 재사용 가능하게 유지한다.** 30줄 이상이거나 한글 fixture/복수 acceptance를 다루는 Python은 긴 PowerShell here-string을 매번 새로 보내기보다 ignore된 UTF-8 `.py` 파일 또는 기존 versioned test runner를 우선한다. 필요 시 ASCII Unicode escape와 `python -X utf8`를 사용한다. 인코딩 실패 때문에 전체 acceptance를 다시 돌리는 상황을 방지한다.
-10. **단계별 호출 목표:** 상태 확인/문서 수정 4~6회, source 수정+단일 build 8~12회, GUI 포함 일반 기능 작업 16~24회를 우선 목표로 한다. 기존 기본 상한(12/20/30)은 안전 차단선이지 목표치가 아니다. 목표를 넘기기 시작하면 새 호출이 실제로 결정을 바꾸는지 즉시 점검한다.
+Canonical orchestration is tools/winui/run_checks.py. Obsolete
+experiments/phase6 paths must not be used.
 
-### 기본 실행 순서 — 최소 호출·필수 검증
+## GUI acceptance
 
-다음 순서를 모든 개발 작업의 기본값으로 적용한다. 각 단계의 범위는 실제 변경·위험·사용자 인수 조건에 비례해야 하며, 필수 검증을 생략하는 근거로 사용하지 않는다.
+Use test-owned folders/processes and validate the requested behavior. For UI
+work distinguish input delivery, state change, and final composited pixels when
+visual acceptance matters. Use targeted acceptance first, then the smallest
+required regression.
 
-1. **기존 근거 재사용:** 이전 작업의 소스 분석, 정확한 revision의 빌드·테스트 결과, 미해결 원인을 먼저 확인한다. 해당 코드·환경이 변경되어 근거가 무효가 된 부분만 다시 조사한다.
-2. **변경·빌드 범위 최소화:** 관련 canonical source만 수정한다. 좁은 정적 검사와 해당 프로젝트의 증분 빌드로 충분하면 전체 재빌드를 피한다. 단, 종속성·ABI·빌드 설정 변경, clean-build 재현 요구, 명시적인 전체 CI 계약이나 필수 최종 검증에는 해당 범위의 Rebuild를 실행한다.
-3. **빌드 결과 한 번에 수집:** 빌드·테스트는 미리 정한 조건으로 한 번 실행하고 로컬 로그에 전체 출력을 저장한다. 도구에는 완료 후 종료 코드·필요한 오류·핵심 검증 결과만 반환하며, 정상 진행 중 반복 상태 조회나 불필요한 로그를 읽지 않는다.
-4. **변경에 직접 관련된 GUI 검증:** 실제로 바뀐 기능의 대표적인 입력·포커스·상태·최종 화면을 먼저 확인한다. 반복 검증은 새 오류나 회귀 위험을 구별할 증거가 필요할 때에만 추가한다. 실행하지 않은 테마·DPI·접근성 검증은 통과로 보고하지 않는다.
-5. **완료 즉시 종료:** 사전에 정한 합격 조건과 필요한 회귀를 충족하면 추가 조사·보조 스크립트·중복 검증을 중단한다. 변경 사항, 실제 검증 결과, 미검증 범위와 꼭 필요한 후속 작업만 정리한다.
+## Evidence reuse
 
-## 1. 최우선 원칙
+Reuse evidence only when binary/source revision, configuration, environment and
+tested condition are unchanged. Do not relabel an older binary or different
+DPI/environment as current acceptance.
 
-최소한의 **합리적** 작업으로 사용자의 요구사항을 정확하게 완료한다. 새 근거를 얻지 못하고, 오류 해결에 기여하지 않으며, 이미 확정된 사실을 반복하는 행동은 수행하지 않는다. 정확성·사용자 데이터 보호·필수 회귀 검증은 효율을 이유로 생략하지 않는다.
+## Git logical units
 
-## 2. 실행 전 판단과 기존 근거 재사용
+When commit/push is approved for the task, commit and normal-push each
+independently explainable verified logical unit. Before commit:
+- git diff --check;
+- inspect staged scope;
+- run the verification required by the change.
 
-각 도구 호출 전에 현재 문제, 이미 확보한 사실, 모르는 사실, **해당 호출 결과가 다음 행동을 어떻게 바꾸는지**, 합격·중단 조건을 결정한다. 다음 행동이 바뀌지 않는 호출은 원칙적으로 생략한다.
+Do not commit/push known failing required acceptance, temporary diagnostics,
+generated artifacts or a known correctness defect.
 
-기존 소스·로그·테스트·스크린샷·revision evidence를 우선 재사용한다. 같은 프로젝트 구조나 전체 파일을 반복 조회하지 않고 변경된 코드와 필요한 부분만 읽는다. 코드/환경이 바뀌어 근거가 무효가 되었을 때에만 필요한 범위를 다시 확인한다.
+After normal push, fetch and verify HEAD == origin/main and ahead/behind 0/0.
+Force push is prohibited. If origin/main moved unexpectedly, analyze rather
+than overwrite.
 
-## 3. 장기 프로세스와 로그
+## Final report
 
-빌드·테스트처럼 긴 작업은 **한 번 실행하고 가능한 경우 완료까지 기다린 뒤 결과를 한 번에 확인**한다. 도구 실행 전에 성공/실패 판정에 필요한 정보를 정의하고 `stdout`/`stderr` 전체는 ignore된 로컬 로그 파일로만 저장한다. 원격 도구에 반환할 정보는 (1) 최종 종료 코드, (2) 실패 시 최초 실제 compiler/linker/MSBuild 오류와 필요한 짧은 문맥, (3) 성공 시 대상 산출물·테스트 최종 요약으로 제한한다. 디버깅 목적이 없는 `.cpp` 파일명·빌드 단계 나열, 정상 빌드의 긴 tail/전체 로그를 **도구 응답으로 내보내지 않는다**. 성공 출력은 원칙적으로 10줄 이내로 제한하며, 실패 시에도 오류와 관련된 범위만 본다.
-
-**호출 패턴:** 한 번의 장기 명령에서 전체 로그를 파일로 리디렉션하고 해당 명령이 **끝난 다음 같은 명령 안에서** 종료 코드와 위 요약을 출력하는 방식을 우선한다. 원격 실행 도구가 PID만 반환할 경우 설정된 대기/timeout 뒤 `read_process_output`으로 **최종 요약을 한 번만** 수집한다. 이 요약이 있으면 원본 로그를 다시 읽지 않는다. 장기 실행 중 `list_sessions`/프로세스 조회/로그 tail을 번갈아 반복하거나, 완료 뒤 성공했는데도 별도 `Get-Content -Tail` 호출로 파일명 목록을 가져오는 행동은 호출 낭비로 금지한다.
-
-객관적인 timeout·정체·오류 증거가 있을 때만 한 차례 상태를 확인하고 최초 실제 오류 근처만 추가 확인한다. 추가 조회로 판단이 바뀌지 않으면 중단한다. 중간 로그의 무출력이나 `start_process`의 초기 PID 반환만으로 성공/실패를 추정하지 않는다. PowerShell 예시는 `& $buildCommand *> $localLog; $code=$LASTEXITCODE; Write-Output ('BUILD_EXIT=' + $code); if($code -ne 0){Select-String $localLog -Pattern 'error C[0-9]+|error LNK[0-9]+|error MSB[0-9]+|fatal error' | Select-Object -First 5}`와 같은 형태이며, 정상 성공은 필요한 최종 결과 몇 줄만 선택한다. 작업 성격에 맞게 로컬 로그와 패턴을 조정하되 전체 로그는 검사 요청 또는 실제 오류가 요구하지 않는 한 반환하지 않는다.
-
-### flyExplorer 독립 WinUI 검증 실행 예시
-
-`python experiments/phase6_winui_shell/run_scoped_checks.py source`는 관련 소스 계약을 검증한다. `build --configuration Debug`와 `gui --configuration Debug`는 해당 빌드와 격리된 GUI를 각각 실행한다. `full`은 소스 검사부터 Debug·Release 빌드와 소유 GUI까지 첫 실패에서 중단한다. 전체 로그는 Git 무시된 `logs/winui-scoped/`에 저장하고 최종 결과만 출력한다. 이미 동일 코드와 조건에서 검증된 단계는 다시 실행하지 않는다. 이 래퍼는 전역 클립보드·휴지통이나 실제 물리 드래그를 검증하지 않는다. 필요할 때만 `--isolate-feature-panels`를 추가해 각 기능별 테스트의 접혀 있는 패널 조건을 분리할 수 있으나, M1.9의 검색·작업 공간 패널을 열어 둔 상태에서 M2.0 분할 창을 복원하는 교차 기능 시험이 통과했다는 증거가 되지는 않는다.
-
-원격 PowerShell에서 Python에 한국어를 전달할 때 입력 인코딩을 명시적으로 UTF-8로 지정하고, 실제 파일의 UTF-8 디코딩과 변경된 문장의 회귀 검사를 수행한다. 콘솔 표시 손상만으로 파일 내용이 손상됐다고 단정하지 않는다.
-
-### 소유 소형 화면 GUI 회귀 재현
-
-해당 Windows 개발 PC에서 과거 실패 조건을 재현할 때는 현재 PowerShell 프로세스에만 `$env:FLY_OWNED_COMPACT_MONITOR_CASE='YES'`를 설정하고 `python experiments/phase6_winui_shell/run_scoped_checks.py gui --configuration Debug`를 실행한다. 같은 방식으로 `Release` 구성도 별도 검증한다. 테스트 스크립트는 최소 1100×740 화면에서 자신이 방금 실행한 정확한 소유 WinUI HWND만 (78,78,960,519)에 배치하며 사용자 창은 조작하지 않는다. 미지원 해상도에서는 실패를 무시하지 않고 조건을 보고한다. 동일 소스·화면 조건의 기존 통합 GUI PASS 로그가 유효한 동안 관성적으로 반복 실행하지 않는다. 물리 드래그는 이 회귀와 별도 승인·수동 시험이 필요하다.
-
-### 원격 명령과 중간 생성물 보존·정리의 실행 기준
-
-- **호출 수를 확인할 때** `start_process`, `read_process_output`, 별도의 파일 조회·편집을 각각 실제 하위 호출로 계산한다. 검증 작업 하나를 긴 명령으로 시작해 전체 로그는 로컬에만 저장하고 종료 코드·첫 번째 오류 또는 최종 PASS만 반환한다. 원격 실행이 PID만 반환하면 그 단계의 예상 실행시간을 고려한 후 최종 결과를 한 번 수집하며, 무출력 폴링을 반복하지 않는다. 시스템상 불가피한 확인이나 실제 실패 진단의 추가 호출은 따로 기록한다. 품질 검증과 사용자 데이터 보호를 호출량 절감보다 우선한다.
-- **Debug/Release 중간 생성물:** 자주 작업하는 Debug 캐시와 최신 Debug·Release 실행 파일 및 심벌은 원칙적으로 보존한다. Release 검증이 끝나고 원격 개발 브랜치에 같은 HEAD가 안전하게 체크포인트된 경우에만 미사용 Release 컴파일 중간물 정리를 선택적으로 수행한다. 일반 `cleanup.bat`는 `obj/bin`을 모두 제거하므로 이 목적에 사용하지 않는다.
-- **정리 실행기:** `python build/cleanup_dev_artifacts.py --release-intermediates`는 삭제하지 않는 미리보기다. 검증된 HEAD를 알고 있고 해당 HEAD의 원격 반영 및 깨끗한 작업 트리와 빌드/GUI 미실행을 확인한 후에만 `python build/cleanup_dev_artifacts.py --release-intermediates --apply --checkpoint <exact-HEAD>`를 수동으로 수행한다. 정리 후 첫 Release 빌드는 해당 중간물을 다시 생성한다. 정리 스크립트는 전체 경로 삭제가 아닌 화이트리스트 대상만 허용한다.
-- **로그:** 증거 기록, 실패/타임아웃 로그, 문서가 참조하는 로그, 각 검사 종류의 최신 성공 결과 두 개는 보존한다. 선택형 `--prune-success-source-logs`는 `logs/winui-scoped` 안의 30일 이상 지난 *검증된 성공* source/preflight 로그 중 참조되지 않고 최신 두 개가 아닌 파일만 미리 보여준다. 삭제는 `--apply --checkpoint <exact-HEAD>`를 별도로 지정해야 한다. GUI·빌드 실패 로그 및 NuGet 고정 캐시는 이 옵션으로 삭제할 수 없다. 용량이 작은 텍스트 로그를 줄이려는 이유로 오류 증거를 제거하지 않는다.
-- **자동 강제 삭제·주기 예약 없음:** 이 운영 기준은 단계가 끝날 때 필요한 경우 직접 수행하는 보수적인 선택형 절차다. 외부 스케줄러나 매 빌드 자동 삭제에 연결하지 않는다. 장기 캐시 크기가 다시 늘면 먼저 측정하고 대상과 검증 범위를 다시 선택한다.
-
-## 4. 실패 분석과 재시도 제한
-
-실패하면 최초의 실제 오류와 실행 환경을 분석하고 구별 가능한 원인 가설을 세운다. 같은 명령을 조건 변경 없이 재시도하지 않는다. 실패 원인과 관계된 코드·설정·명령·환경을 변경한 후에만 재시도한다.
-
-**동일 원인에 대한 재시도는 원칙적으로 최대 2회**다. 같은 증상이 반복되면 동일 접근을 중단하고, 다른 가설을 구별할 수 있는 실험을 선택한다. 새 증거가 이전 실패 원인의 해소를 입증한 경우에는 제한적으로 다시 시도할 수 있다.
-
-## 5. 검증의 의미와 종료 조건
-
-작업 전에 **사용자 요구사항에 해당하는 acceptance case와 필요한 증거**를 정한다. 정적 검사 PASS, compile/link PASS, functional PASS, runtime PASS, 실제 최종 픽셀 visual PASS는 서로 대체할 수 없다.
-
-같은 revision·조건에서 이미 통과한 테스트나 빌드는 근거가 유지되는 한 재실행하지 않는다. 코드·설정·환경 변경으로 결과가 무효가 된 범위만 다시 검증한다. 새 정보 없이 반복 촬영·녹화하거나 해석 기준 없는 대량 프레임을 생성하지 않는다. 성공 조건이 만족되고 추가 변경이 없으면 즉시 검증을 종료한다.
-
-## 6. 실제 GUI 조작 검증
-
-GUI 검증은 **입력 전달 → 내부 상태 변화 → 최종 사용자 화면 픽셀**을 각각 구분한다. 스크롤바를 시험할 때는 올바른 대상 HWND, 실제 마우스 버튼 유지, 손잡이/내용 위치 이동, 합성 계층까지 포함한 최종 화면과 프레임 시점을 확인한다. 동일한 정지 화면 여러 장이나 자동 밝기 0.0만으로 PASS 처리하지 않는다.
-
-동일 입력 방법이 실패하면 포커스·권한·대상 창·좌표/캡처 환경을 점검한다. 새 조건이 없이 같은 입력을 반복하지 않는다. 환경 제약으로 실기 검증이 불가능하면 정확한 미검증 범위를 남기고 다른 종류의 PASS를 대신 사용하지 않는다.
-
-## 7. 범위와 보조 도구
-
-현재 요청을 우선하며 무관한 개선 과제나 추가 스크립트를 만들지 않는다. 기존 검사 도구로 충분한지 먼저 판단한다. 보조 스크립트는 분별력 있는 한 가지 검증이 필요하고 기존 도구로 불가능할 때에만 최소 규모로 작성한다. 임시 진단물은 정식 제품 수정·검증을 지연하지 않으며, 제품 코드에 임시 추적/tint가 남지 않도록 한다.
-
-## 8. 작업 방식 재평가와 중지
-
-새 근거 없는 호출 반복, 검증 목표 불명확, 조건을 바꾸지 않은 동일 오류 재시도, 진단 스크립트가 실제 소스 수정에 우선하는 상황, 이미 충족한 검증의 반복 중 **하나라도 나타나면 즉시 접근을 재평가**한다. 확인된 사실·남은 질문·구별 실험·직접적인 해결 경로를 정리한 뒤 진행한다.
-
-더 얻을 정보가 없거나 현재 환경에 검증 수단이 없다면 이유와 구체적 다음 단계를 기록하고 무의미한 시도를 중단한다. 시간이 걸리거나 어렵다는 이유만으로 조기 포기하지 않는다.
-
-## 9. 사용자 보고와 세션 복구
-
-중간 보고는 실제 발견, 계획 변경, 중요한 위험/차단 요인 또는 사용자 결정이 필요한 경우에만 짧게 작성한다. 명령을 실행했다는 사실, 근거가 늘지 않은 상태 알림, 동일 내용의 반복은 보고하지 않는다.
-
-세션 재개 시 이미 확보한 revision, 로그, 변경 파일, 빌드·시각 증거와 기존 미해결 조건을 확인하여 **중단 지점부터** 이어간다. git status와 branch를 보고 다른 작업자의 변경을 존중한다. 연속된 안전한 checkpoint는 필요한 때만 생성한다.
-
-## 10. 완료 보고와 최종 판단
-
-최종 보고는 (1) 실제 변경·수행 결과, (2) 수행한 검증과 직접 증거, (3) 미검증·미해결 범위, (4) 꼭 필요한 후속 작업만 기술한다. 실패 원인에 영향 없는 호출·시도 횟수·진행 로그는 나열하지 않는다. 검증하지 않은 결과나 미반영 코드를 PASS/배포 완료로 보고하지 않는다.
-
-**모든 단계의 판단 기준:** 지금 하려는 행동이 새로운 근거를 얻거나 실제 문제를 해결하거나 반드시 필요한 검증을 완료하는 데 직접 기여하는가? 아니라면 생략한다. 단, 사용자 데이터 보호와 명시적으로 요구되는 승인 절차는 항상 유지한다.
-
-**UTF-8 pipeline regression (2026-09-30):** PowerShell-to-Python long inline scripts containing literal Korean produced a real `?.txt` test-source corruption on the remote Windows host. Never assume terminal output corruption is only cosmetic. Prefer versioned UTF-8 Python scripts, or ASCII Unicode escapes/character code points and `python -X utf8` for dynamically generated scripts. After touching Korean fixture names or UI labels, reopen the actual UTF-8 source bytes and include a bounded targeted regression check rejecting the actual replacement pattern. Do not use malformed GUI test input as proof of an application failure.
+Report actual changes, verification performed, untested/open gates and necessary
+follow-up. Never claim a test or certification that was not run.

@@ -1,87 +1,41 @@
 flyExplorer
 ===========
 
-flyExplorer is a Windows file manager. The canonical product on `main` is now
-the C++/WinRT WinUI 3 application under `app/winui`.
+flyExplorer is a Windows file manager. The canonical product on main is the
+C++/WinRT WinUI 3 application under app/winui.
 
 Quick start
 -----------
 
-Build Release:
-
     build.bat Release
-
-Run the built product:
-
     run.bat Release
-
-Open a specific folder:
-
     run.bat Release D:\
-
-Run source/contract checks:
-
     test.bat source
-
-Clean generated build output without touching source or evidence logs:
-
-    clean.bat build
-
-Remove the local package cache too (packages will be restored on next build):
-
-    clean.bat all
-
-Run the full owned Debug + Release validation sequence:
-
     python -X utf8 tools\winui\run_checks.py full
 
-Canonical repository layout
----------------------------
+Canonical layout
+----------------
 
-    app/winui/        WinUI 3 application, XAML, helper and project templates
-    src/base/         UI-independent native core reused by the WinUI product
+    app/winui/        WinUI 3 product, XAML, helper and project templates
+    src/base/         UI-independent native core
     tests/winui/      source contracts, owned GUI tests and native fixtures
-    tools/winui/      canonical local build/test orchestration
-    docs/             current and historical engineering documentation
+    tools/winui/      canonical local orchestration
+    docs/development/ maintained current engineering documentation
     out/              ignored build products/intermediates
     .cache/nuget/     ignored NuGet cache
-    logs/             ignored local validation evidence
+    logs/             ignored local evidence
 
-The old `experiments/phase6_winui_shell` product path no longer exists. Phase6
-is the product, so it lives under `app/winui`.
+Release output is out\winui\Release\flyExplorer.exe. Do not copy the EXE
+alone; sibling WinUI resources and FlyShellIsolationHelper.exe are required.
 
-Build outputs
--------------
+The retired MFC product is recoverable only from Git revision cbffb48.
+Historical migration reports and legacy HTML Help are no longer kept in the
+working tree; Git history is their recovery source.
 
-Build products are intentionally kept out of `app/winui`.
-
-Release executable:
-
-    out\winui\Release\flyExplorer.exe
-
-Debug executable:
-
-    out\winui\Debug\flyExplorer.exe
-
-Do not copy only the EXE; the sibling WinUI resources and
-`FlyShellIsolationHelper.exe` are part of the runtime set.
-
-Retired MFC
------------
-
-The previous MFC default exists only in Git history at `cbffb48`.
-No MFC source, build, distribution, library or runnable legacy test tree is
-retained in the current checkout. Exact old-product recovery/rebuild must use
-that historical commit in a separate worktree. Phase5 remains retired.
-
-Development status
-------------------
-
-See `docs/development/CURRENT_STATUS.md` for accepted functionality and open
-release gates. GitHub Actions remain opt-in/manual according to project policy;
-local commands above do not publish releases or change the default application.
+See docs/development/CURRENT_STATUS.md for accepted functionality and open
+release gates. GitHub Actions remain manual/opt-in by project policy.
 
 License
 -------
 
-See `LICENSE` and `CREDITS`.
+See LICENSE and CREDITS.

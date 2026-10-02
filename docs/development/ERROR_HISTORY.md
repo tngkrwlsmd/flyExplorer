@@ -1,3 +1,10 @@
+# Error history
+
+This is the append-only failure/root-cause/prevention ledger. Older entries may
+refer to source or documentation paths that were later retired from the working
+tree. Recover those exact artifacts from Git when needed; do not interpret old
+milestone/current-state wording as the present product status. For current
+product state use CURRENT_STATUS.md.
 # flyExplorer Error Diagnosis / Prevention History
 
 > **Chronological evidence archive (preserved):** Some entries describe past
@@ -2663,7 +2670,7 @@ fix; this new runtime issue must not be labelled its same root cause.
 Audit baseline `bee95d96a0150734ac247ed34e52ffe3bb1f4d92`;
 the documentation commit containing this entry records the new finding.
 Detailed steps, executable hash, other visual findings and untested scope:
-[`UI_UX_AUDIT_20260924.md`](UI_UX_AUDIT_20260924.md).
+`UI_UX_AUDIT_20260924.md` (UI_UX_AUDIT_20260924.md; historical, recover from Git).
 
 **Additional post-fix evidence:** Original main-menu/toolbar/drive/bookmark
 black text on Dark is now visibly readable on this Windows 11 binary.
@@ -3489,7 +3496,7 @@ Not tested: full repository preflight, MSVC Release x64 compile/link, real scrol
   보호하고 이 경계의 임의 repaint/resize 및 임시 trace 재도입을 금지한다.
 - **검증 상태:** 진단 빌드의 x64 compile/link PASS, native regression 17/0,
   동일 Light→Dark 화면의 잔상 소멸 직접 확인. 최종 검증은
-  [UI-09 실행 보고서](UI09_ROOT_CAUSE_20260926.md)에 갱신한다.
+  UI-09 실행 보고서 (UI09_ROOT_CAUSE_20260926.md; historical, recover from Git)에 갱신한다.
   자동 smoke는 사용자 HKCU 보호로 SKIPPED이며 Actions는 실행하지 않았다.
 - **관련 commit:** 이 항목과 제품 수정의 동일 checkpoint (`git log --grep="bookmark geometry damage"`).
 
@@ -4046,12 +4053,12 @@ Initial remote Python writes from Windows PowerShell lost Hangul because the inp
 3. 양쪽 WinUI 파일 목록의 XAML ^CanDragItems^ 및 리스트 항목의 ^CanDrag^와 Drop handler는 Debug에서 컴파일됐지만, 원격 테스트가 자체 소유 창 안의 한국어 파일을 자동 물리 마우스로 왼쪽→오른쪽으로 드래그해 복사하려던 실기 시험은 **기본 핸들러와 직접 ListViewItem 핸들러 모두 실패**했다. 마우스 좌표 및 StatusText UIA 진단을 보존했으며, WinUI DragStarting/Drop 이벤트가 실제 호출됐는지 코드 결함인지 자동화 한계인지 아직 판정할 자료가 부족하다. 미검증 상태의 물리 드래그는 별도 ^FLY_M23_OWNED_DRAG_TEST=YES^ 진단 플래그에서만 시행하고 공통 Shell/세션 수용 시험의 PASS에 섞지 않는다. 실제 Explorer→WinUI 및 WinUI→Explorer 상호 운용/외부 확장 역시 NOT TESTED다.
 4. 전역 Windows 클립보드를 실제로 건드리면 사용자 클립보드 값과 형식을 잃을 위험이 있어, CF_HDROP in-memory wire 검증·합성 로컬 실제 Shell 복사만 기본 native 시험으로 삼고 실제 OS 명령은 별도 격리 Windows 사용자 컨텍스트가 확보될 때 검증한다. 전역 휴지통 실제 삭제·복원도 동일하게 미완료 게이트로 유지한다.
 
-세부 구현 범위 및 검증 등급: [M2.3 단계별 통합](WINUI3_M23_CLIPBOARD_SESSION_DRAG_STAGING_20260929.md).
+세부 구현 범위 및 검증 등급: M2.3 단계별 통합 (WINUI3_M23_CLIPBOARD_SESSION_DRAG_STAGING_20260929.md; historical, recover from Git).
 
 
 ## 2026-09-29: M2.3 한국어 문구 손실 및 드래그 자동화 미도달 기록
 
-M2.3 후속 작업에서 `m23_drag.cpp`의 오류 문구 7개가 이전 원격 UTF-8 전달 문제로 손상된 사실을 확인해 한국어로 복구했다. 재발 방지를 위해 소스 검사에 해당 오류 문구와 리소스 연결 검사를 추가했다. 테스트 소유 Debug 창에서 네 단계 진단을 추가하여 포인터 입력을 시도했으나, 실제 DragStarting·DragOver·Drop 이벤트 발생을 관찰하지 못했다. 코드 결함 또는 입력 자동화 한계를 구분할 근거가 없으므로 드래그는 미검증 상태다. 별도로 Debug·Release 통합 소유 GUI와 소스 검사 102/102는 다른 검증 대상에서 통과했다. [M2.3 후속 세부 기록](WINUI3_M23_FOLLOWUP_KOREAN_RESOURCES_DRAG_DIAGNOSTICS_20260929.md).
+M2.3 후속 작업에서 `m23_drag.cpp`의 오류 문구 7개가 이전 원격 UTF-8 전달 문제로 손상된 사실을 확인해 한국어로 복구했다. 재발 방지를 위해 소스 검사에 해당 오류 문구와 리소스 연결 검사를 추가했다. 테스트 소유 Debug 창에서 네 단계 진단을 추가하여 포인터 입력을 시도했으나, 실제 DragStarting·DragOver·Drop 이벤트 발생을 관찰하지 못했다. 코드 결함 또는 입력 자동화 한계를 구분할 근거가 없으므로 드래그는 미검증 상태다. 별도로 Debug·Release 통합 소유 GUI와 소스 검사 102/102는 다른 검증 대상에서 통과했다. M2.3 후속 세부 기록 (WINUI3_M23_FOLLOWUP_KOREAN_RESOURCES_DRAG_DIAGNOSTICS_20260929.md; historical, recover from Git).
 
 
 ## 2026-09-29: 단계 간 패널 잔존 시 This PC 자동화 요소 미노출

@@ -1,6 +1,6 @@
-# M2.7 Release payload provenance snapshot - 2026-10-01
+# Historical packaged payload provenance snapshot - 2026-10-01 (predates v7)
 
-This snapshot describes the exact canonical WinUI Release runtime used to build the M2.7 installer. Hash matching was performed against the repository-local NuGet cache after a successful Release restore/build. It is provenance evidence, not legal advice or blanket redistribution clearance.
+This snapshot describes the exact WinUI Release runtime used for the 2026-10-01 installer. It predates the v7 Window Tab/session checkpoint and is not provenance for the current product binary. Hash matching was performed against the repository-local NuGet cache after that Release restore/build. Preserve it as historical package evidence and regenerate the audit before packaging the current product.
 
 - Runtime files before distribution materials: **305**
 - flyExplorer/generated files with no NuGet hash match: **17**

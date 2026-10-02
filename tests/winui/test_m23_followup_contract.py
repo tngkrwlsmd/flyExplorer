@@ -1,4 +1,4 @@
-"""M2.3 follow-up: real ko-KR resource wiring and conservative type display."""
+"""Current ko-KR resource, drag-gate and file-list-state contracts."""
 import unittest
 from pathlib import Path
 import xml.etree.ElementTree as ET
@@ -28,17 +28,17 @@ class M23Followup(unittest.TestCase):
   self.assertGreaterEqual(found,7)
  def test_latest_document_summaries_not_corrupted(self):
   docs=R/"docs/development"
-  names=("CURRENT_STATUS.md","README.md",
-         "WINUI3_FULL_REPLACEMENT_20260929.md",
-         "ERROR_HISTORY.md",
-         "WINUI3_M23_FOLLOWUP_KOREAN_RESOURCES_DRAG_DIAGNOSTICS_20260929.md")
-  for name in names:
+  for name in ("CURRENT_STATUS.md","README.md","ARCHITECTURE.md",
+               "UI_VISUAL_RETEST.md"):
    text=(docs/name).read_text(encoding="utf-8")
-   self.assertIn("M2.3 후속" if name!="ERROR_HISTORY.md" else "M2.3 한국어",text,name)
-   self.assertNotIn("M2.3 ??:",text[:500],name)
-   self.assertNotIn("M2.3 ?? ??:",text[:500],name)
-   self.assertNotIn("## ??",text[-500:],name)
-   self.assertNotIn(chr(0xfffd),text[:350],name)
+   self.assertIn("flyExplorer",text,name)
+   self.assertNotIn(chr(0xfffd),text,name)
+  status=(docs/"CURRENT_STATUS.md").read_text(encoding="utf-8")
+  self.assertIn("v7",status)
+  self.assertIn("physical pointer drag acceptance",status)
+  history=(docs/"ERROR_HISTORY.md").read_text(encoding="utf-8")
+  self.assertTrue(history.startswith("# Error history"))
+  self.assertIn("append-only",history[:400])
 
  def test_fixed_seven_true_hangul_drop_failure_messages(self):
   drag=source("m23_drag.cpp")
@@ -67,13 +67,15 @@ class M23Followup(unittest.TestCase):
 
  def test_owned_physical_drag_requires_manual_input_not_automatic_claim(self):
   probe=(R/"tests/winui/manual_owned_drag_probe.py").read_text(encoding="utf-8-sig")
-  doc=(R/"docs/development"/
-       "WINUI3_M23_FOLLOWUP_KOREAN_RESOURCES_DRAG_DIAGNOSTICS_20260929.md").read_text(encoding="utf-8")
+  doc=(R/"docs/development/UI_VISUAL_RETEST.md").read_text(encoding="utf-8")
+  status=(R/"docs/development/CURRENT_STATUS.md").read_text(encoding="utf-8")
   for item in ("FLY_M23_OWNED_DRAG_TRACE","tempfile.mkdtemp",
                "stdin=subprocess.DEVNULL","OWNED_FILE_COPY=","NOT_OBSERVED"):
    self.assertIn(item,probe)
-  self.assertIn("수동 드래그 판별 절차",doc)
-  self.assertIn("NOT TESTED",doc)
+  self.assertIn("physical pointer drag",doc)
+  self.assertIn("manual/environment gates",doc)
+  self.assertIn("physical pointer drag acceptance",status)
+  self.assertIn("Not certified",status)
 
  def test_expanded_panels_preserve_accessible_panes_in_small_windows(self):
   page=ET.parse(A/"MainWindow.xaml").getroot()

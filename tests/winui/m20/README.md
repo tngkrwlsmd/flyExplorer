@@ -1,7 +1,12 @@
-# M2.0 standalone native state/command fixtures
+# Native explorer state fixture
 
-The `src/base/explorer_ui_state.h/.cpp` model has no MFC or WinRT type; both the real standalone WinUI application and this isolated C++ console project compile that model. This fixture does NOT certify a GUI.
+The m20 directory name is retained for compatibility. Its current purpose is to
+compile and validate the same UI-independent explorer_ui_state model used by the
+WinUI application.
 
-Run `app/winui/m20/build.cmd Debug`, set `FLY_M20_CONFIG=Debug`, then run `python app/winui/m20/test_native.py`. Repeat with `Release` and `FLY_M20_CONFIG=Release`. Both native configurations passed 16/16, including independent left/right stable routes, per-tab request supersession, stale-result rejection, hidden pane preservation, 32-tab limits, protected last tab and validated atomic workspace reset with non-reused routes.
+The fixture covers independent pane/tab state, stable routes, stale-result
+rejection, active-pane/split behavior and bounded workspace reset semantics.
+It manipulates disposable native values only and does not certify the GUI.
 
-Only disposable native values are manipulated. The Python harness reads and compares exact hashes of the six real user-setting files but never changes them. Real WinUI GUI and full source regressions are separate; see [M2.0 scoped proof](../../../docs/development/WINUI3_M20_FULL_WINDOW_NATIVE_COMMAND_MODEL_20260929.md).
+Run it through the canonical source/full orchestration rather than relying on
+old milestone commands or deleted migration reports.
