@@ -26,7 +26,7 @@ consumer core; this PROJECT.md remains project-owned across bundle refreshes.
     {"name": "winui-tests", "path": "tests/winui", "responsibility": "source, native and owned GUI contracts"}
   ],
   "review": {
-    "reviewed_revision": "6608e46f4265018283a9ccd2ea9cf7707dd1258e",
+    "reviewed_revision": "1b504299d1541a599f65419e27ad899098ce4fe5",
     "reviewed_at": "2026-10-02",
     "reviewed_paths": [
       "app/winui",
@@ -55,22 +55,24 @@ consumer core; this PROJECT.md remains project-owned across bundle refreshes.
 
 ## Current product checkpoint
 
-Current main includes V8-A WindowWorkspaceController, V8-B SessionCoordinator
-and V8-C ShellNavigationController responsibility extraction. Live Git refs take
-priority.
+Current main includes V8-A WindowWorkspaceController, V8-B SessionCoordinator,
+V8-C ShellNavigationController and V8-D FileOperationController responsibility
+extraction. Live Git refs take priority.
 
 Current accepted UI/state includes functional top-level Window Tabs, dual panes
 with pane-local tabs, Explorer-like navigation/chrome, private session schema v2
-restore, WindowWorkspaceController ownership of top-level workspace state, and
+restore, WindowWorkspaceController ownership of top-level workspace state,
 ShellNavigationController ownership of isolated Shell navigation/watcher
-orchestration.
+orchestration, and FileOperationController ownership of transfer/file-command
+worker lifecycle, cancellation, stale completion and collision/recycle
+continuations.
 
 ## Current verification
 
-Latest accepted product evidence for code revision `6608e46f4265018283a9ccd2ea9cf7707dd1258e` comes from
-self-hosted Windows remote-task run `37005539258`:
+Latest accepted product evidence for code revision `1b504299d1541a599f65419e27ad899098ce4fe5` comes from
+self-hosted Windows remote-task run `37015301375`:
 - canonical structure 4/4 PASS;
-- source contracts 143/143 PASS;
+- source contracts 144/144 PASS;
 - canonical Debug and Release builds PASS;
 - owned Debug and Release GUI PASS with OWNED_WINUI_SHELL_EXIT 0;
 - private-session clear/revoke PASS;

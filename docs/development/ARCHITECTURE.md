@@ -194,14 +194,14 @@ The current/evolutionary direction is:
       |-- WindowWorkspaceController  : IMPLEMENTED V8-A state/transition owner
       |-- SessionCoordinator          : IMPLEMENTED V8-B session caretaker/lifetime
       |-- ShellNavigationController   : IMPLEMENTED V8-C navigation/supervisor/watchers
-      |-- FileOperationController    : clipboard/transfer/collision/recycle
-      '-- SearchController           : search request/cancel/recent state
+      |-- FileOperationController     : IMPLEMENTED V8-D transfer/file-command lifecycle
+      '-- SearchController            : search request/cancel/recent state
 
-WindowWorkspaceController, SessionCoordinator and ShellNavigationController are
-implemented. FileOperationController and SearchController remain future
-extraction candidates, not a mandate for a big-bang rewrite. Create the next
-controller only when a coherent responsibility is being changed or extraction
-materially reduces coupling/race risk.
+WindowWorkspaceController, SessionCoordinator, ShellNavigationController and
+FileOperationController are implemented. SearchController remains the next
+future extraction candidate, not a mandate for a big-bang rewrite. Create the
+next controller only when a coherent responsibility is being changed or
+extraction materially reduces coupling/race risk.
 
 Controllers under app/winui may depend on WinUI only when presentation/
 DispatcherQueue coordination requires it. Move a component to src/base only
