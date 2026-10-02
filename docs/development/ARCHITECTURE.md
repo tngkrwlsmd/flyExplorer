@@ -32,6 +32,13 @@ Theme/language are application preferences. Window geometry and active Window
 Tab are session state. A pane owns its pane-local tab collection; a PaneTab owns
 its navigation identity/history.
 
+V8-A makes this ownership concrete in app/winui/WindowWorkspaceController.
+The controller owns the WindowTab collection, active WindowTab index, identity
+allocation and live workspace state transitions. MainWindow retains XAML
+presentation plus watcher/Shell side effects around those transitions. Session
+serialization remains in src/base/ui_session; session lifecycle/caretaker
+extraction is intentionally deferred to V8-B.
+
 ## SOLID rules for this codebase
 
 SOLID is used to preserve change boundaries, not to maximize the number of
@@ -170,18 +177,20 @@ replacement. Avoid factory-per-class architecture.
 
 ## Target controller boundaries
 
-The intended evolutionary direction is:
+The current/evolutionary direction is:
 
     MainWindow
-      |-- WindowWorkspaceController  : WindowTab/Pane/PaneTab transitions
+      |-- WindowWorkspaceController  : IMPLEMENTED V8-A state/transition owner
       |-- SessionCoordinator         : session capture/restore/lifetime
       |-- ShellNavigationController  : navigation, supervisor, watchers
       |-- FileOperationController    : clipboard/transfer/collision/recycle
       '-- SearchController           : search request/cancel/recent state
 
-This is an extraction map, not a mandate to perform a big-bang rewrite. Create a
-controller when a coherent responsibility is being changed or when extracting
-it materially reduces coupling/race risk.
+WindowWorkspaceController is implemented. The remaining controller names are
+future extraction candidates, not implemented components and not a mandate for
+a big-bang rewrite. Create the next controller only when a coherent
+responsibility is being changed or extraction materially reduces coupling/race
+risk.
 
 Controllers under app/winui may depend on WinUI only when presentation/
 DispatcherQueue coordination requires it. Move a component to src/base only

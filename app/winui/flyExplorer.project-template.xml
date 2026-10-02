@@ -141,6 +141,8 @@
     <ClInclude Include="..\..\src\base\shell_context_core.h" />
     <ClInclude Include="..\..\src\base\ui_session.h" />
     <ClInclude Include="file_list_state.h" />
+    <ClInclude Include="window_tab_state.h" />
+    <ClInclude Include="window_workspace_controller.h" />
     <ClInclude Include="MainWindow.xaml.h">
       <DependentUpon>MainWindow.xaml</DependentUpon>
     </ClInclude>
@@ -163,6 +165,9 @@
     </ClCompile>
     <ClCompile Include="MainWindow.xaml.cpp">
       <DependentUpon>MainWindow.xaml</DependentUpon>
+    </ClCompile>
+    <ClCompile Include="window_workspace_controller.cpp">
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="m19_workspace.cpp">
       <PrecompiledHeader>NotUsing</PrecompiledHeader>

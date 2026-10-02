@@ -57,7 +57,7 @@ void MainWindow::OnSavePrivateSession(
   }
  }catch(...){}
  fxfile::uisession::Session data{};
- data.activeWindow=static_cast<std::uint32_t>(mActiveWindowTab);
+ data.activeWindow=static_cast<std::uint32_t>(mWorkspace.activeIndex());
  try{
   const auto current=AppWindow().Size();
   data.width=static_cast<std::uint32_t>((std::max)(current.Width,0));
@@ -67,8 +67,8 @@ void MainWindow::OnSavePrivateSession(
  }
  using CapturedHistory=std::array<std::vector<fxfile::shellnav::HistoryLocations>,2>;
  std::vector<CapturedHistory> histories;
- data.windowTabs.reserve(mWindowTabs.size());histories.reserve(mWindowTabs.size());
- for(auto const& state:mWindowTabs){
+ data.windowTabs.reserve(mWorkspace.count());histories.reserve(mWorkspace.count());
+ for(auto const& state:mWorkspace.states()){
   CapturedHistory captured{};
   fxfile::uisession::WindowTab saved{};
   saved.split=state.model.split;saved.splitPermille=state.splitPermille;
@@ -188,10 +188,10 @@ void MainWindow::LoadPrivateSession(){
     if(auto ui=weak.get()){
      if(ticket!=ui->mSessionEpoch||!ok||restored->empty()||ui->mFileOperationPending)return;
      ui->SuspendActiveWindowTab();
-     for(auto& old:ui->mWindowTabs)ui->ReleaseWindowTabRoutes(old);
-     ui->mWindowTabs=std::move(*restored);
-     ui->mActiveWindowTab=(std::min)(static_cast<size_t>(session->activeWindow),ui->mWindowTabs.size()-1);
-     ui->mNextWindowTabIdentity=static_cast<std::uint64_t>(ui->mWindowTabs.size()+1);
+     for(std::size_t i=0;i<ui->mWorkspace.count();++i)
+      ui->ReleaseWindowTabRoutes(ui->mWorkspace.state(i));
+     if(!ui->mWorkspace.replace(std::move(*restored),
+          static_cast<std::size_t>(session->activeWindow)))return;
      try{ui->AppWindow().Resize({static_cast<int>(session->width),static_cast<int>(session->height)});}catch(...){}
      ui->ApplyActiveWindowTab(L"저장한 개인 WinUI 세션을 복원했습니다.");
      ui->RefreshWindowTabs();

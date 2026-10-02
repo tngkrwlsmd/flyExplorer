@@ -100,7 +100,7 @@ void MainWindow::ApplyWorkspace(fxfile::preview::Workspace&& doc) {
                                  doc.split?doc.paths[1].size():1}};
     std::array<size_t,2> selected{{doc.selected[0],
                                    doc.split?doc.selected[1]:0}};
-    if(!ActiveWindowTab().model.reset(doc.split,counts,selected)){
+    if(!mWorkspace.resetActive(doc.split,counts,selected)){
         StatusText().Text(L"지원하지 않는 작업 공간 배치입니다.");
         return;
     }

@@ -5,7 +5,7 @@
 #include "FileToolbar.xaml.h"
 #include "StatusFooter.xaml.h"
 #include "file_list_state.h"
-#include "window_tab_state.h"
+#include "window_workspace_controller.h"
 #include "../../src/base/shell_transfer_core.h"
 #include "../../src/base/shell_clipboard_core.h"
 #include "../../src/base/ui_preferences.h"
@@ -124,17 +124,13 @@ namespace winrt::FlyExplorer::implementation
         void OnHeaderSortClicked(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
 
     private:
-        std::vector<fxfile::previewtabs::WindowTabState> mWindowTabs{
-            fxfile::previewtabs::WindowTabState{0}};
-        std::size_t mActiveWindowTab=0;
-        std::uint64_t mNextWindowTabIdentity=1;
+        fxfile::previewtabs::WindowWorkspaceController mWorkspace{};
         fxfile::previewtabs::WindowTabState& ActiveWindowTab(){
-            return mWindowTabs.at(mActiveWindowTab);
+            return mWorkspace.active();
         }
         fxfile::previewtabs::WindowTabState const& ActiveWindowTab() const{
-            return mWindowTabs.at(mActiveWindowTab);
+            return mWorkspace.active();
         }
-        static constexpr std::size_t kMaxWindowTabs=10;
         bool CreateWindowTab(std::wstring const& startPath);
         bool ActivateWindowTab(std::size_t index);
         bool CloseWindowTab(std::size_t index);

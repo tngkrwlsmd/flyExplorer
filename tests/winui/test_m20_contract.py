@@ -20,14 +20,21 @@ class ModelAndFullShell(unittest.TestCase):
             "filesystemPaths","nextRoute_=1"):
    self.assertIn(v,h)
   ui=source("app/winui/MainWindow.xaml.h")
-  self.assertIn("std::vector<fxfile::previewtabs::WindowTabState> mWindowTabs",ui)
-  self.assertIn("mNextWindowTabIdentity=1",ui)
+  controller=source("app/winui/window_workspace_controller.h")
+  self.assertIn("WindowWorkspaceController mWorkspace",ui)
+  self.assertNotIn("mWindowTabs",ui)
+  self.assertNotIn("mNextWindowTabIdentity",ui)
+  self.assertIn("std::vector<WindowTabState> states_",controller)
+  self.assertIn("std::uint64_t nextIdentity_=1",controller)
   self.assertNotIn("struct PaneState",ui)
  def test_all_real_tab_and_pane_commands_dispatch_through_native_model(self):
   cpp=source("app/winui/MainWindow.xaml.cpp")
+  controller=source("app/winui/window_workspace_controller.cpp")
   for v in ("Command::AddTab","Command::CloseTab","Command::ToggleSplit",
             "Command::ActivatePane","Command::SelectTab"):
    self.assertIn(v,cpp)
+  self.assertGreaterEqual(cpp.count("mWorkspace.dispatch("),5)
+  self.assertIn("active().model.dispatch(command,side,tab)",controller)
   self.assertNotIn("mPanes",cpp)
   self.assertNotIn("mNextRoute",cpp)
  def test_request_and_event_matching_keep_stale_helpers_out_of_ui(self):
@@ -40,7 +47,7 @@ class ModelAndFullShell(unittest.TestCase):
   self.assertIn("nextRoute_++",lib)
  def test_workspace_reset_uses_native_model_and_still_owns_workers(self):
   src=source("app/winui/m19_features.cpp")
-  self.assertIn("ActiveWindowTab().model.reset(doc.split,counts,selected)",src)
+  self.assertIn("mWorkspace.resetActive(doc.split,counts,selected)",src)
   self.assertIn("mSupervisor->forget(route)",src)
   self.assertIn("ActiveWindowTab().model.markPending(side,next.first,id,false)",src)
  def test_winui_full_frame_has_light_dark_system_and_this_pc(self):
@@ -68,7 +75,7 @@ class ModelAndFullShell(unittest.TestCase):
    self.assertIn(x,code)
  def test_actual_project_links_both_native_and_winui_shell(self):
   xml=source("app/winui/flyExplorer.project-template.xml")
-  for x in ("explorer_ui_state.cpp","m20_shell.cpp","m19_features.cpp",
+  for x in ("explorer_ui_state.cpp","window_workspace_controller.cpp","m20_shell.cpp","m19_features.cpp",
             "shell_isolated_supervisor.cpp","directory_watcher.cpp"):
    self.assertIn(x,xml)
  def test_owned_real_gui_harness_reaches_actual_theme_pixels(self):
@@ -90,8 +97,14 @@ class V7WindowTabEngineContract(unittest.TestCase):
   for token in ("kRouteStride","model(id*kRouteStride)"):
    self.assertIn(token,state)
   self.assertIn("Model::Model(std::uint64_t routeBase)",core)
+  controller=(root/"app/winui/window_workspace_controller.cpp").read_text(encoding="utf-8")
   for token in ("CreateWindowTab","ActivateWindowTab","CloseWindowTab",
                 "SuspendActiveWindowTab","ReleaseWindowTabRoutes"):
    self.assertIn(token,header);self.assertIn("MainWindow::"+token,impl)
+  for token in ("WindowWorkspaceController::create","WindowWorkspaceController::activate",
+                "WindowWorkspaceController::close","WindowWorkspaceController::replace"):
+   self.assertIn(token,controller)
+  self.assertNotIn("mWindowTabs",header)
+  self.assertIn("mWorkspace.create()",impl)
   self.assertIn("mWatcher->unwatch(route)",impl)
   self.assertIn("mSupervisor->forget(route)",impl)

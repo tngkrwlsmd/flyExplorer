@@ -16,6 +16,9 @@ precedence over this recorded checkpoint.
 - Windows 11-style WinUI 3 shell with custom title bar/Mica, navigation,
   address/search, command bar, status surface and independent dual panes.
 - Functional top-level Window Tabs plus per-pane folder tabs.
+- V8-A extracts live WindowTab/Pane/PaneTab state-transition ownership into the
+  UI-independent WindowWorkspaceController under app/winui; MainWindow keeps
+  XAML presentation plus Shell/watcher side effects.
 - Ctrl+T, Ctrl+W, Ctrl+Tab and Ctrl+Shift+Tab Window Tab behavior.
 - Details, List, Small Icons and Medium Icons views.
 - Back/Forward/Up, filtering/sorting, local create/rename, guarded copy/move/

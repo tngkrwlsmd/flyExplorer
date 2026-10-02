@@ -128,7 +128,7 @@ namespace winrt::FlyExplorer::implementation
                 ui->ActivateWindowTab(static_cast<size_t>(index));
             }},
             [nativeWeak](int index){if(auto ui=nativeWeak.get()){
-                if(ui->mWindowTabs.size()==1){ui->Close();return;}
+                if(ui->mWorkspace.count()==1){ui->Close();return;}
                 ui->CloseWindowTab(static_cast<size_t>(index));
             }});
         RootShell().PreviewKeyDown(
@@ -145,13 +145,14 @@ namespace winrt::FlyExplorer::implementation
                     if(key==Windows::System::VirtualKey::T){
                         if(ui->CreateWindowTab(L"shell:MyComputerFolder"))ui->RefreshWindowTabs();
                     }else if(key==Windows::System::VirtualKey::W){
-                        if(ui->mWindowTabs.size()==1)ui->Close();
-                        else if(ui->CloseWindowTab(ui->mActiveWindowTab))ui->RefreshWindowTabs();
-                    }else if(ui->mWindowTabs.size()>1){
-                        const auto count=ui->mWindowTabs.size();
+                        if(ui->mWorkspace.count()==1)ui->Close();
+                        else if(ui->CloseWindowTab(ui->mWorkspace.activeIndex()))ui->RefreshWindowTabs();
+                    }else if(ui->mWorkspace.count()>1){
+                        const auto count=ui->mWorkspace.count();
+                        const auto active=ui->mWorkspace.activeIndex();
                         const bool shift=(::GetKeyState(VK_SHIFT)&0x8000)!=0;
-                        const auto next=shift?(ui->mActiveWindowTab+count-1)%count:
-                            (ui->mActiveWindowTab+1)%count;
+                        const auto next=shift?(active+count-1)%count:
+                            (active+1)%count;
                         if(ui->ActivateWindowTab(next))ui->RefreshWindowTabs();
                     }
                     args.Handled(true);
@@ -363,8 +364,8 @@ namespace winrt::FlyExplorer::implementation
         if(mSessionRevision)mSessionRevision->fetch_add(1);
         if(mTransferProgress)mTransferProgress->cancel.store(true);
         for(auto& cancel:mDetailCancel)if(cancel)cancel->store(true);
-        for(auto& state:mWindowTabs)
-            for(auto& files:state.fileLists)files.invalidate();
+        for(std::size_t i=0;i<mWorkspace.count();++i)
+            for(auto& files:mWorkspace.state(i).fileLists)files.invalidate();
         try{if(mTransferTimer)mTransferTimer.Stop();}catch(...){}
         if(mSupervisor)mSupervisor->shutdown();
         if(mWatcher)mWatcher->shutdown();
@@ -1208,10 +1209,10 @@ namespace winrt::FlyExplorer::implementation
     void MainWindow::RefreshWindowTabs()
     {
         if(mSuppressWindowTabRefresh)return;
-        std::vector<std::wstring> labels;labels.reserve(mWindowTabs.size());
-        for(auto const& state:mWindowTabs)labels.push_back(WindowTabLabel(state));
+        std::vector<std::wstring> labels;labels.reserve(mWorkspace.count());
+        for(auto const& state:mWorkspace.states())labels.push_back(WindowTabLabel(state));
         winrt::get_self<winrt::FlyExplorer::implementation::ShellHeader>(HeaderView())
-            ->SetWindowTabs(labels,static_cast<int>(mActiveWindowTab));
+            ->SetWindowTabs(labels,static_cast<int>(mWorkspace.activeIndex()));
     }
     void MainWindow::ReleaseWindowTabRoutes(
         fxfile::previewtabs::WindowTabState& state)
@@ -1279,12 +1280,9 @@ namespace winrt::FlyExplorer::implementation
     }
     bool MainWindow::CreateWindowTab(std::wstring const& startPath)
     {
-        if(mWindowTabs.size()>=kMaxWindowTabs||
-           mNextWindowTabIdentity>0xffffffffull)return false;
+        if(!mWorkspace.canCreate())return false;
         SuspendActiveWindowTab();
-        const auto identity=mNextWindowTabIdentity++;
-        mWindowTabs.emplace_back(identity);
-        mActiveWindowTab=mWindowTabs.size()-1;
+        if(!mWorkspace.create())return false;
         const auto defaultView=static_cast<FileViewMode>(
             (std::clamp)(mPreferences.defaultViewMode,0,3));
         for(auto& list:ActiveWindowTab().fileLists)list.viewMode=defaultView;
@@ -1296,25 +1294,21 @@ namespace winrt::FlyExplorer::implementation
     }
     bool MainWindow::ActivateWindowTab(std::size_t index)
     {
-        if(index>=mWindowTabs.size())return false;
-        if(index==mActiveWindowTab)return true;
+        if(index>=mWorkspace.count())return false;
+        if(mWorkspace.isActive(index))return true;
         SuspendActiveWindowTab();
-        mActiveWindowTab=index;
+        if(!mWorkspace.activate(index))return false;
         ApplyActiveWindowTab(L"창 탭을 전환했습니다.");
         return true;
     }
     bool MainWindow::CloseWindowTab(std::size_t index)
     {
-        if(mWindowTabs.size()<=1||index>=mWindowTabs.size())return false;
-        const bool closingActive=index==mActiveWindowTab;
+        if(mWorkspace.count()<=1||index>=mWorkspace.count())return false;
+        const bool closingActive=mWorkspace.isActive(index);
         if(closingActive)SuspendActiveWindowTab();
-        ReleaseWindowTabRoutes(mWindowTabs[index]);
-        mWindowTabs.erase(mWindowTabs.begin()+static_cast<std::ptrdiff_t>(index));
-        if(index<mActiveWindowTab)--mActiveWindowTab;
-        else if(closingActive){
-            if(mActiveWindowTab>=mWindowTabs.size())mActiveWindowTab=mWindowTabs.size()-1;
-            ApplyActiveWindowTab(L"창 탭을 닫았습니다.");
-        }
+        ReleaseWindowTabRoutes(mWorkspace.state(index));
+        if(!mWorkspace.close(index))return false;
+        if(closingActive)ApplyActiveWindowTab(L"창 탭을 닫았습니다.");
         else RefreshWindowTabs();
         return true;
     }
@@ -1359,7 +1353,7 @@ namespace winrt::FlyExplorer::implementation
     }
     void MainWindow::ActivatePane(int side)
     {
-        if(!ActiveWindowTab().model.dispatch(fxfile::explorerui::Command::ActivatePane,side)
+        if(!mWorkspace.dispatch(fxfile::explorerui::Command::ActivatePane,side)
                     .accepted)return;
         const auto& nav=Current();
         const auto address=nav.snapshot().parsingName;
@@ -1641,7 +1635,7 @@ namespace winrt::FlyExplorer::implementation
             StatusText().Text(L"먼저 현재 폴더를 불러와 주세요.");
             return;
         }
-        if(!ActiveWindowTab().model.dispatch(fxfile::explorerui::Command::AddTab,
+        if(!mWorkspace.dispatch(fxfile::explorerui::Command::AddTab,
                             ActiveWindowTab().model.activePane).accepted)return;
         QueuePidl(ActiveWindowTab().model.activePane,std::move(start),
                   fxfile::shellnav::NavigationAction::Open);
@@ -1654,7 +1648,7 @@ namespace winrt::FlyExplorer::implementation
             StatusText().Text(L"각 창에는 탭을 최소 한 개 유지해야 합니다.");
             return;
         }
-        const auto change=ActiveWindowTab().model.dispatch(
+        const auto change=mWorkspace.dispatch(
             fxfile::explorerui::Command::CloseTab,ActiveWindowTab().model.activePane);
         if(!change.accepted)return;
         mSupervisor->forget(change.releasedRoute);
@@ -1665,7 +1659,7 @@ namespace winrt::FlyExplorer::implementation
     }
     void MainWindow::OnSplitClicked(IInspectable const&,RoutedEventArgs const&)
     {
-        if(!ActiveWindowTab().model.dispatch(fxfile::explorerui::Command::ToggleSplit)
+        if(!mWorkspace.dispatch(fxfile::explorerui::Command::ToggleSplit)
                   .accepted)return;
         SecondaryPane().Visibility(ActiveWindowTab().model.split?Visibility::Visible:Visibility::Collapsed);
         PaneDivider().Visibility(ActiveWindowTab().model.split?Visibility::Visible:Visibility::Collapsed);
@@ -1711,7 +1705,7 @@ namespace winrt::FlyExplorer::implementation
         // WinUI raises deferred SelectionChanged for programmatic strip
         // rebuilds. Only a DIFFERENT selected tab is user navigation.
         if (static_cast<size_t>(view.SelectedIndex())==pane.active)return;
-        if(!ActiveWindowTab().model.dispatch(fxfile::explorerui::Command::SelectTab,0,
+        if(!mWorkspace.dispatch(fxfile::explorerui::Command::SelectTab,0,
                  static_cast<size_t>(view.SelectedIndex())).accepted)return;
         Refresh(L"왼쪽 탭을 선택했습니다.");
     }
@@ -1723,7 +1717,7 @@ namespace winrt::FlyExplorer::implementation
         auto& pane=ActiveWindowTab().model.panes[1];
         if (static_cast<size_t>(view.SelectedIndex())>=pane.tabs.size())return;
         if (static_cast<size_t>(view.SelectedIndex())==pane.active)return;
-        if(!ActiveWindowTab().model.dispatch(fxfile::explorerui::Command::SelectTab,1,
+        if(!mWorkspace.dispatch(fxfile::explorerui::Command::SelectTab,1,
                  static_cast<size_t>(view.SelectedIndex())).accepted)return;
         Refresh(L"오른쪽 탭을 선택했습니다.");
     }

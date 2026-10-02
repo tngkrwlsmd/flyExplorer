@@ -85,11 +85,11 @@ class M23Contracts(unittest.TestCase):
    self.assertIn(key,res)
  def test_real_winui_tab_sort_split_window_active_restored(self):
   source=src(A+"m23_session.cpp")
-  for name in ("data.windowTabs.reserve(mWindowTabs.size())","data.activeWindow",
+  for name in ("data.windowTabs.reserve(mWorkspace.count())","data.activeWindow",
                "splitPermille","nameColumnWidth","viewMode","sortMode",
                "historyLocations","historyPathsFromLocations","restoreHistoryPaths",
-               "ui->mWindowTabs=std::move(*restored)","ui->mActiveWindowTab",
-               "ApplyActiveWindowTab","mSessionEpoch"):
+               "ui->mWorkspace.replace(std::move(*restored)",
+               "mWorkspace.activeIndex()","ApplyActiveWindowTab","mSessionEpoch"):
    self.assertIn(name,source)
   save_part=source[source.index("void MainWindow::OnSavePrivateSession"):source.index("void MainWindow::LoadPrivateSession")]
   self.assertNotIn("SHGetPathFromIDListEx",save_part)

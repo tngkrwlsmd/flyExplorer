@@ -189,8 +189,11 @@ class FluentShellContract(unittest.TestCase):
         self.assertIn("fxfile::explorerui::Model model",state)
         self.assertIn("fileLists",state)
         self.assertNotIn("Microsoft::UI::Xaml",state)
-        self.assertIn("mWindowTabs",header)
-        self.assertIn("mActiveWindowTab=0",header)
+        controller=text("window_workspace_controller.h")
+        self.assertIn("WindowWorkspaceController mWorkspace",header)
+        self.assertNotIn("mWindowTabs",header)
+        self.assertNotIn("mActiveWindowTab",header)
+        self.assertIn("std::vector<WindowTabState> states_",controller)
         self.assertIn("ActiveWindowTab()",header)
         self.assertNotIn("fxfile::explorerui::Model mModel",header)
 
@@ -224,7 +227,7 @@ class FluentShellContract(unittest.TestCase):
         self.assertIn("historyPathsFromLocations",shell_h)
         self.assertIn("restoreHistoryPaths",app)
         self.assertIn("session->windowTabs",app)
-        self.assertIn("ui->mWindowTabs=std::move(*restored)",app)
+        self.assertIn("ui->mWorkspace.replace(std::move(*restored)",app)
 
     def test_v7_functional_window_tab_chrome_contract(self):
         root=Path(__file__).resolve().parents[2]
