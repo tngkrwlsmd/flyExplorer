@@ -121,8 +121,11 @@ try:
  for key in ids:assert element(key).exists(timeout=5),("Missing XAML control",key)
  print("REAL_WINUI_SHELL_CONTROLS",len(ids),"DUAL_PANES_AND_TABS=True",flush=True)
  startup_status=element("StatusText").window_text().lower()
+ # The isolated supervisor permits two bounded 4.5-second attempts. Leave
+ # room for that recovery budget plus process/UIA publication without
+ # changing the product's native deadline.
  eventually(lambda:str(left).lower() in element("AddressBox").get_value().lower(),
-            "UI-independent native core/helper was not active at startup",12)
+            "UI-independent native core/helper was not active at startup",18)
  assert "?? ?????" not in element("StatusText").window_text(),(
    "native helper committed the owned route but left an error status",
    element("StatusText").window_text())

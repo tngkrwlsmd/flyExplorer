@@ -110,6 +110,15 @@ class BuildEnvironmentContract(unittest.TestCase):
         )
         self.assertNotIn('if /I "%STAGE%"=="policy" (', body)
 
+    def test_owned_gui_startup_wait_covers_supervisor_retry_budget(self):
+        gui = (ROOT / "tests/winui/test_shell_gui.py").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn(
+            '"UI-independent native core/helper was not active at startup",18',
+            gui,
+        )
+
     def test_self_hosted_failure_artifacts_are_bounded_and_uploaded(self):
         workflow = (
             ROOT / ".github/workflows/windows-build.yml"

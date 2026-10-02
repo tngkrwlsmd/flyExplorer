@@ -24,8 +24,13 @@ def run(*,win,element,safe_click,focus,eventually,owned,localdata,env,exe):
     eventually(lambda:len(nested_rows())==1,"v7 Nested folder row missing",10)
     # AddressBox Enter has its own full-suite contract. Here use the actual
     # folder activation route so this targeted test measures WindowTab-owned
-    # navigation/history rather than keyboard-edit focus timing.
-    nested_rows()[0].double_click_input()
+    # navigation/history rather than keyboard-edit focus timing. Window focus
+    # can replace the UIA row peer after watcher publication, so resolve the
+    # exact owned row again immediately before the physical gesture.
+    focus()
+    rows=nested_rows()
+    assert len(rows)==1,("v7 Nested row lost before physical input",len(rows))
+    rows[0].double_click_input()
     eventually(lambda:element("BackButton").is_enabled() and
                not any(x.element_info.control_type=="ListItem"
                        for x in element("LeftFiles").descendants()),
