@@ -52,6 +52,23 @@ Reuse evidence only when binary/source revision, configuration, environment and
 tested condition are unchanged. Do not relabel an older binary or different
 DPI/environment as current acceptance.
 
+## Architecture/refactor discipline
+
+For SOLID/design-pattern refactors:
+- start from a concrete oversized responsibility or volatile dependency, not a
+  pattern name;
+- extract one coherent owner at a time and preserve behavior;
+- prefer composition and small value/request APIs over inheritance;
+- do not add abstraction layers unless they reduce coupling, isolate an OS/
+  async boundary, or enable a real substitution/test seam;
+- require a focused contract for the new ownership boundary;
+- do not combine architectural extraction with unrelated visual/feature work;
+- after state/lifecycle extraction, run targeted GUI acceptance including
+  normal process exit before deciding whether a full GUI regression is needed.
+
+A smaller architecture with fewer unnecessary abstractions is preferred over a
+textbook pattern graph that increases call depth and debugging cost.
+
 ## Git logical units
 
 When commit/push is approved for the task, commit and normal-push each

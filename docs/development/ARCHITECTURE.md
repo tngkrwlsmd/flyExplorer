@@ -32,6 +32,180 @@ Theme/language are application preferences. Window geometry and active Window
 Tab are session state. A pane owns its pane-local tab collection; a PaneTab owns
 its navigation identity/history.
 
+## SOLID rules for this codebase
+
+SOLID is used to preserve change boundaries, not to maximize the number of
+classes or interfaces.
+
+### Single Responsibility Principle (primary rule)
+
+A responsibility is a reason to change. Presentation, workspace-state
+transition, persistence, Shell navigation, search, transfer/clipboard and
+lifecycle coordination are separate reasons to change.
+
+MainWindow is allowed to:
+- receive XAML events;
+- translate UI input into controller calls;
+- project controller/native state back into XAML;
+- participate in the top-level composition/lifetime boundary.
+
+MainWindow should not gain a new independent state machine or persistence/
+worker subsystem. Existing oversized MainWindow responsibilities should be
+extracted behavior-preservingly when touched by substantial work.
+
+A separate .cpp file containing MainWindow methods is still MainWindow
+responsibility; physical file separation does not satisfy SRP.
+
+### Open/Closed Principle
+
+Prefer the simplest closed representation that matches the domain. Enums and
+switches are acceptable for deliberately closed sets such as a small finite
+theme or view-mode set.
+
+Use a strategy/polymorphic seam when:
+- new variants repeatedly modify multiple unrelated branches;
+- each variant has substantial behavior/lifecycle of its own; or
+- runtime substitution is a real product/test requirement.
+
+Do not replace every switch with subclasses.
+
+### Liskov Substitution Principle
+
+The product intentionally favors composition, final classes and value objects.
+Do not create inheritance hierarchies solely for reuse. Where a substitutable
+base/interface exists, every implementation must preserve success/failure,
+ownership, cancellation, lifetime and side-effect contracts expected by callers.
+
+### Interface Segregation Principle
+
+Subsystem seams should expose focused operations. Prefer small APIs such as
+request/validate/execute, load/save/clear, or submit/forget/shutdown over a
+catch-all application service. A caller should not receive file mutation,
+session, search and Shell-provider operations through one wide interface.
+
+### Dependency Inversion Principle
+
+High-level workspace/UI policy must not depend on low-level Shell/COM process
+details more than necessary. Stable seams are most valuable at:
+- Shell/provider/process boundaries;
+- persistence/storage boundaries;
+- asynchronous worker/watcher boundaries;
+- functionality that needs deterministic test substitution.
+
+Do not create an interface around pure value transformations merely to satisfy
+DIP. Composition roots may know concrete implementations; ordinary UI behavior
+should not repeatedly construct and coordinate low-level infrastructure.
+
+## Design-pattern map
+
+Use patterns only where they clarify an existing responsibility.
+
+### State / Coordinator — window workspace
+
+WindowTab/Pane/PaneTab values represent state. Transition rules for create,
+activate, close, split, active pane and tab ownership belong to one workspace
+coordinator rather than being distributed across XAML handlers.
+
+Preferred direction:
+
+    MainWindow
+        -> WindowWorkspaceController
+             -> WindowTabState[]
+             -> Pane/PaneTab state
+
+State objects should remain mostly values; do not push XAML behavior into them.
+
+### Memento — private session
+
+ui_session is the serializable snapshot/store boundary. Session orchestration
+should be separated into:
+- origin state: workspace/controller state;
+- memento: fxfile::uisession::Session and nested DTOs;
+- caretaker/coordinator: capture, save/load, legacy v1 mapping, v2 restore,
+  epoch/revision invalidation and close cancellation.
+
+Serialization remains UI-independent in src/base.
+
+### Facade / Proxy / Adapter — Shell integration
+
+IsolatedShellSupervisor is a bounded proxy/facade over helper processes and
+Shell calls. ShellNavigationController (or equivalent focused owner) should
+coordinate supervisor/watcher requests and adapt IsolatedResult/Snapshot values
+into workspace/presentation state.
+
+Do not expose pipe, Job object or COM extension details to XAML handlers.
+
+### Observer — watchers and asynchronous completion
+
+Directory/Shell watchers and worker callbacks use observer-style completion.
+Callbacks must preserve:
+- weak/no-use-after-close UI ownership;
+- cancellation before dispatcher teardown;
+- route/request/epoch stale-result rejection;
+- no synchronous provider work on the XAML thread.
+
+### Command/request object — file operations
+
+File mutation/transfer behavior should be represented by bounded request data
+and coordinated execution. Current Kind/Request/Report forms are preferred over
+one heap-allocated command subclass per toolbar button.
+
+Introduce richer Command objects only when undo/redo, durable queues,
+composition/macros or independently schedulable commands become real
+requirements.
+
+### Strategy — variable behavior families
+
+Use Strategy for behavior families only after variants own meaningful distinct
+logic. Candidate examples are future complex file-view rendering modes or
+provider policies. Current small closed-set switches are acceptable until that
+threshold is reached.
+
+### Composition root / Factory
+
+Concrete supervisor/watcher/store construction belongs at a small explicit
+composition boundary. A dedicated factory is warranted only when implementation
+selection varies by configuration/environment or deterministic tests need
+replacement. Avoid factory-per-class architecture.
+
+## Target controller boundaries
+
+The intended evolutionary direction is:
+
+    MainWindow
+      |-- WindowWorkspaceController  : WindowTab/Pane/PaneTab transitions
+      |-- SessionCoordinator         : session capture/restore/lifetime
+      |-- ShellNavigationController  : navigation, supervisor, watchers
+      |-- FileOperationController    : clipboard/transfer/collision/recycle
+      '-- SearchController           : search request/cancel/recent state
+
+This is an extraction map, not a mandate to perform a big-bang rewrite. Create a
+controller when a coherent responsibility is being changed or when extracting
+it materially reduces coupling/race risk.
+
+Controllers under app/winui may depend on WinUI only when presentation/
+DispatcherQueue coordination requires it. Move a component to src/base only
+when its public contract is genuinely WinUI-independent.
+
+## Refactor acceptance rules
+
+Architecture refactors must normally be behavior-preserving:
+- do not combine responsibility extraction with unrelated UX/feature changes;
+- keep session schema compatibility unless migration is the explicit task;
+- preserve Shell process/watcher/cancellation safety boundaries;
+- retain real exit-0 requirements and protected user-settings invariants;
+- add focused source contracts for new ownership seams;
+- run targeted GUI acceptance for any moved lifecycle/state behavior, then the
+  smallest required regression.
+
+Avoid these anti-patterns:
+- God Object/MainWindow accumulation;
+- Service Locator or mutable global singleton state;
+- interface/factory/class proliferation without a variation point;
+- deep inheritance for orchestration;
+- XAML/WinRT leakage into UI-independent src/base code;
+- pattern names used as justification without a measurable change boundary.
+
 ## Shell isolation
 
 No third-party Shell provider or potentially blocking Shell extension call may

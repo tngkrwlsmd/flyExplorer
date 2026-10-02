@@ -55,6 +55,74 @@ machine-wide install and similar OS-global effects are separate explicit gates.
 ko-KR is the default for new app-owned UI. Preserve true UTF-8 Unicode and
 validate real GUI behavior when relevant.
 
+## SOLID and design-pattern policy
+
+Architecture work must improve responsibility boundaries without introducing
+ceremonial abstractions. Apply SOLID as a design test, not as a requirement to
+create an interface/class for every function.
+
+- **SRP first:** one owner for one reason to change. MainWindow is the XAML
+  composition/presentation boundary; do not add new independent persistence,
+  search, transfer, navigation or workspace state machines directly to it.
+  File splitting alone is not responsibility splitting when methods still
+  belong to one oversized owner.
+- **OCP pragmatically:** stable closed sets such as small enums may use switch
+  statements. Introduce Strategy/polymorphism only when behavior families
+  genuinely vary or extension repeatedly requires editing unrelated code.
+- **LSP through simple composition:** prefer final/value types and composition
+  over inheritance hierarchies. A subtype must preserve the complete observable
+  contract of its base; do not add inheritance merely to claim reuse.
+- **ISP at subsystem boundaries:** keep native APIs small and purpose-specific.
+  UI code should depend on only the operations it needs, not a catch-all file
+  manager/service interface.
+- **DIP where volatility warrants it:** isolate OS/Shell/async/persistence
+  boundaries behind stable controller/facade/store seams when substitution,
+  lifecycle control or testability benefits. Do not wrap deterministic value
+  helpers in one-method interfaces without a real variation point.
+
+Preferred project patterns:
+- Window workspace state -> State/Coordinator ownership.
+- Private session capture/restore -> Memento-style snapshot plus a caretaker/
+  coordinator; serialization remains in src/base.
+- Shell navigation/provider isolation -> Facade/Proxy plus Adapter from native
+  results to presentation state.
+- Watchers/async completion -> Observer/callback with weak UI ownership,
+  cancellation and stale-route rejection.
+- File operations -> request/command objects plus a coordinating controller;
+  do not create one command class per button unless undo/queue/macro behavior
+  requires it.
+- View/render modes -> Strategy only after mode-specific behavior becomes large
+  enough that switch-based closed-set handling is no longer simpler.
+- Object creation -> keep a small explicit composition root. Add factories only
+  when construction genuinely varies or tests need substitution.
+
+For new or refactored UI behavior, prefer this ownership direction:
+
+    MainWindow (XAML events/presentation)
+        -> WindowWorkspaceController
+        -> SessionCoordinator
+        -> ShellNavigationController
+        -> FileOperationController
+        -> SearchController
+        -> focused src/base values/services
+
+These controller names describe responsibility boundaries, not a requirement to
+create all of them before needed. Extract behavior-preservingly, one coherent
+responsibility at a time.
+
+Prohibited architecture shortcuts:
+- growing MainWindow into a God Object;
+- renaming/splitting files while retaining the same oversized owner;
+- service locator/global mutable singleton state;
+- interface-per-class/factory-per-class pattern inflation;
+- deep inheritance for WinUI or Shell orchestration;
+- moving WinUI/XAML types into src/base;
+- broad rewrites that mix architecture extraction with unrelated feature
+  behavior changes.
+
+See docs/development/ARCHITECTURE.md for the detailed mapping and extraction
+criteria.
+
 ## UI direction
 
 Windows 11 File Explorer is the primary visual/interaction reference using
