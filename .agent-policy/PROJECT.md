@@ -50,6 +50,9 @@ and prevents late DispatcherQueue completions from turning teardown into
   FlyShellIsolationHelper.exe are required.
 - Potentially blocking Shell/provider behavior stays off the XAML UI thread and
   behind bounded isolation.
+- Project CI runs on the repository-scoped interactive self-hosted Windows x64
+  runner; pushes to main use the Release + GUI validation scope automatically.
+- GitHub-hosted runners are not part of the active flyExplorer CI path.
 
 ## Open gates
 
