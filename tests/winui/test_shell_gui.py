@@ -56,8 +56,9 @@ def ownedwindows(pid):
   return 1
  u.EnumWindows(cb,0)
  return found
+GUI_TIMEOUT_SCALE=1.5 if os.environ.get("GITHUB_ACTIONS")=="true" else 1.0
 def eventually(fn,label,timeout=8):
- limit=time.monotonic()+timeout
+ limit=time.monotonic()+timeout*GUI_TIMEOUT_SCALE
  while time.monotonic()<limit:
   try:
    if fn():return True

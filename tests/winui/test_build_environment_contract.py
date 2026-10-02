@@ -110,6 +110,19 @@ class BuildEnvironmentContract(unittest.TestCase):
         )
         self.assertNotIn('if /I "%STAGE%"=="policy" (', body)
 
+    def test_owned_gui_actions_timeout_scale_is_bounded(self):
+        gui = (ROOT / "tests/winui/test_shell_gui.py").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn(
+            'GUI_TIMEOUT_SCALE=1.5 if os.environ.get("GITHUB_ACTIONS")=="true" else 1.0',
+            gui,
+        )
+        self.assertIn(
+            "limit=time.monotonic()+timeout*GUI_TIMEOUT_SCALE",
+            gui,
+        )
+
     def test_owned_gui_startup_wait_covers_supervisor_retry_budget(self):
         gui = (ROOT / "tests/winui/test_shell_gui.py").read_text(
             encoding="utf-8"
