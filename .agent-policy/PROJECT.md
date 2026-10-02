@@ -26,7 +26,7 @@ consumer core; this PROJECT.md remains project-owned across bundle refreshes.
     {"name": "winui-tests", "path": "tests/winui", "responsibility": "source, native and owned GUI contracts"}
   ],
   "review": {
-    "reviewed_revision": "50753e5a406f35aeb2aa949bb4672d3dc4e23c32",
+    "reviewed_revision": "aab5e4b0713cef7ee3c1ba52b9de20ce76f3cb3f",
     "reviewed_at": "2026-10-02",
     "reviewed_paths": [
       "app/winui",
@@ -55,9 +55,9 @@ consumer core; this PROJECT.md remains project-owned across bundle refreshes.
 
 ## Current product checkpoint
 
-Current main includes the V8-A WindowWorkspaceController extraction introduced
-at 15764dc and the follow-up owned-GUI stabilization through 3c2a633. Live Git
-refs take priority.
+Current main includes V8-A WindowWorkspaceController and V8-B
+SessionCoordinator responsibility extraction through 6c2a677. Live Git refs
+take priority.
 
 Current accepted UI/state includes functional top-level Window Tabs, dual panes
 with pane-local tabs, Explorer-like navigation/chrome, private session schema v2
@@ -65,17 +65,17 @@ restore, and WindowWorkspaceController ownership of top-level workspace state.
 
 ## Current verification
 
-Latest accepted product evidence before this policy-only synchronization:
+Latest accepted product evidence before this policy-gate correction:
 - canonical structure 4/4 PASS;
-- source contracts 132/132 PASS;
+- source contracts 138/138 PASS;
 - canonical Release build PASS;
 - owned Release GUI PASS with OWNED_WINUI_SHELL_EXIT 0;
 - private-session clear/revoke PASS;
 - protected six user-config hashes identical.
 
-The later 72a0288 workflow change exercised bounded failure artifact upload; its
-GUI failure did not change product code acceptance and remains separate CI/test
-evidence.
+The later CI-only remote-task workflow commit does not modify product code.
+Its first automatic GUI run exposed a history-readiness timing failure that is
+tracked separately from this policy-gate correction.
 
 The v7 close-race fix moved cancellation/shutdown to the window Closed boundary
 and prevents late DispatcherQueue completions from turning teardown into

@@ -82,7 +82,7 @@ Bundle/readiness/routing/risk를 자동 검증하면 **Profile B — Validated**
 
 실제 tool/API/action 직전에 allow/block/approval/override를 집행해야 하면 **Profile C — Enforced Runtime**으로 확장한다. Planner와 독립적인 actual operation 관찰, concrete target/environment/exposure facts, exact approval/override binding, atomic replay consumption, issuer/transport trust와 final dispatcher가 필요하다. Bundle 설치나 `--routing-mode enforcement`만으로 Profile C가 되지 않는다.
 
-상세 설치·PROJECT bootstrap/readiness·A→B→C upgrade 절차의 primary owner는 [Adoption profiles](docs/adoption-profiles.md)다. 작은 before/after 흐름은 [Profile A/B consumer example](examples/consumer-basic/README.md), 신뢰 경계는 [Threat model](docs/threat-model.md), 실행 형태는 [runtime adapter examples](examples/runtime-adapter/README.md)를 따른다.
+상세 설치·PROJECT bootstrap/readiness·A→B→C upgrade 절차의 primary owner는 [Adoption profiles](docs/adoption-profiles.md)다. 작은 before/after 흐름은 matching canonical source artifact의 `examples/consumer-basic/README.md`, 신뢰 경계는 [Threat model](docs/threat-model.md), 실행 형태는 matching canonical source artifact의 `examples/runtime-adapter/README.md`를 따른다.
 
 ## 어떤 Profile을 써야 하나?
 

@@ -99,6 +99,17 @@ class BuildEnvironmentContract(unittest.TestCase):
             lines,
             ["pywinauto==0.6.9", "Pillow==12.3.0", "psutil==7.2.2"],
         )
+    def test_policy_batch_gate_propagates_validator_failure(self):
+        body = (ROOT / "test.bat").read_text(encoding="utf-8")
+        self.assertIn('if /I "%STAGE%"=="policy" goto :policy', body)
+        self.assertIn(":policy", body)
+        self.assertIn(
+            'python -X utf8 "%~dp0tools\\policy\\run_policy_checks.py"\n'
+            'exit /b %ERRORLEVEL%',
+            body,
+        )
+        self.assertNotIn('if /I "%STAGE%"=="policy" (', body)
+
     def test_self_hosted_failure_artifacts_are_bounded_and_uploaded(self):
         workflow = (
             ROOT / ".github/workflows/windows-build.yml"
