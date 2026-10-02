@@ -84,6 +84,71 @@ class LanguageNeutralConformanceTests(unittest.TestCase):
         self.assertEqual(set(), exemptions - catalog)
         self.assertEqual(set(), direct.intersection(exemptions))
 
+    def test_priority_high_risk_operations_have_direct_coverage(self):
+        priority = {
+            "cloud.resource_change",
+            "cloud.resource_delete",
+            "database.schema_change",
+            "database.destructive_change",
+            "credential.rotate",
+            "iam.change",
+            "external.message_send",
+            "service.restart",
+            "storage.object_delete",
+            "network.configuration_change",
+            "artifact.publish",
+            "data.export",
+            "database.read",
+            "git.branch_change",
+            "git.commit",
+            "git.merge",
+            "git.rebase",
+        }
+        direct = set()
+        for vector in self.vectors:
+            data = vector["input"]
+            candidates = [data]
+            if isinstance(data.get("base"), dict):
+                candidates.append(data["base"])
+            if isinstance(data.get("boundary"), dict):
+                candidates.append(data["boundary"])
+            for item in candidates:
+                direct.update(item.get("planned_operations", []))
+                direct.update(item.get("actual_operations", []))
+        self.assertEqual(set(), priority - direct)
+
+    def test_runner_kind_registry_matches_schema_and_readme_delegates_registry(self):
+        schema_kinds = set(self.schema["properties"]["vectors"]["items"]["properties"]["kind"]["enum"])
+        self.assertEqual(schema_kinds, set(runner.RUNNERS))
+        readme = (ROOT / "conformance" / "README.md").read_text(encoding="utf-8")
+        self.assertIn("authoritative 목록은 `corpus.schema.json`", readme)
+        self.assertNotIn("지원 `kind`는 다음과 같다:", readme)
+
+    def test_cross_language_guide_names_kind_specific_wire_contracts(self):
+        readme = (ROOT / "conformance" / "README.md").read_text(encoding="utf-8")
+        required = [
+            "POLICY_CONTRACT.json",
+            "POLICY_CONTRACT.schema.json",
+            "ROUTING_ALIASES.json",
+            "ROUTING_ALIASES.schema.json",
+            "RUNTIME_ACTION.schema.json",
+            "APPROVAL_ASSERTION.schema.json",
+            "PROTECTED_OVERRIDE.schema.json",
+            "OPERATION_EXTENSION.schema.json",
+            "ADAPTER_CAPABILITIES.schema.json",
+            "conformance/golden.json",
+            "conformance/invalid.json",
+            "conformance/corpus.schema.json",
+            "conformance/result.schema.json",
+            "conformance/coverage.json",
+        ]
+        for rel in required:
+            self.assertIn(rel, readme)
+            self.assertTrue((ROOT / rel).is_file(), rel)
+        self.assertIn("`extension_contract`, `extension_boundary`", readme)
+        self.assertIn("`OPERATION_EXTENSION.schema.json` + `ADAPTER_CAPABILITIES.schema.json`", readme)
+        self.assertIn("Source of Truth는 계속 `corpus.schema.json` enum", readme)
+
     def test_reference_runner_passes_entire_corpus(self):
         result = runner.run_suite()
         jsonschema.Draft202012Validator.check_schema(self.result_schema)
