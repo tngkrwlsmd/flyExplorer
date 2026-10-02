@@ -47,16 +47,19 @@ class RealWinUIIsolationContract(unittest.TestCase):
     def test_ui_routes_via_process_and_change_watcher_not_shell_on_ui(self):
         ui=read(UI/"MainWindow.xaml.cpp")
         hdr=read(UI/"MainWindow.xaml.h")
+        controller=read(UI/"shell_navigation_controller.cpp")
+        controllerhdr=read(UI/"shell_navigation_controller.h")
         watcher=read(SRC/"directory_watcher.cpp")
-        for token in ("mSupervisor->submitParsing(",
-                      "mSupervisor->submit(","mSupervisor->forget(",
-                      "mWatcher->watch(","mWatcher->unwatch(",
+        for token in ("supervisor_->submitParsing(",
+                      "supervisor_->submit(","supervisor_->forget(",
+                      "watcher_->watch(","watcher_->unwatch(",
                       "result.filesystemPath"):
-            self.assertIn(token,ui)
-        self.assertIsNone(re.search(r"::SHGetPathFromIDListEx\s*\(",ui))
-        self.assertNotIn("mWorker->",ui)
-        self.assertIn("IsolatedShellSupervisor>",hdr)
-        self.assertIn("DirectoryWatcher>",hdr)
+            self.assertIn(token,controller)
+        self.assertIsNone(re.search(r"::SHGetPathFromIDListEx\s*\(",ui+controller))
+        self.assertNotIn("mWorker->",ui+controller)
+        self.assertIn("ShellNavigationController>",hdr)
+        self.assertIn("IsolatedShellSupervisor> supervisor_",controllerhdr)
+        self.assertIn("DirectoryWatcher> watcher_",controllerhdr)
         self.assertIn("WaitForMultipleObjects(",watcher)
         self.assertIn("directory_change_bridge.h",watcher)
         self.assertNotIn("CoInitialize",watcher)
@@ -78,7 +81,7 @@ class RealWinUIIsolationContract(unittest.TestCase):
 
     def test_m18_shell_namespace_notification_separate_from_shell_helpers(self):
         watch=read(SRC/"shell_namespace_watcher.cpp")
-        host=read(UI/"MainWindow.xaml.cpp")
+        host=read(UI/"shell_navigation_controller.cpp")
         project=read(UI/"flyExplorer.project-template.xml")
         harness=read(TESTS/"test_shell_gui.py")
         for token in ("SHChangeNotifyRegister","SHChangeNotification_Lock",
@@ -89,8 +92,8 @@ class RealWinUIIsolationContract(unittest.TestCase):
         self.assertNotIn("EnumObjects(",watch)
         self.assertNotIn("SHParseDisplayName(",watch)
         self.assertIn("shell_namespace_watcher.cpp",project)
-        self.assertIn("mShellWatcher->watch(",host)
-        self.assertIn("mShellWatcher->unwatch(",host)
+        self.assertIn("shellWatcher_->watch(",host)
+        self.assertIn("shellWatcher_->unwatch(",host)
         self.assertIn("FLY_M18_OWNED_SHELL_NOTIFY",harness)
         self.assertIn("REAL_WINUI_OWNED_SHELL_NAMESPACE_EVENT_REFRESH",harness)
 

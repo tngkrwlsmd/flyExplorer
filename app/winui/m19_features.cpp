@@ -86,16 +86,8 @@ void MainWindow::InitializeM19(){
 void MainWindow::ApplyWorkspace(fxfile::preview::Workspace&& doc) {
     // Validated off-thread BEFORE replacing any live pane. On this child
     // instance only: never mutate a different WinUI or MFC window.
-    for(int side=0;side!=2;++side){
-        for(auto route:ActiveWindowTab().model.panes[side].routeIds){
-            mSupervisor->forget(route);
-            mWatcher->unwatch(route);
-            mShellWatcher->unwatch(route);
-        }
-        mRestoreQueue[side].clear();
-        mWatchedRoutes[side]=mWatchTokens[side]=0;
-        mWatchedPaths[side].clear();
-    }
+    mShellNavigation->release(ActiveWindowTab().model);
+    for(int side=0;side!=2;++side)mRestoreQueue[side].clear();
     std::array<size_t,2> counts{{doc.paths[0].size(),
                                  doc.split?doc.paths[1].size():1}};
     std::array<size_t,2> selected{{doc.selected[0],
@@ -134,10 +126,9 @@ void MainWindow::QueueNextWorkspaceTab(int side) {
         const auto next=std::move(tasks.front());
         tasks.pop_front();
         if(next.first>=pane.routeIds.size())continue;
-        const auto id=mSupervisor->submitParsing(
-            side,pane.routeIds[next.first],next.second);
+        const auto id=mShellNavigation->submitParsing(
+            ActiveWindowTab().model,side,next.first,next.second,false);
         if(id) {
-            ActiveWindowTab().model.markPending(side,next.first,id,false);
             RefreshTabs(side);
             return;
         }

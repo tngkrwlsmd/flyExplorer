@@ -7,6 +7,7 @@
 #include "file_list_state.h"
 #include "window_workspace_controller.h"
 #include "session_coordinator.h"
+#include "shell_navigation_controller.h"
 #include "../../src/base/shell_transfer_core.h"
 #include "../../src/base/shell_clipboard_core.h"
 #include "../../src/base/ui_preferences.h"
@@ -14,10 +15,6 @@
 #include <mutex>
 #include "../../src/base/shell_navigation_core.h"
 #include "../../src/base/explorer_ui_state.h"
-#include "../../src/base/shell_async_worker.h"
-#include "../../src/base/shell_isolated_supervisor.h"
-#include "../../src/base/directory_watcher.h"
-#include "../../src/base/shell_namespace_watcher.h"
 #include "m19_workspace.h"
 #include "m19_search.h"
 #include <atomic>
@@ -216,9 +213,7 @@ namespace winrt::FlyExplorer::implementation
         void UpdateSelectionChrome();
         void UpdateCommandAvailability();
         void QueueSelectionPresentationUpdate();
-        std::unique_ptr<fxfile::shellnav::IsolatedShellSupervisor> mSupervisor;
-        std::unique_ptr<fxfile::directorychange::DirectoryWatcher> mWatcher;
-        std::unique_ptr<fxfile::directorychange::ShellNamespaceWatcher> mShellWatcher;
+        std::unique_ptr<fxfile::previewnav::ShellNavigationController> mShellNavigation;
         bool mOwnedShellNotifyTest=false;
         bool mOwnedComExhaustOnVirtual=false;
         std::array<std::deque<std::pair<size_t,std::wstring>>,2> mRestoreQueue{};
@@ -229,9 +224,6 @@ namespace winrt::FlyExplorer::implementation
         bool mRecentEdited=false;
         void EnsureExpandedPanelFits();
         void InitializeM19();
-        std::uint64_t mNextWatchToken=1;
-        std::array<std::uint64_t,2> mWatchedRoutes{},mWatchTokens{};
-        std::array<std::wstring,2> mWatchedPaths{};
         void QueuePath(int side,std::wstring path);
         void QueuePidl(int side,fxfile::shellnav::Location target,
                        fxfile::shellnav::NavigationAction action);

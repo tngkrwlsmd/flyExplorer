@@ -59,8 +59,8 @@ class M19IntegrationContracts(unittest.TestCase):
         self.assertIn("dispatch.TryEnqueue",src)
         self.assertIn("mSearchCancel->store(true)",code(
           "app/winui/MainWindow.xaml.cpp"))
-        self.assertIn("mSupervisor->forget(route)",src)
-        self.assertIn("mSupervisor->submitParsing(",src)
+        self.assertIn("mShellNavigation->release(ActiveWindowTab().model)",src)
+        self.assertIn("mShellNavigation->submitParsing(",src)
         self.assertIn("CreateProcessW(",src)
 
     def test_workspace_and_search_uia_controls_and_owned_harness(self):

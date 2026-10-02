@@ -240,7 +240,7 @@ namespace winrt::FlyExplorer::implementation
         // The worker owns NO MainWindow/WinRT UI object. Cross-apartment
         // notifications carry only owned native value snapshots/PIDLs and
         // enter the XAML thread through its actual DispatcherQueue.
-        mSupervisor=std::make_unique<fxfile::shellnav::IsolatedShellSupervisor>(
+        mShellNavigation=std::make_unique<fxfile::previewnav::ShellNavigationController>(
             [weak,dispatch](fxfile::shellnav::IsolatedResult answer) {
                 auto envelope=std::make_shared<fxfile::shellnav::IsolatedResult>(
                     std::move(answer));
@@ -248,15 +248,7 @@ namespace winrt::FlyExplorer::implementation
                     if(auto ui=weak.get())
                         ui->OnNativeResult(std::move(*envelope));
                 });
-            });
-        mWatcher=std::make_unique<fxfile::directorychange::DirectoryWatcher>(
-            [weak,dispatch](std::uint64_t route,std::uint64_t token) {
-                dispatch.TryEnqueue([weak,route,token] {
-                    if(auto ui=weak.get())ui->OnNativeChange(route,token);
-                });
-            });
-        mShellWatcher=std::make_unique<
-            fxfile::directorychange::ShellNamespaceWatcher>(
+            },
             [weak,dispatch](std::uint64_t route,std::uint64_t token) {
                 dispatch.TryEnqueue([weak,route,token] {
                     if(auto ui=weak.get())ui->OnNativeChange(route,token);
@@ -275,11 +267,13 @@ namespace winrt::FlyExplorer::implementation
             throw winrt::hresult_error(E_FAIL,L"현재 실행 파일 경로가 올바르지 않습니다.");
         helper.resize(last+1);
         helper+=L"FlyShellIsolationHelper.exe";
-        if(!mSupervisor->start(std::move(helper)))
+        using StartFailure=fxfile::previewnav::ShellNavigationController::StartFailure;
+        const auto startFailure=mShellNavigation->start(std::move(helper));
+        if(startFailure==StartFailure::Supervisor)
             throw winrt::hresult_error(E_FAIL,L"독립 Shell 작업자를 시작할 수 없습니다.");
-        if(!mWatcher->start())
+        if(startFailure==StartFailure::DirectoryWatcher)
             throw winrt::hresult_error(E_FAIL,L"독립 파일 변경 감시를 시작할 수 없습니다.");
-        if(!mShellWatcher->start())
+        if(startFailure==StartFailure::ShellNamespaceWatcher)
             throw winrt::hresult_error(E_FAIL,L"Shell 폴더 변경 감시를 시작할 수 없습니다.");
         const auto initial=StartFolder().native();
         bool testLeftDelay=false;
@@ -336,13 +330,13 @@ namespace winrt::FlyExplorer::implementation
             auto& pane=ActiveWindowTab().model.panes[side];
 #if defined(_DEBUG)
             if(side==0 && testLeftDelay){
-                pane.pending[0]=mSupervisor->submitOwnedTestDelay(
-                    0,pane.routeIds[0],initial);
+                mShellNavigation->submitOwnedTestDelay(
+                    ActiveWindowTab().model,0,0,initial,true);
                 continue;
             }
             if(side==0 && testLeftComDelay){
-                pane.pending[0]=mSupervisor->submitOwnedComDelay(
-                    0,pane.routeIds[0],initial);
+                mShellNavigation->submitOwnedComDelay(
+                    ActiveWindowTab().model,0,0,initial,false,true);
                 continue;
             }
 #endif
@@ -366,9 +360,7 @@ namespace winrt::FlyExplorer::implementation
         for(std::size_t i=0;i<mWorkspace.count();++i)
             for(auto& files:mWorkspace.state(i).fileLists)files.invalidate();
         try{if(mTransferTimer)mTransferTimer.Stop();}catch(...){}
-        if(mSupervisor)mSupervisor->shutdown();
-        if(mWatcher)mWatcher->shutdown();
-        if(mShellWatcher)mShellWatcher->shutdown();
+        if(mShellNavigation)mShellNavigation->shutdown();
         if(mSearchCancel)mSearchCancel->store(true);
     }
     MainWindow::~MainWindow()
@@ -392,23 +384,20 @@ namespace winrt::FlyExplorer::implementation
     }
     void MainWindow::QueuePath(int side,std::wstring path)
     {
-        auto& pane=ActiveWindowTab().model.panes[side];
-        const auto route=pane.routeIds[pane.active];
+        auto& model=ActiveWindowTab().model;
+        auto& pane=model.panes[side];
         std::uint64_t id=0;
 #if defined(_DEBUG)
         if(mOwnedComExhaustOnVirtual && side==0 &&
            path==L"shell:MyComputerFolder")
-            id=mSupervisor->submitOwnedComDelay(
-                side,route,std::move(path),true);
+            id=mShellNavigation->submitOwnedComDelay(
+                model,side,pane.active,std::move(path),true,true);
         else
 #endif
-            id=mSupervisor->submitParsing(side,route,std::move(path));
-        if(id) {
-            // At most one outstanding helper operation per active pane.
-            // Clear the canceled prior tab's UI pending marker too.
-            ActiveWindowTab().model.markPending(side,pane.active,id,true);
-            StatusText().Text(L"폴더를 불러오는 중입니다.");
-        } else StatusText().Text(L"이 위치로 이동할 수 없습니다.");
+            id=mShellNavigation->submitParsing(
+                model,side,pane.active,std::move(path),true);
+        if(id)StatusText().Text(L"폴더를 불러오는 중입니다.");
+        else StatusText().Text(L"이 위치로 이동할 수 없습니다.");
     }
     void MainWindow::QueuePidl(
         int side,fxfile::shellnav::Location target,
@@ -418,112 +407,65 @@ namespace winrt::FlyExplorer::implementation
             StatusText().Text(L"이 위치를 열 수 없습니다.");
             return;
         }
-        auto& pane=ActiveWindowTab().model.panes[side];
-        const auto id=mSupervisor->submit(
-            side,pane.routeIds[pane.active],std::move(target),action);
-        if(id) {
-            // At most one outstanding helper operation per active pane.
-            // Clear the canceled prior tab's UI pending marker too.
-            ActiveWindowTab().model.markPending(side,pane.active,id,true);
-            StatusText().Text(L"폴더를 불러오는 중입니다.");
-        } else StatusText().Text(L"폴더를 불러올 수 없습니다.");
+        const auto id=mShellNavigation->submitActive(
+            ActiveWindowTab().model,side,std::move(target),action);
+        if(id)StatusText().Text(L"폴더를 불러오는 중입니다.");
+        else StatusText().Text(L"폴더를 불러올 수 없습니다.");
     }
     void MainWindow::UpdateWatch(int side,bool force)
     {
-        auto& pane=ActiveWindowTab().model.panes[side];
-        const auto route=pane.routeIds[pane.active];
-        // This path is computed by the disposable Shell helper and passed
-        // as a bounded wire value. No SHGetPathFromIDListEx on WinUI STA.
-        const std::wstring path=(side==0 || ActiveWindowTab().model.split)?
-            pane.filesystemPaths[pane.active]:std::wstring{};
-        if(!force && route==mWatchedRoutes[side] &&
-           path==mWatchedPaths[side])return;
-        if(mWatchedRoutes[side]){
-            mWatcher->unwatch(mWatchedRoutes[side]);
-            mShellWatcher->unwatch(mWatchedRoutes[side]);
-        }
-        mWatchedRoutes[side]=0;
-        mWatchTokens[side]=0;
-        mWatchedPaths[side].clear();
-        const auto& location=pane.tabs[pane.active].snapshot().folder;
-        if(!path.empty() || location.valid()) {
-            const auto token=mNextWatchToken++;
-            if(!path.empty() && !(mOwnedShellNotifyTest && side==0))
-                mWatcher->watch(route,token,path);
-            else if(location.valid())
-                mShellWatcher->watch(route,token,location.get());
-            mWatchedRoutes[side]=route;
-            mWatchTokens[side]=token;
-            mWatchedPaths[side]=std::move(path);
-        }
+        mShellNavigation->updateWatch(
+            ActiveWindowTab().model,side,force,mOwnedShellNotifyTest);
     }
     void MainWindow::OnNativeResult(fxfile::shellnav::IsolatedResult result)
     {
-        for(int side=0;side!=2;++side) {
-            auto& pane=ActiveWindowTab().model.panes[side];
-            for(size_t i=0;i<pane.routeIds.size();++i) {
-                if(pane.routeIds[i]!=result.route ||
-                   pane.pending[i]!=result.request)continue;
-                if(!ActiveWindowTab().model.completeRequest(side,i,result.route,
-                                           result.request))continue;
-                if(FAILED(result.hr)) {
-                    if(i==pane.active) {
-                        if(result.timedOut)
-                            StatusText().Text(
-                                L"Shell 폴더가 4.5초씩 두 번 응답하지 않았습니다. "
-                                L"기존 폴더는 유지됩니다. 다시 시도하거나 다른 폴더를 선택하세요.");
-                        else if(result.networkRequest)
-                            StatusText().Text(
-                                L"네트워크 폴더에 접근할 수 없거나 권한이 없습니다. "
-                                L"기존 폴더는 유지됩니다.");
-                        else
-                            StatusText().Text(
-                                L"Shell 폴더를 열지 못했습니다. "
-                                L"기존 폴더는 유지됩니다.");
-                    }
-                    return;
-                }
-                using Action=fxfile::shellnav::NavigationAction;
-                using History=fxfile::shellnav::HistoryAction;
-                auto action=History::Open;
-                if(result.action==Action::Back)action=History::Back;
-                if(result.action==Action::Forward)action=History::Forward;
-                if(result.action==Action::Up)action=History::Up;
-                if(result.action==Action::Refresh)action=History::Refresh;
-                const auto applied=pane.tabs[i].accept(
-                    std::move(result.snapshot),action);
-                if(applied==S_OK) {
-                    pane.filesystemPaths[i]=std::move(result.filesystemPath);
-                    if(i==pane.active) {
-                        ClearFileDetails(side);
-                        Refresh(result.recovered?
-                            L"응답 지연 후 폴더를 불러왔습니다.":
-                            result.action==Action::Refresh?
-                            L"폴더 변경 알림을 반영했습니다.":
-                            L"폴더를 불러왔습니다.");
-                        UpdateWatch(side,true);
-                    }else RefreshTabs(side);
-                    QueueNextWorkspaceTab(side);
-                }else if(FAILED(applied)) {
-                    StatusText().Text(L"이전 탐색 결과를 무시했습니다.");
-                }
-                return;
+        using Kind=fxfile::previewnav::ShellNavigationController::CompletionKind;
+        const auto completed=mShellNavigation->accept(
+            ActiveWindowTab().model,std::move(result));
+        if(completed.kind==Kind::Ignored || completed.kind==Kind::NoChange)return;
+        if(completed.kind==Kind::Failed){
+            if(completed.active){
+                if(completed.timedOut)
+                    StatusText().Text(
+                        L"Shell 폴더가 4.5초씩 두 번 응답하지 않았습니다. "
+                        L"기존 폴더는 유지됩니다. 다시 시도하거나 다른 폴더를 선택하세요.");
+                else if(completed.networkRequest)
+                    StatusText().Text(
+                        L"네트워크 폴더에 접근할 수 없거나 권한이 없습니다. "
+                        L"기존 폴더는 유지됩니다.");
+                else
+                    StatusText().Text(
+                        L"Shell 폴더를 열지 못했습니다. "
+                        L"기존 폴더는 유지됩니다.");
             }
+            return;
         }
+        if(completed.kind==Kind::Rejected){
+            StatusText().Text(L"이전 탐색 결과를 무시했습니다.");
+            return;
+        }
+        if(completed.active){
+            ClearFileDetails(completed.side);
+            Refresh(completed.recovered?
+                L"응답 지연 후 폴더를 불러왔습니다.":
+                completed.action==fxfile::shellnav::NavigationAction::Refresh?
+                L"폴더 변경 알림을 반영했습니다.":
+                L"폴더를 불러왔습니다.");
+            UpdateWatch(completed.side,true);
+        }else RefreshTabs(completed.side);
+        QueueNextWorkspaceTab(completed.side);
     }
     void MainWindow::OnNativeChange(std::uint64_t route,std::uint64_t token)
     {
-        for(int side=0;side!=2;++side) {
-            if(route!=mWatchedRoutes[side] ||
-               token!=mWatchTokens[side])continue;
-            auto& pane=ActiveWindowTab().model.panes[side];
-            if(pane.routeIds[pane.active]!=route ||
-               pane.pending[pane.active])return;
-            QueuePidl(side,pane.tabs[pane.active].target(
-                fxfile::shellnav::HistoryAction::Refresh),
-                fxfile::shellnav::NavigationAction::Refresh);
-            return;
-        }
+        using Change=fxfile::previewnav::ShellNavigationController::ChangeDisposition;
+        const auto changed=mShellNavigation->handleChange(
+            ActiveWindowTab().model,route,token);
+        if(changed==Change::Queued)
+            StatusText().Text(L"폴더를 불러오는 중입니다.");
+        else if(changed==Change::InvalidTarget)
+            StatusText().Text(L"이 위치를 열 수 없습니다.");
+        else if(changed==Change::SubmitFailed)
+            StatusText().Text(L"폴더를 불러올 수 없습니다.");
     }
     void MainWindow::RefreshTabs(int side)
     {
@@ -1216,32 +1158,16 @@ namespace winrt::FlyExplorer::implementation
     void MainWindow::ReleaseWindowTabRoutes(
         fxfile::previewtabs::WindowTabState& state)
     {
-        for(int side=0;side<2;++side){
-            auto& pane=state.model.panes[side];
-            for(auto route:pane.routeIds){
-                if(mSupervisor)mSupervisor->forget(route);
-                if(mWatcher)mWatcher->unwatch(route);
-                if(mShellWatcher)mShellWatcher->unwatch(route);
-            }
-            for(auto& pending:pane.pending)pending=0;
-            state.fileLists[side].invalidate();
-        }
+        mShellNavigation->release(state.model);
+        for(int side=0;side<2;++side)state.fileLists[side].invalidate();
     }
     void MainWindow::SuspendActiveWindowTab()
     {
         auto& state=ActiveWindowTab();
+        mShellNavigation->suspend(state.model);
         for(int side=0;side<2;++side){
             if(mDetailCancel[side])mDetailCancel[side]->store(true);
-            const auto& pane=state.model.panes[side];
-            for(auto route:pane.routeIds){
-                if(mWatcher)mWatcher->unwatch(route);
-                if(mShellWatcher)mShellWatcher->unwatch(route);
-            }
-            for(auto& pending:state.model.panes[side].pending)pending=0;
             state.fileLists[side].invalidate();
-            mWatchedRoutes[side]=0;
-            mWatchTokens[side]=0;
-            mWatchedPaths[side].clear();
             mRestoreQueue[side].clear();
         }
         if(state.model.split){
@@ -1650,9 +1576,7 @@ namespace winrt::FlyExplorer::implementation
         const auto change=mWorkspace.dispatch(
             fxfile::explorerui::Command::CloseTab,ActiveWindowTab().model.activePane);
         if(!change.accepted)return;
-        mSupervisor->forget(change.releasedRoute);
-        mWatcher->unwatch(change.releasedRoute);
-        mShellWatcher->unwatch(change.releasedRoute);
+        mShellNavigation->forget(change.releasedRoute);
         mRestoreQueue[static_cast<size_t>(ActiveWindowTab().model.activePane)].clear();
         Refresh(L"탭을 닫았습니다.");
     }

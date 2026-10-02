@@ -56,12 +56,12 @@ class M19IntegrationContracts(unittest.TestCase):
   core=text(UI/"MainWindow.xaml.cpp")
   xaml=text(UI/"MainWindow.xaml")
   for q in ("InitializeM19","ApplyWorkspace","QueueNextWorkspaceTab",
-            "mSupervisor->forget(route)","std::thread(",
+            "mShellNavigation->release(ActiveWindowTab().model)","std::thread(",
             "--m19-workspace","GetModuleFileNameW",
             "CreateProcessW","mRestoreQueue[side].emplace_back",
             "saveWorkspaceNew","loadWorkspace"):
    self.assertIn(q,f)
-  self.assertIn("QueueNextWorkspaceTab(side)",core)
+  self.assertIn("QueueNextWorkspaceTab(completed.side)",core)
   self.assertIn("if(mSearchCancel)mSearchCancel->store(true)",core)
   for id in ("WorkspacePanelButton","WorkspaceFileBox",
              "SaveWorkspaceButton","OpenWorkspaceButton",

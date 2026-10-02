@@ -67,6 +67,32 @@ class MigrationContracts(unittest.TestCase):
   self.assertIn("project-template.xml",build)
   self.assertIn("Configuration",text("flyExplorer.project-template.xml"))
 
+ def test_shell_navigation_controller_owns_async_lifecycle(self):
+  project=text("flyExplorer.project-template.xml")
+  header=text("MainWindow.xaml.h")
+  impl=text("MainWindow.xaml.cpp")+text("m19_features.cpp")
+  controller=text("shell_navigation_controller.cpp")
+  controllerhdr=text("shell_navigation_controller.h")
+  self.assertIn("shell_navigation_controller.cpp",project)
+  self.assertIn("shell_navigation_controller.h",project)
+  self.assertIn("ShellNavigationController> mShellNavigation",header)
+  for token in ("mSupervisor","mWatcher","mShellWatcher",
+                "mWatchedRoutes","mWatchTokens","mWatchedPaths"):
+   self.assertNotIn(token,header)
+  for token in ("supervisor_->submit","watcher_->watch",
+                "shellWatcher_->watch","completeRequest(",
+                "pane.tabs[tab].accept","handleChange(",
+                "void ShellNavigationController::suspend",
+                "void ShellNavigationController::release"):
+   self.assertIn(token,controller)
+  self.assertIn("watchedRoutes_",controllerhdr)
+  self.assertIn("watchTokens_",controllerhdr)
+  self.assertIn("mShellNavigation->release",impl)
+  self.assertIn("mShellNavigation->suspend",impl)
+  self.assertNotIn("mSupervisor->",impl)
+  self.assertNotIn("mWatcher->",impl)
+  self.assertNotIn("mShellWatcher->",impl)
+
  def test_shared_native_enum_and_legacy_call_site(self):
   root=ROOT.parents[1]
   legacy=(root/"src/base/shell_enumerator_win.cpp").read_text(encoding="utf-8-sig")
@@ -103,13 +129,19 @@ class MigrationContracts(unittest.TestCase):
   self.assertIn("COINIT_APARTMENTTHREADED",worker)
   self.assertIn("MsgWaitForMultipleObjectsEx",worker)
   self.assertIn("std::thread([st]{run(st);}).detach()",worker)
+  controller=text("shell_navigation_controller.cpp")
+  controllerhdr=text("shell_navigation_controller.h")
   self.assertIn("dispatch.TryEnqueue",winui)
-  self.assertIn("mSupervisor->submit",winui)
-  self.assertIn("mWatcher->watch",winui)
+  self.assertIn("mShellNavigation->submit",winui)
+  self.assertIn("supervisor_->submit",controller)
+  self.assertIn("watcher_->watch",controller)
   self.assertNotIn("mWorker->submit",winui)
   self.assertIn("weak.get()",winui)
-  self.assertIn("std::unique_ptr<fxfile::shellnav::IsolatedShellSupervisor>",mainhdr)
-  self.assertIn("std::unique_ptr<fxfile::directorychange::DirectoryWatcher>",mainhdr)
+  self.assertIn("ShellNavigationController> mShellNavigation",mainhdr)
+  self.assertNotIn("IsolatedShellSupervisor> mSupervisor",mainhdr)
+  self.assertNotIn("DirectoryWatcher> mWatcher",mainhdr)
+  self.assertIn("IsolatedShellSupervisor> supervisor_",controllerhdr)
+  self.assertIn("DirectoryWatcher> watcher_",controllerhdr)
   self.assertNotIn("std::filesystem::directory_iterator",winui)
   self.assertNotIn("CWnd",worker+bridge)
   self.assertNotIn("ListCtrlEx",worker+bridge)
