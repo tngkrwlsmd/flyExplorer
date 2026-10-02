@@ -1,15 +1,13 @@
 name: Windows VM Validation
 
-# Manual-only by project policy. Do not add push/pull_request triggers.
-# This workflow targets the repository-scoped interactive Windows VM runner.
+# Project CI runs on the repository-scoped interactive Windows VM runner.
+# Main pushes run the normal Release + GUI validation automatically.
 on:
+  push:
+    branches:
+      - main
   workflow_dispatch:
     inputs:
-      run_ci:
-        description: "Explicit user approval required for this individual validation run"
-        required: false
-        default: false
-        type: boolean
       validation_scope:
         description: "Validation scope"
         required: true
@@ -24,11 +22,16 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: flyexplorer-windows-vm
+  cancel-in-progress: true
+
 jobs:
   windows-vm:
-    if: ${{ inputs.run_ci }}
     runs-on: [self-hosted, Windows, X64]
     timeout-minutes: 30
+    env:
+      VALIDATION_SCOPE: ${{ github.event_name == 'workflow_dispatch' && inputs.validation_scope || 'release-gui' }}
 
     steps:
       - name: Checkout
@@ -36,8 +39,6 @@ jobs:
 
       - name: VM environment preflight
         shell: powershell -NoLogo -NoProfile -ExecutionPolicy Bypass -Command ". '{0}'"
-        env:
-          VALIDATION_SCOPE: ${{ inputs.validation_scope }}
         run: |
           $ErrorActionPreference = "Stop"
 
@@ -82,27 +83,27 @@ jobs:
           }
 
       - name: Source contracts
-        if: ${{ inputs.validation_scope == 'source' || inputs.validation_scope == 'release' || inputs.validation_scope == 'release-gui' }}
+        if: ${{ env.VALIDATION_SCOPE == 'source' || env.VALIDATION_SCOPE == 'release' || env.VALIDATION_SCOPE == 'release-gui' }}
         shell: cmd
         run: test.bat source
 
       - name: Build canonical WinUI Release
-        if: ${{ inputs.validation_scope == 'release' || inputs.validation_scope == 'release-gui' }}
+        if: ${{ env.VALIDATION_SCOPE == 'release' || env.VALIDATION_SCOPE == 'release-gui' }}
         shell: cmd
         run: build.bat Release
 
       - name: Run owned Release GUI validation
-        if: ${{ inputs.validation_scope == 'release-gui' }}
+        if: ${{ env.VALIDATION_SCOPE == 'release-gui' }}
         shell: cmd
         run: python -X utf8 tools\winui\run_checks.py gui --configuration Release
 
       - name: Run full Debug + Release validation
-        if: ${{ inputs.validation_scope == 'full' }}
+        if: ${{ env.VALIDATION_SCOPE == 'full' }}
         shell: cmd
         run: python -X utf8 tools\winui\run_checks.py full
 
       - name: Verify Release runtime set
-        if: ${{ inputs.validation_scope != 'source' }}
+        if: ${{ env.VALIDATION_SCOPE != 'source' }}
         shell: powershell -NoLogo -NoProfile -ExecutionPolicy Bypass -Command ". '{0}'"
         run: |
           $ErrorActionPreference = "Stop"
