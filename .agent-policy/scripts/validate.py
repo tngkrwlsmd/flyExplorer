@@ -43,7 +43,7 @@ from validation.approval import *  # noqa: F401,F403,E402
 from validation.approval import _approval_replay_state, _parse_timestamp  # noqa: F401,E402
 from validation.override import *  # noqa: F401,F403,E402
 from validation.override import _override_replay_state  # noqa: F401,E402
-
+from validation.context import *  # noqa: F401,F403,E402
 def print_checks(checks: list[Check]) -> None:
     for c in checks:
         suffix = f" — {c.detail}" if c.detail else ""
@@ -68,6 +68,11 @@ def main() -> int:
     parser.add_argument("--execution-nonce", default="", help="single-use runtime nonce (minimum 16 characters) bound into action digest")
     parser.add_argument("--effect", choices=["L1", "L2", "L3", "L4"], help="optional runtime-observed Effect escalation; never lowers operation floors")
     parser.add_argument("--policy", action="append", default=[], metavar="ID", help="print a primary-owner policy section by policy ID; repeatable")
+    parser.add_argument("--compiled-policy", action="store_true", help="compile only the policy context applicable to --operation/--resource/--route inputs")
+    parser.add_argument("--operation-extension", action="append", type=Path, default=[], metavar="JSON", help="validated organization/vendor operation extension document; repeatable")
+    parser.add_argument("--trusted-extension-digest", action="append", default=[], metavar="SHA256", help="out-of-band expected combined extension digest; repeatable")
+    parser.add_argument("--adapter-capabilities", action="append", type=Path, default=[], metavar="JSON", help="adapter capability declaration; repeatable")
+    parser.add_argument("--trusted-capability-digest", action="append", default=[], metavar="SHA256", help="out-of-band expected combined adapter capability digest; repeatable")
     parser.add_argument("--readiness", choices=["development", "deployment"])
     parser.add_argument("--project-root", type=Path, help="project repository root for readiness evidence/Git checks; defaults to the selected PROJECT.md parent")
     parser.add_argument("--project-file", type=Path, help="project facts Markdown for --readiness; defaults to the policy bundle PROJECT.md")
@@ -90,6 +95,15 @@ def main() -> int:
     contract = load_json(CONTRACT_PATH)
     result: dict = {}
     exit_code = 0
+    extension_registry, adapter_capabilities, extension_result, extension_exit = load_extension_runtime_inputs(
+        args.operation_extension,
+        args.adapter_capabilities,
+        contract,
+        args.trusted_extension_digest,
+        args.trusted_capability_digest,
+    )
+    result.update(extension_result)
+    exit_code = max(exit_code, extension_exit)
 
     checks = bundle_checks(ROOT)
     bundle_ok = all(c.status == "PASS" for c in checks)
@@ -114,8 +128,31 @@ def main() -> int:
             result["policy_error"] = str(exc)
             exit_code = 1
 
-    if args.route is not None:
-        routing = route_policies(contract, args.route, args.operation, args.resource, args.routing_mode)
+    if args.compiled_policy and result.get("operation_extensions", {}).get("status") != "FAIL":
+        try:
+            compiled = compile_policy_view(
+                contract,
+                args.route or "",
+                args.operation,
+                args.resource,
+                args.routing_mode,
+                extension_registry,
+            )
+            result["compiled_policy"] = compiled
+            if compiled["status"] == "FAIL":
+                exit_code = 1
+        except Exception as exc:
+            result["compiled_policy"] = {"status": "FAIL", "error": str(exc)}
+            exit_code = 1
+    elif args.route is not None:
+        routing = route_policies(
+            contract,
+            args.route,
+            args.operation,
+            args.resource,
+            args.routing_mode,
+            extension_registry=extension_registry,
+        )
         result["routing"] = routing
         if routing["routing_status"] == "FAIL":
             exit_code = 1
@@ -145,6 +182,8 @@ def main() -> int:
                 execution_nonce=args.execution_nonce,
                 adapter={"id":"validator-cli","surface":"cli","assertion_source":"human_reviewed"},
                 semantic_details={},
+                extension_registry=extension_registry,
+                adapter_capabilities=adapter_capabilities,
             )
             result["execution_boundary"] = boundary
             approval_boundary = boundary
@@ -152,7 +191,11 @@ def main() -> int:
                 exit_code = 1
 
     if args.runtime_action:
-        runtime_action_result = validate_runtime_action(args.runtime_action, contract, ROOT)
+        runtime_action_result = validate_runtime_action(
+            args.runtime_action, contract, ROOT,
+            extension_registry=extension_registry,
+            adapter_capabilities=adapter_capabilities,
+        )
         result["runtime_action"] = runtime_action_result
         boundary = runtime_action_result.get("boundary", {})
         approval_boundary = boundary if boundary else approval_boundary
@@ -162,7 +205,8 @@ def main() -> int:
     if args.approval_assertion:
         approval_result = validate_approval_assertion(
             args.approval_assertion, contract, approval_boundary, ROOT,
-            replay_registry=args.approval_ledger, consume=args.consume_approval
+            replay_registry=args.approval_ledger, consume=args.consume_approval,
+            extension_registry=extension_registry,
         )
         result["approval_assertion"] = approval_result
         if approval_result["object_validity"] != "VALID":
@@ -213,6 +257,7 @@ def main() -> int:
         o = validate_protected_override(
             args.protected_override, contract, approval_boundary, ROOT,
             replay_registry=args.override_ledger, consume=args.consume_override,
+            extension_registry=extension_registry,
         )
         result["protected_override"] = o
         if o["object_validity"] != "VALID" or o.get("binding") == "INVALID":
@@ -222,8 +267,26 @@ def main() -> int:
         print(json.dumps(result, ensure_ascii=False, indent=2))
         return exit_code
 
+    compiled_only = (
+        args.compiled_policy and not args.policy and not args.action_boundary and not args.runtime_action
+        and not args.readiness and not args.project_root and not args.project_file
+        and not args.distribution and not args.trusted_manifest and not args.release_manifest
+        and not args.emit_trust_manifest and not args.approval_assertion and not args.protected_override
+        and not args.override_ledger and not args.consume_override and not args.bootstrap_project
+    )
+    if compiled_only:
+        if result["bundle"]["status"] != "PASS":
+            print("Bundle validation: FAIL", file=sys.stderr)
+            return exit_code
+        compiled = result.get("compiled_policy", {})
+        if compiled.get("status") == "FAIL" and compiled.get("error"):
+            print(compiled["error"], file=sys.stderr)
+            return exit_code
+        print(render_compiled_policy_view(compiled), end="")
+        return exit_code
+
     policy_only = (
-        bool(args.policy) and args.route is None and not args.action_boundary and not args.runtime_action and not args.readiness
+        bool(args.policy) and args.route is None and not args.compiled_policy and not args.action_boundary and not args.runtime_action and not args.readiness
         and not args.project_root and not args.project_file
         and not args.distribution and not args.trusted_manifest and not args.release_manifest and not args.emit_trust_manifest
         and not args.approval_assertion and not args.protected_override and not args.override_ledger and not args.consume_override
@@ -260,6 +323,34 @@ def main() -> int:
             for policy_id, section in result["policy_sections"].items():
                 print(f"Policy section [{policy_id}]:")
                 print(section)
+    if "operation_extensions" in result:
+        ext = result["operation_extensions"]
+        print(f"Operation extensions: {ext.get('status')}")
+        if ext.get("combined_digest"):
+            print("Extension digest:", ext["combined_digest"])
+        if ext.get("operation_ids"):
+            print("Extension operations:", ", ".join(ext["operation_ids"]))
+        print("Extension integrity:", ext.get("integrity", "UNVERIFIED"))
+        print("Extension authority:", ext.get("authority", "NOT_ESTABLISHED"))
+        if ext.get("error"):
+            print(" - error:", ext["error"])
+    if "adapter_capabilities" in result:
+        caps = result["adapter_capabilities"]
+        print(f"Adapter capabilities: {caps.get('status')}")
+        if caps.get("combined_digest"):
+            print("Capability digest:", caps["combined_digest"])
+        print("Capability integrity:", caps.get("integrity", "UNVERIFIED"))
+        print("Capability authority:", caps.get("authority", "NOT_ESTABLISHED"))
+        if caps.get("adapter_ids"):
+            print("Capability adapters:", ", ".join(caps["adapter_ids"]))
+        if caps.get("error"):
+            print(" - error:", caps["error"])
+    if "compiled_policy" in result and not compiled_only:
+        compiled = result["compiled_policy"]
+        if compiled.get("error"):
+            print("Compiled policy: FAIL —", compiled["error"])
+        else:
+            print(render_compiled_policy_view(compiled), end="")
     if "routing" in result:
         r = result["routing"]
         print("Canonical operations:", ", ".join(r["canonical_operations"]) or "(none)")
