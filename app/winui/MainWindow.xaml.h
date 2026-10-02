@@ -6,10 +6,10 @@
 #include "StatusFooter.xaml.h"
 #include "file_list_state.h"
 #include "window_workspace_controller.h"
+#include "session_coordinator.h"
 #include "../../src/base/shell_transfer_core.h"
 #include "../../src/base/shell_clipboard_core.h"
 #include "../../src/base/ui_preferences.h"
-#include "../../src/base/ui_session.h"
 #include "../../src/base/file_command_core.h"
 #include <mutex>
 #include "../../src/base/shell_navigation_core.h"
@@ -125,6 +125,7 @@ namespace winrt::FlyExplorer::implementation
 
     private:
         fxfile::previewtabs::WindowWorkspaceController mWorkspace{};
+        fxfile::sessioncoord::SessionCoordinator mSessionCoordinator{};
         fxfile::previewtabs::WindowTabState& ActiveWindowTab(){
             return mWorkspace.active();
         }
@@ -186,11 +187,6 @@ namespace winrt::FlyExplorer::implementation
         std::shared_ptr<fxfile::shelltransfer::Progress> mTransferProgress;
         Microsoft::UI::Dispatching::DispatcherQueueTimer mTransferTimer{nullptr};
         std::uint64_t mTransferEpoch=0;
-        std::uint64_t mSessionEpoch=0;
-        std::shared_ptr<std::mutex> mSessionMutation=
-            std::make_shared<std::mutex>();
-        std::shared_ptr<std::atomic_uint64_t> mSessionRevision=
-            std::make_shared<std::atomic_uint64_t>(0);
         void InitializePrivateSession();
         void LoadPrivateSession();
         std::vector<std::wstring> mClipboardSources;

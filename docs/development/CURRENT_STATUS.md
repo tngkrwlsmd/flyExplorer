@@ -7,9 +7,9 @@ app/winui, UI-independent native code in src/base, tests in tests/winui, and
 bounded orchestration in tools/winui/run_checks.py. The former MFC application
 is retired from the working tree and is recoverable from Git revision cbffb48.
 
-The latest product-code checkpoint before this documentation cleanup is
-eb76c37 (feat: persist window tab sessions). Live Git refs always take
-precedence over this recorded checkpoint.
+The current product architecture includes V8-A WindowWorkspaceController and
+V8-B SessionCoordinator extraction. Live Git refs always take precedence over
+recorded checkpoints.
 
 ## Accepted current behavior
 
@@ -19,6 +19,10 @@ precedence over this recorded checkpoint.
 - V8-A extracts live WindowTab/Pane/PaneTab state-transition ownership into the
   UI-independent WindowWorkspaceController under app/winui; MainWindow keeps
   XAML presentation plus Shell/watcher side effects.
+- V8-B extracts private-session capture/save/load/restore/clear generation and
+  close invalidation into the UI-independent SessionCoordinator under app/winui.
+  MainWindow now keeps only session-related XAML projection, status and
+  Shell/watcher side effects.
 - Ctrl+T, Ctrl+W, Ctrl+Tab and Ctrl+Shift+Tab Window Tab behavior.
 - Details, List, Small Icons and Medium Icons views.
 - Back/Forward/Up, filtering/sorting, local create/rename, guarded copy/move/
@@ -38,11 +42,13 @@ provide the process/thread fault boundary.
 
 The v7 session acceptance exposed a repeatable close race with
 CoreMessagingXP.dll / 0xC000027B and WER 0x800710DD
-(ERROR_INVALID_OPERATION). The current fix moves cancellation/shutdown to the
-window Closed boundary, re-checks detail-worker cancellation immediately before
-DispatcherQueue enqueue, and treats late detached session completion enqueue as
-best-effort during dispatcher teardown. Accepted GUI evidence requires real
-process exit code 0.
+(ERROR_INVALID_OPERATION). Cancellation/shutdown remains at the window Closed
+boundary. V8-B moves session epoch/revision invalidation into
+SessionCoordinator::prepareForClose(); detached session workers retain only
+shared native generation state and post through a close-safe callback supplied
+by MainWindow. Detail-worker cancellation and late DispatcherQueue completion
+guards remain unchanged. Accepted GUI evidence requires real process exit code
+0.
 
 ## Build and test environment
 

@@ -32,12 +32,18 @@ Theme/language are application preferences. Window geometry and active Window
 Tab are session state. A pane owns its pane-local tab collection; a PaneTab owns
 its navigation identity/history.
 
-V8-A makes this ownership concrete in app/winui/WindowWorkspaceController.
-The controller owns the WindowTab collection, active WindowTab index, identity
-allocation and live workspace state transitions. MainWindow retains XAML
-presentation plus watcher/Shell side effects around those transitions. Session
-serialization remains in src/base/ui_session; session lifecycle/caretaker
-extraction is intentionally deferred to V8-B.
+V8-A makes workspace ownership concrete in
+app/winui/WindowWorkspaceController. The controller owns the WindowTab
+collection, active WindowTab index, identity allocation and live workspace
+state transitions.
+
+V8-B makes private-session lifecycle ownership concrete in
+app/winui/SessionCoordinator. The coordinator owns session epoch/revision,
+serialized snapshot capture, save/load/clear workers, legacy-v1-to-live-state
+restore preparation and close invalidation. MainWindow retains XAML-only window
+size/split projection, status text, Shell/watcher route release and final
+presentation refresh. Serialization format and validation remain UI-independent
+in src/base/ui_session.
 
 ## SOLID rules for this codebase
 
@@ -181,14 +187,14 @@ The current/evolutionary direction is:
 
     MainWindow
       |-- WindowWorkspaceController  : IMPLEMENTED V8-A state/transition owner
-      |-- SessionCoordinator         : session capture/restore/lifetime
-      |-- ShellNavigationController  : navigation, supervisor, watchers
+      |-- SessionCoordinator          : IMPLEMENTED V8-B session caretaker/lifetime
+      |-- ShellNavigationController   : navigation, supervisor, watchers
       |-- FileOperationController    : clipboard/transfer/collision/recycle
       '-- SearchController           : search request/cancel/recent state
 
-WindowWorkspaceController is implemented. The remaining controller names are
-future extraction candidates, not implemented components and not a mandate for
-a big-bang rewrite. Create the next controller only when a coherent
+WindowWorkspaceController and SessionCoordinator are implemented. The remaining
+controller names are future extraction candidates, not implemented components
+and not a mandate for a big-bang rewrite. Create the next controller only when a coherent
 responsibility is being changed or extraction materially reduces coupling/race
 risk.
 

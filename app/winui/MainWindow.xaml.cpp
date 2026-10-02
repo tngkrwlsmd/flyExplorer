@@ -360,8 +360,7 @@ namespace winrt::FlyExplorer::implementation
     {
         if(mClosing)return;
         mClosing=true;
-        ++mSessionEpoch;
-        if(mSessionRevision)mSessionRevision->fetch_add(1);
+        mSessionCoordinator.prepareForClose();
         if(mTransferProgress)mTransferProgress->cancel.store(true);
         for(auto& cancel:mDetailCancel)if(cancel)cancel->store(true);
         for(std::size_t i=0;i<mWorkspace.count();++i)

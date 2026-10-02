@@ -217,6 +217,7 @@ class FluentShellContract(unittest.TestCase):
         session_h=(root/"src/base/ui_session.h").read_text(encoding="utf-8")
         session_cpp=(root/"src/base/ui_session.cpp").read_text(encoding="utf-8")
         shell_h=(root/"src/base/shell_navigation_core.h").read_text(encoding="utf-8")
+        coordinator=(root/"app/winui/session_coordinator.cpp").read_text(encoding="utf-8")
         app=(root/"app/winui/m23_session.cpp").read_text(encoding="utf-8")
         for token in ("struct WindowTab","std::vector<WindowTab> windowTabs",
                       "activeWindow","PaneTab"):
@@ -225,9 +226,10 @@ class FluentShellContract(unittest.TestCase):
         self.assertIn("if(version==2)return decodeV2",session_cpp)
         self.assertIn("bool historyLocations(HistoryLocations&)",shell_h)
         self.assertIn("historyPathsFromLocations",shell_h)
-        self.assertIn("restoreHistoryPaths",app)
-        self.assertIn("session->windowTabs",app)
-        self.assertIn("ui->mWorkspace.replace(std::move(*restored)",app)
+        self.assertIn("restoreHistoryPaths",coordinator)
+        self.assertIn("payload->session.windowTabs",coordinator)
+        self.assertIn("workspace.replace(",coordinator)
+        self.assertIn("mSessionCoordinator.applyRestore(",app)
 
     def test_v7_functional_window_tab_chrome_contract(self):
         root=Path(__file__).resolve().parents[2]

@@ -84,21 +84,26 @@ class M23Contracts(unittest.TestCase):
               "ClearSessionAction.Content"):
    self.assertIn(key,res)
  def test_real_winui_tab_sort_split_window_active_restored(self):
-  source=src(A+"m23_session.cpp")
-  for name in ("data.windowTabs.reserve(mWorkspace.count())","data.activeWindow",
+  coordinator=src(A+"session_coordinator.cpp")
+  surface=src(A+"m23_session.cpp")
+  for name in ("data.windowTabs.reserve(workspace.count())","data.activeWindow",
                "splitPermille","nameColumnWidth","viewMode","sortMode",
                "historyLocations","historyPathsFromLocations","restoreHistoryPaths",
-               "ui->mWorkspace.replace(std::move(*restored)",
-               "mWorkspace.activeIndex()","ApplyActiveWindowTab","mSessionEpoch"):
-   self.assertIn(name,source)
-  save_part=source[source.index("void MainWindow::OnSavePrivateSession"):source.index("void MainWindow::LoadPrivateSession")]
-  self.assertNotIn("SHGetPathFromIDListEx",save_part)
+               "workspace.replace(","workspace.activeIndex()"):
+   self.assertIn(name,coordinator)
+  for name in ("mSessionCoordinator.capture(","mSessionCoordinator.save(",
+               "mSessionCoordinator.load(","mSessionCoordinator.applyRestore(",
+               "ApplyActiveWindowTab"):
+   self.assertIn(name,surface)
+  self.assertNotIn("SHGetPathFromIDListEx",coordinator)
  def test_session_auto_restore_no_explicit_startup_path_override(self):
-  source=src(A+"m23_session.cpp")
+  coordinator=src(A+"session_coordinator.cpp")
+  surface=src(A+"m23_session.cpp")
   for token in ('GetEnvironmentVariableW(L"FLY_M23_OWNED_SESSION"',
                 '"--m23-owned-auto-restore"','explicitPath',
-                "defaultStartupOrOwnedOptIn"):
-   self.assertIn(token,source)
+                "autoRestoreAllowed"):
+   self.assertIn(token,coordinator)
+  self.assertIn("mSessionCoordinator.autoRestoreAllowed()",surface)
  def test_owned_real_second_process_saves_reloads_and_clears(self):
   body=src("tests/winui/test_m23_gui.py")
   for token in ("REAL_M23_EXPLICIT_KOREAN_PRIVATE_SESSION_SAVE",
@@ -111,6 +116,8 @@ class M23Contracts(unittest.TestCase):
   first=src(A+"flyExplorer.project-template.xml")
   second=src("tests/winui/m23/FlyM23NativeContracts.project-template.xml")
   self.assertIn("ui_session.cpp",first)
+  self.assertIn("session_coordinator.cpp",first)
+  self.assertNotIn("session_coordinator.cpp",second)
   self.assertIn("ui_session.cpp",second)
   self.assertEqual(first.count("<DefaultLanguage>ko-KR</DefaultLanguage>"),1)
   self.assertNotIn("<DefaultLanguage>en-US</DefaultLanguage>",first)

@@ -143,6 +143,7 @@
     <ClInclude Include="file_list_state.h" />
     <ClInclude Include="window_tab_state.h" />
     <ClInclude Include="window_workspace_controller.h" />
+    <ClInclude Include="session_coordinator.h" />
     <ClInclude Include="MainWindow.xaml.h">
       <DependentUpon>MainWindow.xaml</DependentUpon>
     </ClInclude>
@@ -168,6 +169,9 @@
     </ClCompile>
     <ClCompile Include="window_workspace_controller.cpp">
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="session_coordinator.cpp">
+      <PrecompiledHeader>Use</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="m19_workspace.cpp">
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
