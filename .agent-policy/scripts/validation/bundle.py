@@ -21,6 +21,158 @@ def parse_policy_matrix(markdown: str) -> dict:
     return matrix
 
 
+GENERATED_POLICY_PATH = "docs/generated-policy-reference.md"
+
+
+def _markdown_cell(value: object) -> str:
+    return str(value).replace("|", "\\|").replace("\n", " ")
+
+
+def render_generated_policy_reference(contract: dict) -> str:
+    """Render machine-owned policy facts from POLICY_CONTRACT.json deterministically."""
+    risk = contract["risk_model"]
+    execution = contract["execution_boundary"]
+    protected = contract["protected_override"]
+    lines = [
+        "# Generated policy reference",
+        "",
+        "> 이 문서는 `POLICY_CONTRACT.json`에서 자동 생성된 deterministic projection이다. "
+        "Source of Truth가 아니며 직접 수정하지 말고 `python scripts/generate_policy_reference.py`로 갱신한다.",
+        "",
+        "**Effect levels (machine-owned)**",
+        "",
+        "| Level | Meaning |",
+        "|---|---|",
+    ]
+    for level, meaning in risk["effect_levels"].items():
+        lines.append(f"| {level} | {_markdown_cell(meaning)} |")
+
+    lines.extend([
+        "",
+        "**Exposure levels (machine-owned)**",
+        "",
+        "| Level | Meaning |",
+        "|---|---|",
+    ])
+    for level, meaning in risk["exposure_levels"].items():
+        lines.append(f"| {level} | {_markdown_cell(meaning)} |")
+
+    exposure_levels = list(risk["exposure_levels"])
+    lines.extend([
+        "",
+        "**Effect × Exposure minimum gate**",
+        "",
+        "| Effect \\ Exposure | " + " | ".join(exposure_levels) + " |",
+        "|---|" + "|".join("---" for _ in exposure_levels) + "|",
+    ])
+    for effect, row in risk["decision_matrix"].items():
+        lines.append(
+            "| " + effect + " | "
+            + " | ".join(_markdown_cell(row[level]) for level in exposure_levels)
+            + " |"
+        )
+
+    lines.extend([
+        "",
+        "**Environment Exposure floors**",
+        "",
+        "| Environment | Minimum Exposure |",
+        "|---|---|",
+    ])
+    for environment, floor in execution["environment_exposure_floors"].items():
+        lines.append(f"| {environment} | {floor} |")
+
+    lines.extend([
+        "",
+        "**Execution boundary required inputs**",
+        "",
+    ])
+    for field in execution.get("required_inputs", []):
+        lines.append(f"- `{field}`")
+
+    derivation = execution.get("exposure_derivation", {})
+    lines.extend([
+        "",
+        "**Raw Exposure fact floors**",
+        "",
+        "| Fact | Value | Minimum Exposure |",
+        "|---|---|---|",
+    ])
+    for fact in derivation.get("required_fact_keys", []):
+        for value, floor in derivation.get("fact_floors", {}).get(fact, {}).items():
+            lines.append(f"| `{fact}` | `{value}` | {floor} |")
+
+    lines.extend([
+        "",
+        "**Context Effect escalation rules**",
+        "",
+    ])
+    rules = execution.get("context_effect_escalation_rules", [])
+    if not rules:
+        lines.append("- none")
+    for rule in rules:
+        operations = ", ".join(f"`{op}`" for op in rule.get("operations", []))
+        matches = []
+        for matcher in rule.get("match_any", []):
+            values = ", ".join(f"`{value}`" for value in matcher.get("values", []))
+            matches.append(f"{matcher.get('source', '')}: {values}")
+        lines.append(
+            f"- `{rule.get('id', '')}`: {operations} -> `{rule.get('effect', '')}` when "
+            + "; ".join(matches)
+        )
+
+    lines.extend([
+        "",
+        "**Operation semantic requirements**",
+        "",
+    ])
+    semantic_rules = execution.get("operation_semantic_requirements", [])
+    if not semantic_rules:
+        lines.append("- none")
+    for rule in semantic_rules:
+        operations = ", ".join(f"`{op}`" for op in rule.get("operations", []))
+        details = ", ".join(f"`{key}`" for key in rule.get("required_semantic_details", [])) or "none"
+        environments = ", ".join(f"`{env}`" for env in rule.get("allowed_environments", [])) or "any"
+        lines.append(
+            f"- `{rule.get('id', '')}`: operations {operations}; required details {details}; allowed environments {environments}"
+        )
+
+    lines.extend([
+        "",
+        "**Canonical operation catalog**",
+        "",
+        "| Operation | Policies | Effect floor | Execution policy | Lifecycle |",
+        "|---|---|---|---|---|",
+    ])
+    for operation in sorted(contract["routing"]["operation_catalog"], key=lambda item: item["id"]):
+        lifecycle = operation.get("lifecycle_status", "")
+        if lifecycle == "deprecated":
+            replacement = operation.get("replacement_operation", "")
+            lifecycle = f"deprecated -> {replacement}" if replacement else "deprecated"
+        lines.append(
+            f"| `{operation['id']}` | "
+            f"{_markdown_cell(', '.join(operation.get('policies', [])))} | "
+            f"{operation.get('effect_floor', '')} | "
+            f"{'yes' if operation.get('requires_execution_policy') else 'no'} | "
+            f"{_markdown_cell(lifecycle)} |"
+        )
+
+    lines.extend([
+        "",
+        "**Approval / override binding**",
+        "",
+        f"- approval gate: `{execution['approval_binding_required_for_gate']}`",
+        f"- approval schema: `{execution['approval_assertion_schema']}`",
+        f"- approval max TTL: `{execution['approval_max_ttl_seconds']}` seconds",
+        f"- protected override gate: `{protected['binding_required_for_gate']}`",
+        f"- protected override schema: `{protected['schema']}`",
+        f"- protected override max TTL: `{protected['max_ttl_seconds']}` seconds",
+        f"- action digest format: `{execution['action_digest_format']}`",
+        "",
+    ])
+    return "\n".join(lines)
+
+
 def compile_python_sources(root: Path) -> list[Check]:
     checks: list[Check] = []
     failures: list[str] = []
@@ -42,6 +194,16 @@ def bundle_checks(root: Path = ROOT) -> list[Check]:
         if not ok:
             missing.append(rel)
 
+    template_project = root / "templates" / "PROJECT.md"
+    compatibility_project = root / "PROJECT.md"
+    if template_project.is_file():
+        parity = compatibility_project.is_file() and compatibility_project.read_bytes() == template_project.read_bytes()
+        checks.append(Check(
+            "project_template_compatibility_parity",
+            "PASS" if parity else "FAIL",
+            "root PROJECT.md matches templates/PROJECT.md" if parity else "root PROJECT.md must be a byte-for-byte compatibility mirror of templates/PROJECT.md",
+        ))
+
     contract = None
     schema = None
     aliases_doc = None
@@ -49,6 +211,8 @@ def bundle_checks(root: Path = ROOT) -> list[Check]:
     runtime_action_schema = None
     approval_assertion_schema = None
     protected_override_schema = None
+    operation_extension_schema = None
+    adapter_capabilities_schema = None
     try:
         contract = load_json(root / "POLICY_CONTRACT.json")
     except Exception as exc:
@@ -77,6 +241,14 @@ def bundle_checks(root: Path = ROOT) -> list[Check]:
         protected_override_schema = load_json(root / "PROTECTED_OVERRIDE.schema.json")
     except Exception as exc:
         checks.append(Check("protected_override_schema_json", "FAIL", str(exc)))
+    try:
+        operation_extension_schema = load_json(root / "OPERATION_EXTENSION.schema.json")
+    except Exception as exc:
+        checks.append(Check("operation_extension_schema_json", "FAIL", str(exc)))
+    try:
+        adapter_capabilities_schema = load_json(root / "ADAPTER_CAPABILITIES.schema.json")
+    except Exception as exc:
+        checks.append(Check("adapter_capabilities_schema_json", "FAIL", str(exc)))
 
     if contract is not None and schema is not None:
         if jsonschema is None:
@@ -113,6 +285,18 @@ def bundle_checks(root: Path = ROOT) -> list[Check]:
                     checks.append(Check("protected_override_schema", "PASS", "protected override schema validates"))
                 except Exception as exc:
                     checks.append(Check("protected_override_schema", "FAIL", str(exc)))
+            if operation_extension_schema is not None:
+                try:
+                    jsonschema.Draft202012Validator.check_schema(operation_extension_schema)
+                    checks.append(Check("operation_extension_schema", "PASS", "operation extension schema validates"))
+                except Exception as exc:
+                    checks.append(Check("operation_extension_schema", "FAIL", str(exc)))
+            if adapter_capabilities_schema is not None:
+                try:
+                    jsonschema.Draft202012Validator.check_schema(adapter_capabilities_schema)
+                    checks.append(Check("adapter_capabilities_schema", "PASS", "adapter capabilities schema validates"))
+                except Exception as exc:
+                    checks.append(Check("adapter_capabilities_schema", "FAIL", str(exc)))
 
         schema_version = contract.get("schema_version")
         checks.append(Check(
@@ -293,8 +477,8 @@ def bundle_checks(root: Path = ROOT) -> list[Check]:
         ))
         checks.append(Check(
             "distribution_allowed_manifest_parity",
-            "PASS" if declared_allowed == CANONICAL_REQUIRED_FILES else "FAIL",
-            "canonical allowed file manifest" if declared_allowed == CANONICAL_REQUIRED_FILES else json.dumps(declared_allowed, ensure_ascii=False),
+            "PASS" if declared_allowed == CANONICAL_ALLOWED_FILES else "FAIL",
+            "canonical allowed file manifest" if declared_allowed == CANONICAL_ALLOWED_FILES else json.dumps(declared_allowed, ensure_ascii=False),
         ))
 
         consumer = contract.get("consumer_distribution") if isinstance(contract.get("consumer_distribution"), dict) else {}
@@ -319,6 +503,16 @@ def bundle_checks(root: Path = ROOT) -> list[Check]:
 
     if contract is not None and (root / "POLICIES.md").is_file():
         policies_md = (root / "POLICIES.md").read_text(encoding="utf-8")
+        generated_expected = render_generated_policy_reference(contract)
+        generated_path = root / GENERATED_POLICY_PATH
+        generated_actual = generated_path.read_text(encoding="utf-8") if generated_path.is_file() else None
+        checks.append(Check(
+            "generated_policy_reference",
+            "PASS" if generated_actual == generated_expected else "FAIL",
+            "generated machine-policy reference is current"
+            if generated_actual == generated_expected
+            else "run python scripts/generate_policy_reference.py",
+        ))
         ids = [p["id"] for p in contract.get("policies", [])]
         anchors = [p["anchor"] for p in contract.get("policies", [])]
         checks.append(Check("policy_ids_unique", "PASS" if len(ids) == len(set(ids)) else "FAIL", ", ".join(ids)))
@@ -327,7 +521,7 @@ def bundle_checks(root: Path = ROOT) -> list[Check]:
             count = policies_md.count(f'id="{p["anchor"]}"')
             checks.append(Check(f"policy_anchor:{p['id']}", "PASS" if count == 1 else "FAIL", f"count={count}"))
 
-        markdown_matrix = parse_policy_matrix(policies_md)
+        markdown_matrix = parse_policy_matrix(generated_actual or "")
         checks.append(Check("risk_matrix_parity", "PASS" if markdown_matrix == contract["risk_model"]["decision_matrix"] else "FAIL", json.dumps(markdown_matrix, ensure_ascii=False)))
 
         known = set(ids)
