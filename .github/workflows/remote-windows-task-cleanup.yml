@@ -1,0 +1,36 @@
+name: Remote Windows Task Cleanup
+
+on:
+  push:
+    branches:
+      - 'remote/**'
+    paths:
+      - '.github/remote-cleanup'
+
+permissions:
+  contents: write
+
+jobs:
+  cleanup:
+    runs-on: [self-hosted, Windows, X64]
+    timeout-minutes: 10
+    steps:
+      - name: Checkout cleanup branch
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 1
+          ref: ${{ github.ref_name }}
+
+      - name: Delete temporary remote branch
+        shell: powershell -NoLogo -NoProfile -ExecutionPolicy Bypass -Command ". '{0}'"
+        run: |
+          $ErrorActionPreference = "Stop"
+          $branch = $env:GITHUB_REF_NAME
+          if ([string]::IsNullOrWhiteSpace($branch) -or -not $branch.StartsWith("remote/")) {
+            throw "Refusing to delete non-remote branch: $branch"
+          }
+          Write-Host "REMOTE_CLEANUP_BRANCH=$branch"
+          git push origin --delete "$branch"
+          if ($LASTEXITCODE -ne 0) {
+            throw "Failed to delete temporary remote branch $branch."
+          }

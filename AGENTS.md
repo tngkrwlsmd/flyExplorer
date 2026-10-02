@@ -155,6 +155,17 @@ Project CI uses the repository-scoped self-hosted Windows runner. Pushes to
 main run Release + GUI validation automatically; workflow_dispatch remains
 available for targeted source/release/full checks.
 
+When RDC/local worktree access is unavailable, repository-controlled Windows
+commands may be executed through the committed-script remote task path:
+create a temporary `remote/**` branch from current main, commit only the
+bounded task body at `.github/remote-task.ps1`, let
+`.github/workflows/remote-windows-task.yml` execute it on the self-hosted
+runner, inspect the Actions logs/artifacts, then commit
+`.github/remote-cleanup` on that branch so
+`.github/workflows/remote-windows-task-cleanup.yml` deletes the temporary
+branch. Do not merge those task/cleanup commits to main. Prefer existing
+bounded workflows when they already cover the required command.
+
 GitHub-hosted runners require explicit user approval and are not part of the
 active flyExplorer CI path unless the user explicitly requests them. Do not add
 a pull_request trigger that executes untrusted fork code on the privileged
