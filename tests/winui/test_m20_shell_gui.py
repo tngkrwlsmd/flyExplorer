@@ -140,6 +140,13 @@ def run(*,win,element,safe_click,focus,eventually,owned):
         for peer in element("LeftFiles").descendants()),
         "This PC local drive did not expose the Fluent capacity progress bar",12)
     print("REAL_M26_THIS_PC_LOCAL_DRIVE_CAPACITY_CARD",True,flush=True)
+    # Address/content peers can become observable before the native navigation
+    # completion has projected history availability back into command chrome.
+    # Wait for the real Back command to become actionable; clicking a still
+    # disabled button is not evidence that per-tab history was lost.
+    eventually(lambda:element("BackButton").exists(timeout=.25)
+        and element("BackButton").is_enabled(),
+        "native This PC route committed without enabling per-tab Back history",12)
     safe_click(element("BackButton"))
     eventually(lambda:element("AddressBox").get_value().lower()==before.lower(),
         "native per-tab history lost after This PC button",16)
