@@ -280,9 +280,16 @@ try:
  safe_click(element("CloseTabButton"))
  eventually(lambda:tabnum("LeftTabs")==left_initial,
             "fast-closing an async tab did not remove it")
- time.sleep(.55)
- assert tabnum("LeftTabs")==left_initial and any(
-     "Nested" in e.window_text() for e in element("LeftFiles").descendants()),(
+ def original_tab_visible():
+  return tabnum("LeftTabs")==left_initial and any(
+      "Nested" in e.window_text() for e in element("LeftFiles").descendants())
+ eventually(original_tab_visible,
+            "closing async tab did not restore the original tab UI",4)
+ # Give the closed route's worker ample time to report, then require the
+ # restored original UI to remain intact. This separates UIA render latency
+ # from the actual stale-result rejection assertion.
+ time.sleep(1.2)
+ assert original_tab_visible(),(
      "stale closed-tab Shell worker result resurrected the old UI")
  print("REAL_ASYNC_TAB_CLOSE_ROUTE_CANCELLATION_NO_RESURRECTION",True,flush=True)
  safe_click(element("SplitButton"))
