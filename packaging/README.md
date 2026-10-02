@@ -1,7 +1,13 @@
 # flyExplorer packaging
 
-package.bat Release builds one x64 setup executable from the canonical
-out\winui\Release runtime set.
+From the repository root, package.bat Release builds one x64 setup executable
+from the canonical out\winui\Release runtime set.
+
+The installer project is reproducible: the tracked
+packaging/installer/flyExplorerSetup.project-template.xml is materialized as the
+ignored flyExplorerSetup.vcxproj by packaging/package.py before MSBuild runs.
+The installer uses the same Visual Studio/MSBuild 18.x, v145 and Windows SDK
+10.0.26100.0 contract as the app.
 
 The installer is a repository-owned native Win32 bootstrap and preserves the
 current unpackaged WinUI 3 execution model.

@@ -79,6 +79,14 @@ def main():
                "gui-Debug", "gui-Release"] if args.stage == "full"
               else [args.stage + ("-" + args.configuration
                     if args.stage != "source" else "")])
+    if any(stage.startswith("gui-") for stage in stages):
+        dep_rc = execute(
+            "gui-python-dependencies",
+            [sys.executable, "-X", "utf8",
+             str(ROOT / "tools" / "winui" / "check_python_deps.py"), "--gui"],
+            30, env, tag)
+        if dep_rc:
+            return dep_rc
     for stage in stages:
         if stage == "source":
             official = execute("canonical-structure-preflight",

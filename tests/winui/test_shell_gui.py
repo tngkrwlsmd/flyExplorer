@@ -5,15 +5,13 @@ import ctypes as c, os, re, shutil, subprocess, tempfile, time, hashlib
 from ctypes import wintypes as W
 from pywinauto import Desktop
 from PIL import ImageGrab
+from profile_guard import (assert_legacy_profile_unchanged, present_count,
+                           snapshot_legacy_profile)
 
 # Read-only original user profile sentinel: the preview has NO permission
 # to use the legacy product's real profile or mutate its settings.
-REAL_CONF=Path(os.environ["APPDATA"])/"fxfile"/"conf"
-PROTECTED_NAMES=("fxfile.conf","fxfile-main.conf","fxfile-toolbar.dat",
-  "fxfile-coolbar.dat","fxfile-dlg_state.conf","fxfile-folder_layout.conf")
-assert all((REAL_CONF/n).is_file() for n in PROTECTED_NAMES)
-ORIGINAL_HASHES={n:hashlib.sha256((REAL_CONF/n).read_bytes()).digest()
-  for n in PROTECTED_NAMES}
+REAL_CONF,ORIGINAL_PROFILE=snapshot_legacy_profile()
+ORIGINAL_PROFILE_PRESENT=present_count(ORIGINAL_PROFILE)
 
 HERE=APP
 CONFIG=os.environ.get("FLY_MIGRATION_CONFIGURATION","Debug")
@@ -492,10 +490,14 @@ finally:
    raise RuntimeError("owned WinUI3 shell did not close normally")
  print("OWNED_WINUI_SHELL_EXIT",p.returncode if p else None,flush=True)
  assert p and p.returncode==0
- assert all(hashlib.sha256((REAL_CONF/n).read_bytes()).digest()==ORIGINAL_HASHES[n]
-            for n in PROTECTED_NAMES),(
-   "unexpected change in real user settings during isolated migration GUI")
- print("ORIGINAL_SIX_USER_CONFIG_SHA256_IDENTICAL",True,flush=True)
+ assert_legacy_profile_unchanged(REAL_CONF,ORIGINAL_PROFILE)
+ print("LEGACY_USER_PROFILE_SENTINEL_UNCHANGED",True,
+       "PRESENT",ORIGINAL_PROFILE_PRESENT,flush=True)
+ if ORIGINAL_PROFILE_PRESENT==6:
+  print("ORIGINAL_SIX_USER_CONFIG_SHA256_IDENTICAL",True,flush=True)
+ else:
+  print("ORIGINAL_SIX_USER_CONFIG_SHA256_IDENTICAL","NOT_APPLICABLE",
+        "PRESENT",ORIGINAL_PROFILE_PRESENT,flush=True)
  assert owned.parent==base and owned.name.startswith("shell-owned-")
  shutil.rmtree(owned)
  print("OWNED_SYNTHETIC_FIXTURE_REMOVED",True,flush=True)

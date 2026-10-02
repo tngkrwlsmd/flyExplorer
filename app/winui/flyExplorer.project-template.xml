@@ -13,7 +13,7 @@
       have a name that matches the .winmd
     -->
     <TargetName>flyExplorer</TargetName>
-    <MinimumVisualStudioVersion>16.0</MinimumVisualStudioVersion>
+    <MinimumVisualStudioVersion>18.0</MinimumVisualStudioVersion>
     <AppContainerApplication>false</AppContainerApplication>
     <AppxPackage>false</AppxPackage>
     <WindowsPackageType>None</WindowsPackageType>
@@ -54,8 +54,7 @@
   </ItemGroup>
   <PropertyGroup Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
-    <PlatformToolset Condition="'$(VisualStudioVersion)' &gt;= '18.0'">v145</PlatformToolset>
-    <PlatformToolset Condition="'$(VisualStudioVersion)' &lt; '18.0'">v143</PlatformToolset>
+    <PlatformToolset>v145</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
     <DesktopCompatible>true</DesktopCompatible>
   </PropertyGroup>
@@ -84,8 +83,7 @@
       <PrecompiledHeaderOutputFile>$(IntDir)pch.pch</PrecompiledHeaderOutputFile>
       <WarningLevel>Level4</WarningLevel>
 
-      <LanguageStandard Condition="'$(VisualStudioVersion)' &gt;= '18.0'">stdcpp20</LanguageStandard>
-      <LanguageStandard Condition="'$(VisualStudioVersion)' &lt; '18.0'">stdcpp17</LanguageStandard>
+      <LanguageStandard>stdcpp20</LanguageStandard>
       <AdditionalOptions>%(AdditionalOptions) /bigobj /utf-8</AdditionalOptions>
     </ClCompile>
   </ItemDefinitionGroup>

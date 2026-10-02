@@ -10,6 +10,7 @@ ROOT=Path(__file__).resolve().parents[1]
 APP=ROOT/"app"/"winui"
 OUT=ROOT/"out"
 MSBUILD_RESOLVER=ROOT/"tools"/"winui"/"resolve_msbuild.py"
+SETUP_PROJECT_TEMPLATE=ROOT/"packaging"/"installer"/"flyExplorerSetup.project-template.xml"
 SETUP_PROJECT=ROOT/"packaging"/"installer"/"flyExplorerSetup.vcxproj"
 
 REQUIRED_TOP=(
@@ -115,6 +116,14 @@ def generate_payload(stage: Path,obj: Path,pairs: list[tuple[Path,Path]]) -> Non
         rc.append(f'{rid} RCDATA "{path}"')
     (obj/"payload.rc").write_text("\n".join(rc)+"\n",encoding="utf-8",newline="\n")
 
+def materialize_setup_project() -> Path:
+    if not SETUP_PROJECT_TEMPLATE.is_file():
+        fail(f"tracked installer project template missing: {SETUP_PROJECT_TEMPLATE}")
+    SETUP_PROJECT.write_text(
+        SETUP_PROJECT_TEMPLATE.read_text(encoding="utf-8"),
+        encoding="utf-8", newline="\n")
+    return SETUP_PROJECT
+
 def resolve_msbuild() -> Path:
     result=subprocess.run([sys.executable,"-X","utf8",str(MSBUILD_RESOLVER)],
                           capture_output=True,text=True,encoding="utf-8")
@@ -125,11 +134,12 @@ def resolve_msbuild() -> Path:
 
 def build_setup(obj: Path,package_out: Path) -> Path:
     msbuild=resolve_msbuild()
+    setup_project=materialize_setup_project()
     setup=package_out/"flyExplorer-Setup-x64.exe"
     if setup.exists():
         setup.unlink()
     cmd=[
-        str(msbuild),str(SETUP_PROJECT),"/nologo","/t:Build",
+        str(msbuild),str(setup_project),"/nologo","/t:Build",
         "/p:Configuration=Release","/p:Platform=x64",
         f"/p:OutDir={package_out.as_posix()}/",
         f"/p:IntDir={(obj/'build').as_posix()}/",

@@ -69,9 +69,9 @@ jobs:
           Write-Host "MSBuild: $msbuild"
 
           if ($env:VALIDATION_SCOPE -in @("release-gui", "full")) {
-            python -c "import PIL, psutil, pywinauto; print('GUI Python dependencies: OK')"
+            python -X utf8 tools\winui\check_python_deps.py --gui
             if ($LASTEXITCODE -ne 0) {
-              throw "Pillow/psutil/pywinauto GUI dependencies are incomplete."
+              throw "Pinned GUI Python dependencies are incomplete or mismatched."
             }
 
             $explorer = Get-Process explorer -ErrorAction SilentlyContinue |

@@ -41,22 +41,57 @@ DispatcherQueue enqueue, and treats late detached session completion enqueue as
 best-effort during dispatcher teardown. Accepted GUI evidence requires real
 process exit code 0.
 
+## Build and test environment
+
+Canonical Windows full builds now have one explicit toolchain contract:
+- Visual Studio/MSBuild 18.x;
+- MSVC v145 x64 tools;
+- Windows SDK 10.0.26100.0.
+
+VS 2022/v143 is not claimed as a supported full-build path. The app, Shell
+helper, M19-M23 native fixtures and installer template use v145 consistently.
+MSBuild discovery verifies the x64 compiler/toolset/SDK, and the app build
+verifies the restored WinUI/XAML assets after NuGet restore.
+
+Direct NuGet references are Microsoft.WindowsAppSDK 2.5.1,
+Microsoft.Windows.CppWinRT 2.0.250303.1,
+Microsoft.Windows.SDK.BuildTools 10.0.26100.9169 and
+Microsoft.Windows.ImplementationLibrary 1.0.260126.7. Actual transitive restore
+is verified from project.assets.json rather than inferred from these four
+references.
+
+Source-only contracts are suitable for a non-Windows/Python stdlib environment.
+Product compilation/execution requires Windows. GUI automation additionally
+requires the pinned tests/winui/requirements-gui.txt set and an interactive
+Windows desktop. Debug is framework-dependent; Release is self-contained but
+still requires its complete sibling runtime/resources.
+
+The previously described external install_script/start_skill cloud bootstrap
+files are not present in this repository. This repository therefore documents
+the required environment but does not claim to have modified external cloud
+bootstrap configuration.
+
 ## Latest verified evidence
 
-On the 2026-10-02 v7 checkpoint:
+On the current 2026-10-02 working revision:
 - canonical structure preflight: 4/4 PASS;
-- source contracts: 125/125 PASS;
-- canonical Release build: PASS;
-- v7-only Release GUI: PASS with OWNED_WINUI_SHELL_EXIT 0;
-- isolated Korean create/watcher/restart GUI: PASS;
-- final full owned Release GUI: PASS in 95.2 seconds;
-- v7 multi-WindowTab restart/session/history/split restore: PASS;
-- private session clear/revoke: PASS;
-- six protected user-configuration hashes: unchanged.
+- source contracts: 131/131 PASS;
+- canonical Debug and Release app builds: PASS;
+- actual NuGet restore direct references and WinUI/XAML build assets: PASS;
+- M19-M23 native fixtures: Debug/Release compile PASS and runtime PASS;
+- Release GUI against an empty legacy %APPDATA% profile: PASS with
+  OWNED_WINUI_SHELL_EXIT 0 and legacy sentinel PRESENT 0;
+- pinned GUI dependencies pywinauto 0.6.9, Pillow 12.3.0 and psutil 7.2.2:
+  validated on the self-hosted Windows runner;
+- current installer template materialization and setup build: PASS;
+- bounded /TESTROOT install/uninstall: PASS with no remaining test directory or
+  test uninstall registry key;
+- existing six protected legacy user-configuration files on the current VM:
+  unchanged during native fixture execution.
 
-The first Release build wrapper in that investigation timed out while MSBuild
-continued; it was not a compiler/linker failure. A normal incremental canonical
-Release build subsequently completed PASS.
+Historical v7-only GUI/session evidence remains valid for the product behavior
+described above. DPI scaling, accessibility, physical drag, signing and public
+distribution remain separate gates.
 
 ## Known functional coverage limits
 
@@ -75,9 +110,11 @@ Current source and the last parity evidence still show these limits:
 
 ## Packaging state
 
-The tracked installer/provenance snapshot was last produced on 2026-10-01 and
-predates v7. It must not be described as a package of the current product until
-packaging is rebuilt and lifecycle/provenance checks are rerun.
+The installer project is now reproducible from a tracked project template, and
+a current local Release setup build plus bounded /TESTROOT install/uninstall
+has passed. The tracked licensing/provenance snapshot still predates v7, so
+this does not by itself clear public distribution or prove a signed clean-machine
+machine-wide install/update/rollback path.
 
 ## Open gates
 

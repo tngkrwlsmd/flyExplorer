@@ -3,23 +3,23 @@ Does not invoke MFC or modify the real fxfile user profile.
 """
 from pathlib import Path
 import hashlib,os,shutil,subprocess,tempfile
+import sys
 HERE=Path(__file__).resolve().parent
 ROOT=HERE.parents[2]
+sys.path.insert(0,str(HERE.parent if 'HERE' in globals() else p.parent))
+from profile_guard import assert_legacy_profile_unchanged,present_count,snapshot_legacy_profile
 CONFIG=os.environ.get("FLY_M19_CONFIG","Debug")
 assert CONFIG in ("Debug","Release")
 EXE=HERE/"bin"/"x64"/CONFIG/"FlyM19NativeContracts.exe"
 assert EXE.is_file(),EXE
 LOGS=ROOT/"logs"/"m19"
 LOGS.mkdir(parents=True,exist_ok=True)
-user=Path(os.environ["APPDATA"])/"fxfile"/"conf"
-names=("fxfile.conf","fxfile-main.conf","fxfile-toolbar.dat",
-"fxfile-coolbar.dat","fxfile-dlg_state.conf","fxfile-folder_layout.conf")
-assert all((user/f).is_file() for f in names)
-before={f:hashlib.sha256((user/f).read_bytes()).digest() for f in names}
+user,before=snapshot_legacy_profile()
 root=Path(tempfile.mkdtemp(prefix="owned-m19-native-",dir=LOGS))
 (root/"localdata").mkdir()
+(root/"appdata").mkdir()
 try:
- env={**os.environ,"LOCALAPPDATA":str(root/"localdata"),
+ env={**os.environ,"APPDATA":str(root/"appdata"),"LOCALAPPDATA":str(root/"localdata"),
       "TEMP":str(root),"TMP":str(root),
       "FLY_M19_OWNED_NATIVE_ONLY":"YES"}
  result=subprocess.run([str(EXE),str(root)],env=env,cwd=EXE.parent,
@@ -28,11 +28,10 @@ try:
  path.write_text(result.stdout+"\n"+result.stderr,encoding="utf-8")
  assert result.returncode==0,(result.returncode,result.stdout,result.stderr)
  assert "M19_NATIVE_SUMMARY 12 passed, 0 failed." in result.stdout
- assert all(hashlib.sha256((user/f).read_bytes()).digest()==h
-            for f,h in before.items())
+ assert_legacy_profile_unchanged(user,before)
  print("M19_NATIVE_TESTED_HELPER_CONFIG",CONFIG,flush=True)
  print("M19_NATIVE_WORKSPACE_AND_RECENT_SEARCH_12_PASS",True,flush=True)
- print("M19_ORIGINAL_SIX_USER_CONFIG_SHA256_IDENTICAL",True,flush=True)
+ print("M19_LEGACY_USER_PROFILE_SENTINEL_UNCHANGED",True,"PRESENT",present_count(before),flush=True)
  print("M19_NATIVE_OWNED_PROOF",path.name,flush=True)
 finally:
  assert root.name.startswith("owned-m19-native-") and root.parent==LOGS

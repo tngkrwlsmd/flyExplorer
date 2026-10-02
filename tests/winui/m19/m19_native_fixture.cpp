@@ -1,6 +1,6 @@
 // Test-owned native M1.9 workspace/search bridge contract, no MFC profile.
-#include "../m19_workspace.h"
-#include "../m19_search.h"
+#include "m19_workspace.h"
+#include "m19_search.h"
 #include <windows.h>
 #include <atomic>
 #include <cstdio>

@@ -42,6 +42,16 @@ Static/source, compile, runtime, GUI-state and visual evidence are distinct.
 Do not claim unrun gates. Follow AGENT_EFFICIENCY.md call budgets and bounded
 log rules.
 
+Canonical Windows full builds require Visual Studio/MSBuild 18.x, MSVC v145 x64
+tools and Windows SDK 10.0.26100.0. Do not claim VS 2022/v143 full-build support
+without a separately verified compatibility change. Source-only Python contracts
+are stdlib-only; GUI automation additionally requires the exact pins in
+tests/winui/requirements-gui.txt and an interactive Windows desktop.
+
+Debug is Windows App SDK framework-dependent. Release is self-contained, but the
+Release executable is not standalone: keep the complete out/winui/Release
+runtime set, including helper, PRI/XBF and dependent DLLs.
+
 ## Architecture and safety
 
 Potentially blocking Shell/provider calls must not run synchronously on the

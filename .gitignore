@@ -17,6 +17,8 @@ ipch/
 # Build outputs and intermediates
 /bin/
 /obj/
+tests/winui/m*/bin/
+tests/winui/m*/obj/
 
 # Local generated/downloaded tooling; canonical tools/winui is tracked
 /tools/gyp-next/

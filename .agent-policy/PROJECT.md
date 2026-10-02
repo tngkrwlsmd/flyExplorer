@@ -44,6 +44,9 @@ and prevents late DispatcherQueue completions from turning teardown into
 ## Build/runtime facts
 
 - Root wrappers are the supported build/run/test entry points.
+- Canonical Windows full builds require Visual Studio/MSBuild 18.x, MSVC v145
+  x64 tools and Windows SDK 10.0.26100.0; v143 is not a claimed full-build
+  target.
 - Release is Windows App SDK self-contained; Debug is framework-dependent.
 - The tracked project template is the project-file source of truth.
 - flyExplorer.exe cannot be distributed alone; sibling resources and

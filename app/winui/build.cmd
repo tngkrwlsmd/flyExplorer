@@ -29,6 +29,8 @@ set "NUGET_HTTP_CACHE_PATH=%CACHE%\http"
 set "NUGET_PLUGINS_CACHE_PATH=%CACHE%\plugins"
 "%MSBUILD%" "%HERE%flyExplorer.vcxproj" /nologo /t:Restore "/p:Configuration=%CONFIG%" /p:Platform=x64 "/p:BaseIntermediateOutputPath=%APP_OBJ%/" "/p:RestoreConfigFile=%HERE%NuGet.Config" "/p:RestorePackagesPath=%NUGET_PACKAGES%" /v:minimal
 if errorlevel 1 exit /b 6
+python -X utf8 "%ROOT%tools\winui\verify_restore.py" "%APP_OBJ%\project.assets.json" "%NUGET_PACKAGES%"
+if errorlevel 1 exit /b 15
 "%MSBUILD%" "%HERE%flyExplorer.vcxproj" /nologo /t:Build "/p:Configuration=%CONFIG%" /p:Platform=x64 "/p:BaseIntermediateOutputPath=%APP_OBJ%/" "/p:OutDir=%APP_OUT%/" "/p:IntDir=%APP_OBJ%/" "/p:GeneratedFilesDir=%APP_OBJ%/Generated Files/" "/p:NuGetTargetMoniker=native%%2CVersion=v0.0" "/p:_NuGetTargetFallbackMoniker=" "/p:NuGetRuntimeIdentifier=" /m:2 /v:minimal
 if errorlevel 1 exit /b 7
 set "HELPER=%OUT%\helper\%CONFIG%\FlyShellIsolationHelper.exe"

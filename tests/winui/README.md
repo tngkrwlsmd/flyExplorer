@@ -15,6 +15,20 @@ Default source contracts:
 
     test.bat source
 
+Source contracts use the Python standard library only. GUI automation additionally
+uses exact versions from requirements-gui.txt:
+
+    python -m pip install -r tests/winui/requirements-gui.txt
+    python -X utf8 tools/winui/check_python_deps.py --gui
+
+The pinned GUI set was validated on the project self-hosted Windows runner with
+Python 3.14.x. GUI tests require an interactive Windows desktop/session.
+
+Legacy %APPDATA%\fxfile\conf files are optional read-only sentinels, not test
+fixtures. Tests must work when none of them exist and must fail if they create,
+remove or modify a real sentinel. Product processes receive test-owned
+APPDATA/LOCALAPPDATA roots.
+
 Full owned Debug + Release sequence:
 
     python -X utf8 tools\winui\run_checks.py full

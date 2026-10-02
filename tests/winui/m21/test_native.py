@@ -1,18 +1,16 @@
 """Isolated native M2.1 test. Real legacy user configuration is read-only."""
 from pathlib import Path
 import os,hashlib,shutil,subprocess,tempfile
+import sys
 HERE=Path(__file__).resolve().parent
 ROOT=HERE.parents[2]
+sys.path.insert(0,str(HERE.parent if 'HERE' in globals() else p.parent))
+from profile_guard import assert_legacy_profile_unchanged,present_count,snapshot_legacy_profile
 CFG=os.environ.get("FLY_M21_CONFIG","Debug")
 assert CFG in ("Debug","Release")
 exe=HERE/"bin"/"x64"/CFG/"FlyM21NativeContracts.exe"
 assert exe.is_file()
-real=Path(os.environ["APPDATA"])/"fxfile"/"conf"
-names=("fxfile.conf","fxfile-main.conf","fxfile-toolbar.dat",
-"fxfile-coolbar.dat","fxfile-dlg_state.conf","fxfile-folder_layout.conf")
-digest=lambda x:hashlib.sha256(x.read_bytes()).digest()
-assert all((real/n).is_file() for n in names)
-original={n:digest(real/n) for n in names}
+real,original=snapshot_legacy_profile()
 log=ROOT/"logs/m21";log.mkdir(exist_ok=True,parents=True)
 own=Path(tempfile.mkdtemp(prefix="m21-native-owned-",dir=log))
 for name in ("local","appdata"):(own/name).mkdir()
@@ -25,6 +23,6 @@ try:
  assert "M21_NATIVE_SUMMARY 18 passed, 0 failed." in result.stdout,result.stdout
  print("M21_NATIVE_"+CFG+"_18_PASS",True)
 finally:
- assert all(digest(real/n)==original[n] for n in names)
+ assert_legacy_profile_unchanged(real,original)
  shutil.rmtree(own)
- print("M21_ORIGINAL_SIX_CONFIG_HASHES_IDENTICAL",True)
+ print("M21_LEGACY_USER_PROFILE_SENTINEL_UNCHANGED",True,"PRESENT",present_count(original))

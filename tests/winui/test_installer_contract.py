@@ -4,6 +4,7 @@ import unittest
 
 ROOT=Path(__file__).resolve().parents[2]
 SETUP=ROOT/"packaging"/"installer"/"setup.cpp"
+SETUP_PROJECT_TEMPLATE=ROOT/"packaging"/"installer"/"flyExplorerSetup.project-template.xml"
 
 class InstallerContract(unittest.TestCase):
     def test_machine_install_and_shortcut_surfaces_are_explicit(self):
@@ -39,6 +40,12 @@ class InstallerContract(unittest.TestCase):
         self.assertIn("flyExplorer-Setup-x64.exe",script)
         self.assertIn("shutil.rmtree(package_out)",script)
         self.assertIn("PAYLOAD_FILES=",script)
+        self.assertTrue(SETUP_PROJECT_TEMPLATE.is_file())
+        template=SETUP_PROJECT_TEMPLATE.read_text(encoding="utf-8")
+        self.assertIn("<PlatformToolset>v145</PlatformToolset>",template)
+        self.assertNotIn("v143",template)
+        self.assertIn("SETUP_PROJECT_TEMPLATE",script)
+        self.assertIn("materialize_setup_project",script)
 
     def test_msbuild_discovery_is_shared_and_not_edition_locked(self):
         resolver=(ROOT/"tools/winui/resolve_msbuild.py").read_text(encoding="utf-8")

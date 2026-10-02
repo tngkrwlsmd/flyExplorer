@@ -12,10 +12,13 @@ import shutil
 import struct
 import subprocess
 import tempfile
+import sys
 import time
 
 HERE=Path(__file__).resolve().parent
 ROOT=HERE.parents[2]
+sys.path.insert(0,str(HERE.parent))
+from profile_guard import assert_legacy_profile_unchanged,present_count,snapshot_legacy_profile
 CONFIG=os.environ.get("FLY_M16_CONFIG","Debug")
 assert CONFIG in ("Debug","Release")
 EXE=ROOT/"out"/"helper"/CONFIG/"FlyShellIsolationHelper.exe"
@@ -83,7 +86,7 @@ def job_for(owned_child):
     return h
 
 def launch(*args,extra_env=None):
-    env={**os.environ,**(extra_env or {})}
+    env={**os.environ,"APPDATA":str(OWNED/"appdata"),"LOCALAPPDATA":str(OWNED/"localdata"),"TEMP":str(OWNED),"TMP":str(OWNED),**(extra_env or {})}
     process=subprocess.Popen([str(EXE),*args],
        stdin=subprocess.PIPE,stdout=subprocess.PIPE,
        stderr=subprocess.DEVNULL,env=env,
@@ -164,15 +167,9 @@ def roundtrip(folder=None,limit=12,pidl_bytes=None):
     assert child.returncode==0,("helper failed",child.returncode)
     return parse(out),out,elapsed
 
-def hashes():
-    conf=Path(os.environ["APPDATA"])/"fxfile"/"conf"
-    names=("fxfile.conf","fxfile-main.conf","fxfile-toolbar.dat",
-          "fxfile-coolbar.dat","fxfile-dlg_state.conf",
-          "fxfile-folder_layout.conf")
-    assert all((conf/n).is_file() for n in names)
-    return {n:hashlib.sha256((conf/n).read_bytes()).hexdigest() for n in names}
-
-original=hashes()
+REAL_CONF,original=snapshot_legacy_profile()
+(OWNED/"appdata").mkdir()
+(OWNED/"localdata").mkdir()
 try:
     left=OWNED/"Left";right=OWNED/"Right"
     (left/"OwnedNested").mkdir(parents=True)
@@ -270,8 +267,9 @@ finally:
         if child.stdout:child.stdout.close()
     for handle in JOBS:
         K.CloseHandle(handle)
-    same=hashes()==original
-    print("ORIGINAL_SIX_USER_CONFIG_SHA256_IDENTICAL",same)
+    assert_legacy_profile_unchanged(REAL_CONF,original)
+    same=True
+    print("LEGACY_USER_PROFILE_SENTINEL_UNCHANGED",True,"PRESENT",present_count(original))
     if OWNED.parent==LOGROOT and OWNED.name.startswith("m16-process-owned-"):
         shutil.rmtree(OWNED)
     print("OWNED_M16_FIXTURES_AND_PROCESSES_CLEANED",True)
