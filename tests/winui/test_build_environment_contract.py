@@ -99,6 +99,26 @@ class BuildEnvironmentContract(unittest.TestCase):
             lines,
             ["pywinauto==0.6.9", "Pillow==12.3.0", "psutil==7.2.2"],
         )
+    def test_self_hosted_failure_artifacts_are_bounded_and_uploaded(self):
+        workflow = (
+            ROOT / ".github/workflows/windows-build.yml"
+        ).read_text(encoding="utf-8")
+        collector = (
+            ROOT / "tools/winui/collect_ci_failure_artifacts.py"
+        ).read_text(encoding="utf-8")
+        self.assertIn("Prepare CI evidence marker", workflow)
+        self.assertIn("collect_ci_failure_artifacts.py", workflow)
+        self.assertIn(
+            "actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a",
+            workflow,
+        )
+        self.assertIn("if: ${{ failure() }}", workflow)
+        self.assertIn("retention-days: 14", workflow)
+        self.assertIn('LOGS / "winui-scoped"', collector)
+        self.assertIn('LOGS / "phase6-winui"', collector)
+        self.assertIn('"flyexplorer.exe"', collector)
+        self.assertIn("MAX_FILE_BYTES", collector)
+        self.assertNotIn("os.environ.items()", collector)
     def test_fresh_profile_guard_preserves_absence_and_existing_files(self):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp) / "fxfile" / "conf"

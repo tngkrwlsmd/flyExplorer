@@ -40,6 +40,13 @@ jobs:
           # Source contracts verify the retired MFC baseline stored only in Git history.
           fetch-depth: 0
 
+      - name: Prepare CI evidence marker
+        shell: powershell -NoLogo -NoProfile -ExecutionPolicy Bypass -Command ". '{0}'"
+        run: |
+          $ErrorActionPreference = "Stop"
+          New-Item -ItemType Directory -Force -Path "logs" | Out-Null
+          (Get-Date).ToUniversalTime().ToString("O") |
+            Set-Content -LiteralPath "logs\\ci-run-start.txt" -Encoding utf8
       - name: VM environment preflight
         shell: powershell -NoLogo -NoProfile -ExecutionPolicy Bypass -Command ". '{0}'"
         run: |
@@ -147,3 +154,19 @@ jobs:
             Write-Host "===== $($log.FullName) ====="
             Get-Content $log.FullName -Tail 120
           }
+
+      - name: Collect bounded failure artifacts
+        if: ${{ failure() }}
+        continue-on-error: true
+        shell: cmd
+        run: python -X utf8 tools\winui\collect_ci_failure_artifacts.py --marker logs\ci-run-start.txt --scope "%VALIDATION_SCOPE%"
+
+      - name: Upload failure artifacts
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: flyexplorer-failure-${{ github.run_id }}-${{ github.run_attempt }}
+          path: logs/ci-failure-artifacts/
+          if-no-files-found: warn
+          retention-days: 14
+          compression-level: 6
