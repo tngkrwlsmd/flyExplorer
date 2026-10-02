@@ -138,14 +138,24 @@ appropriate.
 
 Project CI uses the repository-scoped self-hosted Windows runner. Pushes to
 main run Release + GUI validation automatically; workflow_dispatch remains
-available for targeted source/release/full checks. Do not introduce GitHub-
-hosted runners for project CI unless the user explicitly requests them.
+available for targeted source/release/full checks.
+
+GitHub-hosted runners require explicit user approval and are not part of the
+active flyExplorer CI path unless the user explicitly requests them. Do not add
+a pull_request trigger that executes untrusted fork code on the privileged
+self-hosted runner; use a separately isolated/unprivileged runner path if
+untrusted PR validation is ever required.
 
 ## Git logical units
 
-If commit/push is approved for the task, complete a verified logical unit, run
-git diff --check, inspect staged scope, commit, normal-push, fetch, and verify
-HEAD == origin/main with ahead/behind 0/0. Never force-push.
+If commit/push is approved for the task, prefer a verified logical unit directly
+on main. Use a separate work branch only when repository protection requires
+it, the user requests it, concurrent work would make direct-main unsafe, or the
+change needs isolated integration testing.
+
+Before push, run git diff --check, inspect staged scope, and run the verification
+required by the change. After normal push, fetch and verify HEAD == origin/main
+with ahead/behind 0/0. Never force-push.
 
 Do not push a state with a known required acceptance failure, temporary debug
 instrumentation or generated artifacts.

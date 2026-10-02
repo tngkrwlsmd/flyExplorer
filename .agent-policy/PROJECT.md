@@ -52,7 +52,13 @@ and prevents late DispatcherQueue completions from turning teardown into
   behind bounded isolation.
 - Project CI runs on the repository-scoped interactive self-hosted Windows x64
   runner; pushes to main use the Release + GUI validation scope automatically.
-- GitHub-hosted runners are not part of the active flyExplorer CI path.
+- GitHub-hosted runners require explicit user approval and are not part of the
+  active flyExplorer CI path by default.
+- The privileged self-hosted runner must not execute untrusted fork/PR code
+  automatically.
+- Normal repository work prefers verified direct-main logical units; use a work
+  branch only when repository protection, explicit user direction, concurrent
+  work, or isolated integration testing makes one necessary.
 
 ## Open gates
 

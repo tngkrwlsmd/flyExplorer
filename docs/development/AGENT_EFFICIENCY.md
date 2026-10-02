@@ -80,6 +80,15 @@ independently explainable verified logical unit. Before commit:
 Do not commit/push known failing required acceptance, temporary diagnostics,
 generated artifacts or a known correctness defect.
 
+Prefer direct-main logical units for normal repository work. Create a separate
+work branch only when repository protection requires it, the user requests it,
+concurrent work makes direct-main unsafe, or isolated integration testing is
+materially useful.
+
+The repository-scoped self-hosted runner may execute trusted main pushes
+automatically. GitHub-hosted runners require explicit user approval. Do not run
+untrusted fork/PR code automatically on the privileged self-hosted runner.
+
 After normal push, fetch and verify HEAD == origin/main and ahead/behind 0/0.
 Force push is prohibited. If origin/main moved unexpectedly, analyze rather
 than overwrite.
