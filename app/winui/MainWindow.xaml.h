@@ -141,6 +141,7 @@ namespace winrt::FlyExplorer::implementation
         void SuspendActiveWindowTab();
         void ApplyActiveWindowTab(winrt::hstring const& status);
         void ReleaseWindowTabRoutes(fxfile::previewtabs::WindowTabState& state);
+        void PrepareForClose() noexcept;
         void RefreshWindowTabs();
         std::wstring WindowTabLabel(fxfile::previewtabs::WindowTabState const&) const;
         fxfile::uisettings::Preferences mPreferences{};
@@ -215,6 +216,8 @@ namespace winrt::FlyExplorer::implementation
         winrt::fire_and_forget ConfirmCollision(fxfile::shelltransfer::Request request);
         winrt::fire_and_forget ConfirmRecycle(fxfile::shelltransfer::Request request);
         bool mPopulatingTabs = false;
+        bool mSuppressWindowTabRefresh = false;
+        bool mClosing = false;
         bool mPopulatingFileLists = false;
         void UpdateFooterSummary();
         void PersistPreferences();

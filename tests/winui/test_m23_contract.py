@@ -62,13 +62,12 @@ class M23Contracts(unittest.TestCase):
 
  def test_m23_private_session_versioned_bounds_and_reparse_rejection(self):
   body=src("src/base/ui_session.cpp")
-  for token in ("FXSESS23","FILE_ATTRIBUTE_REPARSE_POINT",
-                "DRIVE_FIXED","MaxSize=131072","value.width<640",
-                "value.sort[0]>7","value.paths[0].size()>8",
-                "checksum(bytes,bytes.size()-4)"):
-   if token=="FXSESS23":
-    self.assertIn("'F','X','S','E','S','S','2','3'",body)
-   else:self.assertIn(token,body)
+  for token in ("'F','X','S','E','S','S','2','3'","FILE_ATTRIBUTE_REPARSE_POINT",
+                "DRIVE_FIXED","MaxSize=524288","MaxWindowTabs=10",
+                "MaxPaneTabs=8","MaxHistory=16","checksum(bytes,bytes.size()-4)",
+                "MOVEFILE_REPLACE_EXISTING","if(version==1)return decodeV1",
+                "if(version==2)return decodeV2","return false;"):
+   self.assertIn(token,body)
  def test_session_profile_strict_and_isolated_from_legacy(self):
   body=src("src/base/ui_session.cpp")
   self.assertIn("flyExplorer",body)
@@ -86,11 +85,14 @@ class M23Contracts(unittest.TestCase):
    self.assertIn(key,res)
  def test_real_winui_tab_sort_split_window_active_restored(self):
   source=src(A+"m23_session.cpp")
-  for name in ("WorkspaceModel","selected[0]","selected[1]",
-               "ActiveWindowTab().fileLists","splitPermille","PrimaryColumn",
-               "SecondaryColumn","AppWindow().Resize","activeSide",
-               "ApplyWorkspace","mSessionEpoch"):
+  for name in ("data.windowTabs.reserve(mWindowTabs.size())","data.activeWindow",
+               "splitPermille","nameColumnWidth","viewMode","sortMode",
+               "historyLocations","historyPathsFromLocations","restoreHistoryPaths",
+               "ui->mWindowTabs=std::move(*restored)","ui->mActiveWindowTab",
+               "ApplyActiveWindowTab","mSessionEpoch"):
    self.assertIn(name,source)
+  save_part=source[source.index("void MainWindow::OnSavePrivateSession"):source.index("void MainWindow::LoadPrivateSession")]
+  self.assertNotIn("SHGetPathFromIDListEx",save_part)
  def test_session_auto_restore_no_explicit_startup_path_override(self):
   source=src(A+"m23_session.cpp")
   for token in ('GetEnvironmentVariableW(L"FLY_M23_OWNED_SESSION"',

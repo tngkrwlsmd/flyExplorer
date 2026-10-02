@@ -19,7 +19,7 @@ CONTRACTS = [
     str((TESTS/"helper"/"test_contract.py").relative_to(ROOT)),
     str((TESTS/"helper"/"test_winui_integration_contract.py").relative_to(ROOT)),
 ]
-OWNED_FLAGS = ("FLY_V7_WINDOW_TABS", "FLY_V7_WINDOW_TABS_ONLY", "FLY_M19_OWNED_FEATURES", "FLY_M20_OWNED_SHELL",
+OWNED_FLAGS = ("FLY_V7_WINDOW_TABS", "FLY_V7_WINDOW_TABS_SESSION", "FLY_M19_OWNED_FEATURES", "FLY_M20_OWNED_SHELL",
                "FLY_M21_OWNED_FEATURES", "FLY_M22_OWNED_FEATURES",
                "FLY_M23_OWNED_FEATURES")
 FAULT_FLAGS = ("FLY_M18_OWNED_COM_HANG", "FLY_M18_EXHAUST_TIMEOUT",
@@ -60,6 +60,8 @@ def main():
     parser.add_argument("stage", choices=("source", "build", "gui", "full"))
     parser.add_argument("--configuration", choices=("Debug", "Release"),
                         default="Debug")
+    parser.add_argument("--v7-window-tabs-only", action="store_true",
+        help="Run only the owned v7 functional/session window-tab acceptance.")
     parser.add_argument("--isolate-feature-panels", action="store_true",
         help="Close test-owned M1.9 panels before M2.0; does not accept the open-panel case.")
     args = parser.parse_args()
@@ -71,7 +73,7 @@ def main():
     env["PYTHONIOENCODING"] = "utf-8"
     env["PYTHONPATH"] = str(TESTS)
     # Never inherit diagnostics or a non-owned GUI scenario by accident.
-    for key in OWNED_FLAGS + FAULT_FLAGS:
+    for key in OWNED_FLAGS + FAULT_FLAGS + ("FLY_V7_WINDOW_TABS_ONLY",):
         env.pop(key, None)
     stages = (["source", "build-Debug", "build-Release",
                "gui-Debug", "gui-Release"] if args.stage == "full"
@@ -97,6 +99,8 @@ def main():
             gui_env["FLY_MIGRATION_CONFIGURATION"] = configuration
             for key in OWNED_FLAGS:
                 gui_env[key] = "YES"
+            if args.v7_window_tabs_only:
+                gui_env["FLY_V7_WINDOW_TABS_ONLY"] = "YES"
             if args.isolate_feature_panels:
                 gui_env["FLY_M20_OWNED_COLLAPSE_M19_PANELS"] = "YES"
             cmd = [sys.executable, "-u", str(TESTS / "test_shell_gui.py")]

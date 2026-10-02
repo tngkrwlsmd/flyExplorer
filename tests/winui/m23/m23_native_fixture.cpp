@@ -103,6 +103,30 @@ int wmain(int argc,wchar_t**argv){
        restoredSession.width==session.width&&
        restoredSession.height==session.height,
        "korean_session_roundtrip_size_sort_both_panes");
+ uisession::Session multi{};
+ multi.width=1280;multi.height=820;multi.activeWindow=1;
+ uisession::WindowTab first{};
+ first.split=true;first.splitPermille=560;first.activeSide=1;
+ first.panes[0].selected=0;first.panes[0].sort=6;first.panes[0].view=3;
+ first.panes[0].nameColumnWidth=176;
+ first.panes[0].tabs.push_back({left.native(),{},{right.native()}});
+ first.panes[1].tabs.push_back({right.native(),{left.native()},{}});
+ auto second=first;second.split=false;second.activeSide=0;second.splitPermille=430;
+ second.panes[0].view=2;second.panes[0].sort=7;
+ second.panes[0].tabs[0].path=right.native();
+ second.panes[1].tabs[0].path=left.native();
+ multi.windowTabs={first,second};
+ check(uisession::valid(multi),"v7_multi_window_session_valid");
+ check(uisession::save(multi),"v7_multi_window_session_save_v2");
+ uisession::Session restoredV2{};
+ check(uisession::load(restoredV2)&&restoredV2.windowTabs.size()==2&&
+       restoredV2.activeWindow==1&&restoredV2.windowTabs[0].activeSide==1&&
+       restoredV2.windowTabs[0].panes[0].view==3&&
+       restoredV2.windowTabs[1].split==false&&
+       restoredV2.windowTabs[1].panes[0].sort==7&&
+       restoredV2.windowTabs[0].panes[0].tabs[0].forward.size()==1,
+       "v7_multi_window_session_roundtrip_history_view_sort_split");
+
  auto rejectedSession=session;
  rejectedSession.width=10;
  check(!uisession::save(rejectedSession),

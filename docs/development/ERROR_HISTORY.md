@@ -4164,3 +4164,32 @@ During the first full Release GUI validation of the v6.1 icon-density presentati
 No product patch or assertion weakening was made for this event. The same exact Release binary independently passed an owned stress gate with parent open plus three immediate child closes (child exits `0 / 0 / 0`, parent `0`, helper orphan `0`) and then passed one bounded full Release GUI rerun in 75.8 seconds, including normal owned exit and unchanged hashes for the original six user configuration files.
 
 Therefore this recurrence is retained as a **nondeterministic unresolved lifecycle risk**, not reported as fixed and not attributed to the Medium/Small geometry change without stronger evidence.
+
+## 2026-10-02: v7 close exposed late DispatcherQueue completion race
+
+**Observed failure**
+- The v7 owned multi-WindowTab restart/restore path completed its functional assertions, then the child or parent repeatedly exited with Windows status 3221226107 (0xC000027B).
+- Windows Application Error named CoreMessagingXP.dll; WER reported combase.dll with 0x800710DD, which the installed Windows SDK defines as ERROR_INVALID_OPERATION.
+- The failure became reproducible when v7 rapidly switched/restored WindowTabs and closed while file-detail/Shell work could still be finishing. It matched the signature of the earlier nondeterministic lifecycle anomaly, but this occurrence was treated as a new open defect until current-source evidence closed it.
+
+**Cause diagnosis**
+- Current source canceled detail/Shell/session work primarily from MainWindow destruction. The application keeps the window alive through shutdown, so destruction is not an early-enough boundary for dispatcher teardown.
+- A detached file-detail worker did not re-check its cancellation flag immediately before DispatcherQueue::TryEnqueue; detached private-session workers also treated that enqueue as infallible.
+- No persisted WER dump with a symbolic application stack was available. The causal conclusion is therefore based on the exact invalid-operation signature, the identified late-enqueue paths, and reproduction closure after changing those paths; it does not claim an internal Microsoft module root cause.
+
+**Fix / prevention**
+- Add idempotent PrepareForClose() on the WinUI Closed event so session revisions, file-detail work, transfers, Shell supervisor/watchers and search are canceled before dispatcher teardown; the destructor remains a fallback.
+- Re-check file-detail cancellation immediately before enqueue and make private-session completion enqueue no-throw/best-effort when the DispatcherQueue is closing.
+- Keep the v7 GUI gate asserting real process exit 0; do not convert the Windows crash code into an accepted test result.
+
+**Integration-test follow-up**
+- The first full Release reruns then failed M2.1 Korean folder creation although isolated M2.1 passed. Root cause was shared-test state: v7 returned WindowTab A at Left\Nested, and M2.1's substring address check falsely accepted that as the Left root.
+- v7 now restores the initial owned folder before returning, and M2.1 requires exact normalized address equality. No product file-command workaround was added.
+
+**Verification**
+- Canonical structure: 4/4 PASS; source contracts: 125/125 PASS before final documentation checkpoint.
+- Canonical Release build: PASS after the first build-runner timeout left MSBuild/link running to completion; the incremental canonical rerun completed normally.
+- v7-only Release GUI: PASS, OWNED_WINUI_SHELL_EXIT 0, original six user config hashes identical.
+- Isolated M2.1 Release GUI: PASS including Korean folder create/watcher and restart theme, exit 0.
+- Final full Release GUI: PASS in 95.2 seconds, including v7 session restore and M2.3 private-session clear, exit 0, original six user config hashes identical.
+- The failed build-wrapper run is retained as orchestration timeout evidence: it hit EXIT=124 while MSBuild/link continued and produced the candidate; it was not a compiler/linker failure.

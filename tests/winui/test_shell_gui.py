@@ -152,7 +152,8 @@ try:
  if os.environ.get("FLY_V7_WINDOW_TABS_ONLY")=="YES":
   from test_v7_window_tabs_gui import run as v7_tabs_run
   v7_tabs_run(win=win,element=element,safe_click=safe_click,
-              focus=ensure_owned_focus,eventually=eventually,owned=owned)
+              focus=ensure_owned_focus,eventually=eventually,owned=owned,
+              localdata=localdata,env=env,exe=EXE)
   print("REAL_V7_WINDOW_TABS_ONLY_COMPLETE",True,flush=True)
   raise SystemExit(0)
  if owned_exhaust:
@@ -458,7 +459,8 @@ try:
  if os.environ.get("FLY_V7_WINDOW_TABS")=="YES":
   from test_v7_window_tabs_gui import run as v7_tabs_run
   v7_tabs_run(win=win,element=element,safe_click=safe_click,
-              focus=ensure_owned_focus,eventually=eventually,owned=owned)
+              focus=ensure_owned_focus,eventually=eventually,owned=owned,
+              localdata=localdata,env=env,exe=EXE)
  if os.environ.get("FLY_M21_OWNED_FEATURES")=="YES":
   from test_m21_gui import run as m21_run
   m21_run(p=p,win=win,element=element,safe_click=safe_click,

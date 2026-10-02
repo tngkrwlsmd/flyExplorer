@@ -63,6 +63,13 @@ HRESULT enumerate(PCIDLIST_ABSOLUTE folder, Snapshot& result,
                   std::atomic_bool const* cancel=nullptr) noexcept;
 
 enum class HistoryAction { Open, Back, Forward, Up, Refresh };
+struct HistoryPaths final {
+    std::vector<std::wstring> back,forward;
+};
+struct HistoryLocations final {
+    std::vector<Location> back,forward;
+};
+bool historyPathsFromLocations(HistoryLocations const&,HistoryPaths&) noexcept;
 
 class Session final {
 public:
@@ -81,6 +88,8 @@ public:
     Snapshot const& snapshot() const noexcept {return current_;}
     bool canBack() const noexcept {return !back_.empty();}
     bool canForward() const noexcept {return !forward_.empty();}
+    bool historyLocations(HistoryLocations&) const noexcept;
+    bool restoreHistoryPaths(HistoryPaths const&) noexcept;
 private:
     HRESULT commit(Location next,bool record) noexcept;
     Snapshot current_;

@@ -209,6 +209,23 @@ class FluentShellContract(unittest.TestCase):
         self.assertIn('row.MinHeight(32)',impl)
         self.assertIn('header.Height(details?24.0:0.0)',impl)
 
+    def test_v7_private_session_v2_migration_contract(self):
+        root=Path(__file__).resolve().parents[2]
+        session_h=(root/"src/base/ui_session.h").read_text(encoding="utf-8")
+        session_cpp=(root/"src/base/ui_session.cpp").read_text(encoding="utf-8")
+        shell_h=(root/"src/base/shell_navigation_core.h").read_text(encoding="utf-8")
+        app=(root/"app/winui/m23_session.cpp").read_text(encoding="utf-8")
+        for token in ("struct WindowTab","std::vector<WindowTab> windowTabs",
+                      "activeWindow","PaneTab"):
+            self.assertIn(token,session_h)
+        self.assertIn("if(version==1)return decodeV1",session_cpp)
+        self.assertIn("if(version==2)return decodeV2",session_cpp)
+        self.assertIn("bool historyLocations(HistoryLocations&)",shell_h)
+        self.assertIn("historyPathsFromLocations",shell_h)
+        self.assertIn("restoreHistoryPaths",app)
+        self.assertIn("session->windowTabs",app)
+        self.assertIn("ui->mWindowTabs=std::move(*restored)",app)
+
     def test_v7_functional_window_tab_chrome_contract(self):
         root=Path(__file__).resolve().parents[2]
         shell=(root/"app/winui/ShellHeader.xaml").read_text(encoding="utf-8")

@@ -32,30 +32,41 @@ void ShellHeader::SetWindowTabCallbacks(std::function<void()> add,
 }
 void ShellHeader::SetWindowTabs(std::vector<std::wstring> const& labels,int selected){
  mRestoringTabs=true;
- auto tabs=WindowTabStrip();tabs.TabItems().Clear();
- for(size_t i=0;i<labels.size();++i){
-  TabViewItem item;item.Header(winrt::box_value(hstring(labels[i])));item.IsClosable(true);
+ auto tabs=WindowTabStrip();auto items=tabs.TabItems();
+ while(items.Size()>labels.size())items.RemoveAtEnd();
+ while(items.Size()<labels.size()){
+  TabViewItem item;item.IsClosable(true);
+  items.Append(item);
+ }
+ for(uint32_t i=0;i<items.Size();++i){
+  auto item=items.GetAt(i).as<TabViewItem>();
+  item.Header(winrt::box_value(hstring(labels[i])));
   Microsoft::UI::Xaml::Automation::AutomationProperties::SetName(
       item,L"창 탭 "+hstring(labels[i]));
-  tabs.TabItems().Append(item);
  }
- tabs.SelectedIndex(labels.empty()?-1:(std::clamp)(selected,0,static_cast<int>(labels.size()-1)));
+ const int target=labels.empty()?-1:(std::clamp)(selected,0,static_cast<int>(labels.size()-1));
+ if(tabs.SelectedIndex()!=target)tabs.SelectedIndex(target);
  mRestoringTabs=false;
 }
 void ShellHeader::OnWindowTabAdd(TabView const&,IInspectable const&){
- if(mAddWindowTab)mAddWindowTab();
+ auto weak=get_weak();DispatcherQueue().TryEnqueue(Microsoft::UI::Dispatching::DispatcherQueuePriority::Low,[weak]{
+  if(auto self=weak.get())if(self->mAddWindowTab)self->mAddWindowTab();
+ });
 }
 void ShellHeader::OnWindowTabSelectionChanged(
  IInspectable const& sender,SelectionChangedEventArgs const&){
  if(mRestoringTabs)return;auto tabs=sender.try_as<TabView>();
- if(tabs&&tabs.SelectedIndex()>=0&&mActivateWindowTab)mActivateWindowTab(tabs.SelectedIndex());
+ if(tabs&&tabs.SelectedIndex()>=0&&mActivateWindowTab)
+  mActivateWindowTab(tabs.SelectedIndex());
 }
 void ShellHeader::OnWindowTabCloseRequested(
  TabView const& sender,TabViewTabCloseRequestedEventArgs const& args){
  if(mRestoringTabs)return;int index=-1;
  for(uint32_t i=0;i<sender.TabItems().Size();++i)
   if(sender.TabItems().GetAt(i)==args.Tab()){index=static_cast<int>(i);break;}
- if(index>=0&&mCloseWindowTab)mCloseWindowTab(index);
+ if(index<0)return;auto weak=get_weak();DispatcherQueue().TryEnqueue(Microsoft::UI::Dispatching::DispatcherQueuePriority::Low,[weak,index]{
+  if(auto self=weak.get())if(self->mCloseWindowTab)self->mCloseWindowTab(index);
+ });
 }
 void ShellHeader::OnThemeSelectionChanged(
  IInspectable const& sender,SelectionChangedEventArgs const&){

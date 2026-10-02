@@ -94,8 +94,9 @@ def run(*,p,win,element,safe_click,focus,eventually,left,right,localdata,env,exe
     # The existing parent harness began in an owned left directory.
     focus()
     safe_click(element("LeftFiles"))
-    eventually(lambda:str(left).lower() in element("AddressBox").get_value().lower(),
-               "owned synthetic left folder is not active before file operations",10)
+    eventually(lambda:element("AddressBox").get_value().rstrip("\/").lower()==
+                      str(left).rstrip("\/").lower(),
+               "owned synthetic left folder is not exactly active before file operations",10)
     chosen=element("FileNameBox")
     chosen.set_edit_text("새 폴더")
     safe_click(element("CreateFolderButton"))

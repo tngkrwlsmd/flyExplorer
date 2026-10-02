@@ -112,18 +112,24 @@ namespace winrt::FlyExplorer::implementation
         // Each reusable XAML control forwards intent; the window owns the
         // shared native state/settings. Never attach a permanent MFC host.
         const auto nativeWeak=get_weak();
+        Closed([nativeWeak](IInspectable const&,WindowEventArgs const&){
+            if(auto ui=nativeWeak.get())ui->PrepareForClose();
+        });
         auto titleHeader=winrt::get_self<
             winrt::FlyExplorer::implementation::ShellHeader>(HeaderView());
         titleHeader->SetWindowTabCallbacks(
             [nativeWeak]{if(auto ui=nativeWeak.get()){
-                if(ui->CreateWindowTab(L"shell:MyComputerFolder"))ui->RefreshWindowTabs();
+                ui->CreateWindowTab(L"shell:MyComputerFolder");
             }},
             [nativeWeak](int index){if(auto ui=nativeWeak.get()){
-                if(ui->ActivateWindowTab(static_cast<size_t>(index)))ui->RefreshWindowTabs();
+                struct Reset final{bool& flag;~Reset(){flag=false;}};
+                ui->mSuppressWindowTabRefresh=true;
+                Reset reset{ui->mSuppressWindowTabRefresh};
+                ui->ActivateWindowTab(static_cast<size_t>(index));
             }},
             [nativeWeak](int index){if(auto ui=nativeWeak.get()){
                 if(ui->mWindowTabs.size()==1){ui->Close();return;}
-                if(ui->CloseWindowTab(static_cast<size_t>(index)))ui->RefreshWindowTabs();
+                ui->CloseWindowTab(static_cast<size_t>(index));
             }});
         RootShell().PreviewKeyDown(
             Microsoft::UI::Xaml::Input::KeyEventHandler(
@@ -349,21 +355,25 @@ namespace winrt::FlyExplorer::implementation
         InitializeM19();
         InitializePrivateSession();
     }
-    MainWindow::~MainWindow()
+    void MainWindow::PrepareForClose() noexcept
     {
+        if(mClosing)return;
+        mClosing=true;
+        ++mSessionEpoch;
+        if(mSessionRevision)mSessionRevision->fetch_add(1);
         if(mTransferProgress)mTransferProgress->cancel.store(true);
-        for(int side=0;side<2;++side){
-            if(mDetailCancel[side])mDetailCancel[side]->store(true);
-            ActiveWindowTab().fileLists[side].invalidate();
-        }
-        if(mTransferTimer)mTransferTimer.Stop();
-        // Never join a Shell extension which might be blocked in COM.
-        // Detached State owns all native handles. UI work is guarded
-        // by get_weak(), route tokens, and closed DispatcherQueue.
+        for(auto& cancel:mDetailCancel)if(cancel)cancel->store(true);
+        for(auto& state:mWindowTabs)
+            for(auto& files:state.fileLists)files.invalidate();
+        try{if(mTransferTimer)mTransferTimer.Stop();}catch(...){}
         if(mSupervisor)mSupervisor->shutdown();
         if(mWatcher)mWatcher->shutdown();
         if(mShellWatcher)mShellWatcher->shutdown();
         if(mSearchCancel)mSearchCancel->store(true);
+    }
+    MainWindow::~MainWindow()
+    {
+        PrepareForClose();
     }
     int32_t MainWindow::MyProperty() {return 0;}
     void MainWindow::MyProperty(int32_t) {}
@@ -735,7 +745,8 @@ namespace winrt::FlyExplorer::implementation
                 }
                 auto payload=std::make_shared<std::vector<FileDetail>>(
                     std::move(details));
-                dispatch.TryEnqueue([weak,payload,side,tab,route,ticket]{
+                if(cancel->load())return;
+                try{dispatch.TryEnqueue([weak,payload,side,tab,route,ticket]{
                     if(auto ui=weak.get()){
                         auto const& pane=ui->ActiveWindowTab().model.panes[side];
                         if(!ui->ActiveWindowTab().fileLists[side].accepts(ticket,route,tab)||
@@ -746,7 +757,7 @@ namespace winrt::FlyExplorer::implementation
                         ui->ActiveWindowTab().fileLists[side].details=std::move(*payload);
                         ui->FillFiles(side);
                     }
-                });
+                });}catch(...){}
             }).detach();
         }catch(...){
             ActiveWindowTab().fileLists[side].invalidate();
@@ -1196,6 +1207,7 @@ namespace winrt::FlyExplorer::implementation
     }
     void MainWindow::RefreshWindowTabs()
     {
+        if(mSuppressWindowTabRefresh)return;
         std::vector<std::wstring> labels;labels.reserve(mWindowTabs.size());
         for(auto const& state:mWindowTabs)labels.push_back(WindowTabLabel(state));
         winrt::get_self<winrt::FlyExplorer::implementation::ShellHeader>(HeaderView())
@@ -1303,6 +1315,7 @@ namespace winrt::FlyExplorer::implementation
             if(mActiveWindowTab>=mWindowTabs.size())mActiveWindowTab=mWindowTabs.size()-1;
             ApplyActiveWindowTab(L"창 탭을 닫았습니다.");
         }
+        else RefreshWindowTabs();
         return true;
     }
     void MainWindow::Refresh(hstring const& status)

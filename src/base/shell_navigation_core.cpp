@@ -129,6 +129,68 @@ HRESULT enumerate(PCIDLIST_ABSOLUTE folder,Snapshot& result,
     }
 }
 
+bool Session::historyLocations(HistoryLocations& out) const noexcept {
+    out={};
+    try {
+        if(back_.size()>16||forward_.size()>16)return false;
+        auto clone=[](std::vector<Location> const& source,
+                      std::vector<Location>& target)->bool {
+            target.reserve(source.size());
+            for(auto const& loc:source){
+                if(!loc.valid())return false;
+                target.emplace_back(loc);
+                if(!target.back().valid())return false;
+            }
+            return true;
+        };
+        return clone(back_,out.back)&&clone(forward_,out.forward);
+    }catch(...){out={};return false;}
+}
+bool historyPathsFromLocations(HistoryLocations const& source,
+                               HistoryPaths& out) noexcept {
+    out={};
+    try {
+        if(source.back.size()>16||source.forward.size()>16)return false;
+        auto append=[](std::vector<Location> const& locations,
+                       std::vector<std::wstring>& target)->bool {
+            target.reserve(locations.size());
+            for(auto const& loc:locations){
+                if(!loc.valid())return false;
+                PWSTR raw=nullptr;
+                const HRESULT hr=::SHGetNameFromIDList(loc.get(),SIGDN_FILESYSPATH,&raw);
+                // The private session persists fixed-local filesystem history
+                // only. A supported local current folder may legitimately have
+                // virtual Shell entries (for example This PC) in its Back stack;
+                // omit those entries rather than failing the entire save.
+                if(FAILED(hr)||!raw){::CoTaskMemFree(raw);continue;}
+                std::wstring path(raw);::CoTaskMemFree(raw);
+                if(path.empty())continue;
+                target.push_back(std::move(path));
+            }
+            return true;
+        };
+        return append(source.back,out.back)&&append(source.forward,out.forward);
+    }catch(...){out={};return false;}
+}
+bool Session::restoreHistoryPaths(HistoryPaths const& paths) noexcept {
+    if(paths.back.size()>16||paths.forward.size()>16)return false;
+    try {
+        auto build=[](std::vector<std::wstring> const& source,
+                      std::vector<Location>& target)->bool {
+            for(auto const& path:source){
+                if(path.empty())return false;
+                PIDLIST_ABSOLUTE raw=::ILCreateFromPathW(path.c_str());
+                if(!raw)return false;
+                Location item;item.reset(raw);target.push_back(std::move(item));
+            }
+            return true;
+        };
+        std::vector<Location> back,forward;
+        if(!build(paths.back,back)||!build(paths.forward,forward))return false;
+        back_=std::move(back);forward_=std::move(forward);return true;
+    }catch(...){return false;}
+}
+
 Location Session::target(HistoryAction action) const {
     if(action==HistoryAction::Back)
         return back_.empty()?Location():Location(back_.back());
