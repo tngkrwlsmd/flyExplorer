@@ -140,14 +140,28 @@ def run(*,p,win,element,safe_click,focus,eventually,ownedwindows,
         live.append(third)
         good(lambda:len(ui_for_child(third))==1,
              "MFC-compatible multi-tab child window missing",14)
+        # Workspace apply launches independent asynchronous navigation for
+        # both panes. The child window can be visible before its right-pane
+        # helper/result is committed, so re-resolve the live UIA tree while
+        # waiting instead of pinning the first transient peer.
+        def mfc_second_pane_ready():
+            if not third.is_running():
+                return False
+            boxes=ui_for_child(third)
+            if len(boxes)!=1:
+                return False
+            current=Desktop(backend="uia").window(handle=boxes[0])
+            right_files=current.child_window(auto_id="RightFiles")
+            return right_files.exists(timeout=.2) and any(
+                "Secondary" in row.window_text()
+                for row in right_files.descendants())
+        good(mfc_second_pane_ready,
+             "MFC-compatible second pane did not restore",25)
         third_win=Desktop(backend="uia").window(handle=ui_for_child(third)[0])
-        good(lambda:any("Secondary" in row.window_text() for row
-             in third_win.child_window(auto_id="RightFiles").descendants()),
-             "MFC-compatible second pane did not restore",17)
         # Selected second tab points INTO Nested, so the listing is empty.
         good(lambda:str(inner).lower() in
              third_win.child_window(auto_id="AddressBox").get_value().lower(),
-             "MFC-compatible selected second tab address did not restore",17)
+             "MFC-compatible selected second tab address did not restore",20)
         good(lambda:len([x for x in
              third_win.child_window(auto_id="LeftTabs").descendants()
              if x.element_info.control_type=="TabItem"])==2,

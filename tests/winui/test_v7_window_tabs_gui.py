@@ -128,9 +128,15 @@ def run(*,win,element,safe_click,focus,eventually,owned,localdata,env,exe):
             split2=target.child_window(auto_id="SplitButton")
             eventually(lambda:"단일 창" in split2.window_text(),
                        "v7 child did not restore WindowTab A split state",8)
-            back2=target.child_window(auto_id="BackButton")
-            eventually(lambda:back2.is_enabled(),
-                       "v7 child did not restore WindowTab A back history",8)
+            # Activating a restored WindowTab queues an owned Refresh. During
+            # that refresh the navigation chrome is deliberately disabled, so
+            # re-resolve the live UIA peer and wait for the refresh to settle
+            # before judging the restored history.
+            def restored_back_ready():
+                back=target.child_window(auto_id="BackButton")
+                return back.exists(timeout=.2) and back.is_enabled()
+            eventually(restored_back_ready,
+                       "v7 child did not restore WindowTab A back history",16)
             assert profile.read_bytes()==original
             print("REAL_V7_MULTI_WINDOW_SESSION_RESTART_RESTORE",True,flush=True)
             print("REAL_V7_WINDOW_TAB_HISTORY_AND_SPLIT_RESTORE",True,flush=True)

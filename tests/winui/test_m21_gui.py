@@ -36,15 +36,22 @@ def run(*,p,win,element,safe_click,focus,eventually,left,right,localdata,env,exe
     expected=b"schema=2\r\nlanguage=ko-KR\r\ntheme=dark\r\nview=details\r\n"
     eventually(lambda:profile.is_file() and profile.read_bytes()==expected,
                "native private Korean dark theme + view default not atomically persisted",12)
+    # Theme application can replace/rebind the UIA peer. Re-resolve the
+    # live picker for each transition and synchronize on both visible app state
+    # and the atomic preference file before issuing the next transition.
+    light_expected=b"schema=2\r\nlanguage=ko-KR\r\ntheme=light\r\nview=details\r\n"
     focus()
-    picker.select(1)
-    eventually(lambda:profile.read_bytes()==
-               b"schema=2\r\nlanguage=ko-KR\r\ntheme=light\r\nview=details\r\n",
-               "native private light theme + view default update not persisted",12)
+    element("ThemePicker").wrapper_object().select(1)
+    eventually(lambda:
+               element("ThemeStateText").window_text()=="테마: 라이트" and
+               profile.read_bytes()==light_expected,
+               "native private light theme + view default update not persisted",16)
     focus()
-    picker.select(2)
-    eventually(lambda:profile.read_bytes()==expected,
-               "rapid dark/light/dark event ordering was not preserved",12)
+    element("ThemePicker").wrapper_object().select(2)
+    eventually(lambda:
+               element("ThemeStateText").window_text()=="테마: 다크" and
+               profile.read_bytes()==expected,
+               "rapid dark/light/dark event ordering was not preserved",16)
     print("REAL_M21_PRIVATE_KO_KR_THEME_SYSTEM_CHOICES_DARK_LIGHT_DARK_ATOMIC",True,flush=True)
 
     # Exact same self-built executable, exact inherited synthetic profile.
