@@ -132,7 +132,13 @@ cannot advance it.
 - Potentially blocking Shell/provider behavior stays off the XAML UI thread and
   behind bounded isolation.
 - Project CI runs on the repository-scoped interactive self-hosted Windows x64
-  runner; pushes to main use the Release + GUI validation scope automatically.
+  runner. Main pushes use change-aware automatic scope resolution:
+  source/policy metadata -> `source`; UI-independent/native/build -> `release`;
+  hard GUI or ordinary WinUI/runtime behavior -> `release-gui`. Nonvisual
+  behavior-preserving WinUI logical units may select `release` with a
+  `refactor:` subject or `CI-Scope: release` trailer, but hard GUI paths
+  cannot be downgraded. The `release` scope includes the Release M20 native
+  state fixture plus canonical Release build/runtime-set verification.
 - Iterative Windows development, Win11 benchmarking and GUI refinement should
   prefer this repository's `Remote Windows Task` workflow_dispatch shell on
   the repository-scoped interactive Windows VM, defaulting to persistent

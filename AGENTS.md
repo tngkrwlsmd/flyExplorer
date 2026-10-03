@@ -262,8 +262,18 @@ it, the user requests it, concurrent work would make direct-main unsafe, or the
 change needs isolated integration testing.
 
 Before push, run git diff --check, inspect staged scope, and run the verification
-required by the change. After normal push, fetch and verify HEAD == origin/main
-with ahead/behind 0/0. Never force-push.
+required by the change. Automatic main-push validation is change-aware:
+metadata/policy/source-contract-only changes use `source`; UI-independent
+native/build/package changes use `release`; hard GUI paths and ordinary WinUI
+behavior changes use `release-gui`. A nonvisual behavior-preserving WinUI
+logical unit may use `release` when its subject starts with `refactor:` or
+the commit carries `CI-Scope: release`. That marker must not be used to skip
+GUI acceptance for a real behavior or visual change, and hard GUI paths cannot
+be downgraded. `CI-Scope: release-gui` may explicitly promote a change.
+The `release` scope includes source contracts, the Release native state
+fixture, canonical Release build and runtime-set verification; it omits owned
+GUI automation. After normal push, fetch and verify HEAD == origin/main with
+ahead/behind 0/0. Never force-push.
 
 Do not push a state with a known required acceptance failure, temporary debug
 instrumentation or generated artifacts.

@@ -2,9 +2,10 @@ name: Windows VM Validation
 
 # Product/runtime CI runs on the repository-scoped interactive Windows VM.
 # Docs/agent-operation-only pushes do not queue this expensive Windows job.
-# Main push scope is resolved from the actual changed paths:
-#   source-contract-only -> source
-#   product/runtime/GUI/build/toolchain/workflow -> release-gui
+# Main push scope is resolved by tools/winui/resolve_validation_scope.py:
+#   source -> policy/source contracts/metadata
+#   release -> UI-independent/native/build or eligible behavior-preserving refactor
+#   release-gui -> hard GUI paths and ordinary WinUI/runtime behavior changes
 # Manual dispatch keeps source/release/release-gui/full exactly available.
 on:
   push:
@@ -17,7 +18,7 @@ on:
       - 'tools/winui/**'
       - 'tools/policy/**'
       - 'packaging/**'
-      - '.github/workflows/**'
+      - '.github/workflows/windows-build.yml'
       - 'build.bat'
       - 'run.bat'
       - 'test.bat'
@@ -80,36 +81,23 @@ jobs:
             }
           }
 
-          $changed = @(git diff --name-only $before $env:GITHUB_SHA)
+          $resolution = @(
+            python -X utf8 tools\winui\resolve_validation_scope.py --before $before --head $env:GITHUB_SHA
+          )
           if ($LASTEXITCODE -ne 0) {
-            throw "Unable to classify changed paths for CI scope."
+            throw "Unable to resolve automatic validation scope."
           }
-          if ($changed.Count -eq 0) {
-            throw "Push-triggered validation has no changed paths."
+          $resolution | ForEach-Object { Write-Host $_ }
+          $scopeLine = $resolution |
+            Where-Object { $_ -like "VALIDATION_SCOPE=*" } |
+            Select-Object -Last 1
+          if ([string]::IsNullOrWhiteSpace($scopeLine)) {
+            throw "Validation scope resolver did not emit VALIDATION_SCOPE."
           }
-
-          Write-Host "Changed paths:"
-          $changed | ForEach-Object { Write-Host "  $_" }
-
-          $sourceOnly = $true
-          foreach ($path in $changed) {
-            $safeSourceContract =
-              $path -match '^tests/winui/test_.*_contract\.py$' -or
-              $path -match '^tools/policy/'
-            $neutralMetadata =
-              $path -match '^docs/' -or
-              $path -match '^AGENTS\.md$' -or
-              $path -match '^README$' -or
-              $path -match '^LICENSE$' -or
-              $path -match '^CREDITS$' -or
-              $path -match '^\.agent-policy/'
-            if (-not $safeSourceContract -and -not $neutralMetadata) {
-              $sourceOnly = $false
-              break
-            }
+          $scope = $scopeLine.Substring("VALIDATION_SCOPE=".Length)
+          if ($scope -notin @("source", "release", "release-gui")) {
+            throw "Invalid automatic validation scope: $scope"
           }
-
-          $scope = if ($sourceOnly) { "source" } else { "release-gui" }
           "VALIDATION_SCOPE=$scope" |
             Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
           Write-Host "VALIDATION_SCOPE=$scope (automatic)"
@@ -176,6 +164,16 @@ jobs:
         if: ${{ env.VALIDATION_SCOPE == 'source' || env.VALIDATION_SCOPE == 'release' || env.VALIDATION_SCOPE == 'release-gui' }}
         shell: cmd
         run: test.bat source
+
+      - name: Build Release native state contracts
+        if: ${{ env.VALIDATION_SCOPE == 'release' || env.VALIDATION_SCOPE == 'release-gui' || env.VALIDATION_SCOPE == 'full' }}
+        shell: cmd
+        run: tests\winui\m20\build.cmd Release
+
+      - name: Run Release native state contracts
+        if: ${{ env.VALIDATION_SCOPE == 'release' || env.VALIDATION_SCOPE == 'release-gui' || env.VALIDATION_SCOPE == 'full' }}
+        shell: cmd
+        run: set FLY_M20_CONFIG=Release&& python -X utf8 tests\winui\m20\test_native.py
 
       - name: Build canonical WinUI Release
         if: ${{ env.VALIDATION_SCOPE == 'release' || env.VALIDATION_SCOPE == 'release-gui' }}

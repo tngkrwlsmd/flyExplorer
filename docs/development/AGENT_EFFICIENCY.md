@@ -55,11 +55,25 @@ For Actions specifically:
 
 Typical CI scope on direct-main pushes:
 - docs/status/agent-operation-only: no Windows VM workflow;
-- source-contract-only tests or tools/policy: source/policy scope;
-- WinUI/src product code, GUI/runtime tests, build/toolchain/package or workflow
-  changes: Release + GUI scope;
+- source-contract-only tests or tools/policy: `source`;
+- `src/base`, native fixtures, build/package/toolchain and other UI-independent
+  changes: `release`;
+- hard GUI paths (XAML, visual assets, owned GUI harness) and ordinary WinUI/
+  runtime behavior changes: `release-gui`;
+- nonvisual behavior-preserving `app/winui` work may use `release` when the
+  logical-unit subject starts with `refactor:` or carries
+  `CI-Scope: release`; hard GUI paths always override this and remain
+  `release-gui`;
+- `CI-Scope: release-gui` may promote any applicable push when stronger GUI
+  evidence is desired;
 - full Debug + Release remains explicit workflow_dispatch or a task-specific
   acceptance gate.
+
+The automatic classifier is `tools/winui/resolve_validation_scope.py` and is
+covered by source contracts. The `release` gate means policy + source +
+Release native state fixture + canonical Release build + runtime-set check,
+without the owned GUI suite. Do not label a functional/visual change as a
+refactor merely to reduce CI cost.
 
 Canonical orchestration is tools/winui/run_checks.py. Obsolete
 experiments/phase6 paths must not be used.
