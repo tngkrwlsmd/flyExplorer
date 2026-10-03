@@ -67,7 +67,7 @@ checkpoints.
   restore lane, while a matching failed/rejected/no-change completion can
   continue remaining tabs.
 - Ctrl+T, Ctrl+W, Ctrl+Tab and Ctrl+Shift+Tab Window Tab behavior.
-- Details, List, Small Icons and Medium Icons views.
+- Details, List, Small Icons, Medium Icons and Large Icons views.
 - Back/Forward/Up, filtering/sorting, local create/rename, guarded copy/move/
   recycle flows, Windows clipboard/context integration, isolated Shell visuals
   and directory/Shell namespace watching.
@@ -127,22 +127,27 @@ bootstrap configuration.
 
 ## Latest verified evidence
 
-On main revision `64dbaf5f26defae93d3b9326be8857b904c8d701`, validated on
-2026-10-03 by automatic self-hosted Windows run `37096585900` with resolved
-scope `release-gui`:
-- policy step completed successfully; documented development readiness PASS,
-  source-evidence readiness remains PARTIAL only for intentionally manual
-  runtime/deploy facts, and reviewed product paths were accepted against
-  product revision `79fc85838fb387281f849f1d4d292bf96fa7db70`;
+Large Icons is accepted on product revision
+`aafa1615048c61aade0cd1c544990735ddb89a15`, with policy-reviewed main revision
+`8fedf10aa3ead00b9488be0176da08dcd419ddf6`. Automatic self-hosted Windows run
+`37110339453` completed successfully on 2026-10-03 with resolved scope
+`release-gui`:
+- policy validation: PASS;
 - canonical structure preflight: 4/4 PASS;
-- source contracts: 154/154 PASS;
-- canonical Release app build: PASS, including restored package/toolchain
-  inputs and the tracked project template;
+- source contracts: 174/174 PASS;
+- Release M20 native state fixture: 26/26 PASS;
+- canonical Release app build: PASS;
 - owned Release GUI validation: PASS with
   `REAL_M23_PRIVATE_SESSION_CLEAR_REVOKES_FUTURE_AUTO_RESTORE True`,
   `OWNED_WINUI_SHELL_EXIT 0` and
   `ORIGINAL_SIX_USER_CONFIG_SHA256_IDENTICAL True`;
 - Release runtime-set verification: PASS.
+
+The Large Icons acceptance used an owned Windows 11 Explorer baseline at
+972x720, 96 DPI and Dark theme. Explorer Large Icons measured about 105x131 px
+per UIA item with roughly 118x132 px pitch. flyExplorer uses a 112x128 item in a
+120x132 wrap slot, retaining a 64 px visual target and two-line label while
+keeping dual-pane density practical.
 
 The PreferencesCoordinator logical unit was pre-main validated on temporary
 remote run `37096260604`: focused coordinator contracts 2/2 PASS, canonical
@@ -191,7 +196,7 @@ Not certified by current automated evidence:
   unresolved);
 - signed clean-machine machine-wide install/update/rollback;
 - public redistribution/source-delivery/rightsholder/legal clearance;
-- Large Icons and optional path-specific Known Folder artwork.
+- optional path-specific Known Folder artwork.
 
 Do not convert source support, RDP-only checks or a prior package into
 certification of these gates.
