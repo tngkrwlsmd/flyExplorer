@@ -156,14 +156,17 @@ code automatically on the privileged self-hosted runner.
 ### Remote Windows development loop
 
 For iterative Windows development, Win11 benchmarking and GUI refinement,
-prefer this repository's `Remote Windows Task` workflow_dispatch shell with
-working directory `C:\dev\flyExplorer`. It runs on the repository-scoped
-interactive Windows VM without creating a request commit, temporary branch or
-task-script commit. Use the persistent checkout to preserve incremental build
-state and a stable interactive desktop between iterations. The dispatched job
-is not a persistent terminal session, so combine related edit/build/test/probe
-work into bounded commands or scripts rather than issuing one Actions job for
-every small shell command.
+prefer the fixed `control/remote-shell` request slot. Write
+`requests/remote-shell/request.json` only on that branch; the request commit
+triggers `Remote Windows Task` on the repository-scoped interactive Windows
+VM and runs in `C:\dev\flyExplorer` by default. Never merge request commits
+into main. Product main continues to record only verified logical units, while
+the control branch records command history separately. Manual
+`workflow_dispatch` remains available for human-operated commands. Use the
+persistent checkout to preserve incremental build state and a stable
+interactive desktop between iterations. Each job is not a persistent terminal
+session, so combine related edit/build/test/probe work into bounded commands or
+scripts rather than issuing one Actions job for every small shell command.
 
 Begin by fetching and inspecting HEAD/origin/main and the worktree. Never use
 reset/clean/checkout-overwrite to erase unexpected local changes. Fast-forward
@@ -185,9 +188,9 @@ loop.
 
 Use `personal-control-plane` for runner health, Windows process/service/
 task-scheduler checks, recovery and machine maintenance, especially when this
-repository's runner/workflow path is broken. The committed-script `remote/**`
-task remains a fallback for project-specific commands when workflow_dispatch is
-unavailable/unsuitable or isolated branch execution is materially useful.
+repository's runner/workflow path is broken. The committed-script `remote/**` task remains a fallback for
+project-specific commands when the request-slot/dispatch path is unavailable or
+unsuitable, or isolated branch execution is materially useful.
 
 After normal push, fetch and verify HEAD == origin/main and ahead/behind 0/0.
 Force push is prohibited. If origin/main moved unexpectedly, analyze rather

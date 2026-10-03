@@ -27,15 +27,31 @@ class RemoteWindowsTaskContractTests(unittest.TestCase):
         self.assertIn("Invoke-Expression $env:REMOTE_COMMAND", self.workflow)
         self.assertIn("Set-Location -LiteralPath $workdir", self.workflow)
 
+    def test_request_slot_uses_dedicated_control_branch(self):
+        self.assertIn("- 'control/remote-shell'", self.workflow)
+        self.assertIn("- 'requests/remote-shell/request.json'", self.workflow)
+        self.assertIn(
+            "github.ref_name == 'control/remote-shell'",
+            self.workflow,
+        )
+        self.assertIn('"requests\\remote-shell\\request.json"', self.workflow)
+        self.assertIn("Remote shell request_id is required.", self.workflow)
+        self.assertIn("REMOTE_SOURCE=control/remote-shell", self.workflow)
+
     def test_dispatch_path_does_not_require_checkout(self):
         self.assertIn(
-            "- name: Checkout remote task branch\n"
+            "- name: Checkout pushed control or task branch\n"
             "        if: github.event_name == 'push'",
             self.workflow,
         )
         self.assertIn(
-            "- name: Run committed remote task\n"
-            "        if: github.event_name == 'push'",
+            "- name: Resolve dispatched shell inputs\n"
+            "        if: github.event_name == 'workflow_dispatch'",
+            self.workflow,
+        )
+        self.assertIn(
+            "github.event_name == 'workflow_dispatch' || "
+            "github.ref_name == 'control/remote-shell'",
             self.workflow,
         )
 
@@ -43,15 +59,19 @@ class RemoteWindowsTaskContractTests(unittest.TestCase):
         self.assertIn("- 'remote/**'", self.workflow)
         self.assertIn("- '.github/remote-task.ps1'", self.workflow)
         self.assertIn('".github\\remote-task.ps1"', self.workflow)
-
-    def test_guidance_prefers_repository_dispatch_and_keeps_rdc_auxiliary(self):
         self.assertIn(
-            "prefer this repository's `Remote Windows Task` workflow_dispatch shell",
+            "startsWith(github.ref, 'refs/heads/remote/')",
+            self.workflow,
+        )
+
+    def test_guidance_prefers_request_slot_and_keeps_rdc_auxiliary(self):
+        self.assertIn(
+            "`control/remote-shell` request slot",
             self.agents,
         )
         self.assertIn("RDC or another desktop-control path is a supplementary tool", self.agents)
         self.assertIn(
-            "prefer this repository's `Remote Windows Task` workflow_dispatch shell",
+            "`control/remote-shell` request slot",
             self.efficiency,
         )
         self.assertIn("RDC/desktop-control is supplementary", self.efficiency)

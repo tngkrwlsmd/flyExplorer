@@ -199,14 +199,18 @@ state; reuse completed evidence for the same revision/configuration rather than
 rerunning it.
 
 For iterative Windows development, GUI work and Windows 11 benchmarking,
-prefer this repository's `Remote Windows Task` workflow_dispatch shell. It
-runs directly on the repository-scoped interactive Windows VM and defaults to
-the persistent canonical checkout `C:\dev\flyExplorer`; dispatching a
-command requires no branch, request file or commit. The persistent checkout is
-the development state boundary. The dispatched shell is still an Actions job,
-not a persistent terminal process, so batch related edit/build/focused-test/
-GUI-probe steps into useful commands or scripts instead of creating one job per
-trivial shell command.
+prefer this repository's fixed `control/remote-shell` request slot. Update
+only `requests/remote-shell/request.json` on that control branch; its push
+triggers `Remote Windows Task` on the repository-scoped interactive Windows
+VM and executes against the persistent canonical checkout
+`C:\dev\flyExplorer`. Request commits are operational history and must never
+be merged into main. This keeps product main limited to verified logical units
+while still allowing GitHub tooling to command the development PC directly.
+Manual `workflow_dispatch` remains the equivalent human-operated shell entry
+point. The persistent checkout is the development state boundary; each Actions
+invocation is a bounded command job rather than a persistent terminal process,
+so batch related edit/build/focused-test/GUI-probe steps into useful commands or
+scripts instead of creating one job per trivial shell command.
 
 At the start of a remote development loop, fetch origin and inspect the current
 branch, HEAD, `origin/main` and `git status --short`. Do not reset, clean,
@@ -236,9 +240,9 @@ verified logical unit.
 
 Runner health, process/service/task-scheduler inspection, runner recovery and
 machine maintenance belong in `personal-control-plane`, especially when this
-repository's runner path itself is broken. The committed-script remote task
-remains a fallback for bounded project-specific commands when workflow_dispatch
-is unavailable/unsuitable or isolated branch execution is materially useful.
+repository's runner path itself is broken. The committed-script remote task remains a fallback for bounded
+project-specific commands when the request-slot/dispatch path is unavailable
+or unsuitable, or isolated branch execution is materially useful.
 In that fallback, create a
 temporary `remote/**` branch from current main, commit only
 `.github/remote-task.ps1`, execute

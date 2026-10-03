@@ -140,12 +140,13 @@ cannot advance it.
   cannot be downgraded. The `release` scope includes the Release M20 native
   state fixture plus canonical Release build/runtime-set verification.
 - Iterative Windows development, Win11 benchmarking and GUI refinement should
-  prefer this repository's `Remote Windows Task` workflow_dispatch shell on
-  the repository-scoped interactive Windows VM, defaulting to persistent
-  checkout `C:\dev\flyExplorer`. Dispatch commands require no request commit
-  or temporary branch. That checkout is the inner development-loop state;
-  flyExplorer Actions are the independent final acceptance plane after a
-  verified logical-unit push. RDC is supplementary for interactions that shell/
+  prefer the fixed `control/remote-shell` branch request slot. Updating
+  `requests/remote-shell/request.json` on that branch triggers this
+  repository's `Remote Windows Task` on the interactive Windows VM and runs
+  against persistent checkout `C:\dev\flyExplorer` by default. Request
+  commits are operational history and must never merge into main; main remains
+  the history of verified logical units. Manual workflow_dispatch is the
+  human-operated equivalent. RDC is supplementary for interactions that shell/
   UIA/screenshot evidence cannot exercise. Use
   `tngkrwlsmd/personal-control-plane` primarily for runner/machine recovery and
   maintenance, especially when this repository's runner path is broken.
