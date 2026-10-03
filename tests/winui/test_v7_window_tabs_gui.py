@@ -166,7 +166,7 @@ def run(*,win,element,safe_click,focus,eventually,owned,localdata,env,exe):
     eventually(lambda:"nested" in address() and element("BackButton").is_enabled(),
                "cleanup close did not restore ready tab A",14)
     safe_click(element("BackButton"))
-    eventually(lambda:address().rstrip("\/")==initial_address.rstrip("\/").lower(),
+    eventually(lambda:address().rstrip("\\/")==initial_address.rstrip("\\/").lower(),
                "v7 cleanup did not restore the original owned folder",14)
     print("REAL_V7_FUNCTIONAL_WINDOW_TABS_STATE_ISOLATION",True,flush=True)
     print("REAL_V7_WINDOW_TAB_KEYBOARD_AND_ADD_BUTTON",True,flush=True)
