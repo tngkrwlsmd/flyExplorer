@@ -13,8 +13,11 @@ ShellNavigationController, FileOperationController and SearchController. A
 post-extraction MainWindow audit also moved the coherent file-detail worker
 lifecycle into FileDetailController. A second responsibility audit selected
 preferences persistence as the next justified ownership boundary and moved its
-revision/mutex/detached-save lifecycle into PreferencesCoordinator. Live Git
-refs always take precedence over recorded checkpoints.
+revision/mutex/detached-save lifecycle into PreferencesCoordinator. A follow-up
+workspace-restore lifecycle audit then found an independent request/settlement
+boundary and moved pane-local restore sequencing into
+WorkspaceRestoreCoordinator. Live Git refs always take precedence over recorded
+checkpoints.
 
 ## Accepted current behavior
 
@@ -53,6 +56,16 @@ refs always take precedence over recorded checkpoints.
   retry reproduced the same boundary. This does not prove a product drag defect;
   it means the current automation environment cannot certify the
   pointer-to-WinUI-drag gesture boundary.
+- The follow-up workspace-restore audit reversed the earlier deferral after
+  identifying a real lifecycle boundary: each pane has queued restore tasks plus
+  one awaited Shell navigation request. Previously a failed/rejected/no-change
+  restore request could clear the model pending flag without advancing the raw
+  queue, leaving later tabs unrestored. WorkspaceRestoreCoordinator now owns
+  restore tasks, awaited request identity, settle/advance matching and
+  reset/cancel semantics. MainWindow keeps workspace/model application, Shell
+  submission and presentation. Stale or canceled completions cannot advance a
+  restore lane, while a matching failed/rejected/no-change completion can
+  continue remaining tabs.
 - Ctrl+T, Ctrl+W, Ctrl+Tab and Ctrl+Shift+Tab Window Tab behavior.
 - Details, List, Small Icons and Medium Icons views.
 - Back/Forward/Up, filtering/sorting, local create/rename, guarded copy/move/
