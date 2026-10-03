@@ -213,6 +213,30 @@ the first relevant failure and return to the remote checkout for the next fix;
 do not make repeated temporary task branches/commits the normal development
 loop.
 
+### Remote workflow run budget
+
+For each logical unit, plan the remote evidence before launching it. The normal
+pre-main budget is **one integrated acceptance run and one data-dependent
+retry**. A third pre-main run is allowed only when the previous result creates
+a distinct hypothesis, requires a different evidence mechanism, or exposes an
+environment boundary that could not have been tested in the existing job.
+Repeated diagnose-only jobs against the same UIA/fixture mechanism are
+prohibited.
+
+Batch investigation, the likely fix, focused tests, incremental build, owned
+GUI exercise and required screenshot capture into the same request whenever
+the result of an earlier step is not needed to decide what later step should
+exist. When a run fails late, reuse all earlier PASS gates from the same
+revision/configuration and resume at the failing boundary. Do not rerun source,
+native or build stages merely to reach an unchanged GUI assertion.
+
+Do not create a separate remote workflow solely to publish, copy or rename
+evidence that the producing run could have retained or reported. Before a main
+push that changes any path covered by project policy review metadata, perform
+the policy readiness/preflight check and update the review metadata as part of
+the same verified logical unit. This check belongs before the expensive final
+main acceptance run, not after it fails.
+
 Use `personal-control-plane` for runner health, Windows process/service/
 task-scheduler checks, recovery and machine maintenance, especially when this
 repository's runner/workflow path is broken. The committed-script `remote/**` task remains a fallback for

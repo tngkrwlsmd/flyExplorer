@@ -99,6 +99,18 @@ class RemoteWindowsTaskContractTests(unittest.TestCase):
         self.assertIn("already merged and accepted", project_normalized)
         self.assertIn("one batched", project_normalized)
 
+    def test_guidance_caps_remote_validation_churn(self):
+        agents = " ".join(self.agents.split())
+        efficiency = " ".join(self.efficiency.split())
+        self.assertIn("one integrated acceptance request plus at most one data-dependent retry", agents)
+        self.assertIn("A third pre-main remote job", agents)
+        self.assertIn("Do not chain diagnose-only jobs", agents)
+        self.assertIn("policy readiness gate", agents)
+        self.assertIn("one integrated acceptance run and one data-dependent retry", efficiency)
+        self.assertIn("Repeated diagnose-only jobs", efficiency)
+        self.assertIn("Do not create a separate remote workflow solely to publish", efficiency)
+        self.assertIn("policy readiness/preflight check", efficiency)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -249,6 +249,32 @@ state, product log or pixel defect), stop debugging that fixture. Switch to a
 different bounded evidence path such as existing owned GUI coverage, native
 helper/hash evidence, source contracts or a direct controlled screenshot.
 
+### Remote validation anti-thrashing rule
+
+For one logical unit, the default pre-main remote workflow budget is **one
+integrated acceptance request plus at most one data-dependent retry**. A third
+pre-main remote job for the same logical unit is exceptional: it requires a
+genuinely different product hypothesis, evidence path or environment need.
+Do not chain diagnose-only jobs that each inspect one UIA label, one button
+invocation, one log fragment or one screenshot state when those checks can be
+batched in the persistent checkout.
+
+Before starting a remote request, write the planned gate sequence into that
+request and execute the longest useful prefix in one job. If a run proves
+source/native/build gates and then fails at a GUI fixture, retain those PASS
+results for the same revision/configuration and make the next request start at
+the failing boundary; do not rebuild or rerun earlier gates without an
+identified reason. The same rule applies to visual evidence: capture, inspect
+and report the required screenshots in the acceptance request rather than
+creating separate publish/copy-only workflows.
+
+Before pushing a verified logical unit to main, run or inspect the policy
+readiness gate whenever a reviewed product path changed. Update
+`.agent-policy/PROJECT.md` review metadata in the same logical unit when
+required, so main CI is not spent rediscovering a known stale review revision.
+A final main CI failure is a new diagnostic input, not permission to start
+another chain of narrowly scoped workflow probes.
+
 At the start of a remote development loop, fetch origin and inspect the current
 branch, HEAD, `origin/main` and `git status --short`. Do not reset, clean,
 discard or overwrite unexpected local work. If the checkout is clean and main
