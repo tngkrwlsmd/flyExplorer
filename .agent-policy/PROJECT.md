@@ -26,7 +26,7 @@ consumer core; this PROJECT.md remains project-owned across bundle refreshes.
     {"name": "winui-tests", "path": "tests/winui", "responsibility": "source, native and owned GUI contracts"}
   ],
   "review": {
-    "reviewed_revision": "02e46d3e2133e3e30bfeca0803af39222a93c7bd",
+    "reviewed_revision": "5fad9447ecc54ceb054329076400ba1573eed8df",
     "reviewed_at": "2026-10-03",
     "reviewed_paths": [
       "app/winui",
@@ -97,52 +97,35 @@ visual acceptance showed all six sidebar artwork images visible at 16x16,
 aligned with the Windows 11 Explorer navigation motifs, with before/after
 process exit 0.
 
+Persistent WinUI filesystem bookmarks are now part of the accepted product
+surface. Bookmarks use the private %LOCALAPPDATA%\flyExplorer\bookmarks-v1.txt
+profile with atomic replacement, case-insensitive path deduplication and a
+bounded 100-item model. The active pane's filesystem folder can be added from
+the always-visible bookmark bar, reopened from the bar, renamed or deleted from
+the management surface and restored after process restart. Legacy MFC bookmark
+configuration is never read automatically; explicit import reads only
+name/path entries and skips malformed, duplicate or unsupported items.
+
 ## Current verification
 
-The latest accepted product checkpoint is the sidebar Known Folder artwork
-logical unit: product revision `02e46d3e2133e3e30bfeca0803af39222a93c7bd`,
-policy/contract-reviewed through
-`559129d7c73c2867371f762b6d5480e41280795e`. Automatic self-hosted Windows
-run `37123115476` completed successfully on 2026-10-03 with resolved scope
-`release-gui`:
-- policy validation PASS;
-- canonical structure 4/4 PASS;
-- source contracts 181/181 PASS;
-- Release M20 native state fixture 26/26 PASS;
-- canonical Release app build PASS;
-- owned Release GUI PASS with
-  `REAL_M23_PRIVATE_SESSION_CLEAR_REVOKES_FUTURE_AUTO_RESTORE True`,
-  `OWNED_WINUI_SHELL_EXIT 0` and protected six user-config hashes identical;
-- Release runtime set PASS.
+The current bookmark product revision is
+`5fad9447ecc54ceb054329076400ba1573eed8df`. Pre-main focused evidence is
+recorded in CURRENT_STATUS.md: remote run `37131861647` completed the canonical
+structure/source contracts, owned bookmark add/rename/delete/explicit legacy
+import, restart persistence, protected legacy user-profile sentinel and
+`git diff --check`; remote run `37130545208` independently established the
+Release M20 native bookmark/state fixture, canonical Release build and the
+pre-existing owned Release GUI suite with normal process exit. Controlled
+972x720, 96 DPI, Dark-theme BEFORE/AFTER capture was repeated on remote run
+`37132254625` with the process-owned window forced to the foreground and is
+recorded as `VISUAL ACCEPTANCE: PASS`.
 
-Later main commits through `51e0b8325f63c00077de7975d6dde770f7e32609`
-are documentation/status updates and do not supersede that product-binary
-acceptance evidence. Live Git refs and recent CI always take priority over this
-snapshot during task resume.
-
-The PreferencesCoordinator logical unit was pre-main validated on temporary
-remote run `37096260604` with focused coordinator contracts 2/2 PASS,
-canonical structure 4/4 PASS, source contracts 154/154 PASS, Release build PASS,
-full owned Release GUI PASS, real process exit 0, protected user configuration
-unchanged and `git diff --check` PASS. The temporary task script is not part
-of main product history.
-
-The WorkspaceRestoreCoordinator logical unit was pre-main validated on temporary
-remote run `37102918444`: canonical structure 4/4 PASS, source contracts
-159/159 PASS, Release native restore/model fixture 26/26 PASS, canonical Release
-build PASS, owned Release GUI PASS with process exit 0 and protected six
-user-config hashes identical, plus `git diff --check` PASS. The temporary task
-script is not part of main product history.
-
-The second audit deliberately did not extract private drag/drop state because
-physical drag remains an explicit open gate. A follow-up workspace-restore
-lifecycle audit then found a distinct request/settlement boundary:
-WorkspaceRestoreCoordinator now owns pane-local restore tasks, the awaited
-Shell navigation request id, stale-completion matching and reset/cancel
-semantics. MainWindow retains workspace/model application, Shell submission and
-presentation. Failed, rejected or no-change restore requests can now settle and
-advance the remaining restore queue, while unrelated or canceled completions
-cannot advance it.
+The automatic main run `37132879024` resolved scope `release-gui` but stopped
+at policy validation because this PROJECT.md still referenced the older sidebar
+review revision. That failure occurred before source/native/build/GUI steps and
+does not supersede the focused product evidence above. This policy review
+updates the reviewed revision to the bookmark product commit; the next
+release-gui main validation is the independent final acceptance gate.
 
 ## Build/runtime facts
 
