@@ -1,6 +1,6 @@
 {
-  "request_id": "ops-20261003-resume-guard-smoke-001",
-  "expected_main_sha": "1555520a15cea50f49ec304e155611dde7cc5ef5",
+  "request_id": "ops-20261003-resume-guard-smoke-002",
+  "expected_main_sha": "93cdd768b7382bb7af283c99f3b949a34c48aa96",
   "working_directory": "C:\\dev\\flyExplorer",
   "command": "Write-Output 'RESUME_GUARD_SMOKE'; Write-Output 'LOCAL_HEAD'; git rev-parse HEAD; Write-Output 'ORIGIN_MAIN'; git fetch origin --prune; git rev-parse origin/main; Write-Output 'STATUS'; git status --short"
 }
