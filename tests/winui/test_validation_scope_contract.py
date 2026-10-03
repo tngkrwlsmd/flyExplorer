@@ -56,38 +56,39 @@ class ValidationScopeContractTests(unittest.TestCase):
             "release",
         )
 
-    def test_regular_winui_behavior_change_defaults_to_gui(self):
+    def test_regular_winui_behavior_change_uses_build_focused_release(self):
         self.assertEqual(
             self.classify(["app/winui/MainWindow.xaml.cpp"], "fix: update navigation"),
-            "release-gui",
+            "release",
         )
 
-    def test_xaml_cannot_be_downgraded_by_refactor_or_trailer(self):
+    def test_xaml_uses_release_automatic_scope(self):
         for message in (
             "refactor: reorganize view",
             "refactor: reorganize view\n\nCI-Scope: release",
+            "ui: reorganize view\n\nCI-Scope: release-gui",
         ):
             self.assertEqual(
                 self.classify(["app/winui/MainWindow.xaml"], message),
-                "release-gui",
+                "release",
             )
 
-    def test_gui_harness_cannot_be_downgraded(self):
+    def test_gui_harness_uses_release_automatic_scope(self):
         self.assertEqual(
             self.classify(
                 ["tests/winui/test_shell_gui.py"],
-                "refactor: simplify GUI harness\n\nCI-Scope: release",
+                "refactor: simplify GUI harness",
             ),
-            "release-gui",
+            "release",
         )
 
-    def test_release_gui_trailer_promotes_release_safe_change(self):
+    def test_release_gui_trailer_does_not_enable_automatic_gui(self):
         self.assertEqual(
             self.classify(
                 ["src/base/model.cpp"],
                 "fix: model behavior\n\nCI-Scope: release-gui",
             ),
-            "release-gui",
+            "release",
         )
 
     def test_source_trailer_cannot_downgrade_product_change(self):
@@ -96,7 +97,7 @@ class ValidationScopeContractTests(unittest.TestCase):
                 ["app/winui/search_controller.cpp"],
                 "fix: search behavior\n\nCI-Scope: source",
             ),
-            "release-gui",
+            "release",
         )
 
     def test_remote_shell_workflow_is_source_only_but_ci_workflow_is_release(self):

@@ -1,12 +1,12 @@
-name: Windows VM Validation
+name: Windows VM Build
 
-# Product/runtime CI runs on the repository-scoped interactive Windows VM.
-# Docs/agent-operation-only pushes do not queue this expensive Windows job.
+# Automatic main CI is build-focused and is not a GUI debugging loop.
+# Docs/agent-operation-only pushes do not queue this Windows job.
 # Main push scope is resolved by tools/winui/resolve_validation_scope.py:
 #   source -> policy/source contracts/metadata
-#   release -> UI-independent/native/build or eligible behavior-preserving refactor
-#   release-gui -> hard GUI paths and ordinary WinUI/runtime behavior changes
-# Manual dispatch keeps source/release/release-gui/full exactly available.
+#   release -> all product/native/WinUI/build/runtime changes
+# GUI/visual acceptance is completed pre-main through control/remote-shell.
+# Manual human dispatch keeps release-gui/full available for exceptional use.
 on:
   push:
     branches:
@@ -95,8 +95,8 @@ jobs:
             throw "Validation scope resolver did not emit VALIDATION_SCOPE."
           }
           $scope = $scopeLine.Substring("VALIDATION_SCOPE=".Length)
-          if ($scope -notin @("source", "release", "release-gui")) {
-            throw "Invalid automatic validation scope: $scope"
+          if ($scope -notin @("source", "release")) {
+            throw "Automatic main CI may resolve only to source or release: $scope"
           }
           "VALIDATION_SCOPE=$scope" |
             Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append

@@ -1,9 +1,8 @@
-"""Resolve the automatic Windows validation scope for one main push.
+"""Resolve the automatic build-focused Windows scope for one main push.
 
-The classifier is deliberately conservative: hard GUI paths always require GUI
-acceptance. A behavior-preserving nonvisual WinUI change may use Release-only
-acceptance when the logical-unit commit is named refactor: or carries an
-explicit CI-Scope: release trailer.
+Automatic main pushes use only source or release. GUI/visual acceptance belongs
+to the pre-main remote-shell development loop. release-gui/full remain manual
+workflow_dispatch choices and are never selected by this classifier.
 """
 from __future__ import annotations
 
@@ -14,7 +13,7 @@ import subprocess
 import sys
 
 TRAILER_RE = re.compile(
-    r"^CI-Scope:\s*(source|release|release-gui)\s*$",
+    r"^CI-Scope:\s*(source|release)\s*$",
     re.IGNORECASE | re.MULTILINE,
 )
 
@@ -124,32 +123,22 @@ def classify(paths: list[str], message: str) -> tuple[str, str]:
 
     hard_gui = [path for path in paths if is_hard_gui(path)]
     requested = requested_scope(message)
-    subject = (message or "").splitlines()[0].strip().lower()
-    is_refactor = subject.startswith("refactor:")
 
     if hard_gui:
-        return "release-gui", "hard GUI path: " + hard_gui[0]
-
-    if requested == "release-gui":
-        return "release-gui", "commit trailer requested release-gui"
+        return (
+            "release",
+            "hard GUI path; GUI acceptance must be completed pre-main: "
+            + hard_gui[0],
+        )
 
     if all(is_source_only(path) for path in paths):
         return "source", "source/policy/metadata-only change"
 
-    if all(is_release_safe(path) for path in paths):
-        return "release", "UI-independent/build/native change"
+    if requested == "source":
+        # A trailer may not downgrade product/build paths.
+        requested = None
 
-    refactor_eligible = all(
-        is_release_safe(path) or is_nonvisual_winui_source(path)
-        for path in paths
-    )
-    if requested == "release" and refactor_eligible:
-        return "release", "CI-Scope: release on nonvisual eligible paths"
-
-    if is_refactor and refactor_eligible:
-        return "release", "refactor: logical unit on nonvisual eligible paths"
-
-    return "release-gui", "WinUI/runtime behavior change defaults to GUI acceptance"
+    return "release", "product/build change uses build-focused Release CI"
 
 
 def git_lines(*args: str) -> list[str]:

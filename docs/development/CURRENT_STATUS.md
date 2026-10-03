@@ -145,6 +145,20 @@ bootstrap configuration.
 
 ## Latest verified evidence
 
+Persistent WinUI bookmarks are accepted on main. Automatic Windows run
+`37133980876` completed successfully for main revision
+`85b20db79ab61742bb9cca2057c5afab696574cf`: policy/source gates passed,
+Release native state contracts passed, the canonical Release build passed, the
+owned Release GUI suite passed with normal process exit, and the Release runtime
+set passed. This closes the bookmark logical unit together with the focused
+pre-main functional and visual evidence below.
+
+Development policy now treats the persistent remote shell as the Windows
+diagnosis/build iteration surface and automatic main Windows CI as a single
+build-focused final gate. Same-revision Actions reruns are prohibited; future
+automatic pushes resolve only to source or release, while release-gui/full are
+explicit human dispatch choices.
+
 Persistent WinUI bookmarks were pre-main validated on work revision
 `3ea29587c973d879f1ad2236f4354794b1a81d62`. The final focused product
 steps in remote run `37131861647` completed before an unrelated temporary

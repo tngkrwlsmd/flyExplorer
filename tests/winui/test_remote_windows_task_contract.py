@@ -92,23 +92,23 @@ class RemoteWindowsTaskContractTests(unittest.TestCase):
             self.assertIn("recent commits", normalized)
             self.assertIn("recent main CI", normalized)
             self.assertIn("expected_main_sha", normalized)
-        self.assertIn("two consecutive failures", self.efficiency)
-        self.assertIn("circuit breaker", self.efficiency)
+        self.assertIn("Zero same-revision Actions retries", self.efficiency)
+        self.assertIn("Do not retry a completed GitHub Actions run", self.efficiency)
         self.assertIn("already on main", self.agents)
         project_normalized = " ".join(self.project.split())
         self.assertIn("already merged and accepted", project_normalized)
         self.assertIn("one batched", project_normalized)
 
-    def test_guidance_caps_remote_validation_churn(self):
+    def test_guidance_makes_actions_build_focused_and_non_retrying(self):
         agents = " ".join(self.agents.split())
         efficiency = " ".join(self.efficiency.split())
-        self.assertIn("one integrated acceptance request plus at most one data-dependent retry", agents)
-        self.assertIn("A third pre-main remote job", agents)
-        self.assertIn("Do not chain diagnose-only jobs", agents)
-        self.assertIn("policy readiness gate", agents)
-        self.assertIn("one integrated acceptance run and one data-dependent retry", efficiency)
-        self.assertIn("Repeated diagnose-only jobs", efficiency)
-        self.assertIn("Do not create a separate remote workflow solely to publish", efficiency)
+        self.assertIn("Same-revision Actions reruns are prohibited", agents)
+        self.assertIn("Automatic main Windows CI is a build-focused final gate", agents)
+        self.assertIn("Automatic pushes may resolve only to `source` or `release`", agents)
+        self.assertIn("Never press rerun", agents)
+        self.assertIn("one automatic acceptance attempt", efficiency)
+        self.assertIn("Do not rerun a failed job or workflow on that same SHA", efficiency)
+        self.assertIn("must not automatically run GUI automation", efficiency)
         self.assertIn("policy readiness/preflight check", efficiency)
 
 

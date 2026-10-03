@@ -139,14 +139,14 @@ release-gui main validation is the independent final acceptance gate.
   FlyShellIsolationHelper.exe are required.
 - Potentially blocking Shell/provider behavior stays off the XAML UI thread and
   behind bounded isolation.
-- Project CI runs on the repository-scoped interactive self-hosted Windows x64
-  runner. Main pushes use change-aware automatic scope resolution:
-  source/policy metadata -> `source`; UI-independent/native/build -> `release`;
-  hard GUI or ordinary WinUI/runtime behavior -> `release-gui`. Nonvisual
-  behavior-preserving WinUI logical units may select `release` with a
-  `refactor:` subject or `CI-Scope: release` trailer, but hard GUI paths
-  cannot be downgraded. The `release` scope includes the Release M20 native
-  state fixture plus canonical Release build/runtime-set verification.
+- Project CI runs on the repository-scoped self-hosted Windows x64 runner, but
+  automatic main CI is build-focused rather than a GUI debugging loop. Main
+  pushes resolve only to `source` for source/policy-only work or `release`
+  for product/WinUI/native/build/runtime changes. The `release` scope includes
+  policy/source contracts, the Release M20 native state fixture, canonical
+  Release build and runtime-set verification. Automatic main CI does not run
+  owned GUI automation; `release-gui` and `full` are explicit human
+  workflow_dispatch choices only.
 - Every resumed/interrupted task starts by reading live main HEAD, recent main
   commits and recent main CI together. If the named logical unit is already
   merged and accepted, advance instead of reopening old control-branch or
@@ -164,10 +164,11 @@ release-gui main validation is the independent final acceptance gate.
   UIA/screenshot evidence cannot exercise. Use
   `tngkrwlsmd/personal-control-plane` primarily for runner/machine recovery and
   maintenance, especially when this repository's runner path is broken.
-- Default remote execution unit is one batched investigate/edit/focused-test/
-  build/GUI-evidence request, with a second request only when genuinely
-  data-dependent. Two consecutive fixture/harness failures without independent
-  product-defect evidence trigger a switch to another bounded evidence path.
+- The persistent remote-shell checkout is the primary Windows development and
+  diagnosis surface. Batch investigate/edit/build/focused-test/GUI-evidence
+  commands there. GitHub Actions never receives a same-revision retry: one SHA
+  gets one automatic acceptance attempt. A failure is diagnosed once, fixed in
+  the remote-shell loop, and only a new revision receives a new run.
 - GitHub-hosted runners require explicit user approval and are not part of the
   active flyExplorer CI path by default.
 - The privileged self-hosted runner must not execute untrusted fork/PR code

@@ -203,13 +203,14 @@ permits it for the task. Normal GitHub connector/API access is allowed when
 appropriate.
 
 Project CI uses the repository-scoped self-hosted Windows runner. Direct-main
-remains the normal development path. Main pushes that can affect the product,
-runtime, GUI, build/toolchain or validation workflow still run Release + GUI
-validation. A push containing only source-contract test files in the
+remains the normal development path. Main pushes that affect product/runtime/build/toolchain paths use a build-focused
+Release validation; they do not run owned GUI automation automatically. A push
+containing only source-contract test files in the
 tests/winui/test_*_contract.py family or tools/policy changes runs only the
 source/policy scope. Documentation/status/agent-operation-only pushes do not
-queue the Windows VM. workflow_dispatch continues to provide
-source/release/release-gui/full explicitly.
+queue the Windows VM. Explicit human workflow_dispatch continues to provide
+source/release/release-gui/full when a stronger one-off gate is intentionally
+requested.
 
 Do not keep one ChatGPT response alive by repeatedly polling a long Actions
 run. After starting a long run, record its run ID, target commit and scope.
@@ -242,38 +243,44 @@ requests when the first result genuinely determines the second. Do not create a
 new remote job merely to rediscover facts already available from live main,
 CURRENT_STATUS or completed run logs.
 
-Classify a remote/GUI failure before retrying: product defect, environment
-limit, or fixture/harness defect. If the same GUI fixture/harness fails twice
-without independent product-defect evidence (crash, assertion, wrong product
-state, product log or pixel defect), stop debugging that fixture. Switch to a
-different bounded evidence path such as existing owned GUI coverage, native
-helper/hash evidence, source contracts or a direct controlled screenshot.
+Classify each failure once from its first relevant error: product defect,
+environment limit, or fixture/harness defect. Do **not** rerun the same GitHub
+Actions revision to see whether it passes on a second attempt. Same-revision
+Actions reruns are prohibited for normal development. A follow-up Actions run
+must correspond to a real new revision that addresses an identified cause; it
+is a new acceptance run, not a retry.
 
-### Remote validation anti-thrashing rule
+### Remote development and final-CI anti-thrashing rule
 
-For one logical unit, the default pre-main remote workflow budget is **one
-integrated acceptance request plus at most one data-dependent retry**. A third
-pre-main remote job for the same logical unit is exceptional: it requires a
-genuinely different product hypothesis, evidence path or environment need.
-Do not chain diagnose-only jobs that each inspect one UIA label, one button
-invocation, one log fragment or one screenshot state when those checks can be
-batched in the persistent checkout.
+Use `control/remote-shell` and the persistent `C:\dev\flyExplorer` checkout
+as the primary Windows development/debug surface. Compile errors, link errors,
+native fixture failures, runtime diagnostics, focused UIA checks and controlled
+screenshots should be investigated there before main is pushed. Batch related
+commands in the remote shell instead of creating a sequence of one-observation
+diagnostic workflows.
 
-Before starting a remote request, write the planned gate sequence into that
-request and execute the longest useful prefix in one job. If a run proves
-source/native/build gates and then fails at a GUI fixture, retain those PASS
-results for the same revision/configuration and make the next request start at
-the failing boundary; do not rebuild or rerun earlier gates without an
-identified reason. The same rule applies to visual evidence: capture, inspect
-and report the required screenshots in the acceptance request rather than
-creating separate publish/copy-only workflows.
+Automatic main Windows CI is a **build-focused final gate**, not a debugging
+environment. Automatic pushes may resolve only to `source` or `release`.
+`release` means policy/source contracts, Release native fixture, canonical
+Release build and runtime-set verification. Automatic main CI must not run the
+owned GUI suite. `release-gui` and `full` remain available only through
+explicit human `workflow_dispatch` when there is a specific reason to request
+them.
+
+For user-visible UI work, complete targeted functional GUI and required
+BEFORE/AFTER pixel review through the remote shell before the main push. Once
+that evidence is accepted, push one logical unit and let main CI verify the
+build/runtime set once. If that final run fails, read the first relevant error,
+return to the remote shell, make a concrete fix, and push a new revision.
+Never press rerun and never create a validation-only commit whose only purpose
+is to obtain another attempt.
 
 Before pushing a verified logical unit to main, run or inspect the policy
 readiness gate whenever a reviewed product path changed. Update
 `.agent-policy/PROJECT.md` review metadata in the same logical unit when
 required, so main CI is not spent rediscovering a known stale review revision.
-A final main CI failure is a new diagnostic input, not permission to start
-another chain of narrowly scoped workflow probes.
+Do not create separate publish/copy-only evidence workflows; the producing
+remote-shell job should retain or report the evidence directly.
 
 At the start of a remote development loop, fetch origin and inspect the current
 branch, HEAD, `origin/main` and `git status --short`. Do not reset, clean,
@@ -329,17 +336,15 @@ it, the user requests it, concurrent work would make direct-main unsafe, or the
 change needs isolated integration testing.
 
 Before push, run git diff --check, inspect staged scope, and run the verification
-required by the change. Automatic main-push validation is change-aware:
-metadata/policy/source-contract-only changes use `source`; UI-independent
-native/build/package changes use `release`; hard GUI paths and ordinary WinUI
-behavior changes use `release-gui`. A nonvisual behavior-preserving WinUI
-logical unit may use `release` when its subject starts with `refactor:` or
-the commit carries `CI-Scope: release`. That marker must not be used to skip
-GUI acceptance for a real behavior or visual change, and hard GUI paths cannot
-be downgraded. `CI-Scope: release-gui` may explicitly promote a change.
-The `release` scope includes source contracts, the Release native state
-fixture, canonical Release build and runtime-set verification; it omits owned
-GUI automation. After normal push, fetch and verify HEAD == origin/main with
+required by the change. Automatic main-push validation is change-aware but build-focused:
+metadata/policy/source-contract-only changes use `source`; every product,
+WinUI, native, build, package or validation-workflow change uses `release`.
+Automatic pushes never select `release-gui`. The `release` scope includes
+policy/source contracts, the Release native state fixture, canonical Release
+build and runtime-set verification; it omits owned GUI automation. GUI and
+visual acceptance for changed UI belongs to the pre-main remote-shell
+development loop. `release-gui` and `full` are explicit human
+workflow_dispatch choices only. After normal push, fetch and verify HEAD == origin/main with
 ahead/behind 0/0. Never force-push.
 
 Do not push a state with a known required acceptance failure, temporary debug
