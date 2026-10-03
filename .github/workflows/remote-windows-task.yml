@@ -1,6 +1,17 @@
 name: Remote Windows Task
 
 on:
+  workflow_dispatch:
+    inputs:
+      command:
+        description: PowerShell command to execute on the flyExplorer Windows VM
+        required: true
+        type: string
+      working_directory:
+        description: Working directory for the command
+        required: false
+        default: 'C:\dev\flyExplorer'
+        type: string
   push:
     branches:
       - 'remote/**'
@@ -10,18 +21,24 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: flyexplorer-remote-windows-task
+  cancel-in-progress: false
+
 jobs:
   task:
     runs-on: [self-hosted, Windows, X64]
     timeout-minutes: 60
     steps:
       - name: Checkout remote task branch
+        if: github.event_name == 'push'
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           fetch-depth: 0
           ref: ${{ github.ref_name }}
 
       - name: Run committed remote task
+        if: github.event_name == 'push'
         shell: powershell -NoLogo -NoProfile -ExecutionPolicy Bypass -Command ". '{0}'"
         run: |
           $ErrorActionPreference = "Stop"
@@ -34,4 +51,33 @@ jobs:
           & $script
           if ($LASTEXITCODE -ne 0) {
             throw "Remote task native command exited with code $LASTEXITCODE."
+          }
+
+      - name: Run dispatched remote shell command
+        if: github.event_name == 'workflow_dispatch'
+        shell: powershell -NoLogo -NoProfile -ExecutionPolicy Bypass -Command ". '{0}'"
+        env:
+          REMOTE_COMMAND: ${{ inputs.command }}
+          REMOTE_WORKDIR: ${{ inputs.working_directory }}
+        run: |
+          $ErrorActionPreference = "Stop"
+          $workdir = $env:REMOTE_WORKDIR
+          if ([string]::IsNullOrWhiteSpace($workdir)) {
+            $workdir = "C:\dev\flyExplorer"
+          }
+          if (-not (Test-Path -LiteralPath $workdir -PathType Container)) {
+            throw "Remote shell working directory does not exist: $workdir"
+          }
+
+          Set-Location -LiteralPath $workdir
+          Write-Host "===== FLYEXPLORER REMOTE SHELL ====="
+          Write-Host "RUNNER: $env:RUNNER_NAME"
+          Write-Host "WORKDIR: $(Get-Location)"
+          Write-Host "SOURCE: workflow_dispatch"
+          Write-Host "===================================="
+
+          $global:LASTEXITCODE = 0
+          Invoke-Expression $env:REMOTE_COMMAND
+          if ($LASTEXITCODE -ne 0) {
+            throw "Remote shell native command exited with code $LASTEXITCODE."
           }

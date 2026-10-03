@@ -199,13 +199,14 @@ state; reuse completed evidence for the same revision/configuration rather than
 rerunning it.
 
 For iterative Windows development, GUI work and Windows 11 benchmarking,
-prefer the repository-controlled `tngkrwlsmd/personal-control-plane` Remote
-Shell path when it is available and authorized. Use its `windows-vm` target
-against the persistent canonical checkout `C:\dev\flyExplorer`. The
-persistent checkout is the development state boundary; Remote Shell itself is
-still an Actions-dispatched command job, not a persistent terminal process.
-Batch related edit/build/focused-test/GUI-probe steps into a useful command or
-script instead of creating one remote job per trivial command.
+prefer this repository's `Remote Windows Task` workflow_dispatch shell. It
+runs directly on the repository-scoped interactive Windows VM and defaults to
+the persistent canonical checkout `C:\dev\flyExplorer`; dispatching a
+command requires no branch, request file or commit. The persistent checkout is
+the development state boundary. The dispatched shell is still an Actions job,
+not a persistent terminal process, so batch related edit/build/focused-test/
+GUI-probe steps into useful commands or scripts instead of creating one job per
+trivial shell command.
 
 At the start of a remote development loop, fetch origin and inspect the current
 branch, HEAD, `origin/main` and `git status --short`. Do not reset, clean,
@@ -220,9 +221,10 @@ launch the test-owned GUI, capture/inspect controlled visual evidence and
 repeat locally until the logical unit is ready. This is especially preferred
 for Explorer/Win11 visual benchmarking and other tasks where keeping the same
 interactive desktop, DPI, window geometry and fixture materially improves the
-comparison. Use RDC or another desktop-control path only when shell/UIA/
-screenshot evidence cannot exercise the required interaction or when the
-repository control path is unavailable.
+comparison. RDC or another desktop-control path is a supplementary tool, not
+the default development transport: use it only when shell/UIA/screenshot
+evidence cannot exercise the required interaction or when the repository
+dispatch path is unavailable.
 
 Direct-main remains the normal Git integration policy, but do not interpret it
 as "push every intermediate edit." Commit/push only a verified logical unit.
@@ -233,10 +235,11 @@ persistent remote checkout, fix and revalidate there, then push the next
 verified logical unit.
 
 Runner health, process/service/task-scheduler inspection, runner recovery and
-machine maintenance also belong in `personal-control-plane`. flyExplorer's
-committed-script remote task remains a fallback for bounded project-specific
-commands when the control-plane path is unavailable, unsuitable for the task,
-or isolated branch execution is materially useful. In that fallback, create a
+machine maintenance belong in `personal-control-plane`, especially when this
+repository's runner path itself is broken. The committed-script remote task
+remains a fallback for bounded project-specific commands when workflow_dispatch
+is unavailable/unsuitable or isolated branch execution is materially useful.
+In that fallback, create a
 temporary `remote/**` branch from current main, commit only
 `.github/remote-task.ps1`, execute
 `.github/workflows/remote-windows-task.yml`, inspect its evidence, then use

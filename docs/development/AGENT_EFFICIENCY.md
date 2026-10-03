@@ -142,21 +142,23 @@ code automatically on the privileged self-hosted runner.
 ### Remote Windows development loop
 
 For iterative Windows development, Win11 benchmarking and GUI refinement,
-prefer `tngkrwlsmd/personal-control-plane` Remote Shell with target
-`windows-vm` and the persistent checkout `C:\dev\flyExplorer` when that
-path is available and authorized. Use the persistent checkout to preserve
-incremental build state and a stable interactive desktop between iterations.
-Remote Shell jobs themselves are not persistent terminal sessions, so combine
-related edit/build/test/probe work into bounded commands or scripts rather than
-issuing one Actions job for every small shell command.
+prefer this repository's `Remote Windows Task` workflow_dispatch shell with
+working directory `C:\dev\flyExplorer`. It runs on the repository-scoped
+interactive Windows VM without creating a request commit, temporary branch or
+task-script commit. Use the persistent checkout to preserve incremental build
+state and a stable interactive desktop between iterations. The dispatched job
+is not a persistent terminal session, so combine related edit/build/test/probe
+work into bounded commands or scripts rather than issuing one Actions job for
+every small shell command.
 
 Begin by fetching and inspecting HEAD/origin/main and the worktree. Never use
 reset/clean/checkout-overwrite to erase unexpected local changes. Fast-forward
 a clean checkout when appropriate. During the inner loop, prefer the smallest
 meaningful checks first, then incremental build and targeted owned GUI/visual
 acceptance. Keep the same controlled fixture/DPI/window geometry when comparing
-against Windows 11 Explorer. Only use RDC/desktop-control as a fallback for
-interactions that shell, UIA or screenshot evidence cannot exercise.
+against Windows 11 Explorer. RDC/desktop-control is supplementary; use it only
+for interactions that shell, UIA or screenshot evidence cannot exercise or
+when the repository dispatch path is unavailable.
 
 Do not push each intermediate edit merely because direct-main is the normal Git
 policy. Finish and verify the logical unit in the remote checkout first. Fetch
@@ -168,10 +170,10 @@ do not make repeated temporary task branches/commits the normal development
 loop.
 
 Use `personal-control-plane` for runner health, Windows process/service/
-task-scheduler checks, recovery and machine maintenance as well. flyExplorer's
-bounded remote task is a fallback for project-specific commands when the
-control-plane path is unavailable/unsuitable or isolated branch execution is
-materially useful.
+task-scheduler checks, recovery and machine maintenance, especially when this
+repository's runner/workflow path is broken. The committed-script `remote/**`
+task remains a fallback for project-specific commands when workflow_dispatch is
+unavailable/unsuitable or isolated branch execution is materially useful.
 
 After normal push, fetch and verify HEAD == origin/main and ahead/behind 0/0.
 Force push is prohibited. If origin/main moved unexpectedly, analyze rather
