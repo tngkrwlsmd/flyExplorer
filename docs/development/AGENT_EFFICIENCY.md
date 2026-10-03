@@ -77,21 +77,17 @@ For Actions specifically:
 - for the same apparent failure, inspect the first relevant error and change
   the hypothesis before rerunning.
 
-Typical CI scope on direct-main pushes:
-- docs/status/agent-operation-only: no Windows VM workflow;
-- source-contract-only tests or tools/policy: `source`;
-- every product, WinUI, native, build/package/toolchain or validation-workflow
-  change: `release`;
-- automatic main pushes never run `release-gui` or `full`;
-- targeted GUI/visual acceptance is completed pre-main through remote shell;
-- `release-gui` and `full` remain explicit human workflow_dispatch choices
-  for exceptional one-off acceptance, not normal development.
+Normal direct-main pushes do **not** trigger the Windows VM workflow.
+`.github/workflows/windows-build.yml` is manual `workflow_dispatch` only.
+Use the persistent remote shell for ordinary Windows build/debug/test iteration.
+When an independent one-off gate is materially useful, dispatch the smallest
+scope deliberately: `source`, `release` (default), `release-gui` or
+`full`. Do not dispatch merely because a commit was pushed.
 
-The automatic classifier is `tools/winui/resolve_validation_scope.py` and is
-covered by source contracts. The `release` gate means policy + source +
-Release native state fixture + canonical Release build + runtime-set check,
-without the owned GUI suite. Do not label a functional/visual change as a
-refactor merely to reduce CI cost.
+`tools/winui/resolve_validation_scope.py` is retained only as an advisory
+classification helper/source contract; it is not wired to a push trigger.
+Targeted GUI/visual acceptance is normally completed pre-main through remote
+shell.
 
 Canonical orchestration is tools/winui/run_checks.py. Obsolete
 experiments/phase6 paths must not be used.
@@ -202,11 +198,10 @@ when the repository dispatch path is unavailable.
 Do not push each intermediate edit merely because direct-main is the normal Git
 policy. Finish and verify the logical unit in the remote checkout first. Fetch
 again immediately before push; if origin/main moved unexpectedly, analyze and
-integrate safely rather than overwriting it. After push, use flyExplorer Actions
-as the independent final acceptance gate. If that final gate fails, diagnose
-the first relevant failure and return to the remote checkout for the next fix;
-do not make repeated temporary task branches/commits the normal development
-loop.
+integrate safely rather than overwriting it. A normal push does not launch Windows Actions. If an independent build gate is
+deliberately requested, invoke the dispatch-only Windows workflow once; on
+failure diagnose the first relevant error and return to the remote checkout.
+Do not make repeated task commits or Actions runs the development loop.
 
 ### Remote shell first; Actions once
 
@@ -216,16 +211,15 @@ tests, inspect runtime output, exercise targeted UIA and capture/review owned
 screenshots there. Batch related diagnostics so one remote-shell request answers
 the current hypothesis instead of spawning many micro-workflows.
 
-For a given Git revision, GitHub Actions gets **one automatic acceptance
-attempt**. Do not rerun a failed job or workflow on that same SHA. If it fails,
-reuse the successful earlier steps, inspect the first relevant error, fix the
-cause through the remote-shell development loop, and push a new revision.
-Only that new revision receives another automatic run.
+For a given Git revision, do not rerun a failed job or workflow on that same
+SHA. Windows Actions are not automatically started by pushes. If a deliberate
+manual run fails, reuse its successful earlier steps, inspect the first relevant
+error, fix the cause through the remote-shell development loop, and push a new
+revision before any later manual gate.
 
-Automatic main Windows CI is build-focused: `source` for source/policy-only
-changes and `release` for product/build changes. It must not automatically
-run GUI automation. Required GUI/visual acceptance is pre-main evidence and
-must be finished before the push. Do not create a separate remote workflow
+Required GUI/visual acceptance is normally pre-main remote-shell evidence.
+Windows VM Build is dispatch-only and should be used only when an independent
+one-off build/acceptance gate is actually requested. Do not create a separate remote workflow
 solely to publish, copy or rename evidence that the producing command could
 retain or report. Before a main push that changes any path covered by project
 policy review metadata, perform the policy readiness/preflight check and update

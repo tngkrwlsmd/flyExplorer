@@ -154,10 +154,10 @@ set passed. This closes the bookmark logical unit together with the focused
 pre-main functional and visual evidence below.
 
 Development policy now treats the persistent remote shell as the Windows
-diagnosis/build iteration surface and automatic main Windows CI as a single
-build-focused final gate. Same-revision Actions reruns are prohibited; future
-automatic pushes resolve only to source or release, while release-gui/full are
-explicit human dispatch choices.
+diagnosis/build iteration surface. Windows VM Build is manual
+`workflow_dispatch` only: normal main pushes do not queue it, the default
+manual scope is `release`, and `release-gui`/`full` are explicit
+exceptional choices. Same-revision Actions reruns are prohibited.
 
 Persistent WinUI bookmarks were pre-main validated on work revision
 `3ea29587c973d879f1ad2236f4354794b1a81d62`. The final focused product

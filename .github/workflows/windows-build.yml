@@ -1,42 +1,22 @@
 name: Windows VM Build
 
-# Automatic main CI is build-focused and is not a GUI debugging loop.
-# Docs/agent-operation-only pushes do not queue this Windows job.
-# Main push scope is resolved by tools/winui/resolve_validation_scope.py:
-#   source -> policy/source contracts/metadata
-#   release -> all product/native/WinUI/build/runtime changes
-# GUI/visual acceptance is completed pre-main through control/remote-shell.
-# Manual human dispatch keeps release-gui/full available for exceptional use.
+# This workflow is manual-only. Normal pushes do not queue the Windows VM.
+# Use control/remote-shell for development, builds, focused tests and diagnosis.
+# Dispatch this workflow only for an intentional one-off acceptance/build gate.
+# release is the default; release-gui/full are explicit exceptional choices.
 on:
-  push:
-    branches:
-      - main
-    paths:
-      - 'app/**'
-      - 'src/**'
-      - 'tests/**'
-      - 'tools/winui/**'
-      - 'tools/policy/**'
-      - 'packaging/**'
-      - '.github/workflows/windows-build.yml'
-      - 'build.bat'
-      - 'run.bat'
-      - 'test.bat'
-      - 'clean.bat'
-      - 'package.bat'
   workflow_dispatch:
     inputs:
       validation_scope:
         description: "Validation scope"
         required: true
-        default: "release-gui"
+        default: "release"
         type: choice
         options:
           - source
           - release
           - release-gui
           - full
-
 permissions:
   contents: read
 
@@ -49,7 +29,7 @@ jobs:
     runs-on: [self-hosted, Windows, X64]
     timeout-minutes: 30
     env:
-      REQUESTED_VALIDATION_SCOPE: ${{ github.event_name == 'workflow_dispatch' && inputs.validation_scope || 'auto' }}
+      VALIDATION_SCOPE: ${{ inputs.validation_scope }}
 
     steps:
       - name: Checkout
@@ -57,50 +37,6 @@ jobs:
         with:
           # Source contracts verify the retired MFC baseline stored only in Git history.
           fetch-depth: 0
-
-      - name: Resolve validation scope
-        shell: powershell -NoLogo -NoProfile -ExecutionPolicy Bypass -Command ". '{0}'"
-        run: |
-          $ErrorActionPreference = "Stop"
-
-          if ($env:REQUESTED_VALIDATION_SCOPE -ne "auto") {
-            "VALIDATION_SCOPE=$env:REQUESTED_VALIDATION_SCOPE" |
-              Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
-            Write-Host "VALIDATION_SCOPE=$env:REQUESTED_VALIDATION_SCOPE (manual)"
-            exit 0
-          }
-
-          $event = Get-Content -Raw -LiteralPath $env:GITHUB_EVENT_PATH |
-            ConvertFrom-Json
-          $before = [string]$event.before
-          if ([string]::IsNullOrWhiteSpace($before) -or
-              $before -eq ("0" * 40)) {
-            $before = git rev-parse "$env:GITHUB_SHA^"
-            if ($LASTEXITCODE -ne 0) {
-              throw "Unable to resolve the previous main revision."
-            }
-          }
-
-          $resolution = @(
-            python -X utf8 tools\winui\resolve_validation_scope.py --before $before --head $env:GITHUB_SHA
-          )
-          if ($LASTEXITCODE -ne 0) {
-            throw "Unable to resolve automatic validation scope."
-          }
-          $resolution | ForEach-Object { Write-Host $_ }
-          $scopeLine = $resolution |
-            Where-Object { $_ -like "VALIDATION_SCOPE=*" } |
-            Select-Object -Last 1
-          if ([string]::IsNullOrWhiteSpace($scopeLine)) {
-            throw "Validation scope resolver did not emit VALIDATION_SCOPE."
-          }
-          $scope = $scopeLine.Substring("VALIDATION_SCOPE=".Length)
-          if ($scope -notin @("source", "release")) {
-            throw "Automatic main CI may resolve only to source or release: $scope"
-          }
-          "VALIDATION_SCOPE=$scope" |
-            Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
-          Write-Host "VALIDATION_SCOPE=$scope (automatic)"
 
       - name: Prepare CI evidence marker
         shell: powershell -NoLogo -NoProfile -ExecutionPolicy Bypass -Command ". '{0}'"

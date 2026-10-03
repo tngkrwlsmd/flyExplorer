@@ -139,14 +139,13 @@ release-gui main validation is the independent final acceptance gate.
   FlyShellIsolationHelper.exe are required.
 - Potentially blocking Shell/provider behavior stays off the XAML UI thread and
   behind bounded isolation.
-- Project CI runs on the repository-scoped self-hosted Windows x64 runner, but
-  automatic main CI is build-focused rather than a GUI debugging loop. Main
-  pushes resolve only to `source` for source/policy-only work or `release`
-  for product/WinUI/native/build/runtime changes. The `release` scope includes
-  policy/source contracts, the Release M20 native state fixture, canonical
-  Release build and runtime-set verification. Automatic main CI does not run
-  owned GUI automation; `release-gui` and `full` are explicit human
-  workflow_dispatch choices only.
+- The self-hosted Windows build workflow is manual `workflow_dispatch` only;
+  normal main pushes do not queue it. The default manual scope is `release`,
+  which includes policy/source contracts, the Release M20 native state fixture,
+  canonical Release build and runtime-set verification. `release-gui` and
+  `full` remain explicit exceptional manual choices. Windows development,
+  focused tests, runtime diagnosis and GUI/visual evidence use the persistent
+  `control/remote-shell` path instead.
 - Every resumed/interrupted task starts by reading live main HEAD, recent main
   commits and recent main CI together. If the named logical unit is already
   merged and accepted, advance instead of reopening old control-branch or
@@ -166,9 +165,10 @@ release-gui main validation is the independent final acceptance gate.
   maintenance, especially when this repository's runner path is broken.
 - The persistent remote-shell checkout is the primary Windows development and
   diagnosis surface. Batch investigate/edit/build/focused-test/GUI-evidence
-  commands there. GitHub Actions never receives a same-revision retry: one SHA
-  gets one automatic acceptance attempt. A failure is diagnosed once, fixed in
-  the remote-shell loop, and only a new revision receives a new run.
+  commands there. Windows build Actions are never triggered merely by a push
+  and never receive a same-revision rerun. A deliberately dispatched failure is
+  diagnosed once, fixed in the remote-shell loop, and only a new revision may
+  justify a later manual gate.
 - GitHub-hosted runners require explicit user approval and are not part of the
   active flyExplorer CI path by default.
 - The privileged self-hosted runner must not execute untrusted fork/PR code

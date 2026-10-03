@@ -202,15 +202,14 @@ Do not use chatgpt-codex-connector unless the user explicitly requests or
 permits it for the task. Normal GitHub connector/API access is allowed when
 appropriate.
 
-Project CI uses the repository-scoped self-hosted Windows runner. Direct-main
-remains the normal development path. Main pushes that affect product/runtime/build/toolchain paths use a build-focused
-Release validation; they do not run owned GUI automation automatically. A push
-containing only source-contract test files in the
-tests/winui/test_*_contract.py family or tools/policy changes runs only the
-source/policy scope. Documentation/status/agent-operation-only pushes do not
-queue the Windows VM. Explicit human workflow_dispatch continues to provide
-source/release/release-gui/full when a stronger one-off gate is intentionally
-requested.
+The repository-scoped self-hosted Windows runner is **not triggered by normal
+main pushes**. `.github/workflows/windows-build.yml` is manual
+`workflow_dispatch` only. Use `control/remote-shell` as the normal Windows
+development surface for compilation, focused tests, runtime diagnosis and GUI/
+visual evidence. Dispatch Windows VM Build only when the user explicitly asks
+for it or a deliberate release/checkpoint gate materially needs an independent
+one-off build. Its default manual scope is `release`; `release-gui` and
+`full` are exceptional explicit choices.
 
 Do not keep one ChatGPT response alive by repeatedly polling a long Actions
 run. After starting a long run, record its run ID, target commit and scope.
@@ -259,18 +258,16 @@ screenshots should be investigated there before main is pushed. Batch related
 commands in the remote shell instead of creating a sequence of one-observation
 diagnostic workflows.
 
-Automatic main Windows CI is a **build-focused final gate**, not a debugging
-environment. Automatic pushes may resolve only to `source` or `release`.
-`release` means policy/source contracts, Release native fixture, canonical
-Release build and runtime-set verification. Automatic main CI must not run the
-owned GUI suite. `release-gui` and `full` remain available only through
-explicit human `workflow_dispatch` when there is a specific reason to request
-them.
+Windows VM Build is a **manual-only build/acceptance gate**, not a debugging
+environment. Normal main pushes must not start it. When an independent gate is
+actually needed, dispatch it once with the smallest intentional scope:
+`source`, `release`, `release-gui` or `full`. The normal choice is
+`release`; GUI/full are exceptional.
 
 For user-visible UI work, complete targeted functional GUI and required
-BEFORE/AFTER pixel review through the remote shell before the main push. Once
-that evidence is accepted, push one logical unit and let main CI verify the
-build/runtime set once. If that final run fails, read the first relevant error,
+BEFORE/AFTER pixel review through the remote shell before the main push. Once that evidence is accepted, push one logical unit without automatically
+starting a Windows workflow. If a deliberate manual build/checkpoint is needed,
+dispatch it once after the push. If it fails, read the first relevant error,
 return to the remote shell, make a concrete fix, and push a new revision.
 Never press rerun and never create a validation-only commit whose only purpose
 is to obtain another attempt.
@@ -302,11 +299,9 @@ dispatch path is unavailable.
 
 Direct-main remains the normal Git integration policy, but do not interpret it
 as "push every intermediate edit." Commit/push only a verified logical unit.
-After that push, flyExplorer Actions are the independent final acceptance
-plane. Do not use repeated temporary task commits and long Actions runs as the
-normal edit/test loop. If final CI exposes a real defect, return to the
-persistent remote checkout, fix and revalidate there, then push the next
-verified logical unit.
+A push by itself must not start Windows build/GUI validation. Use the persistent
+remote checkout for the development loop; invoke the manual Windows build
+workflow only for a deliberately requested one-off gate.
 
 Runner health, process/service/task-scheduler inspection, runner recovery and
 machine maintenance belong in `personal-control-plane`, especially when this
@@ -336,15 +331,12 @@ it, the user requests it, concurrent work would make direct-main unsafe, or the
 change needs isolated integration testing.
 
 Before push, run git diff --check, inspect staged scope, and run the verification
-required by the change. Automatic main-push validation is change-aware but build-focused:
-metadata/policy/source-contract-only changes use `source`; every product,
-WinUI, native, build, package or validation-workflow change uses `release`.
-Automatic pushes never select `release-gui`. The `release` scope includes
-policy/source contracts, the Release native state fixture, canonical Release
-build and runtime-set verification; it omits owned GUI automation. GUI and
-visual acceptance for changed UI belongs to the pre-main remote-shell
-development loop. `release-gui` and `full` are explicit human
-workflow_dispatch choices only. After normal push, fetch and verify HEAD == origin/main with
+required by the change. Normal main pushes do not trigger Windows VM Build at all. The workflow is
+manual `workflow_dispatch` only, with `release` as its default. Use
+`source` for an intentionally requested source/policy-only check,
+`release` for a one-off native/Release build/runtime gate, and
+`release-gui`/`full` only when explicitly needed. GUI and visual acceptance
+for changed UI normally belongs to the pre-main remote-shell development loop. After normal push, fetch and verify HEAD == origin/main with
 ahead/behind 0/0. Never force-push.
 
 Do not push a state with a known required acceptance failure, temporary debug

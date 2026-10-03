@@ -17,6 +17,9 @@ class RemoteWindowsTaskContractTests(unittest.TestCase):
         cls.project = (
             ROOT / ".agent-policy/PROJECT.md"
         ).read_text(encoding="utf-8")
+        cls.windows_build = (
+            ROOT / ".github/workflows/windows-build.yml"
+        ).read_text(encoding="utf-8")
 
     def test_dispatch_shell_requires_no_task_commit(self):
         self.assertIn("workflow_dispatch:", self.workflow)
@@ -92,24 +95,31 @@ class RemoteWindowsTaskContractTests(unittest.TestCase):
             self.assertIn("recent commits", normalized)
             self.assertIn("recent main CI", normalized)
             self.assertIn("expected_main_sha", normalized)
-        self.assertIn("Zero same-revision Actions retries", self.efficiency)
-        self.assertIn("Do not retry a completed GitHub Actions run", self.efficiency)
+        efficiency = " ".join(self.efficiency.split())
+        self.assertIn("Zero same-revision Actions retries", efficiency)
+        self.assertIn("Do not retry a completed GitHub Actions run", efficiency)
         self.assertIn("already on main", self.agents)
         project_normalized = " ".join(self.project.split())
         self.assertIn("already merged and accepted", project_normalized)
-        self.assertIn("one batched", project_normalized)
+        self.assertIn("persistent remote-shell checkout", project_normalized)
 
-    def test_guidance_makes_actions_build_focused_and_non_retrying(self):
+    def test_guidance_makes_windows_build_dispatch_only_and_non_retrying(self):
         agents = " ".join(self.agents.split())
         efficiency = " ".join(self.efficiency.split())
         self.assertIn("Same-revision Actions reruns are prohibited", agents)
-        self.assertIn("Automatic main Windows CI is a build-focused final gate", agents)
-        self.assertIn("Automatic pushes may resolve only to `source` or `release`", agents)
+        self.assertIn("manual-only build/acceptance gate", agents)
+        self.assertIn("Normal main pushes must not start it", agents)
         self.assertIn("Never press rerun", agents)
-        self.assertIn("one automatic acceptance attempt", efficiency)
-        self.assertIn("Do not rerun a failed job or workflow on that same SHA", efficiency)
-        self.assertIn("must not automatically run GUI automation", efficiency)
+        self.assertIn("do not rerun a failed job or workflow on that same SHA", efficiency)
+        self.assertIn("Windows VM Build is dispatch-only", efficiency)
         self.assertIn("policy readiness/preflight check", efficiency)
+
+    def test_windows_build_has_no_push_trigger(self):
+        self.assertIn("on:\n  workflow_dispatch:", self.windows_build)
+        self.assertNotIn("\n  push:", self.windows_build)
+        self.assertIn('default: "release"', self.windows_build)
+        self.assertNotIn("REQUESTED_VALIDATION_SCOPE", self.windows_build)
+        self.assertNotIn("Resolve validation scope", self.windows_build)
 
 
 if __name__ == "__main__":
