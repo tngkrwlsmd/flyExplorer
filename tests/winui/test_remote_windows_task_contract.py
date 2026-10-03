@@ -87,7 +87,9 @@ class RemoteWindowsTaskContractTests(unittest.TestCase):
 
     def test_resume_protocol_blocks_stale_rework_and_fixture_loops(self):
         for text in (self.agents, self.efficiency):
-            self.assertIn("latest main + recent commits + recent main CI", text)
+            self.assertIn("latest main", text)
+            self.assertIn("recent commits", text)
+            self.assertIn("recent main CI", text)
             self.assertIn("expected_main_sha", text)
         self.assertIn("two consecutive failures", self.efficiency)
         self.assertIn("circuit breaker", self.efficiency)

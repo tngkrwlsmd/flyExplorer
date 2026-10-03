@@ -56,7 +56,24 @@ jobs:
           if ([string]::IsNullOrWhiteSpace($requestId)) {
             throw "Remote shell request_id is required."
           }
-          if ($expectedMainSha -notmatch '^[0-9a-f]{40}
+          if ($expectedMainSha -notmatch '^[0-9a-f]{40}$') {
+            throw "Remote shell expected_main_sha must be the 40-character live main SHA."
+          }
+          & git fetch origin main --no-tags --prune
+          if ($LASTEXITCODE -ne 0) {
+            throw "Failed to refresh origin/main before remote shell execution."
+          }
+          $observedMainSha = (& git rev-parse refs/remotes/origin/main).Trim().ToLowerInvariant()
+          if ($LASTEXITCODE -ne 0 -or $observedMainSha -notmatch '^[0-9a-f]{40}$') {
+            throw "Failed to resolve the current origin/main SHA."
+          }
+          if ($observedMainSha -ne $expectedMainSha) {
+            throw "Stale remote shell request: expected main $expectedMainSha but current main is $observedMainSha. Refresh latest main + recent commits + recent main CI and submit a new request."
+          }
+          if ([string]::IsNullOrWhiteSpace($command)) {
+            throw "Remote shell command is required."
+          }
+          if ([string]::IsNullOrWhiteSpace($workdir)) {
             $workdir = "C:\dev\flyExplorer"
           }
           $delimiter = "FLY_REMOTE_" + [guid]::NewGuid().ToString("N")
