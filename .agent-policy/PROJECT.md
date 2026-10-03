@@ -26,7 +26,7 @@ consumer core; this PROJECT.md remains project-owned across bundle refreshes.
     {"name": "winui-tests", "path": "tests/winui", "responsibility": "source, native and owned GUI contracts"}
   ],
   "review": {
-    "reviewed_revision": "79fc85838fb387281f849f1d4d292bf96fa7db70",
+    "reviewed_revision": "5fe92f92b152473215d2984f9b536e2625698740",
     "reviewed_at": "2026-10-03",
     "reviewed_paths": [
       "app/winui",
@@ -102,10 +102,22 @@ full owned Release GUI PASS, real process exit 0, protected user configuration
 unchanged and `git diff --check` PASS. The temporary task script is not part
 of main product history.
 
+The WorkspaceRestoreCoordinator logical unit was pre-main validated on temporary
+remote run `37102918444`: canonical structure 4/4 PASS, source contracts
+159/159 PASS, Release native restore/model fixture 26/26 PASS, canonical Release
+build PASS, owned Release GUI PASS with process exit 0 and protected six
+user-config hashes identical, plus `git diff --check` PASS. The temporary task
+script is not part of main product history.
+
 The second audit deliberately did not extract private drag/drop state because
-physical drag remains an explicit open gate, and it did not extract the
-workspace restore queue because current evidence shows localized sequencing
-bookkeeping rather than a sufficiently independent lifecycle subsystem.
+physical drag remains an explicit open gate. A follow-up workspace-restore
+lifecycle audit then found a distinct request/settlement boundary:
+WorkspaceRestoreCoordinator now owns pane-local restore tasks, the awaited
+Shell navigation request id, stale-completion matching and reset/cancel
+semantics. MainWindow retains workspace/model application, Shell submission and
+presentation. Failed, rejected or no-change restore requests can now settle and
+advance the remaining restore queue, while unrelated or canceled completions
+cannot advance it.
 
 ## Build/runtime facts
 
