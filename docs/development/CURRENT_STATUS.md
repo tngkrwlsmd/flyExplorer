@@ -1,4 +1,4 @@
-# flyExplorer current status — 2026-10-03
+# flyExplorer current status — 2026-10-04
 
 ## Product source of truth
 
@@ -76,6 +76,16 @@ checkpoints.
   background worker and projects 16 px native artwork through the UI dispatcher.
   Each button retains its previous Fluent glyph as a failure fallback. Home and
   This PC intentionally retain their existing Fluent glyphs.
+- Persistent WinUI filesystem bookmarks are stored in the private
+  `%LOCALAPPDATA%\flyExplorer\bookmarks-v1.txt` profile with atomic
+  replacement. The active pane's current filesystem folder can be added from
+  the always-visible bookmark bar, reopened from that bar, renamed or deleted
+  from the management panel, and survives process restart. Paths are
+  case-insensitively deduplicated and the model remains bounded at 100 items.
+  The legacy MFC bookmark file is never read automatically; users may explicitly
+  select a legacy configuration file for read-only name/path import. Duplicate,
+  malformed and unsupported non-filesystem legacy entries are skipped rather
+  than mutating the old profile.
 - Back/Forward/Up, filtering/sorting, local create/rename, guarded copy/move/
   recycle flows, Windows clipboard/context integration, isolated Shell visuals
   and directory/Shell namespace watching.
@@ -134,6 +144,27 @@ the required environment but does not claim to have modified external cloud
 bootstrap configuration.
 
 ## Latest verified evidence
+
+Persistent WinUI bookmarks were pre-main validated on work revision
+`3ea29587c973d879f1ad2236f4354794b1a81d62`. The final focused product
+steps in remote run `37131861647` completed before an unrelated temporary
+evidence-branch cleanup command failed: canonical structure 4/4 PASS, source
+contracts 187/187 PASS, owned bookmark add/rename/delete/legacy-import PASS,
+restart persistence PASS, protected legacy user configuration unchanged and
+`git diff --check` PASS. Earlier run `37130545208` independently established
+the same product revision's Release M20 native bookmark/state fixture at 36/36,
+canonical Release build PASS and the pre-existing full owned Release GUI suite
+PASS with process exit 0.
+
+Visual acceptance was re-captured after rejecting an earlier background-window
+screenshot as invalid evidence. Successful remote run `37132254625` forced
+the process-owned flyExplorer HWND to the foreground for both exact-main BEFORE
+and bookmark AFTER captures at 972x720, 96 DPI and Dark theme. Both windows
+reported title `flyExplorer · 북마크원본`; direct review confirms that the new
+single-row bookmark bar places the saved folder at the left and compact
+add/manage actions at the right without overlap, clipping or pane corruption.
+The dual panes shift downward only by the new row height.
+`VISUAL ACCEPTANCE: PASS`.
 
 Sidebar Known Folder artwork is accepted on product revision
 `02e46d3e2133e3e30bfeca0803af39222a93c7bd`, with policy/test-reviewed main
@@ -224,8 +255,6 @@ Current source and the last parity evidence still show these limits:
 - Shell enumeration is bounded at 2,600 entries; larger folders, streaming
   virtualization, network/virtual providers and sustained thumbnail-cache
   behavior are not certified.
-- Persistent bookmark edit/import/delete and bookmark toolbar parity are not
-  implemented in the current WinUI product.
 - Search is bounded filename search; content search, regex and advanced
   multi-criteria search are not implemented.
 - Saved filter/mask rule sets and the complete historical command/provider

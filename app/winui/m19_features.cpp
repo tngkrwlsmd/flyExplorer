@@ -192,6 +192,7 @@ void MainWindow::OnToggleWorkspaces(
     const auto next=WorkspacePanel().Visibility()==Visibility::Collapsed?
                     Visibility::Visible:Visibility::Collapsed;
     SearchPanel().Visibility(Visibility::Collapsed);
+    BookmarkPanel().Visibility(Visibility::Collapsed);
     WorkspacePanel().Visibility(next);
     if(next==Visibility::Visible)EnsureExpandedPanelFits();
     if(next==Visibility::Visible)
@@ -322,6 +323,7 @@ void MainWindow::OnToggleSearch(
     const auto next=SearchPanel().Visibility()==Visibility::Collapsed?
                     Visibility::Visible:Visibility::Collapsed;
     WorkspacePanel().Visibility(Visibility::Collapsed);
+    BookmarkPanel().Visibility(Visibility::Collapsed);
     SearchPanel().Visibility(next);
     if(next==Visibility::Collapsed){
         mSearchController.invalidate();

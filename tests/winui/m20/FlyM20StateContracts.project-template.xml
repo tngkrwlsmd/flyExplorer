@@ -35,6 +35,7 @@
     <ClCompile>
       <WarningLevel>Level4</WarningLevel>
       <LanguageStandard>stdcpp17</LanguageStandard>
+      <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
       <PreprocessorDefinitions>UNICODE;_UNICODE;WIN32_LEAN_AND_MEAN;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
@@ -48,9 +49,11 @@
     <ClCompile Include="..\..\..\src\base\explorer_ui_state.cpp" />
     <ClCompile Include="..\..\..\src\base\shell_navigation_core.cpp" />
     <ClCompile Include="..\..\..\src\base\shell_enum_bridge.cpp" />
+    <ClCompile Include="..\..\..\src\base\bookmark_store.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\..\src\base\shell_navigation_core.h" />
+    <ClInclude Include="..\..\..\src\base\bookmark_store.h" />
     <ClInclude Include="..\..\..\app\winui\workspace_restore_coordinator.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

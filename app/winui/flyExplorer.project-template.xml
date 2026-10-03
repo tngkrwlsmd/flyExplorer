@@ -127,6 +127,7 @@
       <DependentUpon>NavigationSidebar.xaml</DependentUpon>
     </ClInclude>
     <ClInclude Include="..\..\src\base\ui_preferences.h" />
+    <ClInclude Include="..\..\src\base\bookmark_store.h" />
     <ClInclude Include="..\..\src\base\file_command_core.h" />
     <ClInclude Include="FileToolbar.xaml.h">
       <DependentUpon>FileToolbar.xaml</DependentUpon>
@@ -197,6 +198,9 @@
     <ClCompile Include="search_controller.cpp">
       <PrecompiledHeader>Use</PrecompiledHeader>
     </ClCompile>
+    <ClCompile Include="bookmark_features.cpp">
+      <PrecompiledHeader>Use</PrecompiledHeader>
+    </ClCompile>
     <ClCompile Include="m19_workspace.cpp">
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
     </ClCompile>
@@ -249,6 +253,9 @@
       <PrecompiledHeader>Use</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="..\..\src\base\ui_preferences.cpp">
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="..\..\src\base\bookmark_store.cpp">
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="..\..\src\base\file_command_core.cpp">

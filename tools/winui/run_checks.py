@@ -118,6 +118,13 @@ def main():
                      env_to_use if stage.startswith("gui-") else env, tag)
         if rc != 0:
             return rc
+        if stage.startswith("gui-"):
+            bookmark_rc = execute(
+                stage + "-bookmarks",
+                [sys.executable, "-u", str(TESTS / "test_bookmark_gui.py")],
+                120, env_to_use, tag)
+            if bookmark_rc != 0:
+                return bookmark_rc
     print("SCOPED_CHECKS_COMPLETE=PASS; physical drag and global clipboard "
           "NOT TESTED by this runner; actual owned Recycle Bin has separate test",
           flush=True)

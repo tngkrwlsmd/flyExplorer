@@ -1,10 +1,26 @@
 // Owned synthetic model contracts; no real user directory traversal.
 #include "../../../src/base/explorer_ui_state.h"
 #include "../../../app/winui/workspace_restore_coordinator.h"
+#include "../../../src/base/bookmark_store.h"
+#include <windows.h>
 #include <cstdio>
 #include <cstdint>
+#include <cstring>
 #include <set>
+#include <string>
+#include <vector>
 using namespace fxfile::explorerui;
+namespace {
+bool writeOwned(std::wstring const& path, void const* data, DWORD size) {
+ HANDLE h=::CreateFileW(path.c_str(),GENERIC_WRITE,0,nullptr,CREATE_ALWAYS,
+                        FILE_ATTRIBUTE_NORMAL,nullptr);
+ if(h==INVALID_HANDLE_VALUE)return false;
+ DWORD written=0;
+ const bool good=::WriteFile(h,data,size,&written,nullptr)!=FALSE&&written==size;
+ ::CloseHandle(h);
+ return good;
+}
+}
 int main(){
  int passed=0,failed=0;
  auto check=[&](bool value,char const* label){
@@ -111,6 +127,86 @@ int main(){
  check(state.panes[0].tabs.size()==kMaxTabsPerPane&&
        !state.dispatch(Command::AddTab,0).accepted,
        "bounded_max_32_tabs");
+
+ using BookmarkStore=fxfile::bookmarks::Store;
+ using BookmarkResult=fxfile::bookmarks::MutationResult;
+ wchar_t tempBase[MAX_PATH]{};
+ std::wstring bookmarkRoot;
+ const auto tempLength=::GetTempPathW(MAX_PATH,tempBase);
+ if(tempLength&&tempLength<MAX_PATH){
+  bookmarkRoot=std::wstring(tempBase)+L"fly-bookmark-native-"+
+               std::to_wstring(::GetCurrentProcessId());
+  ::CreateDirectoryW(bookmarkRoot.c_str(),nullptr);
+ }
+ BookmarkStore bookmarks;
+ const DWORD bookmarkAttrs=bookmarkRoot.empty()?INVALID_FILE_ATTRIBUTES:
+      ::GetFileAttributesW(bookmarkRoot.c_str());
+ const bool ownedTemp=bookmarkAttrs!=INVALID_FILE_ATTRIBUTES&&
+      (bookmarkAttrs&FILE_ATTRIBUTE_DIRECTORY);
+ check(ownedTemp&&bookmarks.items().empty(),"bookmark_owned_temp_and_empty");
+ check(bookmarks.add(L"한글 즐겨찾기",L"C:\\Alpha")==BookmarkResult::Applied&&
+       bookmarks.items().size()==1,"bookmark_add_utf16");
+ check(bookmarks.add(L"중복",L"c:/alpha")==BookmarkResult::Duplicate&&
+       bookmarks.items().size()==1,"bookmark_case_insensitive_duplicate");
+ check(bookmarks.add(L"상대",L"relative\\path")==BookmarkResult::Invalid,
+       "bookmark_reject_relative_path");
+ check(bookmarks.rename(0,L"이름 변경")==BookmarkResult::Applied&&
+       bookmarks.items()[0].name==L"이름 변경","bookmark_rename");
+
+ const auto bookmarkFile=bookmarkRoot+L"\\bookmarks.txt";
+ BookmarkStore reloaded;
+ check(ownedTemp&&bookmarks.saveTo(bookmarkFile)&&
+       reloaded.loadFrom(bookmarkFile)&&reloaded.items().size()==1&&
+       reloaded.items()[0].path==L"C:\\Alpha",
+       "bookmark_atomic_save_reload");
+
+ const auto corruptFile=bookmarkRoot+L"\\corrupt.txt";
+ const char corrupt[]="schema=9\r\nbad";
+ const auto beforeCorrupt=reloaded.items().size();
+ check(writeOwned(corruptFile,corrupt,sizeof(corrupt)-1)&&
+       !reloaded.loadFrom(corruptFile)&&
+       reloaded.items().size()==beforeCorrupt,
+       "bookmark_corrupt_load_preserves_model");
+
+ const auto importedDir=bookmarkRoot+L"\\가져온폴더";
+ ::CreateDirectoryW(importedDir.c_str(),nullptr);
+ const auto legacyFile=bookmarkRoot+L"\\legacy.conf";
+ const std::wstring legacy=
+     L"[bookmark]\r\nbookmark.item1.name=가져온 북마크\r\n"
+     L"bookmark.item1.path="+importedDir+
+     L"\r\nbookmark.item2.name=중복\r\n"
+     L"bookmark.item2.path=c:/alpha\r\n";
+ std::vector<unsigned char> legacyBytes(2+legacy.size()*sizeof(wchar_t));
+ legacyBytes[0]=0xff;legacyBytes[1]=0xfe;
+ std::memcpy(legacyBytes.data()+2,legacy.data(),legacy.size()*sizeof(wchar_t));
+ const bool legacyWritten=writeOwned(
+     legacyFile,legacyBytes.data(),static_cast<DWORD>(legacyBytes.size()));
+ const auto importedResult=reloaded.importLegacy(legacyFile);
+ check(legacyWritten&&importedResult.loaded&&importedResult.added==1&&
+       importedResult.skipped==1&&reloaded.items().size()==2,
+       "bookmark_explicit_legacy_import");
+ check(reloaded.erase(0)&&reloaded.items().size()==1&&
+       reloaded.items()[0].name==L"가져온 북마크",
+       "bookmark_delete");
+
+ BookmarkStore capacity;
+ bool filled=true;
+ for(std::size_t i=0;i<BookmarkStore::kMaxItems;++i){
+  if(capacity.add(L"항목 "+std::to_wstring(i),
+                  L"C:\\Cap\\"+std::to_wstring(i))!=BookmarkResult::Applied){
+   filled=false;break;
+  }
+ }
+ check(filled&&capacity.items().size()==BookmarkStore::kMaxItems&&
+       capacity.add(L"초과",L"C:\\Cap\\overflow")==BookmarkResult::Full,
+       "bookmark_bounded_100_items");
+
+ ::DeleteFileW(bookmarkFile.c_str());
+ ::DeleteFileW(corruptFile.c_str());
+ ::DeleteFileW(legacyFile.c_str());
+ ::RemoveDirectoryW(importedDir.c_str());
+ ::RemoveDirectoryW(bookmarkRoot.c_str());
+
  std::printf("M20_NATIVE_SUMMARY %d passed, %d failed.\n",passed,failed);
  return failed?1:0;
 }

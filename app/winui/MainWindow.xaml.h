@@ -18,6 +18,7 @@
 #include "../../src/base/file_command_core.h"
 #include "../../src/base/shell_navigation_core.h"
 #include "../../src/base/explorer_ui_state.h"
+#include "../../src/base/bookmark_store.h"
 #include "m19_workspace.h"
 #include "m19_search.h"
 #include <array>
@@ -72,6 +73,13 @@ namespace winrt::FlyExplorer::implementation
             Microsoft::UI::Xaml::Input::KeyRoutedEventArgs const&);
         void OnRightFileKeyDown(IInspectable const&,
             Microsoft::UI::Xaml::Input::KeyRoutedEventArgs const&);
+        void OnAddBookmark(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
+        void OnToggleBookmarks(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
+        void OnBookmarkSelectionChanged(IInspectable const&,
+            Microsoft::UI::Xaml::Controls::SelectionChangedEventArgs const&);
+        void OnRenameBookmark(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
+        void OnDeleteBookmark(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
+        void OnImportBookmarks(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
         void OnToggleWorkspaces(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
         void OnSaveWorkspace(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
         void OnOpenWorkspace(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
@@ -215,6 +223,11 @@ namespace winrt::FlyExplorer::implementation
         bool mOwnedShellNotifyTest=false;
         bool mOwnedComExhaustOnVirtual=false;
         fxfile::previewrestore::WorkspaceRestoreCoordinator mWorkspaceRestore{};
+        fxfile::bookmarks::Store mBookmarks{};
+        bool mPopulatingBookmarks=false;
+        void InitializeBookmarks();
+        void RefreshBookmarks();
+        void RefreshBookmarkManager(int selected);
         fxfile::previewsearch::SearchController mSearchController{};
         bool mPopulatingRecents=false;
         void EnsureExpandedPanelFits();

@@ -179,6 +179,7 @@ namespace winrt::FlyExplorer::implementation
             }
         });
         mPreferencesCoordinator.load();
+        InitializeBookmarks();
         auto const& preferences=mPreferencesCoordinator.current();
         const auto initialView=(std::clamp)(preferences.defaultViewMode,0,4);
         for(auto& state:ActiveWindowTab().fileLists)state.viewMode=static_cast<FileViewMode>(initialView);

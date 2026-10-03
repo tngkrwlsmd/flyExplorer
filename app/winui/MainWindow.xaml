@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <Window
     x:Class="FlyExplorer.MainWindow"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
@@ -52,6 +52,8 @@
     </Grid.Resources>
         <Grid.RowDefinitions>
             <RowDefinition Height="34"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
@@ -146,7 +148,70 @@
                 </Button>
             </StackPanel>
         </Grid>
-        <StackPanel Grid.Row="3" x:Name="WorkspacePanel" Visibility="Collapsed"
+        <Grid Grid.Row="3" MinHeight="32" Padding="10,1,10,2" ColumnSpacing="4"
+              AutomationProperties.Name="북마크 표시줄">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+            <ScrollViewer Grid.Column="0" HorizontalScrollMode="Enabled"
+                          HorizontalScrollBarVisibility="Hidden"
+                          VerticalScrollMode="Disabled"
+                          VerticalScrollBarVisibility="Disabled">
+                <StackPanel x:Name="BookmarkButtonsPanel"
+                            Orientation="Horizontal" Spacing="2"
+                            VerticalAlignment="Center"
+                            AutomationProperties.Name="저장된 북마크"/>
+            </ScrollViewer>
+            <Button x:Name="AddBookmarkButton" Grid.Column="1"
+                    Style="{StaticResource ExplorerIconButtonStyle}"
+                    ToolTipService.ToolTip="현재 폴더를 북마크에 추가"
+                    AutomationProperties.Name="현재 폴더 북마크 추가"
+                    Click="OnAddBookmark">
+                <FontIcon Glyph="&#xE734;" FontSize="13"/>
+            </Button>
+            <Button x:Name="BookmarkManagerButton" Grid.Column="2"
+                    Style="{StaticResource ExplorerIconButtonStyle}"
+                    ToolTipService.ToolTip="북마크 관리"
+                    AutomationProperties.Name="북마크 관리 열기"
+                    Click="OnToggleBookmarks">
+                <FontIcon Glyph="&#xE713;" FontSize="13"/>
+            </Button>
+        </Grid>
+        <StackPanel Grid.Row="4" x:Name="BookmarkPanel" Visibility="Collapsed"
+                    Spacing="6" Padding="14,3,14,6">
+            <StackPanel Orientation="Horizontal" Spacing="7">
+                <ComboBox x:Name="BookmarkManagerBox" Width="230"
+                          PlaceholderText="북마크 선택"
+                          SelectionChanged="OnBookmarkSelectionChanged"
+                          AutomationProperties.Name="관리할 북마크"/>
+                <TextBox x:Name="BookmarkNameEdit" Width="220" MaxLength="256"
+                         PlaceholderText="북마크 이름"
+                         AutomationProperties.Name="북마크 이름"/>
+                <Button x:Name="BookmarkRenameButton" Content="이름 변경"
+                        Click="OnRenameBookmark"
+                        AutomationProperties.Name="선택한 북마크 이름 변경"/>
+                <Button x:Name="BookmarkDeleteButton" Content="삭제"
+                        Click="OnDeleteBookmark"
+                        AutomationProperties.Name="선택한 북마크 삭제"/>
+                <TextBlock x:Name="BookmarkSelectedPathText"
+                           MaxWidth="360" TextTrimming="CharacterEllipsis"
+                           VerticalAlignment="Center" Opacity="0.65"
+                           AutomationProperties.Name="선택한 북마크 경로"/>
+            </StackPanel>
+            <StackPanel Orientation="Horizontal" Spacing="7">
+                <TextBox x:Name="BookmarkImportPathBox" Width="520"
+                         PlaceholderText="기존 flyExplorer 북마크 파일 전체 경로"
+                         AutomationProperties.Name="가져올 기존 북마크 파일 경로"/>
+                <Button x:Name="BookmarkImportButton" Content="기존 북마크 가져오기"
+                        Click="OnImportBookmarks"
+                        AutomationProperties.Name="기존 flyExplorer 북마크 가져오기"/>
+                <TextBlock Text="기존 프로필은 자동으로 읽지 않습니다"
+                           VerticalAlignment="Center" Opacity="0.65"/>
+            </StackPanel>
+        </StackPanel>
+        <StackPanel Grid.Row="5" x:Name="WorkspacePanel" Visibility="Collapsed"
                     Orientation="Vertical" Spacing="7" Padding="14,3,14,6">
             <StackPanel Orientation="Horizontal" Spacing="7">
                 <TextBlock Text="이름 있는 작업 공간:" VerticalAlignment="Center"/>
@@ -172,7 +237,7 @@
                            Opacity="0.65" VerticalAlignment="Center"/>
             </StackPanel>
         </StackPanel>
-        <StackPanel Grid.Row="4" x:Name="SearchPanel" Visibility="Collapsed"
+        <StackPanel Grid.Row="6" x:Name="SearchPanel" Visibility="Collapsed"
                     Spacing="5" Padding="14,3,14,5">
             <StackPanel Orientation="Horizontal" Spacing="7">
                 <TextBox x:Name="SearchScopeBox" Width="315"
@@ -206,7 +271,7 @@
             <ListView x:Name="SearchMatches" Height="64"
                       AutomationProperties.Name="일치하는 파일 경로"/>
         </StackPanel>
-        <Grid Grid.Row="5" Padding="8,0,8,4" ColumnSpacing="0">
+        <Grid Grid.Row="7" Padding="8,0,8,4" ColumnSpacing="0">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition x:Name="NavigationColumn" Width="160"/>
                 <ColumnDefinition x:Name="PrimaryColumn" Width="*"/>
@@ -388,6 +453,6 @@
                 </Grid>
             </Border>
         </Grid>
-        <local:StatusFooter x:Name="FooterView" Grid.Row="6"/>
+        <local:StatusFooter x:Name="FooterView" Grid.Row="8"/>
     </Grid>
 </Window>
