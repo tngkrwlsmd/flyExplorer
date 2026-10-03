@@ -221,11 +221,16 @@ MainWindow retains theme/view UI application, persistence triggering,
 DispatcherQueue handoff and user-visible failure status.
 
 Private drag/drop was not extracted because its physical pointer acceptance is
-still a separate open gate; changing that ownership now would outpace the
-available runtime evidence. The workspace restore queue also remains in
-MainWindow because current evidence shows localized sequencing bookkeeping tied
-to ShellNavigation completions rather than a sufficiently independent
-subsystem. Do not create another controller by default. Introduce a new
+still a separate open gate. A focused Release probe confirmed that the
+test-owned source ListViewItem is visible, enabled and selectable and that real
+mouse coordinates are delivered, but neither the row nor ListView DragStarting
+diagnostic status is reached; an identical final retry reproduced that result.
+Because DragOver/Drop therefore remain unexercised, current evidence cannot
+distinguish a product gesture defect from an automation/input limitation.
+Changing drag ownership now would outpace the available runtime evidence. The
+workspace restore queue also remains in MainWindow because current evidence
+shows localized sequencing bookkeeping tied to ShellNavigation completions
+rather than a sufficiently independent subsystem. Do not create another controller by default. Introduce a new
 boundary only when concrete mutable-state, lifetime, change-reason or
 deterministic-test evidence justifies it.
 

@@ -4220,3 +4220,35 @@ Therefore this recurrence is retained as a **nondeterministic unresolved lifecyc
 - Isolated M2.1 Release GUI: PASS including Korean folder create/watcher and restart theme, exit 0.
 - Final full Release GUI: PASS in 95.2 seconds, including v7 session restore and M2.3 private-session clear, exit 0, original six user config hashes identical.
 - The failed build-wrapper run is retained as orchestration timeout evidence: it hit EXIT=124 while MSBuild/link continued and produced the candidate; it was not a compiler/linker failure.
+
+## 2026-10-03: owned physical drag 재검증도 DragStarting 경계 미도달 — controller extraction 보류
+
+**상태: OPEN / 자동화 경계 미확정.** 최신 main `7fdf3d4bdd222fff60c36dd9e2d19f5ac112c211`
+기준으로 Release 바이너리를 다시 빌드하고, 테스트 소유 좌우 폴더와 한국어
+`끌기.txt`만 사용하는 물리 마우스 drag 진단을 별도 remote Windows run으로
+반복했다. 기본 재현 run `37098287271`에서는 실제 press/move/release 좌표를
+전달했지만 DragStarting 진단 상태가 나타나지 않았고 파일 복사도 발생하지 않았다.
+
+공통 GUI 단계의 일시적 실패와 진단 코드 자체의 잘못된
+`pywinauto.mouse.move(..., duration=...)` 사용을 각각 제거한 뒤 isolated probe를
+다시 실행했다. 최종 유효 run `37100390801` attempt 1에서는 source row가 실제
+rectangle을 가졌고 `VISIBLE=True`, `ENABLED=True`, 명시적 selection이 성공했다.
+그 상태에서 여러 실제 mouse move와 release를 수행했지만
+`M23_DRAG_TRACE_AFTER_START`와 `M23_DRAG_TRACE_OVER_TARGET`의 StatusText는
+계속 기존 `폴더를 불러왔습니다.`였고, row/ListView DragStarting 진단 문구는 한
+번도 관찰되지 않았다. 16초 내 오른쪽 `끌기.txt` 복사도 발생하지 않았다.
+요청에 따른 마지막 동일-SHA 재시도인 run `37100390801` attempt 2도 같은 결과를
+재현했다. 두 유효 시도 모두 소유 flyExplorer 프로세스 exit 0과 원래 사용자 설정
+6개 SHA256 동일을 확인했다.
+
+이 증거는 DragOver/Drop 제품 로직의 실패를 입증하지 않는다. 해당 이벤트들까지
+도달하지 못했기 때문이다. 또한 실제 사람 포인터에서도 DragStarting이 발생하지
+않는다는 증거도 아니므로 제품 결함이라고 단정하지 않는다. 현재 결론은
+**self-hosted pywinauto 입력으로 WinUI pointer→DragStarting gesture 경계를
+인증할 수 없음**이다. 따라서 `mPrivateDragToken/mPrivateDragParent/
+mPrivateDragSources/mPrivateDragRoute/mPrivateDragSide/mDropReading` ownership을
+별도 controller/coordinator로 이동하는 refactor는 physical acceptance가 확보될
+때까지 보류한다. 실제 사람 포인터 또는 별도 신뢰 가능한 WinUI 입력 경로로
+DragStarting→DragOver→Drop 전체가 관찰되기 전에는 이 gate를 PASS로 승격하지
+않는다.
+

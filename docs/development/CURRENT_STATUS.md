@@ -45,6 +45,14 @@ refs always take precedence over recorded checkpoints.
   now owns the Preferences value, write mutex, revision ordering and detached
   atomic-save worker. MainWindow retains theme/view presentation, request
   initiation and DispatcherQueue-projected save-failure status.
+- A follow-up owned physical-drag probe intentionally did not extract drag/drop.
+  On the Release test-owned window the Korean source row was visible, enabled
+  and explicitly selectable, and real mouse press/move/release coordinates were
+  delivered. However neither the row nor ListView DragStarting diagnostic
+  status appeared, so DragOver/Drop were never reached. A final identical
+  retry reproduced the same boundary. This does not prove a product drag defect;
+  it means the current automation environment cannot certify the
+  pointer-to-WinUI-drag gesture boundary.
 - Ctrl+T, Ctrl+W, Ctrl+Tab and Ctrl+Shift+Tab Window Tab behavior.
 - Details, List, Small Icons and Medium Icons views.
 - Back/Forward/Up, filtering/sorting, local create/rename, guarded copy/move/
@@ -164,7 +172,10 @@ Not certified by current automated evidence:
 - actual 125%, 150% and 200% OS display scaling;
 - High Contrast ON;
 - human Narrator and Korean IME composition acceptance;
-- physical pointer drag acceptance;
+- physical pointer drag acceptance (owned Release automation reaches a visible,
+  enabled, selected source row and real mouse movement, but not WinUI
+  DragStarting; product defect versus automation/input limitation remains
+  unresolved);
 - signed clean-machine machine-wide install/update/rollback;
 - public redistribution/source-delivery/rightsholder/legal clearance;
 - Large Icons and optional path-specific Known Folder artwork.
