@@ -197,7 +197,8 @@ The current/evolutionary direction is:
       |-- FileOperationController     : IMPLEMENTED V8-D transfer/file-command lifecycle
       |-- SearchController            : IMPLEMENTED V8-E search/cancel/recent lifecycle
       |-- FileDetailController        : POST-AUDIT worker/cancel/Shell-visual lifecycle
-      '-- PreferencesCoordinator      : POST-AUDIT-2 preference/write-order lifecycle
+      |-- PreferencesCoordinator      : POST-AUDIT-2 preference/write-order lifecycle
+      '-- WorkspaceRestoreCoordinator : POST-AUDIT-3 restore request/settlement lifecycle
 
 WindowWorkspaceController, SessionCoordinator, ShellNavigationController,
 FileOperationController and SearchController are implemented, and the V8-A
@@ -227,12 +228,24 @@ mouse coordinates are delivered, but neither the row nor ListView DragStarting
 diagnostic status is reached; an identical final retry reproduced that result.
 Because DragOver/Drop therefore remain unexercised, current evidence cannot
 distinguish a product gesture defect from an automation/input limitation.
-Changing drag ownership now would outpace the available runtime evidence. The
-workspace restore queue also remains in MainWindow because current evidence
-shows localized sequencing bookkeeping tied to ShellNavigation completions
-rather than a sufficiently independent subsystem. Do not create another controller by default. Introduce a new
-boundary only when concrete mutable-state, lifetime, change-reason or
-deterministic-test evidence justifies it.
+Changing drag ownership now would outpace the available runtime evidence.
+
+A later workspace-restore lifecycle audit produced stronger evidence than the
+earlier deferral. The old raw per-pane queue depended on ShellNavigation pending
+state but did not own the identity of the request whose settlement should
+advance that queue. A failed, rejected or no-change restore completion could
+therefore clear model pending state and return before QueueNextWorkspaceTab(),
+stalling later tabs. WorkspaceRestoreCoordinator now owns the per-pane restore
+task queue, awaited navigation request id, settle matching and lane reset/cancel
+semantics. MainWindow applies the validated workspace/model, submits Shell
+navigation and projects UI; ShellNavigationController continues to own the
+actual navigation worker/supervisor/watchers. Only the matching restore request
+may advance a lane, and user navigation, tab/window context changes and close
+reset restore state so stale completions cannot advance it.
+
+Do not create another controller by default. Introduce a new boundary only when
+concrete mutable-state, lifetime, change-reason or deterministic-test evidence
+justifies it.
 
 Controllers under app/winui may depend on WinUI only when presentation/
 DispatcherQueue coordination requires it. Move a component to src/base only
