@@ -34,7 +34,15 @@ These are comparison measurements, not mandatory pixel contracts.
 - Shell icons/thumbnails use bounded isolated helper paths. PDF remains
   icon-only unless a future explicitly reviewed thumbnail-provider scope is
   added.
-- Path-specific Known Folder artwork remains open.
+- Known Folder file-list visuals are keyed through a fixed six-item allowlist;
+  no arbitrary path is placed on the helper command line. The helper resolves
+  the Windows Known Folder and returns the native icon pixels. A 2026-10-03
+  BEFORE/AFTER/Explorer contact-sheet review showed one generic icon before
+  and six distinct folder-specific visuals after, matching Explorer motifs.
+- File-list Known Folder artwork is implemented for Desktop, Documents,
+  Downloads, Pictures, Music and Videos using isolated Windows Shell visuals
+  with generic-folder fallback. The navigation sidebar remains Fluent-glyph
+  based and was not changed by this logical unit.
 
 ## v7 ownership and persistence — implemented
 
@@ -54,7 +62,8 @@ The former pre-v7 ownership note is superseded by the implemented v7 model.
 
 ## Current remaining visual/environment gaps
 
-- Optional Known Folder-specific artwork: not implemented.
+- Sidebar Known Folder artwork parity: not included in the accepted file-list
+  artwork unit; current sidebar navigation retains its Fluent glyphs.
 - Actual 125/150/200% DPI: not certified in the current remote environment.
 - High Contrast ON and human Narrator/Korean IME: not certified.
 - Medium view is intentionally not a pixel clone of Explorer.

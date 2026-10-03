@@ -68,6 +68,10 @@ checkpoints.
   continue remaining tabs.
 - Ctrl+T, Ctrl+W, Ctrl+Tab and Ctrl+Shift+Tab Window Tab behavior.
 - Details, List, Small Icons, Medium Icons and Large Icons views.
+- File-list Shell visuals use path-specific Windows Known Folder artwork for
+  Desktop, Documents, Downloads, Pictures, Music and Videos. The bounded
+  disposable Shell helper returns pixels only; failures retain the generic
+  folder icon fallback. Sidebar navigation glyphs are outside this logical unit.
 - Back/Forward/Up, filtering/sorting, local create/rename, guarded copy/move/
   recycle flows, Windows clipboard/context integration, isolated Shell visuals
   and directory/Shell namespace watching.
@@ -126,6 +130,31 @@ the required environment but does not claim to have modified external cloud
 bootstrap configuration.
 
 ## Latest verified evidence
+
+Known Folder file-list artwork is accepted on product revision
+`e40a11c0dbfc135ae9ab73fa9036d10d672406dc`, with policy-reviewed main revision
+`f0234867f61678ec1d3cfd7d0974b320d0879759`. Automatic self-hosted Windows run
+`37115826127` completed successfully on 2026-10-03 with resolved scope
+`release-gui`:
+- policy validation: PASS;
+- canonical structure preflight: 4/4 PASS;
+- source contracts: 177/177 PASS;
+- Release M20 native state fixture: 26/26 PASS;
+- canonical Release app build: PASS;
+- owned Release GUI validation: PASS with
+  `REAL_M23_PRIVATE_SESSION_CLEAR_REVOKES_FUTURE_AUTO_RESTORE True`,
+  `OWNED_WINUI_SHELL_EXIT 0` and
+  `ORIGINAL_SIX_USER_CONFIG_SHA256_IDENTICAL True`;
+- Release runtime-set verification: PASS.
+
+Focused visual acceptance run `37118042729` compared the pre-change main
+`b2a70dcdd217f3af17dada304deaff2c27f9d401`, the accepted product and Windows
+11 Explorer under the same VM, Dark theme, Large Icons and 972x720 window.
+Before the change all six Known Folders shared one generic folder-icon hash;
+after the change Desktop, Documents, Downloads, Pictures, Music and Videos
+produced six distinct native artwork hashes. The reviewed contact sheet matched
+Explorer's folder-specific color/symbol motifs, while both flyExplorer runs
+exited with code 0.
 
 Large Icons is accepted on product revision
 `aafa1615048c61aade0cd1c544990735ddb89a15`, with policy-reviewed main revision
@@ -196,7 +225,8 @@ Not certified by current automated evidence:
   unresolved);
 - signed clean-machine machine-wide install/update/rollback;
 - public redistribution/source-delivery/rightsholder/legal clearance;
-- optional path-specific Known Folder artwork.
+- optional sidebar Known Folder artwork parity; the file-list artwork for the
+  six accepted filesystem Known Folders is implemented and verified.
 
 Do not convert source support, RDP-only checks or a prior package into
 certification of these gates.
