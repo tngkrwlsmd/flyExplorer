@@ -41,8 +41,12 @@ These are comparison measurements, not mandatory pixel contracts.
   and six distinct folder-specific visuals after, matching Explorer motifs.
 - File-list Known Folder artwork is implemented for Desktop, Documents,
   Downloads, Pictures, Music and Videos using isolated Windows Shell visuals
-  with generic-folder fallback. The navigation sidebar remains Fluent-glyph
-  based and was not changed by this logical unit.
+  with generic-folder fallback.
+- The navigation sidebar reuses those same six fixed Known Folder keys at 16 px
+  through a background query + UI-dispatch projection. Each button keeps its
+  prior Fluent glyph as a failure fallback; Home and This PC intentionally stay
+  on their existing Fluent glyphs. A controlled BEFORE/AFTER/Explorer contact
+  sheet confirmed the six native sidebar motifs and alignment.
 
 ## v7 ownership and persistence — implemented
 
@@ -62,8 +66,6 @@ The former pre-v7 ownership note is superseded by the implemented v7 model.
 
 ## Current remaining visual/environment gaps
 
-- Sidebar Known Folder artwork parity: not included in the accepted file-list
-  artwork unit; current sidebar navigation retains its Fluent glyphs.
 - Actual 125/150/200% DPI: not certified in the current remote environment.
 - High Contrast ON and human Narrator/Korean IME: not certified.
 - Medium view is intentionally not a pixel clone of Explorer.

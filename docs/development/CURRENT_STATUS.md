@@ -71,7 +71,11 @@ checkpoints.
 - File-list Shell visuals use path-specific Windows Known Folder artwork for
   Desktop, Documents, Downloads, Pictures, Music and Videos. The bounded
   disposable Shell helper returns pixels only; failures retain the generic
-  folder icon fallback. Sidebar navigation glyphs are outside this logical unit.
+  folder icon fallback.
+- Sidebar navigation reuses the same six fixed Known Folder visual keys on a
+  background worker and projects 16 px native artwork through the UI dispatcher.
+  Each button retains its previous Fluent glyph as a failure fallback. Home and
+  This PC intentionally retain their existing Fluent glyphs.
 - Back/Forward/Up, filtering/sorting, local create/rename, guarded copy/move/
   recycle flows, Windows clipboard/context integration, isolated Shell visuals
   and directory/Shell namespace watching.
@@ -130,6 +134,30 @@ the required environment but does not claim to have modified external cloud
 bootstrap configuration.
 
 ## Latest verified evidence
+
+Sidebar Known Folder artwork is accepted on product revision
+`02e46d3e2133e3e30bfeca0803af39222a93c7bd`, with policy/test-reviewed main
+revision `559129d7c73c2867371f762b6d5480e41280795e`. Automatic self-hosted
+Windows run `37123115476` completed successfully on 2026-10-03 with resolved
+scope `release-gui`:
+- policy validation: PASS;
+- canonical structure preflight: 4/4 PASS;
+- source contracts: 181/181 PASS;
+- Release M20 native state fixture: 26/26 PASS;
+- canonical Release app build: PASS;
+- owned Release GUI validation: PASS with
+  `REAL_M23_PRIVATE_SESSION_CLEAR_REVOKES_FUTURE_AUTO_RESTORE True`,
+  `OWNED_WINUI_SHELL_EXIT 0` and
+  `ORIGINAL_SIX_USER_CONFIG_SHA256_IDENTICAL True`;
+- Release runtime-set verification: PASS.
+
+Focused visual acceptance run `37122383954` compared pre-sidebar revision
+`e0b992edf0ac238ff84a265e5d389481513b1505`, the changed product and Windows
+11 Explorer under the same 972x720 Dark-theme VM conditions. All six sidebar
+Known Folder artwork images were visible at 16x16, the reviewed contact sheet
+matched Explorer's folder-specific navigation motifs, and the run reported
+`SIDEBAR_VISUAL_ACCEPTANCE_PASS` plus
+`SIDEBAR_KNOWN_FOLDER_VISUAL_PASS`.
 
 Known Folder file-list artwork is accepted on product revision
 `e40a11c0dbfc135ae9ab73fa9036d10d672406dc`, with policy-reviewed main revision
@@ -224,9 +252,7 @@ Not certified by current automated evidence:
   DragStarting; product defect versus automation/input limitation remains
   unresolved);
 - signed clean-machine machine-wide install/update/rollback;
-- public redistribution/source-delivery/rightsholder/legal clearance;
-- optional sidebar Known Folder artwork parity; the file-list artwork for the
-  six accepted filesystem Known Folders is implemented and verified.
+- public redistribution/source-delivery/rightsholder/legal clearance.
 
 Do not convert source support, RDP-only checks or a prior package into
 certification of these gates.
