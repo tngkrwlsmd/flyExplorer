@@ -1,5 +1,5 @@
 {
-  "request_id": "validate-20261003-known-folder-artwork-003",
+  "request_id": "validate-20261003-known-folder-artwork-004",
   "working_directory": "C:\\dev\\flyExplorer",
-  "command": "$ErrorActionPreference='Stop'; Write-Output 'STATUS_BEFORE'; git status --short; git diff --check; if($LASTEXITCODE -ne 0){exit $LASTEXITCODE}; python -X utf8 -m unittest tests.winui.test_known_folder_artwork_contract tests.winui.test_file_detail_controller_contract tests.winui.test_registered_file_type_contract tests.winui.test_thumbnail_contract; if($LASTEXITCODE -ne 0){exit $LASTEXITCODE}; test.bat source; if($LASTEXITCODE -ne 0){exit $LASTEXITCODE}; build.bat Release; if($LASTEXITCODE -ne 0){exit $LASTEXITCODE}; Write-Output 'KNOWN_FOLDER_ARTWORK_BUILD_PASS'; git status --short"
+  "command": "$ErrorActionPreference='Stop'; git diff --check; if($LASTEXITCODE -ne 0){exit $LASTEXITCODE}; python -X utf8 -m unittest tests.winui.test_known_folder_artwork_contract tests.winui.test_file_detail_controller_contract tests.winui.test_registered_file_type_contract tests.winui.test_thumbnail_contract; if($LASTEXITCODE -ne 0){exit $LASTEXITCODE}; cmd /c test.bat source; if($LASTEXITCODE -ne 0){exit $LASTEXITCODE}; cmd /c build.bat Release; if($LASTEXITCODE -ne 0){exit $LASTEXITCODE}; Write-Output 'KNOWN_FOLDER_ARTWORK_BUILD_PASS'; git status --short"
 }
