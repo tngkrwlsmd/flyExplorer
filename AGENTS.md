@@ -27,6 +27,30 @@ Before substantial work, use:
 Deleted dated migration reports are historical Git evidence, not current
 instructions.
 
+## Mandatory resume/current-state checkpoint
+
+Before substantial work, and before continuing any interrupted or resumed task,
+establish a fresh live repository snapshot **before touching the Windows VM or
+re-reading an old run as if it were current**:
+
+- read current `main` HEAD;
+- read the recent main commit list (normally the latest 10 is enough);
+- read recent main Windows CI runs and conclusions;
+- compare the requested logical unit with those commits plus
+  `docs/development/CURRENT_STATUS.md`.
+
+If the target logical unit is already on main and has successful acceptance
+evidence for that revision, treat it as complete and move to the next current
+open item. Do not re-run or re-debug an already accepted unit merely because a
+previous chat turn ended earlier. A stale control-branch run, temporary
+worktree, local dirty checkout or pre-main acceptance run is evidence only for
+its recorded SHA; it is never the repository baseline when live main has moved.
+
+Only after this checkpoint may an old run be inspected in detail, and only when
+the fresh snapshot shows that the run still belongs to unfinished current work.
+This "latest main + recent commits + recent main CI" checkpoint is mandatory on
+every resume.
+
 ## Build and verification
 
 Supported root entry points:
@@ -200,17 +224,30 @@ rerunning it.
 
 For iterative Windows development, GUI work and Windows 11 benchmarking,
 prefer this repository's fixed `control/remote-shell` request slot. Update
-only `requests/remote-shell/request.json` on that control branch; its push
-triggers `Remote Windows Task` on the repository-scoped interactive Windows
-VM and executes against the persistent canonical checkout
+only `requests/remote-shell/request.json` on that control branch; every
+request must include `expected_main_sha` equal to the live main SHA observed
+by the mandatory resume/current-state checkpoint. The workflow rejects the
+request before executing its command if main has moved. Its push triggers
+`Remote Windows Task` on the repository-scoped interactive Windows VM and
+executes against the persistent canonical checkout
 `C:\dev\flyExplorer`. Request commits are operational history and must never
 be merged into main. This keeps product main limited to verified logical units
 while still allowing GitHub tooling to command the development PC directly.
 Manual `workflow_dispatch` remains the equivalent human-operated shell entry
 point. The persistent checkout is the development state boundary; each Actions
 invocation is a bounded command job rather than a persistent terminal process,
-so batch related edit/build/focused-test/GUI-probe steps into useful commands or
-scripts instead of creating one job per trivial shell command.
+so batch the normal `investigate -> edit -> focused tests -> incremental build
+-> owned GUI/evidence` loop into one request when practical, or at most two
+requests when the first result genuinely determines the second. Do not create a
+new remote job merely to rediscover facts already available from live main,
+CURRENT_STATUS or completed run logs.
+
+Classify a remote/GUI failure before retrying: product defect, environment
+limit, or fixture/harness defect. If the same GUI fixture/harness fails twice
+without independent product-defect evidence (crash, assertion, wrong product
+state, product log or pixel defect), stop debugging that fixture. Switch to a
+different bounded evidence path such as existing owned GUI coverage, native
+helper/hash evidence, source contracts or a direct controlled screenshot.
 
 At the start of a remote development loop, fetch origin and inspect the current
 branch, HEAD, `origin/main` and `git status --short`. Do not reset, clean,

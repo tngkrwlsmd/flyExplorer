@@ -4,6 +4,25 @@ This policy is mandatory for repository-changing work.
 
 ## Before tool calls
 
+### Mandatory resume/current-state checkpoint
+
+On every new repository-changing task and every resumed/interrupted task, the
+first repository read must establish **latest main + recent commits + recent
+main CI** before any VM request, stale-run diagnosis or product implementation.
+Normally one batched GitHub read should collect main HEAD, about 10 recent main
+commits and the recent main Actions runs.
+
+Compare that live snapshot with `CURRENT_STATUS.md` and the named logical
+unit. If the work is already merged and accepted by CI, reuse that evidence and
+advance; do not reopen the old unit. Runs from `control/remote-shell`,
+temporary worktrees, dirty persistent checkouts and pre-main acceptance remain
+SHA-scoped evidence only and must not override newer live main state.
+
+Every control-branch request must carry `expected_main_sha` from that live
+snapshot. The workflow must reject a stale request when current main no longer
+matches, forcing the agent to refresh context instead of spending time on an
+obsolete baseline.
+
 Define the completion condition, reusable evidence, minimum required
 verification and expected call budget.
 
@@ -23,8 +42,12 @@ Read narrow-first. Do not repeatedly reread unchanged files/logs. Separate
 static/source, compile, runtime, GUI-state and final-pixel evidence.
 
 For the same apparent failure cause, retry at most twice before changing the
-hypothesis. User-observed crashes/hangs/screens can outweigh stale comments or
-old PASS logs.
+hypothesis. For GUI fixtures/harnesses, two consecutive failures without
+independent product-defect evidence are a circuit breaker: stop debugging the
+fixture and switch to a different bounded evidence path. Locale matching, UIA
+virtualization, request serialization/encoding and screenshot harness failures
+are not product defects by themselves. User-observed crashes/hangs/screens can
+outweigh stale comments or old PASS logs.
 
 ## Builds and long operations
 
@@ -157,7 +180,9 @@ code automatically on the privileged self-hosted runner.
 
 For iterative Windows development, Win11 benchmarking and GUI refinement,
 prefer the fixed `control/remote-shell` request slot. Write
-`requests/remote-shell/request.json` only on that branch; the request commit
+`requests/remote-shell/request.json` only on that branch and include the
+mandatory `expected_main_sha` from the current-state checkpoint. The workflow
+rejects the request if live main has moved before execution. The request commit
 triggers `Remote Windows Task` on the repository-scoped interactive Windows
 VM and runs in `C:\dev\flyExplorer` by default. Never merge request commits
 into main. Product main continues to record only verified logical units, while
@@ -165,8 +190,10 @@ the control branch records command history separately. Manual
 `workflow_dispatch` remains available for human-operated commands. Use the
 persistent checkout to preserve incremental build state and a stable
 interactive desktop between iterations. Each job is not a persistent terminal
-session, so combine related edit/build/test/probe work into bounded commands or
-scripts rather than issuing one Actions job for every small shell command.
+session, so default to one batched request containing investigation, edit,
+focused tests, incremental build and owned GUI/evidence when practical. Use a
+second request only when the first result materially determines the next step;
+avoid chains of diagnostic-only requests.
 
 Begin by fetching and inspecting HEAD/origin/main and the worktree. Never use
 reset/clean/checkout-overwrite to erase unexpected local changes. Fast-forward

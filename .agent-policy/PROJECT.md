@@ -99,20 +99,26 @@ process exit 0.
 
 ## Current verification
 
-Latest accepted product evidence for main revision
-`64dbaf5f26defae93d3b9326be8857b904c8d701` comes from automatic self-hosted
-Windows run `37096585900` with resolved scope `release-gui`:
-- policy step completed successfully; documented development readiness PASS,
-  source-evidence readiness PARTIAL because manual runtime/deploy facts remain
-  intentionally manual, and reviewed product paths were accepted against
-  product revision `79fc85838fb387281f849f1d4d292bf96fa7db70`;
+The latest accepted product checkpoint is the sidebar Known Folder artwork
+logical unit: product revision `02e46d3e2133e3e30bfeca0803af39222a93c7bd`,
+policy/contract-reviewed through
+`559129d7c73c2867371f762b6d5480e41280795e`. Automatic self-hosted Windows
+run `37123115476` completed successfully on 2026-10-03 with resolved scope
+`release-gui`:
+- policy validation PASS;
 - canonical structure 4/4 PASS;
-- source contracts 154/154 PASS;
-- canonical Release build PASS;
+- source contracts 181/181 PASS;
+- Release M20 native state fixture 26/26 PASS;
+- canonical Release app build PASS;
 - owned Release GUI PASS with
   `REAL_M23_PRIVATE_SESSION_CLEAR_REVOKES_FUTURE_AUTO_RESTORE True`,
   `OWNED_WINUI_SHELL_EXIT 0` and protected six user-config hashes identical;
 - Release runtime set PASS.
+
+Later main commits through `51e0b8325f63c00077de7975d6dde770f7e32609`
+are documentation/status updates and do not supersede that product-binary
+acceptance evidence. Live Git refs and recent CI always take priority over this
+snapshot during task resume.
 
 The PreferencesCoordinator logical unit was pre-main validated on temporary
 remote run `37096260604` with focused coordinator contracts 2/2 PASS,
@@ -158,8 +164,14 @@ cannot advance it.
   `refactor:` subject or `CI-Scope: release` trailer, but hard GUI paths
   cannot be downgraded. The `release` scope includes the Release M20 native
   state fixture plus canonical Release build/runtime-set verification.
+- Every resumed/interrupted task starts by reading live main HEAD, recent main
+  commits and recent main CI together. If the named logical unit is already
+  merged and accepted, advance instead of reopening old control-branch or
+  pre-main evidence.
 - Iterative Windows development, Win11 benchmarking and GUI refinement should
-  prefer the fixed `control/remote-shell` branch request slot. Updating
+  prefer the fixed `control/remote-shell` branch request slot. Every request
+  includes `expected_main_sha` from that live checkpoint; the workflow rejects
+  stale requests if main has moved. Updating
   `requests/remote-shell/request.json` on that branch triggers this
   repository's `Remote Windows Task` on the interactive Windows VM and runs
   against persistent checkout `C:\dev\flyExplorer` by default. Request
@@ -169,6 +181,10 @@ cannot advance it.
   UIA/screenshot evidence cannot exercise. Use
   `tngkrwlsmd/personal-control-plane` primarily for runner/machine recovery and
   maintenance, especially when this repository's runner path is broken.
+- Default remote execution unit is one batched investigate/edit/focused-test/
+  build/GUI-evidence request, with a second request only when genuinely
+  data-dependent. Two consecutive fixture/harness failures without independent
+  product-defect evidence trigger a switch to another bounded evidence path.
 - GitHub-hosted runners require explicit user approval and are not part of the
   active flyExplorer CI path by default.
 - The privileged self-hosted runner must not execute untrusted fork/PR code

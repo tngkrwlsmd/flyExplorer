@@ -48,12 +48,187 @@ jobs:
           if (-not (Test-Path -LiteralPath $requestPath -PathType Leaf)) {
             throw "Remote shell request is missing: $requestPath"
           }
-          $request = Get-Content -Raw -LiteralPath $requestPath | ConvertFrom-Json
+          $request = Get-Content -Raw -Encoding UTF8 -LiteralPath $requestPath | ConvertFrom-Json
           $requestId = [string]$request.request_id
+          $expectedMainSha = ([string]$request.expected_main_sha).Trim().ToLowerInvariant()
           $workdir = [string]$request.working_directory
           $command = [string]$request.command
           if ([string]::IsNullOrWhiteSpace($requestId)) {
             throw "Remote shell request_id is required."
+          }
+          if ($expectedMainSha -notmatch '^[0-9a-f]{40}
+            $workdir = "C:\dev\flyExplorer"
+          }
+          $delimiter = "FLY_REMOTE_" + [guid]::NewGuid().ToString("N")
+          @(
+            "REMOTE_REQUEST_ID=$requestId"
+            "REMOTE_SOURCE=control/remote-shell"
+            "REMOTE_EXPECTED_MAIN_SHA=$expectedMainSha"
+            "REMOTE_OBSERVED_MAIN_SHA=$observedMainSha"
+            "REMOTE_COMMAND<<$delimiter"
+            $command
+            $delimiter
+            "REMOTE_WORKDIR<<$delimiter"
+            $workdir
+            $delimiter
+          ) | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+
+      - name: Resolve dispatched shell inputs
+        if: github.event_name == 'workflow_dispatch'
+        shell: powershell -NoLogo -NoProfile -ExecutionPolicy Bypass -Command ". '{0}'"
+        env:
+          INPUT_COMMAND: ${{ inputs.command }}
+          INPUT_WORKDIR: ${{ inputs.working_directory }}
+        run: |
+          $delimiter = "FLY_REMOTE_" + [guid]::NewGuid().ToString("N")
+          @(
+            "REMOTE_REQUEST_ID=workflow-dispatch-$env:GITHUB_RUN_ID"
+            "REMOTE_SOURCE=workflow_dispatch"
+            "REMOTE_COMMAND<<$delimiter"
+            $env:INPUT_COMMAND
+            $delimiter
+            "REMOTE_WORKDIR<<$delimiter"
+            $env:INPUT_WORKDIR
+            $delimiter
+          ) | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+
+      - name: Run committed remote task
+        if: github.event_name == 'push' && startsWith(github.ref, 'refs/heads/remote/')
+        shell: powershell -NoLogo -NoProfile -ExecutionPolicy Bypass -Command ". '{0}'"
+        run: |
+          $ErrorActionPreference = "Stop"
+          $script = Join-Path $env:GITHUB_WORKSPACE ".github\remote-task.ps1"
+          if (-not (Test-Path -LiteralPath $script -PathType Leaf)) {
+            throw "Committed remote task script is missing: $script"
+          }
+          Write-Host "REMOTE_TASK_BRANCH=$env:GITHUB_REF_NAME"
+          Write-Host "REMOTE_TASK_SHA=$env:GITHUB_SHA"
+          & $script
+          if ($LASTEXITCODE -ne 0) {
+            throw "Remote task native command exited with code $LASTEXITCODE."
+          }
+
+      - name: Run remote shell command
+        if: github.event_name == 'workflow_dispatch' || github.ref_name == 'control/remote-shell'
+        shell: powershell -NoLogo -NoProfile -ExecutionPolicy Bypass -Command ". '{0}'"
+        run: |
+          $ErrorActionPreference = "Stop"
+          $workdir = $env:REMOTE_WORKDIR
+          if ([string]::IsNullOrWhiteSpace($workdir)) {
+            $workdir = "C:\dev\flyExplorer"
+          }
+          if (-not (Test-Path -LiteralPath $workdir -PathType Container)) {
+            throw "Remote shell working directory does not exist: $workdir"
+          }
+
+          Set-Location -LiteralPath $workdir
+          Write-Host "===== FLYEXPLORER REMOTE SHELL ====="
+          Write-Host "REQUEST_ID: $env:REMOTE_REQUEST_ID"
+          Write-Host "REQUEST_SHA: $env:GITHUB_SHA"
+          Write-Host "RUNNER: $env:RUNNER_NAME"
+          Write-Host "WORKDIR: $(Get-Location)"
+          Write-Host "SOURCE: $env:REMOTE_SOURCE"
+          if ($env:REMOTE_SOURCE -eq "control/remote-shell") {
+            Write-Host "EXPECTED_MAIN_SHA: $env:REMOTE_EXPECTED_MAIN_SHA"
+            Write-Host "OBSERVED_MAIN_SHA: $env:REMOTE_OBSERVED_MAIN_SHA"
+          }
+          Write-Host "===================================="
+
+          $global:LASTEXITCODE = 0
+          Invoke-Expression $env:REMOTE_COMMAND
+          if ($LASTEXITCODE -ne 0) {
+            throw "Remote shell native command exited with code $LASTEXITCODE."
+          }
+) {
+            throw "Remote shell expected_main_sha must be the 40-character live main SHA."
+          }
+          & git fetch origin main --no-tags --prune
+          if ($LASTEXITCODE -ne 0) {
+            throw "Failed to refresh origin/main before remote shell execution."
+          }
+          $observedMainSha = (& git rev-parse refs/remotes/origin/main).Trim().ToLowerInvariant()
+          if ($LASTEXITCODE -ne 0 -or $observedMainSha -notmatch '^[0-9a-f]{40}
+            $workdir = "C:\dev\flyExplorer"
+          }
+          $delimiter = "FLY_REMOTE_" + [guid]::NewGuid().ToString("N")
+          @(
+            "REMOTE_REQUEST_ID=$requestId"
+            "REMOTE_SOURCE=control/remote-shell"
+            "REMOTE_COMMAND<<$delimiter"
+            $command
+            $delimiter
+            "REMOTE_WORKDIR<<$delimiter"
+            $workdir
+            $delimiter
+          ) | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+
+      - name: Resolve dispatched shell inputs
+        if: github.event_name == 'workflow_dispatch'
+        shell: powershell -NoLogo -NoProfile -ExecutionPolicy Bypass -Command ". '{0}'"
+        env:
+          INPUT_COMMAND: ${{ inputs.command }}
+          INPUT_WORKDIR: ${{ inputs.working_directory }}
+        run: |
+          $delimiter = "FLY_REMOTE_" + [guid]::NewGuid().ToString("N")
+          @(
+            "REMOTE_REQUEST_ID=workflow-dispatch-$env:GITHUB_RUN_ID"
+            "REMOTE_SOURCE=workflow_dispatch"
+            "REMOTE_COMMAND<<$delimiter"
+            $env:INPUT_COMMAND
+            $delimiter
+            "REMOTE_WORKDIR<<$delimiter"
+            $env:INPUT_WORKDIR
+            $delimiter
+          ) | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+
+      - name: Run committed remote task
+        if: github.event_name == 'push' && startsWith(github.ref, 'refs/heads/remote/')
+        shell: powershell -NoLogo -NoProfile -ExecutionPolicy Bypass -Command ". '{0}'"
+        run: |
+          $ErrorActionPreference = "Stop"
+          $script = Join-Path $env:GITHUB_WORKSPACE ".github\remote-task.ps1"
+          if (-not (Test-Path -LiteralPath $script -PathType Leaf)) {
+            throw "Committed remote task script is missing: $script"
+          }
+          Write-Host "REMOTE_TASK_BRANCH=$env:GITHUB_REF_NAME"
+          Write-Host "REMOTE_TASK_SHA=$env:GITHUB_SHA"
+          & $script
+          if ($LASTEXITCODE -ne 0) {
+            throw "Remote task native command exited with code $LASTEXITCODE."
+          }
+
+      - name: Run remote shell command
+        if: github.event_name == 'workflow_dispatch' || github.ref_name == 'control/remote-shell'
+        shell: powershell -NoLogo -NoProfile -ExecutionPolicy Bypass -Command ". '{0}'"
+        run: |
+          $ErrorActionPreference = "Stop"
+          $workdir = $env:REMOTE_WORKDIR
+          if ([string]::IsNullOrWhiteSpace($workdir)) {
+            $workdir = "C:\dev\flyExplorer"
+          }
+          if (-not (Test-Path -LiteralPath $workdir -PathType Container)) {
+            throw "Remote shell working directory does not exist: $workdir"
+          }
+
+          Set-Location -LiteralPath $workdir
+          Write-Host "===== FLYEXPLORER REMOTE SHELL ====="
+          Write-Host "REQUEST_ID: $env:REMOTE_REQUEST_ID"
+          Write-Host "REQUEST_SHA: $env:GITHUB_SHA"
+          Write-Host "RUNNER: $env:RUNNER_NAME"
+          Write-Host "WORKDIR: $(Get-Location)"
+          Write-Host "SOURCE: $env:REMOTE_SOURCE"
+          Write-Host "===================================="
+
+          $global:LASTEXITCODE = 0
+          Invoke-Expression $env:REMOTE_COMMAND
+          if ($LASTEXITCODE -ne 0) {
+            throw "Remote shell native command exited with code $LASTEXITCODE."
+          }
+) {
+            throw "Failed to resolve the current origin/main SHA."
+          }
+          if ($observedMainSha -ne $expectedMainSha) {
+            throw "Stale remote shell request: expected main $expectedMainSha but current main is $observedMainSha. Refresh latest main + recent commits + recent main CI and submit a new request."
           }
           if ([string]::IsNullOrWhiteSpace($command)) {
             throw "Remote shell command is required."

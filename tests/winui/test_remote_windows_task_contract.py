@@ -14,6 +14,9 @@ class RemoteWindowsTaskContractTests(unittest.TestCase):
         cls.efficiency = (
             ROOT / "docs/development/AGENT_EFFICIENCY.md"
         ).read_text(encoding="utf-8")
+        cls.project = (
+            ROOT / ".agent-policy/PROJECT.md"
+        ).read_text(encoding="utf-8")
 
     def test_dispatch_shell_requires_no_task_commit(self):
         self.assertIn("workflow_dispatch:", self.workflow)
@@ -36,6 +39,12 @@ class RemoteWindowsTaskContractTests(unittest.TestCase):
         )
         self.assertIn('"requests\\remote-shell\\request.json"', self.workflow)
         self.assertIn("Remote shell request_id is required.", self.workflow)
+        self.assertIn("Get-Content -Raw -Encoding UTF8", self.workflow)
+        self.assertIn("expected_main_sha", self.workflow)
+        self.assertIn("git fetch origin main --no-tags --prune", self.workflow)
+        self.assertIn("Stale remote shell request:", self.workflow)
+        self.assertIn("REMOTE_EXPECTED_MAIN_SHA", self.workflow)
+        self.assertIn("REMOTE_OBSERVED_MAIN_SHA", self.workflow)
         self.assertIn("REMOTE_SOURCE=control/remote-shell", self.workflow)
 
     def test_dispatch_path_does_not_require_checkout(self):
@@ -75,6 +84,16 @@ class RemoteWindowsTaskContractTests(unittest.TestCase):
             self.efficiency,
         )
         self.assertIn("RDC/desktop-control is supplementary", self.efficiency)
+
+    def test_resume_protocol_blocks_stale_rework_and_fixture_loops(self):
+        for text in (self.agents, self.efficiency):
+            self.assertIn("latest main + recent commits + recent main CI", text)
+            self.assertIn("expected_main_sha", text)
+        self.assertIn("two consecutive failures", self.efficiency)
+        self.assertIn("circuit breaker", self.efficiency)
+        self.assertIn("already on main", self.agents)
+        self.assertIn("already merged and accepted", self.project)
+        self.assertIn("one batched", self.project)
 
 
 if __name__ == "__main__":
