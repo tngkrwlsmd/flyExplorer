@@ -32,9 +32,34 @@ For the same revision/configuration, build once unless the first run was
 inconclusive for an identified reason. Keep full output in ignored local logs;
 surface only exit status plus the first relevant error or concise success.
 
-Prefer one start plus one final/blocking read. Do not poll every few seconds or
-alternate log-tail/process probes. Use one status probe only for a genuine
-timeout/stall question.
+Prefer one start plus one final/blocking read. This applies to GitHub Actions,
+remote Windows tasks and local long-running commands, not only subprocesses.
+Do not poll every few seconds, alternate status/log-tail probes, or repeatedly
+read the same run while it is normally progressing.
+
+For Actions specifically:
+- after triggering or observing a long run, record run ID, target SHA, scope and
+  start/current state;
+- do not issue short-interval status reads while the normal runtime has not
+  plausibly elapsed;
+- make at most one later final/blocking status/log read unless new evidence
+  indicates an actual stall or a distinct failure hypothesis;
+- if that read still shows queued/running, end the response with the resume
+  checkpoint rather than holding the chat turn open indefinitely;
+- on resume, query current main/ref, the recorded run, artifacts and cleanup
+  state first, then continue from completed evidence;
+- never restart a completed build/test merely because the previous ChatGPT turn
+  disconnected;
+- for the same apparent failure, inspect the first relevant error and change
+  the hypothesis before rerunning.
+
+Typical CI scope on direct-main pushes:
+- docs/status/agent-operation-only: no Windows VM workflow;
+- source-contract-only tests or tools/policy: source/policy scope;
+- WinUI/src product code, GUI/runtime tests, build/toolchain/package or workflow
+  changes: Release + GUI scope;
+- full Debug + Release remains explicit workflow_dispatch or a task-specific
+  acceptance gate.
 
 Canonical orchestration is tools/winui/run_checks.py. Obsolete
 experiments/phase6 paths must not be used.
@@ -109,9 +134,16 @@ work branch only when repository protection requires it, the user requests it,
 concurrent work makes direct-main unsafe, or isolated integration testing is
 materially useful.
 
-The repository-scoped self-hosted runner may execute trusted main pushes
-automatically. GitHub-hosted runners require explicit user approval. Do not run
-untrusted fork/PR code automatically on the privileged self-hosted runner.
+The repository-scoped self-hosted runner remains the default for trusted
+flyExplorer product/runtime validation. Do not expand GitHub-hosted runners
+into a substitute product build/GUI path. Do not run untrusted fork/PR code
+automatically on the privileged self-hosted runner.
+
+Treat runner/machine maintenance as a different operational responsibility from
+flyExplorer validation. Prefer tngkrwlsmd/personal-control-plane for runner
+health, Windows process/service/task-scheduler checks, recovery and machine
+maintenance when available/authorized. Use flyExplorer's bounded remote task
+only for project-specific commands that belong with this repository.
 
 After normal push, fetch and verify HEAD == origin/main and ahead/behind 0/0.
 Force push is prohibited. If origin/main moved unexpectedly, analyze rather

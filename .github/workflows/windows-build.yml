@@ -1,11 +1,28 @@
 name: Windows VM Validation
 
-# Project CI runs on the repository-scoped interactive Windows VM runner.
-# Main pushes run the normal Release + GUI validation automatically.
+# Product/runtime CI runs on the repository-scoped interactive Windows VM.
+# Docs/agent-operation-only pushes do not queue this expensive Windows job.
+# Main push scope is resolved from the actual changed paths:
+#   source-contract-only -> source
+#   product/runtime/GUI/build/toolchain/workflow -> release-gui
+# Manual dispatch keeps source/release/release-gui/full exactly available.
 on:
   push:
     branches:
       - main
+    paths:
+      - 'app/**'
+      - 'src/**'
+      - 'tests/**'
+      - 'tools/winui/**'
+      - 'tools/policy/**'
+      - 'packaging/**'
+      - '.github/workflows/**'
+      - 'build.bat'
+      - 'run.bat'
+      - 'test.bat'
+      - 'clean.bat'
+      - 'package.bat'
   workflow_dispatch:
     inputs:
       validation_scope:
@@ -31,7 +48,7 @@ jobs:
     runs-on: [self-hosted, Windows, X64]
     timeout-minutes: 30
     env:
-      VALIDATION_SCOPE: ${{ github.event_name == 'workflow_dispatch' && inputs.validation_scope || 'release-gui' }}
+      REQUESTED_VALIDATION_SCOPE: ${{ github.event_name == 'workflow_dispatch' && inputs.validation_scope || 'auto' }}
 
     steps:
       - name: Checkout
@@ -39,6 +56,63 @@ jobs:
         with:
           # Source contracts verify the retired MFC baseline stored only in Git history.
           fetch-depth: 0
+
+      - name: Resolve validation scope
+        shell: powershell -NoLogo -NoProfile -ExecutionPolicy Bypass -Command ". '{0}'"
+        run: |
+          $ErrorActionPreference = "Stop"
+
+          if ($env:REQUESTED_VALIDATION_SCOPE -ne "auto") {
+            "VALIDATION_SCOPE=$env:REQUESTED_VALIDATION_SCOPE" |
+              Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+            Write-Host "VALIDATION_SCOPE=$env:REQUESTED_VALIDATION_SCOPE (manual)"
+            exit 0
+          }
+
+          $event = Get-Content -Raw -LiteralPath $env:GITHUB_EVENT_PATH |
+            ConvertFrom-Json
+          $before = [string]$event.before
+          if ([string]::IsNullOrWhiteSpace($before) -or
+              $before -eq ("0" * 40)) {
+            $before = git rev-parse "$env:GITHUB_SHA^"
+            if ($LASTEXITCODE -ne 0) {
+              throw "Unable to resolve the previous main revision."
+            }
+          }
+
+          $changed = @(git diff --name-only $before $env:GITHUB_SHA)
+          if ($LASTEXITCODE -ne 0) {
+            throw "Unable to classify changed paths for CI scope."
+          }
+          if ($changed.Count -eq 0) {
+            throw "Push-triggered validation has no changed paths."
+          }
+
+          Write-Host "Changed paths:"
+          $changed | ForEach-Object { Write-Host "  $_" }
+
+          $sourceOnly = $true
+          foreach ($path in $changed) {
+            $safeSourceContract =
+              $path -match '^tests/winui/test_.*_contract\.py$' -or
+              $path -match '^tools/policy/'
+            $neutralMetadata =
+              $path -match '^docs/' -or
+              $path -match '^AGENTS\.md$' -or
+              $path -match '^README$' -or
+              $path -match '^LICENSE$' -or
+              $path -match '^CREDITS$' -or
+              $path -match '^\.agent-policy/'
+            if (-not $safeSourceContract -and -not $neutralMetadata) {
+              $sourceOnly = $false
+              break
+            }
+          }
+
+          $scope = if ($sourceOnly) { "source" } else { "release-gui" }
+          "VALIDATION_SCOPE=$scope" |
+            Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          Write-Host "VALIDATION_SCOPE=$scope (automatic)"
 
       - name: Prepare CI evidence marker
         shell: powershell -NoLogo -NoProfile -ExecutionPolicy Bypass -Command ". '{0}'"
@@ -66,14 +140,16 @@ jobs:
             throw "flyExplorer VM expects Python 3.14.x; found $pythonVersion"
           }
 
-          $msbuild = python -X utf8 tools\winui\resolve_msbuild.py
-          if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($msbuild)) {
-            throw "MSBuild resolver failed."
+          if ($env:VALIDATION_SCOPE -ne "source") {
+            $msbuild = python -X utf8 tools\winui\resolve_msbuild.py
+            if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($msbuild)) {
+              throw "MSBuild resolver failed."
+            }
+            if (-not (Test-Path -LiteralPath $msbuild -PathType Leaf)) {
+              throw "Resolved MSBuild does not exist: $msbuild"
+            }
+            Write-Host "MSBuild: $msbuild"
           }
-          if (-not (Test-Path -LiteralPath $msbuild -PathType Leaf)) {
-            throw "Resolved MSBuild does not exist: $msbuild"
-          }
-          Write-Host "MSBuild: $msbuild"
 
           if ($env:VALIDATION_SCOPE -in @("release-gui", "full")) {
             python -X utf8 tools\winui\check_python_deps.py --gui

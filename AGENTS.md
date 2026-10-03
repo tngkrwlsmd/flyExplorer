@@ -178,9 +178,32 @@ Do not use chatgpt-codex-connector unless the user explicitly requests or
 permits it for the task. Normal GitHub connector/API access is allowed when
 appropriate.
 
-Project CI uses the repository-scoped self-hosted Windows runner. Pushes to
-main run Release + GUI validation automatically; workflow_dispatch remains
-available for targeted source/release/full checks.
+Project CI uses the repository-scoped self-hosted Windows runner. Direct-main
+remains the normal development path. Main pushes that can affect the product,
+runtime, GUI, build/toolchain or validation workflow still run Release + GUI
+validation. A push containing only source-contract test files in the
+tests/winui/test_*_contract.py family or tools/policy changes runs only the
+source/policy scope. Documentation/status/agent-operation-only pushes do not
+queue the Windows VM. workflow_dispatch continues to provide
+source/release/release-gui/full explicitly.
+
+Do not keep one ChatGPT response alive by repeatedly polling a long Actions
+run. After starting a long run, record its run ID, target commit and scope.
+Apply the AGENT_EFFICIENCY rule literally: one start/read to establish the run,
+then one final or genuinely blocking read after a reasonable expected runtime.
+Do not perform short-interval status/log polling. If that final read is still
+queued/running, stop the turn with a precise resume checkpoint instead of
+waiting indefinitely. On a later "continue the interrupted work" request, first
+read current main/ref state, the recorded run, relevant artifacts and cleanup
+state; reuse completed evidence for the same revision/configuration rather than
+rerunning it.
+
+Windows runner/machine operations are separate from flyExplorer product
+validation. For runner health, process/service/task-scheduler inspection,
+runner recovery or machine maintenance, prefer the repository-controlled
+tngkrwlsmd/personal-control-plane path when it is available and authorized.
+Keep flyExplorer's remote Windows task for bounded project-specific build/test/
+GUI commands that the control-plane repository cannot or should not own.
 
 When RDC/local worktree access is unavailable, repository-controlled Windows
 commands may be executed through the committed-script remote task path:
