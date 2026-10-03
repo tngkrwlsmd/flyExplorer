@@ -201,7 +201,7 @@ rerunning it.
 For iterative Windows development, GUI work and Windows 11 benchmarking,
 prefer the repository-controlled `tngkrwlsmd/personal-control-plane` Remote
 Shell path when it is available and authorized. Use its `windows-vm` target
-against the persistent canonical checkout `C:\\dev\\flyExplorer`. The
+against the persistent canonical checkout `C:\dev\flyExplorer`. The
 persistent checkout is the development state boundary; Remote Shell itself is
 still an Actions-dispatched command job, not a persistent terminal process.
 Batch related edit/build/focused-test/GUI-probe steps into a useful command or

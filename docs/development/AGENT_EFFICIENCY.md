@@ -143,7 +143,7 @@ code automatically on the privileged self-hosted runner.
 
 For iterative Windows development, Win11 benchmarking and GUI refinement,
 prefer `tngkrwlsmd/personal-control-plane` Remote Shell with target
-`windows-vm` and the persistent checkout `C:\\dev\\flyExplorer` when that
+`windows-vm` and the persistent checkout `C:\dev\flyExplorer` when that
 path is available and authorized. Use the persistent checkout to preserve
 incremental build state and a stable interactive desktop between iterations.
 Remote Shell jobs themselves are not persistent terminal sessions, so combine

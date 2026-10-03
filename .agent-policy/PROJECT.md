@@ -135,7 +135,7 @@ cannot advance it.
   runner; pushes to main use the Release + GUI validation scope automatically.
 - Iterative Windows development, Win11 benchmarking and GUI refinement should
   prefer the authorized `tngkrwlsmd/personal-control-plane` Remote Shell
-  `windows-vm` path with persistent checkout `C:\\dev\\flyExplorer`.
+  `windows-vm` path with persistent checkout `C:\dev\flyExplorer`.
   That checkout is the inner development-loop state; flyExplorer Actions are
   the independent final acceptance plane after a verified logical-unit push.
   Avoid using repeated temporary flyExplorer task commits/long CI runs as the
