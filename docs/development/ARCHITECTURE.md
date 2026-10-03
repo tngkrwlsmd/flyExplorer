@@ -196,7 +196,8 @@ The current/evolutionary direction is:
       |-- ShellNavigationController   : IMPLEMENTED V8-C navigation/supervisor/watchers
       |-- FileOperationController     : IMPLEMENTED V8-D transfer/file-command lifecycle
       |-- SearchController            : IMPLEMENTED V8-E search/cancel/recent lifecycle
-      '-- FileDetailController        : POST-AUDIT worker/cancel/Shell-visual lifecycle
+      |-- FileDetailController        : POST-AUDIT worker/cancel/Shell-visual lifecycle
+      '-- PreferencesCoordinator      : POST-AUDIT-2 preference/write-order lifecycle
 
 WindowWorkspaceController, SessionCoordinator, ShellNavigationController,
 FileOperationController and SearchController are implemented, and the V8-A
@@ -210,11 +211,23 @@ worker lifecycle and bounded Shell visual/thumbnail orchestration. MainWindow
 retains DPI/request preparation, current route/tab/ticket acceptance,
 DispatcherQueue/weak-UI handoff and final XAML projection.
 
-The audit also observed preference-persistence async revision/mutex state and
-private drag/drop state/async deferral as possible future ownership questions;
-neither was extracted in this work. Do not create another controller by default.
-Introduce a new boundary only when concrete mutable-state, lifetime,
-change-reason or deterministic-test evidence justifies it.
+A second MainWindow responsibility audit compared three concrete candidates:
+preference-persistence async revision/mutex state, private drag/drop
+state/async deferral and the workspace restore queue. Preferences persistence
+had the strongest independent change/lifetime boundary and deterministic
+acceptance seam, so PreferencesCoordinator now owns the Preferences value,
+write mutex, latest-revision ordering and detached atomic-save worker.
+MainWindow retains theme/view UI application, persistence triggering,
+DispatcherQueue handoff and user-visible failure status.
+
+Private drag/drop was not extracted because its physical pointer acceptance is
+still a separate open gate; changing that ownership now would outpace the
+available runtime evidence. The workspace restore queue also remains in
+MainWindow because current evidence shows localized sequencing bookkeeping tied
+to ShellNavigation completions rather than a sufficiently independent
+subsystem. Do not create another controller by default. Introduce a new
+boundary only when concrete mutable-state, lifetime, change-reason or
+deterministic-test evidence justifies it.
 
 Controllers under app/winui may depend on WinUI only when presentation/
 DispatcherQueue coordination requires it. Move a component to src/base only

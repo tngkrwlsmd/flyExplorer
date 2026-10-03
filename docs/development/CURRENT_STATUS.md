@@ -11,8 +11,10 @@ The current product architecture includes the completed V8-A through V8-E
 controller-extraction cycle: WindowWorkspaceController, SessionCoordinator,
 ShellNavigationController, FileOperationController and SearchController. A
 post-extraction MainWindow audit also moved the coherent file-detail worker
-lifecycle into FileDetailController. Live Git refs always take precedence over
-recorded checkpoints.
+lifecycle into FileDetailController. A second responsibility audit selected
+preferences persistence as the next justified ownership boundary and moved its
+revision/mutex/detached-save lifecycle into PreferencesCoordinator. Live Git
+refs always take precedence over recorded checkpoints.
 
 ## Accepted current behavior
 
@@ -32,11 +34,17 @@ recorded checkpoints.
   cancellation, stale completion and collision/recycle continuations.
 - V8-E SearchController owns bounded search request identity, cancellation,
   stale completion rejection and recent-scope persistence.
-- The post-extraction audit identified file-detail work as one remaining
+- The first post-extraction audit identified file-detail work as one remaining
   independent lifecycle boundary. FileDetailController now owns pane-local
   cancellation, detached detail workers and bounded Shell visual/thumbnail
   orchestration. MainWindow retains request preparation, live PaneState
   acceptance, DispatcherQueue handoff and XAML projection.
+- The second MainWindow responsibility audit compared preferences persistence,
+  private drag/drop state and workspace restore sequencing. Preferences was the
+  strongest independent persistence/lifetime boundary: PreferencesCoordinator
+  now owns the Preferences value, write mutex, revision ordering and detached
+  atomic-save worker. MainWindow retains theme/view presentation, request
+  initiation and DispatcherQueue-projected save-failure status.
 - Ctrl+T, Ctrl+W, Ctrl+Tab and Ctrl+Shift+Tab Window Tab behavior.
 - Details, List, Small Icons and Medium Icons views.
 - Back/Forward/Up, filtering/sorting, local create/rename, guarded copy/move/
@@ -98,30 +106,34 @@ bootstrap configuration.
 
 ## Latest verified evidence
 
-On main revision `3828bae86840a931ffffc9dbbf3f6a3fb3c3866a`, validated on
-2026-10-03 by automatic self-hosted Windows run `37095040345` with resolved
+On main revision `64dbaf5f26defae93d3b9326be8857b904c8d701`, validated on
+2026-10-03 by automatic self-hosted Windows run `37096585900` with resolved
 scope `release-gui`:
-- policy step completed successfully; documented development readiness PASS and
-  the reviewed product revision/path relationship PASS;
+- policy step completed successfully; documented development readiness PASS,
+  source-evidence readiness remains PARTIAL only for intentionally manual
+  runtime/deploy facts, and reviewed product paths were accepted against
+  product revision `79fc85838fb387281f849f1d4d292bf96fa7db70`;
 - canonical structure preflight: 4/4 PASS;
-- source contracts: 152/152 PASS;
-- canonical Release app build: PASS, including the tracked WinUI project
-  template and restored package/toolchain inputs;
+- source contracts: 154/154 PASS;
+- canonical Release app build: PASS, including restored package/toolchain
+  inputs and the tracked project template;
 - owned Release GUI validation: PASS with
   `REAL_M23_PRIVATE_SESSION_CLEAR_REVOKES_FUTURE_AUTO_RESTORE True`,
   `OWNED_WINUI_SHELL_EXIT 0` and
   `ORIGINAL_SIX_USER_CONFIG_SHA256_IDENTICAL True`;
 - Release runtime-set verification: PASS.
 
-The FileDetailController extraction was also pre-main validated on temporary
-remote run `37094312782`: focused controller contracts 3/3 PASS, canonical
-structure 4/4 PASS, source contracts 152/152 PASS, Release build PASS, targeted
-v7 Release GUI PASS, real process exit 0 and `git diff --check` PASS.
+The PreferencesCoordinator logical unit was pre-main validated on temporary
+remote run `37096260604`: focused coordinator contracts 2/2 PASS, canonical
+structure 4/4 PASS, source contracts 154/154 PASS, Release build PASS, full
+owned Release GUI PASS, real process exit 0, protected user configuration
+unchanged and `git diff --check` PASS.
 
-The broader Debug/package/install evidence from run `37020993308` remains
-historical and was not rerun for this architecture closure. DPI scaling,
-accessibility, physical drag, signing and public distribution remain separate
-gates.
+Earlier FileDetailController evidence remains valid for its own unchanged
+revision. The broader Debug/package/install evidence from run `37020993308`
+remains historical and was not rerun for this behavior-preserving architecture
+work. DPI scaling, accessibility, physical drag, signing and public
+distribution remain separate gates.
 
 ## Known functional coverage limits
 

@@ -71,35 +71,41 @@ state/persistence. The V8-A through V8-E extraction cycle is complete. The
 post-extraction MainWindow responsibility audit is also complete and extracted
 one additional coherent lifecycle boundary: FileDetailController now owns
 pane-local detail cancellation, detached metadata/icon/thumbnail workers and
-bounded Shell visual orchestration. MainWindow retains request preparation,
-live PaneState acceptance, DispatcherQueue handoff and XAML projection.
+bounded Shell visual orchestration. A second responsibility audit then selected
+preferences persistence over drag/drop and workspace restore sequencing:
+PreferencesCoordinator owns the Preferences value, write mutex, revision
+ordering and detached atomic-save worker. MainWindow retains theme/view
+presentation, persistence triggering, DispatcherQueue handoff and status
+projection.
 
 ## Current verification
 
 Latest accepted product evidence for main revision
-`3828bae86840a931ffffc9dbbf3f6a3fb3c3866a` comes from automatic self-hosted
-Windows run `37095040345` with resolved scope `release-gui`:
+`64dbaf5f26defae93d3b9326be8857b904c8d701` comes from automatic self-hosted
+Windows run `37096585900` with resolved scope `release-gui`:
 - policy step completed successfully; documented development readiness PASS,
   source-evidence readiness PARTIAL because manual runtime/deploy facts remain
-  intentionally manual, and reviewed product paths were accepted;
+  intentionally manual, and reviewed product paths were accepted against
+  product revision `79fc85838fb387281f849f1d4d292bf96fa7db70`;
 - canonical structure 4/4 PASS;
-- source contracts 152/152 PASS;
+- source contracts 154/154 PASS;
 - canonical Release build PASS;
 - owned Release GUI PASS with
   `REAL_M23_PRIVATE_SESSION_CLEAR_REVOKES_FUTURE_AUTO_RESTORE True`,
   `OWNED_WINUI_SHELL_EXIT 0` and protected six user-config hashes identical;
 - Release runtime set PASS.
 
-The FileDetailController logical unit was pre-main validated on temporary
-remote run `37094312782` with focused controller contracts 3/3 PASS, source
-contracts 152/152 PASS, Release build PASS, targeted v7 Release GUI PASS, real
-process exit 0 and `git diff --check` PASS. The temporary task script is not
-part of main product history.
+The PreferencesCoordinator logical unit was pre-main validated on temporary
+remote run `37096260604` with focused coordinator contracts 2/2 PASS,
+canonical structure 4/4 PASS, source contracts 154/154 PASS, Release build PASS,
+full owned Release GUI PASS, real process exit 0, protected user configuration
+unchanged and `git diff --check` PASS. The temporary task script is not part
+of main product history.
 
-The v7 close-race fix keeps cancellation/shutdown at the window Closed boundary.
-FileDetailController now centralizes detail-worker cancellation and rechecks
-cancellation before UI posting; MainWindow still rejects stale route/tab/ticket
-completions before XAML projection.
+The second audit deliberately did not extract private drag/drop state because
+physical drag remains an explicit open gate, and it did not extract the
+workspace restore queue because current evidence shows localized sequencing
+bookkeeping rather than a sufficiently independent lifecycle subsystem.
 
 ## Build/runtime facts
 
