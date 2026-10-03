@@ -135,15 +135,43 @@ concurrent work makes direct-main unsafe, or isolated integration testing is
 materially useful.
 
 The repository-scoped self-hosted runner remains the default for trusted
-flyExplorer product/runtime validation. Do not expand GitHub-hosted runners
-into a substitute product build/GUI path. Do not run untrusted fork/PR code
-automatically on the privileged self-hosted runner.
+flyExplorer final product/runtime acceptance. Do not expand GitHub-hosted
+runners into a substitute product build/GUI path. Do not run untrusted fork/PR
+code automatically on the privileged self-hosted runner.
 
-Treat runner/machine maintenance as a different operational responsibility from
-flyExplorer validation. Prefer tngkrwlsmd/personal-control-plane for runner
-health, Windows process/service/task-scheduler checks, recovery and machine
-maintenance when available/authorized. Use flyExplorer's bounded remote task
-only for project-specific commands that belong with this repository.
+### Remote Windows development loop
+
+For iterative Windows development, Win11 benchmarking and GUI refinement,
+prefer `tngkrwlsmd/personal-control-plane` Remote Shell with target
+`windows-vm` and the persistent checkout `C:\\dev\\flyExplorer` when that
+path is available and authorized. Use the persistent checkout to preserve
+incremental build state and a stable interactive desktop between iterations.
+Remote Shell jobs themselves are not persistent terminal sessions, so combine
+related edit/build/test/probe work into bounded commands or scripts rather than
+issuing one Actions job for every small shell command.
+
+Begin by fetching and inspecting HEAD/origin/main and the worktree. Never use
+reset/clean/checkout-overwrite to erase unexpected local changes. Fast-forward
+a clean checkout when appropriate. During the inner loop, prefer the smallest
+meaningful checks first, then incremental build and targeted owned GUI/visual
+acceptance. Keep the same controlled fixture/DPI/window geometry when comparing
+against Windows 11 Explorer. Only use RDC/desktop-control as a fallback for
+interactions that shell, UIA or screenshot evidence cannot exercise.
+
+Do not push each intermediate edit merely because direct-main is the normal Git
+policy. Finish and verify the logical unit in the remote checkout first. Fetch
+again immediately before push; if origin/main moved unexpectedly, analyze and
+integrate safely rather than overwriting it. After push, use flyExplorer Actions
+as the independent final acceptance gate. If that final gate fails, diagnose
+the first relevant failure and return to the remote checkout for the next fix;
+do not make repeated temporary task branches/commits the normal development
+loop.
+
+Use `personal-control-plane` for runner health, Windows process/service/
+task-scheduler checks, recovery and machine maintenance as well. flyExplorer's
+bounded remote task is a fallback for project-specific commands when the
+control-plane path is unavailable/unsuitable or isolated branch execution is
+materially useful.
 
 After normal push, fetch and verify HEAD == origin/main and ahead/behind 0/0.
 Force push is prohibited. If origin/main moved unexpectedly, analyze rather
