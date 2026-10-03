@@ -198,23 +198,51 @@ read current main/ref state, the recorded run, relevant artifacts and cleanup
 state; reuse completed evidence for the same revision/configuration rather than
 rerunning it.
 
-Windows runner/machine operations are separate from flyExplorer product
-validation. For runner health, process/service/task-scheduler inspection,
-runner recovery or machine maintenance, prefer the repository-controlled
-tngkrwlsmd/personal-control-plane path when it is available and authorized.
-Keep flyExplorer's remote Windows task for bounded project-specific build/test/
-GUI commands that the control-plane repository cannot or should not own.
+For iterative Windows development, GUI work and Windows 11 benchmarking,
+prefer the repository-controlled `tngkrwlsmd/personal-control-plane` Remote
+Shell path when it is available and authorized. Use its `windows-vm` target
+against the persistent canonical checkout `C:\\dev\\flyExplorer`. The
+persistent checkout is the development state boundary; Remote Shell itself is
+still an Actions-dispatched command job, not a persistent terminal process.
+Batch related edit/build/focused-test/GUI-probe steps into a useful command or
+script instead of creating one remote job per trivial command.
 
-When RDC/local worktree access is unavailable, repository-controlled Windows
-commands may be executed through the committed-script remote task path:
-create a temporary `remote/**` branch from current main, commit only the
-bounded task body at `.github/remote-task.ps1`, let
-`.github/workflows/remote-windows-task.yml` execute it on the self-hosted
-runner, inspect the Actions logs/artifacts, then commit
-`.github/remote-cleanup` on that branch so
+At the start of a remote development loop, fetch origin and inspect the current
+branch, HEAD, `origin/main` and `git status --short`. Do not reset, clean,
+discard or overwrite unexpected local work. If the checkout is clean and main
+can be advanced normally, synchronize it with a fast-forward-only update.
+Before push, fetch again and stop to analyze any unexpected movement of
+`origin/main`; never force-push.
+
+Use that persistent Windows checkout for the fast inner loop: edit files,
+run the smallest meaningful source/native checks, perform incremental builds,
+launch the test-owned GUI, capture/inspect controlled visual evidence and
+repeat locally until the logical unit is ready. This is especially preferred
+for Explorer/Win11 visual benchmarking and other tasks where keeping the same
+interactive desktop, DPI, window geometry and fixture materially improves the
+comparison. Use RDC or another desktop-control path only when shell/UIA/
+screenshot evidence cannot exercise the required interaction or when the
+repository control path is unavailable.
+
+Direct-main remains the normal Git integration policy, but do not interpret it
+as "push every intermediate edit." Commit/push only a verified logical unit.
+After that push, flyExplorer Actions are the independent final acceptance
+plane. Do not use repeated temporary task commits and long Actions runs as the
+normal edit/test loop. If final CI exposes a real defect, return to the
+persistent remote checkout, fix and revalidate there, then push the next
+verified logical unit.
+
+Runner health, process/service/task-scheduler inspection, runner recovery and
+machine maintenance also belong in `personal-control-plane`. flyExplorer's
+committed-script remote task remains a fallback for bounded project-specific
+commands when the control-plane path is unavailable, unsuitable for the task,
+or isolated branch execution is materially useful. In that fallback, create a
+temporary `remote/**` branch from current main, commit only
+`.github/remote-task.ps1`, execute
+`.github/workflows/remote-windows-task.yml`, inspect its evidence, then use
+`.github/remote-cleanup` so
 `.github/workflows/remote-windows-task-cleanup.yml` deletes the temporary
-branch. Do not merge those task/cleanup commits to main. Prefer existing
-bounded workflows when they already cover the required command.
+branch. Never merge task/cleanup commits to main.
 
 GitHub-hosted runners require explicit user approval and are not part of the
 active flyExplorer CI path unless the user explicitly requests them. Do not add
