@@ -159,9 +159,12 @@ def run(*,win,element,safe_click,focus,eventually,owned,localdata,env,exe):
         eventually(lambda:not profile.exists(),"v7 private session cleanup failed",12)
     focus();safe_click(element("LeftFiles"));send_keys("^w")
     eventually(lambda:len(tabs())==1,"cleanup close after v7 session test failed",10)
-    # A still owns the history created at the start of this test. Use that
-    # committed route for cleanup instead of depending on AddressBox UIA edit/
-    # focus timing after the session child closes.
+    # Closing the session tab rebuilds the surviving A presentation
+    # asynchronously. Require that its committed Nested route and Back command
+    # are live before issuing physical input; the final assertion below still
+    # proves that Back restores the original owned folder.
+    eventually(lambda:"nested" in address() and element("BackButton").is_enabled(),
+               "cleanup close did not restore ready tab A",14)
     safe_click(element("BackButton"))
     eventually(lambda:address().rstrip("\/")==initial_address.rstrip("\/").lower(),
                "v7 cleanup did not restore the original owned folder",14)

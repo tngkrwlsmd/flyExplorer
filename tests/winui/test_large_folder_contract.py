@@ -6,6 +6,7 @@ class FolderScaleContract(unittest.TestCase):
  def test_1100_and_2300_bounded_paged_owned_files(self):
   body=(Path(__file__).resolve().parent/"test_large_owned_folder_gui.py").read_text(encoding="utf-8")
   app=(ROOT/"MainWindow.xaml.cpp").read_text(encoding="utf-8")
+  detail=(ROOT/"file_detail_controller.cpp").read_text(encoding="utf-8")
   for item in ('choices=(1100,2300)','range(args.items)',"bench-0000.txt","bench-1099.txt",
                "process.pid","LEGACY_PRESENT_SETTINGS_UNCHANGED",
                'auto_id="SortPicker"'):
@@ -18,9 +19,9 @@ class FolderScaleContract(unittest.TestCase):
   self.assertIn("state.filteredCount=order.size()",app)
   self.assertIn('SetName(\n            button,hstring(',app)
   self.assertIn('side==0?L"\\uC67C\\uCABD \\uB354 \\uD45C\\uC2DC ":L"\\uC624\\uB978\\uCABD \\uB354 \\uD45C\\uC2DC "',app)
-  self.assertIn("if(mDetailCancel[side])mDetailCancel[side]->store(true);",app)
-  self.assertIn("if(cancel->load())return; // prevent stale metadata",app)
-  self.assertIn("thumbnailBudget<4",app)
+  self.assertIn("mFileDetails.cancel(side)",app)
+  self.assertIn("if(cancelToken->load())return; // prevent stale metadata child launch",detail)
+  self.assertIn("thumbnailBudget<4",detail)
 
   ui=(ROOT/"MainWindow.xaml").read_text(encoding="utf-8")
   self.assertIn("LeftNameFilterBox",ui)

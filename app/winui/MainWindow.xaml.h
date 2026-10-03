@@ -9,6 +9,7 @@
 #include "session_coordinator.h"
 #include "shell_navigation_controller.h"
 #include "file_operation_controller.h"
+#include "file_detail_controller.h"
 #include "search_controller.h"
 #include "../../src/base/shell_transfer_core.h"
 #include "../../src/base/shell_clipboard_core.h"
@@ -177,9 +178,7 @@ namespace winrt::FlyExplorer::implementation
         }
         using FileDetail=fxfile::previewlist::FileDetail;
         using FileViewMode=fxfile::previewlist::FileViewMode;
-        // Incremental thumbnail requests must stop issuing new child
-        // Shell processes when navigation invalidates the native route.
-        std::array<std::shared_ptr<std::atomic_bool>,2> mDetailCancel{};
+        fxfile::previewdetail::FileDetailController mFileDetails{};
         void ScheduleFileDetails(int side,bool force=false);
         void ClearFileDetails(int side);
         Microsoft::UI::Dispatching::DispatcherQueueTimer mTransferTimer{nullptr};

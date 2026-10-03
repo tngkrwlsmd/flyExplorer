@@ -356,7 +356,7 @@ namespace winrt::FlyExplorer::implementation
         mClosing=true;
         mSessionCoordinator.prepareForClose();
         mFileOperations.prepareForClose();
-        for(auto& cancel:mDetailCancel)if(cancel)cancel->store(true);
+        mFileDetails.prepareForClose();
         for(std::size_t i=0;i<mWorkspace.count();++i)
             for(auto& files:mWorkspace.state(i).fileLists)files.invalidate();
         try{if(mTransferTimer)mTransferTimer.Stop();}catch(...){}
@@ -488,7 +488,7 @@ namespace winrt::FlyExplorer::implementation
         mPopulatingTabs=false;
     }
     void MainWindow::ClearFileDetails(int side){
-        if(mDetailCancel[side])mDetailCancel[side]->store(true);
+        mFileDetails.cancel(side);
         ActiveWindowTab().fileLists[side].invalidate();
     }
     void MainWindow::ScheduleFileDetails(int side,bool force){
@@ -507,8 +507,9 @@ namespace winrt::FlyExplorer::implementation
             (std::max)(16.0,baseVisual*raster+0.5)));
         const auto thumbnailPixels=static_cast<std::uint32_t>((std::min)(128.0,
             (std::max)(32.0,48.0*raster+0.5)));
-        if(!force&&ActiveWindowTab().fileLists[side].isCurrent(route,tab,items.size())&&
-           ActiveWindowTab().fileLists[side].visualPixels==visualPixels)return;
+        auto& listState=ActiveWindowTab().fileLists[side];
+        if(!force&&listState.isCurrent(route,tab,items.size())&&
+           listState.visualPixels==visualPixels)return;
         auto const& folder=pane.filesystemPaths[tab];
         if(folder.size()<3||folder[1]!=L':'||folder[2]!=L'\\')return;
         if(items.size()>1200)return;
@@ -516,197 +517,42 @@ namespace winrt::FlyExplorer::implementation
         if(::GetDriveTypeW(root.c_str())!=DRIVE_FIXED)return;
         std::vector<std::wstring> paths{};
         paths.reserve(items.size());
-        for(auto const& item:items){
-            // Values copied from the supervised native Shell snapshot;
-            // never retain a Shell COM pointer on this worker.
+        for(auto const& item:items)
             paths.push_back(item.isFileSystem()?item.parsingName:std::wstring{});
-        }
-        if(mDetailCancel[side])mDetailCancel[side]->store(true);
-        auto cancel=std::make_shared<std::atomic_bool>(false);
-        mDetailCancel[side]=cancel;
-        const auto ticket=ActiveWindowTab().fileLists[side].begin(route,tab);
-        ActiveWindowTab().fileLists[side].visualPixels=visualPixels;
+        const auto ticket=listState.begin(route,tab);
+        listState.visualPixels=visualPixels;
+        fxfile::previewdetail::FileDetailController::Request request{};
+        request.side=side;request.tab=tab;request.route=route;request.ticket=ticket;
+        request.viewMode=requestedView;request.visualPixels=visualPixels;
+        request.thumbnailPixels=thumbnailPixels;request.paths=std::move(paths);
         auto dispatch=DispatcherQueue();
         auto weak=get_weak();
-        try{
-            std::thread([side,tab,route,ticket,cancel,paths=std::move(paths),
-                         dispatch,weak,requestedView,visualPixels,thumbnailPixels]{
-                // Batch 24 distinct registered extensions in one disposable
-                // helper subprocess. A timeout preserves the existing type
-                // fallback and cannot block the WinUI UI thread.
-                std::vector<std::wstring> extensions{L".flyfolder"};
-                for(auto const& path:paths){
-                    const auto dot=path.find_last_of(L'.');
-                    const auto slash=path.find_last_of(L"\\/");
-                    if(dot==std::wstring::npos||
-                       (slash!=std::wstring::npos&&dot<slash))continue;
-                    auto ext=path.substr(dot);
-                    if(!fxfile::filetype::safeExtension(ext))continue;
-                    std::transform(ext.begin(),ext.end(),ext.begin(),
-                       [](wchar_t c){return static_cast<wchar_t>(::towlower(c));});
-                    if(std::find(extensions.begin(),extensions.end(),ext)==extensions.end()
-                         &&extensions.size()<24)extensions.push_back(ext);
+        const bool started=mFileDetails.start(
+            std::move(request),
+            [dispatch](fxfile::previewdetail::FileDetailController::UiTask task){
+                try{return dispatch.TryEnqueue(
+                    [task=std::move(task)]() mutable {task();});}
+                catch(...){return false;}
+            },
+            [weak](fxfile::previewdetail::FileDetailController::Completion completed){
+                if(auto ui=weak.get()){
+                    const int side=completed.side;
+                    const auto tab=completed.tab;
+                    const auto route=completed.route;
+                    const auto ticket=completed.ticket;
+                    auto const count=completed.details.size();
+                    auto const& pane=ui->ActiveWindowTab().model.panes[side];
+                    if(!ui->ActiveWindowTab().fileLists[side].accepts(
+                           ticket,route,tab)||
+                       pane.active!=tab||pane.pending[tab]||
+                       pane.routeIds[tab]!=route||
+                       pane.tabs[tab].snapshot().children.size()!=count)return;
+                    ui->ActiveWindowTab().fileLists[side].details=
+                        std::move(completed.details);
+                    ui->FillFiles(side);
                 }
-                std::unordered_map<std::wstring,fxfile::filetype::Visual> windowsTypes;
-                std::wstring visualHelper;
-                if(!extensions.empty()){
-                    wchar_t exe[32768]{};
-                    const auto count=::GetModuleFileNameW(nullptr,exe,32768);
-                    if(count&&count<32768){
-                        visualHelper=(std::filesystem::path(exe).parent_path()/
-                            L"FlyShellIsolationHelper.exe").native();
-                        windowsTypes=fxfile::filetype::queryVisuals(
-                            visualHelper,extensions,2500,visualPixels);
-                        // A single slow registered extension can cause
-                        // the entire bounded batch to fall back. When that
-                        // happens, recover at most two distinct extensions
-                        // independently; never launch unbounded workers.
-                        std::vector<std::wstring> recover;
-                        if(windowsTypes.empty()){
-                            auto text=std::find(extensions.begin(),
-                                                extensions.end(),L".txt");
-                            if(text!=extensions.end())recover.push_back(*text);
-                            for(auto const& ext:extensions){
-                                if(recover.size()>=2)break;
-                                if(std::find(recover.begin(),recover.end(),ext)
-                                   ==recover.end())recover.push_back(ext);
-                            }
-                        }else{
-                            auto text=std::find(extensions.begin(),
-                                                extensions.end(),L".txt");
-                            if(text!=extensions.end()&&
-                               (windowsTypes.find(*text)==windowsTypes.end()||
-                                windowsTypes[*text].label.empty()))
-                                recover.push_back(*text);
-                        }
-                        for(auto const& ext:recover){
-                            auto one=fxfile::filetype::queryVisuals(
-                                visualHelper,{ext},1350,visualPixels);
-                            auto found=one.find(ext);
-                            if(found!=one.end())
-                                windowsTypes[ext]=std::move(found->second);
-                        }
-                    }
-                }
-                std::vector<FileDetail> details(paths.size());
-                size_t thumbnailBudget=0;
-                for(size_t i=0;i<paths.size();++i){
-                    if(cancel->load())return; // prevent stale metadata child launch
-                    if(paths[i].empty()||paths[i].size()>32000)continue;
-                    WIN32_FILE_ATTRIBUTE_DATA data{};
-                    if(!::GetFileAttributesExW(paths[i].c_str(),
-                        GetFileExInfoStandard,&data))continue;
-                    if(data.dwFileAttributes&FILE_ATTRIBUTE_REPARSE_POINT)continue;
-                    auto& entry=details[i];
-                    // Pure filename extension classification on the
-                    // already validated local worker: no untrusted Shell
-                    // extension or COM type handler runs on the UI thread.
-                    if(data.dwFileAttributes&FILE_ATTRIBUTE_DIRECTORY){
-
-                        entry.typeLabel=L"폴더";
-
-                        auto folder=windowsTypes.find(L".flyfolder");
-
-                        if(folder!=windowsTypes.end()&&!folder->second.bgra.empty()){
-
-                            entry.iconBgra=folder->second.bgra;
-
-                            entry.iconWidth=folder->second.width;
-
-                            entry.iconHeight=folder->second.height;
-
-                        }
-
-                    }else{
-                        const auto dot=paths[i].find_last_of(L'.');
-                        const auto slash=paths[i].find_last_of(L"\\/");
-                        entry.typeLabel=dot!=std::wstring::npos&&
-                             (slash==std::wstring::npos||dot>slash)&&
-                             dot+1<paths[i].size()&&paths[i].size()-dot<=17?
-                             paths[i].substr(dot+1)+L" 파일":L"파일";
-                        if(dot!=std::wstring::npos&&
-                           (slash==std::wstring::npos||dot>slash)){
-                            auto ext=paths[i].substr(dot);
-                            std::transform(ext.begin(),ext.end(),ext.begin(),
-                               [](wchar_t c){return static_cast<wchar_t>(::towlower(c));});
-                            auto found=windowsTypes.find(ext);
-                            if(found!=windowsTypes.end()){
-                                if(!found->second.label.empty())
-                                    entry.typeLabel+=L" (Windows \uC720\uD615: "+
-                                        found->second.label+L")";
-                                entry.iconBgra=found->second.bgra;
-                                entry.iconWidth=found->second.width;
-                                entry.iconHeight=found->second.height;
-                            }
-                        }
-                    }
-                    if(!(data.dwFileAttributes&FILE_ATTRIBUTE_DIRECTORY)){
-                        if(requestedView==FileViewMode::MediumIcons&&
-                           !visualHelper.empty()&&thumbnailBudget<4&&
-                           data.nFileSizeHigh==0&&
-                           data.nFileSizeLow<=32*1024*1024){
-                            auto ext=std::filesystem::path(paths[i]).extension().native();
-                            std::transform(ext.begin(),ext.end(),ext.begin(),
-                              [](wchar_t c){return static_cast<wchar_t>(::towlower(c));});
-                            if(ext==L".png"||ext==L".jpg"||ext==L".jpeg"||
-                               ext==L".bmp"||ext==L".webp"){
-                                ++thumbnailBudget;
-                                if(cancel->load())return;
-                                auto result=fxfile::thumbnail::query(
-                                    visualHelper,paths[i],1800,thumbnailPixels);
-                                if(result.valid()){
-                                    entry.thumbnailBgra=std::move(result.bgra);
-                                    entry.thumbnailWidth=result.width;
-                                    entry.thumbnailHeight=result.height;
-                                }
-                            }
-                        }
-                        entry.bytes=(static_cast<std::uint64_t>(
-                            data.nFileSizeHigh)<<32)|data.nFileSizeLow;
-                        entry.sizeKnown=true;
-                        entry.bytesLabel=entry.bytes<1024?
-                          std::to_wstring(entry.bytes)+L" B":
-                          entry.bytes<1048576?
-                          std::to_wstring(entry.bytes/1024)+L" KB":
-                          std::to_wstring(entry.bytes/1048576)+L" MB";
-                    }
-                    ULARGE_INTEGER timestamp{};
-                    timestamp.HighPart=data.ftLastWriteTime.dwHighDateTime;
-                    timestamp.LowPart=data.ftLastWriteTime.dwLowDateTime;
-                    entry.modified=timestamp.QuadPart;
-                    FILETIME local{};
-                    SYSTEMTIME stamp{};
-                    if(::FileTimeToLocalFileTime(&data.ftLastWriteTime,&local)&&
-                       ::FileTimeToSystemTime(&local,&stamp)){
-                        wchar_t date[32]{},time[24]{};
-                        if(::GetDateFormatEx(L"ko-KR",0,&stamp,
-                              L"yyyy-MM-dd",date,32,nullptr)&&
-                           ::GetTimeFormatEx(L"ko-KR",0,&stamp,
-                              L"HH:mm",time,24)){
-                            entry.dateLabel=std::wstring(date)+L" "+time;
-                            entry.dateKnown=true;
-                        }
-                    }
-                }
-                auto payload=std::make_shared<std::vector<FileDetail>>(
-                    std::move(details));
-                if(cancel->load())return;
-                try{dispatch.TryEnqueue([weak,payload,side,tab,route,ticket]{
-                    if(auto ui=weak.get()){
-                        auto const& pane=ui->ActiveWindowTab().model.panes[side];
-                        if(!ui->ActiveWindowTab().fileLists[side].accepts(ticket,route,tab)||
-                           pane.active!=tab||pane.pending[tab]||
-                           pane.routeIds[tab]!=route||
-                           pane.tabs[tab].snapshot().children.size()!=payload->size())
-                            return; // never apply stale metadata to a new folder
-                        ui->ActiveWindowTab().fileLists[side].details=std::move(*payload);
-                        ui->FillFiles(side);
-                    }
-                });}catch(...){}
-            }).detach();
-        }catch(...){
-            ActiveWindowTab().fileLists[side].invalidate();
-        }
+            });
+        if(!started)listState.invalidate();
     }
     void MainWindow::OnNameColumnWidthChanged(
         IInspectable const& sender,
@@ -1170,7 +1016,7 @@ namespace winrt::FlyExplorer::implementation
         auto& state=ActiveWindowTab();
         mShellNavigation->suspend(state.model);
         for(int side=0;side<2;++side){
-            if(mDetailCancel[side])mDetailCancel[side]->store(true);
+            mFileDetails.cancel(side);
             state.fileLists[side].invalidate();
             mRestoreQueue[side].clear();
         }

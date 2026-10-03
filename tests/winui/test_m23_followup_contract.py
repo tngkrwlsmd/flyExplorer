@@ -60,10 +60,11 @@ class M23Followup(unittest.TestCase):
    self.assertIn(name,state)
   self.assertIn("std::array<fxfile::previewlist::PaneState,2> fileLists",owner)
   self.assertIn('ClInclude Include="file_list_state.h"',source("flyExplorer.project-template.xml"))
-  self.assertNotIn("mFileDetails",window)
-  self.assertIn("ActiveWindowTab().fileLists[side].begin(route,tab)",render)
-  self.assertIn("ActiveWindowTab().fileLists[side].isCurrent(",render)
-  self.assertIn("ActiveWindowTab().fileLists[side].accepts(ticket,route,tab)",render)
+  self.assertIn("FileDetailController mFileDetails",window)
+  self.assertNotIn("mDetailCancel",window)
+  self.assertIn("listState.begin(route,tab)",render)
+  self.assertIn("listState.isCurrent(",render)
+  self.assertIn("ActiveWindowTab().fileLists[side].accepts(",render)
 
  def test_owned_physical_drag_requires_manual_input_not_automatic_claim(self):
   probe=(R/"tests/winui/manual_owned_drag_probe.py").read_text(encoding="utf-8-sig")
@@ -104,8 +105,10 @@ class M23Followup(unittest.TestCase):
 
  def test_type_classification_does_not_invoke_shell_extension_on_ui_thread(self):
   impl=source("MainWindow.xaml.cpp")
-  self.assertIn('entry.typeLabel=L"폴더"',impl)
-  self.assertIn('L" 파일"',impl)
+  worker=source("file_detail_controller.cpp")
+  self.assertIn('entry.typeLabel=L"폴더"',worker)
+  self.assertIn('L" 파일"',worker)
   self.assertIn('if(!meta.typeLabel.empty())',impl)
-  self.assertNotIn('SHGetFileInfo',impl)
+  self.assertNotIn('SHGetFileInfo',worker)
+  self.assertNotIn('fxfile::filetype::queryVisuals(',impl)
 if __name__=="__main__":unittest.main()

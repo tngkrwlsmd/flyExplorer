@@ -22,10 +22,12 @@ class ThumbnailContract(unittest.TestCase):
                 'width>128','height>128'):
    self.assertIn(token,client)
   app=src("app/winui/MainWindow.xaml.cpp")
-  for token in ('thumbnailBudget<4','requestedView==FileViewMode::MediumIcons',
-                'fxfile::thumbnail::query(',
-                'L"Windows Shell image thumbnail"',
-                'ActiveWindowTab().fileLists[side].accepts(ticket,route,tab)'):
+  worker=src("app/winui/file_detail_controller.cpp")
+  for token in ('thumbnailBudget<4','request.viewMode==FileViewMode::MediumIcons',
+                'fxfile::thumbnail::query('):
+   self.assertIn(token,worker)
+  for token in ('L"Windows Shell image thumbnail"',
+                'ActiveWindowTab().fileLists[side].accepts('):
    self.assertIn(token,app)
   template=src("app/winui/flyExplorer.project-template.xml")
   self.assertIn("shell_thumbnail_core.cpp",template)

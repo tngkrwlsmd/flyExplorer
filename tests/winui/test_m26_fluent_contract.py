@@ -169,7 +169,7 @@ class FluentShellContract(unittest.TestCase):
         self.assertIn("ActiveWindowTab().fileLists[side].viewMode",impl)
         self.assertIn("appliedItemsPanel",state)
         self.assertIn("ActiveWindowTab().fileLists[side].appliedItemsPanel!=panel",impl)
-        self.assertIn("if(mDetailCancel[side])mDetailCancel[side]->store(true)",impl)
+        self.assertIn("mFileDetails.cancel(side)",impl)
         self.assertIn("if(state.viewMode==FileViewMode::List){row.MinHeight(32)",impl)
         self.assertIn("row.KeyDown([weak,side]",impl)
         self.assertIn("ui->OpenSelectedFolder(side)",impl)
@@ -249,17 +249,20 @@ class FluentShellContract(unittest.TestCase):
 
     def test_explorer_like_v6_isolated_shell_visual_contract(self):
         impl=text("MainWindow.xaml.cpp")
+        detail=text("file_detail_controller.cpp")
         state=text("file_list_state.h")
         root=Path(__file__).resolve().parents[2]
         assoc=(root/"src/base/shell_assoc_type_core.cpp").read_text(encoding="utf-8")
         helper=(root/"app/winui/helper/FlyShellIsolationHelper.cpp").read_text(encoding="utf-8")
         for token in ("visualPixels","iconWidth","iconHeight"):
             self.assertIn(token,state)
-        for token in ("RasterizationScale()",'L".flyfolder"',
-                      "requestedView==FileViewMode::MediumIcons",
-                      "ActiveWindowTab().fileLists[side].accepts(ticket,route,tab)"):
-            self.assertIn(token,impl)
+        self.assertIn("RasterizationScale()",impl)
+        self.assertIn("ActiveWindowTab().fileLists[side].accepts(",impl)
+        for token in ('L".flyfolder"',
+                      "request.viewMode==FileViewMode::MediumIcons"):
+            self.assertIn(token,detail)
         self.assertNotIn("SHGetFileInfoW",impl)
+        self.assertNotIn("SHGetFileInfoW",detail)
         self.assertIn("requestedPixels",assoc)
         self.assertIn("visualQueryMutex",assoc)
         self.assertIn("SHGFI_LARGEICON",helper)
