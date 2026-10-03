@@ -38,6 +38,7 @@ struct FileToolbar : FileToolbarT<FileToolbar> {
  void OnViewList(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
  void OnViewSmallIcons(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
  void OnViewMediumIcons(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
+ void OnViewLargeIcons(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
  void OnSortChanged(IInspectable const&,Microsoft::UI::Xaml::Controls::SelectionChangedEventArgs const&);
 private:
  void ChooseSort(int index);

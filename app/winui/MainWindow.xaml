@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <Window
     x:Class="FlyExplorer.MainWindow"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
@@ -40,6 +40,7 @@
         <ItemsPanelTemplate x:Key="ExplorerVerticalItemsPanel"><ItemsStackPanel Orientation="Vertical"/></ItemsPanelTemplate>
         <ItemsPanelTemplate x:Key="ExplorerSmallIconsItemsPanel"><ItemsWrapGrid Orientation="Horizontal" ItemWidth="164" ItemHeight="34"/></ItemsPanelTemplate>
         <ItemsPanelTemplate x:Key="ExplorerMediumIconsItemsPanel"><ItemsWrapGrid Orientation="Horizontal" ItemWidth="96" ItemHeight="96"/></ItemsPanelTemplate>
+        <ItemsPanelTemplate x:Key="ExplorerLargeIconsItemsPanel"><ItemsWrapGrid Orientation="Horizontal" ItemWidth="120" ItemHeight="132"/></ItemsPanelTemplate>
         <Style x:Key="ExplorerPaneTitleStyle" TargetType="Button">
             <Setter Property="Height" Value="30"/>
             <Setter Property="Padding" Value="6,0"/>

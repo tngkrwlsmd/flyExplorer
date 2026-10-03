@@ -6,7 +6,7 @@
 #include <vector>
 
 namespace fxfile::previewlist {
-enum class FileViewMode : int { Details=0, List=1, SmallIcons=2, MediumIcons=3 };
+enum class FileViewMode : int { Details=0, List=1, SmallIcons=2, MediumIcons=3, LargeIcons=4 };
 struct FileDetail final {
     std::uint64_t bytes=0;
     std::uint64_t modified=0;
@@ -23,7 +23,7 @@ struct FileDetail final {
 struct PaneState final {
     int sortMode=0;
     FileViewMode viewMode=FileViewMode::Details;
-    int appliedItemsPanel=0; // 0=vertical XAML default, 1=small wrap, 2=medium wrap
+    int appliedItemsPanel=0; // 0=vertical XAML default, 1=small wrap, 2=medium wrap, 3=large wrap
     std::uint32_t visualPixels=0; // DPI-scaled system visual size for current details
     double nameColumnWidth=168.0;
     // Render a bounded first page; keep all items in a native snapshot.

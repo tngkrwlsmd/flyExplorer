@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <UserControl x:Class="FlyExplorer.FileToolbar"
  xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
@@ -82,6 +82,7 @@
                 <ToggleMenuFlyoutItem x:Name="ViewListItem" Text="&#xBAA9;&#xB85D;" Click="OnViewList"/>
                 <ToggleMenuFlyoutItem x:Name="ViewSmallIconsItem" Text="&#xC791;&#xC740; &#xC544;&#xC774;&#xCF58;" Click="OnViewSmallIcons"/>
                 <ToggleMenuFlyoutItem x:Name="ViewMediumIconsItem" Text="&#xBCF4;&#xD1B5; &#xC544;&#xC774;&#xCF58;" Click="OnViewMediumIcons"/>
+                <ToggleMenuFlyoutItem x:Name="ViewLargeIconsItem" Text="&#xD070; &#xC544;&#xC774;&#xCF58;" Click="OnViewLargeIcons"/>
             </MenuFlyout></Button.Flyout>
         </Button>
         <Button x:Name="MoreButton" Grid.Column="5" Width="32" Height="32" Padding="0" Background="Transparent" CornerRadius="4" ToolTipService.ToolTip="&#xB354; &#xBCF4;&#xAE30;" AutomationProperties.Name="&#xB354; &#xBCF4;&#xAE30;">

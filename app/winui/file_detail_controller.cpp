@@ -134,7 +134,8 @@ bool FileDetailController::start(
                     }
                 }
                 if(!(data.dwFileAttributes&FILE_ATTRIBUTE_DIRECTORY)){
-                    if(request.viewMode==FileViewMode::MediumIcons&&
+                    if((request.viewMode==FileViewMode::MediumIcons||
+                        request.viewMode==FileViewMode::LargeIcons)&&
                        !visualHelper.empty()&&thumbnailBudget<4&&
                        data.nFileSizeHigh==0&&
                        data.nFileSizeLow<=32*1024*1024){

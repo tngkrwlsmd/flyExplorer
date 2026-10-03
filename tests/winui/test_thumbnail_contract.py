@@ -23,7 +23,8 @@ class ThumbnailContract(unittest.TestCase):
    self.assertIn(token,client)
   app=src("app/winui/MainWindow.xaml.cpp")
   worker=src("app/winui/file_detail_controller.cpp")
-  for token in ('thumbnailBudget<4','request.viewMode==FileViewMode::MediumIcons',
+  for token in ('thumbnailBudget<4','request.viewMode==FileViewMode::MediumIcons||',
+                'request.viewMode==FileViewMode::LargeIcons',
                 'fxfile::thumbnail::query('):
    self.assertIn(token,worker)
   for token in ('L"Windows Shell image thumbnail"',

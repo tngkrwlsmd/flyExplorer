@@ -180,7 +180,7 @@ namespace winrt::FlyExplorer::implementation
         });
         mPreferencesCoordinator.load();
         auto const& preferences=mPreferencesCoordinator.current();
-        const auto initialView=(std::clamp)(preferences.defaultViewMode,0,3);
+        const auto initialView=(std::clamp)(preferences.defaultViewMode,0,4);
         for(auto& state:ActiveWindowTab().fileLists)state.viewMode=static_cast<FileViewMode>(initialView);
         winrt::get_self<winrt::FlyExplorer::implementation::ShellHeader>(
             HeaderView())->RestoreTheme(static_cast<int>(preferences.theme));
@@ -517,12 +517,14 @@ namespace winrt::FlyExplorer::implementation
         double raster=1.0;
         try{if(auto xr=RootShell().XamlRoot())raster=xr.RasterizationScale();}
         catch(...){raster=1.0;}
-        const std::uint32_t baseVisual=requestedView==FileViewMode::MediumIcons?32:
+        const std::uint32_t baseVisual=requestedView==FileViewMode::LargeIcons?64:
+            requestedView==FileViewMode::MediumIcons?32:
             requestedView==FileViewMode::SmallIcons?20:16;
         const auto visualPixels=static_cast<std::uint32_t>((std::min)(64.0,
             (std::max)(16.0,baseVisual*raster+0.5)));
+        const double thumbnailBase=requestedView==FileViewMode::LargeIcons?96.0:48.0;
         const auto thumbnailPixels=static_cast<std::uint32_t>((std::min)(128.0,
-            (std::max)(32.0,48.0*raster+0.5)));
+            (std::max)(32.0,thumbnailBase*raster+0.5)));
         auto& listState=ActiveWindowTab().fileLists[side];
         if(!force&&listState.isCurrent(route,tab,items.size())&&
            listState.visualPixels==visualPixels)return;
@@ -667,10 +669,12 @@ namespace winrt::FlyExplorer::implementation
             RightSizeSortButton().Visibility(visibility);RightDateSortButton().Visibility(visibility);
         }
         const int panel=viewMode==FileViewMode::SmallIcons?1:
-                        viewMode==FileViewMode::MediumIcons?2:0;
+                        viewMode==FileViewMode::MediumIcons?2:
+                        viewMode==FileViewMode::LargeIcons?3:0;
         if(ActiveWindowTab().fileLists[side].appliedItemsPanel!=panel){
             const wchar_t* key=panel==1?L"ExplorerSmallIconsItemsPanel":
                                panel==2?L"ExplorerMediumIconsItemsPanel":
+                               panel==3?L"ExplorerLargeIconsItemsPanel":
                                         L"ExplorerVerticalItemsPanel";
             try{
                 view.ItemsPanel(RootShell().Resources().Lookup(
@@ -918,19 +922,21 @@ namespace winrt::FlyExplorer::implementation
             row.Content(columns);
             }else{
                 const bool medium=state.viewMode==FileViewMode::MediumIcons;
+                const bool large=state.viewMode==FileViewMode::LargeIcons;
+                const bool iconGrid=medium||large;
                 const bool smallIcons=state.viewMode==FileViewMode::SmallIcons;
-                StackPanel cell;cell.Orientation(medium?Orientation::Vertical:Orientation::Horizontal);
-                cell.Spacing(medium?5.0:7.0);cell.VerticalAlignment(VerticalAlignment::Center);
-                if(medium)cell.HorizontalAlignment(HorizontalAlignment::Center);
+                StackPanel cell;cell.Orientation(iconGrid?Orientation::Vertical:Orientation::Horizontal);
+                cell.Spacing(large?7.0:(medium?5.0:7.0));cell.VerticalAlignment(VerticalAlignment::Center);
+                if(iconGrid)cell.HorizontalAlignment(HorizontalAlignment::Center);
                 auto const* iconMeta=detailReady?&ActiveWindowTab().fileLists[side].details[index]:nullptr;
                 bool actualVisual=false;bool realThumb=false;
                 if(iconMeta){
                     const auto& thumb=iconMeta->thumbnailBgra;
                     realThumb=iconMeta->thumbnailWidth>=16&&iconMeta->thumbnailWidth<=128&&iconMeta->thumbnailHeight>=16&&iconMeta->thumbnailHeight<=128&&thumb.size()==static_cast<size_t>(iconMeta->thumbnailWidth)*iconMeta->thumbnailHeight*4;
-                    const auto& data=medium&&realThumb?thumb:iconMeta->iconBgra;
-                    const int width=medium&&realThumb?static_cast<int>(iconMeta->thumbnailWidth):
+                    const auto& data=iconGrid&&realThumb?thumb:iconMeta->iconBgra;
+                    const int width=iconGrid&&realThumb?static_cast<int>(iconMeta->thumbnailWidth):
                         static_cast<int>(iconMeta->iconWidth);
-                    const int height=medium&&realThumb?static_cast<int>(iconMeta->thumbnailHeight):
+                    const int height=iconGrid&&realThumb?static_cast<int>(iconMeta->thumbnailHeight):
                         static_cast<int>(iconMeta->iconHeight);
                     if(data.size()==static_cast<size_t>(width)*height*4){
                         try{
@@ -939,7 +945,7 @@ namespace winrt::FlyExplorer::implementation
                             if(SUCCEEDED(reinterpret_cast<::IUnknown*>(winrt::get_abi(backing))->QueryInterface(__uuidof(::Windows::Storage::Streams::IBufferByteAccess),access.put_void()))){
                                 BYTE* target=nullptr;if(SUCCEEDED(access->Buffer(&target))&&target){
                                     std::memcpy(target,data.data(),data.size());pixels.Invalidate();Image image;image.Source(pixels);
-                                    const double targetSize=medium?(realThumb?40.0:32.0):(smallIcons?20.0:16.0);image.Width(targetSize);image.Height(targetSize);
+                                    const double targetSize=large?64.0:(medium?(realThumb?40.0:32.0):(smallIcons?20.0:16.0));image.Width(targetSize);image.Height(targetSize);
                                     Microsoft::UI::Xaml::Automation::AutomationProperties::SetName(image,realThumb?L"Windows Shell image thumbnail":
                                         item.isFolder()?L"Windows Shell folder icon":L"Windows system registered file icon");
                                     cell.Children().Append(image);actualVisual=true;
@@ -950,14 +956,15 @@ namespace winrt::FlyExplorer::implementation
                 }
                 if(!actualVisual){
                     FontIcon glyph;glyph.FontFamily(Microsoft::UI::Xaml::Media::FontFamily{L"Segoe Fluent Icons"});
-                    glyph.Glyph(hstring(item.isFolder()?L"\uE8B7":L"\uE8A5"));glyph.FontSize(medium?36.0:(smallIcons?20.0:16.0));cell.Children().Append(glyph);
+                    glyph.Glyph(hstring(item.isFolder()?L"\uE8B7":L"\uE8A5"));glyph.FontSize(large?60.0:(medium?36.0:(smallIcons?20.0:16.0)));cell.Children().Append(glyph);
                 }
                 TextBlock filename;filename.Text(item.label);
-                if(medium){filename.FontSize(12.0);filename.Width(84);filename.TextAlignment(TextAlignment::Center);filename.TextWrapping(TextWrapping::WrapWholeWords);filename.MaxLines(2);filename.TextTrimming(TextTrimming::CharacterEllipsis);}
+                if(iconGrid){filename.FontSize(12.0);filename.Width(large?104.0:84.0);filename.TextAlignment(TextAlignment::Center);filename.TextWrapping(TextWrapping::WrapWholeWords);filename.MaxLines(2);filename.TextTrimming(TextTrimming::CharacterEllipsis);}
                 else{filename.TextTrimming(TextTrimming::CharacterEllipsis);if(smallIcons){filename.FontSize(12.0);filename.Width(120);}}
                 cell.Children().Append(filename);row.Content(cell);
                 if(state.viewMode==FileViewMode::List){row.MinHeight(32);row.Padding(Thickness{5.0,0.0,5.0,0.0});}
                 else if(smallIcons){row.Width(160);row.Height(32);row.Padding(Thickness{5.0,0.0,5.0,0.0});}
+                else if(large){row.Width(112);row.Height(128);row.Padding(Thickness{2.0});row.HorizontalContentAlignment(HorizontalAlignment::Center);}
                 else{row.Width(92);row.Height(92);row.Padding(Thickness{2.0});row.HorizontalContentAlignment(HorizontalAlignment::Center);}
             }
             Microsoft::UI::Xaml::Automation::AutomationProperties::SetName(

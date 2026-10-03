@@ -43,7 +43,8 @@ class FileTypeContract(unittest.TestCase):
   self.assertIn("Windows Shell folder icon",app)
   self.assertIn('extensions{L".flyfolder"}',worker)
   self.assertIn("RasterizationScale()",app)
-  self.assertIn("request.viewMode==FileViewMode::MediumIcons",worker)
+  self.assertIn("request.viewMode==FileViewMode::MediumIcons||",worker)
+  self.assertIn("request.viewMode==FileViewMode::LargeIcons",worker)
   project=source("app/winui/flyExplorer.project-template.xml")
   self.assertIn('shell_assoc_type_core.cpp',project)
 class RealFileListColumnContract(unittest.TestCase):

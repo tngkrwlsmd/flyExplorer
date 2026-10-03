@@ -158,13 +158,15 @@ class FluentShellContract(unittest.TestCase):
         state=text("file_list_state.h")
         prefs=text("../../src/base/ui_preferences.cpp")
         prefh=text("../../src/base/ui_preferences.h")
-        self.assertIn("enum class FileViewMode : int { Details=0, List=1, SmallIcons=2, MediumIcons=3 }",state)
+        self.assertIn("enum class FileViewMode : int { Details=0, List=1, SmallIcons=2, MediumIcons=3, LargeIcons=4 }",state)
         self.assertIn("FileViewMode viewMode=FileViewMode::Details",state)
         for token in ('x:Name="ViewDetailsItem"','x:Name="ViewListItem"',
-                      'x:Name="ViewSmallIconsItem"','x:Name="ViewMediumIconsItem"'):
+                      'x:Name="ViewSmallIconsItem"','x:Name="ViewMediumIconsItem"',
+                      'x:Name="ViewLargeIconsItem"'):
             self.assertIn(token,toolbar)
         self.assertIn("ExplorerSmallIconsItemsPanel",main)
         self.assertIn("ExplorerMediumIconsItemsPanel",main)
+        self.assertIn("ExplorerLargeIconsItemsPanel",main)
         self.assertIn("UpdateViewPresentation(int side)",impl)
         self.assertIn("ActiveWindowTab().fileLists[side].viewMode",impl)
         self.assertIn("appliedItemsPanel",state)
@@ -181,6 +183,11 @@ class FluentShellContract(unittest.TestCase):
         self.assertIn("legacyText",prefs)
         self.assertIn('schema=2\\r\\nlanguage=ko-KR',prefs)
         self.assertIn('view="+viewName(view)',prefs)
+        self.assertIn('case 4:return "large-icons"',prefs)
+        self.assertIn("view<5",prefs)
+        self.assertIn("defaultViewMode>4",prefs)
+        session=(ROOT/"src/base/ui_session.cpp").read_text(encoding="utf-8")
+        self.assertIn("pane.view>4",session)
 
     def test_v7_window_tab_state_owns_workspace_without_xaml(self):
         header=text("MainWindow.xaml.h")
@@ -204,9 +211,14 @@ class FluentShellContract(unittest.TestCase):
         self.assertIn('ItemWidth="164" ItemHeight="34"',main)
         self.assertIn('ExplorerMediumIconsItemsPanel',main)
         self.assertIn('ItemWidth="96" ItemHeight="96"',main)
+        self.assertIn('ExplorerLargeIconsItemsPanel',main)
+        self.assertIn('ItemWidth="120" ItemHeight="132"',main)
         self.assertIn('row.Width(160);row.Height(32)',impl)
         self.assertIn('row.Width(92);row.Height(92)',impl)
-        self.assertIn('filename.FontSize(12.0);filename.Width(84)',impl)
+        self.assertIn('row.Width(112);row.Height(128)',impl)
+        self.assertIn('targetSize=large?64.0',impl)
+        self.assertIn('filename.Width(large?104.0:84.0)',impl)
+        self.assertIn('filename.FontSize(12.0);filename.Width(large?104.0:84.0)',impl)
         self.assertIn('filename.MaxLines(2)',impl)
         self.assertIn('UseSystemFocusVisuals" Value="True"',main)
         self.assertIn('row.MinHeight(32)',impl)
@@ -259,7 +271,7 @@ class FluentShellContract(unittest.TestCase):
         self.assertIn("RasterizationScale()",impl)
         self.assertIn("ActiveWindowTab().fileLists[side].accepts(",impl)
         for token in ('L".flyfolder"',
-                      "request.viewMode==FileViewMode::MediumIcons"):
+                      "request.viewMode==FileViewMode::MediumIcons||"):
             self.assertIn(token,detail)
         self.assertNotIn("SHGetFileInfoW",impl)
         self.assertNotIn("SHGetFileInfoW",detail)
