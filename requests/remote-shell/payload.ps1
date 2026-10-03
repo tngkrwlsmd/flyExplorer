@@ -231,10 +231,10 @@ if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 python -X utf8 -m unittest tests.winui.test_known_folder_artwork_contract tests.winui.test_registered_file_type_contract tests.winui.test_file_detail_controller_contract tests.winui.test_m26_fluent_contract
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
-test.bat source
+.\test.bat source
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
-build.bat Release
+.\build.bat Release
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
 Write-Output "KNOWN_FOLDER_ARTWORK_BUILD_PASS"
