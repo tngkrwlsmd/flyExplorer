@@ -1,5 +1,5 @@
 {
-  "request_id": "benchmark-20261003-known-folder-before-003",
+  "request_id": "develop-20261003-known-folder-artwork-001",
   "working_directory": "C:\\dev\\flyExplorer",
   "command": "$payload=Join-Path $env:GITHUB_WORKSPACE 'requests\\remote-shell\\payload.ps1'; & $payload; if($LASTEXITCODE -ne 0){exit $LASTEXITCODE}"
 }
