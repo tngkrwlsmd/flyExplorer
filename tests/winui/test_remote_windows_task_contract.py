@@ -95,8 +95,9 @@ class RemoteWindowsTaskContractTests(unittest.TestCase):
         self.assertIn("two consecutive failures", self.efficiency)
         self.assertIn("circuit breaker", self.efficiency)
         self.assertIn("already on main", self.agents)
-        self.assertIn("already merged and accepted", self.project)
-        self.assertIn("one batched", self.project)
+        project_normalized = " ".join(self.project.split())
+        self.assertIn("already merged and accepted", project_normalized)
+        self.assertIn("one batched", project_normalized)
 
 
 if __name__ == "__main__":
