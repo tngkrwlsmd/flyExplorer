@@ -1,5 +1,5 @@
 {
-  "request_id": "inspect-20261003-known-folder-diff-002",
+  "request_id": "validate-20261003-known-folder-artwork-003",
   "working_directory": "C:\\dev\\flyExplorer",
-  "command": "Write-Output 'STATUS_BEGIN'; git status --short; Write-Output 'STATUS_END'; Write-Output 'DIFF_BEGIN'; git diff -- app/winui/MainWindow.xaml.cpp app/winui/file_detail_controller.cpp app/winui/file_list_state.h app/winui/helper/FlyShellIsolationHelper.cpp src/base/shell_assoc_type_core.cpp src/base/shell_assoc_type_core.h; Write-Output 'DIFF_END'; Write-Output 'TEST_BEGIN'; Get-Content -Raw -LiteralPath 'tests/winui/test_known_folder_artwork_contract.py'; Write-Output 'TEST_END'"
+  "command": "$ErrorActionPreference='Stop'; Write-Output 'STATUS_BEFORE'; git status --short; git diff --check; if($LASTEXITCODE -ne 0){exit $LASTEXITCODE}; python -X utf8 -m unittest tests.winui.test_known_folder_artwork_contract tests.winui.test_file_detail_controller_contract tests.winui.test_registered_file_type_contract tests.winui.test_thumbnail_contract; if($LASTEXITCODE -ne 0){exit $LASTEXITCODE}; test.bat source; if($LASTEXITCODE -ne 0){exit $LASTEXITCODE}; build.bat Release; if($LASTEXITCODE -ne 0){exit $LASTEXITCODE}; Write-Output 'KNOWN_FOLDER_ARTWORK_BUILD_PASS'; git status --short"
 }
