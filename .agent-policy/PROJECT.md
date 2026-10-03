@@ -26,7 +26,7 @@ consumer core; this PROJECT.md remains project-owned across bundle refreshes.
     {"name": "winui-tests", "path": "tests/winui", "responsibility": "source, native and owned GUI contracts"}
   ],
   "review": {
-    "reviewed_revision": "e40a11c0dbfc135ae9ab73fa9036d10d672406dc",
+    "reviewed_revision": "02e46d3e2133e3e30bfeca0803af39222a93c7bd",
     "reviewed_at": "2026-10-03",
     "reviewed_paths": [
       "app/winui",
@@ -89,6 +89,13 @@ The detail worker matches OS Known Folder paths off the UI thread, the helper
 returns bounded pixels, and generic folder artwork remains the fallback.
 Pre-main before/after evidence changed all six targeted rows from generic
 folder icons to their native Windows artwork with process exit 0.
+NavigationSidebar now reuses the same six fixed Known Folder keys on a
+background worker and applies 16 px native pixels on the UI dispatcher.
+Home and This PC retain their existing Fluent glyphs, while each Known Folder
+button keeps its prior glyph as a failure fallback. Controlled 972x720 Dark
+visual acceptance showed all six sidebar artwork images visible at 16x16,
+aligned with the Windows 11 Explorer navigation motifs, with before/after
+process exit 0.
 
 ## Current verification
 
@@ -182,8 +189,7 @@ Not certified:
 - human Narrator/Korean IME;
 - physical drag;
 - signed clean-machine machine-wide install/update/rollback;
-- public redistribution/source-delivery/rightsholder/legal clearance;
-- Large Icons and optional Known Folder-specific artwork.
+- public redistribution/source-delivery/rightsholder/legal clearance.
 
 The tracked installer/provenance snapshot predates v7 and must be rebuilt before
 it can represent the current product.
