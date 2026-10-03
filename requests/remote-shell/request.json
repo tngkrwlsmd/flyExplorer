@@ -1,5 +1,5 @@
 {
-  "request_id": "smoke-20261003-remote-shell-001",
+  "request_id": "sync-20261003-main-001",
   "working_directory": "C:\\dev\\flyExplorer",
-  "command": "Write-Output \"USER=$env:USERNAME\"; Write-Output \"COMPUTER=$env:COMPUTERNAME\"; Write-Output \"PWD=$(Get-Location)\"; git remote -v; git branch --show-current; git rev-parse HEAD; git fetch origin --prune; git rev-parse origin/main; git status --short"
+  "command": "git fetch origin --prune; $branch = git branch --show-current; if ($branch -ne 'main') { throw \"Expected main branch, found $branch\" }; $dirty = @(git status --porcelain); if ($dirty.Count -ne 0) { $dirty | ForEach-Object { Write-Output $_ }; throw 'Refusing to fast-forward a dirty development checkout.' }; git merge --ff-only origin/main; if ($LASTEXITCODE -ne 0) { throw 'Fast-forward failed.' }; Write-Output 'SYNCED_HEAD'; git rev-parse HEAD; Write-Output 'SYNCED_STATUS'; git status --short"
 }
