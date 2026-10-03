@@ -4251,4 +4251,3 @@ mPrivateDragSources/mPrivateDragRoute/mPrivateDragSide/mDropReading` ownership�
 때까지 보류한다. 실제 사람 포인터 또는 별도 신뢰 가능한 WinUI 입력 경로로
 DragStarting→DragOver→Drop 전체가 관찰되기 전에는 이 gate를 PASS로 승격하지
 않는다.
-
