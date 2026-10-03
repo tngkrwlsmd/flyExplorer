@@ -26,7 +26,7 @@ consumer core; this PROJECT.md remains project-owned across bundle refreshes.
     {"name": "winui-tests", "path": "tests/winui", "responsibility": "source, native and owned GUI contracts"}
   ],
   "review": {
-    "reviewed_revision": "aafa1615048c61aade0cd1c544990735ddb89a15",
+    "reviewed_revision": "e40a11c0dbfc135ae9ab73fa9036d10d672406dc",
     "reviewed_at": "2026-10-03",
     "reviewed_paths": [
       "app/winui",
@@ -83,6 +83,12 @@ thumbnail use. Pre-main owned GUI evidence measured fully visible items at
 112x128 with 120x132 pitch against the controlled Explorer Large Icons
 baseline of 105x131 with 118x132 pitch; owned thumbnails were visible,
 the GUI exited 0 and protected user settings remained unchanged.
+File-list Known Folder artwork now resolves Desktop, Documents, Downloads,
+Pictures, Music and Videos through a fixed-key, disposable Shell helper path.
+The detail worker matches OS Known Folder paths off the UI thread, the helper
+returns bounded pixels, and generic folder artwork remains the fallback.
+Pre-main before/after evidence changed all six targeted rows from generic
+folder icons to their native Windows artwork with process exit 0.
 
 ## Current verification
 
