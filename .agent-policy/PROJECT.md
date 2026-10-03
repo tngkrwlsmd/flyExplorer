@@ -133,6 +133,15 @@ cannot advance it.
   behind bounded isolation.
 - Project CI runs on the repository-scoped interactive self-hosted Windows x64
   runner; pushes to main use the Release + GUI validation scope automatically.
+- Iterative Windows development, Win11 benchmarking and GUI refinement should
+  prefer the authorized `tngkrwlsmd/personal-control-plane` Remote Shell
+  `windows-vm` path with persistent checkout `C:\\dev\\flyExplorer`.
+  That checkout is the inner development-loop state; flyExplorer Actions are
+  the independent final acceptance plane after a verified logical-unit push.
+  Avoid using repeated temporary flyExplorer task commits/long CI runs as the
+  normal edit/test loop. Remote Shell jobs are command jobs rather than a
+  persistent terminal process, so batch related development steps and preserve
+  state in the checkout instead.
 - GitHub-hosted runners require explicit user approval and are not part of the
   active flyExplorer CI path by default.
 - The privileged self-hosted runner must not execute untrusted fork/PR code
