@@ -26,7 +26,7 @@ consumer core; this PROJECT.md remains project-owned across bundle refreshes.
     {"name": "winui-tests", "path": "tests/winui", "responsibility": "source, native and owned GUI contracts"}
   ],
   "review": {
-    "reviewed_revision": "5fe92f92b152473215d2984f9b536e2625698740",
+    "reviewed_revision": "aafa1615048c61aade0cd1c544990735ddb89a15",
     "reviewed_at": "2026-10-03",
     "reviewed_paths": [
       "app/winui",
@@ -77,6 +77,12 @@ PreferencesCoordinator owns the Preferences value, write mutex, revision
 ordering and detached atomic-save worker. MainWindow retains theme/view
 presentation, persistence triggering, DispatcherQueue handoff and status
 projection.
+Large Icons is now an accepted fifth view mode (stable value 4) with private
+preference/session persistence, a 64 px Shell visual path and bounded image
+thumbnail use. Pre-main owned GUI evidence measured fully visible items at
+112x128 with 120x132 pitch against the controlled Explorer Large Icons
+baseline of 105x131 with 118x132 pitch; owned thumbnails were visible,
+the GUI exited 0 and protected user settings remained unchanged.
 
 ## Current verification
 
