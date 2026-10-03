@@ -4,6 +4,7 @@
 #include "../../../src/base/shell_isolation_wire.h"
 #include <windows.h>
 #include <shellapi.h>
+#include <shlobj.h>
 #include <shlwapi.h>
 #include <cstdint>
 #include <cstring>
@@ -396,6 +397,126 @@ int wmain(int argc,wchar_t** argv) {
                 }
             }
         }catch(...){resultCode=41;}
+        ::CoUninitialize();
+        return resultCode;
+    }
+    if(argc>=4&&!wcscmp(argv[1],L"--known-folder-visuals")){
+        wchar_t* end=nullptr;
+        const auto parsed=::wcstoul(argv[2],&end,10);
+        if(!end||*end||parsed<16||parsed>64||argc>9)return 18;
+        const auto visualPixels=static_cast<std::uint32_t>(parsed);
+        auto output=::GetStdHandle(STD_OUTPUT_HANDLE);
+        if(!output||output==INVALID_HANDLE_VALUE)return 19;
+        const auto apt=::CoInitializeEx(
+            nullptr,COINIT_APARTMENTTHREADED|COINIT_DISABLE_OLE1DDE);
+        if(FAILED(apt))return 24;
+        int resultCode=0;
+        for(int i=3;i<argc&&resultCode==0;++i){
+            std::wstring key(argv[i]);
+            KNOWNFOLDERID const* id=nullptr;
+            if(key==L"desktop")id=&FOLDERID_Desktop;
+            else if(key==L"documents")id=&FOLDERID_Documents;
+            else if(key==L"downloads")id=&FOLDERID_Downloads;
+            else if(key==L"pictures")id=&FOLDERID_Pictures;
+            else if(key==L"music")id=&FOLDERID_Music;
+            else if(key==L"videos")id=&FOLDERID_Videos;
+            else {resultCode=20;break;}
+
+            PWSTR path=nullptr;
+            const auto pathHr=::SHGetKnownFolderPath(
+                *id,KF_FLAG_DEFAULT,nullptr,&path);
+            SHFILEINFOW info{};
+            const auto typeResult=SUCCEEDED(pathHr)&&path?
+                ::SHGetFileInfoW(path,0,&info,sizeof(info),SHGFI_TYPENAME):0;
+            std::wstring readable=typeResult?info.szTypeName:L"";
+            if(readable.size()>79)readable.clear();
+            const int count=readable.empty()?0: ::WideCharToMultiByte(
+                CP_UTF8,WC_ERR_INVALID_CHARS,readable.data(),
+                static_cast<int>(readable.size()),nullptr,0,nullptr,nullptr);
+            if(count<0||count>320){
+                if(path)::CoTaskMemFree(path);
+                resultCode=22;break;
+            }
+
+            std::string line=std::to_string(i-3)+"\t";
+            if(count){
+                std::string utf8(static_cast<size_t>(count),'\0');
+                if(::WideCharToMultiByte(CP_UTF8,WC_ERR_INVALID_CHARS,
+                      readable.data(),static_cast<int>(readable.size()),
+                      utf8.data(),count,nullptr,nullptr)!=count){
+                    if(path)::CoTaskMemFree(path);
+                    resultCode=22;break;
+                }
+                line+=utf8;
+            }
+            line+="\t";
+
+            HBITMAP bitmap=nullptr;
+            if(SUCCEEDED(pathHr)&&path){
+                Microsoft::WRL::ComPtr<IShellItem> item;
+                if(SUCCEEDED(::SHCreateItemFromParsingName(
+                     path,nullptr,IID_PPV_ARGS(&item)))){
+                    Microsoft::WRL::ComPtr<IShellItemImageFactory> factory;
+                    if(SUCCEEDED(item.As(&factory))){
+                        SIZE requested{static_cast<LONG>(visualPixels),
+                                       static_cast<LONG>(visualPixels)};
+                        factory->GetImage(
+                            requested,SIIGBF_ICONONLY,&bitmap);
+                    }
+                }
+            }
+            if(path)::CoTaskMemFree(path);
+
+            if(bitmap){
+                BITMAP bm{};
+                if(::GetObjectW(bitmap,sizeof(bm),&bm)==sizeof(bm)&&
+                   bm.bmWidth==static_cast<LONG>(visualPixels)&&
+                   bm.bmHeight==static_cast<LONG>(visualPixels)){
+                    BITMAPINFO dib{};
+                    dib.bmiHeader.biSize=sizeof(BITMAPINFOHEADER);
+                    dib.bmiHeader.biWidth=bm.bmWidth;
+                    dib.bmiHeader.biHeight=-bm.bmHeight;
+                    dib.bmiHeader.biPlanes=1;
+                    dib.bmiHeader.biBitCount=32;
+                    dib.bmiHeader.biCompression=BI_RGB;
+                    std::vector<unsigned char> pixels(
+                        visualPixels*visualPixels*4);
+                    HDC screen=::GetDC(nullptr);
+                    if(screen&&::GetDIBits(screen,bitmap,0,visualPixels,
+                         pixels.data(),&dib,DIB_RGB_COLORS)==visualPixels){
+                        bool anyAlpha=false;
+                        for(size_t p=3;p<pixels.size();p+=4)
+                            anyAlpha|=pixels[p]!=0;
+                        if(!anyAlpha)
+                            for(size_t p=3;p<pixels.size();p+=4)
+                                pixels[p]=255;
+                        DWORD required=0;
+                        ::CryptBinaryToStringA(pixels.data(),
+                            static_cast<DWORD>(pixels.size()),
+                            CRYPT_STRING_BASE64|CRYPT_STRING_NOCRLF,
+                            nullptr,&required);
+                        if(required>0&&required<40000){
+                            std::string encoded(required,'\0');
+                            if(::CryptBinaryToStringA(pixels.data(),
+                                static_cast<DWORD>(pixels.size()),
+                                CRYPT_STRING_BASE64|CRYPT_STRING_NOCRLF,
+                                encoded.data(),&required)){
+                                encoded.resize(std::strlen(encoded.c_str()));
+                                line+=encoded;
+                            }
+                        }
+                    }
+                    if(screen)::ReleaseDC(nullptr,screen);
+                }
+                ::DeleteObject(bitmap);
+            }
+
+            line+="\n";
+            DWORD sent=0;
+            if(!::WriteFile(output,line.data(),
+                 static_cast<DWORD>(line.size()),&sent,nullptr)||
+               sent!=line.size())resultCode=23;
+        }
         ::CoUninitialize();
         return resultCode;
     }

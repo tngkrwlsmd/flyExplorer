@@ -44,6 +44,35 @@ bool FileDetailController::start(
             post=std::move(post),completion=std::move(completion)]() mutable {
             using FileDetail=fxfile::previewlist::FileDetail;
             using FileViewMode=fxfile::previewlist::FileViewMode;
+            static constexpr wchar_t const* knownFolderKeys[]{
+                L"desktop",L"documents",L"downloads",
+                L"pictures",L"music",L"videos"
+            };
+            std::vector<std::pair<std::wstring,std::wstring>> knownFolderPaths;
+            knownFolderPaths.reserve(6);
+            for(auto const* key:knownFolderKeys){
+                auto path=fxfile::filetype::knownFolderPath(key);
+                if(!path.empty())
+                    knownFolderPaths.emplace_back(key,std::move(path));
+            }
+            std::vector<std::wstring> knownFolderKeyByIndex(
+                request.paths.size());
+            std::vector<std::wstring> requestedKnownFolderKeys;
+            for(std::size_t i=0;i<request.paths.size();++i){
+                auto const& candidate=request.paths[i];
+                if(candidate.empty())continue;
+                for(auto const& known:knownFolderPaths){
+                    if(::CompareStringOrdinal(
+                         candidate.c_str(),-1,known.second.c_str(),-1,TRUE)
+                       !=CSTR_EQUAL)continue;
+                    knownFolderKeyByIndex[i]=known.first;
+                    if(std::find(requestedKnownFolderKeys.begin(),
+                         requestedKnownFolderKeys.end(),known.first)
+                       ==requestedKnownFolderKeys.end())
+                        requestedKnownFolderKeys.push_back(known.first);
+                    break;
+                }
+            }
             std::vector<std::wstring> extensions{L".flyfolder"};
             for(auto const& path:request.paths){
                 const auto dot=path.find_last_of(L'.');
@@ -58,6 +87,8 @@ bool FileDetailController::start(
                      &&extensions.size()<24)extensions.push_back(ext);
             }
             std::unordered_map<std::wstring,fxfile::filetype::Visual> windowsTypes;
+            std::unordered_map<std::wstring,fxfile::filetype::Visual>
+                knownFolderVisuals;
             std::wstring visualHelper;
             if(!extensions.empty()){
                 wchar_t exe[32768]{};
@@ -89,6 +120,10 @@ bool FileDetailController::start(
                         auto found=one.find(ext);
                         if(found!=one.end())windowsTypes[ext]=std::move(found->second);
                     }
+                    if(!requestedKnownFolderKeys.empty())
+                        knownFolderVisuals=fxfile::filetype::queryKnownFolderVisuals(
+                            visualHelper,requestedKnownFolderKeys,
+                            2500,request.visualPixels);
                 }
             }
             std::vector<FileDetail> details(request.paths.size());
@@ -104,11 +139,22 @@ bool FileDetailController::start(
                 auto& entry=details[i];
                 if(data.dwFileAttributes&FILE_ATTRIBUTE_DIRECTORY){
                     entry.typeLabel=L"폴더";
-                    auto folder=windowsTypes.find(L".flyfolder");
-                    if(folder!=windowsTypes.end()&&!folder->second.bgra.empty()){
-                        entry.iconBgra=folder->second.bgra;
-                        entry.iconWidth=folder->second.width;
-                        entry.iconHeight=folder->second.height;
+                    auto const& knownKey=knownFolderKeyByIndex[i];
+                    auto known=knownKey.empty()?knownFolderVisuals.end():
+                        knownFolderVisuals.find(knownKey);
+                    if(known!=knownFolderVisuals.end()&&
+                       !known->second.bgra.empty()){
+                        entry.iconBgra=known->second.bgra;
+                        entry.iconWidth=known->second.width;
+                        entry.iconHeight=known->second.height;
+                        entry.knownFolderVisual=true;
+                    }else{
+                        auto folder=windowsTypes.find(L".flyfolder");
+                        if(folder!=windowsTypes.end()&&!folder->second.bgra.empty()){
+                            entry.iconBgra=folder->second.bgra;
+                            entry.iconWidth=folder->second.width;
+                            entry.iconHeight=folder->second.height;
+                        }
                     }
                 }else{
                     const auto dot=path.find_last_of(L'.');

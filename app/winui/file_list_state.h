@@ -14,6 +14,7 @@ struct FileDetail final {
     std::wstring typeLabel;
     std::vector<unsigned char> iconBgra; // optional isolated system item icon
     std::uint32_t iconWidth=0,iconHeight=0;
+    bool knownFolderVisual=false;
     std::vector<unsigned char> thumbnailBgra;
     std::uint32_t thumbnailWidth=0,thumbnailHeight=0;
     std::wstring dateLabel;

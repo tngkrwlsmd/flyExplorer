@@ -861,7 +861,9 @@ namespace winrt::FlyExplorer::implementation
                                 image.Width(16);image.Height(16);
                                 Microsoft::UI::Xaml::Automation::AutomationProperties::
                                     SetName(image,item.isFolder()?
-                                        L"Windows Shell folder icon":
+                                        (iconMeta->knownFolderVisual?
+                                            L"Windows Known Folder artwork":
+                                            L"Windows Shell folder icon"):
                                         L"Windows system registered file icon");
                                 nameCell.Children().Append(image);
                                 actualVisual=true;
@@ -947,7 +949,8 @@ namespace winrt::FlyExplorer::implementation
                                     std::memcpy(target,data.data(),data.size());pixels.Invalidate();Image image;image.Source(pixels);
                                     const double targetSize=large?64.0:(medium?(realThumb?40.0:32.0):(smallIcons?20.0:16.0));image.Width(targetSize);image.Height(targetSize);
                                     Microsoft::UI::Xaml::Automation::AutomationProperties::SetName(image,realThumb?L"Windows Shell image thumbnail":
-                                        item.isFolder()?L"Windows Shell folder icon":L"Windows system registered file icon");
+                                        item.isFolder()?(iconMeta->knownFolderVisual?L"Windows Known Folder artwork":
+                                            L"Windows Shell folder icon"):L"Windows system registered file icon");
                                     cell.Children().Append(image);actualVisual=true;
                                 }
                             }

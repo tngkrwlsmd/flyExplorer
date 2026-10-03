@@ -1,5 +1,5 @@
-// Windows registered file-type names: bounded disposable helper process.
-// Never invoke association or Shell extension code on the WinUI UI thread.
+// Windows registered file-type names and fixed Known Folder visuals:
+// bounded disposable helper process, never on the WinUI UI thread.
 #pragma once
 #include <windows.h>
 #include <cstdint>
@@ -11,8 +11,13 @@ namespace fxfile::filetype {
 // Extensions are limited to one period followed by 1..16 ASCII alpha/numeric
 // characters; no path or command-line metacharacters reach the helper.
 bool safeExtension(std::wstring const& ext) noexcept;
+// Known Folder helper keys are a fixed product-owned allowlist. No arbitrary
+// path is passed on the helper command line.
+bool safeKnownFolderKey(std::wstring const& key) noexcept;
+std::wstring knownFolderPath(std::wstring const& key) noexcept;
+
 // On failures or timeout returns an empty mapping. The caller's original
-// generic extension-based classification remains a valid safe fallback.
+// generic extension/folder classification remains a valid safe fallback.
 struct Visual {
     std::wstring label;
     // Square BGRA from a disposable OS Shell helper, or empty.
@@ -22,6 +27,10 @@ struct Visual {
 std::unordered_map<std::wstring,Visual> queryVisuals(
     std::wstring const& ownedHelper,
     std::vector<std::wstring> const& extensions,
+    DWORD timeoutMs=2500,std::uint32_t requestedPixels=16) noexcept;
+std::unordered_map<std::wstring,Visual> queryKnownFolderVisuals(
+    std::wstring const& ownedHelper,
+    std::vector<std::wstring> const& keys,
     DWORD timeoutMs=2500,std::uint32_t requestedPixels=16) noexcept;
 std::unordered_map<std::wstring,std::wstring> query(
     std::wstring const& ownedHelper,
