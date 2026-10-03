@@ -10,17 +10,15 @@
 #include "shell_navigation_controller.h"
 #include "file_operation_controller.h"
 #include "file_detail_controller.h"
+#include "preferences_coordinator.h"
 #include "search_controller.h"
 #include "../../src/base/shell_transfer_core.h"
 #include "../../src/base/shell_clipboard_core.h"
-#include "../../src/base/ui_preferences.h"
 #include "../../src/base/file_command_core.h"
-#include <mutex>
 #include "../../src/base/shell_navigation_core.h"
 #include "../../src/base/explorer_ui_state.h"
 #include "m19_workspace.h"
 #include "m19_search.h"
-#include <atomic>
 #include <deque>
 #include <array>
 #include <vector>
@@ -141,11 +139,7 @@ namespace winrt::FlyExplorer::implementation
         void PrepareForClose() noexcept;
         void RefreshWindowTabs();
         std::wstring WindowTabLabel(fxfile::previewtabs::WindowTabState const&) const;
-        fxfile::uisettings::Preferences mPreferences{};
-        std::shared_ptr<std::mutex> mPreferencesWriteMutex=
-            std::make_shared<std::mutex>();
-        std::shared_ptr<std::atomic_uint64_t> mPreferencesRevision=
-            std::make_shared<std::atomic_uint64_t>(0);
+        fxfile::previewprefs::PreferencesCoordinator mPreferencesCoordinator{};
         fxfile::previewops::FileOperationController mFileOperations{};
         // Reusable XAML controls expose their inner primitives to the
         // existing M2.1 callers without coupling native state to views.

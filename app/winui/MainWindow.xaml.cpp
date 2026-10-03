@@ -178,15 +178,16 @@ namespace winrt::FlyExplorer::implementation
                     (ui->HomePath()/L"Videos").native());
             }
         });
-        fxfile::uisettings::load(mPreferences);
-        const auto initialView=(std::clamp)(mPreferences.defaultViewMode,0,3);
+        mPreferencesCoordinator.load();
+        auto const& preferences=mPreferencesCoordinator.current();
+        const auto initialView=(std::clamp)(preferences.defaultViewMode,0,3);
         for(auto& state:ActiveWindowTab().fileLists)state.viewMode=static_cast<FileViewMode>(initialView);
         winrt::get_self<winrt::FlyExplorer::implementation::ShellHeader>(
-            HeaderView())->RestoreTheme(static_cast<int>(mPreferences.theme));
+            HeaderView())->RestoreTheme(static_cast<int>(preferences.theme));
         RootShell().RequestedTheme(
-            mPreferences.theme==fxfile::uisettings::Theme::Dark?
+            preferences.theme==fxfile::uisettings::Theme::Dark?
                 ElementTheme::Dark:
-            mPreferences.theme==fxfile::uisettings::Theme::Light?
+            preferences.theme==fxfile::uisettings::Theme::Light?
                 ElementTheme::Light:ElementTheme::Default);
         winrt::get_self<winrt::FlyExplorer::implementation::ShellHeader>(
             HeaderView())->SetThemeCallback([nativeWeak](int selection){
@@ -1059,7 +1060,7 @@ namespace winrt::FlyExplorer::implementation
         SuspendActiveWindowTab();
         if(!mWorkspace.create())return false;
         const auto defaultView=static_cast<FileViewMode>(
-            (std::clamp)(mPreferences.defaultViewMode,0,3));
+            (std::clamp)(mPreferencesCoordinator.current().defaultViewMode,0,3));
         for(auto& list:ActiveWindowTab().fileLists)list.viewMode=defaultView;
         ApplyActiveWindowTab(L"새 창 탭을 준비하는 중입니다.");
         const auto seed=startPath.empty()?HomePath().native():startPath;

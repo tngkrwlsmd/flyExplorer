@@ -147,6 +147,7 @@
     <ClInclude Include="shell_navigation_controller.h" />
     <ClInclude Include="file_operation_controller.h" />
     <ClInclude Include="file_detail_controller.h" />
+    <ClInclude Include="preferences_coordinator.h" />
     <ClInclude Include="search_controller.h" />
     <ClInclude Include="MainWindow.xaml.h">
       <DependentUpon>MainWindow.xaml</DependentUpon>
@@ -185,6 +186,9 @@
     </ClCompile>
     <ClCompile Include="file_detail_controller.cpp">
       <PrecompiledHeader>Use</PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="preferences_coordinator.cpp">
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="search_controller.cpp">
       <PrecompiledHeader>Use</PrecompiledHeader>

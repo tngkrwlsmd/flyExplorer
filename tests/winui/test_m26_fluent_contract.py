@@ -173,7 +173,7 @@ class FluentShellContract(unittest.TestCase):
         self.assertIn("if(state.viewMode==FileViewMode::List){row.MinHeight(32)",impl)
         self.assertIn("row.KeyDown([weak,side]",impl)
         self.assertIn("ui->OpenSelectedFolder(side)",impl)
-        self.assertIn("mPreferences.defaultViewMode=selection",text("m20_shell.cpp"))
+        self.assertIn("mPreferencesCoordinator.setDefaultViewMode(selection)",text("m20_shell.cpp"))
         self.assertIn("OnHeaderSortClicked",main)
         self.assertIn("UpdateSortPresentation(int side)",impl)
         self.assertIn("selection<0||selection>7",text("m22_transfers.cpp"))
