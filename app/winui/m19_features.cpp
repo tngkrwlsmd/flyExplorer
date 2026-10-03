@@ -93,7 +93,7 @@ void MainWindow::ApplyWorkspace(fxfile::preview::Workspace&& doc) {
     // Validated off-thread BEFORE replacing any live pane. On this child
     // instance only: never mutate a different WinUI or MFC window.
     mShellNavigation->release(ActiveWindowTab().model);
-    for(int side=0;side!=2;++side)mRestoreQueue[side].clear();
+    mWorkspaceRestore.reset();
     std::array<size_t,2> counts{{doc.paths[0].size(),
                                  doc.split?doc.paths[1].size():1}};
     std::array<size_t,2> selected{{doc.selected[0],
@@ -113,28 +113,33 @@ void MainWindow::ApplyWorkspace(fxfile::preview::Workspace&& doc) {
             doc.paths[0]:doc.paths[side];
         auto& pane=ActiveWindowTab().model.panes[side];
         const size_t count=pane.tabs.size();
+        std::vector<fxfile::previewrestore::WorkspaceRestoreCoordinator::Task>
+            tasks;
+        tasks.reserve(count?count-1:0);
         for(size_t i=0;i<count;++i){
             if(i==pane.active)continue;
-            mRestoreQueue[side].emplace_back(i,paths[i]);
+            tasks.push_back({i,paths[i]});
         }
         const std::wstring initial=(!ActiveWindowTab().model.split&&side==1)?
             paths[doc.selected[0]]:paths[pane.active];
-        QueuePath(side,initial); // nonblocking, same supervised lane
+        const auto initialRequest=QueuePath(
+            side,initial); // nonblocking, same supervised lane
+        mWorkspaceRestore.begin(side,std::move(tasks),initialRequest);
+        if(!initialRequest)QueueNextWorkspaceTab(side);
     }
     Refresh(L"검증한 작업 공간을 독립된 창에서 복원하는 중입니다.");
 }
 void MainWindow::QueueNextWorkspaceTab(int side) {
     auto& pane=ActiveWindowTab().model.panes[side];
-    auto& tasks=mRestoreQueue[side];
-    if(std::any_of(pane.pending.begin(),pane.pending.end(),
-                   [](std::uint64_t x){return x!=0;}))return;
-    while(!tasks.empty()){
-        const auto next=std::move(tasks.front());
-        tasks.pop_front();
-        if(next.first>=pane.routeIds.size())continue;
+    const bool paneBusy=std::any_of(
+        pane.pending.begin(),pane.pending.end(),
+        [](std::uint64_t x){return x!=0;});
+    while(auto next=mWorkspaceRestore.takeNext(
+              side,paneBusy,pane.routeIds.size())){
         const auto id=mShellNavigation->submitParsing(
-            ActiveWindowTab().model,side,next.first,next.second,false);
+            ActiveWindowTab().model,side,next->tab,next->path,false);
         if(id) {
+            mWorkspaceRestore.track(side,id);
             RefreshTabs(side);
             return;
         }

@@ -103,6 +103,7 @@ ShellNavigationController::Completion ShellNavigationController::accept(
     completed.timedOut=result.timedOut;
     completed.networkRequest=result.networkRequest;
     completed.hr=result.hr;
+    completed.request=result.request;
 
     for(int side=0;side<2;++side){
         auto& pane=model.panes[static_cast<std::size_t>(side)];

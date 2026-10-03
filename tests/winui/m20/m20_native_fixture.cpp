@@ -1,5 +1,6 @@
 // Owned synthetic model contracts; no real user directory traversal.
 #include "../../../src/base/explorer_ui_state.h"
+#include "../../../app/winui/workspace_restore_coordinator.h"
 #include <cstdio>
 #include <cstdint>
 #include <set>
@@ -52,6 +53,48 @@ int main(){
  check(!state.dispatch(Command::CloseTab,0).accepted&&
        state.panes[0].routeIds[0]==left,
        "cannot_close_last_tab");
+
+ using Restore=fxfile::previewrestore::WorkspaceRestoreCoordinator;
+ Restore restore;
+ restore.begin(0,{{1,L"one"},{2,L"two"}},500);
+ check(restore.active(0)&&restore.queued(0)==2&&
+       !restore.takeNext(0,false,3).has_value(),
+       "restore_waits_for_initial_request");
+ check(!restore.settle(0,499)&&restore.active(0)&&
+       restore.queued(0)==2,
+       "restore_wrong_request_does_not_advance");
+ check(restore.settle(0,500),"restore_failure_settle_allows_next");
+ auto firstRestore=restore.takeNext(0,false,3);
+ check(firstRestore&&firstRestore->tab==1&&firstRestore->path==L"one"&&
+       restore.track(0,501),
+       "restore_tracks_first_inactive_tab");
+ check(!restore.takeNext(0,false,3).has_value()&&
+       restore.settle(0,501),
+       "restore_waits_for_matching_inactive_completion");
+ auto secondRestore=restore.takeNext(0,false,3);
+ check(secondRestore&&secondRestore->tab==2&&secondRestore->path==L"two"&&
+       restore.track(0,502)&&restore.settle(0,502)&&
+       !restore.active(0),
+       "restore_continues_after_each_settled_request");
+ restore.begin(0,{{99,L"stale"},{1,L"valid"}},0);
+ auto skipped=restore.takeNext(0,false,2);
+ check(skipped&&skipped->tab==1&&skipped->path==L"valid",
+       "restore_skips_invalid_tab_index");
+ restore.begin(0,{{1,L"old"}},600);
+ restore.reset(0);
+ check(!restore.settle(0,600)&&!restore.active(0),
+       "restore_reset_rejects_stale_completion");
+ restore.begin(0,{{1,L"left"}},700);
+ restore.begin(1,{{1,L"right"}},800);
+ check(restore.settle(0,700)&&restore.active(1)&&
+       !restore.takeNext(1,false,2).has_value()&&
+       restore.settle(1,800),
+       "restore_two_lanes_are_independent");
+ restore.begin(0,{{1,L"retry"}},0);
+ check(!restore.takeNext(0,true,2).has_value()&&
+       restore.takeNext(0,false,2).has_value(),
+       "restore_submit_failure_or_busy_can_resume");
+
  check(!state.dispatch(Command::SelectTab,0,33).accepted&&
        state.dispatch(Command::SelectTab,1,0).accepted&&state.activePane==1,
        "validate_tab_range_and_selection");

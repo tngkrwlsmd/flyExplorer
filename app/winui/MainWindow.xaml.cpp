@@ -355,6 +355,7 @@ namespace winrt::FlyExplorer::implementation
     {
         if(mClosing)return;
         mClosing=true;
+        mWorkspaceRestore.reset();
         mSessionCoordinator.prepareForClose();
         mFileOperations.prepareForClose();
         mFileDetails.prepareForClose();
@@ -383,7 +384,7 @@ namespace winrt::FlyExplorer::implementation
             return std::filesystem::path(buffer);
         return StartFolder();
     }
-    void MainWindow::QueuePath(int side,std::wstring path)
+    std::uint64_t MainWindow::QueuePath(int side,std::wstring path)
     {
         mSearchController.invalidate();
         auto& model=ActiveWindowTab().model;
@@ -400,13 +401,16 @@ namespace winrt::FlyExplorer::implementation
                 model,side,pane.active,std::move(path),true);
         if(id)StatusText().Text(L"폴더를 불러오는 중입니다.");
         else StatusText().Text(L"이 위치로 이동할 수 없습니다.");
+        return id;
     }
     void MainWindow::QueuePidl(
         int side,fxfile::shellnav::Location target,
         fxfile::shellnav::NavigationAction action)
     {
-        if(action!=fxfile::shellnav::NavigationAction::Refresh)
+        if(action!=fxfile::shellnav::NavigationAction::Refresh){
             mSearchController.invalidate();
+            mWorkspaceRestore.reset(side);
+        }
         if(!target.valid()) {
             StatusText().Text(L"이 위치를 열 수 없습니다.");
             return;
@@ -426,7 +430,16 @@ namespace winrt::FlyExplorer::implementation
         using Kind=fxfile::previewnav::ShellNavigationController::CompletionKind;
         const auto completed=mShellNavigation->accept(
             ActiveWindowTab().model,std::move(result));
-        if(completed.kind==Kind::Ignored || completed.kind==Kind::NoChange)return;
+        if(completed.kind==Kind::Ignored)return;
+        const bool restoreSettled=mWorkspaceRestore.settle(
+            completed.side,completed.request);
+        auto continueRestore=[&]{
+            if(restoreSettled)QueueNextWorkspaceTab(completed.side);
+        };
+        if(completed.kind==Kind::NoChange){
+            continueRestore();
+            return;
+        }
         if(completed.kind==Kind::Failed){
             if(completed.active){
                 if(completed.timedOut)
@@ -442,10 +455,12 @@ namespace winrt::FlyExplorer::implementation
                         L"Shell 폴더를 열지 못했습니다. "
                         L"기존 폴더는 유지됩니다.");
             }
+            continueRestore();
             return;
         }
         if(completed.kind==Kind::Rejected){
             StatusText().Text(L"이전 탐색 결과를 무시했습니다.");
+            continueRestore();
             return;
         }
         if(completed.active){
@@ -457,7 +472,7 @@ namespace winrt::FlyExplorer::implementation
                 L"폴더를 불러왔습니다.");
             UpdateWatch(completed.side,true);
         }else RefreshTabs(completed.side);
-        QueueNextWorkspaceTab(completed.side);
+        continueRestore();
     }
     void MainWindow::OnNativeChange(std::uint64_t route,std::uint64_t token)
     {
@@ -1019,7 +1034,7 @@ namespace winrt::FlyExplorer::implementation
         for(int side=0;side<2;++side){
             mFileDetails.cancel(side);
             state.fileLists[side].invalidate();
-            mRestoreQueue[side].clear();
+            mWorkspaceRestore.reset(side);
         }
         if(state.model.split){
             try{
@@ -1123,7 +1138,7 @@ namespace winrt::FlyExplorer::implementation
     bool MainWindow::OpenFolder(std::wstring const& path)
     {
         if(path.empty())return false;
-        mRestoreQueue[static_cast<size_t>(ActiveWindowTab().model.activePane)].clear();
+        mWorkspaceRestore.reset(ActiveWindowTab().model.activePane);
         QueuePath(ActiveWindowTab().model.activePane,path);
         return true;
     }
@@ -1430,7 +1445,7 @@ namespace winrt::FlyExplorer::implementation
         if(!change.accepted)return;
         mSearchController.invalidate();
         mShellNavigation->forget(change.releasedRoute);
-        mRestoreQueue[static_cast<size_t>(ActiveWindowTab().model.activePane)].clear();
+        mWorkspaceRestore.reset(ActiveWindowTab().model.activePane);
         Refresh(L"탭을 닫았습니다.");
     }
     void MainWindow::OnSplitClicked(IInspectable const&,RoutedEventArgs const&)

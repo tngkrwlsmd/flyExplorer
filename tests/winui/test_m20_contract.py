@@ -51,7 +51,8 @@ class ModelAndFullShell(unittest.TestCase):
   nav=source("app/winui/shell_navigation_controller.cpp")
   self.assertIn("mWorkspace.resetActive(doc.split,counts,selected)",src)
   self.assertIn("mShellNavigation->release(ActiveWindowTab().model)",src)
-  self.assertIn("ActiveWindowTab().model,side,next.first,next.second,false",src)
+  self.assertIn("ActiveWindowTab().model,side,next->tab,next->path,false",src)
+  self.assertIn("mWorkspaceRestore.track(side,id)",src)
   self.assertIn("model.markPending(side,tab,id,supersedeOthers)",nav)
  def test_winui_full_frame_has_light_dark_system_and_this_pc(self):
   xaml=source("app/winui/MainWindow.xaml")

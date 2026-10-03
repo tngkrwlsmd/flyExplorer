@@ -59,10 +59,11 @@ class M19IntegrationContracts(unittest.TestCase):
   for q in ("InitializeM19","ApplyWorkspace","QueueNextWorkspaceTab",
             "mShellNavigation->release(ActiveWindowTab().model)","std::thread(",
             "--m19-workspace","GetModuleFileNameW",
-            "CreateProcessW","mRestoreQueue[side].emplace_back",
+            "CreateProcessW","mWorkspaceRestore.begin(",
             "saveWorkspaceNew","loadWorkspace"):
    self.assertIn(q,f)
   self.assertIn("QueueNextWorkspaceTab(completed.side)",core)
+  self.assertNotIn("mRestoreQueue",f+core)
   self.assertIn("mSearchController.prepareForClose()",core)
   for id in ("WorkspacePanelButton","WorkspaceFileBox",
              "SaveWorkspaceButton","OpenWorkspaceButton",

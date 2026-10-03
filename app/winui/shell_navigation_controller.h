@@ -30,6 +30,7 @@ public:
         CompletionKind kind=CompletionKind::Ignored;
         int side=-1;
         std::size_t tab=0;
+        std::uint64_t request=0;
         bool active=false;
         fxfile::shellnav::NavigationAction action=
             fxfile::shellnav::NavigationAction::Open;

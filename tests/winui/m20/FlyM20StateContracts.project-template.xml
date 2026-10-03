@@ -44,12 +44,14 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="m20_native_fixture.cpp" />
+    <ClCompile Include="..\..\..\app\winui\workspace_restore_coordinator.cpp" />
     <ClCompile Include="..\..\..\src\base\explorer_ui_state.cpp" />
     <ClCompile Include="..\..\..\src\base\shell_navigation_core.cpp" />
     <ClCompile Include="..\..\..\src\base\shell_enum_bridge.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\..\src\base\shell_navigation_core.h" />
+    <ClInclude Include="..\..\..\app\winui\workspace_restore_coordinator.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
 </Project>

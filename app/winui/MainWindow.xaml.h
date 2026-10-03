@@ -11,6 +11,7 @@
 #include "file_operation_controller.h"
 #include "file_detail_controller.h"
 #include "preferences_coordinator.h"
+#include "workspace_restore_coordinator.h"
 #include "search_controller.h"
 #include "../../src/base/shell_transfer_core.h"
 #include "../../src/base/shell_clipboard_core.h"
@@ -19,7 +20,6 @@
 #include "../../src/base/explorer_ui_state.h"
 #include "m19_workspace.h"
 #include "m19_search.h"
-#include <deque>
 #include <array>
 #include <vector>
 #include <filesystem>
@@ -214,12 +214,12 @@ namespace winrt::FlyExplorer::implementation
         std::unique_ptr<fxfile::previewnav::ShellNavigationController> mShellNavigation;
         bool mOwnedShellNotifyTest=false;
         bool mOwnedComExhaustOnVirtual=false;
-        std::array<std::deque<std::pair<size_t,std::wstring>>,2> mRestoreQueue{};
+        fxfile::previewrestore::WorkspaceRestoreCoordinator mWorkspaceRestore{};
         fxfile::previewsearch::SearchController mSearchController{};
         bool mPopulatingRecents=false;
         void EnsureExpandedPanelFits();
         void InitializeM19();
-        void QueuePath(int side,std::wstring path);
+        std::uint64_t QueuePath(int side,std::wstring path);
         void QueuePidl(int side,fxfile::shellnav::Location target,
                        fxfile::shellnav::NavigationAction action);
         void OnNativeResult(fxfile::shellnav::IsolatedResult result);
