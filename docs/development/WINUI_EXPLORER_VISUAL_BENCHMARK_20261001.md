@@ -66,6 +66,9 @@ The former pre-v7 ownership note is superseded by the implemented v7 model.
 
 ## Current remaining visual/environment gaps
 
-- Actual 125/150/200% DPI: not certified in the current remote environment.
+- Actual 125/150/200% DPI: blocked in the current remote environment. The
+  self-hosted VM exposes only one 1274x771 display mode; a 2026-10-03
+  DisplayConfig DPI probe reported CURRENT=100%, RECOMMENDED=100%, MAX=100%,
+  so Windows does not offer a higher real OS scale on this virtual display.
 - High Contrast ON and human Narrator/Korean IME: not certified.
 - Medium view is intentionally not a pixel clone of Explorer.

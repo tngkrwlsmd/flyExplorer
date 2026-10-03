@@ -244,7 +244,9 @@ machine-wide install/update/rollback path.
 ## Open gates
 
 Not certified by current automated evidence:
-- actual 125%, 150% and 200% OS display scaling;
+- actual 125%, 150% and 200% OS display scaling (blocked on the current
+  self-hosted VM: Windows reports one active 1274x771 display mode and
+  DisplayConfig DPI range CURRENT=100%, RECOMMENDED=100%, MAX=100%);
 - High Contrast ON;
 - human Narrator and Korean IME composition acceptance;
 - physical pointer drag acceptance (owned Release automation reaches a visible,
