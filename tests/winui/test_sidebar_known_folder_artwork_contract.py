@@ -20,6 +20,13 @@ class SidebarKnownFolderArtworkContract(unittest.TestCase):
         self.assertIn('x:Name="HomeButton"',xaml)
         self.assertIn('x:Name="ThisPCButton"',xaml)
 
+    def test_home_and_this_pc_keep_fluent_glyph_scope(self):
+        xaml=source("app/winui/NavigationSidebar.xaml")
+        self.assertIn('<FontIcon Glyph="&#xE80F;" FontSize="15"/>',xaml)
+        self.assertIn('<FontIcon Glyph="&#xE7F8;" FontSize="15"/>',xaml)
+        self.assertNotIn('x:Name="HomeArtwork"',xaml)
+        self.assertNotIn('x:Name="ThisPCArtwork"',xaml)
+
     def test_sidebar_queries_fixed_known_folder_pixels_off_ui_thread(self):
         impl=source("app/winui/NavigationSidebar.xaml.cpp")
         for token in (
