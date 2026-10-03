@@ -1,4 +1,4 @@
-# flyExplorer current status — 2026-10-02
+# flyExplorer current status — 2026-10-03
 
 ## Product source of truth
 
@@ -7,8 +7,11 @@ app/winui, UI-independent native code in src/base, tests in tests/winui, and
 bounded orchestration in tools/winui/run_checks.py. The former MFC application
 is retired from the working tree and is recoverable from Git revision cbffb48.
 
-The current product architecture includes V8-A WindowWorkspaceController and
-V8-B SessionCoordinator extraction. Live Git refs always take precedence over
+The current product architecture includes the completed V8-A through V8-E
+controller-extraction cycle: WindowWorkspaceController, SessionCoordinator,
+ShellNavigationController, FileOperationController and SearchController. A
+post-extraction MainWindow audit also moved the coherent file-detail worker
+lifecycle into FileDetailController. Live Git refs always take precedence over
 recorded checkpoints.
 
 ## Accepted current behavior
@@ -23,6 +26,17 @@ recorded checkpoints.
   close invalidation into the UI-independent SessionCoordinator under app/winui.
   MainWindow now keeps only session-related XAML projection, status and
   Shell/watcher side effects.
+- V8-C ShellNavigationController owns isolated Shell navigation, supervisor,
+  filesystem/Shell namespace watchers and stale route/request handling.
+- V8-D FileOperationController owns transfer/file-command worker lifecycle,
+  cancellation, stale completion and collision/recycle continuations.
+- V8-E SearchController owns bounded search request identity, cancellation,
+  stale completion rejection and recent-scope persistence.
+- The post-extraction audit identified file-detail work as one remaining
+  independent lifecycle boundary. FileDetailController now owns pane-local
+  cancellation, detached detail workers and bounded Shell visual/thumbnail
+  orchestration. MainWindow retains request preparation, live PaneState
+  acceptance, DispatcherQueue handoff and XAML projection.
 - Ctrl+T, Ctrl+W, Ctrl+Tab and Ctrl+Shift+Tab Window Tab behavior.
 - Details, List, Small Icons and Medium Icons views.
 - Back/Forward/Up, filtering/sorting, local create/rename, guarded copy/move/
@@ -46,9 +60,11 @@ CoreMessagingXP.dll / 0xC000027B and WER 0x800710DD
 boundary. V8-B moves session epoch/revision invalidation into
 SessionCoordinator::prepareForClose(); detached session workers retain only
 shared native generation state and post through a close-safe callback supplied
-by MainWindow. Detail-worker cancellation and late DispatcherQueue completion
-guards remain unchanged. Accepted GUI evidence requires real process exit code
-0.
+by MainWindow. FileDetailController now owns pane-local detail cancellation and
+the detached metadata/icon/thumbnail worker lifecycle. MainWindow still performs
+the live route/tab/ticket acceptance before projecting a completion, and
+PrepareForClose cancels detail work before ShellNavigationController shutdown.
+Accepted GUI evidence requires real process exit code 0.
 
 ## Build and test environment
 
@@ -82,26 +98,30 @@ bootstrap configuration.
 
 ## Latest verified evidence
 
-On code revision `71d4fb284b43f65a19efb538395121f402974264`, validated on 2026-10-02 by self-hosted
-Windows remote-task run `37020993308`:
+On main revision `3828bae86840a931ffffc9dbbf3f6a3fb3c3866a`, validated on
+2026-10-03 by automatic self-hosted Windows run `37095040345` with resolved
+scope `release-gui`:
+- policy step completed successfully; documented development readiness PASS and
+  the reviewed product revision/path relationship PASS;
 - canonical structure preflight: 4/4 PASS;
-- source contracts: 149/149 PASS;
-- canonical Debug and Release app builds: PASS;
-- actual NuGet restore direct references and WinUI/XAML build assets: PASS;
-- M19-M23 native fixtures remain covered by the canonical source/GUI suite;
-- owned Debug and Release GUI validation: PASS with
-  OWNED_WINUI_SHELL_EXIT 0 and protected legacy configuration hashes identical;
-- pinned GUI dependencies pywinauto 0.6.9, Pillow 12.3.0 and psutil 7.2.2:
-  validated on the self-hosted Windows runner;
-- current installer template materialization and setup build: PASS;
-- bounded /TESTROOT install/uninstall: PASS with no remaining test directory or
-  test uninstall registry key;
-- existing six protected legacy user-configuration files on the current VM:
-  unchanged during native fixture execution.
+- source contracts: 152/152 PASS;
+- canonical Release app build: PASS, including the tracked WinUI project
+  template and restored package/toolchain inputs;
+- owned Release GUI validation: PASS with
+  `REAL_M23_PRIVATE_SESSION_CLEAR_REVOKES_FUTURE_AUTO_RESTORE True`,
+  `OWNED_WINUI_SHELL_EXIT 0` and
+  `ORIGINAL_SIX_USER_CONFIG_SHA256_IDENTICAL True`;
+- Release runtime-set verification: PASS.
 
-Historical v7-only GUI/session evidence remains valid for the product behavior
-described above. DPI scaling, accessibility, physical drag, signing and public
-distribution remain separate gates.
+The FileDetailController extraction was also pre-main validated on temporary
+remote run `37094312782`: focused controller contracts 3/3 PASS, canonical
+structure 4/4 PASS, source contracts 152/152 PASS, Release build PASS, targeted
+v7 Release GUI PASS, real process exit 0 and `git diff --check` PASS.
+
+The broader Debug/package/install evidence from run `37020993308` remains
+historical and was not rerun for this architecture closure. DPI scaling,
+accessibility, physical drag, signing and public distribution remain separate
+gates.
 
 ## Known functional coverage limits
 

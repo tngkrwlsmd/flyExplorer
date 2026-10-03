@@ -195,14 +195,26 @@ The current/evolutionary direction is:
       |-- SessionCoordinator          : IMPLEMENTED V8-B session caretaker/lifetime
       |-- ShellNavigationController   : IMPLEMENTED V8-C navigation/supervisor/watchers
       |-- FileOperationController     : IMPLEMENTED V8-D transfer/file-command lifecycle
-      '-- SearchController            : IMPLEMENTED V8-E search/cancel/recent lifecycle
+      |-- SearchController            : IMPLEMENTED V8-E search/cancel/recent lifecycle
+      '-- FileDetailController        : POST-AUDIT worker/cancel/Shell-visual lifecycle
 
 WindowWorkspaceController, SessionCoordinator, ShellNavigationController,
-FileOperationController and SearchController are implemented. The V8-A through
-V8-E controller-extraction cycle is complete. The next architecture step is a
-MainWindow post-extraction responsibility audit, not automatic creation of
-another controller. Add a new boundary only when the audit identifies a
-coherent remaining ownership/lifecycle problem.
+FileOperationController and SearchController are implemented, and the V8-A
+through V8-E controller-extraction cycle is complete.
+
+The subsequent MainWindow post-extraction responsibility audit is also complete.
+Most remaining MainWindow work is presentation/composition. The audit found one
+coherent leftover lifecycle subsystem: file-detail metadata/icon/thumbnail work.
+FileDetailController now owns its pane-local cancellation tokens, detached
+worker lifecycle and bounded Shell visual/thumbnail orchestration. MainWindow
+retains DPI/request preparation, current route/tab/ticket acceptance,
+DispatcherQueue/weak-UI handoff and final XAML projection.
+
+The audit also observed preference-persistence async revision/mutex state and
+private drag/drop state/async deferral as possible future ownership questions;
+neither was extracted in this work. Do not create another controller by default.
+Introduce a new boundary only when concrete mutable-state, lifetime,
+change-reason or deterministic-test evidence justifies it.
 
 Controllers under app/winui may depend on WinUI only when presentation/
 DispatcherQueue coordination requires it. Move a component to src/base only

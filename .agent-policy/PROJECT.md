@@ -26,7 +26,7 @@ consumer core; this PROJECT.md remains project-owned across bundle refreshes.
     {"name": "winui-tests", "path": "tests/winui", "responsibility": "source, native and owned GUI contracts"}
   ],
   "review": {
-    "reviewed_revision": "241a60c4bc292dea24c8fe178dec4aad3b9ce0af",
+    "reviewed_revision": "3828bae86840a931ffffc9dbbf3f6a3fb3c3866a",
     "reviewed_at": "2026-10-03",
     "reviewed_paths": [
       "app/winui",
@@ -67,26 +67,39 @@ orchestration, FileOperationController ownership of transfer/file-command
 worker lifecycle, cancellation, stale completion and collision/recycle
 continuations, and SearchController ownership of bounded search request
 identity, cooperative cancellation, stale completion rejection and recent-scope
-state/persistence. The V8-A through V8-E extraction cycle is complete; the next
-architecture step is a MainWindow post-extraction responsibility audit.
+state/persistence. The V8-A through V8-E extraction cycle is complete. The
+post-extraction MainWindow responsibility audit is also complete and extracted
+one additional coherent lifecycle boundary: FileDetailController now owns
+pane-local detail cancellation, detached metadata/icon/thumbnail workers and
+bounded Shell visual orchestration. MainWindow retains request preparation,
+live PaneState acceptance, DispatcherQueue handoff and XAML projection.
 
 ## Current verification
 
-Latest accepted product evidence for code revision `71d4fb284b43f65a19efb538395121f402974264` comes from
-self-hosted Windows remote-task run `37020993308`:
+Latest accepted product evidence for main revision
+`3828bae86840a931ffffc9dbbf3f6a3fb3c3866a` comes from automatic self-hosted
+Windows run `37095040345` with resolved scope `release-gui`:
+- policy step completed successfully; documented development readiness PASS,
+  source-evidence readiness PARTIAL because manual runtime/deploy facts remain
+  intentionally manual, and reviewed product paths were accepted;
 - canonical structure 4/4 PASS;
-- source contracts 149/149 PASS;
-- canonical Debug and Release builds PASS;
-- owned Debug and Release GUI PASS with OWNED_WINUI_SHELL_EXIT 0;
-- private-session clear/revoke PASS;
-- protected six user-config hashes identical.
+- source contracts 152/152 PASS;
+- canonical Release build PASS;
+- owned Release GUI PASS with
+  `REAL_M23_PRIVATE_SESSION_CLEAR_REVOKES_FUTURE_AUTO_RESTORE True`,
+  `OWNED_WINUI_SHELL_EXIT 0` and protected six user-config hashes identical;
+- Release runtime set PASS.
 
-The validation used the repository-controlled temporary remote-task path; its
-task commit is validation-only and is not part of the product history.
+The FileDetailController logical unit was pre-main validated on temporary
+remote run `37094312782` with focused controller contracts 3/3 PASS, source
+contracts 152/152 PASS, Release build PASS, targeted v7 Release GUI PASS, real
+process exit 0 and `git diff --check` PASS. The temporary task script is not
+part of main product history.
 
-The v7 close-race fix moved cancellation/shutdown to the window Closed boundary
-and prevents late DispatcherQueue completions from turning teardown into
-0xC000027B.
+The v7 close-race fix keeps cancellation/shutdown at the window Closed boundary.
+FileDetailController now centralizes detail-worker cancellation and rechecks
+cancellation before UI posting; MainWindow still rejects stale route/tab/ticket
+completions before XAML projection.
 
 ## Build/runtime facts
 
