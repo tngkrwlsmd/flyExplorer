@@ -38,42 +38,60 @@
                 <Button x:Name="DesktopButton" Style="{StaticResource ExplorerNavButtonStyle}"
                         Click="OnDesktopClicked" AutomationProperties.Name="바탕 화면으로 이동">
                     <StackPanel Orientation="Horizontal" Spacing="9">
-                        <FontIcon Glyph="&#xE7F4;" FontSize="15"/>
+                        <Grid Width="16" Height="16">
+                            <FontIcon x:Name="DesktopFallbackIcon" Glyph="&#xE7F4;" FontSize="15"/>
+                            <Image x:Name="DesktopArtwork" Width="16" Height="16" Visibility="Collapsed" Stretch="Uniform" AutomationProperties.Name="Windows Known Folder sidebar artwork: Desktop"/>
+                        </Grid>
                         <TextBlock Text="바탕 화면" VerticalAlignment="Center"/>
                     </StackPanel>
                 </Button>
                 <Button x:Name="DownloadsButton" Style="{StaticResource ExplorerNavButtonStyle}"
                         Click="OnDownloadsClicked" AutomationProperties.Name="다운로드로 이동">
                     <StackPanel Orientation="Horizontal" Spacing="9">
-                        <FontIcon Glyph="&#xE896;" FontSize="15"/>
+                        <Grid Width="16" Height="16">
+                            <FontIcon x:Name="DownloadsFallbackIcon" Glyph="&#xE896;" FontSize="15"/>
+                            <Image x:Name="DownloadsArtwork" Width="16" Height="16" Visibility="Collapsed" Stretch="Uniform" AutomationProperties.Name="Windows Known Folder sidebar artwork: Downloads"/>
+                        </Grid>
                         <TextBlock Text="다운로드" VerticalAlignment="Center"/>
                     </StackPanel>
                 </Button>
                 <Button x:Name="DocumentsButton" Style="{StaticResource ExplorerNavButtonStyle}"
                         Click="OnDocumentsClicked" AutomationProperties.Name="문서로 이동">
                     <StackPanel Orientation="Horizontal" Spacing="9">
-                        <FontIcon Glyph="&#xE8A5;" FontSize="15"/>
+                        <Grid Width="16" Height="16">
+                            <FontIcon x:Name="DocumentsFallbackIcon" Glyph="&#xE8A5;" FontSize="15"/>
+                            <Image x:Name="DocumentsArtwork" Width="16" Height="16" Visibility="Collapsed" Stretch="Uniform" AutomationProperties.Name="Windows Known Folder sidebar artwork: Documents"/>
+                        </Grid>
                         <TextBlock Text="문서" VerticalAlignment="Center"/>
                     </StackPanel>
                 </Button>
                 <Button x:Name="PicturesButton" Style="{StaticResource ExplorerNavButtonStyle}"
                         Click="OnPicturesClicked" AutomationProperties.Name="사진으로 이동">
                     <StackPanel Orientation="Horizontal" Spacing="9">
-                        <FontIcon Glyph="&#xEB9F;" FontSize="15"/>
+                        <Grid Width="16" Height="16">
+                            <FontIcon x:Name="PicturesFallbackIcon" Glyph="&#xEB9F;" FontSize="15"/>
+                            <Image x:Name="PicturesArtwork" Width="16" Height="16" Visibility="Collapsed" Stretch="Uniform" AutomationProperties.Name="Windows Known Folder sidebar artwork: Pictures"/>
+                        </Grid>
                         <TextBlock Text="사진" VerticalAlignment="Center"/>
                     </StackPanel>
                 </Button>
                 <Button x:Name="MusicButton" Style="{StaticResource ExplorerNavButtonStyle}"
                         Click="OnMusicClicked" AutomationProperties.Name="음악으로 이동">
                     <StackPanel Orientation="Horizontal" Spacing="9">
-                        <FontIcon Glyph="&#xE8D6;" FontSize="15"/>
+                        <Grid Width="16" Height="16">
+                            <FontIcon x:Name="MusicFallbackIcon" Glyph="&#xE8D6;" FontSize="15"/>
+                            <Image x:Name="MusicArtwork" Width="16" Height="16" Visibility="Collapsed" Stretch="Uniform" AutomationProperties.Name="Windows Known Folder sidebar artwork: Music"/>
+                        </Grid>
                         <TextBlock Text="음악" VerticalAlignment="Center"/>
                     </StackPanel>
                 </Button>
                 <Button x:Name="VideosButton" Style="{StaticResource ExplorerNavButtonStyle}"
                         Click="OnVideosClicked" AutomationProperties.Name="동영상으로 이동">
                     <StackPanel Orientation="Horizontal" Spacing="9">
-                        <FontIcon Glyph="&#xE8B2;" FontSize="15"/>
+                        <Grid Width="16" Height="16">
+                            <FontIcon x:Name="VideosFallbackIcon" Glyph="&#xE8B2;" FontSize="15"/>
+                            <Image x:Name="VideosArtwork" Width="16" Height="16" Visibility="Collapsed" Stretch="Uniform" AutomationProperties.Name="Windows Known Folder sidebar artwork: Videos"/>
+                        </Grid>
                         <TextBlock Text="동영상" VerticalAlignment="Center"/>
                     </StackPanel>
                 </Button>
