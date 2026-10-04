@@ -89,6 +89,25 @@ class RemoteWindowsTaskContractTests(unittest.TestCase):
             self.workflow,
         )
 
+    def test_remote_stage_detection_matches_executions_not_incidental_filenames(self):
+        self.assertIn(
+            "Match executable invocations, not incidental filenames/variables.",
+            self.workflow,
+        )
+        self.assertIn("$commandBoundary =", self.workflow)
+        self.assertIn("$pythonInvocation =", self.workflow)
+        self.assertIn(
+            "tools/winui/validate_remote_request.py",
+            " ".join((self.agents + self.efficiency + self.project).split()),
+        )
+        self.assertTrue(
+            (ROOT / "tools/winui/validate_remote_request.py").is_file()
+        )
+        self.assertTrue(
+            (ROOT / "tests/winui/test_gui_harness_contract.py").is_file()
+        )
+
+
     def test_windows_workflows_skip_github_rerun_attempts(self):
         self.assertIn(
             "task:\n    if: ${{ github.run_attempt == '1' }}",
