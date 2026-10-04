@@ -107,6 +107,10 @@ class FluentShellContract(unittest.TestCase):
         self.assertIn('HorizontalAlignment="Right"',xaml)
         self.assertNotIn('Width="7" Margin="0,1,-3,1"',xaml)
         self.assertEqual(xaml.count('Style="{StaticResource ExplorerColumnResizeThumbStyle}"'),6)
+        self.assertEqual(xaml.count('PointerPressed="OnDetailColumnResizePointerPressed"'),6)
+        self.assertEqual(xaml.count('PointerMoved="OnDetailColumnResizePointerMoved"'),6)
+        self.assertEqual(xaml.count('PointerReleased="OnDetailColumnResizePointerReleased"'),6)
+        self.assertEqual(xaml.count('PointerCaptureLost="OnDetailColumnResizePointerCaptureLost"'),6)
         self.assertIn("ApplyDetailColumnLayout(int side)",impl)
         self.assertIn("DetailLayoutProfile() const",impl)
         self.assertIn("DetailColumnWidths(int side) const",impl)
@@ -117,7 +121,14 @@ class FluentShellContract(unittest.TestCase):
                       "LeftSizeColumnResizeThumb","RightNameColumnResizeThumb",
                       "RightTypeColumnResizeThumb","RightSizeColumnResizeThumb"):
             self.assertIn('x:Name="'+thumb+'"',xaml)
-        self.assertIn("OnDetailColumnResizeDragDelta",impl)
+        for token in ("OnDetailColumnResizePointerPressed",
+                      "OnDetailColumnResizePointerMoved",
+                      "OnDetailColumnResizePointerReleased",
+                      "OnDetailColumnResizePointerCaptureLost",
+                      "CapturePointer(args.Pointer())",
+                      "ReleasePointerCapture(args.Pointer())"):
+            self.assertIn(token,impl)
+        self.assertNotIn("OnDetailColumnResizeDragDelta",impl)
         self.assertIn("PrimaryPane().BorderThickness(Thickness{0.0,2.0,0.0,0.0})",impl)
         self.assertIn("SecondaryPane().BorderThickness(Thickness{0.0,2.0,0.0,0.0})",impl)
         self.assertIn("AutomationProperties::SetName",impl)
