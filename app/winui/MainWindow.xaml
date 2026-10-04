@@ -312,6 +312,48 @@
                            VerticalAlignment="Center" Opacity="0.65"/>
             </StackPanel>
             <StackPanel Orientation="Horizontal" Spacing="7">
+                <TextBlock Text="크기(KB):" VerticalAlignment="Center"/>
+                <TextBox x:Name="SearchMinSizeBox" Width="90" MaxLength="20"
+                         PlaceholderText="최소"
+                         AutomationProperties.Name="최소 파일 크기 KB"/>
+                <TextBlock Text="~" VerticalAlignment="Center"/>
+                <TextBox x:Name="SearchMaxSizeBox" Width="90" MaxLength="20"
+                         PlaceholderText="최대"
+                         AutomationProperties.Name="최대 파일 크기 KB"/>
+                <TextBlock Text="수정일:" VerticalAlignment="Center"/>
+                <TextBlock Text="이후:" VerticalAlignment="Center" Opacity="0.75"/>
+                <TextBox x:Name="SearchModifiedAfterBox" Width="108" MaxLength="10"
+                         PlaceholderText="YYYY-MM-DD"
+                         AutomationProperties.Name="수정일 이후"/>
+                <TextBlock Text="~ 이전:" VerticalAlignment="Center" Opacity="0.75"/>
+                <TextBox x:Name="SearchModifiedBeforeBox" Width="108" MaxLength="10"
+                         PlaceholderText="YYYY-MM-DD"
+                         AutomationProperties.Name="수정일 이전"/>
+                <TextBlock Text="범위 포함" VerticalAlignment="Center" Opacity="0.65"/>
+            </StackPanel>
+            <StackPanel Orientation="Horizontal" Spacing="7">
+                <TextBlock Text="조건 세트:" VerticalAlignment="Center"/>
+                <ComboBox x:Name="SearchPresetBox" Width="185"
+                          PlaceholderText="저장된 조건 선택"
+                          SelectionChanged="OnSearchPresetSelectionChanged"
+                          AutomationProperties.Name="저장된 검색 조건 세트"/>
+                <TextBox x:Name="SearchPresetNameBox" Width="165" MaxLength="56"
+                         PlaceholderText="조건 세트 이름"
+                         AutomationProperties.Name="검색 조건 세트 이름"/>
+                <Button x:Name="SearchPresetNewButton" Content="새 조건"
+                        Click="OnNewSearchPreset"
+                        AutomationProperties.Name="새 검색 조건 세트"/>
+                <Button x:Name="SearchPresetSaveButton" Content="저장"
+                        Click="OnSaveSearchPreset"
+                        AutomationProperties.Name="검색 조건 세트 저장"/>
+                <Button x:Name="SearchPresetApplyButton" Content="적용"
+                        Click="OnApplySearchPreset"
+                        AutomationProperties.Name="검색 조건 세트 적용"/>
+                <Button x:Name="SearchPresetDeleteButton" Content="삭제"
+                        Click="OnDeleteSearchPreset"
+                        AutomationProperties.Name="검색 조건 세트 삭제"/>
+            </StackPanel>
+            <StackPanel Orientation="Horizontal" Spacing="7">
                 <TextBlock Text="최근 검색 위치:" VerticalAlignment="Center"/>
                 <TextBlock x:Name="RecentCountText" Text="저장 0개" VerticalAlignment="Center"
                            AutomationProperties.Name="최근 검색 위치 수"/>
@@ -322,7 +364,7 @@
                 <Button x:Uid="SearchClearButton" x:Name="SearchClearButton" Content="최근 기록 지우기"
                         Click="OnClearSearchRecent"
                         AutomationProperties.Name="최근 검색 위치 지우기"/>
-                <TextBlock x:Name="SearchCountText" Text="제한된 이름 검색 · 파일 변경 없음"
+                <TextBlock x:Name="SearchCountText" Text="제한된 복합 검색 · 파일 변경 없음"
                            VerticalAlignment="Center"
                            AutomationProperties.Name="검색 결과 요약"/>
             </StackPanel>

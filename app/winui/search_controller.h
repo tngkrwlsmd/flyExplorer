@@ -31,6 +31,8 @@ public:
         Started,
         InvalidRequest,
         InvalidExtension,
+        InvalidSizeRange,
+        InvalidDateRange,
         InvalidPattern,
         Closing,
         ThreadStartFailed

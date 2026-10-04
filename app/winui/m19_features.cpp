@@ -303,6 +303,10 @@ SearchController::Context MainWindow::SearchContext(){
     context.scope=std::wstring(SearchScopeBox().Text().c_str());
     context.query.term=std::wstring(SearchTermBox().Text().c_str());
     context.query.extension=std::wstring(SearchExtensionBox().Text().c_str());
+    context.query.minSizeKb=std::wstring(SearchMinSizeBox().Text().c_str());
+    context.query.maxSizeKb=std::wstring(SearchMaxSizeBox().Text().c_str());
+    context.query.modifiedAfter=std::wstring(SearchModifiedAfterBox().Text().c_str());
+    context.query.modifiedBefore=std::wstring(SearchModifiedBeforeBox().Text().c_str());
     context.query.regex=SearchRegexBox().IsChecked().GetBoolean();
     context.query.caseSensitive=SearchCaseBox().IsChecked().GetBoolean();
     switch(SearchTargetBox().SelectedIndex()){
@@ -352,7 +356,7 @@ void MainWindow::OnToggleSearch(
     auto const& path=pane.filesystemPaths[pane.active];
     if(!path.empty())SearchScopeBox().Text(hstring(path));
     StatusText().Text(
-        L"파일 이름 검색 · 정규식/대소문자/대상/확장자 조건을 선택할 수 있습니다.");
+        L"이름/정규식/확장자/크기/수정일 조건을 조합하고 조건 세트를 저장할 수 있습니다.");
 }
 void MainWindow::OnRunSearch(
     IInspectable const&,RoutedEventArgs const&) {
@@ -380,11 +384,19 @@ void MainWindow::OnRunSearch(
     SearchRunButton().IsEnabled(true);
     if(status==Start::InvalidRequest){
         StatusText().Text(
-           L"검색 폴더와 검색어를 입력하세요(검색어 최대 256자).");
+           L"검색 폴더와 하나 이상의 이름/확장자/크기/수정일 조건을 입력하세요.");
     }else if(status==Start::InvalidExtension){
         SearchCountText().Text(L"확장자 조건이 올바르지 않습니다.");
         StatusText().Text(
            L"확장자는 .txt처럼 한 줄의 확장자 이름만 입력하세요.");
+    }else if(status==Start::InvalidSizeRange){
+        SearchCountText().Text(L"파일 크기 범위가 올바르지 않습니다.");
+        StatusText().Text(
+           L"크기는 0 이상의 KB 정수로 입력하고 최소값이 최대값보다 크지 않아야 합니다.");
+    }else if(status==Start::InvalidDateRange){
+        SearchCountText().Text(L"수정일 범위가 올바르지 않습니다.");
+        StatusText().Text(
+           L"수정일은 YYYY-MM-DD로 입력하고 이후 날짜가 이전 날짜보다 늦지 않아야 합니다.");
     }else if(status==Start::InvalidPattern){
         SearchCountText().Text(L"정규식이 올바르지 않습니다.");
         StatusText().Text(

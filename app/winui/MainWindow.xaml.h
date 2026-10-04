@@ -20,6 +20,7 @@
 #include "../../src/base/explorer_ui_state.h"
 #include "../../src/base/bookmark_store.h"
 #include "../../src/base/filter_rule_store.h"
+#include "../../src/base/search_preset_store.h"
 #include "m19_workspace.h"
 #include "m19_search.h"
 #include <array>
@@ -96,6 +97,12 @@ namespace winrt::FlyExplorer::implementation
         void OnSelectSearchRecent(IInspectable const&,
             Microsoft::UI::Xaml::Controls::SelectionChangedEventArgs const&);
         void OnClearSearchRecent(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
+        void OnSearchPresetSelectionChanged(IInspectable const&,
+            Microsoft::UI::Xaml::Controls::SelectionChangedEventArgs const&);
+        void OnNewSearchPreset(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
+        void OnSaveSearchPreset(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
+        void OnApplySearchPreset(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
+        void OnDeleteSearchPreset(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
         void OnCreateFolder(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
         void OnRenameSelected(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
         void OnWindowsCopy(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
@@ -241,7 +248,13 @@ namespace winrt::FlyExplorer::implementation
         void InitializeFilterRules();
         void RefreshFilterRuleManager(int selected);
         fxfile::previewsearch::SearchController mSearchController{};
+        fxfile::searchpresets::Store mSearchPresets{};
         bool mPopulatingRecents=false;
+        bool mPopulatingSearchPresets=false;
+        void InitializeSearchPresets();
+        void RefreshSearchPresetManager(int selected);
+        fxfile::searchpresets::Preset SearchPresetFromUi();
+        void ApplySearchPresetToUi(fxfile::searchpresets::Preset const& value);
         void EnsureExpandedPanelFits();
         void InitializeM19();
         std::uint64_t QueuePath(int side,std::wstring path);

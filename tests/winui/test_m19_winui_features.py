@@ -207,6 +207,11 @@ def run(*,p,win,element,safe_click,focus,eventually,ownedwindows,
         safe_click(element("SearchPanelButton"))
         for key in ("SearchScopeBox","SearchTermBox","SearchRegexBox",
                     "SearchCaseBox","SearchTargetBox","SearchExtensionBox",
+                    "SearchMinSizeBox","SearchMaxSizeBox",
+                    "SearchModifiedAfterBox","SearchModifiedBeforeBox",
+                    "SearchPresetBox","SearchPresetNameBox",
+                    "SearchPresetSaveButton","SearchPresetApplyButton",
+                    "SearchPresetDeleteButton",
                     "SearchRememberBox","SearchRunButton","SearchRecentBox",
                     "SearchClearButton","SearchMatches","SearchCountText"):
             assert element(key).exists(timeout=4),("Missing M1.9 search UI",key)
@@ -237,6 +242,18 @@ def run(*,p,win,element,safe_click,focus,eventually,ownedwindows,
         for target_file in (report_upper,report_lower,notes,korean,
                             report_folder/"nested-report.txt"):
             target_file.write_text("owned search v2",encoding="utf-8")
+        nested_report=report_folder/"nested-report.txt"
+        sized=[
+            (report_upper,4096,(2026,1,15,12,0,0,0,0,-1)),
+            (report_lower,16384,(2025,6,10,12,0,0,0,0,-1)),
+            (notes,2048,(2024,3,20,12,0,0,0,0,-1)),
+            (nested_report,8192,(2026,2,5,12,0,0,0,0,-1)),
+            (korean,12288,(2026,4,1,12,0,0,0,0,-1)),
+        ]
+        for target_file,size,stamp in sized:
+            target_file.write_bytes(b"x"*size)
+            when=time.mktime(stamp)
+            os.utime(target_file,(when,when))
         regex=element("SearchRegexBox")
         case=element("SearchCaseBox")
         target=element("SearchTargetBox")
@@ -294,10 +311,78 @@ def run(*,p,win,element,safe_click,focus,eventually,ownedwindows,
         assert element("SearchRunButton").is_enabled()
         print("REAL_SEARCH_V2_INVALID_REGEX_PRESTART_REJECT_PASS",True,flush=True)
 
-        # Restore legacy-default options before continuing the existing recent-
-        # search persistence acceptance below.
+        # Search v3: bounded AND criteria plus private named query presets.
         safe_click(regex)
+        min_size=element("SearchMinSizeBox")
+        max_size=element("SearchMaxSizeBox")
+        after=element("SearchModifiedAfterBox")
+        before_date=element("SearchModifiedBeforeBox")
+        preset_name=element("SearchPresetNameBox")
+        preset_file=localdata/"flyExplorer"/"search-presets-v1.txt"
+
+        term.set_edit_text("report")
+        extension.set_edit_text(".txt")
+        min_size.set_edit_text("7")
+        max_size.set_edit_text("9")
+        after.set_edit_text("2026-02-01")
+        before_date.set_edit_text("2026-02-28")
+        safe_click(element("SearchRunButton"))
+        good(lambda:match("SearchCountText","검색 결과 1개"),
+             "Search v3 compound AND criteria did not return one file",14)
+        assert search_matches("nested-report.txt")
+        print("REAL_SEARCH_V3_NAME_EXTENSION_SIZE_DATE_AND_PASS",True,flush=True)
+
+        term.set_edit_text("")
         extension.set_edit_text("")
+        min_size.set_edit_text("10")
+        max_size.set_edit_text("13")
+        after.set_edit_text("")
+        before_date.set_edit_text("")
+        safe_click(element("SearchRunButton"))
+        good(lambda:match("SearchCountText","검색 결과 1개"),
+             "Search v3 size-only query with empty name failed",14)
+        assert search_matches("한글-보고서.TXT")
+        print("REAL_SEARCH_V3_SIZE_ONLY_EMPTY_TERM_PASS",True,flush=True)
+
+        term.set_edit_text("report")
+        min_size.set_edit_text("20")
+        max_size.set_edit_text("10")
+        safe_click(element("SearchRunButton"))
+        good(lambda:match("SearchCountText","파일 크기 범위가 올바르지 않습니다"),
+             "Search v3 invalid size range was not rejected before worker",7)
+        assert element("SearchRunButton").is_enabled()
+        print("REAL_SEARCH_V3_INVALID_SIZE_PRESTART_REJECT_PASS",True,flush=True)
+
+        min_size.set_edit_text("")
+        max_size.set_edit_text("")
+        after.set_edit_text("2026-02-30")
+        before_date.set_edit_text("")
+        safe_click(element("SearchRunButton"))
+        good(lambda:match("SearchCountText","수정일 범위가 올바르지 않습니다"),
+             "Search v3 invalid date was not rejected before worker",7)
+        print("REAL_SEARCH_V3_INVALID_DATE_PRESTART_REJECT_PASS",True,flush=True)
+
+        term.set_edit_text("report")
+        extension.set_edit_text(".txt")
+        min_size.set_edit_text("7")
+        max_size.set_edit_text("9")
+        after.set_edit_text("2026-02-01")
+        before_date.set_edit_text("2026-02-28")
+        preset_name.set_edit_text("2월 중간 보고서")
+        safe_click(element("SearchPresetSaveButton"))
+        good(lambda:preset_file.is_file() and
+             "2월 중간 보고서\treport\t.txt" in
+             preset_file.read_text(encoding="utf-8"),
+             "Search v3 saved query preset was not durable",10)
+        print("REAL_SEARCH_V3_PRIVATE_PRESET_SAVE_PASS",True,flush=True)
+
+        # Restore legacy-default options before continuing existing recent
+        # search persistence acceptance.
+        extension.set_edit_text("")
+        min_size.set_edit_text("")
+        max_size.set_edit_text("")
+        after.set_edit_text("")
+        before_date.set_edit_text("")
         focus()
         target.wrapper_object().select(0)
         term.set_edit_text("readme")
@@ -367,6 +452,25 @@ def run(*,p,win,element,safe_click,focus,eventually,ownedwindows,
                      auto_id="RecentCountText").window_text()),
                  "restarted WinUI failed to reload two opted-in scopes",12)
             print("REAL_M19_SEARCH_RESTART_RECENTS_LOADED",2,flush=True)
+            preset_name2=restarted.child_window(auto_id="SearchPresetNameBox")
+            good(lambda:preset_name2.get_value()=="2월 중간 보고서",
+                 "Search v3 private preset name did not reload",8)
+            restarted.child_window(auto_id="SearchPresetApplyButton").click_input()
+            good(lambda:
+                 restarted.child_window(auto_id="SearchMinSizeBox").get_value()=="7" and
+                 restarted.child_window(auto_id="SearchMaxSizeBox").get_value()=="9" and
+                 restarted.child_window(auto_id="SearchModifiedAfterBox").get_value()=="2026-02-01" and
+                 restarted.child_window(auto_id="SearchModifiedBeforeBox").get_value()=="2026-02-28",
+                 "Search v3 saved criteria did not apply after restart",8)
+            restarted.child_window(auto_id="SearchRunButton").click_input()
+            good(lambda:"검색 결과 1개" in restarted.child_window(
+                     auto_id="SearchCountText").window_text(),
+                 "Search v3 reloaded preset did not execute",14)
+            restarted.child_window(auto_id="SearchPresetDeleteButton").click_input()
+            good(lambda:preset_file.is_file() and
+                 preset_file.read_text(encoding="utf-8").strip()=="schema=1",
+                 "Search v3 preset delete did not persist",8)
+            print("REAL_SEARCH_V3_PRESET_RESTART_APPLY_DELETE_PASS",True,flush=True)
         finally:
             if restart.poll() is None:
                 target=psutil.Process(restart.pid)

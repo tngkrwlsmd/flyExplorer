@@ -35,6 +35,10 @@ SearchController::StartStatus SearchController::validateRequest(
         return StartStatus::Started;
     case fxfile::preview::SearchQueryValidation::InvalidExtension:
         return StartStatus::InvalidExtension;
+    case fxfile::preview::SearchQueryValidation::InvalidSizeRange:
+        return StartStatus::InvalidSizeRange;
+    case fxfile::preview::SearchQueryValidation::InvalidDateRange:
+        return StartStatus::InvalidDateRange;
     case fxfile::preview::SearchQueryValidation::InvalidRegex:
         return StartStatus::InvalidPattern;
     default:

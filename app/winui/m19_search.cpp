@@ -51,6 +51,82 @@ bool literalMatches(
     return lower(name).find(lower(term))!=std::wstring::npos;
 }
 
+
+bool parseOptionalSizeKb(
+    std::wstring const& text,bool& has,std::uint64_t& bytes)
+{
+    has=!text.empty();bytes=0;
+    if(!has)return true;
+    if(text.size()>20)return false;
+    std::uint64_t value=0;
+    for(const auto ch:text){
+        if(ch<L'0'||ch>L'9')return false;
+        const auto digit=static_cast<std::uint64_t>(ch-L'0');
+        if(value>(UINT64_MAX-digit)/10)return false;
+        value=value*10+digit;
+    }
+    if(value>UINT64_MAX/1024)return false;
+    bytes=value*1024;
+    return true;
+}
+
+bool leap(int year){
+    return (year%4==0&&year%100!=0)||year%400==0;
+}
+
+bool parseDate(std::wstring const& text,std::uint32_t& key)
+{
+    key=0;
+    if(text.empty())return true;
+    if(text.size()!=10||text[4]!=L'-'||text[7]!=L'-')return false;
+    for(std::size_t i=0;i<text.size();++i)
+        if(i!=4&&i!=7&&(text[i]<L'0'||text[i]>L'9'))return false;
+    const int year=std::stoi(text.substr(0,4));
+    const int month=std::stoi(text.substr(5,2));
+    const int day=std::stoi(text.substr(8,2));
+    if(year<1601||year>9999||month<1||month>12)return false;
+    static constexpr int days[]=
+        {31,28,31,30,31,30,31,31,30,31,30,31};
+    const int maxDay=month==2&&leap(year)?29:days[month-1];
+    if(day<1||day>maxDay)return false;
+    key=static_cast<std::uint32_t>(year*10000+month*100+day);
+    return true;
+}
+
+std::uint32_t localDateKey(FILETIME const& value)
+{
+    FILETIME local{};
+    SYSTEMTIME time{};
+    if(!::FileTimeToLocalFileTime(&value,&local)||
+       !::FileTimeToSystemTime(&local,&time))return 0;
+    return static_cast<std::uint32_t>(
+        time.wYear*10000+time.wMonth*100+time.wDay);
+}
+
+bool criteriaMatch(
+    WIN32_FIND_DATAW const& fd,bool folderEntry,
+    SearchQuery const& query,
+    std::uint64_t minBytes,bool hasMin,
+    std::uint64_t maxBytes,bool hasMax,
+    std::uint32_t afterDate,std::uint32_t beforeDate)
+{
+    if((hasMin||hasMax)&&folderEntry)return false;
+    if(!folderEntry&&(hasMin||hasMax)){
+        ULARGE_INTEGER size{};
+        size.LowPart=fd.nFileSizeLow;
+        size.HighPart=fd.nFileSizeHigh;
+        if(hasMin&&size.QuadPart<minBytes)return false;
+        if(hasMax&&size.QuadPart>maxBytes)return false;
+    }
+    if(afterDate||beforeDate){
+        const auto key=localDateKey(fd.ftLastWriteTime);
+        if(!key)return false;
+        if(afterDate&&key<afterDate)return false;
+        if(beforeDate&&key>beforeDate)return false;
+    }
+    return true;
+}
+
 std::wstring recentFile(){
     wchar_t base[32768]{};
     const DWORD size=::GetEnvironmentVariableW(
@@ -83,8 +159,15 @@ bool exactWrite(HANDLE h,unsigned char const* p,size_t bytes){
 SearchQueryValidation validateSearchQuery(SearchQuery const& query) noexcept
 {
     try{
-        if(query.term.empty()||query.term.size()>256||
+        if(query.term.size()>256||
            query.term.find_first_of(L"\r\n")!=std::wstring::npos)
+            return SearchQueryValidation::InvalidTerm;
+
+        const bool hasCriterion=
+            !query.term.empty()||!query.extension.empty()||
+            !query.minSizeKb.empty()||!query.maxSizeKb.empty()||
+            !query.modifiedAfter.empty()||!query.modifiedBefore.empty();
+        if(!hasCriterion||(query.regex&&query.term.empty()))
             return SearchQueryValidation::InvalidTerm;
 
         auto extension=normalizeExtension(query.extension);
@@ -93,6 +176,19 @@ SearchQueryValidation validateSearchQuery(SearchQuery const& query) noexcept
            query.extension.find_first_of(L"\\/:*?\"<>|\r\n")!=
                std::wstring::npos)
             return SearchQueryValidation::InvalidExtension;
+
+        bool hasMin=false,hasMax=false;
+        std::uint64_t minBytes=0,maxBytes=0;
+        if(!parseOptionalSizeKb(query.minSizeKb,hasMin,minBytes)||
+           !parseOptionalSizeKb(query.maxSizeKb,hasMax,maxBytes)||
+           (hasMin&&hasMax&&minBytes>maxBytes))
+            return SearchQueryValidation::InvalidSizeRange;
+
+        std::uint32_t afterDate=0,beforeDate=0;
+        if(!parseDate(query.modifiedAfter,afterDate)||
+           !parseDate(query.modifiedBefore,beforeDate)||
+           (afterDate&&beforeDate&&afterDate>beforeDate))
+            return SearchQueryValidation::InvalidDateRange;
 
         if(query.regex){
             auto flags=std::regex_constants::ECMAScript;
@@ -111,6 +207,9 @@ SearchQueryValidation validateSearchQuery(SearchQuery const& query) noexcept
 bool sameSearchQuery(SearchQuery const& a,SearchQuery const& b) noexcept
 {
     return a.term==b.term&&a.extension==b.extension&&
+           a.minSizeKb==b.minSizeKb&&a.maxSizeKb==b.maxSizeKb&&
+           a.modifiedAfter==b.modifiedAfter&&
+           a.modifiedBefore==b.modifiedBefore&&
            a.regex==b.regex&&a.caseSensitive==b.caseSensitive&&
            a.kind==b.kind;
 }
@@ -132,6 +231,13 @@ SearchResults scanFiles(
     std::vector<std::pair<std::wstring,size_t>> pending{{folder,0}};
     size_t walked=0;
     const auto requestedExtension=normalizeExtension(query.extension);
+    bool hasMin=false,hasMax=false;
+    std::uint64_t minBytes=0,maxBytes=0;
+    (void)parseOptionalSizeKb(query.minSizeKb,hasMin,minBytes);
+    (void)parseOptionalSizeKb(query.maxSizeKb,hasMax,maxBytes);
+    std::uint32_t afterDate=0,beforeDate=0;
+    (void)parseDate(query.modifiedAfter,afterDate);
+    (void)parseDate(query.modifiedBefore,beforeDate);
     std::wregex pattern;
     if(query.regex){
         auto flags=std::regex_constants::ECMAScript;
@@ -163,12 +269,14 @@ SearchResults scanFiles(
             const bool folderEntry=
                 (fd.dwFileAttributes&FILE_ATTRIBUTE_DIRECTORY)!=0;
 
-            bool nameMatch=false;
-            if(query.regex)
-                nameMatch=std::regex_search(fd.cFileName,pattern);
-            else
-                nameMatch=literalMatches(
-                    fd.cFileName,query.term,query.caseSensitive);
+            bool nameMatch=query.term.empty();
+            if(!query.term.empty()){
+                if(query.regex)
+                    nameMatch=std::regex_search(fd.cFileName,pattern);
+                else
+                    nameMatch=literalMatches(
+                        fd.cFileName,query.term,query.caseSensitive);
+            }
 
             const bool extensionMatch=
                 folderEntry?requestedExtension.empty():
@@ -176,7 +284,10 @@ SearchResults scanFiles(
                     fd.cFileName,requestedExtension,query.caseSensitive);
 
             if(kindMatches(folderEntry,query.kind)&&
-               nameMatch&&extensionMatch){
+               nameMatch&&extensionMatch&&
+               criteriaMatch(fd,folderEntry,query,
+                             minBytes,hasMin,maxBytes,hasMax,
+                             afterDate,beforeDate)){
                 ++out.count;
                 if(out.matches.size()<kMaxResults)
                     out.matches.push_back(candidate);

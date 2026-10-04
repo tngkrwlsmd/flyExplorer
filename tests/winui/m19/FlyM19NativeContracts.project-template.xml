@@ -48,9 +48,11 @@
     <ClCompile Include="m19_native_fixture.cpp" />
     <ClCompile Include="..\..\..\app\winui\m19_workspace.cpp" />
     <ClCompile Include="..\..\..\app\winui\m19_search.cpp" />
+    <ClCompile Include="..\..\..\src\base\search_preset_store.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\..\src\base\shell_navigation_core.h" />
+    <ClInclude Include="..\..\..\src\base\search_preset_store.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
 </Project>

@@ -1,6 +1,7 @@
 // Test-owned native M1.9 workspace/search bridge contract, no MFC profile.
 #include "m19_workspace.h"
 #include "m19_search.h"
+#include "../../../src/base/search_preset_store.h"
 #include <windows.h>
 #include <atomic>
 #include <cstdio>
@@ -133,6 +134,24 @@ int wmain(int argc,wchar_t** argv){
         ::CloseHandle(file);
         return true;
     };
+    auto sizeAndDate=[&](std::wstring const& path,
+                         std::uint64_t bytes,
+                         WORD year,WORD month,WORD day){
+        HANDLE file=::CreateFileW(path.c_str(),GENERIC_WRITE,0,nullptr,
+            OPEN_EXISTING,FILE_ATTRIBUTE_NORMAL,nullptr);
+        if(file==INVALID_HANDLE_VALUE)return false;
+        LARGE_INTEGER size{};size.QuadPart=static_cast<LONGLONG>(bytes);
+        bool ok=::SetFilePointerEx(file,size,nullptr,FILE_BEGIN)!=FALSE&&
+                ::SetEndOfFile(file)!=FALSE;
+        SYSTEMTIME local{};
+        local.wYear=year;local.wMonth=month;local.wDay=day;local.wHour=12;
+        FILETIME localFt{},utcFt{};
+        ok=ok&&::SystemTimeToFileTime(&local,&localFt)!=FALSE&&
+              ::LocalFileTimeToFileTime(&localFt,&utcFt)!=FALSE&&
+              ::SetFileTime(file,nullptr,nullptr,&utcFt)!=FALSE;
+        ::CloseHandle(file);
+        return ok;
+    };
     const auto reportUpper=left+L"\\Report-2026.TXT";
     const auto reportLower=left+L"\\report-2025.txt";
     const auto notes=left+L"\\notes.md";
@@ -142,6 +161,12 @@ int wmain(int argc,wchar_t** argv){
     if(!touch(reportUpper)||!touch(reportLower)||!touch(notes)||
        !::CreateDirectoryW(reportFolder.c_str(),nullptr)||
        !touch(nestedReport)||!touch(korean))return 95;
+
+    if(!sizeAndDate(reportUpper,4096,2026,1,15)||
+       !sizeAndDate(reportLower,16384,2025,6,10)||
+       !sizeAndDate(notes,2048,2024,3,20)||
+       !sizeAndDate(nestedReport,8192,2026,2,5)||
+       !sizeAndDate(korean,12288,2026,4,1))return 94;
 
     auto cancel=std::make_shared<std::atomic_bool>(false);
     auto result=fxfile::preview::scanFiles(left,L"owned-needle",cancel);
@@ -204,6 +229,85 @@ int wmain(int argc,wchar_t** argv){
     expect(unicodeResult.valid&&unicodeResult.count==1&&
            unicodeResult.matches[0]==korean,
            "UNICODE_LITERAL_EXTENSION_MATCH");
+
+    fxfile::preview::SearchQuery sizeOnly{};
+    sizeOnly.minSizeKb=L"10";
+    sizeOnly.maxSizeKb=L"13";
+    auto sizeResult=fxfile::preview::scanFiles(left,sizeOnly,cancel);
+    expect(sizeResult.valid&&sizeResult.count==1&&
+           sizeResult.matches[0]==korean,
+           "SIZE_ONLY_QUERY_WITH_EMPTY_TERM");
+
+    fxfile::preview::SearchQuery dateOnly{};
+    dateOnly.modifiedAfter=L"2026-02-01";
+    dateOnly.modifiedBefore=L"2026-02-28";
+    auto dateResult=fxfile::preview::scanFiles(left,dateOnly,cancel);
+    expect(dateResult.valid&&dateResult.count==1&&
+           dateResult.matches[0]==nestedReport,
+           "LOCAL_MODIFIED_DATE_RANGE");
+
+    fxfile::preview::SearchQuery compound{};
+    compound.term=L"report";
+    compound.extension=L"txt";
+    compound.minSizeKb=L"7";
+    compound.maxSizeKb=L"9";
+    compound.modifiedAfter=L"2026-02-01";
+    compound.modifiedBefore=L"2026-02-28";
+    auto compoundResult=fxfile::preview::scanFiles(left,compound,cancel);
+    expect(compoundResult.valid&&compoundResult.count==1&&
+           compoundResult.matches[0]==nestedReport,
+           "NAME_EXTENSION_SIZE_DATE_AND_QUERY");
+
+    fxfile::preview::SearchQuery invalidSize{};
+    invalidSize.term=L"report";invalidSize.minSizeKb=L"20";
+    invalidSize.maxSizeKb=L"10";
+    expect(fxfile::preview::validateSearchQuery(invalidSize)==
+           fxfile::preview::SearchQueryValidation::InvalidSizeRange,
+           "INVALID_SIZE_RANGE_REJECTED");
+
+    fxfile::preview::SearchQuery invalidDate{};
+    invalidDate.term=L"report";invalidDate.modifiedAfter=L"2026-02-30";
+    expect(fxfile::preview::validateSearchQuery(invalidDate)==
+           fxfile::preview::SearchQueryValidation::InvalidDateRange,
+           "INVALID_DATE_SYNTAX_REJECTED");
+
+    fxfile::preview::SearchQuery reversedDate{};
+    reversedDate.term=L"report";reversedDate.modifiedAfter=L"2026-04-01";
+    reversedDate.modifiedBefore=L"2026-02-01";
+    expect(fxfile::preview::validateSearchQuery(reversedDate)==
+           fxfile::preview::SearchQueryValidation::InvalidDateRange,
+           "REVERSED_DATE_RANGE_REJECTED");
+
+    fxfile::preview::SearchQuery folderSize{};
+    folderSize.term=L"Report";
+    folderSize.kind=fxfile::preview::SearchEntryKind::Folders;
+    folderSize.minSizeKb=L"1";
+    auto folderSizeResult=fxfile::preview::scanFiles(left,folderSize,cancel);
+    expect(folderSizeResult.valid&&folderSizeResult.count==0,
+           "SIZE_CRITERIA_EXCLUDES_FOLDERS");
+
+    using PresetStore=fxfile::searchpresets::Store;
+    using PresetResult=fxfile::searchpresets::MutationResult;
+    PresetStore presets;
+    fxfile::searchpresets::Preset preset{};
+    preset.name=L"이번 달 보고서";
+    preset.term=L"report";preset.extension=L"txt";
+    preset.minSizeKb=L"7";preset.maxSizeKb=L"9";
+    preset.modifiedAfter=L"2026-02-01";
+    preset.modifiedBefore=L"2026-02-28";
+    expect(presets.add(preset)==PresetResult::Applied&&
+           presets.add(preset)==PresetResult::Duplicate,
+           "SEARCH_PRESET_ADD_DUPLICATE_BOUNDARY");
+    const auto presetFile=root+L"\\search-presets.txt";
+    PresetStore reloaded;
+    expect(presets.saveTo(presetFile)&&reloaded.loadFrom(presetFile)&&
+           reloaded.items().size()==1&&
+           reloaded.items()[0].modifiedAfter==L"2026-02-01"&&
+           reloaded.items()[0].minSizeKb==L"7",
+           "SEARCH_PRESET_ATOMIC_RESTART_PERSISTENCE");
+    expect(reloaded.erase(0)&&reloaded.items().empty(),
+           "SEARCH_PRESET_DELETE");
+    ::DeleteFileW(presetFile.c_str());
 
     cancel->store(true);
     expect(fxfile::preview::scanFiles(

@@ -5,6 +5,7 @@
 #define FLYEXPLORER_WINUI_PREVIEW_M19_SEARCH_H
 #include <atomic>
 #include <cstddef>
+#include <cstdint>
 #include <memory>
 #include <string>
 #include <vector>
@@ -20,6 +21,10 @@ enum class SearchEntryKind {
 struct SearchQuery {
     std::wstring term;
     std::wstring extension;
+    std::wstring minSizeKb;
+    std::wstring maxSizeKb;
+    std::wstring modifiedAfter;
+    std::wstring modifiedBefore;
     bool regex=false;
     bool caseSensitive=false;
     SearchEntryKind kind=SearchEntryKind::Files;
@@ -29,6 +34,8 @@ enum class SearchQueryValidation {
     Valid,
     InvalidTerm,
     InvalidExtension,
+    InvalidSizeRange,
+    InvalidDateRange,
     InvalidRegex,
 };
 
