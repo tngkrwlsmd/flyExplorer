@@ -179,26 +179,37 @@ def main():
             def progress_text():
                 control=more_control()
                 return control.window_text() if control.exists(timeout=.2) and control.is_visible() else ""
+            def footer_count():
+                control=fresh_parent().child_window(auto_id="ItemCountText")
+                if not control.exists(timeout=.2):
+                    return 0
+                digits="".join(ch for ch in control.window_text() if ch.isdigit())
+                return int(digits) if digits else 0
             def fresh_first_row():
                 matches=[v for v in fresh_parent().child_window(
                    auto_id="LeftFiles").descendants()
                    if v.element_info.control_type=="ListItem"]
                 return matches[0].window_text() if matches else ""
+            shown=0
             for _ in range(180):
                 text=progress_text()
                 head=text.split("/",1)[0]
                 try:
-                    if int(head)>20000:
-                        break
+                    shown=max(shown,int(head))
                 except ValueError:
                     pass
-                before=text
+                shown=max(shown,footer_count())
+                if shown>20000:
+                    break
+                before=(text,footer_count())
+                until(lambda:more_control().exists(timeout=.2) and
+                      more_control().is_visible(),
+                      "browse-over-20k load-more action disappeared before completion",14)
                 more_control().click_input()
-                until(lambda:progress_text()!=before,
+                until(lambda:(progress_text(),footer_count())!=before,
                       "browse-over-20k progress did not advance",14)
-            progress=progress_text()
-            shown=int(progress.split("/",1)[0])
-            assert shown>20000,progress
+            shown=max(shown,footer_count())
+            assert shown>20000,(progress_text(),footer_count())
             def previous_visible():
                 control=fresh_parent().child_window(auto_id="LeftLoadPreviousButton")
                 return control.exists(timeout=.2) and control.is_visible()
