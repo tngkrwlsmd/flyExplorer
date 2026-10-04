@@ -64,6 +64,15 @@ to learn that JSON metadata is invalid, a module cannot import, a branch does
 not exist, a Markdown sentence wrapped, or an automation method name was
 invented.
 
+Use `tools/winui/validate_remote_request.py` as the canonical request-shape
+validator and keep `tests/winui/test_gui_harness_contract.py` in the source
+contract set for Python/pywinauto harness sanity. Run those checks locally when
+a checkout/interpreter is available; otherwise mechanically evaluate the same
+assertions from repository content before the request commit. This preflight is
+not a reason to introduce GitHub-hosted/cloud compute, and it must not be
+deferred into a Windows VM task. The self-hosted workflow checks are only a
+fallback guard after the zero-run preflight already passed.
+
 The request workflow fingerprints validation as
 `candidate_sha + configuration + sorted(validation_kind)` and rejects an
 already-requested fingerprint before the remote command executes. Do not evade
