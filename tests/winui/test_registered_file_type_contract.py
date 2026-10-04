@@ -83,6 +83,7 @@ class RealFileListColumnContract(unittest.TestCase):
    self.assertIn(item,impl)
   self.assertEqual(xml.count('PointerPressed="OnDetailColumnResizePointerPressed"'),6)
   self.assertEqual(xml.count('PointerMoved="OnDetailColumnResizePointerMoved"'),6)
+  self.assertEqual(xml.count('Style="{StaticResource ExplorerColumnResizeThumbStyle}" Margin="0,1,0,1" IsHitTestVisible="False"'),6)
   self.assertNotIn("RootShell().AddHandler(",impl)
   self.assertNotIn("OnDetailColumnResizeDragDelta",xml)
   self.assertNotIn("OnDetailColumnResizeDragDelta",impl)
