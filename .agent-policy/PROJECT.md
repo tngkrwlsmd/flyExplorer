@@ -26,7 +26,7 @@ consumer core; this PROJECT.md remains project-owned across bundle refreshes.
     {"name": "winui-tests", "path": "tests/winui", "responsibility": "source, native and owned GUI contracts"}
   ],
   "review": {
-    "reviewed_revision": "fb92b9dd03c90ce3e3434270bff3cc5be8714cad",
+    "reviewed_revision": "f7f3674e5271c17652a865cf2ed499185983d1eb",
     "reviewed_at": "2026-10-04",
     "reviewed_paths": [
       "app/winui",
@@ -121,6 +121,40 @@ existing depth-5, 2,500-entry walk and 100-result bounds, cancellation,
 stale-result rejection and opt-in recent-scope persistence remain in force.
 
 ## Current verification
+
+Model-level large-folder page streaming is accepted on product revision
+`f7f3674e5271c17652a865cf2ed499185983d1eb`. The isolated Shell helper still returns one bounded protocol-v3
+page at a time (maximum 1,024 entries and 8 MiB per response), but the
+supervisor no longer aggregates all continuation pages before reporting
+navigation. The first page is accepted into the active Shell session and
+rendered immediately; later pages are requested through a continuation action
+and appended only when route, request identity, folder PIDL and expected child
+offset still match.
+
+WinUI keeps the existing 160-row render window. A truncated model is exposed
+with a `+` suffix such as `160/1024+`. View-page requests can request another
+Shell page when the currently loaded model is exhausted. Operations that require
+a complete bounded model, including global sort and non-empty pane filtering,
+set a completion intent and pull continuation pages until the folder ends or
+the existing 20,000-entry aggregate safety bound is reached. Optional metadata,
+thumbnail and Shell-visual detail work remains deferred while the snapshot is
+truncated.
+
+Remote run `37177222154` passed canonical structure 4/4, source contracts
+223/223, the canonical Release build, the real helper protocol-v3 process
+regression including offset/limit paging, and an owned Release folder containing
+8,000 files. The actual WinUI first rendered the initial 1,024-item model in
+2.71 seconds, showed the initial streamed-page marker, then completed the
+remaining pages for global name-descending sort and reached `bench-7999.txt`.
+The GUI also proved the completed `8000` model before the post-stream view page,
+kept protected legacy settings unchanged and exited normally. `git diff
+--check` passed.
+
+This closes the prior "model waits for the full aggregated transport snapshot"
+gap. It does not make enumeration unbounded: the 20,000-entry aggregate/model
+ceiling remains a deliberate safety bound, and full-model global sort/filter
+still requires completing pages up to that bound. Network/virtual provider
+behavior and sustained thumbnail-cache behavior remain separate open gates.
 
 Paged isolated Shell enumeration beyond the former 6,000-entry single-frame
 ceiling is accepted on product revision `fb92b9dd03c90ce3e3434270bff3cc5be8714cad`. The private helper

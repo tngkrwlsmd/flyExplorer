@@ -152,6 +152,26 @@ bootstrap configuration.
 
 ## Latest verified evidence
 
+Model-level large-folder page streaming is accepted on product revision
+`f7f3674e5271c17652a865cf2ed499185983d1eb`. Protocol-v3 Shell transport remains bounded to 1,024 entries
+and 8 MiB per helper response, while the active navigation model now accepts the
+first page immediately and appends validated continuation pages on demand rather
+than waiting for the supervisor to aggregate the whole folder first. The WinUI
+list remains render-paged at 160 rows and marks incomplete models with a `+`
+suffix. Global sort and non-empty pane filtering complete the bounded streamed
+model before producing final results. The existing 20,000-entry safety ceiling
+remains in force.
+
+Evidence: remote run `37177222154` passed canonical structure 4/4, source
+contracts 223/223, the canonical Release build and the real protocol-v3 helper
+regression. An owned Release folder with 8,000 files first rendered its 1,024
+loaded items in 2.71 seconds, then the existing GUI path completed continuation
+pages for global name-descending sort and reached `bench-7999.txt`.
+`OWNED_LARGE_MODEL_STREAMING_INITIAL_1024` and
+`OWNED_LARGE_MODEL_STREAMING_SORT_COMPLETES_8000` both passed, protected
+legacy settings remained unchanged, and `git diff --check` passed.
+
+
 Paged isolated Shell enumeration beyond the former 6,000-entry single-frame
 ceiling is accepted on product revision `fb92b9dd03c90ce3e3434270bff3cc5be8714cad`. Wire protocol v3
 limits each disposable helper response to 1,024 entries and 8 MiB, while the
@@ -395,14 +415,14 @@ distribution remain separate gates.
 ## Known functional coverage limits
 
 Current source and the last parity evidence still show these limits:
-- Local filesystem Shell enumeration now uses protocol-v3 transport paging:
+- Local filesystem Shell enumeration uses protocol-v3 page transport:
   1,024 entries per isolated helper response, an 8 MiB per-response body bound,
-  and a 20,000-entry aggregated navigation-snapshot bound. Owned Release
-  evidence covers 8,000-file navigation, global name sort and progressive
-  160-item rendering. This removes the former 6,000-entry single-frame ceiling,
-  but true model-level streaming virtualization beyond the aggregated snapshot,
-  network/virtual providers and sustained thumbnail-cache behavior are not
-  certified.
+  and a 20,000-entry model safety bound. The active model now accepts the first
+  page immediately and appends continuation pages on demand; owned Release
+  evidence covers an 8,000-file initial 1,024-item render followed by complete
+  global name sort and progressive 160-row rendering. Unbounded virtualization
+  beyond the 20,000-item model ceiling, network/virtual providers and sustained
+  thumbnail-cache behavior are not certified.
 - Search remains bounded. Regex, case sensitivity, entry-kind,
   single-extension, minimum/maximum file size, inclusive local modified-date
   and literal text content conditions are implemented with up to 20 private
