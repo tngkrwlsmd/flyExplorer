@@ -60,15 +60,32 @@ class LargeFolderStreamingContracts(unittest.TestCase):
         self.assertIn("logicalIndex(std::size_t resident)",core)
         self.assertIn("residentIndex(std::uint64_t logical",core)
         self.assertIn("std::size_t renderedBaseOffset=0",state)
+        self.assertIn("std::vector<std::uint64_t> renderedLogical",state)
         self.assertIn("snapshot.logicalIndex(index)",main)
-        self.assertIn("renderedState.renderedBaseOffset",main)
+        self.assertIn("renderedState.renderedLogical",main)
         for source in consumers:
             self.assertNotIn("unbox_value<uint32_t>(row.Tag())",source)
             self.assertNotIn("unbox_value<uint32_t>(entry.Tag())",source)
         self.assertGreaterEqual(
-            sum("residentIndex(logical,index)" in source for source in consumers),
+            sum("indexedItem(" in source for source in consumers),
             4,
         )
+
+    def test_session_retains_lightweight_name_index_beyond_resident_window(self):
+        core=read("src/base/shell_navigation_core.h")
+        cpp=read("src/base/shell_navigation_core.cpp")
+        main=read("app/winui/MainWindow.xaml.cpp")
+        state=read("app/winui/file_list_state.h")
+        self.assertIn("struct IndexedItem final",core)
+        self.assertIn("std::vector<IndexedItem> nameIndex_",core)
+        self.assertIn("indexedFrontier() const noexcept",core)
+        self.assertIn("mergeIndexPage(Snapshot const& page)",core+cpp)
+        self.assertIn("page.baseOffset>nameIndex_.size()",cpp)
+        self.assertIn("state.indexedNameProjection",main)
+        self.assertIn("state.indexToComplete",main)
+        self.assertIn("session.nameIndex()",main)
+        self.assertIn("session.indexedFrontier()==snapshot.nextOffset",main)
+        self.assertIn("bool indexedNameSort=false",state)
 
     def test_ui_browses_window_and_rebuilds_complete_model_for_sort_filter(self):
         main=read("app/winui/MainWindow.xaml.cpp")
