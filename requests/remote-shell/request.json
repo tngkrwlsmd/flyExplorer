@@ -1,17 +1,15 @@
 {
-  "request_id": "validation-churn-guards-runtime-duplicate-001",
+  "request_id": "validation-churn-guards-cleanup-001",
   "expected_main_sha": "a68626830efb6e251c43d4667b4cae93bb35885c",
   "candidate_sha": "a68626830efb6e251c43d4667b4cae93bb35885c",
-  "logical_unit": "validation-churn-guards",
-  "configuration": "Release",
+  "logical_unit": "validation-churn-guards-cleanup",
+  "configuration": "none",
   "validation_kind": [
-    "source"
+    "none"
   ],
-  "invalidated_evidence": {
-    "source": "remote workflow schema, rerun guards, policy contracts and their focused source test changed"
-  },
+  "invalidated_evidence": {},
   "retry_reason": "",
   "retry_revision": "",
   "working_directory": "C:\\dev\\flyExplorer",
-  "command": "$ErrorActionPreference = \"Stop\"\ngit fetch origin main --no-tags --prune\nif ($LASTEXITCODE -ne 0) { throw \"fetch main failed\" }\nif ((git rev-parse origin/main).Trim() -ne \"a68626830efb6e251c43d4667b4cae93bb35885c\") { throw \"main moved\" }\nif ((git status --short).Count -ne 0) { throw \"dirty persistent checkout\" }\ngit checkout main\nif ($LASTEXITCODE -ne 0) { throw \"checkout main failed\" }\ngit merge --ff-only origin/main\nif ($LASTEXITCODE -ne 0) { throw \"main fast-forward failed\" }\npython -X utf8 tests\\winui\\test_remote_windows_task_contract.py\nif ($LASTEXITCODE -ne 0) { throw \"focused remote workflow contract failed\" }\ngit diff --check HEAD^..HEAD\nif ($LASTEXITCODE -ne 0) { throw \"main diff check failed\" }\nWrite-Host \"VALIDATION_CHURN_GUARDS_RUNTIME_PASS\"\n"
+  "command": "$ErrorActionPreference = \"Stop\"\ngit fetch origin main --no-tags --prune\nif ($LASTEXITCODE -ne 0) { throw \"fetch main failed\" }\nif ((git rev-parse origin/main).Trim() -ne \"a68626830efb6e251c43d4667b4cae93bb35885c\") { throw \"main moved\" }\ngit -C $env:GITHUB_WORKSPACE push origin --delete work/validation-churn-guards\nif ($LASTEXITCODE -ne 0) { throw \"work branch cleanup failed\" }\nWrite-Host \"VALIDATION_CHURN_GUARDS_WORK_BRANCH_DELETED\"\n"
 }
