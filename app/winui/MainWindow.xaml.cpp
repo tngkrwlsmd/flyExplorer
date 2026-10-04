@@ -92,37 +92,27 @@ namespace winrt::FlyExplorer::implementation
     MainWindow::MainWindow()
     {
         InitializeComponent();
-        auto wireResizePointer=[this](
-            Microsoft::UI::Xaml::Controls::Primitives::Thumb const& thumb){
-            using Microsoft::UI::Xaml::Input::PointerEventHandler;
-            using Microsoft::UI::Xaml::UIElement;
-            thumb.AddHandler(
-                UIElement::PointerPressedEvent(),
-                winrt::box_value(PointerEventHandler{
-                    this,&MainWindow::OnDetailColumnResizePointerPressed}),
-                true);
-            thumb.AddHandler(
-                UIElement::PointerMovedEvent(),
-                winrt::box_value(PointerEventHandler{
-                    this,&MainWindow::OnDetailColumnResizePointerMoved}),
-                true);
-            thumb.AddHandler(
-                UIElement::PointerReleasedEvent(),
-                winrt::box_value(PointerEventHandler{
-                    this,&MainWindow::OnDetailColumnResizePointerReleased}),
-                true);
-            thumb.AddHandler(
-                UIElement::PointerCaptureLostEvent(),
-                winrt::box_value(PointerEventHandler{
-                    this,&MainWindow::OnDetailColumnResizePointerCaptureLost}),
-                true);
-        };
-        wireResizePointer(LeftNameColumnResizeThumb());
-        wireResizePointer(LeftTypeColumnResizeThumb());
-        wireResizePointer(LeftSizeColumnResizeThumb());
-        wireResizePointer(RightNameColumnResizeThumb());
-        wireResizePointer(RightTypeColumnResizeThumb());
-        wireResizePointer(RightSizeColumnResizeThumb());
+        using Microsoft::UI::Xaml::Input::PointerEventHandler;
+        RootShell().AddHandler(
+            UIElement::PointerPressedEvent(),
+            winrt::box_value(PointerEventHandler{
+                this,&MainWindow::OnDetailColumnResizePointerPressed}),
+            true);
+        RootShell().AddHandler(
+            UIElement::PointerMovedEvent(),
+            winrt::box_value(PointerEventHandler{
+                this,&MainWindow::OnDetailColumnResizePointerMoved}),
+            true);
+        RootShell().AddHandler(
+            UIElement::PointerReleasedEvent(),
+            winrt::box_value(PointerEventHandler{
+                this,&MainWindow::OnDetailColumnResizePointerReleased}),
+            true);
+        RootShell().AddHandler(
+            UIElement::PointerCaptureLostEvent(),
+            winrt::box_value(PointerEventHandler{
+                this,&MainWindow::OnDetailColumnResizePointerCaptureLost}),
+            true);
         // M2.6 uses the public WinUI 3 custom-titlebar/backdrop path only.
         // Pane-local folder TabViews remain inside each pane; the titlebar now
         // hosts a separate functional WindowTab workspace strip.
@@ -773,18 +763,25 @@ namespace winrt::FlyExplorer::implementation
         if(mColumnControlsReady)ApplyDetailColumnLayout(side);
     }
     void MainWindow::OnDetailColumnResizePointerPressed(
-        IInspectable const& sender,
+        IInspectable const&,
         Microsoft::UI::Xaml::Input::PointerRoutedEventArgs const& args){
-        auto thumb=sender.try_as<
-            Microsoft::UI::Xaml::Controls::Primitives::Thumb>();
-        if(!thumb||!thumb.Tag())return;
+        auto node=args.OriginalSource().try_as<DependencyObject>();
+        Microsoft::UI::Xaml::Controls::Primitives::Thumb thumb{nullptr};
+        while(node){
+            thumb=node.try_as<
+                Microsoft::UI::Xaml::Controls::Primitives::Thumb>();
+            if(thumb)break;
+            node=Microsoft::UI::Xaml::Media::VisualTreeHelper::GetParent(node);
+        }
+        if(!thumb||!thumb.Tag()||
+           std::wstring(thumb.Name().c_str()).find(
+               L"ColumnResizeThumb")==std::wstring::npos)return;
         const auto tag=std::wstring(
             winrt::unbox_value<hstring>(thumb.Tag()).c_str());
         if(tag.size()!=3||tag[1]!=L','||
            tag[0]<L'0'||tag[0]>L'1'||
            tag[2]<L'0'||tag[2]>L'2')return;
         const auto point=args.GetCurrentPoint(RootShell());
-        if(!point.Properties().IsLeftButtonPressed())return;
         const int side=tag[0]-L'0';
         const int column=tag[2]-L'0';
         if(ActiveWindowTab().model.activePane!=side)ActivatePane(side);
@@ -792,19 +789,14 @@ namespace winrt::FlyExplorer::implementation
         mDetailColumnPointerSide=side;
         mDetailColumnPointerColumn=column;
         mDetailColumnPointerLastX=point.Position().X;
-        thumb.CapturePointer(args.Pointer());
         args.Handled(true);
     }
     void MainWindow::OnDetailColumnResizePointerMoved(
-        IInspectable const& sender,
+        IInspectable const&,
         Microsoft::UI::Xaml::Input::PointerRoutedEventArgs const& args){
-        if(!mDetailColumnPointerDrag)return;
-        auto thumb=sender.try_as<
-            Microsoft::UI::Xaml::Controls::Primitives::Thumb>();
-        if(!thumb)return;
-        const auto point=args.GetCurrentPoint(RootShell());
-        if(!point.Properties().IsLeftButtonPressed())return;
-        const auto currentX=point.Position().X;
+        if(!mDetailColumnPointerDrag||
+           (::GetAsyncKeyState(VK_LBUTTON)&0x8000)==0)return;
+        const auto currentX=args.GetCurrentPoint(RootShell()).Position().X;
         const auto delta=currentX-mDetailColumnPointerLastX;
         if(std::abs(delta)<0.25)return;
         mDetailColumnPointerLastX=currentX;
@@ -822,11 +814,9 @@ namespace winrt::FlyExplorer::implementation
         args.Handled(true);
     }
     void MainWindow::OnDetailColumnResizePointerReleased(
-        IInspectable const& sender,
+        IInspectable const&,
         Microsoft::UI::Xaml::Input::PointerRoutedEventArgs const& args){
-        auto thumb=sender.try_as<
-            Microsoft::UI::Xaml::Controls::Primitives::Thumb>();
-        if(thumb)thumb.ReleasePointerCapture(args.Pointer());
+        if(!mDetailColumnPointerDrag)return;
         mDetailColumnPointerDrag=false;
         mDetailColumnPointerSide=-1;
         mDetailColumnPointerColumn=-1;
