@@ -553,6 +553,7 @@ namespace winrt::FlyExplorer::implementation
                 auto& state=ActiveWindowTab().fileLists[completed.side];
                 auto const& pane=ActiveWindowTab().model.panes[completed.side];
                 state.streamToComplete=false;
+                state.indexToComplete=false;
                 state.visibleCount=(std::min)(
                     state.visibleCount,
                     pane.tabs[pane.active].snapshot().children.size());
@@ -583,6 +584,7 @@ namespace winrt::FlyExplorer::implementation
             if(completed.active&&continuation){
                 auto& state=ActiveWindowTab().fileLists[completed.side];
                 state.streamToComplete=false;
+                state.indexToComplete=false;
                 FillFiles(completed.side);
                 UpdateFooterSummary();
                 StatusText().Text(
@@ -600,12 +602,15 @@ namespace winrt::FlyExplorer::implementation
                 auto& state=ActiveWindowTab().fileLists[completed.side];
                 auto& pane=ActiveWindowTab().model.panes[completed.side];
                 auto& session=pane.tabs[pane.active];
-                if(!state.streamToComplete&&state.sortMode==0&&
-                   state.filenameFilter.empty()){
+                const bool boundedResident=
+                    state.indexToComplete||
+                    (!state.streamToComplete&&state.sortMode==0&&
+                     state.filenameFilter.empty());
+                if(boundedResident){
                     if(completed.pageDirection==PageDirection::Forward){
                         const auto evicted=session.trimResidentFront(
                             fxfile::shellnav::kResidentWindowEntries);
-                        if(evicted){
+                        if(evicted&&!state.indexedNameProjection){
                             state.visibleCount=state.visibleCount>evicted?
                                 state.visibleCount-evicted:
                                 (std::min)(
@@ -615,9 +620,10 @@ namespace winrt::FlyExplorer::implementation
                     }else if(completed.pageDirection==PageDirection::Backward){
                         session.trimResidentBack(
                             fxfile::shellnav::kResidentWindowEntries);
-                        state.visibleCount=(std::min)(
-                            state.visibleCount,
-                            session.snapshot().children.size());
+                        if(!state.indexedNameProjection)
+                            state.visibleCount=(std::min)(
+                                state.visibleCount,
+                                session.snapshot().children.size());
                     }
                 }
                 ClearFileDetails(completed.side);
@@ -625,16 +631,20 @@ namespace winrt::FlyExplorer::implementation
                 UpdateSelectionChrome();
                 UpdateFooterSummary();
                 auto const& snapshot=session.snapshot();
-                const bool incomplete=
-                    snapshot.baseOffset||
-                    snapshot.residentEndOffset()<snapshot.nextOffset||
-                    snapshot.truncated;
+                const bool incomplete=state.indexToComplete?
+                    (snapshot.residentEndOffset()<snapshot.nextOffset||
+                     snapshot.truncated):
+                    (snapshot.baseOffset||
+                     snapshot.residentEndOffset()<snapshot.nextOffset||
+                     snapshot.truncated);
                 if(state.streamToComplete&&incomplete){
                     if(QueueNextFolderPage(completed.side,true))return;
                     if(state.fullModelLimitReached)return;
                     state.streamToComplete=false;
+                    state.indexToComplete=false;
                 }else if(!incomplete){
                     state.streamToComplete=false;
+                    state.indexToComplete=false;
                 }
                 StatusText().Text(
                     completed.pageDirection==PageDirection::Backward?
