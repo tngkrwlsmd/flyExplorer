@@ -44,18 +44,22 @@ struct Item final {
     bool isFolder() const noexcept {return (attributes&SFGAO_FOLDER)!=0;}
     bool isFileSystem() const noexcept {return (attributes&SFGAO_FILESYSTEM)!=0;}
 };
+constexpr std::size_t kResidentWindowEntries=2048;
+
 struct Snapshot final {
     Location folder;
     std::wstring displayName;
     std::wstring parsingName;
     std::vector<Item> children;
     // Logical enumeration coordinates are independent from resident children.
-    // Today baseOffset remains zero because all accepted pages stay resident;
-    // keeping these coordinates explicit allows a later bounded resident window
-    // without reusing children.size() as the Shell continuation cursor.
+    // baseOffset may move as a bounded resident window evicts old pages, while
+    // nextOffset remains the furthest validated forward enumeration frontier.
     std::size_t baseOffset=0;
     std::size_t nextOffset=0;
     bool truncated=false;
+    std::size_t residentEndOffset() const noexcept {
+        return baseOffset+children.size();
+    }
     std::uint64_t logicalIndex(std::size_t resident) const noexcept {
         return static_cast<std::uint64_t>(baseOffset)+resident;
     }
@@ -97,6 +101,9 @@ public:
     // COM worker; no Shell API call is made on the receiving UI thread.
     HRESULT accept(Snapshot&& prepared,HistoryAction action) noexcept;
     HRESULT appendPage(Snapshot&& page,std::size_t expectedOffset) noexcept;
+    HRESULT prependPage(Snapshot&& page,std::size_t expectedEnd) noexcept;
+    std::size_t trimResidentFront(std::size_t maximum) noexcept;
+    std::size_t trimResidentBack(std::size_t maximum) noexcept;
     // Clone only a PIDL; never transfer the worker's COM interface.
     Location target(HistoryAction action) const;
     HRESULT open(std::wstring const& parsingName) noexcept;
