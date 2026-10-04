@@ -34,7 +34,7 @@ public:
                          NavigationAction action);
     std::uint64_t submitParsing(int pane,std::uint64_t route,std::wstring path);
     std::uint64_t submitPage(int pane,std::uint64_t route,Location target,
-                             std::uint32_t offset);
+                             std::uint32_t offset,std::uint32_t limit=0);
     void forget(std::uint64_t route);
     void shutdown() noexcept;
 #if defined(_DEBUG)
