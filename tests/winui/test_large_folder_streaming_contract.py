@@ -84,6 +84,7 @@ class LargeFolderStreamingContracts(unittest.TestCase):
         self.assertIn("state.indexedNameProjection",main)
         self.assertIn("state.indexToComplete",main)
         self.assertIn("session.nameIndex()",main)
+        self.assertIn("state.indexedNameProjection&&!state.indexToComplete&&mode<=1",main)
         self.assertIn("session.indexedFrontier()==snapshot.nextOffset",main)
         self.assertIn("state.indexedNameSort=state.sortMode<=1",main)
         self.assertIn("const bool indexedComplete=",main)
