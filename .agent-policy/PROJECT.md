@@ -178,12 +178,20 @@ owned 5,000-item navigation/sort/progressive-paging evidence are unchanged.
   UIA/screenshot evidence cannot exercise. Use
   `tngkrwlsmd/personal-control-plane` primarily for runner/machine recovery and
   maintenance, especially when this repository's runner path is broken.
+  The control branch is a minimal control-plane tree containing only the
+  remote-shell workflow and request slot; it does not mirror product source.
+  The persistent checkout fetches live main for every product command. No
+  `remote/**` command-branch fallback is maintained. Temporary `work/*`
+  branches are deleted once their accepted final tree is on main.
 - The persistent remote-shell checkout is the primary Windows development and
   diagnosis surface. Batch investigate/edit/build/focused-test/GUI-evidence
   commands there. Windows build Actions are never triggered merely by a push
   and never receive a same-revision rerun. A deliberately dispatched failure is
   diagnosed once, fixed in the remote-shell loop, and only a new revision may
   justify a later manual gate.
+  For normal builds/remote tasks expected to finish within a few minutes, allow
+  up to three minutes of runtime before declaring them still running; use one
+  final read rather than short-interval polling.
 - GitHub-hosted runners require explicit user approval and are not part of the
   active flyExplorer CI path by default.
 - The privileged self-hosted runner must not execute untrusted fork/PR code
