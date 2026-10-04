@@ -45,7 +45,8 @@ class FolderScaleContract(unittest.TestCase):
   native=(ROOT.parents[1]/"src/base/shell_isolation_wire.h").read_text(encoding="utf-8")
   self.assertIn("kVersion=3",native)
   self.assertIn("kMaxPageEntries=1024",native)
-  self.assertIn("kMaxNavigationEntries=20000",native)
+  self.assertIn("kMaxCompleteModelEntries=20000",native)
+  self.assertIn("kMaxBrowseEntries=100000",native)
   self.assertIn("kMaxBody=8u*1024u*1024u",native)
   self.assertNotIn("EmptyClipboard(",body)
   supervisor=(ROOT.parents[1]/"src/base/shell_isolated_supervisor.cpp").read_text(
@@ -62,5 +63,8 @@ class FolderScaleContract(unittest.TestCase):
   self.assertIn("session.prependPage(",controller)
   self.assertIn("NavigationAction::Continue",controller)
   self.assertIn("snapshot.residentEndOffset()<snapshot.nextOffset",app)
+  self.assertIn("kMaxCompleteModelEntries",app)
+  self.assertIn("kMaxBrowseEntries",app)
+  self.assertIn("fullModelLimitReached",app)
 
 if __name__=="__main__":unittest.main()
