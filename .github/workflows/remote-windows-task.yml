@@ -15,10 +15,8 @@ on:
   push:
     branches:
       - 'control/remote-shell'
-      - 'remote/**'
     paths:
       - 'requests/remote-shell/request.json'
-      - '.github/remote-task.ps1'
 
 permissions:
   contents: read
@@ -32,7 +30,7 @@ jobs:
     runs-on: [self-hosted, Windows, X64]
     timeout-minutes: 60
     steps:
-      - name: Checkout pushed control or task branch
+      - name: Checkout control branch request
         if: github.event_name == 'push'
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
@@ -108,22 +106,6 @@ jobs:
             $env:INPUT_WORKDIR
             $delimiter
           ) | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
-
-      - name: Run committed remote task
-        if: github.event_name == 'push' && startsWith(github.ref, 'refs/heads/remote/')
-        shell: powershell -NoLogo -NoProfile -ExecutionPolicy Bypass -Command ". '{0}'"
-        run: |
-          $ErrorActionPreference = "Stop"
-          $script = Join-Path $env:GITHUB_WORKSPACE ".github\remote-task.ps1"
-          if (-not (Test-Path -LiteralPath $script -PathType Leaf)) {
-            throw "Committed remote task script is missing: $script"
-          }
-          Write-Host "REMOTE_TASK_BRANCH=$env:GITHUB_REF_NAME"
-          Write-Host "REMOTE_TASK_SHA=$env:GITHUB_SHA"
-          & $script
-          if ($LASTEXITCODE -ne 0) {
-            throw "Remote task native command exited with code $LASTEXITCODE."
-          }
 
       - name: Run remote shell command
         if: github.event_name == 'workflow_dispatch' || github.ref_name == 'control/remote-shell'
