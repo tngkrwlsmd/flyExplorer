@@ -152,6 +152,41 @@ bootstrap configuration.
 
 ## Latest verified evidence
 
+Sequential resident-window browsing beyond the former 20,000-entry complete-model
+ceiling is accepted on product work revision
+`924a035e244fb547662bedb7094f45b543396a36`. The Shell transport now has two explicit
+bounds: `kMaxCompleteModelEntries=20000` for operations that require a complete
+model, and `kMaxBrowseEntries=100000` as a bounded safety ceiling for normal
+resident-window navigation. Normal browsing still keeps at most 2,048 children
+resident; increasing the browse frontier does not increase the resident-model
+bound.
+
+A global sort or non-empty pane filter is not allowed to silently operate on a
+partial model above 20,000 entries. If the known frontier has crossed the
+complete-model ceiling, the UI refuses that operation, restores ordinary
+sequential presentation, and reports that full-model sort/filter is currently
+limited to 20,000 entries. The 100,000 browse value is an implementation safety
+bound, not a 100,000-item performance or compatibility certification.
+
+Run `37183718932` passed source contracts 228/228, the canonical Release
+build, and the real helper process regression including
+`REAL_NATIVE_HELPER_OFFSET_OVER_COMPLETE_MODEL_PASS True`. Its long 20.5k GUI
+probe then failed only because the harness retained a stale UIA load-more
+wrapper after repeated WinUI rerenders. A later harness-only correction changed
+no product file. Final focused GUI/visual resume run `37184906352` passed on
+the same built product behavior and reached logical progress `20480` in an
+owned 20,500-file folder, kept backward resident-window navigation available,
+and proved `OWNED_LARGE_OVER_20K_SORT_REFUSED True`; protected legacy settings
+remained unchanged.
+
+The folder-tab clipping reported above the Name header is also fixed in this
+unit. `LeftTabs` and `RightTabs` now use 36 px instead of the too-tight
+28 px height. Matched 956x521 Dark-theme evidence shows the former
+`2300-files` caption vertically clipped in BEFORE and fully visible in AFTER,
+with the Name/Type/Size header row, resident-window progress control and the
+opposite pane remaining aligned. The 20k+ AFTER evidence likewise shows the
+`20500-files` caption fully visible. `VISUAL ACCEPTANCE: PASS`.
+
 Bounded large-folder resident-window navigation is accepted on the product
 tree prepared at work revision `37d4cc023777c67a963710efd2e17ee7125a7cae`, with the final
 harness-only follow-up at `1c5779448a8cb194ff1a506ccfdd7cf0239f8222`. Normal unsorted,
