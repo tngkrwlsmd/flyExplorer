@@ -72,6 +72,8 @@ class RemoteWindowsTaskContractTests(unittest.TestCase):
             self.workflow,
         )
         self.assertIn("Duplicate validation fingerprint", self.workflow)
+        self.assertIn("$invalidatedEvidence.psobject.Properties |", self.workflow)
+        self.assertIn("Where-Object { -not [string]::IsNullOrWhiteSpace($_) }", self.workflow)
         self.assertIn(
             "retry_reason/retry_revision are only valid",
             self.workflow,
