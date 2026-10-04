@@ -233,7 +233,7 @@ status. On a later "continue the interrupted work" request, first read current
 main/ref state, the recorded run, relevant artifacts and cleanup state; reuse
 completed evidence for the same revision/configuration rather than rerunning it.
 
-For one logical unit, the normal Windows validation budget is one primary run.
+For one logical unit, the normal Windows validation budget is one primary Windows validation run.
 After a diagnosed failure, at most one focused successor may be submitted after
 the predecessor has completed and the concrete product/harness/environment
 change is committed. A **third Windows validation run for the same logical
@@ -243,7 +243,7 @@ be prepared locally while waiting, but the request slot stays untouched until
 the active run is complete and its first relevant failure is known.
 
 Expensive real-file GUI fixtures (including 8,000+ and 20,000+ folder probes)
-are final-acceptance tools, not harness-debug loops. Prove the harness/control
+are final acceptance tools, not harness-debug loops. Prove the harness/control
 lifecycle first with the smallest fixture that exercises the same interaction,
 then run the expensive fixture once. If that expensive run exposes a harness
 bug after product build/native evidence has passed, preserve those PASS stages,
