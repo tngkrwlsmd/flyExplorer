@@ -121,6 +121,7 @@ namespace winrt::FlyExplorer::implementation
             IInspectable const&,
             Microsoft::UI::Xaml::Controls::TextChangedEventArgs const&);
         void OnLoadMoreFiles(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
+        void OnLoadPreviousFiles(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
         void OnNameColumnWidthChanged(
             IInspectable const&,
             Microsoft::UI::Xaml::Controls::Primitives::RangeBaseValueChangedEventArgs const&);
