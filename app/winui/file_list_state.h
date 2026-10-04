@@ -37,6 +37,7 @@ struct PaneState final {
     std::size_t visibleTab=0;
     bool streamToComplete=false;
     std::vector<FileDetail> details;
+    std::size_t renderedBaseOffset=0;
     std::vector<std::wstring> renderedPaths;
     std::uint64_t route=0,epoch=0;
     std::size_t tab=0;
