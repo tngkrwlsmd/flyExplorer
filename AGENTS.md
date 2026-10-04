@@ -222,9 +222,10 @@ checkpoint. This check must happen before the request commit because
 workflow-side fingerprint rejection is too late to prevent queue/runner waste.
 
 After starting a build or remote task, record its run ID, target commit and
-scope. The first routine status read must be **no earlier than three minutes**
-after submission for work that is not already known complete; the three-minute
-rule is not a polling interval. Do not issue repeated status/log reads during
+scope. For normal work expected to finish within a few minutes, allow up to three
+minutes before the first routine status read. That first routine status read
+must be **no earlier than three minutes** after submission for work that is not
+already known complete; the three-minute rule is not a polling interval. Do not issue repeated status/log reads during
 that window. At the first read after that window, if the run is still
 queued/running, stop the turn with a precise resume checkpoint instead of
 continuing to poll. A second same-turn read is allowed only when a tool has
