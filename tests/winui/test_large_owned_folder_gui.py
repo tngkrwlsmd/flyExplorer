@@ -87,8 +87,9 @@ def main():
             return parent.child_window(auto_id="LeftFiles").exists(timeout=.25)
         until(ready,"Owner preview window not ready",20)
         def visible_file_list():
-            matches=[v for v in parent.descendants(auto_id="LeftFiles")
-                     if v.element_info.control_type=="List"]
+            matches=[v for v in parent.descendants()
+                     if v.element_info.automation_id=="LeftFiles" and
+                        v.element_info.control_type=="List"]
             visible=[v for v in matches if v.is_visible()]
             if visible:
                 return visible[-1]
