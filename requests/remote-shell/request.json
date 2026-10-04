@@ -1,15 +1,11 @@
 {
-  "request_id": "remote-workflow-single-source-001",
+  "request_id": "large-folder-name-index-integrate-main-001",
   "expected_main_sha": "118b92c77c5ca8a78207b5236c42fa688796d108",
   "candidate_sha": "118b92c77c5ca8a78207b5236c42fa688796d108",
-  "logical_unit": "remote-workflow-single-source",
-  "configuration": "Release",
-  "validation_kind": [
-    "source"
-  ],
-  "invalidated_evidence": {
-    "source": "Remote Windows Task ownership changed: main now holds the reusable implementation and control/remote-shell holds only a thin @main caller plus request data."
-  },
+  "logical_unit": "large-folder-name-index-integrate-main",
+  "configuration": "none",
+  "validation_kind": ["none"],
+  "invalidated_evidence": {},
   "working_directory": "",
-  "command": "$ErrorActionPreference = \"Stop\"\ngit fetch origin main control/remote-shell --no-tags --prune\nif ($LASTEXITCODE -ne 0) { throw \"fetch refs failed\" }\nif ((git rev-parse origin/main).Trim() -ne \"118b92c77c5ca8a78207b5236c42fa688796d108\") { throw \"main moved\" }\nif ((git status --short).Count -ne 0) { throw \"dirty persistent checkout\" }\n\ngit checkout main\nif ($LASTEXITCODE -ne 0) { throw \"checkout main failed\" }\ngit merge --ff-only origin/main\nif ($LASTEXITCODE -ne 0) { throw \"fast-forward main failed\" }\nif ((git rev-parse HEAD).Trim() -ne \"118b92c77c5ca8a78207b5236c42fa688796d108\") { throw \"main mismatch\" }\n\npython -X utf8 -m py_compile tests\\winui\\test_remote_windows_task_contract.py\nif ($LASTEXITCODE -ne 0) { throw \"contract syntax failed\" }\npython -X utf8 tests\\winui\\test_remote_windows_task_contract.py\nif ($LASTEXITCODE -ne 0) { throw \"remote workflow contract failed\" }\ncmd /c test.bat source\nif ($LASTEXITCODE -ne 0) { throw \"source contracts failed\" }\n\n$triggerLines = @(git show origin/control/remote-shell:.github/workflows/remote-windows-task.yml)\nif ($LASTEXITCODE -ne 0) { throw \"control trigger read failed\" }\n$trigger = $triggerLines -join [Environment]::NewLine\nif ($trigger -notmatch 'uses:\\s+tngkrwlsmd/flyExplorer/.github/workflows/remote-windows-task.yml@main') {\n  throw \"control trigger does not delegate to main reusable workflow\"\n}\nif ($trigger -match 'validation_kind|Invoke-Expression|upload-artifact|runs-on:|FLYEXPLORER_CANONICAL_CHECKOUT') {\n  throw \"control trigger contains duplicated execution logic\"\n}\n$implementation = Get-Content -Raw -Encoding UTF8 .github\\workflows\\remote-windows-task.yml\nif ($implementation -notmatch 'workflow_call:' -or $implementation -match '(?m)^\\s{2}push:') {\n  throw \"main implementation ownership contract failed\"\n}\n\ngit diff --check HEAD^..HEAD\nif ($LASTEXITCODE -ne 0) { throw \"diff check failed\" }\nWrite-Host \"REMOTE_WORKFLOW_SINGLE_SOURCE_PASS\"\n"
+  "command": "$ErrorActionPreference = \"Stop\"\ngit fetch origin main work/large-folder-name-index --no-tags --prune\nif ($LASTEXITCODE -ne 0) { throw \"fetch failed\" }\nif ((git rev-parse origin/main).Trim() -ne \"118b92c77c5ca8a78207b5236c42fa688796d108\") { throw \"main moved\" }\nif ((git rev-parse origin/work/large-folder-name-index).Trim() -ne \"3984884008f30f67434efaa5c963b68c565f79c2\") { throw \"work branch moved\" }\nif ((git status --short).Count -ne 0) { throw \"dirty persistent checkout\" }\ngit checkout -B work/large-folder-name-index origin/work/large-folder-name-index\nif ($LASTEXITCODE -ne 0) { throw \"checkout work branch failed\" }\ngit merge --no-edit origin/main\nif ($LASTEXITCODE -ne 0) { git merge --abort 2>$null; throw \"main merge conflicted\" }\ngit diff --check origin/main..HEAD\nif ($LASTEXITCODE -ne 0) { throw \"diff check failed after merge\" }\n$newHead=(git rev-parse HEAD).Trim()\nWrite-Host (\"INTEGRATED_HEAD=\" + $newHead)\ngit push origin HEAD:refs/heads/work/large-folder-name-index\nif ($LASTEXITCODE -ne 0) { throw \"push integrated work branch failed\" }\nWrite-Host \"LARGE_FOLDER_NAME_INDEX_MAIN_INTEGRATION_PASS\""
 }
