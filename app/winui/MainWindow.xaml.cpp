@@ -805,30 +805,48 @@ namespace winrt::FlyExplorer::implementation
         if(text.size()>64)return;
         auto& state=ActiveWindowTab().fileLists[side];
         auto const& pane=ActiveWindowTab().model.panes[side];
-        auto const& snapshot=pane.tabs[pane.active].snapshot();
+        auto const& session=pane.tabs[pane.active];
+        auto const& snapshot=session.snapshot();
+        if(state.filenameFilter==text)return;
         const auto completeLimit=static_cast<std::size_t>(
             fxfile::isolation::kMaxCompleteModelEntries);
-        if(!text.empty()&&
-           (snapshot.nextOffset>completeLimit||
-            (snapshot.nextOffset==completeLimit&&snapshot.truncated))){
-            input.Text(hstring(state.filenameFilter));
-            StatusText().Text(
-                L"이름 필터는 현재 최대 20,000개 항목까지 전체 모델을 완성할 수 있습니다.");
-            return;
-        }
-        if(state.filenameFilter==text)return;
+        const bool beyondComplete=
+            snapshot.nextOffset>completeLimit||
+            (snapshot.nextOffset==completeLimit&&snapshot.truncated);
         state.filenameFilter=std::move(text);
         state.visibleCount=160;
-        FillFiles(side); // Only the view changes. Shell model and stable tags do not.
+        if(beyondComplete&&!state.filenameFilter.empty()){
+            state.indexedNameProjection=true;
+            state.indexToComplete=
+                snapshot.residentEndOffset()<snapshot.nextOffset||
+                snapshot.truncated;
+        }else if(state.filenameFilter.empty()){
+            state.indexedNameProjection=
+                beyondComplete&&state.indexedNameSort;
+            state.indexToComplete=state.indexedNameProjection&&
+                (snapshot.residentEndOffset()<snapshot.nextOffset||
+                 snapshot.truncated);
+        }else{
+            state.indexedNameProjection=false;
+            state.indexToComplete=false;
+        }
+        FillFiles(side);
         UpdateSelectionChrome();
         if(side==ActiveWindowTab().model.activePane)UpdateFooterSummary();
-        if(!state.filenameFilter.empty()&&
-           (snapshot.baseOffset||
-            snapshot.residentEndOffset()<snapshot.nextOffset||
-            snapshot.truncated))
+        if(state.indexedNameProjection){
+            if(state.indexToComplete)
+                QueueNextFolderPage(side,true);
+            else
+                StatusText().Text(L"전체 이름 인덱스에 필터를 적용했습니다.");
+        }else if(!state.filenameFilter.empty()&&
+                (snapshot.baseOffset||
+                 snapshot.residentEndOffset()<snapshot.nextOffset||
+                 snapshot.truncated)){
             QueueNextFolderPage(side,true);
-        else if(state.filenameFilter.empty()&&state.sortMode==0)
+        }else if(state.filenameFilter.empty()&&state.sortMode==0){
             state.streamToComplete=false;
+            state.indexToComplete=false;
+        }
     }
     void MainWindow::OnLoadMoreFiles(
         IInspectable const& sender,Microsoft::UI::Xaml::RoutedEventArgs const&){
