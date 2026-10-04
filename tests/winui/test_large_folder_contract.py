@@ -35,6 +35,8 @@ class FolderScaleContract(unittest.TestCase):
   self.assertIn("OWNED_LARGE_MODEL_STREAMING_INITIAL_1024",body)
   self.assertIn("OWNED_LARGE_MODEL_STREAMING_SORT_COMPLETES_8000",body)
   self.assertIn("state.visibleRoute!=nextRoute",app)
+  self.assertIn("renderedState.renderedBaseOffset",app)
+  self.assertIn("snapshot.logicalIndex(index)",app)
   native=(ROOT.parents[1]/"src/base/shell_isolation_wire.h").read_text(encoding="utf-8")
   self.assertIn("kVersion=3",native)
   self.assertIn("kMaxPageEntries=1024",native)
