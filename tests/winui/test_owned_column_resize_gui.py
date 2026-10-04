@@ -53,25 +53,27 @@ def main(config="Release"):
         def element(auto_id):
             return window().child_window(auto_id=auto_id)
 
-        # The column-resize acceptance only needs the left Details pane. Do not
-        # require an arbitrary 1500px desktop: collapse the secondary pane when
-        # the current split command says two-pane mode is active. WinUI can keep
-        # a cached UIA peer for a Collapsed SecondaryPane, so do not use that
-        # peer's is_visible() value as the split-state oracle.
-        split=element("SplitButton")
-        eventually(lambda:split.exists(timeout=.2) and split.is_visible(),
+        # The column-resize acceptance only needs the left Details pane.
+        # Do not trust cached SecondaryPane UIA visibility or SplitButton text:
+        # click once and use the real LeftFiles width delta as the split-state
+        # oracle. If the first click made the pane narrower, it started in
+        # single-pane mode, so click once more to restore the wider state.
+        eventually(lambda:element("SplitButton").exists(timeout=.2) and
+                   element("SplitButton").is_visible(),
                    "split toggle unavailable",6)
-        split_state=split.window_text()
-        if "단일 창" in split_state:
-            before_width=element("LeftFiles").rectangle().width()
-            split.click_input()
-            eventually(lambda:"분할 창" in element("SplitButton").window_text(),
-                       "split command did not enter single-pane mode",8)
-            eventually(lambda:element("LeftFiles").rectangle().width()>before_width,
-                       "left pane did not expand after single-pane transition",8)
-        else:
-            eventually(lambda:"분할 창" in element("SplitButton").window_text(),
-                       "split command state unavailable",6)
+        initial_width=element("LeftFiles").rectangle().width()
+        element("SplitButton").click_input()
+        eventually(lambda:abs(element("LeftFiles").rectangle().width()-
+                              initial_width)>=80,
+                   "split toggle did not materially change left pane width",8)
+        toggled_width=element("LeftFiles").rectangle().width()
+        if toggled_width<initial_width:
+            element("SplitButton").click_input()
+            eventually(lambda:element("LeftFiles").rectangle().width()>=
+                              initial_width-12,
+                       "left pane did not return to single-pane width",8)
+        eventually(lambda:element("LeftFiles").rectangle().width()>=500,
+                   "single-pane width is too narrow for all Details columns",6)
 
         for auto_id in ("LeftNameColumnResizeThumb","LeftTypeColumnResizeThumb",
                         "LeftSizeColumnResizeThumb","LeftNameSortButton",
