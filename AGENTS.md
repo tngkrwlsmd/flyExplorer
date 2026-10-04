@@ -405,6 +405,17 @@ harness preflight defects, not product defects. Windows-only behavior that
 cannot be established statically belongs in the remote run, but the request
 that reaches Windows should already be syntactically and structurally valid.
 
+The canonical zero-run request validator is
+`tools/winui/validate_remote_request.py`. For GUI harness changes, the
+canonical static guard is `tests/winui/test_gui_harness_contract.py`; it must
+remain part of the normal source-contract set. Use these checks locally or
+mechanically reproduce their assertions through repository reads before
+writing the request slot. **Do not add a GitHub-hosted/cloud runner just to run
+this preflight, and do not create a Windows VM task merely because local static
+execution is unavailable.** The agent-side check must be completed before the
+request commit; the Windows workflow's own validation is only a second line of
+defense.
+
 The request-slot workflow derives a validation fingerprint from
 `candidate_sha + configuration + sorted(validation_kind)`. A fingerprint
 already present in the control-branch request history is rejected before the
