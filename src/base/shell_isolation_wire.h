@@ -13,7 +13,7 @@ constexpr std::uint32_t kMaxItemUnits=4096;
 constexpr std::uint32_t kMaxPidl=65536;
 constexpr std::uint32_t kMaxBody=8u*1024u*1024u;
 constexpr std::uint32_t kMaxPageEntries=1024;
-constexpr std::uint32_t kMaxAggregateEntries=20000;
+constexpr std::uint32_t kMaxNavigationEntries=20000;
 #pragma pack(push,1)
 struct Request {
     std::uint32_t magic,version,type,length;

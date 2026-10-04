@@ -20,8 +20,11 @@ class LargeFolderStreamingContracts(unittest.TestCase):
         h=read("src/base/shell_navigation_core.h")
         cpp=read("src/base/shell_navigation_core.cpp")
         self.assertIn("appendPage(Snapshot&& page,std::size_t expectedOffset)",h)
-        self.assertIn("current_.children.size()!=expectedOffset",cpp)
+        self.assertIn("current_.nextOffset!=expectedOffset",cpp)
+        self.assertIn("page.baseOffset!=expectedOffset",cpp)
+        self.assertIn("page.nextOffset!=expectedOffset+page.children.size()",cpp)
         self.assertIn("::ILIsEqual(current_.folder.get(),page.folder.get())",cpp)
+        self.assertIn("current_.nextOffset=page.nextOffset",cpp)
         self.assertIn("current_.truncated=page.truncated",cpp)
 
     def test_controller_continuation_reuses_pending_identity(self):
@@ -30,6 +33,7 @@ class LargeFolderStreamingContracts(unittest.TestCase):
         self.assertIn("Extended",h)
         self.assertIn("submitContinuation(",h+cpp)
         self.assertIn("supervisor_->submitPage(",cpp)
+        self.assertIn("const auto offset=snapshot.nextOffset",cpp)
         self.assertIn("model.markPending(side,pane.active,id,true)",cpp)
         self.assertIn("NavigationAction::Continue",cpp)
         self.assertIn("appendPage(",cpp)

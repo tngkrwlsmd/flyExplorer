@@ -38,7 +38,7 @@ class FolderScaleContract(unittest.TestCase):
   native=(ROOT.parents[1]/"src/base/shell_isolation_wire.h").read_text(encoding="utf-8")
   self.assertIn("kVersion=3",native)
   self.assertIn("kMaxPageEntries=1024",native)
-  self.assertIn("kMaxAggregateEntries=20000",native)
+  self.assertIn("kMaxNavigationEntries=20000",native)
   self.assertIn("kMaxBody=8u*1024u*1024u",native)
   self.assertNotIn("EmptyClipboard(",body)
   supervisor=(ROOT.parents[1]/"src/base/shell_isolated_supervisor.cpp").read_text(
@@ -50,6 +50,7 @@ class FolderScaleContract(unittest.TestCase):
   self.assertNotIn("Snapshot aggregate",supervisor)
   controller=(ROOT/"shell_navigation_controller.cpp").read_text(encoding="utf-8")
   self.assertIn("submitContinuation(",controller)
+  self.assertIn("const auto offset=snapshot.nextOffset",controller)
   self.assertIn("appendPage(",controller)
   self.assertIn("NavigationAction::Continue",controller)
   self.assertIn("snapshot.truncated?L\"+\"",app)

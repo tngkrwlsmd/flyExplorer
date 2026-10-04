@@ -49,6 +49,12 @@ struct Snapshot final {
     std::wstring displayName;
     std::wstring parsingName;
     std::vector<Item> children;
+    // Logical enumeration coordinates are independent from resident children.
+    // Today baseOffset remains zero because all accepted pages stay resident;
+    // keeping these coordinates explicit allows a later bounded resident window
+    // without reusing children.size() as the Shell continuation cursor.
+    std::size_t baseOffset=0;
+    std::size_t nextOffset=0;
     bool truncated=false;
 };
 

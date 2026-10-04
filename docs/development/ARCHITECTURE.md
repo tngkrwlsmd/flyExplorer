@@ -283,6 +283,19 @@ before window dispatcher teardown.
 
 The helper is a bounded fault/isolation boundary, not a security sandbox.
 
+Large-folder navigation uses protocol-v3 helper pages of at most 1,024 entries
+and 8 MiB. The first page is committed to the active Session immediately and
+continuations are accepted only for the same route/request/folder and expected
+logical offset. Snapshot logical coordinates (`baseOffset`/`nextOffset`) are
+kept separate from `children.size()`. Current main still retains every accepted
+child and enforces the 20,000-entry navigation safety ceiling, but continuation
+identity no longer depends on resident vector length. This is the seam required
+for a later bounded resident window. Do not raise or remove the 20,000 ceiling
+until that window/index also defines backward access, selection identity and
+the behavior of operations that require a complete folder such as global
+sort/filter.
+
+
 ## Session persistence
 
 Private session schema v2 stores only bounded validated state. Persisted
