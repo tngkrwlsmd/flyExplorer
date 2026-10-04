@@ -1,15 +1,15 @@
 {
-  "request_id": "zero-run-preflight-guidance-001",
-  "expected_main_sha": "488d102a03f5e5914e784c7a11cd54d414634e30",
-  "candidate_sha": "488d102a03f5e5914e784c7a11cd54d414634e30",
-  "logical_unit": "zero-run-preflight-guidance",
+  "request_id": "remote-settings-principles-refactor-001",
+  "expected_main_sha": "2aeaf828f029f87f31d185f35c6e11866fd703f0",
+  "candidate_sha": "2aeaf828f029f87f31d185f35c6e11866fd703f0",
+  "logical_unit": "remote-settings-principles-refactor",
   "configuration": "Release",
   "validation_kind": [
     "source"
   ],
   "invalidated_evidence": {
-    "source": "AGENTS, AGENT_EFFICIENCY, PROJECT guidance and the remote Windows contract test changed to require a zero-run preflight for refs, request metadata, command quoting, harness syntax/imports, prose contracts and GUI API sanity before any Remote Windows Task."
+    "source": "Remote Windows workflow settings, guidance, verification profile and contract tests changed to single-source mutable paths/intervals/capacity/budget while keeping policy principle-based."
   },
-  "working_directory": "C:\\dev\\flyExplorer",
-  "command": "$ErrorActionPreference = \"Stop\"\ngit fetch origin main --no-tags --prune\nif ($LASTEXITCODE -ne 0) { throw \"fetch main failed\" }\nif ((git rev-parse origin/main).Trim() -ne \"488d102a03f5e5914e784c7a11cd54d414634e30\") { throw \"main moved\" }\nif ((git status --short).Count -ne 0) { throw \"dirty persistent checkout\" }\n\ngit checkout main\nif ($LASTEXITCODE -ne 0) { throw \"checkout main failed\" }\ngit merge --ff-only origin/main\nif ($LASTEXITCODE -ne 0) { throw \"fast-forward main failed\" }\nif ((git rev-parse HEAD).Trim() -ne \"488d102a03f5e5914e784c7a11cd54d414634e30\") { throw \"main mismatch\" }\n\npython -X utf8 -m py_compile tests\\winui\\test_remote_windows_task_contract.py\nif ($LASTEXITCODE -ne 0) { throw \"contract syntax preflight failed\" }\n\npython -X utf8 tests\\winui\\test_remote_windows_task_contract.py\nif ($LASTEXITCODE -ne 0) { throw \"remote Windows contract failed\" }\n\ncmd /c test.bat source\nif ($LASTEXITCODE -ne 0) { throw \"source contracts failed\" }\n\ngit diff --check HEAD^..HEAD\nif ($LASTEXITCODE -ne 0) { throw \"guidance diff check failed\" }\nWrite-Host \"ZERO_RUN_PREFLIGHT_GUIDANCE_PASS\"\n"
+  "working_directory": "",
+  "command": "$ErrorActionPreference = \"Stop\"\ngit fetch origin main --no-tags --prune\nif ($LASTEXITCODE -ne 0) { throw \"fetch main failed\" }\nif ((git rev-parse origin/main).Trim() -ne \"2aeaf828f029f87f31d185f35c6e11866fd703f0\") { throw \"main moved\" }\nif ((git status --short).Count -ne 0) { throw \"dirty persistent checkout\" }\n\ngit checkout main\nif ($LASTEXITCODE -ne 0) { throw \"checkout main failed\" }\ngit merge --ff-only origin/main\nif ($LASTEXITCODE -ne 0) { throw \"fast-forward main failed\" }\nif ((git rev-parse HEAD).Trim() -ne \"2aeaf828f029f87f31d185f35c6e11866fd703f0\") { throw \"main mismatch\" }\n\npython -X utf8 -m py_compile tests\\winui\\test_remote_windows_task_contract.py\nif ($LASTEXITCODE -ne 0) { throw \"contract syntax failed\" }\n\npython -X utf8 tests\\winui\\test_remote_windows_task_contract.py\nif ($LASTEXITCODE -ne 0) { throw \"remote task contract failed\" }\n\ncmd /c test.bat source\nif ($LASTEXITCODE -ne 0) { throw \"source contracts failed\" }\n\ngit diff --check HEAD^..HEAD\nif ($LASTEXITCODE -ne 0) { throw \"diff check failed\" }\nWrite-Host \"REMOTE_SETTINGS_PRINCIPLES_REFACTOR_PASS\"\n"
 }
