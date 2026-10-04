@@ -19,7 +19,7 @@ on:
       - 'requests/remote-shell/request.json'
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
   group: flyexplorer-remote-windows-task
