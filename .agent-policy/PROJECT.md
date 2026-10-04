@@ -257,7 +257,11 @@ directly invalidates that fixture's result.
   window unless the user explicitly requested scheduled or recurring follow-up.
   If the first permitted routine read still shows the run active, stop with a
   resume checkpoint rather than issuing additional status/log reads in the
-  same turn.
+  same turn. When the user explicitly requests active monitoring for the
+  current run, that request overrides the routine three-minute floor for that
+  task only: query no more frequently than every 30 seconds, stop on
+  completion, and do not create a scheduled/automation task unless the user
+  separately requests one.
 - One logical unit gets one primary Windows validation run. After a diagnosed
   failure, one focused successor is allowed only after the predecessor is
   complete and the concrete fix is committed. A third Windows validation run
