@@ -301,12 +301,12 @@ directly invalidates that fixture's result.
   policy text. First prove the harness/control lifecycle on the smallest
   fixture that exercises the same path, and preserve unaffected PASS evidence
   if a high-cost fixture later exposes a harness defect.
-- For normal builds or remote tasks expected to finish within a few minutes,
-  do not actively query GitHub status before the three-minute routine-read
-  floor unless completion is independently known. Do not sleep for three
-  minutes as a workflow step, and do not replace the wait with an unsolicited
-  scheduled task. After an allowed read, either act on the completed result or
-  leave the exact active run ID as the resume point.
+- For normal builds or remote tasks, do not actively query GitHub status on a
+  short interval. Use the workflow-configured routine observation interval
+  unless completion is independently known. Do not sleep merely to consume the
+  observation window and do not replace it with an unsolicited scheduled task.
+  After an allowed read, either act on the completed result or leave the exact
+  active run ID as the resume point.
 - Main-branch pushes do not trigger Windows validation automatically. After a
   logical unit is already accepted and moved to main, do not dispatch another
   Windows CI run just to reconfirm it. A post-main manual gate requires a
