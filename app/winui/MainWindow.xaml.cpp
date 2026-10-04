@@ -436,36 +436,59 @@ namespace winrt::FlyExplorer::implementation
             state.streamToComplete=true;
             state.fullModelLimitReached=false;
             const auto limit=static_cast<std::size_t>(
-                fxfile::isolation::kMaxCompleteModelEntries);
+                state.indexToComplete?
+                    fxfile::isolation::kMaxBrowseEntries:
+                    fxfile::isolation::kMaxCompleteModelEntries);
             if(snapshot.nextOffset>limit||
                (snapshot.nextOffset==limit&&snapshot.truncated)){
                 state.streamToComplete=false;
+                state.indexToComplete=false;
                 state.fullModelLimitReached=true;
-                state.sortMode=0;
-                if(!state.filenameFilter.empty()){
-                    state.filenameFilter.clear();
-                    auto filter=side==0?LeftNameFilterBox():RightNameFilterBox();
-                    if(!filter.Text().empty())filter.Text(L"");
+                if(state.indexedNameProjection){
+                    state.indexedNameProjection=false;
+                    state.indexedNameSort=false;
+                    state.sortMode=0;
+                    if(!state.filenameFilter.empty()){
+                        state.filenameFilter.clear();
+                        auto filter=side==0?LeftNameFilterBox():RightNameFilterBox();
+                        if(!filter.Text().empty())filter.Text(L"");
+                    }
+                    if(side==ActiveWindowTab().model.activePane)
+                        fileBar()->SetSortIndex(0);
+                    UpdateSortPresentation(side);
+                    FillFiles(side);
+                    UpdateSelectionChrome();
+                    if(side==ActiveWindowTab().model.activePane)UpdateFooterSummary();
+                    StatusText().Text(
+                        L"이름 인덱스는 현재 최대 100,000개 항목까지 지원합니다. "
+                        L"일반 순차 탐색은 현재 창을 유지합니다.");
+                }else{
+                    state.sortMode=0;
+                    if(!state.filenameFilter.empty()){
+                        state.filenameFilter.clear();
+                        auto filter=side==0?LeftNameFilterBox():RightNameFilterBox();
+                        if(!filter.Text().empty())filter.Text(L"");
+                    }
+                    if(side==ActiveWindowTab().model.activePane)
+                        fileBar()->SetSortIndex(0);
+                    UpdateSortPresentation(side);
+                    FillFiles(side);
+                    UpdateSelectionChrome();
+                    if(side==ActiveWindowTab().model.activePane)UpdateFooterSummary();
+                    StatusText().Text(
+                        L"유형/크기/날짜 전역 정렬은 현재 최대 20,000개 항목까지 지원합니다. "
+                        L"이름 정렬/필터는 인덱스 경로를 사용하세요.");
                 }
-                if(side==ActiveWindowTab().model.activePane)
-                    fileBar()->SetSortIndex(0);
-                UpdateSortPresentation(side);
-                FillFiles(side);
-                UpdateSelectionChrome();
-                if(side==ActiveWindowTab().model.activePane)UpdateFooterSummary();
-                StatusText().Text(
-                    L"전역 정렬/필터는 현재 최대 20,000개 항목까지 지원합니다. "
-                    L"일반 순차 탐색은 계속할 수 있습니다.");
                 return false;
             }
         }
         if(pane.pending[pane.active])return false;
-        if(completeFolder&&snapshot.baseOffset){
+        if(completeFolder&&!state.indexToComplete&&snapshot.baseOffset){
             const auto id=mShellNavigation->submitPreviousPage(
                 ActiveWindowTab().model,side);
             if(id){
                 StatusText().Text(
-                    L"정확한 정렬/필터를 위해 이전 폴더 항목을 다시 불러오는 중입니다.");
+                    L"정확한 정렬을 위해 이전 폴더 항목을 다시 불러오는 중입니다.");
                 return true;
             }
             state.streamToComplete=false;
@@ -478,20 +501,27 @@ namespace winrt::FlyExplorer::implementation
             snapshot.truncated;
         if(!hasForward){
             state.streamToComplete=false;
+            state.indexToComplete=false;
             return false;
         }
         const auto ceiling=completeFolder?
-            static_cast<std::size_t>(fxfile::isolation::kMaxCompleteModelEntries):
+            static_cast<std::size_t>(
+                state.indexToComplete?
+                    fxfile::isolation::kMaxBrowseEntries:
+                    fxfile::isolation::kMaxCompleteModelEntries):
             static_cast<std::size_t>(fxfile::isolation::kMaxBrowseEntries);
         const auto id=mShellNavigation->submitNextPage(
             ActiveWindowTab().model,side,ceiling);
         if(id){
             StatusText().Text(completeFolder?
-                L"정확한 정렬/필터를 위해 남은 폴더 항목을 불러오는 중입니다.":
+                (state.indexToComplete?
+                    L"전체 이름 인덱스를 완성하는 중입니다.":
+                    L"정확한 정렬을 위해 남은 폴더 항목을 불러오는 중입니다."):
                 L"폴더의 다음 항목 페이지를 불러오는 중입니다.");
             return true;
         }
         state.streamToComplete=false;
+        state.indexToComplete=false;
         StatusText().Text(
             L"이 폴더의 추가 항목을 더 불러올 수 없습니다. 현재 항목은 유지됩니다.");
         return false;
