@@ -95,7 +95,7 @@ def launch(*args,extra_env=None):
     return process
 
 def request(path=None,pidl_bytes=None,offset=0,limit=1024):
-    assert 0<=offset<=20000 and 1<=limit<=1024
+    assert 0<=offset<20000 and 1<=limit<=1024 and offset+limit<=20000
     if pidl_bytes is not None:
         assert pidl_valid(pidl_bytes)
         return struct.pack("<IIIIII",MAGIC,3,2,len(pidl_bytes),
