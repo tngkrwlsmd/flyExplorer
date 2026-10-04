@@ -152,6 +152,26 @@ bootstrap configuration.
 
 ## Latest verified evidence
 
+Search v3 compound metadata criteria are accepted on product revision
+`b7e6873407016e8a3e9cceb3e397a81d71b7e0c5`. Bounded search now AND-composes optional integer-KB minimum/
+maximum file size and inclusive local modified-date bounds with the existing
+name/regex, case, target and extension criteria. A name term may be empty when
+another criterion is supplied. Up to 20 named condition sets are persisted
+privately and atomically in
+`%LOCALAPPDATA%\flyExplorer\search-presets-v1.txt`; scope is intentionally
+not saved.
+
+Evidence: remote run `37170399569` passed canonical structure 4/4, source
+contracts 205/205, Release M19 native Search v3 contracts 29/29, canonical
+Release build and the established owned M1.9 GUI harness, including compound
+AND matching, size-only empty-term search, invalid range rejection, preset
+save/restart/apply/delete, legacy-profile protection and process exit 0.
+The initial unmatched-height screenshot was rejected as visual evidence.
+After correcting clipped date hints, run `37171067880` passed the focused
+Search v3 contract 6/6, canonical Release build and fixed 956x689 visual
+capture; direct review found no clipping/overlap and both panes remained usable.
+
+
 Persistent pane filter presets are accepted on product revision
 `a7490083000ac8faeb6c4fbe2cf54fecd6b00cf8`. Up to 20 named rules are stored privately and atomically in
 `%LOCALAPPDATA%\flyExplorer\filter-rules-v1.txt`. Existing case-insensitive
@@ -314,13 +334,15 @@ Current source and the last parity evidence still show these limits:
   5,000-item navigation/sort/progressive-paging evidence. Folders above 6,000,
   true streaming virtualization, network/virtual providers and sustained
   thumbnail-cache behavior are not certified.
-- Search remains bounded name search. Regex, case sensitivity, entry-kind and
-  single-extension conditions are implemented, but content search and broader
-  saved/compound multi-criteria queries are not implemented.
+- Search remains bounded metadata/name search. Regex, case sensitivity,
+  entry-kind, single-extension, minimum/maximum file size and inclusive local
+  modified-date conditions are implemented with up to 20 private saved
+  condition sets. Content search and broader provider/property criteria are
+  not implemented.
 - Persistent pane filter/mask rule sets are implemented with up to 20 named
   private presets, case-insensitive wildcard masks and legacy substring
-  compatibility. Saved size/date/compound query composition and historical
-  per-rule color/icon classification are not implemented.
+  compatibility. Pane filters remain name/mask based; historical per-rule
+  color/icon classification is not implemented.
 - The complete historical command/provider verb/fault matrix is not fully
   implemented or tested.
 - User-configurable accelerators and a complete historical shortcut map are

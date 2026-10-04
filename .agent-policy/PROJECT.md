@@ -26,7 +26,7 @@ consumer core; this PROJECT.md remains project-owned across bundle refreshes.
     {"name": "winui-tests", "path": "tests/winui", "responsibility": "source, native and owned GUI contracts"}
   ],
   "review": {
-    "reviewed_revision": "a7490083000ac8faeb6c4fbe2cf54fecd6b00cf8",
+    "reviewed_revision": "b7e6873407016e8a3e9cceb3e397a81d71b7e0c5",
     "reviewed_at": "2026-10-04",
     "reviewed_paths": [
       "app/winui",
@@ -121,6 +121,36 @@ existing depth-5, 2,500-entry walk and 100-result bounds, cancellation,
 stale-result rejection and opt-in recent-scope persistence remain in force.
 
 ## Current verification
+
+Search v3 compound metadata criteria are accepted on product revision
+`b7e6873407016e8a3e9cceb3e397a81d71b7e0c5`. The existing bounded worker now supports optional minimum/
+maximum file size in integer KB and inclusive local modified-date bounds in
+`YYYY-MM-DD`, AND-composed with the existing name/regex, case, entry-kind and
+single-extension criteria. An empty name term is valid when another criterion
+is present. Size criteria intentionally exclude folders. The depth-5,
+2,500-entry walk, 100-result retention, reparse-point avoidance, cancellation
+and stale-context rejection remain unchanged.
+
+Up to 20 named query-condition sets persist privately under
+`%LOCALAPPDATA%\flyExplorer\search-presets-v1.txt` using atomic replacement.
+The search scope is deliberately not part of a preset, so saved criteria can be
+reused against another folder.
+
+Remote run `37170399569` passed canonical structure 4/4, source contracts
+205/205, the Release M19 native Search v3 fixture at 29/29, canonical Release
+build and the established M1.9 owned GUI harness. The GUI passed name +
+extension + size + date AND matching, size-only search with an empty name term,
+invalid size/date pre-start rejection, private preset save, restart/apply/
+delete, protected legacy-profile checks, normal exit and `git diff --check`.
+
+The first functional AFTER screenshot was not accepted as matched visual
+evidence because its window height differed from BEFORE. A fixed-size review at
+956x689 then exposed clipped date placeholder text; that visual-only XAML issue
+was corrected before acceptance. Final remote run `37171067880` passed the
+focused Search v3 source contract (6/6), canonical Release build and a new
+956x689 capture. Direct review on the same Windows VM and Dark presentation
+shows complete date labels, no control overlap/clipping, and both file panes
+remaining usable at that size.
 
 Persistent pane filter presets are accepted on product revision
 `a7490083000ac8faeb6c4fbe2cf54fecd6b00cf8`. The private store is bounded to 20 named rules and persists
