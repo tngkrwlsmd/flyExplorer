@@ -152,6 +152,28 @@ bootstrap configuration.
 
 ## Latest verified evidence
 
+Paged isolated Shell enumeration beyond the former 6,000-entry single-frame
+ceiling is accepted on product revision `fb92b9dd03c90ce3e3434270bff3cc5be8714cad`. Wire protocol v3
+limits each disposable helper response to 1,024 entries and 8 MiB, while the
+supervisor requests successive offset pages and aggregates at most 20,000
+entries for one navigation snapshot. Existing cancellation/supersession,
+per-page watchdog/retry, PIDL/checksum validation and exact-owned child process
+boundaries remain intact. WinUI rendering remains progressive at 160 visible
+items initially and 160-item increments.
+
+Evidence: the first pre-main run `37174851727` exposed only a stale source
+assertion tied to the old supervisor local variable; product code was unchanged.
+After that test-only correction, run `37174929070` passed canonical structure
+4/4, source contracts 218/218, canonical Release build, the real helper
+protocol-v3 process-isolation suite including offset/limit page requests, and an
+owned Release folder containing 8,000 files. The GUI reached first render in
+6.17 seconds, sorted name-descending to the final owned file, passed the
+160/8000 -> 320/8000 controlled render-page assertions, kept legacy settings
+unchanged and emitted
+`OWNED_LARGE_FOLDER_OVER_6000_PAGED_TRANSPORT True`. `git diff --check`
+passed.
+
+
 Explicit legacy content encodings are accepted on product revision
 `44305357394c8eed76eaaa31614ecaddaca7f4c3`. Bounded literal content search keeps deterministic Auto UTF
 behavior (UTF-8/ASCII plus BOM UTF-16 LE/BE) and adds explicit Korean CP949 and
@@ -241,15 +263,15 @@ behavior also passed, the WinUI process exited 0 and the protected legacy
 profile remained unchanged. Repeated standalone SearchPanel discovery failures
 were treated as a fixture boundary and abandoned rather than retried.
 
-Local large-folder coverage now includes an owned 5,000-file filesystem folder.
-Product revision `51182fed05e32dfbd90ee320a4a259b1b884d0df` raises the isolated Shell enumeration ceiling
-from 2,600 to 6,000 entries while retaining the 8 MiB wire-body bound and
-160-item progressive WinUI rendering. Remote run `37135593385` completed the
-Release build and helper protocol suite, then verified 5,000-item navigation,
-name-descending sort to `bench-4999.txt`, and progressive paging
-`160/5000 -> 320/5000`. Its later filename-filter UIA assertion was outside
-the enumeration-ceiling change; filter and Ctrl+Shift+F behavior stay covered
-by the existing 2,300-item case.
+Local large-folder coverage now includes an owned 8,000-file filesystem
+folder on paged isolated Shell transport. Product revision
+`fb92b9dd03c90ce3e3434270bff3cc5be8714cad` replaces the former 6,000-entry single-frame response with
+protocol-v3 offset pages capped at 1,024 entries and 8 MiB each, aggregated by
+the supervisor up to 20,000 entries. Remote run `37174929070` passed Release
+build, helper protocol-v3 regression, 8,000-item navigation, name-descending
+sort to `bench-7999.txt`, and the existing progressive render paging
+`160/8000 -> 320/8000`. The model still receives one bounded aggregate
+snapshot; true model-level streaming virtualization remains a separate gap.
 
 
 Persistent WinUI bookmarks are accepted on main. Automatic Windows run
@@ -373,10 +395,14 @@ distribution remain separate gates.
 ## Known functional coverage limits
 
 Current source and the last parity evidence still show these limits:
-- Local filesystem Shell enumeration is bounded at 6,000 entries and has owned
-  5,000-item navigation/sort/progressive-paging evidence. Folders above 6,000,
-  true streaming virtualization, network/virtual providers and sustained
-  thumbnail-cache behavior are not certified.
+- Local filesystem Shell enumeration now uses protocol-v3 transport paging:
+  1,024 entries per isolated helper response, an 8 MiB per-response body bound,
+  and a 20,000-entry aggregated navigation-snapshot bound. Owned Release
+  evidence covers 8,000-file navigation, global name sort and progressive
+  160-item rendering. This removes the former 6,000-entry single-frame ceiling,
+  but true model-level streaming virtualization beyond the aggregated snapshot,
+  network/virtual providers and sustained thumbnail-cache behavior are not
+  certified.
 - Search remains bounded. Regex, case sensitivity, entry-kind,
   single-extension, minimum/maximum file size, inclusive local modified-date
   and literal text content conditions are implemented with up to 20 private

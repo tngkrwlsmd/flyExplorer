@@ -26,7 +26,7 @@ consumer core; this PROJECT.md remains project-owned across bundle refreshes.
     {"name": "winui-tests", "path": "tests/winui", "responsibility": "source, native and owned GUI contracts"}
   ],
   "review": {
-    "reviewed_revision": "44305357394c8eed76eaaa31614ecaddaca7f4c3",
+    "reviewed_revision": "fb92b9dd03c90ce3e3434270bff3cc5be8714cad",
     "reviewed_at": "2026-10-04",
     "reviewed_paths": [
       "app/winui",
@@ -121,6 +121,35 @@ existing depth-5, 2,500-entry walk and 100-result bounds, cancellation,
 stale-result rejection and opt-in recent-scope persistence remain in force.
 
 ## Current verification
+
+Paged isolated Shell enumeration beyond the former 6,000-entry single-frame
+ceiling is accepted on product revision `fb92b9dd03c90ce3e3434270bff3cc5be8714cad`. The private helper
+wire is version 3: each helper response is bounded to at most 1,024 entries and
+8 MiB of body data, while the supervisor requests successive offset pages and
+aggregates at most 20,000 entries for one navigation snapshot. Cancellation,
+route supersession, per-page watchdog/retry, PIDL validation, checksum
+validation and exact-owned child job boundaries remain in force. The WinUI list
+still renders only 160 rows initially and exposes controlled 160-row increments.
+
+This is transport paging, not full model-level streaming virtualization.
+The navigation model still owns the aggregated snapshot (bounded at 20,000)
+before sorting/filtering, so do not describe this revision as unbounded or true
+streaming virtualization.
+
+The first pre-main run `37174851727` stopped at source contracts because one
+old contract asserted the pre-paging local variable name
+`result.timedOut=outcome.timeout`. No product code changed for that failure.
+Work revision `40f126fdc3225c41e6a3a5fbc7534f0d36522d11`
+updated only that source assertion. Remote run `37174929070` then passed
+canonical structure 4/4, source contracts 218/218, the canonical Release build,
+the real helper protocol-v3 process-isolation regression (including
+offset/limit paging), and an owned Release folder containing 8,000 files.
+The GUI verified first render, name-descending sort to the final owned file,
+the existing 160->320 controlled render-page path, protected legacy settings
+unchanged, and emitted
+`OWNED_LARGE_FOLDER_OVER_6000_PAGED_TRANSPORT True`.
+First render in that owned fixture was 6.17 seconds. `git diff --check`
+also passed.
 
 Explicit legacy text encodings for bounded content search are accepted on
 product revision `44305357394c8eed76eaaa31614ecaddaca7f4c3`. The default mode remains deterministic:
