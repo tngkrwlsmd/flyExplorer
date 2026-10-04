@@ -306,6 +306,16 @@ directly invalidates that fixture's result.
   policy text. First prove the harness/control lifecycle on the smallest
   fixture that exercises the same path, and preserve unaffected PASS evidence
   if a high-cost fixture later exposes a harness defect.
+- Before any high-cost E2E successor, classify the first relevant failure as
+  **product**, **harness/fixture**, or **control-plane/environment**, then
+  isolate the broken boundary on the smallest fixture that preserves the same
+  lifecycle. For GUI paths, prove **input -> event -> model -> projection** in
+  order before using the expensive fixture again. High-cost E2E is final
+  acceptance, not discovery for UIA/automation semantics, stale wrappers,
+  fixture assumptions, request serialization, runner routing or other
+  orchestration defects. Fix only the identified layer and rerun only the
+  invalidated boundary; repeat the expensive fixture only when its acceptance
+  evidence was genuinely invalidated.
 - For normal builds or remote tasks, do not actively query GitHub status on a
   short interval. Use the workflow-configured routine observation interval
   unless completion is independently known. Do not sleep merely to consume the
