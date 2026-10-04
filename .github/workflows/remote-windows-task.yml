@@ -159,20 +159,27 @@ jobs:
           }
 
           # Catch common expensive stages that were omitted from validation_kind.
+          # Match executable invocations, not incidental filenames/variables.
           $detectedStages = @()
-          if ($command -match '(?i)(test\.bat\s+source|run_checks\.py[^\r\n]*\bsource\b)') {
+          $commandBoundary = '(?im)(^|[;\r\n&]\s*)'
+          $pythonInvocation = '(?:py|python)(?:\.exe)?(?:\s+-\S+)*\s+'
+          if ($command -match ($commandBoundary + '(?:cmd\s+/c\s+)?test\.bat\s+source(?:\s|$)') -or
+              $command -match '(?im)run_checks\.py[^\r\n;&]*\bsource\b') {
             $detectedStages += "source"
           }
-          if ($command -match '(?i)(build\.bat\s+(debug|release)|app\\winui\\build\.cmd|run_checks\.py[^\r\n]*\b(build|full)\b)') {
+          if ($command -match ($commandBoundary + '(?:cmd\s+/c\s+)?build\.bat\s+(?:debug|release)(?:\s|$)') -or
+              $command -match ($commandBoundary + '(?:cmd\s+/c\s+)?app[\\/]winui[\\/]build\.cmd') -or
+              $command -match '(?im)run_checks\.py[^\r\n;&]*\b(?:build|full)\b') {
             $detectedStages += "build"
           }
-          if ($command -match '(?i)(test_native\.py|test_process_isolation\.py|tests\\winui\\m[0-9]+\\[^\r\n]*test)') {
+          if ($command -match ($commandBoundary + $pythonInvocation + '[^\r\n;&]*(?:test_native\.py|test_process_isolation\.py)(?:\s|$)')) {
             $detectedStages += "native"
           }
-          if ($command -match '(?i)(test_[A-Za-z0-9_]*gui\.py|test_shell_gui\.py|run_checks\.py[^\r\n]*\b(gui|full)\b)') {
+          if ($command -match ($commandBoundary + $pythonInvocation + '[^\r\n;&]*test_[A-Za-z0-9_]*gui\.py(?:\s|$)') -or
+              $command -match '(?im)run_checks\.py[^\r\n;&]*\b(?:gui|full)\b') {
             $detectedStages += "gui"
           }
-          if ($command -match '(?i)(screenshot|imagegrab|capture_[A-Za-z0-9_]*\.py|visual[_-]acceptance)') {
+          if ($command -match ($commandBoundary + $pythonInvocation + '[^\r\n;&]*(?:capture_[A-Za-z0-9_]*\.py|visual[_-]acceptance)(?:\s|$)')) {
             $detectedStages += "visual"
           }
           foreach ($stage in @($detectedStages | Sort-Object -Unique)) {
