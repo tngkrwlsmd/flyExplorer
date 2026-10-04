@@ -21,7 +21,7 @@ on:
       - '.github/remote-task.ps1'
 
 permissions:
-  contents: read
+  contents: write
 
 concurrency:
   group: flyexplorer-remote-windows-task
