@@ -1042,7 +1042,7 @@ namespace winrt::FlyExplorer::implementation
              pane.routeIds[pane.active],pane.active,items.size());
         const int mode=state.sortMode;
         const bool indexedProjection=
-            state.indexedNameProjection&&mode<=1&&
+            state.indexedNameProjection&&!state.indexToComplete&&mode<=1&&
             session.indexedFrontier()==snapshot.nextOffset;
         const auto sourceCount=indexedProjection?nameIndex.size():items.size();
         std::vector<size_t> order(sourceCount);
