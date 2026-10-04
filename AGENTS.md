@@ -293,6 +293,19 @@ its evidence is actually required. If it exposes a harness bug after product
 build/native evidence has passed, preserve those PASS stages and rerun only the
 invalidated boundary after diagnosis.
 
+Before any high-cost E2E retry, isolate the failing layer with the cheapest
+representative path. Classify the failure as **product**, **harness/fixture**, or
+**control-plane/environment** from the first relevant evidence; do not let an
+automation or orchestration defect masquerade as a product defect. For GUI
+flows, validate the chain **input -> event -> model -> projection** explicitly,
+using the smallest fixture that preserves the same interaction/lifecycle. A
+high-cost E2E is the final acceptance gate after those lower-cost boundaries
+converge, not the tool for discovering whether a UIA method, event route,
+fixture, or control-plane command works. If a lower layer fails, fix that layer
+and rerun only the invalidated boundary; rebuild or repeat the expensive E2E
+only when a product/build change or a still-required final acceptance genuinely
+invalidates its prior evidence.
+
 For iterative Windows development, GUI work and Windows 11 benchmarking,
 prefer this repository's fixed `control/remote-shell` request slot. Update
 only `requests/remote-shell/request.json` on that control branch; every
