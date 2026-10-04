@@ -86,10 +86,18 @@ def main():
             parent=Desktop(backend="uia").window(handle=windows[0].handle)
             return parent.child_window(auto_id="LeftFiles").exists(timeout=.25)
         until(ready,"Owner preview window not ready",20)
+        def visible_file_list():
+            matches=[v for v in parent.descendants(auto_id="LeftFiles")
+                     if v.element_info.control_type=="List"]
+            visible=[v for v in matches if v.is_visible()]
+            if visible:
+                return visible[-1]
+            if matches:
+                return matches[-1]
+            raise AssertionError("owned LeftFiles list not found")
         def first_row():
-            matches=[v for v in parent.child_window(
-               auto_id="LeftFiles").descendants()
-               if v.element_info.control_type=="ListItem"]
+            matches=[v for v in visible_file_list().descendants()
+                     if v.element_info.control_type=="ListItem"]
             return matches[0].window_text() if matches else ""
         until(lambda:"bench-0000.txt" in first_row(),
               "large-folder native Shell first row not rendered",
