@@ -274,7 +274,12 @@ def main():
                   repr(fresh_first_row()),flush=True)
             until(lambda:"bench-20499.txt" in fresh_first_row(),
                   "indexed name filter did not project the target row",12)
-            filt.set_edit_text("")
+            filt=fresh_parent().child_window(auto_id="LeftNameFilterBox")
+            filt.set_focus()
+            keyboard.send_keys("^a{BACKSPACE}")
+            until(lambda:fresh_parent().child_window(
+                      auto_id="LeftNameFilterBox").get_value()=="",
+                  "indexed name filter keyboard clear did not empty the editor",5)
             until(lambda:"bench-9999.txt" in fresh_first_row(),
                   "clearing indexed filter did not restore indexed name sort",12)
             fresh_parent().child_window(auto_id="SortPicker").select(2)
