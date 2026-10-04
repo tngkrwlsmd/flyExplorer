@@ -9,6 +9,7 @@
 #include "../../src/base/file_operation_core.h"
 #include "../../src/base/shell_isolation_wire.h"
 #include <algorithm>
+#include <cmath>
 #include <cwchar>
 #include <cwctype>
 #include <thread>
