@@ -106,6 +106,7 @@ class FluentShellContract(unittest.TestCase):
         self.assertIn('<Grid Background="Transparent">',xaml)
         self.assertIn('HorizontalAlignment="Right"',xaml)
         self.assertNotIn('Width="7" Margin="0,1,-3,1"',xaml)
+        self.assertEqual(xaml.count('Style="{StaticResource ExplorerColumnResizeThumbStyle}"'),6)
         self.assertIn("ApplyDetailColumnLayout(int side)",impl)
         self.assertIn("DetailLayoutProfile() const",impl)
         self.assertIn("DetailColumnWidths(int side) const",impl)
