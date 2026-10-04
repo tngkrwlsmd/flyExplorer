@@ -1104,25 +1104,31 @@ namespace winrt::FlyExplorer::implementation
                 }),order.end());
         }
         state.filteredCount=order.size();
-        const bool hasPrevious=snapshot.baseOffset!=0&&!state.streamToComplete;
-        const bool hasForward=
-            snapshot.residentEndOffset()<snapshot.nextOffset||
-            snapshot.truncated;
+        const bool hasPrevious=
+            !indexedProjection&&snapshot.baseOffset!=0&&!state.streamToComplete;
+        const bool hasForward=indexedProjection?
+            state.indexToComplete&&
+                (snapshot.residentEndOffset()<snapshot.nextOffset||
+                 snapshot.truncated):
+            (snapshot.residentEndOffset()<snapshot.nextOffset||
+             snapshot.truncated);
         const bool hasMore=order.size()>state.visibleCount||hasForward;
         previous.Visibility(hasPrevious?Visibility::Visible:Visibility::Collapsed);
         button.Visibility(hasMore?Visibility::Visible:Visibility::Collapsed);
         auto detailsHeader=side==0?LeftDetailsHeader():RightDetailsHeader();
         if(state.viewMode!=FileViewMode::Details)
             detailsHeader.Height((hasPrevious||hasMore)?24.0:0.0);
-        const bool sequential=state.filenameFilter.empty()&&mode==0;
+        const bool sequential=
+            !indexedProjection&&state.filenameFilter.empty()&&mode==0;
         const auto shown=sequential?
             snapshot.baseOffset+(std::min)(order.size(),state.visibleCount):
             (std::min)(order.size(),state.visibleCount);
         const auto total=sequential?snapshot.nextOffset:order.size();
-        const bool incomplete=
-            snapshot.baseOffset||
-            snapshot.residentEndOffset()<snapshot.nextOffset||
-            snapshot.truncated;
+        const bool incomplete=indexedProjection?
+            state.indexToComplete:
+            (snapshot.baseOffset||
+             snapshot.residentEndOffset()<snapshot.nextOffset||
+             snapshot.truncated);
         const auto progress=std::to_wstring(shown)+
             L"/"+std::to_wstring(total)+(incomplete?L"+":L"");
         button.Content(winrt::box_value(hstring(progress)));
@@ -1136,15 +1142,21 @@ namespace winrt::FlyExplorer::implementation
                side==0?L"\uC67C\uCABD \uB354 \uD45C\uC2DC ":L"\uC624\uB978\uCABD \uB354 \uD45C\uC2DC ")+progress));
         for(size_t visible=0;visible<(std::min)(order.size(),state.visibleCount);++visible){
             const auto index=order[visible];
-            const auto& item=items[index];
+            const auto logical=logicalAt(index);
+            std::size_t resident=0;
+            const bool residentReady=residentAt(index,resident);
+            const auto& itemLabel=labelAt(index);
+            const auto& itemParsing=parsingAt(index);
+            const bool itemFolder=folderAt(index);
+            auto const* meta=residentReady&&detailReady?
+                &state.details[resident]:nullptr;
             ListViewItem row;
-            auto label=std::wstring(item.isFolder()?L"[폴더]  ":L"[파일]  ")+
-                       item.label;
-            if(detailReady){
-                const auto& meta=ActiveWindowTab().fileLists[side].details[index];
-                if(!meta.typeLabel.empty())label+=L"   |   "+meta.typeLabel;
-                if(meta.sizeKnown)label+=L"   |   "+meta.bytesLabel;
-                if(meta.dateKnown)label+=L"   |   "+meta.dateLabel;
+            auto label=std::wstring(itemFolder?L"[폴더]  ":L"[파일]  ")+
+                       itemLabel;
+            if(meta){
+                if(!meta->typeLabel.empty())label+=L"   |   "+meta->typeLabel;
+                if(meta->sizeKnown)label+=L"   |   "+meta->bytesLabel;
+                if(meta->dateKnown)label+=L"   |   "+meta->dateLabel;
             }
             if(state.viewMode==FileViewMode::Details){
             Grid columns;
@@ -1162,7 +1174,7 @@ namespace winrt::FlyExplorer::implementation
             nameCell.VerticalAlignment(VerticalAlignment::Center);
             bool localDrive=false;
             ULARGE_INTEGER freeBytes{},totalBytes{},freeTotal{};
-            const auto& parsing=item.parsingName;
+            const auto& parsing=itemParsing;
             if(parsing.size()==3&&parsing[1]==L':'&&
                (parsing[2]==L'\\'||parsing[2]==L'/')){
                 const auto driveType=::GetDriveTypeW(parsing.c_str());
@@ -1172,8 +1184,7 @@ namespace winrt::FlyExplorer::implementation
                    totalBytes.QuadPart>0)
                     localDrive=true;
             }
-            auto const* iconMeta=detailReady?
-                &ActiveWindowTab().fileLists[side].details[index]:nullptr;
+            auto const* iconMeta=meta;
             bool actualVisual=false;
             if(iconMeta){
                 const auto& data=iconMeta->iconBgra;
@@ -1199,7 +1210,7 @@ namespace winrt::FlyExplorer::implementation
                                 image.Source(pixels);
                                 image.Width(16);image.Height(16);
                                 Microsoft::UI::Xaml::Automation::AutomationProperties::
-                                    SetName(image,item.isFolder()?
+                                    SetName(image,itemFolder?
                                         (iconMeta->knownFolderVisual?
                                             L"Windows Known Folder artwork":
                                             L"Windows Shell folder icon"):
@@ -1216,12 +1227,12 @@ namespace winrt::FlyExplorer::implementation
                 glyph.FontFamily(Microsoft::UI::Xaml::Media::FontFamily{
                     L"Segoe Fluent Icons"});
                 glyph.Glyph(hstring(localDrive?L"\uEDA2":
-                    item.isFolder()?L"\uE8B7":L"\uE8A5"));
+                    itemFolder?L"\uE8B7":L"\uE8A5"));
                 glyph.FontSize(localDrive?20.0:16.0);
                 nameCell.Children().Append(glyph);
             }
             TextBlock filename;
-            filename.Text(item.label);
+            filename.Text(itemLabel);
             filename.TextTrimming(TextTrimming::CharacterEllipsis);
             if(localDrive){
                 StackPanel drive;
@@ -1256,7 +1267,6 @@ namespace winrt::FlyExplorer::implementation
                 Grid::SetColumn(field,col);
                 columns.Children().Append(field);
             };
-            auto const* meta=detailReady?&ActiveWindowTab().fileLists[side].details[index]:nullptr;
             addText(meta?meta->typeLabel:L"",1);
             addText(meta&&meta->sizeKnown?meta->bytesLabel:L"",2);
             addText(meta&&meta->dateKnown?meta->dateLabel:L"",3);
@@ -1288,7 +1298,7 @@ namespace winrt::FlyExplorer::implementation
                                     std::memcpy(target,data.data(),data.size());pixels.Invalidate();Image image;image.Source(pixels);
                                     const double targetSize=large?64.0:(medium?(realThumb?40.0:32.0):(smallIcons?20.0:16.0));image.Width(targetSize);image.Height(targetSize);
                                     Microsoft::UI::Xaml::Automation::AutomationProperties::SetName(image,realThumb?L"Windows Shell image thumbnail":
-                                        item.isFolder()?(iconMeta->knownFolderVisual?L"Windows Known Folder artwork":
+                                        itemFolder?(iconMeta->knownFolderVisual?L"Windows Known Folder artwork":
                                             L"Windows Shell folder icon"):L"Windows system registered file icon");
                                     cell.Children().Append(image);actualVisual=true;
                                 }
@@ -1298,9 +1308,9 @@ namespace winrt::FlyExplorer::implementation
                 }
                 if(!actualVisual){
                     FontIcon glyph;glyph.FontFamily(Microsoft::UI::Xaml::Media::FontFamily{L"Segoe Fluent Icons"});
-                    glyph.Glyph(hstring(item.isFolder()?L"\uE8B7":L"\uE8A5"));glyph.FontSize(large?60.0:(medium?36.0:(smallIcons?20.0:16.0)));cell.Children().Append(glyph);
+                    glyph.Glyph(hstring(itemFolder?L"\uE8B7":L"\uE8A5"));glyph.FontSize(large?60.0:(medium?36.0:(smallIcons?20.0:16.0)));cell.Children().Append(glyph);
                 }
-                TextBlock filename;filename.Text(item.label);
+                TextBlock filename;filename.Text(itemLabel);
                 if(iconGrid){filename.FontSize(12.0);filename.Width(large?104.0:84.0);filename.TextAlignment(TextAlignment::Center);filename.TextWrapping(TextWrapping::WrapWholeWords);filename.MaxLines(2);filename.TextTrimming(TextTrimming::CharacterEllipsis);}
                 else{filename.TextTrimming(TextTrimming::CharacterEllipsis);if(smallIcons){filename.FontSize(12.0);filename.Width(120);}}
                 cell.Children().Append(filename);row.Content(cell);
@@ -1311,8 +1321,7 @@ namespace winrt::FlyExplorer::implementation
             }
             Microsoft::UI::Xaml::Automation::AutomationProperties::SetName(
                 row,hstring(label));
-            row.Tag(winrt::box_value(
-                static_cast<std::uint64_t>(snapshot.logicalIndex(index))));
+            row.Tag(winrt::box_value(logical));
             const auto weak=get_weak();
             row.Tapped([weak,side](IInspectable const&,
                 Microsoft::UI::Xaml::Input::TappedRoutedEventArgs const&){
@@ -1334,8 +1343,10 @@ namespace winrt::FlyExplorer::implementation
                 if(auto ui=weak.get())ui->OnFileRowDragStarting(side,sender,args);
             });
             view.Items().Append(row);
-            if(!item.parsingName.empty()&&
-               std::find(selected.begin(),selected.end(),item.parsingName)
+            state.renderedLogical.push_back(logical);
+            state.renderedPaths.push_back(itemParsing);
+            if(!itemParsing.empty()&&
+               std::find(selected.begin(),selected.end(),itemParsing)
                   !=selected.end()){
                 // Restore selection by native parsing path, never stale
                 // pre-sort row index (including real multiple selection).
