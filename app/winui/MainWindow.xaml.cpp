@@ -735,9 +735,35 @@ namespace winrt::FlyExplorer::implementation
                  name==L"RightNameWidthSlider"?1:-1;
         if(side<0)return;
         auto width=slider.Value();
-        if(width<120||width>320)return;
+        if(width<120||width>360)return;
         ActiveWindowTab().fileLists[side].nameColumnWidth=width;
-        if(mColumnControlsReady)FillFiles(side);
+        if(mColumnControlsReady)ApplyDetailColumnLayout(side);
+    }
+    void MainWindow::OnDetailColumnResizeDragDelta(
+        IInspectable const& sender,
+        Microsoft::UI::Xaml::Controls::Primitives::DragDeltaEventArgs const& args){
+        auto thumb=sender.try_as<Microsoft::UI::Xaml::Controls::Primitives::Thumb>();
+        if(!thumb||!thumb.Tag())return;
+        const auto tag=std::wstring(
+            winrt::unbox_value<hstring>(thumb.Tag()).c_str());
+        if(tag.size()!=3||tag[1]!=L','||
+           tag[0]<L'0'||tag[0]>L'1'||
+           tag[2]<L'0'||tag[2]>L'2')return;
+        const int side=tag[0]-L'0';
+        const int column=tag[2]-L'0';
+        if(ActiveWindowTab().model.activePane!=side)ActivatePane(side);
+        auto& state=ActiveWindowTab().fileLists[side];
+        const auto delta=args.HorizontalChange();
+        if(column==0)
+            state.nameColumnWidth=(std::clamp)(
+                state.nameColumnWidth+delta,120.0,360.0);
+        else if(column==1)
+            state.typeColumnWidth=(std::clamp)(
+                state.typeColumnWidth+delta,96.0,320.0);
+        else
+            state.sizeColumnWidth=(std::clamp)(
+                state.sizeColumnWidth+delta,64.0,180.0);
+        ApplyDetailColumnLayout(side);
     }
     void MainWindow::OnNameFilterChanged(
         IInspectable const& sender,
@@ -845,11 +871,14 @@ namespace winrt::FlyExplorer::implementation
     std::array<GridLength,4> MainWindow::DetailColumnWidths(int side) const
     {
         const int profile=DetailLayoutProfile();
-        const auto user=ActiveWindowTab().fileLists[side].nameColumnWidth;
+        auto const& state=ActiveWindowTab().fileLists[side];
+        const auto name=(std::clamp)(state.nameColumnWidth,120.0,360.0);
+        const auto type=(std::clamp)(state.typeColumnWidth,96.0,320.0);
+        const auto size=(std::clamp)(state.sizeColumnWidth,64.0,180.0);
         if(profile==0)return {GridLength{1.0,GridUnitType::Star},GridLength{0.0,GridUnitType::Pixel},GridLength{0.0,GridUnitType::Pixel},GridLength{0.0,GridUnitType::Pixel}};
-        if(profile==1)return {GridLength{1.0,GridUnitType::Star},GridLength{0.0,GridUnitType::Pixel},GridLength{64.0,GridUnitType::Pixel},GridLength{0.0,GridUnitType::Pixel}};
-        if(profile==2)return {GridLength{(std::min)(user,168.0),GridUnitType::Pixel},GridLength{1.0,GridUnitType::Star},GridLength{64.0,GridUnitType::Pixel},GridLength{0.0,GridUnitType::Pixel}};
-        return {GridLength{user,GridUnitType::Pixel},GridLength{1.0,GridUnitType::Star},GridLength{80.0,GridUnitType::Pixel},GridLength{155.0,GridUnitType::Pixel}};
+        if(profile==1)return {GridLength{1.0,GridUnitType::Star},GridLength{0.0,GridUnitType::Pixel},GridLength{size,GridUnitType::Pixel},GridLength{0.0,GridUnitType::Pixel}};
+        if(profile==2)return {GridLength{(std::min)(name,220.0),GridUnitType::Pixel},GridLength{1.0,GridUnitType::Star},GridLength{size,GridUnitType::Pixel},GridLength{0.0,GridUnitType::Pixel}};
+        return {GridLength{name,GridUnitType::Pixel},GridLength{type,GridUnitType::Pixel},GridLength{size,GridUnitType::Pixel},GridLength{1.0,GridUnitType::Star}};
     }
     void MainWindow::ApplyDetailColumnLayout(int side)
     {
@@ -859,6 +888,30 @@ namespace winrt::FlyExplorer::implementation
         auto size=side==0?LeftSizeHeaderColumn():RightSizeHeaderColumn();
         auto date=side==0?LeftDateHeaderColumn():RightDateHeaderColumn();
         name.Width(widths[0]);type.Width(widths[1]);size.Width(widths[2]);date.Width(widths[3]);
+
+        const auto profile=DetailLayoutProfile();
+        auto setThumbs=[&](auto const& nameThumb,auto const& typeThumb,
+                           auto const& sizeThumb){
+            nameThumb.Visibility(profile>=2?Visibility::Visible:Visibility::Collapsed);
+            typeThumb.Visibility(profile>=3?Visibility::Visible:Visibility::Collapsed);
+            sizeThumb.Visibility(profile>=1?Visibility::Visible:Visibility::Collapsed);
+        };
+        if(side==0)setThumbs(
+            LeftNameColumnResizeThumb(),LeftTypeColumnResizeThumb(),
+            LeftSizeColumnResizeThumb());
+        else setThumbs(
+            RightNameColumnResizeThumb(),RightTypeColumnResizeThumb(),
+            RightSizeColumnResizeThumb());
+
+        auto view=side==0?LeftFiles():RightFiles();
+        for(auto const& item:view.Items()){
+            auto row=item.try_as<ListViewItem>();
+            if(!row)continue;
+            auto grid=row.Content().try_as<Grid>();
+            if(!grid||grid.ColumnDefinitions().Size()!=4)continue;
+            for(std::uint32_t column=0;column<4;++column)
+                grid.ColumnDefinitions().GetAt(column).Width(widths[column]);
+        }
     }
 
     void MainWindow::UpdateViewPresentation(int side)
