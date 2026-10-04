@@ -26,7 +26,7 @@ consumer core; this PROJECT.md remains project-owned across bundle refreshes.
     {"name": "winui-tests", "path": "tests/winui", "responsibility": "source, native and owned GUI contracts"}
   ],
   "review": {
-    "reviewed_revision": "b7e6873407016e8a3e9cceb3e397a81d71b7e0c5",
+    "reviewed_revision": "eb612e6ef81e168e95cc5c00284eaf890157497b",
     "reviewed_at": "2026-10-04",
     "reviewed_paths": [
       "app/winui",
@@ -121,6 +121,37 @@ existing depth-5, 2,500-entry walk and 100-result bounds, cancellation,
 stale-result rejection and opt-in recent-scope persistence remain in force.
 
 ## Current verification
+
+Bounded literal file-content search is accepted on product revision
+`eb612e6ef81e168e95cc5c00284eaf890157497b`. It reuses the existing SearchController worker and composes
+an optional literal content term with existing name/regex, extension, size,
+modified-date and entry-kind criteria. Content matching supports UTF-8/ASCII
+and BOM-tagged UTF-16 LE/BE text. Unmarked NUL-containing files are treated as
+binary and skipped. Reading is bounded to 1 MiB per file and 16 MiB per search,
+with cancellation checked every 64 KiB. Folder-only content queries are rejected
+before worker start. The existing depth-5, 2,500-entry and 100-result search
+bounds remain unchanged.
+
+Saved search-condition sets now persist the content term using schema 2 while
+retaining read compatibility with schema 1. Scope remains intentionally
+excluded from saved presets.
+
+Remote run `37172317827` passed canonical structure 4/4 and source contracts
+212/212, then isolated one native-fixture token mismatch after 39/40 checks;
+the product code was not changed for that failure. New work revision
+`651ee13c8edfbdd91cb28f34234fcfb610b53df2` corrected only the fixture token.
+Remote run `37172446492` then passed the Release M19 native contract gate at
+40/40, the canonical Release build, UTF-8 and UTF-16 real owned-GUI content
+search, folder-only pre-start rejection, schema-2 preset save/restart/apply/
+delete, protected legacy-profile checks and normal owned WinUI exit 0. That run
+later failed in a broader unrelated test-shell tail while resolving
+`LeftFiles` after the owned content-search section had already completed; it
+was not treated as a content-search product failure.
+
+Final focused remote run `37172732023` succeeded with `git diff --check` and
+matched 956x689 Dark-theme BEFORE/AFTER evidence. Direct review shows the added
+file-content row, encoding/I/O-budget guidance and existing search criteria
+without clipping or overlap, while both file panes remain usable.
 
 Search v3 compound metadata criteria are accepted on product revision
 `b7e6873407016e8a3e9cceb3e397a81d71b7e0c5`. The existing bounded worker now supports optional minimum/

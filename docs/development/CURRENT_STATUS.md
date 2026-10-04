@@ -152,6 +152,28 @@ bootstrap configuration.
 
 ## Latest verified evidence
 
+Bounded literal content search is accepted on product revision
+`eb612e6ef81e168e95cc5c00284eaf890157497b`. Search now AND-composes an optional literal file-content term
+with the existing name/regex, extension, size, local modified-date and target
+criteria. UTF-8/ASCII and BOM-tagged UTF-16 LE/BE are supported; unmarked
+NUL-containing files are skipped as binary. Reads are bounded to 1 MiB per file
+and 16 MiB per search, with 64 KiB cancellation checkpoints. Folder-only
+content search is rejected before worker start. Saved search presets write
+schema 2 with the content term and continue to read schema 1.
+
+Evidence: remote run `37172317827` passed canonical structure 4/4 and source
+contracts 212/212; its only later failure was an isolated native-fixture token
+mismatch at 39/40. After a test-only correction, run `37172446492` passed the
+Release M19 native gate at 40/40, canonical Release build, real UTF-8/UTF-16
+owned-GUI content search, folder-only rejection, content-preset
+save/restart/apply/delete, protected legacy-profile checks and owned WinUI exit
+0. A later unrelated broad shell-harness tail could not resolve `LeftFiles`
+after the content-search section had already completed. Final focused run
+`37172732023` succeeded with `git diff --check` and matched 956x689
+BEFORE/AFTER Dark-theme evidence; direct review found no clipping/overlap and
+both panes remained usable.
+
+
 Search v3 compound metadata criteria are accepted on product revision
 `b7e6873407016e8a3e9cceb3e397a81d71b7e0c5`. Bounded search now AND-composes optional integer-KB minimum/
 maximum file size and inclusive local modified-date bounds with the existing
@@ -334,11 +356,13 @@ Current source and the last parity evidence still show these limits:
   5,000-item navigation/sort/progressive-paging evidence. Folders above 6,000,
   true streaming virtualization, network/virtual providers and sustained
   thumbnail-cache behavior are not certified.
-- Search remains bounded metadata/name search. Regex, case sensitivity,
-  entry-kind, single-extension, minimum/maximum file size and inclusive local
-  modified-date conditions are implemented with up to 20 private saved
-  condition sets. Content search and broader provider/property criteria are
-  not implemented.
+- Search remains bounded. Regex, case sensitivity, entry-kind,
+  single-extension, minimum/maximum file size, inclusive local modified-date
+  and literal text content conditions are implemented with up to 20 private
+  saved condition sets. Content reads are limited to UTF-8/ASCII or BOM-tagged
+  UTF-16 text, 1 MiB per file and 16 MiB per search; content regex, broader
+  encodings, indexed/provider/property search and unrestricted deep content
+  scanning are not implemented.
 - Persistent pane filter/mask rule sets are implemented with up to 20 named
   private presets, case-insensitive wildcard masks and legacy substring
   compatibility. Pane filters remain name/mask based; historical per-rule
