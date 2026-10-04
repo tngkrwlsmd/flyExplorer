@@ -1,19 +1,15 @@
 {
-  "request_id": "large-folder-over-20k-gui-resume-003",
+  "request_id": "large-folder-20k-visual-evidence-export-001",
   "expected_main_sha": "5eb0fbb50c627a736e8e6ca2bb4d9793ebad33ea",
-  "candidate_sha": "0d94c9a822334d736ca7bdd795d83b5c87f689fc",
-  "logical_unit": "large-folder-over-20k-browse",
-  "configuration": "Release",
+  "candidate_sha": "5eb0fbb50c627a736e8e6ca2bb4d9793ebad33ea",
+  "logical_unit": "large-folder-20k-evidence-export",
+  "configuration": "none",
   "validation_kind": [
-    "gui",
-    "visual"
+    "none"
   ],
-  "invalidated_evidence": {
-    "gui": "latest harness reacquires the owned top-level UIA window and tracks progress through both the load-more label and footer count during the long 20.5k probe",
-    "visual": "the same focused run captures the unclipped 36px folder-tab layout after crossing the 20k frontier"
-  },
+  "invalidated_evidence": {},
   "retry_reason": "",
   "retry_revision": "",
   "working_directory": "C:\\dev\\flyExplorer",
-  "command": "$ErrorActionPreference = \"Stop\"\ngit fetch origin main work/large-folder-20k-browse --no-tags --prune\nif ($LASTEXITCODE -ne 0) { throw \"fetch failed\" }\nif ((git rev-parse origin/main).Trim() -ne \"5eb0fbb50c627a736e8e6ca2bb4d9793ebad33ea\") { throw \"main moved\" }\nif ((git status --short).Count -ne 0) { throw \"dirty persistent checkout\" }\ngit checkout -B work/large-folder-20k-browse origin/work/large-folder-20k-browse\nif ($LASTEXITCODE -ne 0) { throw \"checkout harness fix failed\" }\nif ((git rev-parse HEAD).Trim() -ne \"0d94c9a822334d736ca7bdd795d83b5c87f689fc\") { throw \"candidate mismatch\" }\n$changedProduct = git diff --name-only 924a035e244fb547662bedb7094f45b543396a36..HEAD -- app/winui src/base\nif ($LASTEXITCODE -ne 0) { throw \"product diff check failed\" }\nif ($changedProduct) { throw \"harness-only resume unexpectedly changed product files: $changedProduct\" }\nif (!(Test-Path -LiteralPath \"out\\winui\\Release\\flyExplorer.exe\")) { throw \"accepted candidate Release binary missing\" }\n\npython -X utf8 tests\\winui\\test_large_owned_folder_gui.py --items 20500 --configuration Release --browse-over-complete-model\nif ($LASTEXITCODE -ne 0) { throw \"browse-over-20k GUI/visual resume failed\" }\n\ngit diff --check origin/main..HEAD\nif ($LASTEXITCODE -ne 0) { throw \"diff check failed\" }\nWrite-Host \"LARGE_FOLDER_OVER_20K_GUI_RESUME_PASS\"\n"
+  "command": "$ErrorActionPreference = \"Stop\"\ngit fetch origin main --no-tags --prune\nif ($LASTEXITCODE -ne 0) { throw \"fetch main failed\" }\nif ((git rev-parse origin/main).Trim() -ne \"5eb0fbb50c627a736e8e6ca2bb4d9793ebad33ea\") { throw \"main moved\" }\n$source = \"C:\\dev\\flyExplorer\\logs\\m23\"\n$target = \"C:\\dev\\flyExplorer\\logs\\remote-evidence\"\n$files = @(\n  \"large-resident-window-before.png\",\n  \"large-resident-window-after.png\",\n  \"large-browse-over-20k-after.png\"\n)\nNew-Item -ItemType Directory -Force -Path $target | Out-Null\nGet-ChildItem -LiteralPath $target -File -ErrorAction SilentlyContinue | Remove-Item -Force\nforeach($name in $files){\n  $src = Join-Path $source $name\n  if (!(Test-Path -LiteralPath $src -PathType Leaf)) { throw \"required image missing: $name\" }\n  Copy-Item -LiteralPath $src -Destination (Join-Path $target $name)\n}\nGet-FileHash -Algorithm SHA256 -LiteralPath ($files | ForEach-Object { Join-Path $source $_ }) |\n  ForEach-Object { \"$($_.Path) $($_.Hash)\" } |\n  Set-Content -Encoding UTF8 -LiteralPath (Join-Path $target \"large-folder-20k-sha256.txt\")\nWrite-Host \"LARGE_FOLDER_20K_EVIDENCE_EXPORT_PASS\"\n"
 }
