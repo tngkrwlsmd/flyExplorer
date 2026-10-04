@@ -64,7 +64,7 @@ def main():
     for key in ("FLY_M23_OWNED_DRAG_TEST","FLY_M23_OWNED_SESSION",
                 "FLY_M22_OWNED_ACTUAL_RECYCLE"):
         env.pop(key,None)
-    from pywinauto import Desktop
+    from pywinauto import Desktop, keyboard
     import psutil
     import ctypes as c
     from ctypes import wintypes as w
@@ -237,43 +237,34 @@ def main():
             filt=fresh_parent().child_window(auto_id="LeftNameFilterBox")
             assert filt.exists(timeout=.2)
             before_filter=(status_text(),footer_count(),fresh_first_row())
-            filt.set_edit_text("20499")
-            until(lambda:filt.get_value()=="20499",
-                  "indexed name filter input did not accept the target",5)
+            files=fresh_parent().child_window(auto_id="LeftFiles")
+            files.set_focus()
+            keyboard.send_keys("^+f")
+            until(lambda:fresh_parent().child_window(
+                      auto_id="LeftNameFilterBox").has_keyboard_focus(),
+                  "Ctrl+Shift+F did not focus the indexed name filter",5)
+            keyboard.send_keys("20499")
+            until(lambda:fresh_parent().child_window(
+                      auto_id="LeftNameFilterBox").get_value()=="20499",
+                  "indexed name filter keyboard input did not accept the target",5)
             print("OWNED_LARGE_INDEX_FILTER_INPUT_ACCEPTED",True,flush=True)
-            try:
-                until(lambda:
-                      status_text()!=before_filter[0] or
-                      footer_count()!=before_filter[1] or
-                      fresh_first_row()!=before_filter[2],
-                      "indexed name filter event produced no observable change",5)
-            except Exception:
-                print("OWNED_LARGE_INDEX_FILTER_EVENT_STATE",
-                      repr(filt.get_value()),repr(status_text()),
-                      footer_count(),repr(fresh_first_row()),flush=True)
-                raise
+            until(lambda:
+                  status_text()!=before_filter[0] or
+                  footer_count()!=before_filter[1] or
+                  fresh_first_row()!=before_filter[2],
+                  "indexed name filter event produced no observable change",8)
             print("OWNED_LARGE_INDEX_FILTER_EVENT_STATE",
-                  repr(filt.get_value()),repr(status_text()),
-                  footer_count(),repr(fresh_first_row()),flush=True)
-            try:
-                until(lambda:footer_count()==1,
-                      "indexed name filter model count did not become one",5)
-            except Exception:
-                print("OWNED_LARGE_INDEX_FILTER_MODEL_STATE",
-                      repr(status_text()),footer_count(),
-                      repr(fresh_first_row()),flush=True)
-                raise
+                  repr(fresh_parent().child_window(
+                      auto_id="LeftNameFilterBox").get_value()),
+                  repr(status_text()),footer_count(),
+                  repr(fresh_first_row()),flush=True)
+            until(lambda:footer_count()==1,
+                  "indexed name filter model count did not become one",8)
             print("OWNED_LARGE_INDEX_FILTER_MODEL_STATE",
                   repr(status_text()),footer_count(),
                   repr(fresh_first_row()),flush=True)
-            try:
-                until(lambda:"bench-20499.txt" in fresh_first_row(),
-                      "indexed name filter did not project the target row",12)
-            except Exception:
-                print("OWNED_LARGE_INDEX_FILTER_PROJECTION_STATE",
-                      repr(status_text()),footer_count(),
-                      repr(fresh_first_row()),flush=True)
-                raise
+            until(lambda:"bench-20499.txt" in fresh_first_row(),
+                  "indexed name filter did not project the target row",12)
             filt.set_edit_text("")
             until(lambda:"bench-9999.txt" in fresh_first_row(),
                   "clearing indexed filter did not restore indexed name sort",12)
@@ -331,7 +322,6 @@ def main():
                   auto_id="LeftLoadMoreButton").window_text(),
                   "controlled extra page did not render",12)
         if args.items==2300:
-            from pywinauto import keyboard
             filt=parent.child_window(auto_id="LeftNameFilterBox")
             assert filt.exists(timeout=.2)
             filt.set_edit_text("2299")
