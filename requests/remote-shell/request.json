@@ -1,25 +1,19 @@
 {
-  "request_id": "large-folder-resident-window-acceptance-001",
+  "request_id": "large-folder-resident-window-gui-resume-001",
   "expected_main_sha": "d395db0f40b2a3863be4216ba1644f46f42c8dc0",
-  "candidate_sha": "37d4cc023777c67a963710efd2e17ee7125a7cae",
+  "candidate_sha": "1c5779448a8cb194ff1a506ccfdd7cf0239f8222",
   "logical_unit": "large-folder-resident-window",
   "configuration": "Release",
   "validation_kind": [
-    "source",
-    "build",
-    "native",
     "gui",
     "visual"
   ],
   "invalidated_evidence": {
-    "source": "Shell Session resident-window contracts, page-range routing, XAML controls and GUI harness changed",
-    "build": "C++ navigation core, supervisor/controller, MainWindow XAML/C++ and helper validation changed",
-    "native": "isolated helper now accepts exact bounded offset/limit ranges including offset zero for previous-window rehydration",
-    "gui": "large-folder rows now evict to a 2048-entry resident window with previous/forward rehydration and full-model sort rebuild",
-    "visual": "a previous-window control appears only after resident eviction and logical progress is projected from the resident window"
+    "gui": "focused resident-window harness incorrectly fell through into the unrelated generic 2300-row tail after all target markers had passed",
+    "visual": "AFTER acceptance needs one clean successful process completion on the harness-only revision; product pixels are unchanged from the already built candidate"
   },
   "retry_reason": "",
   "retry_revision": "",
   "working_directory": "C:\\dev\\flyExplorer",
-  "command": "$ErrorActionPreference = \"Stop\"\ngit fetch origin main work/large-folder-resident-window --no-tags --prune\nif ($LASTEXITCODE -ne 0) { throw \"fetch failed\" }\nif ((git rev-parse origin/main).Trim() -ne \"d395db0f40b2a3863be4216ba1644f46f42c8dc0\") { throw \"main moved\" }\nif ((git status --short).Count -ne 0) { throw \"dirty persistent checkout\" }\n\ngit checkout -B work/large-folder-resident-window origin/work/large-folder-resident-window\nif ($LASTEXITCODE -ne 0) { throw \"checkout candidate failed\" }\nif ((git rev-parse HEAD).Trim() -ne \"37d4cc023777c67a963710efd2e17ee7125a7cae\") { throw \"candidate mismatch\" }\n\ncmd /c test.bat source\nif ($LASTEXITCODE -ne 0) { throw \"source contracts failed\" }\n\nif (!(Test-Path -LiteralPath \"out\\winui\\Release\\flyExplorer.exe\")) {\n  throw \"accepted baseline Release binary missing\"\n}\npython -X utf8 tests\\winui\\test_large_owned_folder_gui.py --items 2300 --configuration Release --resident-window-evidence before\nif ($LASTEXITCODE -ne 0) { throw \"matched BEFORE resident-window GUI capture failed\" }\n\ncmd /c build.bat Release\nif ($LASTEXITCODE -ne 0) { throw \"Release build failed\" }\n\n$env:FLY_M16_CONFIG = \"Release\"\npython -X utf8 tests\\winui\\helper\\test_process_isolation.py\nif ($LASTEXITCODE -ne 0) { throw \"focused helper process-isolation test failed\" }\n\npython -X utf8 tests\\winui\\test_large_owned_folder_gui.py --items 2300 --configuration Release --resident-window-evidence after\nif ($LASTEXITCODE -ne 0) { throw \"resident-window GUI/visual acceptance failed\" }\n\ngit diff --check origin/main..HEAD\nif ($LASTEXITCODE -ne 0) { throw \"diff check failed\" }\nWrite-Host \"LARGE_FOLDER_RESIDENT_WINDOW_ACCEPTANCE_PASS\"\n"
+  "command": "$ErrorActionPreference = \"Stop\"\ngit fetch origin main work/large-folder-resident-window --no-tags --prune\nif ($LASTEXITCODE -ne 0) { throw \"fetch failed\" }\nif ((git rev-parse origin/main).Trim() -ne \"d395db0f40b2a3863be4216ba1644f46f42c8dc0\") { throw \"main moved\" }\nif ((git status --short).Count -ne 0) { throw \"dirty persistent checkout\" }\ngit checkout -B work/large-folder-resident-window origin/work/large-folder-resident-window\nif ($LASTEXITCODE -ne 0) { throw \"checkout harness fix failed\" }\nif ((git rev-parse HEAD).Trim() -ne \"1c5779448a8cb194ff1a506ccfdd7cf0239f8222\") { throw \"candidate mismatch\" }\n$changedProduct = git diff --name-only 37d4cc023777c67a963710efd2e17ee7125a7cae..HEAD -- app/winui src/base\nif ($LASTEXITCODE -ne 0) { throw \"product-diff check failed\" }\nif ($changedProduct) { throw \"harness-only resume unexpectedly changes product files: $changedProduct\" }\nif (!(Test-Path -LiteralPath \"out\\winui\\Release\\flyExplorer.exe\")) { throw \"accepted candidate Release binary missing\" }\n\npython -X utf8 tests\\winui\\test_large_owned_folder_gui.py --items 2300 --configuration Release --resident-window-evidence after\nif ($LASTEXITCODE -ne 0) { throw \"focused resident-window GUI/visual resume failed\" }\n\ngit diff --check origin/main..HEAD\nif ($LASTEXITCODE -ne 0) { throw \"diff check failed\" }\nWrite-Host \"LARGE_FOLDER_RESIDENT_WINDOW_GUI_RESUME_PASS\"\n"
 }
