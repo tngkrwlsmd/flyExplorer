@@ -44,6 +44,8 @@ class LargeFolderStreamingContracts(unittest.TestCase):
         self.assertIn("session.prependPage(",cpp)
         self.assertIn("PageDirection::Backward",cpp)
         self.assertIn("model.markPending(side,pane.active,id,true)",cpp)
+        self.assertIn("kMaxBrowseEntries",cpp)
+        self.assertIn("ceiling-residentEnd",cpp)
 
     def test_ui_row_identity_is_logical_not_resident_vector_index(self):
         core=read("src/base/shell_navigation_core.h")
@@ -85,6 +87,9 @@ class LargeFolderStreamingContracts(unittest.TestCase):
         self.assertIn("QueueNextFolderPage(side,true)",transfers)
         self.assertIn("state.filenameFilter.empty()&&mode==0",main)
         self.assertIn("snapshot.baseOffset+(std::min)(order.size(),state.visibleCount)",main)
+        self.assertIn("kMaxCompleteModelEntries",main)
+        self.assertIn("kMaxBrowseEntries",main)
+        self.assertIn("fullModelLimitReached",main)
 
     def test_real_owned_gui_proves_initial_1024_then_global_8000(self):
         gui=read("tests/winui/test_large_owned_folder_gui.py")
