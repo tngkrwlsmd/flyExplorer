@@ -55,16 +55,23 @@ def main(config="Release"):
 
         # The column-resize acceptance only needs the left Details pane. Do not
         # require an arbitrary 1500px desktop: collapse the secondary pane when
-        # it is visible so the left pane reaches the full Details profile even
-        # on a smaller self-hosted desktop.
-        secondary=element("SecondaryPane")
-        if secondary.exists(timeout=.5) and secondary.is_visible():
-            split=element("SplitButton")
-            eventually(lambda:split.exists(timeout=.2) and split.is_visible(),
-                       "split toggle unavailable",6)
+        # the current split command says two-pane mode is active. WinUI can keep
+        # a cached UIA peer for a Collapsed SecondaryPane, so do not use that
+        # peer's is_visible() value as the split-state oracle.
+        split=element("SplitButton")
+        eventually(lambda:split.exists(timeout=.2) and split.is_visible(),
+                   "split toggle unavailable",6)
+        split_state=split.window_text()
+        if "단일 창" in split_state:
+            before_width=element("LeftFiles").rectangle().width()
             split.click_input()
-            eventually(lambda:not element("SecondaryPane").is_visible(),
-                       "secondary pane did not collapse for column resize",8)
+            eventually(lambda:"분할 창" in element("SplitButton").window_text(),
+                       "split command did not enter single-pane mode",8)
+            eventually(lambda:element("LeftFiles").rectangle().width()>before_width,
+                       "left pane did not expand after single-pane transition",8)
+        else:
+            eventually(lambda:"분할 창" in element("SplitButton").window_text(),
+                       "split command state unavailable",6)
 
         for auto_id in ("LeftNameColumnResizeThumb","LeftTypeColumnResizeThumb",
                         "LeftSizeColumnResizeThumb","LeftNameSortButton",
