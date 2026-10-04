@@ -93,7 +93,7 @@ class RemoteWindowsTaskContractTests(unittest.TestCase):
             self.assertIn("30-50", normalized)
             self.assertIn("validation fingerprint", normalized)
             self.assertIn("retry_revision", normalized)
-        self.assertIn("<=2 validation runs per logical unit", self.project)
+        self.assertIn("<=2 validation runs per logical unit", " ".join(self.project.split()))
 
     def test_dispatch_path_does_not_require_checkout(self):
         self.assertIn(
