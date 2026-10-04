@@ -1429,14 +1429,15 @@ namespace winrt::FlyExplorer::implementation
         const auto& state=ActiveWindowTab().fileLists[side];
         auto const& snapshot=pane.tabs[pane.active].snapshot();
         std::size_t count=snapshot.children.size();
-        const bool incomplete=snapshot.truncated||
-            snapshot.baseOffset||
-            snapshot.residentEndOffset()<snapshot.nextOffset;
+        bool incomplete=snapshot.truncated;
         if(state.visibleRoute==pane.routeIds[pane.active]&&state.visibleTab==pane.active){
-            if(state.filenameFilter.empty()&&state.sortMode==0)
+            if(state.filenameFilter.empty()){
                 count=snapshot.nextOffset;
-            else
+            }else{
                 count=state.filteredCount;
+                incomplete=incomplete||snapshot.baseOffset||
+                    snapshot.residentEndOffset()<snapshot.nextOffset;
+            }
         }
         const auto selected=view.SelectedItems().Size();
         ItemCountText().Text(hstring(
