@@ -52,7 +52,7 @@ class RemoteWindowsTaskContractTests(unittest.TestCase):
 
     def test_dispatch_path_does_not_require_checkout(self):
         self.assertIn(
-            "- name: Checkout pushed control or task branch\n"
+            "- name: Checkout control branch request\n"
             "        if: github.event_name == 'push'",
             self.workflow,
         )
@@ -67,14 +67,21 @@ class RemoteWindowsTaskContractTests(unittest.TestCase):
             self.workflow,
         )
 
-    def test_legacy_remote_branch_path_remains_a_fallback(self):
-        self.assertIn("- 'remote/**'", self.workflow)
-        self.assertIn("- '.github/remote-task.ps1'", self.workflow)
-        self.assertIn('".github\\remote-task.ps1"', self.workflow)
-        self.assertIn(
-            "startsWith(github.ref, 'refs/heads/remote/')",
-            self.workflow,
-        )
+    def test_remote_shell_is_the_only_push_based_command_channel(self):
+        self.assertNotIn("remote/**", self.workflow)
+        self.assertNotIn("remote-task.ps1", self.workflow)
+        self.assertNotIn("Run committed remote task", self.workflow)
+        self.assertIn("minimal control-plane tree", self.agents)
+        self.assertIn("Do not create `remote/**` task branches", self.agents)
+
+    def test_long_run_guidance_allows_up_to_three_minutes_without_polling(self):
+        agents = " ".join(self.agents.split())
+        efficiency = " ".join(self.efficiency.split())
+        project = " ".join(self.project.split())
+        self.assertIn("up to three minutes", agents)
+        self.assertIn("up to three minutes", efficiency)
+        self.assertIn("up to three minutes", project)
+        self.assertIn("one final/blocking read", efficiency)
 
     def test_guidance_prefers_request_slot_and_keeps_rdc_auxiliary(self):
         self.assertIn(
