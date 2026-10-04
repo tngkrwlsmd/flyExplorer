@@ -136,6 +136,8 @@ HRESULT enumeratePage(PCIDLIST_ABSOLUTE folder,Snapshot& result,
                 break;
             }
         }
+        fresh.baseOffset=offset;
+        fresh.nextOffset=offset+fresh.children.size();
         result=std::move(fresh);
         return S_OK;
     } catch(std::bad_alloc const&) {
@@ -283,7 +285,9 @@ HRESULT Session::appendPage(
 {
     if(!current_.folder.valid()||!page.folder.valid()||
        !::ILIsEqual(current_.folder.get(),page.folder.get())||
-       current_.children.size()!=expectedOffset||
+       current_.nextOffset!=expectedOffset||
+       page.baseOffset!=expectedOffset||
+       page.nextOffset!=expectedOffset+page.children.size()||
        current_.parsingName!=page.parsingName)
         return HRESULT_FROM_WIN32(ERROR_INVALID_STATE);
     try{
@@ -291,6 +295,7 @@ HRESULT Session::appendPage(
             current_.children.size()+page.children.size());
         for(auto& child:page.children)
             current_.children.push_back(std::move(child));
+        current_.nextOffset=page.nextOffset;
         current_.truncated=page.truncated;
         return S_OK;
     }catch(std::bad_alloc const&){
