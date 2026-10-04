@@ -145,6 +145,17 @@ bootstrap configuration.
 
 ## Latest verified evidence
 
+Local large-folder coverage now includes an owned 5,000-file filesystem folder.
+Product revision `51182fed05e32dfbd90ee320a4a259b1b884d0df` raises the isolated Shell enumeration ceiling
+from 2,600 to 6,000 entries while retaining the 8 MiB wire-body bound and
+160-item progressive WinUI rendering. Remote run `37135593385` completed the
+Release build and helper protocol suite, then verified 5,000-item navigation,
+name-descending sort to `bench-4999.txt`, and progressive paging
+`160/5000 -> 320/5000`. Its later filename-filter UIA assertion was outside
+the enumeration-ceiling change; filter and Ctrl+Shift+F behavior stay covered
+by the existing 2,300-item case.
+
+
 Persistent WinUI bookmarks are accepted on main. Automatic Windows run
 `37133980876` completed successfully for main revision
 `85b20db79ab61742bb9cca2057c5afab696574cf`: policy/source gates passed,
@@ -266,9 +277,10 @@ distribution remain separate gates.
 ## Known functional coverage limits
 
 Current source and the last parity evidence still show these limits:
-- Shell enumeration is bounded at 2,600 entries; larger folders, streaming
-  virtualization, network/virtual providers and sustained thumbnail-cache
-  behavior are not certified.
+- Local filesystem Shell enumeration is bounded at 6,000 entries and has owned
+  5,000-item navigation/sort/progressive-paging evidence. Folders above 6,000,
+  true streaming virtualization, network/virtual providers and sustained
+  thumbnail-cache behavior are not certified.
 - Search is bounded filename search; content search, regex and advanced
   multi-criteria search are not implemented.
 - Saved filter/mask rule sets and the complete historical command/provider

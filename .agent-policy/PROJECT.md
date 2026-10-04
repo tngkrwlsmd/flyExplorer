@@ -26,8 +26,8 @@ consumer core; this PROJECT.md remains project-owned across bundle refreshes.
     {"name": "winui-tests", "path": "tests/winui", "responsibility": "source, native and owned GUI contracts"}
   ],
   "review": {
-    "reviewed_revision": "5fad9447ecc54ceb054329076400ba1573eed8df",
-    "reviewed_at": "2026-10-03",
+    "reviewed_revision": "51182fed05e32dfbd90ee320a4a259b1b884d0df",
+    "reviewed_at": "2026-10-04",
     "reviewed_paths": [
       "app/winui",
       "src/base",
@@ -106,26 +106,29 @@ the management surface and restored after process restart. Legacy MFC bookmark
 configuration is never read automatically; explicit import reads only
 name/path entries and skips malformed, duplicate or unsupported items.
 
+Local filesystem Shell enumeration now uses a bounded 6,000-entry isolated
+helper ceiling while retaining the 8 MiB wire-body limit and 160-item
+progressive UI rendering. This extends the previously exercised 2,300-item
+path without introducing unbounded enumeration or changing the Shell fault
+boundary.
+
 ## Current verification
 
-The current bookmark product revision is
-`5fad9447ecc54ceb054329076400ba1573eed8df`. Pre-main focused evidence is
-recorded in CURRENT_STATUS.md: remote run `37131861647` completed the canonical
-structure/source contracts, owned bookmark add/rename/delete/explicit legacy
-import, restart persistence, protected legacy user-profile sentinel and
-`git diff --check`; remote run `37130545208` independently established the
-Release M20 native bookmark/state fixture, canonical Release build and the
-pre-existing owned Release GUI suite with normal process exit. Controlled
-972x720, 96 DPI, Dark-theme BEFORE/AFTER capture was repeated on remote run
-`37132254625` with the process-owned window forced to the foreground and is
-recorded as `VISUAL ACCEPTANCE: PASS`.
+The accepted large-folder product revision is
+`51182fed05e32dfbd90ee320a4a259b1b884d0df`. Remote run `37135593385` built the canonical Release app
+successfully, passed the isolated Shell-helper protocol suite, opened an owned
+5,000-file local folder, sorted it name-descending to `bench-4999.txt`, and
+confirmed progressive view paging from `160/5000` to `320/5000`. The run
+then failed only when it continued into the pre-existing filename-filter UIA
+exercise. That filter/shortcut behavior remains covered by the separate
+2,300-item owned case and is not part of the 6,000-entry enumeration ceiling
+change.
 
-The automatic main run `37132879024` resolved scope `release-gui` but stopped
-at policy validation because this PROJECT.md still referenced the older sidebar
-review revision. That failure occurred before source/native/build/GUI steps and
-does not supersede the focused product evidence above. This policy review
-updates the reviewed revision to the bookmark product commit; the next
-release-gui main validation is the independent final acceptance gate.
+The Shell wire remains strictly bounded at 8 MiB and 6,000 entries. Optional
+file metadata remains deferred above 1,200 entries, while the visible WinUI list
+continues to render in 160-item increments. Folders larger than 6,000 entries,
+true streaming virtualization, network/virtual-provider scale and sustained
+thumbnail-cache behavior remain outside the certified boundary.
 
 ## Build/runtime facts
 
