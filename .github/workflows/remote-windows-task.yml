@@ -8,9 +8,8 @@ on:
         required: true
         type: string
       working_directory:
-        description: Working directory for the command
+        description: Optional working-directory override; blank uses the workflow-configured canonical persistent checkout
         required: false
-        default: 'C:\dev\flyExplorer'
         type: string
   push:
     branches:
@@ -20,6 +19,15 @@ on:
 
 permissions:
   contents: read
+
+# Mutable operational values live here. Guidance references the setting names
+# and principles instead of copying paths, intervals or budget numbers.
+env:
+  FLYEXPLORER_CANONICAL_CHECKOUT: 'C:\dev\flyExplorer'
+  FLYEXPLORER_ROUTINE_OBSERVATION_SECONDS: '180'
+  FLYEXPLORER_ACTIVE_MONITOR_SECONDS: '30'
+  FLYEXPLORER_REMOTE_RUNNER_CAPACITY: '1'
+  FLYEXPLORER_DEFAULT_VALIDATION_RUN_BUDGET: '2'
 
 concurrency:
   group: flyexplorer-remote-windows-task
@@ -138,7 +146,7 @@ jobs:
             throw "Remote shell command is required."
           }
           if ([string]::IsNullOrWhiteSpace($workdir)) {
-            $workdir = "C:\dev\flyExplorer"
+            $workdir = $env:FLYEXPLORER_CANONICAL_CHECKOUT
           }
 
           # Catch common expensive stages that were omitted from validation_kind.
@@ -283,7 +291,7 @@ jobs:
           $ErrorActionPreference = "Stop"
           $workdir = $env:REMOTE_WORKDIR
           if ([string]::IsNullOrWhiteSpace($workdir)) {
-            $workdir = "C:\dev\flyExplorer"
+            $workdir = $env:FLYEXPLORER_CANONICAL_CHECKOUT
           }
           if (-not (Test-Path -LiteralPath $workdir -PathType Container)) {
             throw "Remote shell working directory does not exist: $workdir"
@@ -321,6 +329,6 @@ jobs:
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: flyexplorer-remote-evidence-${{ github.run_id }}
-          path: C:\dev\flyExplorer\logs\remote-evidence\
+          path: ${{ env.FLYEXPLORER_CANONICAL_CHECKOUT }}\logs\remote-evidence\
           if-no-files-found: ignore
           retention-days: 3

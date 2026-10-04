@@ -17,19 +17,27 @@ class RemoteWindowsTaskContractTests(unittest.TestCase):
         cls.project = (
             ROOT / ".agent-policy/PROJECT.md"
         ).read_text(encoding="utf-8")
+        cls.verification_profile = (
+            ROOT / "docs/development/VERIFICATION_PROFILE.md"
+        ).read_text(encoding="utf-8")
         cls.windows_build = (
             ROOT / ".github/workflows/windows-build.yml"
         ).read_text(encoding="utf-8")
+
 
     def test_dispatch_shell_requires_no_task_commit(self):
         self.assertIn("workflow_dispatch:", self.workflow)
         self.assertIn("command:", self.workflow)
         self.assertIn("working_directory:", self.workflow)
-        self.assertIn("default: 'C:\\dev\\flyExplorer'", self.workflow)
+        self.assertIn("FLYEXPLORER_CANONICAL_CHECKOUT: 'C:\\dev\\flyExplorer'", self.workflow)
+        self.assertEqual(self.workflow.count("C:\\dev\\flyExplorer"), 1)
+        self.assertNotIn("default: 'C:\\dev\\flyExplorer'", self.workflow)
+        self.assertIn("$workdir = $env:FLYEXPLORER_CANONICAL_CHECKOUT", self.workflow)
         self.assertIn(
-            "if: github.event_name == 'workflow_dispatch'",
+            "${{ env.FLYEXPLORER_CANONICAL_CHECKOUT }}\\logs\\remote-evidence",
             self.workflow,
         )
+        self.assertIn("if: github.event_name == 'workflow_dispatch'", self.workflow)
         self.assertIn("Invoke-Expression $env:REMOTE_COMMAND", self.workflow)
         self.assertIn("Set-Location -LiteralPath $workdir", self.workflow)
 
@@ -89,13 +97,14 @@ class RemoteWindowsTaskContractTests(unittest.TestCase):
             self.windows_build,
         )
 
+
     def test_validation_churn_targets_are_documented(self):
         for text in (self.agents, self.efficiency, self.project):
             normalized = " ".join(text.split())
-            self.assertIn("30-50", normalized)
             self.assertIn("validation fingerprint", normalized)
             self.assertIn("retry_revision", normalized)
-        self.assertIn("<=2 validation runs per logical unit", " ".join(self.project.split()))
+            self.assertIn("diagnosis-free", normalized)
+        self.assertIn("FLYEXPLORER_DEFAULT_VALIDATION_RUN_BUDGET", self.workflow)
 
     def test_dispatch_path_does_not_require_checkout(self):
         self.assertIn(
@@ -122,16 +131,17 @@ class RemoteWindowsTaskContractTests(unittest.TestCase):
         self.assertIn("minimal control-plane tree", agents)
         self.assertIn("Do not create `remote/**` task branches", agents)
 
-    def test_long_run_guidance_defaults_to_three_minute_floor_with_explicit_monitoring_override(self):
+
+    def test_long_run_guidance_uses_configured_observation_intervals(self):
         agents = " ".join(self.agents.split())
         efficiency = " ".join(self.efficiency.split())
         project = " ".join(self.project.split())
         for normalized in (agents, efficiency, project):
-            self.assertIn("no earlier than three minutes", normalized)
-            self.assertIn("30 seconds", normalized)
-        self.assertIn("one final/blocking read", efficiency)
-        self.assertIn("scheduled/automation", agents)
-        self.assertIn("scheduled/automation", project)
+            self.assertIn("FLYEXPLORER_ROUTINE_OBSERVATION_SECONDS", normalized)
+            self.assertIn("FLYEXPLORER_ACTIVE_MONITOR_SECONDS", normalized)
+            self.assertIn("short-interval", normalized)
+        self.assertIn("FLYEXPLORER_ROUTINE_OBSERVATION_SECONDS:", self.workflow)
+        self.assertIn("FLYEXPLORER_ACTIVE_MONITOR_SECONDS:", self.workflow)
 
     def test_pre_dispatch_lease_blocks_overlapping_remote_runs(self):
         texts = (
@@ -149,35 +159,64 @@ class RemoteWindowsTaskContractTests(unittest.TestCase):
         self.assertIn("pre-dispatch", texts[1].lower())
         self.assertIn("pre-dispatch", texts[2].lower())
 
-    def test_remote_run_budget_stops_speculative_successors(self):
+
+    def test_remote_run_budget_requires_new_hypothesis_and_evidence_need(self):
         agents = " ".join(self.agents.split())
         efficiency = " ".join(self.efficiency.split())
         project = " ".join(self.project.split())
         for normalized in (agents, efficiency, project):
-            self.assertIn("one primary Windows validation run", normalized)
-            self.assertIn("third Windows validation run", normalized)
-            self.assertIn("explicit user approval", normalized)
-        self.assertIn("Never queue a speculative successor", agents)
-        self.assertIn("never queue a successor while its predecessor is active", efficiency)
-        self.assertIn("Never queue speculative successors", project)
+            self.assertIn("FLYEXPLORER_DEFAULT_VALIDATION_RUN_BUDGET", normalized)
+            self.assertIn("new failure hypothesis", normalized)
+            self.assertIn("evidence need", normalized)
+            self.assertIn("diagnosis-free", normalized)
+        self.assertNotIn("third Windows validation run", agents)
+        self.assertNotIn("third Windows validation run", efficiency)
+        self.assertNotIn("third Windows validation run", project)
 
-    def test_three_minute_rule_is_default_only_and_explicit_monitoring_is_bounded(self):
-        agents = " ".join(self.agents.split())
-        efficiency = " ".join(self.efficiency.split())
-        project = " ".join(self.project.split())
-        for normalized in (agents, efficiency, project):
-            self.assertIn("no earlier than three minutes", normalized)
-            self.assertIn("explicitly", normalized)
-            self.assertIn("30 seconds", normalized)
-        self.assertIn("anti-polling", agents)
-        self.assertIn("anti-polling", efficiency)
 
-    def test_expensive_large_folder_fixtures_are_final_acceptance_only(self):
-        for text in (self.agents, self.efficiency, self.project):
+    def test_observation_policy_does_not_duplicate_interval_literals(self):
+        for text in (self.agents, self.efficiency):
             normalized = " ".join(text.split())
-            self.assertIn("8,000+", normalized)
-            self.assertIn("20,000+", normalized)
-            self.assertIn("final acceptance", normalized)
+            self.assertNotIn("three minutes", normalized)
+            self.assertNotIn("30 seconds", normalized)
+        project_discipline = self.project.split("### Remote-shell and CI discipline", 1)[1].split("### Source-contract hygiene", 1)[0]
+        project_discipline = " ".join(project_discipline.split())
+        self.assertNotIn("three minutes", project_discipline)
+        self.assertNotIn("30 seconds", project_discipline)
+
+
+    def test_high_cost_fixture_policy_uses_separate_profile(self):
+        agents = " ".join(self.agents.split())
+        efficiency = " ".join(self.efficiency.split())
+        project_discipline = self.project.split("### Remote-shell and CI discipline", 1)[1].split("### Source-contract hygiene", 1)[0]
+        project_discipline = " ".join(project_discipline.split())
+        for normalized in (agents, efficiency, project_discipline):
+            self.assertIn("high-cost", normalized.lower())
+            self.assertIn("VERIFICATION_PROFILE.md", normalized)
+        self.assertNotIn("8,000+", agents)
+        self.assertNotIn("20,000+", agents)
+        self.assertNotIn("8,000+", efficiency)
+        self.assertNotIn("20,000+", efficiency)
+        self.assertIn("8,000 files", self.verification_profile)
+        self.assertIn("20,000-entry", self.verification_profile)
+
+    def test_remote_settings_are_single_sourced_and_runner_serialization_is_conditional(self):
+        for name in (
+            "FLYEXPLORER_CANONICAL_CHECKOUT",
+            "FLYEXPLORER_ROUTINE_OBSERVATION_SECONDS",
+            "FLYEXPLORER_ACTIVE_MONITOR_SECONDS",
+            "FLYEXPLORER_REMOTE_RUNNER_CAPACITY",
+            "FLYEXPLORER_DEFAULT_VALIDATION_RUN_BUDGET",
+        ):
+            self.assertIn(name + ":", self.workflow)
+            self.assertIn(name, self.verification_profile)
+        for text in (self.agents, self.efficiency, self.project):
+            self.assertNotIn("C:\\dev\\flyExplorer", text)
+        combined = " ".join((self.agents + self.efficiency + self.project).split())
+        self.assertIn("FLYEXPLORER_REMOTE_RUNNER_CAPACITY", combined)
+        self.assertIn("re-evaluate", combined.lower())
+        self.assertIn("concurrency", combined.lower())
+        self.assertIn("group: flyexplorer-remote-windows-task", self.workflow)
 
     def test_guidance_prefers_request_slot_and_keeps_rdc_auxiliary(self):
         agents = " ".join(self.agents.split())

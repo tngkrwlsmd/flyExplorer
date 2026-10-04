@@ -213,7 +213,7 @@ If the available GitHub connector/API does not expose a repository operation
 needed for the current task, **do not stop at the connector gap and do not hunt
 for an unrelated control path first**. Use this repository's
 `control/remote-shell` request slot and persistent
-`C:\\dev\\flyExplorer` checkout as the next fallback for repository-scoped Git,
+`workflow-configured canonical persistent checkout` checkout as the next fallback for repository-scoped Git,
 private Actions/run/artifact inspection, branch cleanup and other shell-capable
 operations. Only move to RDC/desktop-control or another control plane when the
 remote-shell path itself cannot perform the operation or the repository runner
@@ -238,49 +238,48 @@ modify the request slot and do not create a successor request. Record that run
 ID and either wait for the normal observation point or leave a resume
 checkpoint. This check must happen before the request commit because
 workflow-side fingerprint rejection is too late to prevent queue/runner waste.
+This serialization rule is based on the current
+`FLYEXPLORER_REMOTE_RUNNER_CAPACITY` workflow setting representing a single
+interactive Windows execution lane. If runner capacity changes, re-evaluate the
+global lease/concurrency rule instead of preserving single-runner serialization
+by habit.
 
 After starting a build or remote task, record its run ID, target commit and
-scope. For normal work expected to finish within a few minutes, the first
-**routine active GitHub status read** must be no earlier than three minutes
-after submission when completion is not otherwise known. This is an
-anti-polling floor, **not a required sleep/wait period**: do not keep a response
-open merely to reach three minutes and do not perform short-interval status/log
-reads during that window. If completion becomes independently known before
-three minutes — for example the user reports that the run finished/failed, a
-tool returns a genuine completion signal, or another already-available signal
-proves completion — inspect the run immediately. If completion is not known,
-finish with the exact run ID as a resume checkpoint rather than inventing a
-delay. **Do not create a scheduled/automation task merely to bridge this
-observation window; use one only when the user explicitly requested scheduled
-or recurring follow-up.** At the first permitted routine read, if the run is
-still queued/running, stop with a precise resume checkpoint instead of
-continuing to poll. A second same-turn read is allowed only after a genuine
-completion signal or when the user explicitly asks for current status. If the
-user explicitly asks for active monitoring of the current run, that request
-overrides the routine three-minute observation floor for that task only:
-poll no more frequently than every 30 seconds, stop immediately when the run
-completes, and never turn that monitoring into a scheduled/automation task
-unless the user separately asks for one. On a
-later "continue the interrupted work" request, first read current main/ref
-state, the recorded run, relevant artifacts and cleanup state; reuse completed
-evidence for the same revision/configuration rather than rerunning it.
+scope. The governing principle is **no short-interval routine polling**.
+The workflow-level settings `FLYEXPLORER_ROUTINE_OBSERVATION_SECONDS` and
+`FLYEXPLORER_ACTIVE_MONITOR_SECONDS` define the current observation cadence;
+do not duplicate their literal values in guidance. If completion becomes
+independently known — for example the user reports completion/failure or a tool
+returns a genuine completion signal — inspect the run immediately. Otherwise,
+routine status reads wait for the configured routine observation interval. When
+the user explicitly requests active monitoring, use the configured active
+monitor interval, stop as soon as completion is observed, and never replace
+that monitoring with a scheduled/automation task unless the user separately
+asks for one. If a permitted read still shows the run active, leave the exact
+run ID as the resume checkpoint instead of tight-loop polling. On a later
+"continue the interrupted work" request, first read current main/ref state, the
+recorded run, relevant artifacts and cleanup state; reuse completed evidence
+for the same revision/configuration rather than rerunning it.
 
-For one logical unit, the normal Windows validation budget is one primary Windows validation run.
-After a diagnosed failure, at most one focused successor may be submitted after
-the predecessor has completed and the concrete product/harness/environment
-change is committed. A **third Windows validation run for the same logical
-unit requires explicit user approval before any request commit**. Never queue a
-speculative successor while its predecessor is active. Harness-only fixes may
-be prepared locally while waiting, but the request slot stays untouched until
-the active run is complete and its first relevant failure is known.
+For one logical unit, use the workflow-configured
+`FLYEXPLORER_DEFAULT_VALIDATION_RUN_BUDGET` as the normal planning budget, not
+as an arbitrary correctness limit. Its purpose is to prevent
+**diagnosis-free repeated execution**. Every successor run must follow a
+completed predecessor, a concrete new revision or execution-condition change,
+and a stated new failure hypothesis or evidence need. A run beyond the default
+budget is allowed only when that additional hypothesis/evidence need is
+explicitly justified; ordinal run number alone is neither a reason to run nor a
+reason to stop. Never queue a speculative successor while its predecessor is
+active.
 
-Expensive real-file GUI fixtures (including 8,000+ and 20,000+ folder probes)
-are final acceptance tools, not harness-debug loops. Prove the harness/control
-lifecycle first with the smallest fixture that exercises the same interaction,
-then run the expensive fixture once. If that expensive run exposes a harness
-bug after product build/native evidence has passed, preserve those PASS stages,
-fix and smoke-test the harness cheaply, and use the single focused successor
-only for the invalidated GUI/visual boundary.
+High-cost fixtures are final acceptance tools, not harness-debug loops.
+The current project-specific fixture profile and thresholds live in
+`docs/development/VERIFICATION_PROFILE.md`; guidance must not duplicate those
+numbers. Prove the harness/control lifecycle first with the smallest fixture
+that exercises the same interaction, then spend the high-cost fixture only when
+its evidence is actually required. If it exposes a harness bug after product
+build/native evidence has passed, preserve those PASS stages and rerun only the
+invalidated boundary after diagnosis.
 
 For iterative Windows development, GUI work and Windows 11 benchmarking,
 prefer this repository's fixed `control/remote-shell` request slot. Update
@@ -289,8 +288,7 @@ request must include `expected_main_sha` equal to the live main SHA observed
 by the mandatory resume/current-state checkpoint. The workflow rejects the
 request before executing its command if main has moved. Its push triggers
 `Remote Windows Task` on the repository-scoped interactive Windows VM and
-executes against the persistent canonical checkout
-`C:\dev\flyExplorer`. Request commits are operational history and must never
+executes against the workflow-configured canonical persistent checkout. Request commits are operational history and must never
 be merged into main. This keeps product main limited to verified logical units
 while still allowing GitHub tooling to command the development PC directly.
 Manual `workflow_dispatch` remains the equivalent human-operated shell entry
@@ -398,15 +396,14 @@ mechanism. Manual `workflow_dispatch` remains a human fallback and therefore
 does not use request-history fingerprinting, but it remains subject to the
 same no-rerun policy and must not replace the normal request-slot discipline.
 
-After the next 30-50 Remote Windows Task runs, review the recorded logical unit,
-validation kind and fingerprint data. The target is normally no more than one
-or two validation runs per logical unit, zero product-build repeats after a
-harness-only fix, and zero duplicate same-candidate fingerprints without an
-explicit changed retry revision.
+Periodically review the recorded logical unit, validation kind and fingerprint
+data. The target is zero diagnosis-free repeated validation, zero product-build
+repeats after a harness-only fix, and zero duplicate same-candidate
+fingerprints without a materially changed retry revision.
 
 ### Remote development and final-CI anti-thrashing rule
 
-Use `control/remote-shell` and the persistent `C:\dev\flyExplorer` checkout
+Use `control/remote-shell` and the workflow-configured canonical persistent checkout
 as the primary Windows development/debug surface. Compile errors, link errors,
 native fixture failures, runtime diagnostics, focused UIA checks and controlled
 screenshots should be investigated there before main is pushed. Batch related
@@ -465,7 +462,7 @@ branches. The repository has one Git-backed Windows command channel:
 `control/remote-shell`, plus manual `workflow_dispatch` as a human fallback.
 The control branch is a minimal control-plane tree, not a product mirror: keep
 only the remote-shell workflow and request slot there. Product source is always
-read from or fetched into the persistent `C:\dev\flyExplorer` checkout from
+read from or fetched into the workflow-configured canonical persistent checkout from
 live `main`. If the remote-shell workflow itself changes, refresh that one
 workflow file on the control branch; never resync the whole product tree there.
 

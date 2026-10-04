@@ -82,11 +82,11 @@ Default ceilings per user request:
 - general source modification plus build: 20 calls;
 - real GUI/debug task: 30 calls.
 
-For the first 30-50 Remote Windows Task runs after the mechanical guard lands,
-audit the recorded `logical_unit`, `validation_kind` and validation
-fingerprints. Target normally <=2 validation runs per logical unit, zero
-unchanged-product build repeats after a harness-only correction, and zero
-duplicate same-candidate fingerprints without a changed retry revision.
+Periodically audit the recorded `logical_unit`, `validation_kind` and
+validation fingerprints. The target is zero diagnosis-free repeated validation,
+zero unchanged-product build repeats after a harness-only correction, and zero
+duplicate same-candidate fingerprints without a materially changed retry
+revision.
 
 These are safety ceilings, not targets. At 75% of a ceiling, re-evaluate the
 plan. Essential verification must not be skipped merely to hit a budget.
@@ -124,16 +124,15 @@ remote Windows tasks and local long-running commands, not only subprocesses.
 Do not poll every few seconds, alternate status/log-tail probes, or repeatedly
 read the same run while it is normally progressing.
 
-For builds/remote tasks whose expected runtime is within a few minutes, the
-default first active GitHub status read is no earlier than three minutes after
-submission unless completion is independently known. This is an anti-polling
-floor, not a sleep requirement: establish the run once and make one
-final/blocking read when the default observation point is reached. Completion
-observed earlier may be consumed immediately. If the user explicitly requests
-active monitoring for the current run, that request overrides the default
-three-minute floor for that task only; poll no more frequently than every
-30 seconds, stop immediately on completion, and do not create a scheduled or
-automation task merely to bridge the observation window.
+For builds/remote tasks, the policy is to avoid short-interval routine polling.
+The current routine and active-monitor cadences are configuration, not policy:
+read `FLYEXPLORER_ROUTINE_OBSERVATION_SECONDS` and
+`FLYEXPLORER_ACTIVE_MONITOR_SECONDS` from the Remote Windows Task workflow.
+Completion observed independently may be consumed immediately. Without an
+explicit active-monitoring request, wait for the configured routine observation
+interval before a routine read. With explicit active monitoring, use the
+configured active interval and stop immediately on completion. Do not create a
+scheduled/automation task merely to bridge either interval.
 
 For Actions specifically:
 - **before writing `requests/remote-shell/request.json` or pushing
@@ -142,20 +141,21 @@ For Actions specifically:
   `in_progress`, the request slot is leased by that run: do not submit,
   replace or pre-stage a successor request. This pre-dispatch check is required
   because workflow-side duplicate/fingerprint rejection still consumes queue
-  time on the single self-hosted runner;
+  time. This serialization assumes the workflow-configured
+  `FLYEXPLORER_REMOTE_RUNNER_CAPACITY` represents a single interactive
+  execution lane; if that capacity changes, re-evaluate the lease/concurrency
+  policy;
 - after triggering or observing a long run, record run ID, target SHA, scope and
   start/current state;
-- by default, do not issue short-interval status reads while the normal runtime
-  has not plausibly elapsed. The first routine active status read is no earlier
-  than three minutes after submission unless completion is independently known;
-- when the user explicitly asks for active monitoring of the current run,
-  30-second polling is allowed for that task only. Do not poll more frequently,
+- by default, do not issue short-interval status reads. Use the workflow-
+  configured routine observation interval unless completion is independently
+  known;
+- when the user explicitly asks for active monitoring of the current run, use
+  the workflow-configured active-monitor interval. Do not poll more frequently,
   stop as soon as completion is observed, and do not replace this with an
   unsolicited scheduled/automation task;
-- without that explicit active-monitoring request, the three-minute rule is an
-  anti-polling floor rather than a polling interval. If the first post-floor
-  read still says queued/running, end the response with the exact resume
-  checkpoint. Do not keep the same turn alive with repeated status reads;
+- if an allowed read still says queued/running, end with the exact resume
+  checkpoint rather than keeping the same turn alive with repeated reads;
 - a second same-turn read is allowed only when a tool has produced a genuine
   completion signal, the user explicitly asks for current status, or a distinct
   failure hypothesis requires one bounded log read;
@@ -169,18 +169,18 @@ For Actions specifically:
   the hypothesis before rerunning.
 
 Remote validation chain budget:
-- one logical unit normally gets one primary Windows validation run;
-- after that run completes with an identified failure, one focused successor is
-  allowed after the relevant product/harness/environment change is committed;
-- a third Windows validation run for the same logical unit requires explicit
-  user approval before any control-branch request commit;
-- never queue a successor while its predecessor is active, even if a harness
-  fix has already been prepared;
-- expensive 8,000+ or 20,000+ real-file GUI fixtures are final acceptance, not
-  harness development. Smoke the same UI/control lifecycle on the smallest
-  useful fixture first. If the expensive run reveals a harness-only defect,
-  preserve product build/native PASS evidence and rerun only GUI/visual in the
-  single focused successor.
+- use `FLYEXPLORER_DEFAULT_VALIDATION_RUN_BUDGET` as the normal planning
+  budget, whose purpose is to prevent diagnosis-free repeated execution;
+- every successor requires a completed predecessor, a material revision or
+  execution-condition change, and a concrete new failure hypothesis or
+  evidence need;
+- runs beyond the default budget require explicit justification of that new
+  hypothesis/evidence need; the ordinal run number is not itself the policy;
+- never queue a successor while its predecessor is active;
+- high-cost fixtures are final acceptance, not harness development. Their
+  current project-specific profile lives in
+  `docs/development/VERIFICATION_PROFILE.md`. Smoke the same lifecycle on the
+  smallest useful fixture first and preserve unaffected PASS evidence.
 
 Normal direct-main pushes do **not** trigger the Windows VM workflow.
 `.github/workflows/windows-build.yml` is manual `workflow_dispatch` only.
@@ -280,7 +280,7 @@ prefer the fixed `control/remote-shell` request slot. Write
 mandatory `expected_main_sha` from the current-state checkpoint. The workflow
 rejects the request if live main has moved before execution. The request commit
 triggers `Remote Windows Task` on the repository-scoped interactive Windows
-VM and runs in `C:\dev\flyExplorer` by default. Never merge request commits
+VM and runs in the workflow-configured canonical persistent checkout by default. Never merge request commits
 into main. Product main continues to record only verified logical units, while
 the control branch records command history separately. Manual
 `workflow_dispatch` remains available for human-operated commands. The

@@ -42,7 +42,7 @@ consumer core; this PROJECT.md remains project-owned across bundle refreshes.
 ## Canonical product
 
 - Repository: tngkrwlsmd/flyExplorer.
-- Canonical branch/worktree: main / C:\dev\flyExplorer.
+- Canonical branch/worktree: main / workflow-configured canonical persistent checkout.
 - Product: C++/WinRT Windows App SDK WinUI 3 file manager.
 - Product source: app/winui.
 - Shared UI-independent native code: src/base.
@@ -172,10 +172,10 @@ skipped at the job boundary in both Windows workflows with
 human-operated fallback but is not the routine development path and does not
 replace request-slot metadata/deduplication.
 
-After 30-50 Remote Windows Task runs under this guard, review the recorded
-metadata. The operating targets are normally <=2 validation runs per logical
-unit, zero repeated product builds after harness-only corrections, and zero
-same-candidate duplicate fingerprints without a changed retry revision.
+Periodically review the recorded metadata. The operating targets are zero
+diagnosis-free repeated validation, zero repeated product builds after
+harness-only corrections, and zero same-candidate duplicate fingerprints
+without a materially changed retry revision.
 
 ### Default verification ladder
 
@@ -272,38 +272,35 @@ directly invalidates that fixture's result.
   create a successor request. Record the active run ID and wait/resume from it.
   Workflow-side fingerprint rejection is only a second line of defense because
   it occurs after scheduling and cannot recover queue time already consumed.
-- The first routine **active GitHub status read** after submitting a remote
-  task is no earlier than three minutes unless completion is independently
-  known. The three-minute floor prevents polling; it is **not** a required
-  sleep/wait period and must not keep a response open just to consume time.
-  User-reported completion/failure, a genuine tool completion signal, or another
-  already-available completion signal permits immediate inspection. If
-  completion is not known, leave the exact run ID as a resume checkpoint.
-  Never create a scheduled/automation task solely to bridge this observation
-  window unless the user explicitly requested scheduled or recurring follow-up.
-  If the first permitted routine read still shows the run active, stop with a
-  resume checkpoint rather than issuing additional status/log reads in the
-  same turn. When the user explicitly requests active monitoring for the
-  current run, that request overrides the routine three-minute floor for that
-  task only: query no more frequently than every 30 seconds, stop on
-  completion, and do not create a scheduled/automation task unless the user
-  separately requests one.
-- One logical unit gets one primary Windows validation run. After a diagnosed
-  failure, one focused successor is allowed only after the predecessor is
-  complete and the concrete fix is committed. A third Windows validation run
-  for the same logical unit requires explicit user approval before any request
-  commit. Never queue speculative successors while a predecessor is active.
+  This global serialization assumes the workflow setting
+  `FLYEXPLORER_REMOTE_RUNNER_CAPACITY` represents a single interactive
+  execution lane. If capacity changes, re-evaluate the lease and concurrency
+  policy instead of carrying the single-runner assumption forward.
+- Do not short-interval poll Remote Windows Task status. The current routine
+  observation and explicit active-monitor cadences come from the workflow
+  settings `FLYEXPLORER_ROUTINE_OBSERVATION_SECONDS` and
+  `FLYEXPLORER_ACTIVE_MONITOR_SECONDS`; policy text must not duplicate their
+  literal values. Independently known completion may be inspected immediately.
+  Otherwise use the configured routine interval, or the configured active
+  interval when the user explicitly requests active monitoring. Never create a
+  scheduled/automation task merely to bridge an observation interval.
+- Use the workflow-configured `FLYEXPLORER_DEFAULT_VALIDATION_RUN_BUDGET` as
+  the normal planning budget. The policy objective is no diagnosis-free
+  repeated execution: every successor must have a completed predecessor, a
+  material revision/execution-condition change, and a concrete new failure
+  hypothesis or evidence need. Runs beyond the default budget require explicit
+  justification of that need; the ordinal run number is not itself a gate.
 - For an unexplained GUI/input failure, the first diagnostic successor must
   establish the failing layer before the interaction mechanism is changed.
   Prefer environment-gated test diagnostics that capture event entry, hit
   target/geometry, drag or button/capture state, pointer/cursor coordinates and
   deltas, and the resulting model/UI boundary in one run. Do not burn Windows
   runs on competing event-routing hypotheses until that boundary is proven.
-- 8,000+ and 20,000+ real-file GUI fixtures are final acceptance only. First
-  prove the harness/control lifecycle on the smallest fixture that exercises
-  the same path. If the expensive fixture exposes a harness defect after
-  product build/native PASS, keep those PASS stages, fix and smoke the harness
-  cheaply, then spend the single focused successor on GUI/visual only.
+- High-cost fixtures are final acceptance only. Their current project-specific
+  sizes/thresholds live in `docs/development/VERIFICATION_PROFILE.md`, not in
+  policy text. First prove the harness/control lifecycle on the smallest
+  fixture that exercises the same path, and preserve unaffected PASS evidence
+  if a high-cost fixture later exposes a harness defect.
 - For normal builds or remote tasks expected to finish within a few minutes,
   do not actively query GitHub status before the three-minute routine-read
   floor unless completion is independently known. Do not sleep for three
@@ -342,8 +339,8 @@ directly invalidates that fixture's result.
 - Focused GUI PASS -> unrelated later broad-GUI step fails: do not replay the
   focused GUI. Fix or retire the unrelated harness path separately.
 - Large-folder/native algorithm iterating: use cheap source/native fixtures
-  while developing; run the 8,000+ real-file GUI fixture only for final
-  acceptance.
+  while developing; reserve the configured high-cost real-file GUI fixture for
+  final acceptance.
 - Successful matched visual evidence remains valid across docs/test/control-only
   commits that do not change the rendered product tree.
 
@@ -617,7 +614,7 @@ owned 5,000-item navigation/sort/progressive-paging evidence are unchanged.
   stale requests if main has moved. Updating
   `requests/remote-shell/request.json` on that branch triggers this
   repository's `Remote Windows Task` on the interactive Windows VM and runs
-  against persistent checkout `C:\dev\flyExplorer` by default. Request
+  against workflow-configured canonical persistent checkout by default. Request
   commits are operational history and must never merge into main; main remains
   the history of verified logical units. Manual workflow_dispatch is the
   human-operated equivalent. RDC is supplementary for interactions that shell/
