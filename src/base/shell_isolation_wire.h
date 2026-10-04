@@ -6,16 +6,18 @@
 #include <cstring>
 namespace fxfile { namespace isolation {
 constexpr std::uint32_t kMagic=0x314c5346; // FSL1 little endian
-constexpr std::uint32_t kVersion=2;
+constexpr std::uint32_t kVersion=3;
 constexpr std::uint32_t kPath=1,kAbsolutePidl=2;
 constexpr std::uint32_t kMaxPathUnits=16384;
 constexpr std::uint32_t kMaxItemUnits=4096;
 constexpr std::uint32_t kMaxPidl=65536;
 constexpr std::uint32_t kMaxBody=8u*1024u*1024u;
-constexpr std::uint32_t kMaxEntries=6000;
+constexpr std::uint32_t kMaxPageEntries=1024;
+constexpr std::uint32_t kMaxAggregateEntries=20000;
 #pragma pack(push,1)
 struct Request {
     std::uint32_t magic,version,type,length;
+    std::uint32_t offset,limit;
 };
 struct Reply {
     std::uint32_t magic,version;
@@ -23,7 +25,7 @@ struct Reply {
     std::uint32_t count,bodyBytes,checksum,flags;
 };
 #pragma pack(pop)
-static_assert(sizeof(Request)==16,"Shell request ABI");
+static_assert(sizeof(Request)==24,"Shell request ABI");
 static_assert(sizeof(Reply)==28,"Shell response ABI");
 inline std::uint32_t checksum(void const* data,size_t length) noexcept {
     const auto* ptr=static_cast<unsigned char const*>(data);

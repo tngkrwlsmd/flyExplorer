@@ -15,7 +15,7 @@ class IsolationContracts(unittest.TestCase):
         h=source("FlyShellIsolationHelper.cpp")
         self.assertIn("shell_navigation_core.cpp",p)
         self.assertIn("shell_enum_bridge.cpp",p)
-        self.assertIn("shellnav::enumerate",h)
+        self.assertIn("shellnav::enumeratePage",h)
         self.assertIn("COINIT_APARTMENTTHREADED",h)
         for forbidden in ("ExplorerCtrl","ListCtrlEx","afxwin.h",
                           "file_operation_core.cpp","ProductCommandBridge",
@@ -26,10 +26,11 @@ class IsolationContracts(unittest.TestCase):
         h=source("FlyShellIsolationHelper.cpp")
         t=(HERE/"test_process_isolation.py").read_text(encoding="utf-8-sig")
         wire=source(ROOT/"src/base/shell_isolation_wire.h")
-        for required in ("kVersion=2","kAbsolutePidl=2",
+        for required in ("kVersion=3","kAbsolutePidl=2",
                          "kMaxPathUnits=16384","kMaxPidl=65536",
-                         "kMaxBody=8u*1024u*1024u","sizeof(Reply)==28",
-                         "validPidl"):
+                         "kMaxPageEntries=1024","kMaxAggregateEntries=20000",
+                         "kMaxBody=8u*1024u*1024u","sizeof(Request)==24",
+                         "sizeof(Reply)==28","validPidl"):
             self.assertIn(required,wire)
         for required in ("exactRead","exactWrite","ILGetSize",
                          "checksum(body.bytes.data(),body.bytes.size())",
@@ -39,7 +40,8 @@ class IsolationContracts(unittest.TestCase):
                           "SHFileOperationW(","ShellExecuteW("):
             self.assertNotIn(forbidden,h)
         for required in ("pidl_valid(raw)","string bounds",
-                         "result frame length","corrupted body"):
+                         "result frame length","corrupted body",
+                         "REAL_NATIVE_HELPER_PAGED_OFFSET_LIMIT_PASS"):
             self.assertIn(required,t)
 
     def test_private_job_boundaries_without_product_switch(self):

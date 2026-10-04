@@ -3,11 +3,11 @@ from pathlib import Path
 import unittest
 ROOT=Path(__file__).resolve().parents[2]/"app"/"winui"
 class FolderScaleContract(unittest.TestCase):
- def test_1100_2300_and_5000_bounded_paged_owned_files(self):
+ def test_1100_2300_5000_and_8000_bounded_paged_owned_files(self):
   body=(Path(__file__).resolve().parent/"test_large_owned_folder_gui.py").read_text(encoding="utf-8")
   app=(ROOT/"MainWindow.xaml.cpp").read_text(encoding="utf-8")
   detail=(ROOT/"file_detail_controller.cpp").read_text(encoding="utf-8")
-  for item in ('choices=(1100,2300,5000)','range(args.items)',"bench-0000.txt","bench-1099.txt",
+  for item in ('choices=(1100,2300,5000,8000)','range(args.items)',"bench-0000.txt","bench-1099.txt",
                "process.pid","LEGACY_PRESENT_SETTINGS_UNCHANGED",
                'auto_id="SortPicker"'):
    self.assertIn(item,body)
@@ -31,9 +31,12 @@ class FolderScaleContract(unittest.TestCase):
   self.assertIn("LeftNameFilterBox()",shortcut)
   self.assertIn("GetKeyState(VK_SHIFT)",shortcut)
   self.assertIn("OWNED_LARGE_CTRL_SHIFT_F_FILTER_FOCUS",body)
+  self.assertIn("OWNED_LARGE_FOLDER_OVER_6000_PAGED_TRANSPORT",body)
   self.assertIn("state.visibleRoute!=nextRoute",app)
   native=(ROOT.parents[1]/"src/base/shell_isolation_wire.h").read_text(encoding="utf-8")
-  self.assertIn("kMaxEntries=6000",native)
+  self.assertIn("kVersion=3",native)
+  self.assertIn("kMaxPageEntries=1024",native)
+  self.assertIn("kMaxAggregateEntries=20000",native)
   self.assertIn("kMaxBody=8u*1024u*1024u",native)
   self.assertNotIn("EmptyClipboard(",body)
   supervisor=(ROOT.parents[1]/"src/base/shell_isolated_supervisor.cpp").read_text(
@@ -41,5 +44,7 @@ class FolderScaleContract(unittest.TestCase):
   self.assertIn("Exit is not EOF.",supervisor)
   self.assertIn("readProgress=(received!=0);",supervisor)
   self.assertIn("!expected||frame.size()<expected",supervisor)
+  self.assertIn("offset,kMaxPageEntries",supervisor)
+  self.assertIn("aggregate.children.size()>=kMaxAggregateEntries",supervisor)
 
 if __name__=="__main__":unittest.main()

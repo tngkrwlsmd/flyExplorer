@@ -94,14 +94,16 @@ def launch(*args,extra_env=None):
     CHILDREN.append(process)
     return process
 
-def request(path=None,pidl_bytes=None):
+def request(path=None,pidl_bytes=None,offset=0,limit=1024):
+    assert 0<=offset<=20000 and 1<=limit<=1024
     if pidl_bytes is not None:
         assert pidl_valid(pidl_bytes)
-        return struct.pack("<IIII",MAGIC,2,2,len(pidl_bytes))+pidl_bytes
+        return struct.pack("<IIIIII",MAGIC,3,2,len(pidl_bytes),
+                           offset,limit)+pidl_bytes
     raw=str(path).encode("utf-16le")
     units=len(raw)//2
     assert 0<units<=16384
-    return struct.pack("<IIII",MAGIC,2,1,units)+raw
+    return struct.pack("<IIIIII",MAGIC,3,1,units,offset,limit)+raw
 
 def pidl_valid(raw):
     off=0
@@ -115,7 +117,7 @@ def pidl_valid(raw):
 def parse(frame):
     if len(frame)<28:raise ValueError("short result")
     magic,version,hr,count,n,expected,flags=struct.unpack_from("<IIiIIII",frame)
-    if magic!=MAGIC or version!=2 or count>6000 or n>8*1024**2:
+    if magic!=MAGIC or version!=3 or count>1024 or n>8*1024**2:
         raise ValueError("result protocol bounds")
     if len(frame)!=28+n:raise ValueError("result frame length")
     body=frame[28:]
@@ -158,11 +160,12 @@ def parse(frame):
     if off!=n:raise ValueError("unconsumed data")
     return {"hr":hr,"folder":folder,"entries":items,"flags":flags}
 
-def roundtrip(folder=None,limit=12,pidl_bytes=None):
+def roundtrip(folder=None,timeout=12,pidl_bytes=None,offset=0,page_limit=1024):
     child=launch()
     job=job_for(child)
     started=time.monotonic()
-    out,_=child.communicate(request(folder,pidl_bytes),timeout=limit)
+    out,_=child.communicate(
+        request(folder,pidl_bytes,offset,page_limit),timeout=timeout)
     elapsed=time.monotonic()-started
     assert child.returncode==0,("helper failed",child.returncode)
     return parse(out),out,elapsed
@@ -181,6 +184,11 @@ try:
         for e in first["entries"])
     assert any(e["name"]=="owned.txt" for e in first["entries"])
     assert first["folder"]["filesystem_path"].lower().endswith("left")
+    page0,_,_=roundtrip(left,offset=0,page_limit=1)
+    page1,_,_=roundtrip(left,offset=1,page_limit=1)
+    assert len(page0["entries"])==1 and page0["flags"]==1
+    assert len(page1["entries"])==1 and page1["entries"][0]["name"]!=page0["entries"][0]["name"]
+    print("REAL_NATIVE_HELPER_PAGED_OFFSET_LIMIT_PASS",True)
     identical,_,_=roundtrip(pidl_bytes=first["folder"]["pidl"])
     assert identical["hr"]==0 and set(e["name"] for e in identical["entries"])==set(
         e["name"] for e in first["entries"])
@@ -206,11 +214,13 @@ try:
     print("HOST_PROTOCOL_REJECTS_TRUNCATED_OVERSIZE_CORRUPTED_FRAMES PASS")
     malformed=launch()
     job_for(malformed)
-    _,_=malformed.communicate(struct.pack("<IIII",MAGIC,2,1,16385),timeout=4)
+    _,_=malformed.communicate(
+        struct.pack("<IIIIII",MAGIC,3,1,16385,0,1024),timeout=4)
     assert malformed.returncode==4
     incomplete=launch()
     job_for(incomplete)
-    _,_=incomplete.communicate(struct.pack("<IIII",MAGIC,2,1,6)+b"x",timeout=4)
+    _,_=incomplete.communicate(
+        struct.pack("<IIIIII",MAGIC,3,1,6,0,1024)+b"x",timeout=4)
     assert incomplete.returncode==5
     print("HELPER_OVERSIZED_AND_TRUNCATED_REQUESTS_REJECTED PASS")
     # Start two independent lanes. The left one is deliberately *owned* and
@@ -220,7 +230,7 @@ try:
     slowjob=job_for(blocked)
     time.sleep(.3)
     assert blocked.poll() is None
-    healthy,_,elapsed=roundtrip(right,limit=10)
+    healthy,_,elapsed=roundtrip(right,timeout=10)
     assert healthy["hr"]==0 and any(
          e["name"]=="OtherNested" for e in healthy["entries"])
     assert blocked.poll() is None

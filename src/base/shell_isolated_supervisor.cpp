@@ -99,7 +99,7 @@ HRESULT parse(std::vector<unsigned char> const& all,
     Reply head{};
     std::memcpy(&head,all.data(),sizeof(head));
     if(head.magic!=kMagic||head.version!=kVersion||
-       head.count>kMaxEntries||head.bodyBytes>kMaxBody||
+       head.count>kMaxPageEntries||head.bodyBytes>kMaxBody||
        head.flags&~1u||all.size()!=sizeof(head)+head.bodyBytes)
         return HRESULT_FROM_WIN32(ERROR_INVALID_DATA);
     std::vector<unsigned char> body(
@@ -353,7 +353,8 @@ bool current(std::shared_ptr<Lane> lane,Work const& job){
 template<typename Lane>
 Attempt oneAttempt(
     std::shared_ptr<Lane> lane,Work const& job,
-    std::wstring const& executable,bool artificialBlock){
+    std::wstring const& executable,bool artificialBlock,
+    std::uint32_t pageOffset,std::uint32_t pageLimit){
     Attempt outcome;
     Handle childInRead,hostInWrite,hostOutRead,childOutWrite,childErr;
     SECURITY_ATTRIBUTES inheritable{sizeof(SECURITY_ATTRIBUTES),nullptr,TRUE};
@@ -456,7 +457,7 @@ Attempt oneAttempt(
     if(!artificialBlock){
         const size_t units=job.type==kPath?job.path.size():job.pidl.size();
         Request req{kMagic,kVersion,job.type,
-          static_cast<std::uint32_t>(units)};
+          static_cast<std::uint32_t>(units),pageOffset,pageLimit};
         bool sent=true;
         DWORD written=0;
         if(!::WriteFile(hostInWrite.h,&req,sizeof(req),&written,nullptr)||
@@ -519,7 +520,8 @@ Attempt oneAttempt(
                     Reply header{};
                     std::memcpy(&header,frame.data(),sizeof(header));
                     if(header.magic!=kMagic||header.version!=kVersion||
-                       header.bodyBytes>kMaxBody||header.count>kMaxEntries ||
+                       header.bodyBytes>kMaxBody||
+                       header.count>kMaxPageEntries ||
                        (header.flags&~1u)){bad=true;break;}
                     expected=sizeof(Reply)+header.bodyBytes;
                 }
@@ -590,36 +592,101 @@ void IsolatedShellSupervisor::runLane(std::shared_ptr<State> st,
             item.path.size()>=2 && item.path[0]==L'\\' &&
             item.path[1]==L'\\');
         try{
-            for(DWORD attempt=0;attempt<kMaxAttempts;++attempt){
-                if(!current(lane,item))break;
-                bool testBlock=false;
+            Snapshot aggregate;
+            std::wstring aggregatePath;
+            std::uint32_t offset=0;
+            bool finished=false;
+            while(!finished&&current(lane,item)){
+                Attempt accepted;
+                bool haveAttempt=false;
+                for(DWORD attempt=0;attempt<kMaxAttempts;++attempt){
+                    if(!current(lane,item))break;
+                    bool testBlock=false;
 #if defined(_DEBUG)
-                testBlock=((item.ownedDelay||item.ownedComDelay)&&attempt==0)
-                    ||(item.ownedComDelay&&item.ownedComExhaust);
+                    testBlock=(offset==0)&&(
+                        ((item.ownedDelay||item.ownedComDelay)&&attempt==0)||
+                        (item.ownedComDelay&&item.ownedComExhaust));
 #endif
-                auto outcome=oneAttempt(
-                    lane,item,st->executable,testBlock);
-                if(outcome.canceled||!current(lane,item))break;
-                result.attempts=attempt+1;
-                if(outcome.timeout&&attempt+1<kMaxAttempts){
-                    result.recovered=true;
-                    continue;
+                    auto outcome=oneAttempt(
+                        lane,item,st->executable,testBlock,
+                        offset,kMaxPageEntries);
+                    if(outcome.canceled||!current(lane,item))break;
+                    ++result.attempts;
+                    if(outcome.timeout&&attempt+1<kMaxAttempts){
+                        result.recovered=true;
+                        continue;
+                    }
+                    accepted=std::move(outcome);
+                    haveAttempt=true;
+                    break;
                 }
-                result.hr=outcome.hr;
-                result.timedOut=outcome.timeout;
-                if(SUCCEEDED(result.hr)){
-                    result.snapshot=std::move(outcome.snapshot);
-                    result.filesystemPath=std::move(outcome.path);
+                if(!haveAttempt||!current(lane,item))break;
+                result.hr=accepted.hr;
+                result.timedOut=accepted.timeout;
+                if(FAILED(result.hr)){
+                    finished=true;
+                    break;
                 }
-                IsolatedCallback cb;
-                {
-                    std::lock_guard<std::mutex> guard(st->lock);
-                    if(!st->stopped)cb=st->complete;
+
+                auto page=std::move(accepted.snapshot);
+                if(offset==0){
+                    aggregate.folder=std::move(page.folder);
+                    aggregate.displayName=std::move(page.displayName);
+                    aggregate.parsingName=std::move(page.parsingName);
+                    aggregatePath=std::move(accepted.path);
+                }else{
+                    if(!aggregate.folder.valid()||!page.folder.valid()||
+                       !::ILIsEqual(aggregate.folder.get(),page.folder.get())||
+                       aggregate.parsingName!=page.parsingName||
+                       aggregatePath!=accepted.path){
+                        result.hr=HRESULT_FROM_WIN32(ERROR_INVALID_DATA);
+                        finished=true;
+                        break;
+                    }
                 }
-                if(cb&&current(lane,item)){
-                    try{cb(std::move(result));}catch(...){}
+
+                const auto pageCount=page.children.size();
+                if(pageCount>kMaxPageEntries||
+                   aggregate.children.size()>
+                       kMaxAggregateEntries-pageCount){
+                    result.hr=HRESULT_FROM_WIN32(ERROR_INVALID_DATA);
+                    finished=true;
+                    break;
                 }
-                break;
+                for(auto& child:page.children)
+                    aggregate.children.push_back(std::move(child));
+
+                if(!page.truncated){
+                    aggregate.truncated=false;
+                    finished=true;
+                    break;
+                }
+                if(pageCount==0){
+                    result.hr=HRESULT_FROM_WIN32(ERROR_INVALID_DATA);
+                    finished=true;
+                    break;
+                }
+                if(aggregate.children.size()>=kMaxAggregateEntries){
+                    aggregate.truncated=true;
+                    finished=true;
+                    break;
+                }
+                offset=static_cast<std::uint32_t>(
+                    aggregate.children.size());
+            }
+
+            if(current(lane,item)&&SUCCEEDED(result.hr)&&finished){
+                result.snapshot=std::move(aggregate);
+                result.filesystemPath=std::move(aggregatePath);
+            }
+
+            IsolatedCallback cb;
+            {
+                std::lock_guard<std::mutex> guard(st->lock);
+                if(!st->stopped)cb=st->complete;
+            }
+            if(cb&&current(lane,item)){
+                try{cb(std::move(result));}catch(...){}
             }
         }catch(...){
             IsolatedCallback cb;

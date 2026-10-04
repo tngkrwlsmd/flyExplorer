@@ -626,7 +626,9 @@ int wmain(int argc,wchar_t** argv) {
        req.magic!=kMagic||req.version!=kVersion)return 4;
     if((req.type==kPath && (!req.length||req.length>kMaxPathUnits)) ||
        (req.type==kAbsolutePidl && (!req.length||req.length>kMaxPidl)) ||
-       (req.type!=kPath && req.type!=kAbsolutePidl))return 4;
+       (req.type!=kPath && req.type!=kAbsolutePidl)||
+       !req.limit||req.limit>kMaxPageEntries||
+       req.offset>kMaxAggregateEntries)return 4;
     std::wstring parsing;
     std::vector<unsigned char> pidlBytes;
     if(req.type==kPath){
@@ -658,8 +660,10 @@ int wmain(int argc,wchar_t** argv) {
         requested.reset(raw);
         fxfile::shellnav::Snapshot snap;
         if(SUCCEEDED(hr))
-            hr=fxfile::shellnav::enumerate(
-                requested.get(),snap,SHCONTF_FOLDERS|SHCONTF_NONFOLDERS,kMaxEntries);
+            hr=fxfile::shellnav::enumeratePage(
+                requested.get(),snap,
+                SHCONTF_FOLDERS|SHCONTF_NONFOLDERS,
+                req.offset,req.limit);
         sent=answer(output,hr,SUCCEEDED(hr)?&snap:nullptr);
     }catch(std::bad_alloc const&){sent=answer(output,E_OUTOFMEMORY);}
      catch(...){sent=answer(output,E_FAIL);}

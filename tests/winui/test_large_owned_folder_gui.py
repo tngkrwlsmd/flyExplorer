@@ -1,4 +1,4 @@
-"""Actual 1,100-file WinUI navigation/sort probe with disposable owner PID."""
+"""Actual bounded large-folder WinUI navigation/sort probe with disposable owner PID."""
 from pathlib import Path
 from paths import ROOT, APP, app_exe
 import argparse
@@ -27,7 +27,7 @@ def until(fn,label,timeout):
 
 def main():
     parser=argparse.ArgumentParser()
-    parser.add_argument("--items",type=int,choices=(1100,2300,5000),default=1100)
+    parser.add_argument("--items",type=int,choices=(1100,2300,5000,8000),default=1100)
     parser.add_argument("--configuration",choices=("Debug","Release"),
                         default="Debug")
     args=parser.parse_args()
@@ -84,7 +84,8 @@ def main():
                if v.element_info.control_type=="ListItem"]
             return matches[0].window_text() if matches else ""
         until(lambda:"bench-0000.txt" in first_row(),
-              "1,100-file native Shell first row not rendered",28)
+              "large-folder native Shell first row not rendered",
+              48 if args.items>=8000 else 28)
         first_elapsed=time.monotonic()-started
         # Focus only an exact newly created GUI window and verify PID.
         parent.set_focus()
@@ -96,7 +97,7 @@ def main():
         assert ui.GetForegroundWindow()==parent.handle
         parent.child_window(auto_id="SortPicker").select(1)
         until(lambda:f"bench-{args.items-1:04d}.txt" in first_row(),
-              "1,100-file name descending did not show the final owned file",20)
+              "large-folder name descending did not show the final owned file",20)
         if args.items>=2300:
             more=parent.child_window(auto_id="LeftLoadMoreButton")
             until(lambda:more.exists(timeout=.2) and
@@ -135,6 +136,8 @@ def main():
         print("OWNED_LARGE_FOLDER_FIRST_RENDER_SECONDS",
               round(first_elapsed,2),flush=True)
         print("OWNED_LARGE_FOLDER_NAVIGATION_AND_NAME_SORT",True,flush=True)
+        if args.items>=8000:
+            print("OWNED_LARGE_FOLDER_OVER_6000_PAGED_TRANSPORT",True,flush=True)
         success=True
     finally:
         if process.poll() is None:

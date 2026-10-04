@@ -57,6 +57,9 @@ struct Snapshot final {
 // a separately designed cancellable STA worker in a later migration phase.
 // Atomic cancellation here is a cooperative boundary between Next() calls,
 // NOT a guarantee to interrupt a Shell extension already blocked inside COM.
+HRESULT enumeratePage(PCIDLIST_ABSOLUTE folder, Snapshot& result,
+                      DWORD flags,std::size_t offset,std::size_t itemLimit,
+                      std::atomic_bool const* cancel=nullptr) noexcept;
 HRESULT enumerate(PCIDLIST_ABSOLUTE folder, Snapshot& result,
                   DWORD flags=SHCONTF_FOLDERS|SHCONTF_NONFOLDERS,
                   size_t itemLimit=1200,

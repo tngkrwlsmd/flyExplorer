@@ -66,11 +66,10 @@ void Location::reset(PIDLIST_ABSOLUTE owned) noexcept {
     pidl_=owned;
 }
 
-HRESULT enumerate(PCIDLIST_ABSOLUTE folder,Snapshot& result,
-                  DWORD flags,size_t limit,
-                  std::atomic_bool const* cancel) noexcept {
+HRESULT enumeratePage(PCIDLIST_ABSOLUTE folder,Snapshot& result,
+                      DWORD flags,std::size_t offset,std::size_t limit,
+                      std::atomic_bool const* cancel) noexcept {
     if(!folder || !limit)return E_INVALIDARG;
-    // COM ownership and all snapshots stay on the calling apartment.
     try {
         if(cancel && cancel->load())return HRESULT_FROM_WIN32(ERROR_CANCELLED);
         FolderRef parent;
@@ -79,6 +78,27 @@ HRESULT enumerate(PCIDLIST_ABSOLUTE folder,Snapshot& result,
         EnumRef iterator;
         hr=openEnumeration(parent.p,nullptr,flags,&iterator.p);
         if(FAILED(hr))return hr;
+
+        for(std::size_t skipped=0;skipped<offset;++skipped){
+            if(cancel && cancel->load())return HRESULT_FROM_WIN32(ERROR_CANCELLED);
+            PIDLIST_RELATIVE raw=nullptr;
+            ULONG fetched=0;
+            hr=iterator.p->Next(1,&raw,&fetched);
+            if(hr==S_FALSE){
+                ::CoTaskMemFree(raw);
+                break;
+            }
+            if(FAILED(hr)){
+                ::CoTaskMemFree(raw);
+                return hr;
+            }
+            if(fetched!=1||!raw){
+                ::CoTaskMemFree(raw);
+                return E_FAIL;
+            }
+            ::CoTaskMemFree(raw);
+        }
+
         Snapshot fresh;
         fresh.folder=Location(folder);
         if(!fresh.folder.valid())return E_OUTOFMEMORY;
@@ -98,13 +118,10 @@ HRESULT enumerate(PCIDLIST_ABSOLUTE folder,Snapshot& result,
                 ::CoTaskMemFree(raw);
                 return E_FAIL;
             }
-            // Next hands out an owned relative PIDL. Combine into an
-            // absolute location, release its temporary relative PIDL.
             PIDLIST_ABSOLUTE full=::ILCombine(folder,raw);
             SFGAOF attributes=SFGAO_FOLDER|SFGAO_FILESYSTEM|SFGAO_HIDDEN;
             PCUITEMID_CHILD child=raw;
-            const HRESULT attrHr=parent.p->GetAttributesOf(1,
-                                                          &child,&attributes);
+            const HRESULT attrHr=parent.p->GetAttributesOf(1,&child,&attributes);
             if(FAILED(attrHr))attributes=0;
             ::CoTaskMemFree(raw);
             if(!full)return E_OUTOFMEMORY;
@@ -115,18 +132,23 @@ HRESULT enumerate(PCIDLIST_ABSOLUTE folder,Snapshot& result,
             item.parsingName=nameOf(item.id.get(),SIGDN_DESKTOPABSOLUTEPARSING);
             fresh.children.push_back(std::move(item));
             if(fresh.children.size()==limit) {
-                // A bounded, explicitly marked partial snapshot.
                 fresh.truncated=true;
                 break;
             }
         }
-        result=std::move(fresh); // atomic on error/cancel: old state intact
+        result=std::move(fresh);
         return S_OK;
     } catch(std::bad_alloc const&) {
         return E_OUTOFMEMORY;
     } catch(...) {
         return E_FAIL;
     }
+}
+
+HRESULT enumerate(PCIDLIST_ABSOLUTE folder,Snapshot& result,
+                  DWORD flags,size_t limit,
+                  std::atomic_bool const* cancel) noexcept {
+    return enumeratePage(folder,result,flags,0,limit,cancel);
 }
 
 bool Session::historyLocations(HistoryLocations& out) const noexcept {
