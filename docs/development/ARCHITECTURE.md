@@ -284,27 +284,34 @@ before window dispatcher teardown.
 The helper is a bounded fault/isolation boundary, not a security sandbox.
 
 Large-folder navigation uses protocol-v3 helper pages of at most 1,024 entries
-and 8 MiB. The first page is committed to the active Session immediately and
-continuations are accepted only for the same route/request/folder and expected
-logical offset. Snapshot logical coordinates (`baseOffset`/`nextOffset`) are
-kept separate from `children.size()`. Current main still retains every accepted
-child and enforces the 20,000-entry navigation safety ceiling, but continuation
-identity no longer depends on resident vector length. This is the seam required
-for a later bounded resident window. Do not raise or remove the 20,000 ceiling
-until that window/index also defines backward access, selection identity and
-the behavior of operations that require a complete folder such as global
-sort/filter.
+and 8 MiB. The first page is committed immediately. `Snapshot::nextOffset`
+tracks the furthest validated enumeration frontier independently from the
+resident range `[baseOffset, residentEndOffset())`.
 
-The UI-side identity seam is also explicit. File-list rows carry a logical
-`uint64` item index derived from `Snapshot::baseOffset`, not a direct
-`children` vector position. Consumers translate that identity through
-`Snapshot::residentIndex()` before opening, renaming, transferring, copying to
-the Windows clipboard, invoking context menus or starting private drag.
+Normal unsorted, unfiltered browsing uses a 2,048-entry resident window.
+Forward page acceptance can trim the oldest prefix. Backward navigation requests
+an exact range ending at the current `baseOffset`, prepends it, then trims the
+tail. Forward navigation from an older resident window can request a known range
+below `nextOffset` without incorrectly advancing the frontier. Route/request/
+folder identity and exact offset/range checks still reject stale or overlapping
+results.
+
+Global sort and non-empty pane filtering intentionally do not operate on a
+partial resident window. Their completion intent first rehydrates any evicted
+prefix and known forward gap, then continues normal Shell pages until the folder
+ends or the existing 20,000-entry navigation safety ceiling is reached. The
+resident window therefore reduces normal browsing retention without silently
+changing existing bounded full-model sort/filter behavior. Do not remove the
+20,000 ceiling until a separate indexed strategy defines semantics beyond that
+bounded full model.
+
+File-list rows carry logical `uint64` item indices, not resident-vector
+positions. Consumers translate them through `Snapshot::residentIndex()`
+before open, rename, transfer, clipboard, context-menu or private-drag actions.
 `PaneState::renderedBaseOffset` keeps selection restoration tied to the window
-that produced the previous rows. Current main still has `baseOffset == 0`
-because resident-page eviction is not implemented yet; this contract prevents a
-future nonzero resident window from silently retargeting stale UI rows.
-
+that rendered the row. Rows remaining resident can restore selection by parsing
+path; an evicted row is intentionally not kept as a hidden cross-window
+selection.
 
 
 ## Session persistence
