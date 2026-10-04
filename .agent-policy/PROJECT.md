@@ -254,6 +254,13 @@ directly invalidates that fixture's result.
   local/static check, and new GUI automation IDs/API calls are verified against
   checked-in code or an established harness. If any of those checks fail, fix
   them before dispatch; do not create a Remote Windows Task to discover them.
+- The canonical local/static request validator is
+  `tools/winui/validate_remote_request.py`; GUI harness API/syntax traps are
+  guarded by `tests/winui/test_gui_harness_contract.py`. Apply those checks,
+  or mechanically reproduce the same assertions from repository content, before
+  the request-slot commit. Do not add GitHub-hosted/cloud compute for this
+  preflight and do not substitute a Windows VM run for a missing local/static
+  check. The remote workflow remains only a second-line guard.
 - Treat missing modules, nonexistent branches, invalid request metadata,
   PowerShell/JSON serialization mistakes, brittle Markdown line-wrap
   assertions and nonexistent UIA/pywinauto methods as **preflight defects** by
