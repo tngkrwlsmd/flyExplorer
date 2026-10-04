@@ -1,4 +1,5 @@
 #include "pch.h"
+#include <winrt/Microsoft.UI.Input.h>
 #include "MainWindow.xaml.h"
 #include "../../src/base/shell_assoc_type_core.h"
 #include "../../src/base/shell_thumbnail_core.h"
