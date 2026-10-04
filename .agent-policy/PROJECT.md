@@ -276,13 +276,18 @@ directly invalidates that fixture's result.
   `FLYEXPLORER_REMOTE_RUNNER_CAPACITY` represents a single interactive
   execution lane. If capacity changes, re-evaluate the lease and concurrency
   policy instead of carrying the single-runner assumption forward.
-- Do not short-interval poll Remote Windows Task status. The current routine
-  observation and explicit active-monitor cadences come from the workflow
-  settings `FLYEXPLORER_ROUTINE_OBSERVATION_SECONDS` and
+- Do not short-interval poll Remote Windows Task status, but do not use that
+  rule to abandon a run whose result is required to finish the current user
+  request. Such a run is a blocking dependency: follow it through completion
+  at the workflow-configured observation cadence, consume the result as soon as
+  completion is observed, and continue the dependent action in the same task.
+  The user does not need to separately request active monitoring for a
+  result-dependent run. The current routine and explicit active-monitor
+  cadences come from the workflow settings
+  `FLYEXPLORER_ROUTINE_OBSERVATION_SECONDS` and
   `FLYEXPLORER_ACTIVE_MONITOR_SECONDS`; policy text must not duplicate their
-  literal values. Independently known completion may be inspected immediately.
-  Otherwise use the configured routine interval, or the configured active
-  interval when the user explicitly requests active monitoring. Never create a
+  literal values. Explicit active monitoring changes cadence only.
+  Independently known completion may be inspected immediately. Never create a
   scheduled/automation task merely to bridge an observation interval.
 - Use the workflow-configured `FLYEXPLORER_DEFAULT_VALIDATION_RUN_BUDGET` as
   the normal planning budget. The policy objective is no diagnosis-free
@@ -305,8 +310,10 @@ directly invalidates that fixture's result.
   short interval. Use the workflow-configured routine observation interval
   unless completion is independently known. Do not sleep merely to consume the
   observation window and do not replace it with an unsolicited scheduled task.
-  After an allowed read, either act on the completed result or leave the exact
-  active run ID as the resume point.
+  If the current request depends on the result, remain responsible for that run
+  until completion and then act on it. Leave the exact active run ID as a
+  resume point only when the result is not required to satisfy the current
+  request.
 - Main-branch pushes do not trigger Windows validation automatically. After a
   logical unit is already accepted and moved to main, do not dispatch another
   Windows CI run just to reconfirm it. A post-main manual gate requires a

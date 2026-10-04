@@ -124,14 +124,18 @@ remote Windows tasks and local long-running commands, not only subprocesses.
 Do not poll every few seconds, alternate status/log-tail probes, or repeatedly
 read the same run while it is normally progressing.
 
-For builds/remote tasks, the policy is to avoid short-interval routine polling.
-The current routine and active-monitor cadences are configuration, not policy:
-read `FLYEXPLORER_ROUTINE_OBSERVATION_SECONDS` and
+For builds/remote tasks, the policy is to avoid short-interval routine polling
+without abandoning result-dependent work. If the current user request cannot be
+completed until the run succeeds or fails, that run remains a blocking
+dependency of the current task and must be followed through completion. The
+current routine and active-monitor cadences are configuration, not policy: read
+`FLYEXPLORER_ROUTINE_OBSERVATION_SECONDS` and
 `FLYEXPLORER_ACTIVE_MONITOR_SECONDS` from the Remote Windows Task workflow.
-Completion observed independently may be consumed immediately. Without an
-explicit active-monitoring request, wait for the configured routine observation
-interval before a routine read. With explicit active monitoring, use the
-configured active interval and stop immediately on completion. Do not create a
+Use the configured routine cadence for dependent completion tracking unless the
+user explicitly requests active monitoring, in which case use the configured
+active cadence. Explicit active monitoring changes cadence only; it is not a
+prerequisite for following a run that the task depends on. Completion observed
+independently may be consumed immediately. Do not create a
 scheduled/automation task merely to bridge either interval.
 
 For Actions specifically:
@@ -150,17 +154,19 @@ For Actions specifically:
 - by default, do not issue short-interval status reads. Use the workflow-
   configured routine observation interval unless completion is independently
   known;
+- if the current user request depends on the run result, keep the task open and
+  continue bounded observations at the configured cadence until the run
+  completes; consume the result immediately when observed and continue the
+  dependent action in the same task;
 - when the user explicitly asks for active monitoring of the current run, use
   the workflow-configured active-monitor interval. Do not poll more frequently,
   stop as soon as completion is observed, and do not replace this with an
   unsolicited scheduled/automation task;
-- if an allowed read still says queued/running, end with the exact resume
-  checkpoint rather than keeping the same turn alive with repeated reads;
-- a second same-turn read is allowed only when a tool has produced a genuine
-  completion signal, the user explicitly asks for current status, or a distinct
-  failure hypothesis requires one bounded log read;
-- if that read still shows queued/running, end the response with the resume
-  checkpoint rather than holding the chat turn open indefinitely;
+- explicit active monitoring changes only the cadence. It is not required to
+  follow a run whose result is necessary to satisfy the current request;
+- only when the run result is not required for the current request may an
+  allowed read that still says queued/running end with the exact resume
+  checkpoint;
 - on resume, query current main/ref, the recorded run, artifacts and cleanup
   state first, then continue from completed evidence;
 - never restart a completed build/test merely because the previous ChatGPT turn
