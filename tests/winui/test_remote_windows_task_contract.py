@@ -308,6 +308,20 @@ class RemoteWindowsTaskContractTests(unittest.TestCase):
         self.assertIn("nonexistent branches", project)
         self.assertIn("pywinauto", project)
 
+    def test_zero_run_preflight_uses_canonical_local_guards_without_cloud_runner(self):
+        agents = " ".join(self.agents.split())
+        efficiency = " ".join(self.efficiency.split())
+        project = " ".join(self.project.split())
+        for normalized in (agents, efficiency, project):
+            self.assertIn("tools/winui/validate_remote_request.py", normalized)
+            self.assertIn("tests/winui/test_gui_harness_contract.py", normalized)
+            self.assertIn("cloud", normalized.lower())
+            self.assertIn("Windows VM", normalized)
+        self.assertIn("Do not add a GitHub-hosted/cloud runner", agents)
+        self.assertIn("do not add GitHub-hosted/cloud compute", project.lower())
+        self.assertIn("must not be deferred into a Windows VM task", efficiency)
+
+
     def test_guidance_requires_whitespace_normalized_prose_contracts(self):
         agents = " ".join(self.agents.split())
         efficiency = " ".join(self.efficiency.split())
