@@ -188,6 +188,18 @@ Remote validation chain budget:
   `docs/development/VERIFICATION_PROFILE.md`. Smoke the same lifecycle on the
   smallest useful fixture first and preserve unaffected PASS evidence.
 
+Before repeating any expensive E2E, perform layered failure isolation on the
+cheapest representative case. First decide whether the first relevant error is
+a **product defect**, **harness/fixture defect**, or
+**control-plane/environment defect**. For GUI behavior, trace the same
+interaction through **input -> event -> model -> projection** on a small fixture
+before returning to the high-cost fixture. Do not use the expensive fixture to
+discover whether pywinauto/UIA input semantics, event delivery, stale wrappers,
+fixture assumptions, command serialization, or runner orchestration are valid.
+Fix the identified layer, preserve unaffected build/runtime PASS evidence, and
+rerun only the invalidated stage. The expensive E2E is run after lower-cost
+evidence has converged, as final acceptance.
+
 Normal direct-main pushes do **not** trigger the Windows VM workflow.
 `.github/workflows/windows-build.yml` is manual `workflow_dispatch` only.
 Use the persistent remote shell for ordinary Windows build/debug/test iteration.
