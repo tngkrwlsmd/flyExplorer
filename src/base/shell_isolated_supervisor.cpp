@@ -243,7 +243,7 @@ std::uint64_t IsolatedShellSupervisor::submit(
 std::uint64_t IsolatedShellSupervisor::submitPage(
     int side,std::uint64_t route,Location target,std::uint32_t offset){
     if(side<0||side>1||!route||!target.valid()||
-       !offset||offset>=kMaxAggregateEntries)return 0;
+       !offset||offset>=kMaxNavigationEntries)return 0;
     const auto length=::ILGetSize(target.get());
     if(length<2||length>kMaxPidl||
        !validPidl(target.get(),length))return 0;
@@ -256,7 +256,7 @@ std::uint64_t IsolatedShellSupervisor::submitPage(
         item.type=kAbsolutePidl;
         item.pageOffset=offset;
         item.pageLimit=(std::min)(
-            kMaxPageEntries,kMaxAggregateEntries-offset);
+            kMaxPageEntries,kMaxNavigationEntries-offset);
         auto* ptr=static_cast<unsigned char const*>(
             static_cast<void const*>(target.get()));
         item.pidl.assign(ptr,ptr+length);
@@ -652,6 +652,10 @@ void IsolatedShellSupervisor::runLane(std::shared_ptr<State> st,
                 result.timedOut=outcome.timeout;
                 if(SUCCEEDED(result.hr)){
                     result.snapshot=std::move(outcome.snapshot);
+                    result.snapshot.baseOffset=item.pageOffset;
+                    result.snapshot.nextOffset=
+                        static_cast<std::size_t>(item.pageOffset)+
+                        result.snapshot.children.size();
                     result.filesystemPath=std::move(outcome.path);
                 }
                 IsolatedCallback cb;
