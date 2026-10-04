@@ -1,19 +1,13 @@
 {
-  "request_id": "large-folder-name-index-final-acceptance-001",
-  "expected_main_sha": "6e6e1a66cf69c7158f2bfa2be329341b72d5b388",
-  "candidate_sha": "6936fba97d2e18ac81115b5d02b84db7e90472dd",
-  "logical_unit": "large-folder-name-index",
-  "configuration": "Release",
+  "request_id": "large-folder-name-index-branch-cleanup-001",
+  "expected_main_sha": "7d854e9b9b15bc903bf41ad9023b04f7922f2f0f",
+  "candidate_sha": "7d854e9b9b15bc903bf41ad9023b04f7922f2f0f",
+  "logical_unit": "large-folder-name-index-branch-cleanup",
+  "configuration": "none",
   "validation_kind": [
-    "source",
-    "gui",
-    "visual"
+    "none"
   ],
-  "invalidated_evidence": {
-    "source": "The final integrated candidate includes harness-only follow-up commits and is rechecked against source contracts at its exact SHA.",
-    "gui": "The low-cost keyboard smoke passed; this is the single final 20,500-item acceptance for indexed name sort/filter on the integrated candidate.",
-    "visual": "Final owned 20,500-item evidence must be captured for the exact integrated candidate."
-  },
+  "invalidated_evidence": {},
   "working_directory": "",
-  "command": "$ErrorActionPreference = \"Stop\"\ngit fetch origin main work/large-folder-name-index --no-tags --prune\nif ($LASTEXITCODE -ne 0) { throw \"fetch failed\" }\nif ((git rev-parse origin/main).Trim() -ne \"6e6e1a66cf69c7158f2bfa2be329341b72d5b388\") { throw \"main moved\" }\nif ((git rev-parse origin/work/large-folder-name-index).Trim() -ne \"6936fba97d2e18ac81115b5d02b84db7e90472dd\") { throw \"candidate branch moved\" }\nif ((git status --short).Count -ne 0) { throw \"dirty persistent checkout\" }\ngit checkout -B work/large-folder-name-index origin/work/large-folder-name-index\nif ($LASTEXITCODE -ne 0) { throw \"checkout candidate failed\" }\nif ((git rev-parse HEAD).Trim() -ne \"6936fba97d2e18ac81115b5d02b84db7e90472dd\") { throw \"candidate mismatch\" }\n$delta=@(git diff --name-only 58f0d2814c90026984f27d9ec2604fdb6babdea2..HEAD)\n$unexpected=@($delta | Where-Object { $_ -ne \"tests/winui/test_large_owned_folder_gui.py\" })\nif($unexpected.Count -ne 0){ throw (\"product or contract changed since validated build: \" + ($unexpected -join \", \")) }\ncmd /c test.bat source\nif ($LASTEXITCODE -ne 0) { throw \"source contracts failed\" }\nif (!(Test-Path -LiteralPath \"out\\winui\\Release\\flyExplorer.exe\" -PathType Leaf)) { throw \"validated Release artifact missing\" }\npython -X utf8 tests\\winui\\test_large_owned_folder_gui.py --items 20500 --configuration Release --browse-over-complete-model\nif ($LASTEXITCODE -ne 0) { throw \"final 20k indexed name acceptance failed\" }\n$source = \"C:\\dev\\flyExplorer\\logs\\m23\\large-name-index-over-20k-after.png\"\n$target = \"C:\\dev\\flyExplorer\\logs\\remote-evidence\"\nif (!(Test-Path -LiteralPath $source -PathType Leaf)) { throw \"final visual evidence missing\" }\nNew-Item -ItemType Directory -Force -Path $target | Out-Null\nGet-ChildItem -LiteralPath $target -File -ErrorAction SilentlyContinue | Remove-Item -Force\nCopy-Item -LiteralPath $source -Destination (Join-Path $target \"large-name-index-over-20k-after.png\")\nGet-FileHash -Algorithm SHA256 -LiteralPath $source | ForEach-Object { \"$($_.Path) $($_.Hash)\" } | Set-Content -Encoding UTF8 -LiteralPath (Join-Path $target \"large-name-index-sha256.txt\")\ngit diff --check origin/main..HEAD\nif ($LASTEXITCODE -ne 0) { throw \"diff check failed\" }\nWrite-Host \"LARGE_FOLDER_NAME_INDEX_FINAL_ACCEPTANCE_PASS\""
+  "command": "$ErrorActionPreference = \"Stop\"\n$repo=\"tngkrwlsmd/flyExplorer\"\n$branch=\"work/large-folder-name-index\"\n$expected=\"6936fba97d2e18ac81115b5d02b84db7e90472dd\"\n$ref=(\"heads/\" + $branch)\n$encoded=[uri]::EscapeDataString($ref)\n$obj=gh api (\"repos/\" + $repo + \"/git/ref/\" + $encoded) | ConvertFrom-Json\nif($obj.object.sha -ne $expected){ throw (\"ref moved: expected \" + $expected + \", got \" + $obj.object.sha) }\ngh api --method DELETE (\"repos/\" + $repo + \"/git/refs/\" + $encoded)\nif($LASTEXITCODE -ne 0){ throw \"branch delete failed\" }\nWrite-Host (\"DELETED_BRANCH=\" + $branch)\nWrite-Host \"LARGE_FOLDER_NAME_INDEX_BRANCH_CLEANUP_PASS\""
 }
