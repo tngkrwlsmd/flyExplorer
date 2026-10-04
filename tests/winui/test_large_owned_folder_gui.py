@@ -28,14 +28,17 @@ def until(fn,label,timeout):
 
 def main():
     parser=argparse.ArgumentParser()
-    parser.add_argument("--items",type=int,choices=(1100,2300,5000,8000),default=1100)
+    parser.add_argument("--items",type=int,choices=(1100,2300,5000,8000,20500),default=1100)
     parser.add_argument("--configuration",choices=("Debug","Release"),
                         default="Debug")
     parser.add_argument("--resident-window-evidence",
                         choices=("none","before","after"),default="none")
+    parser.add_argument("--browse-over-complete-model",action="store_true")
     args=parser.parse_args()
     if args.resident_window_evidence!="none":
         assert args.items==2300 and args.configuration=="Release"
+    if args.browse_over_complete_model:
+        assert args.items==20500 and args.configuration=="Release"
     if os.name!="nt":
         return 2
     here=APP
@@ -163,6 +166,45 @@ def main():
                   "bench-0252.txt" in first_row(),
                   "forward resident rehydration did not return to shifted window",16)
             print("OWNED_RESIDENT_WINDOW_FORWARD_REHYDRATED_TAIL",True,flush=True)
+
+        if args.browse_over_complete_model:
+            previous=parent.child_window(auto_id="LeftLoadPreviousButton")
+            status=parent.child_window(auto_id="StatusText")
+            more=parent.child_window(auto_id="LeftLoadMoreButton")
+            def progress_text():
+                return more.window_text() if more.exists(timeout=.2) and more.is_visible() else ""
+            for _ in range(180):
+                text=progress_text()
+                head=text.split("/",1)[0]
+                try:
+                    if int(head)>20000:
+                        break
+                except ValueError:
+                    pass
+                before=text
+                more.click_input()
+                until(lambda:progress_text()!=before,
+                      "browse-over-20k progress did not advance",14)
+            progress=progress_text()
+            shown=int(progress.split("/",1)[0])
+            assert shown>20000,progress
+            until(lambda:previous.exists(timeout=.2) and previous.is_visible(),
+                  "browse-over-20k did not retain backward resident navigation",8)
+            rect=parent.rectangle()
+            evidence=base/"large-browse-over-20k-after.png"
+            ImageGrab.grab(
+                bbox=(rect.left,rect.top,rect.right,rect.bottom),
+                include_layered_windows=True).save(evidence)
+            first_before_sort=first_row()
+            parent.child_window(auto_id="SortPicker").select(1)
+            until(lambda:"20,000" in status.window_text(),
+                  "global sort above complete-model ceiling was not refused",8)
+            assert first_row()==first_before_sort
+            print("OWNED_LARGE_BROWSE_OVER_20000",shown,flush=True)
+            print("OWNED_LARGE_OVER_20K_SORT_REFUSED",True,flush=True)
+            print("OWNED_LARGE_OVER_20K_VISUAL",evidence.name,flush=True)
+            success=True
+            return
 
         parent.child_window(auto_id="SortPicker").select(1)
         until(lambda:f"bench-{args.items-1:04d}.txt" in first_row(),
