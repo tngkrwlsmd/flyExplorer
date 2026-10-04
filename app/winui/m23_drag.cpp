@@ -32,18 +32,16 @@ void MainWindow::OnFileDragItemsStarting(
  if(pane.pending[tab]||pane.filesystemPaths[tab].empty()){
   args.Cancel(true);return;
  }
- auto const& snapshot=pane.tabs[tab].snapshot();
- auto const& entries=snapshot.children;
+ auto const& session=pane.tabs[tab];
  std::vector<std::wstring> paths{};
  for(auto const& item:args.Items()){
   auto row=item.try_as<ListViewItem>();
   if(!row||!row.Tag()){args.Cancel(true);return;}
   const auto logical=unbox_value<std::uint64_t>(row.Tag());
-  std::size_t index=0;
-  if(!snapshot.residentIndex(logical,index)||
-     !entries[index].isFileSystem()||
-     entries[index].parsingName.empty()){args.Cancel(true);return;}
-  paths.push_back(entries[index].parsingName);
+  auto const* indexed=session.indexedItem(static_cast<std::size_t>(logical));
+  if(!indexed||!indexed->isFileSystem()||
+     indexed->parsingName.empty()){args.Cancel(true);return;}
+  paths.push_back(indexed->parsingName);
  }
  GUID id{};
  if(FAILED(::CoCreateGuid(&id))){args.Cancel(true);return;}
@@ -72,8 +70,7 @@ void MainWindow::OnFileRowDragStarting(
   args.Cancel(true);return;
  }
  const auto view=side==0?LeftFiles():RightFiles();
- auto const& snapshot=pane.tabs[tab].snapshot();
- auto const& entries=snapshot.children;
+ auto const& session=pane.tabs[tab];
  std::vector<ListViewItem> chosen;
  bool rowSelected=false;
  for(auto const& item:view.SelectedItems()){
@@ -89,13 +86,12 @@ void MainWindow::OnFileRowDragStarting(
  for(auto const& entry:chosen){
   if(!entry.Tag()){args.Cancel(true);return;}
   const auto logical=unbox_value<std::uint64_t>(entry.Tag());
-  std::size_t index=0;
-  if(!snapshot.residentIndex(logical,index)||
-     !entries[index].isFileSystem()||
-     entries[index].parsingName.empty()){
+  auto const* indexed=session.indexedItem(static_cast<std::size_t>(logical));
+  if(!indexed||!indexed->isFileSystem()||
+     indexed->parsingName.empty()){
    args.Cancel(true);return;
   }
-  paths.push_back(entries[index].parsingName);
+  paths.push_back(indexed->parsingName);
  }
  GUID id{};
  if(FAILED(::CoCreateGuid(&id))){args.Cancel(true);return;}
