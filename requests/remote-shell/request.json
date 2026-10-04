@@ -1,21 +1,15 @@
 {
-  "request_id": "direct-shell-column-resize-cursor-timer-011",
-  "expected_main_sha": "d50f01e8ccecb800f0dbac6c0b9f550e9cb25e49",
-  "candidate_sha": "d15a20fccf66a2573aad64108f8b281fd6e45ce6",
-  "logical_unit": "direct-shell-context-column-resize",
-  "configuration": "Release",
+  "request_id": "guidance-remote-shell-fallback-and-gui-diagnostics-001",
+  "expected_main_sha": "917c7ca057fe65003694f52abfd7e159c7302a7a",
+  "candidate_sha": "917c7ca057fe65003694f52abfd7e159c7302a7a",
+  "logical_unit": "remote-shell-guidance-contract",
+  "configuration": "none",
   "validation_kind": [
-    "source",
-    "build",
-    "gui",
-    "visual"
+    "source"
   ],
   "invalidated_evidence": {
-    "source": "Resize contracts now require a DispatcherQueueTimer-driven physical cursor loop and no PointerMovedEvent registration.",
-    "build": "MainWindow now stores a drag timer/screen cursor position and updates column widths from GetCursorPos with XamlRoot RasterizationScale.",
-    "gui": "The prior diagnostic proved PointerPressed/HIT succeeds but no PointerMoved events arrive; cursor polling directly replaces the failed movement transport.",
-    "visual": "Matched before/after Details column evidence must be recaptured only after all physical drags succeed."
+    "source": "AGENTS, AGENT_EFFICIENCY, PROJECT guidance and the remote-windows-task contract tests changed to require remote-shell fallback for connector/API gaps and layered first-run GUI input diagnostics."
   },
   "working_directory": "C:\\dev\\flyExplorer",
-  "command": "$ErrorActionPreference = \"Stop\"\ngit fetch origin main work/direct-shell-context-column-resize --no-tags --prune\nif ($LASTEXITCODE -ne 0) { throw \"fetch failed\" }\nif ((git rev-parse origin/main).Trim() -ne \"d50f01e8ccecb800f0dbac6c0b9f550e9cb25e49\") { throw \"main moved\" }\nif ((git status --short).Count -ne 0) { throw \"dirty persistent checkout\" }\ngit checkout -B work/direct-shell-context-column-resize origin/work/direct-shell-context-column-resize\nif ($LASTEXITCODE -ne 0) { throw \"checkout candidate failed\" }\nif ((git rev-parse HEAD).Trim() -ne \"d15a20fccf66a2573aad64108f8b281fd6e45ce6\") { throw \"candidate mismatch\" }\n\ncmd /c test.bat policy\nif ($LASTEXITCODE -ne 0) { throw \"policy readiness failed\" }\n\ncmd /c test.bat source\nif ($LASTEXITCODE -ne 0) { throw \"source contracts failed\" }\n\ncmd /c build.bat Release\nif ($LASTEXITCODE -ne 0) { throw \"Release build failed\" }\n\npython -X utf8 tests\\winui\\test_owned_column_resize_gui.py Release\nif ($LASTEXITCODE -ne 0) { throw \"Details column resize GUI acceptance failed\" }\n\n$source = \"C:\\dev\\flyExplorer\\logs\\m24\"\n$target = \"C:\\dev\\flyExplorer\\logs\\remote-evidence\"\n$files = @(\"detail-columns-before.png\",\"detail-columns-after.png\")\nNew-Item -ItemType Directory -Force -Path $target | Out-Null\nGet-ChildItem -LiteralPath $target -File -ErrorAction SilentlyContinue | Remove-Item -Force\nforeach ($name in $files) {\n  $path = Join-Path $source $name\n  if (!(Test-Path -LiteralPath $path -PathType Leaf)) { throw \"visual evidence missing: $name\" }\n  Copy-Item -LiteralPath $path -Destination (Join-Path $target $name)\n}\nGet-FileHash -Algorithm SHA256 -LiteralPath ($files | ForEach-Object { Join-Path $source $_ }) |\n  ForEach-Object { \"$($_.Path) $($_.Hash)\" } |\n  Set-Content -Encoding UTF8 -LiteralPath (Join-Path $target \"column-resize-sha256.txt\")\n\ngit diff --check origin/main..HEAD\nif ($LASTEXITCODE -ne 0) { throw \"diff check failed\" }\nWrite-Host \"DIRECT_SHELL_COLUMN_RESIZE_CURSOR_TIMER_PASS\"\n"
+  "command": "$ErrorActionPreference = \"Stop\"\ngit fetch origin main --no-tags --prune\nif ($LASTEXITCODE -ne 0) { throw \"fetch main failed\" }\nif ((git rev-parse origin/main).Trim() -ne \"917c7ca057fe65003694f52abfd7e159c7302a7a\") { throw \"main moved\" }\nif ((git status --short).Count -ne 0) { throw \"dirty persistent checkout\" }\n\ngit checkout main\nif ($LASTEXITCODE -ne 0) { throw \"checkout main failed\" }\ngit merge --ff-only origin/main\nif ($LASTEXITCODE -ne 0) { throw \"fast-forward main failed\" }\nif ((git rev-parse HEAD).Trim() -ne \"917c7ca057fe65003694f52abfd7e159c7302a7a\") { throw \"persistent checkout main mismatch\" }\n\npython -X utf8 tests\\winui\\test_remote_windows_task_contract.py\nif ($LASTEXITCODE -ne 0) { throw \"remote-shell guidance contract failed\" }\n\ncmd /c test.bat source\nif ($LASTEXITCODE -ne 0) { throw \"source contracts failed\" }\n\n$stale = git ls-remote --heads origin work/direct-shell-context-column-resize\nif ($LASTEXITCODE -ne 0) { throw \"branch existence check failed\" }\nif ($stale) {\n  git push origin --delete work/direct-shell-context-column-resize\n  if ($LASTEXITCODE -ne 0) { throw \"accepted work branch cleanup failed\" }\n  Write-Host \"WORK_BRANCH_CLEANUP=deleted\"\n} else {\n  Write-Host \"WORK_BRANCH_CLEANUP=already-absent\"\n}\n\ngit diff --check HEAD^..HEAD\nif ($LASTEXITCODE -ne 0) { throw \"guidance diff check failed\" }\nWrite-Host \"REMOTE_SHELL_GUIDANCE_CONTRACT_PASS\"\n"
 }
