@@ -3,6 +3,7 @@
 #include "../../src/base/shell_context_core.h"
 #include "../../src/base/shell_isolation_wire.h"
 #include <winrt/Microsoft.UI.Xaml.Input.h>
+#include <winrt/Microsoft.UI.Xaml.Media.h>
 #include <winrt/Windows.System.h>
 #include <thread>
 #include <chrono>
