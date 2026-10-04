@@ -106,7 +106,12 @@ class FluentShellContract(unittest.TestCase):
         self.assertIn("DetailColumnWidths(int side) const",impl)
         self.assertIn("GridUnitType::Star",impl)
         self.assertIn("if(pane<340.0)return 1",impl)
-        self.assertIn("GridLength{0.0,GridUnitType::Pixel},GridLength{64.0,GridUnitType::Pixel}",impl)
+        self.assertIn("GridLength{0.0,GridUnitType::Pixel},GridLength{size,GridUnitType::Pixel}",impl)
+        for thumb in ("LeftNameColumnResizeThumb","LeftTypeColumnResizeThumb",
+                      "LeftSizeColumnResizeThumb","RightNameColumnResizeThumb",
+                      "RightTypeColumnResizeThumb","RightSizeColumnResizeThumb"):
+            self.assertIn('x:Name="'+thumb+'"',xaml)
+        self.assertIn("OnDetailColumnResizeDragDelta",impl)
         self.assertIn("PrimaryPane().BorderThickness(Thickness{0.0,2.0,0.0,0.0})",impl)
         self.assertIn("SecondaryPane().BorderThickness(Thickness{0.0,2.0,0.0,0.0})",impl)
         self.assertIn("AutomationProperties::SetName",impl)
