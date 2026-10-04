@@ -38,6 +38,29 @@ class LargeFolderStreamingContracts(unittest.TestCase):
         self.assertIn("NavigationAction::Continue",cpp)
         self.assertIn("appendPage(",cpp)
 
+    def test_ui_row_identity_is_logical_not_resident_vector_index(self):
+        core=read("src/base/shell_navigation_core.h")
+        state=read("app/winui/file_list_state.h")
+        main=read("app/winui/MainWindow.xaml.cpp")
+        consumers=[
+            main,
+            read("app/winui/m21_commands.cpp"),
+            read("app/winui/m22_transfers.cpp"),
+            read("app/winui/m23_drag.cpp"),
+        ]
+        self.assertIn("logicalIndex(std::size_t resident)",core)
+        self.assertIn("residentIndex(std::uint64_t logical",core)
+        self.assertIn("std::size_t renderedBaseOffset=0",state)
+        self.assertIn("snapshot.logicalIndex(index)",main)
+        self.assertIn("renderedState.renderedBaseOffset",main)
+        for source in consumers:
+            self.assertNotIn("unbox_value<uint32_t>(row.Tag())",source)
+            self.assertNotIn("unbox_value<uint32_t>(entry.Tag())",source)
+        self.assertGreaterEqual(
+            sum("residentIndex(logical,index)" in source for source in consumers),
+            4,
+        )
+
     def test_ui_starts_with_truncated_page_and_loads_on_demand(self):
         main=read("app/winui/MainWindow.xaml.cpp")
         state=read("app/winui/file_list_state.h")
