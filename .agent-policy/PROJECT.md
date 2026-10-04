@@ -308,18 +308,26 @@ still requires completing pages up to that bound. Network/virtual provider
 behavior and sustained thumbnail-cache behavior remain separate open gates.
 
 Paged isolated Shell enumeration beyond the former 6,000-entry single-frame
-ceiling is accepted on product revision `fb92b9dd03c90ce3e3434270bff3cc5be8714cad`. The private helper
-wire is version 3: each helper response is bounded to at most 1,024 entries and
-8 MiB of body data, while the supervisor requests successive offset pages and
-aggregates at most 20,000 entries for one navigation snapshot. Cancellation,
+ceiling was first accepted on product revision `fb92b9dd03c90ce3e3434270bff3cc5be8714cad`. That revision introduced
+private wire protocol v3 with at most 1,024 entries and 8 MiB per helper
+response. Its supervisor-side aggregation behavior is historical evidence, not
+the current architecture.
+
+Current main follows the later model-level page-streaming revision
+`f7f3674e5271c17652a865cf2ed499185983d1eb`: the first helper page is committed immediately and later
+pages append only after route/request/folder/offset validation. Cancellation,
 route supersession, per-page watchdog/retry, PIDL validation, checksum
 validation and exact-owned child job boundaries remain in force. The WinUI list
-still renders only 160 rows initially and exposes controlled 160-row increments.
+still renders 160 rows initially and exposes controlled 160-row increments.
 
-This is transport paging, not full model-level streaming virtualization.
-The navigation model still owns the aggregated snapshot (bounded at 20,000)
-before sorting/filtering, so do not describe this revision as unbounded or true
-streaming virtualization.
+The navigation session still retains every accepted child and intentionally
+stops continuation at the 20,000-entry navigation safety ceiling. Logical
+enumeration progress is tracked separately from resident child count, so a
+future resident-window implementation can evict model pages without corrupting
+the continuation cursor. Do not describe current main as unbounded: 20,000+
+browsing still requires a bounded resident window/index design, and operations
+that need a complete folder such as global sort/filter need explicit semantics
+when the complete folder is not resident.
 
 The first pre-main run `37174851727` stopped at source contracts because one
 old contract asserted the pre-paging local variable name
