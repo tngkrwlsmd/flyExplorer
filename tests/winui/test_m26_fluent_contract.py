@@ -101,6 +101,11 @@ class FluentShellContract(unittest.TestCase):
         for n in ("LeftTypeHeaderColumn","LeftSizeHeaderColumn","LeftDateHeaderColumn",
                   "RightTypeHeaderColumn","RightSizeHeaderColumn","RightDateHeaderColumn"):
             self.assertIn('x:Name="'+n+'"',xaml)
+        self.assertIn('x:Key="ExplorerColumnResizeThumbStyle"',xaml)
+        self.assertIn('<Setter Property="Width" Value="12"/>',xaml)
+        self.assertIn('<Grid Background="Transparent">',xaml)
+        self.assertIn('HorizontalAlignment="Right"',xaml)
+        self.assertNotIn('Width="7" Margin="0,1,-3,1"',xaml)
         self.assertIn("ApplyDetailColumnLayout(int side)",impl)
         self.assertIn("DetailLayoutProfile() const",impl)
         self.assertIn("DetailColumnWidths(int side) const",impl)
