@@ -25,10 +25,21 @@ SearchController::~SearchController()
     prepareForClose();
 }
 
-bool SearchController::validRequest(Request const& request) noexcept
+SearchController::StartStatus SearchController::validateRequest(
+    Request const& request) noexcept
 {
-    return !request.scope.empty()&&request.scope.size()<=32700&&
-           !request.term.empty()&&request.term.size()<=256;
+    if(request.scope.empty()||request.scope.size()>32700)
+        return StartStatus::InvalidRequest;
+    switch(fxfile::preview::validateSearchQuery(request.query)){
+    case fxfile::preview::SearchQueryValidation::Valid:
+        return StartStatus::Started;
+    case fxfile::preview::SearchQueryValidation::InvalidExtension:
+        return StartStatus::InvalidExtension;
+    case fxfile::preview::SearchQueryValidation::InvalidRegex:
+        return StartStatus::InvalidPattern;
+    default:
+        return StartStatus::InvalidRequest;
+    }
 }
 
 bool SearchController::sameContext(
@@ -37,14 +48,16 @@ bool SearchController::sameContext(
     return a.windowIdentity==b.windowIdentity&&
            a.side==b.side&&a.tab==b.tab&&a.route==b.route&&
            a.paneFolder==b.paneFolder&&
-           a.scope==b.scope&&a.term==b.term;
+           a.scope==b.scope&&
+           fxfile::preview::sameSearchQuery(a.query,b.query);
 }
 
 SearchController::StartStatus SearchController::start(
     Request request,Context context,Post post,
     CompletionCallback completion)
 {
-    if(!validRequest(request))return StartStatus::InvalidRequest;
+    const auto validation=validateRequest(request);
+    if(validation!=StartStatus::Started)return validation;
     if(!post||!completion)return StartStatus::ThreadStartFailed;
 
     auto cancel=std::make_shared<std::atomic_bool>(false);
@@ -70,10 +83,10 @@ SearchController::StartStatus SearchController::start(
             value.request=std::move(request);
             try{
                 value.result=fxfile::preview::scanFiles(
-                    value.request.scope,value.request.term,cancel);
+                    value.request.scope,value.request.query,cancel);
             }catch(...){
                 value.result.scope=value.request.scope;
-                value.result.term=value.request.term;
+                value.result.term=value.request.query.term;
                 value.result.valid=false;
             }
             bool posted=false;

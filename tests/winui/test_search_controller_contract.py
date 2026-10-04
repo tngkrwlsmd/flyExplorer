@@ -39,8 +39,9 @@ class SearchControllerContracts(unittest.TestCase):
         features=src("app/winui/m19_features.cpp")
         main=src("app/winui/MainWindow.xaml.cpp")
         for field in ("windowIdentity","side","tab","route",
-                      "paneFolder","scope","term"):
+                      "paneFolder","scope"):
             self.assertIn("a."+field+"==b."+field,controller)
+        self.assertIn("sameSearchQuery(a.query,b.query)",controller)
         self.assertIn("mSearchController.accept(",features)
         self.assertIn("Disposition::StaleContext",features)
         self.assertIn("mSearchController.invalidate()",main)
@@ -61,8 +62,16 @@ class SearchControllerContracts(unittest.TestCase):
         search=src("app/winui/m19_search.cpp")
         for token in ("kMaxWalk=2500","kMaxDepth=5","kMaxResults=100",
                       "kRecentMax=8","kMaxRecentBytes=65536",
-                      "term.size()>256","FILE_ATTRIBUTE_REPARSE_POINT"):
+                      "query.term.size()>256","kMaxExtension=32",
+                      "FILE_ATTRIBUTE_REPARSE_POINT",
+                      "std::regex_search","InvalidRegex"):
             self.assertIn(token,search)
+        self.assertIn("FilesAndFolders",
+                      src("app/winui/m19_search.h"))
+        controller=src("app/winui/search_controller.cpp")
+        for token in ("InvalidExtension","InvalidPattern",
+                      "validateSearchQuery(request.query)"):
+            self.assertIn(token,controller)
 
 if __name__=="__main__":
     unittest.main()

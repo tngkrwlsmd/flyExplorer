@@ -205,9 +205,10 @@ def run(*,p,win,element,safe_click,focus,eventually,ownedwindows,
         # thread. The startup checkbox is off and never learns an opted-out
         # folder; all results and preview history use ONLY owned paths.
         safe_click(element("SearchPanelButton"))
-        for key in ("SearchScopeBox","SearchTermBox","SearchRememberBox",
-                    "SearchRunButton","SearchRecentBox","SearchClearButton",
-                    "SearchMatches","SearchCountText"):
+        for key in ("SearchScopeBox","SearchTermBox","SearchRegexBox",
+                    "SearchCaseBox","SearchTargetBox","SearchExtensionBox",
+                    "SearchRememberBox","SearchRunButton","SearchRecentBox",
+                    "SearchClearButton","SearchMatches","SearchCountText"):
             assert element(key).exists(timeout=4),("Missing M1.9 search UI",key)
         scope=element("SearchScopeBox")
         term=element("SearchTermBox")
@@ -224,6 +225,85 @@ def run(*,p,win,element,safe_click,focus,eventually,ownedwindows,
              "M1.9 search result summary missing",7)
         assert not recall.exists(),"Default unchecked search persisted a private path"
         print("REAL_M19_SEARCH_DEFAULT_OPT_OUT_NO_PERSISTENT_HISTORY",True,flush=True)
+
+        # Search v2 extends the existing, already-owned M1.9 panel rather than
+        # introducing another UI/lifecycle owner. Exercise only synthetic files.
+        report_upper=left/"Report-2026.TXT"
+        report_lower=left/"report-2025.txt"
+        notes=left/"notes.md"
+        report_folder=left/"Report-Archive"
+        korean=left/"한글-보고서.TXT"
+        report_folder.mkdir(exist_ok=True)
+        for target_file in (report_upper,report_lower,notes,korean,
+                            report_folder/"nested-report.txt"):
+            target_file.write_text("owned search v2",encoding="utf-8")
+        regex=element("SearchRegexBox")
+        case=element("SearchCaseBox")
+        target=element("SearchTargetBox")
+        extension=element("SearchExtensionBox")
+
+        term.set_edit_text("report")
+        safe_click(element("SearchRunButton"))
+        good(lambda:match("SearchCountText","검색 결과 3개"),
+             "Search v2 default file-only literal search failed",14)
+        assert search_matches("Report-2026.TXT")
+        assert search_matches("report-2025.txt")
+        assert search_matches("nested-report.txt")
+        # The result rows expose full paths, so the nested file path contains
+        # "Report-Archive". The exact count of three proves the folder itself
+        # was not returned by the default file-only query.
+        print("REAL_SEARCH_V2_DEFAULT_FILE_LITERAL_3_PASS",True,flush=True)
+
+        safe_click(regex)
+        safe_click(case)
+        term.set_edit_text(r"^Report-[0-9]{4}\.TXT$")
+        safe_click(element("SearchRunButton"))
+        good(lambda:match("SearchCountText","검색 결과 1개"),
+             "Search v2 case-sensitive regex search failed",14)
+        assert search_matches("Report-2026.TXT")
+        assert not search_matches("report-2025.txt")
+        print("REAL_SEARCH_V2_REGEX_CASE_SENSITIVE_PASS",True,flush=True)
+
+        safe_click(regex)
+        safe_click(case)
+        term.set_edit_text("보고서")
+        extension.set_edit_text(".txt")
+        safe_click(element("SearchRunButton"))
+        good(lambda:match("SearchCountText","검색 결과 1개"),
+             "Search v2 Unicode extension filter failed",14)
+        assert search_matches("한글-보고서.TXT")
+        print("REAL_SEARCH_V2_UNICODE_EXTENSION_PASS",True,flush=True)
+
+        extension.set_edit_text("")
+        focus()
+        target.wrapper_object().select(1)
+        term.set_edit_text("Report")
+        safe_click(element("SearchRunButton"))
+        good(lambda:match("SearchCountText","검색 결과 1개"),
+             "Search v2 folder-only search failed",14)
+        assert search_matches("Report-Archive")
+        print("REAL_SEARCH_V2_FOLDER_ONLY_PASS",True,flush=True)
+
+        focus()
+        target.wrapper_object().select(0)
+        safe_click(regex)
+        term.set_edit_text("[")
+        safe_click(element("SearchRunButton"))
+        good(lambda:match("SearchCountText","정규식이 올바르지 않습니다"),
+             "Search v2 invalid regex was not rejected before worker start",7)
+        assert element("SearchRunButton").is_enabled()
+        print("REAL_SEARCH_V2_INVALID_REGEX_PRESTART_REJECT_PASS",True,flush=True)
+
+        # Restore legacy-default options before continuing the existing recent-
+        # search persistence acceptance below.
+        safe_click(regex)
+        extension.set_edit_text("")
+        focus()
+        target.wrapper_object().select(0)
+        term.set_edit_text("readme")
+        safe_click(element("SearchRunButton"))
+        good(lambda:match("SearchCountText","검색 결과 1개"),
+             "Search v2 option reset did not restore default search",12)
 
         safe_click(element("SearchRememberBox"))
         assert element("SearchRememberBox").get_toggle_state()==1

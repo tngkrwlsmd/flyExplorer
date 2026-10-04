@@ -300,7 +300,21 @@ SearchController::Context MainWindow::SearchContext(){
     if(context.tab<pane.filesystemPaths.size())
         context.paneFolder=pane.filesystemPaths[context.tab];
     context.scope=std::wstring(SearchScopeBox().Text().c_str());
-    context.term=std::wstring(SearchTermBox().Text().c_str());
+    context.query.term=std::wstring(SearchTermBox().Text().c_str());
+    context.query.extension=std::wstring(SearchExtensionBox().Text().c_str());
+    context.query.regex=SearchRegexBox().IsChecked().GetBoolean();
+    context.query.caseSensitive=SearchCaseBox().IsChecked().GetBoolean();
+    switch(SearchTargetBox().SelectedIndex()){
+    case 1:
+        context.query.kind=fxfile::preview::SearchEntryKind::Folders;
+        break;
+    case 2:
+        context.query.kind=fxfile::preview::SearchEntryKind::FilesAndFolders;
+        break;
+    default:
+        context.query.kind=fxfile::preview::SearchEntryKind::Files;
+        break;
+    }
     return context;
 }
 void MainWindow::RefreshRecentSearchOptions(){
@@ -335,15 +349,16 @@ void MainWindow::OnToggleSearch(
         static_cast<size_t>(ActiveWindowTab().model.activePane)];
     auto const& path=pane.filesystemPaths[pane.active];
     if(!path.empty())SearchScopeBox().Text(hstring(path));
-    StatusText().Text(L"제한된 파일 이름 검색 · 최근 위치 저장은 선택 사항입니다.");
+    StatusText().Text(
+        L"파일 이름 검색 · 정규식/대소문자/대상/확장자 조건을 선택할 수 있습니다.");
 }
 void MainWindow::OnRunSearch(
     IInspectable const&,RoutedEventArgs const&) {
     SearchController::Request request{};
-    request.scope=std::wstring(SearchScopeBox().Text().c_str());
-    request.term=std::wstring(SearchTermBox().Text().c_str());
-    request.remember=SearchRememberBox().IsChecked().GetBoolean();
     auto context=SearchContext();
+    request.scope=context.scope;
+    request.query=context.query;
+    request.remember=SearchRememberBox().IsChecked().GetBoolean();
     const auto weak=get_weak();
     const auto status=mSearchController.start(
         std::move(request),std::move(context),
@@ -356,14 +371,22 @@ void MainWindow::OnRunSearch(
     if(status==Start::Started){
         SearchRunButton().IsEnabled(false);
         SearchCountText().Text(
-            L"독립 스레드에서 파일 이름을 검색하고 있습니다...");
+            L"독립 스레드에서 이름 조건을 검색하고 있습니다...");
         SearchMatches().Items().Clear();
         return;
     }
     SearchRunButton().IsEnabled(true);
     if(status==Start::InvalidRequest){
         StatusText().Text(
-           L"검색 폴더와 검색어를 입력하세요(최대 256자).");
+           L"검색 폴더와 검색어를 입력하세요(검색어 최대 256자).");
+    }else if(status==Start::InvalidExtension){
+        SearchCountText().Text(L"확장자 조건이 올바르지 않습니다.");
+        StatusText().Text(
+           L"확장자는 .txt처럼 한 줄의 확장자 이름만 입력하세요.");
+    }else if(status==Start::InvalidPattern){
+        SearchCountText().Text(L"정규식이 올바르지 않습니다.");
+        StatusText().Text(
+           L"정규식 문법을 확인하세요. 잘못된 정규식은 검색을 시작하지 않습니다.");
     }else if(status==Start::ThreadStartFailed){
         StatusText().Text(L"독립 검색 스레드를 시작할 수 없습니다.");
     }

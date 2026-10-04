@@ -243,15 +243,35 @@
                 <TextBox x:Name="SearchScopeBox" Width="315"
                          PlaceholderText="검색할 폴더의 전체 경로"
                          AutomationProperties.Name="검색 폴더 전체 경로"/>
-                <TextBox x:Name="SearchTermBox" Width="155"
-                         PlaceholderText="파일 이름에 포함될 단어"
-                         AutomationProperties.Name="검색어"/>
+                <TextBox x:Name="SearchTermBox" Width="210" MaxLength="256"
+                         PlaceholderText="이름 검색어 또는 정규식"
+                         AutomationProperties.Name="검색어 또는 정규식"/>
                 <CheckBox x:Name="SearchRememberBox" IsChecked="False"
                           Content="검색 위치 기억(선택)"
                           VerticalAlignment="Center"
                           AutomationProperties.Name="최근 검색 위치 저장 선택"/>
                 <Button x:Uid="SearchRunButton" x:Name="SearchRunButton" Content="파일 찾기"
-                        Click="OnRunSearch" AutomationProperties.Name="파일 이름 검색 실행"/>
+                        Click="OnRunSearch" AutomationProperties.Name="이름 조건 검색 실행"/>
+            </StackPanel>
+            <StackPanel Orientation="Horizontal" Spacing="7">
+                <CheckBox x:Name="SearchRegexBox" IsChecked="False"
+                          Content="정규식"
+                          AutomationProperties.Name="정규식 검색 사용"/>
+                <CheckBox x:Name="SearchCaseBox" IsChecked="False"
+                          Content="대/소문자 구분"
+                          AutomationProperties.Name="대소문자 구분"/>
+                <TextBlock Text="대상:" VerticalAlignment="Center"/>
+                <ComboBox x:Name="SearchTargetBox" Width="125" SelectedIndex="0"
+                          AutomationProperties.Name="검색 대상">
+                    <ComboBoxItem Content="파일"/>
+                    <ComboBoxItem Content="폴더"/>
+                    <ComboBoxItem Content="파일 + 폴더"/>
+                </ComboBox>
+                <TextBox x:Name="SearchExtensionBox" Width="135" MaxLength="32"
+                         PlaceholderText="확장자 예: .txt"
+                         AutomationProperties.Name="파일 확장자 조건"/>
+                <TextBlock Text="깊이 5 · 최대 2,500개 검사 · 결과 100개"
+                           VerticalAlignment="Center" Opacity="0.65"/>
             </StackPanel>
             <StackPanel Orientation="Horizontal" Spacing="7">
                 <TextBlock Text="최근 검색 위치:" VerticalAlignment="Center"/>
@@ -264,7 +284,7 @@
                 <Button x:Uid="SearchClearButton" x:Name="SearchClearButton" Content="최근 기록 지우기"
                         Click="OnClearSearchRecent"
                         AutomationProperties.Name="최근 검색 위치 지우기"/>
-                <TextBlock x:Name="SearchCountText" Text="제한된 파일 이름 검색 · 파일 변경 없음"
+                <TextBlock x:Name="SearchCountText" Text="제한된 이름 검색 · 파일 변경 없음"
                            VerticalAlignment="Center"
                            AutomationProperties.Name="검색 결과 요약"/>
             </StackPanel>

@@ -70,7 +70,8 @@ class M19IntegrationContracts(unittest.TestCase):
         for control in ("WorkspacePanelButton","WorkspaceFileBox",
                         "SaveWorkspaceButton","OpenWorkspaceButton",
                         "SearchPanelButton","SearchScopeBox","SearchTermBox",
-                        "SearchRememberBox","SearchRecentBox",
+                        "SearchRegexBox","SearchCaseBox","SearchTargetBox",
+                        "SearchExtensionBox","SearchRememberBox","SearchRecentBox",
                         "SearchRunButton","SearchClearButton"):
             self.assertIn('x:Name="'+control+'"',xaml)
         harness=code("tests/winui/test_shell_gui.py")

@@ -18,18 +18,20 @@ public:
         std::uint64_t route=0;
         std::wstring paneFolder;
         std::wstring scope;
-        std::wstring term;
+        fxfile::preview::SearchQuery query{};
     };
 
     struct Request final {
         std::wstring scope;
-        std::wstring term;
+        fxfile::preview::SearchQuery query{};
         bool remember=false;
     };
 
     enum class StartStatus {
         Started,
         InvalidRequest,
+        InvalidExtension,
+        InvalidPattern,
         Closing,
         ThreadStartFailed
     };
@@ -80,7 +82,7 @@ private:
     struct SharedState;
     std::shared_ptr<SharedState> state_;
 
-    static bool validRequest(Request const&) noexcept;
+    static StartStatus validateRequest(Request const&) noexcept;
     static bool sameContext(
         Context const&,Context const&) noexcept;
 };

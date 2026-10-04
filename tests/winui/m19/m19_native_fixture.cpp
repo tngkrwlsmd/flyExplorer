@@ -126,11 +126,85 @@ int wmain(int argc,wchar_t** argv){
        CREATE_NEW,FILE_ATTRIBUTE_NORMAL,nullptr);
     if(h==INVALID_HANDLE_VALUE)return 96;
     ::CloseHandle(h);
+    auto touch=[&](std::wstring const& path){
+        HANDLE file=::CreateFileW(path.c_str(),GENERIC_WRITE,0,nullptr,
+            CREATE_NEW,FILE_ATTRIBUTE_NORMAL,nullptr);
+        if(file==INVALID_HANDLE_VALUE)return false;
+        ::CloseHandle(file);
+        return true;
+    };
+    const auto reportUpper=left+L"\\Report-2026.TXT";
+    const auto reportLower=left+L"\\report-2025.txt";
+    const auto notes=left+L"\\notes.md";
+    const auto reportFolder=left+L"\\Report-Archive";
+    const auto nestedReport=reportFolder+L"\\nested-report.txt";
+    const auto korean=left+L"\\한글-보고서.TXT";
+    if(!touch(reportUpper)||!touch(reportLower)||!touch(notes)||
+       !::CreateDirectoryW(reportFolder.c_str(),nullptr)||
+       !touch(nestedReport)||!touch(korean))return 95;
+
     auto cancel=std::make_shared<std::atomic_bool>(false);
     auto result=fxfile::preview::scanFiles(left,L"owned-needle",cancel);
     expect(result.valid&&!result.truncated&&result.count==1&&
            result.matches.size()==1&&result.matches[0]==match,
            "NATIVE_READ_ONLY_BOUNDED_SEARCH");
+
+    fxfile::preview::SearchQuery regexCase{};
+    regexCase.term=L"^Report-[0-9]{4}\\.TXT$";
+    regexCase.regex=true;
+    regexCase.caseSensitive=true;
+    auto regexCaseResult=fxfile::preview::scanFiles(left,regexCase,cancel);
+    expect(regexCaseResult.valid&&regexCaseResult.count==1&&
+           regexCaseResult.matches.size()==1&&
+           regexCaseResult.matches[0]==reportUpper,
+           "REGEX_CASE_SENSITIVE_FILE_MATCH");
+
+    regexCase.caseSensitive=false;
+    auto regexIgnoreCase=fxfile::preview::scanFiles(left,regexCase,cancel);
+    expect(regexIgnoreCase.valid&&regexIgnoreCase.count==2,
+           "REGEX_CASE_INSENSITIVE_FILE_MATCH");
+
+    fxfile::preview::SearchQuery extensionQuery{};
+    extensionQuery.term=L"report";
+    extensionQuery.extension=L".txt";
+    auto extensionResult=fxfile::preview::scanFiles(
+        left,extensionQuery,cancel);
+    expect(extensionResult.valid&&extensionResult.count==3,
+           "LITERAL_EXTENSION_FILTER");
+
+    fxfile::preview::SearchQuery folders{};
+    folders.term=L"Report";
+    folders.kind=fxfile::preview::SearchEntryKind::Folders;
+    auto folderResult=fxfile::preview::scanFiles(left,folders,cancel);
+    expect(folderResult.valid&&folderResult.count==1&&
+           folderResult.matches[0]==reportFolder,
+           "FOLDER_ONLY_SEARCH");
+
+    fxfile::preview::SearchQuery both{};
+    both.term=L"report";
+    both.kind=fxfile::preview::SearchEntryKind::FilesAndFolders;
+    auto bothResult=fxfile::preview::scanFiles(left,both,cancel);
+    expect(bothResult.valid&&bothResult.count==4,
+           "FILES_AND_FOLDERS_SEARCH");
+
+    fxfile::preview::SearchQuery invalidRegex{};
+    invalidRegex.term=L"[";
+    invalidRegex.regex=true;
+    auto invalidRegexResult=fxfile::preview::scanFiles(
+        left,invalidRegex,cancel);
+    expect(!invalidRegexResult.valid&&invalidRegexResult.invalidPattern&&
+           fxfile::preview::validateSearchQuery(invalidRegex)==
+             fxfile::preview::SearchQueryValidation::InvalidRegex,
+           "INVALID_REGEX_REJECTED_BEFORE_SEARCH");
+
+    fxfile::preview::SearchQuery unicodeQuery{};
+    unicodeQuery.term=L"보고서";
+    unicodeQuery.extension=L"txt";
+    auto unicodeResult=fxfile::preview::scanFiles(left,unicodeQuery,cancel);
+    expect(unicodeResult.valid&&unicodeResult.count==1&&
+           unicodeResult.matches[0]==korean,
+           "UNICODE_LITERAL_EXTENSION_MATCH");
+
     cancel->store(true);
     expect(fxfile::preview::scanFiles(
            left,L"owned-needle",cancel).canceled,
