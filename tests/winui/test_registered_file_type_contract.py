@@ -70,9 +70,10 @@ class RealFileListColumnContract(unittest.TestCase):
                "OnNameColumnWidthChanged(","RootShell().AddHandler(",
                "TransformToVisual(RootShell())","thumb.ActualWidth()",
                "thumb.ActualHeight()","FLYEXPLORER_COLUMN_RESIZE_DIAGNOSTIC",
-               "RootShell().CapturePointer(args.Pointer())",
-               "RootShell().ReleasePointerCapture(args.Pointer())",
-               "ApplyDetailColumnLayout(mDetailColumnPointerSide);",
+               "DispatcherQueue().CreateTimer()","std::chrono::milliseconds(16)",
+               "::GetCursorPos(&next)","::GetAsyncKeyState(VK_LBUTTON)",
+               "RasterizationScale()",
+               "ApplyDetailColumnLayout(ui->mDetailColumnPointerSide);",
                "grid.ColumnDefinitions().GetAt(column).Width(widths[column])"):
    self.assertIn(item,impl)
   for item in ("OnDetailColumnResizePointerPressed(",
@@ -83,7 +84,8 @@ class RealFileListColumnContract(unittest.TestCase):
   self.assertNotIn('PointerPressed="OnDetailColumnResizePointerPressed"',xml)
   self.assertNotIn('PointerMoved="OnDetailColumnResizePointerMoved"',xml)
   self.assertEqual(xml.count('Style="{StaticResource ExplorerColumnResizeThumbStyle}" Margin="0,1,0,1" IsHitTestVisible="False"'),6)
-  self.assertGreaterEqual(impl.count("RootShell().AddHandler("),4)
+  self.assertGreaterEqual(impl.count("RootShell().AddHandler("),3)
+  self.assertNotIn("UIElement::PointerMovedEvent()",impl)
   self.assertNotIn("ColumnResizeHitTarget",xml)
   self.assertNotIn("ColumnResizeHitTarget",impl)
   self.assertNotIn("OnDetailColumnResizeDragDelta",xml)
