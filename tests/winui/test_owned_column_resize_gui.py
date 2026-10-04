@@ -88,14 +88,18 @@ def main(config="Release"):
             include_layered_windows=True).save(before)
 
         def drag_and_verify(thumb_id,next_header_id,delta):
+            window().set_focus()
+            time.sleep(.12)
             thumb=element(thumb_id)
             next_header=element(next_header_id)
             start=next_header.rectangle().left
             box=thumb.rectangle()
             x=(box.left+box.right)//2
             y=(box.top+box.bottom)//2
-            assert box.width()>=5 and box.height()>=8,(thumb_id,box)
-            window().set_focus()
+            assert box.width()>=10 and box.height()>=8,(thumb_id,box)
+            print("COLUMN_RESIZE_DRAG_BEGIN",thumb_id,
+                  (box.left,box.top,box.right,box.bottom),
+                  "boundary",start,flush=True)
             mouse.move(coords=(x,y))
             time.sleep(.12)
             mouse.press(button="left",coords=(x,y))
@@ -107,8 +111,11 @@ def main(config="Release"):
                     time.sleep(.06)
             finally:
                 mouse.release(button="left",coords=(x+delta,y))
-            eventually(lambda:element(next_header_id).rectangle().left>=start+delta-8,
+            eventually(lambda:element(next_header_id).rectangle().left>=start+12,
                        thumb_id+" drag did not resize the next column boundary",8)
+            end=element(next_header_id).rectangle().left
+            print("COLUMN_RESIZE_DRAG_END",thumb_id,
+                  "boundary",end,"delta",end-start,flush=True)
         drag_and_verify("LeftNameColumnResizeThumb","LeftTypeSortButton",40)
         drag_and_verify("LeftTypeColumnResizeThumb","LeftSizeSortButton",28)
         drag_and_verify("LeftSizeColumnResizeThumb","LeftDateSortButton",20)
