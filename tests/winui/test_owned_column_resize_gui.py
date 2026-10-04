@@ -2,7 +2,7 @@
 from pathlib import Path
 from paths import APP, app_exe
 from PIL import ImageGrab
-import hashlib,os,shutil,subprocess,sys,tempfile,time
+import ctypes,hashlib,os,shutil,subprocess,sys,tempfile,time
 import psutil
 from pywinauto import Desktop,mouse
 
@@ -100,15 +100,31 @@ def main(config="Release"):
             print("COLUMN_RESIZE_DRAG_BEGIN",thumb_id,
                   (box.left,box.top,box.right,box.bottom),
                   "boundary",start,flush=True)
+            def hit_info(px,py):
+                try:
+                    hit=Desktop(backend="uia").from_point(px,py)
+                    info=hit.element_info
+                    return (info.automation_id,info.control_type,hit.window_text())
+                except Exception as error:
+                    return ("<uia-error>",type(error).__name__,"")
             mouse.move(coords=(x,y))
             time.sleep(.12)
+            print("COLUMN_RESIZE_HIT_BEFORE",thumb_id,hit_info(x,y),flush=True)
             mouse.press(button="left",coords=(x,y))
+            print("COLUMN_RESIZE_BUTTON_AFTER_PRESS",
+                  bool(ctypes.windll.user32.GetAsyncKeyState(0x01)&0x8000),
+                  flush=True)
             try:
                 steps=10
                 for step in range(1,steps+1):
                     nx=x+round(delta*step/steps)
                     mouse.move(coords=(nx,y))
-                    time.sleep(.06)
+                    time.sleep(.08)
+                    boundary=element(next_header_id).rectangle().left
+                    print("COLUMN_RESIZE_STEP",thumb_id,step,
+                          "cursor",nx,y,"boundary",boundary,
+                          "button",bool(ctypes.windll.user32.GetAsyncKeyState(0x01)&0x8000),
+                          "hit",hit_info(nx,y),flush=True)
             finally:
                 mouse.release(button="left",coords=(x+delta,y))
             eventually(lambda:element(next_header_id).rectangle().left>=start+12,
