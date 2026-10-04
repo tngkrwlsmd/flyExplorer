@@ -1,15 +1,21 @@
 {
-  "request_id": "validation-churn-work-branch-cleanup-002",
+  "request_id": "large-folder-logical-offset-acceptance-001",
   "expected_main_sha": "5cdd28c0b7188730a4182f24932d3aaa901b9cae",
-  "candidate_sha": "5cdd28c0b7188730a4182f24932d3aaa901b9cae",
-  "logical_unit": "validation-churn-branch-cleanup",
-  "configuration": "none",
+  "candidate_sha": "a8325cad1eb66db34de33cf104d45819e4cda574",
+  "logical_unit": "large-folder-logical-offset",
+  "configuration": "Release",
   "validation_kind": [
-    "none"
+    "source",
+    "build",
+    "native"
   ],
-  "invalidated_evidence": {},
+  "invalidated_evidence": {
+    "source": "large-folder contracts, current-status wording and navigation offset ownership changed",
+    "build": "C++ Snapshot and Shell navigation continuation fields changed",
+    "native": "isolated helper continuation offset and navigation ceiling wiring changed"
+  },
   "retry_reason": "",
   "retry_revision": "",
   "working_directory": "C:\\dev\\flyExplorer",
-  "command": "$ErrorActionPreference = \"Stop\"\ngit fetch origin main --no-tags --prune\nif ($LASTEXITCODE -ne 0) { throw \"fetch main failed\" }\nif ((git rev-parse origin/main).Trim() -ne \"5cdd28c0b7188730a4182f24932d3aaa901b9cae\") { throw \"main moved\" }\n$remoteHeads = git ls-remote --heads origin work/validation-churn-guards work/validation-churn-empty-evidence-fix\nif ($LASTEXITCODE -ne 0) { throw \"list remote work branches failed\" }\n$toDelete = @()\nif ($remoteHeads -match \"refs/heads/work/validation-churn-guards\") { $toDelete += \"work/validation-churn-guards\" }\nif ($remoteHeads -match \"refs/heads/work/validation-churn-empty-evidence-fix\") { $toDelete += \"work/validation-churn-empty-evidence-fix\" }\nif ($toDelete.Count -gt 0) {\n  git push origin --delete @toDelete\n  if ($LASTEXITCODE -ne 0) { throw \"persistent-checkout branch cleanup failed\" }\n}\nWrite-Host \"VALIDATION_CHURN_TEMP_BRANCH_CLEANUP_PASS\"\n"
+  "command": "$ErrorActionPreference = \"Stop\"\ngit fetch origin main work/large-folder-logical-offset --no-tags --prune\nif ($LASTEXITCODE -ne 0) { throw \"fetch failed\" }\nif ((git rev-parse origin/main).Trim() -ne \"5cdd28c0b7188730a4182f24932d3aaa901b9cae\") { throw \"main moved\" }\nif ((git status --short).Count -ne 0) { throw \"dirty persistent checkout\" }\ngit checkout -B work/large-folder-logical-offset origin/work/large-folder-logical-offset\nif ($LASTEXITCODE -ne 0) { throw \"checkout candidate failed\" }\nif ((git rev-parse HEAD).Trim() -ne \"a8325cad1eb66db34de33cf104d45819e4cda574\") { throw \"candidate mismatch\" }\n\npython -X utf8 tests\\winui\\test_large_folder_streaming_contract.py\nif ($LASTEXITCODE -ne 0) { throw \"streaming source contract failed\" }\npython -X utf8 tests\\winui\\test_large_folder_contract.py\nif ($LASTEXITCODE -ne 0) { throw \"large-folder source contract failed\" }\npython -X utf8 tests\\winui\\helper\\test_contract.py\nif ($LASTEXITCODE -ne 0) { throw \"helper source contract failed\" }\n\ncmd /c build.bat Release\nif ($LASTEXITCODE -ne 0) { throw \"Release build failed\" }\n\n$env:FLY_M16_CONFIG = \"Release\"\npython -X utf8 tests\\winui\\helper\\test_process_isolation.py\nif ($LASTEXITCODE -ne 0) { throw \"focused helper process-isolation test failed\" }\n\ngit diff --check origin/main..HEAD\nif ($LASTEXITCODE -ne 0) { throw \"diff check failed\" }\nWrite-Host \"LARGE_FOLDER_LOGICAL_OFFSET_ACCEPTANCE_PASS\"\n"
 }
