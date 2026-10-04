@@ -437,6 +437,11 @@
                                     ValueChanged="OnNameColumnWidthChanged"
                                     ToolTipService.ToolTip="&#xC774;&#xB984; &#xC5F4; &#xB108;&#xBE44;"
                                     AutomationProperties.Name="&#xC67C;&#xCABD; &#xC774;&#xB984; &#xC5F4; &#xB108;&#xBE44; &#xC870;&#xC808;"/>
+                            <Button x:Name="LeftLoadPreviousButton" Content="&#x2190;"
+                                    Visibility="Collapsed" MinWidth="28" Height="25"
+                                    Padding="5,0" Click="OnLoadPreviousFiles"
+                                    ToolTipService.ToolTip="&#xC774;&#xC804; &#xD56D;&#xBAA9; &#xCC3D;"
+                                    AutomationProperties.Name="&#xC67C;&#xCABD; &#xC774;&#xC804; &#xD56D;&#xBAA9; &#xCC3D;"/>
                             <Button x:Name="LeftLoadMoreButton" Content="+160"
                                     Visibility="Collapsed" MinWidth="46" Height="25"
                                     Padding="5,0" Click="OnLoadMoreFiles"
@@ -524,6 +529,11 @@
                                     ValueChanged="OnNameColumnWidthChanged"
                                     ToolTipService.ToolTip="&#xC774;&#xB984; &#xC5F4; &#xB108;&#xBE44;"
                                     AutomationProperties.Name="&#xC624;&#xB978;&#xCABD; &#xC774;&#xB984; &#xC5F4; &#xB108;&#xBE44; &#xC870;&#xC808;"/>
+                            <Button x:Name="RightLoadPreviousButton" Content="&#x2190;"
+                                    Visibility="Collapsed" MinWidth="28" Height="25"
+                                    Padding="5,0" Click="OnLoadPreviousFiles"
+                                    ToolTipService.ToolTip="&#xC774;&#xC804; &#xD56D;&#xBAA9; &#xCC3D;"
+                                    AutomationProperties.Name="&#xC624;&#xB978;&#xCABD; &#xC774;&#xC804; &#xD56D;&#xBAA9; &#xCC3D;"/>
                             <Button x:Name="RightLoadMoreButton" Content="+160"
                                     Visibility="Collapsed" MinWidth="46" Height="25"
                                     Padding="5,0" Click="OnLoadMoreFiles"
