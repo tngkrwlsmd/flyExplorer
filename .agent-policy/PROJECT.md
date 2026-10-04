@@ -120,6 +120,124 @@ regular expressions and extensions are rejected before a worker starts. The
 existing depth-5, 2,500-entry walk and 100-result bounds, cancellation,
 stale-result rejection and opt-in recent-scope persistence remain in force.
 
+## Development loop and verification budget
+
+flyExplorer uses a deliberately narrow development loop. The goal is the
+smallest evidence set that proves the changed behavior, not maximum repeated
+confidence. This project is stricter than the generic retry allowance where the
+rules below differ.
+
+### Plan the verification frontier before running the VM
+
+- Define one logical implementation unit and its concrete acceptance claims
+  before editing. Map each unresolved claim to the lowest layer that can prove
+  it: static/source contract, compile, native/runtime, focused GUI, or visual.
+- Before every remote run, compare the current candidate with the last revision
+  that already has valid evidence. Explicitly identify which prior evidence was
+  invalidated by the new diff. Do not rerun a stage whose relevant product,
+  build input, runtime path, or presentation did not change.
+- Test-only, harness-only, documentation-only and control-plane-only revisions
+  do not invalidate an already successful product build or product runtime
+  result unless they alter how that evidence was produced or interpreted.
+  Reuse the existing binary and prior PASS evidence when valid.
+- Catch obvious compile/test-fixture mistakes through diff/static review before
+  paying for a Windows VM run. A remote run should answer a remaining product
+  question, not be the first syntax review of a test harness.
+
+### Default verification ladder
+
+Use only the rows required by the change:
+
+1. **Docs/policy/test-only change:** static diff/review and the narrowest
+   relevant source/contract check if one exists. Do not run a Windows build
+   merely because the repository is a Windows application.
+2. **Windows C++/project/XAML compile input changed:** perform static/source
+   checks first, then one canonical Release build. A second build requires a
+   product/build-input change that invalidated the first build.
+3. **Runtime semantics changed:** after a valid build, run one focused native
+   or runtime scenario that directly exercises the changed behavior. Prefer an
+   established focused fixture over a broad regression harness.
+4. **GUI interaction semantics changed:** run one focused owned-GUI scenario
+   only when the behavior cannot be established at a lower layer. Do not append
+   unrelated GUI flows after the relevant acceptance boundary.
+5. **Visual/layout/artwork changed:** perform matched visual acceptance once,
+   after functional evidence passes. If pixels/layout/artwork did not change,
+   do not create visual evidence unless the user explicitly asks for it.
+6. **Cross-cutting protocol/schema/shared-build change:** a broader source
+   suite or helper regression is justified only when no narrower trustworthy
+   contract covers the affected boundary. It is still run once per invalidated
+   revision, not as a default companion to every build.
+
+For a normal logical unit, the default Windows-VM verification budget is
+**one canonical Release build plus one focused runtime or GUI acceptance**.
+Expensive fixtures such as multi-thousand-file folders, broad GUI walks,
+Explorer benchmark capture, DPI/visual sessions or full runtime matrices are
+final-acceptance gates, not iteration loops. Exercise each expensive fixture at
+most once after cheaper evidence has converged, unless a later product change
+directly invalidates that fixture's result.
+
+### Failure and retry rules
+
+- Stop at the **first relevant failure** and classify it as product,
+  test-harness, or environment/control-plane before changing anything.
+- **Never rerun the same product/test revision.** This includes a same-SHA
+  Actions rerun and an equivalent remote-shell command issued only to see
+  whether it passes the second time.
+- flyExplorer permits **zero automatic result-based retries**, including a
+  speculative "one more try" for apparently transient failures. A later run is
+  justified only after the cause has been identified and the code, harness, or
+  execution condition has materially changed.
+- After a new revision, resume at the **earliest invalidated failure boundary**
+  and run only dependent downstream stages. Do not replay the entire
+  source -> native -> build -> GUI -> visual chain by default.
+- A harness-only correction does not justify rebuilding unchanged product
+  binaries. A visual-only/XAML correction does not justify repeating unrelated
+  native semantics. A product algorithm change does invalidate the relevant
+  build/runtime evidence and should restart from that specific boundary.
+- If the requested focused behavior already passed and a later unrelated broad
+  harness tail fails, preserve the focused PASS evidence, diagnose the unrelated
+  tail separately, and do not rerun the broad harness as a condition of the
+  focused feature's acceptance.
+- Once the required evidence is successful, stop. Do not add another run,
+  screenshot, fixture size, or harness solely for additional confidence.
+
+### Remote-shell and CI discipline
+
+- The persistent `control/remote-shell` checkout is the normal Windows
+  development surface. Batch only the stages that are currently required; do
+  not include earlier PASS stages "for completeness".
+- For normal builds or remote tasks expected to finish within a few minutes,
+  allow up to three minutes before the status read. Avoid short-interval
+  polling; after that read, either act on the result or leave the exact run ID
+  as the resume point.
+- Main-branch pushes do not trigger Windows validation automatically. After a
+  logical unit is already accepted and moved to main, do not dispatch another
+  Windows CI run just to reconfirm it. A post-main manual gate requires a
+  distinct release/deployment requirement, a newly invalidated risk, or an
+  explicit user request.
+- Keep only `main`, the minimal `control/remote-shell` branch, and at most
+  the temporary work branch required by the current isolated integration.
+  Delete an accepted `work/*` branch immediately after its final tree is on
+  main.
+- Operational control-branch commits and remote evidence are never product
+  history. Product main should contain one clean logical product commit (plus a
+  necessary acceptance/docs commit when appropriate), not iterative WIP or
+  verification churn.
+
+### Evidence reuse examples
+
+- Product build PASS -> test assertion fixed only: reuse the product build;
+  rerun the failed focused test only.
+- Native/runtime PASS -> XAML label/layout changed only: rebuild the UI once if
+  required, then run the visual/UI boundary only; do not rerun the native gate.
+- Focused GUI PASS -> unrelated later broad-GUI step fails: do not replay the
+  focused GUI. Fix or retire the unrelated harness path separately.
+- Large-folder/native algorithm iterating: use cheap source/native fixtures
+  while developing; run the 8,000+ real-file GUI fixture only for final
+  acceptance.
+- Successful matched visual evidence remains valid across docs/test/control-only
+  commits that do not change the rendered product tree.
+
 ## Current verification
 
 Model-level large-folder page streaming is accepted on product revision
@@ -366,14 +484,10 @@ owned 5,000-item navigation/sort/progressive-paging evidence are unchanged.
   `remote/**` command-branch fallback is maintained. Temporary `work/*`
   branches are deleted once their accepted final tree is on main.
 - The persistent remote-shell checkout is the primary Windows development and
-  diagnosis surface. Batch investigate/edit/build/focused-test/GUI-evidence
-  commands there. Windows build Actions are never triggered merely by a push
-  and never receive a same-revision rerun. A deliberately dispatched failure is
-  diagnosed once, fixed in the remote-shell loop, and only a new revision may
-  justify a later manual gate.
-  For normal builds/remote tasks expected to finish within a few minutes, allow
-  up to three minutes of runtime before declaring them still running; use one
-  final read rather than short-interval polling.
+  diagnosis surface. Verification scope, evidence reuse, failure handling,
+  retry prohibition and polling behavior follow the project-specific
+  **Development loop and verification budget** above. Windows build Actions are
+  never triggered merely by a push and never receive a same-revision rerun.
 - GitHub-hosted runners require explicit user approval and are not part of the
   active flyExplorer CI path by default.
 - The privileged self-hosted runner must not execute untrusted fork/PR code
