@@ -95,7 +95,7 @@ def launch(*args,extra_env=None):
     return process
 
 def request(path=None,pidl_bytes=None,offset=0,limit=1024):
-    assert 0<=offset<20000 and 1<=limit<=1024 and offset+limit<=20000
+    assert 0<=offset<100000 and 1<=limit<=1024 and offset+limit<=100000
     if pidl_bytes is not None:
         assert pidl_valid(pidl_bytes)
         return struct.pack("<IIIIII",MAGIC,3,2,len(pidl_bytes),
@@ -189,6 +189,9 @@ try:
     assert len(page0["entries"])==1 and page0["flags"]==1
     assert len(page1["entries"])==1 and page1["entries"][0]["name"]!=page0["entries"][0]["name"]
     print("REAL_NATIVE_HELPER_PAGED_OFFSET_LIMIT_PASS",True)
+    over_complete,_,_=roundtrip(left,offset=20001,page_limit=1)
+    assert over_complete["hr"]==0 and over_complete["entries"]==[]
+    print("REAL_NATIVE_HELPER_OFFSET_OVER_COMPLETE_MODEL_PASS",True)
     identical,_,_=roundtrip(pidl_bytes=first["folder"]["pidl"])
     assert identical["hr"]==0 and set(e["name"] for e in identical["entries"])==set(
         e["name"] for e in first["entries"])

@@ -28,13 +28,14 @@ class IsolationContracts(unittest.TestCase):
         wire=source(ROOT/"src/base/shell_isolation_wire.h")
         for required in ("kVersion=3","kAbsolutePidl=2",
                          "kMaxPathUnits=16384","kMaxPidl=65536",
-                         "kMaxPageEntries=1024","kMaxNavigationEntries=20000",
+                         "kMaxPageEntries=1024","kMaxCompleteModelEntries=20000",
+                         "kMaxBrowseEntries=100000",
                          "kMaxBody=8u*1024u*1024u","sizeof(Request)==24",
                          "sizeof(Reply)==28","validPidl"):
             self.assertIn(required,wire)
         for required in ("exactRead","exactWrite","ILGetSize",
                          "checksum(body.bytes.data(),body.bytes.size())",
-                         "req.limit>kMaxNavigationEntries-req.offset",
+                         "req.limit>kMaxBrowseEntries-req.offset",
                          "SHGetPathFromIDListEx"):
             self.assertIn(required,h)
         for forbidden in ("DeleteFileW(","MoveFileW(","CopyFileW(",
@@ -42,7 +43,8 @@ class IsolationContracts(unittest.TestCase):
             self.assertNotIn(forbidden,h)
         for required in ("pidl_valid(raw)","string bounds",
                          "result frame length","corrupted body",
-                         "REAL_NATIVE_HELPER_PAGED_OFFSET_LIMIT_PASS"):
+                         "REAL_NATIVE_HELPER_PAGED_OFFSET_LIMIT_PASS",
+                         "REAL_NATIVE_HELPER_OFFSET_OVER_COMPLETE_MODEL_PASS"):
             self.assertIn(required,t)
 
     def test_private_job_boundaries_without_product_switch(self):

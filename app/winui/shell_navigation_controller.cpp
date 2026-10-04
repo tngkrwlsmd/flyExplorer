@@ -96,27 +96,35 @@ std::uint64_t ShellNavigationController::submitActive(
 }
 
 std::uint64_t ShellNavigationController::submitNextPage(
-    fxfile::explorerui::Model& model,int side)
+    fxfile::explorerui::Model& model,int side,std::size_t ceiling)
 {
     if(side<0||side>1)return 0;
+    ceiling=(std::min)(
+        ceiling,
+        static_cast<std::size_t>(fxfile::isolation::kMaxBrowseEntries));
+    if(!ceiling)return 0;
     auto& pane=model.panes[static_cast<std::size_t>(side)];
     if(!validTab(model,side,pane.active)||
        pane.pending[pane.active])return 0;
     auto& session=pane.tabs[pane.active];
     auto const& snapshot=session.snapshot();
     const auto residentEnd=snapshot.residentEndOffset();
+    if(residentEnd>=ceiling)return 0;
     std::size_t offset=residentEnd;
     std::size_t limit=0;
     if(residentEnd<snapshot.nextOffset){
-        limit=(std::min)(
+        limit=(std::min)({
             static_cast<std::size_t>(fxfile::isolation::kMaxPageEntries),
-            snapshot.nextOffset-residentEnd);
+            snapshot.nextOffset-residentEnd,
+            ceiling-residentEnd});
     }else{
         offset=snapshot.nextOffset;
-        if(!snapshot.truncated||
-           offset>=fxfile::isolation::kMaxNavigationEntries)
-            return 0;
+        if(!snapshot.truncated||offset>=ceiling)return 0;
+        limit=(std::min)(
+            static_cast<std::size_t>(fxfile::isolation::kMaxPageEntries),
+            ceiling-offset);
     }
+    if(!limit)return 0;
     fxfile::shellnav::Location target(snapshot.folder);
     if(!target.valid())return 0;
     const auto id=supervisor_->submitPage(

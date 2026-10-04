@@ -1,6 +1,7 @@
 #include "pch.h"
 #include "MainWindow.xaml.h"
 #include "../../src/base/shell_context_core.h"
+#include "../../src/base/shell_isolation_wire.h"
 #include <winrt/Microsoft.UI.Xaml.Input.h>
 #include <winrt/Windows.System.h>
 #include <thread>
@@ -58,12 +59,25 @@ void MainWindow::OnFileRightTapped(
 void MainWindow::UpdateSort(int selection){
  if(selection<0||selection>7)return;
  const int side=ActiveWindowTab().model.activePane;
- ActiveWindowTab().fileLists[side].sortMode=selection;
+ auto& state=ActiveWindowTab().fileLists[side];
+ auto const& pane=ActiveWindowTab().model.panes[side];
+ auto const& snapshot=pane.tabs[pane.active].snapshot();
+ const auto completeLimit=static_cast<std::size_t>(
+  fxfile::isolation::kMaxCompleteModelEntries);
+ if((snapshot.baseOffset||
+     snapshot.residentEndOffset()<snapshot.nextOffset||
+     snapshot.truncated)&&
+    (snapshot.nextOffset>completeLimit||
+     (snapshot.nextOffset==completeLimit&&snapshot.truncated))){
+  fileBar()->SetSortIndex(state.sortMode);
+  StatusText().Text(
+   L"전역 정렬은 현재 최대 20,000개 항목까지 전체 모델을 완성할 수 있습니다.");
+  return;
+ }
+ state.sortMode=selection;
  fileBar()->SetSortIndex(selection);
  UpdateSortPresentation(side);
  FillFiles(side);
- auto const& pane=ActiveWindowTab().model.panes[side];
- auto const& snapshot=pane.tabs[pane.active].snapshot();
  if(snapshot.baseOffset||
     snapshot.residentEndOffset()<snapshot.nextOffset||
     snapshot.truncated)

@@ -297,13 +297,21 @@ folder identity and exact offset/range checks still reject stale or overlapping
 results.
 
 Global sort and non-empty pane filtering intentionally do not operate on a
-partial resident window. Their completion intent first rehydrates any evicted
-prefix and known forward gap, then continues normal Shell pages until the folder
-ends or the existing 20,000-entry navigation safety ceiling is reached. The
-resident window therefore reduces normal browsing retention without silently
-changing existing bounded full-model sort/filter behavior. Do not remove the
-20,000 ceiling until a separate indexed strategy defines semantics beyond that
-bounded full model.
+partial resident window. Two ceilings are explicit. `kMaxCompleteModelEntries`
+is 20,000 and bounds operations that need the complete folder model.
+`kMaxBrowseEntries` is 100,000 and bounds ordinary sequential resident-window
+navigation. The controller passes the appropriate ceiling into forward page
+submission, while the helper/supervisor reject any offset/limit range outside
+the browse ceiling.
+
+If sequential browsing has already crossed 20,000, global sort/filter is
+refused rather than producing a partial result. Below that boundary, completion
+intent still rehydrates any evicted prefix and known forward gap and finishes
+the bounded model before applying the operation. The 100,000 value is a safety
+cap only; current acceptance proves browsing beyond 20,000 with an owned
+20,500-file folder, not general 100,000-item performance or provider support.
+A future indexed strategy is still required before complete-model semantics can
+scale beyond 20,000.
 
 File-list rows carry logical `uint64` item indices, not resident-vector
 positions. Consumers translate them through `Snapshot::residentIndex()`
