@@ -92,6 +92,37 @@ namespace winrt::FlyExplorer::implementation
     MainWindow::MainWindow()
     {
         InitializeComponent();
+        auto wireResizePointer=[this](
+            Microsoft::UI::Xaml::Controls::Primitives::Thumb const& thumb){
+            using Microsoft::UI::Xaml::Input::PointerEventHandler;
+            using Microsoft::UI::Xaml::UIElement;
+            thumb.AddHandler(
+                UIElement::PointerPressedEvent(),
+                winrt::box_value(PointerEventHandler{
+                    this,&MainWindow::OnDetailColumnResizePointerPressed}),
+                true);
+            thumb.AddHandler(
+                UIElement::PointerMovedEvent(),
+                winrt::box_value(PointerEventHandler{
+                    this,&MainWindow::OnDetailColumnResizePointerMoved}),
+                true);
+            thumb.AddHandler(
+                UIElement::PointerReleasedEvent(),
+                winrt::box_value(PointerEventHandler{
+                    this,&MainWindow::OnDetailColumnResizePointerReleased}),
+                true);
+            thumb.AddHandler(
+                UIElement::PointerCaptureLostEvent(),
+                winrt::box_value(PointerEventHandler{
+                    this,&MainWindow::OnDetailColumnResizePointerCaptureLost}),
+                true);
+        };
+        wireResizePointer(LeftNameColumnResizeThumb());
+        wireResizePointer(LeftTypeColumnResizeThumb());
+        wireResizePointer(LeftSizeColumnResizeThumb());
+        wireResizePointer(RightNameColumnResizeThumb());
+        wireResizePointer(RightTypeColumnResizeThumb());
+        wireResizePointer(RightSizeColumnResizeThumb());
         // M2.6 uses the public WinUI 3 custom-titlebar/backdrop path only.
         // Pane-local folder TabViews remain inside each pane; the titlebar now
         // hosts a separate functional WindowTab workspace strip.
