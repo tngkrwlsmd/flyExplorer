@@ -1,21 +1,21 @@
 {
-  "request_id": "large-folder-logical-offset-acceptance-001",
-  "expected_main_sha": "5cdd28c0b7188730a4182f24932d3aaa901b9cae",
-  "candidate_sha": "a8325cad1eb66db34de33cf104d45819e4cda574",
-  "logical_unit": "large-folder-logical-offset",
+  "request_id": "large-folder-selection-identity-acceptance-001",
+  "expected_main_sha": "0714dd8f5d6420d967a84ce0c946b1c11a476d91",
+  "candidate_sha": "6be98c5a48a075104a6e66dbb201f284f3f47172",
+  "logical_unit": "large-folder-selection-identity",
   "configuration": "Release",
   "validation_kind": [
     "source",
     "build",
-    "native"
+    "gui"
   ],
   "invalidated_evidence": {
-    "source": "large-folder contracts, current-status wording and navigation offset ownership changed",
-    "build": "C++ Snapshot and Shell navigation continuation fields changed",
-    "native": "isolated helper continuation offset and navigation ceiling wiring changed"
+    "source": "row Tag identity, resident-index translation and large-folder source contracts changed",
+    "build": "C++ Snapshot helpers and WinUI file command/transfer/drag consumers changed",
+    "gui": "selected ListViewItem Tag is now boxed as a logical uint64 identity before rename command dispatch"
   },
   "retry_reason": "",
   "retry_revision": "",
   "working_directory": "C:\\dev\\flyExplorer",
-  "command": "$ErrorActionPreference = \"Stop\"\ngit fetch origin main work/large-folder-logical-offset --no-tags --prune\nif ($LASTEXITCODE -ne 0) { throw \"fetch failed\" }\nif ((git rev-parse origin/main).Trim() -ne \"5cdd28c0b7188730a4182f24932d3aaa901b9cae\") { throw \"main moved\" }\nif ((git status --short).Count -ne 0) { throw \"dirty persistent checkout\" }\ngit checkout -B work/large-folder-logical-offset origin/work/large-folder-logical-offset\nif ($LASTEXITCODE -ne 0) { throw \"checkout candidate failed\" }\nif ((git rev-parse HEAD).Trim() -ne \"a8325cad1eb66db34de33cf104d45819e4cda574\") { throw \"candidate mismatch\" }\n\npython -X utf8 tests\\winui\\test_large_folder_streaming_contract.py\nif ($LASTEXITCODE -ne 0) { throw \"streaming source contract failed\" }\npython -X utf8 tests\\winui\\test_large_folder_contract.py\nif ($LASTEXITCODE -ne 0) { throw \"large-folder source contract failed\" }\npython -X utf8 tests\\winui\\helper\\test_contract.py\nif ($LASTEXITCODE -ne 0) { throw \"helper source contract failed\" }\n\ncmd /c build.bat Release\nif ($LASTEXITCODE -ne 0) { throw \"Release build failed\" }\n\n$env:FLY_M16_CONFIG = \"Release\"\npython -X utf8 tests\\winui\\helper\\test_process_isolation.py\nif ($LASTEXITCODE -ne 0) { throw \"focused helper process-isolation test failed\" }\n\ngit diff --check origin/main..HEAD\nif ($LASTEXITCODE -ne 0) { throw \"diff check failed\" }\nWrite-Host \"LARGE_FOLDER_LOGICAL_OFFSET_ACCEPTANCE_PASS\"\n"
+  "command": "$ErrorActionPreference = \"Stop\"\ngit fetch origin main work/large-folder-selection-identity --no-tags --prune\nif ($LASTEXITCODE -ne 0) { throw \"fetch failed\" }\nif ((git rev-parse origin/main).Trim() -ne \"0714dd8f5d6420d967a84ce0c946b1c11a476d91\") { throw \"main moved\" }\nif ((git status --short).Count -ne 0) { throw \"dirty persistent checkout\" }\ngit checkout -B work/large-folder-selection-identity origin/work/large-folder-selection-identity\nif ($LASTEXITCODE -ne 0) { throw \"checkout candidate failed\" }\nif ((git rev-parse HEAD).Trim() -ne \"6be98c5a48a075104a6e66dbb201f284f3f47172\") { throw \"candidate mismatch\" }\n\npython -X utf8 tests\\winui\\test_large_folder_streaming_contract.py\nif ($LASTEXITCODE -ne 0) { throw \"streaming source contract failed\" }\npython -X utf8 tests\\winui\\test_large_folder_contract.py\nif ($LASTEXITCODE -ne 0) { throw \"large-folder source contract failed\" }\n\ncmd /c build.bat Release\nif ($LASTEXITCODE -ne 0) { throw \"Release build failed\" }\n\n$env:FLY_MIGRATION_CONFIGURATION = \"Release\"\n$env:FLY_M21_OWNED_FEATURES = \"YES\"\npython -X utf8 tests\\winui\\test_shell_gui.py\nif ($LASTEXITCODE -ne 0) { throw \"focused M21 selected-row GUI failed\" }\n\ngit diff --check origin/main..HEAD\nif ($LASTEXITCODE -ne 0) { throw \"diff check failed\" }\nWrite-Host \"LARGE_FOLDER_SELECTION_IDENTITY_ACCEPTANCE_PASS\"\n"
 }
