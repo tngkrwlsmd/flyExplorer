@@ -1,17 +1,13 @@
 {
-  "request_id": "large-folder-name-index-gui-layered-001",
-  "expected_main_sha": "118b92c77c5ca8a78207b5236c42fa688796d108",
-  "candidate_sha": "53726391e66306717e45fb6c6ba1b81987b61b52",
-  "logical_unit": "large-folder-name-index",
-  "configuration": "Release",
+  "request_id": "large-folder-name-index-policy-sync-001",
+  "expected_main_sha": "07d83fd9c6a1033e6f4bd5935ca1f46063f784f5",
+  "candidate_sha": "07d83fd9c6a1033e6f4bd5935ca1f46063f784f5",
+  "logical_unit": "large-folder-name-index-policy-sync",
+  "configuration": "none",
   "validation_kind": [
-    "gui",
-    "visual"
+    "none"
   ],
-  "invalidated_evidence": {
-    "gui": "A second focused run proved the 20,500-item browse and indexed name sort, then failed at a combined filter-row/footer assertion. This harness-only revision separates filter input acceptance, target-row projection, and footer count so the remaining boundary is identified without rebuilding unchanged product sources.",
-    "visual": "Final visual evidence remains invalidated until the separated filter boundary and subsequent size-sort refusal reach the terminal accepted state."
-  },
+  "invalidated_evidence": {},
   "working_directory": "",
-  "command": "$ErrorActionPreference = \"Stop\"\ngit fetch origin main work/large-folder-name-index --no-tags --prune\nif ($LASTEXITCODE -ne 0) { throw \"fetch failed\" }\nif ((git rev-parse origin/main).Trim() -ne \"118b92c77c5ca8a78207b5236c42fa688796d108\") { throw \"main moved\" }\nif ((git rev-parse origin/work/large-folder-name-index).Trim() -ne \"53726391e66306717e45fb6c6ba1b81987b61b52\") { throw \"candidate branch moved\" }\nif ((git status --short).Count -ne 0) { throw \"dirty persistent checkout\" }\ngit checkout -B work/large-folder-name-index origin/work/large-folder-name-index\nif ($LASTEXITCODE -ne 0) { throw \"checkout candidate failed\" }\nif ((git rev-parse HEAD).Trim() -ne \"53726391e66306717e45fb6c6ba1b81987b61b52\") { throw \"candidate mismatch\" }\n$changed=@(git diff --name-only b04119082799dc8e064ae3bd696f1e18fb76f085..HEAD)\nif ($changed.Count -ne 1 -or $changed[0] -ne \"tests/winui/test_large_owned_folder_gui.py\") { throw (\"unexpected harness-only delta: \" + ($changed -join \", \")) }\npython -X utf8 -m py_compile tests\\winui\\test_large_owned_folder_gui.py\nif ($LASTEXITCODE -ne 0) { throw \"large-folder GUI harness syntax failed\" }\nif (!(Test-Path -LiteralPath \"out\\winui\\Release\\flyExplorer.exe\" -PathType Leaf)) { throw \"validated Release build artifact is missing\" }\npython -X utf8 tests\\winui\\test_large_owned_folder_gui.py --items 20500 --configuration Release --browse-over-complete-model\n$guiExit=$LASTEXITCODE\n$target = \"C:\\dev\\flyExplorer\\logs\\remote-evidence\"\nNew-Item -ItemType Directory -Force -Path $target | Out-Null\n$source = \"C:\\dev\\flyExplorer\\logs\\m23\\large-name-index-over-20k-after.png\"\nif (Test-Path -LiteralPath $source -PathType Leaf) {\n  Get-ChildItem -LiteralPath $target -File -ErrorAction SilentlyContinue | Remove-Item -Force\n  Copy-Item -LiteralPath $source -Destination (Join-Path $target \"large-name-index-over-20k-after.png\")\n  Get-FileHash -Algorithm SHA256 -LiteralPath $source | ForEach-Object { \"$($_.Path) $($_.Hash)\" } | Set-Content -Encoding UTF8 -LiteralPath (Join-Path $target \"large-name-index-sha256.txt\")\n}\nif ($guiExit -ne 0) { throw \"indexed name sort/filter over-20k GUI acceptance failed\" }\nif (!(Test-Path -LiteralPath $source -PathType Leaf)) { throw \"indexed visual evidence image missing\" }\ngit diff --check origin/main..HEAD\nif ($LASTEXITCODE -ne 0) { throw \"diff check failed\" }\nWrite-Host \"LARGE_FOLDER_NAME_INDEX_LAYERED_GUI_PASS\""
+  "command": "$ErrorActionPreference = \"Stop\"\ngit fetch origin main work/large-folder-name-index --no-tags --prune\nif ($LASTEXITCODE -ne 0) { throw \"fetch failed\" }\nif ((git rev-parse origin/main).Trim() -ne \"07d83fd9c6a1033e6f4bd5935ca1f46063f784f5\") { throw \"main moved\" }\nif ((git rev-parse origin/work/large-folder-name-index).Trim() -ne \"60cf6565f9e5c2c299a721a559c478360140313e\") { throw \"work branch moved\" }\nif ((git status --short).Count -ne 0) { throw \"dirty persistent checkout\" }\ngit checkout -B work/large-folder-name-index origin/work/large-folder-name-index\nif ($LASTEXITCODE -ne 0) { throw \"checkout work branch failed\" }\ngit merge --no-edit origin/main\nif ($LASTEXITCODE -ne 0) { git merge --abort 2>$null; throw \"latest main merge conflicted\" }\ngit diff --check origin/main..HEAD\nif ($LASTEXITCODE -ne 0) { throw \"diff check failed after main merge\" }\n$head=(git rev-parse HEAD).Trim()\nWrite-Host (\"INTEGRATED_HEAD=\" + $head)\ngit push origin HEAD:refs/heads/work/large-folder-name-index\nif ($LASTEXITCODE -ne 0) { throw \"push integrated branch failed\" }\nWrite-Host \"LARGE_FOLDER_NAME_INDEX_POLICY_SYNC_PASS\""
 }
