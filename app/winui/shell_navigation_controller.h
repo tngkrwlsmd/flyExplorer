@@ -27,12 +27,18 @@ public:
         Rejected,
         NoChange
     };
+    enum class PageDirection {
+        None,
+        Forward,
+        Backward
+    };
     struct Completion final {
         CompletionKind kind=CompletionKind::Ignored;
         int side=-1;
         std::size_t tab=0;
         std::uint64_t request=0;
         bool active=false;
+        PageDirection pageDirection=PageDirection::None;
         fxfile::shellnav::NavigationAction action=
             fxfile::shellnav::NavigationAction::Open;
         HRESULT hr=S_OK;
@@ -62,7 +68,9 @@ public:
         fxfile::explorerui::Model& model,int side,
         fxfile::shellnav::Location target,
         fxfile::shellnav::NavigationAction action);
-    std::uint64_t submitContinuation(
+    std::uint64_t submitNextPage(
+        fxfile::explorerui::Model& model,int side);
+    std::uint64_t submitPreviousPage(
         fxfile::explorerui::Model& model,int side);
 
     Completion accept(
