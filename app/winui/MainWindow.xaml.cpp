@@ -767,49 +767,41 @@ namespace winrt::FlyExplorer::implementation
         Microsoft::UI::Xaml::Input::PointerRoutedEventArgs const& args){
         const auto point=args.GetCurrentPoint(RootShell());
         const auto position=point.Position();
+        const bool diagnostic=
+            ::GetEnvironmentVariableW(
+                L"FLYEXPLORER_COLUMN_RESIZE_DIAGNOSTIC",nullptr,0)>0;
+        if(diagnostic)StatusText().Text(L"RESIZE_PRESS");
         int side=-1;
         int column=-1;
-        auto hitBoundary=[&](
+        auto hitThumb=[&](
             int candidateSide,
-            Grid const& header,
-            ColumnDefinition const& name,
-            ColumnDefinition const& type,
-            ColumnDefinition const& size,
-            Microsoft::UI::Xaml::Controls::Primitives::Thumb const& nameThumb,
-            Microsoft::UI::Xaml::Controls::Primitives::Thumb const& typeThumb,
-            Microsoft::UI::Xaml::Controls::Primitives::Thumb const& sizeThumb){
-            if(header.ActualHeight()<=0.0)return false;
-            const auto origin=header.TransformToVisual(RootShell()).TransformPoint(
+            int candidateColumn,
+            Microsoft::UI::Xaml::Controls::Primitives::Thumb const& thumb){
+            if(thumb.Visibility()!=Visibility::Visible||
+               thumb.ActualWidth()<=0.0||thumb.ActualHeight()<=0.0)return false;
+            const auto origin=thumb.TransformToVisual(RootShell()).TransformPoint(
                 Windows::Foundation::Point{0.0f,0.0f});
-            if(position.Y<origin.Y||
-               position.Y>origin.Y+header.ActualHeight())return false;
-            const double nameBoundary=origin.X+name.ActualWidth();
-            const double typeBoundary=nameBoundary+type.ActualWidth();
-            const double sizeBoundary=typeBoundary+size.ActualWidth();
-            if(nameThumb.Visibility()==Visibility::Visible&&
-               std::abs(static_cast<double>(position.X)-nameBoundary)<=8.0){
-                side=candidateSide;column=0;return true;
-            }
-            if(typeThumb.Visibility()==Visibility::Visible&&
-               std::abs(static_cast<double>(position.X)-typeBoundary)<=8.0){
-                side=candidateSide;column=1;return true;
-            }
-            if(sizeThumb.Visibility()==Visibility::Visible&&
-               std::abs(static_cast<double>(position.X)-sizeBoundary)<=8.0){
-                side=candidateSide;column=2;return true;
-            }
-            return false;
+            constexpr double pad=2.0;
+            if(position.X<origin.X-pad||
+               position.X>origin.X+thumb.ActualWidth()+pad||
+               position.Y<origin.Y-pad||
+               position.Y>origin.Y+thumb.ActualHeight()+pad)return false;
+            side=candidateSide;
+            column=candidateColumn;
+            return true;
         };
-        if(!hitBoundary(
-               0,LeftDetailsHeader(),LeftNameHeaderColumn(),
-               LeftTypeHeaderColumn(),LeftSizeHeaderColumn(),
-               LeftNameColumnResizeThumb(),LeftTypeColumnResizeThumb(),
-               LeftSizeColumnResizeThumb())&&
-           !hitBoundary(
-               1,RightDetailsHeader(),RightNameHeaderColumn(),
-               RightTypeHeaderColumn(),RightSizeHeaderColumn(),
-               RightNameColumnResizeThumb(),RightTypeColumnResizeThumb(),
-               RightSizeColumnResizeThumb()))return;
+        if(!hitThumb(0,0,LeftNameColumnResizeThumb())&&
+           !hitThumb(0,1,LeftTypeColumnResizeThumb())&&
+           !hitThumb(0,2,LeftSizeColumnResizeThumb())&&
+           !hitThumb(1,0,RightNameColumnResizeThumb())&&
+           !hitThumb(1,1,RightTypeColumnResizeThumb())&&
+           !hitThumb(1,2,RightSizeColumnResizeThumb())){
+            if(diagnostic)StatusText().Text(L"RESIZE_MISS");
+            return;
+        }
+        if(diagnostic)StatusText().Text(
+            hstring(L"RESIZE_HIT "+std::to_wstring(side)+L","+
+                std::to_wstring(column)));
         if(ActiveWindowTab().model.activePane!=side)ActivatePane(side);
         mDetailColumnPointerDrag=true;
         mDetailColumnPointerSide=side;
@@ -838,6 +830,10 @@ namespace winrt::FlyExplorer::implementation
             state.sizeColumnWidth=(std::clamp)(
                 state.sizeColumnWidth+delta,64.0,180.0);
         ApplyDetailColumnLayout(mDetailColumnPointerSide);
+        if(::GetEnvironmentVariableW(
+               L"FLYEXPLORER_COLUMN_RESIZE_DIAGNOSTIC",nullptr,0)>0)
+            StatusText().Text(
+                hstring(L"RESIZE_MOVE "+std::to_wstring(delta)));
         args.Handled(true);
     }
     void MainWindow::OnDetailColumnResizePointerReleased(
