@@ -1,6 +1,7 @@
 #include "shell_navigation_core.h"
 #include <shlwapi.h>
 #include <new>
+#include <stdexcept>
 #include <utility>
 #pragma comment(lib, "shell32.lib")
 #pragma comment(lib, "shlwapi.lib")
@@ -206,7 +207,7 @@ HRESULT Session::mergeIndexPage(Snapshot const& page) noexcept
 void Session::replaceCurrent(
     Snapshot&& prepared,std::vector<IndexedItem>&& index) noexcept
 {
-    replaceCurrent(std::move(prepared),std::move(preparedIndex));
+    current_=std::move(prepared);
     nameIndex_=std::move(index);
 }
 
