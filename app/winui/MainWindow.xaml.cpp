@@ -999,8 +999,10 @@ namespace winrt::FlyExplorer::implementation
         UpdateSortPresentation(side);
         auto view=side==0?LeftFiles():RightFiles();
         const auto& pane=ActiveWindowTab().model.panes[static_cast<size_t>(side)];
-        const auto& snapshot=pane.tabs[pane.active].snapshot();
+        const auto& session=pane.tabs[pane.active];
+        const auto& snapshot=session.snapshot();
         const auto& items=snapshot.children;
+        const auto& nameIndex=session.nameIndex();
         auto& state=ActiveWindowTab().fileLists[side];
         const auto nextRoute=pane.routeIds[pane.active];
         if(state.visibleRoute!=nextRoute||state.visibleTab!=pane.active){
@@ -1008,6 +1010,9 @@ namespace winrt::FlyExplorer::implementation
             state.visibleTab=pane.active;
             state.visibleCount=160;
             state.streamToComplete=false;
+            state.indexToComplete=false;
+            state.indexedNameSort=false;
+            state.indexedNameProjection=false;
             state.fullModelLimitReached=false;
         }
         auto previous=side==0?LeftLoadPreviousButton():RightLoadPreviousButton();
@@ -1018,46 +1023,76 @@ namespace winrt::FlyExplorer::implementation
             if(!row||!row.Tag())continue;
             const auto logical=winrt::unbox_value<std::uint64_t>(row.Tag());
             auto const& renderedState=ActiveWindowTab().fileLists[side];
-            const auto base=static_cast<std::uint64_t>(
-                renderedState.renderedBaseOffset);
-            if(logical>=base){
-                const auto resident=logical-base;
-                if(resident<renderedState.renderedPaths.size())
-                    selected.push_back(
-                        renderedState.renderedPaths[
-                            static_cast<std::size_t>(resident)]);
+            auto found=std::find(
+                renderedState.renderedLogical.begin(),
+                renderedState.renderedLogical.end(),logical);
+            if(found!=renderedState.renderedLogical.end()){
+                const auto position=static_cast<std::size_t>(
+                    std::distance(renderedState.renderedLogical.begin(),found));
+                if(position<renderedState.renderedPaths.size())
+                    selected.push_back(renderedState.renderedPaths[position]);
             }
         }
         view.Items().Clear();
-        ActiveWindowTab().fileLists[side].renderedPaths.clear();
-        ActiveWindowTab().fileLists[side].renderedBaseOffset=snapshot.baseOffset;
-        ActiveWindowTab().fileLists[side].renderedPaths.reserve(items.size());
-        for(auto const& item:items)
-            ActiveWindowTab().fileLists[side].renderedPaths.push_back(item.parsingName);
-        const bool detailReady=ActiveWindowTab().fileLists[side].isCurrent(
+        state.renderedLogical.clear();
+        state.renderedPaths.clear();
+        state.renderedBaseOffset=snapshot.baseOffset;
+        const bool detailReady=state.isCurrent(
              pane.routeIds[pane.active],pane.active,items.size());
-        std::vector<size_t> order(items.size());
+        const int mode=state.sortMode;
+        const bool indexedProjection=
+            state.indexedNameProjection&&mode<=1&&
+            session.indexedFrontier()==snapshot.nextOffset;
+        const auto sourceCount=indexedProjection?nameIndex.size():items.size();
+        std::vector<size_t> order(sourceCount);
         std::iota(order.begin(),order.end(),size_t{0});
-        const int mode=ActiveWindowTab().fileLists[side].sortMode;
+        auto labelAt=[&](size_t index)->std::wstring const&{
+            return indexedProjection?nameIndex[index].label:items[index].label;
+        };
+        auto parsingAt=[&](size_t index)->std::wstring const&{
+            return indexedProjection?nameIndex[index].parsingName:
+                                     items[index].parsingName;
+        };
+        auto folderAt=[&](size_t index)->bool{
+            return indexedProjection?nameIndex[index].isFolder():
+                                     items[index].isFolder();
+        };
+        auto logicalAt=[&](size_t index)->std::uint64_t{
+            return indexedProjection?static_cast<std::uint64_t>(index):
+                snapshot.logicalIndex(index);
+        };
+        auto residentAt=[&](size_t index,std::size_t& resident)->bool{
+            if(!indexedProjection){resident=index;return true;}
+            return snapshot.residentIndex(
+                static_cast<std::uint64_t>(index),resident);
+        };
         auto lessName=[&](size_t lhs,size_t rhs){
-            const auto& a=items[lhs].label;
-            const auto& b=items[rhs].label;
-            return ::CompareStringOrdinal(a.c_str(),-1,b.c_str(),-1,TRUE)==CSTR_LESS_THAN;
+            const auto& a=labelAt(lhs);
+            const auto& b=labelAt(rhs);
+            return ::CompareStringOrdinal(
+                a.c_str(),-1,b.c_str(),-1,TRUE)==CSTR_LESS_THAN;
         };
         std::stable_sort(order.begin(),order.end(),[&](size_t lhs,size_t rhs){
-            if(items[lhs].isFolder()!=items[rhs].isFolder())return items[lhs].isFolder();
-            if(detailReady&&(mode==4||mode==5)){
-                const auto& a=ActiveWindowTab().fileLists[side].details[lhs].typeLabel;const auto& b=ActiveWindowTab().fileLists[side].details[rhs].typeLabel;
-                const auto cmp=::CompareStringOrdinal(a.c_str(),-1,b.c_str(),-1,TRUE);
-                if(cmp!=CSTR_EQUAL)return mode==5?cmp==CSTR_GREATER_THAN:cmp==CSTR_LESS_THAN;
-            }else if(detailReady&&(mode==2||mode==6)){
-                const auto& x=ActiveWindowTab().fileLists[side].details[lhs];const auto& y=ActiveWindowTab().fileLists[side].details[rhs];
+            if(folderAt(lhs)!=folderAt(rhs))return folderAt(lhs);
+            if(!indexedProjection&&detailReady&&(mode==4||mode==5)){
+                const auto& a=state.details[lhs].typeLabel;
+                const auto& b=state.details[rhs].typeLabel;
+                const auto cmp=::CompareStringOrdinal(
+                    a.c_str(),-1,b.c_str(),-1,TRUE);
+                if(cmp!=CSTR_EQUAL)
+                    return mode==5?cmp==CSTR_GREATER_THAN:cmp==CSTR_LESS_THAN;
+            }else if(!indexedProjection&&detailReady&&(mode==2||mode==6)){
+                const auto& x=state.details[lhs];
+                const auto& y=state.details[rhs];
                 if(x.sizeKnown!=y.sizeKnown)return x.sizeKnown;
-                if(x.sizeKnown&&x.bytes!=y.bytes)return mode==2?x.bytes>y.bytes:x.bytes<y.bytes;
-            }else if(detailReady&&(mode==3||mode==7)){
-                const auto& x=ActiveWindowTab().fileLists[side].details[lhs];const auto& y=ActiveWindowTab().fileLists[side].details[rhs];
+                if(x.sizeKnown&&x.bytes!=y.bytes)
+                    return mode==2?x.bytes>y.bytes:x.bytes<y.bytes;
+            }else if(!indexedProjection&&detailReady&&(mode==3||mode==7)){
+                const auto& x=state.details[lhs];
+                const auto& y=state.details[rhs];
                 if(x.dateKnown!=y.dateKnown)return x.dateKnown;
-                if(x.dateKnown&&x.modified!=y.modified)return mode==3?x.modified>y.modified:x.modified<y.modified;
+                if(x.dateKnown&&x.modified!=y.modified)
+                    return mode==3?x.modified>y.modified:x.modified<y.modified;
             }
             return mode==1?lessName(rhs,lhs):lessName(lhs,rhs);
         });
@@ -1065,7 +1100,7 @@ namespace winrt::FlyExplorer::implementation
             order.erase(std::remove_if(order.begin(),order.end(),
                 [&](size_t index){
                     return !fxfile::filterrules::Store::matches(
-                        items[index].label,state.filenameFilter);
+                        labelAt(index),state.filenameFilter);
                 }),order.end());
         }
         state.filteredCount=order.size();
