@@ -175,6 +175,12 @@ def main():
                          "bench-2299.txt" in first_row(),
                   "global sort did not rebuild the evicted prefix",16)
             print("OWNED_RESIDENT_WINDOW_GLOBAL_SORT_REBUILT_2300",True,flush=True)
+            # This focused resident-window mode has already proved the target
+            # navigation and full-model sort boundaries. Do not fall through
+            # into the generic 2300-item view/filter tail, whose 160-row reset
+            # assumption belongs to a fresh non-windowed scenario.
+            success=True
+            return
         if args.items>=8000:
             until(lambda:f"320/{args.items}" in parent.child_window(
                   auto_id="LeftLoadMoreButton").window_text(),
