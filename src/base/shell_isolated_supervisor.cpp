@@ -244,11 +244,11 @@ std::uint64_t IsolatedShellSupervisor::submitPage(
     int side,std::uint64_t route,Location target,
     std::uint32_t offset,std::uint32_t limit){
     if(side<0||side>1||!route||!target.valid()||
-       offset>=kMaxNavigationEntries)return 0;
+       offset>=kMaxBrowseEntries)return 0;
     if(!limit)limit=(std::min)(
-        kMaxPageEntries,kMaxNavigationEntries-offset);
+        kMaxPageEntries,kMaxBrowseEntries-offset);
     if(!limit||limit>kMaxPageEntries||
-       limit>kMaxNavigationEntries-offset)return 0;
+       limit>kMaxBrowseEntries-offset)return 0;
     const auto length=::ILGetSize(target.get());
     if(length<2||length>kMaxPidl||
        !validPidl(target.get(),length))return 0;
