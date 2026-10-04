@@ -133,7 +133,7 @@ current routine and active-monitor cadences are configuration, not policy: read
 `FLYEXPLORER_ACTIVE_MONITOR_SECONDS` from the Remote Windows Task workflow.
 Use the configured routine cadence for dependent completion tracking unless the
 user explicitly requests active monitoring, in which case use the configured
-active cadence. Explicit active monitoring changes cadence only; it is not a
+active cadence. Explicit active monitoring changes only the cadence; it is not a
 prerequisite for following a run that the task depends on. Completion observed
 independently may be consumed immediately. Do not create a
 scheduled/automation task merely to bridge either interval.
