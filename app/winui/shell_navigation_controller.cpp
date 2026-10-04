@@ -1,6 +1,7 @@
 #include "pch.h"
 #include "shell_navigation_controller.h"
 #include "../../src/base/shell_isolation_wire.h"
+#include <algorithm>
 #include <utility>
 
 namespace fxfile::previewnav {
