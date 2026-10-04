@@ -1,23 +1,17 @@
 {
-  "request_id": "large-folder-name-index-acceptance-001",
+  "request_id": "large-folder-name-index-source-log-001",
   "expected_main_sha": "d50f01e8ccecb800f0dbac6c0b9f550e9cb25e49",
   "candidate_sha": "12c21384e8dd2c8ba34ec3480c70133182857a10",
-  "logical_unit": "large-folder-name-index",
+  "logical_unit": "large-folder-name-index-source-log",
   "configuration": "Release",
   "validation_kind": [
-    "source",
-    "build",
-    "gui",
-    "visual"
+    "source-diagnostic"
   ],
   "invalidated_evidence": {
-    "source": "Session now retains lightweight logical name metadata, file-list projection state changed, and large-folder contracts/harness changed",
-    "build": "shell_navigation_core and WinUI list/command/transfer/drag C++ inputs changed",
-    "gui": "name sort and name filter above 20,000 entries now use the lightweight index while size sort remains bounded to the 20,000 complete-model path",
-    "visual": "20k+ sorted/filtered indexed rows render from logical metadata outside the 2,048 resident window"
+    "diagnostic": "Read the previous source log only; do not rerun product validation."
   },
-  "retry_reason": "",
-  "retry_revision": "",
+  "retry_reason": "Diagnostic read of the failed source-contract log from run 37188516780; no test rerun.",
+  "retry_revision": "12c21384e8dd2c8ba34ec3480c70133182857a10",
   "working_directory": "C:\\dev\\flyExplorer",
-  "command": "$ErrorActionPreference = \"Stop\"\ngit fetch origin main work/large-folder-name-index --no-tags --prune\nif ($LASTEXITCODE -ne 0) { throw \"fetch failed\" }\nif ((git rev-parse origin/main).Trim() -ne \"d50f01e8ccecb800f0dbac6c0b9f550e9cb25e49\") { throw \"main moved\" }\nif ((git status --short).Count -ne 0) { throw \"dirty persistent checkout\" }\ngit checkout -B work/large-folder-name-index origin/work/large-folder-name-index\nif ($LASTEXITCODE -ne 0) { throw \"checkout candidate failed\" }\nif ((git rev-parse HEAD).Trim() -ne \"12c21384e8dd2c8ba34ec3480c70133182857a10\") { throw \"candidate mismatch\" }\n\ncmd /c test.bat source\nif ($LASTEXITCODE -ne 0) { throw \"source contracts failed\" }\n\ncmd /c build.bat Release\nif ($LASTEXITCODE -ne 0) { throw \"Release build failed\" }\n\npython -X utf8 tests\\winui\\test_large_owned_folder_gui.py --items 2300 --configuration Release\nif ($LASTEXITCODE -ne 0) { throw \"cheap indexed-control GUI smoke failed\" }\n\npython -X utf8 tests\\winui\\test_large_owned_folder_gui.py --items 20500 --configuration Release --browse-over-complete-model\nif ($LASTEXITCODE -ne 0) { throw \"indexed name sort/filter over-20k acceptance failed\" }\n\n$source = \"C:\\dev\\flyExplorer\\logs\\m23\\large-name-index-over-20k-after.png\"\n$target = \"C:\\dev\\flyExplorer\\logs\\remote-evidence\"\nif (!(Test-Path -LiteralPath $source -PathType Leaf)) { throw \"indexed visual evidence image missing\" }\nNew-Item -ItemType Directory -Force -Path $target | Out-Null\nGet-ChildItem -LiteralPath $target -File -ErrorAction SilentlyContinue | Remove-Item -Force\nCopy-Item -LiteralPath $source -Destination (Join-Path $target \"large-name-index-over-20k-after.png\")\nGet-FileHash -Algorithm SHA256 -LiteralPath $source |\n  ForEach-Object { \"$($_.Path) $($_.Hash)\" } |\n  Set-Content -Encoding UTF8 -LiteralPath (Join-Path $target \"large-name-index-sha256.txt\")\n\ngit diff --check origin/main..HEAD\nif ($LASTEXITCODE -ne 0) { throw \"diff check failed\" }\nWrite-Host \"LARGE_FOLDER_NAME_INDEX_ACCEPTANCE_PASS\"\n"
+  "command": "$ErrorActionPreference = \"Stop\"\n$log = Get-ChildItem -LiteralPath \"C:\\dev\\flyExplorer\\logs\\winui-scoped\" -Filter \"*-source.log\" -File |\n  Sort-Object LastWriteTime -Descending |\n  Select-Object -First 1\nif (-not $log) { throw \"source log missing\" }\nWrite-Host (\"SOURCE_LOG=\" + $log.FullName)\nGet-Content -LiteralPath $log.FullName |\n  Select-String -Pattern \"^FAIL:\",\"^ERROR:\",\"AssertionError\",\"Traceback\",\"File \\\".*test_.*\\.py\\\"\" -Context 1,4 |\n  ForEach-Object { $_.ToString() }\n"
 }
