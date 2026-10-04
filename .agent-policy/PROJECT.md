@@ -144,6 +144,39 @@ rules below differ.
   paying for a Windows VM run. A remote run should answer a remaining product
   question, not be the first syntax review of a test harness.
 
+### Machine-enforced remote validation metadata
+
+The fixed `control/remote-shell` request slot now records the validation
+frontier in data rather than relying only on prose. Every request includes
+`candidate_sha`, stable `logical_unit`, `configuration`,
+`validation_kind` and `invalidated_evidence`. Validation kinds are an exact
+array drawn from `source`, `build`, `native`, `gui` and `visual`;
+ordinary inspection/Git/cleanup requests use exactly `["none"]` with
+`configuration: "none"`, an empty evidence object and
+`candidate_sha == expected_main_sha`.
+
+For validation requests, `invalidated_evidence` has exactly the declared stage
+keys and a concrete non-empty reason for each one. The workflow recognizes the
+normal source/build/native/GUI/visual commands and rejects a request whose
+command executes a stage that was not declared. It derives
+`candidate_sha|configuration|sorted(validation_kind)` as the validation
+fingerprint and checks prior request-slot history before executing the Windows
+command.
+
+A duplicate fingerprint is rejected by default. A genuinely changed
+harness/environment condition may override that rejection only with both a
+specific `retry_reason` and a new `retry_revision`; the same retry revision
+cannot be reused for that fingerprint. GitHub Actions rerun attempts are also
+skipped at the job boundary in both Windows workflows with
+`github.run_attempt == '1'`. Manual `workflow_dispatch` is retained as a
+human-operated fallback but is not the routine development path and does not
+replace request-slot metadata/deduplication.
+
+After 30-50 Remote Windows Task runs under this guard, review the recorded
+metadata. The operating targets are normally <=2 validation runs per logical
+unit, zero repeated product builds after harness-only corrections, and zero
+same-candidate duplicate fingerprints without a changed retry revision.
+
 ### Default verification ladder
 
 Use only the rows required by the change:

@@ -27,6 +27,7 @@ concurrency:
 
 jobs:
   task:
+    if: ${{ github.run_attempt == '1' }}
     runs-on: [self-hosted, Windows, X64]
     timeout-minutes: 60
     steps:
@@ -49,14 +50,119 @@ jobs:
           $request = Get-Content -Raw -Encoding UTF8 -LiteralPath $requestPath | ConvertFrom-Json
           $requestId = [string]$request.request_id
           $expectedMainSha = ([string]$request.expected_main_sha).Trim().ToLowerInvariant()
+          $candidateSha = ([string]$request.candidate_sha).Trim().ToLowerInvariant()
+          $logicalUnit = ([string]$request.logical_unit).Trim()
+          $configuration = ([string]$request.configuration).Trim()
+          if ($request.validation_kind -isnot [System.Array]) {
+            throw "Remote shell validation_kind must be a JSON array."
+          }
+          $validationKinds = @(
+            $request.validation_kind |
+              ForEach-Object { ([string]$_).Trim().ToLowerInvariant() }
+          )
+          $invalidatedEvidence = $request.invalidated_evidence
+          $retryReason = ([string]$request.retry_reason).Trim()
+          $retryRevision = ([string]$request.retry_revision).Trim()
           $workdir = [string]$request.working_directory
           $command = [string]$request.command
+
           if ([string]::IsNullOrWhiteSpace($requestId)) {
             throw "Remote shell request_id is required."
           }
           if ($expectedMainSha -notmatch '^[0-9a-f]{40}$') {
             throw "Remote shell expected_main_sha must be the 40-character live main SHA."
           }
+          if ($candidateSha -notmatch '^[0-9a-f]{40}$') {
+            throw "Remote shell candidate_sha must be a 40-character Git SHA."
+          }
+          if ($logicalUnit -notmatch '^[A-Za-z0-9][A-Za-z0-9._/-]{1,95}$') {
+            throw "Remote shell logical_unit must be a stable 2-96 character identifier."
+          }
+          if ($configuration -notin @("none", "Debug", "Release")) {
+            throw "Remote shell configuration must be none, Debug or Release."
+          }
+          if ($validationKinds.Count -eq 0) {
+            throw "Remote shell validation_kind must contain at least one stage."
+          }
+          $allowedKinds = @("none", "source", "build", "native", "gui", "visual")
+          $invalidKinds = @($validationKinds | Where-Object { $_ -notin $allowedKinds })
+          if ($invalidKinds.Count -ne 0) {
+            throw "Remote shell validation_kind contains unsupported stage(s): $($invalidKinds -join ', ')."
+          }
+          $uniqueKinds = @($validationKinds | Sort-Object -Unique)
+          if ($uniqueKinds.Count -ne $validationKinds.Count) {
+            throw "Remote shell validation_kind must not contain duplicate stages."
+          }
+          if (($uniqueKinds -contains "none") -and $uniqueKinds.Count -ne 1) {
+            throw "Remote shell validation_kind none cannot be combined with validation stages."
+          }
+
+          $evidenceKeys = @()
+          if ($null -ne $invalidatedEvidence) {
+            $evidenceKeys = @(
+              $invalidatedEvidence.psobject.Properties.Name |
+                ForEach-Object { ([string]$_).Trim().ToLowerInvariant() }
+            )
+          }
+          if ($uniqueKinds -contains "none") {
+            if ($configuration -ne "none") {
+              throw "Non-validation remote requests must use configuration none."
+            }
+            if ($candidateSha -ne $expectedMainSha) {
+              throw "Non-validation remote requests must use candidate_sha equal to expected_main_sha."
+            }
+            if ($evidenceKeys.Count -ne 0) {
+              throw "Non-validation remote requests must leave invalidated_evidence empty."
+            }
+          } else {
+            if ($configuration -eq "none") {
+              throw "Validation remote requests must declare Debug or Release configuration."
+            }
+            if ($null -eq $invalidatedEvidence) {
+              throw "Validation remote requests must declare invalidated_evidence."
+            }
+            foreach ($kind in $uniqueKinds) {
+              $property = $invalidatedEvidence.psobject.Properties[$kind]
+              if ($null -eq $property -or [string]::IsNullOrWhiteSpace([string]$property.Value)) {
+                throw "Remote shell invalidated_evidence must explain why '$kind' evidence is invalidated."
+              }
+            }
+            $extraEvidence = @($evidenceKeys | Where-Object { $_ -notin $uniqueKinds })
+            if ($extraEvidence.Count -ne 0) {
+              throw "Remote shell invalidated_evidence contains undeclared stage(s): $($extraEvidence -join ', ')."
+            }
+          }
+
+          if ([string]::IsNullOrWhiteSpace($command)) {
+            throw "Remote shell command is required."
+          }
+          if ([string]::IsNullOrWhiteSpace($workdir)) {
+            $workdir = "C:\dev\flyExplorer"
+          }
+
+          # Catch common expensive stages that were omitted from validation_kind.
+          $detectedStages = @()
+          if ($command -match '(?i)(test\.bat\s+source|run_checks\.py[^\r\n]*\bsource\b)') {
+            $detectedStages += "source"
+          }
+          if ($command -match '(?i)(build\.bat\s+(debug|release)|app\\winui\\build\.cmd|run_checks\.py[^\r\n]*\b(build|full)\b)') {
+            $detectedStages += "build"
+          }
+          if ($command -match '(?i)(test_native\.py|test_process_isolation\.py|tests\\winui\\m[0-9]+\\[^\r\n]*test)') {
+            $detectedStages += "native"
+          }
+          if ($command -match '(?i)(test_[A-Za-z0-9_]*gui\.py|test_shell_gui\.py|run_checks\.py[^\r\n]*\b(gui|full)\b)') {
+            $detectedStages += "gui"
+          }
+          if ($command -match '(?i)(screenshot|imagegrab|capture_[A-Za-z0-9_]*\.py|visual[_-]acceptance)') {
+            $detectedStages += "visual"
+          }
+          foreach ($stage in @($detectedStages | Sort-Object -Unique)) {
+            if ($stage -notin $uniqueKinds) {
+              throw "Remote shell command appears to run '$stage' validation but validation_kind does not declare it."
+            }
+          }
+
           & git fetch origin main --no-tags --prune
           if ($LASTEXITCODE -ne 0) {
             throw "Failed to refresh origin/main before remote shell execution."
@@ -68,18 +174,80 @@ jobs:
           if ($observedMainSha -ne $expectedMainSha) {
             throw "Stale remote shell request: expected main $expectedMainSha but current main is $observedMainSha. Refresh latest main + recent commits + recent main CI and submit a new request."
           }
-          if ([string]::IsNullOrWhiteSpace($command)) {
-            throw "Remote shell command is required."
+
+          $sortedKinds = @($uniqueKinds | Sort-Object)
+          $validationFingerprint = "$candidateSha|$configuration|$($sortedKinds -join ',')"
+          $matchingRequests = @()
+          $matchingRetryRevisions = @()
+          if ($sortedKinds -notcontains "none") {
+            $history = @(& git log --format=%H -- requests/remote-shell/request.json)
+            if ($LASTEXITCODE -ne 0) {
+              throw "Failed to read remote request history for validation deduplication."
+            }
+            foreach ($commit in @($history | Select-Object -Skip 1)) {
+              $gitObject = $commit + ":requests/remote-shell/request.json"
+              $priorText = @(& git show $gitObject 2>$null)
+              if ($LASTEXITCODE -ne 0 -or $priorText.Count -eq 0) {
+                continue
+              }
+              try {
+                $prior = (($priorText -join [Environment]::NewLine) | ConvertFrom-Json)
+              } catch {
+                continue
+              }
+              $priorCandidate = ([string]$prior.candidate_sha).Trim().ToLowerInvariant()
+              $priorConfiguration = ([string]$prior.configuration).Trim()
+              $priorKinds = @(
+                $prior.validation_kind |
+                  ForEach-Object { ([string]$_).Trim().ToLowerInvariant() } |
+                  Sort-Object -Unique
+              )
+              if ($priorCandidate -notmatch '^[0-9a-f]{40}$' -or
+                  $priorConfiguration -notin @("Debug", "Release") -or
+                  $priorKinds.Count -eq 0) {
+                continue
+              }
+              $priorFingerprint = "$priorCandidate|$priorConfiguration|$($priorKinds -join ',')"
+              if ($priorFingerprint -eq $validationFingerprint) {
+                $matchingRequests += $commit
+                $priorRetryRevision = ([string]$prior.retry_revision).Trim()
+                if (-not [string]::IsNullOrWhiteSpace($priorRetryRevision)) {
+                  $matchingRetryRevisions += $priorRetryRevision
+                }
+              }
+            }
           }
-          if ([string]::IsNullOrWhiteSpace($workdir)) {
-            $workdir = "C:\dev\flyExplorer"
+
+          if ($matchingRequests.Count -gt 0) {
+            if ([string]::IsNullOrWhiteSpace($retryReason)) {
+              throw "Duplicate validation fingerprint '$validationFingerprint' was already requested. Reuse the prior evidence or provide retry_reason and a changed retry_revision."
+            }
+            if ($retryReason.Contains([char]13) -or $retryReason.Contains([char]10)) {
+              throw "Remote shell retry_reason must be a single line."
+            }
+            if ($retryRevision -notmatch '^[A-Za-z0-9][A-Za-z0-9._:/-]{0,127}$') {
+              throw "Duplicate validation override requires a changed retry_revision identifier."
+            }
+            if ($matchingRetryRevisions -contains $retryRevision) {
+              throw "retry_revision '$retryRevision' was already used for this validation fingerprint."
+            }
+          } elseif (-not [string]::IsNullOrWhiteSpace($retryReason) -or
+                    -not [string]::IsNullOrWhiteSpace($retryRevision)) {
+            throw "retry_reason/retry_revision are only valid when overriding a duplicate validation fingerprint."
           }
+
           $delimiter = "FLY_REMOTE_" + [guid]::NewGuid().ToString("N")
           @(
             "REMOTE_REQUEST_ID=$requestId"
             "REMOTE_SOURCE=control/remote-shell"
             "REMOTE_EXPECTED_MAIN_SHA=$expectedMainSha"
             "REMOTE_OBSERVED_MAIN_SHA=$observedMainSha"
+            "REMOTE_CANDIDATE_SHA=$candidateSha"
+            "REMOTE_LOGICAL_UNIT=$logicalUnit"
+            "REMOTE_CONFIGURATION=$configuration"
+            "REMOTE_VALIDATION_KIND=$($sortedKinds -join ',')"
+            "REMOTE_VALIDATION_FINGERPRINT=$validationFingerprint"
+            "REMOTE_RETRY_REVISION=$retryRevision"
             "REMOTE_COMMAND<<$delimiter"
             $command
             $delimiter
@@ -130,6 +298,14 @@ jobs:
           if ($env:REMOTE_SOURCE -eq "control/remote-shell") {
             Write-Host "EXPECTED_MAIN_SHA: $env:REMOTE_EXPECTED_MAIN_SHA"
             Write-Host "OBSERVED_MAIN_SHA: $env:REMOTE_OBSERVED_MAIN_SHA"
+            Write-Host "CANDIDATE_SHA: $env:REMOTE_CANDIDATE_SHA"
+            Write-Host "LOGICAL_UNIT: $env:REMOTE_LOGICAL_UNIT"
+            Write-Host "CONFIGURATION: $env:REMOTE_CONFIGURATION"
+            Write-Host "VALIDATION_KIND: $env:REMOTE_VALIDATION_KIND"
+            Write-Host "VALIDATION_FINGERPRINT: $env:REMOTE_VALIDATION_FINGERPRINT"
+            if (-not [string]::IsNullOrWhiteSpace($env:REMOTE_RETRY_REVISION)) {
+              Write-Host "RETRY_REVISION: $env:REMOTE_RETRY_REVISION"
+            }
           }
           Write-Host "===================================="
 

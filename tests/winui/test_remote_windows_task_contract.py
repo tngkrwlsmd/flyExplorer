@@ -50,6 +50,51 @@ class RemoteWindowsTaskContractTests(unittest.TestCase):
         self.assertIn("REMOTE_OBSERVED_MAIN_SHA", self.workflow)
         self.assertIn("REMOTE_SOURCE=control/remote-shell", self.workflow)
 
+    def test_request_slot_requires_machine_checkable_validation_metadata(self):
+        for token in (
+            "candidate_sha",
+            "logical_unit",
+            "configuration",
+            "validation_kind",
+            "invalidated_evidence",
+            "retry_reason",
+            "retry_revision",
+            "REMOTE_VALIDATION_FINGERPRINT",
+        ):
+            self.assertIn(token, self.workflow)
+        self.assertIn("validation_kind must be a JSON array", self.workflow)
+        self.assertIn(
+            "command appears to run '$stage' validation",
+            self.workflow,
+        )
+        self.assertIn(
+            "git log --format=%H -- requests/remote-shell/request.json",
+            self.workflow,
+        )
+        self.assertIn("Duplicate validation fingerprint", self.workflow)
+        self.assertIn(
+            "retry_reason/retry_revision are only valid",
+            self.workflow,
+        )
+
+    def test_windows_workflows_skip_github_rerun_attempts(self):
+        self.assertIn(
+            "task:\n    if: ${{ github.run_attempt == '1' }}",
+            self.workflow,
+        )
+        self.assertIn(
+            "windows-vm:\n    if: ${{ github.run_attempt == '1' }}",
+            self.windows_build,
+        )
+
+    def test_validation_churn_targets_are_documented(self):
+        for text in (self.agents, self.efficiency, self.project):
+            normalized = " ".join(text.split())
+            self.assertIn("30-50", normalized)
+            self.assertIn("validation fingerprint", normalized)
+            self.assertIn("retry_revision", normalized)
+        self.assertIn("<=2 validation runs per logical unit", " ".join(self.project.split()))
+
     def test_dispatch_path_does_not_require_checkout(self):
         self.assertIn(
             "- name: Checkout control branch request\n"

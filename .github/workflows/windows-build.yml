@@ -26,6 +26,7 @@ concurrency:
 
 jobs:
   windows-vm:
+    if: ${{ github.run_attempt == '1' }}
     runs-on: [self-hosted, Windows, X64]
     timeout-minutes: 30
     env:
