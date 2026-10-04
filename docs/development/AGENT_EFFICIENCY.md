@@ -39,6 +39,31 @@ exactly match the declared stages, and the command does not contain a
 recognizable undeclared validation stage. Do not spend a Remote Windows Task
 run discovering request-shape errors that the workflow schema already defines.
 
+### Zero-run preflight before Remote Windows Task
+
+The request slot is the **last** step of preparation, not the first validation
+tool. Before a control-branch push, catch cheap failures without consuming the
+Windows queue:
+
+- verify live main/candidate SHA, every referenced branch/ref/path and the
+  pre-dispatch lease;
+- validate request JSON metadata and stage/command agreement;
+- review PowerShell/JSON quoting and reuse a known-good command template rather
+  than debugging fresh shell serialization on the runner;
+- for changed Python tests/harnesses, perform syntax/import-path sanity and
+  verify referenced scripts/modules exist;
+- for changed source/documentation contracts, run or mechanically evaluate the
+  narrowest affected assertion first, with whitespace-normalized prose checks;
+- for GUI harness changes, verify fixture paths, automation IDs and UIA/helper
+  API names against checked-in code or an already working harness before
+  spending a physical GUI run.
+
+A failure at this layer is a **preflight defect**. Fix it before dispatch and do
+not count it as product validation. Do not create a Remote Windows Task merely
+to learn that JSON metadata is invalid, a module cannot import, a branch does
+not exist, a Markdown sentence wrapped, or an automation method name was
+invented.
+
 The request workflow fingerprints validation as
 `candidate_sha + configuration + sorted(validation_kind)` and rejects an
 already-requested fingerprint before the remote command executes. Do not evade

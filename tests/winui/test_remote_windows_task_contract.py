@@ -201,6 +201,23 @@ class RemoteWindowsTaskContractTests(unittest.TestCase):
         self.assertIn("before the control-branch commit", efficiency)
         self.assertIn("agent preflight defect", project.lower())
 
+    def test_zero_run_preflight_blocks_avoidable_workflow_failures(self):
+        agents = " ".join(self.agents.split())
+        efficiency = " ".join(self.efficiency.split())
+        project = " ".join(self.project.split())
+        for normalized in (agents, efficiency, project):
+            self.assertIn("zero-run preflight", normalized.lower())
+            self.assertIn("preflight defect", normalized.lower())
+            self.assertIn("branch", normalized.lower())
+            self.assertIn("path", normalized.lower())
+            self.assertIn("import", normalized.lower())
+            self.assertIn("UIA", normalized)
+        self.assertIn("do not create a workflow run", agents.lower())
+        self.assertIn("PowerShell/JSON", agents)
+        self.assertIn("syntax/import-path sanity", efficiency)
+        self.assertIn("nonexistent branches", project)
+        self.assertIn("pywinauto", project)
+
     def test_guidance_requires_whitespace_normalized_prose_contracts(self):
         agents = " ".join(self.agents.split())
         efficiency = " ".join(self.efficiency.split())

@@ -350,6 +350,38 @@ Treat a workflow rejection of these request-shape rules as an **agent preflight
 defect**, not as product evidence. Correct the metadata before doing any product
 diagnosis.
 
+Before any control-branch push, complete a **zero-run preflight** for avoidable
+agent/control-plane errors. A Remote Windows Task must not be created until all
+applicable checks below pass:
+
+1. **Request shape:** validate the metadata invariants above, exact
+   `expected_main_sha`/`candidate_sha`, evidence keys and stage/command
+   agreement.
+2. **Lease/ref existence:** confirm no active Remote Windows Task owns the
+   request slot; verify every branch/ref/SHA/path the command will use actually
+   exists before dispatch.
+3. **Command sanity:** inspect quoting/escaping and PowerShell/JSON boundaries;
+   keep request commands small and composed from previously working forms.
+   Never use the Windows runner as the first parser for a newly invented
+   multi-line quoting construct when it can be checked statically.
+4. **Source/test sanity:** when tests/contracts changed, run or mechanically
+   evaluate the narrowest affected contract before dispatch. Python harnesses
+   must at least pass syntax compilation; `python -m` targets/import paths must
+   resolve to tracked modules rather than being discovered by the runner.
+5. **Harness/API sanity:** validate fixture paths, automation IDs and helper/API
+   calls against the checked-in code or an established harness pattern. Do not
+   invent pywinauto/UIA wrapper methods or assume a control API exists without a
+   static/source check.
+6. **Prose-contract hygiene:** semantic documentation assertions use normalized
+   whitespace; raw line-sensitive matching is reserved for genuinely
+   line-structured formats.
+
+If one of these checks fails, fix it locally/in the agent layer and **do not
+create a workflow run**. Classify failures caught here as request/contract/
+harness preflight defects, not product defects. Windows-only behavior that
+cannot be established statically belongs in the remote run, but the request
+that reaches Windows should already be syntactically and structurally valid.
+
 The request-slot workflow derives a validation fingerprint from
 `candidate_sha + configuration + sorted(validation_kind)`. A fingerprint
 already present in the control-branch request history is rejected before the

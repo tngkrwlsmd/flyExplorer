@@ -247,6 +247,18 @@ directly invalidates that fixture's result.
   matching the declared stages, and command/stage agreement. Workflow rejection
   for these invariants is an agent preflight defect and should never be used as
   product-failure evidence.
+- The request-slot commit is allowed only after a **zero-run preflight** has
+  cleared avoidable control/harness errors: referenced refs/SHAs/paths exist,
+  command quoting is structurally valid, changed Python harnesses have syntax
+  and import-path sanity, changed prose/source contracts have the narrowest
+  local/static check, and new GUI automation IDs/API calls are verified against
+  checked-in code or an established harness. If any of those checks fail, fix
+  them before dispatch; do not create a Remote Windows Task to discover them.
+- Treat missing modules, nonexistent branches, invalid request metadata,
+  PowerShell/JSON serialization mistakes, brittle Markdown line-wrap
+  assertions and nonexistent UIA/pywinauto methods as **preflight defects** by
+  default. They are not product failures unless independent product evidence
+  proves otherwise.
 - If the available GitHub connector/API does not expose a repository operation
   needed for the task, use `control/remote-shell` as the immediate
   repository-scoped fallback when the operation is shell-capable. This includes
