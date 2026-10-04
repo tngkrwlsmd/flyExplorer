@@ -69,6 +69,13 @@ Static/source, compile, runtime, GUI-state and visual evidence are distinct.
 Do not claim unrun gates. Follow AGENT_EFFICIENCY.md call budgets and bounded
 log rules.
 
+When source tests assert prose/documentation meaning, compare a whitespace-
+normalized form (for example `" ".join(text.split())`) unless exact line
+breaks/indentation are themselves the contract. Do not make semantic guidance
+tests fail merely because Markdown wrapped a sentence differently. Reserve raw
+newline-sensitive assertions for formats where layout is structurally
+significant, such as exact YAML/workflow blocks.
+
 Canonical Windows full builds require Visual Studio/MSBuild 18.x, MSVC v145 x64
 tools and Windows SDK 10.0.26100.0. Do not claim VS 2022/v143 full-build support
 without a separately verified compatibility change. Product source-only Python
@@ -324,6 +331,24 @@ runner executes anything. In addition to `request_id`, `expected_main_sha`,
 for every declared validation stage. Routine non-validation shell/inspection
 requests use `candidate_sha == expected_main_sha`, `configuration: none`,
 `validation_kind: ["none"]` and an empty evidence object.
+
+Before committing the request slot, perform a **request-metadata preflight in
+the agent/tooling layer** instead of relying on the workflow to reject a bad
+request after it consumes queue time. Check these invariants as one unit:
+
+- `validation_kind == ["none"]` -> `configuration == "none"`,
+  `candidate_sha == expected_main_sha`, and `invalidated_evidence == {}`;
+- any validation stage (`source/build/native/gui/visual`) ->
+  `configuration` is exactly `Debug` or `Release`, `candidate_sha` is
+  the intended 40-hex revision, and `invalidated_evidence` contains exactly
+  the declared stages with non-empty reasons;
+- the command's recognizable source/build/native/gui/visual work matches the
+  declared `validation_kind`;
+- request ID/logical unit are non-empty and the pre-dispatch lease is clear.
+
+Treat a workflow rejection of these request-shape rules as an **agent preflight
+defect**, not as product evidence. Correct the metadata before doing any product
+diagnosis.
 
 The request-slot workflow derives a validation fingerprint from
 `candidate_sha + configuration + sorted(validation_kind)`. A fingerprint

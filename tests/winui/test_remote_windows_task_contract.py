@@ -187,6 +187,31 @@ class RemoteWindowsTaskContractTests(unittest.TestCase):
         self.assertIn("`control/remote-shell` request slot", efficiency)
         self.assertIn("RDC/desktop-control is supplementary", efficiency)
 
+    def test_guidance_requires_request_metadata_preflight_before_push(self):
+        agents = " ".join(self.agents.split())
+        efficiency = " ".join(self.efficiency.split())
+        project = " ".join(self.project.split())
+        for normalized in (agents, efficiency, project):
+            self.assertIn("preflight", normalized.lower())
+            self.assertIn('configuration', normalized)
+            self.assertIn('Debug', normalized)
+            self.assertIn('Release', normalized)
+            self.assertIn('invalidated_evidence', normalized)
+        self.assertIn('validation_kind == ["none"]', agents)
+        self.assertIn("before the control-branch commit", efficiency)
+        self.assertIn("agent preflight defect", project.lower())
+
+    def test_guidance_requires_whitespace_normalized_prose_contracts(self):
+        agents = " ".join(self.agents.split())
+        efficiency = " ".join(self.efficiency.split())
+        project = " ".join(self.project.split())
+        for normalized in (agents, efficiency, project):
+            self.assertIn("normalize", normalized.lower())
+            self.assertIn("whitespace", normalized.lower())
+            self.assertIn("newline", normalized.lower())
+        self.assertIn('" ".join(text.split())', agents)
+        self.assertIn("Markdown", efficiency)
+
     def test_missing_github_connector_operation_falls_back_to_remote_shell(self):
         for text in (self.agents, self.efficiency, self.project):
             normalized = " ".join(text.split())

@@ -31,6 +31,14 @@ Git-only request uses `validation_kind: ["none"]`; a validation request names
 only the source/build/native/gui/visual stages invalidated by the current diff
 and gives one concrete reason per stage.
 
+Preflight that JSON **before the control-branch commit**. Non-validation means
+`configuration: "none"`, candidate equals expected main and no invalidated
+evidence. Any declared validation stage means `configuration` is exactly
+`Debug` or `Release`, candidate is the intended revision, evidence keys
+exactly match the declared stages, and the command does not contain a
+recognizable undeclared validation stage. Do not spend a Remote Windows Task
+run discovering request-shape errors that the workflow schema already defines.
+
 The request workflow fingerprints validation as
 `candidate_sha + configuration + sorted(validation_kind)` and rejects an
 already-requested fingerprint before the remote command executes. Do not evade
@@ -64,6 +72,12 @@ and 16-24 for GUI/debug work.
 
 Read narrow-first. Do not repeatedly reread unchanged files/logs. Separate
 static/source, compile, runtime, GUI-state and final-pixel evidence.
+
+For prose/documentation source contracts, normalize whitespace before semantic
+substring checks unless exact newlines/indentation are the behavior under test.
+A Markdown line wrap must not create a validation run; newline-sensitive
+assertions are appropriate only for structurally formatted content such as an
+exact workflow/YAML block.
 
 Do not retry a completed GitHub Actions run on the same revision. Zero
 same-revision Actions retries is the default and required development policy.

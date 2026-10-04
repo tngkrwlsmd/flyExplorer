@@ -239,6 +239,14 @@ directly invalidates that fixture's result.
 - The persistent `control/remote-shell` checkout is the normal Windows
   development surface. Batch only the stages that are currently required; do
   not include earlier PASS stages "for completeness".
+- Before every request-slot commit, preflight the request metadata locally/in
+  the agent layer. `["none"]` requires `configuration: "none"`, candidate
+  equal to expected main and empty invalidated evidence. Any
+  source/build/native/gui/visual validation requires `configuration` exactly
+  `Debug` or `Release`, the intended candidate SHA, evidence keys exactly
+  matching the declared stages, and command/stage agreement. Workflow rejection
+  for these invariants is an agent preflight defect and should never be used as
+  product-failure evidence.
 - If the available GitHub connector/API does not expose a repository operation
   needed for the task, use `control/remote-shell` as the immediate
   repository-scoped fallback when the operation is shell-capable. This includes
@@ -303,6 +311,15 @@ directly invalidates that fixture's result.
   history. Product main should contain one clean logical product commit (plus a
   necessary acceptance/docs commit when appropriate), not iterative WIP or
   verification churn.
+
+### Source-contract hygiene
+
+- Documentation/guidance tests compare whitespace-normalized prose for semantic
+  requirements unless exact line breaks or indentation are themselves part of
+  the format contract. Markdown reflow must not fail a semantic source gate.
+- Use raw newline-sensitive assertions only for structurally significant blocks
+  such as exact workflow/YAML syntax or another deliberately line-oriented
+  format.
 
 ### Evidence reuse examples
 
