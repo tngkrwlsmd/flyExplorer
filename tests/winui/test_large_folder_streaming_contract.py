@@ -114,8 +114,10 @@ class LargeFolderStreamingContracts(unittest.TestCase):
             "20500",
             "--browse-over-complete-model",
             "OWNED_LARGE_BROWSE_OVER_20000",
-            "OWNED_LARGE_OVER_20K_SORT_REFUSED",
-            "large-browse-over-20k-after.png",
+            "OWNED_LARGE_OVER_20K_NAME_SORT_INDEXED",
+            "OWNED_LARGE_OVER_20K_NAME_FILTER_INDEXED",
+            "OWNED_LARGE_OVER_20K_SIZE_SORT_REFUSED",
+            "large-name-index-over-20k-after.png",
         ):
             self.assertIn(marker,gui)
 
