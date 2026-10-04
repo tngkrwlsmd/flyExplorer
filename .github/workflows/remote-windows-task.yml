@@ -337,9 +337,11 @@ jobs:
             $test1 = Join-Path $temp "tests\winui\test_gui_harness_contract.py"
             $test2 = Join-Path $temp "tests\winui\test_remote_request_preflight_contract.py"
             $test3 = Join-Path $temp "tests\winui\test_remote_windows_task_contract.py"
-            & python -X utf8 -m unittest $test1 $test2 $test3
-            if ($LASTEXITCODE -ne 0) {
-              throw "Static candidate source/harness contracts failed."
+            foreach ($test in @($test1, $test2, $test3)) {
+              & python -X utf8 $test
+              if ($LASTEXITCODE -ne 0) {
+                throw "Static candidate source/harness contract failed: $test"
+              }
             }
             & git -C $temp diff --check "$($env:REMOTE_EXPECTED_MAIN_SHA)..$($env:REMOTE_CANDIDATE_SHA)"
             if ($LASTEXITCODE -ne 0) {
