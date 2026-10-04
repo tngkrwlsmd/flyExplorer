@@ -168,13 +168,22 @@ def main():
             print("OWNED_RESIDENT_WINDOW_FORWARD_REHYDRATED_TAIL",True,flush=True)
 
         if args.browse_over_complete_model:
-            previous=parent.child_window(auto_id="LeftLoadPreviousButton")
-            status=parent.child_window(auto_id="StatusText")
+            def fresh_parent():
+                windows=[x for x in Desktop(backend="uia").windows(process=process.pid)
+                         if "flyExplorer" in x.window_text()]
+                if len(windows)!=1:
+                    raise AssertionError("owned flyExplorer window identity changed")
+                return Desktop(backend="uia").window(handle=windows[0].handle)
             def more_control():
-                return parent.child_window(auto_id="LeftLoadMoreButton")
+                return fresh_parent().child_window(auto_id="LeftLoadMoreButton")
             def progress_text():
                 control=more_control()
                 return control.window_text() if control.exists(timeout=.2) and control.is_visible() else ""
+            def fresh_first_row():
+                matches=[v for v in fresh_parent().child_window(
+                   auto_id="LeftFiles").descendants()
+                   if v.element_info.control_type=="ListItem"]
+                return matches[0].window_text() if matches else ""
             for _ in range(180):
                 text=progress_text()
                 head=text.split("/",1)[0]
@@ -190,18 +199,22 @@ def main():
             progress=progress_text()
             shown=int(progress.split("/",1)[0])
             assert shown>20000,progress
-            until(lambda:previous.exists(timeout=.2) and previous.is_visible(),
+            until(lambda:(lambda p:
+                  p.exists(timeout=.2) and p.is_visible())(
+                    fresh_parent().child_window(auto_id="LeftLoadPreviousButton")),
                   "browse-over-20k did not retain backward resident navigation",8)
-            rect=parent.rectangle()
+            current=fresh_parent()
+            rect=current.rectangle()
             evidence=base/"large-browse-over-20k-after.png"
             ImageGrab.grab(
                 bbox=(rect.left,rect.top,rect.right,rect.bottom),
                 include_layered_windows=True).save(evidence)
-            first_before_sort=first_row()
-            parent.child_window(auto_id="SortPicker").select(1)
-            until(lambda:"20,000" in status.window_text(),
+            first_before_sort=fresh_first_row()
+            fresh_parent().child_window(auto_id="SortPicker").select(1)
+            until(lambda:"20,000" in fresh_parent().child_window(
+                  auto_id="StatusText").window_text(),
                   "global sort above complete-model ceiling was not refused",8)
-            assert first_row()==first_before_sort
+            assert fresh_first_row()==first_before_sort
             print("OWNED_LARGE_BROWSE_OVER_20000",shown,flush=True)
             print("OWNED_LARGE_OVER_20K_SORT_REFUSED",True,flush=True)
             print("OWNED_LARGE_OVER_20K_VISUAL",evidence.name,flush=True)
