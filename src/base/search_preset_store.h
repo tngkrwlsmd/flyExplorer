@@ -9,6 +9,7 @@ struct Preset final {
     std::wstring name;
     std::wstring term;
     std::wstring contentTerm;
+    int contentEncoding=0;
     std::wstring extension;
     std::wstring minSizeKb;
     std::wstring maxSizeKb;

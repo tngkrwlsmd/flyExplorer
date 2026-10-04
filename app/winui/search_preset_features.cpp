@@ -14,6 +14,11 @@ fxfile::preview::SearchQuery queryFromPreset(
     fxfile::preview::SearchQuery q{};
     q.term=p.term;
     q.contentTerm=p.contentTerm;
+    q.contentEncoding=p.contentEncoding==1?
+        fxfile::preview::SearchContentEncoding::Korean949:
+        p.contentEncoding==2?
+          fxfile::preview::SearchContentEncoding::Windows1252:
+          fxfile::preview::SearchContentEncoding::AutoUtf;
     q.extension=p.extension;
     q.minSizeKb=p.minSizeKb;
     q.maxSizeKb=p.maxSizeKb;
@@ -44,6 +49,8 @@ fxfile::searchpresets::Preset MainWindow::SearchPresetFromUi()
     p.name=std::wstring(SearchPresetNameBox().Text().c_str());
     p.term=std::wstring(SearchTermBox().Text().c_str());
     p.contentTerm=std::wstring(SearchContentBox().Text().c_str());
+    p.contentEncoding=SearchContentEncodingBox().SelectedIndex();
+    if(p.contentEncoding<0||p.contentEncoding>2)p.contentEncoding=0;
     p.extension=std::wstring(SearchExtensionBox().Text().c_str());
     p.minSizeKb=std::wstring(SearchMinSizeBox().Text().c_str());
     p.maxSizeKb=std::wstring(SearchMaxSizeBox().Text().c_str());
@@ -61,6 +68,7 @@ void MainWindow::ApplySearchPresetToUi(
 {
     SearchTermBox().Text(hstring(p.term));
     SearchContentBox().Text(hstring(p.contentTerm));
+    SearchContentEncodingBox().SelectedIndex((std::clamp)(p.contentEncoding,0,2));
     SearchExtensionBox().Text(hstring(p.extension));
     SearchMinSizeBox().Text(hstring(p.minSizeKb));
     SearchMaxSizeBox().Text(hstring(p.maxSizeKb));

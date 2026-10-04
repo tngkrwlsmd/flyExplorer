@@ -35,6 +35,23 @@ std::vector<unsigned char> utf16(std::wstring const& text){
     }
     return out;
 }
+std::vector<unsigned char> codepage(
+    UINT page,std::wstring const& text)
+{
+    BOOL usedDefault=FALSE;
+    const int needed=::WideCharToMultiByte(
+        page,WC_NO_BEST_FIT_CHARS,text.data(),
+        static_cast<int>(text.size()),nullptr,0,nullptr,&usedDefault);
+    if(needed<=0||usedDefault)return {};
+    std::vector<unsigned char> out(static_cast<std::size_t>(needed));
+    usedDefault=FALSE;
+    const int written=::WideCharToMultiByte(
+        page,WC_NO_BEST_FIT_CHARS,text.data(),
+        static_cast<int>(text.size()),
+        reinterpret_cast<char*>(out.data()),needed,nullptr,&usedDefault);
+    if(written!=needed||usedDefault)return {};
+    return out;
+}
 }
 int wmain(int argc,wchar_t** argv){
     wchar_t yes[8]{},local[32768]{};
@@ -291,6 +308,8 @@ int wmain(int argc,wchar_t** argv){
     const auto contentUtf16Be=left+L"\\content-utf16be.txt";
     const auto contentBinary=left+L"\\content-binary.bin";
     const auto contentOversize=left+L"\\content-oversize.txt";
+    const auto contentCp949=left+L"\\content-cp949.txt";
+    const auto content1252=left+L"\\content-1252.txt";
     const std::string utf8Body="Alpha UtfEightOnly omega";
     if(!put(contentUtf8,std::vector<unsigned char>(
              utf8Body.begin(),utf8Body.end()))||
@@ -302,11 +321,16 @@ int wmain(int argc,wchar_t** argv){
         utf16be.push_back(static_cast<unsigned char>((ch>>8)&255));
         utf16be.push_back(static_cast<unsigned char>(ch&255));
     }
-    if(!put(contentUtf16Be,utf16be)||
+    const auto cp949=codepage(949,L"prefix 레거시한글 suffix");
+    const auto cp1252=codepage(1252,L"prefix café western suffix");
+    if(cp949.empty()||cp1252.empty()||
+       !put(contentUtf16Be,utf16be)||
        !put(contentBinary,std::vector<unsigned char>{
            'A',0,'N','e','e','d','l','e'})||
        !put(contentOversize,
-            std::vector<unsigned char>(1024*1024+1,'x')))
+            std::vector<unsigned char>(1024*1024+1,'x'))||
+       !put(contentCp949,cp949)||
+       !put(content1252,cp1252))
         return 92;
 
     fxfile::preview::SearchQuery contentUtf8Query{};
@@ -342,6 +366,58 @@ int wmain(int argc,wchar_t** argv){
     expect(contentBeResult.valid&&contentBeResult.count==1&&
            contentBeResult.matches[0]==contentUtf16Be,
            "UTF16BE_BOM_CONTENT_MATCH");
+
+    fxfile::preview::SearchQuery cp949Auto{};
+    cp949Auto.term=L"content-cp949";
+    cp949Auto.contentTerm=L"레거시한글";
+    auto cp949AutoResult=fxfile::preview::scanFiles(
+        left,cp949Auto,cancel);
+    expect(cp949AutoResult.valid&&cp949AutoResult.count==0&&
+           cp949AutoResult.contentFilesSkipped==1,
+           "AUTO_UTF_REJECTS_CP949");
+
+    auto cp949Query=cp949Auto;
+    cp949Query.contentEncoding=
+        fxfile::preview::SearchContentEncoding::Korean949;
+    auto cp949Result=fxfile::preview::scanFiles(left,cp949Query,cancel);
+    expect(cp949Result.valid&&cp949Result.count==1&&
+           cp949Result.matches[0]==contentCp949,
+           "EXPLICIT_CP949_CONTENT_MATCH");
+
+    fxfile::preview::SearchQuery cp1252Auto{};
+    cp1252Auto.term=L"content-1252";
+    cp1252Auto.contentTerm=L"café";
+    auto cp1252AutoResult=fxfile::preview::scanFiles(
+        left,cp1252Auto,cancel);
+    expect(cp1252AutoResult.valid&&cp1252AutoResult.count==0&&
+           cp1252AutoResult.contentFilesSkipped==1,
+           "AUTO_UTF_REJECTS_WINDOWS1252");
+
+    auto cp1252Query=cp1252Auto;
+    cp1252Query.contentEncoding=
+        fxfile::preview::SearchContentEncoding::Windows1252;
+    auto cp1252Result=fxfile::preview::scanFiles(
+        left,cp1252Query,cancel);
+    expect(cp1252Result.valid&&cp1252Result.count==1&&
+           cp1252Result.matches[0]==content1252,
+           "EXPLICIT_WINDOWS1252_CONTENT_MATCH");
+
+    auto bomFallback=contentLeQuery;
+    bomFallback.contentEncoding=
+        fxfile::preview::SearchContentEncoding::Korean949;
+    auto bomFallbackResult=fxfile::preview::scanFiles(
+        left,bomFallback,cancel);
+    expect(bomFallbackResult.valid&&bomFallbackResult.count==1&&
+           bomFallbackResult.matches[0]==contentUtf16Le,
+           "BOM_OVERRIDES_EXPLICIT_FALLBACK_ENCODING");
+
+    fxfile::preview::SearchQuery invalidEncoding{};
+    invalidEncoding.contentTerm=L"needle";
+    invalidEncoding.contentEncoding=
+        static_cast<fxfile::preview::SearchContentEncoding>(99);
+    expect(fxfile::preview::validateSearchQuery(invalidEncoding)==
+           fxfile::preview::SearchQueryValidation::InvalidContentEncoding,
+           "INVALID_CONTENT_ENCODING_REJECTED");
 
     fxfile::preview::SearchQuery binaryQuery{};
     binaryQuery.term=L"content-binary";
@@ -405,6 +481,7 @@ int wmain(int argc,wchar_t** argv){
     preset.name=L"이번 달 보고서";
     preset.term=L"report";preset.extension=L"txt";
     preset.contentTerm=L"needle";
+    preset.contentEncoding=1;
     preset.minSizeKb=L"7";preset.maxSizeKb=L"9";
     preset.modifiedAfter=L"2026-02-01";
     preset.modifiedBefore=L"2026-02-28";
@@ -421,9 +498,23 @@ int wmain(int argc,wchar_t** argv){
     const auto presetRaw=bytes(presetFile);
     const std::string presetText(presetRaw.begin(),presetRaw.end());
     expect(reloaded.items()[0].contentTerm==L"needle"&&
+           reloaded.items()[0].contentEncoding==1&&
            presetRaw.size()>8&&
-           presetText.find("schema=2")!=std::string::npos,
-           "SEARCH_PRESET_CONTENT_SCHEMA2_RESTART");
+           presetText.find("schema=3")!=std::string::npos,
+           "SEARCH_PRESET_CONTENT_ENCODING_SCHEMA3_RESTART");
+
+    const auto schema2PresetFile=root+L"\\search-presets-v2.txt";
+    const std::string schema2Preset=
+        "schema=2\r\nLegacy2\treport\tneedle\ttxt\t0\t0\t0\t7\t9\t"
+        "2026-02-01\t2026-02-28\r\n";
+    PresetStore schema2Presets;
+    expect(put(schema2PresetFile,std::vector<unsigned char>(
+               schema2Preset.begin(),schema2Preset.end()))&&
+           schema2Presets.loadFrom(schema2PresetFile)&&
+           schema2Presets.items().size()==1&&
+           schema2Presets.items()[0].contentTerm==L"needle"&&
+           schema2Presets.items()[0].contentEncoding==0,
+           "SEARCH_PRESET_SCHEMA2_BACKWARD_COMPAT");
 
     const auto legacyPresetFile=root+L"\\search-presets-v1.txt";
     const std::string legacyPreset=
@@ -441,6 +532,7 @@ int wmain(int argc,wchar_t** argv){
     expect(reloaded.erase(0)&&reloaded.items().empty(),
            "SEARCH_PRESET_DELETE");
     ::DeleteFileW(presetFile.c_str());
+    ::DeleteFileW(schema2PresetFile.c_str());
     ::DeleteFileW(legacyPresetFile.c_str());
 
     cancel->store(true);

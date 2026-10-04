@@ -206,7 +206,7 @@ def run(*,p,win,element,safe_click,focus,eventually,ownedwindows,
         # folder; all results and preview history use ONLY owned paths.
         safe_click(element("SearchPanelButton"))
         for key in ("SearchScopeBox","SearchTermBox","SearchContentBox",
-                    "SearchRegexBox","SearchCaseBox","SearchTargetBox",
+                    "SearchContentEncodingBox","SearchRegexBox","SearchCaseBox","SearchTargetBox",
                     "SearchExtensionBox","SearchMinSizeBox","SearchMaxSizeBox",
                     "SearchModifiedAfterBox","SearchModifiedBeforeBox",
                     "SearchPresetBox","SearchPresetNameBox",
@@ -254,12 +254,21 @@ def run(*,p,win,element,safe_click,focus,eventually,ownedwindows,
             target_file.write_bytes(b"x"*size)
             when=time.mktime(stamp)
             os.utime(target_file,(when,when))
+        preset_cp949="프리셋한글".encode("cp949")
+        nested_report.write_bytes(
+            preset_cp949+b"x"*(8192-len(preset_cp949)))
+        nested_when=time.mktime((2026,2,5,12,0,0,0,0,-1))
+        os.utime(nested_report,(nested_when,nested_when))
         content_utf8=left/"content-utf8.txt"
         content_utf16=left/"content-utf16.txt"
         content_binary=left/"content-binary.bin"
+        content_cp949=left/"content-cp949.txt"
+        content_1252=left/"content-1252.txt"
         content_utf8.write_text("Alpha NeedLe omega",encoding="utf-8")
         content_utf16.write_text("prefix 한글바늘 suffix",encoding="utf-16")
         content_binary.write_bytes(b"A\x00Needle")
+        content_cp949.write_bytes("prefix 레거시한글 suffix".encode("cp949"))
+        content_1252.write_bytes("prefix café western suffix".encode("cp1252"))
         regex=element("SearchRegexBox")
         case=element("SearchCaseBox")
         target=element("SearchTargetBox")
@@ -370,6 +379,7 @@ def run(*,p,win,element,safe_click,focus,eventually,ownedwindows,
 
         # Bounded literal content search reuses the same worker and case toggle.
         content_box=element("SearchContentBox")
+        content_encoding=element("SearchContentEncodingBox")
         term.set_edit_text("")
         extension.set_edit_text("")
         min_size.set_edit_text("")
@@ -391,6 +401,39 @@ def run(*,p,win,element,safe_click,focus,eventually,ownedwindows,
         assert search_matches("content-utf16.txt")
         print("REAL_CONTENT_SEARCH_UTF16_PASS",True,flush=True)
 
+        content_box.set_edit_text("레거시한글")
+        safe_click(element("SearchRunButton"))
+        good(lambda:match("SearchCountText","검색 결과 0개"),
+             "auto UTF unexpectedly decoded CP949 content",14)
+        print("REAL_CONTENT_ENCODING_AUTO_UTF_REJECTS_CP949_PASS",True,flush=True)
+
+        focus()
+        content_encoding.wrapper_object().select(1)
+        content_box.set_edit_text("레거시한글")
+        safe_click(element("SearchRunButton"))
+        good(lambda:match("SearchCountText","검색 결과 1개"),
+             "explicit CP949 content search failed",14)
+        assert search_matches("content-cp949.txt")
+        print("REAL_CONTENT_ENCODING_CP949_PASS",True,flush=True)
+
+        focus()
+        content_encoding.wrapper_object().select(2)
+        content_box.set_edit_text("café")
+        safe_click(element("SearchRunButton"))
+        good(lambda:match("SearchCountText","검색 결과 1개"),
+             "explicit Windows-1252 content search failed",14)
+        assert search_matches("content-1252.txt")
+        print("REAL_CONTENT_ENCODING_WINDOWS1252_PASS",True,flush=True)
+
+        focus()
+        content_encoding.wrapper_object().select(0)
+        content_box.set_edit_text("한글바늘")
+        safe_click(element("SearchRunButton"))
+        good(lambda:match("SearchCountText","검색 결과 1개"),
+             "auto UTF did not restore after legacy codepage checks",14)
+        assert search_matches("content-utf16.txt")
+        print("REAL_CONTENT_ENCODING_AUTO_UTF_RESTORE_PASS",True,flush=True)
+
         focus()
         target.wrapper_object().select(1)
         content_box.set_edit_text("needle")
@@ -408,11 +451,14 @@ def run(*,p,win,element,safe_click,focus,eventually,ownedwindows,
         max_size.set_edit_text("9")
         after.set_edit_text("2026-02-01")
         before_date.set_edit_text("2026-02-28")
-        content_box.set_edit_text("x")
+        content_box.set_edit_text("프리셋한글")
+        focus()
+        content_encoding.wrapper_object().select(1)
         preset_name.set_edit_text("2월 중간 보고서")
         safe_click(element("SearchPresetSaveButton"))
         good(lambda:preset_file.is_file() and
-             "2월 중간 보고서\treport\tx\t.txt" in
+             "schema=3" in preset_file.read_text(encoding="utf-8") and
+             "2월 중간 보고서\treport\t프리셋한글\t1\t.txt" in
              preset_file.read_text(encoding="utf-8"),
              "Search v3 saved query preset was not durable",10)
         print("REAL_SEARCH_V3_PRIVATE_PRESET_SAVE_PASS",True,flush=True)
@@ -427,6 +473,7 @@ def run(*,p,win,element,safe_click,focus,eventually,ownedwindows,
         before_date.set_edit_text("")
         content_box.set_edit_text("")
         focus()
+        content_encoding.wrapper_object().select(0)
         target.wrapper_object().select(0)
         term.set_edit_text("readme")
         safe_click(element("SearchRunButton"))
@@ -504,16 +551,17 @@ def run(*,p,win,element,safe_click,focus,eventually,ownedwindows,
                  restarted.child_window(auto_id="SearchMaxSizeBox").get_value()=="9" and
                  restarted.child_window(auto_id="SearchModifiedAfterBox").get_value()=="2026-02-01" and
                  restarted.child_window(auto_id="SearchModifiedBeforeBox").get_value()=="2026-02-28" and
-                 restarted.child_window(auto_id="SearchContentBox").get_value()=="x",
+                 restarted.child_window(auto_id="SearchContentBox").get_value()=="프리셋한글",
                  "saved Search v3/content criteria did not apply after restart",8)
             restarted.child_window(auto_id="SearchRunButton").click_input()
             good(lambda:"검색 결과 1개" in restarted.child_window(
                      auto_id="SearchCountText").window_text(),
                  "Search v3/content reloaded preset did not execute",14)
+            print("REAL_CONTENT_ENCODING_PRESET_RESTART_PASS",True,flush=True)
             print("REAL_CONTENT_SEARCH_PRESET_RESTART_PASS",True,flush=True)
             restarted.child_window(auto_id="SearchPresetDeleteButton").click_input()
             good(lambda:preset_file.is_file() and
-                 preset_file.read_text(encoding="utf-8").strip()=="schema=2",
+                 preset_file.read_text(encoding="utf-8").strip()=="schema=3",
                  "Search v3/content preset delete did not persist",8)
             print("REAL_SEARCH_V3_PRESET_RESTART_APPLY_DELETE_PASS",True,flush=True)
         finally:

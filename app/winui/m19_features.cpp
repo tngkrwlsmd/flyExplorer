@@ -303,6 +303,17 @@ SearchController::Context MainWindow::SearchContext(){
     context.scope=std::wstring(SearchScopeBox().Text().c_str());
     context.query.term=std::wstring(SearchTermBox().Text().c_str());
     context.query.contentTerm=std::wstring(SearchContentBox().Text().c_str());
+    switch(SearchContentEncodingBox().SelectedIndex()){
+    case 1:
+        context.query.contentEncoding=fxfile::preview::SearchContentEncoding::Korean949;
+        break;
+    case 2:
+        context.query.contentEncoding=fxfile::preview::SearchContentEncoding::Windows1252;
+        break;
+    default:
+        context.query.contentEncoding=fxfile::preview::SearchContentEncoding::AutoUtf;
+        break;
+    }
     context.query.extension=std::wstring(SearchExtensionBox().Text().c_str());
     context.query.minSizeKb=std::wstring(SearchMinSizeBox().Text().c_str());
     context.query.maxSizeKb=std::wstring(SearchMaxSizeBox().Text().c_str());
@@ -402,6 +413,10 @@ void MainWindow::OnRunSearch(
         SearchCountText().Text(L"파일 내용 조건이 올바르지 않습니다.");
         StatusText().Text(
            L"내용 검색은 256자 이하의 한 줄 literal 텍스트이며 폴더 전용 검색과 함께 사용할 수 없습니다.");
+    }else if(status==Start::InvalidContentEncoding){
+        SearchCountText().Text(L"파일 내용 인코딩 조건이 올바르지 않습니다.");
+        StatusText().Text(
+           L"내용 인코딩은 자동 UTF, 한국어 CP949, 서유럽 Windows-1252 중 하나여야 합니다.");
     }else if(status==Start::InvalidPattern){
         SearchCountText().Text(L"정규식이 올바르지 않습니다.");
         StatusText().Text(

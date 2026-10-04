@@ -440,6 +440,16 @@ try:
           ownedwindows=ownedwindows,
           left=left,right=right,inner=inner,
           owned=owned,localdata=localdata,env=env,exe=EXE)
+  if os.environ.get("FLY_M19_OWNED_FEATURES_ONLY")=="YES":
+   rect=win.rectangle()
+   assert rect.width()>400 and rect.height()>260
+   img=base/"m19-focused-real-gui.png"
+   ImageGrab.grab(bbox=(rect.left,rect.top,rect.right,rect.bottom),
+                  include_layered_windows=True).save(img)
+   print("M19_FOCUSED_GUI_SCREENSHOT",img.name,
+         "SIZE",rect.width(),rect.height(),flush=True)
+   print("M19_FOCUSED_GUI_PASS",True,flush=True)
+   raise SystemExit(0)
  # Diagnostic only: distinguish a post-M19 expanded-panel layout from
  # the same M20 native command test on an otherwise independent window.
  if os.environ.get("FLY_M20_OWNED_COLLAPSE_M19_PANELS")=="YES":

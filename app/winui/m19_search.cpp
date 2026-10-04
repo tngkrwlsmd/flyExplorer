@@ -81,8 +81,27 @@ bool decodeUtf8(
         static_cast<int>(size),out.data(),needed)==needed;
 }
 
+bool decodeCodePage(
+    UINT codePage,unsigned char const* data,std::size_t size,
+    std::wstring& out)
+{
+    out.clear();
+    if(!size)return true;
+    const int needed=::MultiByteToWideChar(
+        codePage,MB_ERR_INVALID_CHARS,
+        reinterpret_cast<char const*>(data),
+        static_cast<int>(size),nullptr,0);
+    if(needed<=0)return false;
+    out.resize(static_cast<std::size_t>(needed));
+    return ::MultiByteToWideChar(
+        codePage,MB_ERR_INVALID_CHARS,
+        reinterpret_cast<char const*>(data),
+        static_cast<int>(size),out.data(),needed)==needed;
+}
+
 bool decodeText(
-    std::vector<unsigned char> const& bytes,std::wstring& out)
+    std::vector<unsigned char> const& bytes,
+    SearchContentEncoding encoding,std::wstring& out)
 {
     out.clear();
     if(bytes.empty())return true;
@@ -110,12 +129,24 @@ bool decodeText(
     if(std::find(bytes.begin()+static_cast<std::ptrdiff_t>(start),
                  bytes.end(),static_cast<unsigned char>(0))!=bytes.end())
         return false;
-    return decodeUtf8(bytes.data()+start,bytes.size()-start,out);
+    const auto* data=bytes.data()+start;
+    const auto size=bytes.size()-start;
+    switch(encoding){
+    case SearchContentEncoding::AutoUtf:
+        return decodeUtf8(data,size,out);
+    case SearchContentEncoding::Korean949:
+        return decodeCodePage(949,data,size,out);
+    case SearchContentEncoding::Windows1252:
+        return decodeCodePage(1252,data,size,out);
+    default:
+        return false;
+    }
 }
 
 ContentMatch contentMatches(
     std::wstring const& path,std::uint64_t fileBytes,
     std::wstring const& term,bool caseSensitive,
+    SearchContentEncoding encoding,
     std::shared_ptr<std::atomic_bool> const& cancel,
     std::uint64_t& remainingBudget,
     SearchResults& out)
@@ -176,7 +207,7 @@ ContentMatch contentMatches(
     }
 
     std::wstring text;
-    if(!decodeText(bytes,text)){
+    if(!decodeText(bytes,encoding,text)){
         ++out.contentFilesSkipped;
         return ContentMatch::Skipped;
     }
@@ -309,6 +340,10 @@ SearchQueryValidation validateSearchQuery(SearchQuery const& query) noexcept
            (!query.contentTerm.empty()&&
             query.kind==SearchEntryKind::Folders))
             return SearchQueryValidation::InvalidContentTerm;
+        if(query.contentEncoding!=SearchContentEncoding::AutoUtf&&
+           query.contentEncoding!=SearchContentEncoding::Korean949&&
+           query.contentEncoding!=SearchContentEncoding::Windows1252)
+            return SearchQueryValidation::InvalidContentEncoding;
 
         auto extension=normalizeExtension(query.extension);
         if(query.extension.size()>kMaxExtension||
@@ -351,6 +386,7 @@ bool sameSearchQuery(SearchQuery const& a,SearchQuery const& b) noexcept
            a.modifiedAfter==b.modifiedAfter&&
            a.modifiedBefore==b.modifiedBefore&&
            a.contentTerm==b.contentTerm&&
+           a.contentEncoding==b.contentEncoding&&
            a.regex==b.regex&&a.caseSensitive==b.caseSensitive&&
            a.kind==b.kind;
 }
@@ -439,7 +475,8 @@ SearchResults scanFiles(
                     size.HighPart=fd.nFileSizeHigh;
                     const auto content=contentMatches(
                         candidate,size.QuadPart,query.contentTerm,
-                        query.caseSensitive,cancel,contentBudget,out);
+                        query.caseSensitive,query.contentEncoding,
+                        cancel,contentBudget,out);
                     if(content==ContentMatch::Canceled){
                         out.canceled=true;
                         ::FindClose(find);

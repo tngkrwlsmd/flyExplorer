@@ -18,6 +18,12 @@ enum class SearchEntryKind {
     FilesAndFolders,
 };
 
+enum class SearchContentEncoding {
+    AutoUtf,
+    Korean949,
+    Windows1252,
+};
+
 struct SearchQuery {
     std::wstring term;
     std::wstring extension;
@@ -26,6 +32,7 @@ struct SearchQuery {
     std::wstring modifiedAfter;
     std::wstring modifiedBefore;
     std::wstring contentTerm;
+    SearchContentEncoding contentEncoding=SearchContentEncoding::AutoUtf;
     bool regex=false;
     bool caseSensitive=false;
     SearchEntryKind kind=SearchEntryKind::Files;
@@ -38,6 +45,7 @@ enum class SearchQueryValidation {
     InvalidSizeRange,
     InvalidDateRange,
     InvalidContentTerm,
+    InvalidContentEncoding,
     InvalidRegex,
 };
 

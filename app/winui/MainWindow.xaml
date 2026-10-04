@@ -313,10 +313,17 @@
             </StackPanel>
             <StackPanel Orientation="Horizontal" Spacing="7">
                 <TextBlock Text="파일 내용:" VerticalAlignment="Center"/>
-                <TextBox x:Name="SearchContentBox" Width="360" MaxLength="256"
+                <TextBox x:Name="SearchContentBox" Width="300" MaxLength="256"
                          PlaceholderText="파일 내용에 포함될 literal 텍스트"
                          AutomationProperties.Name="파일 내용 검색어"/>
-                <TextBlock Text="UTF-8 / UTF-16 BOM · 파일당 1 MiB · 전체 16 MiB"
+                <TextBlock Text="인코딩:" VerticalAlignment="Center"/>
+                <ComboBox x:Name="SearchContentEncodingBox" Width="155" SelectedIndex="0"
+                          AutomationProperties.Name="파일 내용 인코딩">
+                    <ComboBoxItem Content="자동 UTF"/>
+                    <ComboBoxItem Content="한국어 CP949"/>
+                    <ComboBoxItem Content="서유럽 Windows-1252"/>
+                </ComboBox>
+                <TextBlock Text="BOM 우선 · 1 MiB/파일 · 16 MiB/검색"
                            VerticalAlignment="Center" Opacity="0.65"/>
             </StackPanel>
             <StackPanel Orientation="Horizontal" Spacing="7">

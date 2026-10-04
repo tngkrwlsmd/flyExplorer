@@ -47,13 +47,15 @@ class ContentSearchContracts(unittest.TestCase):
         self.assertLess(cpp.index("validateRequest(request)",start),
                         cpp.index("std::thread",start))
 
-    def test_search_presets_migrate_schema1_and_persist_content_schema2(self):
+    def test_search_presets_read_old_schemas_and_write_content_schema3(self):
         h=read("src/base/search_preset_store.h")
         cpp=read("src/base/search_preset_store.cpp")
         self.assertIn("std::wstring contentTerm",h)
+        self.assertIn("int contentEncoding=0",h)
         self.assertIn('line==L"schema=1"',cpp)
         self.assertIn('line==L"schema=2"',cpp)
-        self.assertIn('std::wstring text=L"schema=2\\r\\n"',cpp)
+        self.assertIn('line==L"schema=3"',cpp)
+        self.assertIn('std::wstring text=L"schema=3\\r\\n"',cpp)
 
     def test_winui_and_owned_gui_include_content_criterion(self):
         xaml=read("app/winui/MainWindow.xaml")
@@ -82,7 +84,8 @@ class ContentSearchContracts(unittest.TestCase):
             "NAME_EXTENSION_CONTENT_AND_QUERY",
             "CONTENT_FOLDER_ONLY_REJECTED_BEFORE_SEARCH",
             "CONTENT_TOTAL_IO_BUDGET_16MIB",
-            "SEARCH_PRESET_CONTENT_SCHEMA2_RESTART",
+            "SEARCH_PRESET_CONTENT_ENCODING_SCHEMA3_RESTART",
+            "SEARCH_PRESET_SCHEMA2_BACKWARD_COMPAT",
             "SEARCH_PRESET_SCHEMA1_BACKWARD_COMPAT",
         ):
             self.assertIn(marker,native)
