@@ -237,10 +237,12 @@ def main():
             filt=fresh_parent().child_window(auto_id="LeftNameFilterBox")
             assert filt.exists(timeout=.2)
             filt.set_edit_text("20499")
-            until(lambda:"bench-20499.txt" in fresh_first_row() and
-                  "1" in fresh_parent().child_window(
-                      auto_id="ItemCountText").window_text(),
-                  "indexed name filter above 20k did not isolate the target",12)
+            until(lambda:filt.get_value()=="20499",
+                  "indexed name filter input did not accept the target",5)
+            until(lambda:"bench-20499.txt" in fresh_first_row(),
+                  "indexed name filter did not project the target row",12)
+            until(lambda:footer_count()==1,
+                  "indexed name filter footer did not report one item",5)
             filt.set_edit_text("")
             until(lambda:"bench-9999.txt" in fresh_first_row(),
                   "clearing indexed filter did not restore indexed name sort",12)
