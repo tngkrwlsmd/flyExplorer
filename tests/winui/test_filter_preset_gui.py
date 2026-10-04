@@ -5,7 +5,7 @@ from profile_guard import assert_legacy_profile_unchanged, snapshot_legacy_profi
 import ctypes as c
 import os,shutil,subprocess,tempfile,time
 from ctypes import wintypes as W
-from pywinauto import Desktop
+from pywinauto import Desktop,keyboard
 from PIL import ImageGrab
 
 CONFIG=os.environ.get("FLY_MIGRATION_CONFIGURATION","Release")
@@ -101,7 +101,14 @@ try:
     print("FILTER_PRESET_SAVE_APPLY_MASK_PASS",True,flush=True)
 
     filt=win.child_window(auto_id="LeftNameFilterBox")
-    filt.set_edit_text("note")
+    files=win.child_window(auto_id="LeftFiles")
+    files.set_focus()
+    keyboard.send_keys("^+f")
+    until(lambda:filt.has_keyboard_focus(),
+          "Ctrl+Shift+F did not focus the pane name filter",5)
+    keyboard.send_keys("note")
+    until(lambda:filt.get_value()=="note",
+          "keyboard substring filter input did not reach the editor",5)
     until(lambda:any("notes.txt" in t for t in row_texts(win)) and
           all("alpha.cpp" not in t for t in row_texts(win)),
           "legacy substring filter compatibility failed",10)
