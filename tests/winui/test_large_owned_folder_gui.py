@@ -9,6 +9,7 @@ import subprocess
 import sys
 import tempfile
 import time
+from PIL import ImageGrab
 
 
 LEGACY=("fxfile.conf","fxfile-main.conf","fxfile-toolbar.dat",
@@ -30,7 +31,11 @@ def main():
     parser.add_argument("--items",type=int,choices=(1100,2300,5000,8000),default=1100)
     parser.add_argument("--configuration",choices=("Debug","Release"),
                         default="Debug")
+    parser.add_argument("--resident-window-evidence",
+                        choices=("none","before","after"),default="none")
     args=parser.parse_args()
+    if args.resident_window_evidence!="none":
+        assert args.items==2300 and args.configuration=="Release"
     if os.name!="nt":
         return 2
     here=APP
@@ -106,10 +111,70 @@ def main():
                   "initial streamed view page did not advance",10)
             print("OWNED_LARGE_MODEL_STREAMING_INITIAL_1024",True,flush=True)
 
+        if args.resident_window_evidence!="none":
+            previous=parent.child_window(auto_id="LeftLoadPreviousButton")
+            status=parent.child_window(auto_id="StatusText")
+            def progress_text():
+                control=parent.child_window(auto_id="LeftLoadMoreButton")
+                if not control.exists(timeout=.15) or not control.is_visible():
+                    return ""
+                return control.window_text()
+            def click_more_and_settle():
+                before=progress_text()
+                parent.set_focus()
+                parent.child_window(auto_id="LeftLoadMoreButton").click_input()
+                until(lambda:progress_text()!=before,
+                      "resident-window progress did not advance",12)
+                if "불러오는 중" in status.window_text():
+                    until(lambda:"불러오는 중" not in status.window_text(),
+                          "resident-window Shell page did not settle",16)
+            for _ in range(24):
+                if "2208/2300" in progress_text():
+                    break
+                click_more_and_settle()
+            until(lambda:"2208/2300" in progress_text(),
+                  "resident-window probe did not reach matched logical progress",12)
+            rect=parent.rectangle()
+            evidence=base/("large-resident-window-"+
+                args.resident_window_evidence+".png")
+            ImageGrab.grab(
+                bbox=(rect.left,rect.top,rect.right,rect.bottom),
+                include_layered_windows=True).save(evidence)
+            if args.resident_window_evidence=="before":
+                assert "bench-0000.txt" in first_row()
+                assert not previous.exists(timeout=.2) or not previous.is_visible()
+                print("OWNED_RESIDENT_WINDOW_BEFORE_2208_OF_2300",True,
+                      evidence.name,flush=True)
+                success=True
+                return
+            until(lambda:previous.exists(timeout=.2) and previous.is_visible(),
+                  "bounded resident window did not expose previous-page action",10)
+            assert "bench-0252.txt" in first_row(),first_row()
+            assert "2208/2300+" in progress_text(),progress_text()
+            print("OWNED_RESIDENT_WINDOW_EVICTED_PREFIX_252",True,
+                  evidence.name,flush=True)
+            previous.click_input()
+            until(lambda:"bench-0000.txt" in first_row() and
+                  (not previous.exists(timeout=.2) or not previous.is_visible()),
+                  "previous resident window did not restore logical prefix",16)
+            print("OWNED_RESIDENT_WINDOW_PREVIOUS_REHYDRATED_PREFIX",True,flush=True)
+            click_more_and_settle()
+            until(lambda:previous.exists(timeout=.2) and previous.is_visible() and
+                  "bench-0252.txt" in first_row(),
+                  "forward resident rehydration did not return to shifted window",16)
+            print("OWNED_RESIDENT_WINDOW_FORWARD_REHYDRATED_TAIL",True,flush=True)
+
         parent.child_window(auto_id="SortPicker").select(1)
         until(lambda:f"bench-{args.items-1:04d}.txt" in first_row(),
               "large-folder global name sort did not complete streamed pages",
               36 if args.items>=8000 else 24)
+        if args.resident_window_evidence=="after":
+            previous=parent.child_window(auto_id="LeftLoadPreviousButton")
+            until(lambda:(not previous.exists(timeout=.2) or
+                          not previous.is_visible()) and
+                         "bench-2299.txt" in first_row(),
+                  "global sort did not rebuild the evicted prefix",16)
+            print("OWNED_RESIDENT_WINDOW_GLOBAL_SORT_REBUILT_2300",True,flush=True)
         if args.items>=8000:
             until(lambda:f"320/{args.items}" in parent.child_window(
                   auto_id="LeftLoadMoreButton").window_text(),
