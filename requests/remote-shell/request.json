@@ -1,7 +1,7 @@
 {
-  "request_id": "large-folder-name-index-filter-layer-002",
-  "expected_main_sha": "07d83fd9c6a1033e6f4bd5935ca1f46063f784f5",
-  "candidate_sha": "dcb628e137ec1b35e127a8218533430eb1cf8d34",
+  "request_id": "large-folder-name-index-filter-layer-003",
+  "expected_main_sha": "86d08481ec77fb7478abec29ab4df718cb7991ce",
+  "candidate_sha": "504646353dda2725d89052fdd56926b6de2d91b7",
   "logical_unit": "large-folder-name-index",
   "configuration": "Release",
   "validation_kind": [
@@ -9,9 +9,9 @@
     "gui"
   ],
   "invalidated_evidence": {
-    "source": "Monitoring-policy guidance and its source contract were added to the candidate after the prior source PASS.",
-    "gui": "The harness now records the indexed filter event, model-count, and row-projection layers to locate the remaining 20k+ failure without rebuilding unchanged product code."
+    "source": "The monitoring policy contract wording was corrected after the prior source-only preflight failure.",
+    "gui": "The prior request stopped at source contracts before the indexed filter event/model/projection diagnostic could execute."
   },
   "working_directory": "",
-  "command": "$ErrorActionPreference = \"Stop\"\ngit fetch origin main work/large-folder-name-index --no-tags --prune\nif ($LASTEXITCODE -ne 0) { throw \"fetch failed\" }\nif ((git rev-parse origin/main).Trim() -ne \"07d83fd9c6a1033e6f4bd5935ca1f46063f784f5\") { throw \"main moved\" }\nif ((git rev-parse origin/work/large-folder-name-index).Trim() -ne \"dcb628e137ec1b35e127a8218533430eb1cf8d34\") { throw \"candidate branch moved\" }\nif ((git status --short).Count -ne 0) { throw \"dirty persistent checkout\" }\ngit checkout -B work/large-folder-name-index origin/work/large-folder-name-index\nif ($LASTEXITCODE -ne 0) { throw \"checkout candidate failed\" }\nif ((git rev-parse HEAD).Trim() -ne \"dcb628e137ec1b35e127a8218533430eb1cf8d34\") { throw \"candidate mismatch\" }\npython -X utf8 -m py_compile tests\\winui\\test_remote_windows_task_contract.py tests\\winui\\test_large_owned_folder_gui.py\nif ($LASTEXITCODE -ne 0) { throw \"changed Python contract syntax failed\" }\ncmd /c test.bat source\nif ($LASTEXITCODE -ne 0) { throw \"source contracts failed\" }\nif (!(Test-Path -LiteralPath \"out\\winui\\Release\\flyExplorer.exe\" -PathType Leaf)) { throw \"previously validated Release artifact missing\" }\npython -X utf8 tests\\winui\\test_large_owned_folder_gui.py --items 20500 --configuration Release --browse-over-complete-model\n$guiExit=$LASTEXITCODE\ngit diff --check origin/main..HEAD\nif ($LASTEXITCODE -ne 0) { throw \"diff check failed\" }\nif ($guiExit -ne 0) { throw \"indexed filter layer diagnostic failed\" }\nWrite-Host \"LARGE_FOLDER_NAME_INDEX_FILTER_DIAGNOSTIC_PASS\""
+  "command": "$ErrorActionPreference = \"Stop\"\ngit fetch origin main work/large-folder-name-index --no-tags --prune\nif ($LASTEXITCODE -ne 0) { throw \"fetch failed\" }\nif ((git rev-parse origin/main).Trim() -ne \"86d08481ec77fb7478abec29ab4df718cb7991ce\") { throw \"main moved\" }\nif ((git rev-parse origin/work/large-folder-name-index).Trim() -ne \"504646353dda2725d89052fdd56926b6de2d91b7\") { throw \"candidate branch moved\" }\nif ((git status --short).Count -ne 0) { throw \"dirty persistent checkout\" }\ngit checkout -B work/large-folder-name-index origin/work/large-folder-name-index\nif ($LASTEXITCODE -ne 0) { throw \"checkout candidate failed\" }\nif ((git rev-parse HEAD).Trim() -ne \"504646353dda2725d89052fdd56926b6de2d91b7\") { throw \"candidate mismatch\" }\npython -X utf8 -m py_compile tests\\winui\\test_remote_windows_task_contract.py tests\\winui\\test_large_owned_folder_gui.py\nif ($LASTEXITCODE -ne 0) { throw \"changed Python contract syntax failed\" }\ncmd /c test.bat source\nif ($LASTEXITCODE -ne 0) { throw \"source contracts failed\" }\nif (!(Test-Path -LiteralPath \"out\\winui\\Release\\flyExplorer.exe\" -PathType Leaf)) { throw \"previously validated Release artifact missing\" }\npython -X utf8 tests\\winui\\test_large_owned_folder_gui.py --items 20500 --configuration Release --browse-over-complete-model\n$guiExit=$LASTEXITCODE\ngit diff --check origin/main..HEAD\nif ($LASTEXITCODE -ne 0) { throw \"diff check failed\" }\nif ($guiExit -ne 0) { throw \"indexed filter layer diagnostic failed\" }\nWrite-Host \"LARGE_FOLDER_NAME_INDEX_FILTER_DIAGNOSTIC_PASS\""
 }
