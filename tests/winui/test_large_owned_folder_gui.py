@@ -190,6 +190,9 @@ def main():
                    auto_id="LeftFiles").descendants()
                    if v.element_info.control_type=="ListItem"]
                 return matches[0].window_text() if matches else ""
+            def status_text():
+                control=fresh_parent().child_window(auto_id="StatusText")
+                return control.window_text() if control.exists(timeout=.2) else ""
             shown=0
             for _ in range(180):
                 text=progress_text()
@@ -208,6 +211,9 @@ def main():
                 more_control().click_input()
                 until(lambda:(progress_text(),footer_count())!=before,
                       "browse-over-20k progress did not advance",14)
+                if "불러오는 중" in status_text():
+                    until(lambda:"불러오는 중" not in status_text(),
+                          "browse-over-20k Shell page did not settle",16)
             shown=max(shown,footer_count())
             assert shown>20000,(progress_text(),footer_count())
             def previous_visible():
