@@ -828,12 +828,21 @@ namespace winrt::FlyExplorer::implementation
         for(auto const& old:view.SelectedItems()){
             auto row=old.try_as<ListViewItem>();
             if(!row||!row.Tag())continue;
-            auto index=winrt::unbox_value<uint32_t>(row.Tag());
-            if(index<ActiveWindowTab().fileLists[side].renderedPaths.size())
-                selected.push_back(ActiveWindowTab().fileLists[side].renderedPaths[index]);
+            const auto logical=winrt::unbox_value<std::uint64_t>(row.Tag());
+            auto const& renderedState=ActiveWindowTab().fileLists[side];
+            const auto base=static_cast<std::uint64_t>(
+                renderedState.renderedBaseOffset);
+            if(logical>=base){
+                const auto resident=logical-base;
+                if(resident<renderedState.renderedPaths.size())
+                    selected.push_back(
+                        renderedState.renderedPaths[
+                            static_cast<std::size_t>(resident)]);
+            }
         }
         view.Items().Clear();
         ActiveWindowTab().fileLists[side].renderedPaths.clear();
+        ActiveWindowTab().fileLists[side].renderedBaseOffset=snapshot.baseOffset;
         ActiveWindowTab().fileLists[side].renderedPaths.reserve(items.size());
         for(auto const& item:items)
             ActiveWindowTab().fileLists[side].renderedPaths.push_back(item.parsingName);
@@ -1062,7 +1071,8 @@ namespace winrt::FlyExplorer::implementation
             }
             Microsoft::UI::Xaml::Automation::AutomationProperties::SetName(
                 row,hstring(label));
-            row.Tag(winrt::box_value(static_cast<uint32_t>(index)));
+            row.Tag(winrt::box_value(
+                static_cast<std::uint64_t>(snapshot.logicalIndex(index))));
             const auto weak=get_weak();
             row.Tapped([weak,side](IInspectable const&,
                 Microsoft::UI::Xaml::Input::TappedRoutedEventArgs const&){
@@ -1624,10 +1634,13 @@ namespace winrt::FlyExplorer::implementation
         if(!picked)return;
         const auto row=picked.try_as<ListViewItem>();
         if(!row || !row.Tag())return;
-        const auto index=winrt::unbox_value<uint32_t>(row.Tag());
+        const auto logical=winrt::unbox_value<std::uint64_t>(row.Tag());
         auto& session=Current();
-        const auto& entries=session.snapshot().children;
-        if(index>=entries.size() || !entries[index].isFolder())return;
+        const auto& snapshot=session.snapshot();
+        std::size_t index=0;
+        if(!snapshot.residentIndex(logical,index))return;
+        const auto& entries=snapshot.children;
+        if(!entries[index].isFolder())return;
         // The native engine CLONES this original absolute Shell PIDL
         // before updating session state; no dangling shell pointers.
         QueuePidl(side,fxfile::shellnav::Location(entries[index].id),
