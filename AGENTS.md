@@ -202,6 +202,17 @@ Do not use chatgpt-codex-connector unless the user explicitly requests or
 permits it for the task. Normal GitHub connector/API access is allowed when
 appropriate.
 
+If the available GitHub connector/API does not expose a repository operation
+needed for the current task, **do not stop at the connector gap and do not hunt
+for an unrelated control path first**. Use this repository's
+`control/remote-shell` request slot and persistent
+`C:\\dev\\flyExplorer` checkout as the next fallback for repository-scoped Git,
+private Actions/run/artifact inspection, branch cleanup and other shell-capable
+operations. Only move to RDC/desktop-control or another control plane when the
+remote-shell path itself cannot perform the operation or the repository runner
+is unavailable. A missing connector method is not, by itself, a reason to leave
+a required repository action undone.
+
 The repository-scoped self-hosted Windows runner is **not triggered by normal
 main pushes**. `.github/workflows/windows-build.yml` is manual
 `workflow_dispatch` only. Use `control/remote-shell` as the normal Windows
@@ -285,11 +296,22 @@ new remote job merely to rediscover facts already available from live main,
 CURRENT_STATUS or completed run logs.
 
 Classify each failure once from its first relevant error: product defect,
-environment limit, or fixture/harness defect. Do **not** rerun the same GitHub
-Actions revision to see whether it passes on a second attempt. Same-revision
-Actions reruns are prohibited for normal development. A follow-up Actions run
-must correspond to a real new revision that addresses an identified cause; it
-is a new acceptance run, not a retry.
+environment limit, or fixture/harness defect. For an unexplained GUI/input
+failure, the **first diagnostic successor must locate the broken layer before
+changing the interaction strategy**. Prefer a minimal environment-gated,
+test-only diagnostic that records in one run: event entry/exit, resolved hit
+target or geometry, drag/button/capture state, pointer or cursor coordinates and
+deltas, and the observable UI result. Use that evidence to prove whether the
+break is in event delivery, hit testing, drag-state transport, coordinate
+conversion, model mutation, or rendering. Do not spend successive Windows runs
+on alternative event/capture implementations while that boundary is still
+unknown. Diagnostics must be inert in normal product runs and should be removed
+or kept strictly gated once the cause is known.
+
+Do **not** rerun the same GitHub Actions revision to see whether it passes on a
+second attempt. Same-revision Actions reruns are prohibited for normal
+development. A follow-up Actions run must correspond to a real new revision
+that addresses an identified cause; it is a new acceptance run, not a retry.
 
 ### Mechanical validation-churn guard
 

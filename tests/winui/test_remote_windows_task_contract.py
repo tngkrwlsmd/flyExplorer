@@ -191,6 +191,28 @@ class RemoteWindowsTaskContractTests(unittest.TestCase):
         )
         self.assertIn("RDC/desktop-control is supplementary", self.efficiency)
 
+    def test_missing_github_connector_operation_falls_back_to_remote_shell(self):
+        for text in (self.agents, self.efficiency, self.project):
+            normalized = " ".join(text.split())
+            self.assertIn("GitHub connector/API does not expose", normalized)
+            self.assertIn("`control/remote-shell`", normalized)
+        self.assertIn("missing connector method", " ".join(self.agents.split()))
+        self.assertIn("Git/branch cleanup", " ".join(self.project.split()))
+
+    def test_gui_input_failure_requires_layered_first_diagnostic(self):
+        agents = " ".join(self.agents.split())
+        efficiency = " ".join(self.efficiency.split())
+        project = " ".join(self.project.split())
+        for normalized in (agents, efficiency, project):
+            self.assertIn("environment-gated", normalized)
+            self.assertIn("event entry", normalized)
+            self.assertIn("hit", normalized)
+            self.assertIn("coordinates", normalized)
+            self.assertIn("deltas", normalized)
+        self.assertIn("where the signal stops", efficiency)
+        self.assertIn("failing layer", project)
+        self.assertIn("before changing the interaction strategy", agents)
+
     def test_resume_protocol_blocks_stale_rework_and_fixture_loops(self):
         for text in (self.agents, self.efficiency):
             normalized = " ".join(text.split())

@@ -262,9 +262,16 @@ reset/clean/checkout-overwrite to erase unexpected local changes. Fast-forward
 a clean checkout when appropriate. During the inner loop, prefer the smallest
 meaningful checks first, then incremental build and targeted owned GUI/visual
 acceptance. Keep the same controlled fixture/DPI/window geometry when comparing
-against Windows 11 Explorer. RDC/desktop-control is supplementary; use it only
-for interactions that shell, UIA or screenshot evidence cannot exercise or
-when the repository dispatch path is unavailable.
+against Windows 11 Explorer.
+
+If the available GitHub connector/API does not expose a repository operation
+needed to continue the task, treat that as a tooling gap, not a task blocker.
+Use `control/remote-shell` next for shell-capable repository operations,
+including Git/branch cleanup and private run/artifact inspection when practical.
+Do not spend tool calls searching unrelated APIs or switch to desktop control
+while the repository remote shell can perform the operation. RDC/desktop-control
+is supplementary; use it only for interactions that shell, UIA or screenshot
+evidence cannot exercise or when the repository dispatch path is unavailable.
 
 Do not push each intermediate edit merely because direct-main is the normal Git
 policy. Finish and verify the logical unit in the remote checkout first. Fetch
@@ -281,6 +288,15 @@ for normal Windows iteration: investigate, edit, compile, run focused native
 tests, inspect runtime output, exercise targeted UIA and capture/review owned
 screenshots there. Batch related diagnostics so one remote-shell request answers
 the current hypothesis instead of spawning many micro-workflows.
+
+For the first unexplained GUI/input failure, make the next focused diagnostic
+answer **where the signal stops** before trying another interaction mechanism.
+Prefer environment-gated diagnostics that expose event entry, hit target or
+geometry, drag/button/capture state, cursor/pointer coordinates and deltas, and
+the resulting UI/model boundary in the same run. Do not iterate
+`Thumb -> capture -> root route -> another route`-style hypotheses one run at a
+time without first proving which layer failed. Once the layer is known, make
+one concrete fix and invalidate only the evidence affected by that fix.
 
 For a given Git revision, do not rerun a failed job or workflow on that same
 SHA. Windows Actions are not automatically started by pushes. If a deliberate

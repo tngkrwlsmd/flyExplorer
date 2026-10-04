@@ -239,6 +239,12 @@ directly invalidates that fixture's result.
 - The persistent `control/remote-shell` checkout is the normal Windows
   development surface. Batch only the stages that are currently required; do
   not include earlier PASS stages "for completeness".
+- If the available GitHub connector/API does not expose a repository operation
+  needed for the task, use `control/remote-shell` as the immediate
+  repository-scoped fallback when the operation is shell-capable. This includes
+  Git/branch cleanup and private run/artifact inspection when practical. Do not
+  declare the task blocked, leave required cleanup undone, or switch to
+  RDC/another control path merely because a connector method is missing.
 - **Pre-dispatch lease:** before writing `requests/remote-shell/request.json`
   or pushing the control branch, query recent Remote Windows Task runs for
   `control/remote-shell`. If any run is `queued`, `pending`, `waiting`,
@@ -267,6 +273,12 @@ directly invalidates that fixture's result.
   complete and the concrete fix is committed. A third Windows validation run
   for the same logical unit requires explicit user approval before any request
   commit. Never queue speculative successors while a predecessor is active.
+- For an unexplained GUI/input failure, the first diagnostic successor must
+  establish the failing layer before the interaction mechanism is changed.
+  Prefer environment-gated test diagnostics that capture event entry, hit
+  target/geometry, drag or button/capture state, pointer/cursor coordinates and
+  deltas, and the resulting model/UI boundary in one run. Do not burn Windows
+  runs on competing event-routing hypotheses until that boundary is proven.
 - 8,000+ and 20,000+ real-file GUI fixtures are final acceptance only. First
   prove the harness/control lifecycle on the smallest fixture that exercises
   the same path. If the expensive fixture exposes a harness defect after
