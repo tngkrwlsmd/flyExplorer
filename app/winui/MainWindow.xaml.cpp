@@ -739,31 +739,72 @@ namespace winrt::FlyExplorer::implementation
         ActiveWindowTab().fileLists[side].nameColumnWidth=width;
         if(mColumnControlsReady)ApplyDetailColumnLayout(side);
     }
-    void MainWindow::OnDetailColumnResizeDragDelta(
+    void MainWindow::OnDetailColumnResizePointerPressed(
         IInspectable const& sender,
-        Microsoft::UI::Xaml::Controls::Primitives::DragDeltaEventArgs const& args){
-        auto thumb=sender.try_as<Microsoft::UI::Xaml::Controls::Primitives::Thumb>();
+        Microsoft::UI::Xaml::Input::PointerRoutedEventArgs const& args){
+        auto thumb=sender.try_as<
+            Microsoft::UI::Xaml::Controls::Primitives::Thumb>();
         if(!thumb||!thumb.Tag())return;
         const auto tag=std::wstring(
             winrt::unbox_value<hstring>(thumb.Tag()).c_str());
         if(tag.size()!=3||tag[1]!=L','||
            tag[0]<L'0'||tag[0]>L'1'||
            tag[2]<L'0'||tag[2]>L'2')return;
+        const auto point=args.GetCurrentPoint(RootShell());
+        if(!point.Properties().IsLeftButtonPressed())return;
         const int side=tag[0]-L'0';
         const int column=tag[2]-L'0';
         if(ActiveWindowTab().model.activePane!=side)ActivatePane(side);
-        auto& state=ActiveWindowTab().fileLists[side];
-        const auto delta=args.HorizontalChange();
-        if(column==0)
+        mDetailColumnPointerDrag=true;
+        mDetailColumnPointerSide=side;
+        mDetailColumnPointerColumn=column;
+        mDetailColumnPointerLastX=point.Position().X;
+        thumb.CapturePointer(args.Pointer());
+        args.Handled(true);
+    }
+    void MainWindow::OnDetailColumnResizePointerMoved(
+        IInspectable const& sender,
+        Microsoft::UI::Xaml::Input::PointerRoutedEventArgs const& args){
+        if(!mDetailColumnPointerDrag)return;
+        auto thumb=sender.try_as<
+            Microsoft::UI::Xaml::Controls::Primitives::Thumb>();
+        if(!thumb)return;
+        const auto point=args.GetCurrentPoint(RootShell());
+        if(!point.Properties().IsLeftButtonPressed())return;
+        const auto currentX=point.Position().X;
+        const auto delta=currentX-mDetailColumnPointerLastX;
+        if(std::abs(delta)<0.25)return;
+        mDetailColumnPointerLastX=currentX;
+        auto& state=ActiveWindowTab().fileLists[mDetailColumnPointerSide];
+        if(mDetailColumnPointerColumn==0)
             state.nameColumnWidth=(std::clamp)(
                 state.nameColumnWidth+delta,120.0,360.0);
-        else if(column==1)
+        else if(mDetailColumnPointerColumn==1)
             state.typeColumnWidth=(std::clamp)(
                 state.typeColumnWidth+delta,96.0,320.0);
-        else
+        else if(mDetailColumnPointerColumn==2)
             state.sizeColumnWidth=(std::clamp)(
                 state.sizeColumnWidth+delta,64.0,180.0);
-        ApplyDetailColumnLayout(side);
+        ApplyDetailColumnLayout(mDetailColumnPointerSide);
+        args.Handled(true);
+    }
+    void MainWindow::OnDetailColumnResizePointerReleased(
+        IInspectable const& sender,
+        Microsoft::UI::Xaml::Input::PointerRoutedEventArgs const& args){
+        auto thumb=sender.try_as<
+            Microsoft::UI::Xaml::Controls::Primitives::Thumb>();
+        if(thumb)thumb.ReleasePointerCapture(args.Pointer());
+        mDetailColumnPointerDrag=false;
+        mDetailColumnPointerSide=-1;
+        mDetailColumnPointerColumn=-1;
+        args.Handled(true);
+    }
+    void MainWindow::OnDetailColumnResizePointerCaptureLost(
+        IInspectable const&,
+        Microsoft::UI::Xaml::Input::PointerRoutedEventArgs const&){
+        mDetailColumnPointerDrag=false;
+        mDetailColumnPointerSide=-1;
+        mDetailColumnPointerColumn=-1;
     }
     void MainWindow::OnNameFilterChanged(
         IInspectable const& sender,
