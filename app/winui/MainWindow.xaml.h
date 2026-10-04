@@ -285,7 +285,8 @@ namespace winrt::FlyExplorer::implementation
         bool mDetailColumnPointerDrag=false;
         int mDetailColumnPointerSide=-1;
         int mDetailColumnPointerColumn=-1;
-        double mDetailColumnPointerLastX=0.0;
+        LONG mDetailColumnPointerLastScreenX=0;
+        Microsoft::UI::Dispatching::DispatcherQueueTimer mDetailColumnDragTimer{nullptr};
         double mShellWidth=972.0;
         std::array<int,2> mDetailLayoutProfiles{{-1,-1}};
         int DetailLayoutProfile() const;
