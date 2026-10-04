@@ -236,13 +236,44 @@ def main():
             assert not previous.exists(timeout=.2) or not previous.is_visible()
             filt=fresh_parent().child_window(auto_id="LeftNameFilterBox")
             assert filt.exists(timeout=.2)
+            before_filter=(status_text(),footer_count(),fresh_first_row())
             filt.set_edit_text("20499")
             until(lambda:filt.get_value()=="20499",
                   "indexed name filter input did not accept the target",5)
-            until(lambda:"bench-20499.txt" in fresh_first_row(),
-                  "indexed name filter did not project the target row",12)
-            until(lambda:footer_count()==1,
-                  "indexed name filter footer did not report one item",5)
+            print("OWNED_LARGE_INDEX_FILTER_INPUT_ACCEPTED",True,flush=True)
+            try:
+                until(lambda:
+                      status_text()!=before_filter[0] or
+                      footer_count()!=before_filter[1] or
+                      fresh_first_row()!=before_filter[2],
+                      "indexed name filter event produced no observable change",5)
+            except Exception:
+                print("OWNED_LARGE_INDEX_FILTER_EVENT_STATE",
+                      repr(filt.get_value()),repr(status_text()),
+                      footer_count(),repr(fresh_first_row()),flush=True)
+                raise
+            print("OWNED_LARGE_INDEX_FILTER_EVENT_STATE",
+                  repr(filt.get_value()),repr(status_text()),
+                  footer_count(),repr(fresh_first_row()),flush=True)
+            try:
+                until(lambda:footer_count()==1,
+                      "indexed name filter model count did not become one",5)
+            except Exception:
+                print("OWNED_LARGE_INDEX_FILTER_MODEL_STATE",
+                      repr(status_text()),footer_count(),
+                      repr(fresh_first_row()),flush=True)
+                raise
+            print("OWNED_LARGE_INDEX_FILTER_MODEL_STATE",
+                  repr(status_text()),footer_count(),
+                  repr(fresh_first_row()),flush=True)
+            try:
+                until(lambda:"bench-20499.txt" in fresh_first_row(),
+                      "indexed name filter did not project the target row",12)
+            except Exception:
+                print("OWNED_LARGE_INDEX_FILTER_PROJECTION_STATE",
+                      repr(status_text()),footer_count(),
+                      repr(fresh_first_row()),flush=True)
+                raise
             filt.set_edit_text("")
             until(lambda:"bench-9999.txt" in fresh_first_row(),
                   "clearing indexed filter did not restore indexed name sort",12)
