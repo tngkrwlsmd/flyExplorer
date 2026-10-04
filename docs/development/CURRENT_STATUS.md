@@ -283,16 +283,20 @@ behavior also passed, the WinUI process exited 0 and the protected legacy
 profile remained unchanged. Repeated standalone SearchPanel discovery failures
 were treated as a fixture boundary and abandoned rather than retried.
 
-Local large-folder coverage now includes an owned 8,000-file filesystem
-folder on paged isolated Shell transport. Product revision
-`fb92b9dd03c90ce3e3434270bff3cc5be8714cad` replaces the former 6,000-entry single-frame response with
-protocol-v3 offset pages capped at 1,024 entries and 8 MiB each, aggregated by
-the supervisor up to 20,000 entries. Remote run `37174929070` passed Release
-build, helper protocol-v3 regression, 8,000-item navigation, name-descending
-sort to `bench-7999.txt`, and the existing progressive render paging
-`160/8000 -> 320/8000`. The model still receives one bounded aggregate
-snapshot; true model-level streaming virtualization remains a separate gap.
+Historical transport-paging evidence remains recorded on product revision
+`fb92b9dd03c90ce3e3434270bff3cc5be8714cad`: protocol-v3 introduced 1,024-entry / 8 MiB helper pages and
+run `37174929070` proved an owned 8,000-file folder before model-level
+streaming landed. That older revision aggregated pages in the supervisor; it is
+not the current architecture.
 
+Current main follows the later `f7f3674e5271c17652a865cf2ed499185983d1eb` model-level streaming path
+described above: the first page is accepted immediately and continuations
+append on demand. The remaining scale limit is different. Accepted children
+are still retained in the navigation session and continuation stops at the
+20,000-entry navigation safety ceiling. Logical enumeration offsets are now
+separate from resident child count as the prerequisite for a future bounded
+resident window. 20,000+ browsing and global sort/filter semantics beyond a
+fully resident model are not yet certified.
 
 Persistent WinUI bookmarks are accepted on main. Automatic Windows run
 `37133980876` completed successfully for main revision
