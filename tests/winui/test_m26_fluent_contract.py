@@ -114,7 +114,7 @@ class FluentShellContract(unittest.TestCase):
         self.assertNotIn("RootShell().AddHandler(",impl)
         self.assertNotIn("VisualTreeHelper::GetParent",impl)
         self.assertIn('L"ColumnResizeHitTarget"',impl)
-        self.assertNotIn(impl)
+        self.assertNotIn("IsLeftButtonPressed()",impl)
         self.assertIn("CapturePointer(args.Pointer())",impl)
         self.assertIn("ReleasePointerCapture(args.Pointer())",impl)
         self.assertIn("ApplyDetailColumnLayout(int side)",impl)
