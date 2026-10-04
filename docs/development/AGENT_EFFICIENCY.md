@@ -61,11 +61,21 @@ remote Windows tasks and local long-running commands, not only subprocesses.
 Do not poll every few seconds, alternate status/log-tail probes, or repeatedly
 read the same run while it is normally progressing.
 
+For builds/remote tasks whose expected runtime is within a few minutes, the
+normal wait budget is up to three minutes. Establish the run once, let it run
+normally, and make one final/blocking read near the end of that window instead
+of repeatedly checking it. Completion observed earlier may be consumed
+immediately; the three-minute rule is a maximum wait budget, not a requirement
+to sleep after a run is already known to be complete.
+
 For Actions specifically:
 - after triggering or observing a long run, record run ID, target SHA, scope and
   start/current state;
 - do not issue short-interval status reads while the normal runtime has not
   plausibly elapsed;
+- for a normal sub-three-minute build, do not declare a resume checkpoint merely
+  because the first read still says running; allow the at-most-three-minute
+  wait budget and then make the final read;
 - make at most one later final/blocking status/log read unless new evidence
   indicates an actual stall or a distinct failure hypothesis;
 - if that read still shows queued/running, end the response with the resume
@@ -178,9 +188,14 @@ triggers `Remote Windows Task` on the repository-scoped interactive Windows
 VM and runs in `C:\dev\flyExplorer` by default. Never merge request commits
 into main. Product main continues to record only verified logical units, while
 the control branch records command history separately. Manual
-`workflow_dispatch` remains available for human-operated commands. Use the
-persistent checkout to preserve incremental build state and a stable
-interactive desktop between iterations. Each job is not a persistent terminal
+`workflow_dispatch` remains available for human-operated commands. The
+`control/remote-shell` branch is intentionally a minimal control-plane tree:
+it carries the remote-shell workflow plus request slot, not a copy of product
+source. The persistent checkout fetches live `main` for product work. Do not
+create `remote/**` command branches, and delete temporary `work/*` branches
+after their accepted tree lands on main. Use the persistent checkout to
+preserve incremental build state and a stable interactive desktop between
+iterations. Each job is not a persistent terminal
 session, so default to one batched request containing investigation, edit,
 focused tests, incremental build and owned GUI/evidence when practical. Use a
 second request only when the first result materially determines the next step;
