@@ -180,16 +180,12 @@ class RemoteWindowsTaskContractTests(unittest.TestCase):
             self.assertIn("final acceptance", normalized)
 
     def test_guidance_prefers_request_slot_and_keeps_rdc_auxiliary(self):
-        self.assertIn(
-            "`control/remote-shell` request slot",
-            self.agents,
-        )
-        self.assertIn("RDC or another desktop-control path is a supplementary tool", self.agents)
-        self.assertIn(
-            "`control/remote-shell` request slot",
-            self.efficiency,
-        )
-        self.assertIn("RDC/desktop-control is supplementary", self.efficiency)
+        agents = " ".join(self.agents.split())
+        efficiency = " ".join(self.efficiency.split())
+        self.assertIn("`control/remote-shell` request slot", agents)
+        self.assertIn("RDC or another desktop-control path is a supplementary tool", agents)
+        self.assertIn("`control/remote-shell` request slot", efficiency)
+        self.assertIn("RDC/desktop-control is supplementary", efficiency)
 
     def test_missing_github_connector_operation_falls_back_to_remote_shell(self):
         for text in (self.agents, self.efficiency, self.project):
