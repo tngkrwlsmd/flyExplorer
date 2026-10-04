@@ -324,21 +324,29 @@ def main():
         if args.items==2300:
             filt=parent.child_window(auto_id="LeftNameFilterBox")
             assert filt.exists(timeout=.2)
-            filt.set_edit_text("2299")
+            files=parent.child_window(auto_id="LeftFiles")
+            files.set_focus()
+            keyboard.send_keys("^+f")
+            until(lambda:filt.has_keyboard_focus(),
+                  "Ctrl+Shift+F did not reveal and focus the owned pane name filter",5)
+            keyboard.send_keys("2299")
+            until(lambda:filt.get_value()=="2299",
+                  "keyboard name filter input did not accept the target",5)
             until(lambda:"bench-2299.txt" in first_row() and
                   (not parent.child_window(
                        auto_id="LeftLoadMoreButton").exists(timeout=.1) or
                    not parent.child_window(
                        auto_id="LeftLoadMoreButton").is_visible()),
                   "native file-name filter must not mutate model or page",9)
-            filt.set_edit_text("")
+            keyboard.send_keys("^a{BACKSPACE}")
+            until(lambda:filt.get_value()=="",
+                  "keyboard name filter clear did not empty the editor",5)
             until(lambda:"bench-2299.txt" in first_row(),
                   "clearing pane filter failed to restore sorted native snapshot",10)
-            files=parent.child_window(auto_id="LeftFiles")
             files.set_focus()
             keyboard.send_keys("^+f")
             until(lambda:filt.has_keyboard_focus(),
-                  "Ctrl+Shift+F did not focus the owned pane name filter",5)
+                  "Ctrl+Shift+F did not refocus the owned pane name filter",5)
             print("OWNED_LARGE_CTRL_SHIFT_F_FILTER_FOCUS",True,flush=True)
             print("OWNED_LARGE_PROGRESSIVE_PAGE_FILTER_RESET",True,flush=True)
         assert (folder/"bench-0000.txt").read_text(encoding="utf-8").startswith(
