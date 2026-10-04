@@ -1,15 +1,25 @@
 {
-  "request_id": "large-folder-resident-window-cleanup-001",
+  "request_id": "large-folder-over-20k-browse-001",
   "expected_main_sha": "5eb0fbb50c627a736e8e6ca2bb4d9793ebad33ea",
-  "candidate_sha": "5eb0fbb50c627a736e8e6ca2bb4d9793ebad33ea",
-  "logical_unit": "resident-window-branch-cleanup",
-  "configuration": "none",
+  "candidate_sha": "924a035e244fb547662bedb7094f45b543396a36",
+  "logical_unit": "large-folder-over-20k-browse",
+  "configuration": "Release",
   "validation_kind": [
-    "none"
+    "source",
+    "build",
+    "native",
+    "gui",
+    "visual"
   ],
-  "invalidated_evidence": {},
+  "invalidated_evidence": {
+    "source": "Shell browse/full-model constants, controller ceiling routing, UI refusal semantics, TabView height and focused contracts changed",
+    "build": "C++ controller/supervisor/helper/MainWindow inputs and XAML changed",
+    "native": "helper request validation now permits bounded offsets above the 20,000 complete-model ceiling",
+    "gui": "sequential resident-window browsing must cross 20,000 while global sort refuses incomplete >20k models",
+    "visual": "folder TabView height changed from 28 to 36 to remove the clipped pane-tab title reported by the user"
+  },
   "retry_reason": "",
   "retry_revision": "",
   "working_directory": "C:\\dev\\flyExplorer",
-  "command": "$ErrorActionPreference = \"Stop\"\ngit fetch origin main --no-tags --prune\nif ($LASTEXITCODE -ne 0) { throw \"fetch main failed\" }\nif ((git rev-parse origin/main).Trim() -ne \"5eb0fbb50c627a736e8e6ca2bb4d9793ebad33ea\") { throw \"main moved\" }\n$remote = git ls-remote --heads origin work/large-folder-resident-window\nif ($LASTEXITCODE -ne 0) { throw \"list work branch failed\" }\nif ($remote -match \"refs/heads/work/large-folder-resident-window\") {\n  git push origin --delete work/large-folder-resident-window\n  if ($LASTEXITCODE -ne 0) { throw \"work branch cleanup failed\" }\n}\ngit checkout main\nif ($LASTEXITCODE -ne 0) { throw \"checkout main failed\" }\ngit merge --ff-only origin/main\nif ($LASTEXITCODE -ne 0) { throw \"main fast-forward failed\" }\nWrite-Host \"RESIDENT_WINDOW_WORK_BRANCH_CLEANUP_PASS\"\n"
+  "command": "$ErrorActionPreference = \"Stop\"\ngit fetch origin main work/large-folder-20k-browse --no-tags --prune\nif ($LASTEXITCODE -ne 0) { throw \"fetch failed\" }\nif ((git rev-parse origin/main).Trim() -ne \"5eb0fbb50c627a736e8e6ca2bb4d9793ebad33ea\") { throw \"main moved\" }\nif ((git status --short).Count -ne 0) { throw \"dirty persistent checkout\" }\ngit checkout -B work/large-folder-20k-browse origin/work/large-folder-20k-browse\nif ($LASTEXITCODE -ne 0) { throw \"checkout candidate failed\" }\nif ((git rev-parse HEAD).Trim() -ne \"924a035e244fb547662bedb7094f45b543396a36\") { throw \"candidate mismatch\" }\n\ncmd /c test.bat source\nif ($LASTEXITCODE -ne 0) { throw \"source contracts failed\" }\n\ncmd /c build.bat Release\nif ($LASTEXITCODE -ne 0) { throw \"Release build failed\" }\n\n$env:FLY_M16_CONFIG = \"Release\"\npython -X utf8 tests\\winui\\helper\\test_process_isolation.py\nif ($LASTEXITCODE -ne 0) { throw \"helper over-20k offset regression failed\" }\n\npython -X utf8 tests\\winui\\test_large_owned_folder_gui.py --items 20500 --configuration Release --browse-over-complete-model\nif ($LASTEXITCODE -ne 0) { throw \"browse-over-20k GUI/visual acceptance failed\" }\n\ngit diff --check origin/main..HEAD\nif ($LASTEXITCODE -ne 0) { throw \"diff check failed\" }\nWrite-Host \"LARGE_FOLDER_OVER_20K_BROWSE_ACCEPTANCE_PASS\"\n"
 }
