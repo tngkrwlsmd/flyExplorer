@@ -124,19 +124,17 @@ void MainWindow::RunTransfer(fxfile::shelltransfer::Kind kind){
   req.destination=other.filesystemPaths[other.active];
  }
  auto list=side==0?LeftFiles():RightFiles();
- auto const& snapshot=pane.tabs[tab].snapshot();
- auto const& items=snapshot.children;
+ auto const& session=pane.tabs[tab];
  for(auto const& value:list.SelectedItems()){
   const auto row=value.try_as<ListViewItem>();
   if(!row||!row.Tag()){StatusText().Text(L"선택한 항목을 읽지 못했습니다.");return;}
   const auto logical=winrt::unbox_value<std::uint64_t>(row.Tag());
-  std::size_t index=0;
-  if(!snapshot.residentIndex(logical,index)||!items[index].isFileSystem()||
-     items[index].parsingName.empty()){
+  auto const* indexed=session.indexedItem(static_cast<std::size_t>(logical));
+  if(!indexed||!indexed->isFileSystem()||indexed->parsingName.empty()){
    StatusText().Text(L"가상 Shell 항목은 이 파일 작업에서 지원하지 않습니다.");
    return;
   }
-  req.sources.push_back(items[index].parsingName);
+  req.sources.push_back(indexed->parsingName);
   if(req.sources.size()>32){
    StatusText().Text(L"파일 작업 한 번에 최대 32개 항목을 선택할 수 있습니다.");
    return;
@@ -308,18 +306,16 @@ bool MainWindow::CopySelectedToWindowsClipboard(int side,bool cut){
   StatusText().Text(L"폴더를 완전히 불러온 후 항목을 선택하세요.");return false;
  }
  const auto view=side==0?LeftFiles():RightFiles();
- const auto& snapshot=pane.tabs[pane.active].snapshot();
- const auto& entries=snapshot.children;
+ const auto& session=pane.tabs[pane.active];
  fxfile::shellclipboard::Payload item{};
  item.move=cut;
  for(auto const& selected:view.SelectedItems()){
   auto const row=selected.try_as<ListViewItem>();
   if(!row||!row.Tag())return false;
   const auto logical=winrt::unbox_value<std::uint64_t>(row.Tag());
-  std::size_t index=0;
-  if(!snapshot.residentIndex(logical,index)||
-     !entries[index].isFileSystem())return false;
-  item.paths.push_back(entries[index].parsingName);
+  auto const* indexed=session.indexedItem(static_cast<std::size_t>(logical));
+  if(!indexed||!indexed->isFileSystem()||indexed->parsingName.empty())return false;
+  item.paths.push_back(indexed->parsingName);
   if(item.paths.size()>32)return false;
  }
  if(!fxfile::shellclipboard::valid(item)){
@@ -409,12 +405,10 @@ void MainWindow::OnExternalWindowsContextMenu(
  auto row=list.SelectedItems().GetAt(0).try_as<ListViewItem>();
  if(!row||!row.Tag())return;
  const auto logical=winrt::unbox_value<std::uint64_t>(row.Tag());
- auto const& snapshot=pane.tabs[pane.active].snapshot();
- std::size_t index=0;
- if(!snapshot.residentIndex(logical,index)||
-    !snapshot.children[index].isFileSystem())return;
- auto const& items=snapshot.children;
- auto path=items[index].parsingName;
+ auto const& session=pane.tabs[pane.active];
+ auto const* indexed=session.indexedItem(static_cast<std::size_t>(logical));
+ if(!indexed||!indexed->isFileSystem()||indexed->parsingName.empty())return;
+ auto path=indexed->parsingName;
  auto const value=std::filesystem::path(path);
  if(!value.is_absolute()||value.lexically_normal().native()!=path||
     path.size()>1024)return;
