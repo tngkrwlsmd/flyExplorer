@@ -1012,7 +1012,7 @@ namespace winrt::FlyExplorer::implementation
             state.visibleCount=160;
             state.streamToComplete=false;
             state.indexToComplete=false;
-            state.indexedNameSort=false;
+            state.indexedNameSort=state.sortMode<=1;
             state.indexedNameProjection=false;
             state.fullModelLimitReached=false;
         }
@@ -1590,11 +1590,17 @@ namespace winrt::FlyExplorer::implementation
         std::size_t count=snapshot.children.size();
         bool incomplete=snapshot.truncated;
         if(state.visibleRoute==pane.routeIds[pane.active]&&state.visibleTab==pane.active){
+            const auto& session=pane.tabs[pane.active];
+            const bool indexedComplete=
+                state.indexedNameProjection&&!state.indexToComplete&&
+                session.indexedFrontier()==snapshot.nextOffset;
             if(state.filenameFilter.empty()){
                 count=snapshot.nextOffset;
+                if(indexedComplete)incomplete=false;
             }else{
                 count=state.filteredCount;
-                incomplete=incomplete||snapshot.baseOffset||
+                incomplete=indexedComplete?false:
+                    incomplete||snapshot.baseOffset||
                     snapshot.residentEndOffset()<snapshot.nextOffset;
             }
         }
