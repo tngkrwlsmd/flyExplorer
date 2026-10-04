@@ -535,22 +535,52 @@ namespace winrt::FlyExplorer::implementation
         }
         if(completed.kind==Kind::Extended){
             if(completed.active){
+                using PageDirection=
+                    fxfile::previewnav::ShellNavigationController::PageDirection;
+                auto& state=ActiveWindowTab().fileLists[completed.side];
+                auto& pane=ActiveWindowTab().model.panes[completed.side];
+                auto& session=pane.tabs[pane.active];
+                if(!state.streamToComplete&&state.sortMode==0&&
+                   state.filenameFilter.empty()){
+                    if(completed.pageDirection==PageDirection::Forward){
+                        const auto evicted=session.trimResidentFront(
+                            fxfile::shellnav::kResidentWindowEntries);
+                        if(evicted){
+                            state.visibleCount=state.visibleCount>evicted?
+                                state.visibleCount-evicted:
+                                (std::min)(
+                                    static_cast<std::size_t>(160),
+                                    session.snapshot().children.size());
+                        }
+                    }else if(completed.pageDirection==PageDirection::Backward){
+                        session.trimResidentBack(
+                            fxfile::shellnav::kResidentWindowEntries);
+                        state.visibleCount=(std::min)(
+                            state.visibleCount,
+                            session.snapshot().children.size());
+                    }
+                }
                 ClearFileDetails(completed.side);
                 FillFiles(completed.side);
                 UpdateSelectionChrome();
                 UpdateFooterSummary();
-                auto& state=ActiveWindowTab().fileLists[completed.side];
-                auto const& pane=ActiveWindowTab().model.panes[completed.side];
-                auto const& snapshot=pane.tabs[pane.active].snapshot();
-                if(state.streamToComplete&&snapshot.truncated){
+                auto const& snapshot=session.snapshot();
+                const bool incomplete=
+                    snapshot.baseOffset||
+                    snapshot.residentEndOffset()<snapshot.nextOffset||
+                    snapshot.truncated;
+                if(state.streamToComplete&&incomplete){
                     if(QueueNextFolderPage(completed.side,true))return;
                     state.streamToComplete=false;
-                }else if(!snapshot.truncated){
+                }else if(!incomplete){
                     state.streamToComplete=false;
                 }
-                StatusText().Text(snapshot.truncated?
+                StatusText().Text(
+                    completed.pageDirection==PageDirection::Backward?
+                    L"폴더의 이전 항목 창을 불러왔습니다.":
+                    snapshot.truncated?
                     L"폴더의 다음 항목 페이지를 불러왔습니다.":
-                    L"폴더의 모든 스트리밍 항목을 불러왔습니다.");
+                    L"폴더의 현재 스트리밍 항목을 불러왔습니다.");
             }
             return;
         }
