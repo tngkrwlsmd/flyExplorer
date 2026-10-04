@@ -628,7 +628,7 @@ int wmain(int argc,wchar_t** argv) {
        (req.type==kAbsolutePidl && (!req.length||req.length>kMaxPidl)) ||
        (req.type!=kPath && req.type!=kAbsolutePidl)||
        !req.limit||req.limit>kMaxPageEntries||
-       req.offset>kMaxAggregateEntries)return 4;
+       req.offset>kMaxNavigationEntries)return 4;
     std::wstring parsing;
     std::vector<unsigned char> pidlBytes;
     if(req.type==kPath){
