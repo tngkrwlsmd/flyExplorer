@@ -96,7 +96,9 @@ def main(config="Release"):
             y=(box.top+box.bottom)//2
             mouse.move(coords=(x,y))
             mouse.press(button="left",coords=(x,y))
-            mouse.move(coords=(x+delta,y),duration=.35)
+            for step in range(1,6):
+                mouse.move(coords=(x+round(delta*step/5),y))
+                time.sleep(.07)
             mouse.release(button="left",coords=(x+delta,y))
             eventually(lambda:element(next_header_id).rectangle().left>=start+delta-8,
                        thumb_id+" drag did not resize the next column boundary",8)
