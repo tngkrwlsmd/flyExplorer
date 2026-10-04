@@ -47,17 +47,15 @@ void MainWindow::BeginFileNameCommand(fxfile::filecommand::Kind kind){
    return;
   }
   const auto logical=winrt::unbox_value<std::uint64_t>(row.Tag());
-  const auto& snapshot=pane.tabs[tab].snapshot();
-  std::size_t index=0;
-  if(!snapshot.residentIndex(logical,index)||
-     !snapshot.children[index].isFileSystem()||
-     snapshot.children[index].parsingName.empty()){
+  auto const* indexed=pane.tabs[tab].indexedItem(
+      static_cast<std::size_t>(logical));
+  if(!indexed||!indexed->isFileSystem()||indexed->parsingName.empty()){
    StatusText().Text(L"이 항목은 이름을 변경할 수 없습니다.");
    return;
   }
   try{initial=std::filesystem::path(
-          snapshot.children[index].parsingName).filename().wstring();}
-  catch(...){initial=snapshot.children[index].label;}
+          indexed->parsingName).filename().wstring();}
+  catch(...){initial=indexed->label;}
  }
  fileBar()->BeginNameEdit(kind==fxfile::filecommand::Kind::CreateFolder?0:1,hstring(initial));
  StatusText().Text(kind==fxfile::filecommand::Kind::CreateFolder?
@@ -95,15 +93,13 @@ void MainWindow::ExecuteFileCommand(fxfile::filecommand::Kind kind){
          return;
      }
      const auto logical=winrt::unbox_value<std::uint64_t>(row.Tag());
-     const auto& snapshot=pane.tabs[tab].snapshot();
-     std::size_t index=0;
-     if(!snapshot.residentIndex(logical,index)||
-        !snapshot.children[index].isFileSystem()||
-        snapshot.children[index].parsingName.empty()){
+     auto const* indexed=pane.tabs[tab].indexedItem(
+         static_cast<std::size_t>(logical));
+     if(!indexed||!indexed->isFileSystem()||indexed->parsingName.empty()){
          StatusText().Text(L"가상 Shell 항목은 이 파일 작업에서 변경할 수 없습니다.");
          return;
      }
-     request.source=snapshot.children[index].parsingName;
+     request.source=indexed->parsingName;
  }
  auto dispatch=DispatcherQueue();
  FileOperationController::Post post=[dispatch](FileOperationController::UiTask task){
