@@ -299,9 +299,22 @@ Release build and helper process regression, then proved all target 2,300-file
 resident-window markers before an unrelated focused-harness tail assertion
 failed. Harness-only revision `1c5779448a8cb194ff1a506ccfdd7cf0239f8222` changed no product file;
 resume run `37182611109` reran only GUI/visual acceptance and passed eviction,
-backward/forward rehydration and complete 2,300-item global sort. Matched
-956x521 Dark-theme BEFORE/AFTER review passed with no overlap or clipping.
-The 20,000 navigation ceiling remains unchanged.
+backward/forward rehydration and complete 2,300-item global sort.
+
+The next accepted scale step is product work revision
+`924a035e244fb547662bedb7094f45b543396a36`. It separates the 20,000-entry
+complete-model ceiling from a 100,000-entry bounded sequential-browse ceiling.
+Run `37183718932` passed source contracts 228/228, the canonical Release build
+and real helper offset-over-20k regression before a GUI-harness-only failure.
+Final harness-only run `37184906352` changed no product file and proved owned
+20,500-file browsing past the complete-model boundary at logical progress
+`20480`, preserved previous-window access and refused incomplete global sort.
+The 100,000 ceiling is not itself certified.
+
+The same unit raises each pane folder `TabView` from 28 to 36 px. Matched
+956x521 Dark-theme review shows the previously clipped folder-tab caption fully
+visible without moving or clipping the Name/Type/Size header row.
+`VISUAL ACCEPTANCE: PASS`.
 
 Remote run `37177222154` passed canonical structure 4/4, source contracts
 223/223, the canonical Release build, the real helper protocol-v3 process
@@ -314,10 +327,12 @@ kept protected legacy settings unchanged and exited normally. `git diff
 --check` passed.
 
 This closes the prior "model waits for the full aggregated transport snapshot"
-gap. It does not make enumeration unbounded: the 20,000-entry navigation-model
-ceiling remains a deliberate safety bound, and full-model global sort/filter
-still requires completing pages up to that bound. Network/virtual provider
-behavior and sustained thumbnail-cache behavior remain separate open gates.
+gap. It does not make enumeration unbounded. Ordinary resident-window browsing
+is bounded by `kMaxBrowseEntries=100000`, while complete-model global
+sort/filter remains bounded by `kMaxCompleteModelEntries=20000`. Do not claim
+100,000-item acceptance from the constant alone: current owned GUI evidence
+proves 20,500-file browsing only. Network/virtual provider behavior and
+sustained thumbnail-cache behavior remain separate open gates.
 
 Paged isolated Shell enumeration beyond the former 6,000-entry single-frame
 ceiling was first accepted on product revision `fb92b9dd03c90ce3e3434270bff3cc5be8714cad`. That revision introduced
@@ -332,14 +347,16 @@ route supersession, per-page watchdog/retry, PIDL validation, checksum
 validation and exact-owned child job boundaries remain in force. The WinUI list
 still renders 160 rows initially and exposes controlled 160-row increments.
 
-Normal unsorted, unfiltered large-folder browsing now uses a 2,048-entry
+Normal unsorted, unfiltered large-folder browsing uses a 2,048-entry
 resident window. Logical `baseOffset` and `nextOffset` remain independent of
 resident child count, exact previous/known-forward ranges can be rehydrated, and
 file-list rows retain logical identities across a nonzero resident base.
-Global sort and non-empty pane filtering preserve the prior bounded full-model
-semantics by rehydrating any evicted prefix/gap before completion. Do not
-describe current main as unbounded: the 20,000-entry navigation safety ceiling
-still applies and 20,000+ browsing remains an open gate.
+Sequential browsing may now advance beyond 20,000 up to the bounded 100,000
+browse ceiling, while global sort and non-empty pane filtering retain the
+20,000 complete-model ceiling. Above that complete-model boundary those
+operations must be refused rather than applied to a partial window. Do not
+describe current main as unbounded or as 100,000-item certified; owned GUI
+acceptance currently reaches 20,500 items.
 
 The first pre-main run `37174851727` stopped at source contracts because one
 old contract asserted the pre-paging local variable name
