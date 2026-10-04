@@ -1,25 +1,19 @@
 {
-  "request_id": "large-folder-20k-browse-acceptance-001",
+  "request_id": "large-folder-over-20k-gui-resume-002",
   "expected_main_sha": "5eb0fbb50c627a736e8e6ca2bb4d9793ebad33ea",
-  "candidate_sha": "8979948f8b519c5b6cc1bd133586b2474b2690cf",
-  "logical_unit": "large-folder-20k-browse",
+  "candidate_sha": "f48b7866fc7255765b068d9349fb57968f47473d",
+  "logical_unit": "large-folder-over-20k-browse",
   "configuration": "Release",
   "validation_kind": [
-    "source",
-    "build",
-    "native",
     "gui",
     "visual"
   ],
   "invalidated_evidence": {
-    "source": "folder-tab XAML height, split complete-model/browse ceilings, controller ceiling routing and large-folder contracts changed",
-    "build": "WinUI XAML/C++ plus Shell helper/supervisor wire-bound constants changed",
-    "native": "helper and supervisor now accept exact page offsets above the 20,000 full-model ceiling up to the bounded 100,000 browse ceiling",
-    "gui": "owned 20,500-file navigation must pass the 20,000 frontier while retaining backward resident-window navigation and refusing incomplete global sort",
-    "visual": "folder-tab height changed from 28 to 36 to remove the clipped tab caption above the Name header"
+    "gui": "the 20.5k probe must reacquire the owned top-level UIA window as well as child controls after repeated WinUI list rerenders",
+    "visual": "the tab-height AFTER capture is produced by this same focused GUI boundary"
   },
   "retry_reason": "",
   "retry_revision": "",
   "working_directory": "C:\\dev\\flyExplorer",
-  "command": "$ErrorActionPreference = \"Stop\"\ngit fetch origin main work/large-folder-20k-browse --no-tags --prune\nif ($LASTEXITCODE -ne 0) { throw \"fetch failed\" }\nif ((git rev-parse origin/main).Trim() -ne \"5eb0fbb50c627a736e8e6ca2bb4d9793ebad33ea\") { throw \"main moved\" }\nif ((git status --short).Count -ne 0) { throw \"dirty persistent checkout\" }\ngit checkout -B work/large-folder-20k-browse origin/work/large-folder-20k-browse\nif ($LASTEXITCODE -ne 0) { throw \"checkout candidate failed\" }\nif ((git rev-parse HEAD).Trim() -ne \"8979948f8b519c5b6cc1bd133586b2474b2690cf\") { throw \"candidate mismatch\" }\n\ncmd /c test.bat source\nif ($LASTEXITCODE -ne 0) { throw \"source contracts failed\" }\n\ncmd /c build.bat Release\nif ($LASTEXITCODE -ne 0) { throw \"Release build failed\" }\n\n$env:FLY_M16_CONFIG = \"Release\"\npython -X utf8 tests\\winui\\helper\\test_process_isolation.py\nif ($LASTEXITCODE -ne 0) { throw \"helper process-isolation regression failed\" }\n\npython -X utf8 tests\\winui\\test_large_owned_folder_gui.py --items 2300 --configuration Release --resident-window-evidence after\nif ($LASTEXITCODE -ne 0) { throw \"matched folder-tab visual acceptance failed\" }\n\npython -X utf8 tests\\winui\\test_large_owned_folder_gui.py --items 20500 --configuration Release --browse-over-complete-model\nif ($LASTEXITCODE -ne 0) { throw \"browse-over-20k acceptance failed\" }\n\ngit diff --check origin/main..HEAD\nif ($LASTEXITCODE -ne 0) { throw \"diff check failed\" }\nWrite-Host \"LARGE_FOLDER_20K_BROWSE_ACCEPTANCE_PASS\"\n"
+  "command": "$ErrorActionPreference = \"Stop\"\ngit fetch origin main work/large-folder-20k-browse --no-tags --prune\nif ($LASTEXITCODE -ne 0) { throw \"fetch failed\" }\nif ((git rev-parse origin/main).Trim() -ne \"5eb0fbb50c627a736e8e6ca2bb4d9793ebad33ea\") { throw \"main moved\" }\nif ((git status --short).Count -ne 0) { throw \"dirty persistent checkout\" }\ngit checkout -B work/large-folder-20k-browse origin/work/large-folder-20k-browse\nif ($LASTEXITCODE -ne 0) { throw \"checkout harness fix failed\" }\nif ((git rev-parse HEAD).Trim() -ne \"f48b7866fc7255765b068d9349fb57968f47473d\") { throw \"candidate mismatch\" }\n$changedProduct = git diff --name-only 924a035e244fb547662bedb7094f45b543396a36..HEAD -- app/winui src/base\nif ($LASTEXITCODE -ne 0) { throw \"product diff check failed\" }\nif ($changedProduct) { throw \"harness-only resume unexpectedly changed product files: $changedProduct\" }\nif (!(Test-Path -LiteralPath \"out\\winui\\Release\\flyExplorer.exe\")) { throw \"accepted candidate Release binary missing\" }\n\npython -X utf8 tests\\winui\\test_large_owned_folder_gui.py --items 20500 --configuration Release --browse-over-complete-model\nif ($LASTEXITCODE -ne 0) { throw \"browse-over-20k GUI/visual resume failed\" }\n\ngit diff --check origin/main..HEAD\nif ($LASTEXITCODE -ne 0) { throw \"diff check failed\" }\nWrite-Host \"LARGE_FOLDER_OVER_20K_GUI_RESUME_PASS\"\n"
 }
