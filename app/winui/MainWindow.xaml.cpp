@@ -754,7 +754,6 @@ namespace winrt::FlyExplorer::implementation
            tag[0]<L'0'||tag[0]>L'1'||
            tag[2]<L'0'||tag[2]>L'2')return;
         const auto point=args.GetCurrentPoint(RootShell());
-        if(!point.Properties().IsLeftButtonPressed())return;
         const int side=tag[0]-L'0';
         const int column=tag[2]-L'0';
         if(ActiveWindowTab().model.activePane!=side)ActivatePane(side);
@@ -770,7 +769,6 @@ namespace winrt::FlyExplorer::implementation
         Microsoft::UI::Xaml::Input::PointerRoutedEventArgs const& args){
         if(!mDetailColumnPointerDrag)return;
         const auto point=args.GetCurrentPoint(RootShell());
-        if(!point.Properties().IsLeftButtonPressed())return;
         const auto currentX=point.Position().X;
         const auto delta=currentX-mDetailColumnPointerLastX;
         if(std::abs(delta)<0.25)return;
