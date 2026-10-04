@@ -794,9 +794,10 @@ namespace winrt::FlyExplorer::implementation
     void MainWindow::OnDetailColumnResizePointerMoved(
         IInspectable const&,
         Microsoft::UI::Xaml::Input::PointerRoutedEventArgs const& args){
-        if(!mDetailColumnPointerDrag||
-           (::GetAsyncKeyState(VK_LBUTTON)&0x8000)==0)return;
-        const auto currentX=args.GetCurrentPoint(RootShell()).Position().X;
+        if(!mDetailColumnPointerDrag)return;
+        const auto point=args.GetCurrentPoint(RootShell());
+        if(!point.Properties().IsLeftButtonPressed())return;
+        const auto currentX=point.Position().X;
         const auto delta=currentX-mDetailColumnPointerLastX;
         if(std::abs(delta)<0.25)return;
         mDetailColumnPointerLastX=currentX;
