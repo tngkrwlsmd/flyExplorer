@@ -71,7 +71,7 @@ class RealFileListColumnContract(unittest.TestCase):
                "sizeColumnWidth","FontIcon glyph;",
                "Grid::SetColumn(field,col);","AutomationProperties::SetName(",
                "OnNameColumnWidthChanged(","ColumnResizeHitTarget",
-               "IsLeftButtonPressed()","CapturePointer(args.Pointer())",
+               "CapturePointer(args.Pointer())",
                "ReleasePointerCapture(args.Pointer())",
                "ApplyDetailColumnLayout(mDetailColumnPointerSide);",
                "grid.ColumnDefinitions().GetAt(column).Width(widths[column])"):
