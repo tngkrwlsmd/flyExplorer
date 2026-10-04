@@ -68,7 +68,7 @@ class RealFileListColumnContract(unittest.TestCase):
                "sizeColumnWidth","FontIcon glyph;",
                "Grid::SetColumn(field,col);","AutomationProperties::SetName(",
                "OnNameColumnWidthChanged(","RootShell().AddHandler(",
-               "GetAsyncKeyState(VK_LBUTTON)",
+               "IsLeftButtonPressed()",
                "ApplyDetailColumnLayout(mDetailColumnPointerSide);",
                "grid.ColumnDefinitions().GetAt(column).Width(widths[column])"):
    self.assertIn(item,impl)
