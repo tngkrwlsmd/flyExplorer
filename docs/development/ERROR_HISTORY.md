@@ -16,6 +16,42 @@ product state use CURRENT_STATUS.md.
 
 이 문서는 확정된 오류를 단순 수정으로 끝내지 않고, 다음 진단을 빠르게 하고 같은 계열의 결함을 사전에 막기 위한 프로젝트 기록이다.
 
+## 2026-10-04 — overlapping Remote Windows Task chain amplified one acceptance into seven runs
+
+**오류 발생**
+- 실행/프로필: Remote Windows Task #247-#253, large-folder 20k+ browse/tab-clipping acceptance.
+- 사용자에게 보인 증상: one logical unit accumulated seven Actions runs, including queued speculative successors and repeated long 20.5k GUI probes. From Actions metadata the first-to-last wall interval was about 38 minutes and the summed run durations were about 53 minutes, creating roughly hour-scale perceived delay for one task.
+
+**최초 실제 오류**
+- #247 had already passed source 228/228, canonical Release build and the real helper over-20k offset regression before the expensive GUI harness failed on a stale UIA load-more wrapper.
+- Later successors were submitted while earlier runs were still active. #251 ultimately passed the required 20k+ GUI/visual boundary. #252 then waited behind it and was rejected only after reaching the runner because its validation fingerprint duplicated #251.
+
+**원인 진단**
+- Observed: the workflow-side fingerprint guard prevents duplicate command execution but runs too late to prevent an already-created Actions run from occupying the queue.
+- Observed: the three-minute guidance was treated as a status-polling cadence instead of a no-polling observation window.
+- Observed: a 20,500-real-file final-acceptance fixture was also being used to debug UIA harness lifecycle/completion conditions.
+- Root cause: the orchestration policy lacked a mandatory client-side active-run lease and a hard per-logical-unit successor budget before writing the control-branch request.
+
+**해결 방법**
+- `AGENTS.md`, `.agent-policy/PROJECT.md` and `AGENT_EFFICIENCY.md` now require a pre-dispatch lease: query recent `control/remote-shell` runs before writing `request.json`; any queued/pending/waiting/requested/in-progress run blocks a new request.
+- The first routine read is no earlier than three minutes and a still-active result becomes a resume checkpoint instead of another same-turn polling loop.
+- One logical unit gets one primary Windows validation run plus at most one focused successor after a diagnosed completed failure. A third run requires explicit user approval before any request commit.
+- 8,000+/20,000+ real-file GUI fixtures are final acceptance only; harness lifecycle must first be proven on the smallest useful fixture.
+
+**재발 방지**
+- `test_remote_windows_task_contract.py` locks the pre-dispatch lease, no-polling interpretation, two-run budget and expensive-fixture rule into source contracts.
+- Workflow-side validation fingerprint rejection remains a second line of defense, not a substitute for the pre-dispatch check.
+
+**검증 상태**
+- Static: PASS — policy language and source-contract assertions reviewed together.
+- Compile/link: not applicable; no product/build input changed.
+- Runtime/visual: not rerun. Existing #251 success evidence is reused; creating another Windows task solely to validate the anti-churn policy would violate the policy itself.
+
+**관련 commit**
+- pending squash commit — remote-run lease policy hardening.
+
+---
+
 ## 2026-10-02 — transfer completion could skip the destination refresh
 
 **Observed problem:** an owned multi-file copy completed on disk, but the
