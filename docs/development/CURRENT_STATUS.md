@@ -152,19 +152,49 @@ bootstrap configuration.
 
 ## Latest verified evidence
 
-Large-folder resident-window prerequisites are now split from the existing
-20,000-entry ceiling without claiming that the ceiling is removed. The first
-preparation unit separates logical enumeration progress
-(`Snapshot::baseOffset/nextOffset`) from resident `children.size()`; remote run
-`37180519800` passed focused large-folder contracts, the canonical Release
-build, the isolated helper process regression, legacy-profile protection and
-`git diff --check`. The follow-up unit tags file-list rows with logical
-`uint64` item identities and resolves them through the current Snapshot before
-open/rename/transfer/clipboard/context/drag actions. Remote run `37180884833`
-passed the logical-row source contract, Release build, the existing owned M21
-selected-row rename path, process exit 0, protected legacy settings and
-`git diff --check`. No resident page eviction or 20,000+ certification is
-claimed yet.
+Bounded large-folder resident-window navigation is accepted on the product
+tree prepared at work revision `37d4cc023777c67a963710efd2e17ee7125a7cae`, with the final
+harness-only follow-up at `1c5779448a8cb194ff1a506ccfdd7cf0239f8222`. Normal unsorted,
+unfiltered browsing keeps at most 2,048 Shell children resident. Moving forward
+can evict the oldest prefix while preserving the logical enumeration frontier;
+an app-owned previous-window action requests the exact missing offset range and
+rehydrates that prefix. Moving forward again rehydrates the known tail rather
+than advancing the folder frontier twice.
+
+Operations that require the complete bounded model keep their prior semantics.
+A non-empty pane filter or global sort first rehydrates an evicted prefix and
+any known resident gap, then continues to the folder end or the existing
+20,000-entry navigation ceiling before producing the final result. The
+20,000-entry ceiling itself is unchanged; 20,000+ browsing is still not
+certified.
+
+Acceptance run `37182310190` passed source contracts (227/227), the canonical
+Release build and the real isolated-helper offset/limit process regression.
+Its target GUI path proved a 2,300-file folder evicted exactly 252 entries from
+the front at a 2,048-entry resident bound, restored the prefix through the
+previous-window action, rehydrated the tail, and rebuilt all 2,300 entries for
+global descending-name sort. That run then failed only because the focused
+harness incorrectly fell through into an unrelated fresh-view `160/2300`
+assertion after every target marker had already passed. The harness-only
+revision changed no product file. Resume run `37182611109` reran only the
+invalidated GUI/visual boundary and passed
+`OWNED_RESIDENT_WINDOW_EVICTED_PREFIX_252`,
+`OWNED_RESIDENT_WINDOW_PREVIOUS_REHYDRATED_PREFIX`,
+`OWNED_RESIDENT_WINDOW_FORWARD_REHYDRATED_TAIL` and
+`OWNED_RESIDENT_WINDOW_GLOBAL_SORT_REBUILT_2300`, with protected legacy
+settings unchanged.
+
+Matched Dark-theme visual evidence is 956x521 for both BEFORE and AFTER. BEFORE
+at logical progress `2208/2300` shows `bench-0000.txt` with no previous
+control. AFTER at the same logical progress shows the compact previous action,
+`2208/2300+`, and resident start `bench-0252.txt`. Direct review found no
+header overlap, clipping, pane corruption or column displacement. The opposite
+pane remained unchanged. `VISUAL ACCEPTANCE: PASS`.
+
+Selection identity remains logical rather than resident-vector based. Selection
+for rows still resident across a window move can be restored by parsing path;
+a row that has been evicted is no longer selected until its window is reloaded.
+No cross-window hidden selection is claimed.
 
 Model-level large-folder page streaming is accepted on product revision
 `f7f3674e5271c17652a865cf2ed499185983d1eb`. Protocol-v3 Shell transport remains bounded to 1,024 entries
@@ -303,14 +333,13 @@ run `37174929070` proved an owned 8,000-file folder before model-level
 streaming landed. That older revision aggregated pages in the supervisor; it is
 not the current architecture.
 
-Current main follows the later `f7f3674e5271c17652a865cf2ed499185983d1eb` model-level streaming path
-described above: the first page is accepted immediately and continuations
-append on demand. The remaining scale limit is different. Accepted children
-are still retained in the navigation session and continuation stops at the
-20,000-entry navigation safety ceiling. Logical enumeration offsets are now
-separate from resident child count as the prerequisite for a future bounded
-resident window. 20,000+ browsing and global sort/filter semantics beyond a
-fully resident model are not yet certified.
+Current main builds on the later `f7f3674e5271c17652a865cf2ed499185983d1eb` model-level streaming
+path described above. Normal sequential browsing now bounds resident children
+to 2,048 and can rehydrate exact previous/known-forward ranges while retaining
+the furthest validated logical frontier. Full-model global sort and non-empty
+filter semantics are preserved by rebuilding the bounded complete model before
+final results. The 20,000-entry navigation safety ceiling remains in force, so
+20,000+ browsing is not yet certified.
 
 Persistent WinUI bookmarks are accepted on main. Automatic Windows run
 `37133980876` completed successfully for main revision
