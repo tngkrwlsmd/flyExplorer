@@ -69,7 +69,7 @@ public:
         fxfile::shellnav::Location target,
         fxfile::shellnav::NavigationAction action);
     std::uint64_t submitNextPage(
-        fxfile::explorerui::Model& model,int side);
+        fxfile::explorerui::Model& model,int side,std::size_t ceiling);
     std::uint64_t submitPreviousPage(
         fxfile::explorerui::Model& model,int side);
 
