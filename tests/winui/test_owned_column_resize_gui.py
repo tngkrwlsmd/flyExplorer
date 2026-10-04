@@ -50,16 +50,22 @@ def main(config="Release"):
             return Desktop(backend="uia").window(handle=hwnd)
         eventually(lambda:window() is not None,"Owned flyExplorer window unavailable")
         win=window()
-        # Use a wide split-pane layout so all four Details columns are visible.
-        try:
-            win.move_window(x=40,y=40,width=1500,height=760,repaint=True)
-        except Exception:
-            import ctypes as c
-            c.windll.user32.SetWindowPos(hwnd,0,40,40,1500,760,0x0004)
-        eventually(lambda:window().rectangle().width()>=1400,
-                   "owned window did not enter wide Details profile",8)
         def element(auto_id):
             return window().child_window(auto_id=auto_id)
+
+        # The column-resize acceptance only needs the left Details pane. Do not
+        # require an arbitrary 1500px desktop: collapse the secondary pane when
+        # it is visible so the left pane reaches the full Details profile even
+        # on a smaller self-hosted desktop.
+        secondary=element("SecondaryPane")
+        if secondary.exists(timeout=.5) and secondary.is_visible():
+            split=element("SplitButton")
+            eventually(lambda:split.exists(timeout=.2) and split.is_visible(),
+                       "split toggle unavailable",6)
+            split.click_input()
+            eventually(lambda:not element("SecondaryPane").is_visible(),
+                       "secondary pane did not collapse for column resize",8)
+
         for auto_id in ("LeftNameColumnResizeThumb","LeftTypeColumnResizeThumb",
                         "LeftSizeColumnResizeThumb","LeftNameSortButton",
                         "LeftTypeSortButton","LeftSizeSortButton",
