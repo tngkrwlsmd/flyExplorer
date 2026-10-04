@@ -453,37 +453,72 @@ namespace winrt::FlyExplorer::implementation
         if(completeFolder){
             state.streamToComplete=true;
             state.fullModelLimitReached=false;
-            const auto limit=static_cast<std::size_t>(
+            const auto completeLimit=static_cast<std::size_t>(
                 fxfile::isolation::kMaxCompleteModelEntries);
+            const bool atCompleteLimit=
+                snapshot.nextOffset>completeLimit||
+                (snapshot.nextOffset==completeLimit&&snapshot.truncated);
+            const bool nameIndexEligible=
+                state.sortMode<=1&&
+                (state.indexedNameSort||!state.filenameFilter.empty());
+            if(!state.indexToComplete&&atCompleteLimit&&nameIndexEligible){
+                state.indexToComplete=true;
+                state.indexedNameProjection=true;
+            }
+            const auto limit=static_cast<std::size_t>(
+                state.indexToComplete?
+                    fxfile::isolation::kMaxBrowseEntries:
+                    fxfile::isolation::kMaxCompleteModelEntries);
             if(snapshot.nextOffset>limit||
                (snapshot.nextOffset==limit&&snapshot.truncated)){
                 state.streamToComplete=false;
+                state.indexToComplete=false;
                 state.fullModelLimitReached=true;
-                state.sortMode=0;
-                if(!state.filenameFilter.empty()){
-                    state.filenameFilter.clear();
-                    auto filter=side==0?LeftNameFilterBox():RightNameFilterBox();
-                    if(!filter.Text().empty())filter.Text(L"");
+                if(state.indexedNameProjection){
+                    state.indexedNameProjection=false;
+                    state.indexedNameSort=false;
+                    state.sortMode=0;
+                    if(!state.filenameFilter.empty()){
+                        state.filenameFilter.clear();
+                        auto filter=side==0?LeftNameFilterBox():RightNameFilterBox();
+                        if(!filter.Text().empty())filter.Text(L"");
+                    }
+                    if(side==ActiveWindowTab().model.activePane)
+                        fileBar()->SetSortIndex(0);
+                    UpdateSortPresentation(side);
+                    FillFiles(side);
+                    UpdateSelectionChrome();
+                    if(side==ActiveWindowTab().model.activePane)UpdateFooterSummary();
+                    StatusText().Text(
+                        L"이름 인덱스는 현재 최대 100,000개 항목까지 지원합니다. "
+                        L"일반 순차 탐색은 현재 창을 유지합니다.");
+                }else{
+                    state.sortMode=0;
+                    if(!state.filenameFilter.empty()){
+                        state.filenameFilter.clear();
+                        auto filter=side==0?LeftNameFilterBox():RightNameFilterBox();
+                        if(!filter.Text().empty())filter.Text(L"");
+                    }
+                    if(side==ActiveWindowTab().model.activePane)
+                        fileBar()->SetSortIndex(0);
+                    UpdateSortPresentation(side);
+                    FillFiles(side);
+                    UpdateSelectionChrome();
+                    if(side==ActiveWindowTab().model.activePane)UpdateFooterSummary();
+                    StatusText().Text(
+                        L"유형/크기/날짜 전역 정렬은 현재 최대 20,000개 항목까지 지원합니다. "
+                        L"이름 정렬/필터는 인덱스 경로를 사용하세요.");
                 }
-                if(side==ActiveWindowTab().model.activePane)
-                    fileBar()->SetSortIndex(0);
-                UpdateSortPresentation(side);
-                FillFiles(side);
-                UpdateSelectionChrome();
-                if(side==ActiveWindowTab().model.activePane)UpdateFooterSummary();
-                StatusText().Text(
-                    L"전역 정렬/필터는 현재 최대 20,000개 항목까지 지원합니다. "
-                    L"일반 순차 탐색은 계속할 수 있습니다.");
                 return false;
             }
         }
         if(pane.pending[pane.active])return false;
-        if(completeFolder&&snapshot.baseOffset){
+        if(completeFolder&&!state.indexToComplete&&snapshot.baseOffset){
             const auto id=mShellNavigation->submitPreviousPage(
                 ActiveWindowTab().model,side);
             if(id){
                 StatusText().Text(
-                    L"정확한 정렬/필터를 위해 이전 폴더 항목을 다시 불러오는 중입니다.");
+                    L"정확한 정렬을 위해 이전 폴더 항목을 다시 불러오는 중입니다.");
                 return true;
             }
             state.streamToComplete=false;
@@ -496,20 +531,27 @@ namespace winrt::FlyExplorer::implementation
             snapshot.truncated;
         if(!hasForward){
             state.streamToComplete=false;
+            state.indexToComplete=false;
             return false;
         }
         const auto ceiling=completeFolder?
-            static_cast<std::size_t>(fxfile::isolation::kMaxCompleteModelEntries):
+            static_cast<std::size_t>(
+                state.indexToComplete?
+                    fxfile::isolation::kMaxBrowseEntries:
+                    fxfile::isolation::kMaxCompleteModelEntries):
             static_cast<std::size_t>(fxfile::isolation::kMaxBrowseEntries);
         const auto id=mShellNavigation->submitNextPage(
             ActiveWindowTab().model,side,ceiling);
         if(id){
             StatusText().Text(completeFolder?
-                L"정확한 정렬/필터를 위해 남은 폴더 항목을 불러오는 중입니다.":
+                (state.indexToComplete?
+                    L"전체 이름 인덱스를 완성하는 중입니다.":
+                    L"정확한 정렬을 위해 남은 폴더 항목을 불러오는 중입니다."):
                 L"폴더의 다음 항목 페이지를 불러오는 중입니다.");
             return true;
         }
         state.streamToComplete=false;
+        state.indexToComplete=false;
         StatusText().Text(
             L"이 폴더의 추가 항목을 더 불러올 수 없습니다. 현재 항목은 유지됩니다.");
         return false;
@@ -541,6 +583,7 @@ namespace winrt::FlyExplorer::implementation
                 auto& state=ActiveWindowTab().fileLists[completed.side];
                 auto const& pane=ActiveWindowTab().model.panes[completed.side];
                 state.streamToComplete=false;
+                state.indexToComplete=false;
                 state.visibleCount=(std::min)(
                     state.visibleCount,
                     pane.tabs[pane.active].snapshot().children.size());
@@ -571,6 +614,7 @@ namespace winrt::FlyExplorer::implementation
             if(completed.active&&continuation){
                 auto& state=ActiveWindowTab().fileLists[completed.side];
                 state.streamToComplete=false;
+                state.indexToComplete=false;
                 FillFiles(completed.side);
                 UpdateFooterSummary();
                 StatusText().Text(
@@ -588,12 +632,15 @@ namespace winrt::FlyExplorer::implementation
                 auto& state=ActiveWindowTab().fileLists[completed.side];
                 auto& pane=ActiveWindowTab().model.panes[completed.side];
                 auto& session=pane.tabs[pane.active];
-                if(!state.streamToComplete&&state.sortMode==0&&
-                   state.filenameFilter.empty()){
+                const bool boundedResident=
+                    state.indexToComplete||
+                    (!state.streamToComplete&&state.sortMode==0&&
+                     state.filenameFilter.empty());
+                if(boundedResident){
                     if(completed.pageDirection==PageDirection::Forward){
                         const auto evicted=session.trimResidentFront(
                             fxfile::shellnav::kResidentWindowEntries);
-                        if(evicted){
+                        if(evicted&&!state.indexedNameProjection){
                             state.visibleCount=state.visibleCount>evicted?
                                 state.visibleCount-evicted:
                                 (std::min)(
@@ -603,26 +650,32 @@ namespace winrt::FlyExplorer::implementation
                     }else if(completed.pageDirection==PageDirection::Backward){
                         session.trimResidentBack(
                             fxfile::shellnav::kResidentWindowEntries);
-                        state.visibleCount=(std::min)(
-                            state.visibleCount,
-                            session.snapshot().children.size());
+                        if(!state.indexedNameProjection)
+                            state.visibleCount=(std::min)(
+                                state.visibleCount,
+                                session.snapshot().children.size());
                     }
+                }
+                auto const& snapshot=session.snapshot();
+                const bool incomplete=state.indexToComplete?
+                    (snapshot.residentEndOffset()<snapshot.nextOffset||
+                     snapshot.truncated):
+                    (snapshot.baseOffset||
+                     snapshot.residentEndOffset()<snapshot.nextOffset||
+                     snapshot.truncated);
+                if(state.streamToComplete&&!incomplete){
+                    state.streamToComplete=false;
+                    state.indexToComplete=false;
                 }
                 ClearFileDetails(completed.side);
                 FillFiles(completed.side);
                 UpdateSelectionChrome();
                 UpdateFooterSummary();
-                auto const& snapshot=session.snapshot();
-                const bool incomplete=
-                    snapshot.baseOffset||
-                    snapshot.residentEndOffset()<snapshot.nextOffset||
-                    snapshot.truncated;
                 if(state.streamToComplete&&incomplete){
                     if(QueueNextFolderPage(completed.side,true))return;
                     if(state.fullModelLimitReached)return;
                     state.streamToComplete=false;
-                }else if(!incomplete){
-                    state.streamToComplete=false;
+                    state.indexToComplete=false;
                 }
                 StatusText().Text(
                     completed.pageDirection==PageDirection::Backward?
@@ -895,30 +948,48 @@ namespace winrt::FlyExplorer::implementation
         if(text.size()>64)return;
         auto& state=ActiveWindowTab().fileLists[side];
         auto const& pane=ActiveWindowTab().model.panes[side];
-        auto const& snapshot=pane.tabs[pane.active].snapshot();
+        auto const& session=pane.tabs[pane.active];
+        auto const& snapshot=session.snapshot();
+        if(state.filenameFilter==text)return;
         const auto completeLimit=static_cast<std::size_t>(
             fxfile::isolation::kMaxCompleteModelEntries);
-        if(!text.empty()&&
-           (snapshot.nextOffset>completeLimit||
-            (snapshot.nextOffset==completeLimit&&snapshot.truncated))){
-            input.Text(hstring(state.filenameFilter));
-            StatusText().Text(
-                L"이름 필터는 현재 최대 20,000개 항목까지 전체 모델을 완성할 수 있습니다.");
-            return;
-        }
-        if(state.filenameFilter==text)return;
+        const bool beyondComplete=
+            snapshot.nextOffset>completeLimit||
+            (snapshot.nextOffset==completeLimit&&snapshot.truncated);
         state.filenameFilter=std::move(text);
         state.visibleCount=160;
-        FillFiles(side); // Only the view changes. Shell model and stable tags do not.
+        if(beyondComplete&&!state.filenameFilter.empty()){
+            state.indexedNameProjection=true;
+            state.indexToComplete=
+                snapshot.residentEndOffset()<snapshot.nextOffset||
+                snapshot.truncated;
+        }else if(state.filenameFilter.empty()){
+            state.indexedNameProjection=
+                beyondComplete&&state.indexedNameSort;
+            state.indexToComplete=state.indexedNameProjection&&
+                (snapshot.residentEndOffset()<snapshot.nextOffset||
+                 snapshot.truncated);
+        }else{
+            state.indexedNameProjection=false;
+            state.indexToComplete=false;
+        }
+        FillFiles(side);
         UpdateSelectionChrome();
         if(side==ActiveWindowTab().model.activePane)UpdateFooterSummary();
-        if(!state.filenameFilter.empty()&&
-           (snapshot.baseOffset||
-            snapshot.residentEndOffset()<snapshot.nextOffset||
-            snapshot.truncated))
+        if(state.indexedNameProjection){
+            if(state.indexToComplete)
+                QueueNextFolderPage(side,true);
+            else
+                StatusText().Text(L"전체 이름 인덱스에 필터를 적용했습니다.");
+        }else if(!state.filenameFilter.empty()&&
+                (snapshot.baseOffset||
+                 snapshot.residentEndOffset()<snapshot.nextOffset||
+                 snapshot.truncated)){
             QueueNextFolderPage(side,true);
-        else if(state.filenameFilter.empty()&&state.sortMode==0)
+        }else if(state.filenameFilter.empty()&&state.sortMode==0){
             state.streamToComplete=false;
+            state.indexToComplete=false;
+        }
     }
     void MainWindow::OnLoadMoreFiles(
         IInspectable const& sender,Microsoft::UI::Xaml::RoutedEventArgs const&){
@@ -942,12 +1013,12 @@ namespace winrt::FlyExplorer::implementation
             state.visibleCount=(std::min)(available,state.visibleCount+160);
             FillFiles(side); // Selection is restored using real parsing paths.
             if(state.visibleCount>=available&&hasForward)
-                QueueNextFolderPage(side,false);
+                QueueNextFolderPage(side,state.indexToComplete);
             return;
         }
         if(hasForward){
             state.visibleCount+=160;
-            if(!QueueNextFolderPage(side,false))
+            if(!QueueNextFolderPage(side,state.indexToComplete))
                 state.visibleCount=available;
         }
     }
@@ -1101,8 +1172,10 @@ namespace winrt::FlyExplorer::implementation
         UpdateSortPresentation(side);
         auto view=side==0?LeftFiles():RightFiles();
         const auto& pane=ActiveWindowTab().model.panes[static_cast<size_t>(side)];
-        const auto& snapshot=pane.tabs[pane.active].snapshot();
+        const auto& session=pane.tabs[pane.active];
+        const auto& snapshot=session.snapshot();
         const auto& items=snapshot.children;
+        const auto& nameIndex=session.nameIndex();
         auto& state=ActiveWindowTab().fileLists[side];
         const auto nextRoute=pane.routeIds[pane.active];
         if(state.visibleRoute!=nextRoute||state.visibleTab!=pane.active){
@@ -1110,6 +1183,9 @@ namespace winrt::FlyExplorer::implementation
             state.visibleTab=pane.active;
             state.visibleCount=160;
             state.streamToComplete=false;
+            state.indexToComplete=false;
+            state.indexedNameSort=state.sortMode<=1;
+            state.indexedNameProjection=false;
             state.fullModelLimitReached=false;
         }
         auto previous=side==0?LeftLoadPreviousButton():RightLoadPreviousButton();
@@ -1120,46 +1196,76 @@ namespace winrt::FlyExplorer::implementation
             if(!row||!row.Tag())continue;
             const auto logical=winrt::unbox_value<std::uint64_t>(row.Tag());
             auto const& renderedState=ActiveWindowTab().fileLists[side];
-            const auto base=static_cast<std::uint64_t>(
-                renderedState.renderedBaseOffset);
-            if(logical>=base){
-                const auto resident=logical-base;
-                if(resident<renderedState.renderedPaths.size())
-                    selected.push_back(
-                        renderedState.renderedPaths[
-                            static_cast<std::size_t>(resident)]);
+            auto found=std::find(
+                renderedState.renderedLogical.begin(),
+                renderedState.renderedLogical.end(),logical);
+            if(found!=renderedState.renderedLogical.end()){
+                const auto position=static_cast<std::size_t>(
+                    std::distance(renderedState.renderedLogical.begin(),found));
+                if(position<renderedState.renderedPaths.size())
+                    selected.push_back(renderedState.renderedPaths[position]);
             }
         }
         view.Items().Clear();
-        ActiveWindowTab().fileLists[side].renderedPaths.clear();
-        ActiveWindowTab().fileLists[side].renderedBaseOffset=snapshot.baseOffset;
-        ActiveWindowTab().fileLists[side].renderedPaths.reserve(items.size());
-        for(auto const& item:items)
-            ActiveWindowTab().fileLists[side].renderedPaths.push_back(item.parsingName);
-        const bool detailReady=ActiveWindowTab().fileLists[side].isCurrent(
+        state.renderedLogical.clear();
+        state.renderedPaths.clear();
+        state.renderedBaseOffset=snapshot.baseOffset;
+        const bool detailReady=state.isCurrent(
              pane.routeIds[pane.active],pane.active,items.size());
-        std::vector<size_t> order(items.size());
+        const int mode=state.sortMode;
+        const bool indexedProjection=
+            state.indexedNameProjection&&!state.indexToComplete&&mode<=1&&
+            session.indexedFrontier()==snapshot.nextOffset;
+        const auto sourceCount=indexedProjection?nameIndex.size():items.size();
+        std::vector<size_t> order(sourceCount);
         std::iota(order.begin(),order.end(),size_t{0});
-        const int mode=ActiveWindowTab().fileLists[side].sortMode;
+        auto labelAt=[&](size_t index)->std::wstring const&{
+            return indexedProjection?nameIndex[index].label:items[index].label;
+        };
+        auto parsingAt=[&](size_t index)->std::wstring const&{
+            return indexedProjection?nameIndex[index].parsingName:
+                                     items[index].parsingName;
+        };
+        auto folderAt=[&](size_t index)->bool{
+            return indexedProjection?nameIndex[index].isFolder():
+                                     items[index].isFolder();
+        };
+        auto logicalAt=[&](size_t index)->std::uint64_t{
+            return indexedProjection?static_cast<std::uint64_t>(index):
+                snapshot.logicalIndex(index);
+        };
+        auto residentAt=[&](size_t index,std::size_t& resident)->bool{
+            if(!indexedProjection){resident=index;return true;}
+            return snapshot.residentIndex(
+                static_cast<std::uint64_t>(index),resident);
+        };
         auto lessName=[&](size_t lhs,size_t rhs){
-            const auto& a=items[lhs].label;
-            const auto& b=items[rhs].label;
-            return ::CompareStringOrdinal(a.c_str(),-1,b.c_str(),-1,TRUE)==CSTR_LESS_THAN;
+            const auto& a=labelAt(lhs);
+            const auto& b=labelAt(rhs);
+            return ::CompareStringOrdinal(
+                a.c_str(),-1,b.c_str(),-1,TRUE)==CSTR_LESS_THAN;
         };
         std::stable_sort(order.begin(),order.end(),[&](size_t lhs,size_t rhs){
-            if(items[lhs].isFolder()!=items[rhs].isFolder())return items[lhs].isFolder();
-            if(detailReady&&(mode==4||mode==5)){
-                const auto& a=ActiveWindowTab().fileLists[side].details[lhs].typeLabel;const auto& b=ActiveWindowTab().fileLists[side].details[rhs].typeLabel;
-                const auto cmp=::CompareStringOrdinal(a.c_str(),-1,b.c_str(),-1,TRUE);
-                if(cmp!=CSTR_EQUAL)return mode==5?cmp==CSTR_GREATER_THAN:cmp==CSTR_LESS_THAN;
-            }else if(detailReady&&(mode==2||mode==6)){
-                const auto& x=ActiveWindowTab().fileLists[side].details[lhs];const auto& y=ActiveWindowTab().fileLists[side].details[rhs];
+            if(folderAt(lhs)!=folderAt(rhs))return folderAt(lhs);
+            if(!indexedProjection&&detailReady&&(mode==4||mode==5)){
+                const auto& a=state.details[lhs].typeLabel;
+                const auto& b=state.details[rhs].typeLabel;
+                const auto cmp=::CompareStringOrdinal(
+                    a.c_str(),-1,b.c_str(),-1,TRUE);
+                if(cmp!=CSTR_EQUAL)
+                    return mode==5?cmp==CSTR_GREATER_THAN:cmp==CSTR_LESS_THAN;
+            }else if(!indexedProjection&&detailReady&&(mode==2||mode==6)){
+                const auto& x=state.details[lhs];
+                const auto& y=state.details[rhs];
                 if(x.sizeKnown!=y.sizeKnown)return x.sizeKnown;
-                if(x.sizeKnown&&x.bytes!=y.bytes)return mode==2?x.bytes>y.bytes:x.bytes<y.bytes;
-            }else if(detailReady&&(mode==3||mode==7)){
-                const auto& x=ActiveWindowTab().fileLists[side].details[lhs];const auto& y=ActiveWindowTab().fileLists[side].details[rhs];
+                if(x.sizeKnown&&x.bytes!=y.bytes)
+                    return mode==2?x.bytes>y.bytes:x.bytes<y.bytes;
+            }else if(!indexedProjection&&detailReady&&(mode==3||mode==7)){
+                const auto& x=state.details[lhs];
+                const auto& y=state.details[rhs];
                 if(x.dateKnown!=y.dateKnown)return x.dateKnown;
-                if(x.dateKnown&&x.modified!=y.modified)return mode==3?x.modified>y.modified:x.modified<y.modified;
+                if(x.dateKnown&&x.modified!=y.modified)
+                    return mode==3?x.modified>y.modified:x.modified<y.modified;
             }
             return mode==1?lessName(rhs,lhs):lessName(lhs,rhs);
         });
@@ -1167,29 +1273,35 @@ namespace winrt::FlyExplorer::implementation
             order.erase(std::remove_if(order.begin(),order.end(),
                 [&](size_t index){
                     return !fxfile::filterrules::Store::matches(
-                        items[index].label,state.filenameFilter);
+                        labelAt(index),state.filenameFilter);
                 }),order.end());
         }
         state.filteredCount=order.size();
-        const bool hasPrevious=snapshot.baseOffset!=0&&!state.streamToComplete;
-        const bool hasForward=
-            snapshot.residentEndOffset()<snapshot.nextOffset||
-            snapshot.truncated;
+        const bool hasPrevious=
+            !indexedProjection&&snapshot.baseOffset!=0&&!state.streamToComplete;
+        const bool hasForward=indexedProjection?
+            state.indexToComplete&&
+                (snapshot.residentEndOffset()<snapshot.nextOffset||
+                 snapshot.truncated):
+            (snapshot.residentEndOffset()<snapshot.nextOffset||
+             snapshot.truncated);
         const bool hasMore=order.size()>state.visibleCount||hasForward;
         previous.Visibility(hasPrevious?Visibility::Visible:Visibility::Collapsed);
         button.Visibility(hasMore?Visibility::Visible:Visibility::Collapsed);
         auto detailsHeader=side==0?LeftDetailsHeader():RightDetailsHeader();
         if(state.viewMode!=FileViewMode::Details)
             detailsHeader.Height((hasPrevious||hasMore)?24.0:0.0);
-        const bool sequential=state.filenameFilter.empty()&&mode==0;
+        const bool sequential=
+            !indexedProjection&&state.filenameFilter.empty()&&mode==0;
         const auto shown=sequential?
             snapshot.baseOffset+(std::min)(order.size(),state.visibleCount):
             (std::min)(order.size(),state.visibleCount);
         const auto total=sequential?snapshot.nextOffset:order.size();
-        const bool incomplete=
-            snapshot.baseOffset||
-            snapshot.residentEndOffset()<snapshot.nextOffset||
-            snapshot.truncated;
+        const bool incomplete=indexedProjection?
+            state.indexToComplete:
+            (snapshot.baseOffset||
+             snapshot.residentEndOffset()<snapshot.nextOffset||
+             snapshot.truncated);
         const auto progress=std::to_wstring(shown)+
             L"/"+std::to_wstring(total)+(incomplete?L"+":L"");
         button.Content(winrt::box_value(hstring(progress)));
@@ -1203,15 +1315,21 @@ namespace winrt::FlyExplorer::implementation
                side==0?L"\uC67C\uCABD \uB354 \uD45C\uC2DC ":L"\uC624\uB978\uCABD \uB354 \uD45C\uC2DC ")+progress));
         for(size_t visible=0;visible<(std::min)(order.size(),state.visibleCount);++visible){
             const auto index=order[visible];
-            const auto& item=items[index];
+            const auto logical=logicalAt(index);
+            std::size_t resident=0;
+            const bool residentReady=residentAt(index,resident);
+            const auto& itemLabel=labelAt(index);
+            const auto& itemParsing=parsingAt(index);
+            const bool itemFolder=folderAt(index);
+            auto const* meta=residentReady&&detailReady?
+                &state.details[resident]:nullptr;
             ListViewItem row;
-            auto label=std::wstring(item.isFolder()?L"[폴더]  ":L"[파일]  ")+
-                       item.label;
-            if(detailReady){
-                const auto& meta=ActiveWindowTab().fileLists[side].details[index];
-                if(!meta.typeLabel.empty())label+=L"   |   "+meta.typeLabel;
-                if(meta.sizeKnown)label+=L"   |   "+meta.bytesLabel;
-                if(meta.dateKnown)label+=L"   |   "+meta.dateLabel;
+            auto label=std::wstring(itemFolder?L"[폴더]  ":L"[파일]  ")+
+                       itemLabel;
+            if(meta){
+                if(!meta->typeLabel.empty())label+=L"   |   "+meta->typeLabel;
+                if(meta->sizeKnown)label+=L"   |   "+meta->bytesLabel;
+                if(meta->dateKnown)label+=L"   |   "+meta->dateLabel;
             }
             if(state.viewMode==FileViewMode::Details){
             Grid columns;
@@ -1229,7 +1347,7 @@ namespace winrt::FlyExplorer::implementation
             nameCell.VerticalAlignment(VerticalAlignment::Center);
             bool localDrive=false;
             ULARGE_INTEGER freeBytes{},totalBytes{},freeTotal{};
-            const auto& parsing=item.parsingName;
+            const auto& parsing=itemParsing;
             if(parsing.size()==3&&parsing[1]==L':'&&
                (parsing[2]==L'\\'||parsing[2]==L'/')){
                 const auto driveType=::GetDriveTypeW(parsing.c_str());
@@ -1239,8 +1357,7 @@ namespace winrt::FlyExplorer::implementation
                    totalBytes.QuadPart>0)
                     localDrive=true;
             }
-            auto const* iconMeta=detailReady?
-                &ActiveWindowTab().fileLists[side].details[index]:nullptr;
+            auto const* iconMeta=meta;
             bool actualVisual=false;
             if(iconMeta){
                 const auto& data=iconMeta->iconBgra;
@@ -1266,7 +1383,7 @@ namespace winrt::FlyExplorer::implementation
                                 image.Source(pixels);
                                 image.Width(16);image.Height(16);
                                 Microsoft::UI::Xaml::Automation::AutomationProperties::
-                                    SetName(image,item.isFolder()?
+                                    SetName(image,itemFolder?
                                         (iconMeta->knownFolderVisual?
                                             L"Windows Known Folder artwork":
                                             L"Windows Shell folder icon"):
@@ -1283,12 +1400,12 @@ namespace winrt::FlyExplorer::implementation
                 glyph.FontFamily(Microsoft::UI::Xaml::Media::FontFamily{
                     L"Segoe Fluent Icons"});
                 glyph.Glyph(hstring(localDrive?L"\uEDA2":
-                    item.isFolder()?L"\uE8B7":L"\uE8A5"));
+                    itemFolder?L"\uE8B7":L"\uE8A5"));
                 glyph.FontSize(localDrive?20.0:16.0);
                 nameCell.Children().Append(glyph);
             }
             TextBlock filename;
-            filename.Text(item.label);
+            filename.Text(itemLabel);
             filename.TextTrimming(TextTrimming::CharacterEllipsis);
             if(localDrive){
                 StackPanel drive;
@@ -1323,7 +1440,6 @@ namespace winrt::FlyExplorer::implementation
                 Grid::SetColumn(field,col);
                 columns.Children().Append(field);
             };
-            auto const* meta=detailReady?&ActiveWindowTab().fileLists[side].details[index]:nullptr;
             addText(meta?meta->typeLabel:L"",1);
             addText(meta&&meta->sizeKnown?meta->bytesLabel:L"",2);
             addText(meta&&meta->dateKnown?meta->dateLabel:L"",3);
@@ -1355,7 +1471,7 @@ namespace winrt::FlyExplorer::implementation
                                     std::memcpy(target,data.data(),data.size());pixels.Invalidate();Image image;image.Source(pixels);
                                     const double targetSize=large?64.0:(medium?(realThumb?40.0:32.0):(smallIcons?20.0:16.0));image.Width(targetSize);image.Height(targetSize);
                                     Microsoft::UI::Xaml::Automation::AutomationProperties::SetName(image,realThumb?L"Windows Shell image thumbnail":
-                                        item.isFolder()?(iconMeta->knownFolderVisual?L"Windows Known Folder artwork":
+                                        itemFolder?(iconMeta->knownFolderVisual?L"Windows Known Folder artwork":
                                             L"Windows Shell folder icon"):L"Windows system registered file icon");
                                     cell.Children().Append(image);actualVisual=true;
                                 }
@@ -1365,9 +1481,9 @@ namespace winrt::FlyExplorer::implementation
                 }
                 if(!actualVisual){
                     FontIcon glyph;glyph.FontFamily(Microsoft::UI::Xaml::Media::FontFamily{L"Segoe Fluent Icons"});
-                    glyph.Glyph(hstring(item.isFolder()?L"\uE8B7":L"\uE8A5"));glyph.FontSize(large?60.0:(medium?36.0:(smallIcons?20.0:16.0)));cell.Children().Append(glyph);
+                    glyph.Glyph(hstring(itemFolder?L"\uE8B7":L"\uE8A5"));glyph.FontSize(large?60.0:(medium?36.0:(smallIcons?20.0:16.0)));cell.Children().Append(glyph);
                 }
-                TextBlock filename;filename.Text(item.label);
+                TextBlock filename;filename.Text(itemLabel);
                 if(iconGrid){filename.FontSize(12.0);filename.Width(large?104.0:84.0);filename.TextAlignment(TextAlignment::Center);filename.TextWrapping(TextWrapping::WrapWholeWords);filename.MaxLines(2);filename.TextTrimming(TextTrimming::CharacterEllipsis);}
                 else{filename.TextTrimming(TextTrimming::CharacterEllipsis);if(smallIcons){filename.FontSize(12.0);filename.Width(120);}}
                 cell.Children().Append(filename);row.Content(cell);
@@ -1378,8 +1494,7 @@ namespace winrt::FlyExplorer::implementation
             }
             Microsoft::UI::Xaml::Automation::AutomationProperties::SetName(
                 row,hstring(label));
-            row.Tag(winrt::box_value(
-                static_cast<std::uint64_t>(snapshot.logicalIndex(index))));
+            row.Tag(winrt::box_value(logical));
             const auto weak=get_weak();
             row.Tapped([weak,side](IInspectable const&,
                 Microsoft::UI::Xaml::Input::TappedRoutedEventArgs const&){
@@ -1401,8 +1516,10 @@ namespace winrt::FlyExplorer::implementation
                 if(auto ui=weak.get())ui->OnFileRowDragStarting(side,sender,args);
             });
             view.Items().Append(row);
-            if(!item.parsingName.empty()&&
-               std::find(selected.begin(),selected.end(),item.parsingName)
+            state.renderedLogical.push_back(logical);
+            state.renderedPaths.push_back(itemParsing);
+            if(!itemParsing.empty()&&
+               std::find(selected.begin(),selected.end(),itemParsing)
                   !=selected.end()){
                 // Restore selection by native parsing path, never stale
                 // pre-sort row index (including real multiple selection).
@@ -1645,11 +1762,17 @@ namespace winrt::FlyExplorer::implementation
         std::size_t count=snapshot.children.size();
         bool incomplete=snapshot.truncated;
         if(state.visibleRoute==pane.routeIds[pane.active]&&state.visibleTab==pane.active){
+            const auto& session=pane.tabs[pane.active];
+            const bool indexedComplete=
+                state.indexedNameProjection&&!state.indexToComplete&&
+                session.indexedFrontier()==snapshot.nextOffset;
             if(state.filenameFilter.empty()){
                 count=snapshot.nextOffset;
+                if(indexedComplete)incomplete=false;
             }else{
                 count=state.filteredCount;
-                incomplete=incomplete||snapshot.baseOffset||
+                incomplete=indexedComplete?false:
+                    incomplete||snapshot.baseOffset||
                     snapshot.residentEndOffset()<snapshot.nextOffset;
             }
         }
@@ -1951,15 +2074,20 @@ namespace winrt::FlyExplorer::implementation
         if(!row || !row.Tag())return;
         const auto logical=winrt::unbox_value<std::uint64_t>(row.Tag());
         auto& session=Current();
+        auto const* indexed=session.indexedItem(
+            static_cast<std::size_t>(logical));
+        if(!indexed||!indexed->isFolder())return;
         const auto& snapshot=session.snapshot();
-        std::size_t index=0;
-        if(!snapshot.residentIndex(logical,index))return;
-        const auto& entries=snapshot.children;
-        if(!entries[index].isFolder())return;
-        // The native engine CLONES this original absolute Shell PIDL
-        // before updating session state; no dangling shell pointers.
-        QueuePidl(side,fxfile::shellnav::Location(entries[index].id),
-                  fxfile::shellnav::NavigationAction::Open);
+        std::size_t resident=0;
+        if(snapshot.residentIndex(logical,resident)){
+            const auto& entries=snapshot.children;
+            // The native engine CLONES this original absolute Shell PIDL
+            // before updating session state; no dangling shell pointers.
+            QueuePidl(side,fxfile::shellnav::Location(entries[resident].id),
+                      fxfile::shellnav::NavigationAction::Open);
+        }else if(!indexed->parsingName.empty()){
+            QueuePath(side,indexed->parsingName);
+        }
     }
     void MainWindow::OnLeftFileDoubleTapped(
         IInspectable const&,Input::DoubleTappedRoutedEventArgs const&)

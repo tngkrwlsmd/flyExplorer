@@ -1,6 +1,7 @@
 #include "shell_navigation_core.h"
 #include <shlwapi.h>
 #include <new>
+#include <stdexcept>
 #include <utility>
 #pragma comment(lib, "shell32.lib")
 #pragma comment(lib, "shlwapi.lib")
@@ -170,6 +171,47 @@ bool Session::historyLocations(HistoryLocations& out) const noexcept {
         return clone(back_,out.back)&&clone(forward_,out.forward);
     }catch(...){out={};return false;}
 }
+std::vector<IndexedItem> Session::buildIndex(Snapshot const& snapshot)
+{
+    if(snapshot.baseOffset!=0||
+       snapshot.nextOffset!=snapshot.children.size())
+        throw std::invalid_argument("initial Shell snapshot must start at zero");
+    std::vector<IndexedItem> index;
+    index.reserve(snapshot.children.size());
+    for(auto const& child:snapshot.children)
+        index.push_back(IndexedItem{
+            child.label,child.parsingName,child.attributes});
+    return index;
+}
+
+HRESULT Session::mergeIndexPage(Snapshot const& page) noexcept
+{
+    if(page.nextOffset!=page.baseOffset+page.children.size()||
+       page.baseOffset>nameIndex_.size())
+        return HRESULT_FROM_WIN32(ERROR_INVALID_DATA);
+    try{
+        if(nameIndex_.size()<page.nextOffset)
+            nameIndex_.resize(page.nextOffset);
+        for(std::size_t i=0;i<page.children.size();++i){
+            auto const& child=page.children[i];
+            nameIndex_[page.baseOffset+i]=IndexedItem{
+                child.label,child.parsingName,child.attributes};
+        }
+        return S_OK;
+    }catch(std::bad_alloc const&){
+        return E_OUTOFMEMORY;
+    }catch(...){
+        return E_FAIL;
+    }
+}
+
+void Session::replaceCurrent(
+    Snapshot&& prepared,std::vector<IndexedItem>&& index) noexcept
+{
+    current_=std::move(prepared);
+    nameIndex_=std::move(index);
+}
+
 bool historyPathsFromLocations(HistoryLocations const& source,
                                HistoryPaths& out) noexcept {
     out={};
@@ -232,11 +274,19 @@ Location Session::target(HistoryAction action) const {
 }
 HRESULT Session::accept(Snapshot&& prepared,HistoryAction action) noexcept {
     if(!prepared.folder.valid())return E_INVALIDARG;
+    std::vector<IndexedItem> preparedIndex;
+    try{
+        preparedIndex=buildIndex(prepared);
+    }catch(std::bad_alloc const&){
+        return E_OUTOFMEMORY;
+    }catch(...){
+        return E_INVALIDARG;
+    }
     if(action==HistoryAction::Refresh) {
         if(!current_.folder.valid() ||
            !::ILIsEqual(current_.folder.get(),prepared.folder.get()))
             return E_INVALIDARG;
-        current_=std::move(prepared);
+        replaceCurrent(std::move(prepared),std::move(preparedIndex));
         return S_OK;
     }
     if(action==HistoryAction::Back) {
@@ -247,7 +297,7 @@ HRESULT Session::accept(Snapshot&& prepared,HistoryAction action) noexcept {
             Location previous(current_.folder);
             if(!previous.valid())return E_OUTOFMEMORY;
             forward_.push_back(std::move(previous));
-            current_=std::move(prepared);
+            replaceCurrent(std::move(prepared),std::move(preparedIndex));
             back_.pop_back();
             return S_OK;
         }catch(...) {return E_OUTOFMEMORY;}
@@ -260,7 +310,7 @@ HRESULT Session::accept(Snapshot&& prepared,HistoryAction action) noexcept {
             Location previous(current_.folder);
             if(!previous.valid())return E_OUTOFMEMORY;
             back_.push_back(std::move(previous));
-            current_=std::move(prepared);
+            replaceCurrent(std::move(prepared),std::move(preparedIndex));
             forward_.pop_back();
             return S_OK;
         }catch(...) {return E_OUTOFMEMORY;}
@@ -274,7 +324,7 @@ HRESULT Session::accept(Snapshot&& prepared,HistoryAction action) noexcept {
             if(!previous.valid())return E_OUTOFMEMORY;
             back_.push_back(std::move(previous));
         }
-        current_=std::move(prepared);
+        replaceCurrent(std::move(prepared),std::move(preparedIndex));
         forward_.clear();
         return S_OK;
     }catch(...) {return E_OUTOFMEMORY;}
@@ -294,6 +344,8 @@ HRESULT Session::appendPage(
        current_.parsingName!=page.parsingName)
         return HRESULT_FROM_WIN32(ERROR_INVALID_STATE);
     const bool advancesFrontier=expectedOffset==current_.nextOffset;
+    const auto indexHr=mergeIndexPage(page);
+    if(FAILED(indexHr))return indexHr;
     try{
         current_.children.reserve(
             current_.children.size()+page.children.size());
@@ -322,6 +374,8 @@ HRESULT Session::prependPage(
        page.baseOffset>=expectedEnd||
        current_.parsingName!=page.parsingName)
         return HRESULT_FROM_WIN32(ERROR_INVALID_STATE);
+    const auto indexHr=mergeIndexPage(page);
+    if(FAILED(indexHr))return indexHr;
     try{
         std::vector<Item> combined;
         combined.reserve(page.children.size()+current_.children.size());
@@ -365,12 +419,14 @@ HRESULT Session::commit(Location next,bool record) noexcept {
     Snapshot fresh;
     const HRESULT hr=enumerate(next.get(),fresh);
     if(FAILED(hr))return hr;
+    std::vector<IndexedItem> freshIndex;
     try {
+        freshIndex=buildIndex(fresh);
         if(record && current_.folder.valid()) {
             back_.push_back(current_.folder);
             forward_.clear();
         }
-        current_=std::move(fresh);
+        replaceCurrent(std::move(fresh),std::move(freshIndex));
         return S_OK;
     } catch(...) {return E_OUTOFMEMORY;}
 }
@@ -402,8 +458,13 @@ HRESULT Session::refresh() noexcept {
     if(!current_.folder.valid())return E_UNEXPECTED;
     Snapshot fresh;
     const HRESULT hr=enumerate(current_.folder.get(),fresh);
-    if(SUCCEEDED(hr))current_=std::move(fresh);
-    return hr;
+    if(FAILED(hr))return hr;
+    try{
+        auto freshIndex=buildIndex(fresh);
+        replaceCurrent(std::move(fresh),std::move(freshIndex));
+        return S_OK;
+    }catch(std::bad_alloc const&){return E_OUTOFMEMORY;}
+    catch(...){return E_FAIL;}
 }
 HRESULT Session::back() noexcept {
     if(back_.empty())return S_FALSE;
@@ -411,8 +472,9 @@ HRESULT Session::back() noexcept {
     const HRESULT hr=enumerate(back_.back().get(),fresh);
     if(FAILED(hr))return hr;
     try {
+        auto freshIndex=buildIndex(fresh);
         forward_.push_back(current_.folder);
-        current_=std::move(fresh);
+        replaceCurrent(std::move(fresh),std::move(freshIndex));
         back_.pop_back();
         return S_OK;
     }catch(...) {return E_OUTOFMEMORY;}
@@ -423,8 +485,9 @@ HRESULT Session::forward() noexcept {
     const HRESULT hr=enumerate(forward_.back().get(),fresh);
     if(FAILED(hr))return hr;
     try {
+        auto freshIndex=buildIndex(fresh);
         back_.push_back(current_.folder);
-        current_=std::move(fresh);
+        replaceCurrent(std::move(fresh),std::move(freshIndex));
         forward_.pop_back();
         return S_OK;
     }catch(...) {return E_OUTOFMEMORY;}

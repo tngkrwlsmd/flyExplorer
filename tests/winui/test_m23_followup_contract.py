@@ -55,7 +55,8 @@ class M23Followup(unittest.TestCase):
   window=source("MainWindow.xaml.h")
   owner=source("window_tab_state.h")
   render=source("MainWindow.xaml.cpp")
-  for name in ("sortMode","details","renderedPaths","epoch",
+  for name in ("sortMode","details","renderedLogical","renderedPaths",
+               "indexedNameProjection","epoch",
                "invalidate()","isCurrent(","accepts("):
    self.assertIn(name,state)
   self.assertIn("std::array<fxfile::previewlist::PaneState,2> fileLists",owner)
@@ -108,7 +109,7 @@ class M23Followup(unittest.TestCase):
   worker=source("file_detail_controller.cpp")
   self.assertIn('entry.typeLabel=L"폴더"',worker)
   self.assertIn('L" 파일"',worker)
-  self.assertIn('if(!meta.typeLabel.empty())',impl)
+  self.assertIn('if(!meta->typeLabel.empty())',impl)
   self.assertNotIn('SHGetFileInfo',worker)
   self.assertNotIn('fxfile::filetype::queryVisuals(',impl)
 if __name__=="__main__":unittest.main()

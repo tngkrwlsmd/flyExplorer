@@ -64,7 +64,7 @@ def main():
     for key in ("FLY_M23_OWNED_DRAG_TEST","FLY_M23_OWNED_SESSION",
                 "FLY_M22_OWNED_ACTUAL_RECYCLE"):
         env.pop(key,None)
-    from pywinauto import Desktop
+    from pywinauto import Desktop, keyboard
     import psutil
     import ctypes as c
     from ctypes import wintypes as w
@@ -86,10 +86,19 @@ def main():
             parent=Desktop(backend="uia").window(handle=windows[0].handle)
             return parent.child_window(auto_id="LeftFiles").exists(timeout=.25)
         until(ready,"Owner preview window not ready",20)
+        def visible_file_list():
+            matches=[v for v in parent.descendants()
+                     if v.element_info.automation_id=="LeftFiles" and
+                        v.element_info.control_type=="List"]
+            visible=[v for v in matches if v.is_visible()]
+            if visible:
+                return visible[-1]
+            if matches:
+                return matches[-1]
+            raise AssertionError("owned LeftFiles list not found")
         def first_row():
-            matches=[v for v in parent.child_window(
-               auto_id="LeftFiles").descendants()
-               if v.element_info.control_type=="ListItem"]
+            matches=[v for v in visible_file_list().descendants()
+                     if v.element_info.control_type=="ListItem"]
             return matches[0].window_text() if matches else ""
         until(lambda:"bench-0000.txt" in first_row(),
               "large-folder native Shell first row not rendered",
@@ -190,6 +199,9 @@ def main():
                    auto_id="LeftFiles").descendants()
                    if v.element_info.control_type=="ListItem"]
                 return matches[0].window_text() if matches else ""
+            def status_text():
+                control=fresh_parent().child_window(auto_id="StatusText")
+                return control.window_text() if control.exists(timeout=.2) else ""
             shown=0
             for _ in range(180):
                 text=progress_text()
@@ -208,6 +220,9 @@ def main():
                 more_control().click_input()
                 until(lambda:(progress_text(),footer_count())!=before,
                       "browse-over-20k progress did not advance",14)
+                if "불러오는 중" in status_text():
+                    until(lambda:"불러오는 중" not in status_text(),
+                          "browse-over-20k Shell page did not settle",16)
             shown=max(shown,footer_count())
             assert shown>20000,(progress_text(),footer_count())
             def previous_visible():
@@ -221,15 +236,63 @@ def main():
             ImageGrab.grab(
                 bbox=(rect.left,rect.top,rect.right,rect.bottom),
                 include_layered_windows=True).save(evidence)
-            first_before_sort=fresh_first_row()
             fresh_parent().child_window(auto_id="SortPicker").select(1)
+            until(lambda:"bench-9999.txt" in fresh_first_row(),
+                  "indexed global name sort above 20k did not complete",16)
+            sort_progress=progress_text()
+            assert "20500" in sort_progress,sort_progress
+            previous=fresh_parent().child_window(auto_id="LeftLoadPreviousButton")
+            assert not previous.exists(timeout=.2) or not previous.is_visible()
+            filt=fresh_parent().child_window(auto_id="LeftNameFilterBox")
+            assert filt.exists(timeout=.2)
+            before_filter=(status_text(),footer_count(),fresh_first_row())
+            files=fresh_parent().child_window(auto_id="LeftFiles")
+            files.set_focus()
+            keyboard.send_keys("^+f")
+            until(lambda:fresh_parent().child_window(
+                      auto_id="LeftNameFilterBox").has_keyboard_focus(),
+                  "Ctrl+Shift+F did not focus the indexed name filter",5)
+            keyboard.send_keys("20499")
+            until(lambda:fresh_parent().child_window(
+                      auto_id="LeftNameFilterBox").get_value()=="20499",
+                  "indexed name filter keyboard input did not accept the target",5)
+            print("OWNED_LARGE_INDEX_FILTER_INPUT_ACCEPTED",True,flush=True)
+            until(lambda:
+                  status_text()!=before_filter[0] or
+                  footer_count()!=before_filter[1] or
+                  fresh_first_row()!=before_filter[2],
+                  "indexed name filter event produced no observable change",8)
+            print("OWNED_LARGE_INDEX_FILTER_EVENT_STATE",
+                  repr(fresh_parent().child_window(
+                      auto_id="LeftNameFilterBox").get_value()),
+                  repr(status_text()),footer_count(),
+                  repr(fresh_first_row()),flush=True)
+            until(lambda:footer_count()==1,
+                  "indexed name filter model count did not become one",8)
+            print("OWNED_LARGE_INDEX_FILTER_MODEL_STATE",
+                  repr(status_text()),footer_count(),
+                  repr(fresh_first_row()),flush=True)
+            until(lambda:"bench-20499.txt" in fresh_first_row(),
+                  "indexed name filter did not project the target row",12)
+            filt.set_edit_text("")
+            until(lambda:"bench-9999.txt" in fresh_first_row(),
+                  "clearing indexed filter did not restore indexed name sort",12)
+            fresh_parent().child_window(auto_id="SortPicker").select(2)
             until(lambda:"20,000" in fresh_parent().child_window(
                   auto_id="StatusText").window_text(),
-                  "global sort above complete-model ceiling was not refused",8)
-            assert fresh_first_row()==first_before_sort
+                  "size sort above complete-model ceiling was not refused",8)
+            assert "bench-9999.txt" in fresh_first_row()
+            current=fresh_parent()
+            rect=current.rectangle()
+            evidence=base/"large-name-index-over-20k-after.png"
+            ImageGrab.grab(
+                bbox=(rect.left,rect.top,rect.right,rect.bottom),
+                include_layered_windows=True).save(evidence)
             print("OWNED_LARGE_BROWSE_OVER_20000",shown,flush=True)
-            print("OWNED_LARGE_OVER_20K_SORT_REFUSED",True,flush=True)
-            print("OWNED_LARGE_OVER_20K_VISUAL",evidence.name,flush=True)
+            print("OWNED_LARGE_OVER_20K_NAME_SORT_INDEXED",True,flush=True)
+            print("OWNED_LARGE_OVER_20K_NAME_FILTER_INDEXED",True,flush=True)
+            print("OWNED_LARGE_OVER_20K_SIZE_SORT_REFUSED",True,flush=True)
+            print("OWNED_LARGE_OVER_20K_INDEX_VISUAL",evidence.name,flush=True)
             success=True
             return
 
@@ -268,24 +331,31 @@ def main():
                   auto_id="LeftLoadMoreButton").window_text(),
                   "controlled extra page did not render",12)
         if args.items==2300:
-            from pywinauto import keyboard
             filt=parent.child_window(auto_id="LeftNameFilterBox")
             assert filt.exists(timeout=.2)
-            filt.set_edit_text("2299")
+            files=parent.child_window(auto_id="LeftFiles")
+            files.set_focus()
+            keyboard.send_keys("^+f")
+            until(lambda:filt.has_keyboard_focus(),
+                  "Ctrl+Shift+F did not reveal and focus the owned pane name filter",5)
+            keyboard.send_keys("2299")
+            until(lambda:filt.get_value()=="2299",
+                  "keyboard name filter input did not accept the target",5)
             until(lambda:"bench-2299.txt" in first_row() and
                   (not parent.child_window(
                        auto_id="LeftLoadMoreButton").exists(timeout=.1) or
                    not parent.child_window(
                        auto_id="LeftLoadMoreButton").is_visible()),
                   "native file-name filter must not mutate model or page",9)
-            filt.set_edit_text("")
+            keyboard.send_keys("^a{BACKSPACE}")
+            until(lambda:filt.get_value()=="",
+                  "keyboard name filter clear did not empty the editor",5)
             until(lambda:"bench-2299.txt" in first_row(),
                   "clearing pane filter failed to restore sorted native snapshot",10)
-            files=parent.child_window(auto_id="LeftFiles")
             files.set_focus()
             keyboard.send_keys("^+f")
             until(lambda:filt.has_keyboard_focus(),
-                  "Ctrl+Shift+F did not focus the owned pane name filter",5)
+                  "Ctrl+Shift+F did not refocus the owned pane name filter",5)
             print("OWNED_LARGE_CTRL_SHIFT_F_FILTER_FOCUS",True,flush=True)
             print("OWNED_LARGE_PROGRESSIVE_PAGE_FILTER_RESET",True,flush=True)
         assert (folder/"bench-0000.txt").read_text(encoding="utf-8").startswith(

@@ -24,7 +24,7 @@ class ContextContract(unittest.TestCase):
   for term in ("ShowExternalWindowsContextMenu(int side)",
                "OnFileRightTapped","args.Handled(true)",
                "VisualTreeHelper::GetParent","mFileOperations.busy()",
-               "items[index].isFileSystem()","root[1]!=L':'",
+               "session.indexedItem(","indexed->isFileSystem()","root[1]!=L':'",
                "shellcontext::show("):
    self.assertIn(term,app)
   self.assertNotIn("QueryContextMenu",app)

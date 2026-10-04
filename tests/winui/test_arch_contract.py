@@ -59,7 +59,7 @@ class MigrationContracts(unittest.TestCase):
   self.assertNotIn("\ub3c5\ub9bd \ud504\ub85c\uc138\uc2a4",navtext)
   self.assertTrue((ROOT.parents[1]/"src/base/file_command_core.cpp").is_file())
   self.assertNotIn("std::filesystem::directory_iterator",impl)
-  self.assertIn("QueuePidl(side,fxfile::shellnav::Location(entries[index].id)",impl)
+  self.assertIn("QueuePidl(side,fxfile::shellnav::Location(entries[resident].id)",impl)
   self.assertNotIn("SHFileOperation(",impl)
   self.assertNotIn("DeleteFile(",impl)
   self.assertNotIn("MoveFile(",impl)

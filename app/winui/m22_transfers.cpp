@@ -77,23 +77,36 @@ void MainWindow::UpdateSort(int selection){
  const int side=ActiveWindowTab().model.activePane;
  auto& state=ActiveWindowTab().fileLists[side];
  auto const& pane=ActiveWindowTab().model.panes[side];
- auto const& snapshot=pane.tabs[pane.active].snapshot();
+ auto const& session=pane.tabs[pane.active];
+ auto const& snapshot=session.snapshot();
  const auto completeLimit=static_cast<std::size_t>(
   fxfile::isolation::kMaxCompleteModelEntries);
- if((snapshot.baseOffset||
-     snapshot.residentEndOffset()<snapshot.nextOffset||
-     snapshot.truncated)&&
-    (snapshot.nextOffset>completeLimit||
-     (snapshot.nextOffset==completeLimit&&snapshot.truncated))){
+ const bool beyondComplete=
+  snapshot.nextOffset>completeLimit||
+  (snapshot.nextOffset==completeLimit&&snapshot.truncated);
+ if(beyondComplete&&selection>1){
   fileBar()->SetSortIndex(state.sortMode);
   StatusText().Text(
-   L"전역 정렬은 현재 최대 20,000개 항목까지 전체 모델을 완성할 수 있습니다.");
+   L"유형/크기/수정 날짜 전역 정렬은 현재 최대 20,000개 항목까지 지원합니다. "
+   L"이름 정렬은 경량 인덱스를 사용합니다.");
   return;
  }
  state.sortMode=selection;
+ state.indexedNameSort=selection<=1;
+ state.indexedNameProjection=beyondComplete&&state.indexedNameSort;
+ state.indexToComplete=state.indexedNameProjection&&
+  (snapshot.residentEndOffset()<snapshot.nextOffset||snapshot.truncated);
+ state.visibleCount=160;
  fileBar()->SetSortIndex(selection);
  UpdateSortPresentation(side);
  FillFiles(side);
+ if(state.indexedNameProjection){
+  if(state.indexToComplete)
+   QueueNextFolderPage(side,true);
+  else
+   StatusText().Text(L"전체 이름 인덱스로 정렬했습니다.");
+  return;
+ }
  if(snapshot.baseOffset||
     snapshot.residentEndOffset()<snapshot.nextOffset||
     snapshot.truncated)
@@ -127,19 +140,17 @@ void MainWindow::RunTransfer(fxfile::shelltransfer::Kind kind){
   req.destination=other.filesystemPaths[other.active];
  }
  auto list=side==0?LeftFiles():RightFiles();
- auto const& snapshot=pane.tabs[tab].snapshot();
- auto const& items=snapshot.children;
+ auto const& session=pane.tabs[tab];
  for(auto const& value:list.SelectedItems()){
   const auto row=value.try_as<ListViewItem>();
   if(!row||!row.Tag()){StatusText().Text(L"선택한 항목을 읽지 못했습니다.");return;}
   const auto logical=winrt::unbox_value<std::uint64_t>(row.Tag());
-  std::size_t index=0;
-  if(!snapshot.residentIndex(logical,index)||!items[index].isFileSystem()||
-     items[index].parsingName.empty()){
+  auto const* indexed=session.indexedItem(static_cast<std::size_t>(logical));
+  if(!indexed||!indexed->isFileSystem()||indexed->parsingName.empty()){
    StatusText().Text(L"가상 Shell 항목은 이 파일 작업에서 지원하지 않습니다.");
    return;
   }
-  req.sources.push_back(items[index].parsingName);
+  req.sources.push_back(indexed->parsingName);
   if(req.sources.size()>32){
    StatusText().Text(L"파일 작업 한 번에 최대 32개 항목을 선택할 수 있습니다.");
    return;
@@ -311,18 +322,16 @@ bool MainWindow::CopySelectedToWindowsClipboard(int side,bool cut){
   StatusText().Text(L"폴더를 완전히 불러온 후 항목을 선택하세요.");return false;
  }
  const auto view=side==0?LeftFiles():RightFiles();
- const auto& snapshot=pane.tabs[pane.active].snapshot();
- const auto& entries=snapshot.children;
+ const auto& session=pane.tabs[pane.active];
  fxfile::shellclipboard::Payload item{};
  item.move=cut;
  for(auto const& selected:view.SelectedItems()){
   auto const row=selected.try_as<ListViewItem>();
   if(!row||!row.Tag())return false;
   const auto logical=winrt::unbox_value<std::uint64_t>(row.Tag());
-  std::size_t index=0;
-  if(!snapshot.residentIndex(logical,index)||
-     !entries[index].isFileSystem())return false;
-  item.paths.push_back(entries[index].parsingName);
+  auto const* indexed=session.indexedItem(static_cast<std::size_t>(logical));
+  if(!indexed||!indexed->isFileSystem()||indexed->parsingName.empty())return false;
+  item.paths.push_back(indexed->parsingName);
   if(item.paths.size()>32)return false;
  }
  if(!fxfile::shellclipboard::valid(item)){
@@ -412,12 +421,10 @@ void MainWindow::ShowExternalWindowsContextMenu(int side){
  auto row=list.SelectedItems().GetAt(0).try_as<ListViewItem>();
  if(!row||!row.Tag())return;
  const auto logical=winrt::unbox_value<std::uint64_t>(row.Tag());
- auto const& snapshot=pane.tabs[pane.active].snapshot();
- std::size_t index=0;
- if(!snapshot.residentIndex(logical,index)||
-    !snapshot.children[index].isFileSystem())return;
- auto const& items=snapshot.children;
- auto path=items[index].parsingName;
+ auto const& session=pane.tabs[pane.active];
+ auto const* indexed=session.indexedItem(static_cast<std::size_t>(logical));
+ if(!indexed||!indexed->isFileSystem()||indexed->parsingName.empty())return;
+ auto path=indexed->parsingName;
  auto const value=std::filesystem::path(path);
  if(!value.is_absolute()||value.lexically_normal().native()!=path||
     path.size()>1024)return;
@@ -486,6 +493,7 @@ void MainWindow::HandleFileShortcut(
  const auto shift=(::GetKeyState(VK_SHIFT)&0x8000)!=0;
  if(ctrl&&shift&&vk==Windows::System::VirtualKey::F){
   auto box=side==0?LeftNameFilterBox():RightNameFilterBox();
+  if(box.Opacity()<0.5)ToggleNameFilter(side);
   box.Focus(Microsoft::UI::Xaml::FocusState::Keyboard);
   box.SelectAll();
   args.Handled(true);return;
