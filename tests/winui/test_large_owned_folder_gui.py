@@ -199,9 +199,10 @@ def main():
             progress=progress_text()
             shown=int(progress.split("/",1)[0])
             assert shown>20000,progress
-            until(lambda:(lambda p:
-                  p.exists(timeout=.2) and p.is_visible())(
-                    fresh_parent().child_window(auto_id="LeftLoadPreviousButton")),
+            def previous_visible():
+                control=fresh_parent().child_window(auto_id="LeftLoadPreviousButton")
+                return control.exists(timeout=.2) and control.is_visible()
+            until(previous_visible,
                   "browse-over-20k did not retain backward resident navigation",8)
             current=fresh_parent()
             rect=current.rectangle()
