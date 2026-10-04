@@ -91,6 +91,17 @@ class LargeFolderStreamingContracts(unittest.TestCase):
         self.assertIn("kMaxBrowseEntries",main)
         self.assertIn("fullModelLimitReached",main)
 
+    def test_owned_gui_covers_browse_over_complete_model_ceiling(self):
+        gui=read("tests/winui/test_large_owned_folder_gui.py")
+        for marker in (
+            "20500",
+            "--browse-over-complete-model",
+            "OWNED_LARGE_BROWSE_OVER_20000",
+            "OWNED_LARGE_OVER_20K_SORT_REFUSED",
+            "large-browse-over-20k-after.png",
+        ):
+            self.assertIn(marker,gui)
+
     def test_real_owned_gui_proves_initial_1024_then_global_8000(self):
         gui=read("tests/winui/test_large_owned_folder_gui.py")
         for marker in (
