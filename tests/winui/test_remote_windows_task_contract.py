@@ -71,8 +71,9 @@ class RemoteWindowsTaskContractTests(unittest.TestCase):
         self.assertNotIn("remote/**", self.workflow)
         self.assertNotIn("remote-task.ps1", self.workflow)
         self.assertNotIn("Run committed remote task", self.workflow)
-        self.assertIn("minimal control-plane tree", self.agents)
-        self.assertIn("Do not create `remote/**` task branches", self.agents)
+        agents = " ".join(self.agents.split())
+        self.assertIn("minimal control-plane tree", agents)
+        self.assertIn("Do not create `remote/**` task branches", agents)
 
     def test_long_run_guidance_allows_up_to_three_minutes_without_polling(self):
         agents = " ".join(self.agents.split())
