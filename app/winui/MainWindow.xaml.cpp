@@ -638,10 +638,6 @@ namespace winrt::FlyExplorer::implementation
                                 session.snapshot().children.size());
                     }
                 }
-                ClearFileDetails(completed.side);
-                FillFiles(completed.side);
-                UpdateSelectionChrome();
-                UpdateFooterSummary();
                 auto const& snapshot=session.snapshot();
                 const bool incomplete=state.indexToComplete?
                     (snapshot.residentEndOffset()<snapshot.nextOffset||
@@ -649,12 +645,17 @@ namespace winrt::FlyExplorer::implementation
                     (snapshot.baseOffset||
                      snapshot.residentEndOffset()<snapshot.nextOffset||
                      snapshot.truncated);
+                if(state.streamToComplete&&!incomplete){
+                    state.streamToComplete=false;
+                    state.indexToComplete=false;
+                }
+                ClearFileDetails(completed.side);
+                FillFiles(completed.side);
+                UpdateSelectionChrome();
+                UpdateFooterSummary();
                 if(state.streamToComplete&&incomplete){
                     if(QueueNextFolderPage(completed.side,true))return;
                     if(state.fullModelLimitReached)return;
-                    state.streamToComplete=false;
-                    state.indexToComplete=false;
-                }else if(!incomplete){
                     state.streamToComplete=false;
                     state.indexToComplete=false;
                 }
