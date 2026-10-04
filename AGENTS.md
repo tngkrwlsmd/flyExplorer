@@ -245,21 +245,33 @@ global lease/concurrency rule instead of preserving single-runner serialization
 by habit.
 
 After starting a build or remote task, record its run ID, target commit and
-scope. The governing principle is **no short-interval routine polling**.
+scope. The governing principle is **no short-interval routine polling**, but
+that principle must not be used to abandon result-dependent work. If the
+current user request cannot be completed until that run succeeds or fails,
+treat the run as a blocking dependency of the current request: keep following
+it to completion at the workflow-configured observation cadence, consume the
+result as soon as completion is observed, and continue the dependent action in
+the same task. The user does not need to separately ask for "active
+monitoring" just to have a run that this task depends on followed through to
+its result.
+
 The workflow-level settings `FLYEXPLORER_ROUTINE_OBSERVATION_SECONDS` and
 `FLYEXPLORER_ACTIVE_MONITOR_SECONDS` define the current observation cadence;
-do not duplicate their literal values in guidance. If completion becomes
-independently known — for example the user reports completion/failure or a tool
-returns a genuine completion signal — inspect the run immediately. Otherwise,
-routine status reads wait for the configured routine observation interval. When
-the user explicitly requests active monitoring, use the configured active
-monitor interval, stop as soon as completion is observed, and never replace
-that monitoring with a scheduled/automation task unless the user separately
-asks for one. If a permitted read still shows the run active, leave the exact
-run ID as the resume checkpoint instead of tight-loop polling. On a later
-"continue the interrupted work" request, first read current main/ref state, the
-recorded run, relevant artifacts and cleanup state; reuse completed evidence
-for the same revision/configuration rather than rerunning it.
+do not duplicate their literal values in guidance. Explicit active monitoring
+changes the observation cadence to the configured active-monitor interval; it
+does not determine whether a result-dependent run must be followed. If
+completion becomes independently known — for example the user reports
+completion/failure or a tool returns a genuine completion signal — inspect the
+run immediately. Do not tight-loop status reads, sleep merely to consume an
+interval, or create a scheduled/automation task merely to bridge observation
+time.
+
+Only when a run's result is **not required to satisfy the current user
+request** may an active run be left as a resume checkpoint after a permitted
+read. On a later "continue the interrupted work" request, first read current
+main/ref state, the recorded run, relevant artifacts and cleanup state; reuse
+completed evidence for the same revision/configuration rather than rerunning
+it.
 
 For one logical unit, use the workflow-configured
 `FLYEXPLORER_DEFAULT_VALIDATION_RUN_BUDGET` as the normal planning budget, not
