@@ -1,14 +1,14 @@
 {
-  "request_id": "guidance-remote-shell-fallback-and-gui-diagnostics-001",
+  "request_id": "guidance-remote-shell-fallback-and-gui-diagnostics-002",
   "expected_main_sha": "917c7ca057fe65003694f52abfd7e159c7302a7a",
   "candidate_sha": "917c7ca057fe65003694f52abfd7e159c7302a7a",
   "logical_unit": "remote-shell-guidance-contract",
-  "configuration": "none",
+  "configuration": "Release",
   "validation_kind": [
     "source"
   ],
   "invalidated_evidence": {
-    "source": "AGENTS, AGENT_EFFICIENCY, PROJECT guidance and the remote-windows-task contract tests changed to require remote-shell fallback for connector/API gaps and layered first-run GUI input diagnostics."
+    "source": "The previous request was rejected before execution because source validation incorrectly declared configuration none. This request uses the required Release metadata and validates the new remote-shell fallback and layered GUI diagnostic contracts."
   },
   "working_directory": "C:\\dev\\flyExplorer",
   "command": "$ErrorActionPreference = \"Stop\"\ngit fetch origin main --no-tags --prune\nif ($LASTEXITCODE -ne 0) { throw \"fetch main failed\" }\nif ((git rev-parse origin/main).Trim() -ne \"917c7ca057fe65003694f52abfd7e159c7302a7a\") { throw \"main moved\" }\nif ((git status --short).Count -ne 0) { throw \"dirty persistent checkout\" }\n\ngit checkout main\nif ($LASTEXITCODE -ne 0) { throw \"checkout main failed\" }\ngit merge --ff-only origin/main\nif ($LASTEXITCODE -ne 0) { throw \"fast-forward main failed\" }\nif ((git rev-parse HEAD).Trim() -ne \"917c7ca057fe65003694f52abfd7e159c7302a7a\") { throw \"persistent checkout main mismatch\" }\n\npython -X utf8 tests\\winui\\test_remote_windows_task_contract.py\nif ($LASTEXITCODE -ne 0) { throw \"remote-shell guidance contract failed\" }\n\ncmd /c test.bat source\nif ($LASTEXITCODE -ne 0) { throw \"source contracts failed\" }\n\n$stale = git ls-remote --heads origin work/direct-shell-context-column-resize\nif ($LASTEXITCODE -ne 0) { throw \"branch existence check failed\" }\nif ($stale) {\n  git push origin --delete work/direct-shell-context-column-resize\n  if ($LASTEXITCODE -ne 0) { throw \"accepted work branch cleanup failed\" }\n  Write-Host \"WORK_BRANCH_CLEANUP=deleted\"\n} else {\n  Write-Host \"WORK_BRANCH_CLEANUP=already-absent\"\n}\n\ngit diff --check HEAD^..HEAD\nif ($LASTEXITCODE -ne 0) { throw \"guidance diff check failed\" }\nWrite-Host \"REMOTE_SHELL_GUIDANCE_CONTRACT_PASS\"\n"
