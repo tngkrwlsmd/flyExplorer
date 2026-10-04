@@ -493,6 +493,7 @@ void MainWindow::HandleFileShortcut(
  const auto shift=(::GetKeyState(VK_SHIFT)&0x8000)!=0;
  if(ctrl&&shift&&vk==Windows::System::VirtualKey::F){
   auto box=side==0?LeftNameFilterBox():RightNameFilterBox();
+  if(box.Opacity()<0.5)ToggleNameFilter(side);
   box.Focus(Microsoft::UI::Xaml::FocusState::Keyboard);
   box.SelectAll();
   args.Handled(true);return;
