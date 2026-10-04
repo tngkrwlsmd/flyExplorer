@@ -65,6 +65,7 @@ struct PaneState final {
         renderedLogical.clear();
         renderedPaths.clear();
         indexToComplete=false;
+        indexedNameSort=false;
         indexedNameProjection=false;
         return epoch;
     }
