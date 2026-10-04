@@ -108,6 +108,20 @@ class RemoteWindowsTaskContractTests(unittest.TestCase):
         )
 
 
+    def test_windows_job_has_static_candidate_fail_fast_gate(self):
+        self.assertIn("- name: Static candidate preflight", self.workflow)
+        self.assertIn("STATIC_CANDIDATE_PREFLIGHT=SKIP_NON_VALIDATION", self.workflow)
+        self.assertIn("git worktree add --detach", self.workflow)
+        self.assertIn("test_gui_harness_contract.py", self.workflow)
+        self.assertIn("test_remote_request_preflight_contract.py", self.workflow)
+        self.assertIn("test_remote_windows_task_contract.py", self.workflow)
+        self.assertIn("STATIC_CANDIDATE_PREFLIGHT=PASS", self.workflow)
+        self.assertLess(
+            self.workflow.index("- name: Static candidate preflight"),
+            self.workflow.index("- name: Run remote shell command"),
+        )
+
+
     def test_windows_workflows_skip_github_rerun_attempts(self):
         self.assertIn(
             "task:\n    if: ${{ github.run_attempt == '1' }}",
