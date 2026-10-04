@@ -49,12 +49,27 @@ void MainWindow::OnCancelTransfer(IInspectable const&,RoutedEventArgs const&){
  }
 }
 void MainWindow::OnFileRightTapped(
- IInspectable const& sender,Microsoft::UI::Xaml::Input::RightTappedRoutedEventArgs const&){
+ IInspectable const& sender,Microsoft::UI::Xaml::Input::RightTappedRoutedEventArgs const& args){
  auto list=sender.try_as<ListView>();
  if(!list)return;
- if(list==LeftFiles())ActivatePane(0);
- else if(list==RightFiles())ActivatePane(1);
+ const int side=list==LeftFiles()?0:list==RightFiles()?1:-1;
+ if(side<0)return;
+ ActivatePane(side);
+
+ ListViewItem clicked{nullptr};
+ auto current=args.OriginalSource().try_as<DependencyObject>();
+ while(current){
+  if(auto row=current.try_as<ListViewItem>()){clicked=row;break;}
+  current=Microsoft::UI::Xaml::Media::VisualTreeHelper::GetParent(current);
+ }
+ if(!clicked)return;
+ if(list.SelectedItems().Size()!=1||!clicked.IsSelected()){
+  list.SelectedItems().Clear();
+  clicked.IsSelected(true);
+ }
+ args.Handled(true);
  QueueSelectionPresentationUpdate();
+ ShowExternalWindowsContextMenu(side);
 }
 void MainWindow::UpdateSort(int selection){
  if(selection<0||selection>7)return;
@@ -378,13 +393,13 @@ void MainWindow::OnWindowsCut(IInspectable const&,RoutedEventArgs const&){
 void MainWindow::OnWindowsPaste(IInspectable const&,RoutedEventArgs const&){
  PasteFromWindowsClipboard();
 }
-void MainWindow::OnExternalWindowsContextMenu(
- IInspectable const&,RoutedEventArgs const&){
+void MainWindow::ShowExternalWindowsContextMenu(int side){
+ if(side<0||side>1)return;
+
  if(mFileOperations.busy()){
   StatusText().Text(L"Shell \uC791\uC5C5\uC774 \uB05D\uB09C \uB4A4 \uC2DC\uB3C4\uD558\uC138\uC694.");
   return;
  }
- const auto side=ActiveWindowTab().model.activePane;
  auto const& pane=ActiveWindowTab().model.panes[side];
  if(pane.pending[pane.active]||pane.filesystemPaths[pane.active].empty())
   return;
@@ -441,6 +456,10 @@ void MainWindow::OnExternalWindowsContextMenu(
  }catch(...){
   StatusText().Text(L"Shell \uBA54\uB274 \uB3C5\uB9BD \uC791\uC5C5\uC790\uB97C \uC2DC\uC791\uD558\uC9C0 \uBABB\uD588\uC2B5\uB2C8\uB2E4.");
  }
+}
+void MainWindow::OnExternalWindowsContextMenu(
+ IInspectable const&,RoutedEventArgs const&){
+ ShowExternalWindowsContextMenu(ActiveWindowTab().model.activePane);
 }
 void MainWindow::StartInternalPaste(){
  if(mClipboardSources.empty()||mFileOperations.busy()){
