@@ -1,8 +1,8 @@
 {
-  "request_id": "large-folder-name-index-acceptance-002",
+  "request_id": "direct-shell-context-column-resize-acceptance-001",
   "expected_main_sha": "d50f01e8ccecb800f0dbac6c0b9f550e9cb25e49",
-  "candidate_sha": "3984884008f30f67434efaa5c963b68c565f79c2",
-  "logical_unit": "large-folder-name-index",
+  "candidate_sha": "bc86bb66265152d22071f5ab071978f15eb52bf9",
+  "logical_unit": "direct-shell-context-column-resize",
   "configuration": "Release",
   "validation_kind": [
     "source",
@@ -11,11 +11,11 @@
     "visual"
   ],
   "invalidated_evidence": {
-    "source": "Three stale source contracts were corrected and full-index projection is deferred until collection completes.",
-    "build": "C++ name-index and UI projection inputs changed since the failed primary run; no prior build evidence exists for this logical unit.",
-    "gui": "20,500-item name sort/filter is the changed product boundary; lower 2300 GUI behavior is not rerun for confidence.",
-    "visual": "Final indexed projection is rendered from lightweight logical metadata after resident-window eviction."
+    "source": "ListView ContextFlyout was removed, direct Shell right-click routing added, visible Details resize thumbs/state/contracts added.",
+    "build": "MainWindow XAML/C++/header and m22_transfers C++ compile inputs changed.",
+    "gui": "Right-click must launch the isolated Shell popup directly and visible header separators must resize Details columns by pointer drag.",
+    "visual": "Context popup presentation and Details column geometry changed."
   },
   "working_directory": "C:\\dev\\flyExplorer",
-  "command": "$ErrorActionPreference = \"Stop\"\ngit fetch origin main work/large-folder-name-index --no-tags --prune\nif ($LASTEXITCODE -ne 0) { throw \"fetch failed\" }\nif ((git rev-parse origin/main).Trim() -ne \"d50f01e8ccecb800f0dbac6c0b9f550e9cb25e49\") { throw \"main moved\" }\nif ((git status --short).Count -ne 0) { throw \"dirty persistent checkout\" }\ngit checkout -B work/large-folder-name-index origin/work/large-folder-name-index\nif ($LASTEXITCODE -ne 0) { throw \"checkout candidate failed\" }\nif ((git rev-parse HEAD).Trim() -ne \"3984884008f30f67434efaa5c963b68c565f79c2\") { throw \"candidate mismatch\" }\n\ncmd /c test.bat source\nif ($LASTEXITCODE -ne 0) { throw \"source contracts failed\" }\n\ncmd /c build.bat Release\nif ($LASTEXITCODE -ne 0) { throw \"Release build failed\" }\n\npython -X utf8 tests\\winui\\test_large_owned_folder_gui.py --items 20500 --configuration Release --browse-over-complete-model\nif ($LASTEXITCODE -ne 0) { throw \"indexed name sort/filter over-20k acceptance failed\" }\n\n$source = \"C:\\dev\\flyExplorer\\logs\\m23\\large-name-index-over-20k-after.png\"\n$target = \"C:\\dev\\flyExplorer\\logs\\remote-evidence\"\nif (!(Test-Path -LiteralPath $source -PathType Leaf)) { throw \"indexed visual evidence image missing\" }\nNew-Item -ItemType Directory -Force -Path $target | Out-Null\nGet-ChildItem -LiteralPath $target -File -ErrorAction SilentlyContinue | Remove-Item -Force\nCopy-Item -LiteralPath $source -Destination (Join-Path $target \"large-name-index-over-20k-after.png\")\nGet-FileHash -Algorithm SHA256 -LiteralPath $source |\n  ForEach-Object { \"$($_.Path) $($_.Hash)\" } |\n  Set-Content -Encoding UTF8 -LiteralPath (Join-Path $target \"large-name-index-sha256.txt\")\n\ngit diff --check origin/main..HEAD\nif ($LASTEXITCODE -ne 0) { throw \"diff check failed\" }\nWrite-Host \"LARGE_FOLDER_NAME_INDEX_ACCEPTANCE_PASS\"\n"
+  "command": "$ErrorActionPreference = \"Stop\"\ngit fetch origin main work/direct-shell-context-column-resize --no-tags --prune\nif ($LASTEXITCODE -ne 0) { throw \"fetch failed\" }\nif ((git rev-parse origin/main).Trim() -ne \"d50f01e8ccecb800f0dbac6c0b9f550e9cb25e49\") { throw \"main moved\" }\nif ((git status --short).Count -ne 0) { throw \"dirty persistent checkout\" }\ngit checkout -B work/direct-shell-context-column-resize origin/work/direct-shell-context-column-resize\nif ($LASTEXITCODE -ne 0) { throw \"checkout candidate failed\" }\nif ((git rev-parse HEAD).Trim() -ne \"bc86bb66265152d22071f5ab071978f15eb52bf9\") { throw \"candidate mismatch\" }\n\ncmd /c test.bat source\nif ($LASTEXITCODE -ne 0) { throw \"source contracts failed\" }\n\ncmd /c build.bat Release\nif ($LASTEXITCODE -ne 0) { throw \"Release build failed\" }\n\npython -X utf8 tests\\winui\\test_owned_context_menu_gui.py Release\nif ($LASTEXITCODE -ne 0) { throw \"direct Shell context GUI failed\" }\n\npython -X utf8 tests\\winui\\test_owned_column_resize_gui.py Release\nif ($LASTEXITCODE -ne 0) { throw \"detail column resize GUI failed\" }\n\n$target = \"C:\\dev\\flyExplorer\\logs\\remote-evidence\"\nNew-Item -ItemType Directory -Force -Path $target | Out-Null\nGet-ChildItem -LiteralPath $target -File -ErrorAction SilentlyContinue | Remove-Item -Force\n$images = @(\n  \"C:\\dev\\flyExplorer\\logs\\m24\\direct-shell-context-after.png\",\n  \"C:\\dev\\flyExplorer\\logs\\m24\\detail-columns-before.png\",\n  \"C:\\dev\\flyExplorer\\logs\\m24\\detail-columns-after.png\"\n)\nforeach ($image in $images) {\n  if (!(Test-Path -LiteralPath $image -PathType Leaf)) { throw \"visual evidence missing: $image\" }\n  Copy-Item -LiteralPath $image -Destination $target\n}\nGet-FileHash -Algorithm SHA256 -LiteralPath $images |\n  ForEach-Object { \"$($_.Path) $($_.Hash)\" } |\n  Set-Content -Encoding UTF8 -LiteralPath (Join-Path $target \"direct-context-column-sha256.txt\")\n\ngit diff --check origin/main..HEAD\nif ($LASTEXITCODE -ne 0) { throw \"diff check failed\" }\nWrite-Host \"DIRECT_SHELL_CONTEXT_COLUMN_RESIZE_ACCEPTANCE_PASS\"\n"
 }
