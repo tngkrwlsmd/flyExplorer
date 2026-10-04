@@ -471,24 +471,12 @@
                     <Button x:Name="LeftDateSortButton" Grid.Column="3" Style="{StaticResource ExplorerColumnHeaderButtonStyle}" Tag="0,3" Content="&#xC218;&#xC815; &#xB0A0;&#xC9DC;" Click="OnHeaderSortClicked" AutomationProperties.Name="&#xC218;&#xC815; &#xB0A0;&#xC9DC; &#xC5F4; &#xC815;&#xB82C;"/>
                     <Thumb x:Name="LeftNameColumnResizeThumb" Grid.Column="0" HorizontalAlignment="Right"
                            Style="{StaticResource ExplorerColumnResizeThumbStyle}" Margin="0,1,0,1" Tag="0,0"
-                           PointerPressed="OnDetailColumnResizePointerPressed"
-                           PointerMoved="OnDetailColumnResizePointerMoved"
-                           PointerReleased="OnDetailColumnResizePointerReleased"
-                           PointerCaptureLost="OnDetailColumnResizePointerCaptureLost"
                            AutomationProperties.Name="&#xC67C;&#xCABD; &#xC774;&#xB984; &#xC5F4; &#xB108;&#xBE44; &#xC870;&#xC808;"/>
                     <Thumb x:Name="LeftTypeColumnResizeThumb" Grid.Column="1" HorizontalAlignment="Right"
                            Style="{StaticResource ExplorerColumnResizeThumbStyle}" Margin="0,1,0,1" Tag="0,1"
-                           PointerPressed="OnDetailColumnResizePointerPressed"
-                           PointerMoved="OnDetailColumnResizePointerMoved"
-                           PointerReleased="OnDetailColumnResizePointerReleased"
-                           PointerCaptureLost="OnDetailColumnResizePointerCaptureLost"
                            AutomationProperties.Name="&#xC67C;&#xCABD; &#xC720;&#xD615; &#xC5F4; &#xB108;&#xBE44; &#xC870;&#xC808;"/>
                     <Thumb x:Name="LeftSizeColumnResizeThumb" Grid.Column="2" HorizontalAlignment="Right"
                            Style="{StaticResource ExplorerColumnResizeThumbStyle}" Margin="0,1,0,1" Tag="0,2"
-                           PointerPressed="OnDetailColumnResizePointerPressed"
-                           PointerMoved="OnDetailColumnResizePointerMoved"
-                           PointerReleased="OnDetailColumnResizePointerReleased"
-                           PointerCaptureLost="OnDetailColumnResizePointerCaptureLost"
                            AutomationProperties.Name="&#xC67C;&#xCABD; &#xD06C;&#xAE30; &#xC5F4; &#xB108;&#xBE44; &#xC870;&#xC808;"/>
                 </Grid>
                 <ListView x:Name="LeftFiles" Grid.Row="3" IsDoubleTapEnabled="True"
@@ -566,24 +554,12 @@
                     <Button x:Name="RightDateSortButton" Grid.Column="3" Style="{StaticResource ExplorerColumnHeaderButtonStyle}" Tag="1,3" Content="&#xC218;&#xC815; &#xB0A0;&#xC9DC;" Click="OnHeaderSortClicked" AutomationProperties.Name="&#xC218;&#xC815; &#xB0A0;&#xC9DC; &#xC5F4; &#xC815;&#xB82C;"/>
                     <Thumb x:Name="RightNameColumnResizeThumb" Grid.Column="0" HorizontalAlignment="Right"
                            Style="{StaticResource ExplorerColumnResizeThumbStyle}" Margin="0,1,0,1" Tag="1,0"
-                           PointerPressed="OnDetailColumnResizePointerPressed"
-                           PointerMoved="OnDetailColumnResizePointerMoved"
-                           PointerReleased="OnDetailColumnResizePointerReleased"
-                           PointerCaptureLost="OnDetailColumnResizePointerCaptureLost"
                            AutomationProperties.Name="&#xC624;&#xB978;&#xCABD; &#xC774;&#xB984; &#xC5F4; &#xB108;&#xBE44; &#xC870;&#xC808;"/>
                     <Thumb x:Name="RightTypeColumnResizeThumb" Grid.Column="1" HorizontalAlignment="Right"
                            Style="{StaticResource ExplorerColumnResizeThumbStyle}" Margin="0,1,0,1" Tag="1,1"
-                           PointerPressed="OnDetailColumnResizePointerPressed"
-                           PointerMoved="OnDetailColumnResizePointerMoved"
-                           PointerReleased="OnDetailColumnResizePointerReleased"
-                           PointerCaptureLost="OnDetailColumnResizePointerCaptureLost"
                            AutomationProperties.Name="&#xC624;&#xB978;&#xCABD; &#xC720;&#xD615; &#xC5F4; &#xB108;&#xBE44; &#xC870;&#xC808;"/>
                     <Thumb x:Name="RightSizeColumnResizeThumb" Grid.Column="2" HorizontalAlignment="Right"
                            Style="{StaticResource ExplorerColumnResizeThumbStyle}" Margin="0,1,0,1" Tag="1,2"
-                           PointerPressed="OnDetailColumnResizePointerPressed"
-                           PointerMoved="OnDetailColumnResizePointerMoved"
-                           PointerReleased="OnDetailColumnResizePointerReleased"
-                           PointerCaptureLost="OnDetailColumnResizePointerCaptureLost"
                            AutomationProperties.Name="&#xC624;&#xB978;&#xCABD; &#xD06C;&#xAE30; &#xC5F4; &#xB108;&#xBE44; &#xC870;&#xC808;"/>
                 </Grid>
                 <ListView x:Name="RightFiles" Grid.Row="3" IsDoubleTapEnabled="True"
