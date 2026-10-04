@@ -112,7 +112,7 @@ class FluentShellContract(unittest.TestCase):
         self.assertGreaterEqual(impl.count("RootShell().AddHandler("),4)
         self.assertIn("VisualTreeHelper::GetParent",impl)
         self.assertIn('find(\n               L"ColumnResizeThumb")',impl)
-        self.assertIn("GetAsyncKeyState(VK_LBUTTON)",impl)
+        self.assertIn("IsLeftButtonPressed()",impl)
         self.assertGreaterEqual(impl.count("true);"),4)
         self.assertIn("ApplyDetailColumnLayout(int side)",impl)
         self.assertIn("DetailLayoutProfile() const",impl)
