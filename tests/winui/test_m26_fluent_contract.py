@@ -107,6 +107,7 @@ class FluentShellContract(unittest.TestCase):
         self.assertIn('HorizontalAlignment="Right"',xaml)
         self.assertNotIn('Width="7" Margin="0,1,-3,1"',xaml)
         self.assertEqual(xaml.count('Style="{StaticResource ExplorerColumnResizeThumbStyle}"'),6)
+        self.assertEqual(xaml.count('IsHitTestVisible="False"'),8)
         self.assertEqual(xaml.count('PointerPressed="OnDetailColumnResizePointerPressed"'),6)
         self.assertEqual(xaml.count('PointerMoved="OnDetailColumnResizePointerMoved"'),6)
         self.assertEqual(xaml.count('PointerReleased="OnDetailColumnResizePointerReleased"'),6)
