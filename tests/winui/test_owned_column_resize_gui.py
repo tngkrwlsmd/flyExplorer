@@ -94,8 +94,19 @@ def main(config="Release"):
             box=thumb.rectangle()
             x=(box.left+box.right)//2
             y=(box.top+box.bottom)//2
-            thumb.drag_mouse_input(
-                src=(x,y),dst=(x+delta,y),button="left",absolute=True)
+            assert box.width()>=5 and box.height()>=8,(thumb_id,box)
+            window().set_focus()
+            mouse.move(coords=(x,y))
+            time.sleep(.12)
+            mouse.press(button="left",coords=(x,y))
+            try:
+                steps=10
+                for step in range(1,steps+1):
+                    nx=x+round(delta*step/steps)
+                    mouse.move(coords=(nx,y))
+                    time.sleep(.06)
+            finally:
+                mouse.release(button="left",coords=(x+delta,y))
             eventually(lambda:element(next_header_id).rectangle().left>=start+delta-8,
                        thumb_id+" drag did not resize the next column boundary",8)
         drag_and_verify("LeftNameColumnResizeThumb","LeftTypeSortButton",40)
