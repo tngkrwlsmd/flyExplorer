@@ -300,6 +300,60 @@ jobs:
             $delimiter
           ) | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
 
+      - name: Static candidate preflight
+        if: inputs.request_ref != ''
+        shell: powershell -NoLogo -NoProfile -ExecutionPolicy Bypass -Command ". '{0}'"
+        run: |
+          $ErrorActionPreference = "Stop"
+          if ($env:REMOTE_VALIDATION_KIND -eq "none") {
+            Write-Host "STATIC_CANDIDATE_PREFLIGHT=SKIP_NON_VALIDATION"
+            exit 0
+          }
+
+          $repo = $env:FLYEXPLORER_CANONICAL_CHECKOUT
+          if (-not (Test-Path -LiteralPath $repo -PathType Container)) {
+            throw "Canonical checkout missing before static candidate preflight: $repo"
+          }
+          Set-Location -LiteralPath $repo
+          & git fetch origin --no-tags --prune
+          if ($LASTEXITCODE -ne 0) {
+            throw "Static candidate preflight could not refresh repository refs."
+          }
+          & git cat-file -e "$($env:REMOTE_CANDIDATE_SHA)^{commit}"
+          if ($LASTEXITCODE -ne 0) {
+            throw "Static candidate preflight could not resolve candidate commit."
+          }
+
+          $temp = Join-Path $env:RUNNER_TEMP ("fly-static-preflight-" + $env:GITHUB_RUN_ID)
+          if (Test-Path -LiteralPath $temp) {
+            Remove-Item -LiteralPath $temp -Recurse -Force
+          }
+          try {
+            & git worktree add --detach $temp $env:REMOTE_CANDIDATE_SHA
+            if ($LASTEXITCODE -ne 0) {
+              throw "Static candidate preflight could not create candidate worktree."
+            }
+            $env:PYTHONPATH = Join-Path $temp "tests\winui"
+            $test1 = Join-Path $temp "tests\winui\test_gui_harness_contract.py"
+            $test2 = Join-Path $temp "tests\winui\test_remote_request_preflight_contract.py"
+            $test3 = Join-Path $temp "tests\winui\test_remote_windows_task_contract.py"
+            & python -X utf8 -m unittest $test1 $test2 $test3
+            if ($LASTEXITCODE -ne 0) {
+              throw "Static candidate source/harness contracts failed."
+            }
+            & git -C $temp diff --check "$($env:REMOTE_EXPECTED_MAIN_SHA)..$($env:REMOTE_CANDIDATE_SHA)"
+            if ($LASTEXITCODE -ne 0) {
+              throw "Static candidate diff --check failed."
+            }
+            Write-Host "STATIC_CANDIDATE_PREFLIGHT=PASS"
+          } finally {
+            Set-Location -LiteralPath $repo
+            if (Test-Path -LiteralPath $temp) {
+              & git worktree remove --force $temp
+            }
+            & git worktree prune
+          }
+
       - name: Run remote shell command
         if: inputs.request_ref != '' || github.event_name == 'workflow_dispatch'
         shell: powershell -NoLogo -NoProfile -ExecutionPolicy Bypass -Command ". '{0}'"
