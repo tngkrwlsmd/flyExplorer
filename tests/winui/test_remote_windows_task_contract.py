@@ -318,7 +318,7 @@ class RemoteWindowsTaskContractTests(unittest.TestCase):
             self.assertIn("cloud", normalized.lower())
             self.assertIn("Windows VM", normalized)
         self.assertIn("Do not add a GitHub-hosted/cloud runner", agents)
-        self.assertIn("do not add GitHub-hosted/cloud compute", project.lower())
+        self.assertIn("do not add github-hosted/cloud compute", project.lower())
         self.assertIn("must not be deferred into a Windows VM task", efficiency)
 
 
