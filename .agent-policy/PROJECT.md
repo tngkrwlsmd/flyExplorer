@@ -239,6 +239,28 @@ directly invalidates that fixture's result.
 - The persistent `control/remote-shell` checkout is the normal Windows
   development surface. Batch only the stages that are currently required; do
   not include earlier PASS stages "for completeness".
+- **Pre-dispatch lease:** before writing `requests/remote-shell/request.json`
+  or pushing the control branch, query recent Remote Windows Task runs for
+  `control/remote-shell`. If any run is `queued`, `pending`, `waiting`,
+  `requested` or `in_progress`, do not touch the request slot and do not
+  create a successor request. Record the active run ID and wait/resume from it.
+  Workflow-side fingerprint rejection is only a second line of defense because
+  it occurs after scheduling and cannot recover queue time already consumed.
+- The first routine status read after submitting a remote task is no earlier
+  than three minutes unless completion is independently known. Three minutes is
+  not a polling cadence. If that read still shows the run active, stop with a
+  resume checkpoint rather than issuing additional status/log reads in the
+  same turn.
+- One logical unit gets one primary Windows validation run. After a diagnosed
+  failure, one focused successor is allowed only after the predecessor is
+  complete and the concrete fix is committed. A third Windows validation run
+  for the same logical unit requires explicit user approval before any request
+  commit. Never queue speculative successors while a predecessor is active.
+- 8,000+ and 20,000+ real-file GUI fixtures are final acceptance only. First
+  prove the harness/control lifecycle on the smallest fixture that exercises
+  the same path. If the expensive fixture exposes a harness defect after
+  product build/native PASS, keep those PASS stages, fix and smoke the harness
+  cheaply, then spend the single focused successor on GUI/visual only.
 - For normal builds or remote tasks expected to finish within a few minutes,
   allow up to three minutes before the status read. Avoid short-interval
   polling; after that read, either act on the result or leave the exact run ID
