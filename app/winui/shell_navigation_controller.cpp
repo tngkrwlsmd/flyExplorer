@@ -1,5 +1,6 @@
 #include "pch.h"
 #include "shell_navigation_controller.h"
+#include "../../src/base/shell_isolation_wire.h"
 #include <utility>
 
 namespace fxfile::previewnav {
@@ -93,6 +94,28 @@ std::uint64_t ShellNavigationController::submitActive(
     return id;
 }
 
+std::uint64_t ShellNavigationController::submitContinuation(
+    fxfile::explorerui::Model& model,int side)
+{
+    if(side<0||side>1)return 0;
+    auto& pane=model.panes[static_cast<std::size_t>(side)];
+    if(!validTab(model,side,pane.active)||
+       pane.pending[pane.active])return 0;
+    auto& session=pane.tabs[pane.active];
+    auto const& snapshot=session.snapshot();
+    const auto offset=snapshot.children.size();
+    if(!snapshot.truncated||!offset||
+       offset>=fxfile::isolation::kMaxAggregateEntries)
+        return 0;
+    fxfile::shellnav::Location target(snapshot.folder);
+    if(!target.valid())return 0;
+    const auto id=supervisor_->submitPage(
+        side,pane.routeIds[pane.active],std::move(target),
+        static_cast<std::uint32_t>(offset));
+    if(id)model.markPending(side,pane.active,id,true);
+    return id;
+}
+
 ShellNavigationController::Completion ShellNavigationController::accept(
     fxfile::explorerui::Model& model,
     fxfile::shellnav::IsolatedResult result)
@@ -117,6 +140,14 @@ ShellNavigationController::Completion ShellNavigationController::accept(
                 side,tab,result.route,result.request))return completed;
             if(FAILED(result.hr)){
                 completed.kind=CompletionKind::Failed;
+                return completed;
+            }
+            if(result.action==fxfile::shellnav::NavigationAction::Continue){
+                const auto appended=pane.tabs[tab].appendPage(
+                    std::move(result.snapshot),result.pageOffset);
+                completed.hr=appended;
+                completed.kind=SUCCEEDED(appended)?
+                    CompletionKind::Extended:CompletionKind::Rejected;
                 return completed;
             }
             const auto applied=pane.tabs[tab].accept(

@@ -57,10 +57,14 @@ void MainWindow::OnFileRightTapped(
 }
 void MainWindow::UpdateSort(int selection){
  if(selection<0||selection>7)return;
- ActiveWindowTab().fileLists[ActiveWindowTab().model.activePane].sortMode=selection;
+ const int side=ActiveWindowTab().model.activePane;
+ ActiveWindowTab().fileLists[side].sortMode=selection;
  fileBar()->SetSortIndex(selection);
- UpdateSortPresentation(ActiveWindowTab().model.activePane);
- FillFiles(ActiveWindowTab().model.activePane);
+ UpdateSortPresentation(side);
+ FillFiles(side);
+ auto const& pane=ActiveWindowTab().model.panes[side];
+ if(pane.tabs[pane.active].snapshot().truncated)
+  QueueNextFolderPage(side,true);
 }
 void MainWindow::RunTransfer(fxfile::shelltransfer::Kind kind){
  if(mFileOperations.busy()){

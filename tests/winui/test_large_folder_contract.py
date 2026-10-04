@@ -11,7 +11,7 @@ class FolderScaleContract(unittest.TestCase):
                "process.pid","LEGACY_PRESENT_SETTINGS_UNCHANGED",
                'auto_id="SortPicker"'):
    self.assertIn(item,body)
-  self.assertIn("if(items.size()>1200)return",app) # Native optional metadata is deferred for huge folders.
+  self.assertIn("if(snapshot.truncated||items.size()>1200)return",app) # Native optional metadata is deferred while the folder is streaming.
   self.assertIn("OnLoadMoreFiles(",app)
   self.assertIn("state.visibleCount+160",app)
   self.assertIn("OnNameFilterChanged(",app)
@@ -32,6 +32,8 @@ class FolderScaleContract(unittest.TestCase):
   self.assertIn("GetKeyState(VK_SHIFT)",shortcut)
   self.assertIn("OWNED_LARGE_CTRL_SHIFT_F_FILTER_FOCUS",body)
   self.assertIn("OWNED_LARGE_FOLDER_OVER_6000_PAGED_TRANSPORT",body)
+  self.assertIn("OWNED_LARGE_MODEL_STREAMING_INITIAL_1024",body)
+  self.assertIn("OWNED_LARGE_MODEL_STREAMING_SORT_COMPLETES_8000",body)
   self.assertIn("state.visibleRoute!=nextRoute",app)
   native=(ROOT.parents[1]/"src/base/shell_isolation_wire.h").read_text(encoding="utf-8")
   self.assertIn("kVersion=3",native)
@@ -44,7 +46,12 @@ class FolderScaleContract(unittest.TestCase):
   self.assertIn("Exit is not EOF.",supervisor)
   self.assertIn("readProgress=(received!=0);",supervisor)
   self.assertIn("!expected||frame.size()<expected",supervisor)
-  self.assertIn("offset,kMaxPageEntries",supervisor)
-  self.assertIn("aggregate.children.size()>=kMaxAggregateEntries",supervisor)
+  self.assertIn("item.pageOffset,item.pageLimit",supervisor)
+  self.assertNotIn("Snapshot aggregate",supervisor)
+  controller=(ROOT/"shell_navigation_controller.cpp").read_text(encoding="utf-8")
+  self.assertIn("submitContinuation(",controller)
+  self.assertIn("appendPage(",controller)
+  self.assertIn("NavigationAction::Continue",controller)
+  self.assertIn("snapshot.truncated?L\"+\"",app)
 
 if __name__=="__main__":unittest.main()

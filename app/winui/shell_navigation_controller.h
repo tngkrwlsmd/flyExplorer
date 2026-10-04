@@ -23,6 +23,7 @@ public:
         Ignored,
         Failed,
         Applied,
+        Extended,
         Rejected,
         NoChange
     };
@@ -61,6 +62,8 @@ public:
         fxfile::explorerui::Model& model,int side,
         fxfile::shellnav::Location target,
         fxfile::shellnav::NavigationAction action);
+    std::uint64_t submitContinuation(
+        fxfile::explorerui::Model& model,int side);
 
     Completion accept(
         fxfile::explorerui::Model& model,

@@ -37,6 +37,8 @@ struct Work {
     std::uint64_t route=0,request=0;
     NavigationAction action=NavigationAction::Open;
     std::uint32_t type=kPath;
+    std::uint32_t pageOffset=0;
+    std::uint32_t pageLimit=kMaxPageEntries;
     std::wstring path;
     std::vector<unsigned char> pidl;
 #if defined(_DEBUG)
@@ -238,6 +240,42 @@ std::uint64_t IsolatedShellSupervisor::submit(
         return st->nextTicket-1;
     }catch(...){return 0;}
 }
+std::uint64_t IsolatedShellSupervisor::submitPage(
+    int side,std::uint64_t route,Location target,std::uint32_t offset){
+    if(side<0||side>1||!route||!target.valid()||
+       !offset||offset>=kMaxAggregateEntries)return 0;
+    const auto length=::ILGetSize(target.get());
+    if(length<2||length>kMaxPidl||
+       !validPidl(target.get(),length))return 0;
+    auto st=state_;
+    if(!st)return 0;
+    try{
+        Work item;
+        item.route=route;
+        item.action=NavigationAction::Continue;
+        item.type=kAbsolutePidl;
+        item.pageOffset=offset;
+        item.pageLimit=(std::min)(
+            kMaxPageEntries,kMaxAggregateEntries-offset);
+        auto* ptr=static_cast<unsigned char const*>(
+            static_cast<void const*>(target.get()));
+        item.pidl.assign(ptr,ptr+length);
+        std::lock_guard<std::mutex> lock(st->lock);
+        if(st->stopped||!st->started)return 0;
+        item.request=st->nextTicket++;
+        auto lane=st->lanes[side];
+        {
+            std::lock_guard<std::mutex> guard(lane->mutex);
+            lane->generation=item.request;
+            lane->pending=std::move(item);
+            if(lane->activeJob)
+                ::TerminateJobObject(lane->activeJob,ERROR_CANCELLED);
+        }
+        ::SetEvent(lane->wake);
+        return st->nextTicket-1;
+    }catch(...){return 0;}
+}
+
 void IsolatedShellSupervisor::forget(std::uint64_t route){
     auto st=state_;
     if(!st)return;
@@ -588,105 +626,43 @@ void IsolatedShellSupervisor::runLane(std::shared_ptr<State> st,
         IsolatedResult result;
         result.route=item.route;result.request=item.request;
         result.action=item.action;
+        result.pageOffset=item.pageOffset;
         result.networkRequest=(item.type==kPath &&
             item.path.size()>=2 && item.path[0]==L'\\' &&
             item.path[1]==L'\\');
         try{
-            Snapshot aggregate;
-            std::wstring aggregatePath;
-            std::uint32_t offset=0;
-            bool finished=false;
-            while(!finished&&current(lane,item)){
-                Attempt accepted;
-                bool haveAttempt=false;
-                for(DWORD attempt=0;attempt<kMaxAttempts;++attempt){
-                    if(!current(lane,item))break;
-                    bool testBlock=false;
+            for(DWORD attempt=0;attempt<kMaxAttempts;++attempt){
+                if(!current(lane,item))break;
+                bool testBlock=false;
 #if defined(_DEBUG)
-                    testBlock=(offset==0)&&(
-                        ((item.ownedDelay||item.ownedComDelay)&&attempt==0)||
-                        (item.ownedComDelay&&item.ownedComExhaust));
+                testBlock=(item.pageOffset==0)&&(
+                    ((item.ownedDelay||item.ownedComDelay)&&attempt==0)||
+                    (item.ownedComDelay&&item.ownedComExhaust));
 #endif
-                    auto outcome=oneAttempt(
-                        lane,item,st->executable,testBlock,
-                        offset,kMaxPageEntries);
-                    if(outcome.canceled||!current(lane,item))break;
-                    ++result.attempts;
-                    if(outcome.timeout&&attempt+1<kMaxAttempts){
-                        result.recovered=true;
-                        continue;
-                    }
-                    accepted=std::move(outcome);
-                    haveAttempt=true;
-                    break;
+                auto outcome=oneAttempt(
+                    lane,item,st->executable,testBlock,
+                    item.pageOffset,item.pageLimit);
+                if(outcome.canceled||!current(lane,item))break;
+                ++result.attempts;
+                if(outcome.timeout&&attempt+1<kMaxAttempts){
+                    result.recovered=true;
+                    continue;
                 }
-                if(!haveAttempt||!current(lane,item))break;
-                result.hr=accepted.hr;
-                result.timedOut=accepted.timeout;
-                if(FAILED(result.hr)){
-                    finished=true;
-                    break;
+                result.hr=outcome.hr;
+                result.timedOut=outcome.timeout;
+                if(SUCCEEDED(result.hr)){
+                    result.snapshot=std::move(outcome.snapshot);
+                    result.filesystemPath=std::move(outcome.path);
                 }
-
-                auto page=std::move(accepted.snapshot);
-                if(offset==0){
-                    aggregate.folder=std::move(page.folder);
-                    aggregate.displayName=std::move(page.displayName);
-                    aggregate.parsingName=std::move(page.parsingName);
-                    aggregatePath=std::move(accepted.path);
-                }else{
-                    if(!aggregate.folder.valid()||!page.folder.valid()||
-                       !::ILIsEqual(aggregate.folder.get(),page.folder.get())||
-                       aggregate.parsingName!=page.parsingName||
-                       aggregatePath!=accepted.path){
-                        result.hr=HRESULT_FROM_WIN32(ERROR_INVALID_DATA);
-                        finished=true;
-                        break;
-                    }
+                IsolatedCallback cb;
+                {
+                    std::lock_guard<std::mutex> guard(st->lock);
+                    if(!st->stopped)cb=st->complete;
                 }
-
-                const auto pageCount=page.children.size();
-                if(pageCount>kMaxPageEntries||
-                   aggregate.children.size()>
-                       kMaxAggregateEntries-pageCount){
-                    result.hr=HRESULT_FROM_WIN32(ERROR_INVALID_DATA);
-                    finished=true;
-                    break;
+                if(cb&&current(lane,item)){
+                    try{cb(std::move(result));}catch(...){}
                 }
-                for(auto& child:page.children)
-                    aggregate.children.push_back(std::move(child));
-
-                if(!page.truncated){
-                    aggregate.truncated=false;
-                    finished=true;
-                    break;
-                }
-                if(pageCount==0){
-                    result.hr=HRESULT_FROM_WIN32(ERROR_INVALID_DATA);
-                    finished=true;
-                    break;
-                }
-                if(aggregate.children.size()>=kMaxAggregateEntries){
-                    aggregate.truncated=true;
-                    finished=true;
-                    break;
-                }
-                offset=static_cast<std::uint32_t>(
-                    aggregate.children.size());
-            }
-
-            if(current(lane,item)&&SUCCEEDED(result.hr)&&finished){
-                result.snapshot=std::move(aggregate);
-                result.filesystemPath=std::move(aggregatePath);
-            }
-
-            IsolatedCallback cb;
-            {
-                std::lock_guard<std::mutex> guard(st->lock);
-                if(!st->stopped)cb=st->complete;
-            }
-            if(cb&&current(lane,item)){
-                try{cb(std::move(result));}catch(...){}
+                break;
             }
         }catch(...){
             IsolatedCallback cb;

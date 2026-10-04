@@ -27,13 +27,15 @@ struct PaneState final {
     int appliedItemsPanel=0; // 0=vertical XAML default, 1=small wrap, 2=medium wrap, 3=large wrap
     std::uint32_t visualPixels=0; // DPI-scaled system visual size for current details
     double nameColumnWidth=168.0;
-    // Render a bounded first page; keep all items in a native snapshot.
-    // route/tab identity resets paging on navigation without stale UI rows.
+    // Render a bounded first view page. Large Shell folders keep only the
+    // currently streamed native pages; route/tab identity resets both view
+    // paging and continuation intent on navigation without stale UI rows.
     std::wstring filenameFilter;
     std::size_t filteredCount=0;
     std::size_t visibleCount=160;
     std::uint64_t visibleRoute=0;
     std::size_t visibleTab=0;
+    bool streamToComplete=false;
     std::vector<FileDetail> details;
     std::vector<std::wstring> renderedPaths;
     std::uint64_t route=0,epoch=0;

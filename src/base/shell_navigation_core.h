@@ -79,6 +79,7 @@ public:
     // Commit ONLY a complete owned value snapshot prepared by a separate
     // COM worker; no Shell API call is made on the receiving UI thread.
     HRESULT accept(Snapshot&& prepared,HistoryAction action) noexcept;
+    HRESULT appendPage(Snapshot&& page,std::size_t expectedOffset) noexcept;
     // Clone only a PIDL; never transfer the worker's COM interface.
     Location target(HistoryAction action) const;
     HRESULT open(std::wstring const& parsingName) noexcept;

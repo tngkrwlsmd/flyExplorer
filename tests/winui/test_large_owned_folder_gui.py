@@ -95,11 +95,31 @@ def main():
         assert ui.GetWindowThreadProcessId(parent.handle,c.byref(owner))
         assert owner.value==process.pid
         assert ui.GetForegroundWindow()==parent.handle
+        more=parent.child_window(auto_id="LeftLoadMoreButton")
+        if args.items>=8000:
+            until(lambda:more.exists(timeout=.2) and
+                  "160/1024+" in more.window_text(),
+                  "streamed large folder did not expose the bounded initial page",10)
+            more.click_input()
+            until(lambda:"320/1024+" in parent.child_window(
+                  auto_id="LeftLoadMoreButton").window_text(),
+                  "initial streamed view page did not advance",10)
+            print("OWNED_LARGE_MODEL_STREAMING_INITIAL_1024",True,flush=True)
+
         parent.child_window(auto_id="SortPicker").select(1)
         until(lambda:f"bench-{args.items-1:04d}.txt" in first_row(),
-              "large-folder name descending did not show the final owned file",20)
-        if args.items>=2300:
-            more=parent.child_window(auto_id="LeftLoadMoreButton")
+              "large-folder global name sort did not complete streamed pages",
+              36 if args.items>=8000 else 24)
+        if args.items>=8000:
+            until(lambda:f"320/{args.items}" in parent.child_window(
+                  auto_id="LeftLoadMoreButton").window_text(),
+                  "global sort did not finish the 8000-item streamed model",12)
+            print("OWNED_LARGE_MODEL_STREAMING_SORT_COMPLETES_8000",True,flush=True)
+            more.click_input()
+            until(lambda:f"480/{args.items}" in parent.child_window(
+                  auto_id="LeftLoadMoreButton").window_text(),
+                  "post-stream controlled view page did not advance",12)
+        elif args.items>=2300:
             until(lambda:more.exists(timeout=.2) and
                   f"160/{args.items}" in more.window_text(),
                   "large native entries were not view-paged",8)

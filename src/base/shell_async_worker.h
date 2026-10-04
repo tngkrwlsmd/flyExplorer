@@ -10,7 +10,7 @@
 #include <memory>
 #include <string>
 namespace fxfile { namespace shellnav {
-enum class NavigationAction { Open, Back, Forward, Up, Refresh };
+enum class NavigationAction { Open, Back, Forward, Up, Refresh, Continue };
 struct AsyncResult final {
     std::uint64_t route=0;
     std::uint64_t request=0;

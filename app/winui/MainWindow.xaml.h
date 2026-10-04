@@ -260,6 +260,7 @@ namespace winrt::FlyExplorer::implementation
         std::uint64_t QueuePath(int side,std::wstring path);
         void QueuePidl(int side,fxfile::shellnav::Location target,
                        fxfile::shellnav::NavigationAction action);
+        bool QueueNextFolderPage(int side,bool completeFolder);
         void OnNativeResult(fxfile::shellnav::IsolatedResult result);
         void OnNativeChange(std::uint64_t route,std::uint64_t token);
         void UpdateWatch(int side,bool force=false);

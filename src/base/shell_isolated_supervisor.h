@@ -20,6 +20,7 @@ struct IsolatedResult {
     bool timedOut=false;
     bool networkRequest=false;
     std::uint32_t attempts=0;
+    std::uint32_t pageOffset=0;
 };
 using IsolatedCallback=std::function<void(IsolatedResult)>;
 class IsolatedShellSupervisor final {
@@ -32,6 +33,8 @@ public:
     std::uint64_t submit(int pane,std::uint64_t route,Location target,
                          NavigationAction action);
     std::uint64_t submitParsing(int pane,std::uint64_t route,std::wstring path);
+    std::uint64_t submitPage(int pane,std::uint64_t route,Location target,
+                             std::uint32_t offset);
     void forget(std::uint64_t route);
     void shutdown() noexcept;
 #if defined(_DEBUG)

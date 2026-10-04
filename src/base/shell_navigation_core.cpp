@@ -278,6 +278,28 @@ HRESULT Session::accept(Snapshot&& prepared,HistoryAction action) noexcept {
     }catch(...) {return E_OUTOFMEMORY;}
 }
 
+HRESULT Session::appendPage(
+    Snapshot&& page,std::size_t expectedOffset) noexcept
+{
+    if(!current_.folder.valid()||!page.folder.valid()||
+       !::ILIsEqual(current_.folder.get(),page.folder.get())||
+       current_.children.size()!=expectedOffset||
+       current_.parsingName!=page.parsingName)
+        return HRESULT_FROM_WIN32(ERROR_INVALID_STATE);
+    try{
+        current_.children.reserve(
+            current_.children.size()+page.children.size());
+        for(auto& child:page.children)
+            current_.children.push_back(std::move(child));
+        current_.truncated=page.truncated;
+        return S_OK;
+    }catch(std::bad_alloc const&){
+        return E_OUTOFMEMORY;
+    }catch(...){
+        return E_FAIL;
+    }
+}
+
 HRESULT Session::commit(Location next,bool record) noexcept {
     if(!next.valid())return E_INVALIDARG;
     if(current_.folder.valid() &&
