@@ -57,10 +57,7 @@ class RealFileListColumnContract(unittest.TestCase):
                "LeftNameHeaderColumn","RightNameHeaderColumn",
                "LeftNameColumnResizeThumb","LeftTypeColumnResizeThumb",
                "LeftSizeColumnResizeThumb","RightNameColumnResizeThumb",
-               "RightTypeColumnResizeThumb","RightSizeColumnResizeThumb",
-               "LeftNameColumnResizeHitTarget","LeftTypeColumnResizeHitTarget",
-               "LeftSizeColumnResizeHitTarget","RightNameColumnResizeHitTarget",
-               "RightTypeColumnResizeHitTarget","RightSizeColumnResizeHitTarget"):
+               "RightTypeColumnResizeThumb","RightSizeColumnResizeThumb"):
    self.assertIn(item,xml)
   import xml.etree.ElementTree as ET
   root=ET.parse(A/"MainWindow.xaml").getroot()
@@ -70,9 +67,10 @@ class RealFileListColumnContract(unittest.TestCase):
   for item in ("mColumnControlsReady","nameColumnWidth","typeColumnWidth",
                "sizeColumnWidth","FontIcon glyph;",
                "Grid::SetColumn(field,col);","AutomationProperties::SetName(",
-               "OnNameColumnWidthChanged(","ColumnResizeHitTarget",
-               "CapturePointer(args.Pointer())",
-               "ReleasePointerCapture(args.Pointer())",
+               "OnNameColumnWidthChanged(","RootShell().AddHandler(",
+               "TransformToVisual(RootShell())","ActualWidth()",
+               "RootShell().CapturePointer(args.Pointer())",
+               "RootShell().ReleasePointerCapture(args.Pointer())",
                "ApplyDetailColumnLayout(mDetailColumnPointerSide);",
                "grid.ColumnDefinitions().GetAt(column).Width(widths[column])"):
    self.assertIn(item,impl)
@@ -81,10 +79,12 @@ class RealFileListColumnContract(unittest.TestCase):
                "OnDetailColumnResizePointerReleased(",
                "OnDetailColumnResizePointerCaptureLost("):
    self.assertIn(item,impl)
-  self.assertEqual(xml.count('PointerPressed="OnDetailColumnResizePointerPressed"'),6)
-  self.assertEqual(xml.count('PointerMoved="OnDetailColumnResizePointerMoved"'),6)
+  self.assertNotIn('PointerPressed="OnDetailColumnResizePointerPressed"',xml)
+  self.assertNotIn('PointerMoved="OnDetailColumnResizePointerMoved"',xml)
   self.assertEqual(xml.count('Style="{StaticResource ExplorerColumnResizeThumbStyle}" Margin="0,1,0,1" IsHitTestVisible="False"'),6)
-  self.assertNotIn("RootShell().AddHandler(",impl)
+  self.assertGreaterEqual(impl.count("RootShell().AddHandler("),4)
+  self.assertNotIn("ColumnResizeHitTarget",xml)
+  self.assertNotIn("ColumnResizeHitTarget",impl)
   self.assertNotIn("OnDetailColumnResizeDragDelta",xml)
   self.assertNotIn("OnDetailColumnResizeDragDelta",impl)
   self.assertIn("double nameColumnWidth=168.0",state)
