@@ -235,6 +235,22 @@ class RemoteWindowsTaskContractTests(unittest.TestCase):
         self.assertIn("8,000 files", self.verification_profile)
         self.assertIn("20,000-entry", self.verification_profile)
 
+    def test_expensive_e2e_requires_layered_failure_isolation(self):
+        agents = " ".join(self.agents.split())
+        efficiency = " ".join(self.efficiency.split())
+        project = " ".join(self.project.split())
+        for normalized in (agents, efficiency, project):
+            lowered = normalized.lower()
+            self.assertIn("input -> event -> model -> projection", normalized)
+            self.assertIn("final acceptance", lowered)
+            self.assertIn("harness/fixture", lowered)
+            self.assertIn("control-plane/environment", lowered)
+            self.assertIn("smallest", lowered)
+        self.assertIn("not the tool for discovering", agents)
+        self.assertIn("pywinauto/UIA", efficiency)
+        self.assertIn("final acceptance, not discovery", project.lower())
+
+
     def test_remote_settings_are_single_sourced_and_runner_serialization_is_conditional(self):
         for name in (
             "FLYEXPLORER_CANONICAL_CHECKOUT",
