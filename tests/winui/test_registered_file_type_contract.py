@@ -53,7 +53,7 @@ class RealFileListColumnContract(unittest.TestCase):
   impl=(A/"MainWindow.xaml.cpp").read_text(encoding="utf-8")
   state=(A/"file_list_state.h").read_text(encoding="utf-8")
   for item in ("LeftNameWidthSlider","RightNameWidthSlider",
-               "OnNameColumnWidthChanged","OnDetailColumnResizeDragDelta",
+               "OnNameColumnWidthChanged",
                "LeftNameHeaderColumn","RightNameHeaderColumn",
                "LeftNameColumnResizeThumb","LeftTypeColumnResizeThumb",
                "LeftSizeColumnResizeThumb","RightNameColumnResizeThumb",
@@ -67,9 +67,18 @@ class RealFileListColumnContract(unittest.TestCase):
   for item in ("mColumnControlsReady","nameColumnWidth","typeColumnWidth",
                "sizeColumnWidth","FontIcon glyph;",
                "Grid::SetColumn(field,col);","AutomationProperties::SetName(",
-               "OnNameColumnWidthChanged(","OnDetailColumnResizeDragDelta(",
+               "OnNameColumnWidthChanged(","RootShell().AddHandler(",
+               "GetAsyncKeyState(VK_LBUTTON)",
+               "ApplyDetailColumnLayout(mDetailColumnPointerSide);",
                "grid.ColumnDefinitions().GetAt(column).Width(widths[column])"):
    self.assertIn(item,impl)
+  for item in ("OnDetailColumnResizePointerPressed(",
+               "OnDetailColumnResizePointerMoved(",
+               "OnDetailColumnResizePointerReleased(",
+               "OnDetailColumnResizePointerCaptureLost("):
+   self.assertIn(item,impl)
+  self.assertNotIn("OnDetailColumnResizeDragDelta",xml)
+  self.assertNotIn("OnDetailColumnResizeDragDelta",impl)
   self.assertIn("double nameColumnWidth=168.0",state)
   self.assertIn("double typeColumnWidth=180.0",state)
   self.assertIn("double sizeColumnWidth=80.0",state)
