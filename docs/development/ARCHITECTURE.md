@@ -295,6 +295,17 @@ until that window/index also defines backward access, selection identity and
 the behavior of operations that require a complete folder such as global
 sort/filter.
 
+The UI-side identity seam is also explicit. File-list rows carry a logical
+`uint64` item index derived from `Snapshot::baseOffset`, not a direct
+`children` vector position. Consumers translate that identity through
+`Snapshot::residentIndex()` before opening, renaming, transferring, copying to
+the Windows clipboard, invoking context menus or starting private drag.
+`PaneState::renderedBaseOffset` keeps selection restoration tied to the window
+that produced the previous rows. Current main still has `baseOffset == 0`
+because resident-page eviction is not implemented yet; this contract prevents a
+future nonzero resident window from silently retargeting stale UI rows.
+
+
 
 ## Session persistence
 

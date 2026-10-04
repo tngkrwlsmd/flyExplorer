@@ -152,6 +152,20 @@ bootstrap configuration.
 
 ## Latest verified evidence
 
+Large-folder resident-window prerequisites are now split from the existing
+20,000-entry ceiling without claiming that the ceiling is removed. The first
+preparation unit separates logical enumeration progress
+(`Snapshot::baseOffset/nextOffset`) from resident `children.size()`; remote run
+`37180519800` passed focused large-folder contracts, the canonical Release
+build, the isolated helper process regression, legacy-profile protection and
+`git diff --check`. The follow-up unit tags file-list rows with logical
+`uint64` item identities and resolves them through the current Snapshot before
+open/rename/transfer/clipboard/context/drag actions. Remote run `37180884833`
+passed the logical-row source contract, Release build, the existing owned M21
+selected-row rename path, process exit 0, protected legacy settings and
+`git diff --check`. No resident page eviction or 20,000+ certification is
+claimed yet.
+
 Model-level large-folder page streaming is accepted on product revision
 `f7f3674e5271c17652a865cf2ed499185983d1eb`. Protocol-v3 Shell transport remains bounded to 1,024 entries
 and 8 MiB per helper response, while the active navigation model now accepts the

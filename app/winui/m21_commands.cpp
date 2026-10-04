@@ -46,14 +46,18 @@ void MainWindow::BeginFileNameCommand(fxfile::filecommand::Kind kind){
    StatusText().Text(L"이름을 변경할 파일 또는 폴더를 선택하세요.");
    return;
   }
-  const auto index=winrt::unbox_value<uint32_t>(row.Tag());
-  const auto& entries=pane.tabs[tab].snapshot().children;
-  if(index>=entries.size()||!entries[index].isFileSystem()||entries[index].parsingName.empty()){
+  const auto logical=winrt::unbox_value<std::uint64_t>(row.Tag());
+  const auto& snapshot=pane.tabs[tab].snapshot();
+  std::size_t index=0;
+  if(!snapshot.residentIndex(logical,index)||
+     !snapshot.children[index].isFileSystem()||
+     snapshot.children[index].parsingName.empty()){
    StatusText().Text(L"이 항목은 이름을 변경할 수 없습니다.");
    return;
   }
-  try{initial=std::filesystem::path(entries[index].parsingName).filename().wstring();}
-  catch(...){initial=entries[index].label;}
+  try{initial=std::filesystem::path(
+          snapshot.children[index].parsingName).filename().wstring();}
+  catch(...){initial=snapshot.children[index].label;}
  }
  fileBar()->BeginNameEdit(kind==fxfile::filecommand::Kind::CreateFolder?0:1,hstring(initial));
  StatusText().Text(kind==fxfile::filecommand::Kind::CreateFolder?
@@ -90,14 +94,16 @@ void MainWindow::ExecuteFileCommand(fxfile::filecommand::Kind kind){
          StatusText().Text(L"이름을 변경할 파일 또는 폴더를 선택하세요.");
          return;
      }
-     const auto index=winrt::unbox_value<uint32_t>(row.Tag());
-     const auto& entries=pane.tabs[tab].snapshot().children;
-     if(index>=entries.size()||!entries[index].isFileSystem()||
-        entries[index].parsingName.empty()){
+     const auto logical=winrt::unbox_value<std::uint64_t>(row.Tag());
+     const auto& snapshot=pane.tabs[tab].snapshot();
+     std::size_t index=0;
+     if(!snapshot.residentIndex(logical,index)||
+        !snapshot.children[index].isFileSystem()||
+        snapshot.children[index].parsingName.empty()){
          StatusText().Text(L"가상 Shell 항목은 이 파일 작업에서 변경할 수 없습니다.");
          return;
      }
-     request.source=entries[index].parsingName;
+     request.source=snapshot.children[index].parsingName;
  }
  auto dispatch=DispatcherQueue();
  FileOperationController::Post post=[dispatch](FileOperationController::UiTask task){
