@@ -107,13 +107,16 @@ class FluentShellContract(unittest.TestCase):
         self.assertIn('HorizontalAlignment="Right"',xaml)
         self.assertNotIn('Width="7" Margin="0,1,-3,1"',xaml)
         self.assertEqual(xaml.count('Style="{StaticResource ExplorerColumnResizeThumbStyle}"'),6)
-        self.assertNotIn('PointerPressed="OnDetailColumnResizePointerPressed"',xaml)
-        self.assertNotIn('PointerMoved="OnDetailColumnResizePointerMoved"',xaml)
-        self.assertGreaterEqual(impl.count("RootShell().AddHandler("),4)
-        self.assertIn("VisualTreeHelper::GetParent",impl)
-        self.assertIn('find(\n               L"ColumnResizeThumb")',impl)
+        self.assertEqual(xaml.count('PointerPressed="OnDetailColumnResizePointerPressed"'),6)
+        self.assertEqual(xaml.count('PointerMoved="OnDetailColumnResizePointerMoved"'),6)
+        self.assertEqual(xaml.count('PointerReleased="OnDetailColumnResizePointerReleased"'),6)
+        self.assertEqual(xaml.count('PointerCaptureLost="OnDetailColumnResizePointerCaptureLost"'),6)
+        self.assertNotIn("RootShell().AddHandler(",impl)
+        self.assertNotIn("VisualTreeHelper::GetParent",impl)
+        self.assertIn('L"ColumnResizeHitTarget"',impl)
         self.assertIn("IsLeftButtonPressed()",impl)
-        self.assertGreaterEqual(impl.count("true);"),4)
+        self.assertIn("CapturePointer(args.Pointer())",impl)
+        self.assertIn("ReleasePointerCapture(args.Pointer())",impl)
         self.assertIn("ApplyDetailColumnLayout(int side)",impl)
         self.assertIn("DetailLayoutProfile() const",impl)
         self.assertIn("DetailColumnWidths(int side) const",impl)
@@ -124,6 +127,10 @@ class FluentShellContract(unittest.TestCase):
                       "LeftSizeColumnResizeThumb","RightNameColumnResizeThumb",
                       "RightTypeColumnResizeThumb","RightSizeColumnResizeThumb"):
             self.assertIn('x:Name="'+thumb+'"',xaml)
+        for hit in ("LeftNameColumnResizeHitTarget","LeftTypeColumnResizeHitTarget",
+                    "LeftSizeColumnResizeHitTarget","RightNameColumnResizeHitTarget",
+                    "RightTypeColumnResizeHitTarget","RightSizeColumnResizeHitTarget"):
+            self.assertIn('x:Name="'+hit+'"',xaml)
         for token in ("OnDetailColumnResizePointerPressed",
                       "OnDetailColumnResizePointerMoved",
                       "OnDetailColumnResizePointerReleased",
