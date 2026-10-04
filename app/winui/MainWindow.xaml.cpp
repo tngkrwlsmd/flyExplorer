@@ -729,7 +729,10 @@ namespace winrt::FlyExplorer::implementation
         if(side==ActiveWindowTab().model.activePane)UpdateFooterSummary();
         auto const& pane=ActiveWindowTab().model.panes[side];
         auto const& snapshot=pane.tabs[pane.active].snapshot();
-        if(!state.filenameFilter.empty()&&snapshot.truncated)
+        if(!state.filenameFilter.empty()&&
+           (snapshot.baseOffset||
+            snapshot.residentEndOffset()<snapshot.nextOffset||
+            snapshot.truncated))
             QueueNextFolderPage(side,true);
         else if(state.filenameFilter.empty()&&state.sortMode==0)
             state.streamToComplete=false;
@@ -749,18 +752,44 @@ namespace winrt::FlyExplorer::implementation
            state.visibleTab!=pane.active)return;
         const auto available=state.filteredCount;
         auto const& snapshot=pane.tabs[pane.active].snapshot();
+        const bool hasForward=
+            snapshot.residentEndOffset()<snapshot.nextOffset||
+            snapshot.truncated;
         if(state.visibleCount<available){
             state.visibleCount=(std::min)(available,state.visibleCount+160);
             FillFiles(side); // Selection is restored using real parsing paths.
-            if(state.visibleCount>=available&&snapshot.truncated)
+            if(state.visibleCount>=available&&hasForward)
                 QueueNextFolderPage(side,false);
             return;
         }
-        if(snapshot.truncated){
+        if(hasForward){
             state.visibleCount+=160;
             if(!QueueNextFolderPage(side,false))
                 state.visibleCount=available;
         }
+    }
+    void MainWindow::OnLoadPreviousFiles(
+        IInspectable const& sender,Microsoft::UI::Xaml::RoutedEventArgs const&){
+        auto const button=sender.try_as<Button>();
+        if(!button)return;
+        const auto label=button.Name();
+        const int side=label==L"LeftLoadPreviousButton"?0:
+                       label==L"RightLoadPreviousButton"?1:-1;
+        if(side<0)return;
+        auto& pane=ActiveWindowTab().model.panes[side];
+        if(pane.pending[pane.active])return;
+        auto& state=ActiveWindowTab().fileLists[side];
+        if(state.visibleRoute!=pane.routeIds[pane.active]||
+           state.visibleTab!=pane.active)return;
+        auto const& snapshot=pane.tabs[pane.active].snapshot();
+        if(!snapshot.baseOffset)return;
+        state.streamToComplete=false;
+        const auto id=mShellNavigation->submitPreviousPage(
+            ActiveWindowTab().model,side);
+        if(id)
+            StatusText().Text(L"폴더의 이전 항목 창을 불러오는 중입니다.");
+        else
+            StatusText().Text(L"이전 항목 창을 불러올 수 없습니다.");
     }
     int MainWindow::DetailLayoutProfile() const
     {
