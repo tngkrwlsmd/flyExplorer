@@ -7,6 +7,7 @@
 #endif
 #include <shellapi.h>
 #include "../../src/base/file_operation_core.h"
+#include "../../src/base/shell_isolation_wire.h"
 #include <algorithm>
 #include <cwchar>
 #include <cwctype>
@@ -430,8 +431,34 @@ namespace winrt::FlyExplorer::implementation
         if(pane.active>=pane.tabs.size()||
            pane.active>=pane.pending.size())return false;
         auto& state=ActiveWindowTab().fileLists[side];
-        if(completeFolder)state.streamToComplete=true;
         auto const& snapshot=pane.tabs[pane.active].snapshot();
+        if(completeFolder){
+            state.streamToComplete=true;
+            state.fullModelLimitReached=false;
+            const auto limit=static_cast<std::size_t>(
+                fxfile::isolation::kMaxCompleteModelEntries);
+            if(snapshot.nextOffset>limit||
+               (snapshot.nextOffset==limit&&snapshot.truncated)){
+                state.streamToComplete=false;
+                state.fullModelLimitReached=true;
+                state.sortMode=0;
+                if(!state.filenameFilter.empty()){
+                    state.filenameFilter.clear();
+                    auto filter=side==0?LeftNameFilterBox():RightNameFilterBox();
+                    if(!filter.Text().empty())filter.Text(L"");
+                }
+                if(side==ActiveWindowTab().model.activePane)
+                    fileBar()->SetSortIndex(0);
+                UpdateSortPresentation(side);
+                FillFiles(side);
+                UpdateSelectionChrome();
+                if(side==ActiveWindowTab().model.activePane)UpdateFooterSummary();
+                StatusText().Text(
+                    L"전역 정렬/필터는 현재 최대 20,000개 항목까지 지원합니다. "
+                    L"일반 순차 탐색은 계속할 수 있습니다.");
+                return false;
+            }
+        }
         if(pane.pending[pane.active])return false;
         if(completeFolder&&snapshot.baseOffset){
             const auto id=mShellNavigation->submitPreviousPage(
@@ -453,8 +480,11 @@ namespace winrt::FlyExplorer::implementation
             state.streamToComplete=false;
             return false;
         }
+        const auto ceiling=completeFolder?
+            static_cast<std::size_t>(fxfile::isolation::kMaxCompleteModelEntries):
+            static_cast<std::size_t>(fxfile::isolation::kMaxBrowseEntries);
         const auto id=mShellNavigation->submitNextPage(
-            ActiveWindowTab().model,side);
+            ActiveWindowTab().model,side,ceiling);
         if(id){
             StatusText().Text(completeFolder?
                 L"정확한 정렬/필터를 위해 남은 폴더 항목을 불러오는 중입니다.":
@@ -571,6 +601,7 @@ namespace winrt::FlyExplorer::implementation
                     snapshot.truncated;
                 if(state.streamToComplete&&incomplete){
                     if(QueueNextFolderPage(completed.side,true))return;
+                    if(state.fullModelLimitReached)return;
                     state.streamToComplete=false;
                 }else if(!incomplete){
                     state.streamToComplete=false;
@@ -721,14 +752,24 @@ namespace winrt::FlyExplorer::implementation
         auto text=std::wstring(input.Text().c_str());
         if(text.size()>64)return;
         auto& state=ActiveWindowTab().fileLists[side];
+        auto const& pane=ActiveWindowTab().model.panes[side];
+        auto const& snapshot=pane.tabs[pane.active].snapshot();
+        const auto completeLimit=static_cast<std::size_t>(
+            fxfile::isolation::kMaxCompleteModelEntries);
+        if(!text.empty()&&
+           (snapshot.nextOffset>completeLimit||
+            (snapshot.nextOffset==completeLimit&&snapshot.truncated))){
+            input.Text(hstring(state.filenameFilter));
+            StatusText().Text(
+                L"이름 필터는 현재 최대 20,000개 항목까지 전체 모델을 완성할 수 있습니다.");
+            return;
+        }
         if(state.filenameFilter==text)return;
         state.filenameFilter=std::move(text);
         state.visibleCount=160;
         FillFiles(side); // Only the view changes. Shell model and stable tags do not.
         UpdateSelectionChrome();
         if(side==ActiveWindowTab().model.activePane)UpdateFooterSummary();
-        auto const& pane=ActiveWindowTab().model.panes[side];
-        auto const& snapshot=pane.tabs[pane.active].snapshot();
         if(!state.filenameFilter.empty()&&
            (snapshot.baseOffset||
             snapshot.residentEndOffset()<snapshot.nextOffset||
@@ -897,6 +938,7 @@ namespace winrt::FlyExplorer::implementation
             state.visibleTab=pane.active;
             state.visibleCount=160;
             state.streamToComplete=false;
+            state.fullModelLimitReached=false;
         }
         auto previous=side==0?LeftLoadPreviousButton():RightLoadPreviousButton();
         auto button=side==0?LeftLoadMoreButton():RightLoadMoreButton();
