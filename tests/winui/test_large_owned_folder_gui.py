@@ -170,9 +170,11 @@ def main():
         if args.browse_over_complete_model:
             previous=parent.child_window(auto_id="LeftLoadPreviousButton")
             status=parent.child_window(auto_id="StatusText")
-            more=parent.child_window(auto_id="LeftLoadMoreButton")
+            def more_control():
+                return parent.child_window(auto_id="LeftLoadMoreButton")
             def progress_text():
-                return more.window_text() if more.exists(timeout=.2) and more.is_visible() else ""
+                control=more_control()
+                return control.window_text() if control.exists(timeout=.2) and control.is_visible() else ""
             for _ in range(180):
                 text=progress_text()
                 head=text.split("/",1)[0]
@@ -182,7 +184,7 @@ def main():
                 except ValueError:
                     pass
                 before=text
-                more.click_input()
+                more_control().click_input()
                 until(lambda:progress_text()!=before,
                       "browse-over-20k progress did not advance",14)
             progress=progress_text()
