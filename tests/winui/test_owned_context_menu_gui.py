@@ -8,6 +8,7 @@ from ctypes import wintypes as w
 import hashlib,os,subprocess,sys,tempfile,time
 from pathlib import Path
 from paths import APP, app_exe
+from PIL import ImageGrab
 import psutil
 from pywinauto import Desktop,keyboard
 
@@ -133,6 +134,13 @@ def main(config="Debug"):
    return pid.value==child.pid
   eventually(owns_foreground,"Native Shell popup did not own foreground",6)
   print("ACTUAL_OWNED_SHELL_CONTEXT_POPUP_FOREGROUND",True,flush=True)
+  rect=get_win().rectangle()
+  evidence=root/"direct-shell-context-after.png"
+  ImageGrab.grab(
+      bbox=(max(0,rect.left-20),max(0,rect.top-20),
+            rect.right+220,rect.bottom+20),
+      include_layered_windows=True).save(evidence)
+  print("OWNED_DIRECT_SHELL_CONTEXT_VISUAL",evidence.name,flush=True)
   # Escape only while exact test-launched helper owns the foreground.
   user.keybd_event(0x1b,0,0,0)
   user.keybd_event(0x1b,0,2,0)
