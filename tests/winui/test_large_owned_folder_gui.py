@@ -221,15 +221,39 @@ def main():
             ImageGrab.grab(
                 bbox=(rect.left,rect.top,rect.right,rect.bottom),
                 include_layered_windows=True).save(evidence)
-            first_before_sort=fresh_first_row()
             fresh_parent().child_window(auto_id="SortPicker").select(1)
+            until(lambda:"bench-20499.txt" in fresh_first_row(),
+                  "indexed global name sort above 20k did not complete",16)
+            sort_progress=progress_text()
+            assert "20500" in sort_progress,sort_progress
+            previous=fresh_parent().child_window(auto_id="LeftLoadPreviousButton")
+            assert not previous.exists(timeout=.2) or not previous.is_visible()
+            filt=fresh_parent().child_window(auto_id="LeftNameFilterBox")
+            assert filt.exists(timeout=.2)
+            filt.set_edit_text("20499")
+            until(lambda:"bench-20499.txt" in fresh_first_row() and
+                  "1" in fresh_parent().child_window(
+                      auto_id="ItemCountText").window_text(),
+                  "indexed name filter above 20k did not isolate the target",12)
+            filt.set_edit_text("")
+            until(lambda:"bench-20499.txt" in fresh_first_row(),
+                  "clearing indexed filter did not restore indexed name sort",12)
+            fresh_parent().child_window(auto_id="SortPicker").select(2)
             until(lambda:"20,000" in fresh_parent().child_window(
                   auto_id="StatusText").window_text(),
-                  "global sort above complete-model ceiling was not refused",8)
-            assert fresh_first_row()==first_before_sort
+                  "size sort above complete-model ceiling was not refused",8)
+            assert "bench-20499.txt" in fresh_first_row()
+            current=fresh_parent()
+            rect=current.rectangle()
+            evidence=base/"large-name-index-over-20k-after.png"
+            ImageGrab.grab(
+                bbox=(rect.left,rect.top,rect.right,rect.bottom),
+                include_layered_windows=True).save(evidence)
             print("OWNED_LARGE_BROWSE_OVER_20000",shown,flush=True)
-            print("OWNED_LARGE_OVER_20K_SORT_REFUSED",True,flush=True)
-            print("OWNED_LARGE_OVER_20K_VISUAL",evidence.name,flush=True)
+            print("OWNED_LARGE_OVER_20K_NAME_SORT_INDEXED",True,flush=True)
+            print("OWNED_LARGE_OVER_20K_NAME_FILTER_INDEXED",True,flush=True)
+            print("OWNED_LARGE_OVER_20K_SIZE_SORT_REFUSED",True,flush=True)
+            print("OWNED_LARGE_OVER_20K_INDEX_VISUAL",evidence.name,flush=True)
             success=True
             return
 
