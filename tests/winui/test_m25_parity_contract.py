@@ -13,7 +13,7 @@ class ParityContract(unittest.TestCase):
       "src/fxfile/accel_table.cpp"):
    self.assertTrue(historical_exists(historical),historical)
   self.assertIn("cbffb48",status)
-  for token in ("2,600","bookmark","regex","High Contrast ON",
+  for token in ("6,000","bookmark","regex","High Contrast ON",
                 "signed clean-machine"):
    self.assertIn(token.lower(),status.lower())
 if __name__=="__main__":unittest.main()
