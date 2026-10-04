@@ -291,6 +291,18 @@ the existing 20,000-entry aggregate safety bound is reached. Optional metadata,
 thumbnail and Shell-visual detail work remains deferred while the snapshot is
 truncated.
 
+Resident-window acceptance extends that streaming baseline. Product work revision
+`37d4cc023777c67a963710efd2e17ee7125a7cae` implements the 2,048-entry normal-browse
+window, exact previous/known-forward rehydration and full-model rebuild before
+sort/filter. Run `37182310190` passed source contracts 227/227, the canonical
+Release build and helper process regression, then proved all target 2,300-file
+resident-window markers before an unrelated focused-harness tail assertion
+failed. Harness-only revision `1c5779448a8cb194ff1a506ccfdd7cf0239f8222` changed no product file;
+resume run `37182611109` reran only GUI/visual acceptance and passed eviction,
+backward/forward rehydration and complete 2,300-item global sort. Matched
+956x521 Dark-theme BEFORE/AFTER review passed with no overlap or clipping.
+The 20,000 navigation ceiling remains unchanged.
+
 Remote run `37177222154` passed canonical structure 4/4, source contracts
 223/223, the canonical Release build, the real helper protocol-v3 process
 regression including offset/limit paging, and an owned Release folder containing
@@ -320,14 +332,14 @@ route supersession, per-page watchdog/retry, PIDL validation, checksum
 validation and exact-owned child job boundaries remain in force. The WinUI list
 still renders 160 rows initially and exposes controlled 160-row increments.
 
-The navigation session still retains every accepted child and intentionally
-stops continuation at the 20,000-entry navigation safety ceiling. Logical
-enumeration progress is tracked separately from resident child count, so a
-future resident-window implementation can evict model pages without corrupting
-the continuation cursor. Do not describe current main as unbounded: 20,000+
-browsing still requires a bounded resident window/index design, and operations
-that need a complete folder such as global sort/filter need explicit semantics
-when the complete folder is not resident.
+Normal unsorted, unfiltered large-folder browsing now uses a 2,048-entry
+resident window. Logical `baseOffset` and `nextOffset` remain independent of
+resident child count, exact previous/known-forward ranges can be rehydrated, and
+file-list rows retain logical identities across a nonzero resident base.
+Global sort and non-empty pane filtering preserve the prior bounded full-model
+semantics by rehydrating any evicted prefix/gap before completion. Do not
+describe current main as unbounded: the 20,000-entry navigation safety ceiling
+still applies and 20,000+ browsing remains an open gate.
 
 The first pre-main run `37174851727` stopped at source contracts because one
 old contract asserted the pre-paging local variable name

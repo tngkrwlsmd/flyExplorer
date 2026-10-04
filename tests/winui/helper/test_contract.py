@@ -34,6 +34,7 @@ class IsolationContracts(unittest.TestCase):
             self.assertIn(required,wire)
         for required in ("exactRead","exactWrite","ILGetSize",
                          "checksum(body.bytes.data(),body.bytes.size())",
+                         "req.limit>kMaxNavigationEntries-req.offset",
                          "SHGetPathFromIDListEx"):
             self.assertIn(required,h)
         for forbidden in ("DeleteFileW(","MoveFileW(","CopyFileW(",

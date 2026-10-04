@@ -241,9 +241,14 @@ std::uint64_t IsolatedShellSupervisor::submit(
     }catch(...){return 0;}
 }
 std::uint64_t IsolatedShellSupervisor::submitPage(
-    int side,std::uint64_t route,Location target,std::uint32_t offset){
+    int side,std::uint64_t route,Location target,
+    std::uint32_t offset,std::uint32_t limit){
     if(side<0||side>1||!route||!target.valid()||
-       !offset||offset>=kMaxNavigationEntries)return 0;
+       offset>=kMaxNavigationEntries)return 0;
+    if(!limit)limit=(std::min)(
+        kMaxPageEntries,kMaxNavigationEntries-offset);
+    if(!limit||limit>kMaxPageEntries||
+       limit>kMaxNavigationEntries-offset)return 0;
     const auto length=::ILGetSize(target.get());
     if(length<2||length>kMaxPidl||
        !validPidl(target.get(),length))return 0;
@@ -255,8 +260,7 @@ std::uint64_t IsolatedShellSupervisor::submitPage(
         item.action=NavigationAction::Continue;
         item.type=kAbsolutePidl;
         item.pageOffset=offset;
-        item.pageLimit=(std::min)(
-            kMaxPageEntries,kMaxNavigationEntries-offset);
+        item.pageLimit=limit;
         auto* ptr=static_cast<unsigned char const*>(
             static_cast<void const*>(target.get()));
         item.pidl.assign(ptr,ptr+length);
@@ -627,6 +631,7 @@ void IsolatedShellSupervisor::runLane(std::shared_ptr<State> st,
         result.route=item.route;result.request=item.request;
         result.action=item.action;
         result.pageOffset=item.pageOffset;
+        result.pageLimit=item.pageLimit;
         result.networkRequest=(item.type==kPath &&
             item.path.size()>=2 && item.path[0]==L'\\' &&
             item.path[1]==L'\\');

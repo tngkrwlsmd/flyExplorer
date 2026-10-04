@@ -63,7 +63,10 @@ void MainWindow::UpdateSort(int selection){
  UpdateSortPresentation(side);
  FillFiles(side);
  auto const& pane=ActiveWindowTab().model.panes[side];
- if(pane.tabs[pane.active].snapshot().truncated)
+ auto const& snapshot=pane.tabs[pane.active].snapshot();
+ if(snapshot.baseOffset||
+    snapshot.residentEndOffset()<snapshot.nextOffset||
+    snapshot.truncated)
   QueueNextFolderPage(side,true);
 }
 void MainWindow::RunTransfer(fxfile::shelltransfer::Kind kind){

@@ -432,12 +432,28 @@ namespace winrt::FlyExplorer::implementation
         auto& state=ActiveWindowTab().fileLists[side];
         if(completeFolder)state.streamToComplete=true;
         auto const& snapshot=pane.tabs[pane.active].snapshot();
-        if(!snapshot.truncated){
+        if(pane.pending[pane.active])return false;
+        if(completeFolder&&snapshot.baseOffset){
+            const auto id=mShellNavigation->submitPreviousPage(
+                ActiveWindowTab().model,side);
+            if(id){
+                StatusText().Text(
+                    L"정확한 정렬/필터를 위해 이전 폴더 항목을 다시 불러오는 중입니다.");
+                return true;
+            }
+            state.streamToComplete=false;
+            StatusText().Text(
+                L"전체 폴더 모델을 복원할 수 없습니다. 현재 항목은 유지됩니다.");
+            return false;
+        }
+        const bool hasForward=
+            snapshot.residentEndOffset()<snapshot.nextOffset||
+            snapshot.truncated;
+        if(!hasForward){
             state.streamToComplete=false;
             return false;
         }
-        if(pane.pending[pane.active])return false;
-        const auto id=mShellNavigation->submitContinuation(
+        const auto id=mShellNavigation->submitNextPage(
             ActiveWindowTab().model,side);
         if(id){
             StatusText().Text(completeFolder?
@@ -519,22 +535,52 @@ namespace winrt::FlyExplorer::implementation
         }
         if(completed.kind==Kind::Extended){
             if(completed.active){
+                using PageDirection=
+                    fxfile::previewnav::ShellNavigationController::PageDirection;
+                auto& state=ActiveWindowTab().fileLists[completed.side];
+                auto& pane=ActiveWindowTab().model.panes[completed.side];
+                auto& session=pane.tabs[pane.active];
+                if(!state.streamToComplete&&state.sortMode==0&&
+                   state.filenameFilter.empty()){
+                    if(completed.pageDirection==PageDirection::Forward){
+                        const auto evicted=session.trimResidentFront(
+                            fxfile::shellnav::kResidentWindowEntries);
+                        if(evicted){
+                            state.visibleCount=state.visibleCount>evicted?
+                                state.visibleCount-evicted:
+                                (std::min)(
+                                    static_cast<std::size_t>(160),
+                                    session.snapshot().children.size());
+                        }
+                    }else if(completed.pageDirection==PageDirection::Backward){
+                        session.trimResidentBack(
+                            fxfile::shellnav::kResidentWindowEntries);
+                        state.visibleCount=(std::min)(
+                            state.visibleCount,
+                            session.snapshot().children.size());
+                    }
+                }
                 ClearFileDetails(completed.side);
                 FillFiles(completed.side);
                 UpdateSelectionChrome();
                 UpdateFooterSummary();
-                auto& state=ActiveWindowTab().fileLists[completed.side];
-                auto const& pane=ActiveWindowTab().model.panes[completed.side];
-                auto const& snapshot=pane.tabs[pane.active].snapshot();
-                if(state.streamToComplete&&snapshot.truncated){
+                auto const& snapshot=session.snapshot();
+                const bool incomplete=
+                    snapshot.baseOffset||
+                    snapshot.residentEndOffset()<snapshot.nextOffset||
+                    snapshot.truncated;
+                if(state.streamToComplete&&incomplete){
                     if(QueueNextFolderPage(completed.side,true))return;
                     state.streamToComplete=false;
-                }else if(!snapshot.truncated){
+                }else if(!incomplete){
                     state.streamToComplete=false;
                 }
-                StatusText().Text(snapshot.truncated?
+                StatusText().Text(
+                    completed.pageDirection==PageDirection::Backward?
+                    L"폴더의 이전 항목 창을 불러왔습니다.":
+                    snapshot.truncated?
                     L"폴더의 다음 항목 페이지를 불러왔습니다.":
-                    L"폴더의 모든 스트리밍 항목을 불러왔습니다.");
+                    L"폴더의 현재 스트리밍 항목을 불러왔습니다.");
             }
             return;
         }
@@ -683,7 +729,10 @@ namespace winrt::FlyExplorer::implementation
         if(side==ActiveWindowTab().model.activePane)UpdateFooterSummary();
         auto const& pane=ActiveWindowTab().model.panes[side];
         auto const& snapshot=pane.tabs[pane.active].snapshot();
-        if(!state.filenameFilter.empty()&&snapshot.truncated)
+        if(!state.filenameFilter.empty()&&
+           (snapshot.baseOffset||
+            snapshot.residentEndOffset()<snapshot.nextOffset||
+            snapshot.truncated))
             QueueNextFolderPage(side,true);
         else if(state.filenameFilter.empty()&&state.sortMode==0)
             state.streamToComplete=false;
@@ -703,18 +752,44 @@ namespace winrt::FlyExplorer::implementation
            state.visibleTab!=pane.active)return;
         const auto available=state.filteredCount;
         auto const& snapshot=pane.tabs[pane.active].snapshot();
+        const bool hasForward=
+            snapshot.residentEndOffset()<snapshot.nextOffset||
+            snapshot.truncated;
         if(state.visibleCount<available){
             state.visibleCount=(std::min)(available,state.visibleCount+160);
             FillFiles(side); // Selection is restored using real parsing paths.
-            if(state.visibleCount>=available&&snapshot.truncated)
+            if(state.visibleCount>=available&&hasForward)
                 QueueNextFolderPage(side,false);
             return;
         }
-        if(snapshot.truncated){
+        if(hasForward){
             state.visibleCount+=160;
             if(!QueueNextFolderPage(side,false))
                 state.visibleCount=available;
         }
+    }
+    void MainWindow::OnLoadPreviousFiles(
+        IInspectable const& sender,Microsoft::UI::Xaml::RoutedEventArgs const&){
+        auto const button=sender.try_as<Button>();
+        if(!button)return;
+        const auto label=button.Name();
+        const int side=label==L"LeftLoadPreviousButton"?0:
+                       label==L"RightLoadPreviousButton"?1:-1;
+        if(side<0)return;
+        auto& pane=ActiveWindowTab().model.panes[side];
+        if(pane.pending[pane.active])return;
+        auto& state=ActiveWindowTab().fileLists[side];
+        if(state.visibleRoute!=pane.routeIds[pane.active]||
+           state.visibleTab!=pane.active)return;
+        auto const& snapshot=pane.tabs[pane.active].snapshot();
+        if(!snapshot.baseOffset)return;
+        state.streamToComplete=false;
+        const auto id=mShellNavigation->submitPreviousPage(
+            ActiveWindowTab().model,side);
+        if(id)
+            StatusText().Text(L"폴더의 이전 항목 창을 불러오는 중입니다.");
+        else
+            StatusText().Text(L"이전 항목 창을 불러올 수 없습니다.");
     }
     int MainWindow::DetailLayoutProfile() const
     {
@@ -823,6 +898,7 @@ namespace winrt::FlyExplorer::implementation
             state.visibleCount=160;
             state.streamToComplete=false;
         }
+        auto previous=side==0?LeftLoadPreviousButton():RightLoadPreviousButton();
         auto button=side==0?LeftLoadMoreButton():RightLoadMoreButton();
         std::vector<std::wstring> selected;
         for(auto const& old:view.SelectedItems()){
@@ -881,16 +957,33 @@ namespace winrt::FlyExplorer::implementation
                 }),order.end());
         }
         state.filteredCount=order.size();
-        const bool hasMore=order.size()>state.visibleCount||snapshot.truncated;
+        const bool hasPrevious=snapshot.baseOffset!=0&&!state.streamToComplete;
+        const bool hasForward=
+            snapshot.residentEndOffset()<snapshot.nextOffset||
+            snapshot.truncated;
+        const bool hasMore=order.size()>state.visibleCount||hasForward;
+        previous.Visibility(hasPrevious?Visibility::Visible:Visibility::Collapsed);
         button.Visibility(hasMore?Visibility::Visible:Visibility::Collapsed);
         auto detailsHeader=side==0?LeftDetailsHeader():RightDetailsHeader();
         if(state.viewMode!=FileViewMode::Details)
-            detailsHeader.Height(hasMore?24.0:0.0);
-        const auto progress=std::to_wstring(
-            (std::min)(order.size(),state.visibleCount))+
-            L"/"+std::to_wstring(order.size())+
-            (snapshot.truncated?L"+":L"");
+            detailsHeader.Height((hasPrevious||hasMore)?24.0:0.0);
+        const bool sequential=state.filenameFilter.empty()&&mode==0;
+        const auto shown=sequential?
+            snapshot.baseOffset+(std::min)(order.size(),state.visibleCount):
+            (std::min)(order.size(),state.visibleCount);
+        const auto total=sequential?snapshot.nextOffset:order.size();
+        const bool incomplete=
+            snapshot.baseOffset||
+            snapshot.residentEndOffset()<snapshot.nextOffset||
+            snapshot.truncated;
+        const auto progress=std::to_wstring(shown)+
+            L"/"+std::to_wstring(total)+(incomplete?L"+":L"");
         button.Content(winrt::box_value(hstring(progress)));
+        Microsoft::UI::Xaml::Automation::AutomationProperties::SetName(
+            previous,hstring(std::wstring(
+               side==0?L"\uC67C\uCABD \uC774\uC804 \uD56D\uBAA9 \uCC3D, \uD604\uC7AC \uC2DC\uC791 ":
+                       L"\uC624\uB978\uCABD \uC774\uC804 \uD56D\uBAA9 \uCC3D, \uD604\uC7AC \uC2DC\uC791 ")+
+               std::to_wstring(snapshot.baseOffset+1)));
         Microsoft::UI::Xaml::Automation::AutomationProperties::SetName(
             button,hstring(std::wstring(
                side==0?L"\uC67C\uCABD \uB354 \uD45C\uC2DC ":L"\uC624\uB978\uCABD \uB354 \uD45C\uC2DC ")+progress));
@@ -1336,11 +1429,19 @@ namespace winrt::FlyExplorer::implementation
         const auto& state=ActiveWindowTab().fileLists[side];
         auto const& snapshot=pane.tabs[pane.active].snapshot();
         std::size_t count=snapshot.children.size();
-        if(state.visibleRoute==pane.routeIds[pane.active]&&state.visibleTab==pane.active)
-            count=state.filteredCount;
+        bool incomplete=snapshot.truncated;
+        if(state.visibleRoute==pane.routeIds[pane.active]&&state.visibleTab==pane.active){
+            if(state.filenameFilter.empty()){
+                count=snapshot.nextOffset;
+            }else{
+                count=state.filteredCount;
+                incomplete=incomplete||snapshot.baseOffset||
+                    snapshot.residentEndOffset()<snapshot.nextOffset;
+            }
+        }
         const auto selected=view.SelectedItems().Size();
         ItemCountText().Text(hstring(
-            std::to_wstring(count)+(snapshot.truncated?L"+\uAC1C \uD56D\uBAA9":L"\uAC1C \uD56D\uBAA9")));
+            std::to_wstring(count)+(incomplete?L"+\uAC1C \uD56D\uBAA9":L"\uAC1C \uD56D\uBAA9")));
         SelectionCountText().Text(selected?
             hstring(std::to_wstring(selected)+L"\uAC1C \uC120\uD0DD\uB428"):hstring{});
         UpdateCommandAvailability();

@@ -1,6 +1,7 @@
 #include "pch.h"
 #include "shell_navigation_controller.h"
 #include "../../src/base/shell_isolation_wire.h"
+#include <algorithm>
 #include <utility>
 
 namespace fxfile::previewnav {
@@ -94,7 +95,7 @@ std::uint64_t ShellNavigationController::submitActive(
     return id;
 }
 
-std::uint64_t ShellNavigationController::submitContinuation(
+std::uint64_t ShellNavigationController::submitNextPage(
     fxfile::explorerui::Model& model,int side)
 {
     if(side<0||side>1)return 0;
@@ -103,15 +104,49 @@ std::uint64_t ShellNavigationController::submitContinuation(
        pane.pending[pane.active])return 0;
     auto& session=pane.tabs[pane.active];
     auto const& snapshot=session.snapshot();
-    const auto offset=snapshot.nextOffset;
-    if(!snapshot.truncated||!offset||
-       offset>=fxfile::isolation::kMaxNavigationEntries)
-        return 0;
+    const auto residentEnd=snapshot.residentEndOffset();
+    std::size_t offset=residentEnd;
+    std::size_t limit=0;
+    if(residentEnd<snapshot.nextOffset){
+        limit=(std::min)(
+            static_cast<std::size_t>(fxfile::isolation::kMaxPageEntries),
+            snapshot.nextOffset-residentEnd);
+    }else{
+        offset=snapshot.nextOffset;
+        if(!snapshot.truncated||
+           offset>=fxfile::isolation::kMaxNavigationEntries)
+            return 0;
+    }
     fxfile::shellnav::Location target(snapshot.folder);
     if(!target.valid())return 0;
     const auto id=supervisor_->submitPage(
         side,pane.routeIds[pane.active],std::move(target),
-        static_cast<std::uint32_t>(offset));
+        static_cast<std::uint32_t>(offset),
+        static_cast<std::uint32_t>(limit));
+    if(id)model.markPending(side,pane.active,id,true);
+    return id;
+}
+
+std::uint64_t ShellNavigationController::submitPreviousPage(
+    fxfile::explorerui::Model& model,int side)
+{
+    if(side<0||side>1)return 0;
+    auto& pane=model.panes[static_cast<std::size_t>(side)];
+    if(!validTab(model,side,pane.active)||
+       pane.pending[pane.active])return 0;
+    auto& session=pane.tabs[pane.active];
+    auto const& snapshot=session.snapshot();
+    if(!snapshot.baseOffset)return 0;
+    const auto offset=snapshot.baseOffset>
+        fxfile::isolation::kMaxPageEntries?
+        snapshot.baseOffset-fxfile::isolation::kMaxPageEntries:0;
+    const auto limit=snapshot.baseOffset-offset;
+    fxfile::shellnav::Location target(snapshot.folder);
+    if(!target.valid()||!limit)return 0;
+    const auto id=supervisor_->submitPage(
+        side,pane.routeIds[pane.active],std::move(target),
+        static_cast<std::uint32_t>(offset),
+        static_cast<std::uint32_t>(limit));
     if(id)model.markPending(side,pane.active,id,true);
     return id;
 }
@@ -143,10 +178,30 @@ ShellNavigationController::Completion ShellNavigationController::accept(
                 return completed;
             }
             if(result.action==fxfile::shellnav::NavigationAction::Continue){
-                const auto appended=pane.tabs[tab].appendPage(
-                    std::move(result.snapshot),result.pageOffset);
-                completed.hr=appended;
-                completed.kind=SUCCEEDED(appended)?
+                auto& session=pane.tabs[tab];
+                auto const& current=session.snapshot();
+                const auto residentEnd=current.residentEndOffset();
+                HRESULT pageHr=HRESULT_FROM_WIN32(ERROR_INVALID_STATE);
+                if(result.pageOffset==residentEnd){
+                    if(result.pageOffset<current.nextOffset&&
+                       result.snapshot.nextOffset!=
+                           static_cast<std::size_t>(result.pageOffset)+
+                           result.pageLimit){
+                        completed.hr=pageHr;
+                        completed.kind=CompletionKind::Rejected;
+                        return completed;
+                    }
+                    pageHr=session.appendPage(
+                        std::move(result.snapshot),result.pageOffset);
+                    completed.pageDirection=PageDirection::Forward;
+                }else if(result.pageOffset<current.baseOffset&&
+                         result.snapshot.nextOffset==current.baseOffset){
+                    pageHr=session.prependPage(
+                        std::move(result.snapshot),current.baseOffset);
+                    completed.pageDirection=PageDirection::Backward;
+                }
+                completed.hr=pageHr;
+                completed.kind=SUCCEEDED(pageHr)?
                     CompletionKind::Extended:CompletionKind::Rejected;
                 return completed;
             }

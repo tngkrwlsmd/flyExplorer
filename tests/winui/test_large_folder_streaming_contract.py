@@ -16,27 +16,34 @@ class LargeFolderStreamingContracts(unittest.TestCase):
         self.assertNotIn("Snapshot aggregate",cpp)
         self.assertNotIn("aggregate.children",cpp)
 
-    def test_session_append_is_same_folder_and_expected_offset_only(self):
+    def test_session_supports_bounded_bidirectional_resident_window(self):
         h=read("src/base/shell_navigation_core.h")
         cpp=read("src/base/shell_navigation_core.cpp")
-        self.assertIn("appendPage(Snapshot&& page,std::size_t expectedOffset)",h)
-        self.assertIn("current_.nextOffset!=expectedOffset",cpp)
-        self.assertIn("page.baseOffset!=expectedOffset",cpp)
-        self.assertIn("page.nextOffset!=expectedOffset+page.children.size()",cpp)
-        self.assertIn("::ILIsEqual(current_.folder.get(),page.folder.get())",cpp)
-        self.assertIn("current_.nextOffset=page.nextOffset",cpp)
-        self.assertIn("current_.truncated=page.truncated",cpp)
+        self.assertIn("kResidentWindowEntries=2048",h)
+        self.assertIn("residentEndOffset() const noexcept",h)
+        self.assertIn("prependPage(Snapshot&& page,std::size_t expectedEnd)",h)
+        self.assertIn("trimResidentFront(std::size_t maximum)",h)
+        self.assertIn("trimResidentBack(std::size_t maximum)",h)
+        self.assertIn("current_.residentEndOffset()!=expectedOffset",cpp)
+        self.assertIn("expectedOffset>current_.nextOffset",cpp)
+        self.assertIn("const bool advancesFrontier=expectedOffset==current_.nextOffset",cpp)
+        self.assertIn("page.nextOffset!=expectedEnd",cpp)
+        self.assertIn("current_.baseOffset=page.baseOffset",cpp)
 
-    def test_controller_continuation_reuses_pending_identity(self):
+    def test_controller_pages_forward_rehydrates_and_pages_backward(self):
         h=read("app/winui/shell_navigation_controller.h")
         cpp=read("app/winui/shell_navigation_controller.cpp")
-        self.assertIn("Extended",h)
-        self.assertIn("submitContinuation(",h+cpp)
+        self.assertIn("PageDirection",h)
+        self.assertIn("submitNextPage(",h+cpp)
+        self.assertIn("submitPreviousPage(",h+cpp)
+        self.assertIn("snapshot.residentEndOffset()",cpp)
+        self.assertIn("snapshot.nextOffset-residentEnd",cpp)
+        self.assertIn("snapshot.baseOffset-offset",cpp)
         self.assertIn("supervisor_->submitPage(",cpp)
-        self.assertIn("const auto offset=snapshot.nextOffset",cpp)
+        self.assertIn("result.pageLimit",cpp)
+        self.assertIn("session.prependPage(",cpp)
+        self.assertIn("PageDirection::Backward",cpp)
         self.assertIn("model.markPending(side,pane.active,id,true)",cpp)
-        self.assertIn("NavigationAction::Continue",cpp)
-        self.assertIn("appendPage(",cpp)
 
     def test_ui_row_identity_is_logical_not_resident_vector_index(self):
         core=read("src/base/shell_navigation_core.h")
@@ -61,17 +68,23 @@ class LargeFolderStreamingContracts(unittest.TestCase):
             4,
         )
 
-    def test_ui_starts_with_truncated_page_and_loads_on_demand(self):
+    def test_ui_browses_window_and_rebuilds_complete_model_for_sort_filter(self):
         main=read("app/winui/MainWindow.xaml.cpp")
+        ui=read("app/winui/MainWindow.xaml")
         state=read("app/winui/file_list_state.h")
         transfers=read("app/winui/m22_transfers.cpp")
         self.assertIn("bool streamToComplete=false",state)
-        self.assertIn("QueueNextFolderPage(",main)
-        self.assertIn("snapshot.truncated?L\"+\"",main)
-        self.assertIn("snapshot.truncated||items.size()>1200",main)
-        self.assertIn("state.visibleCount+=160",main)
+        self.assertIn("LeftLoadPreviousButton",ui)
+        self.assertIn("RightLoadPreviousButton",ui)
+        self.assertIn("OnLoadPreviousFiles",ui+main)
+        self.assertIn("trimResidentFront(",main)
+        self.assertIn("trimResidentBack(",main)
+        self.assertIn("submitPreviousPage(",main)
+        self.assertIn("snapshot.residentEndOffset()<snapshot.nextOffset",main)
+        self.assertIn("snapshot.baseOffset",transfers)
         self.assertIn("QueueNextFolderPage(side,true)",transfers)
-        self.assertIn("!state.filenameFilter.empty()&&snapshot.truncated",main)
+        self.assertIn("state.filenameFilter.empty()&&mode==0",main)
+        self.assertIn("snapshot.baseOffset+(std::min)(order.size(),state.visibleCount)",main)
 
     def test_real_owned_gui_proves_initial_1024_then_global_8000(self):
         gui=read("tests/winui/test_large_owned_folder_gui.py")
