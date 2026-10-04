@@ -1,15 +1,15 @@
 {
-  "request_id": "guidance-remote-shell-fallback-and-gui-diagnostics-003",
-  "expected_main_sha": "24dabf61314e81117fceccc74855f52d2deb75e0",
-  "candidate_sha": "24dabf61314e81117fceccc74855f52d2deb75e0",
-  "logical_unit": "remote-shell-guidance-contract",
+  "request_id": "remote-request-preflight-and-prose-contract-hygiene-001",
+  "expected_main_sha": "6734698c4bb74f24e809428142fe35964c42e62d",
+  "candidate_sha": "6734698c4bb74f24e809428142fe35964c42e62d",
+  "logical_unit": "remote-request-preflight-hygiene",
   "configuration": "Release",
   "validation_kind": [
     "source"
   ],
   "invalidated_evidence": {
-    "source": "The focused guidance contract failed only because an existing assertion did not normalize line wrapping. The assertion now normalizes whitespace; source evidence must be rechecked on the corrected main revision."
+    "source": "AGENTS, AGENT_EFFICIENCY, PROJECT guidance and remote task contract tests changed to require pre-push request metadata validation and whitespace-normalized prose contract assertions."
   },
   "working_directory": "C:\\dev\\flyExplorer",
-  "command": "$ErrorActionPreference = \"Stop\"\ngit fetch origin main --no-tags --prune\nif ($LASTEXITCODE -ne 0) { throw \"fetch main failed\" }\nif ((git rev-parse origin/main).Trim() -ne \"24dabf61314e81117fceccc74855f52d2deb75e0\") { throw \"main moved\" }\nif ((git status --short).Count -ne 0) { throw \"dirty persistent checkout\" }\n\ngit checkout main\nif ($LASTEXITCODE -ne 0) { throw \"checkout main failed\" }\ngit merge --ff-only origin/main\nif ($LASTEXITCODE -ne 0) { throw \"fast-forward main failed\" }\nif ((git rev-parse HEAD).Trim() -ne \"24dabf61314e81117fceccc74855f52d2deb75e0\") { throw \"persistent checkout main mismatch\" }\n\npython -X utf8 tests\\winui\\test_remote_windows_task_contract.py\nif ($LASTEXITCODE -ne 0) { throw \"remote-shell guidance contract failed\" }\n\ncmd /c test.bat source\nif ($LASTEXITCODE -ne 0) { throw \"source contracts failed\" }\n\n$stale = git ls-remote --heads origin work/direct-shell-context-column-resize\nif ($LASTEXITCODE -ne 0) { throw \"branch existence check failed\" }\nif ($stale) {\n  git push origin --delete work/direct-shell-context-column-resize\n  if ($LASTEXITCODE -ne 0) { throw \"accepted work branch cleanup failed\" }\n  Write-Host \"WORK_BRANCH_CLEANUP=deleted\"\n} else {\n  Write-Host \"WORK_BRANCH_CLEANUP=already-absent\"\n}\n\ngit diff --check HEAD^..HEAD\nif ($LASTEXITCODE -ne 0) { throw \"guidance diff check failed\" }\nWrite-Host \"REMOTE_SHELL_GUIDANCE_CONTRACT_PASS\"\n"
+  "command": "$ErrorActionPreference = \"Stop\"\ngit fetch origin main --no-tags --prune\nif ($LASTEXITCODE -ne 0) { throw \"fetch main failed\" }\nif ((git rev-parse origin/main).Trim() -ne \"6734698c4bb74f24e809428142fe35964c42e62d\") { throw \"main moved\" }\nif ((git status --short).Count -ne 0) { throw \"dirty persistent checkout\" }\n\ngit checkout main\nif ($LASTEXITCODE -ne 0) { throw \"checkout main failed\" }\ngit merge --ff-only origin/main\nif ($LASTEXITCODE -ne 0) { throw \"fast-forward main failed\" }\nif ((git rev-parse HEAD).Trim() -ne \"6734698c4bb74f24e809428142fe35964c42e62d\") { throw \"persistent checkout main mismatch\" }\n\npython -X utf8 tests\\winui\\test_remote_windows_task_contract.py\nif ($LASTEXITCODE -ne 0) { throw \"remote task contract failed\" }\n\ncmd /c test.bat source\nif ($LASTEXITCODE -ne 0) { throw \"source contracts failed\" }\n\ngit diff --check HEAD^..HEAD\nif ($LASTEXITCODE -ne 0) { throw \"guidance diff check failed\" }\nWrite-Host \"REMOTE_REQUEST_PREFLIGHT_HYGIENE_PASS\"\n"
 }
