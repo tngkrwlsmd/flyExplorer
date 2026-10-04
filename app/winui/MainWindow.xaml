@@ -296,7 +296,7 @@
                           Content="정규식"
                           AutomationProperties.Name="정규식 검색 사용"/>
                 <CheckBox x:Name="SearchCaseBox" IsChecked="False"
-                          Content="대/소문자 구분"
+                          Content="대/소문자 구분 (이름/내용)"
                           AutomationProperties.Name="대소문자 구분"/>
                 <TextBlock Text="대상:" VerticalAlignment="Center"/>
                 <ComboBox x:Name="SearchTargetBox" Width="125" SelectedIndex="0"
@@ -309,6 +309,14 @@
                          PlaceholderText="확장자 예: .txt"
                          AutomationProperties.Name="파일 확장자 조건"/>
                 <TextBlock Text="깊이 5 · 최대 2,500개 검사 · 결과 100개"
+                           VerticalAlignment="Center" Opacity="0.65"/>
+            </StackPanel>
+            <StackPanel Orientation="Horizontal" Spacing="7">
+                <TextBlock Text="파일 내용:" VerticalAlignment="Center"/>
+                <TextBox x:Name="SearchContentBox" Width="360" MaxLength="256"
+                         PlaceholderText="파일 내용에 포함될 literal 텍스트"
+                         AutomationProperties.Name="파일 내용 검색어"/>
+                <TextBlock Text="UTF-8 / UTF-16 BOM · 파일당 1 MiB · 전체 16 MiB"
                            VerticalAlignment="Center" Opacity="0.65"/>
             </StackPanel>
             <StackPanel Orientation="Horizontal" Spacing="7">

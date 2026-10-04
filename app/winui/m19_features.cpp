@@ -302,6 +302,7 @@ SearchController::Context MainWindow::SearchContext(){
         context.paneFolder=pane.filesystemPaths[context.tab];
     context.scope=std::wstring(SearchScopeBox().Text().c_str());
     context.query.term=std::wstring(SearchTermBox().Text().c_str());
+    context.query.contentTerm=std::wstring(SearchContentBox().Text().c_str());
     context.query.extension=std::wstring(SearchExtensionBox().Text().c_str());
     context.query.minSizeKb=std::wstring(SearchMinSizeBox().Text().c_str());
     context.query.maxSizeKb=std::wstring(SearchMaxSizeBox().Text().c_str());
@@ -356,7 +357,7 @@ void MainWindow::OnToggleSearch(
     auto const& path=pane.filesystemPaths[pane.active];
     if(!path.empty())SearchScopeBox().Text(hstring(path));
     StatusText().Text(
-        L"이름/정규식/확장자/크기/수정일 조건을 조합하고 조건 세트를 저장할 수 있습니다.");
+        L"이름/정규식/확장자/크기/수정일/텍스트 내용 조건을 조합하고 저장할 수 있습니다.");
 }
 void MainWindow::OnRunSearch(
     IInspectable const&,RoutedEventArgs const&) {
@@ -377,14 +378,14 @@ void MainWindow::OnRunSearch(
     if(status==Start::Started){
         SearchRunButton().IsEnabled(false);
         SearchCountText().Text(
-            L"독립 스레드에서 이름 조건을 검색하고 있습니다...");
+            L"독립 스레드에서 제한된 이름/메타데이터/내용 검색을 실행하고 있습니다...");
         SearchMatches().Items().Clear();
         return;
     }
     SearchRunButton().IsEnabled(true);
     if(status==Start::InvalidRequest){
         StatusText().Text(
-           L"검색 폴더와 하나 이상의 이름/확장자/크기/수정일 조건을 입력하세요.");
+           L"검색 폴더와 하나 이상의 이름/확장자/크기/수정일/내용 조건을 입력하세요.");
     }else if(status==Start::InvalidExtension){
         SearchCountText().Text(L"확장자 조건이 올바르지 않습니다.");
         StatusText().Text(
@@ -397,6 +398,10 @@ void MainWindow::OnRunSearch(
         SearchCountText().Text(L"수정일 범위가 올바르지 않습니다.");
         StatusText().Text(
            L"수정일은 YYYY-MM-DD로 입력하고 이후 날짜가 이전 날짜보다 늦지 않아야 합니다.");
+    }else if(status==Start::InvalidContentTerm){
+        SearchCountText().Text(L"파일 내용 조건이 올바르지 않습니다.");
+        StatusText().Text(
+           L"내용 검색은 256자 이하의 한 줄 literal 텍스트이며 폴더 전용 검색과 함께 사용할 수 없습니다.");
     }else if(status==Start::InvalidPattern){
         SearchCountText().Text(L"정규식이 올바르지 않습니다.");
         StatusText().Text(
@@ -436,10 +441,15 @@ void MainWindow::OnSearchCompleted(
         row.Text(hstring(file));
         items.Append(row);
     }
-    SearchCountText().Text(hstring(
-        L"검색 결과 "+std::to_wstring(completion.result.count)+
-        (completion.result.truncated?L"개(제한된 일부 결과)":
-                                     L"개")));
+    auto summary=L"검색 결과 "+std::to_wstring(completion.result.count)+
+        (completion.result.truncated?L"개(제한된 일부 결과)":L"개");
+    if(!completion.request.query.contentTerm.empty()){
+        summary+=L" · 내용 "+std::to_wstring(completion.result.contentFilesScanned)+L"개 검사";
+        if(completion.result.contentFilesSkipped)
+            summary+=L" · "+std::to_wstring(completion.result.contentFilesSkipped)+L"개 건너뜀";
+        if(completion.result.contentLimited)summary+=L" · 16 MiB I/O 제한 도달";
+    }
+    SearchCountText().Text(hstring(summary));
     if(completion.request.remember){
         RefreshRecentSearchOptions();
         if(!accepted.recentSaved){

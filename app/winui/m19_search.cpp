@@ -1,6 +1,7 @@
 #include "m19_search.h"
 #include <windows.h>
 #include <algorithm>
+#include <array>
 #include <cwchar>
 #include <cwctype>
 #include <regex>
@@ -11,6 +12,9 @@ namespace {
 
 constexpr size_t kMaxWalk=2500,kMaxDepth=5,kMaxResults=100,kRecentMax=8;
 constexpr size_t kMaxExtension=32;
+constexpr std::uint64_t kMaxContentFileBytes=1024ull*1024ull;
+constexpr std::uint64_t kMaxContentSearchBytes=16ull*1024ull*1024ull;
+constexpr DWORD kContentChunkBytes=64*1024;
 constexpr DWORD kMaxRecentBytes=65536;
 
 std::wstring lower(std::wstring value){
@@ -49,6 +53,136 @@ bool literalMatches(
 {
     if(caseSensitive)return name.find(term)!=std::wstring::npos;
     return lower(name).find(lower(term))!=std::wstring::npos;
+}
+
+
+enum class ContentMatch {
+    Match,
+    NoMatch,
+    Skipped,
+    Canceled,
+    BudgetExceeded,
+};
+
+bool decodeUtf8(
+    unsigned char const* data,std::size_t size,std::wstring& out)
+{
+    out.clear();
+    if(!size)return true;
+    const int needed=::MultiByteToWideChar(
+        CP_UTF8,MB_ERR_INVALID_CHARS,
+        reinterpret_cast<char const*>(data),
+        static_cast<int>(size),nullptr,0);
+    if(needed<=0)return false;
+    out.resize(static_cast<std::size_t>(needed));
+    return ::MultiByteToWideChar(
+        CP_UTF8,MB_ERR_INVALID_CHARS,
+        reinterpret_cast<char const*>(data),
+        static_cast<int>(size),out.data(),needed)==needed;
+}
+
+bool decodeText(
+    std::vector<unsigned char> const& bytes,std::wstring& out)
+{
+    out.clear();
+    if(bytes.empty())return true;
+    if(bytes.size()>=2&&bytes[0]==0xff&&bytes[1]==0xfe){
+        const auto remaining=bytes.size()-2;
+        if(remaining%2)return false;
+        out.reserve(remaining/2);
+        for(std::size_t i=2;i<bytes.size();i+=2)
+            out.push_back(static_cast<wchar_t>(
+                bytes[i]|(static_cast<unsigned>(bytes[i+1])<<8)));
+        return true;
+    }
+    if(bytes.size()>=2&&bytes[0]==0xfe&&bytes[1]==0xff){
+        const auto remaining=bytes.size()-2;
+        if(remaining%2)return false;
+        out.reserve(remaining/2);
+        for(std::size_t i=2;i<bytes.size();i+=2)
+            out.push_back(static_cast<wchar_t>(
+                (static_cast<unsigned>(bytes[i])<<8)|bytes[i+1]));
+        return true;
+    }
+    std::size_t start=0;
+    if(bytes.size()>=3&&bytes[0]==0xef&&bytes[1]==0xbb&&bytes[2]==0xbf)
+        start=3;
+    if(std::find(bytes.begin()+static_cast<std::ptrdiff_t>(start),
+                 bytes.end(),static_cast<unsigned char>(0))!=bytes.end())
+        return false;
+    return decodeUtf8(bytes.data()+start,bytes.size()-start,out);
+}
+
+ContentMatch contentMatches(
+    std::wstring const& path,std::uint64_t fileBytes,
+    std::wstring const& term,bool caseSensitive,
+    std::shared_ptr<std::atomic_bool> const& cancel,
+    std::uint64_t& remainingBudget,
+    SearchResults& out)
+{
+    if(fileBytes>kMaxContentFileBytes){
+        ++out.contentFilesSkipped;
+        return ContentMatch::Skipped;
+    }
+    if(fileBytes>remainingBudget){
+        out.contentLimited=true;
+        return ContentMatch::BudgetExceeded;
+    }
+
+    HANDLE file=::CreateFileW(
+        path.c_str(),GENERIC_READ,
+        FILE_SHARE_READ|FILE_SHARE_WRITE|FILE_SHARE_DELETE,
+        nullptr,OPEN_EXISTING,
+        FILE_ATTRIBUTE_NORMAL|FILE_FLAG_SEQUENTIAL_SCAN|FILE_FLAG_OPEN_REPARSE_POINT,
+        nullptr);
+    if(file==INVALID_HANDLE_VALUE){
+        ++out.contentFilesSkipped;
+        return ContentMatch::Skipped;
+    }
+    const DWORD attrs=::GetFileAttributesW(path.c_str());
+    if(attrs==INVALID_FILE_ATTRIBUTES||
+       (attrs&FILE_ATTRIBUTE_REPARSE_POINT)!=0){
+        ::CloseHandle(file);
+        ++out.contentFilesSkipped;
+        return ContentMatch::Skipped;
+    }
+
+    std::vector<unsigned char> bytes;
+    bytes.reserve(static_cast<std::size_t>(fileBytes));
+    std::array<unsigned char,kContentChunkBytes> chunk{};
+    std::uint64_t readTotal=0;
+    bool good=true;
+    while(readTotal<fileBytes){
+        if(cancel&&cancel->load()){
+            ::CloseHandle(file);
+            return ContentMatch::Canceled;
+        }
+        const DWORD wanted=static_cast<DWORD>(
+            (std::min<std::uint64_t>)(kContentChunkBytes,fileBytes-readTotal));
+        DWORD used=0;
+        if(!::ReadFile(file,chunk.data(),wanted,&used,nullptr)){
+            good=false;break;
+        }
+        if(!used)break;
+        bytes.insert(bytes.end(),chunk.begin(),chunk.begin()+used);
+        readTotal+=used;
+    }
+    ::CloseHandle(file);
+    remainingBudget-=readTotal;
+    out.contentBytesRead+=readTotal;
+    if(!good||readTotal!=fileBytes){
+        ++out.contentFilesSkipped;
+        return ContentMatch::Skipped;
+    }
+
+    std::wstring text;
+    if(!decodeText(bytes,text)){
+        ++out.contentFilesSkipped;
+        return ContentMatch::Skipped;
+    }
+    ++out.contentFilesScanned;
+    return literalMatches(text,term,caseSensitive)?
+        ContentMatch::Match:ContentMatch::NoMatch;
 }
 
 
@@ -166,9 +300,15 @@ SearchQueryValidation validateSearchQuery(SearchQuery const& query) noexcept
         const bool hasCriterion=
             !query.term.empty()||!query.extension.empty()||
             !query.minSizeKb.empty()||!query.maxSizeKb.empty()||
-            !query.modifiedAfter.empty()||!query.modifiedBefore.empty();
+            !query.modifiedAfter.empty()||!query.modifiedBefore.empty()||
+            !query.contentTerm.empty();
         if(!hasCriterion||(query.regex&&query.term.empty()))
             return SearchQueryValidation::InvalidTerm;
+        if(query.contentTerm.size()>256||
+           query.contentTerm.find_first_of(L"\r\n")!=std::wstring::npos||
+           (!query.contentTerm.empty()&&
+            query.kind==SearchEntryKind::Folders))
+            return SearchQueryValidation::InvalidContentTerm;
 
         auto extension=normalizeExtension(query.extension);
         if(query.extension.size()>kMaxExtension||
@@ -210,6 +350,7 @@ bool sameSearchQuery(SearchQuery const& a,SearchQuery const& b) noexcept
            a.minSizeKb==b.minSizeKb&&a.maxSizeKb==b.maxSizeKb&&
            a.modifiedAfter==b.modifiedAfter&&
            a.modifiedBefore==b.modifiedBefore&&
+           a.contentTerm==b.contentTerm&&
            a.regex==b.regex&&a.caseSensitive==b.caseSensitive&&
            a.kind==b.kind;
 }
@@ -238,6 +379,7 @@ SearchResults scanFiles(
     std::uint32_t afterDate=0,beforeDate=0;
     (void)parseDate(query.modifiedAfter,afterDate);
     (void)parseDate(query.modifiedBefore,beforeDate);
+    std::uint64_t contentBudget=kMaxContentSearchBytes;
     std::wregex pattern;
     if(query.regex){
         auto flags=std::regex_constants::ECMAScript;
@@ -283,11 +425,35 @@ SearchResults scanFiles(
                 extensionMatches(
                     fd.cFileName,requestedExtension,query.caseSensitive);
 
-            if(kindMatches(folderEntry,query.kind)&&
+            bool matched=kindMatches(folderEntry,query.kind)&&
                nameMatch&&extensionMatch&&
                criteriaMatch(fd,folderEntry,query,
                              minBytes,hasMin,maxBytes,hasMax,
-                             afterDate,beforeDate)){
+                             afterDate,beforeDate);
+            if(matched&&!query.contentTerm.empty()){
+                if(folderEntry){
+                    matched=false;
+                }else{
+                    ULARGE_INTEGER size{};
+                    size.LowPart=fd.nFileSizeLow;
+                    size.HighPart=fd.nFileSizeHigh;
+                    const auto content=contentMatches(
+                        candidate,size.QuadPart,query.contentTerm,
+                        query.caseSensitive,cancel,contentBudget,out);
+                    if(content==ContentMatch::Canceled){
+                        out.canceled=true;
+                        ::FindClose(find);
+                        return out;
+                    }
+                    if(content==ContentMatch::BudgetExceeded){
+                        out.truncated=true;
+                        ::FindClose(find);
+                        return out;
+                    }
+                    matched=content==ContentMatch::Match;
+                }
+            }
+            if(matched){
                 ++out.count;
                 if(out.matches.size()<kMaxResults)
                     out.matches.push_back(candidate);

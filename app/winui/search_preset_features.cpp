@@ -13,6 +13,7 @@ fxfile::preview::SearchQuery queryFromPreset(
 {
     fxfile::preview::SearchQuery q{};
     q.term=p.term;
+    q.contentTerm=p.contentTerm;
     q.extension=p.extension;
     q.minSizeKb=p.minSizeKb;
     q.maxSizeKb=p.maxSizeKb;
@@ -42,6 +43,7 @@ fxfile::searchpresets::Preset MainWindow::SearchPresetFromUi()
     fxfile::searchpresets::Preset p{};
     p.name=std::wstring(SearchPresetNameBox().Text().c_str());
     p.term=std::wstring(SearchTermBox().Text().c_str());
+    p.contentTerm=std::wstring(SearchContentBox().Text().c_str());
     p.extension=std::wstring(SearchExtensionBox().Text().c_str());
     p.minSizeKb=std::wstring(SearchMinSizeBox().Text().c_str());
     p.maxSizeKb=std::wstring(SearchMaxSizeBox().Text().c_str());
@@ -58,6 +60,7 @@ void MainWindow::ApplySearchPresetToUi(
     fxfile::searchpresets::Preset const& p)
 {
     SearchTermBox().Text(hstring(p.term));
+    SearchContentBox().Text(hstring(p.contentTerm));
     SearchExtensionBox().Text(hstring(p.extension));
     SearchMinSizeBox().Text(hstring(p.minSizeKb));
     SearchMaxSizeBox().Text(hstring(p.maxSizeKb));
@@ -128,7 +131,7 @@ void MainWindow::OnSaveSearchPreset(
         queryFromPreset(value));
     if(validation!=fxfile::preview::SearchQueryValidation::Valid){
         StatusText().Text(
-            L"검색 조건을 먼저 확인하세요. 잘못된 크기/날짜/정규식 조건은 저장하지 않습니다.");
+            L"검색 조건을 먼저 확인하세요. 잘못된 크기/날짜/내용/정규식 조건은 저장하지 않습니다.");
         return;
     }
 

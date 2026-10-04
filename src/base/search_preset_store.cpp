@@ -31,6 +31,7 @@ bool sameNoCase(std::wstring const& a,std::wstring const& b){
 bool valid(Preset const& p){
     if(p.name.empty()||p.name.size()>Store::kMaxName||bad(p.name))return false;
     if(p.term.size()>Store::kMaxField||bad(p.term)||
+       p.contentTerm.size()>Store::kMaxField||bad(p.contentTerm)||
        p.extension.size()>32||bad(p.extension)||
        p.minSizeKb.size()>20||bad(p.minSizeKb)||
        p.maxSizeKb.size()>20||bad(p.maxSizeKb)||
@@ -156,21 +157,26 @@ bool Store::loadFrom(std::wstring const& path) noexcept{
         std::wstring line;
         if(!std::getline(lines,line))return false;
         if(!line.empty()&&line.back()==L'\r')line.pop_back();
-        if(line!=L"schema=1")return false;
+        const bool schema1=line==L"schema=1";
+        const bool schema2=line==L"schema=2";
+        if(!schema1&&!schema2)return false;
         Store candidate;
         while(std::getline(lines,line)){
             if(!line.empty()&&line.back()==L'\r')line.pop_back();
             if(line.empty())continue;
             auto f=split(line);
-            if(f.size()!=10)return false;
+            if((schema1&&f.size()!=10)||(schema2&&f.size()!=11))return false;
             Preset p{};
-            p.name=f[0];p.term=f[1];p.extension=f[2];
-            p.regex=f[3]==L"1";p.caseSensitive=f[4]==L"1";
-            try{p.kind=std::stoi(f[5]);}catch(...){return false;}
-            p.minSizeKb=f[6];p.maxSizeKb=f[7];
-            p.modifiedAfter=f[8];p.modifiedBefore=f[9];
-            if((f[3]!=L"0"&&f[3]!=L"1")||
-               (f[4]!=L"0"&&f[4]!=L"1")||
+            p.name=f[0];p.term=f[1];
+            std::size_t offset=0;
+            if(schema2){p.contentTerm=f[2];offset=1;}
+            p.extension=f[2+offset];
+            p.regex=f[3+offset]==L"1";p.caseSensitive=f[4+offset]==L"1";
+            try{p.kind=std::stoi(f[5+offset]);}catch(...){return false;}
+            p.minSizeKb=f[6+offset];p.maxSizeKb=f[7+offset];
+            p.modifiedAfter=f[8+offset];p.modifiedBefore=f[9+offset];
+            if((f[3+offset]!=L"0"&&f[3+offset]!=L"1")||
+               (f[4+offset]!=L"0"&&f[4+offset]!=L"1")||
                candidate.add(std::move(p))!=MutationResult::Applied)
                 return false;
         }
@@ -183,9 +189,10 @@ bool Store::saveTo(std::wstring const& path) const noexcept{
         Store checked;
         for(auto const& p:mItems)
             if(checked.add(p)!=MutationResult::Applied)return false;
-        std::wstring text=L"schema=1\r\n";
+        std::wstring text=L"schema=2\r\n";
         for(auto const& p:mItems){
-            text+=p.name+L"\t"+p.term+L"\t"+p.extension+L"\t"+
+            text+=p.name+L"\t"+p.term+L"\t"+p.contentTerm+L"\t"+
+                p.extension+L"\t"+
                 (p.regex?L"1":L"0")+L"\t"+
                 (p.caseSensitive?L"1":L"0")+L"\t"+
                 std::to_wstring(p.kind)+L"\t"+

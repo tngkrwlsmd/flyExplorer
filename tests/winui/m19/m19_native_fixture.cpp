@@ -286,12 +286,125 @@ int wmain(int argc,wchar_t** argv){
     expect(folderSizeResult.valid&&folderSizeResult.count==0,
            "SIZE_CRITERIA_EXCLUDES_FOLDERS");
 
+    const auto contentUtf8=left+L"\\content-utf8.txt";
+    const auto contentUtf16Le=left+L"\\content-utf16le.txt";
+    const auto contentUtf16Be=left+L"\\content-utf16be.txt";
+    const auto contentBinary=left+L"\\content-binary.bin";
+    const auto contentOversize=left+L"\\content-oversize.txt";
+    const std::string utf8Body="Alpha UtfEightOnly omega";
+    if(!put(contentUtf8,std::vector<unsigned char>(
+             utf8Body.begin(),utf8Body.end()))||
+       !put(contentUtf16Le,utf16(L"prefix 한글바늘 suffix")))
+        return 93;
+
+    std::vector<unsigned char> utf16be{0xfe,0xff};
+    for(const auto ch:std::wstring(L"prefix BigEndianNeedle suffix")){
+        utf16be.push_back(static_cast<unsigned char>((ch>>8)&255));
+        utf16be.push_back(static_cast<unsigned char>(ch&255));
+    }
+    if(!put(contentUtf16Be,utf16be)||
+       !put(contentBinary,std::vector<unsigned char>{
+           'A',0,'N','e','e','d','l','e'})||
+       !put(contentOversize,
+            std::vector<unsigned char>(1024*1024+1,'x')))
+        return 92;
+
+    fxfile::preview::SearchQuery contentUtf8Query{};
+    contentUtf8Query.contentTerm=L"utfEightOnly";
+    auto contentUtf8Result=fxfile::preview::scanFiles(
+        left,contentUtf8Query,cancel);
+    expect(contentUtf8Result.valid&&contentUtf8Result.count==1&&
+           contentUtf8Result.matches[0]==contentUtf8&&
+           contentUtf8Result.contentFilesScanned>0,
+           "UTF8_CONTENT_CASE_INSENSITIVE_MATCH");
+
+    contentUtf8Query.caseSensitive=true;
+    contentUtf8Query.contentTerm=L"UtfEightOnly";
+    auto contentCaseResult=fxfile::preview::scanFiles(
+        left,contentUtf8Query,cancel);
+    expect(contentCaseResult.valid&&contentCaseResult.count==1&&
+           contentCaseResult.matches[0]==contentUtf8,
+           "CONTENT_CASE_SENSITIVE_MATCH");
+
+    fxfile::preview::SearchQuery contentLeQuery{};
+    contentLeQuery.contentTerm=L"한글바늘";
+    auto contentLeResult=fxfile::preview::scanFiles(
+        left,contentLeQuery,cancel);
+    expect(contentLeResult.valid&&contentLeResult.count==1&&
+           contentLeResult.matches[0]==contentUtf16Le,
+           "UTF16LE_BOM_CONTENT_MATCH");
+
+    fxfile::preview::SearchQuery contentBeQuery{};
+    contentBeQuery.contentTerm=L"BigEndianNeedle";
+    contentBeQuery.caseSensitive=true;
+    auto contentBeResult=fxfile::preview::scanFiles(
+        left,contentBeQuery,cancel);
+    expect(contentBeResult.valid&&contentBeResult.count==1&&
+           contentBeResult.matches[0]==contentUtf16Be,
+           "UTF16BE_BOM_CONTENT_MATCH");
+
+    fxfile::preview::SearchQuery binaryQuery{};
+    binaryQuery.term=L"content-binary";
+    binaryQuery.contentTerm=L"Needle";
+    auto binaryResult=fxfile::preview::scanFiles(left,binaryQuery,cancel);
+    expect(binaryResult.valid&&binaryResult.count==0&&
+           binaryResult.contentFilesSkipped==1,
+           "BINARY_NUL_CONTENT_SKIPPED");
+
+    fxfile::preview::SearchQuery oversizeQuery{};
+    oversizeQuery.term=L"content-oversize";
+    oversizeQuery.contentTerm=L"x";
+    auto oversizeResult=fxfile::preview::scanFiles(
+        left,oversizeQuery,cancel);
+    expect(oversizeResult.valid&&oversizeResult.count==0&&
+           oversizeResult.contentFilesSkipped==1&&
+           oversizeResult.contentBytesRead==0,
+           "CONTENT_FILE_OVER_1MIB_SKIPPED");
+
+    fxfile::preview::SearchQuery contentAnd{};
+    contentAnd.term=L"content-utf8";
+    contentAnd.extension=L".txt";
+    contentAnd.contentTerm=L"utfEightOnly";
+    auto contentAndResult=fxfile::preview::scanFiles(
+        left,contentAnd,cancel);
+    expect(contentAndResult.valid&&contentAndResult.count==1&&
+           contentAndResult.matches[0]==contentUtf8,
+           "NAME_EXTENSION_CONTENT_AND_QUERY");
+
+    fxfile::preview::SearchQuery contentFolderOnly{};
+    contentFolderOnly.contentTerm=L"needle";
+    contentFolderOnly.kind=fxfile::preview::SearchEntryKind::Folders;
+    expect(fxfile::preview::validateSearchQuery(contentFolderOnly)==
+           fxfile::preview::SearchQueryValidation::InvalidContentTerm,
+           "CONTENT_FOLDER_ONLY_REJECTED_BEFORE_SEARCH");
+
+    const auto budgetDir=left+L"\\ContentBudget";
+    if(!::CreateDirectoryW(budgetDir.c_str(),nullptr))return 91;
+    const std::vector<unsigned char> oneMiB(1024*1024,'a');
+    bool budgetFiles=true;
+    for(int i=0;i<17;++i){
+        const auto path=budgetDir+L"\\budget-"+
+            (i<10?L"0":L"")+std::to_wstring(i)+L".txt";
+        if(!put(path,oneMiB)){budgetFiles=false;break;}
+    }
+    fxfile::preview::SearchQuery budgetQuery{};
+    budgetQuery.term=L"budget-";
+    budgetQuery.contentTerm=L"needle-never";
+    auto budgetResult=fxfile::preview::scanFiles(
+        left,budgetQuery,cancel);
+    expect(budgetFiles&&budgetResult.valid&&budgetResult.truncated&&
+           budgetResult.contentLimited&&budgetResult.count==0&&
+           budgetResult.contentFilesScanned==16&&
+           budgetResult.contentBytesRead==16ull*1024ull*1024ull,
+           "CONTENT_TOTAL_IO_BUDGET_16MIB");
+
     using PresetStore=fxfile::searchpresets::Store;
     using PresetResult=fxfile::searchpresets::MutationResult;
     PresetStore presets;
     fxfile::searchpresets::Preset preset{};
     preset.name=L"이번 달 보고서";
     preset.term=L"report";preset.extension=L"txt";
+    preset.contentTerm=L"needle";
     preset.minSizeKb=L"7";preset.maxSizeKb=L"9";
     preset.modifiedAfter=L"2026-02-01";
     preset.modifiedBefore=L"2026-02-28";
@@ -305,9 +418,30 @@ int wmain(int argc,wchar_t** argv){
            reloaded.items()[0].modifiedAfter==L"2026-02-01"&&
            reloaded.items()[0].minSizeKb==L"7",
            "SEARCH_PRESET_ATOMIC_RESTART_PERSISTENCE");
+    const auto presetRaw=bytes(presetFile);
+    const std::string presetText(presetRaw.begin(),presetRaw.end());
+    expect(reloaded.items()[0].contentTerm==L"needle"&&
+           presetRaw.size()>8&&
+           presetText.find("schema=2")!=std::string::npos,
+           "SEARCH_PRESET_CONTENT_SCHEMA2_RESTART");
+
+    const auto legacyPresetFile=root+L"\\search-presets-v1.txt";
+    const std::string legacyPreset=
+        "schema=1\r\nLegacy\treport\ttxt\t0\t0\t0\t7\t9\t"
+        "2026-02-01\t2026-02-28\r\n";
+    PresetStore legacyPresets;
+    expect(put(legacyPresetFile,std::vector<unsigned char>(
+               legacyPreset.begin(),legacyPreset.end()))&&
+           legacyPresets.loadFrom(legacyPresetFile)&&
+           legacyPresets.items().size()==1&&
+           legacyPresets.items()[0].name==L"Legacy"&&
+           legacyPresets.items()[0].contentTerm.empty(),
+           "SEARCH_PRESET_SCHEMA1_BACKWARD_COMPAT");
+
     expect(reloaded.erase(0)&&reloaded.items().empty(),
            "SEARCH_PRESET_DELETE");
     ::DeleteFileW(presetFile.c_str());
+    ::DeleteFileW(legacyPresetFile.c_str());
 
     cancel->store(true);
     expect(fxfile::preview::scanFiles(

@@ -8,6 +8,7 @@ namespace fxfile::searchpresets {
 struct Preset final {
     std::wstring name;
     std::wstring term;
+    std::wstring contentTerm;
     std::wstring extension;
     std::wstring minSizeKb;
     std::wstring maxSizeKb;

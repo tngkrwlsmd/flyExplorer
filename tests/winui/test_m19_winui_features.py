@@ -205,9 +205,9 @@ def run(*,p,win,element,safe_click,focus,eventually,ownedwindows,
         # thread. The startup checkbox is off and never learns an opted-out
         # folder; all results and preview history use ONLY owned paths.
         safe_click(element("SearchPanelButton"))
-        for key in ("SearchScopeBox","SearchTermBox","SearchRegexBox",
-                    "SearchCaseBox","SearchTargetBox","SearchExtensionBox",
-                    "SearchMinSizeBox","SearchMaxSizeBox",
+        for key in ("SearchScopeBox","SearchTermBox","SearchContentBox",
+                    "SearchRegexBox","SearchCaseBox","SearchTargetBox",
+                    "SearchExtensionBox","SearchMinSizeBox","SearchMaxSizeBox",
                     "SearchModifiedAfterBox","SearchModifiedBeforeBox",
                     "SearchPresetBox","SearchPresetNameBox",
                     "SearchPresetSaveButton","SearchPresetApplyButton",
@@ -254,6 +254,12 @@ def run(*,p,win,element,safe_click,focus,eventually,ownedwindows,
             target_file.write_bytes(b"x"*size)
             when=time.mktime(stamp)
             os.utime(target_file,(when,when))
+        content_utf8=left/"content-utf8.txt"
+        content_utf16=left/"content-utf16.txt"
+        content_binary=left/"content-binary.bin"
+        content_utf8.write_text("Alpha NeedLe omega",encoding="utf-8")
+        content_utf16.write_text("prefix 한글바늘 suffix",encoding="utf-16")
+        content_binary.write_bytes(b"A\x00Needle")
         regex=element("SearchRegexBox")
         case=element("SearchCaseBox")
         target=element("SearchTargetBox")
@@ -362,19 +368,55 @@ def run(*,p,win,element,safe_click,focus,eventually,ownedwindows,
              "Search v3 invalid date was not rejected before worker",7)
         print("REAL_SEARCH_V3_INVALID_DATE_PRESTART_REJECT_PASS",True,flush=True)
 
+        # Bounded literal content search reuses the same worker and case toggle.
+        content_box=element("SearchContentBox")
+        term.set_edit_text("")
+        extension.set_edit_text("")
+        min_size.set_edit_text("")
+        max_size.set_edit_text("")
+        after.set_edit_text("")
+        before_date.set_edit_text("")
+        content_box.set_edit_text("needle")
+        safe_click(element("SearchRunButton"))
+        good(lambda:match("SearchCountText","검색 결과 1개"),
+             "UTF-8 literal content search did not return one owned file",14)
+        assert search_matches("content-utf8.txt")
+        assert not search_matches("content-binary.bin")
+        print("REAL_CONTENT_SEARCH_UTF8_LITERAL_PASS",True,flush=True)
+
+        content_box.set_edit_text("한글바늘")
+        safe_click(element("SearchRunButton"))
+        good(lambda:match("SearchCountText","검색 결과 1개"),
+             "UTF-16 content search did not return one owned file",14)
+        assert search_matches("content-utf16.txt")
+        print("REAL_CONTENT_SEARCH_UTF16_PASS",True,flush=True)
+
+        focus()
+        target.wrapper_object().select(1)
+        content_box.set_edit_text("needle")
+        safe_click(element("SearchRunButton"))
+        good(lambda:match("SearchCountText","파일 내용 조건이 올바르지 않습니다"),
+             "folder-only content search was not rejected before worker",7)
+        assert element("SearchRunButton").is_enabled()
+        print("REAL_CONTENT_SEARCH_FOLDER_ONLY_PRESTART_REJECT_PASS",True,flush=True)
+        focus()
+        target.wrapper_object().select(0)
+
         term.set_edit_text("report")
         extension.set_edit_text(".txt")
         min_size.set_edit_text("7")
         max_size.set_edit_text("9")
         after.set_edit_text("2026-02-01")
         before_date.set_edit_text("2026-02-28")
+        content_box.set_edit_text("x")
         preset_name.set_edit_text("2월 중간 보고서")
         safe_click(element("SearchPresetSaveButton"))
         good(lambda:preset_file.is_file() and
-             "2월 중간 보고서\treport\t.txt" in
+             "2월 중간 보고서\treport\tx\t.txt" in
              preset_file.read_text(encoding="utf-8"),
              "Search v3 saved query preset was not durable",10)
         print("REAL_SEARCH_V3_PRIVATE_PRESET_SAVE_PASS",True,flush=True)
+        print("REAL_CONTENT_SEARCH_PRESET_SAVE_PASS",True,flush=True)
 
         # Restore legacy-default options before continuing existing recent
         # search persistence acceptance.
@@ -383,6 +425,7 @@ def run(*,p,win,element,safe_click,focus,eventually,ownedwindows,
         max_size.set_edit_text("")
         after.set_edit_text("")
         before_date.set_edit_text("")
+        content_box.set_edit_text("")
         focus()
         target.wrapper_object().select(0)
         term.set_edit_text("readme")
@@ -460,16 +503,18 @@ def run(*,p,win,element,safe_click,focus,eventually,ownedwindows,
                  restarted.child_window(auto_id="SearchMinSizeBox").get_value()=="7" and
                  restarted.child_window(auto_id="SearchMaxSizeBox").get_value()=="9" and
                  restarted.child_window(auto_id="SearchModifiedAfterBox").get_value()=="2026-02-01" and
-                 restarted.child_window(auto_id="SearchModifiedBeforeBox").get_value()=="2026-02-28",
-                 "Search v3 saved criteria did not apply after restart",8)
+                 restarted.child_window(auto_id="SearchModifiedBeforeBox").get_value()=="2026-02-28" and
+                 restarted.child_window(auto_id="SearchContentBox").get_value()=="x",
+                 "saved Search v3/content criteria did not apply after restart",8)
             restarted.child_window(auto_id="SearchRunButton").click_input()
             good(lambda:"검색 결과 1개" in restarted.child_window(
                      auto_id="SearchCountText").window_text(),
-                 "Search v3 reloaded preset did not execute",14)
+                 "Search v3/content reloaded preset did not execute",14)
+            print("REAL_CONTENT_SEARCH_PRESET_RESTART_PASS",True,flush=True)
             restarted.child_window(auto_id="SearchPresetDeleteButton").click_input()
             good(lambda:preset_file.is_file() and
-                 preset_file.read_text(encoding="utf-8").strip()=="schema=1",
-                 "Search v3 preset delete did not persist",8)
+                 preset_file.read_text(encoding="utf-8").strip()=="schema=2",
+                 "Search v3/content preset delete did not persist",8)
             print("REAL_SEARCH_V3_PRESET_RESTART_APPLY_DELETE_PASS",True,flush=True)
         finally:
             if restart.poll() is None:

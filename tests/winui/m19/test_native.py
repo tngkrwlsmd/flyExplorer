@@ -27,10 +27,10 @@ try:
  path=LOGS/("m19-native-"+CONFIG.lower()+"-standalone-results.log")
  path.write_text(result.stdout+"\n"+result.stderr,encoding="utf-8")
  assert result.returncode==0,(result.returncode,result.stdout,result.stderr)
- assert "M19_NATIVE_SUMMARY 29 passed, 0 failed." in result.stdout
+ assert "M19_NATIVE_SUMMARY 40 passed, 0 failed." in result.stdout
  assert_legacy_profile_unchanged(user,before)
  print("M19_NATIVE_TESTED_HELPER_CONFIG",CONFIG,flush=True)
- print("M19_NATIVE_WORKSPACE_AND_SEARCH_V3_29_PASS",True,flush=True)
+ print("M19_NATIVE_WORKSPACE_AND_CONTENT_SEARCH_40_PASS",True,flush=True)
  print("M19_LEGACY_USER_PROFILE_SENTINEL_UNCHANGED",True,"PRESENT",present_count(before),flush=True)
  print("M19_NATIVE_OWNED_PROOF",path.name,flush=True)
 finally:

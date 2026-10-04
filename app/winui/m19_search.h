@@ -25,6 +25,7 @@ struct SearchQuery {
     std::wstring maxSizeKb;
     std::wstring modifiedAfter;
     std::wstring modifiedBefore;
+    std::wstring contentTerm;
     bool regex=false;
     bool caseSensitive=false;
     SearchEntryKind kind=SearchEntryKind::Files;
@@ -36,6 +37,7 @@ enum class SearchQueryValidation {
     InvalidExtension,
     InvalidSizeRange,
     InvalidDateRange,
+    InvalidContentTerm,
     InvalidRegex,
 };
 
@@ -43,7 +45,11 @@ struct SearchResults {
     std::wstring scope;
     std::wstring term;
     bool valid=false,truncated=false,canceled=false,invalidPattern=false;
+    bool contentLimited=false;
     size_t count=0;
+    size_t contentFilesScanned=0;
+    size_t contentFilesSkipped=0;
+    std::uint64_t contentBytesRead=0;
     std::vector<std::wstring> matches;
 };
 

@@ -33,6 +33,7 @@ public:
         InvalidExtension,
         InvalidSizeRange,
         InvalidDateRange,
+        InvalidContentTerm,
         InvalidPattern,
         Closing,
         ThreadStartFailed
