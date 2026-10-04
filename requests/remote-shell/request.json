@@ -1,15 +1,15 @@
 {
-  "request_id": "remote-settings-principles-refactor-002",
-  "expected_main_sha": "b200291e67823984c9e396a28855348e99b15b3d",
-  "candidate_sha": "b200291e67823984c9e396a28855348e99b15b3d",
-  "logical_unit": "remote-settings-principles-refactor",
+  "request_id": "remote-workflow-single-source-001",
+  "expected_main_sha": "118b92c77c5ca8a78207b5236c42fa688796d108",
+  "candidate_sha": "118b92c77c5ca8a78207b5236c42fa688796d108",
+  "logical_unit": "remote-workflow-single-source",
   "configuration": "Release",
   "validation_kind": [
     "source"
   ],
   "invalidated_evidence": {
-    "source": "The previous source run found one stale fixed observation interval in PROJECT.md; that literal was removed and the guidance is now fully setting-referenced."
+    "source": "Remote Windows Task ownership changed: main now holds the reusable implementation and control/remote-shell holds only a thin @main caller plus request data."
   },
   "working_directory": "",
-  "command": "$ErrorActionPreference = \"Stop\"\ngit fetch origin main --no-tags --prune\nif ($LASTEXITCODE -ne 0) { throw \"fetch main failed\" }\nif ((git rev-parse origin/main).Trim() -ne \"b200291e67823984c9e396a28855348e99b15b3d\") { throw \"main moved\" }\nif ((git status --short).Count -ne 0) { throw \"dirty persistent checkout\" }\ngit checkout main\nif ($LASTEXITCODE -ne 0) { throw \"checkout main failed\" }\ngit merge --ff-only origin/main\nif ($LASTEXITCODE -ne 0) { throw \"fast-forward main failed\" }\nif ((git rev-parse HEAD).Trim() -ne \"b200291e67823984c9e396a28855348e99b15b3d\") { throw \"main mismatch\" }\npython -X utf8 -m py_compile tests\\winui\\test_remote_windows_task_contract.py\nif ($LASTEXITCODE -ne 0) { throw \"contract syntax failed\" }\npython -X utf8 tests\\winui\\test_remote_windows_task_contract.py\nif ($LASTEXITCODE -ne 0) { throw \"remote task contract failed\" }\ncmd /c test.bat source\nif ($LASTEXITCODE -ne 0) { throw \"source contracts failed\" }\ngit diff --check HEAD^..HEAD\nif ($LASTEXITCODE -ne 0) { throw \"diff check failed\" }\nWrite-Host \"REMOTE_SETTINGS_PRINCIPLES_REFACTOR_PASS\"\n"
+  "command": "$ErrorActionPreference = \"Stop\"\ngit fetch origin main control/remote-shell --no-tags --prune\nif ($LASTEXITCODE -ne 0) { throw \"fetch refs failed\" }\nif ((git rev-parse origin/main).Trim() -ne \"118b92c77c5ca8a78207b5236c42fa688796d108\") { throw \"main moved\" }\nif ((git status --short).Count -ne 0) { throw \"dirty persistent checkout\" }\n\ngit checkout main\nif ($LASTEXITCODE -ne 0) { throw \"checkout main failed\" }\ngit merge --ff-only origin/main\nif ($LASTEXITCODE -ne 0) { throw \"fast-forward main failed\" }\nif ((git rev-parse HEAD).Trim() -ne \"118b92c77c5ca8a78207b5236c42fa688796d108\") { throw \"main mismatch\" }\n\npython -X utf8 -m py_compile tests\\winui\\test_remote_windows_task_contract.py\nif ($LASTEXITCODE -ne 0) { throw \"contract syntax failed\" }\npython -X utf8 tests\\winui\\test_remote_windows_task_contract.py\nif ($LASTEXITCODE -ne 0) { throw \"remote workflow contract failed\" }\ncmd /c test.bat source\nif ($LASTEXITCODE -ne 0) { throw \"source contracts failed\" }\n\n$triggerLines = @(git show origin/control/remote-shell:.github/workflows/remote-windows-task.yml)\nif ($LASTEXITCODE -ne 0) { throw \"control trigger read failed\" }\n$trigger = $triggerLines -join [Environment]::NewLine\nif ($trigger -notmatch 'uses:\\s+tngkrwlsmd/flyExplorer/.github/workflows/remote-windows-task.yml@main') {\n  throw \"control trigger does not delegate to main reusable workflow\"\n}\nif ($trigger -match 'validation_kind|Invoke-Expression|upload-artifact|runs-on:|FLYEXPLORER_CANONICAL_CHECKOUT') {\n  throw \"control trigger contains duplicated execution logic\"\n}\n$implementation = Get-Content -Raw -Encoding UTF8 .github\\workflows\\remote-windows-task.yml\nif ($implementation -notmatch 'workflow_call:' -or $implementation -match '(?m)^\\s{2}push:') {\n  throw \"main implementation ownership contract failed\"\n}\n\ngit diff --check HEAD^..HEAD\nif ($LASTEXITCODE -ne 0) { throw \"diff check failed\" }\nWrite-Host \"REMOTE_WORKFLOW_SINGLE_SOURCE_PASS\"\n"
 }
