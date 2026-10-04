@@ -26,7 +26,7 @@ consumer core; this PROJECT.md remains project-owned across bundle refreshes.
     {"name": "winui-tests", "path": "tests/winui", "responsibility": "source, native and owned GUI contracts"}
   ],
   "review": {
-    "reviewed_revision": "6e0cddb543fdfe6cd4a21a0d2fe83e3047f00bf6",
+    "reviewed_revision": "42e23c7f7ab3ddd97e84a07f959cbb1566d14deb",
     "reviewed_at": "2026-10-04",
     "reviewed_paths": [
       "app/winui",
