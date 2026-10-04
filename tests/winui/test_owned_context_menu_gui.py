@@ -1,4 +1,4 @@
-"""Never invoke external verbs: verify test-owned WinUI launches Shell popup.
+"""Never invoke external verbs: verify file right-click launches Shell popup directly.
 
 This is an input/cancel smoke only. It must never click any third-party
 command, open a preexisting window or modify unowned files.
@@ -8,6 +8,7 @@ from ctypes import wintypes as w
 import hashlib,os,subprocess,sys,tempfile,time
 from pathlib import Path
 from paths import APP, app_exe
+from PIL import ImageGrab
 import psutil
 from pywinauto import Desktop,keyboard
 
@@ -93,71 +94,6 @@ def main(config="Debug"):
       "Owned file row not visible inside owned ListView viewport")
   click=(left+min(50,(right-left)//2),(top+bottom)//2)
   assert area.left<click[0]<area.right and area.top<click[1]<area.bottom
-  def menu():
-   # WinUI may host ContextFlyout in a top-level XAML popup HWND. Search
-   # only exact owned-process windows; never inspect other applications.
-   hits=[]
-   for target in Desktop(backend="uia").windows(process=winui.pid):
-    try:
-     hits.extend(x for x in target.descendants()
-        if x.element_info.name=="Windows Shell isolated context menu")
-    except Exception:pass
-   return hits[0] if len(hits)==1 else None
-  def foreground_owned():
-   f=user.GetForegroundWindow()
-   if not f:return False
-   pid=w.DWORD()
-   user.GetWindowThreadProcessId(f,c.byref(pid))
-   return pid.value==winui.pid
-  def wait_app_menu(seconds):
-   end=time.monotonic()+seconds
-   while time.monotonic()<end:
-    hit=menu()
-    if hit is not None:return hit
-    time.sleep(.15)
-   return None
-  # Native watcher/UIA timing can replace the selected peer while the
-  # ContextFlyout is opening. Retry the exact clipped pointer gesture at
-  # most twice. Between attempts ESC is sent only when the exact owned
-  # WinUI process owns foreground; never dismiss or click a foreign menu.
-  for attempt in range(2):
-   if menu() is not None:break
-   eventually(select_owned_row,"Owned context row lost before right click",5)
-   item=row().rectangle()
-   area=win.child_window(auto_id="LeftFiles").rectangle()
-   left=max(item.left,area.left);right=min(item.right,area.right)
-   top=max(item.top,area.top);bottom=min(item.bottom,area.bottom)
-   assert right-left>30 and bottom-top>5
-   click=(left+min(50,(right-left)//2),(top+bottom)//2)
-   assert area.left<click[0]<area.right and area.top<click[1]<area.bottom
-   mouse.click(button="right",coords=click)
-   if wait_app_menu(2.3) is not None:break
-   if foreground_owned():
-    keyboard.send_keys("{ESC}")
-    time.sleep(.25)
-  if menu() is None:
-   eventually(select_owned_row,"Owned context row lost before keyboard fallback",5)
-   current=row()
-   assert current is not None
-   current.set_focus()
-   assert foreground_owned()
-   keyboard.send_keys("+{F10}")
-   print("OWNED_CONTEXT_KEYBOARD_FALLBACK_USED",True,flush=True)
-  try:
-   eventually(lambda:menu() is not None,
-              "Owned Shell menu launch item absent",6)
-  except AssertionError:
-   # Diagnostic only, no more synthetic coordinate drags/clicks.
-   discovered=[]
-   for target in Desktop(backend="uia").windows(process=winui.pid):
-    for element in target.descendants():
-     if element.element_info.control_type in ("MenuItem","Menu"):
-      discovered.append(element.element_info.name[:78])
-   print("OWNED_PROCESS_MENU_UIA_DIAGNOSTIC",
-         [x.encode("unicode_escape").decode("ascii") for x in discovered[:18]],
-         flush=True)
-   raise
-  menu().click_input()
   def spawned():
    nonlocal child
    candidates=[]
@@ -170,7 +106,26 @@ def main(config="Debug"):
    if len(candidates)!=1:return False
    child=candidates[0]
    return True
-  eventually(spawned,"WinUI did not launch exact owned isolated context helper",8)
+  # Right-click the exact owned row. flyExplorer must launch the isolated
+  # Shell popup directly; there is no app-owned intermediary MenuFlyout.
+  for attempt in range(2):
+   eventually(select_owned_row,"Owned context row lost before right click",5)
+   item=row().rectangle()
+   area=win.child_window(auto_id="LeftFiles").rectangle()
+   left=max(item.left,area.left);right=min(item.right,area.right)
+   top=max(item.top,area.top);bottom=min(item.bottom,area.bottom)
+   assert right-left>30 and bottom-top>5
+   click=(left+min(50,(right-left)//2),(top+bottom)//2)
+   assert area.left<click[0]<area.right and area.top<click[1]<area.bottom
+   mouse.click(button="right",coords=click)
+   try:
+    eventually(spawned,"direct Shell helper not launched from right click",4)
+    break
+   except AssertionError:
+    if attempt:
+     raise
+    time.sleep(.25)
+  print("OWNED_CONTEXT_DIRECT_RIGHT_CLICK_HELPER",True,flush=True)
   def owns_foreground():
    f=user.GetForegroundWindow()
    if not f:return False
@@ -179,6 +134,13 @@ def main(config="Debug"):
    return pid.value==child.pid
   eventually(owns_foreground,"Native Shell popup did not own foreground",6)
   print("ACTUAL_OWNED_SHELL_CONTEXT_POPUP_FOREGROUND",True,flush=True)
+  rect=get_win().rectangle()
+  evidence=root/"direct-shell-context-after.png"
+  ImageGrab.grab(
+      bbox=(max(0,rect.left-20),max(0,rect.top-20),
+            rect.right+220,rect.bottom+20),
+      include_layered_windows=True).save(evidence)
+  print("OWNED_DIRECT_SHELL_CONTEXT_VISUAL",evidence.name,flush=True)
   # Escape only while exact test-launched helper owns the foreground.
   user.keybd_event(0x1b,0,0,0)
   user.keybd_event(0x1b,0,2,0)

@@ -17,29 +17,39 @@ class RemoteWindowsTaskContractTests(unittest.TestCase):
         cls.project = (
             ROOT / ".agent-policy/PROJECT.md"
         ).read_text(encoding="utf-8")
+        cls.verification_profile = (
+            ROOT / "docs/development/VERIFICATION_PROFILE.md"
+        ).read_text(encoding="utf-8")
         cls.windows_build = (
             ROOT / ".github/workflows/windows-build.yml"
         ).read_text(encoding="utf-8")
+
 
     def test_dispatch_shell_requires_no_task_commit(self):
         self.assertIn("workflow_dispatch:", self.workflow)
         self.assertIn("command:", self.workflow)
         self.assertIn("working_directory:", self.workflow)
-        self.assertIn("default: 'C:\\dev\\flyExplorer'", self.workflow)
+        self.assertIn("FLYEXPLORER_CANONICAL_CHECKOUT: 'C:\\dev\\flyExplorer'", self.workflow)
+        self.assertEqual(self.workflow.count("C:\\dev\\flyExplorer"), 1)
+        self.assertNotIn("default: 'C:\\dev\\flyExplorer'", self.workflow)
+        self.assertIn("$workdir = $env:FLYEXPLORER_CANONICAL_CHECKOUT", self.workflow)
         self.assertIn(
-            "if: github.event_name == 'workflow_dispatch'",
+            "${{ env.FLYEXPLORER_CANONICAL_CHECKOUT }}\\logs\\remote-evidence",
             self.workflow,
         )
+        self.assertIn("if: github.event_name == 'workflow_dispatch'", self.workflow)
         self.assertIn("Invoke-Expression $env:REMOTE_COMMAND", self.workflow)
         self.assertIn("Set-Location -LiteralPath $workdir", self.workflow)
 
+
     def test_request_slot_uses_dedicated_control_branch(self):
-        self.assertIn("- 'control/remote-shell'", self.workflow)
-        self.assertIn("- 'requests/remote-shell/request.json'", self.workflow)
-        self.assertIn(
-            "github.ref_name == 'control/remote-shell'",
-            self.workflow,
-        )
+        self.assertIn("workflow_call:", self.workflow)
+        self.assertIn("request_ref:", self.workflow)
+        self.assertIn("request_branch:", self.workflow)
+        self.assertNotIn("\n  push:", self.workflow)
+        self.assertIn("ref: ${{ inputs.request_ref }}", self.workflow)
+        self.assertIn("INPUT_REQUEST_BRANCH: ${{ inputs.request_branch }}", self.workflow)
+        self.assertIn('Remote shell reusable workflow only accepts control/remote-shell requests.', self.workflow)
         self.assertIn('"requests\\remote-shell\\request.json"', self.workflow)
         self.assertIn("Remote shell request_id is required.", self.workflow)
         self.assertIn("Get-Content -Raw -Encoding UTF8", self.workflow)
@@ -89,18 +99,20 @@ class RemoteWindowsTaskContractTests(unittest.TestCase):
             self.windows_build,
         )
 
+
     def test_validation_churn_targets_are_documented(self):
         for text in (self.agents, self.efficiency, self.project):
             normalized = " ".join(text.split())
-            self.assertIn("30-50", normalized)
             self.assertIn("validation fingerprint", normalized)
             self.assertIn("retry_revision", normalized)
-        self.assertIn("<=2 validation runs per logical unit", " ".join(self.project.split()))
+            self.assertIn("diagnosis-free", normalized)
+        self.assertIn("FLYEXPLORER_DEFAULT_VALIDATION_RUN_BUDGET", self.workflow)
+
 
     def test_dispatch_path_does_not_require_checkout(self):
         self.assertIn(
             "- name: Checkout control branch request\n"
-            "        if: github.event_name == 'push'",
+            "        if: inputs.request_ref != ''",
             self.workflow,
         )
         self.assertIn(
@@ -109,10 +121,18 @@ class RemoteWindowsTaskContractTests(unittest.TestCase):
             self.workflow,
         )
         self.assertIn(
-            "github.event_name == 'workflow_dispatch' || "
-            "github.ref_name == 'control/remote-shell'",
+            "if: inputs.request_ref != '' || github.event_name == 'workflow_dispatch'",
             self.workflow,
         )
+
+    def test_main_remote_workflow_is_the_single_execution_source(self):
+        normalized = " ".join((self.agents + self.efficiency + self.project).split())
+        self.assertIn("reusable workflow", normalized)
+        self.assertIn("@main", normalized)
+        self.assertIn("thin push trigger", normalized)
+        self.assertIn("workflow_call:", self.workflow)
+        self.assertNotIn("\n  push:", self.workflow)
+        self.assertIn("Remote Windows Task implementation", self.verification_profile)
 
     def test_remote_shell_is_the_only_push_based_command_channel(self):
         self.assertNotIn("remote/**", self.workflow)
@@ -122,14 +142,17 @@ class RemoteWindowsTaskContractTests(unittest.TestCase):
         self.assertIn("minimal control-plane tree", agents)
         self.assertIn("Do not create `remote/**` task branches", agents)
 
-    def test_long_run_guidance_allows_up_to_three_minutes_without_polling(self):
+
+    def test_long_run_guidance_uses_configured_observation_intervals(self):
         agents = " ".join(self.agents.split())
         efficiency = " ".join(self.efficiency.split())
         project = " ".join(self.project.split())
-        self.assertIn("up to three minutes", agents)
-        self.assertIn("up to three minutes", efficiency)
-        self.assertIn("up to three minutes", project)
-        self.assertIn("one final/blocking read", efficiency)
+        for normalized in (agents, efficiency, project):
+            self.assertIn("FLYEXPLORER_ROUTINE_OBSERVATION_SECONDS", normalized)
+            self.assertIn("FLYEXPLORER_ACTIVE_MONITOR_SECONDS", normalized)
+            self.assertIn("short-interval", normalized)
+        self.assertIn("FLYEXPLORER_ROUTINE_OBSERVATION_SECONDS:", self.workflow)
+        self.assertIn("FLYEXPLORER_ACTIVE_MONITOR_SECONDS:", self.workflow)
 
     def test_pre_dispatch_lease_blocks_overlapping_remote_runs(self):
         texts = (
@@ -147,44 +170,136 @@ class RemoteWindowsTaskContractTests(unittest.TestCase):
         self.assertIn("pre-dispatch", texts[1].lower())
         self.assertIn("pre-dispatch", texts[2].lower())
 
-    def test_remote_run_budget_stops_speculative_successors(self):
+
+    def test_remote_run_budget_requires_new_hypothesis_and_evidence_need(self):
         agents = " ".join(self.agents.split())
         efficiency = " ".join(self.efficiency.split())
         project = " ".join(self.project.split())
         for normalized in (agents, efficiency, project):
-            self.assertIn("one primary Windows validation run", normalized)
-            self.assertIn("third Windows validation run", normalized)
-            self.assertIn("explicit user approval", normalized)
-        self.assertIn("Never queue a speculative successor", agents)
-        self.assertIn("never queue a successor while its predecessor is active", efficiency)
-        self.assertIn("Never queue speculative successors", project)
+            self.assertIn("FLYEXPLORER_DEFAULT_VALIDATION_RUN_BUDGET", normalized)
+            self.assertIn("new failure hypothesis", normalized)
+            self.assertIn("evidence need", normalized)
+            self.assertIn("diagnosis-free", normalized)
+        self.assertNotIn("third Windows validation run", agents)
+        self.assertNotIn("third Windows validation run", efficiency)
+        self.assertNotIn("third Windows validation run", project)
 
-    def test_three_minute_rule_is_a_no_polling_window(self):
+
+    def test_observation_policy_does_not_duplicate_interval_literals(self):
+        for text in (self.agents, self.efficiency):
+            normalized = " ".join(text.split())
+            self.assertNotIn("three minutes", normalized)
+            self.assertNotIn("30 seconds", normalized)
+        project_discipline = self.project.split("### Remote-shell and CI discipline", 1)[1].split("### Source-contract hygiene", 1)[0]
+        project_discipline = " ".join(project_discipline.split())
+        self.assertNotIn("three minutes", project_discipline)
+        self.assertNotIn("30 seconds", project_discipline)
+
+
+    def test_high_cost_fixture_policy_uses_separate_profile(self):
         agents = " ".join(self.agents.split())
         efficiency = " ".join(self.efficiency.split())
-        self.assertIn("no earlier than three minutes", agents)
-        self.assertIn("no earlier than three minutes", efficiency)
-        self.assertIn("not a polling interval", agents)
-        self.assertIn("not a three-minute polling interval", efficiency)
+        project_discipline = self.project.split("### Remote-shell and CI discipline", 1)[1].split("### Source-contract hygiene", 1)[0]
+        project_discipline = " ".join(project_discipline.split())
+        for normalized in (agents, efficiency, project_discipline):
+            self.assertIn("high-cost", normalized.lower())
+            self.assertIn("VERIFICATION_PROFILE.md", normalized)
+        self.assertNotIn("8,000+", agents)
+        self.assertNotIn("20,000+", agents)
+        self.assertNotIn("8,000+", efficiency)
+        self.assertNotIn("20,000+", efficiency)
+        self.assertIn("8,000 files", self.verification_profile)
+        self.assertIn("20,000-entry", self.verification_profile)
 
-    def test_expensive_large_folder_fixtures_are_final_acceptance_only(self):
+    def test_remote_settings_are_single_sourced_and_runner_serialization_is_conditional(self):
+        for name in (
+            "FLYEXPLORER_CANONICAL_CHECKOUT",
+            "FLYEXPLORER_ROUTINE_OBSERVATION_SECONDS",
+            "FLYEXPLORER_ACTIVE_MONITOR_SECONDS",
+            "FLYEXPLORER_REMOTE_RUNNER_CAPACITY",
+            "FLYEXPLORER_DEFAULT_VALIDATION_RUN_BUDGET",
+        ):
+            self.assertIn(name + ":", self.workflow)
+            self.assertIn(name, self.verification_profile)
         for text in (self.agents, self.efficiency, self.project):
-            normalized = " ".join(text.split())
-            self.assertIn("8,000+", normalized)
-            self.assertIn("20,000+", normalized)
-            self.assertIn("final acceptance", normalized)
+            self.assertNotIn("C:\\dev\\flyExplorer", text)
+        combined = " ".join((self.agents + self.efficiency + self.project).split())
+        self.assertIn("FLYEXPLORER_REMOTE_RUNNER_CAPACITY", combined)
+        self.assertIn("re-evaluate", combined.lower())
+        self.assertIn("concurrency", combined.lower())
+        self.assertIn("group: flyexplorer-remote-windows-task", self.workflow)
 
     def test_guidance_prefers_request_slot_and_keeps_rdc_auxiliary(self):
-        self.assertIn(
-            "`control/remote-shell` request slot",
-            self.agents,
-        )
-        self.assertIn("RDC or another desktop-control path is a supplementary tool", self.agents)
-        self.assertIn(
-            "`control/remote-shell` request slot",
-            self.efficiency,
-        )
-        self.assertIn("RDC/desktop-control is supplementary", self.efficiency)
+        agents = " ".join(self.agents.split())
+        efficiency = " ".join(self.efficiency.split())
+        self.assertIn("`control/remote-shell` request slot", agents)
+        self.assertIn("RDC or another desktop-control path is a supplementary tool", agents)
+        self.assertIn("`control/remote-shell` request slot", efficiency)
+        self.assertIn("RDC/desktop-control is supplementary", efficiency)
+
+    def test_guidance_requires_request_metadata_preflight_before_push(self):
+        agents = " ".join(self.agents.split())
+        efficiency = " ".join(self.efficiency.split())
+        project = " ".join(self.project.split())
+        for normalized in (agents, efficiency, project):
+            self.assertIn("preflight", normalized.lower())
+            self.assertIn('configuration', normalized)
+            self.assertIn('Debug', normalized)
+            self.assertIn('Release', normalized)
+            self.assertIn('invalidated_evidence', normalized)
+        self.assertIn('validation_kind == ["none"]', agents)
+        self.assertIn("before the control-branch commit", efficiency)
+        self.assertIn("agent preflight defect", project.lower())
+
+    def test_zero_run_preflight_blocks_avoidable_workflow_failures(self):
+        agents = " ".join(self.agents.split())
+        efficiency = " ".join(self.efficiency.split())
+        project = " ".join(self.project.split())
+        for normalized in (agents, efficiency, project):
+            self.assertIn("zero-run preflight", normalized.lower())
+            self.assertIn("preflight defect", normalized.lower())
+            self.assertIn("branch", normalized.lower())
+            self.assertIn("path", normalized.lower())
+            self.assertIn("import", normalized.lower())
+            self.assertIn("UIA", normalized)
+        self.assertIn("do not create a workflow run", agents.lower())
+        self.assertIn("PowerShell/JSON", agents)
+        self.assertIn("syntax/import-path sanity", efficiency)
+        self.assertIn("nonexistent branches", project)
+        self.assertIn("pywinauto", project)
+
+    def test_guidance_requires_whitespace_normalized_prose_contracts(self):
+        agents = " ".join(self.agents.split())
+        efficiency = " ".join(self.efficiency.split())
+        project = " ".join(self.project.split())
+        for normalized in (agents, efficiency, project):
+            self.assertIn("normalize", normalized.lower())
+            self.assertIn("whitespace", normalized.lower())
+            self.assertIn("newline", normalized.lower())
+        self.assertIn('" ".join(text.split())', agents)
+        self.assertIn("Markdown", efficiency)
+
+    def test_missing_github_connector_operation_falls_back_to_remote_shell(self):
+        for text in (self.agents, self.efficiency, self.project):
+            normalized = " ".join(text.split())
+            self.assertIn("GitHub connector/API does not expose", normalized)
+            self.assertIn("`control/remote-shell`", normalized)
+        self.assertIn("missing connector method", " ".join(self.agents.split()))
+        self.assertIn("Git/branch cleanup", " ".join(self.project.split()))
+
+    def test_gui_input_failure_requires_layered_first_diagnostic(self):
+        agents = " ".join(self.agents.split())
+        efficiency = " ".join(self.efficiency.split())
+        project = " ".join(self.project.split())
+        for normalized in (agents, efficiency, project):
+            self.assertIn("environment-gated", normalized)
+            self.assertIn("event entry", normalized)
+            self.assertIn("hit", normalized)
+            self.assertIn("coordinates", normalized)
+            self.assertIn("deltas", normalized)
+        self.assertIn("where the signal stops", efficiency)
+        self.assertIn("failing layer", project)
+        self.assertIn("before changing the interaction strategy", agents)
 
     def test_resume_protocol_blocks_stale_rework_and_fixture_loops(self):
         for text in (self.agents, self.efficiency):

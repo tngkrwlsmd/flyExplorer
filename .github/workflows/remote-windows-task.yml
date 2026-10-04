@@ -1,6 +1,16 @@
-name: Remote Windows Task
+name: Remote Windows Task Implementation
 
 on:
+  workflow_call:
+    inputs:
+      request_ref:
+        description: Control-branch request commit SHA
+        required: true
+        type: string
+      request_branch:
+        description: Branch carrying the request commit
+        required: true
+        type: string
   workflow_dispatch:
     inputs:
       command:
@@ -8,18 +18,20 @@ on:
         required: true
         type: string
       working_directory:
-        description: Working directory for the command
+        description: Optional working-directory override; blank uses the workflow-configured canonical persistent checkout
         required: false
-        default: 'C:\dev\flyExplorer'
         type: string
-  push:
-    branches:
-      - 'control/remote-shell'
-    paths:
-      - 'requests/remote-shell/request.json'
-
 permissions:
   contents: read
+
+# Mutable operational values live here. Guidance references the setting names
+# and principles instead of copying paths, intervals or budget numbers.
+env:
+  FLYEXPLORER_CANONICAL_CHECKOUT: 'C:\dev\flyExplorer'
+  FLYEXPLORER_ROUTINE_OBSERVATION_SECONDS: '180'
+  FLYEXPLORER_ACTIVE_MONITOR_SECONDS: '30'
+  FLYEXPLORER_REMOTE_RUNNER_CAPACITY: '1'
+  FLYEXPLORER_DEFAULT_VALIDATION_RUN_BUDGET: '2'
 
 concurrency:
   group: flyexplorer-remote-windows-task
@@ -32,17 +44,22 @@ jobs:
     timeout-minutes: 60
     steps:
       - name: Checkout control branch request
-        if: github.event_name == 'push'
+        if: inputs.request_ref != ''
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           fetch-depth: 0
-          ref: ${{ github.ref_name }}
+          ref: ${{ inputs.request_ref }}
 
       - name: Resolve request-slot shell inputs
-        if: github.event_name == 'push' && github.ref_name == 'control/remote-shell'
+        if: inputs.request_ref != ''
         shell: powershell -NoLogo -NoProfile -ExecutionPolicy Bypass -Command ". '{0}'"
+        env:
+          INPUT_REQUEST_BRANCH: ${{ inputs.request_branch }}
         run: |
           $ErrorActionPreference = "Stop"
+          if ($env:INPUT_REQUEST_BRANCH -ne "control/remote-shell") {
+            throw "Remote shell reusable workflow only accepts control/remote-shell requests."
+          }
           $requestPath = Join-Path $env:GITHUB_WORKSPACE "requests\remote-shell\request.json"
           if (-not (Test-Path -LiteralPath $requestPath -PathType Leaf)) {
             throw "Remote shell request is missing: $requestPath"
@@ -138,7 +155,7 @@ jobs:
             throw "Remote shell command is required."
           }
           if ([string]::IsNullOrWhiteSpace($workdir)) {
-            $workdir = "C:\dev\flyExplorer"
+            $workdir = $env:FLYEXPLORER_CANONICAL_CHECKOUT
           }
 
           # Catch common expensive stages that were omitted from validation_kind.
@@ -277,13 +294,13 @@ jobs:
           ) | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
 
       - name: Run remote shell command
-        if: github.event_name == 'workflow_dispatch' || github.ref_name == 'control/remote-shell'
+        if: inputs.request_ref != '' || github.event_name == 'workflow_dispatch'
         shell: powershell -NoLogo -NoProfile -ExecutionPolicy Bypass -Command ". '{0}'"
         run: |
           $ErrorActionPreference = "Stop"
           $workdir = $env:REMOTE_WORKDIR
           if ([string]::IsNullOrWhiteSpace($workdir)) {
-            $workdir = "C:\dev\flyExplorer"
+            $workdir = $env:FLYEXPLORER_CANONICAL_CHECKOUT
           }
           if (-not (Test-Path -LiteralPath $workdir -PathType Container)) {
             throw "Remote shell working directory does not exist: $workdir"
@@ -321,6 +338,6 @@ jobs:
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: flyexplorer-remote-evidence-${{ github.run_id }}
-          path: C:\dev\flyExplorer\logs\remote-evidence\
+          path: ${{ env.FLYEXPLORER_CANONICAL_CHECKOUT }}\logs\remote-evidence\
           if-no-files-found: ignore
           retention-days: 3

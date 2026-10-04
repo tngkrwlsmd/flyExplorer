@@ -31,6 +31,39 @@ Git-only request uses `validation_kind: ["none"]`; a validation request names
 only the source/build/native/gui/visual stages invalidated by the current diff
 and gives one concrete reason per stage.
 
+Preflight that JSON **before the control-branch commit**. Non-validation means
+`configuration: "none"`, candidate equals expected main and no invalidated
+evidence. Any declared validation stage means `configuration` is exactly
+`Debug` or `Release`, candidate is the intended revision, evidence keys
+exactly match the declared stages, and the command does not contain a
+recognizable undeclared validation stage. Do not spend a Remote Windows Task
+run discovering request-shape errors that the workflow schema already defines.
+
+### Zero-run preflight before Remote Windows Task
+
+The request slot is the **last** step of preparation, not the first validation
+tool. Before a control-branch push, catch cheap failures without consuming the
+Windows queue:
+
+- verify live main/candidate SHA, every referenced branch/ref/path and the
+  pre-dispatch lease;
+- validate request JSON metadata and stage/command agreement;
+- review PowerShell/JSON quoting and reuse a known-good command template rather
+  than debugging fresh shell serialization on the runner;
+- for changed Python tests/harnesses, perform syntax/import-path sanity and
+  verify referenced scripts/modules exist;
+- for changed source/documentation contracts, run or mechanically evaluate the
+  narrowest affected assertion first, with whitespace-normalized prose checks;
+- for GUI harness changes, verify fixture paths, automation IDs and UIA/helper
+  API names against checked-in code or an already working harness before
+  spending a physical GUI run.
+
+A failure at this layer is a **preflight defect**. Fix it before dispatch and do
+not count it as product validation. Do not create a Remote Windows Task merely
+to learn that JSON metadata is invalid, a module cannot import, a branch does
+not exist, a Markdown sentence wrapped, or an automation method name was
+invented.
+
 The request workflow fingerprints validation as
 `candidate_sha + configuration + sorted(validation_kind)` and rejects an
 already-requested fingerprint before the remote command executes. Do not evade
@@ -49,11 +82,11 @@ Default ceilings per user request:
 - general source modification plus build: 20 calls;
 - real GUI/debug task: 30 calls.
 
-For the first 30-50 Remote Windows Task runs after the mechanical guard lands,
-audit the recorded `logical_unit`, `validation_kind` and validation
-fingerprints. Target normally <=2 validation runs per logical unit, zero
-unchanged-product build repeats after a harness-only correction, and zero
-duplicate same-candidate fingerprints without a changed retry revision.
+Periodically audit the recorded `logical_unit`, `validation_kind` and
+validation fingerprints. The target is zero diagnosis-free repeated validation,
+zero unchanged-product build repeats after a harness-only correction, and zero
+duplicate same-candidate fingerprints without a materially changed retry
+revision.
 
 These are safety ceilings, not targets. At 75% of a ceiling, re-evaluate the
 plan. Essential verification must not be skipped merely to hit a budget.
@@ -64,6 +97,12 @@ and 16-24 for GUI/debug work.
 
 Read narrow-first. Do not repeatedly reread unchanged files/logs. Separate
 static/source, compile, runtime, GUI-state and final-pixel evidence.
+
+For prose/documentation source contracts, normalize whitespace before semantic
+substring checks unless exact newlines/indentation are the behavior under test.
+A Markdown line wrap must not create a validation run; newline-sensitive
+assertions are appropriate only for structurally formatted content such as an
+exact workflow/YAML block.
 
 Do not retry a completed GitHub Actions run on the same revision. Zero
 same-revision Actions retries is the default and required development policy.
@@ -85,12 +124,15 @@ remote Windows tasks and local long-running commands, not only subprocesses.
 Do not poll every few seconds, alternate status/log-tail probes, or repeatedly
 read the same run while it is normally progressing.
 
-For builds/remote tasks whose expected runtime is within a few minutes, the
-normal wait budget is up to three minutes. Establish the run once, let it run
-normally, and make one final/blocking read near the end of that window instead
-of repeatedly checking it. Completion observed earlier may be consumed
-immediately; the three-minute rule is a maximum wait budget, not a requirement
-to sleep after a run is already known to be complete.
+For builds/remote tasks, the policy is to avoid short-interval routine polling.
+The current routine and active-monitor cadences are configuration, not policy:
+read `FLYEXPLORER_ROUTINE_OBSERVATION_SECONDS` and
+`FLYEXPLORER_ACTIVE_MONITOR_SECONDS` from the Remote Windows Task workflow.
+Completion observed independently may be consumed immediately. Without an
+explicit active-monitoring request, wait for the configured routine observation
+interval before a routine read. With explicit active monitoring, use the
+configured active interval and stop immediately on completion. Do not create a
+scheduled/automation task merely to bridge either interval.
 
 For Actions specifically:
 - **before writing `requests/remote-shell/request.json` or pushing
@@ -99,16 +141,21 @@ For Actions specifically:
   `in_progress`, the request slot is leased by that run: do not submit,
   replace or pre-stage a successor request. This pre-dispatch check is required
   because workflow-side duplicate/fingerprint rejection still consumes queue
-  time on the single self-hosted runner;
+  time. This serialization assumes the workflow-configured
+  `FLYEXPLORER_REMOTE_RUNNER_CAPACITY` represents a single interactive
+  execution lane; if that capacity changes, re-evaluate the lease/concurrency
+  policy;
 - after triggering or observing a long run, record run ID, target SHA, scope and
   start/current state;
-- do not issue short-interval status reads while the normal runtime has not
-  plausibly elapsed. The first routine status read is no earlier than three
-  minutes after submission unless completion is independently known;
-- the three-minute rule is a no-polling window, not a three-minute polling
-  interval. If the first post-window read still says queued/running, end the
-  response with the exact resume checkpoint. Do not keep the same turn alive
-  with second/third/fourth status reads;
+- by default, do not issue short-interval status reads. Use the workflow-
+  configured routine observation interval unless completion is independently
+  known;
+- when the user explicitly asks for active monitoring of the current run, use
+  the workflow-configured active-monitor interval. Do not poll more frequently,
+  stop as soon as completion is observed, and do not replace this with an
+  unsolicited scheduled/automation task;
+- if an allowed read still says queued/running, end with the exact resume
+  checkpoint rather than keeping the same turn alive with repeated reads;
 - a second same-turn read is allowed only when a tool has produced a genuine
   completion signal, the user explicitly asks for current status, or a distinct
   failure hypothesis requires one bounded log read;
@@ -122,18 +169,18 @@ For Actions specifically:
   the hypothesis before rerunning.
 
 Remote validation chain budget:
-- one logical unit normally gets one primary Windows validation run;
-- after that run completes with an identified failure, one focused successor is
-  allowed after the relevant product/harness/environment change is committed;
-- a third Windows validation run for the same logical unit requires explicit
-  user approval before any control-branch request commit;
-- never queue a successor while its predecessor is active, even if a harness
-  fix has already been prepared;
-- expensive 8,000+ or 20,000+ real-file GUI fixtures are final acceptance, not
-  harness development. Smoke the same UI/control lifecycle on the smallest
-  useful fixture first. If the expensive run reveals a harness-only defect,
-  preserve product build/native PASS evidence and rerun only GUI/visual in the
-  single focused successor.
+- use `FLYEXPLORER_DEFAULT_VALIDATION_RUN_BUDGET` as the normal planning
+  budget, whose purpose is to prevent diagnosis-free repeated execution;
+- every successor requires a completed predecessor, a material revision or
+  execution-condition change, and a concrete new failure hypothesis or
+  evidence need;
+- runs beyond the default budget require explicit justification of that new
+  hypothesis/evidence need; the ordinal run number is not itself the policy;
+- never queue a successor while its predecessor is active;
+- high-cost fixtures are final acceptance, not harness development. Their
+  current project-specific profile lives in
+  `docs/development/VERIFICATION_PROFILE.md`. Smoke the same lifecycle on the
+  smallest useful fixture first and preserve unaffected PASS evidence.
 
 Normal direct-main pushes do **not** trigger the Windows VM workflow.
 `.github/workflows/windows-build.yml` is manual `workflow_dispatch` only.
@@ -233,13 +280,16 @@ prefer the fixed `control/remote-shell` request slot. Write
 mandatory `expected_main_sha` from the current-state checkpoint. The workflow
 rejects the request if live main has moved before execution. The request commit
 triggers `Remote Windows Task` on the repository-scoped interactive Windows
-VM and runs in `C:\dev\flyExplorer` by default. Never merge request commits
+VM and runs in the workflow-configured canonical persistent checkout by default. Never merge request commits
 into main. Product main continues to record only verified logical units, while
 the control branch records command history separately. Manual
 `workflow_dispatch` remains available for human-operated commands. The
 `control/remote-shell` branch is intentionally a minimal control-plane tree:
-it carries the remote-shell workflow plus request slot, not a copy of product
-source. The persistent checkout fetches live `main` for product work. Do not
+it carries the request slot plus a thin push trigger only. The full Remote
+Windows Task implementation is reusable workflow code on `main`; the control
+trigger calls it at `@main` and must not duplicate validation, path, artifact
+or execution logic. The persistent checkout fetches live `main` for product
+work. Do not
 create `remote/**` command branches, and delete temporary `work/*` branches
 after their accepted tree lands on main. Use the persistent checkout to
 preserve incremental build state and a stable interactive desktop between
@@ -254,9 +304,16 @@ reset/clean/checkout-overwrite to erase unexpected local changes. Fast-forward
 a clean checkout when appropriate. During the inner loop, prefer the smallest
 meaningful checks first, then incremental build and targeted owned GUI/visual
 acceptance. Keep the same controlled fixture/DPI/window geometry when comparing
-against Windows 11 Explorer. RDC/desktop-control is supplementary; use it only
-for interactions that shell, UIA or screenshot evidence cannot exercise or
-when the repository dispatch path is unavailable.
+against Windows 11 Explorer.
+
+If the available GitHub connector/API does not expose a repository operation
+needed to continue the task, treat that as a tooling gap, not a task blocker.
+Use `control/remote-shell` next for shell-capable repository operations,
+including Git/branch cleanup and private run/artifact inspection when practical.
+Do not spend tool calls searching unrelated APIs or switch to desktop control
+while the repository remote shell can perform the operation. RDC/desktop-control
+is supplementary; use it only for interactions that shell, UIA or screenshot
+evidence cannot exercise or when the repository dispatch path is unavailable.
 
 Do not push each intermediate edit merely because direct-main is the normal Git
 policy. Finish and verify the logical unit in the remote checkout first. Fetch
@@ -273,6 +330,15 @@ for normal Windows iteration: investigate, edit, compile, run focused native
 tests, inspect runtime output, exercise targeted UIA and capture/review owned
 screenshots there. Batch related diagnostics so one remote-shell request answers
 the current hypothesis instead of spawning many micro-workflows.
+
+For the first unexplained GUI/input failure, make the next focused diagnostic
+answer **where the signal stops** before trying another interaction mechanism.
+Prefer environment-gated diagnostics that expose event entry, hit target or
+geometry, drag/button/capture state, cursor/pointer coordinates and deltas, and
+the resulting UI/model boundary in the same run. Do not iterate
+`Thumb -> capture -> root route -> another route`-style hypotheses one run at a
+time without first proving which layer failed. Once the layer is known, make
+one concrete fix and invalidate only the evidence affected by that fix.
 
 For a given Git revision, do not rerun a failed job or workflow on that same
 SHA. Windows Actions are not automatically started by pushes. If a deliberate

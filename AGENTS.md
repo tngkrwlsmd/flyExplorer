@@ -69,6 +69,13 @@ Static/source, compile, runtime, GUI-state and visual evidence are distinct.
 Do not claim unrun gates. Follow AGENT_EFFICIENCY.md call budgets and bounded
 log rules.
 
+When source tests assert prose/documentation meaning, compare a whitespace-
+normalized form (for example `" ".join(text.split())`) unless exact line
+breaks/indentation are themselves the contract. Do not make semantic guidance
+tests fail merely because Markdown wrapped a sentence differently. Reserve raw
+newline-sensitive assertions for formats where layout is structurally
+significant, such as exact YAML/workflow blocks.
+
 Canonical Windows full builds require Visual Studio/MSBuild 18.x, MSVC v145 x64
 tools and Windows SDK 10.0.26100.0. Do not claim VS 2022/v143 full-build support
 without a separately verified compatibility change. Product source-only Python
@@ -202,6 +209,17 @@ Do not use chatgpt-codex-connector unless the user explicitly requests or
 permits it for the task. Normal GitHub connector/API access is allowed when
 appropriate.
 
+If the available GitHub connector/API does not expose a repository operation
+needed for the current task, **do not stop at the connector gap and do not hunt
+for an unrelated control path first**. Use this repository's
+`control/remote-shell` request slot and persistent
+`workflow-configured canonical persistent checkout` checkout as the next fallback for repository-scoped Git,
+private Actions/run/artifact inspection, branch cleanup and other shell-capable
+operations. Only move to RDC/desktop-control or another control plane when the
+remote-shell path itself cannot perform the operation or the repository runner
+is unavailable. A missing connector method is not, by itself, a reason to leave
+a required repository action undone.
+
 The repository-scoped self-hosted Windows runner is **not triggered by normal
 main pushes**. `.github/workflows/windows-build.yml` is manual
 `workflow_dispatch` only. Use `control/remote-shell` as the normal Windows
@@ -220,36 +238,48 @@ modify the request slot and do not create a successor request. Record that run
 ID and either wait for the normal observation point or leave a resume
 checkpoint. This check must happen before the request commit because
 workflow-side fingerprint rejection is too late to prevent queue/runner waste.
+This serialization rule is based on the current
+`FLYEXPLORER_REMOTE_RUNNER_CAPACITY` workflow setting representing a single
+interactive Windows execution lane. If runner capacity changes, re-evaluate the
+global lease/concurrency rule instead of preserving single-runner serialization
+by habit.
 
 After starting a build or remote task, record its run ID, target commit and
-scope. For normal work expected to finish within a few minutes, allow up to three
-minutes before the first routine status read. That first routine status read must
-be **no earlier than three minutes** after submission for work that is not
-already known complete; the three-minute rule is not a polling interval. Do not issue repeated status/log reads during
-that window. At the first read after that window, if the run is still
-queued/running, stop the turn with a precise resume checkpoint instead of
-continuing to poll. A second same-turn read is allowed only when a tool has
-returned a genuine completion signal or the user explicitly asks for current
-status. On a later "continue the interrupted work" request, first read current
-main/ref state, the recorded run, relevant artifacts and cleanup state; reuse
-completed evidence for the same revision/configuration rather than rerunning it.
+scope. The governing principle is **no short-interval routine polling**.
+The workflow-level settings `FLYEXPLORER_ROUTINE_OBSERVATION_SECONDS` and
+`FLYEXPLORER_ACTIVE_MONITOR_SECONDS` define the current observation cadence;
+do not duplicate their literal values in guidance. If completion becomes
+independently known — for example the user reports completion/failure or a tool
+returns a genuine completion signal — inspect the run immediately. Otherwise,
+routine status reads wait for the configured routine observation interval. When
+the user explicitly requests active monitoring, use the configured active
+monitor interval, stop as soon as completion is observed, and never replace
+that monitoring with a scheduled/automation task unless the user separately
+asks for one. If a permitted read still shows the run active, leave the exact
+run ID as the resume checkpoint instead of tight-loop polling. On a later
+"continue the interrupted work" request, first read current main/ref state, the
+recorded run, relevant artifacts and cleanup state; reuse completed evidence
+for the same revision/configuration rather than rerunning it.
 
-For one logical unit, the normal Windows validation budget is one primary Windows validation run.
-After a diagnosed failure, at most one focused successor may be submitted after
-the predecessor has completed and the concrete product/harness/environment
-change is committed. A **third Windows validation run for the same logical
-unit requires explicit user approval before any request commit**. Never queue a
-speculative successor while its predecessor is active. Harness-only fixes may
-be prepared locally while waiting, but the request slot stays untouched until
-the active run is complete and its first relevant failure is known.
+For one logical unit, use the workflow-configured
+`FLYEXPLORER_DEFAULT_VALIDATION_RUN_BUDGET` as the normal planning budget, not
+as an arbitrary correctness limit. Its purpose is to prevent
+**diagnosis-free repeated execution**. Every successor run must follow a
+completed predecessor, a concrete new revision or execution-condition change,
+and a stated new failure hypothesis or evidence need. A run beyond the default
+budget is allowed only when that additional hypothesis/evidence need is
+explicitly justified; ordinal run number alone is neither a reason to run nor a
+reason to stop. Never queue a speculative successor while its predecessor is
+active.
 
-Expensive real-file GUI fixtures (including 8,000+ and 20,000+ folder probes)
-are final acceptance tools, not harness-debug loops. Prove the harness/control
-lifecycle first with the smallest fixture that exercises the same interaction,
-then run the expensive fixture once. If that expensive run exposes a harness
-bug after product build/native evidence has passed, preserve those PASS stages,
-fix and smoke-test the harness cheaply, and use the single focused successor
-only for the invalidated GUI/visual boundary.
+High-cost fixtures are final acceptance tools, not harness-debug loops.
+The current project-specific fixture profile and thresholds live in
+`docs/development/VERIFICATION_PROFILE.md`; guidance must not duplicate those
+numbers. Prove the harness/control lifecycle first with the smallest fixture
+that exercises the same interaction, then spend the high-cost fixture only when
+its evidence is actually required. If it exposes a harness bug after product
+build/native evidence has passed, preserve those PASS stages and rerun only the
+invalidated boundary after diagnosis.
 
 For iterative Windows development, GUI work and Windows 11 benchmarking,
 prefer this repository's fixed `control/remote-shell` request slot. Update
@@ -258,8 +288,7 @@ request must include `expected_main_sha` equal to the live main SHA observed
 by the mandatory resume/current-state checkpoint. The workflow rejects the
 request before executing its command if main has moved. Its push triggers
 `Remote Windows Task` on the repository-scoped interactive Windows VM and
-executes against the persistent canonical checkout
-`C:\dev\flyExplorer`. Request commits are operational history and must never
+executes against the workflow-configured canonical persistent checkout. Request commits are operational history and must never
 be merged into main. This keeps product main limited to verified logical units
 while still allowing GitHub tooling to command the development PC directly.
 Manual `workflow_dispatch` remains the equivalent human-operated shell entry
@@ -272,11 +301,22 @@ new remote job merely to rediscover facts already available from live main,
 CURRENT_STATUS or completed run logs.
 
 Classify each failure once from its first relevant error: product defect,
-environment limit, or fixture/harness defect. Do **not** rerun the same GitHub
-Actions revision to see whether it passes on a second attempt. Same-revision
-Actions reruns are prohibited for normal development. A follow-up Actions run
-must correspond to a real new revision that addresses an identified cause; it
-is a new acceptance run, not a retry.
+environment limit, or fixture/harness defect. For an unexplained GUI/input
+failure, the **first diagnostic successor must locate the broken layer before
+changing the interaction strategy**. Prefer a minimal environment-gated,
+test-only diagnostic that records in one run: event entry/exit, resolved hit
+target or geometry, drag/button/capture state, pointer or cursor coordinates and
+deltas, and the observable UI result. Use that evidence to prove whether the
+break is in event delivery, hit testing, drag-state transport, coordinate
+conversion, model mutation, or rendering. Do not spend successive Windows runs
+on alternative event/capture implementations while that boundary is still
+unknown. Diagnostics must be inert in normal product runs and should be removed
+or kept strictly gated once the cause is known.
+
+Do **not** rerun the same GitHub Actions revision to see whether it passes on a
+second attempt. Same-revision Actions reruns are prohibited for normal
+development. A follow-up Actions run must correspond to a real new revision
+that addresses an identified cause; it is a new acceptance run, not a retry.
 
 ### Mechanical validation-churn guard
 
@@ -289,6 +329,56 @@ runner executes anything. In addition to `request_id`, `expected_main_sha`,
 for every declared validation stage. Routine non-validation shell/inspection
 requests use `candidate_sha == expected_main_sha`, `configuration: none`,
 `validation_kind: ["none"]` and an empty evidence object.
+
+Before committing the request slot, perform a **request-metadata preflight in
+the agent/tooling layer** instead of relying on the workflow to reject a bad
+request after it consumes queue time. Check these invariants as one unit:
+
+- `validation_kind == ["none"]` -> `configuration == "none"`,
+  `candidate_sha == expected_main_sha`, and `invalidated_evidence == {}`;
+- any validation stage (`source/build/native/gui/visual`) ->
+  `configuration` is exactly `Debug` or `Release`, `candidate_sha` is
+  the intended 40-hex revision, and `invalidated_evidence` contains exactly
+  the declared stages with non-empty reasons;
+- the command's recognizable source/build/native/gui/visual work matches the
+  declared `validation_kind`;
+- request ID/logical unit are non-empty and the pre-dispatch lease is clear.
+
+Treat a workflow rejection of these request-shape rules as an **agent preflight
+defect**, not as product evidence. Correct the metadata before doing any product
+diagnosis.
+
+Before any control-branch push, complete a **zero-run preflight** for avoidable
+agent/control-plane errors. A Remote Windows Task must not be created until all
+applicable checks below pass:
+
+1. **Request shape:** validate the metadata invariants above, exact
+   `expected_main_sha`/`candidate_sha`, evidence keys and stage/command
+   agreement.
+2. **Lease/ref existence:** confirm no active Remote Windows Task owns the
+   request slot; verify every branch/ref/SHA/path the command will use actually
+   exists before dispatch.
+3. **Command sanity:** inspect quoting/escaping and PowerShell/JSON boundaries;
+   keep request commands small and composed from previously working forms.
+   Never use the Windows runner as the first parser for a newly invented
+   multi-line quoting construct when it can be checked statically.
+4. **Source/test sanity:** when tests/contracts changed, run or mechanically
+   evaluate the narrowest affected contract before dispatch. Python harnesses
+   must at least pass syntax compilation; `python -m` targets/import paths must
+   resolve to tracked modules rather than being discovered by the runner.
+5. **Harness/API sanity:** validate fixture paths, automation IDs and helper/API
+   calls against the checked-in code or an established harness pattern. Do not
+   invent pywinauto/UIA wrapper methods or assume a control API exists without a
+   static/source check.
+6. **Prose-contract hygiene:** semantic documentation assertions use normalized
+   whitespace; raw line-sensitive matching is reserved for genuinely
+   line-structured formats.
+
+If one of these checks fails, fix it locally/in the agent layer and **do not
+create a workflow run**. Classify failures caught here as request/contract/
+harness preflight defects, not product defects. Windows-only behavior that
+cannot be established statically belongs in the remote run, but the request
+that reaches Windows should already be syntactically and structurally valid.
 
 The request-slot workflow derives a validation fingerprint from
 `candidate_sha + configuration + sorted(validation_kind)`. A fingerprint
@@ -306,15 +396,14 @@ mechanism. Manual `workflow_dispatch` remains a human fallback and therefore
 does not use request-history fingerprinting, but it remains subject to the
 same no-rerun policy and must not replace the normal request-slot discipline.
 
-After the next 30-50 Remote Windows Task runs, review the recorded logical unit,
-validation kind and fingerprint data. The target is normally no more than one
-or two validation runs per logical unit, zero product-build repeats after a
-harness-only fix, and zero duplicate same-candidate fingerprints without an
-explicit changed retry revision.
+Periodically review the recorded logical unit, validation kind and fingerprint
+data. The target is zero diagnosis-free repeated validation, zero product-build
+repeats after a harness-only fix, and zero duplicate same-candidate
+fingerprints without a materially changed retry revision.
 
 ### Remote development and final-CI anti-thrashing rule
 
-Use `control/remote-shell` and the persistent `C:\dev\flyExplorer` checkout
+Use `control/remote-shell` and the workflow-configured canonical persistent checkout
 as the primary Windows development/debug surface. Compile errors, link errors,
 native fixture failures, runtime diagnostics, focused UIA checks and controlled
 screenshots should be investigated there before main is pushed. Batch related
@@ -371,11 +460,14 @@ machine maintenance belong in `personal-control-plane`, especially when this
 repository's runner path itself is broken. Do not create `remote/**` task
 branches. The repository has one Git-backed Windows command channel:
 `control/remote-shell`, plus manual `workflow_dispatch` as a human fallback.
-The control branch is a minimal control-plane tree, not a product mirror: keep
-only the remote-shell workflow and request slot there. Product source is always
-read from or fetched into the persistent `C:\dev\flyExplorer` checkout from
-live `main`. If the remote-shell workflow itself changes, refresh that one
-workflow file on the control branch; never resync the whole product tree there.
+The control branch is a minimal control-plane tree, not a product mirror. It
+carries only the request slot plus a thin push-trigger workflow. The complete
+Remote Windows Task implementation lives only on `main` as the reusable
+`.github/workflows/remote-windows-task.yml`; the control trigger calls that
+implementation explicitly at `@main`. Do not copy validation, path, artifact
+or execution logic back into the control branch. Product source is always read
+from or fetched into the workflow-configured canonical persistent checkout from
+live `main`.
 
 GitHub-hosted runners require explicit user approval and are not part of the
 active flyExplorer CI path unless the user explicitly requests them. Do not add

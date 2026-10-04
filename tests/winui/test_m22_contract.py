@@ -27,8 +27,9 @@ class M22Contracts(unittest.TestCase):
  def test_compiled_reusable_file_toolbar_and_status(self):
   x=src(A+"MainWindow.xaml")
   for text in ('x:Name="ToolbarView"','x:Name="FooterView"',
-               'SelectionMode="Multiple"','ContextFlyout'):
+               'SelectionMode="Multiple"','RightTapped="OnFileRightTapped"'):
    self.assertIn(text,x)
+  self.assertNotIn("<ListView.ContextFlyout>",x)
   for component in ("FileToolbar","StatusFooter"):
    for suffix in (".idl",".xaml",".xaml.h",".xaml.cpp"):
     self.assertTrue((R/A/(component+suffix)).is_file(),component+suffix)
@@ -73,9 +74,11 @@ class M22Contracts(unittest.TestCase):
  def test_shortcuts_and_context_menu_have_noninert_handlers(self):
   x=src(A+"MainWindow.xaml")
   m=src(A+"m22_transfers.cpp")
-  for text in ('Click="OnCopySelected"','Click="OnMoveSelected"',
-               'Click="OnRecycleSelected"'):
-   self.assertIn(text,x)
+  self.assertEqual(x.count('RightTapped="OnFileRightTapped"'),2)
+  self.assertNotIn("<ListView.ContextFlyout>",x)
+  for text in ("ShowExternalWindowsContextMenu(side)",
+               "shellcontext::show(","args.Handled(true)"):
+   self.assertIn(text,m)
   for text in ('VirtualKey::F5','VirtualKey::F6','VirtualKey::Delete',
                'VirtualKey::A','VirtualKey::C','VirtualKey::V'):
    self.assertIn(text,m)

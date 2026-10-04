@@ -222,7 +222,7 @@ def main():
                 bbox=(rect.left,rect.top,rect.right,rect.bottom),
                 include_layered_windows=True).save(evidence)
             fresh_parent().child_window(auto_id="SortPicker").select(1)
-            until(lambda:"bench-20499.txt" in fresh_first_row(),
+            until(lambda:"bench-9999.txt" in fresh_first_row(),
                   "indexed global name sort above 20k did not complete",16)
             sort_progress=progress_text()
             assert "20500" in sort_progress,sort_progress
@@ -236,13 +236,13 @@ def main():
                       auto_id="ItemCountText").window_text(),
                   "indexed name filter above 20k did not isolate the target",12)
             filt.set_edit_text("")
-            until(lambda:"bench-20499.txt" in fresh_first_row(),
+            until(lambda:"bench-9999.txt" in fresh_first_row(),
                   "clearing indexed filter did not restore indexed name sort",12)
             fresh_parent().child_window(auto_id="SortPicker").select(2)
             until(lambda:"20,000" in fresh_parent().child_window(
                   auto_id="StatusText").window_text(),
                   "size sort above complete-model ceiling was not refused",8)
-            assert "bench-20499.txt" in fresh_first_row()
+            assert "bench-9999.txt" in fresh_first_row()
             current=fresh_parent()
             rect=current.rectangle()
             evidence=base/"large-name-index-over-20k-after.png"

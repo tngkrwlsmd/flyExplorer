@@ -27,6 +27,8 @@ struct PaneState final {
     int appliedItemsPanel=0; // 0=vertical XAML default, 1=small wrap, 2=medium wrap, 3=large wrap
     std::uint32_t visualPixels=0; // DPI-scaled system visual size for current details
     double nameColumnWidth=168.0;
+    double typeColumnWidth=180.0;
+    double sizeColumnWidth=80.0;
     // Render a bounded first view page. Large Shell folders keep only the
     // currently streamed native pages; route/tab identity resets both view
     // paging and continuation intent on navigation without stale UI rows.

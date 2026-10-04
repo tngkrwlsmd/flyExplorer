@@ -10,6 +10,7 @@ Their exact content remains available through Git history.
 - CURRENT_STATUS.md — accepted product state, latest evidence and open gates.
 - ARCHITECTURE.md — current WinUI/native-core/Shell-isolation architecture.
 - AGENT_EFFICIENCY.md — mandatory bounded tool/build/test strategy.
+- VERIFICATION_PROFILE.md — mutable remote-runner tunables and high-cost fixture profile.
 - ERROR_HISTORY.md — append-only failure/root-cause/prevention ledger.
 - UI_UX_DESIGN_GUIDE.md — current product UI/UX rules.
 - WIN11_EXPLORER_UI_REFERENCE.md — Windows 11 Explorer comparison policy.

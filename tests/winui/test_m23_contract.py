@@ -45,11 +45,14 @@ class M23Contracts(unittest.TestCase):
   self.assertIn("PasteFromWindowsClipboard();args.Handled(true);return;",s)
  def test_real_winui_context_actions_both_lists(self):
   x=src(A+"MainWindow.xaml")
-  for item in ('Click="OnWindowsCopy"','Click="OnWindowsCut"',
-               'Click="OnWindowsPaste"'):
-   self.assertEqual(x.count(item),2)
+  impl=src(A+"m22_transfers.cpp")
+  self.assertEqual(x.count('RightTapped="OnFileRightTapped"'),2)
+  self.assertNotIn("<ListView.ContextFlyout>",x)
   for method in ("OnWindowsCopy","OnWindowsCut","OnWindowsPaste"):
    self.assertIn(method,src(A+"MainWindow.xaml.h"))
+  for token in ("CopySelectedToWindowsClipboard(","PasteFromWindowsClipboard()",
+                "ShowExternalWindowsContextMenu(side)"):
+   self.assertIn(token,impl)
   self.assertIn("shell_clipboard_core.cpp",src(A+"flyExplorer.project-template.xml"))
  def test_owned_native_never_touches_global_clipboard(self):
   s=src("tests/winui/m23/m23_native_fixture.cpp")
