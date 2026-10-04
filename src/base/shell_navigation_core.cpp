@@ -285,24 +285,76 @@ HRESULT Session::appendPage(
 {
     if(!current_.folder.valid()||!page.folder.valid()||
        !::ILIsEqual(current_.folder.get(),page.folder.get())||
-       current_.nextOffset!=expectedOffset||
+       current_.residentEndOffset()!=expectedOffset||
        page.baseOffset!=expectedOffset||
-       page.nextOffset!=expectedOffset+page.children.size()||
+       page.nextOffset!=page.residentEndOffset()||
+       expectedOffset>current_.nextOffset||
+       (expectedOffset<current_.nextOffset&&
+        page.nextOffset>current_.nextOffset)||
        current_.parsingName!=page.parsingName)
         return HRESULT_FROM_WIN32(ERROR_INVALID_STATE);
+    const bool advancesFrontier=expectedOffset==current_.nextOffset;
     try{
         current_.children.reserve(
             current_.children.size()+page.children.size());
         for(auto& child:page.children)
             current_.children.push_back(std::move(child));
-        current_.nextOffset=page.nextOffset;
-        current_.truncated=page.truncated;
+        if(advancesFrontier){
+            current_.nextOffset=page.nextOffset;
+            current_.truncated=page.truncated;
+        }
         return S_OK;
     }catch(std::bad_alloc const&){
         return E_OUTOFMEMORY;
     }catch(...){
         return E_FAIL;
     }
+}
+
+HRESULT Session::prependPage(
+    Snapshot&& page,std::size_t expectedEnd) noexcept
+{
+    if(!current_.folder.valid()||!page.folder.valid()||
+       !::ILIsEqual(current_.folder.get(),page.folder.get())||
+       current_.baseOffset!=expectedEnd||
+       page.nextOffset!=expectedEnd||
+       page.nextOffset!=page.residentEndOffset()||
+       page.baseOffset>=expectedEnd||
+       current_.parsingName!=page.parsingName)
+        return HRESULT_FROM_WIN32(ERROR_INVALID_STATE);
+    try{
+        std::vector<Item> combined;
+        combined.reserve(page.children.size()+current_.children.size());
+        for(auto& child:page.children)
+            combined.push_back(std::move(child));
+        for(auto& child:current_.children)
+            combined.push_back(std::move(child));
+        current_.children=std::move(combined);
+        current_.baseOffset=page.baseOffset;
+        return S_OK;
+    }catch(std::bad_alloc const&){
+        return E_OUTOFMEMORY;
+    }catch(...){
+        return E_FAIL;
+    }
+}
+
+std::size_t Session::trimResidentFront(std::size_t maximum) noexcept
+{
+    if(!maximum||current_.children.size()<=maximum)return 0;
+    const auto drop=current_.children.size()-maximum;
+    current_.children.erase(
+        current_.children.begin(),current_.children.begin()+drop);
+    current_.baseOffset+=drop;
+    return drop;
+}
+
+std::size_t Session::trimResidentBack(std::size_t maximum) noexcept
+{
+    if(!maximum||current_.children.size()<=maximum)return 0;
+    const auto drop=current_.children.size()-maximum;
+    current_.children.resize(maximum);
+    return drop;
 }
 
 HRESULT Session::commit(Location next,bool record) noexcept {
