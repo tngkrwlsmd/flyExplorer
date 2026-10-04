@@ -1,15 +1,15 @@
 {
-  "request_id": "remote-settings-principles-refactor-001",
-  "expected_main_sha": "2aeaf828f029f87f31d185f35c6e11866fd703f0",
-  "candidate_sha": "2aeaf828f029f87f31d185f35c6e11866fd703f0",
+  "request_id": "remote-settings-principles-refactor-002",
+  "expected_main_sha": "b200291e67823984c9e396a28855348e99b15b3d",
+  "candidate_sha": "b200291e67823984c9e396a28855348e99b15b3d",
   "logical_unit": "remote-settings-principles-refactor",
   "configuration": "Release",
   "validation_kind": [
     "source"
   ],
   "invalidated_evidence": {
-    "source": "Remote Windows workflow settings, guidance, verification profile and contract tests changed to single-source mutable paths/intervals/capacity/budget while keeping policy principle-based."
+    "source": "The previous source run found one stale fixed observation interval in PROJECT.md; that literal was removed and the guidance is now fully setting-referenced."
   },
   "working_directory": "",
-  "command": "$ErrorActionPreference = \"Stop\"\ngit fetch origin main --no-tags --prune\nif ($LASTEXITCODE -ne 0) { throw \"fetch main failed\" }\nif ((git rev-parse origin/main).Trim() -ne \"2aeaf828f029f87f31d185f35c6e11866fd703f0\") { throw \"main moved\" }\nif ((git status --short).Count -ne 0) { throw \"dirty persistent checkout\" }\n\ngit checkout main\nif ($LASTEXITCODE -ne 0) { throw \"checkout main failed\" }\ngit merge --ff-only origin/main\nif ($LASTEXITCODE -ne 0) { throw \"fast-forward main failed\" }\nif ((git rev-parse HEAD).Trim() -ne \"2aeaf828f029f87f31d185f35c6e11866fd703f0\") { throw \"main mismatch\" }\n\npython -X utf8 -m py_compile tests\\winui\\test_remote_windows_task_contract.py\nif ($LASTEXITCODE -ne 0) { throw \"contract syntax failed\" }\n\npython -X utf8 tests\\winui\\test_remote_windows_task_contract.py\nif ($LASTEXITCODE -ne 0) { throw \"remote task contract failed\" }\n\ncmd /c test.bat source\nif ($LASTEXITCODE -ne 0) { throw \"source contracts failed\" }\n\ngit diff --check HEAD^..HEAD\nif ($LASTEXITCODE -ne 0) { throw \"diff check failed\" }\nWrite-Host \"REMOTE_SETTINGS_PRINCIPLES_REFACTOR_PASS\"\n"
+  "command": "$ErrorActionPreference = \"Stop\"\ngit fetch origin main --no-tags --prune\nif ($LASTEXITCODE -ne 0) { throw \"fetch main failed\" }\nif ((git rev-parse origin/main).Trim() -ne \"b200291e67823984c9e396a28855348e99b15b3d\") { throw \"main moved\" }\nif ((git status --short).Count -ne 0) { throw \"dirty persistent checkout\" }\ngit checkout main\nif ($LASTEXITCODE -ne 0) { throw \"checkout main failed\" }\ngit merge --ff-only origin/main\nif ($LASTEXITCODE -ne 0) { throw \"fast-forward main failed\" }\nif ((git rev-parse HEAD).Trim() -ne \"b200291e67823984c9e396a28855348e99b15b3d\") { throw \"main mismatch\" }\npython -X utf8 -m py_compile tests\\winui\\test_remote_windows_task_contract.py\nif ($LASTEXITCODE -ne 0) { throw \"contract syntax failed\" }\npython -X utf8 tests\\winui\\test_remote_windows_task_contract.py\nif ($LASTEXITCODE -ne 0) { throw \"remote task contract failed\" }\ncmd /c test.bat source\nif ($LASTEXITCODE -ne 0) { throw \"source contracts failed\" }\ngit diff --check HEAD^..HEAD\nif ($LASTEXITCODE -ne 0) { throw \"diff check failed\" }\nWrite-Host \"REMOTE_SETTINGS_PRINCIPLES_REFACTOR_PASS\"\n"
 }
