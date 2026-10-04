@@ -23,6 +23,24 @@ snapshot. The workflow must reject a stale request when current main no longer
 matches, forcing the agent to refresh context instead of spending time on an
 obsolete baseline.
 
+Control-branch requests also carry machine-checkable validation metadata:
+`candidate_sha`, stable `logical_unit`, `configuration`,
+`validation_kind`, and `invalidated_evidence`. The stage array is the exact
+evidence frontier the request is allowed to exercise. A normal inspection or
+Git-only request uses `validation_kind: ["none"]`; a validation request names
+only the source/build/native/gui/visual stages invalidated by the current diff
+and gives one concrete reason per stage.
+
+The request workflow fingerprints validation as
+`candidate_sha + configuration + sorted(validation_kind)` and rejects an
+already-requested fingerprint before the remote command executes. Do not evade
+this by making another control commit with an equivalent command. A materially
+different retry is allowed only with both `retry_reason` and a changed
+`retry_revision` for the harness/environment condition that invalidated the
+prior attempt. The workflow also checks recognizable expensive commands against
+the declared stage list. GitHub rerun attempts are skipped at the job boundary
+in both Windows workflows.
+
 Define the completion condition, reusable evidence, minimum required
 verification and expected call budget.
 
@@ -30,6 +48,12 @@ Default ceilings per user request:
 - documentation/status task: 12 calls;
 - general source modification plus build: 20 calls;
 - real GUI/debug task: 30 calls.
+
+For the first 30-50 Remote Windows Task runs after the mechanical guard lands,
+audit the recorded `logical_unit`, `validation_kind` and validation
+fingerprints. Target normally <=2 validation runs per logical unit, zero
+unchanged-product build repeats after a harness-only correction, and zero
+duplicate same-candidate fingerprints without a changed retry revision.
 
 These are safety ceilings, not targets. At 75% of a ceiling, re-evaluate the
 plan. Essential verification must not be skipped merely to hit a budget.
