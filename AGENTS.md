@@ -222,17 +222,25 @@ checkpoint. This check must happen before the request commit because
 workflow-side fingerprint rejection is too late to prevent queue/runner waste.
 
 After starting a build or remote task, record its run ID, target commit and
-scope. For normal work expected to finish within a few minutes, allow up to three
-minutes before the first routine status read. That first routine status read
-must be **no earlier than three minutes** after submission for work that is not
-already known complete; the three-minute rule is not a polling interval. Do not issue repeated status/log reads during
-that window. At the first read after that window, if the run is still
-queued/running, stop the turn with a precise resume checkpoint instead of
-continuing to poll. A second same-turn read is allowed only when a tool has
-returned a genuine completion signal or the user explicitly asks for current
-status. On a later "continue the interrupted work" request, first read current
-main/ref state, the recorded run, relevant artifacts and cleanup state; reuse
-completed evidence for the same revision/configuration rather than rerunning it.
+scope. For normal work expected to finish within a few minutes, the first
+**routine active GitHub status read** must be no earlier than three minutes
+after submission when completion is not otherwise known. This is an
+anti-polling floor, **not a required sleep/wait period**: do not keep a response
+open merely to reach three minutes and do not perform short-interval status/log
+reads during that window. If completion becomes independently known before
+three minutes — for example the user reports that the run finished/failed, a
+tool returns a genuine completion signal, or another already-available signal
+proves completion — inspect the run immediately. If completion is not known,
+finish with the exact run ID as a resume checkpoint rather than inventing a
+delay. **Do not create a scheduled/automation task merely to bridge this
+observation window; use one only when the user explicitly requested scheduled
+or recurring follow-up.** At the first permitted routine read, if the run is
+still queued/running, stop with a precise resume checkpoint instead of
+continuing to poll. A second same-turn read is allowed only after a genuine
+completion signal or when the user explicitly asks for current status. On a
+later "continue the interrupted work" request, first read current main/ref
+state, the recorded run, relevant artifacts and cleanup state; reuse completed
+evidence for the same revision/configuration rather than rerunning it.
 
 For one logical unit, the normal Windows validation budget is one primary Windows validation run.
 After a diagnosed failure, at most one focused successor may be submitted after
