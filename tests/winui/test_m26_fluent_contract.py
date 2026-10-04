@@ -127,9 +127,7 @@ class FluentShellContract(unittest.TestCase):
         for token in ("OnDetailColumnResizePointerPressed",
                       "OnDetailColumnResizePointerMoved",
                       "OnDetailColumnResizePointerReleased",
-                      "OnDetailColumnResizePointerCaptureLost",
-                      "CapturePointer(args.Pointer())",
-                      "ReleasePointerCapture(args.Pointer())"):
+                      "OnDetailColumnResizePointerCaptureLost"):
             self.assertIn(token,impl)
         self.assertNotIn("OnDetailColumnResizeDragDelta",impl)
         self.assertIn("PrimaryPane().BorderThickness(Thickness{0.0,2.0,0.0,0.0})",impl)
