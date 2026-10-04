@@ -1,4 +1,4 @@
-# flyExplorer current status — 2026-10-04
+# flyExplorer current status — 2026-10-05
 
 ## Product source of truth
 
@@ -161,12 +161,14 @@ resident-window navigation. Normal browsing still keeps at most 2,048 children
 resident; increasing the browse frontier does not increase the resident-model
 bound.
 
-A global sort or non-empty pane filter is not allowed to silently operate on a
-partial model above 20,000 entries. If the known frontier has crossed the
-complete-model ceiling, the UI refuses that operation, restores ordinary
-sequential presentation, and reports that full-model sort/filter is currently
-limited to 20,000 entries. The 100,000 browse value is an implementation safety
-bound, not a 100,000-item performance or compatibility certification.
+Operations that require full Shell metadata are still not allowed to silently
+operate on a partial model above 20,000 entries. Type, size and modified-date
+global sorts continue to refuse above the complete-model ceiling. Name sort and
+name filtering are now the deliberate exception: navigation retains a
+lightweight label/parsing-name/attribute index while resident Shell children
+remain bounded, and projects that completed index for global name operations.
+The 100,000 browse/index value remains an implementation safety bound, not a
+100,000-item performance or compatibility certification.
 
 Run `37183718932` passed source contracts 228/228, the canonical Release
 build, and the real helper process regression including
@@ -176,8 +178,19 @@ wrapper after repeated WinUI rerenders. A later harness-only correction changed
 no product file. Final focused GUI/visual resume run `37184906352` passed on
 the same built product behavior and reached logical progress `20480` in an
 owned 20,500-file folder, kept backward resident-window navigation available,
-and proved `OWNED_LARGE_OVER_20K_SORT_REFUSED True`; protected legacy settings
+and proved the earlier pre-index refusal behavior; protected legacy settings
 remained unchanged.
+
+Follow-up PR #15 supersedes that name-operation limitation. Final integrated
+candidate `6936fba97d2e18ac81115b5d02b84db7e90472dd` passed source contracts
+241/241 and the owned 20,500-file GUI/visual acceptance in run
+`37211942616`. The run proved `OWNED_LARGE_OVER_20K_NAME_SORT_INDEXED True`,
+`OWNED_LARGE_OVER_20K_NAME_FILTER_INDEXED True`,
+`OWNED_LARGE_OVER_20K_SIZE_SORT_REFUSED True`, normal legacy-settings
+preservation, and the actual indexed filter projection of `bench-20499.txt`
+with footer count 1. The accepted feature was squash-merged to main as
+`582560f89afe8c9c53bbc23791cdbd5d3335c014`. Dark-theme 956x521 final-pixel
+review found no blocking overlap, clipping or pane regression.
 
 The folder-tab clipping reported above the Name header is also fixed in this
 unit. `LeftTabs` and `RightTabs` now use 36 px instead of the too-tight
