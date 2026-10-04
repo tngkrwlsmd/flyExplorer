@@ -125,9 +125,18 @@ namespace winrt::FlyExplorer::implementation
         void OnNameColumnWidthChanged(
             IInspectable const&,
             Microsoft::UI::Xaml::Controls::Primitives::RangeBaseValueChangedEventArgs const&);
-        void OnDetailColumnResizeDragDelta(
+        void OnDetailColumnResizePointerPressed(
             IInspectable const&,
-            Microsoft::UI::Xaml::Controls::Primitives::DragDeltaEventArgs const&);
+            Microsoft::UI::Xaml::Input::PointerRoutedEventArgs const&);
+        void OnDetailColumnResizePointerMoved(
+            IInspectable const&,
+            Microsoft::UI::Xaml::Input::PointerRoutedEventArgs const&);
+        void OnDetailColumnResizePointerReleased(
+            IInspectable const&,
+            Microsoft::UI::Xaml::Input::PointerRoutedEventArgs const&);
+        void OnDetailColumnResizePointerCaptureLost(
+            IInspectable const&,
+            Microsoft::UI::Xaml::Input::PointerRoutedEventArgs const&);
         void OnFileRightTapped(IInspectable const&,
             Microsoft::UI::Xaml::Input::RightTappedRoutedEventArgs const&);
         void OnFileSelectionChanged(IInspectable const&,
@@ -273,6 +282,10 @@ namespace winrt::FlyExplorer::implementation
         void Refresh(winrt::hstring const& status = L"Ready");
         void RefreshTabs(int side);
         bool mColumnControlsReady=false;
+        bool mDetailColumnPointerDrag=false;
+        int mDetailColumnPointerSide=-1;
+        int mDetailColumnPointerColumn=-1;
+        double mDetailColumnPointerLastX=0.0;
         double mShellWidth=972.0;
         std::array<int,2> mDetailLayoutProfiles{{-1,-1}};
         int DetailLayoutProfile() const;
