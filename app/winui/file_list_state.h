@@ -49,11 +49,6 @@ struct PaneState final {
     void invalidate() noexcept {
         ++epoch;
         details.clear();
-        renderedLogical.clear();
-        renderedPaths.clear();
-        indexToComplete=false;
-        indexedNameSort=false;
-        indexedNameProjection=false;
         visualPixels=0;
         route=0;
     }
@@ -62,11 +57,6 @@ struct PaneState final {
         route=nextRoute;
         tab=nextTab;
         details.clear();
-        renderedLogical.clear();
-        renderedPaths.clear();
-        indexToComplete=false;
-        indexedNameSort=false;
-        indexedNameProjection=false;
         return epoch;
     }
     bool isCurrent(std::uint64_t expectedRoute,std::size_t expectedTab,
