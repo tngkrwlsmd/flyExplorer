@@ -1,15 +1,15 @@
 {
-  "request_id": "large-folder-name-filter-keyboard-smoke-002",
+  "request_id": "large-folder-name-filter-keyboard-smoke-003",
   "expected_main_sha": "6e6e1a66cf69c7158f2bfa2be329341b72d5b388",
-  "candidate_sha": "decc89f83e34da0c94df9b861b6acbf298b84064",
+  "candidate_sha": "697d5bee76d66e69c1932e5fd44716e8a1392d8f",
   "logical_unit": "large-folder-name-index",
   "configuration": "Release",
   "validation_kind": [
     "gui"
   ],
   "invalidated_evidence": {
-    "gui": "The 2300-item harness was changed from UIA ValuePattern editing to the same Ctrl+Shift+F keyboard path used by the product shortcut, while the Release binary is unchanged from the immediately preceding successful build."
+    "gui": "The low-cost owned GUI now resolves the current visible LeftFiles automation element after WinUI rerenders, removing the stale/ambiguous wrapper failure before the keyboard filter path."
   },
   "working_directory": "",
-  "command": "$ErrorActionPreference = \"Stop\"\ngit fetch origin main work/large-folder-name-index --no-tags --prune\nif ($LASTEXITCODE -ne 0) { throw \"fetch failed\" }\nif ((git rev-parse origin/main).Trim() -ne \"6e6e1a66cf69c7158f2bfa2be329341b72d5b388\") { throw \"main moved\" }\nif ((git rev-parse origin/work/large-folder-name-index).Trim() -ne \"decc89f83e34da0c94df9b861b6acbf298b84064\") { throw \"candidate branch moved\" }\nif ((git status --short).Count -ne 0) { throw \"dirty persistent checkout\" }\ngit checkout -B work/large-folder-name-index origin/work/large-folder-name-index\nif ($LASTEXITCODE -ne 0) { throw \"checkout candidate failed\" }\nif ((git rev-parse HEAD).Trim() -ne \"decc89f83e34da0c94df9b861b6acbf298b84064\") { throw \"candidate mismatch\" }\npython -X utf8 -m py_compile tests\\winui\\test_large_owned_folder_gui.py\nif ($LASTEXITCODE -ne 0) { throw \"GUI harness syntax failed\" }\nif (!(Test-Path -LiteralPath \"out\\winui\\Release\\flyExplorer.exe\" -PathType Leaf)) { throw \"validated Release artifact missing\" }\npython -X utf8 tests\\winui\\test_large_owned_folder_gui.py --items 2300 --configuration Release\nif ($LASTEXITCODE -ne 0) { throw \"2300-item keyboard filter smoke failed\" }\ngit diff --check origin/main..HEAD\nif ($LASTEXITCODE -ne 0) { throw \"diff check failed\" }\nWrite-Host \"LARGE_FOLDER_NAME_FILTER_KEYBOARD_SMOKE_PASS\""
+  "command": "$ErrorActionPreference = \"Stop\"\ngit fetch origin main work/large-folder-name-index --no-tags --prune\nif ($LASTEXITCODE -ne 0) { throw \"fetch failed\" }\nif ((git rev-parse origin/main).Trim() -ne \"6e6e1a66cf69c7158f2bfa2be329341b72d5b388\") { throw \"main moved\" }\nif ((git rev-parse origin/work/large-folder-name-index).Trim() -ne \"697d5bee76d66e69c1932e5fd44716e8a1392d8f\") { throw \"candidate branch moved\" }\nif ((git status --short).Count -ne 0) { throw \"dirty persistent checkout\" }\ngit checkout -B work/large-folder-name-index origin/work/large-folder-name-index\nif ($LASTEXITCODE -ne 0) { throw \"checkout candidate failed\" }\nif ((git rev-parse HEAD).Trim() -ne \"697d5bee76d66e69c1932e5fd44716e8a1392d8f\") { throw \"candidate mismatch\" }\npython -X utf8 -m py_compile tests\\winui\\test_large_owned_folder_gui.py\nif ($LASTEXITCODE -ne 0) { throw \"GUI harness syntax failed\" }\nif (!(Test-Path -LiteralPath \"out\\winui\\Release\\flyExplorer.exe\" -PathType Leaf)) { throw \"validated Release artifact missing\" }\npython -X utf8 tests\\winui\\test_large_owned_folder_gui.py --items 2300 --configuration Release\nif ($LASTEXITCODE -ne 0) { throw \"2300-item keyboard filter smoke failed\" }\ngit diff --check origin/main..HEAD\nif ($LASTEXITCODE -ne 0) { throw \"diff check failed\" }\nWrite-Host \"LARGE_FOLDER_NAME_FILTER_KEYBOARD_SMOKE_PASS\""
 }
