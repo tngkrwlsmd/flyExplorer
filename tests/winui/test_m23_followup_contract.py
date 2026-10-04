@@ -109,7 +109,7 @@ class M23Followup(unittest.TestCase):
   worker=source("file_detail_controller.cpp")
   self.assertIn('entry.typeLabel=L"폴더"',worker)
   self.assertIn('L" 파일"',worker)
-  self.assertIn('if(!meta.typeLabel.empty())',impl)
+  self.assertIn('if(!meta->typeLabel.empty())',impl)
   self.assertNotIn('SHGetFileInfo',worker)
   self.assertNotIn('fxfile::filetype::queryVisuals(',impl)
 if __name__=="__main__":unittest.main()
