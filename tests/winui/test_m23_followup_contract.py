@@ -55,7 +55,8 @@ class M23Followup(unittest.TestCase):
   window=source("MainWindow.xaml.h")
   owner=source("window_tab_state.h")
   render=source("MainWindow.xaml.cpp")
-  for name in ("sortMode","details","renderedPaths","epoch",
+  for name in ("sortMode","details","renderedLogical","renderedPaths",
+               "indexedNameProjection","epoch",
                "invalidate()","isCurrent(","accepts("):
    self.assertIn(name,state)
   self.assertIn("std::array<fxfile::previewlist::PaneState,2> fileLists",owner)
