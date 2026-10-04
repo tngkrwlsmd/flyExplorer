@@ -237,7 +237,12 @@ observation window; use one only when the user explicitly requested scheduled
 or recurring follow-up.** At the first permitted routine read, if the run is
 still queued/running, stop with a precise resume checkpoint instead of
 continuing to poll. A second same-turn read is allowed only after a genuine
-completion signal or when the user explicitly asks for current status. On a
+completion signal or when the user explicitly asks for current status. If the
+user explicitly asks for active monitoring of the current run, that request
+overrides the routine three-minute observation floor for that task only:
+poll no more frequently than every 30 seconds, stop immediately when the run
+completes, and never turn that monitoring into a scheduled/automation task
+unless the user separately asks for one. On a
 later "continue the interrupted work" request, first read current main/ref
 state, the recorded run, relevant artifacts and cleanup state; reuse completed
 evidence for the same revision/configuration rather than rerunning it.
