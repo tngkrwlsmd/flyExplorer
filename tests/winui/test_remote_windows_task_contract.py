@@ -131,6 +131,49 @@ class RemoteWindowsTaskContractTests(unittest.TestCase):
         self.assertIn("up to three minutes", project)
         self.assertIn("one final/blocking read", efficiency)
 
+    def test_pre_dispatch_lease_blocks_overlapping_remote_runs(self):
+        texts = (
+            " ".join(self.agents.split()),
+            " ".join(self.efficiency.split()),
+            " ".join(self.project.split()),
+        )
+        for normalized in texts:
+            self.assertIn("before writing `requests/remote-shell/request.json`", normalized)
+            self.assertIn("`queued`", normalized)
+            self.assertIn("`pending`", normalized)
+            self.assertIn("`in_progress`", normalized)
+            self.assertIn("do not", normalized)
+        self.assertIn("pre-dispatch", texts[0].lower())
+        self.assertIn("pre-dispatch", texts[1].lower())
+        self.assertIn("pre-dispatch", texts[2].lower())
+
+    def test_remote_run_budget_stops_speculative_successors(self):
+        agents = " ".join(self.agents.split())
+        efficiency = " ".join(self.efficiency.split())
+        project = " ".join(self.project.split())
+        for normalized in (agents, efficiency, project):
+            self.assertIn("one primary Windows validation run", normalized)
+            self.assertIn("third Windows validation run", normalized)
+            self.assertIn("explicit user approval", normalized)
+        self.assertIn("Never queue a speculative successor", agents)
+        self.assertIn("never queue a successor while its predecessor is active", efficiency)
+        self.assertIn("Never queue speculative successors", project)
+
+    def test_three_minute_rule_is_a_no_polling_window(self):
+        agents = " ".join(self.agents.split())
+        efficiency = " ".join(self.efficiency.split())
+        self.assertIn("no earlier than three minutes", agents)
+        self.assertIn("no earlier than three minutes", efficiency)
+        self.assertIn("not a polling interval", agents)
+        self.assertIn("not a three-minute polling interval", efficiency)
+
+    def test_expensive_large_folder_fixtures_are_final_acceptance_only(self):
+        for text in (self.agents, self.efficiency, self.project):
+            normalized = " ".join(text.split())
+            self.assertIn("8,000+", normalized)
+            self.assertIn("20,000+", normalized)
+            self.assertIn("final acceptance", normalized)
+
     def test_guidance_prefers_request_slot_and_keeps_rdc_auxiliary(self):
         self.assertIn(
             "`control/remote-shell` request slot",
