@@ -898,6 +898,7 @@ namespace winrt::FlyExplorer::implementation
             state.visibleCount=160;
             state.streamToComplete=false;
         }
+        auto previous=side==0?LeftLoadPreviousButton():RightLoadPreviousButton();
         auto button=side==0?LeftLoadMoreButton():RightLoadMoreButton();
         std::vector<std::wstring> selected;
         for(auto const& old:view.SelectedItems()){
@@ -956,16 +957,33 @@ namespace winrt::FlyExplorer::implementation
                 }),order.end());
         }
         state.filteredCount=order.size();
-        const bool hasMore=order.size()>state.visibleCount||snapshot.truncated;
+        const bool hasPrevious=snapshot.baseOffset!=0&&!state.streamToComplete;
+        const bool hasForward=
+            snapshot.residentEndOffset()<snapshot.nextOffset||
+            snapshot.truncated;
+        const bool hasMore=order.size()>state.visibleCount||hasForward;
+        previous.Visibility(hasPrevious?Visibility::Visible:Visibility::Collapsed);
         button.Visibility(hasMore?Visibility::Visible:Visibility::Collapsed);
         auto detailsHeader=side==0?LeftDetailsHeader():RightDetailsHeader();
         if(state.viewMode!=FileViewMode::Details)
-            detailsHeader.Height(hasMore?24.0:0.0);
-        const auto progress=std::to_wstring(
-            (std::min)(order.size(),state.visibleCount))+
-            L"/"+std::to_wstring(order.size())+
-            (snapshot.truncated?L"+":L"");
+            detailsHeader.Height((hasPrevious||hasMore)?24.0:0.0);
+        const bool sequential=state.filenameFilter.empty()&&mode==0;
+        const auto shown=sequential?
+            snapshot.baseOffset+(std::min)(order.size(),state.visibleCount):
+            (std::min)(order.size(),state.visibleCount);
+        const auto total=sequential?snapshot.nextOffset:order.size();
+        const bool incomplete=
+            snapshot.baseOffset||
+            snapshot.residentEndOffset()<snapshot.nextOffset||
+            snapshot.truncated;
+        const auto progress=std::to_wstring(shown)+
+            L"/"+std::to_wstring(total)+(incomplete?L"+":L"");
         button.Content(winrt::box_value(hstring(progress)));
+        Microsoft::UI::Xaml::Automation::AutomationProperties::SetName(
+            previous,hstring(std::wstring(
+               side==0?L"\uC67C\uCABD \uC774\uC804 \uD56D\uBAA9 \uCC3D, \uD604\uC7AC \uC2DC\uC791 ":
+                       L"\uC624\uB978\uCABD \uC774\uC804 \uD56D\uBAA9 \uCC3D, \uD604\uC7AC \uC2DC\uC791 ")+
+               std::to_wstring(snapshot.baseOffset+1)));
         Microsoft::UI::Xaml::Automation::AutomationProperties::SetName(
             button,hstring(std::wstring(
                side==0?L"\uC67C\uCABD \uB354 \uD45C\uC2DC ":L"\uC624\uB978\uCABD \uB354 \uD45C\uC2DC ")+progress));
@@ -1411,11 +1429,18 @@ namespace winrt::FlyExplorer::implementation
         const auto& state=ActiveWindowTab().fileLists[side];
         auto const& snapshot=pane.tabs[pane.active].snapshot();
         std::size_t count=snapshot.children.size();
-        if(state.visibleRoute==pane.routeIds[pane.active]&&state.visibleTab==pane.active)
-            count=state.filteredCount;
+        const bool incomplete=snapshot.truncated||
+            snapshot.baseOffset||
+            snapshot.residentEndOffset()<snapshot.nextOffset;
+        if(state.visibleRoute==pane.routeIds[pane.active]&&state.visibleTab==pane.active){
+            if(state.filenameFilter.empty()&&state.sortMode==0)
+                count=snapshot.nextOffset;
+            else
+                count=state.filteredCount;
+        }
         const auto selected=view.SelectedItems().Size();
         ItemCountText().Text(hstring(
-            std::to_wstring(count)+(snapshot.truncated?L"+\uAC1C \uD56D\uBAA9":L"\uAC1C \uD56D\uBAA9")));
+            std::to_wstring(count)+(incomplete?L"+\uAC1C \uD56D\uBAA9":L"\uAC1C \uD56D\uBAA9")));
         SelectionCountText().Text(selected?
             hstring(std::to_wstring(selected)+L"\uAC1C \uC120\uD0DD\uB428"):hstring{});
         UpdateCommandAvailability();
