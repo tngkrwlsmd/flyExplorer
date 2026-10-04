@@ -32,13 +32,16 @@ void MainWindow::OnFileDragItemsStarting(
  if(pane.pending[tab]||pane.filesystemPaths[tab].empty()){
   args.Cancel(true);return;
  }
- auto const& entries=pane.tabs[tab].snapshot().children;
+ auto const& snapshot=pane.tabs[tab].snapshot();
+ auto const& entries=snapshot.children;
  std::vector<std::wstring> paths{};
  for(auto const& item:args.Items()){
   auto row=item.try_as<ListViewItem>();
   if(!row||!row.Tag()){args.Cancel(true);return;}
-  const auto index=unbox_value<uint32_t>(row.Tag());
-  if(index>=entries.size()||!entries[index].isFileSystem()||
+  const auto logical=unbox_value<std::uint64_t>(row.Tag());
+  std::size_t index=0;
+  if(!snapshot.residentIndex(logical,index)||
+     !entries[index].isFileSystem()||
      entries[index].parsingName.empty()){args.Cancel(true);return;}
   paths.push_back(entries[index].parsingName);
  }
@@ -69,7 +72,8 @@ void MainWindow::OnFileRowDragStarting(
   args.Cancel(true);return;
  }
  const auto view=side==0?LeftFiles():RightFiles();
- auto const& entries=pane.tabs[tab].snapshot().children;
+ auto const& snapshot=pane.tabs[tab].snapshot();
+ auto const& entries=snapshot.children;
  std::vector<ListViewItem> chosen;
  bool rowSelected=false;
  for(auto const& item:view.SelectedItems()){
@@ -84,8 +88,10 @@ void MainWindow::OnFileRowDragStarting(
  std::vector<std::wstring> paths;
  for(auto const& entry:chosen){
   if(!entry.Tag()){args.Cancel(true);return;}
-  const auto index=unbox_value<uint32_t>(entry.Tag());
-  if(index>=entries.size()||!entries[index].isFileSystem()||
+  const auto logical=unbox_value<std::uint64_t>(entry.Tag());
+  std::size_t index=0;
+  if(!snapshot.residentIndex(logical,index)||
+     !entries[index].isFileSystem()||
      entries[index].parsingName.empty()){
    args.Cancel(true);return;
   }
