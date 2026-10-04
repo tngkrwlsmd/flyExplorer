@@ -212,15 +212,17 @@ one-off build. Its default manual scope is `release`; `release-gui` and
 `full` are exceptional explicit choices.
 
 Do not keep one ChatGPT response alive by repeatedly polling a long Actions
-run. After starting a long run, record its run ID, target commit and scope.
-Apply the AGENT_EFFICIENCY rule literally: one start/read to establish the run,
-then one final or genuinely blocking read after a reasonable expected runtime.
-Do not perform short-interval status/log polling. If that final read is still
-queued/running, stop the turn with a precise resume checkpoint instead of
-waiting indefinitely. On a later "continue the interrupted work" request, first
-read current main/ref state, the recorded run, relevant artifacts and cleanup
-state; reuse completed evidence for the same revision/configuration rather than
-rerunning it.
+run. After starting a build or remote task, record its run ID, target commit and
+scope. For work that normally finishes within a few minutes, give it up to
+three minutes of normal runtime before concluding that it is still running.
+Do not replace that wait with rapid polling: establish the run once, then make
+one final/blocking read near the end of that window or earlier only when a
+genuinely blocking signal is available. If it is still queued/running after
+that at-most-three-minute wait, stop the turn with a precise resume checkpoint
+instead of waiting indefinitely. On a later "continue the interrupted work"
+request, first read current main/ref state, the recorded run, relevant artifacts
+and cleanup state; reuse completed evidence for the same revision/configuration
+rather than rerunning it.
 
 For iterative Windows development, GUI work and Windows 11 benchmarking,
 prefer this repository's fixed `control/remote-shell` request slot. Update
@@ -305,16 +307,14 @@ workflow only for a deliberately requested one-off gate.
 
 Runner health, process/service/task-scheduler inspection, runner recovery and
 machine maintenance belong in `personal-control-plane`, especially when this
-repository's runner path itself is broken. The committed-script remote task remains a fallback for bounded
-project-specific commands when the request-slot/dispatch path is unavailable
-or unsuitable, or isolated branch execution is materially useful.
-In that fallback, create a
-temporary `remote/**` branch from current main, commit only
-`.github/remote-task.ps1`, execute
-`.github/workflows/remote-windows-task.yml`, inspect its evidence, then use
-`.github/remote-cleanup` so
-`.github/workflows/remote-windows-task-cleanup.yml` deletes the temporary
-branch. Never merge task/cleanup commits to main.
+repository's runner path itself is broken. Do not create `remote/**` task
+branches. The repository has one Git-backed Windows command channel:
+`control/remote-shell`, plus manual `workflow_dispatch` as a human fallback.
+The control branch is a minimal control-plane tree, not a product mirror: keep
+only the remote-shell workflow and request slot there. Product source is always
+read from or fetched into the persistent `C:\dev\flyExplorer` checkout from
+live `main`. If the remote-shell workflow itself changes, refresh that one
+workflow file on the control branch; never resync the whole product tree there.
 
 GitHub-hosted runners require explicit user approval and are not part of the
 active flyExplorer CI path unless the user explicitly requests them. Do not add
@@ -328,7 +328,9 @@ flyExplorer intentionally overrides the generic branch-first integration
 default in the vendored policy. If commit/push is approved for the task, prefer
 a verified logical unit directly on main. Use a separate work branch only when repository protection requires
 it, the user requests it, concurrent work would make direct-main unsafe, or the
-change needs isolated integration testing.
+change needs isolated integration testing. Delete temporary work branches as
+soon as their verified final tree is accepted on main; do not keep stale
+work/* branches as historical checkpoints.
 
 Before push, run git diff --check, inspect staged scope, and run the verification
 required by the change. Normal main pushes do not trigger Windows VM Build at all. The workflow is
