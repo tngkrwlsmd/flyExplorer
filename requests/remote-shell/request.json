@@ -1,19 +1,15 @@
 {
-  "request_id": "large-folder-resident-window-gui-resume-001",
+  "request_id": "large-folder-resident-window-evidence-export-001",
   "expected_main_sha": "d395db0f40b2a3863be4216ba1644f46f42c8dc0",
-  "candidate_sha": "1c5779448a8cb194ff1a506ccfdd7cf0239f8222",
-  "logical_unit": "large-folder-resident-window",
-  "configuration": "Release",
+  "candidate_sha": "d395db0f40b2a3863be4216ba1644f46f42c8dc0",
+  "logical_unit": "resident-window-evidence-export",
+  "configuration": "none",
   "validation_kind": [
-    "gui",
-    "visual"
+    "none"
   ],
-  "invalidated_evidence": {
-    "gui": "focused resident-window harness incorrectly fell through into the unrelated generic 2300-row tail after all target markers had passed",
-    "visual": "AFTER acceptance needs one clean successful process completion on the harness-only revision; product pixels are unchanged from the already built candidate"
-  },
+  "invalidated_evidence": {},
   "retry_reason": "",
   "retry_revision": "",
   "working_directory": "C:\\dev\\flyExplorer",
-  "command": "$ErrorActionPreference = \"Stop\"\ngit fetch origin main work/large-folder-resident-window --no-tags --prune\nif ($LASTEXITCODE -ne 0) { throw \"fetch failed\" }\nif ((git rev-parse origin/main).Trim() -ne \"d395db0f40b2a3863be4216ba1644f46f42c8dc0\") { throw \"main moved\" }\nif ((git status --short).Count -ne 0) { throw \"dirty persistent checkout\" }\ngit checkout -B work/large-folder-resident-window origin/work/large-folder-resident-window\nif ($LASTEXITCODE -ne 0) { throw \"checkout harness fix failed\" }\nif ((git rev-parse HEAD).Trim() -ne \"1c5779448a8cb194ff1a506ccfdd7cf0239f8222\") { throw \"candidate mismatch\" }\n$changedProduct = git diff --name-only 37d4cc023777c67a963710efd2e17ee7125a7cae..HEAD -- app/winui src/base\nif ($LASTEXITCODE -ne 0) { throw \"product-diff check failed\" }\nif ($changedProduct) { throw \"harness-only resume unexpectedly changes product files: $changedProduct\" }\nif (!(Test-Path -LiteralPath \"out\\winui\\Release\\flyExplorer.exe\")) { throw \"accepted candidate Release binary missing\" }\n\npython -X utf8 tests\\winui\\test_large_owned_folder_gui.py --items 2300 --configuration Release --resident-window-evidence after\nif ($LASTEXITCODE -ne 0) { throw \"focused resident-window GUI/visual resume failed\" }\n\ngit diff --check origin/main..HEAD\nif ($LASTEXITCODE -ne 0) { throw \"diff check failed\" }\nWrite-Host \"LARGE_FOLDER_RESIDENT_WINDOW_GUI_RESUME_PASS\"\n"
+  "command": "$ErrorActionPreference = \"Stop\"\ngit fetch origin main --no-tags --prune\nif ($LASTEXITCODE -ne 0) { throw \"fetch main failed\" }\nif ((git rev-parse origin/main).Trim() -ne \"d395db0f40b2a3863be4216ba1644f46f42c8dc0\") { throw \"main moved\" }\n$source = \"C:\\dev\\flyExplorer\\logs\\m23\"\n$target = \"C:\\dev\\flyExplorer\\logs\\remote-evidence\"\n$before = Join-Path $source \"large-resident-window-before.png\"\n$after = Join-Path $source \"large-resident-window-after.png\"\nif (!(Test-Path -LiteralPath $before -PathType Leaf)) { throw \"BEFORE screenshot missing\" }\nif (!(Test-Path -LiteralPath $after -PathType Leaf)) { throw \"AFTER screenshot missing\" }\nNew-Item -ItemType Directory -Force -Path $target | Out-Null\nGet-ChildItem -LiteralPath $target -File -ErrorAction SilentlyContinue | Remove-Item -Force\nCopy-Item -LiteralPath $before -Destination (Join-Path $target \"large-resident-window-before.png\")\nCopy-Item -LiteralPath $after -Destination (Join-Path $target \"large-resident-window-after.png\")\nGet-FileHash -Algorithm SHA256 -LiteralPath $before,$after |\n  ForEach-Object { \"$($_.Path) $($_.Hash)\" } |\n  Set-Content -Encoding UTF8 -LiteralPath (Join-Path $target \"resident-window-sha256.txt\")\nWrite-Host \"RESIDENT_WINDOW_EVIDENCE_EXPORT_PASS\"\n"
 }
