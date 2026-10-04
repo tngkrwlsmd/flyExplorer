@@ -152,6 +152,21 @@ bootstrap configuration.
 
 ## Latest verified evidence
 
+Persistent pane filter presets are accepted on product revision
+`a7490083000ac8faeb6c4fbe2cf54fecd6b00cf8`. Up to 20 named rules are stored privately and atomically in
+`%LOCALAPPDATA%\flyExplorer\filter-rules-v1.txt`. Existing case-insensitive
+substring pane filtering remains compatible; `*`, `?` and `;` enable
+case-insensitive wildcard mask sets such as `*.cpp;*.h`.
+
+Evidence: remote run `37168744531` passed source contracts, Release M20 native
+state contracts at 48/48 and the canonical Release build. Final focused GUI run
+`37169304880` passed save/apply, wildcard matching, substring compatibility,
+restart persistence, delete, legacy-profile protection and exit 0.
+BEFORE/AFTER visual evidence was exported in run `37169509814` and reviewed at
+1060x760, 96-DPI VM, Dark theme with no clipping or overlap introduced by the
+new two-row preset panel.
+
+
 Search v2 is accepted on product revision `1fc808f91fa2236890a0025a555ccbd0d922319c`. Focused source
 contracts passed before product execution. Remote run `37166780382` passed the
 Release M19 native suite at 19/19 and the canonical Release build. Remote run
@@ -302,8 +317,12 @@ Current source and the last parity evidence still show these limits:
 - Search remains bounded name search. Regex, case sensitivity, entry-kind and
   single-extension conditions are implemented, but content search and broader
   saved/compound multi-criteria queries are not implemented.
-- Saved filter/mask rule sets and the complete historical command/provider
-  verb/fault matrix are not implemented or not fully tested.
+- Persistent pane filter/mask rule sets are implemented with up to 20 named
+  private presets, case-insensitive wildcard masks and legacy substring
+  compatibility. Saved size/date/compound query composition and historical
+  per-rule color/icon classification are not implemented.
+- The complete historical command/provider verb/fault matrix is not fully
+  implemented or tested.
 - User-configurable accelerators and a complete historical shortcut map are
   not implemented.
 

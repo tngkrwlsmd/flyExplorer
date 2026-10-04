@@ -26,7 +26,7 @@ consumer core; this PROJECT.md remains project-owned across bundle refreshes.
     {"name": "winui-tests", "path": "tests/winui", "responsibility": "source, native and owned GUI contracts"}
   ],
   "review": {
-    "reviewed_revision": "1fc808f91fa2236890a0025a555ccbd0d922319c",
+    "reviewed_revision": "a7490083000ac8faeb6c4fbe2cf54fecd6b00cf8",
     "reviewed_at": "2026-10-04",
     "reviewed_paths": [
       "app/winui",
@@ -121,6 +121,29 @@ existing depth-5, 2,500-entry walk and 100-result bounds, cancellation,
 stale-result rejection and opt-in recent-scope persistence remain in force.
 
 ## Current verification
+
+Persistent pane filter presets are accepted on product revision
+`a7490083000ac8faeb6c4fbe2cf54fecd6b00cf8`. The private store is bounded to 20 named rules and persists
+only under `%LOCALAPPDATA%\flyExplorer\filter-rules-v1.txt` using atomic
+same-directory replacement. Existing case-insensitive substring filtering is
+preserved; expressions containing `*`, `?` or `;` use case-insensitive
+wildcard-mask semantics.
+
+Remote run `37168744531` passed canonical source contracts, the Release M20
+native fixture at 48/48 and the canonical Release build, and captured the
+controlled BEFORE frame. The first GUI assertion failures were isolated to
+pywinauto visibility/index assumptions for WinUI container controls and did not
+change product code. Final focused run `37169304880` passed durable preset
+save, wildcard application, legacy substring compatibility, restart
+persistence, delete, protected legacy-profile sentinel checks, normal process
+exit and `git diff --check`.
+
+Visual evidence was exported by remote run `37169509814`. The reviewed
+BEFORE/AFTER frames were both 1060x760, 96-DPI VM, Dark theme and the same owned
+fixture. The AFTER frame shows the two-row preset manager without clipping or
+overlap; navigation, address/search chrome and both file panes remain usable.
+The AFTER capture was intentionally taken after the harness re-applied the
+legacy substring `note` filter, matching the functional evidence.
 
 The accepted Search v2 product revision is
 `1fc808f91fa2236890a0025a555ccbd0d922319c`. Focused source contracts passed before build. Remote run
