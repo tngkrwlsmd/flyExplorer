@@ -48,7 +48,7 @@ product state use CURRENT_STATUS.md.
 - Runtime/visual: not rerun. Existing #251 success evidence is reused; creating another Windows task solely to validate the anti-churn policy would violate the policy itself.
 
 **관련 commit**
-- pending squash commit — remote-run lease policy hardening.
+- this logical unit — remote-run lease policy hardening (squashed on merge).
 
 ---
 
