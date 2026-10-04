@@ -1,8 +1,8 @@
 {
-  "request_id": "validation-churn-nonvalidation-runtime-001",
+  "request_id": "validation-churn-work-branch-cleanup-002",
   "expected_main_sha": "5cdd28c0b7188730a4182f24932d3aaa901b9cae",
   "candidate_sha": "5cdd28c0b7188730a4182f24932d3aaa901b9cae",
-  "logical_unit": "validation-churn-cleanup",
+  "logical_unit": "validation-churn-branch-cleanup",
   "configuration": "none",
   "validation_kind": [
     "none"
@@ -11,5 +11,5 @@
   "retry_reason": "",
   "retry_revision": "",
   "working_directory": "C:\\dev\\flyExplorer",
-  "command": "$ErrorActionPreference = \"Stop\"\ngit fetch origin main --no-tags --prune\nif ($LASTEXITCODE -ne 0) { throw \"fetch main failed\" }\nif ((git rev-parse origin/main).Trim() -ne \"5cdd28c0b7188730a4182f24932d3aaa901b9cae\") { throw \"main moved\" }\nWrite-Host \"NONVALIDATION_METADATA_GUARD_PASS\"\ngit -C $env:GITHUB_WORKSPACE push origin --delete work/validation-churn-guards work/validation-churn-empty-evidence-fix\nif ($LASTEXITCODE -ne 0) { throw \"temporary work branch cleanup failed\" }\nWrite-Host \"VALIDATION_CHURN_WORK_BRANCHES_DELETED\"\n"
+  "command": "$ErrorActionPreference = \"Stop\"\ngit fetch origin main --no-tags --prune\nif ($LASTEXITCODE -ne 0) { throw \"fetch main failed\" }\nif ((git rev-parse origin/main).Trim() -ne \"5cdd28c0b7188730a4182f24932d3aaa901b9cae\") { throw \"main moved\" }\n$remoteHeads = git ls-remote --heads origin work/validation-churn-guards work/validation-churn-empty-evidence-fix\nif ($LASTEXITCODE -ne 0) { throw \"list remote work branches failed\" }\n$toDelete = @()\nif ($remoteHeads -match \"refs/heads/work/validation-churn-guards\") { $toDelete += \"work/validation-churn-guards\" }\nif ($remoteHeads -match \"refs/heads/work/validation-churn-empty-evidence-fix\") { $toDelete += \"work/validation-churn-empty-evidence-fix\" }\nif ($toDelete.Count -gt 0) {\n  git push origin --delete @toDelete\n  if ($LASTEXITCODE -ne 0) { throw \"persistent-checkout branch cleanup failed\" }\n}\nWrite-Host \"VALIDATION_CHURN_TEMP_BRANCH_CLEANUP_PASS\"\n"
 }
