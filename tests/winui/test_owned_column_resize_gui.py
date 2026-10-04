@@ -54,7 +54,10 @@ def main(config="Release"):
         try:
             win.move_window(x=40,y=40,width=1500,height=760,repaint=True)
         except Exception:
-            pass
+            import ctypes as c
+            c.windll.user32.SetWindowPos(hwnd,0,40,40,1500,760,0x0004)
+        eventually(lambda:window().rectangle().width()>=1400,
+                   "owned window did not enter wide Details profile",8)
         def element(auto_id):
             return window().child_window(auto_id=auto_id)
         for auto_id in ("LeftNameColumnResizeThumb","LeftTypeColumnResizeThumb",
