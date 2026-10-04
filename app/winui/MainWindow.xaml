@@ -478,24 +478,6 @@
                     <Thumb x:Name="LeftSizeColumnResizeThumb" Grid.Column="2" HorizontalAlignment="Right"
                            Style="{StaticResource ExplorerColumnResizeThumbStyle}" Margin="0,1,0,1" IsHitTestVisible="False"
                            AutomationProperties.Name="&#xC67C;&#xCABD; &#xD06C;&#xAE30; &#xC5F4; &#xB108;&#xBE44; &#xC870;&#xC808;"/>
-                    <Border x:Name="LeftNameColumnResizeHitTarget" Grid.Column="0" HorizontalAlignment="Right"
-                            Width="12" Margin="0,1,0,1" Background="Transparent" Tag="0,0"
-                            PointerPressed="OnDetailColumnResizePointerPressed"
-                            PointerMoved="OnDetailColumnResizePointerMoved"
-                            PointerReleased="OnDetailColumnResizePointerReleased"
-                            PointerCaptureLost="OnDetailColumnResizePointerCaptureLost"/>
-                    <Border x:Name="LeftTypeColumnResizeHitTarget" Grid.Column="1" HorizontalAlignment="Right"
-                            Width="12" Margin="0,1,0,1" Background="Transparent" Tag="0,1"
-                            PointerPressed="OnDetailColumnResizePointerPressed"
-                            PointerMoved="OnDetailColumnResizePointerMoved"
-                            PointerReleased="OnDetailColumnResizePointerReleased"
-                            PointerCaptureLost="OnDetailColumnResizePointerCaptureLost"/>
-                    <Border x:Name="LeftSizeColumnResizeHitTarget" Grid.Column="2" HorizontalAlignment="Right"
-                            Width="12" Margin="0,1,0,1" Background="Transparent" Tag="0,2"
-                            PointerPressed="OnDetailColumnResizePointerPressed"
-                            PointerMoved="OnDetailColumnResizePointerMoved"
-                            PointerReleased="OnDetailColumnResizePointerReleased"
-                            PointerCaptureLost="OnDetailColumnResizePointerCaptureLost"/>
                 </Grid>
                 <ListView x:Name="LeftFiles" Grid.Row="3" IsDoubleTapEnabled="True"
                           ItemContainerStyle="{StaticResource ExplorerListItemStyle}"
@@ -579,24 +561,6 @@
                     <Thumb x:Name="RightSizeColumnResizeThumb" Grid.Column="2" HorizontalAlignment="Right"
                            Style="{StaticResource ExplorerColumnResizeThumbStyle}" Margin="0,1,0,1" IsHitTestVisible="False"
                            AutomationProperties.Name="&#xC624;&#xB978;&#xCABD; &#xD06C;&#xAE30; &#xC5F4; &#xB108;&#xBE44; &#xC870;&#xC808;"/>
-                    <Border x:Name="RightNameColumnResizeHitTarget" Grid.Column="0" HorizontalAlignment="Right"
-                            Width="12" Margin="0,1,0,1" Background="Transparent" Tag="1,0"
-                            PointerPressed="OnDetailColumnResizePointerPressed"
-                            PointerMoved="OnDetailColumnResizePointerMoved"
-                            PointerReleased="OnDetailColumnResizePointerReleased"
-                            PointerCaptureLost="OnDetailColumnResizePointerCaptureLost"/>
-                    <Border x:Name="RightTypeColumnResizeHitTarget" Grid.Column="1" HorizontalAlignment="Right"
-                            Width="12" Margin="0,1,0,1" Background="Transparent" Tag="1,1"
-                            PointerPressed="OnDetailColumnResizePointerPressed"
-                            PointerMoved="OnDetailColumnResizePointerMoved"
-                            PointerReleased="OnDetailColumnResizePointerReleased"
-                            PointerCaptureLost="OnDetailColumnResizePointerCaptureLost"/>
-                    <Border x:Name="RightSizeColumnResizeHitTarget" Grid.Column="2" HorizontalAlignment="Right"
-                            Width="12" Margin="0,1,0,1" Background="Transparent" Tag="1,2"
-                            PointerPressed="OnDetailColumnResizePointerPressed"
-                            PointerMoved="OnDetailColumnResizePointerMoved"
-                            PointerReleased="OnDetailColumnResizePointerReleased"
-                            PointerCaptureLost="OnDetailColumnResizePointerCaptureLost"/>
                 </Grid>
                 <ListView x:Name="RightFiles" Grid.Row="3" IsDoubleTapEnabled="True"
                           ItemContainerStyle="{StaticResource ExplorerListItemStyle}"
