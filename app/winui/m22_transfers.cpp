@@ -61,23 +61,36 @@ void MainWindow::UpdateSort(int selection){
  const int side=ActiveWindowTab().model.activePane;
  auto& state=ActiveWindowTab().fileLists[side];
  auto const& pane=ActiveWindowTab().model.panes[side];
- auto const& snapshot=pane.tabs[pane.active].snapshot();
+ auto const& session=pane.tabs[pane.active];
+ auto const& snapshot=session.snapshot();
  const auto completeLimit=static_cast<std::size_t>(
   fxfile::isolation::kMaxCompleteModelEntries);
- if((snapshot.baseOffset||
-     snapshot.residentEndOffset()<snapshot.nextOffset||
-     snapshot.truncated)&&
-    (snapshot.nextOffset>completeLimit||
-     (snapshot.nextOffset==completeLimit&&snapshot.truncated))){
+ const bool beyondComplete=
+  snapshot.nextOffset>completeLimit||
+  (snapshot.nextOffset==completeLimit&&snapshot.truncated);
+ if(beyondComplete&&selection>1){
   fileBar()->SetSortIndex(state.sortMode);
   StatusText().Text(
-   L"전역 정렬은 현재 최대 20,000개 항목까지 전체 모델을 완성할 수 있습니다.");
+   L"유형/크기/수정 날짜 전역 정렬은 현재 최대 20,000개 항목까지 지원합니다. "
+   L"이름 정렬은 경량 인덱스를 사용합니다.");
   return;
  }
  state.sortMode=selection;
+ state.indexedNameSort=selection<=1;
+ state.indexedNameProjection=beyondComplete&&state.indexedNameSort;
+ state.indexToComplete=state.indexedNameProjection&&
+  (snapshot.residentEndOffset()<snapshot.nextOffset||snapshot.truncated);
+ state.visibleCount=160;
  fileBar()->SetSortIndex(selection);
  UpdateSortPresentation(side);
  FillFiles(side);
+ if(state.indexedNameProjection){
+  if(state.indexToComplete)
+   QueueNextFolderPage(side,true);
+  else
+   StatusText().Text(L"전체 이름 인덱스로 정렬했습니다.");
+  return;
+ }
  if(snapshot.baseOffset||
     snapshot.residentEndOffset()<snapshot.nextOffset||
     snapshot.truncated)
