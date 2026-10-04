@@ -34,6 +34,7 @@ def main(config="Release"):
     old={n:hashlib.sha256((mfc/n).read_bytes()).digest()
          for n in LEGACY if (mfc/n).is_file()}
     env=os.environ.copy()
+    env["FLYEXPLORER_COLUMN_RESIZE_DIAGNOSTIC"]="1"
     for key in ("APPDATA","LOCALAPPDATA","TEMP","TMP"):
         target=owned/key.lower();target.mkdir();env[key]=str(target)
     proc=subprocess.Popen([str(exe),str(folder)],cwd=exe.parent,env=env)
@@ -52,6 +53,11 @@ def main(config="Release"):
         win=window()
         def element(auto_id):
             return window().child_window(auto_id=auto_id)
+        def resize_status():
+            try:
+                return element("StatusText").window_text()
+            except Exception as error:
+                return "<status-error:"+type(error).__name__+">"
 
         # The column-resize acceptance only needs the left Details pane.
         # Do not trust cached SecondaryPane UIA visibility or SplitButton text:
@@ -113,7 +119,7 @@ def main(config="Release"):
             mouse.press(button="left",coords=(x,y))
             print("COLUMN_RESIZE_BUTTON_AFTER_PRESS",
                   bool(ctypes.windll.user32.GetAsyncKeyState(0x01)&0x8000),
-                  flush=True)
+                  "status",resize_status(),flush=True)
             try:
                 steps=10
                 for step in range(1,steps+1):
@@ -124,7 +130,7 @@ def main(config="Release"):
                     print("COLUMN_RESIZE_STEP",thumb_id,step,
                           "cursor",nx,y,"boundary",boundary,
                           "button",bool(ctypes.windll.user32.GetAsyncKeyState(0x01)&0x8000),
-                          "hit",hit_info(nx,y),flush=True)
+                          "hit",hit_info(nx,y),"status",resize_status(),flush=True)
             finally:
                 mouse.release(button="left",coords=(x+delta,y))
             eventually(lambda:element(next_header_id).rectangle().left>=start+12,
