@@ -46,10 +46,10 @@ class OwnedContextInvocationRegression(unittest.TestCase):
   self.assertIn("right=min(item.right,area.right)",probe)
   self.assertIn("top=max(item.top,area.top)",probe)
   self.assertIn("bottom=min(item.bottom,area.bottom)",probe)
-  self.assertIn('def foreground_owned():',probe)
-  self.assertIn('pid.value==winui.pid',probe)
-  self.assertIn('if foreground_owned():',probe)
+  self.assertIn('OWNED_CONTEXT_DIRECT_RIGHT_CLICK_HELPER',probe)
+  self.assertIn('mouse.click(button="right",coords=click)',probe)
   self.assertIn('"--context-menu" in q.cmdline()',probe)
   self.assertIn('pid.value==child.pid',probe)
+  self.assertNotIn('Windows Shell isolated context menu',probe)
 
 if __name__=="__main__":unittest.main()
