@@ -100,8 +100,9 @@ jobs:
           $evidenceKeys = @()
           if ($null -ne $invalidatedEvidence) {
             $evidenceKeys = @(
-              $invalidatedEvidence.psobject.Properties.Name |
-                ForEach-Object { ([string]$_).Trim().ToLowerInvariant() }
+              $invalidatedEvidence.psobject.Properties |
+                ForEach-Object { ([string]$_.Name).Trim().ToLowerInvariant() } |
+                Where-Object { -not [string]::IsNullOrWhiteSpace($_) }
             )
           }
           if ($uniqueKinds -contains "none") {
