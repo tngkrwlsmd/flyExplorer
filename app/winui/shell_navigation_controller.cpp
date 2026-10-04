@@ -103,9 +103,9 @@ std::uint64_t ShellNavigationController::submitContinuation(
        pane.pending[pane.active])return 0;
     auto& session=pane.tabs[pane.active];
     auto const& snapshot=session.snapshot();
-    const auto offset=snapshot.children.size();
+    const auto offset=snapshot.nextOffset;
     if(!snapshot.truncated||!offset||
-       offset>=fxfile::isolation::kMaxAggregateEntries)
+       offset>=fxfile::isolation::kMaxNavigationEntries)
         return 0;
     fxfile::shellnav::Location target(snapshot.folder);
     if(!target.valid())return 0;
