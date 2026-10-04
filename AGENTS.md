@@ -251,6 +251,40 @@ Actions reruns are prohibited for normal development. A follow-up Actions run
 must correspond to a real new revision that addresses an identified cause; it
 is a new acceptance run, not a retry.
 
+### Mechanical validation-churn guard
+
+Every `control/remote-shell` request must classify itself before the Windows
+runner executes anything. In addition to `request_id`, `expected_main_sha`,
+`working_directory` and `command`, the request JSON must provide:
+`candidate_sha`, a stable `logical_unit`, `configuration`,
+`validation_kind` as an array drawn from `source/build/native/gui/visual`
+(or exactly `none`), and `invalidated_evidence` with one non-empty reason
+for every declared validation stage. Routine non-validation shell/inspection
+requests use `candidate_sha == expected_main_sha`, `configuration: none`,
+`validation_kind: ["none"]` and an empty evidence object.
+
+The request-slot workflow derives a validation fingerprint from
+`candidate_sha + configuration + sorted(validation_kind)`. A fingerprint
+already present in the control-branch request history is rejected before the
+remote command runs. An exceptional repeat requires both a concrete
+`retry_reason` and a changed `retry_revision` identifying the harness or
+environment revision that makes the new attempt materially different; the same
+retry revision cannot be reused for the same fingerprint. Common source/build/
+native/GUI/visual commands are also checked against the declared stage set so
+expensive work cannot be hidden behind `validation_kind: ["none"]`.
+
+Both Windows workflows reject GitHub rerun attempts at the job boundary with
+`github.run_attempt == '1'`; do not use the UI rerun button as a development
+mechanism. Manual `workflow_dispatch` remains a human fallback and therefore
+does not use request-history fingerprinting, but it remains subject to the
+same no-rerun policy and must not replace the normal request-slot discipline.
+
+After the next 30-50 Remote Windows Task runs, review the recorded logical unit,
+validation kind and fingerprint data. The target is normally no more than one
+or two validation runs per logical unit, zero product-build repeats after a
+harness-only fix, and zero duplicate same-candidate fingerprints without an
+explicit changed retry revision.
+
 ### Remote development and final-CI anti-thrashing rule
 
 Use `control/remote-shell` and the persistent `C:\dev\flyExplorer` checkout
