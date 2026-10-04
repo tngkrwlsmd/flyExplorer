@@ -1,6 +1,6 @@
 {
-  "request_id": "filter-presets-evidence-001",
-  "expected_main_sha": "591ecbad86a133812fa27521ca771aaba15e2ffe",
+  "request_id": "filter-presets-branch-cleanup-001",
+  "expected_main_sha": "433e26a5278af97be4c58edc362549d52abf778a",
   "working_directory": "C:\\dev\\flyExplorer",
-  "command": "$ErrorActionPreference = \"Stop\"\ngit fetch origin main --no-tags --prune\nif ($LASTEXITCODE -ne 0) { throw \"fetch main failed\" }\nif ((git rev-parse origin/main).Trim() -ne \"591ecbad86a133812fa27521ca771aaba15e2ffe\") { throw \"main moved\" }\n\n$before=\"C:\\dev\\flyExplorer\\logs\\filter-preset-before.png\"\n$after=\"C:\\dev\\flyExplorer\\logs\\filter-preset-after.png\"\nif (-not (Test-Path $before) -or -not (Test-Path $after)) { throw \"visual evidence missing\" }\n\n$evidence=\"C:\\dev\\flyExplorer\\logs\\remote-evidence\"\nif (Test-Path $evidence) { Remove-Item -Recurse -Force $evidence }\nNew-Item -ItemType Directory -Force -Path $evidence | Out-Null\nCopy-Item $before (Join-Path $evidence \"filter-preset-before.png\")\nCopy-Item $after (Join-Path $evidence \"filter-preset-after.png\")\n@\"\nfeature=filter-presets\nmain=591ecbad86a133812fa27521ca771aaba15e2ffe\nvalidated_product_tree=14771ce7a16afd36fad23cfd738238b642343f48\nvalidated_gui_revision=ae1085c7d995ec7ba97774d8b0d1d95cfaa1e7e6\ngui_run=37169304880\n\"@ | Set-Content -Encoding UTF8 (Join-Path $evidence \"manifest.txt\")\n\nWrite-Host \"FILTER_PRESET_EVIDENCE_READY\"\n"
+  "command": "$ErrorActionPreference = \"Stop\"\ngit fetch origin main --no-tags --prune\nif ($LASTEXITCODE -ne 0) { throw \"fetch main failed\" }\nif ((git rev-parse origin/main).Trim() -ne \"433e26a5278af97be4c58edc362549d52abf778a\") { throw \"main moved\" }\n\ngit -C $env:GITHUB_WORKSPACE push origin --delete work/filter-presets\nif ($LASTEXITCODE -ne 0) { throw \"filter preset branch cleanup failed\" }\n\nWrite-Host \"FILTER_PRESET_WORK_BRANCH_DELETED\"\n"
 }
