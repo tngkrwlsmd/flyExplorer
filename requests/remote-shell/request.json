@@ -1,21 +1,19 @@
 {
-  "request_id": "direct-shell-column-resize-pointer-final-001",
+  "request_id": "direct-shell-column-resize-pointer-final-002",
   "expected_main_sha": "d50f01e8ccecb800f0dbac6c0b9f550e9cb25e49",
-  "candidate_sha": "e6f85e7576fba6f4a8e7601e4aee394e3e9d9a0c",
+  "candidate_sha": "4759c618eaf07c0a43095c6ea9204fae4986ee4c",
   "logical_unit": "direct-shell-context-column-resize",
   "configuration": "Release",
   "validation_kind": [
-    "source",
     "build",
     "gui",
     "visual"
   ],
   "invalidated_evidence": {
-    "source": "Column-resize contract changed from Thumb.DragDelta to captured pointer input.",
-    "build": "MainWindow XAML/C++ pointer handlers changed.",
-    "gui": "Physical mouse drag must now resize the visible Details column boundaries.",
-    "visual": "BEFORE/AFTER column-width evidence is regenerated for the pointer-capture implementation."
+    "build": "Added the missing WinUI pointer-point definition include after the previous compile failure.",
+    "gui": "Physical pointer-captured column drag is unchanged and still needs final acceptance after a successful build.",
+    "visual": "BEFORE/AFTER column-width evidence is regenerated from the built pointer-capture candidate."
   },
   "working_directory": "C:\\dev\\flyExplorer",
-  "command": "$ErrorActionPreference = \"Stop\"\ngit fetch origin main work/direct-shell-context-column-resize --no-tags --prune\nif ($LASTEXITCODE -ne 0) { throw \"fetch failed\" }\nif ((git rev-parse origin/main).Trim() -ne \"d50f01e8ccecb800f0dbac6c0b9f550e9cb25e49\") { throw \"main moved\" }\nif ((git status --short).Count -ne 0) { throw \"dirty persistent checkout\" }\ngit checkout -B work/direct-shell-context-column-resize origin/work/direct-shell-context-column-resize\nif ($LASTEXITCODE -ne 0) { throw \"checkout candidate failed\" }\nif ((git rev-parse HEAD).Trim() -ne \"e6f85e7576fba6f4a8e7601e4aee394e3e9d9a0c\") { throw \"candidate mismatch\" }\n\npython -X utf8 tests\\winui\\test_m26_fluent_contract.py\nif ($LASTEXITCODE -ne 0) { throw \"focused column source contract failed\" }\n\ncmd /c build.bat Release\nif ($LASTEXITCODE -ne 0) { throw \"Release build failed\" }\n\npython -X utf8 tests\\winui\\test_owned_column_resize_gui.py Release\nif ($LASTEXITCODE -ne 0) { throw \"Details column resize GUI acceptance failed\" }\n\n$source = \"C:\\dev\\flyExplorer\\logs\\m24\"\n$target = \"C:\\dev\\flyExplorer\\logs\\remote-evidence\"\n$files = @(\"detail-columns-before.png\",\"detail-columns-after.png\")\nNew-Item -ItemType Directory -Force -Path $target | Out-Null\nGet-ChildItem -LiteralPath $target -File -ErrorAction SilentlyContinue | Remove-Item -Force\nforeach ($name in $files) {\n  $path = Join-Path $source $name\n  if (!(Test-Path -LiteralPath $path -PathType Leaf)) { throw \"visual evidence missing: $name\" }\n  Copy-Item -LiteralPath $path -Destination (Join-Path $target $name)\n}\nGet-FileHash -Algorithm SHA256 -LiteralPath ($files | ForEach-Object { Join-Path $source $_ }) |\n  ForEach-Object { \"$($_.Path) $($_.Hash)\" } |\n  Set-Content -Encoding UTF8 -LiteralPath (Join-Path $target \"column-resize-sha256.txt\")\n\ngit diff --check origin/main..HEAD\nif ($LASTEXITCODE -ne 0) { throw \"diff check failed\" }\nWrite-Host \"DIRECT_SHELL_COLUMN_RESIZE_POINTER_FINAL_PASS\"\n"
+  "command": "$ErrorActionPreference = \"Stop\"\ngit fetch origin main work/direct-shell-context-column-resize --no-tags --prune\nif ($LASTEXITCODE -ne 0) { throw \"fetch failed\" }\nif ((git rev-parse origin/main).Trim() -ne \"d50f01e8ccecb800f0dbac6c0b9f550e9cb25e49\") { throw \"main moved\" }\nif ((git status --short).Count -ne 0) { throw \"dirty persistent checkout\" }\ngit checkout -B work/direct-shell-context-column-resize origin/work/direct-shell-context-column-resize\nif ($LASTEXITCODE -ne 0) { throw \"checkout candidate failed\" }\nif ((git rev-parse HEAD).Trim() -ne \"4759c618eaf07c0a43095c6ea9204fae4986ee4c\") { throw \"candidate mismatch\" }\n\ncmd /c build.bat Release\nif ($LASTEXITCODE -ne 0) { throw \"Release build failed\" }\n\npython -X utf8 tests\\winui\\test_owned_column_resize_gui.py Release\nif ($LASTEXITCODE -ne 0) { throw \"Details column resize GUI acceptance failed\" }\n\n$source = \"C:\\dev\\flyExplorer\\logs\\m24\"\n$target = \"C:\\dev\\flyExplorer\\logs\\remote-evidence\"\n$files = @(\"detail-columns-before.png\",\"detail-columns-after.png\")\nNew-Item -ItemType Directory -Force -Path $target | Out-Null\nGet-ChildItem -LiteralPath $target -File -ErrorAction SilentlyContinue | Remove-Item -Force\nforeach ($name in $files) {\n  $path = Join-Path $source $name\n  if (!(Test-Path -LiteralPath $path -PathType Leaf)) { throw \"visual evidence missing: $name\" }\n  Copy-Item -LiteralPath $path -Destination (Join-Path $target $name)\n}\nGet-FileHash -Algorithm SHA256 -LiteralPath ($files | ForEach-Object { Join-Path $source $_ }) |\n  ForEach-Object { \"$($_.Path) $($_.Hash)\" } |\n  Set-Content -Encoding UTF8 -LiteralPath (Join-Path $target \"column-resize-sha256.txt\")\n\ngit diff --check origin/main..HEAD\nif ($LASTEXITCODE -ne 0) { throw \"diff check failed\" }\nWrite-Host \"DIRECT_SHELL_COLUMN_RESIZE_POINTER_FINAL_PASS\"\n"
 }
