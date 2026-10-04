@@ -432,12 +432,28 @@ namespace winrt::FlyExplorer::implementation
         auto& state=ActiveWindowTab().fileLists[side];
         if(completeFolder)state.streamToComplete=true;
         auto const& snapshot=pane.tabs[pane.active].snapshot();
-        if(!snapshot.truncated){
+        if(pane.pending[pane.active])return false;
+        if(completeFolder&&snapshot.baseOffset){
+            const auto id=mShellNavigation->submitPreviousPage(
+                ActiveWindowTab().model,side);
+            if(id){
+                StatusText().Text(
+                    L"정확한 정렬/필터를 위해 이전 폴더 항목을 다시 불러오는 중입니다.");
+                return true;
+            }
+            state.streamToComplete=false;
+            StatusText().Text(
+                L"전체 폴더 모델을 복원할 수 없습니다. 현재 항목은 유지됩니다.");
+            return false;
+        }
+        const bool hasForward=
+            snapshot.residentEndOffset()<snapshot.nextOffset||
+            snapshot.truncated;
+        if(!hasForward){
             state.streamToComplete=false;
             return false;
         }
-        if(pane.pending[pane.active])return false;
-        const auto id=mShellNavigation->submitContinuation(
+        const auto id=mShellNavigation->submitNextPage(
             ActiveWindowTab().model,side);
         if(id){
             StatusText().Text(completeFolder?
