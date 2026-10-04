@@ -452,6 +452,18 @@
                     <Button x:Name="LeftTypeSortButton" Grid.Column="1" Style="{StaticResource ExplorerColumnHeaderButtonStyle}" Tag="0,1" Content="&#xC720;&#xD615;" Click="OnHeaderSortClicked" AutomationProperties.Name="&#xC720;&#xD615; &#xC5F4; &#xC815;&#xB82C;"/>
                     <Button x:Name="LeftSizeSortButton" Grid.Column="2" Style="{StaticResource ExplorerColumnHeaderButtonStyle}" Tag="0,2" Content="&#xD06C;&#xAE30;" Click="OnHeaderSortClicked" AutomationProperties.Name="&#xD06C;&#xAE30; &#xC5F4; &#xC815;&#xB82C;"/>
                     <Button x:Name="LeftDateSortButton" Grid.Column="3" Style="{StaticResource ExplorerColumnHeaderButtonStyle}" Tag="0,3" Content="&#xC218;&#xC815; &#xB0A0;&#xC9DC;" Click="OnHeaderSortClicked" AutomationProperties.Name="&#xC218;&#xC815; &#xB0A0;&#xC9DC; &#xC5F4; &#xC815;&#xB82C;"/>
+                    <Thumb x:Name="LeftNameColumnResizeThumb" Grid.Column="0" HorizontalAlignment="Right"
+                           Width="7" Margin="0,1,-3,1" Background="Transparent" Tag="0,0"
+                           DragDelta="OnDetailColumnResizeDragDelta"
+                           AutomationProperties.Name="&#xC67C;&#xCABD; &#xC774;&#xB984; &#xC5F4; &#xB108;&#xBE44; &#xC870;&#xC808;"/>
+                    <Thumb x:Name="LeftTypeColumnResizeThumb" Grid.Column="1" HorizontalAlignment="Right"
+                           Width="7" Margin="0,1,-3,1" Background="Transparent" Tag="0,1"
+                           DragDelta="OnDetailColumnResizeDragDelta"
+                           AutomationProperties.Name="&#xC67C;&#xCABD; &#xC720;&#xD615; &#xC5F4; &#xB108;&#xBE44; &#xC870;&#xC808;"/>
+                    <Thumb x:Name="LeftSizeColumnResizeThumb" Grid.Column="2" HorizontalAlignment="Right"
+                           Width="7" Margin="0,1,-3,1" Background="Transparent" Tag="0,2"
+                           DragDelta="OnDetailColumnResizeDragDelta"
+                           AutomationProperties.Name="&#xC67C;&#xCABD; &#xD06C;&#xAE30; &#xC5F4; &#xB108;&#xBE44; &#xC870;&#xC808;"/>
                 </Grid>
                 <ListView x:Name="LeftFiles" Grid.Row="3" IsDoubleTapEnabled="True"
                           ItemContainerStyle="{StaticResource ExplorerListItemStyle}"
@@ -464,24 +476,6 @@
                           DragOver="OnFileDragOver" Drop="OnFileDrop"
                           DragItemsStarting="OnFileDragItemsStarting"
                           AutomationProperties.Name="왼쪽 폴더 내용">
-                    <ListView.ContextFlyout>
-                        <MenuFlyout>
-                            <MenuFlyoutItem Text="복사" Click="OnCopySelected"/>
-                            <MenuFlyoutItem Text="이동" Click="OnMoveSelected"/>
-                            <MenuFlyoutItem Text="이름 변경" Click="OnRenameSelected"/>
-                            <MenuFlyoutSeparator/>
-                            <MenuFlyoutItem Text="Windows 클립보드로 복사"
-                                Click="OnWindowsCopy"/>
-                            <MenuFlyoutItem Text="Windows 클립보드로 잘라내기"
-                                Click="OnWindowsCut"/>
-                            <MenuFlyoutItem Text="Windows 클립보드에서 붙여넣기"
-                                Click="OnWindowsPaste"/>
-                            <MenuFlyoutItem Text="휴지통" Click="OnRecycleSelected"/>
-                            <MenuFlyoutItem Text="Windows &#xD655;&#xC7A5; &#xCEE8;&#xD14D;&#xC2A4;&#xD2B8; &#xBA54;&#xB274;"
-                            AutomationProperties.Name="Windows Shell isolated context menu"
-                            Click="OnExternalWindowsContextMenu"/>
-                        </MenuFlyout>
-                    </ListView.ContextFlyout>
                 </ListView>
                 </Grid>
             </Border>
@@ -544,6 +538,18 @@
                     <Button x:Name="RightTypeSortButton" Grid.Column="1" Style="{StaticResource ExplorerColumnHeaderButtonStyle}" Tag="1,1" Content="&#xC720;&#xD615;" Click="OnHeaderSortClicked" AutomationProperties.Name="&#xC720;&#xD615; &#xC5F4; &#xC815;&#xB82C;"/>
                     <Button x:Name="RightSizeSortButton" Grid.Column="2" Style="{StaticResource ExplorerColumnHeaderButtonStyle}" Tag="1,2" Content="&#xD06C;&#xAE30;" Click="OnHeaderSortClicked" AutomationProperties.Name="&#xD06C;&#xAE30; &#xC5F4; &#xC815;&#xB82C;"/>
                     <Button x:Name="RightDateSortButton" Grid.Column="3" Style="{StaticResource ExplorerColumnHeaderButtonStyle}" Tag="1,3" Content="&#xC218;&#xC815; &#xB0A0;&#xC9DC;" Click="OnHeaderSortClicked" AutomationProperties.Name="&#xC218;&#xC815; &#xB0A0;&#xC9DC; &#xC5F4; &#xC815;&#xB82C;"/>
+                    <Thumb x:Name="RightNameColumnResizeThumb" Grid.Column="0" HorizontalAlignment="Right"
+                           Width="7" Margin="0,1,-3,1" Background="Transparent" Tag="1,0"
+                           DragDelta="OnDetailColumnResizeDragDelta"
+                           AutomationProperties.Name="&#xC624;&#xB978;&#xCABD; &#xC774;&#xB984; &#xC5F4; &#xB108;&#xBE44; &#xC870;&#xC808;"/>
+                    <Thumb x:Name="RightTypeColumnResizeThumb" Grid.Column="1" HorizontalAlignment="Right"
+                           Width="7" Margin="0,1,-3,1" Background="Transparent" Tag="1,1"
+                           DragDelta="OnDetailColumnResizeDragDelta"
+                           AutomationProperties.Name="&#xC624;&#xB978;&#xCABD; &#xC720;&#xD615; &#xC5F4; &#xB108;&#xBE44; &#xC870;&#xC808;"/>
+                    <Thumb x:Name="RightSizeColumnResizeThumb" Grid.Column="2" HorizontalAlignment="Right"
+                           Width="7" Margin="0,1,-3,1" Background="Transparent" Tag="1,2"
+                           DragDelta="OnDetailColumnResizeDragDelta"
+                           AutomationProperties.Name="&#xC624;&#xB978;&#xCABD; &#xD06C;&#xAE30; &#xC5F4; &#xB108;&#xBE44; &#xC870;&#xC808;"/>
                 </Grid>
                 <ListView x:Name="RightFiles" Grid.Row="3" IsDoubleTapEnabled="True"
                           ItemContainerStyle="{StaticResource ExplorerListItemStyle}"
@@ -556,24 +562,6 @@
                           DragOver="OnFileDragOver" Drop="OnFileDrop"
                           DragItemsStarting="OnFileDragItemsStarting"
                           AutomationProperties.Name="오른쪽 폴더 내용">
-                    <ListView.ContextFlyout>
-                        <MenuFlyout>
-                            <MenuFlyoutItem Text="복사" Click="OnCopySelected"/>
-                            <MenuFlyoutItem Text="이동" Click="OnMoveSelected"/>
-                            <MenuFlyoutItem Text="이름 변경" Click="OnRenameSelected"/>
-                            <MenuFlyoutSeparator/>
-                            <MenuFlyoutItem Text="Windows 클립보드로 복사"
-                                Click="OnWindowsCopy"/>
-                            <MenuFlyoutItem Text="Windows 클립보드로 잘라내기"
-                                Click="OnWindowsCut"/>
-                            <MenuFlyoutItem Text="Windows 클립보드에서 붙여넣기"
-                                Click="OnWindowsPaste"/>
-                            <MenuFlyoutItem Text="휴지통" Click="OnRecycleSelected"/>
-                            <MenuFlyoutItem Text="Windows &#xD655;&#xC7A5; &#xCEE8;&#xD14D;&#xC2A4;&#xD2B8; &#xBA54;&#xB274;"
-                            AutomationProperties.Name="Windows Shell isolated context menu"
-                            Click="OnExternalWindowsContextMenu"/>
-                        </MenuFlyout>
-                    </ListView.ContextFlyout>
                 </ListView>
                 </Grid>
             </Border>
