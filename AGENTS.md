@@ -249,7 +249,7 @@ scope. The governing principle is **no short-interval routine polling**, but
 that principle must not be used to abandon result-dependent work. If the
 current user request cannot be completed until that run succeeds or fails,
 treat the run as a blocking dependency of the current request: keep following
-it to completion at the workflow-configured observation cadence, consume the
+it through completion at the workflow-configured observation cadence, consume the
 result as soon as completion is observed, and continue the dependent action in
 the same task. The user does not need to separately ask for "active
 monitoring" just to have a run that this task depends on followed through to
