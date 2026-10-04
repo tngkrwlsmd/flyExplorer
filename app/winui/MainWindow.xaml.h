@@ -125,6 +125,9 @@ namespace winrt::FlyExplorer::implementation
         void OnNameColumnWidthChanged(
             IInspectable const&,
             Microsoft::UI::Xaml::Controls::Primitives::RangeBaseValueChangedEventArgs const&);
+        void OnDetailColumnResizeDragDelta(
+            IInspectable const&,
+            Microsoft::UI::Xaml::Controls::Primitives::DragDeltaEventArgs const&);
         void OnFileRightTapped(IInspectable const&,
             Microsoft::UI::Xaml::Input::RightTappedRoutedEventArgs const&);
         void OnFileSelectionChanged(IInspectable const&,
@@ -275,6 +278,7 @@ namespace winrt::FlyExplorer::implementation
         int DetailLayoutProfile() const;
         std::array<Microsoft::UI::Xaml::GridLength,4> DetailColumnWidths(int side) const;
         void ApplyDetailColumnLayout(int side);
+        void ShowExternalWindowsContextMenu(int side);
         void UpdateViewPresentation(int side);
         void UpdateSortPresentation(int side);
         void UpdateBreadcrumb(std::wstring const& address);
