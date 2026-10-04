@@ -44,6 +44,15 @@ struct Item final {
     bool isFolder() const noexcept {return (attributes&SFGAO_FOLDER)!=0;}
     bool isFileSystem() const noexcept {return (attributes&SFGAO_FILESYSTEM)!=0;}
 };
+
+struct IndexedItem final {
+    std::wstring label;
+    std::wstring parsingName;
+    SFGAOF attributes=0;
+    bool isFolder() const noexcept {return (attributes&SFGAO_FOLDER)!=0;}
+    bool isFileSystem() const noexcept {return (attributes&SFGAO_FILESYSTEM)!=0;}
+};
+
 constexpr std::size_t kResidentWindowEntries=2048;
 
 struct Snapshot final {
@@ -114,13 +123,22 @@ public:
     HRESULT forward() noexcept;
     HRESULT up() noexcept;
     Snapshot const& snapshot() const noexcept {return current_;}
+    std::vector<IndexedItem> const& nameIndex() const noexcept {return nameIndex_;}
+    IndexedItem const* indexedItem(std::size_t logical) const noexcept {
+        return logical<nameIndex_.size()?&nameIndex_[logical]:nullptr;
+    }
+    std::size_t indexedFrontier() const noexcept {return nameIndex_.size();}
     bool canBack() const noexcept {return !back_.empty();}
     bool canForward() const noexcept {return !forward_.empty();}
     bool historyLocations(HistoryLocations&) const noexcept;
     bool restoreHistoryPaths(HistoryPaths const&) noexcept;
 private:
+    static std::vector<IndexedItem> buildIndex(Snapshot const& snapshot);
+    HRESULT mergeIndexPage(Snapshot const& page) noexcept;
+    void replaceCurrent(Snapshot&& prepared,std::vector<IndexedItem>&& index) noexcept;
     HRESULT commit(Location next,bool record) noexcept;
     Snapshot current_;
+    std::vector<IndexedItem> nameIndex_;
     std::vector<Location> back_;
     std::vector<Location> forward_;
 };
