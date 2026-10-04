@@ -1,5 +1,5 @@
 {
-  "request_id": "large-folder-name-index-source-log-002",
+  "request_id": "large-folder-name-index-source-log-003",
   "expected_main_sha": "d50f01e8ccecb800f0dbac6c0b9f550e9cb25e49",
   "candidate_sha": "12c21384e8dd2c8ba34ec3480c70133182857a10",
   "logical_unit": "large-folder-name-index-source-log",
@@ -10,8 +10,6 @@
   "invalidated_evidence": {
     "source": "Diagnostic read only of previous source log; no source tests are rerun."
   },
-  "retry_reason": "Previous diagnostic request was rejected by control-plane validation_kind schema before command execution.",
-  "retry_revision": "12c21384e8dd2c8ba34ec3480c70133182857a10",
   "working_directory": "C:\\dev\\flyExplorer",
   "command": "$ErrorActionPreference = \"Stop\"\n$log = Get-ChildItem -LiteralPath \"C:\\dev\\flyExplorer\\logs\\winui-scoped\" -Filter \"*-source.log\" -File |\n  Sort-Object LastWriteTime -Descending |\n  Select-Object -First 1\nif (-not $log) { throw \"source log missing\" }\nWrite-Host (\"SOURCE_LOG=\" + $log.FullName)\nGet-Content -LiteralPath $log.FullName |\n  Select-String -Pattern \"FAIL:\",\"ERROR:\",\"AssertionError\",\"Traceback\",\"test_\" -Context 1,4 |\n  ForEach-Object { Write-Host $_.ToString() }\n"
 }
