@@ -146,6 +146,12 @@
                         Click="OnToggleSearch">
                     <FontIcon Glyph="&#xE721;" FontSize="14"/>
                 </Button>
+                <Button x:Name="FilterRulePanelButton" Style="{StaticResource ExplorerIconButtonStyle}"
+                        ToolTipService.ToolTip="필터 프리셋"
+                        AutomationProperties.Name="필터 프리셋 관리 열기"
+                        Click="OnToggleFilterRules">
+                    <FontIcon Glyph="&#xE71C;" FontSize="14"/>
+                </Button>
             </StackPanel>
         </Grid>
         <Grid Grid.Row="3" MinHeight="32" Padding="10,1,10,2" ColumnSpacing="4"
@@ -208,6 +214,38 @@
                         Click="OnImportBookmarks"
                         AutomationProperties.Name="기존 flyExplorer 북마크 가져오기"/>
                 <TextBlock Text="기존 프로필은 자동으로 읽지 않습니다"
+                           VerticalAlignment="Center" Opacity="0.65"/>
+            </StackPanel>
+        </StackPanel>
+        <StackPanel Grid.Row="4" x:Name="FilterRulePanel" Visibility="Collapsed"
+                    Spacing="6" Padding="14,3,14,6">
+            <StackPanel Orientation="Horizontal" Spacing="7">
+                <TextBlock Text="필터 프리셋:" VerticalAlignment="Center"/>
+                <ComboBox x:Name="FilterRuleManagerBox" Width="200"
+                          PlaceholderText="저장된 규칙 선택"
+                          SelectionChanged="OnFilterRuleSelectionChanged"
+                          AutomationProperties.Name="저장된 필터 프리셋"/>
+                <TextBox x:Name="FilterRuleNameEdit" Width="190" MaxLength="56"
+                         PlaceholderText="규칙 이름"
+                         AutomationProperties.Name="필터 프리셋 이름"/>
+                <Button x:Name="FilterRuleNewButton" Content="새 규칙"
+                        Click="OnNewFilterRule"
+                        AutomationProperties.Name="새 필터 프리셋 작성"/>
+                <Button x:Name="FilterRuleSaveButton" Content="저장"
+                        Click="OnSaveFilterRule"
+                        AutomationProperties.Name="필터 프리셋 저장"/>
+                <Button x:Name="FilterRuleDeleteButton" Content="삭제"
+                        Click="OnDeleteFilterRule"
+                        AutomationProperties.Name="선택한 필터 프리셋 삭제"/>
+            </StackPanel>
+            <StackPanel Orientation="Horizontal" Spacing="7">
+                <TextBox x:Name="FilterRuleMasksEdit" Width="430" MaxLength="260"
+                         PlaceholderText="예: *.cpp;*.h 또는 이름 일부"
+                         AutomationProperties.Name="필터 이름 또는 마스크 규칙"/>
+                <Button x:Name="FilterRuleApplyButton" Content="활성 창에 적용"
+                        Click="OnApplyFilterRule"
+                        AutomationProperties.Name="현재 활성 창에 필터 프리셋 적용"/>
+                <TextBlock Text="* ? ;가 있으면 마스크 집합, 없으면 기존 이름 포함 필터"
                            VerticalAlignment="Center" Opacity="0.65"/>
             </StackPanel>
         </StackPanel>

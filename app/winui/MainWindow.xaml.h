@@ -19,6 +19,7 @@
 #include "../../src/base/shell_navigation_core.h"
 #include "../../src/base/explorer_ui_state.h"
 #include "../../src/base/bookmark_store.h"
+#include "../../src/base/filter_rule_store.h"
 #include "m19_workspace.h"
 #include "m19_search.h"
 #include <array>
@@ -80,6 +81,13 @@ namespace winrt::FlyExplorer::implementation
         void OnRenameBookmark(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
         void OnDeleteBookmark(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
         void OnImportBookmarks(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
+        void OnToggleFilterRules(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
+        void OnFilterRuleSelectionChanged(IInspectable const&,
+            Microsoft::UI::Xaml::Controls::SelectionChangedEventArgs const&);
+        void OnNewFilterRule(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
+        void OnSaveFilterRule(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
+        void OnApplyFilterRule(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
+        void OnDeleteFilterRule(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
         void OnToggleWorkspaces(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
         void OnSaveWorkspace(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
         void OnOpenWorkspace(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
@@ -228,6 +236,10 @@ namespace winrt::FlyExplorer::implementation
         void InitializeBookmarks();
         void RefreshBookmarks();
         void RefreshBookmarkManager(int selected);
+        fxfile::filterrules::Store mFilterRules{};
+        bool mPopulatingFilterRules=false;
+        void InitializeFilterRules();
+        void RefreshFilterRuleManager(int selected);
         fxfile::previewsearch::SearchController mSearchController{};
         bool mPopulatingRecents=false;
         void EnsureExpandedPanelFits();

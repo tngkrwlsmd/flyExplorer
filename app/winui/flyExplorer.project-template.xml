@@ -128,6 +128,7 @@
     </ClInclude>
     <ClInclude Include="..\..\src\base\ui_preferences.h" />
     <ClInclude Include="..\..\src\base\bookmark_store.h" />
+    <ClInclude Include="..\..\src\base\filter_rule_store.h" />
     <ClInclude Include="..\..\src\base\file_command_core.h" />
     <ClInclude Include="FileToolbar.xaml.h">
       <DependentUpon>FileToolbar.xaml</DependentUpon>
@@ -201,6 +202,9 @@
     <ClCompile Include="bookmark_features.cpp">
       <PrecompiledHeader>Use</PrecompiledHeader>
     </ClCompile>
+    <ClCompile Include="filter_rule_features.cpp">
+      <PrecompiledHeader>Use</PrecompiledHeader>
+    </ClCompile>
     <ClCompile Include="m19_workspace.cpp">
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
     </ClCompile>
@@ -256,6 +260,9 @@
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="..\..\src\base\bookmark_store.cpp">
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="..\..\src\base\filter_rule_store.cpp">
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="..\..\src\base\file_command_core.cpp">

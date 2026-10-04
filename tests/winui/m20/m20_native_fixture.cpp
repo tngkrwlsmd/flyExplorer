@@ -2,6 +2,7 @@
 #include "../../../src/base/explorer_ui_state.h"
 #include "../../../app/winui/workspace_restore_coordinator.h"
 #include "../../../src/base/bookmark_store.h"
+#include "../../../src/base/filter_rule_store.h"
 #include <windows.h>
 #include <cstdio>
 #include <cstdint>
@@ -201,6 +202,65 @@ int main(){
        capacity.add(L"초과",L"C:\\Cap\\overflow")==BookmarkResult::Full,
        "bookmark_bounded_100_items");
 
+ using FilterStore=fxfile::filterrules::Store;
+ using FilterResult=fxfile::filterrules::MutationResult;
+ FilterStore filters;
+ check(filters.items().empty(),"filter_rule_empty_store");
+ check(filters.add(L"코드 파일",L" *.cpp ; *.h ")==FilterResult::Applied&&
+       filters.items().size()==1&&filters.items()[0].masks==L"*.cpp;*.h",
+       "filter_rule_add_and_normalize");
+ check(filters.add(L"코드 파일",L"*.txt")==FilterResult::Duplicate,
+       "filter_rule_duplicate_name_rejected");
+ check(filters.add(L"잘못됨",L"*.cpp;;*.h")==FilterResult::Invalid,
+       "filter_rule_reject_empty_mask");
+ check(FilterStore::matches(L"Quarterly-REPORT.txt",L"report")&&
+       !FilterStore::matches(L"Quarterly-REPORT.txt",L"photo"),
+       "filter_rule_literal_substring_compat");
+ check(FilterStore::matches(L"sample.CPP",L"*.cpp;*.h")&&
+       FilterStore::matches(L"sample.h",L"*.cpp;*.h")&&
+       !FilterStore::matches(L"sample.txt",L"*.cpp;*.h"),
+       "filter_rule_wildcard_set_case_insensitive");
+ check(FilterStore::matches(L"photo1.JPG",L"photo?.jpg")&&
+       !FilterStore::matches(L"photo10.JPG",L"photo?.jpg"),
+       "filter_rule_question_wildcard");
+ check(filters.update(0,L"문서",L"*.txt;*.md")==FilterResult::Applied&&
+       filters.items()[0].name==L"문서"&&
+       filters.items()[0].masks==L"*.txt;*.md",
+       "filter_rule_update");
+
+ const auto filterFile=bookmarkRoot+L"\\filter-rules.txt";
+ FilterStore filterReloaded;
+ check(filters.saveTo(filterFile)&&filterReloaded.loadFrom(filterFile)&&
+       filterReloaded.items().size()==1&&
+       filterReloaded.items()[0].name==L"문서"&&
+       filterReloaded.items()[0].masks==L"*.txt;*.md",
+       "filter_rule_atomic_save_reload");
+
+ const auto filterCorrupt=bookmarkRoot+L"\\filter-corrupt.txt";
+ const char filterBad[]="schema=9\r\nbad";
+ const auto filterBefore=filterReloaded.items().size();
+ check(writeOwned(filterCorrupt,filterBad,sizeof(filterBad)-1)&&
+       !filterReloaded.loadFrom(filterCorrupt)&&
+       filterReloaded.items().size()==filterBefore,
+       "filter_rule_corrupt_load_preserves_model");
+ check(filterReloaded.erase(0)&&filterReloaded.items().empty(),
+       "filter_rule_delete");
+
+ FilterStore filterCapacity;
+ bool filterFilled=true;
+ for(std::size_t i=0;i<FilterStore::kMaxItems;++i){
+  if(filterCapacity.add(L"규칙 "+std::to_wstring(i),
+       L"*.x"+std::to_wstring(i))!=FilterResult::Applied){
+   filterFilled=false;break;
+  }
+ }
+ check(filterFilled&&
+       filterCapacity.items().size()==FilterStore::kMaxItems&&
+       filterCapacity.add(L"초과",L"*.overflow")==FilterResult::Full,
+       "filter_rule_bounded_20_items");
+
+ ::DeleteFileW(filterFile.c_str());
+ ::DeleteFileW(filterCorrupt.c_str());
  ::DeleteFileW(bookmarkFile.c_str());
  ::DeleteFileW(corruptFile.c_str());
  ::DeleteFileW(legacyFile.c_str());

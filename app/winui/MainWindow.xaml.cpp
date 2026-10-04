@@ -180,6 +180,7 @@ namespace winrt::FlyExplorer::implementation
         });
         mPreferencesCoordinator.load();
         InitializeBookmarks();
+        InitializeFilterRules();
         auto const& preferences=mPreferencesCoordinator.current();
         const auto initialView=(std::clamp)(preferences.defaultViewMode,0,4);
         for(auto& state:ActiveWindowTab().fileLists)state.viewMode=static_cast<FileViewMode>(initialView);
@@ -772,16 +773,11 @@ namespace winrt::FlyExplorer::implementation
             return mode==1?lessName(rhs,lhs):lessName(lhs,rhs);
         });
         if(!state.filenameFilter.empty()){
-            auto matches=[&](size_t index){
-                auto const& label=items[index].label;
-                auto const& query=state.filenameFilter;
-                return std::search(label.begin(),label.end(),
-                    query.begin(),query.end(),[](wchar_t a,wchar_t b){
-                    return ::towlower(a)==::towlower(b);
-                })!=label.end();
-            };
             order.erase(std::remove_if(order.begin(),order.end(),
-                [&](size_t index){return !matches(index);}),order.end());
+                [&](size_t index){
+                    return !fxfile::filterrules::Store::matches(
+                        items[index].label,state.filenameFilter);
+                }),order.end());
         }
         state.filteredCount=order.size();
         button.Visibility(order.size()>state.visibleCount?

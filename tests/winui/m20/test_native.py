@@ -14,7 +14,7 @@ conf,before=snapshot_legacy_profile()
 result=subprocess.run([str(exe)],cwd=exe.parent,capture_output=True,
     text=True,errors="replace",timeout=20)
 assert result.returncode==0,(result.returncode,result.stdout,result.stderr)
-assert "M20_NATIVE_SUMMARY 36 passed, 0 failed." in result.stdout,result.stdout
+assert "M20_NATIVE_SUMMARY 48 passed, 0 failed." in result.stdout,result.stdout
 assert_legacy_profile_unchanged(conf,before)
-print("M20_STANDALONE_NATIVE_"+config+"_36_PASS",True)
+print("M20_STANDALONE_NATIVE_"+config+"_48_PASS",True)
 print("M20_LEGACY_USER_PROFILE_SENTINEL_UNCHANGED",True,"PRESENT",present_count(before))

@@ -155,6 +155,7 @@ void MainWindow::OnToggleBookmarks(
         ? Visibility::Visible : Visibility::Collapsed;
     WorkspacePanel().Visibility(Visibility::Collapsed);
     SearchPanel().Visibility(Visibility::Collapsed);
+    FilterRulePanel().Visibility(Visibility::Collapsed);
     BookmarkPanel().Visibility(next);
     if (next == Visibility::Visible) {
         RefreshBookmarkManager(BookmarkManagerBox().SelectedIndex());
