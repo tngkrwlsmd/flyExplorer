@@ -1,5 +1,5 @@
 {
-  "request_id": "validation-churn-guards-premain-001",
+  "request_id": "validation-churn-guards-premain-002",
   "expected_main_sha": "9549dae8ad20191eb7454f724a8f4e19ca9d7bdc",
   "working_directory": "C:\\dev\\flyExplorer",
   "command": "$ErrorActionPreference = \"Stop\"\ngit fetch origin main work/validation-churn-guards --no-tags --prune\nif ($LASTEXITCODE -ne 0) { throw \"fetch failed\" }\nif ((git rev-parse origin/main).Trim() -ne \"9549dae8ad20191eb7454f724a8f4e19ca9d7bdc\") { throw \"main moved\" }\nif ((git status --short).Count -ne 0) { throw \"dirty persistent checkout\" }\ngit checkout work/validation-churn-guards\nif ($LASTEXITCODE -ne 0) { throw \"checkout candidate failed\" }\ngit merge --ff-only origin/work/validation-churn-guards\nif ($LASTEXITCODE -ne 0) { throw \"candidate fast-forward failed\" }\npython -X utf8 tests\\winui\\test_remote_windows_task_contract.py\nif ($LASTEXITCODE -ne 0) { throw \"focused remote workflow contract failed\" }\ngit diff --check origin/main..HEAD\nif ($LASTEXITCODE -ne 0) { throw \"diff check failed\" }\nWrite-Host \"VALIDATION_CHURN_GUARDS_PREMAIN_PASS\"\n"
