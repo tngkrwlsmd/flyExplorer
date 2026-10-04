@@ -78,5 +78,13 @@ class RealFileListColumnContract(unittest.TestCase):
                 "REAL_M24_OWNED_FILE_ROW_AND_COLUMN_ACCESSIBLE_NAMES"):
    self.assertIn(token,owned)
   self.assertNotIn('"?.txt"',owned)
+  resize=(ROOT/"tests/winui/test_owned_column_resize_gui.py").read_text(
+      encoding="utf-8")
+  for token in ("LeftNameColumnResizeThumb","LeftTypeColumnResizeThumb",
+                "LeftSizeColumnResizeThumb","mouse.press(button=\"left\"",
+                "OWNED_DETAIL_COLUMN_NAME_RESIZE",
+                "OWNED_DETAIL_COLUMN_TYPE_RESIZE",
+                "OWNED_DETAIL_COLUMN_SIZE_RESIZE"):
+   self.assertIn(token,resize)
 
 if __name__=="__main__":unittest.main()
