@@ -93,15 +93,25 @@ immediately; the three-minute rule is a maximum wait budget, not a requirement
 to sleep after a run is already known to be complete.
 
 For Actions specifically:
+- **before writing `requests/remote-shell/request.json` or pushing
+  `control/remote-shell`, query the recent Remote Windows Task runs.** If any
+  run is `queued`, `pending`, `waiting`, `requested` or
+  `in_progress`, the request slot is leased by that run: do not submit,
+  replace or pre-stage a successor request. This pre-dispatch check is required
+  because workflow-side duplicate/fingerprint rejection still consumes queue
+  time on the single self-hosted runner;
 - after triggering or observing a long run, record run ID, target SHA, scope and
   start/current state;
 - do not issue short-interval status reads while the normal runtime has not
-  plausibly elapsed;
-- for a normal sub-three-minute build, do not declare a resume checkpoint merely
-  because the first read still says running; allow the at-most-three-minute
-  wait budget and then make the final read;
-- make at most one later final/blocking status/log read unless new evidence
-  indicates an actual stall or a distinct failure hypothesis;
+  plausibly elapsed. The first routine status read is no earlier than three
+  minutes after submission unless completion is independently known;
+- the three-minute rule is a no-polling window, not a three-minute polling
+  interval. If the first post-window read still says queued/running, end the
+  response with the exact resume checkpoint. Do not keep the same turn alive
+  with second/third/fourth status reads;
+- a second same-turn read is allowed only when a tool has produced a genuine
+  completion signal, the user explicitly asks for current status, or a distinct
+  failure hypothesis requires one bounded log read;
 - if that read still shows queued/running, end the response with the resume
   checkpoint rather than holding the chat turn open indefinitely;
 - on resume, query current main/ref, the recorded run, artifacts and cleanup
@@ -110,6 +120,20 @@ For Actions specifically:
   disconnected;
 - for the same apparent failure, inspect the first relevant error and change
   the hypothesis before rerunning.
+
+Remote validation chain budget:
+- one logical unit normally gets one primary Windows validation run;
+- after that run completes with an identified failure, one focused successor is
+  allowed after the relevant product/harness/environment change is committed;
+- a third Windows validation run for the same logical unit requires explicit
+  user approval before any control-branch request commit;
+- never queue a successor while its predecessor is active, even if a harness
+  fix has already been prepared;
+- expensive 8,000+ or 20,000+ real-file GUI fixtures are final acceptance, not
+  harness development. Smoke the same UI/control lifecycle on the smallest
+  useful fixture first. If the expensive run reveals a harness-only defect,
+  preserve product build/native PASS evidence and rerun only GUI/visual in the
+  single focused successor.
 
 Normal direct-main pushes do **not** trigger the Windows VM workflow.
 `.github/workflows/windows-build.yml` is manual `workflow_dispatch` only.

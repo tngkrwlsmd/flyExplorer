@@ -212,17 +212,43 @@ one-off build. Its default manual scope is `release`; `release-gui` and
 `full` are exceptional explicit choices.
 
 Do not keep one ChatGPT response alive by repeatedly polling a long Actions
-run. After starting a build or remote task, record its run ID, target commit and
-scope. For work that normally finishes within a few minutes, give it up to
-three minutes of normal runtime before concluding that it is still running.
-Do not replace that wait with rapid polling: establish the run once, then make
-one final/blocking read near the end of that window or earlier only when a
-genuinely blocking signal is available. If it is still queued/running after
-that at-most-three-minute wait, stop the turn with a precise resume checkpoint
-instead of waiting indefinitely. On a later "continue the interrupted work"
-request, first read current main/ref state, the recorded run, relevant artifacts
-and cleanup state; reuse completed evidence for the same revision/configuration
-rather than rerunning it.
+run. A Remote Windows Task has a **pre-dispatch lease**: before writing
+`requests/remote-shell/request.json` or pushing the control branch, query the
+recent `control/remote-shell` Actions runs. If any Remote Windows Task is
+`queued`, `pending`, `waiting`, `requested` or `in_progress`, do not
+modify the request slot and do not create a successor request. Record that run
+ID and either wait for the normal observation point or leave a resume
+checkpoint. This check must happen before the request commit because
+workflow-side fingerprint rejection is too late to prevent queue/runner waste.
+
+After starting a build or remote task, record its run ID, target commit and
+scope. The first routine status read must be **no earlier than three minutes**
+after submission for work that is not already known complete; the three-minute
+rule is not a polling interval. Do not issue repeated status/log reads during
+that window. At the first read after that window, if the run is still
+queued/running, stop the turn with a precise resume checkpoint instead of
+continuing to poll. A second same-turn read is allowed only when a tool has
+returned a genuine completion signal or the user explicitly asks for current
+status. On a later "continue the interrupted work" request, first read current
+main/ref state, the recorded run, relevant artifacts and cleanup state; reuse
+completed evidence for the same revision/configuration rather than rerunning it.
+
+For one logical unit, the normal Windows validation budget is one primary Windows validation run.
+After a diagnosed failure, at most one focused successor may be submitted after
+the predecessor has completed and the concrete product/harness/environment
+change is committed. A **third Windows validation run for the same logical
+unit requires explicit user approval before any request commit**. Never queue a
+speculative successor while its predecessor is active. Harness-only fixes may
+be prepared locally while waiting, but the request slot stays untouched until
+the active run is complete and its first relevant failure is known.
+
+Expensive real-file GUI fixtures (including 8,000+ and 20,000+ folder probes)
+are final acceptance tools, not harness-debug loops. Prove the harness/control
+lifecycle first with the smallest fixture that exercises the same interaction,
+then run the expensive fixture once. If that expensive run exposes a harness
+bug after product build/native evidence has passed, preserve those PASS stages,
+fix and smoke-test the harness cheaply, and use the single focused successor
+only for the invalidated GUI/visual boundary.
 
 For iterative Windows development, GUI work and Windows 11 benchmarking,
 prefer this repository's fixed `control/remote-shell` request slot. Update
