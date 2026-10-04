@@ -435,6 +435,18 @@ namespace winrt::FlyExplorer::implementation
         if(completeFolder){
             state.streamToComplete=true;
             state.fullModelLimitReached=false;
+            const auto completeLimit=static_cast<std::size_t>(
+                fxfile::isolation::kMaxCompleteModelEntries);
+            const bool atCompleteLimit=
+                snapshot.nextOffset>completeLimit||
+                (snapshot.nextOffset==completeLimit&&snapshot.truncated);
+            const bool nameIndexEligible=
+                state.sortMode<=1&&
+                (state.indexedNameSort||!state.filenameFilter.empty());
+            if(!state.indexToComplete&&atCompleteLimit&&nameIndexEligible){
+                state.indexToComplete=true;
+                state.indexedNameProjection=true;
+            }
             const auto limit=static_cast<std::size_t>(
                 state.indexToComplete?
                     fxfile::isolation::kMaxBrowseEntries:
