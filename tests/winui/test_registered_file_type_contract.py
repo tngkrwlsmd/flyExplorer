@@ -53,19 +53,26 @@ class RealFileListColumnContract(unittest.TestCase):
   impl=(A/"MainWindow.xaml.cpp").read_text(encoding="utf-8")
   state=(A/"file_list_state.h").read_text(encoding="utf-8")
   for item in ("LeftNameWidthSlider","RightNameWidthSlider",
-               "OnNameColumnWidthChanged","LeftNameHeaderColumn",
-               "RightNameHeaderColumn"):
+               "OnNameColumnWidthChanged","OnDetailColumnResizeDragDelta",
+               "LeftNameHeaderColumn","RightNameHeaderColumn",
+               "LeftNameColumnResizeThumb","LeftTypeColumnResizeThumb",
+               "LeftSizeColumnResizeThumb","RightNameColumnResizeThumb",
+               "RightTypeColumnResizeThumb","RightSizeColumnResizeThumb"):
    self.assertIn(item,xml)
   import xml.etree.ElementTree as ET
   root=ET.parse(A/"MainWindow.xaml").getroot()
   labels={value for element in root.iter() for value in element.attrib.values()}
   for label in ("\uc774\ub984","\uc720\ud615","\ud06c\uae30","\uc218\uc815 \ub0a0\uc9dc"):
    self.assertIn(label,labels)
-  for item in ("mColumnControlsReady","nameColumnWidth","FontIcon glyph;",
+  for item in ("mColumnControlsReady","nameColumnWidth","typeColumnWidth",
+               "sizeColumnWidth","FontIcon glyph;",
                "Grid::SetColumn(field,col);","AutomationProperties::SetName(",
-               "OnNameColumnWidthChanged("):
+               "OnNameColumnWidthChanged(","OnDetailColumnResizeDragDelta(",
+               "grid.ColumnDefinitions().GetAt(column).Width(widths[column])"):
    self.assertIn(item,impl)
   self.assertIn("double nameColumnWidth=168.0",state)
+  self.assertIn("double typeColumnWidth=180.0",state)
+  self.assertIn("double sizeColumnWidth=80.0",state)
   owned=(ROOT/"tests/winui/test_m22_gui.py").read_text(encoding="utf-8")
   for token in ("GetDpiForWindow","SystemParametersInfoW",
                 "REAL_M24_OWNED_FILE_ROW_AND_COLUMN_ACCESSIBLE_NAMES"):
