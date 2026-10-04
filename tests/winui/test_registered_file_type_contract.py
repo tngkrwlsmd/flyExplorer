@@ -57,7 +57,10 @@ class RealFileListColumnContract(unittest.TestCase):
                "LeftNameHeaderColumn","RightNameHeaderColumn",
                "LeftNameColumnResizeThumb","LeftTypeColumnResizeThumb",
                "LeftSizeColumnResizeThumb","RightNameColumnResizeThumb",
-               "RightTypeColumnResizeThumb","RightSizeColumnResizeThumb"):
+               "RightTypeColumnResizeThumb","RightSizeColumnResizeThumb",
+               "LeftNameColumnResizeHitTarget","LeftTypeColumnResizeHitTarget",
+               "LeftSizeColumnResizeHitTarget","RightNameColumnResizeHitTarget",
+               "RightTypeColumnResizeHitTarget","RightSizeColumnResizeHitTarget"):
    self.assertIn(item,xml)
   import xml.etree.ElementTree as ET
   root=ET.parse(A/"MainWindow.xaml").getroot()
@@ -67,8 +70,9 @@ class RealFileListColumnContract(unittest.TestCase):
   for item in ("mColumnControlsReady","nameColumnWidth","typeColumnWidth",
                "sizeColumnWidth","FontIcon glyph;",
                "Grid::SetColumn(field,col);","AutomationProperties::SetName(",
-               "OnNameColumnWidthChanged(","RootShell().AddHandler(",
-               "IsLeftButtonPressed()",
+               "OnNameColumnWidthChanged(","ColumnResizeHitTarget",
+               "IsLeftButtonPressed()","CapturePointer(args.Pointer())",
+               "ReleasePointerCapture(args.Pointer())",
                "ApplyDetailColumnLayout(mDetailColumnPointerSide);",
                "grid.ColumnDefinitions().GetAt(column).Width(widths[column])"):
    self.assertIn(item,impl)
@@ -77,6 +81,9 @@ class RealFileListColumnContract(unittest.TestCase):
                "OnDetailColumnResizePointerReleased(",
                "OnDetailColumnResizePointerCaptureLost("):
    self.assertIn(item,impl)
+  self.assertEqual(xml.count('PointerPressed="OnDetailColumnResizePointerPressed"'),6)
+  self.assertEqual(xml.count('PointerMoved="OnDetailColumnResizePointerMoved"'),6)
+  self.assertNotIn("RootShell().AddHandler(",impl)
   self.assertNotIn("OnDetailColumnResizeDragDelta",xml)
   self.assertNotIn("OnDetailColumnResizeDragDelta",impl)
   self.assertIn("double nameColumnWidth=168.0",state)
