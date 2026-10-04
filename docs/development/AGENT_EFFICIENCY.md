@@ -86,11 +86,15 @@ Do not poll every few seconds, alternate status/log-tail probes, or repeatedly
 read the same run while it is normally progressing.
 
 For builds/remote tasks whose expected runtime is within a few minutes, the
-normal wait budget is up to three minutes. Establish the run once, let it run
-normally, and make one final/blocking read near the end of that window instead
-of repeatedly checking it. Completion observed earlier may be consumed
-immediately; the three-minute rule is a maximum wait budget, not a requirement
-to sleep after a run is already known to be complete.
+default first active GitHub status read is no earlier than three minutes after
+submission unless completion is independently known. This is an anti-polling
+floor, not a sleep requirement: establish the run once and make one
+final/blocking read when the default observation point is reached. Completion
+observed earlier may be consumed immediately. If the user explicitly requests
+active monitoring for the current run, that request overrides the default
+three-minute floor for that task only; poll no more frequently than every
+30 seconds, stop immediately on completion, and do not create a scheduled or
+automation task merely to bridge the observation window.
 
 For Actions specifically:
 - **before writing `requests/remote-shell/request.json` or pushing
@@ -102,13 +106,17 @@ For Actions specifically:
   time on the single self-hosted runner;
 - after triggering or observing a long run, record run ID, target SHA, scope and
   start/current state;
-- do not issue short-interval status reads while the normal runtime has not
-  plausibly elapsed. The first routine status read is no earlier than three
-  minutes after submission unless completion is independently known;
-- the three-minute rule is a no-polling window, not a three-minute polling
-  interval. If the first post-window read still says queued/running, end the
-  response with the exact resume checkpoint. Do not keep the same turn alive
-  with second/third/fourth status reads;
+- by default, do not issue short-interval status reads while the normal runtime
+  has not plausibly elapsed. The first routine active status read is no earlier
+  than three minutes after submission unless completion is independently known;
+- when the user explicitly asks for active monitoring of the current run,
+  30-second polling is allowed for that task only. Do not poll more frequently,
+  stop as soon as completion is observed, and do not replace this with an
+  unsolicited scheduled/automation task;
+- without that explicit active-monitoring request, the three-minute rule is an
+  anti-polling floor rather than a polling interval. If the first post-floor
+  read still says queued/running, end the response with the exact resume
+  checkpoint. Do not keep the same turn alive with repeated status reads;
 - a second same-turn read is allowed only when a tool has produced a genuine
   completion signal, the user explicitly asks for current status, or a distinct
   failure hypothesis requires one bounded log read;

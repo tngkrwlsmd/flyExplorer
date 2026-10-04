@@ -26,7 +26,7 @@ consumer core; this PROJECT.md remains project-owned across bundle refreshes.
     {"name": "winui-tests", "path": "tests/winui", "responsibility": "source, native and owned GUI contracts"}
   ],
   "review": {
-    "reviewed_revision": "f7f3674e5271c17652a865cf2ed499185983d1eb",
+    "reviewed_revision": "1d3df0f1eb6fe93aee018161a7c0ea19e59137da",
     "reviewed_at": "2026-10-04",
     "reviewed_paths": [
       "app/winui",
@@ -246,11 +246,22 @@ directly invalidates that fixture's result.
   create a successor request. Record the active run ID and wait/resume from it.
   Workflow-side fingerprint rejection is only a second line of defense because
   it occurs after scheduling and cannot recover queue time already consumed.
-- The first routine status read after submitting a remote task is no earlier
-  than three minutes unless completion is independently known. Three minutes is
-  not a polling cadence. If that read still shows the run active, stop with a
+- The first routine **active GitHub status read** after submitting a remote
+  task is no earlier than three minutes unless completion is independently
+  known. The three-minute floor prevents polling; it is **not** a required
+  sleep/wait period and must not keep a response open just to consume time.
+  User-reported completion/failure, a genuine tool completion signal, or another
+  already-available completion signal permits immediate inspection. If
+  completion is not known, leave the exact run ID as a resume checkpoint.
+  Never create a scheduled/automation task solely to bridge this observation
+  window unless the user explicitly requested scheduled or recurring follow-up.
+  If the first permitted routine read still shows the run active, stop with a
   resume checkpoint rather than issuing additional status/log reads in the
-  same turn.
+  same turn. When the user explicitly requests active monitoring for the
+  current run, that request overrides the routine three-minute floor for that
+  task only: query no more frequently than every 30 seconds, stop on
+  completion, and do not create a scheduled/automation task unless the user
+  separately requests one.
 - One logical unit gets one primary Windows validation run. After a diagnosed
   failure, one focused successor is allowed only after the predecessor is
   complete and the concrete fix is committed. A third Windows validation run
@@ -262,9 +273,11 @@ directly invalidates that fixture's result.
   product build/native PASS, keep those PASS stages, fix and smoke the harness
   cheaply, then spend the single focused successor on GUI/visual only.
 - For normal builds or remote tasks expected to finish within a few minutes,
-  allow up to three minutes before the status read. Avoid short-interval
-  polling; after that read, either act on the result or leave the exact run ID
-  as the resume point.
+  do not actively query GitHub status before the three-minute routine-read
+  floor unless completion is independently known. Do not sleep for three
+  minutes as a workflow step, and do not replace the wait with an unsolicited
+  scheduled task. After an allowed read, either act on the completed result or
+  leave the exact active run ID as the resume point.
 - Main-branch pushes do not trigger Windows validation automatically. After a
   logical unit is already accepted and moved to main, do not dispatch another
   Windows CI run just to reconfirm it. A post-main manual gate requires a

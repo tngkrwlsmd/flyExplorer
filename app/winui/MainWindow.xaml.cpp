@@ -1,4 +1,5 @@
 #include "pch.h"
+#include <winrt/Microsoft.UI.Input.h>
 #include "MainWindow.xaml.h"
 #include "../../src/base/shell_assoc_type_core.h"
 #include "../../src/base/shell_thumbnail_core.h"
@@ -9,6 +10,7 @@
 #include "../../src/base/file_operation_core.h"
 #include "../../src/base/shell_isolation_wire.h"
 #include <algorithm>
+#include <cmath>
 #include <cwchar>
 #include <cwctype>
 #include <thread>
@@ -90,6 +92,22 @@ namespace winrt::FlyExplorer::implementation
     MainWindow::MainWindow()
     {
         InitializeComponent();
+        using Microsoft::UI::Xaml::Input::PointerEventHandler;
+        RootShell().AddHandler(
+            UIElement::PointerPressedEvent(),
+            winrt::box_value(PointerEventHandler{
+                this,&MainWindow::OnDetailColumnResizePointerPressed}),
+            true);
+        RootShell().AddHandler(
+            UIElement::PointerReleasedEvent(),
+            winrt::box_value(PointerEventHandler{
+                this,&MainWindow::OnDetailColumnResizePointerReleased}),
+            true);
+        RootShell().AddHandler(
+            UIElement::PointerCaptureLostEvent(),
+            winrt::box_value(PointerEventHandler{
+                this,&MainWindow::OnDetailColumnResizePointerCaptureLost}),
+            true);
         // M2.6 uses the public WinUI 3 custom-titlebar/backdrop path only.
         // Pane-local folder TabViews remain inside each pane; the titlebar now
         // hosts a separate functional WindowTab workspace strip.
@@ -735,9 +753,133 @@ namespace winrt::FlyExplorer::implementation
                  name==L"RightNameWidthSlider"?1:-1;
         if(side<0)return;
         auto width=slider.Value();
-        if(width<120||width>320)return;
+        if(width<120||width>360)return;
         ActiveWindowTab().fileLists[side].nameColumnWidth=width;
-        if(mColumnControlsReady)FillFiles(side);
+        if(mColumnControlsReady)ApplyDetailColumnLayout(side);
+    }
+    void MainWindow::OnDetailColumnResizePointerPressed(
+        IInspectable const&,
+        Microsoft::UI::Xaml::Input::PointerRoutedEventArgs const& args){
+        const auto point=args.GetCurrentPoint(RootShell());
+        const auto position=point.Position();
+        const bool diagnostic=
+            ::GetEnvironmentVariableW(
+                L"FLYEXPLORER_COLUMN_RESIZE_DIAGNOSTIC",nullptr,0)>0;
+        if(diagnostic)StatusText().Text(L"RESIZE_PRESS");
+        int side=-1;
+        int column=-1;
+        auto hitThumb=[&](
+            int candidateSide,
+            int candidateColumn,
+            Microsoft::UI::Xaml::Controls::Primitives::Thumb const& thumb){
+            if(thumb.Visibility()!=Visibility::Visible||
+               thumb.ActualWidth()<=0.0||thumb.ActualHeight()<=0.0)return false;
+            const auto origin=thumb.TransformToVisual(RootShell()).TransformPoint(
+                Windows::Foundation::Point{0.0f,0.0f});
+            constexpr double pad=2.0;
+            if(position.X<origin.X-pad||
+               position.X>origin.X+thumb.ActualWidth()+pad||
+               position.Y<origin.Y-pad||
+               position.Y>origin.Y+thumb.ActualHeight()+pad)return false;
+            side=candidateSide;
+            column=candidateColumn;
+            return true;
+        };
+        if(!hitThumb(0,0,LeftNameColumnResizeThumb())&&
+           !hitThumb(0,1,LeftTypeColumnResizeThumb())&&
+           !hitThumb(0,2,LeftSizeColumnResizeThumb())&&
+           !hitThumb(1,0,RightNameColumnResizeThumb())&&
+           !hitThumb(1,1,RightTypeColumnResizeThumb())&&
+           !hitThumb(1,2,RightSizeColumnResizeThumb())){
+            if(diagnostic)StatusText().Text(L"RESIZE_MISS");
+            return;
+        }
+        if(diagnostic)StatusText().Text(
+            hstring(L"RESIZE_HIT "+std::to_wstring(side)+L","+
+                std::to_wstring(column)));
+        POINT cursor{};
+        if(!::GetCursorPos(&cursor)){
+            if(diagnostic)StatusText().Text(L"RESIZE_CURSOR_FAIL");
+            return;
+        }
+        if(ActiveWindowTab().model.activePane!=side)ActivatePane(side);
+        mDetailColumnPointerDrag=true;
+        mDetailColumnPointerSide=side;
+        mDetailColumnPointerColumn=column;
+        mDetailColumnPointerLastScreenX=cursor.x;
+        if(mDetailColumnDragTimer)mDetailColumnDragTimer.Stop();
+        auto timer=DispatcherQueue().CreateTimer();
+        mDetailColumnDragTimer=timer;
+        timer.Interval(std::chrono::milliseconds(16));
+        auto weak=get_weak();
+        timer.Tick([weak](auto const&,auto const&){
+            auto ui=weak.get();
+            if(!ui)return;
+            if(!ui->mDetailColumnPointerDrag){
+                if(ui->mDetailColumnDragTimer)ui->mDetailColumnDragTimer.Stop();
+                return;
+            }
+            if((::GetAsyncKeyState(VK_LBUTTON)&0x8000)==0){
+                ui->mDetailColumnPointerDrag=false;
+                ui->mDetailColumnPointerSide=-1;
+                ui->mDetailColumnPointerColumn=-1;
+                if(ui->mDetailColumnDragTimer)ui->mDetailColumnDragTimer.Stop();
+                return;
+            }
+            POINT next{};
+            if(!::GetCursorPos(&next))return;
+            double raster=1.0;
+            try{
+                if(auto xr=ui->RootShell().XamlRoot())
+                    raster=xr.RasterizationScale();
+            }catch(...){raster=1.0;}
+            if(raster<=0.0)raster=1.0;
+            const auto delta=
+                static_cast<double>(next.x-ui->mDetailColumnPointerLastScreenX)/
+                raster;
+            if(std::abs(delta)<0.25)return;
+            ui->mDetailColumnPointerLastScreenX=next.x;
+            auto& state=ui->ActiveWindowTab().fileLists[
+                ui->mDetailColumnPointerSide];
+            if(ui->mDetailColumnPointerColumn==0)
+                state.nameColumnWidth=(std::clamp)(
+                    state.nameColumnWidth+delta,120.0,360.0);
+            else if(ui->mDetailColumnPointerColumn==1)
+                state.typeColumnWidth=(std::clamp)(
+                    state.typeColumnWidth+delta,96.0,320.0);
+            else if(ui->mDetailColumnPointerColumn==2)
+                state.sizeColumnWidth=(std::clamp)(
+                    state.sizeColumnWidth+delta,64.0,180.0);
+            ui->ApplyDetailColumnLayout(ui->mDetailColumnPointerSide);
+            if(::GetEnvironmentVariableW(
+                   L"FLYEXPLORER_COLUMN_RESIZE_DIAGNOSTIC",nullptr,0)>0)
+                ui->StatusText().Text(
+                    hstring(L"RESIZE_MOVE "+std::to_wstring(delta)));
+        });
+        timer.Start();
+        args.Handled(true);
+    }
+    void MainWindow::OnDetailColumnResizePointerMoved(
+        IInspectable const&,
+        Microsoft::UI::Xaml::Input::PointerRoutedEventArgs const&){
+        // Physical mouse resize is driven by mDetailColumnDragTimer because
+        // WinUI does not reliably route PointerMoved during this owned drag.
+    }
+    void MainWindow::OnDetailColumnResizePointerReleased(
+        IInspectable const&,
+        Microsoft::UI::Xaml::Input::PointerRoutedEventArgs const& args){
+        if(!mDetailColumnPointerDrag)return;
+        mDetailColumnPointerDrag=false;
+        mDetailColumnPointerSide=-1;
+        mDetailColumnPointerColumn=-1;
+        if(mDetailColumnDragTimer)mDetailColumnDragTimer.Stop();
+        args.Handled(true);
+    }
+    void MainWindow::OnDetailColumnResizePointerCaptureLost(
+        IInspectable const&,
+        Microsoft::UI::Xaml::Input::PointerRoutedEventArgs const&){
+        if(!mDetailColumnPointerDrag&&mDetailColumnDragTimer)
+            mDetailColumnDragTimer.Stop();
     }
     void MainWindow::OnNameFilterChanged(
         IInspectable const& sender,
@@ -845,11 +987,14 @@ namespace winrt::FlyExplorer::implementation
     std::array<GridLength,4> MainWindow::DetailColumnWidths(int side) const
     {
         const int profile=DetailLayoutProfile();
-        const auto user=ActiveWindowTab().fileLists[side].nameColumnWidth;
+        auto const& state=ActiveWindowTab().fileLists[side];
+        const auto name=(std::clamp)(state.nameColumnWidth,120.0,360.0);
+        const auto type=(std::clamp)(state.typeColumnWidth,96.0,320.0);
+        const auto size=(std::clamp)(state.sizeColumnWidth,64.0,180.0);
         if(profile==0)return {GridLength{1.0,GridUnitType::Star},GridLength{0.0,GridUnitType::Pixel},GridLength{0.0,GridUnitType::Pixel},GridLength{0.0,GridUnitType::Pixel}};
-        if(profile==1)return {GridLength{1.0,GridUnitType::Star},GridLength{0.0,GridUnitType::Pixel},GridLength{64.0,GridUnitType::Pixel},GridLength{0.0,GridUnitType::Pixel}};
-        if(profile==2)return {GridLength{(std::min)(user,168.0),GridUnitType::Pixel},GridLength{1.0,GridUnitType::Star},GridLength{64.0,GridUnitType::Pixel},GridLength{0.0,GridUnitType::Pixel}};
-        return {GridLength{user,GridUnitType::Pixel},GridLength{1.0,GridUnitType::Star},GridLength{80.0,GridUnitType::Pixel},GridLength{155.0,GridUnitType::Pixel}};
+        if(profile==1)return {GridLength{1.0,GridUnitType::Star},GridLength{0.0,GridUnitType::Pixel},GridLength{size,GridUnitType::Pixel},GridLength{0.0,GridUnitType::Pixel}};
+        if(profile==2)return {GridLength{(std::min)(name,220.0),GridUnitType::Pixel},GridLength{1.0,GridUnitType::Star},GridLength{size,GridUnitType::Pixel},GridLength{0.0,GridUnitType::Pixel}};
+        return {GridLength{name,GridUnitType::Pixel},GridLength{type,GridUnitType::Pixel},GridLength{size,GridUnitType::Pixel},GridLength{1.0,GridUnitType::Star}};
     }
     void MainWindow::ApplyDetailColumnLayout(int side)
     {
@@ -859,6 +1004,33 @@ namespace winrt::FlyExplorer::implementation
         auto size=side==0?LeftSizeHeaderColumn():RightSizeHeaderColumn();
         auto date=side==0?LeftDateHeaderColumn():RightDateHeaderColumn();
         name.Width(widths[0]);type.Width(widths[1]);size.Width(widths[2]);date.Width(widths[3]);
+
+        const auto profile=DetailLayoutProfile();
+        auto setThumbVisibility=[&](
+            auto const& nameThumb,auto const& typeThumb,auto const& sizeThumb){
+            nameThumb.Visibility(
+                profile>=2?Visibility::Visible:Visibility::Collapsed);
+            typeThumb.Visibility(
+                profile>=3?Visibility::Visible:Visibility::Collapsed);
+            sizeThumb.Visibility(
+                profile>=1?Visibility::Visible:Visibility::Collapsed);
+        };
+        if(side==0)setThumbVisibility(
+            LeftNameColumnResizeThumb(),LeftTypeColumnResizeThumb(),
+            LeftSizeColumnResizeThumb());
+        else setThumbVisibility(
+            RightNameColumnResizeThumb(),RightTypeColumnResizeThumb(),
+            RightSizeColumnResizeThumb());
+
+        auto view=side==0?LeftFiles():RightFiles();
+        for(auto const& item:view.Items()){
+            auto row=item.try_as<ListViewItem>();
+            if(!row)continue;
+            auto grid=row.Content().try_as<Grid>();
+            if(!grid||grid.ColumnDefinitions().Size()!=4)continue;
+            for(std::uint32_t column=0;column<4;++column)
+                grid.ColumnDefinitions().GetAt(column).Width(widths[column]);
+        }
     }
 
     void MainWindow::UpdateViewPresentation(int side)

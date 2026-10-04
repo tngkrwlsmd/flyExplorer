@@ -125,6 +125,18 @@ namespace winrt::FlyExplorer::implementation
         void OnNameColumnWidthChanged(
             IInspectable const&,
             Microsoft::UI::Xaml::Controls::Primitives::RangeBaseValueChangedEventArgs const&);
+        void OnDetailColumnResizePointerPressed(
+            IInspectable const&,
+            Microsoft::UI::Xaml::Input::PointerRoutedEventArgs const&);
+        void OnDetailColumnResizePointerMoved(
+            IInspectable const&,
+            Microsoft::UI::Xaml::Input::PointerRoutedEventArgs const&);
+        void OnDetailColumnResizePointerReleased(
+            IInspectable const&,
+            Microsoft::UI::Xaml::Input::PointerRoutedEventArgs const&);
+        void OnDetailColumnResizePointerCaptureLost(
+            IInspectable const&,
+            Microsoft::UI::Xaml::Input::PointerRoutedEventArgs const&);
         void OnFileRightTapped(IInspectable const&,
             Microsoft::UI::Xaml::Input::RightTappedRoutedEventArgs const&);
         void OnFileSelectionChanged(IInspectable const&,
@@ -270,11 +282,17 @@ namespace winrt::FlyExplorer::implementation
         void Refresh(winrt::hstring const& status = L"Ready");
         void RefreshTabs(int side);
         bool mColumnControlsReady=false;
+        bool mDetailColumnPointerDrag=false;
+        int mDetailColumnPointerSide=-1;
+        int mDetailColumnPointerColumn=-1;
+        LONG mDetailColumnPointerLastScreenX=0;
+        Microsoft::UI::Dispatching::DispatcherQueueTimer mDetailColumnDragTimer{nullptr};
         double mShellWidth=972.0;
         std::array<int,2> mDetailLayoutProfiles{{-1,-1}};
         int DetailLayoutProfile() const;
         std::array<Microsoft::UI::Xaml::GridLength,4> DetailColumnWidths(int side) const;
         void ApplyDetailColumnLayout(int side);
+        void ShowExternalWindowsContextMenu(int side);
         void UpdateViewPresentation(int side);
         void UpdateSortPresentation(int side);
         void UpdateBreadcrumb(std::wstring const& address);

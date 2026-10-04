@@ -122,14 +122,16 @@ class RemoteWindowsTaskContractTests(unittest.TestCase):
         self.assertIn("minimal control-plane tree", agents)
         self.assertIn("Do not create `remote/**` task branches", agents)
 
-    def test_long_run_guidance_allows_up_to_three_minutes_without_polling(self):
+    def test_long_run_guidance_defaults_to_three_minute_floor_with_explicit_monitoring_override(self):
         agents = " ".join(self.agents.split())
         efficiency = " ".join(self.efficiency.split())
         project = " ".join(self.project.split())
-        self.assertIn("up to three minutes", agents)
-        self.assertIn("up to three minutes", efficiency)
-        self.assertIn("up to three minutes", project)
+        for normalized in (agents, efficiency, project):
+            self.assertIn("no earlier than three minutes", normalized)
+            self.assertIn("30 seconds", normalized)
         self.assertIn("one final/blocking read", efficiency)
+        self.assertIn("scheduled/automation", agents)
+        self.assertIn("scheduled/automation", project)
 
     def test_pre_dispatch_lease_blocks_overlapping_remote_runs(self):
         texts = (
@@ -159,13 +161,16 @@ class RemoteWindowsTaskContractTests(unittest.TestCase):
         self.assertIn("never queue a successor while its predecessor is active", efficiency)
         self.assertIn("Never queue speculative successors", project)
 
-    def test_three_minute_rule_is_a_no_polling_window(self):
+    def test_three_minute_rule_is_default_only_and_explicit_monitoring_is_bounded(self):
         agents = " ".join(self.agents.split())
         efficiency = " ".join(self.efficiency.split())
-        self.assertIn("no earlier than three minutes", agents)
-        self.assertIn("no earlier than three minutes", efficiency)
-        self.assertIn("not a polling interval", agents)
-        self.assertIn("not a three-minute polling interval", efficiency)
+        project = " ".join(self.project.split())
+        for normalized in (agents, efficiency, project):
+            self.assertIn("no earlier than three minutes", normalized)
+            self.assertIn("explicitly", normalized)
+            self.assertIn("30 seconds", normalized)
+        self.assertIn("anti-polling", agents)
+        self.assertIn("anti-polling", efficiency)
 
     def test_expensive_large_folder_fixtures_are_final_acceptance_only(self):
         for text in (self.agents, self.efficiency, self.project):

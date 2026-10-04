@@ -101,12 +101,49 @@ class FluentShellContract(unittest.TestCase):
         for n in ("LeftTypeHeaderColumn","LeftSizeHeaderColumn","LeftDateHeaderColumn",
                   "RightTypeHeaderColumn","RightSizeHeaderColumn","RightDateHeaderColumn"):
             self.assertIn('x:Name="'+n+'"',xaml)
+        self.assertIn('x:Key="ExplorerColumnResizeThumbStyle"',xaml)
+        self.assertIn('<Setter Property="Width" Value="12"/>',xaml)
+        self.assertIn('<Grid Background="Transparent">',xaml)
+        self.assertIn('HorizontalAlignment="Right"',xaml)
+        self.assertNotIn('Width="7" Margin="0,1,-3,1"',xaml)
+        self.assertEqual(xaml.count('Style="{StaticResource ExplorerColumnResizeThumbStyle}"'),6)
+        self.assertEqual(xaml.count('Style="{StaticResource ExplorerColumnResizeThumbStyle}" Margin="0,1,0,1" IsHitTestVisible="False"'),6)
+        self.assertNotIn('PointerPressed="OnDetailColumnResizePointerPressed"',xaml)
+        self.assertNotIn('PointerMoved="OnDetailColumnResizePointerMoved"',xaml)
+        self.assertNotIn('PointerReleased="OnDetailColumnResizePointerReleased"',xaml)
+        self.assertNotIn('PointerCaptureLost="OnDetailColumnResizePointerCaptureLost"',xaml)
+        self.assertGreaterEqual(impl.count("RootShell().AddHandler("),3)
+        self.assertNotIn("UIElement::PointerMovedEvent()",impl)
+        self.assertNotIn("VisualTreeHelper::GetParent",impl)
+        self.assertNotIn("ColumnResizeHitTarget",xaml)
+        self.assertNotIn("ColumnResizeHitTarget",impl)
+        self.assertIn("TransformToVisual(RootShell())",impl)
+        self.assertIn("thumb.ActualWidth()",impl)
+        self.assertIn("thumb.ActualHeight()",impl)
+        self.assertIn("FLYEXPLORER_COLUMN_RESIZE_DIAGNOSTIC",impl)
+        self.assertIn("DispatcherQueue().CreateTimer()",impl)
+        self.assertIn("std::chrono::milliseconds(16)",impl)
+        self.assertIn("::GetCursorPos(&next)",impl)
+        self.assertIn("::GetAsyncKeyState(VK_LBUTTON)",impl)
+        self.assertIn("RasterizationScale()",impl)
+        self.assertNotIn("RootShell().CapturePointer(args.Pointer())",impl)
+        self.assertNotIn("RootShell().ReleasePointerCapture(args.Pointer())",impl)
         self.assertIn("ApplyDetailColumnLayout(int side)",impl)
         self.assertIn("DetailLayoutProfile() const",impl)
         self.assertIn("DetailColumnWidths(int side) const",impl)
         self.assertIn("GridUnitType::Star",impl)
         self.assertIn("if(pane<340.0)return 1",impl)
-        self.assertIn("GridLength{0.0,GridUnitType::Pixel},GridLength{64.0,GridUnitType::Pixel}",impl)
+        self.assertIn("GridLength{0.0,GridUnitType::Pixel},GridLength{size,GridUnitType::Pixel}",impl)
+        for thumb in ("LeftNameColumnResizeThumb","LeftTypeColumnResizeThumb",
+                      "LeftSizeColumnResizeThumb","RightNameColumnResizeThumb",
+                      "RightTypeColumnResizeThumb","RightSizeColumnResizeThumb"):
+            self.assertIn('x:Name="'+thumb+'"',xaml)
+        for token in ("OnDetailColumnResizePointerPressed",
+                      "OnDetailColumnResizePointerMoved",
+                      "OnDetailColumnResizePointerReleased",
+                      "OnDetailColumnResizePointerCaptureLost"):
+            self.assertIn(token,impl)
+        self.assertNotIn("OnDetailColumnResizeDragDelta",impl)
         self.assertIn("PrimaryPane().BorderThickness(Thickness{0.0,2.0,0.0,0.0})",impl)
         self.assertIn("SecondaryPane().BorderThickness(Thickness{0.0,2.0,0.0,0.0})",impl)
         self.assertIn("AutomationProperties::SetName",impl)
