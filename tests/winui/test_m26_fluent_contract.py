@@ -110,7 +110,7 @@ class FluentShellContract(unittest.TestCase):
         self.assertNotIn('PointerPressed="OnDetailColumnResizePointerPressed"',xaml)
         self.assertNotIn('PointerMoved="OnDetailColumnResizePointerMoved"',xaml)
         self.assertIn("wireResizePointer",impl)
-        self.assertEqual(impl.count("wireResizePointer("),7)
+        self.assertEqual(impl.count("wireResizePointer("),6)
         self.assertGreaterEqual(impl.count("AddHandler("),4)
         self.assertGreaterEqual(impl.count("true);"),4)
         self.assertIn("ApplyDetailColumnLayout(int side)",impl)
