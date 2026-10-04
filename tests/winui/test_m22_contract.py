@@ -27,8 +27,9 @@ class M22Contracts(unittest.TestCase):
  def test_compiled_reusable_file_toolbar_and_status(self):
   x=src(A+"MainWindow.xaml")
   for text in ('x:Name="ToolbarView"','x:Name="FooterView"',
-               'SelectionMode="Multiple"','ContextFlyout'):
+               'SelectionMode="Multiple"','RightTapped="OnFileRightTapped"'):
    self.assertIn(text,x)
+  self.assertNotIn("<ListView.ContextFlyout>",x)
   for component in ("FileToolbar","StatusFooter"):
    for suffix in (".idl",".xaml",".xaml.h",".xaml.cpp"):
     self.assertTrue((R/A/(component+suffix)).is_file(),component+suffix)
