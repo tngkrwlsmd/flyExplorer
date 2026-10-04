@@ -86,6 +86,13 @@ checkpoints.
   select a legacy configuration file for read-only name/path import. Duplicate,
   malformed and unsupported non-filesystem legacy entries are skipped rather
   than mutating the old profile.
+- Search v2 keeps the existing bounded asynchronous SearchController lifecycle
+  and adds optional ECMAScript regex, case-sensitive matching, file/folder/both
+  targeting and a single extension condition. Default behavior remains
+  case-insensitive literal file-name search. Invalid regex/extension input is
+  rejected before worker start. The existing depth-5, 2,500-entry walk and
+  100-result bounds, cancellation/stale-result rejection and opt-in recent
+  scope persistence remain unchanged.
 - Back/Forward/Up, filtering/sorting, local create/rename, guarded copy/move/
   recycle flows, Windows clipboard/context integration, isolated Shell visuals
   and directory/Shell namespace watching.
@@ -144,6 +151,17 @@ the required environment but does not claim to have modified external cloud
 bootstrap configuration.
 
 ## Latest verified evidence
+
+Search v2 is accepted on product revision `1fc808f91fa2236890a0025a555ccbd0d922319c`. Focused source
+contracts passed before product execution. Remote run `37166780382` passed the
+Release M19 native suite at 19/19 and the canonical Release build. Remote run
+`37167164976` then exercised the same product through the established M1.9
+owned GUI harness: default file-only literal search, case-sensitive regex,
+Korean filename plus extension filtering, folder-only targeting and invalid
+regex rejection all passed. Existing recent-scope opt-in save/restart/clear
+behavior also passed, the WinUI process exited 0 and the protected legacy
+profile remained unchanged. Repeated standalone SearchPanel discovery failures
+were treated as a fixture boundary and abandoned rather than retried.
 
 Local large-folder coverage now includes an owned 5,000-file filesystem folder.
 Product revision `51182fed05e32dfbd90ee320a4a259b1b884d0df` raises the isolated Shell enumeration ceiling
@@ -281,8 +299,9 @@ Current source and the last parity evidence still show these limits:
   5,000-item navigation/sort/progressive-paging evidence. Folders above 6,000,
   true streaming virtualization, network/virtual providers and sustained
   thumbnail-cache behavior are not certified.
-- Search is bounded filename search; content search, regex and advanced
-  multi-criteria search are not implemented.
+- Search remains bounded name search. Regex, case sensitivity, entry-kind and
+  single-extension conditions are implemented, but content search and broader
+  saved/compound multi-criteria queries are not implemented.
 - Saved filter/mask rule sets and the complete historical command/provider
   verb/fault matrix are not implemented or not fully tested.
 - User-configurable accelerators and a complete historical shortcut map are

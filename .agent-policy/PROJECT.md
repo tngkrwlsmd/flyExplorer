@@ -26,7 +26,7 @@ consumer core; this PROJECT.md remains project-owned across bundle refreshes.
     {"name": "winui-tests", "path": "tests/winui", "responsibility": "source, native and owned GUI contracts"}
   ],
   "review": {
-    "reviewed_revision": "51182fed05e32dfbd90ee320a4a259b1b884d0df",
+    "reviewed_revision": "1fc808f91fa2236890a0025a555ccbd0d922319c",
     "reviewed_at": "2026-10-04",
     "reviewed_paths": [
       "app/winui",
@@ -112,23 +112,35 @@ progressive UI rendering. This extends the previously exercised 2,300-item
 path without introducing unbounded enumeration or changing the Shell fault
 boundary.
 
+Search v2 extends the existing bounded name-search model without changing its
+worker/lifecycle owner. The default remains file-only, case-insensitive literal
+name search. Users may opt into ECMAScript regular expressions, case-sensitive
+matching, file/folder/both targeting and a single extension condition. Invalid
+regular expressions and extensions are rejected before a worker starts. The
+existing depth-5, 2,500-entry walk and 100-result bounds, cancellation,
+stale-result rejection and opt-in recent-scope persistence remain in force.
+
 ## Current verification
 
-The accepted large-folder product revision is
-`51182fed05e32dfbd90ee320a4a259b1b884d0df`. Remote run `37135593385` built the canonical Release app
-successfully, passed the isolated Shell-helper protocol suite, opened an owned
-5,000-file local folder, sorted it name-descending to `bench-4999.txt`, and
-confirmed progressive view paging from `160/5000` to `320/5000`. The run
-then failed only when it continued into the pre-existing filename-filter UIA
-exercise. That filter/shortcut behavior remains covered by the separate
-2,300-item owned case and is not part of the 6,000-entry enumeration ceiling
-change.
+The accepted Search v2 product revision is
+`1fc808f91fa2236890a0025a555ccbd0d922319c`. Focused source contracts passed before build. Remote run
+`37166780382` then passed the Release M19 native fixture at 19/19, including
+regex case-sensitive/insensitive matching, extension filtering, folder-only and
+files+folders targeting, invalid-regex rejection, Unicode filename matching,
+cancellation and recent-scope persistence; the canonical Release app build also
+passed. Its standalone SearchPanel fixture was rejected as a UIA harness path
+after repeating panel-discovery failures and was not used as product evidence.
 
-The Shell wire remains strictly bounded at 8 MiB and 6,000 entries. Optional
-file metadata remains deferred above 1,200 entries, while the visible WinUI list
-continues to render in 160-item increments. Folders larger than 6,000 entries,
-true streaming virtualization, network/virtual-provider scale and sustained
-thumbnail-cache behavior remain outside the certified boundary.
+The evidence path was switched rather than retried. Remote run
+`37167164976` used the established M1.9 owned GUI harness and passed default
+file-only literal search, case-sensitive regex, Korean filename plus extension,
+folder-only targeting, invalid-regex pre-start rejection, existing opt-in
+recent-scope save/restart/clear behavior, normal process exit and protected
+legacy-profile sentinel checks. `git diff --check` also passed.
+
+The previously accepted large-folder revision remains
+`51182fed05e32dfbd90ee320a4a259b1b884d0df`; its 6,000-entry wire bound and
+owned 5,000-item navigation/sort/progressive-paging evidence are unchanged.
 
 ## Build/runtime facts
 
