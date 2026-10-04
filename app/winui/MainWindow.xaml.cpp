@@ -870,12 +870,12 @@ namespace winrt::FlyExplorer::implementation
             state.visibleCount=(std::min)(available,state.visibleCount+160);
             FillFiles(side); // Selection is restored using real parsing paths.
             if(state.visibleCount>=available&&hasForward)
-                QueueNextFolderPage(side,false);
+                QueueNextFolderPage(side,state.indexToComplete);
             return;
         }
         if(hasForward){
             state.visibleCount+=160;
-            if(!QueueNextFolderPage(side,false))
+            if(!QueueNextFolderPage(side,state.indexToComplete))
                 state.visibleCount=available;
         }
     }
@@ -1895,15 +1895,20 @@ namespace winrt::FlyExplorer::implementation
         if(!row || !row.Tag())return;
         const auto logical=winrt::unbox_value<std::uint64_t>(row.Tag());
         auto& session=Current();
+        auto const* indexed=session.indexedItem(
+            static_cast<std::size_t>(logical));
+        if(!indexed||!indexed->isFolder())return;
         const auto& snapshot=session.snapshot();
-        std::size_t index=0;
-        if(!snapshot.residentIndex(logical,index))return;
-        const auto& entries=snapshot.children;
-        if(!entries[index].isFolder())return;
-        // The native engine CLONES this original absolute Shell PIDL
-        // before updating session state; no dangling shell pointers.
-        QueuePidl(side,fxfile::shellnav::Location(entries[index].id),
-                  fxfile::shellnav::NavigationAction::Open);
+        std::size_t resident=0;
+        if(snapshot.residentIndex(logical,resident)){
+            const auto& entries=snapshot.children;
+            // The native engine CLONES this original absolute Shell PIDL
+            // before updating session state; no dangling shell pointers.
+            QueuePidl(side,fxfile::shellnav::Location(entries[resident].id),
+                      fxfile::shellnav::NavigationAction::Open);
+        }else if(!indexed->parsingName.empty()){
+            QueuePath(side,indexed->parsingName);
+        }
     }
     void MainWindow::OnLeftFileDoubleTapped(
         IInspectable const&,Input::DoubleTappedRoutedEventArgs const&)
