@@ -41,13 +41,15 @@ class RemoteWindowsTaskContractTests(unittest.TestCase):
         self.assertIn("Invoke-Expression $env:REMOTE_COMMAND", self.workflow)
         self.assertIn("Set-Location -LiteralPath $workdir", self.workflow)
 
+
     def test_request_slot_uses_dedicated_control_branch(self):
-        self.assertIn("- 'control/remote-shell'", self.workflow)
-        self.assertIn("- 'requests/remote-shell/request.json'", self.workflow)
-        self.assertIn(
-            "github.ref_name == 'control/remote-shell'",
-            self.workflow,
-        )
+        self.assertIn("workflow_call:", self.workflow)
+        self.assertIn("request_ref:", self.workflow)
+        self.assertIn("request_branch:", self.workflow)
+        self.assertNotIn("\n  push:", self.workflow)
+        self.assertIn("ref: ${{ inputs.request_ref }}", self.workflow)
+        self.assertIn("INPUT_REQUEST_BRANCH: ${{ inputs.request_branch }}", self.workflow)
+        self.assertIn('Remote shell reusable workflow only accepts control/remote-shell requests.', self.workflow)
         self.assertIn('"requests\\remote-shell\\request.json"', self.workflow)
         self.assertIn("Remote shell request_id is required.", self.workflow)
         self.assertIn("Get-Content -Raw -Encoding UTF8", self.workflow)
@@ -106,10 +108,11 @@ class RemoteWindowsTaskContractTests(unittest.TestCase):
             self.assertIn("diagnosis-free", normalized)
         self.assertIn("FLYEXPLORER_DEFAULT_VALIDATION_RUN_BUDGET", self.workflow)
 
+
     def test_dispatch_path_does_not_require_checkout(self):
         self.assertIn(
             "- name: Checkout control branch request\n"
-            "        if: github.event_name == 'push'",
+            "        if: inputs.request_ref != ''",
             self.workflow,
         )
         self.assertIn(
@@ -118,10 +121,18 @@ class RemoteWindowsTaskContractTests(unittest.TestCase):
             self.workflow,
         )
         self.assertIn(
-            "github.event_name == 'workflow_dispatch' || "
-            "github.ref_name == 'control/remote-shell'",
+            "if: inputs.request_ref != '' || github.event_name == 'workflow_dispatch'",
             self.workflow,
         )
+
+    def test_main_remote_workflow_is_the_single_execution_source(self):
+        normalized = " ".join((self.agents + self.efficiency + self.project).split())
+        self.assertIn("reusable workflow", normalized)
+        self.assertIn("@main", normalized)
+        self.assertIn("thin push trigger", normalized)
+        self.assertIn("workflow_call:", self.workflow)
+        self.assertNotIn("\n  push:", self.workflow)
+        self.assertIn("Remote Windows Task implementation", self.verification_profile)
 
     def test_remote_shell_is_the_only_push_based_command_channel(self):
         self.assertNotIn("remote/**", self.workflow)

@@ -622,7 +622,10 @@ owned 5,000-item navigation/sort/progressive-paging evidence are unchanged.
   `tngkrwlsmd/personal-control-plane` primarily for runner/machine recovery and
   maintenance, especially when this repository's runner path is broken.
   The control branch is a minimal control-plane tree containing only the
-  remote-shell workflow and request slot; it does not mirror product source.
+  request slot and a thin push trigger. The full Remote Windows Task
+  implementation lives on `main` as a reusable workflow, and the control
+  trigger calls that `@main` implementation instead of carrying a second copy
+  of validation/path/artifact/execution logic.
   The persistent checkout fetches live main for every product command. No
   `remote/**` command-branch fallback is maintained. Temporary `work/*`
   branches are deleted once their accepted final tree is on main.

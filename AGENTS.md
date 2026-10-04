@@ -460,11 +460,14 @@ machine maintenance belong in `personal-control-plane`, especially when this
 repository's runner path itself is broken. Do not create `remote/**` task
 branches. The repository has one Git-backed Windows command channel:
 `control/remote-shell`, plus manual `workflow_dispatch` as a human fallback.
-The control branch is a minimal control-plane tree, not a product mirror: keep
-only the remote-shell workflow and request slot there. Product source is always
-read from or fetched into the workflow-configured canonical persistent checkout from
-live `main`. If the remote-shell workflow itself changes, refresh that one
-workflow file on the control branch; never resync the whole product tree there.
+The control branch is a minimal control-plane tree, not a product mirror. It
+carries only the request slot plus a thin push-trigger workflow. The complete
+Remote Windows Task implementation lives only on `main` as the reusable
+`.github/workflows/remote-windows-task.yml`; the control trigger calls that
+implementation explicitly at `@main`. Do not copy validation, path, artifact
+or execution logic back into the control branch. Product source is always read
+from or fetched into the workflow-configured canonical persistent checkout from
+live `main`.
 
 GitHub-hosted runners require explicit user approval and are not part of the
 active flyExplorer CI path unless the user explicitly requests them. Do not add

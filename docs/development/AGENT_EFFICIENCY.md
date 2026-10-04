@@ -285,8 +285,11 @@ into main. Product main continues to record only verified logical units, while
 the control branch records command history separately. Manual
 `workflow_dispatch` remains available for human-operated commands. The
 `control/remote-shell` branch is intentionally a minimal control-plane tree:
-it carries the remote-shell workflow plus request slot, not a copy of product
-source. The persistent checkout fetches live `main` for product work. Do not
+it carries the request slot plus a thin push trigger only. The full Remote
+Windows Task implementation is reusable workflow code on `main`; the control
+trigger calls it at `@main` and must not duplicate validation, path, artifact
+or execution logic. The persistent checkout fetches live `main` for product
+work. Do not
 create `remote/**` command branches, and delete temporary `work/*` branches
 after their accepted tree lands on main. Use the persistent checkout to
 preserve incremental build state and a stable interactive desktop between

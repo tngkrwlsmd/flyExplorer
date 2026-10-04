@@ -32,3 +32,11 @@ These are current project facts, not generic policy:
 
 Change this profile when the project fixture strategy changes. Do not copy these
 numbers back into the general development rules.
+
+## Remote workflow ownership
+
+The full Remote Windows Task implementation is
+`.github/workflows/remote-windows-task.yml` on `main`. The
+`control/remote-shell` branch carries only request data and a thin push
+trigger that calls the reusable implementation at `@main`. Operational logic
+must not be duplicated into the control branch.
