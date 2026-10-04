@@ -154,6 +154,30 @@ class RemoteWindowsTaskContractTests(unittest.TestCase):
         self.assertIn("FLYEXPLORER_ROUTINE_OBSERVATION_SECONDS:", self.workflow)
         self.assertIn("FLYEXPLORER_ACTIVE_MONITOR_SECONDS:", self.workflow)
 
+    def test_result_dependent_runs_are_followed_to_completion(self):
+        agents = " ".join(self.agents.split())
+        efficiency = " ".join(self.efficiency.split())
+        project = " ".join(self.project.split())
+        for normalized in (agents, efficiency, project):
+            self.assertIn("current user request", normalized)
+            self.assertIn("blocking dependency", normalized)
+            self.assertIn("through completion", normalized)
+            self.assertIn("active monitoring", normalized.lower())
+            self.assertIn("cadence", normalized.lower())
+        self.assertIn(
+            "Explicit active monitoring changes the observation cadence",
+            agents,
+        )
+        self.assertIn(
+            "Explicit active monitoring changes only the cadence",
+            efficiency,
+        )
+        self.assertIn(
+            "Explicit active monitoring changes cadence only",
+            project,
+        )
+
+
     def test_pre_dispatch_lease_blocks_overlapping_remote_runs(self):
         texts = (
             " ".join(self.agents.split()),
