@@ -1,21 +1,15 @@
 {
-  "request_id": "direct-shell-column-resize-captured-stream-final-005",
+  "request_id": "direct-shell-column-resize-input-diagnostic-006",
   "expected_main_sha": "d50f01e8ccecb800f0dbac6c0b9f550e9cb25e49",
-  "candidate_sha": "194885dfd90d00bec385e14ce59767e460ffd66a",
+  "candidate_sha": "90ec888e2fe3c465764609769d036349682b223a",
   "logical_unit": "direct-shell-context-column-resize",
   "configuration": "Release",
   "validation_kind": [
-    "source",
-    "build",
-    "gui",
-    "visual"
+    "gui"
   ],
   "invalidated_evidence": {
-    "source": "The owned hit-target pointer contract now forbids redundant IsLeftButtonPressed polling and relies on the captured PointerPressed-to-PointerReleased stream.",
-    "build": "MainWindow column-resize product code removed button-state guards from the captured pointer path.",
-    "gui": "The previous run reached the physical drag but never changed the boundary; removing the extra button-state gate directly changes the failed interaction path.",
-    "visual": "Before/after Details layout evidence must be recaptured only if the corrected physical drag succeeds."
+    "gui": "Harness-only diagnostics now record UIA hit target, real VK_LBUTTON state, and the next-column boundary after each physical mouse step. Product files are unchanged from the previously built 194885df revision."
   },
   "working_directory": "C:\\dev\\flyExplorer",
-  "command": "$ErrorActionPreference = \"Stop\"\ngit fetch origin main work/direct-shell-context-column-resize --no-tags --prune\nif ($LASTEXITCODE -ne 0) { throw \"fetch failed\" }\nif ((git rev-parse origin/main).Trim() -ne \"d50f01e8ccecb800f0dbac6c0b9f550e9cb25e49\") { throw \"main moved\" }\nif ((git status --short).Count -ne 0) { throw \"dirty persistent checkout\" }\ngit checkout -B work/direct-shell-context-column-resize origin/work/direct-shell-context-column-resize\nif ($LASTEXITCODE -ne 0) { throw \"checkout candidate failed\" }\nif ((git rev-parse HEAD).Trim() -ne \"194885dfd90d00bec385e14ce59767e460ffd66a\") { throw \"candidate mismatch\" }\n\ncmd /c test.bat policy\nif ($LASTEXITCODE -ne 0) { throw \"policy readiness failed\" }\n\ncmd /c test.bat source\nif ($LASTEXITCODE -ne 0) { throw \"source contracts failed\" }\n\ncmd /c build.bat Release\nif ($LASTEXITCODE -ne 0) { throw \"Release build failed\" }\n\npython -X utf8 tests\\winui\\test_owned_column_resize_gui.py Release\nif ($LASTEXITCODE -ne 0) { throw \"Details column resize GUI acceptance failed\" }\n\n$source = \"C:\\dev\\flyExplorer\\logs\\m24\"\n$target = \"C:\\dev\\flyExplorer\\logs\\remote-evidence\"\n$files = @(\"detail-columns-before.png\",\"detail-columns-after.png\")\nNew-Item -ItemType Directory -Force -Path $target | Out-Null\nGet-ChildItem -LiteralPath $target -File -ErrorAction SilentlyContinue | Remove-Item -Force\nforeach ($name in $files) {\n  $path = Join-Path $source $name\n  if (!(Test-Path -LiteralPath $path -PathType Leaf)) { throw \"visual evidence missing: $name\" }\n  Copy-Item -LiteralPath $path -Destination (Join-Path $target $name)\n}\nGet-FileHash -Algorithm SHA256 -LiteralPath ($files | ForEach-Object { Join-Path $source $_ }) |\n  ForEach-Object { \"$($_.Path) $($_.Hash)\" } |\n  Set-Content -Encoding UTF8 -LiteralPath (Join-Path $target \"column-resize-sha256.txt\")\n\ngit diff --check origin/main..HEAD\nif ($LASTEXITCODE -ne 0) { throw \"diff check failed\" }\nWrite-Host \"DIRECT_SHELL_COLUMN_RESIZE_CAPTURED_STREAM_FINAL_PASS\"\n"
+  "command": "$ErrorActionPreference = \"Stop\"\ngit fetch origin main work/direct-shell-context-column-resize --no-tags --prune\nif ($LASTEXITCODE -ne 0) { throw \"fetch failed\" }\nif ((git rev-parse origin/main).Trim() -ne \"d50f01e8ccecb800f0dbac6c0b9f550e9cb25e49\") { throw \"main moved\" }\nif ((git status --short).Count -ne 0) { throw \"dirty persistent checkout\" }\ngit checkout -B work/direct-shell-context-column-resize origin/work/direct-shell-context-column-resize\nif ($LASTEXITCODE -ne 0) { throw \"checkout candidate failed\" }\nif ((git rev-parse HEAD).Trim() -ne \"90ec888e2fe3c465764609769d036349682b223a\") { throw \"candidate mismatch\" }\n\n$changedProduct = git diff --name-only 194885dfd90d00bec385e14ce59767e460ffd66a..HEAD -- app/winui src/base\nif ($LASTEXITCODE -ne 0) { throw \"product-diff check failed\" }\nif ($changedProduct) { throw \"diagnostic candidate unexpectedly changes product files: $changedProduct\" }\nif (!(Test-Path -LiteralPath \"out\\winui\\Release\\flyExplorer.exe\")) { throw \"accepted Release binary missing\" }\n\npython -X utf8 tests\\winui\\test_owned_column_resize_gui.py Release\nif ($LASTEXITCODE -ne 0) { throw \"Details column resize GUI diagnostic failed\" }\n\ngit diff --check origin/main..HEAD\nif ($LASTEXITCODE -ne 0) { throw \"diff check failed\" }\nWrite-Host \"DIRECT_SHELL_COLUMN_RESIZE_INPUT_DIAGNOSTIC_PASS\"\n"
 }
