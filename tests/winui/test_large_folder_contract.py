@@ -7,7 +7,7 @@ class FolderScaleContract(unittest.TestCase):
   body=(Path(__file__).resolve().parent/"test_large_owned_folder_gui.py").read_text(encoding="utf-8")
   app=(ROOT/"MainWindow.xaml.cpp").read_text(encoding="utf-8")
   detail=(ROOT/"file_detail_controller.cpp").read_text(encoding="utf-8")
-  for item in ('choices=(1100,2300,5000,8000)','range(args.items)',"bench-0000.txt","bench-1099.txt",
+  for item in ('choices=(1100,2300,5000,8000,20500)','range(args.items)',"bench-0000.txt","bench-1099.txt",
                "process.pid","LEGACY_PRESENT_SETTINGS_UNCHANGED",
                'auto_id="SortPicker"'):
    self.assertIn(item,body)
@@ -39,6 +39,8 @@ class FolderScaleContract(unittest.TestCase):
   self.assertIn("OWNED_LARGE_FOLDER_OVER_6000_PAGED_TRANSPORT",body)
   self.assertIn("OWNED_LARGE_MODEL_STREAMING_INITIAL_1024",body)
   self.assertIn("OWNED_LARGE_MODEL_STREAMING_SORT_COMPLETES_8000",body)
+  self.assertIn("OWNED_LARGE_BROWSE_OVER_20000",body)
+  self.assertIn("OWNED_LARGE_OVER_20K_SORT_REFUSED",body)
   self.assertIn("state.visibleRoute!=nextRoute",app)
   self.assertIn("renderedState.renderedBaseOffset",app)
   self.assertIn("snapshot.logicalIndex(index)",app)
