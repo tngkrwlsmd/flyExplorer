@@ -1,6 +1,6 @@
 {
-  "request_id": "search-v2-source-log-001",
+  "request_id": "search-v2-source-log-head-001",
   "expected_main_sha": "ecca3e98000dad764f846be0d6483775b2610fe0",
   "working_directory": "C:\\dev\\flyExplorer",
-  "command": "$ErrorActionPreference = \"Stop\"\n$log = \"C:\\dev\\flyExplorer\\logs\\winui-scoped\\20261004-095037-source.log\"\nif (-not (Test-Path $log)) { throw \"source log missing\" }\nSelect-String -Path $log -Pattern \"^FAIL:|^ERROR:|AssertionError:|FAILED \\(\" -Context 0,6\n"
+  "command": "$log = \"C:\\dev\\flyExplorer\\logs\\winui-scoped\\20261004-095037-source.log\"\nGet-Content -LiteralPath $log -TotalCount 22\n"
 }
