@@ -186,7 +186,8 @@ std::vector<IndexedItem> Session::buildIndex(Snapshot const& snapshot)
 
 HRESULT Session::mergeIndexPage(Snapshot const& page) noexcept
 {
-    if(page.nextOffset!=page.baseOffset+page.children.size())
+    if(page.nextOffset!=page.baseOffset+page.children.size()||
+       page.baseOffset>nameIndex_.size())
         return HRESULT_FROM_WIN32(ERROR_INVALID_DATA);
     try{
         if(nameIndex_.size()<page.nextOffset)
