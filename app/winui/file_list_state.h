@@ -36,6 +36,7 @@ struct PaneState final {
     std::uint64_t visibleRoute=0;
     std::size_t visibleTab=0;
     bool streamToComplete=false;
+    bool fullModelLimitReached=false;
     std::vector<FileDetail> details;
     std::size_t renderedBaseOffset=0;
     std::vector<std::wstring> renderedPaths;
