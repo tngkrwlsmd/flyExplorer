@@ -26,7 +26,7 @@ consumer core; this PROJECT.md remains project-owned across bundle refreshes.
     {"name": "winui-tests", "path": "tests/winui", "responsibility": "source, native and owned GUI contracts"}
   ],
   "review": {
-    "reviewed_revision": "eb612e6ef81e168e95cc5c00284eaf890157497b",
+    "reviewed_revision": "44305357394c8eed76eaaa31614ecaddaca7f4c3",
     "reviewed_at": "2026-10-04",
     "reviewed_paths": [
       "app/winui",
@@ -121,6 +121,41 @@ existing depth-5, 2,500-entry walk and 100-result bounds, cancellation,
 stale-result rejection and opt-in recent-scope persistence remain in force.
 
 ## Current verification
+
+Explicit legacy text encodings for bounded content search are accepted on
+product revision `44305357394c8eed76eaaa31614ecaddaca7f4c3`. The default mode remains deterministic:
+UTF-8/ASCII plus BOM-tagged UTF-16 LE/BE. Users can explicitly choose Korean
+CP949 or Western Windows-1252 for BOM-less legacy text; BOM detection always
+wins over the selected fallback. The existing 1 MiB/file, 16 MiB/search and
+64 KiB cancellation boundaries remain unchanged. Invalid encoding enum values
+are rejected before worker start.
+
+Saved search-condition presets now write schema 3 with the selected content
+encoding while retaining read compatibility with schema 1 and schema 2. Scope
+remains intentionally excluded.
+
+Remote run `37173754944` passed canonical structure 4/4, source contracts
+218/218, the Release M19 native content-encoding gate at 47/47, canonical
+Release build and the focused existing M1.9 owned GUI boundary. The GUI proved
+that Auto UTF rejects BOM-less CP949 input, explicit CP949 matches Korean legacy
+text, explicit Windows-1252 matches Western legacy text, switching back to Auto
+UTF restores UTF-16 behavior, and the selected CP949 encoding survives private
+preset save/restart/apply by successfully executing the restored query. The
+owned WinUI process exited 0, protected legacy-profile checks passed, and
+`git diff --check` passed.
+
+Matched Dark-theme visual evidence uses 956x689. The first AFTER capture taken
+immediately after an automation-driven CP949 selection was not accepted because
+the closed ComboBox had not visually repainted its selected label. A separate
+visual-only run `37174155301` captured the ordinary default state and shows
+`자동 UTF`, the encoding selector and the I/O guidance without clipping or
+overlap, with both file panes still usable. The functional CP949/1252 selection
+itself is covered by the focused GUI run above.
+
+Content regex remains intentionally unimplemented: this project currently has
+no regex engine with a match limit/callout mechanism that would preserve the
+accepted cancellation contract for up-to-1-MiB decoded text. Do not add
+unbounded `std::wregex` content matching as a shortcut.
 
 Bounded literal file-content search is accepted on product revision
 `eb612e6ef81e168e95cc5c00284eaf890157497b`. It reuses the existing SearchController worker and composes

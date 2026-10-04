@@ -152,6 +152,27 @@ bootstrap configuration.
 
 ## Latest verified evidence
 
+Explicit legacy content encodings are accepted on product revision
+`44305357394c8eed76eaaa31614ecaddaca7f4c3`. Bounded literal content search keeps deterministic Auto UTF
+behavior (UTF-8/ASCII plus BOM UTF-16 LE/BE) and adds explicit Korean CP949 and
+Western Windows-1252 decoding for BOM-less text. BOM detection has priority over
+the selected fallback. The existing 1 MiB/file, 16 MiB/search and 64 KiB
+cancellation boundaries are unchanged. Saved search presets write schema 3 with
+the content encoding and continue to read schema 1/2.
+
+Evidence: remote run `37173754944` passed canonical structure 4/4, source
+contracts 218/218, Release M19 native contracts 47/47, canonical Release build
+and a focused existing M1.9 owned GUI path. Real GUI checks passed Auto-UTF
+rejection of CP949, explicit CP949 matching, explicit Windows-1252 matching,
+return to Auto UTF, encoding-aware preset restart/apply, protected legacy
+profile checks and process exit 0. `git diff --check` also passed. The initial
+automation-selected CP949 screenshot was not accepted for visual review because
+the closed ComboBox label had not repainted; visual-only run `37174155301`
+then captured the ordinary default state at the same 956x689 Dark-theme size,
+showing `자동 UTF` and the selector without clipping/overlap while both panes
+remain usable.
+
+
 Bounded literal content search is accepted on product revision
 `eb612e6ef81e168e95cc5c00284eaf890157497b`. Search now AND-composes an optional literal file-content term
 with the existing name/regex, extension, size, local modified-date and target
@@ -359,10 +380,11 @@ Current source and the last parity evidence still show these limits:
 - Search remains bounded. Regex, case sensitivity, entry-kind,
   single-extension, minimum/maximum file size, inclusive local modified-date
   and literal text content conditions are implemented with up to 20 private
-  saved condition sets. Content reads are limited to UTF-8/ASCII or BOM-tagged
-  UTF-16 text, 1 MiB per file and 16 MiB per search; content regex, broader
-  encodings, indexed/provider/property search and unrestricted deep content
-  scanning are not implemented.
+  saved condition sets. Content reads use deterministic Auto UTF
+  (UTF-8/ASCII plus BOM-tagged UTF-16) or explicit CP949/Windows-1252, with
+  1 MiB per file and 16 MiB per search. Content regex, other encodings,
+  indexed/provider/property search and unrestricted deep content scanning are
+  not implemented.
 - Persistent pane filter/mask rule sets are implemented with up to 20 named
   private presets, case-insensitive wildcard masks and legacy substring
   compatibility. Pane filters remain name/mask based; historical per-rule
