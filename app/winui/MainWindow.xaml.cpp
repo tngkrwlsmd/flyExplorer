@@ -92,27 +92,6 @@ namespace winrt::FlyExplorer::implementation
     MainWindow::MainWindow()
     {
         InitializeComponent();
-        using Microsoft::UI::Xaml::Input::PointerEventHandler;
-        RootShell().AddHandler(
-            UIElement::PointerPressedEvent(),
-            winrt::box_value(PointerEventHandler{
-                this,&MainWindow::OnDetailColumnResizePointerPressed}),
-            true);
-        RootShell().AddHandler(
-            UIElement::PointerMovedEvent(),
-            winrt::box_value(PointerEventHandler{
-                this,&MainWindow::OnDetailColumnResizePointerMoved}),
-            true);
-        RootShell().AddHandler(
-            UIElement::PointerReleasedEvent(),
-            winrt::box_value(PointerEventHandler{
-                this,&MainWindow::OnDetailColumnResizePointerReleased}),
-            true);
-        RootShell().AddHandler(
-            UIElement::PointerCaptureLostEvent(),
-            winrt::box_value(PointerEventHandler{
-                this,&MainWindow::OnDetailColumnResizePointerCaptureLost}),
-            true);
         // M2.6 uses the public WinUI 3 custom-titlebar/backdrop path only.
         // Pane-local folder TabViews remain inside each pane; the titlebar now
         // hosts a separate functional WindowTab workspace strip.
@@ -763,25 +742,19 @@ namespace winrt::FlyExplorer::implementation
         if(mColumnControlsReady)ApplyDetailColumnLayout(side);
     }
     void MainWindow::OnDetailColumnResizePointerPressed(
-        IInspectable const&,
+        IInspectable const& sender,
         Microsoft::UI::Xaml::Input::PointerRoutedEventArgs const& args){
-        auto node=args.OriginalSource().try_as<DependencyObject>();
-        Microsoft::UI::Xaml::Controls::Primitives::Thumb thumb{nullptr};
-        while(node){
-            thumb=node.try_as<
-                Microsoft::UI::Xaml::Controls::Primitives::Thumb>();
-            if(thumb)break;
-            node=Microsoft::UI::Xaml::Media::VisualTreeHelper::GetParent(node);
-        }
-        if(!thumb||!thumb.Tag()||
-           std::wstring(thumb.Name().c_str()).find(
-               L"ColumnResizeThumb")==std::wstring::npos)return;
+        auto target=sender.try_as<FrameworkElement>();
+        if(!target||!target.Tag()||
+           std::wstring(target.Name().c_str()).find(
+               L"ColumnResizeHitTarget")==std::wstring::npos)return;
         const auto tag=std::wstring(
-            winrt::unbox_value<hstring>(thumb.Tag()).c_str());
+            winrt::unbox_value<hstring>(target.Tag()).c_str());
         if(tag.size()!=3||tag[1]!=L','||
            tag[0]<L'0'||tag[0]>L'1'||
            tag[2]<L'0'||tag[2]>L'2')return;
         const auto point=args.GetCurrentPoint(RootShell());
+        if(!point.Properties().IsLeftButtonPressed())return;
         const int side=tag[0]-L'0';
         const int column=tag[2]-L'0';
         if(ActiveWindowTab().model.activePane!=side)ActivatePane(side);
@@ -789,6 +762,7 @@ namespace winrt::FlyExplorer::implementation
         mDetailColumnPointerSide=side;
         mDetailColumnPointerColumn=column;
         mDetailColumnPointerLastX=point.Position().X;
+        target.CapturePointer(args.Pointer());
         args.Handled(true);
     }
     void MainWindow::OnDetailColumnResizePointerMoved(
@@ -815,8 +789,10 @@ namespace winrt::FlyExplorer::implementation
         args.Handled(true);
     }
     void MainWindow::OnDetailColumnResizePointerReleased(
-        IInspectable const&,
+        IInspectable const& sender,
         Microsoft::UI::Xaml::Input::PointerRoutedEventArgs const& args){
+        if(auto target=sender.try_as<UIElement>())
+            target.ReleasePointerCapture(args.Pointer());
         if(!mDetailColumnPointerDrag)return;
         mDetailColumnPointerDrag=false;
         mDetailColumnPointerSide=-1;
@@ -955,18 +931,27 @@ namespace winrt::FlyExplorer::implementation
         name.Width(widths[0]);type.Width(widths[1]);size.Width(widths[2]);date.Width(widths[3]);
 
         const auto profile=DetailLayoutProfile();
-        auto setThumbs=[&](auto const& nameThumb,auto const& typeThumb,
-                           auto const& sizeThumb){
-            nameThumb.Visibility(profile>=2?Visibility::Visible:Visibility::Collapsed);
-            typeThumb.Visibility(profile>=3?Visibility::Visible:Visibility::Collapsed);
-            sizeThumb.Visibility(profile>=1?Visibility::Visible:Visibility::Collapsed);
+        auto setSeparatorVisibility=[&](
+            auto const& nameThumb,auto const& typeThumb,auto const& sizeThumb,
+            auto const& nameHit,auto const& typeHit,auto const& sizeHit){
+            const auto nameVisibility=
+                profile>=2?Visibility::Visible:Visibility::Collapsed;
+            const auto typeVisibility=
+                profile>=3?Visibility::Visible:Visibility::Collapsed;
+            const auto sizeVisibility=
+                profile>=1?Visibility::Visible:Visibility::Collapsed;
+            nameThumb.Visibility(nameVisibility);nameHit.Visibility(nameVisibility);
+            typeThumb.Visibility(typeVisibility);typeHit.Visibility(typeVisibility);
+            sizeThumb.Visibility(sizeVisibility);sizeHit.Visibility(sizeVisibility);
         };
-        if(side==0)setThumbs(
+        if(side==0)setSeparatorVisibility(
             LeftNameColumnResizeThumb(),LeftTypeColumnResizeThumb(),
-            LeftSizeColumnResizeThumb());
-        else setThumbs(
+            LeftSizeColumnResizeThumb(),LeftNameColumnResizeHitTarget(),
+            LeftTypeColumnResizeHitTarget(),LeftSizeColumnResizeHitTarget());
+        else setSeparatorVisibility(
             RightNameColumnResizeThumb(),RightTypeColumnResizeThumb(),
-            RightSizeColumnResizeThumb());
+            RightSizeColumnResizeThumb(),RightNameColumnResizeHitTarget(),
+            RightTypeColumnResizeHitTarget(),RightSizeColumnResizeHitTarget());
 
         auto view=side==0?LeftFiles():RightFiles();
         for(auto const& item:view.Items()){
