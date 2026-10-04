@@ -56,6 +56,17 @@ struct Snapshot final {
     std::size_t baseOffset=0;
     std::size_t nextOffset=0;
     bool truncated=false;
+    std::uint64_t logicalIndex(std::size_t resident) const noexcept {
+        return static_cast<std::uint64_t>(baseOffset)+resident;
+    }
+    bool residentIndex(std::uint64_t logical,std::size_t& resident) const noexcept {
+        const auto base=static_cast<std::uint64_t>(baseOffset);
+        if(logical<base)return false;
+        const auto delta=logical-base;
+        if(delta>=children.size())return false;
+        resident=static_cast<std::size_t>(delta);
+        return true;
+    }
 };
 
 // Call on a COM-initialized STA/UI thread only. Shell extensions may display
