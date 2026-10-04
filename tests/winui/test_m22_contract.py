@@ -82,6 +82,9 @@ class M22Contracts(unittest.TestCase):
   for text in ('VirtualKey::F5','VirtualKey::F6','VirtualKey::Delete',
                'VirtualKey::A','VirtualKey::C','VirtualKey::V'):
    self.assertIn(text,m)
+  self.assertIn('if(box.Opacity()<0.5)ToggleNameFilter(side);',m)
+  shortcut=m.split('if(ctrl&&shift&&vk==Windows::System::VirtualKey::F){',1)[1].split('}',1)[0]
+  self.assertLess(shortcut.index('ToggleNameFilter(side)'),shortcut.index('box.Focus('))
  def test_m22_owned_native_fixtures_never_mutate_real_recycle_bin(self):
   s=src("tests/winui/m22/m22_transfer_fixture.cpp")
   self.assertIn("recycle_plan",s) if "recycle_plan" in s else self.assertIn("recycle_requires_explicit_consent",s)
