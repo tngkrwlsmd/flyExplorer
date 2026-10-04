@@ -37,6 +37,7 @@ struct PaneState final {
     std::size_t visibleTab=0;
     bool streamToComplete=false;
     bool indexToComplete=false;
+    bool indexedNameSort=false;
     bool indexedNameProjection=false;
     bool fullModelLimitReached=false;
     std::vector<FileDetail> details;
@@ -51,6 +52,7 @@ struct PaneState final {
         renderedLogical.clear();
         renderedPaths.clear();
         indexToComplete=false;
+        indexedNameSort=false;
         indexedNameProjection=false;
         visualPixels=0;
         route=0;
