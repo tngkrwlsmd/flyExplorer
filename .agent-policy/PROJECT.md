@@ -302,7 +302,7 @@ kept protected legacy settings unchanged and exited normally. `git diff
 --check` passed.
 
 This closes the prior "model waits for the full aggregated transport snapshot"
-gap. It does not make enumeration unbounded: the 20,000-entry aggregate/model
+gap. It does not make enumeration unbounded: the 20,000-entry navigation-model
 ceiling remains a deliberate safety bound, and full-model global sort/filter
 still requires completing pages up to that bound. Network/virtual provider
 behavior and sustained thumbnail-cache behavior remain separate open gates.
