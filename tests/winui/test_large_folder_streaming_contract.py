@@ -85,6 +85,9 @@ class LargeFolderStreamingContracts(unittest.TestCase):
         self.assertIn("state.indexToComplete",main)
         self.assertIn("session.nameIndex()",main)
         self.assertIn("session.indexedFrontier()==snapshot.nextOffset",main)
+        self.assertIn("state.indexedNameSort=state.sortMode<=1",main)
+        self.assertIn("const bool indexedComplete=",main)
+        self.assertIn("if(indexedComplete)incomplete=false",main)
         self.assertIn("bool indexedNameSort=false",state)
 
     def test_ui_browses_window_and_rebuilds_complete_model_for_sort_filter(self):
