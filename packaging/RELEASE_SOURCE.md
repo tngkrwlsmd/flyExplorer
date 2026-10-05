@@ -86,3 +86,23 @@ available to public binary recipients. Public release still requires the
 selected GPLv3 section 6 source-delivery mechanism, public source-access
 directions, required retention/availability, rightsholder confirmation and any
 other release/legal approvals.
+
+## Current accepted private evidence
+
+Remote Windows Task #440 (`37376305779`) accepted binary source revision
+`bc63c8b48e466d1275cc6dcffb0c50e02d39db60` with source tree
+`8f1bc2e0181cc87e646dd2fad75ccdca0c8e8a66`.
+
+- source bundle: 382 tracked files, 3,942,910 source bytes,
+  SHA-256 `5a263a42ecced3384be9a8ab131024ce309e4eb96b249bad1f8adc91f065ce1d`;
+- source manifest SHA-256:
+  `4f96cb8b81414f3f64b6f5b2fa4c6a7ef1328e85de0bca0a93232bfa5f10a771`;
+- runtime manifest SHA-256:
+  `61572e65c4a593e01607147596195041ce9d530e5f9fc21c9f9517f615b26c1d`;
+- unsigned setup: 124,107,776 bytes,
+  SHA-256 `825a644a8170acdaae43135604d6998ce517f882b3f8f228fa54cb30c1298a91`.
+
+The private Actions artifact `flyexplorer-remote-evidence-37376305779`
+preserves the concrete setup, source ZIP, source manifest, runtime provenance
+and release identity together. It is retained as engineering evidence only; it
+is not a public GPL source-delivery endpoint.
