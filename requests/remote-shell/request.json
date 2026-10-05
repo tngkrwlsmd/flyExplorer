@@ -1,13 +1,13 @@
 {
-  "request_id": "verify-classifier-write-permissions-20261005-v3",
+  "request_id": "verify-legacy-classifier-fallback-20261005",
   "expected_main_sha": "974926d9d3a0ef1015477a9a7ff2409486e988be",
   "candidate_sha": "974926d9d3a0ef1015477a9a7ff2409486e988be",
-  "logical_unit": "remote-classifier-permissions",
+  "logical_unit": "remote-classifier-legacy-fallback",
   "configuration": "none",
   "request_mode": "diagnostic",
   "validation_plan": [],
-  "retry_reason": "workflow definition repaired after pre-job parse failure",
+  "retry_reason": "directly verify classification when the observed historical main revision predates the classifier",
   "harness_revision": "974926d9d3a0ef1015477a9a7ff2409486e988be",
   "working_directory": "",
-  "command": "$ErrorActionPreference=\"Stop\"\n$repo=$env:FLYEXPLORER_CANONICAL_CHECKOUT\n& git -C $repo fetch origin main --no-tags --prune\nif($LASTEXITCODE -ne 0){throw \"fetch main failed\"}\n$temp=Join-Path $env:RUNNER_TEMP (\"fly-classifier-permission-check-\" + $env:GITHUB_RUN_ID)\nif(Test-Path -LiteralPath $temp){Remove-Item -LiteralPath $temp -Recurse -Force}\ntry {\n  & git -C $repo worktree add --detach $temp 974926d9d3a0ef1015477a9a7ff2409486e988be\n  if($LASTEXITCODE -ne 0){throw \"worktree add failed\"}\n  & python -X utf8 (Join-Path $temp \"tests\\winui\\test_remote_failure_classifier.py\")\n  if($LASTEXITCODE -ne 0){throw \"failure classifier tests failed\"}\n  & python -X utf8 (Join-Path $temp \"tests\\winui\\test_remote_evidence_policy.py\")\n  if($LASTEXITCODE -ne 0){throw \"remote evidence policy tests failed\"}\n  & python -X utf8 (Join-Path $temp \"tests\\winui\\test_remote_windows_task_contract.py\")\n  if($LASTEXITCODE -ne 0){throw \"remote workflow contract tests failed\"}\n  Write-Host \"REMOTE_CLASSIFIER_PERMISSION_CHECK=PASS\"\n} finally {\n  if(Test-Path -LiteralPath $temp){& git -C $repo worktree remove --force $temp}\n  & git -C $repo worktree prune\n}"
+  "command": "$ErrorActionPreference=\"Stop\"\n\"REMOTE_OBSERVED_MAIN_SHA=ef9dbf16495e4911c59492ea43eec1a4b0e06bef\" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append\nWrite-Host 'File \"tests/winui/test_installed_lifecycle.py\"'\nWrite-Host \"subprocess.TimeoutExpired: Command ['C:\\x\\flyExplorer.exe'] timed out after 16 seconds\"\nWrite-Host \"AssertionError: owned installed app did not close within the accepted 16-second budget\"\n& cmd /c exit 7"
 }
