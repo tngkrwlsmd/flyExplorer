@@ -321,7 +321,6 @@ jobs:
             $args = @(
               "-X", "utf8", $script,
               "--repository", $env:GITHUB_REPOSITORY,
-              "--token", $env:GH_EVIDENCE_TOKEN,
               "--logical-unit", $env:REMOTE_LOGICAL_UNIT,
               "--current-run-id", $env:GITHUB_RUN_ID,
               "--request-mode", $env:REMOTE_REQUEST_MODE,
