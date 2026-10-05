@@ -1,11 +1,11 @@
 {
-  "request_id": "immutable-release-capability-diagnostic-20261006",
+  "request_id": "enable-immutable-releases-20261006",
   "expected_main_sha": "8b3ff0da418f8d9c154f0984921359f4a620b552",
   "candidate_sha": "8b3ff0da418f8d9c154f0984921359f4a620b552",
-  "logical_unit": "immutable-release-capability-diagnostic",
+  "logical_unit": "enable-immutable-releases",
   "request_mode": "diagnostic",
   "configuration": "none",
   "validation_plan": [],
   "working_directory": "",
-  "command": "$ErrorActionPreference=\"Stop\"\nSet-Location -LiteralPath $env:FLYEXPLORER_CANONICAL_CHECKOUT\nWrite-Host \"===== IMMUTABLE RELEASES =====\"\n$immutableOutput=& gh api repos/tngkrwlsmd/flyExplorer/immutable-releases 2>&1\n$immutableCode=$LASTEXITCODE\nWrite-Host (\"IMMUTABLE_RELEASES_QUERY_EXIT=\"+$immutableCode)\n$immutableOutput | ForEach-Object { Write-Host (\"IMMUTABLE_RELEASES_QUERY=\"+$_) }\nWrite-Host \"===== REPOSITORY =====\"\n& gh api repos/tngkrwlsmd/flyExplorer --jq '{visibility,private,default_branch,archived,disabled}'\nif($LASTEXITCODE -ne 0){throw \"repository metadata query failed\"}\nWrite-Host \"===== EXISTING RELEASES =====\"\n$releaseOutput=& gh api repos/tngkrwlsmd/flyExplorer/releases 2>&1\n$releaseCode=$LASTEXITCODE\nWrite-Host (\"RELEASE_QUERY_EXIT=\"+$releaseCode)\n$releaseOutput | ForEach-Object { Write-Host (\"RELEASE_QUERY=\"+$_) }"
+  "command": "$ErrorActionPreference=\"Stop\"\nSet-Location -LiteralPath $env:FLYEXPLORER_CANONICAL_CHECKOUT\n$before=& gh api repos/tngkrwlsmd/flyExplorer/immutable-releases\nif($LASTEXITCODE -ne 0){throw \"immutable release status read failed\"}\nWrite-Host (\"IMMUTABLE_RELEASES_BEFORE=\"+$before)\n& gh api --method PUT repos/tngkrwlsmd/flyExplorer/immutable-releases\nif($LASTEXITCODE -ne 0){throw \"failed to enable immutable releases\"}\n$after=& gh api repos/tngkrwlsmd/flyExplorer/immutable-releases\nif($LASTEXITCODE -ne 0){throw \"immutable release status verification failed\"}\nWrite-Host (\"IMMUTABLE_RELEASES_AFTER=\"+$after)\n$parsed=$after | ConvertFrom-Json\nif(-not $parsed.enabled){throw \"immutable releases remain disabled\"}\nWrite-Host \"IMMUTABLE_RELEASES_ENABLE=PASS\""
 }
