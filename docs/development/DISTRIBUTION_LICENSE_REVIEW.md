@@ -30,30 +30,39 @@ provenance and setup hashes. The #440 evidence artifact preserves the concrete
 setup and source ZIP together with their manifests/identity record.
 
 This closes the engineering requirement for an exact binary-to-source identity.
-It does not itself make source available to public recipients and therefore does
-not clear GPLv3 section 6 delivery, retention/public-access, final release-tag,
-rightsholder or signing gates.
+The GPL conveyance mechanism is now selected as section 6(d) network equivalent
+access: binary and source are offered on the same public GitHub Release page at
+no additional source charge. `v1.0.0.0` is reserved as the final tag, and
+GitHub Immutable Releases is enabled so the published tag/assets become locked.
+The project adds a 1095-day source-retention period after binary withdrawal in
+addition to keeping source available for the full binary-download period.
+
+This policy selection does not itself make the current private evidence public
+and does not clear rightsholder, production-signing or clean-machine gates.
 
 ## Open public-distribution gates
 
 Public binary redistribution remains not cleared. Current tracked engineering
 evidence identifies these separate gates:
 
-1. The root application license is GPLv3-or-later. Object-code conveyance needs
-   a GPLv3 section 6 compliant Corresponding Source delivery mechanism.
-   The repository is private, so its normal clone access is not treated as
-   public recipient source availability.
-2. A current release needs an exact binary-to-source identity from the source
-   actually packaged, plus clear source-access directions or another selected
-   GPLv3 section 6 mechanism. A tracked GPL text alone does not establish
-   Corresponding Source availability.
+1. The root application license is GPLv3-or-later. The selected object-code
+   conveyance path is GPLv3 section 6(d). Before publication, the designated
+   GitHub Release surface must be public and provide the matching binary and
+   deterministic source ZIP from the same release page without authentication
+   or additional source charge.
+2. The reserved tag `v1.0.0.0` must remain absent until the final draft has all
+   signed binary/source/identity assets. Publishing under GitHub Immutable
+   Releases must then lock the tag to the exact binary source revision and lock
+   the assets. Release notes must carry direct source-access directions and
+   hashes. Source retention is the full binary-availability period plus the
+   project's 1095-day post-withdrawal minimum.
 3. Rightsholder/contribution-grant authority still requires human confirmation.
    Git author metadata does not by itself establish copyright ownership,
    assignment, work-for-hire status or relicensing authority. See
    packaging/RIGHTSHOLDER_REVIEW.md.
 4. Production signing remains open. The release path still requires signed
-   payload/setup verification and a clean-machine Program Files/HKLM
-   install/update/rollback lifecycle check.
+   payload/setup verification, regenerated final release identity and a
+   clean-machine Program Files/HKLM install/update/rollback lifecycle check.
 
 Tracked license, notice and provenance materials improve engineering evidence
 but do not by themselves clear public redistribution.

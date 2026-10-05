@@ -26,7 +26,7 @@ consumer core; this PROJECT.md remains project-owned across bundle refreshes.
     {"name": "winui-tests", "path": "tests/winui", "responsibility": "source, native and owned GUI contracts"}
   ],
   "review": {
-    "reviewed_revision": "e9d6f485e992cf7532fb3928e301e38302aeceb6",
+    "reviewed_revision": "8968837576eec214c623808ed55fc17a0473d6b7",
     "reviewed_at": "2026-10-05",
     "reviewed_paths": [
       "app/winui",
@@ -36,7 +36,8 @@ consumer core; this PROJECT.md remains project-owned across bundle refreshes.
       ".github/workflows/windows-build.yml",
       ".github/workflows/remote-windows-task.yml",
       "tools/winui/run_checks.py",
-      "tests/winui/requirements-gui.txt"
+      "packaging",
+      "tests/winui"
     ]
   }
 }
@@ -709,10 +710,17 @@ unsigned setup SHA-256 is
 `825a644a8170acdaae43135604d6998ce517f882b3f8f228fa54cb30c1298a91`.
 The setup, source ZIP, source manifest, runtime provenance and release identity
 were preserved together in the private #440 evidence artifact. This closes the
-technical exact binary/source identity gate, but production signing,
-clean-machine machine-wide deployment, public recipient source availability,
-final release tag/retention mechanism and rightsholder/legal clearance remain
-open.
+technical exact binary/source identity gate.
+
+The public conveyance policy is now fixed to GPLv3 section 6(d): matching binary
+and source assets on the same public GitHub Release page, without authentication
+or extra source charge. `v1.0.0.0` is reserved but intentionally not pre-created;
+repository Immutable Releases was enabled in run #446 (`37379026246`) so the
+fully assembled published release locks its tag/assets. Corresponding Source
+must remain available while the binary is offered and for at least 1095 days
+after withdrawal under the project's stronger retention policy. Production
+signing, clean-machine machine-wide deployment, activation of the public
+release surface and rightsholder/legal clearance remain open.
 
 ## Documentation
 
