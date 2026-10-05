@@ -26,12 +26,16 @@ consumer core; this PROJECT.md remains project-owned across bundle refreshes.
     {"name": "winui-tests", "path": "tests/winui", "responsibility": "source, native and owned GUI contracts"}
   ],
   "review": {
-    "reviewed_revision": "1d3df0f1eb6fe93aee018161a7c0ea19e59137da",
-    "reviewed_at": "2026-10-04",
+    "reviewed_revision": "e9d6f485e992cf7532fb3928e301e38302aeceb6",
+    "reviewed_at": "2026-10-05",
     "reviewed_paths": [
       "app/winui",
       "src/base",
       "build.bat",
+      "test.bat",
+      ".github/workflows/windows-build.yml",
+      ".github/workflows/remote-windows-task.yml",
+      "tools/winui/run_checks.py",
       "tests/winui/requirements-gui.txt"
     ]
   }
@@ -74,9 +78,12 @@ pane-local detail cancellation, detached metadata/icon/thumbnail workers and
 bounded Shell visual orchestration. A second responsibility audit then selected
 preferences persistence over drag/drop and workspace restore sequencing:
 PreferencesCoordinator owns the Preferences value, write mutex, revision
-ordering and detached atomic-save worker. MainWindow retains theme/view
-presentation, persistence triggering, DispatcherQueue handoff and status
-projection.
+ordering and detached atomic-save worker. A later restore-lifecycle audit
+identified an independent request/settlement boundary, so
+WorkspaceRestoreCoordinator now owns pane-local restore queues, awaited
+navigation request identity and settle/reset/cancel semantics. MainWindow
+retains theme/view presentation, persistence triggering, workspace/model
+application, Shell submission, DispatcherQueue handoff and status projection.
 Large Icons is now an accepted fifth view mode (stable value 4) with private
 preference/session persistence, a 64 px Shell visual path and bounded image
 thumbnail use. Pre-main owned GUI evidence measured fully visible items at
@@ -106,19 +113,24 @@ the management surface and restored after process restart. Legacy MFC bookmark
 configuration is never read automatically; explicit import reads only
 name/path entries and skips malformed, duplicate or unsupported items.
 
-Local filesystem Shell enumeration now uses a bounded 6,000-entry isolated
-helper ceiling while retaining the 8 MiB wire-body limit and 160-item
-progressive UI rendering. This extends the previously exercised 2,300-item
-path without introducing unbounded enumeration or changing the Shell fault
-boundary.
+Local filesystem Shell enumeration now uses protocol-v3 page transport with at
+most 1,024 entries and 8 MiB per helper response. The first page is accepted
+immediately, normal browsing keeps a 2,048-entry resident window, and UI rows
+remain progressively rendered in 160-row increments. Complete-model operations
+remain bounded by 20,000 entries, while sequential resident-window browsing has
+a separate 100,000-entry safety ceiling. Current owned GUI evidence reaches
+20,500 entries; the 100,000 value is not a performance/certification claim.
 
-Search v2 extends the existing bounded name-search model without changing its
-worker/lifecycle owner. The default remains file-only, case-insensitive literal
-name search. Users may opt into ECMAScript regular expressions, case-sensitive
-matching, file/folder/both targeting and a single extension condition. Invalid
-regular expressions and extensions are rejected before a worker starts. The
-existing depth-5, 2,500-entry walk and 100-result bounds, cancellation,
-stale-result rejection and opt-in recent-scope persistence remain in force.
+Search remains owned by the bounded asynchronous SearchController lifecycle.
+The default is file-only, case-insensitive literal name search; optional
+criteria include ECMAScript regex, case sensitivity, file/folder/both targeting,
+single extension, minimum/maximum file size, inclusive local modified-date and
+bounded literal file-content matching. Up to 20 private condition sets may be
+saved. Content decoding supports deterministic Auto UTF plus explicit CP949 and
+Windows-1252 fallbacks, with 1 MiB per file and 16 MiB per search. The depth-5,
+2,500-entry walk and 100-result bounds, cancellation and stale-result rejection
+remain in force; content regex, indexed/provider/property search and unrestricted
+deep content scanning are not implemented.
 
 ## Development loop and verification budget
 
@@ -230,13 +242,15 @@ directly invalidates that fixture's result.
 - The persistent `control/remote-shell` checkout is the normal Windows
   development surface. Batch only the stages that are currently required; do
   not include earlier PASS stages "for completeness".
-- Before every request-slot commit, preflight the request metadata locally/in
-  the agent layer. `["none"]` requires `configuration: "none"`, candidate
-  equal to expected main and empty invalidated evidence. Any
-  source/build/native/gui/visual validation requires `configuration` exactly
-  `Debug` or `Release`, the intended candidate SHA, evidence keys exactly
-  matching the declared stages, and command/stage agreement. Workflow rejection
-  for these invariants is an agent preflight defect and should never be used as
+- Before every request-slot commit, preflight the current request schema locally/
+  in the agent layer. A diagnostic request uses
+  `request_mode: "diagnostic"`, `configuration: "none"` and an empty
+  `validation_plan`. A validation request uses
+  `request_mode: "validation"`, configuration exactly `Debug` or
+  `Release`, a non-empty logical `validation_plan`, the intended
+  `candidate_sha` and the live `expected_main_sha`. Do not infer a second
+  stage declaration from free-form command text. Workflow rejection for these
+  invariants is an agent preflight defect and should never be used as
   product-failure evidence.
 - The request-slot commit is allowed only after a **zero-run preflight** has
   cleared avoidable control/harness errors: referenced refs/SHAs/paths exist,
@@ -671,8 +685,11 @@ Not certified:
 - signed clean-machine machine-wide install/update/rollback;
 - public redistribution/source-delivery/rightsholder/legal clearance.
 
-The tracked installer/provenance snapshot predates v7 and must be rebuilt before
-it can represent the current product.
+Current unsigned packaging evidence is accepted on candidate
+`8283ece6c4348a751f487a64230e1bc149a47a2f`, merged through PR #27, including
+bounded `/TESTROOT` clean install, repair, update, rollback and uninstall.
+This does not clear production signing, clean-machine machine-wide deployment or
+public redistribution/legal/source-delivery gates.
 
 ## Documentation
 
