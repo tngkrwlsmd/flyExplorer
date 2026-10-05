@@ -34,6 +34,7 @@ env:
   FLYEXPLORER_REMOTE_RUNNER_CAPACITY: '1'
   FLYEXPLORER_DEFAULT_VALIDATION_RUN_BUDGET: '2'
   FLYEXPLORER_REMOTE_EVIDENCE_DIR: 'C:\\dev\\flyExplorer\\logs\\remote-evidence'
+  FLYEXPLORER_REUSE_DIR: 'C:\\dev\\flyExplorer\\logs\\remote-reuse'
 
 concurrency:
   group: flyexplorer-remote-windows-task
@@ -369,9 +370,13 @@ jobs:
               "--retry-scope", $env:REMOTE_RETRY_SCOPE
             )
             if ($env:REMOTE_RETRY_SCOPE -eq "focused-reuse") {
+              if (Test-Path -LiteralPath $env:FLYEXPLORER_REUSE_DIR) {
+                Remove-Item -LiteralPath $env:FLYEXPLORER_REUSE_DIR -Recurse -Force
+              }
               $args += @(
                 "--reuse-run-id", $env:REMOTE_REUSE_RUN_ID,
-                "--reuse-candidate-sha", $env:REMOTE_REUSE_CANDIDATE_SHA
+                "--reuse-candidate-sha", $env:REMOTE_REUSE_CANDIDATE_SHA,
+                "--extract-reuse-dir", $env:FLYEXPLORER_REUSE_DIR
               )
               foreach ($target in @(
                 $env:REMOTE_REUSED_TARGETS -split ',' |
@@ -609,6 +614,7 @@ jobs:
             Write-Host "HARNESS_REVISION: $env:REMOTE_HARNESS_REVISION"
             Write-Host "RETRY_SCOPE: $env:REMOTE_RETRY_SCOPE"
             Write-Host "REUSED_TARGETS: $env:REMOTE_REUSED_TARGETS"
+            Write-Host "REUSE_DIR: $env:FLYEXPLORER_REUSE_DIR"
           }
           Write-Host "===================================="
 
