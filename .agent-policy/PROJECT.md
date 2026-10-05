@@ -660,11 +660,16 @@ owned 5,000-item navigation/sort/progressive-paging evidence are unchanged.
   conformance evidence in self-hosted CI. This does not claim Profile C runtime
   enforcement.
 
+High Contrast ON is accepted on merged product revision
+`eaa1b368a677f57c15183c5e6851f0598ed25878`. Actual Windows High Contrast
+GUI/visual acceptance passed in Remote Windows Task `37252987127`, including
+selected-row UIA state, search controls, protected user settings and restoration
+of the original High Contrast OFF state.
+
 ## Open gates
 
 Not certified:
 - actual 125/150/200% OS scaling;
-- High Contrast ON;
 - human Narrator/Korean IME;
 - physical drag;
 - signed clean-machine machine-wide install/update/rollback;
