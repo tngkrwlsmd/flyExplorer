@@ -87,6 +87,13 @@ class HighContrastContract(unittest.TestCase):
         ):
             self.assertNotIn(forbidden,body)
 
+    def test_high_contrast_search_acceptance_uses_exposed_control(self):
+        body=(APP.parent.parent/"tests"/"winui"/"test_high_contrast_gui.py").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn('auto_id="SearchScopeBox"', body)
+        self.assertNotIn('auto_id="SearchPanel").exists', body)
+
     def test_expected_ui_surfaces_consume_high_contrast_resources(self):
         combined = "\n".join(
             path.read_text(encoding="utf-8")
