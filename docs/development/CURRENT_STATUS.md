@@ -76,7 +76,14 @@ checkpoints.
   Explorer-style `Ctrl+Shift+N` opens the existing create-folder name editor
   for the current active pane/tab. No separate keyboard mutation path or command
   owner was introduced. Historical flyExplorer `F11` is not restored because
-  current Windows/File Explorer uses F11 for window maximize/restore.
+  current Windows/File Explorer uses F11 for window maximize/restore. Remote
+  Windows Task #423 (`37297889221`) passed FAST, a normal Release build and the
+  focused file-operations GUI on candidate
+  `9af6c368a15853e5aab96906f6a298e733f3c40c`; real Ctrl+Shift+N input created
+  owned Korean folders in each independently activated pane through the existing
+  command path, the opposite pane remained untouched, the existing button path
+  still passed, the owned process exited 0 and protected legacy settings
+  remained unchanged.
 - Details, List, Small Icons, Medium Icons and Large Icons views.
 - File-list Shell visuals use path-specific Windows Known Folder artwork for
   Desktop, Documents, Downloads, Pictures, Music and Videos. The bounded
