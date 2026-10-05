@@ -94,8 +94,12 @@ class RemoteWindowsTaskContractTests(unittest.TestCase):
             "Match executable invocations, not incidental filenames/variables.",
             self.workflow,
         )
-        self.assertIn("$commandBoundary =", self.workflow)
-        self.assertIn("$pythonInvocation =", self.workflow)
+        self.assertIn("$stageStatements =", self.workflow)
+        self.assertIn("py_compile|compileall", self.workflow)
+        self.assertIn(
+            "Static Python syntax/import checks do not execute GUI/native/visual stages.",
+            self.workflow,
+        )
         self.assertIn(
             "tools/winui/validate_remote_request.py",
             " ".join((self.agents + self.efficiency + self.project).split()),
