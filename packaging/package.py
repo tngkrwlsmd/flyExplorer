@@ -1,12 +1,12 @@
 from __future__ import annotations
 import argparse
+import importlib.util
 import re
 import shutil
 import subprocess
 import sys
 from pathlib import Path
 
-import provenance as payload_provenance
 
 ROOT=Path(__file__).resolve().parents[1]
 APP=ROOT/"app"/"winui"
@@ -14,6 +14,14 @@ OUT=ROOT/"out"
 MSBUILD_RESOLVER=ROOT/"tools"/"winui"/"resolve_msbuild.py"
 SETUP_PROJECT_TEMPLATE=ROOT/"packaging"/"installer"/"flyExplorerSetup.project-template.xml"
 SETUP_PROJECT=ROOT/"packaging"/"installer"/"flyExplorerSetup.vcxproj"
+PROVENANCE_MODULE=ROOT/"packaging"/"provenance.py"
+
+_provenance_spec=importlib.util.spec_from_file_location(
+    "flyexplorer_payload_provenance",PROVENANCE_MODULE)
+if _provenance_spec is None or _provenance_spec.loader is None:
+    raise RuntimeError("cannot load packaging/provenance.py")
+payload_provenance=importlib.util.module_from_spec(_provenance_spec)
+_provenance_spec.loader.exec_module(payload_provenance)
 
 REQUIRED_TOP=(
     "flyExplorer.exe",
