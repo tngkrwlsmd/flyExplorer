@@ -143,6 +143,11 @@ def run_contracts(label: str, paths: list[str], env: dict[str, str], tag: str) -
     )
 
 
+def fail(category: str, code: int) -> int:
+    print(f"FAILURE_CATEGORY={category}", flush=True)
+    return code
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
@@ -199,20 +204,32 @@ def main():
                 tag,
             )
             if official:
-                return official
+                return fail("STRUCTURE_CONTRACT_FAILURE", official)
 
         suites = []
         if args.stage in {"source", "product-source"}:
-            suites.append(("product-source-contracts", PRODUCT_SOURCE_CONTRACTS))
+            suites.append((
+                "product-source-contracts",
+                PRODUCT_SOURCE_CONTRACTS,
+                "PRODUCT_SOURCE_CONTRACT_FAILURE",
+            ))
         if args.stage in {"source", "harness"}:
-            suites.append(("harness-contracts", HARNESS_CONTRACTS))
+            suites.append((
+                "harness-contracts",
+                HARNESS_CONTRACTS,
+                "HARNESS_CONTRACT_FAILURE",
+            ))
         if args.stage in {"source", "infra"}:
-            suites.append(("infra-policy-contracts", INFRA_POLICY_CONTRACTS))
+            suites.append((
+                "infra-policy-contracts",
+                INFRA_POLICY_CONTRACTS,
+                "INFRA_POLICY_CONTRACT_FAILURE",
+            ))
 
-        for label, paths in suites:
+        for label, paths, category in suites:
             rc = run_contracts(label, paths, env, tag)
             if rc:
-                return rc
+                return fail(category, rc)
 
         print(
             "SOURCE_CHECKS_COMPLETE=PASS "
@@ -250,7 +267,7 @@ def main():
             tag,
         )
         if dep_rc:
-            return dep_rc
+            return fail("HARNESS_DEPENDENCY_FAILURE", dep_rc)
 
     for stage in stages:
         if stage.startswith("build-"):
@@ -274,7 +291,12 @@ def main():
 
         rc = execute(stage, cmd, timeout, env_to_use, tag)
         if rc != 0:
-            return rc
+            return fail(
+                "PRODUCT_BUILD_FAILURE"
+                if stage.startswith("build-")
+                else "GUI_ACCEPTANCE_FAILURE",
+                rc,
+            )
         if stage.startswith("gui-"):
             bookmark_rc = execute(
                 stage + "-bookmarks",
@@ -284,7 +306,7 @@ def main():
                 tag,
             )
             if bookmark_rc != 0:
-                return bookmark_rc
+                return fail("GUI_ACCEPTANCE_FAILURE", bookmark_rc)
 
     print(
         "SCOPED_CHECKS_COMPLETE=PASS; physical drag and global clipboard "

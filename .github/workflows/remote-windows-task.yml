@@ -142,6 +142,13 @@ jobs:
           if ($uniquePlan.Count -ne $validationPlan.Count) {
             throw "Remote shell validation_plan must not contain duplicate targets."
           }
+          $needsGuiHealth = @(
+            $uniquePlan |
+              Where-Object {
+                $_ -match '(^|[-/])(gui|visual)($|[-/])' -or
+                $_ -match '(^|[-/])high-contrast($|[-/])'
+              }
+          ).Count -gt 0
 
           if ($requestMode -eq "diagnostic") {
             if ($configuration -ne "none") {
@@ -208,6 +215,7 @@ jobs:
             "REMOTE_LOGICAL_UNIT=$logicalUnit"
             "REMOTE_CONFIGURATION=$configuration"
             "REMOTE_VALIDATION_PLAN=$($uniquePlan -join ',')"
+            "REMOTE_NEEDS_GUI_HEALTH=$($needsGuiHealth.ToString().ToLowerInvariant())"
             "REMOTE_VALIDATION_FINGERPRINT=$validationFingerprint"
             "REMOTE_HARNESS_REVISION=$harnessRevision"
             "REMOTE_RETRY_REASON=$retryReason"
@@ -236,6 +244,7 @@ jobs:
             "REMOTE_SOURCE=workflow_dispatch"
             "REMOTE_REQUEST_MODE=diagnostic"
             "REMOTE_VALIDATION_PLAN="
+            "REMOTE_NEEDS_GUI_HEALTH=false"
             "REMOTE_COMMAND<<$delimiter"
             $env:INPUT_COMMAND
             $delimiter
@@ -328,7 +337,7 @@ jobs:
                 'test_remote_request_preflight_contract.py',
                 'test_remote_windows_task_contract.py'
               )) {
-                & python -X utf8 (Join-Path $temp "tests\winui\${D}name")
+                & python -X utf8 (Join-Path $temp "tests\winui\$name")
                 if ($LASTEXITCODE -ne 0) {
                   throw "Infrastructure policy contract failed: $name"
                 }
@@ -338,8 +347,9 @@ jobs:
             $harnessChanged = @(
               $changedPaths |
                 Where-Object {
+                  $_ -eq 'tests/winui/uia_polling.py' -or
+                  $_ -like 'tests/winui/test_*gui.py' -or
                   $_ -eq 'tests/winui/test_gui_harness_contract.py' -or
-                  $_ -eq 'tests/winui/test_high_contrast_gui.py' -or
                   $_ -like 'tools/winui/high_contrast_*.py' -or
                   $_ -eq 'tools/winui/runner_health.py' -or
                   $_ -eq 'tools/winui/check_python_static.py'
@@ -363,7 +373,7 @@ jobs:
 
       - name: Runner health for GUI validation
         id: health
-        if: ${{ inputs.request_ref != '' && env.REMOTE_REQUEST_MODE == 'validation' && (contains(env.REMOTE_VALIDATION_PLAN, 'gui') || contains(env.REMOTE_VALIDATION_PLAN, 'visual') || contains(env.REMOTE_VALIDATION_PLAN, 'high-contrast')) }}
+        if: ${{ inputs.request_ref != '' && env.REMOTE_REQUEST_MODE == 'validation' && env.REMOTE_NEEDS_GUI_HEALTH == 'true' }}
         shell: powershell -NoLogo -NoProfile -ExecutionPolicy Bypass -Command ". '{0}'"
         run: |
           $ErrorActionPreference = "Stop"
@@ -407,7 +417,12 @@ jobs:
           Set-Location -LiteralPath $workdir
           $evidenceRoot = Join-Path $env:FLYEXPLORER_CANONICAL_CHECKOUT "logs\remote-evidence"
           New-Item -ItemType Directory -Force -Path $evidenceRoot | Out-Null
-          foreach ($classifier in @("high-contrast-result.json", "remote-result.json")) {
+          foreach ($classifier in @(
+            "high-contrast-result.json",
+            "remote-result.json",
+            "remote-command.log",
+            "remote-command-error.txt"
+          )) {
             $classifierPath = Join-Path $evidenceRoot $classifier
             Remove-Item -LiteralPath $classifierPath -Force -ErrorAction SilentlyContinue
           }
@@ -431,10 +446,34 @@ jobs:
           }
           Write-Host "===================================="
 
-          $global:LASTEXITCODE = 0
-          Invoke-Expression $env:REMOTE_COMMAND
-          if ($LASTEXITCODE -ne 0) {
-            throw "Remote shell native command exited with code $LASTEXITCODE."
+          $commandLog = Join-Path $evidenceRoot "remote-command.log"
+          $commandError = Join-Path $evidenceRoot "remote-command-error.txt"
+          $transcriptStarted = $false
+          try {
+            try {
+              Start-Transcript -LiteralPath $commandLog -Force | Out-Null
+              $transcriptStarted = $true
+            } catch {
+              Write-Host "COMMAND_TRANSCRIPT_WARN=$($_.Exception.Message)"
+            }
+
+            $global:LASTEXITCODE = 0
+            Invoke-Expression $env:REMOTE_COMMAND
+            if ($LASTEXITCODE -ne 0) {
+              throw "Remote shell native command exited with code $LASTEXITCODE."
+            }
+          } catch {
+            ($_ | Format-List * -Force | Out-String) |
+              Set-Content -LiteralPath $commandError -Encoding UTF8
+            throw
+          } finally {
+            if ($transcriptStarted) {
+              try {
+                Stop-Transcript | Out-Null
+              } catch {
+                Write-Host "COMMAND_TRANSCRIPT_STOP_WARN=$($_.Exception.Message)"
+              }
+            }
           }
 
       - name: Write structured remote result
@@ -463,6 +502,62 @@ jobs:
           $healthOutcome = "${{ steps.health.outcome }}"
           $commandOutcome = "${{ steps.command.outcome }}"
 
+          function Read-ResultCategory([string]$path) {
+            if (-not (Test-Path -LiteralPath $path -PathType Leaf)) {
+              return $null
+            }
+            try {
+              $payload = Get-Content -Raw -Encoding UTF8 -LiteralPath $path |
+                ConvertFrom-Json
+              $value = ([string]$payload.failure_category).Trim()
+              if (-not [string]::IsNullOrWhiteSpace($value)) {
+                return $value
+              }
+            } catch {
+              Write-Host "RESULT_CLASSIFICATION_WARN=$($_.Exception.Message)"
+            }
+            return $null
+          }
+
+          function Infer-CommandFailure([string]$text) {
+            if ([string]::IsNullOrWhiteSpace($text)) {
+              return "COMMAND_FAILURE_UNCLASSIFIED"
+            }
+
+            $explicit = [regex]::Matches(
+              $text,
+              'FAILURE_CATEGORY=([A-Z0-9_]+)'
+            )
+            if ($explicit.Count -gt 0) {
+              return $explicit[$explicit.Count - 1].Groups[1].Value
+            }
+
+            if ($text -match 'error C\d+|error LNK\d+|error MSB\d+|fatal error C\d+') {
+              return "PRODUCT_BUILD_FAILURE"
+            }
+            if (
+              $text -match 'NameError:' -or
+              $text -match 'TypeError:.*unexpected keyword argument' -or
+              $text -match "UIAWrapper.*has no attribute 'child_window'" -or
+              $text -match 'IUIA\.build_condition\(\).*unexpected keyword argument'
+            ) {
+              return "HARNESS_PROGRAMMING_FAILURE"
+            }
+            if ($text -match 'NoPatternInterfaceError') {
+              return "AUTOMATION_API_FAILURE"
+            }
+            if ($text -match 'ElementAmbiguousError|ElementNotFoundError') {
+              return "AUTOMATION_DISCOVERY_FAILURE"
+            }
+            if ($text -match 'TimeoutError') {
+              return "AUTOMATION_TIMEOUT_FAILURE"
+            }
+            if ($text -match 'AssertionError:|(?m)^FAIL:|(?m)^FAILED') {
+              return "TEST_ASSERTION_FAILURE"
+            }
+            return "COMMAND_FAILURE_UNCLASSIFIED"
+          }
+
           $failureCategory = $null
           if ($requestOutcome -eq "failure") {
             $failureCategory = "REQUEST_SCHEMA_FAILURE"
@@ -471,17 +566,23 @@ jobs:
           } elseif ($healthOutcome -eq "failure") {
             $failureCategory = "RUNNER_HEALTH_FAILURE"
           } elseif ($commandOutcome -eq "failure") {
-            $failureCategory = "COMMAND_FAILURE"
-            $highContrastResult = Join-Path $evidence "high-contrast-result.json"
-            if (Test-Path -LiteralPath $highContrastResult -PathType Leaf) {
-              try {
-                $hc = Get-Content -Raw -Encoding UTF8 -LiteralPath $highContrastResult | ConvertFrom-Json
-                if (-not [string]::IsNullOrWhiteSpace([string]$hc.failure_category)) {
-                  $failureCategory = [string]$hc.failure_category
+            $failureCategory = Read-ResultCategory (
+              Join-Path $evidence "high-contrast-result.json"
+            )
+            if ([string]::IsNullOrWhiteSpace([string]$failureCategory)) {
+              $commandText = @(
+                "remote-command.log",
+                "remote-command-error.txt"
+              ) |
+                ForEach-Object {
+                  $path = Join-Path $evidence $_
+                  if (Test-Path -LiteralPath $path -PathType Leaf) {
+                    Get-Content -Raw -Encoding UTF8 -LiteralPath $path
+                  }
                 }
-              } catch {
-                Write-Host "RESULT_CLASSIFICATION_WARN=$($_.Exception.Message)"
-              }
+              $failureCategory = Infer-CommandFailure (
+                $commandText -join [Environment]::NewLine
+              )
             }
           }
 

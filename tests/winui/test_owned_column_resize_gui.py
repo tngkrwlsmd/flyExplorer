@@ -1,6 +1,7 @@
 """Owned GUI acceptance for draggable Details column separators."""
 from pathlib import Path
 from paths import APP, app_exe
+from uia_polling import wait_until
 from PIL import ImageGrab
 import ctypes,hashlib,os,shutil,subprocess,sys,tempfile,time
 import psutil
@@ -11,14 +12,7 @@ LEGACY=("fxfile.conf","fxfile-main.conf","fxfile-toolbar.dat",
         "fxfile-folder_layout.conf")
 
 def eventually(fn,label,seconds=12):
-    end=time.monotonic()+seconds
-    while time.monotonic()<end:
-        try:
-            if fn(): return
-        except Exception:
-            pass
-        time.sleep(.2)
-    raise AssertionError(label)
+    return wait_until(fn, label, seconds=seconds, interval=.2)
 
 def main(config="Release"):
     if os.name!="nt": return 2

@@ -8,6 +8,7 @@ from ctypes import wintypes as w
 import hashlib,os,subprocess,sys,tempfile,time
 from pathlib import Path
 from paths import APP, app_exe
+from uia_polling import wait_until
 from PIL import ImageGrab
 import psutil
 from pywinauto import Desktop,keyboard
@@ -17,13 +18,7 @@ LEGACY=("fxfile.conf","fxfile-main.conf","fxfile-toolbar.dat",
 user=c.windll.user32
 user.GetWindowThreadProcessId.argtypes=(w.HWND,c.POINTER(w.DWORD))
 def eventually(fn,label,seconds=13):
- end=time.monotonic()+seconds
- while time.monotonic()<end:
-  try:
-   if fn():return
-  except Exception:pass
-  time.sleep(.2)
- raise AssertionError(label)
+ return wait_until(fn, label, seconds=seconds, interval=.2)
 def main(config="Debug"):
  a=APP
  exe=app_exe(config)

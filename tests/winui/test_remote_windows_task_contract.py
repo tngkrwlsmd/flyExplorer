@@ -14,6 +14,9 @@ class RemoteWindowsTaskContractTests(unittest.TestCase):
         cls.windows_build = (
             ROOT / ".github/workflows/windows-build.yml"
         ).read_text(encoding="utf-8")
+        cls.run_checks = (
+            ROOT / "tools/winui/run_checks.py"
+        ).read_text(encoding="utf-8")
         cls.profile = (
             ROOT / "docs/development/VERIFICATION_PROFILE.md"
         ).read_text(encoding="utf-8")
@@ -61,20 +64,29 @@ class RemoteWindowsTaskContractTests(unittest.TestCase):
         self.assertIn("Stale validation request:", self.workflow)
         self.assertIn("DIAGNOSTIC_STALE_MAIN=ADVISORY", self.workflow)
 
-    def test_static_preflight_is_change_scoped(self):
+    def test_static_preflight_is_change_scoped_and_covers_all_gui_harnesses(self):
         self.assertIn("$changedPaths", self.workflow)
         self.assertIn("check_python_static.py", self.workflow)
         self.assertIn("$infraChanged", self.workflow)
         self.assertIn("$harnessChanged", self.workflow)
+        self.assertIn("'tests/winui/uia_polling.py'", self.workflow)
+        self.assertIn("'tests/winui/test_*gui.py'", self.workflow)
         self.assertIn("git -C $temp diff --check", self.workflow)
+        self.assertNotIn(r"tests\winui\${D}name", self.workflow)
+        self.assertIn(r'tests\winui\$name', self.workflow)
         self.assertLess(
             self.workflow.index("- name: Static candidate preflight"),
             self.workflow.index("- name: Run remote shell command"),
         )
 
-    def test_gui_validation_has_runner_health_gate(self):
+    def test_gui_validation_has_explicit_runner_health_gate(self):
+        self.assertIn("REMOTE_NEEDS_GUI_HEALTH", self.workflow)
         self.assertIn("- name: Runner health for GUI validation", self.workflow)
         self.assertIn("runner_health.py", self.workflow)
+        self.assertIn(
+            "env.REMOTE_NEEDS_GUI_HEALTH == 'true'",
+            self.workflow,
+        )
         self.assertLess(
             self.workflow.index("- name: Runner health for GUI validation"),
             self.workflow.index("- name: Run remote shell command"),
@@ -90,7 +102,14 @@ class RemoteWindowsTaskContractTests(unittest.TestCase):
             self.windows_build,
         )
 
-    def test_structured_result_distinguishes_not_run_and_failure_layers(self):
+    def test_command_failure_keeps_machine_readable_evidence(self):
+        self.assertIn("remote-command.log", self.workflow)
+        self.assertIn("remote-command-error.txt", self.workflow)
+        self.assertIn("Start-Transcript", self.workflow)
+        self.assertIn("Stop-Transcript", self.workflow)
+        self.assertIn("FAILURE_CATEGORY=([A-Z0-9_]+)", self.workflow)
+
+    def test_structured_result_distinguishes_failure_layers(self):
         for stage in (
             "REQUEST_VALIDATION",
             "STATIC_PREFLIGHT",
@@ -102,10 +121,28 @@ class RemoteWindowsTaskContractTests(unittest.TestCase):
             "REQUEST_SCHEMA_FAILURE",
             "HELPER_STATIC_FAILURE",
             "RUNNER_HEALTH_FAILURE",
-            "COMMAND_FAILURE",
+            "PRODUCT_BUILD_FAILURE",
+            "HARNESS_PROGRAMMING_FAILURE",
+            "AUTOMATION_API_FAILURE",
+            "AUTOMATION_DISCOVERY_FAILURE",
+            "AUTOMATION_TIMEOUT_FAILURE",
+            "TEST_ASSERTION_FAILURE",
+            "COMMAND_FAILURE_UNCLASSIFIED",
         ):
             self.assertIn(category, self.workflow)
         self.assertIn('"skipped" { return "NOT_RUN" }', self.workflow)
+
+    def test_scoped_runner_emits_failure_categories(self):
+        for category in (
+            "STRUCTURE_CONTRACT_FAILURE",
+            "PRODUCT_SOURCE_CONTRACT_FAILURE",
+            "HARNESS_CONTRACT_FAILURE",
+            "INFRA_POLICY_CONTRACT_FAILURE",
+            "HARNESS_DEPENDENCY_FAILURE",
+            "PRODUCT_BUILD_FAILURE",
+            "GUI_ACCEPTANCE_FAILURE",
+        ):
+            self.assertIn(f'"{category}"', self.run_checks)
 
     def test_windows_build_remains_manual_only(self):
         self.assertIn("on:\n  workflow_dispatch:", self.windows_build)

@@ -4,6 +4,7 @@ import hashlib
 import os
 from pathlib import Path
 from paths import ROOT, APP, app_exe
+from uia_polling import wait_until
 import shutil
 import subprocess
 import sys
@@ -16,13 +17,7 @@ import psutil
 LEGACY=("fxfile.conf","fxfile-main.conf","fxfile-toolbar.dat",
         "fxfile-coolbar.dat","fxfile-dlg_state.conf","fxfile-folder_layout.conf")
 def until(fn,why,timeout=22):
- end=time.monotonic()+timeout
- while time.monotonic()<end:
-  try:
-   if fn():return
-  except Exception:pass
-  time.sleep(.24)
- raise AssertionError(why)
+ return wait_until(fn, why, seconds=timeout, interval=.24)
 def run(configuration="Debug"):
  here=APP
  root=ROOT

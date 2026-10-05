@@ -13,6 +13,7 @@ import hashlib
 import os
 from pathlib import Path
 from paths import ROOT, APP, app_exe
+from uia_polling import wait_until
 import shutil
 import subprocess
 import sys
@@ -31,14 +32,7 @@ u.PostMessageW.argtypes=[w.HWND,w.UINT,w.WPARAM,w.LPARAM]
 u.PostMessageW.restype=w.BOOL
 
 def until(f,why,seconds=17):
-    stop=time.monotonic()+seconds
-    last=None
-    while time.monotonic()<stop:
-        try:
-            if f():return True
-        except Exception as e:last=type(e).__name__
-        time.sleep(.19)
-    raise AssertionError(why+" "+str(last or ""))
+    return wait_until(f, why, seconds=seconds, interval=.19)
 
 def own_focus(win,hwnd,allowed_pid=None):
     win.set_focus()

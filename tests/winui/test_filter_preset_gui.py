@@ -2,6 +2,7 @@
 from pathlib import Path
 from paths import ROOT, app_exe
 from profile_guard import assert_legacy_profile_unchanged, snapshot_legacy_profile
+from uia_polling import wait_until
 import ctypes as c
 import os,shutil,subprocess,tempfile,time
 from ctypes import wintypes as W
@@ -34,13 +35,7 @@ def windows(pid):
         return 1
     u.EnumWindows(cb,0);return out
 def until(fn,label,timeout=12):
-    end=time.monotonic()+timeout
-    while time.monotonic()<end:
-        try:
-            if fn():return
-        except Exception:pass
-        time.sleep(.15)
-    raise AssertionError(label)
+    return wait_until(fn, label, seconds=timeout, interval=.15)
 def row_texts(win):
     files=win.child_window(auto_id="LeftFiles")
     return [x.window_text() for x in files.descendants(control_type="ListItem")]
