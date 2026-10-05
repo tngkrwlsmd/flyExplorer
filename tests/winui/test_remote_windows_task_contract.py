@@ -220,6 +220,7 @@ class RemoteWindowsTaskContractTests(unittest.TestCase):
         self.assertIn("configurations = [\"Release\"]", self.run_checks)
         self.assertIn("--include-debug", self.run_checks)
         self.assertIn("targeted GUI", self.run_checks)
+        self.assertNotIn('"native-compile"', self.run_checks)
 
     def test_windows_build_remains_manual_only(self):
         self.assertIn("on:\n  workflow_dispatch:", self.windows_build)
