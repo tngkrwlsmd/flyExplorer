@@ -698,11 +698,23 @@ jobs:
                 }
                 $revision = (& git -C $env:FLYEXPLORER_CANONICAL_CHECKOUT rev-parse refs/remotes/origin/main).Trim()
               }
-              $spec = "${revision}:tools/winui/classify_remote_failure.py"
+              $spec = $revision + ":tools/winui/classify_remote_failure.py"
               & git -C $env:FLYEXPLORER_CANONICAL_CHECKOUT show $spec |
                 Set-Content -LiteralPath $classifier -Encoding UTF8
               if ($LASTEXITCODE -ne 0 -or -not (Test-Path -LiteralPath $classifier -PathType Leaf)) {
-                return "COMMAND_FAILURE_UNCLASSIFIED"
+                Remove-Item -LiteralPath $classifier -Force -ErrorAction SilentlyContinue
+                & git -C $env:FLYEXPLORER_CANONICAL_CHECKOUT fetch origin main --no-tags --prune
+                if ($LASTEXITCODE -ne 0) {
+                  return "COMMAND_FAILURE_UNCLASSIFIED"
+                }
+                $revision = (& git -C $env:FLYEXPLORER_CANONICAL_CHECKOUT rev-parse refs/remotes/origin/main).Trim()
+                $spec = $revision + ":tools/winui/classify_remote_failure.py"
+                & git -C $env:FLYEXPLORER_CANONICAL_CHECKOUT show $spec |
+                  Set-Content -LiteralPath $classifier -Encoding UTF8
+                if ($LASTEXITCODE -ne 0 -or -not (Test-Path -LiteralPath $classifier -PathType Leaf)) {
+                  return "COMMAND_FAILURE_UNCLASSIFIED"
+                }
+                Write-Host "RESULT_CLASSIFIER_FALLBACK=current-main revision=$revision"
               }
               $text | Set-Content -LiteralPath $tempText -Encoding UTF8
               $category = (& python -X utf8 $classifier $tempText | Select-Object -Last 1).Trim()
