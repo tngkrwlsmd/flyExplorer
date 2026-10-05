@@ -7,18 +7,20 @@ be duplicated in policy/guidance text. Behavioral principles live in
 
 ## Remote Windows operational settings
 
-The single source for current remote-shell operational tunables is the top-level
-`env` block in `.github/workflows/remote-windows-task.yml`:
+The top-level `env` block in `.github/workflows/remote-windows-task.yml`
+mirrors the current remote-shell operational policy:
 
 - `FLYEXPLORER_CANONICAL_CHECKOUT` — canonical persistent Windows checkout.
-- `FLYEXPLORER_ROUTINE_OBSERVATION_SECONDS` — default routine observation interval.
-- `FLYEXPLORER_ACTIVE_MONITOR_SECONDS` — explicit active-monitor interval.
+- `FLYEXPLORER_ROUTINE_OBSERVATION_SECONDS` — 30-second dependent-run observation interval.
+- `FLYEXPLORER_ACTIVE_MONITOR_SECONDS` — 30-second explicit active-monitor interval.
+- `FLYEXPLORER_RESULT_DEPENDENT_MAX_WAIT_SECONDS` — 180-second / three-minute same-turn wait ceiling for result-dependent Actions runs.
 - `FLYEXPLORER_REMOTE_RUNNER_CAPACITY` — current interactive Windows execution capacity.
 - `FLYEXPLORER_DEFAULT_VALIDATION_RUN_BUDGET` — normal validation planning budget.
 
-Guidance references these setting names and their purpose, not their literal
-values. When runner capacity changes, revisit request-slot serialization and the
-workflow concurrency group.
+The 30-second observation interval and three-minute ceiling are deliberate
+repository policy and are intentionally repeated in the maintained guidance so
+future conversations do not reinterpret them away. When runner capacity changes,
+revisit request-slot serialization and the workflow concurrency group.
 
 ## Current high-cost fixture profile
 

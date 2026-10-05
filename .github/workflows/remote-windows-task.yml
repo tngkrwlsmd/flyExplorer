@@ -24,12 +24,14 @@ on:
 permissions:
   contents: read
 
-# Mutable operational values live here. Guidance references the setting names
-# and principles instead of copying paths, intervals or budget numbers.
+# Operational values live here. The 30-second observation interval and
+# three-minute result-dependent wait ceiling are deliberate project policy and
+# are also stated explicitly in repository guidance.
 env:
   FLYEXPLORER_CANONICAL_CHECKOUT: 'C:\dev\flyExplorer'
-  FLYEXPLORER_ROUTINE_OBSERVATION_SECONDS: '180'
+  FLYEXPLORER_ROUTINE_OBSERVATION_SECONDS: '30'
   FLYEXPLORER_ACTIVE_MONITOR_SECONDS: '30'
+  FLYEXPLORER_RESULT_DEPENDENT_MAX_WAIT_SECONDS: '180'
   FLYEXPLORER_REMOTE_RUNNER_CAPACITY: '1'
   FLYEXPLORER_DEFAULT_VALIDATION_RUN_BUDGET: '2'
 

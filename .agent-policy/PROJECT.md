@@ -283,19 +283,21 @@ directly invalidates that fixture's result.
   `FLYEXPLORER_REMOTE_RUNNER_CAPACITY` represents a single interactive
   execution lane. If capacity changes, re-evaluate the lease and concurrency
   policy instead of carrying the single-runner assumption forward.
-- Do not short-interval poll Remote Windows Task status, but do not use that
-  rule to abandon a run whose result is required to finish the current user
-  request. Such a run is a blocking dependency: follow it through completion
-  at the workflow-configured observation cadence, consume the result as soon as
-  completion is observed, and continue the dependent action in the same task.
-  The user does not need to separately request active monitoring for a
-  result-dependent run. The current routine and explicit active-monitor
-  cadences come from the workflow settings
-  `FLYEXPLORER_ROUTINE_OBSERVATION_SECONDS` and
-  `FLYEXPLORER_ACTIVE_MONITOR_SECONDS`; policy text must not duplicate their
-  literal values. Explicit active monitoring changes cadence only.
-  Independently known completion may be inspected immediately. Never create a
-  scheduled/automation task merely to bridge an observation interval.
+- If the current user request depends on a GitHub Actions / Remote Windows
+  Task result, that run is a blocking dependency. Record the Actions start time
+  and poll every **30 seconds** while its reported execution time is under
+  **three minutes**. Do not end the response after an early queued/running read
+  during that window. Consume completion immediately and continue the dependent
+  action in the same task. If the run is still active once its Actions
+  execution time reaches three minutes, stop waiting in that response and leave
+  the exact run ID, candidate SHA and next action as the resume checkpoint.
+  Independently known completion is inspected immediately; never poll faster
+  than 30 seconds or create an automation merely to bridge this wait. The user
+  does not need to separately request active monitoring for a result-dependent
+  run. `FLYEXPLORER_ROUTINE_OBSERVATION_SECONDS`,
+  `FLYEXPLORER_ACTIVE_MONITOR_SECONDS`, and
+  `FLYEXPLORER_RESULT_DEPENDENT_MAX_WAIT_SECONDS` mirror the fixed
+  30-second / 30-second / 180-second policy.
 - Use the workflow-configured `FLYEXPLORER_DEFAULT_VALIDATION_RUN_BUDGET` as
   the normal planning budget. The policy objective is no diagnosis-free
   repeated execution: every successor must have a completed predecessor, a
@@ -323,14 +325,13 @@ directly invalidates that fixture's result.
   orchestration defects. Fix only the identified layer and rerun only the
   invalidated boundary; repeat the expensive fixture only when its acceptance
   evidence was genuinely invalidated.
-- For normal builds or remote tasks, do not actively query GitHub status on a
-  short interval. Use the workflow-configured routine observation interval
-  unless completion is independently known. Do not sleep merely to consume the
-  observation window and do not replace it with an unsolicited scheduled task.
-  If the current request depends on the result, remain responsible for that run
-  until completion and then act on it. Leave the exact active run ID as a
-  resume point only when the result is not required to satisfy the current
-  request.
+- For a result-dependent Actions run, the normal same-response observation
+  window is bounded: check every 30 seconds until completion or until the run's
+  Actions execution time reaches three minutes, whichever comes first. Only
+  after that three-minute ceiling may an unfinished required run be left as a
+  resume checkpoint. A run that is not required for the current request may be
+  checkpointed immediately. Do not replace either case with an unsolicited
+  scheduled task.
 - Main-branch pushes do not trigger Windows validation automatically. After a
   logical unit is already accepted and moved to main, do not dispatch another
   Windows CI run just to reconfirm it. A post-main manual gate requires a
