@@ -614,10 +614,22 @@ artifacts. #440 changed only that evidence destination to the workflow's
 canonical `logs\remote-evidence` path and completed successfully.
 
 This closes the technical exact binary-to-source identity gate for the accepted
-unsigned artifact. It does **not** make the private source ZIP publicly
-available, select the final immutable release tag or GPLv3 section 6 delivery
-mechanism, certify production Authenticode signing, or certify clean-machine
-Program Files/HKLM machine-wide lifecycle.
+unsigned artifact. The public distribution mechanism is now selected as GPLv3
+section 6(d) same-release-page network access, and the reserved final tag is
+`v1.0.0.0`. Repository-level GitHub Immutable Releases was enabled in Remote
+Windows Task #446 (`37379026246`). The tag is intentionally absent before
+publication because the current private-repository plan cannot protect
+pre-created tags with a tag ruleset; the completed draft release will create/
+adopt and lock the tag when published.
+
+The project retention policy keeps matching Corresponding Source publicly
+available for the complete binary-availability period and at least 1095 days
+after the binary is withdrawn. This is an additional project commitment; GPLv3
+section 6(d) itself does not specify a fixed three-year duration.
+
+These decisions do **not** make the private source ZIP publicly available,
+certify production Authenticode signing, certify clean-machine Program Files/
+HKLM machine-wide lifecycle, or clear rightsholder/legal review.
 
 ## Open gates
 
