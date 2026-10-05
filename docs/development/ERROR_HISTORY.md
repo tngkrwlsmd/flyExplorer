@@ -4337,3 +4337,34 @@ candidate integration run #429 (`37302252972`) preserved
 product-like `try/finally` semantics, and recorded COMMAND=PASS with exit 0.
 Run #428 is not acceptance evidence because its dispatch harness had already
 removed quotes before the workflow received the command.
+
+## 2026-10-05: fresh Release rebuild invalidated prior exact-build provenance
+
+**Observed:** Remote Windows Task #434 (`37306118305`) passed request
+validation, FAST preflight, runner health, packaging static checks and a fresh
+Release build, then `packaging/provenance.py --check` rejected the tracked
+snapshot with `tracked payload provenance does not match the current Release
+runtime`.
+
+**Diagnosis:** This was not a product/runtime defect. The previous snapshot had
+been generated from a different Release build. The provenance contract hashes
+the actual runtime bytes; linker/PE output from a later clean build is a new
+byte set even when product behavior/source inputs are otherwise unchanged.
+Therefore an older build digest must not be reused as a cross-build
+reproducibility assertion.
+
+**Correction / prevention:** The packaging instructions now make provenance
+ownership explicit: after every fresh Release build, run
+`packaging/provenance.py --write`, immediately run `--check`, and package
+that same runtime. Do not rebuild between provenance generation and packaging.
+
+**Verification:** Remote Windows Task #435 (`37306799266`) clean-built
+candidate `1862231b271e9bb71d5adbf53439fe0d49b60af4`, generated and checked
+the exact runtime snapshot, built a 326-file setup, and passed bounded
+`/TESTROOT` clean install, repair, update, rollback and uninstall. The runtime
+contains 305 files (17 product/generated, 288 exact NuGet byte matches) with
+manifest SHA-256
+`40f0f12797c6731f823dd3e438b09fc575a78a54f9962c14fb572e5d70dfdcc5`.
+Clean-install, update and rollback shutdown observation all exited normally.
+The accepted provenance commit is
+`00f90c30800fb66f88184211442f6eeb05a950b7`.
