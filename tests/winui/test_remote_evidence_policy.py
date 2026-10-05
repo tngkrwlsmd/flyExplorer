@@ -22,6 +22,7 @@ def result(category, *, candidate="a" * 40, plan=None):
         "validation_plan": plan
         or ["release-build", "provenance", "package", "installed-gui-lifecycle"],
         "failure_category": category,
+        "stages": {"COMMAND": "FAIL"},
     }
 
 
@@ -40,6 +41,21 @@ class RemoteEvidencePolicyTests(unittest.TestCase):
     def test_current_classifier_can_resolve_old_unclassified_timeout(self):
         category = policy.evaluate_previous(
             result=result("COMMAND_FAILURE_UNCLASSIFIED"),
+            log_text=(
+                'File "tests/winui/test_installed_lifecycle.py"\n'
+                "subprocess.TimeoutExpired: Command ['C:\\x\\flyExplorer.exe'] "
+                "timed out after 16 seconds\n"
+                "AssertionError: owned installed app did not close within "
+                "the accepted 16-second budget"
+            ),
+            request_mode="validation",
+            retry_scope="focused-reuse",
+        )
+        self.assertEqual("INSTALLED_APP_SHUTDOWN_TIMEOUT", category)
+
+    def test_current_classifier_can_resolve_legacy_missing_category(self):
+        category = policy.evaluate_previous(
+            result=result(None),
             log_text=(
                 'File "tests/winui/test_installed_lifecycle.py"\n'
                 "subprocess.TimeoutExpired: Command ['C:\\x\\flyExplorer.exe'] "
