@@ -8,10 +8,12 @@ failures. Stdlib-only by design.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import io
 import json
 import os
 from pathlib import Path
+import shutil
 import sys
 import urllib.parse
 import urllib.request
@@ -170,11 +172,11 @@ def _zip_text(data: bytes) -> str:
     return "\n".join(chunks)
 
 
-def run_artifact_result(
+def run_artifact_zip(
     repository: str,
     token: str,
     run_id: int,
-) -> dict | None:
+) -> bytes | None:
     payload = _json(
         f"https://api.github.com/repos/{repository}/actions/runs/{run_id}/artifacts",
         token,
@@ -190,17 +192,100 @@ def run_artifact_result(
     )
     if artifact is None:
         return None
-    data = _request(
+    return _request(
         f"https://api.github.com/repos/{repository}/actions/artifacts/"
         f"{artifact['id']}/zip",
         token,
     )
+
+
+def _zip_json(data: bytes, name: str) -> dict | None:
     with zipfile.ZipFile(io.BytesIO(data)) as archive:
         try:
-            raw = archive.read("remote-result.json")
+            raw = archive.read(name)
         except KeyError:
             return None
-    return json.loads(raw.decode("utf-8-sig"))
+    value = json.loads(raw.decode("utf-8-sig"))
+    return value if isinstance(value, dict) else None
+
+
+def run_artifact_result(
+    repository: str,
+    token: str,
+    run_id: int,
+) -> dict | None:
+    data = run_artifact_zip(repository, token, run_id)
+    return None if data is None else _zip_json(data, "remote-result.json")
+
+
+def validate_reuse_artifacts(
+    *,
+    data: bytes,
+    logical_unit: str,
+    candidate_sha: str,
+    targets: list[str],
+) -> dict[str, bytes]:
+    manifest = _zip_json(data, "reuse-evidence.json")
+    if manifest is None:
+        raise EvidencePolicyError(
+            "reuse run has no reuse-evidence.json; prior PASS logs alone are "
+            "not a reusable binary artifact"
+        )
+    if manifest.get("format") != "flyexplorer-reuse-evidence-v1":
+        raise EvidencePolicyError("reuse-evidence.json format is unsupported")
+    if str(manifest.get("logical_unit") or "") != logical_unit:
+        raise EvidencePolicyError("reuse artifact logical_unit does not match")
+    if str(manifest.get("candidate_sha") or "").lower() != candidate_sha.lower():
+        raise EvidencePolicyError("reuse artifact candidate_sha does not match")
+    declared = manifest.get("targets")
+    if not isinstance(declared, dict):
+        raise EvidencePolicyError("reuse artifact targets map is missing")
+
+    extracted: dict[str, bytes] = {}
+    with zipfile.ZipFile(io.BytesIO(data)) as archive:
+        names = set(archive.namelist())
+        for target in targets:
+            item = declared.get(target)
+            if not isinstance(item, dict):
+                raise EvidencePolicyError(
+                    f"reuse artifact does not preserve target: {target}"
+                )
+            path = str(item.get("path") or "").replace("\\", "/")
+            expected_hash = str(item.get("sha256") or "").lower()
+            expected_bytes = item.get("bytes")
+            parts = Path(path).parts
+            if (
+                not path.startswith("reuse/")
+                or not path
+                or ".." in parts
+                or path not in names
+            ):
+                raise EvidencePolicyError(
+                    f"reuse artifact path is invalid or missing for {target}: {path}"
+                )
+            raw = archive.read(path)
+            if not isinstance(expected_bytes, int) or expected_bytes != len(raw):
+                raise EvidencePolicyError(
+                    f"reuse artifact byte count mismatch for {target}"
+                )
+            digest = hashlib.sha256(raw).hexdigest()
+            if expected_hash != digest:
+                raise EvidencePolicyError(
+                    f"reuse artifact SHA-256 mismatch for {target}"
+                )
+            extracted[path] = raw
+    return extracted
+
+
+def extract_reuse_artifacts(files: dict[str, bytes], output: Path) -> None:
+    if output.exists():
+        shutil.rmtree(output)
+    output.mkdir(parents=True, exist_ok=True)
+    for path, raw in files.items():
+        rel = Path(path).relative_to("reuse")
+        target = output / rel
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_bytes(raw)
 
 
 def run_log_text(repository: str, token: str, run_id: int) -> str:
@@ -253,6 +338,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--reuse-run-id", type=int)
     parser.add_argument("--reuse-candidate-sha", default="")
     parser.add_argument("--reused-target", action="append", default=[])
+    parser.add_argument("--extract-reuse-dir", type=Path)
     args = parser.parse_args(argv)
     if not args.token:
         print("REMOTE_EVIDENCE_POLICY=FAIL: GitHub Actions token is required", file=sys.stderr)
@@ -291,9 +377,12 @@ def main(argv: list[str] | None = None) -> int:
         if args.retry_scope == "focused-reuse":
             if not args.reuse_run_id:
                 raise EvidencePolicyError("focused-reuse requires reuse run id")
-            reuse_result = run_artifact_result(
+            reuse_zip = run_artifact_zip(
                 args.repository, args.token, args.reuse_run_id
             )
+            if reuse_zip is None:
+                raise EvidencePolicyError("reuse run has no remote evidence artifact")
+            reuse_result = _zip_json(reuse_zip, "remote-result.json")
             if reuse_result is None:
                 raise EvidencePolicyError("reuse run has no remote-result artifact")
             reuse_log = run_log_text(
@@ -306,9 +395,21 @@ def main(argv: list[str] | None = None) -> int:
                 candidate_sha=args.reuse_candidate_sha,
                 targets=args.reused_target,
             )
+            reusable_files = validate_reuse_artifacts(
+                data=reuse_zip,
+                logical_unit=args.logical_unit,
+                candidate_sha=args.reuse_candidate_sha,
+                targets=args.reused_target,
+            )
+            if args.extract_reuse_dir is None:
+                raise EvidencePolicyError(
+                    "focused-reuse requires --extract-reuse-dir"
+                )
+            extract_reuse_artifacts(reusable_files, args.extract_reuse_dir)
             print(
                 f"REMOTE_EVIDENCE_REUSE=PASS run_id={args.reuse_run_id} "
-                f"targets={','.join(args.reused_target)}"
+                f"targets={','.join(args.reused_target)} "
+                f"files={len(reusable_files)}"
             )
     except (
         EvidencePolicyError,
