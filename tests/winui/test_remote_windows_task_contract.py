@@ -64,6 +64,17 @@ class RemoteWindowsTaskContractTests(unittest.TestCase):
         self.assertIn("Stale validation request:", self.workflow)
         self.assertIn("DIAGNOSTIC_STALE_MAIN=ADVISORY", self.workflow)
 
+    def test_diagnostic_skips_prior_evidence_policy(self):
+        evidence = self.workflow.index(
+            "- name: Enforce prior evidence retry policy"
+        )
+        preflight = self.workflow.index("- name: Static candidate preflight")
+        block = self.workflow[evidence:preflight]
+        self.assertIn(
+            "inputs.request_ref != '' && env.REMOTE_REQUEST_MODE == 'validation'",
+            block,
+        )
+
     def test_prior_evidence_policy_refreshes_canonical_refs_first(self):
         evidence = self.workflow.index(
             "- name: Enforce prior evidence retry policy"
