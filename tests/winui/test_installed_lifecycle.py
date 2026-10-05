@@ -1,6 +1,13 @@
-"""Actual M2.7 installer lifecycle in a bounded owned directory/HKCU test scope."""
+"""Actual installer lifecycle in a bounded owned directory/HKCU test scope.
+
+This proves the current unsigned setup's bounded install/repair/update/rollback/
+launch/uninstall behavior. It is not a signed clean-machine Program Files/HKLM
+certification.
+"""
 from pathlib import Path
 import ctypes
+import hashlib
+import json
 import os
 import shutil
 import subprocess
@@ -15,13 +22,20 @@ SETUP=ROOT/"out"/"package"/"flyExplorer-Setup-x64.exe"
 LOGS=ROOT/"logs"/"m27"
 REG_PATH=r"Software\Microsoft\Windows\CurrentVersion\Uninstall\flyExplorer-InstallerTest"
 
+
+def sha256(path):
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
 def run(args):
     result=subprocess.run([str(SETUP),*args],cwd=SETUP.parent,timeout=45)
     assert result.returncode==0,(args,result.returncode)
 
+
 def reg_value(name):
     with winreg.OpenKey(winreg.HKEY_CURRENT_USER,REG_PATH) as key:
         return winreg.QueryValueEx(key,name)[0]
+
 
 def reg_exists():
     try:
@@ -29,6 +43,7 @@ def reg_exists():
         return True
     except FileNotFoundError:
         return False
+
 
 def wait_absent(path,seconds=20):
     end=time.time()+seconds
@@ -38,18 +53,51 @@ def wait_absent(path,seconds=20):
         time.sleep(.2)
     return not path.exists()
 
-def launch_installed(root,profile):
+
+def runtime_provenance(root):
+    path=root/"licenses"/"PAYLOAD_PROVENANCE.json"
+    data=json.loads(path.read_text(encoding="utf-8-sig"))
+    assert data["format"]=="flyexplorer-runtime-provenance-v1"
+    assert data["runtime_file_count"]==len(data["files"])
+    for item in data["files"]:
+        target=root/Path(item["path"])
+        assert target.is_file(),item["path"]
+        assert target.stat().st_size==item["bytes"],item["path"]
+        assert sha256(target)==item["sha256"],item["path"]
+    return data
+
+
+def install_manifest(root):
+    return {
+        line.strip()
+        for line in (root/"install-manifest.txt").read_text(
+            encoding="utf-8-sig").splitlines()
+        if line.strip()
+    }
+
+
+def assert_runtime_manifest_covered(root,provenance):
+    installed=install_manifest(root)
+    runtime={item["path"].replace("/","\\") for item in provenance["files"]}
+    normalized={item.replace("/","\\") for item in installed}
+    assert runtime<=normalized,(runtime-normalized)
+
+
+def launch_installed(root,profile,label):
     source=profile/"source";source.mkdir(parents=True,exist_ok=True)
     (source/"installed-navigation.txt").write_text("owned",encoding="utf-8")
     env=os.environ.copy()
     for key in ("APPDATA","LOCALAPPDATA","TEMP","TMP"):
         p=profile/key.lower();p.mkdir(exist_ok=True);env[key]=str(p)
     exe=root/"flyExplorer.exe"
+    expected=sha256(exe)
     proc=subprocess.Popen([str(exe),str(source)],cwd=root,env=env)
     window=None
     try:
         end=time.time()+18
         while time.time()<end:
+            if proc.poll() is not None:
+                break
             windows=Desktop(backend="uia").windows(process=proc.pid)
             if windows:
                 window=Desktop(backend="uia").window(handle=windows[0].handle)
@@ -58,6 +106,8 @@ def launch_installed(root,profile):
                            window.child_window(auto_id="LeftFiles").descendants()
                            if x.element_info.control_type=="ListItem"]
                     if any("installed-navigation.txt" in x for x in items):
+                        assert sha256(exe)==expected
+                        print("INSTALLED_APP_OWNED_NAVIGATION",label,True,flush=True)
                         return
             time.sleep(.25)
         raise AssertionError("installed flyExplorer did not navigate owned folder")
@@ -69,6 +119,7 @@ def launch_installed(root,profile):
             except subprocess.TimeoutExpired:
                 proc.terminate();proc.wait(timeout=5)
         assert proc.returncode==0,proc.returncode
+
 
 def main():
     assert SETUP.is_file(),f"missing installer: {SETUP}; run package.bat Release"
@@ -85,6 +136,7 @@ def main():
                     "flyExplorerUninstall.exe","install-manifest.txt",
                     "licenses/flyExplorer-LICENSE.txt","licenses/GPL-3.0.txt",
                     "licenses/THIRD_PARTY-NOTICES.txt","licenses/PAYLOAD_PROVENANCE.md",
+                    "licenses/PAYLOAD_PROVENANCE.json",
                     "licenses/nuget/microsoft.windowsappsdk/2.5.1/license.txt",
                     "licenses/nuget/microsoft.windowsappsdk/2.5.1/NOTICE.txt",
                     "licenses/nuget/microsoft.web.webview2/1.0.3719.77/LICENSE.txt",
@@ -97,18 +149,42 @@ def main():
         assert reg_value("DisplayName")=="flyExplorer"
         assert reg_value("DisplayVersion")=="1.0.0.0"
         assert Path(reg_value("InstallLocation"))==root
+        provenance=runtime_provenance(root)
+        assert_runtime_manifest_covered(root,provenance)
+        print("OWNED_INSTALLER_RUNTIME_PROVENANCE_PASS",True,flush=True)
+        launch_installed(root,profile,"clean-install")
 
-        # Same-version repair/reinstall.
+        # Same-version repair must remove a prior manifest-owned obsolete file
+        # and restore a corrupted current runtime byte-for-byte.
+        obsolete=root/"obsolete-owned-runtime.bin"
+        obsolete.write_bytes(b"owned obsolete payload")
+        with (root/"install-manifest.txt").open("a",encoding="utf-8",newline="") as stream:
+            stream.write("obsolete-owned-runtime.bin\r\n")
+        repair_target=root/"StatusFooter.xbf"
+        assert repair_target.is_file()
+        repair_target.write_bytes(b"owned stale runtime")
         run(["/S",f"/TESTROOT={root}","/TESTDISPLAYVERSION=1.0.0.0"])
+        assert not obsolete.exists()
+        provenance=runtime_provenance(root)
+        assert_runtime_manifest_covered(root,provenance)
         assert reg_value("DisplayVersion")=="1.0.0.0"
+        print("OWNED_INSTALLER_STALE_MANIFEST_CLEANUP_PASS",True,flush=True)
 
-        # Synthetic installer-state upgrade and explicit downgrade policy check.
+        # Bounded installer-state upgrade and rollback use the exact current
+        # payload. Cross-version signed rollback remains a separate external gate.
         run(["/S",f"/TESTROOT={root}","/TESTDISPLAYVERSION=1.0.0.1"])
         assert reg_value("DisplayVersion")=="1.0.0.1"
+        provenance=runtime_provenance(root)
+        assert_runtime_manifest_covered(root,provenance)
+        launch_installed(root,profile,"update")
+        print("OWNED_INSTALLER_UPDATE_LAUNCH_PASS",True,flush=True)
+
         run(["/S",f"/TESTROOT={root}","/TESTDISPLAYVERSION=1.0.0.0"])
         assert reg_value("DisplayVersion")=="1.0.0.0"
-
-        launch_installed(root,profile)
+        provenance=runtime_provenance(root)
+        assert_runtime_manifest_covered(root,provenance)
+        launch_installed(root,profile,"rollback")
+        print("OWNED_INSTALLER_ROLLBACK_LAUNCH_PASS",True,flush=True)
 
         uninstaller=root/"flyExplorerUninstall.exe"
         result=subprocess.run([str(uninstaller),"/UNINSTALL","/S",f"/TESTROOT={root}"],
@@ -117,8 +193,7 @@ def main():
         assert wait_absent(root),root
         assert not reg_exists()
         assert sentinel.is_file()
-        print("OWNED_INSTALLER_CLEAN_INSTALL_REPAIR_UPGRADE_ROLLBACK_UNINSTALL",True)
-        print("INSTALLED_APP_OWNED_NAVIGATION",True)
+        print("OWNED_INSTALLER_CLEAN_INSTALL_REPAIR_UPDATE_ROLLBACK_UNINSTALL",True)
         print("USER_SETTINGS_SENTINEL_PRESERVED",True)
     finally:
         if reg_exists():
@@ -126,6 +201,7 @@ def main():
             except OSError:pass
         if root.exists():shutil.rmtree(root,ignore_errors=True)
         if profile.exists():shutil.rmtree(profile,ignore_errors=True)
+
 
 if __name__=="__main__":
     main()
