@@ -1,13 +1,13 @@
 {
-  "request_id": "failure-propagation-product-contract-20261005",
+  "request_id": "failure-propagation-command-contract-20261005",
   "expected_main_sha": "ef8e2d7a65c03c3727aae625facaf6305d7d9841",
-  "candidate_sha": "79edd4de9aa63e15af01b6c5462f64ed0b0aeb36",
-  "logical_unit": "failure-propagation-product-contract",
+  "candidate_sha": "d44fee897778b336ff83b15523a492f8fe511154",
+  "logical_unit": "failure-propagation-command-contract",
   "configuration": "Release",
   "request_mode": "validation",
   "validation_plan": [
     "infra"
   ],
   "working_directory": "",
-  "command": "Write-Host \"COMMAND_SHOULD_NOT_RUN_AFTER_EXPECTED_PREFLIGHT_FAILURE\""
+  "command": "$ErrorActionPreference=\"Stop\"\n$repo=$env:FLYEXPLORER_CANONICAL_CHECKOUT\nSet-Location -LiteralPath $repo\n& git fetch origin work/failure-propagation-20261005 --no-tags --prune\nif($LASTEXITCODE -ne 0){throw \"candidate fetch failed\"}\n$temp=Join-Path $env:RUNNER_TEMP (\"command-propagation-\"+$env:GITHUB_RUN_ID)\nif(Test-Path -LiteralPath $temp){Remove-Item -LiteralPath $temp -Recurse -Force}\ntry{\n  & git worktree add --detach $temp d44fee897778b336ff83b15523a492f8fe511154\n  if($LASTEXITCODE -ne 0){throw \"candidate worktree failed\"}\n  Set-Location -LiteralPath $temp\n  @'\nimport unittest\nclass IntentionalInfraFailure(unittest.TestCase):\n    def test_failure_propagation(self):\n        self.fail(\"intentional command-layer infra failure propagation fixture\")\nif __name__ == \"__main__\":\n    unittest.main()\n'@ | Set-Content -LiteralPath \"tests\\winui\\test_remote_failure_classifier.py\" -Encoding UTF8\n  & python -X utf8 tools\\winui\\run_checks.py infra\n  exit $LASTEXITCODE\n} finally {\n  Set-Location -LiteralPath $repo\n  if(Test-Path -LiteralPath $temp){& git worktree remove --force $temp}\n  & git worktree prune\n}"
 }
