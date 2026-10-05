@@ -15,6 +15,7 @@ import time
 import uuid
 import winreg
 
+import psutil
 from pywinauto import Desktop
 
 ROOT=Path(__file__).resolve().parents[2]
@@ -52,6 +53,42 @@ def wait_absent(path,seconds=20):
             return True
         time.sleep(.2)
     return not path.exists()
+
+
+def owned_runtime_processes(root):
+    root=root.resolve()
+    found=[]
+    for proc in psutil.process_iter(["pid","exe"]):
+        try:
+            exe=proc.info.get("exe")
+            if exe and Path(exe).resolve().is_relative_to(root):
+                found.append(proc)
+        except (psutil.Error,OSError,RuntimeError):
+            pass
+    return found
+
+
+def wait_owned_runtime_processes(root,label,seconds=8):
+    end=time.monotonic()+seconds
+    while time.monotonic()<end:
+        pending=owned_runtime_processes(root)
+        if not pending:
+            print("OWNED_INSTALLER_RUNTIME_PROCESSES_SETTLED",label,True,flush=True)
+            return
+        time.sleep(.2)
+    pending=owned_runtime_processes(root)
+    detail=[(proc.pid,proc.name()) for proc in pending if proc.is_running()]
+    for proc in pending:
+        try:proc.terminate()
+        except psutil.Error:pass
+    _,alive=psutil.wait_procs(pending,timeout=4)
+    for proc in alive:
+        try:proc.kill()
+        except psutil.Error:pass
+    raise AssertionError(
+        "owned installed runtime process did not settle before next lifecycle phase: "
+        +repr(detail)
+    )
 
 
 def runtime_provenance(root):
@@ -131,6 +168,7 @@ def launch_installed(root,profile,label):
             "owned installed app exited nonzero without harness termination",
             proc.returncode,
         )
+        wait_owned_runtime_processes(root,label)
 
 
 def main():
