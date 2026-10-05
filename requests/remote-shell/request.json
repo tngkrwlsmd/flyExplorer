@@ -1,5 +1,5 @@
 {
-  "request_id": "current-release-packaging-shutdown-diagnostic-001",
+  "request_id": "current-release-packaging-shutdown-diagnostic-002",
   "expected_main_sha": "8ab54f79fc2fd22b152697edaf4a66bacf559f6f",
   "candidate_sha": "d004d7ce1b1872f1c18514d9e78b9de88054e364",
   "logical_unit": "current-release-packaging",
