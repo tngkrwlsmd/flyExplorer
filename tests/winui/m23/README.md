@@ -8,6 +8,7 @@ Private session schema v2 now persists Window Tab, pane/tab, view/sort/column
 and bounded filesystem history state while remaining able to read legacy v1.
 All automated fixtures use disposable owned paths and private profile state.
 
-Real global clipboard, physical pointer drag and other OS-global actions remain
-separate explicit gates. Current GUI acceptance is orchestrated by
-tools/winui/run_checks.py.
+Real global clipboard and other OS-global actions remain separate explicit
+gates. Owned same-app physical pointer drag is now part of the Release GUI
+acceptance and uses only disposable test-owned paths. Current GUI acceptance is
+orchestrated by tools/winui/run_checks.py.
