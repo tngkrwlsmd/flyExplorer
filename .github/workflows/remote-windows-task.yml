@@ -622,6 +622,7 @@ jobs:
           } else {
             "${{ steps.request.outcome }}"
           }
+          $evidencePolicyOutcome = "${{ steps.evidence_policy.outcome }}"
           $preflightOutcome = "${{ steps.preflight.outcome }}"
           $healthOutcome = "${{ steps.health.outcome }}"
           $commandOutcome = "${{ steps.command.outcome }}"
@@ -667,6 +668,8 @@ jobs:
           $failureCategory = $null
           if ($requestOutcome -eq "failure") {
             $failureCategory = "REQUEST_SCHEMA_FAILURE"
+          } elseif ($evidencePolicyOutcome -eq "failure") {
+            $failureCategory = "EVIDENCE_POLICY_FAILURE"
           } elseif ($preflightOutcome -eq "failure") {
             $failureCategory = "HELPER_STATIC_FAILURE"
           } elseif ($healthOutcome -eq "failure") {
@@ -713,6 +716,7 @@ jobs:
             )
             stages = [ordered]@{
               REQUEST_VALIDATION = Convert-Outcome $requestOutcome
+              EVIDENCE_POLICY = Convert-Outcome $evidencePolicyOutcome
               STATIC_PREFLIGHT = Convert-Outcome $preflightOutcome
               RUNNER_HEALTH = Convert-Outcome $healthOutcome
               COMMAND = Convert-Outcome $commandOutcome
