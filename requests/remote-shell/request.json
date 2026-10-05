@@ -1,13 +1,13 @@
 {
-  "request_id": "cleanup-stale-branches-20261005-direct",
-  "expected_main_sha": "dfa258cc1f19600759318e6adaa6d55b871a7402",
-  "candidate_sha": "dfa258cc1f19600759318e6adaa6d55b871a7402",
-  "logical_unit": "repository-branch-cleanup",
+  "request_id": "verify-classifier-write-permissions-20261005",
+  "expected_main_sha": "829be6abbc2845effa075f57bccb181d7857e38d",
+  "candidate_sha": "829be6abbc2845effa075f57bccb181d7857e38d",
+  "logical_unit": "remote-classifier-permissions",
   "configuration": "none",
   "request_mode": "diagnostic",
   "validation_plan": [],
   "retry_reason": "",
-  "harness_revision": "dfa258cc1f19600759318e6adaa6d55b871a7402",
+  "harness_revision": "829be6abbc2845effa075f57bccb181d7857e38d",
   "working_directory": "",
-  "command": "$ErrorActionPreference=\"Stop\"\n$keep=@(\"main\",\"control/remote-shell\")\n$delete=@(\n  \"docs/current-packaging-acceptance-20261005\",\n  \"docs/current-provenance-snapshot-20261005\",\n  \"work/current-release-packaging-20261005\",\n  \"work/current-release-packaging-final-20261005\",\n  \"work/current-release-packaging-validated-20261005\",\n  \"work/diagnostic-evidence-skip-20261005\",\n  \"work/diagnostic-skip-evidence-policy-20261005\",\n  \"work/remote-evidence-api-fix-20261005\",\n  \"work/remote-evidence-fetch-fix-20261005\",\n  \"work/remote-evidence-redirect-fix-20261005\",\n  \"work/remote-failure-powershell-classify-20261005\",\n  \"work/remote-retry-evidence-20261005\",\n  \"work/remote-reusable-artifacts-20261005\",\n  \"work/verification-infra-hardening-20261005\",\n  \"work/verification-infra-simplify-20261005\"\n)\nSet-Location -LiteralPath $env:GITHUB_WORKSPACE\n$remote=(git remote get-url origin).Trim()\nWrite-Host \"BRANCH_CLEANUP_REMOTE=$remote\"\nforeach($branch in $delete){\n  if($branch -in $keep){throw \"refusing to delete protected operational branch: $branch\"}\n  $exists=& git ls-remote --heads origin \"refs/heads/$branch\"\n  if([string]::IsNullOrWhiteSpace(($exists -join \"\"))){\n    Write-Host \"BRANCH_ALREADY_ABSENT=$branch\"\n    continue\n  }\n  & git push origin --delete $branch\n  if($LASTEXITCODE -ne 0){throw \"failed to delete branch: $branch\"}\n  Write-Host \"BRANCH_DELETED=$branch\"\n}\nforeach($branch in $keep){\n  $exists=& git ls-remote --heads origin \"refs/heads/$branch\"\n  if([string]::IsNullOrWhiteSpace(($exists -join \"\"))){throw \"required branch missing after cleanup: $branch\"}\n  Write-Host \"BRANCH_KEPT=$branch\"\n}\nWrite-Host \"BRANCH_CLEANUP_PASS\""
+  "command": "$ErrorActionPreference=\"Stop\"\n$repo=$env:FLYEXPLORER_CANONICAL_CHECKOUT\n& git -C $repo fetch origin main --no-tags --prune\nif($LASTEXITCODE -ne 0){throw \"fetch main failed\"}\n$temp=Join-Path $env:RUNNER_TEMP (\"fly-classifier-permission-check-\" + $env:GITHUB_RUN_ID)\nif(Test-Path -LiteralPath $temp){Remove-Item -LiteralPath $temp -Recurse -Force}\ntry {\n  & git -C $repo worktree add --detach $temp 829be6abbc2845effa075f57bccb181d7857e38d\n  if($LASTEXITCODE -ne 0){throw \"worktree add failed\"}\n  & python -X utf8 (Join-Path $temp \"tests\\winui\\test_remote_failure_classifier.py\")\n  if($LASTEXITCODE -ne 0){throw \"failure classifier tests failed\"}\n  & python -X utf8 (Join-Path $temp \"tests\\winui\\test_remote_evidence_policy.py\")\n  if($LASTEXITCODE -ne 0){throw \"remote evidence policy tests failed\"}\n  & python -X utf8 (Join-Path $temp \"tests\\winui\\test_remote_windows_task_contract.py\")\n  if($LASTEXITCODE -ne 0){throw \"remote workflow contract tests failed\"}\n  Write-Host \"REMOTE_CLASSIFIER_PERMISSION_CHECK=PASS\"\n} finally {\n  if(Test-Path -LiteralPath $temp){& git -C $repo worktree remove --force $temp}\n  & git -C $repo worktree prune\n}"
 }
