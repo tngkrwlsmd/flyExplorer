@@ -29,48 +29,78 @@ def _has(pattern: str, command: str) -> bool:
 
 
 def detect_stages(command: str) -> set[str]:
-    """Detect only executable validation invocations, not incidental filenames."""
+    """Detect executable validation stages, not static checks or filenames."""
     stages: set[str] = set()
+    statements = [
+        part.strip()
+        for part in re.split(r"[;\r\n&]+", command)
+        if part.strip()
+    ]
 
-    if _has(
-        COMMAND_BOUNDARY + r"(?:cmd\s+/c\s+)?test\.bat\s+source(?:\s|$)",
-        command,
-    ) or _has(r"run_checks\.py[^\r\n;&]*\bsource\b", command):
-        stages.add("source")
+    for statement in statements:
+        if re.search(
+            r"^(?:cmd\s+/c\s+)?test\.bat\s+source(?:\s|$)",
+            statement,
+            flags=re.IGNORECASE,
+        ) or re.search(
+            r"^(?:cmd\s+/c\s+)?(?:py|python)(?:\.exe)?\b"
+            r"[^\r\n]*run_checks\.py[^\r\n]*\bsource\b",
+            statement,
+            flags=re.IGNORECASE,
+        ):
+            stages.add("source")
 
-    if _has(
-        COMMAND_BOUNDARY
-        + r"(?:cmd\s+/c\s+)?build\.bat\s+(?:debug|release)(?:\s|$)",
-        command,
-    ) or _has(
-        COMMAND_BOUNDARY + r"(?:cmd\s+/c\s+)?app[\\/]winui[\\/]build\.cmd",
-        command,
-    ) or _has(r"run_checks\.py[^\r\n;&]*\b(?:build|full)\b", command):
-        stages.add("build")
+        if re.search(
+            r"^(?:cmd\s+/c\s+)?build\.bat\s+(?:debug|release)(?:\s|$)",
+            statement,
+            flags=re.IGNORECASE,
+        ) or re.search(
+            r"^(?:cmd\s+/c\s+)?app[\\/]winui[\\/]build\.cmd",
+            statement,
+            flags=re.IGNORECASE,
+        ) or re.search(
+            r"^(?:cmd\s+/c\s+)?(?:py|python)(?:\.exe)?\b"
+            r"[^\r\n]*run_checks\.py[^\r\n]*\b(?:build|full)\b",
+            statement,
+            flags=re.IGNORECASE,
+        ):
+            stages.add("build")
 
-    if _has(
-        COMMAND_BOUNDARY
-        + PYTHON
-        + r"[^\r\n;&]*(?:test_native\.py|test_process_isolation\.py)(?:\s|$)",
-        command,
-    ):
-        stages.add("native")
+        python_statement = re.search(
+            r"^(?:cmd\s+/c\s+)?(?:py|python)(?:\.exe)?\b",
+            statement,
+            flags=re.IGNORECASE,
+        )
+        if not python_statement:
+            continue
 
-    if _has(
-        COMMAND_BOUNDARY
-        + PYTHON
-        + r"[^\r\n;&]*test_[A-Za-z0-9_]*gui\.py(?:\s|$)",
-        command,
-    ) or _has(r"run_checks\.py[^\r\n;&]*\b(?:gui|full)\b", command):
-        stages.add("gui")
+        # Syntax/import preflight is static analysis, even when the target
+        # filename itself ends in _gui.py or names another validation harness.
+        if re.search(
+            r"\s-m\s+(?:py_compile|compileall)\b",
+            statement,
+            flags=re.IGNORECASE,
+        ):
+            continue
 
-    if _has(
-        COMMAND_BOUNDARY
-        + PYTHON
-        + r"[^\r\n;&]*(?:capture_[A-Za-z0-9_]*\.py|visual[_-]acceptance)(?:\s|$)",
-        command,
-    ):
-        stages.add("visual")
+        if re.search(
+            r"(?:test_native\.py|test_process_isolation\.py)(?:\s|$)",
+            statement,
+            flags=re.IGNORECASE,
+        ):
+            stages.add("native")
+        if re.search(
+            r"test_[A-Za-z0-9_]*gui\.py(?:\s|$)",
+            statement,
+            flags=re.IGNORECASE,
+        ):
+            stages.add("gui")
+        if re.search(
+            r"(?:capture_[A-Za-z0-9_]*\.py|visual[_-]acceptance)(?:\s|$)",
+            statement,
+            flags=re.IGNORECASE,
+        ):
+            stages.add("visual")
 
     return stages
 
