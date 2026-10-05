@@ -118,10 +118,12 @@ class BuildEnvironmentContract(unittest.TestCase):
             'GUI_TIMEOUT_SCALE=1.5 if os.environ.get("GITHUB_ACTIONS")=="true" else 1.0',
             gui,
         )
+        normalized = "".join(gui.split())
         self.assertIn(
-            "limit=time.monotonic()+timeout*GUI_TIMEOUT_SCALE",
-            gui,
+            "seconds=timeout*GUI_TIMEOUT_SCALE",
+            normalized,
         )
+        self.assertIn("interval=.13", normalized)
 
     def test_owned_gui_startup_wait_covers_supervisor_retry_budget(self):
         gui = (ROOT / "tests/winui/test_shell_gui.py").read_text(
