@@ -57,7 +57,13 @@ class EvidencePolicyError(RuntimeError):
 
 def effective_category(result: dict, log_text: str) -> str | None:
     value = str(result.get("failure_category") or "").strip()
-    if value == UNCLASSIFIED:
+    stages = result.get("stages")
+    command_outcome = ""
+    if isinstance(stages, dict):
+        command_outcome = str(stages.get("COMMAND") or "").strip().upper()
+    if value == UNCLASSIFIED or (
+        not value and command_outcome in {"FAIL", "FAILURE"}
+    ):
         return classify(log_text)
     return value or None
 
