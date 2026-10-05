@@ -152,6 +152,18 @@ bootstrap configuration.
 
 ## Latest verified evidence
 
+High Contrast ON is now accepted on merged product revision
+`eaa1b368a677f57c15183c5e6851f0598ed25878` via PR #16. Final candidate
+`bd13f3c68a12d3bdd111a0171a70f17ef3b6f8de` passed source contracts
+258/258 and actual Windows High Contrast ON GUI/visual acceptance in remote run
+`37252987127`. The owned acceptance verified selected-row UIA state, expanded
+search-surface controls, protected legacy user settings unchanged, and restored
+High Contrast to OFF after the run. Direct screenshot review confirmed readable
+tabs, command/address/search chrome, sidebar, dual panes, selected rows, search
+fields, checkboxes, combo boxes, buttons and separators without blocking overlap
+or same-color loss. Final evidence artifact: `11321836100`,
+digest `sha256:0662bdd402093ad184fea08653c32fee523ecf54225aaef99a8fd0364a1e6a19`.
+
 Sequential resident-window browsing beyond the former 20,000-entry complete-model
 ceiling is accepted on product work revision
 `924a035e244fb547662bedb7094f45b543396a36`. The Shell transport now has two explicit
@@ -549,7 +561,6 @@ Not certified by current automated evidence:
 - actual 125%, 150% and 200% OS display scaling (blocked on the current
   self-hosted VM: Windows reports one active 1274x771 display mode and
   DisplayConfig DPI range CURRENT=100%, RECOMMENDED=100%, MAX=100%);
-- High Contrast ON;
 - human Narrator and Korean IME composition acceptance;
 - physical pointer drag acceptance (owned Release automation reaches a visible,
   enabled, selected source row and real mouse movement, but not WinUI
