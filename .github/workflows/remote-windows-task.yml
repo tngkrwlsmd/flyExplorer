@@ -272,10 +272,10 @@ jobs:
               Write-Host "COMMAND_TRANSCRIPT_WARN=$($_.Exception.Message)"
             }
 
-            $global:LASTEXITCODE = 0
-            Invoke-Expression $env:REMOTE_COMMAND
-            if ($LASTEXITCODE -ne 0) {
-              throw "Remote shell native command exited with code $LASTEXITCODE."
+            & powershell.exe -NoLogo -NoProfile -ExecutionPolicy Bypass -Command $env:REMOTE_COMMAND
+            $commandCode = $LASTEXITCODE
+            if ($commandCode -ne 0) {
+              throw "Remote shell command process exited with code $commandCode."
             }
           } catch {
             ($_ | Format-List * -Force | Out-String) |

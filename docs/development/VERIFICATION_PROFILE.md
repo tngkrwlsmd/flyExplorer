@@ -72,6 +72,14 @@ category first, then an explicit marker, then the legacy classifier as fallback.
 Only failures that occur before lower validation can classify themselves use
 the bounded request/static/runner fallback categories.
 
+Remote command execution uses a fresh Windows PowerShell process and judges
+the command by that process exit code, not by the parent shell's stale
+`$LASTEXITCODE`. A handled native nonzero used as a condition therefore does
+not make an otherwise successful script fail, while a bare failing native
+command or an uncaught PowerShell `throw` still fails the task. Multi-step
+commands must continue to check native exit codes at the call boundary when
+later successful statements could otherwise mask them.
+
 ## Retry policy
 
 Do not use rerun as a development loop. Deterministic product assertions and
@@ -104,6 +112,15 @@ Goal: catch cheap deterministic defects before build or GUI execution.
 FAST plus the minimum build/native/targeted GUI smoke required by the changed
 product behavior. Do not repeat a deterministic FAST assertion here merely
 because the profile is broader.
+
+Do not add a separate native compile preflight. On the self-hosted Windows
+runner, selected/project compile experiments either failed to prove that the
+changed translation unit reached the compiler or cost too close to the normal
+build. The existing Release build is the trusted compile boundary: the measured
+fresh build was about 150 seconds, a one-translation-unit incremental build was
+about 46 seconds, and an injected `#error` was detected by the incremental
+build in about 7 seconds. Use FAST -> Release build rather than adding a second
+compile control path.
 
 ### FINAL ACCEPTANCE
 
