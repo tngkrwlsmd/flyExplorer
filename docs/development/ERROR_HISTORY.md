@@ -4337,4 +4337,3 @@ candidate integration run #429 (`37302252972`) preserved
 product-like `try/finally` semantics, and recorded COMMAND=PASS with exit 0.
 Run #428 is not acceptance evidence because its dispatch harness had already
 removed quotes before the workflow received the command.
-
