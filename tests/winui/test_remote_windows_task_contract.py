@@ -1,8 +1,22 @@
 """Behavior-oriented contracts for the reduced Windows validation workflow."""
 from pathlib import Path
+import importlib.util
+import json
+import os
+import sys
+import tempfile
 import unittest
 
 ROOT = Path(__file__).resolve().parents[2]
+TOOLS = ROOT / "tools" / "winui"
+sys.path.insert(0, str(TOOLS))
+SPEC = importlib.util.spec_from_file_location(
+    "run_checks_contract_module",
+    TOOLS / "run_checks.py",
+)
+assert SPEC and SPEC.loader
+RUN_CHECKS = importlib.util.module_from_spec(SPEC)
+SPEC.loader.exec_module(RUN_CHECKS)
 
 
 class RemoteWindowsTaskContractTests(unittest.TestCase):
@@ -49,6 +63,31 @@ class RemoteWindowsTaskContractTests(unittest.TestCase):
         ):
             self.assertNotIn(obsolete, self.profile)
 
+    def test_known_lower_failure_is_written_as_structured_sidecar(self):
+        previous = os.environ.get("FLYEXPLORER_CHECK_RESULT_PATH")
+        try:
+            with tempfile.TemporaryDirectory() as temp:
+                result = Path(temp) / "check-result.json"
+                os.environ["FLYEXPLORER_CHECK_RESULT_PATH"] = str(result)
+                RUN_CHECKS.begin_result("fast")
+                self.assertFalse(result.exists())
+                self.assertEqual(
+                    1,
+                    RUN_CHECKS.fail("PRODUCT_SOURCE_CONTRACT_FAILURE", 1),
+                )
+                payload = json.loads(result.read_text(encoding="utf-8"))
+                self.assertEqual(
+                    "PRODUCT_SOURCE_CONTRACT_FAILURE",
+                    payload["failure_category"],
+                )
+                self.assertEqual(1, payload["exit_code"])
+                self.assertEqual("fast", payload["stage"])
+        finally:
+            if previous is None:
+                os.environ.pop("FLYEXPLORER_CHECK_RESULT_PATH", None)
+            else:
+                os.environ["FLYEXPLORER_CHECK_RESULT_PATH"] = previous
+
     def test_request_model_is_small_diagnostic_or_validation(self):
         for token in (
             "REMOTE_REQUEST_MODE",
@@ -76,21 +115,42 @@ class RemoteWindowsTaskContractTests(unittest.TestCase):
         self.assertIn("Stale validation request:", self.workflow)
         self.assertIn("DIAGNOSTIC_STALE_MAIN=ADVISORY", self.workflow)
 
-    def test_static_preflight_delegates_to_change_scoped_fast_runner(self):
+    def test_static_preflight_persists_lower_failure_evidence(self):
         preflight = self.workflow.index("- name: Static candidate preflight")
         command = self.workflow.index("- name: Run remote shell command")
         block = self.workflow[preflight:command]
         self.assertIn("git worktree add --detach", block)
-        self.assertIn("run_checks.py", block)
         self.assertIn(" fast --before ", block)
-        self.assertNotIn("$infraChanged", block)
-        self.assertNotIn("$harnessChanged", block)
+        self.assertIn("FLYEXPLORER_CHECK_RESULT_PATH", block)
+        self.assertIn("check-result.json", block)
+        self.assertIn("static-preflight.log", block)
+        self.assertIn("Tee-Object", block)
         self.assertLess(preflight, command)
 
     def test_gui_validation_has_explicit_runner_health_gate(self):
         self.assertIn("REMOTE_NEEDS_GUI_HEALTH", self.workflow)
         self.assertIn("- name: Runner health for GUI validation", self.workflow)
         self.assertIn("runner_health.py", self.workflow)
+
+    def test_structured_category_precedes_marker_and_classifier_fallback(self):
+        writer = self.workflow[
+            self.workflow.index("- name: Write structured remote result"):
+            self.workflow.index("- name: Upload remote evidence")
+        ]
+        resolver = writer[
+            writer.index("function Resolve-LowerFailure"):
+            writer.index("$failureCategory = $null")
+        ]
+        self.assertLess(
+            resolver.index("Read-ResultCategory"),
+            resolver.index("Read-ExplicitCategory"),
+        )
+        self.assertLess(
+            resolver.index("Read-ExplicitCategory"),
+            resolver.index("Infer-CommandFailure"),
+        )
+        self.assertIn('"check-result.json"', writer)
+        self.assertIn('"static-preflight.log"', writer)
 
     def test_classifier_fallback_and_result_writer_are_bounded(self):
         self.assertIn("classify_remote_failure.py", self.workflow)
@@ -122,6 +182,8 @@ class RemoteWindowsTaskContractTests(unittest.TestCase):
 
     def test_command_failure_keeps_machine_readable_evidence(self):
         for token in (
+            "check-result.json",
+            "static-preflight.log",
             "remote-command.log",
             "remote-command-error.txt",
             "Start-Transcript",

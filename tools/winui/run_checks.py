@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 import os
 from pathlib import Path
 import re
@@ -15,6 +16,9 @@ ROOT = Path(__file__).resolve().parents[2]
 APP = ROOT / "app" / "winui"
 TESTS = ROOT / "tests" / "winui"
 LOGS = ROOT / "logs" / "winui-scoped"
+DEFAULT_RESULT = ROOT / "logs" / "remote-evidence" / "check-result.json"
+_ACTIVE_STAGE = ""
+_RESULT_PATH = DEFAULT_RESULT
 
 PRODUCT_SUITES = {
     "core": [
@@ -115,6 +119,30 @@ def unique(paths):
     return list(dict.fromkeys(paths))
 
 
+def begin_result(stage):
+    global _ACTIVE_STAGE, _RESULT_PATH
+    _ACTIVE_STAGE = stage
+    configured = os.environ.get("FLYEXPLORER_CHECK_RESULT_PATH", "").strip()
+    _RESULT_PATH = Path(configured) if configured else DEFAULT_RESULT
+    _RESULT_PATH.unlink(missing_ok=True)
+    _RESULT_PATH.with_suffix(_RESULT_PATH.suffix + ".tmp").unlink(missing_ok=True)
+
+
+def write_failure_result(category, code):
+    payload = {
+        "failure_category": category,
+        "exit_code": int(code),
+        "stage": _ACTIVE_STAGE,
+    }
+    _RESULT_PATH.parent.mkdir(parents=True, exist_ok=True)
+    temp = _RESULT_PATH.with_suffix(_RESULT_PATH.suffix + ".tmp")
+    temp.write_text(
+        json.dumps(payload, ensure_ascii=True, separators=(",", ":")) + "\n",
+        encoding="utf-8",
+    )
+    os.replace(temp, _RESULT_PATH)
+
+
 def execute(label, command, timeout, env, tag):
     LOGS.mkdir(parents=True, exist_ok=True)
     path = LOGS / (tag + "-" + label + ".log")
@@ -178,6 +206,7 @@ def run_contracts(label, paths, env, tag):
 
 def fail(category, code):
     print(f"FAILURE_CATEGORY={category}", flush=True)
+    write_failure_result(category, code)
     return code
 
 
@@ -409,6 +438,7 @@ def main():
     if args.stage == "gui" and args.area not in GUI_AREAS:
         parser.error("gui --area must name a supported targeted GUI area")
 
+    begin_result(args.stage)
     tag = time.strftime("%Y%m%d-%H%M%S")
     env = os.environ.copy()
     env["PYTHONIOENCODING"] = "utf-8"
