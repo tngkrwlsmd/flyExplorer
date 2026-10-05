@@ -26,8 +26,8 @@ consumer core; this PROJECT.md remains project-owned across bundle refreshes.
     {"name": "winui-tests", "path": "tests/winui", "responsibility": "source, native and owned GUI contracts"}
   ],
   "review": {
-    "reviewed_revision": "e9d6f485e992cf7532fb3928e301e38302aeceb6",
-    "reviewed_at": "2026-10-05",
+    "reviewed_revision": "8b3ff0da418f8d9c154f0984921359f4a620b552",
+    "reviewed_at": "2026-10-06",
     "reviewed_paths": [
       "app/winui",
       "src/base",
@@ -36,6 +36,7 @@ consumer core; this PROJECT.md remains project-owned across bundle refreshes.
       ".github/workflows/windows-build.yml",
       ".github/workflows/remote-windows-task.yml",
       "tools/winui/run_checks.py",
+      "packaging",
       "tests/winui/requirements-gui.txt"
     ]
   }
