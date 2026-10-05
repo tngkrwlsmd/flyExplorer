@@ -145,7 +145,10 @@ class RemoteWindowsTaskContractTests(unittest.TestCase):
         self.assertIn("remote-command-error.txt", self.workflow)
         self.assertIn("Start-Transcript", self.workflow)
         self.assertIn("Stop-Transcript", self.workflow)
-        self.assertIn("FAILURE_CATEGORY=([A-Z0-9_]+)", self.workflow)
+        classifier = (
+            ROOT / "tools/winui/classify_remote_failure.py"
+        ).read_text(encoding="utf-8")
+        self.assertIn("FAILURE_CATEGORY=([A-Z0-9_]+)", classifier)
 
     def test_structured_result_distinguishes_failure_layers(self):
         for stage in (
@@ -161,15 +164,23 @@ class RemoteWindowsTaskContractTests(unittest.TestCase):
             "EVIDENCE_POLICY_FAILURE",
             "HELPER_STATIC_FAILURE",
             "RUNNER_HEALTH_FAILURE",
+        ):
+            self.assertIn(category, self.workflow)
+        classifier = (
+            ROOT / "tools/winui/classify_remote_failure.py"
+        ).read_text(encoding="utf-8")
+        for category in (
             "PRODUCT_BUILD_FAILURE",
             "HARNESS_PROGRAMMING_FAILURE",
             "AUTOMATION_API_FAILURE",
             "AUTOMATION_DISCOVERY_FAILURE",
             "AUTOMATION_TIMEOUT_FAILURE",
             "TEST_ASSERTION_FAILURE",
+            "SUBPROCESS_TIMEOUT_FAILURE",
+            "INSTALLED_APP_SHUTDOWN_TIMEOUT",
             "COMMAND_FAILURE_UNCLASSIFIED",
         ):
-            self.assertIn(category, self.workflow)
+            self.assertIn(category, classifier)
         self.assertIn('"skipped" { return "NOT_RUN" }', self.workflow)
 
     def test_scoped_runner_emits_failure_categories(self):
