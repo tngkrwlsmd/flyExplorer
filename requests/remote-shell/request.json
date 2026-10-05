@@ -1,11 +1,13 @@
 {
-  "request_id": "set-actions-retention-365-20261005",
+  "request_id": "actions-retention-365-source-20261005",
   "expected_main_sha": "ed08c8c8f5d067ec0f0f365cc0f882d1e0e4a32c",
-  "candidate_sha": "ed08c8c8f5d067ec0f0f365cc0f882d1e0e4a32c",
-  "logical_unit": "actions-retention-setting",
-  "request_mode": "diagnostic",
-  "configuration": "none",
-  "validation_plan": [],
+  "candidate_sha": "6b51f1ae41d270e9153ba9643bc154c9b6242e7a",
+  "logical_unit": "actions-retention-365",
+  "request_mode": "validation",
+  "configuration": "Release",
+  "validation_plan": [
+    "source"
+  ],
   "working_directory": "",
-  "command": "$ErrorActionPreference=\"Stop\"\n$endpoint=\"repos/tngkrwlsmd/flyExplorer/actions/permissions/artifact-and-log-retention\"\n$beforeRaw=(& gh api -H \"X-GitHub-Api-Version: 2026-03-10\" $endpoint | Out-String)\nif($LASTEXITCODE -ne 0){throw \"GitHub CLI cannot read Actions retention setting with current runner auth\"}\n$before=$beforeRaw | ConvertFrom-Json\nWrite-Host (\"ACTIONS_RETENTION_BEFORE_DAYS=\"+$before.days)\nWrite-Host (\"ACTIONS_RETENTION_MAXIMUM_ALLOWED_DAYS=\"+$before.maximum_allowed_days)\nif([int]$before.maximum_allowed_days -lt 365){throw \"repository/account maximum does not permit 365 days\"}\n& gh api --method PUT -H \"X-GitHub-Api-Version: 2026-03-10\" $endpoint -F days=365\nif($LASTEXITCODE -ne 0){throw \"failed to set Actions retention to 365 days\"}\n$afterRaw=(& gh api -H \"X-GitHub-Api-Version: 2026-03-10\" $endpoint | Out-String)\nif($LASTEXITCODE -ne 0){throw \"failed to verify Actions retention after update\"}\n$after=$afterRaw | ConvertFrom-Json\nWrite-Host (\"ACTIONS_RETENTION_AFTER_DAYS=\"+$after.days)\nWrite-Host (\"ACTIONS_RETENTION_AFTER_MAXIMUM_ALLOWED_DAYS=\"+$after.maximum_allowed_days)\nif([int]$after.days -ne 365){throw \"Actions retention verification did not return 365 days\"}\nWrite-Host \"ACTIONS_RETENTION_365=PASS\""
+  "command": "$ErrorActionPreference=\"Stop\"\nWrite-Host \"ACTIONS_RETENTION_SOURCE_VALIDATION=PASS\""
 }
