@@ -1,16 +1,20 @@
-"""Static guardrails for WinUI GUI harnesses.
-
-These checks intentionally avoid launching Windows or importing pywinauto.
-They catch harness mistakes that must not consume a Remote Windows Task.
-"""
+"""Cheap static guardrails for WinUI GUI harnesses and validation helpers."""
 from __future__ import annotations
 
 import ast
+import importlib.util
 from pathlib import Path
 import unittest
 
 ROOT = Path(__file__).resolve().parents[2]
 TESTS = ROOT / "tests" / "winui"
+TOOLS = ROOT / "tools" / "winui"
+STATIC_PATH = TOOLS / "check_python_static.py"
+
+spec = importlib.util.spec_from_file_location("check_python_static", STATIC_PATH)
+assert spec is not None and spec.loader is not None
+static_check = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(static_check)
 
 
 def _literal_keyword(call: ast.Call, name: str) -> str | None:
@@ -27,8 +31,10 @@ def _name_filter_lookup(node: ast.AST) -> bool:
     func = node.func
     if not isinstance(func, ast.Attribute) or func.attr != "child_window":
         return False
-    automation_id = _literal_keyword(node, "auto_id")
-    return automation_id in {"LeftNameFilterBox", "RightNameFilterBox"}
+    return _literal_keyword(node, "auto_id") in {
+        "LeftNameFilterBox",
+        "RightNameFilterBox",
+    }
 
 
 class _HarnessVisitor(ast.NodeVisitor):
@@ -61,31 +67,45 @@ class _HarnessVisitor(ast.NodeVisitor):
             if any(keyword.arg == "auto_id" for keyword in node.keywords):
                 self._error(
                     node,
-                    "pywinauto descendants(auto_id=...) is unsupported on the "
-                    "project runner; enumerate descendants() and filter "
-                    "element_info.automation_id instead",
+                    "pywinauto descendants(auto_id=...) is unsupported; "
+                    "enumerate descendants() and filter automation_id",
                 )
 
         if isinstance(func, ast.Attribute) and func.attr == "set_edit_text":
             owner = func.value
-            direct_filter = _name_filter_lookup(owner)
-            named_filter = (
-                isinstance(owner, ast.Name) and owner.id in self.name_filter_vars
-            )
-            if direct_filter or named_filter:
+            if _name_filter_lookup(owner) or (
+                isinstance(owner, ast.Name)
+                and owner.id in self.name_filter_vars
+            ):
                 self._error(
                     node,
-                    "NameFilterBox must be driven through real keyboard input "
-                    "(Ctrl+Shift+F/type_keys/send_keys) so TextChanged/event "
-                    "delivery is exercised; set_edit_text only proves UIA Value",
+                    "NameFilterBox must be driven through real keyboard input",
                 )
         self.generic_visit(node)
 
 
+class _BroadSwallowVisitor(ast.NodeVisitor):
+    def __init__(self, path: Path):
+        self.path = path
+        self.errors: list[str] = []
+
+    def visit_ExceptHandler(self, node: ast.ExceptHandler) -> None:
+        broad = node.type is None or (
+            isinstance(node.type, ast.Name)
+            and node.type.id in {"Exception", "BaseException"}
+        )
+        if broad and len(node.body) == 1 and isinstance(node.body[0], ast.Pass):
+            self.errors.append(
+                f"{self.path.name}:{node.lineno}: broad exception is silently swallowed"
+            )
+        self.generic_visit(node)
+
+
 class GuiHarnessStaticContract(unittest.TestCase):
-    def test_all_winui_python_harnesses_parse(self):
+    def test_winui_python_sources_parse(self):
         failures = []
-        for path in sorted(TESTS.glob("*.py")):
+        paths = list(TESTS.glob("*.py")) + list(TOOLS.glob("*.py"))
+        for path in sorted(paths):
             try:
                 ast.parse(
                     path.read_text(encoding="utf-8-sig"),
@@ -103,6 +123,45 @@ class GuiHarnessStaticContract(unittest.TestCase):
                 filename=str(path),
             )
             visitor = _HarnessVisitor(path)
+            visitor.visit(tree)
+            failures.extend(visitor.errors)
+        self.assertEqual([], failures, "\n".join(failures))
+
+    def test_static_checker_catches_missing_import_name(self):
+        self.assertEqual(
+            ["sys"],
+            static_check.undefined_names(
+                "def main():\n    return sys.argv[1]\n",
+                "missing_sys.py",
+            ),
+        )
+
+    def test_critical_harness_helpers_have_no_undefined_globals(self):
+        paths = [
+            TOOLS / "high_contrast_state.py",
+            TOOLS / "high_contrast_runner_setup.py",
+            TOOLS / "runner_health.py",
+            TOOLS / "high_contrast_acceptance.py",
+            TESTS / "test_high_contrast_gui.py",
+        ]
+        failures = []
+        for path in paths:
+            failures.extend(static_check.check_path(path))
+        self.assertEqual([], failures, "\n".join(failures))
+
+    def test_critical_polling_paths_do_not_silently_swallow_broad_errors(self):
+        paths = [
+            TOOLS / "high_contrast_runner_setup.py",
+            TOOLS / "high_contrast_acceptance.py",
+            TESTS / "test_high_contrast_gui.py",
+        ]
+        failures = []
+        for path in paths:
+            tree = ast.parse(
+                path.read_text(encoding="utf-8-sig"),
+                filename=str(path),
+            )
+            visitor = _BroadSwallowVisitor(path)
             visitor.visit(tree)
             failures.extend(visitor.errors)
         self.assertEqual([], failures, "\n".join(failures))
