@@ -356,7 +356,18 @@ model:
 - diagnostic: `request_mode: "diagnostic"`, `configuration: "none"` and
   `validation_plan: []`;
 - validation: `request_mode: "validation"`, configuration exactly Debug or
-  Release, and a non-empty logical `validation_plan`.
+  Release, and a non-empty logical `validation_plan`. A normal validation
+  uses `retry_scope: "full"`. After a classified harness/automation/shutdown
+  failure, use `retry_scope: "focused-reuse"` with structured
+  `reuse_evidence`; do not repeat already successful build/package targets.
+
+The workflow checks the latest same-logical-unit Actions evidence before a
+validation retry. If the prior failure remains
+`COMMAND_FAILURE_UNCLASSIFIED`, another validation is blocked until the
+failure is classified. Focused reuse is accepted only when the prior run
+contains the declared targets and their canonical success markers, the diff
+since that evidence is harness/infra-only, and the retry command does not call
+the normal build/package entry points.
 
 Do not duplicate that plan by regex-parsing the command. For validation,
 evidence identity includes logical unit, normalized plan, normalized command
