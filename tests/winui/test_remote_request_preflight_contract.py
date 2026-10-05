@@ -55,6 +55,22 @@ class RemoteRequestPreflightContract(unittest.TestCase):
         self.assertEqual(set(), validator.detect_stages(command))
         validator.validate_request(request(command=command))
 
+    def test_static_py_compile_of_gui_harness_is_not_gui_stage(self):
+        command = (
+            "python -X utf8 -m py_compile "
+            "tests\\winui\\test_high_contrast_gui.py"
+        )
+        self.assertEqual(set(), validator.detect_stages(command))
+        validator.validate_request(request(command=command))
+
+    def test_static_compileall_of_gui_harness_is_not_gui_stage(self):
+        command = (
+            "python -m compileall -q "
+            "tests\\winui\\test_large_owned_folder_gui.py"
+        )
+        self.assertEqual(set(), validator.detect_stages(command))
+        validator.validate_request(request(command=command))
+
     def test_actual_gui_python_invocation_is_detected(self):
         command = (
             "python -X utf8 tests\\winui\\test_large_owned_folder_gui.py "
