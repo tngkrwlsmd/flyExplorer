@@ -3,13 +3,15 @@
 Status: OPEN. Windows SDK signtool.exe is installed, but the current machine
 has no Code Signing certificate in CurrentUser/My or LocalMachine/My.
 
-The latest unsigned setup/lifecycle acceptance is Remote Windows Task #382 and
-PR #27 for candidate `8283ece6c4348a751f487a64230e1bc149a47a2f`.
-Current main contains later product changes, so a final release must regenerate
-the current runtime/provenance and repeat the required package lifecycle before
-signing. Production signing remains unverified because the current machine has
-no approved Code Signing certificate; signed payload/setup and clean-machine
-Program Files/HKLM lifecycle evidence are still required.
+The latest unsigned setup/lifecycle acceptance is Remote Windows Task #435
+(`37306799266`) for package candidate
+`00f90c30800fb66f88184211442f6eeb05a950b7`, with runtime manifest SHA-256
+`40f0f12797c6731f823dd3e438b09fc575a78a54f9962c14fb572e5d70dfdcc5`.
+Production signing remains unverified because the current machine has no
+approved Code Signing certificate; signed payload/setup and clean-machine
+Program Files/HKLM lifecycle evidence are still required. Signing changes
+artifact bytes, so the final signed release still requires fresh signed-package
+verification and lifecycle evidence.
 
 Required release order:
 1. Build the final current Release runtime.
