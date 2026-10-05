@@ -1,13 +1,19 @@
 {
-  "request_id": "high-contrast-readonly-state-001",
+  "request_id": "high-contrast-adaptive-resource-smoke-001",
   "expected_main_sha": "fd2bda4d26a9d777f2ee17eb2fed5ab507174e25",
-  "candidate_sha": "fd2bda4d26a9d777f2ee17eb2fed5ab507174e25",
+  "candidate_sha": "fb530bdbc2cf327c6d3020bc5ddc8467734ec8ea",
   "logical_unit": "high-contrast-accessibility",
-  "configuration": "none",
+  "configuration": "Release",
   "validation_kind": [
-    "none"
+    "source",
+    "build",
+    "gui"
   ],
-  "invalidated_evidence": {},
+  "invalidated_evidence": {
+    "source": "High Contrast theme dictionaries and a new static contract were added.",
+    "build": "Application XAML theme resources and multiple WinUI XAML consumers changed.",
+    "gui": "Visible muted text/separator opacity now resolves through theme resources and must not regress the current owned accessibility layout."
+  },
   "working_directory": "",
-  "command": "$ErrorActionPreference = \"Stop\"\ngit fetch origin main --no-tags --prune\nif ((git rev-parse origin/main).Trim() -ne \"fd2bda4d26a9d777f2ee17eb2fed5ab507174e25\") { throw \"main moved\" }\npython -X utf8 -c \"import ctypes; from ctypes import wintypes as w; u=ctypes.WinDLL('user32',use_last_error=True); H=type('H',(ctypes.Structure,),{'_fields_':[('cbSize',w.UINT),('dwFlags',w.DWORD),('lpszDefaultScheme',w.LPWSTR)]}); x=H(); x.cbSize=ctypes.sizeof(x); ok=u.SystemParametersInfoW(0x0042,x.cbSize,ctypes.byref(x),0); print('HIGH_CONTRAST_QUERY_OK='+str(bool(ok))); print('HIGH_CONTRAST_ON='+str(bool(x.dwFlags&1))); print('HIGH_CONTRAST_SCHEME='+repr(x.lpszDefaultScheme)); print('COLOR_WINDOW='+hex(u.GetSysColor(5)&0xffffff)); print('COLOR_WINDOWTEXT='+hex(u.GetSysColor(8)&0xffffff)); print('COLOR_HIGHLIGHT='+hex(u.GetSysColor(13)&0xffffff)); print('COLOR_HIGHLIGHTTEXT='+hex(u.GetSysColor(14)&0xffffff))\"\nif ($LASTEXITCODE -ne 0) { throw \"high contrast state query failed\" }\nWrite-Host \"HIGH_CONTRAST_READONLY_PROBE_PASS\""
+  "command": "$ErrorActionPreference = \"Stop\"\ngit fetch origin main work/high-contrast-acceptance --no-tags --prune\nif ($LASTEXITCODE -ne 0) { throw \"fetch failed\" }\nif ((git rev-parse origin/main).Trim() -ne \"fd2bda4d26a9d777f2ee17eb2fed5ab507174e25\") { throw \"main moved\" }\nif ((git rev-parse origin/work/high-contrast-acceptance).Trim() -ne \"fb530bdbc2cf327c6d3020bc5ddc8467734ec8ea\") { throw \"candidate moved\" }\nif ((git status --short).Count -ne 0) { throw \"dirty persistent checkout\" }\ngit checkout -B work/high-contrast-acceptance origin/work/high-contrast-acceptance\nif ($LASTEXITCODE -ne 0) { throw \"checkout candidate failed\" }\nif ((git rev-parse HEAD).Trim() -ne \"fb530bdbc2cf327c6d3020bc5ddc8467734ec8ea\") { throw \"candidate mismatch\" }\npython -X utf8 -m py_compile tests\\winui\\test_high_contrast_contract.py\nif ($LASTEXITCODE -ne 0) { throw \"High Contrast contract syntax failed\" }\ncmd /c test.bat source\nif ($LASTEXITCODE -ne 0) { throw \"source contracts failed\" }\ncmd /c build.bat Release\nif ($LASTEXITCODE -ne 0) { throw \"Release build failed\" }\npython -X utf8 tests\\winui\\test_owned_accessibility_layout_gui.py Release\nif ($LASTEXITCODE -ne 0) { throw \"owned accessibility layout smoke failed\" }\ngit diff --check origin/main..HEAD\nif ($LASTEXITCODE -ne 0) { throw \"diff check failed\" }\nWrite-Host \"HIGH_CONTRAST_ADAPTIVE_RESOURCE_SMOKE_PASS\""
 }
