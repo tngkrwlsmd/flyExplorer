@@ -11,19 +11,25 @@ inventory unless a component is reintroduced.
 Release uses a self-contained Windows App SDK payload and tracked distribution
 materials under packaging/licenses/.
 
-## Current package freshness
+## Latest package evidence and current freshness
 
-Current unsigned packaging evidence is up to date with the accepted WinUI
-product. Remote Windows Task #382 (`37265695330`) clean-built candidate
-`8283ece6c4348a751f487a64230e1bc149a47a2f`, generated and verified the
-Release payload provenance, built the setup and passed bounded `/TESTROOT`
-clean install, repair, update, rollback and uninstall. That candidate was merged
-through PR #27.
+Remote Windows Task #382 (`37265695330`) clean-built candidate
+`8283ece6c4348a751f487a64230e1bc149a47a2f`, generated and verified that
+candidate's Release payload provenance, built the setup and passed bounded
+`/TESTROOT` clean install, repair, update, rollback and uninstall. That
+candidate was merged through PR #27.
 
 The accepted run inventoried 305 runtime files, including 288 exact NuGet byte
-matches, and packaged 326 files with the tracked license/notice material.
-This is engineering evidence for the current unsigned package path; it is not a
-production-signed release or clean-machine machine-wide certification.
+matches, and packaged 326 files with the tracked license/notice material. It is
+valid engineering evidence for that recorded candidate, but current main later
+changed product code, including physical same-app drag and the active-pane
+`Ctrl+Shift+N` create-folder shortcut. Therefore #382 is not exact
+current-main package freshness or binary/source identity. Regenerate provenance,
+build the package and rerun the required package acceptance before the next
+current-product release claim.
+
+The recorded #382 evidence is unsigned and does not certify production signing
+or clean-machine machine-wide deployment.
 
 ## Open public-distribution gates
 

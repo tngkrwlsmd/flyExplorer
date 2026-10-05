@@ -162,6 +162,13 @@ requires the pinned tests/winui/requirements-gui.txt set and an interactive
 Windows desktop. Debug is framework-dependent; Release is self-contained but
 still requires its complete sibling runtime/resources.
 
+Remote Windows Task now preserves multi-line/quoted PowerShell source by writing
+`REMOTE_COMMAND` verbatim to a per-run temporary `.ps1` and invoking a fresh
+`powershell.exe -File` process. The child process exit code is authoritative
+and the temporary script is removed in `finally`. Candidate run #429
+(`37302252972`) verified preserved quoting/multi-line source, handled native
+nonzero semantics, product-like `try/finally` flow and command exit 0.
+
 The previously described external install_script/start_skill cloud bootstrap
 files are not present in this repository. This repository therefore documents
 the required environment but does not claim to have modified external cloud
@@ -570,14 +577,22 @@ Current source and the last parity evidence still show these limits:
 
 ## Packaging state
 
-The current Release packaging path is accepted on candidate
+The latest accepted unsigned package lifecycle evidence is from candidate
 `8283ece6c4348a751f487a64230e1bc149a47a2f`, merged through PR #27.
 Remote Windows Task #382 (`37265695330`) performed one clean Release build,
-generated and re-verified the exact runtime provenance inventory, built the
-current setup, and passed bounded `/TESTROOT` clean install, repair,
-update, rollback and uninstall. The run inventoried 305 Release runtime files
+generated and re-verified that candidate's exact runtime provenance inventory,
+built the setup, and passed bounded `/TESTROOT` clean install, repair, update,
+rollback and uninstall. The run inventoried 305 Release runtime files
 (17 product/generated and 288 exact NuGet byte matches) and packaged 326 files
 including the required license/notice material.
+
+That package candidate predates later accepted product changes, including
+physical same-app file drag (`ef8e2d7a65c03c3727aae625facaf6305d7d9841`)
+and the active-pane `Ctrl+Shift+N` create-folder shortcut
+(`ed08c8c8f5d067ec0f0f365cc0f882d1e0e4a32c`). Therefore the #382 package
+evidence remains valid historical lifecycle/provenance evidence for its
+candidate, but it is not exact current-main package freshness. Regenerate
+provenance and package acceptance before the next current-product release claim.
 
 The same run replaced the old installed-process wait with a checked-in shutdown
 timeline probe. Clean-install, update and rollback all posted `WM_CLOSE`,
@@ -586,9 +601,10 @@ flyExplorer process within about 0.17-0.21 seconds. This establishes that the
 earlier 16-second lifecycle timeout was a harness observation/process-wait
 failure rather than a product shutdown defect.
 
-This acceptance is still an unsigned, test-owned install path. It does not
-certify production Authenticode signing or clean-machine Program Files/HKLM
-machine-wide install/update/rollback.
+That acceptance is an unsigned, test-owned install path for its recorded
+candidate. It does not certify the later current-main product, production
+Authenticode signing or clean-machine Program Files/HKLM machine-wide
+install/update/rollback.
 
 ## Open gates
 

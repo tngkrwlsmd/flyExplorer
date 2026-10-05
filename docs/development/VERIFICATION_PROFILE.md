@@ -72,13 +72,16 @@ category first, then an explicit marker, then the legacy classifier as fallback.
 Only failures that occur before lower validation can classify themselves use
 the bounded request/static/runner fallback categories.
 
-Remote command execution uses a fresh Windows PowerShell process and judges
-the command by that process exit code, not by the parent shell's stale
-`$LASTEXITCODE`. A handled native nonzero used as a condition therefore does
-not make an otherwise successful script fail, while a bare failing native
-command or an uncaught PowerShell `throw` still fails the task. Multi-step
-commands must continue to check native exit codes at the call boundary when
-later successful statements could otherwise mask them.
+Remote command execution preserves the request source by writing
+`REMOTE_COMMAND` verbatim to a per-run temporary `.ps1`, then launching a
+fresh Windows PowerShell process with `-File`. This avoids native argv
+re-tokenization of multi-line/quoted PowerShell source. The child process exit
+code, not the parent shell's stale `$LASTEXITCODE`, determines command success;
+the temporary script is removed in `finally`. A handled native nonzero used as
+a condition therefore does not make an otherwise successful script fail, while
+a bare failing native command or an uncaught PowerShell `throw` still fails the
+task. Multi-step commands must continue to check native exit codes at the call
+boundary when later successful statements could otherwise mask them.
 
 ## Retry policy
 

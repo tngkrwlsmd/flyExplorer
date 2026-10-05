@@ -4287,3 +4287,53 @@ mPrivateDragSources/mPrivateDragRoute/mPrivateDragSide/mDropReading` ownership�
 때까지 보류한다. 실제 사람 포인터 또는 별도 신뢰 가능한 WinUI 입력 경로로
 DragStarting→DragOver→Drop 전체가 관찰되기 전에는 이 gate를 PASS로 승격하지
 않는다.
+
+## 2026-10-05: physical same-app drag gate closed after WinUI pointer-route diagnosis
+
+**Prior state:** The 2026-10-03 entry above correctly recorded that the then-current
+pywinauto gesture did not reach DragStarting and therefore could not certify the
+product drag path. That OPEN result remains valid for its recorded revision and
+harness.
+
+**Resolved boundary:** Later focused diagnostics identified the WinUI gesture
+boundary rather than changing FileOperationController ownership. ListViewItem
+handled the press for selection, and subsequent pointer movement followed
+control capture instead of the original row route. The product now observes the
+handled press, polls held left-button/cursor movement at a bounded interval,
+applies the Windows drag threshold, obtains the current PointerPoint by ID and
+starts the documented WinUI drag path. The existing DragStarting handler still
+owns DataPackage construction and source/route validation.
+
+**Acceptance:** Remote Windows Task `37277431952` exercised real owned mouse
+press/move/release in Release, reached DragOver, copied the owned Korean file
+between panes, exited 0 and left all six protected user settings byte-identical.
+Same-app physical drag is therefore accepted for the recorded/current product
+path. External cross-application drag remains a separate interoperability gate.
+
+## 2026-10-05: Remote Windows Task multi-line PowerShell source lost quoting through native argv
+
+**Observed:** Remote Windows Task #422 (`37297422247`) received a multi-line
+PowerShell request but child execution reported
+`Stop : The term 'Stop' is not recognized` and treated a quoted
+`("create-folder-shortcuts-" + $env:GITHUB_RUN_ID)` expression as an executable
+token. Run #423 also showed the `Stop` corruption while later successful
+statements allowed the task to finish green, demonstrating a false-green risk.
+
+**Root cause:** The workflow passed the full `REMOTE_COMMAND` source directly as
+a native `powershell.exe -Command` argument. Windows/native argument
+re-tokenization did not preserve the original PowerShell quoting and multi-line
+source. The child process exit-code logic itself was not the root cause.
+
+**Fix / prevention:** The workflow now writes `REMOTE_COMMAND` verbatim to a
+per-run temporary `.ps1` and invokes a fresh
+`powershell.exe -NoLogo -NoProfile -ExecutionPolicy Bypass -File` process.
+The child process exit code remains authoritative, and the temporary script is
+removed in `finally`. The existing workflow contract rejects a return to
+`-Command $env:REMOTE_COMMAND` or `Invoke-Expression`.
+
+**Verification:** Static/contract preflight passed 21 focused tests. The valid
+candidate integration run #429 (`37302252972`) preserved
+`$ErrorActionPreference="Stop"`, multi-line quoting, handled native nonzero and
+product-like `try/finally` semantics, and recorded COMMAND=PASS with exit 0.
+Run #428 is not acceptance evidence because its dispatch harness had already
+removed quotes before the workflow received the command.
