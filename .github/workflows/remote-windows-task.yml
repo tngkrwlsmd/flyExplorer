@@ -200,7 +200,45 @@ jobs:
               $reuseEvidence.validated_targets |
                 ForEach-Object { ([string]$_).Trim().ToLowerInvariant() }
             )
-            if ($reuseRunId -notmatch '^[1-9][0-9]*
+            if ($reuseRunId -notmatch '^[1-9][0-9]*$') {
+              throw "reuse_evidence.run_id must be a positive integer."
+            }
+            if ($reuseCandidateSha -notmatch '^[0-9a-f]{40}$') {
+              throw "reuse_evidence.candidate_sha must be a 40-character Git SHA."
+            }
+            if ($reusedTargets.Count -eq 0) {
+              throw "reuse_evidence.validated_targets must not be empty."
+            }
+            $invalidReuseTargets = @(
+              $reusedTargets |
+                Where-Object { $_ -notmatch '^[A-Za-z0-9][A-Za-z0-9._/-]{0,95}$' }
+            )
+            if ($invalidReuseTargets.Count -ne 0) {
+              throw "reuse_evidence.validated_targets contains invalid logical targets."
+            }
+            $duplicateReuseTargets = @($reusedTargets | Sort-Object -Unique)
+            if ($duplicateReuseTargets.Count -ne $reusedTargets.Count) {
+              throw "reuse_evidence.validated_targets must not contain duplicates."
+            }
+            $overlap = @($uniquePlan | Where-Object { $_ -in $reusedTargets })
+            if ($overlap.Count -ne 0) {
+              throw "Focused evidence reuse must not rerun reused targets: $($overlap -join ',')."
+            }
+            $normalizedSafetyCommand = ($command -replace '\s+', ' ').ToLowerInvariant()
+            foreach ($forbidden in @(
+              'build.bat',
+              'package.bat',
+              'clean.bat build',
+              'provenance.py --write',
+              'run_checks.py full'
+            )) {
+              if ($normalizedSafetyCommand.Contains($forbidden)) {
+                throw "Focused evidence reuse command must not rebuild/repackage reused evidence: $forbidden"
+              }
+            }
+          } elseif ($null -ne $reuseEvidence) {
+            throw "reuse_evidence is only valid with focused-reuse."
+          }
           if ([string]::IsNullOrWhiteSpace($workdir)) {
             $workdir = $env:FLYEXPLORER_CANONICAL_CHECKOUT
           }
