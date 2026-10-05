@@ -59,5 +59,27 @@ class SessionCoordinatorContract(unittest.TestCase):
         self.assertIn('<ClInclude Include="session_coordinator.h" />',project)
         self.assertIn('<ClCompile Include="session_coordinator.cpp">',project)
 
+    def test_private_session_format_is_versioned_bounded_and_reparse_safe(self):
+        body=read(ROOT/"src"/"base"/"ui_session.cpp")
+        for token in ("'F','X','S','E','S','S','2','3'",
+                      "FILE_ATTRIBUTE_REPARSE_POINT","DRIVE_FIXED",
+                      "MaxSize=524288","MaxWindowTabs=10","MaxPaneTabs=8",
+                      "MaxHistory=16","checksum(bytes,bytes.size()-4)",
+                      "MOVEFILE_REPLACE_EXISTING",
+                      "if(version==1)return decodeV1",
+                      "if(version==2)return decodeV2"):
+            self.assertIn(token,body)
+        self.assertIn("winui-session-v1.bin",body)
+        self.assertIn("MOVEFILE_WRITE_THROUGH",body)
+        self.assertNotIn("fxfile\\\\conf",body)
+
+    def test_session_controls_and_owned_gui_remain_opt_in_and_profile_isolated(self):
+        xaml=read(APP/"MainWindow.xaml")
+        gui=read(ROOT/"tests"/"winui"/"test_m23_gui.py")
+        for control in ("SaveSessionButton","RestoreSessionButton","ClearSessionButton"):
+            self.assertIn(control,xaml)
+        for forbidden in ("shellclipboard::write(","OpenClipboard(","recycleConfirmed=true"):
+            self.assertNotIn(forbidden,gui)
+
 if __name__=="__main__":
     unittest.main()
