@@ -700,8 +700,8 @@ Not certified:
 The latest unsigned package lifecycle evidence is from candidate
 `8283ece6c4348a751f487a64230e1bc149a47a2f`, merged through PR #27, and passed
 bounded `/TESTROOT` clean install, repair, update, rollback and uninstall.
-Current main is 44 commits ahead of that candidate and includes later product
-changes, including physical drag and `Ctrl+Shift+N`; therefore that package
+Current main is ahead of that candidate and includes later product changes,
+including physical drag and `Ctrl+Shift+N`; therefore that package
 evidence must not be presented as exact current-main binary/source packaging
 freshness. Regenerate provenance/package acceptance before the next release
 claim. Production signing, clean-machine machine-wide deployment and public
