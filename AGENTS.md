@@ -244,31 +244,33 @@ interactive Windows execution lane. If runner capacity changes, re-evaluate the
 global lease/concurrency rule instead of preserving single-runner serialization
 by habit.
 
-After starting a build or remote task, record its run ID, target commit and
-scope. The governing principle is **no short-interval routine polling**, but
-that principle must not be used to abandon result-dependent work. If the
-current user request cannot be completed until that run succeeds or fails,
-treat the run as a blocking dependency of the current request: keep following
-it through completion at the workflow-configured observation cadence, consume the
-result as soon as completion is observed, and continue the dependent action in
-the same task. The user does not need to separately ask for "active
-monitoring" just to have a run that this task depends on followed through to
-its result.
+After starting a GitHub Actions build or Remote Windows Task, record its run
+ID, target commit, scope, and Actions-reported start time. If the current user
+request depends on that run's result, treat it as a blocking dependency and
+**poll every 30 seconds while the Actions execution time is under three
+minutes**. Do not end the response merely because the first read still says
+queued/running during that window. As soon as completion is observed, consume
+the result immediately and continue the dependent action in the same task.
 
-The workflow-level settings `FLYEXPLORER_ROUTINE_OBSERVATION_SECONDS` and
-`FLYEXPLORER_ACTIVE_MONITOR_SECONDS` define the current observation cadence;
-do not duplicate their literal values in guidance. Explicit active monitoring
-changes the observation cadence to the configured active-monitor interval; it
-does not determine whether a result-dependent run must be followed. If
-completion becomes independently known — for example the user reports
-completion/failure or a tool returns a genuine completion signal — inspect the
-run immediately. Do not tight-loop status reads, sleep merely to consume an
-interval, or create a scheduled/automation task merely to bridge observation
-time.
+The three-minute ceiling is measured from the Actions run's execution/start
+time, not from when ChatGPT happened to notice the run. Once the run has been
+executing for three minutes and is still active, stop waiting in that response
+and leave the exact run ID, candidate SHA, and next action as the resume
+checkpoint. If completion becomes independently known before the next scheduled
+30-second observation — for example the user reports it or a tool returns a
+genuine completion signal — inspect it immediately instead of waiting out the
+interval. Do not poll faster than every 30 seconds, do not create a
+scheduled/automation task merely to bridge the wait, and do not require the
+user to separately ask for active monitoring when the current request already
+depends on the run.
 
-Only when a run's result is **not required to satisfy the current user
-request** may an active run be left as a resume checkpoint after a permitted
-read. On a later "continue the interrupted work" request, first read current
+The workflow settings `FLYEXPLORER_ROUTINE_OBSERVATION_SECONDS`,
+`FLYEXPLORER_ACTIVE_MONITOR_SECONDS`, and
+`FLYEXPLORER_RESULT_DEPENDENT_MAX_WAIT_SECONDS` mirror this fixed repository
+policy. Their expected values are 30 seconds, 30 seconds, and 180 seconds
+respectively. A run whose result is **not required to satisfy the current user
+request** may still be left as a resume checkpoint without waiting through this
+window. On a later "continue the interrupted work" request, first read current
 main/ref state, the recorded run, relevant artifacts and cleanup state; reuse
 completed evidence for the same revision/configuration rather than rerunning
 it.
