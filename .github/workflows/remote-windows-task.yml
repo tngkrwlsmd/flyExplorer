@@ -23,8 +23,8 @@ on:
         type: string
 
 permissions:
-  actions: read
-  contents: read
+  actions: write
+  contents: write
 
 env:
   FLYEXPLORER_CANONICAL_CHECKOUT: 'C:\dev\flyExplorer'
