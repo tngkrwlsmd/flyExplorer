@@ -1,13 +1,11 @@
 {
-  "request_id": "verify-legacy-classifier-fallback-20261005",
+  "request_id": "test-infra-simplify-fast-20261005",
   "expected_main_sha": "974926d9d3a0ef1015477a9a7ff2409486e988be",
-  "candidate_sha": "974926d9d3a0ef1015477a9a7ff2409486e988be",
-  "logical_unit": "remote-classifier-legacy-fallback",
+  "candidate_sha": "3aa7782be479107750727042db4efc4243da7c4c",
+  "logical_unit": "test-infra-simplify",
   "configuration": "none",
   "request_mode": "diagnostic",
   "validation_plan": [],
-  "retry_reason": "directly verify classification when the observed historical main revision predates the classifier",
-  "harness_revision": "974926d9d3a0ef1015477a9a7ff2409486e988be",
   "working_directory": "",
-  "command": "$ErrorActionPreference=\"Stop\"\n\"REMOTE_OBSERVED_MAIN_SHA=ef9dbf16495e4911c59492ea43eec1a4b0e06bef\" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append\nWrite-Host 'File \"tests/winui/test_installed_lifecycle.py\"'\nWrite-Host \"subprocess.TimeoutExpired: Command ['C:\\x\\flyExplorer.exe'] timed out after 16 seconds\"\nWrite-Host \"AssertionError: owned installed app did not close within the accepted 16-second budget\"\n& cmd /c exit 7"
+  "command": "$ErrorActionPreference=\"Stop\"\n$repo=$env:FLYEXPLORER_CANONICAL_CHECKOUT\nSet-Location -LiteralPath $repo\n& git fetch origin work/test-infra-simplify-20261005 --no-tags --prune\nif($LASTEXITCODE -ne 0){throw \"candidate fetch failed\"}\n$temp=Join-Path $env:RUNNER_TEMP (\"test-infra-simplify-\"+$env:GITHUB_RUN_ID)\nif(Test-Path -LiteralPath $temp){Remove-Item -LiteralPath $temp -Recurse -Force}\ntry{\n  & git worktree add --detach $temp 3aa7782be479107750727042db4efc4243da7c4c\n  if($LASTEXITCODE -ne 0){throw \"candidate worktree failed\"}\n  Set-Location -LiteralPath $temp\n  & python -X utf8 tools\\winui\\run_checks.py fast --before 974926d9d3a0ef1015477a9a7ff2409486e988be --head 3aa7782be479107750727042db4efc4243da7c4c\n  if($LASTEXITCODE -ne 0){throw \"change-scoped FAST validation failed\"}\n  Write-Host \"TEST_INFRA_SIMPLIFY_FAST=PASS\"\n} finally {\n  Set-Location -LiteralPath $repo\n  if(Test-Path -LiteralPath $temp){& git worktree remove --force $temp}\n  & git worktree prune\n}"
 }
