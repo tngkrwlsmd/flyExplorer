@@ -135,5 +135,13 @@ class LargeFolderStreamingContracts(unittest.TestCase):
         ):
             self.assertIn(marker,gui)
 
+    def test_owned_large_folder_fixture_is_bounded_and_never_mutates_global_clipboard(self):
+        gui=read("tests/winui/test_large_owned_folder_gui.py")
+        for token in ("choices=(1100,2300,5000,8000,20500)",
+                      "range(args.items)","LEGACY_PRESENT_SETTINGS_UNCHANGED",
+                      'auto_id="SortPicker"'):
+            self.assertIn(token,gui)
+        self.assertNotIn("EmptyClipboard(",gui)
+
 if __name__=="__main__":
     unittest.main()
