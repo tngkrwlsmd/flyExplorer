@@ -1510,6 +1510,22 @@ namespace winrt::FlyExplorer::implementation
                 args.Handled(true);
             });
             row.CanDrag(true);
+            row.PointerPressed([weak,side](IInspectable const& sender,
+                Microsoft::UI::Xaml::Input::PointerRoutedEventArgs const& args){
+                if(auto ui=weak.get())ui->OnFileRowPointerPressed(side,sender,args);
+            });
+            row.PointerMoved([weak,side](IInspectable const& sender,
+                Microsoft::UI::Xaml::Input::PointerRoutedEventArgs const& args){
+                if(auto ui=weak.get())ui->OnFileRowPointerMoved(side,sender,args);
+            });
+            row.PointerReleased([weak,side](IInspectable const& sender,
+                Microsoft::UI::Xaml::Input::PointerRoutedEventArgs const& args){
+                if(auto ui=weak.get())ui->OnFileRowPointerReleased(side,sender,args);
+            });
+            row.PointerCanceled([weak,side](IInspectable const& sender,
+                Microsoft::UI::Xaml::Input::PointerRoutedEventArgs const& args){
+                if(auto ui=weak.get())ui->OnFileRowPointerReleased(side,sender,args);
+            });
             row.DragStarting([weak,side](
                 Microsoft::UI::Xaml::UIElement const& sender,
                 Microsoft::UI::Xaml::DragStartingEventArgs const& args){
