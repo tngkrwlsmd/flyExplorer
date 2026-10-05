@@ -33,7 +33,7 @@ env:
   FLYEXPLORER_RESULT_DEPENDENT_MAX_WAIT_SECONDS: '180'
   FLYEXPLORER_REMOTE_RUNNER_CAPACITY: '1'
   FLYEXPLORER_DEFAULT_VALIDATION_RUN_BUDGET: '2'
-  FLYEXPLORER_REMOTE_EVIDENCE_DIR: 'C:\dev\flyExplorer\logs\remote-evidence'
+  FLYEXPLORER_REMOTE_EVIDENCE_DIR: 'C:\\dev\\flyExplorer\\logs\\remote-evidence'
 
 concurrency:
   group: flyexplorer-remote-windows-task
@@ -200,45 +200,7 @@ jobs:
               $reuseEvidence.validated_targets |
                 ForEach-Object { ([string]$_).Trim().ToLowerInvariant() }
             )
-            if ($reuseRunId -notmatch '^[1-9][0-9]*$') {
-              throw "reuse_evidence.run_id must be a positive integer."
-            }
-            if ($reuseCandidateSha -notmatch '^[0-9a-f]{40}$') {
-              throw "reuse_evidence.candidate_sha must be a 40-character Git SHA."
-            }
-            if ($reusedTargets.Count -eq 0) {
-              throw "reuse_evidence.validated_targets must not be empty."
-            }
-            $invalidReuseTargets = @(
-              $reusedTargets |
-                Where-Object { $_ -notmatch '^[A-Za-z0-9][A-Za-z0-9._/-]{0,95}$' }
-            )
-            if ($invalidReuseTargets.Count -ne 0) {
-              throw "reuse_evidence.validated_targets contains invalid logical targets."
-            }
-            $duplicateReuseTargets = @($reusedTargets | Sort-Object -Unique)
-            if ($duplicateReuseTargets.Count -ne $reusedTargets.Count) {
-              throw "reuse_evidence.validated_targets must not contain duplicates."
-            }
-            $overlap = @($uniquePlan | Where-Object { $_ -in $reusedTargets })
-            if ($overlap.Count -ne 0) {
-              throw "Focused evidence reuse must not rerun reused targets: $($overlap -join ',')."
-            }
-            $normalizedSafetyCommand = ($command -replace '\s+', ' ').ToLowerInvariant()
-            foreach ($forbidden in @(
-              'build.bat',
-              'package.bat',
-              'clean.bat build',
-              'provenance.py --write',
-              'run_checks.py full'
-            )) {
-              if ($normalizedSafetyCommand.Contains($forbidden)) {
-                throw "Focused evidence reuse command must not rebuild/repackage reused evidence: $forbidden"
-              }
-            }
-          } elseif ($null -ne $reuseEvidence) {
-            throw "reuse_evidence is only valid with focused-reuse."
-          }
+            if ($reuseRunId -notmatch '^[1-9][0-9]*
           if ([string]::IsNullOrWhiteSpace($workdir)) {
             $workdir = $env:FLYEXPLORER_CANONICAL_CHECKOUT
           }
@@ -334,7 +296,6 @@ jobs:
             $delimiter
           ) | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
           Write-Host "REQUEST_VALIDATION=PASS mode=diagnostic dispatch=true"
-
 
       - name: Enforce prior evidence retry policy
         id: evidence_policy
@@ -1692,8 +1653,8 @@ jobs:
             if ($invalidReuseTargets.Count -ne 0) {
               throw "reuse_evidence.validated_targets contains invalid logical targets."
             }
-            $duplicateReuseTargets = @($reusedTargets | Sort-Object -Unique)
-            if ($duplicateReuseTargets.Count -ne $reusedTargets.Count) {
+            $dedupReuseTargets = @($reusedTargets | Sort-Object -Unique)
+            if ($dedupReuseTargets.Count -ne $reusedTargets.Count) {
               throw "reuse_evidence.validated_targets must not contain duplicates."
             }
             $overlap = @($uniquePlan | Where-Object { $_ -in $reusedTargets })
@@ -3159,8 +3120,8 @@ jobs:
             if ($invalidReuseTargets.Count -ne 0) {
               throw "reuse_evidence.validated_targets contains invalid logical targets."
             }
-            $duplicateReuseTargets = @($reusedTargets | Sort-Object -Unique)
-            if ($duplicateReuseTargets.Count -ne $reusedTargets.Count) {
+            $dedupReuseTargets = @($reusedTargets | Sort-Object -Unique)
+            if ($dedupReuseTargets.Count -ne $reusedTargets.Count) {
               throw "reuse_evidence.validated_targets must not contain duplicates."
             }
             $overlap = @($uniquePlan | Where-Object { $_ -in $reusedTargets })
