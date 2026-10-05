@@ -73,10 +73,10 @@ checkpoints.
 - Ctrl+T, Ctrl+W, Ctrl+Tab and Ctrl+Shift+Tab Window Tab behavior.
 - File creation keyboard routing now reuses the existing
   `fxfile::filecommand::Kind::CreateFolder` command path: Windows
-  Explorer-style `Ctrl+Shift+N` and the historical flyExplorer `F11`
-  shortcut both open the existing create-folder name editor for the current
-  active pane/tab. No separate keyboard mutation path or command owner was
-  introduced.
+  Explorer-style `Ctrl+Shift+N` opens the existing create-folder name editor
+  for the current active pane/tab. No separate keyboard mutation path or command
+  owner was introduced. Historical flyExplorer `F11` is not restored because
+  current Windows/File Explorer uses F11 for window maximize/restore.
 - Details, List, Small Icons, Medium Icons and Large Icons views.
 - File-list Shell visuals use path-specific Windows Known Folder artwork for
   Desktop, Documents, Downloads, Pictures, Music and Videos. The bounded
@@ -557,8 +557,9 @@ Current source and the last parity evidence still show these limits:
 - User-configurable accelerators and a complete historical shortcut map are
   not implemented. The current product has a bounded shortcut subset, including
   the accepted create-folder aliases `Ctrl+Shift+N` and `F11`; historical
-  defaults that conflict with current WinUI behavior (notably F5/F6) require a
-  separate compatibility decision rather than silent remapping.
+  defaults that conflict with current WinUI/Windows behavior (notably F5/F6
+  and historical flyExplorer F11) require a separate compatibility decision
+  rather than silent remapping.
 
 ## Packaging state
 
