@@ -1,11 +1,11 @@
 {
-  "request_id": "test-infra-simplify-fast-20261005",
+  "request_id": "test-infra-simplify-fast-final-20261005",
   "expected_main_sha": "974926d9d3a0ef1015477a9a7ff2409486e988be",
-  "candidate_sha": "3aa7782be479107750727042db4efc4243da7c4c",
+  "candidate_sha": "f5b3fc72894f2545063a634283c6c714414a2ecf",
   "logical_unit": "test-infra-simplify",
   "configuration": "none",
   "request_mode": "diagnostic",
   "validation_plan": [],
   "working_directory": "",
-  "command": "$ErrorActionPreference=\"Stop\"\n$repo=$env:FLYEXPLORER_CANONICAL_CHECKOUT\nSet-Location -LiteralPath $repo\n& git fetch origin work/test-infra-simplify-20261005 --no-tags --prune\nif($LASTEXITCODE -ne 0){throw \"candidate fetch failed\"}\n$temp=Join-Path $env:RUNNER_TEMP (\"test-infra-simplify-\"+$env:GITHUB_RUN_ID)\nif(Test-Path -LiteralPath $temp){Remove-Item -LiteralPath $temp -Recurse -Force}\ntry{\n  & git worktree add --detach $temp 3aa7782be479107750727042db4efc4243da7c4c\n  if($LASTEXITCODE -ne 0){throw \"candidate worktree failed\"}\n  Set-Location -LiteralPath $temp\n  & python -X utf8 tools\\winui\\run_checks.py fast --before 974926d9d3a0ef1015477a9a7ff2409486e988be --head 3aa7782be479107750727042db4efc4243da7c4c\n  if($LASTEXITCODE -ne 0){throw \"change-scoped FAST validation failed\"}\n  Write-Host \"TEST_INFRA_SIMPLIFY_FAST=PASS\"\n} finally {\n  Set-Location -LiteralPath $repo\n  if(Test-Path -LiteralPath $temp){& git worktree remove --force $temp}\n  & git worktree prune\n}"
+  "command": "$ErrorActionPreference=\"Stop\"\n$repo=$env:FLYEXPLORER_CANONICAL_CHECKOUT\nSet-Location -LiteralPath $repo\n& git fetch origin work/test-infra-simplify-20261005 --no-tags --prune\nif($LASTEXITCODE -ne 0){throw \"candidate fetch failed\"}\n$temp=Join-Path $env:RUNNER_TEMP (\"test-infra-simplify-final-\"+$env:GITHUB_RUN_ID)\nif(Test-Path -LiteralPath $temp){Remove-Item -LiteralPath $temp -Recurse -Force}\ntry{\n  & git worktree add --detach $temp f5b3fc72894f2545063a634283c6c714414a2ecf\n  if($LASTEXITCODE -ne 0){throw \"candidate worktree failed\"}\n  Set-Location -LiteralPath $temp\n  & python -X utf8 tools\\winui\\run_checks.py fast --before 974926d9d3a0ef1015477a9a7ff2409486e988be --head f5b3fc72894f2545063a634283c6c714414a2ecf\n  if($LASTEXITCODE -ne 0){throw \"final change-scoped FAST validation failed\"}\n  Write-Host \"TEST_INFRA_SIMPLIFY_FINAL_FAST=PASS\"\n} finally {\n  Set-Location -LiteralPath $repo\n  if(Test-Path -LiteralPath $temp){& git worktree remove --force $temp}\n  & git worktree prune\n}"
 }
