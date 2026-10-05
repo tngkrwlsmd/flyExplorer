@@ -61,5 +61,8 @@ Public redistribution remains uncleared. Production signing, clean-machine
 Program Files/HKLM lifecycle, GPL source delivery and rightsholder review remain
 separate gates.
 
+For exact binary/source identity and the deterministic source bundle workflow,
+see RELEASE_SOURCE.md.
+
 See SIGNING.md, SOURCE_DISTRIBUTION.md, RIGHTSHOLDER_REVIEW.md and
 docs/development/DISTRIBUTION_LICENSE_REVIEW.md for open release gates.
