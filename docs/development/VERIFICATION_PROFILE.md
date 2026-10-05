@@ -83,8 +83,17 @@ A same-revision rerun may be used once when the previous evidence clearly shows
 an infrastructure/transient class such as runner session loss, transient UIA
 availability, network fetch, Windows Settings automation, infrastructure
 timeout or artifact upload failure. The workflow no longer blocks all reruns at
-the job boundary because that hid this distinction. Repeated or unclassified
-reruns are not valid evidence.
+the job boundary because that hid this distinction.
+
+The workflow now reads the prior Actions result/log for the same logical unit
+before an expensive retry. A still-unclassified prior failure blocks validation
+until it can be classified by the current failure classifier or a focused
+diagnostic. A harness/automation/shutdown-boundary failure requires
+`retry_scope: focused-reuse`: the request names the prior run/candidate and
+the successful targets it reuses, the workflow verifies canonical success
+markers plus a harness/infra-only diff, and the focused command is forbidden
+from invoking the normal build/package entry points again. Repeated full
+validation after such a classified focused failure is invalid evidence.
 
 ## Verification profiles
 
