@@ -1,6 +1,7 @@
 """Real, disposable WinUI 3 dual-pane shell acceptance (not product-parity certification)."""
 from pathlib import Path
 from paths import ROOT, APP, app_exe
+from uia_polling import wait_until
 import ctypes as c, os, re, shutil, subprocess, tempfile, time, hashlib
 from ctypes import wintypes as W
 from pywinauto import Desktop
@@ -58,13 +59,9 @@ def ownedwindows(pid):
  return found
 GUI_TIMEOUT_SCALE=1.5 if os.environ.get("GITHUB_ACTIONS")=="true" else 1.0
 def eventually(fn,label,timeout=8):
- limit=time.monotonic()+timeout*GUI_TIMEOUT_SCALE
- while time.monotonic()<limit:
-  try:
-   if fn():return True
-  except Exception:pass
-  time.sleep(.13)
- raise AssertionError(label)
+ return wait_until(
+  fn, label, seconds=timeout*GUI_TIMEOUT_SCALE, interval=.13
+ )
 def labels(win):
  return [e.window_text() for e in win.descendants() if e.window_text()]
 p=None;hwnd=None
