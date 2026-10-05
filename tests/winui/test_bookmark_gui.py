@@ -2,6 +2,7 @@
 from pathlib import Path
 from paths import ROOT, app_exe
 from profile_guard import assert_legacy_profile_unchanged, snapshot_legacy_profile
+from uia_polling import wait_until
 import ctypes as c
 import os
 import shutil
@@ -66,15 +67,7 @@ def windows(pid):
     return found
 
 def eventually(fn, label, timeout=10):
-    limit = time.monotonic() + timeout
-    while time.monotonic() < limit:
-        try:
-            if fn():
-                return
-        except Exception:
-            pass
-        time.sleep(.15)
-    raise AssertionError(label)
+    return wait_until(fn, label, seconds=timeout, interval=.15)
 
 def launch(start):
     env = {
