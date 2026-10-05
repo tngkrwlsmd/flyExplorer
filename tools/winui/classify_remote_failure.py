@@ -51,7 +51,7 @@ def classify(text: str) -> str:
         return "AUTOMATION_DISCOVERY_FAILURE"
     if "TimeoutError" in text:
         return "AUTOMATION_TIMEOUT_FAILURE"
-    if "AssertionError:" in text or re.search(r"(?m)^FAIL:|(?m)^FAILED", text):
+    if "AssertionError:" in text or re.search(r"(?m)^(?:FAIL:|FAILED)", text):
         return "TEST_ASSERTION_FAILURE"
     return "COMMAND_FAILURE_UNCLASSIFIED"
 
