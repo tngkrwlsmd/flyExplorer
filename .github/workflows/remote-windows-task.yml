@@ -13,6 +13,9 @@ permissions:
 
 jobs:
   task:
+    permissions:
+      actions: write
+      contents: write
     uses: tngkrwlsmd/flyExplorer/.github/workflows/remote-windows-task.yml@main
     with:
       request_ref: ${{ github.sha }}
