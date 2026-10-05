@@ -1,13 +1,17 @@
 {
-  "request_id": "high-contrast-branch-cleanup-001",
+  "request_id": "verification-infra-source-health-001",
   "expected_main_sha": "0b3ba42fe528f31fa4d6978b11d58a8f50a884c1",
-  "candidate_sha": "0b3ba42fe528f31fa4d6978b11d58a8f50a884c1",
-  "logical_unit": "high-contrast-branch-cleanup",
-  "configuration": "none",
+  "candidate_sha": "11f18f850380fab7127985ee3045135f13dca90d",
+  "logical_unit": "verification-infra-simplify",
+  "configuration": "Release",
   "validation_kind": [
-    "none"
+    "source"
   ],
-  "invalidated_evidence": {},
+  "invalidated_evidence": {
+    "source": "Windows validation helpers, workflow contracts, and source orchestration changed"
+  },
+  "retry_reason": "",
+  "retry_revision": "",
   "working_directory": "",
-  "command": "$ErrorActionPreference=\"Stop\"\n$repo=\"tngkrwlsmd/flyExplorer\"\n$branch=\"work/high-contrast-acceptance\"\n$expected=\"bd13f3c68a12d3bdd111a0171a70f17ef3b6f8de\"\n$ref=(\"heads/\"+$branch)\n$encoded=[uri]::EscapeDataString($ref)\n$obj=gh api (\"repos/\"+$repo+\"/git/ref/\"+$encoded) | ConvertFrom-Json\nif($LASTEXITCODE -ne 0){throw \"failed to resolve cleanup branch\"}\nif($obj.object.sha -ne $expected){throw (\"cleanup branch moved: expected \"+$expected+\", got \"+$obj.object.sha)}\ngh api --method DELETE (\"repos/\"+$repo+\"/git/refs/\"+$encoded)\nif($LASTEXITCODE -ne 0){throw \"cleanup branch delete failed\"}\nWrite-Host (\"DELETED_BRANCH=\"+$branch)\nWrite-Host \"HIGH_CONTRAST_BRANCH_CLEANUP_PASS\""
+  "command": "$ErrorActionPreference=\"Stop\"\n$repo=\"C:\\dev\\flyExplorer\"\n$main=\"0b3ba42fe528f31fa4d6978b11d58a8f50a884c1\"\n$candidate=\"11f18f850380fab7127985ee3045135f13dca90d\"\n$branch=\"work/verification-infra-simplify-20261005\"\nSet-Location -LiteralPath $repo\n& git fetch origin main $branch --no-tags --prune\nif($LASTEXITCODE -ne 0){throw \"fetch failed\"}\nif((& git rev-parse refs/remotes/origin/main).Trim() -ne $main){throw \"main moved\"}\nif((& git rev-parse (\"refs/remotes/origin/\"+$branch)).Trim() -ne $candidate){throw \"candidate moved\"}\n$base=Join-Path $env:RUNNER_TEMP (\"validation-infra-\"+$env:GITHUB_RUN_ID)\n$mainDir=$base+\"-main\"\n$candidateDir=$base+\"-candidate\"\nforeach($p in @($mainDir,$candidateDir)){if(Test-Path -LiteralPath $p){Remove-Item -LiteralPath $p -Recurse -Force}}\ntry{\n  & git worktree add --detach $mainDir $main\n  if($LASTEXITCODE -ne 0){throw \"main worktree failed\"}\n  & git worktree add --detach $candidateDir $candidate\n  if($LASTEXITCODE -ne 0){throw \"candidate worktree failed\"}\n  $env:PYTHONIOENCODING=\"utf-8\"\n\n  Write-Host \"===== BASELINE_MAIN_SOURCE =====\"\n  & python -X utf8 (Join-Path $mainDir \"tools\\winui\\run_checks.py\") source\n  if($LASTEXITCODE -ne 0){throw \"baseline main source failed\"}\n\n  Write-Host \"===== CANDIDATE_SOURCE =====\"\n  & python -X utf8 (Join-Path $candidateDir \"tools\\winui\\run_checks.py\") source\n  if($LASTEXITCODE -ne 0){throw \"candidate source failed\"}\n\n  Write-Host \"===== CRITICAL_PYTHON_STATIC =====\"\n  $checker=Join-Path $candidateDir \"tools\\winui\\check_python_static.py\"\n  $critical=@(\n    (Join-Path $candidateDir \"tools\\winui\\high_contrast_state.py\"),\n    (Join-Path $candidateDir \"tools\\winui\\high_contrast_runner_setup.py\"),\n    (Join-Path $candidateDir \"tools\\winui\\high_contrast_acceptance.py\"),\n    (Join-Path $candidateDir \"tools\\winui\\runner_health.py\"),\n    (Join-Path $candidateDir \"tests\\winui\\test_high_contrast_gui.py\")\n  )\n  & python -X utf8 $checker @critical\n  if($LASTEXITCODE -ne 0){throw \"critical Python static check failed\"}\n\n  & python -X utf8 (Join-Path $candidateDir \"tools\\winui\\high_contrast_runner_setup.py\") --check\n  if($LASTEXITCODE -ne 0){throw \"High Contrast setup check failed\"}\n  & python -X utf8 (Join-Path $candidateDir \"tools\\winui\\runner_health.py\") --configuration Release --check\n  if($LASTEXITCODE -ne 0){throw \"runner health check failed\"}\n\n  & git -C $candidateDir diff --check ($main+\"..\"+$candidate)\n  if($LASTEXITCODE -ne 0){throw \"candidate diff check failed\"}\n  Write-Host \"VALIDATION_INFRA_SOURCE_AND_HEALTH_PASS\"\n}finally{\n  Set-Location -LiteralPath $repo\n  foreach($p in @($candidateDir,$mainDir)){if(Test-Path -LiteralPath $p){& git worktree remove --force $p}}\n  & git worktree prune\n}"
 }
