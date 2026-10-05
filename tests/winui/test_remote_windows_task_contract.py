@@ -181,13 +181,21 @@ class RemoteWindowsTaskContractTests(unittest.TestCase):
         ):
             self.assertIn(category, self.workflow)
 
-    def test_remote_command_uses_process_exit_not_stale_last_native_exit(self):
+    def test_remote_command_preserves_source_and_uses_process_exit(self):
         command = self.workflow[
             self.workflow.index("- name: Run remote shell command"):
             self.workflow.index("- name: Write structured remote result")
         ]
         self.assertIn(
-            "& powershell.exe -NoLogo -NoProfile -ExecutionPolicy Bypass -Command $env:REMOTE_COMMAND",
+            '("flyexplorer-remote-command-" + $env:GITHUB_RUN_ID + ".ps1")',
+            command,
+        )
+        self.assertIn(
+            "Set-Content -LiteralPath $remoteScript -Value $env:REMOTE_COMMAND -Encoding UTF8",
+            command,
+        )
+        self.assertIn(
+            "& powershell.exe -NoLogo -NoProfile -ExecutionPolicy Bypass -File $remoteScript",
             command,
         )
         self.assertIn("$commandCode = $LASTEXITCODE", command)
@@ -195,6 +203,11 @@ class RemoteWindowsTaskContractTests(unittest.TestCase):
             'throw "Remote shell command process exited with code $commandCode."',
             command,
         )
+        self.assertIn(
+            "Remove-Item -LiteralPath $remoteScript -Force -ErrorAction SilentlyContinue",
+            command,
+        )
+        self.assertNotIn("-Command $env:REMOTE_COMMAND", command)
         self.assertNotIn("Invoke-Expression $env:REMOTE_COMMAND", command)
         self.assertNotIn("$global:LASTEXITCODE = 0", command)
         self.assertNotIn(
