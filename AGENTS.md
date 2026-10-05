@@ -340,10 +340,10 @@ on alternative event/capture implementations while that boundary is still
 unknown. Diagnostics must be inert in normal product runs and should be removed
 or kept strictly gated once the cause is known.
 
-Do **not** rerun the same GitHub Actions revision to see whether it passes on a
-second attempt. Same-revision Actions reruns are prohibited for normal
-development. A follow-up Actions run must correspond to a real new revision
-that addresses an identified cause; it is a new acceptance run, not a retry.
+Do not rerun a deterministic product/source failure on the same revision.
+For an explicitly classified infrastructure/transient failure, one controlled
+same-revision rerun is allowed; do not repeat an unclassified failure and do
+not turn rerun into the normal development loop.
 
 ### Mechanical validation-churn guard
 
@@ -418,26 +418,24 @@ execution is unavailable.** The agent-side check must be completed before the
 request commit; the Windows workflow's own validation is only a second line of
 defense.
 
-The request-slot workflow derives a validation fingerprint from
-`candidate_sha + configuration + sorted(validation_kind)`. A fingerprint
-already present in the control-branch request history is rejected before the
-remote command runs. An exceptional repeat requires both a concrete
-`retry_reason` and a changed `retry_revision` identifying the harness or
-environment revision that makes the new attempt materially different; the same
-retry revision cannot be reused for the same fingerprint. Common source/build/
-native/GUI/visual commands are also checked against the declared stage set so
-expensive work cannot be hidden behind `validation_kind: ["none"]`.
+The request slot separates purpose first: `request_mode: diagnostic` is for
+inspection/discovery and uses `configuration: none` with an empty
+`validation_plan`; `request_mode: validation` uses Debug/Release and names
+the logical validation targets in `validation_plan`. Do not restate those
+targets by regex-parsing the free-form command. Legacy `validation_kind`
+requests are migration-only.
 
-Both Windows workflows reject GitHub rerun attempts at the job boundary with
-`github.run_attempt == '1'`; do not use the UI rerun button as a development
-mechanism. Manual `workflow_dispatch` remains a human fallback and therefore
-does not use request-history fingerprinting, but it remains subject to the
-same no-rerun policy and must not replace the normal request-slot discipline.
+Validation evidence identity includes candidate SHA, configuration, logical
+unit, normalized validation plan, normalized command hash and harness revision.
+The fingerprint is an evidence/reuse key, not a hard duplicate rejection gate.
+A harness or validation-logic change therefore has a distinct identity without
+inventing a retry token.
 
-Periodically review the recorded logical unit, validation kind and fingerprint
-data. The target is zero diagnosis-free repeated validation, zero product-build
-repeats after a harness-only fix, and zero duplicate same-candidate
-fingerprints without a materially changed retry revision.
+Do not use Actions rerun as the development loop. Deterministic product or
+source-contract failures require a real revision. A same-revision rerun is
+allowed at most once only when the prior evidence is clearly infrastructure or
+transient (runner/session, transient UIA, network, Windows Settings setup,
+infrastructure timeout or artifact upload). Classify the prior failure first.
 
 ### Remote development and final-CI anti-thrashing rule
 
