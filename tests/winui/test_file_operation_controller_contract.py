@@ -81,7 +81,7 @@ class FileOperationContracts(unittest.TestCase):
             main.index("RefreshWindowTabs();")
         ]
         self.assertIn("VirtualKey::N", constructor)
-        self.assertIn("VirtualKey::F11", constructor)
+        self.assertNotIn("VirtualKey::F11", constructor)
         self.assertIn("VK_CONTROL", constructor)
         self.assertIn("VK_SHIFT", constructor)
         self.assertIn("VK_MENU", constructor)
