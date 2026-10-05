@@ -1,13 +1,11 @@
 {
-  "request_id": "release-source-identity-cleanup-20261006",
+  "request_id": "release-tag-public-source-diagnostic-20261006",
   "expected_main_sha": "8b3ff0da418f8d9c154f0984921359f4a620b552",
   "candidate_sha": "8b3ff0da418f8d9c154f0984921359f4a620b552",
-  "logical_unit": "release-source-identity-cleanup",
-  "request_mode": "validation",
-  "configuration": "Release",
-  "validation_plan": [
-    "cleanup"
-  ],
+  "logical_unit": "release-tag-public-source-diagnostic",
+  "request_mode": "diagnostic",
+  "configuration": "none",
+  "validation_plan": [],
   "working_directory": "",
-  "command": "$ErrorActionPreference=\"Stop\"\n$repo=$env:FLYEXPLORER_CANONICAL_CHECKOUT\n$branch=\"work/release-source-identity-20261006\"\n$expectedWork=\"911940b18120077c05759d8d4b9be90e1d6f3f86\"\n$expectedMain=\"8b3ff0da418f8d9c154f0984921359f4a620b552\"\n$source=\"bc63c8b48e466d1275cc6dcffb0c50e02d39db60\"\nSet-Location -LiteralPath $repo\n& git fetch origin main $branch --no-tags --prune\nif($LASTEXITCODE -ne 0){throw \"cleanup fetch failed\"}\n$mainSha=(& git rev-parse refs/remotes/origin/main).Trim()\n$workRef=\"refs/remotes/origin/\"+$branch\n$workSha=(& git rev-parse $workRef).Trim()\nif($mainSha -ne $expectedMain){throw \"main moved before cleanup: $mainSha\"}\nif($workSha -ne $expectedWork){throw \"work branch moved before cleanup: $workSha\"}\n\n& git merge-base --is-ancestor $source refs/remotes/origin/main\nif($LASTEXITCODE -ne 0){throw \"binary source revision is not preserved in main history\"}\n\n$mainTree=(& git rev-parse \"refs/remotes/origin/main^{tree}\").Trim()\n$workTree=(& git rev-parse ($workRef+\"^{tree}\")).Trim()\nif($mainTree -ne $workTree){throw \"refuse cleanup: merged main tree differs from work branch tree\"}\n\n& git push origin --delete $branch\nif($LASTEXITCODE -ne 0){throw \"failed to delete merged release-source work branch\"}\n& git fetch origin --prune --no-tags\nif($LASTEXITCODE -ne 0){throw \"post-delete fetch failed\"}\nif(& git show-ref --verify --quiet $workRef){throw \"release-source work branch still exists\"}\nWrite-Host \"RELEASE_SOURCE_WORK_BRANCH_CLEANUP=PASS\""
+  "command": "$ErrorActionPreference=\"Stop\"\nSet-Location -LiteralPath $env:FLYEXPLORER_CANONICAL_CHECKOUT\n& git fetch origin --tags --no-tags:$false\nif($LASTEXITCODE -ne 0){throw \"tag fetch failed\"}\nWrite-Host \"===== TAGS =====\"\n& git tag --list --sort=version:refname\nWrite-Host \"===== V1 TAG RESOLUTION =====\"\n& git rev-parse -q --verify \"refs/tags/v1.0.0.0\" 2>$null\nWrite-Host (\"V1_TAG_EXISTS=\"+($LASTEXITCODE -eq 0))\nWrite-Host \"===== RULESETS =====\"\n& gh api repos/tngkrwlsmd/flyExplorer/rulesets --jq '.[] | {id,name,target,enforcement,bypass_actors,conditions,rules}'\nif($LASTEXITCODE -ne 0){throw \"ruleset query failed\"}\nWrite-Host \"===== IMMUTABLE RELEASES =====\"\n& gh api repos/tngkrwlsmd/flyExplorer/immutable-releases\nif($LASTEXITCODE -eq 0){\n  Write-Host \"IMMUTABLE_RELEASES_ENABLED=true\"\n} else {\n  Write-Host \"IMMUTABLE_RELEASES_ENABLED=false\"\n  $global:LASTEXITCODE=0\n}\nWrite-Host \"===== REPOSITORY =====\"\n& gh api repos/tngkrwlsmd/flyExplorer --jq '{visibility,private,default_branch,archived,disabled}'\nif($LASTEXITCODE -ne 0){throw \"repository metadata query failed\"}"
 }
