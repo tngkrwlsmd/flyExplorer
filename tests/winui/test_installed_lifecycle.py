@@ -113,12 +113,24 @@ def launch_installed(root,profile,label):
         raise AssertionError("installed flyExplorer did not navigate owned folder")
     finally:
         if proc.poll() is None:
-            if window is not None:
-                ctypes.windll.user32.PostMessageW(window.handle,0x10,0,0)
-            try:proc.wait(timeout=10)
+            if window is None:
+                proc.terminate();proc.wait(timeout=5)
+                raise AssertionError("owned installed app HWND unavailable at shutdown")
+            posted=ctypes.windll.user32.PostMessageW(window.handle,0x10,0,0)
+            if not posted:
+                proc.terminate();proc.wait(timeout=5)
+                raise AssertionError("owned installed app WM_CLOSE failed")
+            try:
+                proc.wait(timeout=16)
             except subprocess.TimeoutExpired:
                 proc.terminate();proc.wait(timeout=5)
-        assert proc.returncode==0,proc.returncode
+                raise AssertionError(
+                    "owned installed app did not close within the accepted 16-second budget"
+                )
+        assert proc.returncode==0,(
+            "owned installed app exited nonzero without harness termination",
+            proc.returncode,
+        )
 
 
 def main():
