@@ -5,6 +5,7 @@ launch/uninstall behavior. It is not a signed clean-machine Program Files/HKLM
 certification.
 """
 from pathlib import Path
+import argparse
 import ctypes
 import hashlib
 import json
@@ -120,6 +121,70 @@ def assert_runtime_manifest_covered(root,provenance):
     assert runtime<=normalized,(runtime-normalized)
 
 
+def shutdown_diagnostic(root,proc,label):
+    windows=[]
+    try:
+        windows=[
+            {
+                "handle":int(item.handle),
+                "title":item.window_text(),
+            }
+            for item in Desktop(backend="uia").windows(process=proc.pid)
+        ]
+    except (psutil.Error,OSError,RuntimeError):
+        windows=[]
+
+    processes=[]
+    try:
+        owner=psutil.Process(proc.pid)
+        observed=[owner,*owner.children(recursive=True)]
+    except (psutil.Error,OSError,RuntimeError):
+        observed=[]
+    for item in observed:
+        try:
+            processes.append({
+                "pid":item.pid,
+                "name":item.name(),
+                "exe":item.exe(),
+                "status":item.status(),
+                "threads":len(item.threads()),
+            })
+        except (psutil.Error,OSError,RuntimeError):
+            processes.append({"pid":item.pid,"unavailable":True})
+
+    payload={
+        "failure_category":(
+            "INSTALLED_APP_WINDOW_CLOSE_TIMEOUT"
+            if windows else "INSTALLED_APP_PROCESS_EXIT_TIMEOUT"
+        ),
+        "label":label,
+        "main_pid":proc.pid,
+        "main_poll":proc.poll(),
+        "windows":windows,
+        "processes":processes,
+    }
+    evidence=Path(os.environ.get(
+        "FLYEXPLORER_REMOTE_EVIDENCE_DIR",
+        str(LOGS),
+    ))
+    evidence.mkdir(parents=True,exist_ok=True)
+    path=evidence/"installed-shutdown-result.json"
+    path.write_text(
+        json.dumps(payload,ensure_ascii=False,indent=2)+"\n",
+        encoding="utf-8",
+    )
+    print(
+        "FAILURE_CATEGORY="+payload["failure_category"],
+        flush=True,
+    )
+    print(
+        "INSTALLED_APP_SHUTDOWN_DIAGNOSTIC="+
+        json.dumps(payload,ensure_ascii=False,separators=(",",":")),
+        flush=True,
+    )
+    return payload
+
+
 def launch_installed(root,profile,label):
     source=profile/"source";source.mkdir(parents=True,exist_ok=True)
     (source/"installed-navigation.txt").write_text("owned",encoding="utf-8")
@@ -160,9 +225,15 @@ def launch_installed(root,profile,label):
             try:
                 proc.wait(timeout=16)
             except subprocess.TimeoutExpired:
-                proc.terminate();proc.wait(timeout=5)
+                diagnostic=shutdown_diagnostic(root,proc,label)
+                proc.terminate()
+                try:
+                    proc.wait(timeout=5)
+                except subprocess.TimeoutExpired:
+                    proc.kill();proc.wait(timeout=5)
                 raise AssertionError(
-                    "owned installed app did not close within the accepted 16-second budget"
+                    "owned installed app did not close within the accepted 16-second budget; "
+                    +diagnostic["failure_category"]
                 )
         assert proc.returncode==0,(
             "owned installed app exited nonzero without harness termination",
@@ -171,7 +242,27 @@ def launch_installed(root,profile,label):
         wait_owned_runtime_processes(root,label)
 
 
+def shutdown_probe(runtime_root):
+    runtime_root=runtime_root.resolve()
+    assert (runtime_root/"flyExplorer.exe").is_file(),runtime_root
+    token=uuid.uuid4().hex[:10]
+    profile=LOGS/f"shutdown-probe-profile-{token}"
+    profile.mkdir(parents=True)
+    try:
+        launch_installed(runtime_root,profile,"shutdown-probe")
+        print("OWNED_RUNTIME_SHUTDOWN_PROBE_PASS",True,flush=True)
+    finally:
+        if profile.exists():shutil.rmtree(profile,ignore_errors=True)
+
+
 def main():
+    parser=argparse.ArgumentParser()
+    parser.add_argument("--runtime-root",type=Path)
+    args=parser.parse_args()
+    if args.runtime_root is not None:
+        shutdown_probe(args.runtime_root)
+        return
+
     assert SETUP.is_file(),f"missing installer: {SETUP}; run package.bat Release"
     LOGS.mkdir(parents=True,exist_ok=True)
     token=uuid.uuid4().hex[:10]
