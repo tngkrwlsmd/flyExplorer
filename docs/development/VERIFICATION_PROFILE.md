@@ -64,9 +64,13 @@ orchestrator additionally records:
 - \`VISUAL\`
 - \`CLEANUP\`
 
-If baseline fails, candidate GUI remains \`NOT_RUN\`. A failure before the
-product command is classified as request/static/runner infrastructure rather
-than as a product regression.
+If baseline fails, candidate GUI remains \`NOT_RUN\`. Lower validation code
+that already knows a failure category writes the small machine-readable
+\`logs/remote-evidence/check-result.json\` result as well as the existing
+\`FAILURE_CATEGORY=...\` marker. Final classification uses the structured
+category first, then an explicit marker, then the legacy classifier as fallback.
+Only failures that occur before lower validation can classify themselves use
+the bounded request/static/runner fallback categories.
 
 ## Retry policy
 
