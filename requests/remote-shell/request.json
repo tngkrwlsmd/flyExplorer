@@ -1,5 +1,5 @@
 {
-  "request_id": "high-contrast-readonly-state-002",
+  "request_id": "high-contrast-hotkey-probe-001",
   "expected_main_sha": "92c16faf6c56c89cf4bff5230482db3ac312a82f",
   "candidate_sha": "92c16faf6c56c89cf4bff5230482db3ac312a82f",
   "logical_unit": "high-contrast-accessibility",
@@ -9,5 +9,5 @@
   ],
   "invalidated_evidence": {},
   "working_directory": "",
-  "command": "$ErrorActionPreference = \"Stop\"\ngit fetch origin main --no-tags --prune\nif ((git rev-parse origin/main).Trim() -ne \"92c16faf6c56c89cf4bff5230482db3ac312a82f\") { throw \"main moved\" }\npython -X utf8 -c \"import ctypes; from ctypes import wintypes as w; u=ctypes.WinDLL('user32',use_last_error=True); H=type('H',(ctypes.Structure,),{'_fields_':[('cbSize',w.UINT),('dwFlags',w.DWORD),('lpszDefaultScheme',w.LPWSTR)]}); x=H(); x.cbSize=ctypes.sizeof(x); ok=u.SystemParametersInfoW(0x0042,x.cbSize,ctypes.byref(x),0); print('HIGH_CONTRAST_QUERY_OK='+str(bool(ok))); print('HIGH_CONTRAST_ON='+str(bool(x.dwFlags&1))); print('HIGH_CONTRAST_SCHEME='+repr(x.lpszDefaultScheme))\"\nif ($LASTEXITCODE -ne 0) { throw \"high contrast state query failed\" }\nWrite-Host \"HIGH_CONTRAST_READONLY_PROBE_PASS\""
+  "command": "$ErrorActionPreference = \"Stop\"\npython -X utf8 -c \"import ctypes; from ctypes import wintypes as w; u=ctypes.WinDLL('user32',use_last_error=True); H=type('H',(ctypes.Structure,),{'_fields_':[('cbSize',w.UINT),('dwFlags',w.DWORD),('lpszDefaultScheme',w.LPWSTR)]}); x=H(); x.cbSize=ctypes.sizeof(x); ok=u.SystemParametersInfoW(0x0042,x.cbSize,ctypes.byref(x),0); print('HC_QUERY_OK='+str(bool(ok))); print('HC_FLAGS='+hex(x.dwFlags)); print('HC_ON='+str(bool(x.dwFlags&1))); print('HC_HOTKEYACTIVE='+str(bool(x.dwFlags&4))); print('HC_HOTKEYAVAILABLE='+str(bool(x.dwFlags&64))); print('HC_SCHEME='+repr(x.lpszDefaultScheme))\"\nif ($LASTEXITCODE -ne 0) { throw \"High Contrast flag query failed\" }\nWrite-Host \"HIGH_CONTRAST_FLAG_PROBE_PASS\""
 }
