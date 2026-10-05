@@ -72,6 +72,14 @@ category first, then an explicit marker, then the legacy classifier as fallback.
 Only failures that occur before lower validation can classify themselves use
 the bounded request/static/runner fallback categories.
 
+Remote command execution uses a fresh Windows PowerShell process and judges
+the command by that process exit code, not by the parent shell's stale
+`$LASTEXITCODE`. A handled native nonzero used as a condition therefore does
+not make an otherwise successful script fail, while a bare failing native
+command or an uncaught PowerShell `throw` still fails the task. Multi-step
+commands must continue to check native exit codes at the call boundary when
+later successful statements could otherwise mask them.
+
 ## Retry policy
 
 Do not use rerun as a development loop. Deterministic product assertions and
