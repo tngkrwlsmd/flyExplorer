@@ -154,11 +154,11 @@ class RemoteRequestPreflightContract(unittest.TestCase):
 
     def test_focused_reuse_blocks_known_expensive_entry_points(self):
         for command in (
-            ".\build.bat Release",
-            ".\package.bat Release",
-            ".\clean.bat build",
-            "python packaging\provenance.py --write",
-            "python tools\winui\run_checks.py full",
+            r".\build.bat Release",
+            r".\package.bat Release",
+            r".\clean.bat build",
+            r"python packaging\provenance.py --write",
+            r"python tools\winui\run_checks.py full",
         ):
             with self.subTest(command=command):
                 with self.assertRaisesRegex(
