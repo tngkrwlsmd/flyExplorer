@@ -1,10 +1,15 @@
-# Historical packaged payload provenance snapshot - 2026-10-01 (predates v7)
+# Current packaged payload provenance snapshot — 2026-10-05
 
-This snapshot describes the exact WinUI Release runtime used for the 2026-10-01 installer. It predates the v7 Window Tab/session checkpoint and is not provenance for the current product binary. Hash matching was performed against the repository-local NuGet cache after that Release restore/build. Preserve it as historical package evidence and regenerate the audit before packaging the current product.
+This snapshot is generated from the exact canonical Release runtime before
+distribution materials are added to the installer. Runtime bytes are matched
+by SHA-256 against package versions in the build's project.assets.json and
+the repository-local NuGet cache.
 
+- Runtime source revision: `067122c8e9b45d56c4fa8dde75fef9c2ef86f44f`
 - Runtime files before distribution materials: **305**
-- flyExplorer/generated files with no NuGet hash match: **17**
-- files with an exact NuGet package hash match: **288**
+- Product/generated files with no NuGet byte match: **17**
+- Files with an exact NuGet package byte match: **288**
+- Runtime manifest SHA-256: `988e7723ae05289a52f13c1d8b58cc39a310fa72a1fccd5f99121979d843974b`
 
 ## Exact NuGet payload matches
 
@@ -20,29 +25,48 @@ This snapshot describes the exact WinUI Release runtime used for the 2026-10-01 
 
 ## Product/generated files
 
-- `App.xbf`
-- `Assets/LockScreenLogo.scale-200.png`
-- `Assets/SplashScreen.scale-200.png`
-- `Assets/Square150x150Logo.scale-200.png`
-- `Assets/Square44x44Logo.scale-200.png`
-- `Assets/Square44x44Logo.targetsize-24_altform-unplated.png`
-- `Assets/StoreLogo.png`
-- `Assets/Wide310x150Logo.scale-200.png`
-- `FileToolbar.xbf`
-- `flyExplorer.exe`
-- `flyExplorer.pri`
-- `FlyExplorer.winmd`
-- `FlyShellIsolationHelper.exe`
-- `MainWindow.xbf`
-- `NavigationSidebar.xbf`
-- `ShellHeader.xbf`
-- `StatusFooter.xbf`
+- `App.xbf` — 1963 bytes — `sha256:b3be7467102b933fa4f21735a3779356eafb96fc31e99a56da39ca0f41a1c9b6`
+- `Assets/LockScreenLogo.scale-200.png` — 432 bytes — `sha256:688f384ef8832609d1f4d5e7fa9f6e08a81a6f52bba2c67070e385a015dfb42b`
+- `Assets/SplashScreen.scale-200.png` — 5372 bytes — `sha256:209a614557ff28be5a307c55ec17e2126f1ad34f54a88c5d4226441891c5892f`
+- `Assets/Square150x150Logo.scale-200.png` — 1755 bytes — `sha256:0b2ecc4b0e160157f55e43d1cd9532751cfa265be816227681c633b9c69a9381`
+- `Assets/Square44x44Logo.scale-200.png` — 637 bytes — `sha256:0be34ccbed90a09a51d56abc1b9ab279154d454e43906057b45762ba00b38854`
+- `Assets/Square44x44Logo.targetsize-24_altform-unplated.png` — 283 bytes — `sha256:7799103c81a408b8dfc465764a5a8e693ebe1048a2e0f4690ae467398390030a`
+- `Assets/StoreLogo.png` — 456 bytes — `sha256:5a44b2f15b76ff4cfcb315e8b62b2ac1e4a1f616bbfee0b8be29f9e2e116172c`
+- `Assets/Wide310x150Logo.scale-200.png` — 2097 bytes — `sha256:4938ed44d7d63f44ca959eafb942be36459939a9c679bfcbf4f5c837fdf3475c`
+- `FileToolbar.xbf` — 4993 bytes — `sha256:6fb066df97fceda4397c370768a6bae1a2e980cf3be72f4238af05ec0ce89374`
+- `flyExplorer.exe` — 1790464 bytes — `sha256:4f74e457b829e2ec75e876e9eb1eb7cfb5502004ead0c572bf32d03125de1b33`
+- `flyExplorer.pri` — 2221824 bytes — `sha256:57918bd72c8a10486bc61f40e4eb2e0e9d003a3456dfc9215b73d9de4c0158fc`
+- `FlyExplorer.winmd` — 3584 bytes — `sha256:bc37cc74fef7181038b3c30fc6b71a3d51461aa2917130b71a6f43ebb9d5c3f3`
+- `FlyShellIsolationHelper.exe` — 184320 bytes — `sha256:d02601af9ba5dc7b03a5962eed0abd12e0c191b2a1cf2449873f39ae7a12b744`
+- `MainWindow.xbf` — 19323 bytes — `sha256:c0683a2755cd79a44c266a7102a7ff77e3b8a5c2ee64fbf1056d02b3de88c608`
+- `NavigationSidebar.xbf` — 4015 bytes — `sha256:f2c289b8787e8c1a1f2e0b0f676a9d984768be0a867891e5ae04daa030c362b6`
+- `ShellHeader.xbf` — 2014 bytes — `sha256:1c1557c62a13345b457fc62112892ca75a0f9e4b71ba9b60c806ac3ee8a5f6c3`
+- `StatusFooter.xbf` — 1175 bytes — `sha256:f54a46a7ab23a015203adabb403c6323e315acf8b496ad76d2fe63351cf77624`
+
+## Tracked redistribution notices
+
+- `microsoft.web.webview2 1.0.3719.77`: `LICENSE.txt`, `NOTICE.txt`
+- `microsoft.windows.ai.machinelearning 2.1.74`: `ThirdPartyNotices.txt`, `license.txt`
+- `microsoft.windowsappsdk 2.5.1`: `NOTICE.txt`, `license.txt`
+- `microsoft.windowsappsdk.ai 2.5.5`: `license.txt`
+- `microsoft.windowsappsdk.dwrite 2.1.0`: `license.txt`
+- `microsoft.windowsappsdk.foundation 2.3.12`: `license.txt`
+- `microsoft.windowsappsdk.interactiveexperiences 2.1.9`: `license.txt`
+- `microsoft.windowsappsdk.search 2.5.5`: `license.txt`
+- `microsoft.windowsappsdk.widgets 2.0.5`: `license.txt`
+- `microsoft.windowsappsdk.winui 2.3.9`: `NOTICE.txt`, `license.txt`, `tools/NOTICE.txt`
 
 ## Distribution-material policy
 
 - The installer additionally carries the repository root `LICENSE` and `CREDITS`.
-- `packaging/licenses/GPL-3.0.txt` is the full GPLv3 text fetched from GNU/FSF.
-- `packaging/licenses/nuget/` retains every license/NOTICE/ThirdPartyNotices file found in the NuGet package/version sets that contributed hash-matched runtime files, plus the top-level `Microsoft.WindowsAppSDK 2.5.1` package terms.
-- Direct build-only PackageReferences whose files do not appear in the installer payload are not treated as redistributed runtime components by this snapshot.
+- `packaging/licenses/GPL-3.0.txt` is the full GPLv3 text.
+- `packaging/licenses/nuget/` must contain notice/license material for every
+  package version identified above, plus the top-level Microsoft.WindowsAppSDK
+  package terms from the active restore graph.
+- `PAYLOAD_PROVENANCE.json` is the machine-readable per-file SHA-256 inventory
+  corresponding to this summary.
+- Direct build-only PackageReferences whose bytes do not appear in the Release
+  runtime are not classified as redistributed runtime components by this audit.
 
-Any dependency version, runtime file set, or package provenance change requires regenerating this audit before public release.
+Any runtime byte set, restored package origin, or tracked notice change makes
+this snapshot stale and must fail packaging until the audit is regenerated.
