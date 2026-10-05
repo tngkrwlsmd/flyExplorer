@@ -52,6 +52,8 @@ class InstallerContract(unittest.TestCase):
     def test_owned_installer_lifecycle_verifies_runtime_update_and_rollback(self):
         body=(ROOT/"tests/winui/test_installed_lifecycle.py").read_text(
             encoding="utf-8")
+        helper=(ROOT/"tools/winui/diagnose_installed_shutdown.py").read_text(
+            encoding="utf-8")
         for token in (
             "PAYLOAD_PROVENANCE.json",
             "runtime_provenance(root)",
@@ -61,14 +63,24 @@ class InstallerContract(unittest.TestCase):
             "OWNED_INSTALLER_ROLLBACK_LAUNCH_PASS",
             "OWNED_INSTALLER_RUNTIME_PROCESSES_SETTLED",
             "wait_owned_runtime_processes(root,label)",
-            "INSTALLED_APP_SHUTDOWN_DIAGNOSTIC",
-            "INSTALLED_APP_WINDOW_CLOSE_TIMEOUT",
-            "INSTALLED_APP_PROCESS_EXIT_TIMEOUT",
+            "shutdown_helper.post_close_and_observe",
             "OWNED_RUNTIME_SHUTDOWN_PROBE_PASS",
             "--runtime-root",
             "USER_SETTINGS_SENTINEL_PRESERVED",
         ):
             self.assertIn(token,body)
+        for token in (
+            "SHUTDOWN_TIMELINE",
+            "WM_CLOSE_POSTED=",
+            "HWND_EXISTS=",
+            "PID_ALIVE=",
+            "TOP_LEVEL_WINDOWS=",
+            "CHILD_PIDS=",
+            "INSTALLED_APP_WINDOW_CLOSE_TIMEOUT",
+            "INSTALLED_APP_PROCESS_EXIT_TIMEOUT",
+            "INSTALLED_APP_HARNESS_OBSERVATION_FAILURE",
+        ):
+            self.assertIn(token,helper)
 
     def test_msbuild_discovery_is_shared_and_not_edition_locked(self):
         resolver=(ROOT/"tools/winui/resolve_msbuild.py").read_text(encoding="utf-8")
