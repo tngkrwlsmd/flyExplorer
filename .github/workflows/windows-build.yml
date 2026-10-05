@@ -182,5 +182,5 @@ jobs:
           name: flyexplorer-failure-${{ github.run_id }}-${{ github.run_attempt }}
           path: logs/ci-failure-artifacts/
           if-no-files-found: warn
-          retention-days: 14
+          retention-days: 365
           compression-level: 6
