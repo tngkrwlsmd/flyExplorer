@@ -549,11 +549,25 @@ Current source and the last parity evidence still show these limits:
 
 ## Packaging state
 
-The installer project is now reproducible from a tracked project template, and
-a current local Release setup build plus bounded /TESTROOT install/uninstall
-has passed. The tracked licensing/provenance snapshot still predates v7, so
-this does not by itself clear public distribution or prove a signed clean-machine
-machine-wide install/update/rollback path.
+The current Release packaging path is accepted on candidate
+`8283ece6c4348a751f487a64230e1bc149a47a2f`, merged through PR #27.
+Remote Windows Task #382 (`37265695330`) performed one clean Release build,
+generated and re-verified the exact runtime provenance inventory, built the
+current setup, and passed bounded `/TESTROOT` clean install, repair,
+update, rollback and uninstall. The run inventoried 305 Release runtime files
+(17 product/generated and 288 exact NuGet byte matches) and packaged 326 files
+including the required license/notice material.
+
+The same run replaced the old installed-process wait with a checked-in shutdown
+timeline probe. Clean-install, update and rollback all posted `WM_CLOSE`,
+lost their top-level window within about 0.1 seconds and exited the owning
+flyExplorer process within about 0.17-0.21 seconds. This establishes that the
+earlier 16-second lifecycle timeout was a harness observation/process-wait
+failure rather than a product shutdown defect.
+
+This acceptance is still an unsigned, test-owned install path. It does not
+certify production Authenticode signing or clean-machine Program Files/HKLM
+machine-wide install/update/rollback.
 
 ## Open gates
 
