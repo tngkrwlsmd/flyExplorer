@@ -48,7 +48,7 @@ def main(configuration="Release"):
 
     exe=app_exe(configuration)
     assert exe.is_file(),exe
-    before=snapshot_legacy_profile()
+    legacy_root,before=snapshot_legacy_profile()
     root=ROOT/"logs"/"high-contrast"
     root.mkdir(parents=True,exist_ok=True)
     owned=Path(tempfile.mkdtemp(prefix="high-contrast-owned-",dir=root))
@@ -141,7 +141,8 @@ def main(configuration="Release"):
             else:
                 proc.terminate()
                 proc.wait(timeout=7)
-        unchanged=assert_legacy_profile_unchanged(before)
+        assert_legacy_profile_unchanged(legacy_root,before)
+        unchanged=True
         print("ORIGINAL_SIX_USER_SETTINGS_IDENTICAL",unchanged,flush=True)
         assert current_hc()[0],"High Contrast state changed by owned acceptance"
         if passed and unchanged and proc.returncode==0:
