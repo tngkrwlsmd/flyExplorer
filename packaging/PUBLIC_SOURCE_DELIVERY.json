@@ -1,0 +1,55 @@
+{
+  "format": "flyexplorer-public-source-delivery-v1",
+  "license": "GPL-3.0-or-later",
+  "selected_gplv3_section_6_method": "6(d)-network-equivalent-access",
+  "release_tag": "v1.0.0.0",
+  "binary_source_revision": "bc63c8b48e466d1275cc6dcffb0c50e02d39db60",
+  "source_tree_sha": "8f1bc2e0181cc87e646dd2fad75ccdca0c8e8a66",
+  "tag_policy": {
+    "precreate_tag": false,
+    "create_on_publish": true,
+    "immutable_releases_required": true,
+    "tag_must_resolve_to_binary_source_revision": true,
+    "tag_name_reuse_forbidden": true
+  },
+  "designated_public_place": {
+    "provider": "GitHub Releases",
+    "repository": "tngkrwlsmd/flyExplorer",
+    "repository_must_be_public_before_publish": true,
+    "binary_and_source_on_same_release_page": true,
+    "authentication_required": false,
+    "source_additional_charge": false
+  },
+  "required_release_assets": [
+    "flyExplorer-Setup-x64.exe",
+    "flyExplorer-source-bc63c8b48e466d1275cc6dcffb0c50e02d39db60.zip",
+    "flyExplorer-source-bc63c8b48e466d1275cc6dcffb0c50e02d39db60.manifest.json",
+    "RELEASE_IDENTITY.json",
+    "PAYLOAD_PROVENANCE.json",
+    "PAYLOAD_PROVENANCE.md"
+  ],
+  "release_notes_requirements": [
+    "identify the release as GPL-3.0-or-later",
+    "show the Corresponding Source asset next to the binary download",
+    "state that source access requires no additional charge",
+    "publish setup, source-bundle and release-identity SHA-256 values",
+    "state the source revision and source tree SHA",
+    "provide public source-access directions"
+  ],
+  "retention_policy": {
+    "source_available_for_full_binary_availability_period": true,
+    "minimum_days_after_last_public_binary_availability": 1095,
+    "source_must_not_be_removed_while_binary_is_available": true,
+    "release_assets_must_remain_immutable": true,
+    "note": "The three-year post-withdrawal period is a project retention policy chosen to exceed the fixed-duration language applicable to GPLv3 section 6(d); it is not represented as an explicit 6(d) statutory duration."
+  },
+  "prepublication_gates": [
+    "rightsholder/contribution authority confirmed by a human",
+    "production Authenticode signing completed",
+    "signed clean-machine Program Files/HKLM lifecycle accepted",
+    "repository or designated release surface is publicly accessible without authentication",
+    "draft release contains all required binary/source/identity assets",
+    "release identity is regenerated for the final signed setup with release_tag v1.0.0.0",
+    "immutable release publication is verified after publish"
+  ]
+}
