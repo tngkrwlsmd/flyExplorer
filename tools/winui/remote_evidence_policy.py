@@ -10,6 +10,7 @@ from __future__ import annotations
 import argparse
 import io
 import json
+import os
 from pathlib import Path
 import sys
 import urllib.request
@@ -217,7 +218,10 @@ def latest_same_unit(
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--repository", required=True)
-    parser.add_argument("--token", required=True)
+    parser.add_argument(
+        "--token",
+        default=os.environ.get("GH_EVIDENCE_TOKEN", ""),
+    )
     parser.add_argument("--logical-unit", required=True)
     parser.add_argument("--current-run-id", type=int, required=True)
     parser.add_argument(
@@ -232,6 +236,9 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--reuse-candidate-sha", default="")
     parser.add_argument("--reused-target", action="append", default=[])
     args = parser.parse_args(argv)
+    if not args.token:
+        print("REMOTE_EVIDENCE_POLICY=FAIL: GitHub Actions token is required", file=sys.stderr)
+        return 3
 
     try:
         previous = latest_same_unit(
