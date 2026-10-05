@@ -4,6 +4,7 @@ from ctypes import wintypes as w
 import hashlib,os,subprocess,sys,tempfile,time
 from pathlib import Path
 from paths import APP, app_exe
+from uia_polling import wait_until
 import psutil
 from pywinauto import Desktop,keyboard
 
@@ -22,13 +23,7 @@ def high_contrast():
  assert u.SystemParametersInfoW(0x0042,x.cbSize,c.byref(x),0)
  return bool(x.dwFlags&1)
 def until(f,msg,seconds=18):
- end=time.monotonic()+seconds
- while time.monotonic()<end:
-  try:
-   if f():return
-  except Exception:pass
-  time.sleep(.2)
- raise AssertionError(msg)
+ return wait_until(f, msg, seconds=seconds, interval=.2)
 def main(config="Debug"):
  a=APP
  exe=app_exe(config)
