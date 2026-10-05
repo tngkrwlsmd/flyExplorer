@@ -33,8 +33,10 @@ Historical migration reports and legacy HTML Help are no longer kept in the
 working tree; Git history is their recovery source.
 
 See docs/development/CURRENT_STATUS.md for accepted functionality and open
-release gates. Project CI runs on the repository-scoped self-hosted Windows
-runner; main pushes automatically run the normal Release + GUI validation.
+release gates. Windows validation uses the repository-scoped self-hosted runner,
+but normal main pushes do not queue Windows VM Build. Use control/remote-shell
+for iterative Windows development and focused validation; dispatch Windows VM
+Build manually only for a deliberate one-off acceptance/build gate.
 
 License
 -------
