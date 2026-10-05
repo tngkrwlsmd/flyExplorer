@@ -1,13 +1,13 @@
 {
-  "request_id": "large-folder-name-index-branch-cleanup-002",
+  "request_id": "high-contrast-readonly-state-001",
   "expected_main_sha": "fd2bda4d26a9d777f2ee17eb2fed5ab507174e25",
   "candidate_sha": "fd2bda4d26a9d777f2ee17eb2fed5ab507174e25",
-  "logical_unit": "large-folder-name-index-branch-cleanup",
+  "logical_unit": "high-contrast-accessibility",
   "configuration": "none",
   "validation_kind": [
     "none"
   ],
   "invalidated_evidence": {},
   "working_directory": "",
-  "command": "$ErrorActionPreference = \"Stop\"\n$repo=\"tngkrwlsmd/flyExplorer\"\n$branch=\"work/large-folder-name-index\"\n$expected=\"6936fba97d2e18ac81115b5d02b84db7e90472dd\"\n$staleControlRepo=\"tngkrwlsmd/personal-control-plane\"\n$staleRun=\"37213174845\"\ngh api --method POST (\"repos/\" + $staleControlRepo + \"/actions/runs/\" + $staleRun + \"/cancel\") 2>$null | Out-Null\nif($LASTEXITCODE -eq 0){ Write-Host (\"CANCELLED_STALE_ROCKY_RUN=\" + $staleRun) } else { Write-Warning (\"Could not cancel stale Rocky8 run \" + $staleRun); $global:LASTEXITCODE=0 }\n$ref=(\"heads/\" + $branch)\n$encoded=[uri]::EscapeDataString($ref)\n$obj=gh api (\"repos/\" + $repo + \"/git/ref/\" + $encoded) | ConvertFrom-Json\nif($LASTEXITCODE -ne 0){ throw \"failed to resolve branch ref\" }\nif($obj.object.sha -ne $expected){ throw (\"ref moved: expected \" + $expected + \", got \" + $obj.object.sha) }\ngh api --method DELETE (\"repos/\" + $repo + \"/git/refs/\" + $encoded)\nif($LASTEXITCODE -ne 0){ throw \"branch delete failed\" }\nWrite-Host (\"DELETED_BRANCH=\" + $branch)\nWrite-Host \"LARGE_FOLDER_NAME_INDEX_BRANCH_CLEANUP_PASS\""
+  "command": "$ErrorActionPreference = \"Stop\"\ngit fetch origin main --no-tags --prune\nif ((git rev-parse origin/main).Trim() -ne \"fd2bda4d26a9d777f2ee17eb2fed5ab507174e25\") { throw \"main moved\" }\npython -X utf8 -c \"import ctypes; from ctypes import wintypes as w; u=ctypes.WinDLL('user32',use_last_error=True); H=type('H',(ctypes.Structure,),{'_fields_':[('cbSize',w.UINT),('dwFlags',w.DWORD),('lpszDefaultScheme',w.LPWSTR)]}); x=H(); x.cbSize=ctypes.sizeof(x); ok=u.SystemParametersInfoW(0x0042,x.cbSize,ctypes.byref(x),0); print('HIGH_CONTRAST_QUERY_OK='+str(bool(ok))); print('HIGH_CONTRAST_ON='+str(bool(x.dwFlags&1))); print('HIGH_CONTRAST_SCHEME='+repr(x.lpszDefaultScheme)); print('COLOR_WINDOW='+hex(u.GetSysColor(5)&0xffffff)); print('COLOR_WINDOWTEXT='+hex(u.GetSysColor(8)&0xffffff)); print('COLOR_HIGHLIGHT='+hex(u.GetSysColor(13)&0xffffff)); print('COLOR_HIGHLIGHTTEXT='+hex(u.GetSysColor(14)&0xffffff))\"\nif ($LASTEXITCODE -ne 0) { throw \"high contrast state query failed\" }\nWrite-Host \"HIGH_CONTRAST_READONLY_PROBE_PASS\""
 }
