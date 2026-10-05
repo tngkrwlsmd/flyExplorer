@@ -150,8 +150,6 @@ namespace winrt::FlyExplorer::implementation
             Microsoft::UI::Xaml::DragStartingEventArgs const&);
         void OnFileRowPointerPressed(int side,IInspectable const&,
             Microsoft::UI::Xaml::Input::PointerRoutedEventArgs const&);
-        winrt::fire_and_forget OnFileRowPointerMoved(int side,IInspectable const&,
-            Microsoft::UI::Xaml::Input::PointerRoutedEventArgs const&);
         void OnFileRowPointerReleased(int side,IInspectable const&,
             Microsoft::UI::Xaml::Input::PointerRoutedEventArgs const&);
         void OnFileDragOver(IInspectable const&,
@@ -231,9 +229,15 @@ namespace winrt::FlyExplorer::implementation
         std::uint32_t mFileRowPointerId=0;
         std::uint64_t mFileRowPointerLogical=0;
         int mFileRowPointerSide=-1;
-        Windows::Foundation::Point mFileRowPointerOrigin{};
+        LONG mFileRowPointerScreenX=0;
+        LONG mFileRowPointerScreenY=0;
+        Microsoft::UI::Xaml::UIElement mFileRowPointerElement{nullptr};
+        Microsoft::UI::Dispatching::DispatcherQueueTimer mFileRowDragTimer{nullptr};
         bool mDropReading=false;
         void ResetFileRowPointerDrag() noexcept;
+        void PollFileRowPointerDrag();
+        winrt::fire_and_forget StartFileRowDragAsync(
+            Microsoft::UI::Xaml::UIElement const&,std::uint32_t pointerId);
         void HandleFileShortcut(int side,
             Microsoft::UI::Xaml::Input::KeyRoutedEventArgs const& args);
         void StartInternalPaste();
