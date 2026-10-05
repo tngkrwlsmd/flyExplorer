@@ -112,7 +112,7 @@ class RemoteWindowsTaskContractTests(unittest.TestCase):
     def test_failure_classification_uses_stdlib_classifier(self):
         self.assertIn("classify_remote_failure.py", self.workflow)
         self.assertIn("FLYEXPLORER_WORKFLOW_SHA", self.workflow)
-        self.assertIn("github.workflow_sha", self.workflow)
+        self.assertIn("job.workflow_sha", self.workflow)
         self.assertIn("REMOTE_OBSERVED_MAIN_SHA", self.workflow)
         self.assertIn("refs/remotes/origin/main", self.workflow)
         self.assertIn("RESULT_CLASSIFIER_REVISION", self.workflow)
