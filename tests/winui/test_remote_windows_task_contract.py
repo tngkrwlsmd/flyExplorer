@@ -162,6 +162,7 @@ class RemoteWindowsTaskContractTests(unittest.TestCase):
             1, self.workflow.count("- name: Write structured remote result")
         )
         self.assertEqual(1, self.workflow.count("- name: Upload remote evidence"))
+        self.assertIn("retention-days: 365", self.workflow)
         self.assertEqual(1, self.workflow.count("REMOTE_RESULT="))
 
     def test_structured_result_separates_request_static_health_and_command(self):

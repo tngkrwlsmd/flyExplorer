@@ -148,7 +148,7 @@ class BuildEnvironmentContract(unittest.TestCase):
             workflow,
         )
         self.assertIn("if: ${{ failure() }}", workflow)
-        self.assertIn("retention-days: 14", workflow)
+        self.assertIn("retention-days: 365", workflow)
         self.assertIn('LOGS / "winui-scoped"', collector)
         self.assertIn('LOGS / "phase6-winui"', collector)
         self.assertIn('"flyexplorer.exe"', collector)
