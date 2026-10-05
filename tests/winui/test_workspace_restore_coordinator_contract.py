@@ -67,5 +67,27 @@ class WorkspaceRestoreCoordinatorContracts(unittest.TestCase):
                       "restore_two_lanes_are_independent"):
             self.assertIn(token,fixture)
 
+    def test_workspace_file_format_is_bounded_utf16_and_never_writes_legacy_profile(self):
+        body=src("app/winui/m19_workspace.cpp")
+        header=src("app/winui/m19_workspace.h")
+        for token in ("kMaxBytes=1048576","kMaxTabs=32",
+                      "FILE_FLAG_OPEN_REPARSE_POINT","FILE_ATTRIBUTE_REPARSE_POINT",
+                      "readExact","validUtf16","Duplicate or empty workspace key",
+                      "CREATE_NEW","FlushFileBuffers"):
+            self.assertIn(token,body)
+        self.assertIn("std::array<std::vector<std::wstring>,2>",header)
+        self.assertNotIn("APPDATA",body)
+        self.assertNotIn("fxfile-main.conf",body)
+
+    def test_workspace_ui_routes_restore_through_coordinator(self):
+        xaml=src("app/winui/MainWindow.xaml")
+        features=src("app/winui/m19_features.cpp")
+        for control in ("WorkspacePanelButton","WorkspaceFileBox",
+                        "SaveWorkspaceButton","OpenWorkspaceButton"):
+            self.assertIn('x:Name="'+control+'"',xaml)
+        for token in ("mWorkspaceRestore.begin(","mWorkspaceRestore.track(side,id)",
+                      "QueueNextWorkspaceTab"):
+            self.assertIn(token,features)
+
 if __name__=="__main__":
     unittest.main()
