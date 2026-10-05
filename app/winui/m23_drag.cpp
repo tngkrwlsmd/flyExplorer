@@ -3,8 +3,11 @@
 #include <winrt/Windows.ApplicationModel.DataTransfer.h>
 #include <winrt/Windows.Storage.h>
 #include <winrt/Windows.Foundation.h>
+#include <winrt/Microsoft.UI.Input.h>
 #include <shobjidl.h>
 #include <filesystem>
+#include <cmath>
+#include <chrono>
 #include <utility>
 using namespace winrt;
 using namespace Microsoft::UI::Xaml;
@@ -20,6 +23,89 @@ bool traceOwnedDrag(){
  return n==3&&::CompareStringOrdinal(flag,-1,L"YES",-1,FALSE)==CSTR_EQUAL;
 }
 
+}
+void MainWindow::ResetFileRowPointerDrag() noexcept{
+ mFileRowPointerArmed=false;
+ mFileRowPointerId=0;
+ mFileRowPointerLogical=0;
+ mFileRowPointerSide=-1;
+ mFileRowPointerScreenX=0;
+ mFileRowPointerScreenY=0;
+ mFileRowPointerElement=nullptr;
+ if(mFileRowDragTimer)mFileRowDragTimer.Stop();
+ mFileRowDragTimer=nullptr;
+}
+void MainWindow::OnFileRowPointerPressed(
+ int side,IInspectable const& sender,
+ Microsoft::UI::Xaml::Input::PointerRoutedEventArgs const& args){
+ ResetFileRowPointerDrag();
+ auto row=sender.try_as<ListViewItem>();
+ if(!row||!row.Tag()||side<0||side>1||mFileOperations.busy())return;
+ const auto point=args.GetCurrentPoint(row);
+ if(!point.Properties().IsLeftButtonPressed())return;
+ POINT cursor{};
+ if(!::GetCursorPos(&cursor))return;
+ mFileRowPointerArmed=true;
+ mFileRowPointerId=args.Pointer().PointerId();
+ mFileRowPointerLogical=unbox_value<std::uint64_t>(row.Tag());
+ mFileRowPointerSide=side;
+ mFileRowPointerScreenX=cursor.x;
+ mFileRowPointerScreenY=cursor.y;
+ mFileRowPointerElement=row;
+ auto timer=DispatcherQueue().CreateTimer();
+ mFileRowDragTimer=timer;
+ timer.Interval(std::chrono::milliseconds(16));
+ auto weak=get_weak();
+ timer.Tick([weak](auto const&,auto const&){
+  if(auto ui=weak.get())ui->PollFileRowPointerDrag();
+ });
+ timer.Start();
+ if(traceOwnedDrag())
+  StatusText().Text(L"끌기 진단: 포인터 누름 감지");
+}
+void MainWindow::PollFileRowPointerDrag(){
+ if(!mFileRowPointerArmed||!mFileRowPointerElement){
+  ResetFileRowPointerDrag();return;
+ }
+ if((::GetAsyncKeyState(VK_LBUTTON)&0x8000)==0){
+  ResetFileRowPointerDrag();return;
+ }
+ auto row=mFileRowPointerElement.try_as<ListViewItem>();
+ if(!row||!row.Tag()||
+    unbox_value<std::uint64_t>(row.Tag())!=mFileRowPointerLogical){
+  ResetFileRowPointerDrag();return;
+ }
+ POINT cursor{};
+ if(!::GetCursorPos(&cursor))return;
+ const auto thresholdX=(std::max)(4,::GetSystemMetrics(SM_CXDRAG));
+ const auto thresholdY=(std::max)(4,::GetSystemMetrics(SM_CYDRAG));
+ if(std::abs(cursor.x-mFileRowPointerScreenX)<thresholdX&&
+    std::abs(cursor.y-mFileRowPointerScreenY)<thresholdY)return;
+
+ auto element=mFileRowPointerElement;
+ const auto pointerId=mFileRowPointerId;
+ ResetFileRowPointerDrag();
+ if(traceOwnedDrag())
+  StatusText().Text(L"끌기 진단: 포인터 임계값 통과");
+ StartFileRowDragAsync(element,pointerId);
+}
+fire_and_forget MainWindow::StartFileRowDragAsync(
+ UIElement const& row,std::uint32_t pointerId){
+ auto keep=get_strong();
+ try{
+  const auto point=Microsoft::UI::Input::PointerPoint::GetCurrentPoint(pointerId);
+  if(!point||!point.Properties().IsLeftButtonPressed())co_return;
+  co_await row.StartDragAsync(point);
+ }catch(winrt::hresult_error const&){
+  StatusText().Text(L"파일 끌기를 시작하지 못했습니다.");
+ }
+}
+void MainWindow::OnFileRowPointerReleased(
+ int side,IInspectable const&,
+ Microsoft::UI::Xaml::Input::PointerRoutedEventArgs const& args){
+ if(mFileRowPointerArmed&&side==mFileRowPointerSide&&
+    args.Pointer().PointerId()==mFileRowPointerId)
+  ResetFileRowPointerDrag();
 }
 void MainWindow::OnFileDragItemsStarting(
  IInspectable const& sender,DragItemsStartingEventArgs const& args){
@@ -60,6 +146,7 @@ void MainWindow::OnFileDragItemsStarting(
 }
 void MainWindow::OnFileRowDragStarting(
  int side,UIElement const& sender,DragStartingEventArgs const& args){
+ ResetFileRowPointerDrag();
  auto row=sender.try_as<ListViewItem>();
  if(!row||!row.Tag()||side<0||side>1||mFileOperations.busy()){
   args.Cancel(true);return;

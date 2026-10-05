@@ -116,11 +116,13 @@ under logs/ or bounded CI artifacts rather than product-source PNGs.
 For layout/theme/scale-sensitive UI work, exercise the relevant environments
 that are actually available. Do not infer a PASS for an unavailable one.
 
-Actual 125/150/200% display scaling, High Contrast ON, human Narrator/Korean
-IME behavior and physical pointer drag remain separate manual/environment gates
-unless the current task explicitly exercises them. RDP restrictions,
+Actual 125/150/200% display scaling, High Contrast ON and human
+Narrator/Korean IME behavior remain separate environment/manual gates unless
+the current task explicitly exercises them. Owned same-app physical pointer
+drag is covered by the Release acceptance path; external cross-application drag
+remains a separate interoperability gate when relevant. RDP restrictions,
 source-level support or code-level RasterizationScale behavior do not certify
-them.
+unavailable environments.
 
 ## Evidence language
 

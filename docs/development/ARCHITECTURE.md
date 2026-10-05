@@ -221,14 +221,16 @@ write mutex, latest-revision ordering and detached atomic-save worker.
 MainWindow retains theme/view UI application, persistence triggering,
 DispatcherQueue handoff and user-visible failure status.
 
-Private drag/drop was not extracted because its physical pointer acceptance is
-still a separate open gate. A focused Release probe confirmed that the
-test-owned source ListViewItem is visible, enabled and selectable and that real
-mouse coordinates are delivered, but neither the row nor ListView DragStarting
-diagnostic status is reached; an identical final retry reproduced that result.
-Because DragOver/Drop therefore remain unexercised, current evidence cannot
-distinguish a product gesture defect from an automation/input limitation.
-Changing drag ownership now would outpace the available runtime evidence.
+Private drag/drop remains in MainWindow because the gesture, active pane/route
+identity, selected rendered rows, DataPackage deferral and transfer handoff are
+one short-lived UI interaction rather than an independent lifetime owner.
+Physical pointer acceptance is now established: ListViewItem handled-event
+routing is observed on press, cursor/button movement is polled across control
+capture, and the Windows drag threshold feeds the current PointerPoint into
+StartDragAsync. The existing DragStarting path then creates the private data
+package and the drop path revalidates source/destination context before handing
+off to FileOperationController. Remote Windows Task `37277431952` proved the
+owned Release two-pane Korean-file drag-copy with normal process exit.
 
 A later workspace-restore lifecycle audit produced stronger evidence than the
 earlier deferral. The old raw per-pane queue depended on ShellNavigation pending

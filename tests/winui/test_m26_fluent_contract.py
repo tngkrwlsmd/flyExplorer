@@ -113,7 +113,9 @@ class FluentShellContract(unittest.TestCase):
         self.assertNotIn('PointerReleased="OnDetailColumnResizePointerReleased"',xaml)
         self.assertNotIn('PointerCaptureLost="OnDetailColumnResizePointerCaptureLost"',xaml)
         self.assertGreaterEqual(impl.count("RootShell().AddHandler("),3)
-        self.assertNotIn("UIElement::PointerMovedEvent()",impl)
+        constructor=impl[impl.index("MainWindow::MainWindow()"):
+                         impl.index("// M2.6 uses the public WinUI 3 custom-titlebar")]
+        self.assertNotIn("UIElement::PointerMovedEvent()",constructor)
         self.assertNotIn("VisualTreeHelper::GetParent",impl)
         self.assertNotIn("ColumnResizeHitTarget",xaml)
         self.assertNotIn("ColumnResizeHitTarget",impl)
