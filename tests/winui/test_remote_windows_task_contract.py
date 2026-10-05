@@ -180,38 +180,34 @@ class RemoteWindowsTaskContractTests(unittest.TestCase):
         self.assertIn("Do not create `remote/**` task branches", agents)
 
 
-    def test_long_run_guidance_uses_configured_observation_intervals(self):
+    def test_result_dependent_actions_use_30_second_three_minute_wait_policy(self):
         agents = " ".join(self.agents.split())
         efficiency = " ".join(self.efficiency.split())
         project = " ".join(self.project.split())
         for normalized in (agents, efficiency, project):
+            lowered = normalized.lower()
+            self.assertIn("30 seconds", lowered)
+            self.assertIn("three minutes", lowered)
+            self.assertIn("blocking dependency", lowered)
+            self.assertIn("actions", lowered)
+            self.assertIn("resume checkpoint", lowered)
             self.assertIn("FLYEXPLORER_ROUTINE_OBSERVATION_SECONDS", normalized)
             self.assertIn("FLYEXPLORER_ACTIVE_MONITOR_SECONDS", normalized)
-            self.assertIn("short-interval", normalized)
-        self.assertIn("FLYEXPLORER_ROUTINE_OBSERVATION_SECONDS:", self.workflow)
-        self.assertIn("FLYEXPLORER_ACTIVE_MONITOR_SECONDS:", self.workflow)
-
-    def test_result_dependent_runs_are_followed_to_completion(self):
-        agents = " ".join(self.agents.split())
-        efficiency = " ".join(self.efficiency.split())
-        project = " ".join(self.project.split())
-        for normalized in (agents, efficiency, project):
-            self.assertIn("current user request", normalized)
-            self.assertIn("blocking dependency", normalized)
-            self.assertIn("through completion", normalized)
-            self.assertIn("active monitoring", normalized.lower())
-            self.assertIn("cadence", normalized.lower())
+            self.assertIn(
+                "FLYEXPLORER_RESULT_DEPENDENT_MAX_WAIT_SECONDS",
+                normalized,
+            )
         self.assertIn(
-            "Explicit active monitoring changes the observation cadence",
-            agents,
+            "FLYEXPLORER_ROUTINE_OBSERVATION_SECONDS: '30'",
+            self.workflow,
         )
         self.assertIn(
-            "Explicit active monitoring changes only the cadence",
-            efficiency,
+            "FLYEXPLORER_ACTIVE_MONITOR_SECONDS: '30'",
+            self.workflow,
         )
         self.assertIn(
-            "Explicit active monitoring changes cadence only",
-            project,
+            "FLYEXPLORER_RESULT_DEPENDENT_MAX_WAIT_SECONDS: '180'",
+            self.workflow,
         )
 
 
@@ -246,15 +242,19 @@ class RemoteWindowsTaskContractTests(unittest.TestCase):
         self.assertNotIn("third Windows validation run", project)
 
 
-    def test_observation_policy_does_not_duplicate_interval_literals(self):
-        for text in (self.agents, self.efficiency):
-            normalized = " ".join(text.split())
-            self.assertNotIn("three minutes", normalized)
-            self.assertNotIn("30 seconds", normalized)
-        project_discipline = self.project.split("### Remote-shell and CI discipline", 1)[1].split("### Source-contract hygiene", 1)[0]
-        project_discipline = " ".join(project_discipline.split())
-        self.assertNotIn("three minutes", project_discipline)
-        self.assertNotIn("30 seconds", project_discipline)
+    def test_observation_policy_intentionally_pins_interval_literals(self):
+        texts = (
+            " ".join(self.agents.split()),
+            " ".join(self.efficiency.split()),
+            " ".join(self.project.split()),
+        )
+        for normalized in texts:
+            lowered = normalized.lower()
+            self.assertIn("30 seconds", lowered)
+            self.assertIn("three minutes", lowered)
+        self.assertIn("180 seconds", texts[0].lower())
+        self.assertIn("180 seconds", texts[1].lower())
+        self.assertIn("180-second", texts[2].lower())
 
 
     def test_high_cost_fixture_policy_uses_separate_profile(self):
@@ -293,6 +293,7 @@ class RemoteWindowsTaskContractTests(unittest.TestCase):
             "FLYEXPLORER_CANONICAL_CHECKOUT",
             "FLYEXPLORER_ROUTINE_OBSERVATION_SECONDS",
             "FLYEXPLORER_ACTIVE_MONITOR_SECONDS",
+            "FLYEXPLORER_RESULT_DEPENDENT_MAX_WAIT_SECONDS",
             "FLYEXPLORER_REMOTE_RUNNER_CAPACITY",
             "FLYEXPLORER_DEFAULT_VALIDATION_RUN_BUDGET",
         ):
