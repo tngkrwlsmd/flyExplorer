@@ -38,5 +38,14 @@ class PreferencesCoordinatorContract(unittest.TestCase):
         self.assertIn('ClInclude Include="preferences_coordinator.h"',project)
         self.assertIn('ClCompile Include="preferences_coordinator.cpp"',project)
 
+    def test_private_preferences_store_is_korean_default_atomic_and_legacy_isolated(self):
+        body=(R/"src/base/ui_preferences.cpp").read_text(encoding="utf-8-sig")
+        header=(R/"src/base/ui_preferences.h").read_text(encoding="utf-8-sig")
+        for token in ("flyExplorer","ui-preferences-v1.txt","ko-KR",
+                      "GetTempFileNameW","MOVEFILE_WRITE_THROUGH",
+                      "MOVEFILE_REPLACE_EXISTING"):
+            self.assertIn(token,body+header)
+        self.assertNotIn("fxfile\\\\conf",body+header)
+
 if __name__=="__main__":
     unittest.main()
