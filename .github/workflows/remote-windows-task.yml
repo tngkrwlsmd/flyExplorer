@@ -16,7 +16,7 @@ jobs:
     permissions:
       actions: write
       contents: write
-    uses: tngkrwlsmd/flyExplorer/.github/workflows/remote-windows-task.yml@main
+    uses: tngkrwlsmd/flyExplorer/.github/workflows/remote-windows-task.yml@validate/native-preflight-selected-20261005
     with:
       request_ref: ${{ github.sha }}
       request_branch: ${{ github.ref_name }}
