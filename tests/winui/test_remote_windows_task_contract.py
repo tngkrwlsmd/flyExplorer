@@ -64,6 +64,35 @@ class RemoteWindowsTaskContractTests(unittest.TestCase):
         self.assertIn("Stale validation request:", self.workflow)
         self.assertIn("DIAGNOSTIC_STALE_MAIN=ADVISORY", self.workflow)
 
+    def test_prior_evidence_policy_blocks_wasteful_full_retries(self):
+        self.assertIn("actions: read", self.workflow)
+        self.assertIn("- name: Enforce prior evidence retry policy", self.workflow)
+        self.assertIn("remote_evidence_policy.py", self.workflow)
+        self.assertIn("REMOTE_RETRY_SCOPE", self.workflow)
+        self.assertIn("REMOTE_REUSE_RUN_ID", self.workflow)
+        self.assertIn("REMOTE_REUSED_TARGETS", self.workflow)
+        self.assertIn("FOCUSED_REUSE_DIFF=PASS", self.workflow)
+        self.assertIn(
+            "Focused evidence reuse command must not rebuild/repackage",
+            self.workflow,
+        )
+        self.assertLess(
+            self.workflow.index("- name: Enforce prior evidence retry policy"),
+            self.workflow.index("- name: Static candidate preflight"),
+        )
+
+    def test_failure_classification_uses_stdlib_classifier(self):
+        self.assertIn("classify_remote_failure.py", self.workflow)
+        for category in (
+            "INSTALLED_APP_SHUTDOWN_TIMEOUT",
+            "SUBPROCESS_TIMEOUT_FAILURE",
+            "COMMAND_FAILURE_UNCLASSIFIED",
+        ):
+            classifier = (
+                ROOT / "tools/winui/classify_remote_failure.py"
+            ).read_text(encoding="utf-8")
+            self.assertIn(category, classifier)
+
     def test_static_preflight_is_change_scoped_and_covers_all_gui_harnesses(self):
         self.assertIn("$changedPaths", self.workflow)
         self.assertIn("check_python_static.py", self.workflow)
