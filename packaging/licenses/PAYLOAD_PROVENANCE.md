@@ -5,11 +5,11 @@ distribution materials are added to the installer. Runtime bytes are matched
 by SHA-256 against package versions in the build's project.assets.json and
 the repository-local NuGet cache.
 
-- Runtime source revision: `a84ff56597ca638b31fdcb4a5b0bc1356cb443f3`
+- Runtime source revision: `1862231b271e9bb71d5adbf53439fe0d49b60af4`
 - Runtime files before distribution materials: **305**
 - Product/generated files with no NuGet byte match: **17**
 - Files with an exact NuGet package byte match: **288**
-- Runtime manifest SHA-256: `8ffbde6a94840cae874a761e6a26148616f167fb0db1fedb3939aa2f18968856`
+- Runtime manifest SHA-256: `40f0f12797c6731f823dd3e438b09fc575a78a54f9962c14fb572e5d70dfdcc5`
 
 ## Exact NuGet payload matches
 
@@ -34,10 +34,10 @@ the repository-local NuGet cache.
 - `Assets/StoreLogo.png` — 456 bytes — `sha256:5a44b2f15b76ff4cfcb315e8b62b2ac1e4a1f616bbfee0b8be29f9e2e116172c`
 - `Assets/Wide310x150Logo.scale-200.png` — 2097 bytes — `sha256:4938ed44d7d63f44ca959eafb942be36459939a9c679bfcbf4f5c837fdf3475c`
 - `FileToolbar.xbf` — 4993 bytes — `sha256:6fb066df97fceda4397c370768a6bae1a2e980cf3be72f4238af05ec0ce89374`
-- `flyExplorer.exe` — 1806336 bytes — `sha256:ba7ba0d20a0384ab75ab6d1a542a68d3f8df1ae3221d4480e9270cf9c6229fd5`
+- `flyExplorer.exe` — 1806336 bytes — `sha256:b4f3a9564870766e60df0978dfede02a736d2d01cf3aa84c9521d7c730eb77bf`
 - `flyExplorer.pri` — 2221824 bytes — `sha256:57918bd72c8a10486bc61f40e4eb2e0e9d003a3456dfc9215b73d9de4c0158fc`
-- `FlyExplorer.winmd` — 3584 bytes — `sha256:826e69f1aac81fcae62a1f65baff3a75d3d907a11c94ba7cb64ad39475d80e46`
-- `FlyShellIsolationHelper.exe` — 184320 bytes — `sha256:19aa8bbfbf07ec6af034ede60424cb2579f7a75d70983f1d05058f274ced9c2d`
+- `FlyExplorer.winmd` — 3584 bytes — `sha256:33781a3a3814904e8c24c42f125eba7812fd4196c229352470ce212a7fa64d44`
+- `FlyShellIsolationHelper.exe` — 184320 bytes — `sha256:293f56d4cf312e1e62c2881c4b24a9422a679acc9f5132b49ced7725431e0d63`
 - `MainWindow.xbf` — 19323 bytes — `sha256:c0683a2755cd79a44c266a7102a7ff77e3b8a5c2ee64fbf1056d02b3de88c608`
 - `NavigationSidebar.xbf` — 4015 bytes — `sha256:f2c289b8787e8c1a1f2e0b0f676a9d984768be0a867891e5ae04daa030c362b6`
 - `ShellHeader.xbf` — 2014 bytes — `sha256:1c1557c62a13345b457fc62112892ca75a0f9e4b71ba9b60c806ac3ee8a5f6c3`
