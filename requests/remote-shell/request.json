@@ -1,13 +1,13 @@
 {
-  "request_id": "verify-classifier-write-permissions-20261005-v2",
-  "expected_main_sha": "6184dd124b48851e718586f2a9c2ada91824d984",
-  "candidate_sha": "6184dd124b48851e718586f2a9c2ada91824d984",
+  "request_id": "verify-classifier-write-permissions-20261005-v3",
+  "expected_main_sha": "974926d9d3a0ef1015477a9a7ff2409486e988be",
+  "candidate_sha": "974926d9d3a0ef1015477a9a7ff2409486e988be",
   "logical_unit": "remote-classifier-permissions",
   "configuration": "none",
   "request_mode": "diagnostic",
   "validation_plan": [],
-  "retry_reason": "workflow-call permission propagation corrected after pre-job validation failure",
-  "harness_revision": "6184dd124b48851e718586f2a9c2ada91824d984",
+  "retry_reason": "workflow definition repaired after pre-job parse failure",
+  "harness_revision": "974926d9d3a0ef1015477a9a7ff2409486e988be",
   "working_directory": "",
-  "command": "$ErrorActionPreference=\"Stop\"\n$repo=$env:FLYEXPLORER_CANONICAL_CHECKOUT\n& git -C $repo fetch origin main --no-tags --prune\nif($LASTEXITCODE -ne 0){throw \"fetch main failed\"}\n$temp=Join-Path $env:RUNNER_TEMP (\"fly-classifier-permission-check-\" + $env:GITHUB_RUN_ID)\nif(Test-Path -LiteralPath $temp){Remove-Item -LiteralPath $temp -Recurse -Force}\ntry {\n  & git -C $repo worktree add --detach $temp 6184dd124b48851e718586f2a9c2ada91824d984\n  if($LASTEXITCODE -ne 0){throw \"worktree add failed\"}\n  & python -X utf8 (Join-Path $temp \"tests\\winui\\test_remote_failure_classifier.py\")\n  if($LASTEXITCODE -ne 0){throw \"failure classifier tests failed\"}\n  & python -X utf8 (Join-Path $temp \"tests\\winui\\test_remote_evidence_policy.py\")\n  if($LASTEXITCODE -ne 0){throw \"remote evidence policy tests failed\"}\n  & python -X utf8 (Join-Path $temp \"tests\\winui\\test_remote_windows_task_contract.py\")\n  if($LASTEXITCODE -ne 0){throw \"remote workflow contract tests failed\"}\n  Write-Host \"REMOTE_CLASSIFIER_PERMISSION_CHECK=PASS\"\n} finally {\n  if(Test-Path -LiteralPath $temp){& git -C $repo worktree remove --force $temp}\n  & git -C $repo worktree prune\n}"
+  "command": "$ErrorActionPreference=\"Stop\"\n$repo=$env:FLYEXPLORER_CANONICAL_CHECKOUT\n& git -C $repo fetch origin main --no-tags --prune\nif($LASTEXITCODE -ne 0){throw \"fetch main failed\"}\n$temp=Join-Path $env:RUNNER_TEMP (\"fly-classifier-permission-check-\" + $env:GITHUB_RUN_ID)\nif(Test-Path -LiteralPath $temp){Remove-Item -LiteralPath $temp -Recurse -Force}\ntry {\n  & git -C $repo worktree add --detach $temp 974926d9d3a0ef1015477a9a7ff2409486e988be\n  if($LASTEXITCODE -ne 0){throw \"worktree add failed\"}\n  & python -X utf8 (Join-Path $temp \"tests\\winui\\test_remote_failure_classifier.py\")\n  if($LASTEXITCODE -ne 0){throw \"failure classifier tests failed\"}\n  & python -X utf8 (Join-Path $temp \"tests\\winui\\test_remote_evidence_policy.py\")\n  if($LASTEXITCODE -ne 0){throw \"remote evidence policy tests failed\"}\n  & python -X utf8 (Join-Path $temp \"tests\\winui\\test_remote_windows_task_contract.py\")\n  if($LASTEXITCODE -ne 0){throw \"remote workflow contract tests failed\"}\n  Write-Host \"REMOTE_CLASSIFIER_PERMISSION_CHECK=PASS\"\n} finally {\n  if(Test-Path -LiteralPath $temp){& git -C $repo worktree remove --force $temp}\n  & git -C $repo worktree prune\n}"
 }
