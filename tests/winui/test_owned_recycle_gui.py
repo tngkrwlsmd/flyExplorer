@@ -7,6 +7,7 @@ manual recovery and prints no other Recycle Bin item information.
 """
 from pathlib import Path
 from paths import ROOT, APP, app_exe
+from uia_polling import wait_until
 import argparse
 import hashlib
 import os
@@ -21,15 +22,7 @@ import uuid
 LEGACY=("fxfile.conf","fxfile-main.conf","fxfile-toolbar.dat",
         "fxfile-coolbar.dat","fxfile-dlg_state.conf","fxfile-folder_layout.conf")
 def eventually(predicate, label, seconds=16):
-    deadline=time.monotonic()+seconds
-    while time.monotonic()<deadline:
-        try:
-            if predicate():
-                return
-        except Exception:
-            pass
-        time.sleep(.25)
-    raise AssertionError(label)
+    return wait_until(predicate, label, seconds=seconds, interval=.25)
 
 
 def restore_verified_owned_item(item):
