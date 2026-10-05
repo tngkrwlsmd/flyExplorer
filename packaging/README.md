@@ -8,6 +8,12 @@ From the repository root, the current unsigned packaging sequence is:
 4. `python -X utf8 packaging\provenance.py --check`
 5. `package.bat Release`
 
+The provenance snapshot belongs to the exact Release byte set produced by step
+2. It is not a cross-build reproducibility assertion. After any fresh rebuild,
+run `--write` again before `--check` and package that same runtime; do not
+reuse a snapshot generated from an earlier build merely because the source tree
+is behaviorally unchanged.
+
 `package.bat Release` builds one x64 setup executable from the canonical
 `out\winui\Release` runtime set and fails closed if the generated provenance
 snapshot does not match that runtime.
