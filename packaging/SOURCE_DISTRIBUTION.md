@@ -7,10 +7,12 @@ but does not itself provide Corresponding Source or a public source-access
 direction. The repository is currently private, so its normal clone URL is not
 treated as public recipient access.
 
-The v7 product code is committed, but the tracked installer predates v7.
-Before publicly conveying a new installer, create an exact binary-to-source
-release identity from the source actually packaged and choose/implement a
-GPLv3 section 6 compliant Corresponding Source delivery method.
+The current unsigned packaging path is accepted through Remote Windows Task
+#382 and PR #27, but that engineering acceptance does not provide Corresponding
+Source to public binary recipients. Before publicly conveying an installer,
+create an exact binary-to-source release identity from the source actually
+packaged and choose/implement a GPLv3 section 6 compliant Corresponding Source
+delivery method.
 
 A release record should include:
 - exact Git commit/release tag corresponding to the binary;
