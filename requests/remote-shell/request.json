@@ -1,15 +1,13 @@
 {
-  "request_id": "high-contrast-harness-source-001",
-  "expected_main_sha": "fd2bda4d26a9d777f2ee17eb2fed5ab507174e25",
-  "candidate_sha": "eb6b187f81d6bbd6dc2c6ad6e7cd944d45bf3565",
-  "logical_unit": "high-contrast-accessibility",
-  "configuration": "Release",
+  "request_id": "high-contrast-main-sync-001",
+  "expected_main_sha": "308180d684419aeccd0e8c114118cfb06b265909",
+  "candidate_sha": "308180d684419aeccd0e8c114118cfb06b265909",
+  "logical_unit": "high-contrast-main-sync",
+  "configuration": "none",
   "validation_kind": [
-    "source"
+    "none"
   ],
-  "invalidated_evidence": {
-    "source": "The final High Contrast ON harness and its read-only contract were added after the product build/normal-theme GUI smoke passed."
-  },
+  "invalidated_evidence": {},
   "working_directory": "",
-  "command": "$ErrorActionPreference = \"Stop\"\ngit fetch origin main work/high-contrast-acceptance --no-tags --prune\nif ($LASTEXITCODE -ne 0) { throw \"fetch failed\" }\nif ((git rev-parse origin/main).Trim() -ne \"fd2bda4d26a9d777f2ee17eb2fed5ab507174e25\") { throw \"main moved\" }\nif ((git rev-parse origin/work/high-contrast-acceptance).Trim() -ne \"eb6b187f81d6bbd6dc2c6ad6e7cd944d45bf3565\") { throw \"candidate moved\" }\nif ((git status --short).Count -ne 0) { throw \"dirty persistent checkout\" }\ngit checkout -B work/high-contrast-acceptance origin/work/high-contrast-acceptance\nif ($LASTEXITCODE -ne 0) { throw \"checkout candidate failed\" }\nif ((git rev-parse HEAD).Trim() -ne \"eb6b187f81d6bbd6dc2c6ad6e7cd944d45bf3565\") { throw \"candidate mismatch\" }\npython -X utf8 -m py_compile tests\\winui\\test_high_contrast_contract.py tests\\winui\\test_high_contrast_gui.py\nif ($LASTEXITCODE -ne 0) { throw \"High Contrast test syntax failed\" }\ncmd /c test.bat source\nif ($LASTEXITCODE -ne 0) { throw \"source contracts failed\" }\ngit diff --check origin/main..HEAD\nif ($LASTEXITCODE -ne 0) { throw \"diff check failed\" }\nWrite-Host \"HIGH_CONTRAST_HARNESS_SOURCE_PASS\""
+  "command": "$ErrorActionPreference = \"Stop\"\ngit fetch origin main work/high-contrast-acceptance --no-tags --prune\nif ($LASTEXITCODE -ne 0) { throw \"fetch failed\" }\nif ((git rev-parse origin/main).Trim() -ne \"308180d684419aeccd0e8c114118cfb06b265909\") { throw \"main moved\" }\nif ((git rev-parse origin/work/high-contrast-acceptance).Trim() -ne \"eb6b187f81d6bbd6dc2c6ad6e7cd944d45bf3565\") { throw \"work branch moved\" }\nif ((git status --short).Count -ne 0) { throw \"dirty persistent checkout\" }\ngit checkout -B work/high-contrast-acceptance origin/work/high-contrast-acceptance\nif ($LASTEXITCODE -ne 0) { throw \"checkout work branch failed\" }\ngit merge --no-edit origin/main\nif ($LASTEXITCODE -ne 0) { git merge --abort 2>$null; throw \"main merge conflicted\" }\ngit diff --check origin/main..HEAD\nif ($LASTEXITCODE -ne 0) { throw \"diff check failed after main merge\" }\n$head=(git rev-parse HEAD).Trim()\nWrite-Host (\"INTEGRATED_HEAD=\" + $head)\ngit push origin HEAD:refs/heads/work/high-contrast-acceptance\nif ($LASTEXITCODE -ne 0) { throw \"push integrated work branch failed\" }\nWrite-Host \"HIGH_CONTRAST_MAIN_SYNC_PASS\""
 }
