@@ -40,12 +40,28 @@ class InstallerContract(unittest.TestCase):
         self.assertIn("flyExplorer-Setup-x64.exe",script)
         self.assertIn("shutil.rmtree(package_out)",script)
         self.assertIn("PAYLOAD_FILES=",script)
+        self.assertIn("payload_provenance.verify_snapshot()",script)
+        self.assertIn("RUNTIME_MANIFEST_SHA256=",script)
         self.assertTrue(SETUP_PROJECT_TEMPLATE.is_file())
         template=SETUP_PROJECT_TEMPLATE.read_text(encoding="utf-8")
         self.assertIn("<PlatformToolset>v145</PlatformToolset>",template)
         self.assertNotIn("v143",template)
         self.assertIn("SETUP_PROJECT_TEMPLATE",script)
         self.assertIn("materialize_setup_project",script)
+
+    def test_owned_installer_lifecycle_verifies_runtime_update_and_rollback(self):
+        body=(ROOT/"tests/winui/test_installed_lifecycle.py").read_text(
+            encoding="utf-8")
+        for token in (
+            "PAYLOAD_PROVENANCE.json",
+            "runtime_provenance(root)",
+            "OWNED_INSTALLER_RUNTIME_PROVENANCE_PASS",
+            "OWNED_INSTALLER_STALE_MANIFEST_CLEANUP_PASS",
+            "OWNED_INSTALLER_UPDATE_LAUNCH_PASS",
+            "OWNED_INSTALLER_ROLLBACK_LAUNCH_PASS",
+            "USER_SETTINGS_SENTINEL_PRESERVED",
+        ):
+            self.assertIn(token,body)
 
     def test_msbuild_discovery_is_shared_and_not_edition_locked(self):
         resolver=(ROOT/"tools/winui/resolve_msbuild.py").read_text(encoding="utf-8")
