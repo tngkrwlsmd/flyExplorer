@@ -69,23 +69,43 @@ Tracked \`packaging/RELEASE_IDENTITY.json\` and
 \`packaging/SOURCE_BUNDLE_MANIFEST.json\` are audit records. The actual setup and
 source ZIP remain release artifacts.
 
-## Git reachability and release tags
+## Git reachability and immutable release tag
 
 The binary source revision must remain durably recoverable. During development
-it must remain in \`main\` history (for example through a merge that preserves
-the source commit) or behind another durable ref. Before a public release,
-create the final approved immutable release tag and record that concrete tag in
-a newly generated release identity.
+it remains in `main` history. The reserved public release tag is
+`v1.0.0.0`, matching product version 1.0.0.0 and targeting binary source
+revision `bc63c8b48e466d1275cc6dcffb0c50e02d39db60`.
 
-Do not move a published release tag to a different source revision.
+Do **not** pre-create that tag. The current private-repository GitHub plan does
+not provide repository tag rulesets, so a pre-created tag would remain movable.
+GitHub Immutable Releases is enabled for this repository. The release workflow
+is therefore: create a draft release targeting the exact binary source
+revision, attach every final signed binary/source/identity asset, verify hashes
+and public-access prerequisites, then publish the draft once. Published
+immutable releases lock their associated tag and assets.
 
-## Public source delivery remains a separate gate
+After publication, `RELEASE_IDENTITY.json` for the final signed setup must
+record `release_tag: "v1.0.0.0"`, and the tag must resolve to the exact binary
+source revision. Never delete/move/reuse a published release tag.
 
-A private Actions artifact proves the engineering path but does not make source
-available to public binary recipients. Public release still requires the
-selected GPLv3 section 6 source-delivery mechanism, public source-access
-directions, required retention/availability, rightsholder confirmation and any
-other release/legal approvals.
+## Selected public source delivery
+
+The selected GPL method is **GPLv3 section 6(d)** network equivalent access.
+The matching object code and deterministic Corresponding Source ZIP are offered
+from the same public GitHub Release page with no authentication requirement and
+no additional source charge. Release notes must point directly to the source
+asset and publish the setup/source/identity hashes.
+
+The source must remain available for the entire time the matching binary is
+publicly downloadable. In addition, flyExplorer adopts a project retention
+minimum of 1095 days after the binary is withdrawn. That three-year
+post-withdrawal period is a project policy; section 6(d) itself does not specify
+a fixed three-year term.
+
+The private repository is not yet a public delivery surface. Publication
+therefore remains blocked until the designated release page is publicly
+accessible, the final signed artifact identity is regenerated, and the
+rightsholder/signing/clean-machine gates are cleared.
 
 ## Current accepted private evidence
 
