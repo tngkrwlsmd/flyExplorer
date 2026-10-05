@@ -48,14 +48,18 @@ checkpoints.
   now owns the Preferences value, write mutex, revision ordering and detached
   atomic-save worker. MainWindow retains theme/view presentation, request
   initiation and DispatcherQueue-projected save-failure status.
-- A follow-up owned physical-drag probe intentionally did not extract drag/drop.
-  On the Release test-owned window the Korean source row was visible, enabled
-  and explicitly selectable, and real mouse press/move/release coordinates were
-  delivered. However neither the row nor ListView DragStarting diagnostic
-  status appeared, so DragOver/Drop were never reached. A final identical
-  retry reproduced the same boundary. This does not prove a product drag defect;
-  it means the current automation environment cannot certify the
-  pointer-to-WinUI-drag gesture boundary.
+- Physical pointer drag is now accepted on candidate
+  `9e1b8be9f6b61ed8fc69519d281a9fe8bd2f1bc5` in Remote Windows Task
+  `37277431952`. The previous failure boundary was WinUI gesture routing:
+  ListViewItem consumed the pointer route for selection and later pointer
+  movement followed control capture rather than the row handler. The product
+  now observes the handled press, polls the held left-button/cursor at 16 ms,
+  applies the Windows drag threshold, obtains the current PointerPoint by ID and
+  calls the documented StartDragAsync entry point. The existing DragStarting
+  handler still owns data-package creation and route/source validation. The
+  owned Release test delivered real mouse press/move/release, reached DragOver,
+  copied the Korean owned file across panes, exited normally, and left all six
+  protected user settings byte-identical.
 - The follow-up workspace-restore audit reversed the earlier deferral after
   identifying a real lifecycle boundary: each pane has queued restore tasks plus
   one awaited Shell navigation request. Previously a failed/rejected/no-change
@@ -576,10 +580,6 @@ Not certified by current automated evidence:
   self-hosted VM: Windows reports one active 1274x771 display mode and
   DisplayConfig DPI range CURRENT=100%, RECOMMENDED=100%, MAX=100%);
 - human Narrator and Korean IME composition acceptance;
-- physical pointer drag acceptance (owned Release automation reaches a visible,
-  enabled, selected source row and real mouse movement, but not WinUI
-  DragStarting; product defect versus automation/input limitation remains
-  unresolved);
 - signed clean-machine machine-wide install/update/rollback;
 - public redistribution/source-delivery/rightsholder/legal clearance.
 
