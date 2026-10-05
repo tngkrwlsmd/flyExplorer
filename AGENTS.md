@@ -237,12 +237,10 @@ recent `control/remote-shell` Actions runs. If any Remote Windows Task is
 modify the request slot and do not create a successor request. Record that run
 ID and either wait for the normal observation point or leave a resume
 checkpoint. This check must happen before the request commit because
-workflow-side fingerprint rejection is too late to prevent queue/runner waste.
-This serialization rule is based on the current
-`FLYEXPLORER_REMOTE_RUNNER_CAPACITY` workflow setting representing a single
-interactive Windows execution lane. If runner capacity changes, re-evaluate the
-global lease/concurrency rule instead of preserving single-runner serialization
-by habit.
+workflow-side request validation is too late to prevent queue/runner waste.
+The workflow concurrency group currently represents one interactive Windows
+execution lane. If runner capacity changes, re-evaluate the global lease and
+concurrency rule instead of preserving single-runner serialization by habit.
 
 After starting a GitHub Actions build or Remote Windows Task, record its run
 ID, target commit, scope, and Actions-reported start time. If the current user
@@ -264,26 +262,18 @@ scheduled/automation task merely to bridge the wait, and do not require the
 user to separately ask for active monitoring when the current request already
 depends on the run.
 
-The workflow settings `FLYEXPLORER_ROUTINE_OBSERVATION_SECONDS`,
-`FLYEXPLORER_ACTIVE_MONITOR_SECONDS`, and
-`FLYEXPLORER_RESULT_DEPENDENT_MAX_WAIT_SECONDS` mirror this fixed repository
-policy. Their expected values are 30 seconds, 30 seconds, and 180 seconds
-respectively. A run whose result is **not required to satisfy the current user
-request** may still be left as a resume checkpoint without waiting through this
-window. On a later "continue the interrupted work" request, first read current
+The 30-second observation cadence and 180-second same-turn ceiling are agent
+policy and are not duplicated as workflow environment variables. A run whose
+result is **not required to satisfy the current user request** may still be left
+as a resume checkpoint without waiting through this window. On a later "continue the interrupted work" request, first read current
 main/ref state, the recorded run, relevant artifacts and cleanup state; reuse
 completed evidence for the same revision/configuration rather than rerunning
 it.
 
-For one logical unit, use the workflow-configured
-`FLYEXPLORER_DEFAULT_VALIDATION_RUN_BUDGET` as the normal planning budget, not
-as an arbitrary correctness limit. Its purpose is to prevent
-**diagnosis-free repeated execution**. Every successor run must follow a
-completed predecessor, a concrete new revision or execution-condition change,
-and a stated new failure hypothesis or evidence need. A run beyond the default
-budget is allowed only when that additional hypothesis/evidence need is
-explicitly justified; ordinal run number alone is neither a reason to run nor a
-reason to stop. Never queue a speculative successor while its predecessor is
+For one logical unit, do not use a numeric retry token or workflow-side run
+budget. Every successor run must follow a completed predecessor, a concrete
+product/harness/execution-condition change, and a stated new failure hypothesis
+or evidence need. Never queue a speculative successor while its predecessor is
 active.
 
 High-cost fixtures are final acceptance tools, not harness-debug loops.
@@ -340,10 +330,9 @@ on alternative event/capture implementations while that boundary is still
 unknown. Diagnostics must be inert in normal product runs and should be removed
 or kept strictly gated once the cause is known.
 
-Do not rerun a deterministic product/source failure on the same revision.
-For an explicitly classified infrastructure/transient failure, one controlled
-same-revision rerun is allowed; do not repeat an unclassified failure and do
-not turn rerun into the normal development loop.
+Do not rerun the same product/test revision merely to see whether it passes.
+Classify the first relevant failure and change the product, harness, or
+execution condition that explains it before a successor validation.
 
 ### Mechanical validation-churn guard
 
@@ -356,91 +345,52 @@ model:
 - diagnostic: `request_mode: "diagnostic"`, `configuration: "none"` and
   `validation_plan: []`;
 - validation: `request_mode: "validation"`, configuration exactly Debug or
-  Release, and a non-empty logical `validation_plan`. A normal validation
-  uses `retry_scope: "full"`. After a classified harness/automation/shutdown
-  failure, use `retry_scope: "focused-reuse"` with structured
-  `reuse_evidence`; do not repeat already successful build/package targets.
+  Release, and a non-empty logical `validation_plan`.
 
-The workflow checks the latest same-logical-unit Actions evidence before a
-validation retry. If the prior failure remains
-`COMMAND_FAILURE_UNCLASSIFIED`, another validation is blocked until the
-failure is classified. Focused reuse is accepted only when the prior run
-contains the declared targets and their canonical success markers, the diff
-since that evidence is harness/infra-only, and the retry command does not call
-the normal build/package entry points.
-
-Do not duplicate that plan by regex-parsing the command. For validation,
-evidence identity includes logical unit, normalized plan, normalized command
-hash and harness revision, so different targets and harness changes are not
-false duplicates. Read-only diagnostic work may continue when main moved, but
-validation, write/destructive work and final acceptance remain fail-closed
-against stale main.
+Retry/reuse metadata is intentionally not part of the request schema. The
+workflow does not inspect previous Actions runs or infer a second validation
+plan from the free-form command. Read-only diagnostic work may continue when
+main moved, but validation, write/destructive work and final acceptance remain
+fail-closed against stale main.
 
 Before committing the request slot, run the canonical request preflight and
 confirm the pre-dispatch lease. Treat request-shape rejection as an agent
 preflight defect, not product evidence.
-diagnosis.
 
 Before any control-branch push, complete a **zero-run preflight** for avoidable
 agent/control-plane errors. A Remote Windows Task must not be created until all
 applicable checks below pass:
 
-1. **Request shape:** validate the mode/configuration/plan invariants above,
-   exact `expected_main_sha`/`candidate_sha`, request ID and logical unit.
+1. **Request shape:** validate mode/configuration/plan invariants, exact
+   `expected_main_sha`/`candidate_sha`, request ID and logical unit.
 2. **Lease/ref existence:** confirm no active Remote Windows Task owns the
-   request slot; verify every branch/ref/SHA/path the command will use actually
-   exists before dispatch.
+   request slot; verify every branch/ref/SHA/path the command will use exists.
 3. **Command sanity:** inspect quoting/escaping and PowerShell/JSON boundaries;
    keep request commands small and composed from previously working forms.
-   Never use the Windows runner as the first parser for a newly invented
-   multi-line quoting construct when it can be checked statically.
 4. **Source/test sanity:** when tests/contracts changed, run or mechanically
    evaluate the narrowest affected contract before dispatch. Python harnesses
-   must at least pass syntax compilation; `python -m` targets/import paths must
-   resolve to tracked modules rather than being discovered by the runner.
+   must at least pass syntax/import-path checks.
 5. **Harness/API sanity:** validate fixture paths, automation IDs and helper/API
-   calls against the checked-in code or an established harness pattern. Do not
-   invent pywinauto/UIA wrapper methods or assume a control API exists without a
-   static/source check.
+   calls against checked-in code or an established harness pattern.
 6. **Prose-contract hygiene:** semantic documentation assertions use normalized
    whitespace; raw line-sensitive matching is reserved for genuinely
    line-structured formats.
 
-If one of these checks fails, fix it locally/in the agent layer and **do not
-create a workflow run**. Classify failures caught here as request/contract/
-harness preflight defects, not product defects. Windows-only behavior that
-cannot be established statically belongs in the remote run, but the request
-that reaches Windows should already be syntactically and structurally valid.
+If one of these checks fails, fix it in the agent layer and **do not create a
+workflow run**. Windows-only behavior that cannot be established statically
+belongs in the remote run, but the request that reaches Windows should already
+be syntactically and structurally valid.
 
 The canonical zero-run request validator is
 `tools/winui/validate_remote_request.py`. For GUI harness changes, the
-canonical static guard is `tests/winui/test_gui_harness_contract.py`; it must
-remain part of the normal source-contract set. Use these checks locally or
-mechanically reproduce their assertions through repository reads before
-writing the request slot. **Do not add a GitHub-hosted/cloud runner just to run
-this preflight, and do not create a Windows VM task merely because local static
-execution is unavailable.** The agent-side check must be completed before the
-request commit; the Windows workflow's own validation is only a second line of
-defense.
+canonical static guard is `tests/winui/test_gui_harness_contract.py`. Use
+these checks locally or mechanically reproduce their assertions through
+repository reads before writing the request slot. The Windows workflow's own
+validation is only a second line of defense.
 
-The request slot separates purpose first: `request_mode: diagnostic` is for
-inspection/discovery and uses `configuration: none` with an empty
-`validation_plan`; `request_mode: validation` uses Debug/Release and names
-the logical validation targets in `validation_plan`. Do not restate those
-targets by regex-parsing the free-form command. Legacy `validation_kind`
-requests are migration-only.
-
-Validation evidence identity includes candidate SHA, configuration, logical
-unit, normalized validation plan, normalized command hash and harness revision.
-The fingerprint is an evidence/reuse key, not a hard duplicate rejection gate.
-A harness or validation-logic change therefore has a distinct identity without
-inventing a retry token.
-
-Do not use Actions rerun as the development loop. Deterministic product or
-source-contract failures require a real revision. A same-revision rerun is
-allowed at most once only when the prior evidence is clearly infrastructure or
-transient (runner/session, transient UIA, network, Windows Settings setup,
-infrastructure timeout or artifact upload). Classify the prior failure first.
+Do not use Actions rerun as the development loop. A successor validation exists
+only after the identified product, harness, or execution condition has changed,
+and it resumes from the earliest invalidated boundary.
 
 ### Remote development and final-CI anti-thrashing rule
 

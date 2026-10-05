@@ -7,18 +7,11 @@ canonical execution profile. General engineering principles stay in
 
 ## Remote Windows operational settings
 
-The top-level \`env\` block in
-\`.github/workflows/remote-windows-task.yml\` owns these values:
-
-- \`FLYEXPLORER_CANONICAL_CHECKOUT\` - canonical persistent Windows checkout.
-- \`FLYEXPLORER_ROUTINE_OBSERVATION_SECONDS\` - 30-second dependent-run observation interval.
-- \`FLYEXPLORER_ACTIVE_MONITOR_SECONDS\` - 30-second explicit active-monitor interval.
-- \`FLYEXPLORER_RESULT_DEPENDENT_MAX_WAIT_SECONDS\` - 180-second / three-minute same-turn wait ceiling.
-- \`FLYEXPLORER_REMOTE_RUNNER_CAPACITY\` - current interactive Windows execution capacity.
-- \`FLYEXPLORER_DEFAULT_VALIDATION_RUN_BUDGET\` - normal planning budget, not a retry token budget.
-
-When runner capacity changes, revisit request-slot serialization and workflow
-concurrency.
+The reusable workflow keeps only one repository-specific runtime setting:
+`FLYEXPLORER_CANONICAL_CHECKOUT`, the canonical persistent Windows checkout.
+Runner serialization is expressed directly by workflow concurrency rather than
+duplicated tuning variables. Agent observation cadence and retry discipline are
+policy, not workflow environment configuration.
 
 ## Request modes
 
@@ -79,21 +72,13 @@ Do not use rerun as a development loop. Deterministic product assertions and
 source-contract failures require a source or test revision before another
 acceptance run.
 
-A same-revision rerun may be used once when the previous evidence clearly shows
-an infrastructure/transient class such as runner session loss, transient UIA
-availability, network fetch, Windows Settings automation, infrastructure
-timeout or artifact upload failure. The workflow no longer blocks all reruns at
-the job boundary because that hid this distinction.
-
-The workflow now reads the prior Actions result/log for the same logical unit
-before an expensive retry. A still-unclassified prior failure blocks validation
-until it can be classified by the current failure classifier or a focused
-diagnostic. A harness/automation/shutdown-boundary failure requires
-`retry_scope: focused-reuse`: the request names the prior run/candidate and
-the successful targets it reuses, the workflow verifies canonical success
-markers plus a harness/infra-only diff, and the focused command is forbidden
-from invoking the normal build/package entry points again. Repeated full
-validation after such a classified focused failure is invalid evidence.
+There are no automatic or workflow-enforced result-based retries and no
+prior-run evidence-reuse protocol. After any failure, classify the first
+relevant error as product, harness/fixture, or control-plane/environment. A
+successor run is justified only after the code, harness, or execution condition
+that explains the failure has materially changed. Resume from the earliest
+invalidated boundary and do not rebuild or repackage unchanged product merely
+because a later harness step failed.
 
 ## Verification profiles
 

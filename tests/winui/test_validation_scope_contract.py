@@ -11,104 +11,84 @@ SPEC.loader.exec_module(SCOPE)
 
 
 class ValidationScopeContractTests(unittest.TestCase):
-    def classify(self, paths, message="fix: change behavior"):
-        return SCOPE.classify(paths, message)[0]
+    def classify(self, paths):
+        return SCOPE.classify(paths, "fix: change behavior")[0]
 
-    def test_metadata_and_source_contracts_use_source(self):
+    def areas(self, paths):
+        return SCOPE.affected_areas(paths)
+
+    def test_metadata_and_contracts_remain_source_only(self):
         self.assertEqual(
+            "source",
             self.classify([
                 "AGENTS.md",
                 "docs/development/AGENT_EFFICIENCY.md",
                 "tests/winui/test_arch_contract.py",
-                "tools/policy/run_policy_checks.py",
+                ".github/workflows/remote-windows-task.yml",
             ]),
-            "source",
         )
 
-    def test_ui_independent_and_build_paths_use_release(self):
-        self.assertEqual(self.classify(["src/base/model.cpp"]), "release")
-        self.assertEqual(self.classify(["packaging/setup.iss"]), "release")
-        self.assertEqual(self.classify(["build.bat"]), "release")
-        self.assertEqual(
-            self.classify(["tests/winui/m20/m20_native_fixture.cpp"]),
-            "release",
-        )
-
-    def test_nonvisual_winui_refactor_uses_release(self):
-        self.assertEqual(
-            self.classify(
-                [
-                    "app/winui/workspace_restore_coordinator.cpp",
-                    "app/winui/workspace_restore_coordinator.h",
-                    "tests/winui/test_workspace_restore_coordinator_contract.py",
-                ],
-                "refactor: isolate restore lifecycle",
-            ),
-            "release",
-        )
-
-    def test_explicit_release_trailer_can_mark_nonvisual_behavior_preserving_work(self):
-        self.assertEqual(
-            self.classify(
-                ["app/winui/MainWindow.xaml.cpp"],
-                "chore: reorganize event plumbing\n\nCI-Scope: release",
-            ),
-            "release",
-        )
-
-    def test_regular_winui_behavior_change_uses_build_focused_release(self):
-        self.assertEqual(
-            self.classify(["app/winui/MainWindow.xaml.cpp"], "fix: update navigation"),
-            "release",
-        )
-
-    def test_xaml_uses_release_automatic_scope(self):
-        for message in (
-            "refactor: reorganize view",
-            "refactor: reorganize view\n\nCI-Scope: release",
-            "ui: reorganize view\n\nCI-Scope: release-gui",
+    def test_product_and_build_paths_require_one_release_build_scope(self):
+        for path in (
+            "src/base/model.cpp",
+            "packaging/package.py",
+            "build.bat",
+            "app/winui/MainWindow.xaml.cpp",
+            "app/winui/MainWindow.xaml",
         ):
-            self.assertEqual(
-                self.classify(["app/winui/MainWindow.xaml"], message),
-                "release",
-            )
+            self.assertEqual("release", self.classify([path]), path)
 
-    def test_gui_harness_uses_release_automatic_scope(self):
+    def test_search_session_shell_and_file_operation_changes_are_narrow(self):
         self.assertEqual(
-            self.classify(
-                ["tests/winui/test_shell_gui.py"],
-                "refactor: simplify GUI harness",
-            ),
-            "release",
+            {"search"},
+            self.areas(["app/winui/search_controller.cpp"]),
         )
-
-    def test_release_gui_trailer_does_not_enable_automatic_gui(self):
         self.assertEqual(
-            self.classify(
-                ["src/base/model.cpp"],
-                "fix: model behavior\n\nCI-Scope: release-gui",
-            ),
-            "release",
+            {"session"},
+            self.areas(["app/winui/session_coordinator.cpp"]),
+        )
+        self.assertEqual(
+            {"shell"},
+            self.areas(["app/winui/shell_navigation_controller.cpp"]),
+        )
+        self.assertEqual(
+            {"file-operations"},
+            self.areas(["src/base/shell_transfer_core.cpp"]),
         )
 
-    def test_source_trailer_cannot_downgrade_product_change(self):
+    def test_packaging_accessibility_large_folder_and_settings_are_narrow(self):
+        self.assertEqual({"packaging"}, self.areas(["packaging/package.py"]))
         self.assertEqual(
-            self.classify(
-                ["app/winui/search_controller.cpp"],
-                "fix: search behavior\n\nCI-Scope: source",
-            ),
-            "release",
+            {"accessibility"},
+            self.areas(["tests/winui/test_high_contrast_contract.py"]),
+        )
+        self.assertEqual(
+            {"large-folder"},
+            self.areas(["tests/winui/test_large_folder_streaming_contract.py"]),
+        )
+        self.assertEqual(
+            {"identity-settings"},
+            self.areas(["src/base/ui_preferences.cpp"]),
         )
 
-    def test_remote_shell_workflow_is_source_only_but_ci_workflow_is_release(self):
+    def test_unknown_base_source_fails_conservatively_to_all_product_areas(self):
         self.assertEqual(
-            self.classify([".github/workflows/remote-windows-task.yml"]),
-            "source",
+            set(SCOPE.PRODUCT_AREAS),
+            self.areas(["src/base/new_cross_cutting_model.cpp"]),
         )
-        self.assertEqual(
-            self.classify([".github/workflows/windows-build.yml"]),
-            "release",
-        )
+
+    def test_infra_only_change_does_not_expand_to_product_contracts(self):
+        paths = [
+            ".github/workflows/remote-windows-task.yml",
+            "tools/winui/validate_remote_request.py",
+        ]
+        self.assertEqual(set(), self.areas(paths))
+        self.assertEqual({"infra"}, SCOPE.change_families(paths))
+
+    def test_gui_harness_is_harness_family_without_product_expansion(self):
+        paths = ["tests/winui/test_shell_gui.py"]
+        self.assertEqual(set(), self.areas(paths))
+        self.assertEqual({"harness"}, SCOPE.change_families(paths))
 
 
 if __name__ == "__main__":

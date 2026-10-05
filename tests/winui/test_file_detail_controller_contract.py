@@ -47,5 +47,16 @@ class FileDetailControllerContract(unittest.TestCase):
         self.assertIn('<ClInclude Include="file_detail_controller.h" />',project)
         self.assertIn('<ClCompile Include="file_detail_controller.cpp">',project)
 
+    def test_file_list_cache_has_one_current_owner_per_window_tab(self):
+        state=read("app/winui/file_list_state.h")
+        owner=read("app/winui/window_tab_state.h")
+        main=read("app/winui/MainWindow.xaml.cpp")
+        for token in ("sortMode","details","renderedLogical","renderedPaths",
+                      "indexedNameProjection","epoch","invalidate()","isCurrent(","accepts("):
+            self.assertIn(token,state)
+        self.assertIn("std::array<fxfile::previewlist::PaneState,2> fileLists",owner)
+        self.assertIn("listState.begin(route,tab)",main)
+        self.assertIn("listState.isCurrent(",main)
+
 if __name__=="__main__":
     unittest.main()

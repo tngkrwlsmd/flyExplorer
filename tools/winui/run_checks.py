@@ -1,4 +1,4 @@
-"""Bounded WinUI checks grouped by product, harness, and infrastructure risk."""
+"""Bounded WinUI checks with change-scoped FAST and targeted GUI selection."""
 from __future__ import annotations
 
 import argparse
@@ -9,47 +9,74 @@ import subprocess
 import sys
 import time
 
+from resolve_validation_scope import PRODUCT_AREAS, affected_areas, change_families
+
 ROOT = Path(__file__).resolve().parents[2]
 APP = ROOT / "app" / "winui"
 TESTS = ROOT / "tests" / "winui"
 LOGS = ROOT / "logs" / "winui-scoped"
 
-ALL_CONTRACTS = [
-    p
-    for p in sorted(TESTS.glob("test_*contract.py"))
-    if p.name != "test_structure_contract.py"
-]
-
-INFRA_POLICY_NAMES = {
-    "test_remote_request_preflight_contract.py",
-    "test_remote_windows_task_contract.py",
-    "test_validation_scope_contract.py",
+PRODUCT_SUITES = {
+    "core": [
+        "tests/winui/test_arch_contract.py",
+        "tests/winui/test_m26_fluent_contract.py",
+        "tests/winui/test_localization_contract.py",
+    ],
+    "shell": [
+        "tests/winui/helper/test_contract.py",
+        "tests/winui/helper/test_winui_integration_contract.py",
+        "tests/winui/test_external_context_contract.py",
+        "tests/winui/test_file_detail_controller_contract.py",
+        "tests/winui/test_known_folder_artwork_contract.py",
+        "tests/winui/test_sidebar_known_folder_artwork_contract.py",
+        "tests/winui/test_thumbnail_contract.py",
+    ],
+    "search": [
+        "tests/winui/test_search_controller_contract.py",
+        "tests/winui/test_filter_preset_contract.py",
+    ],
+    "file-operations": [
+        "tests/winui/test_file_operation_controller_contract.py",
+        "tests/winui/test_clipboard_manual_contract.py",
+        "tests/winui/test_owned_explorer_clipboard_contract.py",
+        "tests/winui/test_recycle_owned_contract.py",
+    ],
+    "session": [
+        "tests/winui/test_session_coordinator_contract.py",
+        "tests/winui/test_workspace_restore_coordinator_contract.py",
+    ],
+    "accessibility": [
+        "tests/winui/test_accessibility_scope_contract.py",
+        "tests/winui/test_high_contrast_contract.py",
+        "tests/winui/test_manual_accessibility_contract.py",
+    ],
+    "packaging": [
+        "tests/winui/test_installer_contract.py",
+        "tests/winui/test_lifecycle_safety_contract.py",
+        "tests/winui/test_portable_safety_contract.py",
+        "tests/winui/test_registered_file_type_contract.py",
+        "tests/winui/test_release_payload_contract.py",
+    ],
+    "large-folder": [
+        "tests/winui/test_large_folder_streaming_contract.py",
+    ],
+    "identity-settings": [
+        "tests/winui/test_bookmark_contract.py",
+        "tests/winui/test_preferences_coordinator_contract.py",
+        "tests/winui/test_product_identity_contract.py",
+    ],
 }
-HARNESS_NAMES = {
-    "test_gui_harness_contract.py",
-    "test_build_environment_contract.py",
-}
-INFRA_POLICY_CONTRACTS = [
-    str(path.relative_to(ROOT))
-    for path in ALL_CONTRACTS
-    if path.name in INFRA_POLICY_NAMES
-] + [
-    str((TESTS / "test_remote_failure_classifier.py").relative_to(ROOT)),
-    str((TESTS / "test_remote_evidence_policy.py").relative_to(ROOT)),
-]
 HARNESS_CONTRACTS = [
-    str(path.relative_to(ROOT))
-    for path in ALL_CONTRACTS
-    if path.name in HARNESS_NAMES
+    "tests/winui/test_build_environment_contract.py",
+    "tests/winui/test_gui_harness_contract.py",
 ]
-PRODUCT_SOURCE_CONTRACTS = [
-    str(path.relative_to(ROOT))
-    for path in ALL_CONTRACTS
-    if path.name not in INFRA_POLICY_NAMES | HARNESS_NAMES
-] + [
-    str((TESTS / "helper" / "test_contract.py").relative_to(ROOT)),
-    str((TESTS / "helper" / "test_winui_integration_contract.py").relative_to(ROOT)),
+INFRA_CONTRACTS = [
+    "tests/winui/test_remote_failure_classifier.py",
+    "tests/winui/test_remote_request_preflight_contract.py",
+    "tests/winui/test_remote_windows_task_contract.py",
+    "tests/winui/test_validation_scope_contract.py",
 ]
+STRUCTURE_CONTRACT = "tests/winui/test_structure_contract.py"
 
 OWNED_FLAGS = (
     "FLY_V7_WINDOW_TABS",
@@ -69,9 +96,27 @@ FAULT_FLAGS = (
     "FLY_M23_OWNED_DRAG_TRACE",
     "FLY_M20_OWNED_COLLAPSE_M19_PANELS",
 )
+GUI_AREAS = (
+    "core",
+    "shell",
+    "search",
+    "file-operations",
+    "session",
+    "window-tabs",
+    "bookmark",
+    "filter-preset",
+    "accessibility",
+    "large-folder",
+    "all",
+)
+
+
+def unique(paths):
+    return list(dict.fromkeys(paths))
 
 
 def execute(label, command, timeout, env, tag):
+    LOGS.mkdir(parents=True, exist_ok=True)
     path = LOGS / (tag + "-" + label + ".log")
     start = time.monotonic()
     with path.open("w", encoding="utf-8", newline="\n") as output:
@@ -90,28 +135,12 @@ def execute(label, command, timeout, env, tag):
             code = 124
             output.write("\nTIMEOUT: bounded local subprocess terminated\n")
 
-    content = path.read_text(encoding="utf-8", errors="replace")
-    summary = re.findall(
-        r"Ran \d+ tests.*|^OK(?: \([^\n]*\))?$|^FAILED.*",
-        content,
-        re.M,
-    )
-    if not summary:
-        summary = [
-            line
-            for line in content.splitlines()
-            if line.startswith(
-                (
-                    "REAL_M23_",
-                    "OWNED_WINUI_SHELL_EXIT",
-                    "ORIGINAL_SIX_USER_CONFIG_",
-                )
-            )
-        ][-3:]
+    body = path.read_text(encoding="utf-8", errors="replace")
+    summary = re.findall(r"Ran \d+ tests.*|^OK(?: \([^\n]*\))?$|^FAILED.*", body, re.M)
     first_error = next(
         (
             line.strip()[:240]
-            for line in content.splitlines()
+            for line in body.splitlines()
             if re.search(
                 r"error C\d+|error LNK\d+|error MSB\d+|fatal error|"
                 r"AssertionError:|RuntimeError:|ElementNotFoundError:|"
@@ -133,22 +162,212 @@ def execute(label, command, timeout, env, tag):
     return code
 
 
-def run_contracts(label: str, paths: list[str], env: dict[str, str], tag: str) -> int:
+def run_contracts(label, paths, env, tag):
+    paths = unique(paths)
     if not paths:
         print(f"{label}: SKIPPED empty suite", flush=True)
         return 0
     return execute(
         label,
         [sys.executable, "-m", "unittest", *paths],
-        90,
+        120,
         env,
         tag,
     )
 
 
-def fail(category: str, code: int) -> int:
+def fail(category, code):
     print(f"FAILURE_CATEGORY={category}", flush=True)
     return code
+
+
+def git_lines(*args):
+    result = subprocess.run(
+        ["git", *args],
+        cwd=ROOT,
+        text=True,
+        encoding="utf-8",
+        errors="strict",
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        check=False,
+    )
+    if result.returncode:
+        raise RuntimeError(result.stderr.strip() or "git command failed")
+    return [line for line in result.stdout.splitlines() if line.strip()]
+
+
+def product_contracts(areas):
+    return unique(
+        path
+        for area in PRODUCT_AREAS
+        if area in areas
+        for path in PRODUCT_SUITES[area]
+    )
+
+
+def run_fast(before, head, env, tag):
+    diff = subprocess.run(
+        ["git", "diff", "--check", before, head],
+        cwd=ROOT,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        check=False,
+    )
+    if diff.returncode:
+        print(diff.stdout, end="", flush=True)
+        return fail("STATIC_DIFF_FAILURE", diff.returncode)
+
+    paths = git_lines("diff", "--name-only", before, head)
+    areas = affected_areas(paths)
+    families = change_families(paths)
+    print("FAST_CHANGED_PATHS=" + str(len(paths)), flush=True)
+    print("FAST_AREAS=" + (",".join(sorted(areas)) or "-"), flush=True)
+    print("FAST_FAMILIES=" + (",".join(sorted(families)) or "-"), flush=True)
+
+    python_files = [
+        ROOT / path
+        for path in paths
+        if path.endswith(".py")
+        and path.startswith(("tools/winui/", "tests/winui/"))
+        and (ROOT / path).is_file()
+    ]
+    if python_files:
+        rc = execute(
+            "changed-python-static",
+            [
+                sys.executable,
+                "-X",
+                "utf8",
+                str(ROOT / "tools/winui/check_python_static.py"),
+                *map(str, python_files),
+            ],
+            45,
+            env,
+            tag,
+        )
+        if rc:
+            return fail("HELPER_STATIC_FAILURE", rc)
+
+    if areas:
+        rc = run_contracts(
+            "canonical-structure-preflight",
+            [STRUCTURE_CONTRACT],
+            env,
+            tag,
+        )
+        if rc:
+            return fail("STRUCTURE_CONTRACT_FAILURE", rc)
+
+    selected = product_contracts(areas)
+    changed_contracts = [
+        path
+        for path in paths
+        if path.endswith("_contract.py") and (ROOT / path).is_file()
+    ]
+    selected.extend(
+        path
+        for path in changed_contracts
+        if path not in HARNESS_CONTRACTS
+        and path not in INFRA_CONTRACTS
+        and path != STRUCTURE_CONTRACT
+    )
+    rc = run_contracts("fast-product-contracts", selected, env, tag)
+    if rc:
+        return fail("PRODUCT_SOURCE_CONTRACT_FAILURE", rc)
+
+    if "harness" in families:
+        rc = run_contracts("fast-harness-contracts", HARNESS_CONTRACTS, env, tag)
+        if rc:
+            return fail("HARNESS_CONTRACT_FAILURE", rc)
+
+    if "infra" in families:
+        rc = run_contracts("fast-infra-contracts", INFRA_CONTRACTS, env, tag)
+        if rc:
+            return fail("INFRA_POLICY_CONTRACT_FAILURE", rc)
+
+    print("FAST_CHECKS_COMPLETE=PASS", flush=True)
+    return 0
+
+
+def gui_command(area, configuration, env):
+    gui_env = env.copy()
+    gui_env["FLY_MIGRATION_CONFIGURATION"] = configuration
+    for key in OWNED_FLAGS + FAULT_FLAGS + (
+        "FLY_V7_WINDOW_TABS_ONLY",
+        "FLY_M19_OWNED_FEATURES_ONLY",
+    ):
+        gui_env.pop(key, None)
+
+    if area == "bookmark":
+        return [sys.executable, "-u", str(TESTS / "test_bookmark_gui.py")], gui_env, 150
+    if area == "filter-preset":
+        return [sys.executable, "-u", str(TESTS / "test_filter_preset_gui.py")], gui_env, 150
+    if area == "accessibility":
+        return [
+            sys.executable,
+            "-u",
+            str(TESTS / "test_owned_accessibility_layout_gui.py"),
+            configuration,
+        ], gui_env, 160
+    if area == "large-folder":
+        return [
+            sys.executable,
+            "-u",
+            str(TESTS / "test_large_owned_folder_gui.py"),
+            "--items",
+            "1100",
+            "--configuration",
+            configuration,
+        ], gui_env, 180
+
+    flags = {
+        "core": ("FLY_M20_OWNED_SHELL",),
+        "shell": ("FLY_M20_OWNED_SHELL",),
+        "search": ("FLY_M19_OWNED_FEATURES", "FLY_M19_OWNED_FEATURES_ONLY"),
+        "file-operations": ("FLY_M21_OWNED_FEATURES", "FLY_M22_OWNED_FEATURES"),
+        "session": ("FLY_M23_OWNED_FEATURES",),
+        "window-tabs": ("FLY_V7_WINDOW_TABS", "FLY_V7_WINDOW_TABS_ONLY"),
+        "all": OWNED_FLAGS,
+    }[area]
+    for key in flags:
+        gui_env[key] = "YES"
+    return [sys.executable, "-u", str(TESTS / "test_shell_gui.py")], gui_env, 260
+
+
+def run_gui(area, configuration, env, tag):
+    dep_rc = execute(
+        "gui-python-dependencies",
+        [
+            sys.executable,
+            "-X",
+            "utf8",
+            str(ROOT / "tools/winui/check_python_deps.py"),
+            "--gui",
+        ],
+        30,
+        env,
+        tag,
+    )
+    if dep_rc:
+        return fail("HARNESS_DEPENDENCY_FAILURE", dep_rc)
+    cmd, gui_env, timeout = gui_command(area, configuration, env)
+    rc = execute(f"gui-{area}-{configuration}", cmd, timeout, gui_env, tag)
+    return fail("GUI_ACCEPTANCE_FAILURE", rc) if rc else 0
+
+
+def run_build(configuration, env, tag):
+    rc = execute(
+        "build-" + configuration,
+        ["cmd", "/c", str(APP / "build.cmd"), configuration],
+        240,
+        env,
+        tag,
+    )
+    return fail("PRODUCT_BUILD_FAILURE", rc) if rc else 0
 
 
 def main():
@@ -156,6 +375,7 @@ def main():
     parser.add_argument(
         "stage",
         choices=(
+            "fast",
             "source",
             "product-source",
             "harness",
@@ -165,155 +385,89 @@ def main():
             "full",
         ),
     )
+    parser.add_argument("--before")
+    parser.add_argument("--head")
+    parser.add_argument("--area", default="all")
     parser.add_argument(
         "--configuration",
         choices=("Debug", "Release"),
-        default="Debug",
+        default="Release",
     )
     parser.add_argument(
-        "--v7-window-tabs-only",
+        "--include-debug",
         action="store_true",
-        help="Run only the owned v7 functional/session window-tab acceptance.",
-    )
-    parser.add_argument(
-        "--isolate-feature-panels",
-        action="store_true",
-        help=(
-            "Close test-owned M1.9 panels before M2.0; "
-            "does not accept the open-panel case."
-        ),
+        help="FINAL-only opt-in for configuration-specific Debug coverage.",
     )
     args = parser.parse_args()
 
-    if args.stage not in {"source", "product-source", "harness", "infra"}:
+    if args.stage not in {"fast", "source", "product-source", "harness", "infra"}:
         assert os.name == "nt", "Build and owned GUI stages require Windows"
+    if args.stage == "fast" and (not args.before or not args.head):
+        parser.error("fast requires --before and --head")
+    if args.stage == "product-source" and args.area not in ("all", *PRODUCT_AREAS):
+        parser.error("product-source --area must name a product area or all")
+    if args.stage == "gui" and args.area not in GUI_AREAS:
+        parser.error("gui --area must name a supported targeted GUI area")
 
-    LOGS.mkdir(parents=True, exist_ok=True)
     tag = time.strftime("%Y%m%d-%H%M%S")
     env = os.environ.copy()
     env["PYTHONIOENCODING"] = "utf-8"
     env["PYTHONPATH"] = str(TESTS)
 
-    for key in OWNED_FLAGS + FAULT_FLAGS + ("FLY_V7_WINDOW_TABS_ONLY",):
-        env.pop(key, None)
+    if args.stage == "fast":
+        return run_fast(args.before, args.head, env, tag)
 
     if args.stage in {"source", "product-source", "harness", "infra"}:
         if args.stage in {"source", "product-source"}:
-            official = execute(
+            rc = run_contracts(
                 "canonical-structure-preflight",
-                [sys.executable, str(TESTS / "test_structure_contract.py")],
-                30,
+                [STRUCTURE_CONTRACT],
                 env,
                 tag,
             )
-            if official:
-                return fail("STRUCTURE_CONTRACT_FAILURE", official)
-
-        suites = []
-        if args.stage in {"source", "product-source"}:
-            suites.append((
-                "product-source-contracts",
-                PRODUCT_SOURCE_CONTRACTS,
-                "PRODUCT_SOURCE_CONTRACT_FAILURE",
-            ))
-        if args.stage in {"source", "harness"}:
-            suites.append((
-                "harness-contracts",
-                HARNESS_CONTRACTS,
-                "HARNESS_CONTRACT_FAILURE",
-            ))
-        if args.stage in {"source", "infra"}:
-            suites.append((
-                "infra-policy-contracts",
-                INFRA_POLICY_CONTRACTS,
-                "INFRA_POLICY_CONTRACT_FAILURE",
-            ))
-
-        for label, paths, category in suites:
-            rc = run_contracts(label, paths, env, tag)
             if rc:
-                return fail(category, rc)
+                return fail("STRUCTURE_CONTRACT_FAILURE", rc)
 
-        print(
-            "SOURCE_CHECKS_COMPLETE=PASS "
-            "product/harness/infra suites are independently runnable",
-            flush=True,
-        )
-        return 0
-
-    stages = (
-        [
-            "build-Debug",
-            "build-Release",
-            "gui-Debug",
-            "gui-Release",
-        ]
-        if args.stage == "full"
-        else [
-            args.stage
-            + ("-" + args.configuration if args.stage != "source" else "")
-        ]
-    )
-
-    if any(stage.startswith("gui-") for stage in stages):
-        dep_rc = execute(
-            "gui-python-dependencies",
-            [
-                sys.executable,
-                "-X",
-                "utf8",
-                str(ROOT / "tools" / "winui" / "check_python_deps.py"),
-                "--gui",
-            ],
-            30,
-            env,
-            tag,
-        )
-        if dep_rc:
-            return fail("HARNESS_DEPENDENCY_FAILURE", dep_rc)
-
-    for stage in stages:
-        if stage.startswith("build-"):
-            configuration = stage.split("-")[1]
-            cmd = ["cmd", "/c", str(APP / "build.cmd"), configuration]
-            timeout = 210
-            env_to_use = env
-        else:
-            configuration = stage.split("-")[1]
-            gui_env = env.copy()
-            gui_env["FLY_MIGRATION_CONFIGURATION"] = configuration
-            for key in OWNED_FLAGS:
-                gui_env[key] = "YES"
-            if args.v7_window_tabs_only:
-                gui_env["FLY_V7_WINDOW_TABS_ONLY"] = "YES"
-            if args.isolate_feature_panels:
-                gui_env["FLY_M20_OWNED_COLLAPSE_M19_PANELS"] = "YES"
-            cmd = [sys.executable, "-u", str(TESTS / "test_shell_gui.py")]
-            timeout = 230
-            env_to_use = gui_env
-
-        rc = execute(stage, cmd, timeout, env_to_use, tag)
-        if rc != 0:
-            return fail(
-                "PRODUCT_BUILD_FAILURE"
-                if stage.startswith("build-")
-                else "GUI_ACCEPTANCE_FAILURE",
-                rc,
-            )
-        if stage.startswith("gui-"):
-            bookmark_rc = execute(
-                stage + "-bookmarks",
-                [sys.executable, "-u", str(TESTS / "test_bookmark_gui.py")],
-                120,
-                env_to_use,
+        if args.stage in {"source", "product-source"}:
+            areas = PRODUCT_AREAS if args.area == "all" else (args.area,)
+            rc = run_contracts(
+                "product-source-contracts",
+                product_contracts(areas),
+                env,
                 tag,
             )
-            if bookmark_rc != 0:
-                return fail("GUI_ACCEPTANCE_FAILURE", bookmark_rc)
+            if rc:
+                return fail("PRODUCT_SOURCE_CONTRACT_FAILURE", rc)
+        if args.stage in {"source", "harness"}:
+            rc = run_contracts("harness-contracts", HARNESS_CONTRACTS, env, tag)
+            if rc:
+                return fail("HARNESS_CONTRACT_FAILURE", rc)
+        if args.stage in {"source", "infra"}:
+            rc = run_contracts("infra-contracts", INFRA_CONTRACTS, env, tag)
+            if rc:
+                return fail("INFRA_POLICY_CONTRACT_FAILURE", rc)
+        print("SOURCE_CHECKS_COMPLETE=PASS", flush=True)
+        return 0
 
+    if args.stage == "build":
+        return run_build(args.configuration, env, tag)
+
+    if args.stage == "gui":
+        return run_gui(args.area, args.configuration, env, tag)
+
+    configurations = ["Release"]
+    if args.include_debug:
+        configurations.insert(0, "Debug")
+    for configuration in configurations:
+        rc = run_build(configuration, env, tag)
+        if rc:
+            return rc
+        rc = run_gui("all", configuration, env, tag)
+        if rc:
+            return rc
     print(
-        "SCOPED_CHECKS_COMPLETE=PASS; physical drag and global clipboard "
-        "NOT TESTED by this runner; actual owned Recycle Bin has separate test",
+        "FULL_CHECKS_COMPLETE=PASS; high-cost installer, High Contrast, "
+        "8k/20k large-folder and visual review remain explicit FINAL gates",
         flush=True,
     )
     return 0
