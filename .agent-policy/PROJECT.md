@@ -132,6 +132,14 @@ Windows-1252 fallbacks, with 1 MiB per file and 16 MiB per search. The depth-5,
 remain in force; content regex, indexed/provider/property search and unrestricted
 deep content scanning are not implemented.
 
+Physical same-app file drag is accepted through the existing private drag/drop
+path and hands transfer work to FileOperationController after source/destination
+revalidation. Explorer-compatible `Ctrl+Shift+N` is also accepted for
+create-folder and routes through the existing
+`fxfile::filecommand::Kind::CreateFolder` command path for the active pane/tab;
+historical F11 is intentionally not restored because it conflicts with current
+Windows/File Explorer behavior.
+
 ## Development loop and verification budget
 
 flyExplorer uses a deliberately narrow development loop. The goal is the
@@ -659,6 +667,10 @@ owned 5,000-item navigation/sort/progressive-paging evidence are unchanged.
   project-specific **Development loop and verification budget** above. Windows
   build Actions are never triggered merely by a push and never receive a
   diagnosis-free same-revision rerun.
+- Remote Windows Task preserves multi-line PowerShell source by writing
+  `REMOTE_COMMAND` verbatim to a per-run temporary `.ps1` and launching a
+  fresh `powershell.exe -File` process. The child process exit code determines
+  command success/failure; the temporary script is removed in `finally`.
 - GitHub-hosted runners require explicit user approval and are not part of the
   active flyExplorer CI path by default.
 - The privileged self-hosted runner must not execute untrusted fork/PR code
@@ -685,11 +697,15 @@ Not certified:
 - signed clean-machine machine-wide install/update/rollback;
 - public redistribution/source-delivery/rightsholder/legal clearance.
 
-Current unsigned packaging evidence is accepted on candidate
-`8283ece6c4348a751f487a64230e1bc149a47a2f`, merged through PR #27, including
+The latest unsigned package lifecycle evidence is from candidate
+`8283ece6c4348a751f487a64230e1bc149a47a2f`, merged through PR #27, and passed
 bounded `/TESTROOT` clean install, repair, update, rollback and uninstall.
-This does not clear production signing, clean-machine machine-wide deployment or
-public redistribution/legal/source-delivery gates.
+Current main is 44 commits ahead of that candidate and includes later product
+changes, including physical drag and `Ctrl+Shift+N`; therefore that package
+evidence must not be presented as exact current-main binary/source packaging
+freshness. Regenerate provenance/package acceptance before the next release
+claim. Production signing, clean-machine machine-wide deployment and public
+redistribution/legal/source-delivery gates remain open.
 
 ## Documentation
 
