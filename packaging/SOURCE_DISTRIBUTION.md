@@ -27,3 +27,9 @@ A release record should include:
 
 Including GPL-3.0.txt alone does not establish source availability compliance.
 Rightsholder/license compatibility remains a separate open gate.
+
+The repository now has a technical source-identity path in
+`packaging/RELEASE_SOURCE.md`: a deterministic exact-revision source ZIP and
+per-file manifest are bound to runtime provenance and the concrete setup
+SHA-256 by `packaging/release_identity.py`. Private validation of that path
+does not by itself satisfy public recipient source availability.
