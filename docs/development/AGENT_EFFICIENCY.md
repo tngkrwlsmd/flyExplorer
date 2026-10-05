@@ -133,19 +133,23 @@ remote Windows tasks and local long-running commands, not only subprocesses.
 Do not poll every few seconds, alternate status/log-tail probes, or repeatedly
 read the same run while it is normally progressing.
 
-For builds/remote tasks, the policy is to avoid short-interval routine polling
-without abandoning result-dependent work. If the current user request cannot be
-completed until the run succeeds or fails, that run remains a blocking
-dependency of the current task and must be followed through completion. The
-current routine and active-monitor cadences are configuration, not policy: read
-`FLYEXPLORER_ROUTINE_OBSERVATION_SECONDS` and
-`FLYEXPLORER_ACTIVE_MONITOR_SECONDS` from the Remote Windows Task workflow.
-Use the configured routine cadence for dependent completion tracking unless the
-user explicitly requests active monitoring, in which case use the configured
-active cadence. Explicit active monitoring changes only the cadence; it is not a
-prerequisite for following a run that the task depends on. Completion observed
-independently may be consumed immediately. Do not create a
-scheduled/automation task merely to bridge either interval.
+For result-dependent GitHub Actions / Remote Windows Tasks, use a fixed bounded
+wait policy: record the Actions start time, poll every **30 seconds**, and keep
+the same task open while the run's Actions-reported execution time is under
+**three minutes**. An early queued/running read is not a reason to end the
+response during that window. Consume completion immediately and continue the
+dependent work. If the run is still active when its execution time reaches
+three minutes, leave the exact run ID, candidate SHA and next action as the
+resume checkpoint instead of waiting longer in that response.
+
+Do not poll faster than every 30 seconds. If completion becomes independently
+known between observations, inspect it immediately. The user does not need to
+ask separately for active monitoring when the current request already depends
+on the result. Do not create a scheduled/automation task merely to bridge the
+wait. The workflow settings `FLYEXPLORER_ROUTINE_OBSERVATION_SECONDS`,
+`FLYEXPLORER_ACTIVE_MONITOR_SECONDS`, and
+`FLYEXPLORER_RESULT_DEPENDENT_MAX_WAIT_SECONDS` mirror the fixed policy at
+30 seconds, 30 seconds and 180 seconds.
 
 For Actions specifically:
 - **before writing `requests/remote-shell/request.json` or pushing
@@ -160,22 +164,22 @@ For Actions specifically:
   policy;
 - after triggering or observing a long run, record run ID, target SHA, scope and
   start/current state;
-- by default, do not issue short-interval status reads. Use the workflow-
-  configured routine observation interval unless completion is independently
-  known;
-- if the current user request depends on the run result, keep the task open and
-  continue bounded observations at the configured cadence until the run
-  completes; consume the result immediately when observed and continue the
-  dependent action in the same task;
-- when the user explicitly asks for active monitoring of the current run, use
-  the workflow-configured active-monitor interval. Do not poll more frequently,
-  stop as soon as completion is observed, and do not replace this with an
-  unsolicited scheduled/automation task;
-- explicit active monitoring changes only the cadence. It is not required to
-  follow a run whose result is necessary to satisfy the current request;
-- only when the run result is not required for the current request may an
-  allowed read that still says queued/running end with the exact resume
-  checkpoint;
+- if the current user request depends on the run result, use the Actions run
+  start/execution time as the clock: poll every 30 seconds while elapsed
+  execution is under three minutes, consume completion immediately, and
+  continue the dependent action in the same task;
+- do not end the response merely because an early read still says
+  queued/running before the three-minute ceiling;
+- once a still-active dependent run reaches three minutes of Actions execution,
+  stop waiting in that response and leave the exact run ID, candidate SHA and
+  next action as the resume checkpoint;
+- never poll faster than every 30 seconds. Independently known completion may
+  be inspected immediately;
+- explicit active monitoring is not required for a run the current request
+  already depends on, and it does not remove the three-minute same-response
+  ceiling unless the user explicitly asks for a longer watch;
+- when the run result is not required for the current request, it may be left
+  as a resume checkpoint without waiting through the three-minute window;
 - on resume, query current main/ref, the recorded run, artifacts and cleanup
   state first, then continue from completed evidence;
 - never restart a completed build/test merely because the previous ChatGPT turn
