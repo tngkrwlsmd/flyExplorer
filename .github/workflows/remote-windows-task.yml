@@ -647,7 +647,15 @@ jobs:
             $classifier = Join-Path $env:RUNNER_TEMP ("classify-remote-failure-" + $env:GITHUB_RUN_ID + ".py")
             $tempText = Join-Path $env:RUNNER_TEMP ("remote-failure-" + $env:GITHUB_RUN_ID + ".txt")
             try {
-              $spec = "$($env:REMOTE_OBSERVED_MAIN_SHA):tools/winui/classify_remote_failure.py"
+              $revision = $env:REMOTE_OBSERVED_MAIN_SHA
+              if ([string]::IsNullOrWhiteSpace($revision)) {
+                & git -C $env:FLYEXPLORER_CANONICAL_CHECKOUT fetch origin main --no-tags --prune
+                if ($LASTEXITCODE -ne 0) {
+                  return "COMMAND_FAILURE_UNCLASSIFIED"
+                }
+                $revision = (& git -C $env:FLYEXPLORER_CANONICAL_CHECKOUT rev-parse refs/remotes/origin/main).Trim()
+              }
+              $spec = "${revision}:tools/winui/classify_remote_failure.py"
               & git -C $env:FLYEXPLORER_CANONICAL_CHECKOUT show $spec |
                 Set-Content -LiteralPath $classifier -Encoding UTF8
               if ($LASTEXITCODE -ne 0 -or -not (Test-Path -LiteralPath $classifier -PathType Leaf)) {
