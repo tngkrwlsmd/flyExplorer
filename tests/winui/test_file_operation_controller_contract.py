@@ -111,10 +111,15 @@ class FileOperationContracts(unittest.TestCase):
             "ResetFileRowPointerDrag()",
         ):
             self.assertIn(token, drag)
-        self.assertIn("row.PointerPressed(", main)
-        self.assertIn("row.PointerMoved(", main)
-        self.assertIn("row.PointerReleased(", main)
-        self.assertIn("row.PointerCanceled(", main)
+        for token in (
+            "PointerPressedEvent()",
+            "PointerMovedEvent()",
+            "PointerReleasedEvent()",
+            "PointerCanceledEvent()",
+            "box_value(PointerEventHandler",
+            "}),true);",
+        ):
+            self.assertIn(token, main)
         self.assertIn("row.DragStarting(", main)
 
     def test_clipboard_paste_and_drag_share_the_transfer_core(self):
