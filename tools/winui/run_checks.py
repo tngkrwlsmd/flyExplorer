@@ -33,6 +33,9 @@ INFRA_POLICY_CONTRACTS = [
     str(path.relative_to(ROOT))
     for path in ALL_CONTRACTS
     if path.name in INFRA_POLICY_NAMES
+] + [
+    str((TESTS / "test_remote_failure_classifier.py").relative_to(ROOT)),
+    str((TESTS / "test_remote_evidence_policy.py").relative_to(ROOT)),
 ]
 HARNESS_CONTRACTS = [
     str(path.relative_to(ROOT))

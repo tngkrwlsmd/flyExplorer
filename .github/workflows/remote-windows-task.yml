@@ -23,6 +23,7 @@ on:
         type: string
 
 permissions:
+  actions: read
   contents: read
 
 env:
@@ -32,6 +33,7 @@ env:
   FLYEXPLORER_RESULT_DEPENDENT_MAX_WAIT_SECONDS: '180'
   FLYEXPLORER_REMOTE_RUNNER_CAPACITY: '1'
   FLYEXPLORER_DEFAULT_VALIDATION_RUN_BUDGET: '2'
+  FLYEXPLORER_REMOTE_EVIDENCE_DIR: 'C:\\dev\\flyExplorer\\logs\\remote-evidence'
 
 concurrency:
   group: flyexplorer-remote-windows-task
@@ -77,6 +79,14 @@ jobs:
           $workdir = [string]$request.working_directory
           $retryReason = ([string]$request.retry_reason).Trim()
           $harnessRevision = ([string]$request.harness_revision).Trim()
+          $retryScope = ([string]$request.retry_scope).Trim().ToLowerInvariant()
+          if ([string]::IsNullOrWhiteSpace($retryScope)) {
+            $retryScope = if ($requestMode -eq "diagnostic") { "diagnostic" } else { "full" }
+          }
+          $reuseEvidence = $request.reuse_evidence
+          $reuseRunId = ""
+          $reuseCandidateSha = ""
+          $reusedTargets = @()
 
           if ([string]::IsNullOrWhiteSpace($requestMode)) {
             $legacyKinds = @(
@@ -114,6 +124,14 @@ jobs:
           }
           if ($requestMode -notin @("diagnostic", "validation")) {
             throw "Remote shell request_mode must be diagnostic or validation."
+          }
+          $allowedRetryScopes = if ($requestMode -eq "diagnostic") {
+            @("diagnostic")
+          } else {
+            @("full", "focused-reuse")
+          }
+          if ($retryScope -notin $allowedRetryScopes) {
+            throw "Remote shell retry_scope is invalid for request_mode."
           }
           if ($configuration -notin @("none", "Debug", "Release")) {
             throw "Remote shell configuration must be none, Debug or Release."
@@ -157,6 +175,9 @@ jobs:
             if ($validationPlan.Count -ne 0) {
               throw "Diagnostic requests must leave validation_plan empty."
             }
+            if ($null -ne $reuseEvidence) {
+              throw "Diagnostic requests must not declare reuse_evidence."
+            }
           } else {
             if ($configuration -notin @("Debug", "Release")) {
               throw "Validation requests must declare Debug or Release configuration."
@@ -164,6 +185,59 @@ jobs:
             if ($validationPlan.Count -eq 0) {
               throw "Validation requests must declare validation_plan."
             }
+          }
+
+          if ($retryScope -eq "focused-reuse") {
+            if ([string]::IsNullOrWhiteSpace($retryReason)) {
+              throw "Focused evidence reuse requires retry_reason."
+            }
+            if ($null -eq $reuseEvidence) {
+              throw "Focused evidence reuse requires reuse_evidence."
+            }
+            $reuseRunId = ([string]$reuseEvidence.run_id).Trim()
+            $reuseCandidateSha = ([string]$reuseEvidence.candidate_sha).Trim().ToLowerInvariant()
+            $reusedTargets = @(
+              $reuseEvidence.validated_targets |
+                ForEach-Object { ([string]$_).Trim().ToLowerInvariant() }
+            )
+            if ($reuseRunId -notmatch '^[1-9][0-9]*$') {
+              throw "reuse_evidence.run_id must be a positive integer."
+            }
+            if ($reuseCandidateSha -notmatch '^[0-9a-f]{40}$') {
+              throw "reuse_evidence.candidate_sha must be a 40-character Git SHA."
+            }
+            if ($reusedTargets.Count -eq 0) {
+              throw "reuse_evidence.validated_targets must not be empty."
+            }
+            $invalidReuseTargets = @(
+              $reusedTargets |
+                Where-Object { $_ -notmatch '^[A-Za-z0-9][A-Za-z0-9._/-]{0,95}$' }
+            )
+            if ($invalidReuseTargets.Count -ne 0) {
+              throw "reuse_evidence.validated_targets contains invalid logical targets."
+            }
+            $dedupReuseTargets = @($reusedTargets | Sort-Object -Unique)
+            if ($dedupReuseTargets.Count -ne $reusedTargets.Count) {
+              throw "reuse_evidence.validated_targets must not contain duplicates."
+            }
+            $overlap = @($uniquePlan | Where-Object { $_ -in $reusedTargets })
+            if ($overlap.Count -ne 0) {
+              throw "Focused evidence reuse must not rerun reused targets: $($overlap -join ',')."
+            }
+            $normalizedSafetyCommand = ($command -replace '\s+', ' ').ToLowerInvariant()
+            foreach ($forbidden in @(
+              'build.bat',
+              'package.bat',
+              'clean.bat build',
+              'provenance.py --write',
+              'run_checks.py full'
+            )) {
+              if ($normalizedSafetyCommand.Contains($forbidden)) {
+                throw "Focused evidence reuse command must not rebuild/repackage reused evidence: $forbidden"
+              }
+            }
+          } elseif ($null -ne $reuseEvidence) {
+            throw "reuse_evidence is only valid with focused-reuse."
           }
 
           if ([string]::IsNullOrWhiteSpace($workdir)) {
@@ -219,6 +293,10 @@ jobs:
             "REMOTE_VALIDATION_FINGERPRINT=$validationFingerprint"
             "REMOTE_HARNESS_REVISION=$harnessRevision"
             "REMOTE_RETRY_REASON=$retryReason"
+            "REMOTE_RETRY_SCOPE=$retryScope"
+            "REMOTE_REUSE_RUN_ID=$reuseRunId"
+            "REMOTE_REUSE_CANDIDATE_SHA=$reuseCandidateSha"
+            "REMOTE_REUSED_TARGETS=$($reusedTargets -join ',')"
             "REMOTE_COMMAND<<$delimiter"
             $command
             $delimiter
@@ -227,7 +305,7 @@ jobs:
             $delimiter
           ) | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
 
-          Write-Host "REQUEST_VALIDATION=PASS mode=$requestMode plan=$($uniquePlan -join ',')"
+          Write-Host "REQUEST_VALIDATION=PASS mode=$requestMode scope=$retryScope plan=$($uniquePlan -join ',')"
           Write-Host "VALIDATION_FINGERPRINT=$validationFingerprint"
 
       - name: Resolve dispatched shell inputs
@@ -245,6 +323,10 @@ jobs:
             "REMOTE_REQUEST_MODE=diagnostic"
             "REMOTE_VALIDATION_PLAN="
             "REMOTE_NEEDS_GUI_HEALTH=false"
+            "REMOTE_RETRY_SCOPE=diagnostic"
+            "REMOTE_REUSE_RUN_ID="
+            "REMOTE_REUSE_CANDIDATE_SHA="
+            "REMOTE_REUSED_TARGETS="
             "REMOTE_COMMAND<<$delimiter"
             $env:INPUT_COMMAND
             $delimiter
@@ -253,6 +335,83 @@ jobs:
             $delimiter
           ) | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
           Write-Host "REQUEST_VALIDATION=PASS mode=diagnostic dispatch=true"
+
+      - name: Enforce prior evidence retry policy
+        id: evidence_policy
+        if: inputs.request_ref != ''
+        shell: powershell -NoLogo -NoProfile -ExecutionPolicy Bypass -Command ". '{0}'"
+        env:
+          GH_EVIDENCE_TOKEN: ${{ github.token }}
+        run: |
+          $ErrorActionPreference = "Stop"
+          $repo = $env:FLYEXPLORER_CANONICAL_CHECKOUT
+          Set-Location -LiteralPath $repo
+          $temp = Join-Path $env:RUNNER_TEMP ("fly-evidence-policy-" + $env:GITHUB_RUN_ID)
+          if (Test-Path -LiteralPath $temp) {
+            Remove-Item -LiteralPath $temp -Recurse -Force
+          }
+          try {
+            & git worktree add --detach $temp $env:REMOTE_OBSERVED_MAIN_SHA
+            if ($LASTEXITCODE -ne 0) {
+              throw "Evidence policy could not create current-main worktree."
+            }
+            $script = Join-Path $temp "tools\winui\remote_evidence_policy.py"
+            $args = @(
+              "-X", "utf8", $script,
+              "--repository", $env:GITHUB_REPOSITORY,
+              "--logical-unit", $env:REMOTE_LOGICAL_UNIT,
+              "--current-run-id", $env:GITHUB_RUN_ID,
+              "--request-mode", $env:REMOTE_REQUEST_MODE,
+              "--retry-scope", $env:REMOTE_RETRY_SCOPE
+            )
+            if ($env:REMOTE_RETRY_SCOPE -eq "focused-reuse") {
+              $args += @(
+                "--reuse-run-id", $env:REMOTE_REUSE_RUN_ID,
+                "--reuse-candidate-sha", $env:REMOTE_REUSE_CANDIDATE_SHA
+              )
+              foreach ($target in @(
+                $env:REMOTE_REUSED_TARGETS -split ',' |
+                  Where-Object { -not [string]::IsNullOrWhiteSpace($_) }
+              )) {
+                $args += @("--reused-target", $target)
+              }
+            }
+            & python @args
+            if ($LASTEXITCODE -ne 0) {
+              throw "Prior evidence retry policy rejected this request."
+            }
+
+            if ($env:REMOTE_RETRY_SCOPE -eq "focused-reuse") {
+              & git cat-file -e "$($env:REMOTE_REUSE_CANDIDATE_SHA)^{commit}"
+              if ($LASTEXITCODE -ne 0) {
+                throw "Focused reuse could not resolve prior evidence candidate."
+              }
+              $changedSinceEvidence = @(
+                & git diff --name-only "$($env:REMOTE_REUSE_CANDIDATE_SHA)..$($env:REMOTE_CANDIDATE_SHA)"
+              )
+              $unsafe = @(
+                $changedSinceEvidence |
+                  Where-Object {
+                    $_ -ne 'AGENTS.md' -and
+                    $_ -notlike '.agent-policy/*' -and
+                    $_ -notlike '.github/workflows/*' -and
+                    $_ -notlike 'docs/*' -and
+                    $_ -notlike 'tests/winui/*' -and
+                    $_ -notlike 'tools/winui/*'
+                  }
+              )
+              if ($unsafe.Count -ne 0) {
+                throw "Focused evidence reuse invalidated by product/package changes: $($unsafe -join ', ')"
+              }
+              Write-Host "FOCUSED_REUSE_DIFF=PASS changed=$($changedSinceEvidence.Count)"
+            }
+          } finally {
+            Set-Location -LiteralPath $repo
+            if (Test-Path -LiteralPath $temp) {
+              & git worktree remove --force $temp
+            }
+            & git worktree prune
+          }
 
       - name: Static candidate preflight
         id: preflight
@@ -322,6 +481,10 @@ jobs:
                     '.github/workflows/windows-build.yml',
                     'tools/winui/validate_remote_request.py',
                     'tools/winui/run_checks.py',
+                    'tools/winui/classify_remote_failure.py',
+                    'tools/winui/remote_evidence_policy.py',
+                    'tests/winui/test_remote_failure_classifier.py',
+                    'tests/winui/test_remote_evidence_policy.py',
                     'tests/winui/test_remote_request_preflight_contract.py',
                     'tests/winui/test_remote_windows_task_contract.py'
                   )
@@ -329,6 +492,8 @@ jobs:
             )
             if ($infraChanged.Count -gt 0) {
               foreach ($name in @(
+                'test_remote_failure_classifier.py',
+                'test_remote_evidence_policy.py',
                 'test_remote_request_preflight_contract.py',
                 'test_remote_windows_task_contract.py'
               )) {
@@ -438,6 +603,8 @@ jobs:
             Write-Host "VALIDATION_PLAN: $env:REMOTE_VALIDATION_PLAN"
             Write-Host "VALIDATION_FINGERPRINT: $env:REMOTE_VALIDATION_FINGERPRINT"
             Write-Host "HARNESS_REVISION: $env:REMOTE_HARNESS_REVISION"
+            Write-Host "RETRY_SCOPE: $env:REMOTE_RETRY_SCOPE"
+            Write-Host "REUSED_TARGETS: $env:REMOTE_REUSED_TARGETS"
           }
           Write-Host "===================================="
 
@@ -493,6 +660,7 @@ jobs:
           } else {
             "${{ steps.request.outcome }}"
           }
+          $evidencePolicyOutcome = "${{ steps.evidence_policy.outcome }}"
           $preflightOutcome = "${{ steps.preflight.outcome }}"
           $healthOutcome = "${{ steps.health.outcome }}"
           $commandOutcome = "${{ steps.command.outcome }}"
@@ -515,40 +683,33 @@ jobs:
           }
 
           function Infer-CommandFailure([string]$text) {
-            if ([string]::IsNullOrWhiteSpace($text)) {
-              return "COMMAND_FAILURE_UNCLASSIFIED"
-            }
-
-            $explicit = [regex]::Matches(
-              $text,
-              'FAILURE_CATEGORY=([A-Z0-9_]+)'
-            )
-            if ($explicit.Count -gt 0) {
-              return $explicit[$explicit.Count - 1].Groups[1].Value
-            }
-
-            if ($text -match 'error C\d+|error LNK\d+|error MSB\d+|fatal error C\d+') {
-              return "PRODUCT_BUILD_FAILURE"
-            }
-            if (
-              $text -match 'NameError:' -or
-              $text -match 'TypeError:.*unexpected keyword argument' -or
-              $text -match "UIAWrapper.*has no attribute 'child_window'" -or
-              $text -match 'IUIA\.build_condition\(\).*unexpected keyword argument'
-            ) {
-              return "HARNESS_PROGRAMMING_FAILURE"
-            }
-            if ($text -match 'NoPatternInterfaceError') {
-              return "AUTOMATION_API_FAILURE"
-            }
-            if ($text -match 'ElementAmbiguousError|ElementNotFoundError') {
-              return "AUTOMATION_DISCOVERY_FAILURE"
-            }
-            if ($text -match 'TimeoutError') {
-              return "AUTOMATION_TIMEOUT_FAILURE"
-            }
-            if ($text -match 'AssertionError:|(?m)^FAIL:|(?m)^FAILED') {
-              return "TEST_ASSERTION_FAILURE"
+            $classifier = Join-Path $env:RUNNER_TEMP ("classify-remote-failure-" + $env:GITHUB_RUN_ID + ".py")
+            $tempText = Join-Path $env:RUNNER_TEMP ("remote-failure-" + $env:GITHUB_RUN_ID + ".txt")
+            try {
+              $revision = $env:REMOTE_OBSERVED_MAIN_SHA
+              if ([string]::IsNullOrWhiteSpace($revision)) {
+                & git -C $env:FLYEXPLORER_CANONICAL_CHECKOUT fetch origin main --no-tags --prune
+                if ($LASTEXITCODE -ne 0) {
+                  return "COMMAND_FAILURE_UNCLASSIFIED"
+                }
+                $revision = (& git -C $env:FLYEXPLORER_CANONICAL_CHECKOUT rev-parse refs/remotes/origin/main).Trim()
+              }
+              $spec = "${revision}:tools/winui/classify_remote_failure.py"
+              & git -C $env:FLYEXPLORER_CANONICAL_CHECKOUT show $spec |
+                Set-Content -LiteralPath $classifier -Encoding UTF8
+              if ($LASTEXITCODE -ne 0 -or -not (Test-Path -LiteralPath $classifier -PathType Leaf)) {
+                return "COMMAND_FAILURE_UNCLASSIFIED"
+              }
+              $text | Set-Content -LiteralPath $tempText -Encoding UTF8
+              $category = (& python -X utf8 $classifier $tempText | Select-Object -Last 1).Trim()
+              if ($LASTEXITCODE -eq 0 -and $category -match '^[A-Z0-9_]+$') {
+                return $category
+              }
+            } catch {
+              Write-Host "RESULT_CLASSIFICATION_WARN=$($_.Exception.Message)"
+            } finally {
+              Remove-Item -LiteralPath $classifier -Force -ErrorAction SilentlyContinue
+              Remove-Item -LiteralPath $tempText -Force -ErrorAction SilentlyContinue
             }
             return "COMMAND_FAILURE_UNCLASSIFIED"
           }
@@ -556,6 +717,8 @@ jobs:
           $failureCategory = $null
           if ($requestOutcome -eq "failure") {
             $failureCategory = "REQUEST_SCHEMA_FAILURE"
+          } elseif ($evidencePolicyOutcome -eq "failure") {
+            $failureCategory = "EVIDENCE_POLICY_FAILURE"
           } elseif ($preflightOutcome -eq "failure") {
             $failureCategory = "HELPER_STATIC_FAILURE"
           } elseif ($healthOutcome -eq "failure") {
@@ -595,8 +758,14 @@ jobs:
             candidate_sha = $env:REMOTE_CANDIDATE_SHA
             logical_unit = $env:REMOTE_LOGICAL_UNIT
             validation_plan = $validationPlan
+            retry_scope = $env:REMOTE_RETRY_SCOPE
+            reused_targets = @(
+              $env:REMOTE_REUSED_TARGETS -split ',' |
+                Where-Object { -not [string]::IsNullOrWhiteSpace($_) }
+            )
             stages = [ordered]@{
               REQUEST_VALIDATION = Convert-Outcome $requestOutcome
+              EVIDENCE_POLICY = Convert-Outcome $evidencePolicyOutcome
               STATIC_PREFLIGHT = Convert-Outcome $preflightOutcome
               RUNNER_HEALTH = Convert-Outcome $healthOutcome
               COMMAND = Convert-Outcome $commandOutcome

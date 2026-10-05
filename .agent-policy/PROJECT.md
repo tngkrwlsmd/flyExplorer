@@ -166,6 +166,16 @@ acceptance. A same-revision rerun is allowed at most once only for an explicitly
 classified infrastructure/transient failure; repeated or unclassified reruns
 are not valid evidence.
 
+Validation retries are evidence-aware. The workflow reads the most recent
+same-logical-unit Actions result/log before execution. If an older
+`COMMAND_FAILURE_UNCLASSIFIED` still cannot be classified by the current
+classifier, another validation is rejected and only focused diagnosis is
+allowed. Harness/automation/shutdown failures require
+`retry_scope: focused-reuse` with the prior run/candidate and reused target
+list. Canonical success markers and a harness/infra-only diff must validate the
+reuse, and the focused command must not rebuild or repackage the preserved
+product evidence.
+
 ### Default verification ladder
 
 Use only the rows required by the change:

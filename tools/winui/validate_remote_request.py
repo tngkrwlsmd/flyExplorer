@@ -1,8 +1,9 @@
 """Static validator for control/remote-shell request.json.
 
-New requests declare one mode and one validation plan. The command is no longer
-regex-inferred back into validation metadata. Legacy validation_kind requests
-remain readable during migration.
+Validation requests declare a plan plus an execution scope. A focused-reuse
+retry must name the earlier evidence it reuses and may not invoke known
+build/package entry points again. The command is not regex-inferred back into
+validation metadata; these checks are safety boundaries, not stage discovery.
 """
 from __future__ import annotations
 
@@ -16,10 +17,28 @@ SHA_RE = re.compile(r"^[0-9a-f]{40}$")
 LOGICAL_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._/-]{1,95}$")
 PLAN_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._/-]{0,95}$")
 REVISION_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:/-]{0,127}$")
+FOCUSED_REUSE_FORBIDDEN = (
+    "build.bat",
+    "package.bat",
+    "clean.bat build",
+    "provenance.py --write",
+    "run_checks.py full",
+)
 
 
 class RequestError(ValueError):
     pass
+
+
+def _normalize_targets(raw: object, field: str) -> list[str]:
+    if not isinstance(raw, list):
+        raise RequestError(f"{field} must be a JSON array")
+    values = [str(item).strip().lower() for item in raw]
+    if any(not item or not PLAN_RE.fullmatch(item) for item in values):
+        raise RequestError(f"{field} contains an invalid logical target")
+    if len(set(values)) != len(values):
+        raise RequestError(f"{field} must not contain duplicate targets")
+    return values
 
 
 def normalize_request(data: dict) -> dict:
@@ -35,34 +54,37 @@ def normalize_request(data: dict) -> dict:
             raise RequestError(
                 "new request_mode schema must not also declare validation_kind"
             )
-        raw_plan = data.get("validation_plan", [])
+        plan = _normalize_targets(data.get("validation_plan", []), "validation_plan")
     else:
         if not isinstance(legacy_kinds, list) or not legacy_kinds:
             raise RequestError(
                 "request_mode is required for new requests; legacy validation_kind "
                 "must be a non-empty array"
             )
-        normalized_legacy = [
-            str(item).strip().lower() for item in legacy_kinds
-        ]
+        normalized_legacy = [str(item).strip().lower() for item in legacy_kinds]
         if normalized_legacy == ["none"]:
             explicit_mode = "diagnostic"
-            raw_plan = []
+            plan = []
         else:
             explicit_mode = "validation"
-            raw_plan = normalized_legacy
+            plan = _normalize_targets(normalized_legacy, "validation_kind")
 
-    if not isinstance(raw_plan, list):
-        raise RequestError("validation_plan must be a JSON array")
-    plan = [str(item).strip().lower() for item in raw_plan]
-    if any(not item or not PLAN_RE.fullmatch(item) for item in plan):
-        raise RequestError("validation_plan contains an invalid logical target")
-    if len(set(plan)) != len(plan):
-        raise RequestError("validation_plan must not contain duplicate targets")
+    retry_scope = str(data.get("retry_scope", "")).strip().lower()
+    if not retry_scope:
+        retry_scope = "diagnostic" if explicit_mode == "diagnostic" else "full"
+    allowed_scopes = (
+        {"diagnostic"} if explicit_mode == "diagnostic"
+        else {"full", "focused-reuse"}
+    )
+    if retry_scope not in allowed_scopes:
+        raise RequestError(
+            f"retry_scope must be one of {', '.join(sorted(allowed_scopes))}"
+        )
 
     normalized = dict(data)
     normalized["request_mode"] = explicit_mode
     normalized["validation_plan"] = plan
+    normalized["retry_scope"] = retry_scope
     return normalized
 
 
@@ -77,6 +99,7 @@ def validate_request(data: dict) -> dict:
     command = str(normalized.get("command", ""))
     mode = normalized["request_mode"]
     plan = normalized["validation_plan"]
+    retry_scope = normalized["retry_scope"]
     retry_reason = str(normalized.get("retry_reason", "")).strip()
     harness_revision = str(
         normalized.get("harness_revision", candidate)
@@ -103,22 +126,63 @@ def validate_request(data: dict) -> dict:
 
     if mode == "diagnostic":
         if configuration != "none":
-            raise RequestError(
-                "diagnostic requests must use configuration none"
-            )
+            raise RequestError("diagnostic requests must use configuration none")
         if plan:
             raise RequestError(
                 "diagnostic requests must leave validation_plan empty"
             )
+        if normalized.get("reuse_evidence") is not None:
+            raise RequestError("diagnostic requests must not declare reuse_evidence")
     else:
         if configuration not in {"Debug", "Release"}:
             raise RequestError(
                 "validation requests must declare Debug or Release configuration"
             )
         if not plan:
+            raise RequestError("validation requests must declare validation_plan")
+
+    if retry_scope == "focused-reuse":
+        if not retry_reason:
+            raise RequestError("focused-reuse requires retry_reason")
+        reuse = normalized.get("reuse_evidence")
+        if not isinstance(reuse, dict):
+            raise RequestError("focused-reuse requires reuse_evidence")
+        run_id = reuse.get("run_id")
+        reuse_candidate = str(reuse.get("candidate_sha", "")).strip().lower()
+        reused_targets = _normalize_targets(
+            reuse.get("validated_targets", []),
+            "reuse_evidence.validated_targets",
+        )
+        if not isinstance(run_id, int) or isinstance(run_id, bool) or run_id <= 0:
+            raise RequestError("reuse_evidence.run_id must be a positive integer")
+        if not SHA_RE.fullmatch(reuse_candidate):
             raise RequestError(
-                "validation requests must declare validation_plan"
+                "reuse_evidence.candidate_sha must be a 40-character Git SHA"
             )
+        if not reused_targets:
+            raise RequestError(
+                "reuse_evidence.validated_targets must not be empty"
+            )
+        overlap = sorted(set(plan) & set(reused_targets))
+        if overlap:
+            raise RequestError(
+                "validation_plan must not rerun reused targets: "
+                + ", ".join(overlap)
+            )
+        lowered = re.sub(r"\s+", " ", command.lower())
+        forbidden = [token for token in FOCUSED_REUSE_FORBIDDEN if token in lowered]
+        if forbidden:
+            raise RequestError(
+                "focused-reuse command must not rebuild/repackage reused evidence: "
+                + ", ".join(forbidden)
+            )
+        normalized["reuse_evidence"] = {
+            "run_id": run_id,
+            "candidate_sha": reuse_candidate,
+            "validated_targets": reused_targets,
+        }
+    elif normalized.get("reuse_evidence") is not None:
+        raise RequestError("reuse_evidence is only valid with focused-reuse")
 
     return normalized
 
@@ -136,6 +200,7 @@ def main(argv: list[str] | None = None) -> int:
     print(
         "REMOTE_REQUEST_PREFLIGHT=PASS "
         f"mode={normalized['request_mode']} "
+        f"scope={normalized['retry_scope']} "
         f"plan={','.join(normalized['validation_plan']) or '-'}"
     )
     return 0

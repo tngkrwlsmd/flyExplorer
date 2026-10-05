@@ -33,11 +33,31 @@ def request(**overrides):
     return data
 
 
+def focused_request(**overrides):
+    previous = "2" * 40
+    data = request(
+        request_mode="validation",
+        configuration="Release",
+        validation_plan=["installed-gui-lifecycle"],
+        retry_scope="focused-reuse",
+        retry_reason="prior build and package passed; retry lifecycle harness only",
+        reuse_evidence={
+            "run_id": 12345,
+            "candidate_sha": previous,
+            "validated_targets":["release-build", "package", "provenance"],
+        },
+        command="python -X utf8 tests\winui\test_installed_lifecycle.py",
+    )
+    data.update(overrides)
+    return data
+
+
 class RemoteRequestPreflightContract(unittest.TestCase):
     def test_diagnostic_shape_passes_without_validation_metadata_duplication(self):
         normalized = validator.validate_request(request())
         self.assertEqual(normalized["request_mode"], "diagnostic")
         self.assertEqual(normalized["validation_plan"], [])
+        self.assertEqual(normalized["retry_scope"], "diagnostic")
 
     def test_validation_requires_configuration_and_plan(self):
         with self.assertRaisesRegex(
@@ -77,12 +97,13 @@ class RemoteRequestPreflightContract(unittest.TestCase):
         normalized = validator.validate_request(data)
         self.assertEqual(normalized["request_mode"], "validation")
         self.assertEqual(normalized["validation_plan"], ["source", "gui"])
+        self.assertEqual(normalized["retry_scope"], "full")
 
     def test_free_form_command_is_not_reparsed_as_a_second_stage_declaration(self):
         normalized = validator.validate_request(
             request(
                 command=(
-                    "python -X utf8 tests\\winui\\test_large_owned_folder_gui.py "
+                    "python -X utf8 tests\winui\test_large_owned_folder_gui.py "
                     "--items 2300 --configuration Release"
                 )
             )
@@ -96,7 +117,7 @@ class RemoteRequestPreflightContract(unittest.TestCase):
                 configuration="Release",
                 validation_plan=["source", "high-contrast-gui"],
                 command=(
-                    "python tools\\winui\\high_contrast_acceptance.py"
+                    "python tools\winui\high_contrast_acceptance.py"
                 ),
                 harness_revision="hc-harness-v2",
             )
@@ -105,6 +126,61 @@ class RemoteRequestPreflightContract(unittest.TestCase):
             normalized["validation_plan"],
             ["source", "high-contrast-gui"],
         )
+
+    def test_focused_reuse_requires_structured_prior_evidence(self):
+        normalized = validator.validate_request(focused_request())
+        self.assertEqual(normalized["retry_scope"], "focused-reuse")
+        self.assertEqual(
+            normalized["reuse_evidence"]["validated_targets"],
+            ["release-build", "package", "provenance"],
+        )
+
+        with self.assertRaisesRegex(
+            validator.RequestError, "requires reuse_evidence"
+        ):
+            validator.validate_request(
+                focused_request(reuse_evidence=None)
+            )
+
+    def test_focused_reuse_must_not_repeat_reused_targets(self):
+        with self.assertRaisesRegex(
+            validator.RequestError, "must not rerun reused targets"
+        ):
+            validator.validate_request(
+                focused_request(
+                    validation_plan=["package", "installed-gui-lifecycle"]
+                )
+            )
+
+    def test_focused_reuse_blocks_known_expensive_entry_points(self):
+        for command in (
+            r".\build.bat Release",
+            r".\package.bat Release",
+            r".\clean.bat build",
+            r"python packaging\provenance.py --write",
+            r"python tools\winui\run_checks.py full",
+        ):
+            with self.subTest(command=command):
+                with self.assertRaisesRegex(
+                    validator.RequestError, "must not rebuild/repackage"
+                ):
+                    validator.validate_request(
+                        focused_request(command=command)
+                    )
+
+    def test_diagnostic_cannot_claim_reused_validation_evidence(self):
+        with self.assertRaisesRegex(
+            validator.RequestError, "must not declare reuse_evidence"
+        ):
+            validator.validate_request(
+                request(
+                    reuse_evidence={
+                        "run_id": 1,
+                        "candidate_sha": "2" * 40,
+                        "validated_targets": ["package"],
+                    }
+                )
+            )
 
     def test_multiline_retry_reason_is_rejected(self):
         with self.assertRaisesRegex(
