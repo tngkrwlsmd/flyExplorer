@@ -8,6 +8,7 @@ from pathlib import Path
 import argparse
 import ctypes
 import hashlib
+import importlib.util
 import json
 import os
 import shutil
@@ -23,6 +24,15 @@ ROOT=Path(__file__).resolve().parents[2]
 SETUP=ROOT/"out"/"package"/"flyExplorer-Setup-x64.exe"
 LOGS=ROOT/"logs"/"m27"
 REG_PATH=r"Software\Microsoft\Windows\CurrentVersion\Uninstall\flyExplorer-InstallerTest"
+
+SHUTDOWN_HELPER=ROOT/"tools"/"winui"/"diagnose_installed_shutdown.py"
+_shutdown_spec=importlib.util.spec_from_file_location(
+    "diagnose_installed_shutdown",
+    SHUTDOWN_HELPER,
+)
+assert _shutdown_spec is not None and _shutdown_spec.loader is not None
+shutdown_helper=importlib.util.module_from_spec(_shutdown_spec)
+_shutdown_spec.loader.exec_module(shutdown_helper)
 
 
 def sha256(path):
@@ -121,70 +131,6 @@ def assert_runtime_manifest_covered(root,provenance):
     assert runtime<=normalized,(runtime-normalized)
 
 
-def shutdown_diagnostic(root,proc,label):
-    windows=[]
-    try:
-        windows=[
-            {
-                "handle":int(item.handle),
-                "title":item.window_text(),
-            }
-            for item in Desktop(backend="uia").windows(process=proc.pid)
-        ]
-    except (psutil.Error,OSError,RuntimeError):
-        windows=[]
-
-    processes=[]
-    try:
-        owner=psutil.Process(proc.pid)
-        observed=[owner,*owner.children(recursive=True)]
-    except (psutil.Error,OSError,RuntimeError):
-        observed=[]
-    for item in observed:
-        try:
-            processes.append({
-                "pid":item.pid,
-                "name":item.name(),
-                "exe":item.exe(),
-                "status":item.status(),
-                "threads":len(item.threads()),
-            })
-        except (psutil.Error,OSError,RuntimeError):
-            processes.append({"pid":item.pid,"unavailable":True})
-
-    payload={
-        "failure_category":(
-            "INSTALLED_APP_WINDOW_CLOSE_TIMEOUT"
-            if windows else "INSTALLED_APP_PROCESS_EXIT_TIMEOUT"
-        ),
-        "label":label,
-        "main_pid":proc.pid,
-        "main_poll":proc.poll(),
-        "windows":windows,
-        "processes":processes,
-    }
-    evidence=Path(os.environ.get(
-        "FLYEXPLORER_REMOTE_EVIDENCE_DIR",
-        str(LOGS),
-    ))
-    evidence.mkdir(parents=True,exist_ok=True)
-    path=evidence/"installed-shutdown-result.json"
-    path.write_text(
-        json.dumps(payload,ensure_ascii=False,indent=2)+"\n",
-        encoding="utf-8",
-    )
-    print(
-        "FAILURE_CATEGORY="+payload["failure_category"],
-        flush=True,
-    )
-    print(
-        "INSTALLED_APP_SHUTDOWN_DIAGNOSTIC="+
-        json.dumps(payload,ensure_ascii=False,separators=(",",":")),
-        flush=True,
-    )
-    return payload
-
-
 def launch_installed(root,profile,label):
     source=profile/"source";source.mkdir(parents=True,exist_ok=True)
     (source/"installed-navigation.txt").write_text("owned",encoding="utf-8")
@@ -218,21 +164,25 @@ def launch_installed(root,profile,label):
             if window is None:
                 proc.terminate();proc.wait(timeout=5)
                 raise AssertionError("owned installed app HWND unavailable at shutdown")
-            posted=ctypes.windll.user32.PostMessageW(window.handle,0x10,0,0)
-            if not posted:
-                proc.terminate();proc.wait(timeout=5)
-                raise AssertionError("owned installed app WM_CLOSE failed")
-            try:
-                proc.wait(timeout=16)
-            except subprocess.TimeoutExpired:
-                diagnostic=shutdown_diagnostic(root,proc,label)
+            diagnostic=shutdown_helper.post_close_and_observe(
+                proc,
+                window.handle,
+                label=label,
+                evidence_dir=Path(os.environ.get(
+                    "FLYEXPLORER_REMOTE_EVIDENCE_DIR",
+                    str(LOGS),
+                )),
+                timeout=16.0,
+                interval=0.1,
+            )
+            if diagnostic["failure_category"]:
                 proc.terminate()
                 try:
                     proc.wait(timeout=5)
                 except subprocess.TimeoutExpired:
                     proc.kill();proc.wait(timeout=5)
                 raise AssertionError(
-                    "owned installed app did not close within the accepted 16-second budget; "
+                    "owned installed app shutdown failed; "
                     +diagnostic["failure_category"]
                 )
         assert proc.returncode==0,(
