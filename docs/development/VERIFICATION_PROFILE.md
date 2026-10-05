@@ -113,6 +113,15 @@ FAST plus the minimum build/native/targeted GUI smoke required by the changed
 product behavior. Do not repeat a deterministic FAST assertion here merely
 because the profile is broader.
 
+Do not add a separate native compile preflight. On the self-hosted Windows
+runner, selected/project compile experiments either failed to prove that the
+changed translation unit reached the compiler or cost too close to the normal
+build. The existing Release build is the trusted compile boundary: the measured
+fresh build was about 150 seconds, a one-translation-unit incremental build was
+about 46 seconds, and an injected `#error` was detected by the incremental
+build in about 7 seconds. Use FAST -> Release build rather than adding a second
+compile control path.
+
 ### FINAL ACCEPTANCE
 
 STANDARD plus only the environment/global-state/high-cost evidence required for
