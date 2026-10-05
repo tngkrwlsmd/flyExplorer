@@ -1,15 +1,13 @@
 {
-  "request_id": "high-contrast-final-integrated-source-002",
+  "request_id": "high-contrast-readonly-state-002",
   "expected_main_sha": "92c16faf6c56c89cf4bff5230482db3ac312a82f",
-  "candidate_sha": "11fb1d455d79cf2918a57391455077210e924e5d",
+  "candidate_sha": "92c16faf6c56c89cf4bff5230482db3ac312a82f",
   "logical_unit": "high-contrast-accessibility",
-  "configuration": "Release",
+  "configuration": "none",
   "validation_kind": [
-    "source"
+    "none"
   ],
-  "invalidated_evidence": {
-    "source": "The High Contrast candidate absorbed the fixed 30-second/three-minute Actions observation policy and its contract changes after the earlier product build/normal-theme GUI smoke."
-  },
+  "invalidated_evidence": {},
   "working_directory": "",
-  "command": "$ErrorActionPreference = \"Stop\"\ngit fetch origin main work/high-contrast-acceptance --no-tags --prune\nif ($LASTEXITCODE -ne 0) { throw \"fetch failed\" }\nif ((git rev-parse origin/main).Trim() -ne \"92c16faf6c56c89cf4bff5230482db3ac312a82f\") { throw \"main moved\" }\nif ((git rev-parse origin/work/high-contrast-acceptance).Trim() -ne \"11fb1d455d79cf2918a57391455077210e924e5d\") { throw \"candidate moved\" }\nif ((git status --short).Count -ne 0) { throw \"dirty persistent checkout\" }\ngit checkout -B work/high-contrast-acceptance origin/work/high-contrast-acceptance\nif ($LASTEXITCODE -ne 0) { throw \"checkout candidate failed\" }\nif ((git rev-parse HEAD).Trim() -ne \"11fb1d455d79cf2918a57391455077210e924e5d\") { throw \"candidate mismatch\" }\npython -X utf8 -m py_compile tests\\winui\\test_high_contrast_contract.py tests\\winui\\test_high_contrast_gui.py tests\\winui\\test_remote_request_preflight_contract.py tests\\winui\\test_remote_windows_task_contract.py tools\\winui\\validate_remote_request.py\nif ($LASTEXITCODE -ne 0) { throw \"changed Python syntax failed\" }\ncmd /c test.bat source\nif ($LASTEXITCODE -ne 0) { throw \"source contracts failed\" }\ngit diff --check origin/main..HEAD\nif ($LASTEXITCODE -ne 0) { throw \"diff check failed\" }\nWrite-Host \"HIGH_CONTRAST_FINAL_INTEGRATED_SOURCE_PASS\""
+  "command": "$ErrorActionPreference = \"Stop\"\ngit fetch origin main --no-tags --prune\nif ((git rev-parse origin/main).Trim() -ne \"92c16faf6c56c89cf4bff5230482db3ac312a82f\") { throw \"main moved\" }\npython -X utf8 -c \"import ctypes; from ctypes import wintypes as w; u=ctypes.WinDLL('user32',use_last_error=True); H=type('H',(ctypes.Structure,),{'_fields_':[('cbSize',w.UINT),('dwFlags',w.DWORD),('lpszDefaultScheme',w.LPWSTR)]}); x=H(); x.cbSize=ctypes.sizeof(x); ok=u.SystemParametersInfoW(0x0042,x.cbSize,ctypes.byref(x),0); print('HIGH_CONTRAST_QUERY_OK='+str(bool(ok))); print('HIGH_CONTRAST_ON='+str(bool(x.dwFlags&1))); print('HIGH_CONTRAST_SCHEME='+repr(x.lpszDefaultScheme))\"\nif ($LASTEXITCODE -ne 0) { throw \"high contrast state query failed\" }\nWrite-Host \"HIGH_CONTRAST_READONLY_PROBE_PASS\""
 }
