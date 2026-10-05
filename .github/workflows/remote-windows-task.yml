@@ -338,7 +338,7 @@ jobs:
 
       - name: Enforce prior evidence retry policy
         id: evidence_policy
-        if: inputs.request_ref != ''
+        if: ${{ inputs.request_ref != '' && env.REMOTE_REQUEST_MODE == 'validation' }}
         shell: powershell -NoLogo -NoProfile -ExecutionPolicy Bypass -Command ". '{0}'"
         env:
           GH_EVIDENCE_TOKEN: ${{ github.token }}
