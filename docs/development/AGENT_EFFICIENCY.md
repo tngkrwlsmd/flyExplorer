@@ -69,12 +69,10 @@ not a reason to introduce GitHub-hosted/cloud compute, and it must not be
 deferred into a Windows VM task. The self-hosted workflow checks are only a
 fallback guard after the zero-run preflight already passed.
 
-The request workflow fingerprints validation using candidate SHA,
-configuration, logical unit, normalized validation plan, normalized command
-hash and harness revision. Use that fingerprint to identify/reuse equivalent
-evidence; do not hard-block a run merely because an older request had a coarse
-matching stage set. Diagnostic requests do not participate in validation
-deduplication.
+The request workflow deliberately does not maintain a second fingerprint or
+prior-run reuse protocol. The request schema states the candidate, logical unit,
+configuration and validation plan; the agent decides the smallest invalidated
+boundary before dispatch.
 
 Define the completion condition, reusable evidence, minimum required
 verification and expected call budget.
@@ -104,15 +102,13 @@ A Markdown line wrap must not create a validation run; newline-sensitive
 assertions are appropriate only for structurally formatted content such as an
 exact workflow/YAML block.
 
-Do not retry a deterministic product/source failure on the same revision.
-For a clearly classified infrastructure/transient failure, one controlled
-same-revision rerun is permitted; repeated or unclassified reruns are not.
-Inspect the first relevant failure, classify it, fix the identified cause in
-the persistent remote checkout, and only then create a new revision whose
-single final run can provide new evidence. Locale matching, UIA virtualization,
-request serialization/encoding and screenshot harness failures are not product
-defects by themselves. User-observed crashes/hangs/screens can outweigh stale
-comments or old PASS logs.
+Do not retry the same product/test revision merely to see whether it passes.
+Inspect the first relevant failure, classify it, and change the product,
+harness, or execution condition that actually explains the failure before a
+successor validation. Locale matching, UIA virtualization, request
+serialization/encoding and screenshot harness failures are not product defects
+by themselves. User-observed crashes/hangs/screens can outweigh stale comments
+or old PASS logs.
 
 ## Builds and long operations
 
@@ -138,10 +134,8 @@ Do not poll faster than every 30 seconds. If completion becomes independently
 known between observations, inspect it immediately. The user does not need to
 ask separately for active monitoring when the current request already depends
 on the result. Do not create a scheduled/automation task merely to bridge the
-wait. The workflow settings `FLYEXPLORER_ROUTINE_OBSERVATION_SECONDS`,
-`FLYEXPLORER_ACTIVE_MONITOR_SECONDS`, and
-`FLYEXPLORER_RESULT_DEPENDENT_MAX_WAIT_SECONDS` mirror the fixed policy at
-30 seconds, 30 seconds and 180 seconds.
+wait. The 30-second observation cadence and 180-second same-turn ceiling are agent
+policy; they are not duplicated as workflow environment variables.
 
 For Actions specifically:
 - **before writing `requests/remote-shell/request.json` or pushing
@@ -149,11 +143,10 @@ For Actions specifically:
   run is `queued`, `pending`, `waiting`, `requested` or
   `in_progress`, the request slot is leased by that run: do not submit,
   replace or pre-stage a successor request. This pre-dispatch check is required
-  because workflow-side duplicate/fingerprint rejection still consumes queue
-  time. This serialization assumes the workflow-configured
-  `FLYEXPLORER_REMOTE_RUNNER_CAPACITY` represents a single interactive
-  execution lane; if that capacity changes, re-evaluate the lease/concurrency
-  policy;
+  because any workflow-side validation occurs only after scheduling and cannot
+  recover queue time already consumed. The workflow concurrency group currently
+  represents a single interactive execution lane; if runner capacity changes,
+  re-evaluate the lease/concurrency policy;
 - after triggering or observing a long run, record run ID, target SHA, scope and
   start/current state;
 - if the current user request depends on the run result, use the Actions run
@@ -179,14 +172,10 @@ For Actions specifically:
 - for the same apparent failure, inspect the first relevant error and change
   the hypothesis before rerunning.
 
-Remote validation chain budget:
-- use `FLYEXPLORER_DEFAULT_VALIDATION_RUN_BUDGET` as the normal planning
-  budget, whose purpose is to prevent diagnosis-free repeated execution;
-- every successor requires a completed predecessor, a material revision or
-  execution-condition change, and a concrete new failure hypothesis or
-  evidence need;
-- runs beyond the default budget require explicit justification of that new
-  hypothesis/evidence need; the ordinal run number is not itself the policy;
+Remote validation chain discipline:
+- every successor requires a completed predecessor, a material product/harness/
+  execution-condition change, and a concrete new failure hypothesis or evidence
+  need;
 - never queue a successor while its predecessor is active;
 - high-cost fixtures are final acceptance, not harness development. Their
   current project-specific profile lives in
