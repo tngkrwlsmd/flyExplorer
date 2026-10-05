@@ -15,7 +15,7 @@
                     VerticalAlignment="Center">
             <FontIcon Glyph="&#xE8B7;" FontSize="13" AutomationProperties.Name="flyExplorer"/>
             <TextBlock x:Name="ShellHeading" Text="flyExplorer"
-                       FontSize="12" FontWeight="Normal" Opacity="0.82" VerticalAlignment="Center"/>
+                       FontSize="12" FontWeight="Normal" Opacity="{ThemeResource FlyExplorerCaptionOpacity}" VerticalAlignment="Center"/>
         </StackPanel>
         <TabView x:Name="WindowTabStrip" Grid.Column="1" Height="34" Margin="8,0,6,0"
                  IsAddTabButtonVisible="True" TabWidthMode="SizeToContent"
@@ -45,6 +45,6 @@
         </StackPanel>
         <Border Grid.ColumnSpan="4" Height="1" VerticalAlignment="Bottom"
                 Background="{ThemeResource SystemControlForegroundBaseLowBrush}"
-                Opacity="0.20"/>
+                Opacity="{ThemeResource FlyExplorerHeaderSeparatorOpacity}"/>
     </Grid>
 </UserControl>
