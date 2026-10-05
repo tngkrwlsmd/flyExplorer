@@ -66,6 +66,27 @@ class HighContrastContract(unittest.TestCase):
                         failures.append(f"{path.name}:{line}: {match.group(0)}")
         self.assertEqual([], failures, "\n".join(failures))
 
+    def test_owned_high_contrast_gui_never_mutates_global_accessibility_state(self):
+        body=(APP.parent.parent/"tests"/"winui"/"test_high_contrast_gui.py").read_text(
+            encoding="utf-8"
+        )
+        for token in (
+            "HIGH_CONTRAST_ON_REQUIRED",
+            "SystemParametersInfoW(0x0042",
+            "OWNED_HIGH_CONTRAST_UIA_AND_SELECTION_PASS",
+            "OWNED_HIGH_CONTRAST_SEARCH_SURFACE_PASS",
+            "ORIGINAL_SIX_USER_SETTINGS_IDENTICAL",
+            "ImageGrab.grab",
+        ):
+            self.assertIn(token,body)
+        for forbidden in (
+            "SPI_SETHIGHCONTRAST",
+            "SystemParametersInfoW(0x0043",
+            "ChangeDisplaySettingsEx",
+            "winreg.SetValue",
+        ):
+            self.assertNotIn(forbidden,body)
+
     def test_expected_ui_surfaces_consume_high_contrast_resources(self):
         combined = "\n".join(
             path.read_text(encoding="utf-8")
