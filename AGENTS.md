@@ -348,40 +348,34 @@ not turn rerun into the normal development loop.
 ### Mechanical validation-churn guard
 
 Every `control/remote-shell` request must classify itself before the Windows
-runner executes anything. In addition to `request_id`, `expected_main_sha`,
-`working_directory` and `command`, the request JSON must provide:
-`candidate_sha`, a stable `logical_unit`, `configuration`,
-`validation_kind` as an array drawn from `source/build/native/gui/visual`
-(or exactly `none`), and `invalidated_evidence` with one non-empty reason
-for every declared validation stage. Routine non-validation shell/inspection
-requests use `candidate_sha == expected_main_sha`, `configuration: none`,
-`validation_kind: ["none"]` and an empty evidence object.
+runner executes anything. In addition to `request_id`,
+`expected_main_sha`, `candidate_sha`, stable `logical_unit`,
+`working_directory` and `command`, new requests use exactly one purpose
+model:
 
-Before committing the request slot, perform a **request-metadata preflight in
-the agent/tooling layer** instead of relying on the workflow to reject a bad
-request after it consumes queue time. Check these invariants as one unit:
+- diagnostic: `request_mode: "diagnostic"`, `configuration: "none"` and
+  `validation_plan: []`;
+- validation: `request_mode: "validation"`, configuration exactly Debug or
+  Release, and a non-empty logical `validation_plan`.
 
-- `validation_kind == ["none"]` -> `configuration == "none"`,
-  `candidate_sha == expected_main_sha`, and `invalidated_evidence == {}`;
-- any validation stage (`source/build/native/gui/visual`) ->
-  `configuration` is exactly `Debug` or `Release`, `candidate_sha` is
-  the intended 40-hex revision, and `invalidated_evidence` contains exactly
-  the declared stages with non-empty reasons;
-- the command's recognizable source/build/native/gui/visual work matches the
-  declared `validation_kind`;
-- request ID/logical unit are non-empty and the pre-dispatch lease is clear.
+Do not duplicate that plan by regex-parsing the command. For validation,
+evidence identity includes logical unit, normalized plan, normalized command
+hash and harness revision, so different targets and harness changes are not
+false duplicates. Read-only diagnostic work may continue when main moved, but
+validation, write/destructive work and final acceptance remain fail-closed
+against stale main.
 
-Treat a workflow rejection of these request-shape rules as an **agent preflight
-defect**, not as product evidence. Correct the metadata before doing any product
+Before committing the request slot, run the canonical request preflight and
+confirm the pre-dispatch lease. Treat request-shape rejection as an agent
+preflight defect, not product evidence.
 diagnosis.
 
 Before any control-branch push, complete a **zero-run preflight** for avoidable
 agent/control-plane errors. A Remote Windows Task must not be created until all
 applicable checks below pass:
 
-1. **Request shape:** validate the metadata invariants above, exact
-   `expected_main_sha`/`candidate_sha`, evidence keys and stage/command
-   agreement.
+1. **Request shape:** validate the mode/configuration/plan invariants above,
+   exact `expected_main_sha`/`candidate_sha`, request ID and logical unit.
 2. **Lease/ref existence:** confirm no active Remote Windows Task owns the
    request slot; verify every branch/ref/SHA/path the command will use actually
    exists before dispatch.
