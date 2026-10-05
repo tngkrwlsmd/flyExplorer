@@ -48,7 +48,7 @@
                             <Border Width="1"
                                     HorizontalAlignment="Right"
                                     Background="{ThemeResource SystemControlForegroundBaseLowBrush}"
-                                    Opacity="0.55"/>
+                                    Opacity="{ThemeResource FlyExplorerColumnSeparatorOpacity}"/>
                         </Grid>
                     </ControlTemplate>
                 </Setter.Value>
@@ -220,7 +220,7 @@
                         AutomationProperties.Name="선택한 북마크 삭제"/>
                 <TextBlock x:Name="BookmarkSelectedPathText"
                            MaxWidth="360" TextTrimming="CharacterEllipsis"
-                           VerticalAlignment="Center" Opacity="0.65"
+                           VerticalAlignment="Center" Opacity="{ThemeResource FlyExplorerSubtleTextOpacity}"
                            AutomationProperties.Name="선택한 북마크 경로"/>
             </StackPanel>
             <StackPanel Orientation="Horizontal" Spacing="7">
@@ -231,7 +231,7 @@
                         Click="OnImportBookmarks"
                         AutomationProperties.Name="기존 flyExplorer 북마크 가져오기"/>
                 <TextBlock Text="기존 프로필은 자동으로 읽지 않습니다"
-                           VerticalAlignment="Center" Opacity="0.65"/>
+                           VerticalAlignment="Center" Opacity="{ThemeResource FlyExplorerSubtleTextOpacity}"/>
             </StackPanel>
         </StackPanel>
         <StackPanel Grid.Row="4" x:Name="FilterRulePanel" Visibility="Collapsed"
@@ -263,7 +263,7 @@
                         Click="OnApplyFilterRule"
                         AutomationProperties.Name="현재 활성 창에 필터 프리셋 적용"/>
                 <TextBlock Text="* ? ;가 있으면 마스크 집합, 없으면 기존 이름 포함 필터"
-                           VerticalAlignment="Center" Opacity="0.65"/>
+                           VerticalAlignment="Center" Opacity="{ThemeResource FlyExplorerSubtleTextOpacity}"/>
             </StackPanel>
         </StackPanel>
         <StackPanel Grid.Row="5" x:Name="WorkspacePanel" Visibility="Collapsed"
@@ -289,7 +289,7 @@
                         Click="OnClearPrivateSession"
                         AutomationProperties.Name="저장된 개인 탐색 세션 지우기"/>
                 <TextBlock Text="기존 파일은 덮어쓰지 않습니다"
-                           Opacity="0.65" VerticalAlignment="Center"/>
+                           Opacity="{ThemeResource FlyExplorerSubtleTextOpacity}" VerticalAlignment="Center"/>
             </StackPanel>
         </StackPanel>
         <StackPanel Grid.Row="6" x:Name="SearchPanel" Visibility="Collapsed"
@@ -326,7 +326,7 @@
                          PlaceholderText="확장자 예: .txt"
                          AutomationProperties.Name="파일 확장자 조건"/>
                 <TextBlock Text="깊이 5 · 최대 2,500개 검사 · 결과 100개"
-                           VerticalAlignment="Center" Opacity="0.65"/>
+                           VerticalAlignment="Center" Opacity="{ThemeResource FlyExplorerSubtleTextOpacity}"/>
             </StackPanel>
             <StackPanel Orientation="Horizontal" Spacing="7">
                 <TextBlock Text="파일 내용:" VerticalAlignment="Center"/>
@@ -341,7 +341,7 @@
                     <ComboBoxItem Content="서유럽 Windows-1252"/>
                 </ComboBox>
                 <TextBlock Text="BOM 우선 · 1 MiB/파일 · 16 MiB/검색"
-                           VerticalAlignment="Center" Opacity="0.65"/>
+                           VerticalAlignment="Center" Opacity="{ThemeResource FlyExplorerSubtleTextOpacity}"/>
             </StackPanel>
             <StackPanel Orientation="Horizontal" Spacing="7">
                 <TextBlock Text="크기(KB):" VerticalAlignment="Center"/>
@@ -353,15 +353,15 @@
                          PlaceholderText="최대"
                          AutomationProperties.Name="최대 파일 크기 KB"/>
                 <TextBlock Text="수정일:" VerticalAlignment="Center"/>
-                <TextBlock Text="이후:" VerticalAlignment="Center" Opacity="0.75"/>
+                <TextBlock Text="이후:" VerticalAlignment="Center" Opacity="{ThemeResource FlyExplorerSecondaryTextOpacity}"/>
                 <TextBox x:Name="SearchModifiedAfterBox" Width="108" MaxLength="10"
                          PlaceholderText="YYYY-MM-DD"
                          AutomationProperties.Name="수정일 이후"/>
-                <TextBlock Text="~ 이전:" VerticalAlignment="Center" Opacity="0.75"/>
+                <TextBlock Text="~ 이전:" VerticalAlignment="Center" Opacity="{ThemeResource FlyExplorerSecondaryTextOpacity}"/>
                 <TextBox x:Name="SearchModifiedBeforeBox" Width="108" MaxLength="10"
                          PlaceholderText="YYYY-MM-DD"
                          AutomationProperties.Name="수정일 이전"/>
-                <TextBlock Text="범위 포함" VerticalAlignment="Center" Opacity="0.65"/>
+                <TextBlock Text="범위 포함" VerticalAlignment="Center" Opacity="{ThemeResource FlyExplorerSubtleTextOpacity}"/>
             </StackPanel>
             <StackPanel Orientation="Horizontal" Spacing="7">
                 <TextBlock Text="조건 세트:" VerticalAlignment="Center"/>
@@ -493,7 +493,7 @@
                 </ListView>
                 </Grid>
             </Border>
-            <Border x:Name="PaneDivider" Grid.Column="2" Background="{ThemeResource SystemControlForegroundBaseLowBrush}" Opacity="0.42"/>
+            <Border x:Name="PaneDivider" Grid.Column="2" Background="{ThemeResource SystemControlForegroundBaseLowBrush}" Opacity="{ThemeResource FlyExplorerPaneDividerOpacity}"/>
             <Border x:Name="SecondaryPane" Grid.Column="3"
                     CornerRadius="0" BorderThickness="0,2,0,0"
                     BorderBrush="{ThemeResource SystemControlForegroundBaseLowBrush}"

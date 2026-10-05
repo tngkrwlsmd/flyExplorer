@@ -18,7 +18,7 @@
                       HorizontalScrollMode="Disabled" HorizontalScrollBarVisibility="Disabled">
             <StackPanel Spacing="1">
                 <TextBlock Text="탐색" FontSize="11.5" FontWeight="SemiBold"
-                           Opacity="0.62" Margin="7,4,0,5"/>
+                           Opacity="{ThemeResource FlyExplorerSidebarHeadingOpacity}" Margin="7,4,0,5"/>
                 <Button x:Name="HomeButton" Style="{StaticResource ExplorerNavButtonStyle}"
                         Click="OnHomeClicked" AutomationProperties.Name="홈으로 이동">
                     <StackPanel Orientation="Horizontal" Spacing="9">

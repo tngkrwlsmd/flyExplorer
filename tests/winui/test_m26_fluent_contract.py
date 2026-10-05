@@ -38,7 +38,7 @@ class FluentShellContract(unittest.TestCase):
         self.assertIn('x:Name="WindowTabStrip" Grid.Column="1"',header)
         self.assertIn('x:Name="TitleBarDragRegion" Grid.Column="2" MinWidth="48"',header)
         self.assertIn('x:Name="ShellHeading" Text="flyExplorer"',header)
-        self.assertIn('FontSize="12" FontWeight="Normal" Opacity="0.82"',header)
+        self.assertIn('FontSize="12" FontWeight="Normal" Opacity="{ThemeResource FlyExplorerCaptionOpacity}"',header)
         self.assertIn('<TabView',header)
         self.assertEqual(main.count('<TabView '),2)
         self.assertIn('<RowDefinition Height="34"/>',main)
