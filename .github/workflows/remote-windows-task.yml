@@ -16,7 +16,7 @@ jobs:
     permissions:
       actions: write
       contents: write
-    uses: tngkrwlsmd/flyExplorer/.github/workflows/remote-windows-task.yml@validate/failure-propagation-product-contract-20261005
+    uses: tngkrwlsmd/flyExplorer/.github/workflows/remote-windows-task.yml@work/failure-propagation-20261005
     with:
       request_ref: ${{ github.sha }}
       request_branch: ${{ github.ref_name }}
