@@ -23,8 +23,8 @@ on:
         type: string
 
 permissions:
-  actions: write
-  contents: write
+  actions: read
+  contents: read
 
 env:
   FLYEXPLORER_CANONICAL_CHECKOUT: 'C:\dev\flyExplorer'
@@ -645,8 +645,6 @@ jobs:
       - name: Write structured remote result
         if: always()
         shell: powershell -NoLogo -NoProfile -ExecutionPolicy Bypass -Command ". '{0}'"
-        env:
-          FLYEXPLORER_WORKFLOW_SHA: ${{ job.workflow_sha }}
         run: |
           $ErrorActionPreference = "Continue"
           $evidence = Join-Path $env:FLYEXPLORER_CANONICAL_CHECKOUT "logs\remote-evidence"
@@ -692,265 +690,23 @@ jobs:
             $classifier = Join-Path $env:RUNNER_TEMP ("classify-remote-failure-" + $env:GITHUB_RUN_ID + ".py")
             $tempText = Join-Path $env:RUNNER_TEMP ("remote-failure-" + $env:GITHUB_RUN_ID + ".txt")
             try {
-              $classifierRevisions = @()
-              foreach ($revision in @(
-                $env:FLYEXPLORER_WORKFLOW_SHA,
-                $env:REMOTE_OBSERVED_MAIN_SHA
-              )) {
-                $normalized = ([string]$revision).Trim().ToLowerInvariant()
-                if ($normalized -match '^[0-9a-f]{40}
-
-          $failureCategory = $null
-          if ($requestOutcome -eq "failure") {
-            $failureCategory = "REQUEST_SCHEMA_FAILURE"
-          } elseif ($evidencePolicyOutcome -eq "failure") {
-            $failureCategory = "EVIDENCE_POLICY_FAILURE"
-          } elseif ($preflightOutcome -eq "failure") {
-            $failureCategory = "HELPER_STATIC_FAILURE"
-          } elseif ($healthOutcome -eq "failure") {
-            $failureCategory = "RUNNER_HEALTH_FAILURE"
-          } elseif ($commandOutcome -eq "failure") {
-            $failureCategory = Read-ResultCategory (
-              Join-Path $evidence "high-contrast-result.json"
-            )
-            if ([string]::IsNullOrWhiteSpace([string]$failureCategory)) {
-              $commandText = @(
-                "remote-command.log",
-                "remote-command-error.txt"
-              ) |
-                ForEach-Object {
-                  $path = Join-Path $evidence $_
-                  if (Test-Path -LiteralPath $path -PathType Leaf) {
-                    Get-Content -Raw -Encoding UTF8 -LiteralPath $path
-                  }
+              $revision = $env:REMOTE_OBSERVED_MAIN_SHA
+              if ([string]::IsNullOrWhiteSpace($revision)) {
+                & git -C $env:FLYEXPLORER_CANONICAL_CHECKOUT fetch origin main --no-tags --prune
+                if ($LASTEXITCODE -ne 0) {
+                  return "COMMAND_FAILURE_UNCLASSIFIED"
                 }
-              $failureCategory = Infer-CommandFailure (
-                $commandText -join [Environment]::NewLine
-              )
-            }
-          }
-
-          $validationPlan = @()
-          if (-not [string]::IsNullOrWhiteSpace($env:REMOTE_VALIDATION_PLAN)) {
-            $validationPlan = @(
-              $env:REMOTE_VALIDATION_PLAN -split ',' |
-                Where-Object { -not [string]::IsNullOrWhiteSpace($_) }
-            )
-          }
-
-          $result = [ordered]@{
-            request_id = $env:REMOTE_REQUEST_ID
-            request_mode = $env:REMOTE_REQUEST_MODE
-            candidate_sha = $env:REMOTE_CANDIDATE_SHA
-            logical_unit = $env:REMOTE_LOGICAL_UNIT
-            validation_plan = $validationPlan
-            retry_scope = $env:REMOTE_RETRY_SCOPE
-            reused_targets = @(
-              $env:REMOTE_REUSED_TARGETS -split ',' |
-                Where-Object { -not [string]::IsNullOrWhiteSpace($_) }
-            )
-            stages = [ordered]@{
-              REQUEST_VALIDATION = Convert-Outcome $requestOutcome
-              EVIDENCE_POLICY = Convert-Outcome $evidencePolicyOutcome
-              STATIC_PREFLIGHT = Convert-Outcome $preflightOutcome
-              RUNNER_HEALTH = Convert-Outcome $healthOutcome
-              COMMAND = Convert-Outcome $commandOutcome
-            }
-            failure_category = $failureCategory
-          }
-          $resultPath = Join-Path $evidence "remote-result.json"
-          $result | ConvertTo-Json -Depth 6 |
-            Set-Content -LiteralPath $resultPath -Encoding UTF8
-          Write-Host "REMOTE_RESULT=$($result | ConvertTo-Json -Compress -Depth 6)"
-
-      - name: Upload remote evidence
-        if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: flyexplorer-remote-evidence-${{ github.run_id }}
-          path: ${{ env.FLYEXPLORER_CANONICAL_CHECKOUT }}\logs\remote-evidence\
-          if-no-files-found: ignore
-          retention-days: 3
-) {
-                  $classifierRevisions += $normalized
-                }
+                $revision = (& git -C $env:FLYEXPLORER_CANONICAL_CHECKOUT rev-parse refs/remotes/origin/main).Trim()
               }
-
-              & git -C $env:FLYEXPLORER_CANONICAL_CHECKOUT fetch origin main --no-tags --prune
-              if ($LASTEXITCODE -eq 0) {
-                $currentMain = (
-                  & git -C $env:FLYEXPLORER_CANONICAL_CHECKOUT rev-parse refs/remotes/origin/main
-                ).Trim().ToLowerInvariant()
-                if ($LASTEXITCODE -eq 0 -and $currentMain -match '^[0-9a-f]{40}
-
-          $failureCategory = $null
-          if ($requestOutcome -eq "failure") {
-            $failureCategory = "REQUEST_SCHEMA_FAILURE"
-          } elseif ($evidencePolicyOutcome -eq "failure") {
-            $failureCategory = "EVIDENCE_POLICY_FAILURE"
-          } elseif ($preflightOutcome -eq "failure") {
-            $failureCategory = "HELPER_STATIC_FAILURE"
-          } elseif ($healthOutcome -eq "failure") {
-            $failureCategory = "RUNNER_HEALTH_FAILURE"
-          } elseif ($commandOutcome -eq "failure") {
-            $failureCategory = Read-ResultCategory (
-              Join-Path $evidence "high-contrast-result.json"
-            )
-            if ([string]::IsNullOrWhiteSpace([string]$failureCategory)) {
-              $commandText = @(
-                "remote-command.log",
-                "remote-command-error.txt"
-              ) |
-                ForEach-Object {
-                  $path = Join-Path $evidence $_
-                  if (Test-Path -LiteralPath $path -PathType Leaf) {
-                    Get-Content -Raw -Encoding UTF8 -LiteralPath $path
-                  }
-                }
-              $failureCategory = Infer-CommandFailure (
-                $commandText -join [Environment]::NewLine
-              )
-            }
-          }
-
-          $validationPlan = @()
-          if (-not [string]::IsNullOrWhiteSpace($env:REMOTE_VALIDATION_PLAN)) {
-            $validationPlan = @(
-              $env:REMOTE_VALIDATION_PLAN -split ',' |
-                Where-Object { -not [string]::IsNullOrWhiteSpace($_) }
-            )
-          }
-
-          $result = [ordered]@{
-            request_id = $env:REMOTE_REQUEST_ID
-            request_mode = $env:REMOTE_REQUEST_MODE
-            candidate_sha = $env:REMOTE_CANDIDATE_SHA
-            logical_unit = $env:REMOTE_LOGICAL_UNIT
-            validation_plan = $validationPlan
-            retry_scope = $env:REMOTE_RETRY_SCOPE
-            reused_targets = @(
-              $env:REMOTE_REUSED_TARGETS -split ',' |
-                Where-Object { -not [string]::IsNullOrWhiteSpace($_) }
-            )
-            stages = [ordered]@{
-              REQUEST_VALIDATION = Convert-Outcome $requestOutcome
-              EVIDENCE_POLICY = Convert-Outcome $evidencePolicyOutcome
-              STATIC_PREFLIGHT = Convert-Outcome $preflightOutcome
-              RUNNER_HEALTH = Convert-Outcome $healthOutcome
-              COMMAND = Convert-Outcome $commandOutcome
-            }
-            failure_category = $failureCategory
-          }
-          $resultPath = Join-Path $evidence "remote-result.json"
-          $result | ConvertTo-Json -Depth 6 |
-            Set-Content -LiteralPath $resultPath -Encoding UTF8
-          Write-Host "REMOTE_RESULT=$($result | ConvertTo-Json -Compress -Depth 6)"
-
-      - name: Upload remote evidence
-        if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: flyexplorer-remote-evidence-${{ github.run_id }}
-          path: ${{ env.FLYEXPLORER_CANONICAL_CHECKOUT }}\logs\remote-evidence\
-          if-no-files-found: ignore
-          retention-days: 3
-) {
-                  $classifierRevisions += $currentMain
-                }
-              }
-
-              foreach ($revision in @($classifierRevisions | Select-Object -Unique)) {
-                $spec = "${revision}:tools/winui/classify_remote_failure.py"
-                $classifierText = @(
-                  & git -C $env:FLYEXPLORER_CANONICAL_CHECKOUT show $spec 2>$null
-                )
-                if ($LASTEXITCODE -ne 0 -or $classifierText.Count -eq 0) {
-                  continue
-                }
-                $classifierText | Set-Content -LiteralPath $classifier -Encoding UTF8
-                Write-Host "RESULT_CLASSIFIER_REVISION=$revision"
-                break
-              }
-
-              if (-not (Test-Path -LiteralPath $classifier -PathType Leaf)) {
+              $spec = "${revision}:tools/winui/classify_remote_failure.py"
+              & git -C $env:FLYEXPLORER_CANONICAL_CHECKOUT show $spec |
+                Set-Content -LiteralPath $classifier -Encoding UTF8
+              if ($LASTEXITCODE -ne 0 -or -not (Test-Path -LiteralPath $classifier -PathType Leaf)) {
                 return "COMMAND_FAILURE_UNCLASSIFIED"
               }
               $text | Set-Content -LiteralPath $tempText -Encoding UTF8
               $category = (& python -X utf8 $classifier $tempText | Select-Object -Last 1).Trim()
-              if ($LASTEXITCODE -eq 0 -and $category -match '^[A-Z0-9_]+
-
-          $failureCategory = $null
-          if ($requestOutcome -eq "failure") {
-            $failureCategory = "REQUEST_SCHEMA_FAILURE"
-          } elseif ($evidencePolicyOutcome -eq "failure") {
-            $failureCategory = "EVIDENCE_POLICY_FAILURE"
-          } elseif ($preflightOutcome -eq "failure") {
-            $failureCategory = "HELPER_STATIC_FAILURE"
-          } elseif ($healthOutcome -eq "failure") {
-            $failureCategory = "RUNNER_HEALTH_FAILURE"
-          } elseif ($commandOutcome -eq "failure") {
-            $failureCategory = Read-ResultCategory (
-              Join-Path $evidence "high-contrast-result.json"
-            )
-            if ([string]::IsNullOrWhiteSpace([string]$failureCategory)) {
-              $commandText = @(
-                "remote-command.log",
-                "remote-command-error.txt"
-              ) |
-                ForEach-Object {
-                  $path = Join-Path $evidence $_
-                  if (Test-Path -LiteralPath $path -PathType Leaf) {
-                    Get-Content -Raw -Encoding UTF8 -LiteralPath $path
-                  }
-                }
-              $failureCategory = Infer-CommandFailure (
-                $commandText -join [Environment]::NewLine
-              )
-            }
-          }
-
-          $validationPlan = @()
-          if (-not [string]::IsNullOrWhiteSpace($env:REMOTE_VALIDATION_PLAN)) {
-            $validationPlan = @(
-              $env:REMOTE_VALIDATION_PLAN -split ',' |
-                Where-Object { -not [string]::IsNullOrWhiteSpace($_) }
-            )
-          }
-
-          $result = [ordered]@{
-            request_id = $env:REMOTE_REQUEST_ID
-            request_mode = $env:REMOTE_REQUEST_MODE
-            candidate_sha = $env:REMOTE_CANDIDATE_SHA
-            logical_unit = $env:REMOTE_LOGICAL_UNIT
-            validation_plan = $validationPlan
-            retry_scope = $env:REMOTE_RETRY_SCOPE
-            reused_targets = @(
-              $env:REMOTE_REUSED_TARGETS -split ',' |
-                Where-Object { -not [string]::IsNullOrWhiteSpace($_) }
-            )
-            stages = [ordered]@{
-              REQUEST_VALIDATION = Convert-Outcome $requestOutcome
-              EVIDENCE_POLICY = Convert-Outcome $evidencePolicyOutcome
-              STATIC_PREFLIGHT = Convert-Outcome $preflightOutcome
-              RUNNER_HEALTH = Convert-Outcome $healthOutcome
-              COMMAND = Convert-Outcome $commandOutcome
-            }
-            failure_category = $failureCategory
-          }
-          $resultPath = Join-Path $evidence "remote-result.json"
-          $result | ConvertTo-Json -Depth 6 |
-            Set-Content -LiteralPath $resultPath -Encoding UTF8
-          Write-Host "REMOTE_RESULT=$($result | ConvertTo-Json -Compress -Depth 6)"
-
-      - name: Upload remote evidence
-        if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: flyexplorer-remote-evidence-${{ github.run_id }}
-          path: ${{ env.FLYEXPLORER_CANONICAL_CHECKOUT }}\logs\remote-evidence\
-          if-no-files-found: ignore
-          retention-days: 3
-) {
+              if ($LASTEXITCODE -eq 0 -and $category -match '^[A-Z0-9_]+$') {
                 return $category
               }
             } catch {
