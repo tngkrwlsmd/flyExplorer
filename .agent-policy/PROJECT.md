@@ -155,26 +155,18 @@ use mode `validation`, Debug/Release configuration and a non-empty logical
 plan. The workflow does not regex-infer the command back into a second stage
 declaration.
 
-Validation evidence identity includes candidate SHA, configuration, logical
-unit, normalized plan, normalized command hash and harness revision. The
-fingerprint is for evidence identity/reuse rather than hard duplicate blocking.
-A moved main SHA is advisory for read-only diagnostics but fail-closed for
-validation, write/destructive work and final acceptance.
+The request schema is intentionally small. Candidate SHA, configuration,
+logical unit and validation plan state the check directly; the workflow does
+not maintain a second fingerprint/reuse protocol or inspect previous Actions
+runs before execution. A moved main SHA is advisory for read-only diagnostics
+but fail-closed for validation, write/destructive work and final acceptance.
 
-Deterministic product/source failures require a revision before another
-acceptance. A same-revision rerun is allowed at most once only for an explicitly
-classified infrastructure/transient failure; repeated or unclassified reruns
-are not valid evidence.
-
-Validation retries are evidence-aware. The workflow reads the most recent
-same-logical-unit Actions result/log before execution. If an older
-`COMMAND_FAILURE_UNCLASSIFIED` still cannot be classified by the current
-classifier, another validation is rejected and only focused diagnosis is
-allowed. Harness/automation/shutdown failures require
-`retry_scope: focused-reuse` with the prior run/candidate and reused target
-list. Canonical success markers and a harness/infra-only diff must validate the
-reuse, and the focused command must not rebuild or repackage the preserved
-product evidence.
+Do not rerun the same product/test revision merely to see whether it passes.
+After a failure, classify the first relevant error and change the product,
+harness, or execution condition that explains it before a successor
+validation. Resume from the earliest invalidated boundary and preserve
+unaffected successful evidence without encoding it into remote request
+metadata.
 
 ### Default verification ladder
 
@@ -276,10 +268,9 @@ directly invalidates that fixture's result.
   `control/remote-shell`. If any run is `queued`, `pending`, `waiting`,
   `requested` or `in_progress`, do not touch the request slot and do not
   create a successor request. Record the active run ID and wait/resume from it.
-  Workflow-side fingerprint rejection is only a second line of defense because
-  it occurs after scheduling and cannot recover queue time already consumed.
-  This global serialization assumes the workflow setting
-  `FLYEXPLORER_REMOTE_RUNNER_CAPACITY` represents a single interactive
+  Workflow-side request validation is only a second line of defense because it
+  occurs after scheduling and cannot recover queue time already consumed.
+  The workflow concurrency group currently represents a single interactive
   execution lane. If capacity changes, re-evaluate the lease and concurrency
   policy instead of carrying the single-runner assumption forward.
 - If the current user request depends on a GitHub Actions / Remote Windows
@@ -293,16 +284,11 @@ directly invalidates that fixture's result.
   Independently known completion is inspected immediately; never poll faster
   than 30 seconds or create an automation merely to bridge this wait. The user
   does not need to separately request active monitoring for a result-dependent
-  run. `FLYEXPLORER_ROUTINE_OBSERVATION_SECONDS`,
-  `FLYEXPLORER_ACTIVE_MONITOR_SECONDS`, and
-  `FLYEXPLORER_RESULT_DEPENDENT_MAX_WAIT_SECONDS` mirror the fixed
-  30-second / 30-second / 180-second policy.
-- Use the workflow-configured `FLYEXPLORER_DEFAULT_VALIDATION_RUN_BUDGET` as
-  the normal planning budget. The policy objective is no diagnosis-free
-  repeated execution: every successor must have a completed predecessor, a
-  material revision/execution-condition change, and a concrete new failure
-  hypothesis or evidence need. Runs beyond the default budget require explicit
-  justification of that need; the ordinal run number is not itself a gate.
+  run. The 30-second observation cadence and 180-second same-turn ceiling are
+  agent policy, not workflow environment settings.
+- Do not use a numeric retry token or workflow-side run budget. Every successor
+  must have a completed predecessor, a material product/harness/execution-
+  condition change, and a concrete new failure hypothesis or evidence need.
 - For an unexplained GUI/input failure, the first diagnostic successor must
   establish the failing layer before the interaction mechanism is changed.
   Prefer environment-gated test diagnostics that capture event entry, hit
@@ -654,10 +640,11 @@ owned 5,000-item navigation/sort/progressive-paging evidence are unchanged.
   `remote/**` command-branch fallback is maintained. Temporary `work/*`
   branches are deleted once their accepted final tree is on main.
 - The persistent remote-shell checkout is the primary Windows development and
-  diagnosis surface. Verification scope, evidence reuse, failure handling,
-  retry prohibition and polling behavior follow the project-specific
-  **Development loop and verification budget** above. Windows build Actions are
-  never triggered merely by a push and never receive a same-revision rerun.
+  diagnosis surface. Verification scope, failure handling, evidence
+  preservation, retry prohibition and polling behavior follow the
+  project-specific **Development loop and verification budget** above. Windows
+  build Actions are never triggered merely by a push and never receive a
+  diagnosis-free same-revision rerun.
 - GitHub-hosted runners require explicit user approval and are not part of the
   active flyExplorer CI path by default.
 - The privileged self-hosted runner must not execute untrusted fork/PR code
