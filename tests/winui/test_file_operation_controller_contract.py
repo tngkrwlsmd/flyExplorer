@@ -93,6 +93,30 @@ class FileOperationContracts(unittest.TestCase):
         for forbidden in ("winrt::", "CWnd"):
             self.assertNotIn(forbidden, body)
 
+    def test_file_row_drag_owns_pointer_threshold_and_programmatic_start(self):
+        main = read("app/winui/MainWindow.xaml.cpp")
+        header = read("app/winui/MainWindow.xaml.h")
+        drag = read("app/winui/m23_drag.cpp")
+        for token in (
+            "OnFileRowPointerPressed",
+            "OnFileRowPointerMoved",
+            "OnFileRowPointerReleased",
+        ):
+            self.assertIn(token, main + header + drag)
+        for token in (
+            "SM_CXDRAG",
+            "SM_CYDRAG",
+            "IsLeftButtonPressed()",
+            "StartDragAsync(point)",
+            "ResetFileRowPointerDrag()",
+        ):
+            self.assertIn(token, drag)
+        self.assertIn("row.PointerPressed(", main)
+        self.assertIn("row.PointerMoved(", main)
+        self.assertIn("row.PointerReleased(", main)
+        self.assertIn("row.PointerCanceled(", main)
+        self.assertIn("row.DragStarting(", main)
+
     def test_clipboard_paste_and_drag_share_the_transfer_core(self):
         transfer = read("app/winui/m22_transfers.cpp")
         drag = read("app/winui/m23_drag.cpp")
