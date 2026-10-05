@@ -155,8 +155,21 @@ namespace winrt::FlyExplorer::implementation
             [nativeWeak](IInspectable const&,
                 Microsoft::UI::Xaml::Input::KeyRoutedEventArgs const& args){
                 const bool control=(::GetKeyState(VK_CONTROL)&0x8000)!=0;
-                if(!control)return;
+                const bool shift=(::GetKeyState(VK_SHIFT)&0x8000)!=0;
+                const bool alt=(::GetKeyState(VK_MENU)&0x8000)!=0;
                 const auto key=args.Key();
+                const bool createFolderShortcut=
+                    (!alt&&control&&shift&&key==Windows::System::VirtualKey::N)||
+                    (!alt&&!control&&!shift&&key==Windows::System::VirtualKey::F11);
+                if(createFolderShortcut){
+                    if(auto ui=nativeWeak.get()){
+                        ui->BeginFileNameCommand(
+                            fxfile::filecommand::Kind::CreateFolder);
+                        args.Handled(true);
+                    }
+                    return;
+                }
+                if(!control)return;
                 if(key!=Windows::System::VirtualKey::T&&
                    key!=Windows::System::VirtualKey::W&&
                    key!=Windows::System::VirtualKey::Tab)return;
@@ -169,7 +182,6 @@ namespace winrt::FlyExplorer::implementation
                     }else if(ui->mWorkspace.count()>1){
                         const auto count=ui->mWorkspace.count();
                         const auto active=ui->mWorkspace.activeIndex();
-                        const bool shift=(::GetKeyState(VK_SHIFT)&0x8000)!=0;
                         const auto next=shift?(active+count-1)%count:
                             (active+1)%count;
                         if(ui->ActivateWindowTab(next))ui->RefreshWindowTabs();
