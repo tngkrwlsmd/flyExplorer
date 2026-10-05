@@ -1,11 +1,11 @@
 {
-  "request_id": "cleanup-create-folder-shortcuts-20261005",
+  "request_id": "set-actions-retention-365-20261005",
   "expected_main_sha": "ed08c8c8f5d067ec0f0f365cc0f882d1e0e4a32c",
   "candidate_sha": "ed08c8c8f5d067ec0f0f365cc0f882d1e0e4a32c",
-  "logical_unit": "create-folder-shortcut-cleanup",
-  "configuration": "none",
+  "logical_unit": "actions-retention-setting",
   "request_mode": "diagnostic",
+  "configuration": "none",
   "validation_plan": [],
   "working_directory": "",
-  "command": "$ErrorActionPreference=\"Stop\"\n$repo=$env:FLYEXPLORER_CANONICAL_CHECKOUT\nSet-Location -LiteralPath $repo\n& git fetch origin main work/create-folder-shortcuts-20261005 --no-tags --prune\nif($LASTEXITCODE -ne 0){throw \"cleanup fetch failed\"}\n& git diff --quiet refs/remotes/origin/main refs/remotes/origin/work/create-folder-shortcuts-20261005 --\nif($LASTEXITCODE -ne 0){throw \"refuse cleanup: merged main tree differs from work branch tree\"}\n& git push origin --delete work/create-folder-shortcuts-20261005\nif($LASTEXITCODE -ne 0){throw \"failed to delete merged work branch\"}\n& git fetch origin --prune --no-tags\nif($LASTEXITCODE -ne 0){throw \"post-delete fetch failed\"}\nif(& git show-ref --verify --quiet \"refs/remotes/origin/work/create-folder-shortcuts-20261005\"){\n  throw \"branch still exists: work/create-folder-shortcuts-20261005\"\n}\nWrite-Host \"CREATE_FOLDER_SHORTCUT_BRANCH_CLEANUP=PASS\""
+  "command": "$ErrorActionPreference=\"Stop\"\n$endpoint=\"repos/tngkrwlsmd/flyExplorer/actions/permissions/artifact-and-log-retention\"\n$beforeRaw=(& gh api -H \"X-GitHub-Api-Version: 2026-03-10\" $endpoint | Out-String)\nif($LASTEXITCODE -ne 0){throw \"GitHub CLI cannot read Actions retention setting with current runner auth\"}\n$before=$beforeRaw | ConvertFrom-Json\nWrite-Host (\"ACTIONS_RETENTION_BEFORE_DAYS=\"+$before.days)\nWrite-Host (\"ACTIONS_RETENTION_MAXIMUM_ALLOWED_DAYS=\"+$before.maximum_allowed_days)\nif([int]$before.maximum_allowed_days -lt 365){throw \"repository/account maximum does not permit 365 days\"}\n& gh api --method PUT -H \"X-GitHub-Api-Version: 2026-03-10\" $endpoint -F days=365\nif($LASTEXITCODE -ne 0){throw \"failed to set Actions retention to 365 days\"}\n$afterRaw=(& gh api -H \"X-GitHub-Api-Version: 2026-03-10\" $endpoint | Out-String)\nif($LASTEXITCODE -ne 0){throw \"failed to verify Actions retention after update\"}\n$after=$afterRaw | ConvertFrom-Json\nWrite-Host (\"ACTIONS_RETENTION_AFTER_DAYS=\"+$after.days)\nWrite-Host (\"ACTIONS_RETENTION_AFTER_MAXIMUM_ALLOWED_DAYS=\"+$after.maximum_allowed_days)\nif([int]$after.days -ne 365){throw \"Actions retention verification did not return 365 days\"}\nWrite-Host \"ACTIONS_RETENTION_365=PASS\""
 }
