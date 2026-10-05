@@ -7,14 +7,15 @@ but does not by itself provide Corresponding Source or a public source-access
 direction. The repository is currently private, so its normal clone URL is not
 treated as public recipient access.
 
-The latest unsigned packaging lifecycle acceptance is Remote Windows Task #382
-and PR #27 for candidate `8283ece6c4348a751f487a64230e1bc149a47a2f`.
-Current main contains later product changes, so that evidence does not establish
-an exact current-main binary-to-source identity. It also does not provide
-Corresponding Source to public binary recipients. Before publicly conveying an
-installer, regenerate the final package from the release source, record the
-exact binary-to-source identity and choose/implement a GPLv3 section 6 compliant
-Corresponding Source delivery method.
+The latest unsigned packaging lifecycle acceptance is Remote Windows Task #435
+(`37306799266`) for package candidate
+`00f90c30800fb66f88184211442f6eeb05a950b7`. The package embeds provenance
+for the exact clean Release runtime built during that acceptance, but this
+engineering evidence does not itself provide Corresponding Source to public
+binary recipients. Before publicly conveying an installer, establish the final
+release tag/commit and exact binary-to-source release identity, then
+choose/implement a GPLv3 section 6 compliant Corresponding Source delivery
+method.
 
 A release record should include:
 - exact Git commit/release tag corresponding to the binary;
