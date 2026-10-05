@@ -1,13 +1,11 @@
 {
-  "request_id": "failure-propagation-green-20261005",
-  "expected_main_sha": "ef8e2d7a65c03c3727aae625facaf6305d7d9841",
-  "candidate_sha": "d44fee897778b336ff83b15523a492f8fe511154",
-  "logical_unit": "failure-propagation",
-  "configuration": "Release",
-  "request_mode": "validation",
-  "validation_plan": [
-    "infra"
-  ],
+  "request_id": "cleanup-failure-propagation-branches-20261005",
+  "expected_main_sha": "1a798681f6201b55c8dea9aee953adc9611bac6f",
+  "candidate_sha": "1a798681f6201b55c8dea9aee953adc9611bac6f",
+  "logical_unit": "failure-propagation-branch-cleanup",
+  "configuration": "none",
+  "request_mode": "diagnostic",
+  "validation_plan": [],
   "working_directory": "",
-  "command": "Write-Host \"FAILURE_PROPAGATION_GREEN=PASS\""
+  "command": "$ErrorActionPreference=\"Stop\"\n$repo=$env:FLYEXPLORER_CANONICAL_CHECKOUT\nSet-Location -LiteralPath $repo\n& git fetch origin --prune --no-tags\nif($LASTEXITCODE -ne 0){throw \"fetch failed\"}\n& git diff --quiet refs/remotes/origin/main refs/remotes/origin/work/failure-propagation-20261005 --\nif($LASTEXITCODE -ne 0){throw \"merged work branch tree differs from main\"}\n& git push origin --delete \"validate/failure-propagation-product-contract-20261005\" \"validate/native-preflight-selected-20261005\" \"validate/native-preflight-selected-v2-20261005\" \"validate/native-preflight-selected-v3-20261005\" \"work/failure-propagation-20261005\" \"work/failure-propagation-native-preflight-20261005\"\nif($LASTEXITCODE -ne 0){throw \"branch deletion failed\"}\n& git fetch origin --prune --no-tags\nif($LASTEXITCODE -ne 0){throw \"post-delete fetch failed\"}\n  if(& git show-ref --verify --quiet \"refs/remotes/origin/validate/failure-propagation-product-contract-20261005\"){throw \"branch still exists: validate/failure-propagation-product-contract-20261005\"}\n  if(& git show-ref --verify --quiet \"refs/remotes/origin/validate/native-preflight-selected-20261005\"){throw \"branch still exists: validate/native-preflight-selected-20261005\"}\n  if(& git show-ref --verify --quiet \"refs/remotes/origin/validate/native-preflight-selected-v2-20261005\"){throw \"branch still exists: validate/native-preflight-selected-v2-20261005\"}\n  if(& git show-ref --verify --quiet \"refs/remotes/origin/validate/native-preflight-selected-v3-20261005\"){throw \"branch still exists: validate/native-preflight-selected-v3-20261005\"}\n  if(& git show-ref --verify --quiet \"refs/remotes/origin/work/failure-propagation-20261005\"){throw \"branch still exists: work/failure-propagation-20261005\"}\n  if(& git show-ref --verify --quiet \"refs/remotes/origin/work/failure-propagation-native-preflight-20261005\"){throw \"branch still exists: work/failure-propagation-native-preflight-20261005\"}\nWrite-Host \"FAILURE_PROPAGATION_BRANCH_CLEANUP=PASS\""
 }
