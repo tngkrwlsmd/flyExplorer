@@ -180,6 +180,27 @@ class RemoteWindowsTaskContractTests(unittest.TestCase):
         ):
             self.assertIn(category, self.workflow)
 
+    def test_remote_command_uses_process_exit_not_stale_last_native_exit(self):
+        command = self.workflow[
+            self.workflow.index("- name: Run remote shell command"):
+            self.workflow.index("- name: Write structured remote result")
+        ]
+        self.assertIn(
+            "& powershell.exe -NoLogo -NoProfile -ExecutionPolicy Bypass -Command $env:REMOTE_COMMAND",
+            command,
+        )
+        self.assertIn("$commandCode = $LASTEXITCODE", command)
+        self.assertIn(
+            'throw "Remote shell command process exited with code $commandCode."',
+            command,
+        )
+        self.assertNotIn("Invoke-Expression $env:REMOTE_COMMAND", command)
+        self.assertNotIn("$global:LASTEXITCODE = 0", command)
+        self.assertNotIn(
+            'throw "Remote shell native command exited with code $LASTEXITCODE."',
+            command,
+        )
+
     def test_command_failure_keeps_machine_readable_evidence(self):
         for token in (
             "check-result.json",
