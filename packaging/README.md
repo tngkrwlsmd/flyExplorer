@@ -31,21 +31,27 @@ Normal install scope:
 /TESTROOT=<owned path> is the bounded validation mode and avoids normal
 Program Files/HKLM mutation.
 
-## Current freshness
+## Latest accepted package evidence
 
-Remote Windows Task #382 (`37265695330`) accepted the current unsigned
-packaging path from candidate
-`8283ece6c4348a751f487a64230e1bc149a47a2f`, later merged through PR #27.
-The run performed one clean Release build, generated and checked the exact
-runtime provenance, built the setup and passed bounded `/TESTROOT`
-clean-install, repair, update, rollback and uninstall.
+Remote Windows Task #382 (`37265695330`) accepted the unsigned packaging
+lifecycle for candidate `8283ece6c4348a751f487a64230e1bc149a47a2f`,
+later merged through PR #27. The run performed one clean Release build,
+generated and checked that candidate's exact runtime provenance, built the setup
+and passed bounded `/TESTROOT` clean-install, repair, update, rollback and
+uninstall.
 
 The accepted runtime contained 305 files (17 product/generated and 288 exact
 NuGet byte matches); the setup payload contained 326 files after distribution
 materials were added. The checked-in shutdown probe also showed normal
 `WM_CLOSE` process exit for clean-install, update and rollback.
 
-This does not clear public redistribution. Production signing, clean-machine
+Current main contains later product changes, including physical same-app drag
+and the active-pane `Ctrl+Shift+N` create-folder shortcut, so #382 is
+historical package evidence for its candidate rather than exact current-main
+package freshness. Regenerate provenance and rerun package acceptance from the
+final current Release runtime before the next release claim.
+
+Public redistribution remains uncleared. Production signing, clean-machine
 Program Files/HKLM lifecycle, GPL source delivery and rightsholder review remain
 separate gates.
 
