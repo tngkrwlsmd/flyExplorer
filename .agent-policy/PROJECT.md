@@ -697,18 +697,22 @@ Not certified:
 - signed clean-machine machine-wide install/update/rollback;
 - public redistribution/source-delivery/rightsholder/legal clearance.
 
-The latest unsigned package lifecycle evidence is Remote Windows Task #435
-(`37306799266`) on accepted package candidate
-`00f90c30800fb66f88184211442f6eeb05a950b7`. Its clean Release runtime was
-built from candidate `1862231b271e9bb71d5adbf53439fe0d49b60af4`; provenance
-was generated from that exact build, immediately re-verified, and the same
-runtime was packaged and exercised through bounded `/TESTROOT` clean install,
-repair, update, rollback and uninstall. The runtime inventory is 305 files
-(17 product/generated, 288 exact NuGet byte matches), package payload is 326
-files, and the runtime manifest SHA-256 is
-`40f0f12797c6731f823dd3e438b09fc575a78a54f9962c14fb572e5d70dfdcc5`.
-Production signing, clean-machine machine-wide deployment and public
-redistribution/legal/source-delivery gates remain open.
+The latest unsigned package + exact binary/source identity acceptance is Remote
+Windows Task #440 (`37376305779`). Binary source revision
+`bc63c8b48e466d1275cc6dcffb0c50e02d39db60` produced a 305-file Release
+runtime (17 product/generated, 288 exact NuGet byte matches), a 326-file setup,
+and a deterministic 382-file source bundle. Runtime manifest SHA-256 is
+`61572e65c4a593e01607147596195041ce9d530e5f9fc21c9f9517f615b26c1d`;
+source bundle SHA-256 is
+`5a263a42ecced3384be9a8ab131024ce309e4eb96b249bad1f8adc91f065ce1d`;
+unsigned setup SHA-256 is
+`825a644a8170acdaae43135604d6998ce517f882b3f8f228fa54cb30c1298a91`.
+The setup, source ZIP, source manifest, runtime provenance and release identity
+were preserved together in the private #440 evidence artifact. This closes the
+technical exact binary/source identity gate, but production signing,
+clean-machine machine-wide deployment, public recipient source availability,
+final release tag/retention mechanism and rightsholder/legal clearance remain
+open.
 
 ## Documentation
 
