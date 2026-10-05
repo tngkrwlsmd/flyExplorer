@@ -29,6 +29,15 @@ class RemoteWindowsTaskContractTests(unittest.TestCase):
         self.assertIn("contents: read", self.workflow)
         self.assertNotIn("actions: write", self.workflow)
         self.assertNotIn("contents: write", self.workflow)
+        for obsolete in (
+            "FLYEXPLORER_ROUTINE_OBSERVATION_SECONDS",
+            "FLYEXPLORER_ACTIVE_MONITOR_SECONDS",
+            "FLYEXPLORER_RESULT_DEPENDENT_MAX_WAIT_SECONDS",
+            "FLYEXPLORER_REMOTE_RUNNER_CAPACITY",
+            "FLYEXPLORER_DEFAULT_VALIDATION_RUN_BUDGET",
+            "FLYEXPLORER_REMOTE_EVIDENCE_DIR",
+        ):
+            self.assertNotIn(obsolete, self.workflow)
 
     def test_request_model_is_small_diagnostic_or_validation(self):
         for token in (
