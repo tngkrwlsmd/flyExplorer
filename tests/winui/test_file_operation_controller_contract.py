@@ -73,6 +73,33 @@ class FileOperationContracts(unittest.TestCase):
         self.assertIn("completion.touchedFolders.begin()", transfer)
         self.assertIn("QueuePidl(side", transfer)
 
+    def test_create_folder_shortcuts_reuse_existing_file_command_identity(self):
+        main = read("app/winui/MainWindow.xaml.cpp")
+        command = read("app/winui/m21_commands.cpp")
+        constructor = main[
+            main.index("RootShell().PreviewKeyDown("):
+            main.index("RefreshWindowTabs();")
+        ]
+        self.assertIn("VirtualKey::N", constructor)
+        self.assertIn("VirtualKey::F11", constructor)
+        self.assertIn("VK_CONTROL", constructor)
+        self.assertIn("VK_SHIFT", constructor)
+        self.assertIn("VK_MENU", constructor)
+        self.assertEqual(
+            1,
+            constructor.count(
+                "fxfile::filecommand::Kind::CreateFolder"
+            ),
+        )
+        self.assertIn("BeginFileNameCommand(", constructor)
+        self.assertNotIn("CreateDirectoryW", constructor)
+        self.assertIn("if(mFileOperations.busy())", command)
+        self.assertIn(
+            "const int side=ActiveWindowTab().model.activePane;",
+            command,
+        )
+        self.assertIn("mFileOperations.startFileCommand", command)
+
     def test_clipboard_wire_is_unicode_bounded_and_cut_errors_do_not_copy(self):
         body = read("src/base/shell_clipboard_core.cpp")
         for token in (
