@@ -59,10 +59,17 @@ The tracked audit records are `SOURCE_BUNDLE_MANIFEST.json` and
 the private #440 Actions evidence artifact rather than committed to the
 repository.
 
-Public redistribution remains uncleared. Private source evidence is not public
-recipient source availability; production signing, clean-machine Program
-Files/HKLM lifecycle, GPL source-delivery/retention, final release tag and
-rightsholder review remain separate gates.
+Public redistribution remains uncleared, but the source-delivery mechanism and
+retention policy are now selected. Public binary conveyance uses GPLv3 section
+6(d): the binary and deterministic source ZIP must be offered on the same public
+GitHub Release page, without authentication or extra source charge. The reserved
+tag is `v1.0.0.0`; it is intentionally not pre-created and will be locked by
+GitHub Immutable Releases when the fully assembled draft is published.
+
+Source remains available for the full public binary-availability period plus at
+least 1095 days after binary withdrawal as an additional project commitment.
+Production signing, clean-machine Program Files/HKLM lifecycle, public release
+surface activation and rightsholder/legal review remain separate gates.
 
 For exact binary/source identity and the deterministic source bundle workflow,
 see RELEASE_SOURCE.md.
