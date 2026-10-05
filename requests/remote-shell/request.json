@@ -1,11 +1,14 @@
 {
-  "request_id": "verify-actions-retention-365-20261005",
-  "expected_main_sha": "fc213584ce765d009a3c2aab18b23460da303e4a",
-  "candidate_sha": "fc213584ce765d009a3c2aab18b23460da303e4a",
-  "logical_unit": "actions-retention-365-cleanup",
-  "request_mode": "diagnostic",
-  "configuration": "none",
-  "validation_plan": [],
+  "request_id": "docs-current-state-20261005",
+  "expected_main_sha": "e9d6f485e992cf7532fb3928e301e38302aeceb6",
+  "candidate_sha": "3fdf27d12ddceff8c06c4f6195c621efcceea418",
+  "logical_unit": "docs-current-state-refresh",
+  "request_mode": "validation",
+  "configuration": "Release",
+  "validation_plan": [
+    "policy",
+    "infra-docs"
+  ],
   "working_directory": "",
-  "command": "$ErrorActionPreference=\"Stop\"\n$endpoint=\"repos/tngkrwlsmd/flyExplorer/actions/permissions/artifact-and-log-retention\"\n$raw=(& gh api -H \"X-GitHub-Api-Version: 2026-03-10\" $endpoint | Out-String)\nif($LASTEXITCODE -ne 0){throw \"failed to read Actions retention setting\"}\n$setting=$raw | ConvertFrom-Json\n$setting | ConvertTo-Json -Compress\nif([int]$setting.days -ne 365){throw \"Actions retention setting is not 365 days\"}\n$repo=$env:FLYEXPLORER_CANONICAL_CHECKOUT\nSet-Location -LiteralPath $repo\n& git fetch origin main work/actions-retention-365-20261005 --no-tags --prune\nif($LASTEXITCODE -ne 0){throw \"cleanup fetch failed\"}\n& git diff --quiet refs/remotes/origin/main refs/remotes/origin/work/actions-retention-365-20261005 --\nif($LASTEXITCODE -ne 0){throw \"refuse cleanup: merged main tree differs from work branch tree\"}\n& git push origin --delete work/actions-retention-365-20261005\nif($LASTEXITCODE -ne 0){throw \"failed to delete merged work branch\"}\n& git fetch origin --prune --no-tags\nif($LASTEXITCODE -ne 0){throw \"post-delete fetch failed\"}\nif(& git show-ref --verify --quiet \"refs/remotes/origin/work/actions-retention-365-20261005\"){throw \"work branch still exists\"}\nWrite-Host \"ACTIONS_RETENTION_365_FINAL=PASS\""
+  "command": "$ErrorActionPreference=\"Stop\"\n$repo=$env:FLYEXPLORER_CANONICAL_CHECKOUT\n$candidate=\"3fdf27d12ddceff8c06c4f6195c621efcceea418\"\n$baseline=\"e9d6f485e992cf7532fb3928e301e38302aeceb6\"\n$temp=Join-Path $env:RUNNER_TEMP (\"flyexplorer-docs-check-\"+$env:GITHUB_RUN_ID)\n$worktreeAdded=$false\ntry {\n  Set-Location -LiteralPath $repo\n  & git fetch origin main work/docs-current-state-20261005 --no-tags\n  if($LASTEXITCODE -ne 0){throw \"candidate fetch failed\"}\n  $resolved=(& git rev-parse refs/remotes/origin/work/docs-current-state-20261005).Trim()\n  if($LASTEXITCODE -ne 0 -or $resolved -ne $candidate){throw \"candidate ref mismatch: $resolved\"}\n\n  & git worktree add --detach $temp $candidate\n  if($LASTEXITCODE -ne 0){throw \"candidate worktree creation failed\"}\n  $worktreeAdded=$true\n  Set-Location -LiteralPath $temp\n\n  & git diff --check $baseline $candidate\n  if($LASTEXITCODE -ne 0){throw \"git diff --check failed\"}\n\n  & cmd /c test.bat policy\n  if($LASTEXITCODE -ne 0){throw \"policy validation failed\"}\n\n  & python -X utf8 -m unittest tests/winui/test_remote_windows_task_contract.py\n  if($LASTEXITCODE -ne 0){throw \"remote workflow contract failed\"}\n\n  $readme=Get-Content -Raw -Encoding UTF8 -LiteralPath \"README\"\n  if($readme.Contains(\"main pushes automatically run the normal Release + GUI validation\")){throw \"stale README CI wording remains\"}\n\n  $project=Get-Content -Raw -Encoding UTF8 -LiteralPath \".agent-policy\\PROJECT.md\"\n  foreach($stale in @(\n    \"bounded 6,000-entry isolated helper ceiling\",\n    \"The tracked installer/provenance snapshot predates v7\",\n    '[\"none\"] requires `configuration: \"none\"`'\n  )){\n    if($project.Contains($stale)){throw \"stale PROJECT wording remains: $stale\"}\n  }\n\n  $licenseReadme=Get-Content -Raw -Encoding UTF8 -LiteralPath \"packaging\\licenses\\README.md\"\n  if($licenseReadme.Contains(\"2026-10-01 packaged runtime\")){throw \"stale provenance date remains\"}\n\n  Write-Host \"DOCS_CURRENT_STATE_VALIDATION=PASS\"\n} finally {\n  Set-Location -LiteralPath $repo\n  if($worktreeAdded){\n    & git worktree remove --force $temp 2>$null\n    & git worktree prune\n  } elseif(Test-Path -LiteralPath $temp) {\n    Remove-Item -LiteralPath $temp -Recurse -Force -ErrorAction SilentlyContinue\n  }\n}"
 }
