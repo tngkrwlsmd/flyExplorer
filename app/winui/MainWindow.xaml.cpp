@@ -159,8 +159,7 @@ namespace winrt::FlyExplorer::implementation
                 const bool alt=(::GetKeyState(VK_MENU)&0x8000)!=0;
                 const auto key=args.Key();
                 const bool createFolderShortcut=
-                    (!alt&&control&&shift&&key==Windows::System::VirtualKey::N)||
-                    (!alt&&!control&&!shift&&key==Windows::System::VirtualKey::F11);
+                    !alt&&control&&shift&&key==Windows::System::VirtualKey::N;
                 if(createFolderShortcut){
                     if(auto ui=nativeWeak.get()){
                         ui->BeginFileNameCommand(
