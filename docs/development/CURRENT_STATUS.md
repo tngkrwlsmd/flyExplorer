@@ -577,32 +577,34 @@ Current source and the last parity evidence still show these limits:
 
 ## Packaging state
 
-The latest accepted unsigned package lifecycle evidence is from candidate
-`8283ece6c4348a751f487a64230e1bc149a47a2f`, merged through PR #27.
-Remote Windows Task #382 (`37265695330`) performed one clean Release build,
-generated and re-verified that candidate's exact runtime provenance inventory,
-built the setup, and passed bounded `/TESTROOT` clean install, repair, update,
-rollback and uninstall. The run inventoried 305 Release runtime files
-(17 product/generated and 288 exact NuGet byte matches) and packaged 326 files
-including the required license/notice material.
+The current unsigned package lifecycle is accepted by Remote Windows Task #435
+(`37306799266`). The accepted package candidate is
+`00f90c30800fb66f88184211442f6eeb05a950b7`. Its clean canonical Release
+runtime was built from candidate
+`1862231b271e9bb71d5adbf53439fe0d49b60af4`, then
+`packaging/provenance.py --write` and `--check` were run against that exact
+byte set before `package.bat Release` consumed the same runtime.
 
-That package candidate predates later accepted product changes, including
-physical same-app file drag (`ef8e2d7a65c03c3727aae625facaf6305d7d9841`)
-and the active-pane `Ctrl+Shift+N` create-folder shortcut
-(`ed08c8c8f5d067ec0f0f365cc0f882d1e0e4a32c`). Therefore the #382 package
-evidence remains valid historical lifecycle/provenance evidence for its
-candidate, but it is not exact current-main package freshness. Regenerate
-provenance and package acceptance before the next current-product release claim.
+The accepted runtime contains 305 files: 17 product/generated files and 288
+files with exact NuGet byte matches. The setup payload contains 326 files after
+tracked distribution materials are added. Runtime manifest SHA-256:
+`40f0f12797c6731f823dd3e438b09fc575a78a54f9962c14fb572e5d70dfdcc5`.
 
-The same run replaced the old installed-process wait with a checked-in shutdown
-timeline probe. Clean-install, update and rollback all posted `WM_CLOSE`,
-lost their top-level window within about 0.1 seconds and exited the owning
-flyExplorer process within about 0.17-0.21 seconds. This establishes that the
-earlier 16-second lifecycle timeout was a harness observation/process-wait
-failure rather than a product shutdown defect.
+The bounded `/TESTROOT` lifecycle passed clean install, same-version repair
+including stale-manifest cleanup, update, rollback and uninstall. Installed
+clean/update/rollback launches navigated owned content and all three shutdown
+probes posted `WM_CLOSE` and observed owning-process exit 0. The recorded
+shutdown completion points were about 0.221 s for clean install, 0.164 s for
+update and 0.161 s for rollback. The user-settings sentinel was preserved.
 
-That acceptance is an unsigned, test-owned install path for its recorded
-candidate. It does not certify the later current-main product, production
+The preceding #434 run is not package acceptance evidence. It rebuilt Release
+and correctly failed because it expected the prior build's provenance digest to
+match the newly linked byte set. Provenance is intentionally **exact-build
+evidence**, not a claim that two clean builds from the same source revision are
+byte-for-byte reproducible. A fresh Release rebuild must regenerate provenance
+before verification and packaging.
+
+This acceptance is unsigned and test-owned. It does not certify production
 Authenticode signing or clean-machine Program Files/HKLM machine-wide
 install/update/rollback.
 

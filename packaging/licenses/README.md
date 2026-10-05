@@ -3,14 +3,14 @@
 This directory contains notice/license inputs plus the last tracked payload
 provenance snapshot.
 
-PAYLOAD_PROVENANCE.md is the tracked 2026-10-05 snapshot generated from
-Release runtime source revision
-`067122c8e9b45d56c4fa8dde75fef9c2ef86f44f`. It records 305 runtime files
-before distribution materials and belongs to the package lifecycle later
-accepted through Remote Windows Task #382 / PR #27. Current main contains later
-product changes, so this snapshot is historical evidence rather than provenance
-for a current-main binary. Regenerate the provenance audit from the final
-Release runtime before the next release claim.
+PAYLOAD_PROVENANCE.md and PAYLOAD_PROVENANCE.json are the tracked snapshot
+for the exact clean Release runtime used by the accepted package candidate.
+They record the runtime source revision, per-file SHA-256 inventory, package
+origins and the aggregate runtime manifest SHA-256. A fresh Release rebuild is
+a new byte set for provenance purposes: regenerate the snapshot with
+`packaging/provenance.py --write`, immediately verify it with `--check`, and
+package that same runtime rather than expecting an older snapshot to match a
+later rebuild.
 
 The directory also retains:
 - GPL-3.0.txt, the full GNU GPL version 3 text;

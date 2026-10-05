@@ -8,6 +8,12 @@ From the repository root, the current unsigned packaging sequence is:
 4. `python -X utf8 packaging\provenance.py --check`
 5. `package.bat Release`
 
+The provenance snapshot belongs to the exact Release byte set produced by step
+2. It is not a cross-build reproducibility assertion. After any fresh rebuild,
+run `--write` again before `--check` and package that same runtime; do not
+reuse a snapshot generated from an earlier build merely because the source tree
+is behaviorally unchanged.
+
 `package.bat Release` builds one x64 setup executable from the canonical
 `out\winui\Release` runtime set and fails closed if the generated provenance
 snapshot does not match that runtime.
@@ -33,23 +39,23 @@ Program Files/HKLM mutation.
 
 ## Latest accepted package evidence
 
-Remote Windows Task #382 (`37265695330`) accepted the unsigned packaging
-lifecycle for candidate `8283ece6c4348a751f487a64230e1bc149a47a2f`,
-later merged through PR #27. The run performed one clean Release build,
-generated and checked that candidate's exact runtime provenance, built the setup
-and passed bounded `/TESTROOT` clean-install, repair, update, rollback and
+Remote Windows Task #435 (`37306799266`) accepted package candidate
+`00f90c30800fb66f88184211442f6eeb05a950b7`. It clean-built the Release
+runtime from candidate `1862231b271e9bb71d5adbf53439fe0d49b60af4`,
+regenerated and checked provenance for that exact byte set, built the setup and
+passed bounded `/TESTROOT` clean-install, repair, update, rollback and
 uninstall.
 
-The accepted runtime contained 305 files (17 product/generated and 288 exact
-NuGet byte matches); the setup payload contained 326 files after distribution
-materials were added. The checked-in shutdown probe also showed normal
-`WM_CLOSE` process exit for clean-install, update and rollback.
+The accepted runtime contains 305 files (17 product/generated and 288 exact
+NuGet byte matches); the setup payload contains 326 files after distribution
+materials are added. Runtime manifest SHA-256:
+`40f0f12797c6731f823dd3e438b09fc575a78a54f9962c14fb572e5d70dfdcc5`.
+Clean-install, update and rollback all launched owned content and exited normally
+after `WM_CLOSE`.
 
-Current main contains later product changes, including physical same-app drag
-and the active-pane `Ctrl+Shift+N` create-folder shortcut, so #382 is
-historical package evidence for its candidate rather than exact current-main
-package freshness. Regenerate provenance and rerun package acceptance from the
-final current Release runtime before the next release claim.
+Run #434 is retained as a useful fail-closed check: after a fresh rebuild it
+correctly rejected provenance from an earlier build. The provenance snapshot is
+exact-build evidence, not a cross-build reproducibility promise.
 
 Public redistribution remains uncleared. Production signing, clean-machine
 Program Files/HKLM lifecycle, GPL source delivery and rightsholder review remain

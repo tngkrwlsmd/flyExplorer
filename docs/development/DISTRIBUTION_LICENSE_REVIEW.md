@@ -13,23 +13,26 @@ materials under packaging/licenses/.
 
 ## Latest package evidence and current freshness
 
-Remote Windows Task #382 (`37265695330`) clean-built candidate
-`8283ece6c4348a751f487a64230e1bc149a47a2f`, generated and verified that
-candidate's Release payload provenance, built the setup and passed bounded
-`/TESTROOT` clean install, repair, update, rollback and uninstall. That
-candidate was merged through PR #27.
+Remote Windows Task #435 (`37306799266`) accepted package candidate
+`00f90c30800fb66f88184211442f6eeb05a950b7`. Its clean Release runtime was
+built from candidate `1862231b271e9bb71d5adbf53439fe0d49b60af4`; the
+provenance snapshot was generated and checked against that exact build before
+the same runtime was packaged and exercised through bounded `/TESTROOT` clean
+install, repair, update, rollback and uninstall.
 
-The accepted run inventoried 305 runtime files, including 288 exact NuGet byte
-matches, and packaged 326 files with the tracked license/notice material. It is
-valid engineering evidence for that recorded candidate, but current main later
-changed product code, including physical same-app drag and the active-pane
-`Ctrl+Shift+N` create-folder shortcut. Therefore #382 is not exact
-current-main package freshness or binary/source identity. Regenerate provenance,
-build the package and rerun the required package acceptance before the next
-current-product release claim.
+The accepted runtime has 305 files, including 288 exact NuGet byte matches and
+17 product/generated files. The setup payload has 326 files. The accepted
+runtime manifest SHA-256 is
+`40f0f12797c6731f823dd3e438b09fc575a78a54f9962c14fb572e5d70dfdcc5`.
+Clean-install, update and rollback launch/shutdown probes all observed normal
+process exit.
 
-The recorded #382 evidence is unsigned and does not certify production signing
-or clean-machine machine-wide deployment.
+This closes the stale current-product unsigned package/provenance gate that was
+previously represented only by #382. It remains engineering evidence for an
+unsigned, test-owned install path; it does not certify production signing,
+clean-machine machine-wide deployment, GPL source delivery or rightsholder
+clearance. A later fresh Release rebuild is a new byte set and must regenerate
+provenance rather than reusing this digest.
 
 ## Open public-distribution gates
 
