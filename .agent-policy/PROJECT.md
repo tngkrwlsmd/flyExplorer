@@ -668,7 +668,6 @@ of the original High Contrast OFF state.
 Not certified:
 - actual 125/150/200% OS scaling;
 - human Narrator/Korean IME;
-- physical drag;
 - signed clean-machine machine-wide install/update/rollback;
 - public redistribution/source-delivery/rightsholder/legal clearance.
 
