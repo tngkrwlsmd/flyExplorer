@@ -67,7 +67,7 @@ def main(configuration="Release"):
     hwnd=None
     passed=False
     try:
-        def ready():
+        def window_ready():
             nonlocal hwnd
             if proc.poll() is not None:
                 raise AssertionError(
@@ -81,10 +81,14 @@ def main(configuration="Release"):
             if len(windows)!=1:
                 return False
             hwnd=windows[0].handle
-            return windows[0].child_window(auto_id="LeftFiles").exists(timeout=.2)
+            return True
 
-        until(ready,"High Contrast owned flyExplorer window did not start")
+        until(window_ready,"High Contrast owned flyExplorer window did not start")
         win=Desktop(backend="uia").window(handle=hwnd)
+        until(
+            lambda:win.child_window(auto_id="LeftFiles").exists(timeout=.2),
+            "High Contrast owned file list did not become ready",
+        )
         win.set_focus()
         assert u.SetWindowPos(hwnd,None,40,30,1100,720,0x0014)
         until(lambda:abs(win.rectangle().width()-1100)<=3,
