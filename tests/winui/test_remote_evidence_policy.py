@@ -1,10 +1,15 @@
 """Pure policy tests for Remote Windows Task prior-evidence gating."""
 from __future__ import annotations
 
+import hashlib
 import importlib.util
+import io
+import json
 from pathlib import Path
+import tempfile
 import urllib.request
 import unittest
+import zipfile
 
 ROOT = Path(__file__).resolve().parents[2]
 MODULE_PATH = ROOT / "tools" / "winui" / "remote_evidence_policy.py"
@@ -23,6 +28,38 @@ def result(category, *, candidate="a" * 40, plan=None):
         or ["release-build", "provenance", "package", "installed-gui-lifecycle"],
         "failure_category": category,
     }
+
+
+def reuse_archive(*, candidate="b" * 40):
+    files = {
+        "reuse/runtime.zip": b"runtime-archive",
+        "reuse/PAYLOAD_PROVENANCE.json": b'{"format":"demo"}',
+        "reuse/flyExplorer-Setup-x64.exe": b"setup-bytes",
+    }
+    targets = {
+        "release-build": "reuse/runtime.zip",
+        "provenance": "reuse/PAYLOAD_PROVENANCE.json",
+        "package": "reuse/flyExplorer-Setup-x64.exe",
+    }
+    manifest = {
+        "format": "flyexplorer-reuse-evidence-v1",
+        "logical_unit": "packaging",
+        "candidate_sha": candidate,
+        "targets": {
+            target: {
+                "path": path,
+                "bytes": len(files[path]),
+                "sha256": hashlib.sha256(files[path]).hexdigest(),
+            }
+            for target, path in targets.items()
+        },
+    }
+    stream = io.BytesIO()
+    with zipfile.ZipFile(stream, "w") as archive:
+        archive.writestr("reuse-evidence.json", json.dumps(manifest))
+        for path, raw in files.items():
+            archive.writestr(path, raw)
+    return stream.getvalue()
 
 
 class RemoteEvidencePolicyTests(unittest.TestCase):
@@ -121,6 +158,54 @@ class RemoteEvidencePolicyTests(unittest.TestCase):
             candidate_sha="b" * 40,
             targets=["release-build", "provenance", "package"],
         )
+
+    def test_focused_reuse_requires_real_hashed_artifacts(self):
+        data = reuse_archive()
+        files = policy.validate_reuse_artifacts(
+            data=data,
+            logical_unit="packaging",
+            candidate_sha="b" * 40,
+            targets=["release-build", "provenance", "package"],
+        )
+        self.assertEqual(
+            {
+                "reuse/runtime.zip",
+                "reuse/PAYLOAD_PROVENANCE.json",
+                "reuse/flyExplorer-Setup-x64.exe",
+            },
+            set(files),
+        )
+
+    def test_focused_reuse_extracts_only_verified_files(self):
+        files = policy.validate_reuse_artifacts(
+            data=reuse_archive(),
+            logical_unit="packaging",
+            candidate_sha="b" * 40,
+            targets=["release-build", "package"],
+        )
+        with tempfile.TemporaryDirectory() as raw:
+            output = Path(raw) / "reuse"
+            policy.extract_reuse_artifacts(files, output)
+            self.assertEqual(b"runtime-archive", (output/"runtime.zip").read_bytes())
+            self.assertEqual(
+                b"setup-bytes",
+                (output/"flyExplorer-Setup-x64.exe").read_bytes(),
+            )
+            self.assertFalse((output/"PAYLOAD_PROVENANCE.json").exists())
+
+    def test_log_markers_without_binary_bundle_are_not_reusable(self):
+        stream = io.BytesIO()
+        with zipfile.ZipFile(stream, "w") as archive:
+            archive.writestr("remote-result.json", "{}")
+        with self.assertRaisesRegex(
+            policy.EvidencePolicyError, "no reuse-evidence.json"
+        ):
+            policy.validate_reuse_artifacts(
+                data=stream.getvalue(),
+                logical_unit="packaging",
+                candidate_sha="b" * 40,
+                targets=["package"],
+            )
 
     def test_reuse_rejects_missing_success_marker(self):
         with self.assertRaisesRegex(
