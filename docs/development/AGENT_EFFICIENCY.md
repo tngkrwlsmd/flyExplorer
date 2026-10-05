@@ -23,21 +23,17 @@ snapshot. The workflow must reject a stale request when current main no longer
 matches, forcing the agent to refresh context instead of spending time on an
 obsolete baseline.
 
-Control-branch requests also carry machine-checkable validation metadata:
-`candidate_sha`, stable `logical_unit`, `configuration`,
-`validation_kind`, and `invalidated_evidence`. The stage array is the exact
-evidence frontier the request is allowed to exercise. A normal inspection or
-Git-only request uses `validation_kind: ["none"]`; a validation request names
-only the source/build/native/gui/visual stages invalidated by the current diff
-and gives one concrete reason per stage.
+Control-branch requests carry one machine-checkable purpose model in addition
+to candidate SHA and stable logical unit. Diagnostic requests use
+`request_mode: diagnostic`, `configuration: none` and an empty
+`validation_plan`. Validation requests use `request_mode: validation`,
+Debug/Release configuration and a non-empty logical plan.
 
-Preflight that JSON **before the control-branch commit**. Non-validation means
-`configuration: "none"`, candidate equals expected main and no invalidated
-evidence. Any declared validation stage means `configuration` is exactly
-`Debug` or `Release`, candidate is the intended revision, evidence keys
-exactly match the declared stages, and the command does not contain a
-recognizable undeclared validation stage. Do not spend a Remote Windows Task
-run discovering request-shape errors that the workflow schema already defines.
+Preflight that JSON **before the control-branch commit**. Validate the
+mode/configuration/plan relationship and referenced SHAs/paths, but do not
+regex-infer the command back into another stage declaration. Do not spend a
+Remote Windows Task run discovering request-shape errors that the preflight can
+catch locally.
 
 ### Zero-run preflight before Remote Windows Task
 
@@ -47,7 +43,7 @@ Windows queue:
 
 - verify live main/candidate SHA, every referenced branch/ref/path and the
   pre-dispatch lease;
-- validate request JSON metadata and stage/command agreement;
+- validate request JSON mode/plan metadata;
 - review PowerShell/JSON quoting and reuse a known-good command template rather
   than debugging fresh shell serialization on the runner;
 - for changed Python tests/harnesses, perform syntax/import-path sanity and
@@ -73,15 +69,12 @@ not a reason to introduce GitHub-hosted/cloud compute, and it must not be
 deferred into a Windows VM task. The self-hosted workflow checks are only a
 fallback guard after the zero-run preflight already passed.
 
-The request workflow fingerprints validation as
-`candidate_sha + configuration + sorted(validation_kind)` and rejects an
-already-requested fingerprint before the remote command executes. Do not evade
-this by making another control commit with an equivalent command. A materially
-different retry is allowed only with both `retry_reason` and a changed
-`retry_revision` for the harness/environment condition that invalidated the
-prior attempt. The workflow also checks recognizable expensive commands against
-the declared stage list. GitHub rerun attempts are skipped at the job boundary
-in both Windows workflows.
+The request workflow fingerprints validation using candidate SHA,
+configuration, logical unit, normalized validation plan, normalized command
+hash and harness revision. Use that fingerprint to identify/reuse equivalent
+evidence; do not hard-block a run merely because an older request had a coarse
+matching stage set. Diagnostic requests do not participate in validation
+deduplication.
 
 Define the completion condition, reusable evidence, minimum required
 verification and expected call budget.
@@ -91,11 +84,9 @@ Default ceilings per user request:
 - general source modification plus build: 20 calls;
 - real GUI/debug task: 30 calls.
 
-Periodically audit the recorded `logical_unit`, `validation_kind` and
-validation fingerprints. The target is zero diagnosis-free repeated validation,
-zero unchanged-product build repeats after a harness-only correction, and zero
-duplicate same-candidate fingerprints without a materially changed retry
-revision.
+Periodically audit recorded logical units, request modes, validation plans and
+failure classes. The target is zero diagnosis-free repeated validation and zero
+unchanged-product build repeats after harness-only corrections.
 
 These are safety ceilings, not targets. At 75% of a ceiling, re-evaluate the
 plan. Essential verification must not be skipped merely to hit a budget.
@@ -113,8 +104,9 @@ A Markdown line wrap must not create a validation run; newline-sensitive
 assertions are appropriate only for structurally formatted content such as an
 exact workflow/YAML block.
 
-Do not retry a completed GitHub Actions run on the same revision. Zero
-same-revision Actions retries is the default and required development policy.
+Do not retry a deterministic product/source failure on the same revision.
+For a clearly classified infrastructure/transient failure, one controlled
+same-revision rerun is permitted; repeated or unclassified reruns are not.
 Inspect the first relevant failure, classify it, fix the identified cause in
 the persistent remote checkout, and only then create a new revision whose
 single final run can provide new evidence. Locale matching, UIA virtualization,
