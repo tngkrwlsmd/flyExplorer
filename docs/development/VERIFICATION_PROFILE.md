@@ -13,6 +13,11 @@ Runner serialization is expressed directly by workflow concurrency rather than
 duplicated tuning variables. Agent observation cadence and retry discipline are
 policy, not workflow environment configuration.
 
+The Remote Windows Task intentionally keeps `actions: write` and
+`contents: write`. Request mode describes purpose and validation behavior; it
+does not downgrade the workflow token. Repository-scoped maintenance such as
+approved branch cleanup may therefore use the same control plane.
+
 ## Request modes
 
 Remote requests have one purpose, not two declarations of the same purpose.
@@ -26,7 +31,7 @@ command. A moved \`main\` SHA is reported as advisory rather than invalidating a
 read-only diagnostic.
 
 Diagnostic failures are infrastructure/diagnostic evidence. They are not
-product acceptance failures and do not participate in validation deduplication.
+product acceptance failures.
 
 ### Validation
 
@@ -72,13 +77,12 @@ Do not use rerun as a development loop. Deterministic product assertions and
 source-contract failures require a source or test revision before another
 acceptance run.
 
-There are no automatic or workflow-enforced result-based retries and no
-prior-run evidence-reuse protocol. After any failure, classify the first
-relevant error as product, harness/fixture, or control-plane/environment. A
-successor run is justified only after the code, harness, or execution condition
-that explains the failure has materially changed. Resume from the earliest
-invalidated boundary and do not rebuild or repackage unchanged product merely
-because a later harness step failed.
+There are no automatic or workflow-enforced result-based retries. After any
+failure, classify the first relevant error as product, harness/fixture, or
+control-plane/environment. A successor run is justified only after the code,
+harness, or execution condition that explains the failure has materially
+changed. Resume from the earliest invalidated boundary and do not rebuild or
+repackage unchanged product merely because a later harness step failed.
 
 ## Verification profiles
 
