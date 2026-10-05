@@ -133,10 +133,10 @@ remote Windows tasks and local long-running commands, not only subprocesses.
 Do not poll every few seconds, alternate status/log-tail probes, or repeatedly
 read the same run while it is normally progressing.
 
-For result-dependent GitHub Actions / Remote Windows Tasks, use a fixed bounded
-wait policy: record the Actions start time, poll every **30 seconds**, and keep
-the same task open while the run's Actions-reported execution time is under
-**three minutes**. An early queued/running read is not a reason to end the
+For result-dependent GitHub Actions / Remote Windows Tasks, treat the run as a
+**blocking dependency** and use a fixed bounded wait policy: record the Actions
+start time, poll every **30 seconds**, and keep the same task open while the
+run's Actions-reported execution time is under **three minutes**. An early queued/running read is not a reason to end the
 response during that window. Consume completion immediately and continue the
 dependent work. If the run is still active when its execution time reaches
 three minutes, leave the exact run ID, candidate SHA and next action as the
