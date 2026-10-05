@@ -168,4 +168,27 @@ class MigrationContracts(unittest.TestCase):
   self.assertNotIn("CWnd",worker+bridge)
   self.assertNotIn("ListCtrlEx",worker+bridge)
 
+ def test_native_workspace_model_keeps_routes_and_pending_requests_out_of_winui_state(self):
+  state=(ROOT.parents[1]/"src/base/explorer_ui_state.h").read_text(encoding="utf-8-sig")
+  impl=(ROOT.parents[1]/"src/base/explorer_ui_state.cpp").read_text(encoding="utf-8-sig")
+  window=text("MainWindow.xaml.h")
+  controller=text("window_workspace_controller.cpp")
+  for token in ("std::array<Pane,2>","std::vector<shellnav::Session>",
+                "routeIds,pending","Model::dispatch","Model::reset",
+                "Model::markPending","Model::completeRequest"):
+   self.assertIn(token,state+impl)
+  for forbidden in ("CWnd","Microsoft::UI","APPDATA","RegSetValue"):
+   self.assertNotIn(forbidden,state+impl)
+  self.assertIn("WindowWorkspaceController mWorkspace",window)
+  self.assertIn("active().model.dispatch(command,side,tab)",controller)
+
+ def test_native_model_rejects_stale_route_and_request_completions(self):
+  impl=(ROOT.parents[1]/"src/base/explorer_ui_state.cpp").read_text(encoding="utf-8-sig")
+  nav=text("shell_navigation_controller.cpp")
+  for token in ("pane.routeIds[tab]!=route","pane.pending[tab]!=request","nextRoute_++"):
+   self.assertIn(token,impl)
+  for token in ("model.markPending(side,pane.active,id,true)",
+                "model.completeRequest(","pane.pending[tab]!=result.request"):
+   self.assertIn(token,nav)
+
 if __name__=="__main__":unittest.main()
