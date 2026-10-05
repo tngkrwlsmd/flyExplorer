@@ -645,12 +645,15 @@ jobs:
           }
 
           function Infer-CommandFailure([string]$text) {
-            $classifier = Join-Path $env:FLYEXPLORER_CANONICAL_CHECKOUT "tools\winui\classify_remote_failure.py"
-            if (-not (Test-Path -LiteralPath $classifier -PathType Leaf)) {
-              return "COMMAND_FAILURE_UNCLASSIFIED"
-            }
+            $classifier = Join-Path $env:RUNNER_TEMP ("classify-remote-failure-" + $env:GITHUB_RUN_ID + ".py")
             $tempText = Join-Path $env:RUNNER_TEMP ("remote-failure-" + $env:GITHUB_RUN_ID + ".txt")
             try {
+              $spec = "$($env:REMOTE_OBSERVED_MAIN_SHA):tools/winui/classify_remote_failure.py"
+              & git -C $env:FLYEXPLORER_CANONICAL_CHECKOUT show $spec |
+                Set-Content -LiteralPath $classifier -Encoding UTF8
+              if ($LASTEXITCODE -ne 0 -or -not (Test-Path -LiteralPath $classifier -PathType Leaf)) {
+                return "COMMAND_FAILURE_UNCLASSIFIED"
+              }
               $text | Set-Content -LiteralPath $tempText -Encoding UTF8
               $category = (& python -X utf8 $classifier $tempText | Select-Object -Last 1).Trim()
               if ($LASTEXITCODE -eq 0 -and $category -match '^[A-Z0-9_]+
@@ -2120,6 +2123,7 @@ jobs:
             } catch {
               Write-Host "RESULT_CLASSIFICATION_WARN=$($_.Exception.Message)"
             } finally {
+              Remove-Item -LiteralPath $classifier -Force -ErrorAction SilentlyContinue
               Remove-Item -LiteralPath $tempText -Force -ErrorAction SilentlyContinue
             }
             return "COMMAND_FAILURE_UNCLASSIFIED"
