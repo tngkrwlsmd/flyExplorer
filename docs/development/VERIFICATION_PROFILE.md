@@ -24,30 +24,27 @@ Remote requests have one purpose, not two declarations of the same purpose.
 
 ### Diagnostic
 
-\`request_mode: diagnostic\` is for inspection, runner/environment diagnosis,
+`request_mode: diagnostic` is for inspection, runner/environment diagnosis,
 selector discovery and other exploratory work. It uses
-\`configuration: none\`, an empty \`validation_plan\`, and may use a free-form
-command. A moved \`main\` SHA is reported as advisory rather than invalidating a
-read-only diagnostic.
+`configuration: none`, an empty `validation_plan`, and may use a free-form
+command. A moved `main` SHA is advisory for a non-mutating diagnostic. The
+workflow token itself remains write-capable; request mode does not change token
+permissions.
 
 Diagnostic failures are infrastructure/diagnostic evidence. They are not
 product acceptance failures.
 
 ### Validation
 
-\`request_mode: validation\` requires \`Debug\` or \`Release\` and a non-empty
-\`validation_plan\`. The plan names logical validation targets such as
-\`source\`, \`build\`, \`gui\`, \`visual\` or
-\`high-contrast-gui\`; it is not inferred back from command text.
+`request_mode: validation` requires `Debug` or `Release` and a non-empty
+`validation_plan`. The plan names logical validation targets such as
+`source`, `build`, `gui`, `visual` or
+`high-contrast-gui`; it is not inferred back from command text.
 
-The validation fingerprint includes candidate SHA, configuration, logical unit,
-normalized validation plan, normalized command hash and harness revision. The
-fingerprint is evidence identity, not a hard duplicate rejection gate.
-Previously successful evidence may be reused when all identities match.
-Harness or infrastructure changes naturally produce a different identity.
-
-Legacy \`validation_kind\` requests remain readable only for migration. New
-requests must not declare both schemas.
+The current request schema carries candidate SHA, configuration, logical unit
+and validation plan directly. The workflow does not inspect previous Actions
+results before execution. Deprecated fields from the older request schema are
+rejected.
 
 ## Failure taxonomy
 
