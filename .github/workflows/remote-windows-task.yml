@@ -346,6 +346,10 @@ jobs:
           $ErrorActionPreference = "Stop"
           $repo = $env:FLYEXPLORER_CANONICAL_CHECKOUT
           Set-Location -LiteralPath $repo
+          & git fetch origin --no-tags --prune
+          if ($LASTEXITCODE -ne 0) {
+            throw "Evidence policy could not refresh canonical repository refs."
+          }
           $temp = Join-Path $env:RUNNER_TEMP ("fly-evidence-policy-" + $env:GITHUB_RUN_ID)
           if (Test-Path -LiteralPath $temp) {
             Remove-Item -LiteralPath $temp -Recurse -Force
