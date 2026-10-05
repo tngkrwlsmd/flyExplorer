@@ -28,7 +28,6 @@ permissions:
 
 env:
   FLYEXPLORER_CANONICAL_CHECKOUT: 'C:\dev\flyExplorer'
-  FLYEXPLORER_WORKFLOW_SHA: ${{ github.workflow_sha }}
   FLYEXPLORER_ROUTINE_OBSERVATION_SECONDS: '30'
   FLYEXPLORER_ACTIVE_MONITOR_SECONDS: '30'
   FLYEXPLORER_RESULT_DEPENDENT_MAX_WAIT_SECONDS: '180'
@@ -646,6 +645,8 @@ jobs:
       - name: Write structured remote result
         if: always()
         shell: powershell -NoLogo -NoProfile -ExecutionPolicy Bypass -Command ". '{0}'"
+        env:
+          FLYEXPLORER_WORKFLOW_SHA: ${{ job.workflow_sha }}
         run: |
           $ErrorActionPreference = "Continue"
           $evidence = Join-Path $env:FLYEXPLORER_CANONICAL_CHECKOUT "logs\remote-evidence"
