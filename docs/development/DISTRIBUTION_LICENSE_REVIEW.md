@@ -13,11 +13,17 @@ materials under packaging/licenses/.
 
 ## Current package freshness
 
-The latest tracked setup/provenance snapshot was generated on 2026-10-01,
-before the v7 Window Tab/session product checkpoint. It remains useful as
-historical packaging evidence but is not a package of the current product.
-Before any release claim, rebuild from the current Release runtime and rerun
-payload provenance/lifecycle checks.
+Current unsigned packaging evidence is up to date with the accepted WinUI
+product. Remote Windows Task #382 (`37265695330`) clean-built candidate
+`8283ece6c4348a751f487a64230e1bc149a47a2f`, generated and verified the
+Release payload provenance, built the setup and passed bounded `/TESTROOT`
+clean install, repair, update, rollback and uninstall. That candidate was merged
+through PR #27.
+
+The accepted run inventoried 305 runtime files, including 288 exact NuGet byte
+matches, and packaged 326 files with the tracked license/notice material.
+This is engineering evidence for the current unsigned package path; it is not a
+production-signed release or clean-machine machine-wide certification.
 
 ## Open public-distribution gates
 
@@ -36,9 +42,7 @@ evidence identifies these separate gates:
    Git author metadata does not by itself establish copyright ownership,
    assignment, work-for-hire status or relicensing authority. See
    packaging/RIGHTSHOLDER_REVIEW.md.
-4. The tracked installer/provenance snapshot predates v7. It must be rebuilt
-   from the current Release runtime before it can represent the current product.
-5. Production signing remains open. The release path still requires signed
+4. Production signing remains open. The release path still requires signed
    payload/setup verification and a clean-machine Program Files/HKLM
    install/update/rollback lifecycle check.
 
