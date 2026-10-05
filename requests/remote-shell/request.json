@@ -1,11 +1,11 @@
 {
-  "request_id": "cleanup-test-infra-work-branch-20261005",
-  "expected_main_sha": "37d1e1a2e22252c2f06cdb9909d7c7315e4837f0",
-  "candidate_sha": "37d1e1a2e22252c2f06cdb9909d7c7315e4837f0",
-  "logical_unit": "repository-branch-cleanup",
+  "request_id": "verify-write-capable-current-profile-20261005",
+  "expected_main_sha": "72cfa6b962aca2ea351af354091f1f3230deeb91",
+  "candidate_sha": "72cfa6b962aca2ea351af354091f1f3230deeb91",
+  "logical_unit": "remote-write-profile-alignment",
   "configuration": "none",
   "request_mode": "diagnostic",
   "validation_plan": [],
   "working_directory": "",
-  "command": "$ErrorActionPreference=\"Stop\"\n$repo=$env:FLYEXPLORER_CANONICAL_CHECKOUT\nSet-Location -LiteralPath $repo\n& git fetch origin main work/test-infra-simplify-20261005 --no-tags --prune\nif($LASTEXITCODE -ne 0){throw \"cleanup fetch failed\"}\n& git diff --quiet 37d1e1a2e22252c2f06cdb9909d7c7315e4837f0 f5b3fc72894f2545063a634283c6c714414a2ecf --\nif($LASTEXITCODE -ne 0){throw \"refuse branch cleanup: merged main tree differs from work branch tree\"}\n& git push origin --delete work/test-infra-simplify-20261005\nif($LASTEXITCODE -ne 0){throw \"failed to delete merged work branch\"}\nWrite-Host \"MERGED_WORK_BRANCH_DELETED=PASS\""
+  "command": "$ErrorActionPreference=\"Stop\"\n$repo=$env:FLYEXPLORER_CANONICAL_CHECKOUT\nSet-Location -LiteralPath $repo\n& git fetch origin main --no-tags --prune\nif($LASTEXITCODE -ne 0){throw \"main fetch failed\"}\n$temp=Join-Path $env:RUNNER_TEMP (\"remote-profile-write-\"+$env:GITHUB_RUN_ID)\nif(Test-Path -LiteralPath $temp){Remove-Item -LiteralPath $temp -Recurse -Force}\ntry{\n  & git worktree add --detach $temp 72cfa6b962aca2ea351af354091f1f3230deeb91\n  if($LASTEXITCODE -ne 0){throw \"main worktree failed\"}\n  Set-Location -LiteralPath $temp\n  & python -X utf8 tools\\winui\\run_checks.py infra\n  if($LASTEXITCODE -ne 0){throw \"infra validation failed\"}\n  Write-Host \"REMOTE_WRITE_PROFILE_ALIGNMENT=PASS\"\n} finally {\n  Set-Location -LiteralPath $repo\n  if(Test-Path -LiteralPath $temp){& git worktree remove --force $temp}\n  & git worktree prune\n}"
 }
