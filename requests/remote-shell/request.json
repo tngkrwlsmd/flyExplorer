@@ -1,11 +1,14 @@
 {
-  "request_id": "cleanup-remote-command-exit-semantics-20261005",
+  "request_id": "create-folder-shortcuts-20261005",
   "expected_main_sha": "6a2f42a8e2ef25dfe0af4d64256d2a042afe9fcf",
-  "candidate_sha": "6a2f42a8e2ef25dfe0af4d64256d2a042afe9fcf",
-  "logical_unit": "remote-command-exit-semantics-cleanup",
-  "configuration": "none",
-  "request_mode": "diagnostic",
-  "validation_plan": [],
+  "candidate_sha": "965093aa9397b0e0419c94270e636d1d427a8948",
+  "logical_unit": "create-folder-shortcuts",
+  "configuration": "Release",
+  "request_mode": "validation",
+  "validation_plan": [
+    "build",
+    "file-operations-gui"
+  ],
   "working_directory": "",
-  "command": "$ErrorActionPreference=\"Stop\"\n$repo=$env:FLYEXPLORER_CANONICAL_CHECKOUT\nSet-Location -LiteralPath $repo\n& git fetch origin main work/remote-command-exit-semantics-20261005 --no-tags --prune\nif($LASTEXITCODE -ne 0){throw \"cleanup fetch failed\"}\n& git diff --quiet refs/remotes/origin/main refs/remotes/origin/work/remote-command-exit-semantics-20261005 --\nif($LASTEXITCODE -ne 0){throw \"refuse cleanup: merged main tree differs from work branch tree\"}\n& git push origin --delete work/remote-command-exit-semantics-20261005\nif($LASTEXITCODE -ne 0){throw \"failed to delete merged work branch\"}\n& git fetch origin --prune --no-tags\nif($LASTEXITCODE -ne 0){throw \"post-delete fetch failed\"}\nif(& git show-ref --verify --quiet \"refs/remotes/origin/work/remote-command-exit-semantics-20261005\"){\n  throw \"branch still exists: work/remote-command-exit-semantics-20261005\"\n}\nWrite-Host \"REMOTE_COMMAND_EXIT_BRANCH_CLEANUP=PASS\""
+  "command": "$ErrorActionPreference=\"Stop\"\n$repo=$env:FLYEXPLORER_CANONICAL_CHECKOUT\nSet-Location -LiteralPath $repo\n& git fetch origin work/create-folder-shortcuts-20261005 --no-tags --prune\nif($LASTEXITCODE -ne 0){throw \"candidate fetch failed\"}\n$temp=Join-Path $env:RUNNER_TEMP (\"create-folder-shortcuts-\"+$env:GITHUB_RUN_ID)\nif(Test-Path -LiteralPath $temp){Remove-Item -LiteralPath $temp -Recurse -Force}\ntry{\n  & git worktree add --detach $temp 965093aa9397b0e0419c94270e636d1d427a8948\n  if($LASTEXITCODE -ne 0){throw \"candidate worktree failed\"}\n  Set-Location -LiteralPath $temp\n  & git diff --check 6a2f42a8e2ef25dfe0af4d64256d2a042afe9fcf 965093aa9397b0e0419c94270e636d1d427a8948\n  if($LASTEXITCODE -ne 0){throw \"git diff check failed\"}\n\n  & python -X utf8 tools\\winui\\run_checks.py build --configuration Release\n  if($LASTEXITCODE -ne 0){exit $LASTEXITCODE}\n\n  & python -X utf8 tools\\winui\\run_checks.py gui --configuration Release --area file-operations\n  if($LASTEXITCODE -ne 0){exit $LASTEXITCODE}\n\n  Write-Host \"CREATE_FOLDER_SHORTCUTS_VALIDATION=PASS\"\n} finally {\n  Set-Location -LiteralPath $repo\n  if(Test-Path -LiteralPath $temp){& git worktree remove --force $temp}\n  & git worktree prune\n}"
 }
