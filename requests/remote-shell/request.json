@@ -1,7 +1,7 @@
 {
-  "request_id": "physical-drag-start-fix-compile2-20261005",
+  "request_id": "physical-drag-start-handled-events-20261005",
   "expected_main_sha": "72cfa6b962aca2ea351af354091f1f3230deeb91",
-  "candidate_sha": "e0680b5392ceb776d7a6e1df60ded243c6d6e08a",
+  "candidate_sha": "dcfed3b92cabecc8a619c1d38ac8dbc0d7ab225c",
   "logical_unit": "physical-pointer-drag-start",
   "configuration": "Release",
   "request_mode": "validation",
@@ -11,5 +11,5 @@
     "physical-drag-gui"
   ],
   "working_directory": "",
-  "command": "$ErrorActionPreference=\"Stop\"\n$repo=$env:FLYEXPLORER_CANONICAL_CHECKOUT\nSet-Location -LiteralPath $repo\n& git fetch origin work/physical-drag-start-20261005 --no-tags --prune\nif($LASTEXITCODE -ne 0){throw \"candidate fetch failed\"}\n$temp=Join-Path $env:RUNNER_TEMP (\"physical-drag-start-2-\"+$env:GITHUB_RUN_ID)\nif(Test-Path -LiteralPath $temp){Remove-Item -LiteralPath $temp -Recurse -Force}\ntry{\n  & git worktree add --detach $temp e0680b5392ceb776d7a6e1df60ded243c6d6e08a\n  if($LASTEXITCODE -ne 0){throw \"candidate worktree failed\"}\n  Set-Location -LiteralPath $temp\n  & python -X utf8 tools\\winui\\run_checks.py build --configuration Release\n  if($LASTEXITCODE -ne 0){throw \"Release build failed\"}\n  $env:FLY_MIGRATION_CONFIGURATION=\"Release\"\n  $env:FLY_M23_OWNED_FEATURES=\"YES\"\n  $env:FLY_M23_OWNED_DRAG_TEST=\"YES\"\n  $env:FLY_M23_OWNED_DRAG_TRACE=\"YES\"\n  & python -u tests\\winui\\test_shell_gui.py\n  if($LASTEXITCODE -ne 0){throw \"owned physical drag GUI failed\"}\n  Write-Host \"PHYSICAL_DRAG_START_FIX=PASS\"\n} finally {\n  Set-Location -LiteralPath $repo\n  if(Test-Path -LiteralPath $temp){& git worktree remove --force $temp}\n  & git worktree prune\n}"
+  "command": "$ErrorActionPreference=\"Stop\"\n$repo=$env:FLYEXPLORER_CANONICAL_CHECKOUT\nSet-Location -LiteralPath $repo\n& git fetch origin work/physical-drag-start-20261005 --no-tags --prune\nif($LASTEXITCODE -ne 0){throw \"candidate fetch failed\"}\n$temp=Join-Path $env:RUNNER_TEMP (\"physical-drag-start-3-\"+$env:GITHUB_RUN_ID)\nif(Test-Path -LiteralPath $temp){Remove-Item -LiteralPath $temp -Recurse -Force}\ntry{\n  & git worktree add --detach $temp dcfed3b92cabecc8a619c1d38ac8dbc0d7ab225c\n  if($LASTEXITCODE -ne 0){throw \"candidate worktree failed\"}\n  Set-Location -LiteralPath $temp\n  & python -X utf8 tools\\winui\\run_checks.py build --configuration Release\n  if($LASTEXITCODE -ne 0){throw \"Release build failed\"}\n  $env:FLY_MIGRATION_CONFIGURATION=\"Release\"\n  $env:FLY_M23_OWNED_FEATURES=\"YES\"\n  $env:FLY_M23_OWNED_DRAG_TEST=\"YES\"\n  $env:FLY_M23_OWNED_DRAG_TRACE=\"YES\"\n  & python -u tests\\winui\\test_shell_gui.py\n  if($LASTEXITCODE -ne 0){throw \"owned physical drag GUI failed\"}\n  Write-Host \"PHYSICAL_DRAG_START_FIX=PASS\"\n} finally {\n  Set-Location -LiteralPath $repo\n  if(Test-Path -LiteralPath $temp){& git worktree remove --force $temp}\n  & git worktree prune\n}"
 }
