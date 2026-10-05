@@ -79,6 +79,15 @@ class RemoteWindowsTaskContractTests(unittest.TestCase):
             self.workflow.index("- name: Run remote shell command"),
         )
 
+    def test_diagnostic_preflight_is_not_misreported_as_pass(self):
+        self.assertIn(
+            "inputs.request_ref != '' && env.REMOTE_REQUEST_MODE == 'validation'",
+            self.workflow,
+        )
+        self.assertNotIn("STATIC_PREFLIGHT=SKIPPED_DIAGNOSTIC", self.workflow)
+        self.assertIn("$validationPlan = @()", self.workflow)
+        self.assertIn("validation_plan = $validationPlan", self.workflow)
+
     def test_gui_validation_has_explicit_runner_health_gate(self):
         self.assertIn("REMOTE_NEEDS_GUI_HEALTH", self.workflow)
         self.assertIn("- name: Runner health for GUI validation", self.workflow)
