@@ -1,13 +1,17 @@
 {
-  "request_id": "verification-hardening-premerge-002",
-  "expected_main_sha": "df8b172f605ada11ff3b9df3c466d9df8134aa37",
-  "candidate_sha": "136be3abd35038fcdc792d69df1fac257464a277",
-  "logical_unit": "verification-infra-hardening",
-  "configuration": "none",
-  "request_mode": "diagnostic",
-  "validation_plan": [],
+  "request_id": "verification-hardening-postmerge-smoke-001",
+  "expected_main_sha": "95598bec27fd1e551c3f06c0163949ff5b37feed",
+  "candidate_sha": "95598bec27fd1e551c3f06c0163949ff5b37feed",
+  "logical_unit": "verification-infra-postmerge-smoke",
+  "configuration": "Release",
+  "request_mode": "validation",
+  "validation_plan": [
+    "infra",
+    "harness",
+    "gui-runner-health"
+  ],
   "retry_reason": "",
-  "harness_revision": "136be3abd35038fcdc792d69df1fac257464a277",
+  "harness_revision": "95598bec27fd1e551c3f06c0163949ff5b37feed",
   "working_directory": "",
-  "command": "$ErrorActionPreference=\"Stop\"\n$repo=\"C:\\dev\\flyExplorer\"\n$main=\"df8b172f605ada11ff3b9df3c466d9df8134aa37\"\n$candidate=\"136be3abd35038fcdc792d69df1fac257464a277\"\n$branch=\"work/verification-infra-hardening-20261005\"\nSet-Location -LiteralPath $repo\n& git fetch origin main $branch --no-tags --prune\nif($LASTEXITCODE -ne 0){throw \"fetch failed\"}\nif((& git rev-parse refs/remotes/origin/main).Trim() -ne $main){throw \"main moved\"}\nif((& git rev-parse (\"refs/remotes/origin/\"+$branch)).Trim() -ne $candidate){throw \"candidate moved\"}\n$temp=Join-Path $env:RUNNER_TEMP (\"verification-hardening-\"+$env:GITHUB_RUN_ID)\nif(Test-Path -LiteralPath $temp){Remove-Item -LiteralPath $temp -Recurse -Force}\ntry{\n  & git worktree add --detach $temp $candidate\n  if($LASTEXITCODE -ne 0){throw \"candidate worktree failed\"}\n  $env:PYTHONIOENCODING=\"utf-8\"\n  $changed=@(& git -C $temp diff --name-only ($main+\"..\"+$candidate))\n  $python=@($changed | Where-Object { $_ -match '\\.py$' } | ForEach-Object { Join-Path $temp $_ })\n  & python -X utf8 (Join-Path $temp \"tools\\winui\\check_python_static.py\") @python\n  if($LASTEXITCODE -ne 0){throw \"changed Python static check failed\"}\n  & python -X utf8 (Join-Path $temp \"tools\\winui\\run_checks.py\") harness\n  if($LASTEXITCODE -ne 0){throw \"harness suite failed\"}\n  & python -X utf8 (Join-Path $temp \"tools\\winui\\run_checks.py\") infra\n  if($LASTEXITCODE -ne 0){throw \"infra suite failed\"}\n  & git -C $temp diff --check ($main+\"..\"+$candidate)\n  if($LASTEXITCODE -ne 0){throw \"candidate diff check failed\"}\n  Write-Host \"VERIFICATION_HARDENING_PREMERGE_PASS\"\n}finally{\n  Set-Location -LiteralPath $repo\n  if(Test-Path -LiteralPath $temp){& git worktree remove --force $temp}\n  & git worktree prune\n}"
+  "command": "$ErrorActionPreference=\"Stop\"\n$repo=\"C:\\dev\\flyExplorer\"\n$candidate=\"95598bec27fd1e551c3f06c0163949ff5b37feed\"\nSet-Location -LiteralPath $repo\n& git fetch origin main --no-tags --prune\nif($LASTEXITCODE -ne 0){throw \"fetch failed\"}\nif((& git rev-parse refs/remotes/origin/main).Trim() -ne $candidate){throw \"main moved\"}\n$temp=Join-Path $env:RUNNER_TEMP (\"verification-postmerge-smoke-\"+$env:GITHUB_RUN_ID)\nif(Test-Path -LiteralPath $temp){Remove-Item -LiteralPath $temp -Recurse -Force}\ntry{\n  & git worktree add --detach $temp $candidate\n  if($LASTEXITCODE -ne 0){throw \"main worktree failed\"}\n  $env:PYTHONIOENCODING=\"utf-8\"\n  & python -X utf8 (Join-Path $temp \"tools\\winui\\run_checks.py\") harness\n  if($LASTEXITCODE -ne 0){throw \"harness suite failed\"}\n  & python -X utf8 (Join-Path $temp \"tools\\winui\\run_checks.py\") infra\n  if($LASTEXITCODE -ne 0){throw \"infra suite failed\"}\n  & git -C $temp diff --check\n  if($LASTEXITCODE -ne 0){throw \"main diff check failed\"}\n  Write-Host \"VERIFICATION_INFRA_POSTMERGE_SMOKE_PASS\"\n}finally{\n  Set-Location -LiteralPath $repo\n  if(Test-Path -LiteralPath $temp){& git worktree remove --force $temp}\n  & git worktree prune\n}"
 }
