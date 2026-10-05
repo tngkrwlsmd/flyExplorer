@@ -158,6 +158,13 @@ jobs:
         run: |
           $ErrorActionPreference = "Stop"
           $repo = $env:FLYEXPLORER_CANONICAL_CHECKOUT
+          $evidence = Join-Path $repo "logs\remote-evidence"
+          New-Item -ItemType Directory -Force -Path $evidence | Out-Null
+          $checkResult = Join-Path $evidence "check-result.json"
+          $preflightLog = Join-Path $evidence "static-preflight.log"
+          Remove-Item -LiteralPath $checkResult -Force -ErrorAction SilentlyContinue
+          Remove-Item -LiteralPath $preflightLog -Force -ErrorAction SilentlyContinue
+          $env:FLYEXPLORER_CHECK_RESULT_PATH = $checkResult
           Set-Location -LiteralPath $repo
           & git fetch origin --no-tags --prune
           if ($LASTEXITCODE -ne 0) { throw "Static candidate preflight could not refresh repository refs." }
@@ -168,8 +175,10 @@ jobs:
           try {
             & git worktree add --detach $temp $env:REMOTE_CANDIDATE_SHA
             if ($LASTEXITCODE -ne 0) { throw "Static candidate preflight could not create candidate worktree." }
-            & python -X utf8 (Join-Path $temp "tools\winui\run_checks.py") fast --before $env:REMOTE_EXPECTED_MAIN_SHA --head $env:REMOTE_CANDIDATE_SHA
-            if ($LASTEXITCODE -ne 0) { throw "Change-scoped FAST preflight failed." }
+            $fastOutput = & python -X utf8 (Join-Path $temp "tools\winui\run_checks.py") fast --before $env:REMOTE_EXPECTED_MAIN_SHA --head $env:REMOTE_CANDIDATE_SHA 2>&1
+            $fastCode = $LASTEXITCODE
+            $fastOutput | Tee-Object -FilePath $preflightLog
+            if ($fastCode -ne 0) { throw "Change-scoped FAST preflight failed." }
           } finally {
             Set-Location -LiteralPath $repo
             if (Test-Path -LiteralPath $temp) { & git worktree remove --force $temp }
@@ -223,6 +232,7 @@ jobs:
           $evidenceRoot = Join-Path $env:FLYEXPLORER_CANONICAL_CHECKOUT "logs\remote-evidence"
           New-Item -ItemType Directory -Force -Path $evidenceRoot | Out-Null
           foreach ($classifier in @(
+            "check-result.json",
             "high-contrast-result.json",
             "remote-result.json",
             "remote-command.log",
@@ -231,6 +241,8 @@ jobs:
             $classifierPath = Join-Path $evidenceRoot $classifier
             Remove-Item -LiteralPath $classifierPath -Force -ErrorAction SilentlyContinue
           }
+
+          $env:FLYEXPLORER_CHECK_RESULT_PATH = Join-Path $evidenceRoot "check-result.json"
 
           Write-Host "===== FLYEXPLORER REMOTE SHELL ====="
           Write-Host "REQUEST_ID: $env:REMOTE_REQUEST_ID"
@@ -322,6 +334,28 @@ jobs:
             return $null
           }
 
+          function Read-ExplicitCategory([string]$text) {
+            if ([string]::IsNullOrWhiteSpace($text)) {
+              return $null
+            }
+            $matches = [regex]::Matches($text, '(?m)FAILURE_CATEGORY=([A-Z0-9_]+)')
+            if ($matches.Count -gt 0) {
+              return $matches[$matches.Count - 1].Groups[1].Value
+            }
+            return $null
+          }
+
+          function Read-EvidenceText([string[]]$names) {
+            return (@(
+              $names | ForEach-Object {
+                $path = Join-Path $evidence $_
+                if (Test-Path -LiteralPath $path -PathType Leaf) {
+                  Get-Content -Raw -Encoding UTF8 -LiteralPath $path
+                }
+              }
+            ) -join [Environment]::NewLine)
+          }
+
           function Infer-CommandFailure([string]$text) {
             $classifier = Join-Path $env:RUNNER_TEMP ("classify-remote-failure-" + $env:GITHUB_RUN_ID + ".py")
             $tempText = Join-Path $env:RUNNER_TEMP ("remote-failure-" + $env:GITHUB_RUN_ID + ".txt")
@@ -366,32 +400,47 @@ jobs:
             return "COMMAND_FAILURE_UNCLASSIFIED"
           }
 
+          function Resolve-LowerFailure(
+            [string[]]$structuredNames,
+            [string]$text,
+            [string]$fallback
+          ) {
+            foreach ($name in $structuredNames) {
+              $category = Read-ResultCategory (Join-Path $evidence $name)
+              if (-not [string]::IsNullOrWhiteSpace([string]$category)) {
+                return $category
+              }
+            }
+            $category = Read-ExplicitCategory $text
+            if (-not [string]::IsNullOrWhiteSpace([string]$category)) {
+              return $category
+            }
+            $category = Infer-CommandFailure $text
+            if ($category -ne "COMMAND_FAILURE_UNCLASSIFIED") {
+              return $category
+            }
+            return $fallback
+          }
+
           $failureCategory = $null
           if ($requestOutcome -eq "failure") {
             $failureCategory = "REQUEST_SCHEMA_FAILURE"
           } elseif ($preflightOutcome -eq "failure") {
-            $failureCategory = "HELPER_STATIC_FAILURE"
+            $preflightText = Read-EvidenceText @("static-preflight.log")
+            $failureCategory = Resolve-LowerFailure @(
+              "check-result.json"
+            ) $preflightText "HELPER_STATIC_FAILURE"
           } elseif ($healthOutcome -eq "failure") {
             $failureCategory = "RUNNER_HEALTH_FAILURE"
           } elseif ($commandOutcome -eq "failure") {
-            $failureCategory = Read-ResultCategory (
-              Join-Path $evidence "high-contrast-result.json"
+            $commandText = Read-EvidenceText @(
+              "remote-command.log",
+              "remote-command-error.txt"
             )
-            if ([string]::IsNullOrWhiteSpace([string]$failureCategory)) {
-              $commandText = @(
-                "remote-command.log",
-                "remote-command-error.txt"
-              ) |
-                ForEach-Object {
-                  $path = Join-Path $evidence $_
-                  if (Test-Path -LiteralPath $path -PathType Leaf) {
-                    Get-Content -Raw -Encoding UTF8 -LiteralPath $path
-                  }
-                }
-              $failureCategory = Infer-CommandFailure (
-                $commandText -join [Environment]::NewLine
-              )
-            }
+            $failureCategory = Resolve-LowerFailure @(
+              "check-result.json",
+              "high-contrast-result.json"
+            ) $commandText "COMMAND_FAILURE_UNCLASSIFIED"
           }
 
           $validationPlan = @()
