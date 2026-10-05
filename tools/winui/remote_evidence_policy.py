@@ -13,6 +13,7 @@ import json
 import os
 from pathlib import Path
 import sys
+import urllib.parse
 import urllib.request
 import zipfile
 
@@ -123,6 +124,22 @@ def validate_reuse(
             )
 
 
+class _SafeRedirectHandler(urllib.request.HTTPRedirectHandler):
+    """Never forward the GitHub bearer token to signed storage redirects."""
+
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        redirected = super().redirect_request(
+            req, fp, code, msg, headers, newurl
+        )
+        if redirected is None:
+            return None
+        old_host = urllib.parse.urlsplit(req.full_url).hostname
+        new_host = urllib.parse.urlsplit(newurl).hostname
+        if old_host != new_host:
+            redirected.remove_header("Authorization")
+        return redirected
+
+
 def _request(url: str, token: str) -> bytes:
     request = urllib.request.Request(
         url,
@@ -133,7 +150,8 @@ def _request(url: str, token: str) -> bytes:
             "User-Agent": "flyExplorer-remote-evidence-policy",
         },
     )
-    with urllib.request.urlopen(request, timeout=30) as response:
+    opener = urllib.request.build_opener(_SafeRedirectHandler())
+    with opener.open(request, timeout=30) as response:
         return response.read()
 
 
