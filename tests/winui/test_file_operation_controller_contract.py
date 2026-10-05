@@ -99,7 +99,8 @@ class FileOperationContracts(unittest.TestCase):
         drag = read("app/winui/m23_drag.cpp")
         for token in (
             "OnFileRowPointerPressed",
-            "OnFileRowPointerMoved",
+            "PollFileRowPointerDrag",
+            "StartFileRowDragAsync",
             "OnFileRowPointerReleased",
         ):
             self.assertIn(token, main + header + drag)
@@ -107,19 +108,23 @@ class FileOperationContracts(unittest.TestCase):
             "SM_CXDRAG",
             "SM_CYDRAG",
             "IsLeftButtonPressed()",
+            "GetAsyncKeyState(VK_LBUTTON)",
+            "GetCursorPos(&cursor)",
+            "PointerPoint::GetCurrentPoint(pointerId)",
             "StartDragAsync(point)",
             "ResetFileRowPointerDrag()",
         ):
             self.assertIn(token, drag)
         for token in (
             "PointerPressedEvent()",
-            "PointerMovedEvent()",
             "PointerReleasedEvent()",
             "PointerCanceledEvent()",
             "box_value(PointerEventHandler",
             "}),true);",
         ):
             self.assertIn(token, main)
+        self.assertNotIn("PointerMovedEvent()", main[main.index("row.CanDrag(true);"):
+                                                  main.index("view.Items().Append(row);")])
         self.assertIn("row.DragStarting(", main)
 
     def test_clipboard_paste_and_drag_share_the_transfer_core(self):
