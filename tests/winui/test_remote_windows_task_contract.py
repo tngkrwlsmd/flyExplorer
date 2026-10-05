@@ -64,6 +64,18 @@ class RemoteWindowsTaskContractTests(unittest.TestCase):
         self.assertIn("Stale validation request:", self.workflow)
         self.assertIn("DIAGNOSTIC_STALE_MAIN=ADVISORY", self.workflow)
 
+    def test_prior_evidence_policy_refreshes_canonical_refs_first(self):
+        evidence = self.workflow.index(
+            "- name: Enforce prior evidence retry policy"
+        )
+        preflight = self.workflow.index("- name: Static candidate preflight")
+        block = self.workflow[evidence:preflight]
+        self.assertIn("git fetch origin --no-tags --prune", block)
+        self.assertLess(
+            block.index("git fetch origin --no-tags --prune"),
+            block.index("git worktree add --detach"),
+        )
+
     def test_prior_evidence_policy_blocks_wasteful_full_retries(self):
         self.assertIn("actions: read", self.workflow)
         self.assertIn("- name: Enforce prior evidence retry policy", self.workflow)
