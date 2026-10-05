@@ -11,28 +11,28 @@ inventory unless a component is reintroduced.
 Release uses a self-contained Windows App SDK payload and tracked distribution
 materials under packaging/licenses/.
 
-## Latest package evidence and current freshness
+## Latest package and source-identity evidence
 
-Remote Windows Task #435 (`37306799266`) accepted package candidate
-`00f90c30800fb66f88184211442f6eeb05a950b7`. Its clean Release runtime was
-built from candidate `1862231b271e9bb71d5adbf53439fe0d49b60af4`; the
-provenance snapshot was generated and checked against that exact build before
-the same runtime was packaged and exercised through bounded `/TESTROOT` clean
-install, repair, update, rollback and uninstall.
+Remote Windows Task #440 (`37376305779`) accepted the current unsigned setup
+and exact binary/source identity from binary source revision
+`bc63c8b48e466d1275cc6dcffb0c50e02d39db60`. The clean Release runtime
+contains 305 files (17 product/generated, 288 exact NuGet byte matches) with
+manifest SHA-256
+`61572e65c4a593e01607147596195041ce9d530e5f9fc21c9f9517f615b26c1d`.
+The setup payload contains 326 files and the unsigned setup SHA-256 is
+`825a644a8170acdaae43135604d6998ce517f882b3f8f228fa54cb30c1298a91`.
 
-The accepted runtime has 305 files, including 288 exact NuGet byte matches and
-17 product/generated files. The setup payload has 326 files. The accepted
-runtime manifest SHA-256 is
-`40f0f12797c6731f823dd3e438b09fc575a78a54f9962c14fb572e5d70dfdcc5`.
-Clean-install, update and rollback launch/shutdown probes all observed normal
-process exit.
+The deterministic source bundle contains all 382 tracked blobs from that exact
+source revision and has SHA-256
+`5a263a42ecced3384be9a8ab131024ce309e4eb96b249bad1f8adc91f065ce1d`.
+`packaging/RELEASE_IDENTITY.json` binds source tree, source bundle, runtime
+provenance and setup hashes. The #440 evidence artifact preserves the concrete
+setup and source ZIP together with their manifests/identity record.
 
-This closes the stale current-product unsigned package/provenance gate that was
-previously represented only by #382. It remains engineering evidence for an
-unsigned, test-owned install path; it does not certify production signing,
-clean-machine machine-wide deployment, GPL source delivery or rightsholder
-clearance. A later fresh Release rebuild is a new byte set and must regenerate
-provenance rather than reusing this digest.
+This closes the engineering requirement for an exact binary-to-source identity.
+It does not itself make source available to public recipients and therefore does
+not clear GPLv3 section 6 delivery, retention/public-access, final release-tag,
+rightsholder or signing gates.
 
 ## Open public-distribution gates
 
