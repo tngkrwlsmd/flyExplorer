@@ -556,8 +556,8 @@ Current source and the last parity evidence still show these limits:
   implemented or tested.
 - User-configurable accelerators and a complete historical shortcut map are
   not implemented. The current product has a bounded shortcut subset, including
-  the accepted create-folder aliases `Ctrl+Shift+N` and `F11`; historical
-  defaults that conflict with current WinUI/Windows behavior (notably F5/F6
+  the accepted create-folder shortcut `Ctrl+Shift+N`; historical defaults
+  that conflict with current WinUI/Windows behavior (notably F5/F6
   and historical flyExplorer F11) require a separate compatibility decision
   rather than silent remapping.
 
