@@ -93,6 +93,12 @@ class RemoteWindowsTaskContractTests(unittest.TestCase):
             self.workflow.index("- name: Static candidate preflight"),
         )
 
+    def test_focused_reuse_materializes_verified_artifacts(self):
+        self.assertIn("FLYEXPLORER_REUSE_DIR", self.workflow)
+        self.assertIn("--extract-reuse-dir", self.workflow)
+        self.assertIn("REMOTE_REUSE_RUN_ID", self.workflow)
+        self.assertIn("REUSE_DIR:", self.workflow)
+
     def test_failure_classification_uses_stdlib_classifier(self):
         self.assertIn("classify_remote_failure.py", self.workflow)
         for category in (
