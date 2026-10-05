@@ -8,12 +8,52 @@ on:
       - 'requests/remote-shell/request.json'
 
 permissions:
-  actions: read
   contents: write
 
 jobs:
-  task:
-    uses: tngkrwlsmd/flyExplorer/.github/workflows/remote-windows-task.yml@main
-    with:
-      request_ref: ${{ github.sha }}
-      request_branch: ${{ github.ref_name }}
+  cleanup-stale-branches:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+      - name: Delete stale merged and superseded branches
+        shell: bash
+        run: |
+          set -euo pipefail
+          branches=(
+            'docs/current-packaging-acceptance-20261005'
+            'docs/current-provenance-snapshot-20261005'
+            'work/current-release-packaging-20261005'
+            'work/current-release-packaging-final-20261005'
+            'work/current-release-packaging-validated-20261005'
+            'work/diagnostic-evidence-skip-20261005'
+            'work/diagnostic-skip-evidence-policy-20261005'
+            'work/remote-evidence-api-fix-20261005'
+            'work/remote-evidence-fetch-fix-20261005'
+            'work/remote-evidence-redirect-fix-20261005'
+            'work/remote-failure-powershell-classify-20261005'
+            'work/remote-retry-evidence-20261005'
+            'work/remote-reusable-artifacts-20261005'
+            'work/verification-infra-hardening-20261005'
+            'work/verification-infra-simplify-20261005'
+          )
+          for branch in "${branches[@]}"; do
+            case "$branch" in
+              main|control/remote-shell)
+                echo "Refusing to delete operational branch: $branch" >&2
+                exit 2
+                ;;
+            esac
+            if git ls-remote --exit-code --heads origin "refs/heads/$branch" >/dev/null 2>&1; then
+              git push origin --delete "$branch"
+              echo "BRANCH_DELETED=$branch"
+            else
+              echo "BRANCH_ALREADY_ABSENT=$branch"
+            fi
+          done
+          for branch in main control/remote-shell; do
+            git ls-remote --exit-code --heads origin "refs/heads/$branch" >/dev/null
+            echo "BRANCH_KEPT=$branch"
+          done
+          echo "BRANCH_CLEANUP_PASS"
