@@ -2,8 +2,8 @@
 
 Status: OPEN / NOT CLEARED FOR PUBLIC BINARY DISTRIBUTION.
 
-The root LICENSE states GPLv3-or-later. The tracked setup conveys object code
-but does not itself provide Corresponding Source or a public source-access
+The root LICENSE states GPLv3-or-later. A distributed setup conveys object code
+but does not by itself provide Corresponding Source or a public source-access
 direction. The repository is currently private, so its normal clone URL is not
 treated as public recipient access.
 
