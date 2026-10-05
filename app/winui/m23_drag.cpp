@@ -5,6 +5,7 @@
 #include <winrt/Windows.Foundation.h>
 #include <shobjidl.h>
 #include <filesystem>
+#include <cmath>
 #include <utility>
 using namespace winrt;
 using namespace Microsoft::UI::Xaml;
@@ -20,6 +21,71 @@ bool traceOwnedDrag(){
  return n==3&&::CompareStringOrdinal(flag,-1,L"YES",-1,FALSE)==CSTR_EQUAL;
 }
 
+}
+void MainWindow::ResetFileRowPointerDrag() noexcept{
+ mFileRowPointerArmed=false;
+ mFileRowPointerId=0;
+ mFileRowPointerLogical=0;
+ mFileRowPointerSide=-1;
+ mFileRowPointerOrigin={};
+}
+void MainWindow::OnFileRowPointerPressed(
+ int side,IInspectable const& sender,
+ Microsoft::UI::Xaml::Input::PointerRoutedEventArgs const& args){
+ auto row=sender.try_as<ListViewItem>();
+ if(!row||!row.Tag()||side<0||side>1||mFileOperations.busy()){
+  ResetFileRowPointerDrag();return;
+ }
+ const auto point=args.GetCurrentPoint(row);
+ if(!point.Properties().IsLeftButtonPressed()){
+  ResetFileRowPointerDrag();return;
+ }
+ mFileRowPointerArmed=true;
+ mFileRowPointerId=args.Pointer().PointerId();
+ mFileRowPointerLogical=unbox_value<std::uint64_t>(row.Tag());
+ mFileRowPointerSide=side;
+ mFileRowPointerOrigin=point.Position();
+ if(traceOwnedDrag())
+  StatusText().Text(L"끌기 진단: 포인터 누름 감지");
+}
+fire_and_forget MainWindow::OnFileRowPointerMoved(
+ int side,IInspectable const& sender,
+ Microsoft::UI::Xaml::Input::PointerRoutedEventArgs const& args){
+ auto keep=get_strong();
+ auto row=sender.try_as<ListViewItem>();
+ if(!mFileRowPointerArmed||!row||!row.Tag()||
+    side!=mFileRowPointerSide||
+    args.Pointer().PointerId()!=mFileRowPointerId||
+    unbox_value<std::uint64_t>(row.Tag())!=mFileRowPointerLogical)co_return;
+ const auto point=args.GetCurrentPoint(row);
+ if(!point.Properties().IsLeftButtonPressed()){
+  ResetFileRowPointerDrag();co_return;
+ }
+ const auto position=point.Position();
+ const auto thresholdX=(std::max)(4,::GetSystemMetrics(SM_CXDRAG));
+ const auto thresholdY=(std::max)(4,::GetSystemMetrics(SM_CYDRAG));
+ if(std::abs(position.X-mFileRowPointerOrigin.X)<thresholdX&&
+    std::abs(position.Y-mFileRowPointerOrigin.Y)<thresholdY)co_return;
+
+ // WinUI's implicit CanDrag recognizer is not a reliable acceptance boundary
+ // for injected/remote physical mouse input. Own the gesture threshold and use
+ // the documented programmatic entry point; StartDragAsync raises DragStarting.
+ ResetFileRowPointerDrag();
+ args.Handled(true);
+ if(traceOwnedDrag())
+  StatusText().Text(L"끌기 진단: 포인터 임계값 통과");
+ try{
+  co_await row.StartDragAsync(point);
+ }catch(winrt::hresult_error const&){
+  StatusText().Text(L"파일 끌기를 시작하지 못했습니다.");
+ }
+}
+void MainWindow::OnFileRowPointerReleased(
+ int side,IInspectable const&,
+ Microsoft::UI::Xaml::Input::PointerRoutedEventArgs const& args){
+ if(mFileRowPointerArmed&&side==mFileRowPointerSide&&
+    args.Pointer().PointerId()==mFileRowPointerId)
+  ResetFileRowPointerDrag();
 }
 void MainWindow::OnFileDragItemsStarting(
  IInspectable const& sender,DragItemsStartingEventArgs const& args){
@@ -60,6 +126,7 @@ void MainWindow::OnFileDragItemsStarting(
 }
 void MainWindow::OnFileRowDragStarting(
  int side,UIElement const& sender,DragStartingEventArgs const& args){
+ ResetFileRowPointerDrag();
  auto row=sender.try_as<ListViewItem>();
  if(!row||!row.Tag()||side<0||side>1||mFileOperations.busy()){
   args.Cancel(true);return;
