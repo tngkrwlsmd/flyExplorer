@@ -256,15 +256,10 @@ jobs:
 
       - name: Static candidate preflight
         id: preflight
-        if: inputs.request_ref != ''
+        if: ${{ inputs.request_ref != '' && env.REMOTE_REQUEST_MODE == 'validation' }}
         shell: powershell -NoLogo -NoProfile -ExecutionPolicy Bypass -Command ". '{0}'"
         run: |
           $ErrorActionPreference = "Stop"
-          if ($env:REMOTE_REQUEST_MODE -ne "validation") {
-            Write-Host "STATIC_PREFLIGHT=SKIPPED_DIAGNOSTIC"
-            exit 0
-          }
-
           $repo = $env:FLYEXPLORER_CANONICAL_CHECKOUT
           if (-not (Test-Path -LiteralPath $repo -PathType Container)) {
             throw "Canonical checkout missing before static candidate preflight: $repo"
@@ -586,12 +581,20 @@ jobs:
             }
           }
 
+          $validationPlan = @()
+          if (-not [string]::IsNullOrWhiteSpace($env:REMOTE_VALIDATION_PLAN)) {
+            $validationPlan = @(
+              $env:REMOTE_VALIDATION_PLAN -split ',' |
+                Where-Object { -not [string]::IsNullOrWhiteSpace($_) }
+            )
+          }
+
           $result = [ordered]@{
             request_id = $env:REMOTE_REQUEST_ID
             request_mode = $env:REMOTE_REQUEST_MODE
             candidate_sha = $env:REMOTE_CANDIDATE_SHA
             logical_unit = $env:REMOTE_LOGICAL_UNIT
-            validation_plan = $env:REMOTE_VALIDATION_PLAN
+            validation_plan = $validationPlan
             stages = [ordered]@{
               REQUEST_VALIDATION = Convert-Outcome $requestOutcome
               STATIC_PREFLIGHT = Convert-Outcome $preflightOutcome
