@@ -61,6 +61,11 @@ class InstallerContract(unittest.TestCase):
             "OWNED_INSTALLER_ROLLBACK_LAUNCH_PASS",
             "OWNED_INSTALLER_RUNTIME_PROCESSES_SETTLED",
             "wait_owned_runtime_processes(root,label)",
+            "INSTALLED_APP_SHUTDOWN_DIAGNOSTIC",
+            "INSTALLED_APP_WINDOW_CLOSE_TIMEOUT",
+            "INSTALLED_APP_PROCESS_EXIT_TIMEOUT",
+            "OWNED_RUNTIME_SHUTDOWN_PROBE_PASS",
+            "--runtime-root",
             "USER_SETTINGS_SENTINEL_PRESERVED",
         ):
             self.assertIn(token,body)
