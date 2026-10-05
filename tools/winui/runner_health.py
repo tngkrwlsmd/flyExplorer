@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import argparse
+import ctypes
 import json
 import os
 from pathlib import Path
@@ -12,6 +13,14 @@ from high_contrast_state import query
 ROOT = Path(__file__).resolve().parents[2]
 
 
+def _session_id(pid: int) -> int:
+    value = ctypes.c_uint()
+    kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+    if not kernel32.ProcessIdToSessionId(pid, ctypes.byref(value)):
+        raise ctypes.WinError(ctypes.get_last_error())
+    return int(value.value)
+
+
 def collect(configuration: str, require_exe: bool) -> dict[str, object]:
     if os.name != "nt":
         raise RuntimeError("runner health requires Windows")
@@ -19,15 +28,15 @@ def collect(configuration: str, require_exe: bool) -> dict[str, object]:
     import psutil
     from pywinauto import Desktop
 
-    current_session = psutil.Process(os.getpid()).terminal()
+    current_session = _session_id(os.getpid())
     explorer_pids: list[int] = []
     for proc in psutil.process_iter(["name", "pid"]):
         try:
             if (proc.info.get("name") or "").lower() != "explorer.exe":
                 continue
-            if current_session is None or proc.terminal() == current_session:
+            if _session_id(proc.pid) == current_session:
                 explorer_pids.append(proc.pid)
-        except (psutil.NoSuchProcess, psutil.AccessDenied):
+        except (psutil.NoSuchProcess, psutil.AccessDenied, OSError):
             continue
 
     windows = Desktop(backend="uia").windows()
@@ -38,6 +47,7 @@ def collect(configuration: str, require_exe: bool) -> dict[str, object]:
 
     return {
         "python": sys.version.split()[0],
+        "session_id": current_session,
         "interactive_explorer_count": len(explorer_pids),
         "uia_window_count": len(windows),
         "high_contrast_enabled": hc.enabled,
