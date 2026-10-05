@@ -35,6 +35,16 @@ AssertionError: owned installed app did not close within the accepted 16-second 
             classifier.classify(text),
         )
 
+    def test_powershell_method_not_found_is_harness_programming_failure(self):
+        self.assertEqual(
+            "HARNESS_PROGRAMMING_FAILURE",
+            classifier.classify(
+                "Method invocation failed because [System.IO.Path] does not contain "
+                "a method named 'GetRelativePath'.\n"
+                "FullyQualifiedErrorId : MethodNotFound"
+            ),
+        )
+
     def test_generic_subprocess_timeout_has_its_own_category(self):
         self.assertEqual(
             "SUBPROCESS_TIMEOUT_FAILURE",

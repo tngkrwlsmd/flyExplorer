@@ -39,6 +39,8 @@ def classify(text: str) -> str:
 
     if (
         "NameError:" in text
+        or "FullyQualifiedErrorId : MethodNotFound" in text
+        or "does not contain a method named" in text
         or re.search(r"TypeError:.*unexpected keyword argument", text)
         or "UIAWrapper' object has no attribute 'child_window'" in text
         or "IUIA.build_condition() got an unexpected keyword argument" in text
