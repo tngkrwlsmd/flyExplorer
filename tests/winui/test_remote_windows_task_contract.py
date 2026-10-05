@@ -150,6 +150,7 @@ class RemoteWindowsTaskContractTests(unittest.TestCase):
     def test_structured_result_distinguishes_failure_layers(self):
         for stage in (
             "REQUEST_VALIDATION",
+            "EVIDENCE_POLICY",
             "STATIC_PREFLIGHT",
             "RUNNER_HEALTH",
             "COMMAND",
@@ -157,6 +158,7 @@ class RemoteWindowsTaskContractTests(unittest.TestCase):
             self.assertIn(stage, self.workflow)
         for category in (
             "REQUEST_SCHEMA_FAILURE",
+            "EVIDENCE_POLICY_FAILURE",
             "HELPER_STATIC_FAILURE",
             "RUNNER_HEALTH_FAILURE",
             "PRODUCT_BUILD_FAILURE",
