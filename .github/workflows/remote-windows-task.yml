@@ -8,6 +8,7 @@ on:
       - 'requests/remote-shell/request.json'
 
 permissions:
+  actions: read
   contents: read
 
 jobs:
