@@ -126,8 +126,10 @@ def _print_snapshot(item: dict) -> None:
 
 
 def classify_final(final: dict, proc_poll: int | None) -> str | None:
-    if not final["pid_alive"] or proc_poll is not None:
+    if proc_poll is not None:
         return None
+    if not final["pid_alive"]:
+        return "INSTALLED_APP_HARNESS_OBSERVATION_FAILURE"
     if final["hwnd_exists"]:
         return "INSTALLED_APP_WINDOW_CLOSE_TIMEOUT"
     if final["top_level_windows"]:
