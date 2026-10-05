@@ -1,13 +1,11 @@
 {
-  "request_id": "actions-retention-365-source-20261005",
-  "expected_main_sha": "ed08c8c8f5d067ec0f0f365cc0f882d1e0e4a32c",
-  "candidate_sha": "6b51f1ae41d270e9153ba9643bc154c9b6242e7a",
-  "logical_unit": "actions-retention-365",
-  "request_mode": "validation",
-  "configuration": "Release",
-  "validation_plan": [
-    "source"
-  ],
+  "request_id": "verify-actions-retention-365-20261005",
+  "expected_main_sha": "fc213584ce765d009a3c2aab18b23460da303e4a",
+  "candidate_sha": "fc213584ce765d009a3c2aab18b23460da303e4a",
+  "logical_unit": "actions-retention-365-cleanup",
+  "request_mode": "diagnostic",
+  "configuration": "none",
+  "validation_plan": [],
   "working_directory": "",
-  "command": "$ErrorActionPreference=\"Stop\"\nWrite-Host \"ACTIONS_RETENTION_SOURCE_VALIDATION=PASS\""
+  "command": "$ErrorActionPreference=\"Stop\"\n$endpoint=\"repos/tngkrwlsmd/flyExplorer/actions/permissions/artifact-and-log-retention\"\n$raw=(& gh api -H \"X-GitHub-Api-Version: 2026-03-10\" $endpoint | Out-String)\nif($LASTEXITCODE -ne 0){throw \"failed to read Actions retention setting\"}\n$setting=$raw | ConvertFrom-Json\n$setting | ConvertTo-Json -Compress\nif([int]$setting.days -ne 365){throw \"Actions retention setting is not 365 days\"}\n$repo=$env:FLYEXPLORER_CANONICAL_CHECKOUT\nSet-Location -LiteralPath $repo\n& git fetch origin main work/actions-retention-365-20261005 --no-tags --prune\nif($LASTEXITCODE -ne 0){throw \"cleanup fetch failed\"}\n& git diff --quiet refs/remotes/origin/main refs/remotes/origin/work/actions-retention-365-20261005 --\nif($LASTEXITCODE -ne 0){throw \"refuse cleanup: merged main tree differs from work branch tree\"}\n& git push origin --delete work/actions-retention-365-20261005\nif($LASTEXITCODE -ne 0){throw \"failed to delete merged work branch\"}\n& git fetch origin --prune --no-tags\nif($LASTEXITCODE -ne 0){throw \"post-delete fetch failed\"}\nif(& git show-ref --verify --quiet \"refs/remotes/origin/work/actions-retention-365-20261005\"){throw \"work branch still exists\"}\nWrite-Host \"ACTIONS_RETENTION_365_FINAL=PASS\""
 }
