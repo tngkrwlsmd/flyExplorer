@@ -1510,22 +1510,35 @@ namespace winrt::FlyExplorer::implementation
                 args.Handled(true);
             });
             row.CanDrag(true);
-            row.PointerPressed([weak,side](IInspectable const& sender,
-                Microsoft::UI::Xaml::Input::PointerRoutedEventArgs const& args){
-                if(auto ui=weak.get())ui->OnFileRowPointerPressed(side,sender,args);
-            });
-            row.PointerMoved([weak,side](IInspectable const& sender,
-                Microsoft::UI::Xaml::Input::PointerRoutedEventArgs const& args){
-                if(auto ui=weak.get())ui->OnFileRowPointerMoved(side,sender,args);
-            });
-            row.PointerReleased([weak,side](IInspectable const& sender,
-                Microsoft::UI::Xaml::Input::PointerRoutedEventArgs const& args){
-                if(auto ui=weak.get())ui->OnFileRowPointerReleased(side,sender,args);
-            });
-            row.PointerCanceled([weak,side](IInspectable const& sender,
-                Microsoft::UI::Xaml::Input::PointerRoutedEventArgs const& args){
-                if(auto ui=weak.get())ui->OnFileRowPointerReleased(side,sender,args);
-            });
+            using Microsoft::UI::Xaml::Input::PointerEventHandler;
+            row.AddHandler(UIElement::PointerPressedEvent(),
+                box_value(PointerEventHandler{[weak,side](
+                    IInspectable const& sender,
+                    Microsoft::UI::Xaml::Input::PointerRoutedEventArgs const& args){
+                    if(auto ui=weak.get())
+                        ui->OnFileRowPointerPressed(side,sender,args);
+                }}),true);
+            row.AddHandler(UIElement::PointerMovedEvent(),
+                box_value(PointerEventHandler{[weak,side](
+                    IInspectable const& sender,
+                    Microsoft::UI::Xaml::Input::PointerRoutedEventArgs const& args){
+                    if(auto ui=weak.get())
+                        ui->OnFileRowPointerMoved(side,sender,args);
+                }}),true);
+            row.AddHandler(UIElement::PointerReleasedEvent(),
+                box_value(PointerEventHandler{[weak,side](
+                    IInspectable const& sender,
+                    Microsoft::UI::Xaml::Input::PointerRoutedEventArgs const& args){
+                    if(auto ui=weak.get())
+                        ui->OnFileRowPointerReleased(side,sender,args);
+                }}),true);
+            row.AddHandler(UIElement::PointerCanceledEvent(),
+                box_value(PointerEventHandler{[weak,side](
+                    IInspectable const& sender,
+                    Microsoft::UI::Xaml::Input::PointerRoutedEventArgs const& args){
+                    if(auto ui=weak.get())
+                        ui->OnFileRowPointerReleased(side,sender,args);
+                }}),true);
             row.DragStarting([weak,side](
                 Microsoft::UI::Xaml::UIElement const& sender,
                 Microsoft::UI::Xaml::DragStartingEventArgs const& args){
