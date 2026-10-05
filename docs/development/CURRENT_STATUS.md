@@ -413,7 +413,7 @@ Development policy now treats the persistent remote shell as the Windows
 diagnosis/build iteration surface. Windows VM Build is manual
 `workflow_dispatch` only: normal main pushes do not queue it, the default
 manual scope is `release`, and `release-gui`/`full` are explicit
-exceptional choices. Same-revision Actions reruns are prohibited.
+exceptional choices. Deterministic product/source failures require a new revision; one controlled same-revision rerun is allowed only for a clearly classified infrastructure/transient failure.
 
 Persistent WinUI bookmarks were pre-main validated on work revision
 `3ea29587c973d879f1ad2236f4354794b1a81d62`. The final focused product

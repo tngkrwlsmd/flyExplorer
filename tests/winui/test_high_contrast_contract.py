@@ -66,26 +66,37 @@ class HighContrastContract(unittest.TestCase):
                         failures.append(f"{path.name}:{line}: {match.group(0)}")
         self.assertEqual([], failures, "\n".join(failures))
 
-    def test_owned_high_contrast_gui_never_mutates_global_accessibility_state(self):
-        body=(APP.parent.parent/"tests"/"winui"/"test_high_contrast_gui.py").read_text(
-            encoding="utf-8"
-        )
-        for token in (
-            "HIGH_CONTRAST_ON_REQUIRED",
-            "SystemParametersInfoW(0x0042",
-            "OWNED_HIGH_CONTRAST_UIA_AND_SELECTION_PASS",
-            "OWNED_HIGH_CONTRAST_SEARCH_SURFACE_PASS",
-            "ORIGINAL_SIX_USER_SETTINGS_IDENTICAL",
-            "ImageGrab.grab",
-        ):
-            self.assertIn(token,body)
+    def test_high_contrast_acceptance_separates_state_control_from_product_gui(self):
+        gui = (
+            APP.parent.parent / "tests" / "winui" / "test_high_contrast_gui.py"
+        ).read_text(encoding="utf-8")
+        state = (
+            APP.parent.parent / "tools" / "winui" / "high_contrast_state.py"
+        ).read_text(encoding="utf-8")
+        setup = (
+            APP.parent.parent / "tools" / "winui" / "high_contrast_runner_setup.py"
+        ).read_text(encoding="utf-8")
+        orchestrator = (
+            APP.parent.parent / "tools" / "winui" / "high_contrast_acceptance.py"
+        ).read_text(encoding="utf-8")
+
+        self.assertIn("from high_contrast_state import query as current_hc", gui)
+        self.assertIn("SystemParametersInfoW(", state)
+        self.assertIn("0x0042", state)
+        self.assertIn("from high_contrast_runner_setup import set_target", orchestrator)
+        self.assertIn("set_target(", orchestrator)
+        self.assertIn("OWNED_HIGH_CONTRAST_UIA_AND_SELECTION_PASS", gui)
+        self.assertIn("ORIGINAL_SIX_USER_SETTINGS_IDENTICAL", gui)
+        self.assertIn("ImageGrab.grab", gui)
+
+        combined = "\n".join((gui, state, setup, orchestrator))
         for forbidden in (
             "SPI_SETHIGHCONTRAST",
             "SystemParametersInfoW(0x0043",
             "ChangeDisplaySettingsEx",
             "winreg.SetValue",
         ):
-            self.assertNotIn(forbidden,body)
+            self.assertNotIn(forbidden, combined)
 
     def test_high_contrast_search_acceptance_uses_exposed_control(self):
         body=(APP.parent.parent/"tests"/"winui"/"test_high_contrast_gui.py").read_text(

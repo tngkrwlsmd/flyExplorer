@@ -149,33 +149,22 @@ rules below differ.
 The fixed `control/remote-shell` request slot now records the validation
 frontier in data rather than relying only on prose. Every request includes
 `candidate_sha`, stable `logical_unit`, `configuration`,
-`validation_kind` and `invalidated_evidence`. Validation kinds are an exact
-array drawn from `source`, `build`, `native`, `gui` and `visual`;
-ordinary inspection/Git/cleanup requests use exactly `["none"]` with
-`configuration: "none"`, an empty evidence object and
-`candidate_sha == expected_main_sha`.
+`request_mode` and `validation_plan`. Diagnostic requests use mode
+`diagnostic`, configuration `none` and an empty plan. Validation requests
+use mode `validation`, Debug/Release configuration and a non-empty logical
+plan. The workflow does not regex-infer the command back into a second stage
+declaration.
 
-For validation requests, `invalidated_evidence` has exactly the declared stage
-keys and a concrete non-empty reason for each one. The workflow recognizes the
-normal source/build/native/GUI/visual commands and rejects a request whose
-command executes a stage that was not declared. It derives
-`candidate_sha|configuration|sorted(validation_kind)` as the validation
-fingerprint and checks prior request-slot history before executing the Windows
-command.
+Validation evidence identity includes candidate SHA, configuration, logical
+unit, normalized plan, normalized command hash and harness revision. The
+fingerprint is for evidence identity/reuse rather than hard duplicate blocking.
+A moved main SHA is advisory for read-only diagnostics but fail-closed for
+validation, write/destructive work and final acceptance.
 
-A duplicate fingerprint is rejected by default. A genuinely changed
-harness/environment condition may override that rejection only with both a
-specific `retry_reason` and a new `retry_revision`; the same retry revision
-cannot be reused for that fingerprint. GitHub Actions rerun attempts are also
-skipped at the job boundary in both Windows workflows with
-`github.run_attempt == '1'`. Manual `workflow_dispatch` is retained as a
-human-operated fallback but is not the routine development path and does not
-replace request-slot metadata/deduplication.
-
-Periodically review the recorded metadata. The operating targets are zero
-diagnosis-free repeated validation, zero repeated product builds after
-harness-only corrections, and zero same-candidate duplicate fingerprints
-without a materially changed retry revision.
+Deterministic product/source failures require a revision before another
+acceptance. A same-revision rerun is allowed at most once only for an explicitly
+classified infrastructure/transient failure; repeated or unclassified reruns
+are not valid evidence.
 
 ### Default verification ladder
 

@@ -1,8 +1,8 @@
 """Static validator for control/remote-shell request.json.
 
-This module is intentionally cross-platform and has no Windows or third-party
-runtime dependency. It exists so request-shape mistakes are rejected before a
-Remote Windows Task is created.
+New requests declare one mode and one validation plan. The command is no longer
+regex-inferred back into validation metadata. Legacy validation_kind requests
+remain readable during migration.
 """
 from __future__ import annotations
 
@@ -12,111 +12,75 @@ from pathlib import Path
 import re
 import sys
 
-ALLOWED_KINDS = {"none", "source", "build", "native", "gui", "visual"}
 SHA_RE = re.compile(r"^[0-9a-f]{40}$")
 LOGICAL_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._/-]{1,95}$")
-
-COMMAND_BOUNDARY = r"(?:^|[;\r\n&]\s*)"
-PYTHON = r"(?:py|python)(?:\.exe)?(?:\s+-\S+)*\s+"
+PLAN_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._/-]{0,95}$")
+REVISION_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:/-]{0,127}$")
 
 
 class RequestError(ValueError):
     pass
 
 
-def _has(pattern: str, command: str) -> bool:
-    return re.search(pattern, command, flags=re.IGNORECASE | re.MULTILINE) is not None
-
-
-def detect_stages(command: str) -> set[str]:
-    """Detect executable validation stages, not static checks or filenames."""
-    stages: set[str] = set()
-    statements = [
-        part.strip()
-        for part in re.split(r"[;\r\n&]+", command)
-        if part.strip()
-    ]
-
-    for statement in statements:
-        if re.search(
-            r"^(?:cmd\s+/c\s+)?test\.bat\s+source(?:\s|$)",
-            statement,
-            flags=re.IGNORECASE,
-        ) or re.search(
-            r"^(?:cmd\s+/c\s+)?(?:py|python)(?:\.exe)?\b"
-            r"[^\r\n]*run_checks\.py[^\r\n]*\bsource\b",
-            statement,
-            flags=re.IGNORECASE,
-        ):
-            stages.add("source")
-
-        if re.search(
-            r"^(?:cmd\s+/c\s+)?build\.bat\s+(?:debug|release)(?:\s|$)",
-            statement,
-            flags=re.IGNORECASE,
-        ) or re.search(
-            r"^(?:cmd\s+/c\s+)?app[\\/]winui[\\/]build\.cmd",
-            statement,
-            flags=re.IGNORECASE,
-        ) or re.search(
-            r"^(?:cmd\s+/c\s+)?(?:py|python)(?:\.exe)?\b"
-            r"[^\r\n]*run_checks\.py[^\r\n]*\b(?:build|full)\b",
-            statement,
-            flags=re.IGNORECASE,
-        ):
-            stages.add("build")
-
-        python_statement = re.search(
-            r"^(?:cmd\s+/c\s+)?(?:py|python)(?:\.exe)?\b",
-            statement,
-            flags=re.IGNORECASE,
-        )
-        if not python_statement:
-            continue
-
-        # Syntax/import preflight is static analysis, even when the target
-        # filename itself ends in _gui.py or names another validation harness.
-        if re.search(
-            r"\s-m\s+(?:py_compile|compileall)\b",
-            statement,
-            flags=re.IGNORECASE,
-        ):
-            continue
-
-        if re.search(
-            r"(?:test_native\.py|test_process_isolation\.py)(?:\s|$)",
-            statement,
-            flags=re.IGNORECASE,
-        ):
-            stages.add("native")
-        if re.search(
-            r"test_[A-Za-z0-9_]*gui\.py(?:\s|$)",
-            statement,
-            flags=re.IGNORECASE,
-        ):
-            stages.add("gui")
-        if re.search(
-            r"(?:capture_[A-Za-z0-9_]*\.py|visual[_-]acceptance)(?:\s|$)",
-            statement,
-            flags=re.IGNORECASE,
-        ):
-            stages.add("visual")
-
-    return stages
-
-
-def validate_request(data: dict) -> None:
+def normalize_request(data: dict) -> dict:
     if not isinstance(data, dict):
         raise RequestError("request root must be a JSON object")
 
-    request_id = str(data.get("request_id", "")).strip()
-    expected = str(data.get("expected_main_sha", "")).strip().lower()
-    candidate = str(data.get("candidate_sha", "")).strip().lower()
-    logical = str(data.get("logical_unit", "")).strip()
-    configuration = str(data.get("configuration", "")).strip()
-    kinds = data.get("validation_kind")
-    evidence = data.get("invalidated_evidence")
-    command = str(data.get("command", ""))
+    explicit_mode = str(data.get("request_mode", "")).strip().lower()
+    legacy_kinds = data.get("validation_kind")
+    if explicit_mode:
+        if explicit_mode not in {"diagnostic", "validation"}:
+            raise RequestError("request_mode must be diagnostic or validation")
+        if legacy_kinds is not None:
+            raise RequestError(
+                "new request_mode schema must not also declare validation_kind"
+            )
+        raw_plan = data.get("validation_plan", [])
+    else:
+        if not isinstance(legacy_kinds, list) or not legacy_kinds:
+            raise RequestError(
+                "request_mode is required for new requests; legacy validation_kind "
+                "must be a non-empty array"
+            )
+        normalized_legacy = [
+            str(item).strip().lower() for item in legacy_kinds
+        ]
+        if normalized_legacy == ["none"]:
+            explicit_mode = "diagnostic"
+            raw_plan = []
+        else:
+            explicit_mode = "validation"
+            raw_plan = normalized_legacy
+
+    if not isinstance(raw_plan, list):
+        raise RequestError("validation_plan must be a JSON array")
+    plan = [str(item).strip().lower() for item in raw_plan]
+    if any(not item or not PLAN_RE.fullmatch(item) for item in plan):
+        raise RequestError("validation_plan contains an invalid logical target")
+    if len(set(plan)) != len(plan):
+        raise RequestError("validation_plan must not contain duplicate targets")
+
+    normalized = dict(data)
+    normalized["request_mode"] = explicit_mode
+    normalized["validation_plan"] = plan
+    return normalized
+
+
+def validate_request(data: dict) -> dict:
+    normalized = normalize_request(data)
+
+    request_id = str(normalized.get("request_id", "")).strip()
+    expected = str(normalized.get("expected_main_sha", "")).strip().lower()
+    candidate = str(normalized.get("candidate_sha", "")).strip().lower()
+    logical = str(normalized.get("logical_unit", "")).strip()
+    configuration = str(normalized.get("configuration", "")).strip()
+    command = str(normalized.get("command", ""))
+    mode = normalized["request_mode"]
+    plan = normalized["validation_plan"]
+    retry_reason = str(normalized.get("retry_reason", "")).strip()
+    harness_revision = str(
+        normalized.get("harness_revision", candidate)
+    ).strip()
 
     if not request_id:
         raise RequestError("request_id is required")
@@ -125,65 +89,38 @@ def validate_request(data: dict) -> None:
     if not SHA_RE.fullmatch(candidate):
         raise RequestError("candidate_sha must be a 40-character Git SHA")
     if not LOGICAL_RE.fullmatch(logical):
-        raise RequestError("logical_unit must be a stable 2-96 character identifier")
+        raise RequestError(
+            "logical_unit must be a stable 2-96 character identifier"
+        )
     if configuration not in {"none", "Debug", "Release"}:
         raise RequestError("configuration must be none, Debug or Release")
-    if not isinstance(kinds, list) or not kinds:
-        raise RequestError("validation_kind must be a non-empty JSON array")
+    if not command.strip():
+        raise RequestError("command is required")
+    if retry_reason and ("\n" in retry_reason or "\r" in retry_reason):
+        raise RequestError("retry_reason must be a single line")
+    if harness_revision and not REVISION_RE.fullmatch(harness_revision):
+        raise RequestError("harness_revision has an invalid identifier")
 
-    normalized = [str(item).strip().lower() for item in kinds]
-    if any(kind not in ALLOWED_KINDS for kind in normalized):
-        raise RequestError("validation_kind contains unsupported stage")
-    if len(set(normalized)) != len(normalized):
-        raise RequestError("validation_kind contains duplicate stages")
-
-    declared = set(normalized)
-    if "none" in declared and declared != {"none"}:
-        raise RequestError("validation_kind none cannot be combined with validation stages")
-
-    evidence_map = evidence if isinstance(evidence, dict) else {}
-    evidence_keys = {str(key).strip().lower() for key in evidence_map}
-    if declared == {"none"}:
+    if mode == "diagnostic":
         if configuration != "none":
-            raise RequestError("non-validation requests must use configuration none")
-        if candidate != expected:
             raise RequestError(
-                "non-validation requests must use candidate_sha equal to expected_main_sha"
+                "diagnostic requests must use configuration none"
             )
-        if evidence_keys:
+        if plan:
             raise RequestError(
-                "non-validation requests must leave invalidated_evidence empty"
+                "diagnostic requests must leave validation_plan empty"
             )
     else:
-        if configuration == "none":
+        if configuration not in {"Debug", "Release"}:
             raise RequestError(
                 "validation requests must declare Debug or Release configuration"
             )
-        if not isinstance(evidence, dict):
-            raise RequestError("validation requests must declare invalidated_evidence")
-        missing = [
-            kind
-            for kind in sorted(declared)
-            if not str(evidence_map.get(kind, "")).strip()
-        ]
-        if missing:
+        if not plan:
             raise RequestError(
-                "invalidated_evidence missing reason(s): " + ", ".join(missing)
-            )
-        extra = sorted(evidence_keys - declared)
-        if extra:
-            raise RequestError(
-                "invalidated_evidence contains undeclared stage(s): " + ", ".join(extra)
+                "validation requests must declare validation_plan"
             )
 
-    if not command.strip():
-        raise RequestError("command is required")
-    detected = detect_stages(command)
-    undeclared = sorted(detected - declared)
-    if undeclared:
-        raise RequestError(
-            "command runs undeclared validation stage(s): " + ", ".join(undeclared)
-        )
+    return normalized
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -192,11 +129,15 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
     try:
         data = json.loads(args.request.read_text(encoding="utf-8"))
-        validate_request(data)
+        normalized = validate_request(data)
     except (OSError, json.JSONDecodeError, RequestError) as exc:
         print(f"REMOTE_REQUEST_PREFLIGHT=FAIL: {exc}", file=sys.stderr)
         return 2
-    print("REMOTE_REQUEST_PREFLIGHT=PASS")
+    print(
+        "REMOTE_REQUEST_PREFLIGHT=PASS "
+        f"mode={normalized['request_mode']} "
+        f"plan={','.join(normalized['validation_plan']) or '-'}"
+    )
     return 0
 
 
