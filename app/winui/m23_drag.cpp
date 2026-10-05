@@ -3,6 +3,7 @@
 #include <winrt/Windows.ApplicationModel.DataTransfer.h>
 #include <winrt/Windows.Storage.h>
 #include <winrt/Windows.Foundation.h>
+#include <winrt/Microsoft.UI.Input.h>
 #include <shobjidl.h>
 #include <filesystem>
 #include <cmath>
