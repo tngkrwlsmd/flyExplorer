@@ -6,6 +6,8 @@ import subprocess
 import sys
 from pathlib import Path
 
+import provenance as payload_provenance
+
 ROOT=Path(__file__).resolve().parents[1]
 APP=ROOT/"app"/"winui"
 OUT=ROOT/"out"
@@ -158,6 +160,11 @@ def main() -> int:
     parser=argparse.ArgumentParser()
     parser.add_argument("configuration",nargs="?",default="Release",choices=("Release",))
     args=parser.parse_args()
+    try:
+        provenance=payload_provenance.verify_snapshot()
+    except payload_provenance.ProvenanceError as exc:
+        fail(str(exc))
+
     package_out=OUT/"package"
     package_work=OUT/"obj"/"package"
     if package_out.exists():
@@ -172,6 +179,7 @@ def main() -> int:
     setup=build_setup(obj,package_out)
     print(f"PRODUCT_VERSION={product_version()}")
     print(f"PAYLOAD_FILES={len(pairs)}")
+    print(f"RUNTIME_MANIFEST_SHA256={provenance['runtime_manifest_sha256']}")
     print(f"SETUP={setup}")
     return 0
 
