@@ -1,7 +1,7 @@
 {
-  "request_id": "high-contrast-adaptive-resource-smoke-001",
+  "request_id": "high-contrast-adaptive-resource-smoke-002",
   "expected_main_sha": "fd2bda4d26a9d777f2ee17eb2fed5ab507174e25",
-  "candidate_sha": "fb530bdbc2cf327c6d3020bc5ddc8467734ec8ea",
+  "candidate_sha": "b3bc1c8537ac24a4a281223fb438a8e6988d0c99",
   "logical_unit": "high-contrast-accessibility",
   "configuration": "Release",
   "validation_kind": [
@@ -10,10 +10,10 @@
     "gui"
   ],
   "invalidated_evidence": {
-    "source": "High Contrast theme dictionaries and a new static contract were added.",
-    "build": "Application XAML theme resources and multiple WinUI XAML consumers changed.",
-    "gui": "Visible muted text/separator opacity now resolves through theme resources and must not regress the current owned accessibility layout."
+    "source": "The stale Fluent title contract was updated to the High Contrast-aware ThemeResource.",
+    "build": "The prior run stopped at source contracts before the modified XAML could be compiled.",
+    "gui": "The prior run stopped before the owned accessibility layout smoke executed."
   },
   "working_directory": "",
-  "command": "$ErrorActionPreference = \"Stop\"\ngit fetch origin main work/high-contrast-acceptance --no-tags --prune\nif ($LASTEXITCODE -ne 0) { throw \"fetch failed\" }\nif ((git rev-parse origin/main).Trim() -ne \"fd2bda4d26a9d777f2ee17eb2fed5ab507174e25\") { throw \"main moved\" }\nif ((git rev-parse origin/work/high-contrast-acceptance).Trim() -ne \"fb530bdbc2cf327c6d3020bc5ddc8467734ec8ea\") { throw \"candidate moved\" }\nif ((git status --short).Count -ne 0) { throw \"dirty persistent checkout\" }\ngit checkout -B work/high-contrast-acceptance origin/work/high-contrast-acceptance\nif ($LASTEXITCODE -ne 0) { throw \"checkout candidate failed\" }\nif ((git rev-parse HEAD).Trim() -ne \"fb530bdbc2cf327c6d3020bc5ddc8467734ec8ea\") { throw \"candidate mismatch\" }\npython -X utf8 -m py_compile tests\\winui\\test_high_contrast_contract.py\nif ($LASTEXITCODE -ne 0) { throw \"High Contrast contract syntax failed\" }\ncmd /c test.bat source\nif ($LASTEXITCODE -ne 0) { throw \"source contracts failed\" }\ncmd /c build.bat Release\nif ($LASTEXITCODE -ne 0) { throw \"Release build failed\" }\npython -X utf8 tests\\winui\\test_owned_accessibility_layout_gui.py Release\nif ($LASTEXITCODE -ne 0) { throw \"owned accessibility layout smoke failed\" }\ngit diff --check origin/main..HEAD\nif ($LASTEXITCODE -ne 0) { throw \"diff check failed\" }\nWrite-Host \"HIGH_CONTRAST_ADAPTIVE_RESOURCE_SMOKE_PASS\""
+  "command": "$ErrorActionPreference = \"Stop\"\ngit fetch origin main work/high-contrast-acceptance --no-tags --prune\nif ($LASTEXITCODE -ne 0) { throw \"fetch failed\" }\nif ((git rev-parse origin/main).Trim() -ne \"fd2bda4d26a9d777f2ee17eb2fed5ab507174e25\") { throw \"main moved\" }\nif ((git rev-parse origin/work/high-contrast-acceptance).Trim() -ne \"b3bc1c8537ac24a4a281223fb438a8e6988d0c99\") { throw \"candidate moved\" }\nif ((git status --short).Count -ne 0) { throw \"dirty persistent checkout\" }\ngit checkout -B work/high-contrast-acceptance origin/work/high-contrast-acceptance\nif ($LASTEXITCODE -ne 0) { throw \"checkout candidate failed\" }\nif ((git rev-parse HEAD).Trim() -ne \"b3bc1c8537ac24a4a281223fb438a8e6988d0c99\") { throw \"candidate mismatch\" }\npython -X utf8 -m py_compile tests\\winui\\test_high_contrast_contract.py tests\\winui\\test_m26_fluent_contract.py\nif ($LASTEXITCODE -ne 0) { throw \"changed contracts syntax failed\" }\ncmd /c test.bat source\nif ($LASTEXITCODE -ne 0) { throw \"source contracts failed\" }\ncmd /c build.bat Release\nif ($LASTEXITCODE -ne 0) { throw \"Release build failed\" }\npython -X utf8 tests\\winui\\test_owned_accessibility_layout_gui.py Release\nif ($LASTEXITCODE -ne 0) { throw \"owned accessibility layout smoke failed\" }\ngit diff --check origin/main..HEAD\nif ($LASTEXITCODE -ne 0) { throw \"diff check failed\" }\nWrite-Host \"HIGH_CONTRAST_ADAPTIVE_RESOURCE_SMOKE_PASS\""
 }
