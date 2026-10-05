@@ -123,9 +123,11 @@ def main(configuration="Release"):
         print("HIGH_CONTRAST_SHELL_SCREENSHOT",shell_image,flush=True)
 
         win.child_window(auto_id="SearchPanelButton").click_input()
-        until(lambda:win.child_window(auto_id="SearchPanel").exists(timeout=.2)
-              and win.child_window(auto_id="SearchPanel").is_visible(),
-              "High Contrast search panel did not open")
+        until(
+            lambda:win.child_window(auto_id="SearchScopeBox").exists(timeout=.2)
+            and win.child_window(auto_id="SearchScopeBox").is_visible(),
+            "High Contrast search controls did not become visible",
+        )
         search_image=root/"high-contrast-search.png"
         rect=win.rectangle()
         ImageGrab.grab(bbox=(rect.left,rect.top,rect.right,rect.bottom),
