@@ -92,7 +92,8 @@ class RemoteWindowsTaskContractTests(unittest.TestCase):
         )
 
     def test_prior_evidence_policy_blocks_wasteful_full_retries(self):
-        self.assertIn("actions: read", self.workflow)
+        self.assertIn("actions: write", self.workflow)
+        self.assertIn("contents: write", self.workflow)
         self.assertIn("- name: Enforce prior evidence retry policy", self.workflow)
         self.assertIn("remote_evidence_policy.py", self.workflow)
         self.assertIn("REMOTE_RETRY_SCOPE", self.workflow)
@@ -110,6 +111,11 @@ class RemoteWindowsTaskContractTests(unittest.TestCase):
 
     def test_failure_classification_uses_stdlib_classifier(self):
         self.assertIn("classify_remote_failure.py", self.workflow)
+        self.assertIn("FLYEXPLORER_WORKFLOW_SHA", self.workflow)
+        self.assertIn("github.workflow_sha", self.workflow)
+        self.assertIn("REMOTE_OBSERVED_MAIN_SHA", self.workflow)
+        self.assertIn("refs/remotes/origin/main", self.workflow)
+        self.assertIn("RESULT_CLASSIFIER_REVISION", self.workflow)
         for category in (
             "INSTALLED_APP_SHUTDOWN_TIMEOUT",
             "SUBPROCESS_TIMEOUT_FAILURE",
