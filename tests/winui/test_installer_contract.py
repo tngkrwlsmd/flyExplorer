@@ -59,6 +59,8 @@ class InstallerContract(unittest.TestCase):
             "OWNED_INSTALLER_STALE_MANIFEST_CLEANUP_PASS",
             "OWNED_INSTALLER_UPDATE_LAUNCH_PASS",
             "OWNED_INSTALLER_ROLLBACK_LAUNCH_PASS",
+            "OWNED_INSTALLER_RUNTIME_PROCESSES_SETTLED",
+            "wait_owned_runtime_processes(root,label)",
             "USER_SETTINGS_SENTINEL_PRESERVED",
         ):
             self.assertIn(token,body)
