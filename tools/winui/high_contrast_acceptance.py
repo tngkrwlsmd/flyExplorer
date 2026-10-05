@@ -109,8 +109,12 @@ def main(argv: list[str] | None = None) -> int:
                     exit_code = 1
                 else:
                     stages["CANDIDATE_GUI"] = "PASS"
-                    stages["VISUAL"] = "PASS"
-                    print("HIGH_CONTRAST_PRODUCT_ACCEPTANCE_PASS", flush=True)
+                    stages["VISUAL"] = "NOT_RUN"
+                    print(
+                        "HIGH_CONTRAST_PRODUCT_ACCEPTANCE_PASS "
+                        "VISUAL_REVIEW_REQUIRED",
+                        flush=True,
+                    )
     except Exception as exc:
         if stages["RUNNER_SETUP"] == "NOT_RUN":
             stages["RUNNER_SETUP"] = "FAIL"
