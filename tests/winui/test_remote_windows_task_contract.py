@@ -21,14 +21,12 @@ class RemoteWindowsTaskContractTests(unittest.TestCase):
             ROOT / "docs/development/VERIFICATION_PROFILE.md"
         ).read_text(encoding="utf-8")
 
-    def test_one_reusable_execution_workflow_and_read_only_token(self):
+    def test_one_reusable_execution_workflow_and_write_capable_token(self):
         self.assertIn("workflow_call:", self.workflow)
         self.assertIn("workflow_dispatch:", self.workflow)
         self.assertNotIn("\n  push:", self.workflow)
-        self.assertIn("actions: read", self.workflow)
-        self.assertIn("contents: read", self.workflow)
-        self.assertNotIn("actions: write", self.workflow)
-        self.assertNotIn("contents: write", self.workflow)
+        self.assertIn("actions: write", self.workflow)
+        self.assertIn("contents: write", self.workflow)
         for obsolete in (
             "FLYEXPLORER_ROUTINE_OBSERVATION_SECONDS",
             "FLYEXPLORER_ACTIVE_MONITOR_SECONDS",
@@ -38,6 +36,18 @@ class RemoteWindowsTaskContractTests(unittest.TestCase):
             "FLYEXPLORER_REMOTE_EVIDENCE_DIR",
         ):
             self.assertNotIn(obsolete, self.workflow)
+
+    def test_profile_has_no_legacy_fingerprint_or_reuse_protocol(self):
+        for obsolete in (
+            "validation fingerprint",
+            "normalized command hash",
+            "harness revision",
+            "focused-reuse",
+            "retry_scope",
+            "reuse_evidence",
+            "prior-run evidence-reuse protocol",
+        ):
+            self.assertNotIn(obsolete, self.profile)
 
     def test_request_model_is_small_diagnostic_or_validation(self):
         for token in (
