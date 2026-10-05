@@ -1518,13 +1518,6 @@ namespace winrt::FlyExplorer::implementation
                     if(auto ui=weak.get())
                         ui->OnFileRowPointerPressed(side,sender,args);
                 }}),true);
-            row.AddHandler(UIElement::PointerMovedEvent(),
-                box_value(PointerEventHandler{[weak,side](
-                    IInspectable const& sender,
-                    Microsoft::UI::Xaml::Input::PointerRoutedEventArgs const& args){
-                    if(auto ui=weak.get())
-                        ui->OnFileRowPointerMoved(side,sender,args);
-                }}),true);
             row.AddHandler(UIElement::PointerReleasedEvent(),
                 box_value(PointerEventHandler{[weak,side](
                     IInspectable const& sender,
