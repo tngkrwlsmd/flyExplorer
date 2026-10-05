@@ -12,7 +12,6 @@ permissions:
 
 jobs:
   task:
-    if: ${{ github.run_attempt == '1' }}
     uses: tngkrwlsmd/flyExplorer/.github/workflows/remote-windows-task.yml@main
     with:
       request_ref: ${{ github.sha }}
