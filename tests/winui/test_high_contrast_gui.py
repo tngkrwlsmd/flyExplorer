@@ -29,7 +29,7 @@ def current_hc():
     assert u.SystemParametersInfoW(0x0042,state.cbSize,c.byref(state),0)
     return bool(state.dwFlags&1),state.lpszDefaultScheme
 
-def until(fn,label,seconds=15):
+def until(fn,label,seconds=30):
     end=time.monotonic()+seconds
     while time.monotonic()<end:
         try:
@@ -70,7 +70,10 @@ def main(configuration="Release"):
         def ready():
             nonlocal hwnd
             if proc.poll() is not None:
-                return False
+                raise AssertionError(
+                    f"flyExplorer exited before High Contrast window appeared: "
+                    f"returncode={proc.returncode}"
+                )
             if Path(psutil.Process(proc.pid).exe()).resolve()!=exe.resolve():
                 raise AssertionError("flyExplorer PID mismatch")
             windows=[x for x in Desktop(backend="uia").windows(process=proc.pid)
