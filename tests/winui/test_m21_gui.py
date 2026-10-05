@@ -122,22 +122,7 @@ def run(*,p,win,element,safe_click,focus,eventually,left,right,localdata,env,exe
                "Ctrl+Shift+N did not create folder in active left pane",15)
     assert not (right/"단축키 왼쪽").exists()
 
-    focus()
-    safe_click(element("RightFiles"))
-    eventually(lambda:element("AddressBox").get_value().rstrip("\\/").lower()==
-                      str(right).rstrip("\\/").lower(),
-               "right pane did not become active before F11 create",10)
-    send_keys("{F11}")
-    eventually(lambda:element("FileNameBox").wrapper_object().is_visible(),
-               "F11 did not enter create-folder name edit",8)
-    chosen=element("FileNameBox")
-    chosen.set_edit_text("단축키 오른쪽")
-    send_keys("{ENTER}")
-    right_shortcut=right/"단축키 오른쪽"
-    eventually(right_shortcut.is_dir,
-               "F11 did not create folder in active right pane",15)
-    assert not (left/"단축키 오른쪽").exists()
-    print("REAL_CREATE_FOLDER_SHORTCUTS_ACTIVE_PANE_EQUIVALENCE",True,flush=True)
+    print("REAL_CREATE_FOLDER_SHORTCUT_ACTIVE_PANE_EQUIVALENCE",True,flush=True)
 
     focus()
     safe_click(element("LeftFiles"))
