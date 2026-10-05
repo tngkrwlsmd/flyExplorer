@@ -697,14 +697,17 @@ Not certified:
 - signed clean-machine machine-wide install/update/rollback;
 - public redistribution/source-delivery/rightsholder/legal clearance.
 
-The latest unsigned package lifecycle evidence is from candidate
-`8283ece6c4348a751f487a64230e1bc149a47a2f`, merged through PR #27, and passed
-bounded `/TESTROOT` clean install, repair, update, rollback and uninstall.
-Current main is ahead of that candidate and includes later product changes,
-including physical drag and `Ctrl+Shift+N`; therefore that package
-evidence must not be presented as exact current-main binary/source packaging
-freshness. Regenerate provenance/package acceptance before the next release
-claim. Production signing, clean-machine machine-wide deployment and public
+The latest unsigned package lifecycle evidence is Remote Windows Task #435
+(`37306799266`) on accepted package candidate
+`00f90c30800fb66f88184211442f6eeb05a950b7`. Its clean Release runtime was
+built from candidate `1862231b271e9bb71d5adbf53439fe0d49b60af4`; provenance
+was generated from that exact build, immediately re-verified, and the same
+runtime was packaged and exercised through bounded `/TESTROOT` clean install,
+repair, update, rollback and uninstall. The runtime inventory is 305 files
+(17 product/generated, 288 exact NuGet byte matches), package payload is 326
+files, and the runtime manifest SHA-256 is
+`40f0f12797c6731f823dd3e438b09fc575a78a54f9962c14fb572e5d70dfdcc5`.
+Production signing, clean-machine machine-wide deployment and public
 redistribution/legal/source-delivery gates remain open.
 
 ## Documentation
