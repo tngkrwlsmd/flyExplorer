@@ -107,8 +107,8 @@ def run(*,p,win,element,safe_click,focus,eventually,left,right,localdata,env,exe
                "owned synthetic left folder is not exactly active before file operations",10)
     chosen=element("FileNameBox")
 
-    # Explorer-standard Ctrl+Shift+N and the historical flyExplorer F11 alias
-    # must enter the same existing create-folder command on the active pane.
+    # Explorer-standard Ctrl+Shift+N must enter the same existing
+    # create-folder command on whichever pane is currently active.
     focus()
     safe_click(element("LeftFiles"))
     send_keys("^+n")
@@ -122,6 +122,21 @@ def run(*,p,win,element,safe_click,focus,eventually,left,right,localdata,env,exe
                "Ctrl+Shift+N did not create folder in active left pane",15)
     assert not (right/"단축키 왼쪽").exists()
 
+    focus()
+    safe_click(element("RightFiles"))
+    eventually(lambda:element("AddressBox").get_value().rstrip("\\/").lower()==
+                      str(right).rstrip("\\/").lower(),
+               "right pane did not become active before shortcut create",10)
+    send_keys("^+n")
+    eventually(lambda:element("FileNameBox").wrapper_object().is_visible(),
+               "Ctrl+Shift+N did not enter right-pane create-folder edit",8)
+    chosen=element("FileNameBox")
+    chosen.set_edit_text("단축키 오른쪽")
+    send_keys("{ENTER}")
+    right_shortcut=right/"단축키 오른쪽"
+    eventually(right_shortcut.is_dir,
+               "Ctrl+Shift+N did not create folder in active right pane",15)
+    assert not (left/"단축키 오른쪽").exists()
     print("REAL_CREATE_FOLDER_SHORTCUT_ACTIVE_PANE_EQUIVALENCE",True,flush=True)
 
     focus()
