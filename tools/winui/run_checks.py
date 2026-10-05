@@ -20,6 +20,7 @@ PRODUCT_SUITES = {
     "core": [
         "tests/winui/test_arch_contract.py",
         "tests/winui/test_m26_fluent_contract.py",
+        "tests/winui/test_localization_contract.py",
     ],
     "shell": [
         "tests/winui/helper/test_contract.py",
@@ -35,6 +36,7 @@ PRODUCT_SUITES = {
         "tests/winui/test_filter_preset_contract.py",
     ],
     "file-operations": [
+        "tests/winui/test_file_operation_controller_contract.py",
         "tests/winui/test_clipboard_manual_contract.py",
         "tests/winui/test_owned_explorer_clipboard_contract.py",
         "tests/winui/test_recycle_owned_contract.py",
