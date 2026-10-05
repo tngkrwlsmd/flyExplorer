@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import importlib.util
 from pathlib import Path
+import urllib.request
 import unittest
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -70,6 +71,40 @@ class RemoteEvidencePolicyTests(unittest.TestCase):
             retry_scope="diagnostic",
         )
         self.assertEqual("COMMAND_FAILURE_UNCLASSIFIED", category)
+
+    def test_cross_host_redirect_drops_authorization_header(self):
+        request = urllib.request.Request(
+            "https://api.github.com/repos/o/r/actions/runs/1/logs",
+            headers={"Authorization": "Bearer secret"},
+        )
+        redirected = policy._SafeRedirectHandler().redirect_request(
+            request,
+            None,
+            302,
+            "Found",
+            {},
+            "https://results-receiver.actions.githubusercontent.com/signed/path",
+        )
+        self.assertIsNotNone(redirected)
+        self.assertIsNone(redirected.get_header("Authorization"))
+
+    def test_same_host_redirect_preserves_authorization_header(self):
+        request = urllib.request.Request(
+            "https://api.github.com/repos/o/r/actions/runs/1/logs",
+            headers={"Authorization": "Bearer secret"},
+        )
+        redirected = policy._SafeRedirectHandler().redirect_request(
+            request,
+            None,
+            302,
+            "Found",
+            {},
+            "https://api.github.com/repos/o/r/actions/runs/1/logs?x=1",
+        )
+        self.assertEqual(
+            "Bearer secret",
+            redirected.get_header("Authorization"),
+        )
 
     def test_packaging_success_markers_allow_focused_reuse(self):
         policy.validate_reuse(
