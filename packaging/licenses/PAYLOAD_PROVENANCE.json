@@ -1,11 +1,11 @@
 {
   "format": "flyexplorer-runtime-provenance-v1",
-  "generated_date": "2026-10-05",
-  "runtime_source_revision": "1862231b271e9bb71d5adbf53439fe0d49b60af4",
+  "generated_date": "2026-10-06",
+  "runtime_source_revision": "bc63c8b48e466d1275cc6dcffb0c50e02d39db60",
   "runtime_file_count": 305,
   "product_generated_file_count": 17,
   "nuget_matched_file_count": 288,
-  "runtime_manifest_sha256": "40f0f12797c6731f823dd3e438b09fc575a78a54f9962c14fb572e5d70dfdcc5",
+  "runtime_manifest_sha256": "61572e65c4a593e01607147596195041ce9d530e5f9fc21c9f9517f615b26c1d",
   "package_match_counts": [
     {
       "package": "microsoft.web.webview2",
@@ -800,7 +800,7 @@
     {
       "path": "flyExplorer.exe",
       "bytes": 1806336,
-      "sha256": "b4f3a9564870766e60df0978dfede02a736d2d01cf3aa84c9521d7c730eb77bf",
+      "sha256": "1c6205919aefb5c8008809824a90cc7e759ed962bfaf3683f30d98016b776c88",
       "origin": {
         "kind": "product-generated"
       }
@@ -816,7 +816,7 @@
     {
       "path": "FlyExplorer.winmd",
       "bytes": 3584,
-      "sha256": "33781a3a3814904e8c24c42f125eba7812fd4196c229352470ce212a7fa64d44",
+      "sha256": "37e993c911f76b245ad01ded38e60acaa2cb2268809ade36dbcaf1a23ff1084c",
       "origin": {
         "kind": "product-generated"
       }
@@ -824,7 +824,7 @@
     {
       "path": "FlyShellIsolationHelper.exe",
       "bytes": 184320,
-      "sha256": "293f56d4cf312e1e62c2881c4b24a9422a679acc9f5132b49ced7725431e0d63",
+      "sha256": "1acd58b3b396b1fd5dac6d86751715ab7f202ef47ac0948cf0c2f2fabaf5b47f",
       "origin": {
         "kind": "product-generated"
       }

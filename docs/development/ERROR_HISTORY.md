@@ -4368,3 +4368,29 @@ manifest SHA-256
 Clean-install, update and rollback shutdown observation all exited normally.
 The accepted provenance commit is
 `00f90c30800fb66f88184211442f6eeb05a950b7`.
+
+## 2026-10-06: release-source acceptance failed after validation because evidence path variable was nonexistent
+
+**Observed:** Remote Windows Task #439 (`37375579827`) completed clean Release
+build, exact runtime provenance, setup packaging, deterministic source bundle
+generation/check, release identity generation/check and the full bounded
+installer lifecycle. It then failed in the acceptance harness at
+`Join-Path $env:FLYEXPLORER_REMOTE_EVIDENCE_DIR ...` because that environment
+variable is not part of the Remote Windows Task contract.
+
+**Classification:** Control-harness defect, not product/package/source failure.
+The workflow-owned evidence root is
+`$env:FLYEXPLORER_CANONICAL_CHECKOUT\logs\remote-evidence`.
+
+**Fix / prevention:** The successor request writes release-source evidence under
+the workflow's canonical evidence root rather than inventing a second
+environment variable. Future custom evidence producers should derive their path
+from `FLYEXPLORER_CANONICAL_CHECKOUT\logs\remote-evidence` unless the
+workflow explicitly exports another contract.
+
+**Verification:** Remote Windows Task #440 (`37376305779`) changed only the
+evidence destination and completed with REQUEST_VALIDATION, STATIC_PREFLIGHT,
+RUNNER_HEALTH and COMMAND all PASS. The private artifact contains the concrete
+setup, deterministic source ZIP, source manifest, runtime provenance and release
+identity; the accepted record commit is
+`28e361e8d9f3ed796abe7f69a4f301ae6e52a002`.

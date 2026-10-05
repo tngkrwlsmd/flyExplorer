@@ -575,38 +575,49 @@ Current source and the last parity evidence still show these limits:
   and historical flyExplorer F11) require a separate compatibility decision
   rather than silent remapping.
 
-## Packaging state
+## Packaging and source identity state
 
-The current unsigned package lifecycle is accepted by Remote Windows Task #435
-(`37306799266`). The accepted package candidate is
-`00f90c30800fb66f88184211442f6eeb05a950b7`. Its clean canonical Release
-runtime was built from candidate
-`1862231b271e9bb71d5adbf53439fe0d49b60af4`, then
-`packaging/provenance.py --write` and `--check` were run against that exact
-byte set before `package.bat Release` consumed the same runtime.
+The current unsigned package and exact binary/source identity are accepted by
+Remote Windows Task #440 (`37376305779`). The binary source revision is
+`bc63c8b48e466d1275cc6dcffb0c50e02d39db60`, with source tree
+`8f1bc2e0181cc87e646dd2fad75ccdca0c8e8a66`.
 
-The accepted runtime contains 305 files: 17 product/generated files and 288
-files with exact NuGet byte matches. The setup payload contains 326 files after
-tracked distribution materials are added. Runtime manifest SHA-256:
-`40f0f12797c6731f823dd3e438b09fc575a78a54f9962c14fb572e5d70dfdcc5`.
+One clean canonical Release build generated and immediately re-verified runtime
+provenance before `package.bat Release` consumed that same byte set. The
+runtime contains 305 files: 17 product/generated files and 288 exact NuGet byte
+matches. Runtime manifest SHA-256:
+`61572e65c4a593e01607147596195041ce9d530e5f9fc21c9f9517f615b26c1d`.
+
+The resulting unsigned setup contains a 326-file payload and is 124,107,776
+bytes. Setup SHA-256:
+`825a644a8170acdaae43135604d6998ce517f882b3f8f228fa54cb30c1298a91`.
+
+The deterministic source bundle contains all 382 tracked blobs from the exact
+binary source revision, totaling 3,942,910 source-file bytes. Source ZIP
+SHA-256:
+`5a263a42ecced3384be9a8ab131024ce309e4eb96b249bad1f8adc91f065ce1d`.
+Its tracked manifest is `packaging/SOURCE_BUNDLE_MANIFEST.json`; the setup,
+runtime provenance and source-bundle hashes are bound by
+`packaging/RELEASE_IDENTITY.json`.
 
 The bounded `/TESTROOT` lifecycle passed clean install, same-version repair
-including stale-manifest cleanup, update, rollback and uninstall. Installed
-clean/update/rollback launches navigated owned content and all three shutdown
-probes posted `WM_CLOSE` and observed owning-process exit 0. The recorded
-shutdown completion points were about 0.221 s for clean install, 0.164 s for
-update and 0.161 s for rollback. The user-settings sentinel was preserved.
+including stale-manifest cleanup, update, rollback and uninstall. Clean,
+update and rollback launches all observed owning-process exit after `WM_CLOSE`.
+The #440 Actions artifact
+`flyexplorer-remote-evidence-37376305779` preserves the concrete setup,
+source ZIP, source manifest, runtime provenance and release identity together.
 
-The preceding #434 run is not package acceptance evidence. It rebuilt Release
-and correctly failed because it expected the prior build's provenance digest to
-match the newly linked byte set. Provenance is intentionally **exact-build
-evidence**, not a claim that two clean builds from the same source revision are
-byte-for-byte reproducible. A fresh Release rebuild must regenerate provenance
-before verification and packaging.
+Run #439 is not acceptance evidence. All product/package/source checks passed,
+but the control harness used a nonexistent evidence-directory environment
+variable after lifecycle completion and failed before preserving the release
+artifacts. #440 changed only that evidence destination to the workflow's
+canonical `logs\remote-evidence` path and completed successfully.
 
-This acceptance is unsigned and test-owned. It does not certify production
-Authenticode signing or clean-machine Program Files/HKLM machine-wide
-install/update/rollback.
+This closes the technical exact binary-to-source identity gate for the accepted
+unsigned artifact. It does **not** make the private source ZIP publicly
+available, select the final immutable release tag or GPLv3 section 6 delivery
+mechanism, certify production Authenticode signing, or certify clean-machine
+Program Files/HKLM machine-wide lifecycle.
 
 ## Open gates
 

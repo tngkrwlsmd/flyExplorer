@@ -37,29 +37,35 @@ Normal install scope:
 /TESTROOT=<owned path> is the bounded validation mode and avoids normal
 Program Files/HKLM mutation.
 
-## Latest accepted package evidence
+## Latest accepted package and source-identity evidence
 
-Remote Windows Task #435 (`37306799266`) accepted package candidate
-`00f90c30800fb66f88184211442f6eeb05a950b7`. It clean-built the Release
-runtime from candidate `1862231b271e9bb71d5adbf53439fe0d49b60af4`,
-regenerated and checked provenance for that exact byte set, built the setup and
+Remote Windows Task #440 (`37376305779`) accepted binary source revision
+`bc63c8b48e466d1275cc6dcffb0c50e02d39db60`. It clean-built Release,
+regenerated and checked exact runtime provenance, built the setup, generated and
+checked the deterministic source bundle, bound both to a release identity, and
 passed bounded `/TESTROOT` clean-install, repair, update, rollback and
 uninstall.
 
-The accepted runtime contains 305 files (17 product/generated and 288 exact
-NuGet byte matches); the setup payload contains 326 files after distribution
-materials are added. Runtime manifest SHA-256:
-`40f0f12797c6731f823dd3e438b09fc575a78a54f9962c14fb572e5d70dfdcc5`.
-Clean-install, update and rollback all launched owned content and exited normally
-after `WM_CLOSE`.
+Accepted hashes:
+- runtime manifest:
+  `61572e65c4a593e01607147596195041ce9d530e5f9fc21c9f9517f615b26c1d`;
+- deterministic source ZIP:
+  `5a263a42ecced3384be9a8ab131024ce309e4eb96b249bad1f8adc91f065ce1d`;
+- unsigned setup:
+  `825a644a8170acdaae43135604d6998ce517f882b3f8f228fa54cb30c1298a91`.
 
-Run #434 is retained as a useful fail-closed check: after a fresh rebuild it
-correctly rejected provenance from an earlier build. The provenance snapshot is
-exact-build evidence, not a cross-build reproducibility promise.
+The tracked audit records are `SOURCE_BUNDLE_MANIFEST.json` and
+`RELEASE_IDENTITY.json`. The concrete source ZIP and setup are preserved in
+the private #440 Actions evidence artifact rather than committed to the
+repository.
 
-Public redistribution remains uncleared. Production signing, clean-machine
-Program Files/HKLM lifecycle, GPL source delivery and rightsholder review remain
-separate gates.
+Public redistribution remains uncleared. Private source evidence is not public
+recipient source availability; production signing, clean-machine Program
+Files/HKLM lifecycle, GPL source-delivery/retention, final release tag and
+rightsholder review remain separate gates.
+
+For exact binary/source identity and the deterministic source bundle workflow,
+see RELEASE_SOURCE.md.
 
 See SIGNING.md, SOURCE_DISTRIBUTION.md, RIGHTSHOLDER_REVIEW.md and
 docs/development/DISTRIBUTION_LICENSE_REVIEW.md for open release gates.

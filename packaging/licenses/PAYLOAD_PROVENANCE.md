@@ -1,15 +1,15 @@
-# Current packaged payload provenance snapshot — 2026-10-05
+# Current packaged payload provenance snapshot — 2026-10-06
 
 This snapshot is generated from the exact canonical Release runtime before
 distribution materials are added to the installer. Runtime bytes are matched
 by SHA-256 against package versions in the build's project.assets.json and
 the repository-local NuGet cache.
 
-- Runtime source revision: `1862231b271e9bb71d5adbf53439fe0d49b60af4`
+- Runtime source revision: `bc63c8b48e466d1275cc6dcffb0c50e02d39db60`
 - Runtime files before distribution materials: **305**
 - Product/generated files with no NuGet byte match: **17**
 - Files with an exact NuGet package byte match: **288**
-- Runtime manifest SHA-256: `40f0f12797c6731f823dd3e438b09fc575a78a54f9962c14fb572e5d70dfdcc5`
+- Runtime manifest SHA-256: `61572e65c4a593e01607147596195041ce9d530e5f9fc21c9f9517f615b26c1d`
 
 ## Exact NuGet payload matches
 
@@ -34,10 +34,10 @@ the repository-local NuGet cache.
 - `Assets/StoreLogo.png` — 456 bytes — `sha256:5a44b2f15b76ff4cfcb315e8b62b2ac1e4a1f616bbfee0b8be29f9e2e116172c`
 - `Assets/Wide310x150Logo.scale-200.png` — 2097 bytes — `sha256:4938ed44d7d63f44ca959eafb942be36459939a9c679bfcbf4f5c837fdf3475c`
 - `FileToolbar.xbf` — 4993 bytes — `sha256:6fb066df97fceda4397c370768a6bae1a2e980cf3be72f4238af05ec0ce89374`
-- `flyExplorer.exe` — 1806336 bytes — `sha256:b4f3a9564870766e60df0978dfede02a736d2d01cf3aa84c9521d7c730eb77bf`
+- `flyExplorer.exe` — 1806336 bytes — `sha256:1c6205919aefb5c8008809824a90cc7e759ed962bfaf3683f30d98016b776c88`
 - `flyExplorer.pri` — 2221824 bytes — `sha256:57918bd72c8a10486bc61f40e4eb2e0e9d003a3456dfc9215b73d9de4c0158fc`
-- `FlyExplorer.winmd` — 3584 bytes — `sha256:33781a3a3814904e8c24c42f125eba7812fd4196c229352470ce212a7fa64d44`
-- `FlyShellIsolationHelper.exe` — 184320 bytes — `sha256:293f56d4cf312e1e62c2881c4b24a9422a679acc9f5132b49ced7725431e0d63`
+- `FlyExplorer.winmd` — 3584 bytes — `sha256:37e993c911f76b245ad01ded38e60acaa2cb2268809ade36dbcaf1a23ff1084c`
+- `FlyShellIsolationHelper.exe` — 184320 bytes — `sha256:1acd58b3b396b1fd5dac6d86751715ab7f202ef47ac0948cf0c2f2fabaf5b47f`
 - `MainWindow.xbf` — 19323 bytes — `sha256:c0683a2755cd79a44c266a7102a7ff77e3b8a5c2ee64fbf1056d02b3de88c608`
 - `NavigationSidebar.xbf` — 4015 bytes — `sha256:f2c289b8787e8c1a1f2e0b0f676a9d984768be0a867891e5ae04daa030c362b6`
 - `ShellHeader.xbf` — 2014 bytes — `sha256:1c1557c62a13345b457fc62112892ca75a0f9e4b71ba9b60c806ac3ee8a5f6c3`
