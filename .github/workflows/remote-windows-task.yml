@@ -405,6 +405,13 @@ jobs:
           }
 
           Set-Location -LiteralPath $workdir
+          $evidenceRoot = Join-Path $env:FLYEXPLORER_CANONICAL_CHECKOUT "logs\remote-evidence"
+          New-Item -ItemType Directory -Force -Path $evidenceRoot | Out-Null
+          foreach ($classifier in @("high-contrast-result.json", "remote-result.json")) {
+            $classifierPath = Join-Path $evidenceRoot $classifier
+            Remove-Item -LiteralPath $classifierPath -Force -ErrorAction SilentlyContinue
+          }
+
           Write-Host "===== FLYEXPLORER REMOTE SHELL ====="
           Write-Host "REQUEST_ID: $env:REMOTE_REQUEST_ID"
           Write-Host "REQUEST_SHA: $env:GITHUB_SHA"
