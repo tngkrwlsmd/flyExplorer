@@ -1,5 +1,5 @@
 {
-  "request_id": "f5-f6-semantics-standard-20261006",
+  "request_id": "f5-f6-semantics-standard-20261006-v2",
   "expected_main_sha": "4f03ea8bc499cd8e4d064431753d4f7aefac0fff",
   "candidate_sha": "37cb86dc6fe55ac71a0fb9f30b0d1f1a86a01c04",
   "logical_unit": "f5-f6-semantics",
@@ -8,7 +8,7 @@
   "validation_plan": [
     "source",
     "build",
-    "gui:file-operations"
+    "file-operations"
   ],
   "working_directory": "",
   "command": "$ErrorActionPreference=\"Stop\"\n$repo=$env:FLYEXPLORER_CANONICAL_CHECKOUT\n$branch=\"work/f5-f6-semantics-20261006\"\n$baseline=\"4f03ea8bc499cd8e4d064431753d4f7aefac0fff\"\n$candidate=\"37cb86dc6fe55ac71a0fb9f30b0d1f1a86a01c04\"\n$temp=Join-Path $env:RUNNER_TEMP (\"f5-f6-standard-\"+$env:GITHUB_RUN_ID)\n$worktreeAdded=$false\ntry {\n  Set-Location -LiteralPath $repo\n  & git fetch origin main $branch --no-tags --prune\n  if($LASTEXITCODE -ne 0){throw \"candidate fetch failed\"}\n  $mainSha=(& git rev-parse refs/remotes/origin/main).Trim()\n  $branchSha=(& git rev-parse (\"refs/remotes/origin/\"+$branch)).Trim()\n  if($mainSha -ne $baseline){throw \"main moved before F5/F6 validation: $mainSha\"}\n  if($branchSha -ne $candidate){throw \"candidate moved before F5/F6 validation: $branchSha\"}\n\n  & git worktree add --detach $temp $candidate\n  if($LASTEXITCODE -ne 0){throw \"candidate worktree creation failed\"}\n  $worktreeAdded=$true\n  Set-Location -LiteralPath $temp\n  $env:PYTHONIOENCODING=\"utf-8\"\n\n  & git diff --check $baseline $candidate\n  if($LASTEXITCODE -ne 0){throw \"git diff --check failed\"}\n\n  & python -X utf8 tools\\winui\\check_python_static.py tests\\winui\\test_shortcut_semantics_contract.py tests\\winui\\test_m21_gui.py\n  if($LASTEXITCODE -ne 0){throw \"shortcut Python static check failed\"}\n\n  & python -X utf8 -m unittest tests.winui.test_shortcut_semantics_contract\n  if($LASTEXITCODE -ne 0){throw \"shortcut source contract failed\"}\n\n  & python -X utf8 tools\\winui\\run_checks.py fast --before $baseline --head $candidate\n  if($LASTEXITCODE -ne 0){throw \"FAST validation failed\"}\n\n  & .\\build.bat Release\n  if($LASTEXITCODE -ne 0){throw \"Release build failed\"}\n\n  & python -X utf8 tools\\winui\\run_checks.py gui --area file-operations --configuration Release\n  if($LASTEXITCODE -ne 0){throw \"focused file-operations GUI failed\"}\n\n  Write-Host (\"F5_F6_CANDIDATE=\"+$candidate)\n  Write-Host \"F5_F6_SEMANTICS_STANDARD=PASS\"\n} finally {\n  Set-Location -LiteralPath $repo\n  if($worktreeAdded){\n    & git worktree remove --force $temp 2>$null\n    & git worktree prune\n  } elseif(Test-Path -LiteralPath $temp) {\n    Remove-Item -LiteralPath $temp -Recurse -Force -ErrorAction SilentlyContinue\n  }\n}"
