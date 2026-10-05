@@ -1,18 +1,13 @@
 {
-  "request_id": "current-release-packaging-final-001",
-  "expected_main_sha": "0ba7feb43a8a18562c78396abaa2a436455806b4",
-  "candidate_sha": "067122c8e9b45d56c4fa8dde75fef9c2ef86f44f",
-  "logical_unit": "current-release-packaging-final",
-  "configuration": "Release",
-  "request_mode": "validation",
-  "validation_plan": [
-    "release-build",
-    "provenance",
-    "package",
-    "installed-gui-lifecycle"
-  ],
+  "request_id": "cleanup-stale-branches-20261005",
+  "expected_main_sha": "dfa258cc1f19600759318e6adaa6d55b871a7402",
+  "candidate_sha": "dfa258cc1f19600759318e6adaa6d55b871a7402",
+  "logical_unit": "repository-branch-cleanup",
+  "configuration": "none",
+  "request_mode": "diagnostic",
+  "validation_plan": [],
   "retry_reason": "",
-  "harness_revision": "067122c8e9b45d56c4fa8dde75fef9c2ef86f44f",
+  "harness_revision": "dfa258cc1f19600759318e6adaa6d55b871a7402",
   "working_directory": "",
-  "command": "$ErrorActionPreference=\"Stop\"\n$repo=\"C:\\dev\\flyExplorer\"\n$branch=\"work/current-release-packaging-final-20261005\"\n$candidate=\"067122c8e9b45d56c4fa8dde75fef9c2ef86f44f\"\n$main=\"0ba7feb43a8a18562c78396abaa2a436455806b4\"\nSet-Location -LiteralPath $repo\n& git fetch origin $branch main --no-tags --prune\nif($LASTEXITCODE -ne 0){throw \"candidate fetch failed\"}\n$temp=Join-Path $env:RUNNER_TEMP (\"packaging-final-\"+$env:GITHUB_RUN_ID)\nif(Test-Path -LiteralPath $temp){Remove-Item -LiteralPath $temp -Recurse -Force}\ntry{\n  & git worktree add --detach $temp $candidate\n  if($LASTEXITCODE -ne 0){throw \"candidate worktree failed\"}\n  Set-Location -LiteralPath $temp\n  $env:PYTHONIOENCODING=\"utf-8\"\n\n  & python -X utf8 tools\\winui\\check_python_static.py packaging\\package.py packaging\\provenance.py tools\\winui\\diagnose_installed_shutdown.py tests\\winui\\test_installed_lifecycle.py tests\\winui\\test_installer_contract.py tests\\winui\\test_release_payload_contract.py\n  if($LASTEXITCODE -ne 0){throw \"packaging Python static check failed\"}\n  & python -X utf8 -m unittest tests.winui.test_installer_contract tests.winui.test_release_payload_contract\n  if($LASTEXITCODE -ne 0){throw \"packaging contracts failed\"}\n  & git diff --check \"$main..$candidate\"\n  if($LASTEXITCODE -ne 0){throw \"candidate diff check failed\"}\n\n  & .\\clean.bat build\n  if($LASTEXITCODE -ne 0){throw \"clean build output failed\"}\n  & .\\build.bat Release\n  if($LASTEXITCODE -ne 0){throw \"canonical Release build failed\"}\n\n  & python -X utf8 packaging\\provenance.py --write\n  if($LASTEXITCODE -ne 0){throw \"payload provenance generation failed\"}\n  & python -X utf8 packaging\\provenance.py --check\n  if($LASTEXITCODE -ne 0){throw \"payload provenance verification failed\"}\n\n  & .\\package.bat Release\n  if($LASTEXITCODE -ne 0){throw \"current Release package build failed\"}\n\n  $evidence=$env:FLYEXPLORER_REMOTE_EVIDENCE_DIR\n  New-Item -ItemType Directory -Force -Path $evidence | Out-Null\n  Copy-Item -LiteralPath \"packaging\\licenses\\PAYLOAD_PROVENANCE.json\" -Destination (Join-Path $evidence \"PAYLOAD_PROVENANCE.json\") -Force\n  Copy-Item -LiteralPath \"packaging\\licenses\\PAYLOAD_PROVENANCE.md\" -Destination (Join-Path $evidence \"PAYLOAD_PROVENANCE.md\") -Force\n\n  & python -X utf8 tests\\winui\\test_installed_lifecycle.py\n  if($LASTEXITCODE -ne 0){throw \"bounded installed lifecycle failed\"}\n\n  Write-Host \"CURRENT_RELEASE_PACKAGING_FINAL_PASS\"\n}finally{\n  Set-Location -LiteralPath $repo\n  if(Test-Path -LiteralPath $temp){& git worktree remove --force $temp}\n  & git worktree prune\n}"
+  "command": "$ErrorActionPreference=\"Stop\"\n$keep=@(\"main\",\"control/remote-shell\")\n$delete=@(\n  \"docs/current-packaging-acceptance-20261005\",\n  \"docs/current-provenance-snapshot-20261005\",\n  \"work/current-release-packaging-20261005\",\n  \"work/current-release-packaging-final-20261005\",\n  \"work/current-release-packaging-validated-20261005\",\n  \"work/diagnostic-evidence-skip-20261005\",\n  \"work/diagnostic-skip-evidence-policy-20261005\",\n  \"work/remote-evidence-api-fix-20261005\",\n  \"work/remote-evidence-fetch-fix-20261005\",\n  \"work/remote-evidence-redirect-fix-20261005\",\n  \"work/remote-failure-powershell-classify-20261005\",\n  \"work/remote-retry-evidence-20261005\",\n  \"work/remote-reusable-artifacts-20261005\",\n  \"work/verification-infra-hardening-20261005\",\n  \"work/verification-infra-simplify-20261005\"\n)\nSet-Location -LiteralPath $env:GITHUB_WORKSPACE\n$remote=(git remote get-url origin).Trim()\nWrite-Host \"BRANCH_CLEANUP_REMOTE=$remote\"\nforeach($branch in $delete){\n  if($branch -in $keep){throw \"refusing to delete protected operational branch: $branch\"}\n  $exists=& git ls-remote --heads origin \"refs/heads/$branch\"\n  if([string]::IsNullOrWhiteSpace(($exists -join \"\"))){\n    Write-Host \"BRANCH_ALREADY_ABSENT=$branch\"\n    continue\n  }\n  & git push origin --delete $branch\n  if($LASTEXITCODE -ne 0){throw \"failed to delete branch: $branch\"}\n  Write-Host \"BRANCH_DELETED=$branch\"\n}\nforeach($branch in $keep){\n  $exists=& git ls-remote --heads origin \"refs/heads/$branch\"\n  if([string]::IsNullOrWhiteSpace(($exists -join \"\"))){throw \"required branch missing after cleanup: $branch\"}\n  Write-Host \"BRANCH_KEPT=$branch\"\n}\nWrite-Host \"BRANCH_CLEANUP_PASS\""
 }
