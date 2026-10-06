@@ -391,6 +391,25 @@ int wmain(int argc,wchar_t** argv){
            contentCaseResult.matches[0]==contentUtf8,
            "CONTENT_CASE_SENSITIVE_MATCH");
 
+    fxfile::preview::SearchQuery contentRegexQuery{};
+    contentRegexQuery.term=L"content-utf8";
+    contentRegexQuery.contentTerm=
+        L"^Alpha\\s+Utf(Eight|Never)Only\\s+omega$";
+    contentRegexQuery.contentRegex=true;
+    auto contentRegexResult=fxfile::preview::scanFiles(
+        left,contentRegexQuery,cancel);
+    expect(contentRegexResult.valid&&contentRegexResult.count==1&&
+           contentRegexResult.matches.size()==1&&
+           contentRegexResult.matches[0]==contentUtf8,
+           "CONTENT_REGEX_GROUP_ALTERNATION_MATCH");
+
+    fxfile::preview::SearchQuery unsupportedContentRegex{};
+    unsupportedContentRegex.contentTerm=L"(?=Alpha)Alpha";
+    unsupportedContentRegex.contentRegex=true;
+    expect(fxfile::preview::validateSearchQuery(unsupportedContentRegex)==
+           fxfile::preview::SearchQueryValidation::InvalidContentRegex,
+           "CONTENT_REGEX_UNSUPPORTED_LOOKAROUND_REJECTED");
+
     fxfile::preview::SearchQuery contentLeQuery{};
     contentLeQuery.contentTerm=L"한글바늘";
     auto contentLeResult=fxfile::preview::scanFiles(
@@ -515,14 +534,29 @@ int wmain(int argc,wchar_t** argv){
            budgetResult.contentBytesRead==16ull*1024ull*1024ull,
            "CONTENT_TOTAL_IO_BUDGET_16MIB");
 
+    fxfile::preview::SearchQuery adversarialRegex{};
+    adversarialRegex.term=L"budget-00";
+    adversarialRegex.contentTerm=
+        L"(?:a|aa|aaa|aaaa|aaaaa|aaaaaa)+b";
+    adversarialRegex.contentRegex=true;
+    auto adversarialRegexResult=fxfile::preview::scanFiles(
+        left,adversarialRegex,cancel);
+    expect(adversarialRegexResult.valid&&
+           adversarialRegexResult.count==0&&
+           adversarialRegexResult.contentRegexLimited&&
+           adversarialRegexResult.contentFilesSkipped==1&&
+           adversarialRegexResult.contentBytesRead==1024ull*1024ull,
+           "CONTENT_REGEX_ADVERSARIAL_STEP_BUDGET");
+
     using PresetStore=fxfile::searchpresets::Store;
     using PresetResult=fxfile::searchpresets::MutationResult;
     PresetStore presets;
     fxfile::searchpresets::Preset preset{};
     preset.name=L"이번 달 보고서";
     preset.term=L"report";preset.extension=L"txt";
-    preset.contentTerm=L"needle";
+    preset.contentTerm=L"needle.*";
     preset.contentEncoding=1;
+    preset.contentRegex=true;
     preset.minSizeKb=L"7";preset.maxSizeKb=L"9";
     preset.modifiedAfter=L"2026-02-01";
     preset.modifiedBefore=L"2026-02-28";
@@ -538,11 +572,26 @@ int wmain(int argc,wchar_t** argv){
            "SEARCH_PRESET_ATOMIC_RESTART_PERSISTENCE");
     const auto presetRaw=bytes(presetFile);
     const std::string presetText(presetRaw.begin(),presetRaw.end());
-    expect(reloaded.items()[0].contentTerm==L"needle"&&
+    expect(reloaded.items()[0].contentTerm==L"needle.*"&&
            reloaded.items()[0].contentEncoding==1&&
+           reloaded.items()[0].contentRegex&&
            presetRaw.size()>8&&
-           presetText.find("schema=3")!=std::string::npos,
-           "SEARCH_PRESET_CONTENT_ENCODING_SCHEMA3_RESTART");
+           presetText.find("schema=4")!=std::string::npos,
+           "SEARCH_PRESET_CONTENT_REGEX_SCHEMA4_RESTART");
+
+    const auto schema3PresetFile=root+L"\\search-presets-v3.txt";
+    const std::string schema3Preset=
+        "schema=3\r\nLegacy3\treport\tneedle\t1\ttxt\t0\t0\t0\t7\t9\t"
+        "2026-02-01\t2026-02-28\r\n";
+    PresetStore schema3Presets;
+    expect(put(schema3PresetFile,std::vector<unsigned char>(
+               schema3Preset.begin(),schema3Preset.end()))&&
+           schema3Presets.loadFrom(schema3PresetFile)&&
+           schema3Presets.items().size()==1&&
+           schema3Presets.items()[0].contentTerm==L"needle"&&
+           schema3Presets.items()[0].contentEncoding==1&&
+           !schema3Presets.items()[0].contentRegex,
+           "SEARCH_PRESET_SCHEMA3_BACKWARD_COMPAT");
 
     const auto schema2PresetFile=root+L"\\search-presets-v2.txt";
     const std::string schema2Preset=
@@ -573,6 +622,7 @@ int wmain(int argc,wchar_t** argv){
     expect(reloaded.erase(0)&&reloaded.items().empty(),
            "SEARCH_PRESET_DELETE");
     ::DeleteFileW(presetFile.c_str());
+    ::DeleteFileW(schema3PresetFile.c_str());
     ::DeleteFileW(schema2PresetFile.c_str());
     ::DeleteFileW(legacyPresetFile.c_str());
 
