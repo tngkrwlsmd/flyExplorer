@@ -27,7 +27,9 @@ int wmain(int argc,wchar_t**argv){
  check(shellclipboard::valid(payload),"bounded_korean_paths");
  std::vector<unsigned char> bytes;
  check(shellclipboard::encode(payload,bytes)&&
-   bytes.size()>sizeof(DROPFILES)&&bytes.size()<=65536,
+   bytes.size()>sizeof(DROPFILES)&&
+   bytes.size()<=sizeof(DROPFILES)+
+     (shelltransfer::kMaxSourcePathUnits+1)*sizeof(wchar_t),
    "real_cf_hdrop_wire_serialization");
  shellclipboard::Payload restored;
  check(shellclipboard::decode(bytes.data(),bytes.size(),restored)&&
@@ -60,8 +62,16 @@ int wmain(int argc,wchar_t**argv){
  check(!shellclipboard::encode(payload,bytes),"reject_duplicate_file_paths");
  payload.paths={L"..\\relative.txt"};
  check(!shellclipboard::valid(payload),"reject_relative_file_path");
- payload.paths.assign(33,first.native());
- check(!shellclipboard::encode(payload,bytes),"limit_32_items");
+ payload.paths.clear();
+ for(std::size_t i=0;i<64;++i)
+  payload.paths.push_back(
+    (left/(L"clipboard-"+std::to_wstring(i)+L".txt")).native());
+ check(shellclipboard::encode(payload,bytes)&&
+       shellclipboard::decode(bytes.data(),bytes.size(),restored)&&
+       restored.paths==payload.paths,
+       "cf_hdrop_roundtrip_more_than_32_items");
+ payload.paths.assign(shelltransfer::kMaxItems+1,first.native());
+ check(!shellclipboard::encode(payload,bytes),"reject_over_shared_item_budget");
  payload.paths={first.native(),second.native()};
  check(shellclipboard::encode(payload,bytes),"restore_valid_two_files");
  shelltransfer::Request request;
