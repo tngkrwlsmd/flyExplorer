@@ -796,6 +796,7 @@ namespace winrt::FlyExplorer::implementation
         if(!force&&listState.metadataRoute==route&&
            listState.metadataTab==tab)return;
         if(snapshot.baseOffset||snapshot.truncated||
+           snapshot.residentEndOffset()!=snapshot.nextOffset||
            items.size()>fxfile::isolation::kMaxCompleteModelEntries)return;
         auto const& folder=pane.filesystemPaths[tab];
         if(folder.size()<3||folder[1]!=L':'||folder[2]!=L'\\')return;
@@ -832,6 +833,7 @@ namespace winrt::FlyExplorer::implementation
                        pane.active!=tab||pane.pending[tab]||
                        pane.routeIds[tab]!=route||
                        snapshot.baseOffset||snapshot.truncated||
+                       snapshot.residentEndOffset()!=snapshot.nextOffset||
                        snapshot.children.size()!=count)return;
                     auto& state=ui->ActiveWindowTab().fileLists[side];
                     state.metadata=std::move(completed.metadata);
