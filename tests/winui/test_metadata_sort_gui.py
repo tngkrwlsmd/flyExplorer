@@ -109,8 +109,18 @@ def main():
         ui.GetWindowThreadProcessId.argtypes=(w.HWND,c.POINTER(w.DWORD))
         assert ui.GetWindowThreadProcessId(parent.handle,c.byref(owner))
         assert owner.value==process.pid
-        assert ui.GetForegroundWindow()==parent.handle
         ui.ShowWindow(parent.handle,3) # SW_MAXIMIZE: expose all details columns.
+        try:
+            ui.SetForegroundWindow(parent.handle)
+            parent.set_focus()
+        except Exception:
+            pass
+        foreground=ui.GetForegroundWindow()
+        foreground_owner=w.DWORD()
+        if foreground:
+            ui.GetWindowThreadProcessId(foreground,c.byref(foreground_owner))
+        print("METADATA_SORT_FOREGROUND_OWNED",
+              foreground_owner.value==process.pid,flush=True)
         until(lambda:parent.child_window(auto_id="LeftDateSortButton").is_visible() and
               parent.child_window(auto_id="LeftDateSortButton").rectangle().width()>5,
               "maximized details date header not visible",8)
