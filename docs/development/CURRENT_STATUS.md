@@ -249,6 +249,35 @@ bootstrap configuration.
 
 ## Latest verified evidence
 
+Removable-volume Recycle semantics are accepted on candidate
+`a7b675f790356cc152c577a3d670e9829afdaae4` by self-hosted Remote
+Windows Task `37456955994`. The rerun passed request validation,
+change-scoped FAST, GUI runner health, the Release M22 native fixture at 30/30,
+the canonical Release build and the existing file-operations GUI regression.
+The native drive-policy contract now proves Copy, Move and Recycle accept
+`DRIVE_REMOVABLE` local roots while all three remain closed to
+`DRIVE_REMOTE`. Recycle still requires explicit user confirmation and the
+Shell operation retains `FOF_ALLOWUNDO|FOFX_RECYCLEONDELETE`; no direct
+permanent-delete API was added. The UI also states that an unavailable
+removable-drive Recycle Bin does not fall back to permanent deletion.
+
+The same run found the global Recycle Bin empty and therefore executed the
+existing guarded owned fixed-drive recycle probe. It passed both
+`OWNED_ACTUAL_RECYCLE_CONFIRMED True` and
+`OWNED_ACTUAL_RECYCLE_RESTORE_CONFIRMED True`, restoring the synthetic file
+and leaving the Recycle Bin empty again. Structured stages REQUEST_VALIDATION,
+STATIC_PREFLIGHT, RUNNER_HEALTH and COMMAND are all PASS with no failure
+category. Evidence artifact `11409896608`, digest
+`sha256:bfa86cb617b384c711a626d65f2b5bb93ba412c7e277285d43105b90392107e7`,
+preserves the remote result and logs.
+
+Physical USB/removable-media Recycle execution is still not claimed because
+the self-hosted VM currently exposes no `DRIVE_REMOVABLE` volume. Diagnostic
+Remote Windows Task `37451622847` observed only C: as Fixed and D: as
+CD-ROM. A future run with an attached disposable removable volume should
+certify the actual Windows Recycle Bin behavior there; the product policy is
+already fail-closed against permanent deletion fallback.
+
 Large Icons default-view preservation for new Window Tabs is accepted on
 candidate `e70f34b9c291eb2b4678af3ba2145bf25b36d76e` by self-hosted
 Remote Windows Task `37454320102`. The run passed request validation,
@@ -265,14 +294,14 @@ contains matched BEFORE/AFTER captures. Direct visual review confirms the
 baseline new tab uses visibly smaller Medium icons while the candidate keeps
 the intended Large icon geometry without layout overlap.
 
-Removable-volume Copy/Move policy is accepted on candidate
+Removable-volume Copy/Move policy was first accepted on candidate
 `c229e1c0de072f2724c42094430524cd2b78c4f2` by self-hosted Remote
-Windows Task `37451984855`. The run passed request validation, change-scoped
-FAST, GUI runner health, the Release M22 native fixture at 29/29, the canonical
-Release build and the existing file-operations GUI regression. The native
-contract proves Copy and Move accept `DRIVE_REMOVABLE`, Recycle rejects it,
-and Copy/Move continue to reject `DRIVE_REMOTE`; the same fixture still
-executes real owned IFileOperation Copy/Move on the VM's fixed filesystem.
+Windows Task `37451984855`. That run passed request validation,
+change-scoped FAST, GUI runner health, the Release M22 native fixture at 29/29,
+the canonical Release build and the existing file-operations GUI regression.
+At that revision Copy and Move accepted `DRIVE_REMOVABLE` while Recycle was
+still intentionally closed; the later removable-Recycle acceptance above
+supersedes that temporary policy boundary.
 Structured stages REQUEST_VALIDATION, STATIC_PREFLIGHT, RUNNER_HEALTH and
 COMMAND are all PASS. Evidence artifact `11407200582`, digest
 `sha256:aabbd9a19d4ef50aa50eb9dc7c57ddcf0a526ff37b114d8a48a69a92ba78093d`.
@@ -702,12 +731,14 @@ Current source and the last parity evidence still show these limits:
   these metadata sorts remain explicitly refused. Shell visual/type/icon/
   thumbnail enrichment remains separately bounded to 1,200 items, and
   removable/network/provider metadata coverage is still a separate gap.
-- Copy/Move accepts local fixed and removable drive roots through the shared
-  Shell transfer core. Physical USB/removable-media execution is not yet
-  certified because the current self-hosted VM exposes only a fixed C: volume
-  and a D: CD-ROM. Recycle remains fixed-drive-only by design for now, while
-  UNC/network (`DRIVE_REMOTE`) and virtual/provider transfer paths remain
-  unsupported.
+- Copy/Move/Recycle accepts local fixed and removable drive roots through the
+  shared Shell transfer core. Recycle still requires explicit confirmation and
+  uses Shell recycle-only flags; if a removable drive cannot use Windows
+  Recycle Bin, flyExplorer reports failure and does not switch to permanent
+  deletion. Physical USB/removable-media execution is not yet certified
+  because the current self-hosted VM exposes only a fixed C: volume and a D:
+  CD-ROM. UNC/network (`DRIVE_REMOTE`) and virtual/provider transfer paths
+  remain unsupported.
 - Search remains bounded. Regex, case sensitivity, entry-kind,
   single-extension, minimum/maximum file size, inclusive local modified-date
   and literal text content conditions are implemented with up to 20 private
