@@ -103,6 +103,21 @@ checkpoints.
   command path, the opposite pane remained untouched, the existing button path
   still passed, the owned process exited 0 and protected legacy settings
   remained unchanged.
+- Explorer-aligned navigation shortcuts are now explicit product semantics.
+  Plain F5 refreshes only the active pane/tab through the existing isolated
+  Shell `NavigationAction::Refresh` path. Plain F6 never starts a file
+  operation; in split view it activates and keyboard-focuses the opposite
+  pane's file list, while single-pane F6 is left to normal WinUI focus
+  behavior. Both keys are owned at the window `PreviewKeyDown` boundary
+  rather than the file-operation shortcut handler, and modified F5/F6
+  combinations are not interpreted as historical copy/move commands. Remote
+  Windows Task #473 (`37414193732`) accepted candidate
+  `4e59a22c742c7fa8d5d0e21e221f01ff8151e2be`: FAST passed, the canonical
+  Release build produced flyExplorer.exe, the complete Release runtime was
+  cached, physical F5 refreshed the active owned pane without copying the
+  selected folder, physical F6 moved activation/focus left-to-right and back
+  without moving that folder, the owned process exited normally, and the
+  protected legacy profile remained unchanged.
 - Details, List, Small Icons, Medium Icons and Large Icons views.
 - File-list Shell visuals use path-specific Windows Known Folder artwork for
   Desktop, Documents, Downloads, Pictures, Music and Videos. The bounded
@@ -209,6 +224,15 @@ the required environment but does not claim to have modified external cloud
 bootstrap configuration.
 
 ## Latest verified evidence
+
+Explorer-aligned F5/F6 semantics are accepted on candidate
+`4e59a22c742c7fa8d5d0e21e221f01ff8151e2be` by Remote Windows Task #473
+(`37414193732`). The run passed FAST, runner health and the canonical Release
+build, preserved a complete Release runtime cache, then passed the focused owned
+GUI with `REAL_F5_REFRESH_NO_FILE_MUTATION True`,
+`REAL_F6_DUAL_PANE_FOCUS_NO_FILE_MUTATION True` and
+`SHORTCUT_GUI_ACCEPTANCE=PASS`. The structured remote result records
+REQUEST_VALIDATION, STATIC_PREFLIGHT, RUNNER_HEALTH and COMMAND all PASS.
 
 High Contrast ON is now accepted on merged product revision
 `eaa1b368a677f57c15183c5e6851f0598ed25878` via PR #16. Final candidate
@@ -603,11 +627,13 @@ Current source and the last parity evidence still show these limits:
 - The complete historical command/provider verb/fault matrix is not fully
   implemented or tested.
 - User-configurable accelerators and a complete historical shortcut map are
-  not implemented. The current product has a bounded shortcut subset, including
-  the accepted create-folder shortcut `Ctrl+Shift+N`; historical defaults
-  that conflict with current WinUI/Windows behavior (notably F5/F6
-  and historical flyExplorer F11) require a separate compatibility decision
-  rather than silent remapping.
+  not implemented. The current product has a bounded Explorer-aligned shortcut
+  subset. Plain F5 refreshes only the active pane/tab; plain F6 is non-mutating
+  dual-pane focus traversal and switches to the opposite pane when split view
+  is active. Historical flyExplorer F5/F6 copy/move semantics are intentionally
+  not active defaults. Historical flyExplorer F11 still conflicts with current
+  Windows/File Explorer maximize/restore behavior and requires a separate
+  compatibility decision rather than silent remapping.
 
 ## Packaging and source identity state
 
