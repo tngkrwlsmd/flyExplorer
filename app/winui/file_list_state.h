@@ -7,19 +7,22 @@
 
 namespace fxfile::previewlist {
 enum class FileViewMode : int { Details=0, List=1, SmallIcons=2, MediumIcons=3, LargeIcons=4 };
-struct FileDetail final {
+struct FileMetadata final {
     std::uint64_t bytes=0;
     std::uint64_t modified=0;
     std::wstring bytesLabel;
+    std::wstring dateLabel;
+    std::wstring typeKey;
+    bool sizeKnown=false;
+    bool dateKnown=false;
+};
+struct FileDetail final {
     std::wstring typeLabel;
     std::vector<unsigned char> iconBgra; // optional isolated system item icon
     std::uint32_t iconWidth=0,iconHeight=0;
     bool knownFolderVisual=false;
     std::vector<unsigned char> thumbnailBgra;
     std::uint32_t thumbnailWidth=0,thumbnailHeight=0;
-    std::wstring dateLabel;
-    bool sizeKnown=false;
-    bool dateKnown=false;
 };
 struct PaneState final {
     int sortMode=0;
@@ -42,17 +45,43 @@ struct PaneState final {
     bool indexedNameSort=false;
     bool indexedNameProjection=false;
     bool fullModelLimitReached=false;
+    std::vector<FileMetadata> metadata;
     std::vector<FileDetail> details;
     std::size_t renderedBaseOffset=0;
     std::vector<std::uint64_t> renderedLogical;
     std::vector<std::wstring> renderedPaths;
+    std::uint64_t metadataRoute=0,metadataEpoch=0;
+    std::size_t metadataTab=0;
     std::uint64_t route=0,epoch=0;
     std::size_t tab=0;
     void invalidate() noexcept {
+        ++metadataEpoch;
+        metadata.clear();
+        metadataRoute=0;
         ++epoch;
         details.clear();
         visualPixels=0;
         route=0;
+    }
+    std::uint64_t beginMetadata(
+        std::uint64_t nextRoute,std::size_t nextTab) {
+        ++metadataEpoch;
+        metadataRoute=nextRoute;
+        metadataTab=nextTab;
+        metadata.clear();
+        return metadataEpoch;
+    }
+    bool metadataCurrent(
+        std::uint64_t expectedRoute,std::size_t expectedTab,
+        std::size_t expectedItems) const noexcept {
+        return metadataRoute!=0 && metadataRoute==expectedRoute &&
+               metadataTab==expectedTab && metadata.size()==expectedItems;
+    }
+    bool acceptsMetadata(
+        std::uint64_t ticket,std::uint64_t expectedRoute,
+        std::size_t expectedTab) const noexcept {
+        return metadataEpoch==ticket && metadataRoute!=0 &&
+               metadataRoute==expectedRoute && metadataTab==expectedTab;
     }
     std::uint64_t begin(std::uint64_t nextRoute,std::size_t nextTab) {
         ++epoch;
