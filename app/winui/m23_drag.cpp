@@ -32,6 +32,33 @@ bool appendTransferPath(
  paths.push_back(std::move(path));
  return true;
 }
+struct OutboundStorageItem final {
+ std::wstring path;
+ bool folder=false;
+};
+fire_and_forget attachOutboundStorageItems(
+ DragStartingEventArgs args,
+ std::vector<OutboundStorageItem> items){
+ auto deferral=args.GetDeferral();
+ try{
+  std::vector<Windows::Storage::IStorageItem> storageItems;
+  storageItems.reserve(items.size());
+  for(auto const& item:items){
+   if(item.folder)
+    storageItems.emplace_back(co_await Windows::Storage::StorageFolder::
+      GetFolderFromPathAsync(hstring(item.path)));
+   else
+    storageItems.emplace_back(co_await Windows::Storage::StorageFile::
+      GetFileFromPathAsync(hstring(item.path)));
+  }
+  if(!storageItems.empty())
+   args.Data().SetStorageItems(storageItems,false);
+ }catch(...){
+  // The private same-app payload remains valid. External targets simply do
+  // not receive StorageItems if Windows cannot project one of the paths.
+ }
+ deferral.Complete();
+}
 
 }
 void MainWindow::ResetFileRowPointerDrag() noexcept{
@@ -183,7 +210,9 @@ void MainWindow::OnFileRowDragStarting(
  if(!rowSelected)chosen={row};
  if(chosen.empty()||chosen.size()>fxfile::shelltransfer::kMaxItems){args.Cancel(true);return;}
  std::vector<std::wstring> paths;
+ std::vector<OutboundStorageItem> outboundItems;
  std::size_t pathUnits=0;
+ outboundItems.reserve(chosen.size());
  for(auto const& entry:chosen){
   if(!entry.Tag()){args.Cancel(true);return;}
   const auto logical=unbox_value<std::uint64_t>(entry.Tag());
@@ -195,6 +224,7 @@ void MainWindow::OnFileRowDragStarting(
   if(!appendTransferPath(paths,pathUnits,indexed->parsingName)){
    args.Cancel(true);return;
   }
+  outboundItems.push_back({indexed->parsingName,indexed->isFolder()});
  }
  GUID id{};
  if(FAILED(::CoCreateGuid(&id))){args.Cancel(true);return;}
@@ -208,8 +238,10 @@ void MainWindow::OnFileRowDragStarting(
  args.Data().SetData(hstring(PrivateFormat),
                      box_value(hstring(mPrivateDragToken)));
  args.Data().RequestedOperation(DataPackageOperation::Copy);
+ args.AllowedOperations(DataPackageOperation::Copy);
+ attachOutboundStorageItems(args,std::move(outboundItems));
  StatusText().Text(traceOwnedDrag()?L"끌기 진단: 항목 시작 이벤트 도착":
-                        L"선택한 내부 파일 끌기 데이터를 준비했습니다.");
+                        L"선택한 파일 끌기 데이터를 준비했습니다.");
 }
 void MainWindow::OnFileDragOver(
  IInspectable const& sender,DragEventArgs const& args){
