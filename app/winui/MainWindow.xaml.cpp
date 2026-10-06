@@ -718,6 +718,10 @@ namespace winrt::FlyExplorer::implementation
                     state.indexToComplete=false;
                 }
                 ClearFileDetails(completed.side);
+                if(!incomplete){
+                    ScheduleFileMetadata(completed.side);
+                    ScheduleFileDetails(completed.side);
+                }
                 FillFiles(completed.side);
                 UpdateSelectionChrome();
                 UpdateFooterSummary();
@@ -789,7 +793,8 @@ namespace winrt::FlyExplorer::implementation
         auto const& snapshot=pane.tabs[tab].snapshot();
         auto const& items=snapshot.children;
         auto& listState=ActiveWindowTab().fileLists[side];
-        if(!force&&listState.metadataCurrent(route,tab,items.size()))return;
+        if(!force&&listState.metadataRoute==route&&
+           listState.metadataTab==tab)return;
         if(snapshot.baseOffset||snapshot.truncated||
            items.size()>fxfile::isolation::kMaxCompleteModelEntries)return;
         auto const& folder=pane.filesystemPaths[tab];
