@@ -206,7 +206,8 @@ def run(*,p,win,element,safe_click,focus,eventually,ownedwindows,
         # folder; all results and preview history use ONLY owned paths.
         safe_click(element("SearchPanelButton"))
         for key in ("SearchScopeBox","SearchTermBox","SearchContentBox",
-                    "SearchContentEncodingBox","SearchRegexBox","SearchCaseBox","SearchTargetBox",
+                    "SearchContentRegexBox","SearchContentEncodingBox",
+                    "SearchRegexBox","SearchCaseBox","SearchTargetBox",
                     "SearchExtensionBox","SearchMinSizeBox","SearchMaxSizeBox",
                     "SearchModifiedAfterBox","SearchModifiedBeforeBox",
                     "SearchPresetBox","SearchPresetNameBox",
@@ -394,6 +395,23 @@ def run(*,p,win,element,safe_click,focus,eventually,ownedwindows,
         assert not search_matches("content-binary.bin")
         print("REAL_CONTENT_SEARCH_UTF8_LITERAL_PASS",True,flush=True)
 
+        content_regex=element("SearchContentRegexBox")
+        safe_click(content_regex)
+        content_box.set_edit_text(r"^Alpha\s+Need(Le|Missing)\s+omega$")
+        safe_click(element("SearchRunButton"))
+        good(lambda:match("SearchCountText","검색 결과 1개"),
+             "bounded content regex group/alternation did not match",14)
+        assert search_matches("content-utf8.txt")
+        print("REAL_CONTENT_REGEX_GROUP_ALTERNATION_PASS",True,flush=True)
+
+        content_box.set_edit_text("(?=Alpha)Alpha")
+        safe_click(element("SearchRunButton"))
+        good(lambda:match("SearchCountText","파일 내용 정규식이 올바르지 않습니다"),
+             "unsupported content regex was not rejected before worker",7)
+        assert element("SearchRunButton").is_enabled()
+        print("REAL_CONTENT_REGEX_INVALID_PRESTART_REJECT_PASS",True,flush=True)
+        safe_click(content_regex)
+
         content_box.set_edit_text("한글바늘")
         safe_click(element("SearchRunButton"))
         good(lambda:match("SearchCountText","검색 결과 1개"),
@@ -451,16 +469,17 @@ def run(*,p,win,element,safe_click,focus,eventually,ownedwindows,
         max_size.set_edit_text("9")
         after.set_edit_text("2026-02-01")
         before_date.set_edit_text("2026-02-28")
-        content_box.set_edit_text("프리셋한글")
+        content_box.set_edit_text(r"프리셋(한글|없음)")
+        safe_click(content_regex)
         focus()
         content_encoding.wrapper_object().select(1)
         preset_name.set_edit_text("2월 중간 보고서")
         safe_click(element("SearchPresetSaveButton"))
         good(lambda:preset_file.is_file() and
-             "schema=3" in preset_file.read_text(encoding="utf-8") and
-             "2월 중간 보고서\treport\t프리셋한글\t1\t.txt" in
+             "schema=4" in preset_file.read_text(encoding="utf-8") and
+             "2월 중간 보고서\treport\t프리셋(한글|없음)\t1\t.txt\t0\t1\t0\t0" in
              preset_file.read_text(encoding="utf-8"),
-             "Search v3 saved query preset was not durable",10)
+             "Search v4 content-regex preset was not durable",10)
         print("REAL_SEARCH_V3_PRIVATE_PRESET_SAVE_PASS",True,flush=True)
         print("REAL_CONTENT_SEARCH_PRESET_SAVE_PASS",True,flush=True)
 
@@ -472,6 +491,7 @@ def run(*,p,win,element,safe_click,focus,eventually,ownedwindows,
         after.set_edit_text("")
         before_date.set_edit_text("")
         content_box.set_edit_text("")
+        safe_click(content_regex)
         focus()
         content_encoding.wrapper_object().select(0)
         target.wrapper_object().select(0)
@@ -551,17 +571,19 @@ def run(*,p,win,element,safe_click,focus,eventually,ownedwindows,
                  restarted.child_window(auto_id="SearchMaxSizeBox").get_value()=="9" and
                  restarted.child_window(auto_id="SearchModifiedAfterBox").get_value()=="2026-02-01" and
                  restarted.child_window(auto_id="SearchModifiedBeforeBox").get_value()=="2026-02-28" and
-                 restarted.child_window(auto_id="SearchContentBox").get_value()=="프리셋한글",
-                 "saved Search v3/content criteria did not apply after restart",8)
+                 restarted.child_window(auto_id="SearchContentBox").get_value()=="프리셋(한글|없음)" and
+                 restarted.child_window(auto_id="SearchContentRegexBox").get_toggle_state()==1,
+                 "saved Search v4/content-regex criteria did not apply after restart",8)
             restarted.child_window(auto_id="SearchRunButton").click_input()
             good(lambda:"검색 결과 1개" in restarted.child_window(
                      auto_id="SearchCountText").window_text(),
                  "Search v3/content reloaded preset did not execute",14)
             print("REAL_CONTENT_ENCODING_PRESET_RESTART_PASS",True,flush=True)
             print("REAL_CONTENT_SEARCH_PRESET_RESTART_PASS",True,flush=True)
+            print("REAL_CONTENT_REGEX_PRESET_RESTART_PASS",True,flush=True)
             restarted.child_window(auto_id="SearchPresetDeleteButton").click_input()
             good(lambda:preset_file.is_file() and
-                 preset_file.read_text(encoding="utf-8").strip()=="schema=3",
+                 preset_file.read_text(encoding="utf-8").strip()=="schema=4",
                  "Search v3/content preset delete did not persist",8)
             print("REAL_SEARCH_V3_PRESET_RESTART_APPLY_DELETE_PASS",True,flush=True)
         finally:
