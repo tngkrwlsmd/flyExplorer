@@ -125,56 +125,44 @@ try:
     for key in ("AddressBox", "LeftFiles", "RightFiles", "StatusText"):
         assert element(key).exists(timeout=5), ("missing owned control", key)
 
-    eventually(
-        lambda: str(left).lower() in element("AddressBox").get_value().lower(),
-        "owned left route did not load",
-        18,
-    )
-    eventually(
-        lambda: any(
-            row.element_info.control_type == "ListItem"
-            and "F5-새로고침-원본" in row.window_text()
-            for row in element("LeftFiles").descendants()
-        ),
-        "owned F5 source row did not render",
-        12,
-    )
+    def row(side_id, expected_name):
+        return next(
+            (
+                entry for entry in element(side_id).descendants()
+                if entry.element_info.control_type == "ListItem"
+                and expected_name in entry.window_text()
+            ),
+            None,
+        )
 
-    # Configure the independent right pane with a synthetic owned directory.
-    right_surface = element("RightFiles")
-    right_item = next(
-        (row for row in right_surface.descendants()
-         if row.element_info.control_type == "ListItem"),
-        None,
-    )
-    safe_click(right_item or right_surface)
-    address = element("AddressBox")
-    address.set_edit_text(str(right))
-    focus()
-    address.type_keys("{ENTER}", set_foreground=True)
-    eventually(
-        lambda: str(right).lower() in element("AddressBox").get_value().lower(),
-        "owned right route did not load",
-        18,
-    )
-    eventually(
-        lambda: any(
-            row.element_info.control_type == "ListItem"
-            and "F6-오른쪽-표식" in row.window_text()
-            for row in element("RightFiles").descendants()
-        ),
-        "owned right pane marker did not render",
-        18,
-    )
+    def visit(side_id, path, expected_name):
+        safe_click(element(side_id))
+        address = element("AddressBox")
+        address.set_edit_text(str(path))
+        focus()
+        address.type_keys("{ENTER}", set_foreground=True)
+        eventually(
+            lambda: str(path).rstrip("\\/").casefold()
+            in element("AddressBox").get_value().rstrip("\\/").casefold(),
+            "owned pane route did not load: " + side_id,
+            18,
+        )
+        eventually(
+            lambda: row(side_id, expected_name) is not None,
+            "owned row did not render after explicit route: " + expected_name,
+            18,
+        )
+
+    # Reassert both owned routes explicitly. AddressBox navigation can replace
+    # WinUI list peers, so do not rely on the startup peer or an earlier pane
+    # activation when preparing the focused shortcut fixture.
+    visit("LeftFiles", left, source.name)
+    visit("RightFiles", right, secondary.name)
+    visit("LeftFiles", left, source.name)
 
     # F5: return to left, select a real filesystem row and physically press F5.
     left_surface = element("LeftFiles")
-    left_item = next(
-        (row for row in left_surface.descendants()
-         if row.element_info.control_type == "ListItem"
-         and "F5-새로고침-원본" in row.window_text()),
-        None,
-    )
+    left_item = row("LeftFiles", source.name)
     assert left_item is not None
     safe_click(left_item)
     left_item.select()
