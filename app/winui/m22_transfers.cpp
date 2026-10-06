@@ -504,7 +504,8 @@ void MainWindow::HandleFileShortcut(
  const auto vk=args.Key();
  const auto ctrl=(::GetKeyState(VK_CONTROL)&0x8000)!=0;
  const auto shift=(::GetKeyState(VK_SHIFT)&0x8000)!=0;
- if(ctrl&&shift&&vk==Windows::System::VirtualKey::F){
+ const auto alt=(::GetKeyState(VK_MENU)&0x8000)!=0;
+ if(ctrl&&shift&&!alt&&vk==Windows::System::VirtualKey::F){
   auto box=side==0?LeftNameFilterBox():RightNameFilterBox();
   if(box.Opacity()<0.5)ToggleNameFilter(side);
   box.Focus(Microsoft::UI::Xaml::FocusState::Keyboard);
@@ -526,12 +527,6 @@ void MainWindow::HandleFileShortcut(
  }
  if(vk==Windows::System::VirtualKey::F2){
   BeginFileNameCommand(fxfile::filecommand::Kind::RenameSelected);args.Handled(true);return;
- }
- if(vk==Windows::System::VirtualKey::F5){
-  RunTransfer(fxfile::shelltransfer::Kind::Copy);args.Handled(true);return;
- }
- if(vk==Windows::System::VirtualKey::F6){
-  RunTransfer(fxfile::shelltransfer::Kind::Move);args.Handled(true);return;
  }
  if(vk==Windows::System::VirtualKey::Delete){
   RunTransfer(fxfile::shelltransfer::Kind::Recycle);args.Handled(true);
