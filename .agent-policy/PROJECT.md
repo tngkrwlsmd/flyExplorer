@@ -26,8 +26,8 @@ consumer core; this PROJECT.md remains project-owned across bundle refreshes.
     {"name": "winui-tests", "path": "tests/winui", "responsibility": "source, native and owned GUI contracts"}
   ],
   "review": {
-    "reviewed_revision": "8968837576eec214c623808ed55fc17a0473d6b7",
-    "reviewed_at": "2026-10-05",
+    "reviewed_revision": "d6e00b90fddcba1da3851a75cf422182ea736288",
+    "reviewed_at": "2026-10-06",
     "reviewed_paths": [
       "app/winui",
       "src/base",
@@ -135,7 +135,12 @@ deep content scanning are not implemented.
 
 Physical same-app file drag is accepted through the existing private drag/drop
 path and hands transfer work to FileOperationController after source/destination
-revalidation. Explorer-compatible `Ctrl+Shift+N` is also accepted for
+revalidation. File transfer entry points now share one bounded native budget:
+at most 1,024 source items and 1,048,576 aggregate UTF-16 source-path units.
+This replaces the historical 32-item copy/move/recycle/clipboard/drag cap while
+remaining fail-closed above the shared bounds; owned evidence includes a real
+64-item IFileOperation copy, 64-item CF_HDROP round-trip and 64-item WinUI
+cross-pane copy. Explorer-compatible `Ctrl+Shift+N` is also accepted for
 create-folder and routes through the existing
 `fxfile::filecommand::Kind::CreateFolder` command path for the active pane/tab;
 historical F11 is intentionally not restored because it conflicts with current

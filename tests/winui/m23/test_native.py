@@ -4,7 +4,7 @@ import tempfile,subprocess,hashlib,os,shutil
 import sys
 HERE=Path(__file__).resolve().parent
 ROOT=HERE.parents[2]
-sys.path.insert(0,str(HERE.parent if 'HERE' in globals() else p.parent))
+sys.path.insert(0,str(HERE.parent))
 from profile_guard import assert_legacy_profile_unchanged,present_count,snapshot_legacy_profile
 CONFIG=os.environ.get("FLY_M23_CONFIG","Debug")
 assert CONFIG in ("Debug","Release")
@@ -20,8 +20,8 @@ try:
  proc=subprocess.run([str(exe),str(own)],cwd=exe.parent,
       env=env,capture_output=True,text=True,errors="replace",timeout=45)
  assert proc.returncode==0,(proc.returncode,proc.stdout,proc.stderr)
- assert "M23_NATIVE_SUMMARY 29 passed, 0 failed." in proc.stdout,proc.stdout
- print("M23_NATIVE_"+CONFIG+"_29_PASS_NO_GLOBAL_CLIPBOARD_MUTATION",True)
+ assert "M23_NATIVE_SUMMARY 30 passed, 0 failed." in proc.stdout,proc.stdout
+ print("M23_NATIVE_"+CONFIG+"_30_PASS_NO_GLOBAL_CLIPBOARD_MUTATION",True)
 finally:
  assert_legacy_profile_unchanged(config,before)
  shutil.rmtree(own)

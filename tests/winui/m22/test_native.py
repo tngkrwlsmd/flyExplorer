@@ -3,7 +3,7 @@ import os,subprocess,hashlib,tempfile,shutil
 import sys
 HERE=Path(__file__).resolve().parent
 ROOT=HERE.parents[2]
-sys.path.insert(0,str(HERE.parent if 'HERE' in globals() else p.parent))
+sys.path.insert(0,str(HERE.parent))
 from profile_guard import assert_legacy_profile_unchanged,present_count,snapshot_legacy_profile
 CONFIG=os.environ.get("FLY_M22_CONFIG","Debug")
 assert CONFIG in ("Debug","Release")
@@ -19,8 +19,8 @@ try:
  proc=subprocess.run([str(exe),str(own)],cwd=exe.parent,env=env,
      capture_output=True,text=True,errors="replace",timeout=50)
  assert proc.returncode==0,(proc.returncode,proc.stdout,proc.stderr)
- assert "M22_NATIVE_SUMMARY 18 passed, 0 failed." in proc.stdout,proc.stdout
- print("M22_NATIVE_"+CONFIG+"_18_REAL_OWNED_SHELL_PASS",True)
+ assert "M22_NATIVE_SUMMARY 21 passed, 0 failed." in proc.stdout,proc.stdout
+ print("M22_NATIVE_"+CONFIG+"_21_REAL_OWNED_SHELL_PASS",True)
 finally:
  assert_legacy_profile_unchanged(real,before)
  shutil.rmtree(own)

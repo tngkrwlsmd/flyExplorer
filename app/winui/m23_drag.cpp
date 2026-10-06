@@ -22,6 +22,16 @@ bool traceOwnedDrag(){
     L"FLY_M23_OWNED_DRAG_TRACE",flag,16);
  return n==3&&::CompareStringOrdinal(flag,-1,L"YES",-1,FALSE)==CSTR_EQUAL;
 }
+bool appendTransferPath(
+ std::vector<std::wstring>& paths,std::size_t& pathUnits,
+ std::wstring path){
+ if(path.empty()||paths.size()>=fxfile::shelltransfer::kMaxItems)return false;
+ const auto units=path.size()+1;
+ if(units>fxfile::shelltransfer::kMaxSourcePathUnits-pathUnits)return false;
+ pathUnits+=units;
+ paths.push_back(std::move(path));
+ return true;
+}
 
 }
 void MainWindow::ResetFileRowPointerDrag() noexcept{
@@ -112,7 +122,7 @@ void MainWindow::OnFileDragItemsStarting(
  auto view=sender.try_as<ListView>();
  const int side=view==LeftFiles()?0:view==RightFiles()?1:-1;
  if(side<0||mFileOperations.busy()||args.Items().Size()==0||
-    args.Items().Size()>32){args.Cancel(true);return;}
+    args.Items().Size()>fxfile::shelltransfer::kMaxItems){args.Cancel(true);return;}
  auto const& pane=ActiveWindowTab().model.panes[side];
  const auto tab=pane.active;
  if(pane.pending[tab]||pane.filesystemPaths[tab].empty()){
@@ -120,6 +130,7 @@ void MainWindow::OnFileDragItemsStarting(
  }
  auto const& session=pane.tabs[tab];
  std::vector<std::wstring> paths{};
+ std::size_t pathUnits=0;
  for(auto const& item:args.Items()){
   auto row=item.try_as<ListViewItem>();
   if(!row||!row.Tag()){args.Cancel(true);return;}
@@ -127,7 +138,9 @@ void MainWindow::OnFileDragItemsStarting(
   auto const* indexed=session.indexedItem(static_cast<std::size_t>(logical));
   if(!indexed||!indexed->isFileSystem()||
      indexed->parsingName.empty()){args.Cancel(true);return;}
-  paths.push_back(indexed->parsingName);
+  if(!appendTransferPath(paths,pathUnits,indexed->parsingName)){
+   args.Cancel(true);return;
+  }
  }
  GUID id{};
  if(FAILED(::CoCreateGuid(&id))){args.Cancel(true);return;}
@@ -168,8 +181,9 @@ void MainWindow::OnFileRowDragStarting(
   }
  }
  if(!rowSelected)chosen={row};
- if(chosen.empty()||chosen.size()>32){args.Cancel(true);return;}
+ if(chosen.empty()||chosen.size()>fxfile::shelltransfer::kMaxItems){args.Cancel(true);return;}
  std::vector<std::wstring> paths;
+ std::size_t pathUnits=0;
  for(auto const& entry:chosen){
   if(!entry.Tag()){args.Cancel(true);return;}
   const auto logical=unbox_value<std::uint64_t>(entry.Tag());
@@ -178,7 +192,9 @@ void MainWindow::OnFileRowDragStarting(
      indexed->parsingName.empty()){
    args.Cancel(true);return;
   }
-  paths.push_back(indexed->parsingName);
+  if(!appendTransferPath(paths,pathUnits,indexed->parsingName)){
+   args.Cancel(true);return;
+  }
  }
  GUID id{};
  if(FAILED(::CoCreateGuid(&id))){args.Cancel(true);return;}
@@ -258,10 +274,13 @@ fire_and_forget MainWindow::OnFileDrop(
    mPrivateDragSources.clear(); // replay protection after consumption
   }else if(view.Contains(StandardDataFormats::StorageItems())){
    auto items=co_await view.GetStorageItemsAsync();
-   if(items.Size()==0||items.Size()>32){
-    StatusText().Text(L"한 번에 끌 수 있는 항목은 최대 32개입니다.");
+   if(items.Size()==0||
+      items.Size()>fxfile::shelltransfer::kMaxItems){
+    StatusText().Text(hstring(L"한 번에 끌 수 있는 항목은 최대 "+
+      std::to_wstring(fxfile::shelltransfer::kMaxItems)+L"개입니다."));
     mDropReading=false;deferral.Complete();co_return;
    }
+   std::size_t pathUnits=0;
    for(auto const& item:items){
     auto path=std::wstring(item.Path().c_str());
     if(path.empty()||path.size()>32000){
@@ -275,7 +294,10 @@ fire_and_forget MainWindow::OnFileDrop(
      StatusText().Text(L"서로 다른 원본 폴더의 항목을 함께 놓을 수 없습니다.");
      mDropReading=false;deferral.Complete();co_return;
     }
-    request.sources.push_back(std::move(path));
+    if(!appendTransferPath(request.sources,pathUnits,std::move(path))){
+     StatusText().Text(L"끌어온 항목의 전체 경로 크기가 파일 작업 제한을 넘었습니다.");
+     mDropReading=false;deferral.Complete();co_return;
+    }
    }
   }else{
    mDropReading=false;deferral.Complete();co_return;

@@ -141,6 +141,7 @@ void MainWindow::RunTransfer(fxfile::shelltransfer::Kind kind){
  }
  auto list=side==0?LeftFiles():RightFiles();
  auto const& session=pane.tabs[tab];
+ std::size_t sourcePathUnits=0;
  for(auto const& value:list.SelectedItems()){
   const auto row=value.try_as<ListViewItem>();
   if(!row||!row.Tag()){StatusText().Text(L"선택한 항목을 읽지 못했습니다.");return;}
@@ -150,11 +151,16 @@ void MainWindow::RunTransfer(fxfile::shelltransfer::Kind kind){
    StatusText().Text(L"가상 Shell 항목은 이 파일 작업에서 지원하지 않습니다.");
    return;
   }
-  req.sources.push_back(indexed->parsingName);
-  if(req.sources.size()>32){
-   StatusText().Text(L"파일 작업 한 번에 최대 32개 항목을 선택할 수 있습니다.");
+  const auto pathUnits=indexed->parsingName.size()+1;
+  if(req.sources.size()>=fxfile::shelltransfer::kMaxItems||
+     pathUnits>fxfile::shelltransfer::kMaxSourcePathUnits-sourcePathUnits){
+   StatusText().Text(hstring(L"파일 작업은 최대 "+
+      std::to_wstring(fxfile::shelltransfer::kMaxItems)+
+      L"개 항목과 제한된 전체 경로 크기 안에서 실행할 수 있습니다."));
    return;
   }
+  sourcePathUnits+=pathUnits;
+  req.sources.push_back(indexed->parsingName);
  }
  if(req.sources.empty()){
   StatusText().Text(L"작업할 파일 또는 폴더를 선택하세요.");
@@ -325,17 +331,24 @@ bool MainWindow::CopySelectedToWindowsClipboard(int side,bool cut){
  const auto& session=pane.tabs[pane.active];
  fxfile::shellclipboard::Payload item{};
  item.move=cut;
+ std::size_t clipboardPathUnits=0;
  for(auto const& selected:view.SelectedItems()){
   auto const row=selected.try_as<ListViewItem>();
   if(!row||!row.Tag())return false;
   const auto logical=winrt::unbox_value<std::uint64_t>(row.Tag());
   auto const* indexed=session.indexedItem(static_cast<std::size_t>(logical));
   if(!indexed||!indexed->isFileSystem()||indexed->parsingName.empty())return false;
+  const auto pathUnits=indexed->parsingName.size()+1;
+  if(item.paths.size()>=fxfile::shelltransfer::kMaxItems||
+     pathUnits>fxfile::shelltransfer::kMaxSourcePathUnits-clipboardPathUnits)
+   return false;
+  clipboardPathUnits+=pathUnits;
   item.paths.push_back(indexed->parsingName);
-  if(item.paths.size()>32)return false;
  }
  if(!fxfile::shellclipboard::valid(item)){
-  StatusText().Text(L"Windows 클립보드에 넣을 파일 1~32개를 선택하세요.");
+  StatusText().Text(hstring(L"Windows 클립보드 파일 목록은 최대 "+
+      std::to_wstring(fxfile::shelltransfer::kMaxItems)+
+      L"개이며 전체 경로 크기 제한을 넘지 않아야 합니다."));
   return false;
  }
  // OpenClipboard owner must be a live app-owned HWND. GetActiveWindow()

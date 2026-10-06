@@ -98,7 +98,7 @@ DWORD code(HRESULT value) {
 Report validate(Request const& request) noexcept {
  Report report{};
  try {
-  if(request.sources.empty()||request.sources.size()>32||
+  if(request.sources.empty()||request.sources.size()>kMaxItems||
      request.sourceParent.size()>32000||
      (request.kind!=Kind::Copy&&request.kind!=Kind::Move&&
       request.kind!=Kind::Recycle)||
@@ -116,10 +116,13 @@ Report validate(Request const& request) noexcept {
    if(!safeLocalFolder(dest)){report.error=ERROR_INVALID_NAME;return report;}
   }
   std::vector<std::wstring> seen;
+  std::size_t sourcePathUnits=0;
   for(auto const& source:request.sources){
-   if(source.empty()||source.size()>32000){
+   if(source.empty()||source.size()>32000||
+      sourcePathUnits>kMaxSourcePathUnits-source.size()-1){
     report.error=ERROR_INVALID_NAME;return report;
    }
+   sourcePathUnits+=source.size()+1;
    const auto item=fs::path(source).lexically_normal();
    if(!item.is_absolute()||!sameParent(item.parent_path(),parent)||
       !filecommand::validLeaf(item.filename().native())){

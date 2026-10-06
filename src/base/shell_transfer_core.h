@@ -6,9 +6,12 @@
 #include <windows.h>
 #include <atomic>
 #include <cstdint>
+#include <cstddef>
 #include <string>
 #include <vector>
 namespace fxfile::shelltransfer {
+inline constexpr std::size_t kMaxItems=1024;
+inline constexpr std::size_t kMaxSourcePathUnits=1024*1024;
 enum class Kind { Copy, Move, Recycle };
 enum class Collision { Reject, KeepBoth };
 struct Request {
