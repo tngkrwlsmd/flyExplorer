@@ -49,6 +49,29 @@ class FileOperationContracts(unittest.TestCase):
         for forbidden in ("CWnd", "XamlRoot", "Windows::ApplicationModel"):
             self.assertNotIn(forbidden, header + body)
 
+    def test_copy_move_accept_removable_but_recycle_and_remote_stay_closed(self):
+        header = read("src/base/shell_transfer_core.h")
+        body = read("src/base/shell_transfer_core.cpp")
+        fixture = read("tests/winui/m22/m22_transfer_fixture.cpp")
+        for token in (
+            "supportsDriveType(Kind kind,UINT driveType)",
+            "driveType==DRIVE_FIXED||driveType==DRIVE_REMOVABLE",
+            "case Kind::Recycle:",
+            "return driveType==DRIVE_FIXED;",
+            "!supportsDriveType(kind,::GetDriveTypeW(root.c_str()))",
+            "safeLocalFolder(parent,request.kind)",
+            "safeLocalFolder(dest,request.kind)",
+        ):
+            self.assertIn(token, header + body)
+        for token in (
+            "copy_accepts_removable_drive",
+            "move_accepts_removable_drive",
+            "recycle_rejects_removable_drive",
+            "copy_rejects_remote_drive",
+            "move_rejects_remote_drive",
+        ):
+            self.assertIn(token, fixture)
+
     def test_ui_routes_commands_through_async_controller_and_refreshes_touched_panes(self):
         command = read("app/winui/m21_commands.cpp")
         transfer = read("app/winui/m22_transfers.cpp")
