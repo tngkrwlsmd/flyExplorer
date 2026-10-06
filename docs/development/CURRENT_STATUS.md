@@ -249,6 +249,29 @@ bootstrap configuration.
 
 ## Latest verified evidence
 
+Removable-volume sortable metadata support is accepted on candidate
+`e0e9483704a53ac4caddd20b06146bcdfe577044` by self-hosted Remote
+Windows Task `37459066015`. The run passed request validation, change-scoped
+FAST and the canonical Release build, then exercised the existing input-free
+metadata-sort GUI regression in size, modified-date and type modes over the
+1,305-file fixture. It passed
+`METADATA_SORT_OVER_1200_SIZE_DESC True`,
+`METADATA_SORT_OVER_1200_DATE_DESC True` and
+`METADATA_SORT_OVER_1200_TYPE_ASC True`, with
+`REMOVABLE_METADATA_SIZE/DATE/TYPE=PASS`. The sortable-metadata scheduler now
+accepts both `DRIVE_FIXED` and `DRIVE_REMOVABLE` local roots while keeping
+`DRIVE_REMOTE`/UNC and provider paths closed. Shell visual detail/icon/
+thumbnail scheduling remains a separate fixed-drive-only path.
+
+The VM still exposes no `DRIVE_REMOVABLE` volume, so physical USB metadata
+sort execution is not claimed. The same run emitted
+`REMOVABLE_METADATA_PHYSICAL_USB=NOT_RUN_NO_DEVICE`. Evidence artifact
+`11410943753`, digest
+`sha256:ead551360031fe8d584005222231486422adf1d703b4e090c0d049b053d868a9`,
+preserves the remote result and logs. The wrapper's RUNNER_HEALTH stage was
+not requested by this validation-plan vocabulary, but the Release command
+itself executed all three owned WinUI metadata-sort GUI processes successfully.
+
 Removable-volume Recycle semantics are accepted on candidate
 `a7b675f790356cc152c577a3d670e9829afdaae4` by self-hosted Remote
 Windows Task `37456955994`. The rerun passed request validation,
@@ -312,10 +335,13 @@ Remote Windows Task `37451622847` found only C: as `Fixed` and D: as
 with an attached USB/removable volume should certify fixed↔removable and
 removable↔removable Copy/Move without changing the current product policy.
 
-Metadata-sort correctness and metadata/detail separation are accepted on
-candidate `1857330605c8ab27b2c0ea6ce91b279e71f13607` by self-hosted
-Remote Windows Task `37447176742`. The run passed request validation, FAST
-static preflight, GUI runner health and the canonical Release build, then ran
+Metadata-sort correctness and metadata/detail separation were first accepted
+on candidate `1857330605c8ab27b2c0ea6ce91b279e71f13607` by self-hosted
+Remote Windows Task `37447176742`. That revision established fixed-drive
+correctness; the later removable-metadata acceptance above extends the same
+sortable metadata lifecycle to local removable drives. The run passed request
+validation, FAST static preflight, GUI runner health and the canonical Release
+build, then ran
 the same Release executable in three input-free owned processes over a
 1,305-file fixture. It passed
 `METADATA_SORT_OVER_1200_SIZE_DESC True`,
@@ -725,12 +751,14 @@ Current source and the last parity evidence still show these limits:
   beyond the 20,000-item model ceiling, network/virtual providers and sustained
   thumbnail-cache behavior are not certified.
 - Type, size and modified-date global sort requires a complete sortable
-  metadata model and is supported through 20,000 local fixed-drive filesystem
-  entries. The previous 1,200 visual-detail ceiling no longer controls these
-  sorts and 1,201-20,000 items no longer silently use name order. Above 20,000
-  these metadata sorts remain explicitly refused. Shell visual/type/icon/
-  thumbnail enrichment remains separately bounded to 1,200 items, and
-  removable/network/provider metadata coverage is still a separate gap.
+  metadata model and is supported through 20,000 local fixed or removable
+  filesystem entries. The previous 1,200 visual-detail ceiling no longer
+  controls these sorts and 1,201-20,000 items no longer silently use name
+  order. Above 20,000 these metadata sorts remain explicitly refused. Shell
+  visual/type/icon/thumbnail enrichment remains separately bounded to 1,200
+  items and fixed-drive-only; network/UNC/provider metadata coverage remains a
+  separate gap. Physical USB metadata-sort execution is also still awaiting a
+  removable device on the self-hosted VM.
 - Copy/Move/Recycle accepts local fixed and removable drive roots through the
   shared Shell transfer core. Recycle still requires explicit confirmation and
   uses Shell recycle-only flags; if a removable drive cannot use Windows

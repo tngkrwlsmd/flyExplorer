@@ -72,6 +72,11 @@ namespace {
         return value;
     }
 
+    bool SupportsSortableMetadataDrive(UINT driveType) noexcept
+    {
+        return driveType==DRIVE_FIXED||driveType==DRIVE_REMOVABLE;
+    }
+
     std::filesystem::path StartFolder()
     {
         int count=0;
@@ -834,7 +839,7 @@ namespace winrt::FlyExplorer::implementation
         auto const& folder=pane.filesystemPaths[tab];
         if(folder.size()<3||folder[1]!=L':'||folder[2]!=L'\\')return;
         const std::wstring root=folder.substr(0,3);
-        if(::GetDriveTypeW(root.c_str())!=DRIVE_FIXED)return;
+        if(!SupportsSortableMetadataDrive(::GetDriveTypeW(root.c_str())))return;
         std::vector<std::wstring> paths{};
         paths.reserve(items.size());
         for(auto const& item:items)
