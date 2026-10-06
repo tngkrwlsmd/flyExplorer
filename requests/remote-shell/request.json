@@ -1,15 +1,11 @@
 {
-  "request_id": "f5-f6-main-reapply-20261006",
+  "request_id": "f5-f6-checkout-dirty-diagnostic-20261006",
   "expected_main_sha": "9051e174da20264f31968e91ddb40289ace10149",
   "candidate_sha": "436bc42ede40a004b96437721bdd3d5c17997c6b",
-  "logical_unit": "f5-f6-main-reapply",
-  "request_mode": "validation",
-  "configuration": "Release",
-  "validation_plan": [
-    "source",
-    "build",
-    "gui"
-  ],
+  "logical_unit": "f5-f6-checkout-dirty-diagnostic",
+  "request_mode": "diagnostic",
+  "configuration": "none",
+  "validation_plan": [],
   "working_directory": "",
-  "command": "$ErrorActionPreference=\"Stop\"\n$repo=$env:FLYEXPLORER_CANONICAL_CHECKOUT\n$main=\"9051e174da20264f31968e91ddb40289ace10149\"\n$candidate=\"436bc42ede40a004b96437721bdd3d5c17997c6b\"\n$work=\"work/f5-f6-main-reapply-20261006\"\nSet-Location -LiteralPath $repo\n& git fetch origin main $work --no-tags --prune\nif($LASTEXITCODE -ne 0){throw \"candidate fetch failed\"}\n$mainSha=(& git rev-parse refs/remotes/origin/main).Trim()\nif($mainSha -ne $main){throw \"main moved before validation: $mainSha\"}\n$candidateSha=(& git rev-parse (\"refs/remotes/origin/\"+$work)).Trim()\nif($candidateSha -ne $candidate){throw \"candidate branch moved before validation: $candidateSha\"}\n$status=& git status --short\nif($LASTEXITCODE -ne 0){throw \"git status failed\"}\nif($status){throw \"persistent checkout is not clean before validation\"}\n& git diff --check $main...$candidate\nif($LASTEXITCODE -ne 0){throw \"git diff --check failed\"}\n& git switch --detach $candidate\nif($LASTEXITCODE -ne 0){throw \"candidate checkout failed\"}\ntry {\n  & python -X utf8 tests/winui/test_shortcut_semantics_contract.py\n  if($LASTEXITCODE -ne 0){throw \"shortcut source contract failed\"}\n  & python -X utf8 tests/winui/test_gui_harness_contract.py\n  if($LASTEXITCODE -ne 0){throw \"GUI harness static contract failed\"}\n  & cmd /c \"build.bat Release\"\n  if($LASTEXITCODE -ne 0){throw \"Release build failed\"}\n  $env:FLY_MIGRATION_CONFIGURATION=\"Release\"\n  & python -X utf8 tests/winui/test_shortcut_gui.py\n  if($LASTEXITCODE -ne 0){throw \"focused F5/F6 GUI acceptance failed\"}\n  Write-Host \"F5_F6_MAIN_REAPPLY_ACCEPTANCE=PASS\"\n} finally {\n  Remove-Item Env:FLY_MIGRATION_CONFIGURATION -ErrorAction SilentlyContinue\n  & git switch main\n  if($LASTEXITCODE -ne 0){throw \"failed to restore main branch\"}\n  & git merge --ff-only refs/remotes/origin/main\n  if($LASTEXITCODE -ne 0){throw \"failed to restore checkout to origin/main\"}\n}"
+  "command": "$ErrorActionPreference=\"Stop\"\n$repo=$env:FLYEXPLORER_CANONICAL_CHECKOUT\nSet-Location -LiteralPath $repo\nWrite-Host (\"HEAD=\"+(& git rev-parse HEAD).Trim())\nWrite-Host (\"BRANCH=\"+(& git branch --show-current).Trim())\nWrite-Host (\"ORIGIN_MAIN=\"+(& git rev-parse refs/remotes/origin/main).Trim())\nWrite-Host \"STATUS_BEGIN\"\n& git status --short\nif($LASTEXITCODE -ne 0){throw \"git status failed\"}\nWrite-Host \"STATUS_END\""
 }
