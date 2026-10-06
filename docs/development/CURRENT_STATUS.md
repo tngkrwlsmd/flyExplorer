@@ -60,6 +60,25 @@ checkpoints.
   owned Release test delivered real mouse press/move/release, reached DragOver,
   copied the Korean owned file across panes, exited normally, and left all six
   protected user settings byte-identical.
+- Outbound filesystem drag now adds the public Windows
+  `StandardDataFormats::StorageItems` payload on the accepted explicit row
+  `StartDragAsync` path while retaining the private same-app token in the same
+  DataPackage. StorageFile/StorageFolder projection is performed asynchronously
+  under the DragStarting deferral; failure to project the public payload leaves
+  the private same-app payload intact. Outbound allowed/requested operation is
+  Copy only. Remote Windows Task #464 (`37399608114`) passed FAST, canonical
+  Release build and a real physical mouse drag from flyExplorer into a newly
+  opened test-owned Windows Explorer window: the Korean owned file appeared in
+  the Explorer destination and remained in the flyExplorer source. That run
+  later failed only in the older broad same-app GUI harness after the outbound
+  acceptance had completed. Focused same-app successor #466
+  (`37400834524`) kept product code unchanged and passed a real private-token
+  cross-pane drag copy after explicitly routing both owned panes. The product
+  therefore interoperates with external Windows drop targets that consume
+  StorageItems without weakening private route/replay validation. Explorer is
+  the accepted external target; Desktop and arbitrary third-party drop targets
+  use the same public payload but are not separately certified by owned GUI
+  evidence.
 - The follow-up workspace-restore audit reversed the earlier deferral after
   identifying a real lifecycle boundary: each pane has queued restore tasks plus
   one awaited Shell navigation request. Previously a failed/rejected/no-change
