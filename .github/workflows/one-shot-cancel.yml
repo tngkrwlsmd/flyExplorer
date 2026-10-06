@@ -15,7 +15,7 @@ jobs:
   cancel:
     runs-on: windows-2025
     steps:
-      - name: Force-cancel stale run
+      - name: Force-cancel stale run and verify
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
@@ -23,7 +23,15 @@ jobs:
           RUN_ID: "37456490190"
         run: |
           $ErrorActionPreference = "Stop"
-          $uri = "https://api.github.com/repos/$env:REPO/actions/runs/$env:RUN_ID/force-cancel"
           $headers = @{ Authorization = "Bearer $env:GH_TOKEN"; Accept = "application/vnd.github+json"; "X-GitHub-Api-Version" = "2022-11-28" }
-          Invoke-RestMethod -Method Post -Uri $uri -Headers $headers
-          Write-Host "FORCE_CANCEL_REQUESTED=$env:RUN_ID"
+          $base = "https://api.github.com/repos/$env:REPO/actions/runs/$env:RUN_ID"
+          try { Invoke-RestMethod -Method Post -Uri ($base + "/cancel") -Headers $headers } catch { Write-Host "STANDARD_CANCEL=$($_.Exception.Message)" }
+          Start-Sleep -Seconds 2
+          for ($attempt = 1; $attempt -le 3; $attempt++) {
+            try { Invoke-RestMethod -Method Post -Uri ($base + "/force-cancel") -Headers $headers } catch { Write-Host "FORCE_CANCEL_$attempt=$($_.Exception.Message)" }
+            Start-Sleep -Seconds 3
+            $state = Invoke-RestMethod -Method Get -Uri $base -Headers $headers
+            Write-Host ("CANCEL_STATE attempt={0} status={1} conclusion={2}" -f $attempt,$state.status,$state.conclusion)
+            if ($state.status -eq "completed" -and $state.conclusion -eq "cancelled") { Write-Host "FORCE_CANCEL_CONFIRMED=$env:RUN_ID"; exit 0 }
+          }
+          throw "stale run did not reach completed/cancelled"
