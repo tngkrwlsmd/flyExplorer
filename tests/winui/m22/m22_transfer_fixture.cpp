@@ -53,6 +53,24 @@ int wmain(int count,wchar_t**args){
  auto multi=execute(r,progress);
  test(multi.error==0&&get(right/L"가.txt")=="one"&&
       get(right/L"나.txt")=="two","actual_multi_selection_copy");
+ test(kMaxItems>=64,"shared_transfer_budget_exceeds_legacy_32");
+ const auto bulkLeft=root/L"대량 왼쪽",bulkRight=root/L"대량 오른쪽";
+ fs::create_directory(bulkLeft);fs::create_directory(bulkRight);
+ Request bulk;bulk.kind=Kind::Copy;
+ bulk.sourceParent=bulkLeft.native();bulk.destination=bulkRight.native();
+ for(std::size_t i=0;i<64;++i){
+  const auto name=L"대량-"+std::to_wstring(i)+L".txt";
+  put(bulkLeft/name,"bulk");
+  bulk.sources.push_back((bulkLeft/name).native());
+ }
+ test(validate(bulk).error==0&&validate(bulk).queued==64,
+      "validate_more_than_32_items");
+ Progress bulkProgress;
+ auto bulkDone=execute(bulk,bulkProgress);
+ bool allBulk=bulkDone.error==0&&bulkDone.queued==64;
+ for(std::size_t i=0;i<64&&allBulk;++i)
+  allBulk=fs::exists(bulkRight/(L"대량-"+std::to_wstring(i)+L".txt"));
+ test(allBulk,"actual_ifileoperation_64_item_copy");
  auto safe=r;
  r.sources.push_back(r.sources[0]);
  test(validate(r).error==ERROR_INVALID_PARAMETER,"reject_duplicate_source");
@@ -77,8 +95,8 @@ int wmain(int count,wchar_t**args){
  test(validate(r).error!=0,"reject_recursive_folder_copy");
  r=safe;r.sources.clear();
  test(validate(r).error==ERROR_INVALID_PARAMETER,"reject_empty_selection");
- r=safe;r.sources.assign(33,(left/L"가.txt").native());
- test(validate(r).error==ERROR_INVALID_PARAMETER,"max_32_selected_items");
+ r=safe;r.sources.assign(kMaxItems+1,(left/L"가.txt").native());
+ test(validate(r).error==ERROR_INVALID_PARAMETER,"reject_over_shared_item_budget");
  std::printf("M22_NATIVE_SUMMARY %d passed, %d failed.\n",pass,fail);
  return fail?1:0;
 }
