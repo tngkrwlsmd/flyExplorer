@@ -131,11 +131,11 @@ def main():
 
         if args.expect_legacy_fallback:
             until(lambda:"aa-type-last.zzz" in first_row() and
-                  "불러오는 중" not in status.window_text(), 
+                  "불러오는 중" not in status.window_text(),
                   "legacy metadata fallback state did not settle",40)
             print("METADATA_SORT_LEGACY_NAME_FALLBACK_REPRODUCED",True,flush=True)
         else:
-            until(lambda:"zz-size-winner.bin" in first_row(), 
+            until(lambda:"zz-size-winner.bin" in first_row(),
                   "size descending did not use full metadata above 1200",45)
             until(lambda:"메타데이터 정렬" in status.window_text(),
                   "metadata sort completion status missing",10)
