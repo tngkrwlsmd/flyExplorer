@@ -29,6 +29,7 @@ def main():
     parser.add_argument("--configuration",choices=("Debug","Release"),default="Release")
     parser.add_argument("--exe",type=Path)
     parser.add_argument("--expect-legacy-fallback",action="store_true")
+    parser.add_argument("--owned-sort-mode",type=int,choices=(2,3,4))
     parser.add_argument("--capture",choices=("none","before","after"),default="none")
     args=parser.parse_args()
     if os.name!="nt":
@@ -79,13 +80,18 @@ def main():
     for key in ("FLY_M23_OWNED_DRAG_TEST","FLY_M23_OWNED_SESSION",
                 "FLY_M22_OWNED_ACTUAL_RECYCLE"):
         env.pop(key,None)
+    if args.owned_sort_mode is not None:
+        env["FLY_METADATA_SORT_OWNED_TEST"]="YES"
 
     from pywinauto import Desktop
     import psutil
     import ctypes as c
     from ctypes import wintypes as w
 
-    process=subprocess.Popen([str(exe),str(folder)],cwd=exe.parent,env=env)
+    command=[str(exe),str(folder)]
+    if args.owned_sort_mode is not None:
+        command.extend(["--metadata-sort-owned-mode",str(args.owned_sort_mode)])
+    process=subprocess.Popen(command,cwd=exe.parent,env=env)
     parent=None
     success=False
     try:
@@ -139,10 +145,11 @@ def main():
                   if x.element_info.control_type=="ListItem"]
             return rows[0].window_text() if rows else ""
 
-        until(lambda:"aa-type-last.zzz" in first_row(),
-              "deterministic initial name order not rendered",30)
         status=parent.child_window(auto_id="StatusText")
         picker=parent.child_window(auto_id="SortPicker")
+        if args.owned_sort_mode is None:
+            until(lambda:"aa-type-last.zzz" in first_row(),
+                  "deterministic initial name order not rendered",30)
         def choose_header(auto_id,expected,clicks,label):
             parent.set_focus()
             header=parent.child_window(auto_id=auto_id)
@@ -165,14 +172,33 @@ def main():
                   "header",repr(header.window_text()),
                   "status",repr(status.window_text()),flush=True)
 
-        choose_header("LeftSizeSortButton",2,2,"크기 내림차순")
+        if args.owned_sort_mode is not None:
+            expected={
+                2:"zz-size-winner.bin",
+                3:"yy-date-winner.txt",
+                4:"zz-type-first.aaa",
+            }[args.owned_sort_mode]
+            until(lambda:expected in first_row(),
+                  f"owned metadata sort mode {args.owned_sort_mode} did not apply",60)
+            until(lambda:picker.selected_index()==args.owned_sort_mode,
+                  f"owned sort picker did not record mode {args.owned_sort_mode}",10)
+            until(lambda:"메타데이터 정렬" in status.window_text(),
+                  f"owned metadata sort completion status missing for {args.owned_sort_mode}",10)
+            marker={
+                2:"METADATA_SORT_OVER_1200_SIZE_DESC",
+                3:"METADATA_SORT_OVER_1200_DATE_DESC",
+                4:"METADATA_SORT_OVER_1200_TYPE_ASC",
+            }[args.owned_sort_mode]
+            print(marker,True,flush=True)
+        else:
+            choose_header("LeftSizeSortButton",2,2,"크기 내림차순")
 
         if args.expect_legacy_fallback:
             until(lambda:"aa-type-last.zzz" in first_row() and
                   "불러오는 중" not in status.window_text(),
                   "legacy metadata fallback state did not settle",40)
             print("METADATA_SORT_LEGACY_NAME_FALLBACK_REPRODUCED",True,flush=True)
-        else:
+        elif args.owned_sort_mode is None:
             until(lambda:"zz-size-winner.bin" in first_row(),
                   "size descending did not use full metadata above 1200",45)
             until(lambda:"메타데이터 정렬" in status.window_text(),
@@ -197,7 +223,7 @@ def main():
                 all_screens=True).save(shot)
             print("METADATA_SORT_VISUAL",shot.name,flush=True)
 
-        if not args.expect_legacy_fallback:
+        if not args.expect_legacy_fallback and args.owned_sort_mode is None:
             choose_header("LeftDateSortButton",3,2,"수정 날짜 내림차순")
             print("METADATA_SORT_DATE_FIRST_ROW",repr(first_row()),flush=True)
             date_rows=[row.window_text() for row in list_view().descendants()
