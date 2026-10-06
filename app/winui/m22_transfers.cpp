@@ -14,6 +14,13 @@ using namespace Microsoft::UI::Xaml::Controls;
 namespace winrt::FlyExplorer::implementation {
 using FileOperationController=fxfile::previewops::FileOperationController;
 namespace {
+bool removableLocalRoot(std::wstring const& value) noexcept{
+ try{
+  const auto root=std::filesystem::path(value).root_path().native();
+  return root.size()==3&&root[1]==L':'&&root[2]==L'\\'&&
+         ::GetDriveTypeW(root.c_str())==DRIVE_REMOVABLE;
+ }catch(...){return false;}
+}
 hstring errorInKorean(DWORD err){
  switch(err){
  case ERROR_ALREADY_EXISTS:return L"같은 이름의 항목이 있습니다. 덮어쓰지 않았습니다.";
@@ -259,7 +266,8 @@ winrt::fire_and_forget MainWindow::ConfirmRecycle(std::size_t count){
  dialog.Title(winrt::box_value(hstring(L"휴지통으로 보내기")));
  dialog.Content(winrt::box_value(hstring(
      L"선택한 항목 "+std::to_wstring(count)+
-     L"개를 Windows 휴지통으로 이동할까요? 삭제할 항목을 확인하세요.")));
+     L"개를 Windows 휴지통으로 이동할까요? 삭제할 항목을 확인하세요. "
+     L"휴지통을 사용할 수 없으면 영구 삭제로 전환하지 않고 작업을 중단합니다.")));
  dialog.PrimaryButtonText(L"휴지통으로 보내기");
  dialog.CloseButtonText(L"취소");
  dialog.DefaultButton(ContentDialogButton::Close);
@@ -311,7 +319,13 @@ void MainWindow::OnTransferCompleted(
   return;
  }
  if(disposition==Disposition::Failed){
-  StatusText().Text(errorInKorean(completion.report.error));
+  if(completion.request.kind==fxfile::shelltransfer::Kind::Recycle&&
+     removableLocalRoot(completion.request.sourceParent)){
+   StatusText().Text(hstring(
+    L"이 이동식 드라이브의 Windows 휴지통으로 이동을 완료하지 못했습니다. "
+    L"영구 삭제로 전환하지 않았습니다. 오류: "+
+    std::to_wstring(completion.report.error)));
+  }else StatusText().Text(errorInKorean(completion.report.error));
   return;
  }
  StatusText().Text(
