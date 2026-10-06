@@ -101,7 +101,6 @@ def main():
         until(ready,"metadata-sort window not ready",20)
 
         ui=c.windll.user32
-        ui.MoveWindow(parent.handle,80,60,956,689,True)
         parent.set_focus()
         owner=w.DWORD()
         ui.GetWindowThreadProcessId.argtypes=(w.HWND,c.POINTER(w.DWORD))
@@ -147,10 +146,16 @@ def main():
                           ("right",w.LONG),("bottom",w.LONG)]
             rect=RECT()
             assert ui.GetWindowRect(parent.handle,c.byref(rect))
+            width=rect.right-rect.left
+            height=rect.bottom-rect.top
+            print("METADATA_SORT_WINDOW_RECT",
+                  rect.left,rect.top,width,height,flush=True)
+            assert width>600 and height>400
+            time.sleep(1.2)
             shot=evidence_root/f"metadata-sort-{args.capture}.png"
             ImageGrab.grab(
                 bbox=(rect.left,rect.top,rect.right,rect.bottom),
-                include_layered_windows=True).save(shot)
+                all_screens=True).save(shot)
             print("METADATA_SORT_VISUAL",shot.name,flush=True)
 
         if not args.expect_legacy_fallback:
