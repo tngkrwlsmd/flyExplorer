@@ -104,7 +104,7 @@ try:
     )
 
     def ready_winui():
-        nonlocal winui
+        global winui
         if preview.poll() is not None:
             return False
         if Path(psutil.Process(preview.pid).exe()).resolve() != EXE.resolve():
@@ -124,7 +124,7 @@ try:
     target_url = destination_dir.resolve().as_uri().rstrip("/").casefold()
 
     def ready_explorer():
-        nonlocal explorer, owned_explorer, owned_explorer_hwnd
+        global explorer, owned_explorer, owned_explorer_hwnd
         found = []
         for item in shell.Windows():
             try:
