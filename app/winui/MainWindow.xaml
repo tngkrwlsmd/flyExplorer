@@ -330,9 +330,13 @@
             </StackPanel>
             <StackPanel Orientation="Horizontal" Spacing="7">
                 <TextBlock Text="파일 내용:" VerticalAlignment="Center"/>
-                <TextBox x:Name="SearchContentBox" Width="300" MaxLength="256"
-                         PlaceholderText="파일 내용에 포함될 literal 텍스트"
+                <TextBox x:Name="SearchContentBox" Width="245" MaxLength="256"
+                         PlaceholderText="파일 내용 literal 또는 정규식"
                          AutomationProperties.Name="파일 내용 검색어"/>
+                <CheckBox x:Name="SearchContentRegexBox" IsChecked="False"
+                          Content="내용 정규식"
+                          VerticalAlignment="Center"
+                          AutomationProperties.Name="파일 내용 정규식 사용"/>
                 <TextBlock Text="인코딩:" VerticalAlignment="Center"/>
                 <ComboBox x:Name="SearchContentEncodingBox" Width="155" SelectedIndex="0"
                           AutomationProperties.Name="파일 내용 인코딩">
