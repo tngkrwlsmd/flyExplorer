@@ -34,6 +34,7 @@ struct SearchQuery {
     std::wstring contentTerm;
     SearchContentEncoding contentEncoding=SearchContentEncoding::AutoUtf;
     bool regex=false;
+    bool contentRegex=false;
     bool caseSensitive=false;
     SearchEntryKind kind=SearchEntryKind::Files;
 };
@@ -46,6 +47,7 @@ enum class SearchQueryValidation {
     InvalidDateRange,
     InvalidContentTerm,
     InvalidContentEncoding,
+    InvalidContentRegex,
     InvalidRegex,
 };
 
@@ -53,7 +55,8 @@ struct SearchResults {
     std::wstring scope;
     std::wstring term;
     bool valid=false,truncated=false,canceled=false,invalidPattern=false;
-    bool contentLimited=false,resultLimited=false,traversalLimited=false;
+    bool contentLimited=false,contentRegexLimited=false;
+    bool resultLimited=false,traversalLimited=false;
     size_t count=0;
     size_t visited=0;
     size_t contentFilesScanned=0;
