@@ -158,6 +158,44 @@ namespace winrt::FlyExplorer::implementation
                 const bool shift=(::GetKeyState(VK_SHIFT)&0x8000)!=0;
                 const bool alt=(::GetKeyState(VK_MENU)&0x8000)!=0;
                 const auto key=args.Key();
+                if(!control&&!shift&&!alt&&
+                   key==Windows::System::VirtualKey::F5){
+                    if(auto ui=nativeWeak.get()){
+                        const int side=ui->ActiveWindowTab().model.activePane;
+                        auto const& pane=ui->ActiveWindowTab().model.panes[side];
+                        auto const& current=pane.tabs[pane.active].snapshot();
+                        if(current.folder.valid()){
+                            ui->QueuePidl(side,
+                                fxfile::shellnav::Location(current.folder),
+                                fxfile::shellnav::NavigationAction::Refresh);
+                        }else{
+                            ui->StatusText().Text(
+                                L"현재 위치를 새로 고칠 수 없습니다.");
+                        }
+                        args.Handled(true);
+                    }
+                    return;
+                }
+                if(!control&&!shift&&!alt&&
+                   key==Windows::System::VirtualKey::F6){
+                    if(auto ui=nativeWeak.get()){
+                        auto const& model=ui->ActiveWindowTab().model;
+                        if(model.split){
+                            const int other=1-model.activePane;
+                            ui->ActivatePane(other);
+                            auto otherView=other==0?
+                                ui->LeftFiles():ui->RightFiles();
+                            otherView.Focus(
+                                Microsoft::UI::Xaml::FocusState::Keyboard);
+                            ui->StatusText().Text(
+                                other==0?
+                                L"왼쪽 창으로 포커스를 이동했습니다.":
+                                L"오른쪽 창으로 포커스를 이동했습니다.");
+                            args.Handled(true);
+                        }
+                    }
+                    return;
+                }
                 const bool createFolderShortcut=
                     !alt&&control&&shift&&key==Windows::System::VirtualKey::N;
                 if(createFolderShortcut){

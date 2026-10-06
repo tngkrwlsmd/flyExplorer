@@ -26,7 +26,7 @@ consumer core; this PROJECT.md remains project-owned across bundle refreshes.
     {"name": "winui-tests", "path": "tests/winui", "responsibility": "source, native and owned GUI contracts"}
   ],
   "review": {
-    "reviewed_revision": "36b46b96973ef4777f96dffc64413e3c9d548ca5",
+    "reviewed_revision": "4e59a22c742c7fa8d5d0e21e221f01ff8151e2be",
     "reviewed_at": "2026-10-06",
     "reviewed_paths": [
       "app/winui",
@@ -148,9 +148,13 @@ while remaining fail-closed above the shared bounds; owned evidence includes a
 real 64-item IFileOperation copy, 64-item CF_HDROP round-trip and 64-item WinUI
 cross-pane copy. Explorer-compatible `Ctrl+Shift+N` is also accepted for
 create-folder and routes through the existing
-`fxfile::filecommand::Kind::CreateFolder` command path for the active pane/tab;
-historical F11 is intentionally not restored because it conflicts with current
-Windows/File Explorer behavior.
+`fxfile::filecommand::Kind::CreateFolder` command path for the active pane/tab.
+Plain F5 is Explorer-style refresh for the active pane/tab through the existing
+Shell refresh path. Plain F6 is non-mutating split-pane focus traversal to the
+opposite file list. F5/F6 are owned at the window PreviewKeyDown boundary, not
+the file-operation shortcut handler, so the historical F5/F6 copy/move defaults
+are intentionally inactive. Historical F11 is intentionally not restored
+because it conflicts with current Windows/File Explorer behavior.
 
 ## Development loop and verification budget
 
