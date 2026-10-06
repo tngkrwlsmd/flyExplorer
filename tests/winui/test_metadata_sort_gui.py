@@ -142,7 +142,11 @@ def main():
             print("METADATA_SORT_OVER_1200_SIZE_DESC",True,flush=True)
 
         if args.capture!="none":
-            rect=parent.rectangle()
+            class RECT(c.Structure):
+                _fields_=[("left",w.LONG),("top",w.LONG),
+                          ("right",w.LONG),("bottom",w.LONG)]
+            rect=RECT()
+            assert ui.GetWindowRect(parent.handle,c.byref(rect))
             shot=evidence_root/f"metadata-sort-{args.capture}.png"
             ImageGrab.grab(
                 bbox=(rect.left,rect.top,rect.right,rect.bottom),
