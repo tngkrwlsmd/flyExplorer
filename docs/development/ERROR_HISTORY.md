@@ -4394,3 +4394,37 @@ RUNNER_HEALTH and COMMAND all PASS. The private artifact contains the concrete
 setup, deterministic source ZIP, source manifest, runtime provenance and release
 identity; the accepted record commit is
 `28e361e8d9f3ed796abe7f69a4f301ae6e52a002`.
+
+## 2026-10-06: outbound StorageItems drag accepted; same-app regression harness repaired
+
+**Implementation boundary:** The accepted explicit row drag keeps
+`FlyExplorer.M23.OwnedListDrag.v1` for same-app route/replay validation and
+also projects filesystem selections to public Windows `StorageItems`
+asynchronously under `DragStartingEventArgs.GetDeferral()`. The public
+requested/allowed operation is Copy only. A public projection failure does not
+invalidate the already-created private payload.
+
+**External acceptance:** Remote Windows Task #464 (`37399608114`) on product
+revision `0d23048d47b158b98c2aff0cf7f3ec5ffc8c5ebb` passed FAST and the
+canonical Release build, opened one uniquely identified test-owned Windows
+Explorer destination, then performed a real mouse drag from flyExplorer.
+`REAL_OUTBOUND_STORAGEITEMS_EXPLORER_COPY=True`,
+`REAL_OUTBOUND_DRAG_SOURCE_PRESERVED=True`, and
+`OUTBOUND_DRAG_EXPLORER_ACCEPTANCE=PASS` were observed before the run later
+failed in a separate same-app regression fixture.
+
+**Regression-fixture boundary:** The first focused same-app successor #465
+(`37400174960`) failed before drag because its synthetic pane routing did not
+re-establish the owned source row
+(`owned source row disappeared after pane routing`). Product code had not
+changed after #464. The successor changed only the test harness to explicitly
+route and verify both owned panes before physical input.
+
+**Closure:** Remote Windows Task #466 (`37400834524`) kept the accepted P2
+product code unchanged and passed Release build plus real private-token
+cross-pane drag with
+`REAL_SAME_APP_PRIVATE_DRAG_COPY_AFTER_OUTBOUND_SUPPORT=True` and
+`SAME_APP_DRAG_REGRESSION_ACCEPTANCE=PASS`. This closes the concern that
+adding public outbound StorageItems weakened the existing private same-app drag
+path. Explorer is the concrete external acceptance target; Desktop and arbitrary
+third-party targets are not separately claimed as GUI-certified.
