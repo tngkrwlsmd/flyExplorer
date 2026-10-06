@@ -1,5 +1,5 @@
 {
-  "request_id": "metadata-sort-baseline-cache-diagnostic-20261006",
+  "request_id": "metadata-sort-baseline-cache-recursive-20261006",
   "expected_main_sha": "eccc723ce730b49be79626cf2e5794d1e2a9fabc",
   "candidate_sha": "4da45e54ea9970e1b2254a73e1748751118991ab",
   "logical_unit": "metadata-sort-baseline-cache",
@@ -7,5 +7,5 @@
   "configuration": "none",
   "validation_plan": [],
   "working_directory": "",
-  "command": "$ErrorActionPreference=\"Stop\"\n$repo=$env:FLYEXPLORER_CANONICAL_CHECKOUT\n$main=\"eccc723ce730b49be79626cf2e5794d1e2a9fabc\"\n$baselineProduct=\"4e59a22c742c7fa8d5d0e21e221f01ff8151e2be\"\nSet-Location -LiteralPath $repo\n& git fetch origin main --no-tags\nif($LASTEXITCODE -ne 0){throw \"baseline diagnostic fetch failed\"}\n$originMain=(& git rev-parse refs/remotes/origin/main).Trim()\nWrite-Host (\"ORIGIN_MAIN=\"+$originMain)\n& git diff --quiet ($baselineProduct+\"..\"+$main) -- app/winui src/base build.bat run.bat\nWrite-Host (\"BASELINE_PRODUCT_EQUIVALENT=\"+($LASTEXITCODE -eq 0))\n$root=\"C:\\dev\\flyExplorer\\logs\"\nif(Test-Path -LiteralPath $root){\n  Get-ChildItem -LiteralPath $root -Directory -ErrorAction SilentlyContinue |\n    Where-Object { $_.Name -match \"runtime|f5|f6|outbound|transfer\" } |\n    ForEach-Object {\n      $exe=Join-Path $_.FullName \"flyExplorer.exe\"\n      Write-Host (\"CACHE \"+$_.FullName+\" EXE=\"+(Test-Path -LiteralPath $exe))\n    }\n}else{\n  Write-Host \"CACHE_ROOT_MISSING\"\n}"
+  "command": "$ErrorActionPreference=\"Stop\"\n$root=\"C:\\dev\\flyExplorer\\logs\\f5-f6-runtime-4e59a22c\"\nif(!(Test-Path -LiteralPath $root)){throw \"baseline cache directory missing\"}\nGet-ChildItem -LiteralPath $root -Recurse -File -Filter \"flyExplorer.exe\" -ErrorAction SilentlyContinue |\n  ForEach-Object { Write-Host (\"BASELINE_EXE=\"+$_.FullName) }\nGet-ChildItem -LiteralPath $root -Recurse -File -ErrorAction SilentlyContinue |\n  Select-Object -First 12 |\n  ForEach-Object { Write-Host (\"BASELINE_SAMPLE=\"+$_.FullName) }"
 }
