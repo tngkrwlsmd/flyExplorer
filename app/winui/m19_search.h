@@ -53,8 +53,9 @@ struct SearchResults {
     std::wstring scope;
     std::wstring term;
     bool valid=false,truncated=false,canceled=false,invalidPattern=false;
-    bool contentLimited=false;
+    bool contentLimited=false,resultLimited=false,traversalLimited=false;
     size_t count=0;
+    size_t visited=0;
     size_t contentFilesScanned=0;
     size_t contentFilesSkipped=0;
     std::uint64_t contentBytesRead=0;
