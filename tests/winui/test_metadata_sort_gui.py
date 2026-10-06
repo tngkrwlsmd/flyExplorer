@@ -148,7 +148,10 @@ def main():
             header=parent.child_window(auto_id=auto_id)
             assert header.exists(timeout=.5) and header.is_visible(),label
             for step in range(clicks):
-                header.click_input()
+                # Self-hosted service sessions may reject SetCursorPos even
+                # while UIA is healthy. InvokePattern still exercises the
+                # XAML Button Click event without synthetic mouse input.
+                header.invoke()
                 intermediate=expected if step==clicks-1 else {
                     2:6,3:7
                 }[expected]
