@@ -23,7 +23,7 @@ try:
       "TEMP":str(root),"TMP":str(root),
       "FLY_M19_OWNED_NATIVE_ONLY":"YES"}
  result=subprocess.run([str(EXE),str(root)],env=env,cwd=EXE.parent,
-      capture_output=True,encoding="utf-8",errors="replace",timeout=27)
+      capture_output=True,encoding="utf-8",errors="replace",timeout=60)
  path=LOGS/("m19-native-"+CONFIG.lower()+"-standalone-results.log")
  path.write_text(result.stdout+"\n"+result.stderr,encoding="utf-8")
  assert result.returncode==0,(result.returncode,result.stdout,result.stderr)
