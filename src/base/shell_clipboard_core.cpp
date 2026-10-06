@@ -1,5 +1,6 @@
 #define WIN32_LEAN_AND_MEAN
 #include "shell_clipboard_core.h"
+#include "shell_transfer_core.h"
 #include "file_command_core.h"
 #include <shellapi.h>
 #include <shlobj.h>
@@ -8,8 +9,9 @@
 #include <cstring>
 namespace fxfile::shellclipboard {
 namespace {
-constexpr size_t MaxBytes=65536;
-constexpr size_t MaxItems=32;
+constexpr size_t MaxBytes=sizeof(DROPFILES)+
+    (shelltransfer::kMaxSourcePathUnits+1)*sizeof(wchar_t);
+constexpr size_t MaxItems=shelltransfer::kMaxItems;
 bool full(std::wstring const& s){
  if(s.empty()||s.size()>32000)return false;
  std::filesystem::path p(s);
