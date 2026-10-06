@@ -62,6 +62,7 @@ class FileMetadataControllerContract(unittest.TestCase):
             "state.metadata[lhs]",
             "state.metadata[rhs]",
             "ScheduleFileMetadata(completed.side)",
+            "snapshot.residentEndOffset()!=snapshot.nextOffset",
         ):
             self.assertIn(token,main)
         self.assertIn("if(selection>1)",transfers)
