@@ -105,6 +105,7 @@ GUI_AREAS = (
     "core",
     "shell",
     "search",
+    "search-content-regex",
     "file-operations",
     "session",
     "window-tabs",
@@ -332,6 +333,12 @@ def gui_command(area, configuration, env):
     ):
         gui_env.pop(key, None)
 
+    if area == "search-content-regex":
+        return [
+            sys.executable,
+            "-u",
+            str(TESTS / "test_content_regex_gui.py"),
+        ], gui_env, 120
     if area == "bookmark":
         return [sys.executable, "-u", str(TESTS / "test_bookmark_gui.py")], gui_env, 150
     if area == "filter-preset":
