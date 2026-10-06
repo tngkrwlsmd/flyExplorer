@@ -43,6 +43,8 @@ SearchController::StartStatus SearchController::validateRequest(
         return StartStatus::InvalidContentTerm;
     case fxfile::preview::SearchQueryValidation::InvalidContentEncoding:
         return StartStatus::InvalidContentEncoding;
+    case fxfile::preview::SearchQueryValidation::InvalidContentRegex:
+        return StartStatus::InvalidContentPattern;
     case fxfile::preview::SearchQueryValidation::InvalidRegex:
         return StartStatus::InvalidPattern;
     default:
