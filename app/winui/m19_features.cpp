@@ -389,7 +389,7 @@ void MainWindow::OnRunSearch(
     if(status==Start::Started){
         SearchRunButton().IsEnabled(false);
         SearchCountText().Text(
-            L"독립 스레드에서 제한된 이름/메타데이터/내용 검색을 실행하고 있습니다...");
+            L"독립 스레드에서 최대 20,000개 항목을 검색하고 있습니다...");
         SearchMatches().Items().Clear();
         return;
     }
@@ -456,8 +456,13 @@ void MainWindow::OnSearchCompleted(
         row.Text(hstring(file));
         items.Append(row);
     }
-    auto summary=L"검색 결과 "+std::to_wstring(completion.result.count)+
-        (completion.result.truncated?L"개(제한된 일부 결과)":L"개");
+    auto summary=L"검색 결과 "+std::to_wstring(completion.result.count)+L"개";
+    if(completion.result.resultLimited)
+        summary+=L" · 처음 "+std::to_wstring(completion.result.matches.size())+
+                 L"개 표시";
+    if(completion.result.traversalLimited)
+        summary+=L" · 탐색 한도 도달("+std::to_wstring(completion.result.visited)+
+                 L"개 검사)";
     if(!completion.request.query.contentTerm.empty()){
         summary+=L" · 내용 "+std::to_wstring(completion.result.contentFilesScanned)+L"개 검사";
         if(completion.result.contentFilesSkipped)
