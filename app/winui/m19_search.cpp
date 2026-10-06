@@ -1,4 +1,5 @@
 #include "m19_search.h"
+#include "../../src/base/bounded_regex.h"
 #include <windows.h>
 #include <algorithm>
 #include <array>
@@ -146,7 +147,9 @@ bool decodeText(
 ContentMatch contentMatches(
     std::wstring const& path,std::uint64_t fileBytes,
     std::wstring const& term,bool caseSensitive,
+    bool contentRegex,
     SearchContentEncoding encoding,
+    fxfile::boundedregex::Pattern const* contentPattern,
     std::shared_ptr<std::atomic_bool> const& cancel,
     std::uint64_t& remainingBudget,
     SearchResults& out)
@@ -212,6 +215,22 @@ ContentMatch contentMatches(
         return ContentMatch::Skipped;
     }
     ++out.contentFilesScanned;
+    if(contentRegex){
+        if(!contentPattern){
+            ++out.contentFilesSkipped;
+            return ContentMatch::Skipped;
+        }
+        const auto matched=contentPattern->search(text,cancel);
+        if(matched==fxfile::boundedregex::MatchResult::Canceled)
+            return ContentMatch::Canceled;
+        if(matched==fxfile::boundedregex::MatchResult::BudgetExceeded){
+            out.contentRegexLimited=true;
+            ++out.contentFilesSkipped;
+            return ContentMatch::Skipped;
+        }
+        return matched==fxfile::boundedregex::MatchResult::Match?
+            ContentMatch::Match:ContentMatch::NoMatch;
+    }
     return literalMatches(text,term,caseSensitive)?
         ContentMatch::Match:ContentMatch::NoMatch;
 }
@@ -344,6 +363,14 @@ SearchQueryValidation validateSearchQuery(SearchQuery const& query) noexcept
            query.contentEncoding!=SearchContentEncoding::Korean949&&
            query.contentEncoding!=SearchContentEncoding::Windows1252)
             return SearchQueryValidation::InvalidContentEncoding;
+        if(query.contentRegex){
+            if(query.contentTerm.empty())
+                return SearchQueryValidation::InvalidContentTerm;
+            fxfile::boundedregex::Pattern contentPattern;
+            if(contentPattern.compile(query.contentTerm,query.caseSensitive)!=
+               fxfile::boundedregex::CompileResult::Valid)
+                return SearchQueryValidation::InvalidContentRegex;
+        }
 
         auto extension=normalizeExtension(query.extension);
         if(query.extension.size()>kMaxExtension||
@@ -387,7 +414,8 @@ bool sameSearchQuery(SearchQuery const& a,SearchQuery const& b) noexcept
            a.modifiedBefore==b.modifiedBefore&&
            a.contentTerm==b.contentTerm&&
            a.contentEncoding==b.contentEncoding&&
-           a.regex==b.regex&&a.caseSensitive==b.caseSensitive&&
+           a.regex==b.regex&&a.contentRegex==b.contentRegex&&
+           a.caseSensitive==b.caseSensitive&&
            a.kind==b.kind;
 }
 
@@ -400,7 +428,9 @@ SearchResults scanFiles(
     out.term=query.term;
     const auto validation=validateSearchQuery(query);
     if(validation!=SearchQueryValidation::Valid||!regularFolder(folder)){
-        out.invalidPattern=validation==SearchQueryValidation::InvalidRegex;
+        out.invalidPattern=
+            validation==SearchQueryValidation::InvalidRegex||
+            validation==SearchQueryValidation::InvalidContentRegex;
         return out;
     }
 
@@ -416,6 +446,14 @@ SearchResults scanFiles(
     (void)parseDate(query.modifiedAfter,afterDate);
     (void)parseDate(query.modifiedBefore,beforeDate);
     std::uint64_t contentBudget=kMaxContentSearchBytes;
+    fxfile::boundedregex::Pattern contentPattern;
+    if(query.contentRegex&&
+       contentPattern.compile(query.contentTerm,query.caseSensitive)!=
+           fxfile::boundedregex::CompileResult::Valid){
+        out.valid=false;
+        out.invalidPattern=true;
+        return out;
+    }
     std::wregex pattern;
     if(query.regex){
         auto flags=std::regex_constants::ECMAScript;
@@ -476,7 +514,9 @@ SearchResults scanFiles(
                     size.HighPart=fd.nFileSizeHigh;
                     const auto content=contentMatches(
                         candidate,size.QuadPart,query.contentTerm,
-                        query.caseSensitive,query.contentEncoding,
+                        query.caseSensitive,query.contentRegex,
+                        query.contentEncoding,
+                        query.contentRegex?&contentPattern:nullptr,
                         cancel,contentBudget,out);
                     if(content==ContentMatch::Canceled){
                         out.canceled=true;
