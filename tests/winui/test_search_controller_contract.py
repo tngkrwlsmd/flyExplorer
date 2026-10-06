@@ -99,13 +99,17 @@ class SearchControllerContracts(unittest.TestCase):
         self.assertIn("탐색 한도 도달(", features)
         self.assertNotIn("개(제한된 일부 결과)", features)
 
-    def test_content_search_is_literal_encoding_bounded_and_cancellable(self):
+    def test_content_search_is_bounded_regex_encoding_and_cancellable(self):
         header = src("app/winui/m19_search.h")
         search = src("app/winui/m19_search.cpp")
+        bounded = src("src/base/bounded_regex.cpp")
         for token in (
             "contentTerm",
+            "contentRegex",
             "InvalidContentTerm",
+            "InvalidContentRegex",
             "contentLimited",
+            "contentRegexLimited",
             "kMaxContentFileBytes=1024ull*1024ull",
             "kMaxContentSearchBytes=16ull*1024ull*1024ull",
             "kContentChunkBytes=64*1024",
@@ -116,11 +120,15 @@ class SearchControllerContracts(unittest.TestCase):
             "MB_ERR_INVALID_CHARS",
             "FILE_FLAG_OPEN_REPARSE_POINT",
             "if(cancel&&cancel->load())",
-            "ContentMatch::BudgetExceeded",
+            "fxfile::boundedregex::Pattern",
+            "kMaxMatchSteps=4ull*1024ull*1024ull",
+            "StateKind::Split",
+            "CompileResult::Unsupported",
         ):
-            self.assertIn(token, header + search)
-        self.assertNotIn("std::wregex content", search)
-        self.assertEqual(0, search.count("std::thread"))
+            self.assertIn(token, header + search + bounded)
+        self.assertNotIn("std::wregex", bounded)
+        self.assertNotIn("std::regex", bounded)
+        self.assertEqual(0, bounded.count("std::thread"))
 
     def test_content_encoding_prefers_bom_before_explicit_fallback(self):
         search = src("app/winui/m19_search.cpp")
@@ -145,7 +153,9 @@ class SearchControllerContracts(unittest.TestCase):
             'line==L"schema=1"',
             'line==L"schema=2"',
             'line==L"schema=3"',
-            'std::wstring text=L"schema=3\\r\\n"',
+            'line==L"schema=4"',
+            "bool contentRegex=false",
+            'std::wstring text=L"schema=4\\r\\n"',
         ):
             self.assertIn(token, header + store)
         self.assertNotIn("APPDATA\\fxfile", store)
@@ -161,13 +171,20 @@ class SearchControllerContracts(unittest.TestCase):
             "EXPLICIT_CP949_CONTENT_MATCH",
             "EXPLICIT_WINDOWS1252_CONTENT_MATCH",
             "BOM_OVERRIDES_EXPLICIT_FALLBACK_ENCODING",
+            "CONTENT_REGEX_GROUP_ALTERNATION_MATCH",
+            "CONTENT_REGEX_UNSUPPORTED_LOOKAROUND_REJECTED",
+            "CONTENT_REGEX_ADVERSARIAL_STEP_BUDGET",
             "SEARCH_PRESET_SCHEMA1_BACKWARD_COMPAT",
             "SEARCH_PRESET_SCHEMA2_BACKWARD_COMPAT",
+            "SEARCH_PRESET_SCHEMA3_BACKWARD_COMPAT",
         ):
             self.assertIn(marker, native)
         for marker in (
             "REAL_SEARCH_V2_INVALID_REGEX_PRESTART_REJECT_PASS",
             "REAL_CONTENT_SEARCH_PRESET_RESTART_PASS",
+            "REAL_CONTENT_REGEX_GROUP_ALTERNATION_PASS",
+            "REAL_CONTENT_REGEX_INVALID_PRESTART_REJECT_PASS",
+            "REAL_CONTENT_REGEX_PRESET_RESTART_PASS",
             "REAL_CONTENT_ENCODING_CP949_PASS",
             "REAL_CONTENT_ENCODING_WINDOWS1252_PASS",
         ):
