@@ -130,6 +130,7 @@
     <ClInclude Include="..\..\src\base\bookmark_store.h" />
     <ClInclude Include="..\..\src\base\filter_rule_store.h" />
     <ClInclude Include="..\..\src\base\search_preset_store.h" />
+    <ClInclude Include="..\..\src\base\bounded_regex.h" />
     <ClInclude Include="..\..\src\base\file_command_core.h" />
     <ClInclude Include="FileToolbar.xaml.h">
       <DependentUpon>FileToolbar.xaml</DependentUpon>
@@ -274,6 +275,9 @@
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="..\..\src\base\search_preset_store.cpp">
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="..\..\src\base\bounded_regex.cpp">
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="..\..\src\base\file_command_core.cpp">
