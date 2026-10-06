@@ -16,6 +16,7 @@ struct Preset final {
     std::wstring modifiedAfter;
     std::wstring modifiedBefore;
     bool regex=false;
+    bool contentRegex=false;
     bool caseSensitive=false;
     int kind=0;
 };
