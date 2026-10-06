@@ -56,9 +56,12 @@ class SearchControllerContracts(unittest.TestCase):
         for token in (
             "SearchEntryKind",
             "InvalidRegex",
-            "kMaxWalk=2500",
-            "kMaxDepth=5",
-            "kMaxResults=100",
+            "kMaxWalk=20000",
+            "kMaxDepth=32",
+            "kMaxResults=1000",
+            "resultLimited",
+            "traversalLimited",
+            "visited",
             "kMaxExtension=32",
             "std::regex_search",
             "FILE_ATTRIBUTE_REPARSE_POINT",
@@ -75,6 +78,26 @@ class SearchControllerContracts(unittest.TestCase):
             controller.index("validateRequest(request)", start),
             controller.index("std::thread", start),
         )
+
+    def test_search_scale_separates_traversal_and_display_limits(self):
+        header = src("app/winui/m19_search.h")
+        search = src("app/winui/m19_search.cpp")
+        features = src("app/winui/m19_features.cpp")
+        native = src("tests/winui/m19/m19_native_fixture.cpp")
+        for token in (
+            "kMaxWalk=20000",
+            "kMaxDepth=32",
+            "kMaxResults=1000",
+            "out.visited=walked",
+            "out.resultLimited=true",
+            "out.traversalLimited=true",
+            "SEARCH_SCALE_BEYOND_2500_WALK_AND_100_RESULTS",
+            "SEARCH_SCALE_DEPTH_BEYOND_FIVE",
+        ):
+            self.assertIn(token, header + search + native)
+        self.assertIn("처음 ", features)
+        self.assertIn("탐색 한도 도달(", features)
+        self.assertNotIn("개(제한된 일부 결과)", features)
 
     def test_content_search_is_literal_encoding_bounded_and_cancellable(self):
         header = src("app/winui/m19_search.h")

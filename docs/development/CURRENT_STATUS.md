@@ -37,6 +37,11 @@ checkpoints.
   cancellation, stale completion and collision/recycle continuations.
 - V8-E SearchController owns bounded search request identity, cancellation,
   stale completion rejection and recent-scope persistence.
+- Recursive filesystem search now visits up to 20,000 entries with a depth
+  ceiling of 32, keeps up to 1,000 matching paths for UI projection and
+  continues counting matches after the retained-result cap. SearchResults
+  distinguishes retained-result limiting from traversal limiting so the UI can
+  report "first N shown" separately from an incomplete tree walk.
 - The first post-extraction audit identified file-detail work as one remaining
   independent lifecycle boundary. FileDetailController now owns pane-local
   cancellation, detached detail workers and bounded Shell visual/thumbnail
@@ -151,13 +156,15 @@ checkpoints.
   select a legacy configuration file for read-only name/path import. Duplicate,
   malformed and unsupported non-filesystem legacy entries are skipped rather
   than mutating the old profile.
-- Search v2 keeps the existing bounded asynchronous SearchController lifecycle
-  and adds optional ECMAScript regex, case-sensitive matching, file/folder/both
-  targeting and a single extension condition. Default behavior remains
-  case-insensitive literal file-name search. Invalid regex/extension input is
-  rejected before worker start. The existing depth-5, 2,500-entry walk and
-  100-result bounds, cancellation/stale-result rejection and opt-in recent
-  scope persistence remain unchanged.
+- Search v2 kept the existing bounded asynchronous SearchController lifecycle
+  and added optional ECMAScript regex, case-sensitive matching,
+  file/folder/both targeting and a single extension condition. Default
+  behavior remains case-insensitive literal file-name search. Invalid
+  regex/extension input is rejected before worker start. At the Search v2
+  revision the inherited bounds were depth 5, 2,500 walked entries and 100
+  retained results; current main supersedes those historical scale limits with
+  depth 32, 20,000 walked entries and 1,000 retained results while preserving
+  cancellation/stale-result rejection and opt-in recent scope persistence.
 - Back/Forward/Up, filtering/sorting, local create/rename, guarded copy/move/
   recycle flows, Windows clipboard/context integration, isolated Shell visuals
   and directory/Shell namespace watching.
@@ -248,6 +255,28 @@ the required environment but does not claim to have modified external cloud
 bootstrap configuration.
 
 ## Latest verified evidence
+
+Search scale expansion is accepted on candidate
+`73d52afcd28fb8bbb6af3009c805f269e80d7dd1` by self-hosted Remote
+Windows Task `37461845906`. The run passed request validation,
+change-scoped FAST, GUI runner health, the Release M19 native fixture at 49/49,
+the canonical Release build and the established Search GUI regression. The
+native fixture creates 2,600 owned files plus a seven-level directory chain:
+it proves the search walks beyond the historical 2,500-entry ceiling, counts
+1,100 matches while retaining the first 1,000 instead of the historical 100,
+and finds a target below the historical depth-5 boundary. The fixture is fully
+reclaimed after the run.
+
+The product now uses `kMaxWalk=20000`, `kMaxDepth=32` and
+`kMaxResults=1000`. Reaching the retained-result bound sets
+`resultLimited` but scanning/counting continues; reaching the walk/depth
+bound sets `traversalLimited`. The Search panel reports these conditions
+separately rather than using one ambiguous "limited partial results" label.
+Structured stages REQUEST_VALIDATION, STATIC_PREFLIGHT, RUNNER_HEALTH and
+COMMAND are all PASS with no failure category. Evidence artifact
+`11413450005`, digest
+`sha256:86248256d14f11986204acf5fb8c3defdfd0d531a0a78f28dc696227d63eebc6`,
+preserves the remote result and logs.
 
 Removable-volume sortable metadata support is accepted on candidate
 `e0e9483704a53ac4caddd20b06146bcdfe577044` by self-hosted Remote
@@ -767,13 +796,17 @@ Current source and the last parity evidence still show these limits:
   because the current self-hosted VM exposes only a fixed C: volume and a D:
   CD-ROM. UNC/network (`DRIVE_REMOTE`) and virtual/provider transfer paths
   remain unsupported.
-- Search remains bounded. Regex, case sensitivity, entry-kind,
-  single-extension, minimum/maximum file size, inclusive local modified-date
-  and literal text content conditions are implemented with up to 20 private
-  saved condition sets. Content reads use deterministic Auto UTF
-  (UTF-8/ASCII plus BOM-tagged UTF-16) or explicit CP949/Windows-1252, with
-  1 MiB per file and 16 MiB per search. Content regex, other encodings,
-  indexed/provider/property search and unrestricted deep content scanning are
+- Search remains bounded but no longer stops at the historical 2,500-entry,
+  depth-5 and 100-retained-result limits. Filesystem traversal now visits up to
+  20,000 entries at depth 32 and retains the first 1,000 matches while
+  continuing to count later matches. The UI distinguishes a display cap from a
+  traversal cap. Regex, case sensitivity, entry-kind, single-extension,
+  minimum/maximum file size, inclusive local modified-date and literal text
+  content conditions are implemented with up to 20 private saved condition
+  sets. Content reads remain limited to 1 MiB per file and 16 MiB per search,
+  using Auto UTF (UTF-8/ASCII plus BOM-tagged UTF-16) or explicit
+  CP949/Windows-1252. Content regex, other encodings, indexed/provider/property
+  search and traversal beyond the current 20,000/depth-32 safety bounds are
   not implemented.
 - Persistent pane filter/mask rule sets are implemented with up to 20 named
   private presets, case-insensitive wildcard masks and legacy substring

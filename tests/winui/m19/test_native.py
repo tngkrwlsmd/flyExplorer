@@ -6,7 +6,7 @@ import hashlib,os,shutil,subprocess,tempfile
 import sys
 HERE=Path(__file__).resolve().parent
 ROOT=HERE.parents[2]
-sys.path.insert(0,str(HERE.parent if 'HERE' in globals() else p.parent))
+sys.path.insert(0,str(HERE.parent))
 from profile_guard import assert_legacy_profile_unchanged,present_count,snapshot_legacy_profile
 CONFIG=os.environ.get("FLY_M19_CONFIG","Debug")
 assert CONFIG in ("Debug","Release")
@@ -23,14 +23,14 @@ try:
       "TEMP":str(root),"TMP":str(root),
       "FLY_M19_OWNED_NATIVE_ONLY":"YES"}
  result=subprocess.run([str(EXE),str(root)],env=env,cwd=EXE.parent,
-      capture_output=True,encoding="utf-8",errors="replace",timeout=27)
+      capture_output=True,encoding="utf-8",errors="replace",timeout=60)
  path=LOGS/("m19-native-"+CONFIG.lower()+"-standalone-results.log")
  path.write_text(result.stdout+"\n"+result.stderr,encoding="utf-8")
  assert result.returncode==0,(result.returncode,result.stdout,result.stderr)
- assert "M19_NATIVE_SUMMARY 47 passed, 0 failed." in result.stdout
+ assert "M19_NATIVE_SUMMARY 49 passed, 0 failed." in result.stdout
  assert_legacy_profile_unchanged(user,before)
  print("M19_NATIVE_TESTED_HELPER_CONFIG",CONFIG,flush=True)
- print("M19_NATIVE_WORKSPACE_AND_CONTENT_ENCODINGS_47_PASS",True,flush=True)
+ print("M19_NATIVE_WORKSPACE_CONTENT_AND_SCALE_49_PASS",True,flush=True)
  print("M19_LEGACY_USER_PROFILE_SENTINEL_UNCHANGED",True,"PRESENT",present_count(before),flush=True)
  print("M19_NATIVE_OWNED_PROOF",path.name,flush=True)
 finally:
