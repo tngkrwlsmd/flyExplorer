@@ -128,6 +128,7 @@ namespace winrt::FlyExplorer::implementation
             }catch(...){ }
         }
         mColumnControlsReady=true;
+        InitializeOwnedMetadataSortTest();
         // Each reusable XAML control forwards intent; the window owns the
         // shared native state/settings. Never attach a permanent MFC host.
         const auto nativeWeak=get_weak();
@@ -422,6 +423,38 @@ namespace winrt::FlyExplorer::implementation
         InitializeM19();
         InitializePrivateSession();
     }
+    void MainWindow::InitializeOwnedMetadataSortTest()
+    {
+        wchar_t flag[8]{};
+        if(::GetEnvironmentVariableW(
+             L"FLY_METADATA_SORT_OWNED_TEST",flag,8)!=3 ||
+           wcscmp(flag,L"YES"))return;
+        int argc=0;
+        auto argv=::CommandLineToArgvW(::GetCommandLineW(),&argc);
+        if(!argv)return;
+        for(int i=2;i+1<argc;++i){
+            if(wcscmp(argv[i],L"--metadata-sort-owned-mode"))continue;
+            wchar_t* end=nullptr;
+            const long mode=wcstol(argv[i+1],&end,10);
+            if(end&&*end==L'\0'&&(mode==2||mode==3||mode==4))
+                mOwnedMetadataSortMode=static_cast<int>(mode);
+            break;
+        }
+        ::LocalFree(argv);
+    }
+    void MainWindow::RunOwnedMetadataSortTestIfReady()
+    {
+        if(mOwnedMetadataSortConsumed||mOwnedMetadataSortMode<0)return;
+        const int side=ActiveWindowTab().model.activePane;
+        auto const& pane=ActiveWindowTab().model.panes[side];
+        const auto tab=pane.active;
+        if(pane.pending[tab]||pane.filesystemPaths[tab].empty())return;
+        auto const& snapshot=pane.tabs[tab].snapshot();
+        if(snapshot.children.empty())return;
+        mOwnedMetadataSortConsumed=true;
+        UpdateSort(mOwnedMetadataSortMode);
+    }
+
     void MainWindow::PrepareForClose() noexcept
     {
         if(mClosing)return;
@@ -1821,6 +1854,7 @@ namespace winrt::FlyExplorer::implementation
         ScheduleFileMetadata(1);
         ScheduleFileDetails(0);
         ScheduleFileDetails(1);
+        RunOwnedMetadataSortTestIfReady();
     }
     bool MainWindow::OpenFolder(std::wstring const& path)
     {
