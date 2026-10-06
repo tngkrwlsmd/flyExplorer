@@ -14,8 +14,8 @@ inline constexpr std::size_t kMaxItems=1024;
 inline constexpr std::size_t kMaxSourcePathUnits=1024*1024;
 enum class Kind { Copy, Move, Recycle };
 enum class Collision { Reject, KeepBoth };
-// Copy/Move accept ordinary local fixed and removable volumes.
-// Recycle intentionally stays fixed-drive-only until separately certified.
+// Copy/Move/Recycle accept ordinary local fixed and removable volumes.
+// Recycle still requires explicit confirmation and uses recycle-only Shell flags.
 bool supportsDriveType(Kind kind,UINT driveType) noexcept;
 struct Request {
  Kind kind=Kind::Copy;

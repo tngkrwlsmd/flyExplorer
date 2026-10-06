@@ -24,8 +24,10 @@ int wmain(int count,wchar_t**args){
       "copy_accepts_removable_drive");
  test(supportsDriveType(Kind::Move,DRIVE_REMOVABLE),
       "move_accepts_removable_drive");
- test(!supportsDriveType(Kind::Recycle,DRIVE_REMOVABLE),
-      "recycle_rejects_removable_drive");
+ test(supportsDriveType(Kind::Recycle,DRIVE_REMOVABLE),
+      "recycle_accepts_removable_drive");
+ test(!supportsDriveType(Kind::Recycle,DRIVE_REMOTE),
+      "recycle_rejects_remote_drive");
  test(!supportsDriveType(Kind::Copy,DRIVE_REMOTE),
       "copy_rejects_remote_drive");
  test(!supportsDriveType(Kind::Move,DRIVE_REMOTE),

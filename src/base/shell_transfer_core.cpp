@@ -16,9 +16,8 @@ bool supportsDriveType(Kind kind,UINT driveType) noexcept {
  switch(kind){
  case Kind::Copy:
  case Kind::Move:
-  return driveType==DRIVE_FIXED||driveType==DRIVE_REMOVABLE;
  case Kind::Recycle:
-  return driveType==DRIVE_FIXED;
+  return driveType==DRIVE_FIXED||driveType==DRIVE_REMOVABLE;
  default:
   return false;
  }
