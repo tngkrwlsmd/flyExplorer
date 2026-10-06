@@ -1318,6 +1318,8 @@ namespace winrt::FlyExplorer::implementation
         state.renderedLogical.clear();
         state.renderedPaths.clear();
         state.renderedBaseOffset=snapshot.baseOffset;
+        const bool metadataReady=state.metadataCurrent(
+             pane.routeIds[pane.active],pane.active,items.size());
         const bool detailReady=state.isCurrent(
              pane.routeIds[pane.active],pane.active,items.size());
         const int mode=state.sortMode;
@@ -1353,30 +1355,31 @@ namespace winrt::FlyExplorer::implementation
             return ::CompareStringOrdinal(
                 a.c_str(),-1,b.c_str(),-1,TRUE)==CSTR_LESS_THAN;
         };
-        std::stable_sort(order.begin(),order.end(),[&](size_t lhs,size_t rhs){
-            if(folderAt(lhs)!=folderAt(rhs))return folderAt(lhs);
-            if(!indexedProjection&&detailReady&&(mode==4||mode==5)){
-                const auto& a=state.details[lhs].typeLabel;
-                const auto& b=state.details[rhs].typeLabel;
-                const auto cmp=::CompareStringOrdinal(
-                    a.c_str(),-1,b.c_str(),-1,TRUE);
-                if(cmp!=CSTR_EQUAL)
-                    return mode==5?cmp==CSTR_GREATER_THAN:cmp==CSTR_LESS_THAN;
-            }else if(!indexedProjection&&detailReady&&(mode==2||mode==6)){
-                const auto& x=state.details[lhs];
-                const auto& y=state.details[rhs];
-                if(x.sizeKnown!=y.sizeKnown)return x.sizeKnown;
-                if(x.sizeKnown&&x.bytes!=y.bytes)
-                    return mode==2?x.bytes>y.bytes:x.bytes<y.bytes;
-            }else if(!indexedProjection&&detailReady&&(mode==3||mode==7)){
-                const auto& x=state.details[lhs];
-                const auto& y=state.details[rhs];
-                if(x.dateKnown!=y.dateKnown)return x.dateKnown;
-                if(x.dateKnown&&x.modified!=y.modified)
-                    return mode==3?x.modified>y.modified:x.modified<y.modified;
-            }
-            return mode==1?lessName(rhs,lhs):lessName(lhs,rhs);
-        });
+        if(mode<=1||metadataReady)
+            std::stable_sort(order.begin(),order.end(),[&](size_t lhs,size_t rhs){
+                if(folderAt(lhs)!=folderAt(rhs))return folderAt(lhs);
+                if(metadataReady&&(mode==4||mode==5)){
+                    const auto& a=state.metadata[lhs].typeKey;
+                    const auto& b=state.metadata[rhs].typeKey;
+                    const auto cmp=::CompareStringOrdinal(
+                        a.c_str(),-1,b.c_str(),-1,TRUE);
+                    if(cmp!=CSTR_EQUAL)
+                        return mode==5?cmp==CSTR_GREATER_THAN:cmp==CSTR_LESS_THAN;
+                }else if(metadataReady&&(mode==2||mode==6)){
+                    const auto& x=state.metadata[lhs];
+                    const auto& y=state.metadata[rhs];
+                    if(x.sizeKnown!=y.sizeKnown)return x.sizeKnown;
+                    if(x.sizeKnown&&x.bytes!=y.bytes)
+                        return mode==2?x.bytes>y.bytes:x.bytes<y.bytes;
+                }else if(metadataReady&&(mode==3||mode==7)){
+                    const auto& x=state.metadata[lhs];
+                    const auto& y=state.metadata[rhs];
+                    if(x.dateKnown!=y.dateKnown)return x.dateKnown;
+                    if(x.dateKnown&&x.modified!=y.modified)
+                        return mode==3?x.modified>y.modified:x.modified<y.modified;
+                }
+                return mode==1?lessName(rhs,lhs):lessName(lhs,rhs);
+            });
         if(!state.filenameFilter.empty()){
             order.erase(std::remove_if(order.begin(),order.end(),
                 [&](size_t index){
