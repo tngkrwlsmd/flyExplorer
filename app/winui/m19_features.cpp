@@ -320,6 +320,8 @@ SearchController::Context MainWindow::SearchContext(){
     context.query.modifiedAfter=std::wstring(SearchModifiedAfterBox().Text().c_str());
     context.query.modifiedBefore=std::wstring(SearchModifiedBeforeBox().Text().c_str());
     context.query.regex=SearchRegexBox().IsChecked().GetBoolean();
+    context.query.contentRegex=
+        SearchContentRegexBox().IsChecked().GetBoolean();
     context.query.caseSensitive=SearchCaseBox().IsChecked().GetBoolean();
     switch(SearchTargetBox().SelectedIndex()){
     case 1:
@@ -368,7 +370,7 @@ void MainWindow::OnToggleSearch(
     auto const& path=pane.filesystemPaths[pane.active];
     if(!path.empty())SearchScopeBox().Text(hstring(path));
     StatusText().Text(
-        L"이름/정규식/확장자/크기/수정일/텍스트 내용 조건을 조합하고 저장할 수 있습니다.");
+        L"이름/정규식/확장자/크기/수정일/텍스트 내용·내용 정규식 조건을 조합하고 저장할 수 있습니다.");
 }
 void MainWindow::OnRunSearch(
     IInspectable const&,RoutedEventArgs const&) {
@@ -417,6 +419,10 @@ void MainWindow::OnRunSearch(
         SearchCountText().Text(L"파일 내용 인코딩 조건이 올바르지 않습니다.");
         StatusText().Text(
            L"내용 인코딩은 자동 UTF, 한국어 CP949, 서유럽 Windows-1252 중 하나여야 합니다.");
+    }else if(status==Start::InvalidContentPattern){
+        SearchCountText().Text(L"파일 내용 정규식이 올바르지 않습니다.");
+        StatusText().Text(
+           L"내용 정규식은 일반 그룹/|/./[]/*+?/{m,n}/^$를 지원하며 역참조와 lookaround는 지원하지 않습니다.");
     }else if(status==Start::InvalidPattern){
         SearchCountText().Text(L"정규식이 올바르지 않습니다.");
         StatusText().Text(
@@ -468,6 +474,8 @@ void MainWindow::OnSearchCompleted(
         if(completion.result.contentFilesSkipped)
             summary+=L" · "+std::to_wstring(completion.result.contentFilesSkipped)+L"개 건너뜀";
         if(completion.result.contentLimited)summary+=L" · 16 MiB I/O 제한 도달";
+        if(completion.result.contentRegexLimited)
+            summary+=L" · 내용 정규식 연산 한도 도달";
     }
     SearchCountText().Text(hstring(summary));
     if(completion.request.remember){
