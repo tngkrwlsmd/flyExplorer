@@ -39,7 +39,8 @@ class LocalizationContracts(unittest.TestCase):
             self.assertIn(word, shell)
         for word in (
             "원본 폴더가 변경됐습니다",
-            "최대 32개",
+            "한 번에 끌 수 있는 항목은 최대 ",
+            "전체 경로 크기가 파일 작업 제한을 넘었습니다",
             "파일 놓기 데이터를 읽지 못했습니다",
         ):
             self.assertIn(word, drag)
