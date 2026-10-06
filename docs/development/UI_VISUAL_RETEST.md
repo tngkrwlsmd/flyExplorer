@@ -116,10 +116,14 @@ under logs/ or bounded CI artifacts rather than product-source PNGs.
 For layout/theme/scale-sensitive UI work, exercise the relevant environments
 that are actually available. Do not infer a PASS for an unavailable one.
 
-Actual 125/150/200% display scaling, High Contrast ON and human
-Narrator/Korean IME behavior remain separate environment/manual gates unless
-the current task explicitly exercises them. Owned same-app physical pointer
-drag is covered by the Release acceptance path; external cross-application drag
+Actual 125/150/200% display scaling and human Narrator/Korean IME behavior
+remain separate environment/manual gates until exercised. High Contrast ON
+already has actual Windows GUI/visual acceptance on merged product revision
+`eaa1b368a677f57c15183c5e6851f0598ed25878` through Remote Windows Task
+`37252987127`. Reuse that evidence while the relevant product/presentation
+boundary is unchanged; rerun High Contrast only when a later change invalidates
+it. Owned same-app physical pointer drag is covered by the Release acceptance
+path; external cross-application drag
 remains a separate interoperability gate when relevant. RDP restrictions,
 source-level support or code-level RasterizationScale behavior do not certify
 unavailable environments.

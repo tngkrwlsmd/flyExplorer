@@ -65,8 +65,13 @@ For every change that alters composited pixels:
 Do not manufacture certification for an untested theme, DPI, accessibility or
 input condition. For layout/theme/scale-sensitive work, exercise every
 environment that is actually available and list the rest as NOT TESTED or
-ENVIRONMENT BLOCKED. Current 125/150/200% DPI, High Contrast, human Narrator
-and Korean IME remain separate explicit gates until actually exercised.
+ENVIRONMENT BLOCKED. Actual 125/150/200% DPI, human Narrator and Korean IME
+remain separate explicit gates until exercised. High Contrast ON already has
+actual Windows GUI/visual acceptance on merged product revision
+`eaa1b368a677f57c15183c5e6851f0598ed25878` through Remote Windows Task
+`37252987127`; reuse that evidence while the relevant product/presentation
+conditions remain unchanged, and rerun the gate only when a later change
+invalidates it.
 
 Pure behavior-preserving refactors with no composited-pixel change do not need a
 new BEFORE/AFTER screenshot pair, though their required functional GUI
