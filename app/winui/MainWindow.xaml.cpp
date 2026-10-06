@@ -1432,16 +1432,27 @@ namespace winrt::FlyExplorer::implementation
             const auto& itemLabel=labelAt(index);
             const auto& itemParsing=parsingAt(index);
             const bool itemFolder=folderAt(index);
-            auto const* meta=residentReady&&detailReady?
+            auto const* metadata=residentReady&&metadataReady?
+                &state.metadata[resident]:nullptr;
+            auto const* detail=residentReady&&detailReady?
                 &state.details[resident]:nullptr;
+            std::wstring typeLabel;
+            if(detail&&!detail->typeLabel.empty())typeLabel=detail->typeLabel;
+            else if(itemFolder)typeLabel=L"폴더";
+            else if(metadata){
+                typeLabel=metadata->typeKey;
+                if(!typeLabel.empty()&&typeLabel.front()==L'.')
+                    typeLabel.erase(typeLabel.begin());
+                typeLabel=typeLabel.empty()?L"파일":typeLabel+L" 파일";
+            }
             ListViewItem row;
             auto label=std::wstring(itemFolder?L"[폴더]  ":L"[파일]  ")+
                        itemLabel;
-            if(meta){
-                if(!meta->typeLabel.empty())label+=L"   |   "+meta->typeLabel;
-                if(meta->sizeKnown)label+=L"   |   "+meta->bytesLabel;
-                if(meta->dateKnown)label+=L"   |   "+meta->dateLabel;
-            }
+            if(!typeLabel.empty())label+=L"   |   "+typeLabel;
+            if(metadata&&metadata->sizeKnown)
+                label+=L"   |   "+metadata->bytesLabel;
+            if(metadata&&metadata->dateKnown)
+                label+=L"   |   "+metadata->dateLabel;
             if(state.viewMode==FileViewMode::Details){
             Grid columns;
             const auto widths=DetailColumnWidths(side);
@@ -1468,7 +1479,7 @@ namespace winrt::FlyExplorer::implementation
                    totalBytes.QuadPart>0)
                     localDrive=true;
             }
-            auto const* iconMeta=meta;
+            auto const* iconMeta=detail;
             bool actualVisual=false;
             if(iconMeta){
                 const auto& data=iconMeta->iconBgra;
@@ -1551,9 +1562,9 @@ namespace winrt::FlyExplorer::implementation
                 Grid::SetColumn(field,col);
                 columns.Children().Append(field);
             };
-            addText(meta?meta->typeLabel:L"",1);
-            addText(meta&&meta->sizeKnown?meta->bytesLabel:L"",2);
-            addText(meta&&meta->dateKnown?meta->dateLabel:L"",3);
+            addText(typeLabel,1);
+            addText(metadata&&metadata->sizeKnown?metadata->bytesLabel:L"",2);
+            addText(metadata&&metadata->dateKnown?metadata->dateLabel:L"",3);
             row.Content(columns);
             }else{
                 const bool medium=state.viewMode==FileViewMode::MediumIcons;
@@ -1563,7 +1574,7 @@ namespace winrt::FlyExplorer::implementation
                 StackPanel cell;cell.Orientation(iconGrid?Orientation::Vertical:Orientation::Horizontal);
                 cell.Spacing(large?7.0:(medium?5.0:7.0));cell.VerticalAlignment(VerticalAlignment::Center);
                 if(iconGrid)cell.HorizontalAlignment(HorizontalAlignment::Center);
-                auto const* iconMeta=detailReady?&ActiveWindowTab().fileLists[side].details[index]:nullptr;
+                auto const* iconMeta=detail;
                 bool actualVisual=false;bool realThumb=false;
                 if(iconMeta){
                     const auto& thumb=iconMeta->thumbnailBgra;
