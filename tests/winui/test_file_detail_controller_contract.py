@@ -1,4 +1,4 @@
-"""File detail worker lifecycle ownership after the MainWindow V8 audit."""
+"""File visual/detail worker lifecycle ownership after metadata separation."""
 from pathlib import Path
 import unittest
 
@@ -32,10 +32,14 @@ class FileDetailControllerContract(unittest.TestCase):
             "request.paths.size()>1200",
             "fxfile::filetype::queryVisuals(",
             "fxfile::thumbnail::query(",
-            "if(cancelToken->load())return; // prevent stale metadata child launch",
+            "if(cancelToken->load())return; // prevent stale visual child launch",
             "if(cancelToken->load())return;",
         ):
             self.assertIn(token,impl)
+        for removed in ("entry.bytes=","entry.bytesLabel=",
+                        "entry.modified=","entry.dateLabel=",
+                        "entry.sizeKnown=","entry.dateKnown="):
+            self.assertNotIn(removed,impl)
 
     def test_mainwindow_keeps_live_state_acceptance_and_project_compiles_owner(self):
         main=read("app/winui/MainWindow.xaml.cpp")
@@ -51,7 +55,7 @@ class FileDetailControllerContract(unittest.TestCase):
         state=read("app/winui/file_list_state.h")
         owner=read("app/winui/window_tab_state.h")
         main=read("app/winui/MainWindow.xaml.cpp")
-        for token in ("sortMode","details","renderedLogical","renderedPaths",
+        for token in ("sortMode","metadata","details","renderedLogical","renderedPaths",
                       "indexedNameProjection","epoch","invalidate()","isCurrent(","accepts("):
             self.assertIn(token,state)
         self.assertIn("std::array<fxfile::previewlist::PaneState,2> fileLists",owner)
