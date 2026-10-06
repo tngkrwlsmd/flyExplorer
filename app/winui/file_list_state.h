@@ -54,14 +54,20 @@ struct PaneState final {
     std::size_t metadataTab=0;
     std::uint64_t route=0,epoch=0;
     std::size_t tab=0;
-    void invalidate() noexcept {
+    void invalidateMetadata() noexcept {
         ++metadataEpoch;
         metadata.clear();
         metadataRoute=0;
+    }
+    void invalidateDetails() noexcept {
         ++epoch;
         details.clear();
         visualPixels=0;
         route=0;
+    }
+    void invalidate() noexcept {
+        invalidateMetadata();
+        invalidateDetails();
     }
     std::uint64_t beginMetadata(
         std::uint64_t nextRoute,std::size_t nextTab) {
