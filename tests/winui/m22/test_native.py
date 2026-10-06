@@ -19,8 +19,8 @@ try:
  proc=subprocess.run([str(exe),str(own)],cwd=exe.parent,env=env,
      capture_output=True,text=True,errors="replace",timeout=50)
  assert proc.returncode==0,(proc.returncode,proc.stdout,proc.stderr)
- assert "M22_NATIVE_SUMMARY 21 passed, 0 failed." in proc.stdout,proc.stdout
- print("M22_NATIVE_"+CONFIG+"_21_REAL_OWNED_SHELL_PASS",True)
+ assert "M22_NATIVE_SUMMARY 29 passed, 0 failed." in proc.stdout,proc.stdout
+ print("M22_NATIVE_"+CONFIG+"_29_REAL_OWNED_SHELL_PASS",True)
 finally:
  assert_legacy_profile_unchanged(real,before)
  shutil.rmtree(own)

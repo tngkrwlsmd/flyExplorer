@@ -14,6 +14,22 @@ int wmain(int count,wchar_t**args){
   std::printf("M22_NATIVE_%s %s\n",ok?"PASS":"FAIL",label);
   if(ok)++pass;else ++fail;
  };
+ test(supportsDriveType(Kind::Copy,DRIVE_FIXED),
+      "copy_accepts_fixed_drive");
+ test(supportsDriveType(Kind::Move,DRIVE_FIXED),
+      "move_accepts_fixed_drive");
+ test(supportsDriveType(Kind::Recycle,DRIVE_FIXED),
+      "recycle_accepts_fixed_drive");
+ test(supportsDriveType(Kind::Copy,DRIVE_REMOVABLE),
+      "copy_accepts_removable_drive");
+ test(supportsDriveType(Kind::Move,DRIVE_REMOVABLE),
+      "move_accepts_removable_drive");
+ test(!supportsDriveType(Kind::Recycle,DRIVE_REMOVABLE),
+      "recycle_rejects_removable_drive");
+ test(!supportsDriveType(Kind::Copy,DRIVE_REMOTE),
+      "copy_rejects_remote_drive");
+ test(!supportsDriveType(Kind::Move,DRIVE_REMOTE),
+      "move_rejects_remote_drive");
  auto put=[](fs::path const&p,std::string const&s){
   std::ofstream f(p,std::ios::binary);f<<s;
  };
