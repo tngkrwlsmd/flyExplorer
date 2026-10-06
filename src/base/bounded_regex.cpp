@@ -13,7 +13,7 @@ constexpr std::size_t kMaxPatternChars=256;
 constexpr std::size_t kMaxAstDepth=32;
 constexpr std::size_t kMaxRepeat=64;
 constexpr std::size_t kMaxStates=1024;
-constexpr std::uint64_t kMaxMatchSteps=8ull*1024ull*1024ull;
+constexpr std::uint64_t kMaxMatchSteps=4ull*1024ull*1024ull;
 
 enum class AtomKind {
     Literal,
