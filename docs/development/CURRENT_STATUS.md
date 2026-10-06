@@ -156,13 +156,15 @@ checkpoints.
   select a legacy configuration file for read-only name/path import. Duplicate,
   malformed and unsupported non-filesystem legacy entries are skipped rather
   than mutating the old profile.
-- Search v2 keeps the existing bounded asynchronous SearchController lifecycle
-  and adds optional ECMAScript regex, case-sensitive matching, file/folder/both
-  targeting and a single extension condition. Default behavior remains
-  case-insensitive literal file-name search. Invalid regex/extension input is
-  rejected before worker start. The existing depth-5, 2,500-entry walk and
-  100-result bounds, cancellation/stale-result rejection and opt-in recent
-  scope persistence remain unchanged.
+- Search v2 kept the existing bounded asynchronous SearchController lifecycle
+  and added optional ECMAScript regex, case-sensitive matching,
+  file/folder/both targeting and a single extension condition. Default
+  behavior remains case-insensitive literal file-name search. Invalid
+  regex/extension input is rejected before worker start. At the Search v2
+  revision the inherited bounds were depth 5, 2,500 walked entries and 100
+  retained results; current main supersedes those historical scale limits with
+  depth 32, 20,000 walked entries and 1,000 retained results while preserving
+  cancellation/stale-result rejection and opt-in recent scope persistence.
 - Back/Forward/Up, filtering/sorting, local create/rename, guarded copy/move/
   recycle flows, Windows clipboard/context integration, isolated Shell visuals
   and directory/Shell namespace watching.
