@@ -429,6 +429,7 @@ namespace winrt::FlyExplorer::implementation
         mWorkspaceRestore.reset();
         mSessionCoordinator.prepareForClose();
         mFileOperations.prepareForClose();
+        mFileMetadata.prepareForClose();
         mFileDetails.prepareForClose();
         for(std::size_t i=0;i<mWorkspace.count();++i)
             for(auto& files:mWorkspace.state(i).fileLists)files.invalidate();
@@ -776,8 +777,66 @@ namespace winrt::FlyExplorer::implementation
         mPopulatingTabs=false;
     }
     void MainWindow::ClearFileDetails(int side){
+        mFileMetadata.cancel(side);
         mFileDetails.cancel(side);
         ActiveWindowTab().fileLists[side].invalidate();
+    }
+    void MainWindow::ScheduleFileMetadata(int side,bool force){
+        auto const& pane=ActiveWindowTab().model.panes[side];
+        if(pane.pending[pane.active])return;
+        const auto route=pane.routeIds[pane.active];
+        const auto tab=pane.active;
+        auto const& snapshot=pane.tabs[tab].snapshot();
+        auto const& items=snapshot.children;
+        auto& listState=ActiveWindowTab().fileLists[side];
+        if(!force&&listState.metadataCurrent(route,tab,items.size()))return;
+        if(snapshot.baseOffset||snapshot.truncated||
+           items.size()>fxfile::isolation::kMaxCompleteModelEntries)return;
+        auto const& folder=pane.filesystemPaths[tab];
+        if(folder.size()<3||folder[1]!=L':'||folder[2]!=L'\\')return;
+        const std::wstring root=folder.substr(0,3);
+        if(::GetDriveTypeW(root.c_str())!=DRIVE_FIXED)return;
+        std::vector<std::wstring> paths{};
+        paths.reserve(items.size());
+        for(auto const& item:items)
+            paths.push_back(item.isFileSystem()?item.parsingName:std::wstring{});
+        const auto ticket=listState.beginMetadata(route,tab);
+        fxfile::previewmetadata::FileMetadataController::Request request{};
+        request.side=side;request.tab=tab;request.route=route;request.ticket=ticket;
+        request.paths=std::move(paths);
+        auto dispatch=DispatcherQueue();
+        auto weak=get_weak();
+        const bool started=mFileMetadata.start(
+            std::move(request),
+            [dispatch](fxfile::previewmetadata::FileMetadataController::UiTask task){
+                try{return dispatch.TryEnqueue(
+                    [task=std::move(task)]() mutable {task();});}
+                catch(...){return false;}
+            },
+            [weak](fxfile::previewmetadata::FileMetadataController::Completion completed){
+                if(auto ui=weak.get()){
+                    const int side=completed.side;
+                    const auto tab=completed.tab;
+                    const auto route=completed.route;
+                    const auto ticket=completed.ticket;
+                    const auto count=completed.metadata.size();
+                    auto const& pane=ui->ActiveWindowTab().model.panes[side];
+                    auto const& snapshot=pane.tabs[tab].snapshot();
+                    if(!ui->ActiveWindowTab().fileLists[side].acceptsMetadata(
+                           ticket,route,tab)||
+                       pane.active!=tab||pane.pending[tab]||
+                       pane.routeIds[tab]!=route||
+                       snapshot.baseOffset||snapshot.truncated||
+                       snapshot.children.size()!=count)return;
+                    auto& state=ui->ActiveWindowTab().fileLists[side];
+                    state.metadata=std::move(completed.metadata);
+                    ui->FillFiles(side);
+                    if(state.sortMode>1)
+                        ui->StatusText().Text(
+                            L"파일 메타데이터 정렬을 적용했습니다.");
+                }
+            });
+        if(!started)listState.invalidateMetadata();
     }
     void MainWindow::ScheduleFileDetails(int side,bool force){
         auto const& pane=ActiveWindowTab().model.panes[side];
@@ -843,7 +902,7 @@ namespace winrt::FlyExplorer::implementation
                     ui->FillFiles(side);
                 }
             });
-        if(!started)listState.invalidate();
+        if(!started)listState.invalidateDetails();
     }
     void MainWindow::OnNameColumnWidthChanged(
         IInspectable const& sender,
@@ -1737,6 +1796,8 @@ namespace winrt::FlyExplorer::implementation
         RefreshWindowTabs();
         UpdateWatch(0);
         UpdateWatch(1);
+        ScheduleFileMetadata(0);
+        ScheduleFileMetadata(1);
         ScheduleFileDetails(0);
         ScheduleFileDetails(1);
     }
