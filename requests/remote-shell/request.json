@@ -1,5 +1,5 @@
 {
-  "request_id": "control-idle-after-force-cancel-20261006",
+  "request_id": "removable-recycle-vm-acceptance-retry-20261006",
   "expected_main_sha": "5c4b2135a96563417246b32e6be801c4ad593930",
   "candidate_sha": "5c4b2135a96563417246b32e6be801c4ad593930",
   "logical_unit": "control-idle",
