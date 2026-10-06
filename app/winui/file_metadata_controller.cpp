@@ -2,6 +2,7 @@
 #include "file_metadata_controller.h"
 #include "../../src/base/shell_isolation_wire.h"
 #include <algorithm>
+#include <cwchar>
 #include <cwctype>
 #include <filesystem>
 #include <thread>
@@ -35,10 +36,15 @@ std::wstring dateLabel(FILETIME const& value)
     SYSTEMTIME stamp{};
     if(!::FileTimeToLocalFileTime(&value,&local)||
        !::FileTimeToSystemTime(&local,&stamp))return {};
-    wchar_t date[32]{},time[24]{};
-    if(!::GetDateFormatEx(L"ko-KR",0,&stamp,L"yyyy-MM-dd",date,32,nullptr)||
-       !::GetTimeFormatEx(L"ko-KR",0,&stamp,L"HH:mm",time,24))return {};
-    return std::wstring(date)+L" "+time;
+    wchar_t text[32]{};
+    if(std::swprintf(
+         text,32,L"%04u-%02u-%02u %02u:%02u",
+         static_cast<unsigned>(stamp.wYear),
+         static_cast<unsigned>(stamp.wMonth),
+         static_cast<unsigned>(stamp.wDay),
+         static_cast<unsigned>(stamp.wHour),
+         static_cast<unsigned>(stamp.wMinute))<=0)return {};
+    return text;
 }
 
 }
@@ -99,8 +105,8 @@ bool FileMetadataController::start(
                 timestamp.HighPart=data.ftLastWriteTime.dwHighDateTime;
                 timestamp.LowPart=data.ftLastWriteTime.dwLowDateTime;
                 entry.modified=timestamp.QuadPart;
+                entry.dateKnown=entry.modified!=0;
                 entry.dateLabel=dateLabel(data.ftLastWriteTime);
-                entry.dateKnown=!entry.dateLabel.empty();
             }
             if(cancelToken->load())return;
             Completion result{};
