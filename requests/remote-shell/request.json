@@ -1,11 +1,15 @@
 {
-  "request_id": "metadata-sort-baseline-cache-recursive-20261006",
+  "request_id": "metadata-sort-visual-baseline-20261006",
   "expected_main_sha": "eccc723ce730b49be79626cf2e5794d1e2a9fabc",
-  "candidate_sha": "4da45e54ea9970e1b2254a73e1748751118991ab",
-  "logical_unit": "metadata-sort-baseline-cache",
-  "request_mode": "diagnostic",
-  "configuration": "none",
-  "validation_plan": [],
+  "candidate_sha": "b137a9f7f6882dbd7dddc43953dc0fcdb2b6e624",
+  "logical_unit": "metadata-sort-visual-baseline",
+  "request_mode": "validation",
+  "configuration": "Release",
+  "validation_plan": [
+    "build",
+    "gui",
+    "visual"
+  ],
   "working_directory": "",
-  "command": "$ErrorActionPreference=\"Stop\"\n$root=\"C:\\dev\\flyExplorer\\logs\\f5-f6-runtime-4e59a22c\"\nif(!(Test-Path -LiteralPath $root)){throw \"baseline cache directory missing\"}\nGet-ChildItem -LiteralPath $root -Recurse -File -Filter \"flyExplorer.exe\" -ErrorAction SilentlyContinue |\n  ForEach-Object { Write-Host (\"BASELINE_EXE=\"+$_.FullName) }\nGet-ChildItem -LiteralPath $root -Recurse -File -ErrorAction SilentlyContinue |\n  Select-Object -First 12 |\n  ForEach-Object { Write-Host (\"BASELINE_SAMPLE=\"+$_.FullName) }"
+  "command": "$ErrorActionPreference=\"Stop\"\n$repo=$env:FLYEXPLORER_CANONICAL_CHECKOUT\n$main=\"eccc723ce730b49be79626cf2e5794d1e2a9fabc\"\n$candidate=\"b137a9f7f6882dbd7dddc43953dc0fcdb2b6e624\"\n$branch=\"work/metadata-sort-baseline-harness-20261006\"\n$temp=Join-Path $env:RUNNER_TEMP (\"fly-metadata-baseline-\"+$env:GITHUB_RUN_ID)\n$cache=\"C:\\dev\\flyExplorer\\logs\\metadata-sort-baseline-runtime-\"+$candidate.Substring(0,8)\n$evidence=Join-Path $repo \"logs\\remote-evidence\"\nSet-Location -LiteralPath $repo\n& git fetch origin main $branch --no-tags --prune\nif($LASTEXITCODE -ne 0){throw \"metadata baseline fetch failed\"}\nif((& git rev-parse refs/remotes/origin/main).Trim() -ne $main){throw \"main moved before metadata baseline\"}\nif((& git rev-parse (\"refs/remotes/origin/\"+$branch)).Trim() -ne $candidate){throw \"metadata baseline branch moved\"}\n& git diff --quiet ($main+\"...\"+$candidate) -- app/winui src/base build.bat run.bat\nif($LASTEXITCODE -ne 0){throw \"baseline harness branch changed product files\"}\n& git worktree add --detach $temp $candidate\nif($LASTEXITCODE -ne 0){throw \"metadata baseline worktree creation failed\"}\ntry{\n  Set-Location -LiteralPath $temp\n  & git diff --check ($main+\"...\"+$candidate)\n  if($LASTEXITCODE -ne 0){throw \"metadata baseline diff check failed\"}\n  & .\\build.bat Release\n  if($LASTEXITCODE -ne 0){throw \"metadata baseline Release build failed\"}\n  Write-Host \"METADATA_SORT_BASELINE_RELEASE_BUILD=PASS\"\n  if(Test-Path -LiteralPath $cache){Remove-Item -LiteralPath $cache -Recurse -Force}\n  New-Item -ItemType Directory -Path $cache -Force | Out-Null\n  Copy-Item -Path (Join-Path $temp \"out\\winui\\Release\\*\") -Destination $cache -Recurse -Force\n  if(!(Test-Path -LiteralPath (Join-Path $cache \"flyExplorer.exe\"))){throw \"metadata baseline runtime cache missing executable\"}\n  Write-Host (\"METADATA_SORT_BASELINE_RUNTIME_CACHE=\"+$cache)\n  & python -X utf8 tests\\winui\\test_metadata_sort_gui.py --configuration Release --expect-legacy-fallback --capture before\n  if($LASTEXITCODE -ne 0){throw \"metadata baseline GUI failed\"}\n  Write-Host \"METADATA_SORT_BASELINE_GUI=PASS\"\n  New-Item -ItemType Directory -Path $evidence -Force | Out-Null\n  Copy-Item -LiteralPath (Join-Path $temp \"logs\\metadata-sort\\metadata-sort-before.png\") -Destination (Join-Path $evidence \"metadata-sort-before.png\") -Force\n  Write-Host \"METADATA_SORT_BASELINE_VISUAL=EXPORTED\"\n} finally {\n  Set-Location -LiteralPath $repo\n  & git worktree remove $temp --force\n}"
 }
