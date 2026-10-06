@@ -161,7 +161,8 @@ bool Store::loadFrom(std::wstring const& path) noexcept{
         const bool schema1=line==L"schema=1";
         const bool schema2=line==L"schema=2";
         const bool schema3=line==L"schema=3";
-        if(!schema1&&!schema2&&!schema3)return false;
+        const bool schema4=line==L"schema=4";
+        if(!schema1&&!schema2&&!schema3&&!schema4)return false;
         Store candidate;
         while(std::getline(lines,line)){
             if(!line.empty()&&line.back()==L'\r')line.pop_back();
@@ -169,22 +170,28 @@ bool Store::loadFrom(std::wstring const& path) noexcept{
             auto f=split(line);
             if((schema1&&f.size()!=10)||
                (schema2&&f.size()!=11)||
-               (schema3&&f.size()!=12))return false;
+               (schema3&&f.size()!=12)||
+               (schema4&&f.size()!=13))return false;
             Preset p{};
-            p.name=f[0];p.term=f[1];
-            std::size_t offset=0;
-            if(schema2||schema3){p.contentTerm=f[2];offset=1;}
-            if(schema3){
-                try{p.contentEncoding=std::stoi(f[3]);}catch(...){return false;}
-                ++offset;
+            std::size_t i=0;
+            p.name=f[i++];p.term=f[i++];
+            if(schema2||schema3||schema4)p.contentTerm=f[i++];
+            if(schema3||schema4){
+                try{p.contentEncoding=std::stoi(f[i++]);}catch(...){return false;}
             }
-            p.extension=f[2+offset];
-            p.regex=f[3+offset]==L"1";p.caseSensitive=f[4+offset]==L"1";
-            try{p.kind=std::stoi(f[5+offset]);}catch(...){return false;}
-            p.minSizeKb=f[6+offset];p.maxSizeKb=f[7+offset];
-            p.modifiedAfter=f[8+offset];p.modifiedBefore=f[9+offset];
-            if((f[3+offset]!=L"0"&&f[3+offset]!=L"1")||
-               (f[4+offset]!=L"0"&&f[4+offset]!=L"1")||
+            p.extension=f[i++];
+            auto readBool=[&](bool& value){
+                if(i>=f.size()||(f[i]!=L"0"&&f[i]!=L"1"))return false;
+                value=f[i++]==L"1";
+                return true;
+            };
+            if(!readBool(p.regex))return false;
+            if(schema4&&!readBool(p.contentRegex))return false;
+            if(!readBool(p.caseSensitive))return false;
+            try{p.kind=std::stoi(f[i++]);}catch(...){return false;}
+            p.minSizeKb=f[i++];p.maxSizeKb=f[i++];
+            p.modifiedAfter=f[i++];p.modifiedBefore=f[i++];
+            if(i!=f.size()||
                candidate.add(std::move(p))!=MutationResult::Applied)
                 return false;
         }
@@ -197,12 +204,13 @@ bool Store::saveTo(std::wstring const& path) const noexcept{
         Store checked;
         for(auto const& p:mItems)
             if(checked.add(p)!=MutationResult::Applied)return false;
-        std::wstring text=L"schema=3\r\n";
+        std::wstring text=L"schema=4\r\n";
         for(auto const& p:mItems){
             text+=p.name+L"\t"+p.term+L"\t"+p.contentTerm+L"\t"+
                 std::to_wstring(p.contentEncoding)+L"\t"+
                 p.extension+L"\t"+
                 (p.regex?L"1":L"0")+L"\t"+
+                (p.contentRegex?L"1":L"0")+L"\t"+
                 (p.caseSensitive?L"1":L"0")+L"\t"+
                 std::to_wstring(p.kind)+L"\t"+
                 p.minSizeKb+L"\t"+p.maxSizeKb+L"\t"+
