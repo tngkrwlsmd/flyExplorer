@@ -270,6 +270,10 @@ namespace winrt::FlyExplorer::implementation
         std::unique_ptr<fxfile::previewnav::ShellNavigationController> mShellNavigation;
         bool mOwnedShellNotifyTest=false;
         bool mOwnedComExhaustOnVirtual=false;
+        int mOwnedMetadataSortMode=-1;
+        bool mOwnedMetadataSortConsumed=false;
+        void InitializeOwnedMetadataSortTest();
+        void RunOwnedMetadataSortTestIfReady();
         fxfile::previewrestore::WorkspaceRestoreCoordinator mWorkspaceRestore{};
         fxfile::bookmarks::Store mBookmarks{};
         bool mPopulatingBookmarks=false;
