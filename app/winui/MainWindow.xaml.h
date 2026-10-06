@@ -9,6 +9,7 @@
 #include "session_coordinator.h"
 #include "shell_navigation_controller.h"
 #include "file_operation_controller.h"
+#include "file_metadata_controller.h"
 #include "file_detail_controller.h"
 #include "preferences_coordinator.h"
 #include "workspace_restore_coordinator.h"
@@ -211,8 +212,11 @@ namespace winrt::FlyExplorer::implementation
             return footer()->SelectionCountText();
         }
         using FileDetail=fxfile::previewlist::FileDetail;
+        using FileMetadata=fxfile::previewlist::FileMetadata;
         using FileViewMode=fxfile::previewlist::FileViewMode;
+        fxfile::previewmetadata::FileMetadataController mFileMetadata{};
         fxfile::previewdetail::FileDetailController mFileDetails{};
+        void ScheduleFileMetadata(int side,bool force=false);
         void ScheduleFileDetails(int side,bool force=false);
         void ClearFileDetails(int side);
         Microsoft::UI::Dispatching::DispatcherQueueTimer mTransferTimer{nullptr};
