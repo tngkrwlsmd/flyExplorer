@@ -112,7 +112,7 @@ void MainWindow::OnFileDragItemsStarting(
  auto view=sender.try_as<ListView>();
  const int side=view==LeftFiles()?0:view==RightFiles()?1:-1;
  if(side<0||mFileOperations.busy()||args.Items().Size()==0||
-    args.Items().Size()>32){args.Cancel(true);return;}
+    args.Items().Size()>fxfile::shelltransfer::kMaxItems){args.Cancel(true);return;}
  auto const& pane=ActiveWindowTab().model.panes[side];
  const auto tab=pane.active;
  if(pane.pending[tab]||pane.filesystemPaths[tab].empty()){
@@ -168,7 +168,7 @@ void MainWindow::OnFileRowDragStarting(
   }
  }
  if(!rowSelected)chosen={row};
- if(chosen.empty()||chosen.size()>32){args.Cancel(true);return;}
+ if(chosen.empty()||chosen.size()>fxfile::shelltransfer::kMaxItems){args.Cancel(true);return;}
  std::vector<std::wstring> paths;
  for(auto const& entry:chosen){
   if(!entry.Tag()){args.Cancel(true);return;}
@@ -258,8 +258,10 @@ fire_and_forget MainWindow::OnFileDrop(
    mPrivateDragSources.clear(); // replay protection after consumption
   }else if(view.Contains(StandardDataFormats::StorageItems())){
    auto items=co_await view.GetStorageItemsAsync();
-   if(items.Size()==0||items.Size()>32){
-    StatusText().Text(L"한 번에 끌 수 있는 항목은 최대 32개입니다.");
+   if(items.Size()==0||
+      items.Size()>fxfile::shelltransfer::kMaxItems){
+    StatusText().Text(hstring(L"한 번에 끌 수 있는 항목은 최대 "+
+      std::to_wstring(fxfile::shelltransfer::kMaxItems)+L"개입니다."));
     mDropReading=false;deferral.Complete();co_return;
    }
    for(auto const& item:items){
