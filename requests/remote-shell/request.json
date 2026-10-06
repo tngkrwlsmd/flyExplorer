@@ -1,11 +1,16 @@
 {
-  "request_id": "probe-removable-volumes-20261006",
+  "request_id": "removable-transfer-vm-acceptance-20261006",
   "expected_main_sha": "049626c146b158520f82d692d6a44a97c381fc85",
-  "candidate_sha": "049626c146b158520f82d692d6a44a97c381fc85",
+  "candidate_sha": "c229e1c0de072f2724c42094430524cd2b78c4f2",
   "logical_unit": "removable-transfer",
-  "request_mode": "diagnostic",
-  "configuration": "none",
-  "validation_plan": [],
+  "request_mode": "validation",
+  "configuration": "Release",
+  "validation_plan": [
+    "fast",
+    "m22-native-release",
+    "build-release",
+    "gui-file-operations"
+  ],
   "working_directory": "",
-  "command": "$ErrorActionPreference=\"Stop\"\nWrite-Host \"REMOVABLE_PROBE_BEGIN\"\nGet-CimInstance Win32_LogicalDisk | Sort-Object DeviceID | ForEach-Object {\n  Write-Host (\"LOGICAL_DISK DeviceID={0} DriveType={1} FileSystem={2} VolumeName={3}\" -f $_.DeviceID,$_.DriveType,$_.FileSystem,$_.VolumeName)\n}\nGet-Volume | Sort-Object DriveLetter | ForEach-Object {\n  Write-Host (\"VOLUME DriveLetter={0} DriveType={1} FileSystemType={2} Health={3}\" -f $_.DriveLetter,$_.DriveType,$_.FileSystemType,$_.HealthStatus)\n}\nWrite-Host \"REMOVABLE_PROBE_END\""
+  "command": "$ErrorActionPreference=\"Stop\"\n$repo=$env:FLYEXPLORER_CANONICAL_CHECKOUT\n$main=\"049626c146b158520f82d692d6a44a97c381fc85\"\n$candidate=\"c229e1c0de072f2724c42094430524cd2b78c4f2\"\n$branch=\"work/removable-transfer-20261006\"\n$temp=Join-Path $env:RUNNER_TEMP (\"fly-removable-transfer-\"+$env:GITHUB_RUN_ID)\nSet-Location -LiteralPath $repo\n& git fetch origin main $branch --no-tags --prune\nif($LASTEXITCODE -ne 0){throw \"removable transfer fetch failed\"}\nif((& git rev-parse refs/remotes/origin/main).Trim() -ne $main){throw \"main moved before removable transfer acceptance\"}\nif((& git rev-parse (\"refs/remotes/origin/\"+$branch)).Trim() -ne $candidate){throw \"removable transfer candidate moved\"}\nif(Test-Path -LiteralPath $temp){& git worktree remove --force $temp 2>$null; Remove-Item -LiteralPath $temp -Recurse -Force -ErrorAction SilentlyContinue}\n& git worktree add --detach $temp $candidate\nif($LASTEXITCODE -ne 0){throw \"removable transfer worktree creation failed\"}\ntry{\n  Set-Location -LiteralPath $temp\n  & git diff --check ($main+\"...\"+$candidate)\n  if($LASTEXITCODE -ne 0){throw \"removable transfer diff check failed\"}\n\n  & python -X utf8 tools\\winui\\run_checks.py fast --before $main --head $candidate\n  if($LASTEXITCODE -ne 0){throw \"removable transfer FAST failed\"}\n\n  & cmd /c tests\\winui\\m22\\build.cmd Release\n  if($LASTEXITCODE -ne 0){throw \"M22 Release fixture build failed\"}\n  $env:FLY_M22_CONFIG=\"Release\"\n  & python -X utf8 tests\\winui\\m22\\test_native.py\n  if($LASTEXITCODE -ne 0){throw \"M22 Release native acceptance failed\"}\n  Remove-Item Env:\\FLY_M22_CONFIG -ErrorAction SilentlyContinue\n\n  & .\\build.bat Release\n  if($LASTEXITCODE -ne 0){throw \"canonical Release build failed\"}\n\n  & python -X utf8 tools\\winui\\run_checks.py gui --area file-operations --configuration Release\n  if($LASTEXITCODE -ne 0){throw \"file-operations GUI regression failed\"}\n\n  Write-Host \"REMOVABLE_TRANSFER_FAST=PASS\"\n  Write-Host \"REMOVABLE_TRANSFER_M22_NATIVE=PASS\"\n  Write-Host \"REMOVABLE_TRANSFER_RELEASE=PASS\"\n  Write-Host \"REMOVABLE_TRANSFER_GUI_FIXED_REGRESSION=PASS\"\n  Write-Host \"REMOVABLE_TRANSFER_PHYSICAL_USB=NOT_RUN_NO_DEVICE\"\n} finally {\n  Set-Location -LiteralPath $repo\n  Remove-Item Env:\\FLY_M22_CONFIG -ErrorAction SilentlyContinue\n  if(Test-Path -LiteralPath $temp){& git worktree remove --force $temp}\n  & git worktree prune\n}"
 }
