@@ -191,6 +191,47 @@ int wmain(int argc,wchar_t** argv){
            result.matches.size()==1&&result.matches[0]==match,
            "NATIVE_READ_ONLY_BOUNDED_SEARCH");
 
+    const auto scaleRoot=root+L"\\Search Scale";
+    if(!::CreateDirectoryW(scaleRoot.c_str(),nullptr))return 90;
+    bool scaleFiles=true;
+    for(int i=0;i<2600;++i){
+        const auto prefix=i<1100?L"\\scale-bulk-hit-":L"\\scale-filler-";
+        if(!touch(scaleRoot+prefix+std::to_wstring(i)+L".txt")){
+            scaleFiles=false;break;
+        }
+    }
+    auto deep=scaleRoot;
+    bool deepTree=true;
+    for(int depth=0;depth<7;++depth){
+        deep+=L"\\level-"+std::to_wstring(depth);
+        if(!::CreateDirectoryW(deep.c_str(),nullptr)){
+            deepTree=false;break;
+        }
+    }
+    const auto deepTarget=deep+L"\\scale-deep-target.txt";
+    if(deepTree)deepTree=touch(deepTarget);
+
+    fxfile::preview::SearchQuery scaleBulk{};
+    scaleBulk.term=L"scale-bulk-hit";
+    auto scaleBulkResult=fxfile::preview::scanFiles(
+        scaleRoot,scaleBulk,cancel);
+    expect(scaleFiles&&deepTree&&scaleBulkResult.valid&&
+           scaleBulkResult.truncated&&scaleBulkResult.resultLimited&&
+           !scaleBulkResult.traversalLimited&&
+           scaleBulkResult.visited>2500&&scaleBulkResult.count==1100&&
+           scaleBulkResult.matches.size()==1000,
+           "SEARCH_SCALE_BEYOND_2500_WALK_AND_100_RESULTS");
+
+    fxfile::preview::SearchQuery scaleDeep{};
+    scaleDeep.term=L"scale-deep-target";
+    auto scaleDeepResult=fxfile::preview::scanFiles(
+        scaleRoot,scaleDeep,cancel);
+    expect(scaleDeepResult.valid&&!scaleDeepResult.truncated&&
+           !scaleDeepResult.traversalLimited&&
+           scaleDeepResult.count==1&&scaleDeepResult.matches.size()==1&&
+           scaleDeepResult.matches[0]==deepTarget,
+           "SEARCH_SCALE_DEPTH_BEYOND_FIVE");
+
     fxfile::preview::SearchQuery regexCase{};
     regexCase.term=L"^Report-[0-9]{4}\\.TXT$";
     regexCase.regex=true;
