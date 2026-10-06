@@ -172,6 +172,13 @@ checkpoints.
   FAST, runner health, the canonical Release build and the focused owned GUI:
   Ctrl+A selected the 64-item WinUI model and the existing Copy command copied
   all 64 owned files to the opposite pane, with normal process shutdown.
+- Native Copy/Move transfer validation now accepts both `DRIVE_FIXED` and
+  `DRIVE_REMOVABLE` local drive roots. This applies to the shared
+  shell-transfer core used by pane Copy/Move, internal/Windows clipboard paste,
+  same-app transfer and external-drop ingestion. Reparse-point rejection,
+  direct-child validation, item/path budgets and collision/cancellation
+  behavior are unchanged. Recycle intentionally remains fixed-drive-only, and
+  UNC/`DRIVE_REMOTE`, virtual Shell and other drive types remain rejected.
 - Private session schema v2 persists/restores the active Window Tab, per-tab
   split state/ratio and active pane, both panes' tabs, selected tabs,
   view/sort/name-column state and bounded filesystem Back/Forward history.
@@ -237,6 +244,24 @@ the required environment but does not claim to have modified external cloud
 bootstrap configuration.
 
 ## Latest verified evidence
+
+Removable-volume Copy/Move policy is accepted on candidate
+`c229e1c0de072f2724c42094430524cd2b78c4f2` by self-hosted Remote
+Windows Task `37451984855`. The run passed request validation, change-scoped
+FAST, GUI runner health, the Release M22 native fixture at 29/29, the canonical
+Release build and the existing file-operations GUI regression. The native
+contract proves Copy and Move accept `DRIVE_REMOVABLE`, Recycle rejects it,
+and Copy/Move continue to reject `DRIVE_REMOTE`; the same fixture still
+executes real owned IFileOperation Copy/Move on the VM's fixed filesystem.
+Structured stages REQUEST_VALIDATION, STATIC_PREFLIGHT, RUNNER_HEALTH and
+COMMAND are all PASS. Evidence artifact `11407200582`, digest
+`sha256:aabbd9a19d4ef50aa50eb9dc7c57ddcf0a526ff37b114d8a48a69a92ba78093d`.
+
+Physical removable-media execution is not claimed from that run. Diagnostic
+Remote Windows Task `37451622847` found only C: as `Fixed` and D: as
+`CD-ROM`; no `DRIVE_REMOVABLE` volume was attached to the VM. A future run
+with an attached USB/removable volume should certify fixed↔removable and
+removable↔removable Copy/Move without changing the current product policy.
 
 Metadata-sort correctness and metadata/detail separation are accepted on
 candidate `1857330605c8ab27b2c0ea6ce91b279e71f13607` by self-hosted
@@ -657,6 +682,12 @@ Current source and the last parity evidence still show these limits:
   these metadata sorts remain explicitly refused. Shell visual/type/icon/
   thumbnail enrichment remains separately bounded to 1,200 items, and
   removable/network/provider metadata coverage is still a separate gap.
+- Copy/Move accepts local fixed and removable drive roots through the shared
+  Shell transfer core. Physical USB/removable-media execution is not yet
+  certified because the current self-hosted VM exposes only a fixed C: volume
+  and a D: CD-ROM. Recycle remains fixed-drive-only by design for now, while
+  UNC/network (`DRIVE_REMOTE`) and virtual/provider transfer paths remain
+  unsupported.
 - Search remains bounded. Regex, case sensitivity, entry-kind,
   single-extension, minimum/maximum file size, inclusive local modified-date
   and literal text content conditions are implemented with up to 20 private
