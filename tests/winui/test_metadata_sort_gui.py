@@ -110,6 +110,10 @@ def main():
         assert ui.GetWindowThreadProcessId(parent.handle,c.byref(owner))
         assert owner.value==process.pid
         assert ui.GetForegroundWindow()==parent.handle
+        ui.ShowWindow(parent.handle,3) # SW_MAXIMIZE: expose all details columns.
+        until(lambda:parent.child_window(auto_id="LeftDateSortButton").is_visible() and
+              parent.child_window(auto_id="LeftDateSortButton").rectangle().width()>5,
+              "maximized details date header not visible",8)
 
         def list_view():
             matches=[x for x in parent.descendants()
@@ -128,52 +132,27 @@ def main():
         until(lambda:"aa-type-last.zzz" in first_row(),
               "deterministic initial name order not rendered",30)
         status=parent.child_window(auto_id="StatusText")
-        desktop=Desktop(backend="uia")
-        def choose_sort(label):
+        picker=parent.child_window(auto_id="SortPicker")
+        def choose_header(auto_id,expected,clicks,label):
             parent.set_focus()
-            button=parent.child_window(auto_id="SortButton")
-            assert button.exists(timeout=.5) and button.is_visible(),label
-            button.click_input()
-            found=None
-            def resolve_menu_item():
-                nonlocal found
-                for top in desktop.windows(process=process.pid):
-                    candidates=[top]
-                    candidates.extend(top.descendants())
-                    for candidate in candidates:
-                        if (candidate.element_info.control_type=="MenuItem" and
-                            candidate.window_text()==label and
-                            candidate.is_visible()):
-                            found=candidate
-                            return True
-                return False
-            until(resolve_menu_item,f"sort menu item not visible: {label}",5)
-            found.click_input()
-            expected={
-                "이름 오름차순":0,"이름 내림차순":1,
-                "크기 내림차순":2,"수정 날짜 내림차순":3,
-                "유형 오름차순":4,"유형 내림차순":5,
-                "크기 오름차순":6,"수정 날짜 오름차순":7,
-            }[label]
-            picker=parent.child_window(auto_id="SortPicker")
-            header_id={
-                0:"LeftNameSortButton",1:"LeftNameSortButton",
-                2:"LeftSizeSortButton",3:"LeftDateSortButton",
-                4:"LeftTypeSortButton",5:"LeftTypeSortButton",
-                6:"LeftSizeSortButton",7:"LeftDateSortButton",
-            }[expected]
-            header=parent.child_window(auto_id=header_id)
-            until(lambda:picker.selected_index()==expected,
-                  f"sort picker did not record menu action: {label}",5)
+            header=parent.child_window(auto_id=auto_id)
+            assert header.exists(timeout=.5) and header.is_visible(),label
+            for step in range(clicks):
+                header.click_input()
+                intermediate=expected if step==clicks-1 else {
+                    2:6,3:7
+                }[expected]
+                until(lambda:picker.selected_index()==intermediate,
+                      f"sort callback did not record {label} step {step+1}",5)
             arrow="↓" if expected in (1,2,3,5) else "↑"
             until(lambda:arrow in header.window_text(),
-                  f"sort callback did not update header: {label}",5)
-            print("METADATA_SORT_MENU_ACTION",label,
+                  f"sort header did not show expected direction: {label}",5)
+            print("METADATA_SORT_HEADER_ACTION",label,
                   "picker",picker.selected_index(),
                   "header",repr(header.window_text()),
                   "status",repr(status.window_text()),flush=True)
 
-        choose_sort("크기 내림차순")
+        choose_header("LeftSizeSortButton",2,2,"크기 내림차순")
 
         if args.expect_legacy_fallback:
             until(lambda:"aa-type-last.zzz" in first_row() and
@@ -206,7 +185,7 @@ def main():
             print("METADATA_SORT_VISUAL",shot.name,flush=True)
 
         if not args.expect_legacy_fallback:
-            choose_sort("수정 날짜 내림차순")
+            choose_header("LeftDateSortButton",3,2,"수정 날짜 내림차순")
             print("METADATA_SORT_DATE_FIRST_ROW",repr(first_row()),flush=True)
             date_rows=[row.window_text() for row in list_view().descendants()
                        if row.element_info.control_type=="ListItem" and
@@ -215,7 +194,7 @@ def main():
             until(lambda:"yy-date-winner.txt" in first_row(),
                   "date descending did not use metadata",12)
             print("METADATA_SORT_OVER_1200_DATE_DESC",True,flush=True)
-            choose_sort("유형 오름차순")
+            choose_header("LeftTypeSortButton",4,1,"유형 오름차순")
             until(lambda:"zz-type-first.aaa" in first_row(),
                   "type ascending did not use lightweight type metadata",12)
             print("METADATA_SORT_OVER_1200_TYPE_ASC",True,flush=True)
