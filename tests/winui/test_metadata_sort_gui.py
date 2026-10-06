@@ -149,12 +149,29 @@ def main():
                 return False
             until(resolve_menu_item,f"sort menu item not visible: {label}",5)
             found.click_input()
-            until(lambda:label.split()[0] in status.window_text() or
-                  "메타데이터" in status.window_text() or
-                  "정렬" in status.window_text(),
-                  f"sort action produced no status: {label}",5)
+            expected={
+                "이름 오름차순":0,"이름 내림차순":1,
+                "크기 내림차순":2,"수정 날짜 내림차순":3,
+                "유형 오름차순":4,"유형 내림차순":5,
+                "크기 오름차순":6,"수정 날짜 오름차순":7,
+            }[label]
+            picker=parent.child_window(auto_id="SortPicker")
+            header_id={
+                0:"LeftNameSortButton",1:"LeftNameSortButton",
+                2:"LeftSizeSortButton",3:"LeftDateSortButton",
+                4:"LeftTypeSortButton",5:"LeftTypeSortButton",
+                6:"LeftSizeSortButton",7:"LeftDateSortButton",
+            }[expected]
+            header=parent.child_window(auto_id=header_id)
+            until(lambda:picker.selected_index()==expected,
+                  f"sort picker did not record menu action: {label}",5)
+            arrow="↓" if expected in (1,2,3,5) else "↑"
+            until(lambda:arrow in header.window_text(),
+                  f"sort callback did not update header: {label}",5)
             print("METADATA_SORT_MENU_ACTION",label,
-                  repr(status.window_text()),flush=True)
+                  "picker",picker.selected_index(),
+                  "header",repr(header.window_text()),
+                  "status",repr(status.window_text()),flush=True)
 
         choose_sort("크기 내림차순")
 
@@ -191,6 +208,10 @@ def main():
         if not args.expect_legacy_fallback:
             choose_sort("수정 날짜 내림차순")
             print("METADATA_SORT_DATE_FIRST_ROW",repr(first_row()),flush=True)
+            date_rows=[row.window_text() for row in list_view().descendants()
+                       if row.element_info.control_type=="ListItem" and
+                          "yy-date-winner.txt" in row.window_text()]
+            print("METADATA_SORT_DATE_WINNER_VISIBLE",date_rows[:1],flush=True)
             until(lambda:"yy-date-winner.txt" in first_row(),
                   "date descending did not use metadata",12)
             print("METADATA_SORT_OVER_1200_DATE_DESC",True,flush=True)
