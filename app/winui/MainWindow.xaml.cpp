@@ -16,6 +16,7 @@
 #include <thread>
 #include <numeric>
 #include <iterator>
+#include <limits>
 #include <system_error>
 #include <winrt/Windows.System.h>
 #include <winrt/Windows.UI.Text.h>
@@ -427,7 +428,102 @@ namespace winrt::FlyExplorer::implementation
             L"기본 파일 작업 엔진을 연결하지 못했습니다.");
         InitializeM19();
         InitializePrivateSession();
+        InitializeOwnedSearchVisualCaptureTest();
     }
+    void MainWindow::InitializeOwnedSearchVisualCaptureTest()
+    {
+        wchar_t value[32768]{};
+        const DWORD used=::GetEnvironmentVariableW(
+            L"FLY_CONTENT_REGEX_VISUAL_CAPTURE_PATH",
+            value,static_cast<DWORD>(std::size(value)));
+        if(!used||used>=std::size(value))return;
+        std::wstring path(value,used);
+        if(path.empty())return;
+
+        WorkspacePanel().Visibility(Visibility::Collapsed);
+        SearchPanel().Visibility(Visibility::Visible);
+        EnsureExpandedPanelFits();
+
+        auto timer=DispatcherQueue().CreateTimer();
+        mOwnedSearchVisualTimer=timer;
+        timer.Interval(std::chrono::milliseconds(500));
+        auto weak=get_weak();
+        timer.Tick([weak,path=std::move(path)](
+            auto const& sender,auto const&) mutable {
+            sender.Stop();
+            if(auto ui=weak.get()){
+                ui->mOwnedSearchVisualTimer=nullptr;
+                ui->CaptureOwnedSearchVisualAsync(std::move(path));
+            }
+        });
+        timer.Start();
+    }
+
+    winrt::fire_and_forget MainWindow::CaptureOwnedSearchVisualAsync(
+        std::wstring path)
+    {
+        auto lifetime=get_strong();
+        try{
+            Microsoft::UI::Xaml::Media::Imaging::RenderTargetBitmap rendered;
+            co_await rendered.RenderAsync(RootShell());
+            const int width=rendered.PixelWidth();
+            const int height=rendered.PixelHeight();
+            if(width<=0||height<=0)co_return;
+
+            auto pixels=co_await rendered.GetPixelsAsync();
+            winrt::com_ptr<::Windows::Storage::Streams::IBufferByteAccess>
+                access;
+            if(FAILED(reinterpret_cast<::IUnknown*>(
+                winrt::get_abi(pixels))->QueryInterface(
+                    __uuidof(::Windows::Storage::Streams::IBufferByteAccess),
+                    access.put_void())))
+                co_return;
+            BYTE* data=nullptr;
+            if(FAILED(access->Buffer(&data))||!data)co_return;
+
+            const std::uint64_t bytes=
+                static_cast<std::uint64_t>(width)*
+                static_cast<std::uint64_t>(height)*4ull;
+            if(bytes>static_cast<std::uint64_t>(
+                (std::numeric_limits<DWORD>::max)()))
+                co_return;
+
+            BITMAPFILEHEADER fileHeader{};
+            BITMAPINFOHEADER info{};
+            fileHeader.bfType=0x4d42;
+            fileHeader.bfOffBits=
+                sizeof(BITMAPFILEHEADER)+sizeof(BITMAPINFOHEADER);
+            fileHeader.bfSize=fileHeader.bfOffBits+
+                static_cast<DWORD>(bytes);
+            info.biSize=sizeof(BITMAPINFOHEADER);
+            info.biWidth=width;
+            info.biHeight=-height;
+            info.biPlanes=1;
+            info.biBitCount=32;
+            info.biCompression=BI_RGB;
+            info.biSizeImage=static_cast<DWORD>(bytes);
+
+            HANDLE file=::CreateFileW(
+                path.c_str(),GENERIC_WRITE,0,nullptr,CREATE_ALWAYS,
+                FILE_ATTRIBUTE_NORMAL,nullptr);
+            if(file==INVALID_HANDLE_VALUE)co_return;
+            auto write=[file](void const* source,DWORD size){
+                DWORD used=0;
+                return ::WriteFile(file,source,size,&used,nullptr)!=FALSE&&
+                       used==size;
+            };
+            const bool good=
+                write(&fileHeader,sizeof(fileHeader))&&
+                write(&info,sizeof(info))&&
+                write(data,static_cast<DWORD>(bytes))&&
+                ::FlushFileBuffers(file)!=FALSE;
+            ::CloseHandle(file);
+            if(!good)::DeleteFileW(path.c_str());
+        }catch(...){
+            ::DeleteFileW(path.c_str());
+        }
+    }
+
     void MainWindow::InitializeOwnedMetadataSortTest()
     {
         wchar_t flag[8]{};
