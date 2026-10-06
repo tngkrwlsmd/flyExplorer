@@ -12,13 +12,24 @@
 #pragma comment(lib,"shell32.lib")
 namespace fxfile::shelltransfer {
 using Microsoft::WRL::ComPtr;
+bool supportsDriveType(Kind kind,UINT driveType) noexcept {
+ switch(kind){
+ case Kind::Copy:
+ case Kind::Move:
+  return driveType==DRIVE_FIXED||driveType==DRIVE_REMOVABLE;
+ case Kind::Recycle:
+  return driveType==DRIVE_FIXED;
+ default:
+  return false;
+ }
+}
 namespace {
 namespace fs=std::filesystem;
-bool safeLocalFolder(fs::path const& folder) {
+bool safeLocalFolder(fs::path const& folder,Kind kind) {
  if(!folder.is_absolute()||!folder.has_root_directory())return false;
  auto root=folder.root_path().native();
  if(root.size()!=3||root[1]!=L':'||root[2]!=L'\\'||
-    ::GetDriveTypeW(root.c_str())!=DRIVE_FIXED)return false;
+    !supportsDriveType(kind,::GetDriveTypeW(root.c_str())))return false;
  // Reject junctions/symlinks in EVERY existing path component, not only
  // the leaf; this also avoids accepting direct virtual Shell parsing names.
  fs::path part=folder.root_path();
@@ -109,11 +120,15 @@ Report validate(Request const& request) noexcept {
    report.error=ERROR_CANCELLED;return report;
   }
   const auto parent=fs::path(request.sourceParent).lexically_normal();
-  if(!safeLocalFolder(parent)){report.error=ERROR_INVALID_NAME;return report;}
+  if(!safeLocalFolder(parent,request.kind)){
+   report.error=ERROR_INVALID_NAME;return report;
+  }
   fs::path dest{};
   if(request.kind!=Kind::Recycle) {
    dest=fs::path(request.destination).lexically_normal();
-   if(!safeLocalFolder(dest)){report.error=ERROR_INVALID_NAME;return report;}
+   if(!safeLocalFolder(dest,request.kind)){
+    report.error=ERROR_INVALID_NAME;return report;
+   }
   }
   std::vector<std::wstring> seen;
   std::size_t sourcePathUnits=0;
