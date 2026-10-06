@@ -46,10 +46,11 @@ class FileOperationContracts(unittest.TestCase):
             "E_ABORT",
         ):
             self.assertIn(token, header + body)
-        for forbidden in ("CWnd", "XamlRoot", "Windows::ApplicationModel"):
+        for forbidden in ("CWnd", "XamlRoot", "Windows::ApplicationModel",
+                          "DeleteFileW", "RemoveDirectoryW", "SHFileOperation"):
             self.assertNotIn(forbidden, header + body)
 
-    def test_copy_move_accept_removable_but_recycle_and_remote_stay_closed(self):
+    def test_local_removable_transfers_include_recycle_but_remote_stays_closed(self):
         header = read("src/base/shell_transfer_core.h")
         body = read("src/base/shell_transfer_core.cpp")
         fixture = read("tests/winui/m22/m22_transfer_fixture.cpp")
@@ -57,7 +58,6 @@ class FileOperationContracts(unittest.TestCase):
             "supportsDriveType(Kind kind,UINT driveType)",
             "driveType==DRIVE_FIXED||driveType==DRIVE_REMOVABLE",
             "case Kind::Recycle:",
-            "return driveType==DRIVE_FIXED;",
             "!supportsDriveType(kind,::GetDriveTypeW(root.c_str()))",
             "safeLocalFolder(parent,request.kind)",
             "safeLocalFolder(dest,request.kind)",
@@ -66,7 +66,8 @@ class FileOperationContracts(unittest.TestCase):
         for token in (
             "copy_accepts_removable_drive",
             "move_accepts_removable_drive",
-            "recycle_rejects_removable_drive",
+            "recycle_accepts_removable_drive",
+            "recycle_rejects_remote_drive",
             "copy_rejects_remote_drive",
             "move_rejects_remote_drive",
         ):
