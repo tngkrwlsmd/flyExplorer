@@ -113,6 +113,21 @@ checkpoints.
 - Back/Forward/Up, filtering/sorting, local create/rename, guarded copy/move/
   recycle flows, Windows clipboard/context integration, isolated Shell visuals
   and directory/Shell namespace watching.
+- File transfer selection is no longer capped by the historical 32-item
+  magic number. Copy/move/recycle, Windows CF_HDROP clipboard, same-app drag and
+  external StorageItems drop now share the native
+  `fxfile::shelltransfer::kMaxItems=1024` item budget plus
+  `kMaxSourcePathUnits=1048576` aggregate UTF-16 source-path budget. The core
+  remains fail-closed above either bound. Remote Windows Task #459
+  (`37395664418`) passed FAST, Release M22 native contracts at 21/21 including
+  a real 64-item IFileOperation copy, Release M23 native contracts at 30/30
+  including a 64-item CF_HDROP round-trip, and the canonical Release build.
+  Its only later failure was a GUI harness assumption that all 64 virtualized
+  ListView rows must simultaneously appear through UIA. After changing only
+  that harness assertion, Remote Windows Task #460 (`37396241096`) passed
+  FAST, runner health, the canonical Release build and the focused owned GUI:
+  Ctrl+A selected the 64-item WinUI model and the existing Copy command copied
+  all 64 owned files to the opposite pane, with normal process shutdown.
 - Private session schema v2 persists/restores the active Window Tab, per-tab
   split state/ratio and active pane, both panes' tabs, selected tabs,
   view/sort/name-column state and bounded filesystem Back/Forward history.
