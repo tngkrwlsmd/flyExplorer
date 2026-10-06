@@ -15,4 +15,12 @@ class RecycleSafety(unittest.TestCase):
   for bad in ("SHEmptyRecycleBin","os.remove(bin", "EmptyRecycleBin",
               "DeleteFileW", "recycleConfirmed=true"):
    self.assertNotIn(bad,S)
+class RemovableRecyclePolicy(unittest.TestCase):
+ def test_ui_promises_no_permanent_fallback(self):
+  transfer=(Path(__file__).resolve().parents[2]/"app/winui/m22_transfers.cpp").read_text(encoding="utf-8-sig")
+  for token in ("휴지통을 사용할 수 없으면 영구 삭제로 전환하지 않고 작업을 중단합니다.",
+                "removableLocalRoot(completion.request.sourceParent)",
+                "영구 삭제로 전환하지 않았습니다."):
+   self.assertIn(token,transfer)
+
 if __name__=="__main__":unittest.main()
