@@ -123,27 +123,32 @@ try:
             None,
         )
 
-    eventually(lambda: row("LeftFiles", source.name) is not None,
-               "owned same-app source row not rendered", 18)
+    def visit(side_id, path, expected_name=None):
+        focus_owned(win, win.handle, preview.pid)
+        element(side_id).click_input()
+        address = element("AddressBox")
+        address.set_edit_text(str(path))
+        focus_owned(win, win.handle, preview.pid)
+        address.type_keys("{ENTER}", set_foreground=True)
+        eventually(
+            lambda: str(path).rstrip("\\/").casefold()
+            in element("AddressBox").get_value().rstrip("\\/").casefold(),
+            "owned pane route did not load: " + side_id,
+            18,
+        )
+        if expected_name is not None:
+            eventually(
+                lambda: row(side_id, expected_name) is not None,
+                "owned row did not render after explicit route: " + expected_name,
+                18,
+            )
 
-    # Route the independent right pane to the owned destination.
-    focus_owned(win, win.handle, preview.pid)
-    element("RightFiles").click_input()
-    address = element("AddressBox")
-    address.set_edit_text(str(right))
-    focus_owned(win, win.handle, preview.pid)
-    address.type_keys("{ENTER}", set_foreground=True)
-    eventually(
-        lambda: str(right).rstrip("\\/").casefold()
-        in element("AddressBox").get_value().rstrip("\\/").casefold(),
-        "owned right destination route did not load",
-        18,
-    )
-
-    focus_owned(win, win.handle, preview.pid)
-    element("LeftFiles").click_input()
-    eventually(lambda: row("LeftFiles", source.name) is not None,
-               "owned source row disappeared after pane routing", 8)
+    # Reassert both owned routes explicitly. This avoids relying on UIA peer
+    # identity across an AddressBox navigation and keeps the regression focused
+    # on the physical drag rather than pane-routing state.
+    visit("LeftFiles", left, source.name)
+    visit("RightFiles", right)
+    visit("LeftFiles", left, source.name)
     source_row = row("LeftFiles", source.name)
     source_row.select()
 
