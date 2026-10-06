@@ -129,6 +129,10 @@ checkpoints.
   without moving that folder, the owned process exited normally, and the
   protected legacy profile remained unchanged.
 - Details, List, Small Icons, Medium Icons and Large Icons views.
+- New top-level Window Tabs preserve the configured default view across the
+  full 0-4 FileViewMode range. In particular, a Large Icons preference now
+  remains Large Icons when Ctrl+T or the Window Tab add button creates a new
+  workspace tab; it is no longer clamped down to Medium Icons.
 - File-list Shell visuals use path-specific Windows Known Folder artwork for
   Desktop, Documents, Downloads, Pictures, Music and Videos. The bounded
   disposable Shell helper returns pixels only; failures retain the generic
@@ -244,6 +248,22 @@ the required environment but does not claim to have modified external cloud
 bootstrap configuration.
 
 ## Latest verified evidence
+
+Large Icons default-view preservation for new Window Tabs is accepted on
+candidate `e70f34b9c291eb2b4678af3ba2145bf25b36d76e` by self-hosted
+Remote Windows Task `37454320102`. The run passed request validation,
+change-scoped FAST, GUI runner health, an exact-main Release build and an exact
+candidate Release build. With the same isolated `view=large-icons`
+preference, the main baseline rendered the initial tab at 112x128 but the
+Ctrl+T-created tab at 92x92, reproducing the Medium clamp. The candidate
+rendered both the initial and newly created tab at 112x128 and emitted
+`WINDOW_TAB_LARGE_ICONS_DEFAULT_PRESERVED True`. Structured stages
+REQUEST_VALIDATION, STATIC_PREFLIGHT, RUNNER_HEALTH and COMMAND are all PASS.
+Evidence artifact `11408587444`, digest
+`sha256:6175b87438a52fa4fcb78dcdd70a50213b468c9caef8ccd18ddfb03942c497ba`,
+contains matched BEFORE/AFTER captures. Direct visual review confirms the
+baseline new tab uses visibly smaller Medium icons while the candidate keeps
+the intended Large icon geometry without layout overlap.
 
 Removable-volume Copy/Move policy is accepted on candidate
 `c229e1c0de072f2724c42094430524cd2b78c4f2` by self-hosted Remote

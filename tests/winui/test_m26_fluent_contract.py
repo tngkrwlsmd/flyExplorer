@@ -298,6 +298,24 @@ class FluentShellContract(unittest.TestCase):
         self.assertIn('x:Name="LeftTabs"',main)
         self.assertIn('x:Name="RightTabs"',main)
 
+    def test_new_window_tab_preserves_large_icons_default(self):
+        impl=text("MainWindow.xaml.cpp")
+        start=impl.index("bool MainWindow::CreateWindowTab(std::wstring const& startPath)")
+        end=impl.index("bool MainWindow::ActivateWindowTab",start)
+        create=impl[start:end]
+        self.assertIn(
+            "(std::clamp)(mPreferencesCoordinator.current().defaultViewMode,0,4)",
+            create,
+        )
+        self.assertNotIn(
+            "(std::clamp)(mPreferencesCoordinator.current().defaultViewMode,0,3)",
+            create,
+        )
+        self.assertIn(
+            "for(auto& list:ActiveWindowTab().fileLists)list.viewMode=defaultView",
+            create,
+        )
+
     def test_explorer_like_v6_isolated_shell_visual_contract(self):
         impl=text("MainWindow.xaml.cpp")
         detail=text("file_detail_controller.cpp")
