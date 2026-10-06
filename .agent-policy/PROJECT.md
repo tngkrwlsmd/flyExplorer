@@ -26,7 +26,7 @@ consumer core; this PROJECT.md remains project-owned across bundle refreshes.
     {"name": "winui-tests", "path": "tests/winui", "responsibility": "source, native and owned GUI contracts"}
   ],
   "review": {
-    "reviewed_revision": "d6e00b90fddcba1da3851a75cf422182ea736288",
+    "reviewed_revision": "36b46b96973ef4777f96dffc64413e3c9d548ca5",
     "reviewed_at": "2026-10-06",
     "reviewed_paths": [
       "app/winui",
@@ -135,11 +135,17 @@ deep content scanning are not implemented.
 
 Physical same-app file drag is accepted through the existing private drag/drop
 path and hands transfer work to FileOperationController after source/destination
-revalidation. File transfer entry points now share one bounded native budget:
-at most 1,024 source items and 1,048,576 aggregate UTF-16 source-path units.
-This replaces the historical 32-item copy/move/recycle/clipboard/drag cap while
-remaining fail-closed above the shared bounds; owned evidence includes a real
-64-item IFileOperation copy, 64-item CF_HDROP round-trip and 64-item WinUI
+revalidation. The explicit row StartDragAsync path also exposes public Windows
+StorageItems asynchronously under the DragStarting deferral, with Copy-only
+requested/allowed operation; the private same-app token remains present and is
+still checked first on flyExplorer drops. Owned physical acceptance copied a
+Korean test file from flyExplorer into a fresh test-owned Windows Explorer
+window, and a focused successor re-proved same-app private-token cross-pane drag
+without product changes. File transfer entry points share one bounded native
+budget: at most 1,024 source items and 1,048,576 aggregate UTF-16 source-path
+units. This replaces the historical 32-item copy/move/recycle/clipboard/drag cap
+while remaining fail-closed above the shared bounds; owned evidence includes a
+real 64-item IFileOperation copy, 64-item CF_HDROP round-trip and 64-item WinUI
 cross-pane copy. Explorer-compatible `Ctrl+Shift+N` is also accepted for
 create-folder and routes through the existing
 `fxfile::filecommand::Kind::CreateFolder` command path for the active pane/tab;
