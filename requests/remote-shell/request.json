@@ -1,17 +1,11 @@
 {
-  "request_id": "removable-recycle-vm-acceptance-rerun-20261006",
+  "request_id": "control-idle-after-force-cancel-20261006",
   "expected_main_sha": "5c4b2135a96563417246b32e6be801c4ad593930",
-  "candidate_sha": "a7b675f790356cc152c577a3d670e9829afdaae4",
-  "logical_unit": "removable-recycle",
-  "request_mode": "validation",
-  "configuration": "Release",
-  "validation_plan": [
-    "fast",
-    "m22-native-release",
-    "build-release",
-    "gui-file-operations",
-    "fixed-recycle-safe-probe"
-  ],
+  "candidate_sha": "5c4b2135a96563417246b32e6be801c4ad593930",
+  "logical_unit": "control-idle",
+  "request_mode": "diagnostic",
+  "configuration": "none",
+  "validation_plan": [],
   "working_directory": "",
-  "command": "$ErrorActionPreference=\"Stop\"\n$repo=$env:FLYEXPLORER_CANONICAL_CHECKOUT\n$main=\"5c4b2135a96563417246b32e6be801c4ad593930\"\n$candidate=\"a7b675f790356cc152c577a3d670e9829afdaae4\"\n$branch=\"work/removable-recycle-20261006\"\n$temp=Join-Path $env:RUNNER_TEMP (\"fly-removable-recycle-\"+$env:GITHUB_RUN_ID)\nSet-Location -LiteralPath $repo\n& git fetch origin main $branch --no-tags --prune\nif($LASTEXITCODE -ne 0){throw \"removable recycle fetch failed\"}\nif((& git rev-parse refs/remotes/origin/main).Trim() -ne $main){throw \"main moved before removable recycle acceptance\"}\nif((& git rev-parse (\"refs/remotes/origin/\"+$branch)).Trim() -ne $candidate){throw \"removable recycle candidate moved\"}\nif(Test-Path -LiteralPath $temp){& git worktree remove --force $temp 2>$null;Remove-Item -LiteralPath $temp -Recurse -Force -ErrorAction SilentlyContinue}\n& git worktree add --detach $temp $candidate\nif($LASTEXITCODE -ne 0){throw \"removable recycle worktree creation failed\"}\ntry{\n  Set-Location -LiteralPath $temp\n  & git diff --check ($main+\"...\"+$candidate)\n  if($LASTEXITCODE -ne 0){throw \"removable recycle diff check failed\"}\n\n  & python -X utf8 tools\\winui\\run_checks.py fast --before $main --head $candidate\n  if($LASTEXITCODE -ne 0){throw \"removable recycle FAST failed\"}\n\n  & cmd /c tests\\winui\\m22\\build.cmd Release\n  if($LASTEXITCODE -ne 0){throw \"M22 Release fixture build failed\"}\n  $env:FLY_M22_CONFIG=\"Release\"\n  & python -X utf8 tests\\winui\\m22\\test_native.py\n  if($LASTEXITCODE -ne 0){throw \"M22 Release native acceptance failed\"}\n  Remove-Item Env:\\FLY_M22_CONFIG -ErrorAction SilentlyContinue\n\n  & .\\build.bat Release\n  if($LASTEXITCODE -ne 0){throw \"canonical Release build failed\"}\n\n  & python -X utf8 tools\\winui\\run_checks.py gui --area file-operations --configuration Release\n  if($LASTEXITCODE -ne 0){throw \"file-operations GUI regression failed\"}\n\n  & python -X utf8 tests\\winui\\test_owned_recycle_gui.py --configuration Release --preflight\n  if($LASTEXITCODE -eq 0){\n    Write-Host \"REMOVABLE_RECYCLE_FIXED_BIN_PREFLIGHT=EMPTY\"\n    & python -X utf8 tests\\winui\\test_owned_recycle_gui.py --configuration Release --apply-owned\n    if($LASTEXITCODE -ne 0){throw \"owned fixed-drive recycle+restore failed\"}\n    Write-Host \"REMOVABLE_RECYCLE_FIXED_ACTUAL=PASS\"\n  }else{\n    Write-Host \"REMOVABLE_RECYCLE_FIXED_ACTUAL=NOT_RUN_BIN_NOT_EMPTY_OR_UNAVAILABLE\"\n  }\n\n  Write-Host \"REMOVABLE_RECYCLE_FAST=PASS\"\n  Write-Host \"REMOVABLE_RECYCLE_M22_NATIVE=PASS\"\n  Write-Host \"REMOVABLE_RECYCLE_RELEASE=PASS\"\n  Write-Host \"REMOVABLE_RECYCLE_GUI=PASS\"\n  Write-Host \"REMOVABLE_RECYCLE_PHYSICAL_USB=NOT_RUN_NO_DEVICE\"\n} finally {\n  Set-Location -LiteralPath $repo\n  Remove-Item Env:\\FLY_M22_CONFIG -ErrorAction SilentlyContinue\n  if(Test-Path -LiteralPath $temp){& git worktree remove --force $temp}\n  & git worktree prune\n}"
+  "command": "Write-Host \"CONTROL_IDLE=PASS\""
 }
