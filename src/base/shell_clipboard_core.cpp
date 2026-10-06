@@ -24,8 +24,11 @@ bool valid(Payload const& payload) noexcept{
  try{
   if(payload.paths.empty()||payload.paths.size()>MaxItems)return false;
   std::vector<std::wstring> seen;
+  size_t pathUnits=0;
   for(auto const& s:payload.paths){
-   if(!full(s))return false;
+   if(!full(s)||s.size()+1>shelltransfer::kMaxSourcePathUnits-pathUnits)
+    return false;
+   pathUnits+=s.size()+1;
    if(std::any_of(seen.begin(),seen.end(),[&](auto const& existing){
       return ::CompareStringOrdinal(existing.c_str(),-1,s.c_str(),-1,TRUE)==CSTR_EQUAL;
    }))return false;
