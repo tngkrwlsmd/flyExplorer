@@ -73,6 +73,25 @@ class FileMetadataControllerContract(unittest.TestCase):
         self.assertIn("정렬을 위해 전체 폴더 항목을 불러오는 중입니다.",transfers)
         self.assertIn("beyondComplete&&selection>1",transfers)
 
+    def test_sortable_metadata_accepts_fixed_and_removable_only(self):
+        main=read("app/winui/MainWindow.xaml.cpp")
+        helper_start=main.index("bool SupportsSortableMetadataDrive")
+        helper_end=main.index("std::filesystem::path StartFolder",helper_start)
+        helper=main[helper_start:helper_end]
+        metadata_start=main.index("void MainWindow::ScheduleFileMetadata")
+        detail_start=main.index("void MainWindow::ScheduleFileDetails",metadata_start)
+        metadata=main[metadata_start:detail_start]
+        detail_end=main.index("void MainWindow::",detail_start+10)
+        details=main[detail_start:detail_end]
+        self.assertIn("driveType==DRIVE_FIXED||driveType==DRIVE_REMOVABLE",helper)
+        self.assertNotIn("DRIVE_REMOTE",helper)
+        self.assertIn(
+            "SupportsSortableMetadataDrive(::GetDriveTypeW(root.c_str()))",
+            metadata,
+        )
+        # Visual type/icon/thumbnail work remains a separate fixed-drive gate.
+        self.assertIn("::GetDriveTypeW(root.c_str())!=DRIVE_FIXED",details)
+
     def test_owned_vm_sort_hook_is_double_gated_and_bounded(self):
         main=read("app/winui/MainWindow.xaml.cpp")
         header=read("app/winui/MainWindow.xaml.h")
