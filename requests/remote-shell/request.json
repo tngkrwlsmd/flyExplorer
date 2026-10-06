@@ -1,5 +1,5 @@
 {
-  "request_id": "removable-recycle-vm-acceptance-20261006",
+  "request_id": "removable-recycle-vm-acceptance-rerun-20261006",
   "expected_main_sha": "5c4b2135a96563417246b32e6be801c4ad593930",
   "candidate_sha": "a7b675f790356cc152c577a3d670e9829afdaae4",
   "logical_unit": "removable-recycle",
