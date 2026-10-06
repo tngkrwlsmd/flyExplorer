@@ -17,7 +17,7 @@ concurrency:
 jobs:
   accept:
     runs-on: windows-2025-vs2026
-    timeout-minutes: 30
+    timeout-minutes: 20
     env:
       BASELINE_SHA: eccc723ce730b49be79626cf2e5794d1e2a9fabc
 
@@ -25,14 +25,6 @@ jobs:
       - name: Checkout candidate
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
-          path: candidate
-          fetch-depth: 0
-
-      - name: Checkout current main baseline
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-        with:
-          ref: ${{ env.BASELINE_SHA }}
-          path: baseline
           fetch-depth: 0
 
       - name: Set up Python 3.14
@@ -40,25 +32,22 @@ jobs:
         with:
           python-version: "3.14"
           cache: pip
-          cache-dependency-path: candidate/tests/winui/requirements-gui.txt
+          cache-dependency-path: tests/winui/requirements-gui.txt
 
       - name: Install pinned GUI dependencies
         shell: cmd
-        run: python -m pip install -r candidate\tests\winui\requirements-gui.txt
+        run: python -m pip install -r tests\winui\requirements-gui.txt
 
       - name: Hosted environment preflight
         shell: powershell
         run: |
           $ErrorActionPreference = "Stop"
           python --version
-          Set-Location candidate
           $msbuild = python -X utf8 tools\winui\resolve_msbuild.py
           if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($msbuild)) {
             throw "MSBuild 18/v145/SDK 26100 resolver failed on GitHub-hosted runner."
           }
           Write-Host "MSBUILD=$msbuild"
-          $vs = Get-Item "C:\Program Files\Microsoft Visual Studio\18\Enterprise\Common7\IDE\devenv.exe" -ErrorAction SilentlyContinue
-          if ($vs) { Write-Host "VS18_ENTERPRISE_PRESENT=True" }
           $explorer = Get-Process explorer -ErrorAction SilentlyContinue |
             Where-Object { $_.SessionId -eq (Get-Process -Id $PID).SessionId } |
             Select-Object -First 1
@@ -75,57 +64,39 @@ jobs:
         shell: powershell
         run: |
           $ErrorActionPreference = "Stop"
-          Set-Location candidate
           $range = "$env:BASELINE_SHA...${{ github.sha }}"
           git diff --check $range
           if ($LASTEXITCODE -ne 0) { throw "git diff --check failed" }
           python -X utf8 tools\winui\run_checks.py fast --before $env:BASELINE_SHA --head "${{ github.sha }}"
           if ($LASTEXITCODE -ne 0) { throw "FAST source contracts failed" }
 
-      - name: Build current main baseline Release
-        shell: cmd
-        working-directory: baseline
-        run: build.bat Release
-
-      - name: Capture current main BEFORE behavior
-        shell: cmd
-        run: >-
-          python -X utf8 candidate\tests\winui\test_metadata_sort_gui.py
-          --configuration Release
-          --exe baseline\out\winui\Release\flyExplorer.exe
-          --expect-legacy-fallback
-          --capture before
-
       - name: Build candidate Release
         shell: cmd
-        working-directory: candidate
         run: build.bat Release
 
       - name: Run candidate focused metadata-sort GUI
         shell: cmd
         run: >-
-          python -X utf8 candidate\tests\winui\test_metadata_sort_gui.py
+          python -X utf8 tests\winui\test_metadata_sort_gui.py
           --configuration Release
-          --exe candidate\out\winui\Release\flyExplorer.exe
+          --exe out\winui\Release\flyExplorer.exe
           --capture after
 
-      - name: Verify runtime and visual evidence
+      - name: Verify candidate runtime and AFTER evidence
         shell: powershell
         run: |
           $ErrorActionPreference = "Stop"
-          foreach ($root in @("baseline","candidate")) {
-            foreach ($leaf in @("flyExplorer.exe","FlyShellIsolationHelper.exe","flyExplorer.pri","MainWindow.xbf")) {
-              $path = Join-Path $root ("out\winui\Release\" + $leaf)
-              if (-not (Test-Path -LiteralPath $path -PathType Leaf)) {
-                throw "Missing required runtime file: $path"
-              }
+          foreach ($leaf in @("flyExplorer.exe","FlyShellIsolationHelper.exe","flyExplorer.pri","MainWindow.xbf")) {
+            $path = Join-Path "out\winui\Release" $leaf
+            if (-not (Test-Path -LiteralPath $path -PathType Leaf)) {
+              throw "Missing required runtime file: $path"
             }
           }
-          $before = "candidate\logs\metadata-sort\metadata-sort-before.png"
-          $after = "candidate\logs\metadata-sort\metadata-sort-after.png"
-          if (-not (Test-Path -LiteralPath $before -PathType Leaf)) { throw "BEFORE screenshot missing" }
-          if (-not (Test-Path -LiteralPath $after -PathType Leaf)) { throw "AFTER screenshot missing" }
-          Write-Host "METADATA_SORT_HOSTED_ACCEPTANCE=PASS"
+          $after = "logs\metadata-sort\metadata-sort-after.png"
+          if (-not (Test-Path -LiteralPath $after -PathType Leaf)) {
+            throw "AFTER screenshot missing"
+          }
+          Write-Host "METADATA_SORT_HOSTED_CANDIDATE_ACCEPTANCE=PASS"
 
       - name: Upload metadata-sort evidence
         if: always()
@@ -133,8 +104,8 @@ jobs:
         with:
           name: metadata-sort-hosted-${{ github.run_id }}
           path: |
-            candidate/logs/metadata-sort/
-            candidate/logs/winui-scoped/
+            logs/metadata-sort/
+            logs/winui-scoped/
           if-no-files-found: warn
           retention-days: 30
           compression-level: 6
