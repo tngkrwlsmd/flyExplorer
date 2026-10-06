@@ -274,6 +274,11 @@ namespace winrt::FlyExplorer::implementation
         bool mOwnedMetadataSortConsumed=false;
         void InitializeOwnedMetadataSortTest();
         void RunOwnedMetadataSortTestIfReady();
+        Microsoft::UI::Dispatching::DispatcherQueueTimer
+            mOwnedSearchVisualTimer{nullptr};
+        void InitializeOwnedSearchVisualCaptureTest();
+        winrt::fire_and_forget CaptureOwnedSearchVisualAsync(
+            std::wstring path);
         fxfile::previewrestore::WorkspaceRestoreCoordinator mWorkspaceRestore{};
         fxfile::bookmarks::Store mBookmarks{};
         bool mPopulatingBookmarks=false;
