@@ -63,6 +63,9 @@ def main():
     type_first.write_bytes(b"type-first")
     os.utime(type_first,(old_stamp+30,old_stamp+30))
     assert len(list(folder.iterdir()))==ITEMS
+    print("METADATA_SORT_FIXTURE_MTIME",
+          int((folder/"mid-0000.txt").stat().st_mtime),
+          int(date_winner.stat().st_mtime),flush=True)
 
     env=os.environ.copy()
     for key in ("APPDATA","LOCALAPPDATA","TEMP","TMP"):
@@ -124,9 +127,36 @@ def main():
 
         until(lambda:"aa-type-last.zzz" in first_row(),
               "deterministic initial name order not rendered",30)
-        sort=parent.child_window(auto_id="SortPicker")
         status=parent.child_window(auto_id="StatusText")
-        sort.select(2) # size descending
+        desktop=Desktop(backend="uia")
+        def choose_sort(label):
+            parent.set_focus()
+            button=parent.child_window(auto_id="SortButton")
+            assert button.exists(timeout=.5) and button.is_visible(),label
+            button.click_input()
+            found=None
+            def resolve_menu_item():
+                nonlocal found
+                for top in desktop.windows(process=process.pid):
+                    candidates=[top]
+                    candidates.extend(top.descendants())
+                    for candidate in candidates:
+                        if (candidate.element_info.control_type=="MenuItem" and
+                            candidate.window_text()==label and
+                            candidate.is_visible()):
+                            found=candidate
+                            return True
+                return False
+            until(resolve_menu_item,f"sort menu item not visible: {label}",5)
+            found.click_input()
+            until(lambda:label.split()[0] in status.window_text() or
+                  "메타데이터" in status.window_text() or
+                  "정렬" in status.window_text(),
+                  f"sort action produced no status: {label}",5)
+            print("METADATA_SORT_MENU_ACTION",label,
+                  repr(status.window_text()),flush=True)
+
+        choose_sort("크기 내림차순")
 
         if args.expect_legacy_fallback:
             until(lambda:"aa-type-last.zzz" in first_row() and
@@ -159,11 +189,12 @@ def main():
             print("METADATA_SORT_VISUAL",shot.name,flush=True)
 
         if not args.expect_legacy_fallback:
-            sort.select(3) # modified date descending
+            choose_sort("수정 날짜 내림차순")
+            print("METADATA_SORT_DATE_FIRST_ROW",repr(first_row()),flush=True)
             until(lambda:"yy-date-winner.txt" in first_row(),
                   "date descending did not use metadata",12)
             print("METADATA_SORT_OVER_1200_DATE_DESC",True,flush=True)
-            sort.select(4) # type ascending
+            choose_sort("유형 오름차순")
             until(lambda:"zz-type-first.aaa" in first_row(),
                   "type ascending did not use lightweight type metadata",12)
             print("METADATA_SORT_OVER_1200_TYPE_ASC",True,flush=True)
