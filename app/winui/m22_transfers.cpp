@@ -107,10 +107,25 @@ void MainWindow::UpdateSort(int selection){
    StatusText().Text(L"전체 이름 인덱스로 정렬했습니다.");
   return;
  }
- if(snapshot.baseOffset||
-    snapshot.residentEndOffset()<snapshot.nextOffset||
-    snapshot.truncated)
-  QueueNextFolderPage(side,true);
+ const bool incomplete=
+  snapshot.baseOffset||
+  snapshot.residentEndOffset()<snapshot.nextOffset||
+  snapshot.truncated;
+ if(selection>1){
+  if(incomplete){
+   if(QueueNextFolderPage(side,true))
+    StatusText().Text(L"정렬을 위해 전체 폴더 항목을 불러오는 중입니다.");
+   return;
+  }
+  ScheduleFileMetadata(side);
+  if(state.metadataCurrent(
+       pane.routeIds[pane.active],pane.active,snapshot.children.size()))
+   StatusText().Text(L"파일 메타데이터 정렬을 적용했습니다.");
+  else
+   StatusText().Text(L"정렬을 위해 파일 메타데이터를 준비하는 중입니다.");
+  return;
+ }
+ if(incomplete)QueueNextFolderPage(side,true);
 }
 void MainWindow::RunTransfer(fxfile::shelltransfer::Kind kind){
  if(mFileOperations.busy()){

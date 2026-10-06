@@ -24,6 +24,7 @@ PRODUCT_SUITES = {
     "core": [
         "tests/winui/test_arch_contract.py",
         "tests/winui/test_m26_fluent_contract.py",
+        "tests/winui/test_file_metadata_controller_contract.py",
         "tests/winui/test_localization_contract.py",
     ],
     "shell": [

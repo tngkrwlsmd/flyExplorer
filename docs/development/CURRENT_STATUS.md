@@ -42,6 +42,16 @@ checkpoints.
   cancellation, detached detail workers and bounded Shell visual/thumbnail
   orchestration. MainWindow retains request preparation, live PaneState
   acceptance, DispatcherQueue handoff and XAML projection.
+- Sortable file metadata is now a separate lifecycle from Shell visual/detail
+  enrichment. FileMetadataController collects bounded filesystem type keys,
+  byte sizes and last-write timestamps for a complete local fixed-drive model
+  up to the existing 20,000-entry ceiling, while FileDetailController remains
+  responsible for Windows type/icon/known-folder/thumbnail presentation and
+  keeps its 1,200-item visual-work ceiling. Type/size/modified-date sort no
+  longer silently falls back to name order while metadata is pending or when
+  the folder contains 1,201-20,000 items. Modified-date validity is derived
+  from the FILETIME value itself; display-label formatting is independent of
+  sortable timestamp validity.
 - The second MainWindow responsibility audit compared preferences persistence,
   private drag/drop state and workspace restore sequencing. Preferences was the
   strongest independent persistence/lifetime boundary: PreferencesCoordinator
@@ -180,10 +190,13 @@ CoreMessagingXP.dll / 0xC000027B and WER 0x800710DD
 boundary. V8-B moves session epoch/revision invalidation into
 SessionCoordinator::prepareForClose(); detached session workers retain only
 shared native generation state and post through a close-safe callback supplied
-by MainWindow. FileDetailController now owns pane-local detail cancellation and
-the detached metadata/icon/thumbnail worker lifecycle. MainWindow still performs
-the live route/tab/ticket acceptance before projecting a completion, and
-PrepareForClose cancels detail work before ShellNavigationController shutdown.
+by MainWindow. FileMetadataController now owns pane-local sortable-metadata cancellation and
+its detached filesystem-metadata worker lifecycle. FileDetailController
+separately owns pane-local visual-detail cancellation and the detached
+type/icon/thumbnail worker lifecycle. MainWindow still performs the live
+route/tab/ticket acceptance before projecting either completion, and
+PrepareForClose cancels both metadata and detail work before
+ShellNavigationController shutdown.
 Accepted GUI evidence requires real process exit code 0.
 
 ## Build and test environment
@@ -224,6 +237,31 @@ the required environment but does not claim to have modified external cloud
 bootstrap configuration.
 
 ## Latest verified evidence
+
+Metadata-sort correctness and metadata/detail separation are accepted on
+candidate `1857330605c8ab27b2c0ea6ce91b279e71f13607` by self-hosted
+Remote Windows Task `37447176742`. The run passed request validation, FAST
+static preflight, GUI runner health and the canonical Release build, then ran
+the same Release executable in three input-free owned processes over a
+1,305-file fixture. It passed
+`METADATA_SORT_OVER_1200_SIZE_DESC True`,
+`METADATA_SORT_OVER_1200_DATE_DESC True` and
+`METADATA_SORT_OVER_1200_TYPE_ASC True`; every owned process exited 0 and
+the protected legacy settings remained byte-identical. The structured result
+records REQUEST_VALIDATION, STATIC_PREFLIGHT, RUNNER_HEALTH and COMMAND all
+PASS with no failure category. Evidence artifact `11404416210`, digest
+`sha256:5a89904eee3f53d5fac678593974f4dcad1329a0e3445fe4c6f78698f291a8b3`,
+preserves the remote result/logs and AFTER capture.
+
+The VM AFTER screenshot is not used as final visual-review evidence because the
+runner console overlapped the application during screen capture. The clean
+matched metadata-sort visual evidence remains the earlier hosted artifact
+`11397685869`: BEFORE shows the legacy >1,200 size-sort request leaving
+`aa-type-last.zzz` first by name, while AFTER shows
+`zz-size-winner.bin` first at 8 KB. That earlier run is visual evidence for
+the ordering change only; its later date-sort assertion failed and is
+superseded for functional correctness by Remote Windows Task
+`37447176742`.
 
 Explorer-aligned F5/F6 semantics are accepted on candidate
 `4e59a22c742c7fa8d5d0e21e221f01ff8151e2be` by Remote Windows Task #473
@@ -612,6 +650,13 @@ Current source and the last parity evidence still show these limits:
   global name sort and progressive 160-row rendering. Unbounded virtualization
   beyond the 20,000-item model ceiling, network/virtual providers and sustained
   thumbnail-cache behavior are not certified.
+- Type, size and modified-date global sort requires a complete sortable
+  metadata model and is supported through 20,000 local fixed-drive filesystem
+  entries. The previous 1,200 visual-detail ceiling no longer controls these
+  sorts and 1,201-20,000 items no longer silently use name order. Above 20,000
+  these metadata sorts remain explicitly refused. Shell visual/type/icon/
+  thumbnail enrichment remains separately bounded to 1,200 items, and
+  removable/network/provider metadata coverage is still a separate gap.
 - Search remains bounded. Regex, case sensitivity, entry-kind,
   single-extension, minimum/maximum file size, inclusive local modified-date
   and literal text content conditions are implemented with up to 20 private

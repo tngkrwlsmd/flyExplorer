@@ -129,7 +129,7 @@ bool FileDetailController::start(
             std::vector<FileDetail> details(request.paths.size());
             std::size_t thumbnailBudget=0;
             for(std::size_t i=0;i<request.paths.size();++i){
-                if(cancelToken->load())return; // prevent stale metadata child launch
+                if(cancelToken->load())return; // prevent stale visual child launch
                 auto const& path=request.paths[i];
                 if(path.empty()||path.size()>32000)continue;
                 WIN32_FILE_ATTRIBUTE_DATA data{};
@@ -200,29 +200,6 @@ bool FileDetailController::start(
                                 entry.thumbnailHeight=result.height;
                             }
                         }
-                    }
-                    entry.bytes=(static_cast<std::uint64_t>(
-                        data.nFileSizeHigh)<<32)|data.nFileSizeLow;
-                    entry.sizeKnown=true;
-                    entry.bytesLabel=entry.bytes<1024?
-                      std::to_wstring(entry.bytes)+L" B":
-                      entry.bytes<1048576?
-                      std::to_wstring(entry.bytes/1024)+L" KB":
-                      std::to_wstring(entry.bytes/1048576)+L" MB";
-                }
-                ULARGE_INTEGER timestamp{};
-                timestamp.HighPart=data.ftLastWriteTime.dwHighDateTime;
-                timestamp.LowPart=data.ftLastWriteTime.dwLowDateTime;
-                entry.modified=timestamp.QuadPart;
-                FILETIME local{};
-                SYSTEMTIME stamp{};
-                if(::FileTimeToLocalFileTime(&data.ftLastWriteTime,&local)&&
-                   ::FileTimeToSystemTime(&local,&stamp)){
-                    wchar_t date[32]{},time[24]{};
-                    if(::GetDateFormatEx(L"ko-KR",0,&stamp,L"yyyy-MM-dd",date,32,nullptr)&&
-                       ::GetTimeFormatEx(L"ko-KR",0,&stamp,L"HH:mm",time,24)){
-                        entry.dateLabel=std::wstring(date)+L" "+time;
-                        entry.dateKnown=true;
                     }
                 }
             }

@@ -128,6 +128,7 @@ namespace winrt::FlyExplorer::implementation
             }catch(...){ }
         }
         mColumnControlsReady=true;
+        InitializeOwnedMetadataSortTest();
         // Each reusable XAML control forwards intent; the window owns the
         // shared native state/settings. Never attach a permanent MFC host.
         const auto nativeWeak=get_weak();
@@ -422,6 +423,38 @@ namespace winrt::FlyExplorer::implementation
         InitializeM19();
         InitializePrivateSession();
     }
+    void MainWindow::InitializeOwnedMetadataSortTest()
+    {
+        wchar_t flag[8]{};
+        if(::GetEnvironmentVariableW(
+             L"FLY_METADATA_SORT_OWNED_TEST",flag,8)!=3 ||
+           wcscmp(flag,L"YES"))return;
+        int argc=0;
+        auto argv=::CommandLineToArgvW(::GetCommandLineW(),&argc);
+        if(!argv)return;
+        for(int i=2;i+1<argc;++i){
+            if(wcscmp(argv[i],L"--metadata-sort-owned-mode"))continue;
+            wchar_t* end=nullptr;
+            const long mode=wcstol(argv[i+1],&end,10);
+            if(end&&*end==L'\0'&&(mode==2||mode==3||mode==4))
+                mOwnedMetadataSortMode=static_cast<int>(mode);
+            break;
+        }
+        ::LocalFree(argv);
+    }
+    void MainWindow::RunOwnedMetadataSortTestIfReady()
+    {
+        if(mOwnedMetadataSortConsumed||mOwnedMetadataSortMode<0)return;
+        const int side=ActiveWindowTab().model.activePane;
+        auto const& pane=ActiveWindowTab().model.panes[side];
+        const auto tab=pane.active;
+        if(pane.pending[tab]||pane.filesystemPaths[tab].empty())return;
+        auto const& snapshot=pane.tabs[tab].snapshot();
+        if(snapshot.children.empty())return;
+        mOwnedMetadataSortConsumed=true;
+        UpdateSort(mOwnedMetadataSortMode);
+    }
+
     void MainWindow::PrepareForClose() noexcept
     {
         if(mClosing)return;
@@ -429,6 +462,7 @@ namespace winrt::FlyExplorer::implementation
         mWorkspaceRestore.reset();
         mSessionCoordinator.prepareForClose();
         mFileOperations.prepareForClose();
+        mFileMetadata.prepareForClose();
         mFileDetails.prepareForClose();
         for(std::size_t i=0;i<mWorkspace.count();++i)
             for(auto& files:mWorkspace.state(i).fileLists)files.invalidate();
@@ -717,6 +751,10 @@ namespace winrt::FlyExplorer::implementation
                     state.indexToComplete=false;
                 }
                 ClearFileDetails(completed.side);
+                if(!incomplete){
+                    ScheduleFileMetadata(completed.side);
+                    ScheduleFileDetails(completed.side);
+                }
                 FillFiles(completed.side);
                 UpdateSelectionChrome();
                 UpdateFooterSummary();
@@ -776,8 +814,69 @@ namespace winrt::FlyExplorer::implementation
         mPopulatingTabs=false;
     }
     void MainWindow::ClearFileDetails(int side){
+        mFileMetadata.cancel(side);
         mFileDetails.cancel(side);
         ActiveWindowTab().fileLists[side].invalidate();
+    }
+    void MainWindow::ScheduleFileMetadata(int side,bool force){
+        auto const& pane=ActiveWindowTab().model.panes[side];
+        if(pane.pending[pane.active])return;
+        const auto route=pane.routeIds[pane.active];
+        const auto tab=pane.active;
+        auto const& snapshot=pane.tabs[tab].snapshot();
+        auto const& items=snapshot.children;
+        auto& listState=ActiveWindowTab().fileLists[side];
+        if(!force&&listState.metadataRoute==route&&
+           listState.metadataTab==tab)return;
+        if(snapshot.baseOffset||snapshot.truncated||
+           snapshot.residentEndOffset()!=snapshot.nextOffset||
+           items.size()>fxfile::isolation::kMaxCompleteModelEntries)return;
+        auto const& folder=pane.filesystemPaths[tab];
+        if(folder.size()<3||folder[1]!=L':'||folder[2]!=L'\\')return;
+        const std::wstring root=folder.substr(0,3);
+        if(::GetDriveTypeW(root.c_str())!=DRIVE_FIXED)return;
+        std::vector<std::wstring> paths{};
+        paths.reserve(items.size());
+        for(auto const& item:items)
+            paths.push_back(item.isFileSystem()?item.parsingName:std::wstring{});
+        const auto ticket=listState.beginMetadata(route,tab);
+        fxfile::previewmetadata::FileMetadataController::Request request{};
+        request.side=side;request.tab=tab;request.route=route;request.ticket=ticket;
+        request.paths=std::move(paths);
+        auto dispatch=DispatcherQueue();
+        auto weak=get_weak();
+        const bool started=mFileMetadata.start(
+            std::move(request),
+            [dispatch](fxfile::previewmetadata::FileMetadataController::UiTask task){
+                try{return dispatch.TryEnqueue(
+                    [task=std::move(task)]() mutable {task();});}
+                catch(...){return false;}
+            },
+            [weak](fxfile::previewmetadata::FileMetadataController::Completion completed){
+                if(auto ui=weak.get()){
+                    const int side=completed.side;
+                    const auto tab=completed.tab;
+                    const auto route=completed.route;
+                    const auto ticket=completed.ticket;
+                    const auto count=completed.metadata.size();
+                    auto const& pane=ui->ActiveWindowTab().model.panes[side];
+                    auto const& snapshot=pane.tabs[tab].snapshot();
+                    if(!ui->ActiveWindowTab().fileLists[side].acceptsMetadata(
+                           ticket,route,tab)||
+                       pane.active!=tab||pane.pending[tab]||
+                       pane.routeIds[tab]!=route||
+                       snapshot.baseOffset||snapshot.truncated||
+                       snapshot.residentEndOffset()!=snapshot.nextOffset||
+                       snapshot.children.size()!=count)return;
+                    auto& state=ui->ActiveWindowTab().fileLists[side];
+                    state.metadata=std::move(completed.metadata);
+                    ui->FillFiles(side);
+                    if(state.sortMode>1)
+                        ui->StatusText().Text(
+                            L"파일 메타데이터 정렬을 적용했습니다.");
+                }
+            });
+        if(!started)listState.invalidateMetadata();
     }
     void MainWindow::ScheduleFileDetails(int side,bool force){
         auto const& pane=ActiveWindowTab().model.panes[side];
@@ -843,7 +942,7 @@ namespace winrt::FlyExplorer::implementation
                     ui->FillFiles(side);
                 }
             });
-        if(!started)listState.invalidate();
+        if(!started)listState.invalidateDetails();
     }
     void MainWindow::OnNameColumnWidthChanged(
         IInspectable const& sender,
@@ -1259,6 +1358,8 @@ namespace winrt::FlyExplorer::implementation
         state.renderedLogical.clear();
         state.renderedPaths.clear();
         state.renderedBaseOffset=snapshot.baseOffset;
+        const bool metadataReady=state.metadataCurrent(
+             pane.routeIds[pane.active],pane.active,items.size());
         const bool detailReady=state.isCurrent(
              pane.routeIds[pane.active],pane.active,items.size());
         const int mode=state.sortMode;
@@ -1294,30 +1395,31 @@ namespace winrt::FlyExplorer::implementation
             return ::CompareStringOrdinal(
                 a.c_str(),-1,b.c_str(),-1,TRUE)==CSTR_LESS_THAN;
         };
-        std::stable_sort(order.begin(),order.end(),[&](size_t lhs,size_t rhs){
-            if(folderAt(lhs)!=folderAt(rhs))return folderAt(lhs);
-            if(!indexedProjection&&detailReady&&(mode==4||mode==5)){
-                const auto& a=state.details[lhs].typeLabel;
-                const auto& b=state.details[rhs].typeLabel;
-                const auto cmp=::CompareStringOrdinal(
-                    a.c_str(),-1,b.c_str(),-1,TRUE);
-                if(cmp!=CSTR_EQUAL)
-                    return mode==5?cmp==CSTR_GREATER_THAN:cmp==CSTR_LESS_THAN;
-            }else if(!indexedProjection&&detailReady&&(mode==2||mode==6)){
-                const auto& x=state.details[lhs];
-                const auto& y=state.details[rhs];
-                if(x.sizeKnown!=y.sizeKnown)return x.sizeKnown;
-                if(x.sizeKnown&&x.bytes!=y.bytes)
-                    return mode==2?x.bytes>y.bytes:x.bytes<y.bytes;
-            }else if(!indexedProjection&&detailReady&&(mode==3||mode==7)){
-                const auto& x=state.details[lhs];
-                const auto& y=state.details[rhs];
-                if(x.dateKnown!=y.dateKnown)return x.dateKnown;
-                if(x.dateKnown&&x.modified!=y.modified)
-                    return mode==3?x.modified>y.modified:x.modified<y.modified;
-            }
-            return mode==1?lessName(rhs,lhs):lessName(lhs,rhs);
-        });
+        if(mode<=1||metadataReady)
+            std::stable_sort(order.begin(),order.end(),[&](size_t lhs,size_t rhs){
+                if(folderAt(lhs)!=folderAt(rhs))return folderAt(lhs);
+                if(metadataReady&&(mode==4||mode==5)){
+                    const auto& a=state.metadata[lhs].typeKey;
+                    const auto& b=state.metadata[rhs].typeKey;
+                    const auto cmp=::CompareStringOrdinal(
+                        a.c_str(),-1,b.c_str(),-1,TRUE);
+                    if(cmp!=CSTR_EQUAL)
+                        return mode==5?cmp==CSTR_GREATER_THAN:cmp==CSTR_LESS_THAN;
+                }else if(metadataReady&&(mode==2||mode==6)){
+                    const auto& x=state.metadata[lhs];
+                    const auto& y=state.metadata[rhs];
+                    if(x.sizeKnown!=y.sizeKnown)return x.sizeKnown;
+                    if(x.sizeKnown&&x.bytes!=y.bytes)
+                        return mode==2?x.bytes>y.bytes:x.bytes<y.bytes;
+                }else if(metadataReady&&(mode==3||mode==7)){
+                    const auto& x=state.metadata[lhs];
+                    const auto& y=state.metadata[rhs];
+                    if(x.dateKnown!=y.dateKnown)return x.dateKnown;
+                    if(x.dateKnown&&x.modified!=y.modified)
+                        return mode==3?x.modified>y.modified:x.modified<y.modified;
+                }
+                return mode==1?lessName(rhs,lhs):lessName(lhs,rhs);
+            });
         if(!state.filenameFilter.empty()){
             order.erase(std::remove_if(order.begin(),order.end(),
                 [&](size_t index){
@@ -1370,16 +1472,27 @@ namespace winrt::FlyExplorer::implementation
             const auto& itemLabel=labelAt(index);
             const auto& itemParsing=parsingAt(index);
             const bool itemFolder=folderAt(index);
-            auto const* meta=residentReady&&detailReady?
+            auto const* metadata=residentReady&&metadataReady?
+                &state.metadata[resident]:nullptr;
+            auto const* detail=residentReady&&detailReady?
                 &state.details[resident]:nullptr;
+            std::wstring typeLabel;
+            if(detail&&!detail->typeLabel.empty())typeLabel=detail->typeLabel;
+            else if(itemFolder)typeLabel=L"폴더";
+            else if(metadata){
+                typeLabel=metadata->typeKey;
+                if(!typeLabel.empty()&&typeLabel.front()==L'.')
+                    typeLabel.erase(typeLabel.begin());
+                typeLabel=typeLabel.empty()?L"파일":typeLabel+L" 파일";
+            }
             ListViewItem row;
             auto label=std::wstring(itemFolder?L"[폴더]  ":L"[파일]  ")+
                        itemLabel;
-            if(meta){
-                if(!meta->typeLabel.empty())label+=L"   |   "+meta->typeLabel;
-                if(meta->sizeKnown)label+=L"   |   "+meta->bytesLabel;
-                if(meta->dateKnown)label+=L"   |   "+meta->dateLabel;
-            }
+            if(!typeLabel.empty())label+=L"   |   "+typeLabel;
+            if(metadata&&metadata->sizeKnown)
+                label+=L"   |   "+metadata->bytesLabel;
+            if(metadata&&metadata->dateKnown)
+                label+=L"   |   "+metadata->dateLabel;
             if(state.viewMode==FileViewMode::Details){
             Grid columns;
             const auto widths=DetailColumnWidths(side);
@@ -1406,7 +1519,7 @@ namespace winrt::FlyExplorer::implementation
                    totalBytes.QuadPart>0)
                     localDrive=true;
             }
-            auto const* iconMeta=meta;
+            auto const* iconMeta=detail;
             bool actualVisual=false;
             if(iconMeta){
                 const auto& data=iconMeta->iconBgra;
@@ -1489,9 +1602,9 @@ namespace winrt::FlyExplorer::implementation
                 Grid::SetColumn(field,col);
                 columns.Children().Append(field);
             };
-            addText(meta?meta->typeLabel:L"",1);
-            addText(meta&&meta->sizeKnown?meta->bytesLabel:L"",2);
-            addText(meta&&meta->dateKnown?meta->dateLabel:L"",3);
+            addText(typeLabel,1);
+            addText(metadata&&metadata->sizeKnown?metadata->bytesLabel:L"",2);
+            addText(metadata&&metadata->dateKnown?metadata->dateLabel:L"",3);
             row.Content(columns);
             }else{
                 const bool medium=state.viewMode==FileViewMode::MediumIcons;
@@ -1501,7 +1614,7 @@ namespace winrt::FlyExplorer::implementation
                 StackPanel cell;cell.Orientation(iconGrid?Orientation::Vertical:Orientation::Horizontal);
                 cell.Spacing(large?7.0:(medium?5.0:7.0));cell.VerticalAlignment(VerticalAlignment::Center);
                 if(iconGrid)cell.HorizontalAlignment(HorizontalAlignment::Center);
-                auto const* iconMeta=detailReady?&ActiveWindowTab().fileLists[side].details[index]:nullptr;
+                auto const* iconMeta=detail;
                 bool actualVisual=false;bool realThumb=false;
                 if(iconMeta){
                     const auto& thumb=iconMeta->thumbnailBgra;
@@ -1737,8 +1850,11 @@ namespace winrt::FlyExplorer::implementation
         RefreshWindowTabs();
         UpdateWatch(0);
         UpdateWatch(1);
+        ScheduleFileMetadata(0);
+        ScheduleFileMetadata(1);
         ScheduleFileDetails(0);
         ScheduleFileDetails(1);
+        RunOwnedMetadataSortTestIfReady();
     }
     bool MainWindow::OpenFolder(std::wstring const& path)
     {
