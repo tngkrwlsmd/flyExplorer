@@ -6,7 +6,7 @@ import hashlib,os,shutil,subprocess,tempfile
 import sys
 HERE=Path(__file__).resolve().parent
 ROOT=HERE.parents[2]
-sys.path.insert(0,str(HERE.parent if 'HERE' in globals() else p.parent))
+sys.path.insert(0,str(HERE.parent))
 from profile_guard import assert_legacy_profile_unchanged,present_count,snapshot_legacy_profile
 CONFIG=os.environ.get("FLY_M19_CONFIG","Debug")
 assert CONFIG in ("Debug","Release")
