@@ -35,6 +35,7 @@ public:
         InvalidDateRange,
         InvalidContentTerm,
         InvalidContentEncoding,
+        InvalidContentPattern,
         InvalidPattern,
         Closing,
         ThreadStartFailed
