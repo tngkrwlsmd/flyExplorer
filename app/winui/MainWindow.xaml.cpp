@@ -1793,7 +1793,7 @@ namespace winrt::FlyExplorer::implementation
         SuspendActiveWindowTab();
         if(!mWorkspace.create())return false;
         const auto defaultView=static_cast<FileViewMode>(
-            (std::clamp)(mPreferencesCoordinator.current().defaultViewMode,0,3));
+            (std::clamp)(mPreferencesCoordinator.current().defaultViewMode,0,4));
         for(auto& list:ActiveWindowTab().fileLists)list.viewMode=defaultView;
         ApplyActiveWindowTab(L"새 창 탭을 준비하는 중입니다.");
         const auto seed=startPath.empty()?HomePath().native():startPath;
