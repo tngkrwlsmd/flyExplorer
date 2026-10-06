@@ -10,7 +10,7 @@
 namespace fxfile { namespace preview {
 namespace {
 
-constexpr size_t kMaxWalk=2500,kMaxDepth=5,kMaxResults=100,kRecentMax=8;
+constexpr size_t kMaxWalk=20000,kMaxDepth=32,kMaxResults=1000,kRecentMax=8;
 constexpr size_t kMaxExtension=32;
 constexpr std::uint64_t kMaxContentFileBytes=1024ull*1024ull;
 constexpr std::uint64_t kMaxContentSearchBytes=16ull*1024ull*1024ull;
@@ -441,6 +441,7 @@ SearchResults scanFiles(
                 continue;
 
             ++walked;
+            out.visited=walked;
             const auto candidate=top.first+
                 ((top.first.back()==L'\\'||top.first.back()==L'/')?
                   L"":L"\\")+fd.cFileName;
@@ -494,14 +495,24 @@ SearchResults scanFiles(
                 ++out.count;
                 if(out.matches.size()<kMaxResults)
                     out.matches.push_back(candidate);
-                else out.truncated=true;
+                else{
+                    out.resultLimited=true;
+                    out.truncated=true;
+                }
             }
 
-            if(folderEntry&&top.second<kMaxDepth &&
-               (fd.dwFileAttributes&FILE_ATTRIBUTE_REPARSE_POINT)==0)
-                pending.emplace_back(candidate,top.second+1);
+            if(folderEntry&&
+               (fd.dwFileAttributes&FILE_ATTRIBUTE_REPARSE_POINT)==0){
+                if(top.second<kMaxDepth)
+                    pending.emplace_back(candidate,top.second+1);
+                else{
+                    out.traversalLimited=true;
+                    out.truncated=true;
+                }
+            }
 
             if(walked>=kMaxWalk){
+                out.traversalLimited=true;
                 out.truncated=true;
                 break;
             }
@@ -509,7 +520,10 @@ SearchResults scanFiles(
         ::FindClose(find);
         if(out.canceled)return out;
     }
-    if(!pending.empty())out.truncated=true;
+    if(!pending.empty()){
+        out.traversalLimited=true;
+        out.truncated=true;
+    }
     return out;
 }
 
