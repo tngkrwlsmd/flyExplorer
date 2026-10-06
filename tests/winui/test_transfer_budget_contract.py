@@ -47,10 +47,15 @@ class TransferBudgetContract(unittest.TestCase):
         self.assertGreaterEqual(
             drag.count("fxfile::shelltransfer::kMaxSourcePathUnits"), 1
         )
-        for body in (transfer, drag):
-            self.assertNotIn("size()>32", body)
-            self.assertNotIn("Size()>32", body)
-            self.assertNotIn("최대 32개", body)
+        for legacy in (
+            "req.sources.size()>32",
+            "item.paths.size()>32",
+            "chosen.size()>32",
+            "items.Size()>32",
+            "args.Items().Size()>32",
+        ):
+            self.assertNotIn(legacy, transfer + drag)
+        self.assertNotIn("최대 32개", transfer + drag)
 
     def test_native_fixtures_prove_more_than_32_and_fail_closed_above_budget(self):
         transfer_fixture = compact(read("tests/winui/m22/m22_transfer_fixture.cpp"))
