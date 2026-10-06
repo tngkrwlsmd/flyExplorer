@@ -73,6 +73,21 @@ class FileMetadataControllerContract(unittest.TestCase):
         self.assertIn("정렬을 위해 전체 폴더 항목을 불러오는 중입니다.",transfers)
         self.assertIn("beyondComplete&&selection>1",transfers)
 
+    def test_owned_vm_sort_hook_is_double_gated_and_bounded(self):
+        main=read("app/winui/MainWindow.xaml.cpp")
+        header=read("app/winui/MainWindow.xaml.h")
+        for token in (
+            "FLY_METADATA_SORT_OWNED_TEST",
+            "--metadata-sort-owned-mode",
+            "mode==2||mode==3||mode==4",
+            "RunOwnedMetadataSortTestIfReady()",
+            "UpdateSort(mOwnedMetadataSortMode)",
+            "mOwnedMetadataSortConsumed=true",
+        ):
+            self.assertIn(token,main)
+        self.assertIn("int mOwnedMetadataSortMode=-1",header)
+        self.assertIn("bool mOwnedMetadataSortConsumed=false",header)
+
     def test_project_compiles_metadata_owner(self):
         project=read("app/winui/flyExplorer.project-template.xml")
         self.assertIn('<ClInclude Include="file_metadata_controller.h" />',project)
