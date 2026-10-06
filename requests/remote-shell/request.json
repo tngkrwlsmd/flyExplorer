@@ -1,11 +1,11 @@
 {
-  "request_id": "removable-recycle-vm-acceptance-retry-20261006",
-  "expected_main_sha": "5c4b2135a96563417246b32e6be801c4ad593930",
-  "candidate_sha": "5c4b2135a96563417246b32e6be801c4ad593930",
-  "logical_unit": "control-idle",
+  "request_id": "cleanup-removable-recycle-branch-20261006",
+  "expected_main_sha": "290ef0ce94b42a3b97efb3ea3452e6bbfd719955",
+  "candidate_sha": "290ef0ce94b42a3b97efb3ea3452e6bbfd719955",
+  "logical_unit": "branch-cleanup",
   "request_mode": "diagnostic",
   "configuration": "none",
   "validation_plan": [],
   "working_directory": "",
-  "command": "Write-Host \"CONTROL_IDLE=PASS\""
+  "command": "$ErrorActionPreference=\"Stop\"\n$repo=$env:FLYEXPLORER_CANONICAL_CHECKOUT\n$main=\"290ef0ce94b42a3b97efb3ea3452e6bbfd719955\"\n$branch=\"work/removable-recycle-20261006\"\n$expected=\"b8c63677d3994d2a7e5344b5bf270d49390606cb\"\nSet-Location -LiteralPath $repo\n& git fetch origin main --no-tags --prune\nif($LASTEXITCODE -ne 0){throw \"branch cleanup fetch failed\"}\nif((& git rev-parse refs/remotes/origin/main).Trim() -ne $main){throw \"main moved before branch cleanup\"}\n$lines=@(& git ls-remote --heads origin (\"refs/heads/\"+$branch))\nif($LASTEXITCODE -ne 0){throw \"branch lookup failed: $branch\"}\nif($lines.Count -eq 0){Write-Host \"BRANCH_ALREADY_ABSENT=$branch\";Write-Host \"BRANCH_CLEANUP=PASS\";exit 0}\n$observed=(($lines[0] -split \"\\s+\")[0])\nif($observed -ne $expected){throw \"branch cleanup lease mismatch: $branch expected=$expected observed=$observed\"}\n& git push origin --delete $branch\nif($LASTEXITCODE -ne 0){throw \"branch deletion failed: $branch\"}\n$after=@(& git ls-remote --heads origin (\"refs/heads/\"+$branch))\nif($LASTEXITCODE -ne 0){throw \"branch verify failed: $branch\"}\nif($after.Count -ne 0){throw \"branch still exists after deletion: $branch\"}\nWrite-Host \"BRANCH_DELETED=$branch\"\nWrite-Host \"BRANCH_CLEANUP=PASS\""
 }
