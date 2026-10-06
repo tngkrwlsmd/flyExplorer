@@ -4,8 +4,6 @@ on:
   push:
     branches:
       - work/metadata-sort-correctness-20261006
-    paths:
-      - ".github/workflows/metadata-sort-hosted.yml"
 
 permissions:
   contents: read
