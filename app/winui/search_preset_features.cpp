@@ -25,6 +25,7 @@ fxfile::preview::SearchQuery queryFromPreset(
     q.modifiedAfter=p.modifiedAfter;
     q.modifiedBefore=p.modifiedBefore;
     q.regex=p.regex;
+    q.contentRegex=p.contentRegex;
     q.caseSensitive=p.caseSensitive;
     q.kind=p.kind==1?fxfile::preview::SearchEntryKind::Folders:
            p.kind==2?fxfile::preview::SearchEntryKind::FilesAndFolders:
@@ -57,6 +58,7 @@ fxfile::searchpresets::Preset MainWindow::SearchPresetFromUi()
     p.modifiedAfter=std::wstring(SearchModifiedAfterBox().Text().c_str());
     p.modifiedBefore=std::wstring(SearchModifiedBeforeBox().Text().c_str());
     p.regex=SearchRegexBox().IsChecked().GetBoolean();
+    p.contentRegex=SearchContentRegexBox().IsChecked().GetBoolean();
     p.caseSensitive=SearchCaseBox().IsChecked().GetBoolean();
     p.kind=SearchTargetBox().SelectedIndex();
     if(p.kind<0||p.kind>2)p.kind=0;
@@ -75,6 +77,7 @@ void MainWindow::ApplySearchPresetToUi(
     SearchModifiedAfterBox().Text(hstring(p.modifiedAfter));
     SearchModifiedBeforeBox().Text(hstring(p.modifiedBefore));
     SearchRegexBox().IsChecked(p.regex);
+    SearchContentRegexBox().IsChecked(p.contentRegex);
     SearchCaseBox().IsChecked(p.caseSensitive);
     SearchTargetBox().SelectedIndex((std::clamp)(p.kind,0,2));
 }
