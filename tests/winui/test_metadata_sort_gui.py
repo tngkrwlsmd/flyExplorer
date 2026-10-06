@@ -180,8 +180,15 @@ def main():
             }[args.owned_sort_mode]
             until(lambda:expected in first_row(),
                   f"owned metadata sort mode {args.owned_sort_mode} did not apply",60)
-            until(lambda:picker.selected_index()==args.owned_sort_mode,
-                  f"owned sort picker did not record mode {args.owned_sort_mode}",10)
+            header_id={
+                2:"LeftSizeSortButton",
+                3:"LeftDateSortButton",
+                4:"LeftTypeSortButton",
+            }[args.owned_sort_mode]
+            arrow="↓" if args.owned_sort_mode in (2,3) else "↑"
+            header=parent.child_window(auto_id=header_id)
+            until(lambda:arrow in header.window_text(),
+                  f"owned sort header did not record mode {args.owned_sort_mode}",10)
             until(lambda:"메타데이터 정렬" in status.window_text(),
                   f"owned metadata sort completion status missing for {args.owned_sort_mode}",10)
             marker={
