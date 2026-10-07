@@ -31,6 +31,8 @@ class FileOperationContracts(unittest.TestCase):
         for token in (
             "Kind { Copy, Move, Recycle }",
             "Collision { Reject, KeepBoth }",
+            "SourceMode { Filesystem, ShellProvider }",
+            "kMaxProviderParsingUnits=4096",
             "recycleConfirmed=false",
             "IFileOperation",
             "FOFX_RECYCLEONDELETE",
@@ -68,6 +70,11 @@ class FileOperationContracts(unittest.TestCase):
             'value.rfind(L"\\\\\\\\.\\\\",0)==0',
             "safeFilesystemFolder(parent,request.kind)",
             "safeFilesystemFolder(dest,request.kind)",
+            "validateProviderCopy(",
+            "ILIsParent(parent,child,TRUE)",
+            "SFGAO_CANCOPY",
+            "SIGDN_PARENTRELATIVEEDITING",
+            "SourceMode::ShellProvider",
             "executeIsolated(Request const& task,Progress& progress)",
             "JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE",
             "PROC_THREAD_ATTRIBUTE_HANDLE_LIST",
@@ -113,6 +120,8 @@ class FileOperationContracts(unittest.TestCase):
             "state_->progress",
             "completion.ticket!=state_->epoch",
             "sameContext(",
+            "visibleShellFolder",
+            "SourceMode::Filesystem",
             "touched.push_back(request.sourceParent)",
             "touched.push_back(request.destination)",
             "TransferDisposition::Succeeded",
@@ -120,6 +129,14 @@ class FileOperationContracts(unittest.TestCase):
             self.assertIn(token, controller)
         self.assertIn("completion.touchedFolders.begin()", transfer)
         self.assertIn("QueuePidl(side", transfer)
+        for token in (
+            "SourceMode::ShellProvider",
+            "snapshot.parsingName",
+            "SFGAO_CANCOPY",
+            "kMaxProviderParsingUnits",
+            "가상 Shell/provider 항목은 현재 반대쪽 실제 폴더로 복사만 지원합니다.",
+        ):
+            self.assertIn(token, transfer)
 
     def test_create_folder_shortcuts_reuse_existing_file_command_identity(self):
         main = read("app/winui/MainWindow.xaml.cpp")

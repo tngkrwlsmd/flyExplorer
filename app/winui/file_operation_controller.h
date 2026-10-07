@@ -17,6 +17,7 @@ public:
         std::size_t tab=0;
         std::uint64_t route=0;
         std::wstring visibleFolder;
+        std::wstring visibleShellFolder;
     };
 
     enum class StartStatus {

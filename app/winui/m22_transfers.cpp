@@ -141,14 +141,66 @@ void MainWindow::RunTransfer(fxfile::shelltransfer::Kind kind){
  }
  const int side=ActiveWindowTab().model.activePane;
  auto const& pane=ActiveWindowTab().model.panes[side];
- auto const tab=pane.active;
- if(pane.pending[tab]||pane.filesystemPaths[tab].empty()){
-  StatusText().Text(L"실제 폴더를 완전히 불러온 후 파일 작업을 시작하세요.");
+ const auto tab=pane.active;
+ if(pane.pending[tab]){
+  StatusText().Text(L"현재 위치를 완전히 불러온 후 파일 작업을 시작하세요.");
   return;
  }
+ auto const& session=pane.tabs[tab];
+ auto const& snapshot=session.snapshot();
+ auto list=side==0?LeftFiles():RightFiles();
+ struct Selected final {
+  fxfile::shellnav::IndexedItem const* item=nullptr;
+ };
+ std::vector<Selected> chosen;
+ chosen.reserve(list.SelectedItems().Size());
+ bool providerSource=pane.filesystemPaths[tab].empty();
+ for(auto const& value:list.SelectedItems()){
+  const auto row=value.try_as<ListViewItem>();
+  if(!row||!row.Tag()){
+   StatusText().Text(L"선택한 항목을 읽지 못했습니다.");
+   return;
+  }
+  const auto logical=winrt::unbox_value<std::uint64_t>(row.Tag());
+  auto const* indexed=session.indexedItem(static_cast<std::size_t>(logical));
+  if(!indexed||indexed->parsingName.empty()){
+   StatusText().Text(L"선택한 Shell 항목의 원본 정보를 읽지 못했습니다.");
+   return;
+  }
+  if(!indexed->isFileSystem())providerSource=true;
+  chosen.push_back(Selected{indexed});
+ }
+ if(chosen.empty()){
+  StatusText().Text(L"작업할 파일 또는 폴더를 선택하세요.");
+  return;
+ }
+
+ if(providerSource&&kind!=fxfile::shelltransfer::Kind::Copy){
+  StatusText().Text(
+   L"가상 Shell/provider 항목은 현재 반대쪽 실제 폴더로 복사만 지원합니다.");
+  return;
+ }
+
  fxfile::shelltransfer::Request req{};
  req.kind=kind;
- req.sourceParent=pane.filesystemPaths[tab];
+ req.sourceMode=providerSource?
+   fxfile::shelltransfer::SourceMode::ShellProvider:
+   fxfile::shelltransfer::SourceMode::Filesystem;
+ if(providerSource){
+  if(!snapshot.folder.valid()||snapshot.parsingName.empty()||
+     snapshot.parsingName.size()>fxfile::shelltransfer::kMaxProviderParsingUnits){
+   StatusText().Text(L"현재 Shell provider 위치의 원본 정보를 사용할 수 없습니다.");
+   return;
+  }
+  req.sourceParent=snapshot.parsingName;
+ }else{
+  if(pane.filesystemPaths[tab].empty()){
+   StatusText().Text(L"실제 원본 폴더를 완전히 불러온 후 다시 시도하세요.");
+   return;
+  }
+  req.sourceParent=pane.filesystemPaths[tab];
+ }
+
  if(kind!=fxfile::shelltransfer::Kind::Recycle){
   if(!ActiveWindowTab().model.split){
    StatusText().Text(L"좌우 창을 모두 연 뒤 반대쪽 폴더로 복사하거나 이동하세요.");
@@ -161,32 +213,30 @@ void MainWindow::RunTransfer(fxfile::shelltransfer::Kind kind){
   }
   req.destination=other.filesystemPaths[other.active];
  }
- auto list=side==0?LeftFiles():RightFiles();
- auto const& session=pane.tabs[tab];
- std::size_t sourcePathUnits=0;
- for(auto const& value:list.SelectedItems()){
-  const auto row=value.try_as<ListViewItem>();
-  if(!row||!row.Tag()){StatusText().Text(L"선택한 항목을 읽지 못했습니다.");return;}
-  const auto logical=winrt::unbox_value<std::uint64_t>(row.Tag());
-  auto const* indexed=session.indexedItem(static_cast<std::size_t>(logical));
-  if(!indexed||!indexed->isFileSystem()||indexed->parsingName.empty()){
-   StatusText().Text(L"가상 Shell 항목은 이 파일 작업에서 지원하지 않습니다.");
+
+ std::size_t sourceUnits=0;
+ for(auto const& picked:chosen){
+  auto const* indexed=picked.item;
+  if(providerSource){
+   if(!(indexed->attributes&SFGAO_CANCOPY)||
+      indexed->parsingName.size()>fxfile::shelltransfer::kMaxProviderParsingUnits){
+    StatusText().Text(L"선택한 Shell provider 항목은 Windows에서 복사할 수 없습니다.");
+    return;
+   }
+  }else if(!indexed->isFileSystem()){
+   StatusText().Text(L"가상 Shell/provider 항목은 별도 Copy-out 경로가 필요합니다.");
    return;
   }
-  const auto pathUnits=indexed->parsingName.size()+1;
+  const auto identityUnits=indexed->parsingName.size()+1;
   if(req.sources.size()>=fxfile::shelltransfer::kMaxItems||
-     pathUnits>fxfile::shelltransfer::kMaxSourcePathUnits-sourcePathUnits){
+     identityUnits>fxfile::shelltransfer::kMaxSourcePathUnits-sourceUnits){
    StatusText().Text(hstring(L"파일 작업은 최대 "+
       std::to_wstring(fxfile::shelltransfer::kMaxItems)+
-      L"개 항목과 제한된 전체 경로 크기 안에서 실행할 수 있습니다."));
+      L"개 항목과 제한된 전체 원본 식별자 크기 안에서 실행할 수 있습니다."));
    return;
   }
-  sourcePathUnits+=pathUnits;
+  sourceUnits+=identityUnits;
   req.sources.push_back(indexed->parsingName);
- }
- if(req.sources.empty()){
-  StatusText().Text(L"작업할 파일 또는 폴더를 선택하세요.");
-  return;
  }
  StartTransfer(std::move(req));
 }
@@ -200,6 +250,8 @@ FileOperationController::Context MainWindow::FileOperationContext(int side) cons
  context.tab=pane.active;
  context.route=pane.routeIds[pane.active];
  context.visibleFolder=pane.filesystemPaths[pane.active];
+ context.visibleShellFolder=
+     pane.tabs[pane.active].snapshot().parsingName;
  return context;
 }
 namespace {

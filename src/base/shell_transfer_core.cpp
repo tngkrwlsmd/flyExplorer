@@ -145,10 +145,51 @@ Report validate(Request const& request) noexcept {
  Report report{};
  try {
   if(request.sources.empty()||request.sources.size()>kMaxItems||
-     request.sourceParent.size()>32000||
      (request.kind!=Kind::Copy&&request.kind!=Kind::Move&&
       request.kind!=Kind::Recycle)||
-     (request.collision!=Collision::Reject&&request.collision!=Collision::KeepBoth)){
+     (request.collision!=Collision::Reject&&
+      request.collision!=Collision::KeepBoth)||
+     (request.sourceMode!=SourceMode::Filesystem&&
+      request.sourceMode!=SourceMode::ShellProvider)){
+   report.error=ERROR_INVALID_PARAMETER;return report;
+  }
+  if(request.sourceMode==SourceMode::ShellProvider){
+   if(request.kind!=Kind::Copy||request.recycleConfirmed||
+      request.sourceParent.empty()||
+      request.sourceParent.size()>kMaxProviderParsingUnits||
+      request.destination.empty()||request.destination.size()>32000){
+    report.error=request.kind==Kind::Copy?
+        ERROR_INVALID_PARAMETER:ERROR_NOT_SUPPORTED;
+    return report;
+   }
+   const auto dest=fs::path(request.destination).lexically_normal();
+   if(!safeFilesystemFolder(dest,Kind::Copy)){
+    report.error=ERROR_INVALID_NAME;return report;
+   }
+   std::size_t sourceUnits=0;
+   std::vector<std::wstring> seen;
+   seen.reserve(request.sources.size());
+   for(auto const& source:request.sources){
+    if(source.empty()||source.size()>kMaxProviderParsingUnits||
+       source.find(L'\0')!=std::wstring::npos||
+       source.size()+1>kMaxSourcePathUnits-sourceUnits){
+      report.error=ERROR_INVALID_NAME;return report;
+    }
+    sourceUnits+=source.size()+1;
+    if(std::any_of(seen.begin(),seen.end(),[&](auto const& prior){
+       return ::CompareStringOrdinal(
+          prior.c_str(),-1,source.c_str(),-1,TRUE)==CSTR_EQUAL;
+    })){
+      report.error=ERROR_INVALID_PARAMETER;return report;
+    }
+    seen.push_back(source);
+   }
+   report.queued=static_cast<std::uint32_t>(request.sources.size());
+   report.error=ERROR_SUCCESS;
+   return report;
+  }
+
+  if(request.sourceParent.size()>32000){
    report.error=ERROR_INVALID_PARAMETER;return report;
   }
   if(request.kind==Kind::Recycle&&!request.recycleConfirmed){
@@ -179,12 +220,19 @@ Report validate(Request const& request) noexcept {
     report.error=ERROR_INVALID_NAME;return report;
    }
    const DWORD attrs=::GetFileAttributesW(item.c_str());
-   if(attrs==INVALID_FILE_ATTRIBUTES){report.error=ERROR_FILE_NOT_FOUND;return report;}
-   if(attrs&FILE_ATTRIBUTE_REPARSE_POINT){report.error=ERROR_NOT_SUPPORTED;return report;}
+   if(attrs==INVALID_FILE_ATTRIBUTES){
+    report.error=ERROR_FILE_NOT_FOUND;return report;
+   }
+   if(attrs&FILE_ATTRIBUTE_REPARSE_POINT){
+    report.error=ERROR_NOT_SUPPORTED;return report;
+   }
    const auto normalized=item.native();
    if(std::any_of(seen.begin(),seen.end(),[&](auto const& x){
-      return ::CompareStringOrdinal(x.c_str(),-1,normalized.c_str(),-1,TRUE)==CSTR_EQUAL;
-   })){report.error=ERROR_INVALID_PARAMETER;return report;}
+      return ::CompareStringOrdinal(
+         x.c_str(),-1,normalized.c_str(),-1,TRUE)==CSTR_EQUAL;
+   })){
+    report.error=ERROR_INVALID_PARAMETER;return report;
+   }
    seen.push_back(normalized);
    if(request.kind==Kind::Recycle)continue;
    if(sameParent(parent,dest)&&request.kind==Kind::Move){
@@ -198,11 +246,101 @@ Report validate(Request const& request) noexcept {
     report.collisions.push_back(target.native());
   }
   report.queued=static_cast<std::uint32_t>(request.sources.size());
-  report.error=report.collisions.size()&&request.collision==Collision::Reject?
-              ERROR_ALREADY_EXISTS:ERROR_SUCCESS;
+  report.error=report.collisions.size()&&
+               request.collision==Collision::Reject?
+               ERROR_ALREADY_EXISTS:ERROR_SUCCESS;
  }catch(...){report.error=ERROR_INVALID_PARAMETER;}
  return report;
 }
+
+namespace {
+Report validateProviderCopy(Request const& request) noexcept {
+ Report report{};
+ report.error=ERROR_INVALID_NAME;
+ if(request.sourceMode!=SourceMode::ShellProvider||
+    request.kind!=Kind::Copy)return report;
+ PIDLIST_ABSOLUTE parent=nullptr;
+ std::vector<PIDLIST_ABSOLUTE> children;
+ auto cleanup=[&]{
+  for(auto* item:children)if(item)::CoTaskMemFree(item);
+  children.clear();
+  if(parent){::CoTaskMemFree(parent);parent=nullptr;}
+ };
+ try{
+  if(FAILED(::SHParseDisplayName(
+       request.sourceParent.c_str(),nullptr,&parent,0,nullptr))||!parent){
+   cleanup();return report;
+  }
+  ComPtr<IShellItem> parentItem;
+  if(FAILED(::SHCreateItemFromIDList(
+       parent,IID_PPV_ARGS(parentItem.GetAddressOf())))||!parentItem){
+   cleanup();return report;
+  }
+  SFGAOF parentAttrs=0;
+  if(FAILED(parentItem->GetAttributes(SFGAO_FOLDER,&parentAttrs))||
+     !(parentAttrs&SFGAO_FOLDER)){
+   cleanup();return report;
+  }
+
+  const auto destination=fs::path(request.destination).lexically_normal();
+  children.reserve(request.sources.size());
+  for(auto const& source:request.sources){
+   PIDLIST_ABSOLUTE child=nullptr;
+   if(FAILED(::SHParseDisplayName(
+        source.c_str(),nullptr,&child,0,nullptr))||!child){
+    if(child)::CoTaskMemFree(child);
+    cleanup();return report;
+   }
+   if(!::ILIsParent(parent,child,TRUE)){
+    ::CoTaskMemFree(child);cleanup();return report;
+   }
+   if(std::any_of(children.begin(),children.end(),
+      [&](PIDLIST_ABSOLUTE prior){return ::ILIsEqual(prior,child)!=FALSE;})){
+    ::CoTaskMemFree(child);
+    report.error=ERROR_INVALID_PARAMETER;
+    cleanup();return report;
+   }
+
+   ComPtr<IShellItem> item;
+   if(FAILED(::SHCreateItemFromIDList(
+        child,IID_PPV_ARGS(item.GetAddressOf())))||!item){
+    ::CoTaskMemFree(child);cleanup();return report;
+   }
+   SFGAOF attrs=0;
+   if(FAILED(item->GetAttributes(SFGAO_CANCOPY,&attrs))||
+      !(attrs&SFGAO_CANCOPY)){
+    ::CoTaskMemFree(child);
+    report.error=ERROR_NOT_SUPPORTED;
+    cleanup();return report;
+   }
+   PWSTR rawName=nullptr;
+   if(FAILED(item->GetDisplayName(
+        SIGDN_PARENTRELATIVEEDITING,&rawName))||!rawName){
+    if(rawName)::CoTaskMemFree(rawName);
+    ::CoTaskMemFree(child);cleanup();return report;
+   }
+   std::wstring leaf(rawName);
+   ::CoTaskMemFree(rawName);
+   if(!filecommand::validLeaf(leaf)){
+    ::CoTaskMemFree(child);cleanup();return report;
+   }
+   auto target=destination/leaf;
+   if(::GetFileAttributesW(target.c_str())!=INVALID_FILE_ATTRIBUTES)
+    report.collisions.push_back(target.native());
+   children.push_back(child);
+  }
+  report.queued=static_cast<std::uint32_t>(children.size());
+  report.error=!report.collisions.empty()&&
+               request.collision==Collision::Reject?
+               ERROR_ALREADY_EXISTS:ERROR_SUCCESS;
+ }catch(...){
+  report.error=ERROR_INVALID_PARAMETER;
+ }
+ cleanup();
+ return report;
+}
+} // namespace
+
 Report execute(Request const& task,Progress& progress) noexcept{
  Report report=validate(task);
  if(report.error!=ERROR_SUCCESS)return report;
@@ -210,6 +348,13 @@ Report execute(Request const& task,Progress& progress) noexcept{
  const HRESULT initialized=::CoInitializeEx(nullptr,
           COINIT_APARTMENTTHREADED|COINIT_DISABLE_OLE1DDE);
  if(FAILED(initialized)){report.error=code(initialized);return report;}
+ if(task.sourceMode==SourceMode::ShellProvider){
+  report=validateProviderCopy(task);
+  if(report.error!=ERROR_SUCCESS){
+   ::CoUninitialize();
+   return report;
+  }
+ }
  ComPtr<IFileOperation> operation;
  HRESULT hr=::CoCreateInstance(CLSID_FileOperation,nullptr,CLSCTX_INPROC_SERVER,
          IID_PPV_ARGS(operation.GetAddressOf()));
@@ -261,7 +406,7 @@ Report execute(Request const& task,Progress& progress) noexcept{
 }
 namespace {
 constexpr std::uint32_t kTransferWireMagic=0x31525446u; // FTR1
-constexpr std::uint32_t kTransferWireVersion=1;
+constexpr std::uint32_t kTransferWireVersion=2;
 constexpr std::uint32_t kTransferFrameProgress=1;
 constexpr std::uint32_t kTransferFrameComplete=2;
 constexpr std::uint32_t kTransferFlagAborted=1u;
@@ -355,20 +500,28 @@ bool serializeTransfer(Request const& task,
  try{
   body.clear();
   if((task.kind!=Kind::Copy&&task.kind!=Kind::Move)||
+     (task.sourceMode!=SourceMode::Filesystem&&
+      task.sourceMode!=SourceMode::ShellProvider)||
+     (task.sourceMode==SourceMode::ShellProvider&&task.kind!=Kind::Copy)||
      task.sources.empty()||task.sources.size()>kMaxItems||
-     task.sourceParent.empty()||task.sourceParent.size()>32000||
+     task.sourceParent.empty()||
+     task.sourceParent.size()>(task.sourceMode==SourceMode::ShellProvider?
+        kMaxProviderParsingUnits:std::size_t{32000})||
      task.destination.empty()||task.destination.size()>32000||
      (task.collision!=Collision::Reject&&task.collision!=Collision::KeepBoth))
    return false;
+  const auto sourceLimit=task.sourceMode==SourceMode::ShellProvider?
+      kMaxProviderParsingUnits:std::size_t{32000};
   std::size_t sourceUnits=0;
   for(auto const& source:task.sources){
-   if(source.empty()||source.size()>32000||
+   if(source.empty()||source.size()>sourceLimit||
       source.size()+1>kMaxSourcePathUnits-sourceUnits)return false;
    sourceUnits+=source.size()+1;
   }
-  if(!appendU32(body,static_cast<std::uint32_t>(task.kind))||
+  if(!appendU32(body,static_cast<std::uint32_t>(task.sourceMode))||
+     !appendU32(body,static_cast<std::uint32_t>(task.kind))||
      !appendU32(body,static_cast<std::uint32_t>(task.collision))||
-     !appendString(body,task.sourceParent,32000)||
+     !appendString(body,task.sourceParent,sourceLimit)||
      !appendString(body,task.destination,32000)||
      !appendU32(body,static_cast<std::uint32_t>(task.sources.size())))
    return false;
@@ -412,16 +565,23 @@ bool parseTransfer(std::vector<unsigned char> const& body,
                    Request& task) noexcept{
  try{
   WireReader reader{body};
+  const auto sourceMode=reader.u32();
   const auto kind=reader.u32();
   const auto collision=reader.u32();
-  if(kind>static_cast<std::uint32_t>(Kind::Move)||
+  if(sourceMode>static_cast<std::uint32_t>(SourceMode::ShellProvider)||
+     kind>static_cast<std::uint32_t>(Kind::Move)||
      collision>static_cast<std::uint32_t>(Collision::KeepBoth))
    return false;
   task=Request{};
+  task.sourceMode=static_cast<SourceMode>(sourceMode);
   task.kind=static_cast<Kind>(kind);
   task.collision=static_cast<Collision>(collision);
-  if(task.kind!=Kind::Copy&&task.kind!=Kind::Move)return false;
-  task.sourceParent=reader.string(32000);
+  if((task.kind!=Kind::Copy&&task.kind!=Kind::Move)||
+     (task.sourceMode==SourceMode::ShellProvider&&task.kind!=Kind::Copy))
+   return false;
+  const auto sourceLimit=task.sourceMode==SourceMode::ShellProvider?
+      kMaxProviderParsingUnits:std::size_t{32000};
+  task.sourceParent=reader.string(sourceLimit);
   task.destination=reader.string(32000);
   const auto count=reader.u32();
   if(!reader.valid||task.sourceParent.empty()||task.destination.empty()||
@@ -429,7 +589,7 @@ bool parseTransfer(std::vector<unsigned char> const& body,
   std::size_t sourceUnits=0;
   task.sources.reserve(count);
   for(std::uint32_t i=0;i<count;++i){
-   auto source=reader.string(32000);
+   auto source=reader.string(sourceLimit);
    if(!reader.valid||source.empty()||
       source.size()+1>kMaxSourcePathUnits-sourceUnits)return false;
    sourceUnits+=source.size()+1;

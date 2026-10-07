@@ -35,17 +35,22 @@ bool FileOperationController::sameContext(
     Context const& a,Context const& b) noexcept
 {
     return a.side==b.side&&a.tab==b.tab&&a.route==b.route&&
-           a.visibleFolder==b.visibleFolder;
+           a.visibleFolder==b.visibleFolder&&
+           a.visibleShellFolder==b.visibleShellFolder;
 }
 
 bool FileOperationController::visibleForTransfer(
     fxfile::shelltransfer::Request const& request,
     Context const& context) noexcept
 {
-    if(context.side<0||context.side>1||context.visibleFolder.empty())
-        return false;
-    if(context.visibleFolder==request.sourceParent)return true;
+    if(context.side<0||context.side>1)return false;
+    if(request.sourceMode==fxfile::shelltransfer::SourceMode::ShellProvider){
+        if(!context.visibleShellFolder.empty()&&
+           context.visibleShellFolder==request.sourceParent)return true;
+    }else if(!context.visibleFolder.empty()&&
+             context.visibleFolder==request.sourceParent)return true;
     return request.kind!=fxfile::shelltransfer::Kind::Recycle&&
+           !context.visibleFolder.empty()&&
            context.visibleFolder==request.destination;
 }
 
@@ -178,9 +183,11 @@ FileOperationController::StartStatus FileOperationController::launchTransfer(
     }
 
     std::vector<std::wstring> touched;
-    touched.push_back(request.sourceParent);
+    if(request.sourceMode==fxfile::shelltransfer::SourceMode::Filesystem)
+        touched.push_back(request.sourceParent);
     if(request.kind!=fxfile::shelltransfer::Kind::Recycle&&
-       request.destination!=request.sourceParent)
+       (request.sourceMode==fxfile::shelltransfer::SourceMode::ShellProvider||
+        request.destination!=request.sourceParent))
         touched.push_back(request.destination);
 
     auto shared=state_;

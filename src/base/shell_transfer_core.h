@@ -12,8 +12,10 @@
 namespace fxfile::shelltransfer {
 inline constexpr std::size_t kMaxItems=1024;
 inline constexpr std::size_t kMaxSourcePathUnits=1024*1024;
+inline constexpr std::size_t kMaxProviderParsingUnits=4096;
 enum class Kind { Copy, Move, Recycle };
 enum class Collision { Reject, KeepBoth };
+enum class SourceMode { Filesystem, ShellProvider };
 // Copy/Move accept fixed, removable and Windows network filesystem roots,
 // including ordinary UNC shares. Recycle remains local fixed/removable only,
 // requires explicit confirmation and uses recycle-only Shell flags.
@@ -24,9 +26,15 @@ bool transferDriveRoot(std::wstring const& path,std::wstring& root) noexcept;
 struct Request {
  Kind kind=Kind::Copy;
  Collision collision=Collision::Reject;
- std::wstring sourceParent; // original accepted filesystem pane path
- std::wstring destination;  // exact other filesystem pane path; empty for recycle
- std::vector<std::wstring> sources; // native full paths, direct children only
+ SourceMode sourceMode=SourceMode::Filesystem;
+ // Filesystem mode: original accepted pane path. ShellProvider mode:
+ // accepted snapshot's desktop-absolute parent parsing name.
+ std::wstring sourceParent;
+ // Copy/Move destination is always a validated filesystem folder.
+ std::wstring destination;
+ // Filesystem mode: native full paths. ShellProvider mode: desktop-absolute
+ // Shell parsing names. Both remain bounded and direct-child-only.
+ std::vector<std::wstring> sources;
  bool recycleConfirmed=false; // MUST be explicit user consent
 };
 struct Report {
