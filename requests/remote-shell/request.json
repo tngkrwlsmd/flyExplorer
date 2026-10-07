@@ -1,15 +1,11 @@
 {
-  "request_id": "unc-network-copy-move-release-gui-20261007",
+  "request_id": "unc-network-copy-move-foreground-diag-20261007",
   "expected_main_sha": "24bb8722c06b302f6a6b9c00aad34293a38be0d0",
   "candidate_sha": "42453d5a3a914eb01b16cc5b28fb1f72e059014a",
   "logical_unit": "unc-network-copy-move",
-  "request_mode": "validation",
-  "configuration": "Release",
-  "validation_plan": [
-    "m22-native-release",
-    "build-release",
-    "gui-file-operations"
-  ],
+  "request_mode": "diagnostic",
+  "configuration": "none",
+  "validation_plan": [],
   "working_directory": "",
-  "command": "$ErrorActionPreference=\"Stop\"\n$repo=$env:FLYEXPLORER_CANONICAL_CHECKOUT\n$main=\"24bb8722c06b302f6a6b9c00aad34293a38be0d0\";$candidate=\"42453d5a3a914eb01b16cc5b28fb1f72e059014a\";$branch=\"work/unc-network-copy-move-20261007\"\nSet-Location -LiteralPath $repo\n& git fetch origin main $branch --no-tags --prune\nif($LASTEXITCODE -ne 0){throw \"UNC Release fetch failed\"}\nif((& git rev-parse refs/remotes/origin/main).Trim() -ne $main){throw \"main moved before UNC Release\"}\nif((& git rev-parse (\"refs/remotes/origin/\"+$branch)).Trim() -ne $candidate){throw \"UNC Release candidate moved\"}\n$temp=Join-Path $env:RUNNER_TEMP (\"fly-unc-release-\"+$env:GITHUB_RUN_ID)\nif(Test-Path $temp){Remove-Item $temp -Recurse -Force}\ntry{\n & git worktree add --detach $temp $candidate\n if($LASTEXITCODE -ne 0){throw \"UNC Release worktree add failed\"}\n Set-Location $temp\n & git diff --check ($main+\"...\"+$candidate)\n if($LASTEXITCODE -ne 0){throw \"UNC Release diff check failed\"}\n & .\\tests\\winui\\m22\\build.cmd Release\n if($LASTEXITCODE -ne 0){throw \"UNC M22 Release build failed\"}\n $env:FLY_M22_CONFIG=\"Release\";$env:FLY_M22_LOOPBACK_ADMIN_SHARE=\"YES\"\n & python -X utf8 .\\tests\\winui\\m22\\test_native.py\n if($LASTEXITCODE -ne 0){throw \"UNC M22 Release native failed\"}\n Remove-Item Env:FLY_M22_CONFIG -ErrorAction SilentlyContinue\n Remove-Item Env:FLY_M22_LOOPBACK_ADMIN_SHARE -ErrorAction SilentlyContinue\n & .\\build.bat Release\n if($LASTEXITCODE -ne 0){throw \"UNC canonical Release build failed\"}\n & python -X utf8 tools\\winui\\run_checks.py gui --area file-operations --configuration Release\n if($LASTEXITCODE -ne 0){throw \"UNC focused file-operations GUI failed\"}\n Write-Host \"UNC_COPY_MOVE_M22_RELEASE=PASS\"\n Write-Host \"UNC_COPY_MOVE_RELEASE_BUILD=PASS\"\n Write-Host \"UNC_COPY_MOVE_LOCAL_ISOLATED_GUI=PASS\"\n Write-Host \"UNC_COPY_MOVE_PHYSICAL_SMB=NOT_RUN_NO_OWNED_SHARE\"\n}finally{\n Remove-Item Env:FLY_M22_CONFIG -ErrorAction SilentlyContinue\n Remove-Item Env:FLY_M22_LOOPBACK_ADMIN_SHARE -ErrorAction SilentlyContinue\n Set-Location $repo\n if(Test-Path $temp){& git worktree remove --force $temp}\n & git worktree prune\n}"
+  "command": "$ErrorActionPreference=\"Stop\"\n$script=Join-Path $env:RUNNER_TEMP \"fly-foreground-diag.py\"\n@'\nimport ctypes as c\nimport ctypes.wintypes as W\nimport os\nu=c.windll.user32\nCALL=c.WINFUNCTYPE(W.BOOL,W.HWND,W.LPARAM)\nu.GetForegroundWindow.restype=W.HWND\nu.GetWindowThreadProcessId.argtypes=[W.HWND,c.POINTER(W.DWORD)]\nu.GetWindowTextW.argtypes=[W.HWND,W.LPWSTR,c.c_int]\ndef info(hwnd):\n    pid=W.DWORD()\n    if hwnd:u.GetWindowThreadProcessId(hwnd,c.byref(pid))\n    title=c.create_unicode_buffer(700)\n    if hwnd:u.GetWindowTextW(hwnd,title,len(title))\n    return int(hwnd or 0),int(pid.value),title.value\nfg=u.GetForegroundWindow()\nprint(\"FOREGROUND_DIAG\",info(fg),flush=True)\nvisible=[]\n@CALL\ndef cb(hwnd,_):\n    if u.IsWindowVisible(hwnd):\n        h,p,t=info(hwnd)\n        if t:visible.append((h,p,t))\n    return 1\nu.EnumWindows(cb,0)\nprint(\"VISIBLE_WINDOWS\",visible[:40],flush=True)\nprint(\"RUNNER_PID\",os.getpid(),flush=True)\n'@ | Set-Content -LiteralPath $script -Encoding UTF8\n& python -X utf8 $script\nif($LASTEXITCODE -ne 0){throw \"foreground diagnostic failed\"}\nWrite-Host \"UNC_GUI_FOREGROUND_DIAGNOSTIC=PASS\""
 }
