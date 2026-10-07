@@ -77,7 +77,6 @@ def main():
 
         pane=parent.child_window(auto_id="LeftFiles")
         address=parent.child_window(auto_id="AddressBox")
-        pane.click_input()
         address.set_edit_text("shell:MyComputerFolder")
         address.type_keys("{ENTER}",set_foreground=True)
         until(lambda:address.get_value()=="내 PC",
