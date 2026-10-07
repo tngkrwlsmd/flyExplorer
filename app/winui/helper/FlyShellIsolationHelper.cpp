@@ -1,5 +1,6 @@
-// M1.7 read-only Shell namespace helper. One request per exact owned process.
-// Fault boundary ONLY: inherits user token; not a security sandbox.
+// Disposable Shell helper. Navigation requests remain read-only; the explicit
+// --file-transfer mode performs one bounded Copy/Move request in an exact-owned
+// child process. Fault boundary ONLY: inherits user token; not a security sandbox.
 #include "../../../src/base/shell_navigation_core.h"
 #include "../../../src/base/shell_isolation_wire.h"
 #include "../../../src/base/shell_transfer_core.h"
