@@ -16,6 +16,78 @@ product state use CURRENT_STATUS.md.
 
 이 문서는 확정된 오류를 단순 수정으로 끝내지 않고, 다음 진단을 빠르게 하고 같은 계열의 결함을 사전에 막기 위한 프로젝트 기록이다.
 
+## 2026-10-07 — UNC Copy/Move GUI acceptance confused transient status with completion
+
+**오류 발생**
+- 실행/프로필: UNC/network Copy·Move pre-main acceptance. Release/native
+  semantics had already passed, but the broad file-operations GUI run
+  `37553699165` failed before interaction because the runner had no
+  app-owned foreground window. A later UIA-only focused harness then failed
+  after the Copy file had already appeared at the destination.
+- 사용자에게 보인 증상: repeated GUI failures looked like an isolated-transfer
+  completion defect even though filesystem mutation and Release build/native
+  evidence were already successful.
+
+**최초 실제 오류**
+- The broad physical-input harness first failed with
+  `AssertionError: Refusing physical input: foreground belongs to a user window`.
+  Diagnostic run `37554219584` observed no foreground HWND in the runner
+  session, so changing product transfer code would not address that boundary.
+- After switching to UIA-only interaction, the focused harness required
+  `StatusText` to keep the exact transient string `복사를 완료했습니다.`.
+  Direct diagnostic run `37555732127` instead observed the copied file on
+  disk, `CopyButton=True`, `MoveButton=True`, `CancelButton=False` and
+  `StatusText='폴더 변경 알림을 반영했습니다.'`.
+
+**원인 진단**
+- The first failure was a harness/environment mismatch: physical input was
+  intentionally guarded when the runner could not prove an app-owned
+  foreground target.
+- The second failure was a harness lifecycle bug. On successful transfer,
+  `OnTransferCompleted` briefly writes the success string and then queues a
+  deterministic refresh for touched visible folders. The normal watcher/
+  navigation completion is allowed to replace that transient string with the
+  folder-change status before a polling test samples it.
+- Product Copy/Move mutation, helper completion and FileOperationController
+  busy-state settlement were therefore not the failing layer.
+
+**해결 방법**
+- Added a dedicated UIA-only UNC/Copy-Move acceptance path that uses Invoke and
+  Selection patterns and never requires physical mouse/keyboard focus.
+- The focused acceptance now waits for FileOperationController to leave the
+  busy state (`CancelButton` disabled), verifies normal mutation controls are
+  re-enabled, verifies the owned filesystem result, and rejects explicit
+  transfer-failure status families instead of requiring a short-lived success
+  sentence to remain visible.
+- Product code was not changed for this harness correction.
+
+**재발 방지**
+- Async UI acceptance must validate the stable postcondition of the owning
+  lifecycle (mutation result, busy/cancel state, failure disposition) rather
+  than a presentation string that a downstream watcher/refresh is expected to
+  supersede.
+- When physical-input safety rejects a runner session, diagnose foreground/
+  ownership once and move to a semantically equivalent UIA-only path if the
+  feature does not require physical-pointer semantics.
+- Preserve successful build/native evidence across harness-only revisions.
+
+**검증 상태**
+- Run `37553534009`: FAST + helper Debug + M22 Debug native 33/33 PASS.
+- Run `37553699165`: M22 Release native 33/33 and canonical Release build
+  PASS; later broad physical-input GUI boundary failed as described above.
+- Run `37556148841`: final candidate
+  `a08e32788bdcd5d33da31e0c413803f30e548b92` passed `git diff --check`,
+  FAST, canonical Release build and focused UIA-only Copy/Move GUI.
+- Actual SMB/UNC execution: NOT TESTED — no test-owned SMB share was available;
+  the loopback admin-share probe was unavailable.
+
+**관련 commit**
+- `a08e32788bdcd5d33da31e0c413803f30e548b92` — watcher-aware focused
+  transfer acceptance; product behavior unchanged from the previously built
+  UNC Copy/Move implementation.
+
+---
+
 ## 2026-10-04 — overlapping Remote Windows Task chain amplified one acceptance into seven runs
 
 **오류 발생**
