@@ -1,13 +1,11 @@
 {
-  "request_id": "unc-network-shell-visual-docs-fast-20261007",
-  "expected_main_sha": "e70d3ec5c91118acd113f2d90cb6a37f1c7c4ac8",
+  "request_id": "unc-network-shell-visual-cleanup-20261007",
+  "expected_main_sha": "5d7dc8c7a98b39ad3a6c80240d7d6f2f995bbfa9",
   "candidate_sha": "5d7dc8c7a98b39ad3a6c80240d7d6f2f995bbfa9",
-  "logical_unit": "unc-network-shell-visuals",
-  "request_mode": "validation",
-  "configuration": "Release",
-  "validation_plan": [
-    "fast"
-  ],
+  "logical_unit": "unc-network-shell-visual-cleanup",
+  "request_mode": "diagnostic",
+  "configuration": "none",
+  "validation_plan": [],
   "working_directory": "",
-  "command": "$ErrorActionPreference=\"Stop\"\n$repo=$env:FLYEXPLORER_CANONICAL_CHECKOUT\n$main=\"e70d3ec5c91118acd113f2d90cb6a37f1c7c4ac8\";$candidate=\"5d7dc8c7a98b39ad3a6c80240d7d6f2f995bbfa9\";$branch=\"work/unc-network-shell-visuals-20261007\"\nSet-Location -LiteralPath $repo\n& git fetch origin main $branch --no-tags --prune\nif($LASTEXITCODE -ne 0){throw \"network visual docs FAST fetch failed\"}\nif((& git rev-parse refs/remotes/origin/main).Trim() -ne $main){throw \"main moved before network visual docs FAST\"}\nif((& git rev-parse (\"refs/remotes/origin/\"+$branch)).Trim() -ne $candidate){throw \"network visual docs candidate moved\"}\n$temp=Join-Path $env:RUNNER_TEMP (\"fly-network-visual-docs-\"+$env:GITHUB_RUN_ID)\nif(Test-Path -LiteralPath $temp){Remove-Item -LiteralPath $temp -Recurse -Force}\ntry{\n & git worktree add --detach $temp $candidate\n if($LASTEXITCODE -ne 0){throw \"network visual docs worktree add failed\"}\n Set-Location -LiteralPath $temp\n & git diff --check ($main+\"...\"+$candidate)\n if($LASTEXITCODE -ne 0){throw \"network visual docs diff check failed\"}\n & python -X utf8 tools\\winui\\run_checks.py fast --before $main --head $candidate\n if($LASTEXITCODE -ne 0){throw \"network visual docs FAST failed\"}\n Write-Host \"NETWORK_VISUAL_DOCS_DIFF_CHECK=PASS\"\n Write-Host \"NETWORK_VISUAL_DOCS_FAST=PASS\"\n Write-Host \"NETWORK_VISUAL_REUSED_FINAL_RUN=37577442125\"\n Write-Host \"NETWORK_VISUAL_REUSED_FAST_RUN=37577331163\"\n Write-Host \"NETWORK_VISUAL_REUSED_BEFORE_RUN=37575384608\"\n Write-Host \"NETWORK_VISUAL_PHYSICAL_SMB=NOT_RUN_NO_OWNED_SHARE\"\n}finally{\n Set-Location -LiteralPath $repo\n if(Test-Path -LiteralPath $temp){& git worktree remove --force $temp}\n & git worktree prune\n}"
+  "command": "$ErrorActionPreference=\"Stop\"\n$repo=$env:FLYEXPLORER_CANONICAL_CHECKOUT\n$main=\"5d7dc8c7a98b39ad3a6c80240d7d6f2f995bbfa9\"\n$branch=\"work/unc-network-shell-visuals-20261007\"\nSet-Location -LiteralPath $repo\n& git fetch origin main $branch --no-tags --prune\nif($LASTEXITCODE -ne 0){throw \"network visual cleanup fetch failed\"}\nif((& git rev-parse refs/remotes/origin/main).Trim() -ne $main){throw \"main moved before network visual cleanup\"}\nif((& git rev-parse (\"refs/remotes/origin/\"+$branch)).Trim() -ne $main){throw \"network visual work branch is not accepted main\"}\n& git push origin --delete $branch\nif($LASTEXITCODE -ne 0){throw \"network visual work branch delete failed\"}\n& git fetch origin --prune --no-tags\nif($LASTEXITCODE -ne 0){throw \"network visual cleanup prune failed\"}\nif(& git branch -r --list (\"origin/\"+$branch)){throw \"network visual work branch still present after prune\"}\nWrite-Host \"UNC_NETWORK_VISUAL_WORK_BRANCH_CLEANUP=PASS\"\nWrite-Host \"UNC_NETWORK_VISUAL_ACCEPTED_MAIN=$main\""
 }
