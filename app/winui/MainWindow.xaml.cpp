@@ -982,7 +982,7 @@ namespace winrt::FlyExplorer::implementation
         const auto ticket=listState.beginMetadata(route,tab);
         fxfile::previewmetadata::FileMetadataController::Request request{};
         request.side=side;request.tab=tab;request.route=route;request.ticket=ticket;
-        request.isolatedPathAccess=isolatedPathAccess;
+        request.isolatedNetwork=isolatedNetwork;
         request.paths=std::move(paths);
         auto dispatch=DispatcherQueue();
         auto weak=get_weak();
