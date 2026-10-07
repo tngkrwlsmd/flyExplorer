@@ -507,9 +507,11 @@ wins over the selected fallback. The existing 1 MiB/file, 16 MiB/search and
 64 KiB cancellation boundaries remain unchanged. Invalid encoding enum values
 are rejected before worker start.
 
-Saved search-condition presets now write schema 3 with the selected content
-encoding while retaining read compatibility with schema 1 and schema 2. Scope
-remains intentionally excluded.
+At product revision `44305357394c8eed76eaaa31614ecaddaca7f4c3`, saved
+search-condition presets wrote schema 3 with the selected content encoding while
+retaining read compatibility with schema 1 and schema 2. The current schema is
+4 because bounded content regex adds one persisted flag; scope remains
+intentionally excluded.
 
 Remote run `37173754944` passed canonical structure 4/4, source contracts
 218/218, the Release M19 native content-encoding gate at 47/47, canonical
@@ -1089,12 +1091,16 @@ modified-date and entry-kind criteria. Content matching supports UTF-8/ASCII
 and BOM-tagged UTF-16 LE/BE text. Unmarked NUL-containing files are treated as
 binary and skipped. Reading is bounded to 1 MiB per file and 16 MiB per search,
 with cancellation checked every 64 KiB. Folder-only content queries are rejected
-before worker start. The existing depth-5, 2,500-entry and 100-result search
-bounds remain unchanged.
+before worker start. At product revision
+`eb612e6ef81e168e95cc5c00284eaf890157497b`, the then-current depth-5,
+2,500-entry and 100-result search bounds remained unchanged; later search-scale
+work raised those bounds to the current 20,000 entries, depth 32 and 1,000
+retained matches.
 
-Saved search-condition sets now persist the content term using schema 2 while
-retaining read compatibility with schema 1. Scope remains intentionally
-excluded from saved presets.
+At that literal-content revision, saved search-condition sets persisted the
+content term using schema 2 while retaining read compatibility with schema 1.
+The current schema is 4; scope remains intentionally excluded from saved
+presets.
 
 Remote run `37172317827` passed canonical structure 4/4 and source contracts
 212/212, then isolated one native-fixture token mismatch after 39/40 checks;
