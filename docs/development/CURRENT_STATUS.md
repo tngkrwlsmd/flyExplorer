@@ -57,12 +57,12 @@ checkpoints.
   cancellation and a bounded inactivity timeout; local fixed/removable
   metadata keeps the detached in-process worker. FileDetailController separately
   owns Windows type/icon/known-folder/thumbnail presentation. Its 1,200-item
-  visual-work ceiling now accepts local fixed, mapped `DRIVE_REMOTE` and
-  ordinary direct-UNC filesystem roots. Network detail uses navigation-snapshot
-  folder hints so the parent process does not probe UNC attributes, while image
-  path/reparse/size validation and Shell thumbnail extraction stay inside the
-  bounded one-shot helper. Removable-drive visual detail and virtual
-  Shell/provider visual detail remain unsupported. Type/size/modified-date sort
+  visual-work ceiling now accepts local fixed/removable, mapped `DRIVE_REMOTE`
+  and ordinary direct-UNC filesystem roots. Removable/network detail uses
+  navigation-snapshot folder hints so the parent process does not probe those
+  paths for attributes, while image path/reparse/size validation and Shell
+  thumbnail extraction stay inside the bounded one-shot helper. Virtual
+  Shell/provider visual detail remains unsupported. Type/size/modified-date sort
   no longer silently falls back to name order while metadata is pending or when
   the folder contains 1,201-20,000 items. Modified-date validity is derived
   from the FILETIME value itself; display-label formatting is independent of
@@ -934,12 +934,13 @@ Current source and the last parity evidence still show these limits:
   The previous 1,200 visual-detail ceiling no longer controls these sorts and
   1,201-20,000 items no longer silently use name order. Above 20,000 these
   metadata sorts remain explicitly refused. Shell visual/type/icon/thumbnail
-  enrichment is separately bounded to 1,200 items and now supports local fixed,
-  mapped network and ordinary direct-UNC filesystem roots. Actual SMB/mapped-
-  drive visual execution is still uncertified; removable-drive and virtual
-  Shell/provider visual enrichment remain unsupported. Physical USB metadata-
-  sort execution is also still awaiting a removable device on the self-hosted
-  VM.
+  enrichment is separately bounded to 1,200 items and now supports local
+  fixed/removable, mapped network and ordinary direct-UNC filesystem roots.
+  Actual physical USB/removable and SMB/mapped-drive visual execution remain
+  uncertified because the self-hosted runner has neither a removable volume nor
+  a test-owned SMB share; virtual Shell/provider visual enrichment remains
+  unsupported. Physical USB metadata-sort execution is also still awaiting a
+  removable device on the self-hosted VM.
 - Copy/Move accepts local fixed/removable roots, mapped
   `DRIVE_REMOTE` roots and ordinary direct UNC filesystem paths through the
   shared Shell transfer core. Copy/Move Shell mutation is isolated in an

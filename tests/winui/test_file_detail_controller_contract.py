@@ -41,30 +41,31 @@ class FileDetailControllerContract(unittest.TestCase):
                         "entry.sizeKnown=","entry.dateKnown="):
             self.assertNotIn(removed,impl)
 
-    def test_network_details_use_snapshot_hints_and_isolated_thumbnail_path(self):
+    def test_network_and_removable_details_use_snapshot_hints_and_isolated_thumbnail_path(self):
         header=read("app/winui/file_detail_controller.h")
         worker=read("app/winui/file_detail_controller.cpp")
         main=read("app/winui/MainWindow.xaml.cpp")
         for token in (
-            "bool isolatedNetwork=false",
+            "bool isolatedPathAccess=false",
             "std::vector<std::uint8_t> folderHints{}",
         ):
             self.assertIn(token,header)
         for token in (
-            "request.isolatedNetwork",
+            "request.isolatedPathAccess",
             "request.folderHints.size()!=request.paths.size()",
             "folder=request.folderHints[i]!=0",
-            "thumbnailSizeEligible=request.isolatedNetwork||",
+            "thumbnailSizeEligible=request.isolatedPathAccess||",
         ):
             self.assertIn(token,worker)
         self.assertIn(
             "if(!::GetFileAttributesExW(",worker)
         self.assertIn(
-            "if(request.isolatedNetwork){",worker)
+            "if(request.isolatedPathAccess){",worker)
         for token in (
             "shelltransfer::transferDriveRoot(folder,root)",
-            "driveType==DRIVE_REMOTE||mOwnedNetworkDetailForce",
-            "request.isolatedNetwork=isolatedNetwork",
+            "driveType==DRIVE_REMOVABLE||driveType==DRIVE_REMOTE||",
+            "mOwnedNetworkDetailForce||mOwnedRemovableDetailForce",
+            "request.isolatedPathAccess=isolatedPathAccess",
             "request.folderHints=std::move(folderHints)",
             "item.isFolder()?1u:0u",
         ):

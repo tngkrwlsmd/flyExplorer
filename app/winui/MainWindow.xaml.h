@@ -274,6 +274,7 @@ namespace winrt::FlyExplorer::implementation
         bool mOwnedMetadataSortConsumed=false;
         bool mOwnedMetadataForceIsolated=false;
         bool mOwnedNetworkDetailForce=false;
+        bool mOwnedRemovableDetailForce=false;
         void InitializeOwnedMetadataSortTest();
         void RunOwnedMetadataSortTestIfReady();
         Microsoft::UI::Dispatching::DispatcherQueueTimer

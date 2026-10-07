@@ -13,7 +13,7 @@ class ThumbnailContract(unittest.TestCase):
   app=src("app/winui/MainWindow.xaml.cpp")
   self.assertNotIn("IShellItemImageFactory",app)
   self.assertNotIn("SHGetFileInfoW",app)
- def test_network_thumbnail_validation_stays_inside_owned_child(self):
+ def test_network_and_removable_thumbnail_validation_stays_inside_owned_child(self):
   client=src("src/base/shell_thumbnail_core.cpp")
   helper=src("app/winui/helper/FlyShellIsolationHelper.cpp")
   self.assertIn("thumbnailCandidate",client)
@@ -23,7 +23,8 @@ class ThumbnailContract(unittest.TestCase):
   self.assertIn(r'value.rfind(L"\\\\.\\",0)==0',client)
   self.assertIn(
       "fxfile::shelltransfer::transferDriveRoot(source,root)",helper)
-  self.assertIn("driveType!=DRIVE_FIXED&&driveType!=DRIVE_REMOTE",helper)
+  self.assertIn("driveType!=DRIVE_FIXED&&driveType!=DRIVE_REMOVABLE&&",helper)
+  self.assertIn("driveType!=DRIVE_REMOTE",helper)
   self.assertIn("GetFileAttributesW(part.c_str())",helper)
   self.assertIn("GetFileAttributesExW(path.c_str()",helper)
 

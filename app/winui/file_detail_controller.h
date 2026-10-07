@@ -22,7 +22,7 @@ public:
             fxfile::previewlist::FileViewMode::Details;
         std::uint32_t visualPixels=16;
         std::uint32_t thumbnailPixels=48;
-        bool isolatedNetwork=false;
+        bool isolatedPathAccess=false;
         std::vector<std::wstring> paths{};
         std::vector<std::uint8_t> folderHints{};
     };

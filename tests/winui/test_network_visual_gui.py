@@ -1,4 +1,4 @@
-"""Focused visual/type/icon/thumbnail acceptance for isolated network-detail path."""
+"""Focused visual/type/icon/thumbnail acceptance for isolated filesystem detail paths."""
 import argparse
 import ctypes as c
 import hashlib
@@ -29,7 +29,10 @@ def main():
     parser.add_argument("--configuration",choices=("Debug","Release"),default="Release")
     parser.add_argument("--capture",choices=("before","after"),required=True)
     parser.add_argument("--force-network-detail",action="store_true")
+    parser.add_argument("--force-removable-detail",action="store_true")
     args=parser.parse_args()
+    if args.force_network_detail and args.force_removable_detail:
+        parser.error("choose only one forced detail path")
     if os.name!="nt":
         return 2
 
@@ -70,6 +73,10 @@ def main():
         env["FLY_NETWORK_DETAIL_FORCE_TEST"]="YES"
     else:
         env.pop("FLY_NETWORK_DETAIL_FORCE_TEST",None)
+    if args.force_removable_detail:
+        env["FLY_REMOVABLE_DETAIL_FORCE_TEST"]="YES"
+    else:
+        env.pop("FLY_REMOVABLE_DETAIL_FORCE_TEST",None)
 
     process=subprocess.Popen([str(exe),str(folder)],cwd=exe.parent,env=env)
     parent=None
@@ -150,6 +157,8 @@ def main():
         print("NETWORK_VISUAL_TYPE_LABEL_PASS",True,flush=True)
         print("NETWORK_VISUAL_FORCED_NETWORK_PATH",
               args.force_network_detail,flush=True)
+        print("NETWORK_VISUAL_FORCED_REMOVABLE_PATH",
+              args.force_removable_detail,flush=True)
 
         until(lambda:shot.is_file() and shot.stat().st_size>4096,
               "app-owned XAML visual capture did not complete",12)

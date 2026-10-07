@@ -412,7 +412,8 @@ int wmain(int argc,wchar_t** argv) {
         std::wstring root;
         if(!fxfile::shelltransfer::transferDriveRoot(source,root))return 35;
         const auto driveType=::GetDriveTypeW(root.c_str());
-        if(driveType!=DRIVE_FIXED&&driveType!=DRIVE_REMOTE)return 35;
+        if(driveType!=DRIVE_FIXED&&driveType!=DRIVE_REMOVABLE&&
+           driveType!=DRIVE_REMOTE)return 35;
         auto ext=path.extension().native();
         for(auto& c:ext)c=static_cast<wchar_t>(::towlower(c));
         if(ext!=L".png"&&ext!=L".jpg"&&ext!=L".jpeg"&&

@@ -33,7 +33,7 @@ bool FileDetailController::start(
     if(closing_.load()||request.side<0||
        request.side>=static_cast<int>(cancel_.size())||
        request.route==0||request.ticket==0||request.paths.size()>1200||
-       (request.isolatedNetwork&&
+       (request.isolatedPathAccess&&
         request.folderHints.size()!=request.paths.size())||
        !post||!completion)return false;
     const int side=request.side;
@@ -136,7 +136,7 @@ bool FileDetailController::start(
                 if(path.empty()||path.size()>32000)continue;
                 WIN32_FILE_ATTRIBUTE_DATA data{};
                 bool folder=false;
-                if(request.isolatedNetwork){
+                if(request.isolatedPathAccess){
                     folder=request.folderHints[i]!=0;
                 }else{
                     if(!::GetFileAttributesExW(
@@ -190,7 +190,7 @@ bool FileDetailController::start(
                     }
                 }
                 if(!folder){
-                    const bool thumbnailSizeEligible=request.isolatedNetwork||
+                    const bool thumbnailSizeEligible=request.isolatedPathAccess||
                         (data.nFileSizeHigh==0&&
                          data.nFileSizeLow<=32*1024*1024);
                     if((request.viewMode==FileViewMode::MediumIcons||

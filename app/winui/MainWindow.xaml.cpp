@@ -475,6 +475,11 @@ namespace winrt::FlyExplorer::implementation
             ::GetEnvironmentVariableW(
                 L"FLY_NETWORK_DETAIL_FORCE_TEST",forced,8)==3&&
             !wcscmp(forced,L"YES");
+        wchar_t removableForced[8]{};
+        mOwnedRemovableDetailForce=
+            ::GetEnvironmentVariableW(
+                L"FLY_REMOVABLE_DETAIL_FORCE_TEST",removableForced,8)==3&&
+            !wcscmp(removableForced,L"YES");
     }
 
     void MainWindow::CaptureOwnedNetworkVisualIfReady()
@@ -977,7 +982,7 @@ namespace winrt::FlyExplorer::implementation
         const auto ticket=listState.beginMetadata(route,tab);
         fxfile::previewmetadata::FileMetadataController::Request request{};
         request.side=side;request.tab=tab;request.route=route;request.ticket=ticket;
-        request.isolatedNetwork=isolatedNetwork;
+        request.isolatedPathAccess=isolatedPathAccess;
         request.paths=std::move(paths);
         auto dispatch=DispatcherQueue();
         auto weak=get_weak();
@@ -1055,9 +1060,10 @@ namespace winrt::FlyExplorer::implementation
         const auto driveType=directUnc?
             static_cast<UINT>(DRIVE_REMOTE):
             ::GetDriveTypeW(root.c_str());
-        const bool isolatedNetwork=
-            driveType==DRIVE_REMOTE||mOwnedNetworkDetailForce;
-        if(driveType!=DRIVE_FIXED&&!isolatedNetwork)return;
+        const bool isolatedPathAccess=
+            driveType==DRIVE_REMOVABLE||driveType==DRIVE_REMOTE||
+            mOwnedNetworkDetailForce||mOwnedRemovableDetailForce;
+        if(driveType!=DRIVE_FIXED&&!isolatedPathAccess)return;
         std::vector<std::wstring> paths{};
         std::vector<std::uint8_t> folderHints{};
         paths.reserve(items.size());
