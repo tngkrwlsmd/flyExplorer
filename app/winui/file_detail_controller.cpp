@@ -33,8 +33,8 @@ bool FileDetailController::start(
     if(closing_.load()||request.side<0||
        request.side>=static_cast<int>(cancel_.size())||
        request.route==0||request.ticket==0||request.paths.size()>1200||
-       (request.isolatedPathAccess&&
-        request.folderHints.size()!=request.paths.size())||
+       request.folderHints.size()!=request.paths.size()||
+       request.shellParsingNames.size()!=request.paths.size()||
        !post||!completion)return false;
     const int side=request.side;
     cancel(side);
@@ -128,17 +128,29 @@ bool FileDetailController::start(
                             2500,request.visualPixels);
                 }
             }
+            std::vector<fxfile::filetype::Visual> shellItemVisuals;
+            if(!visualHelper.empty()&&
+               std::any_of(request.shellParsingNames.begin(),
+                           request.shellParsingNames.end(),
+                           [](std::wstring const& value){return !value.empty();})){
+                if(cancelToken->load())return;
+                shellItemVisuals=fxfile::filetype::queryShellItemVisuals(
+                    visualHelper,request.shellParsingNames,cancelToken.get(),
+                    4500,request.visualPixels);
+                if(!shellItemVisuals.empty()&&
+                   shellItemVisuals.size()!=request.paths.size())return;
+            }
             std::vector<FileDetail> details(request.paths.size());
             std::size_t thumbnailBudget=0;
             for(std::size_t i=0;i<request.paths.size();++i){
                 if(cancelToken->load())return; // prevent stale visual child launch
                 auto const& path=request.paths[i];
-                if(path.empty()||path.size()>32000)continue;
+                auto const& shellParsing=request.shellParsingNames[i];
+                if((path.empty()&&shellParsing.empty())||
+                   path.size()>32000||shellParsing.size()>4096)continue;
                 WIN32_FILE_ATTRIBUTE_DATA data{};
-                bool folder=false;
-                if(request.isolatedPathAccess){
-                    folder=request.folderHints[i]!=0;
-                }else{
+                bool folder=request.folderHints[i]!=0;
+                if(!path.empty()&&!request.isolatedPathAccess){
                     if(!::GetFileAttributesExW(
                          path.c_str(),GetFileExInfoStandard,&data))
                         continue;
@@ -189,7 +201,18 @@ bool FileDetailController::start(
                         }
                     }
                 }
-                if(!folder){
+                if(shellItemVisuals.size()==request.paths.size()){
+                    auto const& shellVisual=shellItemVisuals[i];
+                    if(!shellVisual.label.empty())
+                        entry.typeLabel=shellVisual.label;
+                    if(!shellVisual.bgra.empty()){
+                        entry.iconBgra=shellVisual.bgra;
+                        entry.iconWidth=shellVisual.width;
+                        entry.iconHeight=shellVisual.height;
+                        entry.knownFolderVisual=false;
+                    }
+                }
+                if(!folder&&!path.empty()&&!request.shellProviderRoot){
                     const bool thumbnailSizeEligible=request.isolatedPathAccess||
                         (data.nFileSizeHigh==0&&
                          data.nFileSizeLow<=32*1024*1024);

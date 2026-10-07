@@ -71,6 +71,55 @@ class FileDetailControllerContract(unittest.TestCase):
         ):
             self.assertIn(token,main)
 
+    def test_virtual_shell_provider_visuals_use_isolated_parsing_name_path(self):
+        header=read("app/winui/file_detail_controller.h")
+        worker=read("app/winui/file_detail_controller.cpp")
+        main=read("app/winui/MainWindow.xaml.cpp")
+        assoc=read("src/base/shell_assoc_type_core.cpp")
+        helper=read("app/winui/helper/FlyShellIsolationHelper.cpp")
+        wire=read("src/base/shell_visual_wire.h")
+        for token in (
+            "bool shellProviderRoot=false",
+            "std::vector<std::wstring> shellParsingNames{}",
+        ):
+            self.assertIn(token,header)
+        for token in (
+            "queryShellItemVisuals(",
+            "request.shellParsingNames",
+            "!folder&&!path.empty()&&!request.shellProviderRoot",
+        ):
+            self.assertIn(token,worker)
+        for token in (
+            "folder.empty()&&snapshot.folder.valid()",
+            "shellParsingNames.push_back(shellProviderRoot?",
+            "request.shellProviderRoot=shellProviderRoot",
+            "request.shellParsingNames=std::move(shellParsingNames)",
+        ):
+            self.assertIn(token,main)
+        for token in (
+            "PROC_THREAD_ATTRIBUTE_HANDLE_LIST",
+            "JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE",
+            "JOB_OBJECT_LIMIT_ACTIVE_PROCESS",
+            'L"FlyShellIsolationHelper.exe"',
+            'L"--shell-item-visuals"',
+            "TerminateJobObject",
+        ):
+            self.assertIn(token,assoc)
+        for token in (
+            'L"--shell-item-visuals"',
+            "SHParseDisplayName(",
+            "SHGFI_PIDL|SHGFI_TYPENAME|SHGFI_ICON",
+        ):
+            self.assertIn(token,helper)
+        for token in (
+            "kMaxItems=1200",
+            "kMaxNameUnits=4096",
+            "kMaxBodyBytes=8u*1024u*1024u",
+            "kMaxLabelUnits=80",
+        ):
+            self.assertIn(token,wire)
+        self.assertNotIn("IShellItemImageFactory",assoc)
+
     def test_mainwindow_keeps_live_state_acceptance_and_project_compiles_owner(self):
         main=read("app/winui/MainWindow.xaml.cpp")
         project=read("app/winui/flyExplorer.project-template.xml")

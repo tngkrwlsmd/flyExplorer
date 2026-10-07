@@ -1090,23 +1090,33 @@ namespace winrt::FlyExplorer::implementation
            listState.visualPixels==visualPixels)return;
         auto const& folder=pane.filesystemPaths[tab];
         if(snapshot.truncated||items.size()>1200)return;
-        std::wstring root;
-        if(!fxfile::shelltransfer::transferDriveRoot(folder,root))return;
-        const bool directUnc=
-            root.size()>=2&&root[0]==L'\\'&&root[1]==L'\\';
-        const auto driveType=directUnc?
-            static_cast<UINT>(DRIVE_REMOTE):
-            ::GetDriveTypeW(root.c_str());
-        const bool isolatedPathAccess=
-            driveType==DRIVE_REMOVABLE||driveType==DRIVE_REMOTE||
-            mOwnedNetworkDetailForce||mOwnedRemovableDetailForce;
-        if(driveType!=DRIVE_FIXED&&!isolatedPathAccess)return;
+        const bool shellProviderRoot=
+            folder.empty()&&snapshot.folder.valid();
+        bool isolatedPathAccess=false;
+        if(!shellProviderRoot){
+            std::wstring root;
+            if(!fxfile::shelltransfer::transferDriveRoot(folder,root))return;
+            const bool directUnc=
+                root.size()>=2&&root[0]==L'\\'&&root[1]==L'\\';
+            const auto driveType=directUnc?
+                static_cast<UINT>(DRIVE_REMOTE):
+                ::GetDriveTypeW(root.c_str());
+            isolatedPathAccess=
+                driveType==DRIVE_REMOVABLE||driveType==DRIVE_REMOTE||
+                mOwnedNetworkDetailForce||mOwnedRemovableDetailForce;
+            if(driveType!=DRIVE_FIXED&&!isolatedPathAccess)return;
+        }
         std::vector<std::wstring> paths{};
+        std::vector<std::wstring> shellParsingNames{};
         std::vector<std::uint8_t> folderHints{};
         paths.reserve(items.size());
+        shellParsingNames.reserve(items.size());
         folderHints.reserve(items.size());
         for(auto const& item:items){
-            paths.push_back(item.isFileSystem()?item.parsingName:std::wstring{});
+            paths.push_back(!shellProviderRoot&&item.isFileSystem()?
+                item.parsingName:std::wstring{});
+            shellParsingNames.push_back(shellProviderRoot?
+                item.parsingName:std::wstring{});
             folderHints.push_back(item.isFolder()?1u:0u);
         }
         const auto ticket=listState.begin(route,tab);
@@ -1116,7 +1126,9 @@ namespace winrt::FlyExplorer::implementation
         request.viewMode=requestedView;request.visualPixels=visualPixels;
         request.thumbnailPixels=thumbnailPixels;
         request.isolatedPathAccess=isolatedPathAccess;
+        request.shellProviderRoot=shellProviderRoot;
         request.paths=std::move(paths);
+        request.shellParsingNames=std::move(shellParsingNames);
         request.folderHints=std::move(folderHints);
         auto dispatch=DispatcherQueue();
         auto weak=get_weak();

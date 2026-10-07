@@ -2,6 +2,7 @@
 // bounded disposable helper process, never on the WinUI UI thread.
 #pragma once
 #include <windows.h>
+#include <atomic>
 #include <cstdint>
 #include <string>
 #include <unordered_map>
@@ -32,6 +33,11 @@ std::unordered_map<std::wstring,Visual> queryKnownFolderVisuals(
     std::wstring const& ownedHelper,
     std::vector<std::wstring> const& keys,
     DWORD timeoutMs=2500,std::uint32_t requestedPixels=16) noexcept;
+std::vector<Visual> queryShellItemVisuals(
+    std::wstring const& ownedHelper,
+    std::vector<std::wstring> const& parsingNames,
+    std::atomic_bool const* cancel=nullptr,
+    DWORD inactivityMs=4500,std::uint32_t requestedPixels=16) noexcept;
 std::unordered_map<std::wstring,std::wstring> query(
     std::wstring const& ownedHelper,
     std::vector<std::wstring> const& extensions,

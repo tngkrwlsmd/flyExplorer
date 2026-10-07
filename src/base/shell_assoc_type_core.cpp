@@ -1,6 +1,8 @@
 #define WIN32_LEAN_AND_MEAN
 #include "shell_assoc_type_core.h"
+#include "shell_visual_wire.h"
 #include <algorithm>
+#include <atomic>
 #include <cwctype>
 #include <filesystem>
 #include <mutex>
@@ -232,6 +234,221 @@ std::unordered_map<std::wstring,Visual> queryKnownFolderVisuals(
                         timeoutMs,requestedPixels);
  }catch(...){return {};}
 }
+
+std::vector<Visual> queryShellItemVisuals(
+   std::wstring const& helper,std::vector<std::wstring> const& parsingNames,
+   std::atomic_bool const* cancel,DWORD inactivityMs,
+   std::uint32_t requestedPixels) noexcept {
+ std::vector<Visual> visuals;
+ try{
+  using namespace fxfile::visualwire;
+  static std::mutex shellItemVisualMutex;
+  std::lock_guard<std::mutex> lock(shellItemVisualMutex);
+  namespace fs=std::filesystem;
+  if(parsingNames.empty()||parsingNames.size()>kMaxItems||
+     inactivityMs<200||inactivityMs>10000||
+     requestedPixels<kMinPixels||requestedPixels>kMaxPixels||
+     !fs::path(helper).is_absolute()||
+     fs::path(helper).filename()!=L"FlyShellIsolationHelper.exe"||
+     !fs::is_regular_file(fs::path(helper)))return {};
+  std::vector<unsigned char> body;
+  body.reserve(parsingNames.size()*64);
+  auto append=[&](void const* source,std::size_t bytes)->bool{
+   if(bytes>kMaxBodyBytes||body.size()>kMaxBodyBytes-bytes)return false;
+   auto const* ptr=static_cast<unsigned char const*>(source);
+   body.insert(body.end(),ptr,ptr+bytes);
+   return true;
+  };
+  for(auto const& name:parsingNames){
+   if(name.size()>kMaxNameUnits||
+      name.find(L'\0')!=std::wstring::npos)return {};
+   const auto units=static_cast<std::uint32_t>(name.size());
+   if(!append(&units,sizeof(units))||
+      !append(name.data(),name.size()*sizeof(wchar_t)))return {};
+  }
+  RequestHeader request{
+      kMagic,kVersion,static_cast<std::uint32_t>(parsingNames.size()),
+      requestedPixels,static_cast<std::uint32_t>(body.size()),
+      checksum(body.data(),body.size())};
+
+  SECURITY_ATTRIBUTES inheritable{sizeof(inheritable),nullptr,TRUE};
+  HANDLE childInputRaw=nullptr,hostInputRaw=nullptr;
+  HANDLE hostOutputRaw=nullptr,childOutputRaw=nullptr;
+  if(!::CreatePipe(&childInputRaw,&hostInputRaw,&inheritable,131072))
+    return {};
+  UniqueHandle childInput(childInputRaw),hostInput(hostInputRaw);
+  if(!::SetHandleInformation(hostInput.h,HANDLE_FLAG_INHERIT,0))return {};
+  if(!::CreatePipe(&hostOutputRaw,&childOutputRaw,&inheritable,131072))
+    return {};
+  UniqueHandle hostOutput(hostOutputRaw),childOutput(childOutputRaw);
+  if(!::SetHandleInformation(hostOutput.h,HANDLE_FLAG_INHERIT,0))return {};
+  UniqueHandle childError(::CreateFileW(
+      L"NUL",GENERIC_WRITE,FILE_SHARE_READ|FILE_SHARE_WRITE,
+      &inheritable,OPEN_EXISTING,FILE_ATTRIBUTE_NORMAL,nullptr));
+  if(!childError.valid())return {};
+
+  SIZE_T attributeBytes=0;
+  ::InitializeProcThreadAttributeList(nullptr,1,0,&attributeBytes);
+  if(!attributeBytes)return {};
+  std::vector<unsigned char> attributeStorage(attributeBytes);
+  auto* attributes=reinterpret_cast<LPPROC_THREAD_ATTRIBUTE_LIST>(
+      attributeStorage.data());
+  if(!::InitializeProcThreadAttributeList(
+      attributes,1,0,&attributeBytes))return {};
+  const HANDLE inherited[]{
+      childInput.h,childOutput.h,childError.h};
+  if(!::UpdateProcThreadAttribute(
+      attributes,0,PROC_THREAD_ATTRIBUTE_HANDLE_LIST,
+      const_cast<HANDLE*>(inherited),sizeof(inherited),nullptr,nullptr)){
+   ::DeleteProcThreadAttributeList(attributes);
+   return {};
+  }
+
+  STARTUPINFOEXW startup{};
+  startup.StartupInfo.cb=sizeof(startup);
+  startup.StartupInfo.dwFlags=STARTF_USESTDHANDLES;
+  startup.StartupInfo.hStdInput=childInput.h;
+  startup.StartupInfo.hStdOutput=childOutput.h;
+  startup.StartupInfo.hStdError=childError.h;
+  startup.lpAttributeList=attributes;
+  std::wstring command=L"\""+helper+L"\" --shell-item-visuals";
+  std::vector<wchar_t> mutableCommand(command.begin(),command.end());
+  mutableCommand.push_back(0);
+  PROCESS_INFORMATION info{};
+  const BOOL created=::CreateProcessW(
+      helper.c_str(),mutableCommand.data(),nullptr,nullptr,TRUE,
+      CREATE_NO_WINDOW|CREATE_SUSPENDED|EXTENDED_STARTUPINFO_PRESENT,
+      nullptr,fs::path(helper).parent_path().c_str(),
+      &startup.StartupInfo,&info);
+  ::DeleteProcThreadAttributeList(attributes);
+  if(!created)return {};
+  UniqueHandle process(info.hProcess),thread(info.hThread);
+  UniqueHandle job(::CreateJobObjectW(nullptr,nullptr));
+  if(!job.valid()){
+   ::TerminateProcess(process.h,ERROR_NOT_ENOUGH_MEMORY);
+   ::WaitForSingleObject(process.h,250);
+   return {};
+  }
+  JOBOBJECT_EXTENDED_LIMIT_INFORMATION limits{};
+  limits.BasicLimitInformation.LimitFlags=
+      JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE|JOB_OBJECT_LIMIT_ACTIVE_PROCESS;
+  limits.BasicLimitInformation.ActiveProcessLimit=1;
+  if(!::SetInformationJobObject(
+       job.h,JobObjectExtendedLimitInformation,&limits,sizeof(limits))||
+     !::AssignProcessToJobObject(job.h,process.h)){
+   const auto error=::GetLastError();
+   ::TerminateProcess(process.h,error);
+   ::WaitForSingleObject(process.h,250);
+   return {};
+  }
+  if(::ResumeThread(thread.h)==DWORD(-1)){
+   ::TerminateJobObject(job.h,::GetLastError());
+   ::WaitForSingleObject(process.h,250);
+   return {};
+  }
+  thread.reset();
+  childInput.reset();
+  childOutput.reset();
+  childError.reset();
+
+  auto writeAll=[](HANDLE handle,void const* source,std::size_t bytes)->bool{
+   auto const* ptr=static_cast<unsigned char const*>(source);
+   while(bytes){
+    const auto chunk=static_cast<DWORD>((std::min<std::size_t>)(bytes,65536));
+    DWORD used=0;
+    if(!::WriteFile(handle,ptr,chunk,&used,nullptr)||!used)return false;
+    ptr+=used;bytes-=used;
+   }
+   return true;
+  };
+  if(!writeAll(hostInput.h,&request,sizeof(request))||
+     (!body.empty()&&!writeAll(hostInput.h,body.data(),body.size()))){
+   ::TerminateJobObject(job.h,ERROR_WRITE_FAULT);
+   ::WaitForSingleObject(process.h,250);
+   return {};
+  }
+  hostInput.reset();
+
+  auto lastProgress=::GetTickCount64();
+  auto stopOwned=[&](DWORD code){
+   if(::WaitForSingleObject(process.h,0)!=WAIT_OBJECT_0){
+    ::TerminateJobObject(job.h,code);
+    ::WaitForSingleObject(process.h,250);
+   }
+  };
+  auto readMonitored=[&](void* target,std::size_t bytes)->bool{
+   auto* ptr=static_cast<unsigned char*>(target);
+   while(bytes){
+    if(cancel&&cancel->load()){
+     stopOwned(ERROR_CANCELLED);
+     return false;
+    }
+    DWORD available=0;
+    if(!::PeekNamedPipe(hostOutput.h,nullptr,0,nullptr,&available,nullptr)){
+     stopOwned(::GetLastError());
+     return false;
+    }
+    if(available){
+     const auto chunk=static_cast<DWORD>((std::min<std::size_t>)(
+         bytes,(std::min<std::size_t>)(available,65536)));
+     DWORD used=0;
+     if(!::ReadFile(hostOutput.h,ptr,chunk,&used,nullptr)||!used){
+      stopOwned(ERROR_READ_FAULT);
+      return false;
+     }
+     ptr+=used;bytes-=used;
+     lastProgress=::GetTickCount64();
+     continue;
+    }
+    if(::WaitForSingleObject(process.h,0)==WAIT_OBJECT_0)return false;
+    if(::GetTickCount64()-lastProgress>=inactivityMs){
+     stopOwned(ERROR_TIMEOUT);
+     return false;
+    }
+    ::Sleep(18);
+   }
+   return true;
+  };
+
+  visuals.resize(parsingNames.size());
+  const auto expectedPixels=requestedPixels*requestedPixels*4u;
+  for(std::size_t i=0;i<visuals.size();++i){
+   ResultHeader result{};
+   if(!readMonitored(&result,sizeof(result))||
+      result.magic!=kMagic||result.version!=kVersion||
+      result.index!=i||result.labelUnits>kMaxLabelUnits||
+      (result.pixelBytes!=0&&result.pixelBytes!=expectedPixels)){
+    stopOwned(ERROR_INVALID_DATA);
+    return {};
+   }
+   if(result.labelUnits){
+    visuals[i].label.resize(result.labelUnits);
+    if(!readMonitored(
+         visuals[i].label.data(),
+         result.labelUnits*sizeof(wchar_t)))return {};
+    if(std::any_of(visuals[i].label.begin(),visuals[i].label.end(),
+       [](wchar_t ch){return ch<32||ch==127;})){
+      stopOwned(ERROR_INVALID_DATA);
+      return {};
+    }
+   }
+   if(result.pixelBytes){
+    visuals[i].bgra.resize(result.pixelBytes);
+    if(!readMonitored(visuals[i].bgra.data(),result.pixelBytes))return {};
+    visuals[i].width=requestedPixels;
+    visuals[i].height=requestedPixels;
+   }
+  }
+  if(::WaitForSingleObject(process.h,500)!=WAIT_OBJECT_0){
+   stopOwned(ERROR_TIMEOUT);
+   return {};
+  }
+  DWORD exitCode=ERROR_GEN_FAILURE;
+  if(!::GetExitCodeProcess(process.h,&exitCode)||exitCode!=0)return {};
+  return visuals;
+ }catch(...){return {};}
+}
+
 std::unordered_map<std::wstring,std::wstring> query(
    std::wstring const& helper,std::vector<std::wstring> const& input,
    DWORD timeoutMs) noexcept {

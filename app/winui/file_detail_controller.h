@@ -23,7 +23,9 @@ public:
         std::uint32_t visualPixels=16;
         std::uint32_t thumbnailPixels=48;
         bool isolatedPathAccess=false;
+        bool shellProviderRoot=false;
         std::vector<std::wstring> paths{};
+        std::vector<std::wstring> shellParsingNames{};
         std::vector<std::uint8_t> folderHints{};
     };
     struct Completion final {

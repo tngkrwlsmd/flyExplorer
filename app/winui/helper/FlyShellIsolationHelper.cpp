@@ -5,6 +5,7 @@
 #include "../../../src/base/shell_isolation_wire.h"
 #include "../../../src/base/shell_transfer_core.h"
 #include "../../../src/base/file_metadata_wire.h"
+#include "../../../src/base/shell_visual_wire.h"
 #include <windows.h>
 #include <shellapi.h>
 #include <shlobj.h>
@@ -283,6 +284,119 @@ int wmain(int argc,wchar_t** argv) {
     if(argc==2&&!wcscmp(argv[1],L"--file-transfer"))
         return fxfile::shelltransfer::runIsolatedHelper(
             ::GetStdHandle(STD_INPUT_HANDLE),::GetStdHandle(STD_OUTPUT_HANDLE));
+    if(argc==2&&!wcscmp(argv[1],L"--shell-item-visuals")){
+        using namespace fxfile::visualwire;
+        auto input=::GetStdHandle(STD_INPUT_HANDLE);
+        auto output=::GetStdHandle(STD_OUTPUT_HANDLE);
+        if(!input||input==INVALID_HANDLE_VALUE||
+           !output||output==INVALID_HANDLE_VALUE)return 90;
+        RequestHeader request{};
+        if(!exactRead(input,&request,sizeof(request))||
+           request.magic!=kMagic||request.version!=kVersion||
+           !request.count||request.count>kMaxItems||
+           request.pixels<kMinPixels||request.pixels>kMaxPixels||
+           request.bodyBytes>kMaxBodyBytes)return 91;
+        std::vector<unsigned char> body(request.bodyBytes);
+        if(request.bodyBytes&&!exactRead(
+             input,body.data(),body.size()))return 92;
+        if(checksum(body.data(),body.size())!=request.checksum)return 93;
+        std::vector<std::wstring> names;
+        names.reserve(request.count);
+        size_t cursor=0;
+        for(std::uint32_t i=0;i<request.count;++i){
+            if(cursor+sizeof(std::uint32_t)>body.size())return 94;
+            std::uint32_t units=0;
+            std::memcpy(&units,body.data()+cursor,sizeof(units));
+            cursor+=sizeof(units);
+            if(units>kMaxNameUnits||
+               static_cast<size_t>(units)>
+                   (body.size()-cursor)/sizeof(wchar_t))return 94;
+            std::wstring name(
+                reinterpret_cast<wchar_t const*>(body.data()+cursor),units);
+            cursor+=static_cast<size_t>(units)*sizeof(wchar_t);
+            if(name.find(L'\0')!=std::wstring::npos)return 94;
+            names.push_back(std::move(name));
+        }
+        if(cursor!=body.size())return 94;
+        const auto apt=::CoInitializeEx(
+            nullptr,COINIT_APARTMENTTHREADED|COINIT_DISABLE_OLE1DDE);
+        if(FAILED(apt))return 95;
+        int resultCode=0;
+        for(std::size_t i=0;i<names.size()&&resultCode==0;++i){
+            std::wstring label;
+            std::vector<unsigned char> pixels;
+            PIDLIST_ABSOLUTE absolute=nullptr;
+            HICON icon=nullptr;
+            try{
+                if(!names[i].empty()&&
+                   SUCCEEDED(::SHParseDisplayName(
+                    names[i].c_str(),nullptr,&absolute,0,nullptr))&&absolute){
+                    SHFILEINFOW info{};
+                    const auto flags=SHGFI_PIDL|SHGFI_TYPENAME|SHGFI_ICON|
+                        (request.pixels<=16?SHGFI_SMALLICON:SHGFI_LARGEICON);
+                    if(::SHGetFileInfoW(
+                        reinterpret_cast<LPCWSTR>(absolute),0,&info,
+                        sizeof(info),flags)){
+                        label=info.szTypeName;
+                        if(label.size()>kMaxLabelUnits||
+                           std::any_of(label.begin(),label.end(),[](wchar_t ch){
+                               return ch<32||ch==127;}))
+                            label.clear();
+                        icon=info.hIcon;
+                    }
+                }
+                if(icon){
+                    BITMAPINFO bitmap{};
+                    bitmap.bmiHeader.biSize=sizeof(BITMAPINFOHEADER);
+                    bitmap.bmiHeader.biWidth=static_cast<LONG>(request.pixels);
+                    bitmap.bmiHeader.biHeight=-static_cast<LONG>(request.pixels);
+                    bitmap.bmiHeader.biPlanes=1;
+                    bitmap.bmiHeader.biBitCount=32;
+                    bitmap.bmiHeader.biCompression=BI_RGB;
+                    void* raw=nullptr;
+                    HDC screen=::GetDC(nullptr);
+                    HDC memory=screen?::CreateCompatibleDC(screen):nullptr;
+                    HBITMAP image=memory?::CreateDIBSection(
+                        memory,&bitmap,DIB_RGB_COLORS,&raw,nullptr,0):nullptr;
+                    if(memory&&image&&raw){
+                        auto old=::SelectObject(memory,image);
+                        std::memset(raw,0,
+                            static_cast<size_t>(request.pixels)*
+                            request.pixels*4);
+                        if(::DrawIconEx(
+                            memory,0,0,icon,request.pixels,request.pixels,
+                            0,nullptr,DI_NORMAL)){
+                            const auto bytes=static_cast<size_t>(
+                                request.pixels)*request.pixels*4;
+                            auto* begin=static_cast<unsigned char*>(raw);
+                            pixels.assign(begin,begin+bytes);
+                        }
+                        ::SelectObject(memory,old);
+                    }
+                    if(image)::DeleteObject(image);
+                    if(memory)::DeleteDC(memory);
+                    if(screen)::ReleaseDC(nullptr,screen);
+                }
+            }catch(...){
+                label.clear();
+                pixels.clear();
+            }
+            if(icon)::DestroyIcon(icon);
+            if(absolute)::CoTaskMemFree(absolute);
+            ResultHeader result{
+                kMagic,kVersion,static_cast<std::uint32_t>(i),
+                static_cast<std::uint32_t>(label.size()),
+                static_cast<std::uint32_t>(pixels.size())};
+            if(!exactWrite(output,&result,sizeof(result))||
+               (!label.empty()&&!exactWrite(
+                   output,label.data(),label.size()*sizeof(wchar_t)))||
+               (!pixels.empty()&&!exactWrite(
+                   output,pixels.data(),pixels.size())))
+                resultCode=96;
+        }
+        ::CoUninitialize();
+        return resultCode;
+    }
     if(argc==2&&!wcscmp(argv[1],L"--file-metadata")){
         auto input=::GetStdHandle(STD_INPUT_HANDLE);
         auto output=::GetStdHandle(STD_OUTPUT_HANDLE);
