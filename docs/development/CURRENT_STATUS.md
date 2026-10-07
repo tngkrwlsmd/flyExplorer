@@ -568,6 +568,35 @@ showing `자동 UTF` and the selector without clipping/overlap while both panes
 remain usable.
 
 
+Bounded content regex is accepted on product revision
+`17c54dfda87e978bad155041929be0e5776f40ef`. The Search panel exposes a
+separate `내용 정규식` checkbox so filename regex semantics stay unchanged.
+Decoded content is matched by `src/base/bounded_regex.*`, a non-backtracking
+NFA with at most 1,024 states and a 4,194,304-state-visit limit per file;
+cancellation is checked inside the matcher. Invalid syntax and unsupported
+lookaround/backreferences are rejected before worker creation. Ordinary groups,
+non-capturing groups, alternation, dot, character classes, `* + ? {m,n}`,
+and `^ $` are supported. Existing 1 MiB/file, 16 MiB/search and 64 KiB read
+cancellation boundaries remain intact. Search presets write schema 4 with the
+content-regex flag and retain schema 1-3 read compatibility.
+
+Evidence: run `37547158373` passed change-scoped FAST and Debug M19 native
+contracts at 53/53. Run `37547329626` subsequently passed the Release 53/53
+native gate and canonical Release build before failing only in the older
+physical-input GUI harness. Successor run `37548113347` passed FAST,
+canonical Release build and the focused UIA-only content-regex GUI. Final
+candidate run `37549364386` passed FAST, Release build, the focused
+content-regex GUI and the owned XAML visual gate at
+`17c54dfda87e978bad155041929be0e5776f40ef`; the rendered 960x608 Search panel
+shows the 245px content box, `내용 정규식` checkbox and encoding selector in
+order without clipping or overlap. The owned process exited 0. The earlier
+baseline screenshot retries `37535152549`, `37535465831`, `37538550263`
+and `37546086877` were harness-only failures (dirty persistent checkout,
+window discovery, physical cursor input, and ImageGrab respectively) and do
+not represent product failures; the unchanged pre-feature Search XAML visual
+evidence was reused per evidence-reuse policy.
+
+
 Bounded literal content search is accepted on product revision
 `eb612e6ef81e168e95cc5c00284eaf890157497b`. Search now AND-composes an optional literal file-content term
 with the existing name/regex, extension, size, local modified-date and target
@@ -800,14 +829,17 @@ Current source and the last parity evidence still show these limits:
   depth-5 and 100-retained-result limits. Filesystem traversal now visits up to
   20,000 entries at depth 32 and retains the first 1,000 matches while
   continuing to count later matches. The UI distinguishes a display cap from a
-  traversal cap. Regex, case sensitivity, entry-kind, single-extension,
-  minimum/maximum file size, inclusive local modified-date and literal text
-  content conditions are implemented with up to 20 private saved condition
-  sets. Content reads remain limited to 1 MiB per file and 16 MiB per search,
-  using Auto UTF (UTF-8/ASCII plus BOM-tagged UTF-16) or explicit
-  CP949/Windows-1252. Content regex, other encodings, indexed/provider/property
-  search and traversal beyond the current 20,000/depth-32 safety bounds are
-  not implemented.
+  traversal cap. Filename regex, case sensitivity, entry-kind,
+  single-extension, minimum/maximum file size, inclusive local modified-date,
+  literal text content and bounded content-regex conditions are implemented
+  with up to 20 private saved condition sets. Content reads remain limited to
+  1 MiB per file and 16 MiB per search, using Auto UTF (UTF-8/ASCII plus
+  BOM-tagged UTF-16) or explicit CP949/Windows-1252. Content regex uses a
+  non-backtracking project-owned matcher capped at 1,024 states and 4,194,304
+  state visits per decoded file; lookaround/backreferences are unsupported and
+  rejected before worker start. Presets write schema 4 and continue to read
+  schemas 1-3. Other encodings, indexed/provider/property search and traversal
+  beyond the current 20,000/depth-32 safety bounds are not implemented.
 - Persistent pane filter/mask rule sets are implemented with up to 20 named
   private presets, case-insensitive wildcard masks and legacy substring
   compatibility. Pane filters remain name/mask based; historical per-rule
