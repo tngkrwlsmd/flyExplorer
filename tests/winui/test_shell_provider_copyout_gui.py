@@ -9,7 +9,6 @@ import tempfile
 import time
 
 from pywinauto import Desktop
-from pywinauto.keyboard import send_keys
 
 from paths import ROOT,app_exe
 from uia_polling import wait_until
@@ -107,9 +106,11 @@ def main():
         print("SHELL_PROVIDER_COPYOUT_PICTURES_ENUMERATION",True,flush=True)
 
         # Only after the provider source has been observed, pin the opposite
-        # pane to the test-owned filesystem destination. F6 changes pane focus
-        # without physical pointer input; the left provider route must survive.
-        focus_owned();send_keys("{F6}");time.sleep(.2)
+        # pane to the test-owned filesystem destination. Invoke the app-owned
+        # automation activation button instead of synthesizing F6.
+        parent.child_window(auto_id="SecondaryPaneTitle").invoke()
+        until(lambda:"오른쪽 창을 선택했습니다" in status.window_text(),
+              "right pane activation did not commit",8)
         address.set_edit_text(str(destination))
         address.type_keys("{ENTER}",set_foreground=True)
         until(lambda:str(destination).lower() in address.get_value().lower(),
@@ -124,7 +125,9 @@ def main():
         assert source_row() is not None,(
             "opening the opposite destination replaced provider source pane")
 
-        focus_owned();send_keys("{F6}");time.sleep(.2)
+        parent.child_window(auto_id="PrimaryPaneTitle").invoke()
+        until(lambda:"왼쪽 창을 선택했습니다" in status.window_text(),
+              "left pane activation did not commit",8)
         source_row().select()
         until(lambda:source_row().is_selected(),
               "provider source selection was lost",8)
