@@ -235,12 +235,24 @@ only sortable metadata through the exact-owned
 `FlyShellIsolationHelper.exe --file-metadata` child. That path uses a bounded
 private wire, restricted inherited handles, a one-process kill-on-close Job
 Object, an inherited cancellation event, a 5-second inactivity watchdog and a
-bounded cooperative-cancel grace before owned-job termination. FileDetailController
-separately owns Windows type/icon/known-folder/thumbnail visual enrichment and
-retains the 1,200-item fixed-drive-only boundary. MainWindow retains request
-preparation, current route/tab/ticket acceptance, DispatcherQueue/weak-UI
-handoff and final XAML projection. Virtual Shell/provider parsing names are not
-opened by the network metadata path.
+bounded cooperative-cancel grace before owned-job termination.
+
+FileDetailController separately owns Windows type/icon/known-folder/thumbnail
+visual enrichment and retains the 1,200-item bound. MainWindow accepts local
+fixed roots plus mapped `DRIVE_REMOTE` and ordinary direct-UNC filesystem
+roots for this lifecycle; direct UNC is classified as network before a
+parent-side drive probe. Network requests carry folder/file hints from the
+already accepted navigation snapshot, so FileDetailController does not call
+`GetFileAttributesExW` on the network path in the flyExplorer process.
+Extension-based Windows type/icon lookup continues through the disposable
+visual helper. Thumbnail client validation is lexical and rejects `\\?\` /
+`\\.\`; the one-shot `--file-thumbnail` helper owns drive-type,
+component/reparse, file-size and `IShellItemImageFactory` path access, and the
+client enforces the existing bounded timeout with exact child termination.
+Removable-drive visual enrichment and virtual Shell/provider parsing names
+remain fail-closed. MainWindow retains request preparation, current
+route/tab/ticket acceptance, DispatcherQueue/weak-UI handoff and final XAML
+projection.
 
 A second MainWindow responsibility audit compared three concrete candidates:
 preference-persistence async revision/mutex state, private drag/drop

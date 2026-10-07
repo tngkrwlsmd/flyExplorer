@@ -33,6 +33,8 @@ bool FileDetailController::start(
     if(closing_.load()||request.side<0||
        request.side>=static_cast<int>(cancel_.size())||
        request.route==0||request.ticket==0||request.paths.size()>1200||
+       (request.isolatedNetwork&&
+        request.folderHints.size()!=request.paths.size())||
        !post||!completion)return false;
     const int side=request.side;
     cancel(side);
@@ -133,11 +135,19 @@ bool FileDetailController::start(
                 auto const& path=request.paths[i];
                 if(path.empty()||path.size()>32000)continue;
                 WIN32_FILE_ATTRIBUTE_DATA data{};
-                if(!::GetFileAttributesExW(path.c_str(),GetFileExInfoStandard,&data))
-                    continue;
-                if(data.dwFileAttributes&FILE_ATTRIBUTE_REPARSE_POINT)continue;
+                bool folder=false;
+                if(request.isolatedNetwork){
+                    folder=request.folderHints[i]!=0;
+                }else{
+                    if(!::GetFileAttributesExW(
+                         path.c_str(),GetFileExInfoStandard,&data))
+                        continue;
+                    if(data.dwFileAttributes&FILE_ATTRIBUTE_REPARSE_POINT)
+                        continue;
+                    folder=(data.dwFileAttributes&FILE_ATTRIBUTE_DIRECTORY)!=0;
+                }
                 auto& entry=details[i];
-                if(data.dwFileAttributes&FILE_ATTRIBUTE_DIRECTORY){
+                if(folder){
                     entry.typeLabel=L"폴더";
                     auto const& knownKey=knownFolderKeyByIndex[i];
                     auto known=knownKey.empty()?knownFolderVisuals.end():
@@ -179,12 +189,14 @@ bool FileDetailController::start(
                         }
                     }
                 }
-                if(!(data.dwFileAttributes&FILE_ATTRIBUTE_DIRECTORY)){
+                if(!folder){
+                    const bool thumbnailSizeEligible=request.isolatedNetwork||
+                        (data.nFileSizeHigh==0&&
+                         data.nFileSizeLow<=32*1024*1024);
                     if((request.viewMode==FileViewMode::MediumIcons||
                         request.viewMode==FileViewMode::LargeIcons)&&
                        !visualHelper.empty()&&thumbnailBudget<4&&
-                       data.nFileSizeHigh==0&&
-                       data.nFileSizeLow<=32*1024*1024){
+                       thumbnailSizeEligible){
                         auto ext=std::filesystem::path(path).extension().native();
                         std::transform(ext.begin(),ext.end(),ext.begin(),
                           [](wchar_t c){return static_cast<wchar_t>(::towlower(c));});

@@ -273,12 +273,16 @@ namespace winrt::FlyExplorer::implementation
         int mOwnedMetadataSortMode=-1;
         bool mOwnedMetadataSortConsumed=false;
         bool mOwnedMetadataForceIsolated=false;
+        bool mOwnedNetworkDetailForce=false;
         void InitializeOwnedMetadataSortTest();
         void RunOwnedMetadataSortTestIfReady();
         Microsoft::UI::Dispatching::DispatcherQueueTimer
             mOwnedSearchVisualTimer{nullptr};
+        std::wstring mOwnedNetworkVisualCapturePath{};
         void InitializeOwnedSearchVisualCaptureTest();
-        winrt::fire_and_forget CaptureOwnedSearchVisualAsync(
+        void InitializeOwnedNetworkVisualCaptureTest();
+        void CaptureOwnedNetworkVisualIfReady();
+        winrt::fire_and_forget CaptureOwnedRootVisualAsync(
             std::wstring path);
         fxfile::previewrestore::WorkspaceRestoreCoordinator mWorkspaceRestore{};
         fxfile::bookmarks::Store mBookmarks{};

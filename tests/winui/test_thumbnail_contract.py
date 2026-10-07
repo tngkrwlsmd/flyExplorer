@@ -13,6 +13,20 @@ class ThumbnailContract(unittest.TestCase):
   app=src("app/winui/MainWindow.xaml.cpp")
   self.assertNotIn("IShellItemImageFactory",app)
   self.assertNotIn("SHGetFileInfoW",app)
+ def test_network_thumbnail_validation_stays_inside_owned_child(self):
+  client=src("src/base/shell_thumbnail_core.cpp")
+  helper=src("app/winui/helper/FlyShellIsolationHelper.cpp")
+  self.assertIn("thumbnailCandidate",client)
+  self.assertNotIn("GetDriveTypeW",client)
+  self.assertNotIn("GetFileAttributesW",client)
+  self.assertIn(r'value.rfind(L"\\\\?\\",0)==0',client)
+  self.assertIn(r'value.rfind(L"\\\\.\\",0)==0',client)
+  self.assertIn(
+      "fxfile::shelltransfer::transferDriveRoot(source,root)",helper)
+  self.assertIn("driveType!=DRIVE_FIXED&&driveType!=DRIVE_REMOTE",helper)
+  self.assertIn("GetFileAttributesW(part.c_str())",helper)
+  self.assertIn("GetFileAttributesExW(path.c_str()",helper)
+
  def test_bounded_worker_and_stale_route_guards_preserved(self):
   client=src("src/base/shell_thumbnail_core.cpp")
   for token in ('timeoutMs<200','timeoutMs>10000','requestedPixels<16',

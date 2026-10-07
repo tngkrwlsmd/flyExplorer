@@ -55,13 +55,18 @@ checkpoints.
   `FlyShellIsolationHelper.exe --file-metadata` process with restricted
   inherited handles, a one-process kill-on-close Job Object, inherited
   cancellation and a bounded inactivity timeout; local fixed/removable
-  metadata keeps the detached in-process worker. FileDetailController remains
-  responsible for Windows type/icon/known-folder/thumbnail presentation and
-  keeps its 1,200-item fixed-drive-only visual-work ceiling. Type/size/
-  modified-date sort no longer silently falls back to name order while
-  metadata is pending or when the folder contains 1,201-20,000 items.
-  Modified-date validity is derived from the FILETIME value itself; display-
-  label formatting is independent of sortable timestamp validity.
+  metadata keeps the detached in-process worker. FileDetailController separately
+  owns Windows type/icon/known-folder/thumbnail presentation. Its 1,200-item
+  visual-work ceiling now accepts local fixed, mapped `DRIVE_REMOTE` and
+  ordinary direct-UNC filesystem roots. Network detail uses navigation-snapshot
+  folder hints so the parent process does not probe UNC attributes, while image
+  path/reparse/size validation and Shell thumbnail extraction stay inside the
+  bounded one-shot helper. Removable-drive visual detail and virtual
+  Shell/provider visual detail remain unsupported. Type/size/modified-date sort
+  no longer silently falls back to name order while metadata is pending or when
+  the folder contains 1,201-20,000 items. Modified-date validity is derived
+  from the FILETIME value itself; display-label formatting is independent of
+  sortable timestamp validity.
 - The second MainWindow responsibility audit compared preferences persistence,
   private drag/drop state and workspace restore sequencing. Preferences was the
   strongest independent persistence/lifetime boundary: PreferencesCoordinator
@@ -345,6 +350,43 @@ test-owned SMB share; the acceptance proves root policy, exact-owned helper
 isolation, wire/lifecycle behavior and complete size/date/type sorting through
 that helper path. No XAML/pixel behavior changed.
 VISUAL ACCEPTANCE: NOT TESTED
+
+UNC/network Shell visual/type/icon/thumbnail support is accepted on candidate
+`e4c95e1c2e7c1a3ca1f3530dac86f4477c1664a3`. The scheduler accepts local fixed roots, mapped
+`DRIVE_REMOTE` roots and ordinary direct `\\server\share\...`
+filesystem roots through the existing 1,200-item detail ceiling. For direct
+UNC, MainWindow classifies the root as network without a parent-side provider
+probe. Network detail requests carry the navigation snapshot's folder/file bits
+into FileDetailController, which avoids `GetFileAttributesExW` on UNC paths in
+the flyExplorer process. Registered Windows type/icon work remains bounded in
+the disposable visual helper, and image thumbnail validation/access remains in
+the exact one-shot `--file-thumbnail` child with the existing timeout and
+exact-process termination path. Extended/device namespaces, reparse traversal,
+virtual Shell/provider parsing names and removable-drive visual detail remain
+closed.
+
+Remote run `37575384608` passed FAST, canonical Release build and the owned
+fixed-drive visual fixture, then captured the accepted 944x510 BEFORE frame via
+an app-owned XAML `RenderTargetBitmap`. Run `37577331163` passed the final
+change-scoped FAST contracts. Run `37577442125` passed `git diff --check`,
+canonical Release build and the same PNG/TXT/folder fixture forced through the
+network-detail branch with
+`NETWORK_VISUAL_THUMBNAIL_PASS=True`,
+`NETWORK_VISUAL_REGISTERED_ICON_PASS=True`,
+`NETWORK_VISUAL_FOLDER_ICON_PASS=True`,
+`NETWORK_VISUAL_TYPE_LABEL_PASS=True`,
+`NETWORK_VISUAL_PROCESS_EXIT=0` and protected legacy settings unchanged.
+Artifact `11463144265` has SHA-256
+`1e93c352694621c4a9b6b18d1884519d675359773cfb9d5f8d170eb3d1e5bb6b`.
+Direct review of the 944x510 BEFORE/AFTER images found identical file-list,
+icons, thumbnail and layout pixels; changed pixels were confined to the random
+test-owned temporary path text in the top chrome.
+**VISUAL ACCEPTANCE: PASS**.
+
+Actual SMB/UNC and mapped-network-drive visual execution is **not claimed**
+because the self-hosted runner has no test-owned SMB share. The accepted GUI
+proves the network-detail scheduling/isolation path with a forced owned local
+fixture, not network latency/provider behavior on a real share.
 
 Removable-volume Recycle semantics are accepted on candidate
 `a7b675f790356cc152c577a3d670e9829afdaae4` by self-hosted Remote
@@ -892,8 +934,10 @@ Current source and the last parity evidence still show these limits:
   The previous 1,200 visual-detail ceiling no longer controls these sorts and
   1,201-20,000 items no longer silently use name order. Above 20,000 these
   metadata sorts remain explicitly refused. Shell visual/type/icon/thumbnail
-  enrichment remains separately bounded to 1,200 items and fixed-drive-only;
-  virtual Shell/provider metadata remains unsupported. Physical USB metadata-
+  enrichment is separately bounded to 1,200 items and now supports local fixed,
+  mapped network and ordinary direct-UNC filesystem roots. Actual SMB/mapped-
+  drive visual execution is still uncertified; removable-drive and virtual
+  Shell/provider visual enrichment remain unsupported. Physical USB metadata-
   sort execution is also still awaiting a removable device on the self-hosted
   VM.
 - Copy/Move accepts local fixed/removable roots, mapped

@@ -430,6 +430,7 @@ namespace winrt::FlyExplorer::implementation
             L"기본 파일 작업 엔진을 연결하지 못했습니다.");
         InitializeM19();
         InitializePrivateSession();
+        InitializeOwnedNetworkVisualCaptureTest();
         InitializeOwnedSearchVisualCaptureTest();
     }
     void MainWindow::InitializeOwnedSearchVisualCaptureTest()
@@ -455,13 +456,36 @@ namespace winrt::FlyExplorer::implementation
             sender.Stop();
             if(auto ui=weak.get()){
                 ui->mOwnedSearchVisualTimer=nullptr;
-                ui->CaptureOwnedSearchVisualAsync(std::move(path));
+                ui->CaptureOwnedRootVisualAsync(std::move(path));
             }
         });
         timer.Start();
     }
 
-    winrt::fire_and_forget MainWindow::CaptureOwnedSearchVisualAsync(
+    void MainWindow::InitializeOwnedNetworkVisualCaptureTest()
+    {
+        wchar_t value[32768]{};
+        const DWORD used=::GetEnvironmentVariableW(
+            L"FLY_NETWORK_VISUAL_CAPTURE_PATH",
+            value,static_cast<DWORD>(std::size(value)));
+        if(!used||used>=std::size(value))return;
+        mOwnedNetworkVisualCapturePath.assign(value,used);
+        wchar_t forced[8]{};
+        mOwnedNetworkDetailForce=
+            ::GetEnvironmentVariableW(
+                L"FLY_NETWORK_DETAIL_FORCE_TEST",forced,8)==3&&
+            !wcscmp(forced,L"YES");
+    }
+
+    void MainWindow::CaptureOwnedNetworkVisualIfReady()
+    {
+        if(mOwnedNetworkVisualCapturePath.empty())return;
+        auto path=std::move(mOwnedNetworkVisualCapturePath);
+        mOwnedNetworkVisualCapturePath.clear();
+        CaptureOwnedRootVisualAsync(std::move(path));
+    }
+
+    winrt::fire_and_forget MainWindow::CaptureOwnedRootVisualAsync(
         std::wstring path)
     {
         auto lifetime=get_strong();
@@ -1023,20 +1047,34 @@ namespace winrt::FlyExplorer::implementation
         if(!force&&listState.isCurrent(route,tab,items.size())&&
            listState.visualPixels==visualPixels)return;
         auto const& folder=pane.filesystemPaths[tab];
-        if(folder.size()<3||folder[1]!=L':'||folder[2]!=L'\\')return;
         if(snapshot.truncated||items.size()>1200)return;
-        const std::wstring root=folder.substr(0,3);
-        if(::GetDriveTypeW(root.c_str())!=DRIVE_FIXED)return;
+        std::wstring root;
+        if(!fxfile::shelltransfer::transferDriveRoot(folder,root))return;
+        const bool directUnc=
+            root.size()>=2&&root[0]==L'\\'&&root[1]==L'\\';
+        const auto driveType=directUnc?
+            static_cast<UINT>(DRIVE_REMOTE):
+            ::GetDriveTypeW(root.c_str());
+        const bool isolatedNetwork=
+            driveType==DRIVE_REMOTE||mOwnedNetworkDetailForce;
+        if(driveType!=DRIVE_FIXED&&!isolatedNetwork)return;
         std::vector<std::wstring> paths{};
+        std::vector<std::uint8_t> folderHints{};
         paths.reserve(items.size());
-        for(auto const& item:items)
+        folderHints.reserve(items.size());
+        for(auto const& item:items){
             paths.push_back(item.isFileSystem()?item.parsingName:std::wstring{});
+            folderHints.push_back(item.isFolder()?1u:0u);
+        }
         const auto ticket=listState.begin(route,tab);
         listState.visualPixels=visualPixels;
         fxfile::previewdetail::FileDetailController::Request request{};
         request.side=side;request.tab=tab;request.route=route;request.ticket=ticket;
         request.viewMode=requestedView;request.visualPixels=visualPixels;
-        request.thumbnailPixels=thumbnailPixels;request.paths=std::move(paths);
+        request.thumbnailPixels=thumbnailPixels;
+        request.isolatedNetwork=isolatedNetwork;
+        request.paths=std::move(paths);
+        request.folderHints=std::move(folderHints);
         auto dispatch=DispatcherQueue();
         auto weak=get_weak();
         const bool started=mFileDetails.start(
@@ -1062,6 +1100,7 @@ namespace winrt::FlyExplorer::implementation
                     ui->ActiveWindowTab().fileLists[side].details=
                         std::move(completed.details);
                     ui->FillFiles(side);
+                    ui->CaptureOwnedNetworkVisualIfReady();
                 }
             });
         if(!started)listState.invalidateDetails();

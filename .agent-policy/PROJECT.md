@@ -75,8 +75,9 @@ identity, cooperative cancellation, stale completion rejection and recent-scope
 state/persistence. The V8-A through V8-E extraction cycle is complete. The
 post-extraction MainWindow responsibility audit is also complete and extracted
 one additional coherent lifecycle boundary: FileDetailController now owns
-pane-local detail cancellation, detached metadata/icon/thumbnail workers and
-bounded Shell visual orchestration. A second responsibility audit then selected
+pane-local visual-detail cancellation, detached type/icon/thumbnail workers and
+bounded Shell visual orchestration. Sortable filesystem metadata is a separate
+FileMetadataController lifecycle. A second responsibility audit then selected
 preferences persistence over drag/drop and workspace restore sequencing:
 PreferencesCoordinator owns the Preferences value, write mutex, revision
 ordering and detached atomic-save worker. A later restore-lifecycle audit
@@ -181,14 +182,43 @@ local fixed/removable roots. Mapped `DRIVE_REMOTE` and direct
 inherited handles, assigns a one-process kill-on-close Job Object, signals
 cancellation through an inherited event, and terminates only that owned job on
 the bounded inactivity/cancellation path. Local fixed/removable metadata keeps
-the existing detached in-process filesystem worker. Shell visual/type/icon/
-thumbnail enrichment remains a separate 1,200-item fixed-drive-only path, and
-virtual Shell/provider parsing names remain closed. Final run
+the existing detached in-process filesystem worker. Final run
 `37563774189` passed FAST, canonical Release build and the 1,305-item focused
 GUI with the local owned fixture forced through the isolated metadata helper for
-size, modified-date and type sorting on candidate `f51edfdb40e066d063c85958601336c1854aeafc`. Actual
-SMB/UNC and mapped-network-drive metadata execution remains an environment
-acceptance gap because the runner has no test-owned SMB share.
+size, modified-date and type sorting on candidate
+`f51edfdb40e066d063c85958601336c1854aeafc`. Actual SMB/UNC and
+mapped-network-drive metadata execution remains an environment acceptance gap
+because the runner has no test-owned SMB share.
+
+Shell visual/type/icon/thumbnail enrichment now accepts local fixed roots,
+mapped `DRIVE_REMOTE` roots and ordinary direct UNC filesystem roots while
+retaining the 1,200-item visual-work ceiling. Direct UNC roots are classified as
+network before any parent-side drive probe. For network detail requests,
+FileDetailController uses folder/file hints already present in the isolated
+navigation snapshot instead of calling `GetFileAttributesExW` on the network
+path in the flyExplorer process. Registered Windows type/icon lookup remains
+extension/key based in the disposable Shell helper; image thumbnail path
+validation, component/reparse checks, the 32 MiB file-size bound and
+`IShellItemImageFactory` access occur only in the one-shot
+`FlyShellIsolationHelper.exe --file-thumbnail` child. The client keeps its
+bounded 200..10,000 ms timeout and terminates only that exact-owned thumbnail
+process on timeout. Extended/device namespaces and virtual Shell/provider
+parsing names remain closed; removable-drive visual enrichment remains outside
+this unit.
+
+Remote run `37575384608` captured the accepted 944x510 BEFORE frame on current
+main using an app-owned XAML `RenderTargetBitmap` capture after the normal
+fixed-drive detail lifecycle. Final candidate
+`e4c95e1c2e7c1a3ca1f3530dac86f4477c1664a3` passed change-scoped FAST in run `37577331163`, then run
+`37577442125` passed canonical Release build and the focused GUI with the
+same owned PNG/TXT/folder fixture forced through the network-detail branch:
+thumbnail, registered file icon, folder icon and Windows type label all passed,
+the process exited 0 and protected legacy settings were byte-identical. Its
+944x510 AFTER frame is visually identical in the file-list/content region to
+BEFORE; pixel differences are confined to the test-owned temporary path text in
+the top chrome. Actual SMB/UNC and mapped-network-drive visual execution remains
+an environment acceptance gap because the runner has no test-owned SMB share.
+
 
 Explorer-compatible `Ctrl+Shift+N` is also accepted for
 create-folder and routes through the existing

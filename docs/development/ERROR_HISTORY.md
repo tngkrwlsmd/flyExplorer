@@ -16,6 +16,75 @@ product state use CURRENT_STATUS.md.
 
 이 문서는 확정된 오류를 단순 수정으로 끝내지 않고, 다음 진단을 빠르게 하고 같은 계열의 결함을 사전에 막기 위한 프로젝트 기록이다.
 
+## 2026-10-07 — network Shell visual acceptance required app-owned XAML capture
+
+**오류 발생**
+- UNC/network Shell visual/type/icon/thumbnail acceptance initially failed in
+  the visual harness before product implementation was merged.
+- Run `37569904209` passed the owned thumbnail/type/icon/folder-icon checks but
+  Pillow `ImageGrab` failed with `OSError: screen grab failed` in the
+  self-hosted service desktop.
+- `PrintWindow(PW_RENDERFULLCONTENT)` runs `37570303708` and
+  `37572625619` completed, but direct artifact review showed a black WinUI
+  compositor client area, so those captures were explicitly rejected as visual
+  evidence.
+- Run `37573025841` then stopped before capture when the existing one-shot PNG
+  thumbnail did not appear within the harness wait; run `37574565680`
+  demonstrated that screen-DC `BitBlt` itself was unavailable in the runner.
+- Later FAST runs `37576775870` and `37577140712` exposed stale source
+  contracts that still encoded the old fixed-drive-only detail boundary and a
+  namespace-escape token assumption.
+
+**원인 진단**
+- Desktop capture APIs are not a reliable evidence boundary for this
+  self-hosted WinUI compositor/session.
+- The thumbnail miss was a pre-existing one-shot scheduling/timing behavior in
+  the baseline harness, not proof of a network-detail product defect.
+- The source-contract failures were test expectations lagging the intentionally
+  expanded network boundary; they occurred before Release runtime acceptance.
+
+**해결 방법**
+- Added a double-gated, test-owned XAML capture hook. After accepted
+  FileDetailController completion, `RenderTargetBitmap` renders `RootShell`
+  inside the app process and writes the owned BMP to the requested evidence
+  path. No desktop capture or foreign foreground ownership is required.
+- Network detail scheduling now accepts mapped `DRIVE_REMOTE` and ordinary
+  direct UNC roots, carries snapshot folder/file hints so the parent worker
+  avoids UNC attribute probes, and leaves actual thumbnail path validation and
+  Shell image extraction in the bounded one-shot helper.
+- Updated source contracts to scope the old fixed-drive-only assertions to the
+  behavior that remains fixed-only and to assert the new network isolation
+  boundary directly.
+
+**재발 방지**
+- WinUI visual acceptance on this runner should prefer app-owned
+  `RenderTargetBitmap` evidence over `ImageGrab`, `PrintWindow` or screen
+  `BitBlt`.
+- A successful capture API return is not sufficient; the resulting image must
+  be directly reviewed before it is accepted.
+- Provider/network expansion contracts must distinguish parent-process path I/O
+  from isolated-helper path I/O rather than forbidding `DRIVE_REMOTE` across a
+  whole translation unit.
+
+**검증 상태**
+- Run `37575384608`: FAST + canonical Release build + fixed-path visual GUI
+  PASS; accepted 944x510 BEFORE screenshot, process exit 0, legacy settings
+  unchanged.
+- Run `37577331163`: final candidate FAST + `git diff --check` PASS.
+- Run `37577442125`: canonical Release build + forced-network visual GUI PASS
+  for PNG thumbnail, registered file icon, folder icon and Windows type label;
+  process exit 0 and protected settings unchanged.
+- BEFORE/AFTER direct pixel review: file-list/content region identical; only
+  random temporary-path text in the top chrome differs.
+- Actual SMB/UNC or mapped-drive visual execution: NOT TESTED — no test-owned
+  SMB share is available.
+- **VISUAL ACCEPTANCE: PASS**.
+
+**관련 candidate**
+- `e4c95e1c2e7c1a3ca1f3530dac86f4477c1664a3`
+
+---
+
 ## 2026-10-07 — UNC metadata-sort acceptance trusted hidden SortPicker UIA state
 
 **오류 발생**

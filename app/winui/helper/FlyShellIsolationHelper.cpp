@@ -409,9 +409,10 @@ int wmain(int argc,wchar_t** argv) {
         std::filesystem::path path(source);
         if(!path.is_absolute()||path.lexically_normal().native()!=source)
             return 34;
-        auto root=path.root_path().native();
-        if(root.size()!=3||root[1]!=L':'||root[2]!=L'\\'||
-           ::GetDriveTypeW(root.c_str())!=DRIVE_FIXED)return 35;
+        std::wstring root;
+        if(!fxfile::shelltransfer::transferDriveRoot(source,root))return 35;
+        const auto driveType=::GetDriveTypeW(root.c_str());
+        if(driveType!=DRIVE_FIXED&&driveType!=DRIVE_REMOTE)return 35;
         auto ext=path.extension().native();
         for(auto& c:ext)c=static_cast<wchar_t>(::towlower(c));
         if(ext!=L".png"&&ext!=L".jpg"&&ext!=L".jpeg"&&

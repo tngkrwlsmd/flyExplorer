@@ -28,16 +28,15 @@ bool exactWrite(HANDLE h,const void* data,size_t bytes){
  }
  return true;
 }
-bool localCandidate(std::wstring const& value) {
+bool thumbnailCandidate(std::wstring const& value) {
  namespace fs=std::filesystem;
  if(value.size()<5||value.size()>1024||
-    value.find(L'\0')!=std::wstring::npos)return false;
+    value.find(L'\0')!=std::wstring::npos||
+    value.rfind(L"\\\\?\\",0)==0||
+    value.rfind(L"\\\\.\\",0)==0)return false;
  fs::path path(value);
  if(!path.is_absolute()||path.lexically_normal().native()!=value)
    return false;
- auto root=path.root_path().native();
- if(root.size()!=3||root[1]!=L':'||root[2]!=L'\\'||
-    ::GetDriveTypeW(root.c_str())!=DRIVE_FIXED)return false;
  auto ext=path.extension().native();
  std::transform(ext.begin(),ext.end(),ext.begin(),[](wchar_t c){
   return static_cast<wchar_t>(::towlower(c));
@@ -53,7 +52,7 @@ Result query(std::wstring const& helper,std::wstring const& localImagePath,
  bool childStarted=false;
  try{
   namespace fs=std::filesystem;
-  if(!localCandidate(localImagePath)||timeoutMs<200||timeoutMs>10000||
+  if(!thumbnailCandidate(localImagePath)||timeoutMs<200||timeoutMs>10000||
      requestedPixels<16||requestedPixels>128||
      !fs::path(helper).is_absolute()||
      fs::path(helper).filename()!=L"FlyShellIsolationHelper.exe"||

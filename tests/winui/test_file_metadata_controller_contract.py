@@ -74,7 +74,7 @@ class FileMetadataControllerContract(unittest.TestCase):
         self.assertIn("정렬을 위해 전체 폴더 항목을 불러오는 중입니다.",transfers)
         self.assertIn("beyondComplete&&selection>1",transfers)
 
-    def test_sortable_metadata_accepts_network_without_opening_visual_detail(self):
+    def test_sortable_metadata_and_visual_detail_have_separate_network_isolation(self):
         main=read("app/winui/MainWindow.xaml.cpp")
         helper_start=main.index("bool SupportsSortableMetadataDrive")
         helper_end=main.index("std::filesystem::path StartFolder",helper_start)
@@ -89,8 +89,12 @@ class FileMetadataControllerContract(unittest.TestCase):
         self.assertIn("shelltransfer::transferDriveRoot(folder,root)",metadata)
         self.assertIn("request.isolatedNetwork=isolatedNetwork",metadata)
         self.assertIn("driveType==DRIVE_REMOTE||mOwnedMetadataForceIsolated",metadata)
-        # Visual type/icon/thumbnail work remains a separate fixed-drive gate.
-        self.assertIn("::GetDriveTypeW(root.c_str())!=DRIVE_FIXED",details)
+        # Visual type/icon/thumbnail work has its own 1,200-item lifecycle
+        # and network isolation path; it does not reuse metadata results.
+        self.assertIn(
+            "driveType==DRIVE_REMOTE||mOwnedNetworkDetailForce",details)
+        self.assertIn("request.isolatedNetwork=isolatedNetwork",details)
+        self.assertIn("request.folderHints=std::move(folderHints)",details)
 
     def test_network_metadata_uses_exact_owned_bounded_helper(self):
         header=read("app/winui/file_metadata_controller.h")

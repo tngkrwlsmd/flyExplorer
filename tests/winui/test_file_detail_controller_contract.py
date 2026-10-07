@@ -41,6 +41,35 @@ class FileDetailControllerContract(unittest.TestCase):
                         "entry.sizeKnown=","entry.dateKnown="):
             self.assertNotIn(removed,impl)
 
+    def test_network_details_use_snapshot_hints_and_isolated_thumbnail_path(self):
+        header=read("app/winui/file_detail_controller.h")
+        worker=read("app/winui/file_detail_controller.cpp")
+        main=read("app/winui/MainWindow.xaml.cpp")
+        for token in (
+            "bool isolatedNetwork=false",
+            "std::vector<std::uint8_t> folderHints{}",
+        ):
+            self.assertIn(token,header)
+        for token in (
+            "request.isolatedNetwork",
+            "request.folderHints.size()!=request.paths.size()",
+            "folder=request.folderHints[i]!=0",
+            "thumbnailSizeEligible=request.isolatedNetwork||",
+        ):
+            self.assertIn(token,worker)
+        self.assertIn(
+            "if(!::GetFileAttributesExW(",worker)
+        self.assertIn(
+            "if(request.isolatedNetwork){",worker)
+        for token in (
+            "shelltransfer::transferDriveRoot(folder,root)",
+            "driveType==DRIVE_REMOTE||mOwnedNetworkDetailForce",
+            "request.isolatedNetwork=isolatedNetwork",
+            "request.folderHints=std::move(folderHints)",
+            "item.isFolder()?1u:0u",
+        ):
+            self.assertIn(token,main)
+
     def test_mainwindow_keeps_live_state_acceptance_and_project_compiles_owner(self):
         main=read("app/winui/MainWindow.xaml.cpp")
         project=read("app/winui/flyExplorer.project-template.xml")
