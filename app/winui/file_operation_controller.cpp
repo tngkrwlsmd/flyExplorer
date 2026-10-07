@@ -190,7 +190,9 @@ FileOperationController::StartStatus FileOperationController::launchTransfer(
             request=std::move(request),touched=std::move(touched),
             post=std::move(post),completion=std::move(completion)
         ]() mutable {
-            auto report=fxfile::shelltransfer::execute(request,*progress);
+            auto report=request.kind==fxfile::shelltransfer::Kind::Recycle?
+                fxfile::shelltransfer::execute(request,*progress):
+                fxfile::shelltransfer::executeIsolated(request,*progress);
             TransferCompletion value{};
             value.ticket=ticket;
             value.context=std::move(context);
