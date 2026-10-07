@@ -1,7 +1,7 @@
 {
-  "request_id": "shell-provider-copyout-docs-policy-20261008",
+  "request_id": "shell-provider-copyout-docs-policy-utc-fix-20261008",
   "expected_main_sha": "700500d92442f25002fb707031d7c2ff2cb2052f",
-  "candidate_sha": "86919fc1f140f10e616cb0f020823d41e13ef1ae",
+  "candidate_sha": "9b468483d7dc259564a142396d7ee29f123ede73",
   "logical_unit": "shell-provider-copyout-docs-policy",
   "request_mode": "validation",
   "configuration": "Release",
@@ -9,5 +9,5 @@
     "docs-policy"
   ],
   "working_directory": "",
-  "command": "$ErrorActionPreference=\"Stop\"\n$repo=$env:FLYEXPLORER_CANONICAL_CHECKOUT\nSet-Location -LiteralPath $repo\n& git fetch origin main work/shell-provider-copyout-20261007 --no-tags --prune\nif($LASTEXITCODE -ne 0){throw \"fetch failed\"}\nif((& git rev-parse refs/remotes/origin/main).Trim() -ne \"700500d92442f25002fb707031d7c2ff2cb2052f\"){throw \"main moved\"}\nif((& git rev-parse refs/remotes/origin/work/shell-provider-copyout-20261007).Trim() -ne \"86919fc1f140f10e616cb0f020823d41e13ef1ae\"){throw \"candidate mismatch\"}\n$dirty=@(& git status --porcelain=v1 -uall)\nif($dirty.Count -ne 0){$dirty|%{Write-Host (\"UNEXPECTED_WORKTREE=\"+$_)};throw \"persistent checkout dirty\"}\n& git switch --detach 86919fc1f140f10e616cb0f020823d41e13ef1ae\nif($LASTEXITCODE -ne 0){throw \"checkout failed\"}\n& .\\test.bat policy\nif($LASTEXITCODE -ne 0){throw \"policy gate failed\"}\n& git diff --check 700500d92442f25002fb707031d7c2ff2cb2052f 86919fc1f140f10e616cb0f020823d41e13ef1ae\nif($LASTEXITCODE -ne 0){throw \"diff check failed\"}\n& git switch main\nif($LASTEXITCODE -ne 0){throw \"restore main failed\"}\n& git merge --ff-only origin/main\nif($LASTEXITCODE -ne 0){throw \"restore main ff failed\"}\nWrite-Host \"SHELL_PROVIDER_COPYOUT_DOCS_POLICY=PASS\""
+  "command": "$ErrorActionPreference=\"Stop\"\n$repo=$env:FLYEXPLORER_CANONICAL_CHECKOUT\nSet-Location -LiteralPath $repo\n& git fetch origin main work/shell-provider-copyout-20261007 --no-tags --prune\nif($LASTEXITCODE -ne 0){throw \"fetch failed\"}\nif((& git rev-parse refs/remotes/origin/main).Trim() -ne \"700500d92442f25002fb707031d7c2ff2cb2052f\"){throw \"main moved\"}\nif((& git rev-parse refs/remotes/origin/work/shell-provider-copyout-20261007).Trim() -ne \"9b468483d7dc259564a142396d7ee29f123ede73\"){throw \"candidate mismatch\"}\n$dirty=@(& git status --porcelain=v1 -uall)\nif($dirty.Count -ne 0){$dirty|%{Write-Host (\"UNEXPECTED_WORKTREE=\"+$_)};throw \"checkout dirty\"}\n& git switch --detach 9b468483d7dc259564a142396d7ee29f123ede73\nif($LASTEXITCODE -ne 0){throw \"checkout failed\"}\n& .\\test.bat policy\nif($LASTEXITCODE -ne 0){throw \"policy failed\"}\n& git diff --check 700500d92442f25002fb707031d7c2ff2cb2052f 9b468483d7dc259564a142396d7ee29f123ede73\nif($LASTEXITCODE -ne 0){throw \"diff check failed\"}\n& git switch main\nif($LASTEXITCODE -ne 0){throw \"restore main failed\"}\n& git merge --ff-only origin/main\nif($LASTEXITCODE -ne 0){throw \"restore main ff failed\"}\nWrite-Host \"SHELL_PROVIDER_COPYOUT_DOCS_POLICY=PASS\""
 }
