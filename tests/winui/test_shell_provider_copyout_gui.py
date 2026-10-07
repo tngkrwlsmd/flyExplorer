@@ -155,8 +155,11 @@ def main():
             "provider Copy-out did not materialize destination file",
             status.window_text())
         assert (destination/MEMBER).read_text(encoding="utf-8")==PAYLOAD
-        until(lambda:"복사를 완료했습니다" in status.window_text(),
-              "provider Copy-out completion status missing",12)
+        copy_button=parent.child_window(auto_id="CopyButton")
+        cancel_button=parent.child_window(auto_id="CancelButton")
+        until(lambda:copy_button.is_enabled() and not cancel_button.is_enabled(),
+              "provider Copy-out controller did not return idle",12)
+        print("SHELL_PROVIDER_COPYOUT_CONTROLLER_IDLE",True,flush=True)
         assert source.read_text(encoding="utf-8")==PAYLOAD
         print("SHELL_PROVIDER_COPYOUT_PASS",True,flush=True)
         print("SHELL_PROVIDER_COPYOUT_SOURCE_PRESERVED",True,flush=True)
