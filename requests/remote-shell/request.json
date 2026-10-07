@@ -1,10 +1,10 @@
 {
-  "request_id": "shell-provider-copyout-status-diagnosis-20261007",
+  "request_id": "shell-provider-copyout-status-diagnosis-20261007-r2",
   "expected_main_sha": "700500d92442f25002fb707031d7c2ff2cb2052f",
   "candidate_sha": "b12e9704488f252ab38c0987fb9abbb3bc95ce22",
   "logical_unit": "shell-provider-copyout-status-diagnosis",
   "request_mode": "diagnostic",
-  "configuration": "Release",
+  "configuration": "none",
   "validation_plan": [],
   "working_directory": "",
   "command": "$ErrorActionPreference=\"Stop\"\n$repo=$env:FLYEXPLORER_CANONICAL_CHECKOUT\nSet-Location -LiteralPath $repo\n& git fetch origin main work/shell-provider-copyout-20261007 --no-tags --prune\nif($LASTEXITCODE -ne 0){throw \"fetch failed\"}\n& git switch --detach b12e9704488f252ab38c0987fb9abbb3bc95ce22\nif($LASTEXITCODE -ne 0){throw \"checkout failed\"}\n& python -X utf8 tests\\winui\\test_shell_provider_copyout_gui.py --configuration Release\nif($LASTEXITCODE -ne 0){throw \"provider copyout status diagnosis failed\"}\n& git switch main\nif($LASTEXITCODE -ne 0){throw \"restore main failed\"}\n& git merge --ff-only origin/main\nif($LASTEXITCODE -ne 0){throw \"restore main ff failed\"}\nWrite-Host \"SHELL_PROVIDER_COPYOUT_STATUS_DIAGNOSIS=PASS\""
