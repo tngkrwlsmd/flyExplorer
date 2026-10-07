@@ -49,7 +49,7 @@ def main():
     destination_sentinel=destination/"destination-ready.txt"
     destination_sentinel.write_text("owned destination sentinel\n",encoding="utf-8")
     workspace=owned/"provider-copyout.fxworkspace"
-    provider_root=r"::{031E4825-7B94-4DC3-B131-E946B44C8DD5}\\Pictures.library-ms"
+    provider_root=r"::{031E4825-7B94-4DC3-B131-E946B44C8DD5}\Pictures.library-ms"
     workspace.write_text(
         "[main]\r\n"
         "main.view.row_count = 1\r\n"
