@@ -1,13 +1,13 @@
 {
-  "request_id": "shell-provider-copyout-20261008-final-gui",
+  "request_id": "shell-provider-copyout-docs-policy-20261008",
   "expected_main_sha": "700500d92442f25002fb707031d7c2ff2cb2052f",
-  "candidate_sha": "32648cfeb5e92594619b9ed24b2568b18d71a2e8",
-  "logical_unit": "shell-provider-copyout",
+  "candidate_sha": "86919fc1f140f10e616cb0f020823d41e13ef1ae",
+  "logical_unit": "shell-provider-copyout-docs-policy",
   "request_mode": "validation",
   "configuration": "Release",
   "validation_plan": [
-    "shell-provider-copyout-gui"
+    "docs-policy"
   ],
   "working_directory": "",
-  "command": "$ErrorActionPreference=\"Stop\"\n$repo=$env:FLYEXPLORER_CANONICAL_CHECKOUT\nSet-Location -LiteralPath $repo\n& git fetch origin main work/shell-provider-copyout-20261007 --no-tags --prune\nif($LASTEXITCODE -ne 0){throw \"fetch failed\"}\nif((& git rev-parse refs/remotes/origin/main).Trim() -ne \"700500d92442f25002fb707031d7c2ff2cb2052f\"){throw \"main moved\"}\nif((& git rev-parse refs/remotes/origin/work/shell-provider-copyout-20261007).Trim() -ne \"32648cfeb5e92594619b9ed24b2568b18d71a2e8\"){throw \"candidate mismatch\"}\n$dirty=@(& git status --porcelain=v1 -uall)\nif($dirty.Count -ne 0){$dirty|%{Write-Host (\"UNEXPECTED_WORKTREE=\"+$_)};throw \"persistent checkout dirty\"}\n& git diff --quiet de413f5302afd92af7b192dec586db22fff2dff3 32648cfeb5e92594619b9ed24b2568b18d71a2e8 -- app/winui src/base\nif($LASTEXITCODE -ne 0){throw \"product source changed after accepted Release build\"}\n$exe=Join-Path $repo \"out\\winui\\Release\\flyExplorer.exe\"\nif(-not(Test-Path -LiteralPath $exe -PathType Leaf)){throw \"accepted Release runtime missing\"}\n& git switch --detach 32648cfeb5e92594619b9ed24b2568b18d71a2e8\nif($LASTEXITCODE -ne 0){throw \"checkout failed\"}\n& python -X utf8 tests\\winui\\test_shell_provider_copyout_gui.py --configuration Release\nif($LASTEXITCODE -ne 0){throw \"provider copyout GUI failed\"}\n& git switch main\nif($LASTEXITCODE -ne 0){throw \"restore main failed\"}\n& git merge --ff-only origin/main\nif($LASTEXITCODE -ne 0){throw \"restore main ff failed\"}\nWrite-Host \"SHELL_PROVIDER_COPYOUT_VALIDATION=PASS\""
+  "command": "$ErrorActionPreference=\"Stop\"\n$repo=$env:FLYEXPLORER_CANONICAL_CHECKOUT\nSet-Location -LiteralPath $repo\n& git fetch origin main work/shell-provider-copyout-20261007 --no-tags --prune\nif($LASTEXITCODE -ne 0){throw \"fetch failed\"}\nif((& git rev-parse refs/remotes/origin/main).Trim() -ne \"700500d92442f25002fb707031d7c2ff2cb2052f\"){throw \"main moved\"}\nif((& git rev-parse refs/remotes/origin/work/shell-provider-copyout-20261007).Trim() -ne \"86919fc1f140f10e616cb0f020823d41e13ef1ae\"){throw \"candidate mismatch\"}\n$dirty=@(& git status --porcelain=v1 -uall)\nif($dirty.Count -ne 0){$dirty|%{Write-Host (\"UNEXPECTED_WORKTREE=\"+$_)};throw \"persistent checkout dirty\"}\n& git switch --detach 86919fc1f140f10e616cb0f020823d41e13ef1ae\nif($LASTEXITCODE -ne 0){throw \"checkout failed\"}\n& .\\test.bat policy\nif($LASTEXITCODE -ne 0){throw \"policy gate failed\"}\n& git diff --check 700500d92442f25002fb707031d7c2ff2cb2052f 86919fc1f140f10e616cb0f020823d41e13ef1ae\nif($LASTEXITCODE -ne 0){throw \"diff check failed\"}\n& git switch main\nif($LASTEXITCODE -ne 0){throw \"restore main failed\"}\n& git merge --ff-only origin/main\nif($LASTEXITCODE -ne 0){throw \"restore main ff failed\"}\nWrite-Host \"SHELL_PROVIDER_COPYOUT_DOCS_POLICY=PASS\""
 }
