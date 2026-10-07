@@ -38,7 +38,9 @@ class ThumbnailContract(unittest.TestCase):
                 "PROC_THREAD_ATTRIBUTE_HANDLE_LIST"):
    self.assertIn(token,assoc)
   for token in ("SHCreateItemFromIDList(","IShellItemImageFactory",
-                "SIIGBF_THUMBNAILONLY","thumbnailPixelBytes"):
+                "SIIGBF_THUMBNAILONLY",
+                "thumbnailWidth,thumbnailHeight",
+                "static_cast<std::uint32_t>(thumbnail.size())"):
    self.assertIn(token,helper)
   for token in ("shellThumbnailHints","shellVisual.thumbnailBgra",
                 "request.shellProviderRoot"):
