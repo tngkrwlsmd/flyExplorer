@@ -237,9 +237,12 @@ void MainWindow::RunTransfer(fxfile::shelltransfer::Kind kind){
  for(auto const& picked:chosen){
   auto const* indexed=picked.item;
   if(providerSource){
-   if(!(indexed->attributes&SFGAO_CANCOPY)||
-      indexed->parsingName.size()>fxfile::shelltransfer::kMaxProviderParsingUnits){
-    StatusText().Text(L"선택한 Shell provider 항목은 Windows에서 복사할 수 없습니다.");
+   // Navigation snapshots do not request SFGAO_CANCOPY. Keep provider
+   // capability probing inside the exact-owned transfer helper for only the
+   // selected items immediately before Shell mutation.
+   if(indexed->parsingName.size()>
+      fxfile::shelltransfer::kMaxProviderParsingUnits){
+    StatusText().Text(L"선택한 Shell provider 항목의 식별자가 너무 깁니다.");
     return;
    }
    std::size_t resident=0;
