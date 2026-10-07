@@ -1,13 +1,14 @@
 {
-  "request_id": "removable-shell-visuals-branch-cleanup-20261007",
+  "request_id": "shell-provider-visual-baseline-20261007",
   "expected_main_sha": "b414e8e3f8eb5e6c771c1f41ba4e632c143b1db4",
-  "candidate_sha": "b414e8e3f8eb5e6c771c1f41ba4e632c143b1db4",
-  "logical_unit": "removable-shell-visuals-branch-cleanup",
+  "candidate_sha": "c5bf4c4a2423bd378a9f02b31aa7b246aa93557e",
+  "logical_unit": "shell-provider-visual-baseline",
   "request_mode": "validation",
   "configuration": "Release",
   "validation_plan": [
-    "branch-cleanup"
+    "release-build",
+    "shell-provider-visual-baseline"
   ],
   "working_directory": "",
-  "command": "$ErrorActionPreference=\"Stop\"\n$repo=$env:FLYEXPLORER_CANONICAL_CHECKOUT\n$main=\"b414e8e3f8eb5e6c771c1f41ba4e632c143b1db4\"\n$branch=\"work/removable-shell-visuals-20261007\"\nSet-Location -LiteralPath $repo\n& git fetch origin --no-tags --prune\nif($LASTEXITCODE -ne 0){throw \"branch cleanup fetch failed\"}\n$observed=(& git rev-parse refs/remotes/origin/main).Trim()\nif($observed -ne $main){throw \"main moved before branch cleanup\"}\n$remoteRef=\"refs/remotes/origin/\"+$branch\n& git show-ref --verify --quiet $remoteRef\nif($LASTEXITCODE -ne 0){throw \"temporary work branch is already absent or unresolved\"}\n$branchHead=(& git rev-parse $remoteRef).Trim()\nif($branchHead -ne $main){throw \"temporary branch does not point at accepted main\"}\n& git merge-base --is-ancestor $branchHead $observed\nif($LASTEXITCODE -ne 0){throw \"temporary branch is not merged into main\"}\n& git push origin --delete $branch\nif($LASTEXITCODE -ne 0){throw \"temporary branch deletion failed\"}\n& git fetch origin --no-tags --prune\nif($LASTEXITCODE -ne 0){throw \"post-cleanup fetch failed\"}\n& git show-ref --verify --quiet $remoteRef\nif($LASTEXITCODE -eq 0){throw \"temporary work branch still exists after deletion\"}\nWrite-Host \"REMOVABLE_SHELL_VISUAL_WORK_BRANCH_CLEANUP=PASS\""
+  "command": "$ErrorActionPreference=\"Stop\"\n$repo=$env:FLYEXPLORER_CANONICAL_CHECKOUT\n$main=\"b414e8e3f8eb5e6c771c1f41ba4e632c143b1db4\"\n$candidate=\"c5bf4c4a2423bd378a9f02b31aa7b246aa93557e\"\n$branch=\"work/shell-provider-visuals-20261007\"\nSet-Location -LiteralPath $repo\n& git fetch origin main $branch --no-tags --prune\nif($LASTEXITCODE -ne 0){throw \"provider baseline fetch failed\"}\nif((& git rev-parse refs/remotes/origin/main).Trim() -ne $main){throw \"main moved before provider baseline\"}\nif((& git rev-parse (\"refs/remotes/origin/\"+$branch)).Trim() -ne $candidate){throw \"provider baseline candidate mismatch\"}\n$dirty=@(& git status --porcelain=v1 -uall)\nif($dirty.Count -ne 0){$dirty|%{Write-Host (\"UNEXPECTED_WORKTREE=\"+$_)};throw \"persistent checkout is dirty\"}\n& git switch --detach $candidate\nif($LASTEXITCODE -ne 0){throw \"provider baseline checkout failed\"}\n& .\\build.bat Release\nif($LASTEXITCODE -ne 0){throw \"provider baseline Release build failed\"}\n& python -X utf8 tests\\winui\\test_shell_provider_visual_gui.py --configuration Release --capture before\nif($LASTEXITCODE -ne 0){throw \"provider baseline GUI failed\"}\n$before=Join-Path $repo \"logs\\shell-provider-visual\\shell-provider-visual-before.bmp\"\nif(-not(Test-Path -LiteralPath $before -PathType Leaf)){throw \"provider baseline capture missing\"}\n$evidence=Join-Path $repo \"logs\\remote-evidence\"\nNew-Item -ItemType Directory -Force -Path $evidence|Out-Null\nCopy-Item -LiteralPath $before -Destination (Join-Path $evidence \"shell-provider-visual-before.bmp\") -Force\nWrite-Host (\"SHELL_PROVIDER_BASELINE_SHA256=\"+(Get-FileHash -Algorithm SHA256 $before).Hash.ToLowerInvariant())\n& git switch main\nif($LASTEXITCODE -ne 0){throw \"failed to restore main after provider baseline\"}\n& git merge --ff-only origin/main\nif($LASTEXITCODE -ne 0){throw \"failed to fast-forward main after provider baseline\"}\nWrite-Host \"SHELL_PROVIDER_VISUAL_BASELINE=PASS\""
 }
