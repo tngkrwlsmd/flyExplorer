@@ -21,6 +21,8 @@ class TransferBudgetContract(unittest.TestCase):
         self.assertIn("kMaxItems=1024", header)
         self.assertIn("kMaxSourcePathUnits=1024*1024", header)
         self.assertIn("kMaxProviderParsingUnits=4096", header)
+        self.assertIn("kMaxProviderPidlBytes=32768", header)
+        self.assertIn("kMaxProviderPidlBytesTotal=1024*1024", header)
 
     def test_native_transfer_validates_item_and_aggregate_path_budget(self):
         core = compact(read("src/base/shell_transfer_core.cpp"))
@@ -29,6 +31,8 @@ class TransferBudgetContract(unittest.TestCase):
         self.assertIn("sourcePathUnits+=source.size()+1", core)
         self.assertIn("source.size()>kMaxProviderParsingUnits", core)
         self.assertIn("SourceMode::ShellProvider", core)
+        self.assertIn("validPidlBlob", core)
+        self.assertIn("sourcePidls", core)
 
     def test_clipboard_reuses_transfer_budget_instead_of_private_32_cap(self):
         clipboard = compact(read("src/base/shell_clipboard_core.cpp"))

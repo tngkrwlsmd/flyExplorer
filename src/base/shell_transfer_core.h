@@ -13,6 +13,8 @@ namespace fxfile::shelltransfer {
 inline constexpr std::size_t kMaxItems=1024;
 inline constexpr std::size_t kMaxSourcePathUnits=1024*1024;
 inline constexpr std::size_t kMaxProviderParsingUnits=4096;
+inline constexpr std::size_t kMaxProviderPidlBytes=32768;
+inline constexpr std::size_t kMaxProviderPidlBytesTotal=1024*1024;
 enum class Kind { Copy, Move, Recycle };
 enum class Collision { Reject, KeepBoth };
 enum class SourceMode { Filesystem, ShellProvider };
@@ -35,6 +37,10 @@ struct Request {
  // Filesystem mode: native full paths. ShellProvider mode: desktop-absolute
  // Shell parsing names. Both remain bounded and direct-child-only.
  std::vector<std::wstring> sources;
+ // ShellProvider mode additionally carries the exact accepted snapshot PIDLs.
+ // These are value bytes only; no COM interface crosses the process boundary.
+ std::vector<unsigned char> sourceParentPidl;
+ std::vector<std::vector<unsigned char>> sourcePidls;
  bool recycleConfirmed=false; // MUST be explicit user consent
 };
 struct Report {

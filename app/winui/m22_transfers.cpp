@@ -14,6 +14,19 @@ using namespace Microsoft::UI::Xaml::Controls;
 namespace winrt::FlyExplorer::implementation {
 using FileOperationController=fxfile::previewops::FileOperationController;
 namespace {
+bool copyPidlBytes(PCIDLIST_ABSOLUTE value,
+                   std::vector<unsigned char>& out) noexcept{
+ out.clear();
+ if(!value)return false;
+ const auto bytes=static_cast<std::size_t>(::ILGetSize(value));
+ if(bytes<sizeof(USHORT)||bytes>fxfile::shelltransfer::kMaxProviderPidlBytes)
+  return false;
+ try{
+  out.resize(bytes);
+  std::memcpy(out.data(),value,bytes);
+  return true;
+ }catch(...){out.clear();return false;}
+}
 bool removableLocalRoot(std::wstring const& value) noexcept{
  try{
   const auto root=std::filesystem::path(value).root_path().native();
@@ -151,6 +164,7 @@ void MainWindow::RunTransfer(fxfile::shelltransfer::Kind kind){
  auto list=side==0?LeftFiles():RightFiles();
  struct Selected final {
   fxfile::shellnav::IndexedItem const* item=nullptr;
+  std::uint64_t logical=0;
  };
  std::vector<Selected> chosen;
  chosen.reserve(list.SelectedItems().Size());
@@ -168,7 +182,7 @@ void MainWindow::RunTransfer(fxfile::shelltransfer::Kind kind){
    return;
   }
   if(!indexed->isFileSystem())providerSource=true;
-  chosen.push_back(Selected{indexed});
+  chosen.push_back(Selected{indexed,logical});
  }
  if(chosen.empty()){
   StatusText().Text(L"작업할 파일 또는 폴더를 선택하세요.");
@@ -193,6 +207,10 @@ void MainWindow::RunTransfer(fxfile::shelltransfer::Kind kind){
    return;
   }
   req.sourceParent=snapshot.parsingName;
+  if(!copyPidlBytes(snapshot.folder.get(),req.sourceParentPidl)){
+   StatusText().Text(L"현재 Shell provider 위치의 PIDL 정보를 사용할 수 없습니다.");
+   return;
+  }
  }else{
   if(pane.filesystemPaths[tab].empty()){
    StatusText().Text(L"실제 원본 폴더를 완전히 불러온 후 다시 시도하세요.");
@@ -215,6 +233,7 @@ void MainWindow::RunTransfer(fxfile::shelltransfer::Kind kind){
  }
 
  std::size_t sourceUnits=0;
+ std::size_t providerPidlBytes=req.sourceParentPidl.size();
  for(auto const& picked:chosen){
   auto const* indexed=picked.item;
   if(providerSource){
@@ -223,6 +242,21 @@ void MainWindow::RunTransfer(fxfile::shelltransfer::Kind kind){
     StatusText().Text(L"선택한 Shell provider 항목은 Windows에서 복사할 수 없습니다.");
     return;
    }
+   std::size_t resident=0;
+   if(!snapshot.residentIndex(picked.logical,resident)||
+      resident>=snapshot.children.size()){
+    StatusText().Text(L"선택한 Shell provider 항목이 현재 snapshot에 없습니다.");
+    return;
+   }
+   std::vector<unsigned char> childPidl;
+   if(!copyPidlBytes(snapshot.children[resident].id.get(),childPidl)||
+      childPidl.size()>fxfile::shelltransfer::kMaxProviderPidlBytesTotal-
+                       providerPidlBytes){
+    StatusText().Text(L"선택한 Shell provider PIDL 크기 제한을 초과했습니다.");
+    return;
+   }
+   providerPidlBytes+=childPidl.size();
+   req.sourcePidls.push_back(std::move(childPidl));
   }else if(!indexed->isFileSystem()){
    StatusText().Text(L"가상 Shell/provider 항목은 별도 Copy-out 경로가 필요합니다.");
    return;

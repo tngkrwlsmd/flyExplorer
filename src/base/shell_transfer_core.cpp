@@ -79,6 +79,18 @@ bool safeFilesystemFolder(fs::path const& folder,Kind kind) {
  return attrs!=INVALID_FILE_ATTRIBUTES&&(attrs&FILE_ATTRIBUTE_DIRECTORY)&&
         !(attrs&FILE_ATTRIBUTE_REPARSE_POINT);
 }
+bool validPidlBlob(std::vector<unsigned char> const& bytes) noexcept{
+ if(bytes.size()<sizeof(USHORT)||bytes.size()>kMaxProviderPidlBytes)return false;
+ std::size_t offset=0;
+ while(offset+sizeof(USHORT)<=bytes.size()){
+  USHORT cb=0;
+  std::memcpy(&cb,bytes.data()+offset,sizeof(cb));
+  if(cb==0)return offset+sizeof(USHORT)==bytes.size();
+  if(cb<sizeof(USHORT)||offset+cb>bytes.size())return false;
+  offset+=cb;
+ }
+ return false;
+}
 bool sameParent(fs::path const& lhs,fs::path const& rhs){
  auto a=lhs.lexically_normal().native();
  auto b=rhs.lexically_normal().native();
@@ -157,7 +169,9 @@ Report validate(Request const& request) noexcept {
    if(request.kind!=Kind::Copy||request.recycleConfirmed||
       request.sourceParent.empty()||
       request.sourceParent.size()>kMaxProviderParsingUnits||
-      request.destination.empty()||request.destination.size()>32000){
+      request.destination.empty()||request.destination.size()>32000||
+      !validPidlBlob(request.sourceParentPidl)||
+      request.sourcePidls.size()!=request.sources.size()){
     report.error=request.kind==Kind::Copy?
         ERROR_INVALID_PARAMETER:ERROR_NOT_SUPPORTED;
     return report;
@@ -167,15 +181,21 @@ Report validate(Request const& request) noexcept {
     report.error=ERROR_INVALID_NAME;return report;
    }
    std::size_t sourceUnits=0;
+   std::size_t pidlBytes=request.sourceParentPidl.size();
    std::vector<std::wstring> seen;
    seen.reserve(request.sources.size());
-   for(auto const& source:request.sources){
+   for(std::size_t i=0;i<request.sources.size();++i){
+    auto const& source=request.sources[i];
+    auto const& pidl=request.sourcePidls[i];
     if(source.empty()||source.size()>kMaxProviderParsingUnits||
        source.find(L'\0')!=std::wstring::npos||
-       source.size()+1>kMaxSourcePathUnits-sourceUnits){
+       source.size()+1>kMaxSourcePathUnits-sourceUnits||
+       !validPidlBlob(pidl)||
+       pidl.size()>kMaxProviderPidlBytesTotal-pidlBytes){
       report.error=ERROR_INVALID_NAME;return report;
     }
     sourceUnits+=source.size()+1;
+    pidlBytes+=pidl.size();
     if(std::any_of(seen.begin(),seen.end(),[&](auto const& prior){
        return ::CompareStringOrdinal(
           prior.c_str(),-1,source.c_str(),-1,TRUE)==CSTR_EQUAL;
@@ -189,7 +209,8 @@ Report validate(Request const& request) noexcept {
    return report;
   }
 
-  if(request.sourceParent.size()>32000){
+  if(request.sourceParent.size()>32000||
+     !request.sourceParentPidl.empty()||!request.sourcePidls.empty()){
    report.error=ERROR_INVALID_PARAMETER;return report;
   }
   if(request.kind==Kind::Recycle&&!request.recycleConfirmed){
@@ -258,85 +279,63 @@ Report validateProviderCopy(Request const& request) noexcept {
  Report report{};
  report.error=ERROR_INVALID_NAME;
  if(request.sourceMode!=SourceMode::ShellProvider||
-    request.kind!=Kind::Copy)return report;
- PIDLIST_ABSOLUTE parent=nullptr;
- std::vector<PIDLIST_ABSOLUTE> children;
- auto cleanup=[&]{
-  for(auto* item:children)if(item)::CoTaskMemFree(item);
-  children.clear();
-  if(parent){::CoTaskMemFree(parent);parent=nullptr;}
- };
+    request.kind!=Kind::Copy||
+    !validPidlBlob(request.sourceParentPidl)||
+    request.sourcePidls.size()!=request.sources.size())return report;
  try{
-  if(FAILED(::SHParseDisplayName(
-       request.sourceParent.c_str(),nullptr,&parent,0,nullptr))||!parent){
-   cleanup();return report;
-  }
+  auto parent=reinterpret_cast<PCIDLIST_ABSOLUTE>(
+      request.sourceParentPidl.data());
   ComPtr<IShellItem> parentItem;
   if(FAILED(::SHCreateItemFromIDList(
-       parent,IID_PPV_ARGS(parentItem.GetAddressOf())))||!parentItem){
-   cleanup();return report;
-  }
+       parent,IID_PPV_ARGS(parentItem.GetAddressOf())))||!parentItem)
+   return report;
   SFGAOF parentAttrs=0;
   if(FAILED(parentItem->GetAttributes(SFGAO_FOLDER,&parentAttrs))||
-     !(parentAttrs&SFGAO_FOLDER)){
-   cleanup();return report;
-  }
+     !(parentAttrs&SFGAO_FOLDER))return report;
 
   const auto destination=fs::path(request.destination).lexically_normal();
-  children.reserve(request.sources.size());
-  for(auto const& source:request.sources){
-   PIDLIST_ABSOLUTE child=nullptr;
-   if(FAILED(::SHParseDisplayName(
-        source.c_str(),nullptr,&child,0,nullptr))||!child){
-    if(child)::CoTaskMemFree(child);
-    cleanup();return report;
-   }
-   if(!::ILIsParent(parent,child,TRUE)){
-    ::CoTaskMemFree(child);cleanup();return report;
-   }
-   if(std::any_of(children.begin(),children.end(),
-      [&](PIDLIST_ABSOLUTE prior){return ::ILIsEqual(prior,child)!=FALSE;})){
-    ::CoTaskMemFree(child);
+  std::vector<PCIDLIST_ABSOLUTE> seen;
+  seen.reserve(request.sourcePidls.size());
+  for(auto const& sourceBytes:request.sourcePidls){
+   if(!validPidlBlob(sourceBytes))return report;
+   auto child=reinterpret_cast<PCIDLIST_ABSOLUTE>(sourceBytes.data());
+   if(!::ILIsParent(parent,child,TRUE))return report;
+   if(std::any_of(seen.begin(),seen.end(),
+      [&](PCIDLIST_ABSOLUTE prior){return ::ILIsEqual(prior,child)!=FALSE;})){
     report.error=ERROR_INVALID_PARAMETER;
-    cleanup();return report;
+    return report;
    }
 
    ComPtr<IShellItem> item;
    if(FAILED(::SHCreateItemFromIDList(
-        child,IID_PPV_ARGS(item.GetAddressOf())))||!item){
-    ::CoTaskMemFree(child);cleanup();return report;
-   }
+        child,IID_PPV_ARGS(item.GetAddressOf())))||!item)return report;
    SFGAOF attrs=0;
    if(FAILED(item->GetAttributes(SFGAO_CANCOPY,&attrs))||
       !(attrs&SFGAO_CANCOPY)){
-    ::CoTaskMemFree(child);
     report.error=ERROR_NOT_SUPPORTED;
-    cleanup();return report;
+    return report;
    }
    PWSTR rawName=nullptr;
    if(FAILED(item->GetDisplayName(
         SIGDN_PARENTRELATIVEEDITING,&rawName))||!rawName){
     if(rawName)::CoTaskMemFree(rawName);
-    ::CoTaskMemFree(child);cleanup();return report;
+    return report;
    }
    std::wstring leaf(rawName);
    ::CoTaskMemFree(rawName);
-   if(!filecommand::validLeaf(leaf)){
-    ::CoTaskMemFree(child);cleanup();return report;
-   }
+   if(!filecommand::validLeaf(leaf))return report;
    auto target=destination/leaf;
    if(::GetFileAttributesW(target.c_str())!=INVALID_FILE_ATTRIBUTES)
     report.collisions.push_back(target.native());
-   children.push_back(child);
+   seen.push_back(child);
   }
-  report.queued=static_cast<std::uint32_t>(children.size());
+  report.queued=static_cast<std::uint32_t>(seen.size());
   report.error=!report.collisions.empty()&&
                request.collision==Collision::Reject?
                ERROR_ALREADY_EXISTS:ERROR_SUCCESS;
  }catch(...){
   report.error=ERROR_INVALID_PARAMETER;
  }
- cleanup();
  return report;
 }
 } // namespace
@@ -377,11 +376,22 @@ Report execute(Request const& task,Progress& progress) noexcept{
   hr=::SHCreateItemFromParsingName(task.destination.c_str(),nullptr,
                                    IID_PPV_ARGS(dest.GetAddressOf()));
  if(SUCCEEDED(hr)){
-  for(auto const& path:task.sources){
+  for(std::size_t i=0;i<task.sources.size();++i){
    if(canceled(progress)){hr=E_ABORT;break;}
    ComPtr<IShellItem> item;
-   hr=::SHCreateItemFromParsingName(path.c_str(),nullptr,
-                                    IID_PPV_ARGS(item.GetAddressOf()));
+   if(task.sourceMode==SourceMode::ShellProvider){
+    if(i>=task.sourcePidls.size()||!validPidlBlob(task.sourcePidls[i])){
+     hr=E_INVALIDARG;
+    }else{
+     auto sourcePidl=reinterpret_cast<PCIDLIST_ABSOLUTE>(
+         task.sourcePidls[i].data());
+     hr=::SHCreateItemFromIDList(
+         sourcePidl,IID_PPV_ARGS(item.GetAddressOf()));
+    }
+   }else{
+    hr=::SHCreateItemFromParsingName(task.sources[i].c_str(),nullptr,
+                                     IID_PPV_ARGS(item.GetAddressOf()));
+   }
    if(FAILED(hr))break;
    if(task.kind==Kind::Copy)hr=operation->CopyItem(item.Get(),dest.Get(),nullptr,nullptr);
    else if(task.kind==Kind::Move)hr=operation->MoveItem(item.Get(),dest.Get(),nullptr,nullptr);
@@ -494,6 +504,12 @@ bool appendString(std::vector<unsigned char>& body,
  return value.empty()||
         appendBytes(body,value.data(),value.size()*sizeof(wchar_t));
 }
+bool appendBlob(std::vector<unsigned char>& body,
+                std::vector<unsigned char> const& value,std::size_t maximum){
+ if(value.size()>maximum||
+    !appendU32(body,static_cast<std::uint32_t>(value.size())))return false;
+ return value.empty()||appendBytes(body,value.data(),value.size());
+}
 bool serializeTransfer(Request const& task,
                        TransferWireRequest& head,
                        std::vector<unsigned char>& body) noexcept{
@@ -526,7 +542,18 @@ bool serializeTransfer(Request const& task,
      !appendU32(body,static_cast<std::uint32_t>(task.sources.size())))
    return false;
   for(auto const& source:task.sources)
-   if(!appendString(body,source,32000))return false;
+   if(!appendString(body,source,sourceLimit))return false;
+  if(task.sourceMode==SourceMode::ShellProvider){
+   if(task.sourcePidls.size()!=task.sources.size()||
+      !appendBlob(body,task.sourceParentPidl,kMaxProviderPidlBytes)||
+      !appendU32(body,static_cast<std::uint32_t>(task.sourcePidls.size())))
+    return false;
+   for(auto const& pidl:task.sourcePidls)
+    if(!appendBlob(body,pidl,kMaxProviderPidlBytes))return false;
+  }else{
+   if(!task.sourceParentPidl.empty()||!task.sourcePidls.empty()||
+      !appendU32(body,0)||!appendU32(body,0))return false;
+  }
   head.magic=kTransferWireMagic;
   head.version=kTransferWireVersion;
   head.bodyBytes=static_cast<std::uint32_t>(body.size());
@@ -558,6 +585,16 @@ struct WireReader final {
                        static_cast<std::size_t>(units)*sizeof(wchar_t));
   offset+=static_cast<std::size_t>(units)*sizeof(wchar_t);
   if(value.find(L'\0')!=std::wstring::npos)valid=false;
+  return value;
+ }
+ std::vector<unsigned char> blob(std::size_t maximum){
+  const auto bytes=u32();
+  if(!valid||bytes>maximum||bytes>body.size()-offset){
+   valid=false;return {};
+  }
+  std::vector<unsigned char> value(bytes);
+  if(bytes)std::memcpy(value.data(),body.data()+offset,bytes);
+  offset+=bytes;
   return value;
  }
 };
@@ -594,6 +631,24 @@ bool parseTransfer(std::vector<unsigned char> const& body,
       source.size()+1>kMaxSourcePathUnits-sourceUnits)return false;
    sourceUnits+=source.size()+1;
    task.sources.push_back(std::move(source));
+  }
+  task.sourceParentPidl=reader.blob(kMaxProviderPidlBytes);
+  const auto pidlCount=reader.u32();
+  if(!reader.valid||pidlCount>kMaxItems)return false;
+  task.sourcePidls.reserve(pidlCount);
+  std::size_t pidlBytes=task.sourceParentPidl.size();
+  for(std::uint32_t i=0;i<pidlCount;++i){
+   auto pidl=reader.blob(kMaxProviderPidlBytes);
+   if(!reader.valid||pidl.empty()||
+      pidl.size()>kMaxProviderPidlBytesTotal-pidlBytes)return false;
+   pidlBytes+=pidl.size();
+   task.sourcePidls.push_back(std::move(pidl));
+  }
+  if(task.sourceMode==SourceMode::ShellProvider){
+   if(!validPidlBlob(task.sourceParentPidl)||
+      task.sourcePidls.size()!=task.sources.size())return false;
+  }else if(!task.sourceParentPidl.empty()||!task.sourcePidls.empty()){
+   return false;
   }
   return reader.valid&&reader.offset==body.size();
  }catch(...){task=Request{};return false;}
