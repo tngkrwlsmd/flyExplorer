@@ -216,13 +216,25 @@ bounded grace-period termination of that exact owned job. This is a
 hang/cancellation boundary, not a security sandbox; the helper inherits the
 user token.
 
-Recycle deliberately does not use the network mutation path. It continues
-through `shelltransfer::execute` on the FileOperationController worker and
-accepts only local fixed/removable roots with explicit recycle confirmation.
-The common core owns direct-child/reparse/path-budget/collision validation for
-both paths. Copy/Move additionally accepts mapped `DRIVE_REMOTE` roots and
-ordinary direct UNC shares, while extended/device namespaces and virtual Shell
-provider parsing names remain fail-closed.
+Recycle deliberately does not use the Copy/Move helper mutation path. It
+continues through `shelltransfer::execute` on the FileOperationController
+worker and accepts only local fixed/removable roots with explicit recycle
+confirmation.
+
+Filesystem Copy/Move keeps direct-child/reparse/path-budget/collision
+validation and additionally accepts mapped `DRIVE_REMOTE` roots and ordinary
+direct UNC shares. Virtual Shell/provider sources use a distinct
+`SourceMode::ShellProvider` that is **Copy-only** and requires a filesystem
+destination. MainWindow serializes no COM interface: it copies the accepted
+snapshot's parent and selected child desktop-absolute PIDLs into bounded value
+blobs (32 KiB each, 1 MiB total) while retaining the common 1,024-item and
+1,048,576 UTF-16 source-identity budget. Inside the exact-owned transfer helper,
+the core validates PIDL framing, immediate parent/child relationship and
+duplicate identity, creates `IShellItem` values from the PIDLs, queries
+`SFGAO_CANCOPY`, obtains a materializable parent-relative leaf for collision
+checking and queues `IFileOperation::CopyItem`. Provider Move, provider
+destination/Copy-in and provider Recycle/Delete remain fail-closed. Extended/
+device namespaces remain fail-closed for filesystem paths.
 
 The subsequent MainWindow post-extraction responsibility audit is also complete.
 Most remaining MainWindow work is presentation/composition. The audit first
