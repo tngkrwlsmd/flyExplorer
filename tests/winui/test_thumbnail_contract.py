@@ -28,6 +28,25 @@ class ThumbnailContract(unittest.TestCase):
   self.assertIn("GetFileAttributesW(part.c_str())",helper)
   self.assertIn("GetFileAttributesExW(path.c_str()",helper)
 
+ def test_virtual_provider_thumbnail_stays_in_exact_owned_visual_helper(self):
+  assoc=src("src/base/shell_assoc_type_core.cpp")
+  helper=src("app/winui/helper/FlyShellIsolationHelper.cpp")
+  worker=src("app/winui/file_detail_controller.cpp")
+  wire=src("src/base/shell_visual_wire.h")
+  for token in ("thumbnailHints","kMaxThumbnailItems",
+                "JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE",
+                "PROC_THREAD_ATTRIBUTE_HANDLE_LIST"):
+   self.assertIn(token,assoc)
+  for token in ("SHCreateItemFromIDList(","IShellItemImageFactory",
+                "SIIGBF_THUMBNAILONLY","thumbnailPixelBytes"):
+   self.assertIn(token,helper)
+  for token in ("shellThumbnailHints","shellVisual.thumbnailBgra",
+                "request.shellProviderRoot"):
+   self.assertIn(token,worker)
+  for token in ("kMaxThumbnailItems=4","kWantThumbnail=1u",
+                "thumbnailPixelBytes"):
+   self.assertIn(token,wire)
+
  def test_bounded_worker_and_stale_route_guards_preserved(self):
   client=src("src/base/shell_thumbnail_core.cpp")
   for token in ('timeoutMs<200','timeoutMs>10000','requestedPixels<16',

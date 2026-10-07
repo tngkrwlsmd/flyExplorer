@@ -242,38 +242,54 @@ std::unordered_map<std::wstring,Visual> queryKnownFolderVisuals(
 
 std::vector<Visual> queryShellItemVisuals(
    std::wstring const& helper,std::vector<std::wstring> const& parsingNames,
+   std::vector<std::uint8_t> const& thumbnailHints,
    std::atomic_bool const* cancel,DWORD inactivityMs,
-   std::uint32_t requestedPixels) noexcept {
+   std::uint32_t requestedPixels,
+   std::uint32_t requestedThumbnailPixels) noexcept {
  std::vector<Visual> visuals;
  try{
   using namespace fxfile::visualwire;
   static std::mutex shellItemVisualMutex;
   std::lock_guard<std::mutex> lock(shellItemVisualMutex);
   namespace fs=std::filesystem;
+  const auto thumbnailCount=static_cast<std::uint32_t>(std::count(
+      thumbnailHints.begin(),thumbnailHints.end(),std::uint8_t{1}));
   if(parsingNames.empty()||parsingNames.size()>kMaxItems||
+     thumbnailHints.size()!=parsingNames.size()||
+     std::any_of(thumbnailHints.begin(),thumbnailHints.end(),
+        [](std::uint8_t value){return value>1;})||
+     thumbnailCount>kMaxThumbnailItems||
      inactivityMs<200||inactivityMs>10000||
      requestedPixels<kMinPixels||requestedPixels>kMaxPixels||
+     (thumbnailCount&&
+       (requestedThumbnailPixels<kMinThumbnailPixels||
+        requestedThumbnailPixels>kMaxThumbnailPixels))||
+     (!thumbnailCount&&requestedThumbnailPixels!=0)||
      !fs::path(helper).is_absolute()||
      fs::path(helper).filename()!=L"FlyShellIsolationHelper.exe"||
      !fs::is_regular_file(fs::path(helper)))return {};
   std::vector<unsigned char> body;
-  body.reserve(parsingNames.size()*64);
+  body.reserve(parsingNames.size()*72);
   auto append=[&](void const* source,std::size_t bytes)->bool{
    if(bytes>kMaxBodyBytes||body.size()>kMaxBodyBytes-bytes)return false;
    auto const* ptr=static_cast<unsigned char const*>(source);
    body.insert(body.end(),ptr,ptr+bytes);
    return true;
   };
-  for(auto const& name:parsingNames){
+  for(std::size_t i=0;i<parsingNames.size();++i){
+   auto const& name=parsingNames[i];
    if(name.size()>kMaxNameUnits||
       name.find(L'\0')!=std::wstring::npos)return {};
-   const auto units=static_cast<std::uint32_t>(name.size());
-   if(!append(&units,sizeof(units))||
+   ItemHeader item{
+       static_cast<std::uint32_t>(name.size()),
+       thumbnailHints[i]?kWantThumbnail:0u};
+   if(!append(&item,sizeof(item))||
       !append(name.data(),name.size()*sizeof(wchar_t)))return {};
   }
   RequestHeader request{
       kMagic,kVersion,static_cast<std::uint32_t>(parsingNames.size()),
-      requestedPixels,static_cast<std::uint32_t>(body.size()),
+      requestedPixels,requestedThumbnailPixels,
+      static_cast<std::uint32_t>(body.size()),
       checksum(body.data(),body.size())};
 
   SECURITY_ATTRIBUTES inheritable{sizeof(inheritable),nullptr,TRUE};
@@ -426,6 +442,18 @@ std::vector<Visual> queryShellItemVisuals(
     stopOwned(ERROR_INVALID_DATA);
     return {};
    }
+   const bool hasThumbnail=result.thumbnailPixelBytes!=0;
+   if((!hasThumbnail&&
+        (result.thumbnailWidth||result.thumbnailHeight))||
+      (hasThumbnail&&
+        (!thumbnailHints[i]||
+         result.thumbnailWidth<16||result.thumbnailWidth>kMaxThumbnailPixels||
+         result.thumbnailHeight<16||result.thumbnailHeight>kMaxThumbnailPixels||
+         result.thumbnailPixelBytes!=
+          result.thumbnailWidth*result.thumbnailHeight*4u))){
+    stopOwned(ERROR_INVALID_DATA);
+    return {};
+   }
    if(result.labelUnits){
     visuals[i].label.resize(result.labelUnits);
     if(!readMonitored(
@@ -442,6 +470,13 @@ std::vector<Visual> queryShellItemVisuals(
     if(!readMonitored(visuals[i].bgra.data(),result.pixelBytes))return {};
     visuals[i].width=requestedPixels;
     visuals[i].height=requestedPixels;
+   }
+   if(result.thumbnailPixelBytes){
+    visuals[i].thumbnailBgra.resize(result.thumbnailPixelBytes);
+    if(!readMonitored(
+         visuals[i].thumbnailBgra.data(),result.thumbnailPixelBytes))return {};
+    visuals[i].thumbnailWidth=result.thumbnailWidth;
+    visuals[i].thumbnailHeight=result.thumbnailHeight;
    }
   }
   if(::WaitForSingleObject(process.h,500)!=WAIT_OBJECT_0){

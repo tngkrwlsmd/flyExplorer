@@ -128,15 +128,52 @@ bool FileDetailController::start(
                             2500,request.visualPixels);
                 }
             }
+            std::vector<std::uint8_t> shellThumbnailHints(
+                request.paths.size(),0);
+            if(request.shellProviderRoot&&
+               (request.viewMode==FileViewMode::MediumIcons||
+                request.viewMode==FileViewMode::LargeIcons)){
+                std::size_t selected=0;
+                auto select=[&](bool imageLike){
+                    for(std::size_t i=0;
+                        i<request.shellParsingNames.size()&&selected<4;++i){
+                        if(shellThumbnailHints[i]||request.folderHints[i]||
+                           request.shellParsingNames[i].empty())continue;
+                        auto const& parsing=request.shellParsingNames[i];
+                        const auto dot=parsing.find_last_of(L'.');
+                        const auto slash=parsing.find_last_of(L"\\/");
+                        std::wstring ext;
+                        if(dot!=std::wstring::npos&&
+                           (slash==std::wstring::npos||dot>slash)){
+                            ext=parsing.substr(dot);
+                            std::transform(ext.begin(),ext.end(),ext.begin(),
+                              [](wchar_t c){
+                               return static_cast<wchar_t>(::towlower(c));});
+                        }
+                        const bool supportedImage=
+                            ext==L".png"||ext==L".jpg"||ext==L".jpeg"||
+                            ext==L".bmp"||ext==L".webp";
+                        if(supportedImage!=imageLike)continue;
+                        shellThumbnailHints[i]=1;
+                        ++selected;
+                    }
+                };
+                select(true);
+                select(false);
+            }
             std::vector<fxfile::filetype::Visual> shellItemVisuals;
             if(!visualHelper.empty()&&
                std::any_of(request.shellParsingNames.begin(),
                            request.shellParsingNames.end(),
                            [](std::wstring const& value){return !value.empty();})){
                 if(cancelToken->load())return;
+                const bool wantsShellThumbnail=std::any_of(
+                    shellThumbnailHints.begin(),shellThumbnailHints.end(),
+                    [](std::uint8_t value){return value!=0;});
                 shellItemVisuals=fxfile::filetype::queryShellItemVisuals(
-                    visualHelper,request.shellParsingNames,cancelToken.get(),
-                    4500,request.visualPixels);
+                    visualHelper,request.shellParsingNames,shellThumbnailHints,
+                    cancelToken.get(),4500,request.visualPixels,
+                    wantsShellThumbnail?request.thumbnailPixels:0u);
                 if(!shellItemVisuals.empty()&&
                    shellItemVisuals.size()!=request.paths.size())return;
             }
@@ -210,6 +247,11 @@ bool FileDetailController::start(
                         entry.iconWidth=shellVisual.width;
                         entry.iconHeight=shellVisual.height;
                         entry.knownFolderVisual=false;
+                    }
+                    if(!shellVisual.thumbnailBgra.empty()){
+                        entry.thumbnailBgra=shellVisual.thumbnailBgra;
+                        entry.thumbnailWidth=shellVisual.thumbnailWidth;
+                        entry.thumbnailHeight=shellVisual.thumbnailHeight;
                     }
                 }
                 if(!folder&&!path.empty()&&!request.shellProviderRoot){

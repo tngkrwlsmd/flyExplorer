@@ -291,32 +291,51 @@ int wmain(int argc,wchar_t** argv) {
            !output||output==INVALID_HANDLE_VALUE)return 90;
         fxfile::visualwire::RequestHeader request{};
         if(!exactRead(input,&request,sizeof(request))||
-           request.magic!=fxfile::visualwire::kMagic||request.version!=fxfile::visualwire::kVersion||
+           request.magic!=fxfile::visualwire::kMagic||
+           request.version!=fxfile::visualwire::kVersion||
            !request.count||request.count>fxfile::visualwire::kMaxItems||
-           request.pixels<fxfile::visualwire::kMinPixels||request.pixels>fxfile::visualwire::kMaxPixels||
+           request.pixels<fxfile::visualwire::kMinPixels||
+           request.pixels>fxfile::visualwire::kMaxPixels||
            request.bodyBytes>fxfile::visualwire::kMaxBodyBytes)return 91;
         std::vector<unsigned char> body(request.bodyBytes);
         if(request.bodyBytes&&!exactRead(
              input,body.data(),body.size()))return 92;
-        if(fxfile::visualwire::checksum(body.data(),body.size())!=request.checksum)return 93;
+        if(fxfile::visualwire::checksum(body.data(),body.size())!=
+           request.checksum)return 93;
         std::vector<std::wstring> names;
+        std::vector<std::uint32_t> itemFlags;
         names.reserve(request.count);
+        itemFlags.reserve(request.count);
+        std::uint32_t thumbnailCount=0;
         size_t cursor=0;
         for(std::uint32_t i=0;i<request.count;++i){
-            if(cursor+sizeof(std::uint32_t)>body.size())return 94;
-            std::uint32_t units=0;
-            std::memcpy(&units,body.data()+cursor,sizeof(units));
-            cursor+=sizeof(units);
-            if(units>fxfile::visualwire::kMaxNameUnits||
-               static_cast<size_t>(units)>
+            if(cursor+sizeof(fxfile::visualwire::ItemHeader)>body.size())
+                return 94;
+            fxfile::visualwire::ItemHeader item{};
+            std::memcpy(&item,body.data()+cursor,sizeof(item));
+            cursor+=sizeof(item);
+            if(item.flags&~fxfile::visualwire::kWantThumbnail)return 94;
+            if(item.flags&fxfile::visualwire::kWantThumbnail)
+                ++thumbnailCount;
+            if(item.units>fxfile::visualwire::kMaxNameUnits||
+               static_cast<size_t>(item.units)>
                    (body.size()-cursor)/sizeof(wchar_t))return 94;
             std::wstring name(
-                reinterpret_cast<wchar_t const*>(body.data()+cursor),units);
-            cursor+=static_cast<size_t>(units)*sizeof(wchar_t);
+                reinterpret_cast<wchar_t const*>(body.data()+cursor),
+                item.units);
+            cursor+=static_cast<size_t>(item.units)*sizeof(wchar_t);
             if(name.find(L'\0')!=std::wstring::npos)return 94;
             names.push_back(std::move(name));
+            itemFlags.push_back(item.flags);
         }
-        if(cursor!=body.size())return 94;
+        if(cursor!=body.size()||
+           thumbnailCount>fxfile::visualwire::kMaxThumbnailItems||
+           (thumbnailCount&&
+             (request.thumbnailPixels<
+                 fxfile::visualwire::kMinThumbnailPixels||
+              request.thumbnailPixels>
+                 fxfile::visualwire::kMaxThumbnailPixels))||
+           (!thumbnailCount&&request.thumbnailPixels!=0))return 94;
         const auto apt=::CoInitializeEx(
             nullptr,COINIT_APARTMENTTHREADED|COINIT_DISABLE_OLE1DDE);
         if(FAILED(apt))return 95;
@@ -324,6 +343,8 @@ int wmain(int argc,wchar_t** argv) {
         for(std::size_t i=0;i<names.size()&&resultCode==0;++i){
             std::wstring label;
             std::vector<unsigned char> pixels;
+            std::vector<unsigned char> thumbnail;
+            std::uint32_t thumbnailWidth=0,thumbnailHeight=0;
             PIDLIST_ABSOLUTE absolute=nullptr;
             HICON icon=nullptr;
             try{
@@ -342,6 +363,75 @@ int wmain(int argc,wchar_t** argv) {
                                return ch<32||ch==127;}))
                             label.clear();
                         icon=info.hIcon;
+                    }
+                    if(itemFlags[i]&fxfile::visualwire::kWantThumbnail){
+                        Microsoft::WRL::ComPtr<IShellItem> item;
+                        if(SUCCEEDED(::SHCreateItemFromIDList(
+                             absolute,IID_PPV_ARGS(&item)))){
+                            Microsoft::WRL::ComPtr<IShellItemImageFactory>
+                                factory;
+                            if(SUCCEEDED(item.As(&factory))){
+                                HBITMAP bitmap=nullptr;
+                                SIZE requested{
+                                    static_cast<LONG>(request.thumbnailPixels),
+                                    static_cast<LONG>(request.thumbnailPixels)};
+                                if(SUCCEEDED(factory->GetImage(
+                                     requested,SIIGBF_THUMBNAILONLY|
+                                     SIIGBF_BIGGERSIZEOK,&bitmap))&&bitmap){
+                                    BITMAP bm{};
+                                    if(::GetObjectW(
+                                         bitmap,sizeof(bm),&bm)==sizeof(bm)&&
+                                       bm.bmWidth>0&&bm.bmHeight>0&&
+                                       bm.bmWidth<=static_cast<LONG>(
+                                          fxfile::visualwire::
+                                            kMaxThumbnailPixels)&&
+                                       bm.bmHeight<=static_cast<LONG>(
+                                          fxfile::visualwire::
+                                            kMaxThumbnailPixels)){
+                                        thumbnailWidth=
+                                            static_cast<std::uint32_t>(
+                                                bm.bmWidth);
+                                        thumbnailHeight=
+                                            static_cast<std::uint32_t>(
+                                                bm.bmHeight);
+                                        BITMAPINFO dib{};
+                                        dib.bmiHeader.biSize=
+                                            sizeof(BITMAPINFOHEADER);
+                                        dib.bmiHeader.biWidth=bm.bmWidth;
+                                        dib.bmiHeader.biHeight=-bm.bmHeight;
+                                        dib.bmiHeader.biPlanes=1;
+                                        dib.bmiHeader.biBitCount=32;
+                                        dib.bmiHeader.biCompression=BI_RGB;
+                                        thumbnail.resize(
+                                            static_cast<size_t>(
+                                                thumbnailWidth)*
+                                            thumbnailHeight*4);
+                                        HDC screen=::GetDC(nullptr);
+                                        if(!screen||::GetDIBits(
+                                             screen,bitmap,0,thumbnailHeight,
+                                             thumbnail.data(),&dib,
+                                             DIB_RGB_COLORS)!=
+                                               static_cast<int>(
+                                                  thumbnailHeight)){
+                                            thumbnail.clear();
+                                            thumbnailWidth=thumbnailHeight=0;
+                                        }else{
+                                            bool anyAlpha=false;
+                                            for(size_t p=3;
+                                                p<thumbnail.size();p+=4)
+                                                anyAlpha|=thumbnail[p]!=0;
+                                            if(!anyAlpha)
+                                                for(size_t p=3;
+                                                    p<thumbnail.size();p+=4)
+                                                    thumbnail[p]=255;
+                                        }
+                                        if(screen)
+                                            ::ReleaseDC(nullptr,screen);
+                                    }
+                                    ::DeleteObject(bitmap);
+                                }
+                            }
+                        }
                     }
                 }
                 if(icon){
@@ -379,6 +469,8 @@ int wmain(int argc,wchar_t** argv) {
             }catch(...){
                 label.clear();
                 pixels.clear();
+                thumbnail.clear();
+                thumbnailWidth=thumbnailHeight=0;
             }
             if(icon)::DestroyIcon(icon);
             if(absolute)::CoTaskMemFree(absolute);
@@ -386,12 +478,16 @@ int wmain(int argc,wchar_t** argv) {
                 fxfile::visualwire::kMagic,fxfile::visualwire::kVersion,
                 static_cast<std::uint32_t>(i),
                 static_cast<std::uint32_t>(label.size()),
-                static_cast<std::uint32_t>(pixels.size())};
+                static_cast<std::uint32_t>(pixels.size()),
+                thumbnailWidth,thumbnailHeight,
+                static_cast<std::uint32_t>(thumbnail.size())};
             if(!exactWrite(output,&result,sizeof(result))||
                (!label.empty()&&!exactWrite(
                    output,label.data(),label.size()*sizeof(wchar_t)))||
                (!pixels.empty()&&!exactWrite(
-                   output,pixels.data(),pixels.size())))
+                   output,pixels.data(),pixels.size()))||
+               (!thumbnail.empty()&&!exactWrite(
+                   output,thumbnail.data(),thumbnail.size())))
                 resultCode=96;
         }
         ::CoUninitialize();

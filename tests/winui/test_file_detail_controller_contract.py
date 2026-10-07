@@ -86,6 +86,9 @@ class FileDetailControllerContract(unittest.TestCase):
         for token in (
             "queryShellItemVisuals(",
             "request.shellParsingNames",
+            "shellThumbnailHints",
+            "wantsShellThumbnail?request.thumbnailPixels:0u",
+            "shellVisual.thumbnailBgra",
             "!folder&&!path.empty()&&!request.shellProviderRoot",
         ):
             self.assertIn(token,worker)
@@ -116,6 +119,8 @@ class FileDetailControllerContract(unittest.TestCase):
             "kMaxNameUnits=4096",
             "kMaxBodyBytes=8u*1024u*1024u",
             "kMaxLabelUnits=80",
+            "kMaxThumbnailItems=4",
+            "kWantThumbnail=1u",
         ):
             self.assertIn(token,wire)
         self.assertNotIn("IShellItemImageFactory",assoc)

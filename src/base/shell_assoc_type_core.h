@@ -21,9 +21,12 @@ std::wstring knownFolderPath(std::wstring const& key) noexcept;
 // generic extension/folder classification remains a valid safe fallback.
 struct Visual {
     std::wstring label;
-    // Square BGRA from a disposable OS Shell helper, or empty.
+    // Square type/icon BGRA from a disposable OS Shell helper, or empty.
     std::vector<unsigned char> bgra;
     std::uint32_t width=0,height=0;
+    // Optional provider thumbnail BGRA. Only requested for a bounded subset.
+    std::vector<unsigned char> thumbnailBgra;
+    std::uint32_t thumbnailWidth=0,thumbnailHeight=0;
 };
 std::unordered_map<std::wstring,Visual> queryVisuals(
     std::wstring const& ownedHelper,
@@ -36,8 +39,10 @@ std::unordered_map<std::wstring,Visual> queryKnownFolderVisuals(
 std::vector<Visual> queryShellItemVisuals(
     std::wstring const& ownedHelper,
     std::vector<std::wstring> const& parsingNames,
+    std::vector<std::uint8_t> const& thumbnailHints,
     std::atomic_bool const* cancel=nullptr,
-    DWORD inactivityMs=4500,std::uint32_t requestedPixels=16) noexcept;
+    DWORD inactivityMs=4500,std::uint32_t requestedPixels=16,
+    std::uint32_t requestedThumbnailPixels=0) noexcept;
 std::unordered_map<std::wstring,std::wstring> query(
     std::wstring const& ownedHelper,
     std::vector<std::wstring> const& extensions,
