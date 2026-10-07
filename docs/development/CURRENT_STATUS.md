@@ -552,8 +552,9 @@ Explicit legacy content encodings are accepted on product revision
 behavior (UTF-8/ASCII plus BOM UTF-16 LE/BE) and adds explicit Korean CP949 and
 Western Windows-1252 decoding for BOM-less text. BOM detection has priority over
 the selected fallback. The existing 1 MiB/file, 16 MiB/search and 64 KiB
-cancellation boundaries are unchanged. Saved search presets write schema 3 with
-the content encoding and continue to read schema 1/2.
+cancellation boundaries are unchanged. At that revision, saved search presets
+wrote schema 3 with the content encoding and read schema 1/2; the current schema
+is 4 after bounded content regex support.
 
 Evidence: remote run `37173754944` passed canonical structure 4/4, source
 contracts 218/218, Release M19 native contracts 47/47, canonical Release build
@@ -603,8 +604,9 @@ with the existing name/regex, extension, size, local modified-date and target
 criteria. UTF-8/ASCII and BOM-tagged UTF-16 LE/BE are supported; unmarked
 NUL-containing files are skipped as binary. Reads are bounded to 1 MiB per file
 and 16 MiB per search, with 64 KiB cancellation checkpoints. Folder-only
-content search is rejected before worker start. Saved search presets write
-schema 2 with the content term and continue to read schema 1.
+content search is rejected before worker start. At that literal-content
+revision, saved search presets wrote schema 2 with the content term and read
+schema 1; the current schema is 4.
 
 Evidence: remote run `37172317827` passed canonical structure 4/4 and source
 contracts 212/212; its only later failure was an isolated native-fixture token
