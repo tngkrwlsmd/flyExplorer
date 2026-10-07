@@ -1078,7 +1078,7 @@ namespace winrt::FlyExplorer::implementation
         request.side=side;request.tab=tab;request.route=route;request.ticket=ticket;
         request.viewMode=requestedView;request.visualPixels=visualPixels;
         request.thumbnailPixels=thumbnailPixels;
-        request.isolatedNetwork=isolatedNetwork;
+        request.isolatedPathAccess=isolatedPathAccess;
         request.paths=std::move(paths);
         request.folderHints=std::move(folderHints);
         auto dispatch=DispatcherQueue();
