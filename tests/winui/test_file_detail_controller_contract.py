@@ -101,7 +101,7 @@ class FileDetailControllerContract(unittest.TestCase):
             "JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE",
             "JOB_OBJECT_LIMIT_ACTIVE_PROCESS",
             'L"FlyShellIsolationHelper.exe"',
-            'L"--shell-item-visuals"',
+            '" --shell-item-visuals"',
             "TerminateJobObject",
         ):
             self.assertIn(token,assoc)
