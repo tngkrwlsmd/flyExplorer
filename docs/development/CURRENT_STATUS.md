@@ -183,13 +183,20 @@ checkpoints.
   FAST, runner health, the canonical Release build and the focused owned GUI:
   Ctrl+A selected the 64-item WinUI model and the existing Copy command copied
   all 64 owned files to the opposite pane, with normal process shutdown.
-- Native Copy/Move transfer validation now accepts both `DRIVE_FIXED` and
-  `DRIVE_REMOVABLE` local drive roots. This applies to the shared
-  shell-transfer core used by pane Copy/Move, internal/Windows clipboard paste,
-  same-app transfer and external-drop ingestion. Reparse-point rejection,
-  direct-child validation, item/path budgets and collision/cancellation
-  behavior are unchanged. Recycle intentionally remains fixed-drive-only, and
-  UNC/`DRIVE_REMOTE`, virtual Shell and other drive types remain rejected.
+- Native Copy/Move transfer validation accepts `DRIVE_FIXED`,
+  `DRIVE_REMOVABLE` and `DRIVE_REMOTE` filesystem roots. Ordinary direct
+  UNC paths (`\\server\share\...`) are classified separately from drive-letter
+  roots and then use the same bounded filesystem validation. Pane Copy/Move,
+  internal/Windows clipboard paste, same-app transfer and external-drop
+  ingestion all converge on FileOperationController, which now executes
+  Copy/Move in the exact-owned `FlyShellIsolationHelper.exe --file-transfer`
+  child. Handle inheritance is restricted, the child is assigned to a
+  one-process kill-on-close Job Object and cancellation is signaled before a
+  bounded grace-period job termination. Reparse-point rejection, direct-child
+  validation, the 1,024-item/1,048,576-path-unit budgets and collision behavior
+  are unchanged. Extended/device namespaces and virtual Shell/provider parsing
+  names remain rejected. Recycle remains local fixed/removable only with
+  explicit confirmation and recycle-only Shell flags.
 - Private session schema v2 persists/restores the active Window Tab, per-tab
   split state/ratio and active pane, both panes' tabs, selected tabs,
   view/sort/name-column state and bounded filesystem Back/Forward history.
@@ -363,6 +370,34 @@ Remote Windows Task `37451622847` found only C: as `Fixed` and D: as
 `CD-ROM`; no `DRIVE_REMOVABLE` volume was attached to the VM. A future run
 with an attached USB/removable volume should certify fixed↔removable and
 removable↔removable Copy/Move without changing the current product policy.
+
+UNC/network Copy/Move support is accepted at the product/harness boundary on
+candidate `a08e32788bdcd5d33da31e0c413803f30e548b92`. The shared transfer
+policy accepts `DRIVE_REMOTE` for Copy/Move but not Recycle, and the pure root
+classifier accepts ordinary `\\server\share\...` roots while rejecting
+`\\?\` / `\\.\` device namespaces. Copy/Move now uses the helper's
+explicit `--file-transfer` mode with a bounded private wire, restricted
+inherited handles, a one-process kill-on-close Job Object and inherited
+cancellation event; Recycle remains on the local-only in-process STA path.
+
+Remote run `37553534009` passed FAST, helper Debug build and the M22 Debug
+native fixture at 33/33. Run `37553699165` passed the M22 Release native
+fixture at 33/33 and the canonical Release build before the older broad
+physical-input GUI harness refused input because no owned foreground window was
+available. Diagnostic run `37554219584` confirmed that desktop condition.
+The UIA-only successor initially used a stale transient-status assertion:
+direct diagnostic run `37555732127` proved that Copy had committed, the
+controller was no longer busy (`Cancel` disabled, mutation controls enabled)
+and the normal directory watcher had already replaced the short-lived
+"복사를 완료했습니다." text with "폴더 변경 알림을 반영했습니다.". After changing
+only that harness assertion, final run `37556148841` passed FAST,
+`git diff --check`, canonical Release build and focused UIA-only local
+Copy/Move through the isolated helper. No XAML/pixel behavior changed.
+
+Actual SMB/UNC transfer execution is **not claimed**: the runner's
+`\\127.0.0.1\C$\...` owned loopback probe reports the admin share
+unavailable, and no disposable SMB share is attached. Mapped network-drive
+execution is likewise not separately certified.
 
 Metadata-sort correctness and metadata/detail separation were first accepted
 on candidate `1857330605c8ab27b2c0ea6ce91b279e71f13607` by self-hosted
@@ -819,14 +854,22 @@ Current source and the last parity evidence still show these limits:
   items and fixed-drive-only; network/UNC/provider metadata coverage remains a
   separate gap. Physical USB metadata-sort execution is also still awaiting a
   removable device on the self-hosted VM.
-- Copy/Move/Recycle accepts local fixed and removable drive roots through the
-  shared Shell transfer core. Recycle still requires explicit confirmation and
-  uses Shell recycle-only flags; if a removable drive cannot use Windows
-  Recycle Bin, flyExplorer reports failure and does not switch to permanent
-  deletion. Physical USB/removable-media execution is not yet certified
-  because the current self-hosted VM exposes only a fixed C: volume and a D:
-  CD-ROM. UNC/network (`DRIVE_REMOTE`) and virtual/provider transfer paths
-  remain unsupported.
+- Copy/Move accepts local fixed/removable roots, mapped
+  `DRIVE_REMOTE` roots and ordinary direct UNC filesystem paths through the
+  shared Shell transfer core. Copy/Move Shell mutation is isolated in an
+  exact-owned helper process so a blocking network/provider call is outside the
+  flyExplorer process and can be terminated through its owned Job Object after
+  cancellation grace. Recycle still accepts only local fixed/removable roots,
+  requires explicit confirmation and uses recycle-only Shell flags; if a
+  removable drive cannot use Windows Recycle Bin, flyExplorer reports failure
+  and does not switch to permanent deletion. Virtual Shell/provider transfer
+  paths and extended/device namespaces remain unsupported. Physical
+  USB/removable execution is still uncertified because the VM has no removable
+  volume. Actual SMB/UNC and mapped-network-drive Copy/Move execution is also
+  not yet certified because the runner has no test-owned SMB share and its
+  loopback admin-share probe is unavailable; current acceptance covers policy,
+  root parsing, exact-owned isolation, local Copy/Move through that isolation
+  path and Release GUI lifecycle.
 - Search remains bounded but no longer stops at the historical 2,500-entry,
   depth-5 and 100-retained-result limits. Filesystem traversal now visits up to
   20,000 entries at depth 32 and retains the first 1,000 matches while
