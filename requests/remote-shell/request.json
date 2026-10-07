@@ -1,13 +1,13 @@
 {
-  "request_id": "shell-provider-thumbnail-docs-policy-20261007",
-  "expected_main_sha": "108cedb5c17a1229604dc6f7a43fbc7c2eb775ab",
+  "request_id": "shell-provider-thumbnail-branch-cleanup-20261007",
+  "expected_main_sha": "700500d92442f25002fb707031d7c2ff2cb2052f",
   "candidate_sha": "700500d92442f25002fb707031d7c2ff2cb2052f",
-  "logical_unit": "shell-provider-thumbnail-docs-policy",
+  "logical_unit": "shell-provider-thumbnail-branch-cleanup",
   "request_mode": "validation",
   "configuration": "Release",
   "validation_plan": [
-    "docs-policy"
+    "branch-cleanup"
   ],
   "working_directory": "",
-  "command": "$ErrorActionPreference=\"Stop\"\n$repo=$env:FLYEXPLORER_CANONICAL_CHECKOUT\n$main=\"108cedb5c17a1229604dc6f7a43fbc7c2eb775ab\"\n$candidate=\"700500d92442f25002fb707031d7c2ff2cb2052f\"\n$branch=\"work/shell-provider-thumbnail-20261007\"\nSet-Location -LiteralPath $repo\n& git fetch origin main $branch --no-tags --prune\nif($LASTEXITCODE -ne 0){throw \"provider thumbnail docs policy fetch failed\"}\nif((& git rev-parse refs/remotes/origin/main).Trim() -ne $main){throw \"main moved before provider thumbnail docs policy\"}\nif((& git rev-parse (\"refs/remotes/origin/\"+$branch)).Trim() -ne $candidate){throw \"provider thumbnail docs candidate mismatch\"}\n$dirty=@(& git status --porcelain=v1 -uall)\nif($dirty.Count -ne 0){$dirty|%{Write-Host (\"UNEXPECTED_WORKTREE=\"+$_)};throw \"persistent checkout dirty\"}\n& git switch --detach $candidate\nif($LASTEXITCODE -ne 0){throw \"provider thumbnail docs checkout failed\"}\n& .\\test.bat policy\nif($LASTEXITCODE -ne 0){throw \"provider thumbnail policy gate failed\"}\n& git diff --check $main $candidate\nif($LASTEXITCODE -ne 0){throw \"provider thumbnail docs diff check failed\"}\n& git switch main\nif($LASTEXITCODE -ne 0){throw \"failed to restore main after provider thumbnail docs policy\"}\n& git merge --ff-only origin/main\nif($LASTEXITCODE -ne 0){throw \"failed to fast-forward main after provider thumbnail docs policy\"}\nWrite-Host \"SHELL_PROVIDER_THUMBNAIL_DOCS_POLICY=PASS\""
+  "command": "$ErrorActionPreference=\"Stop\"\n$repo=$env:FLYEXPLORER_CANONICAL_CHECKOUT\n$main=\"700500d92442f25002fb707031d7c2ff2cb2052f\"\n$branch=\"work/shell-provider-thumbnail-20261007\"\nSet-Location -LiteralPath $repo\n& git fetch origin --no-tags --prune\nif($LASTEXITCODE -ne 0){throw \"provider thumbnail branch cleanup fetch failed\"}\n$observed=(& git rev-parse refs/remotes/origin/main).Trim()\nif($observed -ne $main){throw \"main moved before provider thumbnail branch cleanup\"}\n$remoteRef=\"refs/remotes/origin/\"+$branch\n& git show-ref --verify --quiet $remoteRef\nif($LASTEXITCODE -ne 0){throw \"provider thumbnail work branch is absent or unresolved\"}\n$branchHead=(& git rev-parse $remoteRef).Trim()\nif($branchHead -ne $main){throw \"provider thumbnail work branch does not point at accepted main\"}\n& git merge-base --is-ancestor $branchHead $observed\nif($LASTEXITCODE -ne 0){throw \"provider thumbnail work branch is not merged into main\"}\n& git push origin --delete $branch\nif($LASTEXITCODE -ne 0){throw \"provider thumbnail work branch deletion failed\"}\n& git fetch origin --no-tags --prune\nif($LASTEXITCODE -ne 0){throw \"provider thumbnail post-cleanup fetch failed\"}\n& git show-ref --verify --quiet $remoteRef\nif($LASTEXITCODE -eq 0){throw \"provider thumbnail work branch still exists after deletion\"}\nWrite-Host \"SHELL_PROVIDER_THUMBNAIL_WORK_BRANCH_CLEANUP=PASS\""
 }
