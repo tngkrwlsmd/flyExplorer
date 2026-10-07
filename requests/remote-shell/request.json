@@ -1,11 +1,15 @@
 {
-  "request_id": "search-content-regex-cleanup-20261007",
+  "request_id": "unc-network-copy-move-fast-debug-20261007",
   "expected_main_sha": "24bb8722c06b302f6a6b9c00aad34293a38be0d0",
-  "candidate_sha": "24bb8722c06b302f6a6b9c00aad34293a38be0d0",
-  "logical_unit": "search-content-regex-cleanup",
-  "request_mode": "diagnostic",
-  "configuration": "none",
-  "validation_plan": [],
+  "candidate_sha": "499f5ac4cc6810602e4def52f4e37721d111e9ba",
+  "logical_unit": "unc-network-copy-move",
+  "request_mode": "validation",
+  "configuration": "Debug",
+  "validation_plan": [
+    "fast",
+    "helper-debug",
+    "m22-native-debug"
+  ],
   "working_directory": "",
-  "command": "$ErrorActionPreference=\"Stop\"\n$repo=$env:FLYEXPLORER_CANONICAL_CHECKOUT\n$main=\"24bb8722c06b302f6a6b9c00aad34293a38be0d0\"\n$branch=\"work/search-content-regex-20261007\"\nSet-Location -LiteralPath $repo\n& git fetch origin main $branch --no-tags --prune\nif($LASTEXITCODE -ne 0){throw \"cleanup fetch failed\"}\nif((& git rev-parse refs/remotes/origin/main).Trim() -ne $main){throw \"main moved before cleanup\"}\nif((& git rev-parse (\"refs/remotes/origin/\"+$branch)).Trim() -ne $main){throw \"work branch is not the accepted main revision\"}\n& git push origin --delete $branch\nif($LASTEXITCODE -ne 0){throw \"work branch delete failed\"}\n& git fetch origin --prune --no-tags\nif($LASTEXITCODE -ne 0){throw \"cleanup prune failed\"}\n$remaining=(& git branch -r --list (\"origin/\"+$branch))\nif($remaining){throw \"deleted work branch still present after prune\"}\nWrite-Host \"CONTENT_REGEX_WORK_BRANCH_CLEANUP=PASS\"\nWrite-Host \"CONTENT_REGEX_ACCEPTED_MAIN=$main\""
+  "command": "$ErrorActionPreference=\"Stop\"\n$repo=$env:FLYEXPLORER_CANONICAL_CHECKOUT\n$main=\"24bb8722c06b302f6a6b9c00aad34293a38be0d0\"\n$candidate=\"499f5ac4cc6810602e4def52f4e37721d111e9ba\"\n$branch=\"work/unc-network-copy-move-20261007\"\nSet-Location -LiteralPath $repo\n& git fetch origin main $branch --no-tags --prune\nif($LASTEXITCODE -ne 0){throw \"UNC preflight fetch failed\"}\nif((& git rev-parse refs/remotes/origin/main).Trim() -ne $main){throw \"main moved before UNC validation\"}\nif((& git rev-parse (\"refs/remotes/origin/\"+$branch)).Trim() -ne $candidate){throw \"UNC candidate moved\"}\n$temp=Join-Path $env:RUNNER_TEMP (\"fly-unc-copy-move-fast-\"+$env:GITHUB_RUN_ID)\nif(Test-Path -LiteralPath $temp){Remove-Item -LiteralPath $temp -Recurse -Force}\ntry{\n  & git worktree add --detach $temp $candidate\n  if($LASTEXITCODE -ne 0){throw \"UNC worktree add failed\"}\n  Set-Location -LiteralPath $temp\n  & git diff --check ($main+\"...\"+$candidate)\n  if($LASTEXITCODE -ne 0){throw \"UNC diff check failed\"}\n  & python -X utf8 tools\\winui\\run_checks.py fast --before $main --head $candidate\n  if($LASTEXITCODE -ne 0){throw \"UNC FAST failed\"}\n  & .\\app\\winui\\helper\\build.cmd Debug\n  if($LASTEXITCODE -ne 0){throw \"UNC helper Debug build failed\"}\n  & .\\tests\\winui\\m22\\build.cmd Debug\n  if($LASTEXITCODE -ne 0){throw \"UNC M22 Debug build failed\"}\n  $env:FLY_M22_CONFIG=\"Debug\"\n  $env:FLY_M22_LOOPBACK_ADMIN_SHARE=\"YES\"\n  & python -X utf8 .\\tests\\winui\\m22\\test_native.py\n  if($LASTEXITCODE -ne 0){throw \"UNC M22 Debug native failed\"}\n  Write-Host \"UNC_COPY_MOVE_DIFF_CHECK=PASS\"\n  Write-Host \"UNC_COPY_MOVE_FAST=PASS\"\n  Write-Host \"UNC_COPY_MOVE_HELPER_DEBUG_BUILD=PASS\"\n  Write-Host \"UNC_COPY_MOVE_M22_DEBUG=PASS\"\n}finally{\n  Remove-Item Env:FLY_M22_CONFIG -ErrorAction SilentlyContinue\n  Remove-Item Env:FLY_M22_LOOPBACK_ADMIN_SHARE -ErrorAction SilentlyContinue\n  Set-Location -LiteralPath $repo\n  if(Test-Path -LiteralPath $temp){& git worktree remove --force $temp}\n  & git worktree prune\n}"
 }
