@@ -22,7 +22,7 @@ class IsolationContracts(unittest.TestCase):
                           "UseWinUI"):
             self.assertNotIn(forbidden,p+h)
 
-    def test_strict_read_only_ipc_contract(self):
+    def test_strict_navigation_ipc_contract(self):
         h=source("FlyShellIsolationHelper.cpp")
         t=(HERE/"test_process_isolation.py").read_text(encoding="utf-8-sig")
         wire=source(ROOT/"src/base/shell_isolation_wire.h")
@@ -46,6 +46,28 @@ class IsolationContracts(unittest.TestCase):
                          "REAL_NATIVE_HELPER_PAGED_OFFSET_LIMIT_PASS",
                          "REAL_NATIVE_HELPER_OFFSET_OVER_COMPLETE_MODEL_PASS"):
             self.assertIn(required,t)
+
+    def test_file_transfer_mode_is_explicit_and_owned(self):
+        helper=source("FlyShellIsolationHelper.cpp")
+        project=source("FlyShellIsolationHelper.project-template.xml")
+        core=source(ROOT/"src/base/shell_transfer_core.cpp")
+        for token in (
+            '--file-transfer',
+            "runIsolatedHelper",
+            "shell_transfer_core.cpp",
+            "file_command_core.cpp",
+        ):
+            self.assertIn(token,helper+project)
+        for token in (
+            "PROC_THREAD_ATTRIBUTE_HANDLE_LIST",
+            "JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE",
+            "JOB_OBJECT_LIMIT_ACTIVE_PROCESS",
+            "AssignProcessToJobObject",
+            "TerminateJobObject",
+            "kTransferCancelGraceMs",
+            "CreateEventW",
+        ):
+            self.assertIn(token,core)
 
     def test_private_job_boundaries_without_product_switch(self):
         h=source("FlyShellIsolationHelper.cpp")
