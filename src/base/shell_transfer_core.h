@@ -18,6 +18,7 @@ inline constexpr std::size_t kMaxProviderPidlBytesTotal=1024*1024;
 enum class Kind { Copy, Move, Recycle };
 enum class Collision { Reject, KeepBoth };
 enum class SourceMode { Filesystem, ShellProvider };
+enum class DestinationMode { Filesystem, ShellProvider };
 // Copy/Move accept fixed, removable and Windows network filesystem roots,
 // including ordinary UNC shares. Recycle remains local fixed/removable only,
 // requires explicit confirmation and uses recycle-only Shell flags.
@@ -29,6 +30,7 @@ struct Request {
  Kind kind=Kind::Copy;
  Collision collision=Collision::Reject;
  SourceMode sourceMode=SourceMode::Filesystem;
+ DestinationMode destinationMode=DestinationMode::Filesystem;
  // Filesystem mode: original accepted pane path. ShellProvider mode:
  // accepted snapshot's desktop-absolute parent parsing name.
  std::wstring sourceParent;
@@ -41,6 +43,8 @@ struct Request {
  // These are value bytes only; no COM interface crosses the process boundary.
  std::vector<unsigned char> sourceParentPidl;
  std::vector<std::vector<unsigned char>> sourcePidls;
+ // Exact accepted destination PIDL. First Copy-in target: Pictures Library.
+ std::vector<unsigned char> destinationPidl;
  bool recycleConfirmed=false; // MUST be explicit user consent
 };
 struct Report {
