@@ -60,7 +60,7 @@ class FileDetailControllerContract(unittest.TestCase):
         self.assertIn(
             "if(!::GetFileAttributesExW(",worker)
         self.assertIn(
-            "if(request.isolatedPathAccess){",worker)
+            "if(!path.empty()&&!request.isolatedPathAccess){",worker)
         for token in (
             "shelltransfer::transferDriveRoot(folder,root)",
             "driveType==DRIVE_REMOVABLE||driveType==DRIVE_REMOTE||",
