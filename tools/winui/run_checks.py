@@ -106,6 +106,7 @@ GUI_AREAS = (
     "shell",
     "search",
     "search-content-regex",
+    "unc-copy-move",
     "file-operations",
     "session",
     "window-tabs",
@@ -338,6 +339,12 @@ def gui_command(area, configuration, env):
             sys.executable,
             "-u",
             str(TESTS / "test_content_regex_gui.py"),
+        ], gui_env, 120
+    if area == "unc-copy-move":
+        return [
+            sys.executable,
+            "-u",
+            str(TESTS / "test_unc_transfer_gui.py"),
         ], gui_env, 120
     if area == "bookmark":
         return [sys.executable, "-u", str(TESTS / "test_bookmark_gui.py")], gui_env, 150
