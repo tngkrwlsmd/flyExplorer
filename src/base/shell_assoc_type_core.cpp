@@ -28,11 +28,16 @@ bool safeKnownFolderKey(std::wstring const& key) noexcept {
 namespace {
 struct UniqueHandle {
  HANDLE h=nullptr;
- ~UniqueHandle(){if(h&&h!=INVALID_HANDLE_VALUE)::CloseHandle(h);}
+ ~UniqueHandle(){reset();}
  UniqueHandle()=default;
  explicit UniqueHandle(HANDLE x):h(x){}
  UniqueHandle(UniqueHandle const&)=delete;
  UniqueHandle& operator=(UniqueHandle const&)=delete;
+ bool valid() const noexcept{return h&&h!=INVALID_HANDLE_VALUE;}
+ void reset(HANDLE value=nullptr) noexcept{
+  if(valid())::CloseHandle(h);
+  h=value;
+ }
 };
 struct KnownFolderSpec {
  wchar_t const* key;
