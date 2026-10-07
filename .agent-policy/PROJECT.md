@@ -27,7 +27,7 @@ consumer core; this PROJECT.md remains project-owned across bundle refreshes.
   ],
   "review": {
     "reviewed_revision": "32648cfeb5e92594619b9ed24b2568b18d71a2e8",
-    "reviewed_at": "2026-10-08",
+    "reviewed_at": "2026-10-07",
     "reviewed_paths": [
       "app/winui",
       "src/base",
