@@ -139,11 +139,15 @@ class FileOperationContracts(unittest.TestCase):
             "snapshot.parsingName",
             "copyPidlBytes(snapshot.folder.get(),req.sourceParentPidl)",
             "snapshot.children[resident].id.get()",
-            "SFGAO_CANCOPY",
             "kMaxProviderParsingUnits",
             "가상 Shell/provider 항목은 현재 반대쪽 실제 폴더로 복사만 지원합니다.",
         ):
             self.assertIn(token, transfer)
+        self.assertNotIn("indexed->attributes&SFGAO_CANCOPY", transfer)
+        self.assertIn(
+            "item->GetAttributes(SFGAO_CANCOPY,&attrs)",
+            read("src/base/shell_transfer_core.cpp"),
+        )
 
     def test_create_folder_shortcuts_reuse_existing_file_command_identity(self):
         main = read("app/winui/MainWindow.xaml.cpp")
