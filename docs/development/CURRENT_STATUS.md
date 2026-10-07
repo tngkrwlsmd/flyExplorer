@@ -1,4 +1,4 @@
-# flyExplorer current status — 2026-10-07
+# flyExplorer current status — 2026-10-08
 
 ## Product source of truth
 
@@ -197,20 +197,26 @@ checkpoints.
   FAST, runner health, the canonical Release build and the focused owned GUI:
   Ctrl+A selected the 64-item WinUI model and the existing Copy command copied
   all 64 owned files to the opposite pane, with normal process shutdown.
-- Native Copy/Move transfer validation accepts `DRIVE_FIXED`,
-  `DRIVE_REMOVABLE` and `DRIVE_REMOTE` filesystem roots. Ordinary direct
-  UNC paths (`\\server\share\...`) are classified separately from drive-letter
-  roots and then use the same bounded filesystem validation. Pane Copy/Move,
+- Native filesystem Copy/Move validation accepts `DRIVE_FIXED`,
+  `DRIVE_REMOVABLE` and `DRIVE_REMOTE` roots. Ordinary direct UNC paths
+  (`\\server\share\...`) are classified separately from drive-letter roots
+  and use the same bounded filesystem validation. Pane Copy/Move,
   internal/Windows clipboard paste, same-app transfer and external-drop
-  ingestion all converge on FileOperationController, which now executes
-  Copy/Move in the exact-owned `FlyShellIsolationHelper.exe --file-transfer`
-  child. Handle inheritance is restricted, the child is assigned to a
-  one-process kill-on-close Job Object and cancellation is signaled before a
-  bounded grace-period job termination. Reparse-point rejection, direct-child
-  validation, the 1,024-item/1,048,576-path-unit budgets and collision behavior
-  are unchanged. Extended/device namespaces and virtual Shell/provider parsing
-  names remain rejected. Recycle remains local fixed/removable only with
-  explicit confirmation and recycle-only Shell flags.
+  ingestion converge on FileOperationController, which executes Copy/Move in
+  the exact-owned `FlyShellIsolationHelper.exe --file-transfer` child.
+  Virtual Shell/provider roots now have a separate **Copy-out-only** source
+  mode: the destination must be a real filesystem folder, selected source
+  identity is carried as bounded snapshot PIDL value bytes plus parsing-name
+  diagnostics, and only the helper queries `SFGAO_CANCOPY`, revalidates
+  direct-child identity/materializable leaf names/collisions and calls
+  `IFileOperation::CopyItem`. Per-PIDL size is capped at 32 KiB and aggregate
+  provider PIDL data at 1 MiB in addition to the existing 1,024-item/
+  1,048,576-source-identity-unit bounds. No COM object crosses the wire.
+  Provider Move, Copy-in, Recycle/Delete, reparse traversal and extended/device
+  namespaces remain closed. The transfer child retains restricted handle
+  inheritance, one-process kill-on-close Job Object and bounded cancellation.
+  Recycle remains local fixed/removable only with explicit confirmation and
+  recycle-only Shell flags.
 - Private session schema v2 persists/restores the active Window Tab, per-tab
   split state/ratio and active pane, both panes' tabs, selected tabs,
   view/sort/name-column state and bounded filesystem Back/Forward history.
@@ -546,6 +552,64 @@ every pixel outside those two image cells are identical.
 This unit still does **not** enable virtual Shell/provider Copy/Move or Recycle,
 and it does not claim separate behavior for arbitrary third-party provider
 implementations beyond the built-in Windows Pictures Library acceptance.
+The thumbnail paragraph above records that unit's boundary; current main
+supersedes only its provider-Copy limitation.
+
+Virtual Shell/provider **Copy-out** is accepted on final product/test head
+`32648cfeb5e92594619b9ed24b2568b18d71a2e8`. The feature is deliberately
+one-way: a provider-root selection may be copied to the opposite real
+filesystem pane, while provider Move, provider destination/Copy-in and
+provider Recycle/Delete remain rejected. The request preserves the accepted
+navigation snapshot identity as bounded desktop-absolute PIDL byte values:
+32 KiB per PIDL and 1 MiB aggregate, plus the existing 1,024 source-item and
+1,048,576 UTF-16 source-identity-unit limits. MainWindow performs no provider
+capability call. The exact-owned `--file-transfer` helper reconstitutes the
+parent/children from those PIDLs, requires each selected child to be an
+immediate child of the accepted parent, queries `SFGAO_CANCOPY`, obtains a
+parent-relative editing leaf for collision checks and finally queues
+`IFileOperation::CopyItem`. Filesystem Copy/Move behavior is unchanged.
+
+Acceptance required several harness/identity corrections. The early ZIP
+fixture did not establish a stable product virtual-root route; AppsFolder was
+empty on this VM. The Pictures Library fixture then exposed that pane
+activation/destination settlement had to be explicit. Diagnostic
+`37623786873` resolved the canonical Pictures Library parsing name as
+`::{031E4825-7B94-4DC3-B131-E946B44C8DD5}\\Pictures.library-ms`.
+The product also initially relied on `IndexedItem.attributes & SFGAO_CANCOPY`,
+but navigation enumeration does not request that capability bit. Product
+revision `d95984203c41519235e36e276ba7f89adfa4e82c` therefore removed that UI
+gate and kept capability probing helper-owned immediately before mutation.
+Provider identity had already been hardened at
+`56a6ea69c820f2e0bca782525238242baaba0187` by transporting the accepted
+snapshot's exact parent/child PIDL bytes instead of reparsing provider names in
+the transfer path.
+
+Run `37624726608` passed request validation, change-scoped FAST, GUI runner
+health and the canonical Release build with the final product source. Its
+focused GUI reached provider enumeration, destination readiness, Move
+rejection, Copy start and actual destination materialization; the run failed
+only because the directory watcher replaced the transient
+`복사를 완료했습니다` status with `폴더 변경 알림을 반영했습니다.` before
+the harness read it. The successor changed only the harness to verify
+FileOperationController returned idle rather than relying on a transient status
+string.
+
+Final run `37703633100` passed request validation, FAST, runner health and the
+focused GUI on the unchanged Release product. It reported
+`SHELL_PROVIDER_COPYOUT_PICTURES_ENUMERATION=True`,
+`SHELL_PROVIDER_COPYOUT_DESTINATION_READY=True`,
+`SHELL_PROVIDER_COPYOUT_MOVE_REMAINS_REJECTED=True`,
+`SHELL_PROVIDER_COPYOUT_CONTROLLER_IDLE=True`,
+`SHELL_PROVIDER_COPYOUT_PASS=True` and
+`SHELL_PROVIDER_COPYOUT_SOURCE_PRESERVED=True`. The test-owned Pictures file
+was removed, the remaining fixture was removed, the app exited 0 and protected
+legacy settings stayed byte-identical. No product pixel/layout code changed, so
+no new visual acceptance was required.
+
+The runtime case uses Windows' built-in Pictures Library virtual root with a
+test-owned filesystem-backed child routed through the provider PIDL path. It
+does **not** separately certify arbitrary third-party providers or provider-only
+non-filesystem child types.
 
 Removable-volume Recycle semantics are accepted on candidate
 `a7b675f790356cc152c577a3d670e9829afdaae4` by self-hosted Remote
@@ -1103,22 +1167,25 @@ Current source and the last parity evidence still show these limits:
   certified by the built-in This PC/Pictures Library acceptance. Physical USB
   metadata-sort execution is also still awaiting a removable device on the
   self-hosted VM.
-- Copy/Move accepts local fixed/removable roots, mapped
-  `DRIVE_REMOTE` roots and ordinary direct UNC filesystem paths through the
-  shared Shell transfer core. Copy/Move Shell mutation is isolated in an
-  exact-owned helper process so a blocking network/provider call is outside the
-  flyExplorer process and can be terminated through its owned Job Object after
-  cancellation grace. Recycle still accepts only local fixed/removable roots,
-  requires explicit confirmation and uses recycle-only Shell flags; if a
-  removable drive cannot use Windows Recycle Bin, flyExplorer reports failure
-  and does not switch to permanent deletion. Virtual Shell/provider transfer
-  paths and extended/device namespaces remain unsupported. Physical
+- Filesystem Copy/Move accepts local fixed/removable roots, mapped
+  `DRIVE_REMOTE` roots and ordinary direct UNC paths through the shared Shell
+  transfer core. Virtual Shell/provider sources additionally support bounded
+  **Copy-out to a real filesystem destination** using accepted snapshot PIDL
+  value bytes and helper-owned `SFGAO_CANCOPY`/direct-child/collision
+  revalidation. Provider Move, Copy-in/destination mutation and Recycle/Delete
+  remain unsupported, as do extended/device namespaces. All Copy/Move Shell
+  mutation stays in the exact-owned transfer helper so a blocking Shell call is
+  outside the flyExplorer process and can be terminated through its owned Job
+  Object after cancellation grace. Recycle still accepts only local
+  fixed/removable roots, requires explicit confirmation and uses recycle-only
+  Shell flags; if a removable drive cannot use Windows Recycle Bin, flyExplorer
+  reports failure and does not switch to permanent deletion. Physical
   USB/removable execution is still uncertified because the VM has no removable
   volume. Actual SMB/UNC and mapped-network-drive Copy/Move execution is also
-  not yet certified because the runner has no test-owned SMB share and its
-  loopback admin-share probe is unavailable; current acceptance covers policy,
-  root parsing, exact-owned isolation, local Copy/Move through that isolation
-  path and Release GUI lifecycle.
+  not yet certified because the runner has no test-owned SMB share. Provider
+  Copy-out runtime acceptance covers the built-in Pictures Library virtual root
+  with a test-owned filesystem-backed child; arbitrary third-party/provider-only
+  child behavior remains uncertified.
 - Search remains bounded but no longer stops at the historical 2,500-entry,
   depth-5 and 100-retained-result limits. Filesystem traversal now visits up to
   20,000 entries at depth 32 and retains the first 1,000 matches while
