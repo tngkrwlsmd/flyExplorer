@@ -239,18 +239,30 @@ bounded cooperative-cancel grace before owned-job termination.
 
 FileDetailController separately owns Windows type/icon/known-folder/thumbnail
 visual enrichment and retains the 1,200-item bound. MainWindow accepts local
-fixed/removable roots plus mapped `DRIVE_REMOTE` and ordinary direct-UNC
-filesystem roots for this lifecycle; direct UNC is classified as network before
-a parent-side drive probe. Removable and network requests carry folder/file
-hints from the already accepted navigation snapshot, so FileDetailController
-does not call `GetFileAttributesExW` on those paths in the flyExplorer
-process. Extension-based Windows type/icon lookup continues through the
-disposable visual helper. Thumbnail client validation is lexical and rejects
-`\\?\` / `\\.\`; the one-shot `--file-thumbnail` helper accepts fixed,
-removable and remote filesystem roots and owns drive-type, component/reparse,
-file-size and `IShellItemImageFactory` path access, while the client enforces
-the existing bounded timeout with exact child termination. Virtual
-Shell/provider parsing names remain fail-closed. MainWindow retains request
+fixed/removable roots plus mapped `DRIVE_REMOTE`, ordinary direct-UNC
+filesystem roots and virtual Shell/provider roots for type/icon detail; direct
+UNC is classified as network before a parent-side drive probe. Removable and
+network filesystem requests carry folder/file hints from the already accepted
+navigation snapshot, so FileDetailController does not call
+`GetFileAttributesExW` on those paths in the flyExplorer process.
+
+Virtual-root requests keep filesystem paths empty and instead carry the
+snapshot's desktop-absolute Shell parsing names over a bounded private
+`shell_visual_wire`. `shell_assoc_type_core` launches the exact-owned
+`FlyShellIsolationHelper.exe --shell-item-visuals` child with an inherited
+handle allowlist and one-process kill-on-close Job Object. Only that child calls
+`SHParseDisplayName` and `SHGetFileInfoW(...SHGFI_PIDL...)` for provider
+type/icon data; cancellation or 4.5 seconds without pipe progress terminates
+only the owned job. Provider roots never enter the filesystem attribute or
+thumbnail path.
+
+Extension-based Windows type/icon lookup continues through the disposable
+visual helper. Thumbnail client validation is lexical and rejects `\\?\` /
+`\\.\`; the one-shot `--file-thumbnail` helper accepts fixed, removable
+and remote filesystem roots and owns drive-type, component/reparse, file-size
+and `IShellItemImageFactory` path access, while the client enforces the
+existing bounded timeout with exact child termination. Virtual Shell/provider
+thumbnail extraction remains fail-closed. MainWindow retains request
 preparation, current route/tab/ticket acceptance, DispatcherQueue/weak-UI
 handoff and final XAML projection.
 
