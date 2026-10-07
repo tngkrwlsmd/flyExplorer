@@ -6,7 +6,7 @@ using namespace fxfile::shelltransfer;
 namespace fs=std::filesystem;
 int wmain(int count,wchar_t**args){
  setvbuf(stdout,nullptr,_IONBF,0);
- if(count!=2)return 2;
+ if(count!=2&&count!=3)return 2;
  const fs::path root(args[1]),left=root/L"왼쪽",right=root/L"오른쪽";
  fs::create_directory(left);fs::create_directory(right);
  int pass=0,fail=0;
@@ -28,10 +28,10 @@ int wmain(int count,wchar_t**args){
       "recycle_accepts_removable_drive");
  test(!supportsDriveType(Kind::Recycle,DRIVE_REMOTE),
       "recycle_rejects_remote_drive");
- test(!supportsDriveType(Kind::Copy,DRIVE_REMOTE),
-      "copy_rejects_remote_drive");
- test(!supportsDriveType(Kind::Move,DRIVE_REMOTE),
-      "move_rejects_remote_drive");
+ test(supportsDriveType(Kind::Copy,DRIVE_REMOTE),
+      "copy_accepts_remote_drive");
+ test(supportsDriveType(Kind::Move,DRIVE_REMOTE),
+      "move_accepts_remote_drive");
  auto put=[](fs::path const&p,std::string const&s){
   std::ofstream f(p,std::ios::binary);f<<s;
  };
@@ -115,6 +115,55 @@ int wmain(int count,wchar_t**args){
  test(validate(r).error==ERROR_INVALID_PARAMETER,"reject_empty_selection");
  r=safe;r.sources.assign(kMaxItems+1,(left/L"가.txt").native());
  test(validate(r).error==ERROR_INVALID_PARAMETER,"reject_over_shared_item_budget");
+
+ if(count==3){
+  const fs::path uncRoot(args[2]);
+  const auto uncSource=uncRoot/L"원격 원본";
+  const auto uncDestination=uncRoot/L"원격 대상";
+  fs::create_directories(uncSource);
+  fs::create_directories(uncDestination);
+
+  put(left/L"UNC복사.txt","unc-copy");
+  Request remoteCopy{};
+  remoteCopy.kind=Kind::Copy;
+  remoteCopy.sourceParent=left.native();
+  remoteCopy.destination=uncDestination.native();
+  remoteCopy.sources={(left/L"UNC복사.txt").native()};
+  Progress remoteCopyProgress;
+  auto remoteCopyDone=execute(remoteCopy,remoteCopyProgress);
+  test(remoteCopyDone.error==ERROR_SUCCESS&&
+       get(uncDestination/L"UNC복사.txt")=="unc-copy"&&
+       fs::exists(left/L"UNC복사.txt"),
+       "actual_unc_copy_destination");
+
+  put(uncSource/L"UNC이동.txt","unc-move");
+  Request remoteMove{};
+  remoteMove.kind=Kind::Move;
+  remoteMove.sourceParent=uncSource.native();
+  remoteMove.destination=right.native();
+  remoteMove.sources={(uncSource/L"UNC이동.txt").native()};
+  Progress remoteMoveProgress;
+  auto remoteMoveDone=execute(remoteMove,remoteMoveProgress);
+  test(remoteMoveDone.error==ERROR_SUCCESS&&
+       !fs::exists(uncSource/L"UNC이동.txt")&&
+       get(right/L"UNC이동.txt")=="unc-move",
+       "actual_unc_move_source");
+
+  put(uncSource/L"UNC휴지통.txt","unc-recycle");
+  Request remoteRecycle{};
+  remoteRecycle.kind=Kind::Recycle;
+  remoteRecycle.recycleConfirmed=true;
+  remoteRecycle.sourceParent=uncSource.native();
+  remoteRecycle.sources={(uncSource/L"UNC휴지통.txt").native()};
+  test(validate(remoteRecycle).error==ERROR_INVALID_NAME,
+       "unc_recycle_remains_rejected");
+
+  Request extended=remoteCopy;
+  extended.destination=
+      L"\\\\?\\UNC\\127.0.0.1\\c$\\flyexplorer-owned-never-used";
+  test(validate(extended).error==ERROR_INVALID_NAME,
+       "reject_extended_unc_namespace");
+ }
  std::printf("M22_NATIVE_SUMMARY %d passed, %d failed.\n",pass,fail);
  return fail?1:0;
 }
