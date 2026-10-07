@@ -26,7 +26,7 @@ consumer core; this PROJECT.md remains project-owned across bundle refreshes.
     {"name": "winui-tests", "path": "tests/winui", "responsibility": "source, native and owned GUI contracts"}
   ],
   "review": {
-    "reviewed_revision": "d41a75cac8a2eb40dc406174c07689ad6e54f063",
+    "reviewed_revision": "ff9641d05645266ce639fddff97fdb82f014cc3e",
     "reviewed_at": "2026-10-07",
     "reviewed_paths": [
       "app/winui",
@@ -202,33 +202,40 @@ checks, the 32 MiB file-size bound and `IShellItemImageFactory` access remain
 inside the one-shot `--file-thumbnail` child for fixed/removable/remote
 filesystem roots.
 
-Virtual Shell/provider roots now participate in the same bounded detail
-lifecycle for **type/icon only**. MainWindow keeps filesystem paths empty for a
-virtual root and passes the navigation snapshot's desktop-absolute parsing names
-through the private bounded `shell_visual_wire`. The UI-independent client
-starts exact-owned `FlyShellIsolationHelper.exe --shell-item-visuals` with a
-restricted inherited-handle list and one-process kill-on-close Job Object. Only
-that child performs `SHParseDisplayName` and
-`SHGetFileInfoW(...SHGFI_PIDL...)`; cancellation or 4.5 seconds without pipe
-progress terminates the owned job. Provider roots never enter filesystem
-attribute probing or thumbnail extraction. Extended/device namespaces and
-virtual Shell/provider thumbnails remain closed.
+Virtual Shell/provider roots participate in the same bounded detail lifecycle
+for type/icon and a bounded thumbnail subset. MainWindow keeps filesystem paths
+empty for a virtual root and passes the navigation snapshot's desktop-absolute
+parsing names through private `shell_visual_wire` v2. In Medium/Large Icons,
+FileDetailController selects at most four non-folder provider items, preferring
+known image extensions, and marks only those records for thumbnail work. The
+UI-independent client starts exact-owned
+`FlyShellIsolationHelper.exe --shell-item-visuals` with a restricted inherited
+handle list and one-process kill-on-close Job Object. Only that child performs
+`SHParseDisplayName`, `SHGetFileInfoW(...SHGFI_PIDL...)` and, for the bounded
+thumbnail flags, `IShellItemImageFactory::GetImage` with
+`SIIGBF_THUMBNAILONLY|SIIGBF_BIGGERSIZEOK`. Cancellation or 4.5 seconds
+without pipe progress terminates the owned job. Provider roots never enter
+filesystem attribute probing or the filesystem `--file-thumbnail` route.
+Extended/device namespaces remain closed.
 
 Network visual acceptance remains recorded by runs `37575384608`,
 `37577331163` and `37577442125`; removable visual acceptance remains
-`37588369405`. Virtual Shell/provider type/icon support is accepted on
-candidate `d41a75cac8a2eb40dc406174c07689ad6e54f063` by Remote Windows Task
-`37593453954`: change-scoped FAST, GUI runner health, canonical Release build
-and the focused real `shell:MyComputerFolder` GUI all passed. The accepted
-row changed from a generic folder fallback to the Windows Shell icon and
-`CD 드라이브` type label; the owned process exited 0 and protected legacy
-settings stayed byte-identical. Matched 944x510 captures from baseline run
-`37591794512` and final run `37593453954` differ in 4,368 of 481,440 pixels
-(0.9072%), entirely inside x=199..832, y=221..291, the two visible This PC item
-rows. Chrome, sidebar and all pixels outside those rows are identical.
-Arbitrary third-party provider implementations are not separately certified by
-that built-in This PC acceptance. Physical USB and actual SMB/mapped-drive
-execution remain environment acceptance gaps as recorded below.
+`37588369405`. Virtual Shell/provider type/icon support remains accepted by
+`37593453954`. Provider thumbnail support is accepted on candidate
+`ff9641d05645266ce639fddff97fdb82f014cc3e` by Remote Windows Task
+`37612117791`: change-scoped FAST, GUI runner health, canonical Release build
+and a focused real Pictures Library virtual-root GUI all passed. A test-owned
+160x112 PNG placed directly in the user's Pictures folder appeared through
+`shell:PicturesLibrary`; BEFORE run `37611127478` showed only its registered
+PNG icon, while AFTER showed the image's actual Shell thumbnail. The owned PNG
+was removed after each run, the process exited 0 and protected legacy settings
+stayed byte-identical. Matched 944x510 captures differ in 6,996 of 481,440
+pixels (1.4531%), entirely within the two pane copies of that image cell:
+x=327..390 and x=714..777, y=205..264. All pixels outside those cells are
+identical. Arbitrary third-party provider implementations are not separately
+certified by the built-in Pictures Library acceptance. Physical USB and actual
+SMB/mapped-drive execution remain environment acceptance gaps as recorded
+below.
 
 
 Explorer-compatible `Ctrl+Shift+N` is also accepted for

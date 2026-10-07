@@ -16,6 +16,69 @@ product state use CURRENT_STATUS.md.
 
 이 문서는 확정된 오류를 단순 수정으로 끝내지 않고, 다음 진단을 빠르게 하고 같은 계열의 결함을 사전에 막기 위한 프로젝트 기록이다.
 
+## 2026-10-07 — virtual Shell/provider thumbnail acceptance
+
+**오류 발생**
+- Provider thumbnail acceptance first needed a deterministic virtual-root image
+  fixture. Diagnostic `37610405578` showed Pictures Library exposed the
+  test-owned subfolder but not the image one level below it. Diagnostic
+  `37610682928` moved only the synthetic PNG to the Pictures root and proved
+  the image appears directly through `shell:PicturesLibrary`; cleanup removed
+  it afterward.
+- Baseline `37611127478` fixed the current-product frame with the registered
+  PNG icon and no provider thumbnail.
+- Product run `37611774958` stopped in FAST before build. The new source
+  contract asserted that helper source must literally contain
+  `thumbnailPixelBytes`, but the helper fills that ResultHeader member from
+  `thumbnail.size()`.
+
+**원인 진단**
+- A virtual Shell root can expose filesystem-backed children while still
+  requiring provider parsing-name handling at the root. Pictures Library gives
+  a deterministic built-in acceptance seam without enabling provider mutation.
+- Thumbnail work must stay bounded independently of the 1,200 type/icon item
+  ceiling; requesting thumbnails for every provider entry would make provider
+  latency and response size unbounded.
+- The FAST failure was a test-string mistake, not product behavior.
+
+**해결 방법**
+- `shell_visual_wire` v2 adds per-item flags and separate thumbnail dimensions/
+  byte counts. FileDetailController marks no more than four non-folder items in
+  Medium/Large Icons and prefers known image extensions.
+- The existing exact-owned `--shell-item-visuals` child handles both provider
+  type/icon and flagged thumbnails. Only the child calls
+  `SHCreateItemFromIDList` and `IShellItemImageFactory::GetImage` with
+  `SIIGBF_THUMBNAILONLY|SIIGBF_BIGGERSIZEOK`; inherited handle restriction,
+  one-process Job Object, cancellation and the 4.5-second inactivity watchdog
+  are unchanged.
+- Corrected only the stale source assertion after `37611774958`; product code
+  did not change between that failed FAST candidate and the accepted successor.
+
+**재발 방지**
+- Provider visual protocols must carry explicit per-item work flags and hard
+  thumbnail-count/size limits rather than infer expensive work from item count.
+- Focused GUI fixtures that temporarily touch a user-facing Known Folder must
+  use a unique test-owned filename, refuse overwrite, and delete it in a
+  finally/cleanup path.
+- Source contracts should assert the semantic initialization path rather than a
+  field-name token that need not appear at the call site.
+
+**검증 상태**
+- BEFORE `37611127478`: FAST + runner health + focused Pictures Library GUI
+  PASS; registered PNG icon present, provider thumbnail absent; process exit 0;
+  settings unchanged; owned PNG removed; artifact `11477852307`, SHA-256
+  `ce6ef976c28b0f513b008bfb0b763458a7742f6a89749e953261f521b3b36173`.
+- Final `37612117791`: FAST + runner health + canonical Release build +
+  focused Pictures Library GUI PASS; `SHELL_PROVIDER_THUMBNAIL_PASS=True`;
+  process exit 0; settings unchanged; owned PNG removed; artifact
+  `11478154054`, SHA-256
+  `e54f994a299989de2fa41c2b9200c5fbd547a43544d3b83df5a96565d4cf03a7`.
+- Matched 944x510 visual review: 6,996/481,440 pixels changed (1.4531%), only
+  x=327..390 and 714..777, y=205..264, exactly the two pane copies of the owned
+  image cell. VISUAL ACCEPTANCE: PASS.
+- Provider Copy/Move/Recycle and arbitrary third-party provider behavior remain
+  outside this unit.
+
 ## 2026-10-07 — virtual Shell/provider type-icon isolation and visual acceptance
 
 **오류 발생**

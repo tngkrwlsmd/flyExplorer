@@ -59,13 +59,14 @@ checkpoints.
   owns Windows type/icon/known-folder/thumbnail presentation. Its 1,200-item
   visual-work ceiling accepts local fixed/removable, mapped `DRIVE_REMOTE`
   and ordinary direct-UNC filesystem roots, plus virtual Shell/provider roots
-  for type/icon detail only. Removable/network filesystem detail uses
-  navigation-snapshot folder hints so the parent process does not probe those
-  paths for attributes. Virtual roots keep filesystem paths empty and route
-  bounded parsing names through an exact-owned Shell helper for provider
-  type/icon lookup. Image path/reparse/size validation and thumbnail extraction
-  remain filesystem-only; virtual Shell/provider thumbnails are unsupported.
-  Type/size/modified-date sort
+  for type/icon and bounded thumbnail detail. Removable/network filesystem
+  detail uses navigation-snapshot folder hints so the parent process does not
+  probe those paths for attributes. Virtual roots keep filesystem paths empty
+  and route bounded parsing names through an exact-owned Shell helper. In
+  Medium/Large Icons, at most four non-folder provider items request
+  `IShellItemImageFactory` thumbnails inside that helper; filesystem
+  path/reparse/size thumbnail validation remains on the separate filesystem
+  helper route. Type/size/modified-date sort
   no longer silently falls back to name order while metadata is pending or when
   the folder contains 1,201-20,000 items. Modified-date validity is derived
   from the FILETIME value itself; display-label formatting is independent of
@@ -485,6 +486,66 @@ This unit does **not** enable virtual Shell/provider thumbnails, Copy/Move or
 Recycle. It also does not claim separate acceptance of arbitrary third-party
 provider implementations; the real GUI acceptance uses the built-in Windows
 This PC virtual Shell root.
+
+The type/icon paragraph above records that unit's boundary; the thumbnail
+successor below supersedes only its thumbnail limitation.
+
+Virtual Shell/provider **thumbnail** support is accepted on candidate
+`ff9641d05645266ce639fddff97fdb82f014cc3e`. The private provider visual wire
+is now v2 and carries a per-item thumbnail flag plus a separate requested
+thumbnail size. FileDetailController keeps the existing 1,200-item detail
+ceiling but marks at most four non-folder provider records in Medium/Large
+Icons, preferring parsing names with PNG/JPEG/BMP/WebP extensions before other
+non-folder items. The exact-owned `--shell-item-visuals` helper remains the only
+process allowed to parse provider names. For marked records it creates the
+Shell item from the already parsed absolute PIDL and calls
+`IShellItemImageFactory::GetImage` with
+`SIIGBF_THUMBNAILONLY|SIIGBF_BIGGERSIZEOK`. The same restricted handle
+allowlist, one-process kill-on-close Job Object, cooperative cancellation and
+4.5-second no-progress watchdog cover type/icon and thumbnail work together.
+Provider items never enter filesystem attribute probing or the filesystem
+`--file-thumbnail` path.
+
+Diagnostic run `37610405578` confirmed Pictures Library is a virtual Shell
+root on the current VM. Run `37610682928` then proved a uniquely named
+test-owned PNG placed directly in the user's Pictures folder is exposed as a
+file item through `shell:PicturesLibrary`; the test removed the file after the
+probe.
+
+Matched BEFORE run `37611127478` passed FAST and GUI runner health using the
+already accepted current-product binary because the baseline candidate changed
+only the Python harness. It reported
+`SHELL_PROVIDER_THUMBNAIL_BASELINE_NO_THUMBNAIL=True`: the owned PNG used its
+registered Windows file icon, process exit was 0, protected legacy settings
+were unchanged and the owned image was removed. Artifact `11477852307`
+preserves the 944x510 BEFORE frame, SHA-256
+`ce6ef976c28b0f513b008bfb0b763458a7742f6a89749e953261f521b3b36173`.
+
+The first product validation run `37611774958` stopped during FAST before
+build because the newly added source contract incorrectly expected the literal
+field name `thumbnailPixelBytes` inside helper source even though the helper
+initializes that wire field from `thumbnail.size()`. Only that test assertion
+changed in the successor.
+
+Final run `37612117791` passed request validation, change-scoped FAST, GUI
+runner health, canonical Release build and the focused Pictures Library GUI.
+It reported `SHELL_PROVIDER_THUMBNAIL_PASS=True`, UIA exposed
+`Windows Shell image thumbnail`, the process exited 0, protected legacy
+settings were unchanged and the test-owned PNG was removed. Artifact
+`11478154054` preserves the AFTER evidence; SHA-256
+`e54f994a299989de2fa41c2b9200c5fbd547a43544d3b83df5a96565d4cf03a7`.
+
+Direct matched-image review found both frames are 944x510. Exactly 6,996 of
+481,440 pixels changed (1.4531%). The only changed x-ranges are 327..390 and
+714..777, with y=205..264: the same owned image cell in the left and right
+panes. BEFORE shows the generic registered PNG icon; AFTER shows the generated
+blue/orange/green image thumbnail. Chrome, sidebar, labels, folder cells and
+every pixel outside those two image cells are identical.
+**VISUAL ACCEPTANCE: PASS**.
+
+This unit still does **not** enable virtual Shell/provider Copy/Move or Recycle,
+and it does not claim separate behavior for arbitrary third-party provider
+implementations beyond the built-in Windows Pictures Library acceptance.
 
 Removable-volume Recycle semantics are accepted on candidate
 `a7b675f790356cc152c577a3d670e9829afdaae4` by self-hosted Remote
@@ -1034,13 +1095,14 @@ Current source and the last parity evidence still show these limits:
   metadata sorts remain explicitly refused. Shell visual/type/icon/thumbnail
   enrichment is separately bounded to 1,200 items and now supports local
   fixed/removable, mapped network and ordinary direct-UNC filesystem roots,
-  while virtual Shell/provider roots support bounded type/icon enrichment.
-  Provider thumbnails remain unsupported. Actual physical USB/removable and
-  SMB/mapped-drive visual execution remain uncertified because the self-hosted
-  runner has neither a removable volume nor a test-owned SMB share; arbitrary
-  third-party provider implementations are not separately certified by the
-  built-in This PC acceptance. Physical USB metadata-sort execution is also
-  still awaiting a removable device on the self-hosted VM.
+  while virtual Shell/provider roots support bounded type/icon enrichment plus
+  up to four provider thumbnails in Medium/Large Icons. Actual physical
+  USB/removable and SMB/mapped-drive visual execution remain uncertified because
+  the self-hosted runner has neither a removable volume nor a test-owned SMB
+  share; arbitrary third-party provider implementations are not separately
+  certified by the built-in This PC/Pictures Library acceptance. Physical USB
+  metadata-sort execution is also still awaiting a removable device on the
+  self-hosted VM.
 - Copy/Move accepts local fixed/removable roots, mapped
   `DRIVE_REMOTE` roots and ordinary direct UNC filesystem paths through the
   shared Shell transfer core. Copy/Move Shell mutation is isolated in an
