@@ -125,6 +125,30 @@ def select_one(win,side,name):
     wait_for(selected,f"UIA SelectionPattern failed for {side} {name}",12)
 
 
+TRANSFER_FAILURE_TEXT=(
+    "파일 작업 종료:",
+    "같은 이름의 항목이 있습니다.",
+    "파일 작업을 취소했습니다.",
+    "파일 작업을 수행할 권한이 없습니다.",
+    "연결 지점 또는 지원하지 않는 경로에서는 사용할 수 없습니다.",
+    "원본 또는 대상 경로가 올바르지 않습니다.",
+    "Shell 파일 작업을 완료하지 못했습니다.",
+    "별도 Shell 파일 작업 스레드를 시작하지 못했습니다.",
+)
+
+
+def wait_transfer_completion(win,label):
+    wait_for(
+        lambda:not element(win,"CancelButton").is_enabled(),
+        f"{label} did not leave FileOperationController busy state",
+        12,
+    )
+    status=element(win,"StatusText").window_text()
+    if any(text in status for text in TRANSFER_FAILURE_TEXT):
+        raise AssertionError(f"{label} reported failure after mutation: {status!r}")
+    return status
+
+
 def main():
     user,before=snapshot_legacy_profile()
     owned=Path(tempfile.mkdtemp(prefix="owned-unc-transfer-",dir=LOGS))
@@ -149,8 +173,8 @@ def main():
         proc,hwnd,win=launch(left,env)
         for name in (
             "PrimaryPaneTitle","SecondaryPaneTitle","UpButton",
-            "LeftFiles","RightFiles","CopyButton","MoveButton","StatusText",
-            "ActivePaneText",
+            "LeftFiles","RightFiles","CopyButton","MoveButton","CancelButton",
+            "CreateFolderButton","StatusText","ActivePaneText",
         ):
             assert element(win,name).exists(timeout=5),name
         wait_for(
@@ -196,23 +220,12 @@ def main():
         )
         assert (owned/"격리복사.txt").read_text(encoding="utf-8")=="isolated copy"
         assert (left/"격리복사.txt").is_file()
-        try:
-            wait_for(
-                lambda:"복사를 완료했습니다" in element(win,"StatusText").window_text(),
-                "Copy completion did not return through FileOperationController",
-                10,
-            )
-        except AssertionError:
-            print(
-                "UNC_COPY_COMPLETION_DIAG",
-                "STATUS=",repr(element(win,"StatusText").window_text()),
-                "COPY_ENABLED=",element(win,"CopyButton").is_enabled(),
-                "MOVE_ENABLED=",element(win,"MoveButton").is_enabled(),
-                "CANCEL_ENABLED=",element(win,"CancelButton").is_enabled(),
-                flush=True,
-            )
-            raise
-        print("REAL_UNC_TRANSFER_UIA_ISOLATED_LOCAL_COPY_PASS",True,flush=True)
+        copy_status=wait_transfer_completion(win,"Copy completion")
+        assert element(win,"CreateFolderButton").is_enabled()
+        print(
+            "REAL_UNC_TRANSFER_UIA_ISOLATED_LOCAL_COPY_PASS",
+            True,"STATUS",repr(copy_status),flush=True,
+        )
 
         select_one(win,"Left","격리이동.txt")
         wait_for(
@@ -228,23 +241,12 @@ def main():
             20,
         )
         assert (owned/"격리이동.txt").read_text(encoding="utf-8")=="isolated move"
-        try:
-            wait_for(
-                lambda:"이동을 완료했습니다" in element(win,"StatusText").window_text(),
-                "Move completion did not return through FileOperationController",
-                10,
-            )
-        except AssertionError:
-            print(
-                "UNC_MOVE_COMPLETION_DIAG",
-                "STATUS=",repr(element(win,"StatusText").window_text()),
-                "COPY_ENABLED=",element(win,"CopyButton").is_enabled(),
-                "MOVE_ENABLED=",element(win,"MoveButton").is_enabled(),
-                "CANCEL_ENABLED=",element(win,"CancelButton").is_enabled(),
-                flush=True,
-            )
-            raise
-        print("REAL_UNC_TRANSFER_UIA_ISOLATED_LOCAL_MOVE_PASS",True,flush=True)
+        move_status=wait_transfer_completion(win,"Move completion")
+        assert element(win,"CreateFolderButton").is_enabled()
+        print(
+            "REAL_UNC_TRANSFER_UIA_ISOLATED_LOCAL_MOVE_PASS",
+            True,"STATUS",repr(move_status),flush=True,
+        )
 
         close(proc,hwnd)
         proc=None
