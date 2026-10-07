@@ -16,6 +16,79 @@ product state use CURRENT_STATUS.md.
 
 이 문서는 확정된 오류를 단순 수정으로 끝내지 않고, 다음 진단을 빠르게 하고 같은 계열의 결함을 사전에 막기 위한 프로젝트 기록이다.
 
+## 2026-10-08 — virtual Shell/provider Copy-out acceptance
+
+**오류 발생**
+- The first focused fixture used a test-owned ZIP/Compressed Folder route. The
+  app did not reliably enumerate that route in the self-hosted GUI session;
+  AppsFolder also enumerated no usable items on this VM.
+- After moving to the already accepted Pictures Library virtual root, several
+  harness revisions exposed pane activation/destination-settlement assumptions.
+  Once both panes were deterministic, run `37624180111` reached the product
+  gate and showed `선택한 Shell provider 항목은 Windows에서 복사할 수 없습니다.`.
+- Navigation snapshots do not request `SFGAO_CANCOPY`, so testing that bit in
+  MainWindow falsely rejected an item which the Shell transfer helper could
+  copy.
+- After the UI capability gate was removed, run `37624726608` actually
+  materialized the destination file but failed because the harness waited for a
+  transient completion string that the destination watcher immediately replaced
+  with `폴더 변경 알림을 반영했습니다.`.
+
+**원인 진단**
+- Provider mutation identity must come from the accepted Shell snapshot, not
+  from reparsing a display/parsing name later. Some provider identities are not
+  stable enough to treat string parsing as the mutation authority.
+- Capability checks such as `SFGAO_CANCOPY` belong at the exact-owned helper
+  boundary immediately before mutation. The navigation attribute set is a
+  presentation/enumeration contract, not a transfer-capability contract.
+- A watcher status is allowed to replace a transient success message after the
+  controller has already completed successfully; status text is therefore not a
+  durable transfer completion signal.
+
+**해결 방법**
+- Added `SourceMode::ShellProvider` for Copy-out only. Provider destination,
+  Move and Recycle/Delete remain rejected.
+- MainWindow copies the accepted parent/child PIDLs into bounded value blobs:
+  32 KiB per PIDL and 1 MiB aggregate, in addition to the shared 1,024-item and
+  1,048,576 UTF-16 source-identity bounds. No COM object crosses the process
+  boundary.
+- The exact-owned `--file-transfer` helper validates PIDL framing, immediate
+  parent/child identity, duplicate selection, `SFGAO_CANCOPY`, materializable
+  leaf names and destination collisions before `IFileOperation::CopyItem`.
+- Removed the MainWindow `IndexedItem.attributes & SFGAO_CANCOPY` gate; the
+  helper is the authority for selected provider capability.
+- The focused acceptance starts directly in canonical Pictures Library, commits
+  the opposite filesystem pane explicitly, verifies provider Move rejection and
+  uses controller idle + destination bytes as durable Copy-out completion.
+
+**재발 방지**
+- Preserve accepted PIDL identity across helper boundaries when a Shell action
+  depends on provider identity; parsing-name strings may remain diagnostics but
+  must not become the sole mutation authority.
+- Do not infer transfer capability from navigation attributes that were not
+  explicitly requested.
+- GUI transfer tests must verify durable state (destination bytes, controller
+  idle, source preservation) rather than a transient status message when
+  namespace/directory watchers can legitimately publish a later status.
+
+**검증 상태**
+- Canonical Pictures Library diagnostic `37623786873`: PASS; resolved
+  `::{031E4825-7B94-4DC3-B131-E946B44C8DD5}\\Pictures.library-ms`.
+- Product source last changed at
+  `d95984203c41519235e36e276ba7f89adfa4e82c`.
+- Run `37624726608`: FAST PASS, runner health PASS and canonical Release build
+  PASS. Runtime reached destination materialization; only the stale transient
+  status assertion failed.
+- Final head `32648cfeb5e92594619b9ed24b2568b18d71a2e8`, run
+  `37703633100`: FAST, runner health and focused GUI PASS. Provider
+  enumeration and destination readiness passed; provider Move remained
+  rejected; Copy-out materialized exact bytes; controller returned idle; source
+  remained unchanged; app exited 0; test-owned source/fixture were removed; and
+  protected legacy settings were byte-identical.
+- No product pixel/layout code changed; no new visual acceptance was required.
+- Arbitrary third-party providers and provider-only non-filesystem child types:
+  NOT SEPARATELY CERTIFIED. Provider Copy-in, Move and Recycle/Delete:
+  NOT IMPLEMENTED.
 ## 2026-10-07 — virtual Shell/provider thumbnail acceptance
 
 **오류 발생**
