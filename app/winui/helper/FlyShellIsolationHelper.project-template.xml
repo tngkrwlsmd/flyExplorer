@@ -47,9 +47,13 @@
     <ClCompile Include="FlyShellIsolationHelper.cpp" />
     <ClCompile Include="..\..\..\src\base\shell_navigation_core.cpp" />
     <ClCompile Include="..\..\..\src\base\shell_enum_bridge.cpp" />
+    <ClCompile Include="..\..\..\src\base\shell_transfer_core.cpp" />
+    <ClCompile Include="..\..\..\src\base\file_command_core.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\..\src\base\shell_navigation_core.h" />
+    <ClInclude Include="..\..\..\src\base\shell_transfer_core.h" />
+    <ClInclude Include="..\..\..\src\base\file_command_core.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
 </Project>
