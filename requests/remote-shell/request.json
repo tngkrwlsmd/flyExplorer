@@ -1,11 +1,14 @@
 {
-  "request_id": "cleanup-unc-network-metadata-sort-20261007",
+  "request_id": "unc-network-shell-visual-baseline-20261007",
   "expected_main_sha": "e70d3ec5c91118acd113f2d90cb6a37f1c7c4ac8",
-  "candidate_sha": "e70d3ec5c91118acd113f2d90cb6a37f1c7c4ac8",
-  "logical_unit": "cleanup-unc-network-metadata-sort-branch",
-  "request_mode": "diagnostic",
-  "configuration": "none",
-  "validation_plan": [],
+  "candidate_sha": "859b863abbdd350a681c8ad1afefa384958b1130",
+  "logical_unit": "unc-network-shell-visuals",
+  "request_mode": "validation",
+  "configuration": "Release",
+  "validation_plan": [
+    "build-release",
+    "gui-network-visual-baseline"
+  ],
   "working_directory": "",
-  "command": "$ErrorActionPreference=\"Stop\"\n$repo=$env:FLYEXPLORER_CANONICAL_CHECKOUT\n$main=\"e70d3ec5c91118acd113f2d90cb6a37f1c7c4ac8\"\n$branch=\"work/unc-network-metadata-sort-20261007\"\n$expectedBranch=\"f51edfdb40e066d063c85958601336c1854aeafc\"\nSet-Location -LiteralPath $repo\n& git fetch origin main $branch --no-tags --prune\nif($LASTEXITCODE -ne 0){throw \"cleanup fetch failed\"}\nif((& git rev-parse refs/remotes/origin/main).Trim() -ne $main){throw \"main moved before cleanup\"}\nif((& git rev-parse (\"refs/remotes/origin/\"+$branch)).Trim() -ne $expectedBranch){throw \"work branch moved before cleanup\"}\n& git push origin --delete $branch\nif($LASTEXITCODE -ne 0){throw \"work branch delete failed\"}\n& git fetch origin --prune --no-tags\nif($LASTEXITCODE -ne 0){throw \"cleanup prune failed\"}\n& git show-ref --verify --quiet (\"refs/remotes/origin/\"+$branch)\nif($LASTEXITCODE -eq 0){throw \"work branch still present after delete\"}\nWrite-Host \"UNC_NETWORK_METADATA_WORK_BRANCH_CLEANUP=PASS\"\n"
+  "command": "$ErrorActionPreference=\"Stop\"\n$repo=$env:FLYEXPLORER_CANONICAL_CHECKOUT\n$main=\"e70d3ec5c91118acd113f2d90cb6a37f1c7c4ac8\";$candidate=\"859b863abbdd350a681c8ad1afefa384958b1130\";$branch=\"work/unc-network-shell-visuals-20261007\"\nSet-Location -LiteralPath $repo\n& git fetch origin main $branch --no-tags --prune\nif($LASTEXITCODE -ne 0){throw \"network visual baseline fetch failed\"}\nif((& git rev-parse refs/remotes/origin/main).Trim() -ne $main){throw \"main moved before network visual baseline\"}\nif((& git rev-parse (\"refs/remotes/origin/\"+$branch)).Trim() -ne $candidate){throw \"network visual baseline candidate moved\"}\n$temp=Join-Path $env:RUNNER_TEMP (\"fly-network-visual-before-\"+$env:GITHUB_RUN_ID)\nif(Test-Path -LiteralPath $temp){Remove-Item -LiteralPath $temp -Recurse -Force}\ntry{\n & git worktree add --detach $temp $candidate\n if($LASTEXITCODE -ne 0){throw \"network visual baseline worktree add failed\"}\n Set-Location -LiteralPath $temp\n & git diff --check ($main+\"...\"+$candidate)\n if($LASTEXITCODE -ne 0){throw \"network visual baseline diff check failed\"}\n & .\\build.bat Release\n if($LASTEXITCODE -ne 0){throw \"network visual baseline Release build failed\"}\n & python -u -X utf8 .\\tests\\winui\\test_network_visual_gui.py --configuration Release --capture before\n if($LASTEXITCODE -ne 0){throw \"network visual baseline GUI failed\"}\n Write-Host \"NETWORK_VISUAL_BASELINE_DIFF_CHECK=PASS\"\n Write-Host \"NETWORK_VISUAL_BASELINE_RELEASE=PASS\"\n Write-Host \"NETWORK_VISUAL_BASELINE_GUI=PASS\"\n Write-Host \"NETWORK_VISUAL_BASELINE_PRODUCT_MAIN=$main\"\n}finally{\n Set-Location -LiteralPath $repo\n if(Test-Path -LiteralPath $temp){& git worktree remove --force $temp}\n & git worktree prune\n}"
 }
