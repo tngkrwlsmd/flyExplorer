@@ -30,36 +30,40 @@ bool supportsDriveType(Kind kind,UINT driveType) noexcept {
   return false;
  }
 }
+bool transferDriveRoot(std::wstring const& value,
+                       std::wstring& root) noexcept {
+ root.clear();
+ try{
+  if(value.empty()||value.find(L'\0')!=std::wstring::npos)return false;
+  // Standard UNC only. Extended/device namespaces remain closed so a network
+  // provider cannot bypass the ordinary filesystem/reparse validation below.
+  if(value.size()>=2&&value[0]==L'\\'&&value[1]==L'\\'){
+   if(value.rfind(L"\\\\?\\",0)==0||value.rfind(L"\\\\.\\",0)==0)
+    return false;
+   const auto serverEnd=value.find(L'\\',2);
+   if(serverEnd==std::wstring::npos||serverEnd==2)return false;
+   const auto shareStart=serverEnd+1;
+   if(shareStart>=value.size())return false;
+   const auto shareEnd=value.find(L'\\',shareStart);
+   const auto shareLength=(shareEnd==std::wstring::npos?value.size():shareEnd)-
+                          shareStart;
+   if(!shareLength)return false;
+   root=value.substr(0,shareEnd==std::wstring::npos?value.size():shareEnd);
+   root.push_back(L'\\');
+   return true;
+  }
+  const std::filesystem::path path(value);
+  root=path.root_path().native();
+  return root.size()==3&&root[1]==L':'&&root[2]==L'\\';
+ }catch(...){root.clear();return false;}
+}
 namespace {
 namespace fs=std::filesystem;
 
-bool driveTypeRoot(fs::path const& folder,std::wstring& root) {
- root.clear();
- const auto native=folder.native();
- // Standard UNC only. Extended/device namespaces remain closed so a network
- // provider cannot bypass the ordinary filesystem/reparse validation below.
- if(native.size()>=2&&native[0]==L'\\'&&native[1]==L'\\'){
-  if(native.rfind(L"\\\\?\\",0)==0||native.rfind(L"\\\\.\\",0)==0)
-   return false;
-  const auto serverEnd=native.find(L'\\',2);
-  if(serverEnd==std::wstring::npos||serverEnd==2)return false;
-  const auto shareStart=serverEnd+1;
-  if(shareStart>=native.size())return false;
-  const auto shareEnd=native.find(L'\\',shareStart);
-  const auto shareLength=(shareEnd==std::wstring::npos?native.size():shareEnd)-
-                         shareStart;
-  if(!shareLength)return false;
-  root=native.substr(0,shareEnd==std::wstring::npos?native.size():shareEnd);
-  root.push_back(L'\\');
-  return true;
- }
- root=folder.root_path().native();
- return root.size()==3&&root[1]==L':'&&root[2]==L'\\';
-}
 bool safeFilesystemFolder(fs::path const& folder,Kind kind) {
  if(!folder.is_absolute()||!folder.has_root_directory())return false;
  std::wstring root;
- if(!driveTypeRoot(folder,root)||
+ if(!transferDriveRoot(folder.native(),root)||
     !supportsDriveType(kind,::GetDriveTypeW(root.c_str())))return false;
  // Reject junctions/symlinks in EVERY existing path component, not only
  // the leaf; this also avoids accepting direct virtual Shell parsing names.
