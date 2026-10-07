@@ -18,6 +18,9 @@ enum class Collision { Reject, KeepBoth };
 // including ordinary UNC shares. Recycle remains local fixed/removable only,
 // requires explicit confirmation and uses recycle-only Shell flags.
 bool supportsDriveType(Kind kind,UINT driveType) noexcept;
+// Pure lexical root extraction used before GetDriveTypeW. Accepts ordinary
+// X:\ and \\server\share roots, rejects extended/device namespaces.
+bool transferDriveRoot(std::wstring const& path,std::wstring& root) noexcept;
 struct Request {
  Kind kind=Kind::Copy;
  Collision collision=Collision::Reject;
