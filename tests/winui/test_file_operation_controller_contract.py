@@ -50,28 +50,47 @@ class FileOperationContracts(unittest.TestCase):
                           "DeleteFileW", "RemoveDirectoryW", "SHFileOperation"):
             self.assertNotIn(forbidden, header + body)
 
-    def test_local_removable_transfers_include_recycle_but_remote_stays_closed(self):
+    def test_network_copy_move_are_isolated_while_recycle_stays_local_only(self):
         header = read("src/base/shell_transfer_core.h")
         body = read("src/base/shell_transfer_core.cpp")
         fixture = read("tests/winui/m22/m22_transfer_fixture.cpp")
+        controller = read("app/winui/file_operation_controller.cpp")
+        helper = read("app/winui/helper/FlyShellIsolationHelper.cpp")
+        project = read("app/winui/helper/FlyShellIsolationHelper.project-template.xml")
+        joined = header + body
         for token in (
             "supportsDriveType(Kind kind,UINT driveType)",
-            "driveType==DRIVE_FIXED||driveType==DRIVE_REMOVABLE",
+            "driveType==DRIVE_FIXED||driveType==DRIVE_REMOVABLE||",
+            "driveType==DRIVE_REMOTE",
             "case Kind::Recycle:",
-            "!supportsDriveType(kind,::GetDriveTypeW(root.c_str()))",
-            "safeLocalFolder(parent,request.kind)",
-            "safeLocalFolder(dest,request.kind)",
+            "driveTypeRoot(",
+            'native.rfind(L"\\\\\\\\?\\\\",0)==0',
+            'native.rfind(L"\\\\\\\\.\\\\",0)==0',
+            "safeFilesystemFolder(parent,request.kind)",
+            "safeFilesystemFolder(dest,request.kind)",
+            "executeIsolated(Request const& task,Progress& progress)",
+            "JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE",
+            "PROC_THREAD_ATTRIBUTE_HANDLE_LIST",
+            "kTransferCancelGraceMs",
+            "--file-transfer",
         ):
-            self.assertIn(token, header + body)
+            self.assertIn(token, joined + helper)
+        self.assertIn("shell_transfer_core.cpp", project)
+        self.assertIn("file_command_core.cpp", project)
+        self.assertIn("shelltransfer::executeIsolated(request,*progress)", controller)
+        self.assertIn("shelltransfer::execute(request,*progress)", controller)
         for token in (
-            "copy_accepts_removable_drive",
-            "move_accepts_removable_drive",
-            "recycle_accepts_removable_drive",
+            "copy_accepts_remote_drive",
+            "move_accepts_remote_drive",
             "recycle_rejects_remote_drive",
-            "copy_rejects_remote_drive",
-            "move_rejects_remote_drive",
+            "actual_unc_copy_destination",
+            "actual_unc_move_source",
+            "unc_recycle_remains_rejected",
+            "reject_extended_unc_namespace",
         ):
             self.assertIn(token, fixture)
+        self.assertNotIn("copy_rejects_remote_drive", fixture)
+        self.assertNotIn("move_rejects_remote_drive", fixture)
 
     def test_ui_routes_commands_through_async_controller_and_refreshes_touched_panes(self):
         command = read("app/winui/m21_commands.cpp")
