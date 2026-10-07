@@ -14,14 +14,15 @@ inline constexpr std::size_t kMaxItems=1024;
 inline constexpr std::size_t kMaxSourcePathUnits=1024*1024;
 enum class Kind { Copy, Move, Recycle };
 enum class Collision { Reject, KeepBoth };
-// Copy/Move/Recycle accept ordinary local fixed and removable volumes.
-// Recycle still requires explicit confirmation and uses recycle-only Shell flags.
+// Copy/Move accept fixed, removable and Windows network filesystem roots,
+// including ordinary UNC shares. Recycle remains local fixed/removable only,
+// requires explicit confirmation and uses recycle-only Shell flags.
 bool supportsDriveType(Kind kind,UINT driveType) noexcept;
 struct Request {
  Kind kind=Kind::Copy;
  Collision collision=Collision::Reject;
- std::wstring sourceParent; // original accepted *local* filesystem pane path
- std::wstring destination;  // exact other *local* pane path; empty for recycle
+ std::wstring sourceParent; // original accepted filesystem pane path
+ std::wstring destination;  // exact other filesystem pane path; empty for recycle
  std::vector<std::wstring> sources; // native full paths, direct children only
  bool recycleConfirmed=false; // MUST be explicit user consent
 };
@@ -37,5 +38,11 @@ struct Progress {
 };
 Report validate(Request const& task) noexcept; // read-only preflight
 Report execute(Request const& task,Progress& progress) noexcept; // STA only
+// App-side bounded process boundary for Copy/Move. Resolves the exact helper
+// staged beside flyExplorer, streams progress and kills only that owned child
+// on cancellation/host teardown. Recycle intentionally stays on execute().
+Report executeIsolated(Request const& task,Progress& progress) noexcept;
+// Helper-only stdin/stdout entrypoint used by FlyShellIsolationHelper.exe.
+int runIsolatedHelper(HANDLE input,HANDLE output) noexcept;
 }
 #endif
