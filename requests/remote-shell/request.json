@@ -1,11 +1,15 @@
 {
-  "request_id": "unc-network-copy-move-cleanup-20261007",
+  "request_id": "unc-network-metadata-sort-final-20261007",
   "expected_main_sha": "74550ff2c67633371d1c3ad2e266c32a7e7c8ed1",
-  "candidate_sha": "74550ff2c67633371d1c3ad2e266c32a7e7c8ed1",
-  "logical_unit": "unc-network-copy-move-cleanup",
-  "request_mode": "diagnostic",
-  "configuration": "none",
-  "validation_plan": [],
+  "candidate_sha": "741c48f6239f5bc566bf75df232d1a57eee26118",
+  "logical_unit": "unc-network-metadata-sort",
+  "request_mode": "validation",
+  "configuration": "Release",
+  "validation_plan": [
+    "fast",
+    "build-release",
+    "gui-metadata-sort-isolated"
+  ],
   "working_directory": "",
-  "command": "$ErrorActionPreference=\"Stop\"\n$repo=$env:FLYEXPLORER_CANONICAL_CHECKOUT\n$main=\"74550ff2c67633371d1c3ad2e266c32a7e7c8ed1\"\n$branch=\"work/unc-network-copy-move-20261007\"\nSet-Location -LiteralPath $repo\n& git fetch origin main $branch --no-tags --prune\nif($LASTEXITCODE -ne 0){throw \"UNC cleanup fetch failed\"}\nif((& git rev-parse refs/remotes/origin/main).Trim() -ne $main){throw \"main moved before UNC cleanup\"}\nif((& git rev-parse (\"refs/remotes/origin/\"+$branch)).Trim() -ne $main){throw \"UNC work branch is not accepted main\"}\n& git push origin --delete $branch\nif($LASTEXITCODE -ne 0){throw \"UNC work branch delete failed\"}\n& git fetch origin --prune --no-tags\nif($LASTEXITCODE -ne 0){throw \"UNC cleanup prune failed\"}\nif(& git branch -r --list (\"origin/\"+$branch)){throw \"UNC work branch still present after prune\"}\nWrite-Host \"UNC_COPY_MOVE_WORK_BRANCH_CLEANUP=PASS\"\nWrite-Host \"UNC_COPY_MOVE_ACCEPTED_MAIN=$main\""
+  "command": "$ErrorActionPreference=\"Stop\"\n$repo=$env:FLYEXPLORER_CANONICAL_CHECKOUT\n$main=\"74550ff2c67633371d1c3ad2e266c32a7e7c8ed1\"\n$candidate=\"741c48f6239f5bc566bf75df232d1a57eee26118\"\n$branch=\"work/unc-network-metadata-sort-20261007\"\nSet-Location -LiteralPath $repo\n& git fetch origin main $branch --no-tags --prune\nif($LASTEXITCODE -ne 0){throw \"network metadata fetch failed\"}\nif((& git rev-parse refs/remotes/origin/main).Trim() -ne $main){throw \"main moved before network metadata validation\"}\nif((& git rev-parse (\"refs/remotes/origin/\"+$branch)).Trim() -ne $candidate){throw \"network metadata candidate moved\"}\n$temp=Join-Path $env:RUNNER_TEMP (\"fly-network-metadata-\"+$env:GITHUB_RUN_ID)\nif(Test-Path -LiteralPath $temp){Remove-Item -LiteralPath $temp -Recurse -Force}\ntry{\n  & git worktree add --detach $temp $candidate\n  if($LASTEXITCODE -ne 0){throw \"network metadata worktree add failed\"}\n  Set-Location -LiteralPath $temp\n  & git diff --check ($main+\"...\"+$candidate)\n  if($LASTEXITCODE -ne 0){throw \"network metadata diff check failed\"}\n  & python -X utf8 tools\\winui\\run_checks.py fast --before $main --head $candidate\n  if($LASTEXITCODE -ne 0){throw \"network metadata FAST failed\"}\n  & .\\build.bat Release\n  if($LASTEXITCODE -ne 0){throw \"network metadata Release build failed\"}\n  & python -u -X utf8 .\\tests\\winui\\test_metadata_sort_gui.py --configuration Release --force-isolated-metadata\n  if($LASTEXITCODE -ne 0){throw \"network metadata focused GUI failed\"}\n  Write-Host \"NETWORK_METADATA_DIFF_CHECK=PASS\"\n  Write-Host \"NETWORK_METADATA_FAST=PASS\"\n  Write-Host \"NETWORK_METADATA_RELEASE_BUILD=PASS\"\n  Write-Host \"NETWORK_METADATA_ISOLATED_GUI=PASS\"\n  Write-Host \"NETWORK_METADATA_PHYSICAL_SMB=NOT_RUN_NO_OWNED_SHARE\"\n}finally{\n  Set-Location -LiteralPath $repo\n  if(Test-Path -LiteralPath $temp){& git worktree remove --force $temp}\n  & git worktree prune\n}"
 }
