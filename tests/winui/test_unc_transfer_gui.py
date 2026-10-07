@@ -196,11 +196,22 @@ def main():
         )
         assert (owned/"격리복사.txt").read_text(encoding="utf-8")=="isolated copy"
         assert (left/"격리복사.txt").is_file()
-        wait_for(
-            lambda:"복사를 완료했습니다" in element(win,"StatusText").window_text(),
-            "Copy completion did not return through FileOperationController",
-            10,
-        )
+        try:
+            wait_for(
+                lambda:"복사를 완료했습니다" in element(win,"StatusText").window_text(),
+                "Copy completion did not return through FileOperationController",
+                10,
+            )
+        except AssertionError:
+            print(
+                "UNC_COPY_COMPLETION_DIAG",
+                "STATUS=",repr(element(win,"StatusText").window_text()),
+                "COPY_ENABLED=",element(win,"CopyButton").is_enabled(),
+                "MOVE_ENABLED=",element(win,"MoveButton").is_enabled(),
+                "CANCEL_ENABLED=",element(win,"CancelButton").is_enabled(),
+                flush=True,
+            )
+            raise
         print("REAL_UNC_TRANSFER_UIA_ISOLATED_LOCAL_COPY_PASS",True,flush=True)
 
         select_one(win,"Left","격리이동.txt")
@@ -217,11 +228,22 @@ def main():
             20,
         )
         assert (owned/"격리이동.txt").read_text(encoding="utf-8")=="isolated move"
-        wait_for(
-            lambda:"이동을 완료했습니다" in element(win,"StatusText").window_text(),
-            "Move completion did not return through FileOperationController",
-            10,
-        )
+        try:
+            wait_for(
+                lambda:"이동을 완료했습니다" in element(win,"StatusText").window_text(),
+                "Move completion did not return through FileOperationController",
+                10,
+            )
+        except AssertionError:
+            print(
+                "UNC_MOVE_COMPLETION_DIAG",
+                "STATUS=",repr(element(win,"StatusText").window_text()),
+                "COPY_ENABLED=",element(win,"CopyButton").is_enabled(),
+                "MOVE_ENABLED=",element(win,"MoveButton").is_enabled(),
+                "CANCEL_ENABLED=",element(win,"CancelButton").is_enabled(),
+                flush=True,
+            )
+            raise
         print("REAL_UNC_TRANSFER_UIA_ISOLATED_LOCAL_MOVE_PASS",True,flush=True)
 
         close(proc,hwnd)
