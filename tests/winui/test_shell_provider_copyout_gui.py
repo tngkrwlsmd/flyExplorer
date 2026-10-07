@@ -48,6 +48,18 @@ def main():
     destination.mkdir()
     destination_sentinel=destination/"destination-ready.txt"
     destination_sentinel.write_text("owned destination sentinel\n",encoding="utf-8")
+    workspace=owned/"provider-copyout.fxworkspace"
+    provider_root=r"::{031E4825-7B94-4DC3-B131-E946B44C8DD5}\\Pictures.library-ms"
+    workspace.write_text(
+        "[main]\r\n"
+        "main.view.row_count = 1\r\n"
+        "main.view.column_count = 2\r\n"
+        "main.view1.current_tab = 0\r\n"
+        f"main.view1.tab1.path = {provider_root}\r\n"
+        "main.view2.current_tab = 0\r\n"
+        f"main.view2.tab1.path = {destination}\r\n"
+        "\r\n[workspace]\r\nschema = 1\r\n",
+        encoding="utf-16")
 
     env=os.environ.copy()
     for key in ("APPDATA","LOCALAPPDATA","TEMP","TMP"):
@@ -60,7 +72,7 @@ def main():
         b"schema=2\r\nlanguage=ko-KR\r\ntheme=dark\r\nview=details\r\n")
 
     process=subprocess.Popen(
-        [str(exe),"shell:PicturesLibrary"],cwd=exe.parent,env=env,
+        [str(exe),"--m19-workspace",str(workspace)],cwd=exe.parent,env=env,
         stdin=subprocess.DEVNULL,stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL)
     parent=None
@@ -89,41 +101,24 @@ def main():
             parent.set_focus()
             time.sleep(.10)
 
-        # Start directly in the same built-in virtual Pictures Library route
-        # already accepted by provider visual/thumbnail validation. This avoids
-        # making the fixture depend on a filesystem -> virtual address transition.
-        until(lambda:"Pictures.library-ms" in address.get_value() or
-                     address.get_value() in ("그림","사진"),
-              "Pictures Library virtual root did not open",20)
-
+        # Restore both panes atomically through the existing validated M19
+        # workspace bridge: left is the canonical Pictures Library provider
+        # identity, right is the test-owned filesystem destination.
         def source_row():
             matches=[x for x in left.descendants()
                      if x.element_info.control_type=="ListItem"
                      and MEMBER in x.window_text()]
             return matches[0] if len(matches)==1 else None
-        until(lambda:source_row() is not None,
-              "owned Pictures Library provider item did not enumerate",24)
-        print("SHELL_PROVIDER_COPYOUT_PICTURES_ENUMERATION",True,flush=True)
-
-        # Only after the provider source has been observed, pin the opposite
-        # pane to the test-owned filesystem destination. Invoke the app-owned
-        # automation activation button instead of synthesizing F6.
-        parent.child_window(auto_id="SecondaryPaneTitle").invoke()
-        until(lambda:"오른쪽 창을 선택했습니다" in status.window_text(),
-              "right pane activation did not commit",8)
-        address.set_edit_text(str(destination))
-        address.type_keys("{ENTER}",set_foreground=True)
-        until(lambda:str(destination).lower() in address.get_value().lower(),
-              "right destination address was not accepted",18)
         def destination_ready():
             return any("destination-ready.txt" in x.window_text()
                        for x in right.descendants()
                        if x.element_info.control_type=="ListItem")
+        until(lambda:source_row() is not None,
+              "owned Pictures Library provider item did not enumerate",28)
         until(destination_ready,
-              "right destination filesystem pane did not commit",18)
+              "workspace did not commit right destination filesystem pane",28)
+        print("SHELL_PROVIDER_COPYOUT_PICTURES_ENUMERATION",True,flush=True)
         print("SHELL_PROVIDER_COPYOUT_DESTINATION_READY",True,flush=True)
-        assert source_row() is not None,(
-            "opening the opposite destination replaced provider source pane")
 
         parent.child_window(auto_id="PrimaryPaneTitle").invoke()
         until(lambda:"왼쪽 창을 선택했습니다" in status.window_text(),
