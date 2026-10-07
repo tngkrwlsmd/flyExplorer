@@ -1,14 +1,13 @@
 {
-  "request_id": "shell-provider-copyout-20261007-r8",
+  "request_id": "shell-provider-copyout-20261008-final-gui",
   "expected_main_sha": "700500d92442f25002fb707031d7c2ff2cb2052f",
-  "candidate_sha": "de413f5302afd92af7b192dec586db22fff2dff3",
+  "candidate_sha": "32648cfeb5e92594619b9ed24b2568b18d71a2e8",
   "logical_unit": "shell-provider-copyout",
   "request_mode": "validation",
   "configuration": "Release",
   "validation_plan": [
-    "release-build",
     "shell-provider-copyout-gui"
   ],
   "working_directory": "",
-  "command": "$ErrorActionPreference=\"Stop\"\n$repo=$env:FLYEXPLORER_CANONICAL_CHECKOUT\nSet-Location -LiteralPath $repo\n& git fetch origin main work/shell-provider-copyout-20261007 --no-tags --prune\nif($LASTEXITCODE -ne 0){throw \"fetch failed\"}\n& git switch --detach de413f5302afd92af7b192dec586db22fff2dff3\nif($LASTEXITCODE -ne 0){throw \"checkout failed\"}\n& .\\build.bat Release\nif($LASTEXITCODE -ne 0){throw \"Release build failed\"}\n& python -X utf8 tests\\winui\\test_shell_provider_copyout_gui.py --configuration Release\nif($LASTEXITCODE -ne 0){throw \"provider copyout GUI failed\"}\n& git switch main\nif($LASTEXITCODE -ne 0){throw \"restore main failed\"}\n& git merge --ff-only origin/main\nif($LASTEXITCODE -ne 0){throw \"restore main ff failed\"}\nWrite-Host \"SHELL_PROVIDER_COPYOUT_VALIDATION=PASS\""
+  "command": "$ErrorActionPreference=\"Stop\"\n$repo=$env:FLYEXPLORER_CANONICAL_CHECKOUT\nSet-Location -LiteralPath $repo\n& git fetch origin main work/shell-provider-copyout-20261007 --no-tags --prune\nif($LASTEXITCODE -ne 0){throw \"fetch failed\"}\nif((& git rev-parse refs/remotes/origin/main).Trim() -ne \"700500d92442f25002fb707031d7c2ff2cb2052f\"){throw \"main moved\"}\nif((& git rev-parse refs/remotes/origin/work/shell-provider-copyout-20261007).Trim() -ne \"32648cfeb5e92594619b9ed24b2568b18d71a2e8\"){throw \"candidate mismatch\"}\n$dirty=@(& git status --porcelain=v1 -uall)\nif($dirty.Count -ne 0){$dirty|%{Write-Host (\"UNEXPECTED_WORKTREE=\"+$_)};throw \"persistent checkout dirty\"}\n& git diff --quiet de413f5302afd92af7b192dec586db22fff2dff3 32648cfeb5e92594619b9ed24b2568b18d71a2e8 -- app/winui src/base\nif($LASTEXITCODE -ne 0){throw \"product source changed after accepted Release build\"}\n$exe=Join-Path $repo \"out\\winui\\Release\\flyExplorer.exe\"\nif(-not(Test-Path -LiteralPath $exe -PathType Leaf)){throw \"accepted Release runtime missing\"}\n& git switch --detach 32648cfeb5e92594619b9ed24b2568b18d71a2e8\nif($LASTEXITCODE -ne 0){throw \"checkout failed\"}\n& python -X utf8 tests\\winui\\test_shell_provider_copyout_gui.py --configuration Release\nif($LASTEXITCODE -ne 0){throw \"provider copyout GUI failed\"}\n& git switch main\nif($LASTEXITCODE -ne 0){throw \"restore main failed\"}\n& git merge --ff-only origin/main\nif($LASTEXITCODE -ne 0){throw \"restore main ff failed\"}\nWrite-Host \"SHELL_PROVIDER_COPYOUT_VALIDATION=PASS\""
 }
