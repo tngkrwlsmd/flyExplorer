@@ -127,8 +127,25 @@ def main():
         print("SHELL_PROVIDER_COPYOUT_MOVE_REMAINS_REJECTED",True,flush=True)
 
         parent.child_window(auto_id="CopyButton").invoke()
-        until(lambda:(destination/MEMBER).is_file(),
-              "provider Copy-out did not materialize destination file",24)
+        until(lambda:"복사만 지원" not in status.window_text(),
+              "provider Copy-out command did not leave Move rejection status",8)
+        print("SHELL_PROVIDER_COPYOUT_COPY_START_STATUS",
+              repr(status.window_text()),flush=True)
+        def copy_finished():
+            text=status.window_text()
+            return ((destination/MEMBER).is_file() or
+                    "복사를 완료했습니다" in text or
+                    "완료하지 못했습니다" in text or
+                    "올바르지 않습니다" in text or
+                    "권한이 없습니다" in text or
+                    "취소했습니다" in text or
+                    "오류:" in text)
+        until(copy_finished,"provider Copy-out never completed",24)
+        print("SHELL_PROVIDER_COPYOUT_COPY_FINAL_STATUS",
+              repr(status.window_text()),flush=True)
+        assert (destination/MEMBER).is_file(),(
+            "provider Copy-out did not materialize destination file",
+            status.window_text())
         assert (destination/MEMBER).read_text(encoding="utf-8")==PAYLOAD
         until(lambda:"복사를 완료했습니다" in status.window_text(),
               "provider Copy-out completion status missing",12)
