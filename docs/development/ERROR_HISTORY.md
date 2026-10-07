@@ -16,6 +16,58 @@ product state use CURRENT_STATUS.md.
 
 이 문서는 확정된 오류를 단순 수정으로 끝내지 않고, 다음 진단을 빠르게 하고 같은 계열의 결함을 사전에 막기 위한 프로젝트 기록이다.
 
+## 2026-10-07 — removable Shell visual validation exposed stale contract and stale worktree
+
+**오류 발생**
+- Run `37587596698` stopped in change-scoped FAST before build because
+  `test_file_metadata_controller_contract.py` still encoded the prior
+  network-only visual isolation string.
+- After updating only that stale expectation, run `37587832255` passed FAST
+  and GUI runner health but the command deliberately stopped before build on
+  `?? 965093aa9397b0e0419c94270e636d1d427a8948/` in the canonical checkout.
+
+**원인 진단**
+- The first failure was a source-contract fixture lagging the intended
+  removable extension; metadata isolation itself remained unchanged and the
+  visual detail path had moved to the generalized `isolatedPathAccess`
+  contract.
+- Read-only run `37588036456` proved the unexpected directory was not user
+  data: it was a registered detached Git worktree created on 2026-10-05, with
+  its `.git` file pointing into the canonical repository's worktree metadata.
+  The nested worktree status was checked separately before any removal.
+
+**해결 방법**
+- Updated only the stale cross-controller source assertion after the first
+  failure; no product retry was issued on the unchanged test revision.
+- Cleanup run `37588225417` required the nested worktree to be clean, then
+  removed it through normal `git worktree remove` and verified the outer
+  canonical checkout was clean. No reset/clean/forced deletion was used.
+- The product extension keeps removable/network path attribute probing out of
+  FileDetailController by reusing snapshot folder hints and keeps image path,
+  reparse, size and Shell thumbnail validation inside the exact-owned helper.
+
+**재발 방지**
+- Contracts that verify independent metadata/detail lifecycles should assert
+  the semantic isolation boundary rather than freeze a network-only token when
+  an additional filesystem drive class is intentionally enabled.
+- A hash-named directory inside the canonical checkout must be identified with
+  `git worktree list` and its own status before cleanup; do not assume it is
+  disposable build output from its name alone.
+- Environment residue that prevents a validation command from starting is not
+  product evidence. Change the execution condition, preserve FAST/health
+  evidence as appropriate, and resume from the earliest invalidated boundary.
+
+**검증 상태**
+- Run `37588369405`: request validation, FAST, runner health, canonical
+  Release build and focused forced-removable GUI all PASS; thumbnail,
+  registered icon, folder icon and Windows type label PASS; process exit 0;
+  protected legacy settings unchanged.
+- 944x510 visual comparison against run `37575384608`: 208/481,440 changed
+  pixels (0.0432%), all in temporary path text at y=49..62; file-list/content
+  pixels below y=80 identical. VISUAL ACCEPTANCE: PASS.
+- Physical USB/removable execution: NOT TESTED — the runner reported no
+  `DRIVE_REMOVABLE` volume.
+
 ## 2026-10-07 — network Shell visual acceptance required app-owned XAML capture
 
 **오류 발생**

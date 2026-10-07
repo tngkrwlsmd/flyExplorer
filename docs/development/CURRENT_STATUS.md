@@ -1,4 +1,4 @@
-# flyExplorer current status — 2026-10-06
+# flyExplorer current status — 2026-10-07
 
 ## Product source of truth
 
@@ -361,9 +361,10 @@ into FileDetailController, which avoids `GetFileAttributesExW` on UNC paths in
 the flyExplorer process. Registered Windows type/icon work remains bounded in
 the disposable visual helper, and image thumbnail validation/access remains in
 the exact one-shot `--file-thumbnail` child with the existing timeout and
-exact-process termination path. Extended/device namespaces, reparse traversal,
-virtual Shell/provider parsing names and removable-drive visual detail remain
-closed.
+exact-process termination path. Extended/device namespaces, reparse traversal and virtual Shell/provider
+parsing names remain closed. At this network-only candidate, removable-drive
+visual detail was still closed; the removable successor below supersedes that
+historical boundary.
 
 Remote run `37575384608` passed FAST, canonical Release build and the owned
 fixed-drive visual fixture, then captured the accepted 944x510 BEFORE frame via
@@ -387,6 +388,51 @@ Actual SMB/UNC and mapped-network-drive visual execution is **not claimed**
 because the self-hosted runner has no test-owned SMB share. The accepted GUI
 proves the network-detail scheduling/isolation path with a forced owned local
 fixture, not network latency/provider behavior on a real share.
+
+
+Removable/USB Shell visual/type/icon/thumbnail support is accepted on candidate
+`f134d4794615fb088675bd804621b974bb4428c8`. The existing 1,200-item detail
+lifecycle now accepts `DRIVE_REMOVABLE` in addition to fixed, mapped network
+and direct UNC roots. Removable and network requests use the navigation
+snapshot's folder/file bits through the generalized isolated-path request, so
+FileDetailController does not call `GetFileAttributesExW` on those paths in
+the flyExplorer process. The one-shot `--file-thumbnail` helper now accepts
+fixed/removable/remote roots while retaining component/reparse validation, the
+32 MiB file-size bound, Shell image extraction, bounded timeout and exact-owned
+process termination.
+
+Run `37587596698` stopped at FAST on a stale source-contract expectation
+before any build or GUI work. After that test-only correction, run
+`37587832255` passed FAST and runner health but intentionally stopped before
+build when the canonical checkout exposed an old clean registered nested Git
+worktree. Read-only diagnosis run `37588036456` proved the directory was a
+detached Git worktree from 2026-10-05, and cleanup run `37588225417` verified
+that nested worktree was clean before removing it with `git worktree remove`
+and restoring a clean canonical checkout.
+
+Final run `37588369405` then passed request validation, change-scoped FAST,
+GUI runner health, the canonical Release build and the focused owned GUI.
+The forced removable path reported
+`NETWORK_VISUAL_THUMBNAIL_PASS=True`,
+`NETWORK_VISUAL_REGISTERED_ICON_PASS=True`,
+`NETWORK_VISUAL_FOLDER_ICON_PASS=True`,
+`NETWORK_VISUAL_TYPE_LABEL_PASS=True`,
+`NETWORK_VISUAL_FORCED_REMOVABLE_PATH=True`,
+`NETWORK_VISUAL_PROCESS_EXIT=0` and protected legacy settings unchanged.
+Artifact `11467278119` preserves the final evidence.
+
+Direct review compared its 944x510 AFTER frame against the accepted current-
+product fixed-path BEFORE frame from run `37575384608` / artifact
+`11462737179`. Of 481,440 pixels, 208 changed (0.0432%); every changed pixel
+was confined to x=445..475, y=49..62 in the random test-owned temporary path
+text. The file-list/content region below y=80 was pixel-identical.
+**VISUAL ACCEPTANCE: PASS**.
+
+The final run reported
+`REMOVABLE_VISUAL_PHYSICAL_USB=NOT_RUN_NO_DEVICE`. Actual physical USB/
+removable visual execution is therefore **not claimed**; the accepted GUI
+proves the removable scheduling/isolation branch with a forced test-owned local
+fixture. Virtual Shell/provider visual enrichment remains unsupported.
 
 Removable-volume Recycle semantics are accepted on candidate
 `a7b675f790356cc152c577a3d670e9829afdaae4` by self-hosted Remote
