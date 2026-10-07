@@ -26,8 +26,8 @@ consumer core; this PROJECT.md remains project-owned across bundle refreshes.
     {"name": "winui-tests", "path": "tests/winui", "responsibility": "source, native and owned GUI contracts"}
   ],
   "review": {
-    "reviewed_revision": "ff9641d05645266ce639fddff97fdb82f014cc3e",
-    "reviewed_at": "2026-10-07",
+    "reviewed_revision": "32648cfeb5e92594619b9ed24b2568b18d71a2e8",
+    "reviewed_at": "2026-10-08",
     "reviewed_paths": [
       "app/winui",
       "src/base",
@@ -154,25 +154,44 @@ while remaining fail-closed above the shared bounds; owned evidence includes a
 real 64-item IFileOperation copy, 64-item CF_HDROP round-trip and 64-item WinUI
 cross-pane copy.
 
-Copy/Move now accepts ordinary Windows network filesystem roots in addition to
+Copy/Move accepts ordinary Windows network filesystem roots in addition to
 local fixed/removable roots: mapped `DRIVE_REMOTE` roots are allowed by policy
 and direct `\\server\share\...` paths use the same bounded filesystem
-validation. Extended/device namespaces such as `\\?\` and `\\.\`,
-reparse-point traversal and virtual Shell/provider parsing names remain closed.
-Copy/Move mutation runs through the explicit `--file-transfer` mode of the
-exact-owned `FlyShellIsolationHelper.exe` child. The parent restricts inherited
-handles, assigns the child to a one-process kill-on-close Job Object, forwards
-progress, signals cancellation through an inherited event and may terminate
-only that owned job after the bounded cancellation grace period. Recycle remains
-on the local fixed/removable path with explicit confirmation and recycle-only
-Shell flags; network Recycle is rejected and no permanent-delete fallback was
-added. Remote runs `37553534009` and `37553699165` passed the Debug/Release
-M22 native contracts at 33/33, and final run `37556148841` passed FAST,
-canonical Release build and the focused UIA-only Copy/Move GUI on candidate
-`a08e32788bdcd5d33da31e0c413803f30e548b92`. The current VM exposes no
-test-owned SMB share (the loopback admin-share probe is unavailable), so actual
-SMB/UNC transfer execution and mapped-network-drive execution remain explicit
-environment acceptance gaps rather than claimed runtime evidence.
+validation. Extended/device namespaces such as `\\?\` and `\\.\` and
+reparse-point traversal remain closed.
+
+Virtual Shell/provider **Copy-out** is now a separate read-source path:
+`SourceMode::ShellProvider` is Copy-only and requires a real filesystem
+destination. MainWindow copies the accepted snapshot's desktop-absolute parent
+and selected child PIDLs into bounded value blobs (32 KiB each, 1 MiB total)
+alongside the existing 1,024-item / 1,048,576 UTF-16 identity budget. No COM
+interface crosses the process boundary. The exact-owned
+`FlyShellIsolationHelper.exe --file-transfer` child reconstructs Shell items
+from those PIDLs, revalidates direct-child identity, queries `SFGAO_CANCOPY`
+only inside the helper, validates the materialized leaf/collision, and queues
+`IFileOperation::CopyItem`. Provider Move, Copy-in, Recycle/Delete and extended
+device namespaces remain fail-closed. Filesystem Copy/Move keeps its existing
+path validation.
+
+The transfer child still uses restricted inherited handles, a one-process
+kill-on-close Job Object, streamed progress and inherited cancellation; only
+that owned job may be terminated after the bounded cancellation grace period.
+Recycle remains on the local fixed/removable path with explicit confirmation
+and recycle-only Shell flags; network/provider Recycle is rejected and no
+permanent-delete fallback exists. Existing network acceptance remains
+`37556148841`. Provider Copy-out product source was last changed at
+`d95984203c41519235e36e276ba7f89adfa4e82c`; run `37624726608` passed FAST,
+runner health and the canonical Release build for that product source, then
+failed only because a watcher status replaced the harness's expected completion
+text after the copied file already existed. Final test/head
+`32648cfeb5e92594619b9ed24b2568b18d71a2e8` was accepted by focused GUI run
+`37703633100`: Pictures Library provider enumeration, filesystem destination
+commit, provider Move rejection, Copy-out materialization, controller idle,
+source preservation, process exit 0, fixture cleanup and protected legacy
+settings all passed. This built-in Pictures Library case does not separately
+certify arbitrary third-party provider implementations or provider-only
+non-filesystem child types. Actual SMB/UNC and mapped-network execution remain
+environment acceptance gaps because the VM has no test-owned SMB share.
 
 Sortable file metadata now accepts ordinary network filesystem roots as well as
 local fixed/removable roots. Mapped `DRIVE_REMOTE` and direct
