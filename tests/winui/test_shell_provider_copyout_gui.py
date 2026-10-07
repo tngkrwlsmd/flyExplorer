@@ -59,7 +59,7 @@ def main():
         b"schema=2\r\nlanguage=ko-KR\r\ntheme=dark\r\nview=details\r\n")
 
     process=subprocess.Popen(
-        [str(exe),str(destination)],cwd=exe.parent,env=env,
+        [str(exe),"shell:PicturesLibrary"],cwd=exe.parent,env=env,
         stdin=subprocess.DEVNULL,stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL)
     parent=None
@@ -87,19 +87,12 @@ def main():
             parent.set_focus()
             time.sleep(.10)
 
-        # Pin the right pane to the owned real filesystem destination.
-        focus_owned();send_keys("{F6}");time.sleep(.2)
-        address.set_edit_text(str(destination))
-        address.type_keys("{ENTER}",set_foreground=True)
-        until(lambda:str(destination).lower() in address.get_value().lower(),
-              "right destination folder did not open",18)
-
-        # The left pane uses the already accepted built-in virtual Pictures
-        # Library root. Its child is test-owned but routed through the Shell
-        # snapshot PIDL identity rather than a filesystem source-parent path.
-        focus_owned();send_keys("{F6}");time.sleep(.2)
-        address.set_edit_text("shell:PicturesLibrary")
-        address.type_keys("{ENTER}",set_foreground=True)
+        # Start directly in the same built-in virtual Pictures Library route
+        # already accepted by provider visual/thumbnail validation. This avoids
+        # making the fixture depend on a filesystem -> virtual address transition.
+        until(lambda:"Pictures.library-ms" in address.get_value() or
+                     address.get_value() in ("그림","사진"),
+              "Pictures Library virtual root did not open",20)
 
         def source_row():
             matches=[x for x in left.descendants()
@@ -110,6 +103,18 @@ def main():
               "owned Pictures Library provider item did not enumerate",24)
         print("SHELL_PROVIDER_COPYOUT_PICTURES_ENUMERATION",True,flush=True)
 
+        # Only after the provider source has been observed, pin the opposite
+        # pane to the test-owned filesystem destination. F6 changes pane focus
+        # without physical pointer input; the left provider route must survive.
+        focus_owned();send_keys("{F6}");time.sleep(.2)
+        address.set_edit_text(str(destination))
+        address.type_keys("{ENTER}",set_foreground=True)
+        until(lambda:str(destination).lower() in address.get_value().lower(),
+              "right destination folder did not open",18)
+        assert source_row() is not None,(
+            "opening the opposite destination replaced provider source pane")
+
+        focus_owned();send_keys("{F6}");time.sleep(.2)
         source_row().select()
         until(lambda:source_row().is_selected(),
               "provider source selection was lost",8)
