@@ -47,6 +47,8 @@ def main():
     owned=Path(tempfile.mkdtemp(prefix="shell-provider-copyout-owned-",dir=evidence))
     destination=owned/"destination"
     destination.mkdir()
+    destination_sentinel=destination/"destination-ready.txt"
+    destination_sentinel.write_text("owned destination sentinel\n",encoding="utf-8")
 
     env=os.environ.copy()
     for key in ("APPDATA","LOCALAPPDATA","TEMP","TMP"):
@@ -80,6 +82,7 @@ def main():
         until(ready,"provider copy-out fixture window not ready",24)
 
         left=parent.child_window(auto_id="LeftFiles")
+        right=parent.child_window(auto_id="RightFiles")
         address=parent.child_window(auto_id="AddressBox")
         status=parent.child_window(auto_id="StatusText")
 
@@ -110,7 +113,14 @@ def main():
         address.set_edit_text(str(destination))
         address.type_keys("{ENTER}",set_foreground=True)
         until(lambda:str(destination).lower() in address.get_value().lower(),
-              "right destination folder did not open",18)
+              "right destination address was not accepted",18)
+        def destination_ready():
+            return any("destination-ready.txt" in x.window_text()
+                       for x in right.descendants()
+                       if x.element_info.control_type=="ListItem")
+        until(destination_ready,
+              "right destination filesystem pane did not commit",18)
+        print("SHELL_PROVIDER_COPYOUT_DESTINATION_READY",True,flush=True)
         assert source_row() is not None,(
             "opening the opposite destination replaced provider source pane")
 
