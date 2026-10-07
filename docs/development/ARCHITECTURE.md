@@ -204,6 +204,26 @@ WindowWorkspaceController, SessionCoordinator, ShellNavigationController,
 FileOperationController and SearchController are implemented, and the V8-A
 through V8-E controller-extraction cycle is complete.
 
+FileOperationController remains the transfer lifecycle owner, while the
+filesystem/Shell mutation implementation stays in `src/base/shell_transfer_core`.
+Copy and Move now cross an additional fault boundary: the controller's detached
+worker invokes `shelltransfer::executeIsolated`, which starts the exact
+`FlyShellIsolationHelper.exe --file-transfer` staged beside the app. The
+parent passes only the bounded private transfer frame plus restricted inherited
+stdin/stdout/error/cancel handles, assigns the child to a one-process
+kill-on-close Job Object, streams progress and signals cancellation before a
+bounded grace-period termination of that exact owned job. This is a
+hang/cancellation boundary, not a security sandbox; the helper inherits the
+user token.
+
+Recycle deliberately does not use the network mutation path. It continues
+through `shelltransfer::execute` on the FileOperationController worker and
+accepts only local fixed/removable roots with explicit recycle confirmation.
+The common core owns direct-child/reparse/path-budget/collision validation for
+both paths. Copy/Move additionally accepts mapped `DRIVE_REMOTE` roots and
+ordinary direct UNC shares, while extended/device namespaces and virtual Shell
+provider parsing names remain fail-closed.
+
 The subsequent MainWindow post-extraction responsibility audit is also complete.
 Most remaining MainWindow work is presentation/composition. The audit found one
 coherent leftover lifecycle subsystem: file-detail metadata/icon/thumbnail work.
