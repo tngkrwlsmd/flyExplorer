@@ -57,12 +57,15 @@ checkpoints.
   cancellation and a bounded inactivity timeout; local fixed/removable
   metadata keeps the detached in-process worker. FileDetailController separately
   owns Windows type/icon/known-folder/thumbnail presentation. Its 1,200-item
-  visual-work ceiling now accepts local fixed/removable, mapped `DRIVE_REMOTE`
-  and ordinary direct-UNC filesystem roots. Removable/network detail uses
+  visual-work ceiling accepts local fixed/removable, mapped `DRIVE_REMOTE`
+  and ordinary direct-UNC filesystem roots, plus virtual Shell/provider roots
+  for type/icon detail only. Removable/network filesystem detail uses
   navigation-snapshot folder hints so the parent process does not probe those
-  paths for attributes, while image path/reparse/size validation and Shell
-  thumbnail extraction stay inside the bounded one-shot helper. Virtual
-  Shell/provider visual detail remains unsupported. Type/size/modified-date sort
+  paths for attributes. Virtual roots keep filesystem paths empty and route
+  bounded parsing names through an exact-owned Shell helper for provider
+  type/icon lookup. Image path/reparse/size validation and thumbnail extraction
+  remain filesystem-only; virtual Shell/provider thumbnails are unsupported.
+  Type/size/modified-date sort
   no longer silently falls back to name order while metadata is pending or when
   the folder contains 1,201-20,000 items. Modified-date validity is derived
   from the FILETIME value itself; display-label formatting is independent of
@@ -433,6 +436,55 @@ The final run reported
 removable visual execution is therefore **not claimed**; the accepted GUI
 proves the removable scheduling/isolation branch with a forced test-owned local
 fixture. Virtual Shell/provider visual enrichment remains unsupported.
+
+The removable paragraph above records the boundary at that candidate; current
+main supersedes only its virtual-visual limitation.
+
+Virtual Shell/provider **type/icon** support is accepted on candidate
+`d41a75cac8a2eb40dc406174c07689ad6e54f063`. A virtual root is recognized
+when the accepted navigation session has a Shell PIDL but no filesystem path.
+MainWindow passes each child item's desktop-absolute parsing name, not a
+filesystem path, through a bounded private wire to
+`FlyShellIsolationHelper.exe --shell-item-visuals`. The client uses a
+restricted inherited-handle allowlist, one-process kill-on-close Job Object,
+cooperative cancellation and a 4.5-second no-progress limit. Only the helper
+calls `SHParseDisplayName` and `SHGetFileInfoW(...SHGFI_PIDL...)`. Provider
+items do not enter `GetFileAttributesExW`, filesystem thumbnail probing or
+`IShellItemImageFactory`.
+
+Baseline run `37591794512` passed FAST, runner health and the focused real
+`shell:MyComputerFolder` GUI and preserved artifact `11469400568`. Its
+944x510 BEFORE digest is
+`ac462537fd94437161c2033a927806b170045e18da5573bfdc8ca8f6c4a79005`.
+The visible This PC rows still used generic folder glyphs and the generic
+`폴더` type fallback.
+
+The first product validation candidate stopped at FAST in run `37592816719`
+because one source contract still encoded the pre-change provider attribute
+boundary. After correcting that stale assertion, run `37593190964` reached
+the Release build and exposed ambiguous unqualified `kMagic`, `kVersion` and
+`checksum` names after the new visual wire was included beside the navigation
+wire. The successor qualified those protocol symbols explicitly.
+
+Final run `37593453954` passed request validation, change-scoped FAST, GUI
+runner health, the canonical Release build and focused This PC GUI. It reported
+`SHELL_PROVIDER_TYPE_ICON_PASS=True`,
+`SHELL_PROVIDER_VISUAL_PROCESS_EXIT=0` and protected legacy settings
+unchanged. The accepted DVD row changed from generic `폴더` to Windows type
+`CD 드라이브` and received the provider Shell icon. Artifact `11469965269`
+preserves the AFTER evidence; digest
+`42b3a53b26a209edd5ad5469f87fa0696509d9bc83e94f8e58fab5429ee97c1e`.
+
+Direct matched-image review found both captures are 944x510. Exactly 4,368 of
+481,440 pixels changed (0.9072%), with bounding box x=199..832, y=221..291.
+Every changed pixel is inside the two visible This PC item rows where the
+intended Shell icons/type labels changed; chrome, sidebar and every pixel
+outside those rows are identical. **VISUAL ACCEPTANCE: PASS**.
+
+This unit does **not** enable virtual Shell/provider thumbnails, Copy/Move or
+Recycle. It also does not claim separate acceptance of arbitrary third-party
+provider implementations; the real GUI acceptance uses the built-in Windows
+This PC virtual Shell root.
 
 Removable-volume Recycle semantics are accepted on candidate
 `a7b675f790356cc152c577a3d670e9829afdaae4` by self-hosted Remote
@@ -981,12 +1033,14 @@ Current source and the last parity evidence still show these limits:
   1,201-20,000 items no longer silently use name order. Above 20,000 these
   metadata sorts remain explicitly refused. Shell visual/type/icon/thumbnail
   enrichment is separately bounded to 1,200 items and now supports local
-  fixed/removable, mapped network and ordinary direct-UNC filesystem roots.
-  Actual physical USB/removable and SMB/mapped-drive visual execution remain
-  uncertified because the self-hosted runner has neither a removable volume nor
-  a test-owned SMB share; virtual Shell/provider visual enrichment remains
-  unsupported. Physical USB metadata-sort execution is also still awaiting a
-  removable device on the self-hosted VM.
+  fixed/removable, mapped network and ordinary direct-UNC filesystem roots,
+  while virtual Shell/provider roots support bounded type/icon enrichment.
+  Provider thumbnails remain unsupported. Actual physical USB/removable and
+  SMB/mapped-drive visual execution remain uncertified because the self-hosted
+  runner has neither a removable volume nor a test-owned SMB share; arbitrary
+  third-party provider implementations are not separately certified by the
+  built-in This PC acceptance. Physical USB metadata-sort execution is also
+  still awaiting a removable device on the self-hosted VM.
 - Copy/Move accepts local fixed/removable roots, mapped
   `DRIVE_REMOTE` roots and ordinary direct UNC filesystem paths through the
   shared Shell transfer core. Copy/Move Shell mutation is isolated in an

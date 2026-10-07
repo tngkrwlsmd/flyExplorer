@@ -26,7 +26,7 @@ consumer core; this PROJECT.md remains project-owned across bundle refreshes.
     {"name": "winui-tests", "path": "tests/winui", "responsibility": "source, native and owned GUI contracts"}
   ],
   "review": {
-    "reviewed_revision": "f134d4794615fb088675bd804621b974bb4428c8",
+    "reviewed_revision": "d41a75cac8a2eb40dc406174c07689ad6e54f063",
     "reviewed_at": "2026-10-07",
     "reviewed_paths": [
       "app/winui",
@@ -190,36 +190,45 @@ size, modified-date and type sorting on candidate
 mapped-network-drive metadata execution remains an environment acceptance gap
 because the runner has no test-owned SMB share.
 
-Shell visual/type/icon/thumbnail enrichment now accepts local fixed/removable
-roots, mapped `DRIVE_REMOTE` roots and ordinary direct UNC filesystem roots
-while retaining the 1,200-item visual-work ceiling. Direct UNC roots are
-classified as network before any parent-side drive probe. For removable and
-network detail requests, FileDetailController uses folder/file hints already
-present in the isolated navigation snapshot instead of calling
-`GetFileAttributesExW` on those paths in the flyExplorer process. Registered
-Windows type/icon lookup remains extension/key based in the disposable Shell
-helper; image thumbnail path validation, component/reparse checks, the 32 MiB
-file-size bound and `IShellItemImageFactory` access occur only in the one-shot
-`FlyShellIsolationHelper.exe --file-thumbnail` child, which accepts fixed,
-removable and remote filesystem roots. The client keeps its bounded
-200..10,000 ms timeout and terminates only that exact-owned thumbnail process
-on timeout. Extended/device namespaces and virtual Shell/provider parsing names
-remain closed.
+Shell visual/type/icon/thumbnail enrichment retains the 1,200-item
+visual-work ceiling. Filesystem detail accepts local fixed/removable roots,
+mapped `DRIVE_REMOTE` roots and ordinary direct UNC roots; direct UNC is
+classified as network before any parent-side drive probe. Removable/network
+requests carry folder/file hints from the accepted navigation snapshot so
+FileDetailController does not call `GetFileAttributesExW` on those paths in
+the flyExplorer process. Extension-based Windows type/icon lookup remains in the
+disposable Shell helper. Image thumbnail path validation, component/reparse
+checks, the 32 MiB file-size bound and `IShellItemImageFactory` access remain
+inside the one-shot `--file-thumbnail` child for fixed/removable/remote
+filesystem roots.
+
+Virtual Shell/provider roots now participate in the same bounded detail
+lifecycle for **type/icon only**. MainWindow keeps filesystem paths empty for a
+virtual root and passes the navigation snapshot's desktop-absolute parsing names
+through the private bounded `shell_visual_wire`. The UI-independent client
+starts exact-owned `FlyShellIsolationHelper.exe --shell-item-visuals` with a
+restricted inherited-handle list and one-process kill-on-close Job Object. Only
+that child performs `SHParseDisplayName` and
+`SHGetFileInfoW(...SHGFI_PIDL...)`; cancellation or 4.5 seconds without pipe
+progress terminates the owned job. Provider roots never enter filesystem
+attribute probing or thumbnail extraction. Extended/device namespaces and
+virtual Shell/provider thumbnails remain closed.
 
 Network visual acceptance remains recorded by runs `37575384608`,
-`37577331163` and `37577442125`. Removable visual support is accepted on
-candidate `f134d4794615fb088675bd804621b974bb4428c8` by final Remote Windows
-Task `37588369405`: change-scoped FAST, GUI runner health, canonical Release
-build and the focused owned PNG/TXT/folder GUI all passed. The forced removable
-detail path produced the expected image thumbnail, registered file icon, folder
-icon and Windows type label, exited 0 and left protected legacy settings
-byte-identical. Direct review against the accepted 944x510 fixed-path baseline
-found only 208 changed pixels (0.0432%), all within the test-owned temporary
-path text at y=49..62; the file-list/content region below y=80 was pixel
-identical. The runner reported no `DRIVE_REMOVABLE` volume, so actual physical
-USB visual execution remains an explicit environment acceptance gap. Actual
-SMB/UNC and mapped-network-drive execution likewise remains uncertified because
-the runner has no test-owned SMB share.
+`37577331163` and `37577442125`; removable visual acceptance remains
+`37588369405`. Virtual Shell/provider type/icon support is accepted on
+candidate `d41a75cac8a2eb40dc406174c07689ad6e54f063` by Remote Windows Task
+`37593453954`: change-scoped FAST, GUI runner health, canonical Release build
+and the focused real `shell:MyComputerFolder` GUI all passed. The accepted
+row changed from a generic folder fallback to the Windows Shell icon and
+`CD 드라이브` type label; the owned process exited 0 and protected legacy
+settings stayed byte-identical. Matched 944x510 captures from baseline run
+`37591794512` and final run `37593453954` differ in 4,368 of 481,440 pixels
+(0.9072%), entirely inside x=199..832, y=221..291, the two visible This PC item
+rows. Chrome, sidebar and all pixels outside those rows are identical.
+Arbitrary third-party provider implementations are not separately certified by
+that built-in This PC acceptance. Physical USB and actual SMB/mapped-drive
+execution remain environment acceptance gaps as recorded below.
 
 
 Explorer-compatible `Ctrl+Shift+N` is also accepted for

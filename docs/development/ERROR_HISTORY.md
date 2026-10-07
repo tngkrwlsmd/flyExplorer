@@ -16,6 +16,69 @@ product state use CURRENT_STATUS.md.
 
 이 문서는 확정된 오류를 단순 수정으로 끝내지 않고, 다음 진단을 빠르게 하고 같은 계열의 결함을 사전에 막기 위한 프로젝트 기록이다.
 
+## 2026-10-07 — virtual Shell/provider type-icon isolation and visual acceptance
+
+**오류 발생**
+- Initial baseline run `37590963762` built successfully but the GUI harness
+  attempted physical `click_input` before entering This PC and failed in the
+  service-desktop cursor path. A later mouse-independent revision still did not
+  establish the virtual root reliably; the fixture was changed to launch
+  directly at `shell:MyComputerFolder`.
+- Baseline run `37591794512` then passed and fixed the current-product BEFORE
+  frame.
+- Product run `37592816719` stopped in FAST because a source contract still
+  described the pre-change virtual-provider attribute boundary.
+- Run `37593190964` passed FAST and runner health but the Release helper build
+  failed: the new visual wire introduced `kMagic`, `kVersion` and
+  `checksum` names alongside the navigation wire and several helper references
+  were left unqualified.
+
+**원인 진단**
+- Baseline acquisition must not depend on synthetic mouse movement when typed
+  Shell navigation or startup routing can establish the exact owned virtual
+  root deterministically.
+- The product extension intentionally separates provider visual identity from
+  filesystem detail. Virtual-root requests carry parsing names and never enter
+  filesystem attribute/thumbnail paths.
+- Multiple private wire namespaces can coexist in one helper translation unit;
+  unqualified protocol constants are therefore not a stable contract.
+
+**해결 방법**
+- The focused harness starts its isolated profile directly at the built-in This
+  PC Shell root and uses the app-owned `RenderTargetBitmap` capture path.
+- Added a bounded `shell_visual_wire` and exact-owned
+  `--shell-item-visuals` helper route. The client restricts inherited handles,
+  assigns a one-process kill-on-close Job Object and terminates that job on
+  cancellation or 4.5 seconds without pipe progress.
+- Only the helper parses provider names and calls
+  `SHGetFileInfoW(...SHGFI_PIDL...)`. Protocol constants/checksum references
+  are namespace-qualified. Provider thumbnails remain closed.
+
+**재발 방지**
+- Visual baselines on the self-hosted GUI runner should prefer deterministic
+  owned navigation plus app-compositor capture over physical cursor movement
+  when pointer behavior is not the feature under test.
+- Cross-controller source contracts must be updated in the same logical unit
+  when an intentionally closed route becomes supported.
+- Shared helpers that include more than one private wire must qualify protocol
+  symbols at each boundary.
+
+**검증 상태**
+- Baseline `37591794512`: FAST, runner health, focused This PC GUI, process
+  exit 0 and protected legacy settings unchanged; artifact `11469400568`,
+  BEFORE SHA-256
+  `ac462537fd94437161c2033a927806b170045e18da5573bfdc8ca8f6c4a79005`.
+- Final `37593453954`: FAST, runner health, canonical Release build and
+  focused This PC GUI PASS; provider type/icon PASS, process exit 0, protected
+  settings unchanged; artifact `11469965269`, AFTER SHA-256
+  `42b3a53b26a209edd5ad5469f87fa0696509d9bc83e94f8e58fab5429ee97c1e`.
+- Matched 944x510 visual review: 4,368/481,440 pixels changed (0.9072%), all in
+  x=199..832, y=221..291, exactly the two visible item rows whose provider
+  icon/type presentation changed. VISUAL ACCEPTANCE: PASS.
+- Virtual/provider thumbnail and mutation semantics: NOT IMPLEMENTED in this
+  unit. Arbitrary third-party provider implementation behavior: NOT SEPARATELY
+  CERTIFIED.
+
 ## 2026-10-07 — removable Shell visual validation exposed stale contract and stale worktree
 
 **오류 발생**
