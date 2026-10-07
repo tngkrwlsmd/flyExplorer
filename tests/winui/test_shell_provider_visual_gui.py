@@ -57,7 +57,7 @@ def main():
         b"schema=2\r\nlanguage=ko-KR\r\ntheme=dark\r\nview=details\r\n")
     env["FLY_SHELL_PROVIDER_VISUAL_CAPTURE_PATH"]=str(shot)
 
-    process=subprocess.Popen([str(exe),str(folder)],cwd=exe.parent,env=env)
+    process=subprocess.Popen([str(exe),"shell:MyComputerFolder"],cwd=exe.parent,env=env)
     parent=None
     success=False
     try:
@@ -77,10 +77,8 @@ def main():
 
         pane=parent.child_window(auto_id="LeftFiles")
         address=parent.child_window(auto_id="AddressBox")
-        address.set_edit_text("shell:MyComputerFolder")
-        address.type_keys("{ENTER}",set_foreground=True)
         until(lambda:address.get_value()=="내 PC",
-              "This PC virtual Shell root did not open",20)
+              "This PC virtual Shell root did not open from startup argument",20)
 
         def rows():
             return [x for x in pane.descendants()
