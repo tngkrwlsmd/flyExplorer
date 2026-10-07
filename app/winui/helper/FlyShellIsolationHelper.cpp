@@ -4,6 +4,7 @@
 #include "../../../src/base/shell_navigation_core.h"
 #include "../../../src/base/shell_isolation_wire.h"
 #include "../../../src/base/shell_transfer_core.h"
+#include "../../../src/base/file_metadata_wire.h"
 #include <windows.h>
 #include <shellapi.h>
 #include <shlobj.h>
@@ -282,6 +283,85 @@ int wmain(int argc,wchar_t** argv) {
     if(argc==2&&!wcscmp(argv[1],L"--file-transfer"))
         return fxfile::shelltransfer::runIsolatedHelper(
             ::GetStdHandle(STD_INPUT_HANDLE),::GetStdHandle(STD_OUTPUT_HANDLE));
+    if(argc==2&&!wcscmp(argv[1],L"--file-metadata")){
+        auto input=::GetStdHandle(STD_INPUT_HANDLE);
+        auto output=::GetStdHandle(STD_OUTPUT_HANDLE);
+        if(!input||input==INVALID_HANDLE_VALUE||
+           !output||output==INVALID_HANDLE_VALUE)return 79;
+        fxfile::metadatawire::RequestHeader request{};
+        if(!exactRead(input,&request,sizeof(request))||
+           request.magic!=fxfile::metadatawire::kMagic||
+           request.version!=fxfile::metadatawire::kVersion||
+           !request.count||request.count>fxfile::metadatawire::kMaxItems||
+           request.bodyBytes>fxfile::metadatawire::kMaxBodyBytes)return 80;
+        std::vector<unsigned char> body(request.bodyBytes);
+        if(request.bodyBytes&&!exactRead(
+             input,body.data(),body.size()))return 81;
+        if(fxfile::metadatawire::checksum(body.data(),body.size())!=
+           request.checksum)return 82;
+        auto cancelEvent=reinterpret_cast<HANDLE>(
+            static_cast<std::uintptr_t>(request.cancelHandle));
+        if(cancelEvent&&cancelEvent!=INVALID_HANDLE_VALUE&&
+           ::WaitForSingleObject(cancelEvent,0)==WAIT_FAILED)return 83;
+        std::size_t offset=0;
+        for(std::uint32_t index=0;index<request.count;++index){
+            if(cancelEvent&&
+               ::WaitForSingleObject(cancelEvent,0)==WAIT_OBJECT_0)return 84;
+            if(body.size()-offset<sizeof(std::uint32_t))return 85;
+            std::uint32_t units=0;
+            std::memcpy(&units,body.data()+offset,sizeof(units));
+            offset+=sizeof(units);
+            if(units>32000||
+               static_cast<std::size_t>(units)>
+                   (body.size()-offset)/sizeof(wchar_t))return 85;
+            std::wstring path(units,L'\0');
+            if(units)std::memcpy(
+                path.data(),body.data()+offset,
+                static_cast<std::size_t>(units)*sizeof(wchar_t));
+            offset+=static_cast<std::size_t>(units)*sizeof(wchar_t);
+            if(path.find(L'\0')!=std::wstring::npos)return 85;
+
+            fxfile::metadatawire::Record record{};
+            record.magic=fxfile::metadatawire::kMagic;
+            record.version=fxfile::metadatawire::kVersion;
+            record.index=index;
+            record.error=ERROR_INVALID_NAME;
+            try{
+                if(!path.empty()){
+                    std::filesystem::path native(path);
+                    if(native.is_absolute()){
+                        WIN32_FILE_ATTRIBUTE_DATA data{};
+                        if(::GetFileAttributesExW(
+                             path.c_str(),GetFileExInfoStandard,&data)){
+                            if(data.dwFileAttributes&
+                               FILE_ATTRIBUTE_REPARSE_POINT){
+                                record.error=ERROR_CANT_ACCESS_FILE;
+                            }else{
+                                record.valid=1;
+                                record.error=ERROR_SUCCESS;
+                                record.attributes=data.dwFileAttributes;
+                                record.bytes=(
+                                    static_cast<std::uint64_t>(
+                                        data.nFileSizeHigh)<<32)|
+                                    data.nFileSizeLow;
+                                ULARGE_INTEGER stamp{};
+                                stamp.HighPart=
+                                    data.ftLastWriteTime.dwHighDateTime;
+                                stamp.LowPart=
+                                    data.ftLastWriteTime.dwLowDateTime;
+                                record.modified=stamp.QuadPart;
+                            }
+                        }else record.error=::GetLastError();
+                    }
+                }
+            }catch(...){
+                record.valid=0;
+                record.error=ERROR_INVALID_NAME;
+            }
+            if(!exactWrite(output,&record,sizeof(record)))return 86;
+        }
+        return offset==body.size()?0:87;
+    }
     // Only isolated regression launches set this environment & argument.
     if(argc==2&&!wcscmp(argv[1],L"--test-block")){
         wchar_t flag[16]{};

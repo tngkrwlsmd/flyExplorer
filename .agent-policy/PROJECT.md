@@ -173,6 +173,23 @@ test-owned SMB share (the loopback admin-share probe is unavailable), so actual
 SMB/UNC transfer execution and mapped-network-drive execution remain explicit
 environment acceptance gaps rather than claimed runtime evidence.
 
+Sortable file metadata now accepts ordinary network filesystem roots as well as
+local fixed/removable roots. Mapped `DRIVE_REMOTE` and direct
+`\\server\share\...` folders share the existing complete-model ceiling of
+20,000 entries, but network metadata is collected only in the exact-owned
+`FlyShellIsolationHelper.exe --file-metadata` child. The parent restricts
+inherited handles, assigns a one-process kill-on-close Job Object, signals
+cancellation through an inherited event, and terminates only that owned job on
+the bounded inactivity/cancellation path. Local fixed/removable metadata keeps
+the existing detached in-process filesystem worker. Shell visual/type/icon/
+thumbnail enrichment remains a separate 1,200-item fixed-drive-only path, and
+virtual Shell/provider parsing names remain closed. Final run
+`37563774189` passed FAST, canonical Release build and the 1,305-item focused
+GUI with the local owned fixture forced through the isolated metadata helper for
+size, modified-date and type sorting on candidate `f51edfdb40e066d063c85958601336c1854aeafc`. Actual
+SMB/UNC and mapped-network-drive metadata execution remains an environment
+acceptance gap because the runner has no test-owned SMB share.
+
 Explorer-compatible `Ctrl+Shift+N` is also accepted for
 create-folder and routes through the existing
 `fxfile::filecommand::Kind::CreateFolder` command path for the active pane/tab.

@@ -339,13 +339,19 @@ class FluentShellContract(unittest.TestCase):
 
     def test_this_pc_local_drive_card_is_bounded_and_provider_safe(self):
         impl=text("MainWindow.xaml.cpp")
+        start=impl.index("bool localDrive=false;")
+        end=impl.index("auto const* iconMeta=detail;",start)
+        drive_card=impl[start:end]
         for token in ("GetDriveTypeW","DRIVE_FIXED","DRIVE_REMOVABLE",
-                      "GetDiskFreeSpaceExW","ProgressBar usage",
-                      "GB \uc0ac\uc6a9 \uac00\ub2a5 / "):
+                      "GetDiskFreeSpaceExW"):
+            self.assertIn(token,drive_card)
+        for token in ("ProgressBar usage","GB \uc0ac\uc6a9 \uac00\ub2a5 / "):
             self.assertIn(token,impl)
-        # No generic network drive capacity probe is introduced.
-        self.assertNotIn("DRIVE_REMOTE",impl)
-        self.assertNotIn("WNet",impl)
+        # No generic network drive capacity probe is introduced in the
+        # This PC capacity-card path. DRIVE_REMOTE is valid elsewhere for
+        # isolated sortable metadata.
+        self.assertNotIn("DRIVE_REMOTE",drive_card)
+        self.assertNotIn("WNet",drive_card)
 
     def test_localized_visible_labels_and_no_phase5_resurrection(self):
         values=attr_values("MainWindow.xaml")|attr_values("FileToolbar.xaml")|attr_values("NavigationSidebar.xaml")

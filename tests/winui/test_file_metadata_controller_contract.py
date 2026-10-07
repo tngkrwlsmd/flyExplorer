@@ -25,7 +25,8 @@ class FileMetadataControllerContract(unittest.TestCase):
         self.assertIn("GetFileAttributesExW",impl)
         self.assertIn("entry.typeKey=typeKey",impl)
         self.assertIn("entry.sizeKnown=true",impl)
-        self.assertIn("entry.dateKnown=entry.modified!=0",impl)
+        self.assertIn("entry.modified=modified",impl)
+        self.assertIn("entry.dateKnown=modified!=0",impl)
         self.assertNotIn('GetDateFormatEx(L"ko-KR"',impl)
         self.assertNotIn('GetTimeFormatEx(L"ko-KR"',impl)
         self.assertNotIn("queryVisuals(",impl)
@@ -73,7 +74,7 @@ class FileMetadataControllerContract(unittest.TestCase):
         self.assertIn("정렬을 위해 전체 폴더 항목을 불러오는 중입니다.",transfers)
         self.assertIn("beyondComplete&&selection>1",transfers)
 
-    def test_sortable_metadata_accepts_fixed_and_removable_only(self):
+    def test_sortable_metadata_accepts_network_without_opening_visual_detail(self):
         main=read("app/winui/MainWindow.xaml.cpp")
         helper_start=main.index("bool SupportsSortableMetadataDrive")
         helper_end=main.index("std::filesystem::path StartFolder",helper_start)
@@ -83,20 +84,51 @@ class FileMetadataControllerContract(unittest.TestCase):
         metadata=main[metadata_start:detail_start]
         detail_end=main.index("void MainWindow::",detail_start+10)
         details=main[detail_start:detail_end]
-        self.assertIn("driveType==DRIVE_FIXED||driveType==DRIVE_REMOVABLE",helper)
-        self.assertNotIn("DRIVE_REMOTE",helper)
-        self.assertIn(
-            "SupportsSortableMetadataDrive(::GetDriveTypeW(root.c_str()))",
-            metadata,
-        )
+        self.assertIn("driveType==DRIVE_FIXED||driveType==DRIVE_REMOVABLE||",helper)
+        self.assertIn("driveType==DRIVE_REMOTE",helper)
+        self.assertIn("shelltransfer::transferDriveRoot(folder,root)",metadata)
+        self.assertIn("request.isolatedNetwork=isolatedNetwork",metadata)
+        self.assertIn("driveType==DRIVE_REMOTE||mOwnedMetadataForceIsolated",metadata)
         # Visual type/icon/thumbnail work remains a separate fixed-drive gate.
         self.assertIn("::GetDriveTypeW(root.c_str())!=DRIVE_FIXED",details)
+
+    def test_network_metadata_uses_exact_owned_bounded_helper(self):
+        header=read("app/winui/file_metadata_controller.h")
+        impl=read("app/winui/file_metadata_controller.cpp")
+        helper=read("app/winui/helper/FlyShellIsolationHelper.cpp")
+        wire=read("src/base/file_metadata_wire.h")
+        for token in (
+            "bool isolatedNetwork=false",
+            "collectNetworkMetadata(",
+            "FlyShellIsolationHelper.exe",
+            "--file-metadata",
+            "PROC_THREAD_ATTRIBUTE_HANDLE_LIST",
+            "JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE",
+            "JOB_OBJECT_LIMIT_ACTIVE_PROCESS",
+            "kNetworkMetadataInactivityMs=5000",
+            "kNetworkMetadataCancelGraceMs=1200",
+            "CreateEventW",
+            "TerminateJobObject",
+            "metadatawire::Record",
+            "kMaxPathUnits=1024*1024",
+        ):
+            self.assertIn(token,header+impl+helper+wire)
+        self.assertIn("GetFileAttributesExW",helper)
+        self.assertIn("FILE_ATTRIBUTE_REPARSE_POINT",helper)
+        self.assertIn(
+            "request.count>fxfile::metadatawire::kMaxItems",helper)
+        self.assertIn(
+            "request.bodyBytes>fxfile::metadatawire::kMaxBodyBytes",helper)
+        self.assertIn(
+            "fxfile::metadatawire::checksum(body.data(),body.size())",helper)
 
     def test_owned_vm_sort_hook_is_double_gated_and_bounded(self):
         main=read("app/winui/MainWindow.xaml.cpp")
         header=read("app/winui/MainWindow.xaml.h")
         for token in (
             "FLY_METADATA_SORT_OWNED_TEST",
+            "FLY_METADATA_SORT_FORCE_ISOLATED_TEST",
+            "mOwnedMetadataForceIsolated",
             "--metadata-sort-owned-mode",
             "mode==2||mode==3||mode==4",
             "RunOwnedMetadataSortTestIfReady()",
@@ -106,11 +138,13 @@ class FileMetadataControllerContract(unittest.TestCase):
             self.assertIn(token,main)
         self.assertIn("int mOwnedMetadataSortMode=-1",header)
         self.assertIn("bool mOwnedMetadataSortConsumed=false",header)
+        self.assertIn("bool mOwnedMetadataForceIsolated=false",header)
 
     def test_project_compiles_metadata_owner(self):
         project=read("app/winui/flyExplorer.project-template.xml")
         self.assertIn('<ClInclude Include="file_metadata_controller.h" />',project)
         self.assertIn('<ClCompile Include="file_metadata_controller.cpp">',project)
+        self.assertIn('file_metadata_wire.h',project)
 
 if __name__=="__main__":
     unittest.main()

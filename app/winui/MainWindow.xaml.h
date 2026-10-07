@@ -272,6 +272,7 @@ namespace winrt::FlyExplorer::implementation
         bool mOwnedComExhaustOnVirtual=false;
         int mOwnedMetadataSortMode=-1;
         bool mOwnedMetadataSortConsumed=false;
+        bool mOwnedMetadataForceIsolated=false;
         void InitializeOwnedMetadataSortTest();
         void RunOwnedMetadataSortTestIfReady();
         Microsoft::UI::Dispatching::DispatcherQueueTimer

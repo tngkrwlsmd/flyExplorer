@@ -47,16 +47,21 @@ checkpoints.
   cancellation, detached detail workers and bounded Shell visual/thumbnail
   orchestration. MainWindow retains request preparation, live PaneState
   acceptance, DispatcherQueue handoff and XAML projection.
-- Sortable file metadata is now a separate lifecycle from Shell visual/detail
+- Sortable file metadata is a separate lifecycle from Shell visual/detail
   enrichment. FileMetadataController collects bounded filesystem type keys,
-  byte sizes and last-write timestamps for a complete local fixed-drive model
-  up to the existing 20,000-entry ceiling, while FileDetailController remains
+  byte sizes and last-write timestamps for complete fixed, removable, mapped
+  network and ordinary direct-UNC filesystem models up to the existing
+  20,000-entry ceiling. Network metadata runs in the exact-owned
+  `FlyShellIsolationHelper.exe --file-metadata` process with restricted
+  inherited handles, a one-process kill-on-close Job Object, inherited
+  cancellation and a bounded inactivity timeout; local fixed/removable
+  metadata keeps the detached in-process worker. FileDetailController remains
   responsible for Windows type/icon/known-folder/thumbnail presentation and
-  keeps its 1,200-item visual-work ceiling. Type/size/modified-date sort no
-  longer silently falls back to name order while metadata is pending or when
-  the folder contains 1,201-20,000 items. Modified-date validity is derived
-  from the FILETIME value itself; display-label formatting is independent of
-  sortable timestamp validity.
+  keeps its 1,200-item fixed-drive-only visual-work ceiling. Type/size/
+  modified-date sort no longer silently falls back to name order while
+  metadata is pending or when the folder contains 1,201-20,000 items.
+  Modified-date validity is derived from the FILETIME value itself; display-
+  label formatting is independent of sortable timestamp validity.
 - The second MainWindow responsibility audit compared preferences persistence,
   private drag/drop state and workspace restore sequencing. Preferences was the
   strongest independent persistence/lifetime boundary: PreferencesCoordinator
@@ -294,10 +299,11 @@ metadata-sort GUI regression in size, modified-date and type modes over the
 `METADATA_SORT_OVER_1200_SIZE_DESC True`,
 `METADATA_SORT_OVER_1200_DATE_DESC True` and
 `METADATA_SORT_OVER_1200_TYPE_ASC True`, with
-`REMOVABLE_METADATA_SIZE/DATE/TYPE=PASS`. The sortable-metadata scheduler now
-accepts both `DRIVE_FIXED` and `DRIVE_REMOVABLE` local roots while keeping
-`DRIVE_REMOTE`/UNC and provider paths closed. Shell visual detail/icon/
-thumbnail scheduling remains a separate fixed-drive-only path.
+`REMOVABLE_METADATA_SIZE/DATE/TYPE=PASS`. At that revision the
+sortable-metadata scheduler accepted `DRIVE_FIXED` and `DRIVE_REMOVABLE`
+local roots while `DRIVE_REMOTE`/UNC remained closed; the network extension
+below supersedes that historical boundary. Shell visual detail/icon/thumbnail
+scheduling remains a separate fixed-drive-only path.
 
 The VM still exposes no `DRIVE_REMOVABLE` volume, so physical USB metadata
 sort execution is not claimed. The same run emitted
@@ -307,6 +313,38 @@ sort execution is not claimed. The same run emitted
 preserves the remote result and logs. The wrapper's RUNNER_HEALTH stage was
 not requested by this validation-plan vocabulary, but the Release command
 itself executed all three owned WinUI metadata-sort GUI processes successfully.
+
+UNC/network sortable metadata support is accepted on candidate
+`f51edfdb40e066d063c85958601336c1854aeafc` by self-hosted Remote Windows Task `37563774189`.
+The scheduler accepts local `DRIVE_FIXED`/`DRIVE_REMOVABLE`, mapped
+`DRIVE_REMOTE` and ordinary direct `\\server\share\...` filesystem
+roots. Network requests use the bounded private `file_metadata_wire.h`
+protocol and execute `GetFileAttributesExW` only inside the exact-owned
+`FlyShellIsolationHelper.exe --file-metadata` child. The parent restricts
+inherited handles, assigns the child to a one-process kill-on-close Job Object,
+passes an inherited cancellation event, uses a 5-second inactivity watchdog
+and gives cooperative cancellation a 1.2-second grace period before terminating
+only the owned job. Local fixed/removable metadata remains on the existing
+detached in-process worker. Extended/device namespaces, reparse traversal and
+virtual Shell/provider parsing names remain closed.
+
+Run `37563774189` passed request validation, change-scoped FAST, GUI runner
+health, `git diff --check`, the canonical Release helper/app build and the
+1,305-file focused GUI with the local owned fixture forced through the isolated
+metadata-helper path. It passed
+`METADATA_SORT_OVER_1200_SIZE_DESC True`,
+`METADATA_SORT_OVER_1200_DATE_DESC True`,
+`METADATA_SORT_OVER_1200_TYPE_ASC True`,
+`METADATA_SORT_ISOLATED_HELPER_PASS True`,
+`METADATA_SORT_OWNED_PROCESS_EXIT 0` and protected legacy settings unchanged.
+Evidence artifact `11458556096`, digest
+`sha256:07d060c06f32bc2cb098ef2c9f235fab31d282e6bc01bf131e97a3eef679f1a6`,
+preserves the remote result and logs. Actual SMB/UNC and mapped-network-drive
+metadata execution is **not claimed** because the runner still has no
+test-owned SMB share; the acceptance proves root policy, exact-owned helper
+isolation, wire/lifecycle behavior and complete size/date/type sorting through
+that helper path. No XAML/pixel behavior changed.
+VISUAL ACCEPTANCE: NOT TESTED
 
 Removable-volume Recycle semantics are accepted on candidate
 `a7b675f790356cc152c577a3d670e9829afdaae4` by self-hosted Remote
@@ -846,14 +884,18 @@ Current source and the last parity evidence still show these limits:
   beyond the 20,000-item model ceiling, network/virtual providers and sustained
   thumbnail-cache behavior are not certified.
 - Type, size and modified-date global sort requires a complete sortable
-  metadata model and is supported through 20,000 local fixed or removable
-  filesystem entries. The previous 1,200 visual-detail ceiling no longer
-  controls these sorts and 1,201-20,000 items no longer silently use name
-  order. Above 20,000 these metadata sorts remain explicitly refused. Shell
-  visual/type/icon/thumbnail enrichment remains separately bounded to 1,200
-  items and fixed-drive-only; network/UNC/provider metadata coverage remains a
-  separate gap. Physical USB metadata-sort execution is also still awaiting a
-  removable device on the self-hosted VM.
+  metadata model and is supported through 20,000 fixed, removable, mapped
+  network or ordinary direct-UNC filesystem entries. Network/UNC metadata
+  collection is isolated in the exact-owned helper with bounded inactivity/
+  cancellation handling; actual SMB/UNC and mapped-drive execution remains
+  uncertified because the self-hosted runner has no test-owned SMB share.
+  The previous 1,200 visual-detail ceiling no longer controls these sorts and
+  1,201-20,000 items no longer silently use name order. Above 20,000 these
+  metadata sorts remain explicitly refused. Shell visual/type/icon/thumbnail
+  enrichment remains separately bounded to 1,200 items and fixed-drive-only;
+  virtual Shell/provider metadata remains unsupported. Physical USB metadata-
+  sort execution is also still awaiting a removable device on the self-hosted
+  VM.
 - Copy/Move accepts local fixed/removable roots, mapped
   `DRIVE_REMOTE` roots and ordinary direct UNC filesystem paths through the
   shared Shell transfer core. Copy/Move Shell mutation is isolated in an

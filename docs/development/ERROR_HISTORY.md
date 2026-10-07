@@ -16,6 +16,77 @@ product state use CURRENT_STATUS.md.
 
 이 문서는 확정된 오류를 단순 수정으로 끝내지 않고, 다음 진단을 빠르게 하고 같은 계열의 결함을 사전에 막기 위한 프로젝트 기록이다.
 
+## 2026-10-07 — UNC metadata-sort acceptance trusted hidden SortPicker UIA state
+
+**오류 발생**
+- 실행/프로필: UNC/network sortable-metadata pre-main acceptance.
+- 초기 FAST runs `37558962391`, `37559264194`, `37559370802` exposed
+  stale source-contract assumptions after `DRIVE_REMOTE` became valid only for
+  sortable metadata. Run `37559533336` then reached Release compilation and
+  failed in the helper on ambiguous unqualified `kMagic`/`kVersion`/
+  `checksum` names. After qualification, run `37559970803` built both
+  Release binaries successfully but the 1,305-file GUI stopped at
+  `sort callback did not record 크기 내림차순 step 1`.
+
+**최초 실제 오류**
+- The compile failure was C2872/C2668 in `FlyShellIsolationHelper.cpp`: the
+  new metadata wire reused symbol names already visible from the Shell
+  isolation wire. Qualifying metadata-wire symbols removed the ambiguity.
+- The later GUI failure was not a product sort failure. Small-fixture diagnostic
+  run `37560547409` showed pywinauto `SortPicker.selected_index()` returning
+  `None` both before and after Invoke, while the visible size header changed
+  to `크기 ↑`, status changed to `파일 메타데이터 정렬을 적용했습니다.`,
+  the first row changed according to the requested sort, and the process exited
+  0.
+
+**원인 진단**
+- Some older source contracts were scoped to whole-file token absence instead
+  of the behavior-owning block, so the legitimate metadata-only
+  `DRIVE_REMOTE` token looked like a This-PC capacity-probe regression.
+- The helper compile error was a namespace-collision defect in the new wire
+  integration.
+- The expensive GUI false negative was a harness defect: the hidden
+  compatibility `SortPicker` is not a stable UIA state oracle in this runner.
+  The visible sortable-column header is the product-owned projection of
+  `PaneState::sortMode` and did update immediately.
+
+**해결 방법**
+- Scope the This-PC capacity contract to the capacity-card block and align the
+  metadata-validity/source tokens with the actual owning expressions.
+- Fully qualify `fxfile::metadatawire` symbols in the helper.
+- Change `test_metadata_sort_gui.py` to validate each header Invoke from the
+  visible ascending/descending arrow, then retain the existing stable
+  postconditions: ordered first row, metadata-completion status, process exit
+  and protected-settings checks. Remove the temporary diagnostic CLI after the
+  failing layer was established.
+
+**재발 방지**
+- Source contracts that forbid a provider/drive token must slice the
+  behavior-owning function/block instead of asserting token absence across an
+  unrelated translation unit.
+- Shared helper protocols with common names such as `kMagic`, `kVersion`
+  and `checksum` must be namespace-qualified at integration points.
+- GUI acceptance must use a visible/stable product projection or final model/
+  filesystem postcondition, not a hidden compatibility control whose UIA
+  property may be unavailable. Diagnose this on a small fixture before
+  repeating a high-cost 1,000+ item fixture.
+
+**검증 상태**
+- Run `37560547409`: FAST + runner health + Release build + 25-item diagnostic
+  PASS; visible header/status/row state proved the product callback path.
+- Final run `37563774189`: FAST, runner health, `git diff --check`, canonical
+  Release helper/app build and 1,305-item forced-isolated metadata GUI PASS for
+  size/date/type; owned process exit 0 and protected legacy settings unchanged.
+- Actual SMB/UNC or mapped-drive metadata execution: NOT TESTED — no test-owned
+  SMB share is available on the runner.
+- VISUAL ACCEPTANCE: NOT TESTED
+
+**관련 commit**
+- `f51edfdb40e066d063c85958601336c1854aeafc` — accepted product/test candidate; final integration adds
+  documentation only.
+
+---
+
 ## 2026-10-07 — UNC Copy/Move GUI acceptance confused transient status with completion
 
 **오류 발생**

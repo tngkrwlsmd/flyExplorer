@@ -9,6 +9,7 @@
 #include <shellapi.h>
 #include "../../src/base/file_operation_core.h"
 #include "../../src/base/shell_isolation_wire.h"
+#include "../../src/base/shell_transfer_core.h"
 #include <algorithm>
 #include <cmath>
 #include <cwchar>
@@ -75,7 +76,8 @@ namespace {
 
     bool SupportsSortableMetadataDrive(UINT driveType) noexcept
     {
-        return driveType==DRIVE_FIXED||driveType==DRIVE_REMOVABLE;
+        return driveType==DRIVE_FIXED||driveType==DRIVE_REMOVABLE||
+               driveType==DRIVE_REMOTE;
     }
 
     std::filesystem::path StartFolder()
@@ -530,6 +532,11 @@ namespace winrt::FlyExplorer::implementation
         if(::GetEnvironmentVariableW(
              L"FLY_METADATA_SORT_OWNED_TEST",flag,8)!=3 ||
            wcscmp(flag,L"YES"))return;
+        wchar_t isolated[8]{};
+        mOwnedMetadataForceIsolated=
+            ::GetEnvironmentVariableW(
+                L"FLY_METADATA_SORT_FORCE_ISOLATED_TEST",isolated,8)==3&&
+            !wcscmp(isolated,L"YES");
         int argc=0;
         auto argv=::CommandLineToArgvW(::GetCommandLineW(),&argc);
         if(!argv)return;
@@ -933,9 +940,12 @@ namespace winrt::FlyExplorer::implementation
            snapshot.residentEndOffset()!=snapshot.nextOffset||
            items.size()>fxfile::isolation::kMaxCompleteModelEntries)return;
         auto const& folder=pane.filesystemPaths[tab];
-        if(folder.size()<3||folder[1]!=L':'||folder[2]!=L'\\')return;
-        const std::wstring root=folder.substr(0,3);
-        if(!SupportsSortableMetadataDrive(::GetDriveTypeW(root.c_str())))return;
+        std::wstring root;
+        if(!fxfile::shelltransfer::transferDriveRoot(folder,root))return;
+        const auto driveType=::GetDriveTypeW(root.c_str());
+        if(!SupportsSortableMetadataDrive(driveType))return;
+        const bool isolatedNetwork=
+            driveType==DRIVE_REMOTE||mOwnedMetadataForceIsolated;
         std::vector<std::wstring> paths{};
         paths.reserve(items.size());
         for(auto const& item:items)
@@ -943,6 +953,7 @@ namespace winrt::FlyExplorer::implementation
         const auto ticket=listState.beginMetadata(route,tab);
         fxfile::previewmetadata::FileMetadataController::Request request{};
         request.side=side;request.tab=tab;request.route=route;request.ticket=ticket;
+        request.isolatedNetwork=isolatedNetwork;
         request.paths=std::move(paths);
         auto dispatch=DispatcherQueue();
         auto weak=get_weak();
@@ -970,6 +981,16 @@ namespace winrt::FlyExplorer::implementation
                        snapshot.residentEndOffset()!=snapshot.nextOffset||
                        snapshot.children.size()!=count)return;
                     auto& state=ui->ActiveWindowTab().fileLists[side];
+                    if(completed.error!=ERROR_SUCCESS){
+                        state.invalidateMetadata();
+                        if(state.sortMode>1)
+                            ui->StatusText().Text(
+                                completed.error==ERROR_TIMEOUT?
+                                L"네트워크 파일 메타데이터 응답 시간이 초과되었습니다.":
+                                L"네트워크 파일 메타데이터를 가져오지 못했습니다.");
+                        ui->FillFiles(side);
+                        return;
+                    }
                     state.metadata=std::move(completed.metadata);
                     ui->FillFiles(side);
                     if(state.sortMode>1)

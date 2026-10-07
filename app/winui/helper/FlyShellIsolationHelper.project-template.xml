@@ -54,6 +54,7 @@
     <ClInclude Include="..\..\..\src\base\shell_navigation_core.h" />
     <ClInclude Include="..\..\..\src\base\shell_transfer_core.h" />
     <ClInclude Include="..\..\..\src\base\file_command_core.h" />
+    <ClInclude Include="..\..\..\src\base\file_metadata_wire.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
 </Project>

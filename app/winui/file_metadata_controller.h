@@ -18,6 +18,7 @@ public:
         std::size_t tab=0;
         std::uint64_t route=0;
         std::uint64_t ticket=0;
+        bool isolatedNetwork=false;
         std::vector<std::wstring> paths{};
     };
     struct Completion final {
@@ -25,6 +26,7 @@ public:
         std::size_t tab=0;
         std::uint64_t route=0;
         std::uint64_t ticket=0;
+        std::uint32_t error=0;
         std::vector<fxfile::previewlist::FileMetadata> metadata{};
     };
     using UiTask=std::function<void()>;

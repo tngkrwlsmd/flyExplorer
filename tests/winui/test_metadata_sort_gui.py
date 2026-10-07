@@ -30,6 +30,7 @@ def main():
     parser.add_argument("--exe",type=Path)
     parser.add_argument("--expect-legacy-fallback",action="store_true")
     parser.add_argument("--owned-sort-mode",type=int,choices=(2,3,4))
+    parser.add_argument("--force-isolated-metadata",action="store_true")
     parser.add_argument("--capture",choices=("none","before","after"),default="none")
     args=parser.parse_args()
     if os.name!="nt":
@@ -80,8 +81,10 @@ def main():
     for key in ("FLY_M23_OWNED_DRAG_TEST","FLY_M23_OWNED_SESSION",
                 "FLY_M22_OWNED_ACTUAL_RECYCLE"):
         env.pop(key,None)
-    if args.owned_sort_mode is not None:
+    if args.owned_sort_mode is not None or args.force_isolated_metadata:
         env["FLY_METADATA_SORT_OWNED_TEST"]="YES"
+    if args.force_isolated_metadata:
+        env["FLY_METADATA_SORT_FORCE_ISOLATED_TEST"]="YES"
 
     from pywinauto import Desktop
     import psutil
@@ -162,13 +165,13 @@ def main():
                 intermediate=expected if step==clicks-1 else {
                     2:6,3:7
                 }[expected]
-                until(lambda:picker.selected_index()==intermediate,
-                      f"sort callback did not record {label} step {step+1}",5)
+                arrow="↓" if intermediate in (1,2,3,5) else "↑"
+                until(lambda:arrow in header.window_text(),
+                      f"sort callback did not update {label} step {step+1}",5)
             arrow="↓" if expected in (1,2,3,5) else "↑"
             until(lambda:arrow in header.window_text(),
                   f"sort header did not show expected direction: {label}",5)
             print("METADATA_SORT_HEADER_ACTION",label,
-                  "picker",picker.selected_index(),
                   "header",repr(header.window_text()),
                   "status",repr(status.window_text()),flush=True)
 
@@ -197,6 +200,8 @@ def main():
                 4:"METADATA_SORT_OVER_1200_TYPE_ASC",
             }[args.owned_sort_mode]
             print(marker,True,flush=True)
+            if args.force_isolated_metadata:
+                print("METADATA_SORT_ISOLATED_HELPER_PASS",True,flush=True)
         else:
             choose_header("LeftSizeSortButton",2,2,"크기 내림차순")
 
@@ -231,6 +236,8 @@ def main():
             print("METADATA_SORT_VISUAL",shot.name,flush=True)
 
         if not args.expect_legacy_fallback and args.owned_sort_mode is None:
+            if args.force_isolated_metadata:
+                print("METADATA_SORT_ISOLATED_HELPER_PASS",True,flush=True)
             choose_header("LeftDateSortButton",3,2,"수정 날짜 내림차순")
             print("METADATA_SORT_DATE_FIRST_ROW",repr(first_row()),flush=True)
             date_rows=[row.window_text() for row in list_view().descendants()
