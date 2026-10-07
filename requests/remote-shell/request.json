@@ -1,11 +1,15 @@
 {
-  "request_id": "unc-network-shell-visual-cleanup-20261007",
-  "expected_main_sha": "5d7dc8c7a98b39ad3a6c80240d7d6f2f995bbfa9",
-  "candidate_sha": "5d7dc8c7a98b39ad3a6c80240d7d6f2f995bbfa9",
-  "logical_unit": "unc-network-shell-visual-cleanup",
-  "request_mode": "diagnostic",
-  "configuration": "none",
-  "validation_plan": [],
+  "request_id": "removable-shell-visuals-20261007-r1",
+  "expected_main_sha": "2d38f480998e522e4cfbe2b8a3ca2fef68ff6637",
+  "candidate_sha": "be480eab52b2071ff80a1ee192fa383f77853616",
+  "logical_unit": "removable-shell-visuals",
+  "request_mode": "validation",
+  "configuration": "Release",
+  "validation_plan": [
+    "release-build",
+    "removable-shell-visual-gui",
+    "removable-shell-visual"
+  ],
   "working_directory": "",
-  "command": "$ErrorActionPreference=\"Stop\"\n$repo=$env:FLYEXPLORER_CANONICAL_CHECKOUT\n$main=\"5d7dc8c7a98b39ad3a6c80240d7d6f2f995bbfa9\"\n$branch=\"work/unc-network-shell-visuals-20261007\"\nSet-Location -LiteralPath $repo\n& git fetch origin main $branch --no-tags --prune\nif($LASTEXITCODE -ne 0){throw \"network visual cleanup fetch failed\"}\nif((& git rev-parse refs/remotes/origin/main).Trim() -ne $main){throw \"main moved before network visual cleanup\"}\nif((& git rev-parse (\"refs/remotes/origin/\"+$branch)).Trim() -ne $main){throw \"network visual work branch is not accepted main\"}\n& git push origin --delete $branch\nif($LASTEXITCODE -ne 0){throw \"network visual work branch delete failed\"}\n& git fetch origin --prune --no-tags\nif($LASTEXITCODE -ne 0){throw \"network visual cleanup prune failed\"}\nif(& git branch -r --list (\"origin/\"+$branch)){throw \"network visual work branch still present after prune\"}\nWrite-Host \"UNC_NETWORK_VISUAL_WORK_BRANCH_CLEANUP=PASS\"\nWrite-Host \"UNC_NETWORK_VISUAL_ACCEPTED_MAIN=$main\""
+  "command": "$ErrorActionPreference=\"Stop\"\n$repo=$env:FLYEXPLORER_CANONICAL_CHECKOUT\n$main=\"2d38f480998e522e4cfbe2b8a3ca2fef68ff6637\"\n$candidate=\"be480eab52b2071ff80a1ee192fa383f77853616\"\n$branch=\"work/removable-shell-visuals-20261007\"\nSet-Location -LiteralPath $repo\n& git fetch origin main $branch --no-tags --prune\nif($LASTEXITCODE -ne 0){throw \"removable visual fetch failed\"}\n$observedMain=(& git rev-parse refs/remotes/origin/main).Trim()\nif($observedMain -ne $main){throw \"main moved before removable visual validation\"}\n$observedCandidate=(& git rev-parse (\"refs/remotes/origin/\"+$branch)).Trim()\nif($observedCandidate -ne $candidate){throw \"removable visual candidate ref mismatch\"}\n$dirty=@(& git status --porcelain=v1)\nif($dirty.Count -ne 0){\n  $dirty | ForEach-Object { Write-Host (\"UNEXPECTED_WORKTREE=\"+$_) }\n  throw \"persistent checkout is not clean\"\n}\n& git switch --detach $candidate\nif($LASTEXITCODE -ne 0){throw \"candidate checkout failed\"}\n& .\\build.bat Release\nif($LASTEXITCODE -ne 0){throw \"canonical Release build failed\"}\n$baseline=Join-Path $repo \"logs\\network-visual\\network-visual-before.bmp\"\n$evidence=Join-Path $repo \"logs\\remote-evidence\"\nNew-Item -ItemType Directory -Force -Path $evidence | Out-Null\nif(Test-Path -LiteralPath $baseline -PathType Leaf){\n  Copy-Item -LiteralPath $baseline -Destination (Join-Path $evidence \"removable-visual-before.bmp\") -Force\n  $hash=(Get-FileHash -Algorithm SHA256 -LiteralPath $baseline).Hash.ToLowerInvariant()\n  Write-Host \"REMOVABLE_VISUAL_BASELINE_REUSED=$hash\"\n}else{\n  Write-Host \"REMOVABLE_VISUAL_BASELINE_REUSED=NOT_AVAILABLE\"\n}\n& python -X utf8 tests\\winui\\test_network_visual_gui.py --configuration Release --capture after --force-removable-detail\nif($LASTEXITCODE -ne 0){throw \"focused removable visual GUI failed\"}\n$after=Join-Path $repo \"logs\\network-visual\\network-visual-after.bmp\"\nif(-not (Test-Path -LiteralPath $after -PathType Leaf)){throw \"removable visual AFTER capture missing\"}\nCopy-Item -LiteralPath $after -Destination (Join-Path $evidence \"removable-visual-after.bmp\") -Force\n$afterHash=(Get-FileHash -Algorithm SHA256 -LiteralPath $after).Hash.ToLowerInvariant()\nWrite-Host \"REMOVABLE_VISUAL_AFTER_SHA256=$afterHash\"\n$physical=@(Get-CimInstance Win32_LogicalDisk -Filter \"DriveType=2\" -ErrorAction SilentlyContinue)\nif($physical.Count -eq 0){\n  Write-Host \"REMOVABLE_VISUAL_PHYSICAL_USB=NOT_RUN_NO_DEVICE\"\n}else{\n  Write-Host \"REMOVABLE_VISUAL_PHYSICAL_USB=NOT_RUN_NO_TEST_OWNERSHIP\"\n}\n& git switch main\nif($LASTEXITCODE -ne 0){throw \"failed to return canonical checkout to main\"}\n& git merge --ff-only origin/main\nif($LASTEXITCODE -ne 0){throw \"failed to fast-forward canonical main checkout\"}\nWrite-Host \"REMOVABLE_SHELL_VISUAL_VALIDATION=PASS\""
 }
