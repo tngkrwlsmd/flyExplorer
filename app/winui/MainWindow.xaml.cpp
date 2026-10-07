@@ -431,6 +431,7 @@ namespace winrt::FlyExplorer::implementation
         InitializeM19();
         InitializePrivateSession();
         InitializeOwnedNetworkVisualCaptureTest();
+        InitializeOwnedShellProviderVisualCaptureTest();
         InitializeOwnedSearchVisualCaptureTest();
     }
     void MainWindow::InitializeOwnedSearchVisualCaptureTest()
@@ -480,6 +481,41 @@ namespace winrt::FlyExplorer::implementation
             ::GetEnvironmentVariableW(
                 L"FLY_REMOVABLE_DETAIL_FORCE_TEST",removableForced,8)==3&&
             !wcscmp(removableForced,L"YES");
+    }
+
+    void MainWindow::InitializeOwnedShellProviderVisualCaptureTest()
+    {
+        wchar_t value[32768]{};
+        const DWORD used=::GetEnvironmentVariableW(
+            L"FLY_SHELL_PROVIDER_VISUAL_CAPTURE_PATH",
+            value,static_cast<DWORD>(std::size(value)));
+        if(!used||used>=std::size(value))return;
+        mOwnedShellProviderVisualCapturePath.assign(value,used);
+    }
+
+    void MainWindow::ScheduleOwnedShellProviderVisualCaptureIfNeeded(int side)
+    {
+        if(mOwnedShellProviderVisualCapturePath.empty()||
+           mOwnedShellProviderVisualTimer||side<0||side>1)return;
+        auto const& pane=ActiveWindowTab().model.panes[side];
+        if(pane.active>=pane.filesystemPaths.size()||
+           !pane.filesystemPaths[pane.active].empty()||
+           !pane.tabs[pane.active].snapshot().folder.valid())return;
+        auto timer=DispatcherQueue().CreateTimer();
+        mOwnedShellProviderVisualTimer=timer;
+        timer.Interval(std::chrono::milliseconds(3200));
+        auto weak=get_weak();
+        timer.Tick([weak](auto const& sender,auto const&){
+            sender.Stop();
+            if(auto ui=weak.get()){
+                ui->mOwnedShellProviderVisualTimer=nullptr;
+                if(ui->mOwnedShellProviderVisualCapturePath.empty())return;
+                auto path=std::move(ui->mOwnedShellProviderVisualCapturePath);
+                ui->mOwnedShellProviderVisualCapturePath.clear();
+                ui->CaptureOwnedRootVisualAsync(std::move(path));
+            }
+        });
+        timer.Start();
     }
 
     void MainWindow::CaptureOwnedNetworkVisualIfReady()
@@ -918,6 +954,7 @@ namespace winrt::FlyExplorer::implementation
                 L"폴더 변경 알림을 반영했습니다.":
                 L"폴더를 불러왔습니다.");
             UpdateWatch(completed.side,true);
+            ScheduleOwnedShellProviderVisualCaptureIfNeeded(completed.side);
         }else RefreshTabs(completed.side);
         continueRestore();
     }

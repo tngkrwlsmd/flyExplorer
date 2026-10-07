@@ -279,9 +279,14 @@ namespace winrt::FlyExplorer::implementation
         void RunOwnedMetadataSortTestIfReady();
         Microsoft::UI::Dispatching::DispatcherQueueTimer
             mOwnedSearchVisualTimer{nullptr};
+        Microsoft::UI::Dispatching::DispatcherQueueTimer
+            mOwnedShellProviderVisualTimer{nullptr};
         std::wstring mOwnedNetworkVisualCapturePath{};
+        std::wstring mOwnedShellProviderVisualCapturePath{};
         void InitializeOwnedSearchVisualCaptureTest();
         void InitializeOwnedNetworkVisualCaptureTest();
+        void InitializeOwnedShellProviderVisualCaptureTest();
+        void ScheduleOwnedShellProviderVisualCaptureIfNeeded(int side);
         void CaptureOwnedNetworkVisualIfReady();
         winrt::fire_and_forget CaptureOwnedRootVisualAsync(
             std::wstring path);
