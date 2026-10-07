@@ -151,7 +151,29 @@ budget: at most 1,024 source items and 1,048,576 aggregate UTF-16 source-path
 units. This replaces the historical 32-item copy/move/recycle/clipboard/drag cap
 while remaining fail-closed above the shared bounds; owned evidence includes a
 real 64-item IFileOperation copy, 64-item CF_HDROP round-trip and 64-item WinUI
-cross-pane copy. Explorer-compatible `Ctrl+Shift+N` is also accepted for
+cross-pane copy.
+
+Copy/Move now accepts ordinary Windows network filesystem roots in addition to
+local fixed/removable roots: mapped `DRIVE_REMOTE` roots are allowed by policy
+and direct `\\server\share\...` paths use the same bounded filesystem
+validation. Extended/device namespaces such as `\\?\` and `\\.\`,
+reparse-point traversal and virtual Shell/provider parsing names remain closed.
+Copy/Move mutation runs through the explicit `--file-transfer` mode of the
+exact-owned `FlyShellIsolationHelper.exe` child. The parent restricts inherited
+handles, assigns the child to a one-process kill-on-close Job Object, forwards
+progress, signals cancellation through an inherited event and may terminate
+only that owned job after the bounded cancellation grace period. Recycle remains
+on the local fixed/removable path with explicit confirmation and recycle-only
+Shell flags; network Recycle is rejected and no permanent-delete fallback was
+added. Remote runs `37553534009` and `37553699165` passed the Debug/Release
+M22 native contracts at 33/33, and final run `37556148841` passed FAST,
+canonical Release build and the focused UIA-only Copy/Move GUI on candidate
+`a08e32788bdcd5d33da31e0c413803f30e548b92`. The current VM exposes no
+test-owned SMB share (the loopback admin-share probe is unavailable), so actual
+SMB/UNC transfer execution and mapped-network-drive execution remain explicit
+environment acceptance gaps rather than claimed runtime evidence.
+
+Explorer-compatible `Ctrl+Shift+N` is also accepted for
 create-folder and routes through the existing
 `fxfile::filecommand::Kind::CreateFolder` command path for the active pane/tab.
 Plain F5 is Explorer-style refresh for the active pane/tab through the existing
