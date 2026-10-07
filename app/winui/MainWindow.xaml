@@ -325,13 +325,13 @@
                 <TextBox x:Name="SearchExtensionBox" Width="135" MaxLength="32"
                          PlaceholderText="확장자 예: .txt"
                          AutomationProperties.Name="파일 확장자 조건"/>
-                <TextBlock Text="깊이 5 · 최대 2,500개 검사 · 결과 100개"
+                <TextBlock Text="깊이 32 · 최대 20,000개 검사 · 결과 1,000개"
                            VerticalAlignment="Center" Opacity="{ThemeResource FlyExplorerSubtleTextOpacity}"/>
             </StackPanel>
             <StackPanel Orientation="Horizontal" Spacing="7">
                 <TextBlock Text="파일 내용:" VerticalAlignment="Center"/>
                 <TextBox x:Name="SearchContentBox" Width="245" MaxLength="256"
-                         PlaceholderText="파일 내용 literal 또는 정규식"
+                         PlaceholderText="파일 내용 일반 텍스트 또는 정규식"
                          AutomationProperties.Name="파일 내용 검색어"/>
                 <CheckBox x:Name="SearchContentRegexBox" IsChecked="False"
                           Content="내용 정규식"
