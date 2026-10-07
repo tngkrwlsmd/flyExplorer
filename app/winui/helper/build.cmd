@@ -1,6 +1,6 @@
 @echo off
 setlocal EnableExtensions
-rem M1.6 independent read-only native helper. No MFC/WinUI product deployment.
+rem Independent disposable Shell helper. No MFC/WinUI product deployment.
 set "CONFIG=%~1"
 if "%CONFIG%"=="" set "CONFIG=Debug"
 if /I not "%CONFIG%"=="Debug" if /I not "%CONFIG%"=="Release" exit /b 2
