@@ -285,21 +285,20 @@ int wmain(int argc,wchar_t** argv) {
         return fxfile::shelltransfer::runIsolatedHelper(
             ::GetStdHandle(STD_INPUT_HANDLE),::GetStdHandle(STD_OUTPUT_HANDLE));
     if(argc==2&&!wcscmp(argv[1],L"--shell-item-visuals")){
-        using namespace fxfile::visualwire;
         auto input=::GetStdHandle(STD_INPUT_HANDLE);
         auto output=::GetStdHandle(STD_OUTPUT_HANDLE);
         if(!input||input==INVALID_HANDLE_VALUE||
            !output||output==INVALID_HANDLE_VALUE)return 90;
-        RequestHeader request{};
+        fxfile::visualwire::RequestHeader request{};
         if(!exactRead(input,&request,sizeof(request))||
-           request.magic!=kMagic||request.version!=kVersion||
-           !request.count||request.count>kMaxItems||
-           request.pixels<kMinPixels||request.pixels>kMaxPixels||
-           request.bodyBytes>kMaxBodyBytes)return 91;
+           request.magic!=fxfile::visualwire::kMagic||request.version!=fxfile::visualwire::kVersion||
+           !request.count||request.count>fxfile::visualwire::kMaxItems||
+           request.pixels<fxfile::visualwire::kMinPixels||request.pixels>fxfile::visualwire::kMaxPixels||
+           request.bodyBytes>fxfile::visualwire::kMaxBodyBytes)return 91;
         std::vector<unsigned char> body(request.bodyBytes);
         if(request.bodyBytes&&!exactRead(
              input,body.data(),body.size()))return 92;
-        if(checksum(body.data(),body.size())!=request.checksum)return 93;
+        if(fxfile::visualwire::checksum(body.data(),body.size())!=request.checksum)return 93;
         std::vector<std::wstring> names;
         names.reserve(request.count);
         size_t cursor=0;
@@ -308,7 +307,7 @@ int wmain(int argc,wchar_t** argv) {
             std::uint32_t units=0;
             std::memcpy(&units,body.data()+cursor,sizeof(units));
             cursor+=sizeof(units);
-            if(units>kMaxNameUnits||
+            if(units>fxfile::visualwire::kMaxNameUnits||
                static_cast<size_t>(units)>
                    (body.size()-cursor)/sizeof(wchar_t))return 94;
             std::wstring name(
@@ -338,7 +337,7 @@ int wmain(int argc,wchar_t** argv) {
                         reinterpret_cast<LPCWSTR>(absolute),0,&info,
                         sizeof(info),flags)){
                         label=info.szTypeName;
-                        if(label.size()>kMaxLabelUnits||
+                        if(label.size()>fxfile::visualwire::kMaxLabelUnits||
                            std::any_of(label.begin(),label.end(),[](wchar_t ch){
                                return ch<32||ch==127;}))
                             label.clear();
@@ -383,8 +382,9 @@ int wmain(int argc,wchar_t** argv) {
             }
             if(icon)::DestroyIcon(icon);
             if(absolute)::CoTaskMemFree(absolute);
-            ResultHeader result{
-                kMagic,kVersion,static_cast<std::uint32_t>(i),
+            fxfile::visualwire::ResultHeader result{
+                fxfile::visualwire::kMagic,fxfile::visualwire::kVersion,
+                static_cast<std::uint32_t>(i),
                 static_cast<std::uint32_t>(label.size()),
                 static_cast<std::uint32_t>(pixels.size())};
             if(!exactWrite(output,&result,sizeof(result))||
