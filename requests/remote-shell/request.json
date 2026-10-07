@@ -1,13 +1,13 @@
 {
-  "request_id": "shell-provider-visual-docs-policy-20261007",
-  "expected_main_sha": "b414e8e3f8eb5e6c771c1f41ba4e632c143b1db4",
+  "request_id": "shell-provider-visual-branch-cleanup-20261007",
+  "expected_main_sha": "108cedb5c17a1229604dc6f7a43fbc7c2eb775ab",
   "candidate_sha": "108cedb5c17a1229604dc6f7a43fbc7c2eb775ab",
-  "logical_unit": "shell-provider-visual-docs-policy",
+  "logical_unit": "shell-provider-visual-branch-cleanup",
   "request_mode": "validation",
   "configuration": "Release",
   "validation_plan": [
-    "docs-policy"
+    "branch-cleanup"
   ],
   "working_directory": "",
-  "command": "$ErrorActionPreference=\"Stop\"\n$repo=$env:FLYEXPLORER_CANONICAL_CHECKOUT\n$main=\"b414e8e3f8eb5e6c771c1f41ba4e632c143b1db4\"\n$candidate=\"108cedb5c17a1229604dc6f7a43fbc7c2eb775ab\"\n$branch=\"work/shell-provider-visuals-20261007\"\nSet-Location -LiteralPath $repo\n& git fetch origin main $branch --no-tags --prune\nif($LASTEXITCODE -ne 0){throw \"provider docs policy fetch failed\"}\nif((& git rev-parse refs/remotes/origin/main).Trim() -ne $main){throw \"main moved before provider docs policy validation\"}\nif((& git rev-parse (\"refs/remotes/origin/\"+$branch)).Trim() -ne $candidate){throw \"provider docs policy candidate mismatch\"}\n$dirty=@(& git status --porcelain=v1 -uall)\nif($dirty.Count -ne 0){\n  $dirty|ForEach-Object{Write-Host (\"UNEXPECTED_WORKTREE=\"+$_)}\n  throw \"persistent checkout is dirty before provider docs policy validation\"\n}\n& git switch --detach $candidate\nif($LASTEXITCODE -ne 0){throw \"provider docs policy checkout failed\"}\n& .\\test.bat policy\nif($LASTEXITCODE -ne 0){throw \"provider docs policy gate failed\"}\n& git diff --check $main $candidate\nif($LASTEXITCODE -ne 0){throw \"provider docs git diff --check failed\"}\n& git switch main\nif($LASTEXITCODE -ne 0){throw \"failed to restore main after provider docs policy\"}\n& git merge --ff-only origin/main\nif($LASTEXITCODE -ne 0){throw \"failed to fast-forward main after provider docs policy\"}\nWrite-Host \"SHELL_PROVIDER_VISUAL_DOCS_POLICY=PASS\""
+  "command": "$ErrorActionPreference=\"Stop\"\n$repo=$env:FLYEXPLORER_CANONICAL_CHECKOUT\n$main=\"108cedb5c17a1229604dc6f7a43fbc7c2eb775ab\"\n$branch=\"work/shell-provider-visuals-20261007\"\nSet-Location -LiteralPath $repo\n& git fetch origin --no-tags --prune\nif($LASTEXITCODE -ne 0){throw \"provider branch cleanup fetch failed\"}\n$observed=(& git rev-parse refs/remotes/origin/main).Trim()\nif($observed -ne $main){throw \"main moved before provider branch cleanup\"}\n$remoteRef=\"refs/remotes/origin/\"+$branch\n& git show-ref --verify --quiet $remoteRef\nif($LASTEXITCODE -ne 0){throw \"provider work branch is absent or unresolved\"}\n$branchHead=(& git rev-parse $remoteRef).Trim()\nif($branchHead -ne $main){throw \"provider work branch does not point at accepted main\"}\n& git merge-base --is-ancestor $branchHead $observed\nif($LASTEXITCODE -ne 0){throw \"provider work branch is not merged into main\"}\n& git push origin --delete $branch\nif($LASTEXITCODE -ne 0){throw \"provider work branch deletion failed\"}\n& git fetch origin --no-tags --prune\nif($LASTEXITCODE -ne 0){throw \"provider branch post-cleanup fetch failed\"}\n& git show-ref --verify --quiet $remoteRef\nif($LASTEXITCODE -eq 0){throw \"provider work branch still exists after deletion\"}\nWrite-Host \"SHELL_PROVIDER_VISUAL_WORK_BRANCH_CLEANUP=PASS\""
 }
