@@ -90,10 +90,12 @@ class FileMetadataControllerContract(unittest.TestCase):
         self.assertIn("request.isolatedNetwork=isolatedNetwork",metadata)
         self.assertIn("driveType==DRIVE_REMOTE||mOwnedMetadataForceIsolated",metadata)
         # Visual type/icon/thumbnail work has its own 1,200-item lifecycle
-        # and network isolation path; it does not reuse metadata results.
+        # and isolated removable/network path; it does not reuse metadata results.
         self.assertIn(
-            "driveType==DRIVE_REMOTE||mOwnedNetworkDetailForce",details)
-        self.assertIn("request.isolatedNetwork=isolatedNetwork",details)
+            "driveType==DRIVE_REMOVABLE||driveType==DRIVE_REMOTE||",details)
+        self.assertIn(
+            "mOwnedNetworkDetailForce||mOwnedRemovableDetailForce",details)
+        self.assertIn("request.isolatedPathAccess=isolatedPathAccess",details)
         self.assertIn("request.folderHints=std::move(folderHints)",details)
 
     def test_network_metadata_uses_exact_owned_bounded_helper(self):
