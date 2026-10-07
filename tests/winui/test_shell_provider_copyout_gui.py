@@ -10,6 +10,7 @@ import time
 import zipfile
 
 from pywinauto import Desktop
+from pywinauto.keyboard import send_keys
 
 from paths import ROOT,app_exe
 from uia_polling import wait_until
@@ -86,18 +87,21 @@ def main():
             time.sleep(.10)
             return True
 
-        # Pin the opposite pane to the owned filesystem destination.
+        # Use the product's accepted F6 split-pane traversal rather than
+        # service-desktop mouse movement. Startup activates the left pane.
         focus_owned()
-        right.click_input()
+        send_keys("{F6}")
+        time.sleep(.25)
         address.set_edit_text(str(destination))
         address.type_keys("{ENTER}",set_foreground=True)
         until(lambda:str(destination).lower() in address.get_value().lower(),
               "right destination folder did not open",18)
 
-        # Open the test-owned ZIP through Windows' built-in Compressed Folder
-        # Shell provider. No namespace registration or user archive is touched.
+        # Return to the left pane and open the test-owned ZIP through Windows'
+        # built-in Compressed Folder Shell provider.
         focus_owned()
-        left.click_input()
+        send_keys("{F6}")
+        time.sleep(.25)
         address.set_edit_text(str(archive))
         address.type_keys("{ENTER}",set_foreground=True)
 
@@ -111,14 +115,14 @@ def main():
         print("SHELL_PROVIDER_COPYOUT_ZIP_ENUMERATION",True,flush=True)
 
         focus_owned()
-        source_row().click_input()
-        until(lambda:MEMBER in source_row().window_text(),
+        source_row().select()
+        until(lambda:source_row().is_selected(),
               "provider source selection was lost",8)
 
         # The same provider source MUST remain move-closed in this unit.
         move=parent.child_window(auto_id="MoveButton")
         focus_owned()
-        move.click_input()
+        move.invoke()
         until(lambda:"복사만 지원" in status.window_text(),
               "provider Move was not rejected by copy-only policy",8)
         assert not (destination/MEMBER).exists()
@@ -127,7 +131,7 @@ def main():
         # Copy-out materializes the provider item into the real opposite folder.
         copy=parent.child_window(auto_id="CopyButton")
         focus_owned()
-        copy.click_input()
+        copy.invoke()
         until(lambda:(destination/MEMBER).is_file(),
               "provider Copy-out did not materialize destination file",24)
         assert (destination/MEMBER).read_text(encoding="utf-8")==PAYLOAD
