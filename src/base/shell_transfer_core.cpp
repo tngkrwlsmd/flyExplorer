@@ -255,4 +255,494 @@ Report execute(Request const& task,Progress& progress) noexcept{
  ::CoUninitialize();
  return report;
 }
+namespace {
+constexpr std::uint32_t kTransferWireMagic=0x31525446u; // FTR1
+constexpr std::uint32_t kTransferWireVersion=1;
+constexpr std::uint32_t kTransferFrameProgress=1;
+constexpr std::uint32_t kTransferFrameComplete=2;
+constexpr std::uint32_t kTransferFlagAborted=1u;
+constexpr std::uint32_t kTransferFlagCollision=2u;
+constexpr std::size_t kTransferWireMaxBody=4u*1024u*1024u;
+constexpr DWORD kTransferPollMs=20;
+constexpr DWORD kTransferCancelGraceMs=1500;
+constexpr DWORD kTransferExitGraceMs=2000;
+
+#pragma pack(push,1)
+struct TransferWireRequest final {
+ std::uint32_t magic=0;
+ std::uint32_t version=0;
+ std::uint32_t bodyBytes=0;
+ std::uint32_t checksum=0;
+ std::uint64_t cancelHandle=0;
+};
+struct TransferWireFrame final {
+ std::uint32_t magic=0;
+ std::uint32_t version=0;
+ std::uint32_t type=0;
+ std::uint32_t value=0;
+ std::uint32_t queued=0;
+ std::uint32_t flags=0;
+};
+#pragma pack(pop)
+static_assert(sizeof(TransferWireRequest)==24,"transfer request wire ABI");
+static_assert(sizeof(TransferWireFrame)==24,"transfer frame wire ABI");
+
+struct Handle final {
+ HANDLE value=nullptr;
+ Handle()=default;
+ explicit Handle(HANDLE handle):value(handle){}
+ ~Handle(){reset();}
+ Handle(Handle const&)=delete;
+ Handle& operator=(Handle const&)=delete;
+ void reset(HANDLE handle=nullptr){
+  if(value&&value!=INVALID_HANDLE_VALUE)::CloseHandle(value);
+  value=handle;
+ }
+ bool valid() const noexcept{return value&&value!=INVALID_HANDLE_VALUE;}
+};
+
+std::uint32_t transferChecksum(void const* data,std::size_t size) noexcept{
+ auto const* bytes=static_cast<unsigned char const*>(data);
+ std::uint32_t hash=2166136261u;
+ for(std::size_t i=0;i<size;++i)hash=(hash^bytes[i])*16777619u;
+ return hash;
+}
+bool writeAll(HANDLE handle,void const* data,std::size_t bytes) noexcept{
+ auto const* current=static_cast<unsigned char const*>(data);
+ while(bytes){
+  const auto chunk=static_cast<DWORD>((std::min)(bytes,std::size_t{65536}));
+  DWORD written=0;
+  if(!::WriteFile(handle,current,chunk,&written,nullptr)||!written)return false;
+  current+=written;bytes-=written;
+ }
+ return true;
+}
+bool readAll(HANDLE handle,void* data,std::size_t bytes) noexcept{
+ auto* current=static_cast<unsigned char*>(data);
+ while(bytes){
+  const auto chunk=static_cast<DWORD>((std::min)(bytes,std::size_t{65536}));
+  DWORD got=0;
+  if(!::ReadFile(handle,current,chunk,&got,nullptr)||!got)return false;
+  current+=got;bytes-=got;
+ }
+ return true;
+}
+bool appendBytes(std::vector<unsigned char>& body,
+                 void const* data,std::size_t bytes){
+ if(bytes>kTransferWireMaxBody||body.size()>kTransferWireMaxBody-bytes)
+  return false;
+ auto const* begin=static_cast<unsigned char const*>(data);
+ body.insert(body.end(),begin,begin+bytes);
+ return true;
+}
+bool appendU32(std::vector<unsigned char>& body,std::uint32_t value){
+ return appendBytes(body,&value,sizeof(value));
+}
+bool appendString(std::vector<unsigned char>& body,
+                  std::wstring const& value,std::size_t maximum){
+ if(value.size()>maximum||
+    !appendU32(body,static_cast<std::uint32_t>(value.size())))return false;
+ return value.empty()||
+        appendBytes(body,value.data(),value.size()*sizeof(wchar_t));
+}
+bool serializeTransfer(Request const& task,
+                       TransferWireRequest& head,
+                       std::vector<unsigned char>& body) noexcept{
+ try{
+  body.clear();
+  if((task.kind!=Kind::Copy&&task.kind!=Kind::Move)||
+     task.sources.empty()||task.sources.size()>kMaxItems||
+     task.sourceParent.empty()||task.sourceParent.size()>32000||
+     task.destination.empty()||task.destination.size()>32000||
+     (task.collision!=Collision::Reject&&task.collision!=Collision::KeepBoth))
+   return false;
+  std::size_t sourceUnits=0;
+  for(auto const& source:task.sources){
+   if(source.empty()||source.size()>32000||
+      source.size()+1>kMaxSourcePathUnits-sourceUnits)return false;
+   sourceUnits+=source.size()+1;
+  }
+  if(!appendU32(body,static_cast<std::uint32_t>(task.kind))||
+     !appendU32(body,static_cast<std::uint32_t>(task.collision))||
+     !appendString(body,task.sourceParent,32000)||
+     !appendString(body,task.destination,32000)||
+     !appendU32(body,static_cast<std::uint32_t>(task.sources.size())))
+   return false;
+  for(auto const& source:task.sources)
+   if(!appendString(body,source,32000))return false;
+  head.magic=kTransferWireMagic;
+  head.version=kTransferWireVersion;
+  head.bodyBytes=static_cast<std::uint32_t>(body.size());
+  head.checksum=transferChecksum(body.data(),body.size());
+  return true;
+ }catch(...){body.clear();return false;}
+}
+struct WireReader final {
+ std::vector<unsigned char> const& body;
+ std::size_t offset=0;
+ bool valid=true;
+ std::uint32_t u32(){
+  if(!valid||body.size()-offset<sizeof(std::uint32_t)){
+   valid=false;return 0;
+  }
+  std::uint32_t value=0;
+  std::memcpy(&value,body.data()+offset,sizeof(value));
+  offset+=sizeof(value);
+  return value;
+ }
+ std::wstring string(std::size_t maximum){
+  const auto units=u32();
+  if(!valid||units>maximum||
+     static_cast<std::size_t>(units)>(body.size()-offset)/sizeof(wchar_t)){
+   valid=false;return {};
+  }
+  std::wstring value(units,L'\0');
+  if(units)std::memcpy(value.data(),body.data()+offset,
+                       static_cast<std::size_t>(units)*sizeof(wchar_t));
+  offset+=static_cast<std::size_t>(units)*sizeof(wchar_t);
+  if(value.find(L'\0')!=std::wstring::npos)valid=false;
+  return value;
+ }
+};
+bool parseTransfer(std::vector<unsigned char> const& body,
+                   Request& task) noexcept{
+ try{
+  WireReader reader{body};
+  const auto kind=reader.u32();
+  const auto collision=reader.u32();
+  if(kind>static_cast<std::uint32_t>(Kind::Move)||
+     collision>static_cast<std::uint32_t>(Collision::KeepBoth))
+   return false;
+  task=Request{};
+  task.kind=static_cast<Kind>(kind);
+  task.collision=static_cast<Collision>(collision);
+  if(task.kind!=Kind::Copy&&task.kind!=Kind::Move)return false;
+  task.sourceParent=reader.string(32000);
+  task.destination=reader.string(32000);
+  const auto count=reader.u32();
+  if(!reader.valid||task.sourceParent.empty()||task.destination.empty()||
+     !count||count>kMaxItems)return false;
+  std::size_t sourceUnits=0;
+  task.sources.reserve(count);
+  for(std::uint32_t i=0;i<count;++i){
+   auto source=reader.string(32000);
+   if(!reader.valid||source.empty()||
+      source.size()+1>kMaxSourcePathUnits-sourceUnits)return false;
+   sourceUnits+=source.size()+1;
+   task.sources.push_back(std::move(source));
+  }
+  return reader.valid&&reader.offset==body.size();
+ }catch(...){task=Request{};return false;}
+}
+bool transferHelperPath(std::wstring& result) noexcept{
+ result.clear();
+ try{
+  std::array<wchar_t,32768> module{};
+  const DWORD length=::GetModuleFileNameW(
+      nullptr,module.data(),static_cast<DWORD>(module.size()));
+  if(!length||length>=module.size())return false;
+  auto helper=fs::path(std::wstring(module.data(),length)).parent_path()/
+              L"FlyShellIsolationHelper.exe";
+  const auto flags=::GetFileAttributesW(helper.c_str());
+  if(flags==INVALID_FILE_ATTRIBUTES||(flags&FILE_ATTRIBUTE_DIRECTORY))
+   return false;
+  result=helper.native();
+  return true;
+ }catch(...){return false;}
+}
+Report canceledReport() noexcept{
+ Report result{};
+ result.error=ERROR_CANCELLED;
+ result.aborted=true;
+ return result;
+}
+} // namespace
+
+Report executeIsolated(Request const& task,Progress& progress) noexcept{
+ Report result{};
+ result.error=ERROR_INVALID_PARAMETER;
+ try{
+  if(task.kind!=Kind::Copy&&task.kind!=Kind::Move)return result;
+  if(progress.cancel.load(std::memory_order_relaxed))return canceledReport();
+
+  TransferWireRequest request{};
+  std::vector<unsigned char> body;
+  if(!serializeTransfer(task,request,body))return result;
+
+  std::wstring helper;
+  if(!transferHelperPath(helper)){
+   result.error=ERROR_FILE_NOT_FOUND;
+   return result;
+  }
+
+  SECURITY_ATTRIBUTES inheritable{
+      sizeof(SECURITY_ATTRIBUTES),nullptr,TRUE};
+  HANDLE childInputRaw=nullptr,hostInputRaw=nullptr;
+  HANDLE hostOutputRaw=nullptr,childOutputRaw=nullptr;
+  if(!::CreatePipe(&childInputRaw,&hostInputRaw,&inheritable,131072)){
+   result.error=::GetLastError();return result;
+  }
+  Handle childInput(childInputRaw),hostInput(hostInputRaw);
+  if(!::SetHandleInformation(hostInput.value,HANDLE_FLAG_INHERIT,0)){
+   result.error=::GetLastError();return result;
+  }
+  if(!::CreatePipe(&hostOutputRaw,&childOutputRaw,&inheritable,131072)){
+   result.error=::GetLastError();return result;
+  }
+  Handle hostOutput(hostOutputRaw),childOutput(childOutputRaw);
+  if(!::SetHandleInformation(hostOutput.value,HANDLE_FLAG_INHERIT,0)){
+   result.error=::GetLastError();return result;
+  }
+  Handle childError(::CreateFileW(
+      L"NUL",GENERIC_WRITE,FILE_SHARE_READ|FILE_SHARE_WRITE,
+      &inheritable,OPEN_EXISTING,FILE_ATTRIBUTE_NORMAL,nullptr));
+  if(!childError.valid()){
+   result.error=::GetLastError();return result;
+  }
+  Handle cancelEvent(::CreateEventW(&inheritable,TRUE,FALSE,nullptr));
+  if(!cancelEvent.valid()){
+   result.error=::GetLastError();return result;
+  }
+  request.cancelHandle=static_cast<std::uint64_t>(
+      reinterpret_cast<std::uintptr_t>(cancelEvent.value));
+
+  SIZE_T attributeBytes=0;
+  ::InitializeProcThreadAttributeList(nullptr,1,0,&attributeBytes);
+  if(!attributeBytes){
+   result.error=ERROR_INVALID_PARAMETER;return result;
+  }
+  std::vector<unsigned char> attributeStorage(attributeBytes);
+  auto* attributes=reinterpret_cast<LPPROC_THREAD_ATTRIBUTE_LIST>(
+      attributeStorage.data());
+  if(!::InitializeProcThreadAttributeList(
+      attributes,1,0,&attributeBytes)){
+   result.error=::GetLastError();return result;
+  }
+  const HANDLE inherited[]={
+      childInput.value,childOutput.value,childError.value,cancelEvent.value};
+  const bool handlesReady=::UpdateProcThreadAttribute(
+      attributes,0,PROC_THREAD_ATTRIBUTE_HANDLE_LIST,
+      const_cast<HANDLE*>(inherited),sizeof(inherited),nullptr,nullptr)!=FALSE;
+  if(!handlesReady){
+   result.error=::GetLastError();
+   ::DeleteProcThreadAttributeList(attributes);
+   return result;
+  }
+
+  STARTUPINFOEXW startup{};
+  startup.StartupInfo.cb=sizeof(startup);
+  startup.StartupInfo.dwFlags=STARTF_USESTDHANDLES;
+  startup.StartupInfo.hStdInput=childInput.value;
+  startup.StartupInfo.hStdOutput=childOutput.value;
+  startup.StartupInfo.hStdError=childError.value;
+  startup.lpAttributeList=attributes;
+  std::wstring command=L"\""+helper+L"\" --file-transfer";
+  std::vector<wchar_t> mutableCommand(command.begin(),command.end());
+  mutableCommand.push_back(0);
+  PROCESS_INFORMATION info{};
+  const BOOL created=::CreateProcessW(
+      helper.c_str(),mutableCommand.data(),nullptr,nullptr,TRUE,
+      CREATE_NO_WINDOW|CREATE_SUSPENDED|EXTENDED_STARTUPINFO_PRESENT,
+      nullptr,fs::path(helper).parent_path().c_str(),
+      &startup.StartupInfo,&info);
+  const DWORD createError=::GetLastError();
+  ::DeleteProcThreadAttributeList(attributes);
+  if(!created){
+   result.error=createError;return result;
+  }
+  Handle process(info.hProcess),thread(info.hThread);
+  Handle job(::CreateJobObjectW(nullptr,nullptr));
+  if(!job.valid()){
+   result.error=::GetLastError();
+   ::TerminateProcess(process.value,result.error);
+   ::WaitForSingleObject(process.value,kTransferExitGraceMs);
+   return result;
+  }
+  JOBOBJECT_EXTENDED_LIMIT_INFORMATION limits{};
+  limits.BasicLimitInformation.LimitFlags=
+      JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE|JOB_OBJECT_LIMIT_ACTIVE_PROCESS;
+  limits.BasicLimitInformation.ActiveProcessLimit=1;
+  if(!::SetInformationJobObject(
+         job.value,JobObjectExtendedLimitInformation,&limits,sizeof(limits))||
+     !::AssignProcessToJobObject(job.value,process.value)){
+   result.error=::GetLastError();
+   ::TerminateProcess(process.value,result.error);
+   ::WaitForSingleObject(process.value,kTransferExitGraceMs);
+   return result;
+  }
+  if(::ResumeThread(thread.value)==DWORD(-1)){
+   result.error=::GetLastError();
+   ::TerminateJobObject(job.value,result.error);
+   ::WaitForSingleObject(process.value,kTransferExitGraceMs);
+   return result;
+  }
+  thread.reset();
+  childInput.reset();
+  childOutput.reset();
+  childError.reset();
+
+  if(!writeAll(hostInput.value,&request,sizeof(request))||
+     (!body.empty()&&!writeAll(hostInput.value,body.data(),body.size()))){
+   result.error=ERROR_WRITE_FAULT;
+   ::TerminateJobObject(job.value,result.error);
+   ::WaitForSingleObject(process.value,kTransferExitGraceMs);
+   return result;
+  }
+  hostInput.reset();
+
+  bool cancelSignaled=false;
+  ULONGLONG cancelStarted=0;
+  bool completed=false;
+  for(;;){
+   if(progress.cancel.load(std::memory_order_relaxed)&&!cancelSignaled){
+    ::SetEvent(cancelEvent.value);
+    cancelStarted=::GetTickCount64();
+    cancelSignaled=true;
+   }
+   if(cancelSignaled&&
+      ::GetTickCount64()-cancelStarted>=kTransferCancelGraceMs&&
+      ::WaitForSingleObject(process.value,0)!=WAIT_OBJECT_0){
+    ::TerminateJobObject(job.value,ERROR_CANCELLED);
+    ::WaitForSingleObject(process.value,kTransferExitGraceMs);
+    return canceledReport();
+   }
+
+   DWORD available=0;
+   if(!::PeekNamedPipe(hostOutput.value,nullptr,0,nullptr,&available,nullptr)){
+    if(::WaitForSingleObject(process.value,0)==WAIT_OBJECT_0)break;
+    result.error=::GetLastError();
+    ::TerminateJobObject(job.value,result.error);
+    ::WaitForSingleObject(process.value,kTransferExitGraceMs);
+    return result;
+   }
+   if(available>=sizeof(TransferWireFrame)){
+    TransferWireFrame frame{};
+    if(!readAll(hostOutput.value,&frame,sizeof(frame))||
+       frame.magic!=kTransferWireMagic||
+       frame.version!=kTransferWireVersion){
+     result.error=ERROR_INVALID_DATA;
+     ::TerminateJobObject(job.value,result.error);
+     ::WaitForSingleObject(process.value,kTransferExitGraceMs);
+     return result;
+    }
+    if(frame.type==kTransferFrameProgress){
+     if(frame.value>100||frame.queued||frame.flags){
+      result.error=ERROR_INVALID_DATA;
+      ::TerminateJobObject(job.value,result.error);
+      ::WaitForSingleObject(process.value,kTransferExitGraceMs);
+      return result;
+     }
+     progress.percent.store(frame.value,std::memory_order_relaxed);
+    }else if(frame.type==kTransferFrameComplete){
+     result.error=frame.value;
+     result.queued=frame.queued;
+     result.aborted=(frame.flags&kTransferFlagAborted)!=0;
+     if(frame.flags&~(kTransferFlagAborted|kTransferFlagCollision)){
+      result.error=ERROR_INVALID_DATA;
+      ::TerminateJobObject(job.value,result.error);
+      ::WaitForSingleObject(process.value,kTransferExitGraceMs);
+      return result;
+     }
+     if(frame.flags&kTransferFlagCollision)result.collisions.emplace_back();
+     completed=true;
+     break;
+    }else{
+     result.error=ERROR_INVALID_DATA;
+     ::TerminateJobObject(job.value,result.error);
+     ::WaitForSingleObject(process.value,kTransferExitGraceMs);
+     return result;
+    }
+   }else if(::WaitForSingleObject(process.value,0)==WAIT_OBJECT_0){
+    break;
+   }else{
+    ::Sleep(kTransferPollMs);
+   }
+  }
+
+  if(!completed){
+   if(cancelSignaled)return canceledReport();
+   result.error=ERROR_GEN_FAILURE;
+   return result;
+  }
+  const auto exited=::WaitForSingleObject(process.value,kTransferExitGraceMs);
+  if(exited!=WAIT_OBJECT_0){
+   ::TerminateJobObject(job.value,ERROR_TIMEOUT);
+   ::WaitForSingleObject(process.value,kTransferExitGraceMs);
+   result.error=ERROR_TIMEOUT;
+   result.aborted=true;
+   return result;
+  }
+  DWORD exitCode=ERROR_GEN_FAILURE;
+  if(!::GetExitCodeProcess(process.value,&exitCode)||exitCode!=0){
+   if(result.error==ERROR_SUCCESS)result.error=ERROR_GEN_FAILURE;
+   return result;
+  }
+  if(result.error==ERROR_SUCCESS)
+   progress.percent.store(100,std::memory_order_relaxed);
+  return result;
+ }catch(...){
+  result.error=ERROR_INVALID_PARAMETER;
+  return result;
+ }
+}
+
+int runIsolatedHelper(HANDLE input,HANDLE output) noexcept{
+ try{
+  if(!input||input==INVALID_HANDLE_VALUE||
+     !output||output==INVALID_HANDLE_VALUE)return 70;
+  TransferWireRequest head{};
+  if(!readAll(input,&head,sizeof(head))||
+     head.magic!=kTransferWireMagic||
+     head.version!=kTransferWireVersion||
+     head.bodyBytes>kTransferWireMaxBody)return 71;
+  std::vector<unsigned char> body(head.bodyBytes);
+  if(head.bodyBytes&&!readAll(input,body.data(),body.size()))return 72;
+  if(transferChecksum(body.data(),body.size())!=head.checksum)return 73;
+  Request task{};
+  if(!parseTransfer(body,task))return 74;
+  auto cancelEvent=reinterpret_cast<HANDLE>(
+      static_cast<std::uintptr_t>(head.cancelHandle));
+  if(!cancelEvent||cancelEvent==INVALID_HANDLE_VALUE||
+     ::WaitForSingleObject(cancelEvent,0)==WAIT_FAILED)return 75;
+
+  Progress progress;
+  std::atomic_bool done{false};
+  std::atomic_bool wireOk{true};
+  std::thread reporter([&]{
+   std::uint32_t last=(std::numeric_limits<std::uint32_t>::max)();
+   while(!done.load(std::memory_order_acquire)){
+    if(::WaitForSingleObject(cancelEvent,0)==WAIT_OBJECT_0)
+     progress.cancel.store(true,std::memory_order_relaxed);
+    const auto current=(std::min)(
+        progress.percent.load(std::memory_order_relaxed),100u);
+    if(current!=last){
+     TransferWireFrame frame{
+       kTransferWireMagic,kTransferWireVersion,kTransferFrameProgress,
+       current,0,0};
+     if(!writeAll(output,&frame,sizeof(frame))){
+      wireOk.store(false,std::memory_order_relaxed);
+      progress.cancel.store(true,std::memory_order_relaxed);
+      break;
+     }
+     last=current;
+    }
+    ::Sleep(kTransferPollMs);
+   }
+   if(::WaitForSingleObject(cancelEvent,0)==WAIT_OBJECT_0)
+    progress.cancel.store(true,std::memory_order_relaxed);
+  });
+  const auto report=execute(task,progress);
+  done.store(true,std::memory_order_release);
+  reporter.join();
+  if(!wireOk.load(std::memory_order_relaxed))return 76;
+  TransferWireFrame frame{
+    kTransferWireMagic,kTransferWireVersion,kTransferFrameComplete,
+    report.error,report.queued,
+    (report.aborted?kTransferFlagAborted:0u)|
+    (!report.collisions.empty()?kTransferFlagCollision:0u)};
+  if(!writeAll(output,&frame,sizeof(frame)))return 77;
+  return 0;
+ }catch(...){return 78;}
+}
+
 } // namespace fxfile::shelltransfer
