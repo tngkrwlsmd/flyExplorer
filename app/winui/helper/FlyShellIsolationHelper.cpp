@@ -2,6 +2,7 @@
 // Fault boundary ONLY: inherits user token; not a security sandbox.
 #include "../../../src/base/shell_navigation_core.h"
 #include "../../../src/base/shell_isolation_wire.h"
+#include "../../../src/base/shell_transfer_core.h"
 #include <windows.h>
 #include <shellapi.h>
 #include <shlobj.h>
@@ -277,6 +278,9 @@ int inspectOrShowContext(bool inspect){
 }
 } // namespace
 int wmain(int argc,wchar_t** argv) {
+    if(argc==2&&!wcscmp(argv[1],L"--file-transfer"))
+        return fxfile::shelltransfer::runIsolatedHelper(
+            ::GetStdHandle(STD_INPUT_HANDLE),::GetStdHandle(STD_OUTPUT_HANDLE));
     // Only isolated regression launches set this environment & argument.
     if(argc==2&&!wcscmp(argv[1],L"--test-block")){
         wchar_t flag[16]{};
