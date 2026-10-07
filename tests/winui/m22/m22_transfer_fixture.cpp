@@ -32,6 +32,16 @@ int wmain(int count,wchar_t**args){
       "copy_accepts_remote_drive");
  test(supportsDriveType(Kind::Move,DRIVE_REMOTE),
       "move_accepts_remote_drive");
+ std::wstring parsedRoot;
+ test(transferDriveRoot(L"\\\\server\\share\\folder",parsedRoot)&&
+      parsedRoot==L"\\\\server\\share\\",
+      "parse_standard_unc_share_root");
+ test(transferDriveRoot(L"Z:\\folder",parsedRoot)&&parsedRoot==L"Z:\\",
+      "parse_drive_letter_root");
+ test(!transferDriveRoot(
+        L"\\\\?\\UNC\\server\\share\\folder",parsedRoot)&&
+      !transferDriveRoot(L"\\\\.\\C:\\folder",parsedRoot),
+      "reject_extended_and_device_roots");
  auto put=[](fs::path const&p,std::string const&s){
   std::ofstream f(p,std::ios::binary);f<<s;
  };
