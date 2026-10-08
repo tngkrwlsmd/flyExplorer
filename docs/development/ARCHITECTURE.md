@@ -232,9 +232,28 @@ blobs (32 KiB each, 1 MiB total) while retaining the common 1,024-item and
 the core validates PIDL framing, immediate parent/child relationship and
 duplicate identity, creates `IShellItem` values from the PIDLs, queries
 `SFGAO_CANCOPY`, obtains a materializable parent-relative leaf for collision
-checking and queues `IFileOperation::CopyItem`. Provider Move, provider
-destination/Copy-in and provider Recycle/Delete remain fail-closed. Extended/
+checking and queues `IFileOperation::CopyItem`. Provider Move and
+Recycle/Delete remain fail-closed, as does provider-to-provider Copy. Extended/
 device namespaces remain fail-closed for filesystem paths.
+
+A separate `DestinationMode::ShellProvider` now supports **Copy-in from a
+filesystem source to Windows' built-in Pictures Library only**. MainWindow
+copies the currently accepted destination snapshot's absolute PIDL bytes
+(no COM interface crosses the process boundary); private transfer wire v3
+keeps source and destination modes independent. Inside the exact-owned
+`--file-transfer` COM STA helper, the destination PIDL must equal
+`FOLDERID_PicturesLibrary`. The helper then loads `IShellLibrary`, resolves
+the effective default save folder and requires its safe, non-reparse filesystem
+path to equal `FOLDERID_Pictures`. Only that concrete, revalidated destination
+receives `IFileOperation::CopyItem` after leaf collision checks. Existing
+source path/direct-child checks, Reject/explicit KeepBoth handling, 1,024-source
+and 1 Mi UTF-16 identity bounds, 32 KiB PIDL bound, inherited-handle allowlist,
+one-process Job Object, cancellation, progress and stale-route rejection
+remain in force. Other provider destinations, custom library save folders,
+provider Move/Recycle/Delete and provider-to-provider Copy are unsupported.
+Focused real two-pane Pictures Library Copy-in acceptance passed on product/
+test SHA `dfc8703394e8c750beaaaa7ee9cea9d81ddeba2c`, run `37705656407`;
+arbitrary third-party provider writes are not certified.
 
 The subsequent MainWindow post-extraction responsibility audit is also complete.
 Most remaining MainWindow work is presentation/composition. The audit first
