@@ -1241,8 +1241,21 @@ Current source and the last parity evidence still show these limits:
   non-backtracking project-owned matcher capped at 1,024 states and 4,194,304
   state visits per decoded file; lookaround/backreferences are unsupported and
   rejected before worker start. Presets write schema 4 and continue to read
-  schemas 1-3. Other encodings, indexed/provider/property search and traversal
-  beyond the current 20,000/depth-32 safety bounds are not implemented.
+  schemas 1-3. Windows Search indexed filename search is an explicit second
+  mode for case-insensitive literal file names on non-reparse fixed-drive
+  filesystem scopes. It queries SystemIndex through the exact-owned
+  FlyShellIsolationHelper process, caps returned paths at 1,000 and total
+  wire data at 1 MiB, rejects indexed-mode regex/contents/metadata options,
+  and never silently falls back to filesystem traversal. Cancellation,
+  12-second deadline, one-process kill-on-close Job Object, stale-result and
+  route-token rejection remain active. An unindexed scope can legitimately
+  return zero entries; an unavailable provider or timeout has a distinct
+  status. Indexed filename GUI acceptance: Windows task 37712395449,
+  source ef6618cd478a6cadad56eb3bdce026b7e9541d02, positive result
+  count 1 against independently queried native index oracle, source
+  unchanged, normal process exit. Property/provider indexed search and
+  traversal beyond the current 20,000/depth-32 safety bounds remain
+  unsupported. Visual screenshot review is a separate outstanding gate.
 - Persistent pane filter/mask rule sets are implemented with up to 20 named
   private presets, case-insensitive wildcard masks and legacy substring
   compatibility. Pane filters remain name/mask based; historical per-rule
