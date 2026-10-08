@@ -1,14 +1,13 @@
 {
-  "request_id": "search-v3-indexed-build-20261008",
+  "request_id": "uad-release-v063-20261008",
   "expected_main_sha": "d0011a69f6bc209931eeb0d60fb9d278e9ce7c89",
-  "candidate_sha": "6609ab261a9068a3efb77b635eab2e2270007620",
-  "logical_unit": "search-v3-indexed-filename",
+  "candidate_sha": "d0011a69f6bc209931eeb0d60fb9d278e9ce7c89",
+  "logical_unit": "uad-release-v063",
   "request_mode": "validation",
   "configuration": "Release",
   "validation_plan": [
-    "release-build",
-    "indexed-search-contract"
+    "release-tag"
   ],
   "working_directory": "",
-  "command": "$ErrorActionPreference=\"Stop\"\n$repo=$env:FLYEXPLORER_CANONICAL_CHECKOUT\n$main=\"d0011a69f6bc209931eeb0d60fb9d278e9ce7c89\"\n$candidate=\"6609ab261a9068a3efb77b635eab2e2270007620\"\nSet-Location -LiteralPath $repo\n& git fetch origin main work/search-v3-indexed-filename-20261008 --no-tags --prune\nif($LASTEXITCODE -ne 0){throw \"fetch failed\"}\nif((& git rev-parse refs/remotes/origin/main).Trim() -ne $main){throw \"main moved\"}\nif((& git rev-parse refs/remotes/origin/work/search-v3-indexed-filename-20261008).Trim() -ne $candidate){throw \"candidate differs\"}\n$dirty=@(& git status --porcelain=v1 -uall)\nif($dirty.Count -ne 0){$dirty|%{Write-Host (\"UNEXPECTED_WORKTREE=\"+$_)};throw \"canonical checkout dirty\"}\ntry {\n & git switch --detach $candidate\n if($LASTEXITCODE -ne 0){throw \"checkout failed\"}\n & python -X utf8 tests\\winui\\test_indexed_search_contract.py\n if($LASTEXITCODE -ne 0){throw \"indexed source contract failed\"}\n & .\\build.bat Release\n if($LASTEXITCODE -ne 0){throw \"indexed search Release build failed\"}\n Write-Host \"INDEXED_SEARCH_BUILD=PASS\"\n} finally {\n & git switch main\n if($LASTEXITCODE -ne 0){throw \"restore main failed\"}\n & git merge --ff-only origin/main\n if($LASTEXITCODE -ne 0){throw \"restore main ff failed\"}\n}"
+  "command": "$ErrorActionPreference='Stop'\n$env:GIT_TERMINAL_PROMPT='0'\n$env:GH_PROMPT_DISABLED='1'\nRemove-Item Env:GH_TOKEN -ErrorAction SilentlyContinue\n$remote='https://github.com/tngkrwlsmd/universal-agent-docs.git'\n$source='b8909a5550168d38e6abbe8df9b504f0759f660c'\n$tag='v0.6.3'\n$temp=Join-Path $env:TEMP ('uad-release-'+[Guid]::NewGuid().ToString('N'))\nNew-Item -ItemType Directory -Path $temp -Force | Out-Null\ntry {\n  & git clone --quiet --depth 1 --branch main $remote $temp\n  if($LASTEXITCODE -ne 0){throw 'B clone failed'}\n  $head=(& git -C $temp rev-parse HEAD).Trim()\n  if($LASTEXITCODE -ne 0 -or $head -ne $source){throw 'B main SHA mismatch'}\n  $refs=@(& git -C $temp ls-remote --tags origin \"refs/tags/$tag\")\n  if($LASTEXITCODE -ne 0){throw 'B tag existence check failed'}\n  if($refs.Count -ne 0){throw 'B tag already exists, refuse to move it'}\n  Write-Output ('B_TAG_PREFLIGHT=PASS SOURCE='+$head)\n  & git -C $temp push origin ($source+':refs/tags/'+$tag)\n  if($LASTEXITCODE -ne 0){throw 'B_TAG_PUSH=FAILED: check tag state before any retry'}\n  $confirm=@(& git -C $temp ls-remote --tags origin \"refs/tags/$tag\")\n  if($LASTEXITCODE -ne 0 -or $confirm.Count -ne 1){throw 'B tag postcondition query failed'}\n  $remoteSha=($confirm[0] -split '\\s+')[0]\n  if($remoteSha -ne $source){throw 'B tag points to unexpected SHA'}\n  Write-Output ('B_TAG_PUSH=PASS '+$tag+'@'+$remoteSha)\n} finally { Remove-Item -LiteralPath $temp -Recurse -Force -ErrorAction SilentlyContinue }"
 }
