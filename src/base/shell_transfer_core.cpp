@@ -401,6 +401,17 @@ Report verifyPicturesLibraryCopyIn(
   std::wstring targetPath(raw);
   ::CoTaskMemFree(raw);
   if(!safeFilesystemFolder(fs::path(targetPath),Kind::Copy))return report;
+  PWSTR pictureRaw=nullptr;
+  if(FAILED(::SHGetKnownFolderPath(
+       FOLDERID_Pictures,0,nullptr,&pictureRaw))||!pictureRaw){
+   if(pictureRaw)::CoTaskMemFree(pictureRaw);
+   return report;
+  }
+  std::wstring knownPictures(pictureRaw);
+  ::CoTaskMemFree(pictureRaw);
+  // Never silently write into a redirected/custom library save location
+  // until that location has its own acceptance and collision contract.
+  if(!sameParent(fs::path(targetPath),fs::path(knownPictures)))return report;
   // Verify the effective target, not the library namespace, for collisions.
   for(auto const& source:request.sources){
    const auto name=fs::path(source).filename().native();
