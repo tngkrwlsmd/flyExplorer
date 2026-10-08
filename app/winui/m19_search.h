@@ -60,6 +60,7 @@ struct SearchResults {
     std::wstring term;
     bool valid=false,truncated=false,canceled=false,invalidPattern=false;
     bool contentLimited=false,contentRegexLimited=false;
+    bool indexUnavailable=false,indexTimedOut=false,indexOnly=false;
     bool resultLimited=false,traversalLimited=false;
     size_t count=0;
     size_t visited=0;
