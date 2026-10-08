@@ -342,7 +342,7 @@ int runIndexedFilenameSearch(HANDLE output,
     std::wstring url=L"file:"+scope;
     std::replace(url.begin(),url.end(),L'\\',L'/');
     if(url.back()!=L'/')url+=L'/';
-    const auto sql=L"SELECT TOP 1001 System.ItemPathDisplay FROM SystemIndex "
+    const auto sql=L"SELECT TOP 1001 System.ItemUrl FROM SystemIndex "
         L"WHERE SCOPE='"+sqlQuoted(url)+L"' AND System.FileName LIKE '%"+
         sqlQuoted(term)+L"%'";
     ATL::CDataSource data;
@@ -361,9 +361,22 @@ int runIndexedFilenameSearch(HANDLE output,
        for(hr=rows.MoveFirst();hr==S_OK;hr=rows.MoveNext()){
         const wchar_t* raw=rows.GetString(1);
         if(!raw)continue;
-        std::wstring result(raw);
-        if(result.size()>fxfile::indexwire::kMaxPathUnits||!insideScope(scope,result))
+        // ItemPathDisplay is a friendly presentation path and may hide
+        // extensions. ItemUrl carries the indexed filesystem identity.
+        // Convert only local drive file: URLs; never materialize provider,
+        // network or extended-device locations from an indexed row.
+        std::wstring url(raw);
+        if(url.size()<8||::_wcsnicmp(url.c_str(),L"file:",5)!=0)
          continue;
+        url.erase(0,5);
+        if(url.rfind(L"///",0)==0)url.erase(0,3);
+        else if(!url.empty()&&url.front()==L'/')url.erase(0,1);
+        std::replace(url.begin(),url.end(),L'/',L'\\');
+        if(!fxfile::indexwire::validScope(url))continue;
+        const std::wstring result=
+            std::filesystem::path(url).lexically_normal().native();
+        if(result.size()>fxfile::indexwire::kMaxPathUnits||
+           !insideScope(scope,result))continue;
         auto name=std::filesystem::path(result).filename().native();
         std::wstring lowerName=name,lowerTerm=term;
         std::transform(lowerName.begin(),lowerName.end(),lowerName.begin(),
