@@ -104,30 +104,51 @@ def main():
             window=Desktop(backend="uia").window(handle=matches[0].handle)
             return window.child_window(auto_id="SearchPanelButton").exists(timeout=.2)
         wait(ready,"indexed search window",24)
-        panel=window.child_window(auto_id="SearchTermBox")
+        reported=set()
+        def control(auto_id):
+            # WinUI 3 can duplicate the same physical XAML control in the
+            # accessibility tree. A unique visible geometry/type identifies
+            # the same owned control, never a different hidden pane/window.
+            nodes=[
+                w for w in window.descendants()
+                if w.element_info.automation_id==auto_id and w.is_visible()
+            ]
+            shapes={(w.element_info.control_type,str(w.rectangle()))
+                    for w in nodes}
+            if auto_id not in reported and len(nodes)!=1:
+                print("INDEXED_SEARCH_UIA_DUPLICATE",auto_id,len(nodes),
+                      repr(sorted(shapes)),flush=True)
+                reported.add(auto_id)
+            assert nodes and len(shapes)==1,(
+                "ambiguous visible XAML search control",auto_id,
+                len(nodes),repr(sorted(shapes)))
+            return nodes[0]
+        panel=control("SearchTermBox")
         if not panel.exists(timeout=.2) or not panel.is_visible():
             window.child_window(auto_id="SearchPanelButton").invoke()
         wait(lambda:panel.exists(timeout=.2) and panel.is_visible(),
              "search panel did not open",12)
-        window.child_window(auto_id="SearchScopeBox").set_edit_text(str(pictures))
+        control("SearchScopeBox").set_edit_text(str(pictures))
         panel.set_edit_text(TERM)
-        mode=window.child_window(auto_id="SearchModeBox")
+        mode=control("SearchModeBox")
         if args.capture=="after":
             assert mode.exists(timeout=2),"Windows index selector missing"
             mode.select(1)
             # A WinUI checkbox can appear twice in the UIA tree with
             # identical visible bounds. Use the independently-owned extension
             # field to prove index-only criteria rejection instead.
-            unsupported=window.child_window(auto_id="SearchExtensionBox")
+            unsupported=control("SearchExtensionBox")
             unsupported.set_edit_text(".txt")
-            window.child_window(auto_id="SearchRunButton").invoke()
+            control("SearchRunButton").invoke()
             wait(lambda:"인덱스 검색은 파일명 일반 검색만 지원" in
-                window.child_window(auto_id="SearchCountText").window_text(),
+                control("SearchCountText").window_text(),
                 "indexed-only unsupported criteria did not reject before start",6)
             unsupported.set_edit_text("")
             print("INDEXED_SEARCH_UNSUPPORTED_PRESTART_REJECT_PASS",True,flush=True)
         else:
-            assert not mode.exists(timeout=.2),"BEFORE unexpectedly has index mode"
+            assert not any(
+                x.element_info.automation_id=="SearchModeBox"
+                for x in window.descendants()),"BEFORE unexpectedly has index mode"
         # App-owned RenderTargetBitmap capture; service desktops can reject
         # pywinauto/PIL screen grabbing even when UIA works.
         wait(lambda:shot.is_file() and shot.stat().st_size>4096,
@@ -148,7 +169,7 @@ def main():
             window.child_window(auto_id="SearchRunButton").invoke()
             wait(lambda:TERM in " ".join(
                 row.window_text() for row in
-                window.child_window(auto_id="SearchMatches").descendants()),
+                control("SearchMatches").descendants()),
                 "indexed result does not contain test-owned file",20)
             summary=window.child_window(auto_id="SearchCountText").window_text()
             print("INDEXED_SEARCH_SUMMARY",repr(summary),flush=True)
