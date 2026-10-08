@@ -652,8 +652,25 @@ SearchResults scanIndexedFiles(
   startup.StartupInfo.hStdOutput=childWrite.value;
   startup.StartupInfo.hStdError=childError.value;
   startup.lpAttributeList=attrs;
-  std::wstring command=L"\""+helper+L"\" --indexed-filename-search \""+
-      folder+L"\" \""+query.term+L"\"";
+  // CreateProcessW does not quote argv for us. Preserve a trailing
+  // backslash before the closing quote instead of swallowing that quote.
+  auto quoteArg=[](std::wstring const& arg){
+   std::wstring quoted=L"\"";
+   std::size_t slashes=0;
+   for(const wchar_t ch:arg){
+    if(ch==L'\\'){++slashes;continue;}
+    if(ch==L'"')quoted.append(slashes*2+1,L'\\');
+    else quoted.append(slashes,L'\\');
+    quoted.push_back(ch);
+    slashes=0;
+   }
+   quoted.append(slashes*2,L'\\');
+   quoted.push_back(L'"');
+   return quoted;
+  };
+  std::wstring command=quoteArg(helper)+
+      L" --indexed-filename-search "+quoteArg(folder)+
+      L" "+quoteArg(query.term);
   std::vector<wchar_t> mutableCommand(command.begin(),command.end());
   mutableCommand.push_back(0);
   PROCESS_INFORMATION created{};
