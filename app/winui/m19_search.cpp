@@ -1,11 +1,15 @@
 #include "m19_search.h"
 #include "../../src/base/bounded_regex.h"
+#include "../../src/base/indexed_search_wire.h"
+#include <filesystem>
 #include <windows.h>
 #include <algorithm>
 #include <array>
 #include <cwchar>
 #include <cwctype>
 #include <regex>
+#include <cstring>
+#include <new>
 #include <utility>
 
 namespace fxfile { namespace preview {
@@ -343,6 +347,18 @@ bool exactWrite(HANDLE h,unsigned char const* p,size_t bytes){
 SearchQueryValidation validateSearchQuery(SearchQuery const& query) noexcept
 {
     try{
+        if(query.mode!=SearchMode::Traversal&&
+           query.mode!=SearchMode::WindowsIndex)
+            return SearchQueryValidation::InvalidIndexedCriteria;
+        if(query.mode==SearchMode::WindowsIndex&&
+           (!fxfile::indexwire::validTerm(query.term)||
+            query.regex||query.caseSensitive||
+            query.kind!=SearchEntryKind::Files||
+            !query.extension.empty()||
+            !query.minSizeKb.empty()||!query.maxSizeKb.empty()||
+            !query.modifiedAfter.empty()||!query.modifiedBefore.empty()||
+            !query.contentTerm.empty()||query.contentRegex))
+            return SearchQueryValidation::InvalidIndexedCriteria;
         if(query.term.size()>256||
            query.term.find_first_of(L"\r\n")!=std::wstring::npos)
             return SearchQueryValidation::InvalidTerm;
@@ -408,7 +424,7 @@ SearchQueryValidation validateSearchQuery(SearchQuery const& query) noexcept
 
 bool sameSearchQuery(SearchQuery const& a,SearchQuery const& b) noexcept
 {
-    return a.term==b.term&&a.extension==b.extension&&
+    return a.mode==b.mode&&a.term==b.term&&a.extension==b.extension&&
            a.minSizeKb==b.minSizeKb&&a.maxSizeKb==b.maxSizeKb&&
            a.modifiedAfter==b.modifiedAfter&&
            a.modifiedBefore==b.modifiedBefore&&
@@ -565,6 +581,196 @@ SearchResults scanFiles(
         out.truncated=true;
     }
     return out;
+}
+
+
+SearchResults scanIndexedFiles(
+    std::wstring const& folder,SearchQuery const& query,
+    std::shared_ptr<std::atomic_bool> cancel)
+{
+ using namespace fxfile::indexwire;
+ SearchResults result{};
+ result.scope=folder;
+ result.term=query.term;
+ result.indexOnly=true;
+ if(query.mode!=SearchMode::WindowsIndex||
+    validateSearchQuery(query)!=SearchQueryValidation::Valid||
+    !validScope(folder))return result;
+ if(cancel&&cancel->load()){result.canceled=true;return result;}
+ namespace fs=std::filesystem;
+ struct Handle {
+  HANDLE value=nullptr;
+  Handle()=default;
+  explicit Handle(HANDLE h):value(h){}
+  ~Handle(){reset();}
+  void reset(HANDLE next=nullptr){
+   if(value&&value!=INVALID_HANDLE_VALUE)::CloseHandle(value);
+   value=next;
+  }
+  Handle(Handle const&)=delete;
+  Handle& operator=(Handle const&)=delete;
+  bool valid()const{return value&&value!=INVALID_HANDLE_VALUE;}
+ };
+ try {
+  wchar_t module[32768]{};
+  DWORD size=::GetModuleFileNameW(
+      nullptr,module,static_cast<DWORD>(_countof(module)));
+  if(!size||size>=_countof(module))return result;
+  const auto helper=(fs::path(module).parent_path()/
+      L"FlyShellIsolationHelper.exe").native();
+  if(!fs::is_regular_file(fs::path(helper))) {
+   result.valid=true;result.indexUnavailable=true;return result;
+  }
+  SECURITY_ATTRIBUTES sa{sizeof(sa),nullptr,TRUE};
+  HANDLE childWriteRaw=nullptr,parentReadRaw=nullptr;
+  if(!::CreatePipe(&parentReadRaw,&childWriteRaw,&sa,65536)){
+   result.valid=true;result.indexUnavailable=true;return result;
+  }
+  Handle parentRead(parentReadRaw),childWrite(childWriteRaw);
+  ::SetHandleInformation(parentRead.value,HANDLE_FLAG_INHERIT,0);
+  Handle childIn(::CreateFileW(L"NUL",GENERIC_READ,
+      FILE_SHARE_READ|FILE_SHARE_WRITE,&sa,OPEN_EXISTING,0,nullptr));
+  Handle childError(::CreateFileW(L"NUL",GENERIC_WRITE,
+      FILE_SHARE_READ|FILE_SHARE_WRITE,&sa,OPEN_EXISTING,0,nullptr));
+  if(!childIn.valid()||!childError.valid())return result;
+
+  SIZE_T bytes=0;
+  ::InitializeProcThreadAttributeList(nullptr,1,0,&bytes);
+  if(!bytes)return result;
+  std::vector<unsigned char> storage(bytes);
+  auto* attrs=reinterpret_cast<LPPROC_THREAD_ATTRIBUTE_LIST>(storage.data());
+  if(!::InitializeProcThreadAttributeList(attrs,1,0,&bytes))return result;
+  HANDLE allowed[]{childIn.value,childWrite.value,childError.value};
+  if(!::UpdateProcThreadAttribute(attrs,0,
+      PROC_THREAD_ATTRIBUTE_HANDLE_LIST,allowed,sizeof(allowed),nullptr,nullptr)){
+   ::DeleteProcThreadAttributeList(attrs);return result;
+  }
+  STARTUPINFOEXW startup{};
+  startup.StartupInfo.cb=sizeof(startup);
+  startup.StartupInfo.dwFlags=STARTF_USESTDHANDLES;
+  startup.StartupInfo.hStdInput=childIn.value;
+  startup.StartupInfo.hStdOutput=childWrite.value;
+  startup.StartupInfo.hStdError=childError.value;
+  startup.lpAttributeList=attrs;
+  std::wstring command=L"\""+helper+L"\" --indexed-filename-search \""+
+      folder+L"\" \""+query.term+L"\"";
+  std::vector<wchar_t> mutableCommand(command.begin(),command.end());
+  mutableCommand.push_back(0);
+  PROCESS_INFORMATION created{};
+  const BOOL launched=::CreateProcessW(
+      helper.c_str(),mutableCommand.data(),nullptr,nullptr,TRUE,
+      CREATE_SUSPENDED|CREATE_NO_WINDOW|EXTENDED_STARTUPINFO_PRESENT,
+      nullptr,fs::path(helper).parent_path().c_str(),
+      &startup.StartupInfo,&created);
+  ::DeleteProcThreadAttributeList(attrs);
+  if(!launched){
+   result.valid=true;result.indexUnavailable=true;return result;
+  }
+  Handle process(created.hProcess),thread(created.hThread);
+  Handle job(::CreateJobObjectW(nullptr,nullptr));
+  JOBOBJECT_EXTENDED_LIMIT_INFORMATION limits{};
+  limits.BasicLimitInformation.LimitFlags=
+      JOB_OBJECT_LIMIT_ACTIVE_PROCESS|JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE;
+  limits.BasicLimitInformation.ActiveProcessLimit=1;
+  if(!job.valid()||
+     !::SetInformationJobObject(job.value,
+         JobObjectExtendedLimitInformation,&limits,sizeof(limits))||
+     !::AssignProcessToJobObject(job.value,process.value)){
+   ::TerminateProcess(process.value,ERROR_ACCESS_DENIED);
+   ::WaitForSingleObject(process.value,250);
+   return result;
+  }
+  if(::ResumeThread(thread.value)==DWORD(-1)){
+   ::TerminateJobObject(job.value,ERROR_GEN_FAILURE);
+   ::WaitForSingleObject(process.value,250);
+   return result;
+  }
+  childWrite.reset();
+  thread.reset();
+  childIn.reset();
+  childError.reset();
+
+  const auto start=::GetTickCount64();
+  auto stop=[&](DWORD why){
+   ::TerminateJobObject(job.value,why);
+   ::WaitForSingleObject(process.value,250);
+  };
+  auto readMonitored=[&](void* destination,std::size_t wanted)->bool {
+   auto* p=static_cast<unsigned char*>(destination);
+   while(wanted){
+    if(cancel&&cancel->load()){stop(ERROR_CANCELLED);return false;}
+    DWORD available=0;
+    if(!::PeekNamedPipe(parentRead.value,nullptr,0,nullptr,&available,nullptr)){
+     stop(ERROR_READ_FAULT);return false;
+    }
+    if(available){
+     DWORD count=0;
+     const DWORD chunk=static_cast<DWORD>(
+         (std::min<std::size_t>)(wanted,available));
+     if(!::ReadFile(parentRead.value,p,chunk,&count,nullptr)||!count){
+      stop(ERROR_READ_FAULT);return false;
+     }
+     p+=count;wanted-=count;
+     continue;
+    }
+    if(::GetTickCount64()-start>=12000){
+     result.indexTimedOut=true;
+     stop(ERROR_TIMEOUT);return false;
+    }
+    if(::WaitForSingleObject(process.value,0)==WAIT_OBJECT_0)return false;
+    ::Sleep(20);
+   }
+   return true;
+  };
+  Header wire{};
+  if(!readMonitored(&wire,sizeof(wire))){
+   if(cancel&&cancel->load())result.canceled=true;
+   else {result.valid=true;result.indexUnavailable=!result.indexTimedOut;}
+   return result;
+  }
+  if(wire.magic!=kMagic||wire.version!=kVersion||
+     wire.count>kMaxResults||wire.bytes>kMaxBodyBytes){
+   stop(ERROR_INVALID_DATA);return result;
+  }
+  std::vector<unsigned char> body(wire.bytes);
+  if(wire.bytes&&!readMonitored(body.data(),body.size())){
+   if(cancel&&cancel->load())result.canceled=true;
+   else {result.valid=true;result.indexUnavailable=!result.indexTimedOut;}
+   return result;
+  }
+  if(checksum(body.data(),body.size())!=wire.checksum){
+   stop(ERROR_INVALID_DATA);return result;
+  }
+  if(::WaitForSingleObject(process.value,250)!=WAIT_OBJECT_0){
+   stop(ERROR_TIMEOUT);return result;
+  }
+  DWORD code=1;
+  if(!::GetExitCodeProcess(process.value,&code)||code!=0)return result;
+  if(wire.status!=ERROR_SUCCESS&&wire.status!=ERROR_MORE_DATA){
+   result.valid=true;result.indexUnavailable=true;return result;
+  }
+  std::size_t position=0;
+  for(std::uint32_t i=0;i<wire.count;++i){
+   if(position+4>body.size())return result;
+   std::uint32_t units=0;
+   std::memcpy(&units,body.data()+position,4);
+   position+=4;
+   if(!units||units>kMaxPathUnits||
+      units>(body.size()-position)/sizeof(wchar_t))return result;
+   std::wstring path(units,L'\0');
+   std::memcpy(path.data(),body.data()+position,
+               units*sizeof(wchar_t));
+   position+=units*sizeof(wchar_t);
+   if(!validScope(path))return result;
+   result.matches.push_back(std::move(path));
+  }
+  if(position!=body.size())return result;
+  result.count=result.matches.size();
+  result.resultLimited=wire.status==ERROR_MORE_DATA;
+  result.truncated=result.resultLimited;
+  result.valid=true;
+  return result;
+ }catch(...){return result;}
 }
 
 SearchResults scanFiles(

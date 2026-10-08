@@ -12,6 +12,8 @@
 
 namespace fxfile { namespace preview {
 
+enum class SearchMode { Traversal, WindowsIndex };
+
 enum class SearchEntryKind {
     Files,
     Folders,
@@ -26,6 +28,7 @@ enum class SearchContentEncoding {
 
 struct SearchQuery {
     std::wstring term;
+    SearchMode mode=SearchMode::Traversal;
     std::wstring extension;
     std::wstring minSizeKb;
     std::wstring maxSizeKb;
@@ -49,6 +52,7 @@ enum class SearchQueryValidation {
     InvalidContentEncoding,
     InvalidContentRegex,
     InvalidRegex,
+    InvalidIndexedCriteria,
 };
 
 struct SearchResults {
@@ -67,6 +71,10 @@ struct SearchResults {
 
 SearchQueryValidation validateSearchQuery(SearchQuery const&) noexcept;
 bool sameSearchQuery(SearchQuery const&,SearchQuery const&) noexcept;
+
+SearchResults scanIndexedFiles(
+    std::wstring const& folder,SearchQuery const& query,
+    std::shared_ptr<std::atomic_bool> cancel);
 
 SearchResults scanFiles(
     std::wstring const& folder,SearchQuery const& query,

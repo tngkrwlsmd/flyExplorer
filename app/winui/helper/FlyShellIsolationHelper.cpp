@@ -6,6 +6,8 @@
 #include "../../../src/base/shell_transfer_core.h"
 #include "../../../src/base/file_metadata_wire.h"
 #include "../../../src/base/shell_visual_wire.h"
+#include "../../../src/base/indexed_search_wire.h"
+#include <atldbcli.h>
 #include <windows.h>
 #include <shellapi.h>
 #include <shlobj.h>
@@ -280,7 +282,138 @@ int inspectOrShowContext(bool inspect){
  return rc;
 }
 } // namespace
+
+namespace {
+std::wstring sqlQuoted(std::wstring const& s) {
+ std::wstring escaped;
+ escaped.reserve(s.size()+12);
+ for(wchar_t c:s) {
+  if(c==L'\'')escaped+=L"''";
+  else escaped.push_back(c);
+ }
+ return escaped;
+}
+bool insideScope(std::wstring const& scope,std::wstring const& path) {
+ if(path.size()<=scope.size())return false;
+ if(::CompareStringOrdinal(
+    scope.c_str(),static_cast<int>(scope.size()),
+    path.c_str(),static_cast<int>(scope.size()),TRUE)!=CSTR_EQUAL)return false;
+ return scope.back()==L'\\'||path[scope.size()]==L'\\';
+}
+int runIndexedFilenameSearch(HANDLE output,
+                             std::wstring const& scope,
+                             std::wstring const& term) {
+ using namespace fxfile::indexwire;
+ if(!output||output==INVALID_HANDLE_VALUE||
+    !validScope(scope)||!validTerm(term))return 1;
+ DWORD error=ERROR_SUCCESS;
+ std::vector<std::wstring> results;
+ bool truncated=false;
+ const HRESULT apartment=::CoInitializeEx(
+     nullptr,COINIT_APARTMENTTHREADED|COINIT_DISABLE_OLE1DDE);
+ if(FAILED(apartment))error=ERROR_SERVICE_NOT_ACTIVE;
+ else {
+  try {
+   // All index-provider and filesystem calls run only in this disposable
+   // child. The parent can terminate the owned Job on cancellation/timeout.
+   std::filesystem::path path(scope);
+   auto const root=path.root_path().native();
+   if(root.size()!=3||::GetDriveTypeW(root.c_str())!=DRIVE_FIXED)
+     error=ERROR_NOT_SUPPORTED;
+   else {
+    std::filesystem::path part=path.root_path();
+    for(auto it=path.begin();it!=path.end();++it) {
+     if(*it==path.root_name()||*it==path.root_directory())continue;
+     part/=*it;
+     DWORD attrs=::GetFileAttributesW(part.c_str());
+     if(attrs==INVALID_FILE_ATTRIBUTES||
+        (attrs&FILE_ATTRIBUTE_REPARSE_POINT)) {
+      error=ERROR_INVALID_NAME;break;
+     }
+    }
+    const DWORD attrs=::GetFileAttributesW(scope.c_str());
+    if(error==ERROR_SUCCESS&&
+       (attrs==INVALID_FILE_ATTRIBUTES||!(attrs&FILE_ATTRIBUTE_DIRECTORY)))
+       error=ERROR_INVALID_NAME;
+   }
+   if(error==ERROR_SUCCESS){
+    // Search.CollatorDSO queries *only* SystemIndex; never enumerate the
+    // directory as a fallback for unindexed scopes.
+    std::wstring url=L"file:"+scope;
+    std::replace(url.begin(),url.end(),L'\\',L'/');
+    if(url.back()!=L'/')url+=L'/';
+    const auto sql=L"SELECT TOP 1001 System.ItemPathDisplay FROM SystemIndex "
+        L"WHERE SCOPE='"+sqlQuoted(url)+L"' AND System.FileName LIKE '%"+
+        sqlQuoted(term)+L"%'";
+    ATL::CDataSource data;
+    HRESULT hr=data.OpenFromInitializationString(
+      L"Provider=Search.CollatorDSO.1;Extended Properties=\"Application=Windows\"");
+    if(FAILED(hr))error=ERROR_SERVICE_NOT_ACTIVE;
+    else {
+     ATL::CSession session;
+     hr=session.Open(data);
+     if(FAILED(hr))error=ERROR_SERVICE_NOT_ACTIVE;
+     else {
+      ATL::CCommand<ATL::CDynamicStringAccessorW,ATL::CRowset> rows;
+      hr=rows.Open(session,sql.c_str());
+      if(FAILED(hr))error=ERROR_INVALID_DATA;
+      else {
+       for(hr=rows.MoveFirst();hr==S_OK;hr=rows.MoveNext()){
+        const wchar_t* raw=rows.GetString(1);
+        if(!raw)continue;
+        std::wstring result(raw);
+        if(result.size()>fxfile::indexwire::kMaxPathUnits||!insideScope(scope,result))
+         continue;
+        auto name=std::filesystem::path(result).filename().native();
+        std::wstring lowerName=name,lowerTerm=term;
+        std::transform(lowerName.begin(),lowerName.end(),lowerName.begin(),
+            [](wchar_t x){return static_cast<wchar_t>(::towlower(x));});
+        std::transform(lowerTerm.begin(),lowerTerm.end(),lowerTerm.begin(),
+            [](wchar_t x){return static_cast<wchar_t>(::towlower(x));});
+        if(lowerName.find(lowerTerm)==std::wstring::npos)continue;
+        const DWORD itemAttrs=::GetFileAttributesW(result.c_str());
+        if(itemAttrs==INVALID_FILE_ATTRIBUTES||
+           (itemAttrs&(FILE_ATTRIBUTE_DIRECTORY|FILE_ATTRIBUTE_REPARSE_POINT)))
+         continue;
+        if(results.size()>=fxfile::indexwire::kMaxResults){truncated=true;break;}
+        results.push_back(std::move(result));
+       }
+       if(FAILED(hr))error=ERROR_INVALID_DATA;
+       rows.Close();
+      }
+      session.Close();
+     }
+     data.Close();
+    }
+   }
+  }catch(...){error=ERROR_INVALID_DATA;}
+  ::CoUninitialize();
+ }
+ std::vector<unsigned char> body;
+ if(error==ERROR_SUCCESS){
+  for(auto const& result:results){
+   const auto units=static_cast<std::uint32_t>(result.size());
+   const auto needed=sizeof(units)+units*sizeof(wchar_t);
+   if(needed>fxfile::indexwire::kMaxBodyBytes||body.size()>fxfile::indexwire::kMaxBodyBytes-needed){
+    error=ERROR_MORE_DATA;body.clear();results.clear();break;
+   }
+   auto const* start=reinterpret_cast<unsigned char const*>(&units);
+   body.insert(body.end(),start,start+sizeof(units));
+   start=reinterpret_cast<unsigned char const*>(result.data());
+   body.insert(body.end(),start,start+units*sizeof(wchar_t));
+  }
+ }
+ Header header{fxfile::indexwire::kMagic,fxfile::indexwire::kVersion,error==ERROR_SUCCESS&&truncated?
+     ERROR_MORE_DATA:error,static_cast<std::uint32_t>(results.size()),
+     static_cast<std::uint32_t>(body.size()),fxfile::indexwire::checksum(body.data(),body.size())};
+ return exactWrite(output,&header,sizeof(header))&&
+        (body.empty()||exactWrite(output,body.data(),body.size()))?0:2;
+}
+} // namespace
+
 int wmain(int argc,wchar_t** argv) {
+    if(argc==4&&!wcscmp(argv[1],L"--indexed-filename-search"))
+        return runIndexedFilenameSearch(::GetStdHandle(STD_OUTPUT_HANDLE),argv[2],argv[3]);
     if(argc==2&&!wcscmp(argv[1],L"--file-transfer"))
         return fxfile::shelltransfer::runIsolatedHelper(
             ::GetStdHandle(STD_INPUT_HANDLE),::GetStdHandle(STD_OUTPUT_HANDLE));
