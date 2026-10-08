@@ -47,6 +47,8 @@ SearchController::StartStatus SearchController::validateRequest(
         return StartStatus::InvalidContentPattern;
     case fxfile::preview::SearchQueryValidation::InvalidRegex:
         return StartStatus::InvalidPattern;
+    case fxfile::preview::SearchQueryValidation::InvalidIndexedCriteria:
+        return StartStatus::InvalidIndexedCriteria;
     default:
         return StartStatus::InvalidRequest;
     }
@@ -92,8 +94,12 @@ SearchController::StartStatus SearchController::start(
             value.context=std::move(context);
             value.request=std::move(request);
             try{
-                value.result=fxfile::preview::scanFiles(
-                    value.request.scope,value.request.query,cancel);
+                value.result=value.request.query.mode==
+                    fxfile::preview::SearchMode::WindowsIndex?
+                    fxfile::preview::scanIndexedFiles(
+                       value.request.scope,value.request.query,cancel):
+                    fxfile::preview::scanFiles(
+                       value.request.scope,value.request.query,cancel);
             }catch(...){
                 value.result.scope=value.request.scope;
                 value.result.term=value.request.query.term;
@@ -156,7 +162,9 @@ SearchController::Acceptance SearchController::accept(
         }
 
         accepted.disposition=Disposition::Applied;
-        if(completion.request.remember){
+        if(completion.request.remember&&
+           !completion.result.indexUnavailable&&
+           !completion.result.indexTimedOut){
             const auto before=state_->recent;
             fxfile::preview::rememberScope(
                 state_->recent,completion.request.scope);
