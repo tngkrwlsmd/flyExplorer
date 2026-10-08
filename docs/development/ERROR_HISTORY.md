@@ -16,6 +16,56 @@ product state use CURRENT_STATUS.md.
 
 이 문서는 확정된 오류를 단순 수정으로 끝내지 않고, 다음 진단을 빠르게 하고 같은 계열의 결함을 사전에 막기 위한 프로젝트 기록이다.
 
+## 2026-10-08 — bounded Windows Pictures Library provider Copy-in
+
+**오류/위험 경계**
+- Copy-out previously accepted only a filesystem destination. Blindly allowing
+  arbitrary virtual Shell destinations would delegate an unbounded mutation to
+  providers with different capabilities, collision semantics and storage rules.
+- Display strings are insufficient authority for a provider write. Library
+  write-through may resolve to a different physical default save location.
+- Directory watcher status can replace a transient transfer-success message;
+  success evidence must use the actual destination bytes and controller idle.
+
+**원인 분석 및 처리**
+- Added orthogonal `DestinationMode::ShellProvider` and private transfer wire
+  v3; ordinary filesystem Copy/Move and provider Copy-out preserve their
+  existing mode and validation.
+- The UI sends bounded bytes copied from the accepted destination snapshot
+  PIDL. The exact-owned `FlyShellIsolationHelper.exe --file-transfer` validates
+  its framing and equality with `FOLDERID_PicturesLibrary`, loads the library
+  and resolves its effective default save folder. It accepts only the safe
+  non-reparse, supported-drive path equal to the user's `FOLDERID_Pictures`
+  Known Folder. Other provider destinations/custom save locations fail closed.
+- Collision checks use the resolved filesystem folder. `IFileOperation::CopyItem`
+  handles only filesystem-source Copy; provider-to-provider Copy, Move,
+  Recycle/Delete remain unsupported. Existing cancellation, process ownership,
+  Job Object, progress and stale-route checks remain unchanged.
+
+**재발 방지**
+- Provider mutations require source and destination modes to be explicit in
+  wire framing and checked again in the helper; navigation descriptions never
+  grant mutation authority.
+- The focused fixture refuses to overwrite existing Pictures entries, uses
+  isolated test-owned source and sentinel files, verifies exact bytes plus source
+  preservation, and removes all owned Pictures entries during cleanup.
+- Do not claim general third-party provider writes from a built-in library's
+  filesystem-backed default save-folder acceptance.
+
+**검증 상태**
+- Candidate `dfc8703394e8c750beaaaa7ee9cea9d81ddeba2c`, Remote Windows Task
+  `37705656407`: request validation, change-scoped FAST, interactive GUI
+  runner health, canonical Release build, source contract and focused actual
+  two-pane Pictures Library GUI all PASS.
+- Runtime: provider destination enumerated; provider target Move rejected;
+  filesystem source copied into resolved Pictures location with exact bytes;
+  source preserved; controller idle; application exit 0; both test-owned
+  Pictures items and isolated fixture removed; protected legacy settings
+  byte-identical.
+- No new XAML/layout/icon changes; visual pixel acceptance was not required.
+  Other provider destinations, custom library save locations and
+  provider-to-provider/Move/Recycle/Delete remain NOT SUPPORTED.
+
 ## 2026-10-08 — virtual Shell/provider Copy-out acceptance
 
 **오류 발생**
