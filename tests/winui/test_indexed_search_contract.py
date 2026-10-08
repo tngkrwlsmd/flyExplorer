@@ -38,6 +38,10 @@ class IndexedSearchContracts(unittest.TestCase):
             self.assertIn(token,helper+wire)
         self.assertIn("kMaxResults=1000",wire)
         self.assertIn("kMaxBodyBytes=1024u*1024u",wire)
+        self.assertIn("std::uint32_t encodedCount=0",helper)
+        self.assertIn("truncated=true;break;",helper)
+        self.assertIn("++encodedCount",helper)
+        self.assertNotIn("body.clear();results.clear()",helper)
     def test_ui_mode_and_fail_closed_unsupported_options(self):
         ui=src("app/winui/MainWindow.xaml")
         features=src("app/winui/m19_features.cpp")
