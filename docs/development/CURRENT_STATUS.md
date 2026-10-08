@@ -1255,7 +1255,21 @@ Current source and the last parity evidence still show these limits:
   count 1 against independently queried native index oracle, source
   unchanged, normal process exit. Property/provider indexed search and
   traversal beyond the current 20,000/depth-32 safety bounds remain
-  unsupported. Visual screenshot review is a separate outstanding gate.
+  unsupported. Visual layout acceptance: PASS on matched actual app-owned
+  RenderTargetBitmap captures. Baseline main
+  `387efa622f6a9ce6685e3bffb98299df0503de3c` was rebuilt and captured
+  in run `37718045551`; indexed candidate
+  `ffc2466be51c32c1cf7454a2df80fe4f8c3f5f99` was captured in
+  `37717788614`. Direct inspection plus metrics run `37718272601`
+  found both 956x711 pixels under fixed 972x720 HWND/Dark conditions.
+  113,339 of 679,716 pixels differed (16.6745%), largely from the new
+  indexed-mode row and downstream pane repositioning. Both panes,
+  sidebar, action chrome, file row and footer remained visible without
+  blocking overlap or clipping. The asynchronous capture recorded
+  different transient search-scope field contents and randomized
+  test-owned path text; those pixels are not claimed identical.
+  Higher-DPI and additional selection/theme visual states were not
+  separately exercised in this focused gate.
 - Persistent pane filter/mask rule sets are implemented with up to 20 named
   private presets, case-insensitive wildcard masks and legacy substring
   compatibility. Pane filters remain name/mask based; historical per-rule
