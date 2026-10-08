@@ -1,13 +1,14 @@
 {
-  "request_id": "uad-release-v063-20261008",
+  "request_id": "search-v3-indexed-build-gui-20261008-r2",
   "expected_main_sha": "d0011a69f6bc209931eeb0d60fb9d278e9ce7c89",
-  "candidate_sha": "d0011a69f6bc209931eeb0d60fb9d278e9ce7c89",
-  "logical_unit": "uad-release-v063",
+  "candidate_sha": "fd693c0c1edfe7465f5409545e25775ccf7c904f",
+  "logical_unit": "search-v3-indexed-filename",
   "request_mode": "validation",
   "configuration": "Release",
   "validation_plan": [
-    "release-tag"
+    "release-build",
+    "indexed-search-gui"
   ],
   "working_directory": "",
-  "command": "$ErrorActionPreference='Stop'\n$env:GIT_TERMINAL_PROMPT='0'\n$env:GH_PROMPT_DISABLED='1'\nRemove-Item Env:GH_TOKEN -ErrorAction SilentlyContinue\n$remote='https://github.com/tngkrwlsmd/universal-agent-docs.git'\n$source='b8909a5550168d38e6abbe8df9b504f0759f660c'\n$tag='v0.6.3'\n$temp=Join-Path $env:TEMP ('uad-release-'+[Guid]::NewGuid().ToString('N'))\nNew-Item -ItemType Directory -Path $temp -Force | Out-Null\ntry {\n  & git clone --quiet --depth 1 --branch main $remote $temp\n  if($LASTEXITCODE -ne 0){throw 'B clone failed'}\n  $head=(& git -C $temp rev-parse HEAD).Trim()\n  if($LASTEXITCODE -ne 0 -or $head -ne $source){throw 'B main SHA mismatch'}\n  $refs=@(& git -C $temp ls-remote --tags origin \"refs/tags/$tag\")\n  if($LASTEXITCODE -ne 0){throw 'B tag existence check failed'}\n  if($refs.Count -ne 0){throw 'B tag already exists, refuse to move it'}\n  Write-Output ('B_TAG_PREFLIGHT=PASS SOURCE='+$head)\n  & git -C $temp push origin ($source+':refs/tags/'+$tag)\n  if($LASTEXITCODE -ne 0){throw 'B_TAG_PUSH=FAILED: check tag state before any retry'}\n  $confirm=@(& git -C $temp ls-remote --tags origin \"refs/tags/$tag\")\n  if($LASTEXITCODE -ne 0 -or $confirm.Count -ne 1){throw 'B tag postcondition query failed'}\n  $remoteSha=($confirm[0] -split '\\s+')[0]\n  if($remoteSha -ne $source){throw 'B tag points to unexpected SHA'}\n  Write-Output ('B_TAG_PUSH=PASS '+$tag+'@'+$remoteSha)\n} finally { Remove-Item -LiteralPath $temp -Recurse -Force -ErrorAction SilentlyContinue }"
+  "command": "$ErrorActionPreference=\"Stop\"\nSet-Location $env:FLYEXPLORER_CANONICAL_CHECKOUT\ngit fetch origin work/search-v3-indexed-filename-20261008 --no-tags\nif($LASTEXITCODE -ne 0){throw \"fetch\"}\ngit switch --detach fd693c0c1edfe7465f5409545e25775ccf7c904f\nif($LASTEXITCODE -ne 0){throw \"checkout\"}\ntry {\n python -X utf8 -m py_compile tests\\winui\\test_indexed_search_gui.py\n if($LASTEXITCODE -ne 0){throw \"syntax\"}\n python -X utf8 tests\\winui\\test_indexed_search_contract.py\n if($LASTEXITCODE -ne 0){throw \"contract\"}\n python -X utf8 tests\\winui\\test_indexed_search_gui.py --capture before\n if($LASTEXITCODE -ne 0){throw \"before fixture\"}\n .\\build.bat Release\n if($LASTEXITCODE -ne 0){throw \"build\"}\n python -X utf8 tests\\winui\\test_indexed_search_gui.py --capture after\n if($LASTEXITCODE -ne 0){throw \"after GUI\"}\n Write-Host \"SEARCH_V3_INDEXED_VALIDATION=PASS\"\n} finally {\n git switch main\n if($LASTEXITCODE -ne 0){throw \"restore\"}\n}"
 }
