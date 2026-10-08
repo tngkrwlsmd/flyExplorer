@@ -34,11 +34,11 @@ $db=New-Object System.Data.OleDb.OleDbConnection('Provider=Search.CollatorDSO.1;
 try {{
  $db.Open()
  $cmd=$db.CreateCommand()
- $cmd.CommandText="SELECT TOP 10 System.ItemPathDisplay FROM SystemIndex WHERE SCOPE='{scope}' AND System.FileName LIKE '%{target}%'"
+ $cmd.CommandText="SELECT TOP 10 System.ItemUrl FROM SystemIndex WHERE SCOPE='{scope}' AND System.FileName LIKE '%{target}%'"
  $r=$cmd.ExecuteReader()
  $found=$false
  while($r.Read()){{
-   if([string]$r.GetValue(0) -ieq '{str(folder / name).replace("'", "''")}'){{$found=$true}}
+   if([string]$r.GetValue(0) -ieq '{"file:"+str(folder / name).replace(chr(92),"/").replace("'", "''")}'){{$found=$true}}
  }}
  $r.Close()
  if($found){{Write-Output 'INDEXED_SOURCE_FOUND=true'}}
