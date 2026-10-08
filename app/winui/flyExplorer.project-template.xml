@@ -130,6 +130,7 @@
     <ClInclude Include="..\..\src\base\bookmark_store.h" />
     <ClInclude Include="..\..\src\base\filter_rule_store.h" />
     <ClInclude Include="..\..\src\base\search_preset_store.h" />
+    <ClInclude Include="..\..\src\base\indexed_search_wire.h" />
     <ClInclude Include="..\..\src\base\file_metadata_wire.h" />
     <ClInclude Include="..\..\src\base\shell_visual_wire.h" />
     <ClInclude Include="..\..\src\base\bounded_regex.h" />
