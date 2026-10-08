@@ -6,6 +6,7 @@ import os
 from pathlib import Path
 import shutil
 import subprocess
+import sys
 import tempfile
 import time
 
@@ -20,36 +21,6 @@ TERM="Microsoft Edge"
 
 def wait(fn,label,seconds=25):
     return wait_until(fn,label,seconds=seconds,interval=.3)
-
-def index_contains(folder,name):
-    # Powershell 5.1 supports the Windows Search OLE DB provider. Only
-    # inspect only the pre-verified public system shortcut, never list other rows.
-    scope="file:"+str(folder).replace("\\","/").rstrip("/")+"/"
-    scope=scope.replace("'","''")
-    target=name.replace("'","''")
-    # This query is read-only and restricted to the public indexed scope.
-    script=f"""
-$ErrorActionPreference="Stop"
-$db=New-Object System.Data.OleDb.OleDbConnection('Provider=Search.CollatorDSO.1;Extended Properties="Application=Windows"')
-try {{
- $db.Open()
- $cmd=$db.CreateCommand()
- $cmd.CommandText="SELECT TOP 10 System.ItemUrl FROM SystemIndex WHERE SCOPE='{scope}' AND System.FileName LIKE '%{target}%'"
- $r=$cmd.ExecuteReader()
- $found=$false
- while($r.Read()){{
-   if([string]$r.GetValue(0) -ieq '{"file:"+str(folder / name).replace(chr(92),"/").replace("'", "''")}'){{$found=$true}}
- }}
- $r.Close()
- if($found){{Write-Output 'INDEXED_SOURCE_FOUND=true'}}
- else{{Write-Output 'INDEXED_SOURCE_FOUND=false'}}
-}}finally{{$db.Close()}}
-"""
-    encoded=__import__("base64").b64encode(script.encode("utf-16-le")).decode("ascii")
-    result=subprocess.run(["powershell.exe","-NoProfile","-NonInteractive",
-                           "-EncodedCommand",encoded],
-                          capture_output=True,text=True,timeout=12)
-    return result.returncode==0 and "OWNED_INDEXED=true" in result.stdout
 
 def main():
     parser=argparse.ArgumentParser()
@@ -159,9 +130,14 @@ def main():
             # Positive oracle: this public system shortcut was independently
             # confirmed in the actual SystemIndex, with no test-created file
             # outside our owned UI/profiles and no indexing service mutations.
-            indexed=index_contains(scope,NAME)
-            print("INDEXED_SEARCH_SYSTEM_SOURCE_INDEXED",indexed,flush=True)
-            assert indexed,"read-only Public Desktop index oracle unavailable"
+            native=subprocess.run(
+                [sys.executable,"-X","utf8",
+                 str(Path(__file__).with_name("test_indexed_search_native.py")),
+                 "--configuration",args.configuration],
+                capture_output=True,text=True,timeout=25)
+            print("INDEXED_SEARCH_NATIVE_ORACLE_PASS",
+                  native.returncode==0,flush=True)
+            assert native.returncode==0,(native.stdout,native.stderr)
             control("SearchRunButton").invoke()
             wait(lambda:TERM in " ".join(
                 row.window_text() for row in
