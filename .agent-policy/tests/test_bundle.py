@@ -14,28 +14,25 @@ class BundleTests(unittest.TestCase):
         failures = [c for c in checks if c.status != "PASS"]
         self.assertEqual([], [(c.name, c.detail) for c in failures])
 
-    def test_release_attestation_verifier_is_part_of_canonical_distribution(self):
+    def test_release_verifier_is_part_of_canonical_distribution(self):
         contract = mod.load_json(ROOT / "POLICY_CONTRACT.json")
-        path = ".github/workflows/verify-release.yml"
-        workflow = (ROOT / path).read_text(encoding="utf-8")
+        path = "scripts/release/verify_release.py"
+        verifier = (ROOT / path).read_text(encoding="utf-8")
         self.assertIn(path, contract["distribution"]["required_files"])
         self.assertIn(path, contract["distribution"]["allowed_files"])
+        self.assertIn(path, contract["integrity"]["trusted_core_files"])
         self.assertIn(path, mod.CANONICAL_REQUIRED_FILES)
-        self.assertIn("release_tag", workflow)
-        self.assertIn("expected_source_sha", workflow)
-        self.assertIn('test "$resolved_sha" = "$EXPECTED_SOURCE_SHA"', workflow)
-        self.assertIn("test \"$(jq -r '.immutable' <<<\"$release_json\")\" = \"true\"", workflow)
-        self.assertIn("gh release verify", workflow)
-        self.assertIn("gh release verify-asset", workflow)
-        self.assertIn("gh attestation verify", workflow)
-        self.assertIn("--signer-workflow", workflow)
-        self.assertIn('--source-ref "refs/tags/$TAG"', workflow)
-        self.assertIn("--source-digest", workflow)
-        self.assertIn("sha256sum --check", workflow)
-        self.assertIn("universal-agent-docs-consumer", workflow)
-        self.assertIn("package_consumer.py", workflow)
+        self.assertIn(path, mod.TRUSTED_CORE_FILES)
+        self.assertIn("ASSET_NAMES = (", verifier)
+        self.assertIn("DEFAULT_ATTEMPTS = 4", verifier)
+        self.assertIn("DEFAULT_BASE_DELAY_SECONDS = 10", verifier)
+        self.assertIn('"release", "verify"', verifier)
+        self.assertIn('"verify-asset"', verifier)
+        self.assertIn('"attestation",', verifier)
+        self.assertIn('"verify",', verifier)
+        self.assertIn("backoff_delay_seconds", verifier)
 
-    def test_release_workflow_is_semver_tag_driven_and_refuses_replacement(self):
+    def test_release_workflow_is_semver_tag_driven_and_resumable(self):
         workflow = (ROOT / ".github/workflows/release.yml").read_text(encoding="utf-8")
         self.assertIn('tags:', workflow)
         self.assertIn('- "v*"', workflow)
@@ -43,20 +40,54 @@ class BundleTests(unittest.TestCase):
         self.assertIn('test "$GITHUB_REF_TYPE" = "tag"', workflow)
         self.assertIn("release tag is not strict SemVer with v prefix", workflow)
         self.assertIn('git merge-base --is-ancestor "$SOURCE_SHA" origin/main', workflow)
-        self.assertIn('gh release view "$TAG"', workflow)
-        self.assertIn("refusing replacement", workflow)
+        self.assertIn("Inspect existing immutable release", workflow)
+        self.assertIn("existing immutable release exactly matches tag/source/assets", workflow)
+        self.assertIn("existing immutable release asset digest mismatch", workflow)
+        self.assertIn("if: steps.existing_release.outputs.exists != 'true'", workflow)
         self.assertIn("--verify-tag", workflow)
         self.assertNotIn("--clobber", workflow)
 
-    def test_release_workflow_publishes_and_verifies_immutable_release(self):
+    def test_release_workflow_separates_publish_and_verify_with_shared_verifier(self):
         workflow = (ROOT / ".github/workflows/release.yml").read_text(encoding="utf-8")
+        self.assertIn("  publish:", workflow)
+        self.assertIn("  verify:", workflow)
+        self.assertIn("needs: publish", workflow)
         self.assertIn('release create "$TAG"', workflow)
         self.assertIn('gh "${args[@]}"', workflow)
-        self.assertIn("test \"$(jq -r '.immutable' <<<\"$release_json\")\" = \"true\"", workflow)
-        self.assertIn("gh release verify", workflow)
-        self.assertIn("gh release verify-asset", workflow)
+        self.assertGreaterEqual(workflow.count("python scripts/release/verify_release.py"), 2)
+        self.assertIn("--mode provenance", workflow)
+        self.assertIn("--mode all", workflow)
+        self.assertNotIn("for attempt in 1 2 3 4", workflow)
+        self.assertNotIn("gh release verify-asset", workflow)
         self.assertLess(workflow.index("Generate signed build provenance"), workflow.index("Publish GitHub Release with canonical assets"))
-        self.assertLess(workflow.index("Publish GitHub Release with canonical assets"), workflow.index("Require immutable published release and release attestation"))
+        self.assertLess(workflow.index("Publish GitHub Release with canonical assets"), workflow.index("  verify:"))
+
+    def test_ci_avoids_duplicate_pr_branch_runs_and_has_stable_required_check(self):
+        workflow = (ROOT / ".github/workflows/ci.yml").read_text(encoding="utf-8")
+        self.assertIn('      - main', workflow)
+        self.assertNotIn('      - "**"', workflow)
+        self.assertIn("pull_request:", workflow)
+        self.assertIn("cancel-in-progress: true", workflow)
+        self.assertIn("name: required-ci", workflow)
+        self.assertIn("needs: validate", workflow)
+        self.assertIn("VALIDATE_RESULT:", workflow)
+        self.assertIn('test "$VALIDATE_RESULT" = "success"', workflow)
+
+    def test_manual_release_verifier_uses_shared_release_verifier(self):
+        workflow = (ROOT / ".github/workflows/verify-release.yml").read_text(encoding="utf-8")
+        self.assertIn("python scripts/release/verify_release.py", workflow)
+        self.assertIn("--mode all", workflow)
+        self.assertNotIn("for attempt in 1 2 3 4", workflow)
+        self.assertNotIn("gh release verify-asset", workflow)
+
+    def test_manual_release_verifier_validates_with_trusted_release_source(self):
+        workflow = (ROOT / ".github/workflows/verify-release.yml").read_text(encoding="utf-8")
+        self.assertIn("Checkout trusted release source", workflow)
+        self.assertIn("ref: ${{ steps.source.outputs.sha }}", workflow)
+        self.assertIn("path: release-source", workflow)
+        self.assertIn("release-source/requirements.lock", workflow)
+        self.assertIn("python release-source/scripts/validate.py", workflow)
+        self.assertIn("python release-source/scripts/package_consumer.py", workflow)
 
     def test_release_workflow_attests_consumer_artifacts_before_publication(self):
         workflow = (ROOT / ".github/workflows/release.yml").read_text(encoding="utf-8")
@@ -244,6 +275,22 @@ class BundleTests(unittest.TestCase):
             "unused import/export/variable",
             "duplicate implementation",
             "canonical path가 하나인지",
+        ]
+        missing = [item for item in required if item not in text]
+        self.assertEqual([], missing)
+
+    def test_async_external_operation_continuation_policy_is_preserved(self):
+        text = (ROOT / "POLICIES.md").read_text(encoding="utf-8")
+        required = [
+            "### Asynchronous external operations and continuation",
+            "session lifetime과 operation lifetime을 분리",
+            "stable identifier",
+            "대화 연결 끊김, tool transport timeout, client 응답 timeout",
+            "원격 작업 실패 evidence가 아니다",
+            "single-slot/mutable request surface",
+            "stale 작업",
+            "runner/worker를 복구하기 전에 취소하거나 안전하게 retire",
+            "persisted result와 외부 side effect가 우선",
         ]
         missing = [item for item in required if item not in text]
         self.assertEqual([], missing)

@@ -28,7 +28,7 @@
 - **계획과 재사용:** 작업을 시작할 때 실제 완료 조건, 이미 유효한 소스·로그·실행 증거, 남은 불확실성, 예상 도구 호출 예산 및 종료 기준을 정한다. 호출 결과가 다음 결정에 어떤 영향을 주는지 설명할 수 없으면 기본적으로 호출하지 않는다. 변경된 파일과 필요한 코드 범위만 확인한다.
 - **기본 예산:** consumer가 자체 지침에서 달리 지정하지 않았다면 문서·현황 조회 **12회**, 보통의 코드 수정·단일 빌드 **20회**, 실기 GUI 재현·디버깅 **30회**를 *요청당 기본 점검 상한*으로 사용한다. 독립된 하위 호출을 각각 세며 래퍼·병렬 호출로 숫자를 감추거나 같은 작업을 새 세션으로 나눠 예산을 초기화하지 않는다. 실제 호출을 셀 수 없는 환경에서는 근거 없는 정확한 수치를 주장하지 않는다.
 - **75% 재평가와 예산 소진:** 기본 예산의 75%에 이르면 기존 근거·미해결 항목·직접적인 해결 경로를 재검토한다. 상한에 이르면 새로운 탐색과 추측성 실험을 멈추고, 추가 호출이 꼭 필요한 이유와 예상량을 알려 사용자에게 범위 확장 동의를 받는다. 이미 시작한 필수 검증의 결과 확인, 승인된 작업의 안전한 종료 및 사용자 데이터 보호는 이 상한으로 막지 않는다. 예산 때문에 검증하지 못했다면 PASS라고 보고하지 않는다.
-- **긴 작업:** 빌드·테스트는 한 번 실행하고 가능하면 완료까지 기다린 후 종료 코드와 의미 있는 결과를 한 번에 확인한다. 같은 실행에 대해 프로세스 출력과 로그 끝을 짧은 간격으로 번갈아 조회하거나 새로운 정보 없이 계속 폴링하지 않는다. 무변화 조회는 원칙적으로 연속 한 차례를 넘기지 않는다. 새 오류·합리적인 완료 시점 경과·필수 후속 결정이 있을 때만 추가 조회하고 가능한 한 새 로그 구간만 읽는다.
+- **긴 작업:** 빌드·테스트·CI·원격 작업은 한 번 실행하고 가능하면 완료까지 기다린 후 종료 코드와 의미 있는 결과를 한 번에 확인한다. 같은 실행에 대해 프로세스 출력과 로그 끝을 짧은 간격으로 번갈아 조회하거나 새로운 정보 없이 계속 폴링하지 않는다. 무변화 조회는 원칙적으로 연속 한 차례를 넘기지 않는다. 작업이 현재 세션보다 오래 지속될 수 있으면 stable run/job/request identifier와 대상 revision을 남기고, 합리적인 시점의 상태 확인 후에는 continuation 가능한 상태로 넘긴다. 새 오류·합리적인 완료 시점 경과·필수 후속 결정이 있을 때만 추가 조회하고 가능한 한 새 로그 구간만 읽는다.
 - **실패:** 최초의 실제 오류와 실행 조건을 먼저 분석한다. 같은 실패에 대해 조건·코드·가설을 바꾸지 않고 재시도하지 않는다. 동일 원인에 대한 재시도는 원칙적으로 **최대 두 차례**로 제한하고, 해결되지 않으면 접근법을 바꾸거나 확인된 blocker와 미검증 사항을 보고한다. 비멱등 외부 작업의 별도 retry 안전 규칙은 그대로 우선한다.
 - **시각적 검증:** 입력 이벤트 도달, 내부 상태 변화, 합성된 최종 화면은 각각 다른 증거다. 해석 기준 없는 연속 캡처·동일한 정지 화면 녹화·거듭 실패한 마우스 입력을 반복하지 않는다. 재현에 성공하고 요구한 화면·기능 검증이 충족되면 종료한다.
 - **보고:** 중요한 발견·차단 요인·필수 결정만 중간 보고하고, 최종에는 실제 변경, 수행한 검증, 미검증 범위와 필요한 후속 작업만 기술한다. 작은 진행 상황을 보고하려고 호출을 늘리지 않는다.
@@ -70,6 +70,14 @@ explicit-opt-in tool/connector = DISABLED UNLESS EXPLICITLY REQUESTED
 `test`, `build`, `seed`, `migration`, `sync`, `generate`, `install`이라는 이름만으로 안전성을 판단하지 않는다. 처음 보는 저장소의 lifecycle script, build plugin, test bootstrap, container entrypoint 등은 가능한 범위에서 정적으로 먼저 확인한다.
 
 명령 안에 다른 shell/interpreter 언어를 중첩할 때는 **현재 문자를 실제로 해석하는 parser 경계**를 구분한다. outer shell에서 필요한 escape를 quoted inner-language payload 안에 습관적으로 복제하지 않고, 반대로 inner-language quoting을 outer shell이 먼저 소비하지 않게 한다. 특히 shell → PowerShell/Python/SQL/JSON처럼 parser가 바뀌는 경계에서는 가능하면 최소 isolated command로 quoting/pipe/redirection 동작을 먼저 확인한다.
+
+### Pre-dispatch preflight for remote and costly jobs
+
+원격 runner·고비용 작업은 요청 형식, 대상·참조 경로, quoting, 활성 실행 점유 여부를 제출 전에 검사한다. 사전 검출 가능한 오류는 **preflight defect**로 수정하고 runner를 첫 parser로 사용하지 않는다. 정적 점검은 실제 runtime 검증을 대신하지 않는다.
+
+- request/schema 필드와 branch·SHA·경로 존재 및 최신성, target/working directory
+- shell/JSON/interpreter 경계, 실제 script·API/argument·test fixture 참조
+- 변경된 test/harness의 최소 syntax/import·contract 검사와 single-slot 중복 제출 여부
 
 ### Effect × Exposure
 
@@ -238,6 +246,20 @@ Consumer의 canonical project facts 문서(`.agent-policy/PROJECT.md` 또는 `--
 - 중요한 결정이 코드나 contract만으로 드러나지 않고 장기적으로 유지되어야 한다면 프로젝트가 사용하는 canonical decision/spec 문서에 남긴다. 단순 구현 세부사항까지 별도 문서로 과잉 기록하지 않는다.
 - session 종료, context 교체, 다른 agent/개발자에게 넘기기 전에는 working tree/revision, 수행한 검증, 실행하지 못한 검증, 외부 side effect 상태를 다시 확인한다.
 - 진행 상황 기록 자체를 완료 evidence로 취급하지 않는다. 실제 코드·데이터·remote 상태와 불일치하면 실제 상태가 우선이며 기록을 갱신한다.
+
+### Asynchronous external operations and continuation
+
+CI, remote runner, batch/deploy job처럼 session보다 오래 지속될 수 있는 외부 작업은 **session lifetime과 operation lifetime을 분리**한다.
+
+- 시작/식별 시 run/job/request ID 같은 stable identifier, target과 revision/request identity를 남긴다.
+- `queued`/`running` 상태를 짧은 간격으로 반복 polling하지 않는다. 시작 확인과 합리적인 예상 완료 시점 뒤의 상태 확인을 우선하고, 계속 진행 중이면 continuation identifier를 남겨 이후 세션에서 이어간다.
+- 대화 연결 끊김, tool transport timeout, client 응답 timeout은 **원격 작업 실패 evidence가 아니다**. 재시도 전 provider 상태, 결과/artifact, revision과 이미 발생한 side effect를 reconciliation한다.
+- 성공했거나 진행 중인 실행을 session 중단만으로 중복 실행하지 않는다. terminal failure 또는 요청 미전달 근거가 있을 때만 retry 규칙을 적용한다.
+- non-idempotent 작업은 identity/target으로 중복을 방지한다. single-slot/mutable request surface는 queued/running 작업이 있는 동안 덮어쓰지 않고, supersede할 때는 이전 작업을 먼저 취소·무효화한다.
+- stale 작업이 나중에 실행될 수 있으면 유효성을 확인한다. 더 이상 실행하면 안 되는 작업은 runner/worker를 복구하기 전에 취소하거나 안전하게 retire한다.
+- resume 시 실제 branch/revision, workflow/job 상태, persisted result와 외부 side effect가 우선이다. evidence는 revision/target/condition이 같을 때 재사용한다.
+
+이 절은 vendor-neutral human-facing continuation discipline이다. 프로젝트의 더 구체적인 lifecycle/cancellation/deduplication 규칙을 함께 적용한다.
 
 ### Ambiguity and escalation
 
@@ -437,6 +459,8 @@ Bootstrap:
 - **중간 위험**: business logic, CRUD, validation, parser, API response는 targeted unit/integration, positive/negative, regression 중심.
 - **높은 위험**: auth/permission, payment, migration, 운영 데이터, import, state machine, transaction, concurrency, 외부 전송, public contract는 negative/boundary, rollback/failure path, stale/replay/idempotency, concurrency, security, 실제 integration/E2E 필요성을 검토한다.
 
+**고비용 E2E/실기 fixture**는 작은 대표 fixture와 source/contract/harness 점검 후 최종 acceptance에 사용한다. 하네스 디버깅으로 반복하지 않고 기존 유효한 PASS를 보존해 영향받은 단계만 재검증한다. 필요한 최종 E2E는 생략하거나 PASS로 추정하지 않는다.
+
 ### Evidence levels
 
 - **Static**: syntax, compile, import, typecheck, lint, schema/config shape.
@@ -460,6 +484,14 @@ Bootstrap:
 - security: unauthenticated/unauthorized, tenant/object boundary, tampering, replay, injection, leakage
 - file: malformed, encoding, MIME/extension mismatch, archive traversal/bomb, preservation, reopen
 - external system: timeout, rate limit, malformed response, partial outage, unknown-state retry
+
+### UI functional and visual acceptance
+
+UI 픽셀·레이아웃이 바뀌면 실제 제품의 **기능적 동작**과 **최종 화면 픽셀**을 별개로 검증한다. 가능하면 변경 전후 화면을 같은 창 크기·theme·scale·test-owned fixture 조건에서 비교해 잘림·겹침·대비·관련 상태를 살핀다. revision·차이를 기록하고 회귀는 수정 후 재확인한다. 기능/UIA PASS나 screenshot 존재만으로 visual PASS를 주장하지 않는다. 화면 검토를 못 했으면 `VISUAL ACCEPTANCE: NOT TESTED`/blocker를 보고한다. 화면 불변 refactor에 새 캡처는 불필요하며 개인 화면·민감정보는 촬영/commit하지 않는다.
+
+### Asynchronous completion evidence
+
+비동기 성공은 실제 artifact·저장 결과와 안정적인 완료 상태(필요한 종료/cleanup 포함)로 판정한다. 후속 watcher가 덮어쓰는 toast·status·log 한 줄은 유일한 성공 oracle이 아니다. 실제 결과가 불명확하면 미검증으로 보고한다.
 
 ### Result status and claims
 
@@ -496,6 +528,8 @@ compiler/linker/test 로그에 다수 오류가 연쇄적으로 나타나면 개
 
 분류를 위해 assertion, permission, validation을 약화하지 않는다.
 
+GUI 실패는 작은 fixture로 **input → event → model/state → rendering** 순서에 따라 격리한다. selector/UIA·fixture 문제를 모른 채 입력 방식이나 제품 코드를 연속 변경하지 않는다.
+
 ### Minimum verification by change type
 
 | 변경 유형 | 최소 검토 |
@@ -531,6 +565,10 @@ compiler/linker/test 로그에 다수 오류가 연쇄적으로 나타나면 개
 재현 방어선은 항상 runtime test일 필요는 없다. 같은 결함을 더 싸고 deterministic하게 막을 수 있다면 source invariant, schema/contract validation, lint/static check, build preflight, resource/ABI fingerprint 같은 guard를 우선하거나 regression test와 함께 둔다. 반대로 brittle한 literal token 검사처럼 정상 변형을 자주 거짓 실패시키는 guard는 parser/contract/behavior 기반 검사로 개선한다.
 
 재현 테스트나 자동 guard를 만들 수 없다면 이유와 대신 확보한 evidence를 보고한다.
+
+### Semantic prose and source-contract assertions
+
+문서·정책 의미 검사는 parser/contract 또는 공백 정규화(`" ".join(text.split())`)를 우선한다. Markdown 줄바꿈만 달라 실패하는 literal token 검사 대신 의미를 검증한다. YAML/wire처럼 공백 자체가 contract라면 정확한 형식을 요구한다.
 
 ### Durable failure learning
 
