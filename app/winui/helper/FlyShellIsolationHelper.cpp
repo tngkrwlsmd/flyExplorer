@@ -390,21 +390,26 @@ int runIndexedFilenameSearch(HANDLE output,
   ::CoUninitialize();
  }
  std::vector<unsigned char> body;
+ std::uint32_t encodedCount=0;
  if(error==ERROR_SUCCESS){
   for(auto const& result:results){
    const auto units=static_cast<std::uint32_t>(result.size());
    const auto needed=sizeof(units)+units*sizeof(wchar_t);
-   if(needed>fxfile::indexwire::kMaxBodyBytes||body.size()>fxfile::indexwire::kMaxBodyBytes-needed){
-    error=ERROR_MORE_DATA;body.clear();results.clear();break;
+   if(needed>fxfile::indexwire::kMaxBodyBytes||
+      body.size()>fxfile::indexwire::kMaxBodyBytes-needed){
+    // Preserve every previously encoded result; the byte budget is an
+    // independent cap from the 1,000-item display cap.
+    truncated=true;break;
    }
    auto const* start=reinterpret_cast<unsigned char const*>(&units);
    body.insert(body.end(),start,start+sizeof(units));
    start=reinterpret_cast<unsigned char const*>(result.data());
    body.insert(body.end(),start,start+units*sizeof(wchar_t));
+   ++encodedCount;
   }
  }
  Header header{fxfile::indexwire::kMagic,fxfile::indexwire::kVersion,error==ERROR_SUCCESS&&truncated?
-     ERROR_MORE_DATA:error,static_cast<std::uint32_t>(results.size()),
+     ERROR_MORE_DATA:error,encodedCount,
      static_cast<std::uint32_t>(body.size()),fxfile::indexwire::checksum(body.data(),body.size())};
  return exactWrite(output,&header,sizeof(header))&&
         (body.empty()||exactWrite(output,body.data(),body.size()))?0:2;
