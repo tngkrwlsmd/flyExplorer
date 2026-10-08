@@ -26,7 +26,7 @@ inline std::uint32_t checksum(void const* raw,std::size_t size) noexcept {
 }
 inline bool validTerm(std::wstring const& value) noexcept {
  return !value.empty()&&value.size()<=kMaxTermUnits&&
-    value.find_first_of(L"%_[]\r\n\"\/\\*?")==std::wstring::npos&&
+    value.find_first_of(L"%_[]\r\n\"/\\*?")==std::wstring::npos&&
     value.find(L'\0')==std::wstring::npos;
 }
 inline bool validScope(std::wstring const& value) noexcept {
