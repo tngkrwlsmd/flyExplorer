@@ -1,15 +1,13 @@
 {
-  "request_id": "search-v3-index-itemurl-native-gui-20261008",
+  "request_id": "search-v3-index-gui-canonical-oracle-20261008",
   "expected_main_sha": "387efa622f6a9ce6685e3bffb98299df0503de3c",
-  "candidate_sha": "1d4f4d6390f7ed6b77b28e4300a60f4e127e9d1b",
+  "candidate_sha": "f717bcd05cc10c7935c46557dc0bbc52b03e53a0",
   "logical_unit": "search-v3-indexed-filename",
   "request_mode": "validation",
   "configuration": "Release",
   "validation_plan": [
-    "release-build",
-    "indexed-search-native",
     "indexed-search-gui"
   ],
   "working_directory": "",
-  "command": "$ErrorActionPreference=\"Stop\"\nSet-Location $env:FLYEXPLORER_CANONICAL_CHECKOUT\ngit fetch origin main work/search-v3-indexed-filename-20261008 --no-tags\nif($LASTEXITCODE -ne 0){throw \"fetch\"}\ngit switch --detach 1d4f4d6390f7ed6b77b28e4300a60f4e127e9d1b\nif($LASTEXITCODE -ne 0){throw \"checkout\"}\ntry {\n python -X utf8 tests\\winui\\test_indexed_search_contract.py\n if($LASTEXITCODE -ne 0){throw \"source contract\"}\n .\\build.bat Release\n if($LASTEXITCODE -ne 0){throw \"Release build\"}\n python -X utf8 tests\\winui\\test_indexed_search_native.py --configuration Release\n if($LASTEXITCODE -ne 0){throw \"native indexed URL\"}\n python -X utf8 tests\\winui\\test_indexed_search_gui.py --capture after\n if($LASTEXITCODE -ne 0){throw \"indexed GUI\"}\n Write-Host \"SEARCH_V3_INDEXED_VALIDATION=PASS\"\n} finally {\n git switch main\n if($LASTEXITCODE -ne 0){throw \"restore\"}\n}"
+  "command": "$ErrorActionPreference=\"Stop\"\nSet-Location $env:FLYEXPLORER_CANONICAL_CHECKOUT\ngit fetch origin main work/search-v3-indexed-filename-20261008 --no-tags\nif($LASTEXITCODE -ne 0){throw \"fetch\"}\ngit diff --quiet 1d4f4d6390f7ed6b77b28e4300a60f4e127e9d1b f717bcd05cc10c7935c46557dc0bbc52b03e53a0 -- app/winui src/base\nif($LASTEXITCODE -ne 0){throw \"product source changed\"}\ngit switch --detach f717bcd05cc10c7935c46557dc0bbc52b03e53a0\nif($LASTEXITCODE -ne 0){throw \"checkout\"}\ntry {\n python -X utf8 -m py_compile tests\\winui\\test_indexed_search_gui.py\n if($LASTEXITCODE -ne 0){throw \"test syntax\"}\n python -X utf8 tests\\winui\\test_indexed_search_gui.py --capture after\n if($LASTEXITCODE -ne 0){throw \"indexed GUI\"}\n Write-Host \"SEARCH_V3_INDEXED_GUI=PASS\"\n} finally {\n git switch main\n if($LASTEXITCODE -ne 0){throw \"restore\"}\n}"
 }
