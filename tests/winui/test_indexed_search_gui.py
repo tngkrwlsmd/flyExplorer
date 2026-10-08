@@ -123,16 +123,15 @@ def main():
                 "ambiguous visible XAML search control",auto_id,
                 len(nodes),repr(sorted(shapes)))
             return nodes[0]
+        # The owned XAML capture hook already opens SearchPanel at startup.
+        # A returned wrapper exposes is_visible(), not exists().
         panel=control("SearchTermBox")
-        if not panel.exists(timeout=.2) or not panel.is_visible():
-            window.child_window(auto_id="SearchPanelButton").invoke()
-        wait(lambda:panel.exists(timeout=.2) and panel.is_visible(),
-             "search panel did not open",12)
+        assert panel.is_visible(),"owned search panel did not open"
         control("SearchScopeBox").set_edit_text(str(pictures))
         panel.set_edit_text(TERM)
-        mode=control("SearchModeBox")
         if args.capture=="after":
-            assert mode.exists(timeout=2),"Windows index selector missing"
+            mode=control("SearchModeBox")
+            assert mode.is_visible(),"Windows index selector missing"
             mode.select(1)
             # A WinUI checkbox can appear twice in the UIA tree with
             # identical visible bounds. Use the independently-owned extension
