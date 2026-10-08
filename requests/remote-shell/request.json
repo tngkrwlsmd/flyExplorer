@@ -1,14 +1,13 @@
 {
-  "request_id": "shell-provider-copyin-20261008-r1",
+  "request_id": "shell-provider-copyin-docs-policy-20261008",
   "expected_main_sha": "9b468483d7dc259564a142396d7ee29f123ede73",
-  "candidate_sha": "dfc8703394e8c750beaaaa7ee9cea9d81ddeba2c",
-  "logical_unit": "shell-provider-copyin",
+  "candidate_sha": "1ceb0699c2c3162eae50e7392cf3fab102019e7c",
+  "logical_unit": "shell-provider-copyin-docs-policy",
   "request_mode": "validation",
   "configuration": "Release",
   "validation_plan": [
-    "release-build",
-    "shell-provider-copyin-gui"
+    "docs-policy"
   ],
   "working_directory": "",
-  "command": "$ErrorActionPreference=\"Stop\"\n$repo=$env:FLYEXPLORER_CANONICAL_CHECKOUT\n$main=\"9b468483d7dc259564a142396d7ee29f123ede73\"\n$candidate=\"dfc8703394e8c750beaaaa7ee9cea9d81ddeba2c\"\nSet-Location -LiteralPath $repo\n& git fetch origin main work/shell-provider-copyin-20261008 --no-tags --prune\nif($LASTEXITCODE -ne 0){throw \"fetch failed\"}\nif((& git rev-parse refs/remotes/origin/main).Trim() -ne $main){throw \"main changed\"}\nif((& git rev-parse refs/remotes/origin/work/shell-provider-copyin-20261008).Trim() -ne $candidate){throw \"candidate differs\"}\n$dirty=@(& git status --porcelain=v1 -uall)\nif($dirty.Count -ne 0){$dirty|%{Write-Host (\"UNEXPECTED_WORKTREE=\"+$_)};throw \"canonical checkout dirty\"}\ntry {\n & git switch --detach $candidate\n if($LASTEXITCODE -ne 0){throw \"checkout failed\"}\n & .\\build.bat Release\n if($LASTEXITCODE -ne 0){throw \"Copy-in Release build failed\"}\n & python -X utf8 tests\\winui\\test_shell_provider_copyin_contract.py\n if($LASTEXITCODE -ne 0){throw \"Copy-in native source contract failed\"}\n & python -X utf8 tests\\winui\\test_shell_provider_copyin_gui.py --configuration Release\n if($LASTEXITCODE -ne 0){throw \"Copy-in focused GUI failed\"}\n Write-Host \"SHELL_PROVIDER_COPYIN_VALIDATION=PASS\"\n} finally {\n & git switch main\n if($LASTEXITCODE -ne 0){throw \"restore main failed\"}\n & git merge --ff-only origin/main\n if($LASTEXITCODE -ne 0){throw \"restore main ff failed\"}\n}"
+  "command": "$ErrorActionPreference=\"Stop\"\n$repo=$env:FLYEXPLORER_CANONICAL_CHECKOUT\n$main=\"9b468483d7dc259564a142396d7ee29f123ede73\"\n$candidate=\"1ceb0699c2c3162eae50e7392cf3fab102019e7c\"\n$built=\"dfc8703394e8c750beaaaa7ee9cea9d81ddeba2c\"\nSet-Location -LiteralPath $repo\n& git fetch origin main work/shell-provider-copyin-20261008 --no-tags --prune\nif($LASTEXITCODE -ne 0){throw \"fetch failed\"}\nif((& git rev-parse refs/remotes/origin/main).Trim() -ne $main){throw \"main moved\"}\nif((& git rev-parse refs/remotes/origin/work/shell-provider-copyin-20261008).Trim() -ne $candidate){throw \"candidate mismatch\"}\n$dirty=@(& git status --porcelain=v1 -uall)\nif($dirty.Count -ne 0){$dirty|%{Write-Host (\"UNEXPECTED_WORKTREE=\"+$_)};throw \"checkout dirty\"}\n& git diff --quiet $built $candidate -- app/winui src/base tests/winui\nif($LASTEXITCODE -ne 0){throw \"product or test source changed after GUI PASS\"}\ntry {\n & git switch --detach $candidate\n if($LASTEXITCODE -ne 0){throw \"checkout failed\"}\n & .\\test.bat policy\n if($LASTEXITCODE -ne 0){throw \"policy failed\"}\n & git diff --check $main $candidate\n if($LASTEXITCODE -ne 0){throw \"diff check failed\"}\n Write-Host \"SHELL_PROVIDER_COPYIN_DOCS_POLICY=PASS\"\n} finally {\n & git switch main\n if($LASTEXITCODE -ne 0){throw \"restore main failed\"}\n & git merge --ff-only origin/main\n if($LASTEXITCODE -ne 0){throw \"restore main ff failed\"}\n}"
 }
