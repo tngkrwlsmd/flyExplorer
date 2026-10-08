@@ -111,12 +111,33 @@ def main():
         if args.capture=="after":
             assert mode.exists(timeout=2),"Windows index selector missing"
             mode.select(1)
-            window.child_window(auto_id="SearchRegexBox").invoke()
+            # Diagnose same-auto-id UIA duplicates without retargeting another
+            # window or blindly choosing the first automation tree match.
+            regex_candidates=[
+                x for x in window.descendants()
+                if x.element_info.automation_id=="SearchRegexBox"
+            ]
+            regex_info=[
+                (x.element_info.control_type,x.is_visible(),
+                 x.is_enabled(),str(x.rectangle()))
+                for x in regex_candidates
+            ]
+            print("INDEXED_SEARCH_REGEX_UIA_CANDIDATES",
+                  repr(regex_info),flush=True)
+            eligible=[
+                x for x in regex_candidates
+                if x.element_info.control_type=="CheckBox"
+                and x.is_visible() and x.is_enabled()
+            ]
+            assert len(eligible)==1,(
+                "expected one visible enabled SearchRegexBox",regex_info)
+            regex=eligible[0]
+            regex.invoke()
             window.child_window(auto_id="SearchRunButton").invoke()
             wait(lambda:"인덱스 검색은 파일명 일반 검색만 지원" in
                 window.child_window(auto_id="SearchCountText").window_text(),
                 "indexed-only unsupported criteria did not reject before start",6)
-            window.child_window(auto_id="SearchRegexBox").invoke()
+            regex.invoke()
             print("INDEXED_SEARCH_UNSUPPORTED_PRESTART_REJECT_PASS",True,flush=True)
         else:
             assert not mode.exists(timeout=.2),"BEFORE unexpectedly has index mode"
