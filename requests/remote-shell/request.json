@@ -1,13 +1,11 @@
 {
-  "request_id": "shell-provider-copyin-branch-cleanup-20261008",
-  "expected_main_sha": "1ceb0699c2c3162eae50e7392cf3fab102019e7c",
-  "candidate_sha": "1ceb0699c2c3162eae50e7392cf3fab102019e7c",
-  "logical_unit": "shell-provider-copyin-branch-cleanup",
-  "request_mode": "validation",
-  "configuration": "Release",
-  "validation_plan": [
-    "branch-cleanup"
-  ],
+  "request_id": "search-v3-index-readiness-20261008",
+  "expected_main_sha": "d0011a69f6bc209931eeb0d60fb9d278e9ce7c89",
+  "candidate_sha": "d0011a69f6bc209931eeb0d60fb9d278e9ce7c89",
+  "logical_unit": "search-v3-index-readiness",
+  "request_mode": "diagnostic",
+  "configuration": "none",
+  "validation_plan": [],
   "working_directory": "",
-  "command": "$ErrorActionPreference=\"Stop\"\n$repo=$env:FLYEXPLORER_CANONICAL_CHECKOUT\n$main=\"1ceb0699c2c3162eae50e7392cf3fab102019e7c\"\n$branch=\"work/shell-provider-copyin-20261008\"\nSet-Location -LiteralPath $repo\n& git fetch origin --no-tags --prune\nif($LASTEXITCODE -ne 0){throw \"fetch failed\"}\nif((& git rev-parse refs/remotes/origin/main).Trim() -ne $main){throw \"main changed\"}\n$ref=\"refs/remotes/origin/\"+$branch\n& git show-ref --verify --quiet $ref\nif($LASTEXITCODE -ne 0){throw \"work branch missing\"}\n$branchHead=(& git rev-parse $ref).Trim()\nif($branchHead -ne $main){throw \"branch diverges from accepted main\"}\n& git merge-base --is-ancestor $branchHead $main\nif($LASTEXITCODE -ne 0){throw \"work branch not merged\"}\n& git push origin --delete $branch\nif($LASTEXITCODE -ne 0){throw \"work branch deletion failed\"}\n& git fetch origin --no-tags --prune\nif($LASTEXITCODE -ne 0){throw \"post-delete fetch failed\"}\n& git show-ref --verify --quiet $ref\nif($LASTEXITCODE -eq 0){throw \"deleted branch remains\"}\nWrite-Host \"SHELL_PROVIDER_COPYIN_WORK_BRANCH_CLEANUP=PASS\""
+  "command": "$ErrorActionPreference=\"Stop\"\n$svc=Get-Service WSearch -ErrorAction SilentlyContinue\nif($svc){Write-Host (\"INDEX_SERVICE_STATUS=\"+$svc.Status)}else{Write-Host \"INDEX_SERVICE_STATUS=MISSING\"}\n$script = @'\n$ErrorActionPreference=\"Stop\"\ntry {\n $conn=New-Object System.Data.OleDb.OleDbConnection(\"Provider=Search.CollatorDSO.1;Extended Properties=`\"Application=Windows`\"\")\n $conn.Open()\n $cmd=$conn.CreateCommand()\n $cmd.CommandText=\"SELECT TOP 5 System.ItemUrl FROM SystemIndex\"\n $r=$cmd.ExecuteReader()\n $n=0;while($r.Read()){ $n++;Write-Output (\"INDEX_SAMPLE_URL=\"+[string]$r.GetValue(0)) }\n $r.Close();$conn.Close();Write-Output (\"INDEX_QUERY=PASS SAMPLES=\"+$n)\n} catch {Write-Output (\"INDEX_QUERY=FAIL \"+$_.Exception.GetType().Name+\" \"+$_.Exception.Message)}\n'@\n$encoded=[Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes($script))\n& powershell.exe -NoProfile -NonInteractive -EncodedCommand $encoded\nif($LASTEXITCODE -ne 0){throw \"Windows PowerShell diagnostic failed\"}\nWrite-Host \"INDEX_READINESS_DIAG=PASS\""
 }
