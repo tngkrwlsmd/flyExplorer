@@ -1,13 +1,11 @@
 {
-  "request_id": "search-v3-indexed-uia-wrapper-20261008",
+  "request_id": "search-v3-index-scope-diag-20261008",
   "expected_main_sha": "387efa622f6a9ce6685e3bffb98299df0503de3c",
-  "candidate_sha": "e7295ede3580836380773e39a0fbe4dd3d702ec0",
-  "logical_unit": "search-v3-indexed-filename",
-  "request_mode": "validation",
-  "configuration": "Release",
-  "validation_plan": [
-    "indexed-search-gui"
-  ],
+  "candidate_sha": "387efa622f6a9ce6685e3bffb98299df0503de3c",
+  "logical_unit": "search-v3-index-scope-diagnosis",
+  "request_mode": "diagnostic",
+  "configuration": "none",
+  "validation_plan": [],
   "working_directory": "",
-  "command": "$ErrorActionPreference=\"Stop\"\nSet-Location $env:FLYEXPLORER_CANONICAL_CHECKOUT\ngit fetch origin main work/search-v3-indexed-filename-20261008 --no-tags\nif($LASTEXITCODE -ne 0){throw \"fetch\"}\ngit diff --quiet 09133ee21053d814fa25cad58a2fcd14e05fabc6 e7295ede3580836380773e39a0fbe4dd3d702ec0 -- app/winui src/base\nif($LASTEXITCODE -ne 0){throw \"product source changed\"}\ngit switch --detach e7295ede3580836380773e39a0fbe4dd3d702ec0\nif($LASTEXITCODE -ne 0){throw \"checkout\"}\ntry {\n python -X utf8 -m py_compile tests\\winui\\test_indexed_search_gui.py\n if($LASTEXITCODE -ne 0){throw \"syntax\"}\n python -X utf8 tests\\winui\\test_indexed_search_gui.py --capture after\n if($LASTEXITCODE -ne 0){throw \"indexed GUI\"}\n Write-Host \"SEARCH_V3_INDEXED_GUI=PASS\"\n} finally {\n git switch main\n if($LASTEXITCODE -ne 0){throw \"restore\"}\n}"
+  "command": "$ErrorActionPreference=\"Stop\"\n$db=New-Object System.Data.OleDb.OleDbConnection('Provider=Search.CollatorDSO.1;Extended Properties=\"Application=Windows\"')\n$db.Open()\ntry {\n $pictures=(\"file:\"+[Environment]::GetFolderPath(\"MyPictures\").Replace(\"\\\",\"/\").TrimEnd(\"/\")+\"/\").Replace(\"'\",\"''\")\n $cases=@(\n   @(\"all-edge\",\"SELECT TOP 20 System.ItemUrl FROM SystemIndex WHERE System.FileName LIKE '%Microsoft Edge%'\"),\n   @(\"public-scope\",\"SELECT TOP 20 System.ItemUrl FROM SystemIndex WHERE SCOPE='file:C:/Users/Public/Desktop/'\"),\n   @(\"public-edge\",\"SELECT TOP 20 System.ItemUrl FROM SystemIndex WHERE SCOPE='file:C:/Users/Public/Desktop/' AND System.FileName LIKE '%Microsoft Edge%'\"),\n   @(\"pictures-scope\",\"SELECT TOP 20 System.ItemUrl FROM SystemIndex WHERE SCOPE='\"+$pictures+\"'\"),\n   @(\"pictures-direct\",\"SELECT TOP 20 System.ItemUrl FROM SystemIndex WHERE DIRECTORY='\"+$pictures.TrimEnd(\"/\")+\"'\")\n )\n foreach($c in $cases){\n  $cmd=$db.CreateCommand();$cmd.CommandText=$c[1]\n  try{$rd=$cmd.ExecuteReader();$n=0;while($rd.Read()){$n++};$rd.Close();Write-Host (\"INDEX_PROBE_\"+$c[0]+\"=\"+$n)}\n  catch{Write-Host (\"INDEX_PROBE_\"+$c[0]+\"=ERROR:\"+$_.Exception.GetType().Name)}\n }\n}finally{$db.Close()}\nWrite-Host \"INDEX_SQL_SCOPE_DIAG=PASS\""
 }
