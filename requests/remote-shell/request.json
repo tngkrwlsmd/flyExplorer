@@ -1,13 +1,13 @@
 {
-  "request_id": "search-v3-indexed-final-docs-policy-whitespace-fixed-20261008",
-  "expected_main_sha": "387efa622f6a9ce6685e3bffb98299df0503de3c",
+  "request_id": "search-v3-indexed-branch-cleanup-20261008",
+  "expected_main_sha": "aa61e28cb5f3a12cd90f59f022da4b6111ce9e6b",
   "candidate_sha": "aa61e28cb5f3a12cd90f59f022da4b6111ce9e6b",
-  "logical_unit": "search-v3-indexed-final-docs-policy",
+  "logical_unit": "search-v3-indexed-branch-cleanup",
   "request_mode": "validation",
   "configuration": "Release",
   "validation_plan": [
-    "docs-policy"
+    "branch-cleanup"
   ],
   "working_directory": "",
-  "command": "$ErrorActionPreference=\"Stop\"\nSet-Location -LiteralPath $env:FLYEXPLORER_CANONICAL_CHECKOUT\n& git fetch origin main work/search-v3-indexed-filename-20261008 --no-tags\nif($LASTEXITCODE -ne 0){throw \"fetch\"}\nif((& git rev-parse refs/remotes/origin/main).Trim() -ne \"387efa622f6a9ce6685e3bffb98299df0503de3c\"){throw \"main moved\"}\nif((& git rev-parse refs/remotes/origin/work/search-v3-indexed-filename-20261008).Trim() -ne \"aa61e28cb5f3a12cd90f59f022da4b6111ce9e6b\"){throw \"candidate moved\"}\n$dirty=@(& git status --porcelain=v1 -uall)\nif($dirty.Count -ne 0){throw \"canonical checkout dirty\"}\n& git diff --quiet ffc2466be51c32c1cf7454a2df80fe4f8c3f5f99 aa61e28cb5f3a12cd90f59f022da4b6111ce9e6b -- app/winui src/base tests/winui\nif($LASTEXITCODE -ne 0){throw \"accepted product or test source changed\"}\ntry {\n & git switch --detach aa61e28cb5f3a12cd90f59f022da4b6111ce9e6b\n if($LASTEXITCODE -ne 0){throw \"candidate checkout failed\"}\n & .\\test.bat policy\n if($LASTEXITCODE -ne 0){throw \"policy failed\"}\n & git diff --check 387efa622f6a9ce6685e3bffb98299df0503de3c aa61e28cb5f3a12cd90f59f022da4b6111ce9e6b\n if($LASTEXITCODE -ne 0){throw \"diff check failed\"}\n Write-Host \"SEARCH_V3_INDEXED_FINAL_POLICY=PASS\"\n} finally {\n & git switch main\n if($LASTEXITCODE -ne 0){throw \"restore main failed\"}\n & git merge --ff-only origin/main\n if($LASTEXITCODE -ne 0){throw \"restore main ff failed\"}\n}"
+  "command": "$ErrorActionPreference=\"Stop\"\nSet-Location $env:FLYEXPLORER_CANONICAL_CHECKOUT\n$main=\"aa61e28cb5f3a12cd90f59f022da4b6111ce9e6b\"\n$branch=\"work/search-v3-indexed-filename-20261008\"\ngit fetch origin --no-tags --prune\nif($LASTEXITCODE -ne 0){throw \"fetch failed\"}\nif((& git rev-parse refs/remotes/origin/main).Trim() -ne $main){throw \"main changed\"}\n$ref=\"refs/remotes/origin/\"+$branch\ngit show-ref --verify --quiet $ref\nif($LASTEXITCODE -ne 0){throw \"work ref missing\"}\nif((& git rev-parse $ref).Trim() -ne $main){throw \"branch differs from main\"}\ngit merge-base --is-ancestor $ref refs/remotes/origin/main\nif($LASTEXITCODE -ne 0){throw \"not merged\"}\ngit push origin --delete $branch\nif($LASTEXITCODE -ne 0){throw \"delete failed\"}\ngit fetch origin --no-tags --prune\nif($LASTEXITCODE -ne 0){throw \"post-fetch failed\"}\ngit show-ref --verify --quiet $ref\nif($LASTEXITCODE -eq 0){throw \"branch remains\"}\nWrite-Host \"SEARCH_V3_INDEXED_BRANCH_CLEANUP=PASS\""
 }
