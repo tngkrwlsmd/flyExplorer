@@ -79,6 +79,9 @@ def main():
     prefs.mkdir(parents=True,exist_ok=True)
     (prefs/"ui-preferences-v1.txt").write_bytes(
         b"schema=2\r\nlanguage=ko-KR\r\ntheme=dark\r\nview=details\r\n")
+    shot=base/("indexed-search-"+args.capture+".bmp")
+    shot.unlink(missing_ok=True)
+    env["FLY_CONTENT_REGEX_VISUAL_CAPTURE_PATH"]=str(shot)
     proc=None
     window=None
     success=False
@@ -97,9 +100,11 @@ def main():
             window=Desktop(backend="uia").window(handle=matches[0].handle)
             return window.child_window(auto_id="SearchPanelButton").exists(timeout=.2)
         wait(ready,"indexed search window",24)
-        window.child_window(auto_id="SearchPanelButton").invoke()
         panel=window.child_window(auto_id="SearchTermBox")
-        wait(lambda:panel.exists(timeout=.2),"search panel did not open",12)
+        if not panel.exists(timeout=.2) or not panel.is_visible():
+            window.child_window(auto_id="SearchPanelButton").invoke()
+        wait(lambda:panel.exists(timeout=.2) and panel.is_visible(),
+             "search panel did not open",12)
         window.child_window(auto_id="SearchScopeBox").set_edit_text(str(pictures))
         panel.set_edit_text(TERM)
         mode=window.child_window(auto_id="SearchModeBox")
@@ -115,11 +120,10 @@ def main():
             print("INDEXED_SEARCH_UNSUPPORTED_PRESTART_REJECT_PASS",True,flush=True)
         else:
             assert not mode.exists(timeout=.2),"BEFORE unexpectedly has index mode"
-        # Actual screenshot from this app-owned window, not a reference image.
-        window.set_focus()
-        time.sleep(.3)
-        shot=base/("indexed-search-"+args.capture+".png")
-        window.capture_as_image().save(shot)
+        # App-owned RenderTargetBitmap capture; service desktops can reject
+        # pywinauto/PIL screen grabbing even when UIA works.
+        wait(lambda:shot.is_file() and shot.stat().st_size>4096,
+             "app-owned indexed search capture did not materialize",12)
         print("INDEXED_SEARCH_CAPTURE",shot.name,flush=True)
 
         if args.capture=="after":
