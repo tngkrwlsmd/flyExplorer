@@ -508,7 +508,7 @@ Report execute(Request const& task,Progress& progress) noexcept{
 }
 namespace {
 constexpr std::uint32_t kTransferWireMagic=0x31525446u; // FTR1
-constexpr std::uint32_t kTransferWireVersion=2;
+constexpr std::uint32_t kTransferWireVersion=3;
 constexpr std::uint32_t kTransferFrameProgress=1;
 constexpr std::uint32_t kTransferFrameComplete=2;
 constexpr std::uint32_t kTransferFlagAborted=1u;
@@ -611,11 +611,20 @@ bool serializeTransfer(Request const& task,
      (task.sourceMode!=SourceMode::Filesystem&&
       task.sourceMode!=SourceMode::ShellProvider)||
      (task.sourceMode==SourceMode::ShellProvider&&task.kind!=Kind::Copy)||
+     (task.destinationMode!=DestinationMode::Filesystem&&
+      task.destinationMode!=DestinationMode::ShellProvider)||
+     (task.destinationMode==DestinationMode::ShellProvider&&
+       (task.sourceMode!=SourceMode::Filesystem||task.kind!=Kind::Copy||
+        !validPidlBlob(task.destinationPidl)))||
+     (task.destinationMode==DestinationMode::Filesystem&&
+       !task.destinationPidl.empty())||
      task.sources.empty()||task.sources.size()>kMaxItems||
      task.sourceParent.empty()||
      task.sourceParent.size()>(task.sourceMode==SourceMode::ShellProvider?
         kMaxProviderParsingUnits:std::size_t{32000})||
-     task.destination.empty()||task.destination.size()>32000||
+     task.destination.empty()||
+     task.destination.size()>(task.destinationMode==DestinationMode::ShellProvider?
+       kMaxProviderParsingUnits:std::size_t{32000})||
      (task.collision!=Collision::Reject&&task.collision!=Collision::KeepBoth))
    return false;
   const auto sourceLimit=task.sourceMode==SourceMode::ShellProvider?
@@ -627,10 +636,13 @@ bool serializeTransfer(Request const& task,
    sourceUnits+=source.size()+1;
   }
   if(!appendU32(body,static_cast<std::uint32_t>(task.sourceMode))||
+     !appendU32(body,static_cast<std::uint32_t>(task.destinationMode))||
      !appendU32(body,static_cast<std::uint32_t>(task.kind))||
      !appendU32(body,static_cast<std::uint32_t>(task.collision))||
      !appendString(body,task.sourceParent,sourceLimit)||
-     !appendString(body,task.destination,32000)||
+     !appendString(body,task.destination,
+       task.destinationMode==DestinationMode::ShellProvider?
+        kMaxProviderParsingUnits:std::size_t{32000})||
      !appendU32(body,static_cast<std::uint32_t>(task.sources.size())))
    return false;
   for(auto const& source:task.sources)
@@ -646,6 +658,7 @@ bool serializeTransfer(Request const& task,
    if(!task.sourceParentPidl.empty()||!task.sourcePidls.empty()||
       !appendU32(body,0)||!appendU32(body,0))return false;
   }
+  if(!appendBlob(body,task.destinationPidl,kMaxProviderPidlBytes))return false;
   head.magic=kTransferWireMagic;
   head.version=kTransferWireVersion;
   head.bodyBytes=static_cast<std::uint32_t>(body.size());
@@ -695,23 +708,30 @@ bool parseTransfer(std::vector<unsigned char> const& body,
  try{
   WireReader reader{body};
   const auto sourceMode=reader.u32();
+  const auto destinationMode=reader.u32();
   const auto kind=reader.u32();
   const auto collision=reader.u32();
   if(sourceMode>static_cast<std::uint32_t>(SourceMode::ShellProvider)||
+     destinationMode>static_cast<std::uint32_t>(DestinationMode::ShellProvider)||
      kind>static_cast<std::uint32_t>(Kind::Move)||
      collision>static_cast<std::uint32_t>(Collision::KeepBoth))
    return false;
   task=Request{};
   task.sourceMode=static_cast<SourceMode>(sourceMode);
+  task.destinationMode=static_cast<DestinationMode>(destinationMode);
   task.kind=static_cast<Kind>(kind);
   task.collision=static_cast<Collision>(collision);
   if((task.kind!=Kind::Copy&&task.kind!=Kind::Move)||
-     (task.sourceMode==SourceMode::ShellProvider&&task.kind!=Kind::Copy))
+     (task.sourceMode==SourceMode::ShellProvider&&task.kind!=Kind::Copy)||
+     (task.destinationMode==DestinationMode::ShellProvider&&
+      (task.sourceMode!=SourceMode::Filesystem||task.kind!=Kind::Copy)))
    return false;
   const auto sourceLimit=task.sourceMode==SourceMode::ShellProvider?
       kMaxProviderParsingUnits:std::size_t{32000};
   task.sourceParent=reader.string(sourceLimit);
-  task.destination=reader.string(32000);
+  task.destination=reader.string(
+      task.destinationMode==DestinationMode::ShellProvider?
+      kMaxProviderParsingUnits:std::size_t{32000});
   const auto count=reader.u32();
   if(!reader.valid||task.sourceParent.empty()||task.destination.empty()||
      !count||count>kMaxItems)return false;
@@ -742,6 +762,11 @@ bool parseTransfer(std::vector<unsigned char> const& body,
   }else if(!task.sourceParentPidl.empty()||!task.sourcePidls.empty()){
    return false;
   }
+  task.destinationPidl=reader.blob(kMaxProviderPidlBytes);
+  if(!reader.valid||
+     (task.destinationMode==DestinationMode::ShellProvider?
+       !validPidlBlob(task.destinationPidl):!task.destinationPidl.empty()))
+   return false;
   return reader.valid&&reader.offset==body.size();
  }catch(...){task=Request{};return false;}
 }
