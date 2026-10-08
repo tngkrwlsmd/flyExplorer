@@ -225,11 +225,26 @@ void MainWindow::RunTransfer(fxfile::shelltransfer::Kind kind){
    return;
   }
   const auto& other=ActiveWindowTab().model.panes[1-side];
-  if(other.pending[other.active]||other.filesystemPaths[other.active].empty()){
-   StatusText().Text(L"반대쪽 창의 실제 폴더를 먼저 불러오세요.");
+  if(other.pending[other.active]){
+   StatusText().Text(L"반대쪽 창의 폴더를 완전히 불러오세요.");
    return;
   }
-  req.destination=other.filesystemPaths[other.active];
+  if(!other.filesystemPaths[other.active].empty()){
+   req.destination=other.filesystemPaths[other.active];
+  }else if(!providerSource&&kind==fxfile::shelltransfer::Kind::Copy){
+   auto const& target=other.tabs[other.active].snapshot();
+   if(!target.folder.valid()||target.parsingName.empty()||
+      target.parsingName.size()>fxfile::shelltransfer::kMaxProviderParsingUnits||
+      !copyPidlBytes(target.folder.get(),req.destinationPidl)){
+    StatusText().Text(L"대상 Shell provider의 식별자를 사용할 수 없습니다.");
+    return;
+   }
+   req.destinationMode=fxfile::shelltransfer::DestinationMode::ShellProvider;
+   req.destination=target.parsingName;
+  }else{
+   StatusText().Text(L"가상 Shell/provider 대상에는 실제 폴더의 파일 복사만 지원합니다.");
+   return;
+  }
  }
 
  std::size_t sourceUnits=0;
@@ -431,9 +446,14 @@ void MainWindow::OnTransferCompleted(
   auto const& pane=ActiveWindowTab().model.panes[side];
   if(pane.active>=pane.filesystemPaths.size())continue;
   const auto& visible=pane.filesystemPaths[pane.active];
+  const auto& shellVisible=pane.tabs[pane.active].snapshot().parsingName;
+  const bool providerTarget=completion.request.destinationMode==
+      fxfile::shelltransfer::DestinationMode::ShellProvider;
   const bool touched=std::any_of(
    completion.touchedFolders.begin(),completion.touchedFolders.end(),
-   [&](std::wstring const& folder){return folder==visible;});
+   [&](std::wstring const& folder){
+    return folder==visible||(providerTarget&&folder==shellVisible);
+   });
   if(!touched)continue;
   QueuePidl(side,
    fxfile::shellnav::Location(pane.tabs[pane.active].snapshot().folder),
