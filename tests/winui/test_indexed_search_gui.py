@@ -69,6 +69,10 @@ def main():
     base=ROOT/"logs"/"search-v3-indexed"
     base.mkdir(parents=True,exist_ok=True)
     owned=Path(tempfile.mkdtemp(prefix="indexed-search-owned-",dir=base))
+    view=owned/"display-folder"
+    view.mkdir()
+    (view/"owned-visible-row.txt").write_text(
+        "test-owned visual fixture\n",encoding="utf-8")
     fixture.write_text("test-owned indexed filename verification\n",encoding="utf-8")
     env=os.environ.copy()
     for key in ("APPDATA","LOCALAPPDATA","TEMP","TMP"):
@@ -86,7 +90,7 @@ def main():
     window=None
     success=False
     try:
-        proc=subprocess.Popen([str(exe),str(pictures)],
+        proc=subprocess.Popen([str(exe),str(view)],
                               cwd=exe.parent,env=env,
                               stdin=subprocess.DEVNULL,
                               stdout=subprocess.DEVNULL,
@@ -111,33 +115,16 @@ def main():
         if args.capture=="after":
             assert mode.exists(timeout=2),"Windows index selector missing"
             mode.select(1)
-            # Diagnose same-auto-id UIA duplicates without retargeting another
-            # window or blindly choosing the first automation tree match.
-            regex_candidates=[
-                x for x in window.descendants()
-                if x.element_info.automation_id=="SearchRegexBox"
-            ]
-            regex_info=[
-                (x.element_info.control_type,x.is_visible(),
-                 x.is_enabled(),str(x.rectangle()))
-                for x in regex_candidates
-            ]
-            print("INDEXED_SEARCH_REGEX_UIA_CANDIDATES",
-                  repr(regex_info),flush=True)
-            eligible=[
-                x for x in regex_candidates
-                if x.element_info.control_type=="CheckBox"
-                and x.is_visible() and x.is_enabled()
-            ]
-            assert len(eligible)==1,(
-                "expected one visible enabled SearchRegexBox",regex_info)
-            regex=eligible[0]
-            regex.invoke()
+            # A WinUI checkbox can appear twice in the UIA tree with
+            # identical visible bounds. Use the independently-owned extension
+            # field to prove index-only criteria rejection instead.
+            unsupported=window.child_window(auto_id="SearchExtensionBox")
+            unsupported.set_edit_text(".txt")
             window.child_window(auto_id="SearchRunButton").invoke()
             wait(lambda:"인덱스 검색은 파일명 일반 검색만 지원" in
                 window.child_window(auto_id="SearchCountText").window_text(),
                 "indexed-only unsupported criteria did not reject before start",6)
-            regex.invoke()
+            unsupported.set_edit_text("")
             print("INDEXED_SEARCH_UNSUPPORTED_PRESTART_REJECT_PASS",True,flush=True)
         else:
             assert not mode.exists(timeout=.2),"BEFORE unexpectedly has index mode"
