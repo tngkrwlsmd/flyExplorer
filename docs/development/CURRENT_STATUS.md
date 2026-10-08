@@ -204,7 +204,7 @@ checkpoints.
   internal/Windows clipboard paste, same-app transfer and external-drop
   ingestion converge on FileOperationController, which executes Copy/Move in
   the exact-owned `FlyShellIsolationHelper.exe --file-transfer` child.
-  Virtual Shell/provider roots now have a separate **Copy-out-only** source
+  Virtual Shell/provider roots have a separate **Copy-out** source
   mode: the destination must be a real filesystem folder, selected source
   identity is carried as bounded snapshot PIDL value bytes plus parsing-name
   diagnostics, and only the helper queries `SFGAO_CANCOPY`, revalidates
@@ -212,8 +212,14 @@ checkpoints.
   `IFileOperation::CopyItem`. Per-PIDL size is capped at 32 KiB and aggregate
   provider PIDL data at 1 MiB in addition to the existing 1,024-item/
   1,048,576-source-identity-unit bounds. No COM object crosses the wire.
-  Provider Move, Copy-in, Recycle/Delete, reparse traversal and extended/device
-  namespaces remain closed. The transfer child retains restricted handle
+  A second **Copy-in** destination mode now allows filesystem-source Copy
+  into the built-in Pictures Library only when its exact snapshot PIDL matches
+  `FOLDERID_PicturesLibrary` and the library default save folder is the
+  actual Pictures Known Folder. Helper-only default-save resolution, safe-path
+  and name-collision checks precede `IFileOperation::CopyItem`; the transfer
+  wire is v3. Arbitrary provider destination writes, provider Move,
+  provider-to-provider Copy, Recycle/Delete, reparse traversal and
+  extended/device namespaces remain closed. The transfer child retains restricted handle
   inheritance, one-process kill-on-close Job Object and bounded cancellation.
   Recycle remains local fixed/removable only with explicit confirmation and
   recycle-only Shell flags.
@@ -609,7 +615,39 @@ no new visual acceptance was required.
 The runtime case uses Windows' built-in Pictures Library virtual root with a
 test-owned filesystem-backed child routed through the provider PIDL path. It
 does **not** separately certify arbitrary third-party providers or provider-only
-non-filesystem child types.
+non-filesystem child types. The Copy-out-only statement above records that
+earlier logical unit; the accepted Copy-in successor is documented next.
+
+Virtual Shell/provider **Copy-in to the built-in Pictures Library** is accepted
+on candidate `dfc8703394e8c750beaaaa7ee9cea9d81ddeba2c` by run
+`37705656407`. A filesystem-source selection and opposite Pictures Library
+pane produce a bounded `DestinationMode::ShellProvider` request carrying the
+accepted absolute destination PIDL. The v3 private wire transports this value
+without moving any COM object into the app process. In the exact-owned transfer
+helper, the PIDL must match the system `FOLDERID_PicturesLibrary`; the helper
+loads `IShellLibrary`, reads its default save folder and requires its safe,
+non-reparse filesystem path to equal `FOLDERID_Pictures`. Only then does it
+check destination collisions and perform `IFileOperation::CopyItem` into that
+concrete save folder. Other provider destinations and custom library save
+locations remain fail-closed. The existing 1,024 item / 1 Mi UTF-16 source and
+32 KiB provider PIDL limits, exact-owned Job Object, cancellation, progress,
+stale-route checks and no-overwrite semantics remain in force. Provider Move,
+Recycle/Delete and provider-to-provider Copy remain unsupported.
+
+Final run `37705656407` reported request validation PASS, change-scoped FAST
+PASS, GUI runner health PASS, canonical Release build PASS, source contract
+PASS and focused two-pane GUI PASS. It observed
+`SHELL_PROVIDER_COPYIN_DESTINATION_READY=True`,
+`SHELL_PROVIDER_COPYIN_MOVE_REJECTED=True`,
+`SHELL_PROVIDER_COPYIN_PASS=True`,
+`SHELL_PROVIDER_COPYIN_SOURCE_PRESERVED=True`,
+`SHELL_PROVIDER_COPYIN_OWNED_ITEMS_REMOVED=True`,
+`SHELL_PROVIDER_COPYIN_LEGACY_SETTINGS_UNCHANGED=True` and
+`SHELL_PROVIDER_COPYIN_PROCESS_EXIT=0`. The test used only prechecked,
+test-owned files and removed its isolated fixture. The Shell watcher may replace
+the transient success status, so byte verification and controller idle remain
+the durable acceptance. No XAML/layout/icon changes were made. Actual arbitrary
+third-party provider destination behavior is **NOT CERTIFIED**.
 
 Removable-volume Recycle semantics are accepted on candidate
 `a7b675f790356cc152c577a3d670e9829afdaae4` by self-hosted Remote
@@ -1172,8 +1210,12 @@ Current source and the last parity evidence still show these limits:
   transfer core. Virtual Shell/provider sources additionally support bounded
   **Copy-out to a real filesystem destination** using accepted snapshot PIDL
   value bytes and helper-owned `SFGAO_CANCOPY`/direct-child/collision
-  revalidation. Provider Move, Copy-in/destination mutation and Recycle/Delete
-  remain unsupported, as do extended/device namespaces. All Copy/Move Shell
+  revalidation. A separate bounded filesystem-source Copy-in path now accepts
+  the Windows built-in Pictures Library when its exact accepted destination
+  PIDL and default save folder resolve to the user's Pictures Known Folder;
+  other provider destinations/custom save folders remain unsupported.
+  Provider Move, provider-to-provider Copy and Recycle/Delete remain
+  unsupported, as do extended/device namespaces. All Copy/Move Shell
   mutation stays in the exact-owned transfer helper so a blocking Shell call is
   outside the flyExplorer process and can be terminated through its owned Job
   Object after cancellation grace. Recycle still accepts only local
