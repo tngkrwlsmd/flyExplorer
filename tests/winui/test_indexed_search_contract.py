@@ -36,6 +36,10 @@ class IndexedSearchContracts(unittest.TestCase):
             if token=="GetDefaultSaveFolder(":
                 continue
             self.assertIn(token,helper+wire)
+        self.assertIn('L"SELECT TOP 1001 System.ItemUrl FROM SystemIndex "',helper)
+        self.assertIn("validScope(url)",helper)
+        self.assertIn("std::filesystem::path(url).lexically_normal()",helper)
+        self.assertIn("GetFileAttributesW(result.c_str())",helper)
         self.assertIn("kMaxResults=1000",wire)
         self.assertIn("kMaxBodyBytes=1024u*1024u",wire)
         self.assertIn("std::uint32_t encodedCount=0",helper)
