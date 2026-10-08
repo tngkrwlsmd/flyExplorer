@@ -26,8 +26,8 @@ consumer core; this PROJECT.md remains project-owned across bundle refreshes.
     {"name": "winui-tests", "path": "tests/winui", "responsibility": "source, native and owned GUI contracts"}
   ],
   "review": {
-    "reviewed_revision": "32648cfeb5e92594619b9ed24b2568b18d71a2e8",
-    "reviewed_at": "2026-10-07",
+    "reviewed_revision": "dfc8703394e8c750beaaaa7ee9cea9d81ddeba2c",
+    "reviewed_at": "2026-10-08",
     "reviewed_paths": [
       "app/winui",
       "src/base",
@@ -169,9 +169,25 @@ interface crosses the process boundary. The exact-owned
 `FlyShellIsolationHelper.exe --file-transfer` child reconstructs Shell items
 from those PIDLs, revalidates direct-child identity, queries `SFGAO_CANCOPY`
 only inside the helper, validates the materialized leaf/collision, and queues
-`IFileOperation::CopyItem`. Provider Move, Copy-in, Recycle/Delete and extended
+`IFileOperation::CopyItem`. Provider Move, provider-to-provider Copy, Recycle/Delete and extended
 device namespaces remain fail-closed. Filesystem Copy/Move keeps its existing
 path validation.
+
+Virtual provider **Copy-in** now has a separate, intentionally restricted
+destination mode. Only filesystem-source Copy into the built-in Windows
+Pictures Library is supported, and only while that library's default save
+location is the user's actual Pictures Known Folder. MainWindow passes the
+accepted target-root absolute PIDL as bounded value bytes. Transfer wire v3
+preserves filesystem/provider direction explicitly and refuses provider
+source-to-provider destination or provider Move. Inside the exact-owned helper
+only, the target PIDL must equal `FOLDERID_PicturesLibrary`; the helper loads
+the Shell library, obtains its current default save folder, revalidates the
+filesystem/reparse/drive boundary, requires it to match `FOLDERID_Pictures`,
+checks destination leaf collisions and then queues
+`IFileOperation::CopyItem` into the resolved concrete folder. No arbitrary
+provider write operation is enabled. Collision handling remains Reject or
+explicitly confirmed KeepBoth, never overwrite. The source keeps its
+filesystem attribute/direct-child validation.
 
 The transfer child still uses restricted inherited handles, a one-process
 kill-on-close Job Object, streamed progress and inherited cancellation; only
@@ -192,6 +208,18 @@ settings all passed. This built-in Pictures Library case does not separately
 certify arbitrary third-party provider implementations or provider-only
 non-filesystem child types. Actual SMB/UNC and mapped-network execution remain
 environment acceptance gaps because the VM has no test-owned SMB share.
+
+Provider Copy-in implementation and GUI are accepted on candidate
+`dfc8703394e8c750beaaaa7ee9cea9d81ddeba2c` by Remote Windows Task
+`37705656407`: change-scoped FAST, interactive runner health, canonical
+Release build, focused source contract and actual two-pane Pictures Library
+Copy-in GUI all passed. The test proved a filesystem-source file copied into
+the library's confirmed Pictures save folder with exact bytes; provider-target
+Move was rejected, the source stayed unchanged, the controller returned idle,
+the app exited 0, and both test-owned Pictures items and isolated fixture were
+removed while protected legacy settings stayed byte-identical. Arbitrary
+third-party/provider-only destinations and custom library save locations
+remain outside the accepted scope.
 
 Sortable file metadata now accepts ordinary network filesystem roots as well as
 local fixed/removable roots. Mapped `DRIVE_REMOTE` and direct
