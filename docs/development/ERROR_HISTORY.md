@@ -43,6 +43,33 @@ product state use CURRENT_STATUS.md.
   rejected, original system file unchanged, process exit 0, protected legacy
   settings unchanged. Visual before/after pixel review remains separate.
 
+**Focused visual acceptance follow-up (2026-10-08)**
+- Run `37714905989` was a test-only diagnostic error: PowerShell command-line
+  quoting removed Python's quotes around `RGB`, causing `NameError` before
+  any pixel comparison. The subsequent diagnostic found captures from different
+  fixtures/launch states; different dimensions cannot prove a regression.
+- Later owned capture attempts exposed an early-startup/loaded-state race and
+  a stale Release binary in one baseline run. Both problems were traced to
+  fixture orchestration, not a new product search defect. Exact-main
+  `387efa622f6a9ce6685e3bffb98299df0503de3c` was rebuilt before its
+  final capture (`37718045551`); the accepted indexed candidate
+  `ffc2466be51c32c1cf7454a2df80fe4f8c3f5f99` used the
+  identical test-owned `display-folder` fixture (`37717788614`).
+- Final fixed 972x720 HWND, Dark-theme, actual XAML `RenderTargetBitmap`
+  pair was reviewed directly in `37718272601`: **956x711** images;
+  **113,339 / 679,716** differing pixels (**16.6745%**). The added
+  Windows-index mode row and expected downward flow of the search/pane
+  sections explain the principal layout change; the sidebar, dual file panes,
+  status footer and action chrome stayed legible without blocking overlap or
+  clipping. Transient search-scope input and randomized test-owned path text
+  differed at capture time and were explicitly excluded from any
+  pixel-identical assertion. **VISUAL LAYOUT ACCEPTANCE: PASS**; additional
+  DPI/selection/theme states: NOT SEPARATELY TESTED.
+- Capture processes exited 0 with legacy settings and read-only system index
+  fixture preserved. This closes the indexed mode's focused visual gate,
+  without broadening indexed/provider/property scope. 
+
+
 ## 2026-10-08 — bounded Windows Pictures Library provider Copy-in
 
 **오류/위험 경계**
