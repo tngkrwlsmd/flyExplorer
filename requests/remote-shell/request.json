@@ -1,13 +1,14 @@
 {
-  "request_id": "search-v3-indexed-gui-native-oracle-20261008",
+  "request_id": "search-v3-indexed-docs-visual-check-20261008",
   "expected_main_sha": "387efa622f6a9ce6685e3bffb98299df0503de3c",
-  "candidate_sha": "ef6618cd478a6cadad56eb3bdce026b7e9541d02",
-  "logical_unit": "search-v3-indexed-filename",
+  "candidate_sha": "ffc2466be51c32c1cf7454a2df80fe4f8c3f5f99",
+  "logical_unit": "search-v3-indexed-final-gates",
   "request_mode": "validation",
   "configuration": "Release",
   "validation_plan": [
-    "indexed-search-gui"
+    "docs-policy",
+    "visual-evidence-inventory"
   ],
   "working_directory": "",
-  "command": "$ErrorActionPreference=\"Stop\"\nSet-Location $env:FLYEXPLORER_CANONICAL_CHECKOUT\ngit fetch origin main work/search-v3-indexed-filename-20261008 --no-tags\nif($LASTEXITCODE -ne 0){throw \"fetch\"}\ngit diff --quiet 1d4f4d6390f7ed6b77b28e4300a60f4e127e9d1b ef6618cd478a6cadad56eb3bdce026b7e9541d02 -- app/winui src/base\nif($LASTEXITCODE -ne 0){throw \"product source changed\"}\ngit switch --detach ef6618cd478a6cadad56eb3bdce026b7e9541d02\nif($LASTEXITCODE -ne 0){throw \"checkout\"}\ntry {\n python -X utf8 -m py_compile tests\\winui\\test_indexed_search_gui.py\n if($LASTEXITCODE -ne 0){throw \"syntax\"}\n python -X utf8 tests\\winui\\test_indexed_search_gui.py --capture after\n if($LASTEXITCODE -ne 0){throw \"focused GUI\"}\n Write-Host \"SEARCH_V3_INDEXED_GUI=PASS\"\n} finally {\n git switch main\n if($LASTEXITCODE -ne 0){throw \"restore\"}\n}"
+  "command": "$ErrorActionPreference=\"Stop\"\nSet-Location $env:FLYEXPLORER_CANONICAL_CHECKOUT\ngit fetch origin main work/search-v3-indexed-filename-20261008 --no-tags\nif($LASTEXITCODE -ne 0){throw \"fetch\"}\ngit switch --detach ffc2466be51c32c1cf7454a2df80fe4f8c3f5f99\nif($LASTEXITCODE -ne 0){throw \"checkout\"}\ntry {\n .\\test.bat policy\n if($LASTEXITCODE -ne 0){throw \"policy\"}\n git diff --check 387efa622f6a9ce6685e3bffb98299df0503de3c ffc2466be51c32c1cf7454a2df80fe4f8c3f5f99\n if($LASTEXITCODE -ne 0){throw \"whitespace\"}\n $files=Get-ChildItem logs\\search-v3-indexed -File -Filter \"*.bmp\" -ErrorAction SilentlyContinue\n foreach($file in $files){ Write-Host (\"INDEXED_VISUAL_FILE=\"+$file.FullName+\" SIZE=\"+$file.Length) }\n Write-Host \"SEARCH_V3_INDEXED_DOCS_POLICY=PASS\"\n} finally {\n git switch main\n if($LASTEXITCODE -ne 0){throw \"restore\"}\n}"
 }
