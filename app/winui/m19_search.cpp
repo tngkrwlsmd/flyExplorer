@@ -602,7 +602,11 @@ SearchResults scanIndexedFiles(
   HANDLE value=nullptr;
   Handle()=default;
   explicit Handle(HANDLE h):value(h){}
-  ~Handle(){if(value&&value!=INVALID_HANDLE_VALUE)::CloseHandle(value);}
+  ~Handle(){reset();}
+  void reset(HANDLE next=nullptr){
+   if(value&&value!=INVALID_HANDLE_VALUE)::CloseHandle(value);
+   value=next;
+  }
   Handle(Handle const&)=delete;
   Handle& operator=(Handle const&)=delete;
   bool valid()const{return value&&value!=INVALID_HANDLE_VALUE;}
@@ -681,10 +685,10 @@ SearchResults scanIndexedFiles(
    ::WaitForSingleObject(process.value,250);
    return result;
   }
-  childWrite.~Handle();new(&childWrite)Handle();
-  thread.~Handle();new(&thread)Handle();
-  childIn.~Handle();new(&childIn)Handle();
-  childError.~Handle();new(&childError)Handle();
+  childWrite.reset();
+  thread.reset();
+  childIn.reset();
+  childError.reset();
 
   const auto start=::GetTickCount64();
   auto stop=[&](DWORD why){
@@ -753,9 +757,9 @@ SearchResults scanIndexedFiles(
    position+=4;
    if(!units||units>kMaxPathUnits||
       units>(body.size()-position)/sizeof(wchar_t))return result;
-   const wchar_t* ptr=reinterpret_cast<wchar_t const*>(
-       body.data()+position);
-   std::wstring path(ptr,units);
+   std::wstring path(units,L'\0');
+   std::memcpy(path.data(),body.data()+position,
+               units*sizeof(wchar_t));
    position+=units*sizeof(wchar_t);
    if(!validScope(path))return result;
    result.matches.push_back(std::move(path));
