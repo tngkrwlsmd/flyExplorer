@@ -1,14 +1,11 @@
 {
-  "request_id": "search-v3-indexed-docs-visual-check-20261008",
+  "request_id": "search-v3-indexed-visual-metrics-20261008",
   "expected_main_sha": "387efa622f6a9ce6685e3bffb98299df0503de3c",
   "candidate_sha": "ffc2466be51c32c1cf7454a2df80fe4f8c3f5f99",
-  "logical_unit": "search-v3-indexed-final-gates",
-  "request_mode": "validation",
-  "configuration": "Release",
-  "validation_plan": [
-    "docs-policy",
-    "visual-evidence-inventory"
-  ],
+  "logical_unit": "search-v3-visual-metrics",
+  "request_mode": "diagnostic",
+  "configuration": "none",
+  "validation_plan": [],
   "working_directory": "",
-  "command": "$ErrorActionPreference=\"Stop\"\nSet-Location $env:FLYEXPLORER_CANONICAL_CHECKOUT\ngit fetch origin main work/search-v3-indexed-filename-20261008 --no-tags\nif($LASTEXITCODE -ne 0){throw \"fetch\"}\ngit switch --detach ffc2466be51c32c1cf7454a2df80fe4f8c3f5f99\nif($LASTEXITCODE -ne 0){throw \"checkout\"}\ntry {\n .\\test.bat policy\n if($LASTEXITCODE -ne 0){throw \"policy\"}\n git diff --check 387efa622f6a9ce6685e3bffb98299df0503de3c ffc2466be51c32c1cf7454a2df80fe4f8c3f5f99\n if($LASTEXITCODE -ne 0){throw \"whitespace\"}\n $files=Get-ChildItem logs\\search-v3-indexed -File -Filter \"*.bmp\" -ErrorAction SilentlyContinue\n foreach($file in $files){ Write-Host (\"INDEXED_VISUAL_FILE=\"+$file.FullName+\" SIZE=\"+$file.Length) }\n Write-Host \"SEARCH_V3_INDEXED_DOCS_POLICY=PASS\"\n} finally {\n git switch main\n if($LASTEXITCODE -ne 0){throw \"restore\"}\n}"
+  "command": "$ErrorActionPreference=\"Stop\"\n$root=$env:FLYEXPLORER_CANONICAL_CHECKOUT\n$dir=Join-Path $root \"logs\\search-v3-indexed\"\n$before=Join-Path $dir \"indexed-search-before.bmp\"\n$after=Join-Path $dir \"indexed-search-after.bmp\"\n$code=@'\nfrom PIL import Image,ImageChops\nimport sys\na=Image.open(sys.argv[1]).convert(\"RGB\")\nb=Image.open(sys.argv[2]).convert(\"RGB\")\nprint(\"INDEXED_VISUAL_BEFORE_DIM\",a.size)\nprint(\"INDEXED_VISUAL_AFTER_DIM\",b.size)\nprint(\"INDEXED_VISUAL_SAME_GEOMETRY\",a.size==b.size)\nif a.size==b.size:\n d=ImageChops.difference(a,b)\n print(\"INDEXED_VISUAL_DIFF_BBOX\",d.getbbox())\n print(\"INDEXED_VISUAL_DIFF_PIXELS\",sum(1 for x in d.getdata() if x!=(0,0,0)))\n'@\n& python -c $code $before $after\nif($LASTEXITCODE -ne 0){throw \"visual metrics failed\"}\nWrite-Host \"INDEXED_VISUAL_METRICS=PASS\""
 }
