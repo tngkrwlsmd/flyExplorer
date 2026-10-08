@@ -302,6 +302,9 @@ SearchController::Context MainWindow::SearchContext(){
         context.paneFolder=pane.filesystemPaths[context.tab];
     context.scope=std::wstring(SearchScopeBox().Text().c_str());
     context.query.term=std::wstring(SearchTermBox().Text().c_str());
+    context.query.mode=SearchModeBox().SelectedIndex()==1?
+        fxfile::preview::SearchMode::WindowsIndex:
+        fxfile::preview::SearchMode::Traversal;
     context.query.contentTerm=std::wstring(SearchContentBox().Text().c_str());
     switch(SearchContentEncodingBox().SelectedIndex()){
     case 1:
@@ -370,7 +373,7 @@ void MainWindow::OnToggleSearch(
     auto const& path=pane.filesystemPaths[pane.active];
     if(!path.empty())SearchScopeBox().Text(hstring(path));
     StatusText().Text(
-        L"이름/정규식/확장자/크기/수정일/텍스트 내용·내용 정규식 조건을 조합하고 저장할 수 있습니다.");
+        L"직접 탐색은 기존 복합 조건을, Windows 인덱스는 파일명 일반 검색만 지원합니다.");
 }
 void MainWindow::OnRunSearch(
     IInspectable const&,RoutedEventArgs const&) {
@@ -390,7 +393,9 @@ void MainWindow::OnRunSearch(
     using Start=SearchController::StartStatus;
     if(status==Start::Started){
         SearchRunButton().IsEnabled(false);
-        SearchCountText().Text(
+        SearchCountText().Text(context.query.mode==
+            fxfile::preview::SearchMode::WindowsIndex?
+            L"Windows Search 인덱스에서 파일명을 검색하고 있습니다...":
             L"독립 스레드에서 최대 20,000개 항목을 검색하고 있습니다...");
         SearchMatches().Items().Clear();
         return;
@@ -399,6 +404,10 @@ void MainWindow::OnRunSearch(
     if(status==Start::InvalidRequest){
         StatusText().Text(
            L"검색 폴더와 하나 이상의 이름/확장자/크기/수정일/내용 조건을 입력하세요.");
+    }else if(status==Start::InvalidIndexedCriteria){
+        SearchCountText().Text(L"인덱스 검색은 파일명 일반 검색만 지원합니다.");
+        StatusText().Text(
+           L"Windows 인덱스 검색은 파일·일반 검색어만 사용합니다. 정규식, 확장자, 크기, 날짜, 내용 조건을 해제하세요.");
     }else if(status==Start::InvalidExtension){
         SearchCountText().Text(L"확장자 조건이 올바르지 않습니다.");
         StatusText().Text(
@@ -455,6 +464,14 @@ void MainWindow::OnSearchCompleted(
         return;
     }
 
+    if(completion.result.indexUnavailable||completion.result.indexTimedOut){
+        SearchMatches().Items().Clear();
+        SearchCountText().Text(completion.result.indexTimedOut?
+            L"Windows Search 인덱스 응답 시간 초과":
+            L"Windows Search 인덱스를 사용할 수 없습니다.");
+        StatusText().Text(L"인덱싱된 폴더인지 Windows 검색 설정에서 확인하세요. 직접 탐색으로 자동 전환하지 않았습니다.");
+        return;
+    }
     auto items=SearchMatches().Items();
     items.Clear();
     for(auto const& file:completion.result.matches){
@@ -462,7 +479,12 @@ void MainWindow::OnSearchCompleted(
         row.Text(hstring(file));
         items.Append(row);
     }
-    auto summary=L"검색 결과 "+std::to_wstring(completion.result.count)+L"개";
+    auto summary=(completion.result.indexOnly?
+        std::wstring(L"Windows 인덱스 결과 "):
+        std::wstring(L"검색 결과 "))+
+        std::to_wstring(completion.result.count)+L"개";
+    if(completion.result.indexOnly&&completion.result.count==0)
+        summary+=L" · 인덱싱되지 않은 항목은 검색되지 않습니다";
     if(completion.result.resultLimited)
         summary+=L" · 처음 "+std::to_wstring(completion.result.matches.size())+
                  L"개 표시";
