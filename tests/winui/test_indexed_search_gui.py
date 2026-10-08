@@ -15,20 +15,19 @@ from uia_polling import wait_until
 
 LEGACY=("fxfile.conf","fxfile-main.conf","fxfile-toolbar.dat",
         "fxfile-coolbar.dat","fxfile-dlg_state.conf","fxfile-folder_layout.conf")
-NAME="flyExplorer-search-v3-owned-marker.txt"
-TERM="flyExplorer-search-v3-owned-marker"
+NAME="Microsoft Edge.lnk"
+TERM="Microsoft Edge"
 
 def wait(fn,label,seconds=25):
     return wait_until(fn,label,seconds=seconds,interval=.3)
 
 def index_contains(folder,name):
     # Powershell 5.1 supports the Windows Search OLE DB provider. Only
-    # inspect the test-owned filename, never log unrelated indexed rows.
+    # inspect only the pre-verified public system shortcut, never list other rows.
     scope="file:"+str(folder).replace("\\","/").rstrip("/")+"/"
     scope=scope.replace("'","''")
     target=name.replace("'","''")
-    # Use a single Powershell query with parameters restricted to owned
-    # paths; OLE DB is a read-only SystemIndex connection.
+    # This query is read-only and restricted to the public indexed scope.
     script=f"""
 $ErrorActionPreference="Stop"
 $db=New-Object System.Data.OleDb.OleDbConnection('Provider=Search.CollatorDSO.1;Extended Properties="Application=Windows"')
@@ -39,11 +38,11 @@ try {{
  $r=$cmd.ExecuteReader()
  $found=$false
  while($r.Read()){{
-   if([string]$r.GetValue(0) -eq '{str(folder / name).replace("'", "''")}'){{$found=$true}}
+   if([string]$r.GetValue(0) -ieq '{str(folder / name).replace("'", "''")}'){{$found=$true}}
  }}
  $r.Close()
- if($found){{Write-Output 'OWNED_INDEXED=true'}}
- else{{Write-Output 'OWNED_INDEXED=false'}}
+ if($found){{Write-Output 'INDEXED_SOURCE_FOUND=true'}}
+ else{{Write-Output 'INDEXED_SOURCE_FOUND=false'}}
 }}finally{{$db.Close()}}
 """
     encoded=__import__("base64").b64encode(script.encode("utf-16-le")).decode("ascii")
@@ -59,10 +58,13 @@ def main():
     args=parser.parse_args()
     exe=app_exe(args.configuration).resolve()
     assert exe.is_file(),exe
-    pictures=Path(os.environ["USERPROFILE"])/"Pictures"
-    assert pictures.is_dir(),pictures
-    fixture=pictures/NAME
-    assert not fixture.exists(),fixture
+    # The VM's Pictures scope is not indexed. Use the confirmed built-in
+    # Public Desktop scope without modifying any indexed/system file.
+    scope=Path(os.environ["PUBLIC"])/"Desktop"
+    assert scope.is_dir(),scope
+    fixture=scope/NAME
+    assert fixture.is_file(),"expected pre-indexed public shortcut missing"
+    source_hash=hashlib.sha256(fixture.read_bytes()).digest()
     real=Path(os.environ["APPDATA"])/"fxfile"/"conf"
     before={name:hashlib.sha256((real/name).read_bytes()).digest()
             for name in LEGACY if (real/name).is_file()}
@@ -73,7 +75,6 @@ def main():
     view.mkdir()
     (view/"owned-visible-row.txt").write_text(
         "test-owned visual fixture\n",encoding="utf-8")
-    fixture.write_text("test-owned indexed filename verification\n",encoding="utf-8")
     env=os.environ.copy()
     for key in ("APPDATA","LOCALAPPDATA","TEMP","TMP"):
         p=owned/key.lower()
@@ -127,7 +128,7 @@ def main():
         # A returned wrapper exposes is_visible(), not exists().
         panel=control("SearchTermBox")
         assert panel.is_visible(),"owned search panel did not open"
-        control("SearchScopeBox").set_edit_text(str(pictures))
+        control("SearchScopeBox").set_edit_text(str(scope))
         panel.set_edit_text(TERM)
         if args.capture=="after":
             mode=control("SearchModeBox")
@@ -155,26 +156,22 @@ def main():
         print("INDEXED_SEARCH_CAPTURE",shot.name,flush=True)
 
         if args.capture=="after":
-            # WSearch can take time to index a newly created file. First prove
-            # the fixture is indexed; otherwise there is no fair positive oracle.
-            deadline=time.monotonic()+55
-            indexed=False
-            while time.monotonic()<deadline:
-                if index_contains(pictures,NAME):
-                    indexed=True;break
-                time.sleep(3)
-            print("INDEXED_SEARCH_OWNED_SOURCE_INDEXED",indexed,flush=True)
-            assert indexed,"test-owned Pictures file was not indexed by WSearch"
-            window.child_window(auto_id="SearchRunButton").invoke()
+            # Positive oracle: this public system shortcut was independently
+            # confirmed in the actual SystemIndex, with no test-created file
+            # outside our owned UI/profiles and no indexing service mutations.
+            indexed=index_contains(scope,NAME)
+            print("INDEXED_SEARCH_SYSTEM_SOURCE_INDEXED",indexed,flush=True)
+            assert indexed,"read-only Public Desktop index oracle unavailable"
+            control("SearchRunButton").invoke()
             wait(lambda:TERM in " ".join(
                 row.window_text() for row in
                 control("SearchMatches").descendants()),
-                "indexed result does not contain test-owned file",20)
-            summary=window.child_window(auto_id="SearchCountText").window_text()
+                "indexed result does not contain public system shortcut",20)
+            summary=control("SearchCountText").window_text()
             print("INDEXED_SEARCH_SUMMARY",repr(summary),flush=True)
             assert "Windows 인덱스 결과" in summary,summary
             assert "1개" in summary,summary
-            assert fixture.read_text(encoding="utf-8")=="test-owned indexed filename verification\n"
+            assert hashlib.sha256(fixture.read_bytes()).digest()==source_hash
             print("INDEXED_SEARCH_REAL_INDEX_MATCH_PASS",True,flush=True)
         success=True
     finally:
@@ -184,20 +181,21 @@ def main():
                 proc.wait(timeout=12)
             except Exception:
                 proc.terminate();proc.wait(timeout=8)
-        fixture.unlink(missing_ok=True)
+        source_unchanged=(fixture.is_file() and
+            hashlib.sha256(fixture.read_bytes()).digest()==source_hash)
         unchanged=all((real/name).is_file() and
            hashlib.sha256((real/name).read_bytes()).digest()==value
            for name,value in before.items())
         print("INDEXED_SEARCH_LEGACY_UNCHANGED",unchanged,flush=True)
-        print("INDEXED_SEARCH_FIXTURE_REMOVED",not fixture.exists(),flush=True)
+        print("INDEXED_SEARCH_SYSTEM_SOURCE_UNCHANGED",source_unchanged,flush=True)
         if success:
             assert proc.returncode==0,proc.returncode
             print("INDEXED_SEARCH_PROCESS_EXIT",proc.returncode,flush=True)
-        if success and unchanged and not fixture.exists():
+        if success and unchanged and source_unchanged:
             shutil.rmtree(owned,ignore_errors=True)
         else:
             print("INDEXED_SEARCH_OWNED_LOGS",str(owned),flush=True)
-    return 0 if success and unchanged and not fixture.exists() else 1
+    return 0 if success and unchanged and source_unchanged else 1
 
 if __name__=="__main__":
     raise SystemExit(main())
