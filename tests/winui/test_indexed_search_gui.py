@@ -27,12 +27,6 @@ def index_contains(folder,name):
     scope="file:"+str(folder).replace("\\","/").rstrip("/")+"/"
     scope=scope.replace("'","''")
     target=name.replace("'","''")
-    ps=(
-      '$ErrorActionPreference="Stop";'
-      '$db=New-Object System.Data.OleDb.OleDbConnection('
-      '"Provider=Search.CollatorDSO.1;Extended Properties='
-      "'Application=Windows'"';);'
-    )
     # Use a single Powershell query with parameters restricted to owned
     # paths; OLE DB is a read-only SystemIndex connection.
     script=f"""
