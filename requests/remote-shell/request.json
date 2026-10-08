@@ -1,15 +1,11 @@
 {
-  "request_id": "search-v3-index-public-native-gui-20261008",
+  "request_id": "search-v3-index-column-diagnosis-20261008",
   "expected_main_sha": "387efa622f6a9ce6685e3bffb98299df0503de3c",
-  "candidate_sha": "ed5916e5b5833cfa195007e33250150f9d9211d3",
-  "logical_unit": "search-v3-indexed-filename",
-  "request_mode": "validation",
-  "configuration": "Release",
-  "validation_plan": [
-    "release-build",
-    "indexed-search-native",
-    "indexed-search-gui"
-  ],
+  "candidate_sha": "387efa622f6a9ce6685e3bffb98299df0503de3c",
+  "logical_unit": "search-v3-index-column-diagnosis",
+  "request_mode": "diagnostic",
+  "configuration": "none",
+  "validation_plan": [],
   "working_directory": "",
-  "command": "$ErrorActionPreference=\"Stop\"\nSet-Location $env:FLYEXPLORER_CANONICAL_CHECKOUT\ngit fetch origin main work/search-v3-indexed-filename-20261008 --no-tags\nif($LASTEXITCODE -ne 0){throw \"fetch\"}\ngit switch --detach ed5916e5b5833cfa195007e33250150f9d9211d3\nif($LASTEXITCODE -ne 0){throw \"checkout\"}\ntry {\n python -X utf8 tests\\winui\\test_indexed_search_contract.py\n if($LASTEXITCODE -ne 0){throw \"source contract\"}\n .\\build.bat Release\n if($LASTEXITCODE -ne 0){throw \"Release build\"}\n python -X utf8 tests\\winui\\test_indexed_search_native.py --configuration Release\n if($LASTEXITCODE -ne 0){throw \"native SystemIndex helper\"}\n python -X utf8 tests\\winui\\test_indexed_search_gui.py --capture after\n if($LASTEXITCODE -ne 0){throw \"indexed GUI\"}\n Write-Host \"SEARCH_V3_INDEXED_VALIDATION=PASS\"\n} finally {\n git switch main\n if($LASTEXITCODE -ne 0){throw \"restore\"}\n}"
+  "command": "$ErrorActionPreference=\"Stop\"\n$db=New-Object System.Data.OleDb.OleDbConnection('Provider=Search.CollatorDSO.1;Extended Properties=\"Application=Windows\"')\n$db.Open()\ntry{\n $where=\"FROM SystemIndex WHERE SCOPE='file:C:/Users/Public/Desktop/' AND System.FileName LIKE '%Microsoft Edge%'\"\n foreach($column in @(\"System.ItemPathDisplay\",\"System.ItemUrl\")){\n  $cmd=$db.CreateCommand()\n  $cmd.CommandText=\"SELECT TOP 1001 \"+$column+\" \"+$where\n  $reader=$cmd.ExecuteReader();$count=0\n  while($reader.Read()){\n   $count++\n   $value=[string]$reader.GetValue(0)\n   $asPath=($value -match \"^[A-Za-z]:\\\\\")\n   $prefix=($value.ToLowerInvariant().StartsWith(\"c:\\\\users\\\\public\\\\desktop\\\\\"))\n   $leaf=($value.ToLowerInvariant().Contains(\"microsoft edge\"))\n   Write-Host (\"INDEX_ROW_KIND=\"+$column+\" LENGTH=\"+$value.Length+\" PATH=\"+$asPath+\" PREFIX=\"+$prefix+\" LEAF=\"+$leaf+\" EXISTS=\"+(Test-Path -LiteralPath $value))\n  }\n  $reader.Close()\n  Write-Host (\"INDEX_QUERY_COLUMN=\"+$column+\" ROWS=\"+$count)\n }\n}finally{$db.Close()}\nWrite-Host \"INDEX_PROPERTY_DIAG=PASS\""
 }
