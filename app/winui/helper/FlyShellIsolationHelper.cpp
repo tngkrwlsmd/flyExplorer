@@ -362,7 +362,7 @@ int runIndexedFilenameSearch(HANDLE output,
         const wchar_t* raw=rows.GetString(1);
         if(!raw)continue;
         std::wstring result(raw);
-        if(result.size()>kMaxPathUnits||!insideScope(scope,result))
+        if(result.size()>fxfile::indexwire::kMaxPathUnits||!insideScope(scope,result))
          continue;
         auto name=std::filesystem::path(result).filename().native();
         std::wstring lowerName=name,lowerTerm=term;
@@ -375,7 +375,7 @@ int runIndexedFilenameSearch(HANDLE output,
         if(itemAttrs==INVALID_FILE_ATTRIBUTES||
            (itemAttrs&(FILE_ATTRIBUTE_DIRECTORY|FILE_ATTRIBUTE_REPARSE_POINT)))
          continue;
-        if(results.size()>=kMaxResults){truncated=true;break;}
+        if(results.size()>=fxfile::indexwire::kMaxResults){truncated=true;break;}
         results.push_back(std::move(result));
        }
        if(FAILED(hr))error=ERROR_INVALID_DATA;
@@ -394,7 +394,7 @@ int runIndexedFilenameSearch(HANDLE output,
   for(auto const& result:results){
    const auto units=static_cast<std::uint32_t>(result.size());
    const auto needed=sizeof(units)+units*sizeof(wchar_t);
-   if(needed>kMaxBodyBytes||body.size()>kMaxBodyBytes-needed){
+   if(needed>fxfile::indexwire::kMaxBodyBytes||body.size()>fxfile::indexwire::kMaxBodyBytes-needed){
     error=ERROR_MORE_DATA;body.clear();results.clear();break;
    }
    auto const* start=reinterpret_cast<unsigned char const*>(&units);
@@ -403,9 +403,9 @@ int runIndexedFilenameSearch(HANDLE output,
    body.insert(body.end(),start,start+units*sizeof(wchar_t));
   }
  }
- Header header{kMagic,kVersion,error==ERROR_SUCCESS&&truncated?
+ Header header{fxfile::indexwire::kMagic,fxfile::indexwire::kVersion,error==ERROR_SUCCESS&&truncated?
      ERROR_MORE_DATA:error,static_cast<std::uint32_t>(results.size()),
-     static_cast<std::uint32_t>(body.size()),checksum(body.data(),body.size())};
+     static_cast<std::uint32_t>(body.size()),fxfile::indexwire::checksum(body.data(),body.size())};
  return exactWrite(output,&header,sizeof(header))&&
         (body.empty()||exactWrite(output,body.data(),body.size()))?0:2;
 }
