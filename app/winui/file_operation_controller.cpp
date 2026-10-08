@@ -50,8 +50,12 @@ bool FileOperationController::visibleForTransfer(
     }else if(!context.visibleFolder.empty()&&
              context.visibleFolder==request.sourceParent)return true;
     return request.kind!=fxfile::shelltransfer::Kind::Recycle&&
-           !context.visibleFolder.empty()&&
-           context.visibleFolder==request.destination;
+           (request.destinationMode==
+              fxfile::shelltransfer::DestinationMode::ShellProvider?
+             !context.visibleShellFolder.empty()&&
+             context.visibleShellFolder==request.destination:
+             !context.visibleFolder.empty()&&
+             context.visibleFolder==request.destination);
 }
 
 bool FileOperationController::busy() const noexcept
