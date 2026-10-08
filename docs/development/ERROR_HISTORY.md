@@ -16,6 +16,33 @@ product state use CURRENT_STATUS.md.
 
 이 문서는 확정된 오류를 단순 수정으로 끝내지 않고, 다음 진단을 빠르게 하고 같은 계열의 결함을 사전에 막기 위한 프로젝트 기록이다.
 
+## 2026-10-08 — Windows Search indexed filename search
+
+**원인과 경계**
+- Traversal search was bounded at 20,000 visited entries and depth 32;
+  it could not query Windows Search index contents.
+- First indexed-search Release build exposed helper wire constant
+  ambiguities; fully qualified the new `indexwire` symbols.
+- The first visual harness used desktop screen capture, which failed on
+  the interactive runner service desktop. Switched to app-owned XAML
+  `RenderTargetBitmap` and separated visual evidence from functional GUI.
+- Real Windows Search `System.ItemPathDisplay` did not reliably correspond to
+  the canonical on-disk path. Native indexed `System.ItemUrl` was chosen and
+  validated, with an independent SystemIndex oracle in GUI acceptance.
+- Early GUI fixture queries assumed newly created or public test files were
+  indexed immediately. They were not. Final acceptance used a verified
+  pre-indexed read-only system path without modifying that source.
+
+**검증 및 예방**
+- Exact-owned, killable helper, 1,000 rows/1 MiB response, scope containment,
+  explicit index-unavailable/timeout statuses, no fallback to traversal,
+  search epoch cancellation and stale completion checks.
+- Run `37712395449` on candidate
+  `ef6618cd478a6cadad56eb3bdce026b7e9541d02`: focused GUI PASS,
+  independent native oracle PASS, one real matching row, unsupported criteria
+  rejected, original system file unchanged, process exit 0, protected legacy
+  settings unchanged. Visual before/after pixel review remains separate.
+
 ## 2026-10-08 — bounded Windows Pictures Library provider Copy-in
 
 **오류/위험 경계**
