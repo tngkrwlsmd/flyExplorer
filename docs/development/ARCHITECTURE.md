@@ -186,6 +186,24 @@ composition boundary. A dedicated factory is warranted only when implementation
 selection varies by configuration/environment or deterministic tests need
 replacement. Avoid factory-per-class architecture.
 
+## Windows Search indexed filename boundary (Search v3)
+
+`SearchController` retains epoch/cancel/route acceptance and dispatches
+`SearchMode::WindowsIndex` to `scanIndexedFiles`, leaving traversal the
+default. Only a bounded case-insensitive literal filename query on a local
+non-reparse fixed-drive filesystem directory is eligible; other Search v2
+criteria are rejected before starting the worker. The detached search worker
+launches exact-owned `FlyShellIsolationHelper.exe --indexed-filename-search`
+with restricted inherited handles, one-process kill-on-close Job Object and
+a 12-second deadline. The helper alone executes the read-only Windows Search
+`Search.CollatorDSO.1` `SystemIndex` OLE DB query, bounds return rows to
+1,000 and serialized body to 1 MiB, verifies the scope and actual files, and
+returns an explicit wire status. Query service errors and timeouts are
+reported, never rewritten as traversal results. The isolated child uses the
+current user token; the process boundary is fault isolation, not a sandbox.
+The native oracle plus focused GUI task `37712395449` validated one real
+indexed path. Property and virtual provider index searches are outside scope.
+
 ## Target controller boundaries
 
 The current/evolutionary direction is:
