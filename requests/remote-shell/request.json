@@ -1,14 +1,13 @@
 {
-  "request_id": "search-v3-indexed-quoted-gui-20261008",
+  "request_id": "search-v3-indexed-uia-identity-20261008",
   "expected_main_sha": "387efa622f6a9ce6685e3bffb98299df0503de3c",
-  "candidate_sha": "09133ee21053d814fa25cad58a2fcd14e05fabc6",
+  "candidate_sha": "d216dec83f6eca398aca269102b7bd9e55d6efab",
   "logical_unit": "search-v3-indexed-filename",
   "request_mode": "validation",
   "configuration": "Release",
   "validation_plan": [
-    "release-build",
     "indexed-search-gui"
   ],
   "working_directory": "",
-  "command": "$ErrorActionPreference=\"Stop\"\nSet-Location $env:FLYEXPLORER_CANONICAL_CHECKOUT\ngit fetch origin main work/search-v3-indexed-filename-20261008 --no-tags\nif($LASTEXITCODE -ne 0){throw \"fetch\"}\ngit switch --detach 09133ee21053d814fa25cad58a2fcd14e05fabc6\nif($LASTEXITCODE -ne 0){throw \"checkout\"}\ntry {\n python -X utf8 tests\\winui\\test_indexed_search_contract.py\n if($LASTEXITCODE -ne 0){throw \"source contract\"}\n .\\build.bat Release\n if($LASTEXITCODE -ne 0){throw \"Release build\"}\n python -X utf8 tests\\winui\\test_indexed_search_gui.py --capture after\n if($LASTEXITCODE -ne 0){throw \"indexed GUI\"}\n Write-Host \"SEARCH_V3_INDEXED_VALIDATION=PASS\"\n} finally {\n git switch main\n if($LASTEXITCODE -ne 0){throw \"restore\"}\n}"
+  "command": "$ErrorActionPreference=\"Stop\"\nSet-Location $env:FLYEXPLORER_CANONICAL_CHECKOUT\ngit fetch origin main work/search-v3-indexed-filename-20261008 --no-tags\nif($LASTEXITCODE -ne 0){throw \"fetch\"}\ngit diff --quiet 09133ee21053d814fa25cad58a2fcd14e05fabc6 d216dec83f6eca398aca269102b7bd9e55d6efab -- app/winui src/base\nif($LASTEXITCODE -ne 0){throw \"accepted product source changed\"}\ngit switch --detach d216dec83f6eca398aca269102b7bd9e55d6efab\nif($LASTEXITCODE -ne 0){throw \"checkout\"}\ntry {\n python -X utf8 -m py_compile tests\\winui\\test_indexed_search_gui.py\n if($LASTEXITCODE -ne 0){throw \"syntax\"}\n python -X utf8 tests\\winui\\test_indexed_search_gui.py --capture after\n if($LASTEXITCODE -ne 0){throw \"indexed GUI\"}\n Write-Host \"SEARCH_V3_INDEXED_GUI=PASS\"\n} finally {\n git switch main\n if($LASTEXITCODE -ne 0){throw \"restore\"}\n}"
 }
