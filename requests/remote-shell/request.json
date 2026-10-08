@@ -1,7 +1,7 @@
 {
-  "request_id": "search-v3-index-gui-canonical-oracle-20261008",
+  "request_id": "search-v3-indexed-gui-native-oracle-20261008",
   "expected_main_sha": "387efa622f6a9ce6685e3bffb98299df0503de3c",
-  "candidate_sha": "f717bcd05cc10c7935c46557dc0bbc52b03e53a0",
+  "candidate_sha": "ef6618cd478a6cadad56eb3bdce026b7e9541d02",
   "logical_unit": "search-v3-indexed-filename",
   "request_mode": "validation",
   "configuration": "Release",
@@ -9,5 +9,5 @@
     "indexed-search-gui"
   ],
   "working_directory": "",
-  "command": "$ErrorActionPreference=\"Stop\"\nSet-Location $env:FLYEXPLORER_CANONICAL_CHECKOUT\ngit fetch origin main work/search-v3-indexed-filename-20261008 --no-tags\nif($LASTEXITCODE -ne 0){throw \"fetch\"}\ngit diff --quiet 1d4f4d6390f7ed6b77b28e4300a60f4e127e9d1b f717bcd05cc10c7935c46557dc0bbc52b03e53a0 -- app/winui src/base\nif($LASTEXITCODE -ne 0){throw \"product source changed\"}\ngit switch --detach f717bcd05cc10c7935c46557dc0bbc52b03e53a0\nif($LASTEXITCODE -ne 0){throw \"checkout\"}\ntry {\n python -X utf8 -m py_compile tests\\winui\\test_indexed_search_gui.py\n if($LASTEXITCODE -ne 0){throw \"test syntax\"}\n python -X utf8 tests\\winui\\test_indexed_search_gui.py --capture after\n if($LASTEXITCODE -ne 0){throw \"indexed GUI\"}\n Write-Host \"SEARCH_V3_INDEXED_GUI=PASS\"\n} finally {\n git switch main\n if($LASTEXITCODE -ne 0){throw \"restore\"}\n}"
+  "command": "$ErrorActionPreference=\"Stop\"\nSet-Location $env:FLYEXPLORER_CANONICAL_CHECKOUT\ngit fetch origin main work/search-v3-indexed-filename-20261008 --no-tags\nif($LASTEXITCODE -ne 0){throw \"fetch\"}\ngit diff --quiet 1d4f4d6390f7ed6b77b28e4300a60f4e127e9d1b ef6618cd478a6cadad56eb3bdce026b7e9541d02 -- app/winui src/base\nif($LASTEXITCODE -ne 0){throw \"product source changed\"}\ngit switch --detach ef6618cd478a6cadad56eb3bdce026b7e9541d02\nif($LASTEXITCODE -ne 0){throw \"checkout\"}\ntry {\n python -X utf8 -m py_compile tests\\winui\\test_indexed_search_gui.py\n if($LASTEXITCODE -ne 0){throw \"syntax\"}\n python -X utf8 tests\\winui\\test_indexed_search_gui.py --capture after\n if($LASTEXITCODE -ne 0){throw \"focused GUI\"}\n Write-Host \"SEARCH_V3_INDEXED_GUI=PASS\"\n} finally {\n git switch main\n if($LASTEXITCODE -ne 0){throw \"restore\"}\n}"
 }
