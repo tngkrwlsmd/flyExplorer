@@ -213,6 +213,7 @@ experiments/phase6 paths must not be used.
 
 Use test-owned folders/processes and validate the requested behavior. Distinguish
 input delivery, state change and final composited pixels.
+For asynchronous work, verify durable outputs and settled state, not transient watcher/toast/status messages as the sole success signal.
 
 For any user-visible UI change, final-pixel review is mandatory rather than
 optional:
