@@ -1,11 +1,14 @@
 {
-  "request_id": "search-v3-index-readiness-20261008",
+  "request_id": "search-v3-indexed-build-20261008",
   "expected_main_sha": "d0011a69f6bc209931eeb0d60fb9d278e9ce7c89",
-  "candidate_sha": "d0011a69f6bc209931eeb0d60fb9d278e9ce7c89",
-  "logical_unit": "search-v3-index-readiness",
-  "request_mode": "diagnostic",
-  "configuration": "none",
-  "validation_plan": [],
+  "candidate_sha": "6609ab261a9068a3efb77b635eab2e2270007620",
+  "logical_unit": "search-v3-indexed-filename",
+  "request_mode": "validation",
+  "configuration": "Release",
+  "validation_plan": [
+    "release-build",
+    "indexed-search-contract"
+  ],
   "working_directory": "",
-  "command": "$ErrorActionPreference=\"Stop\"\n$svc=Get-Service WSearch -ErrorAction SilentlyContinue\nif($svc){Write-Host (\"INDEX_SERVICE_STATUS=\"+$svc.Status)}else{Write-Host \"INDEX_SERVICE_STATUS=MISSING\"}\n$script = @'\n$ErrorActionPreference=\"Stop\"\ntry {\n $conn=New-Object System.Data.OleDb.OleDbConnection(\"Provider=Search.CollatorDSO.1;Extended Properties=`\"Application=Windows`\"\")\n $conn.Open()\n $cmd=$conn.CreateCommand()\n $cmd.CommandText=\"SELECT TOP 5 System.ItemUrl FROM SystemIndex\"\n $r=$cmd.ExecuteReader()\n $n=0;while($r.Read()){ $n++;Write-Output (\"INDEX_SAMPLE_URL=\"+[string]$r.GetValue(0)) }\n $r.Close();$conn.Close();Write-Output (\"INDEX_QUERY=PASS SAMPLES=\"+$n)\n} catch {Write-Output (\"INDEX_QUERY=FAIL \"+$_.Exception.GetType().Name+\" \"+$_.Exception.Message)}\n'@\n$encoded=[Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes($script))\n& powershell.exe -NoProfile -NonInteractive -EncodedCommand $encoded\nif($LASTEXITCODE -ne 0){throw \"Windows PowerShell diagnostic failed\"}\nWrite-Host \"INDEX_READINESS_DIAG=PASS\""
+  "command": "$ErrorActionPreference=\"Stop\"\n$repo=$env:FLYEXPLORER_CANONICAL_CHECKOUT\n$main=\"d0011a69f6bc209931eeb0d60fb9d278e9ce7c89\"\n$candidate=\"6609ab261a9068a3efb77b635eab2e2270007620\"\nSet-Location -LiteralPath $repo\n& git fetch origin main work/search-v3-indexed-filename-20261008 --no-tags --prune\nif($LASTEXITCODE -ne 0){throw \"fetch failed\"}\nif((& git rev-parse refs/remotes/origin/main).Trim() -ne $main){throw \"main moved\"}\nif((& git rev-parse refs/remotes/origin/work/search-v3-indexed-filename-20261008).Trim() -ne $candidate){throw \"candidate differs\"}\n$dirty=@(& git status --porcelain=v1 -uall)\nif($dirty.Count -ne 0){$dirty|%{Write-Host (\"UNEXPECTED_WORKTREE=\"+$_)};throw \"canonical checkout dirty\"}\ntry {\n & git switch --detach $candidate\n if($LASTEXITCODE -ne 0){throw \"checkout failed\"}\n & python -X utf8 tests\\winui\\test_indexed_search_contract.py\n if($LASTEXITCODE -ne 0){throw \"indexed source contract failed\"}\n & .\\build.bat Release\n if($LASTEXITCODE -ne 0){throw \"indexed search Release build failed\"}\n Write-Host \"INDEXED_SEARCH_BUILD=PASS\"\n} finally {\n & git switch main\n if($LASTEXITCODE -ne 0){throw \"restore main failed\"}\n & git merge --ff-only origin/main\n if($LASTEXITCODE -ne 0){throw \"restore main ff failed\"}\n}"
 }
