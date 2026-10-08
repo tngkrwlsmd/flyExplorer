@@ -162,7 +162,21 @@ Report validate(Request const& request) noexcept {
      (request.collision!=Collision::Reject&&
       request.collision!=Collision::KeepBoth)||
      (request.sourceMode!=SourceMode::Filesystem&&
-      request.sourceMode!=SourceMode::ShellProvider)){
+      request.sourceMode!=SourceMode::ShellProvider)||
+     (request.destinationMode!=DestinationMode::Filesystem&&
+      request.destinationMode!=DestinationMode::ShellProvider)){
+   report.error=ERROR_INVALID_PARAMETER;return report;
+  }
+  if(request.destinationMode==DestinationMode::ShellProvider&&
+     (request.sourceMode!=SourceMode::Filesystem||
+      request.kind!=Kind::Copy||request.recycleConfirmed||
+      !validPidlBlob(request.destinationPidl)||
+      request.destination.empty()||
+      request.destination.size()>kMaxProviderParsingUnits)){
+   report.error=ERROR_NOT_SUPPORTED;return report;
+  }
+  if(request.destinationMode==DestinationMode::Filesystem&&
+     !request.destinationPidl.empty()){
    report.error=ERROR_INVALID_PARAMETER;return report;
   }
   if(request.sourceMode==SourceMode::ShellProvider){
@@ -221,7 +235,8 @@ Report validate(Request const& request) noexcept {
    report.error=ERROR_INVALID_NAME;return report;
   }
   fs::path dest{};
-  if(request.kind!=Kind::Recycle) {
+  if(request.kind!=Kind::Recycle&&
+     request.destinationMode==DestinationMode::Filesystem) {
    dest=fs::path(request.destination).lexically_normal();
    if(!safeFilesystemFolder(dest,request.kind)){
     report.error=ERROR_INVALID_NAME;return report;
@@ -256,15 +271,19 @@ Report validate(Request const& request) noexcept {
    }
    seen.push_back(normalized);
    if(request.kind==Kind::Recycle)continue;
-   if(sameParent(parent,dest)&&request.kind==Kind::Move){
+   if(request.destinationMode==DestinationMode::Filesystem&&
+      sameParent(parent,dest)&&request.kind==Kind::Move){
     report.error=ERROR_INVALID_PARAMETER;return report;
    }
-   if((attrs&FILE_ATTRIBUTE_DIRECTORY)&&descendant(item,dest)){
+   if(request.destinationMode==DestinationMode::Filesystem&&
+      (attrs&FILE_ATTRIBUTE_DIRECTORY)&&descendant(item,dest)){
     report.error=ERROR_INVALID_PARAMETER;return report;
    }
-   auto target=dest/item.filename();
-   if(::GetFileAttributesW(target.c_str())!=INVALID_FILE_ATTRIBUTES)
-    report.collisions.push_back(target.native());
+   if(request.destinationMode==DestinationMode::Filesystem){
+    auto target=dest/item.filename();
+    if(::GetFileAttributesW(target.c_str())!=INVALID_FILE_ATTRIBUTES)
+     report.collisions.push_back(target.native());
+   }
   }
   report.queued=static_cast<std::uint32_t>(request.sources.size());
   report.error=report.collisions.size()&&
@@ -340,6 +359,68 @@ Report validateProviderCopy(Request const& request) noexcept {
 }
 } // namespace
 
+namespace {
+// Copy-in is initially allowed only for the Windows Pictures Library. The
+// PIDL must match the system Known Folder; a display name is not authority.
+Report verifyPicturesLibraryCopyIn(
+    Request const& request,ComPtr<IShellItem>& concrete) noexcept {
+ Report report{};report.error=ERROR_NOT_SUPPORTED;
+ if(request.destinationMode!=DestinationMode::ShellProvider||
+    request.sourceMode!=SourceMode::Filesystem||request.kind!=Kind::Copy||
+    !validPidlBlob(request.destinationPidl))return report;
+ try{
+  PIDLIST_ABSOLUTE known=nullptr;
+  if(FAILED(::SHGetKnownFolderIDList(
+       FOLDERID_PicturesLibrary,0,nullptr,&known))||!known)return report;
+  auto target=reinterpret_cast<PCIDLIST_ABSOLUTE>(
+      request.destinationPidl.data());
+  bool exact=::ILIsEqual(known,target)!=FALSE;
+  ::CoTaskMemFree(known);
+  if(!exact)return report;
+  ComPtr<IShellItem> libraryItem;
+  if(FAILED(::SHCreateItemFromIDList(
+       target,IID_PPV_ARGS(libraryItem.GetAddressOf())))||!libraryItem)
+   return report;
+  SFGAOF attr=0;
+  if(FAILED(libraryItem->GetAttributes(SFGAO_FOLDER,&attr))||
+     !(attr&SFGAO_FOLDER))return report;
+  ComPtr<IShellLibrary> library;
+  if(FAILED(::CoCreateInstance(CLSID_ShellLibrary,nullptr,CLSCTX_INPROC_SERVER,
+       IID_PPV_ARGS(library.GetAddressOf())))||!library||
+     FAILED(library->LoadLibraryFromItem(libraryItem.Get(),STGM_READ)))
+   return report;
+  ComPtr<IShellItem> saveFolder;
+  if(FAILED(library->GetDefaultSaveFolder(
+       DSFT_DETECT,IID_PPV_ARGS(saveFolder.GetAddressOf())))||!saveFolder)
+   return report;
+  PWSTR raw=nullptr;
+  if(FAILED(saveFolder->GetDisplayName(SIGDN_FILESYSPATH,&raw))||!raw){
+   if(raw)::CoTaskMemFree(raw);
+   return report;
+  }
+  std::wstring targetPath(raw);
+  ::CoTaskMemFree(raw);
+  if(!safeFilesystemFolder(fs::path(targetPath),Kind::Copy))return report;
+  // Verify the effective target, not the library namespace, for collisions.
+  for(auto const& source:request.sources){
+   const auto name=fs::path(source).filename().native();
+   if(!filecommand::validLeaf(name)){
+    report.error=ERROR_INVALID_NAME;return report;
+   }
+   auto targetFile=fs::path(targetPath)/name;
+   if(::GetFileAttributesW(targetFile.c_str())!=INVALID_FILE_ATTRIBUTES)
+    report.collisions.push_back(targetFile.native());
+  }
+  report.queued=static_cast<std::uint32_t>(request.sources.size());
+  report.error=!report.collisions.empty()&&
+               request.collision==Collision::Reject?
+               ERROR_ALREADY_EXISTS:ERROR_SUCCESS;
+  concrete=std::move(saveFolder);
+ }catch(...){report.error=ERROR_INVALID_PARAMETER;}
+ return report;
+}
+} // namespace
+
 Report execute(Request const& task,Progress& progress) noexcept{
  Report report=validate(task);
  if(report.error!=ERROR_SUCCESS)return report;
@@ -352,6 +433,13 @@ Report execute(Request const& task,Progress& progress) noexcept{
   if(report.error!=ERROR_SUCCESS){
    ::CoUninitialize();
    return report;
+  }
+ }
+ ComPtr<IShellItem> providerDestination;
+ if(task.destinationMode==DestinationMode::ShellProvider){
+  report=verifyPicturesLibraryCopyIn(task,providerDestination);
+  if(report.error!=ERROR_SUCCESS){
+   ::CoUninitialize();return report;
   }
  }
  ComPtr<IFileOperation> operation;
@@ -372,9 +460,13 @@ Report execute(Request const& task,Progress& progress) noexcept{
   else hr=operation->Advise(sink,&cookie);
  }
  ComPtr<IShellItem> dest;
- if(SUCCEEDED(hr)&&task.kind!=Kind::Recycle)
-  hr=::SHCreateItemFromParsingName(task.destination.c_str(),nullptr,
-                                   IID_PPV_ARGS(dest.GetAddressOf()));
+ if(SUCCEEDED(hr)&&task.kind!=Kind::Recycle){
+  if(task.destinationMode==DestinationMode::ShellProvider)
+   dest=providerDestination;
+  else
+   hr=::SHCreateItemFromParsingName(task.destination.c_str(),nullptr,
+                                    IID_PPV_ARGS(dest.GetAddressOf()));
+ }
  if(SUCCEEDED(hr)){
   for(std::size_t i=0;i<task.sources.size();++i){
    if(canceled(progress)){hr=E_ABORT;break;}
