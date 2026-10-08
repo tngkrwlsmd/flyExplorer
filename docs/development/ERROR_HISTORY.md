@@ -67,7 +67,7 @@ product state use CURRENT_STATUS.md.
   DPI/selection/theme states: NOT SEPARATELY TESTED.
 - Capture processes exited 0 with legacy settings and read-only system index
   fixture preserved. This closes the indexed mode's focused visual gate,
-  without broadening indexed/provider/property scope. 
+  without broadening indexed/provider/property scope.
 
 
 ## 2026-10-08 — bounded Windows Pictures Library provider Copy-in
