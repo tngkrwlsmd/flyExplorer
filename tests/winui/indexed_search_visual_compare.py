@@ -55,6 +55,8 @@ def main() -> int:
     parser.add_argument("--before", type=Path, required=True)
     parser.add_argument("--after", type=Path, required=True)
     parser.add_argument("--metadata", type=Path, required=True)
+    parser.add_argument("--require-matched", action="store_true",
+                        help="fail acceptance after reporting unmatched viewport geometry")
     args = parser.parse_args()
     before, before_sha = read_capture(args.before)
     after, after_sha = read_capture(args.after)
@@ -107,6 +109,11 @@ def main() -> int:
     print("INDEXED_VISUAL_PIXEL_REPORT=" + json.dumps(report, sort_keys=True), flush=True)
     print_preview("BEFORE", before)
     print_preview("AFTER", after)
+    if args.require_matched:
+        if before.size != after.size:
+            print("INDEXED_VISUAL_MATCHED_GEOMETRY=FAIL", flush=True)
+            return 2
+        print("INDEXED_VISUAL_MATCHED_GEOMETRY=PASS", flush=True)
     print("INDEXED_VISUAL_COMPARISON_CAPTURED=PASS", flush=True)
     return 0
 
