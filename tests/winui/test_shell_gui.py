@@ -8,6 +8,7 @@ from pywinauto import Desktop
 from PIL import ImageGrab
 from profile_guard import (assert_legacy_profile_unchanged, present_count,
                            snapshot_legacy_profile)
+from gui_failure_evidence import capture_failure
 
 # Read-only original user profile sentinel: the preview has NO permission
 # to use the legacy product's real profile or mutate its settings.
@@ -501,6 +502,17 @@ try:
                 include_layered_windows=True).save(img)
  print("ACTUAL_GUI_SCREENSHOT",img.name,"SIZE",rect.width(),rect.height(),flush=True)
  print("REAL_GUI_DPI",u.GetDpiForWindow(hwnd),flush=True)
+except Exception as failure:
+ # Capture the running test-owned application BEFORE cleanup closes it.
+ # Evidence errors do not hide the original failure.
+ try:
+  evidence_dir = capture_failure(base=base, owned=owned, left=left, right=right,
+                                 win=locals().get("win"), hwnd=hwnd,
+                                 pid=p.pid if p else None, error=failure)
+  print("GUI_FAILURE_EVIDENCE_DIR", evidence_dir, flush=True)
+ except Exception as capture_error:
+  print("GUI_FAILURE_EVIDENCE_ERROR", type(capture_error).__name__, flush=True)
+ raise
 finally:
  if p and p.poll() is None:
   if hwnd:u.PostMessageW(hwnd,0x10,0,0)

@@ -74,6 +74,7 @@ PRODUCT_SUITES = {
 HARNESS_CONTRACTS = [
     "tests/winui/test_build_environment_contract.py",
     "tests/winui/test_gui_harness_contract.py",
+    "tests/winui/test_gui_failure_evidence_contract.py",
 ]
 INFRA_CONTRACTS = [
     "tests/winui/test_remote_failure_classifier.py",
