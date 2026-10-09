@@ -355,9 +355,14 @@ def run(*,p,win,element,safe_click,focus,eventually,ownedwindows,
         after.set_edit_text("")
         before_date.set_edit_text("")
         safe_click(element("SearchRunButton"))
-        good(lambda:match("SearchCountText","검색 결과 1개"),
+        # The full GUI profile also enables M22's test-owned 12,000-byte
+        # "큰.txt" fixture, which matches the same 10-13 KiB query.
+        expected = 2 if os.environ.get("FLY_M22_OWNED_FEATURES")=="YES" else 1
+        good(lambda:match("SearchCountText",f"검색 결과 {expected}개"),
              "Search v3 size-only query with empty name failed",14)
         assert search_matches("한글-보고서.TXT")
+        if expected == 2:
+            assert search_matches("큰.txt")
         print("REAL_SEARCH_V3_SIZE_ONLY_EMPTY_TERM_PASS",True,flush=True)
 
         term.set_edit_text("report")
