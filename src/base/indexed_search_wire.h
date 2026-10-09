@@ -3,6 +3,7 @@
 #define FLY_INDEXED_SEARCH_WIRE_H
 #include <cstddef>
 #include <cstdint>
+#include <limits>
 #include <string>
 #include <vector>
 namespace fxfile::indexwire {
@@ -34,6 +35,25 @@ inline bool validExtension(std::wstring const& value) noexcept {
  return !value.empty()&&value.size()<=32&&
     value.find_first_of(L"\\/:*?\"<>|\r\n\t")==std::wstring::npos&&
     value.find(L'\0')==std::wstring::npos;
+}
+// Indexed System.Size is a signed BIGINT. Fail closed above that ceiling.
+constexpr std::uint64_t kMaxIndexedSizeBytes=
+    static_cast<std::uint64_t>((std::numeric_limits<std::int64_t>::max)());
+inline bool parseIndexedSizeKb(std::wstring const& text,
+                               bool& present,std::uint64_t& bytes) noexcept {
+ present=!text.empty();bytes=0;
+ if(!present)return true;
+ if(text.size()>20)return false;
+ std::uint64_t kb=0;
+ const auto limit=kMaxIndexedSizeBytes/1024;
+ for(wchar_t ch:text){
+  if(ch<L'0'||ch>L'9')return false;
+  const auto digit=static_cast<std::uint64_t>(ch-L'0');
+  if(kb>(limit-digit)/10)return false;
+  kb=kb*10+digit;
+ }
+ bytes=kb*1024;
+ return true;
 }
 inline bool validScope(std::wstring const& value) noexcept {
  if(value.size()<3||value.size()>kMaxPathUnits||
