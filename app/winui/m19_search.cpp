@@ -354,7 +354,6 @@ SearchQueryValidation validateSearchQuery(SearchQuery const& query) noexcept
            (!fxfile::indexwire::validTerm(query.term)||
             query.regex||query.caseSensitive||
             query.kind!=SearchEntryKind::Files||
-            !query.minSizeKb.empty()||!query.maxSizeKb.empty()||
             !query.modifiedAfter.empty()||!query.modifiedBefore.empty()||
             !query.contentTerm.empty()||query.contentRegex))
             return SearchQueryValidation::InvalidIndexedCriteria;
@@ -403,6 +402,10 @@ SearchQueryValidation validateSearchQuery(SearchQuery const& query) noexcept
         if(!parseOptionalSizeKb(query.minSizeKb,hasMin,minBytes)||
            !parseOptionalSizeKb(query.maxSizeKb,hasMax,maxBytes)||
            (hasMin&&hasMax&&minBytes>maxBytes))
+            return SearchQueryValidation::InvalidSizeRange;
+        if(query.mode==SearchMode::WindowsIndex&&
+           (minBytes>fxfile::indexwire::kMaxIndexedSizeBytes||
+            maxBytes>fxfile::indexwire::kMaxIndexedSizeBytes))
             return SearchQueryValidation::InvalidSizeRange;
 
         std::uint32_t afterDate=0,beforeDate=0;
@@ -674,8 +677,11 @@ SearchResults scanIndexedFiles(
   std::wstring command=quoteArg(helper)+
       L" --indexed-filename-search "+quoteArg(folder)+
       L" "+quoteArg(query.term);
-  if(!query.extension.empty())
-   command+=L" "+quoteArg(normalizeExtension(query.extension));
+  // Send explicit empty fields; the child independently validates sizes.
+  command+=L" "+quoteArg(
+      query.extension.empty()?L"":normalizeExtension(query.extension))+
+      L" "+quoteArg(query.minSizeKb)+
+      L" "+quoteArg(query.maxSizeKb);
   std::vector<wchar_t> mutableCommand(command.begin(),command.end());
   mutableCommand.push_back(0);
   PROCESS_INFORMATION created{};
