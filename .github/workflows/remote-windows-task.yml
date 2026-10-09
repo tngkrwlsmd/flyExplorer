@@ -480,4 +480,4 @@ jobs:
           name: flyexplorer-remote-evidence-${{ github.run_id }}
           path: ${{ env.FLYEXPLORER_CANONICAL_CHECKOUT }}\logs\remote-evidence\
           if-no-files-found: ignore
-          retention-days: 365
+          retention-days: 1
