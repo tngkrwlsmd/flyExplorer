@@ -1,0 +1,14 @@
+{
+  "candidate_sha": "9700082da4a2071274e34c2fad4200c4fb71e226",
+  "failure_category": null,
+  "logical_unit": "remote-evidence-git-archive",
+  "request_id": "git-evidence-storage-smoke-20261009",
+  "request_mode": "diagnostic",
+  "stages": {
+    "COMMAND": "PASS",
+    "REQUEST_VALIDATION": "PASS",
+    "RUNNER_HEALTH": "NOT_RUN",
+    "STATIC_PREFLIGHT": "NOT_RUN"
+  },
+  "validation_plan": []
+}
