@@ -217,12 +217,14 @@ try:
  # A watcher refresh replaces native rows asynchronously. Re-resolve the
  # owned ListView until the stable Shell snapshot is visible instead of
  # treating the short UIA replacement window as a product navigation failure.
- eventually(lambda:len([e for e in element("LeftFiles").descendants()
-   if e.element_info.control_type=="ListItem" and "Nested" in e.window_text()])==1,
-   "native Shell fixture row did not settle after watcher refresh",8)
- navitems=[e for e in element("LeftFiles").descendants()
-   if e.element_info.control_type=="ListItem" and "Nested" in e.window_text()]
- assert len(navitems)==1,("native Shell fixture row not found",len(navitems))
+ def nested_rows():
+  return [e for e in element("LeftFiles").descendants()
+          if e.element_info.control_type=="ListItem" and "Nested" in e.window_text()]
+ # Capture the truthy UIA row list within the same bounded poll. A separate
+ # snapshot immediately after a count-only poll races WinUI ListView replacement.
+ navitems=eventually(lambda:next((rows for rows in [nested_rows()]
+                                  if len(rows)==1),None),
+                     "native Shell fixture row did not settle after watcher refresh",8)
  print("NATIVE_ROW_PRE_INPUT",
        "STATUS",element("StatusText").window_text(),
        "PATH",element("AddressBox").get_value(),
@@ -230,9 +232,9 @@ try:
  ensure_owned_focus()
  # Focus acquisition can rebuild the WinUIA peer after watcher invalidation;
  # resolve the exact owned row again immediately before the physical gesture.
- navitems=[e for e in element("LeftFiles").descendants()
-   if e.element_info.control_type=="ListItem" and "Nested" in e.window_text()]
- assert len(navitems)==1,("native Shell fixture row lost before input",len(navitems))
+ navitems=eventually(lambda:next((rows for rows in [nested_rows()]
+                                  if len(rows)==1),None),
+                     "native Shell fixture row lost before input",8)
  navitems[0].double_click_input()
  print("OWNED_NATIVE_POINTER_GUARD_PASSED",True,flush=True)
  try:
