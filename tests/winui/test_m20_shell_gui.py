@@ -73,7 +73,13 @@ def run(*,win,element,safe_click,focus,eventually,owned):
     # The old GUI harness has already completed both-pane, tab and PIDL
     # navigation. Verify the new native routed commands still preserve the
     # independent hidden right-pane state and accept full PIDL virtual nav.
-    safe_click(element("LeftFiles"))
+    # Theme restore can re-template this exact WinUI ListView asynchronously.
+    # Retry only known transient UIA lookup errors, within the test-owned app.
+    def click_left_files_after_theme():
+        safe_click(element("LeftFiles"))
+        return True
+    eventually(click_left_files_after_theme,
+               "left pane UIA list did not settle after theme restore",15)
     before=element("AddressBox").get_value()
     left_tabs=element("LeftTabs")
     prior_left=len([v for v in left_tabs.descendants()
