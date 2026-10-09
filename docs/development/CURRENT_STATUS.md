@@ -289,6 +289,25 @@ bootstrap configuration.
 
 ## Latest verified evidence
 
+### 2026-10-09 — Store remote Windows evidence in Git
+
+Candidate `6564165c14ca6dc561a8591ab7a9b696a864b8f6` passed
+source contracts, the Release app build, Release M19 native 57/57, the
+real SystemIndex indexed-extension oracle and test-owned GUI
+include/exclude in remote run `37912684233`. Despite that, the
+workflow conclusion was **failure** solely because the final
+`upload-artifact` step exceeded the GitHub Actions storage quota.
+
+The surviving structured result and status markers are preserved in
+`evidence/remote-windows/runs/37912684233/`. These were recovered
+from the observed Actions log, not from an unavailable artifact ZIP.
+Subsequent remote tasks publish their own bounded status evidence
+directly to this separate Git branch. Screenshots or raw/private data
+are not included. This CI repair does not merge the separate Search
+v3 feature candidate into product `main`.
+
+
+
 ### 2026-10-09 — main Release and complete GUI acceptance
 
 Current main revision `7c23af1515fab0926fa409d277efd6e16b9d1f65`

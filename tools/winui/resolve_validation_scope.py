@@ -36,9 +36,11 @@ INFRA_FILES = {
     "tools/winui/resolve_validation_scope.py",
     "tools/winui/validate_remote_request.py",
     "tools/winui/classify_remote_failure.py",
+    "tools/winui/store_remote_evidence.py",
     "tests/winui/test_remote_failure_classifier.py",
     "tests/winui/test_remote_request_preflight_contract.py",
     "tests/winui/test_remote_windows_task_contract.py",
+    "tests/winui/test_remote_evidence_archive_contract.py",
     "tests/winui/test_validation_scope_contract.py",
 }
 HARNESS_FILES = {

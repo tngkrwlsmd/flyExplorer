@@ -420,7 +420,11 @@ readiness gate whenever a reviewed product path changed. Update
 `.agent-policy/PROJECT.md` review metadata in the same logical unit when
 required, so main CI is not spent rediscovering a known stale review revision.
 Do not create separate publish/copy-only evidence workflows; the producing
-remote-shell job should retain or report the evidence directly.
+remote-shell job should retain or report the evidence directly. Remote-task
+status evidence is archived on the isolated `evidence/remote-windows` branch
+rather than GitHub Actions artifact storage. Only sanitized result fields and
+bounded status markers belong there, never raw logs, credentials or personal
+screenshots. Archive PASS does not mean product or visual acceptance PASS.
 
 At the start of a remote development loop, fetch origin and inspect the current
 branch, HEAD, `origin/main` and `git status --short`. Do not reset, clean,

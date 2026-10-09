@@ -80,6 +80,7 @@ INFRA_CONTRACTS = [
     "tests/winui/test_remote_failure_classifier.py",
     "tests/winui/test_remote_request_preflight_contract.py",
     "tests/winui/test_remote_windows_task_contract.py",
+    "tests/winui/test_remote_evidence_archive_contract.py",
     "tests/winui/test_validation_scope_contract.py",
 ]
 STRUCTURE_CONTRACT = "tests/winui/test_structure_contract.py"

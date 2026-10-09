@@ -181,6 +181,27 @@ These are current project facts, not generic policy:
   high-cost. It is a product safety bound, not a generic validation-run
   threshold.
 
+## Git-backed remote Windows evidence (2026-10-09)
+
+Remote Windows Task archives sanitized evidence to the isolated
+`evidence/remote-windows` branch at `runs/<run-id>/`, avoiding
+account-limited Actions artifact storage. It commits the record from the
+**same executing job** with the existing `contents: write` permission
+and serialized execution lane.
+
+`manifest.json` retains run URL, workflow SHA, candidate SHA and
+pre-archive job state. The optional `remote-result.json` and
+`check-result.json` contain strictly validated structured fields;
+`markers.json` contains limited PASS/FAIL-like markers. Large, missing
+or symlinked inputs are not copied. Full console logs remain in the
+linked Actions run. Raw transcripts, private user data, binaries and
+unreviewed screenshots are **not** committed to Git.
+
+An archive PASS cannot override a failed product stage or independently
+certify the UI's final pixels. Historic run `37912684233` is
+reconstructed only from its surviving Actions log; its missing ZIP and
+screenshot cannot be recovered.
+
 ## Remote workflow ownership
 
 The full Remote Windows Task implementation is

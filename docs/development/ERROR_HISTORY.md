@@ -16,6 +16,26 @@ product state use CURRENT_STATUS.md.
 
 이 문서는 확정된 오류를 단순 수정으로 끝내지 않고, 다음 진단을 빠르게 하고 같은 계열의 결함을 사전에 막기 위한 프로젝트 기록이다.
 
+## 2026-10-09 — Windows indexed search passed but Actions quota failed
+
+- Run `37911818230` initially failed because a Release native fixture
+  invoked the default Debug executable without building its native target.
+  The candidate was corrected to build and run the Release fixture.
+- Run `37912684233`: FAST, Release product/native build, 57 native
+  tests, SystemIndex extension matching and GUI inclusion/exclusion all
+  passed. The job subsequently failed during `actions/upload-artifact`
+  with `Artifact storage quota has been hit`.
+- Remediation: retain restricted structured results and bounded status
+  markers directly in the `evidence/remote-windows` Git branch from
+  the producing Remote Windows Task. The prior run's observed results
+  were saved retrospectively; its missing binary ZIP and pixels were
+  not recovered.
+- Preserve separation: product PASS does not mean historical workflow
+  PASS, and successful evidence persistence does not convert a
+  failure into acceptance.
+
+---
+
 ## 2026-10-09 — chained GUI harness regressions and recovery
 
 **Failure boundaries and fixes**

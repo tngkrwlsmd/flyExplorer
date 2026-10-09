@@ -135,7 +135,7 @@ class RemoteWindowsTaskContractTests(unittest.TestCase):
     def test_structured_category_precedes_marker_and_classifier_fallback(self):
         writer = self.workflow[
             self.workflow.index("- name: Write structured remote result"):
-            self.workflow.index("- name: Upload remote evidence")
+            self.workflow.index("- name: Checkout repository evidence")
         ]
         resolver = writer[
             writer.index("function Resolve-LowerFailure"):
@@ -161,8 +161,11 @@ class RemoteWindowsTaskContractTests(unittest.TestCase):
         self.assertEqual(
             1, self.workflow.count("- name: Write structured remote result")
         )
-        self.assertEqual(1, self.workflow.count("- name: Upload remote evidence"))
-        self.assertIn("retention-days: 1", self.workflow)
+        self.assertEqual(1, self.workflow.count("- name: Store bounded repository evidence"))
+        self.assertIn("ref: evidence/remote-windows", self.workflow)
+        self.assertIn("store_remote_evidence.py", self.workflow)
+        self.assertIn("EVIDENCE_REPO_ARCHIVE=PASS", self.workflow)
+        self.assertNotIn("actions/upload-artifact@", self.workflow)
         self.assertEqual(1, self.workflow.count("REMOTE_RESULT="))
 
     def test_structured_result_separates_request_static_health_and_command(self):
