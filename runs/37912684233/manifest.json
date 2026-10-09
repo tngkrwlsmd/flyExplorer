@@ -1,0 +1,17 @@
+{
+  "schema": 1,
+  "repository": "tngkrwlsmd/flyExplorer",
+  "run_id": 37912684233,
+  "run_url": "https://github.com/tngkrwlsmd/flyExplorer/actions/runs/37912684233",
+  "evidence_type": "recovered_from_actions_job_log",
+  "workflow_conclusion": "failure",
+  "product_acceptance": "PASS",
+  "artifact_upload": "FAILED_QUOTA",
+  "workflow_sha": "94bca8724008dc6bb4eb0905c61c3479a6679f3e",
+  "candidate_sha": "6564165c14ca6dc561a8591ab7a9b696a864b8f6",
+  "scope": "selected structured result and allowlisted PASS markers only; original screenshots, raw logs and full artifact ZIP unavailable",
+  "files": [
+    "remote-result.json",
+    "markers.json"
+  ]
+}

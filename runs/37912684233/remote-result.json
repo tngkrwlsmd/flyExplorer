@@ -1,0 +1,18 @@
+{
+  "request_id": "search-v3-indexed-extension-release-20261009-r2",
+  "request_mode": "validation",
+  "candidate_sha": "6564165c14ca6dc561a8591ab7a9b696a864b8f6",
+  "logical_unit": "search-v3-indexed-extension",
+  "validation_plan": [
+    "build",
+    "gui",
+    "source"
+  ],
+  "stages": {
+    "REQUEST_VALIDATION": "PASS",
+    "STATIC_PREFLIGHT": "PASS",
+    "RUNNER_HEALTH": "PASS",
+    "COMMAND": "PASS"
+  },
+  "failure_category": null
+}

@@ -1,8 +1,0 @@
-namespace FlyExplorer
-{
-    [default_interface]
-    runtimeclass ShellHeader : Microsoft.UI.Xaml.Controls.UserControl
-    {
-        ShellHeader();
-    }
-}
