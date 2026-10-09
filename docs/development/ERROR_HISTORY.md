@@ -36,6 +36,30 @@ product state use CURRENT_STATUS.md.
 
 ---
 
+## 2026-10-09 — indexed Search visual comparison: unequal startup geometry
+
+- First actual BEFORE/AFTER run `37918146605` passed old-main and
+  candidate Release builds, both actual WinUI Search captures, and actual
+  indexed extension filtering, but its screenshot comparator rejected
+  different viewport sizes (BEFORE 944×677, AFTER 944×651).
+  Git evidence archived the workflow failure correctly.
+- The comparator was changed to preserve full, uncropped original
+  dimensions, report overlap and uncovered pixels separately, and provide
+  both image previews for direct inspection. A synthetic mismatched-size
+  regression test now protects this behavior.
+- Follow-up `37920530398` passed the updated comparator and all
+  source/build/native GUI gates. Its screenshot dimensions were
+  944×625 versus 944×599, again −26 pixels in height. The
+  visual inspection found no new clipping or overlap in the modified
+  index-mode explanation or surrounding controls; complete identical
+  viewport pixel parity was not established.
+- Prevention: a successful difference calculation is **not** automatic
+  visual acceptance. Always record and inspect geometry mismatches,
+  identify reviewed UI surface, and keep full-resolution/matched-screen
+  evidence as an explicit separate gate if it was not exercised.
+
+---
+
 ## 2026-10-09 — chained GUI harness regressions and recovery
 
 **Failure boundaries and fixes**
