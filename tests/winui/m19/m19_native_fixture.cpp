@@ -247,6 +247,27 @@ int wmain(int argc,wchar_t** argv){
     expect(regexIgnoreCase.valid&&regexIgnoreCase.count==2,
            "REGEX_CASE_INSENSITIVE_FILE_MATCH");
 
+    fxfile::preview::SearchQuery indexedExtension{};
+    indexedExtension.mode=fxfile::preview::SearchMode::WindowsIndex;
+    indexedExtension.term=L"report";
+    indexedExtension.extension=L".TXT";
+    expect(fxfile::preview::validateSearchQuery(indexedExtension)==
+           fxfile::preview::SearchQueryValidation::Valid,
+           "INDEXED_EXTENSION_UPPERCASE_AND_LEADING_DOT_ACCEPTED");
+    indexedExtension.extension=L"txt";
+    expect(fxfile::preview::validateSearchQuery(indexedExtension)==
+           fxfile::preview::SearchQueryValidation::Valid,
+           "INDEXED_EXTENSION_WITHOUT_DOT_ACCEPTED");
+    indexedExtension.extension=L".t/x";
+    expect(fxfile::preview::validateSearchQuery(indexedExtension)==
+           fxfile::preview::SearchQueryValidation::InvalidExtension,
+           "INDEXED_INVALID_EXTENSION_REJECTED");
+    indexedExtension.extension=L"txt";
+    indexedExtension.minSizeKb=L"1";
+    expect(fxfile::preview::validateSearchQuery(indexedExtension)==
+           fxfile::preview::SearchQueryValidation::InvalidIndexedCriteria,
+           "INDEXED_UNSUPPORTED_SIZE_STILL_REJECTED");
+
     fxfile::preview::SearchQuery extensionQuery{};
     extensionQuery.term=L"report";
     extensionQuery.extension=L".txt";

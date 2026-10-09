@@ -25,28 +25,42 @@ def main():
     sample=scope/"Microsoft Edge.lnk"
     assert sample.is_file(),("public index sample unavailable",sample)
     original=hashlib.sha256(sample.read_bytes()).digest()
-    command=[str(helper),"--indexed-filename-search",str(scope),"Microsoft Edge"]
-    result=subprocess.run(command,capture_output=True,timeout=20)
-    assert result.returncode==0,(result.returncode,result.stderr[-400:])
-    assert len(result.stdout)>=24,("indexed reply missing",len(result.stdout))
-    magic,version,status,count,size,checksum=struct.unpack_from("<6I",result.stdout)
-    assert (magic,version)==(MAGIC,1),(hex(magic),version)
-    assert status==0,("SystemIndex provider query failed",status)
-    body=result.stdout[24:]
-    assert len(body)==size and wire_checksum(body)==checksum
-    assert 1<=count<=1000,count
-    names=[]
-    cursor=0
-    for _ in range(count):
-        assert cursor+4<=len(body)
-        units=struct.unpack_from("<I",body,cursor)[0];cursor+=4
-        assert 0<units<=2048 and cursor+2*units<=len(body)
-        names.append(body[cursor:cursor+2*units].decode("utf-16-le"))
-        cursor+=2*units
-    assert cursor==len(body)
-    assert str(sample).casefold() in {x.casefold() for x in names},names[:4]
-    assert hashlib.sha256(sample.read_bytes()).digest()==original
+    def indexed(extension=None):
+        command=[str(helper),"--indexed-filename-search",
+                 str(scope),"Microsoft Edge"]
+        if extension is not None:
+            command.append(extension)
+        result=subprocess.run(command,capture_output=True,timeout=20)
+        assert result.returncode==0,(result.returncode,result.stderr[-400:])
+        assert len(result.stdout)>=24,("indexed reply missing",len(result.stdout))
+        magic,version,status,count,size,checksum=struct.unpack_from("<6I",result.stdout)
+        assert (magic,version)==(MAGIC,1),(hex(magic),version)
+        assert status==0,("SystemIndex provider query failed",status)
+        body=result.stdout[24:]
+        assert len(body)==size and wire_checksum(body)==checksum
+        assert 0<=count<=1000,count
+        names=[]
+        cursor=0
+        for _ in range(count):
+            assert cursor+4<=len(body)
+            units=struct.unpack_from("<I",body,cursor)[0];cursor+=4
+            assert 0<units<=2048 and cursor+2*units<=len(body)
+            names.append(body[cursor:cursor+2*units].decode("utf-16-le"))
+            cursor+=2*units
+        assert cursor==len(body)
+        return names
+
+    unfiltered=indexed()
+    assert str(sample).casefold() in {x.casefold() for x in unfiltered}
     print("INDEXED_NATIVE_SYSTEMINDEX_QUERY_PASS",True,flush=True)
+    matching=indexed(".LNK")
+    assert str(sample).casefold() in {x.casefold() for x in matching}
+    assert all(p.casefold().endswith(".lnk") for p in matching)
+    excluded=indexed("txt")
+    assert str(sample).casefold() not in {x.casefold() for x in excluded}
+    assert all(p.casefold().endswith(".txt") for p in excluded)
+    print("INDEXED_NATIVE_EXTENSION_MATCH_AND_EXCLUDE_PASS",True,flush=True)
+    assert hashlib.sha256(sample.read_bytes()).digest()==original
     print("INDEXED_NATIVE_SYSTEM_SOURCE_UNCHANGED",True,flush=True)
 
 if __name__=="__main__":

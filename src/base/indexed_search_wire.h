@@ -29,6 +29,12 @@ inline bool validTerm(std::wstring const& value) noexcept {
     value.find_first_of(L"%_[]\r\n\"/\\*?")==std::wstring::npos&&
     value.find(L'\0')==std::wstring::npos;
 }
+// A normalized extension is one filename suffix without its leading dot.
+inline bool validExtension(std::wstring const& value) noexcept {
+ return !value.empty()&&value.size()<=32&&
+    value.find_first_of(L"\\/:*?\"<>|\r\n\t")==std::wstring::npos&&
+    value.find(L'\0')==std::wstring::npos;
+}
 inline bool validScope(std::wstring const& value) noexcept {
  if(value.size()<3||value.size()>kMaxPathUnits||
     value.find_first_of(L"\r\n\"")!=std::wstring::npos||

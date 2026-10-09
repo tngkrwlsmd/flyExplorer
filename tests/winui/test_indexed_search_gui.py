@@ -27,7 +27,11 @@ def main():
     parser.add_argument("--configuration",choices=("Debug","Release"),default="Release")
     parser.add_argument("--capture",choices=("before","after"),default="after")
     args=parser.parse_args()
-    exe=app_exe(args.configuration).resolve()
+    # The controlled BEFORE capture uses the unchanged main product binary,
+    # while the AFTER capture uses the candidate binary. Both are driven by
+    # this same test-owned fixture and the same UIA/capture path.
+    visual_exe=os.environ.get("FLY_INDEXED_SEARCH_VISUAL_EXE","")
+    exe=(Path(visual_exe) if visual_exe else app_exe(args.configuration)).resolve()
     assert exe.is_file(),exe
     # The VM's Pictures scope is not indexed. Use the confirmed built-in
     # Public Desktop scope without modifying any indexed/system file.
@@ -105,26 +109,28 @@ def main():
             mode=control("SearchModeBox")
             assert mode.is_visible(),"Windows index selector missing"
             mode.select(1)
-            # A WinUI checkbox can appear twice in the UIA tree with
-            # identical visible bounds. Use the independently-owned extension
-            # field to prove index-only criteria rejection instead.
-            unsupported=control("SearchExtensionBox")
-            unsupported.set_edit_text(".txt")
+            # The extension filter is now supported; size is still an
+            # intentionally unsupported index-only criterion.
+            unsupported=control("SearchMinSizeBox")
+            unsupported.set_edit_text("1")
             control("SearchRunButton").invoke()
-            wait(lambda:"인덱스 검색은 파일명 일반 검색만 지원" in
+            wait(lambda:"인덱스 검색은 파일명·확장자 일반 검색만 지원" in
                 control("SearchCountText").window_text(),
                 "indexed-only unsupported criteria did not reject before start",6)
             unsupported.set_edit_text("")
             print("INDEXED_SEARCH_UNSUPPORTED_PRESTART_REJECT_PASS",True,flush=True)
         else:
-            assert not any(
-                x.element_info.automation_id=="SearchModeBox"
-                for x in window.descendants()),"BEFORE unexpectedly has index mode"
+            # main already includes Search v3's source selector. The change
+            # under comparison is the indexed-mode extension hint, not
+            # introduction of the selector itself.
+            assert control("SearchModeBox").is_visible(),(
+                "baseline Windows index source selector missing")
         # App-owned RenderTargetBitmap capture; service desktops can reject
         # pywinauto/PIL screen grabbing even when UIA works.
         wait(lambda:shot.is_file() and shot.stat().st_size>4096,
              "app-owned indexed search capture did not materialize",12)
         print("INDEXED_SEARCH_CAPTURE",shot.name,flush=True)
+        print("INDEXED_SEARCH_CAPTURE_REVISION_EXE",str(exe),flush=True)
 
         if args.capture=="after":
             # Positive oracle: this public system shortcut was independently
@@ -138,11 +144,24 @@ def main():
             print("INDEXED_SEARCH_NATIVE_ORACLE_PASS",
                   native.returncode==0,flush=True)
             assert native.returncode==0,(native.stdout,native.stderr)
+            extension=control("SearchExtensionBox")
+            extension.set_edit_text(".txt")
+            control("SearchRunButton").invoke()
+            wait(lambda:"Windows 인덱스 결과" in
+                control("SearchCountText").window_text(),
+                "indexed extension exclusion did not settle",20)
+            assert NAME.casefold() not in " ".join(
+                row.window_text() for row in
+                control("SearchMatches").descendants()).casefold(),(
+                "indexed extension exclusion exposed a .lnk shortcut")
+            print("INDEXED_SEARCH_EXTENSION_EXCLUDES_LNK_PASS",True,flush=True)
+            extension.set_edit_text(".LNK")
             control("SearchRunButton").invoke()
             wait(lambda:TERM in " ".join(
                 row.window_text() for row in
                 control("SearchMatches").descendants()),
-                "indexed result does not contain public system shortcut",20)
+                "indexed extension match does not contain public system shortcut",20)
+            print("INDEXED_SEARCH_EXTENSION_LNK_MATCH_PASS",True,flush=True)
             summary=control("SearchCountText").window_text()
             print("INDEXED_SEARCH_SUMMARY",repr(summary),flush=True)
             assert "Windows 인덱스 결과" in summary,summary

@@ -302,10 +302,13 @@ bool insideScope(std::wstring const& scope,std::wstring const& path) {
 }
 int runIndexedFilenameSearch(HANDLE output,
                              std::wstring const& scope,
-                             std::wstring const& term) {
+                             std::wstring const& term,
+                             std::wstring extension) {
  using namespace fxfile::indexwire;
+ if(!extension.empty()&&extension.front()==L'.')extension.erase(0,1);
  if(!output||output==INVALID_HANDLE_VALUE||
-    !validScope(scope)||!validTerm(term))return 1;
+    !validScope(scope)||!validTerm(term)||
+    (!extension.empty()&&!validExtension(extension)))return 1;
  DWORD error=ERROR_SUCCESS;
  std::vector<std::wstring> results;
  bool truncated=false;
@@ -342,9 +345,11 @@ int runIndexedFilenameSearch(HANDLE output,
     std::wstring url=L"file:"+scope;
     std::replace(url.begin(),url.end(),L'\\',L'/');
     if(url.back()!=L'/')url+=L'/';
-    const auto sql=L"SELECT TOP 1001 System.ItemUrl FROM SystemIndex "
+    std::wstring sql=L"SELECT TOP 1001 System.ItemUrl FROM SystemIndex "
         L"WHERE SCOPE='"+sqlQuoted(url)+L"' AND System.FileName LIKE '%"+
         sqlQuoted(term)+L"%'";
+    if(!extension.empty())
+     sql+=L" AND System.FileExtension = '."+sqlQuoted(extension)+L"'";
     ATL::CDataSource data;
     HRESULT hr=data.OpenFromInitializationString(
       L"Provider=Search.CollatorDSO.1;Extended Properties=\"Application=Windows\"");
@@ -384,6 +389,14 @@ int runIndexedFilenameSearch(HANDLE output,
         std::transform(lowerTerm.begin(),lowerTerm.end(),lowerTerm.begin(),
             [](wchar_t x){return static_cast<wchar_t>(::towlower(x));});
         if(lowerName.find(lowerTerm)==std::wstring::npos)continue;
+        if(!extension.empty()){
+         const auto dot=name.find_last_of(L'.');
+         if(dot==std::wstring::npos||dot+1>=name.size()||
+            ::CompareStringOrdinal(
+              name.c_str()+dot+1,static_cast<int>(name.size()-dot-1),
+              extension.c_str(),static_cast<int>(extension.size()),
+              TRUE)!=CSTR_EQUAL)continue;
+        }
         const DWORD itemAttrs=::GetFileAttributesW(result.c_str());
         if(itemAttrs==INVALID_FILE_ATTRIBUTES||
            (itemAttrs&(FILE_ATTRIBUTE_DIRECTORY|FILE_ATTRIBUTE_REPARSE_POINT)))
@@ -430,8 +443,9 @@ int runIndexedFilenameSearch(HANDLE output,
 } // namespace
 
 int wmain(int argc,wchar_t** argv) {
-    if(argc==4&&!wcscmp(argv[1],L"--indexed-filename-search"))
-        return runIndexedFilenameSearch(::GetStdHandle(STD_OUTPUT_HANDLE),argv[2],argv[3]);
+    if((argc==4||argc==5)&&!wcscmp(argv[1],L"--indexed-filename-search"))
+        return runIndexedFilenameSearch(::GetStdHandle(STD_OUTPUT_HANDLE),
+            argv[2],argv[3],argc==5?argv[4]:L"");
     if(argc==2&&!wcscmp(argv[1],L"--file-transfer"))
         return fxfile::shelltransfer::runIsolatedHelper(
             ::GetStdHandle(STD_INPUT_HANDLE),::GetStdHandle(STD_OUTPUT_HANDLE));
