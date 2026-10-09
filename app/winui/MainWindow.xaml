@@ -315,7 +315,7 @@
                     <ComboBoxItem Content="직접 탐색 (기존)"/>
                     <ComboBoxItem Content="Windows 검색 인덱스"/>
                 </ComboBox>
-                <TextBlock Text="인덱스 모드: 파일명 + 선택적 확장자 · 최대 1,000개 · 미인덱싱 항목 제외"
+                <TextBlock Text="인덱스: 파일명·확장자·크기(KB) · 최대 1,000개 · 미인덱싱 제외"
                            VerticalAlignment="Center" Opacity="{ThemeResource FlyExplorerSubtleTextOpacity}"/>
             </StackPanel>
             <StackPanel Orientation="Horizontal" Spacing="7">
