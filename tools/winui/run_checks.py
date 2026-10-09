@@ -379,6 +379,12 @@ def gui_command(area, configuration, env):
     }[area]
     for key in flags:
         gui_env[key] = "YES"
+    if area == "all":
+        # M19 leaves test-owned Search/Workspace panels expanded. Close those
+        # panels before M20 checks native shell lists and theme retemplating;
+        # a covered/virtualized LeftFiles peer is not a product regression.
+        # This remains opt-in for the full cross-suite handoff only.
+        gui_env["FLY_M20_OWNED_COLLAPSE_M19_PANELS"] = "YES"
     return [sys.executable, "-u", str(TESTS / "test_shell_gui.py")], gui_env, 260
 
 
