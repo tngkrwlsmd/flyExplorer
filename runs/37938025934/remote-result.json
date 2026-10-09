@@ -1,0 +1,16 @@
+{
+  "candidate_sha": "20876753e83c391cd35e0b792b864b576e21bafe",
+  "failure_category": null,
+  "logical_unit": "central-ci-m19-m20-handoff-cleanup",
+  "request_id": "stale-pr53-central-handoff-branch-cleanup-20261009",
+  "request_mode": "validation",
+  "stages": {
+    "COMMAND": "PASS",
+    "REQUEST_VALIDATION": "PASS",
+    "RUNNER_HEALTH": "NOT_RUN",
+    "STATIC_PREFLIGHT": "PASS"
+  },
+  "validation_plan": [
+    "source"
+  ]
+}
