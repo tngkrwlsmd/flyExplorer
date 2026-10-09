@@ -289,6 +289,35 @@ bootstrap configuration.
 
 ## Latest verified evidence
 
+### 2026-10-09 — Indexed Modified-Date Filter (pre-main acceptance)
+
+Code candidate `029ef1e5d8f186bfc5262d386576204b58fa47a9`
+adds optional inclusive local-calendar `YYYY-MM-DD` after/before bounds
+to Windows Search indexed filename, extension and size-KB AND criteria.
+The owned helper prefilters on `System.DateModified` with deliberately
+broad date-only SQL bounds to allow UTC/local offset and DST differences.
+For every returned file it validates current `ftLastWriteTime` as a
+local date and applies the exact inclusive lower/upper bounds, excluding
+stale matches. Gregorian/leap/invalid/reversed dates are rejected before
+the provider call. Search still uses the owned isolated 12-second
+helper, cancellation, at-most 1,000 indexed paths, 1 MiB reply,
+fixed and reparse-safe filesystem scope, and no traversal fallback.
+Indexed regex, folder, content and provider/property search remain
+unsupported and fail closed.
+
+Windows validation `37934459707` **SUCCESS**, SHA-scoped to the code
+candidate: FAST/source contracts, Release native fixture **72/72**,
+Release product build, actual SystemIndex inclusive modified-date
+include/exclude tests, invalid/overflow/reversed input, GUI AND
+composition of extension + KB size + day range, safe reset,
+legacy profile and Public Desktop source unchanged, and normal GUI
+process exit 0. The producing job persisted a curated status record to
+`evidence/remote-windows/runs/37934459707/`. A separate matched-size
+before/after UI visual comparison was dispatched as `37935505947`
+and remains a separate gate until its output and screenshots have been
+inspected; an automatic comparison does not constitute human inspection.
+No post-main independent full Windows CI has been run.
+
 ### 2026-10-09 — Search v3 indexed file size criteria (KB)
 
 Integrated candidate `9cf68d575d62dabd748ba9caff500e7c9eeb2179`
@@ -1371,9 +1400,9 @@ Current source and the last parity evidence still show these limits:
   mode for case-insensitive literal file names on non-reparse fixed-drive
   filesystem scopes. It queries SystemIndex through the exact-owned
   FlyShellIsolationHelper process, caps returned paths at 1,000 and total
-  wire data at 1 MiB, rejects indexed-mode regex/contents/date and other
-  unsupported criteria while allowing bounded optional integer-KB file size,
-  and never silently falls back to filesystem traversal. Cancellation,
+  wire data at 1 MiB, rejects indexed-mode regex/content/folder/provider
+  criteria while allowing optional integer-KB file size and inclusive
+  YYYY-MM-DD modified-date lower/upper bounds, and never silently falls back to filesystem traversal. Cancellation,
   12-second deadline, one-process kill-on-close Job Object, stale-result and
   route-token rejection remain active. An unindexed scope can legitimately
   return zero entries; an unavailable provider or timeout has a distinct
