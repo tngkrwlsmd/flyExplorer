@@ -306,6 +306,16 @@ directly to this separate Git branch. Screenshots or raw/private data
 are not included. This CI repair does not merge the separate Search
 v3 feature candidate into product `main`.
 
+This new archive path was independently exercised on main revision
+`9700082da4a2071274e34c2fad4200c4fb71e226` by Remote Windows
+Task `37917225055`: source contracts **26/26 PASS**, serializer
+`EVIDENCE_ARCHIVE_PREPARE=PASS`, repository push
+`EVIDENCE_REPO_ARCHIVE=PASS` and full workflow conclusion
+**success**. The actual persisted manifest and structured result are
+visible at `evidence/remote-windows/runs/37917225055/`. No
+Release app build or new GUI acceptance was run in this
+archival-only smoke test.
+
 
 
 ### 2026-10-09 — main Release and complete GUI acceptance
