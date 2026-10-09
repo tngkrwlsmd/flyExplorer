@@ -289,6 +289,39 @@ bootstrap configuration.
 
 ## Latest verified evidence
 
+### 2026-10-09 — Search v3 Windows Search indexed extension conditions
+
+Integrated candidate `8c339a450a04109a2f0ab01aa425c0551d5441a4`
+extends indexed filename searches with one optional normalized file extension
+(up to 32 characters) while preserving the fail-closed unsupported-filter
+boundary, 1,000-result limit and isolated helper lifetime. The Windows
+Search-native oracle verifies `.LNK` inclusion and `.txt` exclusion against
+an unchanged pre-indexed Public Desktop shortcut. The 57-case Release M19
+native fixture also passed in run `37912684233`.
+
+Remote Windows Task `37920530398` completed **SUCCESS** on the named
+candidate: FAST source contracts, both old-main and candidate Release builds,
+GUI runner health, indexed-search native oracle and GUI include/exclude, normal
+owned process exit 0, unchanged protected settings/system source, and the
+corrected pixel-comparison fixture all passed. The repository evidence record
+is `evidence/remote-windows/runs/37920530398/`; detailed preview and pixel
+report remain in the Actions job log, not the sanitized Git record.
+
+**Targeted visual review:** actual app-owned baseline and candidate image
+previews were inspected. The modified one-line index-mode explanation is fully
+visible; the surrounding search controls retain their alignment, with no
+new text clipping or overlap observed. The screenshots differ in overall
+height (BEFORE **944×625**, AFTER **944×599**, delta **−26 px**).
+The difference occurs below the modified search panel in the file-list area;
+its cause was not established. The corrected comparator reports the
+unmatched viewport rather than discarding pixels. Therefore this is
+**targeted search-panel visual review PASS**, but **matched full-window
+geometry and exact full-resolution pixel review remain NOT TESTED**.
+Do not describe these unequal images as a like-for-like full-window match.
+Alternate DPI/scaling, physical USB/SMB, human accessibility testing,
+signing and public distribution are still outside this acceptance.
+
+
 ### 2026-10-09 — Store remote Windows evidence in Git
 
 Candidate `6564165c14ca6dc561a8591ab7a9b696a864b8f6` passed
