@@ -8,6 +8,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import threading
 import time
 
 from pywinauto import Desktop
@@ -21,6 +22,52 @@ TERM="Microsoft Edge"
 
 def wait(fn,label,seconds=25):
     return wait_until(fn,label,seconds=seconds,interval=.3)
+
+# Test-owned visual captures need identical Win32 frame sizes. The app's
+# EnsureExpandedPanelFits uses monitor work area and launch position, so
+# independent launches otherwise produce unequal screenshots despite the
+# same UI controls. This thread touches only the PID launched by this test.
+def enforce_owned_capture_size(proc,shot,stop,observed):
+    width,height=972,720
+    user32=ctypes.WinDLL("user32",use_last_error=True)
+    class RECT(ctypes.Structure):
+        _fields_=[("left",ctypes.c_long),("top",ctypes.c_long),
+                  ("right",ctypes.c_long),("bottom",ctypes.c_long)]
+    proc_type=ctypes.WINFUNCTYPE(ctypes.c_bool,ctypes.c_void_p,ctypes.c_void_p)
+    user32.EnumWindows.argtypes=[proc_type,ctypes.c_void_p]
+    user32.GetWindowThreadProcessId.argtypes=[ctypes.c_void_p,
+                                                ctypes.POINTER(ctypes.c_ulong)]
+    user32.GetWindowTextW.argtypes=[ctypes.c_void_p,ctypes.c_wchar_p,ctypes.c_int]
+    user32.GetWindowRect.argtypes=[ctypes.c_void_p,ctypes.POINTER(RECT)]
+    user32.SetWindowPos.argtypes=[ctypes.c_void_p,ctypes.c_void_p,
+                                   ctypes.c_int,ctypes.c_int,ctypes.c_int,
+                                   ctypes.c_int,ctypes.c_uint]
+    user32.IsWindowVisible.argtypes=[ctypes.c_void_p]
+    def visit(hwnd,_):
+        owner=ctypes.c_ulong()
+        user32.GetWindowThreadProcessId(hwnd,ctypes.byref(owner))
+        if owner.value!=proc.pid or not user32.IsWindowVisible(hwnd):
+            return True
+        title=ctypes.create_unicode_buffer(128)
+        user32.GetWindowTextW(hwnd,title,len(title))
+        if "flyExplorer" not in title.value:
+            return True
+        rect=RECT()
+        if not user32.GetWindowRect(hwnd,ctypes.byref(rect)):
+            return True
+        extent=(rect.right-rect.left,rect.bottom-rect.top)
+        if extent!=(width,height):
+            # SWP_NOMOVE | SWP_NOZORDER | SWP_NOACTIVATE. No global
+            # display, DPI, focus or user window state is modified.
+            if user32.SetWindowPos(hwnd,None,0,0,width,height,0x16):
+                observed["resized"]=True
+        else:
+            observed["fixed"]=True
+        return True
+    callback=proc_type(visit)
+    while not stop.is_set() and proc.poll() is None and not shot.is_file():
+        user32.EnumWindows(callback,None)
+        stop.wait(.025)
 
 def main():
     parser=argparse.ArgumentParser()
@@ -65,12 +112,19 @@ def main():
     proc=None
     window=None
     success=False
+    geometry_stop=threading.Event()
+    geometry_thread=None
+    geometry_observed={"fixed":False,"resized":False}
     try:
         proc=subprocess.Popen([str(exe),str(view)],
                               cwd=exe.parent,env=env,
                               stdin=subprocess.DEVNULL,
                               stdout=subprocess.DEVNULL,
                               stderr=subprocess.DEVNULL)
+        geometry_thread=threading.Thread(
+            target=enforce_owned_capture_size,
+            args=(proc,shot,geometry_stop,geometry_observed),daemon=True)
+        geometry_thread.start()
         def ready():
             nonlocal window
             if proc.poll() is not None:return False
@@ -136,6 +190,12 @@ def main():
         # pywinauto/PIL screen grabbing even when UIA works.
         wait(lambda:shot.is_file() and shot.stat().st_size>4096,
              "app-owned indexed search capture did not materialize",12)
+        geometry_stop.set()
+        geometry_thread.join(timeout=2)
+        assert geometry_observed["fixed"],(
+            "test-owned window was not observed at fixed 972x720",
+            geometry_observed)
+        print("INDEXED_SEARCH_OWNED_FIXED_FRAME_972x720_PASS",True,flush=True)
         print("INDEXED_SEARCH_CAPTURE",shot.name,flush=True)
         print("INDEXED_SEARCH_CAPTURE_REVISION_EXE",str(exe),flush=True)
 
@@ -205,6 +265,9 @@ def main():
             print("INDEXED_SEARCH_REAL_INDEX_MATCH_PASS",True,flush=True)
         success=True
     finally:
+        geometry_stop.set()
+        if geometry_thread:
+            geometry_thread.join(timeout=2)
         if proc and proc.poll() is None:
             try:
                 ctypes.windll.user32.PostMessageW(window.handle if window else 0,0x10,0,0)
