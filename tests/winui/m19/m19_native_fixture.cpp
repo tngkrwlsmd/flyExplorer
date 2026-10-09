@@ -263,10 +263,40 @@ int wmain(int argc,wchar_t** argv){
            fxfile::preview::SearchQueryValidation::InvalidExtension,
            "INDEXED_INVALID_EXTENSION_REJECTED");
     indexedExtension.extension=L"txt";
-    indexedExtension.minSizeKb=L"1";
+    indexedExtension.minSizeKb=L"0";
+    indexedExtension.maxSizeKb=L"32";
+    expect(fxfile::preview::validateSearchQuery(indexedExtension)==
+           fxfile::preview::SearchQueryValidation::Valid,
+           "INDEXED_SIZE_RANGE_ACCEPTED");
+    indexedExtension.maxSizeKb=L"0";
+    expect(fxfile::preview::validateSearchQuery(indexedExtension)==
+           fxfile::preview::SearchQueryValidation::Valid,
+           "INDEXED_ZERO_BYTE_BOUND_ACCEPTED");
+    indexedExtension.minSizeKb=L"20";
+    indexedExtension.maxSizeKb=L"10";
+    expect(fxfile::preview::validateSearchQuery(indexedExtension)==
+           fxfile::preview::SearchQueryValidation::InvalidSizeRange,
+           "INDEXED_REVERSED_SIZE_RANGE_REJECTED");
+    indexedExtension.minSizeKb=L"1x";
+    indexedExtension.maxSizeKb=L"";
+    expect(fxfile::preview::validateSearchQuery(indexedExtension)==
+           fxfile::preview::SearchQueryValidation::InvalidSizeRange,
+           "INDEXED_NONDECIMAL_SIZE_REJECTED");
+    indexedExtension.minSizeKb=L"9007199254740992";
+    expect(fxfile::preview::validateSearchQuery(indexedExtension)==
+           fxfile::preview::SearchQueryValidation::InvalidSizeRange,
+           "INDEXED_SIZE_SQL_BIGINT_OVERFLOW_REJECTED");
+    indexedExtension.minSizeKb=L"";
+    indexedExtension.maxSizeKb=L"9007199254740991";
+    expect(fxfile::preview::validateSearchQuery(indexedExtension)==
+           fxfile::preview::SearchQueryValidation::Valid,
+           "INDEXED_SIZE_SQL_BIGINT_CEILING_ACCEPTED");
+    indexedExtension.maxSizeKb=L"";
+    indexedExtension.modifiedAfter=L"2026-02-01";
     expect(fxfile::preview::validateSearchQuery(indexedExtension)==
            fxfile::preview::SearchQueryValidation::InvalidIndexedCriteria,
-           "INDEXED_UNSUPPORTED_SIZE_STILL_REJECTED");
+           "INDEXED_MODIFIED_DATE_REMAINS_UNSUPPORTED");
+    indexedExtension.modifiedAfter=L"";
 
     fxfile::preview::SearchQuery extensionQuery{};
     extensionQuery.term=L"report";
