@@ -313,10 +313,19 @@ composition of extension + KB size + day range, safe reset,
 legacy profile and Public Desktop source unchanged, and normal GUI
 process exit 0. The producing job persisted a curated status record to
 `evidence/remote-windows/runs/37934459707/`. A separate matched-size
-before/after UI visual comparison was dispatched as `37935505947`
-and remains a separate gate until its output and screenshots have been
-inspected; an automatic comparison does not constitute human inspection.
-No post-main independent full Windows CI has been run.
+before/after UI visual comparison completed as `37935505947`
+(**SUCCESS**) on the exact candidate. The captured BEFORE and AFTER
+app-owned screenshots are both **956×711** at a controlled 972×720 HWND:
+zero geometry delta, **1,450 pixels** changed (0.2133%), confined to
+the indexed-mode hint row `[446,200,664,214]`. Both actual previews
+were visually inspected: the Korean indexed-date hint fits on one line,
+and neighboring input controls, dual panes, header and footer retain
+their positions without overlap or clipping. **Targeted fixed-size
+Dark-theme 100% visual PASS.** Preview frames and comparison metadata
+remain in the linked Actions job log; curated status records exist at
+`evidence/remote-windows/runs/37935505947/`. Other DPI, manual
+accessibility/IME, signing, external providers and a separate post-main
+Windows full-suite check remain **NOT TESTED**.
 
 ### 2026-10-09 — Search v3 indexed file size criteria (KB)
 
