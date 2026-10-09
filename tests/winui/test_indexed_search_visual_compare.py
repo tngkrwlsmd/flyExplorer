@@ -37,6 +37,46 @@ class IndexedVisualComparatorContract(unittest.TestCase):
             self.assertIn("INDEXED_VISUAL_AFTER_PREVIEW_BEGIN", done.stdout)
             self.assertIn("INDEXED_VISUAL_COMPARISON_CAPTURED=PASS", done.stdout)
 
+    def test_required_geometry_rejects_unmatched_but_preserves_report(self):
+        with TemporaryDirectory() as folder:
+            folder = Path(folder)
+            before = folder / "before.bmp"
+            after = folder / "after.bmp"
+            report = folder / "report.json"
+            Image.new("RGB", (80, 70), (10, 10, 10)).save(before)
+            Image.new("RGB", (80, 60), (20, 20, 20)).save(after)
+            script = Path(__file__).with_name("indexed_search_visual_compare.py")
+            done = subprocess.run(
+                [sys.executable, "-X", "utf8", str(script),
+                 "--before", str(before), "--after", str(after),
+                 "--metadata", str(report), "--require-matched"],
+                text=True, capture_output=True, timeout=15,
+            )
+            self.assertEqual(2, done.returncode, (done.stdout, done.stderr))
+            self.assertIn("INDEXED_VISUAL_MATCHED_GEOMETRY=FAIL", done.stdout)
+            saved = json.loads(report.read_text(encoding="utf-8"))
+            self.assertFalse(saved["geometry_matched"])
+            self.assertIn("INDEXED_VISUAL_AFTER_PREVIEW_END", done.stdout)
+
+    def test_required_geometry_accepts_same_extent_changed_pixels(self):
+        with TemporaryDirectory() as folder:
+            folder = Path(folder)
+            before = folder / "before.bmp"
+            after = folder / "after.bmp"
+            report = folder / "report.json"
+            Image.new("RGB", (80, 70), (10, 10, 10)).save(before)
+            Image.new("RGB", (80, 70), (20, 20, 20)).save(after)
+            script = Path(__file__).with_name("indexed_search_visual_compare.py")
+            done = subprocess.run(
+                [sys.executable, "-X", "utf8", str(script),
+                 "--before", str(before), "--after", str(after),
+                 "--metadata", str(report), "--require-matched"],
+                text=True, capture_output=True, timeout=15,
+            )
+            self.assertEqual(0, done.returncode, (done.stdout, done.stderr))
+            self.assertIn("INDEXED_VISUAL_MATCHED_GEOMETRY=PASS", done.stdout)
+            self.assertTrue(json.loads(report.read_text(encoding="utf-8"))["geometry_matched"])
+
     def test_equal_images_do_not_claim_diff(self):
         with TemporaryDirectory() as folder:
             folder = Path(folder)
