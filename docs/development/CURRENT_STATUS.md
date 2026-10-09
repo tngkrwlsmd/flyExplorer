@@ -289,6 +289,44 @@ bootstrap configuration.
 
 ## Latest verified evidence
 
+### 2026-10-09 — Search v3 indexed file size criteria (KB)
+
+Integrated candidate `9cf68d575d62dabd748ba9caff500e7c9eeb2179`
+extends Windows Search indexed filename and optional extension conditions
+with inclusive integer-KB minimum/maximum file size, AND-composed in
+`SystemIndex`. The exact-owned helper validates malformed/reversed/overflow
+input below signed-64-bit `System.Size` ceiling, rechecks current filesystem
+size to exclude stale index records, and preserves the 12-second owned-helper
+deadline, cancellation, fixed/reparse-safe scope, 1,000-result/1 MiB wire caps,
+and no filesystem traversal fallback. Date/regex/content/provider/property
+indexed search remains unsupported and fails closed.
+
+Initial run `37923169399` failed only after successful source, Release
+product and native build: the Python driver expected 64 tests for a 63-test
+fixture. After the assertion correction, candidate
+`7cd134456d0ed020d1008858a579ba41900d2902` passed Windows Task
+`37925547766` (**SUCCESS**), including source contracts, 63/63 Release
+native fixtures, Release product build, actual SystemIndex size include/exclude,
+malformed helper argument rejection, focused GUI AND matching, size reset and
+unsupported criteria rejection, protected profile unchanged and test-owned
+process exit 0. Evidence: `evidence/remote-windows/runs/37925547766/`.
+
+The first visual run `37927022090` passed product checks but the captured
+heights differed (944×510 versus 944×677), so it is not matched visual
+acceptance. The corrected owned-HWND geometry fixture on candidate
+`9cf68d575d62dabd748ba9caff500e7c9eeb2179` passed Windows Task
+`37930662129` (**SUCCESS**): BEFORE and AFTER app-owned screenshots
+are both **956×711**, rendered at an owned 972×720 HWND. Changed area
+`[319,200,737,214]` spans 2,586 pixels (0.3805%) and is confined to the
+indexed-search hint row. Both actual previews were visually inspected:
+the new Korean indexed file-size hint stays on one line, controls do not
+overlap or clip, and both file panes, header row, navigation/sidebar and
+footer remain visible. **Targeted fixed Dark-theme/100% visual PASS.**
+This does not certify different DPI, human IME/Narrator, arbitrary providers,
+physical USB/SMB, signing or public release. All runs are pre-main;
+independent exact-main full-suite CI was not performed. Screenshot previews
+and the pixel report remain in the run log, not the curated Git record.
+
 ### 2026-10-09 — Search v3 Windows Search indexed extension conditions
 
 Integrated candidate `8c339a450a04109a2f0ab01aa425c0551d5441a4`
@@ -1333,7 +1371,8 @@ Current source and the last parity evidence still show these limits:
   mode for case-insensitive literal file names on non-reparse fixed-drive
   filesystem scopes. It queries SystemIndex through the exact-owned
   FlyShellIsolationHelper process, caps returned paths at 1,000 and total
-  wire data at 1 MiB, rejects indexed-mode regex/contents/metadata options,
+  wire data at 1 MiB, rejects indexed-mode regex/contents/date and other
+  unsupported criteria while allowing bounded optional integer-KB file size,
   and never silently falls back to filesystem traversal. Cancellation,
   12-second deadline, one-process kill-on-close Job Object, stale-result and
   route-token rejection remain active. An unindexed scope can legitimately
