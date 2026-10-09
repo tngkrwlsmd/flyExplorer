@@ -16,6 +16,27 @@ product state use CURRENT_STATUS.md.
 
 이 문서는 확정된 오류를 단순 수정으로 끝내지 않고, 다음 진단을 빠르게 하고 같은 계열의 결함을 사전에 막기 위한 프로젝트 기록이다.
 
+## 2026-10-09 — indexed size acceptance stopped at native harness count
+
+- Remote Windows Task `37923169399` on candidate
+  `4efa1a59ecfa6c99a74cf0be6b1f53550276a492` passed change-scoped
+  FAST, indexed-size source contracts, the canonical Release product build
+  and a Release native fixture **build**. The Python acceptance driver then
+  asserted `M19_NATIVE_SUMMARY 64 passed, 0 failed.` and failed.
+- Fixture source changed from 57 expected completed assertions to 63
+  (six net additional indexed-size bounds checks), but the Python driver
+  expected 64. This is a test-harness count mismatch; the failed run did
+  not print the actual native summary or reach live SystemIndex/GUI checks.
+  Do not classify this as product runtime acceptance.
+- Fix: assert 63 expected and include the actual native summary in future
+  assertion failures. Run the native regression first; reuse the prior
+  product build PASS as SHA-scoped evidence until a product binary is needed
+  for SystemIndex/GUI acceptance. The temporary worktree from the old run
+  was removed, so any necessary executable on the new candidate must be
+  rebuilt, not assumed reusable.
+
+---
+
 ## 2026-10-09 — Windows indexed search passed but Actions quota failed
 
 - Run `37911818230` initially failed because a Release native fixture
