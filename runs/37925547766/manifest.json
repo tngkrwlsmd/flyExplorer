@@ -1,0 +1,16 @@
+{
+  "candidate_sha": "7cd134456d0ed020d1008858a579ba41900d2902",
+  "files": [
+    "remote-result.json"
+  ],
+  "job_state_before_archive": "success",
+  "remote_result_sha256": "5f7e2c18b913845f33223c14852456203ffc885181b0e207f2f8b27d42cbaa80",
+  "repository": "tngkrwlsmd/flyExplorer",
+  "run_attempt": 1,
+  "run_id": 37925547766,
+  "run_url": "https://github.com/tngkrwlsmd/flyExplorer/actions/runs/37925547766",
+  "schema": 1,
+  "scope": "sanitized structured results and allowlisted status markers only; raw logs, credentials, binaries and desktop screenshots excluded",
+  "source_result": "available",
+  "workflow_sha": "24b81f88b3898243311c167da845ae7056dcb2fd"
+}
