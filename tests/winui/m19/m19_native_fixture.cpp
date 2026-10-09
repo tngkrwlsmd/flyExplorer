@@ -293,10 +293,57 @@ int wmain(int argc,wchar_t** argv){
            "INDEXED_SIZE_SQL_BIGINT_CEILING_ACCEPTED");
     indexedExtension.maxSizeKb=L"";
     indexedExtension.modifiedAfter=L"2026-02-01";
+    indexedExtension.modifiedBefore=L"2026-02-28";
+    expect(fxfile::preview::validateSearchQuery(indexedExtension)==
+           fxfile::preview::SearchQueryValidation::Valid,
+           "INDEXED_INCLUSIVE_DATE_RANGE_ACCEPTED");
+    indexedExtension.modifiedAfter=L"";
+    expect(fxfile::preview::validateSearchQuery(indexedExtension)==
+           fxfile::preview::SearchQueryValidation::Valid,
+           "INDEXED_BEFORE_ONLY_ACCEPTED");
+    indexedExtension.modifiedBefore=L"";
+    indexedExtension.modifiedAfter=L"2024-02-29";
+    expect(fxfile::preview::validateSearchQuery(indexedExtension)==
+           fxfile::preview::SearchQueryValidation::Valid,
+           "INDEXED_LEAP_DAY_ACCEPTED");
+    indexedExtension.modifiedAfter=L"2025-02-29";
+    expect(fxfile::preview::validateSearchQuery(indexedExtension)==
+           fxfile::preview::SearchQueryValidation::InvalidDateRange,
+           "INDEXED_NONLEAP_DAY_REJECTED");
+    indexedExtension.modifiedAfter=L"2026-02-30";
+    expect(fxfile::preview::validateSearchQuery(indexedExtension)==
+           fxfile::preview::SearchQueryValidation::InvalidDateRange,
+           "INDEXED_INVALID_DAY_REJECTED");
+    indexedExtension.modifiedAfter=L"2026/02/01";
+    expect(fxfile::preview::validateSearchQuery(indexedExtension)==
+           fxfile::preview::SearchQueryValidation::InvalidDateRange,
+           "INDEXED_DATE_FORMAT_REJECTED");
+    indexedExtension.modifiedAfter=L"2026-04-01";
+    indexedExtension.modifiedBefore=L"2026-03-31";
+    expect(fxfile::preview::validateSearchQuery(indexedExtension)==
+           fxfile::preview::SearchQueryValidation::InvalidDateRange,
+           "INDEXED_REVERSED_DATE_RANGE_REJECTED");
+    indexedExtension.modifiedAfter=L"1600-12-31";
+    indexedExtension.modifiedBefore=L"";
+    expect(fxfile::preview::validateSearchQuery(indexedExtension)==
+           fxfile::preview::SearchQueryValidation::InvalidDateRange,
+           "INDEXED_OUT_OF_RANGE_YEAR_REJECTED");
+    indexedExtension.modifiedAfter=L"2026-02-01";
+    indexedExtension.modifiedBefore=L"2026-02-28";
+    indexedExtension.minSizeKb=L"1";
+    indexedExtension.maxSizeKb=L"8";
+    expect(fxfile::preview::validateSearchQuery(indexedExtension)==
+           fxfile::preview::SearchQueryValidation::Valid,
+           "INDEXED_EXTENSION_SIZE_DATE_AND_ACCEPTED");
+    indexedExtension.contentTerm=L"unrelated content";
     expect(fxfile::preview::validateSearchQuery(indexedExtension)==
            fxfile::preview::SearchQueryValidation::InvalidIndexedCriteria,
-           "INDEXED_MODIFIED_DATE_REMAINS_UNSUPPORTED");
+           "INDEXED_CONTENT_STILL_REJECTED");
+    indexedExtension.contentTerm=L"";
+    indexedExtension.minSizeKb=L"";
+    indexedExtension.maxSizeKb=L"";
     indexedExtension.modifiedAfter=L"";
+    indexedExtension.modifiedBefore=L"";
 
     fxfile::preview::SearchQuery extensionQuery{};
     extensionQuery.term=L"report";
