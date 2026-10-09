@@ -33,7 +33,7 @@ def enforce_owned_capture_size(proc,shot,stop,observed):
     class RECT(ctypes.Structure):
         _fields_=[("left",ctypes.c_long),("top",ctypes.c_long),
                   ("right",ctypes.c_long),("bottom",ctypes.c_long)]
-    proc_type=ctypes.WINFUNCTYPE(ctypes.c_bool,ctypes.c_void_p,ctypes.c_void_p)
+    proc_type=ctypes.WINFUNCTYPE(ctypes.c_int,ctypes.c_void_p,ctypes.c_void_p)
     user32.EnumWindows.argtypes=[proc_type,ctypes.c_void_p]
     user32.GetWindowThreadProcessId.argtypes=[ctypes.c_void_p,
                                                 ctypes.POINTER(ctypes.c_ulong)]
