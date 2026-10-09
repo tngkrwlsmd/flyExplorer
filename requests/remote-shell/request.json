@@ -1,13 +1,15 @@
 {
-  "request_id": "search-v3-indexed-branch-cleanup-20261008",
-  "expected_main_sha": "aa61e28cb5f3a12cd90f59f022da4b6111ce9e6b",
-  "candidate_sha": "aa61e28cb5f3a12cd90f59f022da4b6111ce9e6b",
-  "logical_unit": "search-v3-indexed-branch-cleanup",
+  "request_id": "search-v3-indexed-extension-20261009",
+  "expected_main_sha": "1aa914f1940cb5a8c4c05a648da2ca7cf8d25a55",
+  "candidate_sha": "b9e9bddcdcfa7ee7f9961bb16c0b003dce7d03cd",
+  "logical_unit": "search-v3-indexed-extension",
   "request_mode": "validation",
   "configuration": "Release",
   "validation_plan": [
-    "branch-cleanup"
+    "source",
+    "build",
+    "gui"
   ],
   "working_directory": "",
-  "command": "$ErrorActionPreference=\"Stop\"\nSet-Location $env:FLYEXPLORER_CANONICAL_CHECKOUT\n$main=\"aa61e28cb5f3a12cd90f59f022da4b6111ce9e6b\"\n$branch=\"work/search-v3-indexed-filename-20261008\"\ngit fetch origin --no-tags --prune\nif($LASTEXITCODE -ne 0){throw \"fetch failed\"}\nif((& git rev-parse refs/remotes/origin/main).Trim() -ne $main){throw \"main changed\"}\n$ref=\"refs/remotes/origin/\"+$branch\ngit show-ref --verify --quiet $ref\nif($LASTEXITCODE -ne 0){throw \"work ref missing\"}\nif((& git rev-parse $ref).Trim() -ne $main){throw \"branch differs from main\"}\ngit merge-base --is-ancestor $ref refs/remotes/origin/main\nif($LASTEXITCODE -ne 0){throw \"not merged\"}\ngit push origin --delete $branch\nif($LASTEXITCODE -ne 0){throw \"delete failed\"}\ngit fetch origin --no-tags --prune\nif($LASTEXITCODE -ne 0){throw \"post-fetch failed\"}\ngit show-ref --verify --quiet $ref\nif($LASTEXITCODE -eq 0){throw \"branch remains\"}\nWrite-Host \"SEARCH_V3_INDEXED_BRANCH_CLEANUP=PASS\""
+  "command": "$ErrorActionPreference='Stop'\n$repo=$env:FLYEXPLORER_CANONICAL_CHECKOUT\n$candidate='b9e9bddcdcfa7ee7f9961bb16c0b003dce7d03cd'\n$working=Join-Path $env:RUNNER_TEMP 'fly-indexed-extension-b9e9bddc'\nif(Test-Path -LiteralPath $working){throw 'Unexpected candidate worktree path already exists'}\nSet-Location -LiteralPath $repo\n& git fetch origin feat/search-v3-indexed-extension --no-tags\nif($LASTEXITCODE -ne 0){throw 'Candidate fetch failed'}\n$observed=(& git rev-parse refs/remotes/origin/feat/search-v3-indexed-extension).Trim()\nif($LASTEXITCODE -ne 0 -or $observed -ne $candidate){throw 'Candidate ref mismatch'}\ntry {\n  & git worktree add --detach $working $candidate\n  if($LASTEXITCODE -ne 0){throw 'Candidate worktree creation failed'}\n  Set-Location -LiteralPath $working\n  & python -X utf8 -m py_compile tests/winui/test_indexed_search_contract.py tests/winui/test_indexed_search_native.py tests/winui/test_indexed_search_gui.py\n  if($LASTEXITCODE -ne 0){throw 'Indexed-search Python syntax failed'}\n  & python -X utf8 -m unittest tests/winui/test_indexed_search_contract.py\n  if($LASTEXITCODE -ne 0){throw 'Indexed-search source contracts failed'}\n  & cmd.exe /c build.bat Release\n  if($LASTEXITCODE -ne 0){throw 'Release build failed'}\n  & python -X utf8 tests/winui/m19/test_native.py --configuration Release\n  if($LASTEXITCODE -ne 0){throw 'M19 native regression failed'}\n  & python -X utf8 tests/winui/test_indexed_search_native.py --configuration Release\n  if($LASTEXITCODE -ne 0){throw 'Indexed-search SystemIndex oracle failed'}\n  & python -X utf8 tests/winui/test_indexed_search_gui.py --configuration Release --capture after\n  if($LASTEXITCODE -ne 0){throw 'Indexed-search owned GUI failed'}\n  Write-Host 'INDEXED_EXTENSION_FOCUSED_ACCEPTANCE=PASS'\n} finally {\n  Set-Location -LiteralPath $repo\n  if(Test-Path -LiteralPath $working){\n    & git worktree remove --force $working\n    if($LASTEXITCODE -ne 0){Write-Host 'CANDIDATE_WORKTREE_CLEANUP=FAILED'}\n  }\n  & git worktree prune\n}"
 }
