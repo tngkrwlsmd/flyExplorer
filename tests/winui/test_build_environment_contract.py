@@ -134,6 +134,20 @@ class BuildEnvironmentContract(unittest.TestCase):
             gui,
         )
 
+    def test_full_gui_handoff_collapses_owned_m19_panels_only(self):
+        # The normal runner strips inherited fault/diagnostic flags.
+        # The full suite must set its M19->M20 handoff flag itself.
+        sys.path.insert(0, str(ROOT / "tools" / "winui"))
+        from run_checks import gui_command
+
+        candidate = {"FLY_M20_OWNED_COLLAPSE_M19_PANELS": "YES"}
+        cmd, full_env, _ = gui_command("all", "Release", {})
+        self.assertIn("test_shell_gui.py", str(cmd[-1]))
+        self.assertEqual("YES", full_env["FLY_M20_OWNED_COLLAPSE_M19_PANELS"])
+        for scope in ("core", "shell", "search", "file-operations", "window-tabs"):
+            _, scoped, _ = gui_command(scope, "Release", candidate)
+            self.assertNotIn("FLY_M20_OWNED_COLLAPSE_M19_PANELS", scoped, scope)
+
     def test_self_hosted_failure_artifacts_are_bounded_and_uploaded(self):
         workflow = (
             ROOT / ".github/workflows/windows-build.yml"

@@ -380,6 +380,11 @@ def gui_command(area, configuration, env):
     }[area]
     for key in flags:
         gui_env[key] = "YES"
+    if area == "all":
+        # M19 leaves test-owned Search/Workspace panels expanded. Restore
+        # native file-list visibility before M20 retemplates its WinUI peers.
+        # Keep the handoff scoped to the chained complete GUI profile.
+        gui_env["FLY_M20_OWNED_COLLAPSE_M19_PANELS"] = "YES"
     return [sys.executable, "-u", str(TESTS / "test_shell_gui.py")], gui_env, 260
 
 
