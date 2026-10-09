@@ -34,6 +34,15 @@ product state use CURRENT_STATUS.md.
   for SystemIndex/GUI acceptance. The temporary worktree from the old run
   was removed, so any necessary executable on the new candidate must be
   rebuilt, not assumed reusable.
+- Resolved: corrected-run `37925547766` completed SUCCESS with 63/63
+  native, Release, actual SystemIndex size include/exclude and GUI PASS.
+  Initial visual run `37927022090` remained unequal geometry
+  (944×510 / 944×677); not accepted as matched visual evidence.
+  The fixed owned-window HWND fixture passed in run `37930662129`:
+  matched 956×711 BEFORE/AFTER, 2,586 changed pixels only on the
+  index-mode hint row. Both actual preview images were reviewed for
+  layout, clipping and dual-pane visibility. These are SHA-scoped
+  pre-main results, not independent post-merge certification.
 
 ---
 
