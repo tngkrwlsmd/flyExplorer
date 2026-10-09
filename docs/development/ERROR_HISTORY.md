@@ -36,8 +36,14 @@ product state use CURRENT_STATUS.md.
   `029ef1e5d8f186bfc5262d386576204b58fa47a9` completed
   **SUCCESS**, including Release native 72/72, Release app build,
   real SystemIndex date include/exclude, combined GUI filters, and
-  protected profile/source unchanged. Screenshot equivalence is a
-  separate matched-geometry gate.
+  protected profile/source unchanged. The separate matched-geometry
+  visual run `37935505947` also completed SUCCESS: matched 956×711
+  before/after app-owned screenshots, with 1,450 changed pixels
+  confined to the one-line indexed-mode guidance text row
+  `[446,200,664,214]`. Both actual previews were inspected for
+  clipping and layout; targeted fixed Dark-theme/100% visual PASS.
+  All checks are SHA-scoped pre-main and do not imply a separate
+  post-merge full-suite verification.
 
 ---
 
