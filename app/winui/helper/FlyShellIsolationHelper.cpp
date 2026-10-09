@@ -303,12 +303,19 @@ bool insideScope(std::wstring const& scope,std::wstring const& path) {
 int runIndexedFilenameSearch(HANDLE output,
                              std::wstring const& scope,
                              std::wstring const& term,
-                             std::wstring extension) {
+                             std::wstring extension,
+                             std::wstring const& minimumKb,
+                             std::wstring const& maximumKb) {
  using namespace fxfile::indexwire;
  if(!extension.empty()&&extension.front()==L'.')extension.erase(0,1);
+ bool hasMin=false,hasMax=false;
+ std::uint64_t minBytes=0,maxBytes=0;
  if(!output||output==INVALID_HANDLE_VALUE||
     !validScope(scope)||!validTerm(term)||
-    (!extension.empty()&&!validExtension(extension)))return 1;
+    (!extension.empty()&&!validExtension(extension))||
+    !parseIndexedSizeKb(minimumKb,hasMin,minBytes)||
+    !parseIndexedSizeKb(maximumKb,hasMax,maxBytes)||
+    (hasMin&&hasMax&&minBytes>maxBytes))return 1;
  DWORD error=ERROR_SUCCESS;
  std::vector<std::wstring> results;
  bool truncated=false;
@@ -350,6 +357,8 @@ int runIndexedFilenameSearch(HANDLE output,
         sqlQuoted(term)+L"%'";
     if(!extension.empty())
      sql+=L" AND System.FileExtension = '."+sqlQuoted(extension)+L"'";
+    if(hasMin)sql+=L" AND System.Size >= "+std::to_wstring(minBytes);
+    if(hasMax)sql+=L" AND System.Size <= "+std::to_wstring(maxBytes);
     ATL::CDataSource data;
     HRESULT hr=data.OpenFromInitializationString(
       L"Provider=Search.CollatorDSO.1;Extended Properties=\"Application=Windows\"");
@@ -397,10 +406,18 @@ int runIndexedFilenameSearch(HANDLE output,
               extension.c_str(),static_cast<int>(extension.size()),
               TRUE)!=CSTR_EQUAL)continue;
         }
-        const DWORD itemAttrs=::GetFileAttributesW(result.c_str());
-        if(itemAttrs==INVALID_FILE_ATTRIBUTES||
-           (itemAttrs&(FILE_ATTRIBUTE_DIRECTORY|FILE_ATTRIBUTE_REPARSE_POINT)))
+        WIN32_FILE_ATTRIBUTE_DATA item{};
+        if(!::GetFileAttributesExW(
+               result.c_str(),GetFileExInfoStandard,&item)||
+           (item.dwFileAttributes&
+            (FILE_ATTRIBUTE_DIRECTORY|FILE_ATTRIBUTE_REPARSE_POINT)))
          continue;
+        // Index records can be stale. Recheck the current size in the helper.
+        const std::uint64_t actualSize=
+            (static_cast<std::uint64_t>(item.nFileSizeHigh)<<32)|
+            item.nFileSizeLow;
+        if((hasMin&&actualSize<minBytes)||
+           (hasMax&&actualSize>maxBytes))continue;
         if(results.size()>=fxfile::indexwire::kMaxResults){truncated=true;break;}
         results.push_back(std::move(result));
        }
@@ -443,9 +460,11 @@ int runIndexedFilenameSearch(HANDLE output,
 } // namespace
 
 int wmain(int argc,wchar_t** argv) {
-    if((argc==4||argc==5)&&!wcscmp(argv[1],L"--indexed-filename-search"))
+    if((argc==4||argc==5||argc==7)&&
+       !wcscmp(argv[1],L"--indexed-filename-search"))
         return runIndexedFilenameSearch(::GetStdHandle(STD_OUTPUT_HANDLE),
-            argv[2],argv[3],argc==5?argv[4]:L"");
+            argv[2],argv[3],argc>=5?argv[4]:L"",
+            argc==7?argv[5]:L"",argc==7?argv[6]:L"");
     if(argc==2&&!wcscmp(argv[1],L"--file-transfer"))
         return fxfile::shelltransfer::runIsolatedHelper(
             ::GetStdHandle(STD_INPUT_HANDLE),::GetStdHandle(STD_OUTPUT_HANDLE));
