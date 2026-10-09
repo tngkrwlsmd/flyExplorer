@@ -1,0 +1,18 @@
+{
+  "candidate_sha": "029ef1e5d8f186bfc5262d386576204b58fa47a9",
+  "failure_category": null,
+  "logical_unit": "search-v3-indexed-modified-date-visual",
+  "request_id": "search-v3-indexed-modified-date-visual-20261009-r1",
+  "request_mode": "validation",
+  "stages": {
+    "COMMAND": "PASS",
+    "REQUEST_VALIDATION": "PASS",
+    "RUNNER_HEALTH": "PASS",
+    "STATIC_PREFLIGHT": "PASS"
+  },
+  "validation_plan": [
+    "build",
+    "gui",
+    "source"
+  ]
+}
