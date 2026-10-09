@@ -134,6 +134,20 @@ class BuildEnvironmentContract(unittest.TestCase):
             gui,
         )
 
+    def test_full_gui_handoff_collapses_owned_m19_panels_only(self):
+        # Reuse the runner's real command builder: the FAULT_FLAGS scrub
+        # otherwise silently discards this owned M19→M20 GUI handoff.
+        sys.path.insert(0, str(ROOT / "tools" / "winui"))
+        from run_checks import gui_command
+
+        incoming = {"FLY_M20_OWNED_COLLAPSE_M19_PANELS": "YES"}
+        full_cmd, full_env, _ = gui_command("all", "Release", {})
+        self.assertEqual("YES", full_env["FLY_M20_OWNED_COLLAPSE_M19_PANELS"])
+        self.assertIn("test_shell_gui.py", str(full_cmd[-1]))
+        for scope in ("core", "shell", "search", "window-tabs"):
+            _, scoped_env, _ = gui_command(scope, "Release", incoming)
+            self.assertNotIn("FLY_M20_OWNED_COLLAPSE_M19_PANELS", scoped_env, scope)
+
     def test_self_hosted_failure_artifacts_are_bounded_and_uploaded(self):
         workflow = (
             ROOT / ".github/workflows/windows-build.yml"
