@@ -29,10 +29,10 @@ try:
  assert result.returncode==0,(result.returncode,result.stdout,result.stderr)
  summary=[line for line in result.stdout.splitlines()
           if line.startswith("M19_NATIVE_SUMMARY ")]
- assert summary==["M19_NATIVE_SUMMARY 63 passed, 0 failed."],summary
+ assert summary==["M19_NATIVE_SUMMARY 72 passed, 0 failed."],summary
  assert_legacy_profile_unchanged(user,before)
  print("M19_NATIVE_TESTED_HELPER_CONFIG",CONFIG,flush=True)
- print("M19_NATIVE_WORKSPACE_CONTENT_REGEX_AND_SCALE_63_PASS",True,flush=True)
+ print("M19_NATIVE_WORKSPACE_CONTENT_REGEX_AND_SCALE_72_PASS",True,flush=True)
  print("M19_LEGACY_USER_PROFILE_SENTINEL_UNCHANGED",True,"PRESENT",present_count(before),flush=True)
  print("M19_NATIVE_OWNED_PROOF",path.name,flush=True)
 finally:
