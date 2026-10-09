@@ -1,6 +1,7 @@
 """Read-only native Windows Search helper acceptance against indexed system item."""
 import argparse
 import hashlib
+from datetime import datetime, timedelta
 import os
 from pathlib import Path
 import struct
@@ -25,10 +26,16 @@ def main():
     sample=scope/"Microsoft Edge.lnk"
     assert sample.is_file(),("public index sample unavailable",sample)
     original=hashlib.sha256(sample.read_bytes()).digest()
-    def indexed(extension=None, min_kb=None, max_kb=None):
+    def indexed(extension=None, min_kb=None, max_kb=None, after=None, before=None):
         command=[str(helper),"--indexed-filename-search",
                  str(scope),"Microsoft Edge"]
-        if min_kb is not None or max_kb is not None:
+        if after is not None or before is not None:
+            command.extend((extension or "",
+                            str(min_kb) if min_kb is not None else "",
+                            str(max_kb) if max_kb is not None else "",
+                            str(after) if after is not None else "",
+                            str(before) if before is not None else ""))
+        elif min_kb is not None or max_kb is not None:
             command.extend((extension or "", str(min_kb) if min_kb is not None else "",
                             str(max_kb) if max_kb is not None else ""))
         elif extension is not None:
@@ -82,6 +89,30 @@ def main():
         invalid=subprocess.run(cmd,capture_output=True,timeout=5)
         assert invalid.returncode!=0,(lower,upper_arg,invalid.returncode)
     print("INDEXED_NATIVE_SIZE_INVALID_ARGS_REJECTED_PASS",True,flush=True)
+    # Exercise exact inclusive local-day bounds on the already-indexed
+    # public shortcut. Never alter the system source or index service.
+    source_mtime=sample.stat().st_mtime_ns
+    local_day=datetime.fromtimestamp(sample.stat().st_mtime).date()
+    same=local_day.isoformat()
+    following=(local_day+timedelta(days=1)).isoformat()
+    previous=(local_day-timedelta(days=1)).isoformat()
+    included=indexed(".LNK", min_kb=0, max_kb=upper, after=same, before=same)
+    assert str(sample).casefold() in {x.casefold() for x in included},(
+        "actual indexed file not found within its inclusive local date")
+    after_excluded=indexed(".LNK", after=following)
+    before_excluded=indexed(".LNK", before=previous)
+    assert str(sample).casefold() not in {x.casefold() for x in after_excluded}
+    assert str(sample).casefold() not in {x.casefold() for x in before_excluded}
+    print("INDEXED_NATIVE_DATE_INCLUSIVE_AND_EXCLUDES_PASS",True,flush=True)
+    for start,end in (("2025-02-29",""), ("2026/01/01",""),
+                      ("2026-04-01","2026-03-31"),
+                      ("1600-12-31","")):
+        args=[str(helper),"--indexed-filename-search",
+              str(scope),"Microsoft Edge",".LNK","","",start,end]
+        rejected=subprocess.run(args,capture_output=True,timeout=5)
+        assert rejected.returncode!=0,(start,end,rejected.returncode)
+    print("INDEXED_NATIVE_DATE_INVALID_ARGS_REJECTED_PASS",True,flush=True)
+    assert sample.stat().st_mtime_ns==source_mtime
     assert hashlib.sha256(sample.read_bytes()).digest()==original
     print("INDEXED_NATIVE_SYSTEM_SOURCE_UNCHANGED",True,flush=True)
 
