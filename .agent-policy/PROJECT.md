@@ -137,11 +137,11 @@ project-owned non-backtracking NFA matcher with a 4,194,304 state-visit limit
 per decoded file; unsupported lookaround/backreferences and invalid patterns
 are rejected before worker start. Cancellation and stale-result rejection
 remain in force. Windows Search indexed filename + optional extension +
-integer-KB size search is now supported only for eligible non-reparse
+integer-KB size and inclusive modified-date search is now supported only for eligible non-reparse
 fixed-drive filesystem scopes by the exact-owned helper. It uses read-only
 SystemIndex with signed-64-bit `System.Size` bounds and validates each
-indexed result against current filesystem size; unsupported indexed regex,
-date, content, provider/property queries still fail closed. Indexed search
+indexed result against current filesystem size and local modified date; unsupported indexed regex,
+content, provider/property queries still fail closed. Indexed search
 retains a 12-second helper lifetime and the 1,000-result/1 MiB wire caps.
 Filesystem traversal beyond current safety bounds remains unsupported.
 
