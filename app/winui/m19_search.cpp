@@ -354,8 +354,7 @@ SearchQueryValidation validateSearchQuery(SearchQuery const& query) noexcept
            (!fxfile::indexwire::validTerm(query.term)||
             query.regex||query.caseSensitive||
             query.kind!=SearchEntryKind::Files||
-            !query.modifiedAfter.empty()||!query.modifiedBefore.empty()||
-            !query.contentTerm.empty()||query.contentRegex))
+             !query.contentTerm.empty()||query.contentRegex))
             return SearchQueryValidation::InvalidIndexedCriteria;
         if(query.term.size()>256||
            query.term.find_first_of(L"\r\n")!=std::wstring::npos)
@@ -412,6 +411,10 @@ SearchQueryValidation validateSearchQuery(SearchQuery const& query) noexcept
         if(!parseDate(query.modifiedAfter,afterDate)||
            !parseDate(query.modifiedBefore,beforeDate)||
            (afterDate&&beforeDate&&afterDate>beforeDate))
+            return SearchQueryValidation::InvalidDateRange;
+        if(query.mode==SearchMode::WindowsIndex&&
+           (!fxfile::indexwire::parseIndexedDate(query.modifiedAfter,afterDate)||
+            !fxfile::indexwire::parseIndexedDate(query.modifiedBefore,beforeDate)))
             return SearchQueryValidation::InvalidDateRange;
 
         if(query.regex){
@@ -681,7 +684,9 @@ SearchResults scanIndexedFiles(
   command+=L" "+quoteArg(
       query.extension.empty()?L"":normalizeExtension(query.extension))+
       L" "+quoteArg(query.minSizeKb)+
-      L" "+quoteArg(query.maxSizeKb);
+      L" "+quoteArg(query.maxSizeKb)+
+      L" "+quoteArg(query.modifiedAfter)+
+      L" "+quoteArg(query.modifiedBefore);
   std::vector<wchar_t> mutableCommand(command.begin(),command.end());
   mutableCommand.push_back(0);
   PROCESS_INFORMATION created{};
