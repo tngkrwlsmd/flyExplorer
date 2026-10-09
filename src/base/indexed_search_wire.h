@@ -55,6 +55,65 @@ inline bool parseIndexedSizeKb(std::wstring const& text,
  bytes=kb*1024;
  return true;
 }
+// Strict Gregorian YYYY-MM-DD parsing shared by the UI and helper.
+inline bool indexedLeapYear(int year) noexcept {
+ return year%400==0||(year%4==0&&year%100!=0);
+}
+inline int indexedMonthDays(int year,int month) noexcept {
+ static constexpr int days[]{31,28,31,30,31,30,31,31,30,31,30,31};
+ return month==2&&indexedLeapYear(year)?29:days[month-1];
+}
+inline bool parseIndexedDate(std::wstring const& text,
+                             std::uint32_t& key) noexcept {
+ key=0;
+ if(text.empty())return true;
+ if(text.size()!=10||text[4]!=L'-'||text[7]!=L'-')return false;
+ for(std::size_t i=0;i<text.size();++i)
+  if(i!=4&&i!=7&&(text[i]<L'0'||text[i]>L'9'))return false;
+ const int year=(text[0]-L'0')*1000+(text[1]-L'0')*100+
+                (text[2]-L'0')*10+(text[3]-L'0');
+ const int month=(text[5]-L'0')*10+(text[6]-L'0');
+ const int day=(text[8]-L'0')*10+(text[9]-L'0');
+ if(year<1601||year>9999||month<1||month>12||
+    day<1||day>indexedMonthDays(year,month))return false;
+ key=static_cast<std::uint32_t>(year*10000+month*100+day);
+ return true;
+}
+// The SQL predicate is a conservative candidate prefilter; each row must
+// also pass a strict local-day comparison against actual file metadata.
+inline bool offsetIndexedDate(std::uint32_t key,int delta,
+                              std::uint32_t& shifted) noexcept {
+ int year=static_cast<int>(key/10000);
+ int month=static_cast<int>((key/100)%100);
+ int day=static_cast<int>(key%100);
+ if(year<1601||year>9999||month<1||month>12||
+    day<1||day>indexedMonthDays(year,month)||delta< -2||delta>2)
+  return false;
+ while(delta>0){
+  if(++day>indexedMonthDays(year,month)){
+   day=1;
+   if(++month>12){month=1;++year;}
+  }
+  --delta;
+  if(year>9999)return false;
+ }
+ while(delta<0){
+  if(--day<1){
+   if(--month<1){month=12;--year;}
+   if(year<1601)return false;
+   day=indexedMonthDays(year,month);
+  }
+  ++delta;
+ }
+ shifted=static_cast<std::uint32_t>(year*10000+month*100+day);
+ return true;
+}
+inline std::wstring indexedSqlMidnight(std::uint32_t key){
+ std::wstring date=std::to_wstring(key);
+ date.insert(4,1,L'-');
+ date.insert(7,1,L'-');
+ return date+L" 00:00:00";
+}
 inline bool validScope(std::wstring const& value) noexcept {
  if(value.size()<3||value.size()>kMaxPathUnits||
     value.find_first_of(L"\r\n\"")!=std::wstring::npos||
