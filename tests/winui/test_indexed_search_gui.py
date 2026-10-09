@@ -109,16 +109,23 @@ def main():
             mode=control("SearchModeBox")
             assert mode.is_visible(),"Windows index selector missing"
             mode.select(1)
-            # The extension filter is now supported; size is still an
-            # intentionally unsupported index-only criterion.
-            unsupported=control("SearchMinSizeBox")
-            unsupported.set_edit_text("1")
+            # Modified-date remains unsupported. Size bounds are now a
+            # valid indexed criterion and are tested below.
+            unsupported=control("SearchModifiedAfterBox")
+            unsupported.set_edit_text("2026-01-01")
             control("SearchRunButton").invoke()
-            wait(lambda:"인덱스 검색은 파일명·확장자 일반 검색만 지원" in
+            wait(lambda:"인덱스 검색은 파일명·확장자·크기 조건만 지원" in
                 control("SearchCountText").window_text(),
-                "indexed-only unsupported criteria did not reject before start",6)
+                "indexed-only date did not reject before worker start",6)
             unsupported.set_edit_text("")
-            print("INDEXED_SEARCH_UNSUPPORTED_PRESTART_REJECT_PASS",True,flush=True)
+            minimum=control("SearchMinSizeBox")
+            minimum.set_edit_text("1x")
+            control("SearchRunButton").invoke()
+            wait(lambda:"파일 크기 범위가 올바르지 않습니다" in
+                control("SearchCountText").window_text(),
+                "indexed malformed size did not reject before worker start",6)
+            minimum.set_edit_text("")
+            print("INDEXED_SEARCH_UNSUPPORTED_AND_INVALID_SIZE_PRESTART_REJECT_PASS",True,flush=True)
         else:
             # main already includes Search v3's source selector. The change
             # under comparison is the indexed-mode extension hint, not
@@ -162,6 +169,34 @@ def main():
                 control("SearchMatches").descendants()),
                 "indexed extension match does not contain public system shortcut",20)
             print("INDEXED_SEARCH_EXTENSION_LNK_MATCH_PASS",True,flush=True)
+            sample_bytes=fixture.stat().st_size
+            upper=(sample_bytes+1023)//1024
+            minimum=control("SearchMinSizeBox")
+            maximum=control("SearchMaxSizeBox")
+            minimum.set_edit_text("0")
+            maximum.set_edit_text(str(upper))
+            control("SearchRunButton").invoke()
+            wait(lambda:"1개" in control("SearchCountText").window_text()
+                 and TERM in " ".join(row.window_text() for row in
+                     control("SearchMatches").descendants())
+                 and control("SearchRunButton").is_enabled(),
+                 "indexed inclusive size and extension match failed",20)
+            print("INDEXED_SEARCH_GUI_SIZE_MATCH_PASS",True,flush=True)
+            minimum.set_edit_text(str(upper+1))
+            maximum.set_edit_text("")
+            control("SearchRunButton").invoke()
+            wait(lambda:"0개" in control("SearchCountText").window_text()
+                 and control("SearchRunButton").is_enabled(),
+                 "indexed minimum size did not exclude shortcut",20)
+            assert TERM not in " ".join(row.window_text() for row in
+                control("SearchMatches").descendants()),(
+                "indexed size exclusion still displays the shortcut")
+            print("INDEXED_SEARCH_GUI_SIZE_EXCLUSION_PASS",True,flush=True)
+            minimum.set_edit_text("")
+            control("SearchRunButton").invoke()
+            wait(lambda:"1개" in control("SearchCountText").window_text()
+                 and control("SearchRunButton").is_enabled(),
+                 "indexed empty size reset failed",20)
             summary=control("SearchCountText").window_text()
             print("INDEXED_SEARCH_SUMMARY",repr(summary),flush=True)
             assert "Windows 인덱스 결과" in summary,summary
