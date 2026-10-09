@@ -25,10 +25,13 @@ def main():
     sample=scope/"Microsoft Edge.lnk"
     assert sample.is_file(),("public index sample unavailable",sample)
     original=hashlib.sha256(sample.read_bytes()).digest()
-    def indexed(extension=None):
+    def indexed(extension=None, min_kb=None, max_kb=None):
         command=[str(helper),"--indexed-filename-search",
                  str(scope),"Microsoft Edge"]
-        if extension is not None:
+        if min_kb is not None or max_kb is not None:
+            command.extend((extension or "", str(min_kb) if min_kb is not None else "",
+                            str(max_kb) if max_kb is not None else ""))
+        elif extension is not None:
             command.append(extension)
         result=subprocess.run(command,capture_output=True,timeout=20)
         assert result.returncode==0,(result.returncode,result.stderr[-400:])
@@ -60,6 +63,25 @@ def main():
     assert str(sample).casefold() not in {x.casefold() for x in excluded}
     assert all(p.casefold().endswith(".txt") for p in excluded)
     print("INDEXED_NATIVE_EXTENSION_MATCH_AND_EXCLUDE_PASS",True,flush=True)
+    # The actual index entry must survive the inclusive signed System.Size
+    # predicate, and the exact same indexed filename must disappear above
+    # its read-only filesystem size. No index reconfiguration or fixture copy.
+    sample_bytes=sample.stat().st_size
+    upper=(sample_bytes+1023)//1024
+    matches=indexed(".LNK", min_kb=0, max_kb=upper)
+    assert str(sample).casefold() in {x.casefold() for x in matches}
+    excluded_size=indexed(".LNK", min_kb=upper+1)
+    assert str(sample).casefold() not in {x.casefold() for x in excluded_size}
+    print("INDEXED_NATIVE_SIZE_MATCH_AND_EXCLUDE_PASS",True,flush=True)
+    # A helper invocation with bad numeric arguments must fail before a
+    # query is dispatched (in contrast to a legitimate empty result).
+    for lower,upper_arg in (("1x", ""), ("20", "10"),
+                            ("9007199254740992", "")):
+        cmd=[str(helper),"--indexed-filename-search",
+             str(scope),"Microsoft Edge",".LNK",lower,upper_arg]
+        invalid=subprocess.run(cmd,capture_output=True,timeout=5)
+        assert invalid.returncode!=0,(lower,upper_arg,invalid.returncode)
+    print("INDEXED_NATIVE_SIZE_INVALID_ARGS_REJECTED_PASS",True,flush=True)
     assert hashlib.sha256(sample.read_bytes()).digest()==original
     print("INDEXED_NATIVE_SYSTEM_SOURCE_UNCHANGED",True,flush=True)
 
