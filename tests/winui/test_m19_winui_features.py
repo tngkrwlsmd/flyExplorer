@@ -579,6 +579,12 @@ def run(*,p,win,element,safe_click,focus,eventually,ownedwindows,
                  restarted.child_window(auto_id="SearchContentBox").get_value()=="프리셋(한글|없음)" and
                  restarted.child_window(auto_id="SearchContentRegexBox").get_toggle_state()==1,
                  "saved Search v4/content-regex criteria did not apply after restart",8)
+            # The private preset retains search criteria but no folder scope.
+            # Explicitly select the synthetic test-owned scope after restart.
+            restarted.child_window(auto_id="SearchScopeBox").set_edit_text(str(left))
+            good(lambda:restarted.child_window(
+                     auto_id="SearchScopeBox").get_value().lower()==str(left).lower(),
+                 "restarted preset search did not select owned scope",8)
             restarted.child_window(auto_id="SearchRunButton").click_input()
             good(lambda:"검색 결과 1개" in restarted.child_window(
                      auto_id="SearchCountText").window_text(),
