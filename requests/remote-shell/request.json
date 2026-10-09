@@ -1,15 +1,11 @@
 {
-  "request_id": "search-v3-indexed-extension-release-20261009-r2",
-  "expected_main_sha": "1aa914f1940cb5a8c4c05a648da2ca7cf8d25a55",
-  "candidate_sha": "6564165c14ca6dc561a8591ab7a9b696a864b8f6",
-  "logical_unit": "search-v3-indexed-extension",
-  "request_mode": "validation",
-  "configuration": "Release",
-  "validation_plan": [
-    "source",
-    "build",
-    "gui"
-  ],
+  "request_id": "git-evidence-storage-smoke-20261009",
+  "expected_main_sha": "9700082da4a2071274e34c2fad4200c4fb71e226",
+  "candidate_sha": "9700082da4a2071274e34c2fad4200c4fb71e226",
+  "logical_unit": "remote-evidence-git-archive",
+  "request_mode": "diagnostic",
+  "configuration": "none",
+  "validation_plan": [],
   "working_directory": "",
-  "command": "$ErrorActionPreference = 'Stop'\n$repo=$env:FLYEXPLORER_CANONICAL_CHECKOUT\n$sha='6564165c14ca6dc561a8591ab7a9b696a864b8f6'\n$ref='refs/remotes/origin/feat/search-v3-indexed-extension'\n$working=Join-Path $env:RUNNER_TEMP 'fly-indexed-extension-release-6564165c'\nif(Test-Path -LiteralPath $working){throw 'Reserved worktree already exists'}\nSet-Location -LiteralPath $repo\n& git fetch origin feat/search-v3-indexed-extension --no-tags\nif($LASTEXITCODE -ne 0){throw 'Fetch failed'}\n$observed=(& git rev-parse $ref).Trim()\nif($LASTEXITCODE -ne 0 -or $observed -ne $sha){throw 'Candidate ref mismatch'}\ntry {\n  & git worktree add --detach $working $sha\n  if($LASTEXITCODE -ne 0){throw 'Candidate worktree failed'}\n  Set-Location -LiteralPath $working\n  & python -X utf8 -m py_compile tests/winui/test_indexed_search_contract.py tests/winui/test_indexed_search_native.py tests/winui/test_indexed_search_gui.py tests/winui/m19/test_native.py\n  if($LASTEXITCODE -ne 0){throw 'PYTHON_SYNTAX_FAIL'}\n  & python -X utf8 -m unittest tests/winui/test_indexed_search_contract.py\n  if($LASTEXITCODE -ne 0){throw 'INDEXED_EXTENSION_CONTRACT_FAIL'}\n  Write-Host 'INDEXED_EXTENSION_CONTRACT=PASS'\n  & cmd.exe /c build.bat Release\n  if($LASTEXITCODE -ne 0){throw 'INDEXED_EXTENSION_PRODUCT_BUILD_FAIL'}\n  Write-Host 'INDEXED_EXTENSION_PRODUCT_BUILD=PASS'\n  & cmd.exe /c tests\\winui\\m19\\build.cmd Release\n  if($LASTEXITCODE -ne 0){throw 'INDEXED_EXTENSION_NATIVE_BUILD_FAIL'}\n  Write-Host 'INDEXED_EXTENSION_NATIVE_BUILD=PASS'\n  $env:FLY_M19_CONFIG='Release'\n  & python -X utf8 tests/winui/m19/test_native.py\n  if($LASTEXITCODE -ne 0){throw 'INDEXED_EXTENSION_NATIVE_FIXTURE_FAIL'}\n  Write-Host 'INDEXED_EXTENSION_NATIVE_FIXTURE=PASS'\n  & python -X utf8 tests/winui/test_indexed_search_native.py --configuration Release\n  if($LASTEXITCODE -ne 0){throw 'INDEXED_EXTENSION_SYSTEMINDEX_FAIL'}\n  Write-Host 'INDEXED_EXTENSION_SYSTEMINDEX=PASS'\n  & python -X utf8 tests/winui/test_indexed_search_gui.py --configuration Release --capture after\n  if($LASTEXITCODE -ne 0){throw 'INDEXED_EXTENSION_GUI_FAIL'}\n  Write-Host 'INDEXED_EXTENSION_GUI=PASS'\n  Write-Host 'INDEXED_EXTENSION_FOCUSED_ACCEPTANCE=PASS'\n} finally {\n  Set-Location -LiteralPath $repo\n  if(Test-Path -LiteralPath $working){\n    & git worktree remove --force $working\n    if($LASTEXITCODE -ne 0){Write-Host 'CANDIDATE_WORKTREE_CLEANUP=FAIL'}\n  }\n  & git worktree prune\n}"
+  "command": "$ErrorActionPreference=\"Stop\"\n$repo=$env:FLYEXPLORER_CANONICAL_CHECKOUT\n$revision=\"9700082da4a2071274e34c2fad4200c4fb71e226\"\n$temp=Join-Path $env:RUNNER_TEMP \"fly-git-evidence-storage-contract-9700082\"\nif(Test-Path -LiteralPath $temp){throw \"Candidate worktree already exists\"}\nSet-Location -LiteralPath $repo\n& git fetch origin main --no-tags\nif($LASTEXITCODE -ne 0){throw \"Main fetch failed\"}\n$observed=(& git rev-parse refs/remotes/origin/main).Trim()\nif($LASTEXITCODE -ne 0 -or $observed -ne $revision){throw \"Main SHA moved\"}\ntry {\n  & git worktree add --detach $temp $revision\n  if($LASTEXITCODE -ne 0){throw \"Candidate worktree creation failed\"}\n  Set-Location -LiteralPath $temp\n  & python -X utf8 -m unittest tests/winui/test_remote_evidence_archive_contract.py tests/winui/test_remote_windows_task_contract.py tests/winui/test_validation_scope_contract.py\n  if($LASTEXITCODE -ne 0){throw \"REPOSITORY_EVIDENCE_CONTRACT_FAILURE\"}\n  Write-Host \"REPOSITORY_EVIDENCE_CONTRACT=PASS\"\n} finally {\n  Set-Location -LiteralPath $repo\n  if(Test-Path -LiteralPath $temp){\n    & git worktree remove --force $temp\n    if($LASTEXITCODE -ne 0){Write-Host \"REPOSITORY_EVIDENCE_CLEANUP=FAIL\"}\n  }\n  & git worktree prune\n}"
 }
