@@ -2,6 +2,7 @@
 import argparse
 import ctypes
 import hashlib
+from datetime import datetime, timedelta
 import os
 from pathlib import Path
 import shutil
@@ -163,15 +164,22 @@ def main():
             mode=control("SearchModeBox")
             assert mode.is_visible(),"Windows index selector missing"
             mode.select(1)
-            # Modified-date remains unsupported. Size bounds are now a
-            # valid indexed criterion and are tested below.
-            unsupported=control("SearchModifiedAfterBox")
-            unsupported.set_edit_text("2026-01-01")
+            # Content and regex remain intentionally unsupported, but
+            # dates are now valid indexed conditions.
+            unsupported=control("SearchContentBox")
+            unsupported.set_edit_text("unsupported content")
             control("SearchRunButton").invoke()
-            wait(lambda:"인덱스 검색은 파일명·확장자·크기 조건만 지원" in
+            wait(lambda:"인덱스 검색은 파일명·확장자·크기·수정일 조건만 지원" in
                 control("SearchCountText").window_text(),
-                "indexed-only date did not reject before worker start",6)
+                "indexed content was not rejected before worker start",6)
             unsupported.set_edit_text("")
+            after_field=control("SearchModifiedAfterBox")
+            after_field.set_edit_text("2025-02-29")
+            control("SearchRunButton").invoke()
+            wait(lambda:"수정일 범위가 올바르지 않습니다" in
+                control("SearchCountText").window_text(),
+                "indexed invalid leap date was not rejected",6)
+            after_field.set_edit_text("")
             minimum=control("SearchMinSizeBox")
             minimum.set_edit_text("1x")
             control("SearchRunButton").invoke()
@@ -179,7 +187,7 @@ def main():
                 control("SearchCountText").window_text(),
                 "indexed malformed size did not reject before worker start",6)
             minimum.set_edit_text("")
-            print("INDEXED_SEARCH_UNSUPPORTED_AND_INVALID_SIZE_PRESTART_REJECT_PASS",True,flush=True)
+            print("INDEXED_SEARCH_UNSUPPORTED_AND_INVALID_DATE_SIZE_PRESTART_REJECT_PASS",True,flush=True)
         else:
             # main already includes Search v3's source selector. The change
             # under comparison is the indexed-mode extension hint, not
@@ -253,10 +261,44 @@ def main():
                 "indexed size exclusion still displays the shortcut")
             print("INDEXED_SEARCH_GUI_SIZE_EXCLUSION_PASS",True,flush=True)
             minimum.set_edit_text("")
+            after_field=control("SearchModifiedAfterBox")
+            before_field=control("SearchModifiedBeforeBox")
+            local_day=datetime.fromtimestamp(fixture.stat().st_mtime).date()
+            day=local_day.isoformat()
+            following=(local_day+timedelta(days=1)).isoformat()
+            previous=(local_day-timedelta(days=1)).isoformat()
+            after_field.set_edit_text(day)
+            before_field.set_edit_text(day)
+            minimum.set_edit_text("0")
+            maximum.set_edit_text(str(upper))
+            control("SearchRunButton").invoke()
+            wait(lambda:"1개" in control("SearchCountText").window_text()
+                 and TERM in " ".join(row.window_text() for row in
+                      control("SearchMatches").descendants())
+                 and control("SearchRunButton").is_enabled(),
+                 "indexed inclusive local-day AND query did not include shortcut",20)
+            print("INDEXED_SEARCH_GUI_DATE_SIZE_AND_PASS",True,flush=True)
+            after_field.set_edit_text(following)
+            before_field.set_edit_text("")
+            control("SearchRunButton").invoke()
+            wait(lambda:"0개" in control("SearchCountText").window_text()
+                 and control("SearchRunButton").is_enabled(),
+                 "indexed lower date bound did not exclude shortcut",20)
+            print("INDEXED_SEARCH_GUI_DATE_AFTER_EXCLUDES_PASS",True,flush=True)
+            after_field.set_edit_text("")
+            before_field.set_edit_text(previous)
+            control("SearchRunButton").invoke()
+            wait(lambda:"0개" in control("SearchCountText").window_text()
+                 and control("SearchRunButton").is_enabled(),
+                 "indexed upper date bound did not exclude shortcut",20)
+            print("INDEXED_SEARCH_GUI_DATE_BEFORE_EXCLUDES_PASS",True,flush=True)
+            before_field.set_edit_text("")
+            minimum.set_edit_text("")
+            maximum.set_edit_text("")
             control("SearchRunButton").invoke()
             wait(lambda:"1개" in control("SearchCountText").window_text()
                  and control("SearchRunButton").is_enabled(),
-                 "indexed empty size reset failed",20)
+                 "indexed cleared date/size constraints did not restore result",20)
             summary=control("SearchCountText").window_text()
             print("INDEXED_SEARCH_SUMMARY",repr(summary),flush=True)
             assert "Windows 인덱스 결과" in summary,summary
