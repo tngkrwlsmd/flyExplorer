@@ -533,6 +533,20 @@ directly invalidates that fixture's result.
 
 ## Current verification
 
+2026-10-09 current-main evidence: PR #55 merged as
+`7c23af1515fab0926fa409d277efd6e16b9d1f65`; central Windows CI
+`37891854981` passed Release build and full `gui-all-Release`
+(exit 0, 145.1 s) and posted `central-ci/windows-gui=success`.
+Separate pre-main chain `37891171256` established normal app exit
+and unchanged protected settings on its tested candidate. The series
+corrected test fixtures, bounded UIA recovery, chained panel handoff
+and test-owned failure evidence, without new product features or
+pixel changes. Existing DPI/accessibility/signing/public-release
+gates remain open. The reviewed-revision metadata above is retained
+because the diff from that reviewed source revision to merged main
+changes only review metadata, not a listed reviewed product path.
+
+
 Model-level large-folder page streaming is accepted on product revision
 `f7f3674e5271c17652a865cf2ed499185983d1eb`. The isolated Shell helper still returns one bounded protocol-v3
 page at a time (maximum 1,024 entries and 8 MiB per response), but the
@@ -831,8 +845,10 @@ owned 5,000-item navigation/sort/progressive-paging evidence are unchanged.
   the history of verified logical units. Manual workflow_dispatch is the
   human-operated equivalent. RDC is supplementary for interactions that shell/
   UIA/screenshot evidence cannot exercise. Use
-  `tngkrwlsmd/personal-control-plane` primarily for runner/machine recovery and
-  maintenance, especially when this repository's runner path is broken.
+  `windows-vm-control` first for Windows computer management, when accessible
+  and suitable for the operation. The verified
+  `tngkrwlsmd/personal-control-plane` remains the central-CI/status-relay
+  and fallback runner-recovery surface.
   The control branch is a minimal control-plane tree containing only the
   request slot and a thin push trigger. The full Remote Windows Task
   implementation lives on `main` as a reusable workflow, and the control

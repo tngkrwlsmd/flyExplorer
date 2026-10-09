@@ -446,10 +446,14 @@ A push by itself must not start Windows build/GUI validation. Use the persistent
 remote checkout for the development loop; invoke the manual Windows build
 workflow only for a deliberately requested one-off gate.
 
-Runner health, process/service/task-scheduler inspection, runner recovery and
-machine maintenance belong in `personal-control-plane`, especially when this
-repository's runner path itself is broken. Do not create `remote/**` task
-branches. The repository has one Git-backed Windows command channel:
+For Windows computer status, process/service/task-scheduler
+inspection, runner recovery and maintenance, inspect `windows-vm-control`
+first and use its existing capabilities or tracked `scripts/tasks/`
+tasks when accessible and suitable. The verified
+`personal-control-plane` central-CI/status-relay and runner-recovery
+path remains the fallback when that project cannot perform the operation.
+RDC is a last resort, not the normal control surface. Do not create
+`remote/**` task branches. The repository has one Git-backed Windows command channel:
 `control/remote-shell`, plus manual `workflow_dispatch` as a human fallback.
 The control branch is a minimal control-plane tree, not a product mirror. It
 carries only the request slot plus a thin push-trigger workflow. The complete

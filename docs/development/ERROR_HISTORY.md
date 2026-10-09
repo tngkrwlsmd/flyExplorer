@@ -16,6 +16,38 @@ product state use CURRENT_STATUS.md.
 
 이 문서는 확정된 오류를 단순 수정으로 끝내지 않고, 다음 진단을 빠르게 하고 같은 계열의 결함을 사전에 막기 위한 프로젝트 기록이다.
 
+## 2026-10-09 — chained GUI harness regressions and recovery
+
+**Failure boundaries and fixes**
+
+- The combined suite's M22-owned 12,000-byte `큰.txt` also matched
+  M19 Search v3's 10–13 KiB search condition. The test now expects
+  two matches in the combined profile, retaining one in standalone
+  search (PR #51). A restarted saved preset restores conditions but
+  not folder scope, so its test re-enters the synthetic search folder.
+- Theme restoration transiently invalidated the `LeftFiles` UIA peer.
+  The owned harness now bounds reacquisition to 15 seconds for known
+  transient errors while retaining the app-owner guard (PR #52).
+- M19 left the Search/Workspace panels open during chained GUI; M20
+  needed a visible file list. Only `area=all` now enables
+  `FLY_M20_OWNED_COLLAPSE_M19_PANELS=YES` (PR #55).
+- Failure-time evidence now captures only the test-owned app window,
+  bounded pane UIA, synthetic folder listings and traceback before
+  cleanup. It does not capture the user's desktop or mask the
+  original GUI failure (PR #54).
+
+**Acceptance and prevention**
+
+Pre-main chained GUI run `37891171256` passed with normal exit 0 and
+protected settings preserved, for its recorded candidate/runtime.
+Post-merge central CI `37891854981` independently verified main
+`7c23af1515fab0926fa409d277efd6e16b9d1f65`: Release build PASS,
+`gui-all-Release` exit 0 (145.1 s) and
+`central-ci/windows-gui=success`. Distinguish test fixture/UIA/
+cross-suite lifecycle errors from product defects; reuse unaffected
+build evidence after harness-only changes. These fixes do not imply
+new visual, DPI, provider or release certification.
+
 ## 2026-10-08 — Windows Search indexed filename search
 
 **원인과 경계**

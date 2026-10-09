@@ -1,4 +1,4 @@
-# flyExplorer current status — 2026-10-08
+# flyExplorer current status — 2026-10-09
 
 ## Product source of truth
 
@@ -288,6 +288,32 @@ the required environment but does not claim to have modified external cloud
 bootstrap configuration.
 
 ## Latest verified evidence
+
+### 2026-10-09 — main Release and complete GUI acceptance
+
+Current main revision `7c23af1515fab0926fa409d277efd6e16b9d1f65`
+(merged PR #55) was verified by the independent central Windows CI run
+`37891854981` in `tngkrwlsmd/personal-control-plane`.
+The run logged `PASS release-build`, `gui-all-Release` exit 0
+(145.1 seconds), and `PASS functional-gui`, then posted
+`central-ci/windows-gui=success` to that exact main SHA.
+
+The merged full-suite handoff scopes
+`FLY_M20_OWNED_COLLAPSE_M19_PANELS=YES` to the chained `all` GUI
+area so M19 Search/Workspace panels are collapsed before M20 file-list
+interaction. Standalone GUI areas do not inherit this flag. Earlier
+test-owned chained acceptance `37891171256` passed using the
+existing Release runtime with normal app exit 0 and unchanged protected
+user settings. PRs #51/#52 corrected combined test fixtures and transient
+UIA restoration; PR #54 added bounded failure capture from the launched
+test-owned app before cleanup. These were harness/test changes, not
+new product functionality.
+
+This central run certifies the named Release-build and functional-GUI
+boundaries, not new BEFORE/AFTER visual pixels, alternate DPI, human
+Narrator/Korean IME, physical USB/SMB, signing, or public distribution.
+Candidate-only evidence must not be confused with exact-main CI evidence.
+
 
 Search scale expansion is accepted on candidate
 `73d52afcd28fb8bbb6af3009c805f269e80d7dd1` by self-hosted Remote

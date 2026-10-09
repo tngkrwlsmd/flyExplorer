@@ -367,11 +367,14 @@ retain or report. Before a main push that changes any path covered by project
 policy review metadata, perform the policy readiness/preflight check and update
 the review metadata in the same logical unit.
 
-Use `personal-control-plane` for runner health, Windows process/service/
-task-scheduler checks, recovery and machine maintenance, especially when this
-repository's runner/workflow path is broken. The committed-script `remote/**` task remains a fallback for
-project-specific commands when the request-slot/dispatch path is unavailable or
-unsuitable, or isolated branch execution is materially useful.
+For Windows computer status, process/service/task-scheduler
+inspection, runner recovery and maintenance, inspect `windows-vm-control`
+first and use its existing capabilities or tracked `scripts/tasks/`
+tasks when accessible and suitable. The verified
+`personal-control-plane` central-CI/status-relay and runner-recovery
+path remains the fallback when that project cannot perform the operation.
+RDC is a last resort, not the normal control surface. Do not create
+`remote/**` task branches.
 
 After normal push, fetch and verify HEAD == origin/main and ahead/behind 0/0.
 Force push is prohibited. If origin/main moved unexpectedly, analyze rather
