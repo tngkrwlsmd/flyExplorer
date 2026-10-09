@@ -16,6 +16,31 @@ product state use CURRENT_STATUS.md.
 
 이 문서는 확정된 오류를 단순 수정으로 끝내지 않고, 다음 진단을 빠르게 하고 같은 계열의 결함을 사전에 막기 위한 프로젝트 기록이다.
 
+## 2026-10-09 — indexed modified-date acceptance and local-time boundary
+
+- Unlike traversal mode's local modified-day semantics, `SystemIndex`
+  stores timestamp metadata that may be interpreted in UTC or local time.
+  Using exact SQL midnight boundaries as the sole truth can exclude
+  local-calendar dates around UTC offset and daylight-saving changes.
+- The isolated helper uses intentionally expanded read-only
+  `System.DateModified` candidate bounds for indexed queries, then
+  re-reads each result's actual `ftLastWriteTime` and compares its
+  exact local calendar date against the inclusive input boundaries.
+  SQL is a prefilter, **not** authoritative acceptance.
+- A shared strict Gregorian parser rejects invalid or reversed
+  `YYYY-MM-DD` dates before indexing; SQL boundaries at year edges
+  may be omitted (rather than overflow) while actual per-file local-day
+  verification remains mandatory. No provider, filesystem, or index
+  service configuration is modified by the test.
+- Remote run `37934459707` on candidate
+  `029ef1e5d8f186bfc5262d386576204b58fa47a9` completed
+  **SUCCESS**, including Release native 72/72, Release app build,
+  real SystemIndex date include/exclude, combined GUI filters, and
+  protected profile/source unchanged. Screenshot equivalence is a
+  separate matched-geometry gate.
+
+---
+
 ## 2026-10-09 — indexed size acceptance stopped at native harness count
 
 - Remote Windows Task `37923169399` on candidate
