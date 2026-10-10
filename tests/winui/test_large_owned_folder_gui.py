@@ -58,6 +58,25 @@ def main():
     owned=Path(tempfile.mkdtemp(prefix="large-owned-",dir=base))
     folder=owned/(str(args.items)+"-files")
     folder.mkdir()
+    if args.indexed_metadata_fault=="reparse":
+        # Preflight reparse fixture *before* creating 20,500 test files.
+        # PowerShell handles junction paths without cmd /c quoting and
+        # native OEM decoding problems. Both paths are test-owned.
+        target=owned/"owned-junction-target"
+        target.mkdir()
+        junction=folder/"00-owned-reparse-junction"
+        creation=subprocess.run(
+            ["powershell.exe","-NoLogo","-NoProfile","-NonInteractive",
+             "-Command",
+             "New-Item -ItemType Junction -Path '"+str(junction)+
+             "' -Target '"+str(target)+
+             "' -ErrorAction Stop | Out-Null"],
+            capture_output=True,text=True,errors="replace",timeout=15)
+        assert creation.returncode==0 and junction.is_dir(),(
+            "test-owned junction creation failed",creation.returncode,
+            creation.stdout,creation.stderr)
+        assert os.lstat(junction).st_file_attributes & 0x400,(
+            "test-owned junction is not a reparse point")
     for n in range(args.items):
         (folder/f"bench-{n:04d}.txt").write_text(
             f"test-owned file {n}\n",encoding="utf-8")
@@ -67,18 +86,6 @@ def main():
         now=time.time()
         os.utime(winner,(now+7200,now+7200))
         (folder/"bench-17000.txt").rename(folder/"bench-17000.aaa")
-    if args.indexed_metadata_fault=="reparse":
-        # A directory junction is a deterministic metadata-reparse fault;
-        # both the junction and target belong to this disposable fixture.
-        target=owned/"owned-junction-target"
-        target.mkdir()
-        junction=folder/"00-owned-reparse-junction"
-        creation=subprocess.run(
-            ["cmd.exe","/d","/c",f'mklink /J "{junction}" "{target}"'],
-            capture_output=True,text=True,timeout=15)
-        assert creation.returncode==0 and junction.is_dir(),(
-            "test-owned junction creation failed",creation.returncode,
-            creation.stdout,creation.stderr)
     env=os.environ.copy()
     for key in ("APPDATA","LOCALAPPDATA","TEMP","TMP"):
         value=owned/key.lower()
