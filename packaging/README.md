@@ -1,12 +1,24 @@
 # flyExplorer packaging
 
-From the repository root, the current unsigned packaging sequence is:
+For a single deliberate unsigned packaging operation from the repository root,
+run:
 
-1. `clean.bat build`
+    fly.bat package
+
+This command executes the following sequence once, failing immediately if any
+step fails:
+
+1. `clean.bat build` (removes the ignored out/ directory)
 2. `build.bat Release`
 3. `python -X utf8 packaging\provenance.py --write`
 4. `python -X utf8 packaging\provenance.py --check`
 5. `package.bat Release`
+
+The provenance write changes tracked
+`packaging/licenses/PAYLOAD_PROVENANCE.json` and
+`packaging/licenses/PAYLOAD_PROVENANCE.md`. Review those changes before
+committing or publishing. Do not run the packaging pipeline on every normal
+test, and do not treat an unsigned setup as a signed public release.
 
 The provenance snapshot belongs to the exact Release byte set produced by step
 2. It is not a cross-build reproducibility assertion. After any fresh rebuild,

@@ -4,14 +4,36 @@ flyExplorer
 flyExplorer is a Windows file manager. The canonical product on main is the
 C++/WinRT WinUI 3 application under app/winui.
 
-Quick start
------------
+Quick start (Windows)
+---------------------
 
-    build.bat Release
-    run.bat Release
-    run.bat Release D:\
-    test.bat source
-    python -X utf8 tools\winui\run_checks.py full
+For normal use, build once with "fly.bat build" and then double-click
+run.bat in the repository root, or double-click the built
+out\winui\Release\flyExplorer.exe directly. No PowerShell is needed.
+run.bat never rebuilds automatically; when launched by double-click with
+no arguments it keeps a missing-build error visible.
+
+For development, use the single entry point:
+
+    fly.bat help
+    fly.bat check
+    fly.bat build
+    fly.bat run
+    fly.bat run "D:\My Files"
+    fly.bat test gui
+    fly.bat test policy
+    fly.bat package
+
+"fly.bat package" intentionally clears out\, performs a fresh Release build,
+regenerates and verifies the exact-runtime provenance, then builds the
+unsigned installer. It stops on the first failure; it also updates tracked
+packaging/licenses/PAYLOAD_PROVENANCE.* metadata. Do not invoke this expensive
+workflow as a default compile/test step.
+
+Older build.bat, run.bat, test.bat, clean.bat and package.bat commands are
+kept for compatibility. Internal app/winui and tests/winui build.cmd scripts
+remain implementation details. The "full" test stage runs Release build +
+functional GUI by default, not a complete native/Debug/visual acceptance.
 
 Canonical layout
 ----------------

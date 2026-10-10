@@ -53,14 +53,29 @@ every resume.
 
 ## Build and verification
 
-Supported root entry points:
+Unified developer entry point (root), with legacy wrappers retained:
 
-    build.bat Debug|Release
-    run.bat Debug|Release [path]
-    test.bat source
-    test.bat policy
-    clean.bat build|all
-    python -X utf8 tools\winui\run_checks.py full
+    fly.bat help
+    fly.bat check
+    fly.bat build [Debug|Release]
+    fly.bat run [Debug|Release] [path]
+    fly.bat test [stage] [Debug|Release]
+    fly.bat package
+    fly.bat clean [build|cache|all]
+
+Root run.bat with no arguments is also a double-click Release launcher; it
+never implicitly builds and displays a persistent missing-build error when
+opened by double-click. A user may directly double-click the built
+out/winui/Release/flyExplorer.exe if its full sibling runtime is present.
+Root build.bat, run.bat, test.bat, clean.bat, package.bat remain supported
+for compatibility; do not bypass their actual build/test implementations.
+fly.bat package deliberately deletes only ignored out/ build output, runs
+one Release build, then writes/checks exact-runtime provenance before
+package.bat Release. Fail closed on cleanup, build, provenance or packaging
+errors. This explicit packaging path updates tracked
+packaging/licenses/PAYLOAD_PROVENANCE.* and is never an automatic retry.
+The full stage defaults to Release build + functional GUI, not all source,
+native, Debug, packaging or pixel-visual acceptance.
 
 Edit tracked project templates, not generated .vcxproj files. Keep build output
 under ignored out/, NuGet cache under .cache/nuget/, and evidence under logs/.
