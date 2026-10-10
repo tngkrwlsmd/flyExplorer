@@ -56,6 +56,11 @@ def main():
     for n in range(args.items):
         (folder/f"bench-{n:04d}.txt").write_text(
             f"test-owned file {n}\n",encoding="utf-8")
+    if args.browse_over_complete_model:
+        (folder/"bench-20499.txt").write_bytes(b"x"*4096)
+        now=time.time()
+        os.utime(folder/"bench-20499.txt",(now+7200,now+7200))
+        (folder/"bench-17000.txt").rename(folder/"bench-17000.aaa")
     env=os.environ.copy()
     for key in ("APPDATA","LOCALAPPDATA","TEMP","TMP"):
         value=owned/key.lower()
@@ -283,10 +288,19 @@ def main():
             until(lambda:"bench-9999.txt" in fresh_first_row(),
                   "clearing indexed filter did not restore indexed name sort",12)
             fresh_parent().child_window(auto_id="SortPicker").select(2)
-            until(lambda:"20,000" in fresh_parent().child_window(
-                  auto_id="StatusText").window_text(),
-                  "size sort above complete-model ceiling was not refused",8)
-            assert "bench-9999.txt" in fresh_first_row()
+            until(lambda:"bench-20499.txt" in fresh_first_row() and
+                  "20500" in progress_text(),
+                  "indexed metadata size sort above 20k did not complete",60)
+            assert (folder/"bench-20499.txt").stat().st_size==4096
+            print("OWNED_LARGE_OVER_20K_SIZE_SORT_INDEXED",True,flush=True)
+            fresh_parent().child_window(auto_id="SortPicker").select(3)
+            until(lambda:"bench-20499.txt" in fresh_first_row(),
+                  "indexed metadata date sort above 20k did not complete",35)
+            print("OWNED_LARGE_OVER_20K_DATE_SORT_INDEXED",True,flush=True)
+            fresh_parent().child_window(auto_id="SortPicker").select(4)
+            until(lambda:"bench-17000.aaa" in fresh_first_row(),
+                  "indexed metadata type sort above 20k did not complete",35)
+            print("OWNED_LARGE_OVER_20K_TYPE_SORT_INDEXED",True,flush=True)
             current=fresh_parent()
             rect=current.rectangle()
             evidence=base/"large-name-index-over-20k-after.png"
@@ -296,7 +310,7 @@ def main():
             print("OWNED_LARGE_BROWSE_OVER_20000",shown,flush=True)
             print("OWNED_LARGE_OVER_20K_NAME_SORT_INDEXED",True,flush=True)
             print("OWNED_LARGE_OVER_20K_NAME_FILTER_INDEXED",True,flush=True)
-            print("OWNED_LARGE_OVER_20K_SIZE_SORT_REFUSED",True,flush=True)
+            print("OWNED_LARGE_OVER_20K_METADATA_SORT_INDEXED",True,flush=True)
             print("OWNED_LARGE_OVER_20K_INDEX_VISUAL",evidence.name,flush=True)
             success=True
             return

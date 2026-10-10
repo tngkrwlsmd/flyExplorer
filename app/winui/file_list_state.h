@@ -43,7 +43,8 @@ struct PaneState final {
     bool streamToComplete=false;
     bool indexToComplete=false;
     bool indexedNameSort=false;
-    bool indexedNameProjection=false;
+    bool indexedMetadataSort=false;
+    bool indexedNameProjection=false; // projected logical item index
     bool fullModelLimitReached=false;
     std::vector<FileMetadata> metadata;
     std::vector<FileDetail> details;

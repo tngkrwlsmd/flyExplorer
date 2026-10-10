@@ -745,15 +745,18 @@ namespace winrt::FlyExplorer::implementation
                 snapshot.nextOffset>completeLimit||
                 (snapshot.nextOffset==completeLimit&&snapshot.truncated);
             const bool nameIndexEligible=
-                state.sortMode<=1&&
-                (state.indexedNameSort||!state.filenameFilter.empty());
+                (state.sortMode<=1&&
+                 (state.indexedNameSort||!state.filenameFilter.empty()))||
+                state.indexedMetadataSort;
             if(!state.indexToComplete&&atCompleteLimit&&nameIndexEligible){
                 state.indexToComplete=true;
                 state.indexedNameProjection=true;
             }
             const auto limit=static_cast<std::size_t>(
                 state.indexToComplete?
-                    fxfile::isolation::kMaxBrowseEntries:
+                    (state.indexedMetadataSort?
+                        fxfile::previewmetadata::kMaxIndexedMetadataEntries:
+                        fxfile::isolation::kMaxBrowseEntries):
                     fxfile::isolation::kMaxCompleteModelEntries);
             if(snapshot.nextOffset>limit||
                (snapshot.nextOffset==limit&&snapshot.truncated)){
@@ -763,6 +766,7 @@ namespace winrt::FlyExplorer::implementation
                 if(state.indexedNameProjection){
                     state.indexedNameProjection=false;
                     state.indexedNameSort=false;
+                    state.indexedMetadataSort=false;
                     state.sortMode=0;
                     if(!state.filenameFilter.empty()){
                         state.filenameFilter.clear();
@@ -776,8 +780,8 @@ namespace winrt::FlyExplorer::implementation
                     UpdateSelectionChrome();
                     if(side==ActiveWindowTab().model.activePane)UpdateFooterSummary();
                     StatusText().Text(
-                        L"이름 인덱스는 현재 최대 100,000개 항목까지 지원합니다. "
-                        L"일반 순차 탐색은 현재 창을 유지합니다.");
+                        L"이름 인덱스는 100,000개, 로컬 메타데이터 인덱스는 "
+                        L"25,000개까지 지원합니다. 순차 탐색은 유지됩니다.");
                 }else{
                     state.sortMode=0;
                     if(!state.filenameFilter.empty()){
@@ -1037,24 +1041,44 @@ namespace winrt::FlyExplorer::implementation
         auto& listState=ActiveWindowTab().fileLists[side];
         if(!force&&listState.metadataRoute==route&&
            listState.metadataTab==tab)return;
-        if(snapshot.baseOffset||snapshot.truncated||
-           snapshot.residentEndOffset()!=snapshot.nextOffset||
-           items.size()>fxfile::isolation::kMaxCompleteModelEntries)return;
+        const bool indexedMetadata=
+            listState.indexedMetadataSort&&listState.indexedNameProjection&&
+            !listState.indexToComplete&&!snapshot.truncated&&
+            snapshot.nextOffset>fxfile::isolation::kMaxCompleteModelEntries&&
+            snapshot.nextOffset==pane.tabs[tab].indexedFrontier()&&
+            pane.tabs[tab].nameIndex().size()<=
+                fxfile::previewmetadata::kMaxIndexedMetadataEntries;
+        if(!indexedMetadata&&
+           (snapshot.baseOffset||snapshot.truncated||
+            snapshot.residentEndOffset()!=snapshot.nextOffset||
+            items.size()>fxfile::isolation::kMaxCompleteModelEntries))return;
         auto const& folder=pane.filesystemPaths[tab];
         std::wstring root;
         if(!fxfile::shelltransfer::transferDriveRoot(folder,root))return;
         const auto driveType=::GetDriveTypeW(root.c_str());
         if(!SupportsSortableMetadataDrive(driveType))return;
+        if(indexedMetadata&&
+           (root.size()!=3||root[1]!=L':'||root[2]!=L'\\'||
+            driveType!=DRIVE_FIXED))return;
         const bool isolatedNetwork=
             driveType==DRIVE_REMOTE||mOwnedMetadataForceIsolated;
         std::vector<std::wstring> paths{};
-        paths.reserve(items.size());
-        for(auto const& item:items)
-            paths.push_back(item.isFileSystem()?item.parsingName:std::wstring{});
+        paths.reserve(indexedMetadata?
+            pane.tabs[tab].nameIndex().size():items.size());
+        if(indexedMetadata){
+            for(auto const& item:pane.tabs[tab].nameIndex())
+                paths.push_back(
+                    item.isFileSystem()?item.parsingName:std::wstring{});
+        }else{
+            for(auto const& item:items)
+                paths.push_back(
+                    item.isFileSystem()?item.parsingName:std::wstring{});
+        }
         const auto ticket=listState.beginMetadata(route,tab);
         fxfile::previewmetadata::FileMetadataController::Request request{};
         request.side=side;request.tab=tab;request.route=route;request.ticket=ticket;
         request.isolatedNetwork=isolatedNetwork;
+        request.requireCompleteIndex=indexedMetadata;
         request.paths=std::move(paths);
         auto dispatch=DispatcherQueue();
         auto weak=get_weak();
@@ -1074,22 +1098,39 @@ namespace winrt::FlyExplorer::implementation
                     const auto count=completed.metadata.size();
                     auto const& pane=ui->ActiveWindowTab().model.panes[side];
                     auto const& snapshot=pane.tabs[tab].snapshot();
-                    if(!ui->ActiveWindowTab().fileLists[side].acceptsMetadata(
-                           ticket,route,tab)||
+                    auto const& session=pane.tabs[tab];
+                    auto const& current=ui->ActiveWindowTab().fileLists[side];
+                    const bool indexedComplete=
+                        current.indexedMetadataSort&&
+                        current.indexedNameProjection&&!current.indexToComplete&&
+                        !snapshot.truncated&&
+                        session.indexedFrontier()==snapshot.nextOffset&&
+                        count==session.nameIndex().size()&&
+                        count>fxfile::isolation::kMaxCompleteModelEntries;
+                    const bool residentComplete=
+                        !snapshot.baseOffset&&!snapshot.truncated&&
+                        snapshot.residentEndOffset()==snapshot.nextOffset&&
+                        snapshot.children.size()==count;
+                    if(!current.acceptsMetadata(ticket,route,tab)||
                        pane.active!=tab||pane.pending[tab]||
                        pane.routeIds[tab]!=route||
-                       snapshot.baseOffset||snapshot.truncated||
-                       snapshot.residentEndOffset()!=snapshot.nextOffset||
-                       snapshot.children.size()!=count)return;
+                       (!indexedComplete&&!residentComplete))return;
                     auto& state=ui->ActiveWindowTab().fileLists[side];
                     if(completed.error!=ERROR_SUCCESS){
                         state.invalidateMetadata();
-                        if(state.sortMode>1)
-                            ui->StatusText().Text(
-                                completed.error==ERROR_TIMEOUT?
-                                L"네트워크 파일 메타데이터 응답 시간이 초과되었습니다.":
-                                L"네트워크 파일 메타데이터를 가져오지 못했습니다.");
+                        if(indexedComplete){
+                            state.indexedMetadataSort=false;
+                            state.indexedNameProjection=false;
+                            state.sortMode=0;
+                            if(side==ui->ActiveWindowTab().model.activePane)
+                                ui->fileBar()->SetSortIndex(0);
+                        }
                         ui->FillFiles(side);
+                        ui->StatusText().Text(indexedComplete?
+                            L"전체 메타데이터를 확인할 수 없어 정렬을 취소했습니다.":
+                            completed.error==ERROR_TIMEOUT?
+                            L"네트워크 파일 메타데이터 응답 시간이 초과되었습니다.":
+                            L"파일 메타데이터를 가져오지 못했습니다.");
                         return;
                     }
                     state.metadata=std::move(completed.metadata);
@@ -1099,7 +1140,19 @@ namespace winrt::FlyExplorer::implementation
                             L"파일 메타데이터 정렬을 적용했습니다.");
                 }
             });
-        if(!started)listState.invalidateMetadata();
+        if(!started){
+            listState.invalidateMetadata();
+            if(indexedMetadata){
+                listState.indexedMetadataSort=false;
+                listState.indexedNameProjection=false;
+                listState.sortMode=0;
+                if(side==ActiveWindowTab().model.activePane)
+                    fileBar()->SetSortIndex(0);
+                FillFiles(side);
+                StatusText().Text(
+                    L"메타데이터 인덱스 용량 한도를 초과해 정렬을 취소했습니다.");
+            }
+        }
     }
     void MainWindow::ScheduleFileDetails(int side,bool force){
         auto const& pane=ActiveWindowTab().model.panes[side];
@@ -1584,6 +1637,7 @@ namespace winrt::FlyExplorer::implementation
             state.streamToComplete=false;
             state.indexToComplete=false;
             state.indexedNameSort=state.sortMode<=1;
+            state.indexedMetadataSort=false;
             state.indexedNameProjection=false;
             state.fullModelLimitReached=false;
         }
@@ -1609,15 +1663,29 @@ namespace winrt::FlyExplorer::implementation
         state.renderedLogical.clear();
         state.renderedPaths.clear();
         state.renderedBaseOffset=snapshot.baseOffset;
-        const bool metadataReady=state.metadataCurrent(
-             pane.routeIds[pane.active],pane.active,items.size());
+        const bool residentMetadataReady=state.metadataCurrent(
+            pane.routeIds[pane.active],pane.active,items.size());
+        const bool indexedMetadataReady=
+            state.indexedMetadataSort&&state.indexedNameProjection&&
+            !state.indexToComplete&&!snapshot.truncated&&
+            session.indexedFrontier()==snapshot.nextOffset&&
+            state.metadataCurrent(
+                pane.routeIds[pane.active],pane.active,nameIndex.size());
         const bool detailReady=state.isCurrent(
              pane.routeIds[pane.active],pane.active,items.size());
         const int mode=state.sortMode;
         const bool indexedProjection=
-            state.indexedNameProjection&&!state.indexToComplete&&mode<=1&&
+            state.indexedNameProjection&&!state.indexToComplete&&
+            (mode<=1||indexedMetadataReady)&&
             session.indexedFrontier()==snapshot.nextOffset;
-        const auto sourceCount=indexedProjection?nameIndex.size():items.size();
+        const bool metadataReady=indexedProjection?
+            indexedMetadataReady:residentMetadataReady;
+        // Never project a partially loaded suffix as a global metadata sort.
+        const bool preparingIndex=
+            state.indexedMetadataSort&&state.indexedNameProjection&&
+            !indexedMetadataReady;
+        const auto sourceCount=preparingIndex?std::size_t{0}:
+            indexedProjection?nameIndex.size():items.size();
         std::vector<size_t> order(sourceCount);
         std::iota(order.begin(),order.end(),size_t{0});
         auto labelAt=[&](size_t index)->std::wstring const&{
@@ -1723,8 +1791,9 @@ namespace winrt::FlyExplorer::implementation
             const auto& itemLabel=labelAt(index);
             const auto& itemParsing=parsingAt(index);
             const bool itemFolder=folderAt(index);
-            auto const* metadata=residentReady&&metadataReady?
-                &state.metadata[resident]:nullptr;
+            auto const* metadata=metadataReady&&
+                (indexedProjection||residentReady)?
+                &state.metadata[indexedProjection?index:resident]:nullptr;
             auto const* detail=residentReady&&detailReady?
                 &state.details[resident]:nullptr;
             std::wstring typeLabel;

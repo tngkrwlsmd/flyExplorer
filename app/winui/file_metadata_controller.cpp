@@ -384,20 +384,27 @@ std::uint32_t collectNetworkMetadata(
     return exitCode==0?ERROR_SUCCESS:ERROR_GEN_FAILURE;
 }
 
-void collectLocalMetadata(
+DWORD collectLocalMetadata(
     std::vector<std::wstring> const& paths,
     std::shared_ptr<std::atomic_bool> const& cancelToken,
-    std::vector<fxfile::previewlist::FileMetadata>& metadata)
+    std::vector<fxfile::previewlist::FileMetadata>& metadata,
+    bool requireCompleteIndex)
 {
     metadata.assign(paths.size(),{});
     for(std::size_t i=0;i<paths.size();++i){
-        if(cancelToken->load())return;
+        if(cancelToken->load())return ERROR_CANCELLED;
         auto const& path=paths[i];
-        if(path.empty()||path.size()>32000)continue;
+        if(path.empty()||path.size()>32000){
+            if(requireCompleteIndex)return ERROR_INVALID_DATA;
+            continue;
+        }
         WIN32_FILE_ATTRIBUTE_DATA data{};
         if(!::GetFileAttributesExW(
-             path.c_str(),GetFileExInfoStandard,&data))continue;
-        if(data.dwFileAttributes&FILE_ATTRIBUTE_REPARSE_POINT)continue;
+             path.c_str(),GetFileExInfoStandard,&data)||
+           (data.dwFileAttributes&FILE_ATTRIBUTE_REPARSE_POINT)){
+            if(requireCompleteIndex)return ERROR_INVALID_DATA;
+            continue;
+        }
         const auto bytes=(static_cast<std::uint64_t>(
             data.nFileSizeHigh)<<32)|data.nFileSizeLow;
         ULARGE_INTEGER timestamp{};
@@ -405,7 +412,10 @@ void collectLocalMetadata(
         timestamp.LowPart=data.ftLastWriteTime.dwLowDateTime;
         applyRaw(metadata[i],path,data.dwFileAttributes,
                  bytes,timestamp.QuadPart);
+        if(requireCompleteIndex&&!metadata[i].dateKnown)
+            return ERROR_INVALID_DATA;
     }
+    return ERROR_SUCCESS;
 }
 
 } // namespace
@@ -432,8 +442,21 @@ bool FileMetadataController::start(
     if(closing_.load()||request.side<0||
        request.side>=static_cast<int>(cancel_.size())||
        request.route==0||request.ticket==0||
-       request.paths.size()>fxfile::isolation::kMaxCompleteModelEntries||
+       request.paths.size()>(
+           request.requireCompleteIndex?
+             kMaxIndexedMetadataEntries:
+             fxfile::isolation::kMaxCompleteModelEntries)||
+       (request.isolatedNetwork&&request.requireCompleteIndex)||
        !post||!completion)return false;
+    if(request.requireCompleteIndex){
+        std::size_t units=0;
+        for(auto const& path:request.paths){
+            if(path.empty()||path.size()>32000||
+               path.size()>kMaxIndexedMetadataPathUnits-units)
+                return false;
+            units+=path.size();
+        }
+    }
     const int side=request.side;
     cancel(side);
     auto cancelToken=std::make_shared<std::atomic_bool>(false);
@@ -452,9 +475,10 @@ bool FileMetadataController::start(
                     request.paths,cancelToken,result.metadata);
                 if(result.error==ERROR_CANCELLED)return;
             }else{
-                collectLocalMetadata(
-                    request.paths,cancelToken,result.metadata);
-                if(cancelToken->load())return;
+                result.error=collectLocalMetadata(
+                    request.paths,cancelToken,result.metadata,
+                    request.requireCompleteIndex);
+                if(result.error==ERROR_CANCELLED||cancelToken->load())return;
             }
             try{
                 post([completion=std::move(completion),

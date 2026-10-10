@@ -33,6 +33,20 @@ class FileMetadataControllerContract(unittest.TestCase):
         self.assertNotIn("thumbnail::query(",impl)
         self.assertIn("FileMetadataController mFileMetadata",main_h)
 
+    def test_indexed_local_metadata_budget_fails_closed(self):
+        header=read("app/winui/file_metadata_controller.h")
+        cpp=read("app/winui/file_metadata_controller.cpp")
+        for token in (
+            "kMaxIndexedMetadataEntries=25000",
+            "kMaxIndexedMetadataPathUnits=12*1024*1024",
+            "requireCompleteIndex=false",
+        ):
+            self.assertIn(token,header)
+        self.assertIn("request.isolatedNetwork&&request.requireCompleteIndex",cpp)
+        self.assertIn("path.size()>kMaxIndexedMetadataPathUnits-units",cpp)
+        self.assertIn("if(requireCompleteIndex)return ERROR_INVALID_DATA;",cpp)
+        self.assertIn("if(requireCompleteIndex&&!metadata[i].dateKnown)",cpp)
+
     def test_metadata_and_visual_cache_identity_are_separate(self):
         state=read("app/winui/file_list_state.h")
         for token in (
@@ -59,7 +73,8 @@ class FileMetadataControllerContract(unittest.TestCase):
         for token in (
             "ScheduleFileMetadata(int side,bool force)",
             "mFileMetadata.start(",
-            "metadataReady=state.metadataCurrent(",
+            "residentMetadataReady=state.metadataCurrent(",
+            "indexedMetadataReady=",
             "if(mode<=1||metadataReady)",
             "state.metadata[lhs].typeKey",
             "state.metadata[lhs]",

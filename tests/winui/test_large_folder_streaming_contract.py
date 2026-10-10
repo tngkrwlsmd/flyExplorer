@@ -84,12 +84,17 @@ class LargeFolderStreamingContracts(unittest.TestCase):
         self.assertIn("state.indexedNameProjection",main)
         self.assertIn("state.indexToComplete",main)
         self.assertIn("session.nameIndex()",main)
-        self.assertIn("state.indexedNameProjection&&!state.indexToComplete&&mode<=1",main)
+        self.assertIn("state.indexedNameProjection&&!state.indexToComplete&&",main)
+        self.assertIn("(mode<=1||indexedMetadataReady)",main)
         self.assertIn("session.indexedFrontier()==snapshot.nextOffset",main)
         self.assertIn("state.indexedNameSort=state.sortMode<=1",main)
         self.assertIn("const bool indexedComplete=",main)
         self.assertIn("if(indexedComplete)incomplete=false",main)
         self.assertIn("bool indexedNameSort=false",state)
+        self.assertIn("bool indexedMetadataSort=false",state)
+        self.assertIn("kMaxIndexedMetadataEntries",main)
+        self.assertIn("const bool indexedMetadataReady=",main)
+        self.assertIn("requireCompleteIndex=indexedMetadata",main)
 
     def test_ui_browses_window_and_rebuilds_complete_model_for_sort_filter(self):
         main=read("app/winui/MainWindow.xaml.cpp")
@@ -120,7 +125,9 @@ class LargeFolderStreamingContracts(unittest.TestCase):
             "OWNED_LARGE_BROWSE_OVER_20000",
             "OWNED_LARGE_OVER_20K_NAME_SORT_INDEXED",
             "OWNED_LARGE_OVER_20K_NAME_FILTER_INDEXED",
-            "OWNED_LARGE_OVER_20K_SIZE_SORT_REFUSED",
+            "OWNED_LARGE_OVER_20K_SIZE_SORT_INDEXED",
+            "OWNED_LARGE_OVER_20K_DATE_SORT_INDEXED",
+            "OWNED_LARGE_OVER_20K_TYPE_SORT_INDEXED",
             "large-name-index-over-20k-after.png",
         ):
             self.assertIn(marker,gui)

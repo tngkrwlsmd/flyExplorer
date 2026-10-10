@@ -11,6 +11,11 @@
 
 namespace fxfile::previewmetadata {
 
+// Separate metadata-index budget; ordinary complete-model and network
+// transport limits remain unchanged. Only local fixed-drive paths qualify.
+inline constexpr std::size_t kMaxIndexedMetadataEntries=25000;
+inline constexpr std::size_t kMaxIndexedMetadataPathUnits=12*1024*1024;
+
 class FileMetadataController final {
 public:
     struct Request final {
@@ -19,6 +24,7 @@ public:
         std::uint64_t route=0;
         std::uint64_t ticket=0;
         bool isolatedNetwork=false;
+        bool requireCompleteIndex=false;
         std::vector<std::wstring> paths{};
     };
     struct Completion final {

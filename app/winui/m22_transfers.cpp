@@ -104,16 +104,27 @@ void MainWindow::UpdateSort(int selection){
  const bool beyondComplete=
   snapshot.nextOffset>completeLimit||
   (snapshot.nextOffset==completeLimit&&snapshot.truncated);
- if(beyondComplete&&selection>1){
+ // Only local fixed-drive items qualify for the bounded metadata index.
+ std::wstring root;
+ auto const& folder=pane.filesystemPaths[pane.active];
+ const bool fixedLocal=
+  selection>1&&fxfile::shelltransfer::transferDriveRoot(folder,root)&&
+  root.size()==3&&root[1]==L':'&&root[2]==L'\\'&&
+  ::GetDriveTypeW(root.c_str())==DRIVE_FIXED;
+ const bool metadataIndexEligible=fixedLocal&&
+  snapshot.nextOffset<=fxfile::previewmetadata::kMaxIndexedMetadataEntries;
+ if(beyondComplete&&selection>1&&!metadataIndexEligible){
   fileBar()->SetSortIndex(state.sortMode);
   StatusText().Text(
-   L"유형/크기/수정 날짜 전역 정렬은 현재 최대 20,000개 항목까지 지원합니다. "
-   L"이름 정렬은 경량 인덱스를 사용합니다.");
+   L"유형·크기·수정일의 20,000개 초과 정렬은 로컬 고정 디스크에서 "
+   L"최대 25,000개까지 지원합니다. 현재 정렬은 유지됩니다.");
   return;
  }
  state.sortMode=selection;
  state.indexedNameSort=selection<=1;
- state.indexedNameProjection=beyondComplete&&state.indexedNameSort;
+ state.indexedMetadataSort=selection>1&&metadataIndexEligible;
+ state.indexedNameProjection=beyondComplete&&
+  (state.indexedNameSort||state.indexedMetadataSort);
  state.indexToComplete=state.indexedNameProjection&&
   (snapshot.residentEndOffset()<snapshot.nextOffset||snapshot.truncated);
  state.visibleCount=160;
@@ -124,13 +135,18 @@ void MainWindow::UpdateSort(int selection){
   if(state.indexToComplete)
    QueueNextFolderPage(side,true);
   else
-   StatusText().Text(L"전체 이름 인덱스로 정렬했습니다.");
+   StatusText().Text(state.indexedMetadataSort?
+    L"인덱스 기반 파일 메타데이터 정렬을 준비합니다.":
+    L"전체 이름 인덱스로 정렬했습니다.");
   return;
  }
  const bool incomplete=
-  snapshot.baseOffset||
-  snapshot.residentEndOffset()<snapshot.nextOffset||
-  snapshot.truncated;
+  state.indexedMetadataSort&&state.indexedNameProjection?
+   (state.indexToComplete||snapshot.truncated||
+    session.indexedFrontier()!=snapshot.nextOffset):
+   (snapshot.baseOffset||
+    snapshot.residentEndOffset()<snapshot.nextOffset||
+    snapshot.truncated);
  if(selection>1){
   if(incomplete){
    if(QueueNextFolderPage(side,true))
