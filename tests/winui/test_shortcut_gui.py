@@ -224,6 +224,59 @@ try:
     assert source.is_dir() and secondary.is_dir()
     assert not (right / source.name).exists()
     print("REAL_CTRL_F_QUICK_SEARCH_FOCUS_NO_FILE_MUTATION", True, flush=True)
+
+    # User changes only a disposable private profile, never system shortcuts.
+    safe_click(element("WorkspacePanelButton"))
+    address_shortcut = element("AddressShortcutBox")
+    search_shortcut = element("SearchShortcutBox")
+    eventually(
+        lambda: address_shortcut.is_visible() and search_shortcut.is_visible(),
+        "bounded shortcut editor not visible", 7,
+    )
+    address_shortcut.select(1)  # Ctrl+E
+    search_shortcut.select(3)   # Ctrl+K
+    safe_click(element("ApplyShortcutButton"))
+    private = localdata / "flyExplorer" / "ui-preferences-v1.txt"
+    eventually(
+        lambda: private.is_file() and b"address-shortcut=1" in private.read_bytes()
+        and b"search-shortcut=3" in private.read_bytes(),
+        "custom focus shortcuts not durably saved", 9,
+    )
+    focus()
+    send_keys("^e")
+    eventually(
+        lambda: element("AddressBox").has_keyboard_focus(),
+        "custom Ctrl+E did not focus address editor", 7,
+    )
+    focus()
+    send_keys("^k")
+    eventually(
+        lambda: element("QuickSearchBox").has_keyboard_focus(),
+        "custom Ctrl+K did not focus quick search", 7,
+    )
+    print("REAL_CUSTOM_FOCUS_SHORTCUTS_SAVED_APPLIED", True, flush=True)
+
+    safe_click(element("ResetShortcutButton"))
+    eventually(
+        lambda: private.is_file() and b"address-shortcut=0" in private.read_bytes()
+        and b"search-shortcut=2" in private.read_bytes(),
+        "default focus shortcuts not durably restored", 9,
+    )
+    focus()
+    send_keys("^l")
+    eventually(
+        lambda: element("AddressBox").has_keyboard_focus(),
+        "reset Ctrl+L did not refocus address editor", 7,
+    )
+    focus()
+    send_keys("^f")
+    eventually(
+        lambda: element("QuickSearchBox").has_keyboard_focus(),
+        "reset Ctrl+F did not refocus quick search", 7,
+    )
+    assert source.is_dir() and secondary.is_dir()
+    assert not (right / source.name).exists()
+    print("REAL_CUSTOM_FOCUS_SHORTCUTS_RESET", True, flush=True)
 finally:
     if process and process.poll() is None:
         if hwnd:
