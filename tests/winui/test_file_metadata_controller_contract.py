@@ -83,6 +83,9 @@ class FileMetadataControllerContract(unittest.TestCase):
             "snapshot.residentEndOffset()!=snapshot.nextOffset",
         ):
             self.assertIn(token,main)
+        self.assertIn("if(state.indexedMetadataSort){",transfers)
+        self.assertIn("pane.routeIds[pane.active],pane.active,session.nameIndex().size()",transfers)
+        self.assertIn("전체 메타데이터 인덱스로 정렬했습니다.",transfers)
         self.assertIn("if(selection>1)",transfers)
         self.assertIn("ScheduleFileMetadata(side)",transfers)
         self.assertIn("정렬을 위해 파일 메타데이터를 준비하는 중입니다.",transfers)
