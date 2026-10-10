@@ -47,26 +47,45 @@ class ShortcutSemanticsContract(unittest.TestCase):
         self.assertIn("Focus( Microsoft::UI::Xaml::FocusState::Keyboard)", f6)
         self.assertNotIn("RunTransfer(", f6)
 
-    def test_ctrl_l_and_ctrl_f_focus_existing_fields_without_mutation(self):
+    def test_configurable_ctrl_focus_shortcuts_do_not_mutate_files(self):
         window = compact(WINDOW.read_text(encoding="utf-8"))
         preview = window.split("RootShell().PreviewKeyDown(", 1)[1].split(
             "RefreshWindowTabs();", 1
         )[0]
-        address = preview.split(
-            "key==Windows::System::VirtualKey::L", 1
-        )[1].split("key==Windows::System::VirtualKey::F", 1)[0]
-        search = preview.split(
-            "key==Windows::System::VirtualKey::F", 1
-        )[1].split("key==Windows::System::VirtualKey::F5", 1)[0]
-        self.assertIn("control&&!shift&&!alt", preview)
-        self.assertIn("OnAddressDisplayClicked(nullptr,nullptr)", address)
-        self.assertIn("QuickSearchBox()", search)
-        self.assertIn("Focus(", search)
-        self.assertIn("SelectAll()", search)
-        for branch in (address, search):
-            self.assertIn("args.Handled(true)", branch)
-            self.assertNotIn("RunTransfer(", branch)
-            self.assertNotIn("OpenFolder(", branch)
+        for token in (
+            "VirtualKey::L", "VirtualKey::E",
+            "VirtualKey::F", "VirtualKey::K",
+            "pref.addressShortcut", "pref.searchShortcut",
+            "OnAddressDisplayClicked(nullptr,nullptr)",
+            "QuickSearchBox()", "SelectAll()", "args.Handled(true)",
+        ):
+            self.assertIn(token, preview)
+        self.assertNotIn("RunTransfer(", preview)
+        bindings = (ROOT / "src" / "base" / "ui_preferences.h").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn("validFocusShortcuts(", bindings)
+        self.assertIn("address!=search", bindings)
+        self.assertIn("addressShortcut=0", bindings)
+        self.assertIn("searchShortcut=2", bindings)
+
+    def test_shortcut_editor_supports_save_reset_and_persistence(self):
+        ui = (ROOT / "app" / "winui" / "MainWindow.xaml").read_text(
+            encoding="utf-8"
+        )
+        header = (ROOT / "app" / "winui" / "MainWindow.xaml.h").read_text(
+            encoding="utf-8"
+        )
+        window = WINDOW.read_text(encoding="utf-8")
+        for token in (
+            'x:Name="AddressShortcutBox"', 'x:Name="SearchShortcutBox"',
+            'Click="OnApplyShortcuts"', 'Click="OnResetShortcuts"',
+        ):
+            self.assertIn(token, ui)
+        for name in ("OnApplyShortcuts", "OnResetShortcuts"):
+            self.assertIn(name, header)
+            self.assertIn("void MainWindow::"+name+"(", window)
+        self.assertIn("PersistPreferences()", window)
 
     def test_full_gui_profile_covers_real_shortcut_keyboard(self):
         orchestrator = compact(

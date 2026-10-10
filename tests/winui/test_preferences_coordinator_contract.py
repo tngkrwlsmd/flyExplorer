@@ -46,6 +46,9 @@ class PreferencesCoordinatorContract(unittest.TestCase):
                       "MOVEFILE_REPLACE_EXISTING"):
             self.assertIn(token,body+header)
         self.assertNotIn("fxfile\\\\conf",body+header)
+        self.assertIn("schema=3", body)
+        self.assertIn("schema=2", body)
+        self.assertIn("validFocusShortcuts(pref.addressShortcut,pref.searchShortcut)", body)
 
 if __name__=="__main__":
     unittest.main()

@@ -167,26 +167,31 @@ namespace winrt::FlyExplorer::implementation
                 const bool shift=(::GetKeyState(VK_SHIFT)&0x8000)!=0;
                 const bool alt=(::GetKeyState(VK_MENU)&0x8000)!=0;
                 const auto key=args.Key();
-                // Explorer-aligned read-only focus shortcuts. Keep them
-                // independent from file-operation commands and text edits.
-                if(control&&!shift&&!alt&&
-                   key==Windows::System::VirtualKey::L){
+                // Closed set of Ctrl-only non-mutating focus shortcuts.
+                // File operations and F5/F6 keep their fixed bindings.
+                if(control&&!shift&&!alt){
                     if(auto ui=nativeWeak.get()){
-                        ui->OnAddressDisplayClicked(nullptr,nullptr);
-                        args.Handled(true);
+                        constexpr Windows::System::VirtualKey choices[]{
+                            Windows::System::VirtualKey::L,
+                            Windows::System::VirtualKey::E,
+                            Windows::System::VirtualKey::F,
+                            Windows::System::VirtualKey::K,
+                        };
+                        auto const& pref=ui->mPreferencesCoordinator.current();
+                        if(key==choices[pref.addressShortcut]){
+                            ui->OnAddressDisplayClicked(nullptr,nullptr);
+                            args.Handled(true);
+                            return;
+                        }
+                        if(key==choices[pref.searchShortcut]){
+                            auto search=ui->QuickSearchBox();
+                            search.Focus(
+                                Microsoft::UI::Xaml::FocusState::Keyboard);
+                            search.SelectAll();
+                            args.Handled(true);
+                            return;
+                        }
                     }
-                    return;
-                }
-                if(control&&!shift&&!alt&&
-                   key==Windows::System::VirtualKey::F){
-                    if(auto ui=nativeWeak.get()){
-                        auto search=ui->QuickSearchBox();
-                        search.Focus(
-                            Microsoft::UI::Xaml::FocusState::Keyboard);
-                        search.SelectAll();
-                        args.Handled(true);
-                    }
-                    return;
                 }
                 if(!control&&!shift&&!alt&&
                    key==Windows::System::VirtualKey::F5){
@@ -277,6 +282,10 @@ namespace winrt::FlyExplorer::implementation
             }
         });
         mPreferencesCoordinator.load();
+        AddressShortcutBox().SelectedIndex(
+            mPreferencesCoordinator.current().addressShortcut);
+        SearchShortcutBox().SelectedIndex(
+            mPreferencesCoordinator.current().searchShortcut);
         InitializeBookmarks();
         InitializeFilterRules();
         InitializeSearchPresets();
@@ -1971,6 +1980,28 @@ namespace winrt::FlyExplorer::implementation
             }
         }
         return L"새 창 탭";
+    }
+    void MainWindow::OnApplyShortcuts(
+        IInspectable const&,RoutedEventArgs const&)
+    {
+        const int address=AddressShortcutBox().SelectedIndex();
+        const int search=SearchShortcutBox().SelectedIndex();
+        if(!mPreferencesCoordinator.setFocusShortcuts(address,search)){
+            StatusText().Text(
+                L"주소창과 검색창은 서로 다른 Ctrl 단축키를 사용해야 합니다.");
+            return;
+        }
+        PersistPreferences();
+        StatusText().Text(L"주소창·검색창 단축키를 적용하고 개인 설정에 저장했습니다.");
+    }
+    void MainWindow::OnResetShortcuts(
+        IInspectable const&,RoutedEventArgs const&)
+    {
+        AddressShortcutBox().SelectedIndex(0);
+        SearchShortcutBox().SelectedIndex(2);
+        mPreferencesCoordinator.setFocusShortcuts(0,2);
+        PersistPreferences();
+        StatusText().Text(L"주소창 Ctrl+L, 검색창 Ctrl+F 기본값을 복원했습니다.");
     }
     void MainWindow::RefreshWindowTabs()
     {

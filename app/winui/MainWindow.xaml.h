@@ -94,6 +94,8 @@ namespace winrt::FlyExplorer::implementation
         void OnSaveWorkspace(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
         void OnOpenWorkspace(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
         void OnToggleSearch(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
+        void OnApplyShortcuts(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
+        void OnResetShortcuts(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
         void OnRunSearch(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
         void OnSelectSearchRecent(IInspectable const&,
             Microsoft::UI::Xaml::Controls::SelectionChangedEventArgs const&);

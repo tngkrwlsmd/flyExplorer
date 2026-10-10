@@ -291,6 +291,30 @@
                 <TextBlock Text="기존 파일은 덮어쓰지 않습니다"
                            Opacity="{ThemeResource FlyExplorerSubtleTextOpacity}" VerticalAlignment="Center"/>
             </StackPanel>
+            <StackPanel Orientation="Horizontal" Spacing="7">
+                <TextBlock Text="주소창 단축키" VerticalAlignment="Center"/>
+                <ComboBox x:Name="AddressShortcutBox" Width="112" SelectedIndex="0"
+                          AutomationProperties.Name="주소창 이동 단축키">
+                    <ComboBoxItem Content="Ctrl+L"/>
+                    <ComboBoxItem Content="Ctrl+E"/>
+                    <ComboBoxItem Content="Ctrl+F"/>
+                    <ComboBoxItem Content="Ctrl+K"/>
+                </ComboBox>
+                <TextBlock Text="검색창 단축키" VerticalAlignment="Center"/>
+                <ComboBox x:Name="SearchShortcutBox" Width="112" SelectedIndex="2"
+                          AutomationProperties.Name="검색창 이동 단축키">
+                    <ComboBoxItem Content="Ctrl+L"/>
+                    <ComboBoxItem Content="Ctrl+E"/>
+                    <ComboBoxItem Content="Ctrl+F"/>
+                    <ComboBoxItem Content="Ctrl+K"/>
+                </ComboBox>
+                <Button x:Name="ApplyShortcutButton" Content="단축키 저장"
+                        Click="OnApplyShortcuts"
+                        AutomationProperties.Name="선택한 단축키 적용하고 저장"/>
+                <Button x:Name="ResetShortcutButton" Content="기본값"
+                        Click="OnResetShortcuts"
+                        AutomationProperties.Name="주소창과 검색창 단축키 기본값 복원"/>
+            </StackPanel>
         </StackPanel>
         <StackPanel Grid.Row="6" x:Name="SearchPanel" Visibility="Collapsed"
                     Spacing="5" Padding="14,3,14,5">

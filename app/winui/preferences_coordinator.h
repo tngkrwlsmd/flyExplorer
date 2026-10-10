@@ -23,6 +23,12 @@ public:
     void setDefaultViewMode(int view) noexcept {
         preferences_.defaultViewMode=view;
     }
+    bool setFocusShortcuts(int address,int search) noexcept {
+        if(!fxfile::uisettings::validFocusShortcuts(address,search))return false;
+        preferences_.addressShortcut=address;
+        preferences_.searchShortcut=search;
+        return true;
+    }
     bool persist(Post post,FailureCallback failure);
 
 private:
