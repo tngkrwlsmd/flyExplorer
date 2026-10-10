@@ -11,6 +11,8 @@ Their exact content remains available through Git history.
 - ARCHITECTURE.md — current WinUI/native-core/Shell-isolation architecture.
 - AGENT_EFFICIENCY.md — mandatory bounded tool/build/test strategy.
 - VERIFICATION_PROFILE.md — central CI scopes, failure taxonomy, FAST/STANDARD/FINAL profiles and high-cost fixture policy.
+- PRE_DISTRIBUTION_FUNCTIONAL_GATES.md — verified pre-installation functional
+  gates, hardware blocks and remaining user-facing/large-folder work.
 - ERROR_HISTORY.md — append-only failure/root-cause/prevention ledger.
 - UI_UX_DESIGN_GUIDE.md — current product UI/UX rules.
 - WIN11_EXPLORER_UI_REFERENCE.md — Windows 11 Explorer comparison policy.

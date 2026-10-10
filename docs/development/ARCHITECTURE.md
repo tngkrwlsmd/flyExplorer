@@ -405,22 +405,24 @@ below `nextOffset` without incorrectly advancing the frontier. Route/request/
 folder identity and exact offset/range checks still reject stale or overlapping
 results.
 
-Global sort and non-empty pane filtering intentionally do not operate on a
-partial resident window. Two ceilings are explicit. `kMaxCompleteModelEntries`
-is 20,000 and bounds operations that need the complete folder model.
-`kMaxBrowseEntries` is 100,000 and bounds ordinary sequential resident-window
-navigation. The controller passes the appropriate ceiling into forward page
-submission, while the helper/supervisor reject any offset/limit range outside
-the browse ceiling.
+Global operations must not treat a partial resident window as a complete
+folder. Name sort and name/mask filtering now use a bounded lightweight
+`ShellNavigationSession::nameIndex_` outside the 2,048-entry resident
+window. An owned 20,500-file GUI/visual scenario passed indexed name
+sort and filtering in run `37211942616` (merged product revision
+`582560f89afe8c9c53bbc23791cdbd5d3335c014`).
 
-If sequential browsing has already crossed 20,000, global sort/filter is
-refused rather than producing a partial result. Below that boundary, completion
-intent still rehydrates any evicted prefix and known forward gap and finishes
-the bounded model before applying the operation. The 100,000 value is a safety
-cap only; current acceptance proves browsing beyond 20,000 with an owned
-20,500-file folder, not general 100,000-item performance or provider support.
-A future indexed strategy is still required before complete-model semantics can
-scale beyond 20,000.
+Type, size and modified-date sorts still require a complete sortable
+metadata model capped by `kMaxCompleteModelEntries=20000`. They must
+refuse above that bound, not silently sort only loaded rows; the same
+20,500-file acceptance demonstrated this explicit size-sort refusal.
+Sequential browsing has a separate `kMaxBrowseEntries=100000` safety
+ceiling with 1,024-entry/8 MiB Shell pages and a 2,048-entry resident
+window. That ceiling is not evidence of accepted 100,000-item throughput.
+The outstanding scalability work is an indexed **metadata** strategy
+for above-20,000 type/size/date sorts, not a rewrite of the accepted
+indexed-name implementation. Preserve page identity, cancellation and
+bounded storage in any future extension.
 
 File-list rows carry logical `uint64` item indices, not resident-vector
 positions. Consumers translate them through `Snapshot::residentIndex()`

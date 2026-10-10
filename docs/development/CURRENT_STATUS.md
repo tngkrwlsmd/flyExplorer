@@ -21,6 +21,29 @@ development now uses `tngkrwlsmd/personal-control-plane` Remote Shell
 trigger Windows validation. See `docs/operations/windows-runner-retirement.md`
 and `docs/development/VERIFICATION_PROFILE.md`.
 
+### 2026-10-10 functional pre-distribution checkpoint
+
+Exact source SHA `a310951872ee5ddb720966498510605f8aea4b6e`:
+central registered source run `38044463555` completed SUCCESS (policy,
+4 structure, 152 product, 20 harness, 30 infrastructure tests, all PASS).
+Remote Shell `38044362154` separately proved the real Windows
+`fly.bat` help/invalid-option and `run.bat` missing-build guards.
+Its subsequent source check failed *before running Python tests* because
+the SYSTEM runner lacked `python` on PATH; the central user-session
+source run then passed those contracts. The test-owned checkout was
+reclaimed. The VM exposes 0 removable drives, 0 mapped network drives
+and 0 non-special SMB shares, so real USB/remote SMB acceptance is
+NOT TESTED, not a product failure. Central `gui` run `38044629405`
+was still in progress at the three-minute observation boundary;
+its result must be checked separately before claiming latest Release/
+functional GUI PASS. Full-resolution pixel review is also separate.
+
+Prior 20,500-file acceptance already proved indexed **name** sort and
+name filtering (run `37211942616`). Above-20,000 type/size/date
+global sorts remain unsupported rather than silently partial.
+The precise remaining tasks are in
+`docs/development/PRE_DISTRIBUTION_FUNCTIONAL_GATES.md`.
+
 These are revision- and scope-specific evidence records, not blanket
 current-main product acceptance:
 
@@ -1380,9 +1403,9 @@ Current source and the last parity evidence still show these limits:
   and a 20,000-entry model safety bound. The active model now accepts the first
   page immediately and appends continuation pages on demand; owned Release
   evidence covers an 8,000-file initial 1,024-item render followed by complete
-  global name sort and progressive 160-row rendering. Unbounded virtualization
-  beyond the 20,000-item model ceiling, network/virtual providers and sustained
-  thumbnail-cache behavior are not certified.
+  global name sort and progressive 160-row rendering. Indexed name sort and name filters have separate 20,500-item acceptance;
+  general 100,000-item performance, above-20,000 metadata sorts, network/
+  virtual providers and sustained thumbnail-cache behavior are not certified.
 - Type, size and modified-date global sort requires a complete sortable
   metadata model and is supported through 20,000 fixed, removable, mapped
   network or ordinary direct-UNC filesystem entries. Network/UNC metadata
