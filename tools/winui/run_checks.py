@@ -25,6 +25,7 @@ PRODUCT_SUITES = {
         "tests/winui/test_arch_contract.py",
         "tests/winui/test_m26_fluent_contract.py",
         "tests/winui/test_shortcut_semantics_contract.py",
+        "tests/winui/test_window_tab_navigation_chrome_contract.py",
         "tests/winui/test_file_metadata_controller_contract.py",
         "tests/winui/test_localization_contract.py",
     ],

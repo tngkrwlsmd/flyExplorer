@@ -852,6 +852,9 @@ namespace winrt::FlyExplorer::implementation
             if(restoreSettled)QueueNextWorkspaceTab(completed.side);
         };
         if(completed.kind==Kind::NoChange){
+            // Request completion can clear pending without changing the
+            // folder snapshot. Keep history buttons in sync with that state.
+            if(completed.active)UpdateNavigationChrome();
             continueRestore();
             return;
         }
@@ -884,6 +887,7 @@ namespace winrt::FlyExplorer::implementation
                         L"Shell 폴더를 열지 못했습니다. "
                         L"기존 폴더는 유지됩니다.");
             }
+            if(completed.active&&!continuation)UpdateNavigationChrome();
             continueRestore();
             return;
         }
@@ -899,6 +903,7 @@ namespace winrt::FlyExplorer::implementation
                 return;
             }
             StatusText().Text(L"이전 탐색 결과를 무시했습니다.");
+            if(completed.active)UpdateNavigationChrome();
             continueRestore();
             return;
         }
@@ -2058,6 +2063,19 @@ namespace winrt::FlyExplorer::implementation
         else RefreshWindowTabs();
         return true;
     }
+    void MainWindow::UpdateNavigationChrome()
+    {
+        auto const& model=ActiveWindowTab().model;
+        auto const side=static_cast<std::size_t>(model.activePane);
+        auto const& pane=model.panes[side];
+        const bool pending=pane.pending[pane.active]!=0;
+        auto const& nav=pane.tabs[pane.active];
+        BackButton().IsEnabled(nav.canBack()&&!pending);
+        ForwardButton().IsEnabled(nav.canForward()&&!pending);
+        UpButton().IsEnabled(nav.snapshot().folder.valid()&&
+                             !ILIsEmpty(nav.snapshot().folder.get()));
+    }
+
     void MainWindow::Refresh(hstring const& status)
     {
         RefreshTabs(0);
@@ -2068,9 +2086,7 @@ namespace winrt::FlyExplorer::implementation
         const auto address=nav.snapshot().parsingName;
         AddressBox().Text(hstring(FriendlyAddress(address)));
         UpdateBreadcrumb(address);
-        BackButton().IsEnabled(nav.canBack() && !ActiveWindowTab().model.panes[ActiveWindowTab().model.activePane].pending[ActiveWindowTab().model.panes[ActiveWindowTab().model.activePane].active]);
-        ForwardButton().IsEnabled(nav.canForward() && !ActiveWindowTab().model.panes[ActiveWindowTab().model.activePane].pending[ActiveWindowTab().model.panes[ActiveWindowTab().model.activePane].active]);
-        UpButton().IsEnabled(nav.snapshot().folder.valid() && !ILIsEmpty(nav.snapshot().folder.get()));
+        UpdateNavigationChrome();
         ActivePaneText().Text(ActiveWindowTab().model.activePane==0?L"활성: 왼쪽":L"활성: 오른쪽");
         PrimaryPaneTitle().Content(winrt::box_value(
             hstring(ActiveWindowTab().model.activePane==0?L"왼쪽 창 (활성)":L"왼쪽 창")));

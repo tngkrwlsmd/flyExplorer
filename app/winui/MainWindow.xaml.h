@@ -320,6 +320,7 @@ namespace winrt::FlyExplorer::implementation
         fxfile::shellnav::Session &Current();
         std::filesystem::path HomePath() const;
         void Refresh(winrt::hstring const& status = L"Ready");
+        void UpdateNavigationChrome();
         void RefreshTabs(int side);
         bool mColumnControlsReady=false;
         bool mDetailColumnPointerDrag=false;

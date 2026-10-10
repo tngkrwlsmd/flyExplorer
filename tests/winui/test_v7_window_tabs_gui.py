@@ -163,8 +163,23 @@ def run(*,win,element,safe_click,focus,eventually,owned,localdata,env,exe):
     # asynchronously. Require that its committed Nested route and Back command
     # are live before issuing physical input; the final assertion below still
     # proves that Back restores the original owned folder.
-    eventually(lambda:"nested" in address() and element("BackButton").is_enabled(),
-               "cleanup close did not restore ready tab A",14)
+    # Distinguish restored route from disabled navigation chrome. Report only
+    # fixture-scoped boolean diagnostics and predeclared status categories.
+    def tab_a_ready():
+        return "nested" in address() and element("BackButton").is_enabled()
+    try:
+        eventually(tab_a_ready,"cleanup close did not restore ready tab A",14)
+    except AssertionError:
+        back=element("BackButton")
+        present=back.exists(timeout=.2)
+        status=element("StatusText").window_text()
+        print("V7_CLEANUP_ROUTE_NESTED","nested" in address(),flush=True)
+        print("V7_CLEANUP_BACK_EXISTS",present,flush=True)
+        print("V7_CLEANUP_BACK_ENABLED",present and back.is_enabled(),flush=True)
+        print("V7_CLEANUP_WINDOW_TABS",len(tabs()),flush=True)
+        print("V7_CLEANUP_STATUS_PENDING","불러오는 중" in status,flush=True)
+        print("V7_CLEANUP_STATUS_REFRESH","변경 알림" in status,flush=True)
+        raise
     safe_click(element("BackButton"))
     eventually(lambda:address().rstrip("\\/")==initial_address.rstrip("\\/").lower(),
                "v7 cleanup did not restore the original owned folder",14)
