@@ -56,9 +56,38 @@ all six byte-identical legacy profile inputs. Source/binary was
 `ac4916a7f506f2bf0bc97ff7d01f4b3d6aedc41a`. Git compared it
 to current `65dcb8d`: only two GUI/source tests differ, so this is
 the *same compiled product*, not a different release feature level.
-Arbitrary external verbs, multiple selection, removable/UNC targets,
-provider moves/deletes/recycle, provider-to-provider copy and
-third-party Shell extensions remain unverified or intentionally blocked.
+**New same-parent bounded multi-selection acceptance (2026-10-11):**
+product `2cb7396bc153a21f49ec7fa35850c72000009420`,
+source/contract run
+[38095921258](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38095921258)
+PASS (163 product contracts), Release build
+[38095991723](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38095991723)
+PASS, owned right-click/single Shift+F10/**two-item Shift+F10**
+popup and Escape cancellation
+[38096316352](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38096316352)
+PASS with two test-file byte identities and six legacy profile
+identities unchanged. Same SHA's prebuilt-Release **entire GUI**
+run [38096428754](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38096428754)
+PASS (WindowTab 14.9 s, shortcut 9.9 s, all 137.4 s).
+
+The menu's isolated helper now accepts **up to 32 selected local
+fixed-drive non-reparse items from the same parent**, with independent
+path/duplicate/length validation on both sides of the pipe and
+revalidated Shell PIDLs. For multiple selections, only the canonical
+nonmutating `properties` verb is allowed for invocation; other
+Shell verbs remain fail-closed. This is **menu display and cancellation
+acceptance**, not proof that the Properties dialog was invoked,
+used or closed. Windows clipboard Copy/Cut/Paste continue to use
+the app's native guarded routes and were not re-accepted by
+an external Explorer-interop test at this SHA. Such an interop
+test explicitly clears the shared Windows clipboard and therefore
+requires separate approval before execution.
+
+**Still OPEN:** actual multi-item Properties invocation/closure,
+clipboard Explorer↔flyExplorer interoperability at the new SHA,
+extension-specific verbs, removable/UNC targets, provider Move/Delete/
+Recycle, provider-to-provider copy, arbitrary third-party
+extensions, and application UI coverage beyond the accepted owned scope.
 
 ## 3. Large-folder metadata indexing — bounded PASS
 
