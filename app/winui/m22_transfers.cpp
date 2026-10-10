@@ -562,8 +562,14 @@ void MainWindow::ShowExternalWindowsContextMenu(int side){
   return;
  }
  auto const& pane=ActiveWindowTab().model.panes[side];
- if(pane.pending[pane.active]||pane.filesystemPaths[pane.active].empty())
+ if(pane.pending[pane.active]){
+  StatusText().Text(L"현재 폴더를 불러온 후 Windows 메뉴를 여세요.");
   return;
+ }
+ if(pane.filesystemPaths[pane.active].empty()){
+  StatusText().Text(L"가상 Shell 항목의 외부 메뉴는 아직 지원하지 않습니다.");
+  return;
+ }
  auto list=side==0?LeftFiles():RightFiles();
  if(list.SelectedItems().Size()!=1){
   StatusText().Text(L"\uC678\uBD80 Shell \uBA54\uB274\uB294 \uD56D\uBAA9 1\uAC1C\uB97C \uC120\uD0DD\uD558\uC138\uC694.");
@@ -574,14 +580,22 @@ void MainWindow::ShowExternalWindowsContextMenu(int side){
  const auto logical=winrt::unbox_value<std::uint64_t>(row.Tag());
  auto const& session=pane.tabs[pane.active];
  auto const* indexed=session.indexedItem(static_cast<std::size_t>(logical));
- if(!indexed||!indexed->isFileSystem()||indexed->parsingName.empty())return;
+ if(!indexed||!indexed->isFileSystem()||indexed->parsingName.empty()){
+  StatusText().Text(L"선택한 파일시스템 항목의 Shell 메뉴를 열 수 없습니다.");
+  return;
+ }
  auto path=indexed->parsingName;
  auto const value=std::filesystem::path(path);
  if(!value.is_absolute()||value.lexically_normal().native()!=path||
     path.size()>1024)return;
  const auto root=value.root_path().native();
  if(root.size()!=3||root[1]!=L':'||root[2]!=L'\\'||
-    ::GetDriveTypeW(root.c_str())!=DRIVE_FIXED)return;
+    ::GetDriveTypeW(root.c_str())!=DRIVE_FIXED){
+  StatusText().Text(
+   L"외부 Shell 메뉴는 로컬 고정 디스크만 지원합니다. "
+   L"이동식·네트워크·가상 공급자 작업은 아직 제한됩니다.");
+  return;
+ }
  const auto flags=::GetFileAttributesW(path.c_str());
  if(flags==INVALID_FILE_ATTRIBUTES||
     (flags&FILE_ATTRIBUTE_REPARSE_POINT))return;
@@ -643,6 +657,12 @@ void MainWindow::HandleFileShortcut(
  const auto ctrl=(::GetKeyState(VK_CONTROL)&0x8000)!=0;
  const auto shift=(::GetKeyState(VK_SHIFT)&0x8000)!=0;
  const auto alt=(::GetKeyState(VK_MENU)&0x8000)!=0;
+ // Keyboard equivalent of right-click for the selected filesystem row.
+ // Reuse the fixed-drive single-item isolated-child safety checks.
+ if(!ctrl&&shift&&!alt&&vk==Windows::System::VirtualKey::F10){
+  ShowExternalWindowsContextMenu(side);
+  args.Handled(true);return;
+ }
  if(ctrl&&shift&&!alt&&vk==Windows::System::VirtualKey::F){
   auto box=side==0?LeftNameFilterBox():RightNameFilterBox();
   if(box.Opacity()<0.5)ToggleNameFilter(side);

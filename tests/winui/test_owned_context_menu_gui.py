@@ -142,6 +142,21 @@ def main(config="Debug"):
   eventually(lambda:not child.is_running() or child.status()=="zombie",
              "Test-owned Shell popup did not cancel",6)
   assert file.read_text(encoding="utf-8")=="test owned only"
+
+  # Separate Shift+F10 path must spawn the same owned helper; cancel only.
+  child=None
+  eventually(select_owned_row,"Owned row missing before Shift+F10",8)
+  win.child_window(auto_id="LeftFiles").set_focus()
+  assert user.GetForegroundWindow()==hwnd,"Refusing input to foreign window"
+  keyboard.send_keys("+{F10}")
+  eventually(spawned,"Shift+F10 did not launch isolated Shell popup",8)
+  eventually(owns_foreground,"Shift+F10 popup did not own foreground",6)
+  user.keybd_event(0x1b,0,0,0)
+  user.keybd_event(0x1b,0,2,0)
+  eventually(lambda:not child.is_running() or child.status()=="zombie",
+             "Shift+F10 popup did not cancel",6)
+  assert file.read_text(encoding="utf-8")=="test owned only"
+  print("OWNED_CONTEXT_SHIFT_F10_MENU_CANCEL",True,flush=True)
   verified=True
  finally:
   if child is not None and child.is_running():
