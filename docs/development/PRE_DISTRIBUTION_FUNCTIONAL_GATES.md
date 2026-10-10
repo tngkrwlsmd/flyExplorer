@@ -1,108 +1,118 @@
 # flyExplorer pre-distribution functional gates — 2026-10-10
 
-Scope: complete safe product functionality and real-world validation
-**before** signing, installer deployment, rights review or public
-redistribution. None of those latter operations is authorized here.
-Always consult live main, AGENTS.md, CURRENT_STATUS.md and
-VERIFICATION_PROFILE.md. Evidence applies only to exact source SHA,
-configuration, environment, tested scope and producing run.
+This document records tests and remaining product functionality **before**
+installer, signing, public release or redistribution. An accepted result
+applies only to the tested SHA/binary, environment, procedure and scope.
+See `CURRENT_STATUS.md`, `ARCHITECTURE.md`, `VERIFICATION_PROFILE.md`
+and `AGENTS.md`. Later evidence below supersedes older failure checkpoints.
 
-## 1. Current Windows source, launcher, Release and GUI
+## 1. Latest accepted Release, GUI and shortcuts
 
-- `a310951872ee5ddb720966498510605f8aea4b6e`: central registered
-  `desktop-a` source run `38044463555` **PASS** — policy plus
-  structure 4, product 152, harness 20, infrastructure 30.
-- On the same SHA, Remote Shell `38044362154` established Windows
-  `fly.bat help`, invalid build/clean rejection and missing-build
-  `run.bat Release` behavior. The later source stage was blocked
-  only by SYSTEM's missing Python PATH; official user-session source
-  succeeded. Disposable checkout was deleted.
-- Central registered `gui` `38044629405` subsequently **PASSED**,
-  including Release build and `gui-all-Release` on the baseline
-  `a310951872ee5ddb720966498510605f8aea4b6e`.
-- New Ctrl+L address-focus / Ctrl+F quick-search-focus candidate
-  `f3d06ff9463f1b462ca3fb1c30675bd6dd742b12` is **NOT
-  ACCEPTED**: central GUI run `38047230115` had `release-build=PASS`
-  but `gui-all-Release=FAIL`, first error
-  `cleanup close did not restore ready tab A` in the existing
-  `test_v7_window_tabs_gui.py`. Session restoration in a separate
-  child, the owned process exit 0 and protected profile identity
-  checks passed. Read-only inspection of the preserved failed GUI
-  snapshot confirmed the surviving `Nested` tab and test-owned
-  `Left\\Nested` address. It did not capture Back button state or
-  app status at the failing instant. Product vs harness/cancellation
-  classification remains open; the candidate's new keyboard GUI test
-  was not reached. The separate upload-artifact step failed because
-  GitHub Actions artifact storage quota was exhausted, but the failure
-  evidence remains on the Windows VM. Do not manufacture an acceptance
-  claim or rerun unchanged tests without a diagnosed correction.
-- A positive `run.bat` launch with a complete matching runtime, as
-  opposed to its missing-build guard, is separately **NOT TESTED**.
-  Functional UIA and matched visual pixel acceptance are distinct.
+**Current main:** `65dcb8d8eea4906b245eafcc7c571418aea93c63`.
 
-## 2. Physical removable and SMB operations — BLOCKED BY ENVIRONMENT
+- Registered Windows `desktop-a` `gui` run
+  [38053505865](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38053505865)
+  **SUCCESS**: policy/source, Release build, WindowTab restore, real
+  physical-keyboard shortcuts, and complete functional GUI PASS
+  (focused WindowTab 16.2 seconds, shortcuts 9.4 seconds, all 124.7 seconds).
+- Source run
+  [38053376198](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38053376198)
+  **SUCCESS**: 4 structure, 163 product-source, 20 harness and
+  30 infrastructure contracts. On the earlier `ac4916a` revision
+  the theme fixture expected exact `schema=2` bytes but the product
+  had correctly started writing `schema=3`. The test-only correction
+  in `65dcb8d` fixed this deterministic harness mismatch.
+- **Accepted bounded user-defined Ctrl focus bindings:** the two
+  address/search actions can independently choose Ctrl+L/E/F/K,
+  with duplicate choices rejected, an atomic private `schema=3`
+  save, legacy schema-1/2 reading and default reset. Fixed
+  F5/F6, pane/window-tab and filesystem operation commands
+  are not remappable. More general Explorer verb accelerator
+  customization remains **OPEN**.
+- Actual app-window Dark visual review
+  [38056561878](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38056561878):
+  matched 1296x736 before/after opening Workspace settings,
+  showing both shortcut selectors and Save/Reset with no visible
+  clipping or overlap.
 
-The central VM inventory reported **0** removable logical drives,
-**0** mapped network drives and **0** non-special SMB shares.
-Code support is not a substitute for hardware/transport evidence.
+**Historical resolved defects:** `f3d06ff` WindowTab history readiness
+failed in `38047230115`; the navigation chrome update was later
+accepted on main by `38048875845`. `ac4916a` source/Release
+built successfully but an obsolete preference-schema expectation
+failed GUI run `38050952226`; later `65dcb8d` is accepted.
+Neither older failure describes the latest main acceptance.
 
-With separately authorized test-owned disposable media/share, check
-physical USB copy/move/metadata sort, collision/cancel and recycle-only
-failures (never permanent-delete fallback); check direct UNC and mapped
-remote-drive browse, copy/move, sort, disconnected/error paths, cleanup
-and bytes before/after. No real user documents, personal SMB shares,
-global clipboard or real Recycle Bin contents may be changed.
-Loopback administrative shares, if ever tested, are only supplemental
-UNC evidence and are not remote SMB certification.
+A positive launch through `run.bat` against the full matching runtime
+has still **NOT** been separately proven. Earlier `38044362154`
+validated `fly.bat` command guards and missing-build behavior.
 
-## 3. Explorer-level function backlog — OPEN
+## 2. Shell context-menu compatibility — bounded PASS
 
-- Keyboard usability improvement (2026-10-10): Ctrl+L now focuses the
-  existing address editor and Ctrl+F focuses the existing quick-search
-  field without starting a file mutation or launching an unsolicited
-  search. The focused Windows GUI regression uses
-  `python -X utf8 tools/winui/run_checks.py gui --area shortcuts --configuration Release`.
-  These shortcuts remain **pending actual GUI acceptance**. The first
-  producing GUI run `38047230115` failed in preexisting WindowTab
-  cleanup before exercising them; its successful Release build alone
-  does not certify physical input.
-- User-configurable shortcuts remain **OPEN**: add a bounded private,
-  atomic settings schema, collision checks, preserved default F5
-  refresh/F6 pane focus/Ctrl+Shift+N semantics and no silent OS-reserved
-  key remaps. Require native/source tests, owned keyboard GUI, and matched
-  visual review of actual focus/pixels before final acceptance.
-- Context menus/provider commands: inventory the remaining safe verbs
-  and test explicit supported virtual/file-system targets before
-  widening capabilities. Provider Move/Delete/Recycle and arbitrary
-  provider writes must remain fail-closed until separately proven.
-- Indexed property/content search and optional filter rule
-  color/icon classifications: independently specify bounded product
-  behavior and cancellation; no silent filesystem traversal fallback.
-  New colors/icons require pixel-level review.
+Focused Windows run
+[38054888667](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38054888667)
+passed test-owned fixed-local-filesystem right-click, Shift+F10
+isolated Shell popup, Escape cancellation, unchanged test file and
+all six byte-identical legacy profile inputs. Source/binary was
+`ac4916a7f506f2bf0bc97ff7d01f4b3d6aedc41a`. Git compared it
+to current `65dcb8d`: only two GUI/source tests differ, so this is
+the *same compiled product*, not a different release feature level.
+Arbitrary external verbs, multiple selection, removable/UNC targets,
+provider moves/deletes/recycle, provider-to-provider copy and
+third-party Shell extensions remain unverified or intentionally blocked.
 
-These are candidate logical units, **not** implemented features.
+## 3. Large-folder metadata indexing — bounded PASS
 
-## 4. Above-20,000 global sort/filter — PARTIAL
+Focused Windows run
+[38055029443](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38055029443)
+used the identical preserved `ac4916a` Release binary and passed
+a **1,305-entry** size/date/type smoke followed by an owned
+**20,500-entry** fixture with indexed name sort/filter and global
+**size, modified date and type sorting**. The winning indexed type
+row was `bench-17000.aaa`; test process exited 0 and the six
+original legacy settings stayed unchanged.
 
-**Already accepted:** lightweight indexed name sort and name/mask
-filter on an owned 20,500-file folder, run `37211942616`,
-integrated revision `582560f89afe8c9c53bbc23791cdbd5d3335c014`,
-with matched Dark visual inspection.
+Read-only actual-app screenshots reviewed in
+[38056349169](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38056349169)
+were both 960x519 Dark: the two-pane layout and headers remained
+visible, no obvious new clipping was found and the after image
+displayed `bench-17000.aaa` first and 20,500 total entries.
 
-**Remaining:** full-folder type/size/modified-date ordering beyond
-`kMaxCompleteModelEntries=20000`. Current refusal is intentional.
-Implement a bounded metadata-index approach preserving the separate
-100,000-entry browse ceiling, 1,024-entry/8 MiB Shell reply budget,
-2,048-item resident window, stable logical identity, cancellation,
-stale-result rejection and complete deterministic ordering. Start
-with inexpensive native/source contracts; use one actual owned
-20,500-item metadata-sort GUI/visual fixture only after the new
-lower-layer contract converges. Do not claim arbitrary 100,000-item
-performance or third-party provider support.
+The current implementation adds a local **fixed-drive-only**
+metadata index bounded by `kMaxIndexedMetadataEntries=25000`
+and `kMaxIndexedMetadataPathUnits=12*1024*1024`, while preserving
+the full resident metadata bound of 20,000 and the separate
+100,000 sequential browse bound. Missing/stale metadata fails
+closed rather than presenting a partially sorted result.
 
-## Excluded release gates
+**Still OPEN:** acceptance at the *25,000-item limit* and larger
+scenarios, sustained performance/cancel/fault coverage, and
+global metadata indexing for removable/UNC/mapped-network/
+arbitrary virtual-provider locations. The 25,000 upper bound
+is a code ceiling, **not** a proven 25,000-file workload.
+100,000 is only a sequential browsing safety bound.
 
-Production signing, installer generation/publication, clean-machine
-Program Files/HKLM lifecycle, rightsholder clearance, matching public
-source release and release-tag publication remain OUT OF SCOPE. No
-test here converts those gates into PASS.
+## 4. Real USB and remote SMB — blocked by environment
+
+The central Windows VM had **zero removable volumes**, **zero
+mapped network volumes** and **zero non-special SMB shares** in
+read-only inventory. No USB or actual remote SMB acceptance is
+claimed. With separate authorization and test-owned disposable
+media/share, require copy/move/metadata sort, collisions,
+cancellation, offline and recycle-only failure behavior,
+file-byte verification and cleanup. Loopback administrative UNC
+is not a substitute for an independent SMB endpoint.
+Never modify user data or protected legacy configuration.
+
+## 5. Remaining Explorer features and distribution boundary
+
+Broader arbitrary accelerator editing, safe/provider context verbs,
+indexed property/content/provider search and visual filter rule
+color/icon classification remain separate feature tasks. Windows
+125/150/200% scaling, High Contrast, Narrator, Korean IME,
+third-party providers and long-duration errors require distinct
+acceptance evidence.
+
+Production signing, installer/Program Files/HKLM lifecycle,
+clean-machine install/update/rollback, rightsholder clearance,
+matching-source public distribution and release publication are
+**OUT OF SCOPE** for this stage and must not be initiated.
