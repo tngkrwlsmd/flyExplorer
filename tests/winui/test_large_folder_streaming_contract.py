@@ -134,6 +134,10 @@ class LargeFolderStreamingContracts(unittest.TestCase):
             "OWNED_LARGE_OVER_20K_DATE_SORT_INDEXED",
             "OWNED_LARGE_OVER_20K_TYPE_SORT_INDEXED",
             "large-name-index-over-20k-after.png",
+            "OWNED_LARGE_25000_EXACT_LIMIT_SORT_PASS",
+            "OWNED_LARGE_25001_METADATA_SORT_REFUSED",
+            "OWNED_LARGE_25001_NO_PARTIAL_SORT",
+            "OWNED_LARGE_BOUNDARY_SAMPLED_RSS_MIB",
         ):
             self.assertIn(marker,gui)
 
@@ -149,7 +153,7 @@ class LargeFolderStreamingContracts(unittest.TestCase):
 
     def test_owned_large_folder_fixture_is_bounded_and_never_mutates_global_clipboard(self):
         gui=read("tests/winui/test_large_owned_folder_gui.py")
-        for token in ("choices=(1100,2300,5000,8000,20500)",
+        for token in ("choices=(1100,2300,5000,8000,20500,25000,25001)",
                       "range(args.items)","LEGACY_PRESENT_SETTINGS_UNCHANGED",
                       'auto_id="SortPicker"'):
             self.assertIn(token,gui)

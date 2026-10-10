@@ -28,7 +28,7 @@ def until(fn,label,timeout):
 
 def main():
     parser=argparse.ArgumentParser()
-    parser.add_argument("--items",type=int,choices=(1100,2300,5000,8000,20500),default=1100)
+    parser.add_argument("--items",type=int,choices=(1100,2300,5000,8000,20500,25000,25001),default=1100)
     parser.add_argument("--configuration",choices=("Debug","Release"),
                         default="Debug")
     parser.add_argument("--resident-window-evidence",
@@ -38,7 +38,7 @@ def main():
     if args.resident_window_evidence!="none":
         assert args.items==2300 and args.configuration=="Release"
     if args.browse_over_complete_model:
-        assert args.items==20500 and args.configuration=="Release"
+        assert args.items in (20500,25000,25001) and args.configuration=="Release"
     if os.name!="nt":
         return 2
     here=APP
@@ -57,9 +57,10 @@ def main():
         (folder/f"bench-{n:04d}.txt").write_text(
             f"test-owned file {n}\n",encoding="utf-8")
     if args.browse_over_complete_model:
-        (folder/"bench-20499.txt").write_bytes(b"x"*4096)
+        winner=folder/f"bench-{args.items-1:04d}.txt"
+        winner.write_bytes(b"x"*4096)
         now=time.time()
-        os.utime(folder/"bench-20499.txt",(now+7200,now+7200))
+        os.utime(winner,(now+7200,now+7200))
         (folder/"bench-17000.txt").rename(folder/"bench-17000.aaa")
     env=os.environ.copy()
     for key in ("APPDATA","LOCALAPPDATA","TEMP","TMP"):
@@ -257,9 +258,10 @@ def main():
             until(lambda:fresh_parent().child_window(
                       auto_id="LeftNameFilterBox").has_keyboard_focus(),
                   "Ctrl+Shift+F did not focus the indexed name filter",5)
-            keyboard.send_keys("20499")
+            target=str(args.items-1)
+            keyboard.send_keys(target)
             until(lambda:fresh_parent().child_window(
-                      auto_id="LeftNameFilterBox").get_value()=="20499",
+                      auto_id="LeftNameFilterBox").get_value()==target,
                   "indexed name filter keyboard input did not accept the target",5)
             print("OWNED_LARGE_INDEX_FILTER_INPUT_ACCEPTED",True,flush=True)
             until(lambda:
@@ -277,7 +279,7 @@ def main():
             print("OWNED_LARGE_INDEX_FILTER_MODEL_STATE",
                   repr(status_text()),footer_count(),
                   repr(fresh_first_row()),flush=True)
-            until(lambda:"bench-20499.txt" in fresh_first_row(),
+            until(lambda:f"bench-{args.items-1:04d}.txt" in fresh_first_row(),
                   "indexed name filter did not project the target row",12)
             filt=fresh_parent().child_window(auto_id="LeftNameFilterBox")
             filt.set_focus()
@@ -288,14 +290,29 @@ def main():
             until(lambda:"bench-9999.txt" in fresh_first_row(),
                   "clearing indexed filter did not restore indexed name sort",12)
             fresh_parent().child_window(auto_id="SortPicker").select(2)
-            until(lambda:"bench-20499.txt" in fresh_first_row() and
-                  "20500" in progress_text(),
-                  "indexed metadata size sort above 20k did not complete",60)
-            assert (folder/"bench-20499.txt").stat().st_size==4096
+            if args.items==25001:
+                # The 25,001st Shell item is a sentinel, not a sortable
+                # metadata-index entry. No partial index sort may escape.
+                until(lambda:"25,000" in status_text(),
+                      "25,001 entries did not trigger safe indexed-sort refusal",90)
+                assert f"bench-{args.items-1:04d}.txt" not in fresh_first_row()
+                assert process.poll() is None
+                assert (folder/f"bench-{args.items-1:04d}.txt").stat().st_size==4096
+                print("OWNED_LARGE_25001_METADATA_SORT_REFUSED",True,flush=True)
+                print("OWNED_LARGE_25001_NO_PARTIAL_SORT",True,flush=True)
+                print("OWNED_LARGE_25001_SAMPLED_RSS_MIB",
+                      round(psutil.Process(process.pid).memory_info().rss/1048576,1),
+                      flush=True)
+                success=True
+                return
+            until(lambda:f"bench-{args.items-1:04d}.txt" in fresh_first_row() and
+                  str(args.items) in progress_text(),
+                  "indexed metadata size sort above 20k did not complete",90)
+            assert (folder/f"bench-{args.items-1:04d}.txt").stat().st_size==4096
             print("OWNED_LARGE_OVER_20K_SIZE_SORT_INDEXED",True,flush=True)
             fresh_parent().child_window(auto_id="SortPicker").select(3)
-            until(lambda:"bench-20499.txt" in fresh_first_row(),
-                  "indexed metadata date sort above 20k did not complete",35)
+            until(lambda:f"bench-{args.items-1:04d}.txt" in fresh_first_row(),
+                  "indexed metadata date sort above 20k did not complete",45)
             print("OWNED_LARGE_OVER_20K_DATE_SORT_INDEXED",True,flush=True)
             fresh_parent().child_window(auto_id="SortPicker").select(4)
             until(lambda:"bench-17000.aaa" in fresh_first_row(),
@@ -311,6 +328,11 @@ def main():
             print("OWNED_LARGE_OVER_20K_NAME_SORT_INDEXED",True,flush=True)
             print("OWNED_LARGE_OVER_20K_NAME_FILTER_INDEXED",True,flush=True)
             print("OWNED_LARGE_OVER_20K_METADATA_SORT_INDEXED",True,flush=True)
+            if args.items==25000:
+                print("OWNED_LARGE_25000_EXACT_LIMIT_SORT_PASS",True,flush=True)
+            print("OWNED_LARGE_BOUNDARY_SAMPLED_RSS_MIB",
+                  round(psutil.Process(process.pid).memory_info().rss/1048576,1),
+                  flush=True)
             print("OWNED_LARGE_OVER_20K_INDEX_VISUAL",evidence.name,flush=True)
             success=True
             return
