@@ -132,12 +132,18 @@ void MainWindow::UpdateSort(int selection){
  UpdateSortPresentation(side);
  FillFiles(side);
  if(state.indexedNameProjection){
-  if(state.indexToComplete)
+  if(state.indexToComplete){
    QueueNextFolderPage(side,true);
-  else
-   StatusText().Text(state.indexedMetadataSort?
-    L"인덱스 기반 파일 메타데이터 정렬을 준비합니다.":
-    L"전체 이름 인덱스로 정렬했습니다.");
+  }else if(state.indexedMetadataSort){
+   ScheduleFileMetadata(side);
+   if(state.metadataCurrent(
+       pane.routeIds[pane.active],pane.active,session.nameIndex().size()))
+    StatusText().Text(L"전체 메타데이터 인덱스로 정렬했습니다.");
+   else
+    StatusText().Text(L"인덱스 기반 파일 메타데이터 정렬을 준비합니다.");
+  }else{
+   StatusText().Text(L"전체 이름 인덱스로 정렬했습니다.");
+  }
   return;
  }
  const bool incomplete=
