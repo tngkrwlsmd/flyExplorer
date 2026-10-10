@@ -14,8 +14,8 @@ consumer core; this PROJECT.md remains project-owned across bundle refreshes.
   "facts": {
     "repository_root": {"value": ".", "status": "Confirmed", "evidence": "path:."},
     "primary_source": {"value": "app/winui", "status": "Confirmed", "evidence": "path:app/winui"},
-    "build_command": {"value": "build.bat Release", "status": "Confirmed", "evidence": "command-source:build.bat::build.bat Release"},
-    "test_command": {"value": "test.bat source", "status": "Confirmed", "evidence": "command-source:test.bat::test.bat source"},
+    "build_command": {"value": "build.bat Release", "status": "Confirmed", "evidence": "manual:central registered desktop-a winui-gui profile invokes build.bat Release from verified flyExplorer main checkout"},
+    "test_command": {"value": "test.bat source", "status": "Confirmed", "evidence": "manual:central registered desktop-a winui-gui profile invokes test.bat source from verified flyExplorer main checkout"},
     "runtime": {"value": "Windows 11 / Visual Studio 18.x / Python 3.14.x", "status": "Confirmed", "evidence": "manual:central registered Windows CI profile and current build policy"},
     "deploy_command": {"value": "", "status": "Unknown", "evidence": "manual:public deployment/signing remains an open gate"},
     "deploy_target": {"value": "", "status": "Unknown", "evidence": "manual:public deployment target is not certified"}
@@ -26,7 +26,7 @@ consumer core; this PROJECT.md remains project-owned across bundle refreshes.
     {"name": "winui-tests", "path": "tests/winui", "responsibility": "source, native and owned GUI contracts"}
   ],
   "review": {
-    "reviewed_revision": "20876753e83c391cd35e0b792b864b576e21bafe",
+    "reviewed_revision": "000e03a00bbad9ea93dbaf529a702fb94ef758d4",
     "reviewed_at": "2026-10-10",
     "reviewed_paths": [
       "app/winui",
