@@ -412,17 +412,29 @@ window. An owned 20,500-file GUI/visual scenario passed indexed name
 sort and filtering in run `37211942616` (merged product revision
 `582560f89afe8c9c53bbc23791cdbd5d3335c014`).
 
-Type, size and modified-date sorts still require a complete sortable
-metadata model capped by `kMaxCompleteModelEntries=20000`. They must
-refuse above that bound, not silently sort only loaded rows; the same
-20,500-file acceptance demonstrated this explicit size-sort refusal.
-Sequential browsing has a separate `kMaxBrowseEntries=100000` safety
-ceiling with 1,024-entry/8 MiB Shell pages and a 2,048-entry resident
-window. That ceiling is not evidence of accepted 100,000-item throughput.
-The outstanding scalability work is an indexed **metadata** strategy
-for above-20,000 type/size/date sorts, not a rewrite of the accepted
-indexed-name implementation. Preserve page identity, cancellation and
-bounded storage in any future extension.
+The complete resident sortable metadata model stays capped by
+`kMaxCompleteModelEntries=20000`. A separate **local fixed-drive-only**
+indexed metadata mode now permits type/size/modified-date sorting
+beyond that bound without storing all Shell rows in the resident model.
+`FileMetadataController` requires complete, valid indexed metadata
+and bounds the request to `kMaxIndexedMetadataEntries=25000` and
+`kMaxIndexedMetadataPathUnits=12*1024*1024`. Indexed logical item
+identities, route/ticket freshness, cancellation and fail-closed
+metadata collection protect against partial/stale global ordering.
+Removable/UNC/mapped-network and arbitrary Shell providers still refuse
+global metadata sorting above 20,000.
+
+The actual owned fixed-drive 20,500-entry GUI test passed indexed
+size/date/type sorting in `38055029443`. A 960x519 Dark matched
+app-window before/after screenshot review (`38056349169`) showed
+a correct first type-sort item, total count and preserved pane layout.
+The 25,000 ceiling is an implementation bound, not a 25,000-item
+performance or correctness acceptance.
+
+Sequential browsing retains the independent
+`kMaxBrowseEntries=100000` safety limit, 1,024-entry/8 MiB Shell
+transport pages and the 2,048-entry resident window. No general
+100,000-item sorted-folder throughput is certified.
 
 File-list rows carry logical `uint64` item indices, not resident-vector
 positions. Consumers translate them through `Snapshot::residentIndex()`
