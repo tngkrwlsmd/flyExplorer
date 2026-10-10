@@ -68,6 +68,16 @@ class ShortcutSemanticsContract(unittest.TestCase):
             self.assertNotIn("RunTransfer(", branch)
             self.assertNotIn("OpenFolder(", branch)
 
+    def test_full_gui_profile_covers_real_shortcut_keyboard(self):
+        orchestrator = compact(
+            (ROOT / "tools" / "winui" / "run_checks.py").read_text(
+                encoding="utf-8"
+            )
+        )
+        self.assertIn('if area == "all":', orchestrator)
+        self.assertIn('gui_command("shortcuts", configuration, env)', orchestrator)
+        self.assertIn('"test_shortcut_gui.py"', orchestrator)
+
     def test_file_operation_shortcuts_do_not_own_f5_or_f6(self):
         transfers = compact(TRANSFERS.read_text(encoding="utf-8"))
         handler = transfers[
