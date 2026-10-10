@@ -384,7 +384,10 @@ def gui_command(area, configuration, env):
         "search": ("FLY_M19_OWNED_FEATURES", "FLY_M19_OWNED_FEATURES_ONLY"),
         "file-operations": ("FLY_M21_OWNED_FEATURES", "FLY_M22_OWNED_FEATURES"),
         "session": ("FLY_M23_OWNED_FEATURES",),
-        "window-tabs": ("FLY_V7_WINDOW_TABS", "FLY_V7_WINDOW_TABS_ONLY"),
+        "window-tabs": (
+            "FLY_V7_WINDOW_TABS", "FLY_V7_WINDOW_TABS_SESSION",
+            "FLY_V7_WINDOW_TABS_ONLY",
+        ),
         "all": OWNED_FLAGS,
     }[area]
     for key in flags:
@@ -413,20 +416,22 @@ def run_gui(area, configuration, env, tag):
     )
     if dep_rc:
         return fail("HARNESS_DEPENDENCY_FAILURE", dep_rc)
+    if area == "all":
+        # Fail early on exact session-history cleanup before long GUI coverage.
+        # Keep standalone focused probes independently runnable.
+        for focused in ("window-tabs", "shortcuts"):
+            cmd, gui_env, timeout = gui_command(
+                focused, configuration, env
+            )
+            rc = execute(
+                f"gui-{focused}-{configuration}",
+                cmd, timeout, gui_env, tag,
+            )
+            if rc:
+                return fail("GUI_ACCEPTANCE_FAILURE", rc)
     cmd, gui_env, timeout = gui_command(area, configuration, env)
     rc = execute(f"gui-{area}-{configuration}", cmd, timeout, gui_env, tag)
-    if rc:
-        return fail("GUI_ACCEPTANCE_FAILURE", rc)
-    if area == "all":
-        # A separate test-owned WinUI process exercises real physical keyboard
-        # focus after the comprehensive shell/process lifecycle has completed.
-        cmd, gui_env, timeout = gui_command("shortcuts", configuration, env)
-        rc = execute(
-            f"gui-shortcuts-{configuration}", cmd, timeout, gui_env, tag
-        )
-        if rc:
-            return fail("GUI_ACCEPTANCE_FAILURE", rc)
-    return 0
+    return fail("GUI_ACCEPTANCE_FAILURE", rc) if rc else 0
 
 
 def run_build(configuration, env, tag):
