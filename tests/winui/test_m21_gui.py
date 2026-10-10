@@ -34,13 +34,17 @@ def run(*,p,win,element,safe_click,focus,eventually,left,right,localdata,env,exe
     print("M21_THEME_LABEL_AFTER_SELECT",element("ThemeStateText").window_text().encode("unicode_escape").decode("ascii"),flush=True)
     eventually(lambda:element("ThemeStateText").window_text()=="테마: 다크",
                "native Korean dark UI string not rendered")
-    expected=b"schema=2\r\nlanguage=ko-KR\r\ntheme=dark\r\nview=details\r\n"
+    # New writes use schema 3; schema 1/2 remain supported only for loading.
+    # Retain exact-byte atomic verification including default focus bindings.
+    expected=(b"schema=3\r\nlanguage=ko-KR\r\ntheme=dark\r\nview=details\r\n"
+              b"address-shortcut=0\r\nsearch-shortcut=2\r\n")
     eventually(lambda:profile.is_file() and profile.read_bytes()==expected,
                "native private Korean dark theme + view default not atomically persisted",12)
     # Theme application can replace/rebind the UIA peer. Re-resolve the
     # live picker for each transition and synchronize on both visible app state
     # and the atomic preference file before issuing the next transition.
-    light_expected=b"schema=2\r\nlanguage=ko-KR\r\ntheme=light\r\nview=details\r\n"
+    light_expected=(b"schema=3\r\nlanguage=ko-KR\r\ntheme=light\r\nview=details\r\n"
+                    b"address-shortcut=0\r\nsearch-shortcut=2\r\n")
     focus()
     element("ThemePicker").wrapper_object().select(1)
     eventually(lambda:

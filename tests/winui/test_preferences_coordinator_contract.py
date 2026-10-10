@@ -38,6 +38,15 @@ class PreferencesCoordinatorContract(unittest.TestCase):
         self.assertIn('ClInclude Include="preferences_coordinator.h"',project)
         self.assertIn('ClCompile Include="preferences_coordinator.cpp"',project)
 
+    def test_owned_theme_gui_expects_current_serialized_schema(self):
+        harness=(R/"tests/winui/test_m21_gui.py").read_text(encoding="utf-8")
+        writer=(R/"src/base/ui_preferences.cpp").read_text(encoding="utf-8")
+        self.assertIn('schema=3\\r\\nlanguage=ko-KR',harness)
+        self.assertIn('address-shortcut=0\\r\\nsearch-shortcut=2',harness)
+        self.assertIn("text3(pref.theme,pref.defaultViewMode",writer)
+        self.assertNotIn('expected=b"schema=2',harness)
+        self.assertNotIn('light_expected=b"schema=2',harness)
+
     def test_private_preferences_store_is_korean_default_atomic_and_legacy_isolated(self):
         body=(R/"src/base/ui_preferences.cpp").read_text(encoding="utf-8-sig")
         header=(R/"src/base/ui_preferences.h").read_text(encoding="utf-8-sig")
