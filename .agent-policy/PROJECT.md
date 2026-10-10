@@ -66,6 +66,14 @@ focused builds and CI requests use `tngkrwlsmd/personal-control-plane`
 Remote Shell or registered central CI (`project_id=desktop-a`), as
 documented in `docs/operations/windows-runner-retirement.md`.
 The independent `evidence/remote-windows` branch is intentionally retained.
+References below to retired request fields/workflows are historical evidence
+only; this current override and root `AGENTS.md` control live operations.
+
+Root `AGENTS.md` overrides the vendored generic branch-first Git example:
+prefer independently verified logical units directly on `main` when safe
+and permitted, or a short-lived work branch when protection, concurrent
+changes, explicit user direction or isolated integration requires it. Do not
+edit upstream-owned generic policy to restate this project exception.
 
 ## Current product checkpoint
 
@@ -334,29 +342,29 @@ rules below differ.
   paying for a Windows VM run. A remote run should answer a remaining product
   question, not be the first syntax review of a test harness.
 
-### Machine-enforced remote validation metadata
+### Current central Windows request contract and evidence identity
 
-The fixed `control/remote-shell` request slot now records the validation
-frontier in data rather than relying only on prose. Every request includes
-`candidate_sha`, stable `logical_unit`, `configuration`,
-`request_mode` and `validation_plan`. Diagnostic requests use mode
-`diagnostic`, configuration `none` and an empty plan. Validation requests
-use mode `validation`, Debug/Release configuration and a non-empty logical
-plan. The workflow does not regex-infer the command back into a second stage
-declaration.
+The former source-repository `control/remote-shell` fields
+(`request_mode`, `validation_plan`, `candidate_sha` and
+`expected_main_sha`) belonged to the retired workflow. Do not submit
+them as a replacement for the current central Remote Shell contract.
+The active request slot is maintained in `tngkrwlsmd/personal-control-plane`
+at `requests/remote-shell/request.json`, with target `windows-vm`.
 
-The request schema is intentionally small. Candidate SHA, configuration,
-logical unit and validation plan state the check directly; the workflow does
-not maintain a second fingerprint/reuse protocol or inspect previous Actions
-runs before execution. A moved main SHA is advisory for read-only diagnostics
-but fail-closed for validation, write/destructive work and final acceptance.
+Independent central CI requires manual `central-flyexplorer-ci.yml`
+dispatch with `project_id=desktop-a`, an exact 40-character SHA reachable
+from `flyExplorer/main`, and an explicit `health|source|release|gui|gui-probe`
+scope. `health` and `gui-probe` are not product acceptance, and `gui`
+does not certify Debug or final-pixel visual evidence. The retired Debug+
+Release `full` profile has no exact automatic central equivalent. See
+`docs/development/VERIFICATION_PROFILE.md` and
+`docs/operations/windows-runner-retirement.md`.
 
-Do not rerun the same product/test revision merely to see whether it passes.
-After a failure, classify the first relevant error and change the product,
-harness, or execution condition that explains it before a successor
-validation. Resume from the earliest invalidated boundary and preserve
-unaffected successful evidence without encoding it into remote request
-metadata.
+Retain the producing run ID, tested exact source SHA, configuration/binary,
+environment, scenario/scope, stage conclusion and visual acceptance
+separately. Preserve prior PASS evidence only for unchanged applicable
+boundaries; do not rerun an unchanged product/test revision merely hoping
+for a different outcome.
 
 ### Default verification ladder
 
@@ -417,111 +425,42 @@ directly invalidates that fixture's result.
 
 ### Remote-shell and CI discipline
 
-- The persistent `control/remote-shell` checkout is the normal Windows
-  development surface. Batch only the stages that are currently required; do
-  not include earlier PASS stages "for completeness".
-- Before every request-slot commit, preflight the current request schema locally/
-  in the agent layer. A diagnostic request uses
-  `request_mode: "diagnostic"`, `configuration: "none"` and an empty
-  `validation_plan`. A validation request uses
-  `request_mode: "validation"`, configuration exactly `Debug` or
-  `Release`, a non-empty logical `validation_plan`, the intended
-  `candidate_sha` and the live `expected_main_sha`. Do not infer a second
-  stage declaration from free-form command text. Workflow rejection for these
-  invariants is an agent preflight defect and should never be used as
-  product-failure evidence.
-- The request-slot commit is allowed only after a **zero-run preflight** has
-  cleared avoidable control/harness errors: referenced refs/SHAs/paths exist,
-  command quoting is structurally valid, changed Python harnesses have syntax
-  and import-path sanity, changed prose/source contracts have the narrowest
-  local/static check, and new GUI automation IDs/API calls are verified against
-  checked-in code or an established harness. If any of those checks fail, fix
-  them before dispatch; do not create a Remote Windows Task to discover them.
-- The canonical local/static request validator is
-  `tools/winui/validate_remote_request.py`; GUI harness API/syntax traps are
-  guarded by `tests/winui/test_gui_harness_contract.py`. Apply those checks,
-  or mechanically reproduce the same assertions from repository content, before
-  the request-slot commit. Do not add GitHub-hosted/cloud compute for this
-  preflight and do not substitute a Windows VM run for a missing local/static
-  check. The remote workflow remains only a second-line guard.
-- Treat missing modules, nonexistent branches, invalid request metadata,
-  PowerShell/JSON serialization mistakes, brittle Markdown line-wrap
-  assertions and nonexistent UIA/pywinauto methods as **preflight defects** by
-  default. They are not product failures unless independent product evidence
-  proves otherwise.
-- If the available GitHub connector/API does not expose a repository operation
-  needed for the task, use `control/remote-shell` as the immediate
-  repository-scoped fallback when the operation is shell-capable. This includes
-  Git/branch cleanup and private run/artifact inspection when practical. Do not
-  declare the task blocked, leave required cleanup undone, or switch to
-  RDC/another control path merely because a connector method is missing.
-- **Pre-dispatch lease:** before writing `requests/remote-shell/request.json`
-  or pushing the control branch, query recent Remote Windows Task runs for
-  `control/remote-shell`. If any run is `queued`, `pending`, `waiting`,
-  `requested` or `in_progress`, do not touch the request slot and do not
-  create a successor request. Record the active run ID and wait/resume from it.
-  Workflow-side request validation is only a second line of defense because it
-  occurs after scheduling and cannot recover queue time already consumed.
-  The workflow concurrency group currently represents a single interactive
-  execution lane. If capacity changes, re-evaluate the lease and concurrency
-  policy instead of carrying the single-runner assumption forward.
-- If the current user request depends on a GitHub Actions / Remote Windows
-  Task result, that run is a blocking dependency. Record the Actions start time
-  and poll every **30 seconds** while its reported execution time is under
-  **three minutes**. Do not end the response after an early queued/running read
-  during that window. Consume completion immediately and continue the dependent
-  action in the same task. If the run is still active once its Actions
-  execution time reaches three minutes, stop waiting in that response and leave
-  the exact run ID, candidate SHA and next action as the resume checkpoint.
-  Independently known completion is inspected immediately; never poll faster
-  than 30 seconds or create an automation merely to bridge this wait. The user
-  does not need to separately request active monitoring for a result-dependent
-  run. The 30-second observation cadence and 180-second same-turn ceiling are
-  agent policy, not workflow environment settings.
-- Do not use a numeric retry token or workflow-side run budget. Every successor
-  must have a completed predecessor, a material product/harness/execution-
-  condition change, and a concrete new failure hypothesis or evidence need.
-- For an unexplained GUI/input failure, the first diagnostic successor must
-  establish the failing layer before the interaction mechanism is changed.
-  Prefer environment-gated test diagnostics that capture event entry, hit
-  target/geometry, drag or button/capture state, pointer/cursor coordinates and
-  deltas, and the resulting model/UI boundary in one run. Do not burn Windows
-  runs on competing event-routing hypotheses until that boundary is proven.
-- High-cost fixtures are final acceptance only. Their current project-specific
-  sizes/thresholds live in `docs/development/VERIFICATION_PROFILE.md`, not in
-  policy text. First prove the harness/control lifecycle on the smallest
-  fixture that exercises the same path, and preserve unaffected PASS evidence
-  if a high-cost fixture later exposes a harness defect.
-- Before any high-cost E2E successor, classify the first relevant failure as
-  **product**, **harness/fixture**, or **control-plane/environment**, then
-  isolate the broken boundary on the smallest fixture that preserves the same
-  lifecycle. For GUI paths, prove **input -> event -> model -> projection** in
-  order before using the expensive fixture again. High-cost E2E is final
-  acceptance, not discovery for UIA/automation semantics, stale wrappers,
-  fixture assumptions, request serialization, runner routing or other
-  orchestration defects. Fix only the identified layer and rerun only the
-  invalidated boundary; repeat the expensive fixture only when its acceptance
-  evidence was genuinely invalidated.
-- For a result-dependent Actions run, the normal same-response observation
-  window is bounded: check every 30 seconds until completion or until the run's
-  Actions execution time reaches three minutes, whichever comes first. Only
-  after that three-minute ceiling may an unfinished required run be left as a
-  resume checkpoint. A run that is not required for the current request may be
-  checkpointed immediately. Do not replace either case with an unsolicited
-  scheduled task.
-- Main-branch pushes do not trigger Windows validation automatically. After a
-  logical unit is already accepted and moved to main, do not dispatch another
-  Windows CI run just to reconfirm it. A post-main manual gate requires a
-  distinct release/deployment requirement, a newly invalidated risk, or an
-  explicit user request.
-- Keep only `main`, the minimal `control/remote-shell` branch, and at most
-  the temporary work branch required by the current isolated integration.
-  Delete an accepted `work/*` branch immediately after its final tree is on
-  main.
-- Operational control-branch commits and remote evidence are never product
-  history. Product main should contain one clean logical product commit (plus a
-  necessary acceptance/docs commit when appropriate), not iterative WIP or
-  verification churn.
+- `tngkrwlsmd/personal-control-plane` now owns Windows VM Remote Shell
+  and independent central CI. Before dispatch read live flyExplorer main,
+  recent commits, accepted evidence, active central jobs, and the central
+  request lease. Never overwrite active work or queue duplicate requests.
+- Central Remote Shell requests target `windows-vm` and must name the
+  verified working directory, command and source revision. Restore its
+  request slot to idle after completion. Do not recreate the retired
+  `control/remote-shell` branch or reuse its old schema.
+- Independent acceptance requires manual registered CI with `desktop-a`,
+  trusted exact main SHA and intended `health|source|release|gui|gui-probe`
+  scope. Only the producing workflow's completed run and exact-SHA status
+  establish the scope-specific conclusion, not the dispatch itself.
+- Apply zero-run preflight: verify refs/SHAs, real paths, quoting across
+  PowerShell/JSON, changed Python syntax/imports, applicable source
+  contracts, UIA APIs and test-owned fixtures before consuming VM time.
+  Request/preflight defects are not product failures.
+- If the GitHub connector lacks a required repository operation, prefer
+  approved central Remote Shell where supported. For Windows computer
+  management, use `windows-vm-control` first where capable; RDC is
+  limited to central control failure or actual desktop interaction.
+- For a required active Actions result, observe no faster than every
+  30 seconds up to three minutes of Actions execution time. If still
+  active, retain run ID, SHA, scope and next action for resumption.
+- Do not speculatively rerun the same SHA. A successor requires a
+  completed predecessor and a concrete product/harness/environment
+  change that addresses the first relevant failure. Diagnose GUI
+  input -> event -> model -> projection on a small fixture before
+  high-cost E2E. Preserve unaffected PASS evidence.
+- Treat full/large fixtures as final acceptance only, with the bounds
+  and FAST/STANDARD/FINAL profiles in
+  `docs/development/VERIFICATION_PROFILE.md`.
+- `flyExplorer/main` pushes do not automatically trigger Windows CI.
+  Keep `main` and archival `evidence/remote-windows`; delete
+  accepted temporary `work/*` branches. Operational requests are
+  not product history. The privileged central service must never
+  execute untrusted source PR/fork code automatically.
 
 ### Source-contract hygiene
 
@@ -548,7 +487,7 @@ directly invalidates that fixture's result.
 
 ## Current verification
 
-2026-10-09 current-main evidence: PR #55 merged as
+2026-10-09 revision-scoped main evidence: PR #55 merged as
 `7c23af1515fab0926fa409d277efd6e16b9d1f65`; central Windows CI
 `37891854981` passed Release build and full `gui-all-Release`
 (exit 0, 145.1 s) and posted `central-ci/windows-gui=success`.
@@ -838,61 +777,35 @@ owned 5,000-item navigation/sort/progressive-paging evidence are unchanged.
   FlyShellIsolationHelper.exe are required.
 - Potentially blocking Shell/provider behavior stays off the XAML UI thread and
   behind bounded isolation.
-- The self-hosted Windows build workflow is manual `workflow_dispatch` only;
-  normal main pushes do not queue it. The default manual scope is `release`,
-  which includes policy/source contracts, the Release M20 native state fixture,
-  canonical Release build and runtime-set verification. `release-gui` and
-  `full` remain explicit exceptional manual choices. Windows development,
-  focused tests, runtime diagnosis and GUI/visual evidence use the persistent
-  `control/remote-shell` path instead.
-- Every resumed/interrupted task starts by reading live main HEAD, recent main
-  commits and recent main CI together. If the named logical unit is already
-  merged and accepted, advance instead of reopening old control-branch or
-  pre-main evidence.
-- Iterative Windows development, Win11 benchmarking and GUI refinement should
-  prefer the fixed `control/remote-shell` branch request slot. Every request
-  includes `expected_main_sha` from that live checkpoint; the workflow rejects
-  stale requests if main has moved. Updating
-  `requests/remote-shell/request.json` on that branch triggers this
-  repository's `Remote Windows Task` on the interactive Windows VM and runs
-  against workflow-configured canonical persistent checkout by default. Request
-  commits are operational history and must never merge into main; main remains
-  the history of verified logical units. Manual workflow_dispatch is the
-  human-operated equivalent. RDC is supplementary for interactions that shell/
-  UIA/screenshot evidence cannot exercise. Use
-  `windows-vm-control` first for Windows computer management, when accessible
-  and suitable for the operation. The verified
-  `tngkrwlsmd/personal-control-plane` remains the central-CI/status-relay
-  and fallback runner-recovery surface.
-  The control branch is a minimal control-plane tree containing only the
-  request slot and a thin push trigger. The full Remote Windows Task
-  implementation lives on `main` as a reusable workflow, and the control
-  trigger calls that `@main` implementation instead of carrying a second copy
-  of validation/path/artifact/execution logic.
-  The persistent checkout fetches live main for every product command. No
-  `remote/**` command-branch fallback is maintained. Temporary `work/*`
-  branches are deleted once their accepted final tree is on main.
-- The persistent remote-shell checkout is the primary Windows development and
-  diagnosis surface. Verification scope, failure handling, evidence
-  preservation, retry prohibition and polling behavior follow the
-  project-specific **Development loop and verification budget** above. Windows
-  build Actions are never triggered merely by a push and never receive a
-  diagnosis-free same-revision rerun.
-- Remote Windows Task preserves multi-line PowerShell source by writing
-  `REMOTE_COMMAND` verbatim to a per-run temporary `.ps1` and launching a
-  fresh `powershell.exe -File` process. The child process exit code determines
-  command success/failure; the temporary script is removed in `finally`.
+- The dedicated flyExplorer Runner and source-repository Windows workflows
+  were retired on 2026-10-10; a normal main push does not trigger CI.
+  Development/diagnosis uses central Remote Shell (`windows-vm`) after
+  slot/lease preflight. Independent acceptance uses manual registered
+  `personal-control-plane` CI (`desktop-a`, trusted 40-character main
+  SHA, explicit scope).
+- A resumed task must first check live main HEAD, recent commits, current
+  central CI and current status. Historical results are SHA-scoped and
+  already accepted logical units must not be restarted.
+- There is no central automatic equivalent of former Debug+Release
+  `full`; `gui` covers Release functional GUI, not final-pixel visual
+  acceptance. See the central operations and verification documents.
+- For Windows computer management, first check `windows-vm-control`
+  capabilities; central `personal-control-plane` owns the Windows VM
+  execution path and RDC is fallback only when warranted.
+- Earlier `control/remote-shell`, `Remote Windows Task` and
+  `Windows VM Build` references are historical evidence, not live
+  commands or trigger configurations.
 - GitHub-hosted runners require explicit user approval and are not part of the
   active flyExplorer CI path by default.
-- The privileged self-hosted runner must not execute untrusted fork/PR code
-  automatically.
+- The privileged central Windows service must not execute untrusted
+  fork/PR code automatically.
 - Normal repository work intentionally overrides the generic branch-first
   default: prefer verified direct-main logical units; use a work branch only
   when repository protection, explicit user direction, concurrent work, or
   isolated integration testing makes one necessary.
-- Vendored generic policy is validated as Profile B-style bundle/readiness/
-  conformance evidence in self-hosted CI. This does not claim Profile C runtime
-  enforcement.
+- Vendored generic policy has Profile B-style bundle/readiness/
+  conformance evidence; this does not claim Profile C runtime enforcement
+  or turn a past runner result into current acceptance.
 
 High Contrast ON is accepted on merged product revision
 `eaa1b368a677f57c15183c5e6851f0598ed25878`. Actual Windows High Contrast

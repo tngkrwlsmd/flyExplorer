@@ -1,4 +1,4 @@
-# flyExplorer current status — 2026-10-09
+# flyExplorer current status — operations updated 2026-10-10
 
 ## Product source of truth
 
@@ -6,6 +6,38 @@ main is the canonical C++/WinRT WinUI 3 product. Product code lives in
 app/winui, UI-independent native code in src/base, tests in tests/winui, and
 bounded orchestration in tools/winui/run_checks.py. The former MFC application
 is retired from the working tree and is recoverable from Git revision cbffb48.
+
+## Windows ownership and acceptance-evidence baseline (2026-10-10)
+
+The 2026-10-10 main snapshot `6ab2791ae1991f3750fa754c2c2d7015aef01950`
+retired the flyExplorer-specific Windows Runner, `control/remote-shell`
+branch and source-repository Windows Actions workflows; the sanitized
+`evidence/remote-windows` historical branch remains preserved. Windows
+development now uses `tngkrwlsmd/personal-control-plane` Remote Shell
+(target `windows-vm`). Independent acceptance requires manual
+`central-flyexplorer-ci.yml` with `project_id=desktop-a`, an exact
+40-character SHA reachable from `flyExplorer/main`, and explicit
+`health|source|release|gui|gui-probe` scope. A normal main push does not
+trigger Windows validation. See `docs/operations/windows-runner-retirement.md`
+and `docs/development/VERIFICATION_PROFILE.md`.
+
+These are revision- and scope-specific evidence records, not blanket
+current-main product acceptance:
+
+| Tested/source revision | Producing run or record | Proven scope / limitation |
+| --- | --- | --- |
+| `7c23af1515fab0926fa409d277efd6e16b9d1f65` (2026-10-09) | Central Windows CI `37891854981`, `central-ci/windows-gui=success` | Release build, `gui-all-Release` functional GUI, exit 0; no new visual/DPI/IME/signing claim |
+| `029ef1e5d8f186bfc5262d386576204b58fa47a9` candidate (2026-10-09) | Remote task `37934459707` and visual task `37935505947` | Indexed-date targeted native/Release/GUI and matched Dark 100% visuals; candidate-specific, not main full-suite acceptance |
+| `6ab2791ae1991f3750fa754c2c2d7015aef01950` (2026-10-10) | Windows-ownership migration source commit | Source/operations change; its main inclusion alone does not establish Release, functional GUI or visual PASS |
+
+When making any new acceptance claim, record the exact source SHA,
+tested binary/configuration, environment, actual scenario/scope,
+producing run ID, status/conclusion and visual comparison separately.
+Reuse previous PASS evidence only when the corresponding product,
+runtime and environment are unchanged. `health`/`gui-probe` are not
+product acceptance, and central `gui` does not prove the retired
+Debug+Release `full` or final-pixel visual gate. Older task names
+below are historical revision-specific evidence only.
 
 The current product architecture includes the completed V8-A through V8-E
 controller-extraction cycle: WindowWorkspaceController, SessionCoordinator,
@@ -275,7 +307,7 @@ requires the pinned tests/winui/requirements-gui.txt set and an interactive
 Windows desktop. Debug is framework-dependent; Release is self-contained but
 still requires its complete sibling runtime/resources.
 
-Remote Windows Task now preserves multi-line/quoted PowerShell source by writing
+The retired Remote Windows Task preserved multi-line/quoted PowerShell by writing
 `REMOTE_COMMAND` verbatim to a per-run temporary `.ps1` and invoking a fresh
 `powershell.exe -File` process. The child process exit code is authoritative
 and the temporary script is removed in `finally`. Candidate run #429
@@ -429,7 +461,7 @@ archival-only smoke test.
 
 ### 2026-10-09 — main Release and complete GUI acceptance
 
-Current main revision `7c23af1515fab0926fa409d277efd6e16b9d1f65`
+On 2026-10-09, main revision `7c23af1515fab0926fa409d277efd6e16b9d1f65`
 (merged PR #55) was verified by the independent central Windows CI run
 `37891854981` in `tngkrwlsmd/personal-control-plane`.
 The run logged `PASS release-build`, `gui-all-Release` exit 0
@@ -1229,11 +1261,12 @@ owned Release GUI suite passed with normal process exit, and the Release runtime
 set passed. This closes the bookmark logical unit together with the focused
 pre-main functional and visual evidence below.
 
-Development policy now treats the persistent remote shell as the Windows
-diagnosis/build iteration surface. Windows VM Build is manual
-`workflow_dispatch` only: normal main pushes do not queue it, the default
-manual scope is `release`, and `release-gui`/`full` are explicit
-exceptional choices. Deterministic product/source failures require a new revision; one controlled same-revision rerun is allowed only for a clearly classified infrastructure/transient failure.
+At the time of this bookmark acceptance, the repository used its
+dedicated Remote Windows Task and Windows VM Build workflows. They were
+retired on 2026-10-10; use `personal-control-plane` for current requests.
+The current retry rule forbids automatic or speculative same-revision
+reruns: classify the first relevant failure and change the invalidated
+product, harness or execution condition before a successor run.
 
 Persistent WinUI bookmarks were pre-main validated on work revision
 `3ea29587c973d879f1ad2236f4354794b1a81d62`. The final focused product
@@ -1509,9 +1542,9 @@ HKLM machine-wide lifecycle, or clear rightsholder/legal review.
 ## Open gates
 
 Not certified by current automated evidence:
-- actual 125%, 150% and 200% OS display scaling (blocked on the current
-  self-hosted VM: Windows reports one active 1274x771 display mode and
-  DisplayConfig DPI range CURRENT=100%, RECOMMENDED=100%, MAX=100%);
+- actual 125%, 150% and 200% OS display scaling (the retired dedicated
+  VM reported only a 1274x771 display mode and 100% DPI range; this is
+  historical environment evidence, not current central-runner acceptance);
 - human Narrator and Korean IME composition acceptance;
 - signed clean-machine machine-wide install/update/rollback;
 - public redistribution/source-delivery/rightsholder/legal clearance.

@@ -32,11 +32,24 @@ The retired MFC product is recoverable only from Git revision cbffb48.
 Historical migration reports and legacy HTML Help are no longer kept in the
 working tree; Git history is their recovery source.
 
-See docs/development/CURRENT_STATUS.md for accepted functionality and open
-release gates. Windows validation uses the repository-scoped self-hosted runner,
-but normal main pushes do not queue Windows VM Build. Use control/remote-shell
-for iterative Windows development and focused validation; dispatch Windows VM
-Build manually only for a deliberate one-off acceptance/build gate.
+See docs/development/CURRENT_STATUS.md for revision-scoped acceptance evidence
+and open release gates. Since 2026-10-10, flyExplorer no longer owns a
+self-hosted Windows Runner, control/remote-shell branch or Windows Actions
+workflows. Normal main pushes do not trigger Windows acceptance.
+
+Use tngkrwlsmd/personal-control-plane for Windows operations. Its Remote Shell
+accepts requests targeting windows-vm; manual central-flyexplorer-ci.yml
+acceptance uses project_id=desktop-a, an exact 40-character commit_sha reachable
+from flyExplorer/main, and an explicit scope (health, source, release, gui or
+gui-probe). Health and gui-probe are not product acceptance; gui proves
+functional GUI, not visual pixels or the former Debug+Release full suite.
+Check active jobs and the request lease before dispatch. The current contract
+is in docs/operations/windows-runner-retirement.md and root AGENTS.md.
+
+For flyExplorer, root AGENTS.md overrides the vendored generic branch-first
+Git example: prefer verified logical units directly on main when safe and
+permitted, using short-lived work branches only when required. Preserve
+evidence/remote-windows as a historical evidence archive.
 
 License
 -------
