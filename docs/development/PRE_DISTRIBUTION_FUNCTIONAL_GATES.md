@@ -84,11 +84,33 @@ the full resident metadata bound of 20,000 and the separate
 100,000 sequential browse bound. Missing/stale metadata fails
 closed rather than presenting a partially sorted result.
 
-**Still OPEN:** acceptance at the *25,000-item limit* and larger
-scenarios, sustained performance/cancel/fault coverage, and
-global metadata indexing for removable/UNC/mapped-network/
-arbitrary virtual-provider locations. The 25,000 upper bound
-is a code ceiling, **not** a proven 25,000-file workload.
+**Latest accepted exact-boundary Windows verification (2026-10-10):**
+source `3587d36d183493ca634fa01681681951bc48455f`,
+preserved Release build run `38058015868` PASS. Owned GUI run
+`38058327731` PASS: 1,305-entry smoke; **25,000-entry**
+indexed type, size, modified-date sort PASS; **25,001-entry**
+fail-closed refusal and no partial sort PASS, with original
+profile bytes unchanged. Sample process RSS 148.7 MiB (25,000)
+and 133.9 MiB (25,001 refusal); these are point samples, not
+peak RSS or performance guarantees. Metadata requires one
+Shell lookahead sentinel at the 25,000 bound.
+
+**Metadata error/cancel acceptance:** product code remains identical
+to `3587d36`; test-only SHA `84610ab4e73396a534899e4b1192e1a284a2978d`.
+Windows run `38060310939` PASS after two prior **harness/environment**
+failures, not product failures: source contract 9/9, test-owned
+junction reparse metadata error -> whole indexed sort canceled
+without partial projection, and immediate application close
+after metadata sort request -> owned process exit 0,
+original file bytes and protected profiles unchanged.
+No new product build was needed after `3587d36`.
+
+**Still OPEN:** scale beyond 25,000, measured peak/memory/performance
+over long runs, removable/UNC/network/virtual-provider indexed
+metadata, and broader cancellation/fault modes beyond the
+accepted owned reparse and immediate-close cases.
+The independent 100,000 sequential browse budget remains unverified
+as a performance promise.
 100,000 is only a sequential browsing safety bound.
 
 ## 4. Real USB and remote SMB — blocked by environment
