@@ -42,11 +42,18 @@ UNC evidence and are not remote SMB certification.
 
 ## 3. Explorer-level function backlog — OPEN
 
-- User-configurable shortcuts: add a bounded private, atomic settings
-  schema, collision checks, preserved default F5 refresh/F6 pane focus/
-  Ctrl+Shift+N semantics and no silent OS-reserved key remaps.
-  Require invalid-input native/source tests, actual owned keyboard GUI,
-  and matched visual review if focus/pixels change.
+- Keyboard usability improvement (2026-10-10): Ctrl+L now focuses the
+  existing address editor and Ctrl+F focuses the existing quick-search
+  field without starting a file mutation or launching an unsolicited
+  search. The focused Windows GUI regression uses
+  `python -X utf8 tools/winui/run_checks.py gui --area shortcuts --configuration Release`.
+  These shortcuts remain **pending actual GUI acceptance** until the
+  producing run on their source revision passes.
+- User-configurable shortcuts remain **OPEN**: add a bounded private,
+  atomic settings schema, collision checks, preserved default F5
+  refresh/F6 pane focus/Ctrl+Shift+N semantics and no silent OS-reserved
+  key remaps. Require native/source tests, owned keyboard GUI, and matched
+  visual review of actual focus/pixels before final acceptance.
 - Context menus/provider commands: inventory the remaining safe verbs
   and test explicit supported virtual/file-system targets before
   widening capabilities. Provider Move/Delete/Recycle and arbitrary

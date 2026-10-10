@@ -167,6 +167,27 @@ namespace winrt::FlyExplorer::implementation
                 const bool shift=(::GetKeyState(VK_SHIFT)&0x8000)!=0;
                 const bool alt=(::GetKeyState(VK_MENU)&0x8000)!=0;
                 const auto key=args.Key();
+                // Explorer-aligned read-only focus shortcuts. Keep them
+                // independent from file-operation commands and text edits.
+                if(control&&!shift&&!alt&&
+                   key==Windows::System::VirtualKey::L){
+                    if(auto ui=nativeWeak.get()){
+                        ui->OnAddressDisplayClicked(nullptr,nullptr);
+                        args.Handled(true);
+                    }
+                    return;
+                }
+                if(control&&!shift&&!alt&&
+                   key==Windows::System::VirtualKey::F){
+                    if(auto ui=nativeWeak.get()){
+                        auto search=ui->QuickSearchBox();
+                        search.Focus(
+                            Microsoft::UI::Xaml::FocusState::Keyboard);
+                        search.SelectAll();
+                        args.Handled(true);
+                    }
+                    return;
+                }
                 if(!control&&!shift&&!alt&&
                    key==Windows::System::VirtualKey::F5){
                     if(auto ui=nativeWeak.get()){

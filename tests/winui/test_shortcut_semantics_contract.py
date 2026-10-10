@@ -47,6 +47,27 @@ class ShortcutSemanticsContract(unittest.TestCase):
         self.assertIn("Focus( Microsoft::UI::Xaml::FocusState::Keyboard)", f6)
         self.assertNotIn("RunTransfer(", f6)
 
+    def test_ctrl_l_and_ctrl_f_focus_existing_fields_without_mutation(self):
+        window = compact(WINDOW.read_text(encoding="utf-8"))
+        preview = window.split("RootShell().PreviewKeyDown(", 1)[1].split(
+            "RefreshWindowTabs();", 1
+        )[0]
+        address = preview.split(
+            "key==Windows::System::VirtualKey::L", 1
+        )[1].split("key==Windows::System::VirtualKey::F", 1)[0]
+        search = preview.split(
+            "key==Windows::System::VirtualKey::F", 1
+        )[1].split("key==Windows::System::VirtualKey::F5", 1)[0]
+        self.assertIn("control&&!shift&&!alt", preview)
+        self.assertIn("OnAddressDisplayClicked(nullptr,nullptr)", address)
+        self.assertIn("QuickSearchBox()", search)
+        self.assertIn("Focus(", search)
+        self.assertIn("SelectAll()", search)
+        for branch in (address, search):
+            self.assertIn("args.Handled(true)", branch)
+            self.assertNotIn("RunTransfer(", branch)
+            self.assertNotIn("OpenFolder(", branch)
+
     def test_file_operation_shortcuts_do_not_own_f5_or_f6(self):
         transfers = compact(TRANSFERS.read_text(encoding="utf-8"))
         handler = transfers[

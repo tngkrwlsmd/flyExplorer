@@ -202,6 +202,28 @@ try:
         10,
     )
     print("REAL_F6_DUAL_PANE_FOCUS_NO_FILE_MUTATION", True, flush=True)
+
+    # Ctrl+L and Ctrl+F focus the existing controls; neither opens a
+    # folder, starts a search, mutates selected files or steals foreground.
+    focus()
+    send_keys("^l")
+    eventually(
+        lambda: element("AddressBox").has_keyboard_focus(),
+        "Ctrl+L did not focus the existing address editor", 7,
+    )
+    assert source.is_dir() and secondary.is_dir()
+    assert not (right / source.name).exists()
+    print("REAL_CTRL_L_ADDRESS_FOCUS_NO_FILE_MUTATION", True, flush=True)
+
+    focus()
+    send_keys("^f")
+    eventually(
+        lambda: element("QuickSearchBox").has_keyboard_focus(),
+        "Ctrl+F did not focus the existing quick search box", 7,
+    )
+    assert source.is_dir() and secondary.is_dir()
+    assert not (right / source.name).exists()
+    print("REAL_CTRL_F_QUICK_SEARCH_FOCUS_NO_FILE_MUTATION", True, flush=True)
 finally:
     if process and process.poll() is None:
         if hwnd:

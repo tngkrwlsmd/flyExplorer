@@ -24,6 +24,7 @@ PRODUCT_SUITES = {
     "core": [
         "tests/winui/test_arch_contract.py",
         "tests/winui/test_m26_fluent_contract.py",
+        "tests/winui/test_shortcut_semantics_contract.py",
         "tests/winui/test_file_metadata_controller_contract.py",
         "tests/winui/test_localization_contract.py",
     ],
@@ -106,6 +107,7 @@ FAULT_FLAGS = (
 )
 GUI_AREAS = (
     "core",
+    "shortcuts",
     "shell",
     "search",
     "search-content-regex",
@@ -337,6 +339,10 @@ def gui_command(area, configuration, env):
     ):
         gui_env.pop(key, None)
 
+    if area == "shortcuts":
+        return [
+            sys.executable, "-u", str(TESTS / "test_shortcut_gui.py"),
+        ], gui_env, 150
     if area == "search-content-regex":
         return [
             sys.executable,
