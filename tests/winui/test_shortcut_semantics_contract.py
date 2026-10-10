@@ -75,7 +75,8 @@ class ShortcutSemanticsContract(unittest.TestCase):
             )
         )
         self.assertIn('if area == "all":', orchestrator)
-        self.assertIn('gui_command("shortcuts", configuration, env)', orchestrator)
+        self.assertIn('for focused in ("window-tabs", "shortcuts"):', orchestrator)
+        self.assertIn('gui_command( focused, configuration, env )', orchestrator)
         self.assertIn('"test_shortcut_gui.py"', orchestrator)
 
     def test_file_operation_shortcuts_do_not_own_f5_or_f6(self):
