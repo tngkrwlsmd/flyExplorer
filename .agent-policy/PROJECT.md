@@ -14,9 +14,9 @@ consumer core; this PROJECT.md remains project-owned across bundle refreshes.
   "facts": {
     "repository_root": {"value": ".", "status": "Confirmed", "evidence": "path:."},
     "primary_source": {"value": "app/winui", "status": "Confirmed", "evidence": "path:app/winui"},
-    "build_command": {"value": "build.bat Release", "status": "Confirmed", "evidence": "command-source:.github/workflows/windows-build.yml::build.bat Release"},
-    "test_command": {"value": "test.bat source", "status": "Confirmed", "evidence": "command-source:.github/workflows/windows-build.yml::test.bat source"},
-    "runtime": {"value": "Windows 11 / Visual Studio 18.x / Python 3.14.x", "status": "Confirmed", "evidence": "manual:project self-hosted Windows runner preflight and current build policy"},
+    "build_command": {"value": "build.bat Release", "status": "Confirmed", "evidence": "manual:central registered desktop-a winui-gui profile invokes build.bat Release from verified flyExplorer main checkout"},
+    "test_command": {"value": "test.bat source", "status": "Confirmed", "evidence": "manual:central registered desktop-a winui-gui profile invokes test.bat source from verified flyExplorer main checkout"},
+    "runtime": {"value": "Windows 11 / Visual Studio 18.x / Python 3.14.x", "status": "Confirmed", "evidence": "manual:central registered Windows CI profile and current build policy"},
     "deploy_command": {"value": "", "status": "Unknown", "evidence": "manual:public deployment/signing remains an open gate"},
     "deploy_target": {"value": "", "status": "Unknown", "evidence": "manual:public deployment target is not certified"}
   },
@@ -26,15 +26,13 @@ consumer core; this PROJECT.md remains project-owned across bundle refreshes.
     {"name": "winui-tests", "path": "tests/winui", "responsibility": "source, native and owned GUI contracts"}
   ],
   "review": {
-    "reviewed_revision": "806ed8b0e87dd019da4a0d24d9486433f1cc4a61",
-    "reviewed_at": "2026-10-09",
+    "reviewed_revision": "000e03a00bbad9ea93dbaf529a702fb94ef758d4",
+    "reviewed_at": "2026-10-10",
     "reviewed_paths": [
       "app/winui",
       "src/base",
       "build.bat",
       "test.bat",
-      ".github/workflows/windows-build.yml",
-      ".github/workflows/remote-windows-task.yml",
       "tools/winui/run_checks.py",
       "packaging",
       "tests/winui"
@@ -47,7 +45,7 @@ consumer core; this PROJECT.md remains project-owned across bundle refreshes.
 ## Canonical product
 
 - Repository: tngkrwlsmd/flyExplorer.
-- Canonical branch/worktree: main / workflow-configured canonical persistent checkout.
+- Canonical branch: main. Working copies must be verified against live main before operation; central CI uses isolated source checkouts.
 - Product: C++/WinRT Windows App SDK WinUI 3 file manager.
 - Product source: app/winui.
 - Shared UI-independent native code: src/base.
@@ -57,6 +55,17 @@ consumer core; this PROJECT.md remains project-owned across bundle refreshes.
   local evidence: ignored logs/.
 - Retired MFC product is absent from the working tree; exact historical recovery
   starts from Git revision cbffb48.
+
+## Current Windows operations override (2026-10-10)
+
+`flyExplorer` no longer owns a registered Windows Runner. Its old
+`control/remote-shell` request branch and Windows workflow definitions
+were retired; references below to those components describe historical
+run evidence, not live instructions. New Windows machine operations,
+focused builds and CI requests use `tngkrwlsmd/personal-control-plane`
+Remote Shell or registered central CI (`project_id=desktop-a`), as
+documented in `docs/operations/windows-runner-retirement.md`.
+The independent `evidence/remote-windows` branch is intentionally retained.
 
 ## Current product checkpoint
 

@@ -148,26 +148,18 @@ class BuildEnvironmentContract(unittest.TestCase):
             _, scoped, _ = gui_command(scope, "Release", candidate)
             self.assertNotIn("FLY_M20_OWNED_COLLAPSE_M19_PANELS", scoped, scope)
 
-    def test_self_hosted_failure_artifacts_are_bounded_and_uploaded(self):
-        workflow = (
-            ROOT / ".github/workflows/windows-build.yml"
-        ).read_text(encoding="utf-8")
+    def test_retained_failure_collector_is_bounded(self):
+        # The former source-repository workflow is retired; the collector
+        # remains available for controlled source-side diagnosis.
         collector = (
             ROOT / "tools/winui/collect_ci_failure_artifacts.py"
         ).read_text(encoding="utf-8")
-        self.assertIn("Prepare CI evidence marker", workflow)
-        self.assertIn("collect_ci_failure_artifacts.py", workflow)
-        self.assertIn(
-            "actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a",
-            workflow,
-        )
-        self.assertIn("if: ${{ failure() }}", workflow)
-        self.assertIn("retention-days: 1", workflow)
         self.assertIn('LOGS / "winui-scoped"', collector)
         self.assertIn('LOGS / "phase6-winui"', collector)
         self.assertIn('"flyexplorer.exe"', collector)
         self.assertIn("MAX_FILE_BYTES", collector)
         self.assertNotIn("os.environ.items()", collector)
+
     def test_fresh_profile_guard_preserves_absence_and_existing_files(self):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp) / "fxfile" / "conf"

@@ -1,0 +1,45 @@
+{
+  "schema_version": 1,
+  "snapshot_date": "2026-10-10",
+  "repository": "tngkrwlsmd/flyExplorer",
+  "old_runner": {
+    "name": "DESKTOP-FJM09OG",
+    "version": "2.337.0",
+    "root": "C:\\actions-runner\\flyExplorer",
+    "registered": false,
+    "scheduled_task_removed": true,
+    "folder_preserved": true
+  },
+  "checkouts": [
+    {
+      "path": "C:\\dev\\flyExplorer",
+      "head_sha": "387efa622f6a9ce6685e3bffb98299df0503de3c",
+      "tracked_changes": 0,
+      "untracked_entries": 0
+    },
+    {
+      "path": "C:\\actions-runner\\flyExplorer\\_work\\flyExplorer\\flyExplorer",
+      "head_sha": "dd658b14eebd4b79138a4efbc262077b0fe30f58",
+      "tracked_changes": 0,
+      "untracked_entries": [
+        "__evidence_repo/",
+        "__evidence_tooling/"
+      ]
+    }
+  ],
+  "preserved_git_evidence": {
+    "branch": "evidence/remote-windows",
+    "directory": "runs",
+    "source": "former Remote Windows Task bounded Git evidence"
+  },
+  "archival_exclusions": [
+    "runner identity/credentials/tokens",
+    "machine/private environment data",
+    "_diag/raw logs",
+    "binaries and installer archives",
+    "_work caches/generated products",
+    "untested screenshots"
+  ],
+  "canonical_control_repo": "tngkrwlsmd/personal-control-plane",
+  "notes": "Read-only inventory only; exact local data directory intentionally retained."
+}

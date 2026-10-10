@@ -5,83 +5,46 @@ canonical execution profile. General engineering principles stay in
 \`AGENTS.md\`, \`.agent-policy/PROJECT.md\` and
 \`docs/development/AGENT_EFFICIENCY.md\`.
 
-## Remote Windows operational settings
+## Central Windows execution settings
 
-The reusable workflow keeps only one repository-specific runtime setting:
-`FLYEXPLORER_CANONICAL_CHECKOUT`, the canonical persistent Windows checkout.
-Runner serialization is expressed directly by workflow concurrency rather than
-duplicated tuning variables. Agent observation cadence and retry discipline are
-policy, not workflow environment configuration.
+The dedicated flyExplorer Windows Runner and source-repository Windows
+workflows were retired on 2026-10-10. There is no active
+`FLYEXPLORER_CANONICAL_CHECKOUT` setting owned by this repository's
+GitHub Actions workflow. The central Windows service and source checkout
+are controlled by `tngkrwlsmd/personal-control-plane`.
 
-The Remote Windows Task intentionally keeps `actions: write` and
-`contents: write`. Request mode describes purpose and validation behavior; it
-does not downgrade the workflow token. Repository-scoped maintenance such as
-approved branch cleanup may therefore use the same control plane.
+## Central request profiles
 
-## Request modes
+**Registered CI:** Explicit manual request to
+`personal-control-plane/.github/workflows/central-flyexplorer-ci.yml`.
+The project ID is `desktop-a`; pass a verified 40-character commit SHA
+reachable from flyExplorer/main and one scope:
 
-Remote requests have one purpose, not two declarations of the same purpose.
+- `health`: runner and environment health; **not** product acceptance.
+- `source`: policy and source contracts.
+- `release`: policy/source and Release build.
+- `gui`: policy/source, Release build and functional GUI.
+- `gui-probe`: focused diagnostic; **not** final acceptance.
 
-### Diagnostic
+There is no exact current central equivalent for the retired
+Debug+Release `full` scope. If it is required, plan and run its gates
+explicitly using central Remote Shell, and retain scope-specific evidence.
 
-`request_mode: diagnostic` is for inspection, runner/environment diagnosis,
-selector discovery and other exploratory work. It uses
-`configuration: none`, an empty `validation_plan`, and may use a free-form
-command. A moved `main` SHA is advisory for a non-mutating diagnostic. The
-workflow token itself remains write-capable; request mode does not change token
-permissions.
-
-Diagnostic failures are infrastructure/diagnostic evidence. They are not
-product acceptance failures.
-
-### Validation
-
-`request_mode: validation` requires `Debug` or `Release` and a non-empty
-`validation_plan`. The plan names logical validation targets such as
-`source`, `build`, `gui`, `visual` or
-`high-contrast-gui`; it is not inferred back from command text.
-
-The current request schema carries candidate SHA, configuration, logical unit
-and validation plan directly. The workflow does not inspect previous Actions
-results before execution. Deprecated fields from the older request schema are
-rejected.
+**Ad hoc Windows shell:** Use central `requests/remote-shell/request.json`
+with target `windows-vm`, not the retired source `control/remote-shell`
+branch. Verify the live source revision, target, working directory,
+request lease and preflight before submission; restore the slot to idle
+when complete. It has a different request schema from the historical
+`request_mode`/`validation_plan` protocol.
 
 ## Failure taxonomy
 
-Remote workflow evidence records these control-plane stages:
-
-- \`REQUEST_VALIDATION\`
-- \`STATIC_PREFLIGHT\`
-- \`RUNNER_HEALTH\`
-- \`COMMAND\`
-
-Each stage is \`PASS\`, \`FAIL\` or \`NOT_RUN\`. The High Contrast acceptance
-orchestrator additionally records:
-
-- \`RUNNER_SETUP\`
-- \`BASELINE\`
-- \`CANDIDATE_GUI\`
-- \`VISUAL\`
-- \`CLEANUP\`
-
-If baseline fails, candidate GUI remains \`NOT_RUN\`. Lower validation code
-that already knows a failure category writes the small machine-readable
-\`logs/remote-evidence/check-result.json\` result as well as the existing
-\`FAILURE_CATEGORY=...\` marker. Final classification uses the structured
-category first, then an explicit marker, then the legacy classifier as fallback.
-Only failures that occur before lower validation can classify themselves use
-the bounded request/static/runner fallback categories.
-
-Remote command execution preserves the request source by writing
-`REMOTE_COMMAND` verbatim to a per-run temporary `.ps1`, then launching a
-fresh Windows PowerShell process with `-File`. This avoids native argv
-re-tokenization of multi-line/quoted PowerShell source. The child process exit
-code, not the parent shell's stale `$LASTEXITCODE`, determines command success;
-the temporary script is removed in `finally`. A handled native nonzero used as
-a condition therefore does not make an otherwise successful script fail, while
-a bare failing native command or an uncaught PowerShell `throw` still fails the
-task. Multi-step commands must continue to check native exit codes at the call
-boundary when later successful statements could otherwise mask them.
+Distinguish a product defect, GUI fixture/harness error and VM/control
+environment failure from the first relevant log. Central run status is
+authoritative only for the exact source SHA, scope and environment
+recorded. A functional GUI PASS does not certify visual pixel review.
+The former remote-request sidecar stages remain historical Git evidence,
+not a current live workflow contract.
 
 ## Retry policy
 
@@ -181,31 +144,17 @@ These are current project facts, not generic policy:
   high-cost. It is a product safety bound, not a generic validation-run
   threshold.
 
-## Git-backed remote Windows evidence (2026-10-09)
+## Archived remote Windows evidence
 
-Remote Windows Task archives sanitized evidence to the isolated
-`evidence/remote-windows` branch at `runs/<run-id>/`, avoiding
-account-limited Actions artifact storage. It commits the record from the
-**same executing job** with the existing `contents: write` permission
-and serialized execution lane.
+The historical `evidence/remote-windows` branch stores sanitized
+results under `runs/<run-id>/`. `manifest.json` identifies run and
+source revision; optional `remote-result.json`, `check-result.json`
+and `markers.json` contain bounded, allowlisted fields. Private
+transcripts, user profile data, binaries and unreviewed screenshots
+were never approved Git evidence and remain excluded.
 
-`manifest.json` retains run URL, workflow SHA, candidate SHA and
-pre-archive job state. The optional `remote-result.json` and
-`check-result.json` contain strictly validated structured fields;
-`markers.json` contains limited PASS/FAIL-like markers. Large, missing
-or symlinked inputs are not copied. Full console logs remain in the
-linked Actions run. Raw transcripts, private user data, binaries and
-unreviewed screenshots are **not** committed to Git.
-
-An archive PASS cannot override a failed product stage or independently
-certify the UI's final pixels. Historic run `37912684233` is
-reconstructed only from its surviving Actions log; its missing ZIP and
-screenshot cannot be recovered.
-
-## Remote workflow ownership
-
-The full Remote Windows Task implementation is
-\`.github/workflows/remote-windows-task.yml\` on \`main\`. The
-\`control/remote-shell\` branch carries only request data and a thin push
-trigger that calls the reusable implementation at \`@main\`. Operational logic
-must not be duplicated into the control branch.
+This branch is retained as an independent audit/archive source.
+The current central CI instead uploads bounded private GUI-failure
+artifacts with one-day retention. See
+`docs/operations/windows-runner-retirement.md` for archived runner
+inventory, request commands and exact capability differences.

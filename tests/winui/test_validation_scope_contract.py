@@ -24,7 +24,7 @@ class ValidationScopeContractTests(unittest.TestCase):
                 "AGENTS.md",
                 "docs/development/AGENT_EFFICIENCY.md",
                 "tests/winui/test_arch_contract.py",
-                ".github/workflows/remote-windows-task.yml",
+                "docs/operations/windows-runner-retirement.md",
             ]),
         )
 
@@ -79,7 +79,7 @@ class ValidationScopeContractTests(unittest.TestCase):
 
     def test_infra_only_change_does_not_expand_to_product_contracts(self):
         paths = [
-            ".github/workflows/remote-windows-task.yml",
+            "tools/winui/resolve_validation_scope.py",
             "tools/winui/validate_remote_request.py",
         ]
         self.assertEqual(set(), self.areas(paths))
