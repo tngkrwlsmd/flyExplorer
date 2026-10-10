@@ -93,6 +93,11 @@ class LargeFolderStreamingContracts(unittest.TestCase):
         self.assertIn("bool indexedNameSort=false",state)
         self.assertIn("bool indexedMetadataSort=false",state)
         self.assertIn("kMaxIndexedMetadataEntries",main)
+        self.assertIn("const bool metadataLookahead=",main)
+        self.assertIn("state.indexToComplete&&state.indexedMetadataSort",main)
+        self.assertIn("kMaxIndexedMetadataEntries+1",main)
+        self.assertIn("snapshot.nextOffset>limit",main)
+        self.assertIn("snapshot.nextOffset==limit&&snapshot.truncated&&",main)
         self.assertIn("const bool indexedMetadataReady=",main)
         self.assertIn("requireCompleteIndex=indexedMetadata",main)
 

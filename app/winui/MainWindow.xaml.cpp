@@ -758,8 +758,15 @@ namespace winrt::FlyExplorer::implementation
                         fxfile::previewmetadata::kMaxIndexedMetadataEntries:
                         fxfile::isolation::kMaxBrowseEntries):
                     fxfile::isolation::kMaxCompleteModelEntries);
+            // At the exact metadata ceiling, a Shell page can report
+            // truncated even if it contains the final entry. Probe one
+            // additional item before accepting exactly 25,000, and reject
+            // 25,001 without exposing a partial global sort.
+            const bool metadataLookahead=
+                state.indexToComplete&&state.indexedMetadataSort;
             if(snapshot.nextOffset>limit||
-               (snapshot.nextOffset==limit&&snapshot.truncated)){
+               (snapshot.nextOffset==limit&&snapshot.truncated&&
+                !metadataLookahead)){
                 state.streamToComplete=false;
                 state.indexToComplete=false;
                 state.fullModelLimitReached=true;
@@ -824,10 +831,14 @@ namespace winrt::FlyExplorer::implementation
             state.indexToComplete=false;
             return false;
         }
+        // One extra Shell entry is an end-of-folder sentinel, never
+        // part of the bounded sortable metadata projection.
         const auto ceiling=completeFolder?
             static_cast<std::size_t>(
                 state.indexToComplete?
-                    fxfile::isolation::kMaxBrowseEntries:
+                    (state.indexedMetadataSort?
+                        fxfile::previewmetadata::kMaxIndexedMetadataEntries+1:
+                        fxfile::isolation::kMaxBrowseEntries):
                     fxfile::isolation::kMaxCompleteModelEntries):
             static_cast<std::size_t>(fxfile::isolation::kMaxBrowseEntries);
         const auto id=mShellNavigation->submitNextPage(
