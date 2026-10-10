@@ -242,6 +242,51 @@ def main():
             ImageGrab.grab(
                 bbox=(rect.left,rect.top,rect.right,rect.bottom),
                 include_layered_windows=True).save(evidence)
+            # Verify the metadata ceiling *before* completing the name
+            # index via its much larger independent browsing budget.
+            # This forces the 25,000+one Shell lookahead path to run.
+            if args.items in (25000,25001):
+                winner_name=f"bench-{args.items-1:04d}.txt"
+                fresh_parent().child_window(auto_id="SortPicker").select(2)
+                if args.items==25001:
+                    until(lambda:"25,000" in status_text(),
+                          "25,001-entry metadata sentinel was not refused",90)
+                    assert winner_name not in fresh_first_row(), (
+                        "partial indexed metadata sort was exposed"
+                    )
+                    assert process.poll() is None
+                    assert (folder/winner_name).stat().st_size==4096
+                    print("OWNED_LARGE_25001_METADATA_SORT_REFUSED",True,flush=True)
+                    print("OWNED_LARGE_25001_NO_PARTIAL_SORT",True,flush=True)
+                    print("OWNED_LARGE_25001_SAMPLED_RSS_MIB",
+                          round(psutil.Process(process.pid).memory_info().rss/1048576,1),
+                          flush=True)
+                    success=True
+                    return
+                until(lambda:winner_name in fresh_first_row() and
+                      str(args.items) in progress_text(),
+                      "exact 25,000-entry metadata index size sort failed",90)
+                print("OWNED_LARGE_25000_SIZE_SORT_INDEXED",True,flush=True)
+                fresh_parent().child_window(auto_id="SortPicker").select(3)
+                until(lambda:winner_name in fresh_first_row(),
+                      "exact 25,000-entry indexed modified-date sort failed",45)
+                print("OWNED_LARGE_25000_DATE_SORT_INDEXED",True,flush=True)
+                fresh_parent().child_window(auto_id="SortPicker").select(4)
+                until(lambda:"bench-17000.aaa" in fresh_first_row(),
+                      "exact 25,000-entry indexed type sort failed",45)
+                print("OWNED_LARGE_25000_TYPE_SORT_INDEXED",True,flush=True)
+                rect=fresh_parent().rectangle()
+                evidence=base/"large-metadata-boundary-25000-after.png"
+                ImageGrab.grab(
+                    bbox=(rect.left,rect.top,rect.right,rect.bottom),
+                    include_layered_windows=True).save(evidence)
+                print("OWNED_LARGE_25000_EXACT_LIMIT_SORT_PASS",True,flush=True)
+                print("OWNED_LARGE_BOUNDARY_SAMPLED_RSS_MIB",
+                      round(psutil.Process(process.pid).memory_info().rss/1048576,1),
+                      flush=True)
+                success=True
+                return
+
             fresh_parent().child_window(auto_id="SortPicker").select(1)
             until(lambda:"bench-9999.txt" in fresh_first_row(),
                   "indexed global name sort above 20k did not complete",16)
@@ -290,21 +335,6 @@ def main():
             until(lambda:"bench-9999.txt" in fresh_first_row(),
                   "clearing indexed filter did not restore indexed name sort",12)
             fresh_parent().child_window(auto_id="SortPicker").select(2)
-            if args.items==25001:
-                # The 25,001st Shell item is a sentinel, not a sortable
-                # metadata-index entry. No partial index sort may escape.
-                until(lambda:"25,000" in status_text(),
-                      "25,001 entries did not trigger safe indexed-sort refusal",90)
-                assert f"bench-{args.items-1:04d}.txt" not in fresh_first_row()
-                assert process.poll() is None
-                assert (folder/f"bench-{args.items-1:04d}.txt").stat().st_size==4096
-                print("OWNED_LARGE_25001_METADATA_SORT_REFUSED",True,flush=True)
-                print("OWNED_LARGE_25001_NO_PARTIAL_SORT",True,flush=True)
-                print("OWNED_LARGE_25001_SAMPLED_RSS_MIB",
-                      round(psutil.Process(process.pid).memory_info().rss/1048576,1),
-                      flush=True)
-                success=True
-                return
             until(lambda:f"bench-{args.items-1:04d}.txt" in fresh_first_row() and
                   str(args.items) in progress_text(),
                   "indexed metadata size sort above 20k did not complete",90)
