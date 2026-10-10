@@ -30,6 +30,8 @@ def main(config="Debug"):
  folder=owned/"source";folder.mkdir()
  file=folder/"context-test-owned.txt"
  file.write_text("test owned only",encoding="utf-8")
+ second=folder/"context-test-second-owned.txt"
+ second.write_text("second owned only",encoding="utf-8")
  mfc=Path(os.environ["APPDATA"])/"fxfile"/"conf"
  old={n:hashlib.sha256((mfc/n).read_bytes()).digest()
       for n in LEGACY if (mfc/n).is_file()}
@@ -157,6 +159,34 @@ def main(config="Debug"):
              "Shift+F10 popup did not cancel",6)
   assert file.read_text(encoding="utf-8")=="test owned only"
   print("OWNED_CONTEXT_SHIFT_F10_MENU_CANCEL",True,flush=True)
+
+  # Select exactly two disposable siblings, then exercise the new
+  # bounded multi-item Shell popup without invoking a Shell verb.
+  child=None
+  eventually(select_owned_row,"First owned row missing before multi-menu",8)
+  def second_row():
+   pane=win.child_window(auto_id="LeftFiles")
+   return next((x for x in pane.descendants()
+      if x.element_info.control_type=="ListItem" and
+         "context-test-second-owned.txt" in x.window_text()),None)
+  eventually(lambda:second_row() is not None,
+             "Second owned file row unavailable",8)
+  second_row().iface_selection_item.AddToSelection()
+  eventually(lambda:row().is_selected() and second_row().is_selected(),
+             "Owned multi-selection did not stabilize",8)
+  win.child_window(auto_id="LeftFiles").set_focus()
+  assert user.GetForegroundWindow()==hwnd,"Refusing multi-menu foreign window"
+  keyboard.send_keys("+{F10}")
+  eventually(spawned,"Two-file Shift+F10 did not spawn Shell helper",8)
+  eventually(owns_foreground,"Multi Shell popup not foreground-owned",6)
+  user.keybd_event(0x1b,0,0,0)
+  user.keybd_event(0x1b,0,2,0)
+  eventually(lambda:not child.is_running() or child.status()=="zombie",
+             "Multi Shell popup did not cancel",6)
+  print("OWNED_CONTEXT_MULTI_SHIFT_F10_MENU_CANCEL",True,flush=True)
+  assert file.read_text(encoding="utf-8")=="test owned only"
+  assert second.read_text(encoding="utf-8")=="second owned only"
+  print("OWNED_CONTEXT_MULTI_FILE_UNCHANGED",True,flush=True)
   verified=True
  finally:
   if child is not None and child.is_running():
@@ -178,7 +208,9 @@ def main(config="Debug"):
     for n,h in old.items())
   print("SIX_ORIGINAL_MFC_SETTINGS_IDENTICAL",safe,flush=True)
   print("ONLY_TEST_OWNED_SOURCE_UNMODIFIED",
-        file.is_file() and file.read_text(encoding="utf-8")=="test owned only",
+        file.is_file() and file.read_text(encoding="utf-8")=="test owned only"
+        and second.is_file() and
+        second.read_text(encoding="utf-8")=="second owned only",
         flush=True)
   if verified and safe:
    import shutil

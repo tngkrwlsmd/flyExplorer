@@ -20,19 +20,37 @@ bool writeAll(HANDLE handle,void const* body,size_t bytes) {
  return true;
 }
 }
-DWORD show(std::wstring const& helper,std::wstring const& path,
+DWORD show(std::wstring const& helper,
+           std::vector<std::wstring> const& paths,
            POINT point,DWORD timeoutMs) noexcept {
  namespace fs=std::filesystem;
  Handle childRead,hostWrite,process,thread;
  try{
-  if(helper.empty()||path.size()<4||path.size()>1024||
-     path.find(L'\0')!=std::wstring::npos||
+  if(helper.empty()||paths.empty()||
+     paths.size()>kMaxContextSelection||
      timeoutMs<1000||timeoutMs>90000||
      !fs::path(helper).is_absolute()||
      fs::path(helper).filename()!=L"FlyShellIsolationHelper.exe"||
-     !fs::is_regular_file(fs::path(helper))||
-     !fs::path(path).is_absolute()||
-     fs::path(path).lexically_normal().native()!=path)return ERROR_INVALID_PARAMETER;
+     !fs::is_regular_file(fs::path(helper)))return ERROR_INVALID_PARAMETER;
+  std::size_t totalUnits=0;
+  auto const parent=fs::path(paths.front()).parent_path().native();
+  for(std::size_t i=0;i<paths.size();++i){
+   auto const& path=paths[i];
+   if(path.size()<4||path.size()>1024||
+      path.find(L'\0')!=std::wstring::npos||
+      !fs::path(path).is_absolute()||
+      fs::path(path).lexically_normal().native()!=path||
+      ::CompareStringOrdinal(
+          fs::path(path).parent_path().c_str(),-1,
+          parent.c_str(),-1,TRUE)!=CSTR_EQUAL||
+      path.size()>kMaxContextPathUnits-totalUnits)
+       return ERROR_INVALID_PARAMETER;
+   totalUnits+=path.size();
+   for(std::size_t j=0;j<i;++j)
+    if(::CompareStringOrdinal(paths[j].c_str(),-1,
+                             path.c_str(),-1,TRUE)==CSTR_EQUAL)
+      return ERROR_INVALID_PARAMETER;
+  }
   SECURITY_ATTRIBUTES sa{sizeof(sa),nullptr,TRUE};
   HANDLE a=nullptr,b=nullptr;
   if(!::CreatePipe(&a,&b,&sa,0))return ::GetLastError();
@@ -55,11 +73,17 @@ DWORD show(std::wstring const& helper,std::wstring const& path,
          &start,&info))return ::GetLastError();
   process.value=info.hProcess;thread.value=info.hThread;
   childRead.close();out.close();
-  const auto units=static_cast<std::uint32_t>(path.size());
+  // --context-menu wire: count, length-prefixed UTF-16 paths, x, y.
+  // --context-inspect retains its legacy single-path request protocol.
+  const auto count=static_cast<std::uint32_t>(paths.size());
   const int x=point.x,y=point.y;
-  if(!writeAll(hostWrite.value,&units,4)||
-     !writeAll(hostWrite.value,path.data(),units*sizeof(wchar_t))||
-     !writeAll(hostWrite.value,&x,4)||
+  bool sent=writeAll(hostWrite.value,&count,4);
+  for(auto const& path:paths){
+   const auto units=static_cast<std::uint32_t>(path.size());
+   sent=sent&&writeAll(hostWrite.value,&units,4)&&
+        writeAll(hostWrite.value,path.data(),units*sizeof(wchar_t));
+  }
+  if(!sent||!writeAll(hostWrite.value,&x,4)||
      !writeAll(hostWrite.value,&y,4)){
     ::TerminateProcess(process.value,ERROR_WRITE_FAULT);
     ::WaitForSingleObject(process.value,350);

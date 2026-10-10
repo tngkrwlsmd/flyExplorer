@@ -593,34 +593,54 @@ void MainWindow::ShowExternalWindowsContextMenu(int side){
   return;
  }
  auto list=side==0?LeftFiles():RightFiles();
- if(list.SelectedItems().Size()!=1){
-  StatusText().Text(L"\uC678\uBD80 Shell \uBA54\uB274\uB294 \uD56D\uBAA9 1\uAC1C\uB97C \uC120\uD0DD\uD558\uC138\uC694.");
+ const auto count=list.SelectedItems().Size();
+ if(!count||count>fxfile::shellcontext::kMaxContextSelection){
+  StatusText().Text(L"외부 Shell 메뉴는 최대 32개 항목을 선택할 수 있습니다.");
   return;
  }
- auto row=list.SelectedItems().GetAt(0).try_as<ListViewItem>();
- if(!row||!row.Tag())return;
- const auto logical=winrt::unbox_value<std::uint64_t>(row.Tag());
  auto const& session=pane.tabs[pane.active];
- auto const* indexed=session.indexedItem(static_cast<std::size_t>(logical));
- if(!indexed||!indexed->isFileSystem()||indexed->parsingName.empty()){
-  StatusText().Text(L"선택한 파일시스템 항목의 Shell 메뉴를 열 수 없습니다.");
-  return;
+ std::vector<std::wstring> paths{};
+ paths.reserve(count);
+ std::wstring commonParent;
+ std::size_t units=0;
+ for(std::uint32_t i=0;i<count;++i){
+  auto row=list.SelectedItems().GetAt(i).try_as<ListViewItem>();
+  if(!row||!row.Tag())return;
+  const auto logical=winrt::unbox_value<std::uint64_t>(row.Tag());
+  auto const* indexed=session.indexedItem(static_cast<std::size_t>(logical));
+  if(!indexed||!indexed->isFileSystem()||indexed->parsingName.empty()){
+   StatusText().Text(L"선택한 파일시스템 항목의 Shell 메뉴를 열 수 없습니다.");
+   return;
+  }
+  auto const& path=indexed->parsingName;
+  const auto value=std::filesystem::path(path);
+  if(!value.is_absolute()||value.lexically_normal().native()!=path||
+     path.size()<4||path.size()>1024||
+     path.size()>fxfile::shellcontext::kMaxContextPathUnits-units)return;
+  auto const parent=value.parent_path().native();
+  if(i&&::CompareStringOrdinal(commonParent.c_str(),-1,
+                               parent.c_str(),-1,TRUE)!=CSTR_EQUAL){
+   StatusText().Text(L"Shell 메뉴는 같은 폴더의 항목만 함께 선택할 수 있습니다.");
+   return;
+  }
+  if(!i)commonParent=parent;
+  const auto root=value.root_path().native();
+  if(root.size()!=3||root[1]!=L':'||root[2]!=L'\\'||
+     ::GetDriveTypeW(root.c_str())!=DRIVE_FIXED){
+   StatusText().Text(
+    L"외부 Shell 메뉴는 로컬 고정 디스크만 지원합니다. "
+    L"이동식·네트워크·가상 공급자 작업은 아직 제한됩니다.");
+   return;
+  }
+  const auto flags=::GetFileAttributesW(path.c_str());
+  if(flags==INVALID_FILE_ATTRIBUTES||
+     (flags&FILE_ATTRIBUTE_REPARSE_POINT))return;
+  for(auto const& prior:paths)
+   if(::CompareStringOrdinal(prior.c_str(),-1,
+                             path.c_str(),-1,TRUE)==CSTR_EQUAL)return;
+  units+=path.size();
+  paths.push_back(path);
  }
- auto path=indexed->parsingName;
- auto const value=std::filesystem::path(path);
- if(!value.is_absolute()||value.lexically_normal().native()!=path||
-    path.size()>1024)return;
- const auto root=value.root_path().native();
- if(root.size()!=3||root[1]!=L':'||root[2]!=L'\\'||
-    ::GetDriveTypeW(root.c_str())!=DRIVE_FIXED){
-  StatusText().Text(
-   L"외부 Shell 메뉴는 로컬 고정 디스크만 지원합니다. "
-   L"이동식·네트워크·가상 공급자 작업은 아직 제한됩니다.");
-  return;
- }
- const auto flags=::GetFileAttributesW(path.c_str());
- if(flags==INVALID_FILE_ATTRIBUTES||
-    (flags&FILE_ATTRIBUTE_REPARSE_POINT))return;
  HWND hwnd=::GetActiveWindow();
  DWORD owner=0;
  if(hwnd)::GetWindowThreadProcessId(hwnd,&owner);
@@ -636,9 +656,9 @@ void MainWindow::ShowExternalWindowsContextMenu(int side){
  auto weak=get_weak();
  StatusText().Text(L"Windows Shell \uD655\uC7A5 \uBA54\uB274\uB97C \uBD84\uB9AC\uB41C \uD504\uB85C\uC138\uC2A4\uC5D0\uC11C \uC5FD\uB2C8\uB2E4.");
  try{
-  std::thread([helper=std::move(helper),path=std::move(path),
+  std::thread([helper=std::move(helper),paths=std::move(paths),
                cursor,dispatch,weak]{
-    const DWORD code=fxfile::shellcontext::show(helper,path,cursor,45000);
+    const DWORD code=fxfile::shellcontext::show(helper,paths,cursor,45000);
     dispatch.TryEnqueue([weak,code]{
       if(auto ui=weak.get()){
        if(code==0)ui->StatusText().Text(

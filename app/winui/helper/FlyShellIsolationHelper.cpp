@@ -152,53 +152,95 @@ int inspectOrShowContext(bool inspect){
  HANDLE input=::GetStdHandle(STD_INPUT_HANDLE);
  HANDLE output=::GetStdHandle(STD_OUTPUT_HANDLE);
  if(!input||input==INVALID_HANDLE_VALUE)return 51;
+ // Keep --context-inspect's established one-path wire unchanged.
+ // Menu mode accepts a bounded vector for same-parent multi-selection.
  std::uint32_t count=0;
- if(!exactRead(input,&count,sizeof(count))||count<4||count>1024)return 52;
- std::wstring source(count,L'\0');
- if(!exactRead(input,source.data(),count*sizeof(wchar_t))||
-    source.find(L'\0')!=std::wstring::npos)return 53;
+ if(!exactRead(input,&count,sizeof(count)))return 52;
+ std::vector<std::wstring> paths;
+ if(inspect){
+  if(count<4||count>1024)return 52;
+  std::wstring source(count,L'\0');
+  if(!exactRead(input,source.data(),count*sizeof(wchar_t))||
+     source.find(L'\0')!=std::wstring::npos)return 53;
+  paths.push_back(std::move(source));
+ }else{
+  if(!count||count>32)return 52;
+  std::size_t totalUnits=0;
+  for(std::uint32_t i=0;i<count;++i){
+   std::uint32_t length=0;
+   if(!exactRead(input,&length,4)||length<4||length>1024||
+      length>16*1024-totalUnits)return 52;
+   std::wstring source(length,L'\0');
+   if(!exactRead(input,source.data(),length*sizeof(wchar_t))||
+      source.find(L'\0')!=std::wstring::npos)return 53;
+   totalUnits+=length;
+   paths.push_back(std::move(source));
+  }
+ }
  int x=0,y=0;
- if(!inspect && (!exactRead(input,&x,4)||!exactRead(input,&y,4)))
+ if(!inspect&&(!exactRead(input,&x,4)||!exactRead(input,&y,4)))
    return 54;
- std::filesystem::path path(source);
- if(!path.is_absolute()||path.lexically_normal().native()!=source)
-   return 55;
- auto root=path.root_path().native();
- if(root.size()!=3||root[1]!=L':'||root[2]!=L'\\'||
-    ::GetDriveTypeW(root.c_str())!=DRIVE_FIXED)return 56;
- std::filesystem::path part=path.root_path();
- for(auto it=path.begin();it!=path.end();++it){
-  if(*it==path.root_name()||*it==path.root_directory())continue;
-  part/=*it;
-  auto attr=::GetFileAttributesW(part.c_str());
-  if(attr==INVALID_FILE_ATTRIBUTES||
-     (attr&FILE_ATTRIBUTE_REPARSE_POINT))return 57;
+ std::wstring commonParent;
+ for(std::size_t i=0;i<paths.size();++i){
+  auto const& source=paths[i];
+  std::filesystem::path path(source);
+  if(!path.is_absolute()||path.lexically_normal().native()!=source)
+    return 55;
+  auto root=path.root_path().native();
+  if(root.size()!=3||root[1]!=L':'||root[2]!=L'\\'||
+     ::GetDriveTypeW(root.c_str())!=DRIVE_FIXED)return 56;
+  auto const parent=path.parent_path().native();
+  if(i&&::CompareStringOrdinal(commonParent.c_str(),-1,
+                               parent.c_str(),-1,TRUE)!=CSTR_EQUAL)return 55;
+  if(!i)commonParent=parent;
+  for(std::size_t j=0;j<i;++j)
+   if(::CompareStringOrdinal(paths[j].c_str(),-1,
+                             source.c_str(),-1,TRUE)==CSTR_EQUAL)return 55;
+  std::filesystem::path part=path.root_path();
+  for(auto it=path.begin();it!=path.end();++it){
+   if(*it==path.root_name()||*it==path.root_directory())continue;
+   part/=*it;
+   auto attr=::GetFileAttributesW(part.c_str());
+   if(attr==INVALID_FILE_ATTRIBUTES||
+      (attr&FILE_ATTRIBUTE_REPARSE_POINT))return 57;
+  }
  }
  const auto apt=::CoInitializeEx(
      nullptr,COINIT_APARTMENTTHREADED|COINIT_DISABLE_OLE1DDE);
  if(FAILED(apt))return 58;
  int rc=59;
- PIDLIST_ABSOLUTE absolute=nullptr;
+ std::vector<PIDLIST_ABSOLUTE> absolutes(paths.size(),nullptr);
+ std::vector<PCUITEMID_CHILD> children;
+ children.reserve(paths.size());
  HWND owner=nullptr;
  HMENU popup=nullptr;
  Microsoft::WRL::ComPtr<IContextMenu> menu;
  Microsoft::WRL::ComPtr<IContextMenu2> two;
  Microsoft::WRL::ComPtr<IContextMenu3> three;
  try {
-  auto hr=::SHParseDisplayName(source.c_str(),nullptr,&absolute,0,nullptr);
-  if(SUCCEEDED(hr)&&absolute){
-   Microsoft::WRL::ComPtr<IShellFolder> folder;
+  Microsoft::WRL::ComPtr<IShellFolder> folder;
+  bool bound=true;
+  for(std::size_t i=0;i<paths.size();++i){
+   auto hr=::SHParseDisplayName(
+       paths[i].c_str(),nullptr,&absolutes[i],0,nullptr);
+   if(FAILED(hr)||!absolutes[i]){bound=false;break;}
+   Microsoft::WRL::ComPtr<IShellFolder> currentFolder;
    PCUITEMID_CHILD child=nullptr;
-   hr=::SHBindToParent(absolute,IID_PPV_ARGS(&folder),&child);
-   if(SUCCEEDED(hr)&&folder&&child){
+   hr=::SHBindToParent(
+       absolutes[i],IID_PPV_ARGS(&currentFolder),&child);
+   if(FAILED(hr)||!currentFolder||!child){bound=false;break;}
+   if(!folder)folder=currentFolder;
+   children.push_back(child);
+  }
+  if(bound&&folder&&children.size()==paths.size()){
     owner=::CreateWindowExW(WS_EX_TOOLWINDOW,L"STATIC",
              L"flyExplorer Shell menu (test-owned child)",WS_POPUP,
              x,y,1,1,nullptr,nullptr,::GetModuleHandleW(nullptr),nullptr);
     if(owner){
-     PCUITEMID_CHILD children[]={child};
-     hr=folder->GetUIObjectOf(owner,1,children,IID_IContextMenu,
-                             nullptr,reinterpret_cast<void**>(
-                                 menu.GetAddressOf()));
+     const auto hr=folder->GetUIObjectOf(
+         owner,static_cast<UINT>(children.size()),children.data(),
+         IID_IContextMenu,nullptr,
+         reinterpret_cast<void**>(menu.GetAddressOf()));
      if(SUCCEEDED(hr)&&menu){
       popup=::CreatePopupMenu();
       if(popup){
@@ -246,6 +288,10 @@ int inspectOrShowContext(bool inspect){
              });
              if(verb=="delete"||verb=="rename"||verb=="copy"||
                 verb=="cut"||verb=="paste"||verb=="move")rc=65;
+             // For multiple items allow only the well-known
+             // nonmutating Properties verb. Native flyExplorer
+             // handles clipboard/file operations independently.
+             if(paths.size()>1&&verb!="properties")rc=65;
             }
             if(rc==0){
              CMINVOKECOMMANDINFOEX args{};
@@ -273,11 +319,10 @@ int inspectOrShowContext(bool inspect){
      }
     }
    }
-  }
  }catch(...){rc=68;}
  if(popup)::DestroyMenu(popup);
  if(owner)::DestroyWindow(owner);
- if(absolute)::CoTaskMemFree(absolute);
+ for(auto item:absolutes)if(item)::CoTaskMemFree(item);
  ::CoUninitialize();
  return rc;
 }

@@ -2,8 +2,11 @@
 #pragma once
 #include <windows.h>
 #include <string>
+#include <vector>
 namespace fxfile::shellcontext {
+inline constexpr std::size_t kMaxContextSelection=32;
+inline constexpr std::size_t kMaxContextPathUnits=16*1024;
 DWORD show(std::wstring const& helper,
-           std::wstring const& selectedLocalPath,
+           std::vector<std::wstring> const& selectedLocalPaths,
            POINT screenPoint,DWORD timeoutMs=45000) noexcept;
 }
