@@ -33,10 +33,33 @@ the SYSTEM runner lacked `python` on PATH; the central user-session
 source run then passed those contracts. The test-owned checkout was
 reclaimed. The VM exposes 0 removable drives, 0 mapped network drives
 and 0 non-special SMB shares, so real USB/remote SMB acceptance is
-NOT TESTED, not a product failure. Central `gui` run `38044629405`
-was still in progress at the three-minute observation boundary;
-its result must be checked separately before claiming latest Release/
-functional GUI PASS. Full-resolution pixel review is also separate.
+NOT TESTED, not a product failure. Central `gui` run `38044629405` subsequently completed **SUCCESS**:
+the Release build and `gui-all-Release` functional GUI passed on
+that exact source SHA. Matched final-pixel review remains separate.
+
+A later feature candidate `f3d06ff9463f1b462ca3fb1c30675bd6dd742b12`
+added Ctrl+L focus for the address editor and Ctrl+F focus for
+quick search, plus an intended physical-keyboard regression.
+Its central registered `gui` run `38047230115` completed **FAILURE**
+despite `release-build=PASS`: the existing `gui-all-Release` suite
+stopped inside `test_v7_window_tabs_gui.py` before reaching the new
+shortcut regression, reporting
+`AssertionError: cleanup close did not restore ready tab A`.
+The earlier private multi-WindowTab session restart/history/split
+restoration markers passed, the test-owned process exited 0, and the
+six protected legacy profile files stayed byte-identical. The
+on-VM captured UIA snapshot showed the surviving `Left\\Nested`
+address and `Nested` pane tab; it did not include the exact Back
+button enablement or status message needed to classify the remaining
+history/chrome readiness failure as product or harness. The private
+failure screenshot and logs remain in the preserved central VM
+workspace. The attempted private Actions artifact upload separately
+failed due to GitHub artifact storage quota; it is not a product
+failure. There is **no accepted Release+GUI PASS for this candidate**.
+Do not rerun the same revision blindly. Diagnose the state/busy
+boundary first, then run a genuinely targeted successor only after a
+material fix/instrumented hypothesis. The central Remote Shell slot
+was restored to idle after read-only failure inspection.
 
 Prior 20,500-file acceptance already proved indexed **name** sort and
 name filtering (run `37211942616`). Above-20,000 type/size/date

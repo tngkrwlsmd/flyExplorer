@@ -17,10 +17,25 @@ configuration, environment, tested scope and producing run.
   `run.bat Release` behavior. The later source stage was blocked
   only by SYSTEM's missing Python PATH; official user-session source
   succeeded. Disposable checkout was deleted.
-- Central registered `gui` `38044629405` remained **IN PROGRESS**
-  at the three-minute observation boundary. Inspect its actual terminal
-  result; do not infer Release/GUI success from submission or source
-  success. No automatic same-revision retry.
+- Central registered `gui` `38044629405` subsequently **PASSED**,
+  including Release build and `gui-all-Release` on the baseline
+  `a310951872ee5ddb720966498510605f8aea4b6e`.
+- New Ctrl+L address-focus / Ctrl+F quick-search-focus candidate
+  `f3d06ff9463f1b462ca3fb1c30675bd6dd742b12` is **NOT
+  ACCEPTED**: central GUI run `38047230115` had `release-build=PASS`
+  but `gui-all-Release=FAIL`, first error
+  `cleanup close did not restore ready tab A` in the existing
+  `test_v7_window_tabs_gui.py`. Session restoration in a separate
+  child, the owned process exit 0 and protected profile identity
+  checks passed. Read-only inspection of the preserved failed GUI
+  snapshot confirmed the surviving `Nested` tab and test-owned
+  `Left\\Nested` address. It did not capture Back button state or
+  app status at the failing instant. Product vs harness/cancellation
+  classification remains open; the candidate's new keyboard GUI test
+  was not reached. The separate upload-artifact step failed because
+  GitHub Actions artifact storage quota was exhausted, but the failure
+  evidence remains on the Windows VM. Do not manufacture an acceptance
+  claim or rerun unchanged tests without a diagnosed correction.
 - A positive `run.bat` launch with a complete matching runtime, as
   opposed to its missing-build guard, is separately **NOT TESTED**.
   Functional UIA and matched visual pixel acceptance are distinct.
@@ -47,8 +62,10 @@ UNC evidence and are not remote SMB certification.
   field without starting a file mutation or launching an unsolicited
   search. The focused Windows GUI regression uses
   `python -X utf8 tools/winui/run_checks.py gui --area shortcuts --configuration Release`.
-  These shortcuts remain **pending actual GUI acceptance** until the
-  producing run on their source revision passes.
+  These shortcuts remain **pending actual GUI acceptance**. The first
+  producing GUI run `38047230115` failed in preexisting WindowTab
+  cleanup before exercising them; its successful Release build alone
+  does not certify physical input.
 - User-configurable shortcuts remain **OPEN**: add a bounded private,
   atomic settings schema, collision checks, preserved default F5
   refresh/F6 pane focus/Ctrl+Shift+N semantics and no silent OS-reserved
