@@ -138,6 +138,11 @@ class LargeFolderStreamingContracts(unittest.TestCase):
             "OWNED_LARGE_25001_METADATA_SORT_REFUSED",
             "OWNED_LARGE_25001_NO_PARTIAL_SORT",
             "OWNED_LARGE_BOUNDARY_SAMPLED_RSS_MIB",
+            "--indexed-metadata-fault",
+            "OWNED_METADATA_REPARSE_FAULT_CANCELLED_SORT",
+            "OWNED_METADATA_REPARSE_NO_PARTIAL_RESULT",
+            "OWNED_METADATA_SORT_IMMEDIATE_CLOSE_EXIT_ZERO",
+            "OWNED_METADATA_CLOSE_NO_FILE_MUTATION",
         ):
             self.assertIn(marker,gui)
 

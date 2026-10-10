@@ -34,11 +34,16 @@ def main():
     parser.add_argument("--resident-window-evidence",
                         choices=("none","before","after"),default="none")
     parser.add_argument("--browse-over-complete-model",action="store_true")
+    parser.add_argument("--indexed-metadata-fault",
+                        choices=("none","reparse","close"),default="none")
     args=parser.parse_args()
     if args.resident_window_evidence!="none":
         assert args.items==2300 and args.configuration=="Release"
     if args.browse_over_complete_model:
         assert args.items in (20500,25000,25001) and args.configuration=="Release"
+    if args.indexed_metadata_fault!="none":
+        assert args.items==20500 and args.browse_over_complete_model
+        assert args.configuration=="Release"
     if os.name!="nt":
         return 2
     here=APP
@@ -62,6 +67,18 @@ def main():
         now=time.time()
         os.utime(winner,(now+7200,now+7200))
         (folder/"bench-17000.txt").rename(folder/"bench-17000.aaa")
+    if args.indexed_metadata_fault=="reparse":
+        # A directory junction is a deterministic metadata-reparse fault;
+        # both the junction and target belong to this disposable fixture.
+        target=owned/"owned-junction-target"
+        target.mkdir()
+        junction=folder/"00-owned-reparse-junction"
+        creation=subprocess.run(
+            ["cmd.exe","/d","/c",f'mklink /J "{junction}" "{target}"'],
+            capture_output=True,text=True,timeout=15)
+        assert creation.returncode==0 and junction.is_dir(),(
+            "test-owned junction creation failed",creation.returncode,
+            creation.stdout,creation.stderr)
     env=os.environ.copy()
     for key in ("APPDATA","LOCALAPPDATA","TEMP","TMP"):
         value=owned/key.lower()
@@ -106,7 +123,9 @@ def main():
             matches=[v for v in visible_file_list().descendants()
                      if v.element_info.control_type=="ListItem"]
             return matches[0].window_text() if matches else ""
-        until(lambda:"bench-0000.txt" in first_row(),
+        until(lambda:("00-owned-reparse-junction" if
+                      args.indexed_metadata_fault=="reparse"
+                      else "bench-0000.txt") in first_row(),
               "large-folder native Shell first row not rendered",
               48 if args.items>=8000 else 28)
         first_elapsed=time.monotonic()-started
@@ -231,6 +250,34 @@ def main():
                           "browse-over-20k Shell page did not settle",16)
             shown=max(shown,footer_count())
             assert shown>20000,(progress_text(),footer_count())
+            if args.indexed_metadata_fault=="reparse":
+                fresh_parent().child_window(auto_id="SortPicker").select(2)
+                until(lambda:"전체 메타데이터를 확인할 수 없어 정렬을 취소했습니다." in
+                      status_text(),
+                      "metadata reparse fault did not fail closed",70)
+                assert process.poll() is None
+                assert junction.is_dir() and target.is_dir()
+                assert (folder/"bench-20499.txt").stat().st_size==4096
+                print("OWNED_METADATA_REPARSE_FAULT_CANCELLED_SORT",True,flush=True)
+                print("OWNED_METADATA_REPARSE_NO_PARTIAL_RESULT",True,flush=True)
+                success=True
+                return
+            if args.indexed_metadata_fault=="close":
+                current=fresh_parent()
+                current.child_window(auto_id="SortPicker").select(2)
+                # The XAML selection callback has requested the worker.
+                # Closing the exact owned HWND must cancel it without a
+                # stale UI callback or a foreign-process termination.
+                current.set_focus()
+                assert ui.GetForegroundWindow()==current.handle
+                ui.PostMessageW(current.handle,0x10,0,0)
+                process.wait(timeout=18)
+                assert process.returncode==0,process.returncode
+                assert (folder/"bench-20499.txt").stat().st_size==4096
+                print("OWNED_METADATA_SORT_IMMEDIATE_CLOSE_EXIT_ZERO",True,flush=True)
+                print("OWNED_METADATA_CLOSE_NO_FILE_MUTATION",True,flush=True)
+                success=True
+                return
             def previous_visible():
                 control=fresh_parent().child_window(auto_id="LeftLoadPreviousButton")
                 return control.exists(timeout=.2) and control.is_visible()
