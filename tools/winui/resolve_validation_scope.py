@@ -27,11 +27,8 @@ SOURCE_FILES = {
     "README.md",
     "LICENSE",
     "CREDITS",
-    ".github/workflows/remote-windows-task.yml",
 }
 INFRA_FILES = {
-    ".github/workflows/remote-windows-task.yml",
-    ".github/workflows/windows-build.yml",
     "tools/winui/run_checks.py",
     "tools/winui/resolve_validation_scope.py",
     "tools/winui/validate_remote_request.py",
