@@ -188,8 +188,27 @@ int wmain(int count,wchar_t**args){
 
  // Receipt storage uses only this explicitly created disposable directory.
  // A receipt is evidence, never authorization to delete the stage.
+ const auto insecureFolder=root/L"receipt-insecure";
+ fs::create_directory(insecureFolder); // normal inherited test DACL
+ const auto insecureRecord=insecureFolder/
+     L".flyExplorer-receipt-{00000000-0000-0000-0000-000000000001}.bin";
+ StageOwnershipReceipt insecureResult{};
+ const bool insecureRejected=!isPrivateStageReceiptDirectory(
+     insecureFolder.native())&&
+     !writeStageReceipt(insecureRecord.native(),stage.native(),
+                        L"target-document.txt")&&
+     !readStageReceipt(insecureRecord.native(),insecureResult)&&
+     !fs::exists(insecureRecord);
+ test(insecureRejected&&get(stage)=="replacement-not-original",
+      "receipt_refuses_untrusted_inherited_acl_store");
  const auto receiptFolder=root/L"receipt-identity";
- fs::create_directory(receiptFolder);
+ const bool privateCreated=createPrivateStageReceiptDirectory(
+     receiptFolder.native());
+ const bool privateVerified=isPrivateStageReceiptDirectory(
+     receiptFolder.native());
+ test(privateCreated&&privateVerified&&
+      !createPrivateStageReceiptDirectory(receiptFolder.native()),
+      "receipt_private_owner_dacl_created_without_acl_reset");
  const auto record=receiptFolder/
      L".flyExplorer-receipt-{00000000-0000-0000-0000-000000000001}.bin";
  StageOwnershipReceipt saved{};
