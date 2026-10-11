@@ -9,6 +9,7 @@ using namespace fxfile::shelltransfer;
 namespace fs=std::filesystem;
 int wmain(int count,wchar_t**args){
  setvbuf(stdout,nullptr,_IONBF,0);
+ if(count==2&&std::wstring(args[1])==L"--receipt-child-exit")return 0;
  if(count==4&&std::wstring(args[1])==L"--owned-stage-cancel"){
   // Cancel only after transfer progress is observed on a disposable file.
   Request request{};
