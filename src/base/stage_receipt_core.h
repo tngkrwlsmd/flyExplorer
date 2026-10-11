@@ -26,6 +26,17 @@ bool isPrivateStageReceiptDirectory(
 bool writeStageReceipt(std::wstring const& exactReceiptPath,
                        std::wstring const& exactStagePath,
                        std::wstring const& targetLeaf) noexcept;
+// Bind the actual CopyFileEx destination HANDLE to the exact stage identity
+// BEFORE writing, and re-check after the durable write. No close/mutation.
+bool writeBoundStageReceipt(std::wstring const& exactReceiptPath,
+                            std::wstring const& exactStagePath,
+                            std::wstring const& targetLeaf,
+                            HANDLE copyDestination) noexcept;
+// Resolve a per-user Windows Known Folder location and provision only an
+// absent owner-only protected directory; never reset an existing directory.
+// A failure returns an empty directory (caller decides whether to opt in).
+bool prepareUserStageReceiptDirectory(
+    std::wstring& exactDirectory) noexcept;
 bool readStageReceipt(std::wstring const& exactReceiptPath,
                       StageOwnershipReceipt& receipt) noexcept;
 bool receiptMatchesStage(StageOwnershipReceipt const& receipt) noexcept;
