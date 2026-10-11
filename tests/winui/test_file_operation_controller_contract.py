@@ -259,8 +259,12 @@ class FileOperationContracts(unittest.TestCase):
         for token in ("FLY_ALLOW_INTERACTIVE_RECEIPT_GUI",
                       "FLY_INTERACTIVE_RECEIPT_LOG_ROOT",
                       "--real-user-shipping-helper-ipc",
-                      "Set-Content"):
+                      "Set-Content",
+                      "owned-gui-stderr.log",
+                      "GUI_PYTHON_EXIT="):
             self.assertIn(token, worker)
+        self.assertLess(worker.index("--real-user-shipping-helper-ipc"),
+                        worker.index("actual-winui-copy"))
         self.assertIn("executeIsolated(request,progress)", fixture)
         self.assertIn("FLY_M22_OWNED_RECEIPT_STORE", transfer)
         self.assertIn("#if defined(FLY_M22_TEST_ISOLATED_RECEIPT_STORE)", transfer)
