@@ -104,6 +104,83 @@ try:
  print("M22_REAL_STAGED_KILLED_COPY_SOURCE_BYTES_UNCHANGED",True,flush=True)
  # A forced kill can strand a .partial file. Reclaim only the unique owned
  # workspace in finally; do not delete application/user filesystem files.
+ # Test a publication race on another uniquely owned destination.
+ # The late target must remain byte-for-byte intact, and the stage should
+ # be removed after MoveFileEx declines to overwrite the new target.
+ race_dst=own/"publish-race-destination"
+ race_dst.mkdir()
+ sentinel=race_dst/".flyExplorer-copy-{00000000-0000-0000-0000-000000000000}.partial"
+ sentinel.write_bytes(b"unrelated-stage-must-never-be-removed")
+ race_process=subprocess.Popen(
+     [str(exe),"--owned-stage-race",str(source),str(race_dst)],
+     cwd=exe.parent,env=env,stdin=subprocess.DEVNULL,
+     stdout=subprocess.PIPE,stderr=subprocess.PIPE)
+ raced=False
+ try:
+  deadline=time.monotonic()+18
+  while time.monotonic()<deadline:
+   stage_files=[p for p in race_dst.glob(".flyExplorer-copy-*.partial")
+                if p.name!=sentinel.name]
+   if stage_files and race_process.poll() is None:
+    with (race_dst/source.name).open("xb") as out:
+     out.write(b"preexisting-race-destination-must-be-kept")
+    raced=True
+    break
+   if race_process.poll() is not None:
+    break
+   time.sleep(.003)
+  stdout,stderr=race_process.communicate(timeout=45)
+ finally:
+  if race_process.poll() is None:
+   race_process.kill()
+   race_process.wait(timeout=5)
+ assert raced,"Could not introduce a late destination in an active stage"
+ assert race_process.returncode==0,(race_process.returncode,
+                                    stdout,stderr)
+ assert b"M22_OWNED_STAGE_LATE_TARGET_COLLISION=PASS" in stdout
+ assert (race_dst/source.name).read_bytes()==(
+     b"preexisting-race-destination-must-be-kept")
+ assert sentinel.read_bytes()==b"unrelated-stage-must-never-be-removed"
+ assert list(race_dst.glob(".flyExplorer-copy-*.partial"))==[sentinel], (
+     "The failed copy should clean only its own unfinished stage")
+ assert source.stat().st_size==original_size and digest(source)==original_digest
+ print("M22_STAGED_LATE_TARGET_COLLISION_PRESERVED_BYTES",True,flush=True)
+ print("M22_STAGED_UNRELATED_PARTIAL_NEVER_DELETED",True,flush=True)
+
+ # Deny WRITE_DATA on the test-owned directory only. Revert in finally,
+ # before the owned directory is reclaimed. Do not alter user directories
+ # or rely on the machine-wide clipboard, Recycle Bin or permission state.
+ import re
+ whoami=subprocess.run(["whoami","/user","/fo","csv","/nh"],
+     capture_output=True,text=True,errors="replace",timeout=10,check=True)
+ sid_match=re.search(r"S-1-5-21(?:-\d+){4}",whoami.stdout)
+ assert sid_match,("Could not identify test-session SID",whoami.stdout)
+ sid="*"+sid_match.group(0)
+ denied_dst=own/"write-denied-destination"
+ denied_dst.mkdir()
+ acl_set=subprocess.run(["icacls",str(denied_dst),"/deny",sid+":(WD)"],
+     capture_output=True,text=True,errors="replace",timeout=15,check=False)
+ assert acl_set.returncode==0,("Failed to restrict test-owned directory",
+                                acl_set.stdout,acl_set.stderr)
+ try:
+  denied=subprocess.run(
+      [str(exe),"--owned-stage-deny",str(source),str(denied_dst)],
+      cwd=exe.parent,env=env,capture_output=True,text=True,
+      errors="replace",timeout=25,check=False)
+ finally:
+  acl_undo=subprocess.run(
+      ["icacls",str(denied_dst),"/remove:d",sid],
+      capture_output=True,text=True,errors="replace",timeout=15,check=False)
+  assert acl_undo.returncode==0,("Failed to restore test-owned ACL",
+                                 acl_undo.stdout,acl_undo.stderr)
+ assert denied.returncode==0,(denied.returncode,
+                               denied.stdout,denied.stderr)
+ assert "M22_OWNED_STAGE_DENIED_DESTINATION=PASS" in denied.stdout
+ assert not (denied_dst/source.name).exists()
+ assert not list(denied_dst.glob(".flyExplorer-copy-*.partial"))
+ assert source.stat().st_size==original_size and digest(source)==original_digest
+ print("M22_STAGED_DENIED_WRITE_SOURCE_PRESERVED",True,flush=True)
+ print("M22_STAGED_DENIED_WRITE_NO_DESTINATION",True,flush=True)
  if unc_used:
   for marker in (
       "actual_unc_copy_destination",
