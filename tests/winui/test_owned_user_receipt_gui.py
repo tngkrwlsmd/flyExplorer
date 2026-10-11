@@ -32,7 +32,8 @@ def local_app_data() -> Path:
     shell = c.WinDLL("shell32", use_last_error=True)
     shell.SHGetKnownFolderPath.argtypes = [
         c.POINTER(GUID), W.DWORD, W.HANDLE, c.POINTER(c.c_wchar_p)]
-    shell.SHGetKnownFolderPath.restype = W.HRESULT
+    # ctypes.wintypes has LONG, but no portable HRESULT alias.
+    shell.SHGetKnownFolderPath.restype = W.LONG
     hr = shell.SHGetKnownFolderPath(c.byref(guid), 0, None, c.byref(value))
     if hr != 0 or not value.value:
         raise RuntimeError("Interactive LocalAppData Known Folder unavailable")
