@@ -76,6 +76,12 @@ try:
  print("M22_REAL_STAGED_MID_COPY_CANCEL_SOURCE_UNCHANGED",True,flush=True)
  # Only terminate this Popen-owned fixture; never kill Explorer, the app,
  # another shell helper, or any unrelated user process.
+ # A same-named but unrelated partial must remain untouched even when
+ # an exact stage from a killed test-owned transfer is reclaimed.
+ kill_sentinel=big_dst/".flyExplorer-copy-{00000000-0000-0000-0000-000000000000}.partial"
+ kill_sentinel.write_bytes(b"unrelated-partial-data-must-survive")
+ kill_stage=None
+ kill_identity=None
  kill_proc=subprocess.Popen(
      [str(exe),"--owned-stage-kill",str(source),str(big_dst)],
      cwd=exe.parent,env=env,stdin=subprocess.DEVNULL,
@@ -84,8 +90,15 @@ try:
  try:
   deadline=time.monotonic()+18
   while time.monotonic()<deadline:
-   stages=list(big_dst.glob(".flyExplorer-copy-*.partial"))
+   stages=[p for p in big_dst.glob(".flyExplorer-copy-*.partial")
+           if p!=kill_sentinel]
    if stages and kill_proc.poll() is None:
+    st=stages[0].lstat()
+    if st.st_ino==0 or st.st_size<4*1024*1024:
+     time.sleep(.003)
+     continue
+    kill_stage=stages[0]
+    kill_identity=(st.st_dev,st.st_ino)
     kill_proc.kill()
     kill_proc.wait(timeout=5)
     observed=True
@@ -102,6 +115,24 @@ try:
  assert source.stat().st_size==original_size and digest(source)==original_digest
  print("M22_REAL_STAGED_KILLED_COPY_FINAL_TARGET_ABSENT",True,flush=True)
  print("M22_REAL_STAGED_KILLED_COPY_SOURCE_BYTES_UNCHANGED",True,flush=True)
+ # This is an explicit receipt-scoped test cleanup, NOT a production
+ # orphan sweep. A durable production receipt is not yet implemented.
+ # Verify the exact pre-kill path and filesystem file ID; never delete
+ # an unknown, renamed or reparse-point stage based only on its name.
+ assert kill_stage is not None and kill_identity is not None
+ assert kill_stage.parent==big_dst and not kill_stage.is_symlink()
+ assert kill_stage.name.startswith(".flyExplorer-copy-{")
+ assert kill_stage.name.endswith("}.partial")
+ assert kill_stage.exists(),("Interrupted stage unexpectedly disappeared",kill_stage)
+ recovered=kill_stage.lstat()
+ assert recovered.st_nlink==1
+ assert (recovered.st_dev,recovered.st_ino)==kill_identity
+ kill_stage.unlink()
+ assert not kill_stage.exists()
+ assert kill_sentinel.read_bytes()==b"unrelated-partial-data-must-survive"
+ assert list(big_dst.glob(".flyExplorer-copy-*.partial"))==[kill_sentinel]
+ print("M22_KILLED_STAGE_EXACT_IDENTITY_RECLAIM_TEST_OWNED_ONLY",True,flush=True)
+ print("M22_KILLED_STAGE_UNRELATED_PARTIAL_UNTOUCHED",True,flush=True)
  # A forced kill can strand a .partial file. Reclaim only the unique owned
  # workspace in finally; do not delete application/user filesystem files.
  # Test a publication race on another uniquely owned destination.
@@ -167,6 +198,14 @@ try:
       [str(exe),"--owned-stage-deny",str(source),str(denied_dst)],
       cwd=exe.parent,env=env,capture_output=True,text=True,
       errors="replace",timeout=25,check=False)
+  # Move goes through IFileOperation rather than the staged Copy path.
+  # Denying creation in a disposable destination must leave the source.
+  move_source=big_src/"acl-denied-move.txt"
+  move_source.write_bytes(b"owned-move-source-must-survive")
+  move_denied=subprocess.run(
+      [str(exe),"--owned-move-deny",str(move_source),str(denied_dst)],
+      cwd=exe.parent,env=env,capture_output=True,text=True,
+      errors="replace",timeout=25,check=False)
  finally:
   acl_undo=subprocess.run(
       ["icacls",str(denied_dst),"/remove:d",sid],
@@ -176,6 +215,12 @@ try:
  assert denied.returncode==0,(denied.returncode,
                                denied.stdout,denied.stderr)
  assert "M22_OWNED_STAGE_DENIED_DESTINATION=PASS" in denied.stdout
+ assert move_denied.returncode==0,(move_denied.returncode,
+                                       move_denied.stdout,move_denied.stderr)
+ assert "M22_OWNED_MOVE_DENIED=PASS" in move_denied.stdout
+ assert move_source.read_bytes()==b"owned-move-source-must-survive"
+ assert not (denied_dst/move_source.name).exists()
+ print("M22_DENIED_MOVE_PRESERVES_ORIGINAL_SOURCE",True,flush=True)
  assert not (denied_dst/source.name).exists()
  assert not list(denied_dst.glob(".flyExplorer-copy-*.partial"))
  assert source.stat().st_size==original_size and digest(source)==original_digest
