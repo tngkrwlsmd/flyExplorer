@@ -945,6 +945,93 @@ int wmain(int count,wchar_t**args){
  test(recursiveFailurePreserved,
       "recursive_copy_nested_lock_reports_failure_and_preserves_source");
 
+ // Recursive folder MOVE cannot be assumed transactional. Lock an
+ // owned nested child to force a genuine Shell I/O failure. Validate each
+ // original payload is still retrievable from its old OR new exact path,
+ // even if another nested entry was already moved before the failure.
+ const auto movingFolder=left/L"폴더 이동 부분 실패";
+ const auto movedFolder=right/movingFolder.filename();
+ fs::create_directories(movingFolder/L"nested");
+ put(movingFolder/L"a-first.txt","folder-move-first-original");
+ put(movingFolder/L"nested"/L"z-locked.txt","folder-move-locked-original");
+ const auto unrelatedFolderSentinel=right/L"unrelated-folder-move-sentinel.txt";
+ put(unrelatedFolderSentinel,"must-stay-unmodified");
+ HANDLE folderMoveLock=::CreateFileW(
+     (movingFolder/L"nested"/L"z-locked.txt").c_str(),
+     GENERIC_READ,0,nullptr,OPEN_EXISTING,FILE_ATTRIBUTE_NORMAL,nullptr);
+ bool folderMovePreserved=false;
+ if(folderMoveLock!=INVALID_HANDLE_VALUE){
+  Request task{};
+  task.kind=Kind::Move;task.sourceParent=left.native();
+  task.destination=right.native();task.sources={movingFolder.native()};
+  Progress active{};
+  const auto result=execute(task,active);
+  ::CloseHandle(folderMoveLock);
+  const auto kept=[&](fs::path const& original,fs::path const& transferred,
+                      char const* expected){
+   const bool old=fs::is_regular_file(original)&&get(original)==expected;
+   const bool newer=fs::is_regular_file(transferred)&&
+                    get(transferred)==expected;
+   return old||newer;
+  };
+  folderMovePreserved=result.error!=ERROR_SUCCESS&&
+      kept(movingFolder/L"a-first.txt",movedFolder/L"a-first.txt",
+           "folder-move-first-original")&&
+      kept(movingFolder/L"nested"/L"z-locked.txt",
+           movedFolder/L"nested"/L"z-locked.txt",
+           "folder-move-locked-original")&&
+      get(unrelatedFolderSentinel)=="must-stay-unmodified";
+ }
+ test(folderMovePreserved,
+      "recursive_move_nested_lock_reports_failure_without_payload_loss");
+ 
+ // Cancel a folder MOVE before any Shell transfer is dispatched. Neither
+ // root nor nested source may disappear; there is no target to roll back.
+ const auto moveCanceledFolder=left/L"폴더 이동 취소";
+ fs::create_directories(moveCanceledFolder/L"nested");
+ put(moveCanceledFolder/L"nested"/L"keep.txt","move-cancel-original");
+ Request canceledFolderMove{};
+ canceledFolderMove.kind=Kind::Move;
+ canceledFolderMove.sourceParent=left.native();
+ canceledFolderMove.destination=right.native();
+ canceledFolderMove.sources={moveCanceledFolder.native()};
+ Progress canceledFolderMoveProgress{};
+ canceledFolderMoveProgress.cancel=true;
+ const auto canceledMoveResult=execute(canceledFolderMove,
+                                        canceledFolderMoveProgress);
+ test(canceledMoveResult.error==ERROR_CANCELLED&&
+      canceledMoveResult.aborted&&
+      get(moveCanceledFolder/L"nested"/L"keep.txt")==
+           "move-cancel-original"&&
+      !fs::exists(right/moveCanceledFolder.filename()),
+      "recursive_move_preflight_cancel_preserves_nested_source");
+
+ // Reject a folder MOVE if its target leaf already exists. The existing
+ // destination and every source descendant must remain exactly intact.
+ const auto collidedMoveFolder=left/L"폴더 이동 충돌";
+ const auto collidedTarget=right/collidedMoveFolder.filename();
+ fs::create_directories(collidedMoveFolder/L"nested");
+ fs::create_directories(collidedTarget/L"nested");
+ put(collidedMoveFolder/L"nested"/L"source.txt","owned-move-original");
+ put(collidedTarget/L"nested"/L"keep.txt","existing-destination");
+ Request collisionMove{};
+ collisionMove.kind=Kind::Move;
+ collisionMove.collision=Collision::Reject;
+ collisionMove.sourceParent=left.native();
+ collisionMove.destination=right.native();
+ collisionMove.sources={collidedMoveFolder.native()};
+ const auto collisionPreflight=validate(collisionMove);
+ Progress collisionMoveProgress{};
+ const auto collisionOutcome=execute(collisionMove,collisionMoveProgress);
+ test(collisionPreflight.error==ERROR_ALREADY_EXISTS&&
+      collisionPreflight.collisions.size()==1&&
+      collisionOutcome.error==ERROR_ALREADY_EXISTS&&
+      get(collidedMoveFolder/L"nested"/L"source.txt")==
+           "owned-move-original"&&
+      get(collidedTarget/L"nested"/L"keep.txt")=="existing-destination"&&
+      !fs::exists(collidedTarget/L"nested"/L"source.txt"),
+      "recursive_move_collision_preserves_source_and_existing_target");
+
  fs::create_directory(left/L"폴더 취소");
  put(left/L"폴더 취소"/L"keep.txt","folder-cancel-original");
  Request canceledFolder{};
