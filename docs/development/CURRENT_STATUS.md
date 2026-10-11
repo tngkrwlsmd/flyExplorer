@@ -7,40 +7,61 @@ app/winui, UI-independent native code in src/base, tests in tests/winui, and
 bounded orchestration in tools/winui/run_checks.py. The former MFC application
 is retired from the working tree and is recoverable from Git revision cbffb48.
 
-## 2026-10-11 isolated stage receipt and creator/ACL safety checks
+## 2026-10-11 live staged Copy receipt binding — draft PR #63
 
-PR #63 adds `src/base/stage_receipt_core.{h,cpp}`, a **standalone**
-write-through, flushed, versioned v1 receipt writer/reader/matcher.
-The exact storage primitive first passed on source candidate
-`30b80de3e75cd759ed4a3f82d492b539f0f42d4c`.
-The API records the exact fixed-drive stage path, intended final leaf,
-Windows file identity, process ID and process start time in a caller-provided
-receipt directory. It refuses overwriting an existing receipt, changed file
-identity, invalid/corrupt records and reparse/hardlink receipt files.
-The byte checksum is for corruption detection, not authentication.
+On draft PR [#63](https://github.com/tngkrwlsmd/flyExplorer/pull/63)
+the isolated Shell helper now attempts to provision an exact
+`FOLDERID_LocalAppData\\flyExplorer-transfer-receipts-v1` directory with
+a protected current-user-only DACL, without changing an existing folder's
+permissions. If the known-folder/private ACL gate cannot be established,
+the pre-existing staged Copy behavior is retained **without a receipt**;
+such stages MUST NOT later be presumed recoverable.
 
-On test-owned Windows [Remote Shell #38122600482](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38122600482),
-the original candidate passed Release M22 48/48.
-Follow-up exact source `050ab1a85d52859fcdd7f5ad92e18f5a96d519cb`
-passed `git diff --check` and Release native M22 **52/52** in
-[Remote Shell #38125429517](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38125429517).
-Four additional cases cover rejection of inherited/unspecified directory
-ACLs, creation of owner-only protected DACLs without resetting existing
-folders, exact live-creator PID+process-start comparison, and a real exited
-fixture child. Unknown/inaccessible/reused PID never counts as verified exit.
-A subsequent project-template correction marks the standalone receipt source
-as `PrecompiledHeader=NotUsing`; it has not received full WinUI validation.
-The Python source-contract, product Release and full GUI gates are still open.
+When journaling is enabled, the first `CopyFileExW` callback binds its
+actual destination HANDLE's `FileIdInfo` to the exact fixed-drive
+`.flyExplorer-copy-{GUID}.partial` file. The versioned receipt is
+CREATE_NEW/write-through/flushed in that private directory and read back
+before a successful Copy is allowed to publish the requested name.
+If binding, write, validation, callback or cancellation fails, there is
+**no final-name publication**, and the journaled/unproven stage is left
+untouched for explicit examination rather than automatic path deletion.
+Successful copies retain the receipt as an inert historical record, not
+as permission to modify files. The journal does not represent a durable
+completed/published transition.
 
-**No automatic cleanup and no production receipt creation:** this storage
-primitive is not wired into `copyStagedFiles`. The standalone directory
-helper can provision an *absent* exact owner-only protected store and
-refuses an existing folder; receipt read/write fail on an untrusted store.
-This is not a production store-location or lifecycle policy. Actual
-transfer-worker receipt provenance, worker handoff and exact-handle binding
-are not established. A creator-state result, even Exited, does not authorize
-publishing, deleting or restoring a user file.
-See `docs/development/STAGED_COPY_RECOVERY.md`.
+The prior standalone primitive passed Windows Release M22 **52/52** in
+[Remote Shell #38125429517](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38125429517)
+on source `050ab1a85d52859fcdd7f5ad92e18f5a96d519cb`.
+Live callback implementation plus a test-only untrusted-store refusal
+passed **54/54** in
+[Remote Shell #38127383070](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38127383070)
+on `2597cc7f29ec5786f11c22038621e745302fd4d4`.
+Production isolated Shell helper Release compiled in
+[run #38127271345](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38127271345)
+on the earlier identical production source; its 53/54 fixture result was
+caused by a mistaken pre-existing test target and was corrected before
+the 54/54 run. The first new fixture variable collision was also corrected
+before valid acceptance.
+
+Exact candidate `7d503803ee7af379c781a6f15e03afdcfca48c94` passed an
+additional *real owned-worker forced termination* in
+[Remote Shell #38127536317](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38127536317).
+After its own 512 MiB staged Copy had a recorded file identity and had
+written at least 4 MiB, only the spawned fixture process was killed.
+Read-only receipt-to-file ID matching, worker-not-running classification,
+original SHA-256 preservation, no final file and an unrelated partial's
+unchanged contents all passed. No application/user-profile data was
+cleaned; no orphan removal was performed.
+
+**Open:** fully integrated app Release/GUI acceptance and Python source
+contracts, per-user known-folder runtime acceptance through actual helper
+IPC, process race hardening (a PID may disappear and report Unknown),
+open-handle safe publish/delete semantics, explicit durable completion and
+crash restart reconciliation, an opt-in user recovery UI, zero-byte
+callback edge and actual power-loss durability. A first-chunk pre-callback
+kill may leave an **unrecorded** stage; do not infer its ownership or
+enumerate and delete it. Same-user malicious edits to a checksum-protected
+receipt are still possible. PR #63 remains Draft and not merged.
 
 ## 2026-10-11 exact staged Copy file-ID read-only validation
 
