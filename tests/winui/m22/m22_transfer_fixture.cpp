@@ -326,8 +326,8 @@ int wmain(int count,wchar_t**args){
       "live_staged_copy_callback_durable_receipt_before_publish");
  Progress deniedJournal{};
  deniedJournal.receiptDirectory=insecureFolder.native();
- const auto rejected=execute(liveRequest,deniedJournal);
- test(rejected.error==ERROR_ACCESS_DENIED&&
+ const auto journalRejected=execute(liveRequest,deniedJournal);
+ test(journalRejected.error==ERROR_ACCESS_DENIED&&
       get(liveSource)=="callback-owned-copy-content"&&
       get(liveDest/liveSource.filename())=="callback-owned-copy-content"&&
       journalCount==1,
