@@ -3,6 +3,8 @@
 #endif
 #include "stage_receipt_core.h"
 #include <objbase.h>
+#include <sddl.h>
+#include <aclapi.h>
 #include "file_command_core.h"
 #include <filesystem>
 #include <algorithm>
