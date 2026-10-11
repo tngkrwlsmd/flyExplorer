@@ -7,6 +7,69 @@ app/winui, UI-independent native code in src/base, tests in tests/winui, and
 bounded orchestration in tools/winui/run_checks.py. The former MFC application
 is retired from the working tree and is recoverable from Git revision cbffb48.
 
+## 2026-10-11 real logged-in-user Known Folder/GUI gate prepared — NOT ACCEPTED
+
+**Priority:** validate the *shipping* isolated Shell helper's own
+`SHGetKnownFolderPath(FOLDERID_LocalAppData)` and owner-only receipt
+store in a real interactive desktop, from an actual WinUI Copy action
+and a second direct `executeIsolated` request. Do not replace this
+with a SYSTEM Session-0 or environment-variable-only test.
+
+A read-only Windows Remote Shell session preflight
+[run #38134659901](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38134659901)
+observed **one interactive Explorer session and one active login**.
+The workflow itself reported failure because its final auxiliary
+PowerShell query left a nonzero exit code; it was *not* GUI acceptance.
+The normal central `desktop-a` CI GUI profile accepts trusted
+`main` ancestry only and cannot be used to certify draft PR #63.
+
+Prepared on this **Draft feature branch only**:
+- `tests/winui/m22/m22_transfer_fixture.cpp` has a new
+  `--real-user-shipping-helper-ipc` entrypoint. It refuses SYSTEM
+  token, checks only explicitly test-owned source/destination paths,
+  snapshots receipt file *names* without reading previous receipt
+  contents, calls the unmodified shipping helper via the real
+  `executeIsolated` IPC path and requires exactly one new
+  `PublishedVerified` receipt under the actual user's Known Folder.
+- `tests/winui/test_owned_user_receipt_gui.py` launches only its own
+  WinUI process/window, activates a test-owned source/destination
+  pane, copies one unique Korean-named test file, verifies exact
+  source/destination bytes, and checks a **new** receipt with the
+  native read-only inspector. It requires an explicit opt-in flag,
+  a non-SYSTEM interactive session and full sibling Release runtime.
+  APPDATA/TEMP are test-owned; the real user's LocalAppData is
+  intentionally **not overridden**, so the helper must resolve the
+  actual OS Known Folder. No old receipts are opened, updated or
+  deleted; the app may create its own private receipt directory and
+  append inert records as it would in production.
+- `tools/winui/Invoke-InteractiveReceiptGate.ps1` and
+  `OwnedInteractiveReceiptWorker.ps1` stage exact runtime + fixture
+  into a fresh ACL-scoped owned root, use a one-shot limited-rights
+  InteractiveToken task in the *existing* logged-in session, and
+  unregister that exact owned task in `finally`. They do not
+  change existing user preferences or schedule a persistent job.
+
+**Not executed / not accepted:** an attempt to dispatch the new
+preflight through the central Remote Shell was blocked by the tool's
+security verification, before a Windows run was created. No
+interactive task was registered and no user Known Folder receipt was
+created by this attempted gate. The new scripts, native CLI extension,
+source-contract changes and GUI assertion have **not** received new
+Windows compilation or GUI execution evidence. Existing exact
+[62/62 native + Release + fixture IPC](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38133470149)
+evidence remains valid only for its older source SHA
+`6ae307b815d4874885e1f90c6838ad31ed65377b`.
+
+**Next acceptance boundary:** an authorized interactive-user task must
+first pass review and syntax/native build preflight. Then require
+shipping-helper Known Folder provenance, actual product-window Copy,
+exact staged/file-ID receipt and published phase, no changes to prior
+journal entries, and cleanup only of test-owned tasks/processes.
+Any environment/tool denial is a gate blockage, not a product PASS
+or failure. Do not merge PR #63 or enable recovery/cleanup on this
+basis. Restricted-ancestor permissions, worker termination/restart,
+and power-loss integrity remain separate following gates.
+
 ## 2026-10-11 active Copy destination ancestor rename guard — draft PR #63
 
 **New verified scope:** For an active, journalled staged Copy only,
