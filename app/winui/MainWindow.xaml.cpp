@@ -1003,6 +1003,12 @@ namespace winrt::FlyExplorer::implementation
                 completed.action==Action::Refresh?
                 L"폴더 변경 알림을 반영했습니다.":
                 L"폴더를 불러왔습니다.");
+            // Navigation refresh is asynchronous and can replace the
+            // file-operation warning. Reassert it after presenting the
+            // touched folder; do not mistake a partial transfer for success.
+            if(completed.action==Action::Refresh&&
+               !mTransferFailureNotice.empty())
+                StatusText().Text(hstring(mTransferFailureNotice));
             UpdateWatch(completed.side,true);
             ScheduleOwnedShellProviderVisualCaptureIfNeeded(completed.side);
         }else RefreshTabs(completed.side);
