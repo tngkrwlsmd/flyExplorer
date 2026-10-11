@@ -7,7 +7,57 @@ app/winui, UI-independent native code in src/base, tests in tests/winui, and
 bounded orchestration in tools/winui/run_checks.py. The former MFC application
 is retired from the working tree and is recoverable from Git revision cbffb48.
 
-## 2026-10-11 interactive receipt gate hardened and enrolled in source checks — still unrun
+## 2026-10-11 real logged-in-user WinUI + shipping Known Folder acceptance — PASS
+
+**Accepted on exact source `b198565f44530641ed46d99eb8a41af28b6ee333`.**
+[Central Remote Shell #38139086195](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38139086195)
+ran an owned, one-shot **InteractiveToken** Windows task in the existing
+user Explorer session (not SYSTEM Session 0), using a separately copied
+WinUI Release runtime, its normal production Shell helper, and a native
+M22 receipt inspector. The exact source-contract and PowerShell
+worker parse preflight passed on the same SHA. The native fixture
+source last compiled on [#38138044010](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38138044010)
+(9/9 receipt-wire synthetic, 15/15 source contract, native Release
+M22 build), followed only by scoped test-script changes.
+
+**Observed PASS markers in the actual user worker log:**
+
+- `M22_INTERACTIVE_SHIPPING_KNOWNFOLDER_IPC=PASS private=1 bytes=1 receipts=1 error=0`:
+  unmodified shipping helper IPC used the real
+  `SHGetKnownFolderPath(FOLDERID_LocalAppData)` protected current-user
+  journal, created one owned copied file, and matched its distinct
+  OS FileIdInfo and `PublishedVerified` immutable phase markers.
+- `GUI_PYTHON_EXIT=0`, `REAL_USER_GUI_SHIPPING_KNOWNFOLDER_RECEIPT=PASS`,
+  `REAL_USER_GUI_COPY_BYTES_PUBLISHED=PASS`:
+  the owned WinUI window's toolbar Copy action published the exact
+  uniquely named owned target. The new record's v1 parent/leaf
+  proved it belonged to this request before the native read-only
+  file-ID/phase inspection accepted it. Original source contents
+  and final destination bytes matched exactly.
+- `REAL_USER_GUI_PRIOR_RECEIPT_CONTENT_NOT_READ=PASS` and
+  `INTERACTIVE_RECEIPT_ONE_SHOT_TASK_RELEASED=TRUE`:
+  prior user journal content was not opened or changed, no journal
+  entries or stages were deleted, and only the newly registered owned
+  test task was unregistered. Owned evidence remains isolated.
+
+The worker was hardened after two test-harness-only failures:
+Windows PowerShell 5.1 interpreted a literal Hangul script pathname
+under its legacy script codepage, so the direct owned source file
+was not created. The test now constructs Unicode filename codepoints.
+Then Python `-X utf8` failed to decode localized
+`whoami /user` headings (`UnicodeDecodeError`); SID acceptance now
+checks raw ASCII SID bytes without removing the security boundary.
+Both fixes are test-only. No `src/base` or `app/winui` product source
+was changed after the accepted [native 62/62 + canonical product Release + test helper IPC #38133470149](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38133470149).
+
+**Next scope:** test-denied `FILE_LIST_DIRECTORY` on a test-owned
+destination ancestor, then exact-stage integrity through force-kill
+and read-only post-restart classification, then power-loss acceptance
+only in a separately approved disposable VM/disk. These are NOT
+covered by the successful user-session GUI run. PR #63 remains Draft,
+unmerged. No automatic recovery, directory-wide scan or deletion.
+
+## 2026-10-11 previous GUI gate preparation (historical, superseded by PASS above)
 
 The newly written interactive-user GUI gate is **not a Windows PASS**.
 Safety-critical preconditions (explicit opt-in, token SID,
