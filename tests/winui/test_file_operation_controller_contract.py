@@ -239,6 +239,8 @@ class FileOperationContracts(unittest.TestCase):
         pure = read("tests/winui/test_owned_receipt_wire_contract.py")
         self.assertIn('struct.Struct("<8sIIIQ16sIQI")', wire)
         self.assertIn('b"FLYSTGR1"', wire)
+        self.assertIn("tests/winui/test_owned_receipt_wire_contract.py",
+                      read("tools/winui/run_checks.py"))
         self.assertIn("stage_path.parent / leaf == expected", wire)
         for scenario in ("test_exact_parent_and_unicode_leaf",
                          "test_unrelated_target_rejected",
