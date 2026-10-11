@@ -184,6 +184,49 @@ int wmain(int count,wchar_t**args){
       !inspectStageFile((probeFolder/L"not-present.partial").native(),invalid),
       "stage_identity_rejects_unowned_names_and_unnormalized_paths");
 
+
+ // Receipt storage uses only this explicitly created disposable directory.
+ // A receipt is evidence, never authorization to delete the stage.
+ const auto receiptFolder=root/L"receipt-identity";
+ fs::create_directory(receiptFolder);
+ const auto record=receiptFolder/
+     L".flyExplorer-receipt-{00000000-0000-0000-0000-000000000001}.bin";
+ StageOwnershipReceipt saved{};
+ const bool wrote=writeStageReceipt(
+     record.native(),stage.native(),L"target-document.txt");
+ const bool loaded=readStageReceipt(record.native(),saved);
+ test(wrote&&loaded&&saved.stagePath==stage.native()&&
+      saved.targetLeaf==L"target-document.txt"&&
+      saved.creatorPid==::GetCurrentProcessId()&&
+      saved.creatorStartTime!=0&&receiptMatchesStage(saved),
+      "receipt_roundtrip_flush_and_exact_stage_identity");
+ const auto initialReceiptBytes=fs::file_size(record);
+ test(!writeStageReceipt(record.native(),stage.native(),
+                         L"target-document.txt")&&
+      fs::file_size(record)==initialReceiptBytes&&
+      readStageReceipt(record.native(),saved),
+      "receipt_create_new_never_overwrites_existing");
+ const auto oldReceiptStage=probeFolder/L"recorded-but-renamed.bin";
+ fs::rename(stage,oldReceiptStage);
+ put(stage,"new-file-at-identical-path");
+ test(readStageReceipt(record.native(),saved)&&
+      !receiptMatchesStage(saved)&&
+      get(oldReceiptStage)=="replacement-not-original"&&
+      get(stage)=="new-file-at-identical-path",
+      "receipt_rejects_same_path_file_replacement");
+ {
+  std::fstream f(record,std::ios::binary|std::ios::in|std::ios::out);
+  char byte=0;
+  f.seekg(0);f.get(byte);f.seekp(0);
+  f.put(static_cast<char>(byte^0x20));
+ }
+ StageOwnershipReceipt tampered{};
+ test(!readStageReceipt(record.native(),tampered)&&
+      !receiptMatchesStage(tampered)&&
+      get(oldReceiptStage)=="replacement-not-original"&&
+      get(stage)=="new-file-at-identical-path",
+      "receipt_corruption_fails_closed_without_file_mutation");
+
  bool noPartial=true;
  for(auto const& item:fs::directory_iterator(right)){
   if(item.path().filename().native().rfind(L".flyExplorer-copy-",0)==0)
