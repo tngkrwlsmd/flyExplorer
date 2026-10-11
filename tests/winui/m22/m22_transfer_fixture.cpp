@@ -41,6 +41,29 @@ int wmain(int count,wchar_t**args){
       outcome.error,int(triggered.load()),progress.percent.load());
   return 24;
  }
+ if(count==4&&(std::wstring(args[1])==L"--owned-stage-deny"||
+               std::wstring(args[1])==L"--owned-stage-race")){
+  // The caller owns both folders; this mode cannot mutate the source,
+  // any existing target, or a non-test-owned folder.
+  const fs::path source(args[2]),destination(args[3]);
+  Request request{};
+  request.kind=Kind::Copy;
+  request.sourceParent=source.parent_path().native();
+  request.destination=destination.native();
+  request.sources={source.native()};
+  Progress progress{};
+  const auto outcome=execute(request,progress);
+  const bool denied=std::wstring(args[1])==L"--owned-stage-deny";
+  const bool expected=denied?
+      (outcome.error==ERROR_ACCESS_DENIED||
+       outcome.error==ERROR_WRITE_PROTECT):
+      (outcome.error==ERROR_ALREADY_EXISTS||
+       outcome.error==ERROR_FILE_EXISTS);
+  std::printf("M22_OWNED_STAGE_%s=%s error=%lu\n",
+      denied?"DENIED_DESTINATION":"LATE_TARGET_COLLISION",
+      expected?"PASS":"FAIL",outcome.error);
+  return expected?0:26;
+ }
  if(count==4&&std::wstring(args[1])==L"--owned-stage-kill"){
   // Only invoked by test_native.py with its disposable source/destination.
   Request request{};
