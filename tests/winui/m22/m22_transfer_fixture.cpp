@@ -143,6 +143,46 @@ int wmain(int count,wchar_t**args){
  test(done.error==0&&get(right/L"자료.txt")=="old"&&
       get(left/L"자료.txt")=="old","actual_ifileoperation_korean_copy");
  test(progress.percent==100,"copy_progress_complete");
+
+ // Recovery identity is read-only evidence, NOT permission to delete.
+ // Exercise a standalone stage inside this exact owned disposable root.
+ const auto probeFolder=root/L"stage-identity";
+ fs::create_directory(probeFolder);
+ const auto stage=probeFolder/
+     L".flyExplorer-copy-{00000000-0000-0000-0000-000000000001}.partial";
+ put(stage,"owned-identity-one");
+ StageFileIdentity observed{},unchanged{},other{},rejected{};
+ const bool inspected=inspectStageFile(stage.native(),observed);
+ test(inspected&&inspectStageFile(stage.native(),unchanged)&&
+      sameStageFile(observed,unchanged)&&
+      !sameStageFile(StageFileIdentity{},observed),
+      "stage_identity_stable_readonly_snapshot");
+ const auto hardlink=probeFolder/L"other-hard-link.txt";
+ std::error_code linkError{};
+ fs::create_hard_link(stage,hardlink,linkError);
+ const bool refusedHardlink=!linkError&&
+      !inspectStageFile(stage.native(),rejected);
+ fs::remove(hardlink,linkError);
+ test(refusedHardlink&&!linkError&&
+      inspectStageFile(stage.native(),unchanged),
+      "stage_identity_refuses_multiple_hardlinks");
+ const auto previous=probeFolder/L"original-retained.bin";
+ fs::rename(stage,previous);
+ put(stage,"replacement-not-original");
+ test(inspectStageFile(stage.native(),other)&&
+      !sameStageFile(observed,other)&&
+      get(previous)=="owned-identity-one"&&
+      get(stage)=="replacement-not-original",
+      "stage_identity_detects_same_path_replacement");
+ StageFileIdentity invalid{};
+ const auto invalidName=probeFolder/L"unrelated.txt";
+ put(invalidName,"must-not-be-interpreted-as-stage");
+ const auto traversal=probeFolder/L"subdir"/L".."/stage.filename();
+ test(!inspectStageFile(invalidName.native(),invalid)&&
+      !inspectStageFile(traversal.native(),invalid)&&
+      !inspectStageFile((probeFolder/L"not-present.partial").native(),invalid),
+      "stage_identity_rejects_unowned_names_and_unnormalized_paths");
+
  bool noPartial=true;
  for(auto const& item:fs::directory_iterator(right)){
   if(item.path().filename().native().rfind(L".flyExplorer-copy-",0)==0)
