@@ -24,12 +24,13 @@ immutable phase records. The staged interactive worker copies the
 parser along with the owned GUI test, closing a missing runtime
 dependency.
 
-`tests/winui/test_owned_receipt_wire_contract.py` adds seven pure
-synthetic owned-fixture scenarios (exact Unicode target, wrong
-target, wrong parent, truncation, bad checksum, wrong version,
-invalid filename and invalid encoded path). A local Python 3
-reconstructed-source check ran **7/7 PASS** and `py_compile`
-on the parser and synthetic test. This is **not** Windows or
+`tests/winui/test_owned_receipt_wire_contract.py` now has nine
+pure synthetic owned-fixture scenarios: exact Unicode target,
+wrong target/parent, truncation, checksum damage, wrong version,
+invalid leaf/encoded path, dot-segment path aliases, and a legal
+zero-valued volume serial with a separately valid file ID. A local
+Python 3 reconstructed-source check ran **9/9 PASS** and
+`py_compile` on the parser and synthetic test. This is **not** Windows or
 GUI acceptance; the reconstructed local test files were not fetched
 as a full Git checkout. The latest GitHub branch's complete native
 source, PowerShell one-shot task and real logged-in GUI are still
