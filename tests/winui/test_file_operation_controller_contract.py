@@ -176,6 +176,16 @@ class FileOperationContracts(unittest.TestCase):
         self.assertIn("!journalReady", transfer)
         self.assertIn("markStageCopyCompleted(", transfer)
         self.assertIn("markStageCopyPublished(", transfer)
+        # Journalled active Copy must use a pinned source file HANDLE and
+        # pinned parent handle, with a no-replace rename by file object.
+        # The receipt primitive itself remains strictly non-mutating.
+        self.assertIn("publishActiveBoundStage(", transfer)
+        self.assertIn("SetFileInformationByHandle(", transfer)
+        self.assertIn("FileRenameInfo,rename", transfer)
+        self.assertIn("rename->RootDirectory=directory;", transfer)
+        self.assertIn("rename->ReplaceIfExists=FALSE;", transfer)
+        self.assertIn("GetFinalPathNameByHandleW(", transfer)
+        self.assertIn("--owned-stage-race-receipt", fixture)
         self.assertIn("FILE_FLAG_OPEN_REPARSE_POINT", transfer)
         self.assertIn("PublicationUnconfirmed", core)
         self.assertIn("PhaseRead::Invalid", core)
