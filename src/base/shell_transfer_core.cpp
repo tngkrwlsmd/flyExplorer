@@ -19,13 +19,6 @@
 #pragma comment(lib,"shell32.lib")
 namespace fxfile::shelltransfer {
 using Microsoft::WRL::ComPtr;
-#if defined(FLY_M22_TEST_DIRECTORY_RENAME_LOCK)
-// This setter exists only in the M22 native fixture binary.
-void setDirectoryRenameProbeForTest(
-    void (*probe)(std::wstring const&) noexcept) noexcept {
- g_directoryRenameProbe.store(probe,std::memory_order_release);
-}
-#endif
 bool supportsDriveType(Kind kind,UINT driveType) noexcept {
  switch(kind){
  case Kind::Copy:
@@ -176,6 +169,13 @@ DWORD code(HRESULT value) {
         static_cast<DWORD>(value);
 }
 }
+#if defined(FLY_M22_TEST_DIRECTORY_RENAME_LOCK)
+// This setter exists only in the M22 native fixture binary.
+void setDirectoryRenameProbeForTest(
+    void (*probe)(std::wstring const&) noexcept) noexcept {
+ g_directoryRenameProbe.store(probe,std::memory_order_release);
+}
+#endif
 // Read-only identity evidence for an explicitly supplied stage path.
 // A file ID is NOT proof of who created the stage; deletion is forbidden.
 bool sameStageFile(StageFileIdentity const& a,
