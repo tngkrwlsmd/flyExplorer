@@ -86,12 +86,10 @@ def clipboard_formats():
         effect=None
         if preferred in found:
             import struct
-            raw=cb.GetClipboardData(preferred)
-            # pywin32 can expose this registered format as bytes OR
-            # a numeric HGLOBAL. Decode both without guessing cut intent.
-            if isinstance(raw,(bytes,bytearray)) and len(raw)>=4:
-                effect=struct.unpack("<I",raw[:4])[0]
-            elif isinstance(raw,int) and raw:
+            # For a registered binary clipboard format the Win32 HGLOBAL
+            # handle, not pywin32's format-dependent conversion, is truth.
+            handle=cb.GetClipboardDataHandle(preferred)
+            if handle:
                 kernel=c.windll.kernel32
                 kernel.GlobalSize.argtypes=[w.HGLOBAL]
                 kernel.GlobalSize.restype=c.c_size_t
@@ -99,12 +97,15 @@ def clipboard_formats():
                 kernel.GlobalLock.restype=c.c_void_p
                 kernel.GlobalUnlock.argtypes=[w.HGLOBAL]
                 kernel.GlobalUnlock.restype=w.BOOL
-                if 4<=kernel.GlobalSize(w.HGLOBAL(raw))<=65536:
-                    pointer=kernel.GlobalLock(w.HGLOBAL(raw))
-                    if pointer:
+                native=w.HGLOBAL(int(handle))
+                size=kernel.GlobalSize(native)
+                if 4<=size<=65536:
+                    ptr=kernel.GlobalLock(native)
+                    if ptr:
                         try:
-                            effect=struct.unpack("<I",c.string_at(pointer,4))[0]
-                        finally:kernel.GlobalUnlock(w.HGLOBAL(raw))
+                            effect=struct.unpack("<I",c.string_at(ptr,4))[0]
+                        finally:
+                            kernel.GlobalUnlock(native)
             print("OWNED_OS_PREFERRED_DROP_EFFECT",effect,flush=True)
         return paths,effect
     finally:cb.CloseClipboard()
@@ -242,7 +243,9 @@ def main():
             until(selected,"Only exact owned Explorer item may be selected",7)
         def clipboard_expected(label,effect):
             expected=fixture[label][0].resolve()
+            reported_error=False
             def correct():
+                nonlocal reported_error
                 try:
                     paths,got_effect=clipboard_formats()
                     if len(paths)!=1 or Path(paths[0]).resolve()!=expected:
@@ -250,7 +253,12 @@ def main():
                     # Effect is mandatory for cut; Explorer may use delayed
                     # representation so don't call any cut success silently.
                     return got_effect==effect if effect==2 else True
-                except Exception:return False
+                except Exception as exc:
+                    if not reported_error:
+                        print("OWNED_CLIPBOARD_OBSERVATION_ERROR",
+                              type(exc).__name__,flush=True)
+                        reported_error=True
+                    return False
             until(correct,"Actual OS CF_HDROP/effect differs from owned selection",5)
             print("REAL_OS_CF_HDROP_OWNED",label,
                   "CUT" if effect==2 else "COPY",flush=True)
