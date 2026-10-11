@@ -72,6 +72,16 @@ class FileOperationContracts(unittest.TestCase):
         self.assertIn("sharing_violation_move_reports_failure_and_preserves_source",
                       fixture)
 
+    def test_selected_row_activates_command_pane(self):
+        source = read("app/winui/MainWindow.xaml.cpp")
+        begin = source.index("void MainWindow::OnFileSelectionChanged(")
+        end = source.index("void MainWindow::OnFileSelectionKeyUp(", begin)
+        body = source[begin:end]
+        self.assertIn("if(mPopulatingFileLists)return;", body)
+        self.assertIn("args.AddedItems().Size()!=0", body)
+        self.assertIn("ActiveWindowTab().model.activePane!=side", body)
+        self.assertIn("ActivatePane(side);", body)
+
     def test_partial_failure_refreshes_visible_touched_folders(self):
         transfer = read("app/winui/m22_transfers.cpp")
         fixture = read("tests/winui/m22/m22_transfer_fixture.cpp")
