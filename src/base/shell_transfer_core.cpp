@@ -19,6 +19,13 @@
 #pragma comment(lib,"shell32.lib")
 namespace fxfile::shelltransfer {
 using Microsoft::WRL::ComPtr;
+#if defined(FLY_M22_TEST_DIRECTORY_RENAME_LOCK)
+// This setter exists only in the M22 native fixture binary.
+void setDirectoryRenameProbeForTest(
+    void (*probe)(std::wstring const&) noexcept) noexcept {
+ g_directoryRenameProbe.store(probe,std::memory_order_release);
+}
+#endif
 bool supportsDriveType(Kind kind,UINT driveType) noexcept {
  switch(kind){
  case Kind::Copy:
@@ -60,6 +67,10 @@ bool transferDriveRoot(std::wstring const& value,
 }
 namespace {
 namespace fs=std::filesystem;
+#if defined(FLY_M22_TEST_DIRECTORY_RENAME_LOCK)
+using DirectoryRenameProbe=void (*)(std::wstring const&) noexcept;
+std::atomic<DirectoryRenameProbe> g_directoryRenameProbe{nullptr};
+#endif
 
 bool safeFilesystemFolder(fs::path const& folder,Kind kind) {
  if(!folder.is_absolute()||!folder.has_root_directory())return false;
@@ -586,49 +597,67 @@ bool publishActiveBoundStage(std::wstring const& stage,
      proof.targetLeaf!=destination.filename().native()||
      !safeFilesystemFolder(source.parent_path(),Kind::Copy))
    return false;
-  // Inspect the exact destination directory and keep it open for the
-  // duration of the rename. Win32 FileRenameInfo on supported Windows
-  // builds rejects a non-null RootDirectory (ERROR_INVALID_PARAMETER);
-  // the subsequent absolute path remains a separately acknowledged race
-  // boundary, so it is NOT a directory-handle-anchored rename.
-  const HANDLE directory=::CreateFileW(
-      source.parent_path().c_str(),FILE_READ_ATTRIBUTES,
-      FILE_SHARE_READ|FILE_SHARE_WRITE|FILE_SHARE_DELETE,nullptr,
-      OPEN_EXISTING,FILE_FLAG_BACKUP_SEMANTICS|
-                    FILE_FLAG_OPEN_REPARSE_POINT,nullptr);
-  if(directory==INVALID_HANDLE_VALUE){
-   error=::GetLastError();return false;
+  // Pin the COMPLETE absolute destination ancestor chain, not just the
+  // final directory. Holding each HANDLE without FILE_SHARE_DELETE prevents
+  // a competing rename of any component while the absolute target pathname
+  // is re-resolved by FileRenameInfo. A conflicting existing DELETE handle
+  // makes the pin fail closed (ERROR_SHARING_VIOLATION).
+  struct DirectoryPins final {
+   std::vector<HANDLE> handles;
+   ~DirectoryPins(){for(auto it=handles.rbegin();it!=handles.rend();++it)
+      ::CloseHandle(*it);}
+  } pins;
+  const fs::path parent=source.parent_path();
+  if(parent.lexically_normal()!=parent||parent.root_path().empty())
+   return false;
+  auto pin=[&](fs::path const& expected)->bool {
+   const HANDLE handle=::CreateFileW(expected.c_str(),
+       FILE_READ_ATTRIBUTES,FILE_SHARE_READ|FILE_SHARE_WRITE,
+       nullptr,OPEN_EXISTING,
+       FILE_FLAG_BACKUP_SEMANTICS|FILE_FLAG_OPEN_REPARSE_POINT,nullptr);
+   if(handle==INVALID_HANDLE_VALUE){error=::GetLastError();return false;}
+   // Own the handle before any throwing allocation or conversion.
+   try{pins.handles.push_back(handle);}catch(...){::CloseHandle(handle);throw;}
+   BY_HANDLE_FILE_INFORMATION info{};
+   if(!::GetFileInformationByHandle(handle,&info)||
+      !(info.dwFileAttributes&FILE_ATTRIBUTE_DIRECTORY)||
+      (info.dwFileAttributes&FILE_ATTRIBUTE_REPARSE_POINT))
+    return false;
+   const DWORD units=::GetFinalPathNameByHandleW(
+       handle,nullptr,0,FILE_NAME_NORMALIZED|VOLUME_NAME_DOS);
+   if(units<5||units>32000)return false;
+   std::wstring resolved(units+1,L'\0');
+   const DWORD size=::GetFinalPathNameByHandleW(
+       handle,resolved.data(),static_cast<DWORD>(resolved.size()),
+       FILE_NAME_NORMALIZED|VOLUME_NAME_DOS);
+   if(size!=units)return false;
+   resolved.resize(size);
+   return resolved.rfind(L"\\\\?\\",0)==0&&
+       ::CompareStringOrdinal(resolved.c_str()+4,-1,
+                              expected.c_str(),-1,TRUE)==CSTR_EQUAL;
+  };
+  fs::path component=parent.root_path();
+  if(!pin(component))return false;
+  for(auto part=parent.begin();part!=parent.end();++part){
+   if(*part==parent.root_name()||*part==parent.root_directory())
+    continue;
+   component/=*part;
+   if(!pin(component))return false;
   }
-  const auto closeDirectory=[&]{::CloseHandle(directory);};
+  const HANDLE directory=pins.handles.back();
   BY_HANDLE_FILE_INFORMATION folder{};
-  if(!::GetFileInformationByHandle(directory,&folder)||
-     !(folder.dwFileAttributes&FILE_ATTRIBUTE_DIRECTORY)||
-     (folder.dwFileAttributes&FILE_ATTRIBUTE_REPARSE_POINT)){
-   closeDirectory();return false;
-  }
-  // Verify that the held parent resolves to the exact expected location.
-  // On unrecognized/changed/aliased paths fail closed, never guess.
-  const DWORD units=::GetFinalPathNameByHandleW(
-      directory,nullptr,0,FILE_NAME_NORMALIZED|VOLUME_NAME_DOS);
-  if(units<5||units>32000){
-   closeDirectory();return false;
-  }
-  std::wstring finalParent(units+1,L'\0');
-  const DWORD received=::GetFinalPathNameByHandleW(
-      directory,finalParent.data(),static_cast<DWORD>(finalParent.size()),
-      FILE_NAME_NORMALIZED|VOLUME_NAME_DOS);
-  finalParent.resize(received<finalParent.size()?received:0);
-  if(finalParent.rfind(L"\\\\?\\",0)!=0||
-     ::CompareStringOrdinal(finalParent.c_str()+4,-1,
-         source.parent_path().c_str(),-1,TRUE)!=CSTR_EQUAL){
-   closeDirectory();return false;
-  }
+  if(!::GetFileInformationByHandle(directory,&folder))
+   return false;
+#if defined(FLY_M22_TEST_DIRECTORY_RENAME_LOCK)
+  if(auto probe=g_directoryRenameProbe.load(std::memory_order_acquire))
+   probe(parent.native());
+#endif
   const HANDLE active=::CreateFileW(stage.c_str(),
       DELETE|FILE_READ_ATTRIBUTES,
       FILE_SHARE_READ|FILE_SHARE_WRITE|FILE_SHARE_DELETE,nullptr,
       OPEN_EXISTING,FILE_FLAG_OPEN_REPARSE_POINT,nullptr);
   if(active==INVALID_HANDLE_VALUE){
-   error=::GetLastError();closeDirectory();return false;
+   error=::GetLastError();return false;
   }
   BY_HANDLE_FILE_INFORMATION basic{};
   FILE_ID_INFO file{};
@@ -644,7 +673,7 @@ bool publishActiveBoundStage(std::wstring const& stage,
       (static_cast<std::uint64_t>(folder.dwVolumeSerialNumber)&0xffffffffu)==
        (file.VolumeSerialNumber&0xffffffffu);
   if(!sameObject){
-   ::CloseHandle(active);closeDirectory();return false;
+   ::CloseHandle(active);return false;
   }
   // path::native() returns a reference owned by its path. filename()
   // creates a temporary path, so never bind a reference to its native().
@@ -662,7 +691,6 @@ bool publishActiveBoundStage(std::wstring const& stage,
       active,FileRenameInfo,rename,static_cast<DWORD>(payload.size()))!=FALSE;
   error=published?ERROR_SUCCESS: ::GetLastError();
   ::CloseHandle(active);
-  closeDirectory();
   return published;
  }catch(...){error=ERROR_INVALID_PARAMETER;return false;}
 }
