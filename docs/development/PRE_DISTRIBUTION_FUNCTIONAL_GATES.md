@@ -99,25 +99,34 @@ not recoverable.** Two earlier tests on the same product were
 harness failures from the binary-format/HGLOBAL reader, not accepted
 file-operation failure evidence.
 
-**Properties remains NOT ACCEPTED:** current STA-fixed Release
-`96d6b57` built successfully in
-[38098503351](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38098503351).
-The independently owned Explorer OS Properties baseline
+**Actual multi-item Properties now ACCEPTED:** product SHA
+`96d6b5723773104baf4fa351ab37dd219481ccfa` (STA-fixed
+Release build [38098503351](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38098503351)),
+test + documentation SHA
+`636d09cda6b06d429e1c36587277766265e353e0`,
+[Windows run 38099891312](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38099891312)
+SUCCESS. Two owned sibling files, exact helper-owned native popup,
+uniquely identified canonical terminal Properties item, and
+helper-owned hit-test point were verified before native pointer
+selection. The actual native Properties dialog appeared at
+**435x587** pixels, was confirmed owned by the exact helper PID,
+was closed by HWND-specific WM_CLOSE, and the helper settled.
+Original file bytes and all six legacy profile identities remained
+unchanged. The test saved a dialog screenshot; no separate
+DPI/High Contrast/final-pixel acceptance was performed.
+The independent Explorer OS Properties baseline
 [38098254103](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38098254103)
-passed. But flyExplorer's two-item popup Properties invocation run
+also passed. Prior keyboard-path run
 [38099074283](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38099074283)
-FAILED: the canonical last Properties menu item was identified,
-keyboard selection was sent, yet no newly visible test-linked dialog
-appeared; the isolated helper exited 0 and owned input files plus
-legacy settings were unchanged. A test-only guarded pointer-input
-successor is committed at `2c1dcbb` but has **not been executed**.
-Do not conflate menu cancellation/return code zero with a
-successfully opened Properties sheet.
+failed without ever displaying a dialog, despite a zero helper
+exit code: the accepted guarded native pointer method resolves that
+**test input delivery** boundary without weakening the isolated
+Shell verb allow-list.
 
-**Still OPEN:** multi-item Properties visible/close acceptance,
-extension-specific verbs, removable/UNC targets, provider Move/Delete/
-Recycle, provider-to-provider copy, arbitrary third-party
-extensions, and broader application UI/environment coverage.
+**Still OPEN:** extension-specific verbs, removable/UNC targets,
+provider Move/Delete/Recycle, provider-to-provider copy,
+arbitrary third-party extensions and broader UI/accessibility/
+provider environment acceptance.
 
 ## 3. Large-folder metadata indexing — bounded PASS
 
