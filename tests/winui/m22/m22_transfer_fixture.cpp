@@ -12,6 +12,7 @@ namespace fs=std::filesystem;
 #if defined(FLY_M22_TEST_DIRECTORY_RENAME_LOCK)
 std::atomic_bool g_directoryProbeAttempted{false};
 std::atomic_bool g_directoryProbeBlocked{false};
+std::atomic_bool g_ancestorProbeBlocked{false};
 // Called synchronously inside the active worker's pinned-ancestor window.
 // No scan or mutation outside a disposable M22-owned folder.
 void attemptTestOwnedParentRename(std::wstring const& exactParent) noexcept {
@@ -26,8 +27,19 @@ void attemptTestOwnedParentRename(std::wstring const& exactParent) noexcept {
  g_directoryProbeBlocked.store(!renamed&&
      (result==ERROR_SHARING_VIOLATION||result==ERROR_ACCESS_DENIED),
      std::memory_order_release);
- std::printf("M22_PIN_RENAME_ATTEMPT moved=%d error=%lu\n",
-             int(renamed),result);
+ const std::wstring ancestor=fs::path(exactParent).parent_path().native();
+ const std::wstring changedAncestor=ancestor+L"-swapped";
+ const BOOL ancestorMoved=::MoveFileExW(
+     ancestor.c_str(),changedAncestor.c_str(),0);
+ const DWORD ancestorError=ancestorMoved?ERROR_SUCCESS: ::GetLastError();
+ if(ancestorMoved)(void)::MoveFileExW(
+     changedAncestor.c_str(),ancestor.c_str(),0);
+ g_ancestorProbeBlocked.store(!ancestorMoved&&
+     (ancestorError==ERROR_SHARING_VIOLATION||
+      ancestorError==ERROR_ACCESS_DENIED),
+     std::memory_order_release);
+ std::printf("M22_PIN_RENAME_ATTEMPT moved=%d error=%lu ancestorMoved=%d ancestorError=%lu\n",
+             int(renamed),result,int(ancestorMoved),ancestorError);
 }
 #endif
 int wmain(int count,wchar_t**args){
@@ -564,12 +576,17 @@ int wmain(int count,wchar_t**args){
  // Deterministically test the exact narrow rename window: before invoking
  // the active worker, this disposable parent IS renameable; from inside
  // the pinned window its rename MUST be blocked by sharing rules.
- const auto pinDest=root/L"m22-pin-target";
- const auto pinOther=root/L"m22-pin-target-swapped";
+ const auto pinAncestor=root/L"m22-pin-ancestor";
+ const auto pinAncestorOther=root/L"m22-pin-ancestor-swapped";
+ const auto pinDest=pinAncestor/L"m22-pin-target";
+ const auto pinOther=pinAncestor/L"m22-pin-target-swapped";
  const auto pinStore=root/L"m22-pin-store";
+ fs::create_directory(pinAncestor);
  fs::create_directory(pinDest);
  const bool renameable=::MoveFileExW(pinDest.c_str(),pinOther.c_str(),0)&&
-                        ::MoveFileExW(pinOther.c_str(),pinDest.c_str(),0);
+                        ::MoveFileExW(pinOther.c_str(),pinDest.c_str(),0)&&
+                        ::MoveFileExW(pinAncestor.c_str(),pinAncestorOther.c_str(),0)&&
+                        ::MoveFileExW(pinAncestorOther.c_str(),pinAncestor.c_str(),0);
  const bool pinStoreReady=createPrivateStageReceiptDirectory(
      pinStore.native());
  bool pinReceiptPublished=false;
@@ -581,6 +598,7 @@ int wmain(int count,wchar_t**args){
   pinProgress.receiptDirectory=pinStore.native();
   g_directoryProbeAttempted.store(false,std::memory_order_release);
   g_directoryProbeBlocked.store(false,std::memory_order_release);
+  g_ancestorProbeBlocked.store(false,std::memory_order_release);
   setDirectoryRenameProbeForTest(&attemptTestOwnedParentRename);
   const auto pinnedResult=execute(pinTask,pinProgress);
   setDirectoryRenameProbeForTest(nullptr);
@@ -595,15 +613,19 @@ int wmain(int count,wchar_t**args){
     pinReceiptPublished=true;
   }
  }
- std::printf("M22_PIN_GUARD_RESULT renameable=%d private=%d copy=%d published=%d probed=%d blocked=%d restored=%d\n",
+ std::printf("M22_PIN_GUARD_RESULT renameable=%d private=%d copy=%d published=%d probed=%d blocked=%d ancestorBlocked=%d restored=%d\n",
              int(renameable),int(pinStoreReady),int(pinResultOk),
              int(pinReceiptPublished),
              int(g_directoryProbeAttempted.load(std::memory_order_acquire)),
              int(g_directoryProbeBlocked.load(std::memory_order_acquire)),
-             int(fs::is_directory(pinDest)&&!fs::exists(pinOther)));
+             int(g_ancestorProbeBlocked.load(std::memory_order_acquire)),
+             int(fs::is_directory(pinDest)&&!fs::exists(pinOther)&&
+                 fs::is_directory(pinAncestor)&&!fs::exists(pinAncestorOther)));
  test(renameable&&pinStoreReady&&pinResultOk&&pinReceiptPublished&&
       g_directoryProbeAttempted.load(std::memory_order_acquire)&&
       g_directoryProbeBlocked.load(std::memory_order_acquire)&&
+      g_ancestorProbeBlocked.load(std::memory_order_acquire)&&
+      fs::is_directory(pinAncestor)&&!fs::exists(pinAncestorOther)&&
       fs::is_directory(pinDest)&&!fs::exists(pinOther),
       "receipt_active_publish_pins_ancestor_against_rename");
 #endif
