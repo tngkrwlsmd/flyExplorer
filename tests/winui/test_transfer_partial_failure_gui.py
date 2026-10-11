@@ -114,18 +114,31 @@ try:
         return next((item for item in element("LeftFiles").descendants()
                      if item.element_info.control_type == "ListItem"
                      and name in item.window_text()), None)
-    first = find_row("a-first.txt")
-    assert first is not None
-    click(first)
-    second = find_row("z-locked.txt")
-    assert second is not None
-    second.iface_selection_item.AddToSelection()
     def selection():
         return [(item.window_text(), bool(item.is_selected()))
                 for item in element("LeftFiles").descendants()
                 if item.element_info.control_type == "ListItem"]
-    eventually(lambda: sum(value for _, value in selection()) == 2,
-               "both source rows must be selected", 9)
+    first = find_row("a-first.txt")
+    assert first is not None
+    click(first)
+    def select_first():
+        item = find_row("a-first.txt")
+        if item is None:
+            return False
+        focus()
+        item.select()
+        current = find_row("a-first.txt")
+        return (current is not None and current.is_selected()
+                and sum(value for _, value in selection()) == 1)
+    eventually(select_first, "first owned row selection did not stabilize", 12)
+    print("PARTIAL_GUI_AFTER_FIRST="+repr(selection()), flush=True)
+    def add_second():
+        item = find_row("z-locked.txt")
+        if item is None:
+            return False
+        item.iface_selection_item.AddToSelection()
+        return sum(value for _, value in selection()) == 2
+    eventually(add_second, "both source rows must be selected", 12)
     selected_before = selection()
     print("PARTIAL_GUI_SELECTION_BEFORE="+repr(selected_before), flush=True)
     assert sum(selected for _, selected in selected_before) == 2, (
