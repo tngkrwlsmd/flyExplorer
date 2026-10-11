@@ -11,6 +11,9 @@
 #include <array>
 #include <atomic>
 #include <cstring>
+#if defined(FLY_M22_TEST_DIRECTORY_RENAME_LOCK)
+#include <cstdio>
+#endif
 #include <limits>
 #include <new>
 #include <thread>
@@ -630,11 +633,23 @@ bool publishActiveBoundStage(std::wstring const& stage,
    const DWORD size=::GetFinalPathNameByHandleW(
        handle,resolved.data(),static_cast<DWORD>(resolved.size()),
        FILE_NAME_NORMALIZED|VOLUME_NAME_DOS);
-   if(size!=units)return false;
+   if(size!=units){
+#if defined(FLY_M22_TEST_DIRECTORY_RENAME_LOCK)
+    std::printf("M22_PIN_REJECT=length expectedUnits=%lu actualUnits=%lu\n",
+                units,size);
+#endif
+    return false;
+   }
    resolved.resize(size);
-   return resolved.rfind(L"\\\\?\\",0)==0&&
+   const bool matches=resolved.rfind(L"\\\\?\\",0)==0&&
        ::CompareStringOrdinal(resolved.c_str()+4,-1,
                               expected.c_str(),-1,TRUE)==CSTR_EQUAL;
+#if defined(FLY_M22_TEST_DIRECTORY_RENAME_LOCK)
+   if(!matches)
+    std::printf("M22_PIN_REJECT=resolved_path expected=%ls actual=%ls\n",
+                expected.c_str(),resolved.c_str());
+#endif
+   return matches;
   };
   fs::path component=parent.root_path();
   if(!pin(component))return false;
