@@ -19,6 +19,63 @@ worker-process crash as a machine-level storage durability test.
   physical host or prove that a separate disposable VM exists.
 - The central Remote Shell request was returned to idle after the audit.
 
+## Hyper-V host identified by operator — host connection not yet established
+
+The operator identified the outer virtualization platform as **Hyper-V**.
+The existing Windows VM remains a **guest**, and its lack of nested
+virtualization does not imply the Hyper-V host lacks the ability to
+create an independent test VM.
+
+A new **read-only host audit script** is versioned at
+`tools/winui/Inspect-HyperVDurabilityHost.ps1`. On the **actual Hyper-V
+host**, from a PowerShell session permitted to query the Hyper-V service,
+run:
+
+```powershell
+& .\tools\winui\Inspect-HyperVDurabilityHost.ps1
+```
+
+This prints only VM/switch counts, remaining host RAM, available
+free GiB at Hyper-V's default VHD location, whether the default
+directories exist, whether the dedicated name
+`flyExplorer-DurabilityLab` is unused, and whether checkpoint/export
+query commands exist. It does **not** display guest names, VM IDs,
+account identities, disk paths or modify host resources.
+
+Do **not** run this inside the shared `windows-vm`: it has no Hyper-V
+management service. An authorized host control channel must be
+identified first; the central `personal-pc` runner is *not assumed*
+to be the Hyper-V host merely because it exists.
+
+### Provisioning blueprint after a successful host audit
+
+1. Identify the existing shared VM by **its actual host-side VM GUID**
+   and explicitly exclude it from all subsequent command targets.
+2. Select an unused test VM name and a new, isolated Hyper-V storage
+   directory on a host volume whose free space is adequate for a
+   Windows OS and a separate owned test VHDX. Verify the host can
+   still run its current production guests without memory pressure.
+3. Use a **Generation 2** guest where the OS image supports it.
+   Plan separate system and test data VHDX, with no attached existing
+   shared guest disk and no physical-disk passthrough.
+4. Keep the disposable VM isolated from production networks unless
+   necessary for product setup; if connectivity is needed, use a
+   separately reviewed Hyper-V virtual switch arrangement.
+5. Save a **host-side export or otherwise independently restorable
+   image**, separately from any VM checkpoint, and verify the
+   restore process and exact new VM ID. A checkpoint by itself is
+   not proof of safe external recovery.
+6. Use unique owned test roots and preserve hashes, immutable
+   receipt paths, marker phase and FileIdInfo evidence **outside**
+   the guest. Do not enable deletion/recovery by default.
+
+Provisioning, checkpoint creation and guest interruption are
+separate, state-changing steps: **do not run them without the host
+identity, storage path, resource budget and explicit scope being
+reviewed first**. A guest's read-only
+[capability audit #38174021618](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38174021618)
+cannot satisfy the host audit.
+
 ## Required independent resources
 
 Before any machine interruption, obtain the following from a
