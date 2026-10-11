@@ -47,6 +47,32 @@ private durable receipt and explicit user authorization described below,
 with any destructive action targeting the verified open file object rather
 than a path subject to replacement.
 
+## Durable receipt primitive — isolated, not yet connected (2026-10-11)
+
+The standalone `src/base/stage_receipt_core.{h,cpp}` contains a bounded,
+versioned v1 receipt writer, reader and identity matcher. The writer uses
+exclusive `CREATE_NEW`, write-through and an explicit flush, with the
+exact staged-Copy path, intended final leaf, NTFS file ID/volume identity
+and creator PID/process creation time. The reader refuses malformed,
+truncated or checksum-mismatched records; the matcher reopens the exact
+stage and rejects replacements. Receipt paths are explicit, not discovered
+by directory scanning. It does not delete, rename, modify or publish stages.
+
+**Important:** this is a deliberately isolated storage primitive, not
+a fully trusted ownership journal. It is not yet called by the live
+`copyStagedFiles` path. The caller must establish and verify an
+application-controlled private receipt directory and authorization rules.
+The checksum detects torn/corrupt bytes, but is **not an authentication
+signature** and cannot prove creator identity against an attacker with
+write access. PID reuse and process lifetime are not verified. There is
+no receipt-assisted recovery UI or production deletion. Never interpret a
+valid standalone receipt as cleanup authorization.
+
+The next integration gate must establish private-directory ACL/owner
+trust, callback/file-handle binding during actual transfers, worker
+liveness validation and tamper/race-resistant exact-file operations.
+Native fixtures use only an isolated test-owned directory.
+
 ## Minimum provenance before implementing production cleanup
 
 An interrupted operation must have a durable, versioned and private
