@@ -65,7 +65,7 @@ try {
     $testDir = Join-Path $run 'tests\winui'
     $nativeDir = Join-Path $testDir 'm22\bin\x64\Release'
     New-Item -ItemType Directory -Path $nativeDir -Force | Out-Null
-    foreach ($name in @('paths.py','uia_polling.py','test_owned_user_receipt_gui.py')) {
+    foreach ($name in @('paths.py','uia_polling.py','receipt_wire_owned.py','test_owned_user_receipt_gui.py')) {
         Copy-Item -LiteralPath (Join-Path $Worktree ('tests\winui\'+$name)) -Destination $testDir
     }
     Copy-Item -LiteralPath $sourceFixture -Destination $nativeDir
