@@ -5,6 +5,7 @@
 #define FLY_SHELL_TRANSFER_CORE_H
 #include <windows.h>
 #include <atomic>
+#include <array>
 #include <cstdint>
 #include <cstddef>
 #include <string>
@@ -57,6 +58,17 @@ struct Progress {
  std::atomic_uint32_t percent{0};
  std::atomic_bool cancel{false};
 };
+// Read-only file-object identity probe for an EXACT observed staged Copy path.
+// This is NOT an ownership receipt or deletion authorization. A matching
+// filename/file ID cannot prove which app/helper created the file.
+struct StageFileIdentity {
+ std::uint64_t volumeSerial=0;
+ std::array<unsigned char,16> fileId{};
+};
+bool inspectStageFile(std::wstring const& exactPath,
+                      StageFileIdentity& identity) noexcept;
+bool sameStageFile(StageFileIdentity const& a,
+                   StageFileIdentity const& b) noexcept;
 Report validate(Request const& task) noexcept; // read-only preflight
 Report execute(Request const& task,Progress& progress) noexcept; // STA only
 // App-side bounded process boundary for Copy/Move. Resolves the exact helper
