@@ -132,6 +132,131 @@ bool exactPrivateFolderPath(std::wstring const& path){
     directory==directory.root_path())return false;
  return fixedParent(directory/fs::path(L"receipt-check"));
 }
+// Separate fixed-size, immutable evidence files are intentionally used
+// instead of rewriting the v1 creator record during a transfer.
+#pragma pack(push,1)
+struct PhaseWire {
+ char magic[8];
+ std::uint32_t version;
+ std::uint32_t phase;
+ std::uint64_t volumeSerial;
+ unsigned char fileId[16];
+ std::uint32_t creatorPid;
+ std::uint64_t creatorStartTime;
+ std::uint32_t checksum;
+};
+#pragma pack(pop)
+constexpr char kPhaseMagic[8]={'F','L','Y','P','H','A','S','1'};
+enum class PhaseRead { Missing, Valid, Invalid };
+std::wstring phasePath(std::wstring const& receiptPath,
+                       std::uint32_t phase){
+ return receiptPath+(phase==1?L".complete":L".published");
+}
+bool equalMarker(PhaseWire const& record,StageOwnershipReceipt const& receipt,
+                 std::uint32_t phase){
+ return std::memcmp(record.magic,kPhaseMagic,sizeof(kPhaseMagic))==0&&
+  record.version==1&&record.phase==phase&&
+  record.volumeSerial==receipt.stageIdentity.volumeSerial&&
+  std::equal(std::begin(record.fileId),std::end(record.fileId),
+             receipt.stageIdentity.fileId.begin())&&
+  record.creatorPid==receipt.creatorPid&&
+  record.creatorStartTime==receipt.creatorStartTime;
+}
+bool markerFileGone(std::wstring const& path){
+ const DWORD a=::GetFileAttributesW(path.c_str());
+ if(a!=INVALID_FILE_ATTRIBUTES)return false;
+ const DWORD error=::GetLastError();
+ return error==ERROR_FILE_NOT_FOUND||error==ERROR_PATH_NOT_FOUND;
+}
+bool exactRegularIdentity(std::wstring const& exactPath,
+                          StageFileIdentity& id){
+ id={};
+ const fs::path path(exactPath);
+ if(!normalized(path,exactPath)||!fixedParent(path)||
+    !filecommand::validLeaf(path.filename().native()))return false;
+ const HANDLE handle=::CreateFileW(exactPath.c_str(),
+    FILE_READ_ATTRIBUTES,FILE_SHARE_READ|FILE_SHARE_WRITE|FILE_SHARE_DELETE,
+    nullptr,OPEN_EXISTING,FILE_FLAG_OPEN_REPARSE_POINT,nullptr);
+ if(handle==INVALID_HANDLE_VALUE)return false;
+ BY_HANDLE_FILE_INFORMATION basic{};
+ FILE_ID_INFO file{};
+ const bool ok=::GetFileInformationByHandle(handle,&basic)!=FALSE&&
+    ::GetFileInformationByHandleEx(handle,FileIdInfo,&file,sizeof(file))!=FALSE&&
+    basic.nNumberOfLinks==1&&
+    !(basic.dwFileAttributes&
+      (FILE_ATTRIBUTE_DIRECTORY|FILE_ATTRIBUTE_REPARSE_POINT));
+ ::CloseHandle(handle);
+ if(!ok)return false;
+ id.volumeSerial=file.VolumeSerialNumber;
+ std::copy(std::begin(file.FileId.Identifier),
+           std::end(file.FileId.Identifier),id.fileId.begin());
+ return validIdentity(id);
+}
+bool publishedTargetMatches(StageOwnershipReceipt const& receipt) {
+ StageFileIdentity target{};
+ const auto path=(fs::path(receipt.stagePath).parent_path()/
+                  fs::path(receipt.targetLeaf)).native();
+ return exactRegularIdentity(path,target)&&
+        sameStageFile(receipt.stageIdentity,target)&&
+        markerFileGone(receipt.stagePath);
+}
+PhaseRead readPhase(std::wstring const& exactReceiptPath,
+                    StageOwnershipReceipt const& receipt,
+                    std::uint32_t phase){
+ const auto path=phasePath(exactReceiptPath,phase);
+ if(path.size()>32000)return PhaseRead::Invalid;
+ const HANDLE handle=::CreateFileW(path.c_str(),GENERIC_READ,
+   FILE_SHARE_READ,nullptr,OPEN_EXISTING,
+   FILE_FLAG_OPEN_REPARSE_POINT,nullptr);
+ if(handle==INVALID_HANDLE_VALUE){
+  return ::GetLastError()==ERROR_FILE_NOT_FOUND?
+         PhaseRead::Missing:PhaseRead::Invalid;
+ }
+ LARGE_INTEGER length{};
+ PhaseWire marker{};
+ DWORD read=0;
+ const bool ok=validReceiptFile(handle)&&
+      ::GetFileSizeEx(handle,&length)!=FALSE&&
+      length.QuadPart==sizeof(marker)&&
+      ::ReadFile(handle,&marker,sizeof(marker),&read,nullptr)!=FALSE&&
+      read==sizeof(marker);
+ ::CloseHandle(handle);
+ if(!ok||!equalMarker(marker,receipt,phase))return PhaseRead::Invalid;
+ const std::uint32_t saved=marker.checksum;
+ marker.checksum=0;
+ std::vector<unsigned char> raw(sizeof(marker));
+ std::memcpy(raw.data(),&marker,sizeof(marker));
+ return checksum(raw)==saved?PhaseRead::Valid:PhaseRead::Invalid;
+}
+bool writePhase(std::wstring const& exactReceiptPath,
+                StageOwnershipReceipt const& receipt,
+                std::uint32_t phase){
+ const auto path=phasePath(exactReceiptPath,phase);
+ if(path.size()>32000)return false;
+ PhaseWire marker{};
+ std::memcpy(marker.magic,kPhaseMagic,sizeof(kPhaseMagic));
+ marker.version=1;
+ marker.phase=phase;
+ marker.volumeSerial=receipt.stageIdentity.volumeSerial;
+ std::copy(receipt.stageIdentity.fileId.begin(),
+           receipt.stageIdentity.fileId.end(),marker.fileId);
+ marker.creatorPid=receipt.creatorPid;
+ marker.creatorStartTime=receipt.creatorStartTime;
+ std::vector<unsigned char> raw(sizeof(marker));
+ std::memcpy(raw.data(),&marker,sizeof(marker));
+ marker.checksum=checksum(raw);
+ const HANDLE handle=::CreateFileW(path.c_str(),GENERIC_WRITE,
+     0,nullptr,CREATE_NEW,
+     FILE_ATTRIBUTE_NORMAL|FILE_FLAG_WRITE_THROUGH|FILE_FLAG_OPEN_REPARSE_POINT,
+     nullptr);
+ if(handle==INVALID_HANDLE_VALUE)return false;
+ DWORD written=0;
+ const bool ok=validReceiptFile(handle)&&
+   ::WriteFile(handle,&marker,sizeof(marker),&written,nullptr)!=FALSE&&
+   written==sizeof(marker)&&::FlushFileBuffers(handle)!=FALSE;
+ ::CloseHandle(handle);
+ return ok&&readPhase(exactReceiptPath,receipt,phase)==PhaseRead::Valid;
+}
 } // namespace
 
 bool isPrivateStageReceiptDirectory(
@@ -380,6 +505,53 @@ bool readStageReceipt(std::wstring const& exactReceiptPath,
   receipt=std::move(candidate);
   return true;
  }catch(...){receipt={};return false;}
+}
+bool markStageCopyCompleted(
+    std::wstring const& exactReceiptPath) noexcept {
+ try{
+  StageOwnershipReceipt receipt{};
+  return readStageReceipt(exactReceiptPath,receipt)&&
+    receiptMatchesStage(receipt)&&
+    readPhase(exactReceiptPath,receipt,1)==PhaseRead::Missing&&
+    readPhase(exactReceiptPath,receipt,2)==PhaseRead::Missing&&
+    writePhase(exactReceiptPath,receipt,1);
+ }catch(...){return false;}
+}
+bool markStageCopyPublished(
+    std::wstring const& exactReceiptPath) noexcept {
+ try{
+  StageOwnershipReceipt receipt{};
+  return readStageReceipt(exactReceiptPath,receipt)&&
+    readPhase(exactReceiptPath,receipt,1)==PhaseRead::Valid&&
+    readPhase(exactReceiptPath,receipt,2)==PhaseRead::Missing&&
+    publishedTargetMatches(receipt)&&
+    writePhase(exactReceiptPath,receipt,2);
+ }catch(...){return false;}
+}
+StageReceiptState inspectStageReceiptState(
+    std::wstring const& exactReceiptPath) noexcept {
+ try{
+  StageOwnershipReceipt receipt{};
+  if(!readStageReceipt(exactReceiptPath,receipt))
+   return StageReceiptState::Invalid;
+  const auto complete=readPhase(exactReceiptPath,receipt,1);
+  const auto published=readPhase(exactReceiptPath,receipt,2);
+  if(complete==PhaseRead::Invalid||published==PhaseRead::Invalid||
+     (published==PhaseRead::Valid&&complete!=PhaseRead::Valid))
+   return StageReceiptState::Inconsistent;
+  const bool stageMatches=receiptMatchesStage(receipt);
+  const bool finalMatches=publishedTargetMatches(receipt);
+  if(published==PhaseRead::Valid)
+   return finalMatches?StageReceiptState::PublishedVerified:
+                       StageReceiptState::Inconsistent;
+  if(complete==PhaseRead::Valid){
+   if(stageMatches)return StageReceiptState::CompletedOnStage;
+   return finalMatches?StageReceiptState::PublicationUnconfirmed:
+                       StageReceiptState::Inconsistent;
+  }
+  return stageMatches?StageReceiptState::CopyingOrInterrupted:
+                       StageReceiptState::Inconsistent;
+ }catch(...){return StageReceiptState::Invalid;}
 }
 ReceiptCreatorState inspectReceiptCreator(
     StageOwnershipReceipt const& receipt) noexcept {
