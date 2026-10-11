@@ -5,6 +5,7 @@
 #include <objbase.h>
 #include <sddl.h>
 #include <aclapi.h>
+#include <shlobj.h>
 #include "file_command_core.h"
 #include <filesystem>
 #include <algorithm>
@@ -13,6 +14,7 @@
 #include <utility>
 #include <vector>
 #pragma comment(lib,"advapi32.lib")
+#pragma comment(lib,"shell32.lib")
 
 namespace fxfile::shelltransfer {
 namespace {
@@ -209,6 +211,62 @@ bool createPrivateStageReceiptDirectory(
   ::LocalFree(security);
   return created&&isPrivateStageReceiptDirectory(exactDirectory);
  }catch(...){return false;}
+}
+
+bool prepareUserStageReceiptDirectory(
+    std::wstring& exactDirectory) noexcept {
+ exactDirectory.clear();
+ try{
+  PWSTR raw=nullptr;
+  if(FAILED(::SHGetKnownFolderPath(FOLDERID_LocalAppData,0,nullptr,&raw))||
+     !raw)return false;
+  const std::wstring base(raw);
+  ::CoTaskMemFree(raw);
+  const fs::path folder=fs::path(base)/L"flyExplorer-transfer-receipts-v1";
+  const std::wstring path=folder.native();
+  if(!normalized(fs::path(base),base)||!fixedParent(folder))
+   return false;
+  const DWORD attrs=::GetFileAttributesW(path.c_str());
+  if(attrs==INVALID_FILE_ATTRIBUTES){
+   if(::GetLastError()!=ERROR_FILE_NOT_FOUND||
+      !createPrivateStageReceiptDirectory(path))return false;
+  }
+  if(!isPrivateStageReceiptDirectory(path))return false;
+  exactDirectory=path;
+  return true;
+ }catch(...){exactDirectory.clear();return false;}
+}
+
+bool writeBoundStageReceipt(std::wstring const& exactReceiptPath,
+                            std::wstring const& exactStagePath,
+                            std::wstring const& targetLeaf,
+                            HANDLE copyDestination) noexcept {
+ if(!copyDestination||copyDestination==INVALID_HANDLE_VALUE)return false;
+ BY_HANDLE_FILE_INFORMATION info{};
+ FILE_ID_INFO handleId{};
+ if(!::GetFileInformationByHandle(copyDestination,&info)||
+    (info.dwFileAttributes&
+        (FILE_ATTRIBUTE_DIRECTORY|FILE_ATTRIBUTE_REPARSE_POINT))||
+    info.nNumberOfLinks!=1||
+    !::GetFileInformationByHandleEx(copyDestination,FileIdInfo,
+                                   &handleId,sizeof(handleId)))return false;
+ StageFileIdentity fromHandle{};
+ fromHandle.volumeSerial=handleId.VolumeSerialNumber;
+ std::copy(std::begin(handleId.FileId.Identifier),
+           std::end(handleId.FileId.Identifier),
+           fromHandle.fileId.begin());
+ StageFileIdentity atPath{};
+ if(!inspectStageFile(exactStagePath,atPath)||
+    !sameStageFile(atPath,fromHandle))return false;
+ // A failed write is not a recoverable receipt. Never remove the stage.
+ if(!writeStageReceipt(exactReceiptPath,exactStagePath,targetLeaf))
+  return false;
+ StageOwnershipReceipt persisted{};
+ return readStageReceipt(exactReceiptPath,persisted)&&
+        persisted.stagePath==exactStagePath&&
+        persisted.targetLeaf==targetLeaf&&
+        sameStageFile(persisted.stageIdentity,fromHandle)&&
+        receiptMatchesStage(persisted);
 }
 
 bool writeStageReceipt(std::wstring const& exactReceiptPath,
