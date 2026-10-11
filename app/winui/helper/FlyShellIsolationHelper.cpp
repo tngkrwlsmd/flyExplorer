@@ -147,6 +147,47 @@ LRESULT CALLBACK menuWindowProc(HWND h,UINT msg,WPARAM w,LPARAM l){
  return originalMenuProc?::CallWindowProcW(originalMenuProc,h,msg,w,l):
                          ::DefWindowProcW(h,msg,w,l);
 }
+// Keep the COM STA and hidden Shell owner alive while a modeless
+// Properties dialog is shown. Ignore windows of any other process.
+struct PropertySheetScan { HWND owner; bool visible=false; };
+BOOL CALLBACK scanPropertySheet(HWND hwnd,LPARAM data) {
+ auto* scan=reinterpret_cast<PropertySheetScan*>(data);
+ if(hwnd==scan->owner||!::IsWindowVisible(hwnd))return TRUE;
+ DWORD pid=0;
+ ::GetWindowThreadProcessId(hwnd,&pid);
+ if(pid!=::GetCurrentProcessId())return TRUE;
+ wchar_t cls[32]{};
+ if(::GetClassNameW(hwnd,cls,32)&&::lstrcmpW(cls,L"#32770")==0)
+  scan->visible=true;
+ return TRUE;
+}
+bool propertySheetVisible(HWND owner) {
+ PropertySheetScan scan{owner,false};
+ ::EnumWindows(&scanPropertySheet,reinterpret_cast<LPARAM>(&scan));
+ return scan.visible;
+}
+bool awaitOwnedPropertySheet(HWND owner) {
+ const auto now=::GetTickCount64();
+ const auto appearBy=now+5000;
+ const auto finishBy=now+35000;
+ bool appeared=false;
+ while(::GetTickCount64()<finishBy) {
+  const bool visible=propertySheetVisible(owner);
+  if(visible)appeared=true;
+  if(appeared&&!visible)return true;
+  if(!appeared&&::GetTickCount64()>=appearBy)return false;
+  const auto wait=::MsgWaitForMultipleObjectsEx(
+      0,nullptr,90,QS_ALLINPUT,MWMO_INPUTAVAILABLE);
+  if(wait==WAIT_FAILED)return false;
+  MSG message{};
+  while(::PeekMessageW(&message,nullptr,0,0,PM_REMOVE)) {
+   if(message.message==WM_QUIT)return false;
+   ::TranslateMessage(&message);
+   ::DispatchMessageW(&message);
+  }
+ }
+ return false;
+}
 int inspectOrShowContext(bool inspect){
  // Child reads one bounded UTF-16 path, optional x,y from an anonymous pipe.
  HANDLE input=::GetStdHandle(STD_INPUT_HANDLE);
@@ -272,6 +313,7 @@ int inspectOrShowContext(bool inspect){
            ::PostMessageW(owner,WM_NULL,0,0);
            rc=0; // Escape / clicking away is a valid cancel.
            if(chosen>=1&&chosen<=0x7fff){
+            bool isProperties=false;
             // Built-in file mutation must use flyExplorer's native
             // guarded transfer/rename routes, not an opaque Shell verb.
             char name[128]{};
@@ -292,11 +334,13 @@ int inspectOrShowContext(bool inspect){
              // nonmutating Properties verb. Native flyExplorer
              // handles clipboard/file operations independently.
              if(paths.size()>1&&verb!="properties")rc=65;
+             isProperties=verb=="properties";
             }
             if(rc==0){
              CMINVOKECOMMANDINFOEX args{};
              args.cbSize=sizeof(args);
-             args.fMask=CMIC_MASK_UNICODE|CMIC_MASK_PTINVOKE;
+             args.fMask=CMIC_MASK_UNICODE|CMIC_MASK_PTINVOKE|
+                        CMIC_MASK_NOASYNC;
              args.hwnd=owner;
              args.lpVerb=MAKEINTRESOURCEA(chosen-1);
              args.lpVerbW=MAKEINTRESOURCEW(chosen-1);
@@ -305,6 +349,8 @@ int inspectOrShowContext(bool inspect){
              if(FAILED(menu->InvokeCommand(
                  reinterpret_cast<CMINVOKECOMMANDINFO*>(&args))))
                  rc=66;
+             else if(isProperties&&!awaitOwnedPropertySheet(owner))
+                 rc=69;
             }
            }
            ::SetWindowLongPtrW(owner,GWLP_WNDPROC,original);
