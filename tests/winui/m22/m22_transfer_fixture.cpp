@@ -1,4 +1,5 @@
 #include "../../../src/base/shell_transfer_core.h"
+#include "../../../src/base/stage_receipt_core.h"
 #include <filesystem>
 #include <fstream>
 #include <cstdio>
