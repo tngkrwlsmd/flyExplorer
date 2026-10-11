@@ -28,6 +28,10 @@ LEGACY = (
 user = c.windll.user32
 user.GetWindowThreadProcessId.argtypes = (w.HWND, c.POINTER(w.DWORD))
 user.GetWindowThreadProcessId.restype = w.DWORD
+user.GetWindow.argtypes = (w.HWND, w.UINT)
+user.GetWindow.restype = w.HWND
+user.PostMessageW.argtypes = (w.HWND, w.UINT, w.WPARAM, w.LPARAM)
+user.PostMessageW.restype = w.BOOL
 
 
 def eventually(fn, name, seconds=12):
