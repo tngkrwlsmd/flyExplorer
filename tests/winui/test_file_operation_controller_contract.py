@@ -72,6 +72,25 @@ class FileOperationContracts(unittest.TestCase):
         self.assertIn("sharing_violation_move_reports_failure_and_preserves_source",
                       fixture)
 
+    def test_regular_fixed_file_copy_commits_only_completed_staging(self):
+        core = read("src/base/shell_transfer_core.cpp")
+        fixture = read("tests/winui/m22/m22_transfer_fixture.cpp")
+        wrapper = read("tests/winui/m22/test_native.py")
+        self.assertIn("bool stageEligible(Request const& task)", core)
+        self.assertIn("task.kind!=Kind::Copy", core)
+        self.assertIn("task.collision!=Collision::Reject", core)
+        self.assertIn("FILE_ATTRIBUTE_REPARSE_POINT", core)
+        self.assertIn("::GetDriveTypeW(sourceRoot.c_str())!=DRIVE_FIXED", core)
+        self.assertIn("::GetDriveTypeW(destRoot.c_str())!=DRIVE_FIXED", core)
+        self.assertIn("COPY_FILE_FAIL_IF_EXISTS", core)
+        self.assertIn("::MoveFileExW(stage.c_str(),target.c_str(),MOVEFILE_WRITE_THROUGH)", core)
+        self.assertIn("::DeleteFileW(stage.c_str())", core)
+        self.assertIn("if(canceled(progress))", core)
+        self.assertNotIn("MOVEFILE_REPLACE_EXISTING", core)
+        self.assertIn("committed_local_copy_has_no_partial_stage", fixture)
+        self.assertIn("M22_REAL_STAGED_KILLED_COPY_FINAL_TARGET_ABSENT", wrapper)
+        self.assertIn("M22_REAL_STAGED_MID_COPY_CANCEL_SOURCE_UNCHANGED", wrapper)
+
     def test_partial_failure_notice_survives_navigation_refresh(self):
         ui = read("app/winui/MainWindow.xaml.cpp")
         header = read("app/winui/MainWindow.xaml.h")
