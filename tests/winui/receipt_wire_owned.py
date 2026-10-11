@@ -7,6 +7,7 @@ inspector must independently verify PublishedVerified and FileIdInfo.
 from __future__ import annotations
 
 from pathlib import Path
+import os
 import struct
 
 _HEADER = struct.Struct("<8sIIIQ16sIQI")
@@ -46,6 +47,7 @@ def matches_owned_published_target(receipt_file: Path, expected_target: Path) ->
         if (not stage_path.is_absolute() or not expected.is_absolute()
                 or "\0" in stage or "\0" in leaf
                 or str(stage_path) != stage
+                or os.path.normpath(stage) != stage
                 or leaf != expected.name or Path(leaf).name != leaf):
             return False
         return stage_path.parent / leaf == expected
