@@ -7,6 +7,39 @@ app/winui, UI-independent native code in src/base, tests in tests/winui, and
 bounded orchestration in tools/winui/run_checks.py. The former MFC application
 is retired from the working tree and is recoverable from Git revision cbffb48.
 
+## 2026-10-12 Hyper-V host identified; audit tool verified, host NOT YET CONNECTED
+
+The operator confirmed the outer platform is **Hyper-V**. The
+central `windows-vm` is the *guest*, not the Hyper-V management
+host. The guest's previously observed absence of Hyper-V cmdlets
+and nested virtualization is **not** evidence that the host cannot
+provision a second isolated Windows VM.
+
+A new **read-only host audit script**
+`tools/winui/Inspect-HyperVDurabilityHost.ps1` reports VM/switch
+counts, remaining host RAM, default VHD storage free space and
+checkpoint/export command availability without naming other VMs,
+modifying disks or starting/stopping any VM. On the exact draft
+source `dca63b0c48e04435383968d9ec6191249352f284`,
+[Windows #38174775038](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38174775038)
+passed `git diff --check`, the host script's **PowerShell
+AST syntax check**, and focused Python file-operation contracts
+**15/15**, including static refusal of dangerous Hyper-V mutating
+commands. This was a syntax/contract test inside the shared VM;
+the host audit itself **has not run**.
+
+The operator-accessible Hyper-V host connection has not yet been
+matched to an authorized tool target. The separately documented
+`personal-pc` central runner must **not** be assumed to be that
+host without confirmation. Until a host-side audit and resource
+identity/rollback review are completed, a disposable test VM,
+independent disk, checkpoint and host recovery are **NOT PROVISIONED**.
+No shared guest restart, host configuration or test power cut was
+performed; central Remote Shell was restored to idle.
+
+Hyper-V-specific host inspection command and staged provision gates:
+[DISPOSABLE_VM_DURABILITY_GATE.md](DISPOSABLE_VM_DURABILITY_GATE.md).
+
 ## 2026-10-12 disposable OS-restart / storage-durability lab — NOT READY
 
 Read-only [central VM audit #38174021618](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38174021618)
