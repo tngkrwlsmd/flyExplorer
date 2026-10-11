@@ -68,17 +68,38 @@ write access. PID reuse and process lifetime are not verified. There is
 no receipt-assisted recovery UI or production deletion. Never interpret a
 valid standalone receipt as cleanup authorization.
 
-The next integration gate must establish private-directory ACL/owner
-trust, callback/file-handle binding during actual transfers, worker
-liveness validation and tamper/race-resistant exact-file operations.
+The standalone primitive now includes a strict read-only
+`isPrivateStageReceiptDirectory` gate and an explicit
+`createPrivateStageReceiptDirectory` helper that provisions *only*
+an absent, exact fixed-drive directory with a protected, current-owner-only
+DACL. Existing directories are never automatically re-permissioned.
+Read/write require the private-store gate and reject inherited/unknown ACL
+trustees. `inspectReceiptCreator` opens the **exact** recorded PID and
+compares the kernel process creation time before returning Running, Exited
+or Unknown. A PID mismatch, access denial or unavailable process gives
+Unknown; even Exited is **not** deletion authorization.
+These are isolated caller-controlled APIs, **not** a production journal.
+
+The next integration gate must establish the trusted app-owned store
+location and lifecycle, actual worker callback/file-handle binding,
+published/unpublished durable transitions, closed worker handoff and
+tamper/race-resistant exact-file operations. Code in the same Windows
+user security context can still alter a receipt; an FNV checksum is
+not cryptographic provenance.
 Native fixtures use only an isolated test-owned directory.
 On the exact source candidate `30b80de3e75cd759ed4a3f82d492b539f0f42d4c`,
 the owned [Windows Remote Shell run #38122600482](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38122600482)
 passed the Release M22 native fixture (48/48, including four receipt
 roundtrip/overwrite/replacement/corruption cases) and `git diff --check`.
 The earlier compiler-header failure was corrected before this run.
-The Python source-contract and full WinUI GUI suites were **not run on
-this isolated candidate**. Production receipt integration remains disabled.
+The newer exact `050ab1a85d52859fcdd7f5ad92e18f5a96d519cb` passed
+[Windows Remote Shell #38125429517](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38125429517):
+Release M22 native 52/52, including the new directory ACL and process
+liveness cases, plus `git diff --check`. The subsequent app project-template
+PCH correction is not included in that native SHA-scoped verification.
+The Python source-contract, full WinUI Release and full GUI suites
+have **not yet run** on the branch. Production receipt integration
+remains disabled.
 
 ## Minimum provenance before implementing production cleanup
 
@@ -97,8 +118,9 @@ Its provenance must bind all of:
   Do not accept filenames or metadata supplied by an unrelated process as
   a cleanup authorization.
 
-There is **no durable receipt implementation today**. Therefore product
-cleanup of orphan stages is disabled and remains an open gate.
+There is **no live production creator receipt integration** in the staged
+Copy path today; only the isolated storage primitive exists. Therefore
+product cleanup of orphan stages is disabled and remains an open gate.
 
 ## Conservative recovery decision
 
