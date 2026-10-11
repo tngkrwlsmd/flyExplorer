@@ -217,6 +217,8 @@ bool writeStageReceipt(std::wstring const& exactReceiptPath,
  try{
   StageFileIdentity stage{};
   if(!receiptLocation(exactReceiptPath,exactStagePath)||
+     !isPrivateStageReceiptDirectory(
+         fs::path(exactReceiptPath).parent_path().native())||
      !filecommand::validLeaf(targetLeaf)||targetLeaf.size()>255||
      !inspectStageFile(exactStagePath,stage))return false;
   const auto started=processStartTime();
