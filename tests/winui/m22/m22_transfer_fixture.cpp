@@ -324,10 +324,15 @@ int wmain(int count,wchar_t**args){
       get(liveDest/liveSource.filename())=="callback-owned-copy-content"&&
       get(liveSource)=="callback-owned-copy-content",
       "live_staged_copy_callback_durable_receipt_before_publish");
+ const auto untrustedDest=root/L"receipt-untrusted-destination";
+ fs::create_directory(untrustedDest);
+ Request untrustedRequest=liveRequest;
+ untrustedRequest.destination=untrustedDest.native();
  Progress deniedJournal{};
  deniedJournal.receiptDirectory=insecureFolder.native();
- const auto journalRejected=execute(liveRequest,deniedJournal);
+ const auto journalRejected=execute(untrustedRequest,deniedJournal);
  test(journalRejected.error==ERROR_ACCESS_DENIED&&
+      !fs::exists(untrustedDest/liveSource.filename())&&
       get(liveSource)=="callback-owned-copy-content"&&
       get(liveDest/liveSource.filename())=="callback-owned-copy-content"&&
       journalCount==1,
