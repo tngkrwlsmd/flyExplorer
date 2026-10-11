@@ -40,6 +40,21 @@ bool prepareUserStageReceiptDirectory(
 bool readStageReceipt(std::wstring const& exactReceiptPath,
                       StageOwnershipReceipt& receipt) noexcept;
 bool receiptMatchesStage(StageOwnershipReceipt const& receipt) noexcept;
+// Immutable per-operation transition records next to the original receipt.
+// Completion is written only after full CopyFileEx success and cancellation
+// checks; publication is recorded only after a verified same-file rename.
+// Both fail closed, use CREATE_NEW + write-through + flush, never overwrite.
+bool markStageCopyCompleted(std::wstring const& exactReceiptPath) noexcept;
+bool markStageCopyPublished(std::wstring const& exactReceiptPath) noexcept;
+// Read-only explicit receipt-path inspection, including across new processes.
+// Inconsistent also covers missing/changed target, incomplete marker, phase
+// gaps, and other ambiguity. No state confers cleanup/restore permission.
+enum class StageReceiptState {
+ Invalid, CopyingOrInterrupted, CompletedOnStage,
+ PublicationUnconfirmed, PublishedVerified, Inconsistent
+};
+StageReceiptState inspectStageReceiptState(
+    std::wstring const& exactReceiptPath) noexcept;
 // Read-only snapshot of the EXACT PID and process creation time.
 // Unknown (including PID reuse/access failure) is never equivalent to Exited.
 // Even Exited does NOT confer authority to remove or publish a stage.
