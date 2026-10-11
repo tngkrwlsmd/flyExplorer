@@ -12,9 +12,11 @@ arbitrary filesystem folders.
 For fixed-drive regular-file Copy with `Collision::Reject`, the helper writes
 `.flyExplorer-copy-{GUID}.partial` into the destination directory. The
 requested filename is published only after a successful full `CopyFileExW`
-and only with a no-replace same-directory `MoveFileExW`. Normal error or
-cancellation best-effort deletes the current request's exact stage path.
-A force-killed process can strand the stage. **The stage filename pattern,
+and only with a no-replace same-directory `MoveFileExW`. For non-journaled operations, normal error or cancellation retains the
+pre-existing best-effort exact-stage deletion. When protected journaling
+is enabled, failed/cancelled stages instead remain untouched for human
+inspection; no automatic orphan scan or deletion is enabled.
+A force-killed process can strand the stage, with or without a receipt. **The stage filename pattern,
 a GUID, last-modified timestamp or ownership SID alone is not proof of
 exclusive stage ownership.** Never scan and purge matching names.
 
@@ -47,59 +49,81 @@ private durable receipt and explicit user authorization described below,
 with any destructive action targeting the verified open file object rather
 than a path subject to replacement.
 
-## Durable receipt primitive — isolated, not yet connected (2026-10-11)
+## Live helper-bound durable receipt — draft, no cleanup (2026-10-11)
 
-The standalone `src/base/stage_receipt_core.{h,cpp}` contains a bounded,
-versioned v1 receipt writer, reader and identity matcher. The writer uses
-exclusive `CREATE_NEW`, write-through and an explicit flush, with the
-exact staged-Copy path, intended final leaf, NTFS file ID/volume identity
-and creator PID/process creation time. The reader refuses malformed,
-truncated or checksum-mismatched records; the matcher reopens the exact
-stage and rejects replacements. Receipt paths are explicit, not discovered
-by directory scanning. It does not delete, rename, modify or publish stages.
+PR [#63](https://github.com/tngkrwlsmd/flyExplorer/pull/63) now includes
+both the isolated `stage_receipt_core.{h,cpp}` storage primitive and
+an **opt-in, process-local binding** from `copyStagedFiles` into a real
+`CopyFileExW` progress callback. This is not a restore or cleanup feature.
 
-**Important:** this is a deliberately isolated storage primitive, not
-a fully trusted ownership journal. It is not yet called by the live
-`copyStagedFiles` path. The caller must establish and verify an
-application-controlled private receipt directory and authorization rules.
-The checksum detects torn/corrupt bytes, but is **not an authentication
-signature** and cannot prove creator identity against an attacker with
-write access. PID reuse and process lifetime are not verified. There is
-no receipt-assisted recovery UI or production deletion. Never interpret a
-valid standalone receipt as cleanup authorization.
+The isolated Shell helper chooses its own user-scoped Windows
+`FOLDERID_LocalAppData` path:
+`flyExplorer-transfer-receipts-v1`. It creates only a missing, exact
+directory under that Known Folder with an owner-only protected DACL, or
+verifies an already-private directory; an unsafe pre-existing folder is
+not modified. No client/user-input path enters the helper wire request.
+If provisioning is unavailable, the helper deliberately falls back to
+the older staged Copy with **no receipt**. Native fixtures configure an
+explicit private directory **only inside their disposable test root**.
 
-The standalone primitive now includes a strict read-only
-`isPrivateStageReceiptDirectory` gate and an explicit
-`createPrivateStageReceiptDirectory` helper that provisions *only*
-an absent, exact fixed-drive directory with a protected, current-owner-only
-DACL. Existing directories are never automatically re-permissioned.
-Read/write require the private-store gate and reject inherited/unknown ACL
-trustees. `inspectReceiptCreator` opens the **exact** recorded PID and
-compares the kernel process creation time before returning Running, Exited
-or Unknown. A PID mismatch, access denial or unavailable process gives
-Unknown; even Exited is **not** deletion authorization.
-These are isolated caller-controlled APIs, **not** a production journal.
+On the first callback, the writer compares the actual CopyFileEx target
+HANDLE's `FileIdInfo` to a separate open-reparse-point exact-stage
+inspection. It writes one bounded versioned binary record with
+`CREATE_NEW`, `FILE_FLAG_WRITE_THROUGH` and `FlushFileBuffers`.
+The record contains the stage's exact path, intended target leaf, volume
+serial, 128-bit file ID, creator PID and kernel process start time.
+A subsequent read and identity revalidation gate final-name publication.
+Failure to bind/write/read, cancellation, or a callback never occurring
+when journaling is required means **no publish** and **no by-path cleanup
+of the questionable stage**. The native receipt code itself performs no
+file deletion, rename or publication. A successful copy keeps an inert
+historical receipt; it does not grant future recovery authority.
 
-The next integration gate must establish the trusted app-owned store
-location and lifecycle, actual worker callback/file-handle binding,
-published/unpublished durable transitions, closed worker handoff and
-tamper/race-resistant exact-file operations. Code in the same Windows
-user security context can still alter a receipt; an FNV checksum is
-not cryptographic provenance.
-Native fixtures use only an isolated test-owned directory.
-On the exact source candidate `30b80de3e75cd759ed4a3f82d492b539f0f42d4c`,
-the owned [Windows Remote Shell run #38122600482](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38122600482)
-passed the Release M22 native fixture (48/48, including four receipt
-roundtrip/overwrite/replacement/corruption cases) and `git diff --check`.
-The earlier compiler-header failure was corrected before this run.
-The newer exact `050ab1a85d52859fcdd7f5ad92e18f5a96d519cb` passed
-[Windows Remote Shell #38125429517](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38125429517):
-Release M22 native 52/52, including the new directory ACL and process
-liveness cases, plus `git diff --check`. The subsequent app project-template
-PCH correction is not included in that native SHA-scoped verification.
-The Python source-contract, full WinUI Release and full GUI suites
-have **not yet run** on the branch. Production receipt integration
-remains disabled.
+A valid receipt only proves a correspondence at one point in time, under
+the current user's access boundary. The checksum is FNV corruption
+detection, **not** malicious-tamper authentication. An attacker running
+under the same Windows user can affect this storage; changes to the
+destination folder's path or ACL after checks can also race checks.
+The same-directory publication remains based on `MoveFileExW`, not on
+an exclusively pinned rename-by-handle. No completed/published receipt
+state and no fsync guarantee for copied data exist. A force kill before
+the first callback can leave an unrecorded stage; no code may infer its
+provenance based on the GUID name or search-and-delete such files.
+
+Read-only `inspectReceiptCreator` compares the PID **and** kernel
+process creation time and returns Running, Exited or Unknown.
+A reused, inaccessible or no-longer-openable PID gives Unknown,
+which is *not* permission to delete. Even Exited does not itself
+authorize file operations; the worker's complete request lifecycle is
+not durably recorded.
+
+### Windows verification (exact SHA scoped)
+
+- [#38122600482](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38122600482):
+  initial standalone receipt native **48/48**.
+- [#38125429517](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38125429517):
+  protected ACL and creator-state native **52/52** on
+  `050ab1a85d52859fcdd7f5ad92e18f5a96d519cb`.
+- [#38127271345](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38127271345):
+  production isolated Shell helper **Release build PASS** and native
+  53/54, with one test fixture incorrectly pre-populating the target.
+- [#38127383070](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38127383070):
+  on `2597cc7f29ec5786f11c22038621e745302fd4d4`,
+  Windows Release native **54/54** including actual live bound
+  CopyFileEx receipt-before-publication and private-store rejection.
+- [#38127536317](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38127536317):
+  on `7d503803ee7af379c781a6f15e03afdcfca48c94`,
+  test-owned 512 MiB **active copy forced kill**: journal and stage
+  identity matched after termination, owning worker was not Running,
+  source SHA-256 and an unrelated partial were unchanged, and no
+  truncated final target appeared. The exact stage was **not** deleted.
+
+**Unrun gates:** full product WinUI Release and GUI acceptance, actual
+helper IPC/known-folder provisioning on an interactive user session,
+Python source contracts on the latest branch, completed/published journal
+transitions, comprehensive zero-byte and initial-callback crash handling,
+replacement/ACL race resistance for publish/cleanup, restart and power
+loss. **Draft PR #63 is not merged.**
 
 ## Minimum provenance before implementing production cleanup
 
@@ -118,9 +142,10 @@ Its provenance must bind all of:
   Do not accept filenames or metadata supplied by an unrelated process as
   a cleanup authorization.
 
-There is **no live production creator receipt integration** in the staged
-Copy path today; only the isolated storage primitive exists. Therefore
-product cleanup of orphan stages is disabled and remains an open gate.
+The first version of live helper-bound receipts is now present on draft
+PR #63, but not merged; it has no authenticated completion transition,
+restart reconciler or user-authorized recoverer. **Product cleanup of
+orphan stages remains disabled**, including on a matching receipt.
 
 ## Conservative recovery decision
 
