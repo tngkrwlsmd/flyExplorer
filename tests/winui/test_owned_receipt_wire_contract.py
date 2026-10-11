@@ -87,6 +87,26 @@ class OwnedReceiptTargetContract(unittest.TestCase):
         self.assertFalse(matches_owned_published_target(
             self.receipt, self.target))
 
+    def test_noncanonical_dot_segment_stage_rejected(self):
+        stage = str(self.destination / "redundant" / ".." / Path(self.stage).name)
+        self.save(stage=stage)
+        self.assertFalse(matches_owned_published_target(
+            self.receipt, self.target))
+
+    def test_volume_serial_zero_does_not_replace_file_id_check(self):
+        self.save()
+        raw = bytearray(self.receipt.read_bytes())
+        # Volume is a stored OS value, not a proof-of-existence sentinel.
+        struct.pack_into("<Q", raw, 20, 0)
+        struct.pack_into("<I", raw, HEADER.size - 4, 0)
+        digest = 2166136261
+        for byte in raw:
+            digest = ((digest ^ byte) * 16777619) & 0xFFFFFFFF
+        struct.pack_into("<I", raw, HEADER.size - 4, digest)
+        self.receipt.write_bytes(raw)
+        self.assertTrue(matches_owned_published_target(
+            self.receipt, self.target))
+
 
 if __name__ == "__main__":
     unittest.main()
