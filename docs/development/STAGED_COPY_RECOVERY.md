@@ -330,6 +330,56 @@ pre-callback record, unsigned journal, reboot/power-loss durability,
 user-profile Known Folder and GUI integration gates are unchanged.
 No orphan enumeration, cleanup or recovery is permitted.
 
+## Test-owned restrictive ancestor and worker-kill checks — accepted 2026-10-11
+
+### Deny `FILE_LIST_DIRECTORY` without silently publishing
+
+On exact feature SHA
+`8b5a42d443ef7f78ae437fef652f0325987d63a1`,
+[Windows #38139468890](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38139468890)
+compiled a Release native fixture with the new
+`--owned-denied-ancestor-copy` test-only CLI and passed the
+focused source contracts. Its initial PowerShell fixture-root
+concatenation error stopped **before** ACL manipulation.
+[Windows #38139610615](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38139610615)
+then used the already accepted binary, with a *fresh test-owned*
+destination ancestor, denying read/list access only to that
+directory with an explicit DACL `(RD)` deny for the test process.
+The child destination remained writable for stage creation.
+The worker finished stage bytes, then `FILE_LIST_DIRECTORY`
+pinning failed closed with `ERROR_ACCESS_DENIED (5)`;
+`M22_RESTRICTED_ANCESTOR_FAIL_CLOSED=PASS error=5 stage=1 records=1`.
+The exact retained stage and `CompletedOnStage` private receipt
+matched, with no final target publication. The original test source
+SHA-256 remained identical, and the test-owned deny ACE was removed
+in `finally`. No user ACL was modified and no stage was deleted.
+
+### Force-killed worker; fresh-process exact read-only classification
+
+[Windows #38139795233](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38139795233)
+used the same source SHA, with a newly created test-owned 512 MiB
+source and unrelated sentinel. It observed one active partial staged
+Copy of at least 4 MiB and one exact private receipt, then killed
+only the process object it started. Before/after SHA-256 of the
+source and sentinel matched, no final target appeared, and the stage
+was retained. An independently started verifier process accepted
+the matching OS FileIdInfo and creator-not-running observation;
+the phase was `CopyingOrInterrupted` in a separate
+`--receipt-inspect-state ... copying` read-only process too.
+**This is a worker process crash/restart classification, not a
+Windows OS restart or physical power-loss durability test.** Both
+fixtures preserve their ambiguous stages, use no automatic cleanup
+and never touch pre-existing user files.
+
+The remaining significant gate is a separately approved and
+reversible *disposable VM/disk* forced OS reboot/power-loss campaign,
+with a source hash and independent preserved target journal checks
+after the filesystem is remounted. Its plan must identify the
+exact test disk and rollback path before any machine-level
+operation. No hard reset, arbitrary process cleanup, normal
+user-journal expiration or recovery action is approved by the
+process-only evidence above.
+
 ## Real interactive WinUI / shipping Known Folder — accepted 2026-10-11
 
 [Central Windows Remote Shell #38139086195](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38139086195)
