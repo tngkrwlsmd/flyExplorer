@@ -146,7 +146,12 @@ class FileOperationContracts(unittest.TestCase):
         for marker in ("CREATE_NEW", "FILE_FLAG_WRITE_THROUGH",
                        "FlushFileBuffers", "FILE_FLAG_OPEN_REPARSE_POINT",
                        "FileIdInfo", "checksum(raw)", "inspectStageFile",
-                       "sameStageFile"):
+                       "sameStageFile", "GetSecurityInfo", "SE_DACL_PROTECTED",
+                       "ConvertStringSecurityDescriptorToSecurityDescriptorW",
+                       "CREATE_NO_WINDOW", "WaitForSingleObject"):
+            if marker == "CREATE_NO_WINDOW":
+                self.assertIn(marker, fixture)
+                continue
             self.assertIn(marker, core + read("src/base/shell_transfer_core.cpp"))
         for destructive in ("DeleteFileW", "RemoveDirectoryW", "MoveFileExW",
                             "SetFileInformationByHandle"):
