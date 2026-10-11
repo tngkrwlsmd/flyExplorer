@@ -12,6 +12,7 @@
 #include <iterator>
 #include <utility>
 #include <vector>
+#pragma comment(lib,"advapi32.lib")
 
 namespace fxfile::shelltransfer {
 namespace {
