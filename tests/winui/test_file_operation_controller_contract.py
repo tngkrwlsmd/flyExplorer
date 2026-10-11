@@ -141,7 +141,9 @@ class FileOperationContracts(unittest.TestCase):
                        "receiptMatchesStage", "StageOwnershipReceipt",
                        "createPrivateStageReceiptDirectory",
                        "isPrivateStageReceiptDirectory",
-                       "inspectReceiptCreator", "ReceiptCreatorState"):
+                       "inspectReceiptCreator", "ReceiptCreatorState",
+                       "writeBoundStageReceipt",
+                       "prepareUserStageReceiptDirectory"):
             self.assertIn(symbol, header)
         for marker in ("CREATE_NEW", "FILE_FLAG_WRITE_THROUGH",
                        "FlushFileBuffers", "FILE_FLAG_OPEN_REPARSE_POINT",
@@ -160,8 +162,16 @@ class FileOperationContracts(unittest.TestCase):
             '<ClCompile Include="..\\..\\src\\base\\stage_receipt_core.cpp">\n'
             '      <PrecompiledHeader>NotUsing</PrecompiledHeader>',
             app_project)
-        self.assertIn("expected=52", native)
-        self.assertIn("expected=56", native)
+        self.assertIn("expected=54", native)
+        self.assertIn("expected=58", native)
+        helper_project = read(
+            "app/winui/helper/FlyShellIsolationHelper.project-template.xml")
+        self.assertIn("stage_receipt_core.cpp", helper_project)
+        transfer = read("src/base/shell_transfer_core.cpp")
+        self.assertIn("writeBoundStageReceipt(", transfer)
+        self.assertIn("prepareUserStageReceiptDirectory(", transfer)
+        self.assertIn("progress.receiptDirectory", transfer)
+        self.assertIn("!journalReady", transfer)
         for scenario in ("receipt_roundtrip_flush_and_exact_stage_identity",
                          "receipt_create_new_never_overwrites_existing",
                          "receipt_rejects_same_path_file_replacement",
@@ -169,7 +179,9 @@ class FileOperationContracts(unittest.TestCase):
                          "receipt_refuses_untrusted_inherited_acl_store",
                          "receipt_private_owner_dacl_created_without_acl_reset",
                          "receipt_creator_alive_and_pid_reuse_fail_closed",
-                         "receipt_creator_exited_without_stage_mutation"):
+                         "receipt_creator_exited_without_stage_mutation",
+                         "live_staged_copy_callback_durable_receipt_before_publish",
+                         "live_staged_copy_refuses_untrusted_receipt_directory"):
             self.assertIn(scenario, fixture)
 
     def test_partial_failure_notice_survives_navigation_refresh(self):
