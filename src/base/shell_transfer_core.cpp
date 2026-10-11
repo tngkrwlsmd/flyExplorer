@@ -614,8 +614,11 @@ bool publishActiveBoundStage(std::wstring const& stage,
   if(parent.lexically_normal()!=parent||parent.root_path().empty())
    return false;
   auto pin=[&](fs::path const& expected)->bool {
+   // Metadata-only access does not enforce the directory's rename
+   // share boundary reliably; request actual list access while pinned.
    const HANDLE handle=::CreateFileW(expected.c_str(),
-       FILE_READ_ATTRIBUTES,FILE_SHARE_READ|FILE_SHARE_WRITE,
+       FILE_LIST_DIRECTORY|FILE_READ_ATTRIBUTES,
+       FILE_SHARE_READ|FILE_SHARE_WRITE,
        nullptr,OPEN_EXISTING,
        FILE_FLAG_BACKUP_SEMANTICS|FILE_FLAG_OPEN_REPARSE_POINT,nullptr);
    if(handle==INVALID_HANDLE_VALUE){error=::GetLastError();return false;}
