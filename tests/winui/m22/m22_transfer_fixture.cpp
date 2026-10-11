@@ -41,6 +41,21 @@ int wmain(int count,wchar_t**args){
       outcome.error,int(triggered.load()),progress.percent.load());
   return 24;
  }
+ if(count==4&&std::wstring(args[1])==L"--owned-move-deny"){
+  // Move failure on a test-owned source and ACL-denied destination folder.
+  const fs::path source(args[2]),destination(args[3]);
+  Request request{};
+  request.kind=Kind::Move;
+  request.sourceParent=source.parent_path().native();
+  request.destination=destination.native();
+  request.sources={source.native()};
+  Progress progress{};
+  const auto outcome=execute(request,progress);
+  const bool failure=outcome.error!=ERROR_SUCCESS;
+  std::printf("M22_OWNED_MOVE_DENIED=%s error=%lu\n",
+      failure?"PASS":"FAIL",outcome.error);
+  return failure?0:27;
+ }
  if(count==4&&(std::wstring(args[1])==L"--owned-stage-deny"||
                std::wstring(args[1])==L"--owned-stage-race")){
   // The caller owns both folders; this mode cannot mutate the source,
