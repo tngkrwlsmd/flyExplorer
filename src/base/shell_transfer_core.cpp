@@ -610,6 +610,22 @@ Report copyStagedFiles(Request const& task,Progress& progress,
    const bool wasCanceled=canceled(progress)||
        copyError==ERROR_REQUEST_ABORTED||
        copyError==ERROR_OPERATION_ABORTED;
+   // CopyFileEx is allowed to skip progress callbacks, notably on empty
+   // files. A successful completed copy can bind the same stage using
+   // an exact read-only handle before any publication. This does not
+   // retroactively cover a worker killed before this point.
+   if(copied&&!wasCanceled&&callback.receiptRequired&&
+      !callback.receiptWritten&&!callback.receiptRejected){
+    const HANDLE stageHandle=::CreateFileW(stage.c_str(),
+       FILE_READ_ATTRIBUTES,
+       FILE_SHARE_READ|FILE_SHARE_WRITE|FILE_SHARE_DELETE,nullptr,
+       OPEN_EXISTING,FILE_FLAG_OPEN_REPARSE_POINT,nullptr);
+    if(stageHandle!=INVALID_HANDLE_VALUE){
+     callback.receiptWritten=writeBoundStageReceipt(
+       callback.receiptPath,stage.native(),callback.targetLeaf,stageHandle);
+     ::CloseHandle(stageHandle);
+    }
+   }
    StageOwnershipReceipt proof{};
    const bool journalReady=!callback.receiptRequired||
       (callback.receiptWritten&&!callback.receiptRejected&&
@@ -617,13 +633,17 @@ Report copyStagedFiles(Request const& task,Progress& progress,
        proof.stagePath==stage.native()&&
        proof.targetLeaf==target.filename().native()&&
        receiptMatchesStage(proof));
-   // A callback may not run for every file (e.g. zero-byte input). Never
-   // publish a journal-required stage without a verified bound receipt.
-   const BOOL published=copied&&!wasCanceled&&journalReady?
+   // Durable completion marker precedes publication; a failed write
+   // cannot be confused with a completed copy or a safe orphan.
+   const bool copyRecorded=!callback.receiptRequired||
+      (copied&&!wasCanceled&&journalReady&&
+       markStageCopyCompleted(callback.receiptPath));
+   const BOOL published=copied&&!wasCanceled&&journalReady&&copyRecorded?
        ::MoveFileExW(stage.c_str(),target.c_str(),MOVEFILE_WRITE_THROUGH):
        FALSE;
    const DWORD publishError=published?ERROR_SUCCESS:
-       copied&&!wasCanceled&&!journalReady?ERROR_INVALID_DATA:
+       copied&&!wasCanceled&&(!journalReady||!copyRecorded)?
+         ERROR_INVALID_DATA:
        copied&&!wasCanceled?::GetLastError():copyError;
    if(!published){
     // An unjournaled stage can already contain copy bytes before the
@@ -640,6 +660,14 @@ Report copyStagedFiles(Request const& task,Progress& progress,
     }
     report.error=wasCanceled?ERROR_CANCELLED:publishError;
     report.aborted=wasCanceled;
+    return report;
+   }
+   // The rename has already occurred; an unreadable/unwritable
+   // publication marker leaves an ambiguous journal. Report the
+   // metadata fault without reversing or deleting a completed file.
+   if(callback.receiptRequired&&
+      !markStageCopyPublished(callback.receiptPath)){
+    report.error=ERROR_WRITE_FAULT;
     return report;
    }
    progress.percent.store(static_cast<std::uint32_t>(
