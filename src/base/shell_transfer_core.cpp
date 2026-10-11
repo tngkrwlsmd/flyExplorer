@@ -642,8 +642,10 @@ bool publishActiveBoundStage(std::wstring const& stage,
   if(!sameObject){
    ::CloseHandle(active);closeDirectory();return false;
   }
-  const auto& leaf=destination.filename().native();
-  const std::size_t size=offsetof(FILE_RENAME_INFO,FileName)+
+  // path::native() returns a reference owned by its path. filename()
+  // creates a temporary path, so never bind a reference to its native().
+  const std::wstring leaf=destination.filename().native();
+  const std::size_t size=sizeof(FILE_RENAME_INFO)+
                          leaf.size()*sizeof(wchar_t);
   std::vector<unsigned char> payload(size);
   auto* rename=reinterpret_cast<FILE_RENAME_INFO*>(payload.data());
