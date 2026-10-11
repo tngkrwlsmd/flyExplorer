@@ -29,6 +29,18 @@ try {
     $env:FLY_INTERACTIVE_RECEIPT_LOG_ROOT = Join-Path $Root 'logs'
     $env:GITHUB_ACTIONS = 'true'
 
+    $stage = 'shipping-helper-direct-ipc'
+    $fixture = Join-Path $Root 'tests\winui\m22\bin\x64\Release\FlyM22ShellTransferContracts.exe'
+    $sourceDir = Join-Path $Root 'owned-ipc-source'
+    $targetDir = Join-Path $Root 'owned-ipc-target'
+    New-Item -ItemType Directory -Path $sourceDir,$targetDir -Force | Out-Null
+    $source = Join-Path $sourceDir 'direct-user-knownfolder-한글.txt'
+    [IO.File]::WriteAllText($source,'Owned-user shipping helper IPC, no cleanup')
+    & $fixture '--real-user-shipping-helper-ipc' $source $targetDir *>&1 |
+        Out-File -FilePath $log -Append -Encoding utf8
+    if ($LASTEXITCODE -ne 0) { throw 'Shipping-helper Known Folder IPC gate failed' }
+
+
     $stage = 'actual-winui-copy'
     $gui = Join-Path $Root 'tests\winui\test_owned_user_receipt_gui.py'
     # Native stderr must not be promoted to a terminating PowerShell error.
@@ -44,17 +56,6 @@ try {
         }
     }
     if ($guiProcess.ExitCode -ne 0) { throw 'Owned interactive GUI transfer gate failed' }
-
-    $stage = 'shipping-helper-direct-ipc'
-    $fixture = Join-Path $Root 'tests\winui\m22\bin\x64\Release\FlyM22ShellTransferContracts.exe'
-    $sourceDir = Join-Path $Root 'owned-ipc-source'
-    $targetDir = Join-Path $Root 'owned-ipc-target'
-    New-Item -ItemType Directory -Path $sourceDir,$targetDir -Force | Out-Null
-    $source = Join-Path $sourceDir 'direct-user-knownfolder-한글.txt'
-    [IO.File]::WriteAllText($source,'Owned-user shipping helper IPC, no cleanup')
-    & $fixture '--real-user-shipping-helper-ipc' $source $targetDir *>&1 |
-        Out-File -FilePath $log -Append -Encoding utf8
-    if ($LASTEXITCODE -ne 0) { throw 'Shipping-helper Known Folder IPC gate failed' }
 
     $passed = $true
     Write-Output 'INTERACTIVE_SHIPPING_KNOWNFOLDER_GUI_AND_IPC=PASS'
