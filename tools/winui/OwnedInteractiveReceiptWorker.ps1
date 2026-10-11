@@ -31,7 +31,7 @@ try {
 
     $stage = 'actual-winui-copy'
     $gui = Join-Path $Root 'tests\winui\test_owned_user_receipt_gui.py'
-    & $python.Source -X utf8 $gui *>&1 | Out-File -LiteralPath $log -Append -Encoding utf8
+    & $python.Source -X utf8 $gui *>&1 | Out-File -FilePath $log -Append -Encoding utf8
     if ($LASTEXITCODE -ne 0) { throw 'Owned interactive GUI transfer gate failed' }
 
     $stage = 'shipping-helper-direct-ipc'
@@ -42,7 +42,7 @@ try {
     $source = Join-Path $sourceDir 'direct-user-knownfolder-한글.txt'
     [IO.File]::WriteAllText($source,'Owned-user shipping helper IPC, no cleanup')
     & $fixture '--real-user-shipping-helper-ipc' $source $targetDir *>&1 |
-        Out-File -LiteralPath $log -Append -Encoding utf8
+        Out-File -FilePath $log -Append -Encoding utf8
     if ($LASTEXITCODE -ne 0) { throw 'Shipping-helper Known Folder IPC gate failed' }
 
     $passed = $true
@@ -51,7 +51,7 @@ try {
     # Avoid emitting user paths or account identifiers in persisted evidence.
     Write-Output ('INTERACTIVE_RECEIPT_FAILED_STAGE=' + $stage)
     Write-Output ('INTERACTIVE_RECEIPT_FAILED_TYPE=' + $_.Exception.GetType().Name)
-    try { ('FAILED_STAGE=' + $stage) | Out-File -LiteralPath $log -Append -Encoding utf8 } catch {}
+    try { ('FAILED_STAGE=' + $stage) | Out-File -FilePath $log -Append -Encoding utf8 } catch {}
 } finally {
     @{
         status = if ($passed) { 'PASS' } else { 'FAIL' }
