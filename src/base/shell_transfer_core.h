@@ -79,6 +79,11 @@ Report execute(Request const& task,Progress& progress) noexcept; // STA only
 // staged beside flyExplorer, streams progress and kills only that owned child
 // on cancellation/host teardown. Recycle intentionally stays on execute().
 Report executeIsolated(Request const& task,Progress& progress) noexcept;
+#if defined(FLY_M22_TEST_DIRECTORY_RENAME_LOCK)
+// Native M22 fixture only. Never defined in the shipped app/helper build.
+void setDirectoryRenameProbeForTest(
+    void (*probe)(std::wstring const&) noexcept) noexcept;
+#endif
 // Helper-only stdin/stdout entrypoint used by FlyShellIsolationHelper.exe.
 int runIsolatedHelper(HANDLE input,HANDLE output) noexcept;
 }
