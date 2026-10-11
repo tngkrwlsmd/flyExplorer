@@ -1,5 +1,8 @@
+#ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN
+#endif
 #include "stage_receipt_core.h"
+#include <objbase.h>
 #include "file_command_core.h"
 #include <filesystem>
 #include <algorithm>
