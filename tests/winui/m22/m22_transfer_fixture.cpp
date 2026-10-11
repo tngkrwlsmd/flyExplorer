@@ -984,7 +984,7 @@ int wmain(int count,wchar_t**args){
  }
  test(folderMovePreserved,
       "recursive_move_nested_lock_reports_failure_without_payload_loss");
- 
+
  // Cancel a folder MOVE before any Shell transfer is dispatched. Neither
  // root nor nested source may disappear; there is no target to roll back.
  const auto moveCanceledFolder=left/L"폴더 이동 취소";
