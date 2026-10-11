@@ -1,4 +1,4 @@
-# flyExplorer current status — operations updated 2026-10-11
+# flyExplorer current status — documentation reconciled 2026-10-12
 
 ## Product source of truth
 
@@ -6,6 +6,22 @@ main is the canonical C++/WinRT WinUI 3 product. Product code lives in
 app/winui, UI-independent native code in src/base, tests in tests/winui, and
 bounded orchestration in tools/winui/run_checks.py. The former MFC application
 is retired from the working tree and is recoverable from Git revision cbffb48.
+
+## Latest product acceptance checkpoint (verified 2026-10-12)
+
+The latest product-bearing main revision before this documentation-only change,
+`f37fddae0ef08461c3f01f90928da9b3bf077c46`, has
+`central-ci/windows-gui=success` pointing to central registered CI
+[run #38120723040](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38120723040).
+This is registered Release/functional GUI evidence for that exact product
+revision, not Debug, final-pixel visual, external-device or
+public-distribution acceptance.
+The focused read-only stage-identity native evidence below belongs to its
+separately recorded source candidate. For later main commits, recheck the
+live SHA, producing central status/run and affected test boundaries; do not
+automatically relabel older candidate or pre-main PASS records as current
+acceptance. Documentation-only revisions do not invalidate an unchanged
+product build/runtime boundary.
 
 ## 2026-10-11 exact staged Copy file-ID read-only validation
 
@@ -215,8 +231,11 @@ material fix/instrumented hypothesis. The central Remote Shell slot
 was restored to idle after read-only failure inspection.
 
 Prior 20,500-file acceptance already proved indexed **name** sort and
-name filtering (run `37211942616`). Above-20,000 type/size/date
-global sorts remain unsupported rather than silently partial.
+name filtering (run `37211942616`). At this 2026-10-10 checkpoint,
+above-20,000 type/size/date global sorts were unsupported. The later
+local fixed-drive-only indexed metadata path superseded that restriction
+for eligible folders (20,500-item owned GUI run `38055029443`);
+other filesystem and Shell/provider types retain the 20,000 limit.
 The precise remaining tasks are in
 `docs/development/PRE_DISTRIBUTION_FUNCTIONAL_GATES.md`.
 
@@ -1193,10 +1212,12 @@ resident-window navigation. Normal browsing still keeps at most 2,048 children
 resident; increasing the browse frontier does not increase the resident-model
 bound.
 
-Operations that require full Shell metadata are still not allowed to silently
-operate on a partial model above 20,000 entries. Type, size and modified-date
-global sorts continue to refuse above the complete-model ceiling. Name sort and
-name filtering are now the deliberate exception: navigation retains a
+At this historical work revision, operations requiring full Shell metadata
+were not allowed to silently operate on a partial model above 20,000 entries.
+Type, size and modified-date global sorts then refused above that ceiling;
+a later local fixed-drive-only indexed metadata implementation superseded this
+restriction for eligible folders (see Known functional coverage limits).
+Name sort and name filtering were the deliberate exception at this checkpoint: navigation retains a
 lightweight label/parsing-name/attribute index while resident Shell children
 remain bounded, and projects that completed index for global name operations.
 The 100,000 browse/index value remains an implementation safety bound, not a
@@ -1576,31 +1597,43 @@ distribution remain separate gates.
 Current source and the last parity evidence still show these limits:
 - Local filesystem Shell enumeration uses protocol-v3 page transport:
   1,024 entries per isolated helper response, an 8 MiB per-response body bound,
-  and a 20,000-entry model safety bound. The active model now accepts the first
-  page immediately and appends continuation pages on demand; owned Release
-  evidence covers an 8,000-file initial 1,024-item render followed by complete
-  global name sort and progressive 160-row rendering. Indexed name sort and name filters have separate 20,500-item acceptance;
-  general 100,000-item performance, above-20,000 metadata sorts, network/
-  virtual providers and sustained thumbnail-cache behavior are not certified.
-- Type, size and modified-date global sort requires a complete sortable
-  metadata model and is supported through 20,000 fixed, removable, mapped
-  network or ordinary direct-UNC filesystem entries. Network/UNC metadata
-  collection is isolated in the exact-owned helper with bounded inactivity/
-  cancellation handling; actual SMB/UNC and mapped-drive execution remains
-  uncertified because the self-hosted runner has no test-owned SMB share.
-  The previous 1,200 visual-detail ceiling no longer controls these sorts and
-  1,201-20,000 items no longer silently use name order. Above 20,000 these
-  metadata sorts remain explicitly refused. Shell visual/type/icon/thumbnail
-  enrichment is separately bounded to 1,200 items and now supports local
-  fixed/removable, mapped network and ordinary direct-UNC filesystem roots,
-  while virtual Shell/provider roots support bounded type/icon enrichment plus
-  up to four provider thumbnails in Medium/Large Icons. Actual physical
-  USB/removable and SMB/mapped-drive visual execution remain uncertified because
-  the self-hosted runner has neither a removable volume nor a test-owned SMB
-  share; arbitrary third-party provider implementations are not separately
-  certified by the built-in This PC/Pictures Library acceptance. Physical USB
-  metadata-sort execution is also still awaiting a removable device on the
-  self-hosted VM.
+  and a 20,000-entry complete-model bound. Sequential navigation has a
+  separate 100,000-entry safety ceiling and 2,048-entry resident window.
+  The active model accepts the first page immediately and appends
+  continuation pages on demand. Owned Release evidence covers an 8,000-file
+  initial 1,024-item render followed by global name sort and progressive
+  160-row rendering. Indexed name sort/filter have separate 20,500-item
+  acceptance. Local fixed-drive indexed size/date/type sorts have a separate
+  20,500-item acceptance; the 25,000-item indexed metadata ceiling is an
+  implementation bound, not a 25,000-item performance certification.
+  General 100,000-item throughput, above-20,000 metadata sorting on
+  removable/network/virtual roots and sustained thumbnail-cache behavior
+  remain unverified or unsupported as specified below.
+- Type, size and modified-date global sort uses a complete sortable metadata
+  model for up to 20,000 fixed, removable, mapped-network or ordinary direct-UNC
+  filesystem entries. For local fixed-drive folders only, a distinct indexed
+  metadata mode can sort beyond 20,000 without making the resident model complete:
+  its bounds are `kMaxIndexedMetadataEntries=25000` and
+  `kMaxIndexedMetadataPathUnits=12*1024*1024`. Exact owned 20,500-file
+  size/date/type GUI acceptance passed in `38055029443`; the 25,000 ceiling
+  is not a verified 25,000-file performance result. Removable, UNC, mapped
+  network and virtual/provider roots still refuse these metadata sorts above
+  20,000. Network/UNC metadata collection is isolated in an exact-owned helper
+  with bounded inactivity and cancellation handling. Actual SMB/UNC and
+  mapped-drive execution remains NOT TESTED in recorded real-device evidence;
+  the retired dedicated runner lacked a test-owned SMB share. The former 1,200
+  visual-detail ceiling does not control complete-model metadata sorting,
+  and 1,201-20,000 entries no longer silently use name order.
+  Shell visual/type/icon/thumbnail enrichment remains separately bounded to
+  1,200 items and supports local fixed/removable, mapped-network and ordinary
+  direct-UNC filesystem roots; virtual Shell/provider roots support bounded
+  type/icon enrichment plus up to four thumbnails in Medium/Large Icons.
+  Actual physical USB/removable and SMB/mapped-drive visual execution remains
+  NOT TESTED in recorded hardware evidence: the retired dedicated runner had
+  neither a removable volume nor a test-owned SMB share. Recheck current central
+  VM hardware availability before running those gates. Third-party providers
+  are not certified by the built-in This PC/Pictures Library acceptance.
+  Physical USB metadata-sort execution also remains NOT TESTED.
 - Filesystem Copy/Move accepts local fixed/removable roots, mapped
   `DRIVE_REMOTE` roots and ordinary direct UNC paths through the shared Shell
   transfer core. Virtual Shell/provider sources additionally support bounded
@@ -1618,9 +1651,11 @@ Current source and the last parity evidence still show these limits:
   fixed/removable roots, requires explicit confirmation and uses recycle-only
   Shell flags; if a removable drive cannot use Windows Recycle Bin, flyExplorer
   reports failure and does not switch to permanent deletion. Physical
-  USB/removable execution is still uncertified because the VM has no removable
-  volume. Actual SMB/UNC and mapped-network-drive Copy/Move execution is also
-  not yet certified because the runner has no test-owned SMB share. Provider
+  USB/removable execution is still NOT TESTED in recorded physical-device
+  evidence (the retired dedicated VM lacked a removable volume).
+  Actual SMB/UNC and mapped-network-drive Copy/Move execution also remains
+  NOT TESTED; the retired runner lacked a test-owned SMB share. The current
+  central VM's device/share inventory must be checked for any new gate. Provider
   Copy-out runtime acceptance covers the built-in Pictures Library virtual root
   with a test-owned filesystem-backed child; arbitrary third-party/provider-only
   child behavior remains uncertified.

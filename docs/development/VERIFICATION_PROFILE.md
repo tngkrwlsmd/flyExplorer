@@ -79,8 +79,9 @@ FAST plus the minimum build/native/targeted GUI smoke required by the changed
 product behavior. Do not repeat a deterministic FAST assertion here merely
 because the profile is broader.
 
-Do not add a separate native compile preflight. On the self-hosted Windows
-runner, selected/project compile experiments either failed to prove that the
+Do not add a separate native compile preflight. Historical measurements on
+the retired flyExplorer-specific self-hosted Windows runner found that
+selected/project compile experiments either failed to prove that the
 changed translation unit reached the compiler or cost too close to the normal
 build. The existing Release build is the trusted compile boundary: the measured
 fresh build was about 150 seconds, a one-translation-unit incremental build was
