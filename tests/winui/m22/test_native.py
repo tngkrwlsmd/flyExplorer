@@ -17,7 +17,7 @@ try:
  env={**os.environ,"LOCALAPPDATA":str(own/"local"),"APPDATA":str(own/"appdata"),
       "TEMP":str(own),"TMP":str(own)}
  args=[str(exe),str(own)]
- expected=33
+ expected=35
  unc_used=False
  if os.environ.get("FLY_M22_LOOPBACK_ADMIN_SHARE")=="YES":
   drive=own.drive.rstrip(":").lower()
@@ -30,7 +30,7 @@ try:
         stderr=subprocess.DEVNULL,timeout=6,check=False)
     if probe.returncode==0:
      args.append(unc_root)
-     expected=37
+     expected=39
      unc_used=True
     else:
      print("M22_NATIVE_LOOPBACK_UNC=NOT_RUN_ADMIN_SHARE_UNAVAILABLE",
