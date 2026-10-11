@@ -212,6 +212,30 @@ bool readStageReceipt(std::wstring const& exactReceiptPath,
   return true;
  }catch(...){receipt={};return false;}
 }
+ReceiptCreatorState inspectReceiptCreator(
+    StageOwnershipReceipt const& receipt) noexcept {
+ if(receipt.creatorPid==0||receipt.creatorStartTime==0)
+  return ReceiptCreatorState::Unknown;
+ const HANDLE process=::OpenProcess(
+     PROCESS_QUERY_LIMITED_INFORMATION|SYNCHRONIZE,FALSE,
+     receipt.creatorPid);
+ if(process==nullptr)return ReceiptCreatorState::Unknown;
+ FILETIME creation{},exit{},kernel{},user{};
+ const bool inspected=::GetProcessTimes(
+     process,&creation,&exit,&kernel,&user)!=FALSE;
+ ULARGE_INTEGER start{};
+ start.LowPart=creation.dwLowDateTime;
+ start.HighPart=creation.dwHighDateTime;
+ ReceiptCreatorState result=ReceiptCreatorState::Unknown;
+ if(inspected&&start.QuadPart==receipt.creatorStartTime){
+  const DWORD observed=::WaitForSingleObject(process,0);
+  if(observed==WAIT_TIMEOUT)result=ReceiptCreatorState::Running;
+  else if(observed==WAIT_OBJECT_0)result=ReceiptCreatorState::Exited;
+ }
+ ::CloseHandle(process);
+ return result;
+}
+
 bool receiptMatchesStage(StageOwnershipReceipt const& receipt) noexcept {
  StageFileIdentity current{};
  return inspectStageFile(receipt.stagePath,current)&&
