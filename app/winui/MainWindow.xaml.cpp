@@ -176,7 +176,11 @@ namespace winrt::FlyExplorer::implementation
                             Windows::System::VirtualKey::E,
                             Windows::System::VirtualKey::F,
                             Windows::System::VirtualKey::K,
+                            Windows::System::VirtualKey::G,
+                            Windows::System::VirtualKey::J,
                         };
+                        static_assert(std::size(choices)==
+                            fxfile::uisettings::kFocusShortcutCount);
                         auto const& pref=ui->mPreferencesCoordinator.current();
                         if(key==choices[pref.addressShortcut]){
                             ui->OnAddressDisplayClicked(nullptr,nullptr);

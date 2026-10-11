@@ -38,7 +38,8 @@ bool load(Preferences& out) noexcept{
  for(auto theme:themes){if(data==legacyText(theme)){out.theme=theme;out.defaultViewMode=0;return true;}}
  for(auto theme:themes)for(int view=0;view<5;++view){
   if(data==text(theme,view)){out.theme=theme;out.defaultViewMode=view;return true;}
-  for(int address=0;address<4;++address)for(int search=0;search<4;++search){
+  for(int address=0;address<kFocusShortcutCount;++address)
+   for(int search=0;search<kFocusShortcutCount;++search){
    if(!validFocusShortcuts(address,search))continue;
    if(data==text3(theme,view,address,search)){
     out.theme=theme;out.defaultViewMode=view;

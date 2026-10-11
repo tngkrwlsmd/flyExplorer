@@ -299,6 +299,8 @@
                     <ComboBoxItem Content="Ctrl+E"/>
                     <ComboBoxItem Content="Ctrl+F"/>
                     <ComboBoxItem Content="Ctrl+K"/>
+                    <ComboBoxItem Content="Ctrl+G"/>
+                    <ComboBoxItem Content="Ctrl+J"/>
                 </ComboBox>
                 <TextBlock Text="검색창 단축키" VerticalAlignment="Center"/>
                 <ComboBox x:Name="SearchShortcutBox" Width="112" SelectedIndex="2"
@@ -307,6 +309,8 @@
                     <ComboBoxItem Content="Ctrl+E"/>
                     <ComboBoxItem Content="Ctrl+F"/>
                     <ComboBoxItem Content="Ctrl+K"/>
+                    <ComboBoxItem Content="Ctrl+G"/>
+                    <ComboBoxItem Content="Ctrl+J"/>
                 </ComboBox>
                 <Button x:Name="ApplyShortcutButton" Content="단축키 저장"
                         Click="OnApplyShortcuts"

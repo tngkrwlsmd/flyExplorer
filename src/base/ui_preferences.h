@@ -3,9 +3,12 @@
 #include <string>
 namespace fxfile::uisettings {
 enum class Theme { System, Light, Dark };
-// Focus-only Ctrl shortcuts use the closed key set [L, E, F, K].
+// Only non-mutating focus commands may be remapped. Order matches the
+// WinUI editor and PreviewKeyDown mapping: Ctrl+[L,E,F,K,G,J].
+inline constexpr int kFocusShortcutCount=6;
 inline constexpr bool validFocusShortcuts(int address,int search) noexcept {
-    return address>=0&&address<4&&search>=0&&search<4&&address!=search;
+    return address>=0&&address<kFocusShortcutCount&&
+           search>=0&&search<kFocusShortcutCount&&address!=search;
 }
 struct Preferences {
     Theme theme=Theme::System;

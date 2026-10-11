@@ -55,6 +55,7 @@ class ShortcutSemanticsContract(unittest.TestCase):
         for token in (
             "VirtualKey::L", "VirtualKey::E",
             "VirtualKey::F", "VirtualKey::K",
+            "VirtualKey::G", "VirtualKey::J",
             "pref.addressShortcut", "pref.searchShortcut",
             "OnAddressDisplayClicked(nullptr,nullptr)",
             "QuickSearchBox()", "SelectAll()", "args.Handled(true)",
@@ -65,7 +66,15 @@ class ShortcutSemanticsContract(unittest.TestCase):
             encoding="utf-8"
         )
         self.assertIn("validFocusShortcuts(", bindings)
+        self.assertIn("kFocusShortcutCount=6", bindings)
         self.assertIn("address!=search", bindings)
+        self.assertIn("std::size(choices)==", window)
+        self.assertIn("fxfile::uisettings::kFocusShortcutCount", window)
+        store = (ROOT / "src" / "base" / "ui_preferences.cpp").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn("address<kFocusShortcutCount", store)
+        self.assertIn("search<kFocusShortcutCount", store)
         self.assertIn("addressShortcut=0", bindings)
         self.assertIn("searchShortcut=2", bindings)
 
@@ -82,6 +91,15 @@ class ShortcutSemanticsContract(unittest.TestCase):
             'Click="OnApplyShortcuts"', 'Click="OnResetShortcuts"',
         ):
             self.assertIn(token, ui)
+        for name in ('AddressShortcutBox', 'SearchShortcutBox'):
+            choices = ui.split('x:Name="'+name+'"', 1)[1].split(
+                '</ComboBox>', 1
+            )[0]
+            items = re.findall(r'<ComboBoxItem Content="([^"]+)"/>', choices)
+            self.assertEqual(
+                ['Ctrl+L', 'Ctrl+E', 'Ctrl+F', 'Ctrl+K', 'Ctrl+G', 'Ctrl+J'],
+                items,
+            )
         for name in ("OnApplyShortcuts", "OnResetShortcuts"):
             self.assertIn(name, header)
             self.assertIn("void MainWindow::"+name+"(", window)
