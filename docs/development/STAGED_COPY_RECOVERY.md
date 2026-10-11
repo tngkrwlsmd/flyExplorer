@@ -72,6 +72,13 @@ The next integration gate must establish private-directory ACL/owner
 trust, callback/file-handle binding during actual transfers, worker
 liveness validation and tamper/race-resistant exact-file operations.
 Native fixtures use only an isolated test-owned directory.
+On the exact source candidate `30b80de3e75cd759ed4a3f82d492b539f0f42d4c`,
+the owned [Windows Remote Shell run #38122600482](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38122600482)
+passed the Release M22 native fixture (48/48, including four receipt
+roundtrip/overwrite/replacement/corruption cases) and `git diff --check`.
+The earlier compiler-header failure was corrected before this run.
+The Python source-contract and full WinUI GUI suites were **not run on
+this isolated candidate**. Production receipt integration remains disabled.
 
 ## Minimum provenance before implementing production cleanup
 
