@@ -104,7 +104,112 @@ bool validIdentity(StageFileIdentity const& identity){
  return std::any_of(identity.fileId.begin(),identity.fileId.end(),
                     [](unsigned char b){return b!=0;});
 }
+// Use a copy of the process token's SID. No global auth state or privileges.
+bool currentUserSid(std::vector<unsigned char>& buffer,PSID& userSid) {
+ userSid=nullptr;
+ HANDLE token=nullptr;
+ if(!::OpenProcessToken(::GetCurrentProcess(),TOKEN_QUERY,&token))
+  return false;
+ DWORD bytes=0;
+ ::GetTokenInformation(token,TokenUser,nullptr,0,&bytes);
+ bool success=false;
+ if(bytes>=sizeof(TOKEN_USER)&&bytes<=65536){
+  buffer.resize(bytes);
+  success=::GetTokenInformation(token,TokenUser,buffer.data(),
+                               bytes,&bytes)!=FALSE;
+ }
+ ::CloseHandle(token);
+ if(!success)return false;
+ auto* user=reinterpret_cast<TOKEN_USER*>(buffer.data());
+ userSid=user->User.Sid;
+ return userSid!=nullptr&&::IsValidSid(userSid)!=FALSE;
+}
+bool exactPrivateFolderPath(std::wstring const& path){
+ const fs::path directory(path);
+ if(!normalized(directory,path)||directory.filename().empty()||
+    directory==directory.root_path())return false;
+ return fixedParent(directory/fs::path(L"receipt-check"));
+}
 } // namespace
+
+bool isPrivateStageReceiptDirectory(
+    std::wstring const& exactDirectory) noexcept {
+ try{
+  if(!exactPrivateFolderPath(exactDirectory))return false;
+  std::vector<unsigned char> token;
+  PSID user=nullptr;
+  if(!currentUserSid(token,user))return false;
+  const HANDLE handle=::CreateFileW(exactDirectory.c_str(),
+      READ_CONTROL|FILE_READ_ATTRIBUTES,
+      FILE_SHARE_READ|FILE_SHARE_WRITE|FILE_SHARE_DELETE,
+      nullptr,OPEN_EXISTING,
+      FILE_FLAG_BACKUP_SEMANTICS|FILE_FLAG_OPEN_REPARSE_POINT,nullptr);
+  if(handle==INVALID_HANDLE_VALUE)return false;
+  BY_HANDLE_FILE_INFORMATION attributes{};
+  PSECURITY_DESCRIPTOR security=nullptr;
+  PSID owner=nullptr;
+  PACL acl=nullptr;
+  const bool isDirectory=::GetFileInformationByHandle(
+      handle,&attributes)!=FALSE&&
+      (attributes.dwFileAttributes&FILE_ATTRIBUTE_DIRECTORY)!=0&&
+      (attributes.dwFileAttributes&FILE_ATTRIBUTE_REPARSE_POINT)==0;
+  const DWORD result=isDirectory?
+      ::GetSecurityInfo(handle,SE_FILE_OBJECT,
+          OWNER_SECURITY_INFORMATION|DACL_SECURITY_INFORMATION,
+          &owner,nullptr,&acl,nullptr,&security):ERROR_INVALID_PARAMETER;
+  ::CloseHandle(handle);
+  bool safe=false;
+  if(result==ERROR_SUCCESS&&security&&owner&&
+     ::EqualSid(owner,user)&&acl&&::IsValidAcl(acl)&&
+     acl->AceCount==1){
+   SECURITY_DESCRIPTOR_CONTROL control{};
+   DWORD revision=0;
+   if(::GetSecurityDescriptorControl(security,&control,&revision)&&
+      (control&SE_DACL_PROTECTED)){
+    void* entry=nullptr;
+    if(::GetAce(acl,0,&entry)){
+     const auto* ace=static_cast<ACCESS_ALLOWED_ACE*>(entry);
+     safe=ace->Header.AceType==ACCESS_ALLOWED_ACE_TYPE&&
+         !(ace->Header.AceFlags&INHERITED_ACE)&&
+         (ace->Header.AceFlags&
+            (OBJECT_INHERIT_ACE|CONTAINER_INHERIT_ACE))==
+            (OBJECT_INHERIT_ACE|CONTAINER_INHERIT_ACE)&&
+         (ace->Mask&FILE_ALL_ACCESS)==FILE_ALL_ACCESS&&
+         ::IsValidSid(const_cast<DWORD*>(&ace->SidStart))&&
+         ::EqualSid(const_cast<DWORD*>(&ace->SidStart),user);
+    }
+   }
+  }
+  if(security)::LocalFree(security);
+  return safe;
+ }catch(...){return false;}
+}
+bool createPrivateStageReceiptDirectory(
+    std::wstring const& exactDirectory) noexcept {
+ try{
+  const fs::path folder(exactDirectory);
+  if(!normalized(folder,exactDirectory)||folder.filename().empty()||
+     !fixedParent(folder))return false;
+  std::vector<unsigned char> token;
+  PSID user=nullptr;
+  if(!currentUserSid(token,user))return false;
+  LPWSTR sidText=nullptr;
+  if(!::ConvertSidToStringSidW(user,&sidText)||!sidText)return false;
+  const std::wstring sddl=L"O:"+std::wstring(sidText)+
+      L"D:P(A;OICI;FA;;;"+std::wstring(sidText)+L")";
+  ::LocalFree(sidText);
+  PSECURITY_DESCRIPTOR security=nullptr;
+  if(!::ConvertStringSecurityDescriptorToSecurityDescriptorW(
+      sddl.c_str(),SDDL_REVISION_1,&security,nullptr)||!security)
+   return false;
+  SECURITY_ATTRIBUTES attributes{sizeof(SECURITY_ATTRIBUTES),security,FALSE};
+  // No open-if-exists, no ACL reset; report a pre-existing path as failure.
+  const bool created=::CreateDirectoryW(
+      exactDirectory.c_str(),&attributes)!=FALSE;
+  ::LocalFree(security);
+  return created&&isPrivateStageReceiptDirectory(exactDirectory);
+ }catch(...){return false;}
+}
 
 bool writeStageReceipt(std::wstring const& exactReceiptPath,
                        std::wstring const& exactStagePath,
