@@ -4,6 +4,8 @@
 #include <filesystem>
 #include <algorithm>
 #include <cstring>
+#include <iterator>
+#include <utility>
 #include <vector>
 
 namespace fxfile::shelltransfer {
