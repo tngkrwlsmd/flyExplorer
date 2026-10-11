@@ -10,6 +10,38 @@ namespace fs=std::filesystem;
 int wmain(int count,wchar_t**args){
  setvbuf(stdout,nullptr,_IONBF,0);
  if(count==2&&std::wstring(args[1])==L"--receipt-child-exit")return 0;
+ // Separate test-only commands. The caller supplies only its owned fixture
+ // files; no application profile, unrelated PID or user folder is touched.
+ if(count==3&&std::wstring(args[1])==L"--receipt-create-private"){
+  const bool ok=createPrivateStageReceiptDirectory(args[2]);
+  std::printf("M22_OWNED_PRIVATE_RECEIPT_STORE=%s\n",ok?"PASS":"FAIL");
+  return ok?0:83;
+ }
+ if(count==4&&std::wstring(args[1])==L"--receipt-verify-killed"){
+  StageOwnershipReceipt entry{};
+  const bool read=readStageReceipt(args[2],entry);
+  const bool matched=read&&entry.stagePath==args[3]&&
+                     receiptMatchesStage(entry);
+  const auto state=read?inspectReceiptCreator(entry):
+                        ReceiptCreatorState::Unknown;
+  const bool inactive=state!=ReceiptCreatorState::Running;
+  std::printf("M22_KILLED_WORKER_RECEIPT_MATCH=%s CREATOR_NOT_RUNNING=%s\n",
+              matched?"PASS":"FAIL",inactive?"PASS":"FAIL");
+  return matched&&inactive?0:84;
+ }
+ if(count==5&&std::wstring(args[1])==L"--owned-stage-kill-receipt"){
+  Request request{};
+  request.kind=Kind::Copy;
+  const fs::path source(args[2]),destination(args[3]);
+  request.sourceParent=source.parent_path().native();
+  request.destination=destination.native();
+  request.sources={source.native()};
+  Progress progress{};
+  progress.receiptDirectory=args[4];
+  if(!isPrivateStageReceiptDirectory(progress.receiptDirectory))return 85;
+  const auto result=execute(request,progress);
+  return result.error==ERROR_SUCCESS?0:86;
+ }
  if(count==4&&std::wstring(args[1])==L"--owned-stage-cancel"){
   // Cancel only after transfer progress is observed on a disposable file.
   Request request{};
