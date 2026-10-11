@@ -108,13 +108,27 @@ def main(config="Release"):
 
         eventually(lambda: row(a.name) is not None and row(b.name) is not None,
                    "Two owned rows missing", 12)
-        view.set_focus()
-        assert pid_of(app_hwnd) == app.pid
-        assert user.GetForegroundWindow() == app_hwnd
-        row(a.name).select()
-        row(b.name).iface_selection_item.AddToSelection()
-        eventually(lambda: row(a.name).is_selected() and row(b.name).is_selected(),
-                   "Two owned siblings not selected", 8)
+        def select_owned_pair():
+            view.set_focus()
+            if pid_of(app_hwnd) != app.pid or user.GetForegroundWindow() != app_hwnd:
+                return False
+            first = row(a.name)
+            other = row(b.name)
+            if first is None or other is None:
+                return False
+            try:
+                first.select()
+                other = row(b.name)
+                if other is None:
+                    return False
+                other.iface_selection_item.AddToSelection()
+                first = row(a.name)
+                other = row(b.name)
+                return (first is not None and other is not None and
+                        first.is_selected() and other.is_selected())
+            except (AttributeError, RuntimeError):
+                return False
+        eventually(select_owned_pair, "Two owned siblings not stably selected", 12)
         view.child_window(auto_id="LeftFiles").set_focus()
         assert user.GetForegroundWindow() == app_hwnd
         keyboard.send_keys("+{F10}")
