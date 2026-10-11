@@ -330,6 +330,34 @@ pre-callback record, unsigned journal, reboot/power-loss durability,
 user-profile Known Folder and GUI integration gates are unchanged.
 No orphan enumeration, cleanup or recovery is permitted.
 
+## Exact target receipt proof for an owned GUI copy — synthetic checks
+
+The GUI gate previously accepted any single newly arrived receipt with
+`PublishedVerified` state, which could conflate another concurrent copy
+with the exact GUI request. It now passes a new receipt through
+`tests/winui/receipt_wire_owned.py` first. That bounded reader parses
+only the new file's 60-byte fixed v1 header, expected UTF-16LE path
+and target leaf, validates the length and checksum, and requires the
+saved stage's parent/leaf to identify the *specific* test-owned
+destination. It then separately calls the existing native read-only
+`--receipt-inspect-state <file> published` API to check the OS
+FileIdInfo and immutable markers. The checksum itself is not
+cryptographic authenticity; a compromised same-user process is not
+covered. Previous journal file **contents** are never accessed,
+modified or deleted by this test.
+
+A stand-alone synthetic contract
+(`tests/winui/test_owned_receipt_wire_contract.py`) has nine
+positive/negative cases, including Unicode target names, changed
+parent/name, torn/corrupt records, unsupported versions, dot segments,
+and valid zero-volume-serial input with a nonzero file ID. Locally
+reconstructed matching Python source ran **9/9 PASS** with syntax
+compilation. This is pure Python test evidence only and must not
+replace Windows compilation, GUI automation, signed/packaged
+distribution or actual logged-in-user Known Folder validation.
+The one-shot interactive staging script now also includes the
+new parser module beside its GUI test.
+
 ## Pending real-user GUI + Known Folder acceptance gate (not run)
 
 Draft PR #63 now carries an **explicitly opted-in and still unverified**
