@@ -10,6 +10,23 @@ namespace fs=std::filesystem;
 int wmain(int count,wchar_t**args){
  setvbuf(stdout,nullptr,_IONBF,0);
  if(count==2&&std::wstring(args[1])==L"--receipt-child-exit")return 0;
+ // Read exactly one known receipt in a freshly launched process, with
+ // no enumeration, cleanup, file attribute changes or publication.
+ if(count==4&&std::wstring(args[1])==L"--receipt-inspect-state"){
+  const auto state=inspectStageReceiptState(args[2]);
+  const std::wstring expected(args[3]);
+  const bool ok=(expected==L"published"&&
+                 state==StageReceiptState::PublishedVerified)||
+                (expected==L"ambiguous"&&
+                 state==StageReceiptState::PublicationUnconfirmed)||
+                (expected==L"inconsistent"&&
+                 state==StageReceiptState::Inconsistent)||
+                (expected==L"copying"&&
+                 state==StageReceiptState::CopyingOrInterrupted);
+  std::printf("M22_RESTART_READONLY_RECEIPT_STATE=%s\n",
+              ok?"PASS":"FAIL");
+  return ok?0:87;
+ }
  // Separate test-only commands. The caller supplies only its owned fixture
  // files; no application profile, unrelated PID or user folder is touched.
  if(count==3&&std::wstring(args[1])==L"--receipt-create-private"){
