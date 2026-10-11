@@ -87,10 +87,25 @@ def clipboard_formats():
         if preferred in found:
             import struct
             raw=cb.GetClipboardData(preferred)
-            # pywin32 may return HGLOBAL or bytes for a registered format;
-            # nonreadable effect is reported as unknown, never presumed move.
+            # pywin32 can expose this registered format as bytes OR
+            # a numeric HGLOBAL. Decode both without guessing cut intent.
             if isinstance(raw,(bytes,bytearray)) and len(raw)>=4:
                 effect=struct.unpack("<I",raw[:4])[0]
+            elif isinstance(raw,int) and raw:
+                kernel=c.windll.kernel32
+                kernel.GlobalSize.argtypes=[w.HGLOBAL]
+                kernel.GlobalSize.restype=c.c_size_t
+                kernel.GlobalLock.argtypes=[w.HGLOBAL]
+                kernel.GlobalLock.restype=c.c_void_p
+                kernel.GlobalUnlock.argtypes=[w.HGLOBAL]
+                kernel.GlobalUnlock.restype=w.BOOL
+                if 4<=kernel.GlobalSize(w.HGLOBAL(raw))<=65536:
+                    pointer=kernel.GlobalLock(w.HGLOBAL(raw))
+                    if pointer:
+                        try:
+                            effect=struct.unpack("<I",c.string_at(pointer,4))[0]
+                        finally:kernel.GlobalUnlock(w.HGLOBAL(raw))
+            print("OWNED_OS_PREFERRED_DROP_EFFECT",effect,flush=True)
         return paths,effect
     finally:cb.CloseClipboard()
 
