@@ -84,6 +84,48 @@ int wmain(int count,wchar_t**args){
               int(completedButUnpublished));
   return pass?0:94;
  }
+ if(count==5&&std::wstring(args[1])==L"--owned-denied-ancestor-copy"){
+  // Called only on a fresh owned fixture. Caller separately denies list
+  // rights on an ancestor while permitting creation in the exact child.
+  // No cleanup, ACL change, stage rename or retained-record deletion here.
+  const fs::path source(args[2]),destination(args[3]),store(args[4]);
+  if(!fs::is_regular_file(source)||!fs::is_directory(destination)||
+     !isPrivateStageReceiptDirectory(store.native())||
+     fs::exists(destination/source.filename()))return 102;
+  Request request{};
+  request.kind=Kind::Copy;
+  request.collision=Collision::Reject;
+  request.sourceParent=source.parent_path().native();
+  request.destination=destination.native();
+  request.sources={source.native()};
+  Progress progress{};
+  progress.receiptDirectory=store.native();
+  const auto result=execute(request,progress);
+  std::size_t receiptCount=0;
+  bool completedStage=false;
+  for(auto const& record:fs::directory_iterator(store)){
+   if(record.path().extension()!=L".bin")continue;
+   ++receiptCount;
+   StageOwnershipReceipt receipt{};
+   if(readStageReceipt(record.path().native(),receipt)&&
+      receipt.targetLeaf==source.filename().native()&&
+      fs::path(receipt.stagePath).parent_path()==destination&&
+      receiptMatchesStage(receipt)&&
+      inspectStageReceiptState(record.path().native())==
+          StageReceiptState::CompletedOnStage)
+    completedStage=true;
+  }
+  const bool refused=result.error==ERROR_ACCESS_DENIED||
+                     result.error==ERROR_SHARING_VIOLATION;
+  const bool pass=refused&&!result.aborted&&
+     fs::is_regular_file(source)&&
+     !fs::exists(destination/source.filename())&&
+     receiptCount==1&&completedStage;
+  std::printf("M22_RESTRICTED_ANCESTOR_FAIL_CLOSED=%s error=%lu stage=%d records=%u\n",
+       pass?"PASS":"FAIL",result.error,int(completedStage),
+       static_cast<unsigned>(receiptCount));
+  return pass?0:103;
+ }
  if(count==4&&std::wstring(args[1])==L"--real-user-shipping-helper-ipc"){
   // Interactive USER-session acceptance only; NEVER run as SYSTEM.
   // Writes only the supplied, uniquely test-owned destination via the
