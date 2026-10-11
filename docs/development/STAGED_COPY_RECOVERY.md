@@ -330,6 +330,39 @@ pre-callback record, unsigned journal, reboot/power-loss durability,
 user-profile Known Folder and GUI integration gates are unchanged.
 No orphan enumeration, cleanup or recovery is permitted.
 
+## Interactive-user test safety contract (2026-10-11, not accepted on Windows)
+
+The prepared opt-in `test_owned_user_receipt_gui.py` now refuses a
+non-interactive/SYSTEM or unidentified security token, missing shipping
+helper/fixture, ambiguous owned WinUI window, and foreign foreground
+window through **unconditional runtime exceptions** rather than
+optimization-skippable Python assertions. It refuses to send pointer
+input unless the foreground HWND belongs to the exact test-spawned
+WinUI PID, and checks exact source bytes and private Known Folder
+availability before reporting the GUI Copy successful.
+
+The new pure receipt-wire regressions are enrolled in the normal
+`tools/winui/run_checks.py` `file-operations` source suite; the
+source contract guards the registration and the fail-closed token,
+session and foreground preconditions. Local Python 3.13 synthetic
+parsing ran **9/9 PASS** again. This does not establish desktop UIA,
+user Known Folder, native M22 compilation or shell process acceptance
+for the latest branch. The authorized remote-desktop connector is
+currently offline and the central Remote Shell safety check denied
+the new interactive preflight; neither was bypassed.
+
+**Next planned acceptance, in order:** (1) review and run an authorized
+one-shot owned InteractiveToken gate on the exact reviewed Draft
+SHA, observing a unique GUI Copy plus a direct shipping-helper
+Known Folder IPC receipt; (2) test restrictive ancestor
+`FILE_LIST_DIRECTORY` permissions with a test-owned ACL and verify
+no publication, no original modification and no unsafe fallback;
+(3) test abrupt termination after stage/receipt creation and
+read-only post-restart classification; (4) test OS reboot/power loss
+only on separately approved disposable VM/disk, validating source
+hash and explicitly preserving all ambiguous stages. None permits
+automatic orphan cleanup or a production merge.
+
 ## Exact target receipt proof for an owned GUI copy — synthetic checks
 
 The GUI gate previously accepted any single newly arrived receipt with
