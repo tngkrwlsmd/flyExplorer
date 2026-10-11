@@ -72,6 +72,18 @@ class FileOperationContracts(unittest.TestCase):
         self.assertIn("sharing_violation_move_reports_failure_and_preserves_source",
                       fixture)
 
+    def test_partial_failure_notice_survives_navigation_refresh(self):
+        ui = read("app/winui/MainWindow.xaml.cpp")
+        header = read("app/winui/MainWindow.xaml.h")
+        transfer = read("app/winui/m22_transfers.cpp")
+        self.assertIn("std::wstring mTransferFailureNotice{};", header)
+        self.assertIn("mTransferFailureNotice=detail;", transfer)
+        self.assertIn("mTransferFailureNotice.clear();", transfer)
+        self.assertIn("completed.action==Action::Refresh&&", ui)
+        self.assertIn("!mTransferFailureNotice.empty()", ui)
+        self.assertIn("StatusText().Text(hstring(mTransferFailureNotice));", ui)
+        self.assertIn("mTransferFailureNotice.clear();", ui)
+
     def test_selected_row_activates_command_pane(self):
         source = read("app/winui/MainWindow.xaml.cpp")
         begin = source.index("void MainWindow::OnFileSelectionChanged(")
