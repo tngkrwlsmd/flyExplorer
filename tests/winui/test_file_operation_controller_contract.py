@@ -138,7 +138,10 @@ class FileOperationContracts(unittest.TestCase):
         native = read("tests/winui/m22/test_native.py")
         app_project = read("app/winui/flyExplorer.project-template.xml")
         for symbol in ("writeStageReceipt", "readStageReceipt",
-                       "receiptMatchesStage", "StageOwnershipReceipt"):
+                       "receiptMatchesStage", "StageOwnershipReceipt",
+                       "createPrivateStageReceiptDirectory",
+                       "isPrivateStageReceiptDirectory",
+                       "inspectReceiptCreator", "ReceiptCreatorState"):
             self.assertIn(symbol, header)
         for marker in ("CREATE_NEW", "FILE_FLAG_WRITE_THROUGH",
                        "FlushFileBuffers", "FILE_FLAG_OPEN_REPARSE_POINT",
