@@ -7,6 +7,8 @@
 #include <chrono>
 #include <algorithm>
 #include <iterator>
+#include <set>
+#include <shlobj.h>
 using namespace fxfile::shelltransfer;
 namespace fs=std::filesystem;
 #if defined(FLY_M22_TEST_DIRECTORY_RENAME_LOCK)
@@ -81,6 +83,91 @@ int wmain(int count,wchar_t**args){
               pass?"PASS":"FAIL",outcome.error,
               int(completedButUnpublished));
   return pass?0:94;
+ }
+ if(count==4&&std::wstring(args[1])==L"--real-user-shipping-helper-ipc"){
+  // Interactive USER-session acceptance only; NEVER run as SYSTEM.
+  // Writes only the supplied, uniquely test-owned destination via the
+  // shipping helper. Its per-user receipt store is selected by the helper,
+  // never by this fixture or environment input. No record is deleted.
+  HANDLE token=nullptr;
+  bool system=false;
+  if(::OpenProcessToken(::GetCurrentProcess(),TOKEN_QUERY,&token)){
+   DWORD needed=0;
+   (void)::GetTokenInformation(token,TokenUser,nullptr,0,&needed);
+   std::vector<unsigned char> sid(needed);
+   if(needed&&::GetTokenInformation(token,TokenUser,sid.data(),needed,&needed)){
+    const auto* user=reinterpret_cast<TOKEN_USER const*>(sid.data());
+    SID_IDENTIFIER_AUTHORITY nt=SECURITY_NT_AUTHORITY;
+    PSID sys=nullptr;
+    if(::AllocateAndInitializeSid(&nt,1,SECURITY_LOCAL_SYSTEM_RID,
+          0,0,0,0,0,0,0,&sys)){
+     system=::EqualSid(user->User.Sid,sys)!=FALSE;
+     ::FreeSid(sys);
+    }
+   }
+   ::CloseHandle(token);
+  }
+  if(system)return 95;
+  const fs::path source(args[2]),destination(args[3]);
+  if(!fs::is_regular_file(source)||!fs::is_directory(destination)||
+     source.parent_path()==destination)return 96;
+  PWSTR raw=nullptr;
+  if(FAILED(::SHGetKnownFolderPath(FOLDERID_LocalAppData,0,nullptr,&raw))||
+     !raw)return 97;
+  const fs::path known(raw);
+  ::CoTaskMemFree(raw);
+  const auto store=known/L"flyExplorer-transfer-receipts-v1";
+  const bool present=fs::exists(store);
+  if(present&&!isPrivateStageReceiptDirectory(store.native()))return 98;
+  std::set<std::wstring> before;
+  if(present){
+   for(auto const& file:fs::directory_iterator(store)){
+    if(file.is_regular_file()&&file.path().extension()==L".bin")
+     before.insert(file.path().filename().native());
+   }
+  }
+  const auto target=destination/source.filename();
+  if(fs::exists(target))return 99;
+  Request request{};
+  request.kind=Kind::Copy;
+  request.collision=Collision::Reject;
+  request.sourceParent=source.parent_path().native();
+  request.destination=destination.native();
+  request.sources={source.native()};
+  Progress progress{};
+  const auto result=executeIsolated(request,progress);
+  bool matched=false;
+  std::size_t createdReceipts=0;
+  if(isPrivateStageReceiptDirectory(store.native())){
+   for(auto const& file:fs::directory_iterator(store)){
+    if(file.path().extension()!=L".bin"||
+       before.count(file.path().filename().native()))continue;
+    StageOwnershipReceipt receipt{};
+    if(readStageReceipt(file.path().native(),receipt)&&
+       receipt.targetLeaf==source.filename().native()&&
+       fs::path(receipt.stagePath).parent_path()==destination&&
+       inspectStageReceiptState(file.path().native())==
+           StageReceiptState::PublishedVerified){
+      ++createdReceipts;
+      matched=true;
+    }
+   }
+  }
+  bool sameBytes=false;
+  if(fs::is_regular_file(target)&&
+     fs::file_size(target)==fs::file_size(source)){
+   std::ifstream a(source,std::ios::binary),b(target,std::ios::binary);
+   sameBytes=std::equal(std::istreambuf_iterator<char>(a),
+         std::istreambuf_iterator<char>(),
+         std::istreambuf_iterator<char>(b),
+         std::istreambuf_iterator<char>());
+  }
+  const bool pass=result.error==ERROR_SUCCESS&&!result.aborted&&
+      progress.percent==100&&sameBytes&&matched&&createdReceipts==1;
+  std::printf("M22_INTERACTIVE_SHIPPING_KNOWNFOLDER_IPC=%s private=%d bytes=%d receipts=%u error=%lu\n",
+      pass?"PASS":"FAIL",int(isPrivateStageReceiptDirectory(store.native())),
+      int(sameBytes),static_cast<unsigned>(createdReceipts),result.error);
+  return pass?0:100;
  }
  if(count==5&&std::wstring(args[1])==L"--owned-helper-ipc-untrusted"){
   // This intentionally inherited ACL folder must never be accepted by the
