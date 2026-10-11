@@ -57,6 +57,10 @@ struct Report {
 struct Progress {
  std::atomic_uint32_t percent{0};
  std::atomic_bool cancel{false};
+ // In-process opt-in only; never serialized from an untrusted request.
+ // The isolated helper resolves its own per-user protected directory.
+ // Tests may supply ONLY a separately created, test-owned private folder.
+ std::wstring receiptDirectory;
 };
 // Read-only file-object identity probe for an EXACT observed staged Copy path.
 // This is NOT an ownership receipt or deletion authorization. A matching
