@@ -44,19 +44,22 @@ def local_app_data() -> Path:
 
 
 def require_logged_in_session() -> None:
-    assert os.environ.get("FLY_ALLOW_INTERACTIVE_RECEIPT_GUI") == "1", (
-        "Explicit interactive user receipt acceptance opt-in required")
+    if os.environ.get("FLY_ALLOW_INTERACTIVE_RECEIPT_GUI") != "1":
+        raise RuntimeError("Explicit interactive user receipt opt-in required")
     kernel = c.WinDLL("kernel32", use_last_error=True)
     kernel.ProcessIdToSessionId.argtypes = [W.DWORD, c.POINTER(W.DWORD)]
     session = W.DWORD()
-    assert kernel.ProcessIdToSessionId(os.getpid(), c.byref(session))
-    assert session.value > 0, "Refuse SYSTEM Session 0"
+    if not kernel.ProcessIdToSessionId(os.getpid(), c.byref(session)):
+        raise RuntimeError("Cannot prove current interactive session")
+    if session.value == 0:
+        raise RuntimeError("Refuse SYSTEM Session 0")
 
     # Session presence alone is insufficient: the current process must NOT
     # have the LocalSystem SID. Fail closed if the token cannot be inspected.
     identity = subprocess.run(["whoami", "/user"], capture_output=True,
                               text=True, timeout=10, check=True)
-    assert "S-1-5-18" not in identity.stdout, "Refuse LocalSystem"
+    if "S-1-5-18" in identity.stdout or "S-1-5-21-" not in identity.stdout:
+        raise RuntimeError("Refuse non-user or unidentified security token")
 
 
 def main() -> None:
@@ -65,12 +68,12 @@ def main() -> None:
     helper = exe.with_name("FlyShellIsolationHelper.exe")
     fixture = (ROOT / "tests" / "winui" / "m22" / "bin" / "x64" /
                "Release" / "FlyM22ShellTransferContracts.exe")
-    assert exe.is_file() and helper.is_file() and fixture.is_file(), (
-        "Matching Release product/helper/M22 fixture required")
+    if not (exe.is_file() and helper.is_file() and fixture.is_file()):
+        raise RuntimeError("Matching Release product/helper/fixture required")
 
     store = local_app_data() / "flyExplorer-transfer-receipts-v1"
-    assert not store.is_symlink(), "Refuse reparse receipt folder"
-    assert not store.exists() or store.is_dir(), "Receipt store is not a folder"
+    if store.is_symlink() or (store.exists() and not store.is_dir()):
+        raise RuntimeError("Refuse non-directory or linked receipt store")
     # Only snapshot file NAMES; never read or mutate older private receipts.
     older = ({p.name for p in store.glob("*.bin")} if store.exists() else set())
 
@@ -126,8 +129,12 @@ def main() -> None:
         wait_until(lambda: process.poll() is not None or
                    len(owned_windows()) == 1, "Owned WinUI did not open",
                    seconds=26, interval=.15)
-        assert process.poll() is None, "Owned WinUI exited on launch"
-        hwnd = owned_windows()[0]
+        if process.poll() is not None:
+            raise RuntimeError("Owned WinUI exited on launch")
+        matches = owned_windows()
+        if len(matches) != 1:
+            raise RuntimeError("Refuse ambiguous owned WinUI window")
+        hwnd = matches[0]
         win = Desktop(backend="uia").window(handle=hwnd)
 
         def control(automation_id):
@@ -138,7 +145,8 @@ def main() -> None:
             foreground = user32.GetForegroundWindow()
             owner = W.DWORD()
             user32.GetWindowThreadProcessId(foreground, c.byref(owner))
-            assert owner.value == process.pid, "Refuse input on foreign HWND"
+            if owner.value != process.pid:
+                raise RuntimeError("Refuse input on foreign HWND")
 
         def eventually(predicate, description, seconds=25):
             return wait_until(predicate, description, seconds=seconds,
@@ -146,7 +154,8 @@ def main() -> None:
 
         for item in ("LeftFiles", "RightFiles", "AddressBox",
                      "CopyButton", "StatusText"):
-            assert control(item).exists(timeout=8), item
+            if not control(item).exists(timeout=8):
+                raise RuntimeError("Required owned WinUI control missing: " + item)
         eventually(lambda: str(left).casefold() in
                    control("AddressBox").get_value().casefold(),
                    "Owned starting source path absent")
@@ -181,9 +190,10 @@ def main() -> None:
         eventually(lambda: destination.is_file() and
                    destination.read_bytes() == data,
                    "Actual WinUI Copy failed exact destination bytes", 35)
-        assert src.read_bytes() == data, "Owned source was modified"
-        assert store.is_dir() and not store.is_symlink(), (
-            "Shipping helper did not create its Known Folder receipt store")
+        if src.read_bytes() != data:
+            raise RuntimeError("Owned source was modified")
+        if not store.is_dir() or store.is_symlink():
+            raise RuntimeError("Shipping helper private receipt store unavailable")
 
         def new_receipts():
             return [p for p in store.glob("*.bin")
