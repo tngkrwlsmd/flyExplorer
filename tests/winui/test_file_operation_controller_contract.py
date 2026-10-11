@@ -51,8 +51,12 @@ class FileOperationContracts(unittest.TestCase):
         ):
             self.assertIn(token, header + body)
         for forbidden in ("CWnd", "XamlRoot", "Windows::ApplicationModel",
-                          "DeleteFileW", "RemoveDirectoryW", "SHFileOperation"):
+                          "RemoveDirectoryW", "SHFileOperation"):
             self.assertNotIn(forbidden, header + body)
+        # Only the unique, request-created staging pathname may be deleted.
+        # Original sources and published destination paths remain protected.
+        self.assertEqual(1, body.count("::DeleteFileW("))
+        self.assertIn("::DeleteFileW(stage.c_str())", body)
 
     def test_native_shell_per_item_failures_never_report_aggregate_success(self):
         core = read("src/base/shell_transfer_core.cpp")
