@@ -120,11 +120,12 @@ not durably recorded.
   source SHA-256 and an unrelated partial were unchanged, and no
   truncated final target appeared. The exact stage was **not** deleted.
 
-**Unrun gates:** full product WinUI Release and GUI acceptance, actual
-helper IPC/known-folder provisioning on an interactive user session,
-Python source contracts on the latest branch, comprehensive initial-callback
-crash handling, replacement/ACL race resistance for publish/cleanup,
-automated restart reconciliation and power loss. **Draft PR #63 is not merged.**
+**At the earlier isolated native checkpoint:** full WinUI Release
+build, real helper IPC and Python source contracts still needed independent
+verification. Those three scoped gates are now covered in the newer section
+below. Interactive *shipping-helper* Known Folder behavior, GUI, initial
+pre-callback crash handling, replacement/ACL races, restart reconciliation
+and power-loss safety remain untested. **Draft PR #63 is not merged.**
 
 ## Immutable phase records and cross-process read-only inspection
 
@@ -181,6 +182,50 @@ hash, durable directory flush guarantee, power-loss proof, user-facing
 recovery consent or safe cleanup operation exists. A kill before the
 first receipt still leaves an unowned-by-evidence stage. No automatic
 recovery or cleanup was added.
+
+## Canonical product build and owned real helper IPC — no profile mutation
+
+The draft PR's completed/posted journal is now exercised through actual
+parent/child transfer pipes and its production WinUI Release build:
+
+- [Remote Shell #38129284452](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38129284452)
+  on exact `404a7450943476a5b23320211e7b4bd9d7b425c2`:
+  original `build.bat Release` and sibling shipping helper presence
+  **PASS**, focused source contracts **15/15 PASS**. An already installed
+  Python interpreter was added **only to this child process's PATH**,
+  not installed or configured machine-wide.
+- [Remote Shell #38129563278](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38129563278)
+  on `f50e17a659d238310758c53464cc9fb0453aeb1f`:
+  independent native fixture and explicit test-only isolated helper both
+  compiled. Real `executeIsolated` pipes and a real child process copied
+  a Korean-named 8 MiB file and a 0-byte file, reporting byte-for-byte
+  equality and full phase/receipt `PublishedVerified` state for each;
+  focused source contracts **15/15 PASS**.
+- [Remote Shell #38129744148](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38129744148)
+  on `b302ab7f6d566e642d1679399a9a492f43f061a0`:
+  unsafe inherited-ACL receipt store was rejected across child-process
+  IPC (reported error 31), test source SHA-256 and empty target remained
+  unchanged; source contracts **15/15 PASS**, new native fixture Release
+  compilation and original `build.bat Release` **PASS** again.
+
+The IPC fixture deliberately uses a **different, explicitly opted-in
+test-only helper build**. A compile guard
+`FLY_M22_TEST_ISOLATED_RECEIPT_STORE`, activated only by
+`/p:FlyM22OwnedHelper=true`, permits its child process to consume
+`FLY_M22_OWNED_RECEIPT_STORE` after strict owner-only private-DACL
+validation. This never enters production request serialization. Normal
+`app/winui/helper/build.cmd` and `build.bat Release` do **not** set the
+fixture property, and the production helper continues to resolve its
+own protected `FOLDERID_LocalAppData` directory. The fixture prevents
+experiments from writing to the SYSTEM profile or real user folders.
+Production Known Folder behavior in a *logged-in interactive user
+session* is **not** established by this fixture.
+
+No test scanned or deleted orphan stages or changed user settings.
+No automatic cleanup, final-name restoration or auto-reconciliation
+authorization is implied. Production GUI integration, user-profile
+provisioning, publisher races, true power-loss durability and an
+explicitly consented recovery UI remain open.
 
 ## Minimum provenance before implementing production cleanup
 
