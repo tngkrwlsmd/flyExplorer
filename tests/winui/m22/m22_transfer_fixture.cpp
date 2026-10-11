@@ -10,6 +10,53 @@ namespace fs=std::filesystem;
 int wmain(int count,wchar_t**args){
  setvbuf(stdout,nullptr,_IONBF,0);
  if(count==2&&std::wstring(args[1])==L"--receipt-child-exit")return 0;
+ if(count==5&&std::wstring(args[1])==L"--owned-helper-ipc-copy"){
+  // This test executable and the *explicit fixture-compiled* helper are
+  // siblings. The environment points only to this test-owned private store.
+  // The production helper has NO environment-controlled receipt root.
+  const fs::path source(args[2]),destination(args[3]),store(args[4]);
+  if(!fs::is_regular_file(source)||!fs::is_directory(destination)||
+     !isPrivateStageReceiptDirectory(store.native()))return 88;
+  const auto expected=source.filename();
+  Request request{};
+  request.kind=Kind::Copy;
+  request.collision=Collision::Reject;
+  request.sourceMode=SourceMode::Filesystem;
+  request.destinationMode=DestinationMode::Filesystem;
+  request.sourceParent=source.parent_path().native();
+  request.destination=destination.native();
+  request.sources={source.native()};
+  Progress progress{};
+  const auto result=executeIsolated(request,progress);
+  bool verified=false;
+  int countRecords=0;
+  for(auto const& entry:fs::directory_iterator(store)){
+   if(entry.path().extension()!=L".bin")continue;
+   ++countRecords;
+   StageOwnershipReceipt receipt{};
+   if(readStageReceipt(entry.path().native(),receipt)&&
+      receipt.targetLeaf==expected.native()&&
+      inspectStageReceiptState(entry.path().native())==
+         StageReceiptState::PublishedVerified)
+    verified=true;
+  }
+  const auto target=destination/expected;
+  bool bytesMatch=false;
+  if(fs::is_regular_file(target)&&
+     fs::file_size(source)==fs::file_size(target)){
+   std::ifstream a(source,std::ios::binary),b(target,std::ios::binary);
+   bytesMatch=std::equal(std::istreambuf_iterator<char>(a),
+                         std::istreambuf_iterator<char>(),
+                         std::istreambuf_iterator<char>(b),
+                         std::istreambuf_iterator<char>());
+  }
+  const bool passed=result.error==ERROR_SUCCESS&&!result.aborted&&
+     progress.percent==100&&countRecords==1&&verified&&bytesMatch;
+  std::printf("M22_ISOLATED_HELPER_IPC_BOUND_RECEIPT=%s error=%lu bytes=%d verified=%d\n",
+       passed?"PASS":"FAIL",result.error,int(bytesMatch),int(verified));
+  return passed?0:89;
+ }
+
  // Read exactly one known receipt in a freshly launched process, with
  // no enumeration, cleanup, file attribute changes or publication.
  if(count==4&&std::wstring(args[1])==L"--receipt-inspect-state"){
