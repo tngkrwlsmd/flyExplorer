@@ -7,6 +7,43 @@ app/winui, UI-independent native code in src/base, tests in tests/winui, and
 bounded orchestration in tools/winui/run_checks.py. The former MFC application
 is retired from the working tree and is recoverable from Git revision cbffb48.
 
+## 2026-10-11 exact owned GUI receipt target matching — synthetic tests only
+
+In draft PR #63, the interactive GUI acceptance now rejects a newly
+created `PublishedVerified` receipt unless its **original v1 receipt
+record** also contains the exact expected copied-file leaf and the exact
+destination parent directory. The bounded
+`tests/winui/receipt_wire_owned.py` parser checks the v1 magic,
+version, fixed binary layout, UTF-16 length fields, nonempty creator
+identity and FNV torn-write checksum. It reads **one newly created
+receipt only**, never earlier user receipt contents or an entire
+directory. Passing that parser does **not** authenticate a receipt:
+the existing separate native read-only `--receipt-inspect-state
+<exact-record> published` still must verify the stored file ID and
+immutable phase records. The staged interactive worker copies the
+parser along with the owned GUI test, closing a missing runtime
+dependency.
+
+`tests/winui/test_owned_receipt_wire_contract.py` adds seven pure
+synthetic owned-fixture scenarios (exact Unicode target, wrong
+target, wrong parent, truncation, bad checksum, wrong version,
+invalid filename and invalid encoded path). A local Python 3
+reconstructed-source check ran **7/7 PASS** and `py_compile`
+on the parser and synthetic test. This is **not** Windows or
+GUI acceptance; the reconstructed local test files were not fetched
+as a full Git checkout. The latest GitHub branch's complete native
+source, PowerShell one-shot task and real logged-in GUI are still
+unexecuted after a control-plane tool security denial.
+
+The normal previously accepted Windows 62/62 native, IPC and
+Release result remains scoped to
+[`6ae307b8...` / #38133470149](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38133470149).
+**Next gate:** review/authorize the interactive task boundary,
+preflight the new scripts and native fixture, then run the
+shipping-helper Known Folder and real GUI Copy on unique owned
+paths. No journal deletion, automated recovery, main merge or
+power-cut experiment is authorized by the synthetic result.
+
 ## 2026-10-11 real logged-in-user Known Folder/GUI gate prepared — NOT ACCEPTED
 
 **Priority:** validate the *shipping* isolated Shell helper's own
