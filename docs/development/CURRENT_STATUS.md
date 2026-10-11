@@ -7,6 +7,45 @@ app/winui, UI-independent native code in src/base, tests in tests/winui, and
 bounded orchestration in tools/winui/run_checks.py. The former MFC application
 is retired from the working tree and is recoverable from Git revision cbffb48.
 
+## 2026-10-11 interactive receipt gate hardened and enrolled in source checks — still unrun
+
+The newly written interactive-user GUI gate is **not a Windows PASS**.
+Safety-critical preconditions (explicit opt-in, token SID,
+non-SYSTEM interactive session, required shipping binaries, only one
+test-owned WinUI HWND, real foreground PID before input, original
+source bytes, private Known Folder availability) now raise explicit
+`RuntimeError`, **not Python `assert`**. These checks remain active
+even if a host accidentally starts Python with optimization
+(`PYTHONOPTIMIZE` or `-O`). A foreign window is never a permitted
+interaction target.
+
+The preexisting nine pure synthetic v1 receipt scenarios were
+rechecked locally using Python 3.13: **9/9 PASS**, plus AST syntax
+for the parser and test. The code paths require a freshly created
+receipt record to match the exact destination path *and* then pass
+a separate native `PublishedVerified` FileIdInfo/phase check.
+`tests/winui/test_owned_receipt_wire_contract.py` is now included
+in `tools/winui/run_checks.py`'s `file-operations` product source
+suite. The static source contract also ensures future changes cannot
+accidentally remove this registration or restore optimization-skippable
+session/foreign-window checks.
+
+The authorized remote-desktop connector currently reports its
+Windows device **offline**; a prior control-plane tool safety
+check also blocked new Remote Shell submission. We did not attempt
+to bypass either control or create a Scheduled Task. The canonical
+`desktop-a` GUI workflow requires a reviewed main ancestor, while
+PR #63 remains Draft. Consequently, the updated gate's full
+Windows source-contract run, native M22 CLI compilation and actual
+interactive user GUI/known-folder test are **still pending**.
+The previously verified product Release and M22 **62/62** result is
+limited to the older SHA
+[`6ae307b8...` / #38133470149](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38133470149).
+There has been no new product source code change since that
+accepted build. Next, connect an authorized interactive Windows
+session and run the exact branch in a test-owned checkout; do not
+merge the Draft or activate cleanup until separately accepted.
+
 ## 2026-10-11 exact owned GUI receipt target matching — synthetic tests only
 
 In draft PR #63, the interactive GUI acceptance now rejects a newly
