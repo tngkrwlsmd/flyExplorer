@@ -7,6 +7,29 @@ app/winui, UI-independent native code in src/base, tests in tests/winui, and
 bounded orchestration in tools/winui/run_checks.py. The former MFC application
 is retired from the working tree and is recoverable from Git revision cbffb48.
 
+## 2026-10-11 isolated durable stage receipt building block
+
+Source candidate `30b80de3e75cd759ed4a3f82d492b539f0f42d4c`
+adds `src/base/stage_receipt_core.{h,cpp}`, a **standalone**
+write-through, flushed, versioned v1 receipt writer/reader/matcher.
+The API records the exact fixed-drive stage path, intended final leaf,
+Windows file identity, process ID and process start time in a caller-provided
+receipt directory. It refuses overwriting an existing receipt, changed file
+identity, invalid/corrupt records and reparse/hardlink receipt files.
+The byte checksum is for corruption detection, not authentication.
+
+On test-owned Windows [Remote Shell #38122600482](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38122600482),
+the exact candidate passed `git diff --check` and the Release native M22
+48/48 checks, including four new receipt-specific scenarios.
+Source-only Python contracts and full WinUI Release/GUI acceptance were
+not run for this candidate.
+
+**No automatic cleanup and no production receipt creation:** this storage
+primitive is not wired into `copyStagedFiles`. Caller-provided receipt
+directory security and actual transfer-worker provenance are not established.
+No record authorizes publishing, deleting or restoring a user file.
+See `docs/development/STAGED_COPY_RECOVERY.md`.
+
 ## 2026-10-11 exact staged Copy file-ID read-only validation
 
 An isolated source candidate `e8870beada07ad9bf43a80f299a7aa189333e16f`
