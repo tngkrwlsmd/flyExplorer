@@ -374,6 +374,7 @@ void MainWindow::ApplyTransferStartStatus(
  }
 }
 void MainWindow::StartTransfer(fxfile::shelltransfer::Request request){
+ mTransferFailureNotice.clear();
  const auto side=ActiveWindowTab().model.activePane;
  const auto count=request.sources.size();
  auto weak=get_weak();
@@ -477,6 +478,7 @@ void MainWindow::OnTransferCompleted(
   // IFileOperation batches are not transactional. Earlier items may have
   // succeeded even when the aggregate failed or was canceled.
   detail+=L" 일부 항목이 처리됐을 수 있습니다. 원본·대상을 확인하세요.";
+  mTransferFailureNotice=detail;
   StatusText().Text(hstring(detail));
   return;
  }
