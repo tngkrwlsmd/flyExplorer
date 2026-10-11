@@ -7,6 +7,34 @@ app/winui, UI-independent native code in src/base, tests in tests/winui, and
 bounded orchestration in tools/winui/run_checks.py. The former MFC application
 is retired from the working tree and is recoverable from Git revision cbffb48.
 
+## 2026-10-12 disposable OS-restart / storage-durability lab — NOT READY
+
+Read-only [central VM audit #38174021618](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38174021618)
+found the shared Windows guest is virtualized but lacks exposed nested
+virtualization, Hyper-V management, a running `vmms` service and
+Windows Sandbox. The guest's system volume had roughly 38 GiB free.
+These are **guest-only observations**, not host VM inventory.
+No separate disposable Windows VM, independently attached test disk,
+external checkpoint/backup or host-side recovery control has been
+verified. The shared VM remains online and its central Remote Shell
+request has been returned to idle; no disk, ACL or OS state was changed.
+
+A non-executable provisioning and acceptance checklist is now tracked
+at [DISPOSABLE_VM_DURABILITY_GATE.md](DISPOSABLE_VM_DURABILITY_GATE.md).
+It requires the exact disposable VM/disk resource IDs, independent
+hypervisor access, baseline/off-guest SHA-256 manifest, recoverable
+checkpoint and specific authorization **before** any machine reset
+or simulated power cut. Merely creating a VHDX inside the shared VM
+would not isolate its operating system.
+
+**Next blocking prerequisite:** obtain access to the underlying
+hypervisor host or an independent disposable Windows VM provider.
+A separate test VM and host-side rollback are **not provisioned** at
+this checkpoint. Earlier successful worker-kill and fresh-process
+read-only receipt tests do not substitute for reboot/power-loss
+durability acceptance. PR #63 remains Draft; no automatic orphan
+cleanup or recovery is enabled.
+
 ## 2026-10-11 restricted ancestor and forced-kill restart-reader acceptance — PASS
 
 New test-only M22 CLI `--owned-denied-ancestor-copy` exercises
