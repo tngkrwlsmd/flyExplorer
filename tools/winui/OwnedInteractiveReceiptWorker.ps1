@@ -34,7 +34,9 @@ try {
     $sourceDir = Join-Path $Root 'owned-ipc-source'
     $targetDir = Join-Path $Root 'owned-ipc-target'
     New-Item -ItemType Directory -Path $sourceDir,$targetDir -Force | Out-Null
-    $source = Join-Path $sourceDir 'direct-user-knownfolder-한글.txt'
+    # PS 5.1 may decode UTF-8 no-BOM .ps1 as legacy ANSI. Build Hangul from codepoints.
+    $unicodeLeaf = 'direct-user-knownfolder-' + [char]0xD55C + [char]0xAE00 + '.txt'
+    $source = Join-Path $sourceDir $unicodeLeaf
     [IO.File]::WriteAllText($source,'Owned-user shipping helper IPC, no cleanup')
     & $fixture '--real-user-shipping-helper-ipc' $source $targetDir *>&1 |
         Out-File -FilePath $log -Append -Encoding utf8
@@ -66,6 +68,11 @@ try {
     try {
         ('FAILED_STAGE=' + $stage) | Out-File -FilePath $log -Append -Encoding utf8
         ('FAILED_TYPE=' + $_.Exception.GetType().Name) | Out-File -FilePath $log -Append -Encoding utf8
+        ('FAILED_LINE=' + $_.InvocationInfo.ScriptLineNumber) | Out-File -FilePath $log -Append -Encoding utf8
+        if ($_.Exception.InnerException) {
+            ('FAILED_INNER=' + $_.Exception.InnerException.GetType().Name) | Out-File -FilePath $log -Append -Encoding utf8
+            ('FAILED_INNER_HRESULT=' + $_.Exception.InnerException.HResult) | Out-File -FilePath $log -Append -Encoding utf8
+        }
     } catch {}
 } finally {
     @{
