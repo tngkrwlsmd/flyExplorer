@@ -30,7 +30,7 @@ try:
         stderr=subprocess.DEVNULL,timeout=6,check=False)
     if probe.returncode==0:
      args.append(unc_root)
-     expected=52
+     expected=54
      unc_used=True
     else:
      print("M22_NATIVE_LOOPBACK_UNC=NOT_RUN_ADMIN_SHARE_UNAVAILABLE",
