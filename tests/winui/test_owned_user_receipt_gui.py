@@ -17,6 +17,7 @@ import uuid
 
 from pywinauto import Desktop
 from paths import ROOT, app_exe
+from receipt_wire_owned import matches_owned_published_target
 from uia_polling import wait_until
 
 
@@ -189,7 +190,9 @@ def main() -> None:
                     if p.name not in older and p.is_file()]
         def committed_new_receipt():
             fresh = new_receipts()
-            if len(fresh) != 1:
+            if (len(fresh) != 1 or
+                    not matches_owned_published_target(
+                        fresh[0], destination)):
                 return False
             checked = subprocess.run(
                 [str(fixture), "--receipt-inspect-state", str(fresh[0]),
