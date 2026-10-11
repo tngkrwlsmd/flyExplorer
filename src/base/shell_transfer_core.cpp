@@ -659,6 +659,10 @@ bool publishActiveBoundStage(std::wstring const& stage,
   if(active==INVALID_HANDLE_VALUE){
    error=::GetLastError();return false;
   }
+  struct ActiveStageGuard final {
+   HANDLE value;
+   ~ActiveStageGuard(){::CloseHandle(value);}
+  } ownedStage{active};
   BY_HANDLE_FILE_INFORMATION basic{};
   FILE_ID_INFO file{};
   const bool sameObject=::GetFileInformationByHandle(active,&basic)!=FALSE&&
@@ -672,9 +676,7 @@ bool publishActiveBoundStage(std::wstring const& stage,
                  proof.stageIdentity.fileId.begin())&&
       (static_cast<std::uint64_t>(folder.dwVolumeSerialNumber)&0xffffffffu)==
        (file.VolumeSerialNumber&0xffffffffu);
-  if(!sameObject){
-   ::CloseHandle(active);return false;
-  }
+  if(!sameObject)return false;
   // path::native() returns a reference owned by its path. filename()
   // creates a temporary path, so never bind a reference to its native().
   const std::wstring exactTarget=destination.native();
@@ -690,7 +692,6 @@ bool publishActiveBoundStage(std::wstring const& stage,
   const bool published=::SetFileInformationByHandle(
       active,FileRenameInfo,rename,static_cast<DWORD>(payload.size()))!=FALSE;
   error=published?ERROR_SUCCESS: ::GetLastError();
-  ::CloseHandle(active);
   return published;
  }catch(...){error=ERROR_INVALID_PARAMETER;return false;}
 }
