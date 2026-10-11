@@ -3,6 +3,7 @@ from pathlib import Path
 import ctypes as c
 from ctypes import wintypes as W
 import os
+import shutil
 import subprocess
 import tempfile
 import time
@@ -119,10 +120,12 @@ try:
     eventually(lambda: (right/"a-first.txt").is_file(), "first item never copied", 22)
     assert (right/"a-first.txt").read_bytes() == b"owned-first-unaltered"
     assert source_first.read_bytes() == b"owned-first-unaltered"
-    assert source_locked.read_bytes() == b"owned-second-unaltered"
     eventually(lambda: "일부 항목이 처리됐을 수 있습니다" in
                element("StatusText").window_text(),
                "partial failure warning was not projected", 18)
+    assert k.CloseHandle(lock)
+    lock = None
+    assert source_locked.read_bytes() == b"owned-second-unaltered"
     eventually(lambda: any("a-first.txt" in name for name in row_names("Right")),
                "right pane did not show first successful item after failure", 18)
     print("REAL_PARTIAL_BATCH_FIRST_COMMITTED=PASS", flush=True)
@@ -151,4 +154,5 @@ finally:
     if process:
         assert process.returncode == 0, process.returncode
     assert_legacy_profile_unchanged(REAL_CONF, PREVIOUS)
+    shutil.rmtree(owned)
 print("PARTIAL_TRANSFER_OWNED_GUI_ACCEPTANCE=PASS", flush=True)
