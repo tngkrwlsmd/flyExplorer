@@ -80,6 +80,8 @@ def main(config="Release"):
     helper_process = None
     app_hwnd = None
     dialog_hwnd = None
+    dialog_pid = None
+    baseline_windows = set()
     completed = False
     try:
         def winui():
@@ -207,30 +209,74 @@ def main(config="Release"):
         assert bounds.width() > 10 and bounds.height() > 8
         assert user.GetForegroundWindow() == popup
         assert pid_of(popup) == helper_process.pid
+        baseline_windows = {
+            x.handle for x in Desktop(backend="uia").windows()
+        }
         selected.click_input()
         print("OWNED_MULTI_PROPERTIES_VERB_CLICKED", True, flush=True)
 
         def owned_dialog():
-            nonlocal dialog_hwnd
-            if not helper_process or not helper_process.is_running():
-                return False
-            for candidate in Desktop(backend="uia").windows(
-                    process=helper_process.pid):
+            nonlocal dialog_hwnd, dialog_pid
+            # A Shell Properties sheet may be brokered to a different
+            # process. Only examine newly created top-level windows,
+            # and require a demonstrable relation to these owned files
+            # or to the exact freshly spawned helper as HWND owner.
+            for candidate in Desktop(backend="uia").windows():
                 try:
                     hwnd = candidate.handle
+                    if hwnd in baseline_windows or hwnd == popup:
+                        continue
+                    if not candidate.is_visible():
+                        continue
                     label = candidate.window_text()
-                    if hwnd == popup or not candidate.is_visible():
+                    if not re.search(r"(properties|속성)", label, re.IGNORECASE):
                         continue
-                    if pid_of(hwnd) != helper_process.pid:
+                    content = [label]
+                    for entry in candidate.descendants()[:120]:
+                        content.append(entry.window_text())
+                    names = "\n".join(content).casefold()
+                    matched_owned_name = (
+                        a.name.casefold() in names or b.name.casefold() in names
+                    )
+                    # GW_OWNER=4 is a read-only link to the exact helper
+                    # window, including when Shell hosts the dialog elsewhere.
+                    owner = user.GetWindow(w.HWND(hwnd), 4)
+                    matches_helper_owner = (
+                        owner and pid_of(owner) == helper_process.pid
+                    )
+                    if not (matched_owned_name or matches_helper_owner or
+                            pid_of(hwnd) == helper_process.pid):
                         continue
-                    if re.search(r"(properties|속성)", label, re.IGNORECASE):
-                        dialog_hwnd = hwnd
-                        return True
+                    dialog_hwnd = hwnd
+                    dialog_pid = pid_of(hwnd)
+                    return True
                 except Exception:
                     pass
             return False
 
-        eventually(owned_dialog, "Owned Properties dialog not visible", 18)
+        try:
+            eventually(owned_dialog, "Test-linked Properties dialog not visible", 13)
+        except AssertionError:
+            # Diagnostic only; do not read arbitrary window titles or
+            # click/close any unverified external window.
+            running = helper_process.is_running()
+            rc = None
+            if not running:
+                try:
+                    rc = helper_process.wait(timeout=0)
+                except psutil.Error:
+                    pass
+            print("OWNED_PROPERTIES_HELPER_RUNNING", running, flush=True)
+            print("OWNED_PROPERTIES_HELPER_EXIT_CODE", rc, flush=True)
+            if app.poll() is None:
+                try:
+                    status = view.child_window(auto_id="StatusText").window_text()
+                    print("OWNED_PROPERTIES_APP_STATUS",
+                          status.encode("unicode_escape").decode("ascii")[:250],
+                          flush=True)
+                except Exception:
+                    pass
+            raise
         dialog = Desktop(backend="uia").window(handle=dialog_hwnd)
         box = dialog.rectangle()
         assert box.width() >= 220 and box.height() >= 160
@@ -241,12 +287,15 @@ def main(config="Release"):
         print("OWNED_MULTI_PROPERTIES_DIALOG_VISIBLE", True, flush=True)
         print("OWNED_MULTI_PROPERTIES_DIALOG_PIXELS",
               box.width(), box.height(), flush=True)
-        assert pid_of(dialog_hwnd) == helper_process.pid
+        assert dialog_hwnd not in baseline_windows
+        assert pid_of(dialog_hwnd) == dialog_pid
+        print("OWNED_PROPERTIES_DIALOG_HELPER_PID_MATCH",
+              dialog_pid == helper_process.pid, flush=True)
         assert user.PostMessageW(dialog_hwnd, 0x10, 0, 0)
         eventually(
             lambda: not any(x.handle == dialog_hwnd for x in
-                            Desktop(backend="uia").windows(process=helper_process.pid)),
-            "Owned Properties dialog did not close", 12)
+                            Desktop(backend="uia").windows()),
+            "Exact test-linked Properties dialog did not close", 12)
         print("OWNED_MULTI_PROPERTIES_DIALOG_CLOSED", True, flush=True)
         eventually(lambda: not helper_process.is_running() or
                    helper_process.status() == "zombie",
@@ -255,8 +304,8 @@ def main(config="Release"):
         print("OWNED_MULTI_PROPERTIES_SOURCE_UNCHANGED", True, flush=True)
         completed = True
     finally:
-        if dialog_hwnd and helper_process and helper_process.is_running():
-            if pid_of(dialog_hwnd) == helper_process.pid:
+        if dialog_hwnd and dialog_pid and dialog_hwnd not in baseline_windows:
+            if pid_of(dialog_hwnd) == dialog_pid:
                 user.PostMessageW(dialog_hwnd, 0x10, 0, 0)
         if helper_process and helper_process.is_running():
             try:
