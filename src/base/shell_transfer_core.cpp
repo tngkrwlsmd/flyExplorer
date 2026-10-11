@@ -570,9 +570,10 @@ bool stageEligible(Request const& task) noexcept{
  }catch(...){return false;}
 }
 // Publish ONLY the stage belonging to the active journalled worker.
-// The source and destination directory remain pinned as open file handles
-// through the no-replace rename. A matching pathname alone is not authority.
-// This must never be called for an orphan/recovery candidate.
+// The stage file HANDLE is pinned through the no-replace rename. The
+// destination directory is opened and checked but Win32 re-resolves the
+// absolute target pathname, so ancestor/path-swap races remain possible.
+// A matching pathname alone is not authority; never use this for recovery.
 bool publishActiveBoundStage(std::wstring const& stage,
                              std::wstring const& target,
                              StageOwnershipReceipt const& proof,
