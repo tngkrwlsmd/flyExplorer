@@ -11,6 +11,15 @@ struct StageOwnershipReceipt {
  DWORD creatorPid=0;
  std::uint64_t creatorStartTime=0;
 };
+// Creates ONLY an absent, exact fixed-drive directory with a protected
+// owner-only DACL. Does not change ACLs on any existing folder or file.
+// Caller must choose a trusted test-owned/app-owned parent; never scan.
+bool createPrivateStageReceiptDirectory(
+    std::wstring const& exactDirectory) noexcept;
+// Read-only strict DACL/owner gate, also enforced on receipt read/write.
+// This mitigates other-user access, not hostile code running as same user.
+bool isPrivateStageReceiptDirectory(
+    std::wstring const& exactDirectory) noexcept;
 // Caller must provide an already provisioned, access-controlled private
 // receipt directory. Neither this primitive nor a valid receipt authorizes
 // deleting, publishing or recovering a file.
