@@ -156,7 +156,10 @@ class FileOperationContracts(unittest.TestCase):
         for destructive in ("DeleteFileW", "RemoveDirectoryW", "MoveFileExW",
                             "SetFileInformationByHandle"):
             self.assertNotIn(destructive, core)
-        self.assertIn("stage_receipt_core.cpp", app_project)
+        self.assertIn(
+            '<ClCompile Include="..\\..\\src\\base\\stage_receipt_core.cpp">\n'
+            '      <PrecompiledHeader>NotUsing</PrecompiledHeader>',
+            app_project)
         self.assertIn("expected=52", native)
         self.assertIn("expected=56", native)
         for scenario in ("receipt_roundtrip_flush_and_exact_stage_identity",
