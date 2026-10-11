@@ -73,9 +73,10 @@ inspection. It writes one bounded versioned binary record with
 The record contains the stage's exact path, intended target leaf, volume
 serial, 128-bit file ID, creator PID and kernel process start time.
 A subsequent read and identity revalidation gate final-name publication.
-Failure to bind/write/read, cancellation, or a callback never occurring
-when journaling is required means **no publish** and **no by-path cleanup
-of the questionable stage**. The native receipt code itself performs no
+Failure to bind/write/read or cancellation when journaling is required
+means **no publish** and **no by-path cleanup of the questionable stage**.
+A completed zero-byte copy with no callback may now bind an exact
+stage HANDLE before completion and publication markers are written. The native receipt code itself performs no
 file deletion, rename or publication. A successful copy keeps an inert
 historical receipt; it does not grant future recovery authority.
 
@@ -85,8 +86,9 @@ detection, **not** malicious-tamper authentication. An attacker running
 under the same Windows user can affect this storage; changes to the
 destination folder's path or ACL after checks can also race checks.
 The same-directory publication remains based on `MoveFileExW`, not on
-an exclusively pinned rename-by-handle. No completed/published receipt
-state and no fsync guarantee for copied data exist. A force kill before
+an exclusively pinned rename-by-handle. The newer append-only transition
+records described below distinguish completion and publication, but
+they do not fsync copied bytes or authenticate stage content. A force kill before
 the first callback can leave an unrecorded stage; no code may infer its
 provenance based on the GUID name or search-and-delete such files.
 
@@ -120,10 +122,65 @@ not durably recorded.
 
 **Unrun gates:** full product WinUI Release and GUI acceptance, actual
 helper IPC/known-folder provisioning on an interactive user session,
-Python source contracts on the latest branch, completed/published journal
-transitions, comprehensive zero-byte and initial-callback crash handling,
-replacement/ACL race resistance for publish/cleanup, restart and power
-loss. **Draft PR #63 is not merged.**
+Python source contracts on the latest branch, comprehensive initial-callback
+crash handling, replacement/ACL race resistance for publish/cleanup,
+automated restart reconciliation and power loss. **Draft PR #63 is not merged.**
+
+## Immutable phase records and cross-process read-only inspection
+
+In the newer draft PR #63 implementation, the helper creates two
+separate immutable phase files derived from one known private receipt path:
+`<receipt>.complete` and `<receipt>.published`. Both use `CREATE_NEW`,
+write-through and `FlushFileBuffers`, then require successful readback,
+correct phase, exact original stage FileIdInfo/volume and creator PID/start
+timestamp. An existing, invalid or partially written phase record cannot
+be overwritten or used as proof.
+
+**Copy completion:** the `.complete` marker is attempted only after
+`CopyFileExW` reports completion and cancellation is not observed.
+Failure or a corrupt marker prevents publishing the requested filename.
+For empty copies with no progress callback, a successfully finished stage
+is reopened with read-only/no-reparse semantics, tied to its actual
+file ID and journaled before completion/publication.
+
+**Publication:** after the complete stage passes identity checks, the
+helper still uses the existing same-directory `MoveFileExW` no-replace
+rename. A successful rename is followed by read-only revalidation that
+the target's FileIdInfo matches the saved stage and the old stage pathname
+is absent; only then is the `.published` marker flushed. When marker
+writing or verification fails after the rename, the final file is **not
+rolled back or deleted**, and the operation reports a metadata error.
+Thus a crash in the rename-to-published-marker interval is **ambiguous**,
+not interpreted as successful publication.
+
+`inspectStageReceiptState(exactReceiptPath)` reads *only* one explicitly
+named receipt, the two associated marker files and the exact stage/target
+paths. Its states include CopyingOrInterrupted, CompletedOnStage,
+PublicationUnconfirmed, PublishedVerified, Invalid and Inconsistent.
+Missing, corrupt or mismatched phases and target replacements never
+grant deletion, restoration or publish authority. The inspector neither
+enumerates directories nor opens files with write/delete access; it can
+run in a **different process** from the original transfer. This is
+snapshot evidence, not a background restart service.
+
+On exact source `d27854627b47fda529edf174e4bd1a5d5c1a010d`,
+[Windows Remote Shell #38128693863](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38128693863)
+passed Release M22 native **61/61**, the isolated Shell helper Release
+build, whitespace preflight, six standalone phase-state regressions,
+a real 0-byte staged copy with both markers, and **3/3** independent
+new-process read-only inspections (two real published-copy receipts and
+one intentionally damaged/inconsistent record). Original actual owned
+active-copy forced termination and source-hash preservation were proven
+separately on the preceding code in
+[run #38127536317](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38127536317).
+
+**Remaining safety limits:** A malicious process with the same owner SID
+can forge an unsigned checksum; read-only FileIdInfo snapshots do not
+pin the identity through arbitrary future renames; no stage-content
+hash, durable directory flush guarantee, power-loss proof, user-facing
+recovery consent or safe cleanup operation exists. A kill before the
+first receipt still leaves an unowned-by-evidence stage. No automatic
+recovery or cleanup was added.
 
 ## Minimum provenance before implementing production cleanup
 
@@ -142,10 +199,11 @@ Its provenance must bind all of:
   Do not accept filenames or metadata supplied by an unrelated process as
   a cleanup authorization.
 
-The first version of live helper-bound receipts is now present on draft
-PR #63, but not merged; it has no authenticated completion transition,
-restart reconciler or user-authorized recoverer. **Product cleanup of
-orphan stages remains disabled**, including on a matching receipt.
+The draft PR #63 now has persistent completion/publication markers
+and a read-only exact-receipt state inspector but no authenticated
+completed-file content, unattended restart reconciler or user-authorized
+recoverer. **Product cleanup of orphan stages remains disabled**,
+including on a matching receipt or published marker.
 
 ## Conservative recovery decision
 
