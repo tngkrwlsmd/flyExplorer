@@ -157,12 +157,16 @@ class FileOperationContracts(unittest.TestCase):
                             "SetFileInformationByHandle"):
             self.assertNotIn(destructive, core)
         self.assertIn("stage_receipt_core.cpp", app_project)
-        self.assertIn("expected=48", native)
         self.assertIn("expected=52", native)
+        self.assertIn("expected=56", native)
         for scenario in ("receipt_roundtrip_flush_and_exact_stage_identity",
                          "receipt_create_new_never_overwrites_existing",
                          "receipt_rejects_same_path_file_replacement",
-                         "receipt_corruption_fails_closed_without_file_mutation"):
+                         "receipt_corruption_fails_closed_without_file_mutation",
+                         "receipt_refuses_untrusted_inherited_acl_store",
+                         "receipt_private_owner_dacl_created_without_acl_reset",
+                         "receipt_creator_alive_and_pid_reuse_fail_closed",
+                         "receipt_creator_exited_without_stage_mutation"):
             self.assertIn(scenario, fixture)
 
     def test_partial_failure_notice_survives_navigation_refresh(self):
