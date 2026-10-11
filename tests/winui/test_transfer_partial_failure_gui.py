@@ -114,10 +114,35 @@ try:
     click(element("LeftFiles"))
     focus()
     send_keys("^a")
+    selected_before = [
+        (item.window_text(), bool(item.is_selected()))
+        for item in element("LeftFiles").descendants()
+        if item.element_info.control_type == "ListItem"
+    ]
+    print("PARTIAL_GUI_SELECTION_BEFORE="+repr(selected_before), flush=True)
+    assert sum(selected for _, selected in selected_before) == 2, (
+        "Both owned source rows must be selected before invoking Copy",
+        selected_before)
     lock = k.CreateFileW(str(source_locked), 0x80000000, 0, None, 3, 0x80, None)
     assert lock != INVALID, ("failed to lock test-owned file", c.get_last_error())
     click(element("CopyButton"))
-    eventually(lambda: (right/"a-first.txt").is_file(), "first item never copied", 22)
+    def first_copy_diagnostic():
+        if (right/"a-first.txt").is_file():
+            return True
+        return False
+    try:
+        eventually(first_copy_diagnostic, "first item never copied", 14)
+    except AssertionError:
+        status = element("StatusText").window_text()
+        print("PARTIAL_GUI_FAILURE_STATUS="+repr(status), flush=True)
+        print("PARTIAL_GUI_FAILURE_LEFT="+repr(row_names("Left")), flush=True)
+        print("PARTIAL_GUI_FAILURE_RIGHT="+repr(row_names("Right")), flush=True)
+        print("PARTIAL_GUI_FAILURE_DEST_FILES="+repr([p.name for p in right.iterdir()]), flush=True)
+        print("PARTIAL_GUI_FAILURE_ACTIVE_ADDRESS="+repr(element("AddressBox").get_value()), flush=True)
+        screen = logs/"partial-failure-diagnostic.png"
+        win.capture_as_image().save(screen)
+        print("PARTIAL_GUI_DIAGNOSTIC_SCREENSHOT="+str(screen), flush=True)
+        raise
     assert (right/"a-first.txt").read_bytes() == b"owned-first-unaltered"
     assert source_first.read_bytes() == b"owned-first-unaltered"
     eventually(lambda: "일부 항목이 처리됐을 수 있습니다" in
