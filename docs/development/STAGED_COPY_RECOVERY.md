@@ -18,6 +18,35 @@ A force-killed process can strand the stage. **The stage filename pattern,
 a GUID, last-modified timestamp or ownership SID alone is not proof of
 exclusive stage ownership.** Never scan and purge matching names.
 
+## Read-only exact-stage identity inspection (2026-10-11)
+
+`inspectStageFile(exactPath, identity)` in
+`src/base/shell_transfer_core.cpp` examines **only** the specifically
+supplied staged-Copy pathname. It does not enumerate directories, modify
+attributes, rename or delete anything. It fails closed unless the path is
+lexically normalized and on an existing fixed-drive folder without junction/
+symlink components, the leaf has the exact staged-Copy GUID shape, and a
+`FILE_FLAG_OPEN_REPARSE_POINT` handle identifies a regular single-link file.
+The resulting `StageFileIdentity` records the OS `FileIdInfo` volume serial
+and 128-bit file ID; `sameStageFile` rejects default/unobserved IDs and
+compares exact recorded identities.
+
+The owned Windows Release regression
+[run #38120473011](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38120473011)
+on source `e8870beada07ad9bf43a80f299a7aa189333e16f`
+passed 44 native cases and source contracts, including stable file-ID
+comparison, hardlink refusal, replacement of the file behind an unchanged
+path, and malformed/un-normalized path refusal. Legacy profile sentinels
+remained unchanged.
+
+This API supplies **read-only evidence**, not durable provenance. In
+particular a newly created unrelated file can have a plausible stage name
+and a valid file ID. A successful inspection alone MUST NEVER trigger
+unattended deletion, publication, or recovery. A future feature needs the
+private durable receipt and explicit user authorization described below,
+with any destructive action targeting the verified open file object rather
+than a path subject to replacement.
+
 ## Minimum provenance before implementing production cleanup
 
 An interrupted operation must have a durable, versioned and private

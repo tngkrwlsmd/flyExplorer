@@ -98,6 +98,27 @@ class FileOperationContracts(unittest.TestCase):
         self.assertIn("M22_STAGED_UNRELATED_PARTIAL_NEVER_DELETED", wrapper)
         self.assertIn("M22_STAGED_DENIED_WRITE_SOURCE_PRESERVED", wrapper)
         self.assertIn("M22_STAGED_DENIED_WRITE_NO_DESTINATION", wrapper)
+        header = read("src/base/shell_transfer_core.h")
+        self.assertIn("bool inspectStageFile(", header)
+        self.assertIn("bool sameStageFile(", header)
+        probe = core[core.index("bool sameStageFile("):
+                     core.index("Report validate(Request")]
+        for token in ("FILE_FLAG_OPEN_REPARSE_POINT", "FileIdInfo",
+                      "FILE_ATTRIBUTE_REPARSE_POINT",
+                      "attributes.nNumberOfLinks!=1",
+                      "safeFilesystemFolder(path.parent_path(),Kind::Copy)"):
+            self.assertIn(token, probe)
+        for forbidden in ("DeleteFileW", "MoveFileExW",
+                          "SetFileInformationByHandle"):
+            self.assertNotIn(forbidden, probe)
+        for scenario in (
+            "stage_identity_stable_readonly_snapshot",
+            "stage_identity_refuses_multiple_hardlinks",
+            "stage_identity_detects_same_path_replacement",
+            "stage_identity_rejects_unowned_names_and_unnormalized_paths",
+        ):
+            self.assertIn(scenario, fixture)
+
         self.assertIn("M22_LIVE_ACL_AFTER_WRITES_SOURCE_BYTES_PRESERVED", wrapper)
         self.assertIn("M22_LIVE_ACL_AFTER_WRITES_NO_TRUNCATED_FINAL", wrapper)
         self.assertIn("M22_LIVE_ACL_PREEXISTING_DESTINATION_PRESERVED", wrapper)
