@@ -167,9 +167,12 @@ def main() -> None:
         eventually(lambda: source_row() is not None,
                    "Owned source row did not load")
         focus()
-        source_row().select()
+        source_row().click_input()
         eventually(lambda: source_row() is not None and
                    source_row().is_selected(), "Owned selection failed")
+        eventually(lambda: str(left).casefold() in
+                   control("AddressBox").get_value().casefold(),
+                   "Selected source pane is not active")
         focus()
         control("CopyButton").click_input()
         destination = right / name
@@ -183,21 +186,21 @@ def main() -> None:
         def new_receipts():
             return [p for p in store.glob("*.bin")
                     if p.name not in older and p.is_file()]
-        eventually(lambda: bool(new_receipts()),
-                   "No new shipping-helper Known Folder receipt")
-        fresh = new_receipts()
-        assert len(fresh) == 1, (
-            "Expected only the one owned GUI Copy receipt", len(fresh))
-        checked = subprocess.run(
-            [str(fixture), "--receipt-inspect-state", str(fresh[0]),
-             "published"], cwd=fixture.parent, capture_output=True,
-            text=True, timeout=15)
-        assert checked.returncode == 0 and (
-            "M22_RESTART_READONLY_RECEIPT_STATE=PASS" in checked.stdout), (
-            "Read-only published identity inspection failed")
+        def committed_new_receipt():
+            fresh = new_receipts()
+            if len(fresh) != 1:
+                return False
+            checked = subprocess.run(
+                [str(fixture), "--receipt-inspect-state", str(fresh[0]),
+                 "published"], cwd=fixture.parent, capture_output=True,
+                text=True, timeout=15)
+            return checked.returncode == 0 and (
+                "M22_RESTART_READONLY_RECEIPT_STATE=PASS" in checked.stdout)
+        eventually(committed_new_receipt,
+                   "No new fully published shipping-helper Known Folder receipt", 30)
         print("REAL_USER_GUI_SHIPPING_KNOWNFOLDER_RECEIPT=PASS", flush=True)
         print("REAL_USER_GUI_COPY_BYTES_PUBLISHED=PASS", flush=True)
-        print("REAL_USER_GUI_EXISTING_RECEIPTS_UNTOUCHED=PASS", flush=True)
+        print("REAL_USER_GUI_PRIOR_RECEIPT_CONTENT_NOT_READ=PASS", flush=True)
     finally:
         if process is not None and process.poll() is None:
             if hwnd:
