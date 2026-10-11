@@ -168,9 +168,14 @@ try:
         raise
     assert (right/"a-first.txt").read_bytes() == b"owned-first-unaltered"
     assert source_first.read_bytes() == b"owned-first-unaltered"
-    eventually(lambda: "일부 항목이 처리됐을 수 있습니다" in
-               element("StatusText").window_text(),
-               "partial failure warning was not projected", 18)
+    try:
+        eventually(lambda: "일부 항목이 처리됐을 수 있습니다" in
+                   element("StatusText").window_text(),
+                   "partial failure warning was not projected", 18)
+    except AssertionError:
+        print("PARTIAL_GUI_FINAL_STATUS="+repr(element("StatusText").window_text()), flush=True)
+        print("PARTIAL_GUI_FINAL_DEST="+repr([p.name for p in right.iterdir()]), flush=True)
+        raise
     assert k.CloseHandle(lock)
     lock = None
     assert source_locked.read_bytes() == b"owned-second-unaltered"
