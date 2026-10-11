@@ -7,6 +7,52 @@ app/winui, UI-independent native code in src/base, tests in tests/winui, and
 bounded orchestration in tools/winui/run_checks.py. The former MFC application
 is retired from the working tree and is recoverable from Git revision cbffb48.
 
+## 2026-10-11 staged Copy publish and access-denial acceptance
+
+Product PR [#59](https://github.com/tngkrwlsmd/flyExplorer/pull/59)
+was squash-merged as `cf854ca5b8f710dcd041d58806494b3c967f65d9`.
+Independent Windows registered central CI
+[run #38117504286](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38117504286)
+with `project_id=desktop-a`, the exact product SHA and `scope=gui`
+completed **SUCCESS**, including `PASS release-build`,
+`gui-all-Release EXIT=0` and `PASS functional-gui`.
+The source branch was subsequently removed.
+
+The accepted local regular-file fixed-drive Copy with collision Reject
+writes to a unique sibling `.flyExplorer-copy-{GUID}.partial` stage and
+publishes with a no-replace same-directory rename only after the copy
+finishes without observed cancellation. Filesystem folder/provider, Move,
+KeepBoth, removable/UNC and Recycle continue through their distinct
+existing Shell paths. This is not a cross-item transaction, and does not
+guarantee power-loss durability or preservation of every Windows metadata
+feature under all device/provider conditions.
+
+[Native run #38115218901](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38115218901)
+on exact source candidate `618c6e61ed9faaab343e04e6b1ad4bdacfa731b9`:
+14 source contracts PASS, 38 Release native cases PASS, a 512 MiB
+mid-copy cancellation and force-killed test-owned copy worker produced no
+published final file, and original SHA-256 remained unchanged.
+[Owned Release/GUI run #38115309861](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38115309861)
+passed the application build and interactive two-item partial-failure
+flow, including failure notice and pane refresh. `git diff --check`
+passed in [run #38117403266](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38117403266).
+
+An additional test-only candidate `9482f7c3badd91488912b4500da0630b8ae8e66c`
+passed owned Windows
+[run #38118314980](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38118314980).
+It tested a destination file created during staging (existing target
+bytes preserved), preservation of a pre-existing unrelated `.partial`
+file, write-denied ACL on a uniquely owned destination folder (source
+bytes unchanged; no final destination), the earlier cancel/kill cases,
+and the six legacy MFC config sentinels. Test-only ACL changes were
+reverted before deleting the disposable fixture.
+
+**Still not certified:** changing ACLs after a destination write handle
+was opened; orphan-stage recovery after process crash (no automatic
+cleanup of unverified files); Move/folder transactionality; real
+removable drive/SMB outage; system crash/power-loss durability. Do not
+automatically sweep files by `.partial` naming pattern alone.
+
 ## 2026-10-11 file-transfer integrity checkpoint
 
 PR [#58](https://github.com/tngkrwlsmd/flyExplorer/pull/58) was squash-merged

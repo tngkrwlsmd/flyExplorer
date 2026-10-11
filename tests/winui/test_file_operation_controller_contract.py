@@ -94,6 +94,12 @@ class FileOperationContracts(unittest.TestCase):
         self.assertIn("committed_local_copy_has_no_partial_stage", fixture)
         self.assertIn("M22_REAL_STAGED_KILLED_COPY_FINAL_TARGET_ABSENT", wrapper)
         self.assertIn("M22_REAL_STAGED_MID_COPY_CANCEL_SOURCE_UNCHANGED", wrapper)
+        self.assertIn("M22_STAGED_LATE_TARGET_COLLISION_PRESERVED_BYTES", wrapper)
+        self.assertIn("M22_STAGED_UNRELATED_PARTIAL_NEVER_DELETED", wrapper)
+        self.assertIn("M22_STAGED_DENIED_WRITE_SOURCE_PRESERVED", wrapper)
+        self.assertIn("M22_STAGED_DENIED_WRITE_NO_DESTINATION", wrapper)
+        self.assertIn("--owned-stage-race", fixture)
+        self.assertIn("--owned-stage-deny", fixture)
 
     def test_partial_failure_notice_survives_navigation_refresh(self):
         ui = read("app/winui/MainWindow.xaml.cpp")
