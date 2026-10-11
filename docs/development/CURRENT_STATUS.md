@@ -7,6 +7,37 @@ app/winui, UI-independent native code in src/base, tests in tests/winui, and
 bounded orchestration in tools/winui/run_checks.py. The former MFC application
 is retired from the working tree and is recoverable from Git revision cbffb48.
 
+## 2026-10-12 separate Hyper-V host-local inventory received — PROVISIONING PENDING
+
+The operator ran the read-only Hyper-V host inspection statements
+directly on the separate Hyper-V computer. They report **2 existing
+VMs, 1 running VM, 1 virtual switch, 142 GiB free at the default VHD
+volume, 63 GiB total / 45 GiB available host RAM, and an unused
+`flyExplorer-DurabilityLab` VM name**. Hyper-V's VM management
+service was running, default VM/VHD folders existed, and
+checkpoint/export query tools were available. The initial
+`#requires` directive failed as an interactive-console input;
+the later read-only query statements succeeded.
+
+This is a **host-local operator-supplied capacity snapshot**, NOT a
+remotely verified connection and NOT disposable VM creation. A
+provisional isolated Gen 2 guest with 2 vCPUs, 8 GiB RAM, dynamic
+64 GiB system and separate dynamic 16 GiB test VHDX is proposed
+for review only. Checkpoint growth and independently recoverable
+export storage may require materially more physical free space than
+the apparent new VHDX usage. Windows installation media, guest OS
+licensing, the dedicated storage/export locations and host-side
+restore authority remain unverified. Existing virtual switch network
+isolation is also unreviewed.
+
+Recorded observations, acceptance gates and bounded sizing:
+[DISPOSABLE_VM_DURABILITY_GATE.md](DISPOSABLE_VM_DURABILITY_GATE.md).
+**Next prerequisite:** confirm independent OS installation media,
+host storage/export budget and separate host access before any
+`New-VM`, `New-VHD`, checkpoint, reset or power-cut operation.
+No shared VM or disk has been changed. PR #63 stays Draft and
+unmerged.
+
 ## 2026-10-12 Hyper-V host identified; audit tool verified, host NOT YET CONNECTED
 
 The operator confirmed the outer platform is **Hyper-V**. The
