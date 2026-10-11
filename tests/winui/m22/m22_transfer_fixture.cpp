@@ -239,6 +239,54 @@ int wmain(int count,wchar_t**args){
       get(left/L"일괄 이동 잠금.txt")=="move-locked";
  }
  test(partialMoveOk,"batch_partial_move_failure_preserves_remaining_source");
+
+ // A locked nested child may interrupt Shell's recursive folder Copy.
+ // A folder is not a transaction: preserve every original source byte,
+ // and never claim that the destination was automatically rolled back.
+ const auto folder=left/L"폴더 부분 실패";
+ fs::create_directory(folder);
+ put(folder/L"a-first.txt","folder-first-original");
+ put(folder/L"z-locked.txt","folder-locked-original");
+ HANDLE nestedLock=::CreateFileW((folder/L"z-locked.txt").c_str(),
+     GENERIC_READ,0,nullptr,OPEN_EXISTING,FILE_ATTRIBUTE_NORMAL,nullptr);
+ bool recursiveFailurePreserved=false;
+ if(nestedLock!=INVALID_HANDLE_VALUE){
+  Request task{};
+  task.kind=Kind::Copy;task.sourceParent=left.native();
+  task.destination=right.native();
+  task.sources={folder.native()};
+  Progress active{};
+  const auto result=execute(task,active);
+  ::CloseHandle(nestedLock);
+  const auto target=right/folder.filename();
+  const bool firstValid=!fs::exists(target/L"a-first.txt")||
+      get(target/L"a-first.txt")=="folder-first-original";
+  const bool secondValid=!fs::exists(target/L"z-locked.txt")||
+      get(target/L"z-locked.txt")=="folder-locked-original";
+  recursiveFailurePreserved=result.error!=ERROR_SUCCESS&&
+      get(folder/L"a-first.txt")=="folder-first-original"&&
+      get(folder/L"z-locked.txt")=="folder-locked-original"&&
+      firstValid&&secondValid;
+ }
+ test(recursiveFailurePreserved,
+      "recursive_copy_nested_lock_reports_failure_and_preserves_source");
+
+ fs::create_directory(left/L"폴더 취소");
+ put(left/L"폴더 취소"/L"keep.txt","folder-cancel-original");
+ Request canceledFolder{};
+ canceledFolder.kind=Kind::Copy;
+ canceledFolder.sourceParent=left.native();
+ canceledFolder.destination=right.native();
+ canceledFolder.sources={(left/L"폴더 취소").native()};
+ Progress earlyCancel{};
+ earlyCancel.cancel=true;
+ const auto canceledFolderResult=execute(canceledFolder,earlyCancel);
+ test(canceledFolderResult.error==ERROR_CANCELLED&&
+      canceledFolderResult.aborted&&
+      get(left/L"폴더 취소"/L"keep.txt")=="folder-cancel-original"&&
+      !fs::exists(right/L"폴더 취소"),
+      "recursive_copy_preflight_cancel_preserves_entire_source");
+
  test(kMaxItems>=64,"shared_transfer_budget_exceeds_legacy_32");
  const auto bulkLeft=root/L"대량 왼쪽",bulkRight=root/L"대량 오른쪽";
  fs::create_directory(bulkLeft);fs::create_directory(bulkRight);
