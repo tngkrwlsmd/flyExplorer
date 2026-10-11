@@ -105,6 +105,66 @@ reviewed first**. A guest's read-only
 [capability audit #38174021618](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38174021618)
 cannot satisfy the host audit.
 
+## 2026-10-12 host-local Hyper-V audit results — CAPACITY PRELIMINARY PASS
+
+The operator ran the read-only inspection statements on the separate
+Hyper-V host and supplied the `FLY_HYPERV_...` results directly:
+
+| Host measure | Observed |
+| --- | --- |
+| Hyper-V management and running VMMS | PASS / TRUE |
+| Existing VM count | 2 |
+| Existing running VMs | 1 |
+| Virtual switches | 1 |
+| Default VHD and VM config directories | both exist |
+| Free space on default VHD storage volume | 142 GiB |
+| Total host RAM | 63 GiB |
+| Available host RAM at time of inspection | 45 GiB |
+| Proposed `flyExplorer-DurabilityLab` VM name already registered | No |
+| Checkpoint query and export commands | both available |
+| New disposable VM and separate test VHDX | **NOT VERIFIED / NOT PROVISIONED** |
+| Independent export/restore actually performed | **NOT VERIFIED** |
+
+**Interpretation:** the separate Hyper-V host has plausible capacity to
+run a disposable guest alongside the existing guests, but these values
+are only a point-in-time snapshot. `FLY_HYPERV_HOST_AUDIT=PASS` means
+the management reads succeeded; it does NOT prove a Windows installer
+image, licensed guest OS, spare physical capacity for both checkpoint
+growth AND independent VM export, or a usable rollback.
+
+The operator pasted each PowerShell statement interactively; the
+initial `#requires` directive produced a console parsing error.
+That header belongs at the beginning of a script file, not pasted
+as an interactive prompt command. The independent Hyper-V queries
+and summary results followed successfully. For reproducibility, use
+the exact reviewed `.ps1` file for subsequent audits instead of
+copying escaped/HTML-formatted Markdown into the console.
+
+### Proposed isolated machine — pending exact host review
+
+- VM name: `flyExplorer-DurabilityLab`, **new VM ID required**
+- VM generation: Gen 2, supported Windows version, OS installation
+  ISO/image supplied legitimately by the operator
+- Initial test sizing for review: **2 virtual CPUs, 8 GiB guest RAM**;
+  dynamic system VHDX **64 GiB logical maximum**, and separate test
+  data VHDX **16 GiB logical maximum** (not already allocated)
+- Hyper-V checkpoint/export: keep **separate off-VM recovery media**
+  and reserve physical space for the actual OS payload, any test data,
+  checkpoint delta growth and independent export; 142 GiB *free* does
+  not guarantee two full copies of the provisioned guest will fit.
+- Switch: the single existing switch is **not automatically approved**.
+  Confirm its isolation properties before any VM network attachment;
+  prefer no NIC if installation/testing can proceed offline.
+- Creation preconditions: separate host management authorization,
+  exact existing VM ID protection, Windows installation media,
+  host storage location, disk capacity budget and restore/export
+  location reviewed. First planned execution is a **non-destructive**
+  host identity/backup feasibility check, NOT any VM reset.
+
+**Current gate: HOST CAPACITY OBSERVED; PROVISIONING AND RECOVERY
+UNVERIFIED.** Keep the shared Windows VM running and do not modify
+its disk attachments, checkpoint tree, runner, settings or profiles.
+
 ## Required independent resources
 
 Before any machine interruption, obtain the following from a
