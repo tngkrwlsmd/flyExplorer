@@ -17,7 +17,7 @@ from time import sleep
 
 import psutil
 from PIL import ImageGrab
-from pywinauto import Desktop, keyboard
+from pywinauto import Desktop, keyboard, mouse
 from paths import APP, ROOT, app_exe
 from uia_polling import wait_until
 
@@ -32,6 +32,8 @@ user.GetWindow.argtypes = (w.HWND, w.UINT)
 user.GetWindow.restype = w.HWND
 user.PostMessageW.argtypes = (w.HWND, w.UINT, w.WPARAM, w.LPARAM)
 user.PostMessageW.restype = w.BOOL
+user.WindowFromPoint.argtypes = (w.POINT,)
+user.WindowFromPoint.restype = w.HWND
 
 
 def eventually(fn, name, seconds=12):
@@ -216,10 +218,9 @@ def main(config="Release"):
         baseline_windows = {
             x.handle for x in Desktop(backend="uia").windows()
         }
-        # Clicking a native #32768 UIA child can dismiss the popup as
-        # though the click landed outside. Invoke the exact known
-        # Properties command via keyboard only when it is unambiguously
-        # the final enabled menu item in its owned popup.
+        # The native #32768 menu can eat keyboard Enter as cancellation.
+        # Only click the exact, uniquely verified built-in Properties item;
+        # reject any point that does not belong to this helper process.
         menu_entries = [
             x for root in roots for x in root.descendants(control_type="MenuItem")
             if x.is_visible() and x.is_enabled() and x.rectangle().height() >= 7
@@ -231,10 +232,16 @@ def main(config="Release"):
         )
         print("OWNED_PROPERTIES_VERIFIED_LAST_MENU_ENTRY",
               property_is_last, flush=True)
-        assert property_is_last, "Cannot safely keyboard-invoke nonfinal Properties verb"
+        assert property_is_last, "Cannot invoke an ambiguous Shell verb"
+        x = bounds.left + bounds.width() // 2
+        y = bounds.top + bounds.height() // 2
+        target = user.WindowFromPoint(w.POINT(x, y))
+        assert target and pid_of(target) == helper_process.pid, (
+            "Properties click point is not owned by exact Shell helper")
         assert user.GetForegroundWindow() == popup
-        keyboard.send_keys("{END}{ENTER}", pause=.12)
-        print("OWNED_MULTI_PROPERTIES_VERB_SELECTED_BY_KEYBOARD", True, flush=True)
+        mouse.click(button="left", coords=(x, y))
+        print("OWNED_MULTI_PROPERTIES_VERB_SELECTED_BY_OWNED_POINTER",
+              True, flush=True)
 
         def owned_dialog():
             nonlocal dialog_hwnd, dialog_pid
