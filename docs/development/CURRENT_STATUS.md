@@ -7,6 +7,59 @@ app/winui, UI-independent native code in src/base, tests in tests/winui, and
 bounded orchestration in tools/winui/run_checks.py. The former MFC application
 is retired from the working tree and is recoverable from Git revision cbffb48.
 
+## 2026-10-11 immutable Copy completion/publication records — draft PR #63
+
+PR [#63](https://github.com/tngkrwlsmd/flyExplorer/pull/63)
+now includes two **append-only, CREATE_NEW, write-through and flushed**
+records alongside the original private stage receipt: one after successful
+full `CopyFileExW` and cancellation validation, **before** publication,
+and one after successful same-directory `MoveFileExW` with a rechecked
+target `FileIdInfo`. The original identity, process PID and creation time
+are repeated and checked on both records; none is overwritten. If a
+completion record fails, the stage must not be published. If recording
+the final published event fails *after* the rename succeeded, the actual
+published file is left untouched and a metadata error is reported. Neither
+phase record grants deletion, rollback, restoration or resume authority.
+
+`inspectStageReceiptState(exactReceiptPath)` inspects only one explicitly
+provided receipt and its two derived marker paths; it neither scans
+directories nor changes any file. It returns Invalid,
+CopyingOrInterrupted, CompletedOnStage, PublicationUnconfirmed,
+PublishedVerified or Inconsistent. When a rename succeeded but the
+published marker is missing, a matching target is expressly
+**PublicationUnconfirmed**, not automatic success. A changed target ID,
+missing stage, truncated/corrupted marker or phase gap fails closed.
+The source byte hash is not authenticated by this journal; and a read-only
+snapshot is not a permanent file-handle lock.
+
+`CopyFileExW` can omit progress callbacks for empty files. In the
+successful-copy path, the helper now binds a read-only exact stage HANDLE
+after the copy and before publication, preserving the same file-ID check.
+This does **not** create provenance for a worker killed before its first
+receipt: unidentified stages remain untrusted and are never swept.
+
+Source candidate `d27854627b47fda529edf174e4bd1a5d5c1a010d`
+passed owned Windows
+[Remote Shell #38128693863](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38128693863):
+Release M22 native **61/61**, production isolated Shell helper Release
+build, `git diff --check`, and three separate-process read-only
+inspections (two real published-copy receipts and one inconsistent
+corrupted-phase receipt). Six phase-state cases and a live zero-byte
+copy case passed. Earlier exact owned force-termination evidence for
+an actively writing stage is
+[run #38127536317](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38127536317).
+No user folder or unrelated process was altered.
+
+**Still open:** full WinUI Release/GUI and Python source-contract
+acceptance for this branch; actual interactive user-profile Known Folder
+provisioning over helper IPC; race-safe handle-pinned final publication;
+reliable worker exit/unknown classification after OS restart; legitimate
+state retention/pruning; third-party file changes; crash during the
+published event; true power-loss durability of file contents/parent
+directories; opt-in user-authorized recovery UI. The non-cryptographic
+receipt/marker checksums do not authenticate malicious same-user edits.
+PR #63 remains Draft and unmerged; no automatic cleanup is enabled.
+
 ## 2026-10-11 live staged Copy receipt binding — draft PR #63
 
 On draft PR [#63](https://github.com/tngkrwlsmd/flyExplorer/pull/63)
@@ -25,9 +78,9 @@ before a successful Copy is allowed to publish the requested name.
 If binding, write, validation, callback or cancellation fails, there is
 **no final-name publication**, and the journaled/unproven stage is left
 untouched for explicit examination rather than automatic path deletion.
-Successful copies retain the receipt as an inert historical record, not
-as permission to modify files. The journal does not represent a durable
-completed/published transition.
+In the original live-callback candidate, copies retained only an inert
+ownership receipt. The newer append-only completion/publication records
+are described immediately above; neither grants authority to modify files.
 
 The prior standalone primitive passed Windows Release M22 **52/52** in
 [Remote Shell #38125429517](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38125429517)
@@ -53,12 +106,12 @@ original SHA-256 preservation, no final file and an unrelated partial's
 unchanged contents all passed. No application/user-profile data was
 cleaned; no orphan removal was performed.
 
-**Open:** fully integrated app Release/GUI acceptance and Python source
-contracts, per-user known-folder runtime acceptance through actual helper
-IPC, process race hardening (a PID may disappear and report Unknown),
-open-handle safe publish/delete semantics, explicit durable completion and
-crash restart reconciliation, an opt-in user recovery UI, zero-byte
-callback edge and actual power-loss durability. A first-chunk pre-callback
+**At this earlier live-callback checkpoint:** fully integrated app
+Release/GUI, Python source contracts, per-user Known Folder runtime
+acceptance through actual helper IPC, worker/race hardening, safe
+open-handle publication and actual power-loss durability remained open.
+The newer section above records the subsequently added immutable phase
+transitions, read-only restart inspection and zero-byte callback fallback. A first-chunk pre-callback
 kill may leave an **unrecorded** stage; do not infer its ownership or
 enumerate and delete it. Same-user malicious edits to a checksum-protected
 receipt are still possible. PR #63 remains Draft and not merged.
