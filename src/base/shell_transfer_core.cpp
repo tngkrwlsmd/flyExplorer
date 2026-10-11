@@ -1,6 +1,7 @@
 #define WIN32_LEAN_AND_MEAN
 #include "shell_transfer_core.h"
 #include "file_command_core.h"
+#include "stage_receipt_core.h"
 #include <shellapi.h>
 #include <shobjidl.h>
 #include <shlobj.h>
@@ -516,13 +517,30 @@ struct StagedCopyProgress final {
  Progress& progress;
  std::size_t index=0;
  std::size_t count=1;
+ std::wstring receiptPath;
+ std::wstring stagePath;
+ std::wstring targetLeaf;
+ bool receiptRequired=false;
+ bool receiptWritten=false;
+ bool receiptRejected=false;
 };
 DWORD CALLBACK onStagedCopyProgress(
  LARGE_INTEGER total,LARGE_INTEGER transferred,LARGE_INTEGER,
- LARGE_INTEGER,DWORD,DWORD,HANDLE,HANDLE,LPVOID state) noexcept{
+ LARGE_INTEGER,DWORD,DWORD,HANDLE,HANDLE destination,LPVOID state) noexcept{
  auto& value=*static_cast<StagedCopyProgress*>(state);
  if(value.progress.cancel.load(std::memory_order_relaxed))
   return PROGRESS_CANCEL;
+ // CopyFileEx gives the actual destination HANDLE. Bind it on the first
+ // callback, not from a guessed GUID/path. Abort without publication if
+ // the opt-in protected journal cannot durably accept this exact identity.
+ if(value.receiptRequired&&!value.receiptWritten){
+  if(!writeBoundStageReceipt(value.receiptPath,value.stagePath,
+                             value.targetLeaf,destination)){
+   value.receiptRejected=true;
+   return PROGRESS_CANCEL;
+  }
+  value.receiptWritten=true;
+ }
  const auto part=total.QuadPart>0?
    static_cast<std::uint64_t>(
      (static_cast<long double>(transferred.QuadPart)*100)/
@@ -574,6 +592,16 @@ Report copyStagedFiles(Request const& task,Progress& progress,
     report.error=ERROR_FILENAME_EXCED_RANGE;return report;
    }
    StagedCopyProgress callback{progress,i,task.sources.size()};
+   if(!progress.receiptDirectory.empty()){
+    if(!isPrivateStageReceiptDirectory(progress.receiptDirectory)){
+     report.error=ERROR_ACCESS_DENIED;return report;
+    }
+    callback.receiptRequired=true;
+    callback.receiptPath=(fs::path(progress.receiptDirectory)/
+      (std::wstring(L".flyExplorer-receipt-")+guidText+L".bin")).native();
+    callback.stagePath=stage.native();
+    callback.targetLeaf=target.filename().native();
+   }
    // FAIL_IF_EXISTS avoids silently reusing a stale or unowned stage.
    const BOOL copied=::CopyFileExW(
        task.sources[i].c_str(),stage.c_str(),
@@ -582,21 +610,33 @@ Report copyStagedFiles(Request const& task,Progress& progress,
    const bool wasCanceled=canceled(progress)||
        copyError==ERROR_REQUEST_ABORTED||
        copyError==ERROR_OPERATION_ABORTED;
-   // Only publish a completed stage and only if cancellation did not
-   // arrive before the atomic same-directory rename.
-   const BOOL published=copied&&!wasCanceled?
+   StageOwnershipReceipt proof{};
+   const bool journalReady=!callback.receiptRequired||
+      (callback.receiptWritten&&!callback.receiptRejected&&
+       readStageReceipt(callback.receiptPath,proof)&&
+       proof.stagePath==stage.native()&&
+       proof.targetLeaf==target.filename().native()&&
+       receiptMatchesStage(proof));
+   // A callback may not run for every file (e.g. zero-byte input). Never
+   // publish a journal-required stage without a verified bound receipt.
+   const BOOL published=copied&&!wasCanceled&&journalReady?
        ::MoveFileExW(stage.c_str(),target.c_str(),MOVEFILE_WRITE_THROUGH):
        FALSE;
    const DWORD publishError=published?ERROR_SUCCESS:
+       copied&&!wasCanceled&&!journalReady?ERROR_INVALID_DATA:
        copied&&!wasCanceled?::GetLastError():copyError;
    if(!published){
-    // The path is exact-owned for this request. Never delete the target,
-    // even if the partial stage cleanup fails.
-    DWORD attrs=::GetFileAttributesW(stage.c_str());
-    if(attrs!=INVALID_FILE_ATTRIBUTES){
-     if(attrs&FILE_ATTRIBUTE_READONLY)
-      ::SetFileAttributesW(stage.c_str(),attrs&~FILE_ATTRIBUTE_READONLY);
-     ::DeleteFileW(stage.c_str());
+    // An unjournaled stage can already contain copy bytes before the
+    // first callback. It cannot be proven recoverable: leave it untouched.
+    // Journalled failures also remain for explicit human review, not an
+    // automatic by-path deletion susceptible to replacement races.
+    if(!callback.receiptRequired){
+     DWORD attrs=::GetFileAttributesW(stage.c_str());
+     if(attrs!=INVALID_FILE_ATTRIBUTES){
+      if(attrs&FILE_ATTRIBUTE_READONLY)
+       ::SetFileAttributesW(stage.c_str(),attrs&~FILE_ATTRIBUTE_READONLY);
+      ::DeleteFileW(stage.c_str());
+     }
     }
     report.error=wasCanceled?ERROR_CANCELLED:publishError;
     report.aborted=wasCanceled;
@@ -1252,6 +1292,11 @@ int runIsolatedHelper(HANDLE input,HANDLE output) noexcept{
      ::WaitForSingleObject(cancelEvent,0)==WAIT_FAILED)return 75;
 
   Progress progress;
+  // This branch is never configured by a pane/request-supplied directory.
+  // Windows Known Folder + owner-only protected ACL gate can fail closed:
+  // legacy staged Copy remains available but gets no recovery receipt.
+  if(stageEligible(task))
+   (void)prepareUserStageReceiptDirectory(progress.receiptDirectory);
   std::atomic_bool done{false};
   std::atomic_bool wireOk{true};
   std::thread reporter([&]{
