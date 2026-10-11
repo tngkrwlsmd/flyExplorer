@@ -7,6 +7,57 @@ app/winui, UI-independent native code in src/base, tests in tests/winui, and
 bounded orchestration in tools/winui/run_checks.py. The former MFC application
 is retired from the working tree and is recoverable from Git revision cbffb48.
 
+## 2026-10-11 file-ID-bound staged publication and late-target safety — draft PR #63
+
+Only for an **active Copy with a valid private receipt**, the source stage
+is now reopened using a `DELETE | FILE_READ_ATTRIBUTES` HANDLE and its
+`FileIdInfo`, single-link and non-reparse attributes must still match
+the exact versioned receipt. The destination parent directory is opened
+and its actual resolved location inspected. Final-name publication uses
+`SetFileInformationByHandle(FileRenameInfo)` with
+`ReplaceIfExists=FALSE`, while the verified source file HANDLE remains
+open. An existing target cannot be overwritten. The non-journalled path
+still uses its original `MoveFileExW` behavior.
+
+**Important limit:** the documented Win32 `FileRenameInfo` combination
+of non-NULL `RootDirectory` and relative filename returned Windows
+`ERROR_INVALID_PARAMETER (87)` in the owned tests; therefore this branch
+uses `RootDirectory=NULL` plus an absolute target path. While the
+**source file object** is pinned, Win32 still re-resolves the destination
+pathname. A malicious rename/reparse race involving ancestor paths
+is NOT eliminated. The opened parent handle is evidence only, not a
+destination-directory-anchored rename. We did not substitute undocumented
+NT APIs or enable orphan cleanup.
+
+On exact source `10204fcab9b1e82c52d9377bbef74fe60e33cdd1`,
+[Remote Shell #38131991165](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38131991165)
+passed `git diff --check`, focused source contracts, Release native
+M22 **61/61**, and a separate 512 MiB disposable in-progress Copy where
+a previously absent target was introduced before publication. The
+journalled no-replace rename returned `ERROR_ALREADY_EXISTS (183)`;
+the unrelated target bytes and source SHA-256 were preserved and the
+owned staged file remained paired with a `CompletedOnStage` receipt.
+There was no published partial or automatic stage deletion.
+
+On the **same exact code**,
+[Remote Shell #38132115933](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38132115933)
+passed focused Python contracts **15/15**, actual child-process
+`executeIsolated` IPC of a Korean-named 8 MiB file and a 0-byte file
+with exact byte/PublishedVerified receipt matches, unsafe inherited-ACL
+store rejection across IPC (error 31), and the canonical
+`build.bat Release` with app and shipping Shell helper outputs.
+The first Win32 relative-root implementation failed three publication
+fixtures (58/61, Windows error 87); this was fixed and the impacted
+stages were rerun, not ignored.
+
+**Still open:** interactive logged-in-user GUI and actual shipping
+Known Folder creation, full power-loss/reboot recovery acceptance,
+handle-anchored destination-ancestor race safety, authenticated records,
+bounded historical receipt retention and an explicitly user-authorized
+recovery UI. No directory sweep or automatic delete is permitted.
+This PR remains Draft and unmerged. Subsequent documentation/comment-only
+commits are not fresh full-product acceptance runs.
+
 ## 2026-10-11 product Release and real child-process IPC acceptance — draft PR #63
 
 The current PR now passes both **canonical app Release compilation** and
