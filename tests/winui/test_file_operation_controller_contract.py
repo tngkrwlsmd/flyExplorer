@@ -168,8 +168,8 @@ class FileOperationContracts(unittest.TestCase):
             '<ClCompile Include="..\\..\\src\\base\\stage_receipt_core.cpp">\n'
             '      <PrecompiledHeader>NotUsing</PrecompiledHeader>',
             app_project)
-        self.assertIn("expected=61", native)
-        self.assertIn("expected=65", native)
+        self.assertIn("expected=62", native)
+        self.assertIn("expected=66", native)
         helper_project = read(
             "app/winui/helper/FlyShellIsolationHelper.project-template.xml")
         self.assertIn("stage_receipt_core.cpp", helper_project)
@@ -192,6 +192,16 @@ class FileOperationContracts(unittest.TestCase):
         self.assertIn("FILE_SHARE_READ|FILE_SHARE_WRITE|FILE_SHARE_DELETE", transfer)
         self.assertIn("rename->ReplaceIfExists=FALSE;", transfer)
         self.assertIn("GetFinalPathNameByHandleW(", transfer)
+        self.assertIn("struct DirectoryPins final", transfer)
+        self.assertIn("FILE_SHARE_READ|FILE_SHARE_WRITE,", transfer)
+        self.assertIn("g_directoryRenameProbe", transfer)
+        self.assertIn("setDirectoryRenameProbeForTest", header)
+        self.assertIn("receipt_active_publish_pins_ancestor_against_rename", fixture)
+        native_project = read(
+            "tests/winui/m22/FlyM22ShellTransferContracts.project-template.xml")
+        self.assertIn("FLY_M22_TEST_DIRECTORY_RENAME_LOCK", native_project)
+        self.assertNotIn("FLY_M22_TEST_DIRECTORY_RENAME_LOCK", helper_project)
+        self.assertNotIn("FLY_M22_TEST_DIRECTORY_RENAME_LOCK", app_project)
         self.assertIn("--owned-stage-race-receipt", fixture)
         self.assertIn("FILE_FLAG_OPEN_REPARSE_POINT", transfer)
         self.assertIn("PublicationUnconfirmed", core)
@@ -225,7 +235,8 @@ class FileOperationContracts(unittest.TestCase):
                          "receipt_phase_published_same_identity_write_once",
                          "receipt_phase_published_target_replacement_is_inconsistent",
                          "receipt_phase_corrupt_transition_rejected_readonly",
-                         "receipt_zero_byte_staged_copy_published_with_bound_identity"):
+                         "receipt_zero_byte_staged_copy_published_with_bound_identity",
+                         "receipt_active_publish_pins_ancestor_against_rename"):
             self.assertIn(scenario, fixture)
 
     def test_partial_failure_notice_survives_navigation_refresh(self):
