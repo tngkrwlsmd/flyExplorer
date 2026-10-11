@@ -140,6 +140,8 @@ try:
         return sum(value for _, value in selection()) == 2
     eventually(add_second, "both source rows must be selected", 12)
     selected_before = selection()
+    eventually(lambda: str(left).lower() in element("AddressBox").get_value().lower(),
+               "selected source pane must become active", 10)
     print("PARTIAL_GUI_SELECTION_BEFORE="+repr(selected_before), flush=True)
     assert sum(selected for _, selected in selected_before) == 2, (
         "Both owned source rows must be selected before invoking Copy",
