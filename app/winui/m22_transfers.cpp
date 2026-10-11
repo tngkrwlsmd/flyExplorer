@@ -436,10 +436,6 @@ void MainWindow::OnTransferCompleted(
  if(disposition==Disposition::Ignored)return;
  if(mTransferTimer)mTransferTimer.Stop();
  SetFileButtonsBusy(false,false);
- if(disposition==Disposition::StaleContext){
-  StatusText().Text(L"파일 작업 종료: 화면이 변경됐습니다. 원본·대상 폴더를 확인하세요.");
-  return;
- }
  if(disposition==Disposition::NeedsCollisionConfirmation){
   ConfirmCollision();
   return;
@@ -465,6 +461,10 @@ void MainWindow::OnTransferCompleted(
   QueuePidl(side,
    fxfile::shellnav::Location(pane.tabs[pane.active].snapshot().folder),
    fxfile::shellnav::NavigationAction::Refresh);
+ }
+ if(disposition==Disposition::StaleContext){
+  StatusText().Text(L"파일 작업 종료: 화면이 변경됐습니다. 원본·대상 폴더를 확인하세요.");
+  return;
  }
  if(disposition==Disposition::Failed){
   std::wstring detail;
