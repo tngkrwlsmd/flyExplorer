@@ -168,8 +168,8 @@ class FileOperationContracts(unittest.TestCase):
             '<ClCompile Include="..\\..\\src\\base\\stage_receipt_core.cpp">\n'
             '      <PrecompiledHeader>NotUsing</PrecompiledHeader>',
             app_project)
-        self.assertIn("expected=62", native)
-        self.assertIn("expected=66", native)
+        self.assertIn("expected=65", native)
+        self.assertIn("expected=69", native)
         helper_project = read(
             "app/winui/helper/FlyShellIsolationHelper.project-template.xml")
         self.assertIn("stage_receipt_core.cpp", helper_project)
@@ -205,6 +205,12 @@ class FileOperationContracts(unittest.TestCase):
         self.assertNotIn("FLY_M22_TEST_DIRECTORY_RENAME_LOCK", app_project)
         self.assertIn("--owned-stage-race-receipt", fixture)
         self.assertIn("--owned-denied-ancestor-copy", fixture)
+        for move_case in (
+            "recursive_move_nested_lock_reports_failure_without_payload_loss",
+            "recursive_move_preflight_cancel_preserves_nested_source",
+            "recursive_move_collision_preserves_source_and_existing_target",
+        ):
+            self.assertIn(move_case, fixture)
         self.assertIn("M22_RESTRICTED_ANCESTOR_FAIL_CLOSED", fixture)
         self.assertIn("StageReceiptState::CompletedOnStage", fixture)
         self.assertIn("FILE_FLAG_OPEN_REPARSE_POINT", transfer)
