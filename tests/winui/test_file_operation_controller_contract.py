@@ -143,7 +143,9 @@ class FileOperationContracts(unittest.TestCase):
                        "isPrivateStageReceiptDirectory",
                        "inspectReceiptCreator", "ReceiptCreatorState",
                        "writeBoundStageReceipt",
-                       "prepareUserStageReceiptDirectory"):
+                       "prepareUserStageReceiptDirectory",
+                       "markStageCopyCompleted", "markStageCopyPublished",
+                       "inspectStageReceiptState", "StageReceiptState"):
             self.assertIn(symbol, header)
         for marker in ("CREATE_NEW", "FILE_FLAG_WRITE_THROUGH",
                        "FlushFileBuffers", "FILE_FLAG_OPEN_REPARSE_POINT",
@@ -162,8 +164,8 @@ class FileOperationContracts(unittest.TestCase):
             '<ClCompile Include="..\\..\\src\\base\\stage_receipt_core.cpp">\n'
             '      <PrecompiledHeader>NotUsing</PrecompiledHeader>',
             app_project)
-        self.assertIn("expected=54", native)
-        self.assertIn("expected=58", native)
+        self.assertIn("expected=61", native)
+        self.assertIn("expected=65", native)
         helper_project = read(
             "app/winui/helper/FlyShellIsolationHelper.project-template.xml")
         self.assertIn("stage_receipt_core.cpp", helper_project)
@@ -172,6 +174,11 @@ class FileOperationContracts(unittest.TestCase):
         self.assertIn("prepareUserStageReceiptDirectory(", transfer)
         self.assertIn("progress.receiptDirectory", transfer)
         self.assertIn("!journalReady", transfer)
+        self.assertIn("markStageCopyCompleted(", transfer)
+        self.assertIn("markStageCopyPublished(", transfer)
+        self.assertIn("FILE_FLAG_OPEN_REPARSE_POINT", transfer)
+        self.assertIn("PublicationUnconfirmed", core)
+        self.assertIn("PhaseRead::Invalid", core)
         self.assertIn("--owned-stage-kill-receipt", fixture)
         self.assertIn("--receipt-verify-killed", fixture)
         self.assertIn("--receipt-create-private", fixture)
@@ -184,7 +191,14 @@ class FileOperationContracts(unittest.TestCase):
                          "receipt_creator_alive_and_pid_reuse_fail_closed",
                          "receipt_creator_exited_without_stage_mutation",
                          "live_staged_copy_callback_durable_receipt_before_publish",
-                         "live_staged_copy_refuses_untrusted_receipt_directory"):
+                         "live_staged_copy_refuses_untrusted_receipt_directory",
+                         "receipt_phase_initial_copying_readonly",
+                         "receipt_phase_completed_immutable_write_once",
+                         "receipt_phase_rename_without_published_marker_ambiguous",
+                         "receipt_phase_published_same_identity_write_once",
+                         "receipt_phase_published_target_replacement_is_inconsistent",
+                         "receipt_phase_corrupt_transition_rejected_readonly",
+                         "receipt_zero_byte_staged_copy_published_with_bound_identity"):
             self.assertIn(scenario, fixture)
 
     def test_partial_failure_notice_survives_navigation_refresh(self):
