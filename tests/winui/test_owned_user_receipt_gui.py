@@ -72,7 +72,9 @@ def main() -> None:
     # Only snapshot file NAMES; never read or mutate older private receipts.
     older = ({p.name for p in store.glob("*.bin")} if store.exists() else set())
 
-    log = ROOT / "logs" / "interactive-user-receipt"
+    log = Path(os.environ.get(
+        "FLY_INTERACTIVE_RECEIPT_LOG_ROOT",
+        str(ROOT / "logs" / "interactive-user-receipt")))
     log.mkdir(parents=True, exist_ok=True)
     owned = Path(tempfile.mkdtemp(prefix="user-knownfolder-owned-", dir=log))
     left, right = owned / "Left", owned / "Right"
