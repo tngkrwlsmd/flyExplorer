@@ -17,7 +17,7 @@ try:
  env={**os.environ,"LOCALAPPDATA":str(own/"local"),"APPDATA":str(own/"appdata"),
       "TEMP":str(own),"TMP":str(own)}
  args=[str(exe),str(own)]
- expected=50
+ expected=52
  unc_used=False
  if os.environ.get("FLY_M22_LOOPBACK_ADMIN_SHARE")=="YES":
   drive=own.drive.rstrip(":").lower()
