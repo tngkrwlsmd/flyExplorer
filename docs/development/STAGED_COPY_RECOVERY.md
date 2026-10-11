@@ -330,7 +330,60 @@ pre-callback record, unsigned journal, reboot/power-loss durability,
 user-profile Known Folder and GUI integration gates are unchanged.
 No orphan enumeration, cleanup or recovery is permitted.
 
-## Interactive-user test safety contract (2026-10-11, not accepted on Windows)
+## Real interactive WinUI / shipping Known Folder — accepted 2026-10-11
+
+[Central Windows Remote Shell #38139086195](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38139086195)
+**PASS**, exact tested source
+`b198565f44530641ed46d99eb8a41af28b6ee333`.
+The owned one-shot InteractiveToken worker, executed in the existing
+logged-in non-SYSTEM session, logged these explicit results:
+
+- `M22_INTERACTIVE_SHIPPING_KNOWNFOLDER_IPC=PASS private=1 bytes=1 receipts=1 error=0`:
+  a normal shipping Shell helper, not a fixture-instrumented helper,
+  copied the specific owned test file using its real
+  `FOLDERID_LocalAppData` owner-protected journal directory and
+  produced one matched read-only `PublishedVerified` receipt.
+- `REAL_USER_GUI_SHIPPING_KNOWNFOLDER_RECEIPT=PASS`,
+  `REAL_USER_GUI_COPY_BYTES_PUBLISHED=PASS`,
+  `GUI_PYTHON_EXIT=0`: an actual owned WinUI window performed a toolbar
+  Copy between two newly created owned directories. Source and
+  destination bytes matched, the *new* receipt v1 target parent/leaf
+  precisely matched that GUI destination, and the separate native
+  read-only inspector accepted its file ID and phase markers.
+- `REAL_USER_GUI_PRIOR_RECEIPT_CONTENT_NOT_READ=PASS`,
+  `INTERACTIVE_RECEIPT_ONE_SHOT_TASK_RELEASED=TRUE`: no previous
+  receipt contents were read, no user files or stages were deleted,
+  and the exact test-owned Scheduled Task was unregistered.
+
+Earlier attempts revealed two **test-only** execution bugs, now fixed:
+PowerShell 5.1 legacy script-codepage interpretation damaged a
+literal Korean test pathname during `WriteAllText`, and Python UTF-8
+mode could not decode the localized `whoami /user` headings. The
+worker constructs Korean test names from UTF-16 codepoints and the
+GUI gate inspects the raw ASCII SID bytes. The actual security guard
+against SYSTEM/nonuser identities is retained.
+
+The native 62/62, canonical full WinUI Release and fixture IPC
+evidence for the unchanged production transfer implementation
+remains in
+[run #38133470149](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38133470149);
+the new user-gate's nine synthetic v1 wire tests, 15 file operation
+source contracts and new native Release fixture compilation were
+independently validated in
+[run #38138044010](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38138044010).
+No new product source code was introduced between those acceptance
+runs and the real-user GUI gate. Later docs commits are not new
+acceptance runs.
+
+**Next non-destructive gate:** verify a test-owned ancestor whose DACL
+denies `FILE_LIST_DIRECTORY` cannot silently bypass the pinned-ancestor
+protection. Check original SHA-256, absence of final target, immutable
+stage/file-ID evidence and no automatic stage removal. Then test
+forced-kill/restart read-only state and explicitly approved disposable
+disk power-loss durability. No recovery or cleanup authorization
+follows from this acceptance.
+
+## Previous user-gate preparation (historical, superseded by PASS above)
 
 The prepared opt-in `test_owned_user_receipt_gui.py` now refuses a
 non-interactive/SYSTEM or unidentified security token, missing shipping
