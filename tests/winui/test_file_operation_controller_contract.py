@@ -227,8 +227,21 @@ class FileOperationContracts(unittest.TestCase):
         self.assertNotIn('environment["LOCALAPPDATA"]', interactive_gui)
         self.assertIn("environment[\"APPDATA\"]", interactive_gui)
         self.assertIn("REAL_USER_GUI_PRIOR_RECEIPT_CONTENT_NOT_READ", interactive_gui)
+        self.assertIn("matches_owned_published_target(", interactive_gui)
+        wire = read("tests/winui/receipt_wire_owned.py")
+        pure = read("tests/winui/test_owned_receipt_wire_contract.py")
+        self.assertIn('struct.Struct("<8sIIIQ16sIQI")', wire)
+        self.assertIn('b"FLYSTGR1"', wire)
+        self.assertIn("stage_path.parent / leaf == expected", wire)
+        for scenario in ("test_exact_parent_and_unicode_leaf",
+                         "test_unrelated_target_rejected",
+                         "test_unrelated_stage_parent_rejected",
+                         "test_truncated_and_corrupt_checksum_rejected",
+                         "test_wrong_version_rejected"):
+            self.assertIn(scenario, pure)
         bridge = read("tools/winui/Invoke-InteractiveReceiptGate.ps1")
         worker = read("tools/winui/OwnedInteractiveReceiptWorker.ps1")
+        self.assertIn("'receipt_wire_owned.py'", bridge)
         for token in ("ExpectedSha", "New-ScheduledTaskPrincipal",
                       "-LogonType Interactive", "-RunLevel Limited",
                       "Unregister-ScheduledTask", "finally",
