@@ -91,6 +91,7 @@ int wmain(int count,wchar_t**args){
   // never by this fixture or environment input. No record is deleted.
   HANDLE token=nullptr;
   bool system=false;
+  bool tokenVerified=false;
   if(::OpenProcessToken(::GetCurrentProcess(),TOKEN_QUERY,&token)){
    DWORD needed=0;
    (void)::GetTokenInformation(token,TokenUser,nullptr,0,&needed);
@@ -102,12 +103,13 @@ int wmain(int count,wchar_t**args){
     if(::AllocateAndInitializeSid(&nt,1,SECURITY_LOCAL_SYSTEM_RID,
           0,0,0,0,0,0,0,&sys)){
      system=::EqualSid(user->User.Sid,sys)!=FALSE;
+     tokenVerified=true;
      ::FreeSid(sys);
     }
    }
    ::CloseHandle(token);
   }
-  if(system)return 95;
+  if(!tokenVerified||system)return 95;
   const fs::path source(args[2]),destination(args[3]);
   if(!fs::is_regular_file(source)||!fs::is_directory(destination)||
      source.parent_path()==destination)return 96;
