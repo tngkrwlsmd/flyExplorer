@@ -131,6 +131,32 @@ class FileOperationContracts(unittest.TestCase):
         self.assertIn("--owned-stage-race", fixture)
         self.assertIn("--owned-stage-deny", fixture)
 
+    def test_durable_stage_receipt_is_non_destructive_and_not_cleanup_authority(self):
+        header = read("src/base/stage_receipt_core.h")
+        core = read("src/base/stage_receipt_core.cpp")
+        fixture = read("tests/winui/m22/m22_transfer_fixture.cpp")
+        native = read("tests/winui/m22/test_native.py")
+        app_project = read("app/winui/flyExplorer.project-template.xml")
+        for symbol in ("writeStageReceipt", "readStageReceipt",
+                       "receiptMatchesStage", "StageOwnershipReceipt"):
+            self.assertIn(symbol, header)
+        for marker in ("CREATE_NEW", "FILE_FLAG_WRITE_THROUGH",
+                       "FlushFileBuffers", "FILE_FLAG_OPEN_REPARSE_POINT",
+                       "FileIdInfo", "checksum(raw)", "inspectStageFile",
+                       "sameStageFile"):
+            self.assertIn(marker, core + read("src/base/shell_transfer_core.cpp"))
+        for destructive in ("DeleteFileW", "RemoveDirectoryW", "MoveFileExW",
+                            "SetFileInformationByHandle"):
+            self.assertNotIn(destructive, core)
+        self.assertIn("stage_receipt_core.cpp", app_project)
+        self.assertIn("expected=48", native)
+        self.assertIn("expected=52", native)
+        for scenario in ("receipt_roundtrip_flush_and_exact_stage_identity",
+                         "receipt_create_new_never_overwrites_existing",
+                         "receipt_rejects_same_path_file_replacement",
+                         "receipt_corruption_fails_closed_without_file_mutation"):
+            self.assertIn(scenario, fixture)
+
     def test_partial_failure_notice_survives_navigation_refresh(self):
         ui = read("app/winui/MainWindow.xaml.cpp")
         header = read("app/winui/MainWindow.xaml.h")
