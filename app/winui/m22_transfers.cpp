@@ -437,32 +437,17 @@ void MainWindow::OnTransferCompleted(
  if(mTransferTimer)mTransferTimer.Stop();
  SetFileButtonsBusy(false,false);
  if(disposition==Disposition::StaleContext){
-  StatusText().Text(L"파일 작업 종료: 작업 이후 화면이 변경됐습니다.");
+  StatusText().Text(L"파일 작업 종료: 화면이 변경됐습니다. 원본·대상 폴더를 확인하세요.");
   return;
  }
  if(disposition==Disposition::NeedsCollisionConfirmation){
   ConfirmCollision();
   return;
  }
- if(disposition==Disposition::Failed){
-  if(completion.request.kind==fxfile::shelltransfer::Kind::Recycle&&
-     removableLocalRoot(completion.request.sourceParent)){
-   StatusText().Text(hstring(
-    L"이 이동식 드라이브의 Windows 휴지통으로 이동을 완료하지 못했습니다. "
-    L"영구 삭제로 전환하지 않았습니다. 오류: "+
-    std::to_wstring(completion.report.error)));
-  }else StatusText().Text(errorInKorean(completion.report.error));
-  return;
- }
- StatusText().Text(
-  completion.request.kind==fxfile::shelltransfer::Kind::Copy?
-    L"복사를 완료했습니다.":
-  completion.request.kind==fxfile::shelltransfer::Kind::Move?
-    L"이동을 완료했습니다.":L"휴지통 이동을 완료했습니다.");
-
- // A watcher may already have a request in flight. Always submit a new
- // Refresh for every currently visible touched folder; ShellNavigationController
- // supersedes older same-pane work and the model rejects stale request IDs.
+ // Failed or canceled transfers can have committed earlier items. Refresh
+ // only the currently visible folders touched by this exact request, even
+ // on failure; never infer that the batch was atomic or delete partial data.
+ // ShellNavigationController supersedes earlier same-pane navigation.
  for(int side=0;side<2;++side){
   if(side==1&&!ActiveWindowTab().model.split)continue;
   auto const& pane=ActiveWindowTab().model.panes[side];
@@ -481,6 +466,27 @@ void MainWindow::OnTransferCompleted(
    fxfile::shellnav::Location(pane.tabs[pane.active].snapshot().folder),
    fxfile::shellnav::NavigationAction::Refresh);
  }
+ if(disposition==Disposition::Failed){
+  std::wstring detail;
+  if(completion.request.kind==fxfile::shelltransfer::Kind::Recycle&&
+     removableLocalRoot(completion.request.sourceParent)){
+   detail=L"이 이동식 드라이브의 Windows 휴지통으로 이동을 완료하지 못했습니다. "
+          L"영구 삭제로 전환하지 않았습니다. 오류: "+
+          std::to_wstring(completion.report.error);
+  }else detail=errorInKorean(completion.report.error).c_str();
+  // IFileOperation batches are not transactional. Earlier items may have
+  // succeeded even when the aggregate failed or was canceled.
+  detail+=L" 일부 항목이 처리됐을 수 있습니다. 원본·대상을 확인하세요.";
+  StatusText().Text(hstring(detail));
+  return;
+ }
+ StatusText().Text(
+  completion.request.kind==fxfile::shelltransfer::Kind::Copy?
+    L"복사를 완료했습니다.":
+  completion.request.kind==fxfile::shelltransfer::Kind::Move?
+    L"이동을 완료했습니다.":L"휴지통 이동을 완료했습니다.");
+
+
 }
 bool MainWindow::CopySelectedToWindowsClipboard(int side,bool cut){
  auto const& pane=ActiveWindowTab().model.panes[side];
