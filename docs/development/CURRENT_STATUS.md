@@ -7,6 +7,58 @@ app/winui, UI-independent native code in src/base, tests in tests/winui, and
 bounded orchestration in tools/winui/run_checks.py. The former MFC application
 is retired from the working tree and is recoverable from Git revision cbffb48.
 
+## 2026-10-11 active Copy destination ancestor rename guard — draft PR #63
+
+**New verified scope:** For an active, journalled staged Copy only,
+`publishActiveBoundStage` now opens a bounded chain of handles from
+the destination drive root through the exact target parent, verifies
+each handle's normalized resolved DOS path and non-reparse directory
+attributes, and retains all handles until publication completes.
+Each directory HANDLE requests
+`FILE_LIST_DIRECTORY|FILE_READ_ATTRIBUTES` with
+`FILE_SHARE_READ|FILE_SHARE_WRITE` (no `FILE_SHARE_DELETE`).
+If any component cannot be pinned due to permissions, an existing
+conflicting DELETE handle, a path mismatch or an unsupported namespace,
+the operation **fails closed** and leaves the journalled stage intact.
+The separate verified source stage HANDLE is still pinned and renamed
+with `FileRenameInfo`/`RootDirectory=NULL`, never overwrite.
+
+**Critical observed counterexample:** Opening an ancestor using ONLY
+`FILE_READ_ATTRIBUTES` and denying delete sharing did **not** prevent
+renaming its directory on the Windows test VM. That initial candidate
+passed 61/62 native cases but the exact test-owned rename succeeded.
+After adding actual `FILE_LIST_DIRECTORY` access, a fixture deliberately
+proved that a disposable target directory **and its parent ancestor**
+could both be renamed before the pinned window, but inside that window
+both `MoveFileExW` attempts failed with
+`ERROR_SHARING_VIOLATION (32)`. No path was left renamed. The helper
+created and verified an exact `PublishedVerified` receipt in the same
+test. The test-only synchronous probe is compiled with
+`FLY_M22_TEST_DIRECTORY_RENAME_LOCK` in the native fixture project
+only; no such callback is present in the shipping app/helper.
+
+[Windows Remote Shell #38133470149](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38133470149)
+on source `6ae307b815d4874885e1f90c6838ad31ed65377b` passed
+`git diff --check`, focused Python source contracts **15/15**,
+Windows Release M22 **62/62**, deterministic target/ancestor rename
+guard, real child-helper IPC for a Korean-named 8 MiB and empty file
+with byte-for-byte/`PublishedVerified` verification, rejection of
+untrusted inherited-ACL journal store, and the **canonical
+`build.bat Release`** with shipping helper outputs. All operations
+used isolated owned test folders. The control-plane request slot was
+restored to idle.
+
+**Limits:** this is test-proven native Windows sharing protection for
+ordinary fixed-drive paths, not a formally atomic directory-anchored
+rename: the Win32 `FileRenameInfo` destination remains a normalized
+absolute pathname. Directory-read rights may be unavailable on
+restricted/execute-only ancestor directories, intentionally causing
+fail-closed Copy errors without publishing the file. Privileged actors,
+mount/volume changes, unsupported file systems, malicious same-user
+receipt tampering, reboot/power-loss durability and the actual
+interactive-user Known Folder/GUI path are not accepted. No automatic
+orphan recovery, scan, deletion or merge was enabled.
+
 ## 2026-10-11 file-ID-bound staged publication and late-target safety — draft PR #63
 
 Only for an **active Copy with a valid private receipt**, the source stage
