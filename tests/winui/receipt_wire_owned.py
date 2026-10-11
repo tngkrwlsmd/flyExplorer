@@ -29,7 +29,7 @@ def matches_owned_published_target(receipt_file: Path, expected_target: Path) ->
         if (magic != b"FLYSTGR1" or version != 1 or
                 not 0 < stage_units <= 32000 or
                 not 0 < leaf_units <= 255 or
-                not volume or not pid or not started or not any(file_id) or
+                not pid or not started or not any(file_id) or
                 size != _HEADER.size + (stage_units + leaf_units) * 2):
             return False
         unsigned = raw[:_HEADER.size - 4] + b"\0\0\0\0" + raw[_HEADER.size:]
@@ -45,7 +45,7 @@ def matches_owned_published_target(receipt_file: Path, expected_target: Path) ->
         expected = Path(expected_target)
         if (not stage_path.is_absolute() or not expected.is_absolute()
                 or "\0" in stage or "\0" in leaf
-                or stage_path != Path(str(stage_path))
+                or str(stage_path) != stage
                 or leaf != expected.name or Path(leaf).name != leaf):
             return False
         return stage_path.parent / leaf == expected
