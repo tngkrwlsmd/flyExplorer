@@ -260,6 +260,20 @@ class FileOperationContracts(unittest.TestCase):
         bridge = read("tools/winui/Invoke-InteractiveReceiptGate.ps1")
         worker = read("tools/winui/OwnedInteractiveReceiptWorker.ps1")
         self.assertIn("'receipt_wire_owned.py'", bridge)
+        # The Hyper-V host probe must stay read-only even if a future
+        # contributor expands the disposable-VM test harness.
+        host_probe = read("tools/winui/Inspect-HyperVDurabilityHost.ps1")
+        for required in ("Get-VMHost", "Get-VM ", "Get-VMSwitch",
+                         "FLY_HYPERV_AUDIT_READONLY=TRUE",
+                         "FLY_HYPERV_DISPOSABLE_VM_PROVISIONED=UNVERIFIED"):
+            self.assertIn(required, host_probe)
+        for mutation in ("New-VM ", "New-VHD ", "Stop-VM ", "Remove-VM ",
+                         "Start-VM ", "Set-VM ", "Checkpoint-VM ",
+                         "Restore-VMSnapshot ", "Remove-VMSnapshot ",
+                         "Restart-Computer ", "Stop-Computer "):
+            self.assertNotIn(mutation, host_probe)
+        self.assertIn("NOT PROVISIONED",
+                      read("docs/development/DISPOSABLE_VM_DURABILITY_GATE.md"))
         for token in ("ExpectedSha", "New-ScheduledTaskPrincipal",
                       "-LogonType Interactive", "-RunLevel Limited",
                       "Unregister-ScheduledTask", "finally",
