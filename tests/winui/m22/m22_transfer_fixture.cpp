@@ -2,10 +2,45 @@
 #include <filesystem>
 #include <fstream>
 #include <cstdio>
+#include <thread>
+#include <chrono>
 using namespace fxfile::shelltransfer;
 namespace fs=std::filesystem;
 int wmain(int count,wchar_t**args){
  setvbuf(stdout,nullptr,_IONBF,0);
+ if(count==4&&std::wstring(args[1])==L"--owned-stage-cancel"){
+  // Cancel only after transfer progress is observed on a disposable file.
+  Request request{};
+  request.kind=Kind::Copy;
+  const fs::path source(args[2]),destination(args[3]);
+  request.sourceParent=source.parent_path().native();
+  request.destination=destination.native();
+  request.sources={source.native()};
+  Progress progress{};
+  std::atomic_bool done{false},triggered{false};
+  std::thread canceler([&]{
+   while(!done.load(std::memory_order_acquire)){
+    const auto percent=progress.percent.load(std::memory_order_relaxed);
+    if(percent>0&&percent<100){
+     triggered.store(true,std::memory_order_relaxed);
+     progress.cancel.store(true,std::memory_order_relaxed);
+     break;
+    }
+    std::this_thread::sleep_for(std::chrono::milliseconds(1));
+   }
+  });
+  const auto outcome=execute(request,progress);
+  done.store(true,std::memory_order_release);
+  canceler.join();
+  if(triggered.load()&&outcome.error==ERROR_CANCELLED&&
+     outcome.aborted&&!fs::exists(destination/source.filename())){
+   std::puts("M22_OWNED_STAGED_MID_COPY_CANCEL=PASS");
+   return 0;
+  }
+  std::printf("M22_OWNED_STAGED_MID_COPY_CANCEL=FAIL error=%lu cancel=%d done=%u\n",
+      outcome.error,int(triggered.load()),progress.percent.load());
+  return 24;
+ }
  if(count==4&&std::wstring(args[1])==L"--owned-stage-kill"){
   // Only invoked by test_native.py with its disposable source/destination.
   Request request{};
