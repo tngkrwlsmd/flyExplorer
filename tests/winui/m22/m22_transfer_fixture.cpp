@@ -81,6 +81,43 @@ int wmain(int count,wchar_t**args){
  auto multi=execute(r,progress);
  test(multi.error==0&&get(right/L"가.txt")=="one"&&
       get(right/L"나.txt")=="two","actual_multi_selection_copy");
+ // Hold a test-owned source with an exclusive Windows handle so IFileOperation
+ // encounters a real OS sharing failure, not a mocked HRESULT. Never touch
+ // unrelated paths or global Shell state.
+ put(left/L"잠금 복사.txt","locked-copy-payload");
+ HANDLE lockCopy=::CreateFileW((left/L"잠금 복사.txt").c_str(),
+     GENERIC_READ,0,nullptr,OPEN_EXISTING,FILE_ATTRIBUTE_NORMAL,nullptr);
+ bool copyBlocked=false,copySourceIntact=false;
+ if(lockCopy!=INVALID_HANDLE_VALUE){
+  Request locked{};
+  locked.kind=Kind::Copy;
+  locked.sourceParent=left.native();locked.destination=right.native();
+  locked.sources={(left/L"잠금 복사.txt").native()};
+  Progress attempt{};
+  auto outcome=execute(locked,attempt);
+  copyBlocked=outcome.error!=ERROR_SUCCESS;
+  ::CloseHandle(lockCopy);
+  copySourceIntact=get(left/L"잠금 복사.txt")=="locked-copy-payload";
+ }
+ test(copyBlocked&&copySourceIntact,
+      "sharing_violation_copy_reports_failure_and_preserves_source");
+ put(left/L"잠금 이동.txt","locked-move-payload");
+ HANDLE lockMove=::CreateFileW((left/L"잠금 이동.txt").c_str(),
+     GENERIC_READ,0,nullptr,OPEN_EXISTING,FILE_ATTRIBUTE_NORMAL,nullptr);
+ bool moveBlocked=false,moveSourceIntact=false;
+ if(lockMove!=INVALID_HANDLE_VALUE){
+  Request locked{};
+  locked.kind=Kind::Move;
+  locked.sourceParent=left.native();locked.destination=right.native();
+  locked.sources={(left/L"잠금 이동.txt").native()};
+  Progress attempt{};
+  auto outcome=execute(locked,attempt);
+  moveBlocked=outcome.error!=ERROR_SUCCESS;
+  ::CloseHandle(lockMove);
+  moveSourceIntact=get(left/L"잠금 이동.txt")=="locked-move-payload";
+ }
+ test(moveBlocked&&moveSourceIntact,
+      "sharing_violation_move_reports_failure_and_preserves_source");
  test(kMaxItems>=64,"shared_transfer_budget_exceeds_legacy_32");
  const auto bulkLeft=root/L"대량 왼쪽",bulkRight=root/L"대량 오른쪽";
  fs::create_directory(bulkLeft);fs::create_directory(bulkRight);

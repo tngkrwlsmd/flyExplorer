@@ -108,9 +108,20 @@ bool canceled(Progress& state){return state.cancel.load(std::memory_order_relaxe
 class Sink final:public IFileOperationProgressSink {
  std::atomic_ulong refs_{1};
  Progress& state_;
+ std::atomic<HRESULT> firstFailure_{S_OK};
+ HRESULT completed(HRESULT operationResult) noexcept {
+  if(FAILED(operationResult)){
+   HRESULT none=S_OK;
+   firstFailure_.compare_exchange_strong(none,operationResult);
+  }
+  // A failed per-item callback must stop the remainder of the batch,
+  // rather than allow the Shell to silently claim aggregate success.
+  return FAILED(operationResult)?operationResult:S_OK;
+ }
  HRESULT alive() const{return state_.cancel.load()?E_ABORT:S_OK;}
 public:
  explicit Sink(Progress& s):state_(s){}
+ HRESULT firstFailure() const noexcept{return firstFailure_.load();}
  HRESULT STDMETHODCALLTYPE QueryInterface(REFIID iid,void**value) override{
   if(!value)return E_POINTER;
   *value=nullptr;
@@ -126,17 +137,17 @@ public:
   return remaining;
  }
  HRESULT STDMETHODCALLTYPE StartOperations() override{return alive();}
- HRESULT STDMETHODCALLTYPE FinishOperations(HRESULT) override{return S_OK;}
+ HRESULT STDMETHODCALLTYPE FinishOperations(HRESULT hr) override{return completed(hr);}
  HRESULT STDMETHODCALLTYPE PreRenameItem(DWORD,IShellItem*,LPCWSTR) override{return alive();}
- HRESULT STDMETHODCALLTYPE PostRenameItem(DWORD,IShellItem*,LPCWSTR,HRESULT,IShellItem*) override{return S_OK;}
+ HRESULT STDMETHODCALLTYPE PostRenameItem(DWORD,IShellItem*,LPCWSTR,HRESULT hr,IShellItem*) override{return completed(hr);}
  HRESULT STDMETHODCALLTYPE PreMoveItem(DWORD,IShellItem*,IShellItem*,LPCWSTR) override{return alive();}
- HRESULT STDMETHODCALLTYPE PostMoveItem(DWORD,IShellItem*,IShellItem*,LPCWSTR,HRESULT,IShellItem*) override{return S_OK;}
+ HRESULT STDMETHODCALLTYPE PostMoveItem(DWORD,IShellItem*,IShellItem*,LPCWSTR,HRESULT hr,IShellItem*) override{return completed(hr);}
  HRESULT STDMETHODCALLTYPE PreCopyItem(DWORD,IShellItem*,IShellItem*,LPCWSTR) override{return alive();}
- HRESULT STDMETHODCALLTYPE PostCopyItem(DWORD,IShellItem*,IShellItem*,LPCWSTR,HRESULT,IShellItem*) override{return S_OK;}
+ HRESULT STDMETHODCALLTYPE PostCopyItem(DWORD,IShellItem*,IShellItem*,LPCWSTR,HRESULT hr,IShellItem*) override{return completed(hr);}
  HRESULT STDMETHODCALLTYPE PreDeleteItem(DWORD,IShellItem*) override{return alive();}
- HRESULT STDMETHODCALLTYPE PostDeleteItem(DWORD,IShellItem*,HRESULT,IShellItem*) override{return S_OK;}
+ HRESULT STDMETHODCALLTYPE PostDeleteItem(DWORD,IShellItem*,HRESULT hr,IShellItem*) override{return completed(hr);}
  HRESULT STDMETHODCALLTYPE PreNewItem(DWORD,IShellItem*,LPCWSTR) override{return alive();}
- HRESULT STDMETHODCALLTYPE PostNewItem(DWORD,IShellItem*,LPCWSTR,LPCWSTR,DWORD,HRESULT,IShellItem*) override{return S_OK;}
+ HRESULT STDMETHODCALLTYPE PostNewItem(DWORD,IShellItem*,LPCWSTR,LPCWSTR,DWORD,HRESULT hr,IShellItem*) override{return completed(hr);}
  HRESULT STDMETHODCALLTYPE UpdateProgress(UINT total,UINT current) override{
   if(total)state_.percent.store(
       static_cast<std::uint32_t>((static_cast<std::uint64_t>(current)*100)/total));
@@ -478,6 +489,7 @@ Report execute(Request const& task,Progress& progress) noexcept{
    hr=::SHCreateItemFromParsingName(task.destination.c_str(),nullptr,
                                     IID_PPV_ARGS(dest.GetAddressOf()));
  }
+ bool performed=false;
  if(SUCCEEDED(hr)){
   for(std::size_t i=0;i<task.sources.size();++i){
    if(canceled(progress)){hr=E_ABORT;break;}
@@ -501,18 +513,29 @@ Report execute(Request const& task,Progress& progress) noexcept{
    else hr=operation->DeleteItem(item.Get(),nullptr);
    if(FAILED(hr))break;
   }
-  if(SUCCEEDED(hr)&&!canceled(progress))hr=operation->PerformOperations();
+  if(SUCCEEDED(hr)&&!canceled(progress)){
+   performed=true;
+   hr=operation->PerformOperations();
+  }
   else if(SUCCEEDED(hr))hr=E_ABORT;
  }
  BOOL anyAborted=FALSE;
- if(operation&&SUCCEEDED(hr)){
+ // Per Microsoft, PerformOperations may return success despite a stopped
+ // operation. Query aborted state even when PerformOperations failed.
+ if(operation&&performed){
   const auto probe=operation->GetAnyOperationsAborted(&anyAborted);
-  if(FAILED(probe))hr=probe;
+  if(FAILED(probe)&&SUCCEEDED(hr))hr=probe;
  }
+ if(sink&&SUCCEEDED(hr)&&FAILED(sink->firstFailure()))
+  hr=sink->firstFailure();
  if(operation&&sink&&cookie)operation->Unadvise(cookie);
  if(sink)sink->Release();
  report.aborted=anyAborted||canceled(progress)||hr==E_ABORT;
- report.error=report.aborted?ERROR_CANCELLED:code(hr);
+ // Preserve concrete access-denied/read/IO failure when a later batch item
+ // fails. Aborted does not mean the preceding items were rolled back.
+ report.error=canceled(progress)||hr==E_ABORT?ERROR_CANCELLED:
+              FAILED(hr)?code(hr):
+              anyAborted?ERROR_CANCELLED:ERROR_SUCCESS;
  if(report.error==ERROR_SUCCESS)progress.percent.store(100);
  ::CoUninitialize();
  return report;

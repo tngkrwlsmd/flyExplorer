@@ -54,6 +54,24 @@ class FileOperationContracts(unittest.TestCase):
                           "DeleteFileW", "RemoveDirectoryW", "SHFileOperation"):
             self.assertNotIn(forbidden, header + body)
 
+    def test_native_shell_per_item_failures_never_report_aggregate_success(self):
+        core = read("src/base/shell_transfer_core.cpp")
+        fixture = read("tests/winui/m22/m22_transfer_fixture.cpp")
+        self.assertIn("std::atomic<HRESULT> firstFailure_{S_OK}", core)
+        self.assertIn("HRESULT firstFailure() const noexcept", core)
+        for callback in ("PostCopyItem", "PostMoveItem", "PostDeleteItem",
+                         "FinishOperations"):
+            self.assertIn("HRESULT STDMETHODCALLTYPE " + callback, core)
+        self.assertIn("return completed(hr);", core)
+        self.assertIn("sink->firstFailure()", core)
+        self.assertIn("if(operation&&performed)", core)
+        self.assertIn("operation->GetAnyOperationsAborted(&anyAborted)", core)
+        self.assertIn("FAILED(hr)?code(hr)", core)
+        self.assertIn("sharing_violation_copy_reports_failure_and_preserves_source",
+                      fixture)
+        self.assertIn("sharing_violation_move_reports_failure_and_preserves_source",
+                      fixture)
+
     def test_network_copy_move_are_isolated_while_recycle_stays_local_only(self):
         header = read("src/base/shell_transfer_core.h")
         body = read("src/base/shell_transfer_core.cpp")
