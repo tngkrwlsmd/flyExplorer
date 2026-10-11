@@ -633,9 +633,13 @@ bool publishActiveBoundStage(std::wstring const& stage,
    const DWORD size=::GetFinalPathNameByHandleW(
        handle,resolved.data(),static_cast<DWORD>(resolved.size()),
        FILE_NAME_NORMALIZED|VOLUME_NAME_DOS);
-   if(size!=units){
+   // With a null output buffer Windows reports the required capacity
+   // INCLUDING the terminator; a successful read reports characters
+   // EXCLUDING it. Accept only those documented bounded shapes.
+   if(!size||size>=resolved.size()||
+      (size!=units&&size+1!=units)){
 #if defined(FLY_M22_TEST_DIRECTORY_RENAME_LOCK)
-    std::printf("M22_PIN_REJECT=length expectedUnits=%lu actualUnits=%lu\n",
+    std::printf("M22_PIN_REJECT=length capacity=%lu returned=%lu\n",
                 units,size);
 #endif
     return false;
