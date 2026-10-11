@@ -164,6 +164,68 @@ DWORD code(HRESULT value) {
         static_cast<DWORD>(value);
 }
 }
+// Read-only identity evidence for an explicitly supplied stage path.
+// A file ID is NOT proof of who created the stage; deletion is forbidden.
+bool sameStageFile(StageFileIdentity const& a,
+                   StageFileIdentity const& b) noexcept {
+ const bool present=std::any_of(a.fileId.begin(),a.fileId.end(),
+                               [](unsigned char x){return x!=0;});
+ return present&&a.volumeSerial==b.volumeSerial&&a.fileId==b.fileId;
+}
+bool inspectStageFile(std::wstring const& exactPath,
+                      StageFileIdentity& identity) noexcept {
+ identity={};
+ try {
+  if(exactPath.empty()||exactPath.size()>32000||
+     exactPath.find(L'\0')!=std::wstring::npos)return false;
+  const fs::path path(exactPath);
+  if(!path.is_absolute()||path.lexically_normal()!=path||
+     path.native()!=exactPath)return false;
+  const std::wstring leaf=path.filename().native();
+  const std::wstring prefix=L".flyExplorer-copy-";
+  const std::wstring suffix=L".partial";
+  if(leaf.size()!=prefix.size()+38+suffix.size()||
+     leaf.compare(0,prefix.size(),prefix)!=0||
+     leaf.compare(leaf.size()-suffix.size(),suffix.size(),suffix)!=0)
+   return false;
+  const std::wstring token=leaf.substr(prefix.size(),38);
+  GUID parsed{};
+  wchar_t canonical[40]{};
+  if(FAILED(::CLSIDFromString(token.c_str(),&parsed))||
+     !::StringFromGUID2(parsed,canonical,40)||
+     ::CompareStringOrdinal(token.c_str(),-1,canonical,-1,TRUE)!=CSTR_EQUAL)
+   return false;
+  std::wstring driveRoot;
+  if(!transferDriveRoot(exactPath,driveRoot)||
+     ::GetDriveTypeW(driveRoot.c_str())!=DRIVE_FIXED||
+     !safeFilesystemFolder(path.parent_path(),Kind::Copy))return false;
+  // OPEN_REPARSE_POINT prevents following an untrusted stage leaf.
+  // Read attributes only; no DELETE, rename or write access is requested.
+  const HANDLE handle=::CreateFileW(
+      exactPath.c_str(),FILE_READ_ATTRIBUTES,
+      FILE_SHARE_READ|FILE_SHARE_WRITE|FILE_SHARE_DELETE,nullptr,
+      OPEN_EXISTING,FILE_FLAG_OPEN_REPARSE_POINT,nullptr);
+  if(handle==INVALID_HANDLE_VALUE)return false;
+  BY_HANDLE_FILE_INFORMATION attributes{};
+  FILE_ID_INFO file{};
+  const bool inspected=::GetFileInformationByHandle(handle,&attributes)!=FALSE&&
+      ::GetFileInformationByHandleEx(handle,FileIdInfo,&file,sizeof(file))!=FALSE;
+  ::CloseHandle(handle);
+  if(!inspected||attributes.nNumberOfLinks!=1||
+     (attributes.dwFileAttributes&
+         (FILE_ATTRIBUTE_DIRECTORY|FILE_ATTRIBUTE_REPARSE_POINT)))
+   return false;
+  const bool validId=std::any_of(
+      std::begin(file.FileId.Identifier),std::end(file.FileId.Identifier),
+      [](unsigned char byte){return byte!=0;});
+  if(!validId)return false;
+  identity.volumeSerial=file.VolumeSerialNumber;
+  std::copy(std::begin(file.FileId.Identifier),
+            std::end(file.FileId.Identifier),identity.fileId.begin());
+  return true;
+ }catch(...){identity={};return false;}
+}
+
 Report validate(Request const& request) noexcept {
  Report report{};
  try {
