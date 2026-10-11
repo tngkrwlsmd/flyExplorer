@@ -72,6 +72,50 @@ class FileOperationContracts(unittest.TestCase):
         self.assertIn("sharing_violation_move_reports_failure_and_preserves_source",
                       fixture)
 
+    def test_partial_failure_notice_survives_navigation_refresh(self):
+        ui = read("app/winui/MainWindow.xaml.cpp")
+        header = read("app/winui/MainWindow.xaml.h")
+        transfer = read("app/winui/m22_transfers.cpp")
+        self.assertIn("std::wstring mTransferFailureNotice{};", header)
+        self.assertIn("mTransferFailureNotice=detail;", transfer)
+        self.assertIn("mTransferFailureNotice.clear();", transfer)
+        self.assertIn("completed.action==Action::Refresh&&", ui)
+        self.assertIn("!mTransferFailureNotice.empty()", ui)
+        self.assertIn("StatusText().Text(hstring(mTransferFailureNotice));", ui)
+        self.assertIn("mTransferFailureNotice.clear();", ui)
+
+    def test_selected_row_activates_command_pane(self):
+        source = read("app/winui/MainWindow.xaml.cpp")
+        begin = source.index("void MainWindow::OnFileSelectionChanged(")
+        end = source.index("void MainWindow::OnFileSelectionKeyUp(", begin)
+        body = source[begin:end]
+        self.assertIn("if(mPopulatingFileLists)return;", body)
+        self.assertIn("args.AddedItems().Size()!=0", body)
+        self.assertIn("ActiveWindowTab().model.activePane!=side", body)
+        self.assertIn("ActivatePane(side);", body)
+
+    def test_partial_failure_refreshes_visible_touched_folders(self):
+        transfer = read("app/winui/m22_transfers.cpp")
+        fixture = read("tests/winui/m22/m22_transfer_fixture.cpp")
+        start = transfer.index("void MainWindow::OnTransferCompleted(")
+        end = transfer.index("bool MainWindow::CopySelectedToWindowsClipboard(",
+                             start)
+        body = transfer[start:end]
+        self.assertLess(
+            body.index("Disposition::NeedsCollisionConfirmation"),
+            body.index("QueuePidl(side"))
+        self.assertLess(body.index("QueuePidl(side"),
+                        body.index("Disposition::StaleContext"))
+        self.assertLess(body.index("QueuePidl(side"),
+                        body.index("Disposition::Failed"))
+        self.assertIn("completion.touchedFolders.begin()", body)
+        self.assertIn("일부 항목이 처리됐을 수 있습니다.", body)
+        for scenario in (
+            "batch_partial_copy_failure_preserves_both_sources",
+            "batch_partial_move_failure_preserves_remaining_source",
+        ):
+            self.assertIn(scenario, fixture)
+
     def test_network_copy_move_are_isolated_while_recycle_stays_local_only(self):
         header = read("src/base/shell_transfer_core.h")
         body = read("src/base/shell_transfer_core.cpp")

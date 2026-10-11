@@ -694,6 +694,7 @@ namespace winrt::FlyExplorer::implementation
     }
     std::uint64_t MainWindow::QueuePath(int side,std::wstring path)
     {
+        mTransferFailureNotice.clear();
         mSearchController.invalidate();
         auto& model=ActiveWindowTab().model;
         auto& pane=model.panes[side];
@@ -716,6 +717,7 @@ namespace winrt::FlyExplorer::implementation
         fxfile::shellnav::NavigationAction action)
     {
         if(action!=fxfile::shellnav::NavigationAction::Refresh){
+            mTransferFailureNotice.clear();
             mSearchController.invalidate();
             mWorkspaceRestore.reset(side);
         }
@@ -1003,6 +1005,12 @@ namespace winrt::FlyExplorer::implementation
                 completed.action==Action::Refresh?
                 L"폴더 변경 알림을 반영했습니다.":
                 L"폴더를 불러왔습니다.");
+            // Navigation refresh is asynchronous and can replace the
+            // file-operation warning. Reassert it after presenting the
+            // touched folder; do not mistake a partial transfer for success.
+            if(completed.action==Action::Refresh&&
+               !mTransferFailureNotice.empty())
+                StatusText().Text(hstring(mTransferFailureNotice));
             UpdateWatch(completed.side,true);
             ScheduleOwnedShellProviderVisualCaptureIfNeeded(completed.side);
         }else RefreshTabs(completed.side);
@@ -2345,14 +2353,21 @@ namespace winrt::FlyExplorer::implementation
         });
     }
     void MainWindow::OnFileSelectionChanged(IInspectable const& sender,
-        SelectionChangedEventArgs const&)
+        SelectionChangedEventArgs const& args)
     {
         if(mPopulatingFileLists)return;
         auto view=sender.try_as<ListView>();
         if(!view)return;
+        const int side=view==LeftFiles()?0:view==RightFiles()?1:-1;
+        if(side<0)return;
+        // UI Automation and keyboard multi-selection can bypass Tapped.
+        // Newly selecting an item makes that pane the command target.
+        // Clearing selections (including watcher refreshes) never steals focus.
+        if(args.AddedItems().Size()!=0&&
+           ActiveWindowTab().model.activePane!=side)
+            ActivatePane(side);
         UpdateSelectionChrome();
-        if((view==LeftFiles()&&ActiveWindowTab().model.activePane==0)||
-           (view==RightFiles()&&ActiveWindowTab().model.activePane==1))
+        if(ActiveWindowTab().model.activePane==side)
             UpdateFooterSummary();
     }
     void MainWindow::OnFileSelectionKeyUp(IInspectable const&,
