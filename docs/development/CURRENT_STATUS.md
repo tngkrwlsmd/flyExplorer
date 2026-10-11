@@ -1,4 +1,4 @@
-# flyExplorer current status — operations updated 2026-10-10
+# flyExplorer current status — operations updated 2026-10-11
 
 ## Product source of truth
 
@@ -6,6 +6,39 @@ main is the canonical C++/WinRT WinUI 3 product. Product code lives in
 app/winui, UI-independent native code in src/base, tests in tests/winui, and
 bounded orchestration in tools/winui/run_checks.py. The former MFC application
 is retired from the working tree and is recoverable from Git revision cbffb48.
+
+## 2026-10-11 file-transfer integrity checkpoint
+
+PR [#58](https://github.com/tngkrwlsmd/flyExplorer/pull/58) was squash-merged
+as product commit `a7308c1ad35ff7889a822add0dd0803bc92a0f2c`.
+Independent central Windows CI
+[run #38111030089](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38111030089)
+for registered project `desktop-a`, exact SHA and scope `gui` completed
+**SUCCESS**: `release-build=PASS` and `gui-all-Release EXIT=0`
+(`functional-gui=PASS`). This certifies Release and functional GUI
+regression for the merged product revision, not final pixel-visual acceptance.
+
+The preceding exact candidate `048c1b7d7f77e17e5e4ce0f40ad77841266cd7e4`
+passed the owned Windows Release and partial-transfer GUI probe in
+[run #38109058002](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38109058002):
+a two-item Copy committed the first file, an exclusive file lock blocked
+the second, both source byte sequences remained intact, the destination
+pane reflected the committed item, and the partial-failure warning stayed
+visible after asynchronous folder refresh. Related native Release tests
+passed 37/37 in
+[run #38106603515](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38106603515),
+including locked two-item Copy and Move. Final candidate
+`git diff --check` passed in
+[run #38109308352](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38109308352).
+
+The implemented fixes propagate per-item Shell transfer failures, refresh
+visible touched folders on failed/canceled batches, preserve the partial
+failure notice during async navigation refresh, and activate the file pane
+when new items are selected. **Shell IFileOperation batches are not
+transactional.** These checks do not establish all-or-nothing rollback,
+cleanup of partially written destination files on forced process termination,
+permission changes during transfer, or real external USB/SMB disconnection
+recovery. Those remain independent file-integrity gates.
 
 ## Windows ownership and acceptance-evidence baseline (2026-10-10)
 
