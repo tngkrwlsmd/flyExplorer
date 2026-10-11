@@ -224,6 +224,21 @@ class FileOperationContracts(unittest.TestCase):
                           "older"):
             self.assertIn(guarantee, interactive_gui)
         self.assertIn("M22_ISOLATED_HELPER_IPC_UNTRUSTED_STORE", fixture)
+        self.assertNotIn('environment["LOCALAPPDATA"]', interactive_gui)
+        self.assertIn("environment[\"APPDATA\"]", interactive_gui)
+        self.assertIn("REAL_USER_GUI_PRIOR_RECEIPT_CONTENT_NOT_READ", interactive_gui)
+        bridge = read("tools/winui/Invoke-InteractiveReceiptGate.ps1")
+        worker = read("tools/winui/OwnedInteractiveReceiptWorker.ps1")
+        for token in ("ExpectedSha", "New-ScheduledTaskPrincipal",
+                      "-LogonType Interactive", "-RunLevel Limited",
+                      "Unregister-ScheduledTask", "finally",
+                      "Refusing non-owned checkout"):
+            self.assertIn(token, bridge)
+        for token in ("FLY_ALLOW_INTERACTIVE_RECEIPT_GUI",
+                      "FLY_INTERACTIVE_RECEIPT_LOG_ROOT",
+                      "--real-user-shipping-helper-ipc",
+                      "Set-Content"):
+            self.assertIn(token, worker)
         self.assertIn("executeIsolated(request,progress)", fixture)
         self.assertIn("FLY_M22_OWNED_RECEIPT_STORE", transfer)
         self.assertIn("#if defined(FLY_M22_TEST_ISOLATED_RECEIPT_STORE)", transfer)
