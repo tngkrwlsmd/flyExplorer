@@ -12,6 +12,43 @@ namespace fs=std::filesystem;
 int wmain(int count,wchar_t**args){
  setvbuf(stdout,nullptr,_IONBF,0);
  if(count==2&&std::wstring(args[1])==L"--receipt-child-exit")return 0;
+ if(count==5&&std::wstring(args[1])==L"--owned-stage-race-receipt"){
+  // Run only with a disposable test-owned source, destination and
+  // owner-only journal. A second test-owned controller creates the final
+  // target while CopyFileEx is writing the exact stage.
+  const fs::path source(args[2]),destination(args[3]),store(args[4]);
+  if(!isPrivateStageReceiptDirectory(store.native())||
+     !fs::is_regular_file(source)||!fs::is_directory(destination))return 93;
+  Request request{};
+  request.kind=Kind::Copy;
+  request.collision=Collision::Reject;
+  request.sourceParent=source.parent_path().native();
+  request.destination=destination.native();
+  request.sources={source.native()};
+  Progress progress{};
+  progress.receiptDirectory=store.native();
+  const auto outcome=execute(request,progress);
+  bool completedButUnpublished=false;
+  std::size_t originalRecords=0;
+  for(auto const& record:fs::directory_iterator(store)){
+   if(record.path().extension()!=L".bin")continue;
+   ++originalRecords;
+   StageOwnershipReceipt receipt{};
+   if(readStageReceipt(record.path().native(),receipt)&&
+      receipt.targetLeaf==source.filename().native()&&
+      receiptMatchesStage(receipt)&&
+      inspectStageReceiptState(record.path().native())==
+         StageReceiptState::CompletedOnStage)
+    completedButUnpublished=true;
+  }
+  const bool denied=(outcome.error==ERROR_ALREADY_EXISTS||
+                     outcome.error==ERROR_FILE_EXISTS);
+  const bool pass=denied&&originalRecords==1&&completedButUnpublished;
+  std::printf("M22_BOUND_PUBLISH_LATE_TARGET_COLLISION=%s error=%lu journal=%d\n",
+              pass?"PASS":"FAIL",outcome.error,
+              int(completedButUnpublished));
+  return pass?0:94;
+ }
  if(count==5&&std::wstring(args[1])==L"--owned-helper-ipc-untrusted"){
   // This intentionally inherited ACL folder must never be accepted by the
   // test-only helper. The child exits without touching the source or target.
