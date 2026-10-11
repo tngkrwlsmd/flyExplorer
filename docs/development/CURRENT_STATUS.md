@@ -7,6 +7,59 @@ app/winui, UI-independent native code in src/base, tests in tests/winui, and
 bounded orchestration in tools/winui/run_checks.py. The former MFC application
 is retired from the working tree and is recoverable from Git revision cbffb48.
 
+## 2026-10-11 restricted ancestor and forced-kill restart-reader acceptance — PASS
+
+New test-only M22 CLI `--owned-denied-ancestor-copy` exercises
+`execute` with the *current* versioned private receipt journal while a
+newly created test-owned destination **ancestor** denies
+`FILE_LIST_DIRECTORY` to the calling SYSTEM SID, but the exact child
+still permits stage creation. The independent
+[Windows run #38139468890](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38139468890)
+first passed the focused source contract and Release native M22
+compilation on exact SHA
+`8b5a42d443ef7f78ae437fef652f0325987d63a1`.
+Its later PowerShell test command had a path-concatenation **syntax
+error before any ACL was altered**. That is a test runner defect, not
+an observed product failure. The successful follow-up
+[Windows #38139610615](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38139610615)
+reused this exact already compiled binary without rebuilding and passed:
+
+- `M22_RESTRICTED_ANCESTOR_FAIL_CLOSED=PASS error=5 stage=1 records=1`:
+  copy completed into its test-owned stage but `ERROR_ACCESS_DENIED`
+  prevented publication; exactly one valid private receipt pointed to
+  the intact stage with `CompletedOnStage`.
+- Original test-owned source SHA-256 unchanged; final target absent;
+  ancestor's **test-only** ACL deny entry restored in `finally`.
+  No profile/user file touched or automatic cleanup attempted.
+
+On the **same exact SHA**,
+[Windows #38139795233](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38139795233)
+executed a new disposable 512 MiB staged Copy worker process and
+force-killed **only its captured process handle** after one partial
+stage had at least 4 MiB of copied content and exactly one receipt
+already existed. It then verified source and unrelated owned
+sentinel SHA-256 unchanged and no published target. A **fresh
+independent verifier process** returned:
+
+- `M22_KILLED_WORKER_RECEIPT_MATCH=PASS`: the saved exact stage path
+  and OS FileIdInfo still matched the owned immutable record;
+- `CREATOR_NOT_RUNNING=PASS`, `STATE_PENDING=PASS`: creator was no
+  longer running and receipt phase remained
+  `CopyingOrInterrupted`, not a fabricated completed copy;
+- `M22_RESTART_READONLY_RECEIPT_STATE=PASS`: exact journal
+  classification was repeated across a new process boundary,
+  without attempting recovery or any stage deletion.
+
+**Acceptance limit:** this covers a forcibly killed Copy *worker*
+and independent reader process restart, **not** machine reboot,
+hard power-cut, actual disk flush guarantees, malicious same-user
+record modification, or historical stage pruning. The production
+`src/base` and `app/winui` code is unchanged from the previously
+verified canonical Release/GUI implementation. Do not merge PR #63,
+auto-clean orphan stages, simulate power loss or restart the shared
+VM until an independently authorized, disposable VM/disk experiment
+and rollback procedure are available.
+
 ## 2026-10-11 real logged-in-user WinUI + shipping Known Folder acceptance — PASS
 
 **Accepted on exact source `b198565f44530641ed46d99eb8a41af28b6ee333`.**
