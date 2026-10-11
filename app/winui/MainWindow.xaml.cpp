@@ -694,6 +694,7 @@ namespace winrt::FlyExplorer::implementation
     }
     std::uint64_t MainWindow::QueuePath(int side,std::wstring path)
     {
+        mTransferFailureNotice.clear();
         mSearchController.invalidate();
         auto& model=ActiveWindowTab().model;
         auto& pane=model.panes[side];
@@ -716,6 +717,7 @@ namespace winrt::FlyExplorer::implementation
         fxfile::shellnav::NavigationAction action)
     {
         if(action!=fxfile::shellnav::NavigationAction::Refresh){
+            mTransferFailureNotice.clear();
             mSearchController.invalidate();
             mWorkspaceRestore.reset(side);
         }
