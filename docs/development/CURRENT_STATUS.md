@@ -7,11 +7,12 @@ app/winui, UI-independent native code in src/base, tests in tests/winui, and
 bounded orchestration in tools/winui/run_checks.py. The former MFC application
 is retired from the working tree and is recoverable from Git revision cbffb48.
 
-## 2026-10-11 isolated durable stage receipt building block
+## 2026-10-11 isolated stage receipt and creator/ACL safety checks
 
-Source candidate `30b80de3e75cd759ed4a3f82d492b539f0f42d4c`
-adds `src/base/stage_receipt_core.{h,cpp}`, a **standalone**
+PR #63 adds `src/base/stage_receipt_core.{h,cpp}`, a **standalone**
 write-through, flushed, versioned v1 receipt writer/reader/matcher.
+The exact storage primitive first passed on source candidate
+`30b80de3e75cd759ed4a3f82d492b539f0f42d4c`.
 The API records the exact fixed-drive stage path, intended final leaf,
 Windows file identity, process ID and process start time in a caller-provided
 receipt directory. It refuses overwriting an existing receipt, changed file
@@ -19,15 +20,26 @@ identity, invalid/corrupt records and reparse/hardlink receipt files.
 The byte checksum is for corruption detection, not authentication.
 
 On test-owned Windows [Remote Shell #38122600482](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38122600482),
-the exact candidate passed `git diff --check` and the Release native M22
-48/48 checks, including four new receipt-specific scenarios.
-Source-only Python contracts and full WinUI Release/GUI acceptance were
-not run for this candidate.
+the original candidate passed Release M22 48/48.
+Follow-up exact source `050ab1a85d52859fcdd7f5ad92e18f5a96d519cb`
+passed `git diff --check` and Release native M22 **52/52** in
+[Remote Shell #38125429517](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38125429517).
+Four additional cases cover rejection of inherited/unspecified directory
+ACLs, creation of owner-only protected DACLs without resetting existing
+folders, exact live-creator PID+process-start comparison, and a real exited
+fixture child. Unknown/inaccessible/reused PID never counts as verified exit.
+A subsequent project-template correction marks the standalone receipt source
+as `PrecompiledHeader=NotUsing`; it has not received full WinUI validation.
+The Python source-contract, product Release and full GUI gates are still open.
 
 **No automatic cleanup and no production receipt creation:** this storage
-primitive is not wired into `copyStagedFiles`. Caller-provided receipt
-directory security and actual transfer-worker provenance are not established.
-No record authorizes publishing, deleting or restoring a user file.
+primitive is not wired into `copyStagedFiles`. The standalone directory
+helper can provision an *absent* exact owner-only protected store and
+refuses an existing folder; receipt read/write fail on an untrusted store.
+This is not a production store-location or lifecycle policy. Actual
+transfer-worker receipt provenance, worker handoff and exact-handle binding
+are not established. A creator-state result, even Exited, does not authorize
+publishing, deleting or restoring a user file.
 See `docs/development/STAGED_COPY_RECOVERY.md`.
 
 ## 2026-10-11 exact staged Copy file-ID read-only validation
