@@ -12,8 +12,12 @@ arbitrary filesystem folders.
 For fixed-drive regular-file Copy with `Collision::Reject`, the helper writes
 `.flyExplorer-copy-{GUID}.partial` into the destination directory. The
 requested filename is published only after a successful full `CopyFileExW`
-and only with a no-replace same-directory `MoveFileExW`. For non-journaled operations, normal error or cancellation retains the
-pre-existing best-effort exact-stage deletion. When protected journaling
+using an explicitly **no-replace** same-directory operation.
+The legacy non-journalled path uses `MoveFileExW`; the private-receipt
+path now pins the source file HANDLE and uses Win32 `FileRenameInfo`
+with an absolute destination name. For non-journalled operations,
+normal error or cancellation retains the pre-existing best-effort
+exact-stage deletion. When protected journaling
 is enabled, failed/cancelled stages instead remain untouched for human
 inspection; no automatic orphan scan or deletion is enabled.
 A force-killed process can strand the stage, with or without a receipt. **The stage filename pattern,
@@ -85,10 +89,11 @@ the current user's access boundary. The checksum is FNV corruption
 detection, **not** malicious-tamper authentication. An attacker running
 under the same Windows user can affect this storage; changes to the
 destination folder's path or ACL after checks can also race checks.
-The same-directory publication remains based on `MoveFileExW`, not on
-an exclusively pinned rename-by-handle. The newer append-only transition
-records described below distinguish completion and publication, but
-they do not fsync copied bytes or authenticate stage content. A force kill before
+The original staged Copy path used `MoveFileExW`; the journalled path
+now uses a source-file-ID-verified handle through the rename as described
+below. The newer append-only transition records distinguish completion
+and publication, but they do not fsync copied bytes, authenticate stage
+content or eliminate destination pathname resolution races. A force kill before
 the first callback can leave an unrecorded stage; no code may infer its
 provenance based on the GUID name or search-and-delete such files.
 
@@ -145,8 +150,9 @@ is reopened with read-only/no-reparse semantics, tied to its actual
 file ID and journaled before completion/publication.
 
 **Publication:** after the complete stage passes identity checks, the
-helper still uses the existing same-directory `MoveFileExW` no-replace
-rename. A successful rename is followed by read-only revalidation that
+helper now uses the no-replace source-handle `FileRenameInfo` operation
+for journalled active copies (legacy non-journalled copies remain on
+`MoveFileExW`). A successful rename is followed by read-only revalidation that
 the target's FileIdInfo matches the saved stage and the old stage pathname
 is absent; only then is the `.published` marker flushed. When marker
 writing or verification fails after the rename, the final file is **not
@@ -226,6 +232,50 @@ No automatic cleanup, final-name restoration or auto-reconciliation
 authorization is implied. Production GUI integration, user-profile
 provisioning, publisher races, true power-loss durability and an
 explicitly consented recovery UI remain open.
+
+## Source HANDLE-verified publication — absolute target remains a race
+
+The newest draft PR #63 active-worker implementation uses an exact,
+still-open stage file HANDLE with `DELETE|FILE_READ_ATTRIBUTES`,
+`FILE_FLAG_OPEN_REPARSE_POINT`, one hard link, and an exact OS
+`FileIdInfo` match to the previously flushed ownership receipt. It
+also opens the destination directory and confirms the resolved location
+and expected volume. The critical source file **object** is held through
+`SetFileInformationByHandle(FileRenameInfo)` with
+`ReplaceIfExists=FALSE` and an explicit no-overwrite requirement.
+This function is part of the synchronous active transfer only: no
+published/complete/expired receipt allows a post-crash file operation.
+
+Windows' documented `FILE_RENAME_INFO` supports describing an output
+relative to `RootDirectory`, but the VM's Win32 API rejected that
+combination with `ERROR_INVALID_PARAMETER (87)` on the initial attempt.
+We instead use `RootDirectory=NULL` and a full, normalized destination
+pathname. This is a supported Win32 call, but **it does not pin the
+destination path to the opened directory HANDLE**. Path swapping,
+ancestor renames and untrusted reparse races during absolute-name
+resolution remain open. A source HANDLE match prevents renaming the
+wrong source file; it does **not** certify where a concurrently changed
+destination path will resolve. Do not market this as fully race-safe.
+
+[Windows Remote Shell #38131991165](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38131991165)
+on exact `10204fcab9b1e82c52d9377bbef74fe60e33cdd1`:
+Release native M22 **61/61** passed after the change. A test-owned
+512 MiB copy was still writing its stage when an unrelated same-name
+target was created; after `FileRenameInfo` returned
+`ERROR_ALREADY_EXISTS (183)`, the source SHA-256 and original target
+bytes remained identical, and the complete but unpublished stage retained
+its exact receipt. No orphan cleanup was run.
+
+[Windows Remote Shell #38132115933](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38132115933)
+on the **same source** passed focused source contracts **15/15**,
+actual child-helper IPC for a Korean-named 8 MiB source and an empty
+source (both bytes and `PublishedVerified` receipt state matched),
+separate IPC rejection of an inherited-ACL journal store (error 31),
+and the canonical WinUI `build.bat Release` with the shipping Shell
+helper present. All IPC test records were confined to disposable owned
+folders with a special **test-only** helper build. Interactive user
+Known Folder, actual GUI acceptance, power loss, historical record
+retention and full destination path-race protection are **not tested**.
 
 ## Minimum provenance before implementing production cleanup
 
