@@ -181,6 +181,7 @@ class FileOperationContracts(unittest.TestCase):
         self.assertIn("PhaseRead::Invalid", core)
         self.assertIn("--owned-stage-kill-receipt", fixture)
         self.assertIn("--receipt-verify-killed", fixture)
+        self.assertIn("--receipt-inspect-state", fixture)
         self.assertIn("--receipt-create-private", fixture)
         for scenario in ("receipt_roundtrip_flush_and_exact_stage_identity",
                          "receipt_create_new_never_overwrites_existing",
