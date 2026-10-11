@@ -2345,14 +2345,21 @@ namespace winrt::FlyExplorer::implementation
         });
     }
     void MainWindow::OnFileSelectionChanged(IInspectable const& sender,
-        SelectionChangedEventArgs const&)
+        SelectionChangedEventArgs const& args)
     {
         if(mPopulatingFileLists)return;
         auto view=sender.try_as<ListView>();
         if(!view)return;
+        const int side=view==LeftFiles()?0:view==RightFiles()?1:-1;
+        if(side<0)return;
+        // UI Automation and keyboard multi-selection can bypass Tapped.
+        // Newly selecting an item makes that pane the command target.
+        // Clearing selections (including watcher refreshes) never steals focus.
+        if(args.AddedItems().Size()!=0&&
+           ActiveWindowTab().model.activePane!=side)
+            ActivatePane(side);
         UpdateSelectionChrome();
-        if((view==LeftFiles()&&ActiveWindowTab().model.activePane==0)||
-           (view==RightFiles()&&ActiveWindowTab().model.activePane==1))
+        if(ActiveWindowTab().model.activePane==side)
             UpdateFooterSummary();
     }
     void MainWindow::OnFileSelectionKeyUp(IInspectable const&,
