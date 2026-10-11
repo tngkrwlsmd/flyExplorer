@@ -216,8 +216,25 @@ def main(config="Release"):
         baseline_windows = {
             x.handle for x in Desktop(backend="uia").windows()
         }
-        selected.click_input()
-        print("OWNED_MULTI_PROPERTIES_VERB_CLICKED", True, flush=True)
+        # Clicking a native #32768 UIA child can dismiss the popup as
+        # though the click landed outside. Invoke the exact known
+        # Properties command via keyboard only when it is unambiguously
+        # the final enabled menu item in its owned popup.
+        menu_entries = [
+            x for root in roots for x in root.descendants(control_type="MenuItem")
+            if x.is_visible() and x.is_enabled() and x.rectangle().height() >= 7
+        ]
+        menu_entries.sort(key=lambda x: (x.rectangle().top, x.rectangle().left))
+        property_is_last = (
+            bool(menu_entries) and owned_name(menu_entries[-1].window_text())
+            and menu_entries[-1].rectangle().top == bounds.top
+        )
+        print("OWNED_PROPERTIES_VERIFIED_LAST_MENU_ENTRY",
+              property_is_last, flush=True)
+        assert property_is_last, "Cannot safely keyboard-invoke nonfinal Properties verb"
+        assert user.GetForegroundWindow() == popup
+        keyboard.send_keys("{END}{ENTER}", pause=.12)
+        print("OWNED_MULTI_PROPERTIES_VERB_SELECTED_BY_KEYBOARD", True, flush=True)
 
         def owned_dialog():
             nonlocal dialog_hwnd, dialog_pid
@@ -270,6 +287,16 @@ def main(config="Release"):
                     rc = helper_process.wait(timeout=0)
                 except psutil.Error:
                     pass
+            new_generic = 0
+            for item in Desktop(backend="uia").windows():
+                try:
+                    if item.handle not in baseline_windows and re.search(
+                        r"(properties|속성)", item.window_text(), re.IGNORECASE):
+                        new_generic += 1
+                except Exception:
+                    pass
+            print("OWNED_PROPERTIES_NEW_GENERIC_WINDOWS_COUNT",
+                  new_generic, flush=True)
             print("OWNED_PROPERTIES_HELPER_RUNNING", running, flush=True)
             print("OWNED_PROPERTIES_HELPER_EXIT_CODE", rc, flush=True)
             if app.poll() is None:
