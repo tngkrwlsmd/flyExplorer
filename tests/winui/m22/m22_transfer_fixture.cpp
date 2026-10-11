@@ -2,10 +2,57 @@
 #include <filesystem>
 #include <fstream>
 #include <cstdio>
+#include <thread>
+#include <chrono>
 using namespace fxfile::shelltransfer;
 namespace fs=std::filesystem;
 int wmain(int count,wchar_t**args){
  setvbuf(stdout,nullptr,_IONBF,0);
+ if(count==4&&std::wstring(args[1])==L"--owned-stage-cancel"){
+  // Cancel only after transfer progress is observed on a disposable file.
+  Request request{};
+  request.kind=Kind::Copy;
+  const fs::path source(args[2]),destination(args[3]);
+  request.sourceParent=source.parent_path().native();
+  request.destination=destination.native();
+  request.sources={source.native()};
+  Progress progress{};
+  std::atomic_bool done{false},triggered{false};
+  std::thread canceler([&]{
+   while(!done.load(std::memory_order_acquire)){
+    const auto percent=progress.percent.load(std::memory_order_relaxed);
+    if(percent>0&&percent<100){
+     triggered.store(true,std::memory_order_relaxed);
+     progress.cancel.store(true,std::memory_order_relaxed);
+     break;
+    }
+    std::this_thread::sleep_for(std::chrono::milliseconds(1));
+   }
+  });
+  const auto outcome=execute(request,progress);
+  done.store(true,std::memory_order_release);
+  canceler.join();
+  if(triggered.load()&&outcome.error==ERROR_CANCELLED&&
+     outcome.aborted&&!fs::exists(destination/source.filename())){
+   std::puts("M22_OWNED_STAGED_MID_COPY_CANCEL=PASS");
+   return 0;
+  }
+  std::printf("M22_OWNED_STAGED_MID_COPY_CANCEL=FAIL error=%lu cancel=%d done=%u\n",
+      outcome.error,int(triggered.load()),progress.percent.load());
+  return 24;
+ }
+ if(count==4&&std::wstring(args[1])==L"--owned-stage-kill"){
+  // Only invoked by test_native.py with its disposable source/destination.
+  Request request{};
+  request.kind=Kind::Copy;
+  const fs::path source(args[2]),destination(args[3]);
+  request.sourceParent=source.parent_path().native();
+  request.destination=destination.native();
+  request.sources={source.native()};
+  Progress progress{};
+  const auto outcome=execute(request,progress);
+  return outcome.error==ERROR_SUCCESS?0:23;
+ }
  if(count!=2&&count!=3)return 2;
  const fs::path root(args[1]),left=root/L"왼쪽",right=root/L"오른쪽";
  fs::create_directory(left);fs::create_directory(right);
@@ -58,6 +105,12 @@ int wmain(int count,wchar_t**args){
  test(done.error==0&&get(right/L"자료.txt")=="old"&&
       get(left/L"자료.txt")=="old","actual_ifileoperation_korean_copy");
  test(progress.percent==100,"copy_progress_complete");
+ bool noPartial=true;
+ for(auto const& item:fs::directory_iterator(right)){
+  if(item.path().filename().native().rfind(L".flyExplorer-copy-",0)==0)
+   noPartial=false;
+ }
+ test(noPartial,"committed_local_copy_has_no_partial_stage");
  test(validate(r).error==ERROR_ALREADY_EXISTS&&
       validate(r).collisions.size()==1,"detect_collision_without_mutation");
  test(execute(r,progress).error==ERROR_ALREADY_EXISTS,

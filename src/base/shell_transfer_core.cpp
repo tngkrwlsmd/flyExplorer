@@ -443,6 +443,115 @@ Report verifyPicturesLibraryCopyIn(
 }
 } // namespace
 
+namespace {
+// Local fixed-disk regular files are copied to a unique sibling first.
+// Publishing the filename happens only after CopyFileEx reports completion.
+// A terminated worker may leave an explicitly named orphan stage; it must
+// never publish a truncated file under the destination's requested name.
+// Recycle, folder/provider, remote, removable, Move and KeepBoth retain their
+// existing Shell paths and do NOT inherit an atomicity claim.
+struct StagedCopyProgress final {
+ Progress& progress;
+ std::size_t index=0;
+ std::size_t count=1;
+};
+DWORD CALLBACK onStagedCopyProgress(
+ LARGE_INTEGER total,LARGE_INTEGER transferred,LARGE_INTEGER,
+ LARGE_INTEGER,DWORD,DWORD,HANDLE,HANDLE,LPVOID state) noexcept{
+ auto& value=*static_cast<StagedCopyProgress*>(state);
+ if(value.progress.cancel.load(std::memory_order_relaxed))
+  return PROGRESS_CANCEL;
+ const auto part=total.QuadPart>0?
+   static_cast<std::uint64_t>(
+     (static_cast<long double>(transferred.QuadPart)*100)/
+      static_cast<long double>(total.QuadPart)):0;
+ const auto percent=static_cast<std::uint32_t>(
+   (value.index*100+(std::min)(part,std::uint64_t{100}))/value.count);
+ value.progress.percent.store(percent,std::memory_order_relaxed);
+ return PROGRESS_CONTINUE;
+}
+bool stageEligible(Request const& task) noexcept{
+ if(task.kind!=Kind::Copy||task.collision!=Collision::Reject||
+    task.sourceMode!=SourceMode::Filesystem||
+    task.destinationMode!=DestinationMode::Filesystem)return false;
+ try{
+  std::wstring sourceRoot,destRoot;
+  if(!transferDriveRoot(task.sourceParent,sourceRoot)||
+     !transferDriveRoot(task.destination,destRoot)||
+     ::GetDriveTypeW(sourceRoot.c_str())!=DRIVE_FIXED||
+     ::GetDriveTypeW(destRoot.c_str())!=DRIVE_FIXED)return false;
+  for(auto const& path:task.sources){
+   const auto attrs=::GetFileAttributesW(path.c_str());
+   if(attrs==INVALID_FILE_ATTRIBUTES||
+      (attrs&(FILE_ATTRIBUTE_DIRECTORY|FILE_ATTRIBUTE_REPARSE_POINT)))
+    return false;
+  }
+  return true;
+ }catch(...){return false;}
+}
+Report copyStagedFiles(Request const& task,Progress& progress,
+                       Report report) noexcept{
+ try{
+  const auto dest=fs::path(task.destination);
+  for(std::size_t i=0;i<task.sources.size();++i){
+   if(canceled(progress)){
+    report.error=ERROR_CANCELLED;report.aborted=true;return report;
+   }
+   GUID guid{};
+   if(FAILED(::CoCreateGuid(&guid))){
+    report.error=ERROR_GEN_FAILURE;return report;
+   }
+   wchar_t guidText[40]{};
+   if(!::StringFromGUID2(guid,guidText,40)){
+    report.error=ERROR_GEN_FAILURE;return report;
+   }
+   const auto stage=dest/(std::wstring(L".flyExplorer-copy-")+
+                          guidText+L".partial");
+   const auto target=dest/fs::path(task.sources[i]).filename();
+   if(stage.native().size()>32000||target.native().size()>32000){
+    report.error=ERROR_FILENAME_EXCED_RANGE;return report;
+   }
+   StagedCopyProgress callback{progress,i,task.sources.size()};
+   // FAIL_IF_EXISTS avoids silently reusing a stale or unowned stage.
+   const BOOL copied=::CopyFileExW(
+       task.sources[i].c_str(),stage.c_str(),
+       &onStagedCopyProgress,&callback,nullptr,COPY_FILE_FAIL_IF_EXISTS);
+   const DWORD copyError=copied?ERROR_SUCCESS: ::GetLastError();
+   const bool wasCanceled=canceled(progress)||
+       copyError==ERROR_REQUEST_ABORTED||
+       copyError==ERROR_OPERATION_ABORTED;
+   // Only publish a completed stage and only if cancellation did not
+   // arrive before the atomic same-directory rename.
+   const BOOL published=copied&&!wasCanceled?
+       ::MoveFileExW(stage.c_str(),target.c_str(),MOVEFILE_WRITE_THROUGH):
+       FALSE;
+   const DWORD publishError=published?ERROR_SUCCESS:
+       copied&&!wasCanceled?::GetLastError():copyError;
+   if(!published){
+    // The path is exact-owned for this request. Never delete the target,
+    // even if the partial stage cleanup fails.
+    DWORD attrs=::GetFileAttributesW(stage.c_str());
+    if(attrs!=INVALID_FILE_ATTRIBUTES){
+     if(attrs&FILE_ATTRIBUTE_READONLY)
+      ::SetFileAttributesW(stage.c_str(),attrs&~FILE_ATTRIBUTE_READONLY);
+     ::DeleteFileW(stage.c_str());
+    }
+    report.error=wasCanceled?ERROR_CANCELLED:publishError;
+    report.aborted=wasCanceled;
+    return report;
+   }
+   progress.percent.store(static_cast<std::uint32_t>(
+      ((i+1)*100)/task.sources.size()),std::memory_order_relaxed);
+  }
+  report.error=ERROR_SUCCESS;
+  return report;
+ }catch(...){
+  report.error=ERROR_INVALID_PARAMETER;
+  return report;
+ }
+}
+} // namespace
+
 Report execute(Request const& task,Progress& progress) noexcept{
  Report report=validate(task);
  if(report.error!=ERROR_SUCCESS)return report;
@@ -450,6 +559,11 @@ Report execute(Request const& task,Progress& progress) noexcept{
  const HRESULT initialized=::CoInitializeEx(nullptr,
           COINIT_APARTMENTTHREADED|COINIT_DISABLE_OLE1DDE);
  if(FAILED(initialized)){report.error=code(initialized);return report;}
+ if(stageEligible(task)){
+  report=copyStagedFiles(task,progress,std::move(report));
+  ::CoUninitialize();
+  return report;
+ }
  if(task.sourceMode==SourceMode::ShellProvider){
   report=validateProviderCopy(task);
   if(report.error!=ERROR_SUCCESS){
