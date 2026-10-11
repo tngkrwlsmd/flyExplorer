@@ -212,6 +212,17 @@ class FileOperationContracts(unittest.TestCase):
         self.assertIn("--receipt-inspect-state", fixture)
         self.assertIn("--owned-helper-ipc-copy", fixture)
         self.assertIn("--owned-helper-ipc-untrusted", fixture)
+        self.assertIn("--real-user-shipping-helper-ipc", fixture)
+        self.assertIn("SHGetKnownFolderPath(FOLDERID_LocalAppData", fixture)
+        interactive_gui = read("tests/winui/test_owned_user_receipt_gui.py")
+        for guarantee in ("FLY_ALLOW_INTERACTIVE_RECEIPT_GUI",
+                          "SHGetKnownFolderPath",
+                          "REAL_USER_GUI_SHIPPING_KNOWNFOLDER_RECEIPT=PASS",
+                          "--receipt-inspect-state",
+                          "S-1-5-18",
+                          "PostMessageW",
+                          "older"):
+            self.assertIn(guarantee, interactive_gui)
         self.assertIn("M22_ISOLATED_HELPER_IPC_UNTRUSTED_STORE", fixture)
         self.assertIn("executeIsolated(request,progress)", fixture)
         self.assertIn("FLY_M22_OWNED_RECEIPT_STORE", transfer)
