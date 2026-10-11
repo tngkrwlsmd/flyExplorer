@@ -585,8 +585,11 @@ bool publishActiveBoundStage(std::wstring const& stage,
      proof.targetLeaf!=destination.filename().native()||
      !safeFilesystemFolder(source.parent_path(),Kind::Copy))
    return false;
-  // A directory HANDLE, rather than a destination string resolved during
-  // the rename, prevents a swapped parent directory from redirecting it.
+  // Inspect the exact destination directory and keep it open for the
+  // duration of the rename. Win32 FileRenameInfo on supported Windows
+  // builds rejects a non-null RootDirectory (ERROR_INVALID_PARAMETER);
+  // the subsequent absolute path remains a separately acknowledged race
+  // boundary, so it is NOT a directory-handle-anchored rename.
   const HANDLE directory=::CreateFileW(
       source.parent_path().c_str(),FILE_READ_ATTRIBUTES,
       FILE_SHARE_READ|FILE_SHARE_WRITE|FILE_SHARE_DELETE,nullptr,
@@ -644,15 +647,16 @@ bool publishActiveBoundStage(std::wstring const& stage,
   }
   // path::native() returns a reference owned by its path. filename()
   // creates a temporary path, so never bind a reference to its native().
-  const std::wstring leaf=destination.filename().native();
+  const std::wstring exactTarget=destination.native();
   const std::size_t size=sizeof(FILE_RENAME_INFO)+
-                         leaf.size()*sizeof(wchar_t);
+                         exactTarget.size()*sizeof(wchar_t);
   std::vector<unsigned char> payload(size);
   auto* rename=reinterpret_cast<FILE_RENAME_INFO*>(payload.data());
   rename->ReplaceIfExists=FALSE;
-  rename->RootDirectory=directory;
-  rename->FileNameLength=static_cast<DWORD>(leaf.size()*sizeof(wchar_t));
-  std::memcpy(rename->FileName,leaf.data(),rename->FileNameLength);
+  rename->RootDirectory=nullptr;
+  rename->FileNameLength=static_cast<DWORD>(
+      exactTarget.size()*sizeof(wchar_t));
+  std::memcpy(rename->FileName,exactTarget.data(),rename->FileNameLength);
   const bool published=::SetFileInformationByHandle(
       active,FileRenameInfo,rename,static_cast<DWORD>(payload.size()))!=FALSE;
   error=published?ERROR_SUCCESS: ::GetLastError();
@@ -734,8 +738,9 @@ Report copyStagedFiles(Request const& task,Progress& progress,
    BOOL published=FALSE;
    if(copied&&!wasCanceled&&journalReady&&copyRecorded){
     if(callback.receiptRequired){
-     // Use the verified, still-open file object and directory, never
-     // re-resolve an untrusted source pathname inside MoveFileExW.
+     // Pin the verified source file HANDLE through publication. Win32
+     // resolves the full destination pathname; reparse/parent races are
+     // still open and must not be mistaken for an authenticated target.
      published=publishActiveBoundStage(
          stage.native(),target.native(),proof,renameError)?TRUE:FALSE;
     }else{
