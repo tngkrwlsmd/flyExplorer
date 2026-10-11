@@ -17,7 +17,7 @@ try:
  env={**os.environ,"LOCALAPPDATA":str(own/"local"),"APPDATA":str(own/"appdata"),
       "TEMP":str(own),"TMP":str(own)}
  args=[str(exe),str(own)]
- expected=38
+ expected=40
  unc_used=False
  if os.environ.get("FLY_M22_LOOPBACK_ADMIN_SHARE")=="YES":
   drive=own.drive.rstrip(":").lower()
@@ -30,7 +30,7 @@ try:
         stderr=subprocess.DEVNULL,timeout=6,check=False)
     if probe.returncode==0:
      args.append(unc_root)
-     expected=42
+     expected=44
      unc_used=True
     else:
      print("M22_NATIVE_LOOPBACK_UNC=NOT_RUN_ADMIN_SHARE_UNAVAILABLE",
@@ -76,6 +76,12 @@ try:
  print("M22_REAL_STAGED_MID_COPY_CANCEL_SOURCE_UNCHANGED",True,flush=True)
  # Only terminate this Popen-owned fixture; never kill Explorer, the app,
  # another shell helper, or any unrelated user process.
+ # A same-named but unrelated partial must remain untouched even when
+ # an exact stage from a killed test-owned transfer is reclaimed.
+ kill_sentinel=big_dst/".flyExplorer-copy-{00000000-0000-0000-0000-000000000000}.partial"
+ kill_sentinel.write_bytes(b"unrelated-partial-data-must-survive")
+ kill_stage=None
+ kill_identity=None
  kill_proc=subprocess.Popen(
      [str(exe),"--owned-stage-kill",str(source),str(big_dst)],
      cwd=exe.parent,env=env,stdin=subprocess.DEVNULL,
@@ -84,8 +90,15 @@ try:
  try:
   deadline=time.monotonic()+18
   while time.monotonic()<deadline:
-   stages=list(big_dst.glob(".flyExplorer-copy-*.partial"))
+   stages=[p for p in big_dst.glob(".flyExplorer-copy-*.partial")
+           if p!=kill_sentinel]
    if stages and kill_proc.poll() is None:
+    st=stages[0].lstat()
+    if st.st_ino==0 or st.st_size<4*1024*1024:
+     time.sleep(.003)
+     continue
+    kill_stage=stages[0]
+    kill_identity=(st.st_dev,st.st_ino)
     kill_proc.kill()
     kill_proc.wait(timeout=5)
     observed=True
@@ -102,6 +115,24 @@ try:
  assert source.stat().st_size==original_size and digest(source)==original_digest
  print("M22_REAL_STAGED_KILLED_COPY_FINAL_TARGET_ABSENT",True,flush=True)
  print("M22_REAL_STAGED_KILLED_COPY_SOURCE_BYTES_UNCHANGED",True,flush=True)
+ # This is an explicit receipt-scoped test cleanup, NOT a production
+ # orphan sweep. A durable production receipt is not yet implemented.
+ # Verify the exact pre-kill path and filesystem file ID; never delete
+ # an unknown, renamed or reparse-point stage based only on its name.
+ assert kill_stage is not None and kill_identity is not None
+ assert kill_stage.parent==big_dst and not kill_stage.is_symlink()
+ assert kill_stage.name.startswith(".flyExplorer-copy-{")
+ assert kill_stage.name.endswith("}.partial")
+ assert kill_stage.exists(),("Interrupted stage unexpectedly disappeared",kill_stage)
+ recovered=kill_stage.lstat()
+ assert recovered.st_nlink==1
+ assert (recovered.st_dev,recovered.st_ino)==kill_identity
+ kill_stage.unlink()
+ assert not kill_stage.exists()
+ assert kill_sentinel.read_bytes()==b"unrelated-partial-data-must-survive"
+ assert list(big_dst.glob(".flyExplorer-copy-*.partial"))==[kill_sentinel]
+ print("M22_KILLED_STAGE_EXACT_IDENTITY_RECLAIM_TEST_OWNED_ONLY",True,flush=True)
+ print("M22_KILLED_STAGE_UNRELATED_PARTIAL_UNTOUCHED",True,flush=True)
  # A forced kill can strand a .partial file. Reclaim only the unique owned
  # workspace in finally; do not delete application/user filesystem files.
  # Test a publication race on another uniquely owned destination.
@@ -167,6 +198,14 @@ try:
       [str(exe),"--owned-stage-deny",str(source),str(denied_dst)],
       cwd=exe.parent,env=env,capture_output=True,text=True,
       errors="replace",timeout=25,check=False)
+  # Move goes through IFileOperation rather than the staged Copy path.
+  # Denying creation in a disposable destination must leave the source.
+  move_source=big_src/"acl-denied-move.txt"
+  move_source.write_bytes(b"owned-move-source-must-survive")
+  move_denied=subprocess.run(
+      [str(exe),"--owned-move-deny",str(move_source),str(denied_dst)],
+      cwd=exe.parent,env=env,capture_output=True,text=True,
+      errors="replace",timeout=25,check=False)
  finally:
   acl_undo=subprocess.run(
       ["icacls",str(denied_dst),"/remove:d",sid],
@@ -176,11 +215,84 @@ try:
  assert denied.returncode==0,(denied.returncode,
                                denied.stdout,denied.stderr)
  assert "M22_OWNED_STAGE_DENIED_DESTINATION=PASS" in denied.stdout
+ assert move_denied.returncode==0,(move_denied.returncode,
+                                       move_denied.stdout,move_denied.stderr)
+ assert "M22_OWNED_MOVE_DENIED=PASS" in move_denied.stdout
+ assert move_source.read_bytes()==b"owned-move-source-must-survive"
+ assert not (denied_dst/move_source.name).exists()
+ print("M22_DENIED_MOVE_PRESERVES_ORIGINAL_SOURCE",True,flush=True)
  assert not (denied_dst/source.name).exists()
  assert not list(denied_dst.glob(".flyExplorer-copy-*.partial"))
  assert source.stat().st_size==original_size and digest(source)==original_digest
  print("M22_STAGED_DENIED_WRITE_SOURCE_PRESERVED",True,flush=True)
  print("M22_STAGED_DENIED_WRITE_NO_DESTINATION",True,flush=True)
+ # Change the ACL AFTER CopyFileEx has opened and written its private
+ # stage. This may leave the existing writable handle valid on Windows;
+ # acceptance is therefore either a complete verified copy, or an error
+ # without any partial final file. Never equate ACL mutation with a guaranteed
+ # in-flight write failure.
+ live_dst=own/"live-acl-destination"
+ live_dst.mkdir()
+ live_sentinel=live_dst/"unrelated-marker.txt"
+ live_sentinel.write_bytes(b"not-owned-by-current-copy")
+ live_proc=subprocess.Popen(
+     [str(exe),"--owned-stage-kill",str(source),str(live_dst)],
+     cwd=exe.parent,env=env,stdin=subprocess.DEVNULL,
+     stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
+ live_stage=None
+ live_applied=False
+ try:
+  deadline=time.monotonic()+18
+  while time.monotonic()<deadline:
+   found=list(live_dst.glob(".flyExplorer-copy-*.partial"))
+   if found and live_proc.poll() is None:
+    try:
+     if found[0].stat().st_size>=4*1024*1024:
+      live_stage=found[0]
+      break
+    except FileNotFoundError:
+     pass
+   if live_proc.poll() is not None:
+    break
+   time.sleep(.002)
+  assert live_stage is not None,(
+      "Could not observe a writable in-progress test-owned stage")
+  live_acl=subprocess.run(
+      ["icacls",str(live_dst),"/deny",sid+":(WD)"],
+      capture_output=True,text=True,errors="replace",
+      timeout=12,check=False)
+  assert live_acl.returncode==0,(live_acl.stdout,live_acl.stderr)
+  live_applied=True
+  # The observed stage must still be in progress when the ACL mutation
+  # has finished. Otherwise this run is not evidence of a live-ACL race.
+  active_after_acl=live_proc.poll() is None
+  live_code=live_proc.wait(timeout=45)
+ finally:
+  if live_proc.poll() is None:
+   live_proc.kill()
+   live_proc.wait(timeout=5)
+  if live_applied:
+   restore=subprocess.run(
+       ["icacls",str(live_dst),"/remove:d",sid],
+       capture_output=True,text=True,errors="replace",
+       timeout=15,check=False)
+   assert restore.returncode==0,("Test-owned ACL restore failed",
+                                  restore.stdout,restore.stderr)
+ assert active_after_acl, "Copy ended before the live ACL was applied"
+ assert live_code in (0,23),("Unexpected native outcome",live_code)
+ live_target=live_dst/source.name
+ if live_code==0:
+  assert live_target.stat().st_size==original_size
+  assert digest(live_target)==original_digest, (
+      "A partially copied final file was published")
+ else:
+  assert not live_target.exists(), (
+      "A failed in-flight copy published an incomplete final file")
+ assert source.stat().st_size==original_size and digest(source)==original_digest
+ assert live_sentinel.read_bytes()==b"not-owned-by-current-copy"
+ print("M22_LIVE_ACL_AFTER_WRITES_SOURCE_BYTES_PRESERVED",True,flush=True)
+ print("M22_LIVE_ACL_AFTER_WRITES_NO_TRUNCATED_FINAL",True,flush=True)
+ print("M22_LIVE_ACL_PREEXISTING_DESTINATION_PRESERVED",True,flush=True)
  if unc_used:
   for marker in (
       "actual_unc_copy_destination",
