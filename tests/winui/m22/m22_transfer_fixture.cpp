@@ -5,6 +5,8 @@
 #include <cstdio>
 #include <thread>
 #include <chrono>
+#include <algorithm>
+#include <iterator>
 using namespace fxfile::shelltransfer;
 namespace fs=std::filesystem;
 int wmain(int count,wchar_t**args){
