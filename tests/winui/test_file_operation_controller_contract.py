@@ -228,6 +228,13 @@ class FileOperationContracts(unittest.TestCase):
         self.assertIn("environment[\"APPDATA\"]", interactive_gui)
         self.assertIn("REAL_USER_GUI_PRIOR_RECEIPT_CONTENT_NOT_READ", interactive_gui)
         self.assertIn("matches_owned_published_target(", interactive_gui)
+        for guard in ("raise RuntimeError(\"Refuse SYSTEM Session 0\")",
+                      "raise RuntimeError(\"Refuse input on foreign HWND\")",
+                      "raise RuntimeError(\"Refuse ambiguous owned WinUI window\")",
+                      "raise RuntimeError(\"Refuse non-user or unidentified security token\")"):
+            self.assertIn(guard, interactive_gui)
+        self.assertNotIn("assert session.value", interactive_gui)
+        self.assertNotIn("assert owner.value", interactive_gui)
         wire = read("tests/winui/receipt_wire_owned.py")
         pure = read("tests/winui/test_owned_receipt_wire_contract.py")
         self.assertIn('struct.Struct("<8sIIIQ16sIQI")', wire)
