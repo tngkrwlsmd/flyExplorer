@@ -513,6 +513,8 @@ int wmain(int count,wchar_t**args){
  Progress liveProgress{};
  liveProgress.receiptDirectory=liveStore.native();
  const auto liveReport=execute(liveRequest,liveProgress);
+ if(liveReport.error!=ERROR_SUCCESS)
+  std::printf("M22_BOUND_PUBLISH_LIVE_ERROR=%lu\n",liveReport.error);
  bool durableBinding=false;
  std::size_t journalCount=0;
  if(liveStoreCreated){
@@ -546,6 +548,8 @@ int wmain(int count,wchar_t**args){
  Progress emptyProgress{};
  emptyProgress.receiptDirectory=liveStore.native();
  const auto emptyReport=execute(emptyRequest,emptyProgress);
+ if(emptyReport.error!=ERROR_SUCCESS)
+  std::printf("M22_BOUND_PUBLISH_EMPTY_ERROR=%lu\n",emptyReport.error);
  bool emptyPublished=false;
  std::size_t receiptFiles=0;
  for(auto const& file:fs::directory_iterator(liveStore)){
