@@ -25,6 +25,7 @@ LEGACY=("fxfile.conf","fxfile-main.conf","fxfile-toolbar.dat",
 u=c.WinDLL("user32",use_last_error=True)
 u.GetWindowThreadProcessId.argtypes=(w.HWND,c.POINTER(w.DWORD))
 u.GetWindowThreadProcessId.restype=w.DWORD
+u.GetForegroundWindow.restype=w.HWND
 u.PostMessageW.argtypes=(w.HWND,w.UINT,w.WPARAM,w.LPARAM)
 u.PostMessageW.restype=w.BOOL
 
