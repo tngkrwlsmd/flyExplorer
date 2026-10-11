@@ -87,7 +87,11 @@ class FileOperationContracts(unittest.TestCase):
         self.assertIn("::GetDriveTypeW(sourceRoot.c_str())!=DRIVE_FIXED", core)
         self.assertIn("::GetDriveTypeW(destRoot.c_str())!=DRIVE_FIXED", core)
         self.assertIn("COPY_FILE_FAIL_IF_EXISTS", core)
-        self.assertIn("::MoveFileExW(stage.c_str(),target.c_str(),MOVEFILE_WRITE_THROUGH)", core)
+        # Unjournaled legacy path still uses the original no-replace
+        # MoveFileExW, while private journalled copies pin file handles.
+        self.assertIn("::MoveFileExW(", core)
+        self.assertIn("stage.c_str(),target.c_str(),MOVEFILE_WRITE_THROUGH", core)
+        self.assertIn("publishActiveBoundStage(", core)
         self.assertIn("::DeleteFileW(stage.c_str())", core)
         self.assertIn("if(canceled(progress))", core)
         self.assertNotIn("MOVEFILE_REPLACE_EXISTING", core)
