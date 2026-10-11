@@ -330,6 +330,55 @@ pre-callback record, unsigned journal, reboot/power-loss durability,
 user-profile Known Folder and GUI integration gates are unchanged.
 No orphan enumeration, cleanup or recovery is permitted.
 
+## Pending real-user GUI + Known Folder acceptance gate (not run)
+
+Draft PR #63 now carries an **explicitly opted-in and still unverified**
+interactive user acceptance path:
+`tests/winui/test_owned_user_receipt_gui.py`,
+M22 `--real-user-shipping-helper-ipc`,
+`tools/winui/Invoke-InteractiveReceiptGate.ps1`, and
+`tools/winui/OwnedInteractiveReceiptWorker.ps1`.
+
+The test is intended to run as the existing logged-in **non-SYSTEM**
+InteractiveToken, with an exact copied shipping WinUI Release binary,
+its production Shell helper, and a newly compiled native receipt
+inspector. Its only Copy inputs are new, test-owned file paths. It
+uses the OS's **real FOLDERID_LocalAppData** rather than an environment
+override to test whether the shipping helper creates (if absent)
+and later reads an owner-private receipt folder. A unique GUI Copy
+is required to produce a new `PublishedVerified` receipt after the
+WinUI Copy action, and the direct shipping IPC helper must separately
+verify a new exact staged Copy. Older receipt **contents** are not read
+or changed, no journal is deleted, and any app-created records remain
+inert unless a future user-authorized retention policy is approved.
+
+An owned one-shot InteractiveToken task is intended to be registered
+only for the gate and unregistered in `finally`. The bounded runner
+copies the exact executable runtime into a new test-owned directory,
+requires the source SHA and refuses another checkout, and never
+runs as SYSTEM in Session 0. It makes no system-wide preference/ACL
+changes except granting the active user access to that newly created
+test-owned staging directory.
+
+The Windows VM read-only preflight
+[run #38134659901](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38134659901)
+found an existing interactive Explorer/login session, but the
+workflow failed due to an ancillary command exit status. A subsequent
+Remote Shell attempt to build/validate the new gate was **blocked by
+the remote tool's safety validation before dispatch**. Therefore no
+interactive GUI or Known Folder acceptance has been established for
+these new files. Their Python/PowerShell syntax, native fixture
+compilation, and test results remain to be checked before use.
+
+Follow-up acceptance should proceed only through an authorized
+interactive-user path. The already accepted Windows
+[62/62 M22 + Release + isolated test helper IPC](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38133470149)
+still applies only to the older SHA in that run, **not** these
+new test harness files. Restricted ancestors, force-termination,
+OS restart and power-loss integrity remain future, independent
+tests; don't simulate an actual machine power cut without separate
+authorization and a reversible test environment.
+
 ## Minimum provenance before implementing production cleanup
 
 An interrupted operation must have a durable, versioned and private
