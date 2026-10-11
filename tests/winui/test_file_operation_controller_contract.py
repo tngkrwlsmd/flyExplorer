@@ -195,7 +195,8 @@ class FileOperationContracts(unittest.TestCase):
         self.assertIn("struct DirectoryPins final", transfer)
         self.assertIn("FILE_SHARE_READ|FILE_SHARE_WRITE,", transfer)
         self.assertIn("g_directoryRenameProbe", transfer)
-        self.assertIn("setDirectoryRenameProbeForTest", header)
+        self.assertIn("setDirectoryRenameProbeForTest",
+                      read("src/base/shell_transfer_core.h"))
         self.assertIn("receipt_active_publish_pins_ancestor_against_rename", fixture)
         native_project = read(
             "tests/winui/m22/FlyM22ShellTransferContracts.project-template.xml")
