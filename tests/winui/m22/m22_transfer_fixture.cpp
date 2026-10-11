@@ -25,9 +25,12 @@ int wmain(int count,wchar_t**args){
   const auto state=read?inspectReceiptCreator(entry):
                         ReceiptCreatorState::Unknown;
   const bool inactive=state!=ReceiptCreatorState::Running;
-  std::printf("M22_KILLED_WORKER_RECEIPT_MATCH=%s CREATOR_NOT_RUNNING=%s\n",
-              matched?"PASS":"FAIL",inactive?"PASS":"FAIL");
-  return matched&&inactive?0:84;
+  const bool pending=inspectStageReceiptState(args[2])==
+                       StageReceiptState::CopyingOrInterrupted;
+  std::printf("M22_KILLED_WORKER_RECEIPT_MATCH=%s CREATOR_NOT_RUNNING=%s STATE_PENDING=%s\n",
+              matched?"PASS":"FAIL",inactive?"PASS":"FAIL",
+              pending?"PASS":"FAIL");
+  return matched&&inactive&&pending?0:84;
  }
  if(count==5&&std::wstring(args[1])==L"--owned-stage-kill-receipt"){
   Request request{};
@@ -316,6 +319,54 @@ int wmain(int count,wchar_t**args){
       get(stage)=="new-file-at-identical-path",
       "receipt_corruption_fails_closed_without_file_mutation");
 
+ // Pure exact-receipt, read-only state machine across immutable records.
+ // The two stage/target filenames here belong exclusively to this test.
+ const auto phaseStage=probeFolder/
+     L".flyExplorer-copy-{00000000-0000-0000-0000-000000000002}.partial";
+ const auto phaseRecord=receiptFolder/
+     L".flyExplorer-receipt-{00000000-0000-0000-0000-000000000002}.bin";
+ const auto phaseTarget=probeFolder/L"phase-published-target.txt";
+ put(phaseStage,"immutable-phase-test-owned");
+ const bool phaseReceipt=writeStageReceipt(
+     phaseRecord.native(),phaseStage.native(),phaseTarget.filename().native());
+ test(phaseReceipt&&inspectStageReceiptState(phaseRecord.native())==
+      StageReceiptState::CopyingOrInterrupted,
+      "receipt_phase_initial_copying_readonly");
+ const bool completed=markStageCopyCompleted(phaseRecord.native());
+ test(completed&&inspectStageReceiptState(phaseRecord.native())==
+      StageReceiptState::CompletedOnStage&&
+      !markStageCopyCompleted(phaseRecord.native()),
+      "receipt_phase_completed_immutable_write_once");
+ fs::rename(phaseStage,phaseTarget);
+ test(inspectStageReceiptState(phaseRecord.native())==
+      StageReceiptState::PublicationUnconfirmed,
+      "receipt_phase_rename_without_published_marker_ambiguous");
+ const bool publishedMarker=markStageCopyPublished(phaseRecord.native());
+ test(publishedMarker&&inspectStageReceiptState(phaseRecord.native())==
+      StageReceiptState::PublishedVerified&&
+      !markStageCopyPublished(phaseRecord.native()),
+      "receipt_phase_published_same_identity_write_once");
+ const auto formerTarget=probeFolder/L"formerly-published-original.txt";
+ fs::rename(phaseTarget,formerTarget);
+ put(phaseTarget,"unrelated-target-replacement");
+ test(inspectStageReceiptState(phaseRecord.native())==
+      StageReceiptState::Inconsistent&&
+      get(formerTarget)=="immutable-phase-test-owned"&&
+      get(phaseTarget)=="unrelated-target-replacement",
+      "receipt_phase_published_target_replacement_is_inconsistent");
+ {
+  const auto completePath=fs::path(phaseRecord.native()+L".complete");
+  std::fstream f(completePath,std::ios::binary|std::ios::in|std::ios::out);
+  char byte=0;
+  f.seekg(-1,std::ios::end);f.get(byte);
+  f.seekp(-1,std::ios::end);
+  f.put(static_cast<char>(byte^0x01));
+ }
+ test(inspectStageReceiptState(phaseRecord.native())==
+      StageReceiptState::Inconsistent&&
+      get(formerTarget)=="immutable-phase-test-owned",
+      "receipt_phase_corrupt_transition_rejected_readonly");
+
  // Exercise the actual CopyFileExW callback and real destination handle.
  // These three paths are strictly inside the unique disposable fixture root;
  // no production Known Folder is provisioned by this direct execute().
@@ -339,9 +390,12 @@ int wmain(int count,wchar_t**args){
  std::size_t journalCount=0;
  if(liveStoreCreated){
   for(auto const& file:fs::directory_iterator(liveStore)){
+   if(file.path().extension()!=L".bin")continue;
    ++journalCount;
    StageOwnershipReceipt entry{};
    if(readStageReceipt(file.path().native(),entry)&&
+      inspectStageReceiptState(file.path().native())==
+          StageReceiptState::PublishedVerified&&
       entry.targetLeaf==liveSource.filename().native()&&
       entry.creatorPid==::GetCurrentProcessId()&&
       inspectReceiptCreator(entry)==ReceiptCreatorState::Running&&
@@ -356,6 +410,32 @@ int wmain(int count,wchar_t**args){
       get(liveDest/liveSource.filename())=="callback-owned-copy-content"&&
       get(liveSource)=="callback-owned-copy-content",
       "live_staged_copy_callback_durable_receipt_before_publish");
+ // Empty-file copies may not emit a progress callback, so the exact
+ // completed stage handle must still be bound before publication.
+ const auto emptySource=left/L"receipt-empty-file.txt";
+ put(emptySource,"");
+ Request emptyRequest=liveRequest;
+ emptyRequest.sources={emptySource.native()};
+ Progress emptyProgress{};
+ emptyProgress.receiptDirectory=liveStore.native();
+ const auto emptyReport=execute(emptyRequest,emptyProgress);
+ bool emptyPublished=false;
+ std::size_t receiptFiles=0;
+ for(auto const& file:fs::directory_iterator(liveStore)){
+  if(file.path().extension()!=L".bin")continue;
+  ++receiptFiles;
+  StageOwnershipReceipt entry{};
+  if(readStageReceipt(file.path().native(),entry)&&
+     entry.targetLeaf==emptySource.filename().native()&&
+     inspectStageReceiptState(file.path().native())==
+         StageReceiptState::PublishedVerified)
+   emptyPublished=true;
+ }
+ test(emptyReport.error==ERROR_SUCCESS&&
+      fs::exists(liveDest/emptySource.filename())&&
+      fs::file_size(liveDest/emptySource.filename())==0&&
+      emptyPublished&&receiptFiles==2,
+      "receipt_zero_byte_staged_copy_published_with_bound_identity");
  const auto untrustedDest=root/L"receipt-untrusted-destination";
  fs::create_directory(untrustedDest);
  Request untrustedRequest=liveRequest;
