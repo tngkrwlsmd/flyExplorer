@@ -1323,8 +1323,24 @@ int runIsolatedHelper(HANDLE input,HANDLE output) noexcept{
   // This branch is never configured by a pane/request-supplied directory.
   // Windows Known Folder + owner-only protected ACL gate can fail closed:
   // legacy staged Copy remains available but gets no recovery receipt.
+#if defined(FLY_M22_TEST_ISOLATED_RECEIPT_STORE)
+  // TEST BUILD ONLY: the helper's exact executable must be built with the
+  // explicit fixture flag. Never accept environment-configured receipt paths
+  // in the shipping helper or across the production transfer wire.
+  if(stageEligible(task)){
+   std::array<wchar_t,32768> owned{};
+   const DWORD units=::GetEnvironmentVariableW(
+       L"FLY_M22_OWNED_RECEIPT_STORE",owned.data(),
+       static_cast<DWORD>(owned.size()));
+   if(!units||units>=owned.size()||
+      !isPrivateStageReceiptDirectory(std::wstring(owned.data(),units)))
+    return 79;
+   progress.receiptDirectory.assign(owned.data(),units);
+  }
+#else
   if(stageEligible(task))
    (void)prepareUserStageReceiptDirectory(progress.receiptDirectory);
+#endif
   std::atomic_bool done{false};
   std::atomic_bool wireOk{true};
   std::thread reporter([&]{
