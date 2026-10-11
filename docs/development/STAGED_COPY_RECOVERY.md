@@ -250,12 +250,15 @@ Windows' documented `FILE_RENAME_INFO` supports describing an output
 relative to `RootDirectory`, but the VM's Win32 API rejected that
 combination with `ERROR_INVALID_PARAMETER (87)` on the initial attempt.
 We instead use `RootDirectory=NULL` and a full, normalized destination
-pathname. This is a supported Win32 call, but **it does not pin the
-destination path to the opened directory HANDLE**. Path swapping,
-ancestor renames and untrusted reparse races during absolute-name
-resolution remain open. A source HANDLE match prevents renaming the
-wrong source file; it does **not** certify where a concurrently changed
-destination path will resolve. Do not market this as fully race-safe.
+pathname. This is a supported Win32 call, but **it does not use
+the opened directory HANDLE as the rename root**. The subsequent
+active-worker ancestor sharing guard below has been experimentally
+shown to block ordinary target-parent and ancestor renames during this
+window. Privileged, unusual filesystem, mounted-volume and
+reparse/namespace races remain unproven. A source HANDLE match prevents
+renaming the wrong source file; it does **not** by itself certify where
+an absolute destination pathname will resolve. Do not market this as
+fully race-safe.
 
 [Windows Remote Shell #38131991165](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38131991165)
 on exact `10204fcab9b1e82c52d9377bbef74fe60e33cdd1`:
@@ -276,6 +279,56 @@ helper present. All IPC test records were confined to disposable owned
 folders with a special **test-only** helper build. Interactive user
 Known Folder, actual GUI acceptance, power loss, historical record
 retention and full destination path-race protection are **not tested**.
+
+## Active publication pinned ancestor sharing gate (2026-10-11)
+
+The draft active-worker file-handle rename still gives Win32 an absolute
+destination pathname rather than a directory-relative rename via a trusted
+root handle. **Before attempting that rename**, the worker now opens
+**every existing ancestor directory from the fixed drive root to the exact
+destination parent**. Each handle requires actual
+`FILE_LIST_DIRECTORY|FILE_READ_ATTRIBUTES` access, allows normal
+FILE_SHARE_READ/FILE_SHARE_WRITE but *not* FILE_SHARE_DELETE, and remains
+open until after the no-replace rename. Each resolved canonical DOS path
+must match the expected lexically normalized path; direct reparse points
+and a changed/non-directory path fail closed. This decreases the interval
+in which an ordinary competing rename of an ancestor can redirect
+absolute target resolution. If a pin cannot be established, the stage
+is not published and is not automatically removed.
+
+**Regression that changed the design:** `FILE_READ_ATTRIBUTES` alone
+does not reliably stop directory renaming on the actual Windows VM;
+a deterministic test-owned callback demonstrated the rename succeeding
+even while that metadata-only handle was open. Replacing it with
+`FILE_LIST_DIRECTORY|FILE_READ_ATTRIBUTES` caused the exact folder
+and its immediate ancestor rename attempts to fail with Win32
+`ERROR_SHARING_VIOLATION (32)`, although the two folders were
+renameable before acquiring the pinned handles. The test-only callback
+is compiled solely into M22 through
+`FLY_M22_TEST_DIRECTORY_RENAME_LOCK`, not the shipping app/helper.
+Windows `GetFinalPathNameByHandleW` buffer-capacity vs returned-string
+length is handled separately; the required length can include the
+terminating NUL even though the successful returned string count does not.
+
+On exact source `6ae307b815d4874885e1f90c6838ad31ed65377b`,
+[Remote Shell #38133470149](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38133470149)
+passed native M22 Release **62/62** (including both blocked rename attempts),
+focused Python contracts **15/15**, actual child-helper IPC ordinary and
+zero-byte `PublishedVerified` copies, strict untrusted-store IPC
+rejection, and the original `build.bat Release` app and shipping helper.
+No profile mutation or user-file cleanup was undertaken.
+
+**Residual risk and compatibility:** the Windows absolute target remains
+re-resolved, so this is an **observed sharing lock, not a formal
+directory-anchored atomic rename**. Code running with privileged access,
+unusual filesystem and volume/mount behaviors, adversarial ACL changes,
+missing `FILE_LIST_DIRECTORY` rights, and unsupported paths may violate
+the tested assumptions. The conservative response to denied ancestor
+access is to leave an unpublished stage with its receipt and return a
+failure, not to silently fall back to weaker publication. The missing
+pre-callback record, unsigned journal, reboot/power-loss durability,
+user-profile Known Folder and GUI integration gates are unchanged.
+No orphan enumeration, cleanup or recovery is permitted.
 
 ## Minimum provenance before implementing production cleanup
 
