@@ -183,6 +183,8 @@ class FileOperationContracts(unittest.TestCase):
         self.assertIn("--receipt-verify-killed", fixture)
         self.assertIn("--receipt-inspect-state", fixture)
         self.assertIn("--owned-helper-ipc-copy", fixture)
+        self.assertIn("--owned-helper-ipc-untrusted", fixture)
+        self.assertIn("M22_ISOLATED_HELPER_IPC_UNTRUSTED_STORE", fixture)
         self.assertIn("executeIsolated(request,progress)", fixture)
         self.assertIn("FLY_M22_OWNED_RECEIPT_STORE", transfer)
         self.assertIn("#if defined(FLY_M22_TEST_ISOLATED_RECEIPT_STORE)", transfer)
