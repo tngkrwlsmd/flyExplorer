@@ -265,7 +265,8 @@ bool readStageReceipt(std::wstring const& exactReceiptPath,
  receipt={};
  try{
   const fs::path file(exactReceiptPath);
-  if(!normalized(file,exactReceiptPath)||!fixedParent(file))
+  if(!normalized(file,exactReceiptPath)||!fixedParent(file)||
+     !isPrivateStageReceiptDirectory(file.parent_path().native()))
    return false;
   const HANDLE handle=::CreateFileW(exactReceiptPath.c_str(),GENERIC_READ,
        FILE_SHARE_READ,nullptr,OPEN_EXISTING,
