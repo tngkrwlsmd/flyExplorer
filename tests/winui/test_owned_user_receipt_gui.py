@@ -56,9 +56,12 @@ def require_logged_in_session() -> None:
 
     # Session presence alone is insufficient: the current process must NOT
     # have the LocalSystem SID. Fail closed if the token cannot be inspected.
+    # SID bytes are ASCII even when whoami's headings use the machine
+    # OEM codepage. Do NOT decode localized output as UTF-8.
     identity = subprocess.run(["whoami", "/user"], capture_output=True,
-                              text=True, timeout=10, check=True)
-    if "S-1-5-18" in identity.stdout or "S-1-5-21-" not in identity.stdout:
+                              timeout=10, check=True)
+    raw_sid_output = identity.stdout or b""
+    if b"S-1-5-18" in raw_sid_output or b"S-1-5-21-" not in raw_sid_output:
         raise RuntimeError("Refuse non-user or unidentified security token")
 
 
