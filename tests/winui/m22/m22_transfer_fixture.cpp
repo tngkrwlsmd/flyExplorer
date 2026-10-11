@@ -217,8 +217,9 @@ int wmain(int count,wchar_t**args){
  {
   std::fstream f(record,std::ios::binary|std::ios::in|std::ios::out);
   char byte=0;
-  f.seekg(0);f.get(byte);f.seekp(0);
-  f.put(static_cast<char>(byte^0x20));
+  f.seekg(-1,std::ios::end);f.get(byte);
+  f.seekp(-1,std::ios::end);
+  f.put(static_cast<char>(byte^0x01));
  }
  StageOwnershipReceipt tampered{};
  test(!readStageReceipt(record.native(),tampered)&&
