@@ -9,7 +9,6 @@ import tempfile
 import time
 
 from pywinauto import Desktop
-from pywinauto.keyboard import send_keys
 from paths import ROOT, app_exe
 from profile_guard import snapshot_legacy_profile, assert_legacy_profile_unchanged
 from uia_polling import wait_until
@@ -111,14 +110,23 @@ try:
     address.type_keys("{ENTER}", set_foreground=True)
     eventually(lambda: str(right).lower() in element("AddressBox").get_value().lower(),
                "right destination navigation")
-    click(element("LeftFiles"))
-    focus()
-    send_keys("^a")
-    selected_before = [
-        (item.window_text(), bool(item.is_selected()))
-        for item in element("LeftFiles").descendants()
-        if item.element_info.control_type == "ListItem"
-    ]
+    def find_row(name):
+        return next((item for item in element("LeftFiles").descendants()
+                     if item.element_info.control_type == "ListItem"
+                     and name in item.window_text()), None)
+    first = find_row("a-first.txt")
+    assert first is not None
+    click(first)
+    second = find_row("z-locked.txt")
+    assert second is not None
+    second.iface_selection_item.AddToSelection()
+    def selection():
+        return [(item.window_text(), bool(item.is_selected()))
+                for item in element("LeftFiles").descendants()
+                if item.element_info.control_type == "ListItem"]
+    eventually(lambda: sum(value for _, value in selection()) == 2,
+               "both source rows must be selected", 9)
+    selected_before = selection()
     print("PARTIAL_GUI_SELECTION_BEFORE="+repr(selected_before), flush=True)
     assert sum(selected for _, selected in selected_before) == 2, (
         "Both owned source rows must be selected before invoking Copy",
