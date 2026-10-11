@@ -261,7 +261,9 @@ class FileOperationContracts(unittest.TestCase):
                       "--real-user-shipping-helper-ipc",
                       "Set-Content",
                       "owned-gui-stderr.log",
-                      "GUI_PYTHON_EXIT="):
+                      "GUI_PYTHON_EXIT=",
+                      "[char]0xD55C",
+                      "FAILED_INNER_HRESULT="):
             self.assertIn(token, worker)
         self.assertLess(worker.index("--real-user-shipping-helper-ipc"),
                         worker.index("actual-winui-copy"))
