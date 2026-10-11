@@ -569,6 +569,96 @@ bool stageEligible(Request const& task) noexcept{
   return true;
  }catch(...){return false;}
 }
+// Publish ONLY the stage belonging to the active journalled worker.
+// The source and destination directory remain pinned as open file handles
+// through the no-replace rename. A matching pathname alone is not authority.
+// This must never be called for an orphan/recovery candidate.
+bool publishActiveBoundStage(std::wstring const& stage,
+                             std::wstring const& target,
+                             StageOwnershipReceipt const& proof,
+                             DWORD& error) noexcept {
+ error=ERROR_INVALID_DATA;
+ try{
+  const fs::path source(stage),destination(target);
+  if(source.parent_path()!=destination.parent_path()||
+     proof.stagePath!=stage||
+     proof.targetLeaf!=destination.filename().native()||
+     !safeFilesystemFolder(source.parent_path(),Kind::Copy))
+   return false;
+  // A directory HANDLE, rather than a destination string resolved during
+  // the rename, prevents a swapped parent directory from redirecting it.
+  const HANDLE directory=::CreateFileW(
+      source.parent_path().c_str(),FILE_READ_ATTRIBUTES,
+      FILE_SHARE_READ|FILE_SHARE_WRITE|FILE_SHARE_DELETE,nullptr,
+      OPEN_EXISTING,FILE_FLAG_BACKUP_SEMANTICS|
+                    FILE_FLAG_OPEN_REPARSE_POINT,nullptr);
+  if(directory==INVALID_HANDLE_VALUE){
+   error=::GetLastError();return false;
+  }
+  const auto closeDirectory=[&]{::CloseHandle(directory);};
+  BY_HANDLE_FILE_INFORMATION folder{};
+  if(!::GetFileInformationByHandle(directory,&folder)||
+     !(folder.dwFileAttributes&FILE_ATTRIBUTE_DIRECTORY)||
+     (folder.dwFileAttributes&FILE_ATTRIBUTE_REPARSE_POINT)){
+   closeDirectory();return false;
+  }
+  // Verify that the held parent resolves to the exact expected location.
+  // On unrecognized/changed/aliased paths fail closed, never guess.
+  const DWORD units=::GetFinalPathNameByHandleW(
+      directory,nullptr,0,FILE_NAME_NORMALIZED|VOLUME_NAME_DOS);
+  if(units<5||units>32000){
+   closeDirectory();return false;
+  }
+  std::wstring finalParent(units+1,L'\0');
+  const DWORD received=::GetFinalPathNameByHandleW(
+      directory,finalParent.data(),static_cast<DWORD>(finalParent.size()),
+      FILE_NAME_NORMALIZED|VOLUME_NAME_DOS);
+  finalParent.resize(received<finalParent.size()?received:0);
+  if(finalParent.rfind(L"\\\\?\\",0)!=0||
+     ::CompareStringOrdinal(finalParent.c_str()+4,-1,
+         source.parent_path().c_str(),-1,TRUE)!=CSTR_EQUAL){
+   closeDirectory();return false;
+  }
+  const HANDLE active=::CreateFileW(stage.c_str(),
+      DELETE|FILE_READ_ATTRIBUTES,
+      FILE_SHARE_READ|FILE_SHARE_WRITE|FILE_SHARE_DELETE,nullptr,
+      OPEN_EXISTING,FILE_FLAG_OPEN_REPARSE_POINT,nullptr);
+  if(active==INVALID_HANDLE_VALUE){
+   error=::GetLastError();closeDirectory();return false;
+  }
+  BY_HANDLE_FILE_INFORMATION basic{};
+  FILE_ID_INFO file{};
+  const bool sameObject=::GetFileInformationByHandle(active,&basic)!=FALSE&&
+      !(basic.dwFileAttributes&
+          (FILE_ATTRIBUTE_REPARSE_POINT|FILE_ATTRIBUTE_DIRECTORY))&&
+      basic.nNumberOfLinks==1&&
+      ::GetFileInformationByHandleEx(active,FileIdInfo,&file,sizeof(file))!=FALSE&&
+      file.VolumeSerialNumber==proof.stageIdentity.volumeSerial&&
+      std::equal(std::begin(file.FileId.Identifier),
+                 std::end(file.FileId.Identifier),
+                 proof.stageIdentity.fileId.begin())&&
+      (static_cast<std::uint64_t>(folder.dwVolumeSerialNumber)&0xffffffffu)==
+       (file.VolumeSerialNumber&0xffffffffu);
+  if(!sameObject){
+   ::CloseHandle(active);closeDirectory();return false;
+  }
+  const auto& leaf=destination.filename().native();
+  const std::size_t size=offsetof(FILE_RENAME_INFO,FileName)+
+                         leaf.size()*sizeof(wchar_t);
+  std::vector<unsigned char> payload(size);
+  auto* rename=reinterpret_cast<FILE_RENAME_INFO*>(payload.data());
+  rename->ReplaceIfExists=FALSE;
+  rename->RootDirectory=directory;
+  rename->FileNameLength=static_cast<DWORD>(leaf.size()*sizeof(wchar_t));
+  std::memcpy(rename->FileName,leaf.data(),rename->FileNameLength);
+  const bool published=::SetFileInformationByHandle(
+      active,FileRenameInfo,rename,static_cast<DWORD>(payload.size()))!=FALSE;
+  error=published?ERROR_SUCCESS: ::GetLastError();
+  ::CloseHandle(active);
+  closeDirectory();
+  return published;
+ }catch(...){error=ERROR_INVALID_PARAMETER;return false;}
+}
 Report copyStagedFiles(Request const& task,Progress& progress,
                        Report report) noexcept{
  try{
@@ -638,13 +728,25 @@ Report copyStagedFiles(Request const& task,Progress& progress,
    const bool copyRecorded=!callback.receiptRequired||
       (copied&&!wasCanceled&&journalReady&&
        markStageCopyCompleted(callback.receiptPath));
-   const BOOL published=copied&&!wasCanceled&&journalReady&&copyRecorded?
-       ::MoveFileExW(stage.c_str(),target.c_str(),MOVEFILE_WRITE_THROUGH):
-       FALSE;
+   DWORD renameError=ERROR_INVALID_DATA;
+   BOOL published=FALSE;
+   if(copied&&!wasCanceled&&journalReady&&copyRecorded){
+    if(callback.receiptRequired){
+     // Use the verified, still-open file object and directory, never
+     // re-resolve an untrusted source pathname inside MoveFileExW.
+     published=publishActiveBoundStage(
+         stage.native(),target.native(),proof,renameError)?TRUE:FALSE;
+    }else{
+     // Preserve the original legacy behavior outside protected journaling.
+     published=::MoveFileExW(
+         stage.c_str(),target.c_str(),MOVEFILE_WRITE_THROUGH);
+     renameError=published?ERROR_SUCCESS: ::GetLastError();
+    }
+   }
    const DWORD publishError=published?ERROR_SUCCESS:
        copied&&!wasCanceled&&(!journalReady||!copyRecorded)?
          ERROR_INVALID_DATA:
-       copied&&!wasCanceled?::GetLastError():copyError;
+       copied&&!wasCanceled?renameError:copyError;
    if(!published){
     // An unjournaled stage can already contain copy bytes before the
     // first callback. It cannot be proven recoverable: leave it untouched.
