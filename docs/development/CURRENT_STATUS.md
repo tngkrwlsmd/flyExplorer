@@ -7,6 +7,53 @@ app/winui, UI-independent native code in src/base, tests in tests/winui, and
 bounded orchestration in tools/winui/run_checks.py. The former MFC application
 is retired from the working tree and is recoverable from Git revision cbffb48.
 
+## 2026-10-11 product Release and real child-process IPC acceptance — draft PR #63
+
+The current PR now passes both **canonical app Release compilation** and
+owned, actual Shell-helper child-process transfer IPC. No merge or cleanup
+authorization follows from these results.
+
+- [Remote Shell #38129284452](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38129284452)
+  on exact `404a7450943476a5b23320211e7b4bd9d7b425c2`:
+  `build.bat Release` **PASS**, flyExplorer.exe and sibling
+  FlyShellIsolationHelper.exe present, and **15/15** focused Python source
+  contracts PASS. The controlling SYSTEM session initially lacked Python
+  on PATH; the run used an **already installed** interpreter by changing
+  PATH in that one test process, without global installation.
+- [Remote Shell #38129563278](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38129563278)
+  on exact `f50e17a659d238310758c53464cc9fb0453aeb1f`:
+  a **test-only** Release helper executed via real `executeIsolated`
+  parent/child IPC with a Korean-named 8 MiB file and a separate 0-byte
+  file. Both reported transfer success, byte-for-byte equality and a
+  read-back `PublishedVerified` receipt plus phase records in private,
+  explicitly test-owned folders. The native fixture and opt-in isolated
+  helper compiled, focused Python contracts **15/15 PASS**.
+- [Remote Shell #38129744148](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38129744148)
+  on exact `b302ab7f6d566e642d1679399a9a492f43f061a0`:
+  inherited-ACL **untrusted** receipt store explicitly rejected across
+  actual helper IPC (observed error 31). The source SHA-256 and empty
+  destination folder remained unchanged. The same source then passed
+  focused Python contracts **15/15**, new native fixture Release build
+  and the **canonical `build.bat Release`**, producing the product and
+  shipping helper binaries. The test helper code was unchanged from the
+  prior real IPC run and was reused after an exact source diff check.
+
+To avoid touching the SYSTEM/user profile during IPC experiments, a
+separately built helper enables
+`FLY_M22_TEST_ISOLATED_RECEIPT_STORE` **only** with the explicit
+`FlyM22OwnedHelper=true` MSBuild fixture property. Its environment
+override `FLY_M22_OWNED_RECEIPT_STORE` is absent from shipping helper
+compilation and never included in IPC input. The normal build invokes
+neither test property nor any test-root override; production still uses
+its own `FOLDERID_LocalAppData` protected journal policy.
+
+**Still untested:** interactive logged-in user's actual Known Folder
+provisioning through the *shipping* helper and full functional WinUI GUI;
+manual restart/power-loss acceptance; race-safe handle-pinned final
+publication; recovery UI and explicit authorized cleanup. The record
+checksum remains non-cryptographic and initial pre-callback abort may
+leave an unrecorded stage. No automatic discovery/deletion was added.
+
 ## 2026-10-11 immutable Copy completion/publication records — draft PR #63
 
 PR [#63](https://github.com/tngkrwlsmd/flyExplorer/pull/63)
@@ -50,13 +97,13 @@ an actively writing stage is
 [run #38127536317](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38127536317).
 No user folder or unrelated process was altered.
 
-**Still open:** full WinUI Release/GUI and Python source-contract
-acceptance for this branch; actual interactive user-profile Known Folder
-provisioning over helper IPC; race-safe handle-pinned final publication;
-reliable worker exit/unknown classification after OS restart; legitimate
-state retention/pruning; third-party file changes; crash during the
-published event; true power-loss durability of file contents/parent
-directories; opt-in user-authorized recovery UI. The non-cryptographic
+**At that earlier phase-marker checkpoint:** full WinUI Release,
+GUI, Python source contracts and IPC still needed verification. The
+newer section above now records exact completed product Release, focused
+Python and test-only real child-process IPC acceptance. Interactive
+user-profile Known Folder behavior, race-safe handle-pinned publication,
+durable post-restart worker classification, retention/pruning, third-party
+changes, power-loss durability and opt-in recovery UI remain open. The non-cryptographic
 receipt/marker checksums do not authenticate malicious same-user edits.
 PR #63 remains Draft and unmerged; no automatic cleanup is enabled.
 
