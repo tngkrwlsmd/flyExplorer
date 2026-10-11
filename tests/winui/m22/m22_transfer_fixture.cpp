@@ -118,6 +118,51 @@ int wmain(int count,wchar_t**args){
  }
  test(moveBlocked&&moveSourceIntact,
       "sharing_violation_move_reports_failure_and_preserves_source");
+ // The first operation may commit before a later item is blocked. The
+ // batch must still fail, and earlier results must be inspected rather than
+ // erased on the assumption of transactional rollback.
+ put(left/L"일괄 복사 먼저.txt","copy-first");
+ put(left/L"일괄 복사 잠금.txt","copy-locked");
+ HANDLE batchCopyLock=::CreateFileW((left/L"일괄 복사 잠금.txt").c_str(),
+     GENERIC_READ,0,nullptr,OPEN_EXISTING,FILE_ATTRIBUTE_NORMAL,nullptr);
+ bool partialCopyOk=false;
+ if(batchCopyLock!=INVALID_HANDLE_VALUE){
+  Request task{};
+  task.kind=Kind::Copy;task.sourceParent=left.native();
+  task.destination=right.native();
+  task.sources={(left/L"일괄 복사 먼저.txt").native(),
+                (left/L"일괄 복사 잠금.txt").native()};
+  Progress active{};
+  const auto result=execute(task,active);
+  ::CloseHandle(batchCopyLock);
+  partialCopyOk=result.error!=ERROR_SUCCESS&&
+      get(left/L"일괄 복사 먼저.txt")=="copy-first"&&
+      get(left/L"일괄 복사 잠금.txt")=="copy-locked"&&
+      fs::exists(right/L"일괄 복사 먼저.txt")&&
+      get(right/L"일괄 복사 먼저.txt")=="copy-first";
+ }
+ test(partialCopyOk,"batch_partial_copy_failure_preserves_both_sources");
+
+ put(left/L"일괄 이동 먼저.txt","move-first");
+ put(left/L"일괄 이동 잠금.txt","move-locked");
+ HANDLE batchMoveLock=::CreateFileW((left/L"일괄 이동 잠금.txt").c_str(),
+     GENERIC_READ,0,nullptr,OPEN_EXISTING,FILE_ATTRIBUTE_NORMAL,nullptr);
+ bool partialMoveOk=false;
+ if(batchMoveLock!=INVALID_HANDLE_VALUE){
+  Request task{};
+  task.kind=Kind::Move;task.sourceParent=left.native();
+  task.destination=right.native();
+  task.sources={(left/L"일괄 이동 먼저.txt").native(),
+                (left/L"일괄 이동 잠금.txt").native()};
+  Progress active{};
+  const auto result=execute(task,active);
+  ::CloseHandle(batchMoveLock);
+  partialMoveOk=result.error!=ERROR_SUCCESS&&
+      !fs::exists(left/L"일괄 이동 먼저.txt")&&
+      get(right/L"일괄 이동 먼저.txt")=="move-first"&&
+      get(left/L"일괄 이동 잠금.txt")=="move-locked";
+ }
+ test(partialMoveOk,"batch_partial_move_failure_preserves_remaining_source");
  test(kMaxItems>=64,"shared_transfer_budget_exceeds_legacy_32");
  const auto bulkLeft=root/L"대량 왼쪽",bulkRight=root/L"대량 오른쪽";
  fs::create_directory(bulkLeft);fs::create_directory(bulkRight);
