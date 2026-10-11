@@ -98,6 +98,8 @@ def main() -> None:
     window_callback = c.WINFUNCTYPE(W.BOOL, W.HWND, W.LPARAM)
     user32.EnumWindows.argtypes = [window_callback, W.LPARAM]
     user32.GetWindowThreadProcessId.argtypes = [W.HWND, c.POINTER(W.DWORD)]
+    user32.IsWindowVisible.argtypes = [W.HWND]
+    user32.PostMessageW.argtypes = [W.HWND, W.UINT, W.WPARAM, W.LPARAM]
     user32.GetForegroundWindow.restype = W.HWND
 
     try:
