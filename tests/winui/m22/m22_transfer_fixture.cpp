@@ -284,6 +284,55 @@ int wmain(int count,wchar_t**args){
       get(stage)=="new-file-at-identical-path",
       "receipt_corruption_fails_closed_without_file_mutation");
 
+ // Exercise the actual CopyFileExW callback and real destination handle.
+ // These three paths are strictly inside the unique disposable fixture root;
+ // no production Known Folder is provisioned by this direct execute().
+ const auto liveStore=root/L"receipt-live-store";
+ const bool liveStoreCreated=createPrivateStageReceiptDirectory(
+     liveStore.native());
+ const auto liveSource=left/L"receipt-live-source.txt";
+ const auto liveDest=root/L"receipt-live-destination";
+ fs::create_directory(liveDest);
+ put(liveSource,"callback-owned-copy-content");
+ Request liveRequest{};
+ liveRequest.kind=Kind::Copy;
+ liveRequest.collision=Collision::Reject;
+ liveRequest.sourceParent=left.native();
+ liveRequest.destination=liveDest.native();
+ liveRequest.sources={liveSource.native()};
+ Progress liveProgress{};
+ liveProgress.receiptDirectory=liveStore.native();
+ const auto liveReport=execute(liveRequest,liveProgress);
+ bool durableBinding=false;
+ std::size_t journalCount=0;
+ if(liveStoreCreated){
+  for(auto const& file:fs::directory_iterator(liveStore)){
+   ++journalCount;
+   StageOwnershipReceipt entry{};
+   if(readStageReceipt(file.path().native(),entry)&&
+      entry.targetLeaf==liveSource.filename().native()&&
+      entry.creatorPid==::GetCurrentProcessId()&&
+      inspectReceiptCreator(entry)==ReceiptCreatorState::Running&&
+      entry.stagePath.find(liveDest.native()+L"\\")==0&&
+      !receiptMatchesStage(entry)&&
+      !fs::exists(entry.stagePath))
+    durableBinding=true;
+  }
+ }
+ test(liveStoreCreated&&liveReport.error==ERROR_SUCCESS&&
+      liveProgress.percent==100&&journalCount==1&&durableBinding&&
+      get(liveDest/liveSource.filename())=="callback-owned-copy-content"&&
+      get(liveSource)=="callback-owned-copy-content",
+      "live_staged_copy_callback_durable_receipt_before_publish");
+ Progress deniedJournal{};
+ deniedJournal.receiptDirectory=insecureFolder.native();
+ const auto rejected=execute(liveRequest,deniedJournal);
+ test(rejected.error==ERROR_ACCESS_DENIED&&
+      get(liveSource)=="callback-owned-copy-content"&&
+      get(liveDest/liveSource.filename())=="callback-owned-copy-content"&&
+      journalCount==1,
+      "live_staged_copy_refuses_untrusted_receipt_directory");
+
  bool noPartial=true;
  for(auto const& item:fs::directory_iterator(right)){
   if(item.path().filename().native().rfind(L".flyExplorer-copy-",0)==0)
