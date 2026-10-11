@@ -83,11 +83,41 @@ an external Explorer-interop test at this SHA. Such an interop
 test explicitly clears the shared Windows clipboard and therefore
 requires separate approval before execution.
 
-**Still OPEN:** actual multi-item Properties invocation/closure,
-clipboard Explorer↔flyExplorer interoperability at the new SHA,
+**Actual clipboard interop now ACCEPTED for owned Win11 fixtures:**
+compiled product SHA `96d6b5723773104baf4fa351ab37dd219481ccfa`,
+test-only `e8c6b31fcc3c912b0e258e2c66e40e6b5b70526d`,
+[Windows run 38099481287](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38099481287)
+SUCCESS. Four real OS clipboard/file flows PASS: flyExplorer Copy
+to Explorer paste, Explorer Copy to flyExplorer paste, flyExplorer
+Cut to Explorer move, and Explorer Cut to flyExplorer move.
+Exact test-owned Unicode file bytes and move/source disappearance
+were checked; the registered `Preferred DropEffect` HGLOBAL was
+read directly (copy 1/5, cut 2/2). The original six legacy
+settings were byte-identical. **User-approved global clipboard was
+cleared before and after the test and its previous contents were
+not recoverable.** Two earlier tests on the same product were
+harness failures from the binary-format/HGLOBAL reader, not accepted
+file-operation failure evidence.
+
+**Properties remains NOT ACCEPTED:** current STA-fixed Release
+`96d6b57` built successfully in
+[38098503351](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38098503351).
+The independently owned Explorer OS Properties baseline
+[38098254103](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38098254103)
+passed. But flyExplorer's two-item popup Properties invocation run
+[38099074283](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38099074283)
+FAILED: the canonical last Properties menu item was identified,
+keyboard selection was sent, yet no newly visible test-linked dialog
+appeared; the isolated helper exited 0 and owned input files plus
+legacy settings were unchanged. A test-only guarded pointer-input
+successor is committed at `2c1dcbb` but has **not been executed**.
+Do not conflate menu cancellation/return code zero with a
+successfully opened Properties sheet.
+
+**Still OPEN:** multi-item Properties visible/close acceptance,
 extension-specific verbs, removable/UNC targets, provider Move/Delete/
 Recycle, provider-to-provider copy, arbitrary third-party
-extensions, and application UI coverage beyond the accepted owned scope.
+extensions, and broader application UI/environment coverage.
 
 ## 3. Large-folder metadata indexing — bounded PASS
 
