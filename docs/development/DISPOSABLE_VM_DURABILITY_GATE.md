@@ -19,6 +19,35 @@ worker-process crash as a machine-level storage durability test.
   physical host or prove that a separate disposable VM exists.
 - The central Remote Shell request was returned to idle after the audit.
 
+## Hyper-V host is a separate computer — host connection not yet established
+
+The operator confirmed that the Hyper-V host is a **different physical
+computer** from both the shared Windows guest and the separately
+registered `personal-pc` control target. Do not route host-management
+or disk-provisioning commands to either of those targets.
+
+The available Desktop Commander device inventory currently lists
+only `DESKTOP-FJM09OG` (offline), not the separate Hyper-V host.
+Connecting the host requires a **new user-authorized device
+registration**. Until that registration or a host-local audit result
+exists, no real host resource or spare VM claim can be made.
+
+**Host-local alternative:** on the separate Hyper-V computer, open an
+authorized Windows PowerShell session with Hyper-V management access
+and run the versioned read-only
+`tools/winui/Inspect-HyperVDurabilityHost.ps1` script from a trusted
+checkout of this exact branch. Share only its `FLY_HYPERV_...`
+summary lines; no host names, VM names, VM GUIDs or storage paths are
+required for this first capacity review. The script only queries
+Hyper-V availability and capacity; it does not provision resources.
+
+If remote access is preferred, register **that separate host**, not the
+shared guest, in the authorized Desktop Commander device manager:
+https://mcp.desktopcommander.app/. Then confirm the connected device
+identity before any script execution, and run read-only inventory
+only. VM creation, VHDX creation, checkpoint/export and any
+reboot/power-off remain distinct state-changing gates.
+
 ## Hyper-V host identified by operator — host connection not yet established
 
 The operator identified the outer virtualization platform as **Hyper-V**.
