@@ -7,6 +7,57 @@ app/winui, UI-independent native code in src/base, tests in tests/winui, and
 bounded orchestration in tools/winui/run_checks.py. The former MFC application
 is retired from the working tree and is recoverable from Git revision cbffb48.
 
+## 2026-10-11 live ACL, folder, Move and orphan safety checkpoint
+
+The production staged Copy implementation remains unchanged from main
+`cf854ca5b8f710dcd041d58806494b3c967f65d9`, whose independent
+Release and full GUI acceptance passed in central run
+[38117504286](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38117504286).
+The additional regression changes are test-only and do not turn Shell
+folder/Move operations into a transaction.
+
+Exact test candidate `ee6a3173b4b5b930e22a7bafe4864e7be3f14be8`
+passed owned Windows
+[run 38119197158](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38119197158):
+Release native 40/40 and focused contracts PASS. A 512 MiB staged local
+Copy had already written >=4 MiB before the ACL of its test-owned target
+folder changed; the process remained active after the ACL modification.
+Its source SHA-256 stayed unchanged and any published target had complete,
+verified bytes (otherwise no target). Windows may retain write rights for
+existing open handles, so this does not imply an ACL change must interrupt
+an active transfer. Recursive folder Copy with an exclusively locked
+nested child reported failure while preserving both original children and
+without detecting malformed destination child bytes. Folder preflight
+cancellation preserved the whole source and created no destination.
+
+Exact subsequent test candidate
+`07494976381afc1a24f68652f05a3a9150b52a60`
+passed owned Windows
+[run 38119379826](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38119379826),
+repeating all above checks and adding:
+- Test-owned destination ACL denial for Shell Move: error reported,
+  original source contents preserved and no target created.
+- Forced termination of only the owned Copy fixture, followed by
+  explicit reclamation of only the observed temporary stage after
+  checking its exact pre-kill path, same NTFS file identity
+  (`st_dev`/`st_ino`), single hard-link, no symlink, and its known
+  fixture parent. A separate same-pattern partial file was preserved.
+- Six protected original legacy MFC profile values remained unchanged.
+
+**Production crash recovery remains deliberately fail-closed**:
+the app has no durable stage-ownership receipt (path + stable file ID +
+operation identity), so it must not automatically delete any candidate
+just because its name matches `.flyExplorer-copy-*.partial`. Test-only
+reclamation is not a user-folder cleanup implementation. A future
+recoverer must establish durable provenance, closed/abandoned worker,
+same file identity, no reparse traversal and scoped user authorization.
+See `docs/development/STAGED_COPY_RECOVERY.md` for the recovery contract.
+
+Still OPEN: production crash-restart ownership receipts and safe optional
+recovery UI, repeatable in-flight ACL changes that revoke *previously
+opened* access, cross-volume/remote Move and folder interruption,
+power-loss safety and broader third-party Shell/USB/SMB acceptance.
+
 ## 2026-10-11 staged Copy publish and access-denial acceptance
 
 Product PR [#59](https://github.com/tngkrwlsmd/flyExplorer/pull/59)
