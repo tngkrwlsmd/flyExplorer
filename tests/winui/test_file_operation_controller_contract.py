@@ -180,8 +180,9 @@ class FileOperationContracts(unittest.TestCase):
         self.assertIn("!journalReady", transfer)
         self.assertIn("markStageCopyCompleted(", transfer)
         self.assertIn("markStageCopyPublished(", transfer)
-        # Journalled active Copy must use a pinned source file HANDLE and
-        # pinned parent handle, with a no-replace rename by file object.
+        # Journalled active Copy pins the source file HANDLE and inspects
+        # the parent. Win32 re-resolves the absolute target path, so this
+        # contract does not imply handle-anchored destination protection.
         # The receipt primitive itself remains strictly non-mutating.
         self.assertIn("publishActiveBoundStage(", transfer)
         self.assertIn("SetFileInformationByHandle(", transfer)
