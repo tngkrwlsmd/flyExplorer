@@ -182,6 +182,13 @@ class FileOperationContracts(unittest.TestCase):
         self.assertIn("--owned-stage-kill-receipt", fixture)
         self.assertIn("--receipt-verify-killed", fixture)
         self.assertIn("--receipt-inspect-state", fixture)
+        self.assertIn("--owned-helper-ipc-copy", fixture)
+        self.assertIn("executeIsolated(request,progress)", fixture)
+        self.assertIn("FLY_M22_OWNED_RECEIPT_STORE", transfer)
+        self.assertIn("#if defined(FLY_M22_TEST_ISOLATED_RECEIPT_STORE)", transfer)
+        self.assertIn("#else\n  if(stageEligible(task))", transfer)
+        self.assertIn("FlyM22OwnedHelper", helper_project)
+        self.assertIn("FLY_M22_TEST_ISOLATED_RECEIPT_STORE", helper_project)
         self.assertIn("--receipt-create-private", fixture)
         for scenario in ("receipt_roundtrip_flush_and_exact_stage_identity",
                          "receipt_create_new_never_overwrites_existing",
