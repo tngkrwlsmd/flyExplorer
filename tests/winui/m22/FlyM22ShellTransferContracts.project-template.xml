@@ -46,6 +46,7 @@
   <ItemGroup>
     <ClCompile Include="m22_transfer_fixture.cpp" />
     <ClCompile Include="..\..\..\src\base\shell_transfer_core.cpp" />
+    <ClCompile Include="..\..\..\src\base\stage_receipt_core.cpp" />
     <ClCompile Include="..\..\..\src\base\file_command_core.cpp" />
   </ItemGroup>
   <ItemGroup>
