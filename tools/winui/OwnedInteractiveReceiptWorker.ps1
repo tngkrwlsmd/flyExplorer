@@ -31,8 +31,19 @@ try {
 
     $stage = 'actual-winui-copy'
     $gui = Join-Path $Root 'tests\winui\test_owned_user_receipt_gui.py'
-    & $python.Source -X utf8 $gui *>&1 | Out-File -FilePath $log -Append -Encoding utf8
-    if ($LASTEXITCODE -ne 0) { throw 'Owned interactive GUI transfer gate failed' }
+    # Native stderr must not be promoted to a terminating PowerShell error.
+    # Keep only this test-owned GUI process stdout/stderr in owned evidence.
+    $stdout = Join-Path $Root 'owned-gui-stdout.log'
+    $stderr = Join-Path $Root 'owned-gui-stderr.log'
+    $arguments = '-X utf8 "' + $gui + '"'
+    $guiProcess = Start-Process -FilePath $python.Source -ArgumentList $arguments -Wait -PassThru -RedirectStandardOutput $stdout -RedirectStandardError $stderr
+    ('GUI_PYTHON_EXIT=' + $guiProcess.ExitCode) | Out-File -FilePath $log -Append -Encoding utf8
+    foreach ($file in @($stdout,$stderr)) {
+        if (Test-Path -LiteralPath $file) {
+            Get-Content -LiteralPath $file -Tail 35 | Out-File -FilePath $log -Append -Encoding utf8
+        }
+    }
+    if ($guiProcess.ExitCode -ne 0) { throw 'Owned interactive GUI transfer gate failed' }
 
     $stage = 'shipping-helper-direct-ipc'
     $fixture = Join-Path $Root 'tests\winui\m22\bin\x64\Release\FlyM22ShellTransferContracts.exe'
@@ -51,7 +62,10 @@ try {
     # Avoid emitting user paths or account identifiers in persisted evidence.
     Write-Output ('INTERACTIVE_RECEIPT_FAILED_STAGE=' + $stage)
     Write-Output ('INTERACTIVE_RECEIPT_FAILED_TYPE=' + $_.Exception.GetType().Name)
-    try { ('FAILED_STAGE=' + $stage) | Out-File -FilePath $log -Append -Encoding utf8 } catch {}
+    try {
+        ('FAILED_STAGE=' + $stage) | Out-File -FilePath $log -Append -Encoding utf8
+        ('FAILED_TYPE=' + $_.Exception.GetType().Name) | Out-File -FilePath $log -Append -Encoding utf8
+    } catch {}
 } finally {
     @{
         status = if ($passed) { 'PASS' } else { 'FAIL' }
