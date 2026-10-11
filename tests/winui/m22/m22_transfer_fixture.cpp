@@ -9,6 +9,25 @@
 #include <iterator>
 using namespace fxfile::shelltransfer;
 namespace fs=std::filesystem;
+#if defined(FLY_M22_TEST_DIRECTORY_RENAME_LOCK)
+std::atomic_bool g_directoryProbeAttempted{false};
+std::atomic_bool g_directoryProbeBlocked{false};
+// Called synchronously inside the active worker's pinned-ancestor window.
+// No scan or mutation outside a disposable M22-owned folder.
+void attemptTestOwnedParentRename(std::wstring const& exactParent) noexcept {
+ if(fs::path(exactParent).filename()!=L"m22-pin-target")return;
+ const std::wstring alternate=exactParent+L"-swapped";
+ const BOOL renamed=::MoveFileExW(
+     exactParent.c_str(),alternate.c_str(),0);
+ const DWORD result=renamed?ERROR_SUCCESS: ::GetLastError();
+ if(renamed)(void)::MoveFileExW(
+     alternate.c_str(),exactParent.c_str(),0);
+ g_directoryProbeAttempted.store(true,std::memory_order_release);
+ g_directoryProbeBlocked.store(!renamed&&
+     (result==ERROR_SHARING_VIOLATION||result==ERROR_ACCESS_DENIED),
+     std::memory_order_release);
+}
+#endif
 int wmain(int count,wchar_t**args){
  setvbuf(stdout,nullptr,_IONBF,0);
  if(count==2&&std::wstring(args[1])==L"--receipt-child-exit")return 0;
@@ -539,6 +558,47 @@ int wmain(int count,wchar_t**args){
       get(liveDest/liveSource.filename())=="callback-owned-copy-content"&&
       get(liveSource)=="callback-owned-copy-content",
       "live_staged_copy_callback_durable_receipt_before_publish");
+#if defined(FLY_M22_TEST_DIRECTORY_RENAME_LOCK)
+ // Deterministically test the exact narrow rename window: before invoking
+ // the active worker, this disposable parent IS renameable; from inside
+ // the pinned window its rename MUST be blocked by sharing rules.
+ const auto pinDest=root/L"m22-pin-target";
+ const auto pinOther=root/L"m22-pin-target-swapped";
+ const auto pinStore=root/L"m22-pin-store";
+ fs::create_directory(pinDest);
+ const bool renameable=::MoveFileExW(pinDest.c_str(),pinOther.c_str(),0)&&
+                        ::MoveFileExW(pinOther.c_str(),pinDest.c_str(),0);
+ const bool pinStoreReady=createPrivateStageReceiptDirectory(
+     pinStore.native());
+ bool pinReceiptPublished=false;
+ bool pinResultOk=false;
+ if(renameable&&pinStoreReady){
+  Request pinTask=liveRequest;
+  pinTask.destination=pinDest.native();
+  Progress pinProgress{};
+  pinProgress.receiptDirectory=pinStore.native();
+  g_directoryProbeAttempted.store(false,std::memory_order_release);
+  g_directoryProbeBlocked.store(false,std::memory_order_release);
+  setDirectoryRenameProbeForTest(&attemptTestOwnedParentRename);
+  const auto pinnedResult=execute(pinTask,pinProgress);
+  setDirectoryRenameProbeForTest(nullptr);
+  pinResultOk=pinnedResult.error==ERROR_SUCCESS&&
+      get(pinDest/liveSource.filename())=="callback-owned-copy-content";
+  for(auto const& entry:fs::directory_iterator(pinStore)){
+   if(entry.path().extension()!=L".bin")continue;
+   StageOwnershipReceipt receipt{};
+   if(readStageReceipt(entry.path().native(),receipt)&&
+      inspectStageReceiptState(entry.path().native())==
+          StageReceiptState::PublishedVerified)
+    pinReceiptPublished=true;
+  }
+ }
+ test(renameable&&pinStoreReady&&pinResultOk&&pinReceiptPublished&&
+      g_directoryProbeAttempted.load(std::memory_order_acquire)&&
+      g_directoryProbeBlocked.load(std::memory_order_acquire)&&
+      fs::is_directory(pinDest)&&!fs::exists(pinOther),
+      "receipt_active_publish_pins_ancestor_against_rename");
+#endif
  // Empty-file copies may not emit a progress callback, so the exact
  // completed stage handle must still be bound before publication.
  const auto emptySource=left/L"receipt-empty-file.txt";
