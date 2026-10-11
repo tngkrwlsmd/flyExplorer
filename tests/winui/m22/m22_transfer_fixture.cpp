@@ -12,6 +12,30 @@ namespace fs=std::filesystem;
 int wmain(int count,wchar_t**args){
  setvbuf(stdout,nullptr,_IONBF,0);
  if(count==2&&std::wstring(args[1])==L"--receipt-child-exit")return 0;
+ if(count==5&&std::wstring(args[1])==L"--owned-helper-ipc-untrusted"){
+  // This intentionally inherited ACL folder must never be accepted by the
+  // test-only helper. The child exits without touching the source or target.
+  const fs::path source(args[2]),destination(args[3]),untrusted(args[4]);
+  if(!fs::is_regular_file(source)||!fs::is_directory(destination)||
+     !fs::is_directory(untrusted)||
+     isPrivateStageReceiptDirectory(untrusted.native()))return 91;
+  Request task{};
+  task.kind=Kind::Copy;
+  task.collision=Collision::Reject;
+  task.sourceParent=source.parent_path().native();
+  task.destination=destination.native();
+  task.sources={source.native()};
+  Progress state{};
+  const auto result=executeIsolated(task,state);
+  bool targetAbsent=!fs::exists(destination/source.filename());
+  bool folderUnmodified=fs::directory_iterator(destination)==
+                         fs::directory_iterator();
+  const bool passed=result.error!=ERROR_SUCCESS&&targetAbsent&&
+                    folderUnmodified&&fs::exists(source);
+  std::printf("M22_ISOLATED_HELPER_IPC_UNTRUSTED_STORE=%s error=%lu\n",
+      passed?"PASS":"FAIL",result.error);
+  return passed?0:92;
+ }
  if(count==5&&std::wstring(args[1])==L"--owned-helper-ipc-copy"){
   // This test executable and the *explicit fixture-compiled* helper are
   // siblings. The environment points only to this test-owned private store.
