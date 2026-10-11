@@ -263,7 +263,9 @@
     <ClCompile Include="..\..\src\base\shell_context_core.cpp">
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
     </ClCompile>
-    <ClCompile Include="..\..\src\base\stage_receipt_core.cpp" />
+    <ClCompile Include="..\..\src\base\stage_receipt_core.cpp">
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+    </ClCompile>
     <ClCompile Include="..\..\src\base\shell_transfer_core.cpp">
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
     </ClCompile>
