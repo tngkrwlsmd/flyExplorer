@@ -7,6 +7,29 @@ app/winui, UI-independent native code in src/base, tests in tests/winui, and
 bounded orchestration in tools/winui/run_checks.py. The former MFC application
 is retired from the working tree and is recoverable from Git revision cbffb48.
 
+## 2026-10-11 exact staged Copy file-ID read-only validation
+
+An isolated source candidate `e8870beada07ad9bf43a80f299a7aa189333e16f`
+added a read-only `inspectStageFile` / `sameStageFile` API in
+`src/base/shell_transfer_core.{h,cpp}`. It queries Windows
+`FileIdInfo` identity for **one explicitly supplied** fixed-drive
+staged-Copy path using a no-reparse-point-opening handle. It fails
+closed on unexpected leaf naming, normalized-path discrepancies, directory
+junctions/reparse points, multiple hard links and missing identities.
+
+Owned Windows Remote Shell
+[run #38120473011](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38120473011)
+completed SUCCESS: focused source contracts and Release M22 native
+**44/44** including stable identity, same-path replacement detection,
+hardlink refusal and invalid-path refusal; protected legacy MFC
+settings 6/6 unchanged.
+
+**Not production orphan cleanup:** This is a read-only identity building
+block. A valid GUID-shaped file path and file ID do not establish
+provenance. There is no durable creator receipt, no user-authorized
+recovery UI and no product automatic deletion of orphan stages.
+See `docs/development/STAGED_COPY_RECOVERY.md`.
+
 ## 2026-10-11 live ACL, folder, Move and orphan safety checkpoint
 
 The production staged Copy implementation remains unchanged from main
