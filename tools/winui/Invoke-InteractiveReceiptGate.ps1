@@ -83,12 +83,12 @@ try {
         Join-Path $env:SystemRoot 'System32\WindowsPowerShell\v1.0\powershell.exe'
     ) -Argument $command
     $principal = New-ScheduledTaskPrincipal -UserId $interactive[0].Sid -LogonType Interactive -RunLevel Limited
-    $settings = New-ScheduledTaskSettingsSet -ExecutionTimeLimit (New-TimeSpan -Minutes 6) -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries
+    $settings = New-ScheduledTaskSettingsSet -ExecutionTimeLimit (New-TimeSpan -Seconds 150) -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries
     Register-ScheduledTask -TaskName $taskName -Action $action -Principal $principal -Settings $settings -Force | Out-Null
     $taskRegistered = $true
     Start-ScheduledTask -TaskName $taskName
     Write-Output 'INTERACTIVE_RECEIPT_OWNED_TASK_STARTED=PASS'
-    $deadline = (Get-Date).AddMinutes(6)
+    $deadline = (Get-Date).AddSeconds(135)
     while (-not (Test-Path -LiteralPath $result) -and (Get-Date) -lt $deadline) {
         Start-Sleep -Seconds 3
     }
