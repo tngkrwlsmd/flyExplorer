@@ -26,6 +26,8 @@ void attemptTestOwnedParentRename(std::wstring const& exactParent) noexcept {
  g_directoryProbeBlocked.store(!renamed&&
      (result==ERROR_SHARING_VIOLATION||result==ERROR_ACCESS_DENIED),
      std::memory_order_release);
+ std::printf("M22_PIN_RENAME_ATTEMPT moved=%d error=%lu\n",
+             int(renamed),result);
 }
 #endif
 int wmain(int count,wchar_t**args){
@@ -593,6 +595,12 @@ int wmain(int count,wchar_t**args){
     pinReceiptPublished=true;
   }
  }
+ std::printf("M22_PIN_GUARD_RESULT renameable=%d private=%d copy=%d published=%d probed=%d blocked=%d restored=%d\n",
+             int(renameable),int(pinStoreReady),int(pinResultOk),
+             int(pinReceiptPublished),
+             int(g_directoryProbeAttempted.load(std::memory_order_acquire)),
+             int(g_directoryProbeBlocked.load(std::memory_order_acquire)),
+             int(fs::is_directory(pinDest)&&!fs::exists(pinOther)));
  test(renameable&&pinStoreReady&&pinResultOk&&pinReceiptPublished&&
       g_directoryProbeAttempted.load(std::memory_order_acquire)&&
       g_directoryProbeBlocked.load(std::memory_order_acquire)&&
