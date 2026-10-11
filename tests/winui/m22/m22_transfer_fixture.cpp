@@ -201,6 +201,42 @@ int wmain(int count,wchar_t**args){
       saved.creatorPid==::GetCurrentProcessId()&&
       saved.creatorStartTime!=0&&receiptMatchesStage(saved),
       "receipt_roundtrip_flush_and_exact_stage_identity");
+ StageOwnershipReceipt bogus=saved;
+ bogus.creatorStartTime+=1; // PID is valid, but creation time is not.
+ test(inspectReceiptCreator(saved)==ReceiptCreatorState::Running&&
+      inspectReceiptCreator(bogus)==ReceiptCreatorState::Unknown&&
+      inspectReceiptCreator(StageOwnershipReceipt{})==
+          ReceiptCreatorState::Unknown,
+      "receipt_creator_alive_and_pid_reuse_fail_closed");
+ // Retain the child's PROCESS_INFORMATION handle until the exited-state
+ // probe finishes. Only this one fixture-spawned process is observed.
+ wchar_t fixturePath[32768]{};
+ const DWORD fixtureUnits=::GetModuleFileNameW(nullptr,fixturePath,32768);
+ bool exitedProbe=false;
+ if(fixtureUnits>0&&fixtureUnits<32768){
+  std::wstring command=L"\""+std::wstring(fixturePath)+L"\" --receipt-child-exit";
+  STARTUPINFOW info{};info.cb=sizeof(info);
+  PROCESS_INFORMATION child{};
+  if(::CreateProcessW(fixturePath,command.data(),nullptr,nullptr,FALSE,
+                      CREATE_NO_WINDOW,nullptr,nullptr,&info,&child)){
+   const DWORD waited=::WaitForSingleObject(child.hProcess,5000);
+   FILETIME created{},exited{},kernel{},user{};
+   if(waited==WAIT_OBJECT_0&&
+      ::GetProcessTimes(child.hProcess,&created,&exited,&kernel,&user)){
+    ULARGE_INTEGER start{};
+    start.LowPart=created.dwLowDateTime;
+    start.HighPart=created.dwHighDateTime;
+    StageOwnershipReceipt finished=saved;
+    finished.creatorPid=child.dwProcessId;
+    finished.creatorStartTime=start.QuadPart;
+    exitedProbe=inspectReceiptCreator(finished)==ReceiptCreatorState::Exited;
+   }
+   ::CloseHandle(child.hThread);
+   ::CloseHandle(child.hProcess);
+  }
+ }
+ test(exitedProbe&&receiptMatchesStage(saved),
+      "receipt_creator_exited_without_stage_mutation");
  const auto initialReceiptBytes=fs::file_size(record);
  test(!writeStageReceipt(record.native(),stage.native(),
                          L"target-document.txt")&&
