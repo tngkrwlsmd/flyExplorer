@@ -20,5 +20,11 @@ bool writeStageReceipt(std::wstring const& exactReceiptPath,
 bool readStageReceipt(std::wstring const& exactReceiptPath,
                       StageOwnershipReceipt& receipt) noexcept;
 bool receiptMatchesStage(StageOwnershipReceipt const& receipt) noexcept;
+// Read-only snapshot of the EXACT PID and process creation time.
+// Unknown (including PID reuse/access failure) is never equivalent to Exited.
+// Even Exited does NOT confer authority to remove or publish a stage.
+enum class ReceiptCreatorState { Unknown, Running, Exited };
+ReceiptCreatorState inspectReceiptCreator(
+    StageOwnershipReceipt const& receipt) noexcept;
 }
 #endif
