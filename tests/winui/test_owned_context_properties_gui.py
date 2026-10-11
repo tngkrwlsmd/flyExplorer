@@ -141,14 +141,49 @@ def main(config="Release"):
 
         eventually(owned_popup, "Context popup not owned by exact helper", 8)
         popup = owned_popup()
-        menu = Desktop(backend="uia").window(handle=popup)
+        desktop = Desktop(backend="uia")
+        menu = desktop.window(handle=popup)
+        roots = [menu]
+        # Native #32768 popup menus can be top-level owned windows rather
+        # than UIA descendants of the hidden 1x1 foreground owner.
+        roots.extend(x for x in desktop.windows(process=helper_process.pid)
+                     if x.handle != popup)
         candidates = []
-        for entry in menu.descendants(control_type="MenuItem"):
+        seen = set()
+        summaries = []
+        for root in roots:
             try:
-                if owned_name(entry.window_text()) and entry.is_visible():
-                    candidates.append(entry)
-            except Exception:
-                pass
+                entries = root.descendants()
+                matching = 0
+                for entry in entries:
+                    if entry.element_info.control_type != "MenuItem":
+                        continue
+                    try:
+                        if owned_name(entry.window_text()):
+                            matching += 1
+                            identity = (root.handle, entry.rectangle().left,
+                                        entry.rectangle().top)
+                            if identity not in seen:
+                                seen.add(identity)
+                                candidates.append(entry)
+                    except Exception:
+                        pass
+                summaries.append((root.class_name(), len(entries), matching))
+            except Exception as exc:
+                summaries.append(("UNAVAILABLE", type(exc).__name__))
+        print("OWNED_PROPERTIES_POPUP_UIA_SHAPES", summaries, flush=True)
+        if not candidates:
+            # Read-only diagnostic: the win32 accessibility/menu wrapper
+            # may expose a native popup even when UIA exposes no children.
+            try:
+                native = Desktop(backend="win32").window(handle=popup)
+                win32menu = native.menu()
+                print("OWNED_PROPERTIES_WIN32_MENU_INFO",
+                      native.class_name(), type(win32menu).__name__,
+                      len(win32menu.items()) if win32menu else 0, flush=True)
+            except Exception as exc:
+                print("OWNED_PROPERTIES_WIN32_MENU_CLASS",
+                      type(exc).__name__, flush=True)
         assert len(candidates) == 1, (
             "No unambiguous canonical Properties menu item; do not click",
             len(candidates),
