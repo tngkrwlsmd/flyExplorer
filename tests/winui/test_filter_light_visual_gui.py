@@ -224,6 +224,18 @@ def main():
             stop_owned()
 
         assert len(set(dpi_seen)) == 1, ("DPI differs across palette captures", dpi_seen)
+        montage_names = []
+        if args.label == "after":
+            for state in ("normal", "selected-focus"):
+                combined = Image.new("RGB", (width * 2, capture_height * 2))
+                for i, (_, slug, _, _) in enumerate(palettes):
+                    panel = Image.open(output / ("after-" + slug + "-" + state + ".png"))
+                    assert panel.size == (width, capture_height)
+                    combined.paste(panel.convert("RGB"), ((i % 2) * width,
+                                                          (i // 2) * capture_height))
+                montage_name = "after-light-" + state + "-montage.png"
+                combined.save(output / montage_name, "PNG", optimize=True)
+                montage_names.append(montage_name)
         metadata = {
             "revision": args.exact_sha, "role": args.label,
             "configuration": "Release", "theme": "light", "view": "details",
@@ -232,6 +244,7 @@ def main():
             "crop": [0, 0, width, capture_height],
             "test_owned_files": ["alpha.cpp", "beta.h", "notes.txt", "사진.JPG"],
             "binary_sha256": binaries, "images": states,
+            "montages": montage_names,
         }
         (output / (args.label + "-light-metadata.json")).write_text(
             json.dumps(metadata, ensure_ascii=False, indent=2),
