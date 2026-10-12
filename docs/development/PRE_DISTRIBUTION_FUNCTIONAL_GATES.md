@@ -6,6 +6,23 @@ applies only to the tested SHA/binary, environment, procedure and scope.
 See `CURRENT_STATUS.md`, `ARCHITECTURE.md`, `VERIFICATION_PROFILE.md`
 and `AGENTS.md`. Later evidence below supersedes older failure checkpoints.
 
+## Current 2026-10-12 accessibility verdict
+
+Real Korean two-beolsik composition and durable WinUI filter save
+(`한글`) are **ACCEPTED** in owned Windows
+[38227421736](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38227421736);
+earlier failed/unaccepted IME probes below are historical test-harness
+diagnostics. Styled filter High Contrast pixels are **PASS only for tested
+blue/star and red/tag states** in
+[38214474825](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38214474825).
+Narrator spoken phrases and audible output remain **NOT VERIFIED / NOT
+ACCEPTED** after bounded synthetic Speech Recap attempts
+([38233608351](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38233608351)).
+Physical Windows 125/150/200% OS scaling remains **NOT TESTED**; the real
+interactive Windows desktop was last inventoried at 96 DPI
+([38218827761](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38218827761)).
+No new product/runtime test is asserted by this status reconciliation.
+
 ## Latest engineering evidence — current accessibility and private package audit
 
 **Engineering-only product source:** `2a736d85b22859a770138e4b50926ac125d1a052`,
@@ -25,8 +42,9 @@ reported 1024x768 and system DPI **96** in Explorer user session 2.
 Actual 125/150/200% OS scaling therefore remains **NOT TESTED** on this
 machine. The filter colors and badge categories now appear in UI
 Automation names, but actual spoken Narrator behavior remains
-**NOT TESTED**. Earlier matched light/dark 96-DPI pixels are accepted
-in CURRENT_STATUS.md; those results are not substitute higher-scale tests.
+**NOT VERIFIED / NOT ACCEPTED** despite later synthetic Recap attempts.
+Earlier matched light/dark 96-DPI pixels are accepted
+in CURRENT_STATUS.md; those results are not substitutes for higher-scale tests.
 
 **Fresh exact source/binary setup identity: PRIVATE PASS.**
 [Windows owned audit #38210591849](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38210591849)
@@ -252,8 +270,10 @@ Never modify user data or protected legacy configuration.
 Broader arbitrary accelerator editing, safe/provider context verbs,
 indexed property/content/provider search remain separate feature
 tasks. Filter color/icon classification is implemented and accepted
-for light/dark 96-DPI conditions. Windows
-125/150/200% scaling, High Contrast, Narrator, Korean IME,
+for light/dark 96-DPI conditions. Styled-filter High Contrast and
+real Korean two-beolsik composition/save also have the **scoped PASS**
+evidence recorded above. Windows 125/150/200% scaling, actual Narrator
+spoken/audio output, additional untested theme/input scenarios,
 third-party providers and long-duration errors require distinct
 acceptance evidence.
 

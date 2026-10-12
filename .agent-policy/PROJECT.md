@@ -807,22 +807,31 @@ owned 5,000-item navigation/sort/progressive-paging evidence are unchanged.
   conformance evidence; this does not claim Profile C runtime enforcement
   or turn a past runner result into current acceptance.
 
-High Contrast ON is accepted on merged product revision
-`eaa1b368a677f57c15183c5e6851f0598ed25878`. Actual Windows High Contrast
-GUI/visual acceptance passed in Remote Windows Task `37252987127`, including
-selected-row UIA state, search controls, protected user settings and restoration
-of the original High Contrast OFF state.
+High Contrast ON was accepted on merged product revision
+`eaa1b368a677f57c15183c5e6851f0598ed25878` in historical Windows task
+`37252987127`, including restored original OFF state. The later styled-filter
+High Contrast visual gate passed for actual 96-DPI blue/star and red/tag
+conditions in [38214474825](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38214474825);
+it does not certify every Windows contrast scheme or mode. Real Korean
+two-beolsik `한글` composition and durable WinUI filter save passed in
+[38227421736](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38227421736).
+Narrator speech/audio remain unverified despite synthetic Recap probes.
 
 ## Open gates
 
 Not certified:
 - actual 125/150/200% OS scaling;
-- human Narrator/Korean IME;
+- actual Narrator spoken rule/color/icon/selection feedback and audible output
+  (not verified; see `docs/development/NARRATOR_SPEECH_VALIDATION.md`);
 - signed clean-machine machine-wide install/update/rollback;
 - public redistribution/source-delivery/rightsholder/legal clearance.
 
-The latest unsigned package + exact binary/source identity acceptance is Remote
-Windows Task #440 (`37376305779`). Binary source revision
+The latest **retained historical** unsigned package + exact binary/source
+identity acceptance is Remote Windows Task #440 (`37376305779`). This is not a
+package built from current main. A newer private-only source/package identity
+audit [38210591849](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38210591849)
+passed on `2a736d85b22859a770138e4b50926ac125d1a052`, but disposed of
+its temporary setup/source ZIP. Binary source revision
 `bc63c8b48e466d1275cc6dcffb0c50e02d39db60` produced a 305-file Release
 runtime (17 product/generated, 288 exact NuGet byte matches), a 326-file setup,
 and a deterministic 382-file source bundle. Runtime manifest SHA-256 is

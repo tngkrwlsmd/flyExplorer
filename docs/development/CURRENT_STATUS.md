@@ -7,6 +7,30 @@ app/winui, UI-independent native code in src/base, tests in tests/winui, and
 bounded orchestration in tools/winui/run_checks.py. The former MFC application
 is retired from the working tree and is recoverable from Git revision cbffb48.
 
+## Current acceptance index (2026-10-12)
+
+This is a current-state index over **revision- and environment-scoped** evidence,
+not a new test run or an assertion that every later main commit has passed
+every gate. Later evidence in this index supersedes older diagnostic
+`NOT ACCEPTED` / `NOT TESTED` wording in the chronological sections below.
+
+| Gate | Current evidence-scoped verdict |
+| --- | --- |
+| Named filter presets, blue/green/amber/red text and star/pin/flag/tag classification | **IMPLEMENTED**; functional Release/GUI [38198895107](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38198895107) |
+| Styled filter light-theme pixels | **PASS** at actual 96 DPI (16 before/after captures, selection/focus), [38206845319](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38206845319) |
+| Styled filter High Contrast pixels | **PASS for tested blue/star and red/tag states** at actual 96 DPI, [38214474825](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38214474825); not every scheme or mode |
+| Filter UI Automation row/badge semantics and physical-keyboard save | **PASS** in Release functional GUI, [38209842808](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38209842808) |
+| Real Korean two-beolsik IME composition and durable WinUI filter save | **PASS** for `한글` on actual Windows, [38227421736](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38227421736) |
+| Narrator spoken filter name/color/icon/selection and actual audio | **NOT VERIFIED / NOT ACCEPTED**; synthetic Speech Recap inspection did not confirm an utterance, [38233608351](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38233608351) |
+| Actual Windows display scaling at 125%, 150%, 200% | **NOT TESTED**; latest recorded desktop inventory was 96 DPI, [38218827761](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38218827761) |
+| Public distribution/signing and production installation | **NOT CLEARED**; the [38210591849](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38210591849) newer unsigned source/package identity audit was private and its temporary assets were removed |
+
+The older entries below preserve their own dated observations; they do not
+reopen an accepted IME gate or turn UIA/Narrator-launch evidence into real
+spoken-output acceptance. See
+[NARRATOR_SPEECH_VALIDATION.md](NARRATOR_SPEECH_VALIDATION.md) and
+[PRE_DISTRIBUTION_FUNCTIONAL_GATES.md](PRE_DISTRIBUTION_FUNCTIONAL_GATES.md).
+
 ## 2026-10-12 Narrator Speech Recap follow-up: window visible, spoken phrase NOT VERIFIED
 
 **Source and platform:** `flyExplorer/main` at
@@ -2285,10 +2309,13 @@ Current source and the last parity evidence still show these limits:
   test-owned path text; those pixels are not claimed identical.
   Higher-DPI and additional selection/theme visual states were not
   separately exercised in this focused gate.
-- Persistent pane filter/mask rule sets are implemented with up to 20 named
-  private presets, case-insensitive wildcard masks and legacy substring
-  compatibility. Pane filters remain name/mask based; historical per-rule
-  color/icon classification is not implemented.
+- Persistent pane filter/mask rule sets support up to 20 named private
+  presets, case-insensitive wildcard masks and legacy substring compatibility.
+  Named rules now also support opt-in blue/green/amber/red filename accents
+  and star/pin/flag/tag classification badges. These styles decorate matching
+  file rows without replacing the existing name/mask filtering or Shell icons.
+  Actual 96-DPI light-theme and scoped High Contrast visual acceptance is
+  recorded in the current index above; other OS scales remain untested.
 - The complete historical command/provider verb/fault matrix is not fully
   implemented or tested.
 - User-configurable accelerators and a complete historical shortcut map are
@@ -2302,8 +2329,9 @@ Current source and the last parity evidence still show these limits:
 
 ## Packaging and source identity state
 
-The current unsigned package and exact binary/source identity are accepted by
-Remote Windows Task #440 (`37376305779`). The binary source revision is
+The **historically retained** unsigned package and exact binary/source
+identity were accepted by Remote Windows Task #440 (`37376305779`).
+They are not artifacts built from the latest main. The binary source revision is
 `bc63c8b48e466d1275cc6dcffb0c50e02d39db60`, with source tree
 `8f1bc2e0181cc87e646dd2fad75ccdca0c8e8a66`.
 
@@ -2338,8 +2366,16 @@ variable after lifecycle completion and failed before preserving the release
 artifacts. #440 changed only that evidence destination to the workflow's
 canonical `logs\remote-evidence` path and completed successfully.
 
-This closes the technical exact binary-to-source identity gate for the accepted
-unsigned artifact. The public distribution mechanism is now selected as GPLv3
+This closes the technical exact binary-to-source identity gate **for that
+historical unsigned artifact only**. A newer private audit
+[38210591849](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38210591849)
+checked the unsigned setup, 305-file runtime and 438-file source bundle for
+source `2a736d85b22859a770138e4b50926ac125d1a052`, but its test-owned
+setup/source ZIP were removed after the audit. Tracked release manifests
+still identify `bc63c8b...`, not the newer product or current main.
+A final release requires retained, reverified matching assets.
+
+The public distribution mechanism is now selected as GPLv3
 section 6(d) same-release-page network access, and the reserved final tag is
 `v1.0.0.0`. Repository-level GitHub Immutable Releases was enabled in Remote
 Windows Task #446 (`37379026246`). The tag is intentionally absent before
@@ -2359,10 +2395,14 @@ HKLM machine-wide lifecycle, or clear rightsholder/legal review.
 ## Open gates
 
 Not certified by current automated evidence:
-- actual 125%, 150% and 200% OS display scaling (the retired dedicated
-  VM reported only a 1274x771 display mode and 100% DPI range; this is
-  historical environment evidence, not current central-runner acceptance);
-- human Narrator and Korean IME composition acceptance;
+- actual 125%, 150% and 200% OS display scaling (the current central
+  Windows desktop inventory recorded 1024x768 at 96 DPI in
+  [38218827761](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38218827761));
+- actual spoken Narrator filter labels/selection and audio playback (the
+  synthetic Recap diagnostics remain inconclusive, despite safe cleanup);
+- broader Korean IME layouts/controls beyond the specifically accepted
+  real two-beolsik `한글` composition and persisted filter-rule save
+  in [38227421736](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38227421736), if required by a future release scope;
 - signed clean-machine machine-wide install/update/rollback;
 - public redistribution/source-delivery/rightsholder/legal clearance.
 

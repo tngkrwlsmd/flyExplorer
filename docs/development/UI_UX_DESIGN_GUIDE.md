@@ -65,13 +65,15 @@ For every change that alters composited pixels:
 Do not manufacture certification for an untested theme, DPI, accessibility or
 input condition. For layout/theme/scale-sensitive work, exercise every
 environment that is actually available and list the rest as NOT TESTED or
-ENVIRONMENT BLOCKED. Actual 125/150/200% DPI, human Narrator and Korean IME
-remain separate explicit gates until exercised. High Contrast ON already has
-actual Windows GUI/visual acceptance on merged product revision
-`eaa1b368a677f57c15183c5e6851f0598ed25878` through Remote Windows Task
-`37252987127`; reuse that evidence while the relevant product/presentation
-conditions remain unchanged, and rerun the gate only when a later change
-invalidates it.
+ENVIRONMENT BLOCKED. Actual 125/150/200% OS DPI and spoken Narrator
+name/color/icon/selection/audio are still open, independent gates.
+Real Korean two-beolsik `한글` composition and durable filter save passed
+[38227421736](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38227421736);
+this does not certify all IME scenarios. The styled-filter High Contrast
+visual gate passed for tested blue/star and red/tag combinations in
+[38214474825](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38214474825),
+not every scheme or mode. Reuse these SHA/environment-scoped results only
+while the relevant behavior and presentation boundary remains unchanged.
 
 Pure behavior-preserving refactors with no composited-pixel change do not need a
 new BEFORE/AFTER screenshot pair, though their required functional GUI

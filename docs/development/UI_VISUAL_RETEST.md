@@ -177,22 +177,30 @@ focus/select/save, as accepted by the focused GUI suite in
 Each styled file row exposes the preset name, color and icon category
 through UI Automation; badges expose their category rather than only
 a generic icon. This is **UIA semantics PASS**, not a claim that
-Narrator actually spoke those values: narrator audio, tab/reading
-order for every pane, and Korean IME scenarios require distinct
-manual/assistive-technology testing.
+Narrator actually spoke those values: spoken phrases, audio output and
+tab/reading order for every pane remain separate assistive-technology
+gates. Real Korean two-beolsik `한글` composition and durable WinUI
+filter-save behavior subsequently passed in actual Windows
+[38227421736](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38227421736);
+other IME scenarios still require their own evidence.
 
 ## Theme, scale and accessibility gates
 
 For layout/theme/scale-sensitive UI work, exercise the relevant environments
 that are actually available. Do not infer a PASS for an unavailable one.
 
-Actual 125/150/200% display scaling and human Narrator/Korean IME behavior
-remain separate environment/manual gates until exercised. High Contrast ON
-already has actual Windows GUI/visual acceptance on merged product revision
-`eaa1b368a677f57c15183c5e6851f0598ed25878` through Remote Windows Task
-`37252987127`. Reuse that evidence while the relevant product/presentation
-boundary is unchanged; rerun High Contrast only when a later change invalidates
-it. Owned same-app physical pointer drag is covered by the Release acceptance
+Actual 125/150/200% OS display scaling remains **NOT TESTED**.
+Human-observed or independently captured Narrator spoken output remains
+**NOT VERIFIED**, even though the screen reader launched and Speech Recap
+windows were found in synthetic diagnostics; see
+[NARRATOR_SPEECH_VALIDATION.md](NARRATOR_SPEECH_VALIDATION.md).
+Real Korean two-beolsik filter entry/save passed in
+[38227421736](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38227421736).
+The styled-filter High Contrast visual gate passed for the tested color/icon
+combinations in [38214474825](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38214474825).
+Reuse accepted evidence only while the relevant product/presentation
+boundary and tested conditions remain unchanged; rerun a gate only when
+its boundary is invalidated. Owned same-app physical pointer drag is covered by the Release acceptance
 path; external cross-application drag
 remains a separate interoperability gate when relevant. RDP restrictions,
 source-level support or code-level RasterizationScale behavior do not certify
