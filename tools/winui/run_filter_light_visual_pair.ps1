@@ -40,7 +40,13 @@ if($LASTEXITCODE -ne 0){throw 'Owned root ACL failed'}
 $images=Join-Path $Root 'images'
 New-Item -ItemType Directory -Path $images -Force|Out-Null
 $capture=Join-Path $Root 'light-capture.py'
-Copy-Item -LiteralPath (Join-Path $Source 'tests\winui\test_filter_light_visual_gui.py') -Destination $capture
+if($ResumeBeforeBuild){
+ if(-not(Test-Path -LiteralPath $capture -PathType Leaf)){throw 'Reviewed current test-only capture script not pre-staged'}
+ $script=Get-Content -LiteralPath $capture -Raw -Encoding UTF8
+ if(-not $script.Contains('Both revisions already support color/icon selectors')){throw 'Resumed capture script is not fixed baseline comparison'}
+}else{
+ Copy-Item -LiteralPath (Join-Path $Source 'tests\winui\test_filter_light_visual_gui.py') -Destination $capture
+}
 $worker=Join-Path $Root 'light-worker.ps1'
 $result=Join-Path $Root 'light-result.json'
 if($ResumeBeforeBuild){Remove-Item -LiteralPath $result -Force -ErrorAction Stop}
