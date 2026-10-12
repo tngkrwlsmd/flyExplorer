@@ -7,6 +7,55 @@ app/winui, UI-independent native code in src/base, tests in tests/winui, and
 bounded orchestration in tools/winui/run_checks.py. The former MFC application
 is retired from the working tree and is recoverable from Git revision cbffb48.
 
+## 2026-10-12 actual accessibility environment diagnostics (no scale changes)
+
+**Read-only Windows capability inventory: PASS.**
+[Run 38218827761](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38218827761)
+reported a single interactive Windows Explorer session (2),
+1024x768 desktop at **96 DPI**, no per-monitor override entries,
+`Win8DpiScaling=0`, and installed Narrator executable plus Korean IME
+DLL. **125%, 150%, 200% real OS DPI remain NOT TESTED**: no scaling
+change/re-login was attempted because that would modify the shared
+interactive desktop without an established, verified recovery path.
+Narrator being installed does **not** certify spoken output; **Narrator
+speech remains NOT TESTED**. The previously accepted real High Contrast
+pixels ([run 38214474825](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38214474825))
+were not redundantly rerun, and HC remains in its original OFF state.
+
+**Real Korean two-beolsik composition: NOT ACCEPTED.**
+[Owned WinUI IME test 38219262419](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38219262419)
+rebuilt the unchanged product and confirmed Korean HKL
+`0x04120412`, but its actual focused input HWND differed from the
+top-level app HWND, `ImmGetContext` returned no context on that
+focused HWND, and physical Hangul-key/right-Alt attempts both entered
+Latin `gksrmf` instead of composed `한글`. A third IMM-native
+method could not be attempted without a valid IMM context.
+This does **not** independently identify a product defect: modern
+WinUI may use Text Services Framework rather than a Win32 HIMC.
+The test-only diagnostic now records focus HWND, IMM open/conversion
+status if present and restores the owned layout and any prior IMM state.
+
+[Owned native Win32 EDIT comparison 38220744083](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38220744083)
+completed its **diagnostic workflow**, but returned
+`KOREAN_IME_NATIVE_EDIT_COMPOSED=False`, no IMM context and an
+**empty input value** after the attempted keys. Since keyboard
+delivery to the native EDIT was not separately proven, this is
+**inconclusive** as a control comparison and must not be presented as
+a native IME or product PASS/FAIL conclusion. The earlier native
+comparison attempts failed at test-only focus and EDIT-clear API
+preconditions and were corrected; none established successful Hangul
+composition. **A real Korean 2-beolsik composition and durable-save
+acceptance is still required** on a known working foreground
+keyboard/TSF environment, preferably with a proven reference editor.
+
+All test execution was restricted to synthetic data and owned app
+windows. [Owned cleanup run 38221028916](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38221028916)
+succeeded after exact source, result-stage, link and active-process
+checks. The registered Remote Shell request slot was restored to idle.
+No product runtime/pixel code, desktop DPI setting or deferred staged
+Copy interruption/safe-recovery logic was modified by this
+diagnostic round.
+
 ## 2026-10-12 high-contrast filter acceptance and remaining IME/DPI/Narrator limits
 
 [Exact-revision Windows High Contrast run 38214474825](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38214474825)
