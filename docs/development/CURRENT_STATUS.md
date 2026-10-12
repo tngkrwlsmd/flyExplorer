@@ -7,6 +7,69 @@ app/winui, UI-independent native code in src/base, tests in tests/winui, and
 bounded orchestration in tools/winui/run_checks.py. The former MFC application
 is retired from the working tree and is recoverable from Git revision cbffb48.
 
+## 2026-10-12 run.bat launcher and styled filter presets
+
+**Canonical real-launch verification: PASS.**
+[Remote Windows run 38198360371](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38198360371)
+reused an already completed exact-revision Release binary at
+`4d8c83f2ca80d7642d79f326a638ebebf8d049b5` to invoke
+`run.bat Release <test-owned Unicode folder>`, rather than launching
+the executable directly. It confirmed launcher exit 0, both pane UIA
+controls and the Korean-named file row, and graceful shutdown of the
+owned app with exit 0. Two earlier timed-out, exact-test-owned processes
+were identified by executable path/fixture argument and closed, followed
+by owned workspace cleanup. Initial launcher checks were blocked by
+test-harness subprocess PIPE inheritance, not a product runtime failure;
+the permanent harness fix is `tests/winui/test_run_bat_release_gui.py`
+in `a4e7d74026f72030a78895ba4463ee3ae4bc9307`.
+
+**Filter preset color/icon feature: Release + functional GUI PASS.**
+Product revision `18a4859ce8fc40101ff746dc5b651b6cfd98b028`
+adds opt-in color palette (default/blue/green/amber/red), secondary
+classification badge (none/star/pin/flag/tag), deterministic first
+matching styled-rule rendering across file view modes, and per-rule
+bounded private style metadata. Existing Shell icons, mask filtering,
+20-rule limit and legacy v1 filter files are preserved; style-bearing
+files use backwards-readable-by-new-product schema 2, rejecting invalid
+style bytes without replacing the loaded model. Older application
+versions are **not** claimed to read new schema 2 style files.
+
+[Exact-revision central Windows GUI run 38198895107](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38198895107)
+completed **SUCCESS** and set `central-ci/windows-gui=success`:
+Release build PASS, `gui-window-tabs-Release` EXIT=0,
+`gui-shortcuts-Release` EXIT=0,
+`gui-filter-preset-Release` EXIT=0 (5.9 s),
+`gui-all-Release` EXIT=0 (118.7 s) and functional GUI PASS.
+The focused filter test checked style selection, schema 2 write/reload,
+visible row badge, mask application, restart persistence, deletion,
+unmodified legacy settings, and normal process exit. Early failed runs
+38198500380 and 38198626453 isolated a stale test-orchestrator contract
+and a single malformed C++ count guard respectively; both were fixed
+before the accepted run.
+
+**Additional M20 Release native acceptance: 52/52 PASS.**
+[Remote Windows run 38202520450](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38202520450)
+checked out that same product revision under a disposable short Windows
+workspace in the registered interactive session, passed five focused
+source contract tests, built the M20 Release native executable and
+confirmed `M20_STANDALONE_NATIVE_Release_52_PASS True`. The original six
+legacy user-profile sentinels were unchanged. The test-owned task and
+workspace were removed. Nonblocking C4005 WIN32_LEAN_AND_MEAN warnings
+were observed in the M20 fixture.
+
+**Visual gate: NOT TESTED.** The new
+`tests/winui/test_filter_style_visual_capture_gui.py` harness (test-only
+revision `0c173826432aa913523ab0c37f43fac1118d2100`)
+defines actual matched WinUI dark/details screenshots using a disposable
+profile and synthetic files, comparing pre-feature
+`4d8c83f2ca80d7642d79f326a638ebebf8d049b5` with the
+post-feature product. A remote screenshot execution request was blocked
+before dispatch, so no actual before/after pixels were captured or
+inspected. Do **not** claim visual acceptance until actual image pairs
+are obtained, their source/DPI/theme/geometry metadata matches, and
+they are visually reviewed. Other DPI/theme variants are separate gates.
+Copy crash-interruption receipts and safe-recovery work remain deferred.
+
 ## 2026-10-12 configurable focus shortcut expansion — Release and functional GUI PASS
 
 Product revision `04e7d358dcc7cb74a6c619b833b503c72b089294`
