@@ -108,7 +108,23 @@ def main():
         assert edit, "Native EDIT child is missing"
         wnd = Desktop(backend="win32").window(handle=edit)
         wnd.click_input()
-        assert u.GetForegroundWindow() == top, "Refuse physical keys outside test-owned foreground"
+        def require_foreground_owned():
+            fg=u.GetForegroundWindow()
+            owner=w.DWORD()
+            if fg:
+                u.GetWindowThreadProcessId(fg,c.byref(owner))
+            if not fg or owner.value != proc.pid:
+                u.SetForegroundWindow(top)
+                time.sleep(.25)
+                fg=u.GetForegroundWindow()
+                owner=w.DWORD()
+                if fg:
+                    u.GetWindowThreadProcessId(fg,c.byref(owner))
+            print("KOREAN_IME_NATIVE_OWNED_FG",
+                  {"top":hex(int(top)),"foreground":hex(int(fg or 0)),
+                   "foreground_owned":owner.value==proc.pid},flush=True)
+            assert owner.value==proc.pid, "Refuse physical keys outside test-owned foreground"
+        require_foreground_owned()
         tid = u.GetWindowThreadProcessId(top, c.byref(w.DWORD()))
         original_hkl = int(u.GetKeyboardLayout(tid) or 0)
         ko = int(u.LoadKeyboardLayoutW("00000412", 0) or 0)
@@ -128,7 +144,7 @@ def main():
         try:
             for method in ("physical-hangul-key", "native-imm-mode"):
                 wnd.set_focus()
-                assert u.GetForegroundWindow() == top
+                require_foreground_owned()
                 wnd.set_edit_text("")
                 if method == "physical-hangul-key":
                     u.keybd_event(0x15, 0x72, 0, None)
