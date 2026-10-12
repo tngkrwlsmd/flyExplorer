@@ -1,6 +1,7 @@
 """Persistent pane filter preset source contracts."""
 from pathlib import Path
 import unittest
+import re
 
 ROOT=Path(__file__).resolve().parents[2]
 def read(path):
@@ -58,6 +59,22 @@ class FilterPresetContracts(unittest.TestCase):
         self.assertIn("fxfile::filterrules::Store::matches(itemLabel,rule.masks)",app)
         self.assertIn("필터 분류 아이콘",app)
         self.assertIn("FillFiles(0);FillFiles(1)",features)
+
+    def test_light_theme_filename_accent_contrast(self):
+        app=read("app/winui/MainWindow.xaml.cpp")
+        self.assertIn("RootShell().ActualTheme()==ElementTheme::Light",app)
+        matches=re.findall(
+            r"case ([1-4]):value=light\?Windows::UI::Color\{255,(\d+),(\d+),(\d+)\}",
+            app)
+        self.assertEqual(len(matches),4,"expected four real light-theme colors")
+        self.assertEqual({int(x[0]) for x in matches},{1,2,3,4})
+        def channel(x):
+            c=int(x)/255
+            return c/12.92 if c<=0.04045 else ((c+0.055)/1.055)**2.4
+        for style,r,g,b in matches:
+            lum=.2126*channel(r)+.7152*channel(g)+.0722*channel(b)
+            self.assertGreaterEqual((1.05)/(lum+.05),4.5,
+                                    "light-theme style "+style)
 
     def test_project_and_native_fixture_include_store(self):
         project=read("app/winui/flyExplorer.project-template.xml")
