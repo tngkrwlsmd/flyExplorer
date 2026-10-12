@@ -40,6 +40,10 @@ at exact flyExplorer source `4d4db4680a75ec6368b8a50d6586608d1016fedd`.
   scheduled tasks after the attempted run. No Windows DPI/high-contrast,
   language-pack, audio device, or system Narrator option was changed
   by the diagnostic.
+  [Safe exact-owned cleanup #38230906259](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38230906259)
+  subsequently removed the retained reference fixture after verifying
+  absence of Narrator processes, active test tasks, links and owned
+  Python workers (`NARRATOR_SPEECH_DIAG_SAFE_CLEANUP=PASS`).
 
 **Acceptance:** `NARRATOR ACTUAL SPOKEN LABELS = NOT TESTED / NOT ACCEPTED`;
 `NARRATOR AUDIO WAVEFORM = NOT CAPTURED`. The pre-existing successful
