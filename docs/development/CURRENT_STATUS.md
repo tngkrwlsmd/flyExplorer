@@ -7,6 +7,63 @@ app/winui, UI-independent native code in src/base, tests in tests/winui, and
 bounded orchestration in tools/winui/run_checks.py. The former MFC application
 is retired from the working tree and is recoverable from Git revision cbffb48.
 
+## 2026-10-12 filter accessibility and updated private source/setup identity
+
+**Actual Windows DPI capability:** [read-only inventory #38209100479](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38209100479)
+reported active 1024x768 desktop at **96 DPI**. Actual OS
+125/150/200% displays were unavailable here; these gates remain
+**NOT TESTED**, not simulated or accepted. Previous light/dark 96-DPI
+visual acceptance remains valid for the tested states only.
+
+**Accessible filter metadata + physical keyboard: PASS (UI Automation).**
+The product gives each matched file row an accessible preset name,
+color name and icon category, and the badge an identifiable category
+name instead of a generic icon announcement. Filter palette selection
+and Save can be operated through owned physical keyboard input.
+[Central CI #38209842808](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38209842808)
+completed **SUCCESS**, Release, WindowTab, shortcuts, focused filter GUI,
+and entire GUI, exact compiled product source
+`8902d494255b471911f092c3cdd4e978af2c4e56`.
+The earlier #38209461852 passed the Release build but hit a transient
+WindowTab UIA peer-rebinding assertion before filter GUI; the test-only
+limited wait fixed the pre-input race. Source-only filter contracts
+also require named badges/rows. **Human Narrator speech** and
+**Korean IME** were not directly exercised; UIA property checks alone
+do not certify screen-reader audio.
+
+**Unsigned private package/source equivalence: PASS, no deployment.**
+[Exact-source owned audit #38210591849](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38210591849)
+clean-built a private Release from
+`2a736d85b22859a770138e4b50926ac125d1a052`, regenerated and
+checked runtime provenance, built an unsigned native setup, generated
+and checked the deterministic **438 tracked file** source ZIP, and
+verified `release_identity.py --write` / `--check` binds them to
+the identical SHA/tree. Recorded private test evidence:
+- source tree `df09334367d2a2be1ea0541548f5aaa73b1d53e5`;
+- source ZIP SHA-256
+  `b08f01ad41b5c211282848c438c138e0587986a614ac8ebf4c8e839231dba01d`;
+- **305** runtime files, manifest SHA-256
+  `fb509b3f6a40ad962c18e10fcd323dab2e195df64884be7430d12304f59f25c7`;
+- unsigned private setup **124,418,560 bytes**, SHA-256
+  `3861b937b122e7d997fe92d778798631f02b952228b9d0707de72b150aa9da37`.
+
+The audit explicitly retained **private-evidence-only**, **not-cleared**
+and **unsigned** states. It did not install into Program Files,
+register HKLM, sign, publish, create a release tag or touch user
+settings. It deleted the private work directory and generated files
+after verifying them. The **tracked** release identity and source
+manifest still refer to historical source `bc63c8b...`; they remain
+valid archival evidence, **not current release assets**. The new SHA
+and hashes are preserved in the Actions run log but the new setup/ZIP
+are not durably published or downloadable. A production build must
+retain and review fresh matching binary/source assets and re-run
+install/update/rollback, signing, clean-machine and public GPL source
+delivery gates. This is an engineering identity acceptance, **not**
+public distribution clearance.
+
+User-deferred staged Copy interruption logging and safe recovery were
+not changed.
+
 ## 2026-10-12 run.bat launcher and styled filter presets
 
 **Canonical real-launch verification: PASS.**
