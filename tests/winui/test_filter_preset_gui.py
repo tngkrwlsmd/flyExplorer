@@ -129,8 +129,8 @@ try:
     masks2=win2.child_window(auto_id="FilterRuleMasksEdit")
     until(lambda:name2.get_value()=="코드 파일" and
           masks2.get_value()=="*.cpp;*.h" and
-          win2.child_window(auto_id="FilterRuleColorBox").selected_index()==1 and
-          win2.child_window(auto_id="FilterRuleIconBox").selected_index()==1,
+          win2.child_window(auto_id="FilterRuleColorBox").selected_text()=="파랑" and
+          win2.child_window(auto_id="FilterRuleIconBox").selected_text()=="별",
           "saved preset did not survive restart",8)
     win2.child_window(auto_id="FilterRuleApplyButton").click_input()
     until(lambda:any("alpha.cpp" in t for t in row_texts(win2)) and
