@@ -7,6 +7,53 @@ app/winui, UI-independent native code in src/base, tests in tests/winui, and
 bounded orchestration in tools/winui/run_checks.py. The former MFC application
 is retired from the working tree and is recoverable from Git revision cbffb48.
 
+## 2026-10-12 configurable focus shortcut expansion — Release PASS, GUI BLOCKED
+
+Main product revision `04e7d358dcc7cb74a6c619b833b503c72b089294`
+adds Ctrl+G and Ctrl+J as opt-in focus-only bindings for the address bar and
+quick search. The existing Ctrl+L/E/F/K choices, non-duplicated binding check,
+private schema-3 persistence, F5/F6 and mutating file-operation shortcuts
+remain unchanged. Owned GUI and M21 native regressions were extended.
+
+Registered central Windows `project_id=desktop-a`, `scope=gui`
+[run #38185317718](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38185317718)
+built the exact source SHA in Release (**PASS**), but the functional GUI stage
+stopped in its prerequisite focused Window Tabs test, **before the shortcut
+GUI test ran**. The exact archived traceback was independently read in
+[run #38185956218](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38185956218):
+`test_v7_window_tabs_gui.py:30` first `focus()` =>
+`test_shell_gui.py:112` intentionally refused physical input because the
+owned product window could not be verified as foreground. No Window Tab
+keyboard action or new shortcut interaction had been attempted.
+
+Read-only Windows inventory in
+[run #38186404331](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38186404331)
+reported Explorer PID only in **disconnected session 2**; console session 4
+was connected without an Explorer process. The inventory command itself
+exited nonzero at a subsequent scheduled-task query; these preceding session
+observations are diagnostic evidence, **not** a successful GUI acceptance.
+Do not bypass the foreground-owner safety check or rerun full GUI unchanged
+while the desktop remains disconnected. Recheck session state before a
+scoped physical-keyboard GUI acceptance and separately complete actual
+BEFORE/AFTER visual review of the expanded shortcut ComboBoxes.
+
+A separate owned SYSTEM Remote Shell native preflight in
+[run #38186627928](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38186627928)
+verified the exact source checkout, but lacked `python.exe` on the SYSTEM
+PATH, so the focused Python contracts and M21 native Release fixture
+**did not execute**. This is an execution-environment limitation, not a
+native compile result. Use an approved, appropriately permissioned Python
+runtime for any subsequent focused test; do not execute user-writable
+interpreter binaries as SYSTEM. The earlier registered Release build result
+remains valid for its exact SHA.
+
+**Acceptance at this SHA:** Release build PASS; shortcut physical-keyboard
+GUI NOT TESTED; M21 native 23-case regression NOT TESTED; visual acceptance
+NOT TESTED. The full `central-ci/windows-gui` status is FAILURE because of
+the disconnected-session GUI boundary, not a demonstrated new shortcut
+product failure. The private staged Copy recovery draft remains outside this
+shortcut feature scope.
+
 ## Latest product acceptance checkpoint (verified 2026-10-12)
 
 The latest product-bearing main revision before this documentation-only change,
