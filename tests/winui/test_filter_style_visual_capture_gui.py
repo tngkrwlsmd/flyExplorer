@@ -46,6 +46,10 @@ def run():
     owned = Path(tempfile.mkdtemp(prefix="filter-visual-", dir=output))
     for folder in ("files", "appdata", "localdata", "temp"):
         (owned / folder).mkdir()
+    user_prefs = owned / "localdata" / "flyExplorer"
+    user_prefs.mkdir()
+    (user_prefs / "ui-preferences-v1.txt").write_bytes(
+        b"schema=2\r\nlanguage=ko-KR\r\ntheme=dark\r\nview=details\r\n")
     for name in ("alpha.cpp", "beta.h", "notes.txt", "사진.JPG"):
         (owned / "files" / name).write_text("owned only", encoding="utf-8")
     env = dict(os.environ)
