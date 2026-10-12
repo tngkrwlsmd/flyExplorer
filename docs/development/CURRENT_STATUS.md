@@ -51,17 +51,33 @@ nonzero, but its session output established the changed precondition.
 The successful 38189416302 acceptance followed without bypassing the
 physical-input safety check or modifying the shortcut product code.
 
-**Distinct remaining evidence:** a standalone Windows M21 native 23-case
-Release fixture was not run by the registered GUI scope; do not conflate
-source contracts with that fixture. The separate SYSTEM Remote Shell
-preflight [38186627928](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38186627928)
-verified the checkout SHA but did not run the native fixture because
-`python.exe` was absent from the SYSTEM PATH. The new shortcut ComboBox
-choices altered composited UI pixels, and no matched actual-product
-BEFORE/AFTER screenshots have been inspected. **VISUAL ACCEPTANCE:
-NOT TESTED.** Functional GUI PASS does not complete the required visual
-acceptance gate. Staged Copy crash-interruption receipt and safe-recovery
-work remain explicitly deferred and were not changed.
+**Supplementary exact-main native evidence:**
+[Remote Shell 38193974521](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38193974521)
+ran a bounded, temporary interactive-user task against exact main
+`9631d1d3f74473f1bae3df8d0f39717d24754139`. The focused shortcut
+contract and preferences-coordinator contract passed, M21 Release native
+C++ compilation passed, and `M21_NATIVE_Release_23_PASS True` verified
+**23/23 cases PASS**. The original six protected legacy user-profile values
+were unchanged (`M21_LEGACY_USER_PROFILE_SENTINEL_UNCHANGED True PRESENT 6`).
+The run completed successfully, removed its test-owned workspace and task,
+and restored the central Remote Shell request slot to idle. It did not
+rebuild or rerun the already accepted full GUI. Non-blocking C4005
+`WIN32_LEAN_AND_MEAN` macro redefinition warnings were reported by the
+native fixture build; no compile or runtime errors occurred.
+
+The earlier SYSTEM Remote Shell preflight
+[38186627928](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38186627928)
+had verified the source SHA but could not launch the fixture because
+`python.exe` was not on the SYSTEM PATH. The new successful task ran in
+the established Explorer user session instead, without elevating a
+user-writable Python interpreter to SYSTEM.
+
+**Remaining visual gate:** the two new shortcut ComboBox choices alter
+composited pixels, but no matched actual-product BEFORE/AFTER screenshots
+have been inspected. **VISUAL ACCEPTANCE: NOT TESTED.** Functional GUI
+and native PASS do not substitute for visual pixel review.
+Staged Copy crash-interruption receipt and safe-recovery work remain
+explicitly deferred and were not changed.
 
 ## Latest product acceptance checkpoint (verified 2026-10-12)
 
