@@ -112,7 +112,7 @@ class ShortcutSemanticsContract(unittest.TestCase):
             )
         )
         self.assertIn('if area == "all":', orchestrator)
-        self.assertIn('for focused in ("window-tabs", "shortcuts"):', orchestrator)
+        self.assertIn('for focused in ("window-tabs", "shortcuts", "filter-preset"):', orchestrator)
         self.assertIn('gui_command( focused, configuration, env )', orchestrator)
         self.assertIn('"test_shortcut_gui.py"', orchestrator)
 
