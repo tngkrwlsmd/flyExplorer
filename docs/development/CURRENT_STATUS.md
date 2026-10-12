@@ -57,18 +57,68 @@ legacy user-profile sentinels were unchanged. The test-owned task and
 workspace were removed. Nonblocking C4005 WIN32_LEAN_AND_MEAN warnings
 were observed in the M20 fixture.
 
-**Visual gate: NOT TESTED.** The new
-`tests/winui/test_filter_style_visual_capture_gui.py` harness (test-only
-revision `0c173826432aa913523ab0c37f43fac1118d2100`)
-defines actual matched WinUI dark/details screenshots using a disposable
-profile and synthetic files, comparing pre-feature
-`4d8c83f2ca80d7642d79f326a638ebebf8d049b5` with the
-post-feature product. A remote screenshot execution request was blocked
-before dispatch, so no actual before/after pixels were captured or
-inspected. Do **not** claim visual acceptance until actual image pairs
-are obtained, their source/DPI/theme/geometry metadata matches, and
-they are visually reviewed. Other DPI/theme variants are separate gates.
-Copy crash-interruption receipts and safe-recovery work remain deferred.
+**Filter color/icon visual acceptance: PASS (matched actual WinUI, dark/96 DPI).**
+[Remote Windows visual run 38204943981](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38204943981)
+completed with `FILTER_VISUAL_RUN_STATUS=PASS STAGE=complete`,
+`FILTER_VISUAL_CAPTURE_PAIR=PASS`, and
+`FILTER_VISUAL_OWNED_CLEANUP=PASS`. The actual before/after Release
+product screenshots were captured with
+`tests/winui/test_filter_style_visual_capture_gui.py` and directly
+inspected from the run's bounded PNG previews. The pre-feature binary
+was built from
+`4d8c83f2ca80d7642d79f326a638ebebf8d049b5`;
+the changed binary was clean-built from
+`885f318b4959efaff2070dcad96252f689680b2b`
+(identical product implementation to accepted `18a4859`; subsequent
+commits only changed tests, orchestration or documentation).
+
+Both real windows were on the same registered interactive Windows desktop,
+with an isolated dark/details profile, 96 DPI, actual app bounds
+`(20,15)-(1080,735)` (1060 x 720), and a 1060 x 680 pixel top preview.
+Both used the same synthetic four-file fixture:
+`alpha.cpp`, `beta.h`, `notes.txt`, and `사진.JPG`.
+The random owned fixture folder name displayed in each breadcrumb
+naturally differs between captures. The before screenshot showed the
+original filter preset mask editor without color/icon controls. The
+after screenshot shows the new blue color and star badge selectors,
+with all controls visible, readable and aligned without overlap.
+`alpha.cpp` and `beta.h` receive readable blue filenames and
+adjacent outline star badges, while their real Windows Shell file icons
+remain intact; `notes.txt` and `사진.JPG` retain the normal
+appearance. The file-list top edge moves down to accommodate the
+additional style controls, as intended. Some unrelated type labels
+were already ellipsized within the narrow columns in both screenshots;
+this was not introduced by the feature. No blocking visual regression
+was observed in the changed editor/file-row region.
+
+**Failure isolation and recovery evidence:** The first [visual run
+38203734728](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38203734728)
+built the baseline but had used a fixed window taller than the active
+desktop. The next [run
+38204124635](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38204124635)
+used viewport-bounded geometry but treated a transient status line as
+part of durable preset-save verification; the harness now validates
+the isolated saved file and schema instead. Subsequent resume attempts
+identified a shallow Git revision limit and a changed app process that
+exited before showing a window when the two versions reused one
+incremental Release output directory. The successful run preserved
+the already captured baseline pixels, used exact-SHA checkout, and
+ran `clean.bat build` only in its disposable workspace before a
+complete current Release build; it then confirmed the current app
+opened, displayed the styled rows and exited normally. The evidence
+supports clean-output isolation, without establishing an independent
+root cause for the earlier startup exit. The separate first failed
+test-owned scratch directory was verified and safely deleted in
+[cleanup run 38205260341](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38205260341).
+The Remote Shell request slot was restored to idle.
+
+**Scope limit:** this is a focused visual PASS for 96 DPI dark/details
+layout. Separate real 125/150/200% DPI, light/High Contrast themes,
+Narrator/IME and full distribution visual states remain **NOT TESTED**
+unless independently accepted elsewhere. Functional GUI and M20
+native acceptance remain distinct, previously verified gates.
+Staged Copy crash-interruption receipt and safe-recovery work remain
+explicitly deferred and were not changed.
 
 ## 2026-10-12 configurable focus shortcut expansion — Release and functional GUI PASS
 

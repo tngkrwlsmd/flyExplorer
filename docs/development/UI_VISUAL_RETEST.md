@@ -42,6 +42,30 @@ foreground-window safety checks to force a visual PASS. Verify exact
 source SHA, test-owned directory identity, matched screenshot conditions,
 normal owned app exit and cleanup.
 
+## Actual viewport and runtime isolation
+
+For real screenshots, size the test-owned window within the *active
+interactive user's* current desktop dimensions; a fixed 760 px-high
+window can extend beyond a short VM desktop and invalidate the capture.
+Record exact window rectangle and DPI, and refuse any screenshot that
+extends outside the display or lacks the test-owned foreground HWND.
+
+When comparing two product revisions with different compiled code,
+build their Release runtimes independently. Do not assume incremental
+MSBuild in a shared `out/` directory refreshes every self-contained
+DLL/PRI resource correctly: [the filter visual review](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38204943981)
+only completed after a `clean.bat build` inside a bounded test-owned
+checkout before building the new revision. Retain pinned package cache
+unless dependency provenance itself requires invalidation.
+A failed visual task may reuse exact-SHA built bytes or previously
+captured screenshots only after checking retained owned-result stage,
+source SHA and image metadata; never use unverified stale runtime files.
+
+For save-related screenshots, assert the isolated persisted file and
+schema/data, not merely a transient UI status line that may be
+replaced during a file-list refresh. Validate normal owned app exit
+and separately inspect the actual pixels before recording visual PASS.
+
 ## Mandatory BEFORE / AFTER capture
 
 Before changing user-visible pixels, capture the actual current product in the
