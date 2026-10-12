@@ -73,13 +73,16 @@ try:
 
     win.child_window(auto_id="FilterRulePanelButton").click_input()
     for key in ("FilterRuleManagerBox","FilterRuleNameEdit",
-                "FilterRuleMasksEdit","FilterRuleNewButton","FilterRuleSaveButton",
+                "FilterRuleMasksEdit","FilterRuleColorBox","FilterRuleIconBox",
+                "FilterRuleNewButton","FilterRuleSaveButton",
                 "FilterRuleApplyButton","FilterRuleDeleteButton"):
         assert win.child_window(auto_id=key).exists(timeout=5),key
     name=win.child_window(auto_id="FilterRuleNameEdit")
     masks=win.child_window(auto_id="FilterRuleMasksEdit")
     name.set_edit_text("코드 파일")
     masks.set_edit_text("*.cpp; *.h")
+    win.child_window(auto_id="FilterRuleColorBox").select(1)
+    win.child_window(auto_id="FilterRuleIconBox").select(1)
     win.child_window(auto_id="FilterRuleSaveButton").click_input()
     preset_file=profile/"filter-rules-v1.txt"
     status=win.child_window(auto_id="StatusText")
@@ -87,12 +90,16 @@ try:
           preset_file.is_file(),
           "preset save did not reach durable success state",8)
     saved=preset_file.read_text(encoding="utf-8")
-    assert "코드 파일\t*.cpp;*.h" in saved,saved
+    assert "schema=2" in saved and "코드 파일\t*.cpp;*.h\t1\t1" in saved,saved
     win.child_window(auto_id="FilterRuleApplyButton").click_input()
     until(lambda:any("alpha.cpp" in t for t in row_texts(win)) and
           any("beta.h" in t for t in row_texts(win)) and
           all("notes.txt" not in t for t in row_texts(win)),
           "wildcard preset did not filter pane",10)
+    until(lambda:any("필터 분류 아이콘" in x.window_text()
+                     for x in win.child_window(auto_id="LeftFiles").descendants()),
+          "styling badge not present in matching file rows",10)
+    print("FILTER_PRESET_STYLED_BADGE_AND_SCHEMA2_PASS",True,flush=True)
     print("FILTER_PRESET_SAVE_APPLY_MASK_PASS",True,flush=True)
 
     filt=win.child_window(auto_id="LeftNameFilterBox")
@@ -121,7 +128,9 @@ try:
     name2=win2.child_window(auto_id="FilterRuleNameEdit")
     masks2=win2.child_window(auto_id="FilterRuleMasksEdit")
     until(lambda:name2.get_value()=="코드 파일" and
-          masks2.get_value()=="*.cpp;*.h",
+          masks2.get_value()=="*.cpp;*.h" and
+          win2.child_window(auto_id="FilterRuleColorBox").selected_index()==1 and
+          win2.child_window(auto_id="FilterRuleIconBox").selected_index()==1,
           "saved preset did not survive restart",8)
     win2.child_window(auto_id="FilterRuleApplyButton").click_input()
     until(lambda:any("alpha.cpp" in t for t in row_texts(win2)) and

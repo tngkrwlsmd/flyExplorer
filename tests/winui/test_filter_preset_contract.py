@@ -43,6 +43,22 @@ class FilterPresetContracts(unittest.TestCase):
         self.assertIn("FilterRulePanel().Visibility(Visibility::Collapsed)",m19)
         self.assertIn("FilterRulePanel().Visibility(Visibility::Collapsed)",bookmarks)
 
+    def test_visual_style_persistence_and_row_classification(self):
+        h=read("src/base/filter_rule_store.h")
+        cpp=read("src/base/filter_rule_store.cpp")
+        xaml=read("app/winui/MainWindow.xaml")
+        app=read("app/winui/MainWindow.xaml.cpp")
+        features=read("app/winui/filter_rule_features.cpp")
+        for token in ('kMaxColor = 4','kMaxIcon = 4','schema=2',
+                      'schema=1','item.color,item.icon','colorText.size()!=1'):
+            self.assertIn(token,h+cpp)
+        for name in ("FilterRuleColorBox","FilterRuleIconBox"):
+            self.assertIn('x:Name="'+name+'"',xaml)
+            self.assertIn(name+"().SelectedIndex(",features)
+        self.assertIn("fxfile::filterrules::Store::matches(itemLabel,rule.masks)",app)
+        self.assertIn("필터 분류 아이콘",app)
+        self.assertIn("FillFiles(0);FillFiles(1)",features)
+
     def test_project_and_native_fixture_include_store(self):
         project=read("app/winui/flyExplorer.project-template.xml")
         native=read("tests/winui/m20/m20_native_fixture.cpp")
