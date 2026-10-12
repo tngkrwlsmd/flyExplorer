@@ -49,6 +49,23 @@ Normal install scope:
 /TESTROOT=<owned path> is the bounded validation mode and avoids normal
 Program Files/HKLM mutation.
 
+## Current product versus historical retained setup — 2026-10-12
+
+The previously retained artifact below was built from
+`bc63c8b48e466d1275cc6dcffb0c50e02d39db60` and is
+**not an installable copy of the current source**.
+[Private Windows audit 38210591849](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38210591849)
+recreated a separate unsigned test-only setup from
+`2a736d85b22859a770138e4b50926ac125d1a052` and independently
+verified exact-source bundle, runtime byte provenance and identity.
+This fresh test build passed, but it was removed with its owned
+workspace; only SHA-256 evidence remains in the Actions log.
+The tracked `RELEASE_IDENTITY.json` and
+`SOURCE_BUNDLE_MANIFEST.json` stay historical and must not be
+advertised as fresh binaries. Rebuild, audit and **retain** all
+matching final assets before release candidate acceptance.
+No private test setup is signed or cleared for public distribution.
+
 ## Latest accepted package and source-identity evidence
 
 Remote Windows Task #440 (`37376305779`) accepted binary source revision
