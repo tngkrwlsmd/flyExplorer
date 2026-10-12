@@ -54,6 +54,28 @@ def main() -> int:
     u.LoadKeyboardLayoutW.restype=c.c_void_p
     u.PostMessageW.argtypes=(W.HWND,W.UINT,W.WPARAM,W.LPARAM)
     u.keybd_event.argtypes=(W.BYTE,W.BYTE,W.DWORD,c.c_void_p)
+    class Rect(c.Structure):
+        _fields_=[("left",W.LONG),("top",W.LONG),
+                  ("right",W.LONG),("bottom",W.LONG)]
+    class GuiThreadInfo(c.Structure):
+        _fields_=[("cbSize",W.DWORD),("flags",W.DWORD),
+                  ("hwndActive",W.HWND),("hwndFocus",W.HWND),
+                  ("hwndCapture",W.HWND),("hwndMenuOwner",W.HWND),
+                  ("hwndMoveSize",W.HWND),("hwndCaret",W.HWND),
+                  ("rcCaret",Rect)]
+    u.GetGUIThreadInfo.argtypes=(W.DWORD,c.POINTER(GuiThreadInfo))
+    u.GetGUIThreadInfo.restype=W.BOOL
+    def owned_focus_hwnd(top,tid):
+        info=GuiThreadInfo()
+        info.cbSize=c.sizeof(info)
+        if not u.GetGUIThreadInfo(tid,c.byref(info)):
+            print("KOREAN_IME_GUI_THREAD_INFO_UNAVAILABLE",
+                  c.get_last_error(),flush=True)
+            return top
+        focus=int(info.hwndFocus or 0)
+        print("KOREAN_IME_FOCUS_HWND",
+              "top",hex(int(top)),"focus",hex(focus),flush=True)
+        return focus or top
     def windows(pid):
         found=[]
         @callback
@@ -104,13 +126,30 @@ def main() -> int:
             imm.ImmGetOpenStatus.restype=W.BOOL
             imm.ImmSetOpenStatus.argtypes=(c.c_void_p,W.BOOL)
             imm.ImmSetOpenStatus.restype=W.BOOL
-            imm.ImmReleaseContext.argtypes=(W.HWND,c.c_void_p)
-            context=imm.ImmGetContext(hwnd)
+            imm.ImmGetConversionStatus.argtypes=(c.c_void_p,
+                                                    c.POINTER(W.DWORD),
+                                                    c.POINTER(W.DWORD))
+            imm.ImmGetConversionStatus.restype=W.BOOL
+            imm.ImmSetConversionStatus.argtypes=(c.c_void_p,
+                                                  W.DWORD,W.DWORD)
+            imm.ImmSetConversionStatus.restype=W.BOOL
+            IME_CMODE_NATIVE=0x0001
+            focus_hwnd=owned_focus_hwnd(hwnd,tid)
+            context=imm.ImmGetContext(focus_hwnd)
             old_open=bool(imm.ImmGetOpenStatus(context)) if context else None
-            print("KOREAN_IME_INITIAL_OPEN",old_open,flush=True)
+            conv,sentence=W.DWORD(),W.DWORD()
+            conversion_known=bool(context and imm.ImmGetConversionStatus(
+                context,c.byref(conv),c.byref(sentence)))
+            saved_conversion=(int(conv.value),int(sentence.value)) if conversion_known else None
+            print("KOREAN_IME_INITIAL_STATE",
+                  {"hkl":hex(int(u.GetKeyboardLayout(tid) or 0)),
+                   "focus_hwnd_is_toplevel":focus_hwnd==hwnd,
+                   "ime_context_exists":bool(context),
+                   "open":old_open,
+                   "conversion":saved_conversion},flush=True)
             try:
                 methods=("korean-hangul-scancode","korean-right-alt",
-                         "owned-ime-open-status")
+                         "owned-ime-open-and-native")
                 for method in methods:
                     editor.set_edit_text("")
                     editor.set_focus()
@@ -122,18 +161,27 @@ def main() -> int:
                         u.keybd_event(0xA5,0x38,1,0)
                         u.keybd_event(0xA5,0x38,3,0)
                     elif context:
-                        result=bool(imm.ImmSetOpenStatus(context,True))
-                        print("KOREAN_IME_OWNED_OPEN_REQUEST",result,flush=True)
+                        opened=bool(imm.ImmSetOpenStatus(context,True))
+                        native=bool(saved_conversion and imm.ImmSetConversionStatus(
+                            context,saved_conversion[0]|IME_CMODE_NATIVE,
+                            saved_conversion[1]))
+                        print("KOREAN_IME_OWNED_NATIVE_REQUEST",
+                              {"opened":opened,"native":native},flush=True)
                     else:
                         print("KOREAN_IME_IMM_CONTEXT_UNAVAILABLE",flush=True)
                         continue
-                    time.sleep(.3)
+                    time.sleep(.35)
                     keyboard.send_keys("gksrmf",pause=.1)
                     time.sleep(.9)
                     value=editor.get_value()
+                    current_conv,current_sentence=W.DWORD(),W.DWORD()
+                    current_known=bool(context and imm.ImmGetConversionStatus(
+                        context,c.byref(current_conv),c.byref(current_sentence)))
                     status=bool(imm.ImmGetOpenStatus(context)) if context else None
                     observations.append({"method":method,
-                                         "typed":value,"open":status})
+                                         "typed":value,"open":status,
+                                         "conversion":int(current_conv.value) if current_known else None,
+                                         "hkl":hex(int(u.GetKeyboardLayout(tid) or 0))})
                     if value=="한글":
                         composed=True
                         print("KOREAN_IME_ACTUAL_COMPOSITION_METHOD",
@@ -141,9 +189,11 @@ def main() -> int:
                         break
             finally:
                 if context:
+                    if saved_conversion is not None:
+                        imm.ImmSetConversionStatus(context,*saved_conversion)
                     if old_open is not None:
                         imm.ImmSetOpenStatus(context,old_open)
-                    imm.ImmReleaseContext(hwnd,context)
+                    imm.ImmReleaseContext(focus_hwnd,context)
             print("KOREAN_IME_COMPOSITION_OBSERVATIONS",
                   repr(observations),flush=True)
             assert composed, "Physical Korean IME 2-beolsik composition not observed"
