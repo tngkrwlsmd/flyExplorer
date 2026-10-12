@@ -85,7 +85,7 @@ class FilterPresetContracts(unittest.TestCase):
         self.assertIn(
             "if(allowDecorativeColor&&decoratedRule&&decoratedRule->color)",app)
         self.assertIn("if(accent)badge.Foreground(accent)",app)
-        self.assertIn("if(accent)text.Foreground(accent)",app)
+        self.assertIn("if(accent)filename.Foreground(accent)",app)
 
     def test_screen_reader_ui_a_rule_color_icon_semantics(self):
         app=read("app/winui/MainWindow.xaml.cpp")
