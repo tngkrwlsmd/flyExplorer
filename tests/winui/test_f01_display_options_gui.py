@@ -41,7 +41,10 @@ def run(*, win, element, safe_click, focus, eventually, base, owned, left, right
                 return None
         menu_item = eventually(target, "F01 view menu item unavailable: " + name, 8)
         assert menu_item is not None, name
-        safe_click(menu_item)
+        # Refocusing the main window here would dismiss the open WinUI popup.
+        # Instead require exact app-process ownership before physical input.
+        assert menu_item.element_info.process_id == win.element_info.process_id
+        menu_item.click_input()
 
     eventually(lambda: named_row(0) is not None,
                "F01 owned readme.txt row not available", 12)
