@@ -2089,16 +2089,10 @@ namespace winrt::FlyExplorer::implementation
                 else if(large){row.Width(112);row.Height(128);row.Padding(Thickness{2.0});row.HorizontalContentAlignment(HorizontalAlignment::Center);}
                 else{row.Width(92);row.Height(92);row.Padding(Thickness{2.0});row.HorizontalContentAlignment(HorizontalAlignment::Center);}
             }
-            // Explicit row height is required for the realized WinUI
-            // container; MinHeight alone can leave the row at 32 pixels.
-            // Drive roots have a capacity meter and must not be clipped.
-            const bool driveRoot=itemFolder&&itemParsing.size()==3&&
-                itemParsing[1]==L':';
-            if(state.compactRows && !driveRoot &&
+            if(state.compactRows &&
                (state.viewMode==FileViewMode::Details||
                 state.viewMode==FileViewMode::List)){
                 row.MinHeight(26);
-                row.Height(26);
                 row.Padding(Thickness{4.0,0.0,4.0,0.0});
             }
             if(decoratedRule){
