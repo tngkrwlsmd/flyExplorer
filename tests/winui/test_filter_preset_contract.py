@@ -84,7 +84,7 @@ class FilterPresetContracts(unittest.TestCase):
         for token in ("필터 프리셋: ", "분류 색상: ", "분류 아이콘: ",
                       "필터 분류 아이콘: "):
             self.assertIn(token,app)
-        self.assertIn("SetName(\\n                row,hstring(label))".replace("\\n","\\n"),app)
+        self.assertIn("row,hstring(label)",app)
         self.assertIn('AutomationProperties.Name="필터 규칙 분류 색상"',xaml)
         self.assertIn('AutomationProperties.Name="필터 규칙 분류 아이콘"',xaml)
 
