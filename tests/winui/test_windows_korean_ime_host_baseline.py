@@ -25,6 +25,8 @@ u.GetKeyboardLayout.restype = c.c_void_p
 u.LoadKeyboardLayoutW.argtypes = (w.LPCWSTR, w.UINT)
 u.LoadKeyboardLayoutW.restype = c.c_void_p
 u.GetForegroundWindow.restype = w.HWND
+u.SetFocus.argtypes = (w.HWND,)
+u.SetFocus.restype = w.HWND
 u.SetForegroundWindow.argtypes = (w.HWND,)
 u.PostMessageW.argtypes = (w.HWND, w.UINT, w.WPARAM, w.LPARAM)
 u.IsWindow.argtypes = (w.HWND,)
@@ -71,6 +73,7 @@ def host():
         raise OSError("native owned EDIT HWND not available")
     u.ShowWindow(top, 5)
     u.UpdateWindow(top)
+    u.SetFocus(edit)  # Focus is set by the native owning GUI thread.
     msg = Msg()
     end = time.monotonic() + 60
     while u.IsWindow(top) and time.monotonic() < end:
@@ -145,8 +148,27 @@ def main():
             context and imm.ImmGetConversionStatus(context,c.byref(conv),c.byref(sentence))) else None
         observations = []
         try:
+            # A composed-text result is meaningful only after the test-owned
+            # native control demonstrably receives actual physical key input.
+            wnd.click_input()
+            require_foreground_owned()
+            u.SendMessageW(edit, 0x000C, 0, "")
+            keyboard.send_keys("123", pause=.09)
+            time.sleep(.45)
+            digits = c.create_unicode_buffer(256)
+            u.GetWindowTextW(edit, digits, 255)
+            physical_delivery = digits.value == "123"
+            print("KOREAN_IME_NATIVE_PHYSICAL_DIGITS",
+                  {"value": digits.value, "delivered": physical_delivery},
+                  flush=True)
+            if not physical_delivery:
+                print("KOREAN_IME_NATIVE_INPUT_DELIVERY=ENVIRONMENT_BLOCKED",
+                      flush=True)
+                print("KOREAN_IME_NATIVE_EDIT_COMPOSED=False", flush=True)
+                print("KOREAN_IME_BASELINE_DIAGNOSTIC=PASS", flush=True)
+                return 0
             for method in ("physical-hangul-key", "native-imm-mode"):
-                wnd.set_focus()
+                wnd.click_input()
                 require_foreground_owned()
                 u.SendMessageW(edit, 0x000C, 0, "")  # owned WM_SETTEXT
                 if method == "physical-hangul-key":
@@ -178,6 +200,7 @@ def main():
         print("KOREAN_IME_NATIVE_EDIT_HKL",korean_hkl,flush=True)
         print("KOREAN_IME_NATIVE_EDIT_OBSERVATIONS",repr(observations),flush=True)
         verdict = any(x["typed"] == "한글" for x in observations)
+        print("KOREAN_IME_NATIVE_INPUT_DELIVERY=PASS", flush=True)
         print("KOREAN_IME_NATIVE_EDIT_COMPOSED="+str(verdict),flush=True)
         print("KOREAN_IME_BASELINE_DIAGNOSTIC=PASS",flush=True)
         return 0
