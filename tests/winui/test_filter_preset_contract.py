@@ -76,6 +76,18 @@ class FilterPresetContracts(unittest.TestCase):
             self.assertGreaterEqual((1.05)/(lum+.05),4.5,
                                     "light-theme style "+style)
 
+    def test_screen_reader_ui_a_rule_color_icon_semantics(self):
+        app=read("app/winui/MainWindow.xaml.cpp")
+        xaml=read("app/winui/MainWindow.xaml")
+        self.assertIn("kFilterColors",app)
+        self.assertIn("kFilterIcons",app)
+        for token in ("필터 프리셋: ", "분류 색상: ", "분류 아이콘: ",
+                      "필터 분류 아이콘: "):
+            self.assertIn(token,app)
+        self.assertIn("SetName(\\n                row,hstring(label))".replace("\\n","\\n"),app)
+        self.assertIn('AutomationProperties.Name="필터 규칙 분류 색상"',xaml)
+        self.assertIn('AutomationProperties.Name="필터 규칙 분류 아이콘"',xaml)
+
     def test_project_and_native_fixture_include_store(self):
         project=read("app/winui/flyExplorer.project-template.xml")
         native=read("tests/winui/m20/m20_native_fixture.cpp")
