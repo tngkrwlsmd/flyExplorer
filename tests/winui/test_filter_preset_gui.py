@@ -81,9 +81,25 @@ try:
     masks=win.child_window(auto_id="FilterRuleMasksEdit")
     name.set_edit_text("코드 파일")
     masks.set_edit_text("*.cpp; *.h")
-    win.child_window(auto_id="FilterRuleColorBox").select(1)
-    win.child_window(auto_id="FilterRuleIconBox").select(1)
-    win.child_window(auto_id="FilterRuleSaveButton").click_input()
+    colors=win.child_window(auto_id="FilterRuleColorBox")
+    icons=win.child_window(auto_id="FilterRuleIconBox")
+    colors.set_focus()
+    until(lambda:colors.has_keyboard_focus(),
+          "filter color selector did not receive keyboard focus",5)
+    keyboard.send_keys("{HOME}{DOWN}")
+    until(lambda:colors.selected_text()=="파랑",
+          "physical keyboard did not select blue classification",5)
+    icons.set_focus()
+    until(lambda:icons.has_keyboard_focus(),
+          "filter icon selector did not receive keyboard focus",5)
+    keyboard.send_keys("{HOME}{DOWN}")
+    until(lambda:icons.selected_text()=="별",
+          "physical keyboard did not select star classification",5)
+    save=win.child_window(auto_id="FilterRuleSaveButton")
+    save.set_focus()
+    until(lambda:save.has_keyboard_focus(),
+          "filter save button not keyboard focusable",5)
+    keyboard.send_keys("{ENTER}")
     preset_file=profile/"filter-rules-v1.txt"
     status=win.child_window(auto_id="StatusText")
     until(lambda:"필터 프리셋을 저장했습니다." in status.window_text() and
@@ -99,6 +115,14 @@ try:
     until(lambda:any("필터 분류 아이콘" in x.window_text()
                      for x in win.child_window(auto_id="LeftFiles").descendants()),
           "styling badge not present in matching file rows",10)
+    until(lambda:any(
+          "분류 색상: 파랑" in t and "분류 아이콘: 별" in t
+          for t in row_texts(win) if "alpha.cpp" in t),
+          "UIA file row omits accessible style/color/icon meaning",8)
+    until(lambda:any("필터 분류 아이콘: 별" in item.window_text()
+                     for item in win.child_window(auto_id="LeftFiles").descendants()),
+          "UIA classification glyph does not identify star badge",8)
+    print("FILTER_PRESET_KEYBOARD_AND_UIA_SEMANTICS_PASS",True,flush=True)
     print("FILTER_PRESET_STYLED_BADGE_AND_SCHEMA2_PASS",True,flush=True)
     print("FILTER_PRESET_SAVE_APPLY_MASK_PASS",True,flush=True)
 
