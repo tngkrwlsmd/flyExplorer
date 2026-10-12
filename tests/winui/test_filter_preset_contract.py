@@ -76,6 +76,17 @@ class FilterPresetContracts(unittest.TestCase):
             self.assertGreaterEqual((1.05)/(lum+.05),4.5,
                                     "light-theme style "+style)
 
+    def test_high_contrast_uses_system_foreground_not_decorative_rgb(self):
+        app=read("app/winui/MainWindow.xaml.cpp")
+        self.assertIn("HIGHCONTRASTW contrast{}",app)
+        self.assertIn("SPI_GETHIGHCONTRAST",app)
+        self.assertIn("HCF_HIGHCONTRASTON",app)
+        self.assertIn("const bool allowDecorativeColor=",app)
+        self.assertIn(
+            "if(allowDecorativeColor&&decoratedRule&&decoratedRule->color)",app)
+        self.assertIn("if(accent)badge.Foreground(accent)",app)
+        self.assertIn("if(accent)text.Foreground(accent)",app)
+
     def test_screen_reader_ui_a_rule_color_icon_semantics(self):
         app=read("app/winui/MainWindow.xaml.cpp")
         xaml=read("app/winui/MainWindow.xaml")
