@@ -84,6 +84,32 @@ XAML/handlers and requires focused confirmation before implementation.
 | F17 | Redesigned **customizable context menu** described by Microsoft on 2026-08-17 as rolling out to **Insiders** | Track the public API/interaction pattern; do not clone private Explorer settings, inject extension DLLs or assume GA |
 | F18 | File Explorer **AI actions**, document summarization and image edits on eligible hardware/cloud subscription | Defer; hardware, policy, license, privacy and actual user value must justify any integration |
 
+## F01-A implementation checkpoint — source/Release PASS; GUI/visual OPEN
+
+- **Candidate product/source SHA:** `e147efb6bfe7d4f6176da6c8954a5910ce00a2c8`,
+  isolated branch `feat/f01-list-display-20261012`, not merged into `main`.
+- The View menu has **selection checkboxes** and **compact Details/List row
+  spacing** toggles for the active pane. The state is isolated per
+  WindowTab/pane, defaults OFF, and is not saved across process restart.
+  Rendering reprojects native-path selection without changing
+  Shell enumeration, transfer, filters, sorting or system preferences.
+- **Exact-source owned Windows acceptance: PASS for focused Python source
+  contract + x64 Release build** in
+  [central Remote Shell 38251419251](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38251419251).
+  A non-elevated interactive-user test task ran the tests/build, the wrapper
+  checked the exact SHA and returned `F01B_SOURCE_AND_RELEASE=PASS`;
+  `F01B_OWNED_CLEANUP=PASS`. Earlier failed attempts were SYSTEM Python
+  PATH or PowerShell test harness issues and are not product defects.
+- **Still OPEN:** actual new-control functional GUI interaction; keyboard/UIA
+  selection semantics and left/right/window-tab rehydration; matched
+  before/after product screenshot inspection in light/dark, split/narrow and
+  appropriate High Contrast states; actual 125/150/200% DPI and Narrator speech
+  if the environment permits. Do not call F01-A UI acceptance PASS or merge
+  solely from a successful build.
+- **Deferred F01 work:** filesystem hidden-item enumeration and
+  filename-extension display semantics, and durable private preference/session
+  persistence. These are separate change/verification boundaries.
+
 ## Recommended execution order
 
 1. **F01 — display options.** Small self-contained visible improvement;
