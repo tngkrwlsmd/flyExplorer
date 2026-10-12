@@ -77,11 +77,12 @@ try:
     invoke=subprocess.run(
         ["cmd.exe","/d","/c",str(ROOT/"run.bat"),"Release",str(owned/"folder")],
         cwd=ROOT,env=env,stdin=subprocess.DEVNULL,
-        stdout=subprocess.PIPE,stderr=subprocess.PIPE,
-        text=True,encoding="utf-8",errors="replace",timeout=18,
+        # Windows start can let the GUI child inherit pipe handles. Waiting
+        # for PIPE EOF here deadlocks until that child exits, before UIA can
+        # validate and close it. The launcher has no expected output contract.
+        stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,timeout=18,
         creationflags=subprocess.CREATE_NO_WINDOW)
-    assert invoke.returncode==0, ("run.bat returned failure",invoke.returncode,
-                                  invoke.stdout[-500:],invoke.stderr[-500:])
+    assert invoke.returncode==0, ("run.bat returned failure",invoke.returncode)
     print("REAL_RUN_BAT_RELEASE_DISPATCH_0",True,flush=True)
     wait_until(lambda: len(launched())==1, "run.bat did not spawn exactly one owned app",
                seconds=23,interval=.18)
