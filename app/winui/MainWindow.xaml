@@ -265,6 +265,29 @@
                 <TextBlock Text="* ? ;가 있으면 마스크 집합, 없으면 기존 이름 포함 필터"
                            VerticalAlignment="Center" Opacity="{ThemeResource FlyExplorerSubtleTextOpacity}"/>
             </StackPanel>
+            <StackPanel Orientation="Horizontal" Spacing="7">
+                <TextBlock Text="분류 색상:" VerticalAlignment="Center"/>
+                <ComboBox x:Name="FilterRuleColorBox" Width="118" SelectedIndex="0"
+                          AutomationProperties.Name="필터 규칙 분류 색상">
+                    <ComboBoxItem Content="기본"/>
+                    <ComboBoxItem Content="파랑"/>
+                    <ComboBoxItem Content="초록"/>
+                    <ComboBoxItem Content="주황"/>
+                    <ComboBoxItem Content="빨강"/>
+                </ComboBox>
+                <TextBlock Text="분류 아이콘:" VerticalAlignment="Center"/>
+                <ComboBox x:Name="FilterRuleIconBox" Width="122" SelectedIndex="0"
+                          AutomationProperties.Name="필터 규칙 분류 아이콘">
+                    <ComboBoxItem Content="없음"/>
+                    <ComboBoxItem Content="별"/>
+                    <ComboBoxItem Content="핀"/>
+                    <ComboBoxItem Content="깃발"/>
+                    <ComboBoxItem Content="태그"/>
+                </ComboBox>
+                <TextBlock Text="일치하는 파일명에 색상과 보조 배지를 표시합니다"
+                           VerticalAlignment="Center"
+                           Opacity="{ThemeResource FlyExplorerSubtleTextOpacity}"/>
+            </StackPanel>
         </StackPanel>
         <StackPanel Grid.Row="5" x:Name="WorkspacePanel" Visibility="Collapsed"
                     Orientation="Vertical" Spacing="7" Padding="14,3,14,6">
