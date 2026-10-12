@@ -30,6 +30,45 @@ present. Before testing there were no Narrator processes.
 - This is **not a product failure**, but it is also **not speech
   acceptance**: no actual Narrator phrase has been verified yet.
 
+## 2026-10-12 unattended follow-up: capability boundary
+
+A synthetic **foreground-controlled Win32 EDIT** case confirmed
+Narrator Speech Recap windows and 35 UIA nodes after recovering
+foreground focus; see
+[38232530406](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38232530406).
+The original zero-node result reflected overly restrictive window
+discovery and startup focus ownership, **not** proof that Speech Recap
+could not be opened. Yet there was still no match for the test-only
+reference utterance.
+
+A second synthetic reference using a native **Button** with a verified
+UIA accessible Name confirmed that the button was meaningfully
+labeled and focused, and that a Recap window existed. The test still
+could **not** verify that the exact phrase had been spoken from the
+accessible Recap transcript
+([38233608351](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38233608351)).
+This outcome cannot be treated as an application defect or as speech
+acceptance. The collector may be incomplete and no audio was captured.
+
+**Operational recovery warning:** when Speech Recap is open, injecting
+`Windows+Ctrl+Enter` or `Narrator+Esc` alone did not reliably
+terminate the test's higher-integrity Narrator process. One supervised
+exact-PID stop was followed by a second Narrator PID. The successful
+bounded cleanup, following strict initial-off, executable identity,
+session, fresh-creation-time and exact test-root guards, is in
+[38234299929](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38234299929).
+Only this specific disposable test was eligible for that operation.
+Never generalize it into permission to kill a user's preexisting
+screen reader.
+
+**Do not keep repeating unattended hotkey/Recap probes on the shared
+Windows session.** The next speech attempt needs a separate attended
+desktop and a real listening observer, or an independently validated
+privacy-limited capture path that proves a named flyExplorer phrase
+came from Narrator (not simply from the app's own UIA tree). Only
+then resume the product checklist below. Confirm initial Narrator
+state before *and after* any run.
+
 ## Safe preparation
 
 1. Use a separate, **attended** Windows 11 graphical session where the
