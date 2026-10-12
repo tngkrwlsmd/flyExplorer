@@ -35,7 +35,16 @@ u.CreateWindowExW.argtypes = (
     c.c_int, c.c_int, c.c_int, c.c_int,
     w.HWND, c.c_void_p, c.c_void_p, c.c_void_p)
 u.CreateWindowExW.restype = w.HWND
-u.PeekMessageW.argtypes = (c.c_void_p,w.HWND,w.UINT,w.UINT,w.UINT)
+class Point(c.Structure):
+    _fields_=[("x",w.LONG),("y",w.LONG)]
+class Msg(c.Structure):
+    _fields_=[("hwnd",w.HWND),("message",w.UINT),
+              ("wParam",w.WPARAM),("lParam",w.LPARAM),
+              ("time",w.DWORD),("pt",Point)]
+u.PeekMessageW.argtypes = (c.POINTER(Msg),w.HWND,w.UINT,w.UINT,w.UINT)
+u.TranslateMessage.argtypes = (c.POINTER(Msg),)
+u.DispatchMessageW.argtypes = (c.POINTER(Msg),)
+u.keybd_event.argtypes=(w.BYTE,w.BYTE,w.DWORD,c.c_void_p)
 imm.ImmGetContext.argtypes = (w.HWND,)
 imm.ImmGetContext.restype = c.c_void_p
 imm.ImmReleaseContext.argtypes = (w.HWND, c.c_void_p)
@@ -59,12 +68,12 @@ def host():
         raise OSError("native owned EDIT HWND not available")
     u.ShowWindow(top, 5)
     u.UpdateWindow(top)
-    msg = c.create_string_buffer(64)
+    msg = Msg()
     end = time.monotonic() + 60
     while u.IsWindow(top) and time.monotonic() < end:
-        while u.PeekMessageW(msg, None, 0, 0, 1):
-            u.TranslateMessage(msg)
-            u.DispatchMessageW(msg)
+        while u.PeekMessageW(c.byref(msg), None, 0, 0, 1):
+            u.TranslateMessage(c.byref(msg))
+            u.DispatchMessageW(c.byref(msg))
         time.sleep(.025)
     if u.IsWindow(top):
         u.DestroyWindow(top)
@@ -109,6 +118,7 @@ def main():
             if int(u.GetKeyboardLayout(tid) or 0) & 0xffff == 0x412:
                 break
             time.sleep(.1)
+        korean_hkl=hex(int(u.GetKeyboardLayout(tid) or 0))
         context = imm.ImmGetContext(edit)
         old_open = bool(imm.ImmGetOpenStatus(context)) if context else None
         conv, sentence = w.DWORD(),w.DWORD()
@@ -119,9 +129,10 @@ def main():
             for method in ("physical-hangul-key", "native-imm-mode"):
                 wnd.set_focus()
                 assert u.GetForegroundWindow() == top
-                u.SendMessageW(edit, 0x000C, 0, "")
+                wnd.set_edit_text("")
                 if method == "physical-hangul-key":
-                    keyboard.send_keys("{VK_HANGUL}")
+                    u.keybd_event(0x15, 0x72, 0, None)
+                    u.keybd_event(0x15, 0x72, 2, None)
                 elif context:
                     imm.ImmSetOpenStatus(context, True)
                     if old_status:
@@ -145,7 +156,7 @@ def main():
                 imm.ImmReleaseContext(edit,context)
             if original_hkl:
                 u.PostMessageW(top, 0x0050, 0, original_hkl)
-        print("KOREAN_IME_NATIVE_EDIT_HKL",hex(int(u.GetKeyboardLayout(tid) or 0)),flush=True)
+        print("KOREAN_IME_NATIVE_EDIT_HKL",korean_hkl,flush=True)
         print("KOREAN_IME_NATIVE_EDIT_OBSERVATIONS",repr(observations),flush=True)
         verdict = any(x["typed"] == "한글" for x in observations)
         print("KOREAN_IME_NATIVE_EDIT_COMPOSED="+str(verdict),flush=True)
