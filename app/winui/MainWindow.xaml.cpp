@@ -1642,6 +1642,15 @@ namespace winrt::FlyExplorer::implementation
 
     void MainWindow::FillFiles(int side)
     {
+        // An explicit RGB foreground overrides Windows contrast-theme text.
+        // Respect the user's system colors, including foreground and
+        // selection colors, instead of applying a decorative accent in HC.
+        HIGHCONTRASTW contrast{};
+        contrast.cbSize=sizeof(contrast);
+        const bool allowDecorativeColor=
+            ::SystemParametersInfoW(SPI_GETHIGHCONTRAST,contrast.cbSize,
+                &contrast,0)!=FALSE &&
+            (contrast.dwFlags&HCF_HIGHCONTRASTON)==0;
         mPopulatingFileLists=true;
         UpdateViewPresentation(side);
         UpdateSortPresentation(side);
@@ -1836,7 +1845,7 @@ namespace winrt::FlyExplorer::implementation
                 }
             }
             Microsoft::UI::Xaml::Media::Brush accent{nullptr};
-            if(decoratedRule&&decoratedRule->color){
+            if(allowDecorativeColor&&decoratedRule&&decoratedRule->color){
                 Windows::UI::Color value{};
                 const bool light=RootShell().ActualTheme()==ElementTheme::Light;
                 switch(decoratedRule->color){
