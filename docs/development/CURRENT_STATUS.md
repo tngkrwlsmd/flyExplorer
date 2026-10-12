@@ -72,10 +72,45 @@ had verified the source SHA but could not launch the fixture because
 the established Explorer user session instead, without elevating a
 user-writable Python interpreter to SYSTEM.
 
-**Remaining visual gate:** the two new shortcut ComboBox choices alter
-composited pixels, but no matched actual-product BEFORE/AFTER screenshots
-have been inspected. **VISUAL ACCEPTANCE: NOT TESTED.** Functional GUI
-and native PASS do not substitute for visual pixel review.
+**Remaining visual gate:** The two added shortcut ComboBox choices alter
+composited pixels, and no matched actual-product BEFORE/AFTER screenshots
+have been inspected. **VISUAL ACCEPTANCE: NOT TESTED.** Functional GUI and
+native PASS do not substitute for visual pixel review.
+
+A test-only, actual-app capture harness was added at
+`tests/winui/test_shortcut_visual_capture_gui.py` in
+`a360f2db52fd3d2a864958c4a22196bf56a14526`. It uses a disposable
+profile/folder, confirms the foreground HWND belongs to its launched app,
+captures app-bounded collapsed and expanded shortcut controls, records
+actual window geometry/DPI, checks a normal process exit and preserves the
+original legacy profile. Intended like-for-like baseline:
+`54c8ee5d2ccf8912232334348c58f8fe60313294`, before the shortcut
+options were expanded. Intended changed screenshot:
+`a360f2db52fd3d2a864958c4a22196bf56a14526`, with identical
+product code to accepted `04e7d358dcc7cb74a6c619b833b503c72b089294`.
+
+Owned Windows [visual run 38194421915](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38194421915)
+passed exact-source preflight and capture-script Python syntax checking but
+stopped at the **baseline Release NuGet restore** before either app screenshot.
+The initial separate source cache lacked several pinned package downloads,
+including Windows SDK BuildTools/Windows App SDK packages, and MSBuild
+reported a missing required Windows App SDK AI WinMD under the isolated
+NuGet packages directory. This is an external package restoration/cache
+boundary, **not** a new product compile or UI regression. The previously
+accepted current-product Release, full GUI and 23/23 M21 native evidence
+remains valid. Do not repeat identical full builds without first resolving
+the specific baseline package cache/network precondition.
+
+The failed visual fixture's uniquely identified owned scratch root was
+verified and deleted without following reparse points by
+[cleanup run 38194622497](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38194622497).
+The one-shot test task was unregistered and the central Remote Shell request
+slot returned to idle. **Resume visual QA** only with working pinned NuGet
+restore for the separate baseline (or an independently verified complete
+baseline runtime), then capture and inspect both before/after screenshot pairs
+under matched DPI, geometry, fixture and theme. Successful script execution
+alone must not be called a visual PASS before pixels are reviewed.
+
 Staged Copy crash-interruption receipt and safe-recovery work remain
 explicitly deferred and were not changed.
 
