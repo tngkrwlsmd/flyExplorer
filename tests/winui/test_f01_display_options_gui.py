@@ -33,7 +33,7 @@ def run(*, win, element, safe_click, focus, eventually, base, owned, left, right
                 if local.exists(timeout=.15):
                     return local.wrapper_object()
                 # WinUI may give a MenuFlyout its own popup UIA root.
-                matches = [x for w in screen.windows(process=win.process_id())
+                matches = [x for w in screen.windows(process=win.wrapper_object().element_info.process_id)
                            for x in w.descendants()
                            if x.element_info.automation_id == name]
                 return matches[0] if len(matches) == 1 else None
@@ -43,7 +43,7 @@ def run(*, win, element, safe_click, focus, eventually, base, owned, left, right
         assert menu_item is not None, name
         # Refocusing the main window here would dismiss the open WinUI popup.
         # Instead require exact app-process ownership before physical input.
-        assert menu_item.element_info.process_id == win.element_info.process_id
+        assert menu_item.element_info.process_id == win.wrapper_object().element_info.process_id
         menu_item.click_input()
 
     eventually(lambda: named_row(0) is not None,
