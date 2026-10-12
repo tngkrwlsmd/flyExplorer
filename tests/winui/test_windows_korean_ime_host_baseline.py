@@ -33,6 +33,7 @@ u.IsWindow.argtypes = (w.HWND,)
 u.FindWindowExW.argtypes = (w.HWND, w.HWND, w.LPCWSTR, w.LPCWSTR)
 u.FindWindowExW.restype = w.HWND
 u.GetWindowTextW.argtypes = (w.HWND, w.LPWSTR, c.c_int)
+u.SetWindowTextW.argtypes = (w.HWND, w.LPCWSTR)
 u.SendMessageW.argtypes = (w.HWND, w.UINT, w.WPARAM, w.LPWSTR)
 u.SendMessageW.restype = c.c_ssize_t
 u.CreateWindowExW.argtypes = (
@@ -75,12 +76,52 @@ def host():
     u.UpdateWindow(top)
     u.SetFocus(edit)  # Focus is set by the native owning GUI thread.
     msg = Msg()
+    # Only the thread which owns the EDIT probes and changes its HIMC.
+    # Its status is exposed on the disposable window title for the parent.
+    owned_ime_state = None
+    def update_owned_ime():
+        nonlocal owned_ime_state
+        ctx = imm.ImmGetContext(edit)
+        details = ["context=" + str(bool(ctx))]
+        if ctx:
+            opened = bool(imm.ImmGetOpenStatus(ctx))
+            mode, sentence = w.DWORD(), w.DWORD()
+            known = bool(imm.ImmGetConversionStatus(
+                ctx, c.byref(mode), c.byref(sentence)))
+            owned_ime_state = (opened, int(mode.value), int(sentence.value)) if known else (opened, None, None)
+            set_open = bool(imm.ImmSetOpenStatus(ctx, True))
+            set_native = bool(known and imm.ImmSetConversionStatus(
+                ctx, mode.value | 1, sentence.value))
+            details.extend(["initial_open=" + str(opened),
+                            "initial_native=" + str(bool(mode.value & 1)) if known else "initial_native=unknown",
+                            "set_open=" + str(set_open),
+                            "set_native=" + str(set_native)])
+            imm.ImmReleaseContext(edit, ctx)
+        u.SetWindowTextW(top, "owned IME | " + "|".join(details))
+    def restore_owned_ime():
+        nonlocal owned_ime_state
+        if owned_ime_state is not None:
+            ctx = imm.ImmGetContext(edit)
+            if ctx:
+                opened, mode, sentence = owned_ime_state
+                if mode is not None:
+                    imm.ImmSetConversionStatus(ctx, mode, sentence)
+                imm.ImmSetOpenStatus(ctx, opened)
+                imm.ImmReleaseContext(edit, ctx)
+            owned_ime_state = None
     end = time.monotonic() + 60
     while u.IsWindow(top) and time.monotonic() < end:
         while u.PeekMessageW(c.byref(msg), None, 0, 0, 1):
+            if msg.hwnd == top and msg.message == 0x8001:  # owned IME enable
+                update_owned_ime()
+                continue
+            if msg.hwnd == top and msg.message == 0x8002:  # restore
+                restore_owned_ime()
+                continue
             u.TranslateMessage(c.byref(msg))
             u.DispatchMessageW(c.byref(msg))
         time.sleep(.025)
+    restore_owned_ime()
     if u.IsWindow(top):
         u.DestroyWindow(top)
     return 0
@@ -147,11 +188,6 @@ def main():
                 break
             time.sleep(.1)
         korean_hkl=hex(int(u.GetKeyboardLayout(tid) or 0))
-        context = imm.ImmGetContext(edit)
-        old_open = bool(imm.ImmGetOpenStatus(context)) if context else None
-        conv, sentence = w.DWORD(),w.DWORD()
-        old_status = (int(conv.value),int(sentence.value)) if (
-            context and imm.ImmGetConversionStatus(context,c.byref(conv),c.byref(sentence))) else None
         observations = []
         try:
             # A composed-text result is meaningful only after the test-owned
@@ -179,33 +215,33 @@ def main():
                 print("KOREAN_IME_NATIVE_EDIT_COMPOSED=False", flush=True)
                 print("KOREAN_IME_BASELINE_DIAGNOSTIC=PASS", flush=True)
                 return 0
-            for method in ("physical-hangul-key", "native-imm-mode"):
+            for method in ("physical-hangul-key", "owned-thread-imm-native"):
                 wnd.click_input()
                 require_foreground_owned()
                 u.SendMessageW(edit, 0x000C, 0, "")  # owned WM_SETTEXT
+                owned_ime = ""
                 if method == "physical-hangul-key":
                     u.keybd_event(0x15, 0x72, 0, None)
                     u.keybd_event(0x15, 0x72, 2, None)
-                elif context:
-                    imm.ImmSetOpenStatus(context, True)
-                    if old_status:
-                        imm.ImmSetConversionStatus(context,old_status[0]|0x1,old_status[1])
+                else:
+                    assert u.PostMessageW(top, 0x8001, 0, 0)
+                    time.sleep(.35)
+                    title = c.create_unicode_buffer(256)
+                    u.GetWindowTextW(top, title, 255)
+                    owned_ime = title.value
+                    print("KOREAN_IME_NATIVE_OWNER_THREAD_STATE", owned_ime, flush=True)
+                    assert owned_ime.startswith("owned IME | "), (
+                        "IME owner thread did not handle the state request")
                 time.sleep(.25)
                 keyboard.send_keys("gksrmf",pause=.09)
                 time.sleep(.5)
                 data = read_owned_edit()
                 observations.append({"method":method,"typed":data,
-                                     "context_exists":bool(context),
-                                     "open":bool(imm.ImmGetOpenStatus(context)) if context else None})
+                                     "owned_ime_state":owned_ime})
                 if data == "한글":
                     break
         finally:
-            if context:
-                if old_status:
-                    imm.ImmSetConversionStatus(context,*old_status)
-                if old_open is not None:
-                    imm.ImmSetOpenStatus(context,old_open)
-                imm.ImmReleaseContext(edit,context)
+            u.PostMessageW(top, 0x8002, 0, 0)  # Restore only owned IME state.
             if original_hkl:
                 u.PostMessageW(top, 0x0050, 0, original_hkl)
         print("KOREAN_IME_NATIVE_EDIT_HKL",korean_hkl,flush=True)
