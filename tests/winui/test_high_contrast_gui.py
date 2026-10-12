@@ -349,8 +349,8 @@ def main(
             colors.select(choice)
             icons.select(choice)
             save.click_input()
-            expected=("고대비 분류\\t*.txt\\t"+str(choice)+
-                      "\\t"+str(choice))
+            expected=("고대비 분류\t*.txt\t"+str(choice)+
+                      "\t"+str(choice))
             store=Path(env["LOCALAPPDATA"])/"flyExplorer"/"filter-rules-v1.txt"
             wait_for(
                 lambda:store.is_file() and
