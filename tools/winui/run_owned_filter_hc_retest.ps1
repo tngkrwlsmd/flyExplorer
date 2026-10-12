@@ -21,7 +21,7 @@ $result=Join-Path $Root 'result.json'
 $workerText=@'
 param([string]$Source,[string]$Root,[string]$Before,[string]$After,[string]$Result)
 $ErrorActionPreference='Stop'
-$state='FAIL';$stage='preflight';$detail=''
+$state='FAIL';$stage='preflight';$detail='';$ime='NOT_RUN'
 $log=Join-Path $Root 'hc-build.log'
 try{
  $env:PYTHONUTF8='1';$env:PYTHONIOENCODING='utf-8'
@@ -49,6 +49,12 @@ try{
  & cmd.exe /d /c 'build.bat Release' *>&1 | Out-File -LiteralPath $log -Append -Encoding UTF8
  $rc=$LASTEXITCODE;$ErrorActionPreference='Stop'
  if($rc -ne 0){throw ('Current Release failed '+$rc)}
+ $stage='physical-Korean-IME'
+ $ErrorActionPreference='Continue'
+ & python.exe -X utf8 (Join-Path $Source 'tests\winui\test_filter_korean_ime_gui.py') *>&1 | Out-File -LiteralPath $log -Append -Encoding UTF8
+ $imeCode=$LASTEXITCODE;$ErrorActionPreference='Stop'
+ if($imeCode -eq 0){$ime='PASS'}else{$ime='NOT_ACCEPTED'}
+ Add-Content -LiteralPath $log -Value ('KOREAN_IME_PHYSICAL_TEST_RESULT='+$ime)
  $stage='actual-HighContrast-settings-and-GUI'
  $old=Join-Path $baseline 'out\winui\Release\flyExplorer.exe'
  $new=Join-Path $Source 'out\winui\Release\flyExplorer.exe'
@@ -74,7 +80,7 @@ try{
  }
  $state='PASS';$stage='complete';$detail='Both HC WinUI revisions, four style pixels and restored contrast theme'
 }catch{$detail=$_.Exception.Message}
-finally{@{status=$state;stage=$stage;detail=$detail}|ConvertTo-Json|Set-Content -LiteralPath $Result -Encoding UTF8}
+finally{@{status=$state;stage=$stage;detail=$detail;ime=$ime}|ConvertTo-Json|Set-Content -LiteralPath $Result -Encoding UTF8}
 if($state -ne 'PASS'){exit 1}
 '@
 Set-Content -LiteralPath $worker -Value $workerText -Encoding UTF8
@@ -90,7 +96,7 @@ try{
  while(-not(Test-Path -LiteralPath $result -PathType Leaf) -and (Get-Date)-lt $until){Start-Sleep -Seconds 5}
  if(-not(Test-Path -LiteralPath $result -PathType Leaf)){throw 'Bounded HC acceptance timeout: restore state before any retry'}
  $done=Get-Content -LiteralPath $result -Raw -Encoding UTF8|ConvertFrom-Json
- Write-Output ('HC_FILTER_STATUS='+$done.status+' STAGE='+$done.stage+' DETAIL='+$done.detail)
+ Write-Output ('HC_FILTER_STATUS='+$done.status+' STAGE='+$done.stage+' DETAIL='+$done.detail+' IME='+$done.ime)
  if($done.status -ne 'PASS'){
   $log=Join-Path $Root 'hc-build.log'
   if(Test-Path -LiteralPath $log){Get-Content -LiteralPath $log -Tail 44|ForEach-Object{Write-Output ('HC_FILTER_LOG '+$_)}}
