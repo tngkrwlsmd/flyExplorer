@@ -183,6 +183,16 @@ def main():
             }
 
         shot("default")
+        if args.label == "after":
+            choose("ViewCheckboxesItem", "선택 확인란")
+            choose("ViewCompactRowsItem", "목록 간격")
+            choose("ViewFileExtensionsItem", "파일 확장명")
+            wait_until(lambda: row() is not None and row().is_selected() and
+                       "실제 파일 이름: readme.txt" in row().window_text(),
+                       "owned hidden extension/selection state absent",
+                       seconds=9, interval=.15)
+            shot("enabled")
+            print("F01_VISUAL_ENABLED_UIA_FULLNAME=PASS", flush=True)
         focus()
         win.child_window(auto_id="ViewButton").click_input()
         # Capture menu while open, but verify the menu belongs to our process.
@@ -205,20 +215,7 @@ def main():
             "bytes": (output / name).stat().st_size,
             "rect": list(window_rect),
         }
-        # Dismiss only this test-owned flyout; no global desktop keystrokes.
-        focus()
-        win.child_window(auto_id="ViewButton").click_input()
 
-        if args.label == "after":
-            choose("ViewCheckboxesItem", "선택 확인란")
-            choose("ViewCompactRowsItem", "목록 간격")
-            choose("ViewFileExtensionsItem", "파일 확장명")
-            wait_until(lambda: row() is not None and row().is_selected() and
-                       "실제 파일 이름: readme.txt" in row().window_text(),
-                       "owned hidden extension/selection state absent",
-                       seconds=9, interval=.15)
-            shot("enabled")
-            print("F01_VISUAL_ENABLED_UIA_FULLNAME=PASS", flush=True)
         assert process.poll() is None
 
         data = {
