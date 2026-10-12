@@ -419,7 +419,7 @@ def run_gui(area, configuration, env, tag):
     if area == "all":
         # Fail early on exact session-history cleanup before long GUI coverage.
         # Keep standalone focused probes independently runnable.
-        for focused in ("window-tabs", "shortcuts"):
+        for focused in ("window-tabs", "shortcuts", "filter-preset"):
             cmd, gui_env, timeout = gui_command(
                 focused, configuration, env
             )
