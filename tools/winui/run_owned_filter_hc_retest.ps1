@@ -32,6 +32,7 @@ try{
  & git -C $Source worktree add --quiet --detach $baseline $Before *>&1 | Out-File -LiteralPath $log -Append -Encoding UTF8
  $rc=$LASTEXITCODE;$ErrorActionPreference='Stop'
  if($rc -ne 0){throw ('Owned baseline checkout failed '+$rc)}
+ $env:GIT_CONFIG_COUNT='2';$env:GIT_CONFIG_KEY_1='safe.directory';$env:GIT_CONFIG_VALUE_1=$baseline
  $rev=(& git -C $baseline rev-parse HEAD).Trim()
  if($rev -cne $Before){throw 'Baseline checkout SHA mismatch'}
  $stage='baseline-Release'
