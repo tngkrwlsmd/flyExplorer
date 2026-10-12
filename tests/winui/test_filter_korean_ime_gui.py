@@ -171,7 +171,7 @@ def main() -> int:
                         print("KOREAN_IME_IMM_CONTEXT_UNAVAILABLE",flush=True)
                         continue
                     time.sleep(.35)
-                    keyboard.send_keys("gksrmf",pause=.1)
+                    keyboard.send_keys("gksrmf",pause=.1,vk_packet=False)
                     time.sleep(.9)
                     value=editor.get_value()
                     current_conv,current_sentence=W.DWORD(),W.DWORD()
