@@ -25,6 +25,7 @@ u.GetKeyboardLayout.restype = c.c_void_p
 u.LoadKeyboardLayoutW.argtypes = (w.LPCWSTR, w.UINT)
 u.LoadKeyboardLayoutW.restype = c.c_void_p
 u.GetForegroundWindow.restype = w.HWND
+u.SetForegroundWindow.argtypes = (w.HWND,)
 u.PostMessageW.argtypes = (w.HWND, w.UINT, w.WPARAM, w.LPARAM)
 u.IsWindow.argtypes = (w.HWND,)
 u.FindWindowExW.argtypes = (w.HWND, w.HWND, w.LPCWSTR, w.LPCWSTR)
