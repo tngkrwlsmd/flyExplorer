@@ -1838,11 +1838,12 @@ namespace winrt::FlyExplorer::implementation
             Microsoft::UI::Xaml::Media::Brush accent{nullptr};
             if(decoratedRule&&decoratedRule->color){
                 Windows::UI::Color value{};
+                const bool light=RootShell().ActualTheme()==ElementTheme::Light;
                 switch(decoratedRule->color){
-                case 1:value={255,89,174,255};break;
-                case 2:value={255,81,204,131};break;
-                case 3:value={255,255,182,79};break;
-                case 4:value={255,255,117,117};break;
+                case 1:value=light?Windows::UI::Color{255,0,82,166}:Windows::UI::Color{255,89,174,255};break;
+                case 2:value=light?Windows::UI::Color{255,0,99,57}:Windows::UI::Color{255,81,204,131};break;
+                case 3:value=light?Windows::UI::Color{255,148,69,0}:Windows::UI::Color{255,255,182,79};break;
+                case 4:value=light?Windows::UI::Color{255,164,25,38}:Windows::UI::Color{255,255,117,117};break;
                 default:break;
                 }
                 accent=Microsoft::UI::Xaml::Media::SolidColorBrush(value);
