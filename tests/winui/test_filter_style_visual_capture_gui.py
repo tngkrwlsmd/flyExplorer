@@ -99,9 +99,20 @@ def run():
         assert proc.poll() is None and len(windows(proc.pid)) == 1
         hwnd = windows(proc.pid)[0]
         win = Desktop(backend="uia").window(handle=hwnd)
-        assert u.SetWindowPos(hwnd, None, 35, 25, 1060, 760, 0x0014)
-        wait_until(lambda: win.rectangle().width() == 1060 and
-                   win.rectangle().height() == 760,
+        # The remote desktop can be shorter than 785 px. Use its actual
+        # active-session bounds; do not capture pixels outside the monitor.
+        screen_width = u.GetSystemMetrics(0)
+        screen_height = u.GetSystemMetrics(1)
+        x, y = 20, 15
+        width = min(1060, screen_width - x - 30)
+        height = min(720, screen_height - y - 30)
+        assert width >= 810 and height >= 570, (
+            "display too small for matched filter visual capture",
+            screen_width, screen_height,
+        )
+        assert u.SetWindowPos(hwnd, None, x, y, width, height, 0x0014)
+        wait_until(lambda: win.rectangle().width() == width and
+                   win.rectangle().height() == height,
                    "matched filter window geometry failed", seconds=8, interval=.15)
         for _ in range(5):
             win.set_focus()
@@ -145,13 +156,14 @@ def run():
         rect = win.rectangle()
         dpi = int(u.GetDpiForWindow(hwnd))
         window = [rect.left, rect.top, rect.right, rect.bottom]
-        assert window == [35, 25, 1095, 785], window
-        assert u.GetSystemMetrics(0) >= window[2] and u.GetSystemMetrics(1) >= window[3]
+        assert window == [x, y, x + width, y + height], window
+        assert screen_width >= window[2] and screen_height >= window[3]
         full = ImageGrab.grab(bbox=tuple(window), include_layered_windows=True)
-        assert full.size == (1060, 760)
+        assert full.size == (width, height)
         fullpath = output / (v.label + "-full.png")
         full.save(fullpath, "PNG", optimize=True)
-        preview = full.crop((0, 0, 1060, 680))
+        preview_height = min(680, height)
+        preview = full.crop((0, 0, width, preview_height))
         path = output / (v.label + "-preview.png")
         preview.save(path, "PNG", optimize=True)
         metadata = {
@@ -159,8 +171,8 @@ def run():
             "binary_sha256": hashlib.sha256(exe.read_bytes()).hexdigest(),
             "label": v.label, "configuration": "Release",
             "dpi": dpi, "window": window,
-            "desktop": [u.GetSystemMetrics(0), u.GetSystemMetrics(1)],
-            "preview_rect_relative_to_window": [0, 0, 1060, 680],
+            "desktop": [screen_width, screen_height],
+            "preview_rect_relative_to_window": [0, 0, width, preview_height],
             "theme": "isolated user dark UI",
             "profile_schema": "schema=2" if v.label == "after" else "schema=1",
             "fixture": "test-owned alpha.cpp/beta.h/notes.txt/사진.JPG",
