@@ -16,6 +16,45 @@ product state use CURRENT_STATUS.md.
 
 이 문서는 확정된 오류를 단순 수정으로 끝내지 않고, 다음 진단을 빠르게 하고 같은 계열의 결함을 사전에 막기 위한 프로젝트 기록이다.
 
+## 2026-10-12 — Narrator Recap focus/visibility evidence is not speech evidence
+
+- The first control-plane speech-recap script attempted
+  `New-Item -LiteralPath` under Windows PowerShell 5.1; this cmdlet
+  did not support that parameter. Correcting this command changed
+  the request harness, not the flyExplorer product
+  ([run 38232070285](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38232070285)).
+- Starting Narrator brought a Narrator window into the foreground.
+  The synthetic owned Win32 editor was no longer focused. A limited,
+  exact-owned foreground correction allowed a second probe to
+  discover two visible Narrator Recap windows with 35 UIA nodes
+  ([run 38232530406](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38232530406)).
+  The previous `zero UIA nodes` diagnosis was a test discovery
+  limitation, not a proven accessibility API failure.
+- A controlled Win32 BUTTON with a verified accessible UIA Name and
+  foreground focus gave a true reference-label prerequisite, but
+  scanning Narrator's actual Recap UIA text/name/value patterns still
+  found no matching phrase, and audio was not captured
+  ([run 38233608351](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38233608351)).
+  **No flyExplorer product failure** follows from the missing reference
+  evidence; neither is actual spoken-text acceptance established.
+- Test cleanup also requires its own explicit gate: after `Narrator+Esc`
+  and `Windows+Ctrl+Enter` were injected, the test-originated
+  Narrator process could remain running. An exact-PID termination
+  sometimes caused a second Narrator instance, requiring strictly
+  provenance-guarded bounded cleanup. Final exact-session/creation
+  checks, two known test-originated PID stops, stable process-zero
+  confirmation and safe owned-file removal completed
+  ([run 38234299929](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38234299929)).
+  Never terminate a preexisting real user's screen reader based only
+  on the executable name.
+- Prevention: stop using this shared session for unattended transcript
+  guesses, require attended actual-audio or independently verified
+  privacy-limited transcript capture, and retain separate source/UIA,
+  speech-text, audio, process cleanup and OS-DPI acceptance labels.
+  See `NARRATOR_SPEECH_VALIDATION.md`.
+
+---
+
 ## 2026-10-12 — Narrator starts but actual speech remains unverified
 
 - The Windows VM runs Windows 11 Pro build 26300 with a working audio
