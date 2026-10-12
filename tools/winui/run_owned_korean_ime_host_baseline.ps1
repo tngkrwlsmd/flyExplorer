@@ -3,7 +3,8 @@
 [CmdletBinding()]
 param([Parameter(Mandatory)][string]$Source,
       [Parameter(Mandatory)][string]$Root,
-      [Parameter(Mandatory)][string]$Expected)
+      [Parameter(Mandatory)][string]$Expected,
+      [switch]$Independent)
 $ErrorActionPreference='Stop'
 if($Expected -notmatch '^[0-9a-f]{40}$'){throw 'Exact SHA required'}
 $base=[IO.Path]::GetFullPath((Join-Path $env:ProgramData 'personal-control-plane\scratch')).TrimEnd('\')
@@ -14,8 +15,10 @@ if((Get-Item -LiteralPath $Root -Force).Attributes -band [IO.FileAttributes]::Re
 if([IO.Path]::GetFullPath($Source) -cne [IO.Path]::GetFullPath((Join-Path $Root 'source'))){throw 'Wrong source checkout'}
 $revision=(& git -C $Source rev-parse HEAD).Trim()
 if($LASTEXITCODE -ne 0 -or $revision -cne $Expected){throw 'Source SHA mismatch'}
-$prior=Get-Content -LiteralPath (Join-Path $Root 'ime-result.json') -Raw -Encoding UTF8|ConvertFrom-Json
-if($prior.status -cne 'FAIL' -or $prior.stage -cne 'physical-Korean-IME'){throw 'Prior IME failure provenance missing'}
+if(-not $Independent){
+ $prior=Get-Content -LiteralPath (Join-Path $Root 'ime-result.json') -Raw -Encoding UTF8|ConvertFrom-Json
+ if($prior.status -cne 'FAIL' -or $prior.stage -cne 'physical-Korean-IME'){throw 'Prior IME failure provenance missing'}
+}
 $users=@(Get-CimInstance Win32_Process -Filter "Name='explorer.exe'"|Where-Object{$_.SessionId -gt 0}|ForEach-Object{
  $o=Invoke-CimMethod -InputObject $_ -MethodName GetOwnerSid
  if($o.ReturnValue -eq 0 -and $o.Sid -match '^S-1-5-21-'){[pscustomobject]@{sid=$o.Sid;session=$_.SessionId}}
