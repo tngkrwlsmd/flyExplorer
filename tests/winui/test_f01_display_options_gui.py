@@ -82,9 +82,19 @@ def run(*, win, element, safe_click, focus, eventually, base, owned, left, right
     print("F01_CHECKBOX_UIA_DESCENDANTS", len(checkboxes), flush=True)
 
     choose("ViewCompactRowsItem")
-    eventually(lambda: named_row(0) is not None and
-               named_row(0).rectangle().height() < original_height,
-               "F01 compact Details row did not reduce height", 10)
+    print("F01_COMPACT_CLICK_STATUS", element("StatusText").window_text(),
+          flush=True)
+    try:
+        eventually(lambda: named_row(0) is not None and
+                   named_row(0).rectangle().height() < original_height,
+                   "F01 compact Details row did not reduce height", 10)
+    except AssertionError:
+        measured = named_row(0)
+        print("F01_COMPACT_HEIGHT_DIAG", "before", original_height,
+              "after", measured.rectangle().height() if measured else "missing",
+              "selected", measured.is_selected() if measured else "missing",
+              "status", element("StatusText").window_text(), flush=True)
+        raise
     compact_height = named_row(0).rectangle().height()
     after_image = shot("checkbox-compact")
     print("F01_OWNED_ROW_HEIGHTS", original_height, compact_height, flush=True)
