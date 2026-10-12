@@ -16,6 +16,37 @@ product state use CURRENT_STATUS.md.
 
 이 문서는 확정된 오류를 단순 수정으로 끝내지 않고, 다음 진단을 빠르게 하고 같은 계열의 결함을 사전에 막기 위한 프로젝트 기록이다.
 
+## 2026-10-12 — Narrator starts but actual speech remains unverified
+
+- The Windows VM runs Windows 11 Pro build 26300 with a working audio
+  endpoint and no preexisting Narrator process
+  ([inventory 38229681112](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38229681112)).
+- A non-elevated user test task starting `Narrator.exe` directly received
+  WinError 740 (requires elevation). Retrying the same command or
+  bypassing UAC is not a safe accessibility acceptance strategy
+  ([run 38230127856](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38230127856)).
+- The documented Windows+Ctrl+Enter accessibility shortcut **did**
+  launch Narrator from a test-owned desktop reference. Nevertheless,
+  the limited UIA client observed zero Narrator-owned text nodes
+  after Narrator+Alt+X Speech Recap; no spoken label or audio waveform
+  was independently confirmed. The test worker then failed at
+  `psutil.AccessDenied` on a higher-integrity Narrator process wait
+  ([run 38230388533](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38230388533)).
+  These are *environment/automation permission* issues, not flyExplorer
+  accessibility correctness failures.
+- An independent process inventory confirmed zero remaining Narrator
+  processes and zero test scheduled tasks after the failed wrapper
+  ([run 38230563415](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38230563415)).
+- Prevention: first isolate actual spoken content in a synthetic
+  reference, **do not** re-label a process-launch/UIA-name test as a
+  voice test, use attended audible confirmation or independently
+  trustworthy Speech Recap access, avoid machine-wide clipboard or
+  unreviewed audio capture, and preserve/restored initial Narrator state.
+  See `docs/development/NARRATOR_SPEECH_VALIDATION.md` for the explicit
+  acceptance procedure.
+
+---
+
 ## 2026-10-09 — indexed modified-date acceptance and local-time boundary
 
 - Unlike traversal mode's local modified-day semantics, `SystemIndex`
