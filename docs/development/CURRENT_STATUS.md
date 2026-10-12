@@ -7,6 +7,32 @@ app/winui, UI-independent native code in src/base, tests in tests/winui, and
 bounded orchestration in tools/winui/run_checks.py. The former MFC application
 is retired from the working tree and is recoverable from Git revision cbffb48.
 
+## 2026-10-12 high-contrast filter acceptance and remaining IME/DPI/Narrator limits
+
+[Exact-revision Windows High Contrast run 38214474825](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38214474825)
+completed **SUCCESS** and logged `HC_FILTER_STATUS=PASS
+STAGE=complete`, `HC_FILTER_FOUR_STYLES_ACTUAL_PIXELS=PASS`,
+`HC_FILTER_OWNED_CLEANUP=PASS`. This compared actual pre/post WinUI
+Release screenshots in the real Windows high-contrast scheme for
+blue/star and red/tag classifications. The four bounded PNG images
+are in that run log. Direct review found legible text, intact
+classification badges, visible selected-row indication, yellow focus
+borders and no new clipping/overlap. The real Windows high-contrast
+setting was restored to its original **OFF** state after capture.
+This is a focused visual acceptance, **not** a blanket certification
+of every high-contrast scheme or file-view mode.
+
+**Korean IME physical composition: NOT ACCEPTED.** The same run explicitly
+reported `IME=NOT_ACCEPTED`. UI Automation typing, Korean-labeled
+controls and persisted Unicode text alone cannot substitute for
+observing real 2-beolsik composition in the owned edit control.
+Do not claim IME PASS without the precise physical-composition marker.
+**Narrator speech: NOT TESTED**; accessible UIA names do not prove
+actual spoken output. Actual **125%, 150%, 200% OS DPI: NOT TESTED**;
+the registered desktop last reported 96 DPI and no independent
+high-scale screenshot evidence is available. These are separate
+remaining accessibility gates.
+
 ## 2026-10-12 filter accessibility and updated private source/setup identity
 
 **Actual Windows DPI capability:** [read-only inventory #38209100479](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38209100479)
