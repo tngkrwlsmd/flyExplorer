@@ -96,6 +96,11 @@ def run():
         wait_until(lambda: len(windows(proc.pid)) == 1 or proc.poll() is not None,
                    "owned WinUI filter visual window unavailable", seconds=22,
                    interval=.15)
+        if proc.poll() is not None or len(windows(proc.pid)) != 1:
+            print("FILTER_VISUAL_STARTUP_DIAG",
+                  "owned_exit_code=", proc.poll(),
+                  "visible_owned_windows=", len(windows(proc.pid)),
+                  flush=True)
         assert proc.poll() is None and len(windows(proc.pid)) == 1
         hwnd = windows(proc.pid)[0]
         win = Desktop(backend="uia").window(handle=hwnd)
@@ -206,7 +211,11 @@ def run():
             except subprocess.TimeoutExpired:
                 raise AssertionError("Test-owned WinUI process failed graceful WM_CLOSE")
         if proc is not None and proc.poll() is not None:
-            assert proc.returncode == 0, "Test-owned WinUI crashed on shutdown"
+            if proc.returncode != 0:
+                print("FILTER_VISUAL_OWNED_APP_EXIT_CODE", proc.returncode,
+                      flush=True)
+                if sys.exc_info()[0] is None:
+                    raise AssertionError("Test-owned WinUI crashed on shutdown")
         assert_legacy_profile_unchanged(orig, before)
         shutil.rmtree(owned)
 
