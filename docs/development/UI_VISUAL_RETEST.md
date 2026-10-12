@@ -27,6 +27,21 @@ For the v7 Window Tab/session slice:
 A GUI PASS must include a normal owned process exit. Do not accept a functional
 sentinel followed by a crash exit code.
 
+## Windows visual baseline scratch path
+
+For matched captures that require separate Release builds of old and new
+revisions, use a short, explicitly test-owned Windows scratch root.
+NuGet restores all packages under the checkout's `.cache/nuget` path;
+a long scratch path can fail the restore before the product is launched.
+In [the shortcut-editor visual retest](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38196377101),
+a 261-character NuGet/WinMD path failed, while a short
+`C:\\ProgramData\\personal-control-plane\\scratch\\v-<12hex>` root
+reduced the known path to 220 characters and let both real WinUI versions
+build and capture successfully. Never globally disable path, restore or
+foreground-window safety checks to force a visual PASS. Verify exact
+source SHA, test-owned directory identity, matched screenshot conditions,
+normal owned app exit and cleanup.
+
 ## Mandatory BEFORE / AFTER capture
 
 Before changing user-visible pixels, capture the actual current product in the
