@@ -10,7 +10,7 @@ struct FileToolbar : FileToolbarT<FileToolbar> {
  void SetView(std::function<void(int)> change);
  void SetViewIndex(int selection);
  void SetListDisplay(std::function<void(int)> change);
- void SetListDisplayState(bool checkboxes,bool compactRows);
+ void SetListDisplayState(bool checkboxes,bool compactRows,bool showExtensions);
  void BeginNameEdit(int action,winrt::hstring const& initial);
  void EndNameEdit();
  void OnCreateFolder(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
@@ -43,6 +43,7 @@ struct FileToolbar : FileToolbarT<FileToolbar> {
  void OnViewLargeIcons(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
  void OnViewCheckboxes(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
  void OnViewCompactRows(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
+ void OnViewFileExtensions(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
  void OnSortChanged(IInspectable const&,Microsoft::UI::Xaml::Controls::SelectionChangedEventArgs const&);
 private:
  void ChooseSort(int index);

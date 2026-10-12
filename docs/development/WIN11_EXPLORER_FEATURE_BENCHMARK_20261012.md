@@ -128,6 +128,29 @@ XAML/handlers and requires focused confirmation before implementation.
   filename-extension display semantics, and durable private preference/session
   persistence. These are separate change/verification boundaries.
 
+## F01-B candidate — view-only file extension visibility (2026-10-13)
+
+- Branch: `feat/f01-list-display-20261012` (not merged to `main`).
+  **View → 파일 확장명 표시** defaults to checked and is independently
+  toggled for each WindowTab/pane. The checkbox state is memory-only.
+- Hiding extensions affects only rendered filenames of filesystem *files*.
+  Dotfiles, dotted folder names, non-filesystem Shell objects, and trailing
+  dots remain intact. `archive.tar.gz` displays `archive.tar`.
+  The full original filename remains in automation narration and all
+  native path identities, filtering, sorting, selection, rename and transfer.
+- The C++ presenter has compile-time guards for representative names,
+  Korean Unicode, virtual items and edge cases.
+- **NOT YET ACCEPTED:** revised Windows Release/source build and actual GUI
+  pixel testing are required. The 2026-10-13 read-only Windows focus probe,
+  [38315380764](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38315380764),
+  saw exactly one Explorer user session but `GetForegroundWindow()==NULL`
+  from that interactive-session task. Desktop lock/input availability cannot
+  be inferred more precisely; do not circumvent owned foreground guards.
+  Owned diagnostic task/files were cleaned and the Remote Shell slot
+  returned idle in control commit `1256f38cdffe26b892fac799d4544c21210b500c`.
+- F01 hidden-file enumeration and durable preference/session persistence are
+  later independent units.
+
 ## Recommended execution order
 
 1. **F01 — display options.** Small self-contained visible improvement;
