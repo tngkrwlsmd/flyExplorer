@@ -1,6 +1,6 @@
 # Exact-revision, test-owned Windows High Contrast filter appearance retest.
 # Uses the existing Settings UI setup/restore, no registry/theme shortcuts.
-param([string]$Source,[string]$Root,[string]$Before,[string]$After)
+param([string]$Source,[string]$Root,[string]$Before,[string]$After,[switch]$ResumeExisting)
 $ErrorActionPreference='Stop'
 if($Before -notmatch '^[0-9a-f]{40}$' -or $After -notmatch '^[0-9a-f]{40}$'){throw 'Exact pinned SHA required'}
 $base=[IO.Path]::GetFullPath((Join-Path $env:ProgramData 'personal-control-plane\scratch')).TrimEnd('\')
@@ -16,10 +16,26 @@ if($users.Count -ne 1){throw 'One dedicated interactive Windows user required'}
 & icacls.exe $Root /inheritance:r /grant:r '*S-1-5-18:(OI)(CI)F' '*S-1-5-32-544:(OI)(CI)F' ('*'+$users[0].sid+':(OI)(CI)M') | Out-Null
 if($LASTEXITCODE -ne 0){throw 'Unable to grant owned scratch access'}
 Write-Output ('HC_FILTER_SESSION='+$users[0].session)
+if($ResumeExisting){
+ $previous=Join-Path $Root 'result.json'
+ if(-not(Test-Path -LiteralPath $previous -PathType Leaf)){throw 'No previously failed owned HC acceptance'}
+ $old=Get-Content -LiteralPath $previous -Raw -Encoding UTF8|ConvertFrom-Json
+ if($old.status -cne 'FAIL' -or $old.stage -cne 'actual-HighContrast-settings-and-GUI'){throw 'Previous stage is not verified after both Release builds'}
+ $contrastResult=Get-Content -LiteralPath (Join-Path $Root 'high-contrast-result.json') -Raw -Encoding UTF8|ConvertFrom-Json
+ if($contrastResult.original_high_contrast -ne $contrastResult.final_high_contrast -or $contrastResult.stages.CLEANUP -cne 'PASS'){throw 'Previous HC theme state was not restored'}
+ $baseline=Join-Path $Root 'baseline'
+ $original=(& git -C $baseline rev-parse HEAD).Trim()
+ if($LASTEXITCODE -ne 0 -or $original -cne $Before){throw 'Existing exact baseline worktree mismatch'}
+ foreach($exe in @((Join-Path $baseline 'out\winui\Release\flyExplorer.exe'),(Join-Path $Source 'out\winui\Release\flyExplorer.exe'))){
+  if(-not(Test-Path -LiteralPath $exe -PathType Leaf)){throw ('Trusted prebuilt Release binary missing '+$exe)}
+ }
+ Remove-Item -LiteralPath $previous -Force -ErrorAction Stop
+ Write-Output 'HC_FILTER_EXACT_OWNED_RELEASE_REUSE=PASS'
+}
 $worker=Join-Path $Root 'worker.ps1'
 $result=Join-Path $Root 'result.json'
 $workerText=@'
-param([string]$Source,[string]$Root,[string]$Before,[string]$After,[string]$Result)
+param([string]$Source,[string]$Root,[string]$Before,[string]$After,[string]$Result,[switch]$ResumeExisting)
 $ErrorActionPreference='Stop'
 $state='FAIL';$stage='preflight';$detail='';$ime='NOT_RUN'
 $log=Join-Path $Root 'hc-build.log'
@@ -27,6 +43,7 @@ try{
  $env:PYTHONUTF8='1';$env:PYTHONIOENCODING='utf-8'
  $env:GIT_CONFIG_COUNT='1';$env:GIT_CONFIG_KEY_0='safe.directory';$env:GIT_CONFIG_VALUE_0=$Source
  $baseline=Join-Path $Root 'baseline'
+ if(-not $ResumeExisting){
  $stage='baseline-detached-worktree'
  $ErrorActionPreference='Continue'
  & git -C $Source worktree add --quiet --detach $baseline $Before *>&1 | Out-File -LiteralPath $log -Append -Encoding UTF8
@@ -49,6 +66,15 @@ try{
  & cmd.exe /d /c 'build.bat Release' *>&1 | Out-File -LiteralPath $log -Append -Encoding UTF8
  $rc=$LASTEXITCODE;$ErrorActionPreference='Stop'
  if($rc -ne 0){throw ('Current Release failed '+$rc)}
+ }else{
+  $env:GIT_CONFIG_COUNT='2';$env:GIT_CONFIG_KEY_1='safe.directory';$env:GIT_CONFIG_VALUE_1=$baseline
+  $rev=(& git -C $baseline rev-parse HEAD).Trim()
+  if($LASTEXITCODE -ne 0 -or $rev -cne $Before){throw 'Reused baseline provenance mismatch'}
+  foreach($exe in @((Join-Path $baseline 'out\winui\Release\flyExplorer.exe'),(Join-Path $Source 'out\winui\Release\flyExplorer.exe'))){
+   if(-not(Test-Path -LiteralPath $exe -PathType Leaf)){throw 'Reused Release exe missing'}
+  }
+  Add-Content -LiteralPath $log -Value 'HC_FILTER_TRUSTED_PREBUILT_BASELINE_AND_CURRENT=PASS'
+ }
  $stage='physical-Korean-IME'
  $ErrorActionPreference='Continue'
  & python.exe -X utf8 (Join-Path $Source 'tests\winui\test_filter_korean_ime_gui.py') *>&1 | Out-File -LiteralPath $log -Append -Encoding UTF8
@@ -89,6 +115,7 @@ $registered=$false;$ok=$false
 try{
  $pwsh=Join-Path $env:SystemRoot 'System32\WindowsPowerShell\v1.0\powershell.exe'
  $arguments='-NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "'+$worker+'" -Source "'+$Source+'" -Root "'+$Root+'" -Before "'+$Before+'" -After "'+$After+'" -Result "'+$result+'"'
+ if($ResumeExisting){$arguments+=' -ResumeExisting'}
  Register-ScheduledTask -TaskName $name -Action (New-ScheduledTaskAction -Execute $pwsh -Argument $arguments) -Principal (New-ScheduledTaskPrincipal -UserId $users[0].sid -LogonType Interactive -RunLevel Limited) -Settings (New-ScheduledTaskSettingsSet -ExecutionTimeLimit (New-TimeSpan -Minutes 20)) -Force | Out-Null
  $registered=$true
  Start-ScheduledTask -TaskName $name
