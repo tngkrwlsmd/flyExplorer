@@ -7,6 +7,49 @@ app/winui, UI-independent native code in src/base, tests in tests/winui, and
 bounded orchestration in tools/winui/run_checks.py. The former MFC application
 is retired from the working tree and is recoverable from Git revision cbffb48.
 
+## 2026-10-12 corrected Korean IME reference diagnostic (latest)
+
+**Test-only diagnostic revision:** `95af8d7b54ab0a7730b0d545db068e087c5fa7c9`.
+[Exact-source central CI 38224982434](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38224982434)
+completed **SUCCESS** for the source checks. The three intervening
+commits since `9fda657` modified only
+`tests/winui/test_windows_korean_ime_host_baseline.py` and
+`tools/winui/run_owned_korean_ime_host_baseline.ps1`, not WinUI/product
+rendering or runtime files. This source result is **not** new Release,
+functional GUI, or final-pixel acceptance.
+
+**Corrected actual native Win32 EDIT input baseline: numeric physical
+keyboard delivery PASS, Korean composition NOT ACCEPTED.**
+[Windows owned diagnostic 38224718703](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38224718703)
+replaced the invalid cross-process `GetWindowTextW` edit read with
+`WM_GETTEXT` and verified an explicit `WM_SETTEXT` / `WM_GETTEXT`
+round trip. The real EDIT then received physical digits `123`
+correctly. Korean HKL was `0x04120412`, yet both the physical Hangul
+key attempt and native-IMM fallback yielded Latin `gksrmf`, **not**
+composed `한글`. Therefore the previous native result reporting an
+empty EDIT value was a test readback artifact and is superseded. A null
+IMM context requested by the external controller is not proof of the
+target application's Text Services Framework or actual IME mode.
+Both the earlier owned WinUI and corrected native-reference attempts
+lack real two-beolsik composition; there is no accepted Hangul
+composition/save result and no isolated flyExplorer product defect.
+
+The diagnostic itself completed with its expected evidence markers;
+the enclosing Remote Shell run is marked **failure** because its
+post-diagnostic report matcher wrongly required extra quote characters
+around a marker. Do not turn that reporting error into a product FAIL
+or claim the whole Actions run succeeded.
+[Owned cleanup 38224957696](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38224957696)
+independently verified and deleted the test-owned scratch root;
+the central Remote Shell request slot was subsequently restored idle.
+
+**Unchanged open environmental gates:** real 125%/150%/200% Windows DPI
+clipping/overlap and spoken Narrator behavior remain **NOT TESTED**.
+The relevant actual 96-DPI Windows High Contrast filter pixel review
+[38214474825](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38214474825)
+remains the accepted focused evidence; it was not rerun because no
+product-visible filter code changed.
+
 ## 2026-10-12 actual accessibility environment diagnostics (no scale changes)
 
 **Read-only Windows capability inventory: PASS.**
