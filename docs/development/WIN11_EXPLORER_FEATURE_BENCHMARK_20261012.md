@@ -84,7 +84,45 @@ XAML/handlers and requires focused confirmation before implementation.
 | F17 | Redesigned **customizable context menu** described by Microsoft on 2026-08-17 as rolling out to **Insiders** | Track the public API/interaction pattern; do not clone private Explorer settings, inject extension DLLs or assume GA |
 | F18 | File Explorer **AI actions**, document summarization and image edits on eligible hardware/cloud subscription | Defer; hardware, policy, license, privacy and actual user value must justify any integration |
 
-## F01-A implementation checkpoint — source/Release PASS; GUI/visual OPEN
+## F01 accepted functional scope — 2026-10-13
+
+- **Current evidence-scoped product and test revision:**
+  `79813b84fe0fcb607d9533b7f09eac0c43f5a14b` on
+  `feat/f01-list-display-20261012`, **not merged to main**.
+- [Central owned Windows run 38318791974](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38318791974)
+  finished successfully: `F01GUI_RESULT_STATUS=PASS STAGE=complete`,
+  `F01GUI_SOURCE_RELEASE_AND_GUI=PASS`, and
+  `F01GUI_OWNED_CLEANUP=PASS`. Its focused owned fixture exercised View
+  selection checkbox toggling, compact Details-row height reduction/restore,
+  filename-extension hide/restore with full native accessibility name, and
+  selection identity retention. The Release build and source contracts passed.
+- **Cause of earlier GUI failures was classified, not ignored.**
+  The initial session had no foreground HWND
+  ([38315380764](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38315380764));
+  a later owned probe confirmed an interactive foreground HWND
+  ([38316628159](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38316628159)).
+  Pointer-based menu automation then hit the prior checkbox command
+  instead of the compact-row command; an unsupported `InvokePattern`
+  attempt failed at `NoPatternInterfaceError`. The correction uses the
+  actual `ToggleMenuFlyoutItem` UIA `TogglePattern` with exact
+  AutomationId, process-owner and dispatched-status checks. A speculative
+  product `Height(26)` override was reverted because no product row-height
+  bug had been proven. Do not reintroduce it as a presumed fix.
+- **Functional GUI PASS is scoped** to the selected left-pane local fixture
+  at the tested native desktop configuration. Full mouse/keyboard pointer
+  parity, every view mode, cross-pane/WindowTab rehydration, high-DPI or
+  Narrator speech are not certified by this focused test.
+- **VISUAL ACCEPTANCE: NOT TESTED.** The owned script wrote app-window
+  screenshots, but its ephemeral checkout/fixture was cleaned at completion;
+  no independent BEFORE current-main vs AFTER candidate pixel inspection
+  has been carried out. Actual matched light/dark, focus/selection,
+  split/narrow and suitable High Contrast visual review remains required
+  before main integration. Do not equate the `GUI PASS` with pixel PASS.
+- Deferred F01 units: hidden-item enumeration and durable private
+  preference/session persistence. The pane-local *display-only*
+  filename-extension toggle is implemented and exercised in the above run.
+
+## F01-A implementation checkpoint — historical source/Release evidence
 
 - **Candidate product/source SHA:** `e147efb6bfe7d4f6176da6c8954a5910ce00a2c8`,
   isolated branch `feat/f01-list-display-20261012`, not merged into `main`.
