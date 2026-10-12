@@ -162,6 +162,7 @@ namespace winrt::FlyExplorer::implementation
         void RunTransfer(fxfile::shelltransfer::Kind);
         void UpdateSort(int selection);
         void UpdateView(int selection);
+        void ToggleListDisplay(int option);
         void OnHeaderSortClicked(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
 
     private:

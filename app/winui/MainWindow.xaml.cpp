@@ -350,6 +350,10 @@ namespace winrt::FlyExplorer::implementation
             if(auto ui=nativeWeak.get())ui->UpdateView(index);
         });
         fileBar()->SetViewIndex(initialView);
+        fileBar()->SetListDisplay([nativeWeak](int option){
+            if(auto ui=nativeWeak.get())ui->ToggleListDisplay(option);
+        });
+        fileBar()->SetListDisplayState(false,false);
         const auto dispatch=DispatcherQueue();
         const auto weak=get_weak();
         // The worker owns NO MainWindow/WinRT UI object. Cross-apartment
@@ -1579,11 +1583,30 @@ namespace winrt::FlyExplorer::implementation
         }
     }
 
+    void MainWindow::ToggleListDisplay(int option)
+    {
+        if(option!=0&&option!=1)return;
+        const int side=ActiveWindowTab().model.activePane;
+        auto& state=ActiveWindowTab().fileLists[side];
+        if(option==0)state.showSelectionCheckboxes=!state.showSelectionCheckboxes;
+        else state.compactRows=!state.compactRows;
+        fileBar()->SetListDisplayState(
+            state.showSelectionCheckboxes,state.compactRows);
+        // FillFiles restores real selections by Shell parsing identity.
+        FillFiles(side);
+        UpdateSelectionChrome();
+        UpdateFooterSummary();
+        StatusText().Text(option==0?
+            L"현재 창의 선택 확인란 표시를 변경했습니다.":
+            L"현재 창의 목록 간격을 변경했습니다.");
+    }
     void MainWindow::UpdateViewPresentation(int side)
     {
         auto view=side==0?LeftFiles():RightFiles();
         auto header=side==0?LeftDetailsHeader():RightDetailsHeader();
-        const auto viewMode=ActiveWindowTab().fileLists[side].viewMode;
+        auto const& display=ActiveWindowTab().fileLists[side];
+        view.IsMultiSelectCheckBoxEnabled(display.showSelectionCheckboxes);
+        const auto viewMode=display.viewMode;
         const bool details=viewMode==FileViewMode::Details;
         header.Height(details?24.0:0.0);
         const auto visibility=details?Visibility::Visible:Visibility::Collapsed;
@@ -2054,6 +2077,12 @@ namespace winrt::FlyExplorer::implementation
                 else if(large){row.Width(112);row.Height(128);row.Padding(Thickness{2.0});row.HorizontalContentAlignment(HorizontalAlignment::Center);}
                 else{row.Width(92);row.Height(92);row.Padding(Thickness{2.0});row.HorizontalContentAlignment(HorizontalAlignment::Center);}
             }
+            if(state.compactRows &&
+               (state.viewMode==FileViewMode::Details||
+                state.viewMode==FileViewMode::List)){
+                row.MinHeight(26);
+                row.Padding(Thickness{4.0,0.0,4.0,0.0});
+            }
             if(decoratedRule){
                 label+=L" | 필터 프리셋: "+decoratedRule->name;
                 if(decoratedRule->color)
@@ -2286,6 +2315,9 @@ namespace winrt::FlyExplorer::implementation
         UpdateFooterSummary();
         fileBar()->SetSortIndex(ActiveWindowTab().fileLists[ActiveWindowTab().model.activePane].sortMode);
         fileBar()->SetViewIndex(static_cast<int>(ActiveWindowTab().fileLists[ActiveWindowTab().model.activePane].viewMode));
+        fileBar()->SetListDisplayState(
+            ActiveWindowTab().fileLists[ActiveWindowTab().model.activePane].showSelectionCheckboxes,
+            ActiveWindowTab().fileLists[ActiveWindowTab().model.activePane].compactRows);
         UpdateSortPresentation(ActiveWindowTab().model.activePane);
         StatusText().Text(status);
         Title(L"flyExplorer · "+hstring(nav.snapshot().displayName));
@@ -2325,6 +2357,9 @@ namespace winrt::FlyExplorer::implementation
         UpdateActivePaneChrome();
         fileBar()->SetSortIndex(ActiveWindowTab().fileLists[side].sortMode);
         fileBar()->SetViewIndex(static_cast<int>(ActiveWindowTab().fileLists[side].viewMode));
+        fileBar()->SetListDisplayState(
+            ActiveWindowTab().fileLists[side].showSelectionCheckboxes,
+            ActiveWindowTab().fileLists[side].compactRows);
         UpdateSortPresentation(side);
         UpdateSelectionChrome();
         UpdateFooterSummary();
