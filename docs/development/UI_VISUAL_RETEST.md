@@ -150,6 +150,18 @@ Capture only synthetic/test-owned paths. Never commit screenshots containing
 personal filenames or private desktop content. Prefer ignored local evidence
 under logs/ or bounded CI artifacts rather than product-source PNGs.
 
+## Filter accents in light theme
+
+Use a separate light palette for file-name text: blue (0,82,166),
+green (0,99,57), amber (148,69,0), red (164,25,38).
+All have at least 6.75:1 contrast on white. Do not reuse the brighter
+dark-theme RGBs unchanged. The actual 96-DPI Windows review in
+[run 38206845319](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38206845319)
+compared 16 screenshots (all four badges/colors, normal and
+selected/keyboard-focused rows). Selected-row legibility is a
+visual check separate from the mathematical white-background ratio.
+Keep DPI scaling, High Contrast and screen-reader gates separate.
+
 ## Theme, scale and accessibility gates
 
 For layout/theme/scale-sensitive UI work, exercise the relevant environments
