@@ -7,6 +7,37 @@ app/winui, UI-independent native code in src/base, tests in tests/winui, and
 bounded orchestration in tools/winui/run_checks.py. The former MFC application
 is retired from the working tree and is recoverable from Git revision cbffb48.
 
+## 2026-10-12 real Korean 2-beolsik composition: ACCEPTED
+
+**Latest source:** `71a9c4ba0ae48c7ab5b247fe05878412ca2d8aa6`.
+[Actual interactive Windows run 38227421736](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38227421736)
+completed **SUCCESS**. The trusted source's Release build and owned
+WinUI filter rule edit performed real Korean keyboard composition
+(`한글`) and confirmed durable persistence to the test-owned filter
+rule store. The app exited normally and the fixture was cleaned.
+The same run first proved composed Hangul in a disposable native
+Win32 EDIT control, then ran the actual WinUI acceptance.
+
+**Confirmed root cause of the previous false-negative IME tests:**
+pywinauto `keyboard.send_keys` defaults to `vk_packet=True` for
+text characters, which injects Unicode packets rather than actual
+virtual-key input traversing Korean IME composition. The test-only
+revision switched the Korean Latin key sequence to
+`vk_packet=False` in both native and WinUI tests. The native
+reference now uses `WM_GETTEXT` for cross-process readback and
+records owned-process input-context state, rather than falsely
+interpreting remote `GetWindowTextW` / remote `ImmGetContext` as
+evidence of product failure. No flyExplorer runtime/XAML/filter
+rendering code changed. This supersedes the earlier
+`NOT ACCEPTED` Korean composition notes below; those remain as
+historical diagnostic evidence only.
+
+**Still open and separate:** actual OS 125/150/200% scaling, clipping,
+overlap and spoken Narrator output. The VM currently reports
+1024x768 in the active desktop with 96 DPI, and the accepted
+real High Contrast filter visual check is unchanged. Do not infer
+DPI/Narrator acceptance from the successful IME test.
+
 ## 2026-10-12 corrected Korean IME reference diagnostic (latest)
 
 **Test-only diagnostic revision:** `95af8d7b54ab0a7730b0d545db068e087c5fa7c9`.
