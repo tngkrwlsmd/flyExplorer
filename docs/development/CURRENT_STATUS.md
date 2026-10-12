@@ -113,12 +113,44 @@ test-owned scratch directory was verified and safely deleted in
 The Remote Shell request slot was restored to idle.
 
 **Scope limit:** this is a focused visual PASS for 96 DPI dark/details
-layout. Separate real 125/150/200% DPI, light/High Contrast themes,
+layout. Separate real 125/150/200% DPI, High Contrast themes,
 Narrator/IME and full distribution visual states remain **NOT TESTED**
 unless independently accepted elsewhere. Functional GUI and M20
 native acceptance remain distinct, previously verified gates.
 Staged Copy crash-interruption receipt and safe-recovery work remain
 explicitly deferred and were not changed.
+
+## 2026-10-12 light-theme filter visual acceptance — PASS
+
+Product commit `bddfb2a46faea8f30f78fb96f737da63da2f2e23`
+adds theme-aware, darker light accents while preserving the accepted
+dark accents, style IDs and badges. White-background contrast improves
+from 2.35/2.04/1.74/2.61:1 to **7.62/7.38/6.75/7.65:1** for
+blue/green/amber/red, exceeding the 4.5:1 normal-text AA reference.
+
+[Actual Windows visual run 38206845319](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38206845319)
+**PASS**: 16 real app screenshots comparing before
+`c911f982464cf714387b98e303ec7ac82f0462a1` and after
+`b9d55954f9eecbf063122f9934f82c42029da6fd`.
+Matched light/details, 96 DPI, 1060x720 actual HWND and synthetic
+four-file fixture. Reviewed all four color/icon combinations (star,
+pin, flag, tag) in normal and UIA-verified selected/keyboard-focused
+states. The darker names and badges remain readable, aligned and
+unclipped; the selected-row highlight is distinguishable.
+Selected-row contrast was reviewed visually, not measured numerically.
+Run confirms normal owned app exit and fixture cleanup. An initial
+test-only harness mistake in run 38206423123 was fixed by comparing
+the same existing color controls in both product revisions.
+
+[Central Windows CI 38207189902](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38207189902)
+**SUCCESS** for exact `b9d55954f9eecbf063122f9934f82c42029da6fd`:
+Release, window tabs, shortcuts, styled filter GUI and full GUI
+regression all exited 0; `central-ci/windows-gui=success`.
+The source contract checks all four light-theme contrast values.
+
+**Separate, NOT TESTED:** 125/150/200% actual OS DPI, High Contrast,
+Narrator and Korean IME. Staged Copy interruption receipts and
+safe recovery remain deferred.
 
 ## 2026-10-12 configurable focus shortcut expansion — Release and functional GUI PASS
 
