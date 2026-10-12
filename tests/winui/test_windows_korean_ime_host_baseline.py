@@ -33,7 +33,7 @@ u.IsWindow.argtypes = (w.HWND,)
 u.FindWindowExW.argtypes = (w.HWND, w.HWND, w.LPCWSTR, w.LPCWSTR)
 u.FindWindowExW.restype = w.HWND
 u.GetWindowTextW.argtypes = (w.HWND, w.LPWSTR, c.c_int)
-u.SendMessageW.argtypes = (w.HWND, w.UINT, w.WPARAM, w.LPCWSTR)
+u.SendMessageW.argtypes = (w.HWND, w.UINT, w.WPARAM, w.LPWSTR)
 u.SendMessageW.restype = c.c_ssize_t
 u.CreateWindowExW.argtypes = (
     w.DWORD, w.LPCWSTR, w.LPCWSTR, w.DWORD,
@@ -113,6 +113,12 @@ def main():
         edit = u.FindWindowExW(top, None, "Edit", None)
         assert edit, "Native EDIT child is missing"
         wnd = Desktop(backend="win32").window(handle=edit)
+        def read_owned_edit():
+            # Cross-process GetWindowTextW intentionally returns empty for
+            # edit controls. WM_GETTEXT is system-marshalled for the owned EDIT.
+            buf = c.create_unicode_buffer(256)
+            u.SendMessageW(edit, 0x000D, 256, buf)
+            return buf.value
         wnd.click_input()
         def require_foreground_owned():
             fg=u.GetForegroundWindow()
@@ -152,14 +158,20 @@ def main():
             # native control demonstrably receives actual physical key input.
             wnd.click_input()
             require_foreground_owned()
+            u.SendMessageW(edit, 0x000C, 0, "owned-readback-check")
+            readback = read_owned_edit()
+            print("KOREAN_IME_NATIVE_TEXT_READBACK",
+                  {"correct": readback == "owned-readback-check",
+                   "value": readback}, flush=True)
+            assert readback == "owned-readback-check", (
+                "Owned native EDIT WM_GETTEXT roundtrip failed")
             u.SendMessageW(edit, 0x000C, 0, "")
             keyboard.send_keys("123", pause=.09)
             time.sleep(.45)
-            digits = c.create_unicode_buffer(256)
-            u.GetWindowTextW(edit, digits, 255)
-            physical_delivery = digits.value == "123"
+            digits = read_owned_edit()
+            physical_delivery = digits == "123"
             print("KOREAN_IME_NATIVE_PHYSICAL_DIGITS",
-                  {"value": digits.value, "delivered": physical_delivery},
+                  {"value": digits, "delivered": physical_delivery},
                   flush=True)
             if not physical_delivery:
                 print("KOREAN_IME_NATIVE_INPUT_DELIVERY=ENVIRONMENT_BLOCKED",
@@ -181,12 +193,11 @@ def main():
                 time.sleep(.25)
                 keyboard.send_keys("gksrmf",pause=.09)
                 time.sleep(.5)
-                data = c.create_unicode_buffer(256)
-                u.GetWindowTextW(edit,data,255)
-                observations.append({"method":method,"typed":data.value,
+                data = read_owned_edit()
+                observations.append({"method":method,"typed":data,
                                      "context_exists":bool(context),
                                      "open":bool(imm.ImmGetOpenStatus(context)) if context else None})
-                if data.value == "한글":
+                if data == "한글":
                     break
         finally:
             if context:
