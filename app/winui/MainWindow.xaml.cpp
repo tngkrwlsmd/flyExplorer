@@ -1848,6 +1848,10 @@ namespace winrt::FlyExplorer::implementation
                 }
                 accent=Microsoft::UI::Xaml::Media::SolidColorBrush(value);
             }
+            static wchar_t const* const kFilterColors[]{
+                L"기본",L"파랑",L"초록",L"주황",L"빨강"};
+            static wchar_t const* const kFilterIcons[]{
+                L"없음",L"별",L"핀",L"깃발",L"태그"};
             auto addFilterBadge=[&](StackPanel const& cell){
                 if(!decoratedRule||!decoratedRule->icon)return;
                 FontIcon badge;
@@ -1862,8 +1866,10 @@ namespace winrt::FlyExplorer::implementation
                 }
                 badge.FontSize(13);
                 if(accent)badge.Foreground(accent);
+                const auto badgeName=std::wstring(L"필터 분류 아이콘: ")+
+                    kFilterIcons[decoratedRule->icon];
                 Microsoft::UI::Xaml::Automation::AutomationProperties::SetName(
-                    badge,L"필터 분류 아이콘");
+                    badge,hstring(badgeName));
                 cell.Children().Append(badge);
             };
             ListViewItem row;
@@ -2038,6 +2044,15 @@ namespace winrt::FlyExplorer::implementation
                 else if(smallIcons){row.Width(160);row.Height(32);row.Padding(Thickness{5.0,0.0,5.0,0.0});}
                 else if(large){row.Width(112);row.Height(128);row.Padding(Thickness{2.0});row.HorizontalContentAlignment(HorizontalAlignment::Center);}
                 else{row.Width(92);row.Height(92);row.Padding(Thickness{2.0});row.HorizontalContentAlignment(HorizontalAlignment::Center);}
+            }
+            if(decoratedRule){
+                label+=L" | 필터 프리셋: "+decoratedRule->name;
+                if(decoratedRule->color)
+                    label+=std::wstring(L" | 분류 색상: ")+
+                        kFilterColors[decoratedRule->color];
+                if(decoratedRule->icon)
+                    label+=std::wstring(L" | 분류 아이콘: ")+
+                        kFilterIcons[decoratedRule->icon];
             }
             Microsoft::UI::Xaml::Automation::AutomationProperties::SetName(
                 row,hstring(label));
