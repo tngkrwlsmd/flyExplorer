@@ -72,44 +72,58 @@ had verified the source SHA but could not launch the fixture because
 the established Explorer user session instead, without elevating a
 user-writable Python interpreter to SYSTEM.
 
-**Remaining visual gate:** The two added shortcut ComboBox choices alter
-composited pixels, and no matched actual-product BEFORE/AFTER screenshots
-have been inspected. **VISUAL ACCEPTANCE: NOT TESTED.** Functional GUI and
-native PASS do not substitute for visual pixel review.
+**Shortcut editor matched visual acceptance: PASS (focused 96-DPI dark UI).**
+In Windows [visual run 38196377101](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38196377101),
+the test-owned screenshot harness completed with
+`VISUAL_WORKER_STATUS=PASS STAGE=complete`,
+`VISUAL_OWNED_CAPTURE_PAIR=PASS` and a successful one-shot interactive
+Windows task. It built and actually launched the Release product at
+pre-feature baseline `54c8ee5d2ccf8912232334348c58f8fe60313294`
+and post-feature `6b2e3fca184b56f24885e1d1ec26970217d9cf46`.
+These differ in product behavior at `04e7d358`; subsequent commits up
+through the captured candidate change only documentation/test harness.
+The matched screenshots used the same disposable private profile,
+synthetic Korean-named file, session, dark appearance, 96 DPI, desktop,
+and app window at (40,30)-(1140,710), size 1100 x 680 pixels.
+Both collapsed and expanded shortcut dropdown states were captured in
+each actual WinUI app, with geometry/DPI equality checked.
 
-A test-only, actual-app capture harness was added at
-`tests/winui/test_shortcut_visual_capture_gui.py` in
-`a360f2db52fd3d2a864958c4a22196bf56a14526`. It uses a disposable
-profile/folder, confirms the foreground HWND belongs to its launched app,
-captures app-bounded collapsed and expanded shortcut controls, records
-actual window geometry/DPI, checks a normal process exit and preserves the
-original legacy profile. Intended like-for-like baseline:
-`54c8ee5d2ccf8912232334348c58f8fe60313294`, before the shortcut
-options were expanded. Intended changed screenshot:
-`a360f2db52fd3d2a864958c4a22196bf56a14526`, with identical
-product code to accepted `04e7d358dcc7cb74a6c619b833b503c72b089294`.
+**Direct pixel review of the two 614 x 378 expanded screenshot previews:**
+the earlier address dropdown exposes Ctrl+L/E/F/K, whereas the new one
+exposes Ctrl+L/E/F/K/G/J. Both added entries are fully visible inside the
+popup, aligned with original rows at consistent spacing; no unintended
+overlap, new text clipping, unreadable contrast, or broken popup edge
+was observed in this changed control region. The right edge of the
+**preview crop** truncates part of the unrelated Reset label; this is
+the preview boundary, not evidence of an actual clipped product control.
+The visual PASS applies to this matched shortcut-editor change and
+theme/scale only. Full-window pixel review, separate real 125/150/200%
+DPI, screen-reader/human IME and broader distribution environments
+are **NOT TESTED**, unless independently accepted elsewhere.
 
-Owned Windows [visual run 38194421915](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38194421915)
-passed exact-source preflight and capture-script Python syntax checking but
-stopped at the **baseline Release NuGet restore** before either app screenshot.
-The initial separate source cache lacked several pinned package downloads,
-including Windows SDK BuildTools/Windows App SDK packages, and MSBuild
-reported a missing required Windows App SDK AI WinMD under the isolated
-NuGet packages directory. This is an external package restoration/cache
-boundary, **not** a new product compile or UI regression. The previously
-accepted current-product Release, full GUI and 23/23 M21 native evidence
-remains valid. Do not repeat identical full builds without first resolving
-the specific baseline package cache/network precondition.
+**Visual build infrastructure defect resolved:** A previous attempted
+[visual run 38194421915](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38194421915)
+failed in the baseline Release NuGet restore before UI launch: the
+isolated scratch workspace made Windows App SDK WinMD and NuGet HTTP
+cache paths **261 characters long**, exceeding the usual 260-character
+Windows MAX_PATH boundary. Read-only
+[HTTP diagnostics 38196231801](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38196231801)
+confirmed NuGet index and two pinned package endpoints returned HTTP 200.
+The successful successor shortened only the disposable Windows scratch
+root to `C:\\ProgramData\\personal-control-plane\\scratch\\v-<12hex>`,
+bringing the known WinMD path to **220 characters**, without modifying
+product code, changing package versions or bypassing restore verification.
+The previous failed fixture was disposed by
+[cleanup 38194622497](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38194622497).
+Run #38196377101 cleaned its own success workspace and task. The central
+Remote Shell request was restored to idle with a skip-CI commit.
 
-The failed visual fixture's uniquely identified owned scratch root was
-verified and deleted without following reparse points by
-[cleanup run 38194622497](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38194622497).
-The one-shot test task was unregistered and the central Remote Shell request
-slot returned to idle. **Resume visual QA** only with working pinned NuGet
-restore for the separate baseline (or an independently verified complete
-baseline runtime), then capture and inspect both before/after screenshot pairs
-under matched DPI, geometry, fixture and theme. Successful script execution
-alone must not be called a visual PASS before pixels are reviewed.
+Capture tool: `tests/winui/test_shortcut_visual_capture_gui.py`.
+The bounded expanded previews are preserved in the visual-run Actions
+log as base64-encoded PNG for source-specific review; temporary full
+window screenshots were deleted with the owned success workspace.
+Do not treat a CI screenshot marker by itself as visual acceptance:
+the images were directly inspected before recording the focused PASS.
 
 Staged Copy crash-interruption receipt and safe-recovery work remain
 explicitly deferred and were not changed.
