@@ -7,6 +7,64 @@ app/winui, UI-independent native code in src/base, tests in tests/winui, and
 bounded orchestration in tools/winui/run_checks.py. The former MFC application
 is retired from the working tree and is recoverable from Git revision cbffb48.
 
+## 2026-10-12 Narrator Speech Recap follow-up: window visible, spoken phrase NOT VERIFIED
+
+**Source and platform:** `flyExplorer/main` at
+`9ee83045b3ab5beb185c291033382d8f52d0db4f`;
+Windows 11 Pro build 26300, interactive session 2, synthetic test-only
+Win32 reference controls. **No flyExplorer runtime or filter UI code changed.**
+
+A second controlled investigation narrowed the previous false-negative
+"zero Narrator UIA nodes" finding:
+- [First window-discovery attempt #38232070285](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38232070285)
+  failed before GUI execution at an invalid PowerShell `New-Item -LiteralPath`
+  argument. Its correction is a request-harness fix, not a product change.
+- [Owned focus probe #38232212661](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38232212661)
+  confirmed that Narrator starts but initially takes foreground focus
+  from a disposable Win32 reference editor. This invalidated any
+  assumption that the original editor remained the focused speech item.
+- [Foreground-corrected Speech Recap probe #38232530406](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38232530406)
+  returned reference foreground focus to the owned editor and confirmed
+  **two** identified Recap-related visible windows and **35** scoped UIA
+  nodes with zero UIA access errors. **No required reference phrase was
+  found** in those nodes; no actual audio was captured. The outer
+  workflow failed its shutdown precondition because a Narrator process
+  remained active after the first shortcut.
+- [Explicitly named native Button reference #38233608351](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38233608351)
+  first independently verified the button's true UIA accessible name
+  (`NARRATOR_REFERENCE_BUTTON_UIA_NAME_MATCH=True`), confirmed owned
+  foreground, launched Narrator, and identified a visible Recap window.
+  Its **actual Recap phrase match was False** even with the named
+  button and a `Narrator+Tab` reading command. This does not establish
+  that Narrator never spoke the label; it establishes that the
+  **available transcript collector cannot attest that utterance**.
+  The workflow again failed the process-exit gate rather than a product
+  assertion. Audio waveform and human hearing remain unverified.
+- Recovery required more care than one stop shortcut. Windows ignored
+  or did not complete some supported stop commands while Recap was
+  active; a single guarded process stop was followed by a **new**
+  Narrator process. [First safe recovery #38233281172](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38233281172)
+  recovered an earlier fixture. [Final bounded exact-owned recovery
+  #38234299929](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38234299929)
+  established the process's recent creation, exact session and path,
+  stopped only the two successive test-originated Narrator PIDs,
+  verified stable **zero** Narrator processes and safely deleted the
+  second exact-owned scratch fixture
+  (`NARRATOR_FINAL_EXACT_OWNED_STATE_RESTORED=PASS`).
+  **No process/task/test-owned files remain from this diagnostic.**
+
+**Current gate verdict:** `NARRATOR SPOKEN FILTER NAME/COLOR/ICON/SELECTION =
+NOT VERIFIED / NOT ACCEPTED`; `NARRATOR AUDIO PLAYBACK = NOT VERIFIED`.
+The improved synthetic reference establishes process launch, focus
+control and Recap window discoverability, **not** a correct Narrator
+announcement in flyExplorer. Do not run repeated unattended speech
+experiments on this shared session or treat an Actions source/workflow
+PASS as spoken acceptance. Next: a separately attended Windows
+session with an actual listening verifier, or a privacy-isolated,
+independently verified audio/transcript capture method; use the
+[manual speech checklist](NARRATOR_SPEECH_VALIDATION.md).
+Actual OS 125/150/200% DPI remains a separate NOT TESTED gate.
+
 ## 2026-10-12 Narrator spoken-output validation: ENVIRONMENT BLOCKED (NOT ACCEPTED)
 
 The current actual Windows VM environment was checked by the registered
