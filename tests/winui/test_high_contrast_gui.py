@@ -305,16 +305,24 @@ def main(
                     f"missing accessible name: {key}",
                 )
 
-        rows = [
-            row
-            for row in win.child_window(auto_id="LeftFiles").descendants()
-            if row.element_info.control_type == "ListItem"
-        ]
-        if not rows:
-            raise AcceptanceFailure(
-                "PRODUCT_ASSERTION_FAILURE",
-                "High Contrast owned file rows missing",
-            )
+        wait_for(
+            lambda: str(folder).lower() in
+                win.child_window(auto_id="AddressBox").get_value().lower(),
+            "High Contrast startup path not yet settled",
+            category="CANDIDATE_UIA_CONTROL_TIMEOUT",
+            seconds=25,
+            on_timeout=snapshot,
+        )
+        rows = wait_for(
+            lambda: [
+                row for row in win.child_window(
+                    auto_id="LeftFiles").descendants(control_type="ListItem")
+            ] or None,
+            "High Contrast owned file rows still loading",
+            category="CANDIDATE_UIA_CONTROL_TIMEOUT",
+            seconds=25,
+            on_timeout=snapshot,
+        )
         rows[0].select()
         wait_for(
             lambda: any(
