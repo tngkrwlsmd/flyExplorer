@@ -7,6 +7,55 @@ app/winui, UI-independent native code in src/base, tests in tests/winui, and
 bounded orchestration in tools/winui/run_checks.py. The former MFC application
 is retired from the working tree and is recoverable from Git revision cbffb48.
 
+## 2026-10-12 Narrator spoken-output validation: ENVIRONMENT BLOCKED (NOT ACCEPTED)
+
+The current actual Windows VM environment was checked by the registered
+control plane on **Windows 11 Pro build 26300**, interactive session 2,
+at exact flyExplorer source `4d4db4680a75ec6368b8a50d6586608d1016fedd`.
+
+- [Read-only inventory #38229681112](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38229681112):
+  Narrator binary installed (file version 10.0.26100.8972), audio and endpoint
+  services running, one functioning audio endpoint, exactly one signed-in
+  interactive desktop session, and **zero** preexisting Narrator processes.
+  These are prerequisites, not audible speech evidence.
+- [Native test-owned reference attempt #38230127856](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38230127856):
+  a non-elevated direct `Narrator.exe` process launch returned Windows
+  `WinError 740` (elevation required). No Narrator speech acceptance.
+- [Supported-shortcut reference attempt #38230388533](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38230388533):
+  a disposable Win32 EDIT containing a synthetic classification phrase
+  was focused in the logged-in desktop. Windows+Ctrl+Enter started a
+  real Narrator process (`NARRATOR_SHORTCUT_LAUNCH_COUNT=1`,
+  `NARRATOR_OWNED_LAUNCH_ACTIVE=True`). The probe attempted
+  Narrator+Alt+X Speech Recap, but **no Narrator-owned accessible text
+  nodes or confirmed reference utterances were observed**
+  (`NARRATOR_OWNED_NARRATOR_UIA_NODE_COUNT=0`,
+  `NARRATOR_OWNED_SPEECH_IN_UIA_RECAP=False`,
+  `NARRATOR_SPEECH_RECAP_WINDOW_VISIBLE=False`).
+  Audio playback was **not captured**. The wrapping workflow failed at
+  non-elevated psutil's `AccessDenied` when waiting on Narrator's
+  higher-integrity process. These are harness/permissions/evidence limits;
+  **neither flyExplorer speech PASS nor product FAIL** can be inferred.
+- [Independent state inventory #38230563415](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38230563415)
+  confirmed **zero** Narrator processes and **zero** residual diagnostic
+  scheduled tasks after the attempted run. No Windows DPI/high-contrast,
+  language-pack, audio device, or system Narrator option was changed
+  by the diagnostic.
+
+**Acceptance:** `NARRATOR ACTUAL SPOKEN LABELS = NOT TESTED / NOT ACCEPTED`;
+`NARRATOR AUDIO WAVEFORM = NOT CAPTURED`. The pre-existing successful
+UIA labels/keyboard interaction tests remain independently valid.
+The actual flyExplorer spoken filter rule name, color, badge/icon meaning
+and selection announcement are **still awaiting an attended session
+with audible monitoring or an independently verified, safely accessible
+Speech Recap transcript**. Do not count a Narrator process launch,
+audio endpoint, source CI or UIA name as real spoken-output acceptance.
+Follow the reproducible, privacy-preserving procedure in
+[`docs/development/NARRATOR_SPEECH_VALIDATION.md`](NARRATOR_SPEECH_VALIDATION.md).
+
+**Separate open gate:** physical OS DPI 125%, 150%, 200%; earlier focused
+96-DPI high-contrast pixel acceptance and Korean physical composition
+remain accepted without unnecessary rerun.
+
 ## 2026-10-12 real Korean 2-beolsik composition: ACCEPTED
 
 **Latest source:** `71a9c4ba0ae48c7ab5b247fe05878412ca2d8aa6`.
