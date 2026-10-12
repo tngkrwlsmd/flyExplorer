@@ -215,31 +215,36 @@ bool Store::matches(
 }
 
 MutationResult Store::add(
-    std::wstring name,std::wstring masks) noexcept
+    std::wstring name,std::wstring masks,int color,int icon) noexcept
 {
     try{
         masks=normalizeMasks(masks);
-        if(!validName(name)||masks.empty())return MutationResult::Invalid;
-        if(mItems.size()>=kMaxItems)return MutationResult::Full;
+        if(!validName(name)||masks.empty()||
+           color<0||color>kMaxColor||icon<0||icon>kMaxIcon)
+            return MutationResult::Invalid;
+        if(mItems.size()>=kMaxItemsreturn MutationResult::Full;
         if(std::any_of(mItems.begin(),mItems.end(),
             [&](Rule const& item){return sameNoCase(item.name,name);}))
             return MutationResult::Duplicate;
-        mItems.push_back({std::move(name),std::move(masks)});
+        mItems.push_back({std::move(name),std::move(masks),color,icon});
         return MutationResult::Applied;
     }catch(...){return MutationResult::Invalid;}
 }
 
 MutationResult Store::update(
-    std::size_t index,std::wstring name,std::wstring masks) noexcept
+    std::size_t index,std::wstring name,std::wstring masks,
+    int color,int icon) noexcept
 {
     try{
         if(index>=mItems.size())return MutationResult::NotFound;
         masks=normalizeMasks(masks);
-        if(!validName(name)||masks.empty())return MutationResult::Invalid;
+        if(!validName(name)||masks.empty()||
+           color<0||color>kMaxColor||icon<0||icon>kMaxIcon)
+            return MutationResult::Invalid;
         for(std::size_t i=0;i<mItems.size();++i)
             if(i!=index&&sameNoCase(mItems[i].name,name))
                 return MutationResult::Duplicate;
-        mItems[index]={std::move(name),std::move(masks)};
+        mItems[index]={std::move(name),std::move(masks),color,icon};
         return MutationResult::Applied;
     }catch(...){return MutationResult::Invalid;}
 }
@@ -266,16 +271,39 @@ bool Store::loadFrom(std::wstring const& path) noexcept
         std::wstring line;
         if(!std::getline(lines,line))return false;
         if(!line.empty()&&line.back()==L'\r')line.pop_back();
-        if(line!=L"schema=1")return false;
+        const bool styled=line==L"schema=2";
+        if(!styled&&line!=L"schema=1")return false;
         Store candidate;
         while(std::getline(lines,line)){
             if(!line.empty()&&line.back()==L'\r')line.pop_back();
             if(line.empty())continue;
-            const auto tab=line.find(L'\t');
-            if(tab==std::wstring::npos||
-               line.find(L'\t',tab+1)!=std::wstring::npos)return false;
-            if(candidate.add(line.substr(0,tab),line.substr(tab+1))!=
-               MutationResult::Applied)return false;
+            const auto first=line.find(L'\t');
+            if(first==std::wstring::npos)return false;
+            const auto second=line.find(L'\t',first+1);
+            int color=0,icon=0;
+            std::wstring mask;
+            if(styled){
+                if(second==std::wstring::npos)return false;
+                const auto third=line.find(L'\t',second+1);
+                if(third==std::wstring::npos||
+                   line.find(L'\t',third+1)!=std::wstring::npos)
+                    return false;
+                const auto colorText=line.substr(second+1,third-second-1);
+                const auto iconText=line.substr(third+1);
+                if(colorText.size()!=1||iconText.size()!=1||
+                   colorText[0]<L'0'||colorText[0]>L'4'||
+                   iconText[0]<L'0'||iconText[0]>L'4')
+                    return false;
+                color=static_cast<int>(colorText[0]-L'0');
+                icon=static_cast<int>(iconText[0]-L'0');
+                mask=line.substr(first+1,second-first-1);
+            }else{
+                if(second!=std::wstring::npos)return false;
+                mask=line.substr(first+1);
+            }
+            if(candidate.add(line.substr(0,first),std::move(mask),
+                             color,icon)!=MutationResult::Applied)
+                return false;
         }
         mItems=std::move(candidate.mItems);
         return true;
@@ -287,11 +315,19 @@ bool Store::saveTo(std::wstring const& path) const noexcept
     try{
         Store checked;
         for(auto const& item:mItems)
-            if(checked.add(item.name,item.masks)!=MutationResult::Applied)
+            if(checked.add(item.name,item.masks,item.color,item.icon)!=
+               MutationResult::Applied)
                 return false;
-        std::wstring text=L"schema=1\r\n";
-        for(auto const& item:mItems)
-            text+=item.name+L"\t"+item.masks+L"\r\n";
+        const bool styled=std::any_of(mItems.begin(),mItems.end(),
+            [](Rule const& rule){return rule.color||rule.icon;});
+        std::wstring text=styled?L"schema=2\r\n":L"schema=1\r\n";
+        for(auto const& item:mItems){
+            text+=item.name+L"\t"+item.masks;
+            if(styled)
+                text+=L"\t"+std::to_wstring(item.color)+
+                      L"\t"+std::to_wstring(item.icon);
+            text+=L"\r\n";
+        }
         std::string utf8;
         return wideToUtf8(text,utf8)&&writeAtomic(path,utf8);
     }catch(...){return false;}
