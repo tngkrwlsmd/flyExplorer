@@ -1828,6 +1828,43 @@ namespace winrt::FlyExplorer::implementation
                     typeLabel.erase(typeLabel.begin());
                 typeLabel=typeLabel.empty()?L"파일":typeLabel+L" 파일";
             }
+            fxfile::filterrules::Rule const* decoratedRule=nullptr;
+            for(auto const& rule:mFilterRules.items()){
+                if((rule.color||rule.icon)&&
+                   fxfile::filterrules::Store::matches(itemLabel,rule.masks)){
+                    decoratedRule=&rule;break; // first matching styled preset wins
+                }
+            }
+            Microsoft::UI::Xaml::Media::Brush accent{nullptr};
+            if(decoratedRule&&decoratedRule->color){
+                Windows::UI::Color value{};
+                switch(decoratedRule->color){
+                case 1:value={255,89,174,255};break;
+                case 2:value={255,81,204,131};break;
+                case 3:value={255,255,182,79};break;
+                case 4:value={255,255,117,117};break;
+                default:break;
+                }
+                accent=Microsoft::UI::Xaml::Media::SolidColorBrush(value);
+            }
+            auto addFilterBadge=[&](StackPanel const& cell){
+                if(!decoratedRule||!decoratedRule->icon)return;
+                FontIcon badge;
+                badge.FontFamily(Microsoft::UI::Xaml::Media::FontFamily{
+                    L"Segoe Fluent Icons"});
+                switch(decoratedRule->icon){
+                case 1:badge.Glyph(L"\uE734");break;
+                case 2:badge.Glyph(L"\uE718");break;
+                case 3:badge.Glyph(L"\uE7C1");break;
+                case 4:badge.Glyph(L"\uE8EC");break;
+                default:return;
+                }
+                badge.FontSize(13);
+                if(accent)badge.Foreground(accent);
+                Microsoft::UI::Xaml::Automation::AutomationProperties::SetName(
+                    badge,L"필터 분류 아이콘");
+                cell.Children().Append(badge);
+            };
             ListViewItem row;
             auto label=std::wstring(itemFolder?L"[폴더]  ":L"[파일]  ")+
                        itemLabel;
@@ -1909,8 +1946,10 @@ namespace winrt::FlyExplorer::implementation
                 glyph.FontSize(localDrive?20.0:16.0);
                 nameCell.Children().Append(glyph);
             }
+            addFilterBadge(nameCell);
             TextBlock filename;
             filename.Text(itemLabel);
+            if(accent)filename.Foreground(accent);
             filename.TextTrimming(TextTrimming::CharacterEllipsis);
             if(localDrive){
                 StackPanel drive;
@@ -1988,7 +2027,9 @@ namespace winrt::FlyExplorer::implementation
                     FontIcon glyph;glyph.FontFamily(Microsoft::UI::Xaml::Media::FontFamily{L"Segoe Fluent Icons"});
                     glyph.Glyph(hstring(itemFolder?L"\uE8B7":L"\uE8A5"));glyph.FontSize(large?60.0:(medium?36.0:(smallIcons?20.0:16.0)));cell.Children().Append(glyph);
                 }
+                addFilterBadge(cell);
                 TextBlock filename;filename.Text(itemLabel);
+                if(accent)filename.Foreground(accent);
                 if(iconGrid){filename.FontSize(12.0);filename.Width(large?104.0:84.0);filename.TextAlignment(TextAlignment::Center);filename.TextWrapping(TextWrapping::WrapWholeWords);filename.MaxLines(2);filename.TextTrimming(TextTrimming::CharacterEllipsis);}
                 else{filename.TextTrimming(TextTrimming::CharacterEllipsis);if(smallIcons){filename.FontSize(12.0);filename.Width(120);}}
                 cell.Children().Append(filename);row.Content(cell);
