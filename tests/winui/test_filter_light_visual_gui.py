@@ -77,7 +77,7 @@ def main():
                 (2, "green", "초록", "핀"),
                 (3, "amber", "주황", "깃발"),
                 (4, "red", "빨강", "태그")]
-    configurations = [(0, "baseline", "", "")] if args.label == "before" else palettes
+    configurations = palettes  # Both revisions already support color/icon selectors
     process = None
     hwnd = None
 
@@ -225,15 +225,15 @@ def main():
 
         assert len(set(dpi_seen)) == 1, ("DPI differs across palette captures", dpi_seen)
         montage_names = []
-        if args.label == "after":
+        if True:
             for state in ("normal", "selected-focus"):
                 combined = Image.new("RGB", (width * 2, capture_height * 2))
                 for i, (_, slug, _, _) in enumerate(palettes):
-                    panel = Image.open(output / ("after-" + slug + "-" + state + ".png"))
+                    panel = Image.open(output / (args.label + "-" + slug + "-" + state + ".png"))
                     assert panel.size == (width, capture_height)
                     combined.paste(panel.convert("RGB"), ((i % 2) * width,
                                                           (i // 2) * capture_height))
-                montage_name = "after-light-" + state + "-montage.png"
+                montage_name = args.label + "-light-" + state + "-montage.png"
                 combined.save(output / montage_name, "PNG", optimize=True)
                 montage_names.append(montage_name)
         metadata = {
