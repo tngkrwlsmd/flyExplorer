@@ -97,23 +97,55 @@ def main() -> int:
                        seconds=8,interval=.15)
             composed=False
             observations=[]
-            for _ in range(2):
-                editor.set_edit_text("")
-                editor.set_focus()
-                assert u.GetForegroundWindow()==hwnd
-                # VK_HANGUL toggles Latin/Hangul IME mode. These are actual
-                # hardware-style key events, not UIA SetValue or Unicode paste.
-                u.keybd_event(0x15,0,0,0)
-                u.keybd_event(0x15,0,2,0)
-                time.sleep(.25)
-                keyboard.send_keys("gksrmf",pause=.09)
-                time.sleep(.8)
-                value=editor.get_value()
-                observations.append(value)
-                if value=="한글":
-                    composed=True
-                    break
-            print("KOREAN_IME_COMPOSITION_OBSERVATIONS",repr(observations),flush=True)
+            imm=c.WinDLL("imm32",use_last_error=True)
+            imm.ImmGetContext.argtypes=(W.HWND,)
+            imm.ImmGetContext.restype=c.c_void_p
+            imm.ImmGetOpenStatus.argtypes=(c.c_void_p,)
+            imm.ImmGetOpenStatus.restype=W.BOOL
+            imm.ImmSetOpenStatus.argtypes=(c.c_void_p,W.BOOL)
+            imm.ImmSetOpenStatus.restype=W.BOOL
+            imm.ImmReleaseContext.argtypes=(W.HWND,c.c_void_p)
+            context=imm.ImmGetContext(hwnd)
+            old_open=bool(imm.ImmGetOpenStatus(context)) if context else None
+            print("KOREAN_IME_INITIAL_OPEN",old_open,flush=True)
+            try:
+                methods=("korean-hangul-scancode","korean-right-alt",
+                         "owned-ime-open-status")
+                for method in methods:
+                    editor.set_edit_text("")
+                    editor.set_focus()
+                    assert u.GetForegroundWindow()==hwnd
+                    if method=="korean-hangul-scancode":
+                        u.keybd_event(0x15,0x72,0,0)
+                        u.keybd_event(0x15,0x72,2,0)
+                    elif method=="korean-right-alt":
+                        u.keybd_event(0xA5,0x38,1,0)
+                        u.keybd_event(0xA5,0x38,3,0)
+                    elif context:
+                        result=bool(imm.ImmSetOpenStatus(context,True))
+                        print("KOREAN_IME_OWNED_OPEN_REQUEST",result,flush=True)
+                    else:
+                        print("KOREAN_IME_IMM_CONTEXT_UNAVAILABLE",flush=True)
+                        continue
+                    time.sleep(.3)
+                    keyboard.send_keys("gksrmf",pause=.1)
+                    time.sleep(.9)
+                    value=editor.get_value()
+                    status=bool(imm.ImmGetOpenStatus(context)) if context else None
+                    observations.append({"method":method,
+                                         "typed":value,"open":status})
+                    if value=="한글":
+                        composed=True
+                        print("KOREAN_IME_ACTUAL_COMPOSITION_METHOD",
+                              method,flush=True)
+                        break
+            finally:
+                if context:
+                    if old_open is not None:
+                        imm.ImmSetOpenStatus(context,old_open)
+                    imm.ImmReleaseContext(hwnd,context)
+            print("KOREAN_IME_COMPOSITION_OBSERVATIONS",
+                  repr(observations),flush=True)
             assert composed, "Physical Korean IME 2-beolsik composition not observed"
             win.child_window(auto_id="FilterRuleMasksEdit").set_edit_text("*.txt")
             win.child_window(auto_id="FilterRuleSaveButton").click_input()
