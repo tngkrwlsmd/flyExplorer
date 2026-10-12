@@ -24,6 +24,8 @@ if($ResumeExisting){
  $contrastResult=Get-Content -LiteralPath (Join-Path $Root 'high-contrast-result.json') -Raw -Encoding UTF8|ConvertFrom-Json
  if($contrastResult.original_high_contrast -ne $contrastResult.final_high_contrast -or $contrastResult.stages.CLEANUP -cne 'PASS'){throw 'Previous HC theme state was not restored'}
  $baseline=Join-Path $Root 'baseline'
+ $env:GIT_CONFIG_COUNT='2';$env:GIT_CONFIG_KEY_0='safe.directory';$env:GIT_CONFIG_VALUE_0=$Source
+ $env:GIT_CONFIG_KEY_1='safe.directory';$env:GIT_CONFIG_VALUE_1=$baseline
  $original=(& git -C $baseline rev-parse HEAD).Trim()
  if($LASTEXITCODE -ne 0 -or $original -cne $Before){throw 'Existing exact baseline worktree mismatch'}
  foreach($exe in @((Join-Path $baseline 'out\winui\Release\flyExplorer.exe'),(Join-Path $Source 'out\winui\Release\flyExplorer.exe'))){
