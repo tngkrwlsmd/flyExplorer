@@ -98,3 +98,24 @@ def run(*, win, element, safe_click, focus, eventually, base, owned, left, right
     eventually(lambda: named_row(0).rectangle().height() >= original_height,
                "F01 default row pitch did not restore", 10)
     print("F01_DISPLAY_TOGGLE_SELECTION_PRESERVED", True, flush=True)
+
+    # New F01-B action changes only the displayed name. The Automation
+    # Name must preserve the original full filename while hidden; selection
+    # remains identified by the unchanged native Shell parsing path.
+    choose("ViewFileExtensionsItem")
+    def extension_hidden():
+        row = named_row(0)
+        return bool(row and row.is_selected() and
+                    "실제 파일 이름: readme.txt" in row.window_text())
+    eventually(extension_hidden,
+               "F01 hidden extension or original-name UIA contract failed", 10)
+    hidden_image = shot("filename-extension-hidden")
+    choose("ViewFileExtensionsItem")
+    def extension_restored():
+        row = named_row(0)
+        return bool(row and row.is_selected() and
+                    "실제 파일 이름:" not in row.window_text())
+    eventually(extension_restored,
+               "F01 displayed extension did not restore with native selection", 10)
+    print("F01_EXTENSION_HIDDEN_ACCESSIBLE_FULLNAME", True, flush=True)
+    print("F01_EXTENSION_CAPTURE", hidden_image.name, flush=True)

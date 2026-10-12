@@ -140,8 +140,20 @@ XAML/handlers and requires focused confirmation before implementation.
   native path identities, filtering, sorting, selection, rename and transfer.
 - The C++ presenter has compile-time guards for representative names,
   Korean Unicode, virtual items and edge cases.
-- **NOT YET ACCEPTED:** revised Windows Release/source build and actual GUI
-  pixel testing are required. The 2026-10-13 read-only Windows focus probe,
+- **Exact product-source contract + Windows x64 Release build: PASS** on
+  `c200c512b75c83fd7d674fd0287cd01af0c4a5bf` in
+  [central Remote Shell 38315864755](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38315864755).
+  Wrapper results: `F01D_EXACT_SOURCE` matches, `F01D_RESULT_STATUS=PASS
+  STAGE=complete`, `F01D_SOURCE_AND_RELEASE=PASS`, and
+  `F01D_OWNED_CLEANUP=PASS`. The shared Remote Shell request was returned
+  idle in control commit `4db7f19f0ad94f4fa1da64838840745933ab3ac6`.
+  This is **not** an actual GUI/visual acceptance result.
+- **GUI/visual still NOT ACCEPTED.** The focused owned GUI harness now
+  includes display-only extension hide/restore, UIA original-filename and
+  selection identity checks, plus a capture marker. This follow-up harness
+  revision is separate from the exactly built product source above and
+  remains unexecuted on the inaccessible foreground desktop.
+  The 2026-10-13 read-only Windows focus probe,
   [38315380764](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38315380764),
   saw exactly one Explorer user session but `GetForegroundWindow()==NULL`
   from that interactive-session task. Desktop lock/input availability cannot
