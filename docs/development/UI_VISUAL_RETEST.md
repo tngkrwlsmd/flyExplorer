@@ -162,6 +162,25 @@ selected/keyboard-focused rows). Selected-row legibility is a
 visual check separate from the mathematical white-background ratio.
 Keep DPI scaling, High Contrast and screen-reader gates separate.
 
+## Registered Windows DPI and filter screen-reader evidence
+
+[Read-only Windows environment inventory 38209100479](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38209100479)
+found an active 1024x768 Explorer desktop and **system DPI 96**.
+No actual 125%, 150%, or 200% monitor-scale acceptance can be inferred
+from WinUI DPI-awareness source code or a simulated window size.
+Use a genuinely scaled OS display and matched actual screenshots
+before changing those three gates from **NOT TESTED**.
+
+Filter rule management can be completed through physical keyboard
+focus/select/save, as accepted by the focused GUI suite in
+[central run 38209842808](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38209842808).
+Each styled file row exposes the preset name, color and icon category
+through UI Automation; badges expose their category rather than only
+a generic icon. This is **UIA semantics PASS**, not a claim that
+Narrator actually spoke those values: narrator audio, tab/reading
+order for every pane, and Korean IME scenarios require distinct
+manual/assistive-technology testing.
+
 ## Theme, scale and accessibility gates
 
 For layout/theme/scale-sensitive UI work, exercise the relevant environments
