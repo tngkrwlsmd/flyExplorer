@@ -133,10 +133,22 @@ def run():
             assert not win.child_window(auto_id="FilterRuleColorBox").exists(timeout=.2)
         win.child_window(auto_id="FilterRuleSaveButton").click_input()
         rulefile = owned / "localdata" / "flyExplorer" / "filter-rules-v1.txt"
-        wait_until(lambda: rulefile.is_file() and
-                   "필터 프리셋을 저장했습니다." in
-                   win.child_window(auto_id="StatusText").window_text(),
-                   "filter preset did not save", seconds=10, interval=.2)
+        # The status line may be clipped or replaced by a later file-list
+        # refresh on a compact display. Durability is the file plus its
+        # validated content; capture status text only when diagnosing failure.
+        try:
+            wait_until(lambda: rulefile.is_file(),
+                       "filter preset did not reach its owned file",
+                       seconds=10, interval=.2)
+        except AssertionError:
+            print("FILTER_VISUAL_SAVE_DIAG",
+                  "status=", repr(win.child_window(
+                      auto_id="StatusText").window_text()),
+                  "name=", repr(name.get_value()),
+                  "masks=", repr(masks.get_value()),
+                  "owned_file_exists=", rulefile.exists(),
+                  flush=True)
+            raise
         data = rulefile.read_text(encoding="utf-8")
         if v.label == "after":
             assert "schema=2" in data and "코드 파일\t*.cpp;*.h\t1\t1" in data
