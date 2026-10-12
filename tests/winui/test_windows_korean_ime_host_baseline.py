@@ -202,7 +202,7 @@ def main():
             assert readback == "owned-readback-check", (
                 "Owned native EDIT WM_GETTEXT roundtrip failed")
             u.SendMessageW(edit, 0x000C, 0, "")
-            keyboard.send_keys("123", pause=.09)
+            keyboard.send_keys("123", pause=.09, vk_packet=False)
             time.sleep(.45)
             digits = read_owned_edit()
             physical_delivery = digits == "123"
@@ -233,7 +233,7 @@ def main():
                     assert owned_ime.startswith("owned IME | "), (
                         "IME owner thread did not handle the state request")
                 time.sleep(.25)
-                keyboard.send_keys("gksrmf",pause=.09)
+                keyboard.send_keys("gksrmf",pause=.09,vk_packet=False)
                 time.sleep(.5)
                 data = read_owned_edit()
                 observations.append({"method":method,"typed":data,
