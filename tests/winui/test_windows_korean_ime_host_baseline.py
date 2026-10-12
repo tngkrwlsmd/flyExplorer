@@ -31,6 +31,8 @@ u.IsWindow.argtypes = (w.HWND,)
 u.FindWindowExW.argtypes = (w.HWND, w.HWND, w.LPCWSTR, w.LPCWSTR)
 u.FindWindowExW.restype = w.HWND
 u.GetWindowTextW.argtypes = (w.HWND, w.LPWSTR, c.c_int)
+u.SendMessageW.argtypes = (w.HWND, w.UINT, w.WPARAM, w.LPCWSTR)
+u.SendMessageW.restype = c.c_ssize_t
 u.CreateWindowExW.argtypes = (
     w.DWORD, w.LPCWSTR, w.LPCWSTR, w.DWORD,
     c.c_int, c.c_int, c.c_int, c.c_int,
@@ -146,7 +148,7 @@ def main():
             for method in ("physical-hangul-key", "native-imm-mode"):
                 wnd.set_focus()
                 require_foreground_owned()
-                wnd.set_edit_text("")
+                u.SendMessageW(edit, 0x000C, 0, "")  # owned WM_SETTEXT
                 if method == "physical-hangul-key":
                     u.keybd_event(0x15, 0x72, 0, None)
                     u.keybd_event(0x15, 0x72, 2, None)
