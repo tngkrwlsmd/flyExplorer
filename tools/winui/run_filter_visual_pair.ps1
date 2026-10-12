@@ -5,8 +5,10 @@ param(
  [Parameter(Mandatory)][string]$Root,
  [Parameter(Mandatory)][string]$Before,
  [Parameter(Mandatory)][string]$After,
- [switch]$ResumeBeforeCapture
+ [switch]$ResumeBeforeCapture,
+ [switch]$ResumeAfterClean
 )
+if($ResumeBeforeCapture -and $ResumeAfterClean){throw 'Only one exact resume mode allowed'}
 $ErrorActionPreference='Stop'
 if($Before -notmatch '^[0-9a-f]{40}$' -or $After -notmatch '^[0-9a-f]{40}$'){throw 'Full exact SHA required'}
 $base=[IO.Path]::GetFullPath((Join-Path $env:ProgramData 'personal-control-plane\scratch')).TrimEnd('\')
@@ -28,6 +30,18 @@ if($ResumeBeforeCapture){
  $binary=Join-Path $Source 'out\winui\Release\flyExplorer.exe'
  if(-not(Test-Path -LiteralPath $binary -PathType Leaf)){throw 'Baseline Release exe absent'}
  Write-Output 'FILTER_VISUAL_PREBUILT_BASELINE_VERIFIED=PASS'
+}
+if($ResumeAfterClean){
+ $previous=Join-Path $Root 'result.json'
+ if(-not(Test-Path -LiteralPath $previous -PathType Leaf)){throw 'Missing prior owned after-capture failure'}
+ $prior=Get-Content -LiteralPath $previous -Raw -Encoding UTF8 | ConvertFrom-Json
+ if($prior.status -cne 'FAIL' -or $prior.stage -cne 'after-actual-capture'){throw 'Previous owned failure is not after-capture'}
+ $oldMeta=Join-Path $Root 'images\before-metadata.json'
+ $oldImage=Join-Path $Root 'images\before-preview.png'
+ if(-not(Test-Path -LiteralPath $oldMeta -PathType Leaf) -or -not(Test-Path -LiteralPath $oldImage -PathType Leaf)){throw 'Previously captured baseline visual evidence absent'}
+ $meta=Get-Content -LiteralPath $oldMeta -Raw -Encoding UTF8 | ConvertFrom-Json
+ if($meta.revision -cne $Before){throw 'Existing before pixels do not match baseline revision'}
+ Write-Output 'FILTER_VISUAL_BEFORE_SCREENSHOT_REUSED=PASS'
 }
 & git -C $Source cat-file -e ($Before+'^{commit}')
 if($LASTEXITCODE -ne 0){throw 'Baseline revision not in bounded clone'}
@@ -55,9 +69,9 @@ if($ResumeBeforeCapture){
 }
 $worker=Join-Path $Root 'worker.ps1'
 $result=Join-Path $Root 'result.json'
-if($ResumeBeforeCapture){Remove-Item -LiteralPath $result -Force -ErrorAction Stop}
+if($ResumeBeforeCapture -or $ResumeAfterClean){Remove-Item -LiteralPath $result -Force -ErrorAction Stop}
 $workerCode=@'
-param([string]$Source,[string]$Capture,[string]$Images,[string]$Result,[string]$Before,[string]$After,[switch]$ResumeBeforeCapture)
+param([string]$Source,[string]$Capture,[string]$Images,[string]$Result,[string]$Before,[string]$After,[switch]$ResumeBeforeCapture,[switch]$ResumeAfterClean)
 $ErrorActionPreference='Stop';$status='FAIL';$stage='preflight';$detail=''
 $log=Join-Path (Split-Path -Parent $Result) 'visual-build.log'
 try{
@@ -70,6 +84,12 @@ try{
  if($LASTEXITCODE -ne 0){throw 'Capture script syntax failed'}
  foreach($label in @('before','after')){
   $sha=if($label -eq 'before'){$Before}else{$After}
+  if($ResumeAfterClean -and $label -eq 'before'){
+   $metadata=Get-Content -LiteralPath (Join-Path $Images 'before-metadata.json') -Raw -Encoding UTF8|ConvertFrom-Json
+   if($metadata.revision -cne $Before){throw 'Prior before image SHA mismatch'}
+   Add-Content -LiteralPath $log -Value 'FILTER_VISUAL_REUSED_BEFORE_PIXELS=PASS'
+   continue
+  }
   $stage=$label+'-checkout'
   if($ResumeBeforeCapture -and $label -eq 'before'){
    $current=(& git -C $Source rev-parse HEAD).Trim()
@@ -83,6 +103,14 @@ try{
    if($rc -ne 0){throw ($label+' checkout exit '+$rc)}
    $current=(& git -C $Source rev-parse HEAD).Trim()
    if($LASTEXITCODE -ne 0 -or $current -cne $sha){throw ($label+' checkout SHA mismatch')}
+   if($ResumeAfterClean -and $label -eq 'after'){
+    $stage='after-clean-owned-output'
+    $ErrorActionPreference='Continue'
+    & cmd.exe /d /c 'clean.bat build' *>&1 | Out-File -LiteralPath $log -Append -Encoding UTF8
+    $cleanRc=$LASTEXITCODE;$ErrorActionPreference='Stop'
+    if($cleanRc -ne 0){throw ('Test-owned output cleanup failed '+$cleanRc)}
+    if(Test-Path -LiteralPath (Join-Path $Source 'out')){throw 'Test-owned old out still present'}
+   }
    $stage=$label+'-Release-build'
    $ErrorActionPreference='Continue'
    & cmd.exe /d /c 'build.bat Release' *>&1 | Out-File -LiteralPath $log -Append -Encoding UTF8
@@ -124,6 +152,7 @@ try{
  $exe=Join-Path $env:SystemRoot 'System32\WindowsPowerShell\v1.0\powershell.exe'
  $arguments='-NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "'+$worker+'" -Source "'+$Source+'" -Capture "'+$capture+'" -Images "'+$images+'" -Result "'+$result+'" -Before "'+$Before+'" -After "'+$After+'"'
  if($ResumeBeforeCapture){$arguments+=' -ResumeBeforeCapture'}
+ if($ResumeAfterClean){$arguments+=' -ResumeAfterClean'}
  $action=New-ScheduledTaskAction -Execute $exe -Argument $arguments
  $principal=New-ScheduledTaskPrincipal -UserId $users[0].sid -LogonType Interactive -RunLevel Limited
  $settings=New-ScheduledTaskSettingsSet -ExecutionTimeLimit (New-TimeSpan -Minutes 16)
