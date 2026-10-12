@@ -46,7 +46,7 @@ def main():
     executable = app_exe("Release")
     assert executable.is_file(), executable
     actual_sha = subprocess.check_output(
-        ["git", "-C", str(root), "rev-parse", "HEAD"],
+        ["git", "-c", "safe.directory=" + str(root), "-C", str(root), "rev-parse", "HEAD"],
         text=True).strip()
     assert actual_sha == args.source_sha, (actual_sha, args.source_sha)
 
