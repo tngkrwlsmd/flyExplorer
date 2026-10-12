@@ -84,6 +84,34 @@ XAML/handlers and requires focused confirmation before implementation.
 | F17 | Redesigned **customizable context menu** described by Microsoft on 2026-08-17 as rolling out to **Insiders** | Track the public API/interaction pattern; do not clone private Explorer settings, inject extension DLLs or assume GA |
 | F18 | File Explorer **AI actions**, document summarization and image edits on eligible hardware/cloud subscription | Defer; hardware, policy, license, privacy and actual user value must justify any integration |
 
+## F01 visual capture checkpoint — 2026-10-13 (INCOMPLETE)
+
+- [Exact-source Windows visual task #38321743127](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38321743127)
+  pinned `main=bb4065bd4fd35c413ab7e16f0ff058e2af2821a0`
+  and `F01=7977997117c5c3cfeeb70be791d46a8e88fab87a`.
+  The worker progressed to `capture-light-before` after both independent
+  Release build stages; no screenshot evidence was accepted.
+- It failed at Git's **dubious repository ownership** check because
+  SYSTEM cloned the test checkout and an interactive user ran the
+  screenshot harness. This is a harness/infrastructure failure, not
+  evidence of a flyExplorer UI defect.
+- The source-only correction in
+  `tests/winui/test_f01_visual_capture_gui.py` at
+  `2d8d38237dbda0cf13e7934edc4e201c34a568c9`
+  sets `git -c safe.directory=<exact test-owned checkout>`
+  only on the one SHA check; no global Git trust or other machine
+  preference is modified. This updated screenshot harness is not yet
+  independently run.
+- The failed owned Windows task printed `F01_VISUAL_OWNED_CLEANUP=PASS`.
+  The shared `personal-control-plane` request slot still contained its
+  **completed** earlier command at last read. Until it is safely restored
+  to idle, do not overwrite an active request or submit another run.
+- **Visual acceptance: NOT TESTED.** Matched light/dark, menu, selection,
+  density and filename states still require retained captures and actual
+  pixel inspection. The prior focused functional GUI PASS
+  ([#38318791974](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38318791974))
+  remains valid for its exact tested source.
+
 ## F01 accepted functional scope — 2026-10-13
 
 - **Current evidence-scoped product and test revision:**
