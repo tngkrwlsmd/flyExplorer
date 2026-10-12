@@ -71,10 +71,14 @@ source ZIP remain release artifacts.
 
 ## Git reachability and immutable release tag
 
-The binary source revision must remain durably recoverable. During development
-it remains in `main` history. The reserved public release tag is
-`v1.0.0.0`, matching product version 1.0.0.0 and targeting binary source
-revision `bc63c8b48e466d1275cc6dcffb0c50e02d39db60`.
+The binary source revision must remain durably recoverable. During
+development it remains in `main` history. The reserved public tag
+`v1.0.0.0` matches product version 1.0.0.0, but has **not been created**.
+The older private artifact's source
+`bc63c8b48e466d1275cc6dcffb0c50e02d39db60` is only historical.
+The final tag target must be selected from the **exact final retained
+signed-binary source revision**, not automatically reusing that
+historical commit or the ephemeral private audit's revision.
 
 Do **not** pre-create that tag. The current private-repository GitHub plan does
 not provide repository tag rulesets, so a pre-created tag would remain movable.
@@ -106,6 +110,18 @@ The private repository is not yet a public delivery surface. Publication
 therefore remains blocked until the designated release page is publicly
 accessible, the final signed artifact identity is regenerated, and the
 rightsholder/signing/clean-machine gates are cleared.
+
+## Current pre-distribution technical audit (not a final release)
+
+[Windows audit 38210591849](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38210591849)
+clean-built the exact private source
+`2a736d85b22859a770138e4b50926ac125d1a052`, verified unsigned
+setup/runtime/source-bundle identity, and removed the generated files
+as test-owned scratch after recording SHA-256 evidence in the run log.
+This demonstrates the current source can be bound to a matching private
+installer; it does **not** supersede the older *retained* #440 artifact
+or authorize publication. Fresh final assets must be generated,
+preserved, reviewed, signed if required, and verified once more.
 
 ## Current accepted private evidence
 
