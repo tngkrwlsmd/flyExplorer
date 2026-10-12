@@ -7,52 +7,61 @@ app/winui, UI-independent native code in src/base, tests in tests/winui, and
 bounded orchestration in tools/winui/run_checks.py. The former MFC application
 is retired from the working tree and is recoverable from Git revision cbffb48.
 
-## 2026-10-12 configurable focus shortcut expansion — Release PASS, GUI BLOCKED
+## 2026-10-12 configurable focus shortcut expansion — Release and functional GUI PASS
 
-Main product revision `04e7d358dcc7cb74a6c619b833b503c72b089294`
-adds Ctrl+G and Ctrl+J as opt-in focus-only bindings for the address bar and
-quick search. The existing Ctrl+L/E/F/K choices, non-duplicated binding check,
-private schema-3 persistence, F5/F6 and mutating file-operation shortcuts
-remain unchanged. Owned GUI and M21 native regressions were extended.
+Product revision `04e7d358dcc7cb74a6c619b833b503c72b089294`
+adds Ctrl+G and Ctrl+J as opt-in focus-only bindings for the address bar
+and quick search. Existing Ctrl+L/E/F/K choices, non-duplicate selection,
+private schema-3 persistence, defaults, F5/F6 and mutating file-operation
+shortcuts remain unchanged. The test-owned focused keyboard GUI regression
+covers persistence, duplicate rejection, actual Ctrl+G/J input, reset,
+no cross-pane file mutation and protected legacy-profile preservation.
 
-Registered central Windows `project_id=desktop-a`, `scope=gui`
-[run #38185317718](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38185317718)
-built the exact source SHA in Release (**PASS**), but the functional GUI stage
-stopped in its prerequisite focused Window Tabs test, **before the shortcut
-GUI test ran**. The exact archived traceback was independently read in
-[run #38185956218](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38185956218):
-`test_v7_window_tabs_gui.py:30` first `focus()` =>
-`test_shell_gui.py:112` intentionally refused physical input because the
-owned product window could not be verified as foreground. No Window Tab
-keyboard action or new shortcut interaction had been attempted.
+**Accepted exact-main central Windows run:**
+[38189416302](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38189416302),
+registered `desktop-a`, `scope=gui`, source SHA
+`3c46c116786038fbea2914e1873fc3600611753c`.
+This main SHA differs from the product revision only by this status
+document. GitHub Actions completed **success** and published
+`central-ci/windows-gui=success` for the exact main SHA. Recorded stages:
 
-Read-only Windows inventory in
-[run #38186404331](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38186404331)
-reported Explorer PID only in **disconnected session 2**; console session 4
-was connected without an Explorer process. The inventory command itself
-exited nonzero at a subsequent scheduled-task query; these preceding session
-observations are diagnostic evidence, **not** a successful GUI acceptance.
-Do not bypass the foreground-owner safety check or rerun full GUI unchanged
-while the desktop remains disconnected. Recheck session state before a
-scoped physical-keyboard GUI acceptance and separately complete actual
-BEFORE/AFTER visual review of the expanded shortcut ComboBoxes.
+- Registered policy/source checks: PASS as prerequisites to the succeeding
+  Release and functional-GUI stages.
+- Canonical Windows Release build: PASS.
+- `gui-window-tabs-Release`: EXIT=0 (15.9 s).
+- `gui-shortcuts-Release`: EXIT=0 (11.0 s); physically delivered shortcut
+  regression, including the new configurable Ctrl+G/J choices.
+- `gui-all-Release`: EXIT=0 (121.7 s), followed by
+  `PASS functional-gui`.
 
-A separate owned SYSTEM Remote Shell native preflight in
-[run #38186627928](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38186627928)
-verified the exact source checkout, but lacked `python.exe` on the SYSTEM
-PATH, so the focused Python contracts and M21 native Release fixture
-**did not execute**. This is an execution-environment limitation, not a
-native compile result. Use an approved, appropriately permissioned Python
-runtime for any subsequent focused test; do not execute user-writable
-interpreter binaries as SYSTEM. The earlier registered Release build result
-remains valid for its exact SHA.
+**Earlier failure now resolved by changed execution conditions:**
+Central [run 38185317718](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38185317718)
+built the same product revision successfully, then stopped on the first
+focus acquisition of its prerequisite Window Tabs test,
+`test_v7_window_tabs_gui.py:30` ->
+`test_shell_gui.py:112`. The foreground-ownership safety guard correctly
+refused physical input. The exact traceback was inspected in
+[run 38185956218](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38185956218).
+A read-only session inventory in
+[run 38186404331](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38186404331)
+found Explorer in disconnected session 2. A subsequent session check,
+[run 38189322684](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38189322684),
+reported session 2 **Active**. That diagnostic workflow itself exited
+nonzero, but its session output established the changed precondition.
+The successful 38189416302 acceptance followed without bypassing the
+physical-input safety check or modifying the shortcut product code.
 
-**Acceptance at this SHA:** Release build PASS; shortcut physical-keyboard
-GUI NOT TESTED; M21 native 23-case regression NOT TESTED; visual acceptance
-NOT TESTED. The full `central-ci/windows-gui` status is FAILURE because of
-the disconnected-session GUI boundary, not a demonstrated new shortcut
-product failure. The private staged Copy recovery draft remains outside this
-shortcut feature scope.
+**Distinct remaining evidence:** a standalone Windows M21 native 23-case
+Release fixture was not run by the registered GUI scope; do not conflate
+source contracts with that fixture. The separate SYSTEM Remote Shell
+preflight [38186627928](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38186627928)
+verified the checkout SHA but did not run the native fixture because
+`python.exe` was absent from the SYSTEM PATH. The new shortcut ComboBox
+choices altered composited UI pixels, and no matched actual-product
+BEFORE/AFTER screenshots have been inspected. **VISUAL ACCEPTANCE:
+NOT TESTED.** Functional GUI PASS does not complete the required visual
+acceptance gate. Staged Copy crash-interruption receipt and safe-recovery
+work remain explicitly deferred and were not changed.
 
 ## Latest product acceptance checkpoint (verified 2026-10-12)
 
