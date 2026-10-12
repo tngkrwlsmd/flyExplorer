@@ -222,7 +222,7 @@ MutationResult Store::add(
         if(!validName(name)||masks.empty()||
            color<0||color>kMaxColor||icon<0||icon>kMaxIcon)
             return MutationResult::Invalid;
-        if(mItems.size()>=kMaxItemsreturn MutationResult::Full;
+        if(mItems.size()>=kMaxItems)return MutationResult::Full;
         if(std::any_of(mItems.begin(),mItems.end(),
             [&](Rule const& item){return sameNoCase(item.name,name);}))
             return MutationResult::Duplicate;
