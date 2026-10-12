@@ -41,13 +41,12 @@ def run(*, win, element, safe_click, focus, eventually, base, owned, left, right
                 return None
         menu_item = eventually(target, "F01 view menu item unavailable: " + name, 8)
         assert menu_item is not None, name
-        # The MenuFlyout popup can be hosted separately from the file pane.
-        # A pointer click on its cached screen rectangle hit the *previous*
-        # checkbox command even when UIA found the compact-row item. Invoke
-        # the exact owned AutomationId instead; do not weaken the process check.
+        # ToggleMenuFlyoutItemAutomationPeer exposes TogglePattern, not
+        # InvokePattern. Cached pointer rectangles can hit the prior item.
+        # Invoke the exact owned checkbox toggle through its UIA provider.
         assert menu_item.element_info.process_id == win.wrapper_object().element_info.process_id
         assert menu_item.element_info.automation_id == name
-        menu_item.invoke()
+        menu_item.iface_toggle.Toggle()
         expected = ("선택 확인란" if name == "ViewCheckboxesItem" else
                     "목록 간격" if name == "ViewCompactRowsItem" else "파일 확장명")
         eventually(lambda: expected in element("StatusText").window_text(),
