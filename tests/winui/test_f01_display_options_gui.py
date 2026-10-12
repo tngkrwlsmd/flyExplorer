@@ -41,10 +41,17 @@ def run(*, win, element, safe_click, focus, eventually, base, owned, left, right
                 return None
         menu_item = eventually(target, "F01 view menu item unavailable: " + name, 8)
         assert menu_item is not None, name
-        # Refocusing the main window here would dismiss the open WinUI popup.
-        # Instead require exact app-process ownership before physical input.
+        # The MenuFlyout popup can be hosted separately from the file pane.
+        # A pointer click on its cached screen rectangle hit the *previous*
+        # checkbox command even when UIA found the compact-row item. Invoke
+        # the exact owned AutomationId instead; do not weaken the process check.
         assert menu_item.element_info.process_id == win.wrapper_object().element_info.process_id
-        menu_item.click_input()
+        assert menu_item.element_info.automation_id == name
+        menu_item.invoke()
+        expected = ("선택 확인란" if name == "ViewCheckboxesItem" else
+                    "목록 간격" if name == "ViewCompactRowsItem" else "파일 확장명")
+        eventually(lambda: expected in element("StatusText").window_text(),
+                   "F01 wrong View command dispatched: " + name, 6)
 
     eventually(lambda: named_row(0) is not None,
                "F01 owned readme.txt row not available", 12)
