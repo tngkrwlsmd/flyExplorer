@@ -100,6 +100,24 @@ XAML/handlers and requires focused confirmation before implementation.
   checked the exact SHA and returned `F01B_SOURCE_AND_RELEASE=PASS`;
   `F01B_OWNED_CLEANUP=PASS`. Earlier failed attempts were SYSTEM Python
   PATH or PowerShell test harness issues and are not product defects.
+- **2026-10-13 owned GUI attempt: NOT ACCEPTED (focus environment/harness gate).**
+  Candidate code remains the accepted product `e147efb6...`; focused GUI
+  harness revisions `cb1b5a1a94b34a5834760a97efe1583bf320e383` and
+  `4d79c195c8d08ae97f2dd193fbc39ab01f650781` add a test-owned
+  View-menu, checkbox, compact-spacing and selection-retention probe.
+  [Remote Shell 38312506917](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38312506917)
+  reached its `gui` stage after source checks, Release build and
+  test syntax preflight. The GUI worker exited 1 at the existing guarded
+  physical-input precondition: `Refusing physical input: foreground belongs
+  to a user window`. The bounded log does not establish which F01 assertion,
+  if any, ran before this failure. This is **not** product GUI PASS or a
+  proven product defect; do not disable the focus guard or rerun unchanged.
+  The exact-owned scheduled task and scratch fixture cleanup completed
+  (`F01C_OWNED_CLEANUP=PASS`), and the central Remote Shell slot was
+  restored idle in control commit `011aef222f5a81886e0eea17d3b1c38913352ae1`.
+  Next: read-only inspect the actual unlocked interactive desktop/focus owner;
+  change the proven environment or harness precondition before attempting
+  a new acceptance run.
 - **Still OPEN:** actual new-control functional GUI interaction; keyboard/UIA
   selection semantics and left/right/window-tab rehydration; matched
   before/after product screenshot inspection in light/dark, split/narrow and
