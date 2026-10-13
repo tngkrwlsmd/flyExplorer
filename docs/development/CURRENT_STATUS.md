@@ -7,6 +7,14 @@ app/winui, UI-independent native code in src/base, tests in tests/winui, and
 bounded orchestration in tools/winui/run_checks.py. The former MFC application
 is retired from the working tree and is recoverable from Git revision cbffb48.
 
+## 2026-10-13 F06 latest main full GUI regression — same-source recheck
+
+- **Canonical main checked:** `40cb928b2ae14e801b5c27300de9348fa3c19e65`, including bounded known-path address suggestions, quoted UNC rejection and last-committed-path preservation. No new product source change was made during this recheck.
+- [Central main GUI run 38382588456](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38382588456) **FAILED** in a v7 multi-WindowTab private-session save assertion (`v7 multi-window private session was not saved`), after successful Release build. This historical failure is not a PASS.
+- [Diagnostic run 38383648183](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38383648183) used a one-commit **test-only** diagnostic fixture (`781dc3671765830ae999f74705445839de7ab040`). Its inner scoped `gui-window-tabs-Release` returned exit code 0; the outer workflow itself failed on an extra, incorrect expected aggregate-log marker. Do not call that outer run successful.
+- **Accepted full main GUI:** [run 38384468606](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38384468606) completed **SUCCESS** against the original identical main source. Policy/source, x64 Release, `gui-window-tabs-Release`, `gui-all-Release`, full functional GUI and `central-ci/windows-gui` status passed. Thus the preceding v7 failure was **not reproducible in this one recheck**; no root cause or long-term nondeterminism fix is claimed.
+- **Open acceptance:** reachable approved SMB share, screenshot comparison of suggestion UI, high-contrast and actual 125/150/200% scaling, Narrator spoken output. Never treat nonexistent loopback UNC rejection as proof of successful network-share browsing.
+
 ## 2026-10-13 F06-D quoted UNC failed-navigation safety — focused acceptance
 
 - **Verified candidate:** `1b6f2ccc671393f5241005ef11bcefcc19ec33b6`,
