@@ -7,6 +7,36 @@ app/winui, UI-independent native code in src/base, tests in tests/winui, and
 bounded orchestration in tools/winui/run_checks.py. The former MFC application
 is retired from the working tree and is recoverable from Git revision cbffb48.
 
+## 2026-10-13 F01-D canonical main and focused restart GUI evidence
+
+- **Integrated on canonical main:** product, tests and documentation at
+  `91e3f5ab5e7cb2a6df5e3fa2d2becb453380668d`. The earlier F01-D
+  candidate checkpoint below is historical branch-scoped evidence, not an
+  assertion that persistence is still awaiting integration.
+- **Central main GUI PASS:** [run 38353716100](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38353716100)
+  completed successfully against the exact integrated main SHA. Policy and
+  source checks, Windows x64 Release build, focused WindowTab/shortcut/filter
+  tests and full functional GUI all passed; status context
+  `central-ci/windows-gui` reported `success`.
+- **Focused four-option restart test:** the isolated GUI fixture on
+  `test/f01d-restart-view-options-20261013`, source
+  `46bb16b5565e28baf5f5c19ea4467f8d88ebd2b9`, toggled all four
+  View choices in the left pane and a distinct combination in the right,
+  explicitly saved private session schema v3, restarted the owned app and
+  inspected both restored View menus. The internal GUI log printed
+  `F01D_REAL_RESTART_TWO_PANES_ALL_FOUR_VIEW_FLAGS=PASS`, alongside
+  successful private-session cleanup; see [run 38359677323](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38359677323).
+  **That outer Actions run is FAILURE**, not an accepted end-to-end workflow:
+  its extra wrapper looked for this marker in the outer orchestration log
+  instead of the inner scoped GUI log. The session GUI process returned
+  exit code zero; the wrapper raised `F01D_GUI_MARKER_MISSING` afterwards.
+  This is harness evidence, not a product or session GUI failure. Do not
+  represent the failed outer workflow as a PASS.
+- **Still open:** actual 125%, 150%, 200% OS display scaling,
+  F01 High Contrast, real Narrator speech, virtual hidden namespaces,
+  large indexed-directory behavior, and F01-D-specific restart pixel
+  comparisons. No global Explorer setting or existing user file is changed.
+
 ## 2026-10-13 F01-D private session display option persistence — acceptance checkpoint
 
 - **Verified candidate:** `feat/f01-display-session-20261013`,

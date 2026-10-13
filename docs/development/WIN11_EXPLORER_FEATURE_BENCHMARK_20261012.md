@@ -84,6 +84,23 @@ XAML/handlers and requires focused confirmation before implementation.
 | F17 | Redesigned **customizable context menu** described by Microsoft on 2026-08-17 as rolling out to **Insiders** | Track the public API/interaction pattern; do not clone private Explorer settings, inject extension DLLs or assume GA |
 | F18 | File Explorer **AI actions**, document summarization and image edits on eligible hardware/cloud subscription | Defer; hardware, policy, license, privacy and actual user value must justify any integration |
 
+## F01-D integrated main and focused restart follow-up — 2026-10-13
+
+- F01-D private-session v3 persistence is **integrated** at main
+  `91e3f5ab5e7cb2a6df5e3fa2d2becb453380668d`;
+  [central full GUI 38353716100](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38353716100)
+  PASS includes Release build and existing full GUI regression.
+- Dedicated two-pane, four-flag View-menu restart GUI on
+  `46bb16b5565e28baf5f5c19ea4467f8d88ebd2b9` produced
+  `F01D_REAL_RESTART_TWO_PANES_ALL_FOUR_VIEW_FLAGS=PASS`
+  in its inner scoped GUI log; [run 38359677323](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38359677323).
+  The **outer workflow failed** on an extra, incorrect log-location marker
+  check (`F01D_GUI_MARKER_MISSING`); do not label that workflow successful.
+  All product changes are identical to the previously accepted main; this
+  follow-up adds focused tests and documentation only.
+- Previously documented remaining DPI, high-contrast, Narrator and visual
+  gates are unchanged.
+
 ## F01-D opt-in session persistence — 2026-10-13 checkpoint
 
 - **Candidate:** `feat/f01-display-session-20261013`, product/test SHA
