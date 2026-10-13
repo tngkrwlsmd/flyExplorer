@@ -162,6 +162,13 @@ def main():
 
         rect = win.rectangle()
         window_rect = (rect.left, rect.top, rect.right, rect.bottom)
+        # Windows' shadow/invisible frame can reveal unrelated desktop pixels
+        # inside a top-level HWND bounding rectangle. Only retain the opaque,
+        # test-owned application interior; keep matched crop across revisions.
+        capture_rect = (rect.left + 12, rect.top + 8,
+                        rect.right - 8, rect.bottom - 8)
+        assert capture_rect[0] < capture_rect[2]
+        assert capture_rect[1] < capture_rect[3]
         assert rect.left >= 0 and rect.top >= 0
         assert rect.right <= user.GetSystemMetrics(0)
         assert rect.bottom <= user.GetSystemMetrics(1)
@@ -171,15 +178,16 @@ def main():
 
         def shot(state):
             focus()
-            image = ImageGrab.grab(bbox=window_rect, include_layered_windows=True)
-            assert image.size == (rect.width(), rect.height())
+            image = ImageGrab.grab(bbox=capture_rect, include_layered_windows=True)
+            assert image.size == (capture_rect[2] - capture_rect[0],
+                                  capture_rect[3] - capture_rect[1])
             name = f"f01-{args.theme}-{args.label}-{state}.png"
             image.save(output / name, "PNG", optimize=True)
             states[state] = {
                 "file": name,
                 "sha256": hashlib.sha256((output / name).read_bytes()).hexdigest(),
                 "bytes": (output / name).stat().st_size,
-                "rect": list(window_rect),
+                "rect": list(capture_rect),
             }
 
         shot("default")
@@ -207,13 +215,13 @@ def main():
             user.GetWindowThreadProcessId(current, ct.byref(owner))
         assert current and owner.value == process.pid
         name = f"f01-{args.theme}-{args.label}-menu.png"
-        menu_png = ImageGrab.grab(bbox=window_rect, include_layered_windows=True)
+        menu_png = ImageGrab.grab(bbox=capture_rect, include_layered_windows=True)
         menu_png.save(output / name, "PNG", optimize=True)
         states["menu"] = {
             "file": name,
             "sha256": hashlib.sha256((output / name).read_bytes()).hexdigest(),
             "bytes": (output / name).stat().st_size,
-            "rect": list(window_rect),
+            "rect": list(capture_rect),
         }
 
         assert process.poll() is None
@@ -221,6 +229,7 @@ def main():
         data = {
             "label": args.label, "theme": args.theme, "source_sha": args.source_sha,
             "configuration": "Release", "window_rect": list(window_rect),
+            "capture_rect": list(capture_rect),
             "dpi": dpi, "desktop": [user.GetSystemMetrics(0), user.GetSystemMetrics(1)],
             "fixture": "test-owned 4 synthetic names, left Details selected readme.txt",
             "states": states,
