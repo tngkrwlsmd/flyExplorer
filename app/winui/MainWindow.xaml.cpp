@@ -2697,18 +2697,35 @@ namespace winrt::FlyExplorer::implementation
     void MainWindow::OpenFolderInNewPaneTab(int side,std::wstring path)
     {
         if(side<0||side>1||path.empty())return;
-        auto& model=ActiveWindowTab().model;
+        auto const& model=ActiveWindowTab().model;
         if(side==1&&!model.split)return;
         auto const& pane=model.panes[static_cast<size_t>(side)];
-        if(pane.tabs.size()>=fxfile::explorerui::kMaxTabsPerPane){
-            StatusText().Text(L"창마다 탭은 최대 32개까지 지원합니다.");
-            return;
-        }
-        if(!mWorkspace.dispatch(fxfile::explorerui::Command::AddTab,side)
-                      .accepted)return;
-        mWorkspaceRestore.reset(side);
-        QueuePath(side,std::move(path));
-        Refresh(L"새 탭의 폴더를 불러오는 중입니다.");
+        if(pane.active>=pane.routeIds.size())return;
+        const auto originWindow=mWorkspace.activeIndex();
+        const auto originRoute=pane.routeIds[pane.active];
+        // The UIA ListViewItem/Button still owns an in-flight PointerPressed.
+        // Never rebuild its visual tree or reallocate its model until the
+        // routed pointer event has returned to the WinUI dispatcher.
+        auto weak=get_weak();
+        DispatcherQueue().TryEnqueue([weak,side,originWindow,originRoute,
+                                      path=std::move(path)]() mutable {
+            auto ui=weak.get();
+            if(!ui||ui->mWorkspace.activeIndex()!=originWindow)return;
+            auto& current=ui->ActiveWindowTab().model;
+            if(side==1&&!current.split)return;
+            auto const& active=current.panes[static_cast<size_t>(side)];
+            if(active.active>=active.routeIds.size()||
+               active.routeIds[active.active]!=originRoute)return;
+            if(active.tabs.size()>=fxfile::explorerui::kMaxTabsPerPane){
+                ui->StatusText().Text(L"창마다 탭은 최대 32개까지 지원합니다.");
+                return;
+            }
+            if(!ui->mWorkspace.dispatch(fxfile::explorerui::Command::AddTab,side)
+                          .accepted)return;
+            ui->mWorkspaceRestore.reset(side);
+            ui->QueuePath(side,std::move(path));
+            ui->Refresh(L"새 탭의 폴더를 불러오는 중입니다.");
+        });
     }
     void MainWindow::OnNewTabClicked(IInspectable const&,RoutedEventArgs const&)
     {

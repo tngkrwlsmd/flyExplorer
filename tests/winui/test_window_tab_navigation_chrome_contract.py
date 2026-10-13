@@ -52,7 +52,9 @@ class WindowTabChromeContract(unittest.TestCase):
         open_tab=main.split("void MainWindow::OpenFolderInNewPaneTab(",1)[1].split(
             "void MainWindow::OnNewTabClicked(",1)[0]
         for fragment in ("model.split","kMaxTabsPerPane","Command::AddTab,side",
-                         "mWorkspaceRestore.reset(side);","QueuePath(side,std::move(path));"):
+                         "mWorkspaceRestore.reset(side);","QueuePath(side,std::move(path));",
+                         "DispatcherQueue().TryEnqueue(", "originWindow",
+                         "active.routeIds[active.active]!=originRoute"):
             self.assertIn(fragment,open_tab)
 
     def test_f06_breadcrumb_middle_click_uses_tagged_segment(self):

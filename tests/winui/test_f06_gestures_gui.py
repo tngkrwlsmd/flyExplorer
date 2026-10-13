@@ -67,11 +67,11 @@ def run(*,win,element,safe_click,focus,eventually,owned,left,right):
     safe_click(second)
     eventually(lambda:"nested" in address(),
                "F06 folder tab did not retain Nested path",10)
-    breadcrumb=element("BreadcrumbPanel")
     def parent_segment():
-        return next((b for b in breadcrumb.descendants()
-                     if b.element_info.control_type=="Button" and
-                     b.window_text().strip()=="Left"),None)
+        # StackPanel itself is not necessarily represented as a UIA element.
+        # The tagged breadcrumb Buttons expose an accessible path name.
+        return next((b for b in win.descendants(control_type="Button")
+                     if (b.window_text() or "").strip()=="주소 경로: Left"),None)
     ancestor=eventually(parent_segment,
                         "F06 owned parent breadcrumb not found",8)
     owned_middle_click(ancestor)
