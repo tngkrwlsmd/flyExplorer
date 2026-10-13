@@ -149,6 +149,13 @@ try:
      for e in element("LeftFiles").descendants()),
      "async native Shell directory items never displayed",12)
  print("REAL_FILE_LIST_IN_LEFT_PANE",True,flush=True)
+ if os.environ.get("FLY_F01_INTERACTION_ONLY")=="YES":
+  from test_f01_keyboard_pane_narrow_gui import run as f01_interaction
+  f01_interaction(win=win,element=element,safe_click=safe_click,
+                  focus=ensure_owned_focus,eventually=eventually,
+                  base=base,owned=owned,left=left,right=right)
+  print("F01_INTERACTION_FOCUSED_GUI_PASS",True,flush=True)
+  raise SystemExit(0)
  if os.environ.get("FLY_V7_WINDOW_TABS_ONLY")=="YES":
   from test_v7_window_tabs_gui import run as v7_tabs_run
   v7_tabs_run(win=win,element=element,safe_click=safe_click,
