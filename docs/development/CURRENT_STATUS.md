@@ -1,4 +1,4 @@
-# flyExplorer current status — documentation reconciled 2026-10-13
+# flyExplorer current status — documentation reconciled 2026-10-14
 
 ## Product source of truth
 
@@ -6,6 +6,47 @@ main is the canonical C++/WinRT WinUI 3 product. Product code lives in
 app/winui, UI-independent native code in src/base, tests in tests/winui, and
 bounded orchestration in tools/winui/run_checks.py. The former MFC application
 is retired from the working tree and is recoverable from Git revision cbffb48.
+
+## 2026-10-14 F02 owned narrow-layout fix — original PNG review
+
+- **Canonical main source:** `7441dad96572d1f90d6eff5fac671116d0081345`;
+  implementation fix `01c24b3393cb20810440f45ff4b2e5cb5577108b`,
+  source regression guard in `7441dad96572d1f90d6eff5fac671116d0081345`.
+  The F02 Details pane previously consumed 260 px without being deducted
+  from the dual-pane DetailLayoutProfile width. At 800x550, the two lists
+  therefore showed name and size fields colliding. The layout now subtracts
+  the visible Details pane's 260 px and re-evaluates file columns when
+  toggling it.
+- **Owned Windows evidence:** [Remote Shell run 38473558319](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38473558319)
+  completed SUCCESS at the exact SHA: source checks, x64 Release build,
+  actual interactive test-owned WinUI, 800x550 window, 96 DPI, light and
+  dark themes, original lossless PNG capture, normal owned process exit,
+  and bounded scratch/task cleanup. This is a focused capture and build,
+  **not** a new current-main full GUI suite acceptance.
+- **Actual original-PNG inspection:** Reconstructed `LIGHT_ENABLED`,
+  `DARK_ENABLED` and the corresponding `FOCUSED_TOGGLE` images from
+  length-checked, numbered log chunks. Both theme previews display
+  distinct non-overlapping file names (without the colliding size column),
+  preserved left/right panes, selected `readme.txt`, Details information
+  and footer. This closes the *observed 800x550 name/size overlap* only.
+  Paths and type text wrap in the Details pane; the modified-date value
+  is below the initial visible 550px viewport. Prior F02 focused
+  functional acceptance tested scrolling at a larger owned window;
+  its visibility after scrolling at 800x550 has not been reverified.
+- **Focus visual is not accepted:** In each theme, `ENABLED` and
+  `FOCUSED_TOGGLE` original PNGs are **byte-for-byte identical**
+  even though the UIA focus assertion passed. The harness calls a window
+  foreground/focus helper before screenshot and uses UIA `set_focus()`
+  to reach the toggle. This evidence does not establish a visible
+  keyboard-navigation focus cue; keyboard-driven focus transfer and
+  actual focus pixels remain open. Do not mark focus visual PASS from
+  the mere UIA `has_keyboard_focus()` result.
+- **Open separate gates:** full-range original-PNG matched revision/state
+  comparison beyond this narrow fix, keyboard focus visibility, narrow
+  Details scroll reachability, actual OS 125/150/200% DPI, High Contrast,
+  Narrator speech, F06 address-suggestion pixels and provider/large-index
+  cases. **F02 VISUAL ACCEPTANCE: NARROW OVERLAP FIX VERIFIED; OTHER
+  REQUIRED VISUAL/ACCESSIBILITY STATES OPEN.**
 
 ## 2026-10-13 F02 canonical main GUI and bounded visual inspection — latest
 
