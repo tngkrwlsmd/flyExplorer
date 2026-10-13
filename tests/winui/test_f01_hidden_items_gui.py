@@ -81,6 +81,19 @@ def run(*, win, element, safe_click, focus, eventually, base, owned, left, right
         eventually(lambda: "숨김 항목" in element("StatusText").window_text(),
                    "owned hidden toggle did not dispatch", 8)
 
+    # Match the previously accepted real 96-DPI WinUI captures; change
+    # only our own HWND, never the OS desktop or another process's window.
+    user.SetWindowPos.argtypes = [W.HWND, W.HWND, ct.c_int, ct.c_int,
+                                  ct.c_int, ct.c_int, W.UINT]
+    width = min(940, user.GetSystemMetrics(0)-75)
+    height = min(610, user.GetSystemMetrics(1)-85)
+    assert width >= 800 and height >= 550
+    guarded_foreground()
+    assert user.SetWindowPos(win.handle, None, 35, 35, width, height, 0x0014)
+    eventually(lambda: abs(win.rectangle().width()-width) <= 3 and
+               abs(win.rectangle().height()-height) <= 3,
+               "test-owned screenshot HWND size not stable", 8)
+
     def shot(state, flyout_open=False):
         if not flyout_open:
             guarded_foreground()
