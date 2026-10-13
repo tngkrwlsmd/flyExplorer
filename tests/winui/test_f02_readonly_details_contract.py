@@ -34,6 +34,20 @@ class F02ReadOnlyDetailsContract(unittest.TestCase):
         self.assertNotIn("GetFileAttributes",source)
         self.assertNotIn("SHGet",source)
 
+    def test_details_width_drives_narrow_file_list_profile(self):
+        main=read("app/winui/MainWindow.xaml.cpp")
+        profile=main.split("int MainWindow::DetailLayoutProfile() const",1)[1].split(
+            "std::array<GridLength,4> MainWindow::DetailColumnWidths(",1)[0]
+        self.assertIn("ActiveWindowTab().fileInfoPaneVisible?260.0:0.0",profile)
+        self.assertIn("mShellWidth-nav-17.0-details",profile)
+        toggle=main.split("void MainWindow::OnToggleFileInfoPane(",1)[1].split(
+            "void MainWindow::ApplyFileInfoPaneLayout(",1)[0]
+        for token in ("ApplyFileInfoPaneLayout();",
+                      "const int profile=DetailLayoutProfile();",
+                      "mDetailLayoutProfiles[side]=profile;",
+                      "FillFiles(side);","UpdateFileInfoPane();"):
+            self.assertIn(token,toggle)
+
     def test_live_route_and_cached_metadata_only(self):
         main=read("app/winui/MainWindow.xaml.cpp")
         source=main.split("void MainWindow::UpdateFileInfoPane(",1)[1].split(
