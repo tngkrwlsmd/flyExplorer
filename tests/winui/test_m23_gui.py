@@ -20,7 +20,7 @@ def run(*,win,element,safe_click,focus,eventually,
         names=("ViewCheckboxesItem","ViewCompactRowsItem",
                "ViewFileExtensionsItem","ViewHiddenItemsItem")
         def view_menu(target, expected=None, change=()):
-            pid=target.element_info.process_id
+            pid=target.wrapper_object().element_info.process_id
             assert pid>0
             target.child_window(auto_id="ViewButton").click_input()
             def peer(name):
@@ -66,15 +66,15 @@ def run(*,win,element,safe_click,focus,eventually,
     if f01d:
         safe_click(element("LeftFiles"))
         for name in names:
-            view_menu(win.wrapper_object(),change=(name,))
-        view_menu(win.wrapper_object(),expected=(1,1,0,1))
+            view_menu(win,change=(name,))
+        view_menu(win,expected=(1,1,0,1))
     visit(1,right,"Secondary")
     focus();element("SortPicker").select(3)
     if f01d:
         safe_click(element("RightFiles"))
         for name in ("ViewCompactRowsItem","ViewFileExtensionsItem"):
-            view_menu(win.wrapper_object(),change=(name,))
-        view_menu(win.wrapper_object(),expected=(0,1,0,0))
+            view_menu(win,change=(name,))
+        view_menu(win,expected=(0,1,0,0))
     if os.environ.get("FLY_M23_OWNED_DRAG_TEST")=="YES":
         # Physical in-window drag: strictly owned source and destination.
         from pywinauto import mouse
