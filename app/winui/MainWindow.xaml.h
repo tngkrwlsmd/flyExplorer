@@ -98,6 +98,7 @@ namespace winrt::FlyExplorer::implementation
         void OnSaveWorkspace(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
         void OnOpenWorkspace(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
         void OnToggleSearch(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
+        void OnToggleFileInfoPane(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
         void OnApplyShortcuts(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
         void OnResetShortcuts(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
         void OnRunSearch(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
@@ -271,6 +272,8 @@ namespace winrt::FlyExplorer::implementation
         bool mClosing = false;
         bool mPopulatingFileLists = false;
         void UpdateFooterSummary();
+        void UpdateFileInfoPane();
+        void ApplyFileInfoPaneLayout();
         void PersistPreferences();
         void UpdateSelectionChrome();
         void UpdateCommandAvailability();
