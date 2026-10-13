@@ -15,7 +15,8 @@ class FileDisplayOptionsContract(unittest.TestCase):
         nodes={e.get(XNAME):e for e in doc.iter() if e.get(XNAME)}
         for key,handler in (("ViewCheckboxesItem","OnViewCheckboxes"),
                             ("ViewCompactRowsItem","OnViewCompactRows"),
-                            ("ViewFileExtensionsItem","OnViewFileExtensions")):
+                            ("ViewFileExtensionsItem","OnViewFileExtensions"),
+                            ("ViewHiddenItemsItem","OnViewHiddenItems")):
             node=nodes[key]
             self.assertTrue(node.tag.endswith("ToggleMenuFlyoutItem"))
             self.assertEqual(node.get("Click"),handler)
@@ -55,6 +56,7 @@ class FileDisplayOptionsContract(unittest.TestCase):
         self.assertIn("bool showSelectionCheckboxes=false;",state)
         self.assertIn("bool compactRows=false;",state)
         self.assertIn("bool showFileExtensions=true;",state)
+        self.assertIn("bool showHiddenItems=false;",state)
         main=body("app/winui/MainWindow.xaml.cpp")
         toggler=main.split("void MainWindow::ToggleListDisplay(",1)[1].split(
             "void MainWindow::UpdateViewPresentation(",1)[0]
@@ -77,13 +79,37 @@ class FileDisplayOptionsContract(unittest.TestCase):
         self.assertIn("fileBar()->SetListDisplay([nativeWeak]",impl)
         self.assertIn("ActiveWindowTab().fileLists[side].compactRows",impl)
         self.assertIn("ActiveWindowTab().fileLists[side].showFileExtensions",impl)
+        self.assertIn("ActiveWindowTab().fileLists[side].showHiddenItems",impl)
         self.assertIn("void ToggleListDisplay(int option);",
                       body("app/winui/MainWindow.xaml.h"))
         toolbar=body("app/winui/FileToolbar.xaml.cpp")
         for needle in ("ViewCheckboxesItem().IsChecked(", "ViewCompactRowsItem().IsChecked(",
-                       "ViewFileExtensionsItem().IsChecked(", "listDisplay_(0)",
-                       "listDisplay_(1)", "listDisplay_(2)"):
+                       "ViewFileExtensionsItem().IsChecked(",
+                       "ViewHiddenItemsItem().IsChecked(", "listDisplay_(0)",
+                       "listDisplay_(1)", "listDisplay_(2)", "listDisplay_(3)"):
             self.assertIn(needle,toolbar)
+
+    def test_hidden_items_only_change_pane_projection_not_native_identity(self):
+        helper=body("app/winui/helper/FlyShellIsolationHelper.cpp")
+        main=body("app/winui/MainWindow.xaml.cpp")
+        state=body("app/winui/file_list_state.h")
+        toolbar=body("app/winui/FileToolbar.xaml.cpp")
+        self.assertIn("SHCONTF_FOLDERS|SHCONTF_NONFOLDERS|SHCONTF_INCLUDEHIDDEN",helper)
+        self.assertNotIn("SHCONTF_INCLUDESUPERHIDDEN",helper)
+        self.assertIn("bool showHiddenItems=false;",state)
+        self.assertIn("ViewHiddenItemsItem().IsChecked(showHidden)",toolbar)
+        self.assertIn("state.showHiddenItems=!state.showHiddenItems;",main)
+        self.assertIn("if(!state.showHiddenItems){",main)
+        self.assertIn("nameIndex[index].attributes:items[index].attributes",main)
+        self.assertIn("return (flags&SFGAO_HIDDEN)!=0;",main)
+        self.assertIn('if(hiddenItem)label+=L" | 숨김 항목";',main)
+        self.assertIn("state.renderedPaths.push_back(itemParsing)",main)
+        self.assertEqual(main.count("SetListDisplayState("),4)
+        toggler=main.split("void MainWindow::ToggleListDisplay(",1)[1].split(
+            "void MainWindow::UpdateViewPresentation(",1)[0]
+        for forbidden in ("QueuePidl(", "PersistPreferences(", "RunTransfer(",
+                          "mShellNavigation->", "SetFileAttributesW("):
+            self.assertNotIn(forbidden,toggler)
 
     def test_native_filename_extension_display_is_not_identity(self):
         source=body("app/winui/file_list_state.h")
@@ -97,7 +123,7 @@ class FileDisplayOptionsContract(unittest.TestCase):
         self.assertIn('label+=L" | 실제 파일 이름: "+itemLabel;',main)
         self.assertIn("state.renderedPaths.push_back(itemParsing)",main)
         self.assertIn("fxfile::filterrules::Store::matches(itemLabel",main)
-        self.assertIn("else state.showFileExtensions=!state.showFileExtensions;",main)
+        self.assertIn("else if(option==2)state.showFileExtensions=!state.showFileExtensions;",main)
         toggler=main.split("void MainWindow::ToggleListDisplay(",1)[1].split(
             "void MainWindow::UpdateViewPresentation(",1)[0]
         for forbidden in ("QueuePidl(", "PersistPreferences(", "RunTransfer(",

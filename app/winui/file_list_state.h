@@ -50,6 +50,7 @@ struct PaneState final {
     bool showSelectionCheckboxes=false;
     bool compactRows=false;
     bool showFileExtensions=true; // pane-local display default, no user filesystem mutation.
+    bool showHiddenItems=false; // ordinary Shell-hidden items; no OS-global setting.
     int appliedItemsPanel=0; // 0=vertical XAML default, 1=small wrap, 2=medium wrap, 3=large wrap
     std::uint32_t visualPixels=0; // DPI-scaled system visual size for current details
     double nameColumnWidth=168.0;
