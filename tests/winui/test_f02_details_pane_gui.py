@@ -34,6 +34,12 @@ def run(*,win,element,safe_click,eventually,left,right):
     mouse.scroll(wheel_dist=5,coords=(rect.mid_point().x,rect.mid_point().y))
     print("F02_LEFT_READONLY_FILE_INFORMATION=PASS",flush=True)
 
+    # The application starts at the owned left path. The right pane is
+    # independent and must be navigated to its synthetic Right fixture.
+    safe_click(element("RightFiles"))
+    address=element("AddressBox")
+    address.set_edit_text(str(right))
+    address.type_keys("{ENTER}",set_foreground=True)
     right_row=eventually(lambda:row(1,"Secondary"),
                          "F02 owned right folder row unavailable",9)
     safe_click(right_row)
