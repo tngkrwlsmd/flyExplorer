@@ -46,7 +46,7 @@ struct FileDetail final {
 struct PaneState final {
     int sortMode=0;
     FileViewMode viewMode=FileViewMode::Details;
-    // F01-A: view-only, owned by one WindowTab/pane; not yet session-persisted.
+    // F01: view-only, owned by one WindowTab/pane; explicit private session v3 persists these.
     bool showSelectionCheckboxes=false;
     bool compactRows=false;
     bool showFileExtensions=true; // pane-local display default, no user filesystem mutation.

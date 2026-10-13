@@ -82,6 +82,10 @@ SessionCoordinator::CaptureResult SessionCoordinator::capture(
                     (std::clamp)(
                         std::lround(state.fileLists[side].nameColumnWidth),
                         80l,600l));
+                target.showSelectionCheckboxes=state.fileLists[side].showSelectionCheckboxes;
+                target.compactRows=state.fileLists[side].compactRows;
+                target.showFileExtensions=state.fileLists[side].showFileExtensions;
+                target.showHiddenItems=state.fileLists[side].showHiddenItems;
                 target.tabs.reserve(pane.tabs.size());
                 captured[side].reserve(pane.tabs.size());
                 for(std::size_t i=0;i<pane.tabs.size();++i){
@@ -237,6 +241,14 @@ bool SessionCoordinator::load(Post post,RestoreCompletion completion)
                                 source.panes[side].view);
                         state.fileLists[side].nameColumnWidth=
                             source.panes[side].nameColumnWidth;
+                        state.fileLists[side].showSelectionCheckboxes=
+                            source.panes[side].showSelectionCheckboxes;
+                        state.fileLists[side].compactRows=
+                            source.panes[side].compactRows;
+                        state.fileLists[side].showFileExtensions=
+                            source.panes[side].showFileExtensions;
+                        state.fileLists[side].showHiddenItems=
+                            source.panes[side].showHiddenItems;
                         auto& pane=state.model.panes[side];
                         for(std::size_t i=0;
                             ok&&i<source.panes[side].tabs.size();++i){

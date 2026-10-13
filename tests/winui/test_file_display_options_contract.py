@@ -89,6 +89,31 @@ class FileDisplayOptionsContract(unittest.TestCase):
                        "listDisplay_(1)", "listDisplay_(2)", "listDisplay_(3)"):
             self.assertIn(needle,toolbar)
 
+    def test_display_options_opt_in_private_session_v3(self):
+        session=body("src/base/ui_session.h")
+        serial=body("src/base/ui_session.cpp")
+        coordinator=body("app/winui/session_coordinator.cpp")
+        fixture=body("tests/winui/m23/m23_native_fixture.cpp")
+        for field in ("showSelectionCheckboxes", "compactRows",
+                      "showFileExtensions", "showHiddenItems"):
+            self.assertIn(field,session)
+            self.assertIn(f"target.{field}=state.fileLists[side].{field};",
+                          coordinator)
+            self.assertIn(f"source.panes[side].{field};",coordinator)
+        for expected in ("encodeV3(", "decodeV2(", "decodeV3(",
+                         "if(version==3)return decodeV3",
+                         "flags&~DisplayMask", "displayFlags(pane)"):
+            self.assertIn(expected,serial)
+        self.assertIn("legacy_v2_display_options_default_without_data_loss",fixture)
+        self.assertIn("reject_unknown_v3_display_flag_with_valid_checksum",fixture)
+        self.assertIn("f01_v3_flags_distinct_between_window_tabs_and_panes",fixture)
+        self.assertIn("if(!mSessionCoordinator.autoRestoreAllowed())return;",
+                      body("app/winui/m23_session.cpp"))
+        toggler=body("app/winui/MainWindow.xaml.cpp").split(
+            "void MainWindow::ToggleListDisplay(",1)[1].split(
+            "void MainWindow::UpdateViewPresentation(",1)[0]
+        self.assertNotIn("PersistPreferences();",toggler)
+
     def test_hidden_items_only_change_pane_projection_not_native_identity(self):
         helper=body("app/winui/helper/FlyShellIsolationHelper.cpp")
         main=body("app/winui/MainWindow.xaml.cpp")
