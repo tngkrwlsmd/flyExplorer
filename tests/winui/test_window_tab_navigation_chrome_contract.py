@@ -77,7 +77,8 @@ class WindowTabChromeContract(unittest.TestCase):
         self.assertNotIn("replace(",portion)
         address=main.split("void MainWindow::OnAddressKeyDown(",1)[1].split(
             "void MainWindow::OnAddressGotFocus(",1)[0]
-        self.assertIn("OpenFolder(ResolveFriendlyAddress(",address)
+        self.assertIn("const auto requested=ResolveFriendlyAddress(",address)
+        self.assertIn("OpenFolder(requested);",address)
 
     def test_f06_address_suggestions_are_bounded_and_in_memory(self):
         xaml=(ROOT/"app/winui/MainWindow.xaml").read_text(encoding="utf-8")
