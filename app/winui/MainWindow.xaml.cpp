@@ -1283,6 +1283,8 @@ namespace winrt::FlyExplorer::implementation
                     ui->ActiveWindowTab().fileLists[side].details=
                         std::move(completed.details);
                     ui->FillFiles(side);
+                    if(side==ui->ActiveWindowTab().model.activePane)
+                        ui->UpdateFileInfoPane();
                     ui->CaptureOwnedNetworkVisualIfReady();
                 }
             });
@@ -2338,6 +2340,7 @@ namespace winrt::FlyExplorer::implementation
 
     void MainWindow::Refresh(hstring const& status)
     {
+        ApplyFileInfoPaneLayout();
         RefreshTabs(0);
         RefreshTabs(1);
         FillFiles(0);
@@ -2462,6 +2465,102 @@ namespace winrt::FlyExplorer::implementation
         fileBar()->CopyButton().IsEnabled(ready);
         fileBar()->MoveButton().IsEnabled(ready);
     }
+    void MainWindow::OnToggleFileInfoPane(IInspectable const&,RoutedEventArgs const&)
+    {
+        auto& state=ActiveWindowTab();
+        state.fileInfoPaneVisible=!state.fileInfoPaneVisible;
+        ApplyFileInfoPaneLayout();
+        UpdateFileInfoPane();
+    }
+    void MainWindow::ApplyFileInfoPaneLayout()
+    {
+        const bool visible=ActiveWindowTab().fileInfoPaneVisible;
+        FileInfoPane().Visibility(visible?Visibility::Visible:Visibility::Collapsed);
+        FileInfoColumn().Width(GridLength{visible?260.0:0.0,GridUnitType::Pixel});
+        Microsoft::UI::Xaml::Automation::AutomationProperties::SetName(
+            FileInfoToggleButton(),visible?
+                L"선택 항목 상세 정보 닫기":L"선택 항목 상세 정보 열기");
+    }
+    void MainWindow::UpdateFileInfoPane()
+    {
+        if(!ActiveWindowTab().fileInfoPaneVisible)return;
+        // Every field defaults to empty until the current pane, tab, route,
+        // rendering identity and selected row are all verified.
+        FileInfoHint().Text(L"항목 하나를 선택하세요.");
+        FileInfoName().Text(L"");
+        FileInfoType().Text(L"");
+        FileInfoLocation().Text(L"");
+        FileInfoSize().Text(L"");
+        FileInfoModified().Text(L"");
+        auto const& window=ActiveWindowTab();
+        const int side=window.model.activePane;
+        auto const& pane=window.model.panes[side];
+        if(side==1&&!window.model.split)return;
+        if(pane.active>=pane.tabs.size()||pane.active>=pane.routeIds.size()||
+           pane.active>=pane.pending.size()||pane.pending[pane.active])return;
+        auto view=side==0?LeftFiles():RightFiles();
+        if(view.SelectedItems().Size()!=1){
+            if(view.SelectedItems().Size()>1)
+                FileInfoHint().Text(L"항목 하나만 선택하면 상세 정보를 표시합니다.");
+            return;
+        }
+        auto selected=view.SelectedItems().GetAt(0).try_as<ListViewItem>();
+        if(!selected||!selected.Tag())return;
+        const auto logical=unbox_value<std::uint64_t>(selected.Tag());
+        auto const& state=window.fileLists[side];
+        const auto route=pane.routeIds[pane.active];
+        if(state.visibleRoute!=route||state.visibleTab!=pane.active)return;
+        auto const found=std::find(state.renderedLogical.begin(),
+                                  state.renderedLogical.end(),logical);
+        if(found==state.renderedLogical.end())return;
+        const auto rendered=static_cast<std::size_t>(
+            std::distance(state.renderedLogical.begin(),found));
+        if(rendered>=state.renderedPaths.size())return;
+        auto const& session=pane.tabs[pane.active];
+        auto const& snapshot=session.snapshot();
+        std::size_t resident=0;
+        const bool residentReady=snapshot.residentIndex(logical,resident);
+        const auto* indexed=session.indexedItem(static_cast<std::size_t>(logical));
+        const auto* item=residentReady?
+            &snapshot.children[resident]:nullptr;
+        if(!item&&!indexed)return;
+        const std::wstring name=item?item->label:indexed->label;
+        const std::wstring path=item?item->parsingName:indexed->parsingName;
+        const bool folder=item?item->isFolder():indexed->isFolder();
+        const bool filesystem=item?item->isFileSystem():indexed->isFileSystem();
+        if(path!=state.renderedPaths[rendered])return;
+        FileInfoHint().Text(side==0?L"왼쪽 창 선택 항목":L"오른쪽 창 선택 항목");
+        FileInfoName().Text(hstring(name));
+        FileInfoType().Text(folder?L"폴더":L"파일");
+        FileInfoLocation().Text(filesystem?
+            hstring(std::filesystem::path(path).parent_path().native()):
+            hstring(L"가상 Shell 항목"));
+        FileInfoSize().Text(folder?L"폴더":L"정보 없음");
+        FileInfoModified().Text(L"정보 없음");
+        // Cache-only presentation: no filesystem, provider, Shell or COM
+        // query can run on the UI thread on a selection change.
+        const bool indexedProjection=
+            state.indexedNameProjection&&!state.indexToComplete&&
+            session.indexedFrontier()==snapshot.nextOffset&&
+            (state.sortMode<=1||
+             (state.indexedMetadataSort&&
+              !snapshot.truncated&&
+              state.metadataCurrent(route,pane.active,session.nameIndex().size())));
+        const std::size_t metadataIndex=indexedProjection?
+            static_cast<std::size_t>(logical):resident;
+        const bool metadataReady=(indexedProjection||residentReady)&&
+            state.metadataCurrent(route,pane.active,
+                indexedProjection?session.nameIndex().size():snapshot.children.size())&&
+            metadataIndex<state.metadata.size();
+        if(metadataReady){
+            auto const& meta=state.metadata[metadataIndex];
+            if(!folder&&meta.sizeKnown)FileInfoSize().Text(hstring(meta.bytesLabel));
+            if(meta.dateKnown)FileInfoModified().Text(hstring(meta.dateLabel));
+        }
+        if(residentReady&&state.isCurrent(route,pane.active,snapshot.children.size())&&
+           resident<state.details.size()&&!state.details[resident].typeLabel.empty())
+            FileInfoType().Text(hstring(state.details[resident].typeLabel));
+    }
     void MainWindow::UpdateFooterSummary()
     {
         const int side=ActiveWindowTab().model.activePane;
@@ -2492,6 +2591,7 @@ namespace winrt::FlyExplorer::implementation
         SelectionCountText().Text(selected?
             hstring(std::to_wstring(selected)+L"\uAC1C \uC120\uD0DD\uB428"):hstring{});
         UpdateCommandAvailability();
+        UpdateFileInfoPane();
     }
     void MainWindow::QueueSelectionPresentationUpdate()
     {
