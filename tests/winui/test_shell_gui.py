@@ -169,6 +169,12 @@ try:
      for e in element("LeftFiles").descendants()),
      "async native Shell directory items never displayed",12)
  print("REAL_FILE_LIST_IN_LEFT_PANE",True,flush=True)
+ if os.environ.get("FLY_F02_INFO_ONLY")=="YES":
+  from test_f02_details_pane_gui import run as f02_probe
+  f02_probe(win=win,element=element,safe_click=safe_click,
+            eventually=eventually,left=left,right=right)
+  print("F02_OWNED_DETAILS_GUI_PASS",True,flush=True)
+  raise SystemExit(0)
  if os.environ.get("FLY_F06_ADDRESS_SUGGEST_ONLY")=="YES":
   from test_f06_address_suggest_gui import run as address_probe
   address_probe(win=win,element=element,focus=ensure_owned_focus,
