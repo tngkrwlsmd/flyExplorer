@@ -113,6 +113,7 @@ namespace winrt::FlyExplorer::implementation
         AddressSuggestionPopup().Closed([addressWeak](
             IInspectable const&,IInspectable const&){
             if(auto ui=addressWeak.get()){
+                if(ui->mClosing)return;
                 auto box=ui->AddressBox();
                 if(box.FocusState()==FocusState::Unfocused&&box.Opacity()>0.5)
                     ui->OnAddressLostFocus(nullptr,nullptr);
@@ -688,6 +689,11 @@ namespace winrt::FlyExplorer::implementation
     {
         if(mClosing)return;
         mClosing=true;
+        // Prevent late popup focus/Closed callbacks while XAML is dismantled.
+        try{
+            AddressSuggestionPopup().IsOpen(false);
+            AddressSuggestionRows().Children().Clear();
+        }catch(...){ }
         mWorkspaceRestore.reset();
         mSessionCoordinator.prepareForClose();
         mFileOperations.prepareForClose();
@@ -2576,6 +2582,7 @@ namespace winrt::FlyExplorer::implementation
     }
     void MainWindow::UpdateAddressSuggestions()
     {
+        if(mClosing)return;
         auto editor=AddressBox();
         auto pop=AddressSuggestionPopup();
         auto rows=AddressSuggestionRows();
@@ -2708,6 +2715,7 @@ namespace winrt::FlyExplorer::implementation
     }
     void MainWindow::OnAddressLostFocus(IInspectable const&,RoutedEventArgs const&)
     {
+        if(mClosing)return;
         // Clicking a candidate transfers focus before its Click event.
         // Keep the popup alive until the click is committed or dismissed.
         if(AddressSuggestionPopup().IsOpen())return;
