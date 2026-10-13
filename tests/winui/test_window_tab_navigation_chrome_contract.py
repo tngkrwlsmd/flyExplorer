@@ -104,6 +104,16 @@ class WindowTabChromeContract(unittest.TestCase):
         self.assertNotIn("AddressSuggestionPopup",impl)
         self.assertNotIn("<Popup ",xaml)
 
+    def test_f06_quoted_loopback_unc_failure_is_owned_and_nonmutating(self):
+        src=(ROOT/"tests/winui/test_shell_gui.py").read_text(encoding="utf-8")
+        for fragment in ("FLY_F06_QUOTED_LOOPBACK_UNC",
+                         "flyexplorer-f06-owned-no-share",
+                         "F06_QUOTED_LOOPBACK_UNC_FAIL_CLOSED_WITH_PRIOR_PANE=PASS",
+                         "REAL_WINUI_LOOPBACK_UNC_REJECTED_WITH_PRIOR_FOLDER_PRESERVED",
+                         "assert_legacy_profile_unchanged"):
+            self.assertIn(fragment,src)
+        self.assertNotIn("net share ",src)
+
     def test_failed_window_tab_probe_separates_route_and_chrome(self):
         harness=(ROOT/"tests/winui/test_v7_window_tabs_gui.py").read_text(encoding="utf-8")
         for token in ("V7_CLEANUP_ROUTE_NESTED","V7_CLEANUP_BACK_EXISTS",

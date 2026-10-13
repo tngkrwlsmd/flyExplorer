@@ -92,7 +92,8 @@ try:
  owned_com=os.environ.get("FLY_M18_OWNED_COM_HANG")=="YES"
  owned_notify=os.environ.get("FLY_M18_OWNED_SHELL_NOTIFY")=="YES"
  owned_exhaust=os.environ.get("FLY_M18_EXHAUST_TIMEOUT")=="YES"
- loopback_unc=os.environ.get("FLY_M18_LOOPBACK_UNC")=="YES"
+ quoted_loopback_unc=os.environ.get("FLY_F06_QUOTED_LOOPBACK_UNC")=="YES"
+ loopback_unc=os.environ.get("FLY_M18_LOOPBACK_UNC")=="YES" or quoted_loopback_unc
  assert not (owned_block and owned_com)
  if owned_block or owned_com:
   assert CONFIG=="Debug","owned fault injection is Debug-only"
@@ -453,11 +454,15 @@ try:
             "native virtual Shell Back did not recover preceding folder")
  print("REAL_NATIVE_VIRTUAL_TO_LOCAL_SHELL_HISTORY",True,flush=True)
  if loopback_unc:
-  # Nonexistent share on 127.0.0.1; no network configuration or live share changed.
+  # Reject a nonexistent loopback share, without configuring SMB or touching
+  # any real network resources, credentials or existing user folder.
   safe_click(element("RightFiles"))
   ensure_owned_focus()
   bad=element("AddressBox")
-  bad.set_edit_text(r"\\127.0.0.1\flyexplorer-m18-owned-no-share")
+  if quoted_loopback_unc:
+   bad.set_edit_text('  "'+r"\\127.0.0.1\flyexplorer-f06-owned-no-share"+'"  ')
+  else:
+   bad.set_edit_text(r"\\127.0.0.1\flyexplorer-m18-owned-no-share")
   ensure_owned_focus()
   bad.type_keys("{ENTER}",set_foreground=True)
   eventually(lambda:any(x in element("StatusText").window_text().lower()
@@ -468,6 +473,10 @@ try:
       "failed loopback UNC changed previously accepted right folder")
   print("REAL_WINUI_LOOPBACK_UNC_REJECTED_WITH_PRIOR_FOLDER_PRESERVED",
         element("StatusText").window_text(),flush=True)
+  if quoted_loopback_unc:
+   assert element("AddressBox").get_value().rstrip("\\/").casefold()==str(right).rstrip("\\/").casefold(),(
+       "quoted UNC failure replaced the previously committed pane address")
+   print("F06_QUOTED_LOOPBACK_UNC_FAIL_CLOSED_WITH_PRIOR_PANE=PASS",flush=True)
  if os.environ.get("FLY_OWNED_COMPACT_MONITOR_CASE")=="YES":
   # Reproduce the 720px work-area / y=78 / 634px free-height case
   # with this exact owned HWND; no desktop/user window is repositioned.
