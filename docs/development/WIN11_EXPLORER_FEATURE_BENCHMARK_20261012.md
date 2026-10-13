@@ -84,6 +84,27 @@ XAML/handlers and requires focused confirmation before implementation.
 | F17 | Redesigned **customizable context menu** described by Microsoft on 2026-08-17 as rolling out to **Insiders** | Track the public API/interaction pattern; do not clone private Explorer settings, inject extension DLLs or assume GA |
 | F18 | File Explorer **AI actions**, document summarization and image edits on eligible hardware/cloud subscription | Defer; hardware, policy, license, privacy and actual user value must justify any integration |
 
+## F01-A/B canonical main integration — 2026-10-13
+
+- **Merged:** [PR #64](https://github.com/tngkrwlsmd/flyExplorer/pull/64)
+  squash commit `0243181dd8833207ce91f1c6b7f819044e81e247`.
+  The verified F01 feature branch had exactly the same Git tree as the
+  merged commit. The following chronological premerge checkpoints retain
+  their original "not merged" wording as historical evidence; this
+  integration notice and `CURRENT_STATUS.md` supersede that wording.
+- **Accepted incremental feature scope:** per-pane/per-WindowTab selection
+  checkboxes, compact Details/List spacing, and display-only filename
+  extension toggling with native identity and UIA full name preserved.
+- **Verified:** Release + focused GUI [38318791974](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38318791974),
+  actual 96-DPI light/dark matched pixel review
+  [38326900487](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38326900487),
+  and keyboard, pane/WindowTab isolation and 800x570 narrow viewport
+  [38328508589](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38328508589).
+- **Intentionally excluded from the merge:** hidden filesystem item
+  enumeration and durable F01 preference/session persistence. Actual
+  125/150/200% OS DPI, F01-specific High Contrast screenshots and
+  Narrator spoken-output acceptance are still open environment gates.
+
 ## F01 keyboard, cross-pane/WindowTab and narrow viewport GUI — 2026-10-13
 
 - **Exact source and test SHA:** `4d08b5aa159d9f94cf19a6d04cfe14673b66e5a7`,
