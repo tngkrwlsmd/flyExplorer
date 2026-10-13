@@ -1259,7 +1259,9 @@ int wmain(int argc,wchar_t** argv) {
         if(SUCCEEDED(hr))
             hr=fxfile::shellnav::enumeratePage(
                 requested.get(),snap,
-                SHCONTF_FOLDERS|SHCONTF_NONFOLDERS,
+                // Only ordinary hidden Shell items. Never super-hidden.
+                // The WinUI pane owns the final visibility decision.
+                SHCONTF_FOLDERS|SHCONTF_NONFOLDERS|SHCONTF_INCLUDEHIDDEN,
                 req.offset,req.limit);
         sent=answer(output,hr,SUCCEEDED(hr)?&snap:nullptr);
     }catch(std::bad_alloc const&){sent=answer(output,E_OUTOFMEMORY);}
