@@ -1,11 +1,12 @@
 """F02 focused, owned GUI acceptance for the read-only selected-item pane."""
 def run(*,win,element,safe_click,eventually,left,right):
     button=element("FileInfoToggleButton")
-    panel=element("FileInfoPane")
+    hint=element("FileInfoHint")
     assert button.exists(timeout=4)
-    assert not panel.is_visible(),"F02 must be opt-in"
+    assert not hint.exists(timeout=.3),"F02 details must be opt-in"
     safe_click(button)
-    eventually(lambda:panel.is_visible(),"F02 detail pane did not open",7)
+    eventually(lambda:hint.exists(timeout=.3) and "닫기" in button.window_text(),
+               "F02 details text did not enter accessibility tree",7)
     assert element("FileInfoHint").window_text()=="항목 하나를 선택하세요."
 
     def row(side,name):
@@ -36,9 +37,10 @@ def run(*,win,element,safe_click,eventually,left,right):
     print("F02_ACTIVE_PANE_SELECTION_ISOLATION=PASS",flush=True)
 
     safe_click(button)
-    eventually(lambda:not panel.is_visible(),"F02 details did not collapse",7)
+    eventually(lambda:not hint.exists(timeout=.3) and "열기" in button.window_text(),
+               "F02 details did not collapse",7)
     safe_click(button)
-    eventually(lambda:panel.is_visible() and
+    eventually(lambda:hint.exists(timeout=.3) and
                element("FileInfoName").window_text()=="Secondary",
                "F02 reopened panel retained wrong selection",7)
     print("F02_TOGGLE_AND_REOPEN=PASS",flush=True)
