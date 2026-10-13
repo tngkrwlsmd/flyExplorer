@@ -23,6 +23,26 @@ class FileDisplayOptionsContract(unittest.TestCase):
                              "True" if key=="ViewFileExtensionsItem" else "False")
             self.assertTrue(node.get("Text"))
 
+    def test_selection_tick_theme_contrast_scoped_to_normal_themes(self):
+        doc=ET.parse(ROOT/"app/winui/MainWindow.xaml")
+        key="{http://schemas.microsoft.com/winfx/2006/xaml}Key"
+        dictionaries=[node for node in doc.iter()
+                      if node.tag.endswith("ResourceDictionary")
+                      and node.get(key) in ("Light","Dark","HighContrast")]
+        by_theme={node.get(key):node for node in dictionaries}
+        self.assertIn("Light",by_theme)
+        self.assertIn("Dark",by_theme)
+        self.assertNotIn("HighContrast",by_theme)
+        colors={}
+        for theme in ("Light","Dark"):
+            brushes=[node for node in by_theme[theme]
+                     if node.tag.endswith("SolidColorBrush")
+                     and node.get(key)=="ListViewItemCheckThemeBrush"]
+            self.assertEqual(len(brushes),1)
+            colors[theme]=brushes[0].get("Color")
+        self.assertEqual(colors["Light"],"#FF202020")
+        self.assertEqual(colors["Dark"],"#FFF5F5F5")
+
     def test_pane_ownership_and_file_identity(self):
         state=body("app/winui/file_list_state.h")
         self.assertIn("bool showSelectionCheckboxes=false;",state)
