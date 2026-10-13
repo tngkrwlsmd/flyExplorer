@@ -353,7 +353,7 @@ namespace winrt::FlyExplorer::implementation
         fileBar()->SetListDisplay([nativeWeak](int option){
             if(auto ui=nativeWeak.get())ui->ToggleListDisplay(option);
         });
-        fileBar()->SetListDisplayState(false,false,true);
+        fileBar()->SetListDisplayState(false,false,true,false);
         const auto dispatch=DispatcherQueue();
         const auto weak=get_weak();
         // The worker owns NO MainWindow/WinRT UI object. Cross-apartment
@@ -1585,15 +1585,16 @@ namespace winrt::FlyExplorer::implementation
 
     void MainWindow::ToggleListDisplay(int option)
     {
-        if(option<0||option>2)return;
+        if(option<0||option>3)return;
         const int side=ActiveWindowTab().model.activePane;
         auto& state=ActiveWindowTab().fileLists[side];
         if(option==0)state.showSelectionCheckboxes=!state.showSelectionCheckboxes;
         else if(option==1)state.compactRows=!state.compactRows;
-        else state.showFileExtensions=!state.showFileExtensions;
+        else if(option==2)state.showFileExtensions=!state.showFileExtensions;
+        else state.showHiddenItems=!state.showHiddenItems;
         fileBar()->SetListDisplayState(
             state.showSelectionCheckboxes,state.compactRows,
-            state.showFileExtensions);
+            state.showFileExtensions,state.showHiddenItems);
         // FillFiles restores real selections by Shell parsing identity.
         FillFiles(side);
         UpdateSelectionChrome();
@@ -1601,8 +1602,11 @@ namespace winrt::FlyExplorer::implementation
         StatusText().Text(option==0?
             L"현재 창의 선택 확인란 표시를 변경했습니다.":
             option==1?L"현재 창의 목록 간격을 변경했습니다.":
-            state.showFileExtensions?L"현재 창의 파일 확장명을 표시합니다.":
-                                     L"현재 창의 파일 확장명을 숨깁니다.");
+            option==2?(state.showFileExtensions?
+                L"현재 창의 파일 확장명을 표시합니다.":
+                L"현재 창의 파일 확장명을 숨깁니다."):
+            state.showHiddenItems?L"현재 창의 숨김 항목을 표시합니다.":
+                                  L"현재 창의 숨김 항목을 숨깁니다.");
     }
     void MainWindow::UpdateViewPresentation(int side)
     {
@@ -1802,6 +1806,16 @@ namespace winrt::FlyExplorer::implementation
                 }
                 return mode==1?lessName(rhs,lhs):lessName(lhs,rhs);
             });
+        // Enumeration is stable regardless of pane option. Project only the
+        // visible Shell rows; never alter PIDLs, logical paging, or transfers.
+        if(!state.showHiddenItems){
+            order.erase(std::remove_if(order.begin(),order.end(),
+                [&](size_t index){
+                    const auto flags=indexedProjection?
+                        nameIndex[index].attributes:items[index].attributes;
+                    return (flags&SFGAO_HIDDEN)!=0;
+                }),order.end());
+        }
         if(!state.filenameFilter.empty()){
             order.erase(std::remove_if(order.begin(),order.end(),
                 [&](size_t index){
@@ -1853,6 +1867,8 @@ namespace winrt::FlyExplorer::implementation
             const bool residentReady=residentAt(index,resident);
             const auto& itemLabel=labelAt(index);
             const auto& itemParsing=parsingAt(index);
+            const bool hiddenItem=(indexedProjection?
+                nameIndex[index].attributes:items[index].attributes)&SFGAO_HIDDEN;
             const bool itemFolder=folderAt(index);
             const auto displayName=fxfile::previewlist::visibleFileName(
                 itemLabel,itemFolder,filesystemAt(index),state.showFileExtensions);
@@ -1917,6 +1933,7 @@ namespace winrt::FlyExplorer::implementation
             ListViewItem row;
             auto label=std::wstring(itemFolder?L"[폴더]  ":L"[파일]  ")+
                        std::wstring(displayName);
+            if(hiddenItem)label+=L" | 숨김 항목";
             if(displayName!=std::wstring_view(itemLabel))
                 label+=L" | 실제 파일 이름: "+itemLabel;
             if(!typeLabel.empty())label+=L"   |   "+typeLabel;
@@ -2330,7 +2347,8 @@ namespace winrt::FlyExplorer::implementation
         fileBar()->SetListDisplayState(
             ActiveWindowTab().fileLists[ActiveWindowTab().model.activePane].showSelectionCheckboxes,
             ActiveWindowTab().fileLists[ActiveWindowTab().model.activePane].compactRows,
-            ActiveWindowTab().fileLists[ActiveWindowTab().model.activePane].showFileExtensions);
+            ActiveWindowTab().fileLists[ActiveWindowTab().model.activePane].showFileExtensions,
+            ActiveWindowTab().fileLists[ActiveWindowTab().model.activePane].showHiddenItems);
         UpdateSortPresentation(ActiveWindowTab().model.activePane);
         StatusText().Text(status);
         Title(L"flyExplorer · "+hstring(nav.snapshot().displayName));
@@ -2373,7 +2391,8 @@ namespace winrt::FlyExplorer::implementation
         fileBar()->SetListDisplayState(
             ActiveWindowTab().fileLists[side].showSelectionCheckboxes,
             ActiveWindowTab().fileLists[side].compactRows,
-            ActiveWindowTab().fileLists[side].showFileExtensions);
+            ActiveWindowTab().fileLists[side].showFileExtensions,
+            ActiveWindowTab().fileLists[side].showHiddenItems);
         UpdateSortPresentation(side);
         UpdateSelectionChrome();
         UpdateFooterSummary();
