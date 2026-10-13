@@ -7,6 +7,39 @@ app/winui, UI-independent native code in src/base, tests in tests/winui, and
 bounded orchestration in tools/winui/run_checks.py. The former MFC application
 is retired from the working tree and is recoverable from Git revision cbffb48.
 
+## 2026-10-13 F02 read-only selected-item Details pane — focused Windows checkpoint
+
+- **Feature branch acceptance:** `feat/f02-readonly-details-pane-20261013`,
+  exact functional candidate `39221b3cd7af257f4e34edf44ebed99c8fb4bb18`;
+  latest visual-capture candidate `f5c0fce1b9193ca95c0a10e86443afc984d637b5`.
+- **Behavior:** explicit opt-in Details pane for the active WindowTab, showing
+  selected file/folder name, type, location, size and modified date from the
+  existing bounded Shell snapshot, rendered row identity and asynchronous
+  metadata caches. Single selection only; stale routes, pending navigation,
+  nonfilesystem entries and multiple selection fail closed. Details are
+  read-only: no new file mutation, in-process Shell provider call or global
+  Windows setting change. Collapse/reopen and opposite-pane selection use
+  separate active-pane state.
+- **Windows functional evidence:** [run 38391634316](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38391634316)
+  completed PASS against `39221b3cd7af257f4e34edf44ebed99c8fb4bb18`:
+  source contracts, x64 Release build, actual owned WinUI left-file/right-folder
+  selection, details text, toggle/reopen, normal exit and owned scratch cleanup.
+  Earlier runs [38386492476](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38386492476),
+  [38386808505](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38386808505)
+  and [38387378826](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38387378826)
+  were diagnostic GUI failures while correcting collapsed UIA peers and
+  scrolled read-only metadata. They are not passing acceptances.
+- **Visual evidence boundary:** [run 38392955469](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38392955469)
+  completed PASS for matched owned light/dark before-and-after screenshot
+  *capture* at `f5c0fce1b9193ca95c0a10e86443afc984d637b5`.
+  It explicitly reported `F02_VISUAL_OWNED_MATCHED_CAPTURES=PASS PIXEL_REVIEW_REQUIRED`.
+  This proves capture, **not actual pixel review, contrast, clipping or
+  comparison acceptance**. Do not mark visual acceptance complete.
+- **Still open:** integrated canonical-main central full GUI acceptance,
+  human/actual pixel inspection (light/dark/focus/narrow), actual OS
+  125/150/200% DPI, High Contrast and Narrator speech, provider/large-index
+  edge cases. Feature branch evidence is not automatic main acceptance.
+
 ## 2026-10-13 F06 latest main full GUI regression — same-source recheck
 
 - **Canonical main checked:** `40cb928b2ae14e801b5c27300de9348fa3c19e65`, including bounded known-path address suggestions, quoted UNC rejection and last-committed-path preservation. No new product source change was made during this recheck.
