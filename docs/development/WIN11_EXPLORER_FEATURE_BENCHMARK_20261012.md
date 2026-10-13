@@ -84,6 +84,55 @@ XAML/handlers and requires focused confirmation before implementation.
 | F17 | Redesigned **customizable context menu** described by Microsoft on 2026-08-17 as rolling out to **Insiders** | Track the public API/interaction pattern; do not clone private Explorer settings, inject extension DLLs or assume GA |
 | F18 | File Explorer **AI actions**, document summarization and image edits on eligible hardware/cloud subscription | Defer; hardware, policy, license, privacy and actual user value must justify any integration |
 
+## F01 keyboard, cross-pane/WindowTab and narrow viewport GUI — 2026-10-13
+
+- **Exact source and test SHA:** `4d08b5aa159d9f94cf19a6d04cfe14673b66e5a7`,
+  feature branch only, baseline `main` remains unchanged.
+- [Central Windows run 38328508589](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38328508589)
+  completed successfully. `F01GUI_RESULT_STATUS=PASS STAGE=complete`,
+  `F01GUI_SOURCE_RELEASE_AND_GUI=PASS`, and
+  `F01GUI_OWNED_CLEANUP=PASS`. The test executed on a non-elevated
+  interactive user session with exact commit pinning, an independent x64
+  Release build, focused Python source contract, owned foreground guard,
+  native Shell startup and a normal app exit.
+- **Actual keyboard interaction PASS:** focused native View button with
+  Enter, focused exact `ToggleMenuFlyoutItem` AutomationId, dispatched
+  physical Space for selection checkboxes, compact rows, and filename
+  extensions. Verified each subsequent flyout toggle state, compact
+  row-height reduction and hidden-extension original-name automation
+  contract. No pointer/UIA TogglePattern action substituted for those
+  three keyboard operations.
+- **Left/right pane isolation PASS:** the left pane's checkbox, compact,
+  extension visibility survived activating the right pane. The right
+  pane retained its independent default flags and original filename;
+  changing its compact setting did not alter the left pane.
+- **WindowTab isolation PASS:** Ctrl+T opened a new independent default
+  tab with all three view flags reset to defaults. Changing the new
+  tab's checkbox setting did not change tab A. Ctrl+Shift+Tab and Ctrl+Tab
+  restored both tabs' distinct view-menu toggle states and original
+  filename presentation.
+- **Narrow real GUI PASS for one 800x570 window at the actual 96 DPI
+  desktop configuration.** Repositioned only the test-owned app HWND
+  and verified View/Sort buttons, both file lists, status, and WindowTab
+  strip are visible and fully contained inside the HWND. Independently
+  inspected the captured opaque app-only `f01-interaction-narrow-owned.png`
+  pixels: no obvious clipping, overlap or unreadable toolbar controls;
+  compact responsive Details columns and both native file lists remain
+  readable. This is not actual 125/150/200%-scale certification or
+  blanket minimum-window/alternate-view acceptance.
+- The test is `tests/winui/test_f01_keyboard_pane_narrow_gui.py`,
+  invoked by `FLY_F01_INTERACTION_ONLY=YES` through the existing
+  `test_shell_gui.py` owned-proc fixture. Input and screenshots are
+  refused unless the foreground HWND belongs to the launched exact
+  test process; the OS display scaling and user preferences are not
+  changed. The central request slot was returned to idle in control
+  commit `9fb252d3d7f24382ed2753ca214991237342476a`.
+- **Still OPEN:** true High Contrast for these new View options,
+  system 125/150/200% scaling, Narrator spoken behavior,
+  remaining alternate file views, durable F01 preferences/session
+  persistence and hidden-item enumeration. No whole-F01 release
+  certification or main merge is claimed.
+
 ## F01 current matched visual acceptance — 2026-10-13
 
 - **Exact visual product source:** `eea2aff02095a86c02446f1146d7840e5b05a333`,
