@@ -25,6 +25,13 @@ class FileDisplayOptionsContract(unittest.TestCase):
 
     def test_selection_tick_theme_contrast_scoped_to_normal_themes(self):
         doc=ET.parse(ROOT/"app/winui/MainWindow.xaml")
+        grid=next(n for n in doc.iter()
+                  if n.tag.endswith("Grid")
+                  and n.get(XNAME)=="RootShell")
+        root_resources=next(n for n in grid
+                            if n.tag.endswith("Grid.Resources"))
+        self.assertEqual(len(root_resources),1)
+        self.assertTrue(root_resources[0].tag.endswith("ResourceDictionary"))
         key="{http://schemas.microsoft.com/winfx/2006/xaml}Key"
         dictionaries=[node for node in doc.iter()
                       if node.tag.endswith("ResourceDictionary")
@@ -37,7 +44,7 @@ class FileDisplayOptionsContract(unittest.TestCase):
         for theme in ("Light","Dark"):
             brushes=[node for node in by_theme[theme]
                      if node.tag.endswith("SolidColorBrush")
-                     and node.get(key)=="ListViewItemCheckThemeBrush"]
+                     and node.get(key)=="ListViewItemCheckBrush"]
             self.assertEqual(len(brushes),1)
             colors[theme]=brushes[0].get("Color")
         self.assertEqual(colors["Light"],"#FF202020")
