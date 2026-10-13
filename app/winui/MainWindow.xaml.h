@@ -347,6 +347,7 @@ namespace winrt::FlyExplorer::implementation
         void UpdateBreadcrumb(std::wstring const& address);
         void UpdateAddressSuggestions();
         void HideAddressSuggestions();
+        bool mAddressSuggestionKeyboardFocus=false;
         void FillFiles(int side);
         bool OpenFolder(std::wstring const& path);
         void ActivatePane(int side);

@@ -120,14 +120,18 @@
                     <FontIcon Glyph="&#xE74A;" FontSize="15"/>
                 </Button>
             </StackPanel>
-            <Grid Grid.Column="1" Height="32">
-                <TextBox x:Name="AddressBox" Height="32" Opacity="0"
+            <Grid Grid.Column="1">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="32"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+                <TextBox x:Name="AddressBox" Grid.Row="0" Height="32" Opacity="0"
                          PlaceholderText="&#xD3F4;&#xB354; &#xACBD;&#xB85C;&#xB97C; &#xC785;&#xB825;&#xD558;&#xC138;&#xC694;"
                          KeyDown="OnAddressKeyDown" TextChanged="OnAddressTextChanged"
                          GotFocus="OnAddressGotFocus"
                          LostFocus="OnAddressLostFocus"
                          AutomationProperties.Name="&#xD604;&#xC7AC; &#xD3F4;&#xB354; &#xC8FC;&#xC18C;"/>
-                <Grid x:Name="AddressDisplayButton" Height="32">
+                <Grid x:Name="AddressDisplayButton" Grid.Row="0" Height="32">
                     <Border Background="Transparent" BorderThickness="1" CornerRadius="4"
                             BorderBrush="{ThemeResource SystemControlForegroundBaseLowBrush}"/>
                     <Grid Margin="4,1">
@@ -144,16 +148,15 @@
                         </Button>
                     </Grid>
                 </Grid>
-                <!-- Bounded paths from existing tabs and loaded folder model only.
-                     Popup does not replace the tested AddressBox TextBox. -->
-                <Popup x:Name="AddressSuggestionPopup" IsLightDismissEnabled="True"
-                       DesiredPlacement="Bottom">
-                    <Border BorderThickness="1" CornerRadius="6" Padding="3"
-                            BorderBrush="{ThemeResource SystemControlForegroundBaseLowBrush}"
-                            Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
-                        <StackPanel x:Name="AddressSuggestionRows" Spacing="1"/>
-                    </Border>
-                </Popup>
+                <!-- In-layout, bounded and keyboard-focusable; no Popup HWND
+                     or lifecycle callback is created for address suggestions. -->
+                <Border x:Name="AddressSuggestionPanel" Grid.Row="1"
+                        Visibility="Collapsed" BorderThickness="1"
+                        CornerRadius="6" Padding="3" Margin="0,2,0,1"
+                        BorderBrush="{ThemeResource SystemControlForegroundBaseLowBrush}"
+                        Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
+                    <StackPanel x:Name="AddressSuggestionRows" Spacing="1"/>
+                </Border>
             </Grid>
             <TextBox x:Name="QuickSearchBox" Grid.Column="2" Height="32"
                      PlaceholderText="&#xD604;&#xC7AC; &#xD3F4;&#xB354; &#xAC80;&#xC0C9;"

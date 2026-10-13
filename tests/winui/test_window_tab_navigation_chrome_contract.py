@@ -85,7 +85,7 @@ class WindowTabChromeContract(unittest.TestCase):
         header=(ROOT/"app/winui/MainWindow.xaml.h").read_text(encoding="utf-8")
         self.assertIn('<TextBox x:Name="AddressBox"',xaml)
         self.assertIn('TextChanged="OnAddressTextChanged"',xaml)
-        self.assertIn('x:Name="AddressSuggestionPopup"',xaml)
+        self.assertIn('x:Name="AddressSuggestionPanel"',xaml)
         self.assertIn("void UpdateAddressSuggestions();",header)
         scope=impl.split("void MainWindow::UpdateAddressSuggestions()",1)[1].split(
             "void MainWindow::OnAddressTextChanged(",1)[0]
@@ -93,14 +93,16 @@ class WindowTabChromeContract(unittest.TestCase):
                        "CompareStringOrdinal(", "pane.tabs",
                        "nameIndex()", "static_cast<size_t>(2048)",
                        "isFolder()&&known[i].isFileSystem()",
-                       "AddressSuggestionRows()", "pop.IsOpen(true)"):
+                       "AddressSuggestionRows()", "panel.Visibility(Visibility::Visible)"):
             self.assertIn(phrase,scope)
         for forbidden in ("directory_iterator","GetFileAttributes",
                           "FindFirstFile","submitParsing(","CoCreateInstance("):
             self.assertNotIn(forbidden,scope)
         self.assertIn("void MainWindow::OnAddressSuggestionClicked(",impl)
         self.assertIn("OpenFolder(path);",impl)
-        self.assertIn("AddressSuggestionPopup().Closed(",impl)
+        self.assertIn("AddressSuggestionPanel().Visibility(Visibility::Collapsed)",impl)
+        self.assertNotIn("AddressSuggestionPopup",impl)
+        self.assertNotIn("<Popup ",xaml)
 
     def test_failed_window_tab_probe_separates_route_and_chrome(self):
         harness=(ROOT/"tests/winui/test_v7_window_tabs_gui.py").read_text(encoding="utf-8")

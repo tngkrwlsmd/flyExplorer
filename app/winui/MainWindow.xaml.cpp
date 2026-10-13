@@ -108,17 +108,6 @@ namespace winrt::FlyExplorer::implementation
     MainWindow::MainWindow()
     {
         InitializeComponent();
-        AddressSuggestionPopup().PlacementTarget(AddressBox());
-        auto addressWeak=get_weak();
-        AddressSuggestionPopup().Closed([addressWeak](
-            IInspectable const&,IInspectable const&){
-            if(auto ui=addressWeak.get()){
-                if(ui->mClosing)return;
-                auto box=ui->AddressBox();
-                if(box.FocusState()==FocusState::Unfocused&&box.Opacity()>0.5)
-                    ui->OnAddressLostFocus(nullptr,nullptr);
-            }
-        });
         using Microsoft::UI::Xaml::Input::PointerEventHandler;
         RootShell().AddHandler(
             UIElement::PointerPressedEvent(),
@@ -689,9 +678,9 @@ namespace winrt::FlyExplorer::implementation
     {
         if(mClosing)return;
         mClosing=true;
-        // Prevent late popup focus/Closed callbacks while XAML is dismantled.
+        // Release candidate controls before the XAML tree is dismantled.
         try{
-            AddressSuggestionPopup().IsOpen(false);
+            AddressSuggestionPanel().Visibility(Visibility::Collapsed);
             AddressSuggestionRows().Children().Clear();
         }catch(...){ }
         mWorkspaceRestore.reset();
@@ -2578,24 +2567,25 @@ namespace winrt::FlyExplorer::implementation
     }
     void MainWindow::HideAddressSuggestions()
     {
-        if(AddressSuggestionPopup())AddressSuggestionPopup().IsOpen(false);
+        mAddressSuggestionKeyboardFocus=false;
+        AddressSuggestionPanel().Visibility(Visibility::Collapsed);
     }
     void MainWindow::UpdateAddressSuggestions()
     {
         if(mClosing)return;
         auto editor=AddressBox();
-        auto pop=AddressSuggestionPopup();
+        auto panel=AddressSuggestionPanel();
         auto rows=AddressSuggestionRows();
         rows.Children().Clear();
         if(editor.Opacity()<0.5||
            editor.FocusState()==FocusState::Unfocused){
-            pop.IsOpen(false);
+            panel.Visibility(Visibility::Collapsed);
             return;
         }
         std::wstring prefix(editor.Text().c_str());
         if(!prefix.empty()&&prefix[0]==L'"')prefix.erase(0,1);
         if(prefix.size()<3||prefix.size()>1024){
-            pop.IsOpen(false);
+            panel.Visibility(Visibility::Collapsed);
             return;
         }
         std::vector<std::wstring> choices;
@@ -2653,9 +2643,8 @@ namespace winrt::FlyExplorer::implementation
             });
             rows.Children().Append(button);
         }
-        if(choices.empty()){pop.IsOpen(false);return;}
-        rows.Width((std::max)(160.0,editor.ActualWidth()-8.0));
-        pop.IsOpen(true);
+        if(choices.empty()){panel.Visibility(Visibility::Collapsed);return;}
+        panel.Visibility(Visibility::Visible);
     }
     void MainWindow::OnAddressTextChanged(IInspectable const&,
         TextChangedEventArgs const&)
@@ -2677,11 +2666,13 @@ namespace winrt::FlyExplorer::implementation
                                      Input::KeyRoutedEventArgs const& args)
     {
         if(args.Key()==Windows::System::VirtualKey::Down &&
-           AddressSuggestionPopup().IsOpen()&&
+           AddressSuggestionPanel().Visibility()==Visibility::Visible&&
            AddressSuggestionRows().Children().Size()>0){
             if(auto first=AddressSuggestionRows().Children().GetAt(0)
-                    .try_as<Button>())
+                    .try_as<Button>()){
+                mAddressSuggestionKeyboardFocus=true;
                 first.Focus(FocusState::Keyboard);
+            }
             args.Handled(true);
             return;
         }
@@ -2693,7 +2684,7 @@ namespace winrt::FlyExplorer::implementation
             args.Handled(true);
         }
         else if (args.Key()==Windows::System::VirtualKey::Escape) {
-            if(AddressSuggestionPopup().IsOpen()){
+            if(AddressSuggestionPanel().Visibility()==Visibility::Visible){
                 HideAddressSuggestions();
                 args.Handled(true);
                 return;
@@ -2709,6 +2700,7 @@ namespace winrt::FlyExplorer::implementation
     }
     void MainWindow::OnAddressGotFocus(IInspectable const&,RoutedEventArgs const&)
     {
+        mAddressSuggestionKeyboardFocus=false;
         AddressDisplayButton().Visibility(Visibility::Collapsed);
         AddressBox().Opacity(1.0);
         AddressBox().SelectAll();
@@ -2716,9 +2708,21 @@ namespace winrt::FlyExplorer::implementation
     void MainWindow::OnAddressLostFocus(IInspectable const&,RoutedEventArgs const&)
     {
         if(mClosing)return;
-        // Clicking a candidate transfers focus before its Click event.
-        // Keep the popup alive until the click is committed or dismissed.
-        if(AddressSuggestionPopup().IsOpen())return;
+        // Pointer Click arrives before this deferred focus reconciliation.
+        // Keyboard Down+Enter may deliberately keep a candidate focused.
+        if(AddressSuggestionPanel().Visibility()==Visibility::Visible){
+            auto weak=get_weak();
+            DispatcherQueue().TryEnqueue([weak]{
+                if(auto ui=weak.get()){
+                    if(ui->mClosing||ui->mAddressSuggestionKeyboardFocus||
+                       ui->AddressSuggestionPanel().Visibility()!=Visibility::Visible)
+                        return;
+                    ui->HideAddressSuggestions();
+                    ui->OnAddressLostFocus(nullptr,nullptr);
+                }
+            });
+            return;
+        }
         const auto address=Current().snapshot().parsingName;
         AddressBox().Text(hstring(FriendlyAddress(address)));
         UpdateBreadcrumb(address);
