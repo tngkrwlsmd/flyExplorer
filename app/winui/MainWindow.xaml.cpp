@@ -1542,7 +1542,11 @@ namespace winrt::FlyExplorer::implementation
     int MainWindow::DetailLayoutProfile() const
     {
         const double nav=mShellWidth<1040.0?156.0:188.0;
-        const double content=(std::max)(0.0,mShellWidth-nav-17.0);
+        // The opt-in Details pane consumes real width inside this shell grid.
+        // Without subtracting it, two narrow file panes retain extra columns
+        // and render filenames and sizes into the same visible pixels.
+        const double details=ActiveWindowTab().fileInfoPaneVisible?260.0:0.0;
+        const double content=(std::max)(0.0,mShellWidth-nav-17.0-details);
         const double pane=ActiveWindowTab().model.split?(std::max)(0.0,(content-1.0)/2.0):content;
         if(pane<250.0)return 0;
         if(pane<340.0)return 1;
@@ -2470,6 +2474,17 @@ namespace winrt::FlyExplorer::implementation
         auto& state=ActiveWindowTab();
         state.fileInfoPaneVisible=!state.fileInfoPaneVisible;
         ApplyFileInfoPaneLayout();
+        // The host Width is unchanged when the Details column expands.
+        // Re-evaluate each file list as if its viewport had been resized.
+        const int profile=DetailLayoutProfile();
+        for(int side=0;side<2;++side){
+            if(mDetailLayoutProfiles[side]!=profile){
+                mDetailLayoutProfiles[side]=profile;
+                if(mColumnControlsReady&&
+                   !ActiveWindowTab().model.panes[side].tabs.empty())
+                    FillFiles(side);
+            }else ApplyDetailColumnLayout(side);
+        }
         UpdateFileInfoPane();
     }
     void MainWindow::ApplyFileInfoPaneLayout()
