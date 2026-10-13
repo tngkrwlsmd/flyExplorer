@@ -39,10 +39,22 @@ def run(*,win,element,safe_click,focus,eventually,owned,left,right):
     left_count=len(pane_tabs(0))
     right_count=len(pane_tabs(1))
     assert left_count==right_count==1
-    owned_middle_click(row_for("Nested"))
-    eventually(lambda:len(pane_tabs(0))==left_count+1 and
-               "nested" in address(),
-               "F06 folder middle-click did not open pane-local tab",17)
+    row=row_for("Nested")
+    print("F06_PRE_MIDDLE_ROW",row.rectangle(),"TABS",left_count,right_count,
+          "ADDRESS_MATCH",bool(address()==initial),flush=True)
+    owned_middle_click(row)
+    try:
+        eventually(lambda:len(pane_tabs(0))==left_count+1 and
+                   "nested" in address(),
+                   "F06 folder middle-click did not open pane-local tab",17)
+    except AssertionError:
+        print("F06_MIDDLE_FAILURE_DIAG","LEFT_TABS",len(pane_tabs(0)),
+              "RIGHT_TABS",len(pane_tabs(1)),
+              "NESTED_ADDRESS","nested" in address(),
+              "ORIGINAL_ADDRESS",address()==initial,
+              "STATUS",element("StatusText").window_text(),
+              flush=True)
+        raise
     assert len(pane_tabs(1))==right_count
     assert element("WindowTabStrip").exists(timeout=.3)
     print("F06_MIDDLE_CLICK_FOLDER_LOCAL_PANE_TAB=PASS",flush=True)
