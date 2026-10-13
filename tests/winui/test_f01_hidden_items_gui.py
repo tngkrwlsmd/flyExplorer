@@ -81,8 +81,15 @@ def run(*, win, element, safe_click, focus, eventually, base, owned, left, right
         eventually(lambda: "숨김 항목" in element("StatusText").window_text(),
                    "owned hidden toggle did not dispatch", 8)
 
-    def shot(state):
-        guarded_foreground()
+    def shot(state, flyout_open=False):
+        if not flyout_open:
+            guarded_foreground()
+        else:
+            fg = user.GetForegroundWindow()
+            owner = W.DWORD()
+            if fg:
+                user.GetWindowThreadProcessId(fg, ct.byref(owner))
+            assert fg and owner.value == pid, "foreign popup foreground"
         bounds = win.rectangle()
         crop = (bounds.left + 12, bounds.top + 8,
                 bounds.right - 8, bounds.bottom - 8)
@@ -112,6 +119,10 @@ def run(*, win, element, safe_click, focus, eventually, base, owned, left, right
         "normal selected Shell item lost on hidden toggle")
     checked(True)
     shot("enabled")
+    menu()
+    shot("menu", flyout_open=True)
+    from pywinauto.keyboard import send_keys
+    send_keys("{ESC}", pause=.06)
     print("F01_HIDDEN_FILE_AND_FOLDER=PASS", flush=True)
 
     # Independent View states: right stays hidden until its own action.
