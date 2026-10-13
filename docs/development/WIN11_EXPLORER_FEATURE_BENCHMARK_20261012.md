@@ -84,6 +84,52 @@ XAML/handlers and requires focused confirmation before implementation.
 | F17 | Redesigned **customizable context menu** described by Microsoft on 2026-08-17 as rolling out to **Insiders** | Track the public API/interaction pattern; do not clone private Explorer settings, inject extension DLLs or assume GA |
 | F18 | File Explorer **AI actions**, document summarization and image edits on eligible hardware/cloud subscription | Defer; hardware, policy, license, privacy and actual user value must justify any integration |
 
+## F01 current matched visual acceptance — 2026-10-13
+
+- **Exact visual product source:** `eea2aff02095a86c02446f1146d7840e5b05a333`,
+  on `feat/f01-list-display-20261012`; original `main` baseline:
+  `bb4065bd4fd35c413ab7e16f0ff058e2af2821a0`.
+  Neither product source nor acceptance evidence has been merged to main.
+- [Owned Windows visual run 38326900487](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38326900487)
+  completed with `F01_VISUAL_RESULT_STATUS=PASS STAGE=complete`,
+  `F01_VISUAL_CAPTURE_COMPLETED=PASS` and
+  `F01_VISUAL_OWNED_CLEANUP=PASS`. Exact independent Release builds
+  and the focused Python file-display contract passed.
+- **VISUAL ACCEPTANCE: PASS for the tested 96-DPI light/dark Details
+  fixture.** Actual composited before/after PNGs were retrieved from the
+  successful run and directly inspected. In both themes the View flyout
+  items are aligned and readable, the selected filename remains selected,
+  compact row spacing is visibly reduced, and hiding an extension changes
+  only filesystem file labels. The selected check glyph is visible against
+  the row in both themes; in dark mode the improved white glyph is
+  distinguishable from the previously near-black check. No overlapping,
+  clipping or unreadable new View controls were identified in these
+  940x610-DIP-window captures, with 96-DPI actual desktop scaling.
+  Eight bounded app-owned screenshots were retained in the run log.
+- **Privacy/capture correction:** the original HWND bounding capture
+  contained a narrow strip of non-application desktop at the left edge.
+  The final capture uses the opaque interior inset (12 pixels left,
+  8 pixels other sides); the final inspected images contain only the
+  app-owned client content. Both source revisions use matching geometry.
+- **Validation chronology:** original actual-pixel collection
+  [38323204777](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38323204777)
+  proved baseline behavior but exposed the dark selection-glyph contrast
+  issue. [38325757051](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38325757051)
+  failed the candidate MSBuild step after a malformed implicit theme
+  dictionary. This was fixed by adding an explicit `ResourceDictionary`
+  and using WinUI's `ListViewItemCheckBrush` resource. Subsequent
+  [38326350703](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38326350703)
+  passed Release build but the capture worker misclassified a Python
+  stderr traceback as a PowerShell error; the final run invoked capture
+  through `cmd.exe` with locally redirected standard streams.
+  These failed attempts are historical diagnostics, not visual PASS.
+- **Still OPEN:** actual 125/150/200% OS DPI, new-option High Contrast,
+  actual Narrator speech, keyboard-only command navigation,
+  active/inactive pane and WindowTab state retention, narrower viewport
+  and icon-view layouts. Do not extrapolate the tested light/dark
+  Details fixture to those scenarios. Persistence and hidden-file
+  enumeration are separate incomplete F01 units.
+
 ## F01 visual capture checkpoint — 2026-10-13 (INCOMPLETE)
 
 - [Exact-source Windows visual task #38321743127](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38321743127)
