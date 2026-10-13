@@ -30,7 +30,17 @@ def main():
     parser.add_argument("--label", choices=("before", "after"), required=True)
     parser.add_argument("--source-sha", required=True)
     parser.add_argument("--theme", choices=("light", "dark"), required=True)
+    parser.add_argument("--window-width", type=int, default=940,
+                        help="Requested owned window width; 800-940 px")
+    parser.add_argument("--window-height", type=int, default=610,
+                        help="Requested owned window height; 550-610 px")
+    parser.add_argument("--capture-focus", action="store_true",
+                        help="Capture the focused Details toggle on the AFTER revision")
     args = parser.parse_args()
+    if not 800 <= args.window_width <= 940 or not 550 <= args.window_height <= 610:
+        parser.error("requested window geometry exceeds the bounded F02 fixture")
+    if args.capture_focus and args.label != "after":
+        parser.error("--capture-focus applies only to the AFTER revision")
     root = args.source.resolve(strict=True)
     output = args.output.resolve(strict=True)
     assert root.is_dir() and output.is_dir()
@@ -119,8 +129,8 @@ def main():
                     return
             raise AssertionError("refuse input/screenshot: foreground not owned by test app")
 
-        width = min(940, user.GetSystemMetrics(0)-75)
-        height = min(610, user.GetSystemMetrics(1)-85)
+        width = min(args.window_width, user.GetSystemMetrics(0)-75)
+        height = min(args.window_height, user.GetSystemMetrics(1)-85)
         assert width >= 800 and height >= 550, (width, height)
         assert user.SetWindowPos(hwnd, None, 35, 35, width, height, 0x0014)
         wait_until(lambda: abs(win.rectangle().width()-width) <= 3 and
@@ -157,8 +167,11 @@ def main():
         assert dpi > 0
         states = {}
 
-        def shot(state):
+        def shot(state, expected_focus=None):
             focus()
+            if expected_focus is not None:
+                assert expected_focus.has_keyboard_focus(), (
+                    "focused control lost keyboard focus before capture", state)
             image = ImageGrab.grab(bbox=capture_rect, include_layered_windows=True)
             assert image.size == (capture_rect[2] - capture_rect[0],
                                   capture_rect[3] - capture_rect[1])
@@ -183,12 +196,22 @@ def main():
             wait_until(lambda: win.child_window(auto_id="FileInfoHint").exists(timeout=.15),
                        "F02 details accessibility hint absent", seconds=7, interval=.15)
             shot("enabled")
+            if args.capture_focus:
+                button.set_focus()
+                wait_until(lambda: button.has_keyboard_focus(),
+                           "F02 Details toggle keyboard focus not exposed",
+                           seconds=6, interval=.15)
+                shot("focused-toggle", expected_focus=button)
+                print("F02_VISUAL_AFTER_FOCUSED_TOGGLE=PASS", flush=True)
             print("F02_VISUAL_AFTER_GUI_DETAILS=PASS", flush=True)
         assert process.poll() is None
 
         data = {
             "label": args.label, "theme": args.theme, "source_sha": args.source_sha,
-            "configuration": "Release", "window_rect": list(window_rect),
+            "configuration": "Release",
+            "requested_window": [args.window_width, args.window_height],
+            "focus_probe": args.capture_focus,
+            "window_rect": list(window_rect),
             "capture_rect": list(capture_rect),
             "dpi": dpi, "desktop": [user.GetSystemMetrics(0), user.GetSystemMetrics(1)],
             "fixture": "test-owned 4 synthetic names, left Details selected readme.txt",
