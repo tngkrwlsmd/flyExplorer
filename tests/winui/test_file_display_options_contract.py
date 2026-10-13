@@ -114,6 +114,16 @@ class FileDisplayOptionsContract(unittest.TestCase):
             "void MainWindow::UpdateViewPresentation(",1)[0]
         self.assertNotIn("PersistPreferences();",toggler)
 
+    def test_f01d_owned_restart_gui_contract(self):
+        fixture=body("tests/winui/test_m23_gui.py")
+        self.assertIn('FLY_F01D_SESSION_VIEW',fixture)
+        self.assertIn('F01D_REAL_RESTART_TWO_PANES_ALL_FOUR_VIEW_FLAGS=PASS',fixture)
+        self.assertIn('expected=(1,1,0,1)',fixture)
+        self.assertIn('expected=(0,1,0,0)',fixture)
+        self.assertIn('original[8]==3',fixture)
+        self.assertIn('child_window.child_window(auto_id="LeftFiles").click_input()',fixture)
+        self.assertIn('owner.value==pid',fixture)
+
     def test_hidden_items_only_change_pane_projection_not_native_identity(self):
         helper=body("app/winui/helper/FlyShellIsolationHelper.cpp")
         main=body("app/winui/MainWindow.xaml.cpp")

@@ -14,6 +14,40 @@ def run(*,win,element,safe_click,focus,eventually,
     assert left.is_dir() and right.is_dir() and left!=right
     profile=localdata/"flyExplorer"/"winui-session-v1.bin"
     assert profile.parent.parent==localdata
+    f01d=os.environ.get("FLY_F01D_SESSION_VIEW")=="YES"
+    if f01d:
+        from pywinauto.keyboard import send_keys
+        names=("ViewCheckboxesItem","ViewCompactRowsItem",
+               "ViewFileExtensionsItem","ViewHiddenItemsItem")
+        def view_menu(target, expected=None, change=()):
+            pid=target.element_info.process_id
+            assert pid>0
+            target.child_window(auto_id="ViewButton").click_input()
+            def peer(name):
+                def locate():
+                    matches=[x for w in Desktop(backend="uia").windows(process=pid)
+                             for x in w.descendants()
+                             if x.element_info.automation_id==name and
+                             x.element_info.process_id==pid]
+                    return matches[0] if len(matches)==1 else None
+                result=eventually(locate,"F01-D View option not found "+name,8)
+                assert result.element_info.process_id==pid
+                return result
+            if change:
+                assert len(change)==1
+                peer(change[0]).iface_toggle.Toggle()
+            else:
+                observed=[int(peer(name).iface_toggle.CurrentToggleState)
+                          for name in names]
+                assert observed==list(expected),(expected,observed)
+                # Close only a popup owned by this exact process.
+                target.set_focus()
+                foreground=ctypes.windll.user32.GetForegroundWindow()
+                owner=ctypes.c_ulong()
+                ctypes.windll.user32.GetWindowThreadProcessId(
+                    ctypes.c_void_p(foreground),ctypes.byref(owner))
+                assert foreground and owner.value==pid
+                send_keys("{ESC}")
     def visit(side,path,child):
         focus()
         # Explorer-like v1 retires the visual pane-title button. Activate the
@@ -29,8 +63,18 @@ def run(*,win,element,safe_click,focus,eventually,
              "isolated native child not loaded in pane "+str(side),17)
     visit(0,left,"Nested")
     focus();element("SortPicker").select(2)
+    if f01d:
+        safe_click(element("LeftFiles"))
+        for name in names:
+            view_menu(win.wrapper_object(),change=(name,))
+        view_menu(win.wrapper_object(),expected=(1,1,0,1))
     visit(1,right,"Secondary")
     focus();element("SortPicker").select(3)
+    if f01d:
+        safe_click(element("RightFiles"))
+        for name in ("ViewCompactRowsItem","ViewFileExtensionsItem"):
+            view_menu(win.wrapper_object(),change=(name,))
+        view_menu(win.wrapper_object(),expected=(0,1,0,0))
     if os.environ.get("FLY_M23_OWNED_DRAG_TEST")=="YES":
         # Physical in-window drag: strictly owned source and destination.
         from pywinauto import mouse
@@ -80,6 +124,8 @@ def run(*,win,element,safe_click,focus,eventually,
         "explicit opt-in local session file not atomically saved",15)
     original=profile.read_bytes()
     assert original.startswith(b"FXSESS23")
+    if f01d:
+        assert original[8]==3, "F01-D expects private session schema v3"
     print("REAL_M23_EXPLICIT_KOREAN_PRIVATE_SESSION_SAVE_WITH_REAL_TABS",True,flush=True)
     # Restart this EXACT owned private-preview binary and explicitly permit
     # the synthetic initial folder override for testing auto restore.
@@ -115,6 +161,16 @@ def run(*,win,element,safe_click,focus,eventually,
             return True
         eventually(ready,"owned restarted preview did not restore both distinct private folders",25)
         print("REAL_M23_SECOND_OWNED_PROCESS_AUTO_RESTORED_BOTH_KOREAN_PANES",True,flush=True)
+        if f01d:
+            child_window=Desktop(backend="uia").window(handle=owned_hwnd)
+            view_menu(child_window,expected=(0,1,0,0))
+            child_window.child_window(auto_id="LeftFiles").click_input()
+            eventually(lambda:"활성: 왼쪽" in
+                       child_window.child_window(auto_id="ActivePaneText").window_text(),
+                       "restored F01-D left pane did not activate",8)
+            view_menu(child_window,expected=(1,1,0,1))
+            print("F01D_REAL_RESTART_TWO_PANES_ALL_FOUR_VIEW_FLAGS=PASS",
+                  flush=True)
         assert profile.read_bytes()==original
     finally:
         if child.poll() is None:
