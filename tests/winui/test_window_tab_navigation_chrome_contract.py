@@ -104,16 +104,18 @@ class WindowTabChromeContract(unittest.TestCase):
         self.assertNotIn("AddressSuggestionPopup",impl)
         self.assertNotIn("<Popup ",xaml)
 
-    def test_f06_failed_navigation_restores_only_active_pane_address(self):
+    def test_f06_address_chrome_tracks_committed_not_pending_request(self):
         src=compact((ROOT/"app/winui/MainWindow.xaml.cpp").read_text(encoding="utf-8"))
+        keydown=src.split("void MainWindow::OnAddressKeyDown(",1)[1].split(
+            "void MainWindow::OnAddressGotFocus(",1)[0]
+        self.assertIn("const auto requested=ResolveFriendlyAddress(",keydown)
+        self.assertIn("OpenFolder(requested);",keydown)
+        self.assertIn("const auto committed=Current().snapshot().parsingName;",keydown)
+        self.assertIn("AddressBox().Text(hstring(FriendlyAddress(committed)))",keydown)
+        self.assertIn("UpdateBreadcrumb(committed)",keydown)
         failed=src.split("if(completed.kind==Kind::Failed)",1)[1].split(
             "if(completed.kind==Kind::Rejected)",1)[0]
-        self.assertIn("if(completed.active&&!continuation)",failed)
-        self.assertIn("if(completed.side==model.activePane)",failed)
-        self.assertIn("snapshot().parsingName",failed)
-        self.assertIn("HideAddressSuggestions()",failed)
-        self.assertIn("AddressBox().Text(hstring(FriendlyAddress(address)))",failed)
-        self.assertIn("UpdateBreadcrumb(address)",failed)
+        self.assertNotIn("AddressBox().Text(",failed)
         self.assertIn("UpdateNavigationChrome()",failed)
 
     def test_f06_quoted_loopback_unc_failure_is_owned_and_nonmutating(self):
