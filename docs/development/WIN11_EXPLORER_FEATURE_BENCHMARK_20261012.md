@@ -84,6 +84,246 @@ XAML/handlers and requires focused confirmation before implementation.
 | F17 | Redesigned **customizable context menu** described by Microsoft on 2026-08-17 as rolling out to **Insiders** | Track the public API/interaction pattern; do not clone private Explorer settings, inject extension DLLs or assume GA |
 | F18 | File Explorer **AI actions**, document summarization and image edits on eligible hardware/cloud subscription | Defer; hardware, policy, license, privacy and actual user value must justify any integration |
 
+## F01 keyboard, cross-pane/WindowTab and narrow viewport GUI — 2026-10-13
+
+- **Exact source and test SHA:** `4d08b5aa159d9f94cf19a6d04cfe14673b66e5a7`,
+  feature branch only, baseline `main` remains unchanged.
+- [Central Windows run 38328508589](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38328508589)
+  completed successfully. `F01GUI_RESULT_STATUS=PASS STAGE=complete`,
+  `F01GUI_SOURCE_RELEASE_AND_GUI=PASS`, and
+  `F01GUI_OWNED_CLEANUP=PASS`. The test executed on a non-elevated
+  interactive user session with exact commit pinning, an independent x64
+  Release build, focused Python source contract, owned foreground guard,
+  native Shell startup and a normal app exit.
+- **Actual keyboard interaction PASS:** focused native View button with
+  Enter, focused exact `ToggleMenuFlyoutItem` AutomationId, dispatched
+  physical Space for selection checkboxes, compact rows, and filename
+  extensions. Verified each subsequent flyout toggle state, compact
+  row-height reduction and hidden-extension original-name automation
+  contract. No pointer/UIA TogglePattern action substituted for those
+  three keyboard operations.
+- **Left/right pane isolation PASS:** the left pane's checkbox, compact,
+  extension visibility survived activating the right pane. The right
+  pane retained its independent default flags and original filename;
+  changing its compact setting did not alter the left pane.
+- **WindowTab isolation PASS:** Ctrl+T opened a new independent default
+  tab with all three view flags reset to defaults. Changing the new
+  tab's checkbox setting did not change tab A. Ctrl+Shift+Tab and Ctrl+Tab
+  restored both tabs' distinct view-menu toggle states and original
+  filename presentation.
+- **Narrow real GUI PASS for one 800x570 window at the actual 96 DPI
+  desktop configuration.** Repositioned only the test-owned app HWND
+  and verified View/Sort buttons, both file lists, status, and WindowTab
+  strip are visible and fully contained inside the HWND. Independently
+  inspected the captured opaque app-only `f01-interaction-narrow-owned.png`
+  pixels: no obvious clipping, overlap or unreadable toolbar controls;
+  compact responsive Details columns and both native file lists remain
+  readable. This is not actual 125/150/200%-scale certification or
+  blanket minimum-window/alternate-view acceptance.
+- The test is `tests/winui/test_f01_keyboard_pane_narrow_gui.py`,
+  invoked by `FLY_F01_INTERACTION_ONLY=YES` through the existing
+  `test_shell_gui.py` owned-proc fixture. Input and screenshots are
+  refused unless the foreground HWND belongs to the launched exact
+  test process; the OS display scaling and user preferences are not
+  changed. The central request slot was returned to idle in control
+  commit `9fb252d3d7f24382ed2753ca214991237342476a`.
+- **Still OPEN:** true High Contrast for these new View options,
+  system 125/150/200% scaling, Narrator spoken behavior,
+  remaining alternate file views, durable F01 preferences/session
+  persistence and hidden-item enumeration. No whole-F01 release
+  certification or main merge is claimed.
+
+## F01 current matched visual acceptance — 2026-10-13
+
+- **Exact visual product source:** `eea2aff02095a86c02446f1146d7840e5b05a333`,
+  on `feat/f01-list-display-20261012`; original `main` baseline:
+  `bb4065bd4fd35c413ab7e16f0ff058e2af2821a0`.
+  Neither product source nor acceptance evidence has been merged to main.
+- [Owned Windows visual run 38326900487](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38326900487)
+  completed with `F01_VISUAL_RESULT_STATUS=PASS STAGE=complete`,
+  `F01_VISUAL_CAPTURE_COMPLETED=PASS` and
+  `F01_VISUAL_OWNED_CLEANUP=PASS`. Exact independent Release builds
+  and the focused Python file-display contract passed.
+- **VISUAL ACCEPTANCE: PASS for the tested 96-DPI light/dark Details
+  fixture.** Actual composited before/after PNGs were retrieved from the
+  successful run and directly inspected. In both themes the View flyout
+  items are aligned and readable, the selected filename remains selected,
+  compact row spacing is visibly reduced, and hiding an extension changes
+  only filesystem file labels. The selected check glyph is visible against
+  the row in both themes; in dark mode the improved white glyph is
+  distinguishable from the previously near-black check. No overlapping,
+  clipping or unreadable new View controls were identified in these
+  940x610-DIP-window captures, with 96-DPI actual desktop scaling.
+  Eight bounded app-owned screenshots were retained in the run log.
+- **Privacy/capture correction:** the original HWND bounding capture
+  contained a narrow strip of non-application desktop at the left edge.
+  The final capture uses the opaque interior inset (12 pixels left,
+  8 pixels other sides); the final inspected images contain only the
+  app-owned client content. Both source revisions use matching geometry.
+- **Validation chronology:** original actual-pixel collection
+  [38323204777](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38323204777)
+  proved baseline behavior but exposed the dark selection-glyph contrast
+  issue. [38325757051](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38325757051)
+  failed the candidate MSBuild step after a malformed implicit theme
+  dictionary. This was fixed by adding an explicit `ResourceDictionary`
+  and using WinUI's `ListViewItemCheckBrush` resource. Subsequent
+  [38326350703](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38326350703)
+  passed Release build but the capture worker misclassified a Python
+  stderr traceback as a PowerShell error; the final run invoked capture
+  through `cmd.exe` with locally redirected standard streams.
+  These failed attempts are historical diagnostics, not visual PASS.
+- **Still OPEN:** actual 125/150/200% OS DPI, new-option High Contrast,
+  actual Narrator speech, keyboard-only command navigation,
+  active/inactive pane and WindowTab state retention, narrower viewport
+  and icon-view layouts. Do not extrapolate the tested light/dark
+  Details fixture to those scenarios. Persistence and hidden-file
+  enumeration are separate incomplete F01 units.
+
+## F01 visual capture checkpoint — 2026-10-13 (INCOMPLETE)
+
+- [Exact-source Windows visual task #38321743127](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38321743127)
+  pinned `main=bb4065bd4fd35c413ab7e16f0ff058e2af2821a0`
+  and `F01=7977997117c5c3cfeeb70be791d46a8e88fab87a`.
+  The worker progressed to `capture-light-before` after both independent
+  Release build stages; no screenshot evidence was accepted.
+- It failed at Git's **dubious repository ownership** check because
+  SYSTEM cloned the test checkout and an interactive user ran the
+  screenshot harness. This is a harness/infrastructure failure, not
+  evidence of a flyExplorer UI defect.
+- The source-only correction in
+  `tests/winui/test_f01_visual_capture_gui.py` at
+  `2d8d38237dbda0cf13e7934edc4e201c34a568c9`
+  sets `git -c safe.directory=<exact test-owned checkout>`
+  only on the one SHA check; no global Git trust or other machine
+  preference is modified. This updated screenshot harness is not yet
+  independently run.
+- The failed owned Windows task printed `F01_VISUAL_OWNED_CLEANUP=PASS`.
+  The shared `personal-control-plane` request slot still contained its
+  **completed** earlier command at last read. Until it is safely restored
+  to idle, do not overwrite an active request or submit another run.
+- **Visual acceptance: NOT TESTED.** Matched light/dark, menu, selection,
+  density and filename states still require retained captures and actual
+  pixel inspection. The prior focused functional GUI PASS
+  ([#38318791974](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38318791974))
+  remains valid for its exact tested source.
+
+## F01 accepted functional scope — 2026-10-13
+
+- **Current evidence-scoped product and test revision:**
+  `79813b84fe0fcb607d9533b7f09eac0c43f5a14b` on
+  `feat/f01-list-display-20261012`, **not merged to main**.
+- [Central owned Windows run 38318791974](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38318791974)
+  finished successfully: `F01GUI_RESULT_STATUS=PASS STAGE=complete`,
+  `F01GUI_SOURCE_RELEASE_AND_GUI=PASS`, and
+  `F01GUI_OWNED_CLEANUP=PASS`. Its focused owned fixture exercised View
+  selection checkbox toggling, compact Details-row height reduction/restore,
+  filename-extension hide/restore with full native accessibility name, and
+  selection identity retention. The Release build and source contracts passed.
+- **Cause of earlier GUI failures was classified, not ignored.**
+  The initial session had no foreground HWND
+  ([38315380764](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38315380764));
+  a later owned probe confirmed an interactive foreground HWND
+  ([38316628159](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38316628159)).
+  Pointer-based menu automation then hit the prior checkbox command
+  instead of the compact-row command; an unsupported `InvokePattern`
+  attempt failed at `NoPatternInterfaceError`. The correction uses the
+  actual `ToggleMenuFlyoutItem` UIA `TogglePattern` with exact
+  AutomationId, process-owner and dispatched-status checks. A speculative
+  product `Height(26)` override was reverted because no product row-height
+  bug had been proven. Do not reintroduce it as a presumed fix.
+- **Functional GUI PASS is scoped** to the selected left-pane local fixture
+  at the tested native desktop configuration. Full mouse/keyboard pointer
+  parity, every view mode, cross-pane/WindowTab rehydration, high-DPI or
+  Narrator speech are not certified by this focused test.
+- **VISUAL ACCEPTANCE: NOT TESTED.** The owned script wrote app-window
+  screenshots, but its ephemeral checkout/fixture was cleaned at completion;
+  no independent BEFORE current-main vs AFTER candidate pixel inspection
+  has been carried out. Actual matched light/dark, focus/selection,
+  split/narrow and suitable High Contrast visual review remains required
+  before main integration. Do not equate the `GUI PASS` with pixel PASS.
+- Deferred F01 units: hidden-item enumeration and durable private
+  preference/session persistence. The pane-local *display-only*
+  filename-extension toggle is implemented and exercised in the above run.
+
+## F01-A implementation checkpoint — historical source/Release evidence
+
+- **Candidate product/source SHA:** `e147efb6bfe7d4f6176da6c8954a5910ce00a2c8`,
+  isolated branch `feat/f01-list-display-20261012`, not merged into `main`.
+- The View menu has **selection checkboxes** and **compact Details/List row
+  spacing** toggles for the active pane. The state is isolated per
+  WindowTab/pane, defaults OFF, and is not saved across process restart.
+  Rendering reprojects native-path selection without changing
+  Shell enumeration, transfer, filters, sorting or system preferences.
+- **Exact-source owned Windows acceptance: PASS for focused Python source
+  contract + x64 Release build** in
+  [central Remote Shell 38251419251](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38251419251).
+  A non-elevated interactive-user test task ran the tests/build, the wrapper
+  checked the exact SHA and returned `F01B_SOURCE_AND_RELEASE=PASS`;
+  `F01B_OWNED_CLEANUP=PASS`. Earlier failed attempts were SYSTEM Python
+  PATH or PowerShell test harness issues and are not product defects.
+- **2026-10-13 owned GUI attempt: NOT ACCEPTED (focus environment/harness gate).**
+  Candidate code remains the accepted product `e147efb6...`; focused GUI
+  harness revisions `cb1b5a1a94b34a5834760a97efe1583bf320e383` and
+  `4d79c195c8d08ae97f2dd193fbc39ab01f650781` add a test-owned
+  View-menu, checkbox, compact-spacing and selection-retention probe.
+  [Remote Shell 38312506917](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38312506917)
+  reached its `gui` stage after source checks, Release build and
+  test syntax preflight. The GUI worker exited 1 at the existing guarded
+  physical-input precondition: `Refusing physical input: foreground belongs
+  to a user window`. The bounded log does not establish which F01 assertion,
+  if any, ran before this failure. This is **not** product GUI PASS or a
+  proven product defect; do not disable the focus guard or rerun unchanged.
+  The exact-owned scheduled task and scratch fixture cleanup completed
+  (`F01C_OWNED_CLEANUP=PASS`), and the central Remote Shell slot was
+  restored idle in control commit `011aef222f5a81886e0eea17d3b1c38913352ae1`.
+  Next: read-only inspect the actual unlocked interactive desktop/focus owner;
+  change the proven environment or harness precondition before attempting
+  a new acceptance run.
+- **Still OPEN:** actual new-control functional GUI interaction; keyboard/UIA
+  selection semantics and left/right/window-tab rehydration; matched
+  before/after product screenshot inspection in light/dark, split/narrow and
+  appropriate High Contrast states; actual 125/150/200% DPI and Narrator speech
+  if the environment permits. Do not call F01-A UI acceptance PASS or merge
+  solely from a successful build.
+- **Deferred F01 work:** filesystem hidden-item enumeration and
+  filename-extension display semantics, and durable private preference/session
+  persistence. These are separate change/verification boundaries.
+
+## F01-B candidate — view-only file extension visibility (2026-10-13)
+
+- Branch: `feat/f01-list-display-20261012` (not merged to `main`).
+  **View → 파일 확장명 표시** defaults to checked and is independently
+  toggled for each WindowTab/pane. The checkbox state is memory-only.
+- Hiding extensions affects only rendered filenames of filesystem *files*.
+  Dotfiles, dotted folder names, non-filesystem Shell objects, and trailing
+  dots remain intact. `archive.tar.gz` displays `archive.tar`.
+  The full original filename remains in automation narration and all
+  native path identities, filtering, sorting, selection, rename and transfer.
+- The C++ presenter has compile-time guards for representative names,
+  Korean Unicode, virtual items and edge cases.
+- **Exact product-source contract + Windows x64 Release build: PASS** on
+  `c200c512b75c83fd7d674fd0287cd01af0c4a5bf` in
+  [central Remote Shell 38315864755](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38315864755).
+  Wrapper results: `F01D_EXACT_SOURCE` matches, `F01D_RESULT_STATUS=PASS
+  STAGE=complete`, `F01D_SOURCE_AND_RELEASE=PASS`, and
+  `F01D_OWNED_CLEANUP=PASS`. The shared Remote Shell request was returned
+  idle in control commit `4db7f19f0ad94f4fa1da64838840745933ab3ac6`.
+  This is **not** an actual GUI/visual acceptance result.
+- **GUI/visual still NOT ACCEPTED.** The focused owned GUI harness now
+  includes display-only extension hide/restore, UIA original-filename and
+  selection identity checks, plus a capture marker. This follow-up harness
+  revision is separate from the exactly built product source above and
+  remains unexecuted on the inaccessible foreground desktop.
+  The 2026-10-13 read-only Windows focus probe,
+  [38315380764](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38315380764),
+  saw exactly one Explorer user session but `GetForegroundWindow()==NULL`
+  from that interactive-session task. Desktop lock/input availability cannot
+  be inferred more precisely; do not circumvent owned foreground guards.
+  Owned diagnostic task/files were cleaned and the Remote Shell slot
+  returned idle in control commit `1256f38cdffe26b892fac799d4544c21210b500c`.
+- F01 hidden-file enumeration and durable preference/session persistence are
+  later independent units.
+
 ## Recommended execution order
 
 1. **F01 — display options.** Small self-contained visible improvement;

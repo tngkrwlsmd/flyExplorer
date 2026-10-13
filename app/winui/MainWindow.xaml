@@ -9,6 +9,19 @@
           Background="Transparent"
           SizeChanged="OnShellSizeChanged">
     <Grid.Resources>
+        <ResourceDictionary>
+        <!-- F01: keep a native ListViewItem selection glyph with contrast.
+             High Contrast retains the system brush, not these overrides. -->
+        <ResourceDictionary.ThemeDictionaries>
+            <ResourceDictionary x:Key="Light">
+                <SolidColorBrush x:Key="ListViewItemCheckBrush"
+                                 Color="#FF202020"/>
+            </ResourceDictionary>
+            <ResourceDictionary x:Key="Dark">
+                <SolidColorBrush x:Key="ListViewItemCheckBrush"
+                                 Color="#FFF5F5F5"/>
+            </ResourceDictionary>
+        </ResourceDictionary.ThemeDictionaries>
         <Style x:Key="ExplorerIconButtonStyle" TargetType="Button">
             <Setter Property="Width" Value="32"/>
             <Setter Property="Height" Value="32"/>
@@ -66,6 +79,7 @@
             <Setter Property="BorderThickness" Value="0"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
         </Style>
+        </ResourceDictionary>
     </Grid.Resources>
         <Grid.RowDefinitions>
             <RowDefinition Height="34"/>

@@ -350,6 +350,10 @@ namespace winrt::FlyExplorer::implementation
             if(auto ui=nativeWeak.get())ui->UpdateView(index);
         });
         fileBar()->SetViewIndex(initialView);
+        fileBar()->SetListDisplay([nativeWeak](int option){
+            if(auto ui=nativeWeak.get())ui->ToggleListDisplay(option);
+        });
+        fileBar()->SetListDisplayState(false,false,true);
         const auto dispatch=DispatcherQueue();
         const auto weak=get_weak();
         // The worker owns NO MainWindow/WinRT UI object. Cross-apartment
@@ -1579,11 +1583,34 @@ namespace winrt::FlyExplorer::implementation
         }
     }
 
+    void MainWindow::ToggleListDisplay(int option)
+    {
+        if(option<0||option>2)return;
+        const int side=ActiveWindowTab().model.activePane;
+        auto& state=ActiveWindowTab().fileLists[side];
+        if(option==0)state.showSelectionCheckboxes=!state.showSelectionCheckboxes;
+        else if(option==1)state.compactRows=!state.compactRows;
+        else state.showFileExtensions=!state.showFileExtensions;
+        fileBar()->SetListDisplayState(
+            state.showSelectionCheckboxes,state.compactRows,
+            state.showFileExtensions);
+        // FillFiles restores real selections by Shell parsing identity.
+        FillFiles(side);
+        UpdateSelectionChrome();
+        UpdateFooterSummary();
+        StatusText().Text(option==0?
+            L"현재 창의 선택 확인란 표시를 변경했습니다.":
+            option==1?L"현재 창의 목록 간격을 변경했습니다.":
+            state.showFileExtensions?L"현재 창의 파일 확장명을 표시합니다.":
+                                     L"현재 창의 파일 확장명을 숨깁니다.");
+    }
     void MainWindow::UpdateViewPresentation(int side)
     {
         auto view=side==0?LeftFiles():RightFiles();
         auto header=side==0?LeftDetailsHeader():RightDetailsHeader();
-        const auto viewMode=ActiveWindowTab().fileLists[side].viewMode;
+        auto const& display=ActiveWindowTab().fileLists[side];
+        view.IsMultiSelectCheckBoxEnabled(display.showSelectionCheckboxes);
+        const auto viewMode=display.viewMode;
         const bool details=viewMode==FileViewMode::Details;
         header.Height(details?24.0:0.0);
         const auto visibility=details?Visibility::Visible:Visibility::Collapsed;
@@ -1731,6 +1758,10 @@ namespace winrt::FlyExplorer::implementation
             return indexedProjection?nameIndex[index].isFolder():
                                      items[index].isFolder();
         };
+        auto filesystemAt=[&](size_t index)->bool{
+            return indexedProjection?nameIndex[index].isFileSystem():
+                                     items[index].isFileSystem();
+        };
         auto logicalAt=[&](size_t index)->std::uint64_t{
             return indexedProjection?static_cast<std::uint64_t>(index):
                 snapshot.logicalIndex(index);
@@ -1823,6 +1854,8 @@ namespace winrt::FlyExplorer::implementation
             const auto& itemLabel=labelAt(index);
             const auto& itemParsing=parsingAt(index);
             const bool itemFolder=folderAt(index);
+            const auto displayName=fxfile::previewlist::visibleFileName(
+                itemLabel,itemFolder,filesystemAt(index),state.showFileExtensions);
             auto const* metadata=metadataReady&&
                 (indexedProjection||residentReady)?
                 &state.metadata[indexedProjection?index:resident]:nullptr;
@@ -1883,7 +1916,9 @@ namespace winrt::FlyExplorer::implementation
             };
             ListViewItem row;
             auto label=std::wstring(itemFolder?L"[폴더]  ":L"[파일]  ")+
-                       itemLabel;
+                       std::wstring(displayName);
+            if(displayName!=std::wstring_view(itemLabel))
+                label+=L" | 실제 파일 이름: "+itemLabel;
             if(!typeLabel.empty())label+=L"   |   "+typeLabel;
             if(metadata&&metadata->sizeKnown)
                 label+=L"   |   "+metadata->bytesLabel;
@@ -1964,7 +1999,7 @@ namespace winrt::FlyExplorer::implementation
             }
             addFilterBadge(nameCell);
             TextBlock filename;
-            filename.Text(itemLabel);
+            filename.Text(hstring(displayName));
             if(accent)filename.Foreground(accent);
             filename.TextTrimming(TextTrimming::CharacterEllipsis);
             if(localDrive){
@@ -2044,7 +2079,7 @@ namespace winrt::FlyExplorer::implementation
                     glyph.Glyph(hstring(itemFolder?L"\uE8B7":L"\uE8A5"));glyph.FontSize(large?60.0:(medium?36.0:(smallIcons?20.0:16.0)));cell.Children().Append(glyph);
                 }
                 addFilterBadge(cell);
-                TextBlock filename;filename.Text(itemLabel);
+                TextBlock filename;filename.Text(hstring(displayName));
                 if(accent)filename.Foreground(accent);
                 if(iconGrid){filename.FontSize(12.0);filename.Width(large?104.0:84.0);filename.TextAlignment(TextAlignment::Center);filename.TextWrapping(TextWrapping::WrapWholeWords);filename.MaxLines(2);filename.TextTrimming(TextTrimming::CharacterEllipsis);}
                 else{filename.TextTrimming(TextTrimming::CharacterEllipsis);if(smallIcons){filename.FontSize(12.0);filename.Width(120);}}
@@ -2053,6 +2088,12 @@ namespace winrt::FlyExplorer::implementation
                 else if(smallIcons){row.Width(160);row.Height(32);row.Padding(Thickness{5.0,0.0,5.0,0.0});}
                 else if(large){row.Width(112);row.Height(128);row.Padding(Thickness{2.0});row.HorizontalContentAlignment(HorizontalAlignment::Center);}
                 else{row.Width(92);row.Height(92);row.Padding(Thickness{2.0});row.HorizontalContentAlignment(HorizontalAlignment::Center);}
+            }
+            if(state.compactRows &&
+               (state.viewMode==FileViewMode::Details||
+                state.viewMode==FileViewMode::List)){
+                row.MinHeight(26);
+                row.Padding(Thickness{4.0,0.0,4.0,0.0});
             }
             if(decoratedRule){
                 label+=L" | 필터 프리셋: "+decoratedRule->name;
@@ -2286,6 +2327,10 @@ namespace winrt::FlyExplorer::implementation
         UpdateFooterSummary();
         fileBar()->SetSortIndex(ActiveWindowTab().fileLists[ActiveWindowTab().model.activePane].sortMode);
         fileBar()->SetViewIndex(static_cast<int>(ActiveWindowTab().fileLists[ActiveWindowTab().model.activePane].viewMode));
+        fileBar()->SetListDisplayState(
+            ActiveWindowTab().fileLists[ActiveWindowTab().model.activePane].showSelectionCheckboxes,
+            ActiveWindowTab().fileLists[ActiveWindowTab().model.activePane].compactRows,
+            ActiveWindowTab().fileLists[ActiveWindowTab().model.activePane].showFileExtensions);
         UpdateSortPresentation(ActiveWindowTab().model.activePane);
         StatusText().Text(status);
         Title(L"flyExplorer · "+hstring(nav.snapshot().displayName));
@@ -2325,6 +2370,10 @@ namespace winrt::FlyExplorer::implementation
         UpdateActivePaneChrome();
         fileBar()->SetSortIndex(ActiveWindowTab().fileLists[side].sortMode);
         fileBar()->SetViewIndex(static_cast<int>(ActiveWindowTab().fileLists[side].viewMode));
+        fileBar()->SetListDisplayState(
+            ActiveWindowTab().fileLists[side].showSelectionCheckboxes,
+            ActiveWindowTab().fileLists[side].compactRows,
+            ActiveWindowTab().fileLists[side].showFileExtensions);
         UpdateSortPresentation(side);
         UpdateSelectionChrome();
         UpdateFooterSummary();
