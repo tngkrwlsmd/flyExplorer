@@ -18,7 +18,8 @@ class F02ReadOnlyDetailsContract(unittest.TestCase):
         for field in ("FileInfoHint","FileInfoName","FileInfoType",
                       "FileInfoLocation","FileInfoSize","FileInfoModified"):
             self.assertEqual(nodes[field].tag.split("}")[-1],"TextBlock")
-            self.assertTrue(nodes[field].get("AutomationProperties.Name"))
+            self.assertEqual(nodes[field].get("TextWrapping"),"Wrap")
+            self.assertIsNone(nodes[field].get("AutomationProperties.Name"))
 
     def test_window_tab_owns_opt_in_and_no_global_preferences(self):
         state=read("app/winui/window_tab_state.h")
