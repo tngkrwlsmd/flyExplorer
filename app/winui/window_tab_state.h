@@ -12,5 +12,6 @@ struct WindowTabState final {
     fxfile::explorerui::Model model;
     std::array<fxfile::previewlist::PaneState,2> fileLists{};
     std::uint32_t splitPermille=500;
+    bool fileInfoPaneVisible=false; // WindowTab-local, opt-in, not session persisted.
 };
 } // namespace fxfile::previewtabs
