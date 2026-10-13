@@ -22,8 +22,16 @@ def run(*,win,element,safe_click,eventually,left,right):
                "F02 left file metadata did not track selection",9)
     assert element("FileInfoLocation").window_text().lower()==str(left).lower()
     assert element("FileInfoHint").window_text()=="왼쪽 창 선택 항목"
-    assert element("FileInfoSize").window_text()
-    assert element("FileInfoModified").window_text()
+    # Size/date can be below the in-layout ScrollViewer viewport on
+    # smaller windows. Reveal them using the owned file-info region.
+    from pywinauto import mouse
+    location=element("FileInfoLocation")
+    rect=location.rectangle()
+    mouse.scroll(wheel_dist=-5,coords=(rect.mid_point().x,rect.mid_point().y))
+    eventually(lambda:element("FileInfoSize").window_text() and
+               element("FileInfoModified").window_text(),
+               "F02 size/date not exposed after details scroll",12)
+    mouse.scroll(wheel_dist=5,coords=(rect.mid_point().x,rect.mid_point().y))
     print("F02_LEFT_READONLY_FILE_INFORMATION=PASS",flush=True)
 
     right_row=eventually(lambda:row(1,"Secondary"),
@@ -33,7 +41,12 @@ def run(*,win,element,safe_click,eventually,left,right):
                "F02 right selection did not replace stale left metadata",9)
     assert element("FileInfoHint").window_text()=="오른쪽 창 선택 항목"
     assert element("FileInfoLocation").window_text().lower()==str(right).lower()
-    assert element("FileInfoSize").window_text()=="폴더"
+    location=element("FileInfoLocation")
+    rect=location.rectangle()
+    mouse.scroll(wheel_dist=-5,coords=(rect.mid_point().x,rect.mid_point().y))
+    eventually(lambda:element("FileInfoSize").window_text()=="폴더",
+               "F02 right folder size absent after details scroll",12)
+    mouse.scroll(wheel_dist=5,coords=(rect.mid_point().x,rect.mid_point().y))
     print("F02_ACTIVE_PANE_SELECTION_ISOLATION=PASS",flush=True)
 
     safe_click(button)
