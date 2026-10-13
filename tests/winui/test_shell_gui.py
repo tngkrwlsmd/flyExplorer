@@ -168,6 +168,13 @@ try:
      for e in element("LeftFiles").descendants()),
      "async native Shell directory items never displayed",12)
  print("REAL_FILE_LIST_IN_LEFT_PANE",True,flush=True)
+ if os.environ.get("FLY_F06_GESTURES_ONLY")=="YES":
+  from test_f06_gestures_gui import run as f06_probe
+  f06_probe(win=win,element=element,safe_click=safe_click,
+            focus=ensure_owned_focus,eventually=eventually,
+            owned=owned,left=left,right=right)
+  print("F06_OWNED_GUI_PASS",True,flush=True)
+  raise SystemExit(0)
  if os.environ.get("FLY_F01_HIDDEN_ONLY")=="YES":
   from test_f01_hidden_items_gui import run as f01_hidden
   f01_hidden(win=win,element=element,safe_click=safe_click,

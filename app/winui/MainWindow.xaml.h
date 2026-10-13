@@ -346,6 +346,7 @@ namespace winrt::FlyExplorer::implementation
         void ActivatePane(int side);
         void UpdateActivePaneChrome();
         void OpenSelectedFolder(int side);
+        void OpenFolderInNewPaneTab(int side,std::wstring path);
         void ApplyWorkspace(fxfile::preview::Workspace&&);
         void QueueNextWorkspaceTab(int side);
         using SearchController=fxfile::previewsearch::SearchController;

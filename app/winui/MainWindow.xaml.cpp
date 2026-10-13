@@ -70,6 +70,14 @@ namespace {
 
     std::wstring ResolveFriendlyAddress(std::wstring value)
     {
+        // Explorer accepts pasted quoted absolute/UNC paths. Remove exactly
+        // one surrounding pair, never modify an interior whitespace or slash.
+        auto const first=value.find_first_not_of(L" \t\r\n");
+        auto const last=value.find_last_not_of(L" \t\r\n");
+        if(first!=std::wstring::npos && last>first &&
+           value[first]==L'"' && value[last]==L'"'){
+            value=value.substr(first+1,last-first-1);
+        }
         if(value==L"\uB0B4 PC")return L"shell:MyComputerFolder";
         return value;
     }
@@ -2614,7 +2622,25 @@ namespace winrt::FlyExplorer::implementation
             button.Content(winrt::box_value(hstring(seg.label)));button.Tag(winrt::box_value(hstring(seg.target)));
             button.FontWeight(current?Windows::UI::Text::FontWeights::SemiBold():Windows::UI::Text::FontWeights::Normal());
             Microsoft::UI::Xaml::Automation::AutomationProperties::SetName(button,L"\uC8FC\uC18C \uACBD\uB85C: "+hstring(seg.label));
-            button.Click({this,&MainWindow::OnBreadcrumbSegmentClicked});panel.Children().Append(button);
+            button.Click({this,&MainWindow::OnBreadcrumbSegmentClicked});
+            auto weak=get_weak();
+            using Microsoft::UI::Xaml::Input::PointerEventHandler;
+            button.AddHandler(UIElement::PointerPressedEvent(),
+                box_value(PointerEventHandler{[weak](
+                    IInspectable const& sender,
+                    Microsoft::UI::Xaml::Input::PointerRoutedEventArgs const& args){
+                    auto target=sender.try_as<Button>();
+                    if(!target||!target.Tag()||
+                       !args.GetCurrentPoint(target).Properties().IsMiddleButtonPressed())return;
+                    if(auto ui=weak.get()){
+                        const auto path=std::wstring(
+                            unbox_value<hstring>(target.Tag()).c_str());
+                        ui->OpenFolderInNewPaneTab(
+                            ui->ActiveWindowTab().model.activePane,path);
+                        args.Handled(true);
+                    }
+                }}),true);
+            panel.Children().Append(button);
         };
         auto separator=[&](){TextBlock glyph;glyph.Text(L"\u203A");glyph.Opacity(0.52);glyph.VerticalAlignment(VerticalAlignment::Center);panel.Children().Append(glyph);};
         if(segments.empty())segments.push_back({friendly,address});
@@ -2667,6 +2693,22 @@ namespace winrt::FlyExplorer::implementation
                 if(mColumnControlsReady&&!ActiveWindowTab().model.panes[side].tabs.empty())FillFiles(side);
             }else ApplyDetailColumnLayout(side);
         }
+    }
+    void MainWindow::OpenFolderInNewPaneTab(int side,std::wstring path)
+    {
+        if(side<0||side>1||path.empty())return;
+        auto& model=ActiveWindowTab().model;
+        if(side==1&&!model.split)return;
+        auto const& pane=model.panes[static_cast<size_t>(side)];
+        if(pane.tabs.size()>=fxfile::explorerui::kMaxTabsPerPane){
+            StatusText().Text(L"창마다 탭은 최대 32개까지 지원합니다.");
+            return;
+        }
+        if(!mWorkspace.dispatch(fxfile::explorerui::Command::AddTab,side)
+                      .accepted)return;
+        mWorkspaceRestore.reset(side);
+        QueuePath(side,std::move(path));
+        Refresh(L"새 탭의 폴더를 불러오는 중입니다.");
     }
     void MainWindow::OnNewTabClicked(IInspectable const&,RoutedEventArgs const&)
     {
