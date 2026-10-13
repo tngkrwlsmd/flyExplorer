@@ -84,6 +84,24 @@ XAML/handlers and requires focused confirmation before implementation.
 | F17 | Redesigned **customizable context menu** described by Microsoft on 2026-08-17 as rolling out to **Insiders** | Track the public API/interaction pattern; do not clone private Explorer settings, inject extension DLLs or assume GA |
 | F18 | File Explorer **AI actions**, document summarization and image edits on eligible hardware/cloud subscription | Defer; hardware, policy, license, privacy and actual user value must justify any integration |
 
+## F06-C known-folder address suggestions — 2026-10-13
+
+- Maintains the existing address TextBox/UIA address identity. Up to eight
+  matching path suggestions appear inline from currently loaded tabs and
+  bounded indexed filesystem folders. Candidate selection navigates the
+  same pane/tab; Escape dismisses the suggestions. The suggestions never
+  enumerate the disk or initiate remote UNC connections while typing.
+- [Windows run 38377574604](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38377574604)
+  passed source, Release build, real candidate selection, Escape, normal
+  process exit and test-owned cleanup at
+  `d9a440492592410ccaae232613288796fa500320`.
+  An earlier Popup version's process teardown failed twice; the accepted
+  implementation instead uses a collapsed in-layout suggestion panel.
+- **F06 remains partial**: an actual approved/test-owned reachable SMB
+  share is required before claiming UNC paste/open E2E. Also open: visual
+  placement at narrow widths, high contrast, actual DPI and Narrator speech,
+  plus richer arbitrary-folder autocomplete.
+
 ## F06-A/B accepted focused gestures — 2026-10-13
 
 - Implemented middle-click on an owned local filesystem folder row and

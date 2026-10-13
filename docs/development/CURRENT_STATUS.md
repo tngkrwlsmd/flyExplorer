@@ -7,6 +7,37 @@ app/winui, UI-independent native code in src/base, tests in tests/winui, and
 bounded orchestration in tools/winui/run_checks.py. The former MFC application
 is retired from the working tree and is recoverable from Git revision cbffb48.
 
+## 2026-10-13 F06-C bounded known-path address suggestions — focused acceptance
+
+- **Exact accepted candidate:** `d9a440492592410ccaae232613288796fa500320`
+  on `feat/f06-address-known-path-suggestions-20261013`, based on
+  F06-A/B canonical main `1ebcc82f08fc6ee6ffc0748becc28265a9dcdaa5`.
+- **Behavior:** keep the existing address TextBox and Ctrl+L/Enter/Escape
+  contract. While typing a prefix, present up to 8 distinct filesystem-folder
+  paths already held in live WindowTab/pane sessions and at most 2,048
+  in-memory indexed entries for the active pane. Picking a candidate navigates
+  the current pane's existing tab; Escape dismisses candidates. No filesystem,
+  COM, provider, network, global settings, or private profile I/O occurs in
+  the text-change handler; no unrequested persistence or background scan.
+- **Lifecycle correction:** first UI experiment used a Popup and passed its
+  candidate interaction checks but the process exited with access violation
+  `0xC0000005` on [run 38376064497](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38376064497).
+  A Popup-close guard still reproduced the teardown failure in
+  [run 38376726015](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38376726015).
+  The accepted source replaces Popup with a collapsed in-layout Border and
+  defers foreign-focus dismissal through the UI dispatch queue. These two
+  older Actions failures must not be labeled feature acceptance.
+- **Focused Windows acceptance:** [run 38377574604](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38377574604)
+  completed PASS for source contracts, WinUI x64 Release build, real
+  in-memory candidate presentation, exact candidate navigation in the same
+  PaneTab, Escape dismissal, normal product exit and owned scratch cleanup.
+- **Remaining boundaries:** real network UNC share paste/open is NOT tested,
+  candidate presentation when an unindexed folder is not known is not
+  supported (intentionally), high-DPI 125/150/200%, High Contrast,
+  Narrator speech and actual F06-C pixel/keyboard-focus visual acceptance
+  remain unverified. Do not imply Explorer-wide autocomplete, OS-global
+  filesystem completion, virtual-provider discovery or release approval.
+
 ## 2026-10-13 F06-A/B folder middle-click and quoted address — focused acceptance
 
 - **Tested feature source:** `257bcc22c42ddb574712d8d69ba4e288c64e20b8`
