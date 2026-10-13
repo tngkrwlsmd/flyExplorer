@@ -105,8 +105,9 @@ def run(*, win, element, safe_click, focus, eventually, base, owned, left, right
         print("F01_HIDDEN_SCREENSHOT", file.name,
               "DPI", user.GetDpiForWindow(win.handle), flush=True)
 
+    # Both panes initially display the owned left Shell folder, not Right.
     eventually(lambda: find_row(0, "readme.txt") is not None and
-               find_row(1, "Secondary") is not None,
+               find_row(1, "readme.txt") is not None,
                "owned original visible Shell rows missing", 15)
     eventually(lambda: absent(0) and absent(1),
                "hidden Shell items leaked into default pane", 8)
@@ -126,7 +127,7 @@ def run(*, win, element, safe_click, focus, eventually, base, owned, left, right
     print("F01_HIDDEN_FILE_AND_FOLDER=PASS", flush=True)
 
     # Independent View states: right stays hidden until its own action.
-    safe_click(find_row(1, "Secondary"))
+    safe_click(find_row(1, "readme.txt"))
     checked(False)
     assert absent(1), "right pane exposed hidden items without its own toggle"
     toggle()
@@ -150,7 +151,7 @@ def run(*, win, element, safe_click, focus, eventually, base, owned, left, right
     assert not any(r.is_selected() and "hidden-note" in r.window_text()
                    for r in rows(0))
     shot("restored")
-    safe_click(find_row(1, "Secondary"))
+    safe_click(find_row(1, "readme.txt"))
     checked(True)
     toggle()
     eventually(lambda: absent(1), "right hidden row leaked after hide", 9)
