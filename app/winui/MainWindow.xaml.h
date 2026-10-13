@@ -42,6 +42,10 @@ namespace winrt::FlyExplorer::implementation
         void OnUpClicked(IInspectable const&, Microsoft::UI::Xaml::RoutedEventArgs const&);
         void OnAddressKeyDown(IInspectable const&, Microsoft::UI::Xaml::Input::KeyRoutedEventArgs const&);
         void OnAddressGotFocus(IInspectable const&, Microsoft::UI::Xaml::RoutedEventArgs const&);
+        void OnAddressTextChanged(IInspectable const&,
+            Microsoft::UI::Xaml::Controls::TextChangedEventArgs const&);
+        void OnAddressSuggestionClicked(IInspectable const&,
+            Microsoft::UI::Xaml::RoutedEventArgs const&);
         void OnAddressLostFocus(IInspectable const&, Microsoft::UI::Xaml::RoutedEventArgs const&);
         void OnAddressDisplayClicked(IInspectable const&, Microsoft::UI::Xaml::RoutedEventArgs const&);
         void OnBreadcrumbSegmentClicked(IInspectable const&, Microsoft::UI::Xaml::RoutedEventArgs const&);
@@ -341,6 +345,8 @@ namespace winrt::FlyExplorer::implementation
         void UpdateViewPresentation(int side);
         void UpdateSortPresentation(int side);
         void UpdateBreadcrumb(std::wstring const& address);
+        void UpdateAddressSuggestions();
+        void HideAddressSuggestions();
         void FillFiles(int side);
         bool OpenFolder(std::wstring const& path);
         void ActivatePane(int side);

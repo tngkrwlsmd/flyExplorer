@@ -108,6 +108,16 @@ namespace winrt::FlyExplorer::implementation
     MainWindow::MainWindow()
     {
         InitializeComponent();
+        AddressSuggestionPopup().PlacementTarget(AddressBox());
+        auto addressWeak=get_weak();
+        AddressSuggestionPopup().Closed([addressWeak](
+            IInspectable const&,IInspectable const&){
+            if(auto ui=addressWeak.get()){
+                auto box=ui->AddressBox();
+                if(box.FocusState()==FocusState::Unfocused&&box.Opacity()>0.5)
+                    ui->OnAddressLostFocus(nullptr,nullptr);
+            }
+        });
         using Microsoft::UI::Xaml::Input::PointerEventHandler;
         RootShell().AddHandler(
             UIElement::PointerPressedEvent(),
@@ -2560,16 +2570,127 @@ namespace winrt::FlyExplorer::implementation
             fxfile::shellnav::HistoryAction::Up),
             fxfile::shellnav::NavigationAction::Up);
     }
+    void MainWindow::HideAddressSuggestions()
+    {
+        if(AddressSuggestionPopup())AddressSuggestionPopup().IsOpen(false);
+    }
+    void MainWindow::UpdateAddressSuggestions()
+    {
+        auto editor=AddressBox();
+        auto pop=AddressSuggestionPopup();
+        auto rows=AddressSuggestionRows();
+        rows.Children().Clear();
+        if(editor.Opacity()<0.5||
+           editor.FocusState()==FocusState::Unfocused){
+            pop.IsOpen(false);
+            return;
+        }
+        std::wstring prefix(editor.Text().c_str());
+        if(!prefix.empty()&&prefix[0]==L'"')prefix.erase(0,1);
+        if(prefix.size()<3||prefix.size()>1024){
+            pop.IsOpen(false);
+            return;
+        }
+        std::vector<std::wstring> choices;
+        choices.reserve(8);
+        auto offer=[&](std::wstring const& path){
+            if(choices.size()>=8||path.empty()||path.size()>32767||
+               path.rfind(L"shell:",0)==0||path.size()<=prefix.size())return;
+            if(::CompareStringOrdinal(path.c_str(),
+                       static_cast<int>(prefix.size()),prefix.c_str(),
+                       static_cast<int>(prefix.size()),TRUE)!=CSTR_EQUAL)return;
+            if(std::find_if(choices.begin(),choices.end(),[&](auto const& old){
+                return ::CompareStringOrdinal(old.c_str(),-1,
+                          path.c_str(),-1,TRUE)==CSTR_EQUAL;
+            })!=choices.end())return;
+            choices.push_back(path);
+        };
+        // No disk, network, Shell or provider work runs while typing.
+        auto const& model=ActiveWindowTab().model;
+        for(int side=0;side<2&&choices.size()<8;++side){
+            if(side==1&&!model.split)continue;
+            auto const& pane=model.panes[static_cast<size_t>(side)];
+            for(auto const& tab:pane.tabs){
+                offer(tab.snapshot().parsingName);
+                if(choices.size()==8)break;
+            }
+        }
+        auto const& pane=model.panes[static_cast<size_t>(model.activePane)];
+        if(pane.active<pane.tabs.size()){
+            auto const& known=pane.tabs[pane.active].nameIndex();
+            const auto limit=(std::min)(known.size(),static_cast<size_t>(2048));
+            for(size_t i=0;i<limit&&choices.size()<8;++i)
+                if(known[i].isFolder()&&known[i].isFileSystem())
+                    offer(known[i].parsingName);
+        }
+        for(auto const& path:choices){
+            Button button;
+            button.Content(box_value(hstring(path)));
+            button.Tag(box_value(hstring(path)));
+            button.HorizontalAlignment(HorizontalAlignment::Stretch);
+            button.HorizontalContentAlignment(HorizontalAlignment::Left);
+            button.Padding(Thickness{8,4,8,4});
+            button.MinHeight(30);
+            Microsoft::UI::Xaml::Automation::AutomationProperties::SetName(
+                button,L"주소 후보: "+hstring(path));
+            button.Click({this,&MainWindow::OnAddressSuggestionClicked});
+            auto weak=get_weak();
+            button.KeyDown([weak](IInspectable const&,
+                Input::KeyRoutedEventArgs const& args){
+                if(args.Key()!=Windows::System::VirtualKey::Escape)return;
+                if(auto ui=weak.get()){
+                    ui->HideAddressSuggestions();
+                    ui->AddressBox().Focus(FocusState::Keyboard);
+                    args.Handled(true);
+                }
+            });
+            rows.Children().Append(button);
+        }
+        if(choices.empty()){pop.IsOpen(false);return;}
+        rows.Width((std::max)(160.0,editor.ActualWidth()-8.0));
+        pop.IsOpen(true);
+    }
+    void MainWindow::OnAddressTextChanged(IInspectable const&,
+        TextChangedEventArgs const&)
+    {
+        UpdateAddressSuggestions();
+    }
+    void MainWindow::OnAddressSuggestionClicked(IInspectable const& sender,
+        RoutedEventArgs const&)
+    {
+        auto button=sender.try_as<Button>();
+        if(!button||!button.Tag())return;
+        const auto path=std::wstring(unbox_value<hstring>(button.Tag()).c_str());
+        HideAddressSuggestions();
+        OpenFolder(path);
+        AddressBox().Opacity(0.0);
+        AddressDisplayButton().Visibility(Visibility::Visible);
+    }
     void MainWindow::OnAddressKeyDown(IInspectable const&,
                                      Input::KeyRoutedEventArgs const& args)
     {
+        if(args.Key()==Windows::System::VirtualKey::Down &&
+           AddressSuggestionPopup().IsOpen()&&
+           AddressSuggestionRows().Children().Size()>0){
+            if(auto first=AddressSuggestionRows().Children().GetAt(0)
+                    .try_as<Button>())
+                first.Focus(FocusState::Keyboard);
+            args.Handled(true);
+            return;
+        }
         if (args.Key()==Windows::System::VirtualKey::Enter) {
+            HideAddressSuggestions();
             OpenFolder(ResolveFriendlyAddress(std::wstring(AddressBox().Text().c_str())));
             AddressBox().Opacity(0.0);
             AddressDisplayButton().Visibility(Visibility::Visible);
             args.Handled(true);
         }
         else if (args.Key()==Windows::System::VirtualKey::Escape) {
+            if(AddressSuggestionPopup().IsOpen()){
+                HideAddressSuggestions();
+                args.Handled(true);
+                return;
+            }
             const auto address=Current().snapshot().parsingName;
             AddressBox().Text(hstring(FriendlyAddress(address)));
             UpdateBreadcrumb(address);
@@ -2587,6 +2708,9 @@ namespace winrt::FlyExplorer::implementation
     }
     void MainWindow::OnAddressLostFocus(IInspectable const&,RoutedEventArgs const&)
     {
+        // Clicking a candidate transfers focus before its Click event.
+        // Keep the popup alive until the click is committed or dismissed.
+        if(AddressSuggestionPopup().IsOpen())return;
         const auto address=Current().snapshot().parsingName;
         AddressBox().Text(hstring(FriendlyAddress(address)));
         UpdateBreadcrumb(address);
@@ -2595,6 +2719,7 @@ namespace winrt::FlyExplorer::implementation
     }
     void MainWindow::OnAddressDisplayClicked(IInspectable const&,RoutedEventArgs const&)
     {
+        HideAddressSuggestions();
         AddressDisplayButton().Visibility(Visibility::Collapsed);
         AddressBox().Opacity(1.0);
         AddressBox().Focus(FocusState::Programmatic);
