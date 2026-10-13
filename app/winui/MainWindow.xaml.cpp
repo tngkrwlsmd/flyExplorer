@@ -934,7 +934,20 @@ namespace winrt::FlyExplorer::implementation
                         L"Shell 폴더를 열지 못했습니다. "
                         L"기존 폴더는 유지됩니다.");
             }
-            if(completed.active&&!continuation)UpdateNavigationChrome();
+            if(completed.active&&!continuation){
+                // A failed address/UNC request must not leave the rejected
+                // input masquerading as the committed active pane location.
+                // Never update the address field for a different pane or tab.
+                auto const& model=ActiveWindowTab().model;
+                if(completed.side==model.activePane){
+                    auto const& pane=model.panes[static_cast<size_t>(model.activePane)];
+                    const auto address=pane.tabs[pane.active].snapshot().parsingName;
+                    HideAddressSuggestions();
+                    AddressBox().Text(hstring(FriendlyAddress(address)));
+                    UpdateBreadcrumb(address);
+                }
+                UpdateNavigationChrome();
+            }
             continueRestore();
             return;
         }

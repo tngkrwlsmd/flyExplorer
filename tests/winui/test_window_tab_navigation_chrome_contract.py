@@ -104,6 +104,18 @@ class WindowTabChromeContract(unittest.TestCase):
         self.assertNotIn("AddressSuggestionPopup",impl)
         self.assertNotIn("<Popup ",xaml)
 
+    def test_f06_failed_navigation_restores_only_active_pane_address(self):
+        src=compact((ROOT/"app/winui/MainWindow.xaml.cpp").read_text(encoding="utf-8"))
+        failed=src.split("if(completed.kind==Kind::Failed)",1)[1].split(
+            "if(completed.kind==Kind::Rejected)",1)[0]
+        self.assertIn("if(completed.active&&!continuation)",failed)
+        self.assertIn("if(completed.side==model.activePane)",failed)
+        self.assertIn("snapshot().parsingName",failed)
+        self.assertIn("HideAddressSuggestions()",failed)
+        self.assertIn("AddressBox().Text(hstring(FriendlyAddress(address)))",failed)
+        self.assertIn("UpdateBreadcrumb(address)",failed)
+        self.assertIn("UpdateNavigationChrome()",failed)
+
     def test_f06_quoted_loopback_unc_failure_is_owned_and_nonmutating(self):
         src=(ROOT/"tests/winui/test_shell_gui.py").read_text(encoding="utf-8")
         for fragment in ("FLY_F06_QUOTED_LOOPBACK_UNC",
