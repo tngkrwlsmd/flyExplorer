@@ -16,6 +16,32 @@ product state use CURRENT_STATUS.md.
 
 이 문서는 확정된 오류를 단순 수정으로 끝내지 않고, 다음 진단을 빠르게 하고 같은 계열의 결함을 사전에 막기 위한 프로젝트 기록이다.
 
+## 2026-10-13 — F06 invalid UNC address chrome and last-request race
+
+- Owned GUI run [38380137080](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38380137080)
+  rejected a quoted nonexistent loopback UNC and retained the right-pane
+  file list, but its address editor still exposed the rejected input.
+- A proposed restore in `OnNativeResult::Failed` then caused the
+  unrelated rapid invalid-then-valid navigation assertion to fail in
+  [38380865307](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38380865307):
+  a delayed failure handler may write over newer text before its newer
+  request commits. The failed approach was removed, not carried into main.
+- The correction restores the committed address immediately after
+  submitting Enter input, leaving route-token checks and async commit
+  ownership to the existing navigation controller. The first run
+  [38381583006](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38381583006)
+  found one stale exact-source assertion after the refactor. Updating that
+  assertion (not weakening the behavioral requirement) led to full
+  [38381812799](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38381812799)
+  source, Release and owned GUI PASS, including the negative quoted UNC
+  and rapid last-request test. Normal app shutdown and scratch cleanup passed.
+- Prevention: do not mutate the address editor from stale asynchronous
+  failures; let only the accepted complete Shell snapshot update committed
+  navigation. Keep a negative UNC test and rapid opposite-order navigation
+  gate together. No live SMB-share creation or credentials during probes.
+
+---
+
 ## 2026-10-12 — Narrator Recap focus/visibility evidence is not speech evidence
 
 - The first control-plane speech-recap script attempted

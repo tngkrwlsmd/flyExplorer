@@ -84,6 +84,24 @@ XAML/handlers and requires focused confirmation before implementation.
 | F17 | Redesigned **customizable context menu** described by Microsoft on 2026-08-17 as rolling out to **Insiders** | Track the public API/interaction pattern; do not clone private Explorer settings, inject extension DLLs or assume GA |
 | F18 | File Explorer **AI actions**, document summarization and image edits on eligible hardware/cloud subscription | Defer; hardware, policy, license, privacy and actual user value must justify any integration |
 
+## F06-D quoted UNC failure safety — 2026-10-13
+
+- Existing F06-A/B quoted absolute/UNC parsing and F06-C bounded in-memory
+  suggestions are integrated. Latest F06-C main
+  `da8613e95ab4ae0fefad2fce60860e5e2a487623` passed
+  [central full GUI 38378269180](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38378269180).
+- Exact F06-D candidate `1b6f2ccc671393f5241005ef11bcefcc19ec33b6`
+  passed [focused Windows 38381812799](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38381812799):
+  quoted nonexistent loopback UNC fails closed with the prior panel's
+  committed path/list, concurrent valid navigation still wins, Release
+  and source contracts pass, normal shutdown and owned cleanup succeed.
+  On Enter the visible address returns to the committed location while
+  the native request runs; async completion updates it only on success.
+- **Scope boundary:** no approved reachable test SMB share was present
+  (test-owned share count zero). Do not claim successful real UNC opening,
+  authenticated provider behavior or F06-C final pixel comparison.
+  No machine-wide share/network/credential changes were performed.
+
 ## F06-C known-folder address suggestions — 2026-10-13
 
 - Maintains the existing address TextBox/UIA address identity. Up to eight

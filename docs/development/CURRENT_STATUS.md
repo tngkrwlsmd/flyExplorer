@@ -7,6 +7,45 @@ app/winui, UI-independent native code in src/base, tests in tests/winui, and
 bounded orchestration in tools/winui/run_checks.py. The former MFC application
 is retired from the working tree and is recoverable from Git revision cbffb48.
 
+## 2026-10-13 F06-D quoted UNC failed-navigation safety — focused acceptance
+
+- **Verified candidate:** `1b6f2ccc671393f5241005ef11bcefcc19ec33b6`,
+  `test/f06-quoted-unc-loopback-20261013`, based on canonical
+  `da8613e95ab4ae0fefad2fce60860e5e2a487623`.
+- **Behavior:** when the user presses Enter on a new address, the address
+  chrome and breadcrumb continue displaying the **last committed** pane/tab
+  location while the isolated Shell request is pending. On success the
+  accepted snapshot updates the location; on failure, an invalid quoted
+  path/UNC request does not replace the previously committed pane.
+  Never rewrite the address in an asynchronous Failed callback: that
+  approach can erase a subsequent user edit or wrongly supersede a newer
+  valid request. Existing side/route request-token isolation is unchanged.
+- **Focused Windows acceptance:** [run 38381812799](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38381812799)
+  completed successfully at the exact candidate SHA: source contracts,
+  x64 Release build, full owned-shell GUI including rapid invalid-then-valid
+  navigation, rejected quoted `\\127.0.0.1\flyexplorer-f06-owned-no-share`
+  with its previous right-pane listing and address preserved, normal app
+  exit and owned scratch cleanup. An environment-only preflight found
+  **zero** pre-existing approved `flyexplorer-owned-*` SMB shares under
+  the central scratch root; no shares/permissions/network settings were
+  created or changed.
+- **Failure history:** [38380137080](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38380137080)
+  proved the raw failed address incorrectly remained in the editor;
+  [38380865307](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38380865307)
+  exposed a rapid-navigation race after restoring the address in a
+  later failed-result callback; [38381583006](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38381583006)
+  stopped at a stale source assertion after moving the restoration to the
+  Enter handler. These are diagnostic failures, not accepted PASS.
+- **Still unverified:** opening a **reachable** approved SMB share,
+  authentication/error-code variations on real UNC providers, F06-C
+  matched before/after screenshots at 96 DPI and narrow/high-contrast,
+  real 125/150/200% OS scaling and actual Narrator speech.
+  The prior F06-C in-layout suggestion feature was already integrated
+  and central main GUI-accepted at
+  `da8613e95ab4ae0fefad2fce60860e5e2a487623`
+  ([run 38378269180](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38378269180)).
+  **VISUAL ACCEPTANCE: NOT TESTED** for these latest F06 states.
+
 ## 2026-10-13 F06-C bounded known-path address suggestions — focused acceptance
 
 - **Exact accepted candidate:** `d9a440492592410ccaae232613288796fa500320`
