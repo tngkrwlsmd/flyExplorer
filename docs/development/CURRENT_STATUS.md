@@ -7,6 +7,40 @@ app/winui, UI-independent native code in src/base, tests in tests/winui, and
 bounded orchestration in tools/winui/run_checks.py. The former MFC application
 is retired from the working tree and is recoverable from Git revision cbffb48.
 
+## 2026-10-13 F06-A/B folder middle-click and quoted address — focused acceptance
+
+- **Tested feature source:** `257bcc22c42ddb574712d8d69ba4e288c64e20b8`
+  on `feat/f06-gestures-address-20261013`, based on canonical F01-D main.
+- **New interaction:** middle-clicking a native filesystem folder row opens
+  exactly that clicked folder in a new *same-pane* PaneTab, preserving the
+  original tab and the other pane. Middle-click on a breadcrumb segment opens
+  its tagged ancestor path in a new pane-local tab. Existing left-click,
+  double-click, drag/drop, native Shell identity, active WindowTab and 32-tab
+  cap remain unchanged. The new route is submitted only after the routed
+  pointer event unwinds, with an original WindowTab/route identity guard
+  against stale deferred actions.
+- **Address input:** a pasted full path surrounded by double quotes (with
+  optional outer whitespace) removes exactly the outer pair of quotes, leaving
+  Unicode, inner spaces and UNC path separators intact. No arbitrary quote
+  rewriting, OS-wide path setting or implicit remote network enumeration.
+- **Evidence:** [central Remote Shell run 38364592231](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38364592231)
+  completed PASS at the exact feature SHA: source checks, Windows x64
+  Release build, owned actual WinUI middle-click folder and breadcrumb
+  PaneTab isolation, quoted Korean path navigation, normal process exit,
+  unchanged historical user profile and owned scratch cleanup.
+- **Historical preacceptance failures:** [38363199512](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38363199512)
+  failed the initial combined middle-click assertion; the separated
+  [38363858966](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38363858966)
+  confirmed folder middle-click tab creation but recorded a subsequent
+  process crash during tab switching. The fix defers model/visual mutation
+  until the pointer event returns, and the focused GUI subsequently passed.
+  The predecessor runs are diagnostic failures, not accepted PASS evidence.
+- **Scope still open:** actual reachable UNC-share paste/open behavior,
+  address suggestions/autocomplete, middle-click on virtual Shell folders,
+  125/150/200% OS scaling, accessibility speech and final visual
+  before/after review (no new authored UI pixels in this feature unit).
+  This is not broad Windows File Explorer parity or distribution approval.
+
 ## 2026-10-13 F01-D canonical main and focused restart GUI evidence
 
 - **Integrated on canonical main:** product, tests and documentation at

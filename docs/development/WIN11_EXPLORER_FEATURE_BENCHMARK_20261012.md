@@ -84,6 +84,21 @@ XAML/handlers and requires focused confirmation before implementation.
 | F17 | Redesigned **customizable context menu** described by Microsoft on 2026-08-17 as rolling out to **Insiders** | Track the public API/interaction pattern; do not clone private Explorer settings, inject extension DLLs or assume GA |
 | F18 | File Explorer **AI actions**, document summarization and image edits on eligible hardware/cloud subscription | Defer; hardware, policy, license, privacy and actual user value must justify any integration |
 
+## F06-A/B accepted focused gestures — 2026-10-13
+
+- Implemented middle-click on an owned local filesystem folder row and
+  address breadcrumb to create an independent same-pane tab, plus outer-quote
+  removal for Unicode paths and non-destructive UNC separator passthrough.
+  Deferred route-checked navigation avoids rebuilding file row visuals in
+  the originating pointer event.
+- [Windows focused acceptance 38364592231](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38364592231):
+  source, Release, actual folder/breadcrumb GUI, original-tab and opposite-pane
+  preservation, quoted Korean local folder, normal exit and owned cleanup PASS
+  at `257bcc22c42ddb574712d8d69ba4e288c64e20b8`.
+- **Remaining F06:** accessible address suggestions and real network UNC
+  share paste/open test; do not reinterpret this unit as F06 full completion.
+  Existing feature-candidate table below retains its 2026-10-12 baseline.
+
 ## F01-D integrated main and focused restart follow-up — 2026-10-13
 
 - F01-D private-session v3 persistence is **integrated** at main
