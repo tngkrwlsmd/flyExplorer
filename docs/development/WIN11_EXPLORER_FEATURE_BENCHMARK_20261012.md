@@ -84,6 +84,22 @@ XAML/handlers and requires focused confirmation before implementation.
 | F17 | Redesigned **customizable context menu** described by Microsoft on 2026-08-17 as rolling out to **Insiders** | Track the public API/interaction pattern; do not clone private Explorer settings, inject extension DLLs or assume GA |
 | F18 | File Explorer **AI actions**, document summarization and image edits on eligible hardware/cloud subscription | Defer; hardware, policy, license, privacy and actual user value must justify any integration |
 
+## F01-C main integration — 2026-10-13
+
+- **Merged:** [PR #65](https://github.com/tngkrwlsmd/flyExplorer/pull/65),
+  squash source commit `6e2814530886daa3014b4ac63eae3cc22e86c3b3`.
+  Its exact Git tree equals the reviewed feature branch. The following
+  historical premerge checkpoint keeps its old source SHA and is no
+  longer an assertion that the feature remains unmerged.
+- **Actual validated scope:** ordinary native Shell-hidden items in
+  both panes, default OFF, per-pane menu toggle, correct deselection
+  on hide, source contract and Windows Release PASS, and inspected
+  light/dark 96-DPI menu and file-row pixels from
+  [run 38333769050](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38333769050).
+- **Still pending:** durable F01 settings/session persistence, actual
+  125/150/200% DPI, F01 High Contrast and Narrator spoken verification,
+  virtual namespace edge cases and large indexed-folder behavior.
+
 ## F01-C ordinary hidden item visibility — 2026-10-13
 
 - **Implementing feature branch:** `feat/f01-hidden-items-20261013`,
