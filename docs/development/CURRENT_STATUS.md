@@ -1,4 +1,4 @@
-# flyExplorer current status — documentation reconciled 2026-10-12
+# flyExplorer current status — documentation reconciled 2026-10-13
 
 ## Product source of truth
 
@@ -6,6 +6,47 @@ main is the canonical C++/WinRT WinUI 3 product. Product code lives in
 app/winui, UI-independent native code in src/base, tests in tests/winui, and
 bounded orchestration in tools/winui/run_checks.py. The former MFC application
 is retired from the working tree and is recoverable from Git revision cbffb48.
+
+## 2026-10-13 F02 canonical main GUI and bounded visual inspection — latest
+
+- **Exact canonical main:** `f4e2bb5937d00a1ef3b2652334e377f10ad25b7d`
+  (2026-10-13; documentation-only latest change). Its source tree retains the
+  F02 product/test changes from `f5c0fce1b9193ca95c0a10e86443afc984d637b5`.
+- **Independent current-main functional acceptance:** [central Remote Shell
+  #38395275513](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38395275513)
+  explicitly requested `project_id=desktop-a`, `scope=gui`, exact main SHA
+  `f4e2bb5937d00a1ef3b2652334e377f10ad25b7d`. Producing output recorded
+  `PASS release-build`, `PASS functional-gui`,
+  `CENTRAL_CI_PASS` and `central-ci/windows-gui=success`.
+  **MAIN RELEASE + FUNCTIONAL GUI: PASS** for that SHA/scope, not Debug, real
+  pixel review, or wider accessibility/hardware certification.
+- **Review of available real-product images (2026-10-13):** The four bounded
+  JPEG re-encodings emitted directly in [F02 visual capture run
+  #38392955469](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38392955469)
+  were reconstructed from their numbered log chunks and visually inspected:
+  `LIGHT_BEFORE`, `LIGHT_AFTER`, `DARK_BEFORE`, `DARK_AFTER`.
+  BEFORE uses `a5783991e57a5aab8e0281f171f39541f36d036c`, AFTER uses
+  `f5c0fce1b9193ca95c0a10e86443afc984d637b5`.
+  The underlying captures were from actual test-owned WinUI Release windows
+  with matched window geometry/DPI for each theme (the capture fixture sizes
+  its HWND up to 940x610). Examined selected `readme.txt` file rows,
+  opt-in Details panel, header/button, type/size/date/location labels, the
+  two independent file panes and bottom status area. Both displayed theme
+  pairs showed readable selection and Details text, preserved left/right
+  panes/status, and no clearly visible panel overlap or clipping. Narrow
+  type/location values wrap across multiple lines; their legibility at
+  smaller widths was not established. Test-owned random fixture paths differ
+  between BEFORE and AFTER and are not pixel-identical expected text.
+- **Evidence limit / visual gate remains OPEN:** the four log images are
+  compressed JPEG previews, **not** the original PNG bytes or a lossless
+  pixel-diff review. Only a selected-row, Details-enabled state under the
+  observed standard-size light/dark fixtures was visually inspected.
+  An original-PNG fine-pixel check and matched narrow-window/focus states
+  have **NOT** been accepted; no actual 125/150/200% scaling, F02 High
+  Contrast, Narrator speech or provider/large-index edge-case validation is
+  inferred. **VISUAL ACCEPTANCE: PARTIAL REVIEW ONLY — NOT FULLY ACCEPTED.**
+  Reuse exact old screenshots/runtime if still retained; do not rebuild
+  unchanged product merely to repeat a prior functional PASS.
 
 ## 2026-10-13 F02 read-only selected-item Details pane — focused Windows checkpoint
 
@@ -35,10 +76,11 @@ is retired from the working tree and is recoverable from Git revision cbffb48.
   It explicitly reported `F02_VISUAL_OWNED_MATCHED_CAPTURES=PASS PIXEL_REVIEW_REQUIRED`.
   This proves capture, **not actual pixel review, contrast, clipping or
   comparison acceptance**. Do not mark visual acceptance complete.
-- **Still open:** integrated canonical-main central full GUI acceptance,
-  human/actual pixel inspection (light/dark/focus/narrow), actual OS
+- **Still open after later main acceptance:** full-resolution original-PNG
+  pixel review and actual narrow/focus interaction states, actual OS
   125/150/200% DPI, High Contrast and Narrator speech, provider/large-index
-  edge cases. Feature branch evidence is not automatic main acceptance.
+  edge cases. The canonical-main functional GUI gate subsequently passed; see
+  the newer checkpoint above. The compressed JPEG review is limited evidence.
 
 ## 2026-10-13 F06 latest main full GUI regression — same-source recheck
 
