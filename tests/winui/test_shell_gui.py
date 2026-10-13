@@ -26,6 +26,18 @@ owned=Path(tempfile.mkdtemp(prefix="shell-owned-",dir=base))
 left=owned/"Left";right=owned/"Right";inner=left/"Nested";rightinner=right/"Secondary"
 for folder in (inner,rightinner):folder.mkdir(parents=True,exist_ok=True)
 (left/"readme.txt").write_text("owned synthetic only",encoding="utf-8")
+if os.environ.get("FLY_F01_HIDDEN_ONLY")=="YES":
+ # Only under the disposable owned fixture. Never change user filesystem attrs.
+ set_attr=c.windll.kernel32.SetFileAttributesW
+ set_attr.argtypes=[W.LPCWSTR,W.DWORD]
+ set_attr.restype=W.BOOL
+ for parent in (left,right):
+  hidden_file=parent/"hidden-note.txt"
+  hidden_folder=parent/"HiddenOwnedFolder"
+  hidden_file.write_text("owned hidden file only",encoding="utf-8")
+  hidden_folder.mkdir()
+  assert set_attr(str(hidden_file),0x2),"hidden file attr failed"
+  assert set_attr(str(hidden_folder),0x12),"hidden folder attr failed"
 if os.environ.get("FLY_M23_OWNED_FEATURES")=="YES":
  (left/"끌기.txt").write_text("owned M23 drag-copy",encoding="utf-8")
 if os.environ.get("FLY_M22_OWNED_FEATURES")=="YES":
@@ -39,6 +51,13 @@ if os.environ.get("FLY_M22_OWNED_FEATURES")=="YES":
  (right/"자료.txt").write_text("preexisting right",encoding="utf-8")
 appdata=owned/"appdata";appdata.mkdir()
 localdata=owned/"localdata";localdata.mkdir()
+if os.environ.get("FLY_F01_HIDDEN_ONLY")=="YES":
+ theme=os.environ.get("FLY_F01_HIDDEN_THEME","light")
+ assert theme in ("light","dark")
+ settings=localdata/"flyExplorer";settings.mkdir()
+ (settings/"ui-preferences-v1.txt").write_bytes(
+  ("schema=3\r\nlanguage=ko-KR\r\ntheme="+theme+
+   "\r\nview=details\r\naddress-shortcut=0\r\nsearch-shortcut=2\r\n").encode("utf-8"))
 temp=owned/"tmp";temp.mkdir()
 u=c.windll.user32
 CALL=c.WINFUNCTYPE(W.BOOL,W.HWND,W.LPARAM)
@@ -149,6 +168,13 @@ try:
      for e in element("LeftFiles").descendants()),
      "async native Shell directory items never displayed",12)
  print("REAL_FILE_LIST_IN_LEFT_PANE",True,flush=True)
+ if os.environ.get("FLY_F01_HIDDEN_ONLY")=="YES":
+  from test_f01_hidden_items_gui import run as f01_hidden
+  f01_hidden(win=win,element=element,safe_click=safe_click,
+             focus=ensure_owned_focus,eventually=eventually,
+             base=base,owned=owned,left=left,right=right)
+  print("F01_HIDDEN_FOCUSED_GUI_PASS",True,flush=True)
+  raise SystemExit(0)
  if os.environ.get("FLY_F01_INTERACTION_ONLY")=="YES":
   from test_f01_keyboard_pane_narrow_gui import run as f01_interaction
   f01_interaction(win=win,element=element,safe_click=safe_click,
