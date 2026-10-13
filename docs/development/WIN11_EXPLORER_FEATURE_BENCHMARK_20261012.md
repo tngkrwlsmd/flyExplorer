@@ -84,6 +84,24 @@ XAML/handlers and requires focused confirmation before implementation.
 | F17 | Redesigned **customizable context menu** described by Microsoft on 2026-08-17 as rolling out to **Insiders** | Track the public API/interaction pattern; do not clone private Explorer settings, inject extension DLLs or assume GA |
 | F18 | File Explorer **AI actions**, document summarization and image edits on eligible hardware/cloud subscription | Defer; hardware, policy, license, privacy and actual user value must justify any integration |
 
+## F01-D opt-in session persistence — 2026-10-13 checkpoint
+
+- **Candidate:** `feat/f01-display-session-20261013`, product/test SHA
+  `d537021a872b1ffe0ecb3572f6936b1a672d64c3`.
+  Private session schema v3 persists selection checkboxes, compact spacing,
+  extension visibility and ordinary hidden-item visibility per WindowTab/pane
+  only on explicit Save Session. Earlier v1/v2 files retain their behavior.
+- **Evidence:** [Windows run 38348701470](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38348701470)
+  passed source, x64 Release, 35 native fixture checks and existing
+  session-focused GUI. The new native cases verify distinct panel/window
+  display masks, v2 default restoration and unknown-bit rejection.
+- **Evidence boundary:** No dedicated GUI second-process verification of all
+  four changed View toggles is claimed. F01-D introduces no new view pixels;
+  actual high-DPI, F01 High Contrast and Narrator gates remain separately open.
+  This checkpoint supersedes older F01 descriptions that list **all** private
+  session persistence as not implemented, but does **not** implement
+  automatic per-folder defaults or unrequested global settings writes.
+
 ## F01-C main integration — 2026-10-13
 
 - **Merged:** [PR #65](https://github.com/tngkrwlsmd/flyExplorer/pull/65),

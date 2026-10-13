@@ -7,6 +7,39 @@ app/winui, UI-independent native code in src/base, tests in tests/winui, and
 bounded orchestration in tools/winui/run_checks.py. The former MFC application
 is retired from the working tree and is recoverable from Git revision cbffb48.
 
+## 2026-10-13 F01-D private session display option persistence — acceptance checkpoint
+
+- **Verified candidate:** `feat/f01-display-session-20261013`,
+  exact tested source `d537021a872b1ffe0ecb3572f6936b1a672d64c3`.
+  This checkpoint records branch evidence, not automatic main integration.
+- **Behavior:** Explicit Save Session stores four display-only View choices
+  (selection checkboxes, compact rows, filename extensions, ordinary hidden
+  items) independently for both panes of each WindowTab. A subsequent normal
+  startup restores these choices only when a valid user-opted-in private
+  session exists. No implicit session autosave, global Windows Explorer
+  preference change, legacy MFC profile mutation, or file-attribute change.
+  Newly created WindowTabs still receive the documented defaults.
+- **Format:** `winui-session-v1.bin` remains the private bounded checksum
+  file; schema 3 adds a strictly validated per-pane four-bit View mask.
+  Existing schema 1/2 decoding is preserved and restores F01 defaults when
+  prior files contain no display bits. Unknown schema-3 option bits are rejected.
+- **Actual Windows acceptance:** [central Remote Shell run 38348701470](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38348701470)
+  completed successfully against exactly the candidate SHA: source contracts,
+  x64 Release build, 35/35 isolated owned native M23 checks (including new
+  schema-v3, legacy-v2 and unknown-flag cases), existing session-focused
+  functional GUI, and test-owned task/scratch cleanup PASS. The first two
+  diagnostic runs 38348407801 and 38348555796 failed at the historical-MFC
+  structure check because the temporary checkout lacked trusted Git-history
+  access; the corrected run scoped Git safe.directory to the owned test source.
+  Those diagnostic runs are not product PASS.
+- **Not yet separately certified:** an actual per-option View-menu interaction
+  followed by a second-process F01 option-state inspection on both panes/tabs.
+  The existing GUI run verifies the prior session lifecycle, while the new
+  option mask's save/load round trip was exercised in the native fixture.
+  Actual 125/150/200% DPI, F01 High Contrast, Narrator spoken output, virtual
+  hidden namespaces and large indexed hidden directory behavior remain open.
+  **VISUAL ACCEPTANCE: NOT TESTED for F01-D-specific restart states.**
+
 ## 2026-10-13 F01-C ordinary hidden files/folders — merged and accepted
 
 - **Canonical main integration:** [PR #65](https://github.com/tngkrwlsmd/flyExplorer/pull/65),
