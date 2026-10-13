@@ -688,23 +688,23 @@
                     <StackPanel Spacing="9">
                         <TextBlock Text="상세 정보" FontSize="17" FontWeight="SemiBold"/>
                         <TextBlock x:Name="FileInfoHint" Text="항목 하나를 선택하세요."
-                                   TextWrapping="Wrap" Opacity="0.8"
-                                   AutomationProperties.Name="상세 정보 상태"/>
+                                   TextWrapping="Wrap" Opacity="{ThemeResource FlyExplorerCaptionOpacity}"
+                                   />
                         <TextBlock Text="이름" FontWeight="SemiBold"/>
                         <TextBlock x:Name="FileInfoName" TextWrapping="Wrap"
-                                   AutomationProperties.Name="선택 항목 이름"/>
+                                   />
                         <TextBlock Text="유형" FontWeight="SemiBold"/>
                         <TextBlock x:Name="FileInfoType" TextWrapping="Wrap"
-                                   AutomationProperties.Name="선택 항목 유형"/>
+                                   />
                         <TextBlock Text="위치" FontWeight="SemiBold"/>
                         <TextBlock x:Name="FileInfoLocation" TextWrapping="Wrap"
-                                   AutomationProperties.Name="선택 항목 위치"/>
+                                   />
                         <TextBlock Text="크기" FontWeight="SemiBold"/>
                         <TextBlock x:Name="FileInfoSize" TextWrapping="Wrap"
-                                   AutomationProperties.Name="선택 항목 크기"/>
+                                   />
                         <TextBlock Text="수정 날짜" FontWeight="SemiBold"/>
                         <TextBlock x:Name="FileInfoModified" TextWrapping="Wrap"
-                                   AutomationProperties.Name="선택 항목 수정 날짜"/>
+                                   />
                     </StackPanel>
                 </ScrollViewer>
             </Border>
