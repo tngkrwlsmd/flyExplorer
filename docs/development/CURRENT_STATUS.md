@@ -7,6 +7,38 @@ app/winui, UI-independent native code in src/base, tests in tests/winui, and
 bounded orchestration in tools/winui/run_checks.py. The former MFC application
 is retired from the working tree and is recoverable from Git revision cbffb48.
 
+## 2026-10-13 F01-C ordinary hidden files/folders — merged and accepted
+
+- **Canonical main integration:** [PR #65](https://github.com/tngkrwlsmd/flyExplorer/pull/65),
+  squash commit `6e2814530886daa3014b4ac63eae3cc22e86c3b3`.
+  The exact merged Git tree equals the feature source tree tested under
+  `feat/f01-hidden-items-20261013`. No unverified product changes
+  were added by the merge.
+- **Feature:** View menu `숨김 항목 표시` (default OFF),
+  independently per active pane and WindowTab in-memory. The isolated
+  Shell helper uses `SHCONTF_INCLUDEHIDDEN` but never
+  `SHCONTF_INCLUDESUPERHIDDEN`, while WinUI projects rows by
+  `SFGAO_HIDDEN`. Native PIDL identity, filtering, sorting and
+  selected file paths are unchanged. Windows global Explorer settings,
+  registry and existing user file attributes remain untouched.
+- **Verified Windows x64 Release + real light/dark GUI at 96 DPI:**
+  [central run #38333769050](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38333769050),
+  tested source `4e84b52ac1eb639408614007d1c7084ca1291887`,
+  final docs-only branch commit
+  `2ee3b13c116143c115e45be710299430e3d09653`.
+  Source contracts, owned native hidden file/folder visibility,
+  default OFF, left/right pane isolation, safe hidden-file
+  deselection on hide and app exit all PASS. Eight actual 940x610
+  app-owned light/dark Details screenshots were inspected:
+  View flyout alignment/checkmark and before/after/restored rows PASS.
+  Remote Shell ownership/proc/scratch cleanup PASS.
+- **Not certified:** actual 125%, 150%, 200% Windows DPI; F01-C
+  High Contrast; Narrator spoken output; virtual Shell hidden
+  namespaces; large indexed hidden-file paging; hidden-state
+  restoration after application restart. F01 settings/session
+  persistence remains a separate unfinished logical unit.
+  This is not full distribution acceptance.
+
 ## 2026-10-13 F01-A/B Explorer display options — merged and accepted
 
 - **Merged canonical main source:** [PR #64](https://github.com/tngkrwlsmd/flyExplorer/pull/64),
