@@ -7,6 +7,33 @@ app/winui, UI-independent native code in src/base, tests in tests/winui, and
 bounded orchestration in tools/winui/run_checks.py. The former MFC application
 is retired from the working tree and is recoverable from Git revision cbffb48.
 
+## 2026-10-13 F01-A/B Explorer display options — merged and accepted
+
+- **Merged canonical main source:** [PR #64](https://github.com/tngkrwlsmd/flyExplorer/pull/64),
+  squash merge commit `0243181dd8833207ce91f1c6b7f819044e81e247`.
+  Exact Git tree at this merge commit equals the feature/test tree verified
+  immediately before integration. Do not confuse historical unmerged F01
+  checkpoints with this newer main acceptance.
+- **Accepted scope:** View menu selection checkboxes, compact Details/List
+  row spacing, and display-only filename extension visibility. These are
+  per active pane and per WindowTab in-memory; checkbox and compact default
+  OFF, extensions default ON. File's original native Shell parsing identity,
+  filtering, selection, transfers and accessible full filename remain intact.
+- **Actual Windows x64 Release and focused GUI functional PASS:**
+  [run #38318791974](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38318791974).
+  **Actual matched BEFORE main / AFTER F01 light and dark pixel review PASS**
+  at 96 DPI: [run #38326900487](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38326900487).
+  **Physical keyboard View menu interaction, right/left pane isolation,
+  Ctrl+T/Ctrl+Tab WindowTab state rehydration and inspected 800x570 native
+  narrow-window pixels PASS:** [run #38328508589](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38328508589).
+  Test-owned process, screenshot and task cleanup PASS, remote-shell slot idle.
+- **Separate OPEN gates, not product PASS:** actual 125%, 150%, 200% OS DPI;
+  F01-specific High Contrast composited pixels; real Narrator speech;
+  other non-Details view layouts and further user interaction surfaces.
+  F01 hidden-item enumeration and saved private preferences/session
+  persistence are intentionally deferred work, not included in PR #64.
+  Full distribution/release certification is not claimed.
+
 ## Current acceptance index (2026-10-12)
 
 This is a current-state index over **revision- and environment-scoped** evidence,
