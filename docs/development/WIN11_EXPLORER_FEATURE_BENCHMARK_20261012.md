@@ -84,6 +84,54 @@ XAML/handlers and requires focused confirmation before implementation.
 | F17 | Redesigned **customizable context menu** described by Microsoft on 2026-08-17 as rolling out to **Insiders** | Track the public API/interaction pattern; do not clone private Explorer settings, inject extension DLLs or assume GA |
 | F18 | File Explorer **AI actions**, document summarization and image edits on eligible hardware/cloud subscription | Defer; hardware, policy, license, privacy and actual user value must justify any integration |
 
+## F01-C ordinary hidden item visibility — 2026-10-13
+
+- **Implementing feature branch:** `feat/f01-hidden-items-20261013`,
+  product and GUI-tested source SHA
+  `4e84b52ac1eb639408614007d1c7084ca1291887`,
+  based on accepted F01-A/B `main`
+  `10b78ff597a7297d0593ecf1ec3cbf1bcbd26d5a`.
+- **New View menu switch:** `숨김 항목 표시` (default OFF),
+  with independent left/right pane state kept in each WindowTab.
+  The disposable isolated Shell child requests
+  `SHCONTF_INCLUDEHIDDEN` but never
+  `SHCONTF_INCLUDESUPERHIDDEN`; the WinUI pane projects visible
+  rows by `SFGAO_HIDDEN` before its filename filter, retaining
+  unmodified PIDLs, logical positions, metadata and transfer identity.
+  This deliberately does not modify Windows Explorer's global options,
+  hidden file attributes, registry, or user files.
+- **First two preflight issues:** [38332940471](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38332940471)
+  had passed source and Release build but the GUI fixture incorrectly
+  expected the right pane to start in the separate owned Right directory;
+  both panes actually start at the owned Left directory.
+  [38333357381](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38333357381)
+  reached GUI assertions but the capture tool incorrectly demanded a
+  wide HWND before explicitly sizing its own window. Both failed runs
+  completed owned scratch/task cleanup and did not establish UI failure.
+- **Focused acceptance PASS:** [38333769050](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38333769050)
+  passed Python source contracts, isolated helper + application x64 Release
+  build and **actual light/dark WinUI GUI** with ordinary hidden
+  `hidden-note.txt` and `HiddenOwnedFolder` created under disposable
+  test-owned folders. Default OFF hides both; each pane's independent
+  switch reveals them; selecting a hidden file then hiding it removes
+  its visible row and stale selection without deleting or mutating it.
+  Both full themed runs reported `F01_HIDDEN_FOCUSED_GUI_PASS True`,
+  `F01GUI_SOURCE_RELEASE_AND_GUI=PASS`, and
+  `F01GUI_OWNED_CLEANUP=PASS`.
+- **Actual 96-DPI visual acceptance PASS for the tested 940x610
+  light/dark Details fixture.** Eight app-interior captures (default,
+  enabled, flyout menu, restored per theme) were retained in run logs
+  and directly reviewed: newly revealed filenames/folders, selected-row
+  readability, checked View flyout item, menu alignment, and restoration
+  all remained visible without clipping. Previous F01-A/B
+  [96-DPI screenshot baseline 38326900487](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38326900487)
+  provides independent canonical app chrome reference.
+- **Not tested:** actual 125/150/200% OS scaling, F01-C-specific
+  High Contrast, real Narrator spoken output, hidden virtual Shell
+  namespaces, large/fully indexed hidden directory paging, and
+  persistence across app restart or explicitly saved private sessions.
+  F01 preference/session persistence is a **separate upcoming unit**.
+
 ## F01-A/B canonical main integration — 2026-10-13
 
 - **Merged:** [PR #64](https://github.com/tngkrwlsmd/flyExplorer/pull/64)
