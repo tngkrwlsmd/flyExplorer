@@ -179,6 +179,13 @@
                         AutomationProperties.Name="&#xB4C0;&#xC5BC; &#xD328;&#xB110; &#xC804;&#xD658;">
                     <FontIcon Glyph="&#xE73F;" FontSize="14"/>
                 </Button>
+
+                <Button x:Name="FileInfoToggleButton" Style="{StaticResource ExplorerIconButtonStyle}"
+                        ToolTipService.ToolTip="선택 항목 상세 정보"
+                        AutomationProperties.Name="선택 항목 상세 정보 열기 또는 닫기"
+                        Click="OnToggleFileInfoPane">
+                    <FontIcon Glyph="&#xE946;" FontSize="14"/>
+                </Button>
                 <Button x:Name="WorkspacePanelButton" Style="{StaticResource ExplorerIconButtonStyle}"
                         ToolTipService.ToolTip="&#xC791;&#xC5C5; &#xACF5;&#xAC04;"
                         AutomationProperties.Name="&#xC791;&#xC5C5; &#xACF5;&#xAC04; &#xC5F4;&#xAE30;"
@@ -502,6 +509,7 @@
                 <ColumnDefinition x:Name="PrimaryColumn" Width="*"/>
                 <ColumnDefinition Width="1"/>
                 <ColumnDefinition x:Name="SecondaryColumn" Width="*"/>
+                <ColumnDefinition x:Name="FileInfoColumn" Width="0"/>
             </Grid.ColumnDefinitions>
             <local:NavigationSidebar x:Name="SidebarView" Grid.Column="0" Margin="0,0,6,0"/>
             <Border x:Name="PrimaryPane" Grid.Column="1"
@@ -668,6 +676,37 @@
                           AutomationProperties.Name="오른쪽 폴더 내용">
                 </ListView>
                 </Grid>
+            </Border>
+            <Border x:Name="FileInfoPane" Grid.Column="4" Margin="8,0,0,0"
+                    Padding="12" CornerRadius="6" Visibility="Collapsed"
+                    BorderThickness="1"
+                    BorderBrush="{ThemeResource SystemControlForegroundBaseLowBrush}"
+                    Background="{ThemeResource ApplicationPageBackgroundThemeBrush}"
+                    AutomationProperties.Name="선택 항목 상세 정보 창">
+                <ScrollViewer VerticalScrollBarVisibility="Auto"
+                              HorizontalScrollBarVisibility="Disabled">
+                    <StackPanel Spacing="9">
+                        <TextBlock Text="상세 정보" FontSize="17" FontWeight="SemiBold"/>
+                        <TextBlock x:Name="FileInfoHint" Text="항목 하나를 선택하세요."
+                                   TextWrapping="Wrap" Opacity="0.8"
+                                   AutomationProperties.Name="상세 정보 상태"/>
+                        <TextBlock Text="이름" FontWeight="SemiBold"/>
+                        <TextBlock x:Name="FileInfoName" TextWrapping="Wrap"
+                                   AutomationProperties.Name="선택 항목 이름"/>
+                        <TextBlock Text="유형" FontWeight="SemiBold"/>
+                        <TextBlock x:Name="FileInfoType" TextWrapping="Wrap"
+                                   AutomationProperties.Name="선택 항목 유형"/>
+                        <TextBlock Text="위치" FontWeight="SemiBold"/>
+                        <TextBlock x:Name="FileInfoLocation" TextWrapping="Wrap"
+                                   AutomationProperties.Name="선택 항목 위치"/>
+                        <TextBlock Text="크기" FontWeight="SemiBold"/>
+                        <TextBlock x:Name="FileInfoSize" TextWrapping="Wrap"
+                                   AutomationProperties.Name="선택 항목 크기"/>
+                        <TextBlock Text="수정 날짜" FontWeight="SemiBold"/>
+                        <TextBlock x:Name="FileInfoModified" TextWrapping="Wrap"
+                                   AutomationProperties.Name="선택 항목 수정 날짜"/>
+                    </StackPanel>
+                </ScrollViewer>
             </Border>
         </Grid>
         <local:StatusFooter x:Name="FooterView" Grid.Row="8"/>
