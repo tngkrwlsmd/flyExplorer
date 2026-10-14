@@ -18,7 +18,7 @@ class F03SafeOpenContract(unittest.TestCase):
         ):
             self.assertIn(token,HEADER)
         for token in (
-            "previewpolicy::screen(candidate)",
+            "previewpolicy::screen(stable)",
             "GetDriveTypeW(rootText)!=DRIVE_FIXED",
             "FILE_FLAG_OPEN_REPARSE_POINT",
             "FILE_FLAG_BACKUP_SEMANTICS",
