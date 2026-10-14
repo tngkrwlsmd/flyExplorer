@@ -93,9 +93,26 @@ def run(*,win,element,safe_click,focus,eventually,owned,localdata,env,exe):
             safe_click(element("WorkspacePanelButton"))
         assert element("SaveSessionButton").exists(timeout=4)
         safe_click(element("SaveSessionButton"))
-        eventually(lambda:profile.is_file() and profile.stat().st_size>=96 and
-                   "저장했습니다" in element("StatusText").window_text(),
-                   "v7 multi-window private session was not saved",16)
+        try:
+            eventually(lambda:profile.is_file() and profile.stat().st_size>=96 and
+                       "저장했습니다" in element("StatusText").window_text(),
+                       "v7 multi-window private session was not saved",16)
+        except AssertionError:
+            # Report only bounded state from the test-owned private profile.
+            # Keep the acceptance assertion unchanged; never accept status alone.
+            present=profile.is_file()
+            status=element("StatusText").window_text()
+            print("V7_SESSION_SAVE_DIAG",
+                  "PROFILE_PRESENT",present,
+                  "PROFILE_VALID_SIZE",present and profile.stat().st_size>=96,
+                  "STATUS_SUCCESS","저장했습니다" in status,
+                  "STATUS_PENDING","저장하는 중" in status,
+                  "STATUS_REJECTED","저장하지" in status or "저장할 수 없어" in status,
+                  "STATUS_NETWORK","네트워크" in status,
+                  "STATUS_FOLDER_LOADING","불러오는 중" in status,
+                  "SPLIT_COLLAPSED","분할 창" in element("SplitButton").window_text(),
+                  flush=True)
+            raise
         original=profile.read_bytes();assert original.startswith(b"FXSESS23")
         child_env={**env,"FLY_M23_OWNED_SESSION":"YES"}
         child=subprocess.Popen([str(exe),str(owned),"--m23-owned-auto-restore"],
