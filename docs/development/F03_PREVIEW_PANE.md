@@ -1,5 +1,65 @@
 # F03 — bounded local Preview pane development boundary
 
+## Current F03 safety and UI acceptance boundary (2026-10-15)
+
+- **Current app code content:** commit [`00377986`](https://github.com/tngkrwlsmd/flyExplorer/commit/003779863a0fa19c8becb04b38e82ce2b3ba6896)
+  restores **only** `app/winui/MainWindow.xaml`,
+  `app/winui/m24_preview.cpp`, and
+  `tests/winui/test_f03_text_preview_gui.py` to the exact blob contents of
+  [`b9b15d39`](https://github.com/tngkrwlsmd/flyExplorer/commit/b9b15d39fa1ee34a406ca29c6cfc6055c165e22d)
+  in one non-force, expected-head Git commit; compare confirmed these
+  contents are identical. All earlier verified native F03 supervision,
+  background `PreviewController`, and request cancellation/generation
+  gates remain present. This is a **bounded app-startup safety rollback**,
+  not F03 GUI acceptance or a return to the old MFC app.
+- **Compilation and native evidence:** actual
+  [Release #38562561304](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38562561304)
+  passed policy/source plus shipping WinUI Release at
+  `7e4054182faffe92fc750d582ce3ac47a6b6ffcd`.
+  [Real child and active-cancel #38558563233](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38558563233)
+  previously passed a scoped, exact native test. These do not validate
+  an end-user text UI or certify a new current-head GUI screenshot.
+- **Last observed successful app startup:** [owned interactive GUI
+  #38564071039](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38564071039)
+  on exact `b9b15d39` reached the real WinUI dual panes, tabs,
+  and native directory items; it failed **later** when its UIA test
+  could not locate `TextPreviewStatus`. It did **not** prove
+  explicit text content display or visual usability. The opt-in button
+  remained low in the scrollable Details region, so the narrow layout
+  and initial keyboard discoverability are not accepted.
+- **Rejected later GUI modification:** [#38565384749](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38565384749)
+  on `fec86c32` failed **at application startup**, code
+  `0xC000027B` in `Microsoft.UI.Xaml.dll`; scoped Windows
+  Application Error/WER events recorded `0x80004002`
+  COM interface failure. No GUI acceptance happened.
+  A disposable, protected test-only simpler heading layout was compiled
+  but [actual test-only launch #38645754377](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38645754377)
+  still exited `3221226107` before exposing an owned window.
+  Therefore, blaming only the horizontal heading layout is not
+  supported; future debugging must isolate the added visibility/state
+  and XAML subtree wiring separately.
+- **Failed diagnostic build scope:** [#38641494315](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38641494315)
+  could not restore NuGet packages in a fresh worktree.
+  [#38643849995](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38643849995)
+  built the alternate layout using the prior owned local cache but
+  reached the test deadline before publishing its GUI result. Its
+  built executable was then run separately as the diagnostic above.
+  Final read-only [#38645509785](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38645509785)
+  confirmed exact original source SHA `fec86c32`, clean Git
+  worktree, **zero** test-owned scheduled tasks and **zero** associated
+  remaining build processes. All evidence remains in an owned,
+  `.keep`-protected scratch root; never auto-clean it.
+- **Next required F03 gate:** diagnose text/visibility COM activation
+  in a **test-owned, pinned and reversible** Release build without
+  repeated clean NuGet restores. Then get an actual interactive
+  user opt-in test to PASS: default bytes hidden, exactly one
+  selected local UTF-8 text file displayed, cancel during child IO,
+  stale selection/window/pane/tab ignored, turn-off and reopen clear
+  content, test-owned profile unchanged. Capture and inspect original
+  narrow Light/Dark window pixels and relevant focus/accessibility
+  behavior before visual acceptance. Image decoding, full Preview
+  pane, 125/150/200% DPI and audible Narrator are **not verified**.
+
 ## Status (2026-10-14)
 
 **Phase 1 policy and partial phase 2 safe open, bounded reader and
@@ -8,8 +68,9 @@ one-shot helper entry.** `file_preview_policy.h` screens candidates,
 opened ancestor handles, and `file_preview_reader.h/.cpp` reads bounded bytes.
 `file_preview_worker_wire.h` defines a separate versioned/bounded request and
 reply protocol. `file_preview_worker.cpp` runs one request in the existing
-`FlyShellIsolationHelper --preview-read` mode. The helper is built in
-Release, but **no production parent supervisor currently calls this mode**.
+`FlyShellIsolationHelper --preview-read` mode. The helper was built in
+Release at this **historical phase-2 checkpoint**; the later native parent
+and opt-in WinUI controller milestones are described above.
 The one-shot worker has no GUI, persistence, Shell extension, web content or
 image decoder. Blocking filesystem work stays out of the XAML thread.
 This is a fault boundary, **not** a security sandbox.
