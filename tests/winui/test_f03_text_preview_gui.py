@@ -22,6 +22,19 @@ def run(*, win, element, safe_click, eventually, left, right):
     assert open_details.exists(timeout=5)
     assert not preview_button.exists(timeout=.3), "F03 must start collapsed"
     safe_click(open_details)
+    # Check file identity while upper metadata is still on screen,
+    # before scrolling down to the bottom-only opt-in controls.
+    def row(name):
+        view=element("LeftFiles")
+        return next((x for x in view.descendants()
+                     if x.element_info.control_type=="ListItem"
+                     and name in x.window_text()),None)
+    readme=eventually(lambda:row("readme.txt"),
+                      "Owned TXT row not found",12)
+    safe_click(readme)
+    eventually(lambda:element("FileInfoName").window_text()=="readme.txt",
+               "Selected file identity mismatch",9)
+    assert body_text()=="", "Default-disabled view showed content"
     # F02 proved the Details ScrollViewer may virtualize low/offscreen
     # TextBlocks out of UIA. Scroll only *inside this owned app pane*;
     # do not change XAML to chase an offscreen automation element.
@@ -69,17 +82,6 @@ def run(*, win, element, safe_click, eventually, left, right):
 
     print("F03_GUI_DEFAULT_OFF_NO_AUTO_CONTENT_READ=PASS",flush=True)
 
-    def row(name):
-        view=element("LeftFiles")
-        return next((x for x in view.descendants()
-                     if x.element_info.control_type=="ListItem"
-                     and name in x.window_text()),None)
-    readme=eventually(lambda:row("readme.txt"),
-                      "Owned TXT row not found",12)
-    safe_click(readme)
-    eventually(lambda:element("FileInfoName").window_text()=="readme.txt",
-               "Selected file identity mismatch",9)
-    assert body_text()=="", "Default-disabled view showed content"
     capture_owned_window("before")
 
     # The control can be below the Details scroll viewport; use only this
