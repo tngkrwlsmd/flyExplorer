@@ -18,8 +18,25 @@ def run(*, win, element, safe_click, eventually, left, right):
     assert open_details.exists(timeout=5)
     assert not preview_button.exists(timeout=.3), "F03 must start collapsed"
     safe_click(open_details)
-    eventually(lambda:preview_button.exists(timeout=.4),
-               "Details region missing opt-in control",9)
+    # F02 proved the Details ScrollViewer may virtualize low/offscreen
+    # TextBlocks out of UIA. Scroll only *inside this owned app pane*;
+    # do not change XAML to chase an offscreen automation element.
+    from pywinauto import mouse
+    eventually(lambda:element("FileInfoLocation").exists(timeout=.3),
+               "Owned Details pane did not open",9)
+    location=element("FileInfoLocation")
+    rect=location.rectangle()
+    pane=element("FileInfoPane")
+    bounds=pane.rectangle()
+    point=rect.mid_point()
+    assert pane.element_info.process_id==win.element_info.process_id
+    assert bounds.left<=point.x<=bounds.right and bounds.top<=point.y<=bounds.bottom
+    win.set_focus()
+    mouse.scroll(wheel_dist=-12,coords=(point.x,point.y))
+    eventually(lambda:preview_button.exists(timeout=.4) and
+               preview_status.exists(timeout=.3),
+               "Owned Details scroll did not reveal opt-in text controls",10)
+    print("F03_GUI_OWNED_DETAILS_SCROLL_REVEALED_CONTROLS=PASS",flush=True)
     assert "켜기" in preview_button.window_text()
     assert body_text()==""
     assert "꺼" in preview_status.window_text()
