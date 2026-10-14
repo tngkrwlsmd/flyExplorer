@@ -38,6 +38,23 @@ class F03WinUIControllerContract(unittest.TestCase):
             self.assertIn(token,ROUTER)
         self.assertIn('files.renderedPaths[slot]!=key.selectedIdentity',ROUTER)
 
+    def test_mouse_acceptance_is_distinct_from_uia_fallback(self):
+        gui=(ROOT/"tests/winui/test_f03_text_preview_gui.py").read_text(
+            encoding="utf-8")
+        for token in (
+            "FLY_F03_STRICT_PHYSICAL_RESELECT",
+            "F03_GUI_STRICT_PHYSICAL_RESELECT=",
+            "F03_GUI_RESELECT_PHYSICAL_SINGLE_SELECTION=",
+            "F03_GUI_RESELECT_FILENAME_PHYSICAL_CLICK_SELECTED=",
+            "F03_GUI_RESELECT_BOTH_ROWS_SELECTED=",
+            "WindowFromPoint",
+            "GetWindowThreadProcessId",
+            "Refuse pointer input at a foreign or obscured pixel",
+        ):
+            self.assertIn(token,gui)
+        self.assertIn("assert physical_single",gui)
+        self.assertIn("selection.Select()",gui)
+
     def test_build_and_xaml_structure(self):
         tree=ET.parse(APP/"flyExplorer.project-template.xml")
         compiles={x.get("Include","").replace("\\","/")
