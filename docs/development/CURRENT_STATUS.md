@@ -7,6 +7,47 @@ app/winui, UI-independent native code in src/base, tests in tests/winui, and
 bounded orchestration in tools/winui/run_checks.py. The former MFC application
 is retired from the working tree and is recoverable from Git revision cbffb48.
 
+## 2026-10-14 F03 guarded local safe-open — native/source verified, Release pending
+
+- **Latest tested source SHA:** `8ecd748a126f58b9c81f88ad026fe8a434a4d77a`.
+  In `src/base/file_preview_safe_open.h/.cpp`, worker-only
+  `openLocalRegular` copies the request path before screening, validates
+  the drive root and each opened directory/file component using Windows
+  HANDLE identities and attributes, rejects reparse/offline/UNC/ADS/
+  non-regular/size-mismatched paths, and returns a RAII file handle plus
+  all ancestor directory handles kept locked through the caller's read.
+  The old bounded `readVerifiedHandle` is used together in the native
+  test, without WinUI involvement. These checks **reduce** replacement
+  and traversal risk; they are not a security sandbox or a substitute
+  for terminating a blocked worker.
+- **Actual test-owned MSVC native:** [#38522342210](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38522342210)
+  PASS at `b6c7c268354493f48ac94d22c77156f87d101fd8`;
+  [#38523226489](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38523226489)
+  PASS at `aca6bc779de2408a3eccc73ba63c5a1e205f3a39`.
+  Actual nested-file read, negative UNC/ADS/traversal/metadata/cancel/
+  expiry cases and file + ancestor-directory symlink rejection passed;
+  temporary fixture cleanup passed. The second run included correction
+  of dangling temporary `wstring_view` fixture paths and path snapshot
+  exception-safety.
+- **Current-source check:** [central source run #38523664886](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38523664886)
+  PASS at the exact SHA `8ecd748a126f58b9c81f88ad026fe8a434a4d77a`
+  (policy, structure 4, product-source 196, harness 20, infra 30).
+  Earlier source run `38523399332` failed one stale source-contract
+  string after the stable-path change; the contract was corrected and
+  the accepted follow-up passed.
+- **Current Release status:** [central registered CI #38523831041](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38523831041)
+  with `scope=release` and exact SHA `8ecd748a126f58b9c81f88ad026fe8a434a4d77a`
+  remained **IN PROGRESS** at the 3-minute observation cutoff; **Release
+  acceptance at this SHA is NOT YET VERIFIED.** Do not dispatch a
+  duplicate run or overwrite its single control-plane request slot.
+  Check the existing run, compile log and precise result on next resume.
+- **Feature gate still OPEN:** no production supervised helper process,
+  bounded IPC, kill-on-timeout cancellation, stale pane/tab/selection
+  protection, bounded decoded images, opt-in Preview presentation or
+  before/after pixel acceptance. No user-visible UI changed, and
+  **F03 PREVIEW PANE IS NOT YET USER-FACING**. Technical details:
+  [F03_PREVIEW_PANE.md](F03_PREVIEW_PANE.md).
+
 ## 2026-10-14 F03 Preview pane — bounded policy and handle reader verified
 
 - **Scope:** source-only candidate policy `src/base/file_preview_policy.h`
