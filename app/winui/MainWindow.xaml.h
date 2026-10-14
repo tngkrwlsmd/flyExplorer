@@ -11,6 +11,7 @@
 #include "file_operation_controller.h"
 #include "file_metadata_controller.h"
 #include "file_detail_controller.h"
+#include "preview_controller.h"
 #include "preferences_coordinator.h"
 #include "workspace_restore_coordinator.h"
 #include "search_controller.h"
@@ -99,6 +100,7 @@ namespace winrt::FlyExplorer::implementation
         void OnOpenWorkspace(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
         void OnToggleSearch(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
         void OnToggleFileInfoPane(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
+        void OnToggleTextPreview(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
         void OnApplyShortcuts(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
         void OnResetShortcuts(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
         void OnRunSearch(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
@@ -225,6 +227,10 @@ namespace winrt::FlyExplorer::implementation
         using FileViewMode=fxfile::previewlist::FileViewMode;
         fxfile::previewmetadata::FileMetadataController mFileMetadata{};
         fxfile::previewdetail::FileDetailController mFileDetails{};
+        fxfile::previewctrl::PreviewController mTextPreviewController{};
+        bool mTextPreviewEnabled=false;
+        void QueueTextPreview();
+        void CancelTextPreview() noexcept;
         void ScheduleFileMetadata(int side,bool force=false);
         void ScheduleFileDetails(int side,bool force=false);
         void ClearFileDetails(int side);
