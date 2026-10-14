@@ -50,7 +50,8 @@ def main():
     from paths import app_exe
     from profile_guard import snapshot_legacy_profile, assert_legacy_profile_unchanged
     from uia_polling import wait_until
-    from pywinauto import Desktop
+    from pywinauto import Desktop, mouse
+    from pywinauto.keyboard import send_keys
     from PIL import ImageGrab
 
     executable = app_exe("Release")
@@ -168,7 +169,8 @@ def main():
         states = {}
 
         def shot(state, expected_focus=None):
-            focus()
+            if expected_focus is None:
+                focus()
             if expected_focus is not None:
                 assert expected_focus.has_keyboard_focus(), (
                     "focused control lost keyboard focus before capture", state)
@@ -196,12 +198,35 @@ def main():
             wait_until(lambda: win.child_window(auto_id="FileInfoHint").exists(timeout=.15),
                        "F02 details accessibility hint absent", seconds=7, interval=.15)
             shot("enabled")
+            if args.window_height <= 550:
+                location = win.child_window(auto_id="FileInfoLocation")
+                modified = win.child_window(auto_id="FileInfoModified")
+                point = location.rectangle().mid_point()
+                focus()
+                mouse.scroll(wheel_dist=-5, coords=(point.x, point.y))
+                wait_until(lambda: bool(modified.window_text()) and
+                           modified.rectangle().bottom < win.rectangle().bottom - 20,
+                           "F02 narrow modified date not reachable after scroll",
+                           seconds=8, interval=.2)
+                shot("scrolled")
+                mouse.scroll(wheel_dist=5, coords=(point.x, point.y))
+                shot("restored")
+                print("F02_VISUAL_NARROW_MODIFIED_DATE_SCROLL=PASS", flush=True)
             if args.capture_focus:
                 button.set_focus()
+                send_keys("+{TAB}")
+                wait_until(lambda: not button.has_keyboard_focus(),
+                           "Shift+Tab did not move focus", seconds=5, interval=.15)
+                send_keys("{TAB}")
                 wait_until(lambda: button.has_keyboard_focus(),
                            "F02 Details toggle keyboard focus not exposed",
                            seconds=6, interval=.15)
                 shot("focused-toggle", expected_focus=button)
+                if states["focused-toggle"]["sha256"] == states.get(
+                        "restored", states["enabled"])["sha256"]:
+                    print("F02_FOCUS_PIXELS_IDENTICAL=REVIEW_REQUIRED", flush=True)
+                else:
+                    print("F02_FOCUS_PIXELS_DIFFER=PASS", flush=True)
                 print("F02_VISUAL_AFTER_FOCUSED_TOGGLE=PASS", flush=True)
             print("F02_VISUAL_AFTER_GUI_DETAILS=PASS", flush=True)
         assert process.poll() is None
