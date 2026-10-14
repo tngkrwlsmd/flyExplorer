@@ -687,20 +687,6 @@
                               HorizontalScrollBarVisibility="Disabled">
                     <StackPanel Spacing="9">
                         <TextBlock Text="상세 정보" FontSize="17" FontWeight="SemiBold"/>
-                        <!-- F03 never reads bytes until the user opts in. -->
-                        <Button x:Name="TextPreviewToggleButton" Content="텍스트 미리보기 켜기"
-                                Click="OnToggleTextPreview"
-                                AutomationProperties.Name="텍스트 미리보기 켜기"/>
-                        <TextBlock x:Name="TextPreviewStatus"
-                                   Text="텍스트 미리보기는 기본적으로 꺼져 있습니다."
-                                   TextWrapping="Wrap"
-                                   Opacity="{ThemeResource FlyExplorerCaptionOpacity}"/>
-                        <ScrollViewer MaxHeight="210"
-                                      VerticalScrollBarVisibility="Auto"
-                                      HorizontalScrollBarVisibility="Disabled">
-                            <TextBlock x:Name="TextPreviewBody"
-                                       TextWrapping="Wrap" IsTextSelectionEnabled="True"/>
-                        </ScrollViewer>
                         <TextBlock x:Name="FileInfoHint" Text="항목 하나를 선택하세요."
                                    TextWrapping="Wrap" Opacity="{ThemeResource FlyExplorerCaptionOpacity}"
                                    />
@@ -719,7 +705,20 @@
                         <TextBlock Text="수정 날짜" FontWeight="SemiBold"/>
                         <TextBlock x:Name="FileInfoModified" TextWrapping="Wrap"
                                    />
-
+                        <!-- F03 never reads bytes until the user opts in. -->
+                        <Button x:Name="TextPreviewToggleButton" Content="텍스트 미리보기 켜기"
+                                Click="OnToggleTextPreview"
+                                AutomationProperties.Name="텍스트 미리보기 켜기"/>
+                        <TextBlock x:Name="TextPreviewStatus"
+                                   Text="텍스트 미리보기는 기본적으로 꺼져 있습니다."
+                                   TextWrapping="Wrap"
+                                   Opacity="{ThemeResource FlyExplorerCaptionOpacity}"/>
+                        <ScrollViewer MaxHeight="210"
+                                      VerticalScrollBarVisibility="Auto"
+                                      HorizontalScrollBarVisibility="Disabled">
+                            <TextBlock x:Name="TextPreviewBody"
+                                       TextWrapping="Wrap" IsTextSelectionEnabled="True"/>
+                        </ScrollViewer>
                     </StackPanel>
                 </ScrollViewer>
             </Border>
