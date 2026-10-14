@@ -4,6 +4,10 @@ Invoked only from test_shell_gui.py with FLY_F03_TEXT_ONLY=YES. All
 materialized files are within that harness' synthetic Left/Right roots.
 """
 from pathlib import Path
+from paths import ROOT
+from uuid import uuid4
+import ctypes
+from ctypes import wintypes
 
 
 def run(*, win, element, safe_click, eventually, left, right):
@@ -40,6 +44,29 @@ def run(*, win, element, safe_click, eventually, left, right):
     assert "켜기" in preview_button.window_text()
     assert body_text()==""
     assert "꺼" in preview_status.window_text()
+    def capture_owned_window(stage):
+        # Only the current harness-owned flyExplorer top-level window.
+        app=win.wrapper_object()
+        app.set_focus()
+        user=ctypes.windll.user32
+        user.GetForegroundWindow.restype=wintypes.HWND
+        user.GetWindowThreadProcessId.argtypes=[
+            wintypes.HWND,ctypes.POINTER(wintypes.DWORD)]
+        foreground=user.GetForegroundWindow()
+        pid=wintypes.DWORD()
+        assert foreground==app.handle, "Refuse to capture any foreign window"
+        user.GetWindowThreadProcessId(foreground,ctypes.byref(pid))
+        assert pid.value==app.element_info.process_id, "Foreign process screenshot refused"
+        image=app.capture_as_image()
+        assert image.width>=650 and image.height>=400, "Unexpected owned app image bounds"
+        dest=ROOT/"logs"/"f03-visual"
+        assert dest.resolve(strict=False).is_relative_to((ROOT/"logs").resolve())
+        dest.mkdir(parents=True,exist_ok=True)
+        path=dest/("f03-owned-"+stage+"-"+uuid4().hex+".png")
+        image.save(path,format="PNG",optimize=True)
+        assert 0<path.stat().st_size<=3*1024*1024
+        print("F03_GUI_OWNED_WINDOW_"+stage.upper()+"_PNG="+str(path),flush=True)
+
     print("F03_GUI_DEFAULT_OFF_NO_AUTO_CONTENT_READ=PASS",flush=True)
 
     def row(name):
@@ -53,6 +80,7 @@ def run(*, win, element, safe_click, eventually, left, right):
     eventually(lambda:element("FileInfoName").window_text()=="readme.txt",
                "Selected file identity mismatch",9)
     assert body_text()=="", "Default-disabled view showed content"
+    capture_owned_window("before")
 
     # The control can be below the Details scroll viewport; use only this
     # owned WinUI window's exposed Invoke pattern.
@@ -64,6 +92,7 @@ def run(*, win, element, safe_click, eventually, left, right):
     eventually(lambda:"owned synthetic only" in body_text(),
                "Explicit text read was not shown",14)
     assert "끄기" in preview_button.window_text()
+    capture_owned_window("after")
     print("F03_GUI_EXPLICIT_TEXT_CONTENT=PASS",flush=True)
 
     nested=eventually(lambda:row("Nested"),
