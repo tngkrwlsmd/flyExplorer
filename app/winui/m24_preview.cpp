@@ -30,8 +30,6 @@ void MainWindow::OnToggleTextPreview(
         CancelTextPreview();
         TextPreviewBody().Text(L"");
         TextPreviewStatus().Text(L"텍스트 미리보기는 꺼져 있습니다.");
-        TextPreviewStatus().Visibility(Visibility::Collapsed);
-        TextPreviewContainer().Visibility(Visibility::Collapsed);
         return;
     }
     QueueTextPreview();
@@ -43,11 +41,7 @@ void MainWindow::QueueTextPreview() {
     CancelTextPreview();
     if(mClosing)return;
     TextPreviewBody().Text(L"");
-    const bool enabled=mTextPreviewEnabled&&
-        ActiveWindowTab().fileInfoPaneVisible;
-    TextPreviewStatus().Visibility(enabled?Visibility::Visible:Visibility::Collapsed);
-    TextPreviewContainer().Visibility(enabled?Visibility::Visible:Visibility::Collapsed);
-    if(!enabled)return;
+    if(!mTextPreviewEnabled||!ActiveWindowTab().fileInfoPaneVisible)return;
     TextPreviewStatus().Text(L"텍스트 파일 한 개를 선택하세요.");
     auto const windowIndex=mWorkspace.activeIndex();
     auto const& state=ActiveWindowTab();
