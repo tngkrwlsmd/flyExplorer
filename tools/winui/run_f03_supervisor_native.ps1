@@ -51,7 +51,7 @@ $body=@(
  ('cd /d "'+$FixtureRoot+'"'),
  ('cl.exe /nologo /std:c++20 /W4 /WX /EHsc /utf-8 /MD /Fo:"'+$FixtureRoot+'\stub.obj" /Fe:"'+$stubExe+'" "'+$stub+'" >"'+$log+'" 2>&1'),
  'if errorlevel 1 exit /b 23',
- ('cl.exe /nologo /std:c++20 /W4 /WX /EHsc /utf-8 /MD /Fo:"'+$FixtureRoot+'\parent.obj" /Fe:"'+$exe+'" "'+$cpp+'" "'+$native+'" >>"'+$log+'" 2>&1'),
+ ('cl.exe /nologo /std:c++20 /W4 /WX /EHsc /utf-8 /MD /Fe:"'+$exe+'" "'+$cpp+'" "'+$native+'" >>"'+$log+'" 2>&1'),
  'if errorlevel 1 exit /b 24',
  ('"'+$exe+'" "'+$helper+'" "'+$stubExe+'" "'+$owned+'"'),
  'exit /b %errorlevel%'
