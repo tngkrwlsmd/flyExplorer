@@ -2,12 +2,36 @@
 
 ## Status (2026-10-14)
 
-**Phase 1 source groundwork only.** `src/base/file_preview_policy.h` holds
-a pure candidate screen, with portable C++17 assertions in
-`tests/winui/native_preview_policy.cpp` and a source contract registered
-in the shell family of `tools/winui/run_checks.py`. This is **not** a
-functional preview feature, file-reading implementation, Windows compile
-acceptance, GUI acceptance or pixel review.
+**Phase 1 candidate policy and partial phase 2 handle-only read component.**
+`src/base/file_preview_policy.h` holds the pure candidate screen;
+`src/base/file_preview_reader.h/.cpp` contains a synchronous, bounded
+**already-opened-HANDLE** read function. The actual safe-open authority,
+supervised out-of-process worker, request generation identity, cancellation
+of blocked native IO, image decoder and WinUI pane are **not implemented**.
+Never invoke this synchronous function from the XAML thread or treat its
+caller-supplied handle as safe merely because a candidate screen passed.
+
+**MSVC Release compile accepted:** [registered central Windows run
+#38518993733](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38518993733)
+reported `PASS release-build` at exact source SHA
+`93c8a435cb5de505d02ac1927ceb30e0f572bd09`, including actual
+`file_preview_reader.cpp` translation-unit compilation.
+
+**Native read behavior NOT YET ACCEPTED:** `tests/winui/native_preview_reader.cpp`
+and `tools/winui/run_f03_reader_native.ps1` provide an owned-fixture
+test for valid text/image bytes, wrong path/size, invalid UTF-8, cancellation,
+deadline, oversized request and directory rejection. The ad-hoc Windows
+runs [38518452445](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38518452445)
+(PowerShell 5.1 dispatch parse),
+[38518550162](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38518550162)
+(SYSTEM Python PATH),
+and [38518696504](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38518696504)
+(MSVC `vcvars64.bat` setup exit 22) were *execution-harness / environment*
+failures before native C++ runtime assertions. They do not prove either
+native behavior PASS or a product failure. All associated owned scratch
+cleanup markers passed. Correct the **first failed native-compiler
+initialization** using diagnostic setup output and the approved interactive
+worker environment rather than repeating unchanged product builds.
 
 ## Intended behavior
 
