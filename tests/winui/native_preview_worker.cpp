@@ -84,31 +84,38 @@ ReplyData query(std::wstring path,std::uint32_t kind,std::uint64_t expected,
 
 bool runPreviewWorkerWireFixture(std::wstring const& path,
                                  std::vector<std::uint8_t> const& bytes) {
+    auto failed=[](char const* stage,ReplyData const& data) {
+        std::fprintf(stderr,
+            "F03_WORKER_WIRE_STAGE=%s EXIT=%d COMPLETE=%d STATUS=%u KIND=%u LEN=%u\n",
+            stage,data.exit,data.complete?1:0,data.header.status,
+            data.header.kind,data.header.byteCount);
+        return false;
+    };
     auto good=query(path,static_cast<std::uint32_t>(previewpolicy::Kind::Text),
                     bytes.size());
     if(!good.complete||good.exit!=0||good.header.status!=0||
-       good.header.kind!=1||good.body!=bytes)return false;
+       good.header.kind!=1||good.body!=bytes)return failed("good",good);
 
     auto badChecksum=query(path,1,bytes.size(),true);
     if(!badChecksum.complete||badChecksum.exit!=0||
-       badChecksum.header.status!=1||!badChecksum.body.empty())return false;
+       badChecksum.header.status!=1||!badChecksum.body.empty())return failed("checksum",badChecksum);
 
     auto badKind=query(path,2,bytes.size());
     if(!badKind.complete||badKind.exit!=0||
-       badKind.header.status!=1||!badKind.body.empty())return false;
+       badKind.header.status!=1||!badKind.body.empty())return failed("kind",badKind);
 
     auto badSize=query(path,1,previewpolicy::kMaxTextBytes+1);
     if(!badSize.complete||badSize.exit!=0||
-       badSize.header.status!=1||!badSize.body.empty())return false;
+       badSize.header.status!=1||!badSize.body.empty())return failed("size",badSize);
 
     std::wstring missing=path+L".missing";
     auto absent=query(missing,1,bytes.size());
     if(!absent.complete||absent.exit!=0||
-       absent.header.status!=2||!absent.body.empty())return false;
+       absent.header.status!=2||!absent.body.empty())return failed("absent",absent);
 
     auto unc=query(L"\\\\server\\share\\payload.txt",1,3);
     if(!unc.complete||unc.exit!=0||
-       unc.header.status!=1||!unc.body.empty())return false;
+       unc.header.status!=1||!unc.body.empty())return failed("unc",unc);
     std::printf("F03_NATIVE_WORKER_WIRE_BOUNDS=PASS\n");
     return true;
 }
