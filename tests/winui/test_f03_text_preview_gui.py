@@ -4,6 +4,7 @@ Invoked only from test_shell_gui.py with FLY_F03_TEXT_ONLY=YES. All
 materialized files are within that harness' synthetic Left/Right roots.
 """
 from pathlib import Path
+import os
 from paths import ROOT
 from uuid import uuid4
 import ctypes
@@ -193,6 +194,12 @@ def run(*, win, element, safe_click, eventually, left, right):
     print("F03_GUI_RESELECT_BOTH_ROWS_SELECTED="+str(both),flush=True)
     physical_single=after_click and not both
     print("F03_GUI_RESELECT_PHYSICAL_SINGLE_SELECTION="+str(physical_single),flush=True)
+    if os.environ.get("FLY_F03_STRICT_PHYSICAL_RESELECT")=="YES":
+        print("F03_GUI_STRICT_PHYSICAL_RESELECT="+
+              ("PASS" if physical_single else "FAIL"),flush=True)
+        assert physical_single, (
+            "Owned filename-side physical click did not establish one TXT "
+            "selection; do not treat UIA Select() as mouse acceptance")
     if not physical_single:
         selection.Select()
         eventually(lambda:bool(readme.iface_selection_item.CurrentIsSelected) and
