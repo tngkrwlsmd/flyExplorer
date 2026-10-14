@@ -41,6 +41,7 @@ class F03SafeOpenContract(unittest.TestCase):
         ]
         self.assertIn("../../src/base/file_preview_safe_open.cpp",compile_paths)
         self.assertIn("F03_NATIVE_SAFE_OPEN_AND_GUARDED_READ=PASS",NATIVE)
+        self.assertIn("std::wstring&&,std::uint64_t)=delete;",NATIVE)
         self.assertIn("F03_NATIVE_ANCESTOR_SYMLINK_REJECT=NOT_TESTED",NATIVE)
 
 
