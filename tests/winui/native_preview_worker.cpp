@@ -108,7 +108,7 @@ bool runPreviewWorkerWireFixture(std::wstring const& path,
     if(!badSize.complete||badSize.exit!=0||
        badSize.header.status!=1||!badSize.body.empty())return failed("size",badSize);
 
-    std::wstring missing=path+L".missing";
+    std::wstring missing=path+L".missing.txt";
     auto absent=query(missing,1,bytes.size());
     if(!absent.complete||absent.exit!=0||
        absent.header.status!=2||!absent.body.empty())return failed("absent",absent);
