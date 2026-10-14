@@ -688,6 +688,7 @@ namespace winrt::FlyExplorer::implementation
         mFileOperations.prepareForClose();
         mFileMetadata.prepareForClose();
         mFileDetails.prepareForClose();
+        mTextPreviewController.prepareForClose();
         for(std::size_t i=0;i<mWorkspace.count();++i)
             for(auto& files:mWorkspace.state(i).fileLists)files.invalidate();
         try{if(mTransferTimer)mTransferTimer.Stop();}catch(...){}
@@ -715,6 +716,7 @@ namespace winrt::FlyExplorer::implementation
     }
     std::uint64_t MainWindow::QueuePath(int side,std::wstring path)
     {
+        CancelTextPreview();
         mTransferFailureNotice.clear();
         mSearchController.invalidate();
         auto& model=ActiveWindowTab().model;
@@ -737,6 +739,7 @@ namespace winrt::FlyExplorer::implementation
         int side,fxfile::shellnav::Location target,
         fxfile::shellnav::NavigationAction action)
     {
+        CancelTextPreview();
         if(action!=fxfile::shellnav::NavigationAction::Refresh){
             mTransferFailureNotice.clear();
             mSearchController.invalidate();
@@ -1067,6 +1070,7 @@ namespace winrt::FlyExplorer::implementation
         mPopulatingTabs=false;
     }
     void MainWindow::ClearFileDetails(int side){
+        if(side==ActiveWindowTab().model.activePane)CancelTextPreview();
         mFileMetadata.cancel(side);
         mFileDetails.cancel(side);
         ActiveWindowTab().fileLists[side].invalidate();
@@ -2254,6 +2258,7 @@ namespace winrt::FlyExplorer::implementation
     }
     void MainWindow::SuspendActiveWindowTab()
     {
+        CancelTextPreview();
         mSearchController.invalidate();
         auto& state=ActiveWindowTab();
         mShellNavigation->suspend(state.model);
@@ -2344,6 +2349,7 @@ namespace winrt::FlyExplorer::implementation
 
     void MainWindow::Refresh(hstring const& status)
     {
+        CancelTextPreview();
         ApplyFileInfoPaneLayout();
         RefreshTabs(0);
         RefreshTabs(1);
@@ -2380,6 +2386,7 @@ namespace winrt::FlyExplorer::implementation
         ScheduleFileDetails(0);
         ScheduleFileDetails(1);
         RunOwnedMetadataSortTestIfReady();
+        QueueTextPreview();
     }
     bool MainWindow::OpenFolder(std::wstring const& path)
     {
@@ -2390,6 +2397,7 @@ namespace winrt::FlyExplorer::implementation
     }
     void MainWindow::ActivatePane(int side)
     {
+        CancelTextPreview();
         if(!mWorkspace.dispatch(fxfile::explorerui::Command::ActivatePane,side)
                     .accepted)return;
         mSearchController.invalidate();
@@ -2417,6 +2425,7 @@ namespace winrt::FlyExplorer::implementation
         UpdateSelectionChrome();
         UpdateFooterSummary();
         Title(L"flyExplorer · "+hstring(nav.snapshot().displayName));
+        QueueTextPreview();
     }
     void MainWindow::UpdateActivePaneChrome()
     {
@@ -2473,6 +2482,15 @@ namespace winrt::FlyExplorer::implementation
     {
         auto& state=ActiveWindowTab();
         state.fileInfoPaneVisible=!state.fileInfoPaneVisible;
+        if(!state.fileInfoPaneVisible){
+            mTextPreviewEnabled=false;
+            CancelTextPreview();
+            TextPreviewBody().Text(L"");
+            TextPreviewStatus().Text(L"텍스트 미리보기는 기본적으로 꺼져 있습니다.");
+            TextPreviewToggleButton().Content(winrt::box_value(L"텍스트 미리보기 켜기"));
+            Microsoft::UI::Xaml::Automation::AutomationProperties::SetName(
+                TextPreviewToggleButton(),L"텍스트 미리보기 켜기");
+        }
         ApplyFileInfoPaneLayout();
         // The host Width is unchanged when the Details column expands.
         // Re-evaluate each file list as if its viewport had been resized.
@@ -2486,6 +2504,7 @@ namespace winrt::FlyExplorer::implementation
             }else ApplyDetailColumnLayout(side);
         }
         UpdateFileInfoPane();
+        QueueTextPreview();
     }
     void MainWindow::ApplyFileInfoPaneLayout()
     {
@@ -2633,8 +2652,10 @@ namespace winrt::FlyExplorer::implementation
            ActiveWindowTab().model.activePane!=side)
             ActivatePane(side);
         UpdateSelectionChrome();
-        if(ActiveWindowTab().model.activePane==side)
+        if(ActiveWindowTab().model.activePane==side){
             UpdateFooterSummary();
+            QueueTextPreview();
+        }
     }
     void MainWindow::OnFileSelectionKeyUp(IInspectable const&,
         Input::KeyRoutedEventArgs const&)
