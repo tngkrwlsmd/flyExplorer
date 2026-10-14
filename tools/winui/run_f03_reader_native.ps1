@@ -35,6 +35,8 @@ if(-not (Test-Path -LiteralPath $vcvars -PathType Leaf)){
 }
 $sourceCpp=Join-Path $SourceRoot 'src\base\file_preview_reader.cpp'
 $safeOpenCpp=Join-Path $SourceRoot 'src\base\file_preview_safe_open.cpp'
+$workerCpp=Join-Path $SourceRoot 'src\base\file_preview_worker.cpp'
+$workerTestCpp=Join-Path $SourceRoot 'tests\winui\native_preview_worker.cpp'
 $testCpp=Join-Path $SourceRoot 'tests\winui\native_preview_reader.cpp'
 $exe=Join-Path $FixtureRoot 'f03-reader-native.exe'
 $batch=Join-Path $FixtureRoot 'compile-and-test.cmd'
@@ -51,7 +53,7 @@ $body=@(
     ('call "'+$vcvars+'" >"'+$setupLog+'" 2>&1'),
     'if errorlevel 1 exit /b 22',
     ('cd /d "'+$FixtureRoot+'"'),
-    ('cl.exe /nologo /std:c++20 /W4 /WX /EHsc /utf-8 /MD /Fe:"'+$exe+'" "'+$sourceCpp+'" "'+$safeOpenCpp+'" "'+$testCpp+'" >"'+$log+'" 2>&1'),
+    ('cl.exe /nologo /std:c++20 /W4 /WX /EHsc /utf-8 /MD /Fe:"'+$exe+'" "'+$sourceCpp+'" "'+$safeOpenCpp+'" "'+$workerCpp+'" "'+$testCpp+'" "'+$workerTestCpp+'" >"'+$log+'" 2>&1'),
     'if errorlevel 1 exit /b 23',
     ('"'+$exe+'" "'+$testFolder+'"'),
     'exit /b %errorlevel%'
@@ -61,6 +63,8 @@ if($body.Count -ne 9 -or
    -not $body[4].Contains($FixtureRoot) -or
    -not $body[5].Contains($sourceCpp) -or
    -not $body[5].Contains($safeOpenCpp) -or
+   -not $body[5].Contains($workerCpp) -or
+   -not $body[5].Contains($workerTestCpp) -or
    -not $body[5].Contains($testCpp) -or
    -not $body[7].Contains($exe)){
     throw 'F03_NATIVE_BATCH_SERIALIZATION_INVALID'
