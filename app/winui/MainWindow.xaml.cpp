@@ -2737,7 +2737,24 @@ namespace winrt::FlyExplorer::implementation
         }
         for(auto const& path:choices){
             Button button;
-            button.Content(box_value(hstring(path)));
+            // Show the identifying final folder rather than the shared
+            // beginning of a long path in narrow address chrome. These are
+            // lexical path operations only: never probe disk/providers here.
+            auto const candidatePath=std::filesystem::path(path);
+            auto leaf=candidatePath.filename().native();
+            if(leaf.empty())leaf=path;
+            const auto parent=candidatePath.parent_path().filename().native();
+            std::wstring display=leaf;
+            if(!parent.empty()&&parent!=leaf&&leaf!=path)
+                display+=L"  \u2014  "+parent;
+            TextBlock candidateLabel;
+            candidateLabel.Text(hstring(display));
+            candidateLabel.TextTrimming(TextTrimming::CharacterEllipsis);
+            candidateLabel.TextWrapping(TextWrapping::NoWrap);
+            button.Content(candidateLabel);
+            Microsoft::UI::Xaml::Controls::ToolTipService::SetToolTip(
+                button,box_value(hstring(path)));
+            // Keep the original full path as the command and UIA target.
             button.Tag(box_value(hstring(path)));
             button.HorizontalAlignment(HorizontalAlignment::Stretch);
             button.HorizontalContentAlignment(HorizontalAlignment::Left);
