@@ -86,6 +86,59 @@ product regressions.
   rejection. Validate the real `--preview-read` child with malformed,
   oversized, slow and canceled requests before wiring any UI.
 
+## 2026-10-14 F03 parent-side one-shot supervisor — native acceptance
+
+- **Exact native code/test SHA:** `4a8ddc9f44935e5b9b47c882b0d9df6193ccd087`.
+  `src/base/file_preview_supervisor.h/.cpp` is a UI-independent,
+  *background-thread-only* parent invocation of the already isolated
+  `FlyShellIsolationHelper.exe --preview-read`. It creates the exact
+  process suspended, puts it in a private kill-on-close Windows Job before
+  resuming it, and limits inherited handles with
+  `PROC_THREAD_ATTRIBUTE_HANDLE_LIST` to the one-request stdin/stdout
+  pipes and a NUL stderr sink. The parent checks a pre-screened request,
+  bounded reply length and kind, status and checksum, plus actual child exit.
+  Cancellation and the independent parent deadline terminate **only this
+  exact-owned Job** and join the IO thread before returning. This is
+  **process fault containment, not a security sandbox**.
+- `src/base/file_preview_request_gate.h` owns request tickets per future
+  pane owner. Every replacement/clear invalidates the previous cancellation
+  token; delivery is permitted only while the same window, pane, tab,
+  selection identity, generation and token remain current. It is a
+  UI-independent primitive; there is **no MainWindow/PreviewController
+  invocation or DispatcherQueue binding yet**.
+- [Actual Windows native release-helper/parent #38558173709](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38558173709)
+  **SUCCESS** on `fa58362a3c719a154b43ea518c9f6bee93c7545f`:
+  real child text-bytes wire, missing/oversized/rejected cases, malformed
+  reply checksum, test-owned hung-child deadline with Job reclamation,
+  stale window/pane/tab/selection generation gate and owned test-file
+  cleanup. Earlier first compile in
+  [#38557801405](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38557801405)
+  failed on a missing move constructor for the parent-side private
+  HANDLE wrapper; the wrapper was corrected to move, never duplicate,
+  the pipe HANDLE.
+- [Follow-up active cancellation #38558563233](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38558563233)
+  **SUCCESS** at the exact SHA above. A disposable hung child was
+  cancelled **after launch**, reaped within a bounded interval, and
+  all previously accepted wire/deadline/gate tests passed again.
+  The matching Release helper binary was reused because this exact
+  follow-up changed only the native test and its source contract.
+- The previous [#38557209117](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38557209117)
+  source-gate attempt was interrupted by a PowerShell 5.1
+  native-stderr `RemoteException` before any compiler or product test.
+  The succeeding [#38557801405](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38557801405)
+  used separate Python stdout/stderr capture, confirmed the source
+  contract PASS and actual Release helper build; it then revealed the
+  concrete C2280 move-wrapper compiler defect noted above. These failed
+  harness/compiler runs must **not** be called accepted validation.
+- The native supervisor translation unit is listed in the *tracked app
+  project template*. **Full shipping app Release compile/link at the new
+  revision is a separate pending gate**. This layer is not yet called
+  by production selection state; UI async ownership, stale-result
+  DispatcherQueue application, actual raster decoding, XAML Preview pane,
+  Light/Dark pixels, DPI and Narrator remain **NOT TESTED**. The app
+  composition root must supply and verify its own trusted sibling helper
+  path; accepting an arbitrary basename is not proof of helper provenance.
+
 ## Phase 2 safe-open acceptance evidence (bounded)
 
 - [MSVC owned native run #38522342210](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38522342210):
