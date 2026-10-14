@@ -7,6 +7,37 @@ app/winui, UI-independent native code in src/base, tests in tests/winui, and
 bounded orchestration in tools/winui/run_checks.py. The former MFC application
 is retired from the working tree and is recoverable from Git revision cbffb48.
 
+## 2026-10-14 F03 Preview parent supervisor — real child native PASS, UI unwired
+
+- **Native acceptance code SHA:** `4a8ddc9f44935e5b9b47c882b0d9df6193ccd087`.
+  Added UI-independent `src/base/file_preview_supervisor.h/.cpp`
+  (background-only, suspended CreateProcess, restricted inherited
+  stdin/stdout/stderr HANDLE_LIST, private Job kill-on-close, checked bounded
+  request/reply and process exit, timeout/cancellation cleanup) plus
+  `file_preview_request_gate.h` (window/pane/tab/selection/generation token
+  invalidation). The supervisor translation unit is linked from the tracked
+  WinUI app project template; **no production controller calls it yet**.
+- [Native actual child #38558173709](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38558173709)
+  **SUCCESS** at `fa58362a3c719a154b43ea518c9f6bee93c7545f` for
+  actual one-shot helper bytes, unsupported/missing request handling,
+  corrupt response, owned child Job timeout, stale route and test cleanup.
+  [Follow-up #38558563233](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38558563233)
+  **SUCCESS** at latest native-test SHA above also covered active
+  cancellation after launching a deliberately blocked disposable child,
+  and re-proved the earlier cases.
+- A failed source-harness run [#38557209117](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38557209117)
+  was a PowerShell stderr-capture error; the corrected source gate and
+  Release helper build succeeded in [#38557801405](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38557801405)
+  before revealing an actual C++ missing-move compile error. The
+  explicit Handle move was fixed, compiled and accepted in the later
+  native runs. Do not mislabel these earlier failed runs PASS.
+- **NOT VERIFIED at current main:** central full WinUI Release after the
+  parent file was linked; actual UI selection/background callback and
+  stale-result presentation, image decoder or visible Preview pane.
+  This is not a sandbox, and actual host power-cut durability is not
+  implied by the unrelated PR #63 graceful-reboot evidence.
+  See [F03_PREVIEW_PANE.md](F03_PREVIEW_PANE.md).
+
 ## 2026-10-14 F03 one-shot Preview helper — bounded private protocol verified
 
 - **Latest worker code SHA:** `d0d5b6a987ef8ae1c73e2aa0f5ceacb20c37f0ec`.
