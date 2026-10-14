@@ -21,17 +21,24 @@ is retired from the working tree and is recoverable from Git revision cbffb48.
   advertised reparse points, non-local and non-regular candidates, unknown
   sizes and unsupported formats. No filesystem reads, Shell/provider
   operations, UI changes, new preferences, clipboard or profile changes.
+- **Verified Windows source acceptance:** [central registered CI
+  #38510347268](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38510347268)
+  completed **SUCCESS** with `project_id=desktop-a`, exact SHA
+  `842742ad7b83a338d3027a9d4025e4c149a8507e`, `scope=source`.
+  Producing output recorded policy validation PASS and source PASS:
+  canonical structure (4 tests), product-source (190), harness (20),
+  infrastructure (30), all with exit 0. This scope does **not** compile
+  the F03 native C++ file through MSVC, perform a Release build, invoke
+  the F03 worker (not implemented), or exercise any GUI/pixels.
 - **Local diagnostic evidence:** portable C++17 candidate-screen logic and
-  static assertions reproduced in an isolated local native build compiled
-  and executed under g++ 14.2 with `-Wall -Wextra -Werror -pedantic`:
-  PASS. This local surrogate check is **not** authoritative native compile
-  evidence for the exact Git checkout or Windows MSVC, and the registered
-  Python source suite has not yet been run on Windows for this commit.
+  assertions were compiled/executed in an isolated local surrogate under
+  g++ 14.2 with `-Wall -Wextra -Werror -pedantic`: PASS. This is not
+  authoritative exact-checkout native/MSVC compile evidence.
 - **Still open:** actual authoritative handle validation and isolated
   cancelable file-read/decoder worker, UTF/binary/error/TOCTOU guards,
   UI/controller wiring and selected-item lifetime, opt-in preview layout,
-  before/after real screenshots, functional and central exact-main
-  acceptance. **F03 USER-VISIBLE FEATURE: NOT IMPLEMENTED.**
+  before/after real screenshots, native build and full functional/current-main
+  GUI acceptance. **F03 USER-VISIBLE FEATURE: NOT IMPLEMENTED.**
 
 ## 2026-10-14 F02 narrow Details scroll and keyboard focus — inspected PNG pass
 
