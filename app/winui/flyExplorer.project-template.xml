@@ -134,6 +134,7 @@
     <ClInclude Include="..\..\src\base\file_metadata_wire.h" />
     <ClInclude Include="..\..\src\base\file_preview_policy.h" />
     <ClInclude Include="..\..\src\base\file_preview_reader.h" />
+    <ClInclude Include="..\..\src\base\file_preview_safe_open.h" />
     <ClInclude Include="..\..\src\base\shell_visual_wire.h" />
     <ClInclude Include="..\..\src\base\bounded_regex.h" />
     <ClInclude Include="..\..\src\base\file_command_core.h" />
@@ -297,6 +298,9 @@
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="..\..\src\base\file_preview_reader.cpp">
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="..\..\src\base\file_preview_safe_open.cpp">
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="..\..\src\base\shell_navigation_core.cpp">
