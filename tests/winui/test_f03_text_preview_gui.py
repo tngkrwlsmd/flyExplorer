@@ -186,10 +186,18 @@ def run(*, win, element, safe_click, eventually, left, right):
                 break
             time.sleep(.12)
         print("F03_GUI_RESELECT_FILENAME_PHYSICAL_CLICK_SELECTED="+str(after_click),flush=True)
-    if not after_click:
+    # With SelectionMode=Multiple, a selected TXT alongside the
+    # still-selected folder is not a valid single-file Preview choice.
+    both=bool(readme.iface_selection_item.CurrentIsSelected) and bool(
+        row("Nested").iface_selection_item.CurrentIsSelected)
+    print("F03_GUI_RESELECT_BOTH_ROWS_SELECTED="+str(both),flush=True)
+    physical_single=after_click and not both
+    print("F03_GUI_RESELECT_PHYSICAL_SINGLE_SELECTION="+str(physical_single),flush=True)
+    if not physical_single:
         selection.Select()
-        eventually(lambda:bool(readme.iface_selection_item.CurrentIsSelected),
-                   "Owned ListItem SelectionItem.Select did not select TXT",7)
+        eventually(lambda:bool(readme.iface_selection_item.CurrentIsSelected) and
+                   not bool(row("Nested").iface_selection_item.CurrentIsSelected),
+                   "Owned UIA Select did not establish exactly one TXT",7)
         print("F03_GUI_RESELECT_UIA_SELECT_FALLBACK=PASS",flush=True)
     eventually(lambda:"owned synthetic only" in body_text(),
                "SelectionItem-confirmed reselect did not trigger owned text request",14)
