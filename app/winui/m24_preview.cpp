@@ -1,5 +1,6 @@
 #include "pch.h"
 #include "MainWindow.xaml.h"
+#include <winrt/Microsoft.UI.Xaml.Automation.h>
 #include "../../src/base/file_preview_policy.h"
 #include <algorithm>
 #include <filesystem>
