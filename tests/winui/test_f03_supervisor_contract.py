@@ -46,6 +46,7 @@ class F03SupervisorContract(unittest.TestCase):
         for value in ("F03_SUPERVISOR_REAL_CHILD_WIRE=PASS",
                       "F03_SUPERVISOR_NEGATIVES=PASS",
                       "F03_SUPERVISOR_JOB_TIMEOUT_AND_CORRUPT_WIRE=PASS",
+                      "F03_SUPERVISOR_ACTIVE_CANCEL_JOB_REAP=PASS",
                       "F03_SUPERVISOR_STALE_ROUTE_CANCEL_GATE=PASS"):
             self.assertIn(value,TEST)
 
