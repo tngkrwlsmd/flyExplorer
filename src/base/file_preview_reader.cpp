@@ -48,7 +48,7 @@ bool inertUtf8(std::vector<std::uint8_t> const& bytes) noexcept
         }
         if(code<minimum||code>0x10ffff||
            (code>=0xd800&&code<=0xdfff))return false;
-        if(code==0||code<0x20 && code!=9 && code!=10 && code!=13 ||
+        if(code==0||(code<0x20&&code!=9&&code!=10&&code!=13)||
            code==0x7f)return false;
     }
     return true;
@@ -80,7 +80,10 @@ bool matchesExpectedLocalHandle(HANDLE handle,
     DWORD got=::GetFinalPathNameByHandleW(
         handle,actual.data(),static_cast<DWORD>(actual.size()),
         FILE_NAME_NORMALIZED|VOLUME_NAME_DOS);
-    if(got!=required||actual.compare(0,4,L"\\\\?\\")!=0)return false;
+    // The size query includes the terminating NUL, the successful read
+    // returns only the copied characters (without that NUL).
+    if(!got||got+1!=required||
+       actual.compare(0,4,L"\\\\?\\")!=0)return false;
     actual.resize(got);
     std::wstring_view resolved(actual.data()+4,actual.size()-4);
     if(!previewpolicy::canonicalLocalPath(resolved) ||
