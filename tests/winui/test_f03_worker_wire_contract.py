@@ -59,6 +59,7 @@ class F03WorkerWireContract(unittest.TestCase):
                       "badChecksum", "badKind", "badSize",
                       "absent", "unc"):
             self.assertIn(token,NATIVE)
+        self.assertIn('path+L".missing.txt"',NATIVE)
 
 
 if __name__=="__main__":
