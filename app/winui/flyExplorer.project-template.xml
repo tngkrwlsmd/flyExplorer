@@ -160,6 +160,7 @@
     <ClInclude Include="file_operation_controller.h" />
     <ClInclude Include="file_metadata_controller.h" />
     <ClInclude Include="file_detail_controller.h" />
+    <ClInclude Include="preview_controller.h" />
     <ClInclude Include="preferences_coordinator.h" />
     <ClInclude Include="workspace_restore_coordinator.h" />
     <ClInclude Include="search_controller.h" />
@@ -202,6 +203,12 @@
       <PrecompiledHeader>Use</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="file_detail_controller.cpp">
+      <PrecompiledHeader>Use</PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="preview_controller.cpp">
+      <PrecompiledHeader>Use</PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="m24_preview.cpp">
       <PrecompiledHeader>Use</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="preferences_coordinator.cpp">
