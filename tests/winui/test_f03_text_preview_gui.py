@@ -108,8 +108,19 @@ def run(*, win, element, safe_click, eventually, left, right):
     readme=eventually(lambda:row("readme.txt"),
                       "Owned text row unavailable after selection switch",8)
     safe_click(readme)
+    # In an extended-selection ListView, physical UIA click_input is
+    # not proof that the selection actually changed. Capture the actual
+    # selected bit before diagnosing the asynchronous Preview controller.
+    selection=readme.iface_selection_item
+    after_click=bool(selection.CurrentIsSelected)
+    print("F03_GUI_RESELECT_PHYSICAL_CLICK_SELECTED="+str(after_click),flush=True)
+    if not after_click:
+        selection.Select()
+        eventually(lambda:bool(readme.iface_selection_item.CurrentIsSelected),
+                   "Owned ListItem SelectionItem.Select did not select TXT",7)
+        print("F03_GUI_RESELECT_UIA_SELECT_FALLBACK=PASS",flush=True)
     eventually(lambda:"owned synthetic only" in body_text(),
-               "New selection did not trigger owned text request",14)
+               "SelectionItem-confirmed reselect did not trigger owned text request",14)
 
     preview_button.iface_invoke.Invoke()
     eventually(lambda:body_text()=="" and
