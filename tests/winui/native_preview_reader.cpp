@@ -13,6 +13,8 @@
 #include <vector>
 #include <utility>
 
+bool runPreviewWorkerWireFixture(std::wstring const& path,
+                                 std::vector<std::uint8_t> const& bytes);
 using fxfile::previewread::Status;
 using fxfile::previewpolicy::Kind;
 using Clock=std::chrono::steady_clock;
@@ -72,6 +74,8 @@ int wmain(int argc,wchar_t** argv)
     writeOwned(text,data);
     writeOwned(image,{0x89,0x50,0x4e,0x47,0x0d,0x0a});
     writeOwned(invalid,{0xc0,0xaf,0x00});
+    check(runPreviewWorkerWireFixture(text,data),
+          "one-shot worker pipe wire and safe file reads");
     // Create a sparse, bounded fixture at 256 KiB + 1 without allocating
     // a large buffer; never read it into memory.
     {
