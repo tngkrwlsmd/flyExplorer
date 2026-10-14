@@ -67,6 +67,21 @@
   explanation in this fixture. **Pointer hit-testing, item target
   geometry, keyboard modifiers, and actual manual mouse use remain
   separate unverified diagnoses**. No product code was changed.
+- **Prepared, NOT EXECUTED mouse hit-target experiment (2026-10-15):**
+  `tests/winui/test_f03_text_preview_gui.py` now logs the UIA-row
+  center attempt versus a bounded filename-side pixel click, verifies
+  the foreground and pixel-owning HWND belong to this test process,
+  checks Ctrl/Shift state, and distinguishes a single selected TXT
+  from a multi-selection. The optional environment flag
+  `FLY_F03_STRICT_PHYSICAL_RESELECT=YES` makes the GUI smoke
+  **fail** if a true single-file physical reselection did not occur;
+  it does **not** allow UIA `SelectionItem.Select()` to conceal this
+  gate. Without that flag, the previously accepted UIA-assisted
+  baseline remains available. The exact newer diagnostic is
+  **UNVERIFIED on Windows** because the remote invocation was
+  blocked, and the connected Desktop Commander device was offline.
+  Do not report a mouse fix until the strict owned test logs
+  `F03_GUI_STRICT_PHYSICAL_RESELECT=PASS` on its pinned commit.
 - **Still not verified:** full independent F03 Preview pane, image
   decode, `.md`/`.log` GUI fixture cases, 125/150/200% real OS DPI,
   high contrast/forced colors, audible Narrator, and complete
