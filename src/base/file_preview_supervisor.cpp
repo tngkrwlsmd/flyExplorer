@@ -21,6 +21,11 @@ public:
     ~Handle() {reset();}
     Handle(Handle const&)=delete;
     Handle& operator=(Handle const&)=delete;
+    Handle(Handle&& other) noexcept:h_(other.release()) {}
+    Handle& operator=(Handle&& other) noexcept {
+        if(this!=&other)reset(other.release());
+        return *this;
+    }
     HANDLE get() const noexcept {return h_;}
     explicit operator bool() const noexcept {
         return h_ && h_!=INVALID_HANDLE_VALUE;
