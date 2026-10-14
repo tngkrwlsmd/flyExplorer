@@ -7,7 +7,55 @@ app/winui, UI-independent native code in src/base, tests in tests/winui, and
 bounded orchestration in tools/winui/run_checks.py. The former MFC application
 is retired from the working tree and is recoverable from Git revision cbffb48.
 
-## 2026-10-15 F03 — parent/helper and opt-in controller implemented; GUI acceptance blocked
+## 2026-10-15 F03 bounded opt-in text Preview — dark/light real GUI PASS with input caveat
+
+- **Accepted GUI SHA:** `0e4e147f7e1004703d9566f3bf38bb086de6c17a`.
+  The current app XAML/C++ are identical to previously starting
+  `b9b15d39`; only F03 test code changed to use the already proven
+  Details-region scrolling and to record the actual selected bit.
+  [Dark actual Windows GUI #38648688824](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38648688824)
+  **SUCCESS**; [Light test-only preference
+  #38649041893](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38649041893)
+  **SUCCESS**. Actual app launch, native list, opt-in `readme.txt`
+  bytes displayed, selection of folder removing stale contents,
+  actual SelectionItem-driven reselect/refresh, opt-out clear,
+  Details reopen default-off and clean app exit passed.
+  Original six user config hashes remained identical and all
+  disposable synthetic fixture files were removed.
+- App-window-only **before/after original PNGs** retained in protected
+  scratch; [dark original view #38648361110](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38648361110)
+  and [light original view #38649262620](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38649262620)
+  were scope-checked and inspected: at the viewed 940x508
+  presentation the toggle/text contrast remained readable, opt-in
+  bytes were visible only in the after image and pane overlay
+  wasn't observed. Toggle **remains low inside Details** and must
+  be revealed with pane-local scrolling; its discoverability needs
+  work. Do not infer DPI/High Contrast/Narrator certification.
+- **Physical mouse reselect NOT ACCEPTED:** both actual GUI logs
+  recorded `F03_GUI_RESELECT_PHYSICAL_CLICK_SELECTED=False`.
+  The subsequent verified UI Automation `SelectionItem.Select()`
+  did select the test-owned file and did rerun Preview correctly.
+  Keep mouse hit-test/selection as an explicit next GUI acceptance
+  gate; do not mislabel this fallback as physical mouse success.
+- **Failed but now reverted separate layout change:** exact
+  `fac580bd` passed [source/Release
+  #38646656680](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38646656680)
+  yet [GUI #38647173047](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38647173047)
+  still crashed at startup `0xC000027B`. Restore commit
+  [`95bd998a`](https://github.com/tngkrwlsmd/flyExplorer/commit/95bd998a5a717718085fb55c99c41d05f11f04e7)
+  kept the previous app/XAML and reverted its now-invalid source
+  assertion. Release success alone is never visual or startup PASS.
+- **Remaining F03:** ensure physical mouse and keyboard-only selection,
+  improve Preview toggle discoverability without modifying the
+  known-starting XAML subtree in a way that recurs the startup
+  COM error, validate `.md`/`.log`, narrow/resized Light/Dark,
+  actual 125/150/200% DPI, high contrast and audible Narrator;
+  full image decoding/independent Preview pane is unimplemented.
+  Retain previously accepted native helper/job/cancel tests and
+  all `.keep` evidence. See
+  [F03_PREVIEW_PANE.md](F03_PREVIEW_PANE.md).
+
+## 2026-10-15 F03 earlier milestone — parent/helper wired, before GUI acceptance
 
 - Current `main` application/UI-test file contents at [00377986](https://github.com/tngkrwlsmd/flyExplorer/commit/003779863a0fa19c8becb04b38e82ce2b3ba6896)
   match the exact blobs of GUI-starting `b9b15d39` after a
