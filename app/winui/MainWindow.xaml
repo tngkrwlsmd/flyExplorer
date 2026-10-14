@@ -705,6 +705,21 @@
                         <TextBlock Text="수정 날짜" FontWeight="SemiBold"/>
                         <TextBlock x:Name="FileInfoModified" TextWrapping="Wrap"
                                    />
+                        <!-- F03 never reads bytes until the user opts in. -->
+                        <Button x:Name="TextPreviewToggleButton" Content="텍스트 미리보기 켜기"
+                                Click="OnToggleTextPreview"
+                                AutomationProperties.Name="텍스트 미리보기 켜기"/>
+                        <TextBlock x:Name="TextPreviewStatus"
+                                   Text="텍스트 미리보기는 기본적으로 꺼져 있습니다."
+                                   TextWrapping="Wrap"
+                                   Opacity="{ThemeResource FlyExplorerCaptionOpacity}"/>
+                        <ScrollViewer MaxHeight="210"
+                                      VerticalScrollBarVisibility="Auto"
+                                      HorizontalScrollBarVisibility="Disabled">
+                            <TextBlock x:Name="TextPreviewBody"
+                                       TextWrapping="Wrap" IsTextSelectionEnabled="True"
+                                       AutomationProperties.Name="선택한 텍스트 파일 미리보기"/>
+                        </ScrollViewer>
                     </StackPanel>
                 </ScrollViewer>
             </Border>
