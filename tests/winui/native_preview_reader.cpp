@@ -146,16 +146,20 @@ int wmain(int argc,wchar_t** argv)
         check(fxfile::previewsafe::openLocalRegular(changed,cancel,end).status
               ==fxfile::previewsafe::Status::Changed,
               "reject forged metadata size at opened handle");
-        auto wrong=ownedCandidate(joined(nested,L"missing.txt"),1);
+        const auto missingPath=joined(nested,L"missing.txt");
+        auto wrong=ownedCandidate(missingPath,1);
         check(!fxfile::previewsafe::openLocalRegular(wrong,cancel,end).accepted(),
               "reject missing file");
-        wrong=ownedCandidate(L"\\\\server\\share\\test.txt",1);
+        const std::wstring uncPath=L"\\\\server\\share\\test.txt";
+        wrong=ownedCandidate(uncPath,1);
         check(!fxfile::previewsafe::openLocalRegular(wrong,cancel,end).accepted(),
               "reject UNC");
-        wrong=ownedCandidate(nestedFile+L":ads",1);
+        const auto adsPath=nestedFile+L":ads";
+        wrong=ownedCandidate(adsPath,1);
         check(!fxfile::previewsafe::openLocalRegular(wrong,cancel,end).accepted(),
               "reject alternate stream");
-        wrong=ownedCandidate(nestedFile+L"\\..\\test.txt",1);
+        const auto traversalPath=nestedFile+L"\\..\\test.txt";
+        wrong=ownedCandidate(traversalPath,1);
         check(!fxfile::previewsafe::openLocalRegular(wrong,cancel,end).accepted(),
               "reject dot-dot path");
         wrong=ownedCandidate(nestedFile, data.size());
@@ -166,7 +170,8 @@ int wmain(int argc,wchar_t** argv)
         wrong.isReparsePoint=true;
         check(!fxfile::previewsafe::openLocalRegular(wrong,cancel,end).accepted(),
               "reject advertised reparse");
-        wrong=ownedCandidate(joined(nested,L"payload.svg"),0);
+        const auto svgPath=joined(nested,L"payload.svg");
+        wrong=ownedCandidate(svgPath,0);
         check(!fxfile::previewsafe::openLocalRegular(wrong,cancel,end).accepted(),
               "reject active file type");
         cancel.store(true);
@@ -192,7 +197,8 @@ int wmain(int argc,wchar_t** argv)
         }else std::printf("F03_NATIVE_LEAF_SYMLINK_REJECT=NOT_TESTED\n");
         const auto linkdir=joined(root,L"linked-dir");
         if(::CreateSymbolicLinkW(linkdir.c_str(),nested.c_str(),0x3)){
-            auto c=ownedCandidate(joined(linkdir,L"open-me.txt"),data.size());
+            const auto linkedFile=joined(linkdir,L"open-me.txt");
+            auto c=ownedCandidate(linkedFile,data.size());
             check(!fxfile::previewsafe::openLocalRegular(c,cancel,end).accepted(),
                   "reject ancestor directory symlink");
             check(!!::RemoveDirectoryW(linkdir.c_str()),
