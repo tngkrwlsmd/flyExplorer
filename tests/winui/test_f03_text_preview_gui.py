@@ -129,6 +129,47 @@ def run(*, win, element, safe_click, eventually, left, right):
     selection=readme.iface_selection_item
     print("F03_GUI_RESELECT_SETTLED_PHYSICAL_CLICK_SELECTED="+str(after_click),flush=True)
     if not after_click:
+        # Physical click_input targets the UIA item's center. With a
+        # multi-select ListView, verify a filename-side physical click
+        # separately before falling back to SelectionItem.Select().
+        from pywinauto import mouse
+        target=readme.rectangle()
+        list_rect=element("LeftFiles").rectangle()
+        root_rect=win.rectangle()
+        # Both the target point and the ListView must belong to the
+        # harness-owned foreground process; never click foreign pixels.
+        x=target.left+min(65,max(8,target.width()//4))
+        y=(target.top+target.bottom)//2
+        assert target.width()>=85 and target.height()>=22
+        assert list_rect.left+4<x<list_rect.right-4
+        assert list_rect.top+4<y<list_rect.bottom-4
+        assert root_rect.left+8<x<root_rect.right-8
+        assert root_rect.top+8<y<root_rect.bottom-8
+        win.set_focus()
+        user=ctypes.windll.user32
+        user.GetForegroundWindow.restype=wintypes.HWND
+        user.GetWindowThreadProcessId.argtypes=[
+            wintypes.HWND,ctypes.POINTER(wintypes.DWORD)]
+        foreground=user.GetForegroundWindow()
+        pid=wintypes.DWORD()
+        user.GetWindowThreadProcessId(foreground,ctypes.byref(pid))
+        assert foreground==win.handle and pid.value==win.element_info.process_id, (
+            "Refuse physical click without owned foreground")
+        print("F03_GUI_RESELECT_TARGET_RELATIVE_X="+str(x-list_rect.left),flush=True)
+        print("F03_GUI_RESELECT_ITEM_WIDTH="+str(target.width()),flush=True)
+        print("F03_GUI_RESELECT_LIST_WIDTH="+str(list_rect.width()),flush=True)
+        print("F03_GUI_RESELECT_TARGET_Y_IN_LIST="+str(y-list_rect.top),flush=True)
+        mouse.click(button="left",coords=(x,y))
+        deadline=time.monotonic()+2.5
+        while time.monotonic()<deadline:
+            current=row("readme.txt")
+            if current and bool(current.iface_selection_item.CurrentIsSelected):
+                readme=current
+                after_click=True
+                break
+            time.sleep(.12)
+        print("F03_GUI_RESELECT_FILENAME_PHYSICAL_CLICK_SELECTED="+str(after_click),flush=True)
+    if not after_click:
         selection.Select()
         eventually(lambda:bool(readme.iface_selection_item.CurrentIsSelected),
                    "Owned ListItem SelectionItem.Select did not select TXT",7)
