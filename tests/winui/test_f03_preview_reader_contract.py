@@ -53,7 +53,7 @@ class F03HandleReaderContract(unittest.TestCase):
             "('call \"'+$vcvars+",
             "('cd /d \"'+$FixtureRoot+",
             "('cl.exe /nologo /std:c++20",
-            "(' \"'+$exe+",
+            "('\"'+$exe+",
             "$body.Count -ne 9",
             "F03_NATIVE_BATCH_SERIALIZATION_INVALID",
         ):
