@@ -690,7 +690,7 @@
                             <TextBlock Text="상세 정보" FontSize="17" FontWeight="SemiBold"
                                        VerticalAlignment="Center"/>
                             <Button x:Name="TextPreviewToggleButton"
-                                    Content="미리보기 켜기" FontSize="11"
+                                    Content="텍스트 미리보기 켜기" FontSize="11"
                                     Padding="6,3" Click="OnToggleTextPreview"
                                     AutomationProperties.Name="텍스트 미리보기 켜기"/>
                         </StackPanel>
