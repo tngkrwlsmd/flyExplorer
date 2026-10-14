@@ -17,22 +17,33 @@ reported `PASS release-build` at exact source SHA
 `93c8a435cb5de505d02ac1927ceb30e0f572bd09`, including actual
 `file_preview_reader.cpp` translation-unit compilation.
 
-**Native read behavior NOT YET ACCEPTED:** `tests/winui/native_preview_reader.cpp`
-and `tools/winui/run_f03_reader_native.ps1` provide an owned-fixture
-test for valid text/image bytes, wrong path/size, invalid UTF-8, cancellation,
-deadline, oversized request and directory rejection. The ad-hoc Windows
-runs [38518452445](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38518452445)
-(PowerShell 5.1 dispatch parse),
-[38518550162](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38518550162)
-(SYSTEM Python PATH),
-and [38518696504](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38518696504)
-(MSVC `vcvars64.bat` setup exit 22) were *execution-harness / environment*
-failures before native C++ runtime assertions. They do not prove either
-native behavior PASS or a product failure. All associated owned scratch
-cleanup markers passed. Correct the **first failed native-compiler
-initialization** using diagnostic setup output and the approved interactive
-worker environment rather than repeating unchanged product builds.
+**Verified focused native handle-read behavior:** [owned Windows
+run #38520021060](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38520021060)
+completed **SUCCESS** with exact source SHA
+`62a4f632d302bce59839b3b4109a1380c55e5b5a` after an isolated
+MSVC compile of `src/base/file_preview_reader.cpp` with
+`tests/winui/native_preview_reader.cpp`. The test-owned, regular local files
+exercised correct UTF-8 and opaque image bytes, mismatched opened path and
+size, invalid UTF-8, cancellation, deadline, oversized text, invalid handle
+and directory rejection. The producing log recorded
+`F03_NATIVE_HANDLE_READ_AND_FAILURE_CONTRACT=PASS`,
+`F03_NATIVE_VERIFIED_HANDLE_ACCEPTANCE=PASS`, and owned scratch cleanup
+PASS. The *actual compiled behavior* of this handle-only primitive is now
+**accepted within those bounded fixture cases**, not as an isolated helper
+service or a shippable preview feature.
 
+**Earlier harness failures correctly classified:** [#38518452445](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38518452445)
+(PowerShell 5.1 parser),
+[#38518550162](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38518550162)
+(SYSTEM session did not expose `python`),
+[#38518696504](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38518696504)
+and diagnostic [#38519687206](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38519687206)
+(truncated `call "` batch serialization from unparenthesized PowerShell
+array string expressions). The native test helper now parenthesizes each
+concatenated array element, checks serialized commands before execution and
+retains a bounded developer-command setup log on failure. These earlier
+failed runs never executed the C++ assertions and must not be recorded as
+product regressions.
 ## Intended behavior
 
 An explicit opt-in read-only Preview pane for the currently selected
@@ -62,9 +73,13 @@ preview handlers remain OUT OF SCOPE.
    **12 MiB**, with a separate **16,777,216-pixel** decode cap.
    The screen only decides whether a request MAY be submitted; its
    caller-supplied flags and path are not proof that a file is safe.
-2. **Authoritative worker/handle validation (NOT IMPLEMENTED):**
-   run file access outside the XAML thread in a bounded, cancellable
-   worker or existing isolated helper. Require handle-based local fixed
+2. **Authoritative worker/handle validation (PARTIALLY IMPLEMENTED):**
+   The `readVerifiedHandle` primitive checks an already-opened file
+   handle, final path/volume, reparse/directory flags, file size and changed
+   metadata, performs bounded reads with cooperative cancellation and strict
+   inert UTF-8 validation. It is currently called only in a test executable.
+   A production safe opener must run outside the XAML thread in a bounded,
+   cancellable worker or existing isolated helper. Require handle-based local fixed
    volume validation; reject reparse/junction traversal of *all*
    components, not just the leaf; reject directories/device/provider
    files; verify file identity, attributes and size on the opened
