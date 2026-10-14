@@ -7,38 +7,54 @@ app/winui, UI-independent native code in src/base, tests in tests/winui, and
 bounded orchestration in tools/winui/run_checks.py. The former MFC application
 is retired from the working tree and is recoverable from Git revision cbffb48.
 
-## 2026-10-14 F03 read-only Preview pane — phase 1 native policy groundwork
+## 2026-10-14 F03 Preview pane — bounded policy and handle reader verified
 
-- **Latest phase-one source:** `bbb12bc4ff5f7e26f2d0bef0e8461beaf7d3dd36`
-  (F03 safe policy, portable native assertions, source contract registered
-  in the canonical shell product-source family, and architecture/acceptance
-  boundary in [F03_PREVIEW_PANE.md](F03_PREVIEW_PANE.md)).
-- **Implemented (not yet an exposed feature):** pure
-  `src/base/file_preview_policy.h` candidate screen for bounded local
-  regular files: TXT/MD/LOG up to 256 KiB, PNG/JPG/JPEG/BMP up to 12 MiB;
-  separate 16,777,216 decoded-pixel ceiling for a FUTURE worker. Explicit
-  rejection of UNC/device/relative/dot-segment/alternate-stream paths,
-  advertised reparse points, non-local and non-regular candidates, unknown
-  sizes and unsupported formats. No filesystem reads, Shell/provider
-  operations, UI changes, new preferences, clipboard or profile changes.
-- **Verified Windows source acceptance:** [central registered CI
+- **Scope:** source-only candidate policy `src/base/file_preview_policy.h`
+  plus independently compiled and tested `src/base/file_preview_reader.h/.cpp`.
+  The actual Preview pane and its out-of-process worker have **NOT** been
+  implemented or connected to WinUI. No existing user-facing pixels changed.
+  Design boundaries and next steps: [F03_PREVIEW_PANE.md](F03_PREVIEW_PANE.md).
+- **Accepted source checkpoint:** [central source run
   #38510347268](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38510347268)
-  completed **SUCCESS** with `project_id=desktop-a`, exact SHA
-  `842742ad7b83a338d3027a9d4025e4c149a8507e`, `scope=source`.
-  Producing output recorded policy validation PASS and source PASS:
-  canonical structure (4 tests), product-source (190), harness (20),
-  infrastructure (30), all with exit 0. This scope does **not** compile
-  the F03 native C++ file through MSVC, perform a Release build, invoke
-  the F03 worker (not implemented), or exercise any GUI/pixels.
-- **Local diagnostic evidence:** portable C++17 candidate-screen logic and
-  assertions were compiled/executed in an isolated local surrogate under
-  g++ 14.2 with `-Wall -Wextra -Werror -pedantic`: PASS. This is not
-  authoritative exact-checkout native/MSVC compile evidence.
-- **Still open:** actual authoritative handle validation and isolated
-  cancelable file-read/decoder worker, UTF/binary/error/TOCTOU guards,
-  UI/controller wiring and selected-item lifetime, opt-in preview layout,
-  before/after real screenshots, native build and full functional/current-main
-  GUI acceptance. **F03 USER-VISIBLE FEATURE: NOT IMPLEMENTED.**
+  PASS at `842742ad7b83a338d3027a9d4025e4c149a8507e`
+  (`desktop-a`, `scope=source`, policy+source contracts). Phase-one
+  local policy screen limits local regular TXT/MD/LOG to 256 KiB and
+  PNG/JPG/JPEG/BMP to 12 MiB; intended future image decode cap
+  16,777,216 pixels, with unsupported/UNC/reparse/unsafe paths rejected.
+- **Exact MSVC Release proof:** [central registered run
+  #38518993733](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38518993733)
+  **SUCCESS**, `project_id=desktop-a`, `scope=release`, SHA
+  `93c8a435cb5de505d02ac1927ceb30e0f572bd09`.
+  Producing log explicitly lists `file_preview_reader.cpp` compiled and
+  `PASS release-build`; executable output created. This is a native
+  compile/Release acceptance, not file-read behavior or UI acceptance.
+- **Exact test-owned MSVC native behavior:** [Remote Shell run
+  #38520021060](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38520021060)
+  **SUCCESS** at `62a4f632d302bce59839b3b4109a1380c55e5b5a`.
+  The standalone reader test compiled `file_preview_reader.cpp` with
+  `native_preview_reader.cpp`, and recorded
+  `F03_NATIVE_HANDLE_READ_AND_FAILURE_CONTRACT=PASS`,
+  `F03_NATIVE_VERIFIED_HANDLE_ACCEPTANCE=PASS`, exact owned SHA and
+  scratch cleanup PASS. Inspected bounded positive reads and rejection
+  of changed/mismatched path/size, invalid UTF-8, cancellation,
+  deadline, oversized text, invalid handle and directory handles.
+  The actual opened-handle final path and local fixed-disk checks are
+  implementation guards, **not** a proof that arbitrary ancestor reparse
+  traversal is safe. The native test is not an isolated worker or GUI.
+- **Prior execution/harness failures:** runs `38518452445` (PowerShell
+  5.1 parser), `38518550162` (SYSTEM Python PATH), `38518696504` /
+  `38519687206` (concatenated PowerShell batch command truncated to
+  `call "`). No C++ assertion ran in those attempts; the batch
+  serialization was corrected, and the final native run passed.
+  Do not repeat unchanged Release or native tests.
+- **Remaining high-priority F03 gaps:** safe authoritative handle opening
+  with all-ancestor reparse and race checks; supervised worker-process
+  launch, cancel/kill and bounded result wire; stale selection/pane/tab
+  identity rejection; image header/decode dimensions/memory guard;
+  inert rendering of UTF-8 text, placeholders, opt-in Preview pane
+  presentation and source/GUI/pixel acceptance. **USER-VISIBLE F03
+  PREVIEW FEATURE: NOT YET IMPLEMENTED.**
+
 
 ## 2026-10-14 F02 narrow Details scroll and keyboard focus — inspected PNG pass
 
