@@ -50,6 +50,14 @@ class F03WinUIControllerContract(unittest.TestCase):
                  for n in root.iter()}
         for name in ("TextPreviewToggleButton","TextPreviewStatus","TextPreviewBody"):
             self.assertIn(name,by_name)
+        # Keep tested XAML subtree and control types unchanged. The prior
+        # refactor added a named/visibility-driven inner ScrollViewer and
+        # crashed at startup (0xC000027B); it was not a mere pixel issue.
+        for name in ("TextPreviewToggleButton","TextPreviewStatus","TextPreviewBody"):
+            self.assertLess(XAML.index('x:Name="'+name+'"'),
+                            XAML.index('x:Name="FileInfoHint"'))
+        self.assertNotIn('x:Name="TextPreviewContainer"',XAML)
+        self.assertNotIn('TextPreviewContainer()',ROUTER)
 
 if __name__=="__main__":
     unittest.main()
