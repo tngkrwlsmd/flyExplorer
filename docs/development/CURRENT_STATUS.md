@@ -46,6 +46,16 @@ is retired from the working tree and is recoverable from Git revision cbffb48.
   persisted; the accessibility Select() fallback again passed.
   Thus the simple immediate-click race is not an adequate
   explanation. Leave mouse hit-testing/focus/manual click unverified.
+- **New mouse diagnostic committed but NOT RUN:** F03 test now records
+  item-center versus bounded filename-side physical pointer selection,
+  verifies window/pixel HWND ownership and Ctrl/Shift state, and
+  rejects a simultaneous folder-and-text multi-selection as successful
+  single-file Preview input. Set `FLY_F03_STRICT_PHYSICAL_RESELECT=YES`
+  in a **test-owned** GUI invocation to fail on mouse selection instead
+  of falling back to UIA `Select()`. The remote Windows request was
+  blocked at security validation and the Desktop Commander device was
+  offline; these source-only updates carry **no new GUI PASS**.
+  See [F03_PREVIEW_PANE.md](F03_PREVIEW_PANE.md).
 - **Failed but now reverted separate layout change:** exact
   `fac580bd` passed [source/Release
   #38646656680](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38646656680)
