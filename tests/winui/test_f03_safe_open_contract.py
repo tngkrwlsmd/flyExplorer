@@ -40,6 +40,14 @@ class F03SafeOpenContract(unittest.TestCase):
             if c.tag.endswith("ClCompile")
         ]
         self.assertIn("../../src/base/file_preview_safe_open.cpp",compile_paths)
+        self.assertIn("const std::wstring path(candidate.absolutePath)",SOURCE)
+        self.assertIn("stable.absolutePath=path",SOURCE)
+        self.assertIn("previewpolicy::screen(stable)",SOURCE)
+        self.assertLess(
+            SOURCE.index("const std::wstring path(candidate.absolutePath)"),
+            SOURCE.index("previewpolicy::screen(stable)"))
+        self.assertIn("UniqueHandle openPath(std::wstring const& path,bool directory) {",SOURCE)
+        self.assertNotIn("UniqueHandle openPath(std::wstring const& path,bool directory) noexcept",SOURCE)
         self.assertIn("F03_NATIVE_SAFE_OPEN_AND_GUARDED_READ=PASS",NATIVE)
         self.assertIn("std::wstring&&,std::uint64_t)=delete;",NATIVE)
         self.assertIn("F03_NATIVE_ANCESTOR_SYMLINK_REJECT=NOT_TESTED",NATIVE)
