@@ -9,6 +9,7 @@
 #include <cstdio>
 #include <filesystem>
 #include <string>
+#include <thread>
 #include <vector>
 
 using fxfile::previewsupervisor::Status;
@@ -86,6 +87,25 @@ bool run(std::wstring const& helper,std::wstring const& stub,
     ::SetEnvironmentVariableW(L"FLY_F03_OWNED_STUB_MODE",nullptr);
     if(deadline.status!=Status::Deadline||duration.count()>1600)
         return fail("owned-hung-child");
+    // Cancel after the child is running, with a bounded owned-only kill.
+    if(!::SetEnvironmentVariableW(L"FLY_F03_OWNED_STUB_MODE",L"hang"))
+        return fail("cancel-env");
+    std::atomic_bool midCancel{false};
+    std::thread cancelRequest([&] {
+        ::Sleep(120);
+        midCancel.store(true);
+    });
+    const auto cancelStart=std::chrono::steady_clock::now();
+    auto canceled=fxfile::previewsupervisor::run(
+        stub,candidate,midCancel,3000);
+    cancelRequest.join();
+    const auto cancelMs=std::chrono::duration_cast<std::chrono::milliseconds>(
+        std::chrono::steady_clock::now()-cancelStart);
+    ::SetEnvironmentVariableW(L"FLY_F03_OWNED_STUB_MODE",nullptr);
+    if(canceled.status!=Status::Cancelled||cancelMs.count()>1500)
+        return fail("owned-midflight-cancel");
+    std::printf("F03_SUPERVISOR_ACTIVE_CANCEL_JOB_REAP=PASS\n");
+
     std::printf("F03_SUPERVISOR_JOB_TIMEOUT_AND_CORRUPT_WIRE=PASS\n");
 
     using namespace fxfile::previewgate;
