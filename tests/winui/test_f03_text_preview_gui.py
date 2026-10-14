@@ -155,6 +155,23 @@ def run(*, win, element, safe_click, eventually, left, right):
         user.GetWindowThreadProcessId(foreground,ctypes.byref(pid))
         assert foreground==win.handle and pid.value==win.element_info.process_id, (
             "Refuse physical click without owned foreground")
+        # Guard the pixel itself, not only the foreground title: floating
+        # or foreign always-on-top windows must never receive test clicks.
+        user.WindowFromPoint.argtypes=[wintypes.POINT]
+        user.WindowFromPoint.restype=wintypes.HWND
+        user.GetAncestor.argtypes=[wintypes.HWND,wintypes.UINT]
+        user.GetAncestor.restype=wintypes.HWND
+        hit=user.WindowFromPoint(wintypes.POINT(x,y))
+        hit_root=user.GetAncestor(hit,2) if hit else None  # GA_ROOT
+        hit_pid=wintypes.DWORD()
+        if hit_root:
+            user.GetWindowThreadProcessId(hit_root,ctypes.byref(hit_pid))
+        assert hit_root==win.handle and hit_pid.value==pid.value, (
+            "Refuse pointer input at a foreign or obscured pixel")
+        ctrl=bool(user.GetAsyncKeyState(0x11)&0x8000)
+        shift=bool(user.GetAsyncKeyState(0x10)&0x8000)
+        print("F03_GUI_RESELECT_INPUT_MODIFIERS_CTRL="+str(ctrl)+" SHIFT="+str(shift),flush=True)
+        assert not ctrl and not shift, "Refuse ambiguous modified mouse selection"
         print("F03_GUI_RESELECT_TARGET_RELATIVE_X="+str(x-list_rect.left),flush=True)
         print("F03_GUI_RESELECT_ITEM_WIDTH="+str(target.width()),flush=True)
         print("F03_GUI_RESELECT_LIST_WIDTH="+str(list_rect.width()),flush=True)
