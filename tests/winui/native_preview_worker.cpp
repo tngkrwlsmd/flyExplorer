@@ -71,7 +71,7 @@ ReplyData query(std::wstring path,std::uint32_t kind,std::uint64_t expected,
         value.body.resize(value.header.byteCount);
         value.complete=value.body.empty() ||
             readAll(outRead,value.body.data(),value.body.size());
-        if(value.complete &&
+        if(value.complete && value.header.status==0 &&
            value.header.checksum!=
                previewwire::checksum(value.body.data(),value.body.size()))
             value.complete=false;
