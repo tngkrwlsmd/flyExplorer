@@ -7,7 +7,44 @@ app/winui, UI-independent native code in src/base, tests in tests/winui, and
 bounded orchestration in tools/winui/run_checks.py. The former MFC application
 is retired from the working tree and is recoverable from Git revision cbffb48.
 
-## 2026-10-14 F03 guarded local safe-open — native/source verified, Release pending
+## 2026-10-14 F03 one-shot Preview helper — bounded private protocol verified
+
+- **Latest worker code SHA:** `d0d5b6a987ef8ae1c73e2aa0f5ceacb20c37f0ec`.
+  Added private versioned/length-checked/checksummed
+  `file_preview_worker_wire.h`, isolated-only
+  `file_preview_worker.cpp`, and explicit
+  `FlyShellIsolationHelper --preview-read` mode. One request opens and
+  reads a single eligible local file, sending a capped raw byte frame
+  or empty-body error. This has **no user-facing Preview pane** and no
+  production parent supervisor wired to this mode.
+- **Native fixture behavior accepted:** [Remote Shell #38526086984](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38526086984)
+  **SUCCESS**: bounded test-owned anonymous-pipe wire, valid TXT bytes,
+  wrong checksum/kind/length, non-existent TXT and UNC negatives,
+  existing native guarded-open and symlink rejection, and scratch cleanup.
+  Prior failed fixtures #38525652361/#38525878610 were a test
+  error: the nonexistent filename ended in unsupported `.missing`, so
+  the correct earlier unsupported-type response disagreed with the
+  test's expected missing-file response. Replaced with
+  `.missing.txt` and verified without product-code changes.
+- **Source contract accepted:** [central #38526337158](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38526337158)
+  **SUCCESS**, exact SHA, policy, structure 4, product 199,
+  harness 20, infrastructure 30 passed.
+- **Release build and helper staging accepted:** [central #38526567823](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38526567823)
+  **SUCCESS**, `scope=release` at exact SHA. `build.cmd` requires
+  the helper build to succeed before building and staging
+  `flyExplorer.exe`; the helper project includes the preview worker.
+  This proves **compiler/link/staging integration**, not actual
+  external child process execution, job-object cancellation, end-to-end
+  bounded read/wire or stale-result filtering.
+- **Next implementation:** separate `PreviewController`/supervisor
+  with owned helper spawn, inherited pipe handle whitelist, job-kill
+  on cancel/timeouts, bounded reads and response verification,
+  route+pane+tab+selection+generation comparison before delivering
+  results. Only then image decoding and opt-in XAML Preview pane.
+  High-contrast, DPI scaling, Narrator and before/after pixels
+  still **NOT TESTED for F03**, because its UI does not exist.
+
+## 2026-10-14 F03 guarded local safe-open — native/source/Release verified
 
 - **Latest tested source SHA:** `8ecd748a126f58b9c81f88ad026fe8a434a4d77a`.
   In `src/base/file_preview_safe_open.h/.cpp`, worker-only
@@ -35,12 +72,11 @@ is retired from the working tree and is recoverable from Git revision cbffb48.
   Earlier source run `38523399332` failed one stale source-contract
   string after the stable-path change; the contract was corrected and
   the accepted follow-up passed.
-- **Current Release status:** [central registered CI #38523831041](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38523831041)
-  with `scope=release` and exact SHA `8ecd748a126f58b9c81f88ad026fe8a434a4d77a`
-  remained **IN PROGRESS** at the 3-minute observation cutoff; **Release
-  acceptance at this SHA is NOT YET VERIFIED.** Do not dispatch a
-  duplicate run or overwrite its single control-plane request slot.
-  Check the existing run, compile log and precise result on next resume.
+- **Safe-opener Release accepted:** [central registered CI #38523831041](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38523831041)
+  completed **SUCCESS** with `scope=release` at exact source SHA
+  `8ecd748a126f58b9c81f88ad026fe8a434a4d77a`;
+  producing log explicitly listed `file_preview_safe_open.cpp` and
+  `PASS release-build`. No duplicate build was dispatched for that SHA.
 - **Feature gate still OPEN:** no production supervised helper process,
   bounded IPC, kill-on-timeout cancellation, stale pane/tab/selection
   protection, bounded decoded images, opt-in Preview presentation or
