@@ -53,7 +53,7 @@ bool safeAttributes(HANDLE h,bool directory,
         standard.EndOfFile.QuadPart>=0;
 }
 
-UniqueHandle openPath(std::wstring const& path,bool directory) noexcept {
+UniqueHandle openPath(std::wstring const& path,bool directory) {
     // Canonical path is reviewed before entering this helper. The internal
     // \\?\ prefix allows long *local* paths without changing their meaning.
     const std::wstring extended=L"\\\\?\\"+path;
@@ -77,15 +77,20 @@ Result openLocalRegular(
 {
     Result rejected{};
     try {
-        const auto policy=previewpolicy::screen(candidate);
+        // Own the request path before *any* policy decision so the policy
+        // and the eventual opened path cannot observe different buffers.
+        if(candidate.absolutePath.size()>previewpolicy::kMaxPathUnits)
+            return rejected;
+        const std::wstring path(candidate.absolutePath);
+        auto stable=candidate;
+        stable.absolutePath=path;
+        const auto policy=previewpolicy::screen(stable);
         if(!policy.accepted())return rejected;
         const auto interrupt=interrupted(cancelled,deadline);
         if(interrupt!=Status::Accepted){
             rejected.status=interrupt;
             return rejected;
         }
-        // Own the path string; no user/UI text mutation while opening.
-        const std::wstring path(candidate.absolutePath);
         if(!previewpolicy::canonicalLocalPath(path)){
             rejected.status=Status::InvalidPath;
             return rejected;
