@@ -28,6 +28,13 @@ is retired from the working tree and is recoverable from Git revision cbffb48.
   Producing log explicitly lists `file_preview_reader.cpp` compiled and
   `PASS release-build`; executable output created. This is a native
   compile/Release acceptance, not file-read behavior or UI acceptance.
+- **Updated current-source contract acceptance:** [central run
+  #38520410675](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38520410675)
+  **SUCCESS** for exact main `0e677eeb215d7d3b514bc382846c5b958533ad76`,
+  `project_id=desktop-a`, `scope=source`; policy validation PASS,
+  canonical structure 4, product-source 194, harness 20 and infrastructure
+  30 tests OK. This source run validates the subsequently corrected native
+  probe harness contract and status docs; it is not a recompile or GUI pass.
 - **Exact test-owned MSVC native behavior:** [Remote Shell run
   #38520021060](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38520021060)
   **SUCCESS** at `62a4f632d302bce59839b3b4109a1380c55e5b5a`.
