@@ -7,6 +7,7 @@
 #include "../../../src/base/file_metadata_wire.h"
 #include "../../../src/base/shell_visual_wire.h"
 #include "../../../src/base/indexed_search_wire.h"
+#include "../../../src/base/file_preview_worker.h"
 #include <atldbcli.h>
 #include <windows.h>
 #include <shellapi.h>
@@ -574,6 +575,9 @@ int runIndexedFilenameSearch(HANDLE output,
 } // namespace
 
 int wmain(int argc,wchar_t** argv) {
+    if(argc==2&&!wcscmp(argv[1],L"--preview-read"))
+        return fxfile::previewworker::runOne(
+            ::GetStdHandle(STD_INPUT_HANDLE),::GetStdHandle(STD_OUTPUT_HANDLE));
     if((argc==4||argc==5||argc==7||argc==9)&&
        !wcscmp(argv[1],L"--indexed-filename-search"))
         return runIndexedFilenameSearch(::GetStdHandle(STD_OUTPUT_HANDLE),
