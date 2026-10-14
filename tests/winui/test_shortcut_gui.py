@@ -256,6 +256,41 @@ try:
     )
     print("REAL_CUSTOM_FOCUS_SHORTCUTS_SAVED_APPLIED", True, flush=True)
 
+    # A duplicate binding must fail closed and keep the last saved values.
+    address_shortcut.select(4)  # new Ctrl+G
+    search_shortcut.select(4)   # duplicate Ctrl+G
+    safe_click(element("ApplyShortcutButton"))
+    eventually(
+        lambda: "서로 다른 Ctrl 단축키" in element("StatusText").window_text(),
+        "duplicate Ctrl+G binding did not report a collision", 7,
+    )
+    assert b"address-shortcut=1" in private.read_bytes()
+    assert b"search-shortcut=3" in private.read_bytes()
+
+    # Both newly added choices must persist and dispatch from physical keys.
+    search_shortcut.select(5)  # new Ctrl+J
+    safe_click(element("ApplyShortcutButton"))
+    eventually(
+        lambda: private.is_file() and b"address-shortcut=4" in private.read_bytes()
+        and b"search-shortcut=5" in private.read_bytes(),
+        "extended Ctrl+G / Ctrl+J shortcuts not durably saved", 9,
+    )
+    focus()
+    send_keys("^g")
+    eventually(
+        lambda: element("AddressBox").has_keyboard_focus(),
+        "custom Ctrl+G did not focus address editor", 7,
+    )
+    focus()
+    send_keys("^j")
+    eventually(
+        lambda: element("QuickSearchBox").has_keyboard_focus(),
+        "custom Ctrl+J did not focus quick search", 7,
+    )
+    assert source.is_dir() and secondary.is_dir()
+    assert not (right / source.name).exists()
+    print("REAL_EXTENDED_FOCUS_SHORTCUTS_NO_FILE_MUTATION", True, flush=True)
+
     safe_click(element("ResetShortcutButton"))
     eventually(
         lambda: private.is_file() and b"address-shortcut=0" in private.read_bytes()

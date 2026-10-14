@@ -3,10 +3,29 @@
 #include <cstddef>
 #include <cstdint>
 #include <string>
+#include <string_view>
 #include <vector>
 
 namespace fxfile::previewlist {
 enum class FileViewMode : int { Details=0, List=1, SmallIcons=2, MediumIcons=3, LargeIcons=4 };
+
+// F01-B: display-only name. Never use for Shell identity, rename, or transfer.
+constexpr std::wstring_view visibleFileName(std::wstring_view name,
+    bool folder,bool filesystem,bool showExtensions) noexcept {
+    if(showExtensions||folder||!filesystem)return name;
+    const auto dot=name.find_last_of(L'.');
+    if(dot==std::wstring_view::npos||dot==0||dot+1==name.size())return name;
+    return name.substr(0,dot);
+}
+static_assert(visibleFileName(L"notes.txt",false,true,false)==L"notes");
+static_assert(visibleFileName(L"archive.tar.gz",false,true,false)==L"archive.tar");
+static_assert(visibleFileName(L"report.txt",false,true,true)==L"report.txt");
+static_assert(visibleFileName(L"folder.ext",true,true,false)==L"folder.ext");
+static_assert(visibleFileName(L"virtual.pdf",false,false,false)==L"virtual.pdf");
+static_assert(visibleFileName(L".gitignore",false,true,false)==L".gitignore");
+static_assert(visibleFileName(L"name.",false,true,false)==L"name.");
+static_assert(visibleFileName(L"한글.문서",false,true,false)==L"한글");
+static_assert(visibleFileName(L"plain",false,true,false)==L"plain");
 struct FileMetadata final {
     std::uint64_t bytes=0;
     std::uint64_t modified=0;
@@ -27,6 +46,11 @@ struct FileDetail final {
 struct PaneState final {
     int sortMode=0;
     FileViewMode viewMode=FileViewMode::Details;
+    // F01: view-only, owned by one WindowTab/pane; explicit private session v3 persists these.
+    bool showSelectionCheckboxes=false;
+    bool compactRows=false;
+    bool showFileExtensions=true; // pane-local display default, no user filesystem mutation.
+    bool showHiddenItems=false; // ordinary Shell-hidden items; no OS-global setting.
     int appliedItemsPanel=0; // 0=vertical XAML default, 1=small wrap, 2=medium wrap, 3=large wrap
     std::uint32_t visualPixels=0; // DPI-scaled system visual size for current details
     double nameColumnWidth=168.0;

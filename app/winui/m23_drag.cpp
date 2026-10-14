@@ -79,6 +79,24 @@ void MainWindow::OnFileRowPointerPressed(
  auto row=sender.try_as<ListViewItem>();
  if(!row||!row.Tag()||side<0||side>1||mFileOperations.busy())return;
  const auto point=args.GetCurrentPoint(row);
+ if(point.Properties().IsMiddleButtonPressed()){
+  // The clicked row, not a possibly stale multi-selection, owns the target.
+  // Copy the path before AddTab may reallocate the original pane's tabs.
+  auto const& model=ActiveWindowTab().model;
+  if(side==1&&!model.split)return;
+  auto const& pane=model.panes[side];
+  if(pane.active>=pane.pending.size()||pane.pending[pane.active])return;
+  const auto logical=unbox_value<std::uint64_t>(row.Tag());
+  auto const* indexed=pane.tabs[pane.active].indexedItem(
+      static_cast<std::size_t>(logical));
+  if(indexed&&indexed->isFolder()&&indexed->isFileSystem()&&
+     !indexed->parsingName.empty()){
+   const auto path=indexed->parsingName;
+   OpenFolderInNewPaneTab(side,path);
+   args.Handled(true);
+  }
+  return;
+ }
  if(!point.Properties().IsLeftButtonPressed())return;
  POINT cursor{};
  if(!::GetCursorPos(&cursor))return;

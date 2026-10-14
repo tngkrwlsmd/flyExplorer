@@ -36,6 +36,8 @@ void MainWindow::RefreshFilterRuleManager(int selected)
     if(mFilterRules.items().empty()){
         FilterRuleManagerBox().SelectedIndex(-1);
         FilterRuleNameEdit().Text(L"");
+        FilterRuleColorBox().SelectedIndex(0);
+        FilterRuleIconBox().SelectedIndex(0);
         const int side=ActiveWindowTab().model.activePane;
         FilterRuleMasksEdit().Text(hstring(
             ActiveWindowTab().fileLists[side].filenameFilter));
@@ -49,6 +51,8 @@ void MainWindow::RefreshFilterRuleManager(int selected)
     auto const& rule=mFilterRules.items()[static_cast<std::size_t>(selected)];
     FilterRuleNameEdit().Text(hstring(rule.name));
     FilterRuleMasksEdit().Text(hstring(rule.masks));
+    FilterRuleColorBox().SelectedIndex(rule.color);
+    FilterRuleIconBox().SelectedIndex(rule.icon);
 }
 
 void MainWindow::OnToggleFilterRules(
@@ -79,6 +83,8 @@ void MainWindow::OnFilterRuleSelectionChanged(
     auto const& rule=mFilterRules.items()[static_cast<std::size_t>(selected)];
     FilterRuleNameEdit().Text(hstring(rule.name));
     FilterRuleMasksEdit().Text(hstring(rule.masks));
+    FilterRuleColorBox().SelectedIndex(rule.color);
+    FilterRuleIconBox().SelectedIndex(rule.icon);
 }
 
 void MainWindow::OnNewFilterRule(
@@ -88,6 +94,8 @@ void MainWindow::OnNewFilterRule(
     FilterRuleManagerBox().SelectedIndex(-1);
     mPopulatingFilterRules=false;
     FilterRuleNameEdit().Text(L"");
+    FilterRuleColorBox().SelectedIndex(0);
+    FilterRuleIconBox().SelectedIndex(0);
     const int side=ActiveWindowTab().model.activePane;
     FilterRuleMasksEdit().Text(hstring(
         ActiveWindowTab().fileLists[side].filenameFilter));
@@ -99,11 +107,13 @@ void MainWindow::OnSaveFilterRule(
 {
     const auto name=std::wstring(FilterRuleNameEdit().Text().c_str());
     const auto masks=std::wstring(FilterRuleMasksEdit().Text().c_str());
+    const int color=FilterRuleColorBox().SelectedIndex();
+    const int icon=FilterRuleIconBox().SelectedIndex();
     auto backup=mFilterRules;
     const int selected=FilterRuleManagerBox().SelectedIndex();
     const auto result=selected>=0?
-        mFilterRules.update(static_cast<std::size_t>(selected),name,masks):
-        mFilterRules.add(name,masks);
+        mFilterRules.update(static_cast<std::size_t>(selected),name,masks,color,icon):
+        mFilterRules.add(name,masks,color,icon);
     using Result=fxfile::filterrules::MutationResult;
     if(result==Result::Duplicate){
         StatusText().Text(L"같은 이름의 필터 프리셋이 이미 있습니다.");
@@ -126,6 +136,7 @@ void MainWindow::OnSaveFilterRule(
     const int next=selected>=0?selected:
         static_cast<int>(mFilterRules.items().size()-1);
     RefreshFilterRuleManager(next);
+    FillFiles(0);FillFiles(1);
     StatusText().Text(L"필터 프리셋을 저장했습니다.");
 }
 
@@ -168,6 +179,7 @@ void MainWindow::OnDeleteFilterRule(
         return;
     }
     RefreshFilterRuleManager(selected);
+    FillFiles(0);FillFiles(1);
     StatusText().Text(L"필터 프리셋을 삭제했습니다.");
 }
 

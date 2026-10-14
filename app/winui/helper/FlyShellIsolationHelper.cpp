@@ -7,6 +7,7 @@
 #include "../../../src/base/file_metadata_wire.h"
 #include "../../../src/base/shell_visual_wire.h"
 #include "../../../src/base/indexed_search_wire.h"
+#include "../../../src/base/file_preview_worker.h"
 #include <atldbcli.h>
 #include <windows.h>
 #include <shellapi.h>
@@ -574,6 +575,9 @@ int runIndexedFilenameSearch(HANDLE output,
 } // namespace
 
 int wmain(int argc,wchar_t** argv) {
+    if(argc==2&&!wcscmp(argv[1],L"--preview-read"))
+        return fxfile::previewworker::runOne(
+            ::GetStdHandle(STD_INPUT_HANDLE),::GetStdHandle(STD_OUTPUT_HANDLE));
     if((argc==4||argc==5||argc==7||argc==9)&&
        !wcscmp(argv[1],L"--indexed-filename-search"))
         return runIndexedFilenameSearch(::GetStdHandle(STD_OUTPUT_HANDLE),
@@ -1259,7 +1263,9 @@ int wmain(int argc,wchar_t** argv) {
         if(SUCCEEDED(hr))
             hr=fxfile::shellnav::enumeratePage(
                 requested.get(),snap,
-                SHCONTF_FOLDERS|SHCONTF_NONFOLDERS,
+                // Only ordinary hidden Shell items. Never super-hidden.
+                // The WinUI pane owns the final visibility decision.
+                SHCONTF_FOLDERS|SHCONTF_NONFOLDERS|SHCONTF_INCLUDEHIDDEN,
                 req.offset,req.limit);
         sent=answer(output,hr,SUCCEEDED(hr)?&snap:nullptr);
     }catch(std::bad_alloc const&){sent=answer(output,E_OUTOFMEMORY);}

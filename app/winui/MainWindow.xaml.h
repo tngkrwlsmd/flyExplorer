@@ -42,6 +42,10 @@ namespace winrt::FlyExplorer::implementation
         void OnUpClicked(IInspectable const&, Microsoft::UI::Xaml::RoutedEventArgs const&);
         void OnAddressKeyDown(IInspectable const&, Microsoft::UI::Xaml::Input::KeyRoutedEventArgs const&);
         void OnAddressGotFocus(IInspectable const&, Microsoft::UI::Xaml::RoutedEventArgs const&);
+        void OnAddressTextChanged(IInspectable const&,
+            Microsoft::UI::Xaml::Controls::TextChangedEventArgs const&);
+        void OnAddressSuggestionClicked(IInspectable const&,
+            Microsoft::UI::Xaml::RoutedEventArgs const&);
         void OnAddressLostFocus(IInspectable const&, Microsoft::UI::Xaml::RoutedEventArgs const&);
         void OnAddressDisplayClicked(IInspectable const&, Microsoft::UI::Xaml::RoutedEventArgs const&);
         void OnBreadcrumbSegmentClicked(IInspectable const&, Microsoft::UI::Xaml::RoutedEventArgs const&);
@@ -94,6 +98,7 @@ namespace winrt::FlyExplorer::implementation
         void OnSaveWorkspace(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
         void OnOpenWorkspace(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
         void OnToggleSearch(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
+        void OnToggleFileInfoPane(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
         void OnApplyShortcuts(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
         void OnResetShortcuts(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
         void OnRunSearch(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
@@ -162,6 +167,7 @@ namespace winrt::FlyExplorer::implementation
         void RunTransfer(fxfile::shelltransfer::Kind);
         void UpdateSort(int selection);
         void UpdateView(int selection);
+        void ToggleListDisplay(int option);
         void OnHeaderSortClicked(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
 
     private:
@@ -266,6 +272,8 @@ namespace winrt::FlyExplorer::implementation
         bool mClosing = false;
         bool mPopulatingFileLists = false;
         void UpdateFooterSummary();
+        void UpdateFileInfoPane();
+        void ApplyFileInfoPaneLayout();
         void PersistPreferences();
         void UpdateSelectionChrome();
         void UpdateCommandAvailability();
@@ -340,11 +348,15 @@ namespace winrt::FlyExplorer::implementation
         void UpdateViewPresentation(int side);
         void UpdateSortPresentation(int side);
         void UpdateBreadcrumb(std::wstring const& address);
+        void UpdateAddressSuggestions();
+        void HideAddressSuggestions();
+        bool mAddressSuggestionKeyboardFocus=false;
         void FillFiles(int side);
         bool OpenFolder(std::wstring const& path);
         void ActivatePane(int side);
         void UpdateActivePaneChrome();
         void OpenSelectedFolder(int side);
+        void OpenFolderInNewPaneTab(int side,std::wstring path);
         void ApplyWorkspace(fxfile::preview::Workspace&&);
         void QueueNextWorkspaceTab(int side);
         using SearchController=fxfile::previewsearch::SearchController;

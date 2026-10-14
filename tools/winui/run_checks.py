@@ -24,6 +24,7 @@ PRODUCT_SUITES = {
     "core": [
         "tests/winui/test_arch_contract.py",
         "tests/winui/test_m26_fluent_contract.py",
+        "tests/winui/test_file_display_options_contract.py",
         "tests/winui/test_shortcut_semantics_contract.py",
         "tests/winui/test_window_tab_navigation_chrome_contract.py",
         "tests/winui/test_file_metadata_controller_contract.py",
@@ -34,6 +35,10 @@ PRODUCT_SUITES = {
         "tests/winui/helper/test_winui_integration_contract.py",
         "tests/winui/test_external_context_contract.py",
         "tests/winui/test_file_detail_controller_contract.py",
+        "tests/winui/test_f03_preview_policy_contract.py",
+        "tests/winui/test_f03_preview_reader_contract.py",
+        "tests/winui/test_f03_safe_open_contract.py",
+        "tests/winui/test_f03_worker_wire_contract.py",
         "tests/winui/test_known_folder_artwork_contract.py",
         "tests/winui/test_sidebar_known_folder_artwork_contract.py",
         "tests/winui/test_thumbnail_contract.py",
@@ -420,7 +425,7 @@ def run_gui(area, configuration, env, tag):
     if area == "all":
         # Fail early on exact session-history cleanup before long GUI coverage.
         # Keep standalone focused probes independently runnable.
-        for focused in ("window-tabs", "shortcuts"):
+        for focused in ("window-tabs", "shortcuts", "filter-preset"):
             cmd, gui_env, timeout = gui_command(
                 focused, configuration, env
             )

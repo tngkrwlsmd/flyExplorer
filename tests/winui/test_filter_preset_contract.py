@@ -1,6 +1,7 @@
 """Persistent pane filter preset source contracts."""
 from pathlib import Path
 import unittest
+import re
 
 ROOT=Path(__file__).resolve().parents[2]
 def read(path):
@@ -42,6 +43,61 @@ class FilterPresetContracts(unittest.TestCase):
         self.assertIn("OnToggleFilterRules",features)
         self.assertIn("FilterRulePanel().Visibility(Visibility::Collapsed)",m19)
         self.assertIn("FilterRulePanel().Visibility(Visibility::Collapsed)",bookmarks)
+
+    def test_visual_style_persistence_and_row_classification(self):
+        h=read("src/base/filter_rule_store.h")
+        cpp=read("src/base/filter_rule_store.cpp")
+        xaml=read("app/winui/MainWindow.xaml")
+        app=read("app/winui/MainWindow.xaml.cpp")
+        features=read("app/winui/filter_rule_features.cpp")
+        for token in ('kMaxColor = 4','kMaxIcon = 4','schema=2',
+                      'schema=1','item.color,item.icon','colorText.size()!=1'):
+            self.assertIn(token,h+cpp)
+        for name in ("FilterRuleColorBox","FilterRuleIconBox"):
+            self.assertIn('x:Name="'+name+'"',xaml)
+            self.assertIn(name+"().SelectedIndex(",features)
+        self.assertIn("fxfile::filterrules::Store::matches(itemLabel,rule.masks)",app)
+        self.assertIn("필터 분류 아이콘",app)
+        self.assertIn("FillFiles(0);FillFiles(1)",features)
+
+    def test_light_theme_filename_accent_contrast(self):
+        app=read("app/winui/MainWindow.xaml.cpp")
+        self.assertIn("RootShell().ActualTheme()==ElementTheme::Light",app)
+        matches=re.findall(
+            r"case ([1-4]):value=light\?Windows::UI::Color\{255,(\d+),(\d+),(\d+)\}",
+            app)
+        self.assertEqual(len(matches),4,"expected four real light-theme colors")
+        self.assertEqual({int(x[0]) for x in matches},{1,2,3,4})
+        def channel(x):
+            c=int(x)/255
+            return c/12.92 if c<=0.04045 else ((c+0.055)/1.055)**2.4
+        for style,r,g,b in matches:
+            lum=.2126*channel(r)+.7152*channel(g)+.0722*channel(b)
+            self.assertGreaterEqual((1.05)/(lum+.05),4.5,
+                                    "light-theme style "+style)
+
+    def test_high_contrast_uses_system_foreground_not_decorative_rgb(self):
+        app=read("app/winui/MainWindow.xaml.cpp")
+        self.assertIn("HIGHCONTRASTW contrast{}",app)
+        self.assertIn("SPI_GETHIGHCONTRAST",app)
+        self.assertIn("HCF_HIGHCONTRASTON",app)
+        self.assertIn("const bool allowDecorativeColor=",app)
+        self.assertIn(
+            "if(allowDecorativeColor&&decoratedRule&&decoratedRule->color)",app)
+        self.assertIn("if(accent)badge.Foreground(accent)",app)
+        self.assertIn("if(accent)filename.Foreground(accent)",app)
+
+    def test_screen_reader_ui_a_rule_color_icon_semantics(self):
+        app=read("app/winui/MainWindow.xaml.cpp")
+        xaml=read("app/winui/MainWindow.xaml")
+        self.assertIn("kFilterColors",app)
+        self.assertIn("kFilterIcons",app)
+        for token in ("필터 프리셋: ", "분류 색상: ", "분류 아이콘: ",
+                      "필터 분류 아이콘: "):
+            self.assertIn(token,app)
+        self.assertIn("row,hstring(label)",app)
+        self.assertIn('AutomationProperties.Name="필터 규칙 분류 색상"',xaml)
+        self.assertIn('AutomationProperties.Name="필터 규칙 분류 아이콘"',xaml)
 
     def test_project_and_native_fixture_include_store(self):
         project=read("app/winui/flyExplorer.project-template.xml")

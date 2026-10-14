@@ -64,7 +64,17 @@ Tabs and Back/history/split restoration.
 
 The former pre-v7 ownership note is superseded by the implemented v7 model.
 
-## Current remaining visual/environment gaps
+## Historical status note (2026-10-12)
+
+This is the **2026-10-01/03 measured pixel reference**. The environment
+items below describe the testing snapshot **at that time**, not the current
+project acceptance matrix. The later tested styled-filter High Contrast
+states and real Korean two-beolsik entry/save are now scoped PASS; Narrator
+spoken content/audio and actual 125/150/200% OS scaling remain open.
+See [CURRENT_STATUS.md](CURRENT_STATUS.md) and
+[WIN11_EXPLORER_FEATURE_BENCHMARK_20261012.md](WIN11_EXPLORER_FEATURE_BENCHMARK_20261012.md).
+
+## Current remaining visual/environment gaps (at the original capture)
 
 - Actual 125/150/200% DPI: blocked in the current remote environment. The
   self-hosted VM exposes only one 1274x771 display mode; a 2026-10-03

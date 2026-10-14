@@ -155,7 +155,10 @@ Functional GUI acceptance and visual acceptance are separate gates. A
 functional/UIA PASS with no screenshot review must be reported as
 `VISUAL ACCEPTANCE: NOT TESTED`, not as complete UI acceptance. Actual
 125/150/200% scaling, High Contrast, human Narrator/Korean IME and other
-environment-specific gates remain NOT TESTED unless they were really exercised.
+environment-specific gates must each be reported according to their own
+revision- and environment-scoped evidence. Reuse valid High Contrast or
+Korean IME PASS records; leave actual higher-DPI scaling or Narrator speech
+NOT TESTED/NOT VERIFIED until independently accepted.
 
 Behavior-preserving refactors that do not alter composited pixels do not require
 fresh screenshots; they still require the relevant GUI regression and normal

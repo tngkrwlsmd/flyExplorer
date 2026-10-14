@@ -9,6 +9,19 @@
           Background="Transparent"
           SizeChanged="OnShellSizeChanged">
     <Grid.Resources>
+        <ResourceDictionary>
+        <!-- F01: keep a native ListViewItem selection glyph with contrast.
+             High Contrast retains the system brush, not these overrides. -->
+        <ResourceDictionary.ThemeDictionaries>
+            <ResourceDictionary x:Key="Light">
+                <SolidColorBrush x:Key="ListViewItemCheckBrush"
+                                 Color="#FF202020"/>
+            </ResourceDictionary>
+            <ResourceDictionary x:Key="Dark">
+                <SolidColorBrush x:Key="ListViewItemCheckBrush"
+                                 Color="#FFF5F5F5"/>
+            </ResourceDictionary>
+        </ResourceDictionary.ThemeDictionaries>
         <Style x:Key="ExplorerIconButtonStyle" TargetType="Button">
             <Setter Property="Width" Value="32"/>
             <Setter Property="Height" Value="32"/>
@@ -66,6 +79,7 @@
             <Setter Property="BorderThickness" Value="0"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
         </Style>
+        </ResourceDictionary>
     </Grid.Resources>
         <Grid.RowDefinitions>
             <RowDefinition Height="34"/>
@@ -106,13 +120,18 @@
                     <FontIcon Glyph="&#xE74A;" FontSize="15"/>
                 </Button>
             </StackPanel>
-            <Grid Grid.Column="1" Height="32">
-                <TextBox x:Name="AddressBox" Height="32" Opacity="0"
+            <Grid Grid.Column="1">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="32"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+                <TextBox x:Name="AddressBox" Grid.Row="0" Height="32" Opacity="0"
                          PlaceholderText="&#xD3F4;&#xB354; &#xACBD;&#xB85C;&#xB97C; &#xC785;&#xB825;&#xD558;&#xC138;&#xC694;"
-                         KeyDown="OnAddressKeyDown" GotFocus="OnAddressGotFocus"
+                         KeyDown="OnAddressKeyDown" TextChanged="OnAddressTextChanged"
+                         GotFocus="OnAddressGotFocus"
                          LostFocus="OnAddressLostFocus"
                          AutomationProperties.Name="&#xD604;&#xC7AC; &#xD3F4;&#xB354; &#xC8FC;&#xC18C;"/>
-                <Grid x:Name="AddressDisplayButton" Height="32">
+                <Grid x:Name="AddressDisplayButton" Grid.Row="0" Height="32">
                     <Border Background="Transparent" BorderThickness="1" CornerRadius="4"
                             BorderBrush="{ThemeResource SystemControlForegroundBaseLowBrush}"/>
                     <Grid Margin="4,1">
@@ -129,6 +148,15 @@
                         </Button>
                     </Grid>
                 </Grid>
+                <!-- In-layout, bounded and keyboard-focusable; no Popup HWND
+                     or lifecycle callback is created for address suggestions. -->
+                <Border x:Name="AddressSuggestionPanel" Grid.Row="1"
+                        Visibility="Collapsed" BorderThickness="1"
+                        CornerRadius="6" Padding="3" Margin="0,2,0,1"
+                        BorderBrush="{ThemeResource SystemControlForegroundBaseLowBrush}"
+                        Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
+                    <StackPanel x:Name="AddressSuggestionRows" Spacing="1"/>
+                </Border>
             </Grid>
             <TextBox x:Name="QuickSearchBox" Grid.Column="2" Height="32"
                      PlaceholderText="&#xD604;&#xC7AC; &#xD3F4;&#xB354; &#xAC80;&#xC0C9;"
@@ -150,6 +178,13 @@
                         Click="OnSplitClicked"
                         AutomationProperties.Name="&#xB4C0;&#xC5BC; &#xD328;&#xB110; &#xC804;&#xD658;">
                     <FontIcon Glyph="&#xE73F;" FontSize="14"/>
+                </Button>
+
+                <Button x:Name="FileInfoToggleButton" Style="{StaticResource ExplorerIconButtonStyle}"
+                        ToolTipService.ToolTip="선택 항목 상세 정보"
+                        AutomationProperties.Name="선택 항목 상세 정보 열기 또는 닫기"
+                        Click="OnToggleFileInfoPane">
+                    <FontIcon Glyph="&#xE946;" FontSize="14"/>
                 </Button>
                 <Button x:Name="WorkspacePanelButton" Style="{StaticResource ExplorerIconButtonStyle}"
                         ToolTipService.ToolTip="&#xC791;&#xC5C5; &#xACF5;&#xAC04;"
@@ -265,6 +300,29 @@
                 <TextBlock Text="* ? ;가 있으면 마스크 집합, 없으면 기존 이름 포함 필터"
                            VerticalAlignment="Center" Opacity="{ThemeResource FlyExplorerSubtleTextOpacity}"/>
             </StackPanel>
+            <StackPanel Orientation="Horizontal" Spacing="7">
+                <TextBlock Text="분류 색상:" VerticalAlignment="Center"/>
+                <ComboBox x:Name="FilterRuleColorBox" Width="118" SelectedIndex="0"
+                          AutomationProperties.Name="필터 규칙 분류 색상">
+                    <ComboBoxItem Content="기본"/>
+                    <ComboBoxItem Content="파랑"/>
+                    <ComboBoxItem Content="초록"/>
+                    <ComboBoxItem Content="주황"/>
+                    <ComboBoxItem Content="빨강"/>
+                </ComboBox>
+                <TextBlock Text="분류 아이콘:" VerticalAlignment="Center"/>
+                <ComboBox x:Name="FilterRuleIconBox" Width="122" SelectedIndex="0"
+                          AutomationProperties.Name="필터 규칙 분류 아이콘">
+                    <ComboBoxItem Content="없음"/>
+                    <ComboBoxItem Content="별"/>
+                    <ComboBoxItem Content="핀"/>
+                    <ComboBoxItem Content="깃발"/>
+                    <ComboBoxItem Content="태그"/>
+                </ComboBox>
+                <TextBlock Text="일치하는 파일명에 색상과 보조 배지를 표시합니다"
+                           VerticalAlignment="Center"
+                           Opacity="{ThemeResource FlyExplorerSubtleTextOpacity}"/>
+            </StackPanel>
         </StackPanel>
         <StackPanel Grid.Row="5" x:Name="WorkspacePanel" Visibility="Collapsed"
                     Orientation="Vertical" Spacing="7" Padding="14,3,14,6">
@@ -299,6 +357,8 @@
                     <ComboBoxItem Content="Ctrl+E"/>
                     <ComboBoxItem Content="Ctrl+F"/>
                     <ComboBoxItem Content="Ctrl+K"/>
+                    <ComboBoxItem Content="Ctrl+G"/>
+                    <ComboBoxItem Content="Ctrl+J"/>
                 </ComboBox>
                 <TextBlock Text="검색창 단축키" VerticalAlignment="Center"/>
                 <ComboBox x:Name="SearchShortcutBox" Width="112" SelectedIndex="2"
@@ -307,6 +367,8 @@
                     <ComboBoxItem Content="Ctrl+E"/>
                     <ComboBoxItem Content="Ctrl+F"/>
                     <ComboBoxItem Content="Ctrl+K"/>
+                    <ComboBoxItem Content="Ctrl+G"/>
+                    <ComboBoxItem Content="Ctrl+J"/>
                 </ComboBox>
                 <Button x:Name="ApplyShortcutButton" Content="단축키 저장"
                         Click="OnApplyShortcuts"
@@ -447,6 +509,7 @@
                 <ColumnDefinition x:Name="PrimaryColumn" Width="*"/>
                 <ColumnDefinition Width="1"/>
                 <ColumnDefinition x:Name="SecondaryColumn" Width="*"/>
+                <ColumnDefinition x:Name="FileInfoColumn" Width="0"/>
             </Grid.ColumnDefinitions>
             <local:NavigationSidebar x:Name="SidebarView" Grid.Column="0" Margin="0,0,6,0"/>
             <Border x:Name="PrimaryPane" Grid.Column="1"
@@ -613,6 +676,37 @@
                           AutomationProperties.Name="오른쪽 폴더 내용">
                 </ListView>
                 </Grid>
+            </Border>
+            <Border x:Name="FileInfoPane" Grid.Column="4" Margin="8,0,0,0"
+                    Padding="12" CornerRadius="6" Visibility="Collapsed"
+                    BorderThickness="1"
+                    BorderBrush="{ThemeResource SystemControlForegroundBaseLowBrush}"
+                    Background="{ThemeResource ApplicationPageBackgroundThemeBrush}"
+                    AutomationProperties.Name="선택 항목 상세 정보 창">
+                <ScrollViewer VerticalScrollBarVisibility="Auto"
+                              HorizontalScrollBarVisibility="Disabled">
+                    <StackPanel Spacing="9">
+                        <TextBlock Text="상세 정보" FontSize="17" FontWeight="SemiBold"/>
+                        <TextBlock x:Name="FileInfoHint" Text="항목 하나를 선택하세요."
+                                   TextWrapping="Wrap" Opacity="{ThemeResource FlyExplorerCaptionOpacity}"
+                                   />
+                        <TextBlock Text="이름" FontWeight="SemiBold"/>
+                        <TextBlock x:Name="FileInfoName" TextWrapping="Wrap"
+                                   />
+                        <TextBlock Text="유형" FontWeight="SemiBold"/>
+                        <TextBlock x:Name="FileInfoType" TextWrapping="Wrap"
+                                   />
+                        <TextBlock Text="위치" FontWeight="SemiBold"/>
+                        <TextBlock x:Name="FileInfoLocation" TextWrapping="Wrap"
+                                   />
+                        <TextBlock Text="크기" FontWeight="SemiBold"/>
+                        <TextBlock x:Name="FileInfoSize" TextWrapping="Wrap"
+                                   />
+                        <TextBlock Text="수정 날짜" FontWeight="SemiBold"/>
+                        <TextBlock x:Name="FileInfoModified" TextWrapping="Wrap"
+                                   />
+                    </StackPanel>
+                </ScrollViewer>
             </Border>
         </Grid>
         <local:StatusFooter x:Name="FooterView" Grid.Row="8"/>

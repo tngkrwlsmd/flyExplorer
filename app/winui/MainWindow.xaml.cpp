@@ -70,6 +70,14 @@ namespace {
 
     std::wstring ResolveFriendlyAddress(std::wstring value)
     {
+        // Explorer accepts pasted quoted absolute/UNC paths. Remove exactly
+        // one surrounding pair, never modify an interior whitespace or slash.
+        auto const first=value.find_first_not_of(L" \t\r\n");
+        auto const last=value.find_last_not_of(L" \t\r\n");
+        if(first!=std::wstring::npos && last>first &&
+           value[first]==L'"' && value[last]==L'"'){
+            value=value.substr(first+1,last-first-1);
+        }
         if(value==L"\uB0B4 PC")return L"shell:MyComputerFolder";
         return value;
     }
@@ -176,7 +184,11 @@ namespace winrt::FlyExplorer::implementation
                             Windows::System::VirtualKey::E,
                             Windows::System::VirtualKey::F,
                             Windows::System::VirtualKey::K,
+                            Windows::System::VirtualKey::G,
+                            Windows::System::VirtualKey::J,
                         };
+                        static_assert(std::size(choices)==
+                            fxfile::uisettings::kFocusShortcutCount);
                         auto const& pref=ui->mPreferencesCoordinator.current();
                         if(key==choices[pref.addressShortcut]){
                             ui->OnAddressDisplayClicked(nullptr,nullptr);
@@ -346,6 +358,10 @@ namespace winrt::FlyExplorer::implementation
             if(auto ui=nativeWeak.get())ui->UpdateView(index);
         });
         fileBar()->SetViewIndex(initialView);
+        fileBar()->SetListDisplay([nativeWeak](int option){
+            if(auto ui=nativeWeak.get())ui->ToggleListDisplay(option);
+        });
+        fileBar()->SetListDisplayState(false,false,true,false);
         const auto dispatch=DispatcherQueue();
         const auto weak=get_weak();
         // The worker owns NO MainWindow/WinRT UI object. Cross-apartment
@@ -662,6 +678,11 @@ namespace winrt::FlyExplorer::implementation
     {
         if(mClosing)return;
         mClosing=true;
+        // Release candidate controls before the XAML tree is dismantled.
+        try{
+            AddressSuggestionPanel().Visibility(Visibility::Collapsed);
+            AddressSuggestionRows().Children().Clear();
+        }catch(...){ }
         mWorkspaceRestore.reset();
         mSessionCoordinator.prepareForClose();
         mFileOperations.prepareForClose();
@@ -1262,6 +1283,8 @@ namespace winrt::FlyExplorer::implementation
                     ui->ActiveWindowTab().fileLists[side].details=
                         std::move(completed.details);
                     ui->FillFiles(side);
+                    if(side==ui->ActiveWindowTab().model.activePane)
+                        ui->UpdateFileInfoPane();
                     ui->CaptureOwnedNetworkVisualIfReady();
                 }
             });
@@ -1519,7 +1542,11 @@ namespace winrt::FlyExplorer::implementation
     int MainWindow::DetailLayoutProfile() const
     {
         const double nav=mShellWidth<1040.0?156.0:188.0;
-        const double content=(std::max)(0.0,mShellWidth-nav-17.0);
+        // The opt-in Details pane consumes real width inside this shell grid.
+        // Without subtracting it, two narrow file panes retain extra columns
+        // and render filenames and sizes into the same visible pixels.
+        const double details=ActiveWindowTab().fileInfoPaneVisible?260.0:0.0;
+        const double content=(std::max)(0.0,mShellWidth-nav-17.0-details);
         const double pane=ActiveWindowTab().model.split?(std::max)(0.0,(content-1.0)/2.0):content;
         if(pane<250.0)return 0;
         if(pane<340.0)return 1;
@@ -1575,11 +1602,38 @@ namespace winrt::FlyExplorer::implementation
         }
     }
 
+    void MainWindow::ToggleListDisplay(int option)
+    {
+        if(option<0||option>3)return;
+        const int side=ActiveWindowTab().model.activePane;
+        auto& state=ActiveWindowTab().fileLists[side];
+        if(option==0)state.showSelectionCheckboxes=!state.showSelectionCheckboxes;
+        else if(option==1)state.compactRows=!state.compactRows;
+        else if(option==2)state.showFileExtensions=!state.showFileExtensions;
+        else state.showHiddenItems=!state.showHiddenItems;
+        fileBar()->SetListDisplayState(
+            state.showSelectionCheckboxes,state.compactRows,
+            state.showFileExtensions,state.showHiddenItems);
+        // FillFiles restores real selections by Shell parsing identity.
+        FillFiles(side);
+        UpdateSelectionChrome();
+        UpdateFooterSummary();
+        StatusText().Text(option==0?
+            L"현재 창의 선택 확인란 표시를 변경했습니다.":
+            option==1?L"현재 창의 목록 간격을 변경했습니다.":
+            option==2?(state.showFileExtensions?
+                L"현재 창의 파일 확장명을 표시합니다.":
+                L"현재 창의 파일 확장명을 숨깁니다."):
+            state.showHiddenItems?L"현재 창의 숨김 항목을 표시합니다.":
+                                  L"현재 창의 숨김 항목을 숨깁니다.");
+    }
     void MainWindow::UpdateViewPresentation(int side)
     {
         auto view=side==0?LeftFiles():RightFiles();
         auto header=side==0?LeftDetailsHeader():RightDetailsHeader();
-        const auto viewMode=ActiveWindowTab().fileLists[side].viewMode;
+        auto const& display=ActiveWindowTab().fileLists[side];
+        view.IsMultiSelectCheckBoxEnabled(display.showSelectionCheckboxes);
+        const auto viewMode=display.viewMode;
         const bool details=viewMode==FileViewMode::Details;
         header.Height(details?24.0:0.0);
         const auto visibility=details?Visibility::Visible:Visibility::Collapsed;
@@ -1638,6 +1692,15 @@ namespace winrt::FlyExplorer::implementation
 
     void MainWindow::FillFiles(int side)
     {
+        // An explicit RGB foreground overrides Windows contrast-theme text.
+        // Respect the user's system colors, including foreground and
+        // selection colors, instead of applying a decorative accent in HC.
+        HIGHCONTRASTW contrast{};
+        contrast.cbSize=sizeof(contrast);
+        const bool allowDecorativeColor=
+            ::SystemParametersInfoW(SPI_GETHIGHCONTRAST,contrast.cbSize,
+                &contrast,0)!=FALSE &&
+            (contrast.dwFlags&HCF_HIGHCONTRASTON)==0;
         mPopulatingFileLists=true;
         UpdateViewPresentation(side);
         UpdateSortPresentation(side);
@@ -1718,6 +1781,10 @@ namespace winrt::FlyExplorer::implementation
             return indexedProjection?nameIndex[index].isFolder():
                                      items[index].isFolder();
         };
+        auto filesystemAt=[&](size_t index)->bool{
+            return indexedProjection?nameIndex[index].isFileSystem():
+                                     items[index].isFileSystem();
+        };
         auto logicalAt=[&](size_t index)->std::uint64_t{
             return indexedProjection?static_cast<std::uint64_t>(index):
                 snapshot.logicalIndex(index);
@@ -1758,6 +1825,16 @@ namespace winrt::FlyExplorer::implementation
                 }
                 return mode==1?lessName(rhs,lhs):lessName(lhs,rhs);
             });
+        // Enumeration is stable regardless of pane option. Project only the
+        // visible Shell rows; never alter PIDLs, logical paging, or transfers.
+        if(!state.showHiddenItems){
+            order.erase(std::remove_if(order.begin(),order.end(),
+                [&](size_t index){
+                    const auto flags=indexedProjection?
+                        nameIndex[index].attributes:items[index].attributes;
+                    return (flags&SFGAO_HIDDEN)!=0;
+                }),order.end());
+        }
         if(!state.filenameFilter.empty()){
             order.erase(std::remove_if(order.begin(),order.end(),
                 [&](size_t index){
@@ -1809,7 +1886,11 @@ namespace winrt::FlyExplorer::implementation
             const bool residentReady=residentAt(index,resident);
             const auto& itemLabel=labelAt(index);
             const auto& itemParsing=parsingAt(index);
+            const bool hiddenItem=(indexedProjection?
+                nameIndex[index].attributes:items[index].attributes)&SFGAO_HIDDEN;
             const bool itemFolder=folderAt(index);
+            const auto displayName=fxfile::previewlist::visibleFileName(
+                itemLabel,itemFolder,filesystemAt(index),state.showFileExtensions);
             auto const* metadata=metadataReady&&
                 (indexedProjection||residentReady)?
                 &state.metadata[indexedProjection?index:resident]:nullptr;
@@ -1824,9 +1905,56 @@ namespace winrt::FlyExplorer::implementation
                     typeLabel.erase(typeLabel.begin());
                 typeLabel=typeLabel.empty()?L"파일":typeLabel+L" 파일";
             }
+            fxfile::filterrules::Rule const* decoratedRule=nullptr;
+            for(auto const& rule:mFilterRules.items()){
+                if((rule.color||rule.icon)&&
+                   fxfile::filterrules::Store::matches(itemLabel,rule.masks)){
+                    decoratedRule=&rule;break; // first matching styled preset wins
+                }
+            }
+            Microsoft::UI::Xaml::Media::Brush accent{nullptr};
+            if(allowDecorativeColor&&decoratedRule&&decoratedRule->color){
+                Windows::UI::Color value{};
+                const bool light=RootShell().ActualTheme()==ElementTheme::Light;
+                switch(decoratedRule->color){
+                case 1:value=light?Windows::UI::Color{255,0,82,166}:Windows::UI::Color{255,89,174,255};break;
+                case 2:value=light?Windows::UI::Color{255,0,99,57}:Windows::UI::Color{255,81,204,131};break;
+                case 3:value=light?Windows::UI::Color{255,148,69,0}:Windows::UI::Color{255,255,182,79};break;
+                case 4:value=light?Windows::UI::Color{255,164,25,38}:Windows::UI::Color{255,255,117,117};break;
+                default:break;
+                }
+                accent=Microsoft::UI::Xaml::Media::SolidColorBrush(value);
+            }
+            static wchar_t const* const kFilterColors[]{
+                L"기본",L"파랑",L"초록",L"주황",L"빨강"};
+            static wchar_t const* const kFilterIcons[]{
+                L"없음",L"별",L"핀",L"깃발",L"태그"};
+            auto addFilterBadge=[&](StackPanel const& cell){
+                if(!decoratedRule||!decoratedRule->icon)return;
+                FontIcon badge;
+                badge.FontFamily(Microsoft::UI::Xaml::Media::FontFamily{
+                    L"Segoe Fluent Icons"});
+                switch(decoratedRule->icon){
+                case 1:badge.Glyph(L"\uE734");break;
+                case 2:badge.Glyph(L"\uE718");break;
+                case 3:badge.Glyph(L"\uE7C1");break;
+                case 4:badge.Glyph(L"\uE8EC");break;
+                default:return;
+                }
+                badge.FontSize(13);
+                if(accent)badge.Foreground(accent);
+                const auto badgeName=std::wstring(L"필터 분류 아이콘: ")+
+                    kFilterIcons[decoratedRule->icon];
+                Microsoft::UI::Xaml::Automation::AutomationProperties::SetName(
+                    badge,hstring(badgeName));
+                cell.Children().Append(badge);
+            };
             ListViewItem row;
             auto label=std::wstring(itemFolder?L"[폴더]  ":L"[파일]  ")+
-                       itemLabel;
+                       std::wstring(displayName);
+            if(hiddenItem)label+=L" | 숨김 항목";
+            if(displayName!=std::wstring_view(itemLabel))
+                label+=L" | 실제 파일 이름: "+itemLabel;
             if(!typeLabel.empty())label+=L"   |   "+typeLabel;
             if(metadata&&metadata->sizeKnown)
                 label+=L"   |   "+metadata->bytesLabel;
@@ -1905,8 +2033,10 @@ namespace winrt::FlyExplorer::implementation
                 glyph.FontSize(localDrive?20.0:16.0);
                 nameCell.Children().Append(glyph);
             }
+            addFilterBadge(nameCell);
             TextBlock filename;
-            filename.Text(itemLabel);
+            filename.Text(hstring(displayName));
+            if(accent)filename.Foreground(accent);
             filename.TextTrimming(TextTrimming::CharacterEllipsis);
             if(localDrive){
                 StackPanel drive;
@@ -1984,7 +2114,9 @@ namespace winrt::FlyExplorer::implementation
                     FontIcon glyph;glyph.FontFamily(Microsoft::UI::Xaml::Media::FontFamily{L"Segoe Fluent Icons"});
                     glyph.Glyph(hstring(itemFolder?L"\uE8B7":L"\uE8A5"));glyph.FontSize(large?60.0:(medium?36.0:(smallIcons?20.0:16.0)));cell.Children().Append(glyph);
                 }
-                TextBlock filename;filename.Text(itemLabel);
+                addFilterBadge(cell);
+                TextBlock filename;filename.Text(hstring(displayName));
+                if(accent)filename.Foreground(accent);
                 if(iconGrid){filename.FontSize(12.0);filename.Width(large?104.0:84.0);filename.TextAlignment(TextAlignment::Center);filename.TextWrapping(TextWrapping::WrapWholeWords);filename.MaxLines(2);filename.TextTrimming(TextTrimming::CharacterEllipsis);}
                 else{filename.TextTrimming(TextTrimming::CharacterEllipsis);if(smallIcons){filename.FontSize(12.0);filename.Width(120);}}
                 cell.Children().Append(filename);row.Content(cell);
@@ -1992,6 +2124,21 @@ namespace winrt::FlyExplorer::implementation
                 else if(smallIcons){row.Width(160);row.Height(32);row.Padding(Thickness{5.0,0.0,5.0,0.0});}
                 else if(large){row.Width(112);row.Height(128);row.Padding(Thickness{2.0});row.HorizontalContentAlignment(HorizontalAlignment::Center);}
                 else{row.Width(92);row.Height(92);row.Padding(Thickness{2.0});row.HorizontalContentAlignment(HorizontalAlignment::Center);}
+            }
+            if(state.compactRows &&
+               (state.viewMode==FileViewMode::Details||
+                state.viewMode==FileViewMode::List)){
+                row.MinHeight(26);
+                row.Padding(Thickness{4.0,0.0,4.0,0.0});
+            }
+            if(decoratedRule){
+                label+=L" | 필터 프리셋: "+decoratedRule->name;
+                if(decoratedRule->color)
+                    label+=std::wstring(L" | 분류 색상: ")+
+                        kFilterColors[decoratedRule->color];
+                if(decoratedRule->icon)
+                    label+=std::wstring(L" | 분류 아이콘: ")+
+                        kFilterIcons[decoratedRule->icon];
             }
             Microsoft::UI::Xaml::Automation::AutomationProperties::SetName(
                 row,hstring(label));
@@ -2197,6 +2344,7 @@ namespace winrt::FlyExplorer::implementation
 
     void MainWindow::Refresh(hstring const& status)
     {
+        ApplyFileInfoPaneLayout();
         RefreshTabs(0);
         RefreshTabs(1);
         FillFiles(0);
@@ -2216,6 +2364,11 @@ namespace winrt::FlyExplorer::implementation
         UpdateFooterSummary();
         fileBar()->SetSortIndex(ActiveWindowTab().fileLists[ActiveWindowTab().model.activePane].sortMode);
         fileBar()->SetViewIndex(static_cast<int>(ActiveWindowTab().fileLists[ActiveWindowTab().model.activePane].viewMode));
+        fileBar()->SetListDisplayState(
+            ActiveWindowTab().fileLists[ActiveWindowTab().model.activePane].showSelectionCheckboxes,
+            ActiveWindowTab().fileLists[ActiveWindowTab().model.activePane].compactRows,
+            ActiveWindowTab().fileLists[ActiveWindowTab().model.activePane].showFileExtensions,
+            ActiveWindowTab().fileLists[ActiveWindowTab().model.activePane].showHiddenItems);
         UpdateSortPresentation(ActiveWindowTab().model.activePane);
         StatusText().Text(status);
         Title(L"flyExplorer · "+hstring(nav.snapshot().displayName));
@@ -2255,6 +2408,11 @@ namespace winrt::FlyExplorer::implementation
         UpdateActivePaneChrome();
         fileBar()->SetSortIndex(ActiveWindowTab().fileLists[side].sortMode);
         fileBar()->SetViewIndex(static_cast<int>(ActiveWindowTab().fileLists[side].viewMode));
+        fileBar()->SetListDisplayState(
+            ActiveWindowTab().fileLists[side].showSelectionCheckboxes,
+            ActiveWindowTab().fileLists[side].compactRows,
+            ActiveWindowTab().fileLists[side].showFileExtensions,
+            ActiveWindowTab().fileLists[side].showHiddenItems);
         UpdateSortPresentation(side);
         UpdateSelectionChrome();
         UpdateFooterSummary();
@@ -2311,6 +2469,113 @@ namespace winrt::FlyExplorer::implementation
         fileBar()->CopyButton().IsEnabled(ready);
         fileBar()->MoveButton().IsEnabled(ready);
     }
+    void MainWindow::OnToggleFileInfoPane(IInspectable const&,RoutedEventArgs const&)
+    {
+        auto& state=ActiveWindowTab();
+        state.fileInfoPaneVisible=!state.fileInfoPaneVisible;
+        ApplyFileInfoPaneLayout();
+        // The host Width is unchanged when the Details column expands.
+        // Re-evaluate each file list as if its viewport had been resized.
+        const int profile=DetailLayoutProfile();
+        for(int side=0;side<2;++side){
+            if(mDetailLayoutProfiles[side]!=profile){
+                mDetailLayoutProfiles[side]=profile;
+                if(mColumnControlsReady&&
+                   !ActiveWindowTab().model.panes[side].tabs.empty())
+                    FillFiles(side);
+            }else ApplyDetailColumnLayout(side);
+        }
+        UpdateFileInfoPane();
+    }
+    void MainWindow::ApplyFileInfoPaneLayout()
+    {
+        const bool visible=ActiveWindowTab().fileInfoPaneVisible;
+        FileInfoPane().Visibility(visible?Visibility::Visible:Visibility::Collapsed);
+        FileInfoColumn().Width(GridLength{visible?260.0:0.0,GridUnitType::Pixel});
+        Microsoft::UI::Xaml::Automation::AutomationProperties::SetName(
+            FileInfoToggleButton(),visible?
+                L"선택 항목 상세 정보 닫기":L"선택 항목 상세 정보 열기");
+    }
+    void MainWindow::UpdateFileInfoPane()
+    {
+        if(!ActiveWindowTab().fileInfoPaneVisible)return;
+        // Every field defaults to empty until the current pane, tab, route,
+        // rendering identity and selected row are all verified.
+        FileInfoHint().Text(L"항목 하나를 선택하세요.");
+        FileInfoName().Text(L"");
+        FileInfoType().Text(L"");
+        FileInfoLocation().Text(L"");
+        FileInfoSize().Text(L"");
+        FileInfoModified().Text(L"");
+        auto const& window=ActiveWindowTab();
+        const int side=window.model.activePane;
+        auto const& pane=window.model.panes[side];
+        if(side==1&&!window.model.split)return;
+        if(pane.active>=pane.tabs.size()||pane.active>=pane.routeIds.size()||
+           pane.active>=pane.pending.size()||pane.pending[pane.active])return;
+        auto view=side==0?LeftFiles():RightFiles();
+        if(view.SelectedItems().Size()!=1){
+            if(view.SelectedItems().Size()>1)
+                FileInfoHint().Text(L"항목 하나만 선택하면 상세 정보를 표시합니다.");
+            return;
+        }
+        auto selected=view.SelectedItems().GetAt(0).try_as<ListViewItem>();
+        if(!selected||!selected.Tag())return;
+        const auto logical=unbox_value<std::uint64_t>(selected.Tag());
+        auto const& state=window.fileLists[side];
+        const auto route=pane.routeIds[pane.active];
+        if(state.visibleRoute!=route||state.visibleTab!=pane.active)return;
+        auto const found=std::find(state.renderedLogical.begin(),
+                                  state.renderedLogical.end(),logical);
+        if(found==state.renderedLogical.end())return;
+        const auto rendered=static_cast<std::size_t>(
+            std::distance(state.renderedLogical.begin(),found));
+        if(rendered>=state.renderedPaths.size())return;
+        auto const& session=pane.tabs[pane.active];
+        auto const& snapshot=session.snapshot();
+        std::size_t resident=0;
+        const bool residentReady=snapshot.residentIndex(logical,resident);
+        const auto* indexed=session.indexedItem(static_cast<std::size_t>(logical));
+        const auto* item=residentReady?
+            &snapshot.children[resident]:nullptr;
+        if(!item&&!indexed)return;
+        const std::wstring name=item?item->label:indexed->label;
+        const std::wstring path=item?item->parsingName:indexed->parsingName;
+        const bool folder=item?item->isFolder():indexed->isFolder();
+        const bool filesystem=item?item->isFileSystem():indexed->isFileSystem();
+        if(path!=state.renderedPaths[rendered])return;
+        FileInfoHint().Text(side==0?L"왼쪽 창 선택 항목":L"오른쪽 창 선택 항목");
+        FileInfoName().Text(hstring(name));
+        FileInfoType().Text(folder?L"폴더":L"파일");
+        FileInfoLocation().Text(filesystem?
+            hstring(std::filesystem::path(path).parent_path().native()):
+            hstring(L"가상 Shell 항목"));
+        FileInfoSize().Text(folder?L"폴더":L"정보 없음");
+        FileInfoModified().Text(L"정보 없음");
+        // Cache-only presentation: no filesystem, provider, Shell or COM
+        // query can run on the UI thread on a selection change.
+        const bool indexedProjection=
+            state.indexedNameProjection&&!state.indexToComplete&&
+            session.indexedFrontier()==snapshot.nextOffset&&
+            (state.sortMode<=1||
+             (state.indexedMetadataSort&&
+              !snapshot.truncated&&
+              state.metadataCurrent(route,pane.active,session.nameIndex().size())));
+        const std::size_t metadataIndex=indexedProjection?
+            static_cast<std::size_t>(logical):resident;
+        const bool metadataReady=(indexedProjection||residentReady)&&
+            state.metadataCurrent(route,pane.active,
+                indexedProjection?session.nameIndex().size():snapshot.children.size())&&
+            metadataIndex<state.metadata.size();
+        if(metadataReady){
+            auto const& meta=state.metadata[metadataIndex];
+            if(!folder&&meta.sizeKnown)FileInfoSize().Text(hstring(meta.bytesLabel));
+            if(meta.dateKnown)FileInfoModified().Text(hstring(meta.dateLabel));
+        }
+        if(residentReady&&state.isCurrent(route,pane.active,snapshot.children.size())&&
+           resident<state.details.size()&&!state.details[resident].typeLabel.empty())
+            FileInfoType().Text(hstring(state.details[resident].typeLabel));
+    }
     void MainWindow::UpdateFooterSummary()
     {
         const int side=ActiveWindowTab().model.activePane;
@@ -2341,6 +2606,7 @@ namespace winrt::FlyExplorer::implementation
         SelectionCountText().Text(selected?
             hstring(std::to_wstring(selected)+L"\uAC1C \uC120\uD0DD\uB428"):hstring{});
         UpdateCommandAvailability();
+        UpdateFileInfoPane();
     }
     void MainWindow::QueueSelectionPresentationUpdate()
     {
@@ -2414,16 +2680,156 @@ namespace winrt::FlyExplorer::implementation
             fxfile::shellnav::HistoryAction::Up),
             fxfile::shellnav::NavigationAction::Up);
     }
+    void MainWindow::HideAddressSuggestions()
+    {
+        mAddressSuggestionKeyboardFocus=false;
+        AddressSuggestionPanel().Visibility(Visibility::Collapsed);
+    }
+    void MainWindow::UpdateAddressSuggestions()
+    {
+        if(mClosing)return;
+        auto editor=AddressBox();
+        auto panel=AddressSuggestionPanel();
+        auto rows=AddressSuggestionRows();
+        rows.Children().Clear();
+        if(editor.Opacity()<0.5||
+           editor.FocusState()==FocusState::Unfocused){
+            panel.Visibility(Visibility::Collapsed);
+            return;
+        }
+        std::wstring prefix(editor.Text().c_str());
+        if(!prefix.empty()&&prefix[0]==L'"')prefix.erase(0,1);
+        if(prefix.size()<3||prefix.size()>1024){
+            panel.Visibility(Visibility::Collapsed);
+            return;
+        }
+        std::vector<std::wstring> choices;
+        choices.reserve(8);
+        auto offer=[&](std::wstring const& path){
+            if(choices.size()>=8||path.empty()||path.size()>32767||
+               path.rfind(L"shell:",0)==0||path.size()<=prefix.size())return;
+            if(::CompareStringOrdinal(path.c_str(),
+                       static_cast<int>(prefix.size()),prefix.c_str(),
+                       static_cast<int>(prefix.size()),TRUE)!=CSTR_EQUAL)return;
+            if(std::find_if(choices.begin(),choices.end(),[&](auto const& old){
+                return ::CompareStringOrdinal(old.c_str(),-1,
+                          path.c_str(),-1,TRUE)==CSTR_EQUAL;
+            })!=choices.end())return;
+            choices.push_back(path);
+        };
+        // No disk, network, Shell or provider work runs while typing.
+        auto const& model=ActiveWindowTab().model;
+        for(int side=0;side<2&&choices.size()<8;++side){
+            if(side==1&&!model.split)continue;
+            auto const& pane=model.panes[static_cast<size_t>(side)];
+            for(auto const& tab:pane.tabs){
+                offer(tab.snapshot().parsingName);
+                if(choices.size()==8)break;
+            }
+        }
+        auto const& pane=model.panes[static_cast<size_t>(model.activePane)];
+        if(pane.active<pane.tabs.size()){
+            auto const& known=pane.tabs[pane.active].nameIndex();
+            const auto limit=(std::min)(known.size(),static_cast<size_t>(2048));
+            for(size_t i=0;i<limit&&choices.size()<8;++i)
+                if(known[i].isFolder()&&known[i].isFileSystem())
+                    offer(known[i].parsingName);
+        }
+        for(auto const& path:choices){
+            Button button;
+            // Show the identifying final folder rather than the shared
+            // beginning of a long path in narrow address chrome. These are
+            // lexical path operations only: never probe disk/providers here.
+            auto const candidatePath=std::filesystem::path(path);
+            auto leaf=candidatePath.filename().native();
+            if(leaf.empty())leaf=path;
+            const auto parent=candidatePath.parent_path().filename().native();
+            std::wstring display=leaf;
+            if(!parent.empty()&&parent!=leaf&&leaf!=path)
+                display+=L"  \u2014  "+parent;
+            TextBlock candidateLabel;
+            candidateLabel.Text(hstring(display));
+            candidateLabel.TextTrimming(TextTrimming::CharacterEllipsis);
+            candidateLabel.TextWrapping(TextWrapping::NoWrap);
+            button.Content(candidateLabel);
+            Microsoft::UI::Xaml::Controls::ToolTipService::SetToolTip(
+                button,box_value(hstring(path)));
+            // Keep the original full path as the command and UIA target.
+            button.Tag(box_value(hstring(path)));
+            button.HorizontalAlignment(HorizontalAlignment::Stretch);
+            button.HorizontalContentAlignment(HorizontalAlignment::Left);
+            button.Padding(Thickness{8,4,8,4});
+            button.MinHeight(30);
+            Microsoft::UI::Xaml::Automation::AutomationProperties::SetName(
+                button,L"주소 후보: "+hstring(path));
+            button.Click({this,&MainWindow::OnAddressSuggestionClicked});
+            auto weak=get_weak();
+            button.KeyDown([weak](IInspectable const&,
+                Input::KeyRoutedEventArgs const& args){
+                if(args.Key()!=Windows::System::VirtualKey::Escape)return;
+                if(auto ui=weak.get()){
+                    ui->HideAddressSuggestions();
+                    ui->AddressBox().Focus(FocusState::Keyboard);
+                    args.Handled(true);
+                }
+            });
+            rows.Children().Append(button);
+        }
+        if(choices.empty()){panel.Visibility(Visibility::Collapsed);return;}
+        panel.Visibility(Visibility::Visible);
+    }
+    void MainWindow::OnAddressTextChanged(IInspectable const&,
+        TextChangedEventArgs const&)
+    {
+        UpdateAddressSuggestions();
+    }
+    void MainWindow::OnAddressSuggestionClicked(IInspectable const& sender,
+        RoutedEventArgs const&)
+    {
+        auto button=sender.try_as<Button>();
+        if(!button||!button.Tag())return;
+        const auto path=std::wstring(unbox_value<hstring>(button.Tag()).c_str());
+        HideAddressSuggestions();
+        OpenFolder(path);
+        AddressBox().Opacity(0.0);
+        AddressDisplayButton().Visibility(Visibility::Visible);
+    }
     void MainWindow::OnAddressKeyDown(IInspectable const&,
                                      Input::KeyRoutedEventArgs const& args)
     {
+        if(args.Key()==Windows::System::VirtualKey::Down &&
+           AddressSuggestionPanel().Visibility()==Visibility::Visible&&
+           AddressSuggestionRows().Children().Size()>0){
+            if(auto first=AddressSuggestionRows().Children().GetAt(0)
+                    .try_as<Button>()){
+                mAddressSuggestionKeyboardFocus=true;
+                first.Focus(FocusState::Keyboard);
+            }
+            args.Handled(true);
+            return;
+        }
         if (args.Key()==Windows::System::VirtualKey::Enter) {
-            OpenFolder(ResolveFriendlyAddress(std::wstring(AddressBox().Text().c_str())));
+            const auto requested=ResolveFriendlyAddress(
+                std::wstring(AddressBox().Text().c_str()));
+            HideAddressSuggestions();
+            OpenFolder(requested);
+            // A submitted path is not a committed location. Keep the chrome
+            // on the last valid folder until the isolated Shell result wins.
+            // Do this on Enter, not on a later Failed callback, which could
+            // otherwise erase a newer address currently being typed.
+            const auto committed=Current().snapshot().parsingName;
+            AddressBox().Text(hstring(FriendlyAddress(committed)));
+            UpdateBreadcrumb(committed);
             AddressBox().Opacity(0.0);
             AddressDisplayButton().Visibility(Visibility::Visible);
             args.Handled(true);
         }
         else if (args.Key()==Windows::System::VirtualKey::Escape) {
+            if(AddressSuggestionPanel().Visibility()==Visibility::Visible){
+                HideAddressSuggestions();
+                args.Handled(true);
+                return;
+            }
             const auto address=Current().snapshot().parsingName;
             AddressBox().Text(hstring(FriendlyAddress(address)));
             UpdateBreadcrumb(address);
@@ -2435,12 +2841,29 @@ namespace winrt::FlyExplorer::implementation
     }
     void MainWindow::OnAddressGotFocus(IInspectable const&,RoutedEventArgs const&)
     {
+        mAddressSuggestionKeyboardFocus=false;
         AddressDisplayButton().Visibility(Visibility::Collapsed);
         AddressBox().Opacity(1.0);
         AddressBox().SelectAll();
     }
     void MainWindow::OnAddressLostFocus(IInspectable const&,RoutedEventArgs const&)
     {
+        if(mClosing)return;
+        // Pointer Click arrives before this deferred focus reconciliation.
+        // Keyboard Down+Enter may deliberately keep a candidate focused.
+        if(AddressSuggestionPanel().Visibility()==Visibility::Visible){
+            auto weak=get_weak();
+            DispatcherQueue().TryEnqueue([weak]{
+                if(auto ui=weak.get()){
+                    if(ui->mClosing||ui->mAddressSuggestionKeyboardFocus||
+                       ui->AddressSuggestionPanel().Visibility()!=Visibility::Visible)
+                        return;
+                    ui->HideAddressSuggestions();
+                    ui->OnAddressLostFocus(nullptr,nullptr);
+                }
+            });
+            return;
+        }
         const auto address=Current().snapshot().parsingName;
         AddressBox().Text(hstring(FriendlyAddress(address)));
         UpdateBreadcrumb(address);
@@ -2449,6 +2872,7 @@ namespace winrt::FlyExplorer::implementation
     }
     void MainWindow::OnAddressDisplayClicked(IInspectable const&,RoutedEventArgs const&)
     {
+        HideAddressSuggestions();
         AddressDisplayButton().Visibility(Visibility::Collapsed);
         AddressBox().Opacity(1.0);
         AddressBox().Focus(FocusState::Programmatic);
@@ -2476,7 +2900,25 @@ namespace winrt::FlyExplorer::implementation
             button.Content(winrt::box_value(hstring(seg.label)));button.Tag(winrt::box_value(hstring(seg.target)));
             button.FontWeight(current?Windows::UI::Text::FontWeights::SemiBold():Windows::UI::Text::FontWeights::Normal());
             Microsoft::UI::Xaml::Automation::AutomationProperties::SetName(button,L"\uC8FC\uC18C \uACBD\uB85C: "+hstring(seg.label));
-            button.Click({this,&MainWindow::OnBreadcrumbSegmentClicked});panel.Children().Append(button);
+            button.Click({this,&MainWindow::OnBreadcrumbSegmentClicked});
+            auto weak=get_weak();
+            using Microsoft::UI::Xaml::Input::PointerEventHandler;
+            button.AddHandler(UIElement::PointerPressedEvent(),
+                box_value(PointerEventHandler{[weak](
+                    IInspectable const& sender,
+                    Microsoft::UI::Xaml::Input::PointerRoutedEventArgs const& args){
+                    auto target=sender.try_as<Button>();
+                    if(!target||!target.Tag()||
+                       !args.GetCurrentPoint(target).Properties().IsMiddleButtonPressed())return;
+                    if(auto ui=weak.get()){
+                        const auto path=std::wstring(
+                            unbox_value<hstring>(target.Tag()).c_str());
+                        ui->OpenFolderInNewPaneTab(
+                            ui->ActiveWindowTab().model.activePane,path);
+                        args.Handled(true);
+                    }
+                }}),true);
+            panel.Children().Append(button);
         };
         auto separator=[&](){TextBlock glyph;glyph.Text(L"\u203A");glyph.Opacity(0.52);glyph.VerticalAlignment(VerticalAlignment::Center);panel.Children().Append(glyph);};
         if(segments.empty())segments.push_back({friendly,address});
@@ -2529,6 +2971,39 @@ namespace winrt::FlyExplorer::implementation
                 if(mColumnControlsReady&&!ActiveWindowTab().model.panes[side].tabs.empty())FillFiles(side);
             }else ApplyDetailColumnLayout(side);
         }
+    }
+    void MainWindow::OpenFolderInNewPaneTab(int side,std::wstring path)
+    {
+        if(side<0||side>1||path.empty())return;
+        auto const& model=ActiveWindowTab().model;
+        if(side==1&&!model.split)return;
+        auto const& pane=model.panes[static_cast<size_t>(side)];
+        if(pane.active>=pane.routeIds.size())return;
+        const auto originWindow=mWorkspace.activeIndex();
+        const auto originRoute=pane.routeIds[pane.active];
+        // The UIA ListViewItem/Button still owns an in-flight PointerPressed.
+        // Never rebuild its visual tree or reallocate its model until the
+        // routed pointer event has returned to the WinUI dispatcher.
+        auto weak=get_weak();
+        DispatcherQueue().TryEnqueue([weak,side,originWindow,originRoute,
+                                      path=std::move(path)]() mutable {
+            auto ui=weak.get();
+            if(!ui||ui->mWorkspace.activeIndex()!=originWindow)return;
+            auto& current=ui->ActiveWindowTab().model;
+            if(side==1&&!current.split)return;
+            auto const& active=current.panes[static_cast<size_t>(side)];
+            if(active.active>=active.routeIds.size()||
+               active.routeIds[active.active]!=originRoute)return;
+            if(active.tabs.size()>=fxfile::explorerui::kMaxTabsPerPane){
+                ui->StatusText().Text(L"창마다 탭은 최대 32개까지 지원합니다.");
+                return;
+            }
+            if(!ui->mWorkspace.dispatch(fxfile::explorerui::Command::AddTab,side)
+                          .accepted)return;
+            ui->mWorkspaceRestore.reset(side);
+            ui->QueuePath(side,std::move(path));
+            ui->Refresh(L"새 탭의 폴더를 불러오는 중입니다.");
+        });
     }
     void MainWindow::OnNewTabClicked(IInspectable const&,RoutedEventArgs const&)
     {

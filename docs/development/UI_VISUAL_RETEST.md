@@ -27,6 +27,45 @@ For the v7 Window Tab/session slice:
 A GUI PASS must include a normal owned process exit. Do not accept a functional
 sentinel followed by a crash exit code.
 
+## Windows visual baseline scratch path
+
+For matched captures that require separate Release builds of old and new
+revisions, use a short, explicitly test-owned Windows scratch root.
+NuGet restores all packages under the checkout's `.cache/nuget` path;
+a long scratch path can fail the restore before the product is launched.
+In [the shortcut-editor visual retest](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38196377101),
+a 261-character NuGet/WinMD path failed, while a short
+`C:\\ProgramData\\personal-control-plane\\scratch\\v-<12hex>` root
+reduced the known path to 220 characters and let both real WinUI versions
+build and capture successfully. Never globally disable path, restore or
+foreground-window safety checks to force a visual PASS. Verify exact
+source SHA, test-owned directory identity, matched screenshot conditions,
+normal owned app exit and cleanup.
+
+## Actual viewport and runtime isolation
+
+For real screenshots, size the test-owned window within the *active
+interactive user's* current desktop dimensions; a fixed 760 px-high
+window can extend beyond a short VM desktop and invalidate the capture.
+Record exact window rectangle and DPI, and refuse any screenshot that
+extends outside the display or lacks the test-owned foreground HWND.
+
+When comparing two product revisions with different compiled code,
+build their Release runtimes independently. Do not assume incremental
+MSBuild in a shared `out/` directory refreshes every self-contained
+DLL/PRI resource correctly: [the filter visual review](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38204943981)
+only completed after a `clean.bat build` inside a bounded test-owned
+checkout before building the new revision. Retain pinned package cache
+unless dependency provenance itself requires invalidation.
+A failed visual task may reuse exact-SHA built bytes or previously
+captured screenshots only after checking retained owned-result stage,
+source SHA and image metadata; never use unverified stale runtime files.
+
+For save-related screenshots, assert the isolated persisted file and
+schema/data, not merely a transient UI status line that may be
+replaced during a file-list refresh. Validate normal owned app exit
+and separately inspect the actual pixels before recording visual PASS.
+
 ## Mandatory BEFORE / AFTER capture
 
 Before changing user-visible pixels, capture the actual current product in the
@@ -111,18 +150,57 @@ Capture only synthetic/test-owned paths. Never commit screenshots containing
 personal filenames or private desktop content. Prefer ignored local evidence
 under logs/ or bounded CI artifacts rather than product-source PNGs.
 
+## Filter accents in light theme
+
+Use a separate light palette for file-name text: blue (0,82,166),
+green (0,99,57), amber (148,69,0), red (164,25,38).
+All have at least 6.75:1 contrast on white. Do not reuse the brighter
+dark-theme RGBs unchanged. The actual 96-DPI Windows review in
+[run 38206845319](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38206845319)
+compared 16 screenshots (all four badges/colors, normal and
+selected/keyboard-focused rows). Selected-row legibility is a
+visual check separate from the mathematical white-background ratio.
+Keep DPI scaling, High Contrast and screen-reader gates separate.
+
+## Registered Windows DPI and filter screen-reader evidence
+
+[Read-only Windows environment inventory 38209100479](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38209100479)
+found an active 1024x768 Explorer desktop and **system DPI 96**.
+No actual 125%, 150%, or 200% monitor-scale acceptance can be inferred
+from WinUI DPI-awareness source code or a simulated window size.
+Use a genuinely scaled OS display and matched actual screenshots
+before changing those three gates from **NOT TESTED**.
+
+Filter rule management can be completed through physical keyboard
+focus/select/save, as accepted by the focused GUI suite in
+[central run 38209842808](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38209842808).
+Each styled file row exposes the preset name, color and icon category
+through UI Automation; badges expose their category rather than only
+a generic icon. This is **UIA semantics PASS**, not a claim that
+Narrator actually spoke those values: spoken phrases, audio output and
+tab/reading order for every pane remain separate assistive-technology
+gates. Real Korean two-beolsik `한글` composition and durable WinUI
+filter-save behavior subsequently passed in actual Windows
+[38227421736](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38227421736);
+other IME scenarios still require their own evidence.
+
 ## Theme, scale and accessibility gates
 
 For layout/theme/scale-sensitive UI work, exercise the relevant environments
 that are actually available. Do not infer a PASS for an unavailable one.
 
-Actual 125/150/200% display scaling and human Narrator/Korean IME behavior
-remain separate environment/manual gates until exercised. High Contrast ON
-already has actual Windows GUI/visual acceptance on merged product revision
-`eaa1b368a677f57c15183c5e6851f0598ed25878` through Remote Windows Task
-`37252987127`. Reuse that evidence while the relevant product/presentation
-boundary is unchanged; rerun High Contrast only when a later change invalidates
-it. Owned same-app physical pointer drag is covered by the Release acceptance
+Actual 125/150/200% OS display scaling remains **NOT TESTED**.
+Human-observed or independently captured Narrator spoken output remains
+**NOT VERIFIED**, even though the screen reader launched and Speech Recap
+windows were found in synthetic diagnostics; see
+[NARRATOR_SPEECH_VALIDATION.md](NARRATOR_SPEECH_VALIDATION.md).
+Real Korean two-beolsik filter entry/save passed in
+[38227421736](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38227421736).
+The styled-filter High Contrast visual gate passed for the tested color/icon
+combinations in [38214474825](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38214474825).
+Reuse accepted evidence only while the relevant product/presentation
+boundary and tested conditions remain unchanged; rerun a gate only when
+its boundary is invalidated. Owned same-app physical pointer drag is covered by the Release acceptance
 path; external cross-application drag
 remains a separate interoperability gate when relevant. RDP restrictions,
 source-level support or code-level RasterizationScale behavior do not certify

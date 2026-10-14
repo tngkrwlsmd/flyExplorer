@@ -16,6 +16,102 @@ product state use CURRENT_STATUS.md.
 
 이 문서는 확정된 오류를 단순 수정으로 끝내지 않고, 다음 진단을 빠르게 하고 같은 계열의 결함을 사전에 막기 위한 프로젝트 기록이다.
 
+## 2026-10-13 — F06 invalid UNC address chrome and last-request race
+
+- Owned GUI run [38380137080](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38380137080)
+  rejected a quoted nonexistent loopback UNC and retained the right-pane
+  file list, but its address editor still exposed the rejected input.
+- A proposed restore in `OnNativeResult::Failed` then caused the
+  unrelated rapid invalid-then-valid navigation assertion to fail in
+  [38380865307](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38380865307):
+  a delayed failure handler may write over newer text before its newer
+  request commits. The failed approach was removed, not carried into main.
+- The correction restores the committed address immediately after
+  submitting Enter input, leaving route-token checks and async commit
+  ownership to the existing navigation controller. The first run
+  [38381583006](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38381583006)
+  found one stale exact-source assertion after the refactor. Updating that
+  assertion (not weakening the behavioral requirement) led to full
+  [38381812799](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38381812799)
+  source, Release and owned GUI PASS, including the negative quoted UNC
+  and rapid last-request test. Normal app shutdown and scratch cleanup passed.
+- Prevention: do not mutate the address editor from stale asynchronous
+  failures; let only the accepted complete Shell snapshot update committed
+  navigation. Keep a negative UNC test and rapid opposite-order navigation
+  gate together. No live SMB-share creation or credentials during probes.
+
+---
+
+## 2026-10-12 — Narrator Recap focus/visibility evidence is not speech evidence
+
+- The first control-plane speech-recap script attempted
+  `New-Item -LiteralPath` under Windows PowerShell 5.1; this cmdlet
+  did not support that parameter. Correcting this command changed
+  the request harness, not the flyExplorer product
+  ([run 38232070285](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38232070285)).
+- Starting Narrator brought a Narrator window into the foreground.
+  The synthetic owned Win32 editor was no longer focused. A limited,
+  exact-owned foreground correction allowed a second probe to
+  discover two visible Narrator Recap windows with 35 UIA nodes
+  ([run 38232530406](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38232530406)).
+  The previous `zero UIA nodes` diagnosis was a test discovery
+  limitation, not a proven accessibility API failure.
+- A controlled Win32 BUTTON with a verified accessible UIA Name and
+  foreground focus gave a true reference-label prerequisite, but
+  scanning Narrator's actual Recap UIA text/name/value patterns still
+  found no matching phrase, and audio was not captured
+  ([run 38233608351](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38233608351)).
+  **No flyExplorer product failure** follows from the missing reference
+  evidence; neither is actual spoken-text acceptance established.
+- Test cleanup also requires its own explicit gate: after `Narrator+Esc`
+  and `Windows+Ctrl+Enter` were injected, the test-originated
+  Narrator process could remain running. An exact-PID termination
+  sometimes caused a second Narrator instance, requiring strictly
+  provenance-guarded bounded cleanup. Final exact-session/creation
+  checks, two known test-originated PID stops, stable process-zero
+  confirmation and safe owned-file removal completed
+  ([run 38234299929](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38234299929)).
+  Never terminate a preexisting real user's screen reader based only
+  on the executable name.
+- Prevention: stop using this shared session for unattended transcript
+  guesses, require attended actual-audio or independently verified
+  privacy-limited transcript capture, and retain separate source/UIA,
+  speech-text, audio, process cleanup and OS-DPI acceptance labels.
+  See `NARRATOR_SPEECH_VALIDATION.md`.
+
+---
+
+## 2026-10-12 — Narrator starts but actual speech remains unverified
+
+- The Windows VM runs Windows 11 Pro build 26300 with a working audio
+  endpoint and no preexisting Narrator process
+  ([inventory 38229681112](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38229681112)).
+- A non-elevated user test task starting `Narrator.exe` directly received
+  WinError 740 (requires elevation). Retrying the same command or
+  bypassing UAC is not a safe accessibility acceptance strategy
+  ([run 38230127856](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38230127856)).
+- The documented Windows+Ctrl+Enter accessibility shortcut **did**
+  launch Narrator from a test-owned desktop reference. Nevertheless,
+  the limited UIA client observed zero Narrator-owned text nodes
+  after Narrator+Alt+X Speech Recap; no spoken label or audio waveform
+  was independently confirmed. The test worker then failed at
+  `psutil.AccessDenied` on a higher-integrity Narrator process wait
+  ([run 38230388533](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38230388533)).
+  These are *environment/automation permission* issues, not flyExplorer
+  accessibility correctness failures.
+- An independent process inventory confirmed zero remaining Narrator
+  processes and zero test scheduled tasks after the failed wrapper
+  ([run 38230563415](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38230563415)).
+- Prevention: first isolate actual spoken content in a synthetic
+  reference, **do not** re-label a process-launch/UIA-name test as a
+  voice test, use attended audible confirmation or independently
+  trustworthy Speech Recap access, avoid machine-wide clipboard or
+  unreviewed audio capture, and preserve/restored initial Narrator state.
+  See `docs/development/NARRATOR_SPEECH_VALIDATION.md` for the explicit
+  acceptance procedure.
+
+---
+
 ## 2026-10-09 — indexed modified-date acceptance and local-time boundary
 
 - Unlike traversal mode's local modified-day semantics, `SystemIndex`

@@ -242,13 +242,24 @@ def main(
         print("READINESS_STAGE=CORE_UIA_READY", flush=True)
 
         win.set_focus()
-        if not u.SetWindowPos(hwnd, None, 40, 30, 1100, 720, 0x0014):
+        screen_width=u.GetSystemMetrics(0)
+        screen_height=u.GetSystemMetrics(1)
+        target_width=min(1080,screen_width-55)
+        target_height=min(720,screen_height-55)
+        if target_width<820 or target_height<550:
+            raise AcceptanceFailure(
+                "CANDIDATE_INTERACTION_NOT_READY",
+                f"High Contrast desktop too small: {screen_width}x{screen_height}",
+            )
+        if not u.SetWindowPos(hwnd, None, 40, 30,
+                              target_width,target_height,0x0014):
             raise AcceptanceFailure(
                 "CANDIDATE_INTERACTION_NOT_READY",
                 "High Contrast acceptance SetWindowPos failed",
             )
         wait_for(
-            lambda: abs(win.rectangle().width() - 1100) <= 3,
+            lambda: abs(win.rectangle().width() - target_width) <= 3
+                    and abs(win.rectangle().height() - target_height) <= 3,
             "High Contrast acceptance size did not apply",
             category="CANDIDATE_INTERACTION_NOT_READY",
             on_timeout=snapshot,
@@ -294,16 +305,24 @@ def main(
                     f"missing accessible name: {key}",
                 )
 
-        rows = [
-            row
-            for row in win.child_window(auto_id="LeftFiles").descendants()
-            if row.element_info.control_type == "ListItem"
-        ]
-        if not rows:
-            raise AcceptanceFailure(
-                "PRODUCT_ASSERTION_FAILURE",
-                "High Contrast owned file rows missing",
-            )
+        wait_for(
+            lambda: str(folder).lower() in
+                win.child_window(auto_id="AddressBox").get_value().lower(),
+            "High Contrast startup path not yet settled",
+            category="CANDIDATE_UIA_CONTROL_TIMEOUT",
+            seconds=25,
+            on_timeout=snapshot,
+        )
+        rows = wait_for(
+            lambda: [
+                row for row in win.child_window(
+                    auto_id="LeftFiles").descendants(control_type="ListItem")
+            ] or None,
+            "High Contrast owned file rows still loading",
+            category="CANDIDATE_UIA_CONTROL_TIMEOUT",
+            seconds=25,
+            on_timeout=snapshot,
+        )
         rows[0].select()
         wait_for(
             lambda: any(
@@ -315,6 +334,75 @@ def main(
             category="PRODUCT_ASSERTION_FAILURE",
             on_timeout=snapshot,
         )
+
+        # Filter classification uses system foreground under high contrast:
+        # save every bounded color/icon pair and capture its actual rendered
+        # selected row. A UIA name test alone cannot validate real pixels.
+        win.child_window(auto_id="FilterRulePanelButton").click_input()
+        filter_name=win.child_window(auto_id="FilterRuleNameEdit")
+        filter_masks=win.child_window(auto_id="FilterRuleMasksEdit")
+        filter_name.set_edit_text("고대비 분류")
+        filter_masks.set_edit_text("*.txt")
+        colors=win.child_window(auto_id="FilterRuleColorBox")
+        icons=win.child_window(auto_id="FilterRuleIconBox")
+        save=win.child_window(auto_id="FilterRuleSaveButton")
+        choices=(
+            (1,"파랑","별","blue"),
+            (2,"초록","핀","green"),
+            (3,"주황","깃발","amber"),
+            (4,"빨강","태그","red"),
+        )
+        screenshots=[]
+        for choice,color_name,icon_name,slug in choices:
+            colors.select(choice)
+            icons.select(choice)
+            save.click_input()
+            expected=("고대비 분류\t*.txt\t"+str(choice)+
+                      "\t"+str(choice))
+            store=Path(env["LOCALAPPDATA"])/"flyExplorer"/"filter-rules-v1.txt"
+            wait_for(
+                lambda:store.is_file() and
+                    expected in store.read_text(encoding="utf-8"),
+                "High Contrast color/icon persistence missing",
+                category="PRODUCT_ASSERTION_FAILURE",
+                seconds=12,
+            )
+            def styled_row():
+                return next((row for row in
+                    win.child_window(auto_id="LeftFiles").descendants(
+                        control_type="ListItem")
+                    if "contrast-alpha.txt" in row.window_text() and
+                       ("분류 색상: "+color_name) in row.window_text() and
+                       ("분류 아이콘: "+icon_name) in row.window_text()),None)
+            item=wait_for(styled_row,"HC file row missing named style",
+                category="PRODUCT_ASSERTION_FAILURE",seconds=12)
+            item.select()
+            item.set_focus()
+            wait_for(lambda:styled_row() is not None and
+                     styled_row().is_selected(),
+                "Styled HC row cannot be selected",
+                category="PRODUCT_ASSERTION_FAILURE",
+                seconds=8)
+            if u.GetForegroundWindow()!=hwnd:
+                win.set_focus()
+            if u.GetForegroundWindow()!=hwnd:
+                raise AcceptanceFailure("CANDIDATE_INTERACTION_NOT_READY",
+                    "HC screenshots require owned app foreground")
+            rect=win.rectangle()
+            if (rect.left<0 or rect.top<0 or
+                rect.right>screen_width or rect.bottom>screen_height):
+                raise AcceptanceFailure("CANDIDATE_INTERACTION_NOT_READY",
+                    "High Contrast screenshot exceeds the desktop viewport")
+            path=root/f"{evidence_prefix}-filter-{slug}.png"
+            ImageGrab.grab(
+                bbox=(rect.left,rect.top,rect.right,rect.bottom),
+                include_layered_windows=True,
+            ).save(path,"PNG",optimize=True)
+            screenshots.append(str(path))
+            print("HIGH_CONTRAST_FILTER_STYLE_CAPTURE",slug,
+                  color_name,icon_name,flush=True)
+        print("OWNED_HIGH_CONTRAST_FILTER_FOUR_STYLES_UIA_PASS",
+              len(screenshots),flush=True)
 
         rect = win.rectangle()
         shell_image = root / f"{evidence_prefix}-shell.png"

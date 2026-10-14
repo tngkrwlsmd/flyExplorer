@@ -1,4 +1,4 @@
-# flyExplorer current status — operations updated 2026-10-11
+# flyExplorer current status — documentation reconciled 2026-10-14
 
 ## Product source of truth
 
@@ -7,599 +7,1180 @@ app/winui, UI-independent native code in src/base, tests in tests/winui, and
 bounded orchestration in tools/winui/run_checks.py. The former MFC application
 is retired from the working tree and is recoverable from Git revision cbffb48.
 
-## 2026-10-12 separate Hyper-V host-local inventory received — PROVISIONING PENDING
-
-The operator ran the read-only Hyper-V host inspection statements
-directly on the separate Hyper-V computer. They report **2 existing
-VMs, 1 running VM, 1 virtual switch, 142 GiB free at the default VHD
-volume, 63 GiB total / 45 GiB available host RAM, and an unused
-`flyExplorer-DurabilityLab` VM name**. Hyper-V's VM management
-service was running, default VM/VHD folders existed, and
-checkpoint/export query tools were available. The initial
-`#requires` directive failed as an interactive-console input;
-the later read-only query statements succeeded.
-
-This is a **host-local operator-supplied capacity snapshot**, NOT a
-remotely verified connection and NOT disposable VM creation. A
-provisional isolated Gen 2 guest with 2 vCPUs, 8 GiB RAM, dynamic
-64 GiB system and separate dynamic 16 GiB test VHDX is proposed
-for review only. Checkpoint growth and independently recoverable
-export storage may require materially more physical free space than
-the apparent new VHDX usage. Windows installation media, guest OS
-licensing, the dedicated storage/export locations and host-side
-restore authority remain unverified. Existing virtual switch network
-isolation is also unreviewed.
-
-Recorded observations, acceptance gates and bounded sizing:
-[DISPOSABLE_VM_DURABILITY_GATE.md](DISPOSABLE_VM_DURABILITY_GATE.md).
-**Next prerequisite:** confirm independent OS installation media,
-host storage/export budget and separate host access before any
-`New-VM`, `New-VHD`, checkpoint, reset or power-cut operation.
-No shared VM or disk has been changed. PR #63 stays Draft and
-unmerged.
-
-## 2026-10-12 Hyper-V host identified; audit tool verified, host NOT YET CONNECTED
-
-The operator confirmed the outer platform is **Hyper-V**. The
-central `windows-vm` is the *guest*, not the Hyper-V management
-host. The guest's previously observed absence of Hyper-V cmdlets
-and nested virtualization is **not** evidence that the host cannot
-provision a second isolated Windows VM.
-
-A new **read-only host audit script**
-`tools/winui/Inspect-HyperVDurabilityHost.ps1` reports VM/switch
-counts, remaining host RAM, default VHD storage free space and
-checkpoint/export command availability without naming other VMs,
-modifying disks or starting/stopping any VM. On the exact draft
-source `dca63b0c48e04435383968d9ec6191249352f284`,
-[Windows #38174775038](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38174775038)
-passed `git diff --check`, the host script's **PowerShell
-AST syntax check**, and focused Python file-operation contracts
-**15/15**, including static refusal of dangerous Hyper-V mutating
-commands. This was a syntax/contract test inside the shared VM;
-the host audit itself **has not run**.
-
-The operator-accessible Hyper-V host connection has not yet been
-matched to an authorized tool target. The separately documented
-`personal-pc` central runner must **not** be assumed to be that
-host without confirmation. Until a host-side audit and resource
-identity/rollback review are completed, a disposable test VM,
-independent disk, checkpoint and host recovery are **NOT PROVISIONED**.
-No shared guest restart, host configuration or test power cut was
-performed; central Remote Shell was restored to idle.
-
-Hyper-V-specific host inspection command and staged provision gates:
-[DISPOSABLE_VM_DURABILITY_GATE.md](DISPOSABLE_VM_DURABILITY_GATE.md).
-
-## 2026-10-12 disposable OS-restart / storage-durability lab — NOT READY
-
-Read-only [central VM audit #38174021618](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38174021618)
-found the shared Windows guest is virtualized but lacks exposed nested
-virtualization, Hyper-V management, a running `vmms` service and
-Windows Sandbox. The guest's system volume had roughly 38 GiB free.
-These are **guest-only observations**, not host VM inventory.
-No separate disposable Windows VM, independently attached test disk,
-external checkpoint/backup or host-side recovery control has been
-verified. The shared VM remains online and its central Remote Shell
-request has been returned to idle; no disk, ACL or OS state was changed.
-
-A non-executable provisioning and acceptance checklist is now tracked
-at [DISPOSABLE_VM_DURABILITY_GATE.md](DISPOSABLE_VM_DURABILITY_GATE.md).
-It requires the exact disposable VM/disk resource IDs, independent
-hypervisor access, baseline/off-guest SHA-256 manifest, recoverable
-checkpoint and specific authorization **before** any machine reset
-or simulated power cut. Merely creating a VHDX inside the shared VM
-would not isolate its operating system.
-
-**Next blocking prerequisite:** obtain access to the underlying
-hypervisor host or an independent disposable Windows VM provider.
-A separate test VM and host-side rollback are **not provisioned** at
-this checkpoint. Earlier successful worker-kill and fresh-process
-read-only receipt tests do not substitute for reboot/power-loss
-durability acceptance. PR #63 remains Draft; no automatic orphan
-cleanup or recovery is enabled.
-
-## 2026-10-11 restricted ancestor and forced-kill restart-reader acceptance — PASS
-
-New test-only M22 CLI `--owned-denied-ancestor-copy` exercises
-`execute` with the *current* versioned private receipt journal while a
-newly created test-owned destination **ancestor** denies
-`FILE_LIST_DIRECTORY` to the calling SYSTEM SID, but the exact child
-still permits stage creation. The independent
-[Windows run #38139468890](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38139468890)
-first passed the focused source contract and Release native M22
-compilation on exact SHA
-`8b5a42d443ef7f78ae437fef652f0325987d63a1`.
-Its later PowerShell test command had a path-concatenation **syntax
-error before any ACL was altered**. That is a test runner defect, not
-an observed product failure. The successful follow-up
-[Windows #38139610615](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38139610615)
-reused this exact already compiled binary without rebuilding and passed:
-
-- `M22_RESTRICTED_ANCESTOR_FAIL_CLOSED=PASS error=5 stage=1 records=1`:
-  copy completed into its test-owned stage but `ERROR_ACCESS_DENIED`
-  prevented publication; exactly one valid private receipt pointed to
-  the intact stage with `CompletedOnStage`.
-- Original test-owned source SHA-256 unchanged; final target absent;
-  ancestor's **test-only** ACL deny entry restored in `finally`.
-  No profile/user file touched or automatic cleanup attempted.
-
-On the **same exact SHA**,
-[Windows #38139795233](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38139795233)
-executed a new disposable 512 MiB staged Copy worker process and
-force-killed **only its captured process handle** after one partial
-stage had at least 4 MiB of copied content and exactly one receipt
-already existed. It then verified source and unrelated owned
-sentinel SHA-256 unchanged and no published target. A **fresh
-independent verifier process** returned:
-
-- `M22_KILLED_WORKER_RECEIPT_MATCH=PASS`: the saved exact stage path
-  and OS FileIdInfo still matched the owned immutable record;
-- `CREATOR_NOT_RUNNING=PASS`, `STATE_PENDING=PASS`: creator was no
-  longer running and receipt phase remained
-  `CopyingOrInterrupted`, not a fabricated completed copy;
-- `M22_RESTART_READONLY_RECEIPT_STATE=PASS`: exact journal
-  classification was repeated across a new process boundary,
-  without attempting recovery or any stage deletion.
-
-**Acceptance limit:** this covers a forcibly killed Copy *worker*
-and independent reader process restart, **not** machine reboot,
-hard power-cut, actual disk flush guarantees, malicious same-user
-record modification, or historical stage pruning. The production
-`src/base` and `app/winui` code is unchanged from the previously
-verified canonical Release/GUI implementation. Do not merge PR #63,
-auto-clean orphan stages, simulate power loss or restart the shared
-VM until an independently authorized, disposable VM/disk experiment
-and rollback procedure are available.
-
-## 2026-10-11 real logged-in-user WinUI + shipping Known Folder acceptance — PASS
-
-**Accepted on exact source `b198565f44530641ed46d99eb8a41af28b6ee333`.**
-[Central Remote Shell #38139086195](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38139086195)
-ran an owned, one-shot **InteractiveToken** Windows task in the existing
-user Explorer session (not SYSTEM Session 0), using a separately copied
-WinUI Release runtime, its normal production Shell helper, and a native
-M22 receipt inspector. The exact source-contract and PowerShell
-worker parse preflight passed on the same SHA. The native fixture
-source last compiled on [#38138044010](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38138044010)
-(9/9 receipt-wire synthetic, 15/15 source contract, native Release
-M22 build), followed only by scoped test-script changes.
-
-**Observed PASS markers in the actual user worker log:**
-
-- `M22_INTERACTIVE_SHIPPING_KNOWNFOLDER_IPC=PASS private=1 bytes=1 receipts=1 error=0`:
-  unmodified shipping helper IPC used the real
-  `SHGetKnownFolderPath(FOLDERID_LocalAppData)` protected current-user
-  journal, created one owned copied file, and matched its distinct
-  OS FileIdInfo and `PublishedVerified` immutable phase markers.
-- `GUI_PYTHON_EXIT=0`, `REAL_USER_GUI_SHIPPING_KNOWNFOLDER_RECEIPT=PASS`,
-  `REAL_USER_GUI_COPY_BYTES_PUBLISHED=PASS`:
-  the owned WinUI window's toolbar Copy action published the exact
-  uniquely named owned target. The new record's v1 parent/leaf
-  proved it belonged to this request before the native read-only
-  file-ID/phase inspection accepted it. Original source contents
-  and final destination bytes matched exactly.
-- `REAL_USER_GUI_PRIOR_RECEIPT_CONTENT_NOT_READ=PASS` and
-  `INTERACTIVE_RECEIPT_ONE_SHOT_TASK_RELEASED=TRUE`:
-  prior user journal content was not opened or changed, no journal
-  entries or stages were deleted, and only the newly registered owned
-  test task was unregistered. Owned evidence remains isolated.
-
-The worker was hardened after two test-harness-only failures:
-Windows PowerShell 5.1 interpreted a literal Hangul script pathname
-under its legacy script codepage, so the direct owned source file
-was not created. The test now constructs Unicode filename codepoints.
-Then Python `-X utf8` failed to decode localized
-`whoami /user` headings (`UnicodeDecodeError`); SID acceptance now
-checks raw ASCII SID bytes without removing the security boundary.
-Both fixes are test-only. No `src/base` or `app/winui` product source
-was changed after the accepted [native 62/62 + canonical product Release + test helper IPC #38133470149](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38133470149).
-
-**Next scope:** test-denied `FILE_LIST_DIRECTORY` on a test-owned
-destination ancestor, then exact-stage integrity through force-kill
-and read-only post-restart classification, then power-loss acceptance
-only in a separately approved disposable VM/disk. These are NOT
-covered by the successful user-session GUI run. PR #63 remains Draft,
-unmerged. No automatic recovery, directory-wide scan or deletion.
-
-## 2026-10-11 previous GUI gate preparation (historical, superseded by PASS above)
-
-The newly written interactive-user GUI gate is **not a Windows PASS**.
-Safety-critical preconditions (explicit opt-in, token SID,
-non-SYSTEM interactive session, required shipping binaries, only one
-test-owned WinUI HWND, real foreground PID before input, original
-source bytes, private Known Folder availability) now raise explicit
-`RuntimeError`, **not Python `assert`**. These checks remain active
-even if a host accidentally starts Python with optimization
-(`PYTHONOPTIMIZE` or `-O`). A foreign window is never a permitted
-interaction target.
-
-The preexisting nine pure synthetic v1 receipt scenarios were
-rechecked locally using Python 3.13: **9/9 PASS**, plus AST syntax
-for the parser and test. The code paths require a freshly created
-receipt record to match the exact destination path *and* then pass
-a separate native `PublishedVerified` FileIdInfo/phase check.
-`tests/winui/test_owned_receipt_wire_contract.py` is now included
-in `tools/winui/run_checks.py`'s `file-operations` product source
-suite. The static source contract also ensures future changes cannot
-accidentally remove this registration or restore optimization-skippable
-session/foreign-window checks.
-
-The authorized remote-desktop connector currently reports its
-Windows device **offline**; a prior control-plane tool safety
-check also blocked new Remote Shell submission. We did not attempt
-to bypass either control or create a Scheduled Task. The canonical
-`desktop-a` GUI workflow requires a reviewed main ancestor, while
-PR #63 remains Draft. Consequently, the updated gate's full
-Windows source-contract run, native M22 CLI compilation and actual
-interactive user GUI/known-folder test are **still pending**.
-The previously verified product Release and M22 **62/62** result is
-limited to the older SHA
-[`6ae307b8...` / #38133470149](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38133470149).
-There has been no new product source code change since that
-accepted build. Next, connect an authorized interactive Windows
-session and run the exact branch in a test-owned checkout; do not
-merge the Draft or activate cleanup until separately accepted.
-
-## 2026-10-11 exact owned GUI receipt target matching — synthetic tests only
-
-In draft PR #63, the interactive GUI acceptance now rejects a newly
-created `PublishedVerified` receipt unless its **original v1 receipt
-record** also contains the exact expected copied-file leaf and the exact
-destination parent directory. The bounded
-`tests/winui/receipt_wire_owned.py` parser checks the v1 magic,
-version, fixed binary layout, UTF-16 length fields, nonempty creator
-identity and FNV torn-write checksum. It reads **one newly created
-receipt only**, never earlier user receipt contents or an entire
-directory. Passing that parser does **not** authenticate a receipt:
-the existing separate native read-only `--receipt-inspect-state
-<exact-record> published` still must verify the stored file ID and
-immutable phase records. The staged interactive worker copies the
-parser along with the owned GUI test, closing a missing runtime
-dependency.
-
-`tests/winui/test_owned_receipt_wire_contract.py` now has nine
-pure synthetic owned-fixture scenarios: exact Unicode target,
-wrong target/parent, truncation, checksum damage, wrong version,
-invalid leaf/encoded path, dot-segment path aliases, and a legal
-zero-valued volume serial with a separately valid file ID. A local
-Python 3 reconstructed-source check ran **9/9 PASS** and
-`py_compile` on the parser and synthetic test. This is **not** Windows or
-GUI acceptance; the reconstructed local test files were not fetched
-as a full Git checkout. The latest GitHub branch's complete native
-source, PowerShell one-shot task and real logged-in GUI are still
-unexecuted after a control-plane tool security denial.
-
-The normal previously accepted Windows 62/62 native, IPC and
-Release result remains scoped to
-[`6ae307b8...` / #38133470149](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38133470149).
-**Next gate:** review/authorize the interactive task boundary,
-preflight the new scripts and native fixture, then run the
-shipping-helper Known Folder and real GUI Copy on unique owned
-paths. No journal deletion, automated recovery, main merge or
-power-cut experiment is authorized by the synthetic result.
-
-## 2026-10-11 real logged-in-user Known Folder/GUI gate prepared — NOT ACCEPTED
-
-**Priority:** validate the *shipping* isolated Shell helper's own
-`SHGetKnownFolderPath(FOLDERID_LocalAppData)` and owner-only receipt
-store in a real interactive desktop, from an actual WinUI Copy action
-and a second direct `executeIsolated` request. Do not replace this
-with a SYSTEM Session-0 or environment-variable-only test.
-
-A read-only Windows Remote Shell session preflight
-[run #38134659901](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38134659901)
-observed **one interactive Explorer session and one active login**.
-The workflow itself reported failure because its final auxiliary
-PowerShell query left a nonzero exit code; it was *not* GUI acceptance.
-The normal central `desktop-a` CI GUI profile accepts trusted
-`main` ancestry only and cannot be used to certify draft PR #63.
-
-Prepared on this **Draft feature branch only**:
-- `tests/winui/m22/m22_transfer_fixture.cpp` has a new
-  `--real-user-shipping-helper-ipc` entrypoint. It refuses SYSTEM
-  token, checks only explicitly test-owned source/destination paths,
-  snapshots receipt file *names* without reading previous receipt
-  contents, calls the unmodified shipping helper via the real
-  `executeIsolated` IPC path and requires exactly one new
-  `PublishedVerified` receipt under the actual user's Known Folder.
-- `tests/winui/test_owned_user_receipt_gui.py` launches only its own
-  WinUI process/window, activates a test-owned source/destination
-  pane, copies one unique Korean-named test file, verifies exact
-  source/destination bytes, and checks a **new** receipt with the
-  native read-only inspector. It requires an explicit opt-in flag,
-  a non-SYSTEM interactive session and full sibling Release runtime.
-  APPDATA/TEMP are test-owned; the real user's LocalAppData is
-  intentionally **not overridden**, so the helper must resolve the
-  actual OS Known Folder. No old receipts are opened, updated or
-  deleted; the app may create its own private receipt directory and
-  append inert records as it would in production.
-- `tools/winui/Invoke-InteractiveReceiptGate.ps1` and
-  `OwnedInteractiveReceiptWorker.ps1` stage exact runtime + fixture
-  into a fresh ACL-scoped owned root, use a one-shot limited-rights
-  InteractiveToken task in the *existing* logged-in session, and
-  unregister that exact owned task in `finally`. They do not
-  change existing user preferences or schedule a persistent job.
-
-**Not executed / not accepted:** an attempt to dispatch the new
-preflight through the central Remote Shell was blocked by the tool's
-security verification, before a Windows run was created. No
-interactive task was registered and no user Known Folder receipt was
-created by this attempted gate. The new scripts, native CLI extension,
-source-contract changes and GUI assertion have **not** received new
-Windows compilation or GUI execution evidence. Existing exact
-[62/62 native + Release + fixture IPC](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38133470149)
-evidence remains valid only for its older source SHA
-`6ae307b815d4874885e1f90c6838ad31ed65377b`.
-
-**Next acceptance boundary:** an authorized interactive-user task must
-first pass review and syntax/native build preflight. Then require
-shipping-helper Known Folder provenance, actual product-window Copy,
-exact staged/file-ID receipt and published phase, no changes to prior
-journal entries, and cleanup only of test-owned tasks/processes.
-Any environment/tool denial is a gate blockage, not a product PASS
-or failure. Do not merge PR #63 or enable recovery/cleanup on this
-basis. Restricted-ancestor permissions, worker termination/restart,
-and power-loss integrity remain separate following gates.
-
-## 2026-10-11 active Copy destination ancestor rename guard — draft PR #63
-
-**New verified scope:** For an active, journalled staged Copy only,
-`publishActiveBoundStage` now opens a bounded chain of handles from
-the destination drive root through the exact target parent, verifies
-each handle's normalized resolved DOS path and non-reparse directory
-attributes, and retains all handles until publication completes.
-Each directory HANDLE requests
-`FILE_LIST_DIRECTORY|FILE_READ_ATTRIBUTES` with
-`FILE_SHARE_READ|FILE_SHARE_WRITE` (no `FILE_SHARE_DELETE`).
-If any component cannot be pinned due to permissions, an existing
-conflicting DELETE handle, a path mismatch or an unsupported namespace,
-the operation **fails closed** and leaves the journalled stage intact.
-The separate verified source stage HANDLE is still pinned and renamed
-with `FileRenameInfo`/`RootDirectory=NULL`, never overwrite.
-
-**Critical observed counterexample:** Opening an ancestor using ONLY
-`FILE_READ_ATTRIBUTES` and denying delete sharing did **not** prevent
-renaming its directory on the Windows test VM. That initial candidate
-passed 61/62 native cases but the exact test-owned rename succeeded.
-After adding actual `FILE_LIST_DIRECTORY` access, a fixture deliberately
-proved that a disposable target directory **and its parent ancestor**
-could both be renamed before the pinned window, but inside that window
-both `MoveFileExW` attempts failed with
-`ERROR_SHARING_VIOLATION (32)`. No path was left renamed. The helper
-created and verified an exact `PublishedVerified` receipt in the same
-test. The test-only synchronous probe is compiled with
-`FLY_M22_TEST_DIRECTORY_RENAME_LOCK` in the native fixture project
-only; no such callback is present in the shipping app/helper.
-
-[Windows Remote Shell #38133470149](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38133470149)
-on source `6ae307b815d4874885e1f90c6838ad31ed65377b` passed
-`git diff --check`, focused Python source contracts **15/15**,
-Windows Release M22 **62/62**, deterministic target/ancestor rename
-guard, real child-helper IPC for a Korean-named 8 MiB and empty file
-with byte-for-byte/`PublishedVerified` verification, rejection of
-untrusted inherited-ACL journal store, and the **canonical
-`build.bat Release`** with shipping helper outputs. All operations
-used isolated owned test folders. The control-plane request slot was
-restored to idle.
-
-**Limits:** this is test-proven native Windows sharing protection for
-ordinary fixed-drive paths, not a formally atomic directory-anchored
-rename: the Win32 `FileRenameInfo` destination remains a normalized
-absolute pathname. Directory-read rights may be unavailable on
-restricted/execute-only ancestor directories, intentionally causing
-fail-closed Copy errors without publishing the file. Privileged actors,
-mount/volume changes, unsupported file systems, malicious same-user
-receipt tampering, reboot/power-loss durability and the actual
-interactive-user Known Folder/GUI path are not accepted. No automatic
-orphan recovery, scan, deletion or merge was enabled.
-
-## 2026-10-11 file-ID-bound staged publication and late-target safety — draft PR #63
-
-Only for an **active Copy with a valid private receipt**, the source stage
-is now reopened using a `DELETE | FILE_READ_ATTRIBUTES` HANDLE and its
-`FileIdInfo`, single-link and non-reparse attributes must still match
-the exact versioned receipt. The destination parent directory is opened
-and its actual resolved location inspected. Final-name publication uses
-`SetFileInformationByHandle(FileRenameInfo)` with
-`ReplaceIfExists=FALSE`, while the verified source file HANDLE remains
-open. An existing target cannot be overwritten. The non-journalled path
-still uses its original `MoveFileExW` behavior.
-
-**Important limit:** the documented Win32 `FileRenameInfo` combination
-of non-NULL `RootDirectory` and relative filename returned Windows
-`ERROR_INVALID_PARAMETER (87)` in the owned tests; therefore this branch
-uses `RootDirectory=NULL` plus an absolute target path. While the
-**source file object** is pinned, Win32 still re-resolves the destination
-pathname. A malicious rename/reparse race involving ancestor paths
-is NOT eliminated. The opened parent handle is evidence only, not a
-destination-directory-anchored rename. We did not substitute undocumented
-NT APIs or enable orphan cleanup.
-
-On exact source `10204fcab9b1e82c52d9377bbef74fe60e33cdd1`,
-[Remote Shell #38131991165](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38131991165)
-passed `git diff --check`, focused source contracts, Release native
-M22 **61/61**, and a separate 512 MiB disposable in-progress Copy where
-a previously absent target was introduced before publication. The
-journalled no-replace rename returned `ERROR_ALREADY_EXISTS (183)`;
-the unrelated target bytes and source SHA-256 were preserved and the
-owned staged file remained paired with a `CompletedOnStage` receipt.
-There was no published partial or automatic stage deletion.
-
-On the **same exact code**,
-[Remote Shell #38132115933](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38132115933)
-passed focused Python contracts **15/15**, actual child-process
-`executeIsolated` IPC of a Korean-named 8 MiB file and a 0-byte file
-with exact byte/PublishedVerified receipt matches, unsafe inherited-ACL
-store rejection across IPC (error 31), and the canonical
-`build.bat Release` with app and shipping Shell helper outputs.
-The first Win32 relative-root implementation failed three publication
-fixtures (58/61, Windows error 87); this was fixed and the impacted
-stages were rerun, not ignored.
-
-**Still open:** interactive logged-in-user GUI and actual shipping
-Known Folder creation, full power-loss/reboot recovery acceptance,
-handle-anchored destination-ancestor race safety, authenticated records,
-bounded historical receipt retention and an explicitly user-authorized
-recovery UI. No directory sweep or automatic delete is permitted.
-This PR remains Draft and unmerged. Subsequent documentation/comment-only
-commits are not fresh full-product acceptance runs.
-
-## 2026-10-11 product Release and real child-process IPC acceptance — draft PR #63
-
-The current PR now passes both **canonical app Release compilation** and
-owned, actual Shell-helper child-process transfer IPC. No merge or cleanup
-authorization follows from these results.
-
-- [Remote Shell #38129284452](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38129284452)
-  on exact `404a7450943476a5b23320211e7b4bd9d7b425c2`:
-  `build.bat Release` **PASS**, flyExplorer.exe and sibling
-  FlyShellIsolationHelper.exe present, and **15/15** focused Python source
-  contracts PASS. The controlling SYSTEM session initially lacked Python
-  on PATH; the run used an **already installed** interpreter by changing
-  PATH in that one test process, without global installation.
-- [Remote Shell #38129563278](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38129563278)
-  on exact `f50e17a659d238310758c53464cc9fb0453aeb1f`:
-  a **test-only** Release helper executed via real `executeIsolated`
-  parent/child IPC with a Korean-named 8 MiB file and a separate 0-byte
-  file. Both reported transfer success, byte-for-byte equality and a
-  read-back `PublishedVerified` receipt plus phase records in private,
-  explicitly test-owned folders. The native fixture and opt-in isolated
-  helper compiled, focused Python contracts **15/15 PASS**.
-- [Remote Shell #38129744148](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38129744148)
-  on exact `b302ab7f6d566e642d1679399a9a492f43f061a0`:
-  inherited-ACL **untrusted** receipt store explicitly rejected across
-  actual helper IPC (observed error 31). The source SHA-256 and empty
-  destination folder remained unchanged. The same source then passed
-  focused Python contracts **15/15**, new native fixture Release build
-  and the **canonical `build.bat Release`**, producing the product and
-  shipping helper binaries. The test helper code was unchanged from the
-  prior real IPC run and was reused after an exact source diff check.
-
-To avoid touching the SYSTEM/user profile during IPC experiments, a
-separately built helper enables
-`FLY_M22_TEST_ISOLATED_RECEIPT_STORE` **only** with the explicit
-`FlyM22OwnedHelper=true` MSBuild fixture property. Its environment
-override `FLY_M22_OWNED_RECEIPT_STORE` is absent from shipping helper
-compilation and never included in IPC input. The normal build invokes
-neither test property nor any test-root override; production still uses
-its own `FOLDERID_LocalAppData` protected journal policy.
-
-**Still untested:** interactive logged-in user's actual Known Folder
-provisioning through the *shipping* helper and full functional WinUI GUI;
-manual restart/power-loss acceptance; race-safe handle-pinned final
-publication; recovery UI and explicit authorized cleanup. The record
-checksum remains non-cryptographic and initial pre-callback abort may
-leave an unrecorded stage. No automatic discovery/deletion was added.
-
-## 2026-10-11 immutable Copy completion/publication records — draft PR #63
-
-PR [#63](https://github.com/tngkrwlsmd/flyExplorer/pull/63)
-now includes two **append-only, CREATE_NEW, write-through and flushed**
-records alongside the original private stage receipt: one after successful
-full `CopyFileExW` and cancellation validation, **before** publication,
-and one after successful same-directory `MoveFileExW` with a rechecked
-target `FileIdInfo`. The original identity, process PID and creation time
-are repeated and checked on both records; none is overwritten. If a
-completion record fails, the stage must not be published. If recording
-the final published event fails *after* the rename succeeded, the actual
-published file is left untouched and a metadata error is reported. Neither
-phase record grants deletion, rollback, restoration or resume authority.
-
-`inspectStageReceiptState(exactReceiptPath)` inspects only one explicitly
-provided receipt and its two derived marker paths; it neither scans
-directories nor changes any file. It returns Invalid,
-CopyingOrInterrupted, CompletedOnStage, PublicationUnconfirmed,
-PublishedVerified or Inconsistent. When a rename succeeded but the
-published marker is missing, a matching target is expressly
-**PublicationUnconfirmed**, not automatic success. A changed target ID,
-missing stage, truncated/corrupted marker or phase gap fails closed.
-The source byte hash is not authenticated by this journal; and a read-only
-snapshot is not a permanent file-handle lock.
-
-`CopyFileExW` can omit progress callbacks for empty files. In the
-successful-copy path, the helper now binds a read-only exact stage HANDLE
-after the copy and before publication, preserving the same file-ID check.
-This does **not** create provenance for a worker killed before its first
-receipt: unidentified stages remain untrusted and are never swept.
-
-Source candidate `d27854627b47fda529edf174e4bd1a5d5c1a010d`
-passed owned Windows
-[Remote Shell #38128693863](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38128693863):
-Release M22 native **61/61**, production isolated Shell helper Release
-build, `git diff --check`, and three separate-process read-only
-inspections (two real published-copy receipts and one inconsistent
-corrupted-phase receipt). Six phase-state cases and a live zero-byte
-copy case passed. Earlier exact owned force-termination evidence for
-an actively writing stage is
-[run #38127536317](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38127536317).
-No user folder or unrelated process was altered.
-
-**At that earlier phase-marker checkpoint:** full WinUI Release,
-GUI, Python source contracts and IPC still needed verification. The
-newer section above now records exact completed product Release, focused
-Python and test-only real child-process IPC acceptance. Interactive
-user-profile Known Folder behavior, race-safe handle-pinned publication,
-durable post-restart worker classification, retention/pruning, third-party
-changes, power-loss durability and opt-in recovery UI remain open. The non-cryptographic
-receipt/marker checksums do not authenticate malicious same-user edits.
-PR #63 remains Draft and unmerged; no automatic cleanup is enabled.
-
-## 2026-10-11 live staged Copy receipt binding — draft PR #63
-
-On draft PR [#63](https://github.com/tngkrwlsmd/flyExplorer/pull/63)
-the isolated Shell helper now attempts to provision an exact
-`FOLDERID_LocalAppData\\flyExplorer-transfer-receipts-v1` directory with
-a protected current-user-only DACL, without changing an existing folder's
-permissions. If the known-folder/private ACL gate cannot be established,
-the pre-existing staged Copy behavior is retained **without a receipt**;
-such stages MUST NOT later be presumed recoverable.
-
-When journaling is enabled, the first `CopyFileExW` callback binds its
-actual destination HANDLE's `FileIdInfo` to the exact fixed-drive
-`.flyExplorer-copy-{GUID}.partial` file. The versioned receipt is
-CREATE_NEW/write-through/flushed in that private directory and read back
-before a successful Copy is allowed to publish the requested name.
-If binding, write, validation, callback or cancellation fails, there is
-**no final-name publication**, and the journaled/unproven stage is left
-untouched for explicit examination rather than automatic path deletion.
-In the original live-callback candidate, copies retained only an inert
-ownership receipt. The newer append-only completion/publication records
-are described immediately above; neither grants authority to modify files.
-
-The prior standalone primitive passed Windows Release M22 **52/52** in
-[Remote Shell #38125429517](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38125429517)
-on source `050ab1a85d52859fcdd7f5ad92e18f5a96d519cb`.
-Live callback implementation plus a test-only untrusted-store refusal
-passed **54/54** in
-[Remote Shell #38127383070](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38127383070)
-on `2597cc7f29ec5786f11c22038621e745302fd4d4`.
-Production isolated Shell helper Release compiled in
-[run #38127271345](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38127271345)
-on the earlier identical production source; its 53/54 fixture result was
-caused by a mistaken pre-existing test target and was corrected before
-the 54/54 run. The first new fixture variable collision was also corrected
-before valid acceptance.
-
-Exact candidate `7d503803ee7af379c781a6f15e03afdcfca48c94` passed an
-additional *real owned-worker forced termination* in
-[Remote Shell #38127536317](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38127536317).
-After its own 512 MiB staged Copy had a recorded file identity and had
-written at least 4 MiB, only the spawned fixture process was killed.
-Read-only receipt-to-file ID matching, worker-not-running classification,
-original SHA-256 preservation, no final file and an unrelated partial's
-unchanged contents all passed. No application/user-profile data was
-cleaned; no orphan removal was performed.
-
-**At this earlier live-callback checkpoint:** fully integrated app
-Release/GUI, Python source contracts, per-user Known Folder runtime
-acceptance through actual helper IPC, worker/race hardening, safe
-open-handle publication and actual power-loss durability remained open.
-The newer section above records the subsequently added immutable phase
-transitions, read-only restart inspection and zero-byte callback fallback. A first-chunk pre-callback
-kill may leave an **unrecorded** stage; do not infer its ownership or
-enumerate and delete it. Same-user malicious edits to a checksum-protected
-receipt are still possible. PR #63 remains Draft and not merged.
+## 2026-10-14 F03 one-shot Preview helper — bounded private protocol verified
+
+- **Latest worker code SHA:** `d0d5b6a987ef8ae1c73e2aa0f5ceacb20c37f0ec`.
+  Added private versioned/length-checked/checksummed
+  `file_preview_worker_wire.h`, isolated-only
+  `file_preview_worker.cpp`, and explicit
+  `FlyShellIsolationHelper --preview-read` mode. One request opens and
+  reads a single eligible local file, sending a capped raw byte frame
+  or empty-body error. This has **no user-facing Preview pane** and no
+  production parent supervisor wired to this mode.
+- **Native fixture behavior accepted:** [Remote Shell #38526086984](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38526086984)
+  **SUCCESS**: bounded test-owned anonymous-pipe wire, valid TXT bytes,
+  wrong checksum/kind/length, non-existent TXT and UNC negatives,
+  existing native guarded-open and symlink rejection, and scratch cleanup.
+  Prior failed fixtures #38525652361/#38525878610 were a test
+  error: the nonexistent filename ended in unsupported `.missing`, so
+  the correct earlier unsupported-type response disagreed with the
+  test's expected missing-file response. Replaced with
+  `.missing.txt` and verified without product-code changes.
+- **Source contract accepted:** [central #38526337158](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38526337158)
+  **SUCCESS**, exact SHA, policy, structure 4, product 199,
+  harness 20, infrastructure 30 passed.
+- **Release build and helper staging accepted:** [central #38526567823](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38526567823)
+  **SUCCESS**, `scope=release` at exact SHA. `build.cmd` requires
+  the helper build to succeed before building and staging
+  `flyExplorer.exe`; the helper project includes the preview worker.
+  This proves **compiler/link/staging integration**, not actual
+  external child process execution, job-object cancellation, end-to-end
+  bounded read/wire or stale-result filtering.
+- **Next implementation:** separate `PreviewController`/supervisor
+  with owned helper spawn, inherited pipe handle whitelist, job-kill
+  on cancel/timeouts, bounded reads and response verification,
+  route+pane+tab+selection+generation comparison before delivering
+  results. Only then image decoding and opt-in XAML Preview pane.
+  High-contrast, DPI scaling, Narrator and before/after pixels
+  still **NOT TESTED for F03**, because its UI does not exist.
+
+## 2026-10-14 F03 guarded local safe-open — native/source/Release verified
+
+- **Latest tested source SHA:** `8ecd748a126f58b9c81f88ad026fe8a434a4d77a`.
+  In `src/base/file_preview_safe_open.h/.cpp`, worker-only
+  `openLocalRegular` copies the request path before screening, validates
+  the drive root and each opened directory/file component using Windows
+  HANDLE identities and attributes, rejects reparse/offline/UNC/ADS/
+  non-regular/size-mismatched paths, and returns a RAII file handle plus
+  all ancestor directory handles kept locked through the caller's read.
+  The old bounded `readVerifiedHandle` is used together in the native
+  test, without WinUI involvement. These checks **reduce** replacement
+  and traversal risk; they are not a security sandbox or a substitute
+  for terminating a blocked worker.
+- **Actual test-owned MSVC native:** [#38522342210](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38522342210)
+  PASS at `b6c7c268354493f48ac94d22c77156f87d101fd8`;
+  [#38523226489](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38523226489)
+  PASS at `aca6bc779de2408a3eccc73ba63c5a1e205f3a39`.
+  Actual nested-file read, negative UNC/ADS/traversal/metadata/cancel/
+  expiry cases and file + ancestor-directory symlink rejection passed;
+  temporary fixture cleanup passed. The second run included correction
+  of dangling temporary `wstring_view` fixture paths and path snapshot
+  exception-safety.
+- **Current-source check:** [central source run #38523664886](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38523664886)
+  PASS at the exact SHA `8ecd748a126f58b9c81f88ad026fe8a434a4d77a`
+  (policy, structure 4, product-source 196, harness 20, infra 30).
+  Earlier source run `38523399332` failed one stale source-contract
+  string after the stable-path change; the contract was corrected and
+  the accepted follow-up passed.
+- **Safe-opener Release accepted:** [central registered CI #38523831041](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38523831041)
+  completed **SUCCESS** with `scope=release` at exact source SHA
+  `8ecd748a126f58b9c81f88ad026fe8a434a4d77a`;
+  producing log explicitly listed `file_preview_safe_open.cpp` and
+  `PASS release-build`. No duplicate build was dispatched for that SHA.
+- **Feature gate still OPEN:** no production supervised helper process,
+  bounded IPC, kill-on-timeout cancellation, stale pane/tab/selection
+  protection, bounded decoded images, opt-in Preview presentation or
+  before/after pixel acceptance. No user-visible UI changed, and
+  **F03 PREVIEW PANE IS NOT YET USER-FACING**. Technical details:
+  [F03_PREVIEW_PANE.md](F03_PREVIEW_PANE.md).
+
+## 2026-10-14 F03 Preview pane — bounded policy and handle reader verified
+
+- **Scope:** source-only candidate policy `src/base/file_preview_policy.h`
+  plus independently compiled and tested `src/base/file_preview_reader.h/.cpp`.
+  The actual Preview pane and its out-of-process worker have **NOT** been
+  implemented or connected to WinUI. No existing user-facing pixels changed.
+  Design boundaries and next steps: [F03_PREVIEW_PANE.md](F03_PREVIEW_PANE.md).
+- **Accepted source checkpoint:** [central source run
+  #38510347268](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38510347268)
+  PASS at `842742ad7b83a338d3027a9d4025e4c149a8507e`
+  (`desktop-a`, `scope=source`, policy+source contracts). Phase-one
+  local policy screen limits local regular TXT/MD/LOG to 256 KiB and
+  PNG/JPG/JPEG/BMP to 12 MiB; intended future image decode cap
+  16,777,216 pixels, with unsupported/UNC/reparse/unsafe paths rejected.
+- **Exact MSVC Release proof:** [central registered run
+  #38518993733](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38518993733)
+  **SUCCESS**, `project_id=desktop-a`, `scope=release`, SHA
+  `93c8a435cb5de505d02ac1927ceb30e0f572bd09`.
+  Producing log explicitly lists `file_preview_reader.cpp` compiled and
+  `PASS release-build`; executable output created. This is a native
+  compile/Release acceptance, not file-read behavior or UI acceptance.
+- **Updated current-source contract acceptance:** [central run
+  #38520410675](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38520410675)
+  **SUCCESS** for exact main `0e677eeb215d7d3b514bc382846c5b958533ad76`,
+  `project_id=desktop-a`, `scope=source`; policy validation PASS,
+  canonical structure 4, product-source 194, harness 20 and infrastructure
+  30 tests OK. This source run validates the subsequently corrected native
+  probe harness contract and status docs; it is not a recompile or GUI pass.
+- **Exact test-owned MSVC native behavior:** [Remote Shell run
+  #38520021060](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38520021060)
+  **SUCCESS** at `62a4f632d302bce59839b3b4109a1380c55e5b5a`.
+  The standalone reader test compiled `file_preview_reader.cpp` with
+  `native_preview_reader.cpp`, and recorded
+  `F03_NATIVE_HANDLE_READ_AND_FAILURE_CONTRACT=PASS`,
+  `F03_NATIVE_VERIFIED_HANDLE_ACCEPTANCE=PASS`, exact owned SHA and
+  scratch cleanup PASS. Inspected bounded positive reads and rejection
+  of changed/mismatched path/size, invalid UTF-8, cancellation,
+  deadline, oversized text, invalid handle and directory handles.
+  The actual opened-handle final path and local fixed-disk checks are
+  implementation guards, **not** a proof that arbitrary ancestor reparse
+  traversal is safe. The native test is not an isolated worker or GUI.
+- **Prior execution/harness failures:** runs `38518452445` (PowerShell
+  5.1 parser), `38518550162` (SYSTEM Python PATH), `38518696504` /
+  `38519687206` (concatenated PowerShell batch command truncated to
+  `call "`). No C++ assertion ran in those attempts; the batch
+  serialization was corrected, and the final native run passed.
+  Do not repeat unchanged Release or native tests.
+- **Remaining high-priority F03 gaps:** safe authoritative handle opening
+  with all-ancestor reparse and race checks; supervised worker-process
+  launch, cancel/kill and bounded result wire; stale selection/pane/tab
+  identity rejection; image header/decode dimensions/memory guard;
+  inert rendering of UTF-8 text, placeholders, opt-in Preview pane
+  presentation and source/GUI/pixel acceptance. **USER-VISIBLE F03
+  PREVIEW FEATURE: NOT YET IMPLEMENTED.**
+
+
+## 2026-10-14 F02 narrow Details scroll and keyboard focus — inspected PNG pass
+
+- **Exact reviewed main:** `028f8692e82a938c32832398758a65271c1b950d`.
+  [Central owned Windows Remote Shell run #38497182086](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38497182086)
+  completed **SUCCESS** against this SHA. The bounded worker executed source
+  checks, x64 Release build, interactive WinUI 800×550 at actual **96 DPI**,
+  light/dark test-owned fixtures, normal process exit, and verified temporary
+  file and scheduled-task cleanup. This is a **focused** GUI/visual acceptance,
+  not an independent full Windows GUI suite or a multi-DPI run.
+- **Lossless pixels reviewed:** Eight PNG screenshots (`ENABLED`,
+  `SCROLLED`, `RESTORED`, `FOCUSED_TOGGLE` per theme), reconstructed with
+  exact length checks from numbered central-run log chunks, were inspected.
+  With Details visible in the short window, the `수정 날짜` heading initially
+  appears at the bottom. Scrolling the owned Details viewport reveals an
+  actual modified-date value in both light and dark themes, without scrolling
+  or disturbing the left/right file lists. Scrolling upward restores the
+  top header and content. **NARROW DETAILS SCROLL REACHABILITY: PASS.**
+- **Visible keyboard focus:** The earlier UIA `set_focus()` screenshots
+  at [run #38473558319](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38473558319)
+  had byte-identical focused and unfocused pixels and were not accepted.
+  The updated fixture in `028f8692` sends real keyboard `Shift+Tab` and
+  `Tab`, checks the Details toggle UIA focus transfer, and captures after
+  keyboard focus. The reviewed images clearly show a dark outline around
+  the Details toggle in Light theme and a light outline in Dark theme,
+  absent from the unfocused images. **FOCUS PIXEL VISIBILITY: PASS** in this
+  actual owned keyboard/96-DPI state. This does **not** establish the entire
+  application's keyboard navigation sequence or Narrator spoken output.
+- **Visual acceptance scope:** The observed F02 800×550 narrow details
+  overlap fix, scroll reachability and focused-toggle outline now have
+  reviewed PNG evidence in both themes. Do not repeat unchanged Release
+  build/capture work. **Remaining distinct gates:** original broader matched
+  states, OS-level 125/150/200% scaling, F02 High Contrast, actual Narrator
+  speech, long/provider paths and large-index edge cases. The latest
+  feature-level focus/scroll passes do not automatically imply a current
+  SHA-scoped central `central-ci/windows-gui` status.
+
+## 2026-10-14 F06 address candidate visual readability — accepted bounded states
+
+- **Exact reviewed `main`:** `92e3661cecd7e3f5effcf805434a12663b4dcd95`
+  with presentation fix `90f588881f60b708823f86cc470cb45a2fc48f52`,
+  source contract `92e3661cecd7e3f5effcf805434a12663b4dcd95`
+  and screenshot harness `fb28cacfbb460a3a5259b2ee35f024805a390445`.
+- **Before / after real screenshot evidence:** [prior original-PNG
+  Windows run 38476514337](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38476514337)
+  and [fixed original-PNG Windows run 38491527835](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38491527835)
+  both completed SUCCESS with test-owned WinUI Release process, normal exit,
+  bounded temporary scratch cleanup, and four app-window-only PNGs for
+  light/dark at window widths 940 and 800 px (96 DPI). The after run explicitly
+  returned `F06_VIS_RESULT=PASS STAGE=complete` and
+  `F06_VIS_OWNED_CLEANUP_PASS`. These are focused acceptance runs,
+  not a new independent full canonical-main GUI suite.
+- **Actual original PNG review:** Log-chunk byte counts matched the expected
+  images, and the four before/after states were visually inspected. Previously
+  the suggestion button rendered the *start* of a long absolute path, truncating
+  away candidate identity (especially at 800 px). After the change the label
+  shows the distinguishing leaf and, where helpful, its parent (e.g.
+  `Nested — Left`); the selected full absolute path remains in the
+  original button Tag, accessible `주소 후보: <full path>` automation name
+  and full-path tooltip. The 940-px light/dark image shows two legible
+  candidates; the 800-px image shows the narrowed single candidate with the
+  leaf fully visible. No obvious candidate/input overlap or truncated
+  distinguishing leaf was found in those captured states.
+- **VISUAL ACCEPTANCE: PASS in inspected 96-DPI light/dark, 940-/800-px
+  address-suggestion states only.** Do not generalize this to all suggestion
+  data, pointer/keyboard focus pixels, High Contrast, actual OS 125/150/200%
+  scaling or Narrator speech. Reachable SMB provider acceptance also remains
+  open. Existing prior main functional GUI evidence is reused, not expanded
+  to new CI status for this SHA.
+
+## 2026-10-14 F02 owned narrow-layout fix — original PNG review
+
+- **Canonical main source:** `7441dad96572d1f90d6eff5fac671116d0081345`;
+  implementation fix `01c24b3393cb20810440f45ff4b2e5cb5577108b`,
+  source regression guard in `7441dad96572d1f90d6eff5fac671116d0081345`.
+  The F02 Details pane previously consumed 260 px without being deducted
+  from the dual-pane DetailLayoutProfile width. At 800x550, the two lists
+  therefore showed name and size fields colliding. The layout now subtracts
+  the visible Details pane's 260 px and re-evaluates file columns when
+  toggling it.
+- **Owned Windows evidence:** [Remote Shell run 38473558319](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38473558319)
+  completed SUCCESS at the exact SHA: source checks, x64 Release build,
+  actual interactive test-owned WinUI, 800x550 window, 96 DPI, light and
+  dark themes, original lossless PNG capture, normal owned process exit,
+  and bounded scratch/task cleanup. This is a focused capture and build,
+  **not** a new current-main full GUI suite acceptance.
+- **Actual original-PNG inspection:** Reconstructed `LIGHT_ENABLED`,
+  `DARK_ENABLED` and the corresponding `FOCUSED_TOGGLE` images from
+  length-checked, numbered log chunks. Both theme previews display
+  distinct non-overlapping file names (without the colliding size column),
+  preserved left/right panes, selected `readme.txt`, Details information
+  and footer. This closes the *observed 800x550 name/size overlap* only.
+  Paths and type text wrap in the Details pane; the modified-date value
+  is below the initial visible 550px viewport. Prior F02 focused
+  functional acceptance tested scrolling at a larger owned window;
+  its visibility after scrolling at 800x550 has not been reverified.
+- **Focus visual is not accepted:** In each theme, `ENABLED` and
+  `FOCUSED_TOGGLE` original PNGs are **byte-for-byte identical**
+  even though the UIA focus assertion passed. The harness calls a window
+  foreground/focus helper before screenshot and uses UIA `set_focus()`
+  to reach the toggle. This evidence does not establish a visible
+  keyboard-navigation focus cue; keyboard-driven focus transfer and
+  actual focus pixels remain open. Do not mark focus visual PASS from
+  the mere UIA `has_keyboard_focus()` result.
+- **Open separate gates:** full-range original-PNG matched revision/state
+  comparison beyond this narrow fix, keyboard focus visibility, narrow
+  Details scroll reachability, actual OS 125/150/200% DPI, High Contrast,
+  Narrator speech, F06 address-suggestion pixels and provider/large-index
+  cases. **F02 VISUAL ACCEPTANCE: NARROW OVERLAP FIX VERIFIED; OTHER
+  REQUIRED VISUAL/ACCESSIBILITY STATES OPEN.**
+
+## 2026-10-13 F02 canonical main GUI and bounded visual inspection — latest
+
+- **Exact canonical main:** `f4e2bb5937d00a1ef3b2652334e377f10ad25b7d`
+  (2026-10-13; documentation-only latest change). Its source tree retains the
+  F02 product/test changes from `f5c0fce1b9193ca95c0a10e86443afc984d637b5`.
+- **Independent current-main functional acceptance:** [central Remote Shell
+  #38395275513](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38395275513)
+  explicitly requested `project_id=desktop-a`, `scope=gui`, exact main SHA
+  `f4e2bb5937d00a1ef3b2652334e377f10ad25b7d`. Producing output recorded
+  `PASS release-build`, `PASS functional-gui`,
+  `CENTRAL_CI_PASS` and `central-ci/windows-gui=success`.
+  **MAIN RELEASE + FUNCTIONAL GUI: PASS** for that SHA/scope, not Debug, real
+  pixel review, or wider accessibility/hardware certification.
+- **Review of available real-product images (2026-10-13):** The four bounded
+  JPEG re-encodings emitted directly in [F02 visual capture run
+  #38392955469](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38392955469)
+  were reconstructed from their numbered log chunks and visually inspected:
+  `LIGHT_BEFORE`, `LIGHT_AFTER`, `DARK_BEFORE`, `DARK_AFTER`.
+  BEFORE uses `a5783991e57a5aab8e0281f171f39541f36d036c`, AFTER uses
+  `f5c0fce1b9193ca95c0a10e86443afc984d637b5`.
+  The underlying captures were from actual test-owned WinUI Release windows
+  with matched window geometry/DPI for each theme (the capture fixture sizes
+  its HWND up to 940x610). Examined selected `readme.txt` file rows,
+  opt-in Details panel, header/button, type/size/date/location labels, the
+  two independent file panes and bottom status area. Both displayed theme
+  pairs showed readable selection and Details text, preserved left/right
+  panes/status, and no clearly visible panel overlap or clipping. Narrow
+  type/location values wrap across multiple lines; their legibility at
+  smaller widths was not established. Test-owned random fixture paths differ
+  between BEFORE and AFTER and are not pixel-identical expected text.
+- **Evidence limit / visual gate remains OPEN:** the four log images are
+  compressed JPEG previews, **not** the original PNG bytes or a lossless
+  pixel-diff review. Only a selected-row, Details-enabled state under the
+  observed standard-size light/dark fixtures was visually inspected.
+  An original-PNG fine-pixel check and matched narrow-window/focus states
+  have **NOT** been accepted; no actual 125/150/200% scaling, F02 High
+  Contrast, Narrator speech or provider/large-index edge-case validation is
+  inferred. **VISUAL ACCEPTANCE: PARTIAL REVIEW ONLY — NOT FULLY ACCEPTED.**
+  Reuse exact old screenshots/runtime if still retained; do not rebuild
+  unchanged product merely to repeat a prior functional PASS.
+
+## 2026-10-13 F02 read-only selected-item Details pane — focused Windows checkpoint
+
+- **Feature branch acceptance:** `feat/f02-readonly-details-pane-20261013`,
+  exact functional candidate `39221b3cd7af257f4e34edf44ebed99c8fb4bb18`;
+  latest visual-capture candidate `f5c0fce1b9193ca95c0a10e86443afc984d637b5`.
+- **Behavior:** explicit opt-in Details pane for the active WindowTab, showing
+  selected file/folder name, type, location, size and modified date from the
+  existing bounded Shell snapshot, rendered row identity and asynchronous
+  metadata caches. Single selection only; stale routes, pending navigation,
+  nonfilesystem entries and multiple selection fail closed. Details are
+  read-only: no new file mutation, in-process Shell provider call or global
+  Windows setting change. Collapse/reopen and opposite-pane selection use
+  separate active-pane state.
+- **Windows functional evidence:** [run 38391634316](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38391634316)
+  completed PASS against `39221b3cd7af257f4e34edf44ebed99c8fb4bb18`:
+  source contracts, x64 Release build, actual owned WinUI left-file/right-folder
+  selection, details text, toggle/reopen, normal exit and owned scratch cleanup.
+  Earlier runs [38386492476](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38386492476),
+  [38386808505](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38386808505)
+  and [38387378826](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38387378826)
+  were diagnostic GUI failures while correcting collapsed UIA peers and
+  scrolled read-only metadata. They are not passing acceptances.
+- **Visual evidence boundary:** [run 38392955469](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38392955469)
+  completed PASS for matched owned light/dark before-and-after screenshot
+  *capture* at `f5c0fce1b9193ca95c0a10e86443afc984d637b5`.
+  It explicitly reported `F02_VISUAL_OWNED_MATCHED_CAPTURES=PASS PIXEL_REVIEW_REQUIRED`.
+  This proves capture, **not actual pixel review, contrast, clipping or
+  comparison acceptance**. Do not mark visual acceptance complete.
+- **Still open after later main acceptance:** full-resolution original-PNG
+  pixel review and actual narrow/focus interaction states, actual OS
+  125/150/200% DPI, High Contrast and Narrator speech, provider/large-index
+  edge cases. The canonical-main functional GUI gate subsequently passed; see
+  the newer checkpoint above. The compressed JPEG review is limited evidence.
+
+## 2026-10-13 F06 latest main full GUI regression — same-source recheck
+
+- **Canonical main checked:** `40cb928b2ae14e801b5c27300de9348fa3c19e65`, including bounded known-path address suggestions, quoted UNC rejection and last-committed-path preservation. No new product source change was made during this recheck.
+- [Central main GUI run 38382588456](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38382588456) **FAILED** in a v7 multi-WindowTab private-session save assertion (`v7 multi-window private session was not saved`), after successful Release build. This historical failure is not a PASS.
+- [Diagnostic run 38383648183](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38383648183) used a one-commit **test-only** diagnostic fixture (`781dc3671765830ae999f74705445839de7ab040`). Its inner scoped `gui-window-tabs-Release` returned exit code 0; the outer workflow itself failed on an extra, incorrect expected aggregate-log marker. Do not call that outer run successful.
+- **Accepted full main GUI:** [run 38384468606](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38384468606) completed **SUCCESS** against the original identical main source. Policy/source, x64 Release, `gui-window-tabs-Release`, `gui-all-Release`, full functional GUI and `central-ci/windows-gui` status passed. Thus the preceding v7 failure was **not reproducible in this one recheck**; no root cause or long-term nondeterminism fix is claimed.
+- **Open acceptance:** reachable approved SMB share, screenshot comparison of suggestion UI, high-contrast and actual 125/150/200% scaling, Narrator spoken output. Never treat nonexistent loopback UNC rejection as proof of successful network-share browsing.
+
+## 2026-10-13 F06-D quoted UNC failed-navigation safety — focused acceptance
+
+- **Verified candidate:** `1b6f2ccc671393f5241005ef11bcefcc19ec33b6`,
+  `test/f06-quoted-unc-loopback-20261013`, based on canonical
+  `da8613e95ab4ae0fefad2fce60860e5e2a487623`.
+- **Behavior:** when the user presses Enter on a new address, the address
+  chrome and breadcrumb continue displaying the **last committed** pane/tab
+  location while the isolated Shell request is pending. On success the
+  accepted snapshot updates the location; on failure, an invalid quoted
+  path/UNC request does not replace the previously committed pane.
+  Never rewrite the address in an asynchronous Failed callback: that
+  approach can erase a subsequent user edit or wrongly supersede a newer
+  valid request. Existing side/route request-token isolation is unchanged.
+- **Focused Windows acceptance:** [run 38381812799](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38381812799)
+  completed successfully at the exact candidate SHA: source contracts,
+  x64 Release build, full owned-shell GUI including rapid invalid-then-valid
+  navigation, rejected quoted `\\127.0.0.1\flyexplorer-f06-owned-no-share`
+  with its previous right-pane listing and address preserved, normal app
+  exit and owned scratch cleanup. An environment-only preflight found
+  **zero** pre-existing approved `flyexplorer-owned-*` SMB shares under
+  the central scratch root; no shares/permissions/network settings were
+  created or changed.
+- **Failure history:** [38380137080](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38380137080)
+  proved the raw failed address incorrectly remained in the editor;
+  [38380865307](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38380865307)
+  exposed a rapid-navigation race after restoring the address in a
+  later failed-result callback; [38381583006](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38381583006)
+  stopped at a stale source assertion after moving the restoration to the
+  Enter handler. These are diagnostic failures, not accepted PASS.
+- **Still unverified:** opening a **reachable** approved SMB share,
+  authentication/error-code variations on real UNC providers, F06-C
+  matched before/after screenshots at 96 DPI and narrow/high-contrast,
+  real 125/150/200% OS scaling and actual Narrator speech.
+  The prior F06-C in-layout suggestion feature was already integrated
+  and central main GUI-accepted at
+  `da8613e95ab4ae0fefad2fce60860e5e2a487623`
+  ([run 38378269180](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38378269180)).
+  **VISUAL ACCEPTANCE: NOT TESTED** for these latest F06 states.
+
+## 2026-10-13 F06-C bounded known-path address suggestions — focused acceptance
+
+- **Exact accepted candidate:** `d9a440492592410ccaae232613288796fa500320`
+  on `feat/f06-address-known-path-suggestions-20261013`, based on
+  F06-A/B canonical main `1ebcc82f08fc6ee6ffc0748becc28265a9dcdaa5`.
+- **Behavior:** keep the existing address TextBox and Ctrl+L/Enter/Escape
+  contract. While typing a prefix, present up to 8 distinct filesystem-folder
+  paths already held in live WindowTab/pane sessions and at most 2,048
+  in-memory indexed entries for the active pane. Picking a candidate navigates
+  the current pane's existing tab; Escape dismisses candidates. No filesystem,
+  COM, provider, network, global settings, or private profile I/O occurs in
+  the text-change handler; no unrequested persistence or background scan.
+- **Lifecycle correction:** first UI experiment used a Popup and passed its
+  candidate interaction checks but the process exited with access violation
+  `0xC0000005` on [run 38376064497](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38376064497).
+  A Popup-close guard still reproduced the teardown failure in
+  [run 38376726015](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38376726015).
+  The accepted source replaces Popup with a collapsed in-layout Border and
+  defers foreign-focus dismissal through the UI dispatch queue. These two
+  older Actions failures must not be labeled feature acceptance.
+- **Focused Windows acceptance:** [run 38377574604](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38377574604)
+  completed PASS for source contracts, WinUI x64 Release build, real
+  in-memory candidate presentation, exact candidate navigation in the same
+  PaneTab, Escape dismissal, normal product exit and owned scratch cleanup.
+- **Remaining boundaries:** real network UNC share paste/open is NOT tested,
+  candidate presentation when an unindexed folder is not known is not
+  supported (intentionally), high-DPI 125/150/200%, High Contrast,
+  Narrator speech and actual F06-C pixel/keyboard-focus visual acceptance
+  remain unverified. Do not imply Explorer-wide autocomplete, OS-global
+  filesystem completion, virtual-provider discovery or release approval.
+
+## 2026-10-13 F06-A/B folder middle-click and quoted address — focused acceptance
+
+- **Tested feature source:** `257bcc22c42ddb574712d8d69ba4e288c64e20b8`
+  on `feat/f06-gestures-address-20261013`, based on canonical F01-D main.
+- **New interaction:** middle-clicking a native filesystem folder row opens
+  exactly that clicked folder in a new *same-pane* PaneTab, preserving the
+  original tab and the other pane. Middle-click on a breadcrumb segment opens
+  its tagged ancestor path in a new pane-local tab. Existing left-click,
+  double-click, drag/drop, native Shell identity, active WindowTab and 32-tab
+  cap remain unchanged. The new route is submitted only after the routed
+  pointer event unwinds, with an original WindowTab/route identity guard
+  against stale deferred actions.
+- **Address input:** a pasted full path surrounded by double quotes (with
+  optional outer whitespace) removes exactly the outer pair of quotes, leaving
+  Unicode, inner spaces and UNC path separators intact. No arbitrary quote
+  rewriting, OS-wide path setting or implicit remote network enumeration.
+- **Evidence:** [central Remote Shell run 38364592231](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38364592231)
+  completed PASS at the exact feature SHA: source checks, Windows x64
+  Release build, owned actual WinUI middle-click folder and breadcrumb
+  PaneTab isolation, quoted Korean path navigation, normal process exit,
+  unchanged historical user profile and owned scratch cleanup.
+- **Historical preacceptance failures:** [38363199512](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38363199512)
+  failed the initial combined middle-click assertion; the separated
+  [38363858966](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38363858966)
+  confirmed folder middle-click tab creation but recorded a subsequent
+  process crash during tab switching. The fix defers model/visual mutation
+  until the pointer event returns, and the focused GUI subsequently passed.
+  The predecessor runs are diagnostic failures, not accepted PASS evidence.
+- **Scope still open:** actual reachable UNC-share paste/open behavior,
+  address suggestions/autocomplete, middle-click on virtual Shell folders,
+  125/150/200% OS scaling, accessibility speech and final visual
+  before/after review (no new authored UI pixels in this feature unit).
+  This is not broad Windows File Explorer parity or distribution approval.
+
+## 2026-10-13 F01-D canonical main and focused restart GUI evidence
+
+- **Integrated on canonical main:** product, tests and documentation at
+  `91e3f5ab5e7cb2a6df5e3fa2d2becb453380668d`. The earlier F01-D
+  candidate checkpoint below is historical branch-scoped evidence, not an
+  assertion that persistence is still awaiting integration.
+- **Central main GUI PASS:** [run 38353716100](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38353716100)
+  completed successfully against the exact integrated main SHA. Policy and
+  source checks, Windows x64 Release build, focused WindowTab/shortcut/filter
+  tests and full functional GUI all passed; status context
+  `central-ci/windows-gui` reported `success`.
+- **Focused four-option restart test:** the isolated GUI fixture on
+  `test/f01d-restart-view-options-20261013`, source
+  `46bb16b5565e28baf5f5c19ea4467f8d88ebd2b9`, toggled all four
+  View choices in the left pane and a distinct combination in the right,
+  explicitly saved private session schema v3, restarted the owned app and
+  inspected both restored View menus. The internal GUI log printed
+  `F01D_REAL_RESTART_TWO_PANES_ALL_FOUR_VIEW_FLAGS=PASS`, alongside
+  successful private-session cleanup; see [run 38359677323](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38359677323).
+  **That outer Actions run is FAILURE**, not an accepted end-to-end workflow:
+  its extra wrapper looked for this marker in the outer orchestration log
+  instead of the inner scoped GUI log. The session GUI process returned
+  exit code zero; the wrapper raised `F01D_GUI_MARKER_MISSING` afterwards.
+  This is harness evidence, not a product or session GUI failure. Do not
+  represent the failed outer workflow as a PASS.
+- **Still open:** actual 125%, 150%, 200% OS display scaling,
+  F01 High Contrast, real Narrator speech, virtual hidden namespaces,
+  large indexed-directory behavior, and F01-D-specific restart pixel
+  comparisons. No global Explorer setting or existing user file is changed.
+
+## 2026-10-13 F01-D private session display option persistence — acceptance checkpoint
+
+- **Verified candidate:** `feat/f01-display-session-20261013`,
+  exact tested source `d537021a872b1ffe0ecb3572f6936b1a672d64c3`.
+  This checkpoint records branch evidence, not automatic main integration.
+- **Behavior:** Explicit Save Session stores four display-only View choices
+  (selection checkboxes, compact rows, filename extensions, ordinary hidden
+  items) independently for both panes of each WindowTab. A subsequent normal
+  startup restores these choices only when a valid user-opted-in private
+  session exists. No implicit session autosave, global Windows Explorer
+  preference change, legacy MFC profile mutation, or file-attribute change.
+  Newly created WindowTabs still receive the documented defaults.
+- **Format:** `winui-session-v1.bin` remains the private bounded checksum
+  file; schema 3 adds a strictly validated per-pane four-bit View mask.
+  Existing schema 1/2 decoding is preserved and restores F01 defaults when
+  prior files contain no display bits. Unknown schema-3 option bits are rejected.
+- **Actual Windows acceptance:** [central Remote Shell run 38348701470](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38348701470)
+  completed successfully against exactly the candidate SHA: source contracts,
+  x64 Release build, 35/35 isolated owned native M23 checks (including new
+  schema-v3, legacy-v2 and unknown-flag cases), existing session-focused
+  functional GUI, and test-owned task/scratch cleanup PASS. The first two
+  diagnostic runs 38348407801 and 38348555796 failed at the historical-MFC
+  structure check because the temporary checkout lacked trusted Git-history
+  access; the corrected run scoped Git safe.directory to the owned test source.
+  Those diagnostic runs are not product PASS.
+- **Not yet separately certified:** an actual per-option View-menu interaction
+  followed by a second-process F01 option-state inspection on both panes/tabs.
+  The existing GUI run verifies the prior session lifecycle, while the new
+  option mask's save/load round trip was exercised in the native fixture.
+  Actual 125/150/200% DPI, F01 High Contrast, Narrator spoken output, virtual
+  hidden namespaces and large indexed hidden directory behavior remain open.
+  **VISUAL ACCEPTANCE: NOT TESTED for F01-D-specific restart states.**
+
+## 2026-10-13 F01-C ordinary hidden files/folders — merged and accepted
+
+- **Canonical main integration:** [PR #65](https://github.com/tngkrwlsmd/flyExplorer/pull/65),
+  squash commit `6e2814530886daa3014b4ac63eae3cc22e86c3b3`.
+  The exact merged Git tree equals the feature source tree tested under
+  `feat/f01-hidden-items-20261013`. No unverified product changes
+  were added by the merge.
+- **Feature:** View menu `숨김 항목 표시` (default OFF),
+  independently per active pane and WindowTab in-memory. The isolated
+  Shell helper uses `SHCONTF_INCLUDEHIDDEN` but never
+  `SHCONTF_INCLUDESUPERHIDDEN`, while WinUI projects rows by
+  `SFGAO_HIDDEN`. Native PIDL identity, filtering, sorting and
+  selected file paths are unchanged. Windows global Explorer settings,
+  registry and existing user file attributes remain untouched.
+- **Verified Windows x64 Release + real light/dark GUI at 96 DPI:**
+  [central run #38333769050](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38333769050),
+  tested source `4e84b52ac1eb639408614007d1c7084ca1291887`,
+  final docs-only branch commit
+  `2ee3b13c116143c115e45be710299430e3d09653`.
+  Source contracts, owned native hidden file/folder visibility,
+  default OFF, left/right pane isolation, safe hidden-file
+  deselection on hide and app exit all PASS. Eight actual 940x610
+  app-owned light/dark Details screenshots were inspected:
+  View flyout alignment/checkmark and before/after/restored rows PASS.
+  Remote Shell ownership/proc/scratch cleanup PASS.
+- **Not certified:** actual 125%, 150%, 200% Windows DPI; F01-C
+  High Contrast; Narrator spoken output; virtual Shell hidden
+  namespaces; large indexed hidden-file paging; hidden-state
+  restoration after application restart. F01 settings/session
+  persistence remains a separate unfinished logical unit.
+  This is not full distribution acceptance.
+
+## 2026-10-13 F01-A/B Explorer display options — merged and accepted
+
+- **Merged canonical main source:** [PR #64](https://github.com/tngkrwlsmd/flyExplorer/pull/64),
+  squash merge commit `0243181dd8833207ce91f1c6b7f819044e81e247`.
+  Exact Git tree at this merge commit equals the feature/test tree verified
+  immediately before integration. Do not confuse historical unmerged F01
+  checkpoints with this newer main acceptance.
+- **Accepted scope:** View menu selection checkboxes, compact Details/List
+  row spacing, and display-only filename extension visibility. These are
+  per active pane and per WindowTab in-memory; checkbox and compact default
+  OFF, extensions default ON. File's original native Shell parsing identity,
+  filtering, selection, transfers and accessible full filename remain intact.
+- **Actual Windows x64 Release and focused GUI functional PASS:**
+  [run #38318791974](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38318791974).
+  **Actual matched BEFORE main / AFTER F01 light and dark pixel review PASS**
+  at 96 DPI: [run #38326900487](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38326900487).
+  **Physical keyboard View menu interaction, right/left pane isolation,
+  Ctrl+T/Ctrl+Tab WindowTab state rehydration and inspected 800x570 native
+  narrow-window pixels PASS:** [run #38328508589](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38328508589).
+  Test-owned process, screenshot and task cleanup PASS, remote-shell slot idle.
+- **Separate OPEN gates, not product PASS:** actual 125%, 150%, 200% OS DPI;
+  F01-specific High Contrast composited pixels; real Narrator speech;
+  other non-Details view layouts and further user interaction surfaces.
+  F01 hidden-item enumeration and saved private preferences/session
+  persistence are intentionally deferred work, not included in PR #64.
+  Full distribution/release certification is not claimed.
+
+## Current acceptance index (2026-10-12)
+
+This is a current-state index over **revision- and environment-scoped** evidence,
+not a new test run or an assertion that every later main commit has passed
+every gate. Later evidence in this index supersedes older diagnostic
+`NOT ACCEPTED` / `NOT TESTED` wording in the chronological sections below.
+
+| Gate | Current evidence-scoped verdict |
+| --- | --- |
+| Named filter presets, blue/green/amber/red text and star/pin/flag/tag classification | **IMPLEMENTED**; functional Release/GUI [38198895107](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38198895107) |
+| Styled filter light-theme pixels | **PASS** at actual 96 DPI (16 before/after captures, selection/focus), [38206845319](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38206845319) |
+| Styled filter High Contrast pixels | **PASS for tested blue/star and red/tag states** at actual 96 DPI, [38214474825](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38214474825); not every scheme or mode |
+| Filter UI Automation row/badge semantics and physical-keyboard save | **PASS** in Release functional GUI, [38209842808](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38209842808) |
+| Real Korean two-beolsik IME composition and durable WinUI filter save | **PASS** for `한글` on actual Windows, [38227421736](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38227421736) |
+| Narrator spoken filter name/color/icon/selection and actual audio | **NOT VERIFIED / NOT ACCEPTED**; synthetic Speech Recap inspection did not confirm an utterance, [38233608351](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38233608351) |
+| Actual Windows display scaling at 125%, 150%, 200% | **NOT TESTED**; latest recorded desktop inventory was 96 DPI, [38218827761](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38218827761) |
+| Public distribution/signing and production installation | **NOT CLEARED**; the [38210591849](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38210591849) newer unsigned source/package identity audit was private and its temporary assets were removed |
+
+The older entries below preserve their own dated observations; they do not
+reopen an accepted IME gate or turn UIA/Narrator-launch evidence into real
+spoken-output acceptance. See
+[NARRATOR_SPEECH_VALIDATION.md](NARRATOR_SPEECH_VALIDATION.md) and
+[PRE_DISTRIBUTION_FUNCTIONAL_GATES.md](PRE_DISTRIBUTION_FUNCTIONAL_GATES.md).
+
+## 2026-10-12 Narrator Speech Recap follow-up: window visible, spoken phrase NOT VERIFIED
+
+**Source and platform:** `flyExplorer/main` at
+`9ee83045b3ab5beb185c291033382d8f52d0db4f`;
+Windows 11 Pro build 26300, interactive session 2, synthetic test-only
+Win32 reference controls. **No flyExplorer runtime or filter UI code changed.**
+
+A second controlled investigation narrowed the previous false-negative
+"zero Narrator UIA nodes" finding:
+- [First window-discovery attempt #38232070285](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38232070285)
+  failed before GUI execution at an invalid PowerShell `New-Item -LiteralPath`
+  argument. Its correction is a request-harness fix, not a product change.
+- [Owned focus probe #38232212661](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38232212661)
+  confirmed that Narrator starts but initially takes foreground focus
+  from a disposable Win32 reference editor. This invalidated any
+  assumption that the original editor remained the focused speech item.
+- [Foreground-corrected Speech Recap probe #38232530406](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38232530406)
+  returned reference foreground focus to the owned editor and confirmed
+  **two** identified Recap-related visible windows and **35** scoped UIA
+  nodes with zero UIA access errors. **No required reference phrase was
+  found** in those nodes; no actual audio was captured. The outer
+  workflow failed its shutdown precondition because a Narrator process
+  remained active after the first shortcut.
+- [Explicitly named native Button reference #38233608351](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38233608351)
+  first independently verified the button's true UIA accessible name
+  (`NARRATOR_REFERENCE_BUTTON_UIA_NAME_MATCH=True`), confirmed owned
+  foreground, launched Narrator, and identified a visible Recap window.
+  Its **actual Recap phrase match was False** even with the named
+  button and a `Narrator+Tab` reading command. This does not establish
+  that Narrator never spoke the label; it establishes that the
+  **available transcript collector cannot attest that utterance**.
+  The workflow again failed the process-exit gate rather than a product
+  assertion. Audio waveform and human hearing remain unverified.
+- Recovery required more care than one stop shortcut. Windows ignored
+  or did not complete some supported stop commands while Recap was
+  active; a single guarded process stop was followed by a **new**
+  Narrator process. [First safe recovery #38233281172](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38233281172)
+  recovered an earlier fixture. [Final bounded exact-owned recovery
+  #38234299929](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38234299929)
+  established the process's recent creation, exact session and path,
+  stopped only the two successive test-originated Narrator PIDs,
+  verified stable **zero** Narrator processes and safely deleted the
+  second exact-owned scratch fixture
+  (`NARRATOR_FINAL_EXACT_OWNED_STATE_RESTORED=PASS`).
+  **No process/task/test-owned files remain from this diagnostic.**
+
+**Current gate verdict:** `NARRATOR SPOKEN FILTER NAME/COLOR/ICON/SELECTION =
+NOT VERIFIED / NOT ACCEPTED`; `NARRATOR AUDIO PLAYBACK = NOT VERIFIED`.
+The improved synthetic reference establishes process launch, focus
+control and Recap window discoverability, **not** a correct Narrator
+announcement in flyExplorer. Do not run repeated unattended speech
+experiments on this shared session or treat an Actions source/workflow
+PASS as spoken acceptance. Next: a separately attended Windows
+session with an actual listening verifier, or a privacy-isolated,
+independently verified audio/transcript capture method; use the
+[manual speech checklist](NARRATOR_SPEECH_VALIDATION.md).
+Actual OS 125/150/200% DPI remains a separate NOT TESTED gate.
+
+## 2026-10-12 Narrator spoken-output validation: ENVIRONMENT BLOCKED (NOT ACCEPTED)
+
+The current actual Windows VM environment was checked by the registered
+control plane on **Windows 11 Pro build 26300**, interactive session 2,
+at exact flyExplorer source `4d4db4680a75ec6368b8a50d6586608d1016fedd`.
+
+- [Read-only inventory #38229681112](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38229681112):
+  Narrator binary installed (file version 10.0.26100.8972), audio and endpoint
+  services running, one functioning audio endpoint, exactly one signed-in
+  interactive desktop session, and **zero** preexisting Narrator processes.
+  These are prerequisites, not audible speech evidence.
+- [Native test-owned reference attempt #38230127856](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38230127856):
+  a non-elevated direct `Narrator.exe` process launch returned Windows
+  `WinError 740` (elevation required). No Narrator speech acceptance.
+- [Supported-shortcut reference attempt #38230388533](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38230388533):
+  a disposable Win32 EDIT containing a synthetic classification phrase
+  was focused in the logged-in desktop. Windows+Ctrl+Enter started a
+  real Narrator process (`NARRATOR_SHORTCUT_LAUNCH_COUNT=1`,
+  `NARRATOR_OWNED_LAUNCH_ACTIVE=True`). The probe attempted
+  Narrator+Alt+X Speech Recap, but **no Narrator-owned accessible text
+  nodes or confirmed reference utterances were observed**
+  (`NARRATOR_OWNED_NARRATOR_UIA_NODE_COUNT=0`,
+  `NARRATOR_OWNED_SPEECH_IN_UIA_RECAP=False`,
+  `NARRATOR_SPEECH_RECAP_WINDOW_VISIBLE=False`).
+  Audio playback was **not captured**. The wrapping workflow failed at
+  non-elevated psutil's `AccessDenied` when waiting on Narrator's
+  higher-integrity process. These are harness/permissions/evidence limits;
+  **neither flyExplorer speech PASS nor product FAIL** can be inferred.
+- [Independent state inventory #38230563415](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38230563415)
+  confirmed **zero** Narrator processes and **zero** residual diagnostic
+  scheduled tasks after the attempted run. No Windows DPI/high-contrast,
+  language-pack, audio device, or system Narrator option was changed
+  by the diagnostic.
+  [Safe exact-owned cleanup #38230906259](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38230906259)
+  subsequently removed the retained reference fixture after verifying
+  absence of Narrator processes, active test tasks, links and owned
+  Python workers (`NARRATOR_SPEECH_DIAG_SAFE_CLEANUP=PASS`).
+
+**Acceptance:** `NARRATOR ACTUAL SPOKEN LABELS = NOT TESTED / NOT ACCEPTED`;
+`NARRATOR AUDIO WAVEFORM = NOT CAPTURED`. The pre-existing successful
+UIA labels/keyboard interaction tests remain independently valid.
+The actual flyExplorer spoken filter rule name, color, badge/icon meaning
+and selection announcement are **still awaiting an attended session
+with audible monitoring or an independently verified, safely accessible
+Speech Recap transcript**. Do not count a Narrator process launch,
+audio endpoint, source CI or UIA name as real spoken-output acceptance.
+Follow the reproducible, privacy-preserving procedure in
+[`docs/development/NARRATOR_SPEECH_VALIDATION.md`](NARRATOR_SPEECH_VALIDATION.md).
+
+**Separate open gate:** physical OS DPI 125%, 150%, 200%; earlier focused
+96-DPI high-contrast pixel acceptance and Korean physical composition
+remain accepted without unnecessary rerun.
+
+## 2026-10-12 real Korean 2-beolsik composition: ACCEPTED
+
+**Latest source:** `71a9c4ba0ae48c7ab5b247fe05878412ca2d8aa6`.
+[Actual interactive Windows run 38227421736](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38227421736)
+completed **SUCCESS**. The trusted source's Release build and owned
+WinUI filter rule edit performed real Korean keyboard composition
+(`한글`) and confirmed durable persistence to the test-owned filter
+rule store. The app exited normally and the fixture was cleaned.
+The same run first proved composed Hangul in a disposable native
+Win32 EDIT control, then ran the actual WinUI acceptance.
+
+**Confirmed root cause of the previous false-negative IME tests:**
+pywinauto `keyboard.send_keys` defaults to `vk_packet=True` for
+text characters, which injects Unicode packets rather than actual
+virtual-key input traversing Korean IME composition. The test-only
+revision switched the Korean Latin key sequence to
+`vk_packet=False` in both native and WinUI tests. The native
+reference now uses `WM_GETTEXT` for cross-process readback and
+records owned-process input-context state, rather than falsely
+interpreting remote `GetWindowTextW` / remote `ImmGetContext` as
+evidence of product failure. No flyExplorer runtime/XAML/filter
+rendering code changed. This supersedes the earlier
+`NOT ACCEPTED` Korean composition notes below; those remain as
+historical diagnostic evidence only.
+
+**Still open and separate:** actual OS 125/150/200% scaling, clipping,
+overlap and spoken Narrator output. The VM currently reports
+1024x768 in the active desktop with 96 DPI, and the accepted
+real High Contrast filter visual check is unchanged. Do not infer
+DPI/Narrator acceptance from the successful IME test.
+
+## 2026-10-12 corrected Korean IME reference diagnostic (latest)
+
+**Test-only diagnostic revision:** `95af8d7b54ab0a7730b0d545db068e087c5fa7c9`.
+[Exact-source central CI 38224982434](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38224982434)
+completed **SUCCESS** for the source checks. The three intervening
+commits since `9fda657` modified only
+`tests/winui/test_windows_korean_ime_host_baseline.py` and
+`tools/winui/run_owned_korean_ime_host_baseline.ps1`, not WinUI/product
+rendering or runtime files. This source result is **not** new Release,
+functional GUI, or final-pixel acceptance.
+
+**Corrected actual native Win32 EDIT input baseline: numeric physical
+keyboard delivery PASS, Korean composition NOT ACCEPTED.**
+[Windows owned diagnostic 38224718703](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38224718703)
+replaced the invalid cross-process `GetWindowTextW` edit read with
+`WM_GETTEXT` and verified an explicit `WM_SETTEXT` / `WM_GETTEXT`
+round trip. The real EDIT then received physical digits `123`
+correctly. Korean HKL was `0x04120412`, yet both the physical Hangul
+key attempt and native-IMM fallback yielded Latin `gksrmf`, **not**
+composed `한글`. Therefore the previous native result reporting an
+empty EDIT value was a test readback artifact and is superseded. A null
+IMM context requested by the external controller is not proof of the
+target application's Text Services Framework or actual IME mode.
+Both the earlier owned WinUI and corrected native-reference attempts
+lack real two-beolsik composition; there is no accepted Hangul
+composition/save result and no isolated flyExplorer product defect.
+
+The diagnostic itself completed with its expected evidence markers;
+the enclosing Remote Shell run is marked **failure** because its
+post-diagnostic report matcher wrongly required extra quote characters
+around a marker. Do not turn that reporting error into a product FAIL
+or claim the whole Actions run succeeded.
+[Owned cleanup 38224957696](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38224957696)
+independently verified and deleted the test-owned scratch root;
+the central Remote Shell request slot was subsequently restored idle.
+
+**Unchanged open environmental gates:** real 125%/150%/200% Windows DPI
+clipping/overlap and spoken Narrator behavior remain **NOT TESTED**.
+The relevant actual 96-DPI Windows High Contrast filter pixel review
+[38214474825](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38214474825)
+remains the accepted focused evidence; it was not rerun because no
+product-visible filter code changed.
+
+## 2026-10-12 actual accessibility environment diagnostics (no scale changes)
+
+**Read-only Windows capability inventory: PASS.**
+[Run 38218827761](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38218827761)
+reported a single interactive Windows Explorer session (2),
+1024x768 desktop at **96 DPI**, no per-monitor override entries,
+`Win8DpiScaling=0`, and installed Narrator executable plus Korean IME
+DLL. **125%, 150%, 200% real OS DPI remain NOT TESTED**: no scaling
+change/re-login was attempted because that would modify the shared
+interactive desktop without an established, verified recovery path.
+Narrator being installed does **not** certify spoken output; **Narrator
+speech remains NOT TESTED**. The previously accepted real High Contrast
+pixels ([run 38214474825](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38214474825))
+were not redundantly rerun, and HC remains in its original OFF state.
+
+**Real Korean two-beolsik composition: NOT ACCEPTED.**
+[Owned WinUI IME test 38219262419](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38219262419)
+rebuilt the unchanged product and confirmed Korean HKL
+`0x04120412`, but its actual focused input HWND differed from the
+top-level app HWND, `ImmGetContext` returned no context on that
+focused HWND, and physical Hangul-key/right-Alt attempts both entered
+Latin `gksrmf` instead of composed `한글`. A third IMM-native
+method could not be attempted without a valid IMM context.
+This does **not** independently identify a product defect: modern
+WinUI may use Text Services Framework rather than a Win32 HIMC.
+The test-only diagnostic now records focus HWND, IMM open/conversion
+status if present and restores the owned layout and any prior IMM state.
+
+[Owned native Win32 EDIT comparison 38220744083](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38220744083)
+completed its **diagnostic workflow**, but returned
+`KOREAN_IME_NATIVE_EDIT_COMPOSED=False`, no IMM context and an
+**empty input value** after the attempted keys. Since keyboard
+delivery to the native EDIT was not separately proven, this is
+**inconclusive** as a control comparison and must not be presented as
+a native IME or product PASS/FAIL conclusion. The earlier native
+comparison attempts failed at test-only focus and EDIT-clear API
+preconditions and were corrected; none established successful Hangul
+composition. **A real Korean 2-beolsik composition and durable-save
+acceptance is still required** on a known working foreground
+keyboard/TSF environment, preferably with a proven reference editor.
+
+All test execution was restricted to synthetic data and owned app
+windows. [Owned cleanup run 38221028916](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38221028916)
+succeeded after exact source, result-stage, link and active-process
+checks. The registered Remote Shell request slot was restored to idle.
+No product runtime/pixel code, desktop DPI setting or deferred staged
+Copy interruption/safe-recovery logic was modified by this
+diagnostic round.
+
+## 2026-10-12 high-contrast filter acceptance and remaining IME/DPI/Narrator limits
+
+[Exact-revision Windows High Contrast run 38214474825](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38214474825)
+completed **SUCCESS** and logged `HC_FILTER_STATUS=PASS
+STAGE=complete`, `HC_FILTER_FOUR_STYLES_ACTUAL_PIXELS=PASS`,
+`HC_FILTER_OWNED_CLEANUP=PASS`. This compared actual pre/post WinUI
+Release screenshots in the real Windows high-contrast scheme for
+blue/star and red/tag classifications. The four bounded PNG images
+are in that run log. Direct review found legible text, intact
+classification badges, visible selected-row indication, yellow focus
+borders and no new clipping/overlap. The real Windows high-contrast
+setting was restored to its original **OFF** state after capture.
+This is a focused visual acceptance, **not** a blanket certification
+of every high-contrast scheme or file-view mode.
+
+**Korean IME physical composition: NOT ACCEPTED.** The same run explicitly
+reported `IME=NOT_ACCEPTED`. UI Automation typing, Korean-labeled
+controls and persisted Unicode text alone cannot substitute for
+observing real 2-beolsik composition in the owned edit control.
+Do not claim IME PASS without the precise physical-composition marker.
+**Narrator speech: NOT TESTED**; accessible UIA names do not prove
+actual spoken output. Actual **125%, 150%, 200% OS DPI: NOT TESTED**;
+the registered desktop last reported 96 DPI and no independent
+high-scale screenshot evidence is available. These are separate
+remaining accessibility gates.
+
+## 2026-10-12 filter accessibility and updated private source/setup identity
+
+**Actual Windows DPI capability:** [read-only inventory #38209100479](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38209100479)
+reported active 1024x768 desktop at **96 DPI**. Actual OS
+125/150/200% displays were unavailable here; these gates remain
+**NOT TESTED**, not simulated or accepted. Previous light/dark 96-DPI
+visual acceptance remains valid for the tested states only.
+
+**Accessible filter metadata + physical keyboard: PASS (UI Automation).**
+The product gives each matched file row an accessible preset name,
+color name and icon category, and the badge an identifiable category
+name instead of a generic icon announcement. Filter palette selection
+and Save can be operated through owned physical keyboard input.
+[Central CI #38209842808](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38209842808)
+completed **SUCCESS**, Release, WindowTab, shortcuts, focused filter GUI,
+and entire GUI, exact compiled product source
+`8902d494255b471911f092c3cdd4e978af2c4e56`.
+The earlier #38209461852 passed the Release build but hit a transient
+WindowTab UIA peer-rebinding assertion before filter GUI; the test-only
+limited wait fixed the pre-input race. Source-only filter contracts
+also require named badges/rows. **Human Narrator speech** and
+**Korean IME** were not directly exercised; UIA property checks alone
+do not certify screen-reader audio.
+
+**Unsigned private package/source equivalence: PASS, no deployment.**
+[Exact-source owned audit #38210591849](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38210591849)
+clean-built a private Release from
+`2a736d85b22859a770138e4b50926ac125d1a052`, regenerated and
+checked runtime provenance, built an unsigned native setup, generated
+and checked the deterministic **438 tracked file** source ZIP, and
+verified `release_identity.py --write` / `--check` binds them to
+the identical SHA/tree. Recorded private test evidence:
+- source tree `df09334367d2a2be1ea0541548f5aaa73b1d53e5`;
+- source ZIP SHA-256
+  `b08f01ad41b5c211282848c438c138e0587986a614ac8ebf4c8e839231dba01d`;
+- **305** runtime files, manifest SHA-256
+  `fb509b3f6a40ad962c18e10fcd323dab2e195df64884be7430d12304f59f25c7`;
+- unsigned private setup **124,418,560 bytes**, SHA-256
+  `3861b937b122e7d997fe92d778798631f02b952228b9d0707de72b150aa9da37`.
+
+The audit explicitly retained **private-evidence-only**, **not-cleared**
+and **unsigned** states. It did not install into Program Files,
+register HKLM, sign, publish, create a release tag or touch user
+settings. It deleted the private work directory and generated files
+after verifying them. The **tracked** release identity and source
+manifest still refer to historical source `bc63c8b...`; they remain
+valid archival evidence, **not current release assets**. The new SHA
+and hashes are preserved in the Actions run log but the new setup/ZIP
+are not durably published or downloadable. A production build must
+retain and review fresh matching binary/source assets and re-run
+install/update/rollback, signing, clean-machine and public GPL source
+delivery gates. This is an engineering identity acceptance, **not**
+public distribution clearance.
+
+User-deferred staged Copy interruption logging and safe recovery were
+not changed.
+
+## 2026-10-12 run.bat launcher and styled filter presets
+
+**Canonical real-launch verification: PASS.**
+[Remote Windows run 38198360371](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38198360371)
+reused an already completed exact-revision Release binary at
+`4d8c83f2ca80d7642d79f326a638ebebf8d049b5` to invoke
+`run.bat Release <test-owned Unicode folder>`, rather than launching
+the executable directly. It confirmed launcher exit 0, both pane UIA
+controls and the Korean-named file row, and graceful shutdown of the
+owned app with exit 0. Two earlier timed-out, exact-test-owned processes
+were identified by executable path/fixture argument and closed, followed
+by owned workspace cleanup. Initial launcher checks were blocked by
+test-harness subprocess PIPE inheritance, not a product runtime failure;
+the permanent harness fix is `tests/winui/test_run_bat_release_gui.py`
+in `a4e7d74026f72030a78895ba4463ee3ae4bc9307`.
+
+**Filter preset color/icon feature: Release + functional GUI PASS.**
+Product revision `18a4859ce8fc40101ff746dc5b651b6cfd98b028`
+adds opt-in color palette (default/blue/green/amber/red), secondary
+classification badge (none/star/pin/flag/tag), deterministic first
+matching styled-rule rendering across file view modes, and per-rule
+bounded private style metadata. Existing Shell icons, mask filtering,
+20-rule limit and legacy v1 filter files are preserved; style-bearing
+files use backwards-readable-by-new-product schema 2, rejecting invalid
+style bytes without replacing the loaded model. Older application
+versions are **not** claimed to read new schema 2 style files.
+
+[Exact-revision central Windows GUI run 38198895107](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38198895107)
+completed **SUCCESS** and set `central-ci/windows-gui=success`:
+Release build PASS, `gui-window-tabs-Release` EXIT=0,
+`gui-shortcuts-Release` EXIT=0,
+`gui-filter-preset-Release` EXIT=0 (5.9 s),
+`gui-all-Release` EXIT=0 (118.7 s) and functional GUI PASS.
+The focused filter test checked style selection, schema 2 write/reload,
+visible row badge, mask application, restart persistence, deletion,
+unmodified legacy settings, and normal process exit. Early failed runs
+38198500380 and 38198626453 isolated a stale test-orchestrator contract
+and a single malformed C++ count guard respectively; both were fixed
+before the accepted run.
+
+**Additional M20 Release native acceptance: 52/52 PASS.**
+[Remote Windows run 38202520450](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38202520450)
+checked out that same product revision under a disposable short Windows
+workspace in the registered interactive session, passed five focused
+source contract tests, built the M20 Release native executable and
+confirmed `M20_STANDALONE_NATIVE_Release_52_PASS True`. The original six
+legacy user-profile sentinels were unchanged. The test-owned task and
+workspace were removed. Nonblocking C4005 WIN32_LEAN_AND_MEAN warnings
+were observed in the M20 fixture.
+
+**Filter color/icon visual acceptance: PASS (matched actual WinUI, dark/96 DPI).**
+[Remote Windows visual run 38204943981](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38204943981)
+completed with `FILTER_VISUAL_RUN_STATUS=PASS STAGE=complete`,
+`FILTER_VISUAL_CAPTURE_PAIR=PASS`, and
+`FILTER_VISUAL_OWNED_CLEANUP=PASS`. The actual before/after Release
+product screenshots were captured with
+`tests/winui/test_filter_style_visual_capture_gui.py` and directly
+inspected from the run's bounded PNG previews. The pre-feature binary
+was built from
+`4d8c83f2ca80d7642d79f326a638ebebf8d049b5`;
+the changed binary was clean-built from
+`885f318b4959efaff2070dcad96252f689680b2b`
+(identical product implementation to accepted `18a4859`; subsequent
+commits only changed tests, orchestration or documentation).
+
+Both real windows were on the same registered interactive Windows desktop,
+with an isolated dark/details profile, 96 DPI, actual app bounds
+`(20,15)-(1080,735)` (1060 x 720), and a 1060 x 680 pixel top preview.
+Both used the same synthetic four-file fixture:
+`alpha.cpp`, `beta.h`, `notes.txt`, and `사진.JPG`.
+The random owned fixture folder name displayed in each breadcrumb
+naturally differs between captures. The before screenshot showed the
+original filter preset mask editor without color/icon controls. The
+after screenshot shows the new blue color and star badge selectors,
+with all controls visible, readable and aligned without overlap.
+`alpha.cpp` and `beta.h` receive readable blue filenames and
+adjacent outline star badges, while their real Windows Shell file icons
+remain intact; `notes.txt` and `사진.JPG` retain the normal
+appearance. The file-list top edge moves down to accommodate the
+additional style controls, as intended. Some unrelated type labels
+were already ellipsized within the narrow columns in both screenshots;
+this was not introduced by the feature. No blocking visual regression
+was observed in the changed editor/file-row region.
+
+**Failure isolation and recovery evidence:** The first [visual run
+38203734728](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38203734728)
+built the baseline but had used a fixed window taller than the active
+desktop. The next [run
+38204124635](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38204124635)
+used viewport-bounded geometry but treated a transient status line as
+part of durable preset-save verification; the harness now validates
+the isolated saved file and schema instead. Subsequent resume attempts
+identified a shallow Git revision limit and a changed app process that
+exited before showing a window when the two versions reused one
+incremental Release output directory. The successful run preserved
+the already captured baseline pixels, used exact-SHA checkout, and
+ran `clean.bat build` only in its disposable workspace before a
+complete current Release build; it then confirmed the current app
+opened, displayed the styled rows and exited normally. The evidence
+supports clean-output isolation, without establishing an independent
+root cause for the earlier startup exit. The separate first failed
+test-owned scratch directory was verified and safely deleted in
+[cleanup run 38205260341](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38205260341).
+The Remote Shell request slot was restored to idle.
+
+**Scope limit:** this is a focused visual PASS for 96 DPI dark/details
+layout. Separate real 125/150/200% DPI, High Contrast themes,
+Narrator/IME and full distribution visual states remain **NOT TESTED**
+unless independently accepted elsewhere. Functional GUI and M20
+native acceptance remain distinct, previously verified gates.
+Staged Copy crash-interruption receipt and safe-recovery work remain
+explicitly deferred and were not changed.
+
+## 2026-10-12 light-theme filter visual acceptance — PASS
+
+Product commit `bddfb2a46faea8f30f78fb96f737da63da2f2e23`
+adds theme-aware, darker light accents while preserving the accepted
+dark accents, style IDs and badges. White-background contrast improves
+from 2.35/2.04/1.74/2.61:1 to **7.62/7.38/6.75/7.65:1** for
+blue/green/amber/red, exceeding the 4.5:1 normal-text AA reference.
+
+[Actual Windows visual run 38206845319](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38206845319)
+**PASS**: 16 real app screenshots comparing before
+`c911f982464cf714387b98e303ec7ac82f0462a1` and after
+`b9d55954f9eecbf063122f9934f82c42029da6fd`.
+Matched light/details, 96 DPI, 1060x720 actual HWND and synthetic
+four-file fixture. Reviewed all four color/icon combinations (star,
+pin, flag, tag) in normal and UIA-verified selected/keyboard-focused
+states. The darker names and badges remain readable, aligned and
+unclipped; the selected-row highlight is distinguishable.
+Selected-row contrast was reviewed visually, not measured numerically.
+Run confirms normal owned app exit and fixture cleanup. An initial
+test-only harness mistake in run 38206423123 was fixed by comparing
+the same existing color controls in both product revisions.
+
+[Central Windows CI 38207189902](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38207189902)
+**SUCCESS** for exact `b9d55954f9eecbf063122f9934f82c42029da6fd`:
+Release, window tabs, shortcuts, styled filter GUI and full GUI
+regression all exited 0; `central-ci/windows-gui=success`.
+The source contract checks all four light-theme contrast values.
+
+**Separate, NOT TESTED:** 125/150/200% actual OS DPI, High Contrast,
+Narrator and Korean IME. Staged Copy interruption receipts and
+safe recovery remain deferred.
+
+## 2026-10-12 configurable focus shortcut expansion — Release and functional GUI PASS
+
+Product revision `04e7d358dcc7cb74a6c619b833b503c72b089294`
+adds Ctrl+G and Ctrl+J as opt-in focus-only bindings for the address bar
+and quick search. Existing Ctrl+L/E/F/K choices, non-duplicate selection,
+private schema-3 persistence, defaults, F5/F6 and mutating file-operation
+shortcuts remain unchanged. The test-owned focused keyboard GUI regression
+covers persistence, duplicate rejection, actual Ctrl+G/J input, reset,
+no cross-pane file mutation and protected legacy-profile preservation.
+
+**Accepted exact-main central Windows run:**
+[38189416302](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38189416302),
+registered `desktop-a`, `scope=gui`, source SHA
+`3c46c116786038fbea2914e1873fc3600611753c`.
+This main SHA differs from the product revision only by this status
+document. GitHub Actions completed **success** and published
+`central-ci/windows-gui=success` for the exact main SHA. Recorded stages:
+
+- Registered policy/source checks: PASS as prerequisites to the succeeding
+  Release and functional-GUI stages.
+- Canonical Windows Release build: PASS.
+- `gui-window-tabs-Release`: EXIT=0 (15.9 s).
+- `gui-shortcuts-Release`: EXIT=0 (11.0 s); physically delivered shortcut
+  regression, including the new configurable Ctrl+G/J choices.
+- `gui-all-Release`: EXIT=0 (121.7 s), followed by
+  `PASS functional-gui`.
+
+**Earlier failure now resolved by changed execution conditions:**
+Central [run 38185317718](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38185317718)
+built the same product revision successfully, then stopped on the first
+focus acquisition of its prerequisite Window Tabs test,
+`test_v7_window_tabs_gui.py:30` ->
+`test_shell_gui.py:112`. The foreground-ownership safety guard correctly
+refused physical input. The exact traceback was inspected in
+[run 38185956218](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38185956218).
+A read-only session inventory in
+[run 38186404331](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38186404331)
+found Explorer in disconnected session 2. A subsequent session check,
+[run 38189322684](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38189322684),
+reported session 2 **Active**. That diagnostic workflow itself exited
+nonzero, but its session output established the changed precondition.
+The successful 38189416302 acceptance followed without bypassing the
+physical-input safety check or modifying the shortcut product code.
+
+**Supplementary exact-main native evidence:**
+[Remote Shell 38193974521](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38193974521)
+ran a bounded, temporary interactive-user task against exact main
+`9631d1d3f74473f1bae3df8d0f39717d24754139`. The focused shortcut
+contract and preferences-coordinator contract passed, M21 Release native
+C++ compilation passed, and `M21_NATIVE_Release_23_PASS True` verified
+**23/23 cases PASS**. The original six protected legacy user-profile values
+were unchanged (`M21_LEGACY_USER_PROFILE_SENTINEL_UNCHANGED True PRESENT 6`).
+The run completed successfully, removed its test-owned workspace and task,
+and restored the central Remote Shell request slot to idle. It did not
+rebuild or rerun the already accepted full GUI. Non-blocking C4005
+`WIN32_LEAN_AND_MEAN` macro redefinition warnings were reported by the
+native fixture build; no compile or runtime errors occurred.
+
+The earlier SYSTEM Remote Shell preflight
+[38186627928](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38186627928)
+had verified the source SHA but could not launch the fixture because
+`python.exe` was not on the SYSTEM PATH. The new successful task ran in
+the established Explorer user session instead, without elevating a
+user-writable Python interpreter to SYSTEM.
+
+**Shortcut editor matched visual acceptance: PASS (focused 96-DPI dark UI).**
+In Windows [visual run 38196377101](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38196377101),
+the test-owned screenshot harness completed with
+`VISUAL_WORKER_STATUS=PASS STAGE=complete`,
+`VISUAL_OWNED_CAPTURE_PAIR=PASS` and a successful one-shot interactive
+Windows task. It built and actually launched the Release product at
+pre-feature baseline `54c8ee5d2ccf8912232334348c58f8fe60313294`
+and post-feature `6b2e3fca184b56f24885e1d1ec26970217d9cf46`.
+These differ in product behavior at `04e7d358`; subsequent commits up
+through the captured candidate change only documentation/test harness.
+The matched screenshots used the same disposable private profile,
+synthetic Korean-named file, session, dark appearance, 96 DPI, desktop,
+and app window at (40,30)-(1140,710), size 1100 x 680 pixels.
+Both collapsed and expanded shortcut dropdown states were captured in
+each actual WinUI app, with geometry/DPI equality checked.
+
+**Direct pixel review of the two 614 x 378 expanded screenshot previews:**
+the earlier address dropdown exposes Ctrl+L/E/F/K, whereas the new one
+exposes Ctrl+L/E/F/K/G/J. Both added entries are fully visible inside the
+popup, aligned with original rows at consistent spacing; no unintended
+overlap, new text clipping, unreadable contrast, or broken popup edge
+was observed in this changed control region. The right edge of the
+**preview crop** truncates part of the unrelated Reset label; this is
+the preview boundary, not evidence of an actual clipped product control.
+The visual PASS applies to this matched shortcut-editor change and
+theme/scale only. Full-window pixel review, separate real 125/150/200%
+DPI, screen-reader/human IME and broader distribution environments
+are **NOT TESTED**, unless independently accepted elsewhere.
+
+**Visual build infrastructure defect resolved:** A previous attempted
+[visual run 38194421915](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38194421915)
+failed in the baseline Release NuGet restore before UI launch: the
+isolated scratch workspace made Windows App SDK WinMD and NuGet HTTP
+cache paths **261 characters long**, exceeding the usual 260-character
+Windows MAX_PATH boundary. Read-only
+[HTTP diagnostics 38196231801](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38196231801)
+confirmed NuGet index and two pinned package endpoints returned HTTP 200.
+The successful successor shortened only the disposable Windows scratch
+root to `C:\\ProgramData\\personal-control-plane\\scratch\\v-<12hex>`,
+bringing the known WinMD path to **220 characters**, without modifying
+product code, changing package versions or bypassing restore verification.
+The previous failed fixture was disposed by
+[cleanup 38194622497](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38194622497).
+Run #38196377101 cleaned its own success workspace and task. The central
+Remote Shell request was restored to idle with a skip-CI commit.
+
+Capture tool: `tests/winui/test_shortcut_visual_capture_gui.py`.
+The bounded expanded previews are preserved in the visual-run Actions
+log as base64-encoded PNG for source-specific review; temporary full
+window screenshots were deleted with the owned success workspace.
+Do not treat a CI screenshot marker by itself as visual acceptance:
+the images were directly inspected before recording the focused PASS.
+
+Staged Copy crash-interruption receipt and safe-recovery work remain
+explicitly deferred and were not changed.
+
+## Latest product acceptance checkpoint (verified 2026-10-12)
+
+The latest product-bearing main revision before this documentation-only change,
+`f37fddae0ef08461c3f01f90928da9b3bf077c46`, has
+`central-ci/windows-gui=success` pointing to central registered CI
+[run #38120723040](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38120723040).
+This is registered Release/functional GUI evidence for that exact product
+revision, not Debug, final-pixel visual, external-device or
+public-distribution acceptance.
+The focused read-only stage-identity native evidence below belongs to its
+separately recorded source candidate. For later main commits, recheck the
+live SHA, producing central status/run and affected test boundaries; do not
+automatically relabel older candidate or pre-main PASS records as current
+acceptance. Documentation-only revisions do not invalidate an unchanged
+product build/runtime boundary.
 
 ## 2026-10-11 exact staged Copy file-ID read-only validation
 
@@ -809,8 +1390,11 @@ material fix/instrumented hypothesis. The central Remote Shell slot
 was restored to idle after read-only failure inspection.
 
 Prior 20,500-file acceptance already proved indexed **name** sort and
-name filtering (run `37211942616`). Above-20,000 type/size/date
-global sorts remain unsupported rather than silently partial.
+name filtering (run `37211942616`). At this 2026-10-10 checkpoint,
+above-20,000 type/size/date global sorts were unsupported. The later
+local fixed-drive-only indexed metadata path superseded that restriction
+for eligible folders (20,500-item owned GUI run `38055029443`);
+other filesystem and Shell/provider types retain the 20,000 limit.
 The precise remaining tasks are in
 `docs/development/PRE_DISTRIBUTION_FUNCTIONAL_GATES.md`.
 
@@ -1787,10 +2371,12 @@ resident-window navigation. Normal browsing still keeps at most 2,048 children
 resident; increasing the browse frontier does not increase the resident-model
 bound.
 
-Operations that require full Shell metadata are still not allowed to silently
-operate on a partial model above 20,000 entries. Type, size and modified-date
-global sorts continue to refuse above the complete-model ceiling. Name sort and
-name filtering are now the deliberate exception: navigation retains a
+At this historical work revision, operations requiring full Shell metadata
+were not allowed to silently operate on a partial model above 20,000 entries.
+Type, size and modified-date global sorts then refused above that ceiling;
+a later local fixed-drive-only indexed metadata implementation superseded this
+restriction for eligible folders (see Known functional coverage limits).
+Name sort and name filtering were the deliberate exception at this checkpoint: navigation retains a
 lightweight label/parsing-name/attribute index while resident Shell children
 remain bounded, and projects that completed index for global name operations.
 The 100,000 browse/index value remains an implementation safety bound, not a
@@ -2170,31 +2756,43 @@ distribution remain separate gates.
 Current source and the last parity evidence still show these limits:
 - Local filesystem Shell enumeration uses protocol-v3 page transport:
   1,024 entries per isolated helper response, an 8 MiB per-response body bound,
-  and a 20,000-entry model safety bound. The active model now accepts the first
-  page immediately and appends continuation pages on demand; owned Release
-  evidence covers an 8,000-file initial 1,024-item render followed by complete
-  global name sort and progressive 160-row rendering. Indexed name sort and name filters have separate 20,500-item acceptance;
-  general 100,000-item performance, above-20,000 metadata sorts, network/
-  virtual providers and sustained thumbnail-cache behavior are not certified.
-- Type, size and modified-date global sort requires a complete sortable
-  metadata model and is supported through 20,000 fixed, removable, mapped
-  network or ordinary direct-UNC filesystem entries. Network/UNC metadata
-  collection is isolated in the exact-owned helper with bounded inactivity/
-  cancellation handling; actual SMB/UNC and mapped-drive execution remains
-  uncertified because the self-hosted runner has no test-owned SMB share.
-  The previous 1,200 visual-detail ceiling no longer controls these sorts and
-  1,201-20,000 items no longer silently use name order. Above 20,000 these
-  metadata sorts remain explicitly refused. Shell visual/type/icon/thumbnail
-  enrichment is separately bounded to 1,200 items and now supports local
-  fixed/removable, mapped network and ordinary direct-UNC filesystem roots,
-  while virtual Shell/provider roots support bounded type/icon enrichment plus
-  up to four provider thumbnails in Medium/Large Icons. Actual physical
-  USB/removable and SMB/mapped-drive visual execution remain uncertified because
-  the self-hosted runner has neither a removable volume nor a test-owned SMB
-  share; arbitrary third-party provider implementations are not separately
-  certified by the built-in This PC/Pictures Library acceptance. Physical USB
-  metadata-sort execution is also still awaiting a removable device on the
-  self-hosted VM.
+  and a 20,000-entry complete-model bound. Sequential navigation has a
+  separate 100,000-entry safety ceiling and 2,048-entry resident window.
+  The active model accepts the first page immediately and appends
+  continuation pages on demand. Owned Release evidence covers an 8,000-file
+  initial 1,024-item render followed by global name sort and progressive
+  160-row rendering. Indexed name sort/filter have separate 20,500-item
+  acceptance. Local fixed-drive indexed size/date/type sorts have a separate
+  20,500-item acceptance; the 25,000-item indexed metadata ceiling is an
+  implementation bound, not a 25,000-item performance certification.
+  General 100,000-item throughput, above-20,000 metadata sorting on
+  removable/network/virtual roots and sustained thumbnail-cache behavior
+  remain unverified or unsupported as specified below.
+- Type, size and modified-date global sort uses a complete sortable metadata
+  model for up to 20,000 fixed, removable, mapped-network or ordinary direct-UNC
+  filesystem entries. For local fixed-drive folders only, a distinct indexed
+  metadata mode can sort beyond 20,000 without making the resident model complete:
+  its bounds are `kMaxIndexedMetadataEntries=25000` and
+  `kMaxIndexedMetadataPathUnits=12*1024*1024`. Exact owned 20,500-file
+  size/date/type GUI acceptance passed in `38055029443`; the 25,000 ceiling
+  is not a verified 25,000-file performance result. Removable, UNC, mapped
+  network and virtual/provider roots still refuse these metadata sorts above
+  20,000. Network/UNC metadata collection is isolated in an exact-owned helper
+  with bounded inactivity and cancellation handling. Actual SMB/UNC and
+  mapped-drive execution remains NOT TESTED in recorded real-device evidence;
+  the retired dedicated runner lacked a test-owned SMB share. The former 1,200
+  visual-detail ceiling does not control complete-model metadata sorting,
+  and 1,201-20,000 entries no longer silently use name order.
+  Shell visual/type/icon/thumbnail enrichment remains separately bounded to
+  1,200 items and supports local fixed/removable, mapped-network and ordinary
+  direct-UNC filesystem roots; virtual Shell/provider roots support bounded
+  type/icon enrichment plus up to four thumbnails in Medium/Large Icons.
+  Actual physical USB/removable and SMB/mapped-drive visual execution remains
+  NOT TESTED in recorded hardware evidence: the retired dedicated runner had
+  neither a removable volume nor a test-owned SMB share. Recheck current central
+  VM hardware availability before running those gates. Third-party providers
+  are not certified by the built-in This PC/Pictures Library acceptance.
+  Physical USB metadata-sort execution also remains NOT TESTED.
 - Filesystem Copy/Move accepts local fixed/removable roots, mapped
   `DRIVE_REMOTE` roots and ordinary direct UNC paths through the shared Shell
   transfer core. Virtual Shell/provider sources additionally support bounded
@@ -2212,9 +2810,11 @@ Current source and the last parity evidence still show these limits:
   fixed/removable roots, requires explicit confirmation and uses recycle-only
   Shell flags; if a removable drive cannot use Windows Recycle Bin, flyExplorer
   reports failure and does not switch to permanent deletion. Physical
-  USB/removable execution is still uncertified because the VM has no removable
-  volume. Actual SMB/UNC and mapped-network-drive Copy/Move execution is also
-  not yet certified because the runner has no test-owned SMB share. Provider
+  USB/removable execution is still NOT TESTED in recorded physical-device
+  evidence (the retired dedicated VM lacked a removable volume).
+  Actual SMB/UNC and mapped-network-drive Copy/Move execution also remains
+  NOT TESTED; the retired runner lacked a test-owned SMB share. The current
+  central VM's device/share inventory must be checked for any new gate. Provider
   Copy-out runtime acceptance covers the built-in Pictures Library virtual root
   with a test-owned filesystem-backed child; arbitrary third-party/provider-only
   child behavior remains uncertified.
@@ -2261,10 +2861,13 @@ Current source and the last parity evidence still show these limits:
   test-owned path text; those pixels are not claimed identical.
   Higher-DPI and additional selection/theme visual states were not
   separately exercised in this focused gate.
-- Persistent pane filter/mask rule sets are implemented with up to 20 named
-  private presets, case-insensitive wildcard masks and legacy substring
-  compatibility. Pane filters remain name/mask based; historical per-rule
-  color/icon classification is not implemented.
+- Persistent pane filter/mask rule sets support up to 20 named private
+  presets, case-insensitive wildcard masks and legacy substring compatibility.
+  Named rules now also support opt-in blue/green/amber/red filename accents
+  and star/pin/flag/tag classification badges. These styles decorate matching
+  file rows without replacing the existing name/mask filtering or Shell icons.
+  Actual 96-DPI light-theme and scoped High Contrast visual acceptance is
+  recorded in the current index above; other OS scales remain untested.
 - The complete historical command/provider verb/fault matrix is not fully
   implemented or tested.
 - User-configurable accelerators and a complete historical shortcut map are
@@ -2278,8 +2881,9 @@ Current source and the last parity evidence still show these limits:
 
 ## Packaging and source identity state
 
-The current unsigned package and exact binary/source identity are accepted by
-Remote Windows Task #440 (`37376305779`). The binary source revision is
+The **historically retained** unsigned package and exact binary/source
+identity were accepted by Remote Windows Task #440 (`37376305779`).
+They are not artifacts built from the latest main. The binary source revision is
 `bc63c8b48e466d1275cc6dcffb0c50e02d39db60`, with source tree
 `8f1bc2e0181cc87e646dd2fad75ccdca0c8e8a66`.
 
@@ -2314,8 +2918,16 @@ variable after lifecycle completion and failed before preserving the release
 artifacts. #440 changed only that evidence destination to the workflow's
 canonical `logs\remote-evidence` path and completed successfully.
 
-This closes the technical exact binary-to-source identity gate for the accepted
-unsigned artifact. The public distribution mechanism is now selected as GPLv3
+This closes the technical exact binary-to-source identity gate **for that
+historical unsigned artifact only**. A newer private audit
+[38210591849](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38210591849)
+checked the unsigned setup, 305-file runtime and 438-file source bundle for
+source `2a736d85b22859a770138e4b50926ac125d1a052`, but its test-owned
+setup/source ZIP were removed after the audit. Tracked release manifests
+still identify `bc63c8b...`, not the newer product or current main.
+A final release requires retained, reverified matching assets.
+
+The public distribution mechanism is now selected as GPLv3
 section 6(d) same-release-page network access, and the reserved final tag is
 `v1.0.0.0`. Repository-level GitHub Immutable Releases was enabled in Remote
 Windows Task #446 (`37379026246`). The tag is intentionally absent before
@@ -2335,12 +2947,29 @@ HKLM machine-wide lifecycle, or clear rightsholder/legal review.
 ## Open gates
 
 Not certified by current automated evidence:
-- actual 125%, 150% and 200% OS display scaling (the retired dedicated
-  VM reported only a 1274x771 display mode and 100% DPI range; this is
-  historical environment evidence, not current central-runner acceptance);
-- human Narrator and Korean IME composition acceptance;
+- actual 125%, 150% and 200% OS display scaling (the current central
+  Windows desktop inventory recorded 1024x768 at 96 DPI in
+  [38218827761](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38218827761));
+- actual spoken Narrator filter labels/selection and audio playback (the
+  synthetic Recap diagnostics remain inconclusive, despite safe cleanup);
+- broader Korean IME layouts/controls beyond the specifically accepted
+  real two-beolsik `한글` composition and persisted filter-rule save
+  in [38227421736](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38227421736), if required by a future release scope;
 - signed clean-machine machine-wide install/update/rollback;
 - public redistribution/source-delivery/rightsholder/legal clearance.
 
 Do not convert source support, RDP-only checks or a prior package into
 certification of these gates.
+
+## 2026-10-14 PR #63 staged Copy receipts — main-sync only, UNMERGED
+
+The draft stage ownership receipt branch has been synchronized with the
+canonical main source while retaining this main status document. Original
+historical detailed status remains in the earlier PR Git commits and in
+STAGED_COPY_RECOVERY.md / DISPOSABLE_VM_DURABILITY_GATE.md.
+The read-only receipt, opt-in private stage journal and precise no-replace
+Copy tests are still **DRAFT / NOT ACCEPTED ON MAIN**. Prerequisites:
+real-user helper Known Folder GUI/IPC, restrictive ancestor ACL failure,
+worker-interruption/restart reconciliation and independent disposable
+Hyper-V VM power-loss recovery. The separate host VM is NOT provisioned;
+never reboot or power-cut the shared CI guest. No auto orphan cleanup.

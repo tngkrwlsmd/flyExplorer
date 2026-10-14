@@ -1,4 +1,4 @@
-# flyExplorer pre-distribution functional gates — 2026-10-10
+# flyExplorer pre-distribution functional gates — updated 2026-10-12
 
 This document records tests and remaining product functionality **before**
 installer, signing, public release or redistribution. An accepted result
@@ -6,9 +6,80 @@ applies only to the tested SHA/binary, environment, procedure and scope.
 See `CURRENT_STATUS.md`, `ARCHITECTURE.md`, `VERIFICATION_PROFILE.md`
 and `AGENTS.md`. Later evidence below supersedes older failure checkpoints.
 
+## Current 2026-10-12 accessibility verdict
+
+Real Korean two-beolsik composition and durable WinUI filter save
+(`한글`) are **ACCEPTED** in owned Windows
+[38227421736](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38227421736);
+earlier failed/unaccepted IME probes below are historical test-harness
+diagnostics. Styled filter High Contrast pixels are **PASS only for tested
+blue/star and red/tag states** in
+[38214474825](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38214474825).
+Narrator spoken phrases and audible output remain **NOT VERIFIED / NOT
+ACCEPTED** after bounded synthetic Speech Recap attempts
+([38233608351](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38233608351)).
+Physical Windows 125/150/200% OS scaling remains **NOT TESTED**; the real
+interactive Windows desktop was last inventoried at 96 DPI
+([38218827761](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38218827761)).
+No new product/runtime test is asserted by this status reconciliation.
+
+## Latest engineering evidence — current accessibility and private package audit
+
+**Engineering-only product source:** `2a736d85b22859a770138e4b50926ac125d1a052`,
+including filter color/icon classification and improved UI Automation
+row/badge descriptions. [Central Windows GUI #38209842808](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38209842808)
+**SUCCESS** on exact source `8902d494255b471911f092c3cdd4e978af2c4e56`
+(the same compiled product; next commit added only the private audit
+script). Release, window tabs, physical shortcuts, filter-preset keyboard
+selection/save, accessible row and badge labels, and the entire GUI
+regression all exited 0. The first CI attempt #38209461852 built Release
+but encountered a transient WindowTab UIA row rebind; the wait-before-
+physical-input harness was corrected before the accepted retest.
+
+**DPI and Narrator boundary:** [read-only Windows desktop inventory
+#38209100479](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38209100479)
+reported 1024x768 and system DPI **96** in Explorer user session 2.
+Actual 125/150/200% OS scaling therefore remains **NOT TESTED** on this
+machine. The filter colors and badge categories now appear in UI
+Automation names, but actual spoken Narrator behavior remains
+**NOT VERIFIED / NOT ACCEPTED** despite later synthetic Recap attempts.
+Earlier matched light/dark 96-DPI pixels are accepted
+in CURRENT_STATUS.md; those results are not substitutes for higher-scale tests.
+
+**Fresh exact source/binary setup identity: PRIVATE PASS.**
+[Windows owned audit #38210591849](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38210591849)
+used exact source `2a736d85b22859a770138e4b50926ac125d1a052`,
+ran one clean Release/provenance/setup build, checked the current
+438-file deterministic source ZIP, and verified an unsigned setup,
+305-file runtime manifest and release identity all reference the same
+source SHA. Private setup SHA-256:
+`3861b937b122e7d997fe92d778798631f02b952228b9d0707de72b150aa9da37`;
+source ZIP SHA-256:
+`b08f01ad41b5c211282848c438c138e0587986a614ac8ebf4c8e839231dba01d`;
+runtime manifest SHA-256:
+`fb509b3f6a40ad962c18e10fcd323dab2e195df64884be7430d12304f59f25c7`.
+The audit was **private engineering only**: no real installation,
+registry mutation, signing, tag or public release. The test-owned package
+and source ZIP were deleted on successful cleanup; hashes and stage
+markers remain in the run log, not a durable downloadable release
+asset. The existing tracked `packaging/RELEASE_IDENTITY.json` and
+`packaging/SOURCE_BUNDLE_MANIFEST.json` still describe the earlier
+`bc63c8b...` accepted artifact and **must not** be represented as
+identities of the current product.
+
+**Open distribution gates:** updated permanent provenance/source manifest
+and retained matching artifacts for a finalized build, current setup's
+owned `/TESTROOT` install/update/rollback/uninstall reacceptance,
+current clean-machine production Program Files/HKLM lifecycle,
+Authenticode signing/trust verification, public same-release-page
+Corresponding Source availability, rightsholder clearance and final
+publication authorization. The reserved release tag must not be created
+or moved prematurely. User-deferred file-copy interruption receipts
+and safe recovery remain out of scope.
+
 ## 1. Latest accepted Release, GUI and shortcuts
 
-**Current main:** `65dcb8d8eea4906b245eafcc7c571418aea93c63`.
+**Historical 2026-10-10 checkpoint:** `65dcb8d8eea4906b245eafcc7c571418aea93c63` (superseded by the current engineering section).
 
 - Registered Windows `desktop-a` `gui` run
   [38053505865](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38053505865)
@@ -42,9 +113,10 @@ built successfully but an obsolete preference-schema expectation
 failed GUI run `38050952226`; later `65dcb8d` is accepted.
 Neither older failure describes the latest main acceptance.
 
-A positive launch through `run.bat` against the full matching runtime
-has still **NOT** been separately proven. Earlier `38044362154`
-validated `fly.bat` command guards and missing-build behavior.
+At this historical checkpoint, actual `run.bat` launch was not yet
+accepted. Later [Windows run 38198360371](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38198360371)
+**PASS** confirmed real `run.bat Release`, dual panes, a Unicode
+file row and normal owned-process shutdown.
 
 ## 2. Shell context-menu compatibility — bounded PASS
 
@@ -196,9 +268,12 @@ Never modify user data or protected legacy configuration.
 ## 5. Remaining Explorer features and distribution boundary
 
 Broader arbitrary accelerator editing, safe/provider context verbs,
-indexed property/content/provider search and visual filter rule
-color/icon classification remain separate feature tasks. Windows
-125/150/200% scaling, High Contrast, Narrator, Korean IME,
+indexed property/content/provider search remain separate feature
+tasks. Filter color/icon classification is implemented and accepted
+for light/dark 96-DPI conditions. Styled-filter High Contrast and
+real Korean two-beolsik composition/save also have the **scoped PASS**
+evidence recorded above. Windows 125/150/200% scaling, actual Narrator
+spoken/audio output, additional untested theme/input scenarios,
 third-party providers and long-duration errors require distinct
 acceptance evidence.
 

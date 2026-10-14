@@ -6,6 +6,8 @@
 #include <shlobj.h>
 #include <filesystem>
 #include <fstream>
+#include <iterator>
+#include <vector>
 #include <cstdio>
 using namespace fxfile;
 namespace fs=std::filesystem;
@@ -119,23 +121,103 @@ int wmain(int argc,wchar_t**argv){
  window1.split=true;window1.splitPermille=560;window1.activeSide=1;
  window1.panes[0].selected=0;window1.panes[0].sort=6;window1.panes[0].view=3;
  window1.panes[0].nameColumnWidth=176;
+ window1.panes[0].showSelectionCheckboxes=true;
+ window1.panes[0].compactRows=true;
+ window1.panes[0].showFileExtensions=false;
+ window1.panes[0].showHiddenItems=true;
+ window1.panes[1].showFileExtensions=false;
  window1.panes[0].tabs.push_back({left.native(),{},{right.native()}});
  window1.panes[1].tabs.push_back({right.native(),{left.native()},{}});
  auto window2=window1;window2.split=false;window2.activeSide=0;window2.splitPermille=430;
  window2.panes[0].view=2;window2.panes[0].sort=7;
+ window2.panes[0].showSelectionCheckboxes=false;
+ window2.panes[0].compactRows=false;
+ window2.panes[0].showFileExtensions=true;
+ window2.panes[0].showHiddenItems=false;
  window2.panes[0].tabs[0].path=right.native();
  window2.panes[1].tabs[0].path=left.native();
  multi.windowTabs={window1,window2};
  check(uisession::valid(multi),"v7_multi_window_session_valid");
- check(uisession::save(multi),"v7_multi_window_session_save_v2");
- uisession::Session restoredV2{};
- check(uisession::load(restoredV2)&&restoredV2.windowTabs.size()==2&&
-       restoredV2.activeWindow==1&&restoredV2.windowTabs[0].activeSide==1&&
-       restoredV2.windowTabs[0].panes[0].view==3&&
-       restoredV2.windowTabs[1].split==false&&
-       restoredV2.windowTabs[1].panes[0].sort==7&&
-       restoredV2.windowTabs[0].panes[0].tabs[0].forward.size()==1,
+ check(uisession::save(multi),"v7_multi_window_session_save_v3");
+ uisession::Session restoredV3{};
+ check(uisession::load(restoredV3)&&restoredV3.windowTabs.size()==2&&
+       restoredV3.activeWindow==1&&restoredV3.windowTabs[0].activeSide==1&&
+       restoredV3.windowTabs[0].panes[0].view==3&&
+       restoredV3.windowTabs[1].split==false&&
+       restoredV3.windowTabs[1].panes[0].sort==7&&
+       restoredV3.windowTabs[0].panes[0].tabs[0].forward.size()==1,
        "v7_multi_window_session_roundtrip_history_view_sort_split");
+ check(restoredV3.windowTabs.size()==2&&
+       restoredV3.windowTabs[0].panes[0].showSelectionCheckboxes&&
+       restoredV3.windowTabs[0].panes[0].compactRows&&
+       !restoredV3.windowTabs[0].panes[0].showFileExtensions&&
+       restoredV3.windowTabs[0].panes[0].showHiddenItems&&
+       !restoredV3.windowTabs[0].panes[1].showFileExtensions&&
+       !restoredV3.windowTabs[1].panes[0].showSelectionCheckboxes&&
+       !restoredV3.windowTabs[1].panes[0].compactRows&&
+       restoredV3.windowTabs[1].panes[0].showFileExtensions&&
+       !restoredV3.windowTabs[1].panes[0].showHiddenItems,
+       "f01_v3_flags_distinct_between_window_tabs_and_panes");
+ // Reject unknown v3 flags even with a correct checksum.
+ std::ifstream saved(uisession::privatePath(),std::ios::binary);
+ std::vector<unsigned char> savedBytes{
+     std::istreambuf_iterator<char>(saved),std::istreambuf_iterator<char>()};
+ saved.close();
+ check(savedBytes.size()>64&&savedBytes[8]==3u,
+       "f01_private_session_v3_wire_written");
+ if(savedBytes.size()>64){
+  auto bad=savedBytes;
+  // magic=8, v3 common header=20, window header=12, pane fields=16.
+  bad[56]|=0x10u;
+  std::uint32_t sum=2166136261u;
+  for(std::size_t i=0;i<bad.size()-4;++i)sum=(sum^bad[i])*16777619u;
+  for(int j=0;j<4;++j)
+   bad[bad.size()-4+j]=static_cast<unsigned char>((sum>>(8*j))&255u);
+  {
+   std::ofstream out(uisession::privatePath(),std::ios::binary|std::ios::trunc);
+   out.write(reinterpret_cast<char const*>(bad.data()),
+             static_cast<std::streamsize>(bad.size()));
+  }
+  uisession::Session invalidFlags{};
+  check(!uisession::load(invalidFlags),
+        "reject_unknown_v3_display_flag_with_valid_checksum");
+ }
+ // Compose legacy schema-v2 bytes using only owned folders.
+ std::vector<unsigned char> older{'F','X','S','E','S','S','2','3'};
+ auto put32=[&](std::uint32_t n){
+  for(int j=0;j<4;++j)older.push_back(
+      static_cast<unsigned char>((n>>(8*j))&255u));
+ };
+ auto putPath=[&](std::wstring const& path){
+  put32(static_cast<std::uint32_t>(path.size()));
+  auto const* bytes=reinterpret_cast<unsigned char const*>(path.data());
+  older.insert(older.end(),bytes,bytes+path.size()*sizeof(wchar_t));
+ };
+ put32(2u);put32(1280);put32(820);put32(0);put32(1);
+ put32(1);put32(500);put32(0);
+ for(auto const& path:{left.native(),right.native()}){
+  put32(0);put32(0);put32(0);put32(168);put32(1);
+  putPath(path);put32(0);put32(0);
+ }
+ std::uint32_t olderSum=2166136261u;
+ for(unsigned char byte:older)olderSum=(olderSum^byte)*16777619u;
+ put32(olderSum);
+ {
+  std::ofstream out(uisession::privatePath(),std::ios::binary|std::ios::trunc);
+  out.write(reinterpret_cast<char const*>(older.data()),
+            static_cast<std::streamsize>(older.size()));
+ }
+ uisession::Session restoredV2{};
+ check(uisession::load(restoredV2)&&restoredV2.windowTabs.size()==1&&
+       restoredV2.windowTabs[0].panes[0].tabs[0].path==left.native()&&
+       restoredV2.windowTabs[0].panes[1].tabs[0].path==right.native()&&
+       !restoredV2.windowTabs[0].panes[0].showSelectionCheckboxes&&
+       !restoredV2.windowTabs[0].panes[0].compactRows&&
+       restoredV2.windowTabs[0].panes[0].showFileExtensions&&
+       !restoredV2.windowTabs[0].panes[0].showHiddenItems,
+       "legacy_v2_display_options_default_without_data_loss");
+ check(uisession::save(multi),
+       "restore_v3_owned_private_profile_after_v2_test");
 
  auto rejectedSession=session;
  rejectedSession.width=10;

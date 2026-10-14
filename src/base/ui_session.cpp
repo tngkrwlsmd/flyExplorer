@@ -12,6 +12,19 @@ namespace fs=std::filesystem;
 constexpr size_t MaxSize=524288;
 constexpr size_t MaxWindowTabs=10,MaxPaneTabs=8,MaxHistory=16;
 constexpr unsigned char Magic[]={'F','X','S','E','S','S','2','3'};
+constexpr std::uint32_t DisplayMask=0x0fu;
+std::uint32_t displayFlags(PaneState const& pane) noexcept {
+ return (pane.showSelectionCheckboxes?1u:0u)|
+        (pane.compactRows?2u:0u)|
+        (pane.showFileExtensions?4u:0u)|
+        (pane.showHiddenItems?8u:0u);
+}
+void restoreDisplayFlags(PaneState& pane,std::uint32_t flags) noexcept {
+ pane.showSelectionCheckboxes=(flags&1u)!=0;
+ pane.compactRows=(flags&2u)!=0;
+ pane.showFileExtensions=(flags&4u)!=0;
+ pane.showHiddenItems=(flags&8u)!=0;
+}
 std::wstring folder() {
  std::array<wchar_t,32768> buffer{};
  const auto count=::GetEnvironmentVariableW(L"LOCALAPPDATA",
@@ -107,16 +120,16 @@ bool encodeLegacy(Session const& state,std::vector<unsigned char>& bytes){
  if(bytes.size()+4>MaxSize)return false;
  u32(bytes,checksum(bytes,bytes.size()));return true;
 }
-bool encodeV2(Session const& state,std::vector<unsigned char>& bytes){
+bool encodeV3(Session const& state,std::vector<unsigned char>& bytes){
  if(!validV2(state))return false;
  bytes.assign(std::begin(Magic),std::end(Magic));
- for(auto item:{2u,state.width,state.height,state.activeWindow,
+ for(auto item:{3u,state.width,state.height,state.activeWindow,
                 static_cast<std::uint32_t>(state.windowTabs.size())})u32(bytes,item);
  for(auto const& window:state.windowTabs){
   u32(bytes,window.split?1u:0u);u32(bytes,window.splitPermille);u32(bytes,window.activeSide);
   for(auto const& pane:window.panes){
    for(auto item:{pane.selected,pane.sort,pane.view,pane.nameColumnWidth,
-                  static_cast<std::uint32_t>(pane.tabs.size())})u32(bytes,item);
+                  displayFlags(pane),static_cast<std::uint32_t>(pane.tabs.size())})u32(bytes,item);
    for(auto const& tab:pane.tabs){
     putString(bytes,tab.path);
     u32(bytes,static_cast<std::uint32_t>(tab.back.size()));
@@ -146,7 +159,8 @@ bool decodeV1(std::vector<unsigned char> const& bytes,size_t pos,Session& out){
  if(!finishChecksum(bytes,pos)||!validLegacy(value))return false;
  out=std::move(value);return true;
 }
-bool decodeV2(std::vector<unsigned char> const& bytes,size_t pos,Session& out){
+bool decodeWindowTabs(std::vector<unsigned char> const& bytes,size_t pos,
+                      Session& out,bool hasDisplayFlags){
  Session value{};std::uint32_t count=0;
  if(!read32(bytes,pos,value.width)||!read32(bytes,pos,value.height)||
     !read32(bytes,pos,value.activeWindow)||!read32(bytes,pos,count)||
@@ -160,8 +174,13 @@ bool decodeV2(std::vector<unsigned char> const& bytes,size_t pos,Session& out){
   for(auto& pane:window.panes){
    std::uint32_t tabs=0;
    if(!read32(bytes,pos,pane.selected)||!read32(bytes,pos,pane.sort)||
-      !read32(bytes,pos,pane.view)||!read32(bytes,pos,pane.nameColumnWidth)||
-      !read32(bytes,pos,tabs)||tabs<1||tabs>MaxPaneTabs)return false;
+      !read32(bytes,pos,pane.view)||!read32(bytes,pos,pane.nameColumnWidth))return false;
+   if(hasDisplayFlags){
+    std::uint32_t flags=0;
+    if(!read32(bytes,pos,flags)||(flags&~DisplayMask))return false;
+    restoreDisplayFlags(pane,flags);
+   }
+   if(!read32(bytes,pos,tabs)||tabs<1||tabs>MaxPaneTabs)return false;
    pane.tabs.reserve(tabs);
    for(std::uint32_t i=0;i<tabs;++i){
     PaneTab tab{};std::uint32_t n=0;
@@ -177,13 +196,19 @@ bool decodeV2(std::vector<unsigned char> const& bytes,size_t pos,Session& out){
  if(!finishChecksum(bytes,pos)||!validV2(value))return false;
  out=std::move(value);return true;
 }
+bool decodeV2(std::vector<unsigned char> const& bytes,size_t pos,Session& out){
+ return decodeWindowTabs(bytes,pos,out,false);
+}
+bool decodeV3(std::vector<unsigned char> const& bytes,size_t pos,Session& out){
+ return decodeWindowTabs(bytes,pos,out,true);
+}
 }
 std::wstring privatePath(){auto const dir=folder();return dir.empty()?L"":dir+L"\\winui-session-v1.bin";}
 bool valid(Session const& value) noexcept{try{return value.windowTabs.empty()?validLegacy(value):validV2(value);}catch(...){return false;}}
 bool save(Session const& state) noexcept{
  try{
   std::vector<unsigned char> bytes{};
-  if(!(state.windowTabs.empty()?encodeLegacy(state,bytes):encodeV2(state,bytes)))return false;
+  if(!(state.windowTabs.empty()?encodeLegacy(state,bytes):encodeV3(state,bytes)))return false;
   const auto dir=folder();if(dir.empty()||dir.size()>MAX_PATH-45)return false;
   if(!::CreateDirectoryW(dir.c_str(),nullptr)&&::GetLastError()!=ERROR_ALREADY_EXISTS)return false;
   auto attr=::GetFileAttributesW(dir.c_str());
@@ -212,6 +237,7 @@ bool load(Session& out) noexcept{
   size_t pos=sizeof(Magic);std::uint32_t version=0;if(!read32(bytes,pos,version))return false;
   if(version==1)return decodeV1(bytes,pos,out);
   if(version==2)return decodeV2(bytes,pos,out);
+  if(version==3)return decodeV3(bytes,pos,out);
   return false;
  }catch(...){return false;}
 }

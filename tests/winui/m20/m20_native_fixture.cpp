@@ -236,6 +236,17 @@ int main(){
        filterReloaded.items()[0].masks==L"*.txt;*.md",
        "filter_rule_atomic_save_reload");
 
+ check(filters.update(0,L"문서",L"*.txt;*.md",2,3)==FilterResult::Applied&&
+       filters.items()[0].color==2&&filters.items()[0].icon==3,
+       "filter_rule_color_icon_bounded_choices");
+ check(filters.update(0,L"문서",L"*.txt;*.md",9,0)==FilterResult::Invalid&&
+       filters.items()[0].color==2&&filters.items()[0].icon==3,
+       "filter_rule_invalid_style_does_not_mutate");
+ FilterStore styledReloaded;
+ check(filters.saveTo(filterFile)&&styledReloaded.loadFrom(filterFile)&&
+       styledReloaded.items().size()==1&&
+       styledReloaded.items()[0].color==2&&styledReloaded.items()[0].icon==3,
+       "filter_rule_v2_styled_atomic_reload");
  const auto filterCorrupt=bookmarkRoot+L"\\filter-corrupt.txt";
  const char filterBad[]="schema=9\r\nbad";
  const auto filterBefore=filterReloaded.items().size();
@@ -245,6 +256,12 @@ int main(){
        "filter_rule_corrupt_load_preserves_model");
  check(filterReloaded.erase(0)&&filterReloaded.items().empty(),
        "filter_rule_delete");
+ const char badStyle[]="schema=2\r\nA\t*.cpp\t8\t0\r\n";
+ const auto previousColor=styledReloaded.items()[0].color;
+ check(writeOwned(filterCorrupt,badStyle,sizeof(badStyle)-1)&&
+       !styledReloaded.loadFrom(filterCorrupt)&&
+       styledReloaded.items()[0].color==previousColor,
+       "filter_rule_v2_invalid_style_fail_closed");
 
  FilterStore filterCapacity;
  bool filterFilled=true;

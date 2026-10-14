@@ -284,6 +284,33 @@ and capability limitations see
 `docs/operations/windows-runner-retirement.md`. This current contract
 supersedes earlier repository-scoped Remote Windows Task instructions.
 
+## Windows CI disk-space maintenance
+
+Treat `C:\ProgramData` as protected machine/application state, not as a
+disposable directory. The Windows control-plane owns CI storage, under
+`C:\ProgramData\personal-control-plane`. Never recursively delete all
+of `ProgramData`, user profile data, Windows Update/installer caches,
+unknown files, staged transfer `.partial` outputs or receipt journals.
+These may be recovery evidence and require separate ownership validation.
+
+Use the control repository's documented capacity workflow and
+`scripts/maintenance/AutoTrim-CIStorage.ps1` (installed through a
+checksum-pinned SYSTEM task), which delegates to
+`Manage-CIStorage.ps1` for exact-workspace provenance validation,
+active-process guards, `.keep`, no reparse traversal and
+archive-before-deletion. Preview first unless an approved, configured
+scheduled task is applying its strictly bounded policy: **72h minimum age,
+30 GiB free-space threshold or 8 GiB recoverable CI backlog, maximum
+three old clean owned CI workspaces per run**. Protect unfinished work,
+unique native/debugging evidence and dirty checkouts. Schedule execution
+and inspect postconditions rather than assuming that committed policy
+files automatically installed a maintenance task.
+
+Reference: `tngkrwlsmd/personal-control-plane/docs/CI_CAPACITY_GUARD.md`.
+Any expansion to `scratch`, orphan copy stages, `ci-evidence` or
+system/installer folders needs a separate verified ownership and retention
+decision; do not automatically extend the allowed root.
+
 ## Git logical units
 
 flyExplorer intentionally overrides the generic branch-first integration

@@ -26,6 +26,18 @@ owned=Path(tempfile.mkdtemp(prefix="shell-owned-",dir=base))
 left=owned/"Left";right=owned/"Right";inner=left/"Nested";rightinner=right/"Secondary"
 for folder in (inner,rightinner):folder.mkdir(parents=True,exist_ok=True)
 (left/"readme.txt").write_text("owned synthetic only",encoding="utf-8")
+if os.environ.get("FLY_F01_HIDDEN_ONLY")=="YES":
+ # Only under the disposable owned fixture. Never change user filesystem attrs.
+ set_attr=c.windll.kernel32.SetFileAttributesW
+ set_attr.argtypes=[W.LPCWSTR,W.DWORD]
+ set_attr.restype=W.BOOL
+ for parent in (left,right):
+  hidden_file=parent/"hidden-note.txt"
+  hidden_folder=parent/"HiddenOwnedFolder"
+  hidden_file.write_text("owned hidden file only",encoding="utf-8")
+  hidden_folder.mkdir()
+  assert set_attr(str(hidden_file),0x2),"hidden file attr failed"
+  assert set_attr(str(hidden_folder),0x12),"hidden folder attr failed"
 if os.environ.get("FLY_M23_OWNED_FEATURES")=="YES":
  (left/"끌기.txt").write_text("owned M23 drag-copy",encoding="utf-8")
 if os.environ.get("FLY_M22_OWNED_FEATURES")=="YES":
@@ -39,6 +51,13 @@ if os.environ.get("FLY_M22_OWNED_FEATURES")=="YES":
  (right/"자료.txt").write_text("preexisting right",encoding="utf-8")
 appdata=owned/"appdata";appdata.mkdir()
 localdata=owned/"localdata";localdata.mkdir()
+if os.environ.get("FLY_F01_HIDDEN_ONLY")=="YES":
+ theme=os.environ.get("FLY_F01_HIDDEN_THEME","light")
+ assert theme in ("light","dark")
+ settings=localdata/"flyExplorer";settings.mkdir()
+ (settings/"ui-preferences-v1.txt").write_bytes(
+  ("schema=3\r\nlanguage=ko-KR\r\ntheme="+theme+
+   "\r\nview=details\r\naddress-shortcut=0\r\nsearch-shortcut=2\r\n").encode("utf-8"))
 temp=owned/"tmp";temp.mkdir()
 u=c.windll.user32
 CALL=c.WINFUNCTYPE(W.BOOL,W.HWND,W.LPARAM)
@@ -73,7 +92,8 @@ try:
  owned_com=os.environ.get("FLY_M18_OWNED_COM_HANG")=="YES"
  owned_notify=os.environ.get("FLY_M18_OWNED_SHELL_NOTIFY")=="YES"
  owned_exhaust=os.environ.get("FLY_M18_EXHAUST_TIMEOUT")=="YES"
- loopback_unc=os.environ.get("FLY_M18_LOOPBACK_UNC")=="YES"
+ quoted_loopback_unc=os.environ.get("FLY_F06_QUOTED_LOOPBACK_UNC")=="YES"
+ loopback_unc=os.environ.get("FLY_M18_LOOPBACK_UNC")=="YES" or quoted_loopback_unc
  assert not (owned_block and owned_com)
  if owned_block or owned_com:
   assert CONFIG=="Debug","owned fault injection is Debug-only"
@@ -149,6 +169,39 @@ try:
      for e in element("LeftFiles").descendants()),
      "async native Shell directory items never displayed",12)
  print("REAL_FILE_LIST_IN_LEFT_PANE",True,flush=True)
+ if os.environ.get("FLY_F02_INFO_ONLY")=="YES":
+  from test_f02_details_pane_gui import run as f02_probe
+  f02_probe(win=win,element=element,safe_click=safe_click,
+            eventually=eventually,left=left,right=right)
+  print("F02_OWNED_DETAILS_GUI_PASS",True,flush=True)
+  raise SystemExit(0)
+ if os.environ.get("FLY_F06_ADDRESS_SUGGEST_ONLY")=="YES":
+  from test_f06_address_suggest_gui import run as address_probe
+  address_probe(win=win,element=element,focus=ensure_owned_focus,
+                eventually=eventually,left=left,right=right,owned=owned)
+  print("F06_ADDRESS_SUGGEST_GUI_PASS",True,flush=True)
+  raise SystemExit(0)
+ if os.environ.get("FLY_F06_GESTURES_ONLY")=="YES":
+  from test_f06_gestures_gui import run as f06_probe
+  f06_probe(win=win,element=element,safe_click=safe_click,
+            focus=ensure_owned_focus,eventually=eventually,
+            owned=owned,left=left,right=right)
+  print("F06_OWNED_GUI_PASS",True,flush=True)
+  raise SystemExit(0)
+ if os.environ.get("FLY_F01_HIDDEN_ONLY")=="YES":
+  from test_f01_hidden_items_gui import run as f01_hidden
+  f01_hidden(win=win,element=element,safe_click=safe_click,
+             focus=ensure_owned_focus,eventually=eventually,
+             base=base,owned=owned,left=left,right=right)
+  print("F01_HIDDEN_FOCUSED_GUI_PASS",True,flush=True)
+  raise SystemExit(0)
+ if os.environ.get("FLY_F01_INTERACTION_ONLY")=="YES":
+  from test_f01_keyboard_pane_narrow_gui import run as f01_interaction
+  f01_interaction(win=win,element=element,safe_click=safe_click,
+                  focus=ensure_owned_focus,eventually=eventually,
+                  base=base,owned=owned,left=left,right=right)
+  print("F01_INTERACTION_FOCUSED_GUI_PASS",True,flush=True)
+  raise SystemExit(0)
  if os.environ.get("FLY_V7_WINDOW_TABS_ONLY")=="YES":
   from test_v7_window_tabs_gui import run as v7_tabs_run
   v7_tabs_run(win=win,element=element,safe_click=safe_click,
@@ -407,11 +460,15 @@ try:
             "native virtual Shell Back did not recover preceding folder")
  print("REAL_NATIVE_VIRTUAL_TO_LOCAL_SHELL_HISTORY",True,flush=True)
  if loopback_unc:
-  # Nonexistent share on 127.0.0.1; no network configuration or live share changed.
+  # Reject a nonexistent loopback share, without configuring SMB or touching
+  # any real network resources, credentials or existing user folder.
   safe_click(element("RightFiles"))
   ensure_owned_focus()
   bad=element("AddressBox")
-  bad.set_edit_text(r"\\127.0.0.1\flyexplorer-m18-owned-no-share")
+  if quoted_loopback_unc:
+   bad.set_edit_text('  "'+r"\\127.0.0.1\flyexplorer-f06-owned-no-share"+'"  ')
+  else:
+   bad.set_edit_text(r"\\127.0.0.1\flyexplorer-m18-owned-no-share")
   ensure_owned_focus()
   bad.type_keys("{ENTER}",set_foreground=True)
   eventually(lambda:any(x in element("StatusText").window_text().lower()
@@ -422,6 +479,10 @@ try:
       "failed loopback UNC changed previously accepted right folder")
   print("REAL_WINUI_LOOPBACK_UNC_REJECTED_WITH_PRIOR_FOLDER_PRESERVED",
         element("StatusText").window_text(),flush=True)
+  if quoted_loopback_unc:
+   assert element("AddressBox").get_value().rstrip("\\/").casefold()==str(right).rstrip("\\/").casefold(),(
+       "quoted UNC failure replaced the previously committed pane address")
+   print("F06_QUOTED_LOOPBACK_UNC_FAIL_CLOSED_WITH_PRIOR_PANE=PASS",flush=True)
  if os.environ.get("FLY_OWNED_COMPACT_MONITOR_CASE")=="YES":
   # Reproduce the 720px work-area / y=78 / 634px free-height case
   # with this exact owned HWND; no desktop/user window is repositioned.
@@ -461,6 +522,14 @@ try:
     eventually(lambda:not element(child).exists(timeout=.2),
       "owned M19 panel did not collapse: "+child,6)
   print("M20_TEST_OWNED_M19_PANELS_COLLAPSED",True,flush=True)
+ if os.environ.get("FLY_F01_DISPLAY_GUI")=="YES":
+  from test_f01_display_options_gui import run as run_f01
+  run_f01(win=win,element=element,safe_click=safe_click,
+          focus=ensure_owned_focus,eventually=eventually,
+          base=base,owned=owned,left=left,right=right)
+  if os.environ.get("FLY_F01_DISPLAY_ONLY")=="YES":
+   print("F01_DISPLAY_FOCUSED_GUI_PASS",True,flush=True)
+   raise SystemExit(0)
  if os.environ.get("FLY_M20_OWNED_SHELL")=="YES":
   if os.environ.get("FLY_OWNED_LAYOUT_DIAG")=="YES":
    observed=[]

@@ -29,6 +29,24 @@ int wmain(int argc,wchar_t**argv){
  pref=uisettings::Preferences{};
  chk(uisettings::load(pref)&&pref.theme==uisettings::Theme::Light&&
    pref.language==L"ko-KR","failed_save_keeps_previous_data");
+ // New Ctrl+G / Ctrl+J focus choices persist in the existing schema=3
+ // private store; duplicate/out-of-range choices cannot overwrite it.
+ pref.addressShortcut=4;pref.searchShortcut=5;
+ chk(uisettings::validFocusShortcuts(4,5)&&uisettings::save(pref),
+     "extended_focus_choices_save");
+ pref=uisettings::Preferences{};
+ chk(uisettings::load(pref)&&pref.theme==uisettings::Theme::Light&&
+     pref.addressShortcut==4&&pref.searchShortcut==5,
+     "extended_focus_choices_reload");
+ pref.searchShortcut=4;
+ chk(!uisettings::validFocusShortcuts(4,4)&&!uisettings::save(pref),
+     "duplicate_focus_choice_rejected");
+ pref.searchShortcut=6;
+ chk(!uisettings::validFocusShortcuts(4,6)&&!uisettings::save(pref),
+     "out_of_range_focus_choice_rejected");
+ pref=uisettings::Preferences{};
+ chk(uisettings::load(pref)&&pref.addressShortcut==4&&
+     pref.searchShortcut==5,"invalid_focus_save_preserves_previous");
  const auto dir=root/L"owned-directory";
  std::filesystem::create_directory(dir);
  filecommand::Request req;

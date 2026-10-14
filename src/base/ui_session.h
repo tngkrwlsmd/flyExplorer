@@ -12,6 +12,9 @@ struct PaneTab {
 struct PaneState {
  std::vector<PaneTab> tabs;
  std::uint32_t selected=0,sort=0,view=0,nameColumnWidth=168;
+ // F01 view-only flags belong to each WindowTab/pane, not global Explorer.
+ bool showSelectionCheckboxes=false,compactRows=false;
+ bool showFileExtensions=true,showHiddenItems=false;
 };
 struct WindowTab {
  bool split=true;
@@ -20,7 +23,7 @@ struct WindowTab {
 };
 struct Session {
  // Legacy schema=1 fields are retained so old callers/tests and old private
- // files remain readable. v7 writes schema=2 whenever windowTabs is nonempty.
+ // files remain readable. F01 writes schema=3 for windowTabs; v1/v2 still load.
  bool split=true;
  std::array<std::vector<std::wstring>,2> paths;
  std::array<std::uint32_t,2> selected{{0,0}},sort{{0,0}};

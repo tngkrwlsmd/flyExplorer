@@ -20,8 +20,8 @@ try:
  result=subprocess.run([str(exe),str(own)],env=env,cwd=exe.parent,
   capture_output=True,text=True,errors="replace",timeout=40)
  assert result.returncode==0,(result.returncode,result.stdout,result.stderr)
- assert "M21_NATIVE_SUMMARY 18 passed, 0 failed." in result.stdout,result.stdout
- print("M21_NATIVE_"+CFG+"_18_PASS",True)
+ assert "M21_NATIVE_SUMMARY 23 passed, 0 failed." in result.stdout,result.stdout
+ print("M21_NATIVE_"+CFG+"_23_PASS",True)
 finally:
  assert_legacy_profile_unchanged(real,original)
  shutil.rmtree(own)
