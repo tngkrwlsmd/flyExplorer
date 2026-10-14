@@ -7,6 +7,44 @@ app/winui, UI-independent native code in src/base, tests in tests/winui, and
 bounded orchestration in tools/winui/run_checks.py. The former MFC application
 is retired from the working tree and is recoverable from Git revision cbffb48.
 
+## 2026-10-15 F03 — parent/helper and opt-in controller implemented; GUI acceptance blocked
+
+- Current `main` application/UI-test file contents at [00377986](https://github.com/tngkrwlsmd/flyExplorer/commit/003779863a0fa19c8becb04b38e82ce2b3ba6896)
+  match the exact blobs of GUI-starting `b9b15d39` after a
+  non-forced, expected-head, **three-file safety rollback**. The
+  previous later layout at `fec86c32` crashed before any owned GUI
+  window (`0xC000027B`, `Microsoft.UI.Xaml.dll`, WER `0x80004002`);
+  a disposable simpler heading also crashed. Do **not** claim that
+  only the horizontal title caused the crash.
+- [Central Release #38559429224](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38559429224)
+  accepted the native parent compile, and
+  [central #38562561304](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38562561304)
+  accepted the shipping Release with opt-in `PreviewController` on
+  `7e405418`. Native actual child, corrupt-wire, hung child and
+  active-cancel checks remain accepted at earlier cited SHAs.
+- [Actual GUI #38564071039](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38564071039)
+  **started** dual-pane WinUI at the matching `b9b15d39`
+  code, then failed its text UIA element lookup. **Text content
+  display, cancellation while changing selection and before/after
+  visual pixels remain NOT ACCEPTED.** This is a startup-stability
+  fallback, not successful F03 user-facing delivery.
+- Later [diagnostic GUI #38645754377](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38645754377)
+  confirmed the simpler heading also had a startup crash. The first
+  disposable worktree [#38641494315](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38641494315)
+  failed external NuGet restoration. Reusing the owned local cache
+  [#38643849995](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38643849995)
+  compiled but its combined job timed out before GUI; its output was
+  separately launched in #38645754377. Read-only
+  [#38645509785](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38645509785)
+  confirmed original pinned checkout clean, no owned test scheduled
+  tasks or build processes; held evidence must not be auto-deleted.
+- **Next:** isolate XAML subtree/visibility COM startup failure via a
+  narrow, real logged-in user's controlled executable; then actual
+  opt-in UTF-8 text UI, stale route/cancel, Light/Dark pixels,
+  keyboard focus, DPI/High Contrast/Narrator. Image decoder and
+  general F03 pane remain unimplemented. See
+  [F03_PREVIEW_PANE.md](F03_PREVIEW_PANE.md).
+
 ## 2026-10-14 F03 Preview parent supervisor — real child native PASS, UI unwired
 
 - **Native acceptance code SHA:** `4a8ddc9f44935e5b9b47c882b0d9df6193ccd087`.
@@ -16,7 +54,8 @@ is retired from the working tree and is recoverable from Git revision cbffb48.
   request/reply and process exit, timeout/cancellation cleanup) plus
   `file_preview_request_gate.h` (window/pane/tab/selection/generation token
   invalidation). The supervisor translation unit is linked from the tracked
-  WinUI app project template; **no production controller calls it yet**.
+  WinUI app project template; the later opt-in controller has since been wired,
+  but its end-to-end interactive GUI is not yet accepted (see current section).
 - [Native actual child #38558173709](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38558173709)
   **SUCCESS** at `fa58362a3c719a154b43ea518c9f6bee93c7545f` for
   actual one-shot helper bytes, unsupported/missing request handling,
@@ -31,9 +70,9 @@ is retired from the working tree and is recoverable from Git revision cbffb48.
   before revealing an actual C++ missing-move compile error. The
   explicit Handle move was fixed, compiled and accepted in the later
   native runs. Do not mislabel these earlier failed runs PASS.
-- **NOT VERIFIED at current main:** central full WinUI Release after the
-  parent file was linked; actual UI selection/background callback and
-  stale-result presentation, image decoder or visible Preview pane.
+- **Central Release compile verified at prior exact SHAs** as documented
+  above. **Still not accepted:** actual end-to-end UI selection/background
+  callback, stale-result display, image decoder or full Preview pane.
   This is not a sandbox, and actual host power-cut durability is not
   implied by the unrelated PR #63 graceful-reboot evidence.
   See [F03_PREVIEW_PANE.md](F03_PREVIEW_PANE.md).
