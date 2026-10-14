@@ -38,6 +38,7 @@ $testCpp=Join-Path $SourceRoot 'tests\winui\native_preview_reader.cpp'
 $exe=Join-Path $FixtureRoot 'f03-reader-native.exe'
 $batch=Join-Path $FixtureRoot 'compile-and-test.cmd'
 $log=Join-Path $FixtureRoot 'compile.log'
+$setupLog=Join-Path $FixtureRoot 'vcvars-setup.log'
 $testFolder=Join-Path $FixtureRoot 'test-data'
 New-Item -ItemType Directory -Path $testFolder -ErrorAction Stop | Out-Null
 # All outputs / objects remain inside the supplied owned fixture.
@@ -46,7 +47,7 @@ New-Item -ItemType Directory -Path $testFolder -ErrorAction Stop | Out-Null
 $body=@(
     '@echo off',
     'setlocal',
-    'call "'+$vcvars+'" >nul 2>&1',
+    'call "'+$vcvars+'" >"'+$setupLog+'" 2>&1',
     'if errorlevel 1 exit /b 22',
     'cd /d "'+$FixtureRoot+'"',
     'cl.exe /nologo /std:c++20 /W4 /WX /EHsc /utf-8 /MD /Fe:"'+$exe+'" "'+$sourceCpp+'" "'+$testCpp+'" >"'+$log+'" 2>&1',
@@ -58,6 +59,9 @@ $body=@(
 & cmd.exe /d /c $batch
 $code=$LASTEXITCODE
 if($code -ne 0){
+    if($code -eq 22 -and (Test-Path -LiteralPath $setupLog)){
+        Get-Content -LiteralPath $setupLog -Tail 35 | ForEach-Object {Write-Output ('F03_NATIVE_VCVARS '+$_)}
+    }
     if(Test-Path -LiteralPath $log){
         Get-Content -LiteralPath $log -Tail 25 | ForEach-Object {Write-Output $_}
     }
