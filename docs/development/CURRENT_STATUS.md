@@ -1,4 +1,4 @@
-# flyExplorer current status — documentation reconciled 2026-10-14
+# flyExplorer current status — documentation reconciled 2026-10-15
 
 ## Product source of truth
 
@@ -37,6 +37,15 @@ is retired from the working tree and is recoverable from Git revision cbffb48.
   did select the test-owned file and did rerun Preview correctly.
   Keep mouse hit-test/selection as an explicit next GUI acceptance
   gate; do not mislabel this fallback as physical mouse success.
+  [Follow-up owned GUI #38649640303](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38649640303)
+  **SUCCESS for UIA-assisted flow only** at test-only SHA
+  `95d45f322cbaaca604066a15683434773b2342ab`.
+  It waited for the folder to report a fully selected state,
+  paused before the next physical click, and polled the target
+  selection. `F03_GUI_RESELECT_SETTLED_PHYSICAL_CLICK_SELECTED=False`
+  persisted; the accessibility Select() fallback again passed.
+  Thus the simple immediate-click race is not an adequate
+  explanation. Leave mouse hit-testing/focus/manual click unverified.
 - **Failed but now reverted separate layout change:** exact
   `fac580bd` passed [source/Release
   #38646656680](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38646656680)
