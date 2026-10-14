@@ -7,6 +7,42 @@ app/winui, UI-independent native code in src/base, tests in tests/winui, and
 bounded orchestration in tools/winui/run_checks.py. The former MFC application
 is retired from the working tree and is recoverable from Git revision cbffb48.
 
+## 2026-10-14 F02 narrow Details scroll and keyboard focus — inspected PNG pass
+
+- **Exact reviewed main:** `028f8692e82a938c32832398758a65271c1b950d`.
+  [Central owned Windows Remote Shell run #38497182086](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38497182086)
+  completed **SUCCESS** against this SHA. The bounded worker executed source
+  checks, x64 Release build, interactive WinUI 800×550 at actual **96 DPI**,
+  light/dark test-owned fixtures, normal process exit, and verified temporary
+  file and scheduled-task cleanup. This is a **focused** GUI/visual acceptance,
+  not an independent full Windows GUI suite or a multi-DPI run.
+- **Lossless pixels reviewed:** Eight PNG screenshots (`ENABLED`,
+  `SCROLLED`, `RESTORED`, `FOCUSED_TOGGLE` per theme), reconstructed with
+  exact length checks from numbered central-run log chunks, were inspected.
+  With Details visible in the short window, the `수정 날짜` heading initially
+  appears at the bottom. Scrolling the owned Details viewport reveals an
+  actual modified-date value in both light and dark themes, without scrolling
+  or disturbing the left/right file lists. Scrolling upward restores the
+  top header and content. **NARROW DETAILS SCROLL REACHABILITY: PASS.**
+- **Visible keyboard focus:** The earlier UIA `set_focus()` screenshots
+  at [run #38473558319](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38473558319)
+  had byte-identical focused and unfocused pixels and were not accepted.
+  The updated fixture in `028f8692` sends real keyboard `Shift+Tab` and
+  `Tab`, checks the Details toggle UIA focus transfer, and captures after
+  keyboard focus. The reviewed images clearly show a dark outline around
+  the Details toggle in Light theme and a light outline in Dark theme,
+  absent from the unfocused images. **FOCUS PIXEL VISIBILITY: PASS** in this
+  actual owned keyboard/96-DPI state. This does **not** establish the entire
+  application's keyboard navigation sequence or Narrator spoken output.
+- **Visual acceptance scope:** The observed F02 800×550 narrow details
+  overlap fix, scroll reachability and focused-toggle outline now have
+  reviewed PNG evidence in both themes. Do not repeat unchanged Release
+  build/capture work. **Remaining distinct gates:** original broader matched
+  states, OS-level 125/150/200% scaling, F02 High Contrast, actual Narrator
+  speech, long/provider paths and large-index edge cases. The latest
+  feature-level focus/scroll passes do not automatically imply a current
+  SHA-scoped central `central-ci/windows-gui` status.
+
 ## 2026-10-14 F06 address candidate visual readability — accepted bounded states
 
 - **Exact reviewed `main`:** `92e3661cecd7e3f5effcf805434a12663b4dcd95`
