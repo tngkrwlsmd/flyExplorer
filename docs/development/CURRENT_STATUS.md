@@ -7,6 +7,32 @@ app/winui, UI-independent native code in src/base, tests in tests/winui, and
 bounded orchestration in tools/winui/run_checks.py. The former MFC application
 is retired from the working tree and is recoverable from Git revision cbffb48.
 
+## 2026-10-14 F03 read-only Preview pane — phase 1 native policy groundwork
+
+- **Latest phase-one source:** `bbb12bc4ff5f7e26f2d0bef0e8461beaf7d3dd36`
+  (F03 safe policy, portable native assertions, source contract registered
+  in the canonical shell product-source family, and architecture/acceptance
+  boundary in [F03_PREVIEW_PANE.md](F03_PREVIEW_PANE.md)).
+- **Implemented (not yet an exposed feature):** pure
+  `src/base/file_preview_policy.h` candidate screen for bounded local
+  regular files: TXT/MD/LOG up to 256 KiB, PNG/JPG/JPEG/BMP up to 12 MiB;
+  separate 16,777,216 decoded-pixel ceiling for a FUTURE worker. Explicit
+  rejection of UNC/device/relative/dot-segment/alternate-stream paths,
+  advertised reparse points, non-local and non-regular candidates, unknown
+  sizes and unsupported formats. No filesystem reads, Shell/provider
+  operations, UI changes, new preferences, clipboard or profile changes.
+- **Local diagnostic evidence:** portable C++17 candidate-screen logic and
+  static assertions reproduced in an isolated local native build compiled
+  and executed under g++ 14.2 with `-Wall -Wextra -Werror -pedantic`:
+  PASS. This local surrogate check is **not** authoritative native compile
+  evidence for the exact Git checkout or Windows MSVC, and the registered
+  Python source suite has not yet been run on Windows for this commit.
+- **Still open:** actual authoritative handle validation and isolated
+  cancelable file-read/decoder worker, UTF/binary/error/TOCTOU guards,
+  UI/controller wiring and selected-item lifetime, opt-in preview layout,
+  before/after real screenshots, functional and central exact-main
+  acceptance. **F03 USER-VISIBLE FEATURE: NOT IMPLEMENTED.**
+
 ## 2026-10-14 F02 narrow Details scroll and keyboard focus — inspected PNG pass
 
 - **Exact reviewed main:** `028f8692e82a938c32832398758a65271c1b950d`.
