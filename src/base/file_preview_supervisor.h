@@ -1,5 +1,5 @@
 #pragma once
-// F03: synchronous isolated Preview IPC. Call ONLY from a background worker,
+// F03: synchronous isolated file-preview IPC. Call ONLY from a background worker,
 // never from the WinUI XAML/dispatcher thread. Does not decode or render data.
 #ifndef FXFILE_PREVIEW_SUPERVISOR_H
 #define FXFILE_PREVIEW_SUPERVISOR_H
