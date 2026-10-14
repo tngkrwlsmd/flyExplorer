@@ -2,16 +2,17 @@
 
 ## Status (2026-10-14)
 
-**Phase 1 policy and partial phase 2 safe path-open + handle-only
-reader components.** `src/base/file_preview_policy.h` screens candidates;
-`src/base/file_preview_safe_open.h/.cpp` conservatively opens the local file
-with all validated directory ancestors held as read-share-only handles;
-`src/base/file_preview_reader.h/.cpp` performs bounded synchronous reads
-on that already-opened handle. These components are **not yet connected**
-to a supervised worker or WinUI. Never invoke either blocking component on
-the XAML thread. Do not treat the path opener as a cross-provider sandbox,
-an out-of-process cancellation mechanism, or a complete solution to every
-filesystem race.
+**Phase 1 policy and partial phase 2 safe open, bounded reader and
+one-shot helper entry.** `file_preview_policy.h` screens candidates,
+`file_preview_safe_open.h/.cpp` validates each local component and retains
+opened ancestor handles, and `file_preview_reader.h/.cpp` reads bounded bytes.
+`file_preview_worker_wire.h` defines a separate versioned/bounded request and
+reply protocol. `file_preview_worker.cpp` runs one request in the existing
+`FlyShellIsolationHelper --preview-read` mode. The helper is built in
+Release, but **no production parent supervisor currently calls this mode**.
+The one-shot worker has no GUI, persistence, Shell extension, web content or
+image decoder. Blocking filesystem work stays out of the XAML thread.
+This is a fault boundary, **not** a security sandbox.
 
 **MSVC Release compile accepted:** [registered central Windows run
 #38518993733](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38518993733)
@@ -46,6 +47,45 @@ concatenated array element, checks serialized commands before execution and
 retains a bounded developer-command setup log on failure. These earlier
 failed runs never executed the C++ assertions and must not be recorded as
 product regressions.
+## Phase 2 one-shot preview helper wire — bounded acceptance evidence
+
+- **Exact code SHA:** `d0d5b6a987ef8ae1c73e2aa0f5ceacb20c37f0ec`.
+  Private request/reply headers are 28/24 bytes, version 1, with UTF-16
+  path length/checksum and capped body sizes (256 KiB text, 12 MiB image).
+  The helper checks canonical path, extension and size before opening;
+  all actual file access remains in the child. It responds with empty
+  bodies on errors. No raw file contents are written to logs.
+- **Actual MSVC native entry test:** [owned run #38526086984](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38526086984)
+  **SUCCESS**: `F03_NATIVE_WORKER_WIRE_BOUNDS=PASS`, existing safe-open
+  and read tests PASS, owned cleanup PASS. The fixture uses anonymous
+  pipes with `runOne` invoked in another thread of the *same process*;
+  it verifies valid text, bad checksum, wrong kind, excess length,
+  missing TXT, UNC, and error replies. It does **not** prove real
+  CreateProcess/job supervision or kill-on-timeout handling.
+  Prior runs [#38525652361](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38525652361)
+  and [#38525878610](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38525878610)
+  failed this newly added test: the negative missing-file fixture used
+  `.missing` (unsupported extension) instead of `.missing.txt`,
+  so the correct earlier format rejection was mismatched against the
+  later unsafe-file status. Test fixture corrected; product behavior
+  unchanged.
+- **Exact source suite:** [central #38526337158](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38526337158)
+  **SUCCESS** at this SHA: policy, structure 4, product source 199,
+  harness 20, infrastructure 30.
+- **Exact Release build:** [central #38526567823](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38526567823)
+  **SUCCESS** with `scope=release` at this SHA. The tracked
+  `app/winui/build.cmd` invokes `helper/build.cmd` first and requires
+  the resulting helper executable before staging the app; the tracked
+  helper project links the new worker, reader and safe-open code. This
+  establishes compile/link/staging integration, **not** actual parent
+  launch/response/timeout/shutdown acceptance.
+- **Next acceptance gate:** add an owned-process PreviewController/
+  supervisor using existing job-bound helper patterns, exact process and
+  pipe handles, non-blocking UI dispatch, one active request per owning
+  pane/tab identity, fast cancellation/kill-on-timeout and stale-result
+  rejection. Validate the real `--preview-read` child with malformed,
+  oversized, slow and canceled requests before wiring any UI.
+
 ## Phase 2 safe-open acceptance evidence (bounded)
 
 - [MSVC owned native run #38522342210](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38522342210):
@@ -68,9 +108,9 @@ product regressions.
   after the code was refactored to `screen(stable)`; the test was
   corrected without weakening the owned-path requirement.
 - **Release validation at this code SHA:** [central run #38523831041](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38523831041)
-  was **still in progress at the 3-minute checkpoint**. Do not mark
-  `file_preview_safe_open.cpp` as integrated WinUI Release PASS until
-  its exact-SHA producing run and compilation log are checked.
+  subsequently completed **SUCCESS**: `file_preview_safe_open.cpp`
+  was included in the app Release build. Exact-SHA evidence is limited
+  to this original worker-free code revision.
 
 The opener walks canonical drive paths component by component, opening
 directories using `FILE_FLAG_OPEN_REPARSE_POINT`, verifying opened-handle
