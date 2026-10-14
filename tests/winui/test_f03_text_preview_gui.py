@@ -22,7 +22,7 @@ def run(*, win, element, safe_click, eventually, left, right):
                "Details region missing opt-in control",9)
     assert "켜기" in preview_button.window_text()
     assert body_text()==""
-    assert "꺼" in preview_status.window_text()
+    assert not preview_status.exists(timeout=.3), "Disabled status must not occupy Details layout"
     print("F03_GUI_DEFAULT_OFF_NO_AUTO_CONTENT_READ=PASS",flush=True)
 
     def row(name):
@@ -65,7 +65,7 @@ def run(*, win, element, safe_click, eventually, left, right):
 
     preview_button.iface_invoke.Invoke()
     eventually(lambda:body_text()=="" and
-               "꺼" in preview_status.window_text(),
+               not preview_status.exists(timeout=.3),
                "Disabled view did not clear previous bytes",8)
     print("F03_GUI_EXPLICIT_OPTOUT_CLEARS_CONTENT=PASS",flush=True)
 
