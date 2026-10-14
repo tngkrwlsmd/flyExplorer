@@ -7,6 +7,39 @@ app/winui, UI-independent native code in src/base, tests in tests/winui, and
 bounded orchestration in tools/winui/run_checks.py. The former MFC application
 is retired from the working tree and is recoverable from Git revision cbffb48.
 
+## 2026-10-14 F06 address candidate visual readability — accepted bounded states
+
+- **Exact reviewed `main`:** `92e3661cecd7e3f5effcf805434a12663b4dcd95`
+  with presentation fix `90f588881f60b708823f86cc470cb45a2fc48f52`,
+  source contract `92e3661cecd7e3f5effcf805434a12663b4dcd95`
+  and screenshot harness `fb28cacfbb460a3a5259b2ee35f024805a390445`.
+- **Before / after real screenshot evidence:** [prior original-PNG
+  Windows run 38476514337](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38476514337)
+  and [fixed original-PNG Windows run 38491527835](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38491527835)
+  both completed SUCCESS with test-owned WinUI Release process, normal exit,
+  bounded temporary scratch cleanup, and four app-window-only PNGs for
+  light/dark at window widths 940 and 800 px (96 DPI). The after run explicitly
+  returned `F06_VIS_RESULT=PASS STAGE=complete` and
+  `F06_VIS_OWNED_CLEANUP_PASS`. These are focused acceptance runs,
+  not a new independent full canonical-main GUI suite.
+- **Actual original PNG review:** Log-chunk byte counts matched the expected
+  images, and the four before/after states were visually inspected. Previously
+  the suggestion button rendered the *start* of a long absolute path, truncating
+  away candidate identity (especially at 800 px). After the change the label
+  shows the distinguishing leaf and, where helpful, its parent (e.g.
+  `Nested — Left`); the selected full absolute path remains in the
+  original button Tag, accessible `주소 후보: <full path>` automation name
+  and full-path tooltip. The 940-px light/dark image shows two legible
+  candidates; the 800-px image shows the narrowed single candidate with the
+  leaf fully visible. No obvious candidate/input overlap or truncated
+  distinguishing leaf was found in those captured states.
+- **VISUAL ACCEPTANCE: PASS in inspected 96-DPI light/dark, 940-/800-px
+  address-suggestion states only.** Do not generalize this to all suggestion
+  data, pointer/keyboard focus pixels, High Contrast, actual OS 125/150/200%
+  scaling or Narrator speech. Reachable SMB provider acceptance also remains
+  open. Existing prior main functional GUI evidence is reused, not expanded
+  to new CI status for this SHA.
+
 ## 2026-10-14 F02 owned narrow-layout fix — original PNG review
 
 - **Canonical main source:** `7441dad96572d1f90d6eff5fac671116d0081345`;
