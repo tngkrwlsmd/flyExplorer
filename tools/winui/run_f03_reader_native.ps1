@@ -47,14 +47,22 @@ New-Item -ItemType Directory -Path $testFolder -ErrorAction Stop | Out-Null
 $body=@(
     '@echo off',
     'setlocal',
-    'call "'+$vcvars+'" >"'+$setupLog+'" 2>&1',
+    ('call "'+$vcvars+'" >"'+$setupLog+'" 2>&1'),
     'if errorlevel 1 exit /b 22',
-    'cd /d "'+$FixtureRoot+'"',
-    'cl.exe /nologo /std:c++20 /W4 /WX /EHsc /utf-8 /MD /Fe:"'+$exe+'" "'+$sourceCpp+'" "'+$testCpp+'" >"'+$log+'" 2>&1',
+    ('cd /d "'+$FixtureRoot+'"'),
+    ('cl.exe /nologo /std:c++20 /W4 /WX /EHsc /utf-8 /MD /Fe:"'+$exe+'" "'+$sourceCpp+'" "'+$testCpp+'" >"'+$log+'" 2>&1'),
     'if errorlevel 1 exit /b 23',
-    '"'+$exe+'" "'+$testFolder+'"',
+    ('"'+$exe+'" "'+$testFolder+'"'),
     'exit /b %errorlevel%'
 )
+if($body.Count -ne 9 -or
+   -not $body[2].Contains($vcvars) -or
+   -not $body[4].Contains($FixtureRoot) -or
+   -not $body[5].Contains($sourceCpp) -or
+   -not $body[5].Contains($testCpp) -or
+   -not $body[7].Contains($exe)){
+    throw 'F03_NATIVE_BATCH_SERIALIZATION_INVALID'
+}
 [IO.File]::WriteAllLines($batch,$body,[Text.Encoding]::ASCII)
 & cmd.exe /d /c $batch
 $code=$LASTEXITCODE
