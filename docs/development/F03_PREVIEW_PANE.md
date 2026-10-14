@@ -1,6 +1,68 @@
 # F03 — bounded local Preview pane development boundary
 
-## Current F03 safety and UI acceptance boundary (2026-10-15)
+## 2026-10-15 F03 opt-in text Preview — scoped Windows GUI acceptance
+
+- **Exact passing GUI source SHA:** `0e4e147f7e1004703d9566f3bf38bb086de6c17a`.
+  The **product XAML/C++ blobs are unchanged** from the earlier
+  startup-working `b9b15d39`/safety rollback; subsequent commits
+  adjusted **only** the F03 owned GUI test. The 2026-10-15 attempted
+  XAML relocation `fac580bd` passed [central Release
+  #38646656680](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38646656680)
+  but then **crashed at GUI startup**
+  ([#38647173047](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38647173047),
+  `0xC000027B`). This was restored by non-force
+  [`95bd998a`](https://github.com/tngkrwlsmd/flyExplorer/commit/95bd998a5a717718085fb55c99c41d05f11f04e7).
+  Therefore **Release PASS does not imply GUI startup PASS**.
+- **Owned real-user dark GUI**
+  [#38648688824](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38648688824)
+  **SUCCESS** at the exact SHA above: application startup, two panes,
+  native Shell list, details opt-in control exposed after *pane-local*
+  scrolling, default-off/no contents, test-owned UTF-8
+  `readme.txt` displayed as `owned synthetic only` only after explicit
+  opt-in; selecting `Nested` cleared old contents; reselecting
+  `readme.txt` via its verified UI Automation SelectionItem pattern
+  delivered fresh contents; turning Preview off cleared text; closing/
+  reopening Details returned to default off. All evidence in the
+  protected owned test directory; app exit=0, original six user
+  settings SHA256 identical and disposable synthetic files cleaned.
+- **Owned Light GUI**
+  [#38649041893](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38649041893)
+  **SUCCESS** with the same source and a **test-owned only**
+  `theme=light` preference. All bounded F03 steps and profile
+  integrity passed again; no user-wide theme/setting changes.
+- **Real pixel inspection:** captured only the verified
+  harness-owned application window before/after user opt-in; the
+  original PNGs are held under `logs/f03-visual` in the protected
+  scratch. Dark
+  [#38648361110](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38648361110)
+  and Light
+  [#38649262620](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38649262620)
+  returned scope-checked **read-only** image views. At the viewed
+  940x508 presentation, button/body/status had visible contrast,
+  the synthetic text appeared only in the after image and no pane
+  overlap was observed. This is *observed Dark/Light scoped acceptance*,
+  **not** a blanket DPI, accessibility, narrow-resize or high-contrast
+  claim. The Preview toggle remains at the **bottom** of Details and
+  needs in-pane scrolling: discoverability is still a UX issue.
+- **Important input limitation, both themes:** test log recorded
+  `F03_GUI_RESELECT_PHYSICAL_CLICK_SELECTED=False`.
+  Re-clicking a row through `pywinauto.click_input` did not change
+  WinUI's actual selected bit; the verified UI Automation
+  `SelectionItem.Select()` then selected the row and the native
+  Preview rerequest completed correctly. **Do not claim verified
+  physical mouse reselection** or that the user-facing click issue is
+  resolved. First isolate hit-testing/focus and re-check actual mouse
+  selection on the owned application; only then claim a complete
+  mouse-operated acceptance.
+- **Still not verified:** full independent F03 Preview pane, image
+  decode, `.md`/`.log` GUI fixture cases, 125/150/200% real OS DPI,
+  high contrast/forced colors, audible Narrator, and complete
+  keyboard-only opt-in/selection flow. Prior supervisor native
+  corrupt-wire, timeouts, process kill, cancellation cases are
+  retained at their own SHAs and not implied by the GUI test.
+  Historic earlier failures below remain evidence, not current status.
+
+## Earlier F03 safety and UI acceptance boundary (2026-10-15)
 
 - **Current app code content:** commit [`00377986`](https://github.com/tngkrwlsmd/flyExplorer/commit/003779863a0fa19c8becb04b38e82ce2b3ba6896)
   restores **only** `app/winui/MainWindow.xaml`,
