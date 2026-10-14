@@ -54,6 +54,19 @@
   resolved. First isolate hit-testing/focus and re-check actual mouse
   selection on the owned application; only then claim a complete
   mouse-operated acceptance.
+- **Follow-up click-timing isolation:** [owned actual mouse test
+  #38649640303](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38649640303)
+  **SUCCESS only for the scoped UIA-assisted Preview flow** at
+  `95d45f322cbaaca604066a15683434773b2342ab`.
+  The test waited for `Nested` to report a settled real selection,
+  paused before clicking `readme.txt`, and polled its actual
+  SelectionItem state after the physical click. It still reported
+  `F03_GUI_RESELECT_SETTLED_PHYSICAL_CLICK_SELECTED=False`.
+  The UIA `Select()` fallback again triggered a correct preview.
+  This rules out the *simple immediate-back-to-back click timing*
+  explanation in this fixture. **Pointer hit-testing, item target
+  geometry, keyboard modifiers, and actual manual mouse use remain
+  separate unverified diagnoses**. No product code was changed.
 - **Still not verified:** full independent F03 Preview pane, image
   decode, `.md`/`.log` GUI fixture cases, 125/150/200% real OS DPI,
   high contrast/forced colors, audible Narrator, and complete
