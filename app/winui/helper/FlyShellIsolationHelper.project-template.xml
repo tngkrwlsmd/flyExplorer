@@ -45,6 +45,9 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="FlyShellIsolationHelper.cpp" />
+    <ClCompile Include="..\..\..\src\base\file_preview_worker.cpp" />
+    <ClCompile Include="..\..\..\src\base\file_preview_reader.cpp" />
+    <ClCompile Include="..\..\..\src\base\file_preview_safe_open.cpp" />
     <ClCompile Include="..\..\..\src\base\shell_navigation_core.cpp" />
     <ClCompile Include="..\..\..\src\base\shell_enum_bridge.cpp" />
     <ClCompile Include="..\..\..\src\base\shell_transfer_core.cpp" />
@@ -55,6 +58,10 @@
     <ClInclude Include="..\..\..\src\base\shell_transfer_core.h" />
     <ClInclude Include="..\..\..\src\base\file_command_core.h" />
     <ClInclude Include="..\..\..\src\base\file_metadata_wire.h" />
+    <ClInclude Include="..\..\..\src\base\file_preview_worker.h" />
+    <ClInclude Include="..\..\..\src\base\file_preview_worker_wire.h" />
+    <ClInclude Include="..\..\..\src\base\file_preview_reader.h" />
+    <ClInclude Include="..\..\..\src\base\file_preview_safe_open.h" />
     <ClInclude Include="..\..\..\src\base\shell_visual_wire.h" />
     <ClInclude Include="..\..\..\src\base\indexed_search_wire.h" />
   </ItemGroup>
