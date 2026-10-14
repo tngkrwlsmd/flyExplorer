@@ -67,11 +67,12 @@ is retired from the working tree and is recoverable from Git revision cbffb48.
   This proves **compiler/link/staging integration**, not actual
   external child process execution, job-object cancellation, end-to-end
   bounded read/wire or stale-result filtering.
-- **Next implementation:** separate `PreviewController`/supervisor
-  with owned helper spawn, inherited pipe handle whitelist, job-kill
-  on cancel/timeouts, bounded reads and response verification,
-  route+pane+tab+selection+generation comparison before delivering
-  results. Only then image decoding and opt-in XAML Preview pane.
+- **Next implementation:** bind the now-native-verified supervisor and
+  request gate to a pane-owned `PreviewController` on a background thread,
+  resolve only the trusted sibling Helper path, cancel on navigation/
+  selection changes, and check the request ticket before UI dispatch.
+  After actual integration acceptance, implement bounded image decoding
+  and an opt-in XAML Preview pane.
   High-contrast, DPI scaling, Narrator and before/after pixels
   still **NOT TESTED for F03**, because its UI does not exist.
 
