@@ -2,14 +2,16 @@
 
 ## Status (2026-10-14)
 
-**Phase 1 candidate policy and partial phase 2 handle-only read component.**
-`src/base/file_preview_policy.h` holds the pure candidate screen;
-`src/base/file_preview_reader.h/.cpp` contains a synchronous, bounded
-**already-opened-HANDLE** read function. The actual safe-open authority,
-supervised out-of-process worker, request generation identity, cancellation
-of blocked native IO, image decoder and WinUI pane are **not implemented**.
-Never invoke this synchronous function from the XAML thread or treat its
-caller-supplied handle as safe merely because a candidate screen passed.
+**Phase 1 policy and partial phase 2 safe path-open + handle-only
+reader components.** `src/base/file_preview_policy.h` screens candidates;
+`src/base/file_preview_safe_open.h/.cpp` conservatively opens the local file
+with all validated directory ancestors held as read-share-only handles;
+`src/base/file_preview_reader.h/.cpp` performs bounded synchronous reads
+on that already-opened handle. These components are **not yet connected**
+to a supervised worker or WinUI. Never invoke either blocking component on
+the XAML thread. Do not treat the path opener as a cross-provider sandbox,
+an out-of-process cancellation mechanism, or a complete solution to every
+filesystem race.
 
 **MSVC Release compile accepted:** [registered central Windows run
 #38518993733](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38518993733)
@@ -44,6 +46,41 @@ concatenated array element, checks serialized commands before execution and
 retains a bounded developer-command setup log on failure. These earlier
 failed runs never executed the C++ assertions and must not be recorded as
 product regressions.
+## Phase 2 safe-open acceptance evidence (bounded)
+
+- [MSVC owned native run #38522342210](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38522342210):
+  PASS at SHA `b6c7c268354493f48ac94d22c77156f87d101fd8` for guarded
+  nested-file open/read, rejected UNC/ADS/traversal/changed-size/cancelled
+  input and actual **file and ancestor-directory symbolic link** rejection
+  (both symlink creation probes succeeded, not skipped). Cleanup PASS.
+- [Corrected native run #38523226489](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38523226489):
+  PASS at SHA `aca6bc779de2408a3eccc73ba63c5a1e205f3a39`. The test
+  fixes dangling `wstring_view` fixtures by retaining path storage and
+  deleting the temporary-string helper overload. The safe opener now
+  copies the candidate path *before* policy screening; path allocation
+  exceptions are caught instead of crossing a `noexcept` boundary.
+- [Final corrected source suite #38523664886](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38523664886):
+  PASS at SHA `8ecd748a126f58b9c81f88ad026fe8a434a4d77a`, scope
+  `source`: policy, structure 4, product-source 196, harness 20 and
+  infrastructure 30 all passed. The prior run
+  [#38523399332](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38523399332)
+  failed because one static test still searched for `screen(candidate)`
+  after the code was refactored to `screen(stable)`; the test was
+  corrected without weakening the owned-path requirement.
+- **Release validation at this code SHA:** [central run #38523831041](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38523831041)
+  was **still in progress at the 3-minute checkpoint**. Do not mark
+  `file_preview_safe_open.cpp` as integrated WinUI Release PASS until
+  its exact-SHA producing run and compilation log are checked.
+
+The opener walks canonical drive paths component by component, opening
+directories using `FILE_FLAG_OPEN_REPARSE_POINT`, verifying opened-handle
+final DOS paths, reparse/offline/directory attributes, volume serial, regular
+file size and fixed-local drive, and retaining ancestor handles through the
+file read to reduce rename/reparse swaps. It refuses unsafe paths rather
+than following them. It does **not** yet isolate blocking OS calls or
+provide a bounded wire, worker termination, pixel decoder, or stale
+PaneTab/WindowTab result rejection. Those remain explicit gates.
+
 ## Intended behavior
 
 An explicit opt-in read-only Preview pane for the currently selected
