@@ -8,6 +8,7 @@ from paths import ROOT
 from uuid import uuid4
 import ctypes
 from ctypes import wintypes
+import time
 
 
 def run(*, win, element, safe_click, eventually, left, right):
@@ -100,9 +101,14 @@ def run(*, win, element, safe_click, eventually, left, right):
     nested=eventually(lambda:row("Nested"),
                       "Owned second row not found",8)
     safe_click(nested)
+    eventually(lambda:bool(nested.iface_selection_item.CurrentIsSelected),
+               "Owned folder selection did not settle",7)
     eventually(lambda:body_text()=="" and
                "텍스트 파일" in preview_status.window_text(),
                "Stale text content retained after selecting a folder",9)
+    # Wait for the actual SelectionItem state and UI layout to settle
+    # before attempting another *physical* click on this owned ListView.
+    time.sleep(.45)
     print("F03_GUI_SELECTION_CHANGED_DISCARDS_OLD_BYTES=PASS",flush=True)
 
     readme=eventually(lambda:row("readme.txt"),
@@ -111,9 +117,17 @@ def run(*, win, element, safe_click, eventually, left, right):
     # In an extended-selection ListView, physical UIA click_input is
     # not proof that the selection actually changed. Capture the actual
     # selected bit before diagnosing the asynchronous Preview controller.
+    selected_until=time.monotonic()+2.5
+    after_click=False
+    while time.monotonic()<selected_until:
+        current=row("readme.txt")
+        if current and bool(current.iface_selection_item.CurrentIsSelected):
+            readme=current
+            after_click=True
+            break
+        time.sleep(.12)
     selection=readme.iface_selection_item
-    after_click=bool(selection.CurrentIsSelected)
-    print("F03_GUI_RESELECT_PHYSICAL_CLICK_SELECTED="+str(after_click),flush=True)
+    print("F03_GUI_RESELECT_SETTLED_PHYSICAL_CLICK_SELECTED="+str(after_click),flush=True)
     if not after_click:
         selection.Select()
         eventually(lambda:bool(readme.iface_selection_item.CurrentIsSelected),
