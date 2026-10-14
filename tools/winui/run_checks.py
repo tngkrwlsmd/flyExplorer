@@ -37,6 +37,7 @@ PRODUCT_SUITES = {
         "tests/winui/test_file_detail_controller_contract.py",
         "tests/winui/test_f03_preview_policy_contract.py",
         "tests/winui/test_f03_preview_reader_contract.py",
+        "tests/winui/test_f03_safe_open_contract.py",
         "tests/winui/test_known_folder_artwork_contract.py",
         "tests/winui/test_sidebar_known_folder_artwork_contract.py",
         "tests/winui/test_thumbnail_contract.py",
