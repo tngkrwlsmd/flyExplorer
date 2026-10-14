@@ -33,7 +33,6 @@ bool PreviewController::start(Request request,Post post,Done done) {
             if(ticket.cancel->load())return;
             previewsupervisor::Result result{};
             try{
-                std::wstring root;
                 if(previewpolicy::canonicalLocalPath(request.filePath)){
                     const wchar_t drive[]={
                         request.filePath[0],L':',L'\\',L'\0'};
