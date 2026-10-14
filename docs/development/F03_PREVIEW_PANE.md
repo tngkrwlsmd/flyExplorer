@@ -79,12 +79,14 @@ product regressions.
   helper project links the new worker, reader and safe-open code. This
   establishes compile/link/staging integration, **not** actual parent
   launch/response/timeout/shutdown acceptance.
-- **Next acceptance gate:** add an owned-process PreviewController/
-  supervisor using existing job-bound helper patterns, exact process and
-  pipe handles, non-blocking UI dispatch, one active request per owning
-  pane/tab identity, fast cancellation/kill-on-timeout and stale-result
-  rejection. Validate the real `--preview-read` child with malformed,
-  oversized, slow and canceled requests before wiring any UI.
+- **Next acceptance gate:** integrate the native-verified parent
+  supervisor and request gate into a pane-owned PreviewController that
+  runs outside XAML STA; derive an exact app-sibling Helper path in the
+  composition root, own cancellation when pane/tab/selection changes,
+  and recheck the generation ticket before DispatcherQueue presentation.
+  The real `--preview-read` child, corrupt reply, timeout and active
+  cancellation are already accepted at the separately listed native SHA;
+  actual WinUI integration is not yet tested.
 
 ## 2026-10-14 F03 parent-side one-shot supervisor — native acceptance
 
