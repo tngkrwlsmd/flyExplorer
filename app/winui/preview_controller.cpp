@@ -49,7 +49,9 @@ bool PreviewController::start(Request request,Post post,Done done) {
                                 attr.nFileSizeLow;
                             previewpolicy::Candidate candidate{
                                 request.filePath,bytes,true,true,true,false,true};
-                            if(previewpolicy::screen(candidate).accepted() &&
+                            const auto screened=previewpolicy::screen(candidate);
+                            if(screened.accepted()&&
+                               screened.kind==previewpolicy::Kind::Text&&
                                !ticket.cancel->load())
                                 result=previewsupervisor::run(
                                     request.siblingHelper,candidate,
