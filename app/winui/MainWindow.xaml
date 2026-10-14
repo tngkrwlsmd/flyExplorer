@@ -717,8 +717,7 @@
                                       VerticalScrollBarVisibility="Auto"
                                       HorizontalScrollBarVisibility="Disabled">
                             <TextBlock x:Name="TextPreviewBody"
-                                       TextWrapping="Wrap" IsTextSelectionEnabled="True"
-                                       AutomationProperties.Name="선택한 텍스트 파일 미리보기"/>
+                                       TextWrapping="Wrap" IsTextSelectionEnabled="True"/>
                         </ScrollViewer>
                     </StackPanel>
                 </ScrollViewer>
