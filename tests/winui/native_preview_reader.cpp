@@ -43,6 +43,14 @@ static HANDLE opened(std::wstring const& path)
     return ::CreateFileW(path.c_str(),GENERIC_READ,FILE_SHARE_READ,nullptr,
                          OPEN_EXISTING,FILE_ATTRIBUTE_NORMAL,nullptr);
 }
+static fxfile::previewpolicy::Candidate ownedCandidate(
+    std::wstring const& path,std::uint64_t bytes) noexcept
+{
+    return {path,bytes,true,true,true,false,true};
+}
+// Candidate stores a wstring_view; passing a temporary would dangle.
+static fxfile::previewpolicy::Candidate ownedCandidate(
+    std::wstring&&,std::uint64_t)=delete;
 static fxfile::previewread::Result read(
     HANDLE h,std::wstring const& path,Kind kind,std::size_t expected,
     std::atomic_bool const& cancel,Clock::time_point deadline)
@@ -127,9 +135,6 @@ int wmain(int argc,wchar_t** argv)
     ::CloseHandle(directory);
 
     // Safety gate: forged candidate flags must never grant a raw path open.
-    auto ownedCandidate=[](std::wstring const& p,std::uint64_t bytes) {
-        return fxfile::previewpolicy::Candidate{p,bytes,true,true,true,false,true};
-    };
     const auto nested=joined(root,L"nested");
     const auto nestedFile=joined(nested,L"open-me.txt");
     check(!!::CreateDirectoryW(nested.c_str(),nullptr),"create owned nested dir");
