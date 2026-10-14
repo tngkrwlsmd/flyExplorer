@@ -46,6 +46,19 @@ class F03HandleReaderContract(unittest.TestCase):
         self.assertIn("std::vector<std::uint8_t> payload;", SOURCE)
         self.assertIn("if(kind==previewpolicy::Kind::Text && !inertUtf8(payload))", SOURCE)
 
+    def test_native_runner_serializes_complete_batch_lines(self):
+        runner=(ROOT/"tools/winui/run_f03_reader_native.ps1").read_text(
+            encoding="utf-8")
+        for marker in (
+            "('call \"'+$vcvars+",
+            "('cd /d \"'+$FixtureRoot+",
+            "('cl.exe /nologo /std:c++20",
+            "(' \"'+$exe+",
+            "$body.Count -ne 9",
+            "F03_NATIVE_BATCH_SERIALIZATION_INVALID",
+        ):
+            self.assertIn(marker, runner)
+
     def test_registered_native_translation_unit(self):
         project=ET.parse(ROOT/"app/winui/flyExplorer.project-template.xml")
         compiles=[
