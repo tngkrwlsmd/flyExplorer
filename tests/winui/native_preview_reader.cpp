@@ -2,6 +2,7 @@
 // This executable never creates a window and never touches user settings.
 // Run with: native_preview_reader.exe C:\<precreated-owned-empty-directory>
 #include "../../src/base/file_preview_reader.h"
+#include "../../src/base/file_preview_safe_open.h"
 #include <Windows.h>
 #include <atomic>
 #include <chrono>
@@ -125,6 +126,83 @@ int wmain(int argc,wchar_t** argv)
           ==Status::UnsafeHandle,"reject directory handles");
     ::CloseHandle(directory);
 
+    // Safety gate: forged candidate flags must never grant a raw path open.
+    auto ownedCandidate=[](std::wstring const& p,std::uint64_t bytes) {
+        return fxfile::previewpolicy::Candidate{p,bytes,true,true,true,false,true};
+    };
+    const auto nested=joined(root,L"nested");
+    const auto nestedFile=joined(nested,L"open-me.txt");
+    check(!!::CreateDirectoryW(nested.c_str(),nullptr),"create owned nested dir");
+    writeOwned(nestedFile,data);
+    {
+        auto c=ownedCandidate(nestedFile,data.size());
+        auto guarded=fxfile::previewsafe::openLocalRegular(c,cancel,end);
+        check(guarded.accepted()&&guarded.lockedAncestors.size()>=2,
+              "lock real ancestors and opened local regular handle");
+        auto result=read(guarded.file.get(),nestedFile,guarded.kind,
+                         guarded.knownBytes,cancel,end);
+        check(result.ok()&&result.bytes==data,"consume guarded handle");
+        auto changed=ownedCandidate(nestedFile,data.size()+1);
+        check(fxfile::previewsafe::openLocalRegular(changed,cancel,end).status
+              ==fxfile::previewsafe::Status::Changed,
+              "reject forged metadata size at opened handle");
+        auto wrong=ownedCandidate(joined(nested,L"missing.txt"),1);
+        check(!fxfile::previewsafe::openLocalRegular(wrong,cancel,end).accepted(),
+              "reject missing file");
+        wrong=ownedCandidate(L"\\\\server\\share\\test.txt",1);
+        check(!fxfile::previewsafe::openLocalRegular(wrong,cancel,end).accepted(),
+              "reject UNC");
+        wrong=ownedCandidate(nestedFile+L":ads",1);
+        check(!fxfile::previewsafe::openLocalRegular(wrong,cancel,end).accepted(),
+              "reject alternate stream");
+        wrong=ownedCandidate(nestedFile+L"\\..\\test.txt",1);
+        check(!fxfile::previewsafe::openLocalRegular(wrong,cancel,end).accepted(),
+              "reject dot-dot path");
+        wrong=ownedCandidate(nestedFile, data.size());
+        wrong.isLocalFixedDrive=false;
+        check(!fxfile::previewsafe::openLocalRegular(wrong,cancel,end).accepted(),
+              "reject forged nonlocal flag");
+        wrong=ownedCandidate(nestedFile,data.size());
+        wrong.isReparsePoint=true;
+        check(!fxfile::previewsafe::openLocalRegular(wrong,cancel,end).accepted(),
+              "reject advertised reparse");
+        wrong=ownedCandidate(joined(nested,L"payload.svg"),0);
+        check(!fxfile::previewsafe::openLocalRegular(wrong,cancel,end).accepted(),
+              "reject active file type");
+        cancel.store(true);
+        check(fxfile::previewsafe::openLocalRegular(c,cancel,end).status
+              ==fxfile::previewsafe::Status::Cancelled,
+              "reject stale cancelled open");
+        cancel.store(false);
+        check(fxfile::previewsafe::openLocalRegular(
+                  c,cancel,Clock::now()-std::chrono::seconds(1)).status
+              ==fxfile::previewsafe::Status::Deadline,
+              "reject expired safe-open");
+    }
+    // Symlinks are optional on locked-down VMs: report NOT_TESTED, never
+    // silently mark reparse traversal coverage passed when creation failed.
+    {
+        const auto symlink=joined(root,L"symlink.txt");
+        if(::CreateSymbolicLinkW(symlink.c_str(),nestedFile.c_str(),0x2)){
+            auto c=ownedCandidate(symlink,data.size());
+            check(!fxfile::previewsafe::openLocalRegular(c,cancel,end).accepted(),
+                  "reject leaf symlink");
+            check(!!::DeleteFileW(symlink.c_str()),"delete own leaf symlink");
+            std::printf("F03_NATIVE_LEAF_SYMLINK_REJECT=PASS\n");
+        }else std::printf("F03_NATIVE_LEAF_SYMLINK_REJECT=NOT_TESTED\n");
+        const auto linkdir=joined(root,L"linked-dir");
+        if(::CreateSymbolicLinkW(linkdir.c_str(),nested.c_str(),0x3)){
+            auto c=ownedCandidate(joined(linkdir,L"open-me.txt"),data.size());
+            check(!fxfile::previewsafe::openLocalRegular(c,cancel,end).accepted(),
+                  "reject ancestor directory symlink");
+            check(!!::RemoveDirectoryW(linkdir.c_str()),
+                  "delete own directory symlink");
+            std::printf("F03_NATIVE_ANCESTOR_SYMLINK_REJECT=PASS\n");
+        }else std::printf("F03_NATIVE_ANCESTOR_SYMLINK_REJECT=NOT_TESTED\n");
+    }
+    check(!!::DeleteFileW(nestedFile.c_str()),"delete nested owned file");
+    check(!!::RemoveDirectoryW(nested.c_str()),"remove nested owned dir");
+    std::printf("F03_NATIVE_SAFE_OPEN_AND_GUARDED_READ=PASS\n");
     for(auto const& p:{text,image,invalid,longtext}){
         check(!!::DeleteFileW(p.c_str()),"delete owned fixture");
     }
