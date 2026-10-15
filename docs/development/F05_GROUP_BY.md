@@ -65,7 +65,7 @@ group disclosure; name/date/size group modes; non-Details layouts.
 Do not change real user folders or system display settings solely
 for these tests. Keep an explicit acceptance status for each scope.
 
-## 2026-10-15 Independent pane and route follow-up — PARTIAL, NOT ACCEPTED
+## 2026-10-15 Earlier dual-pane attempt — FAIL (superseded by later acceptance)
 
 - **Test-only change**: `dee26e68` added an opt-in
   `FLY_F05_PANES_ONLY=YES` synthetic two-pane GUI probe with
@@ -95,9 +95,41 @@ for these tests. Keep an explicit acceptance status for each scope.
   button counts immediately after toggling. A subsequent guarded
   Windows execution request was blocked by platform safety review,
   so **this amended test has not been executed or accepted**.
-- **Still pending:** successful left-then-right independent
-  collapse/expand, right-folder navigation invalidating only right
-  groups, multiple window tab behavior, and original screenshot
-  pixel review. The central Remote Shell request slot remains
-  idle; do not claim those untested scopes are PASS.
+- **As of the earlier failed attempt:** independent
+  collapse, route and multiple window tab behavior had not yet
+  passed. The later accepted runs below supersede those limits;
+  screenshot pixel review remains pending.
+
+
+## 2026-10-15 Final scope: both panes and left pane tabs accepted
+
+**Exact `main` test SHA:** `10bfbce585d2e8e773bba56b30fa0a046a1a20a4`.
+Original product C++/XAML implementation is unchanged from
+`c14be710`; the existing clean Release was reused.
+
+- [Windows owned UI #38712034722](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38712034722):
+  **SUCCESS**; actual right/left group headings, per-pane Markdown
+  and Log collapse, pane switching, right-folder route reset,
+  eight source contracts, clean app exit, original six preference
+  hashes unchanged, synthetic fixture removed.
+- [Windows owned UI #38712448964](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38712448964):
+  **SUCCESS**; repeated the preceding checks and proved
+  `F05_LEFT_TAB_ADD_RIGHT_PANE_SAFE=PASS`,
+  `F05_LEFT_TAB_SELECT_ORIGINAL=PASS`,
+  `F05_LEFT_TAB_SWITCH_AND_CLOSE_ISOLATED=PASS`.
+  Both file panes retained test-owned file rows across tab add,
+  selected-tab change, and close.
+- The failed predecessor [#38693990951](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38693990951)
+  and follow-up diagnosis [#38711709550](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38711709550)
+  found the live left-pane grouping menu returned ToggleState
+  `0` both before and after `click_input()`, although the
+  pane was active. The accepted harness focuses the same
+  owned WinUI ToggleMenuFlyoutItem and sends physical Enter;
+  it correctly toggles group state. This resolves the bounded
+  automated input failure, without claiming mouse-only parity
+  for every screen or that C++ code was defective.
+- **Not certified:** original F05 Light/Dark screenshot pixels,
+  narrator spoken announcements, High Contrast, 125/150/200%
+  DPI, large directory practical performance, other Group by
+  dimensions (name/size/date), or arbitrary shell providers.
 

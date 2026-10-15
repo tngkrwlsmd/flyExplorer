@@ -7,6 +7,52 @@ app/winui, UI-independent native code in src/base, tests in tests/winui, and
 bounded orchestration in tools/winui/run_checks.py. The former MFC application
 is retired from the working tree and is recoverable from Git revision cbffb48.
 
+## 2026-10-15 F05 independent panes, route and tab navigation — Windows GUI PASS
+
+- **Exact accepted test-only `main` SHA:**
+  `10bfbce585d2e8e773bba56b30fa0a046a1a20a4`.
+  Original product grouping bridge `c14be710` unchanged;
+  used previously clean-built and GUI-accepted Release binaries,
+  no product C++/XAML rebuild, no OS display/user config changes.
+- [Dual-pane grouping #38712034722](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38712034722)
+  **SUCCESS**: eight F05 contract tests; the owned right pane
+  successfully grouped .txt/.md/.log and collapsed Markdown; the
+  left pane remained independent. After a verified switch to the
+  left pane, the live View ToggleMenuFlyoutItem accepted physical
+  keyboard Enter (not the unreliable automated mouse click) and
+  displayed left groups while preserving the right collapse.
+  Collapsing left Log did not collapse right Log; switching panes
+  preserved independent state. Right folder navigation discarded
+  its obsolete headings without affecting left groups. Actual
+  WinUI exit 0; all six real legacy settings hashes unchanged;
+  disposable files removed.
+- [Added active left-tab transitions #38712448964](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38712448964)
+  **SUCCESS** at exact SHA: repeated all independent-pane and
+  route checks plus `F05_LEFT_TAB_ADD_RIGHT_PANE_SAFE=PASS`,
+  `F05_LEFT_TAB_SELECT_ORIGINAL=PASS`, and
+  `F05_LEFT_TAB_SWITCH_AND_CLOSE_ISOLATED=PASS`. Creating
+  another left tab, switching to the initial one, returning to
+  the new tab and closing it preserved both panes' real file rows.
+  Source tests 8/8 PASS, process exit 0, original user profile
+  preserved, synthetic fixture removed.
+- **Failure analysis:** initial [#38693990951](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38693990951),
+  [#38710519949](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38710519949),
+  [#38710939595](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38710939595),
+  [#38711406737](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38711406737)
+  and [#38711709550](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38711709550)
+  narrowed a left-pane automated click failure: left was actually
+  active, the group-toggle UIA state was 0 before and after the
+  attempted mouse click; physical Enter worked. This documents a
+  test input-delivery defect, **not proof of a product mouse-click
+  defect**. The accepted run uses mouse on right and Enter on left.
+- **Still NOT TESTED:** original app-window Light/Dark PNG pixel
+  review, Narrator spoken labels, true OS DPI 125/150/200%,
+  active High Contrast, real 25,000-item Windows GUI, other grouping
+  dimensions (name/date/size), and full keyboard-only list workflows.
+  Existing F05 before/grouped/expanded PNG capture markers do not
+  constitute visually inspected pixels. Windows Remote Shell slot
+  restored to idle. Details: `docs/development/F05_GROUP_BY.md`.
+
 ## 2026-10-15 F05 type grouping — real Windows GUI PASS, visual pixel review pending
 
 - **Product:** Native bounded group projection arrived in commit 1d6d9205;
@@ -33,7 +79,7 @@ is retired from the working tree and is recoverable from Git revision cbffb48.
   present); an attempt to retrieve these originals for manual
   pixel inspection was blocked. **Light/Dark visual pixel acceptance
   is NOT certified.** The GUI assertions establish interaction only.
-- **Remaining:** interactive right-pane and cross-tab transitions,
+- **Earlier remaining scope (now superseded for pane/tab behavior by the accepted runs above):** interactive right-pane and cross-tab transitions,
   file selection after group collapse in additional scenarios,
   name/size/date grouping, non-Details group layouts, large-folder
   GUI paging, keyboard-only header toggles, Narrator, DPI 125/150/200%,
