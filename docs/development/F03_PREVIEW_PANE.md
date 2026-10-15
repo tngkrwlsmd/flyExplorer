@@ -1,5 +1,55 @@
 # F03 — bounded local Preview pane development boundary
 
+## 2026-10-15 F03 keyboard-only startup Preview route PASS; real OS DPI/HC/Narrator remain untested
+
+- **Exact accepted test-only main SHA:** `74824b4d5178da966b09535755c7e6c1f601ccb7`.
+  The opt-in `FLY_F03_STARTUP_KEYS_ONLY=YES` harness at
+  `tests/winui/test_shell_gui.py` and
+  `tests/winui/test_f03_startup_keyboard_gui.py` uses the
+  **unchanged previously accepted Release** from product revision
+  `40d383ca`; no C++/XAML files or real user settings changed.
+- [Real user-session keyboard GUI #38683014933](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38683014933)
+  **SUCCESS** at the exact test SHA, on a disposable synthetic
+  `theme=dark` configuration. After activating **only the owned app
+  window**, the probe sent real Tab presses without directly focusing
+  or clicking a control: **18 Tab** presses to the Details toolbar
+  button; Space to open Details; **26 additional Tab** presses to the
+  upper Preview shortcut; Enter to focus and scroll the actual lower
+  opt-in button into view; Space to explicitly enable Preview. The
+  content remained empty before opt-in, and with no selected file the
+  Preview remained empty and requested selection of one text file.
+  Acceptance markers were `F03_STARTUP_KEYS_OPEN_DETAILS=PASS`,
+  `F03_STARTUP_KEYS_REVEAL_NO_READ=PASS`,
+  `F03_STARTUP_KEYS_EXPLICIT_OPTIN_NO_SELECTION=PASS` and
+  `F03_STARTUP_KEYBOARD_ONLY_GUI_PASS=True`.
+  Six focused source contracts also passed; app exit **0**,
+  all six real legacy preference hashes unchanged and owned fixture
+  removed. **PASS is bounded to this startup-to-toggle path**;
+  keyboard-only selection of a file and all file-manager commands,
+  or screen-reader spoken announcements, were not covered.
+- The preceding [#38682895858](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38682895858)
+  failed in **test harness code**, not product behavior, because
+  `UIAElementInfo.has_keyboard_focus` is not supported by the installed
+  pywinauto version. The single-file probe correction uses
+  `IUIAutomationElement.CurrentHasKeyboardFocus` and is verified by
+  the successful run above; no rebuilt binary was needed.
+- [Read-only Windows accessibility inventory #38682652550](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38682652550)
+  **SUCCESS**: the SYSTEM Session 0 `GetDpiForSystem` returned
+  **96 DPI**; one active Explorer user session was found. Its loaded
+  Desktop profile had `LogPixels` **not set** and `Win8DpiScaling=0`.
+  The read-only HighContrast registry flags were `126` (bit 0 not
+  enabled); no `Narrator.exe` process was observed. **This does not
+  establish the actual per-monitor DPI of the interactive user session
+  or provide High Contrast/Narrator audio acceptance.** No display,
+  global accessibility setting, or user configuration was changed.
+- **Still NOT TESTED:** actual OS display 125%/150%/200% screenshot
+  and clipping, active High Contrast product pixels, spoken Narrator
+  output, all-settings keyboard-only coverage and fine-grained
+  screen-reader focus order. Programmatic app-window-only foreground
+  activation is not proof of OS-level launch/initial desktop focus
+  behavior. Central Remote Shell slot was restored to idle; no
+  duplicate Windows acceptance run was requested.
+
 ## 2026-10-15 F03 Preview reveal shortcut — Light/Dark Windows GUI and scoped pixels PASS
 
 - **Current accepted product and GUI source SHA:**
