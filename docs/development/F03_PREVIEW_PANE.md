@@ -1,5 +1,28 @@
 # F03 — bounded local Preview pane development boundary
 
+## 2026-10-15 F03 interactive window DPI/High Contrast inventory — real 100% observed, higher DPI NOT TESTED
+
+- **Exact test-only source SHA:** `7a84b40022d67468dcfd7273b28fb0271ad175c1`.
+  The previously accepted startup-Tab keyboard probe gained only
+  read-only calls to `GetDpiForWindow` on the harness-owned actual
+  WinUI HWND and `SystemParametersInfoW(SPI_GETHIGHCONTRAST)` in
+  the logged-in **interactive user session**. Product XAML/C++,
+  Release runtime and all Windows display/accessibility settings
+  remained unchanged.
+- [Actual Windows owned GUI + direct window DPI/HC #38683265761](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38683265761)
+  **SUCCESS**: `F03_ACTUAL_INTERACTIVE_WINDOW_DPI=96`
+  (**100% scale**) and `F03_ACTUAL_INTERACTIVE_HIGHCONTRAST_ON=False`.
+  The keyboard-only Tab → Space → Tab → Enter → Space acceptance
+  passed again; app exit **0**, all six real user preference hashes
+  unchanged and disposable fixture removed. The exact source-only
+  change did not trigger an unnecessary new Release rebuild.
+- **No higher-DPI or active HC acceptance is implied.** Actual
+  interactive 125% (120 DPI), 150% (144 DPI), 200% (192 DPI) screen
+  geometry/clipping, focus contrast under Windows High Contrast,
+  and Narrator spoken output are all **NOT TESTED**. No global OS
+  setting was changed merely to simulate these states.
+  The central Remote Shell request was restored to idle.
+
 ## 2026-10-15 F03 keyboard-only startup Preview route PASS; real OS DPI/HC/Narrator remain untested
 
 - **Exact accepted test-only main SHA:** `74824b4d5178da966b09535755c7e6c1f601ccb7`.
