@@ -100,6 +100,7 @@ namespace winrt::FlyExplorer::implementation
         void OnOpenWorkspace(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
         void OnToggleSearch(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
         void OnToggleFileInfoPane(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
+        void OnRevealTextPreview(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
         void OnToggleTextPreview(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
         void OnApplyShortcuts(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
         void OnResetShortcuts(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);

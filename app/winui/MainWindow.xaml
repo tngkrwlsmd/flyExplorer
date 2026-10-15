@@ -690,6 +690,14 @@
                         <TextBlock x:Name="FileInfoHint" Text="항목 하나를 선택하세요."
                                    TextWrapping="Wrap" Opacity="{ThemeResource FlyExplorerCaptionOpacity}"
                                    />
+                        <!-- Reach the existing opt-in button without moving its
+                             known-starting Preview subtree or reading bytes. -->
+                        <Button x:Name="TextPreviewRevealButton"
+                                Content="텍스트 미리보기로 이동"
+                                Click="OnRevealTextPreview"
+                                ToolTipService.ToolTip="아래의 텍스트 미리보기 켜기 버튼으로 이동합니다."
+                                AutomationProperties.Name="텍스트 미리보기 켜기 버튼으로 이동"
+                                AutomationProperties.HelpText="이동만 하며 파일 내용을 읽지 않습니다."/>
                         <TextBlock Text="이름" FontWeight="SemiBold"/>
                         <TextBlock x:Name="FileInfoName" TextWrapping="Wrap"
                                    />

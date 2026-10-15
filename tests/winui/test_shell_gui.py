@@ -188,6 +188,12 @@ try:
                      eventually=eventually,left=left,right=right)
   print("F03_EXTENDED_OWNED_GUI_PASS",True,flush=True)
   raise SystemExit(0)
+ if os.environ.get("FLY_F03_REVEAL_ONLY")=="YES":
+  from test_f03_preview_reveal_gui import run as f03_reveal_probe
+  f03_reveal_probe(win=win,element=element,safe_click=safe_click,
+                   eventually=eventually,left=left,right=right)
+  print("F03_REVEAL_OWNED_GUI_PASS",True,flush=True)
+  raise SystemExit(0)
  if os.environ.get("FLY_F03_TEXT_ONLY")=="YES":
   from test_f03_text_preview_gui import run as f03_probe
   f03_probe(win=win,element=element,safe_click=safe_click,

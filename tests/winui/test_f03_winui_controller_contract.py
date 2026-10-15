@@ -70,6 +70,37 @@ class F03WinUIControllerContract(unittest.TestCase):
             self.assertEqual(by_name[name].get("SelectionChanged"),
                              "OnFileSelectionChanged")
 
+    def test_reveal_button_is_only_a_focus_and_scroll_shortcut(self):
+        root=ET.fromstring(XAML)
+        by_name={n.get("{http://schemas.microsoft.com/winfx/2006/xaml}Name"):n
+                 for n in root.iter()}
+        reveal=by_name["TextPreviewRevealButton"]
+        toggle=by_name["TextPreviewToggleButton"]
+        self.assertEqual(reveal.get("Click"),"OnRevealTextPreview")
+        self.assertEqual(toggle.get("Click"),"OnToggleTextPreview")
+        self.assertLess(XAML.index('x:Name="TextPreviewRevealButton"'),
+                        XAML.index('x:Name="FileInfoName"'))
+        self.assertLess(XAML.index('x:Name="FileInfoModified"'),
+                        XAML.index('x:Name="TextPreviewToggleButton"'))
+        self.assertNotIn('x:Name="TextPreviewContainer"',XAML)
+        self.assertIn('void OnRevealTextPreview(',HEADER)
+        self.assertIn('button.Focus(FocusState::Keyboard);',ROUTER)
+        self.assertIn('button.StartBringIntoView();',ROUTER)
+        shortcut=ROUTER.split('void MainWindow::OnRevealTextPreview(',1)[1].split(
+            'void MainWindow::OnToggleTextPreview(',1)[0]
+        for forbidden in ('QueueTextPreview(', 'OnToggleTextPreview(',
+                          'mTextPreviewEnabled=', 'TextPreviewBody().Text(',
+                          'previewsupervisor::run(', 'GetFileAttributesExW('):
+            self.assertNotIn(forbidden,shortcut)
+        gui=(ROOT/"tests/winui/test_f03_preview_reveal_gui.py").read_text(
+            encoding="utf-8")
+        for marker in ('F03_REVEAL_STARTS_OFF=PASS',
+                       'F03_REVEAL_KEYBOARD_FOCUS=PASS',
+                       'F03_REVEAL_EXPLICIT_OPTIN=PASS',
+                       'F03_REVEAL_SCREENSHOT_TOP_PNG=',
+                       'F03_REVEAL_SCREENSHOT_FOCUSED_PNG='):
+            self.assertIn(marker,gui)
+
     def test_build_and_xaml_structure(self):
         tree=ET.parse(APP/"flyExplorer.project-template.xml")
         compiles={x.get("Include","").replace("\\","/")

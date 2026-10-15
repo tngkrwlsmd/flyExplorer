@@ -17,6 +17,16 @@ void MainWindow::CancelTextPreview() noexcept {
     mTextPreviewController.cancel();
 }
 
+void MainWindow::OnRevealTextPreview(
+    IInspectable const&,RoutedEventArgs const&) {
+    if(mClosing||!ActiveWindowTab().fileInfoPaneVisible)return;
+    // The disclosure is a focus/scroll gesture only; the original Preview
+    // button remains the sole explicit opt-in that can read file bytes.
+    auto button=TextPreviewToggleButton();
+    button.Focus(FocusState::Keyboard);
+    button.StartBringIntoView();
+}
+
 void MainWindow::OnToggleTextPreview(
     IInspectable const&,RoutedEventArgs const&) {
     if(mClosing||!ActiveWindowTab().fileInfoPaneVisible)return;
