@@ -64,3 +64,40 @@ group disclosure; name/date/size group modes; non-Details layouts.
 
 Do not change real user folders or system display settings solely
 for these tests. Keep an explicit acceptance status for each scope.
+
+## 2026-10-15 Independent pane and route follow-up — PARTIAL, NOT ACCEPTED
+
+- **Test-only change**: `dee26e68` added an opt-in
+  `FLY_F05_PANES_ONLY=YES` synthetic two-pane GUI probe with
+  separate test-owned TXT/Markdown/log files on both sides. No
+  product C++/XAML or user settings were changed. The existing,
+  previously compiled F05 Release executable was reused.
+- [Actual Windows run #38693990951](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38693990951):
+  **FAIL (partial coverage)**. All eight F05 source contracts
+  passed, and the real WinUI process opened/exited normally.
+  `F05_BOTH_PANES_START_UNGROUPED=PASS`,
+  `F05_RIGHT_GROUP_DOES_NOT_GROUP_LEFT=PASS`, and
+  `F05_RIGHT_MD_COLLAPSED=PASS` were observed. The next assertion
+  timed out because left-pane grouping headings did not appear
+  after switching back from the right. This is **not accepted** as a
+  passing dual-pane test. All six real legacy preference hashes
+  remained identical and synthetic fixture cleanup passed.
+- [Read-only captured UIA evidence #38694342760](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38694342760):
+  **SUCCESS**. Exactly four file-list items and zero group Button
+  peers remained on the left; seven list items and four group
+  Button peers remained on the right. Evidence was drawn only from
+  the failed test's owned WinUI window, not unrelated user windows.
+  Whether left-pane activation failed, left metadata was stale, or
+  the UI toggle was rejected remains **undetermined**.
+- `3e709d50` is a **test-only diagnostic amendment**. It
+  explicitly clicks LeftFiles, waits for the visible active-pane
+  label and reports active pane, StatusText and left/right group
+  button counts immediately after toggling. A subsequent guarded
+  Windows execution request was blocked by platform safety review,
+  so **this amended test has not been executed or accepted**.
+- **Still pending:** successful left-then-right independent
+  collapse/expand, right-folder navigation invalidating only right
+  groups, multiple window tab behavior, and original screenshot
+  pixel review. The central Remote Shell request slot remains
+  idle; do not claim those untested scopes are PASS.
+
