@@ -583,7 +583,7 @@
                 <ListView x:Name="LeftFiles" Grid.Row="3" IsDoubleTapEnabled="True"
                           ItemContainerStyle="{StaticResource ExplorerListItemStyle}"
                           ItemsPanel="{StaticResource ExplorerVerticalItemsPanel}"
-                           SelectionMode="Multiple" DoubleTapped="OnLeftFileDoubleTapped" Tapped="OnLeftPaneTapped"
+                           SelectionMode="Extended" DoubleTapped="OnLeftFileDoubleTapped" Tapped="OnLeftPaneTapped"
                           SelectionChanged="OnFileSelectionChanged" KeyUp="OnFileSelectionKeyUp"
 
                           KeyDown="OnLeftFileKeyDown" RightTapped="OnFileRightTapped"
@@ -666,7 +666,7 @@
                 <ListView x:Name="RightFiles" Grid.Row="3" IsDoubleTapEnabled="True"
                           ItemContainerStyle="{StaticResource ExplorerListItemStyle}"
                           ItemsPanel="{StaticResource ExplorerVerticalItemsPanel}"
-                           SelectionMode="Multiple" DoubleTapped="OnRightFileDoubleTapped" Tapped="OnRightPaneTapped"
+                           SelectionMode="Extended" DoubleTapped="OnRightFileDoubleTapped" Tapped="OnRightPaneTapped"
                           SelectionChanged="OnFileSelectionChanged" KeyUp="OnFileSelectionKeyUp"
 
                           KeyDown="OnRightFileKeyDown" RightTapped="OnFileRightTapped"
