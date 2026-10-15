@@ -26,6 +26,13 @@ owned=Path(tempfile.mkdtemp(prefix="shell-owned-",dir=base))
 left=owned/"Left";right=owned/"Right";inner=left/"Nested";rightinner=right/"Secondary"
 for folder in (inner,rightinner):folder.mkdir(parents=True,exist_ok=True)
 (left/"readme.txt").write_text("owned synthetic only",encoding="utf-8")
+# Extra text formats are opt-in and strictly test-owned; leave all shared
+# GUI fixtures and established TXT behavior unchanged.
+if os.environ.get("FLY_F03_EXTRA_FORMATS")=="YES":
+ assert os.environ.get("FLY_F03_TEXT_ONLY")=="YES"
+ (left/"guide.md").write_text("# owned document\nowned markdown only",encoding="utf-8")
+ (left/"events.log").write_text("2026-10-15 owned log only",encoding="utf-8")
+ (left/"invalid.LOG").write_bytes(b"invalid UTF-8: \xff")
 if os.environ.get("FLY_F01_HIDDEN_ONLY")=="YES":
  # Only under the disposable owned fixture. Never change user filesystem attrs.
  set_attr=c.windll.kernel32.SetFileAttributesW

@@ -98,6 +98,45 @@ def run(*, win, element, safe_click, eventually, left, right):
     assert "끄기" in preview_button.window_text()
     capture_owned_window("after")
     print("F03_GUI_EXPLICIT_TEXT_CONTENT=PASS",flush=True)
+    if os.environ.get("FLY_F03_EXTRA_FORMATS")=="YES":
+        # Exercise actual isolated helper bytes and WinUI projection, not
+        # extension-only acceptance. Switching files must invalidate old text.
+        previous="owned synthetic only"
+        for name,expected,marker in (
+            ("guide.md","owned markdown only","F03_GUI_MARKDOWN_PREVIEW"),
+            ("events.log","owned log only","F03_GUI_LOG_PREVIEW"),
+        ):
+            item=eventually(lambda n=name:row(n),
+                            "Owned format row missing: "+name,10)
+            safe_click(item)
+            eventually(lambda n=name:bool(row(n).iface_selection_item.CurrentIsSelected),
+                       "Owned format selection did not settle: "+name,8)
+            eventually(lambda phrase=expected:phrase in body_text(),
+                       "Safe text helper did not show: "+name,14)
+            assert previous not in body_text(), "Stale preview bytes crossed file selection"
+            assert element("FileInfoName").window_text()==name, (
+                "Displayed metadata belongs to another selected file")
+            print(marker+"=PASS",flush=True)
+            previous=expected
+
+        bad=eventually(lambda:row("invalid.LOG"),
+                       "Owned malformed UTF-8 row not found",10)
+        safe_click(bad)
+        eventually(lambda:bool(row("invalid.LOG").iface_selection_item.CurrentIsSelected),
+                   "Malformed text selection did not settle",8)
+        eventually(lambda:body_text()=="" and
+                   "안전하게 표시할 수 없습니다" in preview_status.window_text(),
+                   "Malformed UTF-8 must fail closed with no previous bytes",14)
+        print("F03_GUI_MALFORMED_LOG_FAIL_CLOSED=PASS",flush=True)
+
+        readme=eventually(lambda:row("readme.txt"),
+                          "Owned original TXT row unavailable",10)
+        safe_click(readme)
+        eventually(lambda:"owned synthetic only" in body_text() and
+                   "owned log only" not in body_text(),
+                   "Returning from malformed/log preview did not restore TXT",14)
+        print("F03_GUI_FORMAT_SWITCH_RESTORES_TXT=PASS",flush=True)
+
 
     nested=eventually(lambda:row("Nested"),
                       "Owned second row not found",8)
