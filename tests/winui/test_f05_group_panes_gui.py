@@ -48,12 +48,33 @@ def run(*,win,element,safe_click,eventually,left,right):
         for top in Desktop(backend="uia").windows():
             if top.element_info.process_id!=pid:continue
             for child in [top,*top.descendants()]:
-                if child.element_info.automation_id=="ViewGroupByTypeItem":
+                if child.element_info.automation_id!="ViewGroupByTypeItem":
+                    continue
+                # WinUI retains UIA peers for dismissed MenuFlyout roots.
+                # The first matching ID need not be the menu just opened.
+                # Only return an onscreen, live, hit-testable menu peer.
+                try:
+                    bounds=child.rectangle()
+                    if not child.is_visible() or bounds.width()<12 or bounds.height()<12:
+                        continue
+                    location=bounds.mid_point()
+                    user.WindowFromPoint.argtypes=[wintypes.POINT]
+                    user.WindowFromPoint.restype=wintypes.HWND
+                    hit=user.WindowFromPoint(wintypes.POINT(location.x,location.y))
+                    process=wintypes.DWORD()
+                    if hit:user.GetWindowThreadProcessId(hit,ctypes.byref(process))
+                    if process.value!=pid:
+                        continue
                     return child
+                except (AttributeError,RuntimeError,ValueError):
+                    continue
         return None
 
     def enable_group(side,expected_names):
         assert foreground_owned(),"Refuse opening flyout outside owned foreground"
+        print("F05_BEFORE_MENU="+side+
+              " STATUS_UESC="+element("StatusText").window_text().encode(
+                  "unicode_escape").decode("ascii"),flush=True)
         element("ViewButton").invoke()
         menu=eventually(owned_menu,"Owned group menu item not visible",9)
         assert menu.element_info.process_id==pid
@@ -61,7 +82,8 @@ def run(*,win,element,safe_click,eventually,left,right):
         menu.click_input()  # ToggleMenuFlyoutItem lacks InvokePattern
         print("F05_GROUP_TOGGLE_DIAG="+side+
               " ACTIVE="+element("ActivePaneText").window_text()+
-              " STATUS="+element("StatusText").window_text()+
+              " STATUS_UESC="+element("StatusText").window_text().encode(
+                  "unicode_escape").decode("ascii")+
               " LEFT_HEADINGS="+str(sum(disclosure("LeftFiles",ext) is not None
                                         for ext in (".txt",".md",".log")))+
               " RIGHT_HEADINGS="+str(sum(disclosure("RightFiles",ext) is not None
