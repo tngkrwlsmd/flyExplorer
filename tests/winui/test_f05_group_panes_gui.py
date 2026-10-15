@@ -95,9 +95,22 @@ def run(*,win,element,safe_click,eventually,left,right):
               " RIGHT_HEADINGS="+str(sum(disclosure("RightFiles",ext) is not None
                                          for ext in (".txt",".md",".log"))),
               flush=True)
-        eventually(lambda:all(disclosure(side,ext) is not None
-                              for ext in (".txt",".md",".log")),
-                   "Full group headings were not displayed in "+side,15)
+        try:
+            eventually(lambda:all(disclosure(side,ext) is not None
+                                  for ext in (".txt",".md",".log")),
+                       "Full group headings were not displayed in "+side,12)
+        except AssertionError:
+            assert foreground_owned(),"Refuse follow-up outside owned GUI"
+            element("ViewButton").invoke()
+            opened=eventually(owned_menu,"Follow-up View menu not visible",7)
+            assert opened.element_info.process_id==pid
+            try:
+                checked=str(opened.iface_toggle.CurrentToggleState)
+            except Exception as exc:
+                checked=type(exc).__name__
+            print("F05_MENU_TOGGLE_AFTER_FAILED_CLICK="+side+
+                  " VALUE="+checked,flush=True)
+            raise
         for name in expected_names:
             assert row(side,name),"Grouped real file missing: "+name
 
