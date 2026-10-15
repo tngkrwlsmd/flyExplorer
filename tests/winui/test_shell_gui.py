@@ -26,9 +26,13 @@ owned=Path(tempfile.mkdtemp(prefix="shell-owned-",dir=base))
 left=owned/"Left";right=owned/"Right";inner=left/"Nested";rightinner=right/"Secondary"
 for folder in (inner,rightinner):folder.mkdir(parents=True,exist_ok=True)
 (left/"readme.txt").write_text("owned synthetic only",encoding="utf-8")
-if os.environ.get("FLY_F05_GROUP_ONLY")=="YES":
+if os.environ.get("FLY_F05_GROUP_ONLY")=="YES" or os.environ.get("FLY_F05_PANES_ONLY")=="YES":
  (left/"group-guide.md").write_text("owned markdown only",encoding="utf-8")
  (left/"group-events.log").write_text("owned log only",encoding="utf-8")
+if os.environ.get("FLY_F05_PANES_ONLY")=="YES":
+ (right/"group-right.txt").write_text("owned right txt",encoding="utf-8")
+ (right/"group-right.md").write_text("owned right markdown",encoding="utf-8")
+ (right/"group-right.log").write_text("owned right log",encoding="utf-8")
 # Extra text formats are opt-in and strictly test-owned; leave all shared
 # GUI fixtures and established TXT behavior unchanged.
 if os.environ.get("FLY_F03_EXTRA_FORMATS")=="YES":
@@ -179,6 +183,12 @@ try:
      for e in element("LeftFiles").descendants()),
      "async native Shell directory items never displayed",12)
  print("REAL_FILE_LIST_IN_LEFT_PANE",True,flush=True)
+ if os.environ.get("FLY_F05_PANES_ONLY")=="YES":
+  from test_f05_group_panes_gui import run as f05_panes_probe
+  f05_panes_probe(win=win,element=element,safe_click=safe_click,
+                  eventually=eventually,left=left,right=right)
+  print("F05_GROUP_TWO_PANES_GUI_PASS=True",flush=True)
+  raise SystemExit(0)
  if os.environ.get("FLY_F05_GROUP_ONLY")=="YES":
   from test_f05_group_gui import run as f05_group_probe
   f05_group_probe(win=win,element=element,safe_click=safe_click,
