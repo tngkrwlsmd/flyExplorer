@@ -117,7 +117,12 @@ class LargeFolderStreamingContracts(unittest.TestCase):
         self.assertIn("snapshot.baseOffset",transfers)
         self.assertIn("QueueNextFolderPage(side,true)",transfers)
         self.assertIn("state.filenameFilter.empty()&&mode==0",main)
-        self.assertIn("snapshot.baseOffset+(std::min)(order.size(),state.visibleCount)",main)
+        # F05 grouped lists count actual file rows, not disclosure headings.
+        # Ungrouped sequential browsing still includes the resident base offset.
+        self.assertIn("const auto shown=grouped?groupPage.visibleFileRows:",main)
+        self.assertIn("sequential?snapshot.baseOffset+",main)
+        self.assertIn("(std::min)(order.size(),state.visibleCount)",main)
+        self.assertIn("const auto total=grouped?groupPage.totalFileRows:",main)
         self.assertIn("kMaxCompleteModelEntries",main)
         self.assertIn("kMaxBrowseEntries",main)
         self.assertIn("fullModelLimitReached",main)
