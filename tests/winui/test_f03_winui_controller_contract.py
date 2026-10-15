@@ -55,6 +55,21 @@ class F03WinUIControllerContract(unittest.TestCase):
         self.assertIn("assert physical_single",gui)
         self.assertIn("selection.Select()",gui)
 
+    def test_file_lists_replace_selection_on_plain_click(self):
+        # F03 real Windows strict GUI #38655414859 proved that Multiple
+        # selection retained Nested after an unmodified readme.txt click.
+        # Extended replaces selection on plain click while retaining
+        # Ctrl/Shift multi-selection in both file panes.
+        root=ET.fromstring(XAML)
+        by_name={n.get("{http://schemas.microsoft.com/winfx/2006/xaml}Name"):n
+                 for n in root.iter()}
+        for name in ("LeftFiles","RightFiles"):
+            self.assertEqual(by_name[name].get("SelectionMode"),"Extended")
+            self.assertEqual(by_name[name].get("CanDragItems"),"True")
+            self.assertEqual(by_name[name].get("CanReorderItems"),"False")
+            self.assertEqual(by_name[name].get("SelectionChanged"),
+                             "OnFileSelectionChanged")
+
     def test_build_and_xaml_structure(self):
         tree=ET.parse(APP/"flyExplorer.project-template.xml")
         compiles={x.get("Include","").replace("\\","/")
