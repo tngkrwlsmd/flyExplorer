@@ -21,6 +21,29 @@ def run(*, win, element, eventually, left, right):
     user.GetWindowThreadProcessId.argtypes=[
         wintypes.HWND,ctypes.POINTER(wintypes.DWORD)]
 
+    # Read actual interactive WinUI window DPI/High Contrast flags, not
+    # the unrelated SYSTEM service Session 0 display values.
+    user.GetDpiForWindow.argtypes=[wintypes.HWND]
+    user.GetDpiForWindow.restype=wintypes.UINT
+    window_dpi=int(user.GetDpiForWindow(wintypes.HWND(app.handle)))
+    assert 96<=window_dpi<=480, "Interactive app-window DPI unavailable"
+    print("F03_ACTUAL_INTERACTIVE_WINDOW_DPI="+str(window_dpi),
+          flush=True)
+
+    class HighContrast(ctypes.Structure):
+        _fields_=[("cbSize",wintypes.UINT),
+                  ("dwFlags",wintypes.DWORD),
+                  ("lpszDefaultScheme",wintypes.LPWSTR)]
+    user.SystemParametersInfoW.argtypes=[
+        wintypes.UINT,wintypes.UINT,ctypes.c_void_p,wintypes.UINT]
+    user.SystemParametersInfoW.restype=wintypes.BOOL
+    hc=HighContrast()
+    hc.cbSize=ctypes.sizeof(HighContrast)
+    assert user.SystemParametersInfoW(0x0042,hc.cbSize,ctypes.byref(hc),0), (
+        "Read-only interactive high-contrast status failed")
+    print("F03_ACTUAL_INTERACTIVE_HIGHCONTRAST_ON="+
+          str(bool(hc.dwFlags & 1)),flush=True)
+
     def owned_foreground():
         hwnd=user.GetForegroundWindow()
         observed=wintypes.DWORD()
