@@ -26,6 +26,7 @@ class F05ExtensionContract(unittest.TestCase):
                      'native_f05_group_tab_cache.cpp'):
             self.assertIn('ROOT / "tests/winui/' + name + '"', RUNNER)
         self.assertIn('F05_NATIVE_ALL_FOUR_GROUP_AND_TAB_PROBES=PASS', RUNNER)
+        self.assertIn('"/std:c++17", "/utf-8", "/W4", "/WX"', RUNNER)
         self.assertIn('subprocess.run([str(target)]', RUNNER)
 
     def test_no_os_io_or_mutation(self):
