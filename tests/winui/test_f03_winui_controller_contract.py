@@ -97,9 +97,10 @@ class F03WinUIControllerContract(unittest.TestCase):
         for marker in ('F03_REVEAL_STARTS_OFF=PASS',
                        'F03_REVEAL_KEYBOARD_FOCUS=PASS',
                        'F03_REVEAL_EXPLICIT_OPTIN=PASS',
-                       'F03_REVEAL_SCREENSHOT_TOP_PNG=',
-                       'F03_REVEAL_SCREENSHOT_FOCUSED_PNG='):
+                       'F03_REVEAL_SCREENSHOT_'):
             self.assertIn(marker,gui)
+        self.assertIn('screenshot("top")',gui)
+        self.assertIn('screenshot("focused")',gui)
 
     def test_build_and_xaml_structure(self):
         tree=ET.parse(APP/"flyExplorer.project-template.xml")
