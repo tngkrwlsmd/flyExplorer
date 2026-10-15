@@ -48,9 +48,13 @@ class ProductIdentityContract(unittest.TestCase):
         for token in ("FlyExplorerWinUIShell","WinUI3NavPoC",
                       "phase6_winui_shell","Phase6","PoC","Migration"):
             self.assertNotIn(token,body,token)
-        # Retired product identity used Preview as a standalone label. Do not
-        # reject legitimate WinUI API identifiers such as PreviewKeyDown.
-        self.assertIsNone(re.search(r"\bPreview\b",body),"Preview")
+        # Reject retired Preview branding in product identity artifacts only.
+        # The current F03 file-preview feature legitimately uses this term
+        # in code, XAML comments and its opt-in control descriptions.
+        for name in ("app.manifest", "product.rc", "product_version.h",
+                     "flyExplorer.project-template.xml"):
+            identity=(APP/name).read_text(encoding="utf-8-sig")
+            self.assertIsNone(re.search(r"\bPreview\b",identity),name)
 
     def test_runtime_path_resolver_uses_final_executable_name(self):
         paths=(ROOT/"tests/winui/paths.py").read_text(encoding="utf-8")
