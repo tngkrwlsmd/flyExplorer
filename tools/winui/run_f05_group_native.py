@@ -35,7 +35,7 @@ def run():
         if target.is_symlink():
             raise RuntimeError("F05_NATIVE_OUTPUT_LINK_REFUSED: " + target.name)
         if os.name == "nt":
-            args = [compiler, "/nologo", "/std:c++17", "/W4", "/WX",
+            args = [compiler, "/nologo", "/std:c++17", "/utf-8", "/W4", "/WX",
                     "/EHsc", str(source), "/Fe:" + str(target)]
         else:
             args = [compiler, "-std=c++17", "-Wall", "-Wextra", "-Werror",
