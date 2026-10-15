@@ -78,6 +78,12 @@ def run(*,win,element,safe_click,eventually,left,right):
         element("ViewButton").invoke()
         menu=eventually(owned_menu,"Owned group menu item not visible",9)
         assert menu.element_info.process_id==pid
+        try:
+            toggle_state=str(menu.iface_toggle.CurrentToggleState)
+        except Exception as exc:
+            toggle_state=type(exc).__name__
+        print("F05_MENU_TOGGLE_BEFORE="+side+" VALUE="+toggle_state,
+              flush=True)
         assert foreground_owned(),"Refuse foreign foreground mouse input"
         menu.click_input()  # ToggleMenuFlyoutItem lacks InvokePattern
         print("F05_GROUP_TOGGLE_DIAG="+side+
