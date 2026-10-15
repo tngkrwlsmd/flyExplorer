@@ -7,6 +7,25 @@ app/winui, UI-independent native code in src/base, tests in tests/winui, and
 bounded orchestration in tools/winui/run_checks.py. The former MFC application
 is retired from the working tree and is recoverable from Git revision cbffb48.
 
+## 2026-10-15 F03 Extended dual-pane input — keyboard and modifiers PASS
+
+- **Exact latest tested source SHA:** `b86e93f5e004d1f5e8cc40ae6ff663f55b01487f`;
+  app XAML/C++ remain **identical** to the exact `196aa27b`
+  Release, strict mouse, and scoped dark-pixel accepted product.
+  New test-only `FLY_F03_EXTENDED_ONLY=YES` and
+  `test_f03_extended_selection_gui.py` run in the isolated shell.
+- [Owned Windows GUI #38664113381](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38664113381)
+  **SUCCESS**. Both left/right ListViews independently passed
+  Down-arrow selection replacement after focusing a file row,
+  Ctrl+click add/remove, Shift+click range, and plain click
+  single-item replacement. `F03_EXTENDED_BOTH_PANES_INPUT_PASS=True`;
+  original 6 legacy user settings SHA256 identical; temporary
+  fixture removed; app exit=0. Remote request slot restored idle.
+- Remains **NOT TESTED**: keyboard-only navigation from app startup,
+  drag-and-drop interaction in `Extended` mode, Light/High Contrast
+  final pixels at the changed product SHA, 125/150/200% actual DPI,
+  screen-reader spoken guidance and full Preview pane/image work.
+
 ## 2026-10-15 F03 physical mouse selection resolved — Release + owned strict GUI + Dark pixels PASS
 
 - **Current accepted product SHA:** `196aa27b1132955c6c6c5eabd1470c971eac06d9`.
@@ -41,7 +60,7 @@ is retired from the working tree and is recoverable from Git revision cbffb48.
 - Central remote request slot restored to idle; protected test-owned
   evidence remains under `.keep`.
 
-## 2026-10-15 F03 bounded opt-in text Preview — dark/light real GUI PASS with input caveat
+## Historical 2026-10-15 F03 opt-in text Preview — early GUI with mouse input caveat
 
 - **Accepted GUI SHA:** `0e4e147f7e1004703d9566f3bf38bb086de6c17a`.
   The current app XAML/C++ are identical to previously starting
@@ -95,8 +114,10 @@ is retired from the working tree and is recoverable from Git revision cbffb48.
   [`95bd998a`](https://github.com/tngkrwlsmd/flyExplorer/commit/95bd998a5a717718085fb55c99c41d05f11f04e7)
   kept the previous app/XAML and reverted its now-invalid source
   assertion. Release success alone is never visual or startup PASS.
-- **Remaining F03:** ensure physical mouse and keyboard-only selection,
-  improve Preview toggle discoverability without modifying the
+- **Remaining F03 (historical checkpoint, superseded in part above):**
+  earlier physical mouse and keyboard selection gates were pending;
+  new strict physical mouse and focused-list keyboard/modified click
+  gates now PASS as recorded above. Still improve Preview toggle discoverability without modifying the
   known-starting XAML subtree in a way that recurs the startup
   COM error, validate `.md`/`.log`, narrow/resized Light/Dark,
   actual 125/150/200% DPI, high contrast and audible Narrator;
