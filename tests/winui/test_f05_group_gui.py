@@ -78,7 +78,20 @@ def run(*,win,element,safe_click,eventually,left,right):
                     "Owned View grouping menu item not accessible",9)
     assert menu.element_info.process_id==owner, (
         "Refuse invoking a foreign popup control")
-    menu.invoke()
+    # WinUI ToggleMenuFlyoutItem exposes no UIA InvokePattern in the
+    # installed pywinauto version. A physical mouse click is the actual
+    # interaction contract. Do not set focus on the owning Window here:
+    # doing so could dismiss its flyout before the click.
+    user=ctypes.windll.user32
+    user.GetForegroundWindow.restype=wintypes.HWND
+    user.GetWindowThreadProcessId.argtypes=[
+        wintypes.HWND,ctypes.POINTER(wintypes.DWORD)]
+    foreground=user.GetForegroundWindow()
+    process=wintypes.DWORD()
+    if foreground:
+        user.GetWindowThreadProcessId(foreground,ctypes.byref(process))
+    assert process.value==owner, "Refuse clicking outside owned app"
+    menu.click_input()
     eventually(lambda:buttons(".txt") and buttons(".md")
                and buttons(".log"),
                "Full model group headings did not render",9)
