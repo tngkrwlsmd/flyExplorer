@@ -1,5 +1,51 @@
 # F03 — bounded local Preview pane development boundary
 
+## 2026-10-15 F03 file-list mouse reselection — fixed, strict Windows PASS
+
+- **Product and test commit:** `196aa27b1132955c6c6c5eabd1470c971eac06d9`.
+  The only product modification is the **two** WinUI file-list
+  `SelectionMode="Multiple"` attributes becoming `"Extended"`;
+  the second changed file adds a source contract for both panes.
+  No PreviewController, Shell helper, drag transfer implementation
+  or user preference code was changed.
+- **Exact Windows Release:** registered central CI
+  [#38662641235](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38662641235)
+  **SUCCESS**, `SCOPE=release SHA=196aa27b...`. This build success
+  is separate from real GUI acceptance.
+- **Strict physical input (no UIA Select fallback):** owned interactive
+  [#38663282030](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38663282030)
+  **SUCCESS** at that same exact SHA. WinUI started in a real user
+  desktop session; `F03_GUI_RESELECT_SETTLED_PHYSICAL_CLICK_SELECTED=True`,
+  `F03_GUI_RESELECT_BOTH_ROWS_SELECTED=False`,
+  `F03_GUI_RESELECT_PHYSICAL_SINGLE_SELECTION=True`, and
+  `F03_GUI_STRICT_PHYSICAL_RESELECT=PASS` after selecting the
+  `Nested` folder and physically re-clicking `readme.txt`.
+  The normal row-target physical click now establishes **exactly one**
+  selected text file; no accessibility selection fallback ran.
+  Fresh opt-in text, stale selection clear, opt-out, default-off
+  reopen, app exit 0 and test fixture cleanup also passed; the
+  original six legacy user configuration hashes were unchanged.
+- **Controlled dark screenshot comparison:** previous strict
+  `Multiple` screenshot from
+  [#38655414859](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38655414859)
+  and new `Extended` screenshot from #38663282030 were read
+  **read-only** from protected test-owned app-window PNGs in
+  [#38663593381](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38663593381).
+  Both ~952x519 dark-theme views show two file panes, one highlighted
+  `readme.txt` row and readable Details opt-in content. No material
+  overlap, new cropping, selection/readability regression or contrast
+  loss was observed in these screenshots; synthetic fixture path/time
+  differs. This is a bounded **Dark visual review**, not real Light,
+  High Contrast, 125/150/200% DPI, Narrator, keyboard-only, Ctrl/Shift
+  multi-select or drag-and-drop acceptance at this SHA.
+- The previous GUI #38655414859 **failed correctly** on the old
+  `Multiple` mode: a filename-side physical click did select
+  `readme.txt` but left `Nested` selected too. The new strict GUI
+  establishes the regression fix at the same logical gate, not merely
+  an assumed selection-mode behavior.
+- Remote Shell request slot restored to `idle` after both tests.
+  Protected `.owner`, `.keep` and previous evidence retained.
+
 ## 2026-10-15 F03 opt-in text Preview — scoped Windows GUI acceptance
 
 - **Exact passing GUI source SHA:** `0e4e147f7e1004703d9566f3bf38bb086de6c17a`.
@@ -67,7 +113,7 @@
   explanation in this fixture. **Pointer hit-testing, item target
   geometry, keyboard modifiers, and actual manual mouse use remain
   separate unverified diagnoses**. No product code was changed.
-- **Prepared, NOT EXECUTED mouse hit-target experiment (2026-10-15):**
+- **Earlier prepared mouse hit-target experiment (historical, before acceptance):**
   `tests/winui/test_f03_text_preview_gui.py` now logs the UIA-row
   center attempt versus a bounded filename-side pixel click, verifies
   the foreground and pixel-owning HWND belong to this test process,
