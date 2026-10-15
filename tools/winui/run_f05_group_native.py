@@ -1,4 +1,4 @@
-"""Compile/run F05 pure projection probes without touching user files or a GUI.
+"""Compile/run all F05 projection and per-tab probes without user files or GUI.
 
 Example: python tools/winui/run_f05_group_native.py
 Creates only ignored out/f05-native artifacts inside this source checkout.
@@ -14,6 +14,8 @@ ROOT = Path(__file__).resolve().parents[2]
 SOURCES = (
     ROOT / "tests/winui/native_f05_group_projection.cpp",
     ROOT / "tests/winui/native_f05_group_presentation.cpp",
+    ROOT / "tests/winui/native_f05_group_modes.cpp",
+    ROOT / "tests/winui/native_f05_group_tab_cache.cpp",
 )
 
 
@@ -40,7 +42,7 @@ def run():
                     "-pedantic", "-O2", str(source), "-o", str(target)]
         subprocess.run(args, cwd=output, check=True, timeout=90)
         subprocess.run([str(target)], cwd=output, check=True, timeout=20)
-    print("F05_NATIVE_GROUP_PROJECTION_AND_PRESENTATION=PASS", flush=True)
+    print("F05_NATIVE_ALL_FOUR_GROUP_AND_TAB_PROBES=PASS", flush=True)
 
 
 if __name__ == "__main__":
