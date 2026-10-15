@@ -38,8 +38,9 @@ def run(*, win, element, eventually, left, right):
         if not target.exists(timeout=.12):
             return False
         # UIA reports actual keyboard focus on the named WinUI control.
-        state=target.element_info.has_keyboard_focus
-        return bool(state() if callable(state) else state)
+        # pywinauto.UIAElementInfo does not expose has_keyboard_focus;
+        # IUIAutomationElement provides the actual Current property.
+        return bool(target.element_info.element.CurrentHasKeyboardFocus)
 
     details=element("FileInfoToggleButton")
     reveal=element("TextPreviewRevealButton")
