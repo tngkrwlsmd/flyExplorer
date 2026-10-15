@@ -1,5 +1,68 @@
 # F03 — bounded local Preview pane development boundary
 
+## 2026-10-15 F03 Preview reveal shortcut — Light/Dark Windows GUI and scoped pixels PASS
+
+- **Current accepted product and GUI source SHA:**
+  `40d383ca63d886d2906363f82d054346da270c7f`; functional
+  C++/XAML addition was committed at `a9beab25`, followed only by
+  a source-contract correction at `40d383ca`.
+  The new focusable `TextPreviewRevealButton` lives near the top of
+  the existing Details ScrollViewer, ahead of metadata. Its
+  `OnRevealTextPreview` handler only focuses the original, still
+  bottom-positioned `TextPreviewToggleButton` and calls
+  `StartBringIntoView()`. It does not opt in, read bytes, or move
+  the known-starting Preview subtree. Earlier relocation that caused
+  startup `0xC000027B` was **not** reintroduced.
+- [Exact Windows source-contract + fresh Release + Light GUI #38680081184](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38680081184):
+  **SUCCESS**. All six focused source tests passed. Real WinUI app
+  started; test-owned `FLY_F03_REVEAL_ONLY=YES` verified default off,
+  visible top shortcut, physical Enter activation after focusing that
+  shortcut, existing lower opt-in Button scrolled into view while
+  content stayed empty, then separate physical Space opt-in showing
+  owned TXT bytes. The GUI reported
+  `F03_REVEAL_STARTS_OFF=PASS`,
+  `F03_REVEAL_KEYBOARD_FOCUS=PASS`, and
+  `F03_REVEAL_EXPLICIT_OPTIN=PASS`.
+  App exit 0, all six real legacy user preference hashes unchanged,
+  disposable fixture removed and one-shot user task unregistered.
+- [Same exact Release reused for test-owned Dark GUI #38681808840](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38681808840):
+  **SUCCESS**, including six source contracts, the same keyboard
+  reveal/opt-in checks, clean app exit, untouched six real settings
+  and fixture cleanup. Only synthetic private `theme=dark` differs.
+  Dark acceptance did **not** recompile the unchanged Release.
+- **Actual original app-window PNG visual inspections**:
+  [Light read-only #38681658077](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38681658077)
+  and [Dark read-only #38681921317](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38681921317).
+  For each theme, the original ~952x519 `top` and `focused`
+  screenshots were inspected: visible/readable reveal action at the
+  top of Details, both file lists, selected TXT row, readable metadata,
+  and focused original Preview opt-in at the bottom after scrolling.
+  No new list/Details overlap, unreadable control label or observed
+  focus-button clipping. **VISUAL ACCEPTANCE: PASS for the inspected
+  Light and Dark owned-window states only**. These are before/after
+  *focus/scroll states*, not pixel-aligned old/new-product diffs.
+  Hashes of original files:
+  Light top `d590eca01362dee4195e2ab410ca6785dd6d2c6d566a23e33d0ea9544cc64533`,
+  Light focused `3ae40458fedf301f57587855b03467e784f2979ee1ac56227444dc014174222c`,
+  Dark top `7f2a38f6db41a4cdc84b84ec571f1799f8ba2bc4de5d63cf9ab060175b0d807c`,
+  Dark focused `56cb1a20c546d11f11d31880ed626799fee5b75d72970ac3eb159746aa786385`.
+  Protected `.owner`/`.keep` evidence was retained.
+- Three earlier attempts failed only **before product GUI/Release
+  acceptance**: #38679756547 used unavailable Python on the SYSTEM
+  service PATH; #38679862974 generated a malformed PowerShell
+  worker; #38679960589 caught an incorrect static assertion expecting
+  a literal screenshot label instead of a dynamically assembled one.
+  The defects were corrected and accepted by #38680081184; none
+  constitutes a user-facing product failure at the final revision.
+- **Scope not certified:** keyboard-only traversal from initial app
+  launch (the owned test explicitly focused the top shortcut before
+  pressing Enter); OS 125/150/200% DPI, High Contrast, Narrator
+  spoken output, image preview, independent Preview panel,
+  and controlled identical-state old/new-product pixel diffs.
+  Prior TXT/MD/LOG Preview and selection acceptance evidence remains
+  valid at unchanged underlying implementation. The central remote
+  request slot was restored to idle after all runs.
+
 ## 2026-10-15 F03 Markdown/LOG Preview — real Windows GUI PASS (test-only)
 
 - **Exact tested main source SHA:** `f0b47f10b6f6f22cc79acc065773603649789f2c`.
