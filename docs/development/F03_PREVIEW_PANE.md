@@ -1,5 +1,37 @@
 # F03 — bounded local Preview pane development boundary
 
+## 2026-10-15 F03 Light theme — strict mouse and original-pixel comparison PASS
+
+- **Exact Light GUI test SHA:** `a425f1064c75a93abf2b191e7956df5336082832`;
+  only project documentation changed since the earlier
+  `b86e93f5` both-pane keyboard/Ctrl/Shift success. Product XAML/C++
+  are still the `196aa27b` Release and strict dark GUI accepted
+  blobs. Light preference `FLY_F01_HIDDEN_ONLY=YES` /
+  `FLY_F01_HIDDEN_THEME=light` was confined to the synthetic test
+  profile, without modifying the real user's theme.
+- [Owned real Windows Light GUI #38664462095](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38664462095)
+  **SUCCESS**: physical row re-click restored exactly one TXT
+  selection (`F03_GUI_RESELECT_SETTLED_PHYSICAL_CLICK_SELECTED=True`,
+  `F03_GUI_RESELECT_BOTH_ROWS_SELECTED=False`,
+  `F03_GUI_STRICT_PHYSICAL_RESELECT=PASS`); explicit opt-in text,
+  folder stale-content clear, opt-out, reopening default-off,
+  clean GUI exit and synthetic fixture removal passed. The six
+  original legacy user settings hashes remained unchanged.
+- **Light before/after visual QA** from original
+  [#38649041893](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38649041893)
+  and new strict #38664462095, original test-owned app window PNGs
+  retrieved in read-only
+  [#38664699576](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38664699576).
+  Both ~952x519 Light screenshots have readable selected filename,
+  visible list icons, Details labels, opt-in toggle/body and footer,
+  with no observed new pane overlap, cut-off or loss of selection
+  contrast. Only synthetic fixture path and timestamp changed.
+  **VISUAL ACCEPTANCE: PASS for this bounded Light comparison**.
+  Real OS 125/150/200% DPI, High Contrast, full focus rings,
+  screen-reader spoken output, and additional file types remain
+  separate untested gates. Dark visual review remains accepted
+  at the unchanged product revision.
+
 ## 2026-10-15 F03 Extended selection — both panes keyboard + Ctrl/Shift GUI PASS
 
 - **Exact latest tested source:** `b86e93f5e004d1f5e8cc40ae6ff663f55b01487f`.
