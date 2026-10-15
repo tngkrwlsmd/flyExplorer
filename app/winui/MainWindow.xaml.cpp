@@ -363,10 +363,10 @@ namespace winrt::FlyExplorer::implementation
             if(auto ui=nativeWeak.get())ui->ToggleListDisplay(option);
         });
         fileBar()->SetListDisplayState(false,false,true,false);
-        fileBar()->SetGroup([nativeWeak]{
-            if(auto ui=nativeWeak.get())ui->ToggleGroupByType();
+        fileBar()->SetGroup([nativeWeak](int mode){
+            if(auto ui=nativeWeak.get())ui->ToggleGroupMode(mode);
         });
-        fileBar()->SetGroupState(false);
+        fileBar()->SetGroupState(0);
         const auto dispatch=DispatcherQueue();
         const auto weak=get_weak();
         // The worker owns NO MainWindow/WinRT UI object. Cross-apartment
@@ -1636,24 +1636,37 @@ namespace winrt::FlyExplorer::implementation
             state.showHiddenItems?L"현재 창의 숨김 항목을 표시합니다.":
                                   L"현재 창의 숨김 항목을 숨깁니다.");
     }
-    void MainWindow::ToggleGroupByType()
+    void MainWindow::ToggleGroupByType(){ToggleGroupMode(1);}
+    void MainWindow::ToggleGroupMode(int choice)
     {
+        if(choice<1||choice>4)return;
         const int side=ActiveWindowTab().model.activePane;
         if(side<0||side>1)return;
         auto& state=ActiveWindowTab().fileLists[side];
         if(state.viewMode!=FileViewMode::Details){
-            StatusText().Text(L"유형별 그룹화는 자세히 보기에서만 사용할 수 있습니다.");
-            fileBar()->SetGroupState(false);
+            StatusText().Text(L"그룹화는 자세히 보기에서만 사용할 수 있습니다.");
+            fileBar()->SetGroupState(0);
             return;
         }
-        state.groupByType=!state.groupByType;
-        state.groupCollapse.resetFor(0,0,side);
+        const auto mode=static_cast<fxfile::filegroup::Mode>(choice-1);
+        const bool off=state.groupByType&&state.groupMode==mode;
+        if(off){
+            state.groupTabCache.disable();
+            state.groupByType=false;
+            state.groupCollapse.resetFor(0,0,side);
+        }else{
+            state.groupTabCache.choose(mode);
+            state.groupMode=mode;
+            state.groupByType=state.groupTabCache.enabled();
+            state.groupCollapse=state.groupTabCache.collapse();
+        }
         FillFiles(side);
-        fileBar()->SetGroupState(state.groupByType);
+        fileBar()->SetGroupState(state.groupByType?
+            static_cast<int>(state.groupMode)+1:0);
         UpdateSelectionChrome();
         UpdateFooterSummary();
         if(state.groupByType)
-            StatusText().Text(L"현재 창의 파일을 유형별로 그룹화했습니다.");
+            StatusText().Text(L"현재 창의 파일을 선택한 기준으로 그룹화했습니다.");
     }
     void MainWindow::UpdateViewPresentation(int side)
     {
@@ -1741,6 +1754,10 @@ namespace winrt::FlyExplorer::implementation
         auto& state=ActiveWindowTab().fileLists[side];
         const auto nextRoute=pane.routeIds[pane.active];
         if(state.visibleRoute!=nextRoute||state.visibleTab!=pane.active){
+            state.groupTabCache.switchTo(nextRoute,pane.active,side);
+            state.groupByType=state.groupTabCache.enabled();
+            state.groupMode=state.groupTabCache.mode();
+            state.groupCollapse=state.groupTabCache.collapse();
             state.visibleRoute=nextRoute;
             state.visibleTab=pane.active;
             state.visibleCount=160;
@@ -1877,6 +1894,21 @@ namespace winrt::FlyExplorer::implementation
         bool grouped=false;
         fxfile::filegroup::Page groupPage{};
         std::unordered_map<std::uint64_t,std::size_t> groupIndices;
+        // A different tab's metadata must not activate stale headings.
+        if(state.groupTabCache.pending()){
+            const bool complete=indexedProjection?
+                !snapshot.truncated&&!state.indexToComplete:
+                snapshot.baseOffset==0&&!snapshot.truncated&&
+                snapshot.residentEndOffset()==snapshot.nextOffset&&
+                snapshot.nextOffset==items.size();
+            if(state.groupTabCache.onCompleteModel(metadataReady,complete)){
+                state.groupByType=true;
+                state.groupMode=state.groupTabCache.mode();
+                state.groupCollapse=state.groupTabCache.collapse();
+                if(ActiveWindowTab().model.activePane==side)
+                    fileBar()->SetGroupState(static_cast<int>(state.groupMode)+1);
+            }
+        }
         if(state.groupByType){
             const bool fullyEnumerated=indexedProjection?
                 !snapshot.truncated&&!state.indexToComplete:
@@ -1899,8 +1931,21 @@ namespace winrt::FlyExplorer::implementation
                         folderAt(index),true,state.metadata[index].typeKey});
                     groupIndices.emplace(logical,index);
                 }
-                auto projection=fxfile::filegroup::projectByType(
-                    request,groupRows);
+                fxfile::filegroup::Result projection{};
+                if(state.groupMode==fxfile::filegroup::Mode::Type){
+                    projection=fxfile::filegroup::projectByType(request,groupRows);
+                }else{
+                    std::vector<fxfile::filegroup::ClassifiedRow> extended;
+                    extended.reserve(groupRows.size());
+                    for(std::size_t n=0;n<groupRows.size();++n){
+                        const auto index=order[n];
+                        const auto& meta=state.metadata[index];
+                        extended.push_back({groupRows[n],labelAt(index),meta.bytes,
+                            meta.sizeKnown,meta.dateLabel,meta.dateKnown});
+                    }
+                    projection=fxfile::filegroup::projectBy(
+                        state.groupMode,request,extended);
+                }
                 if(projection.ready()){
                     state.groupCollapse.resetFor(nextRoute,pane.active,side);
                     groupPage=fxfile::filegroup::present(
@@ -1910,12 +1955,13 @@ namespace winrt::FlyExplorer::implementation
                 }
             }
             if(!grouped){
+                state.groupTabCache.disable();
                 state.groupByType=false;
                 state.groupCollapse.resetFor(0,0,side);
                 if(ActiveWindowTab().model.activePane==side)
-                    fileBar()->SetGroupState(false);
+                    fileBar()->SetGroupState(0);
                 StatusText().Text(
-                    L"전체 목록과 파일 유형 정보가 준비된 로컬 폴더에서만 그룹화할 수 있습니다.");
+                    L"전체 목록과 그룹화에 필요한 파일 정보가 준비된 로컬 폴더에서만 그룹화할 수 있습니다.");
             }
         }
         state.filteredCount=grouped?groupPage.totalFileRows:order.size();
@@ -1993,8 +2039,9 @@ namespace winrt::FlyExplorer::implementation
                            pane.routeIds[tab]!=route)return;
                         auto& files=active.fileLists[side];
                         if(!files.groupByType||
-                           !files.groupCollapse.toggle(route,tab,title,side))
+                           !files.groupTabCache.toggle(title))
                             return;
+                        files.groupCollapse=files.groupTabCache.collapse();
                         ui->FillFiles(side);
                         ui->UpdateSelectionChrome();
                         ui->UpdateFooterSummary();
@@ -2002,7 +2049,7 @@ namespace winrt::FlyExplorer::implementation
                 });
                 heading.Content(disclosure);
                 Microsoft::UI::Xaml::Automation::AutomationProperties::SetName(
-                    heading,hstring(L"선택할 수 없는 유형 그룹: "+title));
+                    heading,hstring(L"선택할 수 없는 파일 그룹: "+title));
                 view.Items().Append(heading);
                 continue;
             }
@@ -2498,8 +2545,8 @@ namespace winrt::FlyExplorer::implementation
             ActiveWindowTab().fileLists[ActiveWindowTab().model.activePane].compactRows,
             ActiveWindowTab().fileLists[ActiveWindowTab().model.activePane].showFileExtensions,
             ActiveWindowTab().fileLists[ActiveWindowTab().model.activePane].showHiddenItems);
-        fileBar()->SetGroupState(
-            ActiveWindowTab().fileLists[ActiveWindowTab().model.activePane].groupByType);
+        {auto const& group=ActiveWindowTab().fileLists[ActiveWindowTab().model.activePane];
+         fileBar()->SetGroupState(group.groupByType?static_cast<int>(group.groupMode)+1:0);}
         UpdateSortPresentation(ActiveWindowTab().model.activePane);
         StatusText().Text(status);
         Title(L"flyExplorer · "+hstring(nav.snapshot().displayName));
@@ -2546,7 +2593,8 @@ namespace winrt::FlyExplorer::implementation
             ActiveWindowTab().fileLists[side].compactRows,
             ActiveWindowTab().fileLists[side].showFileExtensions,
             ActiveWindowTab().fileLists[side].showHiddenItems);
-        fileBar()->SetGroupState(ActiveWindowTab().fileLists[side].groupByType);
+        {auto const& group=ActiveWindowTab().fileLists[side];
+         fileBar()->SetGroupState(group.groupByType?static_cast<int>(group.groupMode)+1:0);}
         UpdateSortPresentation(side);
         UpdateSelectionChrome();
         UpdateFooterSummary();

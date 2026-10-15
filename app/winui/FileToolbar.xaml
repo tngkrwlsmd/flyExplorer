@@ -90,6 +90,9 @@
                 <ToggleMenuFlyoutItem x:Name="ViewHiddenItemsItem" Text="숨김 항목 표시" IsChecked="False" Click="OnViewHiddenItems" AutomationProperties.Name="현재 창 숨김 항목 표시"/>
                 <MenuFlyoutSeparator/>
                 <ToggleMenuFlyoutItem x:Name="ViewGroupByTypeItem" Text="유형별 그룹화 (전체 목록)" IsChecked="False" Click="OnViewGroupByType" AutomationProperties.Name="현재 창 유형별 그룹화"/>
+                <ToggleMenuFlyoutItem x:Name="ViewGroupByNameItem" Text="이름별 그룹화 (전체 목록)" Click="OnViewGroupByName" AutomationProperties.Name="현재 창 이름별 그룹화"/>
+                <ToggleMenuFlyoutItem x:Name="ViewGroupBySizeItem" Text="크기별 그룹화 (전체 목록)" Click="OnViewGroupBySize" AutomationProperties.Name="현재 창 크기별 그룹화"/>
+                <ToggleMenuFlyoutItem x:Name="ViewGroupByMonthItem" Text="수정 월별 그룹화 (전체 목록)" Click="OnViewGroupByMonth" AutomationProperties.Name="현재 창 수정 월별 그룹화"/>
             </MenuFlyout></Button.Flyout>
         </Button>
         <Button x:Name="MoreButton" Grid.Column="5" Width="32" Height="32" Padding="0" Background="Transparent" CornerRadius="4" ToolTipService.ToolTip="&#xB354; &#xBCF4;&#xAE30;" AutomationProperties.Name="&#xB354; &#xBCF4;&#xAE30;">

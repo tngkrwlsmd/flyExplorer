@@ -20,14 +20,14 @@ class F05WinUIGroupIntegrationContract(unittest.TestCase):
         self.assertEqual(control.tag.rsplit("}",1)[-1],"ToggleMenuFlyoutItem")
         self.assertEqual(control.get("Click"),"OnViewGroupByType")
         for token in ("void SetGroup(", "void SetGroupState(",
-                      "OnViewGroupByType(", "std::function<void()> group_"):
+                      "OnViewGroupByType(", "std::function<void(int)> group_"):
             self.assertIn(token,TOOL_HEADER)
-        for token in ("FileToolbar::OnViewGroupByType(", "if(group_)group_();",
+        for token in ("FileToolbar::OnViewGroupByType(", "if(group_)group_(1);",
                       "FileToolbar::SetGroupState("):
             self.assertIn(token,TOOL_CPP)
         self.assertIn("void ToggleGroupByType();",WINDOW_HEADER)
-        self.assertIn("ui->ToggleGroupByType();",WINDOW_CPP)
-        self.assertIn("state.groupByType=!state.groupByType;",WINDOW_CPP)
+        self.assertIn("ui->ToggleGroupMode(mode);",WINDOW_CPP)
+        self.assertIn("state.groupByType=state.groupTabCache.enabled();",WINDOW_CPP)
         self.assertIn("state.viewMode!=FileViewMode::Details",WINDOW_CPP)
 
     def test_route_and_complete_model_gate_before_grouping(self):
@@ -38,7 +38,7 @@ class F05WinUIGroupIntegrationContract(unittest.TestCase):
                       "snapshot.baseOffset==0", "snapshot.nextOffset==items.size()",
                       "kMaximumIndexedItems", "projectByType(",
                       "filegroup::present(", "groupIndices.emplace(logical,index)",
-                      "fileBar()->SetGroupState(false)"):
+                      "fileBar()->SetGroupState(0)"):
             self.assertIn(token,WINDOW_CPP)
         self.assertIn("groupRows.push_back({logical,filesystemAt(index)",WINDOW_CPP)
 
@@ -51,7 +51,7 @@ class F05WinUIGroupIntegrationContract(unittest.TestCase):
                       "if(row&&!row.Tag())nonFiles.push_back(candidate);",
                       "ui->mWorkspace.activeIndex()!=windowIndex",
                       "pane.routeIds[tab]!=route",
-                      "files.groupCollapse.toggle(route,tab,title,side)",
+                      "files.groupTabCache.toggle(title)",
                       "UpdateSelectionChrome();"):
             self.assertIn(token,WINDOW_CPP)
 

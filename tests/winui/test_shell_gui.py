@@ -35,6 +35,19 @@ if os.environ.get("FLY_F05_PANES_ONLY")=="YES":
  (right/"group-right.log").write_text("owned right log",encoding="utf-8")
 # Extra text formats are opt-in and strictly test-owned; leave all shared
 # GUI fixtures and established TXT behavior unchanged.
+if os.environ.get("FLY_F05_MODES_ONLY")=="YES":
+ for name,length,month in (
+     ("Alpha-small.txt",20,7),
+     ("Mango-medium.md",12000,8),
+     ("Zebra-large.log",1024*1024,9),
+     ("가나다-note.txt",42,7)):
+  item=left/name
+  item.write_bytes(b"f"*length)
+  # Midday UTC avoids crossing month boundaries in local Korean time.
+  import datetime
+  stamp=datetime.datetime(2026,month,15,12,
+                          tzinfo=datetime.timezone.utc).timestamp()
+  os.utime(item,(stamp,stamp))
 if os.environ.get("FLY_F03_EXTRA_FORMATS")=="YES":
  assert os.environ.get("FLY_F03_TEXT_ONLY")=="YES"
  (left/"guide.md").write_text("# owned document\nowned markdown only",encoding="utf-8")
@@ -183,6 +196,12 @@ try:
      for e in element("LeftFiles").descendants()),
      "async native Shell directory items never displayed",12)
  print("REAL_FILE_LIST_IN_LEFT_PANE",True,flush=True)
+ if os.environ.get("FLY_F05_MODES_ONLY")=="YES":
+  from test_f05_group_modes_gui import run as f05_modes_probe
+  f05_modes_probe(win=win,element=element,safe_click=safe_click,
+                  eventually=eventually,left=left,right=right)
+  print("F05_FOUR_MODES_AND_TAB_GUI_PASS=True",flush=True)
+  raise SystemExit(0)
  if os.environ.get("FLY_F05_PANES_ONLY")=="YES":
   from test_f05_group_panes_gui import run as f05_panes_probe
   f05_panes_probe(win=win,element=element,safe_click=safe_click,

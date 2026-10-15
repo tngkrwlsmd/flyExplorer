@@ -6,6 +6,8 @@
 #include <string_view>
 #include <vector>
 #include "file_group_presentation.h"
+#include "file_group_modes.h"
+#include "file_group_tab_cache.h"
 
 namespace fxfile::previewlist {
 enum class FileViewMode : int { Details=0, List=1, SmallIcons=2, MediumIcons=3, LargeIcons=4 };
@@ -54,6 +56,8 @@ struct PaneState final {
     bool showHiddenItems=false; // ordinary Shell-hidden items; no OS-global setting.
     bool groupByType=false; // F05 opt-in and pane-local, never OS-global
     fxfile::filegroup::CollapseState groupCollapse{};
+    fxfile::filegroup::Mode groupMode=fxfile::filegroup::Mode::Type;
+    fxfile::filegroup::TabGrouping groupTabCache{};
     int appliedItemsPanel=0; // 0=vertical XAML default, 1=small wrap, 2=medium wrap, 3=large wrap
     std::uint32_t visualPixels=0; // DPI-scaled system visual size for current details
     double nameColumnWidth=168.0;
