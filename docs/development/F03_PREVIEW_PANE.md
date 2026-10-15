@@ -1,5 +1,43 @@
 # F03 — bounded local Preview pane development boundary
 
+## 2026-10-15 F03 Markdown/LOG Preview — real Windows GUI PASS (test-only)
+
+- **Exact tested main source SHA:** `f0b47f10b6f6f22cc79acc065773603649789f2c`.
+  Only `tests/winui/test_shell_gui.py` and
+  `tests/winui/test_f03_text_preview_gui.py` were extended at
+  `6752e0ba`, then the latter's offscreen UIA assertion was corrected
+  at `f0b47f10`. No C++/XAML, policy, or runtime product file changed.
+- [Owned interactive Windows GUI #38670792871](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38670792871)
+  completed **SUCCESS** at the exact SHA. Opt-in-only synthetic
+  `FLY_F03_EXTRA_FORMATS=YES` covered actual `guide.md` Markdown text,
+  `events.log` text, invalid UTF-8 `invalid.LOG` fail-closed with no
+  stale bytes, return to `readme.txt`, default-off/opt-out/reopen,
+  selection churn and strict physical single-row reselection.
+  The GUI log recorded `F03_GUI_MARKDOWN_PREVIEW=PASS`,
+  `F03_GUI_LOG_PREVIEW=PASS`,
+  `F03_GUI_MALFORMED_LOG_FAIL_CLOSED=PASS`, and
+  `F03_GUI_FORMAT_SWITCH_RESTORES_TXT=PASS`.
+  Application exit was **0**; all six original legacy user-setting
+  SHA-256 hashes were unchanged and disposable owned fixture removed.
+- The first [#38668316201](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38668316201)
+  **FAILED in the GUI test harness**, after displaying Markdown text:
+  `FileInfoName` was virtualized/offscreen inside the intentionally
+  scrolled Details area, so an extra UIA lookup raised
+  `ElementNotFoundError`. The corrected test checks selected file-list
+  identity and distinct preview bytes instead; the previous product
+  bytes were retained. The same retained Release app and helper were
+  **reused without rebuilding** on the successful follow-up, after
+  confirming only that one Python probe differed.
+- **Acceptance scope:** focused real Windows text-format and cancellation/
+  selection behavior. The unchanged product's previously reviewed Light/
+  Dark pixels remain their own scoped evidence; this test did not conduct
+  another visual pixel review or a fresh Release compilation. Actual
+  125/150/200% DPI, High Contrast, Narrator speech, keyboard-only startup
+  traversal, `.md`/`.log` non-UTF-8 legacy encodings, raster-image
+  decoding and independent Preview layout are **NOT TESTED**.
+  The central Remote Shell request was restored to idle and test-owned
+  evidence retained.
+
 ## 2026-10-15 F03 Light theme — strict mouse and original-pixel comparison PASS
 
 - **Exact Light GUI test SHA:** `a425f1064c75a93abf2b191e7956df5336082832`;
