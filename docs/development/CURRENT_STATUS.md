@@ -7,6 +7,29 @@ app/winui, UI-independent native code in src/base, tests in tests/winui, and
 bounded orchestration in tools/winui/run_checks.py. The former MFC application
 is retired from the working tree and is recoverable from Git revision cbffb48.
 
+## 2026-10-15 F03 Light strict real GUI + Light pixel QA PASS
+
+- Exact Light acceptance source SHA
+  `a425f1064c75a93abf2b191e7956df5336082832`
+  (docs-only changes after `b86e93f5`; product executable/XAML
+  equivalent to accepted `196aa27b`). Test-owned synthetic Light
+  profile, unchanged real user settings.
+- [Real Windows strict Light GUI #38664462095](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38664462095)
+  **SUCCESS**: physical mouse plain re-click selected exactly
+  `readme.txt`, cleared `Nested` and correctly reread text after
+  opt-in; opt-out/reopen and stale cancellation passed. App exit 0,
+  synthetic fixture removed, all six legacy user preferences hashes
+  unchanged.
+- Previous and new synthetic Light **app-window-only original PNGs**
+  compared in [read-only #38664699576](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38664699576)
+  at ~952x519: readable filename/selected row, toggle, detail labels,
+  content, pane separation and no observed new clipping or overlap.
+  **VISUAL ACCEPTANCE: PASS for this bounded Light comparison**.
+  Dark counterpart accepted at #38663593381. Actual system
+  125/150/200% DPI, High Contrast, Narrator, full keyboard-only
+  traversal and independent Preview pane are NOT TESTED.
+- Central Remote Shell slot restored to idle; protected evidence kept.
+
 ## 2026-10-15 F03 Extended dual-pane input — keyboard and modifiers PASS
 
 - **Exact latest tested source SHA:** `b86e93f5e004d1f5e8cc40ae6ff663f55b01487f`;
