@@ -188,6 +188,12 @@ try:
                      eventually=eventually,left=left,right=right)
   print("F03_EXTENDED_OWNED_GUI_PASS",True,flush=True)
   raise SystemExit(0)
+ if os.environ.get("FLY_F03_STARTUP_KEYS_ONLY")=="YES":
+  from test_f03_startup_keyboard_gui import run as startup_keyboard_probe
+  startup_keyboard_probe(win=win,element=element,eventually=eventually,
+                         left=left,right=right)
+  print("F03_STARTUP_KEYBOARD_ONLY_GUI_PASS=True",flush=True)
+  raise SystemExit(0)
  if os.environ.get("FLY_F03_REVEAL_ONLY")=="YES":
   from test_f03_preview_reveal_gui import run as f03_reveal_probe
   f03_reveal_probe(win=win,element=element,safe_click=safe_click,
