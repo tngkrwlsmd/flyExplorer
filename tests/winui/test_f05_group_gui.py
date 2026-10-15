@@ -58,14 +58,24 @@ def run(*,win,element,safe_click,eventually,left,right):
     # Group mode is opt-in and must remain disabled until clicked.
     bar=element("ViewButton")
     assert bar.exists(timeout=2)
-    eventually(lambda:row("readme.txt") and
-               "txt 파일" in row("readme.txt").window_text(),
-               "File type metadata was not ready for safe global grouping",25)
+    # A registered Windows file-type description need not literally
+    # contain "txt 파일". Do not treat localized Shell labels as proof
+    # of worker metadata completion.
     bar.invoke()
-    menu=Desktop(backend="uia").child_window(
-        auto_id="ViewGroupByTypeItem",control_type="MenuItem")
-    eventually(lambda:menu.exists(timeout=.2),
-               "View grouping menu item not accessible",7)
+    def owned_group_menu():
+        # Desktop is a root wrapper, not a UIA window specification;
+        # Desktop(...).child_window() does not exist in this pywinauto.
+        # MenuFlyout may be a popup HWND, so search ONLY owned-process
+        # windows (never interact with unrelated desktop controls).
+        for top in Desktop(backend="uia").windows():
+            if top.element_info.process_id!=owner:
+                continue
+            for item in [top,*top.descendants()]:
+                if item.element_info.automation_id=="ViewGroupByTypeItem":
+                    return item
+        return None
+    menu=eventually(owned_group_menu,
+                    "Owned View grouping menu item not accessible",9)
     assert menu.element_info.process_id==owner, (
         "Refuse invoking a foreign popup control")
     menu.invoke()
