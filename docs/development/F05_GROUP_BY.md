@@ -182,7 +182,7 @@ Original product C++/XAML implementation is unchanged from
   collapse isolation, a newly ungrouped tab, original-tab collapse restore,
   close-tab coherence and explicit grouping opt-out. The run emitted
   `F05_FOUR_MODES_AND_TAB_GUI_PASS=True` and all nine individual
-  `F05_GUI_* =PASS` checks (without a space before the equals sign).
+  `F05_GUI_*=PASS` checks.
   The application exited with code 0, all six original user-setting file
   SHA-256 hashes remained identical and the test-owned folder was removed.
   Bounded test evidence remains in the owned Windows evidence directory.
@@ -191,3 +191,35 @@ Original product C++/XAML implementation is unchanged from
   Contrast, Narrator speech, keyboard-only disclosure end-to-end,
   large-directory GUI performance and arbitrary Shell providers remain
   unverified. Do not infer those outcomes from UI Automation success.
+
+## 2026-10-16 Four native C++ probes — PASS; outer Windows task timeout
+
+- **Exact tested source SHA:** `1f85741cd1ec183719cc0cbce1d2460d89ab033a`.
+  The canonical `tools/winui/run_f05_group_native.py` now runs four
+  sources, including `native_f05_group_modes.cpp` and
+  `native_f05_group_tab_cache.cpp`. MSVC invokes `/utf-8` along
+  with `/W4 /WX` so the Korean cp949 environment does not reject
+  valid UTF-8 source as warning C4819. A source contract guards both
+  the four-source list and this required compiler option.
+- [Windows compiler run #38823430041](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38823430041)
+  **GitHub Actions FAILURE** because the outer scheduled-task worker
+  did not write its final `result.json` before a seven-minute timeout.
+  The failure is **not** an observed native assertion or compiler failure.
+- [Read-only evidence #38826356423](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38826356423)
+  and [binary/marker verification #38826480894](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38826480894)
+  both **SUCCESS**: eight focused Python contracts showed `OK`; the
+  retained native log independently recorded all five markers:
+  `F05_NATIVE_COMPLETE_MODEL_GROUPING_PASS`,
+  `F05_NATIVE_COLLAPSIBLE_GROUP_PAGE_PASS`,
+  `F05_NATIVE_GROUP_NAME_SIZE_MONTH_PASS`,
+  `F05_NATIVE_PER_TAB_GROUPING_PASS`, and
+  `F05_NATIVE_ALL_FOUR_GROUP_AND_TAB_PROBES=PASS`.
+  Each of the four corresponding .exe outputs exists under the
+  test-owned `out/f05-native` directory at that exact SHA.
+- **Scoped verdict:** all four **native C++ compilation/execution probes
+  PASS**, and eight focused source contracts PASS. The outer one-shot
+  worker's final-result/exit contract is **NOT ACCEPTED**; the Actions
+  run itself must not be relabeled as success. No additional product
+  C++/XAML change was made. F05 GUI acceptance remains scoped to
+  the earlier exact GUI binary; Light/Dark visual pixels are still
+  **NOT TESTED**.
