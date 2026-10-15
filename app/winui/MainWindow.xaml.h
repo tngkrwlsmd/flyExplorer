@@ -171,6 +171,7 @@ namespace winrt::FlyExplorer::implementation
         void UpdateSort(int selection);
         void UpdateView(int selection);
         void ToggleListDisplay(int option);
+        void ToggleGroupByType();
         void OnHeaderSortClicked(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
 
     private:

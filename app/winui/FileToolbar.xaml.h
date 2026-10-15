@@ -10,6 +10,8 @@ struct FileToolbar : FileToolbarT<FileToolbar> {
  void SetView(std::function<void(int)> change);
  void SetViewIndex(int selection);
  void SetListDisplay(std::function<void(int)> change);
+ void SetGroup(std::function<void()> change);
+ void SetGroupState(bool enabled);
  void SetListDisplayState(bool checkboxes,bool compactRows,bool showExtensions,bool showHidden);
  void BeginNameEdit(int action,winrt::hstring const& initial);
  void EndNameEdit();
@@ -45,6 +47,7 @@ struct FileToolbar : FileToolbarT<FileToolbar> {
  void OnViewCompactRows(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
  void OnViewFileExtensions(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
  void OnViewHiddenItems(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
+ void OnViewGroupByType(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
  void OnSortChanged(IInspectable const&,Microsoft::UI::Xaml::Controls::SelectionChangedEventArgs const&);
 private:
  void ChooseSort(int index);
@@ -53,6 +56,7 @@ private:
  std::function<void(int)> sort_;
  std::function<void(int)> view_;
  std::function<void(int)> listDisplay_;
+ std::function<void()> group_;
  bool restoring_=false;
  int pendingNameAction_=-1;
 };

@@ -1,6 +1,7 @@
 #include "pch.h"
 #include <winrt/Microsoft.UI.Input.h>
 #include "MainWindow.xaml.h"
+#include <unordered_map>
 #include "../../src/base/shell_assoc_type_core.h"
 #include "../../src/base/shell_thumbnail_core.h"
 #if __has_include("MainWindow.g.cpp")
@@ -362,6 +363,10 @@ namespace winrt::FlyExplorer::implementation
             if(auto ui=nativeWeak.get())ui->ToggleListDisplay(option);
         });
         fileBar()->SetListDisplayState(false,false,true,false);
+        fileBar()->SetGroup([nativeWeak]{
+            if(auto ui=nativeWeak.get())ui->ToggleGroupByType();
+        });
+        fileBar()->SetGroupState(false);
         const auto dispatch=DispatcherQueue();
         const auto weak=get_weak();
         // The worker owns NO MainWindow/WinRT UI object. Cross-apartment
@@ -1631,6 +1636,25 @@ namespace winrt::FlyExplorer::implementation
             state.showHiddenItems?L"현재 창의 숨김 항목을 표시합니다.":
                                   L"현재 창의 숨김 항목을 숨깁니다.");
     }
+    void MainWindow::ToggleGroupByType()
+    {
+        const int side=ActiveWindowTab().model.activePane;
+        if(side<0||side>1)return;
+        auto& state=ActiveWindowTab().fileLists[side];
+        if(state.viewMode!=FileViewMode::Details){
+            StatusText().Text(L"유형별 그룹화는 자세히 보기에서만 사용할 수 있습니다.");
+            fileBar()->SetGroupState(false);
+            return;
+        }
+        state.groupByType=!state.groupByType;
+        state.groupCollapse.resetFor(0,0,side);
+        FillFiles(side);
+        fileBar()->SetGroupState(state.groupByType);
+        UpdateSelectionChrome();
+        UpdateFooterSummary();
+        if(state.groupByType)
+            StatusText().Text(L"현재 창의 파일을 유형별로 그룹화했습니다.");
+    }
     void MainWindow::UpdateViewPresentation(int side)
     {
         auto view=side==0?LeftFiles():RightFiles();
@@ -1846,7 +1870,55 @@ namespace winrt::FlyExplorer::implementation
                         labelAt(index),state.filenameFilter);
                 }),order.end());
         }
-        state.filteredCount=order.size();
+        // F05 is an opt-in complete-model presentation only. A resident
+        // suffix, partial index, stale metadata, or provider item must NEVER
+        // masquerade as global grouping. Native Shell identities are kept
+        // unchanged and only real file rows enter transfer/selection state.
+        bool grouped=false;
+        fxfile::filegroup::Page groupPage{};
+        std::unordered_map<std::uint64_t,std::size_t> groupIndices;
+        if(state.groupByType){
+            const bool fullyEnumerated=indexedProjection?
+                !snapshot.truncated&&!state.indexToComplete:
+                snapshot.baseOffset==0&&!snapshot.truncated&&
+                snapshot.residentEndOffset()==snapshot.nextOffset&&
+                snapshot.nextOffset==items.size();
+            const bool eligible=state.viewMode==FileViewMode::Details&&
+                fullyEnumerated&&metadataReady&&!state.fullModelLimitReached&&
+                order.size()<=fxfile::filegroup::kMaximumIndexedItems;
+            if(eligible){
+                fxfile::filegroup::Request request{
+                    nextRoute,state.visibleRoute,pane.active,state.visibleTab,
+                    order.size(),true,state.fullModelLimitReached,side};
+                std::vector<fxfile::filegroup::Row> groupRows;
+                groupRows.reserve(order.size());
+                groupIndices.reserve(order.size());
+                for(auto index:order){
+                    const auto logical=logicalAt(index);
+                    groupRows.push_back({logical,filesystemAt(index),
+                        folderAt(index),true,state.metadata[index].typeKey});
+                    groupIndices.emplace(logical,index);
+                }
+                auto projection=fxfile::filegroup::projectByType(
+                    request,groupRows);
+                if(projection.ready()){
+                    state.groupCollapse.resetFor(nextRoute,pane.active,side);
+                    groupPage=fxfile::filegroup::present(
+                        request,projection,state.groupCollapse,
+                        state.visibleCount);
+                    grouped=groupPage.ready();
+                }
+            }
+            if(!grouped){
+                state.groupByType=false;
+                state.groupCollapse.resetFor(0,0,side);
+                if(ActiveWindowTab().model.activePane==side)
+                    fileBar()->SetGroupState(false);
+                StatusText().Text(
+                    L"전체 목록과 파일 유형 정보가 준비된 로컬 폴더에서만 그룹화할 수 있습니다.");
+            }
+        }
+        state.filteredCount=grouped?groupPage.totalFileRows:order.size();
         const bool hasPrevious=
             !indexedProjection&&snapshot.baseOffset!=0&&!state.streamToComplete;
         const bool hasForward=indexedProjection?
@@ -1855,7 +1927,8 @@ namespace winrt::FlyExplorer::implementation
                  snapshot.truncated):
             (snapshot.residentEndOffset()<snapshot.nextOffset||
              snapshot.truncated);
-        const bool hasMore=order.size()>state.visibleCount||hasForward;
+        const bool hasMore=grouped?groupPage.hasMore:
+            order.size()>state.visibleCount||hasForward;
         previous.Visibility(hasPrevious?Visibility::Visible:Visibility::Collapsed);
         button.Visibility(hasMore?Visibility::Visible:Visibility::Collapsed);
         auto detailsHeader=side==0?LeftDetailsHeader():RightDetailsHeader();
@@ -1863,11 +1936,13 @@ namespace winrt::FlyExplorer::implementation
             detailsHeader.Height((hasPrevious||hasMore)?24.0:0.0);
         const bool sequential=
             !indexedProjection&&state.filenameFilter.empty()&&mode==0;
-        const auto shown=sequential?
-            snapshot.baseOffset+(std::min)(order.size(),state.visibleCount):
-            (std::min)(order.size(),state.visibleCount);
-        const auto total=sequential?snapshot.nextOffset:order.size();
-        const bool incomplete=indexedProjection?
+        const auto shown=grouped?groupPage.visibleFileRows:
+            sequential?snapshot.baseOffset+
+                (std::min)(order.size(),state.visibleCount):
+                (std::min)(order.size(),state.visibleCount);
+        const auto total=grouped?groupPage.totalFileRows:
+            sequential?snapshot.nextOffset:order.size();
+        const bool incomplete=grouped?false:indexedProjection?
             state.indexToComplete:
             (snapshot.baseOffset||
              snapshot.residentEndOffset()<snapshot.nextOffset||
@@ -1883,8 +1958,56 @@ namespace winrt::FlyExplorer::implementation
         Microsoft::UI::Xaml::Automation::AutomationProperties::SetName(
             button,hstring(std::wstring(
                side==0?L"\uC67C\uCABD \uB354 \uD45C\uC2DC ":L"\uC624\uB978\uCABD \uB354 \uD45C\uC2DC ")+progress));
-        for(size_t visible=0;visible<(std::min)(order.size(),state.visibleCount);++visible){
-            const auto index=order[visible];
+        const auto renderCount=grouped?groupPage.entries.size():
+            (std::min)(order.size(),state.visibleCount);
+        for(size_t visible=0;visible<renderCount;++visible){
+            if(grouped&&groupPage.entries[visible].kind==
+                         fxfile::filegroup::EntryKind::Heading){
+                auto const& entry=groupPage.entries[visible];
+                ListViewItem heading;
+                heading.IsTabStop(false);
+                heading.CanDrag(false);
+                heading.MinHeight(32);
+                const auto title=entry.title;
+                Button disclosure;
+                disclosure.Content(box_value(hstring(
+                    (entry.collapsed?L"▸ ":L"▾ ")+title+L" ("+
+                    std::to_wstring(entry.groupCount)+L")")));
+                disclosure.HorizontalAlignment(HorizontalAlignment::Stretch);
+                disclosure.HorizontalContentAlignment(HorizontalAlignment::Left);
+                Microsoft::UI::Xaml::Automation::AutomationProperties::SetName(
+                    disclosure,hstring(title+
+                        (entry.collapsed?L" 그룹 펼치기":L" 그룹 접기")));
+                const auto weak=get_weak();
+                const auto windowIndex=mWorkspace.activeIndex();
+                const auto route=nextRoute;
+                const auto tab=pane.active;
+                disclosure.Click([weak,side,windowIndex,route,tab,title](
+                    IInspectable const&,RoutedEventArgs const&){
+                    if(auto ui=weak.get()){
+                        if(ui->mClosing||
+                           ui->mWorkspace.activeIndex()!=windowIndex)return;
+                        auto& active=ui->ActiveWindowTab();
+                        const auto& pane=active.model.panes[side];
+                        if(pane.active!=tab||tab>=pane.routeIds.size()||
+                           pane.routeIds[tab]!=route)return;
+                        auto& files=active.fileLists[side];
+                        if(!files.groupByType||
+                           !files.groupCollapse.toggle(route,tab,title,side))
+                            return;
+                        ui->FillFiles(side);
+                        ui->UpdateSelectionChrome();
+                        ui->UpdateFooterSummary();
+                    }
+                });
+                heading.Content(disclosure);
+                Microsoft::UI::Xaml::Automation::AutomationProperties::SetName(
+                    heading,hstring(L"선택할 수 없는 유형 그룹: "+title));
+                view.Items().Append(heading);
+                continue;
+            }
+            const auto index=grouped?
+                groupIndices.at(groupPage.entries[visible].logical):order[visible];
             const auto logical=logicalAt(index);
             std::size_t resident=0;
             const bool residentReady=residentAt(index,resident);
@@ -2375,6 +2498,8 @@ namespace winrt::FlyExplorer::implementation
             ActiveWindowTab().fileLists[ActiveWindowTab().model.activePane].compactRows,
             ActiveWindowTab().fileLists[ActiveWindowTab().model.activePane].showFileExtensions,
             ActiveWindowTab().fileLists[ActiveWindowTab().model.activePane].showHiddenItems);
+        fileBar()->SetGroupState(
+            ActiveWindowTab().fileLists[ActiveWindowTab().model.activePane].groupByType);
         UpdateSortPresentation(ActiveWindowTab().model.activePane);
         StatusText().Text(status);
         Title(L"flyExplorer · "+hstring(nav.snapshot().displayName));
@@ -2421,6 +2546,7 @@ namespace winrt::FlyExplorer::implementation
             ActiveWindowTab().fileLists[side].compactRows,
             ActiveWindowTab().fileLists[side].showFileExtensions,
             ActiveWindowTab().fileLists[side].showHiddenItems);
+        fileBar()->SetGroupState(ActiveWindowTab().fileLists[side].groupByType);
         UpdateSortPresentation(side);
         UpdateSelectionChrome();
         UpdateFooterSummary();
@@ -2645,11 +2771,32 @@ namespace winrt::FlyExplorer::implementation
         if(!view)return;
         const int side=view==LeftFiles()?0:view==RightFiles()?1:-1;
         if(side<0)return;
+        // F05 headings are non-file presentation surfaces, never native
+        // selection/transfer targets. A ListView parent can select even when
+        // its child Button was clicked; remove any Tag-less heading first.
+        std::vector<IInspectable> nonFiles;
+        for(auto const& candidate:view.SelectedItems()){
+            auto row=candidate.try_as<ListViewItem>();
+            if(row&&!row.Tag())nonFiles.push_back(candidate);
+        }
+        if(!nonFiles.empty()){
+            mPopulatingFileLists=true;
+            for(auto const& item:nonFiles){
+                std::uint32_t index=0;
+                if(view.SelectedItems().IndexOf(item,index))
+                    view.SelectedItems().RemoveAt(index);
+            }
+            mPopulatingFileLists=false;
+        }
         // UI Automation and keyboard multi-selection can bypass Tapped.
         // Newly selecting an item makes that pane the command target.
         // Clearing selections (including watcher refreshes) never steals focus.
-        if(args.AddedItems().Size()!=0&&
-           ActiveWindowTab().model.activePane!=side)
+        bool newlySelectedFile=false;
+        for(auto const& candidate:args.AddedItems()){
+            auto row=candidate.try_as<ListViewItem>();
+            if(row&&row.Tag())newlySelectedFile=true;
+        }
+        if(newlySelectedFile&&ActiveWindowTab().model.activePane!=side)
             ActivatePane(side);
         UpdateSelectionChrome();
         if(ActiveWindowTab().model.activePane==side){

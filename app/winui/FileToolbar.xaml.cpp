@@ -14,6 +14,8 @@ void FileToolbar::SetSort(std::function<void(int)> sort){sort_=std::move(sort);}
 void FileToolbar::SetSortIndex(int value){restoring_=true;SortPicker().SelectedIndex(value);restoring_=false;}
 void FileToolbar::SetView(std::function<void(int)> view){view_=std::move(view);}
 void FileToolbar::SetListDisplay(std::function<void(int)> change){listDisplay_=std::move(change);}
+void FileToolbar::SetGroup(std::function<void()> change){group_=std::move(change);}
+void FileToolbar::SetGroupState(bool enabled){ViewGroupByTypeItem().IsChecked(enabled);}
 void FileToolbar::SetListDisplayState(bool checkboxes,bool compactRows,bool showExtensions,bool showHidden){
  ViewCheckboxesItem().IsChecked(checkboxes);
  ViewCompactRowsItem().IsChecked(compactRows);
@@ -37,5 +39,6 @@ void FileToolbar::OnViewCheckboxes(IInspectable const&,RoutedEventArgs const&){i
 void FileToolbar::OnViewCompactRows(IInspectable const&,RoutedEventArgs const&){if(listDisplay_)listDisplay_(1);}
 void FileToolbar::OnViewFileExtensions(IInspectable const&,RoutedEventArgs const&){if(listDisplay_)listDisplay_(2);}
 void FileToolbar::OnViewHiddenItems(IInspectable const&,RoutedEventArgs const&){if(listDisplay_)listDisplay_(3);}
+void FileToolbar::OnViewGroupByType(IInspectable const&,RoutedEventArgs const&){if(group_)group_();}
 void FileToolbar::OnSortChanged(IInspectable const& sender,SelectionChangedEventArgs const&){if(!restoring_&&sort_)sort_(sender.as<ComboBox>().SelectedIndex());}
 }

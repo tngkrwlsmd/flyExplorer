@@ -36,6 +36,8 @@ PRODUCT_SUITES = {
         "tests/winui/test_external_context_contract.py",
         "tests/winui/test_file_detail_controller_contract.py",
         "tests/winui/test_f03_preview_policy_contract.py",
+        "tests/winui/test_f05_group_projection_contract.py",
+        "tests/winui/test_f05_winui_group_integration_contract.py",
         "tests/winui/test_f03_preview_reader_contract.py",
         "tests/winui/test_f03_safe_open_contract.py",
         "tests/winui/test_f03_worker_wire_contract.py",
