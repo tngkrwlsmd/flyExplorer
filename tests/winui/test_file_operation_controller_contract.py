@@ -149,8 +149,12 @@ class FileOperationContracts(unittest.TestCase):
         end = source.index("void MainWindow::OnFileSelectionKeyUp(", begin)
         body = source[begin:end]
         self.assertIn("if(mPopulatingFileLists)return;", body)
-        self.assertIn("args.AddedItems().Size()!=0", body)
-        self.assertIn("ActiveWindowTab().model.activePane!=side", body)
+        # F05 disclosure headings must never become command targets.
+        # Only a newly selected real file row may activate its pane.
+        self.assertIn("bool newlySelectedFile=false;", body)
+        self.assertIn("for(auto const& candidate:args.AddedItems())", body)
+        self.assertIn("if(row&&row.Tag())newlySelectedFile=true;", body)
+        self.assertIn("if(newlySelectedFile&&ActiveWindowTab().model.activePane!=side)", body)
         self.assertIn("ActivatePane(side);", body)
 
     def test_partial_failure_refreshes_visible_touched_folders(self):
