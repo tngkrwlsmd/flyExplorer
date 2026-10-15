@@ -59,6 +59,14 @@ def run(*,win,element,safe_click,eventually,left,right):
         assert menu.element_info.process_id==pid
         assert foreground_owned(),"Refuse foreign foreground mouse input"
         menu.click_input()  # ToggleMenuFlyoutItem lacks InvokePattern
+        print("F05_GROUP_TOGGLE_DIAG="+side+
+              " ACTIVE="+element("ActivePaneText").window_text()+
+              " STATUS="+element("StatusText").window_text()+
+              " LEFT_HEADINGS="+str(sum(disclosure("LeftFiles",ext) is not None
+                                        for ext in (".txt",".md",".log")))+
+              " RIGHT_HEADINGS="+str(sum(disclosure("RightFiles",ext) is not None
+                                         for ext in (".txt",".md",".log"))),
+              flush=True)
         eventually(lambda:all(disclosure(side,ext) is not None
                               for ext in (".txt",".md",".log")),
                    "Full group headings were not displayed in "+side,15)
@@ -99,8 +107,12 @@ def run(*,win,element,safe_click,eventually,left,right):
     assert row("RightFiles","group-right.txt"),"Right TXT incorrectly hidden"
     print("F05_RIGHT_MD_COLLAPSED=PASS",flush=True)
 
+    safe_click(element("LeftFiles"))
     safe_click(eventually(lambda:row("LeftFiles","readme.txt"),
                           "Left owned row disappeared after right collapse",8))
+    eventually(lambda:"왼쪽" in element("ActivePaneText").window_text(),
+               "Left pane never became active after real click",9)
+    print("F05_LEFT_REACTIVATED="+element("ActivePaneText").window_text(),flush=True)
     enable_group("LeftFiles",("readme.txt","group-guide.md","group-events.log"))
     assert disclosure("RightFiles",".md") is not None
     assert row("RightFiles","group-right.md") is None,(
