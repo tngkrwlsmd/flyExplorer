@@ -199,3 +199,51 @@ def run(*,win,element,safe_click,eventually,left,right):
     assert disclosure("LeftFiles",".md") is not None
     assert row("LeftFiles","group-events.log") is None
     print("F05_RIGHT_NAVIGATION_DOES_NOT_TOUCH_LEFT=PASS",flush=True)
+
+    # F05 window-tab route switch: tab headers never act like real Shell
+    # rows, and a second pane must not be rebuilt or grouped implicitly.
+    safe_click(eventually(lambda:row("LeftFiles","readme.txt"),
+                          "Left TXT unavailable before tab test",9))
+    eventually(lambda:"왼쪽" in element("ActivePaneText").window_text(),
+               "Left pane did not activate before tab creation",9)
+
+    def left_tabs():
+        tabs=[item for item in element("LeftTabs").descendants()
+              if item.element_info.control_type=="TabItem"]
+        assert all(item.element_info.process_id==pid for item in tabs)
+        return tabs
+
+    initial=len(left_tabs())
+    assert initial>=1 and initial<32
+    safe_click(element("NewTabButton"))
+    eventually(lambda:len(left_tabs())==initial+1,
+               "Owned left-pane tab was not added",10)
+    eventually(lambda:row("LeftFiles","readme.txt") is not None,
+               "New left tab did not show its owned folder",13)
+    assert row("RightFiles","group-right.txt") is not None, (
+        "Left tab addition destroyed right pane")
+    print("F05_LEFT_TAB_ADD_RIGHT_PANE_SAFE=PASS",flush=True)
+
+    first=left_tabs()[0]
+    safe_click(first)
+    eventually(lambda:bool(left_tabs()[0].iface_selection_item.CurrentIsSelected),
+               "Selecting initial left tab did not update TabView state",9)
+    eventually(lambda:row("LeftFiles","readme.txt") is not None,
+               "Initial left tab rows were not restored",12)
+    assert row("RightFiles","group-right.txt") is not None
+    print("F05_LEFT_TAB_SELECT_ORIGINAL=PASS",flush=True)
+
+    last=left_tabs()[-1]
+    safe_click(last)
+    eventually(lambda:bool(left_tabs()[-1].iface_selection_item.CurrentIsSelected),
+               "Switching to new left tab failed",9)
+    eventually(lambda:row("LeftFiles","readme.txt") is not None,
+               "New tab rows disappeared after switching",12)
+    safe_click(element("CloseTabButton"))
+    eventually(lambda:len(left_tabs())==initial,
+               "Closing owned left tab did not restore count",10)
+    eventually(lambda:row("LeftFiles","readme.txt") is not None,
+               "Original left tab not restored after close",12)
+    assert row("RightFiles","group-right.txt") is not None, (
+        "Left tab close destroyed right pane")
+    print("F05_LEFT_TAB_SWITCH_AND_CLOSE_ISOLATED=PASS",flush=True)
