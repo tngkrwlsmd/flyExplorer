@@ -68,10 +68,9 @@ pixel visual acceptance.
 
 The original type-grouping implementation has real independent left/right
 pane and left-tab acceptance recorded below. The newly integrated Name,
-Size and Modified-Month modes, including their per-tab restored collapse
-state, still require dedicated **actual Windows GUI** acceptance; the
-source-level contracts alone do not prove those interactions. The F05
-original Light/Dark pixels also remain unreviewed. Further separate gates:
+Size and Modified-Month modes, including per-tab restored collapse, have now
+passed dedicated **actual Windows GUI** acceptance as recorded below.
+The F05 original Light/Dark pixels remain unreviewed. Separate gates:
 active High Contrast, Narrator speech, actual 125/150/200% Windows DPI,
 large-folder GUI, full keyboard-only disclosure and provider/non-Details
 behavior. Non-Details grouping is intentionally unsupported, not an
@@ -149,7 +148,7 @@ Original product C++/XAML implementation is unchanged from
   name/size/modified-month GUI behavior, or arbitrary shell providers.
 
 
-## 2026-10-15 Four-mode integration: new behavior requires its own acceptance
+## 2026-10-15 Four-mode integration (historical pre-acceptance status)
 
 - Product integration: `8e4bfe990f0a5fec6cd83888f58ebb9df707555b` on `main`.
   The new menu routes four explicit modes through the active pane; native
@@ -163,7 +162,32 @@ Original product C++/XAML implementation is unchanged from
   `a378722ab87221c1415b07281e64fca6fd979cd2` (legitimate F03
   Preview terminology versus retired product branding). These are
   **test-only** corrections, not changes to the grouping product code.
-- **Evidence limit:** pre-expansion type grouping and independent pane/tab
-  GUI evidence cannot certify the newly added modes. Neither the presence
-  of an opt-in four-mode GUI test nor a general central GUI acceptance
-  automatically certifies focused F05 mode interaction or final pixels.
+- **Evidence limit at this date:** pre-expansion type grouping and independent
+  pane/tab GUI evidence did not certify the new modes. The later focused
+  Windows test below closed this functional gap, but not visual acceptance.
+
+## 2026-10-16 Four-mode focused Windows GUI — PASS
+
+- **Exact accepted source SHA:** `e1a95f6adee897c803e2dfec74e93a43953878b3`.
+  The grouped product implementation was introduced at `8e4bfe99`;
+  following source-contract fixes did not change the product C++/XAML.
+- [Central CI #38736462369](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38736462369)
+  **SUCCESS** for product-identical SHA `a378722a`: source and policy,
+  Windows Release, window/tab, shortcuts, filter presets and complete
+  default GUI checks. The subsequent `e1a95f6a` diff was documentation.
+- [Focused actual Windows GUI #38809769293](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38809769293)
+  **SUCCESS** for exact `e1a95f6a` on 2026-10-16 06:44 KST:
+  17 targeted F05 source contracts passed; Release was rebuilt; actual
+  interactive WinUI confirmed **Name, Size, Modified Month, Type** headings,
+  collapse isolation, a newly ungrouped tab, original-tab collapse restore,
+  close-tab coherence and explicit grouping opt-out. The run emitted
+  `F05_FOUR_MODES_AND_TAB_GUI_PASS=True` and all nine individual
+  `F05_GUI_* =PASS` checks (without a space before the equals sign).
+  The application exited with code 0, all six original user-setting file
+  SHA-256 hashes remained identical and the test-owned folder was removed.
+  Bounded test evidence remains in the owned Windows evidence directory.
+- **Separate pending gates:** `VISUAL ACCEPTANCE: NOT TESTED` for F05
+  Light/Dark composited pixels; actual 125/150/200% DPI, active High
+  Contrast, Narrator speech, keyboard-only disclosure end-to-end,
+  large-directory GUI performance and arbitrary Shell providers remain
+  unverified. Do not infer those outcomes from UI Automation success.
