@@ -7,6 +7,40 @@ app/winui, UI-independent native code in src/base, tests in tests/winui, and
 bounded orchestration in tools/winui/run_checks.py. The former MFC application
 is retired from the working tree and is recoverable from Git revision cbffb48.
 
+## 2026-10-15 F03 physical mouse selection resolved — Release + owned strict GUI + Dark pixels PASS
+
+- **Current accepted product SHA:** `196aa27b1132955c6c6c5eabd1470c971eac06d9`.
+  Left and right WinUI file lists changed from `SelectionMode="Multiple"`
+  to `SelectionMode="Extended"`; the existing preview/helper and file
+  operation code remain unchanged. The controller source contract
+  checks both panes and the unchanged drag/selection event wiring.
+- [Central Windows Release #38662641235](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38662641235)
+  **SUCCESS** for the exact SHA, followed by
+  [owned strict physical mouse GUI #38663282030](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38663282030)
+  **SUCCESS**. Actual row click changed from `Nested` back to
+  **only** `readme.txt`, with
+  `F03_GUI_RESELECT_PHYSICAL_SINGLE_SELECTION=True`,
+  `F03_GUI_RESELECT_BOTH_ROWS_SELECTED=False`, and
+  `F03_GUI_STRICT_PHYSICAL_RESELECT=PASS`. No UIA `Select()` fallback
+  was needed; genuine opt-in text re-read, selection-stale clear,
+  opt-out and reopen remained PASS. Test-owned fixture removed,
+  app exit 0 and original six user settings SHA256 unchanged.
+- Previous `Multiple` strict GUI
+  [#38655414859](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38655414859)
+  had an ordinary click input failure and multi-selection retention.
+  Its before-change app-only dark PNG and the new after-change PNG
+  were retrieved read-only in
+  [#38663593381](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38663593381)
+  and visually inspected at approximately 952x519: both dual-pane
+  layouts, text Preview, highlight and contrast were readable without
+  observed new clipping/overlap. Fixture path/timestamp differ.
+  **VISUAL ACCEPTANCE: PASS for the compared dark window only.**
+  Light at this changed SHA, keyboard-only, Ctrl/Shift multi-select,
+  drag interactions, 125/150/200% OS DPI, HC and Narrator are
+  **NOT TESTED**, not silently promoted from historical evidence.
+- Central remote request slot restored to idle; protected test-owned
+  evidence remains under `.keep`.
+
 ## 2026-10-15 F03 bounded opt-in text Preview — dark/light real GUI PASS with input caveat
 
 - **Accepted GUI SHA:** `0e4e147f7e1004703d9566f3bf38bb086de6c17a`.
@@ -46,16 +80,13 @@ is retired from the working tree and is recoverable from Git revision cbffb48.
   persisted; the accessibility Select() fallback again passed.
   Thus the simple immediate-click race is not an adequate
   explanation. Leave mouse hit-testing/focus/manual click unverified.
-- **New mouse diagnostic committed but NOT RUN:** F03 test now records
-  item-center versus bounded filename-side physical pointer selection,
-  verifies window/pixel HWND ownership and Ctrl/Shift state, and
-  rejects a simultaneous folder-and-text multi-selection as successful
-  single-file Preview input. Set `FLY_F03_STRICT_PHYSICAL_RESELECT=YES`
-  in a **test-owned** GUI invocation to fail on mouse selection instead
-  of falling back to UIA `Select()`. The remote Windows request was
-  blocked at security validation and the Desktop Commander device was
-  offline; these source-only updates carry **no new GUI PASS**.
-  See [F03_PREVIEW_PANE.md](F03_PREVIEW_PANE.md).
+- **Historical source-only mouse diagnostic:** prior to the
+  strict runs, hit-target/foreground-ownership logging and the
+  `FLY_F03_STRICT_PHYSICAL_RESELECT=YES` acceptance mode were
+  prepared but not yet executed. The later real Windows strict tests
+  #38655414859 (old mode FAIL) and #38663282030 (new mode PASS)
+  supersede that pre-test status. See
+  [F03_PREVIEW_PANE.md](F03_PREVIEW_PANE.md).
 - **Failed but now reverted separate layout change:** exact
   `fac580bd` passed [source/Release
   #38646656680](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38646656680)
