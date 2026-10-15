@@ -1,4 +1,4 @@
-# flyExplorer current status — documentation reconciled 2026-10-15
+# flyExplorer current status — F05 verification reconciled 2026-10-16
 
 ## Product source of truth
 
@@ -6,6 +6,26 @@ main is the canonical C++/WinRT WinUI 3 product. Product code lives in
 app/winui, UI-independent native code in src/base, tests in tests/winui, and
 bounded orchestration in tools/winui/run_checks.py. The former MFC application
 is retired from the working tree and is recoverable from Git revision cbffb48.
+
+## 2026-10-16 F05 four-mode grouping — real Windows GUI PASS
+
+- **Exact tested `main` SHA:** `e1a95f6adee897c803e2dfec74e93a43953878b3`.
+  [Focused Windows GUI #38809769293](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38809769293)
+  **SUCCESS**: 17 targeted contracts, new Release build, actual WinUI
+  Name/Size/Modified Month/Type headings, independent collapse and file rows,
+  per-tab state restoration, new-tab/close-tab and explicit opt-out.
+  WinUI exited 0; six original preference SHA-256 hashes were unchanged;
+  synthetic fixture removed. The earlier
+  [central GUI #38736462369](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38736462369)
+  passed general policy/source, Release and full functional GUI gates for
+  product-identical parent SHA `a378722a`.
+- **Boundaries:** `VISUAL ACCEPTANCE: NOT TESTED` for F05 original
+  Light/Dark pixels. Actual 125/150/200% Windows DPI, active High Contrast,
+  Narrator speech, end-to-end keyboard-only disclosure, large-folder practical
+  GUI and arbitrary providers are separately unverified.
+  See [F05_GROUP_BY.md](F05_GROUP_BY.md) for scoped evidence.
+- **Operations:** completed Windows F05 request slot was restored to
+  idle by personal-control-plane commit `edca8a2937b595e0b73f2be2c205a64f4910f025`.
 
 ## 2026-10-15 F05 independent panes, route and tab navigation — Windows GUI PASS
 
@@ -45,10 +65,11 @@ is retired from the working tree and is recoverable from Git revision cbffb48.
   attempted mouse click; physical Enter worked. This documents a
   test input-delivery defect, **not proof of a product mouse-click
   defect**. The accepted run uses mouse on right and Enter on left.
-- **Still NOT TESTED:** original app-window Light/Dark PNG pixel
-  review, Narrator spoken labels, true OS DPI 125/150/200%,
+- **Historical status as of 2026-10-15:** original app-window Light/Dark
+  PNG pixel review, Narrator spoken labels, true OS DPI 125/150/200%,
   active High Contrast, real 25,000-item Windows GUI, other grouping
-  dimensions (name/date/size), and full keyboard-only list workflows.
+  dimensions (name/date/size), and full keyboard-only list workflows
+  were not yet tested. The newer four-mode GUI test is recorded above.
   Existing F05 before/grouped/expanded PNG capture markers do not
   constitute visually inspected pixels. Windows Remote Shell slot
   restored to idle. Details: `docs/development/F05_GROUP_BY.md`.
