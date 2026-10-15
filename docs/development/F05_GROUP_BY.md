@@ -1,26 +1,32 @@
-# F05 — File type grouping: current bounded acceptance
+# F05 — Four-mode file grouping: implementation and bounded acceptance
 
 ## Scope and design
 
-Type grouping is opt-in via View → 유형별 그룹화 (전체 목록), and
-applies to the active pane. The product currently supports type
-grouping only in Details mode when the complete resident/indexed
-enumeration is available, metadata is synchronized, route/tab/side
-identities match and there are at most 25,000 indexed items.
+Grouping is opt-in via the active pane's View menu. Commit `8e4bfe99`
+extends the original type grouping to four modes: Type (유형), Name
+(이름), Size (크기), and Modified Month (수정 월). All four require
+Details mode, complete resident/indexed enumeration, synchronized
+metadata, matching route/tab/side identities and at most 25,000
+indexed items.
 Unsupported or incomplete folders revert safely to the ordinary
 list instead of presenting a false complete-group claim.
 
-The model classifies folders, filename extensions and extensionless
-entries. Each group has a disclosure action; headings are not real
-files and never carry a Shell item identity. Real selectable rows
-retain original Shell logical identities, parsing paths and 160
-file rows per initial page. Collapse state is pane/window-tab local
-and is invalidated when route identity changes.
+Type groups classify folders, filename extensions and extensionless
+entries; the additional modes bucket the existing bounded filename,
+size and last-modified metadata. Group headings are not real files and
+never carry a Shell item identity. Real selectable rows retain their
+original logical identities and parsing paths, with 160 file rows on
+the initial page. Each pane/window-tab stores its own group mode and
+collapse state. Switching tabs may defer restoration until that tab's
+current complete metadata model is available; obsolete route identity
+is never a license to render stale group rows.
 
 ## Files and tests
 
 - app/winui/file_group_projection.h: bounded full-model type buckets
+- app/winui/file_group_modes.h: name/size/month bucket projection
 - app/winui/file_group_presentation.h: scoped collapse and paging
+- app/winui/file_group_tab_cache.h: per-pane/route/tab deferred group restoration
 - app/winui/FileToolbar.xaml and C++ code: View menu toggle
 - app/winui/file_list_state.h and MainWindow.xaml.cpp: pane ownership,
   presentation rendering, guarded selection and disclosure callbacks
@@ -29,7 +35,10 @@ and is invalidated when route identity changes.
 - tests/winui/test_f05_group_projection_contract.py and
   tests/winui/test_f05_winui_group_integration_contract.py:
   source contract checks
-- tests/winui/test_f05_group_gui.py: real owned interactive GUI probe
+- tests/winui/test_f05_group_gui.py: real owned type-group GUI probe
+- tests/winui/test_f05_group_modes_gui.py: opt-in four-mode owned GUI probe
+- tests/winui/native_f05_group_modes.cpp and
+  tests/winui/native_f05_group_tab_cache.cpp: extended native probes
 
 ## Windows evidence — 2026-10-15
 
@@ -57,10 +66,16 @@ pixel visual acceptance.
 
 ## Further validation / unimplemented capabilities
 
-Actual visual review and Dark theme; independent right pane and
-window-tab switching; active High Contrast and Narrator announcements;
-125%, 150%, 200% Windows DPI; huge-folder GUI limits; keyboard-only
-group disclosure; name/date/size group modes; non-Details layouts.
+The original type-grouping implementation has real independent left/right
+pane and left-tab acceptance recorded below. The newly integrated Name,
+Size and Modified-Month modes, including their per-tab restored collapse
+state, still require dedicated **actual Windows GUI** acceptance; the
+source-level contracts alone do not prove those interactions. The F05
+original Light/Dark pixels also remain unreviewed. Further separate gates:
+active High Contrast, Narrator speech, actual 125/150/200% Windows DPI,
+large-folder GUI, full keyboard-only disclosure and provider/non-Details
+behavior. Non-Details grouping is intentionally unsupported, not an
+unimplemented promise of automatic fallback.
 
 Do not change real user folders or system display settings solely
 for these tests. Keep an explicit acceptance status for each scope.
@@ -130,6 +145,25 @@ Original product C++/XAML implementation is unchanged from
   for every screen or that C++ code was defective.
 - **Not certified:** original F05 Light/Dark screenshot pixels,
   narrator spoken announcements, High Contrast, 125/150/200%
-  DPI, large directory practical performance, other Group by
-  dimensions (name/size/date), or arbitrary shell providers.
+  DPI, large directory practical performance, the newly integrated
+  name/size/modified-month GUI behavior, or arbitrary shell providers.
 
+
+## 2026-10-15 Four-mode integration: new behavior requires its own acceptance
+
+- Product integration: `8e4bfe990f0a5fec6cd83888f58ebb9df707555b` on `main`.
+  The new menu routes four explicit modes through the active pane; native
+  projection uses existing metadata and retains logical Shell file identities.
+  A bounded per-tab cache defers collapse restoration until the original
+  route's complete model is available.
+- Source-contract corrections following the initial central run:
+  `aa5039afe6c22382b4e240bba7ae91abe77e8f91` (exclude heading
+  selection as a command target), `694f4a067495bd81e9940a0d7314bf9f29cb48ee`
+  (group-file count versus sequential resident offset), and
+  `a378722ab87221c1415b07281e64fca6fd979cd2` (legitimate F03
+  Preview terminology versus retired product branding). These are
+  **test-only** corrections, not changes to the grouping product code.
+- **Evidence limit:** pre-expansion type grouping and independent pane/tab
+  GUI evidence cannot certify the newly added modes. Neither the presence
+  of an opt-in four-mode GUI test nor a general central GUI acceptance
+  automatically certifies focused F05 mode interaction or final pixels.
