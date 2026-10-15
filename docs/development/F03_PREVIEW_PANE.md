@@ -1,5 +1,32 @@
 # F03 — bounded local Preview pane development boundary
 
+## 2026-10-15 F03 Extended selection — both panes keyboard + Ctrl/Shift GUI PASS
+
+- **Exact latest tested source:** `b86e93f5e004d1f5e8cc40ae6ff663f55b01487f`.
+  Product C++/XAML bytes are unchanged from the successful
+  `196aa27b` strict mouse/Release revision. New
+  `tests/winui/test_f03_extended_selection_gui.py` and opt-in
+  `FLY_F03_EXTENDED_ONLY=YES` in `test_shell_gui.py` exercise the
+  existing Windows GUI harness with test-owned files only.
+- [Owned real-user GUI #38664113381](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38664113381)
+  **SUCCESS** at the exact source SHA. Both `LeftFiles` and
+  `RightFiles` individually passed **physical keyboard Down arrow**
+  moving from the selected folder to only the TXT file,
+  **Ctrl+click** adding and removing the other selection,
+  **Shift+click** selecting the contiguous two-row range and then
+  **plain click** restoring exactly one selected file. Actual
+  `F03_EXTENDED_BOTH_PANES_INPUT_PASS=True` and
+  `F03_EXTENDED_OWNED_GUI_PASS True`. GUI exited with code 0,
+  disposable fixture removed and all six legacy profile hashes
+  remained identical. Test-owned evidence kept.
+- **Scope limits:** this verifies keyboard selection **once a file-list
+  item has been physically focused**. Keyboard-only navigation from
+  the first app focus, screen reader spoken labels, drag-and-drop,
+  Light/HC, and 125/150/200% OS DPI remain separate, untested gates.
+  Strict F03 text-preview acceptance and the dark visual comparison
+  remain pinned to unchanged product SHA `196aa27b`; do not
+  mislabel the newer test-only commit as a separate visual retest.
+
 ## 2026-10-15 F03 file-list mouse reselection — fixed, strict Windows PASS
 
 - **Product and test commit:** `196aa27b1132955c6c6c5eabd1470c971eac06d9`.
