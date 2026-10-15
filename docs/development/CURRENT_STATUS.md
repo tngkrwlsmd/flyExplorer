@@ -7,6 +7,39 @@ app/winui, UI-independent native code in src/base, tests in tests/winui, and
 bounded orchestration in tools/winui/run_checks.py. The former MFC application
 is retired from the working tree and is recoverable from Git revision cbffb48.
 
+## 2026-10-15 F05 type grouping — real Windows GUI PASS, visual pixel review pending
+
+- **Product:** Native bounded group projection arrived in commit 1d6d9205;
+  the WinUI bridge (View flyout type-group opt-in, per-pane collapsible
+  non-file disclosure headings, original Shell identity preservation,
+  fail-closed incomplete views) arrived in c14be710.
+- **Accepted GUI source SHA:** 50dc06b872069b6f6ba2f4e5ea3e224c2809423f.
+  [Actual owned Windows GUI run #38692989325](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38692989325):
+  **SUCCESS**. Eight source-contract checks passed; the exact
+  previously built Release launched and exited 0; View menu was
+  physically clicked in the owned process; .txt/.md/.log
+  group disclosure headings appeared, a real TXT file could be
+  selected, collapsing Markdown hid only its files, and reopening
+  restored the Markdown row. All six real user setting hashes were
+  identical before and after; disposable synthetic fixture removed.
+- **Failure provenance:** [#38688357154](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38688357154)
+  completed a fresh Release and started WinUI but its GUI test
+  misused Desktop.child_window; [#38692716189](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38692716189)
+  located the group flyout but misused the absent UIA Invoke pattern.
+  Both are corrected **test-harness defects**, not evidence of product
+  startup failure, and #38692989325 passed using the corrected test.
+- **Image status:** actual app-window before/grouped/expanded PNGs
+  were captured under logs/f05-visual (all three capture markers
+  present); an attempt to retrieve these originals for manual
+  pixel inspection was blocked. **Light/Dark visual pixel acceptance
+  is NOT certified.** The GUI assertions establish interaction only.
+- **Remaining:** interactive right-pane and cross-tab transitions,
+  file selection after group collapse in additional scenarios,
+  name/size/date grouping, non-Details group layouts, large-folder
+  GUI paging, keyboard-only header toggles, Narrator, DPI 125/150/200%,
+  Dark/High Contrast visual review. Central Windows request slot
+  was restored to idle. See docs/development/F05_GROUP_BY.md.
+
 ## 2026-10-15 F03 interactive window DPI/High Contrast inventory — real 100% observed, higher DPI NOT TESTED
 
 - **Exact test-only source SHA:** `7a84b40022d67468dcfd7273b28fb0271ad175c1`.
