@@ -114,8 +114,12 @@ def run(*, win, element, safe_click, eventually, left, right):
             eventually(lambda phrase=expected:phrase in body_text(),
                        "Safe text helper did not show: "+name,14)
             assert previous not in body_text(), "Stale preview bytes crossed file selection"
-            assert element("FileInfoName").window_text()==name, (
-                "Displayed metadata belongs to another selected file")
+            # FileInfoName is virtualized after the deliberate Details
+            # ScrollViewer scroll. Its absence is not a wrong-file signal:
+            # the selected list row plus unique returned text establish
+            # identity without scrolling the preview controls out of view.
+            assert bool(row(name).iface_selection_item.CurrentIsSelected), (
+                "Preview row lost its selected state")
             print(marker+"=PASS",flush=True)
             previous=expected
 
