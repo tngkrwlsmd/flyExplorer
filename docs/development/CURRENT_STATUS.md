@@ -7,6 +7,24 @@ app/winui, UI-independent native code in src/base, tests in tests/winui, and
 bounded orchestration in tools/winui/run_checks.py. The former MFC application
 is retired from the working tree and is recoverable from Git revision cbffb48.
 
+## 2026-10-16 Four F05 native C++ probes — PASS with worker timeout caveat
+
+- **Exact tested SHA:** `1f85741cd1ec183719cc0cbce1d2460d89ab033a`.
+  The native harness now includes four F05 C++ tests and explicitly
+  compiles with MSVC `/utf-8 /W4 /WX` (Korean cp949-safe source parsing).
+- [Native attempt #38823430041](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38823430041)
+  concluded **FAILURE** at its outer scheduled worker timeout, with no
+  `result.json`. This must not be represented as a successful CI run.
+- Separate read-only [log review #38826356423](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38826356423)
+  and [exact-SHA binary verification #38826480894](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38826480894)
+  independently confirmed all four native executable outputs and PASS
+  markers, the aggregate `F05_NATIVE_ALL_FOUR_GROUP_AND_TAB_PROBES=PASS`,
+  and 8/8 focused Python contracts `OK`. **Native tests: PASS**;
+  **outer worker completion: NOT ACCEPTED**. Product WinUI GUI results
+  from the earlier verified revision remain unchanged.
+- F05 Light/Dark **VISUAL ACCEPTANCE: NOT TESTED**. Details:
+  [F05_GROUP_BY.md](F05_GROUP_BY.md).
+
 ## 2026-10-16 F05 four-mode grouping — real Windows GUI PASS
 
 - **Exact tested `main` SHA:** `e1a95f6adee897c803e2dfec74e93a43953878b3`.
