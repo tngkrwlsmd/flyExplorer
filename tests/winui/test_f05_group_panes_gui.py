@@ -5,7 +5,7 @@ flyExplorer and all fixtures to the harness-owned Left/Right directories.
 No user files or OS display/accessibility settings are modified.
 """
 from pathlib import Path
-from pywinauto import Desktop
+from pywinauto import Desktop, keyboard
 import ctypes
 from ctypes import wintypes
 import time
@@ -85,7 +85,15 @@ def run(*,win,element,safe_click,eventually,left,right):
         print("F05_MENU_TOGGLE_BEFORE="+side+" VALUE="+toggle_state,
               flush=True)
         assert foreground_owned(),"Refuse foreign foreground mouse input"
-        menu.click_input()  # ToggleMenuFlyoutItem lacks InvokePattern
+        if side=="LeftFiles":
+            # Physical Enter on the currently focused, live ToggleMenuFlyout
+            # peer avoids clicking a stale popup visual after a pane switch.
+            menu.set_focus()
+            assert foreground_owned(),"Refuse keys outside owned UI process"
+            keyboard.send_keys("{ENTER}")
+            print("F05_GROUP_LEFT_MENU_PHYSICAL_ENTER_SENT=True",flush=True)
+        else:
+            menu.click_input()  # Initial right popup: physical mouse
         print("F05_GROUP_TOGGLE_DIAG="+side+
               " ACTIVE="+element("ActivePaneText").window_text()+
               " STATUS_UESC="+element("StatusText").window_text().encode(
