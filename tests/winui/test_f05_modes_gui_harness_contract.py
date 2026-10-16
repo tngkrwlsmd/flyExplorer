@@ -34,8 +34,8 @@ class F05FourModesHarnessContract(unittest.TestCase):
         for token in ('FLY_F05_VISUAL_CAPTURE', 'FLY_F05_VISUAL_THEME',
                       'theme in ("light", "dark")',
                       'owned_foreground()', 'GetSystemMetrics(0)',
-                      'GetSystemMetrics(1)', 'ImageGrab.grab(',
-                      'include_layered_windows=True',
+                      'GetSystemMetrics(1)', 'ImageGrab.grab(window=hwnd)',
+                      'owner.value == process_id',
                       'f05-visual-modes', 'GetDpiForWindow(',
                       'F05_VISUAL_CAPTURE='):
             self.assertIn(token, HARNESS + PROBE)
