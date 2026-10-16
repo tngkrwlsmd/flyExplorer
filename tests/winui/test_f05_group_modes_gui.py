@@ -188,6 +188,27 @@ def run(*, win, element, safe_click, focus, eventually, left, right):
         # No physical input when the interactive user is not foreground.
         print("F05_VISUAL_BASELINE_ONLY=PASS", flush=True)
         return
+    if capture and os.environ.get("FLY_F05_VISUAL_GROUP_MODE_ONLY"):
+        mode = os.environ["FLY_F05_VISUAL_GROUP_MODE_ONLY"]
+        titles = {
+            "name": ("A–F", "M–R", "S–Z", "가–힣"),
+            "size": ("10 KB 미만", "10 KB–1 MB", "1–100 MB"),
+            "month": ("2026년 7월", "2026년 8월", "2026년 9월"),
+            "type": (".txt", ".md", ".log"),
+        }
+        assert mode in titles
+        # WinUI itself triggers this opt-in visual fixture after the
+        # entire synthetic metadata model is ready. This is NOT an
+        # interactive View-menu input acceptance test.
+        eventually(lambda: all(heading(name) is not None
+                               for name in titles[mode]),
+                   "Owned visual fixture group headings missing: " +
+                   mode, 21)
+        screenshot(mode)
+        assert file_row("Alpha-small.txt") is not None
+        print("F05_VISUAL_GROUP_FIXTURE_MODE=" + mode +
+              " PASS_NO_PHYSICAL_INPUT=True", flush=True)
+        return
     set_mode("Name")
     eventually(lambda: all(heading(title) is not None for title in
                            ("A–F", "M–R", "S–Z", "가–힣")),
