@@ -181,7 +181,11 @@ def run(*, win, element, safe_click, focus, eventually, left, right):
     # The isolated metadata worker is asynchronous. Allow the small, owned
     # fixture to settle without modifying system settings or user files.
     time.sleep(.8)
-    assert heading(".md") is None
+    # The opt-in visual Type fixture may already be grouped by WinUI's
+    # dispatcher before Python reaches this pre-grouping checkpoint.
+    if not (capture and
+            os.environ.get("FLY_F05_VISUAL_GROUP_MODE_ONLY") == "type"):
+        assert heading(".md") is None
 
     screenshot("before")
     if capture and os.environ.get("FLY_F05_VISUAL_BASELINE_ONLY") == "YES":
