@@ -300,3 +300,31 @@ Original product C++/XAML implementation is unchanged from
   test app foreground ownership. Consequently, **F05 GROUPED FULL
   VISUAL ACCEPTANCE: NOT TESTED**. Actual 125/150/200% DPI, active High
   Contrast and Narrator spoken output remain independent open gates.
+
+## 2026-10-16 Test-owned grouped XAML visual fixture — source PASS, Release pending
+
+- **Exact source revision:** `23c85c1861745216454314ecc29159b498fd3666`.
+  [Central source/policy CI #38873943360](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38873943360)
+  **SUCCESS** (`PASS policy`, `PASS source`). This covers code
+  contracts, **not** the new C++ binary or grouped pixels.
+- MainWindow now recognizes `FLY_F05_OWNED_XAML_VISUAL_GROUP_MODE`
+  only in combination with a validated test-owned
+  `FLY_F05_OWNED_XAML_VISUAL_DIR`. A bounded UI-dispatcher timer waits
+  for the exact six-file `logs/phase6-winui/shell-owned-*/Left`
+  synthetic model, complete enumeration and current metadata. Only
+  then it uses the existing `ToggleGroupMode` codepath to produce
+  one selected Type/Name/Size/Modified Month XAML screenshot.
+  In normal launches these variables are absent and no timer runs.
+- The opt-in Python harness flag `FLY_F05_VISUAL_GROUP_MODE_ONLY`
+  validates the corresponding real UIA headings and alpha-preserving
+  screenshot, **without physical desktop input**. It emits
+  `F05_VISUAL_GROUP_FIXTURE_GUI_PASS=True`, not
+  `F05_FOUR_MODES_AND_TAB_GUI_PASS=True`. Existing interactive
+  grouping acceptance at `e1a95f6a` is preserved and not replaced.
+- **Unverified for this revision:** fresh Windows Release compilation,
+  execution of grouped visual fixture for either Light or Dark, and
+  actual Windows/DWM final-composited pixel inspection. The separate
+  central Release request did not start; no release/GUI success is
+  claimed. The next executable acceptance is a single exact-SHA
+  Release build followed by bounded owned-file group presentation
+  screenshots. Avoid duplicating completed baseline or native tests.
