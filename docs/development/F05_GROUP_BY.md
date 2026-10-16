@@ -262,3 +262,28 @@ Original product C++/XAML implementation is unchanged from
   fixture and grouped states. Dark theme capture and group-mode visual
   comparison have not completed. OS 125/150/200% DPI, active High Contrast,
   Narrator speech and keyboard-only full workflow remain independent gates.
+
+## 2026-10-16 Baseline-only acceptance path (prepared; not yet executed)
+
+- **Main test-only SHA:** `9077a1ac39e68c3a0232613bb09e255131ae2846`.
+  The private-preferences CRLF fix (`8f67352e`) and its regression
+  contract (`7717d8e0`) are included.
+- The F05 owned GUI harness now recognizes opt-in
+  `FLY_F05_VISUAL_BASELINE_ONLY=YES` *only together with*
+  `FLY_F05_VISUAL_CAPTURE=YES`. It captures app-owned XAML
+  `before.bmp`/`before.png` and exits normally without physical input.
+  It emits `F05_VISUAL_BASELINE_GUI_PASS=True`, **not**
+  `F05_FOUR_MODES_AND_TAB_GUI_PASS=True`. The latter remains reserved
+  for actually exercised group-mode interactions.
+- **Next independent Windows acceptance:** verify the exact source SHA,
+  run the focused source contracts, reuse the same accepted Release
+  binary (no C++/XAML changes since `91179a0e`), exercise Light and
+  Dark baseline-only in separate test-owned profiles, verify six real
+  user settings unchanged, exit 0 and both image hashes, then retrieve
+  and inspect both original XAML pixels before assigning theme PASS.
+  Grouped-state Light/Dark screenshot comparison remains separate.
+- No Windows acceptance or pixel review has been claimed for this
+  corrected baseline-only mode yet. The shared central Remote Shell
+  request was occupied by an unrelated request at the latest preflight;
+  **do not replace or overwrite that request**. Await an idle slot or
+  use another explicitly authorized independent route.
