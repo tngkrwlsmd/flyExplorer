@@ -301,30 +301,49 @@ Original product C++/XAML implementation is unchanged from
   VISUAL ACCEPTANCE: NOT TESTED**. Actual 125/150/200% DPI, active High
   Contrast and Narrator spoken output remain independent open gates.
 
-## 2026-10-16 Test-owned grouped XAML visual fixture — source PASS, Release pending
+## 2026-10-16 F05 grouped XAML Light/Dark matrix — Release and 8/8 owned captures PASS
 
-- **Exact source revision:** `23c85c1861745216454314ecc29159b498fd3666`.
-  [Central source/policy CI #38873943360](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38873943360)
-  **SUCCESS** (`PASS policy`, `PASS source`). This covers code
-  contracts, **not** the new C++ binary or grouped pixels.
-- MainWindow now recognizes `FLY_F05_OWNED_XAML_VISUAL_GROUP_MODE`
-  only in combination with a validated test-owned
-  `FLY_F05_OWNED_XAML_VISUAL_DIR`. A bounded UI-dispatcher timer waits
-  for the exact six-file `logs/phase6-winui/shell-owned-*/Left`
-  synthetic model, complete enumeration and current metadata. Only
-  then it uses the existing `ToggleGroupMode` codepath to produce
-  one selected Type/Name/Size/Modified Month XAML screenshot.
-  In normal launches these variables are absent and no timer runs.
-- The opt-in Python harness flag `FLY_F05_VISUAL_GROUP_MODE_ONLY`
-  validates the corresponding real UIA headings and alpha-preserving
-  screenshot, **without physical desktop input**. It emits
-  `F05_VISUAL_GROUP_FIXTURE_GUI_PASS=True`, not
-  `F05_FOUR_MODES_AND_TAB_GUI_PASS=True`. Existing interactive
-  grouping acceptance at `e1a95f6a` is preserved and not replaced.
-- **Unverified for this revision:** fresh Windows Release compilation,
-  execution of grouped visual fixture for either Light or Dark, and
-  actual Windows/DWM final-composited pixel inspection. The separate
-  central Release request did not start; no release/GUI success is
-  claimed. The next executable acceptance is a single exact-SHA
-  Release build followed by bounded owned-file group presentation
-  screenshots. Avoid duplicating completed baseline or native tests.
+- **Product + test-hook Release source SHA:** `d2ed08d6cfe5f2f6235abe221657d19038e5a1f8`.
+  [Central CI #38891026338](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38891026338)
+  **SUCCESS**: `PASS release-build`; `flyExplorer.exe` linked on
+  Windows with the opt-in grouped XAML capture timer. A second build
+  in the retained owned workspace produced `flyExplorer.exe` SHA-256
+  `7f1f1636d3078e5df95fe40f5519a653ae1235373b6a8f280e7f88d4c435428f`.
+  Its *outer* worker [#38894797967](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38894797967)
+  still reported FAIL because the script did not receive its
+  build-process exit code. Do not relabel that Actions run as PASS;
+  the independent central Release PASS and later binary-checked GUI
+  acceptance are the successful evidence.
+- **Latest test source SHA:** `d51c2af050c01a56d52698eba99a34a45c42f5d7`.
+  Relative to the compiled product SHA, only two Python F05 test
+  files changed. The updated test allows an already-applied *Type*
+  group at the pre-interaction checkpoint; the earlier Type fixture
+  failed on an invalid `.md`-must-be-absent assertion despite the
+  actual grouped UI already appearing. No product/XAML compilation
+  or behavior change was needed for that harness correction.
+- **All eight 944×510, 96 DPI owned grouping presentations:** passed
+  real WinUI UIA heading checks, preserved-alpha XAML screenshots,
+  normal process exit, and protected legacy user settings.
+  [Light Name #38895272394](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38895272394),
+  [Light Size #38895710455](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38895710455),
+  [Light Type/Month and Dark Name #38896686119](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38896686119),
+  [Dark Type/Size/Month #38896939618](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38896939618).
+  All captures are in ignored, test-owned
+  `logs/f05-visual-modes/` paths and are not committed image fixtures.
+- [Read-only diagnostic image review #38897312601](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38897312601)
+  verified all eight original RGBA hashes and inspected the four
+  views per theme with separately applied neutral matte backgrounds.
+  Name, Size, Month and Type group labels, disclosure arrows and file
+  rows were visible without apparent control overlap in these
+  **diagnostic composites**. Some long file-type descriptions were
+  ellipsized in narrow columns; Dark grouped headings had less
+  conspicuous bands than Light. This is a diagnostic observation,
+  **not a finding about the actual DWM backdrop**.
+- **Scoped verdict:** Windows Release **PASS**; test-owned grouping
+  presentation and foreground XAML RGBA extraction **8/8 PASS**;
+  synthetic-background image inspection **DONE**. Current Windows/DWM
+  final-composited Light/Dark screenshots, real OS 125/150/200% DPI,
+  High Contrast, Narrator speech and Korean IME remain separate
+  **NOT VERIFIED** gates. This fixture never sends actual View-menu
+  physical keyboard input; do not substitute its result for the
+  independently scoped real GUI acceptance at `e1a95f6a`.
