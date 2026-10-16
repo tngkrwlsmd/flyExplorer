@@ -30,6 +30,21 @@ class F05FourModesHarnessContract(unittest.TestCase):
                       'F05_GUI_GROUP_EXPLICIT_OFF=PASS'):
             self.assertIn(token, PROBE)
 
+    def test_visual_capture_is_test_owned_and_explicit(self):
+        for token in ('FLY_F05_VISUAL_CAPTURE', 'FLY_F05_VISUAL_THEME',
+                      'theme in ("light", "dark")',
+                      'owned_foreground()', 'GetSystemMetrics(0)',
+                      'GetSystemMetrics(1)', 'ImageGrab.grab(',
+                      'include_layered_windows=True',
+                      'f05-visual-modes', 'GetDpiForWindow(',
+                      'F05_VISUAL_CAPTURE='):
+            self.assertIn(token, HARNESS + PROBE)
+        self.assertIn('assert os.environ.get("FLY_F05_MODES_ONLY")=="YES"',
+                      HARNESS)
+        self.assertIn('settings=localdata/"flyExplorer"', HARNESS)
+        self.assertIn('assert not png.exists()', PROBE)
+        self.assertIn('png.relative_to(ROOT)', PROBE)
+
     def test_files_owned_and_no_global_changes(self):
         for token in ('left / name', 'left.parent == right.parent',
                       'Mango-medium.md', 'Alpha-small.txt'):
