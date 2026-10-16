@@ -84,6 +84,9 @@ class F05FourModesHarnessContract(unittest.TestCase):
                       'ui->ToggleGroupMode(choice)'):
             self.assertIn(token, WINUI)
         self.assertIn('mOwnedF05VisualGroupTimer', HEADER)
+        # App-side Type grouping may precede the Python baseline check.
+        self.assertIn('FLY_F05_VISUAL_GROUP_MODE_ONLY") == "type"', PROBE)
+        self.assertIn('assert heading(".md") is None', PROBE)
         # Physical View-menu checks remain distinct from test-only
         # app-side group presentation, never report them as the same gate.
         self.assertIn('F05_FOUR_MODES_AND_TAB_GUI_PASS=True', HARNESS)
