@@ -161,6 +161,10 @@ def run(*, win, element, safe_click, focus, eventually, left, right):
     assert heading(".md") is None
 
     screenshot("before")
+    if capture and os.environ.get("FLY_F05_VISUAL_BASELINE_ONLY") == "YES":
+        # No physical input when the interactive user is not foreground.
+        print("F05_VISUAL_BASELINE_ONLY=PASS", flush=True)
+        return
     set_mode("Name")
     eventually(lambda: all(heading(title) is not None for title in
                            ("A–F", "M–R", "S–Z", "가–힣")),
