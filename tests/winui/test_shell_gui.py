@@ -93,8 +93,8 @@ if os.environ.get("FLY_F05_VISUAL_CAPTURE")=="YES":
  assert visual_theme in ("light","dark")
  settings=localdata/"flyExplorer";settings.mkdir(exist_ok=True)
  (settings/"ui-preferences-v1.txt").write_bytes(
-  ("schema=3\\r\\nlanguage=ko-KR\\r\\ntheme="+visual_theme+
-   "\\r\\nview=details\\r\\naddress-shortcut=0\\r\\nsearch-shortcut=2\\r\\n").encode("utf-8"))
+  ("schema=3\r\nlanguage=ko-KR\r\ntheme="+visual_theme+
+   "\r\nview=details\r\naddress-shortcut=0\r\nsearch-shortcut=2\r\n").encode("utf-8"))
 if os.environ.get("FLY_F05_VISUAL_CAPTURE")=="YES":
  # App-owned XAML RenderTargetBitmap renders only RootShell into an ignored,
  # synthetic-evidence folder, independent of interactive desktop foreground.
