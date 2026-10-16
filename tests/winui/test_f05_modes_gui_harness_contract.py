@@ -67,6 +67,28 @@ class F05FourModesHarnessContract(unittest.TestCase):
         self.assertIn('mOwnedF05VisualCaptureDirectory', HEADER)
         self.assertNotIn('ImageGrab.grab(', PROBE)
 
+    def test_group_pixels_can_be_scoped_without_foreground_input(self):
+        for token in ('FLY_F05_VISUAL_GROUP_MODE_ONLY',
+                      'FLY_F05_OWNED_XAML_VISUAL_GROUP_MODE',
+                      'visual_group in ("type","name","size","month")',
+                      'F05_VISUAL_GROUP_FIXTURE_GUI_PASS=True'):
+            self.assertIn(token, HARNESS)
+        for token in ('F05_VISUAL_GROUP_FIXTURE_MODE=',
+                      'PASS_NO_PHYSICAL_INPUT=True',
+                      'screenshot(mode)', 'Owned visual fixture group headings'):
+            self.assertIn(token, PROBE)
+        for token in ('FLY_F05_OWNED_XAML_VISUAL_GROUP_MODE',
+                      'shell-owned-', 'snapshot.children.size()!=6',
+                      'tab.fileLists[0].metadataCurrent',
+                      'mOwnedF05VisualGroupTimer',
+                      'ui->ToggleGroupMode(choice)'):
+            self.assertIn(token, WINUI)
+        self.assertIn('mOwnedF05VisualGroupTimer', HEADER)
+        # Physical View-menu checks remain distinct from test-only
+        # app-side group presentation, never report them as the same gate.
+        self.assertIn('F05_FOUR_MODES_AND_TAB_GUI_PASS=True', HARNESS)
+        self.assertIn('keyboard.send_keys("{ENTER}")', PROBE)
+
     def test_files_owned_and_no_global_changes(self):
         for token in ('left / name', 'left.parent == right.parent',
                       'Mango-medium.md', 'Alpha-small.txt'):
