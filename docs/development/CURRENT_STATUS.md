@@ -1,4 +1,27 @@
-# flyExplorer current status — F05 verification reconciled 2026-10-16
+# flyExplorer current status — F05 keyboard validation checkpoint 2026-10-17
+
+## 2026-10-17 F05 keyboard-only disclosure harness — source PASS, GUI NOT TESTED
+
+- **Test-only main SHA:** `22ca4ed1f3fe155a97022f0fa474538a432fdce3`.
+  Opt-in `FLY_F05_KEYBOARD_DISCLOSURE_ONLY=YES` requires
+  `FLY_F05_MODES_ONLY=YES` and forbids concurrent visual-capture mode.
+  The owned GUI probe focuses a real .md grouping disclosure, sends
+  physical Space to collapse and Enter to expand, checks the actual file
+  row each time, and rejects keystrokes outside the test-owned foreground
+  flyExplorer process. The normal GUI and XAML screenshot paths are unchanged.
+- [Central source #38983687975](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38983687975)
+  **SUCCESS** on the exact test commit: policy PASS, structure 4/4,
+  product source 230/230, harness 20/20, infrastructure 30/30.
+- The preceding [SYSTEM Remote Shell #38983541457](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38983541457)
+  **FAILED BEFORE TEST EXECUTION** because Python was not on the SYSTEM
+  runner's PATH. The subsequent central interactive-user source scope
+  corrected that execution-context assumption; this was not a product failure.
+  The Remote Shell request slot was restored to idle.
+- **F05 keyboard-only physical disclosure: NOT TESTED / NOT ACCEPTED.**
+  Source guards and Python harness tests are not real user-input evidence.
+  Actual Windows/DWM final-composited pixels, 125/150/200% OS scaling,
+  active High Contrast and spoken Narrator remain distinct open gates.
+
 
 ## Product source of truth
 

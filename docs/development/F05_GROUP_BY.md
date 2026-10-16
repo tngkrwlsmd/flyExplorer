@@ -347,3 +347,21 @@ Original product C++/XAML implementation is unchanged from
   **NOT VERIFIED** gates. This fixture never sends actual View-menu
   physical keyboard input; do not substitute its result for the
   independently scoped real GUI acceptance at `e1a95f6a`.
+
+## 2026-10-17 keyboard disclosure focused harness — source PASS only
+
+At test-only main `22ca4ed1f3fe155a97022f0fa474538a432fdce3`,
+`test_f05_group_modes_gui.py` has a separate, explicitly opted-in
+keyboard-only test for the test-owned Type grouping disclosure.
+It requires actual foreground ownership, uses physical Space/Enter
+on the .md group Button, and checks collapse/expand against its
+test-owned file. `test_shell_gui.py` requires the paired modes flag
+and excludes XAML capture. The original F05 GUI flows remain unchanged.
+
+[Central source #38983687975](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38983687975)
+passed policy and all source families for the exact test revision
+(4 structure, 230 product, 20 harness, 30 infra).
+**Actual keyboard GUI execution is still NOT TESTED**; neither source PASS
+nor the existing programmatic XAML grouped captures proves it.
+Final Windows/DWM composited pixels, real higher DPI, High Contrast,
+and Narrator audio are also separate unaccepted gates.
