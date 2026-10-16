@@ -307,6 +307,8 @@ namespace winrt::FlyExplorer::implementation
         Microsoft::UI::Dispatching::DispatcherQueueTimer
             mOwnedF05VisualTimer{nullptr};
         std::wstring mOwnedF05VisualCaptureDirectory{};
+        Microsoft::UI::Dispatching::DispatcherQueueTimer
+            mOwnedF05VisualGroupTimer{nullptr};
         void InitializeOwnedF05VisualCaptureTest();
         void ScheduleOwnedF05VisualCapture(std::wstring stage);
         void InitializeOwnedSearchVisualCaptureTest();
