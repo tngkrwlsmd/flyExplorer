@@ -17,6 +17,10 @@ class F05FourModesHarnessContract(unittest.TestCase):
             self.assertIn(token, HARNESS)
         self.assertIn('FLY_F05_PANES_ONLY', HARNESS)
         self.assertIn('focus=ensure_owned_focus', HARNESS)
+        self.assertIn('FLY_F05_VISUAL_BASELINE_ONLY', HARNESS)
+        self.assertIn('F05_VISUAL_BASELINE_GUI_PASS=True', HARNESS)
+        self.assertIn('F05_VISUAL_BASELINE_ONLY=PASS', PROBE)
+        self.assertIn('if capture and os.environ.get(', PROBE)
         self.assertIn('raise SystemExit(0)', HARNESS)
 
 
