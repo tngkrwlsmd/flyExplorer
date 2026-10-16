@@ -38,6 +38,20 @@ class F05FourModesHarnessContract(unittest.TestCase):
                       'F05_GUI_GROUP_EXPLICIT_OFF=PASS'):
             self.assertIn(token, PROBE)
 
+    def test_keyboard_only_disclosure_has_scoped_foreground_guards(self):
+        for token in ('FLY_F05_KEYBOARD_DISCLOSURE_ONLY',
+                      'assert os.environ.get("FLY_F05_MODES_ONLY")=="YES"',
+                      'F05_KEYBOARD_DISCLOSURE_GUI_PASS=True'):
+            self.assertIn(token, HARNESS)
+        for token in ('assert not capture', 'set_mode("Type")',
+                      'disclosure.set_focus()', 'owned_foreground()',
+                      'keyboard.send_keys("{SPACE}")',
+                      'keyboard.send_keys("{ENTER}")',
+                      'F05_KEYBOARD_SPACE_COLLAPSE=PASS',
+                      'F05_KEYBOARD_ENTER_EXPAND=PASS'):
+            self.assertIn(token, PROBE)
+        self.assertNotIn('ImageGrab.grab(', PROBE)
+
     def test_visual_capture_is_test_owned_and_explicit(self):
         for token in ('FLY_F05_VISUAL_CAPTURE', 'FLY_F05_VISUAL_THEME',
                       'theme in ("light", "dark")',

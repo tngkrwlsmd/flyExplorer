@@ -35,6 +35,9 @@ if os.environ.get("FLY_F05_PANES_ONLY")=="YES":
  (right/"group-right.log").write_text("owned right log",encoding="utf-8")
 # Extra text formats are opt-in and strictly test-owned; leave all shared
 # GUI fixtures and established TXT behavior unchanged.
+if os.environ.get("FLY_F05_KEYBOARD_DISCLOSURE_ONLY")=="YES":
+ assert os.environ.get("FLY_F05_MODES_ONLY")=="YES"
+ assert os.environ.get("FLY_F05_VISUAL_CAPTURE")!="YES"
 if os.environ.get("FLY_F05_MODES_ONLY")=="YES":
  for name,length,month in (
      ("Alpha-small.txt",20,7),
@@ -225,7 +228,9 @@ try:
   f05_modes_probe(win=win,element=element,safe_click=safe_click,
                   focus=ensure_owned_focus,
                   eventually=eventually,left=left,right=right)
-  if os.environ.get("FLY_F05_VISUAL_BASELINE_ONLY")=="YES":
+  if os.environ.get("FLY_F05_KEYBOARD_DISCLOSURE_ONLY")=="YES":
+   print("F05_KEYBOARD_DISCLOSURE_GUI_PASS=True",flush=True)
+  elif os.environ.get("FLY_F05_VISUAL_BASELINE_ONLY")=="YES":
    assert os.environ.get("FLY_F05_VISUAL_CAPTURE")=="YES"
    print("F05_VISUAL_BASELINE_GUI_PASS=True",flush=True)
   elif os.environ.get("FLY_F05_VISUAL_GROUP_MODE_ONLY"):

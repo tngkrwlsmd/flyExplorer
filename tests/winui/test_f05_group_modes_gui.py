@@ -188,6 +188,35 @@ def run(*, win, element, safe_click, focus, eventually, left, right):
         assert heading(".md") is None
 
     screenshot("before")
+    if os.environ.get("FLY_F05_KEYBOARD_DISCLOSURE_ONLY") == "YES":
+        # Physical keyboard input is separate from the app-side visual fixture.
+        assert not capture, "Keyboard disclosure is a separate GUI gate"
+        set_mode("Type")
+        eventually(lambda: heading(".md") is not None
+                   and file_row("Mango-medium.md") is not None,
+                   "Keyboard fixture type group not ready", 12)
+        focus()
+        disclosure = eventually(lambda: heading(".md"),
+                                "Owned Markdown disclosure missing", 9)
+        disclosure.set_focus()
+        assert owned_foreground(), "Refusing Space outside owned F05 GUI"
+        keyboard.send_keys("{SPACE}")
+        eventually(lambda: file_row("Mango-medium.md") is None,
+                   "Space did not collapse Markdown group", 9)
+        assert heading(".md") is not None
+        print("F05_KEYBOARD_SPACE_COLLAPSE=PASS", flush=True)
+
+        focus()
+        disclosure = eventually(lambda: heading(".md"),
+                                "Collapsed Markdown disclosure missing", 9)
+        disclosure.set_focus()
+        assert owned_foreground(), "Refusing Enter outside owned F05 GUI"
+        keyboard.send_keys("{ENTER}")
+        eventually(lambda: file_row("Mango-medium.md") is not None,
+                   "Enter did not expand Markdown group", 9)
+        print("F05_KEYBOARD_ENTER_EXPAND=PASS", flush=True)
+        return
+
     if capture and os.environ.get("FLY_F05_VISUAL_BASELINE_ONLY") == "YES":
         # No physical input when the interactive user is not foreground.
         print("F05_VISUAL_BASELINE_ONLY=PASS", flush=True)
