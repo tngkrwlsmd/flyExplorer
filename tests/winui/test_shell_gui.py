@@ -104,6 +104,11 @@ if os.environ.get("FLY_F05_VISUAL_CAPTURE")=="YES":
  xaml_evidence=Path(tempfile.mkdtemp(prefix=visual_theme+"-",dir=visual_root))
  assert xaml_evidence.parent==visual_root
  os.environ["FLY_F05_OWNED_XAML_VISUAL_DIR"]=str(xaml_evidence)
+ visual_group=os.environ.get("FLY_F05_VISUAL_GROUP_MODE_ONLY")
+ if visual_group:
+  assert visual_group in ("type","name","size","month")
+  assert os.environ.get("FLY_F05_VISUAL_BASELINE_ONLY")!="YES"
+  os.environ["FLY_F05_OWNED_XAML_VISUAL_GROUP_MODE"]=visual_group
 temp=owned/"tmp";temp.mkdir()
 u=c.windll.user32
 CALL=c.WINFUNCTYPE(W.BOOL,W.HWND,W.LPARAM)
@@ -223,6 +228,9 @@ try:
   if os.environ.get("FLY_F05_VISUAL_BASELINE_ONLY")=="YES":
    assert os.environ.get("FLY_F05_VISUAL_CAPTURE")=="YES"
    print("F05_VISUAL_BASELINE_GUI_PASS=True",flush=True)
+  elif os.environ.get("FLY_F05_VISUAL_GROUP_MODE_ONLY"):
+   assert os.environ.get("FLY_F05_VISUAL_CAPTURE")=="YES"
+   print("F05_VISUAL_GROUP_FIXTURE_GUI_PASS=True",flush=True)
   else:
    print("F05_FOUR_MODES_AND_TAB_GUI_PASS=True",flush=True)
   raise SystemExit(0)
