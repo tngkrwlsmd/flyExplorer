@@ -62,11 +62,15 @@ def run(*, win, element, safe_click, eventually, left, right):
     def screenshot(stage):
         if not capture:
             return
+        hwnd = win.wrapper_object().handle
+        owner = wintypes.DWORD()
+        user32.GetWindowThreadProcessId(hwnd, ctypes.byref(owner))
+        assert owner.value == process_id and user32.IsWindowVisible(hwnd), (
+            "Refusing screenshot of a non-owned or invisible HWND")
         if not owned_foreground():
-            # Only activate this already verified test-owned WinUI HWND.
-            win.set_focus()
+            # Try activating only our real WinUI HWND, never another window.
+            user32.SetForegroundWindow(hwnd)
             time.sleep(.15)
-        assert owned_foreground(), "Refusing screenshot of any other desktop"
         rect = win.rectangle()
         desktop_w = user32.GetSystemMetrics(0)
         desktop_h = user32.GetSystemMetrics(1)
@@ -79,10 +83,12 @@ def run(*, win, element, safe_click, eventually, left, right):
         time.sleep(.18)  # Let the settled UIA state composite before grabbing.
         png = visual_dir / (stage + ".png")
         assert not png.exists() and png.parent == visual_dir
-        image = ImageGrab.grab(
-            bbox=(rect.left, rect.top, rect.right, rect.bottom),
-            include_layered_windows=True)
-        assert image.width == rect.width() and image.height == rect.height()
+        # Pillow 12.3 HWND capture cannot include other desktop windows.
+        image = ImageGrab.grab(window=hwnd)
+        assert (image.width >= rect.width() - 32 and
+                image.height >= rect.height() - 32)
+        assert any(high - low > 32 for low, high in image.getextrema()[:3]), (
+            "Owned window returned blank composited pixels")
         image.save(png, format="PNG")
         assert 1000 < png.stat().st_size < 3_000_000
         digest = hashlib.sha256(png.read_bytes()).hexdigest()
