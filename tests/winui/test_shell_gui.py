@@ -218,6 +218,7 @@ try:
  if os.environ.get("FLY_F05_MODES_ONLY")=="YES":
   from test_f05_group_modes_gui import run as f05_modes_probe
   f05_modes_probe(win=win,element=element,safe_click=safe_click,
+                  focus=ensure_owned_focus,
                   eventually=eventually,left=left,right=right)
   print("F05_FOUR_MODES_AND_TAB_GUI_PASS=True",flush=True)
   raise SystemExit(0)
