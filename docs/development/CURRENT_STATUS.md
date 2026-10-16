@@ -7,6 +7,12 @@ app/winui, UI-independent native code in src/base, tests in tests/winui, and
 bounded orchestration in tools/winui/run_checks.py. The former MFC application
 is retired from the working tree and is recoverable from Git revision cbffb48.
 
+## 2026-10-16 F05 Windows display read-only capability check
+
+- [Windows #38901048352](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38901048352) SUCCESS: primary monitor **1024×768**; one Explorer user session found. No screen resolution or session setting changed.
+- [Windows #38901222167](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38901222167) SUCCESS: current control-user registry query returned no explicit `LogPixels` or `Win8DpiScaling`; stored HighContrast `Flags=126`. These registry values are **not** proof of effective DPI or active high-contrast state, especially for the separate interactive user session.
+- **Still NOT VERIFIED:** effective per-window 125/150/200% DPI, actual DWM compositor pixels, active High Contrast and Narrator speech. Both inspections were read-only, and the Remote Shell request was restored to idle.
+
 ## 2026-10-16 F05 grouped XAML: Release and 8/8 screenshot checks PASS
 
 - Exact Release source `d2ed08d6`: central CI [#38891026338](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38891026338) SUCCESS.
