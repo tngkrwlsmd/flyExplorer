@@ -85,6 +85,16 @@ if os.environ.get("FLY_F01_HIDDEN_ONLY")=="YES":
  (settings/"ui-preferences-v1.txt").write_bytes(
   ("schema=3\r\nlanguage=ko-KR\r\ntheme="+theme+
    "\r\nview=details\r\naddress-shortcut=0\r\nsearch-shortcut=2\r\n").encode("utf-8"))
+# Focused F05 Light/Dark visual evidence lives in this disposable
+# app-only profile; no Windows/global user theme is ever changed.
+if os.environ.get("FLY_F05_VISUAL_CAPTURE")=="YES":
+ assert os.environ.get("FLY_F05_MODES_ONLY")=="YES"
+ visual_theme=os.environ.get("FLY_F05_VISUAL_THEME")
+ assert visual_theme in ("light","dark")
+ settings=localdata/"flyExplorer";settings.mkdir(exist_ok=True)
+ (settings/"ui-preferences-v1.txt").write_bytes(
+  ("schema=3\\r\\nlanguage=ko-KR\\r\\ntheme="+visual_theme+
+   "\\r\\nview=details\\r\\naddress-shortcut=0\\r\\nsearch-shortcut=2\\r\\n").encode("utf-8"))
 temp=owned/"tmp";temp.mkdir()
 u=c.windll.user32
 CALL=c.WINFUNCTYPE(W.BOOL,W.HWND,W.LPARAM)
