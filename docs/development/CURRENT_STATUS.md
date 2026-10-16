@@ -7,6 +7,21 @@ app/winui, UI-independent native code in src/base, tests in tests/winui, and
 bounded orchestration in tools/winui/run_checks.py. The former MFC application
 is retired from the working tree and is recoverable from Git revision cbffb48.
 
+## 2026-10-16 F05 Light/Dark baseline-only pending Windows review
+
+- Prepared at source SHA `9077a1ac39e68c3a0232613bb09e255131ae2846`:
+  opt-in isolated Light/Dark baseline-only XAML capture, using real CRLF
+  in test-owned preferences and no physical keyboard/menu input. The
+  harness explicitly reports baseline-only separately from four-mode
+  interaction success, preserving existing functional GUI evidence.
+- **Not yet run:** source gate and Windows Light/Dark screenshots at
+  this revised test SHA, original-image pixel review, or grouped states.
+  Current F05 Light/Dark **VISUAL ACCEPTANCE: NOT TESTED**.
+- The personal-control-plane request slot was changed by a separate
+  operation during preflight; do not overwrite its different request.
+  Recheck live main, slot and active runs before arranging validation.
+  See [F05_GROUP_BY.md](F05_GROUP_BY.md).
+
 ## 2026-10-16 F05 captured pixels and Light fixture correction
 
 - **Current source/test head as of this entry:** `3358d04e` (docs).
