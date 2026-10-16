@@ -303,6 +303,12 @@ namespace winrt::FlyExplorer::implementation
             mOwnedShellProviderVisualTimer{nullptr};
         std::wstring mOwnedNetworkVisualCapturePath{};
         std::wstring mOwnedShellProviderVisualCapturePath{};
+        // Explicit, test-owned F05 XAML pixels; disabled in normal launches.
+        Microsoft::UI::Dispatching::DispatcherQueueTimer
+            mOwnedF05VisualTimer{nullptr};
+        std::wstring mOwnedF05VisualCaptureDirectory{};
+        void InitializeOwnedF05VisualCaptureTest();
+        void ScheduleOwnedF05VisualCapture(std::wstring stage);
         void InitializeOwnedSearchVisualCaptureTest();
         void InitializeOwnedNetworkVisualCaptureTest();
         void InitializeOwnedShellProviderVisualCaptureTest();
