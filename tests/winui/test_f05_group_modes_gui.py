@@ -45,56 +45,53 @@ def run(*, win, element, safe_click, eventually, left, right):
             user32.GetWindowThreadProcessId(foreground, ctypes.byref(pid))
         return pid.value == process_id
 
-    # Optional actual-window pixels, only in the synthetic F05 GUI fixture.
+    # The existing WinUI RenderTargetBitmap pipeline writes only RootShell.
+    # Desktop PrintWindow/ImageGrab returns blank pixels on this VM.
     capture = os.environ.get("FLY_F05_VISUAL_CAPTURE") == "YES"
     visual_dir = None
     if capture:
         from paths import ROOT
-        from PIL import ImageGrab
+        from PIL import Image
         theme = os.environ.get("FLY_F05_VISUAL_THEME")
         assert theme in ("light", "dark")
         root = ROOT / "logs" / "f05-visual-modes"
-        assert not root.is_symlink() and not ROOT.is_symlink()
-        root.mkdir(parents=True, exist_ok=True)
-        visual_dir = root / (theme + "-" + uuid4().hex)
-        visual_dir.mkdir()
+        visual_dir = Path(os.environ["FLY_F05_OWNED_XAML_VISUAL_DIR"])
+        assert (visual_dir.is_dir() and visual_dir.parent == root and
+                visual_dir.name.startswith(theme + "-") and
+                not visual_dir.is_symlink() and not root.is_symlink())
 
     def screenshot(stage):
         if not capture:
             return
-        hwnd = win.wrapper_object().handle
-        owner = wintypes.DWORD()
-        user32.GetWindowThreadProcessId(hwnd, ctypes.byref(owner))
-        assert owner.value == process_id and user32.IsWindowVisible(hwnd), (
-            "Refusing screenshot of a non-owned or invisible HWND")
-        if not owned_foreground():
-            # Try activating only our real WinUI HWND, never another window.
-            user32.SetForegroundWindow(hwnd)
-            time.sleep(.15)
-        rect = win.rectangle()
-        desktop_w = user32.GetSystemMetrics(0)
-        desktop_h = user32.GetSystemMetrics(1)
-        assert (0 <= rect.left < rect.right <= desktop_w and
-                0 <= rect.top < rect.bottom <= desktop_h and
-                rect.width() >= 640 and rect.height() >= 350), (
-                    "Actual WinUI window is not wholly within desktop",
-                    (rect.left, rect.top, rect.right, rect.bottom),
-                    (desktop_w, desktop_h))
-        time.sleep(.18)  # Let the settled UIA state composite before grabbing.
+        assert stage in ("before", "name", "size", "month", "type",
+                         "collapsed", "tab-restored", "off")
+        bmp = visual_dir / (stage + ".bmp")
         png = visual_dir / (stage + ".png")
-        assert not png.exists() and png.parent == visual_dir
-        # Pillow 12.3 HWND capture cannot include other desktop windows.
-        image = ImageGrab.grab(window=hwnd)
-        assert (image.width >= rect.width() - 32 and
-                image.height >= rect.height() - 32)
-        assert any(high - low > 32 for low, high in image.getextrema()[:3]), (
-            "Owned window returned blank composited pixels")
+        assert not png.exists() and not png.is_symlink()
+        def ready():
+            if not bmp.is_file() or bmp.stat().st_size < 4096:
+                return None
+            try:
+                with Image.open(bmp) as source:
+                    source.load()
+                    if source.width < 640 or source.height < 350:
+                        return None
+                    img = source.convert("RGB")
+                if not any(high - low > 32 for low, high in
+                           img.getextrema()[:3]):
+                    return None
+                return img
+            except (OSError, ValueError):
+                return None
+        image = eventually(ready, "Owned XAML bitmap unavailable: " +
+                           stage, 18)
         image.save(png, format="PNG")
         assert 1000 < png.stat().st_size < 3_000_000
         digest = hashlib.sha256(png.read_bytes()).hexdigest()
         print("F05_VISUAL_CAPTURE=" + stage + " THEME=" + theme +
               " SIZE=" + str(image.width) + "x" + str(image.height) +
-              " DPI=" + str(user32.GetDpiForWindow(win.wrapper_object().handle)) +
+              " DPI=" + str(user32.GetDpiForWindow(
+                  win.wrapper_object().handle)) +
               " SHA256=" + digest + " FILE=" + str(png.relative_to(ROOT)),
               flush=True)
 
