@@ -45,6 +45,10 @@ class F05FourModesHarnessContract(unittest.TestCase):
         self.assertIn('assert os.environ.get("FLY_F05_MODES_ONLY")=="YES"',
                       HARNESS)
         self.assertIn('settings=localdata/"flyExplorer"', HARNESS)
+        # The preference parser is CRLF-oriented; Python must emit actual
+        # CRLF bytes, not escaped backslash-r/backslash-n text.
+        self.assertIn(r'schema=3\r\nlanguage=ko-KR\r\ntheme=', HARNESS)
+        self.assertNotIn(r'schema=3\\r\\nlanguage=ko-KR', HARNESS)
         self.assertIn('not visual_dir.is_symlink()', PROBE)
         self.assertIn('png.relative_to(ROOT)', PROBE)
         self.assertIn('RenderTargetBitmap rendered', WINUI)
