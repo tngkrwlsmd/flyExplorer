@@ -84,7 +84,7 @@ def run(*, win, element, safe_click, eventually, left, right):
         digest = hashlib.sha256(png.read_bytes()).hexdigest()
         print("F05_VISUAL_CAPTURE=" + stage + " THEME=" + theme +
               " SIZE=" + str(image.width) + "x" + str(image.height) +
-              " DPI=" + str(user32.GetDpiForWindow(win.handle)) +
+              " DPI=" + str(user32.GetDpiForWindow(win.wrapper_object().handle)) +
               " SHA256=" + digest + " FILE=" + str(png.relative_to(ROOT)),
               flush=True)
 
