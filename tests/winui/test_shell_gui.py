@@ -95,6 +95,15 @@ if os.environ.get("FLY_F05_VISUAL_CAPTURE")=="YES":
  (settings/"ui-preferences-v1.txt").write_bytes(
   ("schema=3\\r\\nlanguage=ko-KR\\r\\ntheme="+visual_theme+
    "\\r\\nview=details\\r\\naddress-shortcut=0\\r\\nsearch-shortcut=2\\r\\n").encode("utf-8"))
+if os.environ.get("FLY_F05_VISUAL_CAPTURE")=="YES":
+ # App-owned XAML RenderTargetBitmap renders only RootShell into an ignored,
+ # synthetic-evidence folder, independent of interactive desktop foreground.
+ visual_root=ROOT/"logs"/"f05-visual-modes"
+ assert not visual_root.is_symlink() and not ROOT.is_symlink()
+ visual_root.mkdir(parents=True,exist_ok=True)
+ xaml_evidence=Path(tempfile.mkdtemp(prefix=visual_theme+"-",dir=visual_root))
+ assert xaml_evidence.parent==visual_root
+ os.environ["FLY_F05_OWNED_XAML_VISUAL_DIR"]=str(xaml_evidence)
 temp=owned/"tmp";temp.mkdir()
 u=c.windll.user32
 CALL=c.WINFUNCTYPE(W.BOOL,W.HWND,W.LPARAM)
