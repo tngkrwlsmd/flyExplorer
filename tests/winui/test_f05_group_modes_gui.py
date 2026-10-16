@@ -6,7 +6,11 @@ Requires fresh Windows Release after product integration, not a legacy binary.
 """
 import ctypes
 from ctypes import wintypes
+import hashlib
+import os
+from pathlib import Path
 import time
+from uuid import uuid4
 
 from pywinauto import Desktop, keyboard
 
@@ -40,6 +44,49 @@ def run(*, win, element, safe_click, eventually, left, right):
         if foreground:
             user32.GetWindowThreadProcessId(foreground, ctypes.byref(pid))
         return pid.value == process_id
+
+    # Optional actual-window pixels, only in the synthetic F05 GUI fixture.
+    capture = os.environ.get("FLY_F05_VISUAL_CAPTURE") == "YES"
+    visual_dir = None
+    if capture:
+        from paths import ROOT
+        from PIL import ImageGrab
+        theme = os.environ.get("FLY_F05_VISUAL_THEME")
+        assert theme in ("light", "dark")
+        root = ROOT / "logs" / "f05-visual-modes"
+        assert not root.is_symlink() and not ROOT.is_symlink()
+        root.mkdir(parents=True, exist_ok=True)
+        visual_dir = root / (theme + "-" + uuid4().hex)
+        visual_dir.mkdir()
+
+    def screenshot(stage):
+        if not capture:
+            return
+        assert owned_foreground(), "Refusing screenshot of any other desktop"
+        rect = win.rectangle()
+        desktop_w = user32.GetSystemMetrics(0)
+        desktop_h = user32.GetSystemMetrics(1)
+        assert (0 <= rect.left < rect.right <= desktop_w and
+                0 <= rect.top < rect.bottom <= desktop_h and
+                rect.width() >= 640 and rect.height() >= 350), (
+                    "Actual WinUI window is not wholly within desktop",
+                    (rect.left, rect.top, rect.right, rect.bottom),
+                    (desktop_w, desktop_h))
+        time.sleep(.18)  # Let the settled UIA state composite before grabbing.
+        png = visual_dir / (stage + ".png")
+        assert not png.exists() and png.parent == visual_dir
+        image = ImageGrab.grab(
+            bbox=(rect.left, rect.top, rect.right, rect.bottom),
+            include_layered_windows=True)
+        assert image.width == rect.width() and image.height == rect.height()
+        image.save(png, format="PNG")
+        assert 1000 < png.stat().st_size < 3_000_000
+        digest = hashlib.sha256(png.read_bytes()).hexdigest()
+        print("F05_VISUAL_CAPTURE=" + stage + " THEME=" + theme +
+              " SIZE=" + str(image.width) + "x" + str(image.height) +
+              " DPI=" + str(user32.GetDpiForWindow(win.handle)) +
+              " SHA256=" + digest + " FILE=" + str(png.relative_to(ROOT)),
+              flush=True)
 
     def file_row(name):
         for candidate in element("LeftFiles").descendants():
@@ -101,12 +148,14 @@ def run(*, win, element, safe_click, eventually, left, right):
     time.sleep(.8)
     assert heading(".md") is None
 
+    screenshot("before")
     set_mode("Name")
     eventually(lambda: all(heading(title) is not None for title in
                            ("A–F", "M–R", "S–Z", "가–힣")),
                "Name grouping headings missing", 12)
     assert heading(".md") is None
     print("F05_GUI_GROUP_NAME=PASS", flush=True)
+    screenshot("name")
 
     set_mode("Size")
     eventually(lambda: all(heading(title) is not None for title in
@@ -114,6 +163,7 @@ def run(*, win, element, safe_click, eventually, left, right):
                "Size grouping headings missing", 12)
     assert heading("A–F") is None
     print("F05_GUI_GROUP_SIZE=PASS", flush=True)
+    screenshot("size")
 
     set_mode("Month")
     eventually(lambda: all(heading(title) is not None for title in
@@ -121,6 +171,7 @@ def run(*, win, element, safe_click, eventually, left, right):
                "Modified-month grouping headings missing", 12)
     assert heading("10 KB 미만") is None
     print("F05_GUI_GROUP_MODIFIED_MONTH=PASS", flush=True)
+    screenshot("month")
 
     set_mode("Type")
     eventually(lambda: all(heading(title) is not None for title in
@@ -128,12 +179,14 @@ def run(*, win, element, safe_click, eventually, left, right):
                "Type regression grouping headings missing", 12)
     assert heading("2026년 7월") is None
     print("F05_GUI_GROUP_TYPE_REGRESSION=PASS", flush=True)
+    screenshot("type")
 
     safe_click(heading(".md"))
     eventually(lambda: file_row("Mango-medium.md") is None,
                "Markdown collapsed file remained selectable", 9)
     assert file_row("Alpha-small.txt") is not None
     print("F05_GUI_COLLAPSE_REAL_FILE_ONLY=PASS", flush=True)
+    screenshot("collapsed")
 
     def left_tabs():
         peers = [p for p in element("LeftTabs").descendants()
@@ -156,6 +209,7 @@ def run(*, win, element, safe_click, eventually, left, right):
                and file_row("Mango-medium.md") is None,
                "Original tab did not restore collapsed Markdown group", 15)
     print("F05_GUI_PER_TAB_COLLAPSE_RESTORED=PASS", flush=True)
+    screenshot("tab-restored")
 
     safe_click(left_tabs()[-1])
     eventually(lambda: file_row("Mango-medium.md") is not None,
@@ -174,3 +228,4 @@ def run(*, win, element, safe_click, eventually, left, right):
                and file_row("Mango-medium.md") is not None,
                "Explicit type grouping off failed", 10)
     print("F05_GUI_GROUP_EXPLICIT_OFF=PASS", flush=True)
+    screenshot("off")
