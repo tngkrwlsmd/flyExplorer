@@ -43,7 +43,9 @@ class F05FourModesHarnessContract(unittest.TestCase):
                       'theme in ("light", "dark")',
                       'FLY_F05_OWNED_XAML_VISUAL_DIR',
                       'f05-visual-modes', 'GetDpiForWindow(',
-                      'Image.open(bmp)', 'img.getextrema()',
+                      'Image.frombytes(', 'struct.unpack_from(',
+                      'img.getextrema()', 'Image.alpha_composite(',
+                      'DIAGNOSTIC_COMPOSITE_NOT_REAL_BACKDROP=True',
                       'F05_VISUAL_CAPTURE='):
             self.assertIn(token, HARNESS + PROBE)
         self.assertIn('assert os.environ.get("FLY_F05_MODES_ONLY")=="YES"',
