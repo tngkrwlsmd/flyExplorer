@@ -9,6 +9,7 @@ from ctypes import wintypes
 import hashlib
 import os
 from pathlib import Path
+import struct
 import time
 from uuid import uuid4
 
@@ -72,22 +73,44 @@ def run(*, win, element, safe_click, focus, eventually, left, right):
             if not bmp.is_file() or bmp.stat().st_size < 4096:
                 return None
             try:
-                with Image.open(bmp) as source:
-                    source.load()
-                    if source.width < 640 or source.height < 350:
-                        return None
-                    img = source.convert("RGB")
-                if not any(high - low > 32 for low, high in
-                           img.getextrema()[:3]):
+                data = bmp.read_bytes()
+                if data[:2] != b"BM":
+                    return None
+                offset = struct.unpack_from("<I", data, 10)[0]
+                width, signed_height = struct.unpack_from("<ii", data, 18)
+                bits = struct.unpack_from("<H", data, 28)[0]
+                if (offset < 54 or width < 640 or signed_height > -350 or
+                        bits != 32 or len(data) !=
+                        offset + width * -signed_height * 4):
+                    return None
+                # WinUI RenderTargetBitmap emits a top-down BGRA image.
+                # Pillow's generic BI_RGB BMP reader discards the original
+                # alpha channel, turning transparent Light backgrounds black.
+                img = Image.frombytes(
+                    "RGBA", (width, -signed_height), data[offset:],
+                    "raw", "BGRA")
+                extrema = img.getextrema()
+                if (not any(high - low > 32 for low, high in extrema[:3])
+                        or extrema[3][1] == 0):
                     return None
                 return img
-            except (OSError, ValueError):
+            except (OSError, ValueError, struct.error):
                 return None
         image = eventually(ready, "Owned XAML bitmap unavailable: " +
                            stage, 18)
         image.save(png, format="PNG")
         assert 1000 < png.stat().st_size < 3_000_000
+        # Diagnostic preview only. This opaque color is not a verified
+        # Windows backdrop, so it never establishes composited-pixel PASS.
+        background = (248, 248, 248, 255) if theme == "light" else (
+            26, 26, 26, 255)
+        diagnostic = Image.alpha_composite(
+            Image.new("RGBA", image.size, background), image)
+        diagnostic.convert("RGB").save(
+            visual_dir / ("diagnostic-" + stage + ".png"), format="PNG")
         digest = hashlib.sha256(png.read_bytes()).hexdigest()
+        print("F05_VISUAL_RGBA_ALPHA_PRESERVED=True "
+              "DIAGNOSTIC_COMPOSITE_NOT_REAL_BACKDROP=True", flush=True)
         print("F05_VISUAL_CAPTURE=" + stage + " THEME=" + theme +
               " SIZE=" + str(image.width) + "x" + str(image.height) +
               " DPI=" + str(user32.GetDpiForWindow(
