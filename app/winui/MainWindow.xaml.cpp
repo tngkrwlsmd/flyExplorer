@@ -500,6 +500,66 @@ namespace winrt::FlyExplorer::implementation
            directory.find(L"..")!=std::wstring::npos)return;
         mOwnedF05VisualCaptureDirectory=std::move(directory);
         ScheduleOwnedF05VisualCapture(L"before");
+
+        // Only the synthetic GUI fixture may request a group-state
+        // screenshot without physical keyboard/menu input. It does not
+        // replace the independently accepted real input/output GUI test.
+        wchar_t modeValue[16]{};
+        const DWORD modeLength=::GetEnvironmentVariableW(
+            L"FLY_F05_OWNED_XAML_VISUAL_GROUP_MODE",modeValue,
+            static_cast<DWORD>(std::size(modeValue)));
+        if(!modeLength||modeLength>=std::size(modeValue))return;
+        std::wstring_view mode(modeValue,modeLength);
+        const int choice=mode==L"type"?1:mode==L"name"?2:
+                         mode==L"size"?3:mode==L"month"?4:0;
+        if(!choice)return;
+        auto timer=DispatcherQueue().CreateTimer();
+        mOwnedF05VisualGroupTimer=timer;
+        timer.Interval(std::chrono::milliseconds(1200));
+        timer.IsRepeating(true);
+        auto weak=get_weak();
+        timer.Tick([weak,choice,remaining=15](auto const& sender,
+                                             auto const&) mutable{
+            auto ui=weak.get();
+            if(!ui){sender.Stop();return;}
+            if(ui->mClosing||--remaining<=0){
+                sender.Stop();
+                ui->mOwnedF05VisualGroupTimer=nullptr;
+                return;
+            }
+            // Wait for exactly the six test-owned names and their
+            // complete resident metadata; never mutate a real folder.
+            if(ui->mPopulatingFileLists)return;
+            auto& tab=ui->ActiveWindowTab();
+            if(tab.model.activePane!=0)return;
+            const auto& pane=tab.model.panes[0];
+            if(pane.tabs.empty()||pane.active>=pane.tabs.size())return;
+            const auto& snapshot=pane.tabs[pane.active].snapshot();
+            const auto& path=snapshot.parsingName;
+            if(path.find(L"\\logs\\phase6-winui\\shell-owned-")==
+                    std::wstring::npos ||
+               path.size()<5||path.substr(path.size()-5)!=L"\\Left")
+                return;
+            if(snapshot.truncated||snapshot.baseOffset!=0||
+               snapshot.children.size()!=6||
+               snapshot.nextOffset!=snapshot.children.size())
+                return;
+            if(!tab.fileLists[0].metadataCurrent(
+                    pane.routeIds[pane.active],pane.active,
+                    snapshot.children.size()))return;
+            bool alpha=false,mango=false,zebra=false,korean=false;
+            for(const auto& item:snapshot.children){
+                alpha|=item.label==L"Alpha-small.txt";
+                mango|=item.label==L"Mango-medium.md";
+                zebra|=item.label==L"Zebra-large.log";
+                korean|=item.label==L"\uAC00\uB098\uB2E4-note.txt";
+            }
+            if(!(alpha&&mango&&zebra&&korean))return;
+            sender.Stop();
+            ui->mOwnedF05VisualGroupTimer=nullptr;
+            ui->ToggleGroupMode(choice);
+        });
+        timer.Start();
     }
     void MainWindow::ScheduleOwnedF05VisualCapture(std::wstring stage)
     {
