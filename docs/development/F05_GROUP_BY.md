@@ -223,3 +223,42 @@ Original product C++/XAML implementation is unchanged from
   C++/XAML change was made. F05 GUI acceptance remains scoped to
   the earlier exact GUI binary; Light/Dark visual pixels are still
   **NOT TESTED**.
+
+## 2026-10-16 XAML Light/Dark capture diagnostics — NOT ACCEPTED
+
+- **Source under GUI trials:** `91179a0e` (first owned XAML capture)
+  and `6b0f8865` (guarded UI foreground retry). All new native
+  screenshot code is test-opt-in, with output under ignored
+  `logs/f05-visual-modes/` and isolated `LOCALAPPDATA` preferences.
+- [Source CI #38854939427](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38854939427)
+  **SUCCESS** at `91179a0e` for policy and source, not Release/GUI.
+  [Windows attempt #38855103261](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38855103261)
+  **FAILURE**: retained output confirms `flyExplorer.exe` was linked;
+  however `Start-Process -Wait` in the scheduled worker did not reach
+  `result.json` (11-minute timeout). Binary generation is not a
+  successful outer worker completion.
+- [GUI-only attempt #38866523813](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38866523813)
+  confirmed a **nonblank 944×510 actual XAML** `before.png` at 96 DPI.
+  All six protected original configuration hashes were unchanged,
+  the owned fixture was removed and app exited 0. Subsequent physical
+  group-menu input was refused because the app was not foreground.
+  [Guarded focus attempt #38866979641](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38866979641)
+  likewise refused input after bounded attempts to focus the owned HWND.
+  This is an interactive desktop input-gate failure, **not evidence of
+  incorrect grouping functionality**.
+- [Owned screenshot review transfer #38867304886](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38867304886)
+  retrieved and visually inspected the exact test-owned baseline PNG
+  (`light-aljdaevm/before.png`, SHA-256
+  `6f3cbbacc3263a7ea2c08b9dea6b04c570749c791c27bf35965c54a6b000d6c4`).
+  Although labeled `light`, the captured actual window pixels are
+  **dark**. The isolated preference fixture accidentally wrote literal
+  backslash-r/backslash-n characters instead of CRLF. Corrected in
+  `8f67352e`; protected by source contract `7717d8e0`.
+  The fix has **not yet been revalidated by actual Windows Light-theme
+  screenshots**; the earlier dark pixels must not be reused as Light PASS.
+- **Current verdict:** F05 GUI grouping functionality retains its earlier
+  exact-SHA PASS. App-owned XAML baseline capture is technically proven,
+  but **F05 LIGHT/DARK VISUAL ACCEPTANCE: NOT TESTED** for the corrected
+  fixture and grouped states. Dark theme capture and group-mode visual
+  comparison have not completed. OS 125/150/200% DPI, active High Contrast,
+  Narrator speech and keyboard-only full workflow remain independent gates.
