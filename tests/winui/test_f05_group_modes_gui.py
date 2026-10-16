@@ -62,6 +62,10 @@ def run(*, win, element, safe_click, eventually, left, right):
     def screenshot(stage):
         if not capture:
             return
+        if not owned_foreground():
+            # Only activate this already verified test-owned WinUI HWND.
+            win.set_focus()
+            time.sleep(.15)
         assert owned_foreground(), "Refusing screenshot of any other desktop"
         rect = win.rectangle()
         desktop_w = user32.GetSystemMetrics(0)
