@@ -23,7 +23,7 @@ MODE_IDS = {
 }
 
 
-def run(*, win, element, safe_click, eventually, left, right):
+def run(*, win, element, safe_click, focus, eventually, left, right):
     assert left.parent == right.parent and left.name == "Left"
     assert right.name == "Right" and (left / "Nested").is_dir()
     owned_files = ("Alpha-small.txt", "Mango-medium.md", "Zebra-large.log",
@@ -137,7 +137,12 @@ def run(*, win, element, safe_click, eventually, left, right):
         return None
 
     def set_mode(mode):
-        assert mode in MODE_IDS and owned_foreground(), (
+        assert mode in MODE_IDS
+        # UIA discovery and asynchronous XAML rendering do not guarantee
+        # that this specific test-owned window remains the foreground HWND.
+        # Reacquire owned focus before using physical keyboard input.
+        focus()
+        assert owned_foreground(), (
             "Refusing View flyout keys outside the owned process")
         element("ViewButton").invoke()
         menu = eventually(lambda: live_menu(MODE_IDS[mode]),
