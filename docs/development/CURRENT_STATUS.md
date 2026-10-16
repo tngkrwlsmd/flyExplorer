@@ -7,6 +7,33 @@ app/winui, UI-independent native code in src/base, tests in tests/winui, and
 bounded orchestration in tools/winui/run_checks.py. The former MFC application
 is retired from the working tree and is recoverable from Git revision cbffb48.
 
+## 2026-10-16 F05 captured pixels and Light fixture correction
+
+- **Current source/test head as of this entry:** `3358d04e` (docs).
+  Policy/source CI [#38854939427](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38854939427)
+  succeeded at `91179a0e` before the latest test-only changes.
+- [XAML capture GUI-only #38866523813](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38866523813):
+  actual app-owned baseline PNG at **944×510, 96 DPI**, app exit 0 and
+  all six protected legacy preferences unchanged. Input failed safely
+  when the app was not the foreground user window. A guarded-focus
+  attempt [#38866979641](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38866979641)
+  encountered the same user-session foreground restriction. These
+  failed actions are not evidence of a product grouping regression.
+- Direct pixel review of the retained owned `before.png` showed a
+  **dark rendered window despite the fixture requesting Light**.
+  Root cause: the F05 test wrote escaped text `\\r\\n` rather
+  than CRLF delimiters in its private preference file. Fixed on main
+  by `8f67352e` and guarded by `7717d8e0`. Neither corrected
+  Light screenshot nor Dark grouped screenshot has yet passed a
+  subsequent actual GUI/pixel review.
+- Initial [XAML Build/GUI #38855103261](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38855103261)
+  timed out in outer worker after creating Release executable bytes,
+  before GUI and `result.json`; do not relabel the Actions run PASS.
+- **VISUAL ACCEPTANCE: NOT TESTED** for F05 corrected Light/Dark and
+  grouped states. Existing exact-SHA F05 functional grouping GUI and
+  native C++ PASS evidence remains independent. See
+  [F05_GROUP_BY.md](F05_GROUP_BY.md) for the bounded trial details.
+
 ## 2026-10-16 Four F05 native C++ probes — PASS with worker timeout caveat
 
 - **Exact tested SHA:** `1f85741cd1ec183719cc0cbce1d2460d89ab033a`.
