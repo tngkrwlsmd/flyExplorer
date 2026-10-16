@@ -7,24 +7,12 @@ app/winui, UI-independent native code in src/base, tests in tests/winui, and
 bounded orchestration in tools/winui/run_checks.py. The former MFC application
 is retired from the working tree and is recoverable from Git revision cbffb48.
 
-## 2026-10-16 Grouped XAML visual fixture — source gate PASS; Release and pixels PENDING
+## 2026-10-16 F05 grouped XAML: Release and 8/8 screenshot checks PASS
 
-- [Central source CI #38873943360](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38873943360):
-  **SUCCESS** at exact test-feature SHA `23c85c1861745216454314ecc29159b498fd3666`,
-  both `PASS policy` and `PASS source`. Earlier
-  [#38873148546](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38873148546)
-  passed the prior documentation-only main.
-- New opt-in F05 visual mode waits for the fully loaded, exact
-  six-file synthetic owned folder; it renders one of Type/Name/Size/
-  Modified Month by reusing the existing group model and emits a
-  separate *visual fixture* marker. It never represents an
-  actual physical View-menu acceptance event.
-- **Still pending:** fresh Release binary validation of new C++
-  visual fixture, real grouped Light/Dark pixel review, original
-  Windows/DWM backdrop and DPI/HC/Narrator. The latest central
-  Release dispatch was not executed; do not infer binary success
-  from source CI. Preserve previous scoped native and real-GUI PASS
-  evidence. See [F05_GROUP_BY.md](F05_GROUP_BY.md).
+- Exact Release source `d2ed08d6`: central CI [#38891026338](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38891026338) SUCCESS.
+- Test-only SHA `d51c2af0`: four grouping views per Light/Dark theme verified using the same Release binary, owned UIA headings and alpha-preserving XAML pixels. Evidence: [Light Name #38895272394](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38895272394), [Light Size #38895710455](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38895710455), [mixed views #38896686119](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38896686119), [Dark views #38896939618](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38896939618).
+- [Image review #38897312601](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38897312601) confirmed eight RGBA hashes and reviewed diagnostic-background views. Long type labels may ellipsize and Dark group bands are less prominent.
+- Still **NOT VERIFIED**: actual DWM-composited pixels, real 125/150/200% DPI, High Contrast, Narrator and Korean IME in this scope. Programmatic fixture presentation is distinct from physical View-menu interaction. See [F05_GROUP_BY.md](F05_GROUP_BY.md).
 
 ## 2026-10-16 F05 Light/Dark XAML RGBA baseline capture — PASS
 
