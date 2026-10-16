@@ -6,6 +6,8 @@ ROOT = Path(__file__).resolve().parents[2]
 HARNESS = (ROOT / 'tests/winui/test_shell_gui.py').read_text(encoding='utf-8')
 PROBE = (ROOT / 'tests/winui/test_f05_group_modes_gui.py').read_text(encoding='utf-8')
 TOOLBAR = (ROOT / 'app/winui/FileToolbar.xaml').read_text(encoding='utf-8')
+WINUI = (ROOT / 'app/winui/MainWindow.xaml.cpp').read_text(encoding='utf-8')
+HEADER = (ROOT / 'app/winui/MainWindow.xaml.h').read_text(encoding='utf-8')
 
 
 class F05FourModesHarnessContract(unittest.TestCase):
@@ -33,17 +35,25 @@ class F05FourModesHarnessContract(unittest.TestCase):
     def test_visual_capture_is_test_owned_and_explicit(self):
         for token in ('FLY_F05_VISUAL_CAPTURE', 'FLY_F05_VISUAL_THEME',
                       'theme in ("light", "dark")',
-                      'owned_foreground()', 'GetSystemMetrics(0)',
-                      'GetSystemMetrics(1)', 'ImageGrab.grab(window=hwnd)',
-                      'owner.value == process_id',
+                      'FLY_F05_OWNED_XAML_VISUAL_DIR',
                       'f05-visual-modes', 'GetDpiForWindow(',
+                      'Image.open(bmp)', 'img.getextrema()',
                       'F05_VISUAL_CAPTURE='):
             self.assertIn(token, HARNESS + PROBE)
         self.assertIn('assert os.environ.get("FLY_F05_MODES_ONLY")=="YES"',
                       HARNESS)
         self.assertIn('settings=localdata/"flyExplorer"', HARNESS)
-        self.assertIn('assert not png.exists()', PROBE)
+        self.assertIn('not visual_dir.is_symlink()', PROBE)
         self.assertIn('png.relative_to(ROOT)', PROBE)
+        self.assertIn('RenderTargetBitmap rendered', WINUI)
+        self.assertIn('InitializeOwnedF05VisualCaptureTest();', WINUI)
+        for token in ('FLY_F05_OWNED_XAML_VISUAL_DIR',
+                      'ScheduleOwnedF05VisualCapture',
+                      'L"\\\\logs\\\\f05-visual-modes\\\\"',
+                      'L"tab-restored"', 'L"collapsed"'):
+            self.assertIn(token, WINUI)
+        self.assertIn('mOwnedF05VisualCaptureDirectory', HEADER)
+        self.assertNotIn('ImageGrab.grab(', PROBE)
 
     def test_files_owned_and_no_global_changes(self):
         for token in ('left / name', 'left.parent == right.parent',
