@@ -254,36 +254,49 @@ Original product C++/XAML implementation is unchanged from
   **dark**. The isolated preference fixture accidentally wrote literal
   backslash-r/backslash-n characters instead of CRLF. Corrected in
   `8f67352e`; protected by source contract `7717d8e0`.
-  The fix has **not yet been revalidated by actual Windows Light-theme
-  screenshots**; the earlier dark pixels must not be reused as Light PASS.
+  The earlier dark pixels must not be reused as Light PASS; later
+  corrected theme-specific RGBA baseline verification is below.
 - **Current verdict:** F05 GUI grouping functionality retains its earlier
   exact-SHA PASS. App-owned XAML baseline capture is technically proven,
-  but **F05 LIGHT/DARK VISUAL ACCEPTANCE: NOT TESTED** for the corrected
-  fixture and grouped states. Dark theme capture and group-mode visual
-  comparison have not completed. OS 125/150/200% DPI, active High Contrast,
+  but at that time **F05 LIGHT/DARK VISUAL ACCEPTANCE: NOT TESTED**
+  for the corrected fixture and grouped states. Later baseline-only
+  verification below does not establish full grouped/composited QA. OS 125/150/200% DPI, active High Contrast,
   Narrator speech and keyboard-only full workflow remain independent gates.
 
-## 2026-10-16 Baseline-only acceptance path (prepared; not yet executed)
+## 2026-10-16 Baseline-only Light/Dark XAML capture — PASS; compositor review open
 
-- **Main test-only SHA:** `9077a1ac39e68c3a0232613bb09e255131ae2846`.
-  The private-preferences CRLF fix (`8f67352e`) and its regression
-  contract (`7717d8e0`) are included.
-- The F05 owned GUI harness now recognizes opt-in
-  `FLY_F05_VISUAL_BASELINE_ONLY=YES` *only together with*
-  `FLY_F05_VISUAL_CAPTURE=YES`. It captures app-owned XAML
-  `before.bmp`/`before.png` and exits normally without physical input.
-  It emits `F05_VISUAL_BASELINE_GUI_PASS=True`, **not**
-  `F05_FOUR_MODES_AND_TAB_GUI_PASS=True`. The latter remains reserved
-  for actually exercised group-mode interactions.
-- **Next independent Windows acceptance:** verify the exact source SHA,
-  run the focused source contracts, reuse the same accepted Release
-  binary (no C++/XAML changes since `91179a0e`), exercise Light and
-  Dark baseline-only in separate test-owned profiles, verify six real
-  user settings unchanged, exit 0 and both image hashes, then retrieve
-  and inspect both original XAML pixels before assigning theme PASS.
-  Grouped-state Light/Dark screenshot comparison remains separate.
-- No Windows acceptance or pixel review has been claimed for this
-  corrected baseline-only mode yet. The shared central Remote Shell
-  request was occupied by an unrelated request at the latest preflight;
-  **do not replace or overwrite that request**. Await an idle slot or
-  use another explicitly authorized independent route.
+- **Original baseline-only source SHA:** `3976779e14a691ecff2f3c58a479c0cec49ab35a`.
+  [Real Windows run #38868358300](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38868358300)
+  **SUCCESS**: Light and Dark used separate disposable preferences,
+  both captured 944×510 app-owned XAML bitmaps at actual 96 DPI, both
+  ran 19/19 F05 source contracts, both exited 0, all six original user
+  configuration hashes remained identical, and temporary fixtures were
+  removed. `F05_VISUAL_BASELINE_GUI_PASS=True` is intentionally distinct
+  from four-mode group interaction acceptance.
+- **Alpha diagnosis:** [run #38868792850](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38868792850)
+  confirmed roughly 92% of sampled XAML pixels were transparent in both
+  themes. The original Pillow BI_RGB-to-RGB conversion dropped alpha,
+  making transparent regions appear black, so a black Light preview
+  does **not** establish a Light product regression.
+- **Lossless-alpha correction:** `40a13f78` explicitly decodes the
+  top-down BGRA pixel buffer from the test-owned BMP into RGBA PNG and
+  keeps a separate theme-background composite marked
+  `DIAGNOSTIC_COMPOSITE_NOT_REAL_BACKDROP=True`. Source contract
+  `26dce015` guards this. [Windows run #38869630768](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38869630768)
+  **SUCCESS** at exact SHA `26dce015acb59da47d6fe8ee5cb46c55c6a63e14`:
+  Light original RGBA PNG SHA-256
+  `5b9d44e7e4066f2ab4c34ea026a79b8832a5d002ebb8ee54d5c400020c59a412`;
+  Dark original RGBA PNG SHA-256
+  `42d7e2f2ea0783c01f02d391669c9f44d1f83c3032663094d9d51e0e1f3ccce3`.
+  Both have full exact-SHA 19-test contracts PASS, XAML baseline capture
+  PASS, owned WinUI exit 0, and original user settings unchanged.
+- **Acceptance boundary:** app-owned XAML *foreground RGBA extraction*
+  and theme-specific baseline-only test workflows **PASS**. This is
+  **not** original Windows DWM backdrop/final-composited-pixel
+  inspection. The generated white/dark background composite is a
+  **diagnostic reconstruction**. F05 grouped Light/Dark states were not
+  captured after the current changes because keyboard/menu input was
+  correctly refused when the shared user desktop could not grant the
+  test app foreground ownership. Consequently, **F05 GROUPED FULL
+  VISUAL ACCEPTANCE: NOT TESTED**. Actual 125/150/200% DPI, active High
+  Contrast and Narrator spoken output remain independent open gates.
