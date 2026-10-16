@@ -16,6 +16,7 @@ class F05FourModesHarnessContract(unittest.TestCase):
                       'F05_FOUR_MODES_AND_TAB_GUI_PASS=True'):
             self.assertIn(token, HARNESS)
         self.assertIn('FLY_F05_PANES_ONLY', HARNESS)
+        self.assertIn('focus=ensure_owned_focus', HARNESS)
         self.assertIn('raise SystemExit(0)', HARNESS)
 
 
@@ -26,6 +27,7 @@ class F05FourModesHarnessContract(unittest.TestCase):
             self.assertIn(name, PROBE)
         for token in ('WindowFromPoint', 'owned_foreground()',
                       'menu.set_focus()', 'keyboard.send_keys("{ENTER}")',
+                      'focus()', 'Refusing View flyout keys outside',
                       'F05_GUI_GROUP_NAME=PASS', 'F05_GUI_GROUP_SIZE=PASS',
                       'F05_GUI_GROUP_MODIFIED_MONTH=PASS',
                       'F05_GUI_PER_TAB_COLLAPSE_RESTORED=PASS',
