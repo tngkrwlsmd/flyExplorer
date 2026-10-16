@@ -7,6 +7,25 @@ app/winui, UI-independent native code in src/base, tests in tests/winui, and
 bounded orchestration in tools/winui/run_checks.py. The former MFC application
 is retired from the working tree and is recoverable from Git revision cbffb48.
 
+## 2026-10-16 Grouped XAML visual fixture — source gate PASS; Release and pixels PENDING
+
+- [Central source CI #38873943360](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38873943360):
+  **SUCCESS** at exact test-feature SHA `23c85c1861745216454314ecc29159b498fd3666`,
+  both `PASS policy` and `PASS source`. Earlier
+  [#38873148546](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38873148546)
+  passed the prior documentation-only main.
+- New opt-in F05 visual mode waits for the fully loaded, exact
+  six-file synthetic owned folder; it renders one of Type/Name/Size/
+  Modified Month by reusing the existing group model and emits a
+  separate *visual fixture* marker. It never represents an
+  actual physical View-menu acceptance event.
+- **Still pending:** fresh Release binary validation of new C++
+  visual fixture, real grouped Light/Dark pixel review, original
+  Windows/DWM backdrop and DPI/HC/Narrator. The latest central
+  Release dispatch was not executed; do not infer binary success
+  from source CI. Preserve previous scoped native and real-GUI PASS
+  evidence. See [F05_GROUP_BY.md](F05_GROUP_BY.md).
+
 ## 2026-10-16 F05 Light/Dark XAML RGBA baseline capture — PASS
 
 - **Latest accepted test-only main SHA:** `26dce015acb59da47d6fe8ee5cb46c55c6a63e14`.
