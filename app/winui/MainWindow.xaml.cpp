@@ -484,7 +484,43 @@ namespace winrt::FlyExplorer::implementation
         InitializeOwnedNetworkVisualCaptureTest();
         InitializeOwnedShellProviderVisualCaptureTest();
         InitializeOwnedSearchVisualCaptureTest();
+        InitializeOwnedF05VisualCaptureTest();
     }
+    void MainWindow::InitializeOwnedF05VisualCaptureTest()
+    {
+        wchar_t value[32768]{};
+        const DWORD used=::GetEnvironmentVariableW(
+            L"FLY_F05_OWNED_XAML_VISUAL_DIR",value,
+            static_cast<DWORD>(std::size(value)));
+        if(!used||used>=std::size(value))return;
+        std::wstring directory(value,used);
+        // Reject arbitrary paths: the GUI harness owns the ignored evidence
+        // directory. Never read/write personal folders for this test hook.
+        if(directory.find(L"\\logs\\f05-visual-modes\\")==std::wstring::npos ||
+           directory.find(L"..")!=std::wstring::npos)return;
+        mOwnedF05VisualCaptureDirectory=std::move(directory);
+        ScheduleOwnedF05VisualCapture(L"before");
+    }
+    void MainWindow::ScheduleOwnedF05VisualCapture(std::wstring stage)
+    {
+        if(mOwnedF05VisualCaptureDirectory.empty()||stage.empty()||mClosing)
+            return;
+        auto timer=DispatcherQueue().CreateTimer();
+        mOwnedF05VisualTimer=timer;
+        timer.Interval(std::chrono::milliseconds(600));
+        const auto weak=get_weak();
+        timer.Tick([weak,stage=std::move(stage)](
+            auto const& sender,auto const&){
+            sender.Stop();
+            if(auto ui=weak.get()){
+                ui->mOwnedF05VisualTimer=nullptr;
+                ui->CaptureOwnedRootVisualAsync(
+                    ui->mOwnedF05VisualCaptureDirectory+L"\\"+stage+L".bmp");
+            }
+        });
+        timer.Start();
+    }
+
     void MainWindow::InitializeOwnedSearchVisualCaptureTest()
     {
         wchar_t value[32768]{};
@@ -1667,6 +1703,9 @@ namespace winrt::FlyExplorer::implementation
         UpdateFooterSummary();
         if(state.groupByType)
             StatusText().Text(L"현재 창의 파일을 선택한 기준으로 그룹화했습니다.");
+        ScheduleOwnedF05VisualCapture(off?L"off":
+            choice==1?L"type":choice==2?L"name":
+            choice==3?L"size":L"month");
     }
     void MainWindow::UpdateViewPresentation(int side)
     {
@@ -1907,6 +1946,7 @@ namespace winrt::FlyExplorer::implementation
                 state.groupCollapse=state.groupTabCache.collapse();
                 if(ActiveWindowTab().model.activePane==side)
                     fileBar()->SetGroupState(static_cast<int>(state.groupMode)+1);
+                ScheduleOwnedF05VisualCapture(L"tab-restored");
             }
         }
         if(state.groupByType){
@@ -2045,6 +2085,7 @@ namespace winrt::FlyExplorer::implementation
                         ui->FillFiles(side);
                         ui->UpdateSelectionChrome();
                         ui->UpdateFooterSummary();
+                        ui->ScheduleOwnedF05VisualCapture(L"collapsed");
                     }
                 });
                 heading.Content(disclosure);
