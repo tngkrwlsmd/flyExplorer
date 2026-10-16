@@ -7,20 +7,30 @@ app/winui, UI-independent native code in src/base, tests in tests/winui, and
 bounded orchestration in tools/winui/run_checks.py. The former MFC application
 is retired from the working tree and is recoverable from Git revision cbffb48.
 
-## 2026-10-16 F05 Light/Dark baseline-only pending Windows review
+## 2026-10-16 F05 Light/Dark XAML RGBA baseline capture — PASS
 
-- Prepared at source SHA `9077a1ac39e68c3a0232613bb09e255131ae2846`:
-  opt-in isolated Light/Dark baseline-only XAML capture, using real CRLF
-  in test-owned preferences and no physical keyboard/menu input. The
-  harness explicitly reports baseline-only separately from four-mode
-  interaction success, preserving existing functional GUI evidence.
-- **Not yet run:** source gate and Windows Light/Dark screenshots at
-  this revised test SHA, original-image pixel review, or grouped states.
-  Current F05 Light/Dark **VISUAL ACCEPTANCE: NOT TESTED**.
-- The personal-control-plane request slot was changed by a separate
-  operation during preflight; do not overwrite its different request.
-  Recheck live main, slot and active runs before arranging validation.
-  See [F05_GROUP_BY.md](F05_GROUP_BY.md).
+- **Latest accepted test-only main SHA:** `26dce015acb59da47d6fe8ee5cb46c55c6a63e14`.
+  [Windows Light/Dark baseline run #38868358300](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38868358300)
+  **SUCCESS** at prior source `3976779e`: separate owned preferences,
+  944×510 / 96 DPI XAML images in both themes, 19/19 focused contracts
+  PASS, owned process exit 0, six legacy preference SHA-256 checks
+  unchanged, all disposable filesystem fixtures removed.
+- Raw XAML images were about 92% transparent in sampled pixels; the
+  former BI_RGB-to-RGB conversion wrongly rendered transparent areas
+  black. `40a13f78` switched to explicit top-down BGRA→RGBA decoding,
+  preserving original alpha and writing distinct diagnostic background
+  composites. [RGBA acceptance run #38869630768](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38869630768)
+  **SUCCESS** at `26dce015`: two preserved-alpha original PNGs, 19/19
+  F05 contracts PASS per theme, application exit 0 and unchanged
+  original user profile.
+- **Accepted gate:** baseline-only XAML foreground RGBA capture for
+  Light and Dark. **NOT ACCEPTED:** actual Windows/DWM final-composited
+  pixel comparison, visual review of reconstructed diagnostic images
+  as real output, and Light/Dark *grouped* screens. Physical group
+  input was guarded when the interactive app could not become
+  foreground. OS 125/150/200% DPI, active High Contrast, Narrator
+  speech remain separate open gates. See
+  [F05_GROUP_BY.md](F05_GROUP_BY.md).
 
 ## 2026-10-16 F05 captured pixels and Light fixture correction
 
@@ -37,10 +47,11 @@ is retired from the working tree and is recoverable from Git revision cbffb48.
 - Direct pixel review of the retained owned `before.png` showed a
   **dark rendered window despite the fixture requesting Light**.
   Root cause: the F05 test wrote escaped text `\\r\\n` rather
-  than CRLF delimiters in its private preference file. Fixed on main
-  by `8f67352e` and guarded by `7717d8e0`. Neither corrected
-  Light screenshot nor Dark grouped screenshot has yet passed a
-  subsequent actual GUI/pixel review.
+  than CRLF delimiters in its private preference file. Fixed by
+  `8f67352e` and guarded by `7717d8e0`. Later corrected Light/Dark
+  **baseline-only** screenshots passed at `3976779e` and alpha
+  preservation passed at `26dce015`, as recorded above; actual
+  Windows backdrop and grouped pixels remain unverified.
 - Initial [XAML Build/GUI #38855103261](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38855103261)
   timed out in outer worker after creating Release executable bytes,
   before GUI and `result.json`; do not relabel the Actions run PASS.
