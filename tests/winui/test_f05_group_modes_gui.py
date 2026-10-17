@@ -122,6 +122,23 @@ def run(*, win, element, safe_click, focus, eventually, left, right):
         # The helper fails closed if the test-owned window is not foreground.
         if (stage in ("name", "size", "month", "type") and
                 os.environ.get("FLY_F05_SCREEN_WINDOW_CAPTURE") == "YES"):
+            # GUI source contracts cover the grouped left pane; the actual
+            # full-window screenshot must additionally wait for the right
+            # pane's asynchronously enumerated synthetic fixture.
+            def owned_right_pane_ready():
+                right_list = element("RightFiles")
+                if not right_list.exists(timeout=.1):
+                    return False
+                texts = [item.window_text()
+                         for item in right_list.descendants()
+                         if item.element_info.control_type == "ListItem"]
+                return all(any(name in text for text in texts)
+                           for name in ("Alpha-small.txt", "Mango-medium.md",
+                                        "Zebra-large.log"))
+            eventually(owned_right_pane_ready,
+                       "Right pane synthetic files not ready for screen pixels",
+                       14)
+            time.sleep(.35)  # Let the enumerated rows' icons settle.
             from owned_f05_compositor import attempt_capture
             attempt_capture(win=win, process_id=process_id, visual_dir=visual_dir,
                             stage=stage, theme=theme, focus=focus,

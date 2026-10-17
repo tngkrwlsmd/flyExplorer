@@ -112,6 +112,11 @@ class F05FourModesHarnessContract(unittest.TestCase):
         self.assertIn('FLY_F05_VISUAL_CAPTURE', HARNESS)
         self.assertIn('FLY_F05_VISUAL_GROUP_MODE_ONLY', HARNESS)
         self.assertIn('from owned_f05_compositor import attempt_capture', PROBE)
+        self.assertIn('owned_right_pane_ready()', PROBE)
+        self.assertIn('element("RightFiles")', PROBE)
+        self.assertIn('Zebra-large.log', PROBE)
+        self.assertIn('Right pane synthetic files not ready for screen pixels',
+                      PROBE)
         self.assertNotIn('ImageGrab.grab(', PROBE)
         helper = (ROOT / 'tests/winui/owned_f05_compositor.py').read_text(
             encoding='utf-8')
