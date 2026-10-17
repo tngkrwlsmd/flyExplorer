@@ -1,5 +1,18 @@
 # flyExplorer current status — F05 keyboard validation checkpoint 2026-10-17
 
+## 2026-10-17 F04-A local-tree foundation (no user-visible tree yet)
+
+- Introduced bounded, OS-I/O-free F04 lexical local-drive-path and
+  stale expansion-result identity guards in app/winui/folder_tree_path.h;
+  corresponding native fixture and registered source contract added.
+- This does NOT assert that an actual fixed-drive/reparse inspection occurred,
+  nor that NavigationSidebar now exposes a TreeView. F04-B off-UI-thread
+  isolated enumeration, pane-targeted interaction, Windows GUI and visual
+  acceptance remain OPEN. See docs/development/F04_NAVIGATION_TREE.md.
+- Initial native C++17 and Python source-contract execution was conducted
+  locally outside the Windows VM; Windows Release/GUI are NOT TESTED for F04.
+
+
 ## 2026-10-17 current F05 acceptance and accessibility resume checkpoint
 
 - Live `main` at this checkpoint: `fce74c784c36c61d596c04c1d26fb1600e3c7fb7`. The previously open
