@@ -66,10 +66,26 @@ def run(*, win, element, safe_click, eventually, left, right):
     row = eventually(nested_row, "F04 test-owned Nested child missing", 15)
     assert row.element_info.process_id == owner_pid
     capture("expanded")
-    safe_click(row)
-    eventually(lambda: str(left / "Nested").casefold() in
-               element("AddressBox").get_value().casefold(),
-               "F04 tree selection did not navigate active pane", 15)
+    # Clicking a full TreeItem bounding rectangle can hit the chevron or
+    # empty padding, which expands a node rather than invoking its content.
+    # Use the actual test-owned label's pixel rectangle for physical input.
+    label = next((x for x in row.descendants()
+                  if x.element_info.control_type == "Text"
+                  and x.window_text() == "Nested"), None)
+    assert label is not None, "F04 node content text not exposed to UIA"
+    safe_click(label)
+    try:
+        eventually(lambda: str(left / "Nested").casefold() in
+                   element("AddressBox").get_value().casefold(),
+                   "F04 label click did not navigate active pane", 15)
+    except AssertionError:
+        current = element("AddressBox").get_value().casefold()
+        print("F04_CLICK_DIAG_ROOT_STILL_ACTIVE=",
+              current == str(left).casefold(), flush=True)
+        print("F04_CLICK_DIAG_STATUS=",
+              element("StatusText").window_text()[:110], flush=True)
+        capture("after-click-failed")
+        raise
     print("F04_TREE_OWNED_LOCAL_NAVIGATION=PASS", flush=True)
     eventually(lambda: any(
                str(left / "Nested").casefold() in x.window_text().casefold()
