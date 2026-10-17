@@ -1,5 +1,12 @@
 # flyExplorer current status — F05 keyboard validation checkpoint 2026-10-17
 
+## 2026-10-17 F04-B right-pane test isolation after second GUI failure
+
+- [Central GUI #39033656455](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39033656455) policy/source/Release PASS; functional GUI FAIL before F04 tree interaction at the common Left startup address gate. Retained UIA evidence showed an empty Left list/address and a populated Right list for the owned fixture; normal app exit and owned fixture cleanup confirmed.
+- The focused F04 GUI case now explicitly selects the already ready Right pane and validates the owned address before TreeView actions. The other GUI profiles preserve their Left startup assertion; full GUI regression is still required. This is test isolation, **not** a fix or acceptance of intermittent Left cold-start behavior.
+- Revised focused F04 GUI, actual keyboard operation, independently inspected before/after theme pixels, and cold-start reliability remain OPEN.
+
+
 ## 2026-10-17 F04-B failed Release and corrective patch
 
 - [Central GUI #39031617203](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39031617203) failed at Release compile C2027/C3861: NavigationSidebar.xaml.cpp lacked the WinRT AutomationProperties include. Source checks passed, but no GUI ran.
