@@ -1,5 +1,28 @@
 # flyExplorer current status — F05 keyboard validation checkpoint 2026-10-17
 
+## 2026-10-17 current F05 acceptance and accessibility resume checkpoint
+
+- Live `main` at this checkpoint: `fce74c784c36c61d596c04c1d26fb1600e3c7fb7`. The previously open
+  app-side Light/Type empty-right-pane fixture was fixed in
+  `32cb338cb6c3d3a38101d63b5190cfdd508a5f9d` and its new Release
+  runtime passed [GUI #39022716919](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39022716919)
+  plus [independent visual review #39022817351](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39022817351).
+  Final docs-integrated `main` source checks
+  [#39023239483](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39023239483)
+  **SUCCESS**. Do not repeat those completed gates for unchanged code.
+- Read-only [Windows accessibility inventory #39029834464](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39029834464)
+  **SUCCESS**: one interactive Explorer desktop, preexisting owned Release
+  executable SHA-256 `7f1f1636d3078e5df95fe40f5519a653ae1235373b6a8f280e7f88d4c435428f`,
+  `SPI_GETHIGHCONTRAST` currently **disabled**; no OS/theme/user state
+  changed. This legacy runtime hash is not the newer F05 candidate Release
+  hash `29cdf8e8d3f052fb273461eaf1ba14cd62439bc9e2674f7ae791871a845cd9de`.
+- **Still OPEN:** actual OS scaling at 125/150/200%, F05 active High
+  Contrast composited GUI pixels, and actual spoken Narrator audio.
+  The read-only contrast result does not constitute High Contrast GUI
+  acceptance. Any active contrast test must have a protected original-state
+  restore/cleanup path and exact candidate binary provenance. Narrator
+  unattended hotkey probing remains disallowed by the current guide.
+
 ## 2026-10-17 F05 app-side Type start after both panes are ready — accepted
 
 - **Historical distinction:** the real View → Type user flow had already
