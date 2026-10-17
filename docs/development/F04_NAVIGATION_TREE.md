@@ -90,3 +90,9 @@ independent pixel inspection are complete. Keep F03/F05/legacy paths unchanged.
 - The predecessor Release build does not certify the revised Python harness;
   independent F04 input, completed owned window screenshots and pixel review
   remain OPEN.
+
+## 2026-10-17 F04 right-pane-focused GUI isolation
+
+- [Central #39033656455](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39033656455) FAILED after source and Release PASS. The focused GUI failed *before F04 input* at the shared Left cold-start address readiness assertion. Retained owned evidence showed RightFiles containing the synthetic Nested/readme fixture, but LeftFiles and active AddressBox empty; test-owned application exited normally and removed its fixture. This does not establish an F04 TreeView defect.
+- Focused F04 now waits for the populated RightFiles, activates that pane by a real owned click, and checks that its active address matches the same synthetic Left fixture before tree interaction. This tests an actual right-pane route rather than treating Left cold-start as a prerequisite.
+- The normal GUI startup assertion for Left remains unchanged outside F04-only scope, and the full GUI chain still runs afterward. Right-focused F04 PASS, normal cold-start reliability, keyboard input, and independent Light/Dark pixel acceptance remain unverified until exact-revision evidence.
