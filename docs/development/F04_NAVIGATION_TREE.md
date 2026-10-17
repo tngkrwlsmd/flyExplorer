@@ -100,3 +100,7 @@ independent pixel inspection are complete. Keep F03/F05/legacy paths unchanged.
 ## F04 active-pane selection, October 17
 
 Windows GUI #39035310336: source and Release PASS; F04-only FAIL before tree interactions. Archived owned UIA showed a populated LeftFiles and matching active address, but empty RightFiles. An earlier run saw the opposite side ready. The focused test now chooses either pane only after an owned Nested child is observed, activates that pane, and checks the active address. It reports the other pane state without claiming two-pane startup acceptance. Original general startup gate is preserved. GUI and visual acceptance remain OPEN.
+
+## F04 TreeItem invocation, 2026-10-17
+
+Windows GUI #39036073150: Release and existing three GUI areas passed. F04 test selected a ready pane, displayed the TreeView, located Nested and captured collapsed/expanded states. Clicking the full TreeItem did not update the active address. Revised harness clicks the actual Nested text label, not the bounding TreeItem area, and prints bounded failure diagnostics. Whether the WinUI event or navigation command is defective remains unverified. Light/Dark independent pixel review remains open.
