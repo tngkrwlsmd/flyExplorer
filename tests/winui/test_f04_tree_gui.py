@@ -12,7 +12,14 @@ def run(*, win, element, safe_click, eventually, left, right):
     assert (left / "Nested").is_dir() and right.is_dir()
     toggle = element("FolderTreeToggle")
     tree = element("FolderTreeView")
-    assert toggle.exists(timeout=4) and not tree.is_visible()
+    assert toggle.exists(timeout=4)
+    # WinUI omits descendants of a Collapsed parent from the UIA tree.
+    # WindowSpecification.is_visible() resolves a missing control by polling
+    # until TimeoutError, so test UIA existence before accessing visibility.
+    def tree_visible():
+        return tree.exists(timeout=.2) and tree.is_visible()
+
+    assert not tree_visible()
     app = win.wrapper_object()
     owner_pid = app.element_info.process_id
 
@@ -42,12 +49,12 @@ def run(*, win, element, safe_click, eventually, left, right):
 
     # Verify collapsed/expanded actual windows, not just an XAML source token.
     safe_click(toggle)
-    eventually(lambda: tree.is_visible(), "F04 tree did not open", 6)
+    eventually(tree_visible, "F04 tree did not open", 6)
     safe_click(toggle)
-    eventually(lambda: not tree.is_visible(), "F04 tree did not collapse", 6)
+    eventually(lambda: not tree_visible(), "F04 tree did not collapse", 6)
     capture("collapsed")
     safe_click(toggle)
-    eventually(lambda: tree.is_visible(), "F04 tree did not reopen", 6)
+    eventually(tree_visible, "F04 tree did not reopen", 6)
 
     def nested_row():
         for item in tree.descendants():
@@ -70,5 +77,5 @@ def run(*, win, element, safe_click, eventually, left, right):
                "F04 tree retained previous root after in-tab navigation", 9)
     capture("navigated")
     safe_click(toggle)
-    eventually(lambda: not tree.is_visible(), "F04 tree did not hide", 6)
+    eventually(lambda: not tree_visible(), "F04 tree did not hide", 6)
     print("F04_TREE_TOGGLE_EXPAND_NAVIGATE=PASS", flush=True)
