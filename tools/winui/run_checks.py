@@ -439,7 +439,7 @@ def run_gui(area, configuration, env, tag):
     if area == "all":
         # Fail early on exact session-history cleanup before long GUI coverage.
         # Keep standalone focused probes independently runnable.
-        for focused in ("window-tabs", "shortcuts", "filter-preset", "folder-tree"):
+        for focused in ("window-tabs", "shortcuts", "filter-preset"):
             cmd, gui_env, timeout = gui_command(
                 focused, configuration, env
             )
@@ -449,6 +449,14 @@ def run_gui(area, configuration, env, tag):
             )
             if rc:
                 return fail("GUI_ACCEPTANCE_FAILURE", rc)
+        # F04 is additive: keep the pre-existing shortcut acceptance order.
+        cmd, gui_env, timeout = gui_command("folder-tree", configuration, env)
+        rc = execute(
+            f"gui-folder-tree-{configuration}",
+            cmd, timeout, gui_env, tag,
+        )
+        if rc:
+            return fail("GUI_ACCEPTANCE_FAILURE", rc)
     cmd, gui_env, timeout = gui_command(area, configuration, env)
     rc = execute(f"gui-{area}-{configuration}", cmd, timeout, gui_env, tag)
     return fail("GUI_ACCEPTANCE_FAILURE", rc) if rc else 0
