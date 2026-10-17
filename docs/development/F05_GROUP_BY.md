@@ -365,3 +365,36 @@ passed policy and all source families for the exact test revision
 nor the existing programmatic XAML grouped captures proves it.
 Final Windows/DWM composited pixels, real higher DPI, High Contrast,
 and Narrator audio are also separate unaccepted gates.
+
+## 2026-10-17 actual F05 keyboard disclosure acceptance — GUI PASS
+
+Test-only `flyExplorer/main` SHA: `83152847b753edfb3ebffcb0b6c95db96a0d5489`. The reused Release executable
+was independently verified by SHA-256
+`7f1f1636d3078e5df95fe40f5519a653ae1235373b6a8f280e7f88d4c435428f`,
+matching the prior accepted exact-owned full runtime. Only test/docs had
+changed since the product Release source `d2ed08d6`; the original binary
+and user settings were not modified.
+
+[Windows GUI attempt #38989720309](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38989720309)
+ran the opt-in `FLY_F05_KEYBOARD_DISCLOSURE_ONLY=YES` fixture under a real
+interactive Explorer user session. It selected View → Type, physically
+sent Space on the focused .md disclosure, observed its Markdown file row
+collapse, physically sent Enter and observed the file row reappear. The
+GUI worker wrote `status=PASS` and `stage=complete` to its task-owned
+`result.json`.
+
+The wrapper Action concluded **FAILURE** because the *outer PowerShell
+result-aggregation command* used a malformed `-and` expression, after the
+GUI worker had finished. This is a wrapper defect, not a failed GUI
+assertion. No second GUI attempt was made. Independent **SUCCESS**
+[read-only evidence #38989815625](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38989815625)
+confirmed the persisted result, source SHA, all physical Space/Enter
+PASS markers, unchanged six original user configuration hashes,
+unchanged Release executable, clean checkout and removed scheduled task.
+
+**Scoped acceptance: F05 physical keyboard Type/.md disclosure PASS.**
+This does not represent full-app keyboard-only navigation acceptance or
+DWM-composited screenshot review. Actual native 125/150/200% OS scaling,
+active high-contrast pixels and Narrator speech remain **NOT VERIFIED**.
+The earlier source-only `NOT TESTED` statements in this document are
+historical checkpoints superseded only by the scoped result above.

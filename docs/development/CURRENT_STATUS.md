@@ -1,5 +1,39 @@
 # flyExplorer current status — F05 keyboard validation checkpoint 2026-10-17
 
+## 2026-10-17 F05 physical keyboard disclosure — GUI PASS (latest evidence)
+
+- **Exact current test-only source SHA:** `83152847b753edfb3ebffcb0b6c95db96a0d5489` (no changes to
+  product C++/XAML from the accepted Release source
+  `d2ed08d6cfe5f2f6235abe221657d19038e5a1f8`).
+- **Windows owned GUI:** the user-session test in
+  [#38989720309](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38989720309)
+  created a one-off exact-source fixture, reused the existing full
+  Release runtime, selected the real View → Type grouping and sent
+  physical Space to collapse the .md group and Enter to expand it.
+  The original user configuration hashes remained identical.
+- **Result provenance:** the outer Remote Shell Action **FAILED** due to a
+  PowerShell evidence-aggregation expression (`-and` was applied to a
+  command parameter), *after the interactive GUI worker finished*.
+  A separate **read-only** inspection
+  [#38989815625](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38989815625)
+  **SUCCESS** confirmed the persisted `result.json` recorded
+  `status=PASS`, `stage=complete`, the exact SHA and all four markers:
+  `F05_KEYBOARD_SPACE_COLLAPSE=PASS`,
+  `F05_KEYBOARD_ENTER_EXPAND=PASS`,
+  `F05_KEYBOARD_DISCLOSURE_GUI_PASS=True`, and
+  `ORIGINAL_SIX_USER_CONFIG_SHA256_IDENTICAL True`.
+  It also confirmed zero source changes, no remaining test scheduled
+  task and the original Release executable SHA-256 unchanged at
+  `7f1f1636d3078e5df95fe40f5519a653ae1235373b6a8f280e7f88d4c435428f`.
+- **Accepted scope:** actual user-session keyboard disclosure interaction
+  for one owned Type/.md fixture. This does **not** turn the failed outer
+  Actions run into a successful workflow, prove an entirely keyboard-only
+  app workflow, or certify compositor pixels, native 125/150/200% Windows
+  DPI scaling, active High Contrast or Narrator audio. Historical
+  source-only `NOT TESTED` entries below describe the earlier checkpoint,
+  and are superseded only for this specific keyboard disclosure gate.
+
+
 ## 2026-10-17 F05 keyboard-only disclosure harness — source PASS, GUI NOT TESTED
 
 - **Test-only main SHA:** `22ca4ed1f3fe155a97022f0fa474538a432fdce3`.
