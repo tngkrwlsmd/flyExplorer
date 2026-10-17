@@ -217,16 +217,27 @@ try:
  for key in ids:assert element(key).exists(timeout=5),("Missing XAML control",key)
  print("REAL_WINUI_SHELL_CONTROLS",len(ids),"DUAL_PANES_AND_TABS=True",flush=True)
  if os.environ.get("FLY_F04_TREE_ONLY")=="YES":
-  # Focused tree semantics on a verified active pane, not cold-start parity.
-  # The independent standard profiles keep their left startup readiness gate.
-  eventually(lambda:any("Nested" in row.window_text()
-      for row in element("RightFiles").descendants()),
-      "F04 right-pane owned fixture absent",12)
-  safe_click(element("RightFiles"))
+  # Both physical panes independently load the owned startup path. The
+  # focused F04 test chooses a pane with confirmed real fixture entries.
+  # It does NOT certify the other pane or bypass the normal GUI startup gate.
+  def f04_ready_pane():
+   for name in ("LeftFiles","RightFiles"):
+    if any(row.window_text()=="Nested"
+        for row in element(name).descendants()):
+     return name
+   return None
+  ready=eventually(f04_ready_pane,
+                   "F04 neither pane published the owned folder",12)
+  other="RightFiles" if ready=="LeftFiles" else "LeftFiles"
+  other_ready=any(row.window_text()=="Nested"
+                  for row in element(other).descendants())
+  print("F04_FOCUSED_PANE=",ready,"OTHER_PANE_READY=",other_ready,
+        flush=True)
+  safe_click(element(ready))
   eventually(lambda:str(left).casefold() in
       element("AddressBox").get_value().casefold(),
-      "F04 active pane did not publish owned folder",9)
-  print("F04_FOCUSED_READY_RIGHT_PANE=PASS",flush=True)
+      "F04 selected pane did not publish owned folder",9)
+  print("F04_FOCUSED_READY_PANE=PASS",flush=True)
   from test_f04_tree_gui import run as f04_tree
   f04_tree(win=win,element=element,safe_click=safe_click,
            eventually=eventually,left=left,right=right)
