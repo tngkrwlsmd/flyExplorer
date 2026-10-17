@@ -441,3 +441,69 @@ historical checkpoints superseded only by the scoped result above.
   an unrestricted desktop or change system scaling, and screenshots remain
   in ignored test-owned evidence rather than tracked source.
 
+
+## 2026-10-17 actual 96-DPI F05 compositor matrix and scaling boundary
+
+- **Live test source:** `b118c650d99ed27420d1dfd26ad291529987d210`
+  (policy-only sync after the earlier compositor harness). Later
+  `ebcbb2a3772931e3e6267b6e2fbc1142754c56ee` changed **only** the
+  test's full-window readiness guard and its source contract.
+  Product C++/XAML and the previously accepted Release runtime remained
+  unchanged; executable SHA-256:
+  `7f1f1636d3078e5df95fe40f5519a653ae1235373b6a8f280e7f88d4c435428f`.
+- **Actual DPI:** the active VM had **one interactive Explorer session**,
+  display mode **1024×768** and owned WinUI `GetDpiForWindow` **96 DPI**.
+  No Windows display scaling or user-global theme was changed. Genuine
+  native **125% / 150% / 200%** screen acceptance remains **NOT TESTED /
+  ENVIRONMENT UNAVAILABLE** in this unattended 96-DPI session. Process
+  simulation or XAML pixel density does not substitute for an OS-scaled
+  user desktop.
+- **Dark/Name:** [real GUI #39014603977](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39014603977)
+  **SUCCESS**, original six user settings unchanged, 944×510 XAML RGBA
+  and 960×519 *real screen* PNG. Independent owned-image
+  [inspection #39014681631](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39014681631)
+  verified SHA-256 `e40d7267066cb038237567fa55d678c60f72b8c1a6cdad728715f2b366e085fc`
+  and visually reviewed the pixel capture: **PASS** for Dark/Name/96-DPI.
+- **Other six theme/mode cases:** [user-session matrix #39014847790](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39014847790)
+  finished **SUCCESS** at that exact source SHA: Light/Type, Light/Size,
+  Light/Month, Dark/Type, Dark/Size, Dark/Month each had XAML 96-DPI
+  output, a foreground-owned 960×519 screen PNG, GUI fixture PASS,
+  normal process exit and unchanged original profile hashes.
+  [Read-only exact-image inspection #39014987543](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39014987543)
+  confirmed all six screenshot SHA-256 values and inspected the actual pixels.
+  **Visual review PASS:** Light/Size, Light/Month, Dark/Type, Dark/Size,
+  Dark/Month. No material overlap or unintended icon/text clipping was
+  seen in those sampled states. Long file-kind text may be ellipsized in
+  narrow columns; additional group rows require expected list scrolling.
+- **Light/Type full-window visual gate: OPEN / NOT ACCEPTED.** In the
+  first screenshot the owned left pane showed correct type grouping,
+  but the right file pane was blank. This must not be counted as a
+  full-window visual PASS. A test-only safeguard at `ebcbb2a3` now waits
+  for three known synthetic rows in `RightFiles` before sampling actual
+  screen pixels; it does not change product behavior.
+  The focused user-session [retest #39015238402](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39015238402)
+  **FAILED** that bounded readiness assertion (the WinUI app still exited
+  normally and existing user settings were preserved). The
+  [read-only traceback #39015353869](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39015353869)
+  confirmed the failure. An independent, sanitized UIA evidence read
+  [#39015560737](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39015560737)
+  **SUCCESS** found `LeftFiles` 44 descendant nodes, but
+  `RightFiles` present with **0** descendant nodes, and a right tab
+  without a displayed name. This is a **test-owned startup/Type visual
+  scenario**, not proof of the same defect in normal user View-menu flows;
+  investigate per-pane initial Shell navigation completion and the
+  opt-in app-side Type fixture before changing product code.
+  The intermediate [#39015460241](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39015460241)
+  was an evidence-reader StrictMode/optional-property error, corrected
+  by the successful read-only evidence job; it is not a product failure.
+- **Scoped matrix verdict:** for *real 96-DPI composited pixels*,
+  **7 of 8** Light/Dark × Name/Type/Size/Month snapshots have been
+  visually accepted across the unchanged binary
+  (prior Light/Name [#38991841905](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38991841905),
+  Dark/Name above, and five from the new matrix).
+  The eighth, Light/Type full-window, is **OPEN**. F05-specific active
+  High Contrast, Narrator spoken output, and real OS high-DPI remain
+  independent **NOT VERIFIED** gates. All captured paths are synthetic,
+  inside isolated test-owned evidence; no arbitrary desktop screenshots
+  or personal filenames were committed.
+
