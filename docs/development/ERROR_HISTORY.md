@@ -16,6 +16,44 @@ product state use CURRENT_STATUS.md.
 
 이 문서는 확정된 오류를 단순 수정으로 끝내지 않고, 다음 진단을 빠르게 하고 같은 계열의 결함을 사전에 막기 위한 프로젝트 기록이다.
 
+## 2026-10-17 — Isolated F05 build timeout caused by recursive ACL inheritance removal
+
+- Exact candidate `32cb338c`, branch-only Windows Release
+  [#39018110254](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39018110254)
+  **FAILED** on outer `ISOLATED_RELEASE_RESULT_TIMEOUT`, before product
+  compilation could be established. The temporary setup first created
+  `.owner`, `worker.ps1`, `request.json`, and the isolated source
+  checkout, then applied `icacls /inheritance:r /T` to the root. This
+  recursively removed inherited read access from the child files,
+  including the worker and Git source; the worker could not write a
+  `ci.log` or `result.json`.
+- Diagnosis: [#39021505482](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39021505482)
+  could not read the owner marker. [#39021592902](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39021592902)
+  found SYSTEM running with root SYSTEM/Admin/user ACL intact but
+  `.owner` with **zero ACEs**. After exact owner-path repair,
+  [#39021887711](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39021887711)
+  proved both worker/request ACLs and sample source files had zero ACEs.
+- Recovery was restricted to the unique verified test-owned root:
+  restore inherited permissions to the marker, worker and request,
+  then restore inherited rights within that root's isolated source
+  subtree, preserving the restrictive root ACL; no broad
+  `safe.directory` override, user data cleanup, or ownership takeover.
+  [#39022006596](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39022006596)
+  verified that build/test scripts and `.git/HEAD` became readable.
+  Successor [source #39022160319](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39022160319),
+  [Release #39022312037](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39022312037),
+  and [GUI #39022716919](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39022716919)
+  all passed without repeating the broken recursive ACL command.
+- **Prevention:** Set restrictive ACL only at the *owned root*, before
+  creating children, with explicit SYSTEM, Administrators and exact
+  interactive-user grants. Let descendants inherit. Never apply
+  `/inheritance:r /T` to an existing test subtree, because it removes
+  inheritance from individual files. Assert that `worker.ps1`,
+  `request.json`, build scripts and `.git/HEAD` are readable
+  before scheduling a long-running Release task.
+
+---
+
 ## 2026-10-13 — F06 invalid UNC address chrome and last-request race
 
 - Owned GUI run [38380137080](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38380137080)

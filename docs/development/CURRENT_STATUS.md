@@ -1,5 +1,58 @@
 # flyExplorer current status — F05 keyboard validation checkpoint 2026-10-17
 
+## 2026-10-17 F05 app-side Type start after both panes are ready — accepted
+
+- **Historical distinction:** the real View → Type user flow had already
+  **PASS** at [#39017082938](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39017082938)
+  with independent [96-DPI pixels #39017176600](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39017176600).
+  This follow-up fixes only the opt-in automatic screenshot startup timer,
+  not ordinary View-menu input or group selection.
+- **Candidate C++ and contract:** `32cb338cb6c3d3a38101d63b5190cfdd508a5f9d`
+  changes `MainWindow::InitializeOwnedF05VisualCaptureTest` to wait for
+  the exact test-owned **right** pane route, six resident children,
+  non-truncated complete enumeration, current file-list metadata and a
+  nonempty `RightFiles` projection **in addition to the prior left-pane
+  checks**, before triggering the app-side Type grouping. Focused source
+  contract strengthened accordingly.
+- **First branch build #39018110254 FAILED**, without reaching a product
+  compile verdict: its outer worker timed out before `result.json`.
+  The one-off harness applied recursive `icacls /inheritance:r /T`
+  to a test-owned folder, removing inherited access from source files,
+  the worker script, and its JSON request. Read-only
+  [#39021592902](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39021592902)
+  showed the root ACL retained SYSTEM/Admin/user access but `.owner`
+  had no access rules. Narrow scoped restoration
+  [#39021754922](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39021754922),
+  [#39021887711](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39021887711),
+  and [#39022006596](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39022006596)
+  restored only the isolated files/subtree, verified the exact owner and
+  candidate SHA, and preserved the restrictive test-root ACL.
+- **After recovery:** [branch source #39022160319](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39022160319)
+  **SUCCESS** with runner-health, policy and source PASS.
+  [Branch Release #39022312037](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39022312037)
+  **SUCCESS** with 205,432ms Release build, exit 0, full sibling runtime
+  and `flyExplorer.exe` SHA-256
+  `29cdf8e8d3f052fb273461eaf1ba14cd62439bc9e2674f7ae791871a845cd9de`.
+  No previous Release binary was misattributed to this change.
+- **Focused new-runtime GUI:** [#39022716919](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39022716919)
+  **SUCCESS** for the app-side Light/Type test-owned fixture. XAML
+  944×510, window 96 DPI, actual owned-foreground screen 960×519
+  PNG (45,022 bytes); Type group headings and the six right-pane
+  file rows appeared, original six user preference hashes identical,
+  GUI worker `status=PASS`/`stage=complete`, no lingering test task.
+  Independent exact-PNG [#39022817351](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39022817351)
+  **SUCCESS** verified SHA-256
+  `8ae12c6e8dc9f96593f78730f7295daa81b6a360e03238b7457f88dcced4fb4b`.
+  Direct visual review: both lists visible, readable headings/icons,
+  no material overlap or unexpected clipping. Column descriptions may
+  be ellipsized in the tested narrow window. **Light/Type 96-DPI
+  auto-fixture visual acceptance: PASS for the candidate source/binary.**
+- **Evidence boundaries:** all historical failed tests remain recorded
+  as failures. Branch acceptance is exact to `32cb338c`, and any
+  later documentation-only descendant must retain this provenance.
+  Actual Windows 125/150/200% DPI, active High Contrast, Narrator spoken
+  output, and broader app startup interleavings remain **NOT VERIFIED**.
+
 ## 2026-10-17 actual View-menu Type vs app-side visual fixture — isolated diagnostic
 
 - **Exact source SHA:** `fa12d95e092653ae86ba72d98ff672a06a941386`
@@ -30,7 +83,7 @@
   overlap or unintended clipping at this sampled 96-DPI viewport.
   **Functional GUI / compositor visual PASS applies to this physical
   menu route and isolated right-folder fixture only.**
-- **Still OPEN — app-side F05 visual fixture startup:** the prior
+- **Historical OPEN at this earlier checkpoint — app-side F05 visual fixture startup:** the prior
   synthetic app-triggered Light/Type screenshot showed a blank right
   pane; its [guarded retest #39015238402](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39015238402)
   failed, and read-only [UIA evidence #39015560737](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39015560737)
@@ -45,7 +98,7 @@
   certify all startup ordering cases.
 - **Separate pending scopes:** real native 125/150/200% OS scaling,
   Narrator spoken output, active High Contrast and the app-side
-  Light/Type initial-right-pane scenario remain unverified/open.
+  Light/Type initial-right-pane scenario was still open at that checkpoint; the newer accepted candidate is documented above.
   A narrow tab-header caption and active-pane visual state comparison
   may also merit a later independent check; it was not accepted here.
 
