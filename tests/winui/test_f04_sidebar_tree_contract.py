@@ -40,6 +40,18 @@ class F04SidebarTreeContracts(unittest.TestCase):
         self.assertIn("cancel->load() || !self->IsCurrentTreeOwner()",side)
         self.assertIn("!self->mTreePending && self->IsCurrentTreeOwner()",side)
         self.assertIn("FLY_F04_TREE_ONLY", (ROOT / "tests/winui/test_shell_gui.py").read_text(encoding="utf-8"))
+        harness = read("tests/winui/test_shell_gui.py")
+        initial = harness.index('print("REAL_WINUI_SHELL_CONTROLS"')
+        focus = harness.index('if os.environ.get("FLY_F04_TREE_ONLY")=="YES":', initial)
+        standard = harness.index("startup_status=", initial)
+        self.assertLess(focus, standard)
+        focused = harness[focus:standard]
+        self.assertIn('element("RightFiles").descendants()', focused)
+        self.assertIn('safe_click(element("RightFiles"))', focused)
+        self.assertIn("F04_FOCUSED_READY_RIGHT_PANE=PASS", focused)
+        self.assertIn('"UI-independent native core/helper was not active at startup"',
+                      harness[standard:])
+
         self.assertIn('"folder-tree"', (ROOT / "tools/winui/run_checks.py").read_text(encoding="utf-8"))
         self.assertIn("capture(\"expanded\")", (ROOT / "tests/winui/test_f04_tree_gui.py").read_text(encoding="utf-8"))
         probe = (ROOT / "tests/winui/test_f04_tree_gui.py").read_text(encoding="utf-8")
