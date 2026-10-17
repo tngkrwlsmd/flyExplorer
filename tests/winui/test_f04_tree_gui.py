@@ -73,11 +73,13 @@ def run(*, win, element, safe_click, eventually, left, right):
                   if x.element_info.control_type == "Text"
                   and x.window_text() == "Nested"), None)
     assert label is not None, "F04 node content text not exposed to UIA"
-    safe_click(label)
+    # SelectionMode=Single should select the TreeItem row. Unlike
+    # clicking a nested Text element, this is a physical row interaction.
+    safe_click(row)
     try:
         eventually(lambda: str(left / "Nested").casefold() in
                    element("AddressBox").get_value().casefold(),
-                   "F04 label click did not navigate active pane", 15)
+                   "F04 row click did not navigate active pane", 10)
     except AssertionError:
         current = element("AddressBox").get_value().casefold()
         print("F04_CLICK_DIAG_ROOT_STILL_ACTIVE=",
@@ -93,6 +95,17 @@ def run(*, win, element, safe_click, eventually, left, right):
                   bool(row.iface_selection_item.CurrentIsSelected), flush=True)
         except Exception:
             print("F04_TREE_UIA_SELECTED=UNAVAILABLE", flush=True)
+        # Diagnostic only: an accessibility selection is not a physical
+        # click pass, and the original click assertion is re-raised below.
+        try:
+            row.iface_selection_item.Select()
+            eventually(lambda: str(left / "Nested").casefold() in
+                       element("AddressBox").get_value().casefold(),
+                       "UIA selection did not navigate", 5)
+            print("F04_DIAG_UIA_SELECTION_NAVIGATED=YES", flush=True)
+        except Exception as diagnostic_error:
+            print("F04_DIAG_UIA_SELECTION_NAVIGATED=NO",
+                  type(diagnostic_error).__name__, flush=True)
         try:
             capture("after-click-failed")
         except AssertionError as evidence_error:
