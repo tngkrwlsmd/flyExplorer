@@ -46,9 +46,9 @@ class F04SidebarTreeContracts(unittest.TestCase):
         standard = harness.index("startup_status=", initial)
         self.assertLess(focus, standard)
         focused = harness[focus:standard]
-        self.assertIn('element("RightFiles").descendants()', focused)
-        self.assertIn('safe_click(element("RightFiles"))', focused)
-        self.assertIn("F04_FOCUSED_READY_RIGHT_PANE=PASS", focused)
+        self.assertIn('for name in ("LeftFiles","RightFiles"):', focused)
+        self.assertIn('safe_click(element(ready))', focused)
+        self.assertIn("F04_FOCUSED_READY_PANE=PASS", focused)
         self.assertIn('"UI-independent native core/helper was not active at startup"',
                       harness[standard:])
 
