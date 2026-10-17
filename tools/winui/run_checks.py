@@ -134,6 +134,7 @@ GUI_AREAS = (
     "filter-preset",
     "accessibility",
     "large-folder",
+    "folder-tree",
     "all",
 )
 
@@ -381,6 +382,11 @@ def gui_command(area, configuration, env):
             str(TESTS / "test_owned_accessibility_layout_gui.py"),
             configuration,
         ], gui_env, 160
+    if area == "folder-tree":
+        gui_env["FLY_F04_TREE_ONLY"] = "YES"
+        gui_env["FLY_F04_TREE_VISUAL_CAPTURE"] = "YES"
+        gui_env["FLY_F04_TREE_THEME"] = os.environ.get("FLY_F04_TREE_THEME", "light")
+        return [sys.executable, "-u", str(TESTS / "test_shell_gui.py")], gui_env, 150
     if area == "large-folder":
         return [
             sys.executable,
@@ -433,7 +439,7 @@ def run_gui(area, configuration, env, tag):
     if area == "all":
         # Fail early on exact session-history cleanup before long GUI coverage.
         # Keep standalone focused probes independently runnable.
-        for focused in ("window-tabs", "shortcuts", "filter-preset"):
+        for focused in ("window-tabs", "shortcuts", "filter-preset", "folder-tree"):
             cmd, gui_env, timeout = gui_command(
                 focused, configuration, env
             )

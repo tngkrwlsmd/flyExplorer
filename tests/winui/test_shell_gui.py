@@ -113,6 +113,14 @@ if os.environ.get("FLY_F05_VISUAL_CAPTURE")=="YES":
  (settings/"ui-preferences-v1.txt").write_bytes(
   ("schema=3\r\nlanguage=ko-KR\r\ntheme="+visual_theme+
    "\r\nview=details\r\naddress-shortcut=0\r\nsearch-shortcut=2\r\n").encode("utf-8"))
+if os.environ.get("FLY_F04_TREE_ONLY")=="YES":
+ assert os.environ.get("FLY_F04_TREE_VISUAL_CAPTURE")=="YES"
+ theme=os.environ.get("FLY_F04_TREE_THEME","light")
+ assert theme in ("light","dark")
+ settings=localdata/"flyExplorer";settings.mkdir(exist_ok=True)
+ (settings/"ui-preferences-v1.txt").write_bytes(
+  ("schema=3\r\nlanguage=ko-KR\r\ntheme="+theme+
+   "\r\nview=details\r\naddress-shortcut=0\r\nsearch-shortcut=2\r\n").encode("utf-8"))
 if os.environ.get("FLY_F05_VISUAL_CAPTURE")=="YES":
  # App-owned XAML RenderTargetBitmap renders only RootShell into an ignored,
  # synthetic-evidence folder, independent of interactive desktop foreground.
@@ -238,6 +246,12 @@ try:
      for e in element("LeftFiles").descendants()),
      "async native Shell directory items never displayed",12)
  print("REAL_FILE_LIST_IN_LEFT_PANE",True,flush=True)
+ if os.environ.get("FLY_F04_TREE_ONLY")=="YES":
+  from test_f04_tree_gui import run as f04_tree
+  f04_tree(win=win,element=element,safe_click=safe_click,
+           eventually=eventually,left=left,right=right)
+  print("F04_OWNED_TREE_ONLY_GUI_PASS=True",flush=True)
+  raise SystemExit(0)
  if os.environ.get("FLY_F05_MODES_ONLY")=="YES":
   from test_f05_group_modes_gui import run as f05_modes_probe
   f05_modes_probe(win=win,element=element,safe_click=safe_click,

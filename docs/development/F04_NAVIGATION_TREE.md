@@ -69,3 +69,8 @@ independent pixel inspection are complete. Keep F03/F05/legacy paths unchanged.
 
 - Original central GUI attempt #39031617203 FAILED at Release compilation (C2027/C3861): missing C++/WinRT AutomationProperties definition in NavigationSidebar.xaml.cpp. GUI never ran in that attempt. Independent artifact quota errors are not the root cause.
 - The corrected candidate includes the explicit Automation header, checks the current filesystem path as well as side/tab/route to invalidate a stale tree after same-route navigation, and retries a waiting expanded node after a canceled worker finishes. A new Windows build is required; the old failure stays recorded.
+
+## F04 owned GUI scope
+
+- Dedicated folder-tree GUI area uses a disposable Left/Nested folder and app-owned preference files. It invokes the actual tree toggle, waits for a real child TreeItem and checks active-pane navigation and replacement of the root after in-tab navigation.
+- Captures collapsed, expanded and navigated **owned-window** PNG states only when FLY_F04_TREE_VISUAL_CAPTURE=YES. The central GUI all-area chain executes this smaller test before the generic legacy GUI suite. Captured files under ignored logs still need independent pixel review.
