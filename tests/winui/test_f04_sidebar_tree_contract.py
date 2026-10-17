@@ -65,6 +65,8 @@ class F04SidebarTreeContracts(unittest.TestCase):
         self.assertIn("return tree.exists(timeout=.2) and tree.is_visible()", probe)
         self.assertIn('x.element_info.control_type == "Text"', probe)
         self.assertIn('safe_click(label)', probe)
+        self.assertIn('except AssertionError as evidence_error:', probe)
+        self.assertIn('F04_FAILURE_CAPTURE_SKIPPED=', probe)
         self.assertIn('F04_CLICK_DIAG_ROOT_STILL_ACTIVE=', probe)
         self.assertNotIn("assert toggle.exists(timeout=4) and not tree.is_visible()", probe)
         self.assertNotIn("GetFileAttributesW(",side)
