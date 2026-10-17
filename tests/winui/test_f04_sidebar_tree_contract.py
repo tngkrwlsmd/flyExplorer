@@ -39,6 +39,12 @@ class F04SidebarTreeContracts(unittest.TestCase):
         self.assertIn("next.path==mTreeOwner.path",side)
         self.assertIn("void NavigationSidebar::OnTreeSelectionChanged(",side)
         self.assertIn("sender.SelectedNode()",side)
+        self.assertIn('GetEnvironmentVariableW(L"FLY_F04_TREE_ONLY"',side)
+        self.assertIn('shell-owned-',side)
+        for stage in ("F04_EVENT_ENTERED","F04_OWNER_REJECTED",
+                      "F04_NODE_NULL","F04_PATH_REJECTED",
+                      "F04_CURRENT_ROOT_SELECTED","F04_NAV_REQUESTED"):
+            self.assertIn(stage,side)
         self.assertIn("path==mTreeOwner.path",side)
         self.assertIn("mTreeNavigate(path);",side)
         self.assertNotIn('ItemInvoked="OnTreeItemInvoked"',
@@ -69,6 +75,8 @@ class F04SidebarTreeContracts(unittest.TestCase):
         self.assertIn('except AssertionError as evidence_error:', probe)
         self.assertIn('F04_FAILURE_CAPTURE_SKIPPED=', probe)
         self.assertIn('F04_CLICK_DIAG_ROOT_STILL_ACTIVE=', probe)
+        self.assertIn('F04_TREE_SELECTION_STAGE=', probe)
+        self.assertIn('F04_TREE_UIA_SELECTED=', probe)
         self.assertNotIn("assert toggle.exists(timeout=4) and not tree.is_visible()", probe)
         self.assertNotIn("GetFileAttributesW(",side)
         self.assertNotIn("FindFirstFileW(",side)

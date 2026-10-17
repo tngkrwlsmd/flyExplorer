@@ -84,6 +84,15 @@ def run(*, win, element, safe_click, eventually, left, right):
               current == str(left).casefold(), flush=True)
         print("F04_CLICK_DIAG_STATUS=",
               element("StatusText").window_text()[:110], flush=True)
+        tree_status = element("FolderTreeStatus")
+        print("F04_TREE_SELECTION_STAGE=",
+              tree_status.window_text()[:80] if tree_status.exists(timeout=.2)
+              else "UNEXPOSED", flush=True)
+        try:
+            print("F04_TREE_UIA_SELECTED=",
+                  bool(row.iface_selection_item.CurrentIsSelected), flush=True)
+        except Exception:
+            print("F04_TREE_UIA_SELECTED=UNAVAILABLE", flush=True)
         try:
             capture("after-click-failed")
         except AssertionError as evidence_error:

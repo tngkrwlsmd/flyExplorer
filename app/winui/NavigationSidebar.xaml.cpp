@@ -265,15 +265,37 @@ void NavigationSidebar::OnTreeCollapsed(
 }
 void NavigationSidebar::OnTreeSelectionChanged(
  TreeView const& sender,TreeViewSelectionChangedEventArgs const&){
- // SelectionMode=Single maps a real pointer/keyboard selection to a
- // single, current node. Do not navigate on programmatic Clear/Reset.
- if(!IsCurrentTreeOwner()||!mTreeNavigate)return;
+ // Diagnostic stages contain no folder names or paths and are available
+ // only in the explicit owned GUI fixture, not in a normal user session.
+ wchar_t diagnosticFlag[8]{};
+ const bool diagnostic=
+  mTreeOwner.path.find(L"\\logs\\phase6-winui\\shell-owned-")!=std::wstring::npos &&
+  ::GetEnvironmentVariableW(L"FLY_F04_TREE_ONLY",diagnosticFlag,8)==3 &&
+  !wcscmp(diagnosticFlag,L"YES");
+ auto stage=[this,diagnostic](wchar_t const* message){
+  if(diagnostic)FolderTreeStatus().Text(message);
+ };
+ stage(L"F04_EVENT_ENTERED");
+ if(!IsCurrentTreeOwner()||!mTreeNavigate){
+  stage(L"F04_OWNER_REJECTED");
+  return;
+ }
  auto node=sender.SelectedNode();
- if(!node)return;
+ if(!node){
+  stage(L"F04_NODE_NULL");
+  return;
+ }
  auto path=TreePath(node);
- if(!fxfile::foldertree::normalizedDrivePath(path)||
-    path==mTreeOwner.path)return;
- // MainWindow keeps ownership of the active pane's Shell navigation.
+ if(!fxfile::foldertree::normalizedDrivePath(path)){
+  stage(L"F04_PATH_REJECTED");
+  return;
+ }
+ if(path==mTreeOwner.path){
+  stage(L"F04_CURRENT_ROOT_SELECTED");
+  return;
+ }
+ stage(L"F04_NAV_REQUESTED");
+ // The existing active-pane Shell controller still performs navigation.
  mTreeNavigate(path);
 }
 
