@@ -9,8 +9,11 @@
   nor that NavigationSidebar now exposes a TreeView. F04-B off-UI-thread
   isolated enumeration, pane-targeted interaction, Windows GUI and visual
   acceptance remain OPEN. See docs/development/F04_NAVIGATION_TREE.md.
-- Initial native C++17 and Python source-contract execution was conducted
-  locally outside the Windows VM; Windows Release/GUI are NOT TESTED for F04.
+- Initial native C++17 and Python source-contract execution passed locally.
+  Exact-code central Windows CI [#39030832947](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39030832947)
+  accepted source SHA `7b97f1e060b7d204bcc71877d91bd43fbc161a42`:
+  runner-health, policy and source all PASS. F04 native MSVC compile, Windows
+  Release/GUI and visual acceptance are NOT TESTED.
 
 
 ## 2026-10-17 current F05 acceptance and accessibility resume checkpoint
