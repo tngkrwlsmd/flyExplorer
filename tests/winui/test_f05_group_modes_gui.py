@@ -243,6 +243,46 @@ def run(*, win, element, safe_click, focus, eventually, left, right):
         print("F05_KEYBOARD_ENTER_EXPAND=PASS", flush=True)
         return
 
+    if capture and os.environ.get("FLY_F05_SCREEN_PHYSICAL_TYPE_ONLY") == "YES":
+        # Read the initial model projection before sending a single input.
+        # The first pane's directory must already be fully test-owned.
+        right_control = element("RightFiles")
+        initial = [x for x in right_control.descendants()
+                   if x.element_info.control_type == "ListItem"]
+        print("F05_PHYSICAL_TYPE_INITIAL_RIGHT_ITEMS=" + str(len(initial)),
+              flush=True)
+        # Use the already established independent-pane navigation from
+        # test_shell_gui: activate only this owned right surface, visit the
+        # synthetic /Right folder and await a real helper-delivered row.
+        safe_click(right_control)
+        eventually(lambda: "오른쪽" in element("ActivePaneText").window_text(),
+                   "Right pane failed test-owned activation", 8)
+        address = element("AddressBox")
+        address.set_edit_text(str(right))
+        focus()
+        address.type_keys("{ENTER}", set_foreground=True)
+        eventually(lambda: str(right).casefold() in
+                   element("AddressBox").get_value().casefold(),
+                   "Right pane did not accept owned folder address", 10)
+        eventually(lambda: any(
+                   p.element_info.control_type == "ListItem" and
+                   "Secondary" in p.window_text()
+                   for p in element("RightFiles").descendants()),
+                   "Explicit right Shell navigation did not project row", 16)
+        print("F05_PHYSICAL_TYPE_EXPLICIT_RIGHT_NAV=PASS", flush=True)
+        safe_click(element("LeftFiles"))
+        eventually(lambda: str(left).casefold() in
+                   element("AddressBox").get_value().casefold(),
+                   "Left pane not preserved after explicit right navigation", 8)
+        set_mode("Type")
+        eventually(lambda: all(heading(x) is not None
+                   for x in (".txt", ".md", ".log")),
+                   "Physical View Type headings never appeared", 12)
+        screenshot("type")
+        assert file_row("Mango-medium.md") is not None
+        print("F05_PHYSICAL_TYPE_MENU_GROUPING_AND_SCREEN=PASS", flush=True)
+        return
+
     if capture and os.environ.get("FLY_F05_VISUAL_BASELINE_ONLY") == "YES":
         # No physical input when the interactive user is not foreground.
         print("F05_VISUAL_BASELINE_ONLY=PASS", flush=True)

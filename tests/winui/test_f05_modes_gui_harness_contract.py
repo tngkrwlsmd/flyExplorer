@@ -106,6 +106,20 @@ class F05FourModesHarnessContract(unittest.TestCase):
         self.assertIn('F05_FOUR_MODES_AND_TAB_GUI_PASS=True', HARNESS)
         self.assertIn('keyboard.send_keys("{ENTER}")', PROBE)
 
+    def test_physical_type_diagnostic_uses_separate_owned_right_route(self):
+        # Never mix app-side grouping with the explicit View-menu route.
+        for token in ('FLY_F05_SCREEN_PHYSICAL_TYPE_ONLY',
+                      'assert not os.environ.get("FLY_F05_VISUAL_GROUP_MODE_ONLY")',
+                      'F05_PHYSICAL_TYPE_DIAGNOSTIC_GUI_PASS=True'):
+            self.assertIn(token, HARNESS)
+        for token in ('F05_PHYSICAL_TYPE_INITIAL_RIGHT_ITEMS=',
+                      'F05_PHYSICAL_TYPE_EXPLICIT_RIGHT_NAV=PASS',
+                      'F05_PHYSICAL_TYPE_MENU_GROUPING_AND_SCREEN=PASS',
+                      'safe_click(right_control)', 'Secondary',
+                      'address.type_keys("{ENTER}"',
+                      'set_mode("Type")', 'screenshot("type")'):
+            self.assertIn(token, PROBE)
+
     def test_optional_real_screen_capture_is_scoped_and_fail_closed(self):
         from owned_f05_compositor import capture_box
         self.assertIn('FLY_F05_SCREEN_WINDOW_CAPTURE', HARNESS)

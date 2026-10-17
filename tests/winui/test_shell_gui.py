@@ -35,12 +35,18 @@ if os.environ.get("FLY_F05_PANES_ONLY")=="YES":
  (right/"group-right.log").write_text("owned right log",encoding="utf-8")
 # Extra text formats are opt-in and strictly test-owned; leave all shared
 # GUI fixtures and established TXT behavior unchanged.
-# Screen pixel capture is limited to a separate test-owned F05 group case.
+# Full-screen pixels are never captured; only an owned F05 window crop.
+# The diagnostic physical Type path cannot be combined with the app-side
+# synthetic grouping timer because it must exercise real View-menu input.
 if os.environ.get("FLY_F05_SCREEN_WINDOW_CAPTURE")=="YES":
  assert os.environ.get("FLY_F05_VISUAL_CAPTURE")=="YES"
  assert os.environ.get("FLY_F05_MODES_ONLY")=="YES"
- assert os.environ.get("FLY_F05_VISUAL_GROUP_MODE_ONLY") in (
-  "name","size","month","type")
+ if os.environ.get("FLY_F05_SCREEN_PHYSICAL_TYPE_ONLY")=="YES":
+  assert not os.environ.get("FLY_F05_VISUAL_GROUP_MODE_ONLY")
+  assert os.environ.get("FLY_F05_VISUAL_THEME")=="light"
+ else:
+  assert os.environ.get("FLY_F05_VISUAL_GROUP_MODE_ONLY") in (
+   "name","size","month","type")
 
 if os.environ.get("FLY_F05_KEYBOARD_DISCLOSURE_ONLY")=="YES":
  assert os.environ.get("FLY_F05_MODES_ONLY")=="YES"
@@ -235,6 +241,8 @@ try:
   f05_modes_probe(win=win,element=element,safe_click=safe_click,
                   focus=ensure_owned_focus,
                   eventually=eventually,left=left,right=right)
+  if os.environ.get("FLY_F05_SCREEN_PHYSICAL_TYPE_ONLY")=="YES":
+   print("F05_PHYSICAL_TYPE_DIAGNOSTIC_GUI_PASS=True",flush=True)
   if os.environ.get("FLY_F05_KEYBOARD_DISCLOSURE_ONLY")=="YES":
    print("F05_KEYBOARD_DISCLOSURE_GUI_PASS=True",flush=True)
   elif os.environ.get("FLY_F05_VISUAL_BASELINE_ONLY")=="YES":
