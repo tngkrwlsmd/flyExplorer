@@ -74,3 +74,19 @@ independent pixel inspection are complete. Keep F03/F05/legacy paths unchanged.
 
 - Dedicated folder-tree GUI area uses a disposable Left/Nested folder and app-owned preference files. It invokes the actual tree toggle, waits for a real child TreeItem and checks active-pane navigation and replacement of the root after in-tab navigation.
 - Captures collapsed, expanded and navigated **owned-window** PNG states only when FLY_F04_TREE_VISUAL_CAPTURE=YES. The central GUI all-area chain executes this smaller test before the generic legacy GUI suite. Captured files under ignored logs still need independent pixel review.
+
+## 2026-10-17 GUI automation diagnostic: collapsed UIA element
+
+- Central Windows run [#39032765974](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39032765974)
+  built the exact F04 product Release successfully and passed window tabs,
+  shortcut keyboard and filter GUI. Focused F04 GUI failed before any tree
+  interaction: the baseline assertion called WindowSpecification.is_visible()
+  on FolderTreeView while its parent was intentionally Collapsed. WinUI
+  omitted it from the UIA automation tree; pywinauto threw a TimeoutError
+  resolving auto_id FolderTreeView. The historical failure is retained.
+- Test now resolves optional UIA visibility using exists(timeout=.2) before
+  is_visible(); a matching source regression contract protects the guard.
+  No product C++/XAML was changed in this logical unit.
+- The predecessor Release build does not certify the revised Python harness;
+  independent F04 input, completed owned window screenshots and pixel review
+  remain OPEN.
