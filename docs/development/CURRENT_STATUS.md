@@ -1,5 +1,54 @@
 # flyExplorer current status — F05 keyboard validation checkpoint 2026-10-17
 
+## 2026-10-17 actual View-menu Type vs app-side visual fixture — isolated diagnostic
+
+- **Exact source SHA:** `fa12d95e092653ae86ba72d98ff672a06a941386`
+  (test-harness-only changes on top of `33c60db9`). No WinUI C++/XAML
+  product code was modified; reused the previously verified Release
+  executable SHA-256 `7f1f1636d3078e5df95fe40f5519a653ae1235373b6a8f280e7f88d4c435428f`.
+- **Source/policy check:** [central CI #39016958667](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39016958667)
+  **SUCCESS** at the exact source SHA, full-history-required-scope with
+  `runner-health`, `policy`, and `source` all PASS.
+- **True interactive View-menu route:** [owned Windows GUI #39017082938](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39017082938)
+  **SUCCESS** with user-session F05 physical Type diagnostic. Unlike
+  the synthetic app timer, this route had **no**
+  `FLY_F05_VISUAL_GROUP_MODE_ONLY` environment setting. The right
+  pane initially contained **6** UIA ListItems. The test then activated
+  the right pane, navigated to its *own* synthetic `Right` folder,
+  observed the real `Secondary` row, returned to the left pane, and
+  selected Type via the actual View flyout and physical Enter input.
+  Group headings `.txt`, `.md`, `.log` and the file row were present.
+  User profile SHA-256 values for all six protected settings were identical
+  before/after; the owned app exited with **code 0**; runtime binary
+  unchanged; temporary Scheduled Task removed.
+- **Actual screen pixels:** one foreground-verified **960×519** Light/Type
+  PNG was created (39,238 bytes; SHA-256
+  `bd5e66feb67a1881364015ed34ce961d6ff99b5cef296d8d7b3f63357e131b9d`).
+  The [independent hash-pinned image read #39017176600](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39017176600)
+  **SUCCESS** and direct visual review showed the left Type disclosure
+  bands/icons/labels and the right `Secondary` folder, without material
+  overlap or unintended clipping at this sampled 96-DPI viewport.
+  **Functional GUI / compositor visual PASS applies to this physical
+  menu route and isolated right-folder fixture only.**
+- **Still OPEN — app-side F05 visual fixture startup:** the prior
+  synthetic app-triggered Light/Type screenshot showed a blank right
+  pane; its [guarded retest #39015238402](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39015238402)
+  failed, and read-only [UIA evidence #39015560737](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39015560737)
+  found the `RightFiles` control present with **zero** descendants and
+  a blank right tab caption. The test-only automatic F05 timer checks
+  only left-pane metadata readiness before dispatching the grouping
+  command, while normal product startup queues left and right Shell
+  navigation independently. This is a plausible startup/fixture
+  scheduling distinction, **not a proven root cause**. The successful
+  physical route does not retroactively make that failed synthetic run
+  PASS, establish that the empty pane can never occur in normal use, or
+  certify all startup ordering cases.
+- **Separate pending scopes:** real native 125/150/200% OS scaling,
+  Narrator spoken output, active High Contrast and the app-side
+  Light/Type initial-right-pane scenario remain unverified/open.
+  A narrow tab-header caption and active-pane visual state comparison
+  may also merit a later independent check; it was not accepted here.
+
 ## 2026-10-17 actual 96-DPI F05 compositor matrix and scaling boundary
 
 - **Live test source:** `b118c650d99ed27420d1dfd26ad291529987d210`
