@@ -41,7 +41,8 @@ class F04SidebarTreeContracts(unittest.TestCase):
         self.assertIn("sender.SelectedNode()",side)
         self.assertIn("path==mTreeOwner.path",side)
         self.assertIn("mTreeNavigate(path);",side)
-        self.assertNotIn('ItemInvoked="OnTreeItemInvoked"',xaml)
+        self.assertNotIn('ItemInvoked="OnTreeItemInvoked"',
+                         read("app/winui/NavigationSidebar.xaml"))
         self.assertNotIn("OnTreeItemInvoked(",side)
         self.assertIn("cancel->load() || !self->IsCurrentTreeOwner()",side)
         self.assertIn("!self->mTreePending && self->IsCurrentTreeOwner()",side)
