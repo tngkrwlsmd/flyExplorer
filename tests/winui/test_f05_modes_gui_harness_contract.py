@@ -106,6 +106,29 @@ class F05FourModesHarnessContract(unittest.TestCase):
         self.assertIn('F05_FOUR_MODES_AND_TAB_GUI_PASS=True', HARNESS)
         self.assertIn('keyboard.send_keys("{ENTER}")', PROBE)
 
+    def test_optional_real_screen_capture_is_scoped_and_fail_closed(self):
+        from owned_f05_compositor import capture_box
+        self.assertIn('FLY_F05_SCREEN_WINDOW_CAPTURE', HARNESS)
+        self.assertIn('FLY_F05_VISUAL_CAPTURE', HARNESS)
+        self.assertIn('FLY_F05_VISUAL_GROUP_MODE_ONLY', HARNESS)
+        self.assertIn('from owned_f05_compositor import attempt_capture', PROBE)
+        self.assertNotIn('ImageGrab.grab(', PROBE)
+        helper = (ROOT / 'tests/winui/owned_f05_compositor.py').read_text(
+            encoding='utf-8')
+        for guard in ('owned_foreground()', 'GetWindowThreadProcessId',
+                      'WindowFromPoint', 'BLOCKED_NONOWNED_OVERLAY',
+                      'BLOCKED_BLANK_SCREEN_PIXEL_API',
+                      'PIXELS_ONLY_NEEDS_VISUAL_REVIEW',
+                      'include_layered_windows=True'):
+            self.assertIn(guard, helper)
+        self.assertNotIn('ImageGrab.grab()', helper)
+        self.assertEqual(capture_box((40, 30, 980, 540), 1024, 768),
+                         (40, 30, 980, 540))
+        for invalid in ((-1, 20, 940, 540), (40, 30, 1060, 540),
+                        (40, 30, 300, 300), (40, 30, 980, 800)):
+            with self.subTest(box=invalid), self.assertRaises(ValueError):
+                capture_box(invalid, 1024, 768)
+
     def test_files_owned_and_no_global_changes(self):
         for token in ('left / name', 'left.parent == right.parent',
                       'Mango-medium.md', 'Alpha-small.txt'):

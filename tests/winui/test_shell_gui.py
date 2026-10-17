@@ -35,6 +35,13 @@ if os.environ.get("FLY_F05_PANES_ONLY")=="YES":
  (right/"group-right.log").write_text("owned right log",encoding="utf-8")
 # Extra text formats are opt-in and strictly test-owned; leave all shared
 # GUI fixtures and established TXT behavior unchanged.
+# Screen pixel capture is limited to a separate test-owned F05 group case.
+if os.environ.get("FLY_F05_SCREEN_WINDOW_CAPTURE")=="YES":
+ assert os.environ.get("FLY_F05_VISUAL_CAPTURE")=="YES"
+ assert os.environ.get("FLY_F05_MODES_ONLY")=="YES"
+ assert os.environ.get("FLY_F05_VISUAL_GROUP_MODE_ONLY") in (
+  "name","size","month","type")
+
 if os.environ.get("FLY_F05_KEYBOARD_DISCLOSURE_ONLY")=="YES":
  assert os.environ.get("FLY_F05_MODES_ONLY")=="YES"
  assert os.environ.get("FLY_F05_VISUAL_CAPTURE")!="YES"

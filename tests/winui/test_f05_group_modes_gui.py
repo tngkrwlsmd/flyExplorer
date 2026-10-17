@@ -118,6 +118,15 @@ def run(*, win, element, safe_click, focus, eventually, left, right):
               " SHA256=" + digest + " FILE=" + str(png.relative_to(ROOT)),
               flush=True)
 
+        # Separate opt-in real screen crop; XAML RGBA is not a DWM screenshot.
+        # The helper fails closed if the test-owned window is not foreground.
+        if (stage in ("name", "size", "month", "type") and
+                os.environ.get("FLY_F05_SCREEN_WINDOW_CAPTURE") == "YES"):
+            from owned_f05_compositor import attempt_capture
+            attempt_capture(win=win, process_id=process_id, visual_dir=visual_dir,
+                            stage=stage, theme=theme, focus=focus,
+                            owned_foreground=owned_foreground)
+
     def file_row(name):
         for candidate in element("LeftFiles").descendants():
             if (candidate.element_info.control_type == "ListItem"
