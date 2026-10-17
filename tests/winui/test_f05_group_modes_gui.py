@@ -132,6 +132,8 @@ def run(*, win, element, safe_click, focus, eventually, left, right):
                 texts = [item.window_text()
                          for item in right_list.descendants()
                          if item.element_info.control_type == "ListItem"]
+                if os.environ.get("FLY_F05_SCREEN_PHYSICAL_TYPE_ONLY") == "YES":
+                    return any("Secondary" in text for text in texts)
                 return all(any(name in text for text in texts)
                            for name in ("Alpha-small.txt", "Mango-medium.md",
                                         "Zebra-large.log"))

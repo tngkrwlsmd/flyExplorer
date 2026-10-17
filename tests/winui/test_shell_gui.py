@@ -38,6 +38,8 @@ if os.environ.get("FLY_F05_PANES_ONLY")=="YES":
 # Full-screen pixels are never captured; only an owned F05 window crop.
 # The diagnostic physical Type path cannot be combined with the app-side
 # synthetic grouping timer because it must exercise real View-menu input.
+if os.environ.get("FLY_F05_SCREEN_PHYSICAL_TYPE_ONLY")=="YES":
+ assert os.environ.get("FLY_F05_SCREEN_WINDOW_CAPTURE")=="YES"
 if os.environ.get("FLY_F05_SCREEN_WINDOW_CAPTURE")=="YES":
  assert os.environ.get("FLY_F05_VISUAL_CAPTURE")=="YES"
  assert os.environ.get("FLY_F05_MODES_ONLY")=="YES"
@@ -243,7 +245,7 @@ try:
                   eventually=eventually,left=left,right=right)
   if os.environ.get("FLY_F05_SCREEN_PHYSICAL_TYPE_ONLY")=="YES":
    print("F05_PHYSICAL_TYPE_DIAGNOSTIC_GUI_PASS=True",flush=True)
-  if os.environ.get("FLY_F05_KEYBOARD_DISCLOSURE_ONLY")=="YES":
+  elif os.environ.get("FLY_F05_KEYBOARD_DISCLOSURE_ONLY")=="YES":
    print("F05_KEYBOARD_DISCLOSURE_GUI_PASS=True",flush=True)
   elif os.environ.get("FLY_F05_VISUAL_BASELINE_ONLY")=="YES":
    assert os.environ.get("FLY_F05_VISUAL_CAPTURE")=="YES"

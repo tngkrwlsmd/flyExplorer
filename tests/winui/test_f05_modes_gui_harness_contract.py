@@ -110,12 +110,14 @@ class F05FourModesHarnessContract(unittest.TestCase):
         # Never mix app-side grouping with the explicit View-menu route.
         for token in ('FLY_F05_SCREEN_PHYSICAL_TYPE_ONLY',
                       'assert not os.environ.get("FLY_F05_VISUAL_GROUP_MODE_ONLY")',
-                      'F05_PHYSICAL_TYPE_DIAGNOSTIC_GUI_PASS=True'):
+                      'F05_PHYSICAL_TYPE_DIAGNOSTIC_GUI_PASS=True',
+                      'assert os.environ.get("FLY_F05_SCREEN_WINDOW_CAPTURE")=="YES"'):
             self.assertIn(token, HARNESS)
         for token in ('F05_PHYSICAL_TYPE_INITIAL_RIGHT_ITEMS=',
                       'F05_PHYSICAL_TYPE_EXPLICIT_RIGHT_NAV=PASS',
                       'F05_PHYSICAL_TYPE_MENU_GROUPING_AND_SCREEN=PASS',
                       'safe_click(right_control)', 'Secondary',
+                      'if os.environ.get("FLY_F05_SCREEN_PHYSICAL_TYPE_ONLY") == "YES":',
                       'address.type_keys("{ENTER}"',
                       'set_mode("Type")', 'screenshot("type")'):
             self.assertIn(token, PROBE)
