@@ -42,3 +42,25 @@ the dedicated native fixture (C++17). Linux compiler execution checks only
 portable path logic; it is not a Windows Release/GUI or visual acceptance.
 F04-B remains open until exact-source Windows build, functional GUI and
 independent pixel inspection are complete. Keep F03/F05/legacy paths unchanged.
+
+## F04-B candidate implementation — source integration checkpoint
+
+- Opt-in, initially collapsed folder TreeView is embedded below the existing
+  navigation shortcuts; its root is the current active pane/tab's local folder.
+- On explicit expansion, one cancellable detached native filesystem read worker
+  validates a fixed drive and rejects reparse ancestors and child junctions,
+  hidden children, invalid names and unsupported namespace paths. At most 128
+  child folders and 4,096 examined entries per expansion (2.5s cooperative
+  time budget) are projected. Existing navigation owns actual folder changes.
+- UI-side nodes are invalidated on collapse, explicit hide, active pane/tab or
+  route changes. The worker's result must match the same route and generation
+  before UI projection. Windows path-replacement races during read-only
+  enumeration are not claimed to be eliminated.
+- The first version is limited to the active local folder as root rather than
+  automatically scanning every disk. A single worker can be pending at a time.
+  No Shell provider/UNC/mapped/removable/ZIP traversal, no content reads and no
+  global Windows-setting changes are requested.
+- Implementation is not acceptance evidence. Require exact-source Windows
+  x64 Release, functional UIA/keyboard interaction with an owned fixture and
+  matched BEFORE/AFTER Light/Dark captured pixel review before marking F04-B
+  accepted.

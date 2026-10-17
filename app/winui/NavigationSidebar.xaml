@@ -85,6 +85,17 @@
                         <TextBlock Text="음악" VerticalAlignment="Center"/>
                     </StackPanel>
                 </Button>
+                <Button x:Name="FolderTreeToggle" Style="{StaticResource ExplorerNavButtonStyle}"
+                        Click="OnFolderTreeToggleClicked" AutomationProperties.Name="폴더 트리 표시"
+                        Content="폴더 트리 펼치기"/>
+                <StackPanel x:Name="FolderTreePanel" Visibility="Collapsed" Spacing="3" Margin="2,0,2,4">
+                    <TreeView x:Name="FolderTreeView" Height="238" SelectionMode="None"
+                              Expanding="OnTreeExpanding" Collapsed="OnTreeCollapsed"
+                              ItemInvoked="OnTreeItemInvoked"
+                              AutomationProperties.Name="현재 폴더의 하위 폴더 트리"/>
+                    <TextBlock x:Name="FolderTreeStatus" Text="" Margin="7,0,2,3"
+                               TextWrapping="Wrap" FontSize="11"/>
+                </StackPanel>
                 <Button x:Name="VideosButton" Style="{StaticResource ExplorerNavButtonStyle}"
                         Click="OnVideosClicked" AutomationProperties.Name="동영상으로 이동">
                     <StackPanel Orientation="Horizontal" Spacing="9">

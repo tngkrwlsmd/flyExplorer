@@ -1,0 +1,44 @@
+"""F04-B opt-in tree must stay scoped to the current pane and safe local roots."""
+from pathlib import Path
+import unittest
+
+ROOT = Path(__file__).resolve().parents[2]
+def read(path):
+    return (ROOT / path).read_text(encoding="utf-8")
+
+class F04SidebarTreeContracts(unittest.TestCase):
+    def test_opt_in_accessible_tree_and_existing_shortcuts(self):
+        xaml=read("app/winui/NavigationSidebar.xaml")
+        for required in ('x:Name="FolderTreeToggle"', 'Click="OnFolderTreeToggleClicked"',
+                         'x:Name="FolderTreePanel" Visibility="Collapsed"',
+                         'x:Name="FolderTreeView"', 'Expanding="OnTreeExpanding"',
+                         'Collapsed="OnTreeCollapsed"', 'ItemInvoked="OnTreeItemInvoked"',
+                         'SelectionMode="None"', 'AutomationProperties.Name="현재 폴더의 하위 폴더 트리"',
+                         'x:Name="HomeButton"', 'x:Name="ThisPCButton"'):
+            self.assertIn(required,xaml)
+
+    def test_active_pane_route_and_worker_boundary(self):
+        ui=read("app/winui/MainWindow.xaml.cpp")
+        side=read("app/winui/NavigationSidebar.xaml.cpp")
+        worker=read("app/winui/folder_tree_worker.h")
+        for key in ("SetTreeCallbacks(", "pane.routeIds[pane.active]",
+                    "pane.filesystemPaths[pane.active]", "model.activePane",
+                    "SyncTreeContext()", "ui->OpenFolder(path)"):
+            self.assertIn(key,ui)
+        for key in ("mTreeGeneration", "mTreeCancel", "mTreeBusy",
+                    "request.generation!=self->mTreeGeneration",
+                    "!self->IsCurrentTreeOwner()", "std::thread(",
+                    "enumerateFixedChildren", "HasUnrealizedChildren"):
+            self.assertIn(key,side)
+        for key in ("GetDriveTypeW", "DRIVE_FIXED", "FILE_ATTRIBUTE_REPARSE_POINT",
+                    "FindFirstFileW", "FindNextFileW", "FindClose",
+                    "kMaxChildrenPerNode", "kMaxVisited=4096",
+                    "GetTickCount64", "FILE_ATTRIBUTE_HIDDEN"):
+            self.assertIn(key,worker)
+        self.assertNotIn("GetFileAttributesW(",side)
+        self.assertNotIn("FindFirstFileW(",side)
+        self.assertNotIn("DeleteFile",worker)
+        self.assertNotIn("ShellExecute",worker)
+
+if __name__=="__main__":
+    unittest.main()

@@ -5,6 +5,8 @@
 #include <filesystem>
 #include <thread>
 #include <robuffer.h>
+#include "folder_tree_worker.h"
+#include <algorithm>
 #include <winrt/Microsoft.UI.Xaml.Media.Imaging.h>
 #if __has_include("NavigationSidebar.g.cpp")
 #include "NavigationSidebar.g.cpp"
@@ -119,4 +121,141 @@ void NavigationSidebar::OnVideosClicked(IInspectable const&,RoutedEventArgs cons
  SetSelected(7);
  if(mHandler)mHandler(7);
 }
+void NavigationSidebar::SetTreeCallbacks(
+ std::function<TreeContext()> current,
+ std::function<void(std::wstring const&)> navigate){
+ mTreeCurrent=std::move(current);
+ mTreeNavigate=std::move(navigate);
+}
+bool NavigationSidebar::IsCurrentTreeOwner() const {
+ if(!mTreeVisible||!mTreeCurrent)return false;
+ auto next=mTreeCurrent();
+ return next.side==mTreeOwner.side && next.tab==mTreeOwner.tab &&
+        next.route!=0 && next.route==mTreeOwner.route;
+}
+std::wstring NavigationSidebar::TreePath(TreeViewNode const& node) const {
+ for(auto const& item:mTreeNodes)if(item.node==node)return item.path;
+ return {};
+}
+void NavigationSidebar::ResetTree(){
+ if(mTreeCancel)mTreeCancel->store(true);
+ ++mTreeGeneration;
+ mTreePending=false;
+ FolderTreeView().RootNodes().Clear();
+ mTreeNodes.clear();
+ mTreeOwner={};
+ FolderTreeStatus().Text(L"");
+}
+void NavigationSidebar::SyncTreeContext(){
+ if(!mTreeVisible||!mTreeCurrent)return;
+ auto next=mTreeCurrent();
+ if(next.side==mTreeOwner.side&&next.tab==mTreeOwner.tab&&
+    next.route&&next.route==mTreeOwner.route)return;
+ ResetTree();
+ mTreeOwner=next;
+ if(next.side<0||next.side>1||!next.route||
+    !fxfile::foldertree::normalizedDrivePath(next.path)){
+  FolderTreeStatus().Text(L"로컬 폴더에서만 트리를 사용할 수 있습니다.");
+  return;
+ }
+ TreeViewNode node;
+ node.Content(winrt::box_value(hstring(next.path)));
+ node.HasUnrealizedChildren(true);
+ mTreeNodes.push_back({node,next.path});
+ FolderTreeView().RootNodes().Append(node);
+ node.IsExpanded(true);
+ BeginTreeLoad(node);
+}
+void NavigationSidebar::OnFolderTreeToggleClicked(
+ IInspectable const&,RoutedEventArgs const&){
+ mTreeVisible=!mTreeVisible;
+ FolderTreePanel().Visibility(mTreeVisible?Visibility::Visible:Visibility::Collapsed);
+ FolderTreeToggle().Content(winrt::box_value(
+  mTreeVisible?L"폴더 트리 접기":L"폴더 트리 펼치기"));
+ Microsoft::UI::Xaml::Automation::AutomationProperties::SetName(
+  FolderTreeToggle(),mTreeVisible?L"폴더 트리 숨기기":L"폴더 트리 표시");
+ ResetTree();
+ if(mTreeVisible)SyncTreeContext();
+}
+void NavigationSidebar::BeginTreeLoad(TreeViewNode const& node){
+ if(!IsCurrentTreeOwner()||!node||!node.HasUnrealizedChildren()||
+    mTreePending||mTreeBusy->load())return;
+ auto path=TreePath(node);
+ if(!fxfile::foldertree::normalizedDrivePath(path))return;
+ const auto next=mTreeCurrent();
+ fxfile::foldertree::RequestIdentity request{
+  next.side,next.tab,next.route,++mTreeGeneration};
+ auto cancel=std::make_shared<std::atomic_bool>(false);
+ mTreeCancel=cancel;
+ mTreePending=true;
+ mTreeBusy->store(true);
+ FolderTreeStatus().Text(L"하위 폴더를 확인하고 있습니다.");
+ auto queue=DispatcherQueue();
+ auto weak=get_weak();
+ auto busy=mTreeBusy;
+ std::thread([path=std::move(path),request,cancel,busy,queue,weak]() mutable {
+  auto result=fxfile::foldertree::enumerateFixedChildren(path,*cancel);
+  busy->store(false);
+  queue.TryEnqueue([path=std::move(path),request,cancel,weak,
+                    result=std::move(result)]() mutable {
+   if(auto self=weak.get()){
+    if(request.generation!=self->mTreeGeneration ||
+       cancel->load() || !self->IsCurrentTreeOwner())return;
+    self->mTreePending=false;
+    TreeViewNode parent{nullptr};
+    for(auto const& entry:self->mTreeNodes)
+     if(entry.path==path){parent=entry.node;break;}
+    if(!parent||!parent.IsExpanded())return;
+    if(!result.complete){
+     self->FolderTreeStatus().Text(L"폴더를 안전하게 확인할 수 없습니다.");
+     return;
+    }
+    for(auto const& leaf:result.names){
+     std::wstring child;
+     if(!fxfile::foldertree::childPath(path,leaf,child))continue;
+     TreeViewNode next;
+     next.Content(winrt::box_value(hstring(leaf)));
+     next.HasUnrealizedChildren(true);
+     self->mTreeNodes.push_back({next,std::move(child)});
+     parent.Children().Append(next);
+    }
+    parent.HasUnrealizedChildren(false);
+    self->FolderTreeStatus().Text(
+     result.limited?L"표시 제한에 도달했습니다. 일부 폴더만 표시합니다.":
+     result.names.empty()?L"하위 폴더가 없습니다.":L"");
+   }
+  });
+ }).detach();
+}
+void NavigationSidebar::OnTreeExpanding(
+ TreeView const&,TreeViewExpandingEventArgs const& args){
+ BeginTreeLoad(args.Node());
+}
+void NavigationSidebar::OnTreeCollapsed(
+ TreeView const&,TreeViewCollapsedEventArgs const& args){
+ auto node=args.Node();
+ auto path=TreePath(node);
+ if(path.empty())return;
+ if(mTreeCancel)mTreeCancel->store(true);
+ ++mTreeGeneration;
+ mTreePending=false;
+ const auto prefix=path.back()==L'\\'?path:path+L'\\';
+ mTreeNodes.erase(std::remove_if(mTreeNodes.begin(),mTreeNodes.end(),
+  [&prefix](TreeEntry const& entry){
+   return entry.path.size()>prefix.size() &&
+      entry.path.compare(0,prefix.size(),prefix)==0;
+  }),mTreeNodes.end());
+ node.Children().Clear();
+ node.HasUnrealizedChildren(true);
+}
+void NavigationSidebar::OnTreeItemInvoked(
+ TreeView const&,TreeViewItemInvokedEventArgs const& args){
+ if(!IsCurrentTreeOwner()||!mTreeNavigate)return;
+ auto node=args.InvokedItem().try_as<TreeViewNode>();
+ if(!node)return;
+ auto path=TreePath(node);
+ if(!fxfile::foldertree::normalizedDrivePath(path))return;
+ mTreeNavigate(path);
+}
+
 }

@@ -294,6 +294,25 @@ namespace winrt::FlyExplorer::implementation
                     (ui->HomePath()/L"Videos").native());
             }
         });
+        winrt::get_self<winrt::FlyExplorer::implementation::NavigationSidebar>(
+            SidebarView())->SetTreeCallbacks(
+            [nativeWeak](){
+                winrt::FlyExplorer::implementation::NavigationSidebar::TreeContext ctx;
+                if(auto ui=nativeWeak.get()){
+                    auto const& model=ui->ActiveWindowTab().model;
+                    const int side=model.activePane;
+                    if(side<0||side>1||(side==1&&!model.split))return ctx;
+                    auto const& pane=model.panes[side];
+                    if(pane.active>=pane.routeIds.size()||
+                       pane.active>=pane.filesystemPaths.size())return ctx;
+                    ctx={pane.filesystemPaths[pane.active],side,pane.active,
+                         pane.routeIds[pane.active]};
+                }
+                return ctx;
+            },
+            [nativeWeak](std::wstring const& path){
+                if(auto ui=nativeWeak.get())ui->OpenFolder(path);
+            });
         mPreferencesCoordinator.load();
         AddressShortcutBox().SelectedIndex(
             mPreferencesCoordinator.current().addressShortcut);
@@ -2643,6 +2662,8 @@ namespace winrt::FlyExplorer::implementation
         AddressBox().Text(hstring(FriendlyAddress(address)));
         UpdateBreadcrumb(address);
         UpdateNavigationChrome();
+        winrt::get_self<winrt::FlyExplorer::implementation::NavigationSidebar>(
+            SidebarView())->SyncTreeContext();
         ActivePaneText().Text(ActiveWindowTab().model.activePane==0?L"활성: 왼쪽":L"활성: 오른쪽");
         PrimaryPaneTitle().Content(winrt::box_value(
             hstring(ActiveWindowTab().model.activePane==0?L"왼쪽 창 (활성)":L"왼쪽 창")));
@@ -2699,6 +2720,8 @@ namespace winrt::FlyExplorer::implementation
         SecondaryPaneTitle().Content(winrt::box_value(
             hstring(side==1?L"오른쪽 창 (활성)":L"오른쪽 창")));
         UpdateActivePaneChrome();
+        winrt::get_self<winrt::FlyExplorer::implementation::NavigationSidebar>(
+            SidebarView())->SyncTreeContext();
         fileBar()->SetSortIndex(ActiveWindowTab().fileLists[side].sortMode);
         fileBar()->SetViewIndex(static_cast<int>(ActiveWindowTab().fileLists[side].viewMode));
         fileBar()->SetListDisplayState(

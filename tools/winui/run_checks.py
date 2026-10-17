@@ -49,6 +49,7 @@ PRODUCT_SUITES = {
         "tests/winui/test_known_folder_artwork_contract.py",
         "tests/winui/test_sidebar_known_folder_artwork_contract.py",
         "tests/winui/test_f04_tree_path_contract.py",
+        "tests/winui/test_f04_sidebar_tree_contract.py",
         "tests/winui/test_thumbnail_contract.py",
     ],
     "search": [
