@@ -398,3 +398,46 @@ DWM-composited screenshot review. Actual native 125/150/200% OS scaling,
 active high-contrast pixels and Narrator speech remain **NOT VERIFIED**.
 The earlier source-only `NOT TESTED` statements in this document are
 historical checkpoints superseded only by the scoped result above.
+
+## 2026-10-17 F05 Light Name — actual Windows screen pixels reviewed (96 DPI)
+
+- **Exact test-only source:** `7ba1f3af2ff9a6c2ccd8c9d6926cfb0b9188f52f`; product C++/XAML unchanged from
+  accepted Release source `d2ed08d6cfe5f2f6235abe221657d19038e5a1f8`.
+  Full sibling Release runtime reused with `flyExplorer.exe` SHA-256
+  `7f1f1636d3078e5df95fe40f5519a653ae1235373b6a8f280e7f88d4c435428f`.
+- **Source CI:** the first [#38991252447](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38991252447)
+  **FAILED** at structure preflight because a shallow clone omitted the
+  historical retired MFC Git objects. Central CI fix `fa7fb58f` now
+  unshallows before every non-health scope. Control
+  [Quality #38991458422](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38991458422)
+  7/7 PASS and independent
+  [source #38991562290](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38991562290)
+  **SUCCESS**, with `CENTRAL_CI_CLONE_MODE=full-history-required-scope`,
+  runner-health, policy and source stages all PASS.
+- **Actual test-owned Windows user desktop:**
+  [GUI #38991724639](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38991724639)
+  **SUCCESS** for Light / Name grouping; normal owned process exit, six
+  protected user preference hashes identical. XAML RGBA was separately
+  verified at 944×510, 96 DPI (SHA-256
+  `46f56dadc7687333ee481f9e20c1c1e2b9598f73c3cc20187e92d4be6f30fad3`).
+  A separately opt-in, verified owned-foreground screen crop yielded a
+  **960×519, 42,838-byte PNG** (SHA-256
+  `6883f6ffd21e1318ee9e2008f153ad2d55f63123c1d63689b240814ca7b7e500`).
+  The scoped screen was hash-checked and retrieved in
+  [#38991841905](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/38991841905).
+- **Independent visual review:** actual full window chrome, toolbar, dual
+  panes, Light group disclosure arrows, grouped heading bands and owned
+  file icons/labels were present and readable, with no material overlap
+  or unintended control clipping seen. File-type descriptions ellipsized
+  in narrow columns; lower grouping rows require normal scrolling.
+  These are non-blocking density limitations at the tested 960×519 window.
+  **VISUAL ACCEPTANCE: PASS for the Light/Name 96-DPI owned screen only.**
+  No product UI pixels were changed, so a before/after revision comparison
+  was not needed; this was verification of the existing UI.
+- **Not generalized:** Dark compositor, Type/Size/Month compositor,
+  native Windows 125/150/200% scaling, Narrator speech and F05-specific
+  High Contrast remain **NOT VERIFIED**. Earlier synthetic matte previews
+  do not substitute for these separate scopes. The test did not capture
+  an unrestricted desktop or change system scaling, and screenshots remain
+  in ignored test-owned evidence rather than tracked source.
+
