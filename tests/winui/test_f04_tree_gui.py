@@ -84,7 +84,13 @@ def run(*, win, element, safe_click, eventually, left, right):
               current == str(left).casefold(), flush=True)
         print("F04_CLICK_DIAG_STATUS=",
               element("StatusText").window_text()[:110], flush=True)
-        capture("after-click-failed")
+        try:
+            capture("after-click-failed")
+        except AssertionError as evidence_error:
+            # The failure screenshot must never replace the primary
+            # input->navigation assertion. Do not capture another window.
+            print("F04_FAILURE_CAPTURE_SKIPPED=",
+                  str(evidence_error)[:100], flush=True)
         raise
     print("F04_TREE_OWNED_LOCAL_NAVIGATION=PASS", flush=True)
     eventually(lambda: any(
