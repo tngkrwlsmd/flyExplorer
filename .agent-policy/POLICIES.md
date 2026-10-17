@@ -849,32 +849,31 @@ Regression / Coverage:
 
 ### 기본 branch 통합 workflow
 
-repository-specific instruction, branch protection, required review 같은 더 구체적인 규칙이 별도로 요구하지 않는 한 **새 Pull Request를 기본적으로 만들지 않는다.** 사용자가 PR을 명시적으로 요청했거나 저장소 정책이 PR을 필수로 요구하는 경우에만 PR workflow를 사용한다.
+기본적으로 PR을 만들지 않는다. PR을 사용자가 금지하거나 opt-in으로 제한했다면 명시적 허가 없이 생성하지 않는다. 저장소 보호 규칙과 충돌하면 PR 자동 생성이나 보호 우회 대신 중단·보고한다. PR 허가는 제한된 connector의 사용 허가가 아니다.
 
-기본 통합 순서는 다음과 같다.
+기본 통합 순서는 저장소의 **실제 실행 가능한 검증 경로**에 따라 결정한다.
 
 ```text
-최신 main 확인
-→ 새 작업 branch
-→ 구현/조사 + 관련 검증
-→ 문서 정합성 확인 및 필요한 문서 즉시 수정
-→ branch push
-→ branch CI 성공 확인
-→ 최신 main 재조회
-→ branch가 behind 0이고 fast-forward 가능한지 확인
-→ force 없이 main 반영
-→ main CI 재확인
+main · 저장소 규칙 · runner 권한 확인
+→ 작업 branch(필요시) 및 정적·로컬 검증
+→ 코드·문서 정합성 확인
+→ 허용된 branch CI가 있다면 검증
+→ 최신 main/fast-forward 및 필수 gate 확인
+→ 비강제 main 통합
+→ 요구된 main CI 또는 main SHA 중앙 수동 검증
+→ 실측 PASS/NOT TESTED 구분
 ```
 
-- branch CI가 실패하면 main에 반영하지 않는다.
-- branch CI 이후 `main`이 앞서 나갔다면 stale branch를 그대로 반영하지 않는다. 최신 `main`에 맞춰 동기화한 뒤 필요한 검증과 branch CI를 다시 수행한다.
-- `main` 반영 후 CI가 실패하면 작업을 완료로 보고하지 않는다. 원인을 수정하고 다시 branch/main 검증을 수행한다.
-- branch protection이나 repository ruleset이 direct fast-forward를 막고 PR을 요구하면 이를 우회하지 않는다. 해당 저장소의 더 구체적인 규칙을 따르고, 필요한 권한·승인·검토를 명시적으로 처리한다.
-- workflow 파일이 branch push CI를 지원하지 않는 상태라면 "branch CI 성공"을 가정하지 않는다. 저장소 요구사항에 맞게 CI trigger를 먼저 정합화하거나 실제 실행 가능한 검증 경로를 사용한다.
+- branch CI는 허용·제공되는 경우에만 사용한다. 중앙 main-SHA 수동 CI 전용 저장소에 branch CI를 자동 추가·실행하거나 미실행을 PASS로 표현하지 않는다.
+- privileged self-hosted에는 불신 PR/fork/branch 코드를 자동 실행하지 않는다. 중앙 수동 CI는 승인된 등록부·프로필·범위·정확한 검토 `main` SHA·별도 실행 요청이 필요하다. source/health PASS는 MySQL·browser·GUI·병원 FULL QA가 아니다.
+- GitHub-hosted 금지 저장소에서는 검사 크기나 runner offline을 이유로 hosted를 우회 사용하지 않는다. 승인된 로컬·자체 실행기 검증 또는 `NOT TESTED`로 처리한다.
+- 통합 전 필수 검증 실패 시 중단한다. `main`이 이동했다면 최신 기준으로 갱신·재검증한다.
+- 통합 후 필수 CI/수동 검증이 미통과면 완료로 보고하지 않는다. 적용 상태·검증 상태를 구분한다.
+- ruleset이 직접 통합을 막으면 강제 푸시·승인 생략·자동 PR 없이 중단하고 승인 경로를 확인한다.
 
 ### 작업 종료 전 문서 정합성
 
-코드·테스트가 끝난 것만으로 작업을 완료로 보지 않는다. 최종 branch CI 전에 실제 코드, 테스트, CI 구성과 canonical/지속 문서가 같은 상태를 설명하는지 다시 확인한다.
+코드·테스트가 끝난 것만으로 작업을 완료로 보지 않는다. 저장소가 정의한 최종 사전 검증(정적·로컬·branch CI 중 실제 허용된 경로)과 통합 전에 실제 코드, 테스트, CI 구성과 canonical/지속 문서가 같은 상태를 설명하는지 다시 확인한다.
 
 - 구현 상태, 검증 결과, unresolved, 다음 작업, 실행 절차가 바뀌었으면 해당 primary owner 문서를 같은 작업에서 갱신한다.
 - 새 설명을 추가하는 것뿐 아니라 이제 틀린 과거 설명, 이미 완료된 작업을 계속 다음 작업으로 가리키는 문구, 서로 충돌하는 Git/CI 절차도 제거하거나 교정한다.
