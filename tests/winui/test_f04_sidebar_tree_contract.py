@@ -12,8 +12,8 @@ class F04SidebarTreeContracts(unittest.TestCase):
         for required in ('x:Name="FolderTreeToggle"', 'Click="OnFolderTreeToggleClicked"',
                          'x:Name="FolderTreePanel" Visibility="Collapsed"',
                          'x:Name="FolderTreeView"', 'Expanding="OnTreeExpanding"',
-                         'Collapsed="OnTreeCollapsed"', 'ItemInvoked="OnTreeItemInvoked"',
-                         'SelectionMode="None"', 'AutomationProperties.Name="현재 폴더의 하위 폴더 트리"',
+                         'Collapsed="OnTreeCollapsed"', 'SelectionChanged="OnTreeSelectionChanged"',
+                         'SelectionMode="Single"', 'AutomationProperties.Name="현재 폴더의 하위 폴더 트리"',
                          'x:Name="HomeButton"', 'x:Name="ThisPCButton"'):
             self.assertIn(required,xaml)
 
@@ -37,6 +37,12 @@ class F04SidebarTreeContracts(unittest.TestCase):
             self.assertIn(key,worker)
         self.assertIn("#include <winrt/Microsoft.UI.Xaml.Automation.h>",side)
         self.assertIn("next.path==mTreeOwner.path",side)
+        self.assertIn("void NavigationSidebar::OnTreeSelectionChanged(",side)
+        self.assertIn("sender.SelectedNode()",side)
+        self.assertIn("path==mTreeOwner.path",side)
+        self.assertIn("mTreeNavigate(path);",side)
+        self.assertNotIn('ItemInvoked="OnTreeItemInvoked"',xaml)
+        self.assertNotIn("OnTreeItemInvoked(",side)
         self.assertIn("cancel->load() || !self->IsCurrentTreeOwner()",side)
         self.assertIn("!self->mTreePending && self->IsCurrentTreeOwner()",side)
         self.assertIn("FLY_F04_TREE_ONLY", (ROOT / "tests/winui/test_shell_gui.py").read_text(encoding="utf-8"))

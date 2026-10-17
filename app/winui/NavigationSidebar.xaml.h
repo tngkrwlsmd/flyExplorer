@@ -34,8 +34,8 @@ namespace winrt::FlyExplorer::implementation {
                        Microsoft::UI::Xaml::Controls::TreeViewExpandingEventArgs const&);
   void OnTreeCollapsed(Microsoft::UI::Xaml::Controls::TreeView const&,
                        Microsoft::UI::Xaml::Controls::TreeViewCollapsedEventArgs const&);
-  void OnTreeItemInvoked(Microsoft::UI::Xaml::Controls::TreeView const&,
-                         Microsoft::UI::Xaml::Controls::TreeViewItemInvokedEventArgs const&);
+  void OnTreeSelectionChanged(Microsoft::UI::Xaml::Controls::TreeView const&,
+                              Microsoft::UI::Xaml::Controls::TreeViewSelectionChangedEventArgs const&);
 
  private:
   void SetSelected(int target);

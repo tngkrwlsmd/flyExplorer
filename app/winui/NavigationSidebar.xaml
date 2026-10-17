@@ -89,9 +89,9 @@
                         Click="OnFolderTreeToggleClicked" AutomationProperties.Name="폴더 트리 표시"
                         Content="폴더 트리 펼치기"/>
                 <StackPanel x:Name="FolderTreePanel" Visibility="Collapsed" Spacing="3" Margin="2,0,2,4">
-                    <TreeView x:Name="FolderTreeView" Height="238" SelectionMode="None"
+                    <TreeView x:Name="FolderTreeView" Height="238" SelectionMode="Single"
                               Expanding="OnTreeExpanding" Collapsed="OnTreeCollapsed"
-                              ItemInvoked="OnTreeItemInvoked"
+                              SelectionChanged="OnTreeSelectionChanged"
                               AutomationProperties.Name="현재 폴더의 하위 폴더 트리"/>
                     <TextBlock x:Name="FolderTreeStatus" Text="" Margin="7,0,2,3"
                                TextWrapping="Wrap" FontSize="11"/>

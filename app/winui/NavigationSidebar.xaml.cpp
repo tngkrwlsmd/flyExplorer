@@ -263,13 +263,17 @@ void NavigationSidebar::OnTreeCollapsed(
  node.Children().Clear();
  node.HasUnrealizedChildren(true);
 }
-void NavigationSidebar::OnTreeItemInvoked(
- TreeView const&,TreeViewItemInvokedEventArgs const& args){
+void NavigationSidebar::OnTreeSelectionChanged(
+ TreeView const& sender,TreeViewSelectionChangedEventArgs const&){
+ // SelectionMode=Single maps a real pointer/keyboard selection to a
+ // single, current node. Do not navigate on programmatic Clear/Reset.
  if(!IsCurrentTreeOwner()||!mTreeNavigate)return;
- auto node=args.InvokedItem().try_as<TreeViewNode>();
+ auto node=sender.SelectedNode();
  if(!node)return;
  auto path=TreePath(node);
- if(!fxfile::foldertree::normalizedDrivePath(path))return;
+ if(!fxfile::foldertree::normalizedDrivePath(path)||
+    path==mTreeOwner.path)return;
+ // MainWindow keeps ownership of the active pane's Shell navigation.
  mTreeNavigate(path);
 }
 

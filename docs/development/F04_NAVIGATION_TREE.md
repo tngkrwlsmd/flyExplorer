@@ -104,3 +104,7 @@ Windows GUI #39035310336: source and Release PASS; F04-only FAIL before tree int
 ## F04 TreeItem invocation, 2026-10-17
 
 Windows GUI #39036073150: Release and existing three GUI areas passed. F04 test selected a ready pane, displayed the TreeView, located Nested and captured collapsed/expanded states. Clicking the full TreeItem did not update the active address. Revised harness clicks the actual Nested text label, not the bounding TreeItem area, and prints bounded failure diagnostics. Whether the WinUI event or navigation command is defective remains unverified. Light/Dark independent pixel review remains open.
+
+## 2026-10-17 F04 tree selection event repair
+
+Exact-source Windows GUI #39036967934 built Release and passed three pre-F04 GUI suites, but a real click on the Nested label did not navigate. The owned address remained the existing root and the app status was the last successful folder load. WinUI documents TreeView SelectionChanged as a response to the selected node changing and SelectedNode as the node selected. The candidate now uses SelectionMode=Single and SelectionChanged instead of depending only on ItemInvoked to translate an ordinary mouse/keyboard selection into the existing active-pane OpenFolder command. A guard rejects null, unowned, unsupported and same-root nodes. This is an unaccepted product behavior change pending the exact-source Windows Release and GUI test; the failure alone did not establish that the old ItemInvoked handler fired.
