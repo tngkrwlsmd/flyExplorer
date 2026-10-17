@@ -216,6 +216,22 @@ try:
       "LeftTabs","RightTabs","LeftFiles","RightFiles","StatusText")
  for key in ids:assert element(key).exists(timeout=5),("Missing XAML control",key)
  print("REAL_WINUI_SHELL_CONTROLS",len(ids),"DUAL_PANES_AND_TABS=True",flush=True)
+ if os.environ.get("FLY_F04_TREE_ONLY")=="YES":
+  # Focused tree semantics on a verified active pane, not cold-start parity.
+  # The independent standard profiles keep their left startup readiness gate.
+  eventually(lambda:any("Nested" in row.window_text()
+      for row in element("RightFiles").descendants()),
+      "F04 right-pane owned fixture absent",12)
+  safe_click(element("RightFiles"))
+  eventually(lambda:str(left).casefold() in
+      element("AddressBox").get_value().casefold(),
+      "F04 active pane did not publish owned folder",9)
+  print("F04_FOCUSED_READY_RIGHT_PANE=PASS",flush=True)
+  from test_f04_tree_gui import run as f04_tree
+  f04_tree(win=win,element=element,safe_click=safe_click,
+           eventually=eventually,left=left,right=right)
+  print("F04_OWNED_TREE_ONLY_GUI_PASS=True",flush=True)
+  raise SystemExit(0)
  startup_status=element("StatusText").window_text().lower()
  # The isolated supervisor permits two bounded 4.5-second attempts. Leave
  # room for that recovery budget plus process/UIA publication without
@@ -246,12 +262,6 @@ try:
      for e in element("LeftFiles").descendants()),
      "async native Shell directory items never displayed",12)
  print("REAL_FILE_LIST_IN_LEFT_PANE",True,flush=True)
- if os.environ.get("FLY_F04_TREE_ONLY")=="YES":
-  from test_f04_tree_gui import run as f04_tree
-  f04_tree(win=win,element=element,safe_click=safe_click,
-           eventually=eventually,left=left,right=right)
-  print("F04_OWNED_TREE_ONLY_GUI_PASS=True",flush=True)
-  raise SystemExit(0)
  if os.environ.get("FLY_F05_MODES_ONLY")=="YES":
   from test_f05_group_modes_gui import run as f05_modes_probe
   f05_modes_probe(win=win,element=element,safe_click=safe_click,
