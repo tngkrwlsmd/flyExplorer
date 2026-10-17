@@ -98,6 +98,12 @@ class F05FourModesHarnessContract(unittest.TestCase):
                       'ui->ToggleGroupMode(choice)'):
             self.assertIn(token, WINUI)
         self.assertIn('mOwnedF05VisualGroupTimer', HEADER)
+        # The opt-in startup screenshot cannot group only a ready left pane.
+        for token in ('other=tab.model.panes[1]',
+                      'right.parsingName!=path', 'right.children.size()!=6',
+                      'tab.fileLists[1].metadataCurrent',
+                      'ui->RightFiles().Items().Size()==0'):
+            self.assertIn(token, WINUI)
         # App-side Type grouping may precede the Python baseline check.
         self.assertIn('FLY_F05_VISUAL_GROUP_MODE_ONLY") == "type"', PROBE)
         self.assertIn('assert heading(".md") is None', PROBE)

@@ -555,6 +555,18 @@ namespace winrt::FlyExplorer::implementation
                 korean|=item.label==L"\uAC00\uB098\uB2E4-note.txt";
             }
             if(!(alpha&&mango&&zebra&&korean))return;
+            // The opt-in visual fixture needs both independent panes ready.
+            if(!tab.model.split)return;
+            const auto& other=tab.model.panes[1];
+            if(other.tabs.empty()||other.active>=other.tabs.size())return;
+            const auto& right=other.tabs[other.active].snapshot();
+            if(right.parsingName!=path||right.truncated||
+               right.baseOffset!=0||right.children.size()!=6||
+               right.nextOffset!=right.children.size()||
+               !tab.fileLists[1].metadataCurrent(
+                   other.routeIds[other.active],other.active,
+                   right.children.size())||
+               ui->RightFiles().Items().Size()==0)return;
             sender.Stop();
             ui->mOwnedF05VisualGroupTimer=nullptr;
             ui->ToggleGroupMode(choice);
