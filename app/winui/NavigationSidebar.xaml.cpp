@@ -8,6 +8,7 @@
 #include "folder_tree_worker.h"
 #include <algorithm>
 #include <winrt/Microsoft.UI.Xaml.Media.Imaging.h>
+#include <winrt/Microsoft.UI.Xaml.Automation.h>
 #if __has_include("NavigationSidebar.g.cpp")
 #include "NavigationSidebar.g.cpp"
 #endif
@@ -131,7 +132,8 @@ bool NavigationSidebar::IsCurrentTreeOwner() const {
  if(!mTreeVisible||!mTreeCurrent)return false;
  auto next=mTreeCurrent();
  return next.side==mTreeOwner.side && next.tab==mTreeOwner.tab &&
-        next.route!=0 && next.route==mTreeOwner.route;
+        next.route!=0 && next.route==mTreeOwner.route &&
+        next.path==mTreeOwner.path;
 }
 std::wstring NavigationSidebar::TreePath(TreeViewNode const& node) const {
  for(auto const& item:mTreeNodes)if(item.node==node)return item.path;
@@ -150,7 +152,8 @@ void NavigationSidebar::SyncTreeContext(){
  if(!mTreeVisible||!mTreeCurrent)return;
  auto next=mTreeCurrent();
  if(next.side==mTreeOwner.side&&next.tab==mTreeOwner.tab&&
-    next.route&&next.route==mTreeOwner.route)return;
+    next.route&&next.route==mTreeOwner.route&&
+    next.path==mTreeOwner.path)return;
  ResetTree();
  mTreeOwner=next;
  if(next.side<0||next.side>1||!next.route||
@@ -200,7 +203,19 @@ void NavigationSidebar::BeginTreeLoad(TreeViewNode const& node){
                     result=std::move(result)]() mutable {
    if(auto self=weak.get()){
     if(request.generation!=self->mTreeGeneration ||
-       cancel->load() || !self->IsCurrentTreeOwner())return;
+       cancel->load() || !self->IsCurrentTreeOwner()){
+      // Another expanded node may have been waiting for the one worker.
+      if(!self->mTreePending && self->IsCurrentTreeOwner()){
+       for(auto const& candidate:self->mTreeNodes){
+        if(candidate.node.IsExpanded()&&
+           candidate.node.HasUnrealizedChildren()){
+         self->BeginTreeLoad(candidate.node);
+         break;
+        }
+       }
+      }
+      return;
+    }
     self->mTreePending=false;
     TreeViewNode parent{nullptr};
     for(auto const& entry:self->mTreeNodes)

@@ -1,5 +1,11 @@
 # flyExplorer current status — F05 keyboard validation checkpoint 2026-10-17
 
+## 2026-10-17 F04-B failed Release and corrective patch
+
+- [Central GUI #39031617203](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39031617203) failed at Release compile C2027/C3861: NavigationSidebar.xaml.cpp lacked the WinRT AutomationProperties include. Source checks passed, but no GUI ran.
+- Corrected the include, path ownership check on in-place folder navigation, and canceled-worker retry. Revised Windows build, functional GUI and final pixel acceptance remain unverified pending the successor validation.
+
+
 ## 2026-10-17 F04-A local-tree foundation (no user-visible tree yet)
 
 - Introduced bounded, OS-I/O-free F04 lexical local-drive-path and

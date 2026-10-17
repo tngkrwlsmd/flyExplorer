@@ -64,3 +64,8 @@ independent pixel inspection are complete. Keep F03/F05/legacy paths unchanged.
   x64 Release, functional UIA/keyboard interaction with an owned fixture and
   matched BEFORE/AFTER Light/Dark captured pixel review before marking F04-B
   accepted.
+
+## 2026-10-17 F04-B compile/path repair
+
+- Original central GUI attempt #39031617203 FAILED at Release compilation (C2027/C3861): missing C++/WinRT AutomationProperties definition in NavigationSidebar.xaml.cpp. GUI never ran in that attempt. Independent artifact quota errors are not the root cause.
+- The corrected candidate includes the explicit Automation header, checks the current filesystem path as well as side/tab/route to invalidate a stale tree after same-route navigation, and retries a waiting expanded node after a canceled worker finishes. A new Windows build is required; the old failure stays recorded.

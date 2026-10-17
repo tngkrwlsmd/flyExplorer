@@ -35,6 +35,10 @@ class F04SidebarTreeContracts(unittest.TestCase):
                     "kMaxChildrenPerNode", "kMaxVisited=4096",
                     "GetTickCount64", "FILE_ATTRIBUTE_HIDDEN"):
             self.assertIn(key,worker)
+        self.assertIn("#include <winrt/Microsoft.UI.Xaml.Automation.h>",side)
+        self.assertIn("next.path==mTreeOwner.path",side)
+        self.assertIn("cancel->load() || !self->IsCurrentTreeOwner()",side)
+        self.assertIn("!self->mTreePending && self->IsCurrentTreeOwner()",side)
         self.assertNotIn("GetFileAttributesW(",side)
         self.assertNotIn("FindFirstFileW(",side)
         self.assertNotIn("DeleteFile",worker)
