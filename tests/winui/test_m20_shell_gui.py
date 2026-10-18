@@ -27,7 +27,7 @@ def run(*,win,element,safe_click,focus,eventually,owned):
     # updates synchronously, but the compositor may publish the new frame a
     # little later. Wait for sampled app-owned pixels to settle rather than
     # weakening the visual acceptance threshold or adding a fixed sleep.
-    samples=[(int(rect.width()*0.38),int(rect.height()*0.78)),
+    samples=[(int(rect.width()*0.86),int(rect.height()*0.78)),
              (int(rect.width()*0.72),int(rect.height()*0.78)),
              (min(80,rect.width()-3),int(rect.height()*0.78))]
     def brightness(im):
