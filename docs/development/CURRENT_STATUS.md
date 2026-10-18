@@ -1,5 +1,12 @@
 # flyExplorer current status — F05 keyboard validation checkpoint 2026-10-17
 
+## 2026-10-18 F04 mouse+keyboard and full GUI accepted; pixel capture pending
+
+- Exact `1afbaed256e04c073d53250a326ce34dd22ad6e0` [central Windows GUI #39090939174](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39090939174) **SUCCESS**: source, Release, F04 physical mouse and keyboard, previous M20 actual-theme pixel gate, and full regression all passed. Do not re-debug or rerun this accepted functional revision.
+- New isolated test-only F04 candidate captures both Light and Dark expanded local-tree images under the SAME owned WinUI window/fixture, verifies settled composited brightness, and writes a bounded SHA256/DPI/window/fixture manifest. Windows control-plane now permits retaining only those two digest-matched synthetic captures after the CI workspace is retired; PowerShell parse-only probe #39092630648 PASS. Candidate source/GUI is NOT YET TESTED. The screenshots still require direct manual comparison of clipping, icons, focus and contrast before visual acceptance is marked PASS.
+- Actual 125%, 150%, 200% Windows DPI, Narrator speech, high contrast, keyboard accessibility beyond focused F04 fixture and real Korean IME remain separately evidence-scoped; no unobserved gate is complete.
+
+
 ## 2026-10-18 F04 keyboard passed; M20 theme pixel probe follow-up
 
 - Central GUI [#39090079558](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39090079558) on exact `eb80f4c7458dd8401aa7d53cdf22bc4637b67867`: runner/policy/source/Release PASS; focused **F04 mouse + keyboard** GUI PASS; established window-tabs, shortcuts, filter PASS. Full general GUI FAIL in the pre-existing M20 theme pixel probe, not F04: dark values [179.89, 32, 32], light [126.44, 243, 243]. The left-file-list sample at width 0.38 was the only inverted contrast. Archive confirmed normal owned app exit and test-fixture removal.
