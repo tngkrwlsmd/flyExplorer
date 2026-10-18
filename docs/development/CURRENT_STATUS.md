@@ -1,5 +1,12 @@
 # flyExplorer current status — F05 keyboard validation checkpoint 2026-10-17
 
+## 2026-10-18 F04-B physical mouse: accepted; keyboard candidate
+
+- Exact `1909aec73c890d5473f70707a37560a70158d059` central [Windows GUI #39088980414](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39088980414) **SUCCESS**. Policy, source, Release, focused F04 real-mouse scroll/selection/navigation, and the existing full GUI regression all passed. Reuse this evidence; do not rerun the same scope for an unchanged revision.
+- The next test-only F04 change adds separate real keyboard HOME/DOWN route navigation after returning to the disposable owned parent folder. Its source and GUI acceptance are PENDING and do not invalidate the previously accepted mouse result for the old SHA.
+- Actual F04 Light/Dark composited before/after pixel comparison, 125/150/200% DPI, High Contrast and spoken Narrator remain OPEN until independently observed. Do not treat the GUI PASS as visual acceptance.
+
+
 ## 2026-10-18 F04-B physical mouse acceptance: test item was off-screen
 
 - Central [GUI #39087700903](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39087700903) **FAIL** at the F04 GUI gate (first relevant error: `F04 TreeItem has no UIA clickable point`). Runner, policy, source, x64 Release and window-tabs/shortcuts/filter GUI were all PASS; artifact upload quota error was additional, not the root cause.
