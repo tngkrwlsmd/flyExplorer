@@ -318,6 +318,8 @@ def run(*, win, element, safe_click, eventually, left, right):
         "F04 light/dark actual shell pixels were not distinct", records)
     folder = ROOT / "logs" / "f04-tree-visual"
     user = ctypes.windll.user32
+    user.GetDpiForWindow.argtypes = [wintypes.HWND]
+    user.GetDpiForWindow.restype = wintypes.UINT
     hwnd = user.GetForegroundWindow()
     dpi = user.GetDpiForWindow(hwnd)
     assert dpi >= 96
