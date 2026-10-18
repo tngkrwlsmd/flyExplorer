@@ -162,7 +162,9 @@ void NavigationSidebar::SyncTreeContext(){
   return;
  }
  TreeViewNode node;
- node.Content(winrt::box_value(hstring(next.path)));
+ auto rootLabel=std::filesystem::path(next.path).filename().native();
+ if(rootLabel.empty())rootLabel=next.path;
+ node.Content(winrt::box_value(hstring(rootLabel)));
  node.HasUnrealizedChildren(true);
  mTreeNodes.push_back({node,next.path});
  FolderTreeView().RootNodes().Append(node);
