@@ -1,5 +1,12 @@
 # flyExplorer current status — F05 keyboard validation checkpoint 2026-10-17
 
+## 2026-10-18 F04 keyboard passed; M20 theme pixel probe follow-up
+
+- Central GUI [#39090079558](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39090079558) on exact `eb80f4c7458dd8401aa7d53cdf22bc4637b67867`: runner/policy/source/Release PASS; focused **F04 mouse + keyboard** GUI PASS; established window-tabs, shortcuts, filter PASS. Full general GUI FAIL in the pre-existing M20 theme pixel probe, not F04: dark values [179.89, 32, 32], light [126.44, 243, 243]. The left-file-list sample at width 0.38 was the only inverted contrast. Archive confirmed normal owned app exit and test-fixture removal.
+- Candidate test-only correction moves that one dynamic-left-content brightness sample to width 0.86 within the already successful stable shell area; preserves all three sample locations, real rendered screenshots, compositor settling, and strict `light-dark > 20` at **every** sample. Source and successor GUI acceptance are pending.
+- Independent F04 Light/Dark visual inspection, exact theme/DPI/window metadata, actual 125/150/200% display scaling, Narrator and high contrast remain OPEN; success of mouse/keyboard acceptance does not close pixel acceptance.
+
+
 ## 2026-10-18 F04-B physical mouse: accepted; keyboard candidate
 
 - Exact `1909aec73c890d5473f70707a37560a70158d059` central [Windows GUI #39088980414](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39088980414) **SUCCESS**. Policy, source, Release, focused F04 real-mouse scroll/selection/navigation, and the existing full GUI regression all passed. Reuse this evidence; do not rerun the same scope for an unchanged revision.
