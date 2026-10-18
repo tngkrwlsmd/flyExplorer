@@ -4,6 +4,7 @@ from uuid import uuid4
 import ctypes
 from ctypes import wintypes
 import os
+from pywinauto import mouse
 
 from paths import ROOT
 
@@ -73,25 +74,68 @@ def run(*, win, element, safe_click, eventually, left, right):
                   if x.element_info.control_type == "Text"
                   and x.window_text() == "Nested"), None)
     assert label is not None, "F04 node content text not exposed to UIA"
-    # A TreeItem's bounding-box centre can land on the expander or padding.
-    # UI Automation provides an actual screen-space clickable point for
-    # a tree item. Use that point for REAL mouse input, never Select() as PASS.
-    # comtypes marshals [out] and [out, retval] to Python return
-    # values; unlike native C++, callers pass no pointer arguments.
+    # At a 960x519 window, the tree's nested child starts below the
+    # outer sidebar ScrollViewer viewport. UIA can find/select it even
+    # while the user cannot click it. Scroll first, then send REAL input.
+    try:
+        row.ensure_visible()
+        print("F04_SCROLL_ITEM=REQUESTED", flush=True)
+    except Exception as error:
+        print("F04_SCROLL_ITEM=UNAVAILABLE", type(error).__name__, flush=True)
+
     click_point, has_point = row.element_info.element.GetClickablePoint()
-    assert has_point, "F04 TreeItem has no UIA clickable point"
+    if not has_point:
+        # Scroll the app-owned navigation sidebar (not the desktop or an
+        # arbitrary element) when the nested node remains out of view.
+        user = ctypes.windll.user32
+        hwnd = user.GetForegroundWindow()
+        pid = wintypes.DWORD()
+        if hwnd:
+            user.GetWindowThreadProcessId(hwnd, ctypes.byref(pid))
+        assert pid.value == owner_pid, "Refuse scroll on non-owned foreground"
+        btn = toggle.rectangle()
+        screen = app.rectangle()
+        scroll_x = (btn.left + btn.right) // 2
+        scroll_y = min((btn.top + btn.bottom) // 2, screen.bottom - 65)
+        assert (screen.left + 5 < scroll_x < screen.right - 5 and
+                screen.top + 115 < scroll_y < screen.bottom - 48), (
+            "Refuse sidebar scroll outside owned app viewport")
+        mouse.scroll(coords=(scroll_x, scroll_y), wheel_dist=-8)
+        row = eventually(nested_row, "F04 Nested missing after sidebar scroll", 6)
+        assert row.element_info.process_id == owner_pid
+        label = next((x for x in row.descendants()
+                      if x.element_info.control_type == "Text"
+                      and x.window_text() == "Nested"), None)
+        assert label is not None, "F04 Nested label missing after scroll"
+        click_point, has_point = row.element_info.element.GetClickablePoint()
+        print("F04_PHYSICAL_SIDEBAR_SCROLL=YES",
+              "UIA_POINT_AVAILABLE=", bool(has_point), flush=True)
+
     bounds = row.rectangle()
     window_bounds = app.rectangle()
-    x, y = click_point.x, click_point.y
-    assert bounds.left <= x < bounds.right and bounds.top <= y < bounds.bottom, (
-        "F04 UIA clickable point outside owned TreeItem")
-    assert (window_bounds.left <= x < window_bounds.right and
-            window_bounds.top <= y < window_bounds.bottom), (
-        "Refuse physical click outside owned app window")
-    print("F04_MOUSE_TARGET=UIA_CLICKABLE_POINT",
-          "ROW_WIDTH=", bounds.width(), "ROW_HEIGHT=", bounds.height(),
-          "OFFSET_X=", x - bounds.left, "OFFSET_Y=", y - bounds.top,
-          flush=True)
+    text_bounds = label.rectangle()
+    if has_point and (text_bounds.left <= click_point.x < text_bounds.right
+                      and text_bounds.top <= click_point.y < text_bounds.bottom):
+        x, y = click_point.x, click_point.y
+        target = "UIA_LABEL_POINT"
+    else:
+        # GetClickablePoint may return False for a WinUI TreeItem even
+        # when its text is visible. Prefer the precisely bounded label
+        # rather than treating an accessibility limitation as app failure.
+        x = (text_bounds.left + text_bounds.right) // 2
+        y = (text_bounds.top + text_bounds.bottom) // 2
+        target = "VISIBLE_TEXT_CENTER"
+    assert (text_bounds.left <= x < text_bounds.right and
+            text_bounds.top <= y < text_bounds.bottom and
+            bounds.left <= x < bounds.right and bounds.top <= y < bounds.bottom), (
+        "F04 physical point outside owned item and label")
+    assert (window_bounds.left + 5 < x < window_bounds.right - 5 and
+            window_bounds.top + 115 < y < window_bounds.bottom - 45), (
+        "F04 Nested label not visible in owned app viewport")
+    capture("expanded-scrolled")
+    print("F04_MOUSE_TARGET=", target, "ROW_WIDTH=", bounds.width(),
+          "ROW_HEIGHT=", bounds.height(), "OFFSET_X=", x - bounds.left,
+          "OFFSET_Y=", y - bounds.top, flush=True)
     safe_click(row, coords=(x - bounds.left, y - bounds.top))
     try:
         eventually(lambda: str(left / "Nested").casefold() in
