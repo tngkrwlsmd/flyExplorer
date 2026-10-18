@@ -211,6 +211,19 @@ def execute(label, command, timeout, env, tag):
         print("RESULT=" + " / ".join(summary[-3:])[:280], flush=True)
     if code and first_error:
         print("FIRST_RELEVANT_ERROR=" + first_error, flush=True)
+    if code and label.startswith("gui-folder-tree-"):
+        # Surface only bounded F04 diagnostic stage tokens in the central
+        # Actions log. Full test logs stay inside ignored owned evidence.
+        allowed = (
+            "F04_FOCUSED_PANE=", "F04_FOCUSED_READY_PANE=",
+            "F04_CLICK_DIAG_ROOT_STILL_ACTIVE=",
+            "F04_TREE_SELECTION_STAGE=", "F04_TREE_UIA_SELECTED=",
+            "F04_DIAG_UIA_SELECTION_NAVIGATED=",
+            "F04_FAILURE_CAPTURE_SKIPPED=",
+        )
+        for line in body.splitlines():
+            if line.startswith(allowed):
+                print("F04_FAILURE_DIAGNOSTIC=" + line[:180], flush=True)
     return code
 
 
