@@ -73,9 +73,26 @@ def run(*, win, element, safe_click, eventually, left, right):
                   if x.element_info.control_type == "Text"
                   and x.window_text() == "Nested"), None)
     assert label is not None, "F04 node content text not exposed to UIA"
-    # SelectionMode=Single should select the TreeItem row. Unlike
-    # clicking a nested Text element, this is a physical row interaction.
-    safe_click(row)
+    # A TreeItem's bounding-box centre can land on the expander or padding.
+    # UI Automation provides an actual screen-space clickable point for
+    # a tree item. Use that point for REAL mouse input, never Select() as PASS.
+    click_point = wintypes.POINT()
+    has_point = row.element_info.element.GetClickablePoint(
+        ctypes.byref(click_point))
+    assert has_point, "F04 TreeItem has no UIA clickable point"
+    bounds = row.rectangle()
+    window_bounds = app.rectangle()
+    x, y = click_point.x, click_point.y
+    assert bounds.left <= x < bounds.right and bounds.top <= y < bounds.bottom, (
+        "F04 UIA clickable point outside owned TreeItem")
+    assert (window_bounds.left <= x < window_bounds.right and
+            window_bounds.top <= y < window_bounds.bottom), (
+        "Refuse physical click outside owned app window")
+    print("F04_MOUSE_TARGET=UIA_CLICKABLE_POINT",
+          "ROW_WIDTH=", bounds.width(), "ROW_HEIGHT=", bounds.height(),
+          "OFFSET_X=", x - bounds.left, "OFFSET_Y=", y - bounds.top,
+          flush=True)
+    safe_click(row, coords=(x - bounds.left, y - bounds.top))
     try:
         eventually(lambda: str(left / "Nested").casefold() in
                    element("AddressBox").get_value().casefold(),
