@@ -181,10 +181,16 @@ def run(*, win, element, safe_click, eventually, left, right):
                   str(evidence_error)[:100], flush=True)
         raise
     print("F04_TREE_OWNED_LOCAL_NAVIGATION=PASS", flush=True)
-    eventually(lambda: any(
-               str(left / "Nested").casefold() in x.window_text().casefold()
-               for x in tree.descendants()),
-               "F04 tree retained previous root after in-tab navigation", 9)
+    # The root presents its folder name rather than the complete path.
+    # Confirm the previous root/child pair was replaced by exactly the
+    # navigated folder's sole root TreeItem (not just an existing child).
+    def navigated_root_visible():
+        rows = [x for x in tree.descendants()
+                if x.element_info.control_type == "TreeItem"]
+        return len(rows) == 1 and rows[0].window_text().strip() == "Nested"
+
+    eventually(navigated_root_visible,
+               "F04 tree did not refresh its displayed root after navigation", 9)
     capture("navigated")
     print("F04_TREE_TOGGLE_EXPAND_NAVIGATE=PASS", flush=True)
 

@@ -17,6 +17,14 @@ class F04SidebarTreeContracts(unittest.TestCase):
                          'x:Name="HomeButton"', 'x:Name="ThisPCButton"'):
             self.assertIn(required,xaml)
 
+    def test_tree_root_label_keeps_path_identity(self):
+        side=read("app/winui/NavigationSidebar.xaml.cpp")
+        self.assertIn("std::filesystem::path(next.path).filename().native()",side)
+        self.assertIn("if(rootLabel.empty())rootLabel=next.path",side)
+        self.assertIn("node.Content(winrt::box_value(hstring(rootLabel)))",side)
+        self.assertNotIn("node.Content(winrt::box_value(hstring(next.path)))",side)
+        self.assertIn("mTreeNodes.push_back({node,next.path})",side)
+
     def test_active_pane_route_and_worker_boundary(self):
         ui=read("app/winui/MainWindow.xaml.cpp")
         side=read("app/winui/NavigationSidebar.xaml.cpp")
