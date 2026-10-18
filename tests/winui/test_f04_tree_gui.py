@@ -185,6 +185,35 @@ def run(*, win, element, safe_click, eventually, left, right):
                for x in tree.descendants()),
                "F04 tree retained previous root after in-tab navigation", 9)
     capture("navigated")
+    print("F04_TREE_TOGGLE_EXPAND_NAVIGATE=PASS", flush=True)
+
+    # Independent keyboard acceptance: return to the test-owned parent,
+    # focus the TreeView, then navigate via actual HOME/DOWN key input.
+    # UIA SelectionItem.Select() must not be used to pass this gate.
+    safe_click(element("UpButton"))
+    eventually(lambda: element("AddressBox").get_value().casefold()
+               == str(left).casefold(),
+               "F04 keyboard setup did not return to owned root", 9)
+    eventually(nested_row, "F04 keyboard child absent after returning", 10)
+    tree.set_focus()
+    user = ctypes.windll.user32
+    keyboard_owner = wintypes.DWORD()
+    hwnd = user.GetForegroundWindow()
+    if hwnd:
+        user.GetWindowThreadProcessId(hwnd, ctypes.byref(keyboard_owner))
+    assert keyboard_owner.value == owner_pid, (
+        "Refuse keyboard input: foreground is not test-owned app")
+    tree.type_keys("{HOME}", set_foreground=False)
+    assert element("AddressBox").get_value().casefold() == str(left).casefold(), (
+        "F04 HOME unexpectedly left the owned root")
+    capture("keyboard-root")
+    tree.type_keys("{DOWN}", set_foreground=False)
+    eventually(lambda: str(left / "Nested").casefold() in
+               element("AddressBox").get_value().casefold(),
+               "F04 physical keyboard DOWN did not navigate Nested", 9)
+    capture("keyboard-navigated")
+    print("F04_TREE_PHYSICAL_KEYBOARD_NAVIGATION=PASS", flush=True)
+
     safe_click(toggle)
     eventually(lambda: not tree_visible(), "F04 tree did not hide", 6)
-    print("F04_TREE_TOGGLE_EXPAND_NAVIGATE=PASS", flush=True)
+    print("F04_TREE_KEYBOARD_AND_MOUSE_GUI_PASS=True", flush=True)
