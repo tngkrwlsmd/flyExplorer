@@ -163,6 +163,15 @@ class _PollingBroadCatchVisitor(ast.NodeVisitor):
 
 
 class GuiHarnessStaticContract(unittest.TestCase):
+    def test_theme_pixel_probe_avoids_dynamic_left_list(self):
+        probe = (TESTS / "test_m20_shell_gui.py").read_text(encoding="utf-8")
+        self.assertIn('int(rect.width()*0.86)', probe)
+        self.assertIn('int(rect.width()*0.72)', probe)
+        self.assertIn('min(80,rect.width()-3)', probe)
+        self.assertNotIn('int(rect.width()*0.38)', probe)
+        self.assertIn('assert all(light-dark>20 for light,dark in zip(lb,db))', probe)
+        self.assertIn('settled_surface(', probe)
+
     def test_winui_python_sources_parse(self):
         failures = []
         paths = list(TESTS.glob("*.py")) + list(TOOLS.glob("*.py"))
