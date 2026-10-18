@@ -208,9 +208,12 @@ try:
    if owner.value==p.pid:return True
   raise AssertionError(
    "Refusing physical input: foreground belongs to a user window")
- def safe_click(target):
+ def safe_click(target, coords=None):
   ensure_owned_focus()
-  target.click_input()
+  if coords is None:
+   target.click_input()
+  else:
+   target.click_input(coords=coords)
  ids=("BackButton","ForwardButton","UpButton","AddressBox",
       "NewTabButton","CloseTabButton","SplitButton",
       "LeftTabs","RightTabs","LeftFiles","RightFiles","StatusText")
