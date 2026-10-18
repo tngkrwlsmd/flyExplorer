@@ -47,6 +47,7 @@ def run(*, win, element, safe_click, eventually, left, right):
         image.save(png, format="PNG")
         assert 1000 < png.stat().st_size < 3000000
         print("F04_TREE_" + label.upper() + "_PNG=" + str(png), flush=True)
+        return png
 
     # Verify collapsed/expanded actual windows, not just an XAML source token.
     safe_click(toggle)
@@ -213,6 +214,124 @@ def run(*, win, element, safe_click, eventually, left, right):
                "F04 physical keyboard DOWN did not navigate Nested", 9)
     capture("keyboard-navigated")
     print("F04_TREE_PHYSICAL_KEYBOARD_NAVIGATION=PASS", flush=True)
+
+    # Matched actual-window pixels: same owned process, fixture,
+    # expanded tree and geometry; only app-local ThemePicker changes.
+    # Retained evidence is required for human visual review later.
+    import hashlib
+    import json
+    import time
+    from PIL import ImageStat
+
+    safe_click(element("UpButton"))
+    eventually(lambda: element("AddressBox").get_value().casefold()
+               == str(left).casefold(),
+               "F04 visual setup did not return to owned root", 9)
+    picker = element("ThemePicker").wrapper_object()
+
+    def visible_nested_label():
+        child = nested_row()
+        if child is None:
+            return False
+        text = next((x for x in child.descendants()
+                     if x.element_info.control_type == "Text"
+                     and x.window_text() == "Nested"), None)
+        if text is None:
+            return False
+        box = text.rectangle()
+        outer = app.rectangle()
+        return (box.width() > 0 and box.height() > 0 and
+                outer.top + 115 < (box.top + box.bottom) // 2 <
+                outer.bottom - 45)
+
+    def bring_tree_into_view():
+        if not tree_visible():
+            safe_click(toggle)
+            eventually(tree_visible, "F04 visual TreeView not visible", 6)
+        child = eventually(nested_row, "F04 visual Nested row missing", 9)
+        try:
+            child.ensure_visible()
+        except Exception:
+            pass
+        if not visible_nested_label():
+            box = toggle.rectangle()
+            outer = app.rectangle()
+            px = (box.left + box.right) // 2
+            py = min((box.top + box.bottom) // 2, outer.bottom - 65)
+            assert (outer.left + 5 < px < outer.right - 5 and
+                    outer.top + 115 < py < outer.bottom - 48)
+            user = ctypes.windll.user32
+            hwnd = user.GetForegroundWindow()
+            owner = wintypes.DWORD()
+            if hwnd:
+                user.GetWindowThreadProcessId(hwnd, ctypes.byref(owner))
+            assert owner.value == owner_pid, "Refuse non-owned visual scroll"
+            mouse.scroll(coords=(px, py), wheel_dist=-8)
+        eventually(visible_nested_label, "F04 visual label outside viewport", 8)
+
+    def settled_owned_pixels():
+        last = None
+        stable = 0
+        result = None
+        for _ in range(35):
+            result = app.capture_as_image().convert("RGB")
+            w, h = result.size
+            points = ((int(w*.72), int(h*.78)),
+                      (int(w*.86), int(h*.78)),
+                      (min(80, w-3), int(h*.78)))
+            values = [sum(ImageStat.Stat(result.crop(
+                (x, y, x+3, y+3))).mean)/3 for x,y in points]
+            if last is not None and all(
+                    abs(a-b) < 2 for a,b in zip(last, values)):
+                stable += 1
+            else:
+                stable = 0
+            if stable >= 2:
+                return result, values
+            last = values
+            time.sleep(.12)
+        raise AssertionError("F04 actual theme pixels did not settle")
+
+    records = {}
+    for mode, index, localized in (
+            ("light", 1, "테마: 라이트"),
+            ("dark", 2, "테마: 다크")):
+        picker.select(index)
+        eventually(lambda: element("ThemeStateText").window_text()
+                   == localized, "F04 app-owned theme not committed", 8)
+        bring_tree_into_view()
+        image, values = settled_owned_pixels()
+        path = capture("theme-" + mode + "-expanded")
+        assert path is not None and path.is_file()
+        assert image.size == app.capture_as_image().size
+        records[mode] = dict(file=path.name,
+                             sha256=hashlib.sha256(path.read_bytes()).hexdigest(),
+                             brightness=[round(x, 2) for x in values],
+                             size=list(image.size))
+        print("F04_VISUAL_THEME_", mode, "_SETTLED=PASS", flush=True)
+
+    assert records["light"]["size"] == records["dark"]["size"], (
+        "F04 matched visual image dimensions changed")
+    # Pixel gate is independent of label changes and intentionally strict.
+    assert all(a-b > 20 for a,b in zip(
+        records["light"]["brightness"], records["dark"]["brightness"])), (
+        "F04 light/dark actual shell pixels were not distinct", records)
+    folder = ROOT / "logs" / "f04-tree-visual"
+    user = ctypes.windll.user32
+    hwnd = user.GetForegroundWindow()
+    dpi = user.GetDpiForWindow(hwnd)
+    assert dpi >= 96
+    manifest = dict(schema_version=1, fixture="synthetic Left/Nested",
+                    configuration=os.environ.get("FLY_MIGRATION_CONFIGURATION"),
+                    dpi=int(dpi), window_rect=str(app.rectangle()),
+                    images=records)
+    (folder / "f04-pair-manifest.json").write_text(
+        json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8")
+    print("F04_MATCHED_LIGHT_DARK_PIXELS=PASS",
+          "DPI=", dpi, "SIZE=", records["light"]["size"], flush=True)
+    picker.select(1)
+    eventually(lambda: element("ThemeStateText").window_text()
+               == "테마: 라이트", "F04 owned theme restore failed", 8)
 
     safe_click(toggle)
     eventually(lambda: not tree_visible(), "F04 tree did not hide", 6)
