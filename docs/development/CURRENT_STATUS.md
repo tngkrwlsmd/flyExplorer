@@ -1,4 +1,14 @@
-# flyExplorer current status — F04/F05 interactive DPI and UIA readiness 2026-10-18
+# flyExplorer current status — 96-DPI accessibility GUI accepted 2026-10-18
+
+## 2026-10-18 supplementary M26 owned UIA/keyboard responsiveness — scoped PASS
+
+- **Successful real Windows interactive session:** [personal-control-plane Direct Remote Shell #39103545858](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39103545858) **SUCCESS**. It launched the existing `tests/winui/test_owned_accessibility_layout_gui.py Release` in the logged-in user session (session 1), with exact source `0d10b1b600c854a2cfbb3b425bf7b2d616e9af77` and reused product binary SHA-256 `300eeb16f86bba4dd47f92bd36ee073116f4bce371e4d3f6da54e5a86589db17`. The accepted product source/binary and existing user files were not changed.
+- **Exact observed PASS markers:** 16 named controls and responsive geometry at 960x634, 1100x680, and 1240x710; real Tab-key focus sequence; actual foreground window 96 DPI and High Contrast OFF; all six legacy preferences byte-identical; Python and bounded Windows worker exit 0. The owned successful disposable GUI fixture cleaned itself.
+- **Harness-only change:** central control script `scripts/tasks/Read-FlyExplorerOwnedAccessibilityGui.ps1` now launches the test with separately redirected stdout/stderr and writes an atomic, size-bounded JSON verdict after process exit. The [read-only preserved fixture inspection #39103271352](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39103271352) confirmed one earlier synthetic fixture with test-created environment directories and file; the prior missing traceback cannot be reconstructed from those folders alone. Do not claim the first failed assertion was proven; the new unchanged-product test passed and does not reproduce a product defect.
+- **Scope limitation:** this supplementary M26 smoke does **not** newly certify F04/F05-specific full-screen High Contrast pixels, actual OS 125/150/200% scaling, spoken Narrator phrases, all F05 keyboard traversal, or IME scenarios. Those remain separately OPEN. The previously accepted F04 actual 96-DPI Light/Dark pixels and physical mouse/keyboard tests retain their exact recorded acceptance. One older failing-run synthetic fixture remains retained, without deleting it as part of this acceptance.
+- The preceding `supplementary 96-DPI accessibility GUI attempt — not accepted` section is now historical diagnosis: #39102240993, #39102419752 and #39102607819 remain authentic failed harness/evidence runs and are not retroactively relabeled PASS.
+
+
 
 ## 2026-10-18 interactive Windows monitor DPI (read-only) — observed 100%
 
