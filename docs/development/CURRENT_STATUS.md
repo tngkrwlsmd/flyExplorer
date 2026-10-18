@@ -1,4 +1,15 @@
-# flyExplorer current status — F05 keyboard validation checkpoint 2026-10-17
+# flyExplorer current status — F04 96-DPI visual acceptance 2026-10-18
+
+## 2026-10-18 F04 narrow TreeView root label — accepted on main
+
+- **Integrated:** [PR #66](https://github.com/tngkrwlsmd/flyExplorer/pull/66), merge commit `9dbdd5c3cc298294c6e7c494b01dd34ae7ef8fbf`; exact tested branch source `0d10b1b600c854a2cfbb3b425bf7b2d616e9af77`. The prior main `fa2a1d81a3f4f81b6c0cb82de5f4fff26d333602` passed [central full GUI #39093066725](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39093066725) and retained two hash-matched actual Light/Dark PNGs. Independent inspection of those baseline pixels showed the absolute tree-root path clipped by the narrow sidebar; it was not visual acceptance of that text.
+- **Fix:** root TreeView text shows the current folder's final path component (drive-root fallback retains its path). The exact normalized full path remains in `mTreeNodes` for navigation, stale-route identity, and correct pane ownership. The owned GUI contract now requires one refreshed root TreeItem after in-tab navigation rather than incorrectly requiring the former on-screen full path.
+- **Scoped Windows test:** exact `0d10b1b6` in an isolated full-history Windows user-session checkout: structure **4/4**, product **238/238**, harness **21/21**, infra **30/30** source checks PASS. Canonical Release build PASS, product EXE SHA-256 `300eeb16f86bba4dd47f92bd36ee073116f4bce371e4d3f6da54e5a86589db17`, sibling Shell helper present. The post-build correction changed only the focused Python GUI assertion; a checksum check proved that same product binary was used.
+- **Real GUI:** focused F04 mouse click, sidebar scroll, keyboard HOME/DOWN, tab/pane route and refreshed `Left` -> `Nested` root PASS. The full Release GUI regression also PASS (`gui-window-tabs`, `gui-shortcuts`, `gui-filter-preset`, `gui-folder-tree`, `gui-all`); full GUI stage finished exit 0 in 129.5s, process exited 0, protected six preferences kept identical hashes, owned synthetic fixtures removed, test checkout clean.
+- **Actual pixels / VISUAL ACCEPTANCE: PASS (96 DPI only):** directly reviewed matched Light/Dark actual WinUI screenshots, 960x519, synthetic `Left/Nested`, same owned app geometry. Tree labels, chevrons, two file panes, alignment, focus/selection and theme contrast were readable without material clipping/overlap. Final full-GUI capture SHA-256: Light `5f235a81cce455c4766b88a9ddaa47abc3ce0a116ac89c4d5fa34c610c7cbb8c`; Dark `8d17a03b404e9902dcf8cfcfcf8d9e1475274d6099eebe25dfd421d1774344b2`. The two files were rehashed against the run's private `f04-pair-manifest.json` (DPI 96, 960x519). These test-owned local images were not published in source control.
+- **Evidence limits:** this is pre-main exact-source ordinary-Windows-user acceptance plus verified merge ancestry, not a new central CI claim for the merge SHA. Actual Windows 125%/150%/200% display scale, spoken Narrator output, F04 active High Contrast, broader device/provider cases, signed installer, and public distribution remain separate OPEN gates. The earlier dated F04 'pending' entries below are historical checkpoints, not the current result.
+
+
 
 ## 2026-10-18 F04 mouse+keyboard and full GUI accepted; pixel capture pending
 
