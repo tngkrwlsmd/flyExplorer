@@ -87,8 +87,8 @@ def run(*, win, element, safe_click, eventually, left, right):
     before = label.rectangle()
     visible_window = app.rectangle()
     label_y = (before.top + before.bottom) // 2
-    if not has_point and not (
-            visible_window.top + 115 < label_y < visible_window.bottom - 45):
+    if not (visible_window.top + 115 < label_y <
+            visible_window.bottom - 45):
         # Scroll the app-owned navigation sidebar (not the desktop or an
         # arbitrary element) when the nested node remains out of view.
         user = ctypes.windll.user32
