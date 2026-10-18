@@ -16,6 +16,13 @@ product state use CURRENT_STATUS.md.
 
 이 문서는 확정된 오류를 단순 수정으로 끝내지 않고, 다음 진단을 빠르게 하고 같은 계열의 결함을 사전에 막기 위한 프로젝트 기록이다.
 
+## 2026-10-18 — M26 owned GUI result transport obscured first failure
+
+- On an exact previously accepted product binary (source `0d10b1b6`, exe SHA-256 `300eeb16f86bba4dd47f92bd36ee073116f4bce371e4d3f6da54e5a86589db17`), the optional 96-DPI owned accessibility GUI test was invoked through temporary user-session scheduled tasks. Runs [#39102240993](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39102240993) and [#39102419752](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39102419752) failed in the result-envelope handler (the second produced 236053 bytes where only bounded JSON was expected); [#39102607819](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39102607819) ended with user task exit 1 and no final evidence file. These runs do **not** prove any product UI defect.
+- **Evidence limitation:** the old runner used Windows PowerShell native output redirection under terminating-error semantics and deleted its raw log even when result publication failed. The exact first GUI failure or wrapper failure from those runs cannot be recovered from the retained synthetic fixture. [Read-only inventory #39103271352](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39103271352) found exactly one prior disposable fixture with test-owned source/config/temp dirs; the actual application and registered temporary task had already stopped.
+- **Prevention:** The central control-plane tracked worker now launches the verified Python fixture using `Start-Process` with separate bounded stdout/stderr logs, produces an atomic small JSON result only after child exit, and retains diagnostic stdout/stderr on failure. It refuses unexpected source hash, product hash, user session, output paths, collisions and leftover task ownership. The previously inventoried fixture is preserved without recursive cleanup.
+- **Successor evidence:** [Windows run #39103545858](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39103545858) **SUCCESS**, the same app binary and Python acceptance test (unchanged) produced all 7 expected markers and exit 0: 16 named controls at 960x634, 1100x680 and 1240x710; real Tab focus; 96 DPI/current High Contrast OFF; protected six user configurations unchanged. This supports **96-DPI M26 UIA/keyboard scoped PASS**, not a claim that the exact earlier failure's complete root cause was proven. 125/150/200% native scale, active F04/F05 High Contrast and spoken Narrator remain OPEN.
+
 ## 2026-10-17 — Isolated F05 build timeout caused by recursive ACL inheritance removal
 
 - Exact candidate `32cb338c`, branch-only Windows Release
