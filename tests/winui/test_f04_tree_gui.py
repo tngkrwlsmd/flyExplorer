@@ -84,7 +84,11 @@ def run(*, win, element, safe_click, eventually, left, right):
         print("F04_SCROLL_ITEM=UNAVAILABLE", type(error).__name__, flush=True)
 
     click_point, has_point = row.element_info.element.GetClickablePoint()
-    if not has_point:
+    before = label.rectangle()
+    visible_window = app.rectangle()
+    label_y = (before.top + before.bottom) // 2
+    if not has_point and not (
+            visible_window.top + 115 < label_y < visible_window.bottom - 45):
         # Scroll the app-owned navigation sidebar (not the desktop or an
         # arbitrary element) when the nested node remains out of view.
         user = ctypes.windll.user32
