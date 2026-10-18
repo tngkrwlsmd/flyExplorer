@@ -196,7 +196,7 @@ def execute(label, command, timeout, env, tag):
             if re.search(
                 r"error C\d+|error LNK\d+|error MSB\d+|fatal error|"
                 r"AssertionError:|RuntimeError:|ElementNotFoundError:|"
-                r"TimeoutError|^FAIL:|^ERROR:",
+                r"TimeoutError|TypeError:|AttributeError:|COMError:|^FAIL:|^ERROR:",
                 line,
             )
         ),
