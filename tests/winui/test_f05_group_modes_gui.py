@@ -216,6 +216,128 @@ def run(*, win, element, safe_click, focus, eventually, left, right):
         assert heading(".md") is None
 
     screenshot("before")
+    if os.environ.get("FLY_F05_FULL_KEYBOARD_ONLY") == "YES":
+        # This dedicated path does not invoke or click View commands.
+        # UIA focus acquisition establishes the known starting control;
+        # all menu travel, activation, grouping and disclosure use real keys.
+        assert not capture, "F05 keyboard-only fixture cannot capture screens"
+        assert os.environ.get("FLY_F05_VISUAL_GROUP_MODE_ONLY") is None
+        def mode_by_keys(mode):
+            focus()
+            trigger = element("ViewButton")
+            trigger.set_focus()
+            assert owned_foreground(), "Refusing F05 View keys outside owned app"
+            assert trigger.has_keyboard_focus()
+            keyboard.send_keys("{SPACE}")
+            eventually(lambda: live_menu(MODE_IDS[mode]),
+                       "F05 keyboard-opened View menu missing " + mode, 9)
+            focused = False
+            for _ in range(18):
+                item = live_menu(MODE_IDS[mode])
+                if item is not None and item.has_keyboard_focus():
+                    focused = True
+                    break
+                assert owned_foreground(), "F05 View menu lost owned foreground"
+                keyboard.send_keys("{DOWN}")
+            assert focused, "F05 " + mode + " not reachable by keyboard arrows"
+            keyboard.send_keys("{ENTER}")
+            print("F05_KEYBOARD_MENU_ARROW_ENTER=" + mode + "=PASS", flush=True)
+
+        modes = (
+            ("Name", ("A–F", "M–R", "S–Z", "가–힣")),
+            ("Size", ("10 KB 미만", "10 KB–1 MB", "1–100 MB")),
+            ("Month", ("2026년 7월", "2026년 8월", "2026년 9월")),
+            ("Type", (".txt", ".md", ".log")),
+        )
+        for mode, titles in modes:
+            mode_by_keys(mode)
+            eventually(lambda: all(heading(t) is not None for t in titles),
+                       "F05 keyboard selection failed: " + mode, 13)
+            assert file_row("Mango-medium.md") is not None
+            print("F05_KEYBOARD_MODE=" + mode + "=PASS", flush=True)
+
+        md = eventually(lambda: heading(".md"),
+                        "F05 physical markdown disclosure missing", 9)
+        focus()
+        md.set_focus()
+        assert owned_foreground() and md.has_keyboard_focus()
+        keyboard.send_keys("{SPACE}")
+        eventually(lambda: file_row("Mango-medium.md") is None,
+                   "F05 keyboard Space did not collapse group", 9)
+        print("F05_KEYBOARD_DISCLOSURE_SPACE=PASS", flush=True)
+
+        md = eventually(lambda: heading(".md"),
+                        "F05 collapsed heading missing", 9)
+        md.set_focus()
+        assert owned_foreground() and md.has_keyboard_focus()
+        keyboard.send_keys("{ENTER}")
+        eventually(lambda: file_row("Mango-medium.md") is not None,
+                   "F05 keyboard Enter did not re-expand group", 9)
+        print("F05_KEYBOARD_DISCLOSURE_ENTER=PASS", flush=True)
+
+        # Tab independence must survive keyboard-only create, selection and close.
+        md = eventually(lambda: heading(".md"),
+                        "F05 disclosure missing before keyboard tab switch", 8)
+        md.set_focus()
+        assert owned_foreground() and md.has_keyboard_focus()
+        keyboard.send_keys("{SPACE}")
+        eventually(lambda: file_row("Mango-medium.md") is None,
+                   "F05 pre-switch collapse did not apply", 8)
+
+        def left_tabs():
+            tabs = [p for p in element("LeftTabs").descendants()
+                    if p.element_info.control_type == "TabItem"]
+            assert all(p.element_info.process_id == process_id for p in tabs)
+            return tabs
+
+        initial_count = len(left_tabs())
+        assert 1 <= initial_count < 32
+        create = element("NewTabButton")
+        focus()
+        create.set_focus()
+        assert owned_foreground() and create.has_keyboard_focus()
+        keyboard.send_keys("{ENTER}")
+        eventually(lambda: len(left_tabs()) == initial_count + 1,
+                   "F05 keyboard did not create new tab", 10)
+        eventually(lambda: file_row("Mango-medium.md") is not None and
+                   heading(".md") is None,
+                   "New F05 keyboard tab inherited grouped content", 14)
+        print("F05_KEYBOARD_NEW_TAB_UNGROUPED=PASS", flush=True)
+
+        first = left_tabs()[0]
+        first.set_focus()
+        assert owned_foreground() and first.has_keyboard_focus()
+        keyboard.send_keys("{SPACE}")
+        eventually(lambda: heading(".md") is not None and
+                   file_row("Mango-medium.md") is None,
+                   "Keyboard tab switching lost collapsed state", 14)
+        print("F05_KEYBOARD_TAB_RESTORE_COLLAPSE=PASS", flush=True)
+
+        latest = left_tabs()[-1]
+        latest.set_focus()
+        assert owned_foreground() and latest.has_keyboard_focus()
+        keyboard.send_keys("{SPACE}")
+        eventually(lambda: heading(".md") is None and
+                   file_row("Mango-medium.md") is not None,
+                   "Keyboard tab return did not restore new tab", 11)
+        close = element("CloseTabButton")
+        close.set_focus()
+        assert owned_foreground() and close.has_keyboard_focus()
+        keyboard.send_keys("{ENTER}")
+        eventually(lambda: len(left_tabs()) == initial_count and
+                   heading(".md") is not None and
+                   file_row("Mango-medium.md") is None,
+                   "Keyboard tab close corrupted grouped original", 13)
+        print("F05_KEYBOARD_TAB_CLOSE_PRESERVES_GROUP=PASS", flush=True)
+
+        # Toggling the current mode via the same real keys switches grouping off.
+        mode_by_keys("Type")
+        eventually(lambda: heading(".md") is None and
+                   file_row("Mango-medium.md") is not None,
+                   "F05 keyboard Type toggle-off did not restore normal rows", 12)
+        print("F05_KEYBOARD_MODE_TOGGLE_OFF=PASS", flush=True)
+        return
+
     if os.environ.get("FLY_F05_KEYBOARD_DISCLOSURE_ONLY") == "YES":
         # Physical keyboard input is separate from the app-side visual fixture.
         assert not capture, "Keyboard disclosure is a separate GUI gate"

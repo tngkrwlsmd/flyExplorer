@@ -53,6 +53,11 @@ if os.environ.get("FLY_F05_SCREEN_WINDOW_CAPTURE")=="YES":
 if os.environ.get("FLY_F05_KEYBOARD_DISCLOSURE_ONLY")=="YES":
  assert os.environ.get("FLY_F05_MODES_ONLY")=="YES"
  assert os.environ.get("FLY_F05_VISUAL_CAPTURE")!="YES"
+if os.environ.get("FLY_F05_FULL_KEYBOARD_ONLY")=="YES":
+ assert os.environ.get("FLY_F05_MODES_ONLY")=="YES"
+ assert os.environ.get("FLY_F05_VISUAL_CAPTURE")!="YES"
+ assert os.environ.get("FLY_F05_KEYBOARD_DISCLOSURE_ONLY")!="YES"
+ assert os.environ.get("FLY_F05_SCREEN_PHYSICAL_TYPE_ONLY")!="YES"
 if os.environ.get("FLY_F05_MODES_ONLY")=="YES":
  for name,length,month in (
      ("Alpha-small.txt",20,7),
@@ -285,6 +290,8 @@ try:
    print("F05_PHYSICAL_TYPE_DIAGNOSTIC_GUI_PASS=True",flush=True)
   elif os.environ.get("FLY_F05_KEYBOARD_DISCLOSURE_ONLY")=="YES":
    print("F05_KEYBOARD_DISCLOSURE_GUI_PASS=True",flush=True)
+  elif os.environ.get("FLY_F05_FULL_KEYBOARD_ONLY")=="YES":
+   print("F05_FULL_KEYBOARD_GROUPING_GUI_PASS=True",flush=True)
   elif os.environ.get("FLY_F05_VISUAL_BASELINE_ONLY")=="YES":
    assert os.environ.get("FLY_F05_VISUAL_CAPTURE")=="YES"
    print("F05_VISUAL_BASELINE_GUI_PASS=True",flush=True)
