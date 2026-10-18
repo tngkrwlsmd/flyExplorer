@@ -81,6 +81,12 @@ class F04SidebarTreeContracts(unittest.TestCase):
         self.assertIn('capture("expanded-scrolled")', probe)
         self.assertIn('VISIBLE_TEXT_CENTER', probe)
         self.assertIn('F04_MOUSE_TARGET=', probe)
+        self.assertIn('safe_click(element("UpButton"))', probe)
+        self.assertIn('Refuse keyboard input: foreground is not test-owned app', probe)
+        self.assertIn('tree.type_keys("{HOME}", set_foreground=False)', probe)
+        self.assertIn('tree.type_keys("{DOWN}", set_foreground=False)', probe)
+        self.assertIn('F04_TREE_PHYSICAL_KEYBOARD_NAVIGATION=PASS', probe)
+        self.assertIn('capture("keyboard-navigated")', probe)
         self.assertNotIn('safe_click(row)\n', probe)
         self.assertIn('def safe_click(target, coords=None):',
                       read("tests/winui/test_shell_gui.py"))
