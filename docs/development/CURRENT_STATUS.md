@@ -1,5 +1,13 @@
 # flyExplorer current status — F05 keyboard validation checkpoint 2026-10-17
 
+## 2026-10-18 F04-B physical mouse acceptance: test item was off-screen
+
+- Central [GUI #39087700903](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39087700903) **FAIL** at the F04 GUI gate (first relevant error: `F04 TreeItem has no UIA clickable point`). Runner, policy, source, x64 Release and window-tabs/shortcuts/filter GUI were all PASS; artifact upload quota error was additional, not the root cause.
+- Actual **test-owned 960×519 Windows app screenshot** preserved in `ci-evidence/547d72815d244a25a7e590d6d4a41dfe/application.png` was independently inspected: the expanded sidebar TreeView root was at the bottom edge and `Nested` was off-screen below it. Prior UIA selection could navigate while physical center-click could not reach the invisible child. This proves a missing sidebar scroll in the F04 harness, not necessarily a product selection bug.
+- New focused test requests UIA ScrollItem visibility, physically scrolls the **owned** sidebar if necessary, requires the `Nested` label to be inside the visible window and TreeItem bounds, and only then sends real mouse input. A scrolled-expanded screenshot is added. UIA `Select()` remains diagnostic and cannot pass mouse acceptance.
+- Exact successor SHA source/GUI and independent Light/Dark pixel review, keyboard input and OS DPI are still **OPEN**. Do not repeat accepted older Release/GUI areas to debug the scrolling harness except where the central fixed full-GUI workflow requires them.
+
+
 ## 2026-10-17 F04-B right-pane test isolation after second GUI failure
 
 - [Central GUI #39033656455](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39033656455) policy/source/Release PASS; functional GUI FAIL before F04 tree interaction at the common Left startup address gate. Retained UIA evidence showed an empty Left list/address and a populated Right list for the owned fixture; normal app exit and owned fixture cleanup confirmed.
