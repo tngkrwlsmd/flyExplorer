@@ -76,9 +76,9 @@ def run(*, win, element, safe_click, eventually, left, right):
     # A TreeItem's bounding-box centre can land on the expander or padding.
     # UI Automation provides an actual screen-space clickable point for
     # a tree item. Use that point for REAL mouse input, never Select() as PASS.
-    click_point = wintypes.POINT()
-    has_point = row.element_info.element.GetClickablePoint(
-        ctypes.byref(click_point))
+    # comtypes marshals [out] and [out, retval] to Python return
+    # values; unlike native C++, callers pass no pointer arguments.
+    click_point, has_point = row.element_info.element.GetClickablePoint()
     assert has_point, "F04 TreeItem has no UIA clickable point"
     bounds = row.rectangle()
     window_bounds = app.rectangle()
