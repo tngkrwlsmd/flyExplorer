@@ -1,4 +1,13 @@
-# flyExplorer current status — F04 96-DPI visual acceptance 2026-10-18
+# flyExplorer current status — F04/F05 accessibility environment inventory 2026-10-18
+
+## 2026-10-18 F04/F05 accessibility and actual DPI readiness — read-only inventory
+
+- **Executed:** [Windows control-plane Direct Remote Shell #39101601402](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39101601402) **SUCCESS**, from the tracked read-only `scripts/tasks/Get-FlyExplorerA11yReadiness.ps1`. The task ran as the authorized controller in Windows Session 0; it did not launch the product or change Windows/global user settings.
+- **Observed only:** one Explorer interactive session; controller-reported video modes 1024x768 and 2560x1440; two monitor devices reported OK; zero active Narrator processes and zero sound devices reported OK to the service. The video mode list does not prove which resolution/DPI belongs to the active app window; the audio inventory does not prove absence of a user-session playback endpoint.
+- **Unverified and still OPEN:** actual WinUI `GetDpiForWindow` at OS 125%/150%/200% scale; F04/F05 composited high-contrast rendering; spoken Narrator phrases and reading/focus order. Do not infer PASS from UIA AutomationProperties, physical keyboard acceptance, DWM 96-DPI screenshots, or the SYSTEM/Session 0 hardware inventory. The existing `tests/winui/manual_accessibility_matrix.py` needs a dedicated genuine scaled interactive Windows environment and human Narrator/IME confirmation. Do not activate global scale/contrast/Narrator in the shared VM without an explicit protected baseline/restore and isolated acceptance scope.
+- **Completed earlier:** the source-only and 96-DPI Light/Dark F04 checks below remain accepted; F05 buttons already publish mode/action names and its scoped physical keyboard disclosure passed on its recorded revision. No new F04/F05 product build or GUI/UIA test was executed in this environment-inventory step.
+
+
 
 ## 2026-10-18 F04 narrow TreeView root label — accepted on main
 
