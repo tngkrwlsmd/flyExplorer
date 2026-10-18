@@ -216,6 +216,73 @@ def run(*, win, element, safe_click, focus, eventually, left, right):
         assert heading(".md") is None
 
     screenshot("before")
+    if os.environ.get("FLY_F05_FULL_KEYBOARD_ONLY") == "YES":
+        # This dedicated path does not invoke or click View commands.
+        # UIA focus acquisition establishes the known starting control;
+        # all menu travel, activation, grouping and disclosure use real keys.
+        assert not capture, "F05 keyboard-only fixture cannot capture screens"
+        assert os.environ.get("FLY_F05_VISUAL_GROUP_MODE_ONLY") is None
+        def mode_by_keys(mode):
+            focus()
+            trigger = element("ViewButton")
+            trigger.set_focus()
+            assert owned_foreground(), "Refusing F05 View keys outside owned app"
+            assert trigger.element_info.has_keyboard_focus
+            keyboard.send_keys("{SPACE}")
+            eventually(lambda: live_menu(MODE_IDS[mode]),
+                       "F05 keyboard-opened View menu missing " + mode, 9)
+            focused = False
+            for _ in range(18):
+                item = live_menu(MODE_IDS[mode])
+                if item is not None and item.element_info.has_keyboard_focus:
+                    focused = True
+                    break
+                assert owned_foreground(), "F05 View menu lost owned foreground"
+                keyboard.send_keys("{DOWN}")
+            assert focused, "F05 " + mode + " not reachable by keyboard arrows"
+            keyboard.send_keys("{ENTER}")
+            print("F05_KEYBOARD_MENU_ARROW_ENTER=" + mode + "=PASS", flush=True)
+
+        modes = (
+            ("Name", ("A–F", "M–R", "S–Z", "가–힣")),
+            ("Size", ("10 KB 미만", "10 KB–1 MB", "1–100 MB")),
+            ("Month", ("2026년 7월", "2026년 8월", "2026년 9월")),
+            ("Type", (".txt", ".md", ".log")),
+        )
+        for mode, titles in modes:
+            mode_by_keys(mode)
+            eventually(lambda: all(heading(t) is not None for t in titles),
+                       "F05 keyboard selection failed: " + mode, 13)
+            assert file_row("Mango-medium.md") is not None
+            print("F05_KEYBOARD_MODE=" + mode + "=PASS", flush=True)
+
+        md = eventually(lambda: heading(".md"),
+                        "F05 physical markdown disclosure missing", 9)
+        focus()
+        md.set_focus()
+        assert owned_foreground() and md.element_info.has_keyboard_focus
+        keyboard.send_keys("{SPACE}")
+        eventually(lambda: file_row("Mango-medium.md") is None,
+                   "F05 keyboard Space did not collapse group", 9)
+        print("F05_KEYBOARD_DISCLOSURE_SPACE=PASS", flush=True)
+
+        md = eventually(lambda: heading(".md"),
+                        "F05 collapsed heading missing", 9)
+        md.set_focus()
+        assert owned_foreground() and md.element_info.has_keyboard_focus
+        keyboard.send_keys("{ENTER}")
+        eventually(lambda: file_row("Mango-medium.md") is not None,
+                   "F05 keyboard Enter did not re-expand group", 9)
+        print("F05_KEYBOARD_DISCLOSURE_ENTER=PASS", flush=True)
+
+        # Toggling the current mode via the same real keys switches grouping off.
+        mode_by_keys("Type")
+        eventually(lambda: heading(".md") is None and
+                   file_row("Mango-medium.md") is not None,
+                   "F05 keyboard Type toggle-off did not restore normal rows", 12)
+        print("F05_KEYBOARD_MODE_TOGGLE_OFF=PASS", flush=True)
+        return
+
     if os.environ.get("FLY_F05_KEYBOARD_DISCLOSURE_ONLY") == "YES":
         # Physical keyboard input is separate from the app-side visual fixture.
         assert not capture, "Keyboard disclosure is a separate GUI gate"
