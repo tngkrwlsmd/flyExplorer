@@ -227,14 +227,14 @@ def run(*, win, element, safe_click, focus, eventually, left, right):
             trigger = element("ViewButton")
             trigger.set_focus()
             assert owned_foreground(), "Refusing F05 View keys outside owned app"
-            assert trigger.element_info.has_keyboard_focus
+            assert trigger.has_keyboard_focus()
             keyboard.send_keys("{SPACE}")
             eventually(lambda: live_menu(MODE_IDS[mode]),
                        "F05 keyboard-opened View menu missing " + mode, 9)
             focused = False
             for _ in range(18):
                 item = live_menu(MODE_IDS[mode])
-                if item is not None and item.element_info.has_keyboard_focus:
+                if item is not None and item.has_keyboard_focus():
                     focused = True
                     break
                 assert owned_foreground(), "F05 View menu lost owned foreground"
@@ -260,7 +260,7 @@ def run(*, win, element, safe_click, focus, eventually, left, right):
                         "F05 physical markdown disclosure missing", 9)
         focus()
         md.set_focus()
-        assert owned_foreground() and md.element_info.has_keyboard_focus
+        assert owned_foreground() and md.has_keyboard_focus()
         keyboard.send_keys("{SPACE}")
         eventually(lambda: file_row("Mango-medium.md") is None,
                    "F05 keyboard Space did not collapse group", 9)
@@ -269,7 +269,7 @@ def run(*, win, element, safe_click, focus, eventually, left, right):
         md = eventually(lambda: heading(".md"),
                         "F05 collapsed heading missing", 9)
         md.set_focus()
-        assert owned_foreground() and md.element_info.has_keyboard_focus
+        assert owned_foreground() and md.has_keyboard_focus()
         keyboard.send_keys("{ENTER}")
         eventually(lambda: file_row("Mango-medium.md") is not None,
                    "F05 keyboard Enter did not re-expand group", 9)
