@@ -1,4 +1,46 @@
-# flyExplorer current status — R1 sort-menu scoped GUI/visual PASS 2026-10-19
+# flyExplorer current status — L08 cursor validation OPEN, 2026-10-19
+
+## 2026-10-19 L08 Details column cursor and drag — scoped Windows evidence
+
+- Latest product `main` remained `099cfb7125f98ca57df977861dba2a8bd0c27c77`
+  during this investigation. The exact-source isolated canonical Release build
+  **PASS** [#39221721375](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39221721375),
+  exe SHA-256 `9a9056d94c18d6f662a7b8991f2704d877ae0bee746b9ece6b4e037bbdb9eaf6`.
+  The first central controller attempt [#39221444117](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39221444117)
+  failed before product build on an absent `solution` registry property.
+- Actual interactive desktop session 1, disposable source-owned folder: the
+  checked-in focused L08 GUI raised `AssertionError` before dragging at
+  `LeftNameColumnResizeThumb did not display the horizontal resize cursor`.
+  The ad hoc worker incorrectly reported child exit 0 and the outer Actions run
+  [#39222335628](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39222335628)
+  was SUCCESS. **This is NOT GUI PASS:** Python traceback and missing required
+  test markers override the faulty worker exit oracle.
+- Cursor-only diagnostic [#39223454976](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39223454976)
+  confirmed the native cursor handle `65539` equaled the active Windows stock
+  **arrow** and differed from stock horizontal resize `65553` while hovering
+  the named L08 handle. An intentionally bypassed cursor assertion
+  [#39223067075](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39223067075)
+  independently observed actual mouse press, three progressing column-boundary
+  moves and `RESIZE_MOVE` markers. These are **diagnostics**, not acceptance.
+- One **uncommitted, test-owned** candidate changed only
+  `DetailColumnHandle.cpp` to update the native cursor on pointer events.
+  The first build hit a missing `Microsoft.UI.Xaml.Input.h` projection,
+  then after that header was added the isolated Release build **PASS**
+  [#39224349062](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39224349062);
+  candidate EXE SHA-256 `df5e964b8e60a064843f9251642711c5c067ca232e5c688b406ec7bcb52b076c`.
+  Its strict focused GUI [#39224659050](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39224659050)
+  again **FAILED** at the actual horizontal cursor assertion. The corrected
+  worker rejected the missing required markers instead of claiming success.
+  The candidate **was not pushed to flyExplorer**.
+- **L08 status: PARTIAL FUNCTIONAL DIAGNOSTIC / CURSOR NOT ACCEPTED /
+  INDEPENDENT PIXEL REVIEW NOT PERFORMED.** Before another attempt identify
+  why the WinUI handle's pointer cursor remains the arrow; do not blindly
+  repeat either build or GUI. Other pane, narrow layout and visual claims
+  are outside these scoped diagnostics. The actual 125/150/200% DPI,
+  F04/F05 High Contrast/Narrator and real USB/SMB/UNC tracks remain
+  **USER-EXCLUDED** and must not be revived as L08 prerequisites.
+
+
 
 ## 2026-10-19 L07 bounded filename cells — local scoped acceptance
 
