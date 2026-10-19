@@ -98,6 +98,13 @@ def main(config="Release"):
                         "LeftDateSortButton"):
             eventually(lambda a=auto_id:element(a).exists(timeout=.2) and
                        element(a).is_visible(),auto_id+" not visible",10)
+        # Capture only while the exact owned app window is in the foreground.
+        user32=ctypes.windll.user32
+        user32.GetForegroundWindow.restype=wintypes.HWND
+        def owned_foreground():
+            return int(user32.GetForegroundWindow() or 0)==int(hwnd or 0)
+        window().set_focus()
+        eventually(owned_foreground,"owned window is not foreground for capture",3)
         rect=window().rectangle()
         before=root/"detail-columns-before.png"
         ImageGrab.grab(
@@ -178,6 +185,8 @@ def main(config="Release"):
         eventually(lambda:not horizontal_resize_cursor(),
                    "resize cursor remained outside the header",3)
 
+        window().set_focus()
+        eventually(owned_foreground,"owned window is not foreground for final capture",3)
         rect=window().rectangle()
         after=root/"detail-columns-after.png"
         ImageGrab.grab(
