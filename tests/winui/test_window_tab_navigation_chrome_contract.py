@@ -20,6 +20,12 @@ class WindowTabChromeContract(unittest.TestCase):
         self.assertIn('AutomationProperties.Name="오른쪽 폴더 탭"',xaml)
         self.assertIn('AutomationProperties.Name="창 작업 공간 탭"',header_xaml)
         self.assertIn('L"작업 공간 창 탭 "+hstring(labels[i])',header_cpp)
+        main_cpp=(ROOT/"app"/"winui"/"MainWindow.xaml.cpp").read_text(encoding="utf-8-sig")
+        pane_tabs=main_cpp.split("void MainWindow::RefreshTabs(int side)",1)[1].split(
+            "void MainWindow::ClearFileDetails(int side)",1)[0]
+        self.assertIn('side==0?L"왼쪽 폴더 탭 ":L"오른쪽 폴더 탭 "',pane_tabs)
+        self.assertIn("AutomationProperties::SetName(",pane_tabs)
+        self.assertIn("view.TabItems().Append(item)",pane_tabs)
 
     def test_navigation_chrome_recomputes_from_active_history(self):
         source=compact((ROOT/"app/winui/MainWindow.xaml.cpp").read_text(encoding="utf-8"))
