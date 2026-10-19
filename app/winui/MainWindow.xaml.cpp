@@ -234,12 +234,14 @@ namespace winrt::FlyExplorer::implementation
                             ui->ActivatePane(other);
                             auto otherView=other==0?
                                 ui->LeftFiles():ui->RightFiles();
-                            otherView.Focus(
+                            const bool focused=otherView.Focus(
                                 Microsoft::UI::Xaml::FocusState::Keyboard);
                             ui->StatusText().Text(
-                                other==0?
-                                L"왼쪽 창으로 포커스를 이동했습니다.":
-                                L"오른쪽 창으로 포커스를 이동했습니다.");
+                                focused?
+                                    (other==0?
+                                        L"왼쪽 창으로 포커스를 이동했습니다.":
+                                        L"오른쪽 창으로 포커스를 이동했습니다."):
+                                    L"선택한 패널의 파일 목록에 포커스를 이동할 수 없습니다.");
                             args.Handled(true);
                         }
                     }
