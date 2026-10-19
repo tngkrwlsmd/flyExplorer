@@ -24,6 +24,12 @@
   (`L08_PRECHECK_PYTHON_SYNTAX_PASS`)를 기록했다. GUI를 실행하지 않았고
   **제품 커서 동작/기능 GUI/시각 수용은 여전히 FAIL/NOT TESTED 범위 그대로**다.
   단일 Remote Shell 요청 슬롯은 완료 후 idle로 복원했다.
+- [`0d3f5f4`](https://github.com/tngkrwlsmd/flyExplorer/commit/0d3f5f455af7342349f9dca8bda3142af1aef607)는
+  hover 대상이 소유 앱 프로세스와 다를 경우 외부 창 제목을 수집하지 않도록
+  로그를 제한한다. 이 **최신 테스트 Blob**의 정확한 Windows Python 구문 검사는
+  [#39245014398](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39245014398)에서
+  `L08_CURRENT_SYNTAX_PASS`를 확인했다. GUI 및 제품 변경은 없음.
+  Remote Shell 요청 슬롯은 검증 후 다시 idle로 복원했다.
 - 다음 단계는 **허용된 실제 로그인 GUI 경로**에서 새 probe의 UIA hit target과
   실제 cursor 핸들 출력을 확인해, WinUI `ProtectedCursor`가 수평 핸들에
   적용되지 않는 원인이 hit-test 또는 메시지 전달 중 어디에 있는지 먼저
