@@ -1,4 +1,27 @@
-# flyExplorer current status — G06 pane-local TabViewItem names implemented, GUI pending (2026-10-19)
+# flyExplorer current status — G02/G06 Windows Release PASS; functional GUI pending (2026-10-19)
+
+## 2026-10-19 G02/G06 source contracts and exact Windows Release build — PASS
+
+- Exact tested product source: `11915f42bd6d85d2001653dba0a2aa30e0141532`.
+  A fresh **test-owned clean Windows clone** was checked for the exact main SHA.
+  [Central Windows run #39239758606](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39239758606)
+  reports `G02G06_SHORTCUT_CONTRACT_EXIT=0`, `G02G06_TABS_CONTRACT_EXIT=0`,
+  `G02G06_RELEASE_BUILD_EXIT=0` and `G02G06_SOURCE_AND_RELEASE_PASS`.
+  Candidate Release EXE SHA-256:
+  `967db8f70dce972274786c177753de1030d10c2908fb1fe6758fcd5f0292943b`.
+- The specific tested changes are F6 conditional focus feedback, dynamic
+  owning-pane names for per-pane `TabViewItem`, and context-dependent
+  left/right labels on folder-tab create/close buttons. No file operations,
+  tab commands, visual geometry, user settings or global OS configuration were
+  intentionally altered. Remote request slot restored to idle afterward.
+- **Acceptance limit:** these are **executed source contracts + actual Release
+  compile/link**, not live keyboard F6/Tab/Shift+Tab, UIA reading,
+  screenshots or visual acceptance. G02 complete keyboard traversal and G06
+  runtime UIA validation remain pending. G01 PaneTab sort GUI, L08 resize cursor
+  failure also remain open; do not claim either as PASS.
+- User-excluded actual 125%/150%/200% DPI, F04/F05 High Contrast/Narrator voice,
+  and real USB/SMB/UNC tests remain off the task list.
+
 
 ## 2026-10-19 G06 continued — actual owning-pane names on each folder tab and command
 
