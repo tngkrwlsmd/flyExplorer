@@ -4,6 +4,7 @@ from paths import APP, app_exe
 from uia_polling import wait_until
 from PIL import ImageGrab
 import ctypes,hashlib,os,shutil,subprocess,sys,tempfile,time
+from ctypes import wintypes
 import psutil
 from pywinauto import Desktop,mouse
 
@@ -13,6 +14,17 @@ LEGACY=("fxfile.conf","fxfile-main.conf","fxfile-toolbar.dat",
 
 def eventually(fn,label,seconds=12):
     return wait_until(fn, label, seconds=seconds, interval=.2)
+
+def horizontal_resize_cursor():
+    class CursorInfo(ctypes.Structure):
+        _fields_=[("cbSize",wintypes.DWORD),("flags",wintypes.DWORD),
+                  ("hCursor",wintypes.HANDLE),("position",wintypes.POINT)]
+    user=ctypes.windll.user32
+    user.LoadCursorW.argtypes=[wintypes.HINSTANCE,ctypes.c_void_p]
+    user.LoadCursorW.restype=wintypes.HANDLE
+    info=CursorInfo();info.cbSize=ctypes.sizeof(info)
+    if not user.GetCursorInfo(ctypes.byref(info)):raise ctypes.WinError()
+    return info.hCursor==user.LoadCursorW(None,32644) # IDC_SIZEWE
 
 def main(config="Release"):
     if os.name!="nt": return 2
@@ -108,7 +120,8 @@ def main(config="Release"):
                 except Exception as error:
                     return ("<uia-error>",type(error).__name__,"")
             mouse.move(coords=(x,y))
-            time.sleep(.12)
+            eventually(horizontal_resize_cursor,
+                       thumb_id+" did not display the horizontal resize cursor",3)
             print("COLUMN_RESIZE_HIT_BEFORE",thumb_id,hit_info(x,y),flush=True)
             mouse.press(button="left",coords=(x,y))
             print("COLUMN_RESIZE_BUTTON_AFTER_PRESS",
@@ -130,11 +143,28 @@ def main(config="Release"):
             eventually(lambda:element(next_header_id).rectangle().left>=start+12,
                        thumb_id+" drag did not resize the next column boundary",8)
             end=element(next_header_id).rectangle().left
+            eventually(horizontal_resize_cursor,
+                       thumb_id+" lost the resize cursor after release",3)
             print("COLUMN_RESIZE_DRAG_END",thumb_id,
                   "boundary",end,"delta",end-start,flush=True)
         drag_and_verify("LeftNameColumnResizeThumb","LeftTypeSortButton",40)
         drag_and_verify("LeftTypeColumnResizeThumb","LeftSizeSortButton",28)
         drag_and_verify("LeftSizeColumnResizeThumb","LeftDateSortButton",20)
+
+        # No artificial hold: motion shorter than the polling tick still commits.
+        thumb=element("LeftNameColumnResizeThumb").rectangle()
+        x=(thumb.left+thumb.right)//2;y=(thumb.top+thumb.bottom)//2
+        start=element("LeftTypeSortButton").rectangle().left
+        mouse.press(button="left",coords=(x,y))
+        try:mouse.move(coords=(x+24,y))
+        finally:mouse.release(button="left",coords=(x+24,y))
+        eventually(lambda:element("LeftTypeSortButton").rectangle().left>=start+12,
+                   "rapid resize lost its final movement",8)
+        eventually(horizontal_resize_cursor,"rapid resize lost its cursor",3)
+        body=element("LeftFiles").rectangle()
+        mouse.move(coords=(body.left+30,body.top+40))
+        eventually(lambda:not horizontal_resize_cursor(),
+                   "resize cursor remained outside the header",3)
 
         rect=window().rectangle()
         after=root/"detail-columns-after.png"

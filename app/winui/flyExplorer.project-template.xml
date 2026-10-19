@@ -115,6 +115,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="pch.h" />
+    <ClInclude Include="DetailColumnHandle.h" />
     <ClInclude Include="product_version.h" />
     <ClInclude Include="..\..\src\base\shell_navigation_core.h" />
     <ClInclude Include="App.xaml.h">
@@ -179,6 +180,7 @@
     <Page Include="StatusFooter.xaml" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="DetailColumnHandle.cpp" />
     <ClCompile Include="pch.cpp">
       <PrecompiledHeader>Create</PrecompiledHeader>
     </ClCompile>
@@ -340,6 +342,7 @@
     <ClCompile Include="$(GeneratedFilesDir)module.g.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <Midl Include="DetailColumnHandle.idl" />
     <Midl Include="ShellHeader.idl" />
     <Midl Include="NavigationSidebar.idl" />
     <Midl Include="FileToolbar.idl" />

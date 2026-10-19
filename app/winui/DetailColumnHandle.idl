@@ -1,0 +1,8 @@
+namespace FlyExplorer
+{
+    [default_interface]
+    runtimeclass DetailColumnHandle : Microsoft.UI.Xaml.Controls.Grid
+    {
+        DetailColumnHandle();
+    }
+}

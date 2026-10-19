@@ -1,4 +1,5 @@
 #pragma once
+#include "DetailColumnHandle.h"
 #include "MainWindow.g.h"
 #include "ShellHeader.xaml.h"
 #include "NavigationSidebar.xaml.h"
@@ -140,6 +141,7 @@ namespace winrt::FlyExplorer::implementation
         void OnDetailColumnResizePointerPressed(
             IInspectable const&,
             Microsoft::UI::Xaml::Input::PointerRoutedEventArgs const&);
+        void ApplyDetailColumnPointerPosition();
         void OnDetailColumnResizePointerMoved(
             IInspectable const&,
             Microsoft::UI::Xaml::Input::PointerRoutedEventArgs const&);

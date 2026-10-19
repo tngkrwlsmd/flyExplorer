@@ -8,6 +8,7 @@
 #include "MainWindow.g.cpp"
 #endif
 #include <shellapi.h>
+#include <microsoft.ui.xaml.window.h>
 #include "../../src/base/file_operation_core.h"
 #include "../../src/base/shell_isolation_wire.h"
 #include "../../src/base/shell_transfer_core.h"
@@ -1455,12 +1456,13 @@ namespace winrt::FlyExplorer::implementation
         auto hitThumb=[&](
             int candidateSide,
             int candidateColumn,
-            Microsoft::UI::Xaml::Controls::Primitives::Thumb const& thumb){
+            Microsoft::UI::Xaml::FrameworkElement const& thumb){
             if(thumb.Visibility()!=Visibility::Visible||
                thumb.ActualWidth()<=0.0||thumb.ActualHeight()<=0.0)return false;
             const auto origin=thumb.TransformToVisual(RootShell()).TransformPoint(
                 Windows::Foundation::Point{0.0f,0.0f});
-            constexpr double pad=2.0;
+            // Match the visible Thumb's hit rectangle and its fixed cursor.
+            constexpr double pad=0.0;
             if(position.X<origin.X-pad||
                position.X>origin.X+thumb.ActualWidth()+pad||
                position.Y<origin.Y-pad||
@@ -1481,16 +1483,23 @@ namespace winrt::FlyExplorer::implementation
         if(diagnostic)StatusText().Text(
             hstring(L"RESIZE_HIT "+std::to_wstring(side)+L","+
                 std::to_wstring(column)));
-        POINT cursor{};
-        if(!::GetCursorPos(&cursor)){
-            if(diagnostic)StatusText().Text(L"RESIZE_CURSOR_FAIL");
-            return;
-        }
+        // Input may already be queued through release when this event runs.
+        // Anchor the drag to the press event, not the OS cursor's later position.
+        HWND window{};
+        if(FAILED(get_strong().as<::IWindowNative>()->get_WindowHandle(&window)))return;
+        POINT clientOrigin{};
+        if(!::ClientToScreen(window,&clientOrigin))return;
+        double raster=1.0;
+        if(auto xr=RootShell().XamlRoot())raster=xr.RasterizationScale();
+        if(raster<=0.0)raster=1.0;
+        const auto rootOrigin=RootShell().TransformToVisual(
+            Content().as<UIElement>()).TransformPoint({0.0f,0.0f});
         if(ActiveWindowTab().model.activePane!=side)ActivatePane(side);
         mDetailColumnPointerDrag=true;
         mDetailColumnPointerSide=side;
         mDetailColumnPointerColumn=column;
-        mDetailColumnPointerLastScreenX=cursor.x;
+        mDetailColumnPointerLastScreenX=clientOrigin.x+static_cast<LONG>(
+            std::lround((rootOrigin.X+position.X)*raster));
         if(mDetailColumnDragTimer)mDetailColumnDragTimer.Stop();
         auto timer=DispatcherQueue().CreateTimer();
         mDetailColumnDragTimer=timer;
@@ -1504,44 +1513,50 @@ namespace winrt::FlyExplorer::implementation
                 return;
             }
             if((::GetAsyncKeyState(VK_LBUTTON)&0x8000)==0){
+                ui->ApplyDetailColumnPointerPosition();
                 ui->mDetailColumnPointerDrag=false;
                 ui->mDetailColumnPointerSide=-1;
                 ui->mDetailColumnPointerColumn=-1;
                 if(ui->mDetailColumnDragTimer)ui->mDetailColumnDragTimer.Stop();
                 return;
             }
-            POINT next{};
-            if(!::GetCursorPos(&next))return;
-            double raster=1.0;
-            try{
-                if(auto xr=ui->RootShell().XamlRoot())
-                    raster=xr.RasterizationScale();
-            }catch(...){raster=1.0;}
-            if(raster<=0.0)raster=1.0;
-            const auto delta=
-                static_cast<double>(next.x-ui->mDetailColumnPointerLastScreenX)/
-                raster;
-            if(std::abs(delta)<0.25)return;
-            ui->mDetailColumnPointerLastScreenX=next.x;
-            auto& state=ui->ActiveWindowTab().fileLists[
-                ui->mDetailColumnPointerSide];
-            if(ui->mDetailColumnPointerColumn==0)
-                state.nameColumnWidth=(std::clamp)(
-                    state.nameColumnWidth+delta,120.0,360.0);
-            else if(ui->mDetailColumnPointerColumn==1)
-                state.typeColumnWidth=(std::clamp)(
-                    state.typeColumnWidth+delta,96.0,320.0);
-            else if(ui->mDetailColumnPointerColumn==2)
-                state.sizeColumnWidth=(std::clamp)(
-                    state.sizeColumnWidth+delta,64.0,180.0);
-            ui->ApplyDetailColumnLayout(ui->mDetailColumnPointerSide);
-            if(::GetEnvironmentVariableW(
-                   L"FLYEXPLORER_COLUMN_RESIZE_DIAGNOSTIC",nullptr,0)>0)
-                ui->StatusText().Text(
-                    hstring(L"RESIZE_MOVE "+std::to_wstring(delta)));
+            ui->ApplyDetailColumnPointerPosition();
         });
         timer.Start();
         args.Handled(true);
+    }
+    void MainWindow::ApplyDetailColumnPointerPosition()
+    {
+        if(!mDetailColumnPointerDrag)return;
+        POINT next{};
+        if(!::GetCursorPos(&next))return;
+        double raster=1.0;
+        try{
+            if(auto xr=RootShell().XamlRoot())
+                raster=xr.RasterizationScale();
+        }catch(...){raster=1.0;}
+        if(raster<=0.0)raster=1.0;
+        const auto delta=
+            static_cast<double>(next.x-mDetailColumnPointerLastScreenX)/
+            raster;
+        if(std::abs(delta)<0.25)return;
+        mDetailColumnPointerLastScreenX=next.x;
+        auto& state=ActiveWindowTab().fileLists[
+            mDetailColumnPointerSide];
+        if(mDetailColumnPointerColumn==0)
+            state.nameColumnWidth=(std::clamp)(
+                state.nameColumnWidth+delta,120.0,360.0);
+        else if(mDetailColumnPointerColumn==1)
+            state.typeColumnWidth=(std::clamp)(
+                state.typeColumnWidth+delta,96.0,320.0);
+        else if(mDetailColumnPointerColumn==2)
+            state.sizeColumnWidth=(std::clamp)(
+                state.sizeColumnWidth+delta,64.0,180.0);
+        ApplyDetailColumnLayout(mDetailColumnPointerSide);
+        if(::GetEnvironmentVariableW(
+               L"FLYEXPLORER_COLUMN_RESIZE_DIAGNOSTIC",nullptr,0)>0)
+            StatusText().Text(
+                hstring(L"RESIZE_MOVE "+std::to_wstring(delta)));
     }
     void MainWindow::OnDetailColumnResizePointerMoved(
         IInspectable const&,
@@ -1553,6 +1568,8 @@ namespace winrt::FlyExplorer::implementation
         IInspectable const&,
         Microsoft::UI::Xaml::Input::PointerRoutedEventArgs const& args){
         if(!mDetailColumnPointerDrag)return;
+        // Flush movement shorter than one timer tick, including the final tail.
+        ApplyDetailColumnPointerPosition();
         mDetailColumnPointerDrag=false;
         mDetailColumnPointerSide=-1;
         mDetailColumnPointerColumn=-1;
