@@ -159,12 +159,12 @@
             <StackPanel Grid.Column="3" Orientation="Horizontal" Spacing="2">
                 <Button x:Name="NewTabButton" Style="{StaticResource ExplorerIconButtonStyle}"
                         ToolTipService.ToolTip="&#xC0C8; &#xD0ED;" Click="OnNewTabClicked"
-                        AutomationProperties.Name="&#xC0C8; &#xD0ED;">
+                        AutomationProperties.Name="현재 활성 패널에 새 폴더 탭 만들기">
                     <FontIcon Glyph="&#xE710;" FontSize="14"/>
                 </Button>
                 <Button x:Name="CloseTabButton" Style="{StaticResource ExplorerIconButtonStyle}"
                         ToolTipService.ToolTip="&#xD0ED; &#xB2EB;&#xAE30;" Click="OnCloseTabClicked"
-                        AutomationProperties.Name="&#xD604;&#xC7AC; &#xD0ED; &#xB2EB;&#xAE30;">
+                        AutomationProperties.Name="현재 활성 패널의 폴더 탭 닫기">
                     <FontIcon Glyph="&#xE711;" FontSize="14"/>
                 </Button>
                 <Button x:Name="SplitButton" Style="{StaticResource ExplorerIconButtonStyle}"
