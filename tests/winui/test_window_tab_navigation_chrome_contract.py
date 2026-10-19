@@ -26,6 +26,17 @@ class WindowTabChromeContract(unittest.TestCase):
         self.assertIn('side==0?L"왼쪽 폴더 탭 ":L"오른쪽 폴더 탭 "',pane_tabs)
         self.assertIn("AutomationProperties::SetName(",pane_tabs)
         self.assertIn("view.TabItems().Append(item)",pane_tabs)
+        active=main_cpp.split("void MainWindow::UpdateActivePaneChrome()",1)[1].split(
+            "void MainWindow::UpdateSelectionChrome()",1)[0]
+        for name in (
+            "왼쪽 패널에 새 폴더 탭 만들기",
+            "오른쪽 패널에 새 폴더 탭 만들기",
+            "왼쪽 패널의 현재 폴더 탭 닫기",
+            "오른쪽 패널의 현재 폴더 탭 닫기",
+        ):
+            self.assertIn(name,active)
+        self.assertIn("NewTabButton()",active)
+        self.assertIn("CloseTabButton()",active)
 
     def test_navigation_chrome_recomputes_from_active_history(self):
         source=compact((ROOT/"app/winui/MainWindow.xaml.cpp").read_text(encoding="utf-8"))
