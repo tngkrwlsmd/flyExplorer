@@ -14,6 +14,22 @@
 
 ## 1. L08 진행: Build PASS, GUI/커서 FAIL
 
+- **2026-10-19 후속 진단 준비:** [`552fe9c5`](https://github.com/tngkrwlsmd/flyExplorer/commit/552fe9c58787a64aebf3f126a11f933acb50b07d)에서
+  `tests/winui/test_owned_column_resize_gui.py`의 엄격한 커서 assertion 직전에
+  소유 앱 위치의 UIA hit 정보와 native active/arrow/sizewe 커서 핸들을
+  `COLUMN_RESIZE_HOVER_PROBE`로 출력하게 했다. 실패를 성공으로 바꾸거나
+  기존 커서 assertion/드래그 조건을 우회하지 않는다.
+- 독립 중앙 Windows [#39244437409](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39244437409)는
+  정확한 위 `main` SHA의 신선한 clone에서 **Python `py_compile` PASS**
+  (`L08_PRECHECK_PYTHON_SYNTAX_PASS`)를 기록했다. GUI를 실행하지 않았고
+  **제품 커서 동작/기능 GUI/시각 수용은 여전히 FAIL/NOT TESTED 범위 그대로**다.
+  단일 Remote Shell 요청 슬롯은 완료 후 idle로 복원했다.
+- 다음 단계는 **허용된 실제 로그인 GUI 경로**에서 새 probe의 UIA hit target과
+  실제 cursor 핸들 출력을 확인해, WinUI `ProtectedCursor`가 수평 핸들에
+  적용되지 않는 원인이 hit-test 또는 메시지 전달 중 어디에 있는지 먼저
+  분류하는 것이다. 승인 차단이 지속되면 우회하지 않는다. 기존 드래그
+  경계·실패 검증을 유지하고 원인 확인 전 HWND subclass 등의 변경은 금지한다.
+
 - 새 `main`의 `DetailColumnHandle`과 드래그 코드 자체는 이미 구현됐다.
   정식 테스트 소유 Release 빌드 [#39221721375](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39221721375)
   PASS; EXE `9a9056d94c18d6f662a7b8991f2704d877ae0bee746b9ece6b4e037bbdb9eaf6`.
