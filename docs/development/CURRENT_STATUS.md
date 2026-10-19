@@ -1,4 +1,33 @@
-# flyExplorer current status — G01 source/Release PASS, GUI pending; L08 cursor OPEN (2026-10-19)
+# flyExplorer current status — G02/G06 source-scope fixes added; GUI pending (2026-10-19)
+
+## 2026-10-19 G02 F6 focus feedback and G06 two-level tab names — source-only scope
+
+- `main` [`1c768b3`](https://github.com/tngkrwlsmd/flyExplorer/commit/1c768b308aa4e7427e4fa3266998bc20710b6a6e)
+  changes F6 cross-pane keyboard focus feedback to report success **only if**
+  `otherView.Focus(FocusState::Keyboard)` returns true. The existing shortcut,
+  active-pane targeting and transfer safety are unchanged. Regression source
+  contract [`05266a4`](https://github.com/tngkrwlsmd/flyExplorer/commit/05266a47b6377c977de9336dfddc722df5680f82)
+  checks both branches.
+- G06 [`8480403`](https://github.com/tngkrwlsmd/flyExplorer/commit/848040392852ce0ccfe518e14d338ec5d0c2f9cf)
+  identifies header-folder-tab add/close buttons as actions on the **currently
+  active pane** in their `AutomationProperties.Name`.
+  [`c290ff6`](https://github.com/tngkrwlsmd/flyExplorer/commit/c290ff678a84af91daeca6b40d8e489061565787)
+  distinguishes top-level workspace window tabs in the dynamic automation
+  name; existing distinct left/right PaneTab labels remain.
+  [`de2c687`](https://github.com/tngkrwlsmd/flyExplorer/commit/de2c6874e711f0ab839e57975a8a91a8535028be)
+  adds a source contract for these names. No visible layout or shortcut
+  behavior was intentionally changed.
+- Re-read the exact current GitHub source and checked eight targeted static
+  conditions: F6 success/failure, test coverage, active-pane button labels,
+  left/right PaneTab labels, workspace tab labels, G06 contract presence and
+  original F6 binding: **all eight matched**. This was a read-only static
+  check, **not Python unittest execution, Windows build, live GUI/UIA or
+  visual-pixel PASS**. The authorized desktop connection currently reports
+  offline; do not classify missing runtime evidence as a product defect.
+- The earlier user-requested exclusion of actual 125/150/200% DPI,
+  F04/F05 High Contrast/Narrator audio and real USB/SMB/UNC testing remains
+  in force. Do not reintroduce these tests as prerequisites to G02/G06.
+
 
 ## 2026-10-19 G01 PaneTab-local sorting — source and build accepted, GUI not accepted
 
