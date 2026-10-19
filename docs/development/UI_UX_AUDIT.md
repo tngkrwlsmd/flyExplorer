@@ -1,5 +1,41 @@
 # flyExplorer Windows 11 벤치마킹 및 UI/UX 점검
 
+## 2026-10-19 L07 세 번째 구현 — 상세 보기 이름 셀 말줄임
+
+- `d4fff1b0` 기준. Details 이름 셀의 가로 StackPanel을 Auto(아이콘·필터 배지)
+  + Star(이름) Grid로 바꿔 유한 폭에서 CharacterEllipsis가 동작하게 했다.
+  이웃 유형 열과 6px 여백을 두고 전체 표시 이름 tooltip을 연결했다.
+  드라이브의 진행 표시도 남은 이름 폭에 맞도록 MaxWidth/Stretch를 사용하고
+  용량 설명에는 말줄임을 적용했다. 다른 보기의 렌더링·정렬 엔진은 바꾸지 않았다.
+- 정식 로컬 Release exit 0. EXE SHA-256
+  `6e6c9e37f258fd7f25a038216693af1fc746bcc1e5928367416611885fb3b0dd`.
+  근거: ignored `logs/file-open/build-name-cell.log`, `name-cell-identity.json`.
+  관련 source contracts architecture 9 + display 8 + detail controller 6 +
+  registered type 3 + known-folder artwork 3 = **29 PASS**.
+- **실제 GUI/시각:** 변경 전 `c7bf9663...`와 같은 네 합성 항목,
+  Dark/1906×1016에서 양쪽 긴 한글 파일명이 이름 열 끝에서 `…`로 표시되고
+  유형·크기 열과 겹치지 않음을 직접 확인했다. UIA 항목 이름에는 전체 이름이
+  유지된다. 기존 L03 유형 설명 자체의 길이는 그대로이며 별도 개선 과제다.
+- 왼쪽 기존 UIA 너비 컨트롤로 120→320→168을 설정하고 안정된 실제 화면을
+  읽었다. 이름이 각 열 폭에 맞게 다시 말줄임되며 오른쪽 168은 유지됐다.
+  첫 즉시 캡처는 재배치 중간 상태여서 최종 판정에서 제외했다.
+  컨트롤의 공개 Max=320을 확인하기 전 360을 입력한 시도는
+  E_INVALIDARG로 거절됐다. 시험 값 오류이며 제품의 드래그 상한 실패가 아니다.
+  이 검증은 **UIA 값 변경**이며 실제 경계 마우스 드래그/커서 검증이 아니다.
+- 별도 소유 LOCALAPPDATA의 Light 기본 설정으로 같은 바이너리·네 항목·
+  1906×1016도 직접 검토했다. Light는 추가 AFTER 검토이며 Light BEFORE 비교
+  수용은 아니다. Dark/Light 실행 모두 앱 exit **0**, fixture 파일 해시 불변.
+  사용자·OS 테마/배율은 변경하지 않았다.
+- **한계:** tooltip 연결은 소스 확인이며 실제 hover 표시는 미검증. 실제 좁은
+  창, 드라이브 용량 행과 필터 배지의 새 픽셀 수용, 다른 보기 전체 GUI 및 중앙
+  exact-SHA 수용을 주장하지 않는다. 기존 사용자 제외 항목은 실행하지 않았다.
+
+우선 세 항목 중 문서 열기(L05 제한 범위), 다중 선택 보존(L06), 상세 이름
+침범(L07)이 각각 독립 변경으로 수용됐다. 다음 사용성 점검/수정은 **L08 열 경계
+조절 커서·hit 영역**이며, 아직 해결된 것으로 처리하지 않는다.
+
+---
+
 ## 2026-10-19 L06 두 번째 구현 — 우클릭 선택 보존
 
 - `33cc2e8a` 위에서 `OnFileRightTapped`가 **미선택 행을 우클릭할 때만** 기존

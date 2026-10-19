@@ -1,5 +1,15 @@
 # flyExplorer current status — R1 sort-menu scoped GUI/visual PASS 2026-10-19
 
+## 2026-10-19 L07 bounded filename cells — local scoped acceptance
+
+- Details filename presentation now uses an Auto+Star grid with finite text
+  width, ellipsis and a full-name tooltip; metadata and selection identity kept.
+- Canonical local Release/source 29 PASS. Actual matched Dark BEFORE/AFTER
+  reviewed at 1906x1016, both panes; UIA width 120/320/default 168 reflow checked.
+  Light AFTER reviewed with isolated preferences. Both app exits 0, files unchanged.
+- See UI_UX_AUDIT.md for exact hashes and limits. Tooltip hover, physical resize
+  cursor/drag, narrow-window and drive/badge pixels remain unverified. L08 is next.
+
 ## 2026-10-19 L06 right-click selection — local scoped acceptance
 
 - Right-clicking an already-selected member now preserves the selection set;

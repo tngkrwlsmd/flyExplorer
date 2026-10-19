@@ -2277,9 +2277,23 @@ namespace winrt::FlyExplorer::implementation
                 ColumnDefinition def;def.Width(width);columns.ColumnDefinitions().Append(def);
             };
             for(auto const& width:widths)addColumn(width);
-            StackPanel nameCell;
-            nameCell.Orientation(Orientation::Horizontal);
-            nameCell.Spacing(7);
+            // A horizontal StackPanel measures text with unbounded width and
+            // defeats ellipsis. Give icons Auto and the filename the remaining
+            // finite column width, including while the header is resized.
+            Grid nameCell;
+            nameCell.ColumnSpacing(7);
+            nameCell.Margin(Thickness{0,0,6,0});
+            ColumnDefinition iconColumn;
+            iconColumn.Width(GridLength{1.0,GridUnitType::Auto});
+            ColumnDefinition textColumn;
+            textColumn.Width(GridLength{1.0,GridUnitType::Star});
+            nameCell.ColumnDefinitions().Append(iconColumn);
+            nameCell.ColumnDefinitions().Append(textColumn);
+            StackPanel nameIcons;
+            nameIcons.Orientation(Orientation::Horizontal);
+            nameIcons.Spacing(7);
+            nameIcons.VerticalAlignment(VerticalAlignment::Center);
+            nameCell.Children().Append(nameIcons);
             nameCell.VerticalAlignment(VerticalAlignment::Center);
             bool localDrive=false;
             ULARGE_INTEGER freeBytes{},totalBytes{},freeTotal{};
@@ -2324,7 +2338,7 @@ namespace winrt::FlyExplorer::implementation
                                             L"Windows Known Folder artwork":
                                             L"Windows Shell folder icon"):
                                         L"Windows system registered file icon");
-                                nameCell.Children().Append(image);
+                                nameIcons.Children().Append(image);
                                 actualVisual=true;
                             }
                         }
@@ -2338,20 +2352,23 @@ namespace winrt::FlyExplorer::implementation
                 glyph.Glyph(hstring(localDrive?L"\uEDA2":
                     itemFolder?L"\uE8B7":L"\uE8A5"));
                 glyph.FontSize(localDrive?20.0:16.0);
-                nameCell.Children().Append(glyph);
+                nameIcons.Children().Append(glyph);
             }
-            addFilterBadge(nameCell);
+            addFilterBadge(nameIcons);
             TextBlock filename;
             filename.Text(hstring(displayName));
             if(accent)filename.Foreground(accent);
             filename.TextTrimming(TextTrimming::CharacterEllipsis);
+            Grid::SetColumn(filename,1);
+            ToolTipService::SetToolTip(filename,winrt::box_value(hstring(displayName)));
             if(localDrive){
                 StackPanel drive;
                 drive.Spacing(2);
                 drive.Children().Append(filename);
                 ProgressBar usage;
-                usage.Width((std::max)(115.0,
+                usage.MaxWidth((std::max)(115.0,
                     displayNameWidth-42.0));
+                usage.HorizontalAlignment(HorizontalAlignment::Stretch);
                 usage.Height(3);
                 usage.Minimum(0);usage.Maximum(100);
                 const auto used=totalBytes.QuadPart-freeBytes.QuadPart;
@@ -2361,11 +2378,13 @@ namespace winrt::FlyExplorer::implementation
                 TextBlock capacity;
                 capacity.FontSize(10.0);
                 capacity.Opacity(0.62);
+                capacity.TextTrimming(TextTrimming::CharacterEllipsis);
                 const auto gib=1024ull*1024ull*1024ull;
                 capacity.Text(hstring(std::to_wstring(
                     freeBytes.QuadPart/gib)+L" GB 사용 가능 / "+
                     std::to_wstring(totalBytes.QuadPart/gib)+L" GB"));
                 drive.Children().Append(capacity);
+                Grid::SetColumn(drive,1);
                 nameCell.Children().Append(drive);
                 row.MinHeight(58);
             }else nameCell.Children().Append(filename);
