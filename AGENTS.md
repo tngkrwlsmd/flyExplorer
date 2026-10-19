@@ -98,6 +98,23 @@ source/binary/environment-scoped acceptance, and the existing project/user
 approval boundaries. Update goal status only when its actual completion
 criteria and evidence have been checked.
 
+### Explicit user exclusions (2026-10-19)
+
+Do **not** pursue, schedule, perform, re-propose or treat as release blockers
+any of these previously proposed P1 checks:
+- Real Windows 125%, 150% and 200% OS DPI tests (former goal G03).
+- F04/F05 actual High Contrast visual checks and Narrator spoken-audio tests
+  (former goal G04).
+- Real USB/removable-media, SMB, UNC or mapped-drive file-operation tests
+  (former goal G05).
+
+These are **USER-EXCLUDED**, not PASS and not product defects. Leave the
+historical acceptance/untested evidence intact. Other feature or release
+tasks must not silently reintroduce these tests as subchecks or prerequisites.
+Do not change this exclusion unless the user expressly requests that scope
+again. Continue ordinary available-environment visual QA for separately
+authorized UI changes without interpreting it as permission for excluded tests.
+
 ## Mandatory resume/current-state checkpoint
 
 Before substantial work, and before continuing any interrupted or resumed task,
