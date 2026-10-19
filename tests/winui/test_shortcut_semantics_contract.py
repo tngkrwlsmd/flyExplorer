@@ -45,6 +45,9 @@ class ShortcutSemanticsContract(unittest.TestCase):
         self.assertIn("const int other=1-model.activePane", f6)
         self.assertIn("ActivatePane(other)", f6)
         self.assertIn("Focus( Microsoft::UI::Xaml::FocusState::Keyboard)", f6)
+        self.assertIn("const bool focused=otherView.Focus(", f6)
+        self.assertIn("focused?", f6)
+        self.assertIn("포커스를 이동할 수 없습니다.", f6)
         self.assertNotIn("RunTransfer(", f6)
 
     def test_configurable_ctrl_focus_shortcuts_do_not_mutate_files(self):
