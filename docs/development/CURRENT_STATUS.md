@@ -1,4 +1,26 @@
-# flyExplorer current status — G02/G06 source-scope fixes added; GUI pending (2026-10-19)
+# flyExplorer current status — G06 pane-local TabViewItem names implemented, GUI pending (2026-10-19)
+
+## 2026-10-19 G06 continued — actual owning-pane names on each folder tab and command
+
+- `main` [`1a024da`](https://github.com/tngkrwlsmd/flyExplorer/commit/1a024da1be6e4fb3e5866794a568f1594e9e0c59)
+  assigns an explicit **left/right folder-tab** UIA name to every per-pane
+  `TabViewItem` during `RefreshTabs(side)` without changing its visible header,
+  selection, folder route, or WindowTab behavior.
+- [`d19c359`](https://github.com/tngkrwlsmd/flyExplorer/commit/d19c359547709e830976e88da13b417b5141a698)
+  sets the new-tab and close-tab accessible names dynamically from the
+  **actual active pane** in `UpdateActivePaneChrome()`, invoked on Refresh
+  and pane activation. It preserves original button layout and commands.
+- [`e34b95b`](https://github.com/tngkrwlsmd/flyExplorer/commit/e34b95b6be8b9826b9fb1bf430199636a8846da5)
+  and [`ea2d08b`](https://github.com/tngkrwlsmd/flyExplorer/commit/ea2d08bd77508ed112e51e5c758790e8aab1dfc7)
+  extend the focused source contract to both item ownership and dynamic
+  button labels. Re-read current GitHub sources for 14 scoped static
+  assertions; **all 14 matched**. These are not executed Python unittests.
+- **Acceptance boundary:** no Windows Release recompile or actual live keyboard
+  traversal/UIA inspection was performed for these new edits. The currently
+  connected Desktop Commander Windows host is offline. Do not mark G06 GUI
+  PASS. Existing G01 GUI, L08 horizontal cursor and full G02 keyboard-route
+  gates remain OPEN. Do not reactivate user-excluded G03/G04/G05.
+
 
 ## 2026-10-19 G02 F6 focus feedback and G06 two-level tab names — source-only scope
 
