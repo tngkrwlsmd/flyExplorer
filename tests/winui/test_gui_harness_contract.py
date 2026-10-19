@@ -172,6 +172,19 @@ class GuiHarnessStaticContract(unittest.TestCase):
         self.assertIn('assert all(light-dark>20 for light,dark in zip(lb,db))', probe)
         self.assertIn('settled_surface(', probe)
 
+    def test_details_column_resize_has_focused_strict_gui_entrypoint(self):
+        runner = (TOOLS / "run_checks.py").read_text(encoding="utf-8")
+        gui = (TESTS / "test_owned_column_resize_gui.py").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn('"column-resize",', runner)
+        self.assertIn('if area == "column-resize":', runner)
+        self.assertIn('str(TESTS / "test_owned_column_resize_gui.py")', runner)
+        self.assertIn('OWNED_DETAIL_COLUMN_RESULT ', gui)
+        self.assertIn('print("OWNED_DETAIL_COLUMN_RESULT FAIL"', gui)
+        self.assertIn('eventually(horizontal_resize_cursor,', gui)
+        self.assertIn('SIX_ORIGINAL_MFC_SETTINGS_IDENTICAL', gui)
+
     def test_winui_python_sources_parse(self):
         failures = []
         paths = list(TESTS.glob("*.py")) + list(TOOLS.glob("*.py"))
