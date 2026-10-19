@@ -8,6 +8,8 @@ Their exact content remains available through Git history.
 ## Current documents
 
 - CURRENT_STATUS.md — accepted product state, latest evidence and open gates.
+- NEXT_DEVELOPMENT_GOALS.md — prioritized uncompleted goals, verified design gaps,
+  environment-dependent checks and release prerequisites; planning, not authorization.
 - ARCHITECTURE.md — current WinUI/native-core/Shell-isolation architecture.
 - AGENT_EFFICIENCY.md — mandatory bounded tool/build/test strategy.
 - VERIFICATION_PROFILE.md — central CI scopes, failure taxonomy, FAST/STANDARD/FINAL profiles and high-cost fixture policy.
