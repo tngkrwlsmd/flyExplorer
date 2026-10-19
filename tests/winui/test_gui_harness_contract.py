@@ -181,6 +181,16 @@ class GuiHarnessStaticContract(unittest.TestCase):
         self.assertIn('if area == "column-resize":', runner)
         self.assertIn('str(TESTS / "test_owned_column_resize_gui.py")', runner)
         self.assertIn('OWNED_DETAIL_COLUMN_RESULT ', gui)
+        for marker in (
+            'OWNED_DETAIL_COLUMN_RESULT PASS',
+            'OWNED_DETAIL_COLUMN_NAME_RESIZE True',
+            'OWNED_DETAIL_COLUMN_TYPE_RESIZE True',
+            'OWNED_DETAIL_COLUMN_SIZE_RESIZE True',
+            'SIX_ORIGINAL_MFC_SETTINGS_IDENTICAL True',
+        ):
+            self.assertIn(marker, runner)
+        self.assertIn('if not all(marker in lines for marker in required)', runner)
+        self.assertIn('L08_REQUIRED_GUI_MARKERS_MISSING_OR_ERROR', runner)
         self.assertIn('print("OWNED_DETAIL_COLUMN_RESULT FAIL"', gui)
         self.assertIn('eventually(horizontal_resize_cursor,', gui)
         self.assertIn('SIX_ORIGINAL_MFC_SETTINGS_IDENTICAL', gui)
