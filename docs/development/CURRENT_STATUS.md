@@ -1,5 +1,18 @@
 # flyExplorer current status — R1 sort-menu scoped GUI/visual PASS 2026-10-19
 
+## 2026-10-19 basic file-use audit — confirmed gaps, no product changes
+
+- Actual local use on product-unchanged `e01f552f` reproduced regular txt
+  double-click not opening an associated app, and four selected items shrinking
+  to one after right-clicking a selected member. Long Korean filename cells
+  visually run into the type column. These are not successful functional gates.
+- [UI_UX_AUDIT.md](UI_UX_AUDIT.md) L05-L10 records source boundaries,
+  reproduction, completion criteria and separate visual review. F2 opens a
+  remote toolbar editor with the extension selected; Escape cancellation worked.
+  Actual resize-hover cursor behavior remains unverified, not a claimed PASS/fail.
+- No product edits, rebuild or full E2E; only one synthetic long-name fixture
+  was added under ignored logs. Existing user changes and excluded tracks kept.
+
 ## 2026-10-19 local Explorer follow-up — observation only
 
 - Reused the prior successful local Release on product-unchanged `cdbe716c`;
