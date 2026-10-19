@@ -60,6 +60,7 @@ PRODUCT_SUITES = {
         "tests/winui/test_file_operation_controller_contract.py",
         "tests/winui/test_f2_rename_selection_contract.py",
         "tests/winui/test_command_availability_contract.py",
+        "tests/winui/test_file_command_feedback_contract.py",
         "tests/winui/test_clipboard_manual_contract.py",
         "tests/winui/test_owned_explorer_clipboard_contract.py",
         "tests/winui/test_recycle_owned_contract.py",

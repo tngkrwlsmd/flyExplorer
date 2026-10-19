@@ -134,7 +134,13 @@ void MainWindow::OnFileCommandCompleted(
      completion,FileOperationContext(completion.context.side));
  if(disposition==Disposition::Ignored)return;
  SetFileButtonsBusy(false,false);
- if(disposition==Disposition::StaleContext)return;
+ if(disposition==Disposition::StaleContext){
+     // The folder/tab moved while the worker was completing. Do not
+     // imply success or failure; let the user inspect the original folder.
+     StatusText().Text(
+         L"파일 작업이 종료됐지만 화면이 변경됐습니다. 원본 폴더에서 결과를 확인하세요.");
+     return;
+ }
  if(disposition==Disposition::Failed){
      StatusText().Text(koreanError(completion.result.error));
      return;
