@@ -1,5 +1,71 @@
 # flyExplorer Windows 11 벤치마킹 및 UI/UX 점검
 
+## 2026-10-19 로컬 후속 관찰 — 기능 일부 확인 / Dark 화면 직접 검토
+
+이 절이 아래 최초 점검의 실행 금지 문구보다 최신인 후속 기록이다. 이번에는
+제품 코드를 바꾸지 않고 실제 로컬 앱·Explorer를 관찰했으며 새 빌드는 하지 않았다.
+
+### 기준과 관찰 조건
+
+- 재개 시 GitHub main, 로컬 HEAD/main/origin/main 모두
+  `cdbe716c6d370b2969c5c66d790ae24dcdfb73b0`. 최근 10개 커밋과 중앙 최근
+  4개 CI SUCCESS를 확인했다. 최신 중앙 `39188826255`의 source PASS는
+  `7ac35a06` 범위로 보존하며 이번 SHA의 GUI 인증으로 확대하지 않는다.
+- 이전 로컬 Release EXE SHA-256 `5a2fdab8c1915cc2e647102bd3ced38cb9039dd2301e03e36bd195c0ae08854a`
+  재확인. `git diff e3c5275d HEAD -- app/winui src/base` 차이 없음.
+  기존 `build.bat` 사용자 변경 보존. 이전 빌드 성공을 재사용했다.
+- 기존 프로세스는 초기 창 목록 뒤 사라져 재선택할 수 없었다. 종료 원인/코드를
+  확보하지 못했으므로 정상 종료나 제품 충돌로 판정하지 않는다. 동일 바이너리를
+  정식 `fly.bat run Release <fixture>`로 다시 실행했고 launcher exit 0을 확인했다.
+  파이프 상속 대기를 피하기 위해 stdout/stderr는 DEVNULL을 사용했다.
+- `logs/explorer-parity-local/owned-run/fixture`의 Nested, alpha.txt,
+  한글 파일.txt만 사용했다. 자식 APPDATA/LOCALAPPDATA/TEMP/TMP/USERPROFILE은
+  기존 소유 디렉터리로 격리했다. 파일 변경·삭제, 클립보드·휴지통·OS 설정 조작 없음.
+- Windows Explorer 파일 버전 `10.0.26100.8875`, OS `10.0.26300.0`.
+  두 앱은 Dark로 표시됐다. 실제 앱 캡처 1906×1016, Explorer 1125×622로
+  창 크기가 다르므로 동일 기하의 픽셀 우열·간격 수치 비교로 해석하지 않는다.
+  DPI를 새로 측정하거나 배율을 바꾸지 않았다. 사용자 제외 시험도 실행하지 않았다.
+
+### 기능 GUI 결과
+
+| 관찰 | 결과와 한계 |
+| --- | --- |
+| 소유 폴더 표시 | 두 패널에 Nested 및 일반/한글 파일이 표시됐다. 한글 파일명을 직접 읽었다. |
+| 하위 폴더 열기 | 왼쪽 Nested를 두 번 클릭한 뒤 비동기 완료 상태를 다시 읽어 주소가 Nested, 왼쪽 목록이 비어 있고 오른쪽의 원래 세 항목이 유지됨을 확인했다. |
+| 뒤로 버튼 | 버튼으로 fixture 복귀, 뒤로 비활성/앞으로 활성, 왼쪽 세 항목 복원을 확인했다. |
+| Alt+왼쪽 | Nested에서 입력 후 재관찰해도 위치가 유지됐다. 같은 조건의 뒤로 버튼은 동작했다. RootShell의 현재 키 처리에도 Alt 탐색 연결을 찾지 못했다. 아래 L01의 기능 차이다. |
+| Ctrl+L → Tab | 실제 화면에서 주소 문자열 선택/편집 진입, 다음 Tab에 검색 입력란의 포커스 선·캐럿을 확인했다. 전체 키보드 순회 PASS는 아니다. |
+| 정렬 메뉴 | 실제 화면에서 이름 오름차순 체크와 다른 항목을 직접 읽었다. 기존 R1의 8모드 수용을 재사용하며 다시 전체 정렬 회귀를 실행하지 않았다. |
+| 새 폴더 탭 | 새 탭 버튼 접근 시 도구가 `coordinate input geometry is unavailable`을 반환해 실제 추가 결과를 판정하지 않았다. G02/G06 전체 수용은 여전히 미완료다. |
+
+### 확인된 차이·개선 제안·검증 공백
+
+| ID / 분류 | 근거와 재현 조건 | 관련 파일 | 완료 조건 / 필요한 검증 |
+| --- | --- | --- | --- |
+| L01 / 확인된 기능 차이, 개선 요구 | 소유 하위 폴더에서 Alt+왼쪽이 이동하지 않지만 뒤로 버튼은 이동한다. Ctrl+L은 화면에서 동작하여 키 입력 전체 불능과 구분했다. 이미 약속한 기능의 회귀로 단정하지 않는다. | `app/winui/MainWindow.xaml.cpp`의 RootShell PreviewKeyDown 및 OnBackClicked/OnForwardClicked/OnUpClicked | Alt+왼쪽/오른쪽/위쪽의 지원 계약을 명시하고 기존 탐색 경계를 재사용. 텍스트 편집·메뉴·대화 상자·이동 중 처리와 활성 탭만 변경됨을 실제 입력으로 확인. UI 변경 시 픽셀 게이트도 적용. |
+| L02 / 의도적 기존 정책과 Explorer 차이, 설계 개선 제안 | 선택 없는 Explorer는 잘라내기/복사/이름 변경/삭제 비활성, flyExplorer는 활성. `UpdateCommandAvailability`는 선택 대신 busy 여부만 검사하며 키보드/UIA 접근을 유지하려는 주석이 있다. 무선택 실제 파일 작업은 수행하지 않았다. | `app/winui/MainWindow.xaml.cpp`의 UpdateCommandAvailability, `app/winui/FileToolbar.xaml` | 선택 기반 비활성화 또는 유효한 안내 정책을 결정. 변경한다면 키보드/UIA 선택 경로가 막히지 않게 유지하고 선택 없음/하나/여러 개·busy·패널 전환을 검증. 안전성 결함이나 데이터 손실로 분류하지 않음. |
+| L03 / 시각·문구 개선 제안 | 동일 txt 파일에서 Explorer는 '텍스트 문서', 앱은 'txt 파일 (Windows 유형: 텍스트 문서)'로 표시. 앱의 기본 유형 열에서 설명이 잘린다. 전체 창은 더 넓어도 패널별 열 폭은 고정이므로 창 전체 크기만으로 공간 충분을 판단하지 않음. | `app/winui/file_detail_controller.cpp`의 typeLabel 조합, 상세 열 표시 경계 | 목록에는 등록된 Windows 유형을 우선해 간결하게 표시하고 미등록 형식 fallback·상세 설명 위치를 정함. 일반/미등록/긴 형식명, 두 패널·좁은 창·정렬에 영향 없는지 검사. 실제 BEFORE/AFTER 캡처 검토 필수. |
+| L04 / 도구·검증 공백 | 도구 focused_element는 FileNameBox로 유지됐지만 실제 화면의 Ctrl+L/Tab 포커스는 주소/검색으로 이동했다. 화면 미검토 시 이 값만으로 제품 포커스 결함을 판정할 수 없다. | 기존 `tests/winui/test_owned_accessibility_layout_gui.py`, 이번 Computer Use 관찰 경계 | 새 전용 시험은 실제 focused control/PID·키 전달·모델·픽셀을 교차 확인. 시작부터 모든 주요 영역을 왕복하는 경로와 두 수준 탭은 별도 소유 fixture에서 수용. |
+
+### 시각 검토 결과 (기능 GUI와 별도)
+
+실제 Dark 앱의 기본 목록, 빈 하위 폴더, 정렬 flyout, 주소 편집·검색 포커스와
+Dark Explorer의 동일 fixture 화면을 직접 읽었다. 기본 헤더/주소/명령 계층,
+두 패널 구분, 한글 표시와 정렬 체크는 읽을 수 있었다. L03의 유형 문구 잘림은
+개선 후보로 남겼다. 창 크기가 달라 정량적인 동일 조건 비교는 **미검증**이다.
+Light, 메뉴 전체·오류 대화 상자·전체 키보드 경로를 새로 수용하지 않는다.
+제품 변경이 없으므로 변경 전후 시각 수용을 주장하지 않는다.
+
+한 Explorer 캡처는 다른 창에 가려져 비교 근거에서 제외했다. 대상 창을 다시
+선택·활성화한 올바른 Explorer 화면만 검토했다. 원시 화면·UIA 로그는 Git에
+저장하지 않았다. 이전 승인 서비스 차단은 이번에 해소됐지만 초기 창 소실,
+포커스 필드 불일치와 geometry 오류는 서로 별개의 미확정 도구/환경 한계다.
+
+다음 최대 세 항목은 L01 탐색 단축키, L02 명령 활성 정책 결정, L03 유형 문구
+간결화다. 기존 G01 정렬 소유권의 설계 결정 과제는 그대로 유지한다.
+
+---
+
 점검일: 2026-10-19 (KST). 첨부 명세의 NAV/CMD/LIST/SORT/GROUP/TAB/KEY/VIS
 39개 항목을 대상으로 한 소스·기존 증거 검토 및 제한적 실제 Windows 관찰이다.
 제품 코드 수정, 새 빌드, 전체 GUI/E2E, 커밋·푸시·PR 생성은 수행하지 않는다.

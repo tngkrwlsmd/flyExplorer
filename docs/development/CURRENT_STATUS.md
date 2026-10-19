@@ -1,5 +1,18 @@
 # flyExplorer current status — R1 sort-menu scoped GUI/visual PASS 2026-10-19
 
+## 2026-10-19 local Explorer follow-up — observation only
+
+- Reused the prior successful local Release on product-unchanged `cdbe716c`;
+  no product edit or rebuild. Basic owned-folder navigation/back button,
+  Unicode names, Ctrl+L and subsequent Tab were observed in the actual app.
+- The prior approval-service block cleared. Actual Dark app/Explorer screens
+  were reviewed at different window sizes; this is neither matched-geometry
+  pixel acceptance nor full functional/keyboard regression acceptance.
+- [UI_UX_AUDIT.md](UI_UX_AUDIT.md) records L01 Alt navigation gap, L02 deliberate
+  selection-command availability policy, L03 verbose type-label clipping and
+  L04 focus/geometry tooling limits, with reproduction and completion criteria.
+  Existing R1 acceptance and user-excluded test tracks remain unchanged.
+
 ## 2026-10-19 R1 active sort menu — scoped acceptance
 
 - **Implemented:** eight native ToggleMenuFlyoutItems project the existing sort index;
