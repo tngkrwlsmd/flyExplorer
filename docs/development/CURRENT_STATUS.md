@@ -1,5 +1,19 @@
 # flyExplorer current status — R1 sort-menu scoped GUI/visual PASS 2026-10-19
 
+## 2026-10-19 L05 document activation — local scoped acceptance
+
+- Regular filesystem documents now open through the asynchronous Windows
+  default-app broker from double-click/Enter; folder navigation is preserved.
+  FileOpenController owns duplicate gating, timeout, stale-context checks and
+  close cancellation, separate from MainWindow presentation.
+- Canonical local Release exit 0, source contracts 32 PASS; actual alpha.txt
+  double-click, Korean/space filename Enter, rejected synthetic executable,
+  folder/back regression and owned app exit 0 observed. Scoped Dark/96-DPI
+  BEFORE/AFTER pixels reviewed at 1906x1016. See UI_UX_AUDIT.md for exact hashes.
+- No full GUI/Debug/central exact-SHA claim. Delayed race/timeout and no-association
+  UI are untested; virtual Shell items and Launcher-restricted executable/script
+  activation remain unsupported. L06 multi-selection is the next implementation.
+
 ## 2026-10-19 basic file-use audit — confirmed gaps, no product changes
 
 - Actual local use on product-unchanged `e01f552f` reproduced regular txt

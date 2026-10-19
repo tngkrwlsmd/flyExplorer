@@ -47,6 +47,13 @@ in src/base/ui_session.
 
 ## SOLID rules for this codebase
 
+Regular-document activation belongs to `app/winui/file_open_controller.h`.
+It owns one asynchronous Windows StorageFile/Launcher request, deadline and
+close cancellation. MainWindow supplies weak presentation callbacks and checks
+the active pane/tab/route/folder before launch and completion. This brokered
+document path does not replace the isolated native navigation/context helpers
+or implement unrestricted executable/virtual-Shell activation.
+
 SOLID is used to preserve change boundaries, not to maximize the number of
 classes or interfaces.
 

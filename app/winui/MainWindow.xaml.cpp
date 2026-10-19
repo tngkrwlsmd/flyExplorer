@@ -818,6 +818,7 @@ namespace winrt::FlyExplorer::implementation
         mWorkspaceRestore.reset();
         mSessionCoordinator.prepareForClose();
         mFileOperations.prepareForClose();
+        mFileOpen.prepareForClose();
         mFileMetadata.prepareForClose();
         mFileDetails.prepareForClose();
         mTextPreviewController.prepareForClose();
@@ -3469,7 +3470,40 @@ namespace winrt::FlyExplorer::implementation
         auto& session=Current();
         auto const* indexed=session.indexedItem(
             static_cast<std::size_t>(logical));
-        if(!indexed||!indexed->isFolder())return;
+        if(!indexed)return;
+        if(!indexed->isFolder()){
+            if(mClosing||mFileOperations.busy()||view.SelectedItems().Size()!=1)return;
+            if(!indexed->isFileSystem()||indexed->parsingName.empty()){
+                StatusText().Text(L"가상 Shell 파일의 기본 앱 열기는 아직 지원하지 않습니다.");
+                return;
+            }
+            const auto context=FileOperationContext(side);
+            auto const& pane=ActiveWindowTab().model.panes[side];
+            if(pane.pending[pane.active])return;
+            auto weak=get_weak();
+            using Open=fxfile::previewops::FileOpenController;
+            StatusText().Text(L"기본 앱으로 파일을 여는 중입니다.");
+            const auto start=mFileOpen.request(indexed->parsingName,DispatcherQueue(),
+                [weak,context]{
+                    auto ui=weak.get();
+                    if(!ui||ui->mClosing||
+                       ui->ActiveWindowTab().model.activePane!=context.side)return false;
+                    const auto live=ui->FileOperationContext(context.side);
+                    return live.tab==context.tab&&live.route==context.route&&
+                           live.visibleFolder==context.visibleFolder;
+                },
+                [weak](Open::Result result){
+                    if(auto ui=weak.get())ui->StatusText().Text(
+                        result==Open::Result::Opened?
+                        L"기본 앱으로 파일을 열었습니다.":
+                        result==Open::Result::TimedOut?
+                        L"파일 열기 대기 시간이 초과됐습니다. 다시 시도하세요.":
+                        L"파일을 열지 못했습니다. 파일과 기본 연결 앱을 확인하세요.");
+                });
+            if(start==Open::Start::Busy)StatusText().Text(L"이전 파일 열기 요청을 처리 중입니다.");
+            else if(start==Open::Start::Invalid)StatusText().Text(L"이 파일 경로를 열 수 없습니다.");
+            return;
+        }
         const auto& snapshot=session.snapshot();
         std::size_t resident=0;
         if(snapshot.residentIndex(logical,resident)){

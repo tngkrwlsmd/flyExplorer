@@ -1,5 +1,58 @@
 # flyExplorer Windows 11 벤치마킹 및 UI/UX 점검
 
+## 2026-10-19 L05 첫 구현 — 기본 연결 문서 열기 수용
+
+- 기준 `c6ac450408d97e3d8dd4304f64f2059f4d60036e`에 이번 변경을 적용한
+  로컬 Release를 정식 `fly.bat build Release`로 빌드했다(exit 0).
+  EXE SHA-256 `27a848d9e1356f7d7ec71033570532f43e669d6a4fe34bebd72eeefa96f60c3e`.
+  소스/바이너리/fixture 해시는 ignored `logs/file-open/identity.json`,
+  전체 빌드 출력은 `logs/file-open/build-release.log`에 있다.
+- `MainWindow::OpenSelectedFolder`의 기존 폴더 탐색은 보존하고, 단일 일반
+  파일에 대해서 `file_open_controller.h`의 비동기 StorageFile/Launcher 경로로
+  분기했다. 행/목록 Enter와 DoubleTapped 모두 이 진입점을 사용한다.
+  UI에서 동기 Shell/provider 호출이나 셸 명령 문자열 실행을 추가하지 않았다.
+- 컨트롤러는 동시 요청 하나, 15초 제한, weak UI callback, route/tab/폴더
+  재확인과 close cancellation을 소유한다. lookup 후 탭 문맥이 바뀌면 파일을
+  열지 않고, 늦은 completion은 현재 상태를 덮어쓰지 않는다.
+
+**기능 GUI — 제한된 로컬 수용:**
+
+1. 합성 alpha.txt 이름을 실제 더블클릭 → 기존 메모장 창 제목이
+   `alpha.txt - 메모장`으로 바뀌고 앱에 성공 안내가 나타났다.
+2. `한글 파일.txt`를 실제 클릭→Enter → `한글 파일.txt - 메모장`과 성공
+   안내 확인. 파일명·공백 전달을 확인했으며 편집기 본문 UIA는 읽히지 않아
+   내용 표시의 독립 검증으로 확대하지 않는다. 기존 사용자 문서는 수정/닫지 않았다.
+3. 실행 코드가 아닌 합성 텍스트를 담은 blocked-launch.exe → 실패 안내 확인.
+   이 파일이 실행되거나 executable 지원이 수용됐다는 뜻이 아니다.
+4. 이후 Nested 폴더 두 번 클릭 → 왼쪽 경로 변경/빈 목록, 오른쪽 기존
+   목록 보존. 뒤로 버튼으로 원래 fixture 복귀. 실제 앱 정상 종료 exit **0**.
+5. 파일 내용 해시는 전후 일치했다. 거절 확인용 합성 파일 하나만 내용과
+   소유 경로를 확인해 제거했다. 기존 네 항목은 유지했다.
+
+관련 소스 계약은 architecture 9 + shortcut 6 + external context 3 +
+file-operation 14 = **32 PASS**. 로컬 실제 GUI는 Computer Use로 수동 관찰한
+위 범위이며 전체 자동 GUI, Debug 또는 중앙 exact-SHA acceptance가 아니다.
+중복·timeout·lookup 중 탭 이동·close 경합은 코드 검토 범위이며 결정적 지연을
+만든 별도 런타임 시험은 하지 않았다. 연결 없음의 OS 선택 UI도 미검증이다.
+
+**시각 수용 — scoped Dark/96 DPI:** 이전 `5a2fdab8...`와 새 제품에서 같은
+네 항목 fixture·1906×1016·Dark 화면을 직접 비교했다. 성공/실패 상태 안내가
+읽히고 주소·명령·두 패널 배치는 유지됐다. 시험 중 추가됐던 거절 파일은 최종
+비교 전에 제거했으며 해당 5행 화면은 동일 fixture 비교 쌍으로 사용하지 않았다.
+이름/유형 열의 기존 L07 문제는 그대로이며 이번 회귀로 분류하지 않는다.
+Light/다른 창 크기 수용이나 L07 해결을 주장하지 않는다.
+
+**지원 경계:** 이 구현은 기본 연결 앱이 있는 일반 문서의 파일시스템 경로다.
+가상 Shell 파일은 안내 후 거절한다. Windows Launcher 자체가 exe/msi/일부
+스크립트의 실행을 제한하므로 Explorer의 실행 파일/바로가기 전체 실행 호환은
+별도 미완료 요구로 남긴다. 우회 실행을 자동 추가하지 않는다.
+[Microsoft 공개 API 기준](https://learn.microsoft.com/en-us/windows/apps/develop/launch/launch-the-default-app-for-a-file).
+
+다음 구현 단위는 **L06 다중 선택 보존 및 다중 대상 메뉴 계약**이다.
+아래 L05의 기존 재현 기록은 수정 전 증거이며 이 절이 최신 문서 파일 수용이다.
+
+---
+
 ## 2026-10-19 기본 파일 작업 사용성 추가 점검
 
 앞선 구조·탐색 위주 점검을 보완하여 사용자 제보의 더블클릭/열 조절/긴 이름과

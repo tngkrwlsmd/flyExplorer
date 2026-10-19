@@ -9,6 +9,7 @@
 #include "session_coordinator.h"
 #include "shell_navigation_controller.h"
 #include "file_operation_controller.h"
+#include "file_open_controller.h"
 #include "file_metadata_controller.h"
 #include "file_detail_controller.h"
 #include "preview_controller.h"
@@ -373,6 +374,7 @@ namespace winrt::FlyExplorer::implementation
         void ActivatePane(int side);
         void UpdateActivePaneChrome();
         void OpenSelectedFolder(int side);
+        fxfile::previewops::FileOpenController mFileOpen;
         void OpenFolderInNewPaneTab(int side,std::wstring path);
         void ApplyWorkspace(fxfile::preview::Workspace&&);
         void QueueNextWorkspaceTab(int side);
