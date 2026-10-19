@@ -1,4 +1,43 @@
-# flyExplorer current status — L08 cursor validation OPEN, 2026-10-19
+# flyExplorer current status — G01 source/Release PASS, GUI pending; L08 cursor OPEN (2026-10-19)
+
+## 2026-10-19 G01 PaneTab-local sorting — source and build accepted, GUI not accepted
+
+- Product `main` [`5c5298a3e126`](https://github.com/tngkrwlsmd/flyExplorer/commit/5c5298a3e126542b0118c5a670ac982cd5ed1718)
+  implements folder-tab-local sorting in `WindowTabState.tabSortModes` and
+  `WindowWorkspaceController`: new tabs default to Name ascending, switching or
+  closing a tab restores its saved mode, while left/right panes and Window Tabs
+  retain independent state. The previously accepted R1 sort-menu checkmark
+  presentation remains unchanged.
+- Private WinUI session writes **schema v4** with each folder tab's sort mode.
+  The decoder continues to read v1/v2/v3 and inherits the prior pane-wide sort
+  into old folder tabs. New source tests cover the version dispatch, and the
+  focused sort-menu GUI test now checks new-tab default and closing-tab restore.
+- All seven prepared Git blobs were exact-byte verified in an isolated Windows
+  source checkout matching original product `099cfb7125f9`. `test_session_coordinator_contract.py`
+  **PASS**; GUI test Python syntax **PASS**; Release compiler/linker **PASS**
+  in [#39230031402](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39230031402).
+  Candidate Release EXE SHA-256:
+  `368cc3c2b74f17845ec06e4db3cfc31687040eef78f878c8faba6b7b32df6fa1`.
+  It contains the new seven product/test blobs; the `main` commit applied those
+  exact Git blobs atomically after the build.
+- **NOT GUI ACCEPTED:** an additional login-session GUI execution request was
+  blocked by the tool safety/approval control before execution. It was not
+  bypassed or retried through another execution route. Actual per-PaneTab
+  UI selection, session restart/restore, screenshots and pixel acceptance are
+  therefore **NOT TESTED on this commit**. Do not mistake a compile-successful
+  test file for a runtime PASS. Follow-up requires an explicitly permitted,
+  provenance-matched test path, otherwise leave pending.
+- Earlier L08 cursor remains unresolved. In further isolated
+  [#39228853177](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39228853177),
+  the instrumented handle reported `L08_LOADED` but did not report
+  `L08_ENTERED`/`L08_MOVED` at the probed mouse position, and the native
+  cursor was still stock arrow. This is a **scoped diagnostic observation**,
+  not proof about all pointer input paths. No L08 cursor fix was committed.
+- User-excluded G03 actual 125/150/200% DPI, G04 F04/F05 High Contrast/Narrator,
+  and G05 real USB/SMB/UNC tests remain excluded from development and release
+  prerequisites; their historical evidence is unchanged.
+
+
 
 ## 2026-10-19 L08 Details column cursor and drag — scoped Windows evidence
 
