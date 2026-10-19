@@ -18,6 +18,8 @@ Their exact content remains available through Git history.
 - ERROR_HISTORY.md — append-only failure/root-cause/prevention ledger.
 - UI_UX_DESIGN_GUIDE.md — current product UI/UX rules.
 - WIN11_EXPLORER_UI_REFERENCE.md — Windows 11 Explorer comparison policy.
+- EXPLORER_PARITY_REQUIREMENTS.md — feature-parity development contracts,
+  acceptance criteria, priorities and scoped local build/run evidence.
 - WINUI_EXPLORER_VISUAL_BENCHMARK_20261001.md — measured Explorer baseline.
 - WIN11_EXPLORER_FEATURE_BENCHMARK_20261012.md — sourced feature-gap matrix, priorities and acceptance boundaries.
 - UI_VISUAL_RETEST.md — current owned GUI/visual verification workflow.

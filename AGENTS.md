@@ -274,6 +274,13 @@ criteria.
 
 ## UI direction
 
+For Windows 11 Explorer feature-parity planning and implementation, follow
+docs/development/EXPLORER_PARITY_REQUIREMENTS.md. It defines scoped feature
+contracts, existing evidence, completion criteria and verification boundaries;
+it does not authorize implementing the entire backlog or override explicit
+user exclusions in NEXT_DEVELOPMENT_GOALS.md. Record functional and visual
+acceptance separately and preserve the dual-pane/two-level-tab model.
+
 Windows 11 File Explorer is the primary visual/interaction reference using
 public WinUI/Windows APIs only. Preserve flyExplorer's dual-pane model. See
 docs/development/UI_UX_DESIGN_GUIDE.md and

@@ -6,6 +6,10 @@
 현재 상태 및 수용의 기준은 최신 소스, `CURRENT_STATUS.md`, `UI_UX_AUDIT.md`,
 정확한 SHA/환경의 중앙 Windows 증거다. 작업 시작 시 반드시 다시 대조한다.
 
+Windows 11 탐색기 기능 호환의 구체적인 개발 계약·관련 파일·완료 조건은
+[EXPLORER_PARITY_REQUIREMENTS.md](EXPLORER_PARITY_REQUIREMENTS.md)를 따른다.
+아래 G01/G02/G06 등과 연결되며, 기존 제외 항목이나 완료 수용을 다시 열지 않는다.
+
 **2026-10-19 사용자 지시:** 실제 125%·150%·200% DPI 검증(G03), F04/F05
 고대비·Narrator 음성 검증(G04), USB·SMB·UNC 실환경 검증(G05)은 **향후 개발·검증
 목표에서 제외**한다. 현재 미검증 상태는 기록으로만 유지하며, 다른 작업의 하위
