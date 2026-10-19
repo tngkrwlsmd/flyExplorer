@@ -121,7 +121,10 @@ def main(config="Release"):
                 try:
                     hit=Desktop(backend="uia").from_point(px,py)
                     info=hit.element_info
-                    return (info.automation_id,info.control_type,hit.window_text())
+                    # Never put titles from a foreign foreground window in CI logs.
+                    if getattr(info,"process_id",None)!=proc.pid:
+                        return ("not-owned-hit",)
+                    return (info.automation_id,info.control_type)
                 except Exception as error:
                     return ("<uia-error>",type(error).__name__,"")
             mouse.move(coords=(x,y))
