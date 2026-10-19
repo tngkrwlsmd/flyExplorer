@@ -214,4 +214,13 @@ def main(config="Release"):
     return 0 if passed and safe else 1
 
 if __name__=="__main__":
-    sys.exit(main(sys.argv[1] if len(sys.argv)>1 else "Release"))
+    try:
+        result=main(sys.argv[1] if len(sys.argv)>1 else "Release")
+    except Exception:
+        import traceback
+        traceback.print_exc()
+        print("OWNED_DETAIL_COLUMN_RESULT FAIL",flush=True)
+        sys.exit(1)
+    print("OWNED_DETAIL_COLUMN_RESULT "+("PASS" if result==0 else "FAIL"),
+          flush=True)
+    sys.exit(result)
