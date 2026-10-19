@@ -14,6 +14,33 @@
 
 ## 1. L08 진행: Build PASS, GUI/커서 FAIL
 
+- **2026-10-19 후속 실제 GUI 결과:** 중앙 Windows
+  [#39247119043](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39247119043)에서
+  소유 앱의 UIA hit 대상은 `LeftNameColumnResizeThumb` (`Group`)였지만
+  실제 커서 `65539`는 기본 arrow `65539`였으며 좌우 조절용 커서 `65553`와 달랐다.
+  GUI assertion은 **FAIL**이다. 실행 래퍼가 `gui-pass/exit_code=0`을
+  잘못 기록했지만 Python traceback과 필수 마커 누락으로 이를 거부했다.
+- **후속 격리 후보:** 기존 앱을 중단하거나 소스 `main`을 수정하지 않고
+  `MainWindow.xaml.cpp/.h` 두 파일의 `WM_SETCURSOR` 보정 후보를 별도
+  Windows 테스트 작업공간에 적용했다. 중앙
+  [#39248666199](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39248666199)에서
+  source-contract와 Release 빌드는 **PASS**, GUI는 동일한 기본 arrow 커서로
+  **FAIL**이었다. 이 후보를 제품 코드에 도입하지 않는다.
+- **검증 도구 정비:** `ffd9027c`에서 L08 Python GUI 예외를 명시적으로
+  `OWNED_DETAIL_COLUMN_RESULT FAIL`로 출력하도록 변경했다.
+  `3b308357`에서 `python tools/winui/run_checks.py gui --area column-resize
+  --configuration Release` 집중 경로를 추가했고, `81cab8b6`에서 관련
+  소스 계약을 보강했다. 기존 엄격한 커서 assertion과 세 열 드래그,
+  기존 사용자 설정 불변 조건은 그대로다. **이 새 경로의 실제 Windows 실행은
+  아직 NOT TESTED**다. 전체 GUI 통과로 승격하지 않는다.
+- **제어 상태:** 마지막 조회 시 `personal-control-plane`의
+  `requests/remote-shell/windows-vm.json`에 완료된 과거 후보 요청이 남아 있었다.
+  실행은 모두 종료됐지만 해당 슬롯의 idle 복원 GitHub 쓰기는 안전 검사에서
+  차단됐다. 다른 수단으로 우회하거나 그 슬롯을 덮어쓰지 않는다.
+  승인된 정상 복원 가능 상태가 확인된 뒤에만 Windows 작업을 재개한다.
+  이후의 cursor 수정은 실제 XAML 입력 전달·네이티브 창 경계의 증거가 있을 때만 선택한다.
+
+
 - **2026-10-19 후속 진단 준비:** [`552fe9c5`](https://github.com/tngkrwlsmd/flyExplorer/commit/552fe9c58787a64aebf3f126a11f933acb50b07d)에서
   `tests/winui/test_owned_column_resize_gui.py`의 엄격한 커서 assertion 직전에
   소유 앱 위치의 UIA hit 정보와 native active/arrow/sizewe 커서 핸들을
