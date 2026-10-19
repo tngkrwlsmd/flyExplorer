@@ -30,7 +30,11 @@
   `OWNED_DETAIL_COLUMN_RESULT FAIL`로 출력하도록 변경했다.
   `3b308357`에서 `python tools/winui/run_checks.py gui --area column-resize
   --configuration Release` 집중 경로를 추가했고, `81cab8b6`에서 관련
-  소스 계약을 보강했다. 기존 엄격한 커서 assertion과 세 열 드래그,
+  소스 계약을 보강했다. 이후 `ed68a40a`와 `1f7ad3ca`에서는
+  전용 실행 결과에 정상 종료 코드가 있더라도 명시적 PASS, 세 열의
+  실제 변경 마커, 원본 설정 불변 마커가 모두 존재하고 traceback/FAIL이
+  없어야만 통과시키도록 강화했다. 이 변경은 테스트 실행기의 안전 판정
+  개선이지 커서 문제 해결은 아니다. 기존 엄격한 커서 assertion과 세 열 드래그,
   기존 사용자 설정 불변 조건은 그대로다. **이 새 경로의 실제 Windows 실행은
   아직 NOT TESTED**다. 전체 GUI 통과로 승격하지 않는다.
 - **제어 상태:** 마지막 조회 시 `personal-control-plane`의
