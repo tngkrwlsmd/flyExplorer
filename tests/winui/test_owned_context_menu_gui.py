@@ -174,6 +174,28 @@ def main(config="Debug"):
   second_row().iface_selection_item.AddToSelection()
   eventually(lambda:row().is_selected() and second_row().is_selected(),
              "Owned multi-selection did not stabilize",8)
+  # A right-click on an already-selected member must preserve both siblings.
+  # This fails against the former handler which cleared every multi-selection.
+  item=row().rectangle()
+  area=win.child_window(auto_id="LeftFiles").rectangle()
+  left=max(item.left,area.left);right=min(item.right,area.right)
+  top=max(item.top,area.top);bottom=min(item.bottom,area.bottom)
+  assert right-left>30 and bottom-top>5
+  click=(left+min(50,(right-left)//2),(top+bottom)//2)
+  assert user.GetForegroundWindow()==hwnd,"Refusing multi-right-click foreign window"
+  mouse.click(button="right",coords=click)
+  eventually(spawned,"Multi right-click did not spawn Shell helper",8)
+  eventually(owns_foreground,"Multi right-click helper not foreground-owned",6)
+  assert row().is_selected() and second_row().is_selected(),\
+      "Right-click collapsed the owned multi-selection"
+  user.keybd_event(0x1b,0,0,0)
+  user.keybd_event(0x1b,0,2,0)
+  eventually(lambda:not child.is_running() or child.status()=="zombie",
+             "Multi right-click popup did not cancel",6)
+  assert row().is_selected() and second_row().is_selected()
+  print("OWNED_CONTEXT_MULTI_RIGHT_CLICK_SELECTION_PRESERVED",True,flush=True)
+  child=None
+  win.set_focus()
   win.child_window(auto_id="LeftFiles").set_focus()
   assert user.GetForegroundWindow()==hwnd,"Refusing multi-menu foreign window"
   keyboard.send_keys("+{F10}")

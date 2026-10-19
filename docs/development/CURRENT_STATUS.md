@@ -1,5 +1,17 @@
 # flyExplorer current status — R1 sort-menu scoped GUI/visual PASS 2026-10-19
 
+## 2026-10-19 L06 right-click selection — local scoped acceptance
+
+- Right-clicking an already-selected member now preserves the selection set;
+  an unselected row still replaces it. Existing isolated-helper multi-item
+  execution restrictions remain intact.
+- Local Release/source 3 PASS, actual four-item selection/right-click/cancel
+  retention and unselected-row replacement observed, file hashes unchanged,
+  app exit 0. Dark matched BEFORE/AFTER review recorded in UI_UX_AUDIT.md.
+- Added a real two-file right-click regression to the existing owned GUI test;
+  syntax checked, script not run locally (pywinauto absent). No new central/full
+  GUI acceptance claim. L07 long-name rendering is next.
+
 ## 2026-10-19 L05 document activation — local scoped acceptance
 
 - Regular filesystem documents now open through the asynchronous Windows

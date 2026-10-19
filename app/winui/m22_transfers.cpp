@@ -84,7 +84,9 @@ void MainWindow::OnFileRightTapped(
   current=Microsoft::UI::Xaml::Media::VisualTreeHelper::GetParent(current);
  }
  if(!clicked)return;
- if(list.SelectedItems().Size()!=1||!clicked.IsSelected()){
+ // Right-clicking a member keeps the complete selection. Only an unselected
+ // row replaces it; the isolated menu retains its bounded multi-item policy.
+ if(!clicked.IsSelected()){
   list.SelectedItems().Clear();
   clicked.IsSelected(true);
  }
