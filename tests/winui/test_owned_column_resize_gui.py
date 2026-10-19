@@ -15,7 +15,7 @@ LEGACY=("fxfile.conf","fxfile-main.conf","fxfile-toolbar.dat",
 def eventually(fn,label,seconds=12):
     return wait_until(fn, label, seconds=seconds, interval=.2)
 
-def horizontal_resize_cursor():
+def horizontal_resize_cursor(details=False):
     class CursorInfo(ctypes.Structure):
         _fields_=[("cbSize",wintypes.DWORD),("flags",wintypes.DWORD),
                   ("hCursor",wintypes.HANDLE),("position",wintypes.POINT)]
@@ -24,7 +24,12 @@ def horizontal_resize_cursor():
     user.LoadCursorW.restype=wintypes.HANDLE
     info=CursorInfo();info.cbSize=ctypes.sizeof(info)
     if not user.GetCursorInfo(ctypes.byref(info)):raise ctypes.WinError()
-    return info.hCursor==user.LoadCursorW(None,32644) # IDC_SIZEWE
+    expected=user.LoadCursorW(None,32644) # IDC_SIZEWE
+    if details:
+        arrow=user.LoadCursorW(None,32512) # IDC_ARROW
+        return {"active":int(info.hCursor or 0),
+                "arrow":int(arrow or 0),"sizewe":int(expected or 0)}
+    return info.hCursor==expected
 
 def main(config="Release"):
     if os.name!="nt": return 2
@@ -120,6 +125,10 @@ def main(config="Release"):
                 except Exception as error:
                     return ("<uia-error>",type(error).__name__,"")
             mouse.move(coords=(x,y))
+            # Record the actual UIA hit and native cursor BEFORE the strict
+            # cursor assertion; otherwise a failed hover hides the evidence.
+            print("COLUMN_RESIZE_HOVER_PROBE",thumb_id,
+                  hit_info(x,y),horizontal_resize_cursor(details=True),flush=True)
             eventually(horizontal_resize_cursor,
                        thumb_id+" did not display the horizontal resize cursor",3)
             print("COLUMN_RESIZE_HIT_BEFORE",thumb_id,hit_info(x,y),flush=True)
