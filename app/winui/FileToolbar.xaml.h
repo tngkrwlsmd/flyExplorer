@@ -13,7 +13,7 @@ struct FileToolbar : FileToolbarT<FileToolbar> {
  void SetGroup(std::function<void(int)> change);
  void SetGroupState(int mode);
  void SetListDisplayState(bool checkboxes,bool compactRows,bool showExtensions,bool showHidden);
- void BeginNameEdit(int action,winrt::hstring const& initial);
+ void BeginNameEdit(int action,winrt::hstring const& initial,bool isFolder);
  void EndNameEdit();
  void OnCreateFolder(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
  void OnRenameSelected(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);

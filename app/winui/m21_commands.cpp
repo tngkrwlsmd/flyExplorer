@@ -35,6 +35,7 @@ void MainWindow::BeginFileNameCommand(fxfile::filecommand::Kind kind){
   return;
  }
  std::wstring initial;
+ bool renameFolder=false;
  if(kind==fxfile::filecommand::Kind::RenameSelected){
   const int side=ActiveWindowTab().model.activePane;
   auto& pane=ActiveWindowTab().model.panes[static_cast<size_t>(side)];
@@ -53,11 +54,12 @@ void MainWindow::BeginFileNameCommand(fxfile::filecommand::Kind kind){
    StatusText().Text(L"이 항목은 이름을 변경할 수 없습니다.");
    return;
   }
+  renameFolder=indexed->isFolder();
   try{initial=std::filesystem::path(
           indexed->parsingName).filename().wstring();}
   catch(...){initial=indexed->label;}
  }
- fileBar()->BeginNameEdit(kind==fxfile::filecommand::Kind::CreateFolder?0:1,hstring(initial));
+ fileBar()->BeginNameEdit(kind==fxfile::filecommand::Kind::CreateFolder?0:1,hstring(initial),renameFolder);
  StatusText().Text(kind==fxfile::filecommand::Kind::CreateFolder?
   L"새 폴더 이름을 입력하고 Enter를 누르세요.":
   L"새 이름을 입력하고 Enter를 누르세요.");

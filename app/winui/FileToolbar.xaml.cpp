@@ -4,6 +4,7 @@
 #include "FileToolbar.g.cpp"
 #endif
 #include <winrt/Windows.System.h>
+#include <string_view>
 using namespace winrt;
 using namespace Microsoft::UI::Xaml;
 using namespace Microsoft::UI::Xaml::Controls;
@@ -36,7 +37,25 @@ void FileToolbar::SetListDisplayState(bool checkboxes,bool compactRows,bool show
 void FileToolbar::SetViewIndex(int value){ViewDetailsItem().IsChecked(value==0);ViewListItem().IsChecked(value==1);ViewSmallIconsItem().IsChecked(value==2);ViewMediumIconsItem().IsChecked(value==3);ViewLargeIconsItem().IsChecked(value==4);}
 void FileToolbar::ChooseSort(int index){SetSortIndex(index);if(sort_)sort_(index);}
 void FileToolbar::ChooseView(int index){SetViewIndex(index);if(view_)view_(index);}
-void FileToolbar::BeginNameEdit(int action,hstring const& initial){pendingNameAction_=action;auto box=FileNameBox();box.Width(180);box.Opacity(1.0);box.IsHitTestVisible(true);box.IsTabStop(true);box.Text(initial);box.PlaceholderText(action==0?L"\uC0C8 \uD3F4\uB354 \uC774\uB984":L"\uC0C8 \uC774\uB984");box.Focus(FocusState::Programmatic);box.SelectAll();}
+void FileToolbar::BeginNameEdit(int action,hstring const& initial,bool isFolder){
+ pendingNameAction_=action;
+ auto box=FileNameBox();
+ box.Width(180);
+ box.Opacity(1.0);
+ box.IsHitTestVisible(true);
+ box.IsTabStop(true);
+ box.Text(initial);
+ box.PlaceholderText(action==0?L"\uC0C8 \uD3F4\uB354 \uC774\uB984":L"\uC0C8 \uC774\uB984");
+ box.Focus(FocusState::Programmatic);
+ // Keep the last extension unselected for regular filesystem files.
+ // Select entire names for folders, dotfiles, trailing dots and extensionless files.
+ const auto name=std::wstring_view{initial.c_str()};
+ const auto dot=name.find_last_of(L'.');
+ if(action==1&&!isFolder&&dot!=std::wstring_view::npos&&
+    dot>0&&dot+1<name.size())
+     box.Select(0,static_cast<int>(dot));
+ else box.SelectAll();
+}
 void FileToolbar::EndNameEdit(){pendingNameAction_=-1;auto box=FileNameBox();box.Text(L"");box.Width(1);box.Opacity(0.0);box.IsHitTestVisible(false);box.IsTabStop(false);}
 void FileToolbar::OnCreateFolder(IInspectable const&,RoutedEventArgs const&){if(!action_)return;const auto box=FileNameBox();if((box.Opacity()>=0.5&&pendingNameAction_==0)||(box.Opacity()<0.5&&!box.Text().empty()))action_(9);else action_(0);}
 void FileToolbar::OnRenameSelected(IInspectable const&,RoutedEventArgs const&){if(!action_)return;const auto box=FileNameBox();if((box.Opacity()>=0.5&&pendingNameAction_==1)||(box.Opacity()<0.5&&!box.Text().empty()))action_(10);else action_(1);}
