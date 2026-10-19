@@ -73,9 +73,18 @@
 - G06 접근성 이름 `8480403`, `c290ff6`, 소스 계약 `de2c687`
   반영: 제목 표시줄 작업 공간(WindowTab)과 활성 패널의 폴더 탭
   생성·닫기(PaneTab)를 사용자에게 구별한다. 레이아웃과 단축키 불변.
-- 변경 후 최신 GitHub 소스 8개 정적 조건이 모두 맞음을 확인했다.
-  실제 Python unittest, Windows 빌드/키보드 GUI·UIA 발화, 픽셀 검토는
-  **이번 범위에서 NOT TESTED**. 연결된 Desktop Commander 장치는 offline.
+- 이어서 `1a024da`에서 좌우 PaneTab **항목별** UIA 이름,
+  `d19c359`에서 활성 패널별 생성·닫기 버튼 이름을 적용했다.
+  `e34b95b`, `ea2d08b`에 해당 계약을 추가했다.
+- 정확한 소스 `11915f42bd6d85d2001653dba0a2aa30e0141532`로
+  새로운 test-owned Windows checkout의 단축키 소스 계약·탭 소스 계약
+  및 실제 Release 빌드 [#39239758606](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39239758606)
+  **모두 PASS** (`exit=0/0/0`). EXE SHA-256
+  `967db8f70dce972274786c177753de1030d10c2908fb1fe6758fcd5f0292943b`.
+  범위는 **컴파일과 source 계약**이며 실제 GUI/UIA·시각 픽셀 수용 아님.
+  Remote Shell 요청 파일은 검사 후 idle로 복원했다.
+- 현재 Desktop Commander 호스트는 offline. 기존 GUI 실행 승인
+  차단의 우회는 하지 않았으므로 G02/G06 기능 GUI는 미검증으로 유지한다.
 - 추가 키보드 처음-끝 왕복(G02), F2 실제 선택 범위 및 명령 활성·파일
   작업 결과 GUI 검증, L08 커서와 G01 실제 수용은 계속 열린 상태다.
   이전 사용자 제외 항목 3종은 이 작업의 하위 시험으로 다시 등록 금지.
