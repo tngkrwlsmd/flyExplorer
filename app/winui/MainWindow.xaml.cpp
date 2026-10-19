@@ -1197,8 +1197,11 @@ namespace winrt::FlyExplorer::implementation
         for (const auto& tab : pane.tabs) {
             TabViewItem item;
             const auto& folder=tab.snapshot();
-            item.Header(winrt::box_value(hstring(
-                folder.displayName.empty()?folder.parsingName:folder.displayName)));
+            const auto label=hstring(
+                folder.displayName.empty()?folder.parsingName:folder.displayName);
+            item.Header(winrt::box_value(label));
+            Microsoft::UI::Xaml::Automation::AutomationProperties::SetName(
+                item,(side==0?L"왼쪽 폴더 탭 ":L"오른쪽 폴더 탭 ")+label);
             item.IsClosable(false); // explicit shared Close tab action
             view.TabItems().Append(item);
         }
