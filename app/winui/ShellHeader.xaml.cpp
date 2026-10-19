@@ -42,7 +42,7 @@ void ShellHeader::SetWindowTabs(std::vector<std::wstring> const& labels,int sele
   auto item=items.GetAt(i).as<TabViewItem>();
   item.Header(winrt::box_value(hstring(labels[i])));
   Microsoft::UI::Xaml::Automation::AutomationProperties::SetName(
-      item,L"창 탭 "+hstring(labels[i]));
+      item,L"작업 공간 창 탭 "+hstring(labels[i]));
  }
  const int target=labels.empty()?-1:(std::clamp)(selected,0,static_cast<int>(labels.size()-1));
  if(tabs.SelectedIndex()!=target)tabs.SelectedIndex(target);
