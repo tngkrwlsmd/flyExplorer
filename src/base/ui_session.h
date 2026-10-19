@@ -8,6 +8,7 @@ namespace fxfile::uisession {
 struct PaneTab {
  std::wstring path;
  std::vector<std::wstring> back,forward;
+ std::uint32_t sort=0; // v4: folder-tab sort; old formats inherit pane sort.
 };
 struct PaneState {
  std::vector<PaneTab> tabs;

@@ -2,8 +2,8 @@
 
 Optional matched Light/Dark captures are app-window-only; capture success still
 requires separate pixel inspection. No clipboard, Recycle Bin or OS settings.
-Folder tabs currently share pane sort; this gate preserves that baseline and
-checks menu/list agreement, rather than adding independent folder-tab state.
+Folder tabs now have independent sort modes; the newly opened tab defaults to
+Name ascending, and closing it restores the prior tab's sort.
 """
 import argparse
 import ctypes as ct
@@ -170,14 +170,17 @@ def main():
             wait_until(lambda: tab_count() == original_count + 1,
                        "pane tab was not created", seconds=15, interval=.15)
             wait_until(lambda: len(filenames(0)) == 3, "new pane tab not ready", seconds=20, interval=.15)
-            choose(0)  # current product shares sort across this pane's folder tabs
+            open_sort()
+            check(0)  # A new PaneTab defaults to Name ascending.
+            close_menu()
+            choose(0)
             element("CloseTabButton").invoke()
             wait_until(lambda: tab_count() == original_count,
                        "pane tab was not closed", seconds=15, interval=.15)
-            wait_until(lambda: filenames(0) == list(NAMES),
-                       "shared pane name order changed after tab close", seconds=15, interval=.15)
+            wait_until(lambda: filenames(0) == list(reversed(NAMES)),
+                       "original PaneTab sort not restored after close", seconds=15, interval=.15)
             open_sort()
-            check(0)
+            check(1)
             close_menu()
             choose(1)
             # Window Tabs own independent workspaces as well as pane tabs.

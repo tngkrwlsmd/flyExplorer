@@ -3,6 +3,7 @@
 #include "file_list_state.h"
 #include <array>
 #include <cstdint>
+#include <vector>
 
 namespace fxfile::previewtabs {
 struct WindowTabState final {
@@ -11,6 +12,8 @@ struct WindowTabState final {
     std::uint64_t identity=0;
     fxfile::explorerui::Model model;
     std::array<fxfile::previewlist::PaneState,2> fileLists{};
+    // Active folder tab lives in fileLists; other folder tabs retain their own sort.
+    std::array<std::vector<int>,2> tabSortModes{{std::vector<int>{0},std::vector<int>{0}}};
     std::uint32_t splitPermille=500;
     bool fileInfoPaneVisible=false; // WindowTab-local, opt-in, not session persisted.
 };

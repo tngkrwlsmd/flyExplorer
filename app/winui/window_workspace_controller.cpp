@@ -85,14 +85,40 @@ bool WindowWorkspaceController::close(std::size_t index)
 fxfile::explorerui::Change WindowWorkspaceController::dispatch(
     fxfile::explorerui::Command command,int side,std::size_t tab)
 {
-    return active().model.dispatch(command,side,tab);
+    auto& state=active();
+    if(command!=fxfile::explorerui::Command::SelectTab&&
+       command!=fxfile::explorerui::Command::AddTab&&
+       command!=fxfile::explorerui::Command::CloseTab)
+        return state.model.dispatch(command,side,tab);
+    if(side<0||side>1)return {};
+    auto& pane=state.model.panes[side];
+    auto& modes=state.tabSortModes[side];
+    if(modes.size()!=pane.tabs.size()||pane.active>=modes.size())return {};
+    const auto previous=pane.active;
+    const int current=state.fileLists[side].sortMode;
+    const auto result=state.model.dispatch(command,side,tab);
+    if(!result.accepted)return result;
+    modes[previous]=current;
+    if(command==fxfile::explorerui::Command::AddTab){
+        modes.push_back(0);
+    }else if(command==fxfile::explorerui::Command::CloseTab){
+        modes.erase(modes.begin()+static_cast<std::ptrdiff_t>(previous));
+    }
+    state.fileLists[side].sortMode=modes[pane.active];
+    return result;
 }
 
 bool WindowWorkspaceController::resetActive(
     bool split,std::array<std::size_t,2> counts,
     std::array<std::size_t,2> selected)
 {
-    return active().model.reset(split,counts,selected);
+    auto& state=active();
+    if(!state.model.reset(split,counts,selected))return false;
+    for(int side=0;side<2;++side){
+        state.tabSortModes[side].assign(counts[side],0);
+        state.fileLists[side].sortMode=0;
+    }
+    return true;
 }
 
 bool WindowWorkspaceController::replace(
@@ -103,6 +129,15 @@ bool WindowWorkspaceController::replace(
     std::uint64_t maxIdentity=0;
     for(std::size_t i=0;i<states.size();++i){
         if(states[i].identity>kMaxWindowTabIdentity)return false;
+        for(int side=0;side<2;++side){
+            auto const& pane=states[i].model.panes[side];
+            auto const& modes=states[i].tabSortModes[side];
+            if(modes.size()!=pane.tabs.size()||pane.active>=modes.size()||
+               modes[pane.active]!=states[i].fileLists[side].sortMode)
+                return false;
+            if(std::any_of(modes.begin(),modes.end(),
+                           [](int mode){return mode<0||mode>7;}))return false;
+        }
         maxIdentity=(std::max)(maxIdentity,states[i].identity);
         for(std::size_t j=i+1;j<states.size();++j)
             if(states[i].identity==states[j].identity)return false;

@@ -74,6 +74,10 @@ SessionCoordinator::CaptureResult SessionCoordinator::capture(
                 auto const& pane=state.model.panes[side];
                 auto& target=saved.panes[side];
                 target.selected=static_cast<std::uint32_t>(pane.active);
+                if(state.tabSortModes[side].size()!=pane.tabs.size()){
+                    result.error=CaptureError::InvalidSession;
+                    return result;
+                }
                 target.sort=static_cast<std::uint32_t>(
                     state.fileLists[side].sortMode);
                 target.view=static_cast<std::uint32_t>(
@@ -90,6 +94,9 @@ SessionCoordinator::CaptureResult SessionCoordinator::capture(
                 captured[side].reserve(pane.tabs.size());
                 for(std::size_t i=0;i<pane.tabs.size();++i){
                     fxfile::uisession::PaneTab tab{};
+                    tab.sort=static_cast<std::uint32_t>(
+                        i==pane.active?state.fileLists[side].sortMode:
+                        state.tabSortModes[side][i]);
                     tab.path=i<pane.filesystemPaths.size()?
                         pane.filesystemPaths[i]:L"";
                     if(tab.path.empty())
@@ -204,6 +211,7 @@ bool SessionCoordinator::load(Post post,RestoreCompletion completion)
                         for(auto const& path:paths){
                             fxfile::uisession::PaneTab tab{};
                             tab.path=path;
+                            tab.sort=legacy.panes[side].sort;
                             legacy.panes[side].tabs.push_back(std::move(tab));
                         }
                     }
@@ -234,8 +242,11 @@ bool SessionCoordinator::load(Post post,RestoreCompletion completion)
                             static_cast<int>(source.activeSide)).accepted;
                     }
                     for(int side=0;ok&&side<2;++side){
+                        state.tabSortModes[side].clear();
+                        for(auto const& savedTab:source.panes[side].tabs)
+                            state.tabSortModes[side].push_back(static_cast<int>(savedTab.sort));
                         state.fileLists[side].sortMode=
-                            static_cast<int>(source.panes[side].sort);
+                            state.tabSortModes[side][source.panes[side].selected];
                         state.fileLists[side].viewMode=
                             static_cast<fxfile::previewlist::FileViewMode>(
                                 source.panes[side].view);

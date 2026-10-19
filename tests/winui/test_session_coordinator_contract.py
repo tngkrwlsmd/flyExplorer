@@ -49,6 +49,8 @@ class SessionCoordinatorContract(unittest.TestCase):
         self.assertIn("std::vector<WindowTab> windowTabs",session_h)
         self.assertIn("if(version==1)return decodeV1",session_cpp)
         self.assertIn("if(version==2)return decodeV2",session_cpp)
+        self.assertIn("if(version==3)return decodeV3",session_cpp)
+        self.assertIn("if(version==4)return decodeV4",session_cpp)
         for path in (ROOT/"src"/"base").glob("ui_session.*"):
             body=read(path)
             self.assertNotIn("Microsoft::UI::Xaml",body)
@@ -67,7 +69,9 @@ class SessionCoordinatorContract(unittest.TestCase):
                       "MaxHistory=16","checksum(bytes,bytes.size()-4)",
                       "MOVEFILE_REPLACE_EXISTING",
                       "if(version==1)return decodeV1",
-                      "if(version==2)return decodeV2"):
+                      "if(version==2)return decodeV2",
+                      "if(version==3)return decodeV3",
+                      "if(version==4)return decodeV4"):
             self.assertIn(token,body)
         self.assertIn("winui-session-v1.bin",body)
         self.assertIn("MOVEFILE_WRITE_THROUGH",body)
