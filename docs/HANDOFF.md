@@ -1,9 +1,9 @@
-# flyExplorer 작업 인계 — 2026-10-19 L08 실제 커서 검증
+# flyExplorer 작업 인계 — 2026-10-19 L08 커서 OPEN, G01 코드·빌드 PASS
 
 ## 기준과 사용자 범위
 
-- 기준 제품 코드: `099cfb7125f98ca57df977861dba2a8bd0c27c77`.
-  이후 문서 커밋은 제품 코드 변경이 아니다. 재개할 때 최신 `main`,
+- G01 제품 변경은 [`5c5298a3`](https://github.com/tngkrwlsmd/flyExplorer/commit/5c5298a3e126542b0118c5a670ac982cd5ed1718)에 반영됐다.
+  L08 커서 검증의 당시 제품 코드는 `099cfb7125f9`였다. 재개할 때 최신 `main`,
   최근 10개 커밋, 중앙 CI 및 `CURRENT_STATUS.md`를 다시 확인한다.
 - 작업 순서: **1) L08 커서/드래그 검증 → 2) G01 정렬 상태 독립화
   → 3) 일상 파일 사용성 개선**. 완료되지 않은 앞 단계를 PASS로 처리하거나
@@ -44,19 +44,25 @@
   영향 범위, 정상 종료·사용자 설정 불변을 기록한다. GUI 판정은
   명시적 통과 마커+오류 출력 부재로 한다. 픽셀 시각 검토는 별도.
 
-## 2. G01 결정 (코드 변경 이전)
+## 2. G01 진행: 코드 및 Release PASS, 실제 GUI 수용 대기
 
-- **PaneTab별 독립 정렬**을 유지하기로 선택한다. 현재 UI 설계 문서
-  `ARCHITECTURE.md`와 `UI_UX_DESIGN_GUIDE.md`의 원칙을 보존한다.
-  현재 `fileLists[side].sortMode`는 패널 공유이며 기존 동작이라는
-  근거 [#39187495613](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39187495613)
-  를 보존한다. **G01 코드 구현/세션 마이그레이션은 미착수.**
-- 다음 독립 단위는 탭 정렬 스냅샷 저장·복원, 새 탭 기본값, 탭 닫기,
-  WindowTab 전환, 기존 private session 스키마 마이그레이션과 실제
-  목록·메뉴 일치 회귀를 다뤄야 한다. 현재 수용된 R1 체크 표시와
-  F05 접힘 상태를 훼손하지 않는다.
+- [`5c5298a3`](https://github.com/tngkrwlsmd/flyExplorer/commit/5c5298a3e126542b0118c5a670ac982cd5ed1718)
+  에서 WindowTab당 좌우 각 PaneTab의 정렬 스냅샷을 도입했다.
+  새 PaneTab 기본 이름 오름차순, 탭 선택/닫기 시 정렬 복원,
+  private session schema v4 기록 및 v1~v3 읽기 호환을 구현했다.
+  R1 정렬 체크와 기존 F05 그룹 상태를 변경하지 않았다.
+- 7개 패치 Git Blob의 동일성을 격리 Windows 소스에서 확인한 뒤,
+  `test_session_coordinator_contract.py`와 GUI 스크립트 문법 검사,
+  정식 Release 빌드를 [#39230031402](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39230031402)
+  에서 PASS했다. 바이너리 해시
+  `368cc3c2b74f17845ec06e4db3cfc31687040eef78f878c8faba6b7b32df6fa1`.
+- GUI 시험의 Windows 실행 승인 단계가 안전 제어로 **차단됐다**.
+  다른 경로로 우회하지 않았고, **실제 GUI·시각·세션 복원은 NOT TESTED**다.
+  승인 가능한 정식 수용 경로가 명확해지기 전까지 PASS로 승격하지 않는다.
+- 해당 변경의 상세 원인·테스트 범위는 최신 `CURRENT_STATUS.md`,
+  `NEXT_DEVELOPMENT_GOALS.md`를 따른다.
 
-## 3. 일상 파일 사용성 개선
+## 3. 다음 허용 범위: 일상 파일 사용성 (미착수)
 
 - G02 키보드 전체 탐색·포커스 복귀, G06 두 수준 탭 범위 안내,
   L09 F2 이름 변경, EP05/EP06 명령 활성화/충돌·취소 피드백은
@@ -75,5 +81,7 @@
   에 후보 바이너리/로그/일부 실패 fixture가 증거로 남아 있을 수 있다.
   이것은 `main` 기준 소스·실행 파일이 아니다. 임의 전체 정리 금지.
   필요 시 소유 마커·정확한 경로·내용을 확인한 뒤 별도 정리한다.
-- 이번 제품 변경 없음, 신규 PR 없음. 성공한 Actions run도 내부
-  Traceback 또는 PASS 마커 누락을 덮어쓰지 못한다.
+- 이번 재개에서 G01 제품 변경 7개 파일을 `main`에 반영했다. L08 제품
+  코드는 변경하지 않았고, 사용자 제외 시험과 신규 PR을 수행하지 않았다.
+  중앙 `windows-vm` 요청 파일은 idle 명령으로 복원했다. 성공한 Actions
+  run도 내부 Traceback 또는 PASS 마커 누락을 덮어쓰지 못한다.
