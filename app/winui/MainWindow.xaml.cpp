@@ -2782,6 +2782,12 @@ namespace winrt::FlyExplorer::implementation
     void MainWindow::UpdateActivePaneChrome()
     {
         const bool left=ActiveWindowTab().model.activePane==0;
+        Microsoft::UI::Xaml::Automation::AutomationProperties::SetName(
+            NewTabButton(),left?L"왼쪽 패널에 새 폴더 탭 만들기":
+                                L"오른쪽 패널에 새 폴더 탭 만들기");
+        Microsoft::UI::Xaml::Automation::AutomationProperties::SetName(
+            CloseTabButton(),left?L"왼쪽 패널의 현재 폴더 탭 닫기":
+                                  L"오른쪽 패널의 현재 폴더 탭 닫기");
         PrimaryPane().BorderThickness(Thickness{0.0,2.0,0.0,0.0});
         SecondaryPane().BorderThickness(Thickness{0.0,2.0,0.0,0.0});
         PrimaryPane().Opacity(1.0);
