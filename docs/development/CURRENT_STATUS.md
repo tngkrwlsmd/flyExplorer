@@ -1,4 +1,36 @@
-# flyExplorer current status — F05 full keyboard scoped PASS and owned fixture cleanup 2026-10-18
+# flyExplorer current status — R1 sort-menu scoped GUI/visual PASS 2026-10-19
+
+## 2026-10-19 R1 active sort menu — scoped acceptance
+
+- **Implemented:** eight native ToggleMenuFlyoutItems project the existing sort index;
+  `SetSortIndex` synchronizes activation/restore, menu and legacy ComboBox paths.
+  The initialization callback guard is preserved. No sorting engine, persistence,
+  MainWindow state machine or user settings were changed.
+- **Exact candidate:** reviewed `main` `3dd17f614caaf7a41b5d90a4f345e5a1e1ff61a9`
+  plus the two FileToolbar source changes. Product source hashes and the final
+  fixture hash are recorded in [UI_UX_AUDIT.md](UI_UX_AUDIT.md). Interactive
+  limited-user canonical Release build PASS; EXE SHA-256
+  `5a90c5deaa76f4e93f6a6a870a1defc20beb11456d2bcdf75537b76fc2cab751`.
+  Structure 4/4 and core contracts 60/60 passed. Later harness-only repairs
+  reused these exact product bytes.
+- **Functional GUI PASS:** [39188197976](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39188197976)
+  verified eight real-key sort choices/one-hot UIA Toggle states, actual name order,
+  independent panes/WindowTabs and menu/list agreement across folder-tab changes.
+  Light/Dark app exits 0; real app/legacy settings preserved; owned task/process
+  counts 0. This is a bounded pre-main user-session acceptance, not a new registered
+  exact-main full GUI status or Debug/full acceptance.
+- **VISUAL ACCEPTANCE: PASS (scoped 96 DPI):** four matched BEFORE/AFTER menu pairs,
+  Light/Dark at 960/800x634, were inspected. The selected check and keyboard focus
+  are distinct; the native check gutter is intended; no material clipping/overlap
+  was found. Actual alternate DPI, HC and Narrator speech remain separate gates.
+- **Existing ownership gap, not an R1 regression:** [39187495613](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39187495613)
+  reproduced pane-shared sort across folder tabs in both the old accepted EXE and
+  R1 EXE. ARCHITECTURE's PaneTab-level sort description is not fully implemented.
+  Independent folder-tab sort/session semantics require a separate logical unit;
+  R1 preserves the existing behavior and reports it in the audit.
+- Prior preparation/fixture failures and the cancelled obsolete build wait remain
+  failures/cancellations, not retroactive PASS. Their causes and prevention are in
+  ERROR_HISTORY and the audit. No screenshots, binaries or raw machine logs are committed.
 
 ## 2026-10-18 requested work: F05 grouping keyboard acceptance and retained test cleanup
 

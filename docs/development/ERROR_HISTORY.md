@@ -16,6 +16,34 @@ product state use CURRENT_STATUS.md.
 
 이 문서는 확정된 오류를 단순 수정으로 끝내지 않고, 다음 진단을 빠르게 하고 같은 계열의 결함을 사전에 막기 위한 프로젝트 기록이다.
 
+## 2026-10-19 — R1 validation boundary and state-oracle repairs
+
+- A SYSTEM-created owned checkout caused user-session historical Git contracts to
+  return false despite the retired object being present. Confirm the object first,
+  then use an exact-checkout **process-local** safe.directory setting; never a
+  wildcard/global Git exception or ACL rewrite. Correct the canonical dependency
+  helper path (`tools/winui/check_python_deps.py`) before scheduling.
+- `Start-Process -Wait` remained blocked after native build commands had exited.
+  Bounded owned-process inspection found only the waiting worker/console host.
+  The obsolete owned task was cancelled with evidence retained, without claiming
+  build acceptance. Capture the command process handle and `WaitForExit()` directly;
+  keep stdout/stderr separate and observe its actual exit code.
+- The new GUI fixture first omitted required polling `interval` arguments, then
+  used the hidden legacy ComboBox's `selected_index()` as an oracle. A small real-key
+  probe [39186572498](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39186572498)
+  showed correct focus/check/file-order transitions while that getter returned None.
+  Validate call signatures from the actual helper with stdlib AST/signature binding;
+  assert visible Toggle state and durable file order instead of an unsupported getter.
+- A folder-tab independence assertion was also broader than current product behavior.
+  The unchanged old/new-binary comparison [39187495613](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39187495613)
+  proved pane-shared sort in both. Record the architecture/implementation gap and
+  preserve it in this display-only unit; do not silently add a persistence redesign.
+- **Successor:** [39188197976](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39188197976)
+  passed the repaired focused GUI, normal exits, settings preservation and cleanup
+  using the already-built `5a90c5de...` EXE. Four 96-DPI Light/Dark BEFORE/AFTER pairs
+  were separately reviewed. Source 4+60 and Release PASS evidence was preserved;
+  alternate DPI/HC/Narrator/full GUI and older failed runs were not relabelled PASS.
+
 ## 2026-10-18 — M26 owned GUI result transport obscured first failure
 
 - On an exact previously accepted product binary (source `0d10b1b6`, exe SHA-256 `300eeb16f86bba4dd47f92bd36ee073116f4bce371e4d3f6da54e5a86589db17`), the optional 96-DPI owned accessibility GUI test was invoked through temporary user-session scheduled tasks. Runs [#39102240993](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39102240993) and [#39102419752](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39102419752) failed in the result-envelope handler (the second produced 236053 bytes where only bounded JSON was expected); [#39102607819](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39102607819) ended with user task exit 1 and no final evidence file. These runs do **not** prove any product UI defect.

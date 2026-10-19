@@ -69,10 +69,10 @@
         <Button x:Name="SortButton" Grid.Column="3" Width="70" Style="{StaticResource ExplorerFlyoutButtonStyle}" ToolTipService.ToolTip="&#xC815;&#xB82C;" AutomationProperties.Name="&#xC815;&#xB82C;">
             <StackPanel Orientation="Horizontal" Spacing="5"><FontIcon Glyph="&#xE8CB;" FontSize="14"/><TextBlock Text="&#xC815;&#xB82C;"/></StackPanel>
             <Button.Flyout><MenuFlyout>
-                <MenuFlyoutItem Text="&#xC774;&#xB984; &#xC624;&#xB984;&#xCC28;&#xC21C;" Click="OnSortNameAscending"/><MenuFlyoutItem Text="&#xC774;&#xB984; &#xB0B4;&#xB9BC;&#xCC28;&#xC21C;" Click="OnSortNameDescending"/>
-                <MenuFlyoutItem Text="&#xC720;&#xD615; &#xC624;&#xB984;&#xCC28;&#xC21C;" Click="OnSortTypeAscending"/><MenuFlyoutItem Text="&#xC720;&#xD615; &#xB0B4;&#xB9BC;&#xCC28;&#xC21C;" Click="OnSortTypeDescending"/>
-                <MenuFlyoutItem Text="&#xD06C;&#xAE30; &#xC624;&#xB984;&#xCC28;&#xC21C;" Click="OnSortSizeAscending"/><MenuFlyoutItem Text="&#xD06C;&#xAE30; &#xB0B4;&#xB9BC;&#xCC28;&#xC21C;" Click="OnSortSizeDescending"/>
-                <MenuFlyoutItem Text="&#xC218;&#xC815; &#xB0A0;&#xC9DC; &#xC624;&#xB984;&#xCC28;&#xC21C;" Click="OnSortDateAscending"/><MenuFlyoutItem Text="&#xC218;&#xC815; &#xB0A0;&#xC9DC; &#xB0B4;&#xB9BC;&#xCC28;&#xC21C;" Click="OnSortDateDescending"/>
+                <ToggleMenuFlyoutItem x:Name="SortNameAscendingItem" Text="&#xC774;&#xB984; &#xC624;&#xB984;&#xCC28;&#xC21C;" IsChecked="True" Click="OnSortNameAscending"/><ToggleMenuFlyoutItem x:Name="SortNameDescendingItem" Text="&#xC774;&#xB984; &#xB0B4;&#xB9BC;&#xCC28;&#xC21C;" Click="OnSortNameDescending"/>
+                <ToggleMenuFlyoutItem x:Name="SortTypeAscendingItem" Text="&#xC720;&#xD615; &#xC624;&#xB984;&#xCC28;&#xC21C;" Click="OnSortTypeAscending"/><ToggleMenuFlyoutItem x:Name="SortTypeDescendingItem" Text="&#xC720;&#xD615; &#xB0B4;&#xB9BC;&#xCC28;&#xC21C;" Click="OnSortTypeDescending"/>
+                <ToggleMenuFlyoutItem x:Name="SortSizeAscendingItem" Text="&#xD06C;&#xAE30; &#xC624;&#xB984;&#xCC28;&#xC21C;" Click="OnSortSizeAscending"/><ToggleMenuFlyoutItem x:Name="SortSizeDescendingItem" Text="&#xD06C;&#xAE30; &#xB0B4;&#xB9BC;&#xCC28;&#xC21C;" Click="OnSortSizeDescending"/>
+                <ToggleMenuFlyoutItem x:Name="SortDateAscendingItem" Text="&#xC218;&#xC815; &#xB0A0;&#xC9DC; &#xC624;&#xB984;&#xCC28;&#xC21C;" Click="OnSortDateAscending"/><ToggleMenuFlyoutItem x:Name="SortDateDescendingItem" Text="&#xC218;&#xC815; &#xB0A0;&#xC9DC; &#xB0B4;&#xB9BC;&#xCC28;&#xC21C;" Click="OnSortDateDescending"/>
             </MenuFlyout></Button.Flyout>
         </Button>
         <Button x:Name="ViewButton" Grid.Column="4" Width="68" Style="{StaticResource ExplorerFlyoutButtonStyle}" ToolTipService.ToolTip="&#xBCF4;&#xAE30;" AutomationProperties.Name="&#xBCF4;&#xAE30;">

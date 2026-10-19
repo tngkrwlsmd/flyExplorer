@@ -28,6 +28,14 @@ GUI tests require a logged-in, unlocked interactive Windows user desktop;
 the controlling SYSTEM service's Session 0 is not a GUI test desktop.
 See `docs/operations/windows-runner-retirement.md`.
 
+Focused sort-menu keyboard, pane/tab state and matched Light/Dark capture gate
+(interactive 96-DPI desktop; screenshots require separate pixel review):
+
+    python -X utf8 tests\winui\test_sort_menu_gui.py Release
+
+This uses private test-owned settings and files, checks all eight sort menu
+states and name ordering, and leaves captures under ignored `logs/`.
+
 Legacy %APPDATA%\fxfile\conf files are optional read-only sentinels, not test
 fixtures. Tests must work when none of them exist and must fail if they create,
 remove or modify a real sentinel. Product processes receive test-owned
