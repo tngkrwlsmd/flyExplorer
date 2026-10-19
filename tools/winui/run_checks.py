@@ -482,7 +482,28 @@ def run_gui(area, configuration, env, tag):
         if rc:
             return fail("GUI_ACCEPTANCE_FAILURE", rc)
     cmd, gui_env, timeout = gui_command(area, configuration, env)
-    rc = execute(f"gui-{area}-{configuration}", cmd, timeout, gui_env, tag)
+    label = f"gui-{area}-{configuration}"
+    rc = execute(label, cmd, timeout, gui_env, tag)
+    if not rc and area == "column-resize":
+        # A Windows wrapper previously reported exit=0 despite a Python
+        # traceback. Require positive, independent owned-GUI evidence.
+        body = (LOGS / (tag + "-" + label + ".log")).read_text(
+            encoding="utf-8", errors="replace"
+        )
+        required = (
+            "OWNED_DETAIL_COLUMN_RESULT PASS",
+            "OWNED_DETAIL_COLUMN_NAME_RESIZE True",
+            "OWNED_DETAIL_COLUMN_TYPE_RESIZE True",
+            "OWNED_DETAIL_COLUMN_SIZE_RESIZE True",
+            "SIX_ORIGINAL_MFC_SETTINGS_IDENTICAL True",
+        )
+        lines = set(body.splitlines())
+        if not all(marker in lines for marker in required) or (
+            "OWNED_DETAIL_COLUMN_RESULT FAIL" in lines or
+            "Traceback (most recent call last)" in body
+        ):
+            print("L08_REQUIRED_GUI_MARKERS_MISSING_OR_ERROR", flush=True)
+            rc = 1
     return fail("GUI_ACCEPTANCE_FAILURE", rc) if rc else 0
 
 
