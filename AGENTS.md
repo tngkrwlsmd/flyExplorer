@@ -73,9 +73,30 @@ Before substantial work, use:
 - docs/development/ARCHITECTURE.md
 - docs/development/AGENT_EFFICIENCY.md
 - docs/development/ERROR_HISTORY.md for known/repeated failures.
+- docs/development/NEXT_DEVELOPMENT_GOALS.md when selecting or resuming an
+  unfinished feature, usability audit, accessibility check or release gate;
+  reconcile each goal with live main and exact-SHA acceptance first.
 
 Deleted dated migration reports are historical Git evidence, not current
 instructions.
+
+## Future development goals and scope
+
+The maintained, prioritized incomplete-work register is
+docs/development/NEXT_DEVELOPMENT_GOALS.md. It distinguishes verified
+architecture/behavior gaps from untested environments, deliberate safety
+limits, optional Explorer parity and publication gates. In particular, the
+existing pane-shared folder-tab sort behavior differs from the documented
+PaneTab sort ownership; decide the intended contract before changing it.
+Previously accepted F01-F06 and R1 sort-menu work must not be reopened from
+older historical plans without new evidence.
+
+The register is a planning and resumption aid, **not** permission to implement
+unrequested items, run privileged Windows tests, publish, change global OS
+settings, or create a PR. Preserve the dual-pane plus two-level tab model,
+source/binary/environment-scoped acceptance, and the existing project/user
+approval boundaries. Update goal status only when its actual completion
+criteria and evidence have been checked.
 
 ## Mandatory resume/current-state checkpoint
 
