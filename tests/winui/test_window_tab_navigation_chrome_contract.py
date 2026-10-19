@@ -10,6 +10,17 @@ def compact(s):
     return re.sub(r"\s+", " ", s)
 
 class WindowTabChromeContract(unittest.TestCase):
+    def test_g06_window_tabs_and_folder_tabs_have_distinct_accessible_names(self):
+        xaml=(ROOT/"app"/"winui"/"MainWindow.xaml").read_text(encoding="utf-8-sig")
+        header_xaml=(ROOT/"app"/"winui"/"ShellHeader.xaml").read_text(encoding="utf-8-sig")
+        header_cpp=(ROOT/"app"/"winui"/"ShellHeader.xaml.cpp").read_text(encoding="utf-8-sig")
+        self.assertIn('AutomationProperties.Name="현재 활성 패널에 새 폴더 탭 만들기"',xaml)
+        self.assertIn('AutomationProperties.Name="현재 활성 패널의 폴더 탭 닫기"',xaml)
+        self.assertIn('AutomationProperties.Name="왼쪽 폴더 탭"',xaml)
+        self.assertIn('AutomationProperties.Name="오른쪽 폴더 탭"',xaml)
+        self.assertIn('AutomationProperties.Name="창 작업 공간 탭"',header_xaml)
+        self.assertIn('L"작업 공간 창 탭 "+hstring(labels[i])',header_cpp)
+
     def test_navigation_chrome_recomputes_from_active_history(self):
         source=compact((ROOT/"app/winui/MainWindow.xaml.cpp").read_text(encoding="utf-8"))
         header=(ROOT/"app/winui/MainWindow.xaml.h").read_text(encoding="utf-8")
