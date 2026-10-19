@@ -2815,15 +2815,39 @@ namespace winrt::FlyExplorer::implementation
     }
     void MainWindow::UpdateCommandAvailability()
     {
-        // Keep selection commands reachable to keyboard/UIA selection patterns.
-        // Each command validates the current native selection before mutating.
-        const bool ready=!mFileOperations.busy();
-        fileBar()->WindowsCutButton().IsEnabled(ready);
-        fileBar()->WindowsCopyButton().IsEnabled(ready);
-        RenameButton().IsEnabled(ready);
-        fileBar()->RecycleButton().IsEnabled(ready);
-        fileBar()->CopyButton().IsEnabled(ready);
-        fileBar()->MoveButton().IsEnabled(ready);
+        // Enable actions for the active pane's actual file rows, not for
+        // a group heading, an empty selection, or a stale route. No Shell I/O.
+        const auto& state=ActiveWindowTab();
+        const int side=state.model.activePane;
+        const auto& pane=state.model.panes[side];
+        auto view=side==0?LeftFiles():RightFiles();
+        std::size_t chosen=0;
+        std::uint64_t singleLogical=0;
+        for(auto const& selected:view.SelectedItems()){
+            auto row=selected.try_as<ListViewItem>();
+            if(!row||!row.Tag())continue;
+            try{
+                const auto logical=winrt::unbox_value<std::uint64_t>(row.Tag());
+                if(chosen==0)singleLogical=logical;
+                ++chosen;
+            }catch(...){}
+        }
+        const bool ready=!mFileOperations.busy()&&
+            pane.active<pane.pending.size()&&!pane.pending[pane.active];
+        bool canRename=false;
+        if(ready&&chosen==1&&pane.active<pane.tabs.size()){
+            const auto* indexed=pane.tabs[pane.active].indexedItem(
+                static_cast<std::size_t>(singleLogical));
+            canRename=indexed&&indexed->isFileSystem()&&
+                !indexed->parsingName.empty();
+        }
+        const bool hasItems=ready&&chosen>0;
+        fileBar()->WindowsCutButton().IsEnabled(hasItems);
+        fileBar()->WindowsCopyButton().IsEnabled(hasItems);
+        RenameButton().IsEnabled(canRename);
+        fileBar()->RecycleButton().IsEnabled(hasItems);
+        fileBar()->CopyButton().IsEnabled(hasItems);
+        fileBar()->MoveButton().IsEnabled(hasItems);
     }
     void MainWindow::OnToggleFileInfoPane(IInspectable const&,RoutedEventArgs const&)
     {
