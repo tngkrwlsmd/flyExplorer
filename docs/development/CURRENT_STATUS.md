@@ -1,5 +1,23 @@
 # flyExplorer current status — G02/G06 Windows Release PASS; functional GUI pending (2026-10-19)
 
+## 2026-10-20 G01 — local tab/restore behavior observed; shutdown acceptance blocked
+
+- Current `4bdde290` product sources were built once through `fly.bat build Release`
+  (exit 0); EXE SHA-256 `eb89f47db33d2d12ff6abb1e6b7eb4f47c1e79adabfae3be27e8a54f9e35456d`.
+- Actual owned GUI confirmed PaneTab default Name ascending, independent ascending/
+  descending modes across switches and close, opposite-pane preservation, independent
+  WindowTab name/size modes, and v4 private-session restart restoring two PaneTab modes.
+  The restored descending sort-menu check agreed with the real file order.
+- First app exit was 0. After the restored run, the window closed but the owned process
+  remained without top-level windows for over 60 seconds. A read-only Windows wait chain
+  showed an ALPC wait toward `csrss.exe`, without a reported cycle. The exact cause is
+  unresolved; this does not establish a product deadlock. Owned cleanup produced exit -1.
+- **Final functional GUI acceptance: BLOCKED (shutdown).** Both real user-settings
+  guards and synthetic file hashes were unchanged. No product code was changed.
+  Dark/96-DPI/1906x1016 pixels were inspected; matched pre-implementation visual
+  acceptance, Light/narrow review and legacy v1-v3 live restore remain untested.
+  Ignored evidence: `logs/g01-local-20261020/result.json`, `logs/file-open/g01-current-build.log`.
+
 ## 2026-10-20 L08 — human hover confirmed; automated cursor gate unresolved
 
 - The user directly moved the mouse over a column boundary and reported that

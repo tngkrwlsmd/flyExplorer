@@ -41,11 +41,20 @@ Windows 11 탐색기 기능 호환의 구체적인 개발 계약·관련 파일�
 
 | ID | 우선순위 / 상태 | 목표와 확인된 근거 | 다음 작업 및 완료 조건 |
 | --- | --- | --- | --- |
-| G01 | P1 / **코드·소스·Release 완료, GUI 수용 대기** | [제품 커밋 `5c5298a3`](https://github.com/tngkrwlsmd/flyExplorer/commit/5c5298a3e126542b0118c5a670ac982cd5ed1718)에서 PaneTab별 정렬 상태와 v4 세션·v1~v3 읽기 호환 코드를 구현했다. 일치하는 7개 Blob의 소스 계약·Windows Release 빌드 [#39230031402](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39230031402) PASS. | 실제 PaneTab 전환·추가·닫기·Window Tab 분리·구형 세션 복원, 정렬 메뉴/목록을 기존 허용된 로그인 GUI 경로에서 확인해야 한다. 이번 GUI 실행 요청은 안전/승인 제어로 차단됐으므로 **GUI NOT TESTED**, 통과로 표기 금지. 승인 경로 우회·기존 제외된 G03~G05 시험 금지. |
+| G01 | P1 / **코드·Release 및 핵심 탭 GUI 관찰 완료, 복원 후 종료 차단** | [제품 커밋 `5c5298a3`](https://github.com/tngkrwlsmd/flyExplorer/commit/5c5298a3e126542b0118c5a670ac982cd5ed1718)에서 PaneTab별 정렬 상태와 v4 세션·v1~v3 읽기 호환 코드를 구현했다. 일치하는 7개 Blob의 소스 계약·Windows Release 빌드 [#39230031402](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39230031402) PASS. | 실제 PaneTab 전환·추가·닫기·Window Tab 분리·구형 세션 복원, 정렬 메뉴/목록을 기존 허용된 로그인 GUI 경로에서 확인해야 한다. 이번 GUI 실행 요청은 안전/승인 제어로 차단됐으므로 **GUI NOT TESTED**, 통과로 표기 금지. 승인 경로 우회·기존 제외된 G03~G05 시험 금지. |
 | G02 | P1 / **F6 포커스 피드백 코드·Windows Release PASS, 전체 GUI 대기** | F6 포커스 결과의 참/거짓을 구분하는 변경(`1c768b3`)과 소스 계약(`05266a4`)을 정확한 `11915f42`에서 Windows 실행 [#39239758606](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39239758606)으로 검사했다. 단축키 계약 및 Release 빌드 종료 코드 0. | 시작부터 강제 포커스 없이 Tab/Shift+Tab·주소·메뉴·파일 목록·Window Tab/PaneTab을 실제 로그인 GUI에서 순회하고 포커스 복귀·읽기 순서 확인. 소스·빌드 성공을 전체 GUI PASS로 확대하지 않는다. 사용자 제외 G03~G05 검증 금지. |
 | G06 | P1 / **두 수준 탭 접근성 이름 코드·Windows Release PASS, GUI 대기** | 최상위 작업 공간 탭 이름(`c290ff6`), 좌우 PaneTab 항목 이름(`1a024da`), 활성 패널에 따른 새/닫기 버튼 이름(`d19c359`) 및 계약 테스트(`de2c687`, `e34b95b`, `ea2d08b`)를 반영했다. 정확한 `11915f42`의 Windows 탭 계약 및 Release 빌드 [#39239758606](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39239758606) PASS. | 두 Window Tab × 좌우 폴더 탭에서 실제 포커스·UIA 이름·명령 대상이 일치하는지 확인해야 최종 GUI 완료. 레이아웃·단축키 유지, 사용자 제외된 환경 검증 금지. |
 | G07 | P2 / **검증 범위 확장 후보** | 필터의 한국어 두벌식 `한글` 저장은 수용됐지만 주소, 빠른 검색, 이름 변경에서 조합 중 Enter/Esc·글자 보존은 완전히 검증되지 않았다. | 승인된 실제 한국어 IME 환경에서 입력/조합/확정/취소 결과와 데이터 불변을 검증한다. 수용된 필터 시험을 동일 조건으로 반복하지 않는다. |
 | G08 | P1 / **로컬 대량 폴더 성능 범위 확인 필요** | 20,000개 완전 모델과 로컬 색인 25,000개 상한, 파일 시각 정보의 개별 제한은 구현 한계다. 상한 자체는 해당 규모의 실제 성능 수용을 뜻하지 않는다. | 이미 지원하는 **로컬 파일 시스템** 범위에서 사용자가 요청한 성능 과제만 좁혀 평가한다. G05의 USB·SMB·UNC·매핑 드라이브 시험이나 타사 Shell 제공자 호환성 시험으로 확대하지 않는다. 안전 상한을 증거 없이 높이지 않는다. |
+
+## 2026-10-20 G01 후속 관찰
+
+로컬 `4bdde290` Release에서 탭 추가·전환·닫기, 좌우/WindowTab 정렬 분리,
+v4 저장·재시작 후 두 탭의 정렬 복원을 실제 GUI로 확인했다. 다만 복원 실행은
+창 종료 후 프로세스가 남아 강제 정리 exit -1이었다. 정상 종료 조건 때문에 최종
+GUI 수용은 보류한다. 다음에는 종료의 OS/앱 생명주기 경계만 좁히고 확인된 정렬을
+다시 구현하거나 전체 GUI를 반복하지 않는다. 상세 증거는 CURRENT_STATUS.md와
+UI_UX_AUDIT.md의 최신 G01 절을 따른다. 구버전 세션 실측과 전체 시각 수용은 별도다.
 
 ## G01 구현 후 보류 조건 (2026-10-19)
 
