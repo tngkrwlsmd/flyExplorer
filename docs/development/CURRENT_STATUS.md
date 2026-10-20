@@ -1,5 +1,26 @@
 # flyExplorer current status — G02/G06 Windows Release PASS; functional GUI pending (2026-10-19)
 
+## 2026-10-20 G02/G06 — scoped keyboard and tab-name GUI observations
+
+- Live main `db10ef42`; reused the unchanged `4bdde290` product binary with
+  SHA-256 `eb89f47db33d2d12ff6abb1e6b7eb4f47c1e79adabfae3be27e8a54f9e35456d`.
+  One owned local Release run, no rebuild/product edits or dependency installation.
+- G06 scoped GUI PASS: two WindowTabs each reached two left and two right PaneTabs;
+  all observed items named their actual level/side. Add commands targeted the active
+  pane in both workspaces; left/right close commands in workspace B preserved the
+  opposite pane. Ctrl+Tab/Ctrl+Shift+Tab and Ctrl+W operated on WindowTabs and preserved A.
+- G02 observed PASS: F6 plus real file-row Down selection, list Tab to WindowTab
+  and Shift+Tab back, Ctrl+L address editing and Tab to search, sort-menu Down,
+  Escape focus return and Enter reopen. Left PaneTab Right/Left plus Enter activated
+  the next/previous tab with visible keyboard focus retained.
+- Automation `focused_element` stayed on FileNameBox despite real focus changes;
+  it is not trusted as acceptance. Screenshots and actual command outcomes were used.
+  Interrupted/occluded input attempts were not counted as product failures or PASS.
+- Exit 0; original user settings and three synthetic files unchanged. G02/G06 full
+  acceptance remains pending uninterrupted startup traversal and keyboard focus across
+  all four pane/workspace combinations. Visual review was scoped Dark/96-DPI/1906x1016;
+  no new full visual acceptance. Ignored text evidence: `logs/g01-local-20261020/g02-g06-uia-observations.json`.
+
 ## 2026-10-20 G01 follow-up — shutdown not reproduced; cause unresolved
 
 - Live main `08e066a1` has the same product sources as the recorded `4bdde290`
