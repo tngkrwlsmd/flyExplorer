@@ -1,5 +1,20 @@
 # flyExplorer current status — G02/G06 Windows Release PASS; functional GUI pending (2026-10-19)
 
+## 2026-10-20 G01 follow-up — shutdown not reproduced; cause unresolved
+
+- Live main `08e066a1` has the same product sources as the recorded `4bdde290`
+  EXE (`eb89f47d...`, full hash below). No rebuild or product changes.
+- Reused the same owned v4 session in two diagnostic conditions: restore with UIA
+  text inspection (PID 35676), then restore with screenshot capture and switching
+  to the second PaneTab (PID 44604). Both exited 0 with user settings unchanged;
+  the second also showed the restored ascending file order after settling.
+- The earlier lingering process was not reproduced or explained. Retain an
+  intermittent unresolved shutdown risk, not a fixed defect or final G01 PASS.
+  No lingering process remained to sample a native stack. Obtain that evidence
+  on an actual recurrence rather than repeating identical runs or guessing a fix.
+- Scoped functional observations passed; full visual acceptance remains NOT TESTED.
+  Earlier failure and legacy-session/visual gaps remain intact below.
+
 ## 2026-10-20 G01 — local tab/restore behavior observed; shutdown acceptance blocked
 
 - Current `4bdde290` product sources were built once through `fly.bat build Release`
