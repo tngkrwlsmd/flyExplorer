@@ -1,5 +1,19 @@
 # flyExplorer current status — G02/G06 Windows Release PASS; functional GUI pending (2026-10-19)
 
+## 2026-10-20 L08 — human hover confirmed; automated cursor gate unresolved
+
+- The user directly moved the mouse over a column boundary and reported that
+  the resize cursor displayed correctly. This supersedes treating earlier
+  synthetic-input failures as proof that the cursor never works in the product.
+- Exact binary, column/pane coverage and environment for that observation were
+  not recorded. Preserve it as user-reported manual evidence, not an exact-SHA
+  automated GUI or full visual PASS. Existing strict assertions remain intact.
+- Stop speculative cursor product changes. Further automated failures first need
+  input/event/environment classification against the working human interaction.
+  The temporary local event-source diagnostic was removed from product sources.
+- G01 and G02/G06 remain implemented with the previously recorded build evidence;
+  their outstanding GUI acceptance is the next development completion priority.
+
 ## 2026-10-19 G02/G06 source contracts and exact Windows Release build — PASS
 
 - Exact tested product source: `11915f42bd6d85d2001653dba0a2aa30e0141532`.
