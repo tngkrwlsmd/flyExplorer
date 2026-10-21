@@ -69,6 +69,124 @@ void MainWindow::OnCancelTransfer(IInspectable const&,RoutedEventArgs const&){
   StatusText().Text(L"Shell 파일 작업 취소를 요청했습니다.");
  }
 }
+void MainWindow::ShowAppFileContextMenu(int side,ListViewItem const& anchor){
+ if(mClosing||side<0||side>1||!anchor||
+    ActiveWindowTab().model.activePane!=side)return;
+ const auto& workspace=ActiveWindowTab();
+ const auto& pane=workspace.model.panes[side];
+ if(pane.active>=pane.tabs.size()||pane.active>=pane.pending.size()||
+    pane.active>=pane.routeIds.size()||pane.pending[pane.active])return;
+ const auto tab=pane.active;
+ const auto route=pane.routeIds[tab];
+ const auto& visible=workspace.fileLists[side];
+ if(visible.visibleRoute!=route||visible.visibleTab!=tab)return;
+ auto list=side==0?LeftFiles():RightFiles();
+ const auto count=list.SelectedItems().Size();
+ if(!count||count>fxfile::shelltransfer::kMaxItems){
+  StatusText().Text(L"앱 파일 메뉴는 최대 1,024개 항목을 선택할 수 있습니다.");
+  return;
+ }
+ // Bind every action to the exact WindowTab, PaneTab, route and selected
+ // logical identities. A delayed click must never mutate a new selection.
+ std::vector<std::uint64_t> logicalIds;
+ logicalIds.reserve(count);
+ bool allFilesystem=true;
+ bool canOpen=false;
+ for(auto const& selected:list.SelectedItems()){
+  auto row=selected.try_as<ListViewItem>();
+  if(!row||!row.Tag())return;
+  std::uint64_t logical{};
+  try{logical=unbox_value<std::uint64_t>(row.Tag());}
+  catch(...){return;}
+  auto const* indexed=pane.tabs[tab].indexedItem(
+   static_cast<std::size_t>(logical));
+  if(!indexed||indexed->parsingName.empty())return;
+  logicalIds.push_back(logical);
+  allFilesystem=allFilesystem&&indexed->isFileSystem();
+  if(count==1)
+   canOpen=indexed->isFolder()||indexed->isFileSystem();
+ }
+ std::sort(logicalIds.begin(),logicalIds.end());
+ if(std::adjacent_find(logicalIds.begin(),logicalIds.end())!=logicalIds.end())
+  return;
+ auto expected=std::make_shared<const std::vector<std::uint64_t>>(
+  std::move(logicalIds));
+ const auto identity=workspace.identity;
+ const bool ready=!mFileOperations.busy();
+ const bool selectedFilesystem=ready&&allFilesystem;
+ const bool canRename=selectedFilesystem&&count==1;
+ const bool canOpposite=ready&&workspace.model.split;
+ const bool canExternal=selectedFilesystem&&
+  count<=fxfile::shellcontext::kMaxContextSelection;
+
+ auto weak=get_weak();
+ MenuFlyout menu;
+ auto add=[&](wchar_t const* title,bool enabled,
+              std::function<void(MainWindow&)> action){
+  MenuFlyoutItem item;
+  item.Text(title);
+  item.IsEnabled(enabled);
+  item.Click([weak,side,identity,tab,route,expected,
+              action=std::move(action)](IInspectable const&,
+                                       RoutedEventArgs const&){
+   auto ui=weak.get();
+   if(!ui||ui->mClosing)return;
+   const auto& state=ui->ActiveWindowTab();
+   const auto& pane=state.model.panes[side];
+   if(state.identity!=identity||state.model.activePane!=side||
+      pane.active!=tab||pane.active>=pane.tabs.size()||
+      pane.active>=pane.pending.size()||pane.pending[pane.active]||
+      pane.active>=pane.routeIds.size()||pane.routeIds[tab]!=route||
+      ui->mFileOperations.busy()){
+    ui->StatusText().Text(
+     L"파일 메뉴를 연 뒤 창이나 작업 상태가 변경됐습니다. 다시 선택하세요.");
+    return;
+   }
+   const auto& viewState=state.fileLists[side];
+   if(viewState.visibleRoute!=route||viewState.visibleTab!=tab)return;
+   auto selectedView=side==0?ui->LeftFiles():ui->RightFiles();
+   if(selectedView.SelectedItems().Size()!=expected->size())return;
+   std::vector<std::uint64_t> actual;
+   actual.reserve(expected->size());
+   for(auto const& selected:selectedView.SelectedItems()){
+    auto row=selected.try_as<ListViewItem>();
+    if(!row||!row.Tag())return;
+    try{actual.push_back(unbox_value<std::uint64_t>(row.Tag()));}
+    catch(...){return;}
+   }
+   std::sort(actual.begin(),actual.end());
+   if(actual!=*expected){
+    ui->StatusText().Text(
+     L"파일 선택이 변경됐습니다. 우클릭 메뉴를 다시 여세요.");
+    return;
+   }
+   action(*ui);
+  });
+  menu.Items().Append(item);
+ };
+ add(L"열기",ready&&count==1&&canOpen,
+     [side](MainWindow& ui){ui.OpenSelectedFolder(side);});
+ menu.Items().Append(MenuFlyoutSeparator{});
+ add(L"복사 (클립보드)",selectedFilesystem,
+     [side](MainWindow& ui){ui.CopySelectedToWindowsClipboard(side,false);});
+ add(L"잘라내기 (클립보드)",selectedFilesystem,
+     [side](MainWindow& ui){ui.CopySelectedToWindowsClipboard(side,true);});
+ add(L"반대쪽 패널로 복사",canOpposite,
+     [](MainWindow& ui){ui.RunTransfer(fxfile::shelltransfer::Kind::Copy);});
+ add(L"반대쪽 패널로 이동",canOpposite,
+     [](MainWindow& ui){ui.RunTransfer(fxfile::shelltransfer::Kind::Move);});
+ menu.Items().Append(MenuFlyoutSeparator{});
+ add(L"이름 변경",canRename,
+     [](MainWindow& ui){
+      ui.BeginFileNameCommand(fxfile::filecommand::Kind::RenameSelected);
+     });
+ add(L"휴지통으로 이동",selectedFilesystem,
+     [](MainWindow& ui){ui.RunTransfer(fxfile::shelltransfer::Kind::Recycle);});
+ menu.Items().Append(MenuFlyoutSeparator{});
+ add(L"Windows 확장 메뉴…",canExternal,
+     [side](MainWindow& ui){ui.ShowExternalWindowsContextMenu(side);});
+ menu.ShowAt(anchor);
+}
 void MainWindow::OnFileRightTapped(
  IInspectable const& sender,Microsoft::UI::Xaml::Input::RightTappedRoutedEventArgs const& args){
  auto list=sender.try_as<ListView>();
@@ -92,7 +210,7 @@ void MainWindow::OnFileRightTapped(
  }
  args.Handled(true);
  QueueSelectionPresentationUpdate();
- ShowExternalWindowsContextMenu(side);
+ ShowAppFileContextMenu(side,clicked);
 }
 void MainWindow::UpdateSort(int selection){
  if(selection<0||selection>7)return;
