@@ -97,6 +97,8 @@ void MainWindow::ShowAppFileContextMenu(
  std::vector<std::uint64_t> logicalIds;
  logicalIds.reserve(count);
  bool allFilesystem=true;
+ bool boundedSources=true;
+ std::size_t sourceUnits=0;
  bool canOpen=false;
  bool isFolder=false;
  std::wstring folderPath;
@@ -110,6 +112,10 @@ void MainWindow::ShowAppFileContextMenu(
    static_cast<std::size_t>(logical));
   if(!indexed||indexed->parsingName.empty())return;
   logicalIds.push_back(logical);
+  const auto units=indexed->parsingName.size()+1;
+  if(units>fxfile::shelltransfer::kMaxSourcePathUnits-sourceUnits)
+   boundedSources=false;
+  else sourceUnits+=units;
   allFilesystem=allFilesystem&&indexed->isFileSystem();
   if(count==1){
    canOpen=indexed->isFolder()||indexed->isFileSystem();
@@ -125,9 +131,15 @@ void MainWindow::ShowAppFileContextMenu(
   std::move(logicalIds));
  const auto identity=workspace.identity;
  const bool ready=!mFileOperations.busy();
- const bool selectedFilesystem=ready&&allFilesystem;
  const bool localSource=!pane.filesystemPaths[tab].empty();
- const bool canRename=selectedFilesystem&&localSource&&count==1;
+ const bool localSelection=ready&&boundedSources&&
+  localSource&&allFilesystem;
+ const auto& sourceSnapshot=pane.tabs[tab].snapshot();
+ const bool canProviderSource=ready&&boundedSources&&!localSelection&&
+  sourceSnapshot.folder.valid()&&!sourceSnapshot.parsingName.empty()&&
+  sourceSnapshot.parsingName.size()<=
+   fxfile::shelltransfer::kMaxProviderParsingUnits;
+ const bool canRename=localSelection&&count==1;
  // Derive availability from the destination's current tab and route,
  // rather than offering an operation we already know cannot start.
  bool destinationFilesystem=false;
@@ -149,11 +161,10 @@ void MainWindow::ShowAppFileContextMenu(
    }
   }
  }
- const bool canOppositeCopy=ready&&
-     (destinationFilesystem||(allFilesystem&&destinationProvider));
- const bool canOppositeMove=selectedFilesystem&&
-     destinationFilesystem;
- const bool canExternal=selectedFilesystem&&localSource&&
+ const bool canOppositeCopy=(localSelection||canProviderSource)&&
+     (destinationFilesystem||(localSelection&&destinationProvider));
+ const bool canOppositeMove=localSelection&&destinationFilesystem;
+ const bool canExternal=localSelection&&
   count<=fxfile::shellcontext::kMaxContextSelection;
 
  auto weak=get_weak();
@@ -218,15 +229,15 @@ void MainWindow::ShowAppFileContextMenu(
      }));
  }
  menu.Items().Append(MenuFlyoutSeparator{});
- menu.Items().Append(make(L"잘라내기",L"\uE8C6",selectedFilesystem,
+ menu.Items().Append(make(L"잘라내기",L"\uE8C6",localSelection,
      [side](MainWindow& ui){ui.CopySelectedToWindowsClipboard(side,true);}));
- menu.Items().Append(make(L"복사",L"\uE8C8",selectedFilesystem,
+ menu.Items().Append(make(L"복사",L"\uE8C8",localSelection,
      [side](MainWindow& ui){ui.CopySelectedToWindowsClipboard(side,false);}));
  menu.Items().Append(make(L"이름 바꾸기",L"\uE8AC",canRename,
      [](MainWindow& ui){
       ui.BeginFileNameCommand(fxfile::filecommand::Kind::RenameSelected);
      }));
- menu.Items().Append(make(L"삭제",L"\uE74D",selectedFilesystem,
+ menu.Items().Append(make(L"삭제",L"\uE74D",localSelection,
      [](MainWindow& ui){ui.RunTransfer(fxfile::shelltransfer::Kind::Recycle);}));
  menu.Items().Append(MenuFlyoutSeparator{});
  MenuFlyoutSubItem sendTo;
