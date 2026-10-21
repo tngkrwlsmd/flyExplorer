@@ -359,6 +359,7 @@ namespace winrt::FlyExplorer::implementation
         fxfile::previewactivity::RecentActivityController mRecentActivity{};
         bool mZipInspectionBusy=false;
         bool mZipCreationBusy=false;
+        bool mZipDeflateCreationBusy=false;
         bool mZipExtractionBusy=false;
         bool mZipBatchCreationBusy=false;
         bool mZipBatchExtractionBusy=false;
@@ -417,6 +418,7 @@ namespace winrt::FlyExplorer::implementation
         void OpenSelectedWith(int side);
         void InspectSelectedZip(int side);
         void CreateSelectedZip(int side);
+        void CreateSelectedDeflateZip(int side);
         void CreateSelectedBatchZip(int side);
         void ExtractSelectedBatchZip(int side);
         void ExtractSelectedZip(int side);

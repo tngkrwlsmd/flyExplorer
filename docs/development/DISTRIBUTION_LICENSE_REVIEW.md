@@ -2,6 +2,16 @@
 
 This document records engineering evidence, not legal advice.
 
+## 2026-10-21 F08 miniz tdefl addition (NOT LICENSE CLEARED)
+
+Low-level miniz 3.1.2 `miniz_tdef.h/.c` was added under the
+existing pinned upstream license, with a documented local
+`miniz_tdef_compat.h` shim and include adaptation. The compiler
+template now separately compiles the tdefl C unit alongside
+tinfl. No release, distribution or compliance clearance is claimed;
+ensure all upstream attribution and changes accompany matching
+binary/source materials and verify rightsholder grants.
+
 ## 2026-10-21 F08 miniz codec source addition (NOT LICENSE CLEARED)
 
 The raw DEFLATE single-member decode experiment vendors low-level miniz

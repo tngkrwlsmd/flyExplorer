@@ -1,5 +1,41 @@
 # flyExplorer 작업 인계 — 2026-10-19 L08 커서 OPEN, G01 코드·빌드 PASS
 
+## 2026-10-21 EP10/F08 — 단일 일반 파일 Deflate ZIP 생성 (코드 반영, 미검증)
+
+- 기준 main `3c2883d2`. miniz 3.1.2의 low-level `tdefl` 소스를
+  같은 버전 라이선스·출처와 함께 추가했다. `miniz_tdef.c`의
+  include는 독립형 헤더 및 로컬 `miniz_tdef_compat.h`로
+  조정했으며, shim은 기존 `miniz.h`가 제공하던 압축 상수/
+  checksum 유틸만 로컬로 구현한다. 타 miniz ZIP archive API나
+  runtime 다운로드를 사용하지 않는다. 생성 프로젝트 템플릿에
+  C 소스 및 C++ wrapper를 NotUsing PCH로 추가했다.
+- `src/base/zip_raw_deflate_compress.h/.cpp`가 raw RFC1951
+  압축을 고정 상한 8MiB 입력/유한 출력 버퍼에서 수행한다.
+  `src/base/zip_deflate_writer.h`는 일반 로컬 고정 드라이브
+  안전한 파일 1개만 읽고 CRC·ZIP method 8 로컬/중앙/EOCD
+  헤더를 작성한다. 결과 파일은 `<source>.deflate.zip`.
+  압축 결과가 원본보다 크거나 기존 해제기의 **100:1
+  제한**을 초과하면 method 0(Store)로 전환해 기존 정책과
+  상호 호환되는 출력만 허용한다. Deflate는 실제
+  `ziprawdeflate::inflateExact` 결과가 원본과 일치할 때만
+  스테이징에 진입한다.
+- 기존 ZIP 생성 안전 경계(경로/재분석 지점, 원본 읽기,
+  크기·mtime 재확인, CRC, 기존 파일 충돌 거부, 임시 파일
+  예약→독점 기록/flush→MOVEFILE_WRITE_THROUGH 비대체
+  공개, RAII 정리)를 유지했다. 기존 Store 생성·다중
+  Store 생성 명령을 변경하지 않고, 우클릭에 **ZIP으로 묶기
+  (Deflate, 한 파일)**을 추가했다. WindowTab/PaneTab/
+  route/폴더 문맥이 유지될 때만 완료 알림·새로고침한다.
+- **지원 제외:** 여러 파일의 Deflate ZIP 생성, 폴더
+  계층, ZIP64, descriptor, ZIP 주석, 선점형 취소 및 단일
+  파일 취소 버튼. 커밋 후 취소·프로세스 종료·동시 디렉터리
+  치환/경합에 관한 미검증 위험도 남아 있다.
+- 신규 소스 계약은 작성만 했다. **Windows 빌드·네이티브/
+  소스 테스트·GUI·시각 검증 미실행 / NOT TESTED**.
+  miniz C/C++ 링크 및 정상·손상/빈 ZIP 상호운용성도 검증
+  증거가 없고, 배포 고지·권리자 확인은 여전히 출시 게이트다.
+  G01 OPEN, G07 중단, G03~G05 제외 유지.
+
 ## 2026-10-21 EP10/F08 — 2~8개 ZIP Store/Deflate 혼합 해제 (코드 반영, 미검증)
 
 - 기준 main `473827e0`. 기존 `zip_store_batch_extractor.h`를

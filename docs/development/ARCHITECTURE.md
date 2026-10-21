@@ -139,6 +139,18 @@ whole-directory non-replace publish and cancellation policy remains.
 The batch ZIP writer still emits only Store files. A one-shot tinfl
 call is not preemptible mid-call. All new code is NOT TESTED.
 
+The first F08 **writer-side** raw DEFLATE codec is
+`src/base/zip_raw_deflate_compress.cpp`/header, using miniz 3.1.2
+tdefl compiled as an independent C source. A tightly scoped
+`miniz_tdef_compat.h` fills only the monolithic miniz.h constants
+and checksum helpers needed by tdefl. The single-file
+`zip_deflate_writer.h` writes method-8 ZIP or falls back to method 0
+when compression enlarges data or our own extractor would reject a
+ratio above 100:1. Compressed output is round-trip verified through
+the existing bounded raw inflater before staging. It uses a distinct
+`<source>.deflate.zip` destination, no-overwrite publication, and
+has no single-file cancellation UI. Unbuilt/unexecuted: NOT TESTED.
+
 Regular-document activation belongs to `app/winui/file_open_controller.h`.
 It owns one asynchronous Windows StorageFile/Launcher request, deadline and
 close cancellation. MainWindow supplies weak presentation callbacks and checks
