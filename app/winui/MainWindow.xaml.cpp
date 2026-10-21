@@ -1062,6 +1062,28 @@ namespace winrt::FlyExplorer::implementation
         const auto completed=mShellNavigation->accept(
             ActiveWindowTab().model,std::move(result));
         if(completed.kind==Kind::Ignored)return;
+        // Only a successful refresh of the exact original PaneTab/folder
+        // can reveal a newly created or renamed file. Navigation or a
+        // failed refresh cancels the one-shot request without guessing.
+        if(completed.active&&completed.side>=0&&completed.side<2){
+            auto const& pane=ActiveWindowTab().model.panes[completed.side];
+            auto& reveal=ActiveWindowTab().fileLists[completed.side]
+                .fileCommandReveal;
+            if(!reveal.target.empty()){
+                if(completed.action==Action::Refresh){
+                    if(completed.kind==Kind::Applied&&
+                       pane.active<pane.tabs.size()&&
+                       pane.active<pane.routeIds.size()&&
+                       reveal.route==pane.routeIds[pane.active]&&
+                       reveal.tab==pane.active&&
+                       reveal.folder==
+                           pane.tabs[pane.active].snapshot().parsingName)
+                        reveal.afterRefresh=true;
+                    else reveal.clear();
+                }else if(completed.action!=Action::Continue)
+                    reveal.clear();
+            }
+        }
         const bool continuation=completed.action==Action::Continue;
         const bool restoreSettled=continuation?false:mWorkspaceRestore.settle(
             completed.side,completed.request);
