@@ -8,6 +8,9 @@
 #include <thread>
 #include <chrono>
 #include <utility>
+#include <algorithm>
+#include <functional>
+#include <memory>
 using namespace winrt;
 using namespace Microsoft::UI::Xaml;
 using namespace Microsoft::UI::Xaml::Controls;
@@ -116,6 +119,7 @@ void MainWindow::ShowAppFileContextMenu(int side,ListViewItem const& anchor){
  const bool selectedFilesystem=ready&&allFilesystem;
  const bool canRename=selectedFilesystem&&count==1;
  const bool canOpposite=ready&&workspace.model.split;
+ const bool canOppositeMove=canOpposite&&allFilesystem;
  const bool canExternal=selectedFilesystem&&
   count<=fxfile::shellcontext::kMaxContextSelection;
 
@@ -173,7 +177,7 @@ void MainWindow::ShowAppFileContextMenu(int side,ListViewItem const& anchor){
      [side](MainWindow& ui){ui.CopySelectedToWindowsClipboard(side,true);});
  add(L"반대쪽 패널로 복사",canOpposite,
      [](MainWindow& ui){ui.RunTransfer(fxfile::shelltransfer::Kind::Copy);});
- add(L"반대쪽 패널로 이동",canOpposite,
+ add(L"반대쪽 패널로 이동",canOppositeMove,
      [](MainWindow& ui){ui.RunTransfer(fxfile::shelltransfer::Kind::Move);});
  menu.Items().Append(MenuFlyoutSeparator{});
  add(L"이름 변경",canRename,
@@ -843,10 +847,14 @@ void MainWindow::HandleFileShortcut(
  const auto ctrl=(::GetKeyState(VK_CONTROL)&0x8000)!=0;
  const auto shift=(::GetKeyState(VK_SHIFT)&0x8000)!=0;
  const auto alt=(::GetKeyState(VK_MENU)&0x8000)!=0;
- // Keyboard equivalent of right-click for the selected filesystem row.
- // Reuse the fixed-drive single-item isolated-child safety checks.
+ // Keyboard equivalent of right-click: open the same native flyExplorer
+ // commands menu. Windows extension verbs remain an explicit menu choice.
  if(!ctrl&&shift&&!alt&&vk==Windows::System::VirtualKey::F10){
-  ShowExternalWindowsContextMenu(side);
+  auto view=side==0?LeftFiles():RightFiles();
+  if(view.SelectedItems().Size()){
+   auto row=view.SelectedItems().GetAt(0).try_as<ListViewItem>();
+   if(row)ShowAppFileContextMenu(side,row);
+  }else StatusText().Text(L"파일 메뉴를 열 항목을 먼저 선택하세요.");
   args.Handled(true);return;
  }
  if(ctrl&&shift&&!alt&&vk==Windows::System::VirtualKey::F){
