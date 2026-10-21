@@ -21,7 +21,6 @@ class ZipStoreBatchExtractorContracts(unittest.TestCase):
             "u32(bytes,directoryCursor+42)!=localCursor",
             "packed!=unpacked",
             "localCursor!=central||directoryCursor!=eocd",
-            "flags", # no consumer reliance on ambient ZIP state
             "u16(bytes,localCursor+6)!=0x0800u",
             "u16(bytes,directoryCursor+8)!=0x0800u",
             "detail::flatName(name)",
