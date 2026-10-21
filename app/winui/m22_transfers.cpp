@@ -671,7 +671,10 @@ void MainWindow::ShowExternalWindowsContextMenu(int side){
  if(!::GetCursorPos(&cursor))return;
  auto dispatch=DispatcherQueue();
  auto weak=get_weak();
- StatusText().Text(L"Windows Shell \uD655\uC7A5 \uBA54\uB274\uB97C \uBD84\uB9AC\uB41C \uD504\uB85C\uC138\uC2A4\uC5D0\uC11C \uC5FD\uB2C8\uB2E4.");
+ StatusText().Text(count>1?
+  L"여러 항목의 외부 Windows 메뉴는 속성 확인만 지원합니다. "
+  L"복사·이동·삭제는 앱 명령을 사용하세요.":
+  L"Windows Shell 확장 메뉴를 분리된 프로세스에서 엽니다.");
  try{
   std::thread([helper=std::move(helper),paths=std::move(paths),
                cursor,dispatch,weak]{
@@ -679,9 +682,15 @@ void MainWindow::ShowExternalWindowsContextMenu(int side){
     dispatch.TryEnqueue([weak,code]{
       if(auto ui=weak.get()){
        if(code==0)ui->StatusText().Text(
-          L"Windows Shell \uD655\uC7A5 \uBA54\uB274\uAC00 \uC885\uB8CC\uB410\uC2B5\uB2C8\uB2E4.");
+          L"Windows Shell 확장 메뉴가 종료됐습니다.");
+       else if(code==65)ui->StatusText().Text(
+          L"이 Windows 메뉴 명령은 실행하지 않았습니다. "
+          L"복사·이동·삭제·이름 변경은 flyExplorer 명령을 이용하세요. "
+          L"여러 항목의 외부 메뉴는 속성 확인만 지원합니다.");
+       else if(code==69)ui->StatusText().Text(
+          L"외부 속성 창의 종료를 확인하지 못했습니다. 항목을 확인하세요.");
        else ui->StatusText().Text(
-          L"Windows Shell \uD655\uC7A5 \uBA54\uB274\uB97C \uC644\uB8CC\uD558\uC9C0 \uBABB\uD588\uC2B5\uB2C8\uB2E4.");
+          L"Windows Shell 확장 메뉴를 완료하지 못했습니다.");
       }
     });
   }).detach();
