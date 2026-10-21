@@ -17,6 +17,10 @@ bool validLeaf(std::wstring const& name) noexcept{
     stem[3]>=L'1'&&stem[3]<=L'9')return false;
  return true;
 }
+bool validTextDocumentLeaf(std::wstring const& name) noexcept{
+ return validLeaf(name)&&name.size()>4&&
+  ::CompareStringOrdinal(name.c_str()+name.size()-4,4,L".txt",4,TRUE)==CSTR_EQUAL;
+}
 Result execute(Request const& task) noexcept{
  Result result{};
  if(!validLeaf(task.name)||task.parent.empty()||
@@ -41,6 +45,41 @@ Result execute(Request const& task) noexcept{
   if(task.kind==Kind::CreateFolder){
    if(::CreateDirectoryW(target.c_str(),nullptr))result.error=ERROR_SUCCESS;
    else result.error=::GetLastError();
+   return result;
+  }
+  if(task.kind==Kind::CreateTextFile){
+   if(!validTextDocumentLeaf(task.name)){
+    result.error=ERROR_INVALID_NAME;return result;
+   }
+   // Limit creation to a local drive and reject reparse ancestors. No UNC,
+   // provider or device namespace receives this new mutation command.
+   const auto root=folder.root_path().native();
+   if(root.size()!=3||root[1]!=L':'||root[2]!=L'\\'){
+    result.error=ERROR_NOT_SUPPORTED;return result;
+   }
+   const auto drive=::GetDriveTypeW(root.c_str());
+   if(drive!=DRIVE_FIXED&&drive!=DRIVE_REMOVABLE){
+    result.error=ERROR_NOT_SUPPORTED;return result;
+   }
+   std::filesystem::path current;
+   for(auto const& part:folder){
+    current/=part;
+    if(!current.has_root_directory())continue;
+    const DWORD flags=::GetFileAttributesW(current.c_str());
+    if(flags==INVALID_FILE_ATTRIBUTES){
+     result.error=::GetLastError();return result;
+    }
+    if(!(flags&FILE_ATTRIBUTE_DIRECTORY)||
+       (flags&FILE_ATTRIBUTE_REPARSE_POINT)){
+     result.error=ERROR_ACCESS_DENIED;return result;
+    }
+   }
+   // Atomic no-replace creation: never overwrite an existing file.
+   const HANDLE file=::CreateFileW(target.c_str(),GENERIC_WRITE,
+       FILE_SHARE_READ,nullptr,CREATE_NEW,FILE_ATTRIBUTE_NORMAL,nullptr);
+   if(file==INVALID_HANDLE_VALUE)result.error=::GetLastError();
+   else if(!::CloseHandle(file))result.error=::GetLastError();
+   else result.error=ERROR_SUCCESS;
    return result;
   }
   if(task.kind!=Kind::RenameSelected){result.error=ERROR_INVALID_PARAMETER;return result;}

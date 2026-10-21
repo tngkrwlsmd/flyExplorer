@@ -12,6 +12,7 @@ hstring koreanError(DWORD code){
  case ERROR_ALREADY_EXISTS:
  case ERROR_FILE_EXISTS:return L"같은 이름의 파일 또는 폴더가 이미 존재합니다. 덮어쓰지 않았습니다.";
  case ERROR_ACCESS_DENIED:return L"이 위치를 변경할 권한이 없습니다.";
+ case ERROR_NOT_SUPPORTED:return L"텍스트 문서는 로컬 일반 폴더에서만 만들 수 있습니다.";
  case ERROR_INVALID_NAME:
  case ERROR_INVALID_PARAMETER:return L"이름 또는 폴더 경로가 올바르지 않습니다.";
  case ERROR_FILE_NOT_FOUND:
@@ -34,8 +35,13 @@ void MainWindow::BeginFileNameCommand(fxfile::filecommand::Kind kind){
   StatusText().Text(L"이전 파일 작업이 완료될 때까지 기다려 주세요.");
   return;
  }
+ if(kind!=fxfile::filecommand::Kind::CreateFolder&&
+    kind!=fxfile::filecommand::Kind::CreateTextFile&&
+    kind!=fxfile::filecommand::Kind::RenameSelected)return;
  std::wstring initial;
  bool renameFolder=false;
+ if(kind==fxfile::filecommand::Kind::CreateTextFile)
+  initial=L"새 텍스트 문서.txt";
  if(kind==fxfile::filecommand::Kind::RenameSelected){
   const int side=ActiveWindowTab().model.activePane;
   auto& pane=ActiveWindowTab().model.panes[static_cast<size_t>(side)];
@@ -63,9 +69,14 @@ void MainWindow::BeginFileNameCommand(fxfile::filecommand::Kind kind){
           indexed->parsingName).filename().wstring();}
   catch(...){initial=indexed->label;}
  }
- fileBar()->BeginNameEdit(kind==fxfile::filecommand::Kind::CreateFolder?0:1,hstring(initial),renameFolder);
+ fileBar()->BeginNameEdit(
+     kind==fxfile::filecommand::Kind::CreateFolder?0:
+     kind==fxfile::filecommand::Kind::CreateTextFile?2:1,
+     hstring(initial),renameFolder);
  StatusText().Text(kind==fxfile::filecommand::Kind::CreateFolder?
   L"새 폴더 이름을 입력하고 Enter로 확정하거나 Esc로 취소하세요.":
+  kind==fxfile::filecommand::Kind::CreateTextFile?
+  L"새 텍스트 문서의 .txt 파일 이름을 입력하세요. Enter 확정, Esc 취소.":
   hstring(L"이름 변경 대상: "+initial+
       L" (Enter 확정, Esc 취소)"));
 }
@@ -87,8 +98,15 @@ void MainWindow::ExecuteFileCommand(fxfile::filecommand::Kind kind){
  request.name=std::wstring(FileNameBox().Text().c_str());
  if(request.name.empty()&&kind==fxfile::filecommand::Kind::CreateFolder)
      request.name=L"새 폴더";
+ if(request.name.empty()&&kind==fxfile::filecommand::Kind::CreateTextFile)
+     request.name=L"새 텍스트 문서.txt";
  if(!fxfile::filecommand::validLeaf(request.name)){
      StatusText().Text(L"파일 이름만 입력하세요. 경로나 특수 문자는 사용할 수 없습니다.");
+     return;
+ }
+ if(kind==fxfile::filecommand::Kind::CreateTextFile&&
+    !fxfile::filecommand::validTextDocumentLeaf(request.name)){
+     StatusText().Text(L"새 텍스트 문서는 .txt 확장자로만 만들 수 있습니다.");
      return;
  }
  if(kind==fxfile::filecommand::Kind::RenameSelected){
@@ -176,7 +194,9 @@ void MainWindow::OnFileCommandCompleted(
  fileBar()->EndNameEdit();
  if(originActive)StatusText().Text(
      completion.kind==fxfile::filecommand::Kind::CreateFolder?
-     L"새 폴더를 만들었습니다.":L"이름을 변경했습니다.");
+     L"새 폴더를 만들었습니다.":
+     completion.kind==fxfile::filecommand::Kind::CreateTextFile?
+     L"새 텍스트 문서를 만들었습니다.":L"이름을 변경했습니다.");
  const int side=completion.context.side;
  auto const& pane=ActiveWindowTab().model.panes[side];
  // The worker supplied the actual target path. Defer selection until

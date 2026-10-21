@@ -358,6 +358,10 @@ void MainWindow::ShowAppBackgroundContextMenu(
      [](MainWindow& ui){
       ui.BeginFileNameCommand(fxfile::filecommand::Kind::CreateFolder);
      }));
+ create.Items().Append(make(L"텍스트 문서 (.txt)",L"\uE8A5",localFolder,
+     [](MainWindow& ui){
+      ui.BeginFileNameCommand(fxfile::filecommand::Kind::CreateTextFile);
+     }));
  menu.Items().Append(create);
  Microsoft::UI::Xaml::Controls::Primitives::FlyoutShowOptions options;
  options.Position(position);

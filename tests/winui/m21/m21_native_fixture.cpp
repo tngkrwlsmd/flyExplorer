@@ -83,6 +83,33 @@ int wmain(int argc,wchar_t**argv){
  chk(filecommand::execute(req).error==ERROR_INVALID_NAME,"rename_source_must_be_child");
  req.parent=L"shell:MyComputerFolder";
  chk(filecommand::execute(req).error!=ERROR_SUCCESS,"reject_virtual_folder_mutations");
+ // F13: create an empty text document only, never replace existing data.
+ req.parent=dir.native();req.source.clear();
+ req.kind=filecommand::Kind::CreateTextFile;req.name=L"새 문서.txt";
+ chk(filecommand::execute(req).error==ERROR_SUCCESS&&
+     std::filesystem::is_regular_file(dir/L"새 문서.txt")&&
+     std::filesystem::file_size(dir/L"새 문서.txt")==0,
+     "create_empty_unicode_text_document");
+ chk(filecommand::execute(req).error!=ERROR_SUCCESS&&
+     std::filesystem::file_size(dir/L"새 문서.txt")==0,
+     "text_document_never_overwrites_existing");
+ req.name=L"메모.TXT";
+ chk(filecommand::execute(req).error==ERROR_SUCCESS&&
+     std::filesystem::file_size(dir/L"메모.TXT")==0,
+     "text_document_case_insensitive_extension");
+ req.name=L"메모.md";
+ chk(filecommand::execute(req).error==ERROR_INVALID_NAME&&
+     !std::filesystem::exists(dir/L"메모.md"),
+     "text_document_denies_other_extensions");
+ req.name=L"..\\escape.txt";
+ chk(filecommand::execute(req).error==ERROR_INVALID_NAME,
+     "text_document_denies_traversal");
+ req.name=L"CON.txt";
+ chk(filecommand::execute(req).error==ERROR_INVALID_NAME,
+     "text_document_denies_reserved_device");
+ req.parent=L"shell:MyComputerFolder";req.name=L"virtual.txt";
+ chk(filecommand::execute(req).error!=ERROR_SUCCESS,
+     "text_document_denies_virtual_parent");
  req.parent=dir.native();req.kind=static_cast<filecommand::Kind>(99);
  chk(filecommand::execute(req).error==ERROR_INVALID_PARAMETER,"unknown_mutation_denied");
  std::printf("M21_NATIVE_SUMMARY %d passed, %d failed.\n",pass,fail);

@@ -94,6 +94,38 @@ class FileCommandFeedbackContract(unittest.TestCase):
         self.assertNotIn("GetFileAttributesW(",fill)
         self.assertNotIn("CreateDirectoryW(",fill)
 
+class TextDocumentCreationContract(unittest.TestCase):
+    def test_f13_uses_bounded_native_worker_and_no_replace(self):
+        native=(ROOT/"src"/"base"/"file_command_core.cpp").read_text(encoding="utf-8-sig")
+        header=(ROOT/"src"/"base"/"file_command_core.h").read_text(encoding="utf-8-sig")
+        commands=(APP/"m21_commands.cpp").read_text(encoding="utf-8-sig")
+        bar=(APP/"FileToolbar.xaml.cpp").read_text(encoding="utf-8-sig")
+        win=(APP/"MainWindow.xaml.cpp").read_text(encoding="utf-8-sig")
+        menu=(APP/"m22_transfers.cpp").read_text(encoding="utf-8-sig")
+        controller=(APP/"file_operation_controller.cpp").read_text(encoding="utf-8-sig")
+        fixture=(ROOT/"tests"/"winui"/"m21"/"m21_native_fixture.cpp").read_text(encoding="utf-8-sig")
+        for token in ("CreateTextFile","validTextDocumentLeaf"):
+            self.assertIn(token,header)
+        for token in ("Kind::CreateTextFile","validTextDocumentLeaf(task.name)",
+                      "CREATE_NEW","::CreateFileW(", "FILE_ATTRIBUTE_REPARSE_POINT",
+                      "drive!=DRIVE_FIXED&&drive!=DRIVE_REMOVABLE"):
+            self.assertIn(token,native)
+        self.assertNotIn("CREATE_ALWAYS",native)
+        self.assertNotIn("TRUNCATE_EXISTING",native)
+        self.assertIn("fxfile::filecommand::execute(request)",controller)
+        self.assertIn("새 텍스트 문서.txt",commands)
+        self.assertIn("validTextDocumentLeaf(request.name)",commands)
+        self.assertIn("kind==fxfile::filecommand::Kind::CreateTextFile?2:1",commands)
+        self.assertIn("pendingNameAction_==2?16:-1",bar)
+        self.assertIn("else if(command==16)",win)
+        self.assertIn('make(L"텍스트 문서 (.txt)"',menu)
+        for marker in ("create_empty_unicode_text_document",
+                       "text_document_never_overwrites_existing",
+                       "text_document_denies_traversal",
+                       "text_document_denies_reserved_device"):
+            self.assertIn(marker,fixture)
+
+
 class TransferFeedbackContract(unittest.TestCase):
     def test_confirmation_cancel_and_partial_cancel_have_feedback(self):
         body=(APP/"m22_transfers.cpp").read_text(encoding="utf-8-sig")

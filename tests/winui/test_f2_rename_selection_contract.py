@@ -12,7 +12,7 @@ class RenameSelectionContract(unittest.TestCase):
         for token in (
             "BeginNameEdit(int action,hstring const& initial,bool isFolder)",
             "name.find_last_of(L'.')",
-            "action==1&&!isFolder",
+            "(action==1||action==2)&&!isFolder",
             "dot>0&&dot+1<name.size()",
             "box.Select(0,static_cast<int>(dot))",
             "else box.SelectAll()",
@@ -32,7 +32,8 @@ class RenameSelectionContract(unittest.TestCase):
         self.assertIn("pendingNameAction_=action", bar)
         self.assertIn("box.Focus(FocusState::Programmatic)", bar)
         self.assertIn("void FileToolbar::EndNameEdit()", bar)
-        self.assertIn("action_(pendingNameAction_==0?9:10)", bar)
+        self.assertIn("pendingNameAction_==0?9:pendingNameAction_==1?10:", bar)
+        self.assertIn("pendingNameAction_==2?16:-1", bar)
 
 
 if __name__ == "__main__":

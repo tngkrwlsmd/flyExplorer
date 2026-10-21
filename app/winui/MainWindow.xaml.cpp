@@ -395,6 +395,8 @@ namespace winrt::FlyExplorer::implementation
                     fxfile::filecommand::Kind::CreateFolder);
                 else if(command==10)ui->ExecuteFileCommand(
                     fxfile::filecommand::Kind::RenameSelected);
+                else if(command==16)ui->ExecuteFileCommand(
+                    fxfile::filecommand::Kind::CreateTextFile);
                 else if(command>=11&&command<=13){
                     const int theme=command-11;
                     ui->ApplyThemeChoice(theme);
