@@ -229,9 +229,11 @@ bool FileDetailController::start(
                            [](wchar_t c){return static_cast<wchar_t>(::towlower(c));});
                         auto found=windowsTypes.find(ext);
                         if(found!=windowsTypes.end()){
+                            // Keep the Details Type column concise:
+                            // a registered Windows name replaces, rather
+                            // than duplicates, the extension fallback.
                             if(!found->second.label.empty())
-                                entry.typeLabel+=L" (Windows 유형: "+
-                                    found->second.label+L")";
+                                entry.typeLabel=found->second.label;
                             entry.iconBgra=found->second.bgra;
                             entry.iconWidth=found->second.width;
                             entry.iconHeight=found->second.height;
