@@ -142,20 +142,35 @@ void MainWindow::OnFileCommandCompleted(
  const auto disposition=mFileOperations.acceptFileCommand(
      completion,FileOperationContext(completion.context.side));
  if(disposition==Disposition::Ignored)return;
+ const bool originActive=completion.context.windowTabIdentity==
+                         ActiveWindowTab().identity;
+ auto rememberOrigin=[&](std::wstring const& message){
+     for(std::size_t i=0;i<mWorkspace.count();++i){
+         auto& state=mWorkspace.state(i);
+         if(state.identity==completion.context.windowTabIdentity){
+             state.fileOperationNotice=message;
+             return;
+         }
+     }
+ };
  SetFileButtonsBusy(false,false);
  if(disposition==Disposition::StaleContext){
-     // The folder/tab moved while the worker was completing. Do not
-     // imply success or failure; let the user inspect the original folder.
-     StatusText().Text(
-         L"파일 작업이 종료됐지만 화면이 변경됐습니다. 원본 폴더에서 결과를 확인하세요.");
+     // Switching WindowTab, PaneTab or folder must never update another
+     // workspace's visible status. Keep the warning in its original tab.
+     const std::wstring notice=
+         L"파일 작업이 종료됐지만 화면이 변경됐습니다. 원본 폴더에서 결과를 확인하세요.";
+     rememberOrigin(notice);
+     if(originActive)StatusText().Text(hstring(notice));
      return;
  }
  if(disposition==Disposition::Failed){
-     StatusText().Text(koreanError(completion.result.error));
+     const std::wstring notice=koreanError(completion.result.error).c_str();
+     rememberOrigin(notice);
+     if(originActive)StatusText().Text(hstring(notice));
      return;
  }
  fileBar()->EndNameEdit();
- StatusText().Text(
+ if(originActive)StatusText().Text(
      completion.kind==fxfile::filecommand::Kind::CreateFolder?
      L"새 폴더를 만들었습니다.":L"이름을 변경했습니다.");
  auto const& pane=ActiveWindowTab().model.panes[completion.context.side];
