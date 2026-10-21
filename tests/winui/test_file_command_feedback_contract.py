@@ -17,6 +17,17 @@ class FileCommandFeedbackContract(unittest.TestCase):
         self.assertNotIn("성공",stale)
         self.assertNotIn("MoveFile",stale)
 
+    def test_file_command_feedback_remains_in_originating_window_tab(self):
+        body=(APP/"m21_commands.cpp").read_text(encoding="utf-8-sig")
+        completion=body.split("void MainWindow::OnFileCommandCompleted(",1)[1]
+        self.assertIn("completion.context.windowTabIdentity",completion)
+        self.assertIn("state.identity==completion.context.windowTabIdentity",completion)
+        self.assertIn("state.fileOperationNotice=message;",completion)
+        self.assertIn("rememberOrigin(notice);",completion)
+        self.assertIn("if(originActive)StatusText().Text(hstring(notice));",completion)
+        self.assertIn("if(disposition==Disposition::StaleContext)",completion)
+        self.assertIn("if(disposition==Disposition::Failed)",completion)
+
     def test_failure_and_success_still_use_native_result_and_refresh(self):
         body=(APP/"m21_commands.cpp").read_text(encoding="utf-8-sig")
         completion=body.split("void MainWindow::OnFileCommandCompleted(",1)[1]
