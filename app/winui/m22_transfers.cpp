@@ -72,7 +72,8 @@ void MainWindow::OnCancelTransfer(IInspectable const&,RoutedEventArgs const&){
   StatusText().Text(L"Shell 파일 작업 취소를 요청했습니다.");
  }
 }
-void MainWindow::ShowAppFileContextMenu(int side,ListViewItem const& anchor){
+void MainWindow::ShowAppFileContextMenu(
+ int side,ListViewItem const& anchor,Windows::Foundation::Point const& position){
  if(mClosing||side<0||side>1||!anchor||
     ActiveWindowTab().model.activePane!=side)return;
  const auto& workspace=ActiveWindowTab();
@@ -213,10 +214,13 @@ void MainWindow::ShowAppFileContextMenu(int side,ListViewItem const& anchor){
  menu.Items().Append(MenuFlyoutSeparator{});
  menu.Items().Append(make(L"추가 옵션 표시",L"\uE712",canExternal,
      [side](MainWindow& ui){ui.ShowExternalWindowsContextMenu(side);}));
- menu.ShowAt(anchor);
+ Microsoft::UI::Xaml::Controls::Primitives::FlyoutShowOptions options;
+ options.Position(position);
+ menu.ShowAt(anchor,options);
 }
 void MainWindow::ShowAppBackgroundContextMenu(
- int side,UIElement const& anchor){
+ int side,FrameworkElement const& anchor,
+ Windows::Foundation::Point const& position){
  if(mClosing||side<0||side>1||!anchor||
     ActiveWindowTab().model.activePane!=side)return;
  const auto& state=ActiveWindowTab();
@@ -299,7 +303,9 @@ void MainWindow::ShowAppBackgroundContextMenu(
       ui.BeginFileNameCommand(fxfile::filecommand::Kind::CreateFolder);
      }));
  menu.Items().Append(create);
- menu.ShowAt(anchor);
+ Microsoft::UI::Xaml::Controls::Primitives::FlyoutShowOptions options;
+ options.Position(position);
+ menu.ShowAt(anchor,options);
 }
 void MainWindow::OnFileRightTapped(
  IInspectable const& sender,Microsoft::UI::Xaml::Input::RightTappedRoutedEventArgs const& args){
@@ -319,7 +325,7 @@ void MainWindow::OnFileRightTapped(
   list.SelectedItems().Clear();
   args.Handled(true);
   QueueSelectionPresentationUpdate();
-  ShowAppBackgroundContextMenu(side,list);
+  ShowAppBackgroundContextMenu(side,list,args.GetPosition(list));
   return;
  }
  // Right-clicking a member keeps the complete selection. Only an unselected
@@ -330,7 +336,7 @@ void MainWindow::OnFileRightTapped(
  }
  args.Handled(true);
  QueueSelectionPresentationUpdate();
- ShowAppFileContextMenu(side,clicked);
+ ShowAppFileContextMenu(side,clicked,args.GetPosition(clicked));
 }
 void MainWindow::UpdateSort(int selection){
  if(selection<0||selection>7)return;
@@ -969,7 +975,7 @@ void MainWindow::HandleFileShortcut(
   auto view=side==0?LeftFiles():RightFiles();
   if(view.SelectedItems().Size()){
    auto row=view.SelectedItems().GetAt(0).try_as<ListViewItem>();
-   if(row)ShowAppFileContextMenu(side,row);
+   if(row)ShowAppFileContextMenu(side,row,Windows::Foundation::Point{0,0});
   }else StatusText().Text(L"파일 메뉴를 열 항목을 먼저 선택하세요.");
   args.Handled(true);return;
  }
