@@ -54,6 +54,7 @@ class FileCommandFeedbackContract(unittest.TestCase):
             self.assertIn(token,native)
         for token in (
             "if(disposition==Disposition::Failed)",
+            "if(disposition!=Disposition::Succeeded)return;",
             "reveal.target=completion.result.target;",
             "reveal.folder=completion.context.visibleShellFolder;",
             "reveal.route=completion.context.route;",
