@@ -41,7 +41,8 @@ FileOperationController::~FileOperationController()
 bool FileOperationController::sameContext(
     Context const& a,Context const& b) noexcept
 {
-    return a.side==b.side&&a.tab==b.tab&&a.route==b.route&&
+    return a.windowTabIdentity==b.windowTabIdentity&&
+           a.side==b.side&&a.tab==b.tab&&a.route==b.route&&
            a.visibleFolder==b.visibleFolder&&
            a.visibleShellFolder==b.visibleShellFolder;
 }
