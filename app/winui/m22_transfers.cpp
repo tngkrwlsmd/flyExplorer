@@ -226,27 +226,24 @@ void MainWindow::ShowAppBackgroundContextMenu(
  const auto& state=ActiveWindowTab();
  const auto& pane=state.model.panes[side];
  if(pane.active>=pane.tabs.size()||pane.active>=pane.routeIds.size()||
-    pane.active>=pane.pending.size()||pane.pending[pane.active])return;
+    pane.active>=pane.pending.size()||
+    pane.active>=pane.filesystemPaths.size()||
+    pane.pending[pane.active])return;
  const auto identity=state.identity;
  const auto tab=pane.active;
  const auto route=pane.routeIds[tab];
  const bool ready=!mFileOperations.busy();
  const bool localFolder=ready&&!pane.filesystemPaths[tab].empty();
+ const int viewMode=static_cast<int>(state.fileLists[side].viewMode);
+ const int sortMode=state.fileLists[side].sortMode;
  auto weak=get_weak();
- auto make=[weak,side,identity,tab,route](
-     wchar_t const* text,wchar_t const* glyph,bool enabled,
+ // Share the same route/WindowTab guard for ordinary commands and checked
+ // view/sort items. A delayed menu click cannot change a different pane.
+ auto guarded=[weak,side,identity,tab,route](
      std::function<void(MainWindow&)> action){
-  MenuFlyoutItem item;
-  item.Text(text);
-  item.IsEnabled(enabled);
-  if(glyph&&*glyph){
-   FontIcon icon;
-   icon.Glyph(glyph);
-   item.Icon(icon);
-  }
-  item.Click([weak,side,identity,tab,route,
-              action=std::move(action)](IInspectable const&,
-                                       RoutedEventArgs const&){
+  return [weak,side,identity,tab,route,
+          action=std::move(action)](IInspectable const&,
+                                   RoutedEventArgs const&){
    auto ui=weak.get();
    if(!ui||ui->mClosing||ui->mFileOperations.busy())return;
    const auto& state=ui->ActiveWindowTab();
@@ -259,29 +256,51 @@ void MainWindow::ShowAppBackgroundContextMenu(
     return;
    }
    action(*ui);
-  });
+  };
+ };
+ auto make=[&](wchar_t const* text,wchar_t const* glyph,bool enabled,
+               std::function<void(MainWindow&)> action){
+  MenuFlyoutItem item;
+  item.Text(text);
+  item.IsEnabled(enabled);
+  if(glyph&&*glyph){
+   FontIcon icon;
+   icon.Glyph(glyph);
+   item.Icon(icon);
+  }
+  item.Click(guarded(std::move(action)));
+  return item;
+ };
+ auto choice=[&](wchar_t const* label,bool checked,int index,bool isView){
+  ToggleMenuFlyoutItem item;
+  item.Text(label);
+  item.IsEnabled(ready);
+  item.IsChecked(checked);
+  item.Click(guarded([index,isView](MainWindow& ui){
+   if(isView)ui.UpdateView(index);
+   else ui.UpdateSort(index);
+  }));
   return item;
  };
  MenuFlyout menu;
  MenuFlyoutSubItem view;
  view.Text(L"보기");
- view.Items().Append(make(L"자세히",L"\uE8A0",ready,
-     [](MainWindow& ui){ui.UpdateView(0);}));
- view.Items().Append(make(L"목록",L"\uE8FD",ready,
-     [](MainWindow& ui){ui.UpdateView(1);}));
- view.Items().Append(make(L"작은 아이콘",L"\uE80A",ready,
-     [](MainWindow& ui){ui.UpdateView(2);}));
- view.Items().Append(make(L"중간 아이콘",L"\uE80A",ready,
-     [](MainWindow& ui){ui.UpdateView(3);}));
- view.Items().Append(make(L"큰 아이콘",L"\uE80A",ready,
-     [](MainWindow& ui){ui.UpdateView(4);}));
+ view.Items().Append(choice(L"자세히",viewMode==0,0,true));
+ view.Items().Append(choice(L"목록",viewMode==1,1,true));
+ view.Items().Append(choice(L"작은 아이콘",viewMode==2,2,true));
+ view.Items().Append(choice(L"중간 아이콘",viewMode==3,3,true));
+ view.Items().Append(choice(L"큰 아이콘",viewMode==4,4,true));
  menu.Items().Append(view);
  MenuFlyoutSubItem sort;
  sort.Text(L"정렬 기준");
- sort.Items().Append(make(L"이름 오름차순",nullptr,ready,
-     [](MainWindow& ui){ui.UpdateSort(0);}));
- sort.Items().Append(make(L"이름 내림차순",nullptr,ready,
-     [](MainWindow& ui){ui.UpdateSort(1);}));
+ sort.Items().Append(choice(L"이름 오름차순",sortMode==0,0,false));
+ sort.Items().Append(choice(L"이름 내림차순",sortMode==1,1,false));
+ sort.Items().Append(choice(L"유형 오름차순",sortMode==4,4,false));
+ sort.Items().Append(choice(L"유형 내림차순",sortMode==5,5,false));
+ sort.Items().Append(choice(L"크기 오름차순",sortMode==6,6,false));
+ sort.Items().Append(choice(L"크기 내림차순",sortMode==2,2,false));
+ sort.Items().Append(choice(L"수정 날짜 오름차순",sortMode==7,7,false));
+ sort.Items().Append(choice(L"수정 날짜 내림차순",sortMode==3,3,false));
  menu.Items().Append(sort);
  menu.Items().Append(make(L"새로 고침",L"\uE72C",ready,
      [side](MainWindow& ui){
