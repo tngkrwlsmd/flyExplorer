@@ -1149,18 +1149,31 @@ void MainWindow::RevealSelectedInWindowsExplorer(int side){
  }
 }
 void MainWindow::ShowExternalWindowsContextMenu(int side){
- if(side<0||side>1)return;
+ if(mClosing||side<0||side>1||
+    ActiveWindowTab().model.activePane!=side)return;
 
  if(mFileOperations.busy()){
   StatusText().Text(L"Shell \uC791\uC5C5\uC774 \uB05D\uB09C \uB4A4 \uC2DC\uB3C4\uD558\uC138\uC694.");
   return;
  }
- auto const& pane=ActiveWindowTab().model.panes[side];
- if(pane.pending[pane.active]){
+ const auto& workspace=ActiveWindowTab();
+ const auto& pane=workspace.model.panes[side];
+ if(pane.active>=pane.tabs.size()||
+    pane.active>=pane.pending.size()||
+    pane.active>=pane.routeIds.size()||
+    pane.active>=pane.filesystemPaths.size()||
+    workspace.fileLists[side].visibleTab!=pane.active||
+    workspace.fileLists[side].visibleRoute!=pane.routeIds[pane.active])
+  return;
+ const auto tab=pane.active;
+ const auto route=pane.routeIds[tab];
+ const auto folder=pane.filesystemPaths[tab];
+ const auto identity=workspace.identity;
+ if(pane.pending[tab]){
   StatusText().Text(L"현재 폴더를 불러온 후 Windows 메뉴를 여세요.");
   return;
  }
- if(pane.filesystemPaths[pane.active].empty()){
+ if(folder.empty()){
   StatusText().Text(L"가상 Shell 항목의 외부 메뉴는 아직 지원하지 않습니다.");
   return;
  }
@@ -1170,7 +1183,7 @@ void MainWindow::ShowExternalWindowsContextMenu(int side){
   StatusText().Text(L"외부 Shell 메뉴는 최대 32개 항목을 선택할 수 있습니다.");
   return;
  }
- auto const& session=pane.tabs[pane.active];
+ auto const& session=pane.tabs[tab];
  std::vector<std::wstring> paths{};
  paths.reserve(count);
  std::wstring commonParent;
@@ -1232,10 +1245,23 @@ void MainWindow::ShowExternalWindowsContextMenu(int side){
   L"Windows Shell 확장 메뉴를 분리된 프로세스에서 엽니다.");
  try{
   std::thread([helper=std::move(helper),paths=std::move(paths),
-               cursor,dispatch,weak]{
+               cursor,dispatch,weak,identity,side,tab,route,folder]{
     const DWORD code=fxfile::shellcontext::show(helper,paths,cursor,45000);
-    dispatch.TryEnqueue([weak,code]{
+    dispatch.TryEnqueue([weak,code,identity,side,tab,route,folder]{
       if(auto ui=weak.get()){
+       if(ui->mClosing)return;
+       const auto& live=ui->ActiveWindowTab();
+       if(live.identity!=identity||
+          live.model.activePane!=side||
+          ui->mFileOperations.busy())return;
+       const auto& pane=live.model.panes[side];
+       if(pane.active!=tab||
+          tab>=pane.routeIds.size()||
+          tab>=pane.filesystemPaths.size()||
+          pane.routeIds[tab]!=route||
+          pane.filesystemPaths[tab]!=folder||
+          live.fileLists[side].visibleTab!=tab||
+          live.fileLists[side].visibleRoute!=route)return;
        if(code==0)ui->StatusText().Text(
           L"Windows Shell 확장 메뉴가 종료됐습니다.");
        else if(code==65)ui->StatusText().Text(

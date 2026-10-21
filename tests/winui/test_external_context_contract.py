@@ -112,6 +112,37 @@ class ContextContract(unittest.TestCase):
   self.assertIn("else if(code==69)",app)
   self.assertIn("shellcontext::show(helper,paths,cursor,45000)",app)
 
+ def test_external_menu_result_cannot_overwrite_other_workspace_status(self):
+  app=src("app/winui/m22_transfers.cpp")
+  body=app.split("void MainWindow::ShowExternalWindowsContextMenu(int side){",1)[1].split(
+      "void MainWindow::OnExternalWindowsContextMenu(",1)[0]
+  for token in (
+      "ActiveWindowTab().model.activePane!=side",
+      "pane.active>=pane.tabs.size()",
+      "pane.active>=pane.pending.size()",
+      "pane.active>=pane.routeIds.size()",
+      "pane.active>=pane.filesystemPaths.size()",
+      "const auto identity=workspace.identity;",
+      "const auto tab=pane.active;",
+      "const auto route=pane.routeIds[tab];",
+      "const auto folder=pane.filesystemPaths[tab];",
+      "live.identity!=identity",
+      "live.model.activePane!=side",
+      "pane.active!=tab",
+      "pane.routeIds[tab]!=route",
+      "pane.filesystemPaths[tab]!=folder",
+      "live.fileLists[side].visibleRoute!=route",
+      "if(ui->mClosing)return;",
+      "ui->mFileOperations.busy()",
+  ):
+   self.assertIn(token,body)
+  callback=body.split("dispatch.TryEnqueue([weak,code,identity,side,tab,route,folder]",1)[1]
+  self.assertLess(callback.index("live.identity!=identity"),
+                  callback.index("if(code==0)ui->StatusText().Text("))
+  self.assertLess(callback.index("pane.filesystemPaths[tab]!=folder"),
+                  callback.index("else if(code==65)ui->StatusText().Text("))
+  self.assertIn("shellcontext::show(helper,paths,cursor,45000)",body)
+
  def test_no_automatic_external_command_execution(self):
   a=src("tests/winui/test_shell_gui.py")
   b=src("tests/winui/test_owned_thumbnail_gui.py")

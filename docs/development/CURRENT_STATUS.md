@@ -1,4 +1,22 @@
-# flyExplorer current status — 2026-10-22 EP05 P0/P1 ZIP UI retirement; G01 open
+# flyExplorer current status — 2026-10-22 EP05 P1 external Shell status ownership; G01 open
+
+## 2026-10-22 P1 — external Shell-menu completion status ownership
+
+- At main baseline `36240aba60bfe1d39453f0ae4cb4c330d36ad08e`, the isolated classic Shell context-menu
+  worker posted its final message to whichever workspace and folder tab
+  happened to be active when it completed. This is a confirmed source-level
+  status ownership gap, not a diagnosed file corruption or Shell execution bug.
+- Snapshot the initiating WindowTab identity, active pane, PaneTab, route and
+  filesystem path. Suppress the detached worker's late status when the
+  original context is no longer visible, when closing, or while another
+  file operation is busy. Validate array bounds and visible route before
+  launch. Preserve the existing 32-item, fixed-drive, read-only/path
+  restrictions and isolated helper's unchanged exit-code handling.
+- Updated a focused source-only negative contract in
+  `test_external_context_contract.py`. Windows build, source/native
+  test execution, GUI, visual acceptance and actual Shell menu runtime
+  behavior were **NOT TESTED**. G01 intermittent shutdown is unchanged;
+  G03/G04/G05 exclusions and stopped G07 are unchanged.
 
 ## 2026-10-22 P1 — exclude unused ZIP codecs from active app build
 
