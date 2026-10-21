@@ -204,7 +204,6 @@ namespace winrt::FlyExplorer::implementation
         std::wstring WindowTabLabel(fxfile::previewtabs::WindowTabState const&) const;
         fxfile::previewprefs::PreferencesCoordinator mPreferencesCoordinator{};
         fxfile::previewops::FileOperationController mFileOperations{};
-        std::wstring mTransferFailureNotice{};
         // Reusable XAML controls expose their inner primitives to the
         // existing M2.1 callers without coupling native state to views.
         winrt::FlyExplorer::implementation::FileToolbar* fileBar(){
