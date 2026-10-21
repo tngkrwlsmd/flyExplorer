@@ -1,5 +1,22 @@
 # flyExplorer current status — 2026-10-22 exact-SHA Windows Release source-contract repair; G01 open
 
+## 2026-10-22 — follow-up Release found one remaining stale focus assertion
+
+- Exact main `614438a030adc12e1e1eb607eb32c2871fa69c95`, central Release
+  [39684013477](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39684013477):
+  runner-health/policy PASS, 260 product-source tests with **one failure**.
+  The earlier workspace dispatch failure is resolved. The remaining
+  `test_file_display_options_contract.py` assertion still required a
+  single-line focus expression; current `FillFiles` instead uses
+  `if(focusRow){` to allow reveal-triggered `ScrollIntoView` before
+  `Focus(FocusState::Programmatic)`. This is also a test expectation
+  mismatch, not evidence of a product GUI defect.
+- Changed only that source contract, explicitly asserting both
+  focus restoration and conditional scrolling. Product code untouched.
+  **NOT YET VERIFIED:** current correction needs a fresh Release run.
+  No Release compilation or GUI has occurred in this run.
+  G01 OPEN; G03-G05 excluded; G07 stopped.
+
 ## 2026-10-22 — central Release source stage failed on stale contracts
 
 - Exact trusted main `924888fe0c418422cb3ab446f076d0d3423bffa5`, central control-plane run
