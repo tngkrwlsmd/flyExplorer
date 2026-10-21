@@ -91,6 +91,8 @@ PRODUCT_SUITES = {
     ],
 }
 HARNESS_CONTRACTS = [
+    "tests/winui/test_source_contract_loader.py",
+    "tests/winui/helper/test_page_benchmark.py",
     "tests/winui/test_build_environment_contract.py",
     "tests/winui/test_gui_harness_contract.py",
     "tests/winui/test_gui_failure_evidence_contract.py",
@@ -238,7 +240,7 @@ def run_contracts(label, paths, env, tag):
         return 0
     return execute(
         label,
-        [sys.executable, "-m", "unittest", *paths],
+        [sys.executable, str(ROOT / "tools/winui/run_source_contracts.py"), *paths],
         120,
         env,
         tag,

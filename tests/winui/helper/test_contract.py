@@ -25,6 +25,7 @@ class IsolationContracts(unittest.TestCase):
     def test_strict_navigation_ipc_contract(self):
         h=source("FlyShellIsolationHelper.cpp")
         t=(HERE/"test_process_isolation.py").read_text(encoding="utf-8-sig")
+        t+=(HERE/"wire_client.py").read_text(encoding="utf-8-sig")
         wire=source(ROOT/"src/base/shell_isolation_wire.h")
         for required in ("kVersion=3","kAbsolutePidl=2",
                          "kMaxPathUnits=16384","kMaxPidl=65536",

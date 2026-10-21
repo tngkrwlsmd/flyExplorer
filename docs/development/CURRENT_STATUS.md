@@ -1,5 +1,53 @@
 # flyExplorer current status — G02/G06 scoped local GUI PASS; G01 open (2026-10-21)
 
+## 2026-10-21 G08 — repeatable owned helper page benchmark added
+
+- Main baseline 27395b3c6727c236afd2feb8cada289317db94e1; product code/binaries
+  unchanged. Measured the canonical Release runtime helper, SHA-256
+  639017e014cfc9c9eeb88fc0f8f35148c0f57be6b3d8879bedec7db35f0c2e5d
+  (identical to out/helper/Release). Windows 10.0.26300, Python 3.10.11.
+- New tests/winui/helper/benchmark_pages.py measures fresh-process path-page IPC
+  on disposable fixed-local folders. It first passes 200 files before creating a
+  requested larger fixture, validates strict wire replies, all expected names,
+  page sizes/flags, no duplicates/missing entries, file contents and settings
+  guards. It records first/per-page/total/max timing and cleans owned fixtures.
+  Existing wire functions were extracted unchanged for both native probes.
+- Actual one-pass observations, uncontrolled OS caches (not cold-cache guarantees):
+
+  | Owned files | Pages | First page | Sum of page round trips | Slowest page |
+  | --- | --- | --- | --- | --- |
+  | 200 | 1 | 117.968 ms | 117.968 ms | 117.968 ms |
+  | 8,000 | 8 | 169.320 ms | 1,458.497 ms | 274.177 ms |
+
+  The 8,000-file fixture took 6,797.216 ms to create, separately measured.
+  Round trips include process startup, Shell enumeration and IPC, excluding
+  Python reply validation/fixture creation/cleanup. All entries/content and
+  original legacy/WinUI user settings were preserved. Helpers and fixtures cleaned.
+- This is a diagnostic baseline, not a speed improvement, GUI responsiveness,
+  sorting, memory, indexed-search/25,000-item or 20,000-item certification.
+  No app GUI, excluded G03/G04/G05 test or privileged remote job was run.
+- Added corruption/paging/timeout regressions. The standard harness first exposed
+  an existing local installed-tests-package collision. Explicit file loading now
+  avoids that collision, handles duplicate basenames and lazy sibling imports,
+  and rejects empty/missing/import-failing contracts. Final standard harness
+  43/43 and related Shell/streaming contracts 19/19 PASS; changed Python static
+  checks PASS. Actual helper process/recovery/owned cleanup regression also PASS.
+- Ignored evidence: logs/helper-page-benchmark/benchmark-1792547969671663600.json,
+  helper-regression.log and benchmark-console.log. Measured script SHA-256
+  7405514ca8917c10fdcbcc6ecdf49fb4b68706c1e4ac0cdd85e66a1afcab274a.
+
+## 2026-10-21 G07 stopped by user; retain separate shutdown observation
+
+- The user stopped the actual Korean IME task. Do not automatically resume it.
+  G07 has no new IME acceptance; failed English/other input preconditions are not
+  evidence of an app composition defect. No tracked product change was made.
+- During cleanup, owned PID 15472 lost its window but remained alive. Its executable,
+  PID/start time and absent main window were checked before owned-only termination.
+  Cleanup exit 0xFFFFFFFF, original settings and 13 synthetic files unchanged.
+  No native stack was captured. This preserves the G01 shutdown risk; it is not a
+  normal-exit PASS, root-cause diagnosis or justification to repeat identical runs.
+  Ignored logs/g07-korean-input/result.json retains the scoped evidence.
+
 ## 2026-10-21 G01 — legacy v1/v2/v3 actual restore and v4 migration PASS
 
 - Source main ebe26cf9527250909c0e62b698e5e7803a8317ea; product implementation

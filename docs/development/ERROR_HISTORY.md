@@ -5350,3 +5350,18 @@ The Release native gate then passed 41/41; related display/session source checks
 passed 15/15. Test-owned profiles and existing legacy settings were preserved.
 This native result does not certify real legacy GUI restore or resolve G01's
 intermittent shutdown risk. No product implementation change was required.
+
+## 2026-10-21: installed tests package shadowed source contract execution
+
+The standard harness used python -m unittest with tests/winui/... file selectors.
+On this host an unrelated site-packages/tests/__init__.py won package resolution,
+so every selected contract failed to import tests.winui before running. This is a
+harness/environment collision, not a product failure. run_source_contracts.py now
+loads each selected file explicitly with a distinct module identity and preserves
+sibling import paths while tests run. Regressions cover the ambient tests package,
+duplicate basenames, lazy imports, empty files, missing/outside paths and error
+propagation. Standard harness 43/43 and related Shell/streaming 19/19 passed.
+One new lazy-import fixture initially contained literal backslash-n instead of
+line breaks; that fixture encoding was corrected before the final acceptance.
+The existing real helper process/recovery regression also passed after its wire
+client extraction. The new G08 benchmark is native IPC timing, not GUI acceptance.
