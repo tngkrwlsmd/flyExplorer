@@ -44,6 +44,12 @@ class TransferFeedbackContract(unittest.TestCase):
         self.assertIn("일부 항목이 처리됐을 수 있습니다.",completion)
         self.assertIn("mTransferFailureNotice=detail;",completion)
         self.assertIn("completion.touchedFolders",completion)
+        self.assertIn(
+            "if(completion.context.windowTabIdentity==ActiveWindowTab().identity)",
+            completion
+        )
+        self.assertIn("fxfile::shellnav::NavigationAction::Refresh",completion)
+        self.assertIn("if(disposition==Disposition::StaleContext)",completion)
 
 class AsyncWindowTabOwnershipContract(unittest.TestCase):
     def test_file_operations_reject_other_window_tab_results(self):
