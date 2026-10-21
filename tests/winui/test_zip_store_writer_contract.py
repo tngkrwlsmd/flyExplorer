@@ -16,9 +16,11 @@ class ZipStoreWriterContracts(unittest.TestCase):
                      "0x04034b50u", "0x02014b50u", "0x06054b50u",
                      "detail::word(zip,0x0800)",
                      "GetTempFileNameW", "FlushFileBuffers",
-                     "MoveFileExW(ownedTemp.c_str(),target.c_str()",
+                     "struct Staging final", "temporary.owned=true;",
+                     "MoveFileExW(temporary.path,target.c_str()",
                      "MOVEFILE_WRITE_THROUGH",
-                     "DeleteFileW(ownedTemp.c_str())"):
+                     "~Staging(){if(owned)::DeleteFileW(path);}",
+                     "temporary.owned=false;"):
             self.assertIn(term,code)
         for forbidden in ("MOVEFILE_REPLACE_EXISTING", "CREATE_ALWAYS",
                           "GENERIC_ALL", "FILE_SHARE_WRITE", "ShellExecute",

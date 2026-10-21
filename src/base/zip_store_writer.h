@@ -73,6 +73,11 @@ inline bool safeSource(std::wstring const& name,std::wstring& parent,
         return true;
     }catch(...){return false;}
 }
+struct Staging final {
+    wchar_t path[MAX_PATH]{};
+    bool owned=false;
+    ~Staging(){if(owned)::DeleteFileW(path);}
+};
 inline bool writeAll(HANDLE h,std::vector<unsigned char> const& bytes) noexcept {
     std::size_t pos=0;
     while(pos<bytes.size()) {
@@ -174,15 +179,16 @@ inline Result createOne(std::wstring const& source) noexcept {
         detail::word(zip,0);
         // A temporary file is created in the same directory and made
         // durable before atomic publication. Failure cleans only our temp.
-        wchar_t temp[MAX_PATH]{};
-        if(!::GetTempFileNameW(parent.c_str(),L"fxz",0,temp)){
+        detail::Staging temporary;
+        if(!::GetTempFileNameW(parent.c_str(),L"fxz",0,temporary.path)){
             result.status=Status::CannotWrite;return result;
         }
-        const std::wstring ownedTemp=temp;
+        // Own the reservation across allocations, exceptions and returns.
+        temporary.owned=true;
         bool complete=false;
         {
             fxfile::zipinspect::detail::Handle writer;
-            writer.h=::CreateFileW(temp,GENERIC_WRITE,0,nullptr,
+            writer.h=::CreateFileW(temporary.path,GENERIC_WRITE,0,nullptr,
                        OPEN_EXISTING,FILE_FLAG_OPEN_REPARSE_POINT,nullptr);
             if(writer.h!=INVALID_HANDLE_VALUE){
                 BY_HANDLE_FILE_INFORMATION attributes{};
@@ -194,15 +200,16 @@ inline Result createOne(std::wstring const& source) noexcept {
         }
         if(complete){
             // MOVEFILE_REPLACE_EXISTING deliberately absent.
-            if(::MoveFileExW(ownedTemp.c_str(),target.c_str(),
+            if(::MoveFileExW(temporary.path,target.c_str(),
                              MOVEFILE_WRITE_THROUGH)){
+                temporary.owned=false; // Published final file is not staging.
                 result.status=Status::Created;
                 result.output=target;
                 return result;
             }
         }
         const DWORD error=::GetLastError();
-        ::DeleteFileW(ownedTemp.c_str()); // only our reserved staging file
+        // Staging destructor removes the owned reservation on failure.
         result.status=(error==ERROR_FILE_EXISTS||
                        error==ERROR_ALREADY_EXISTS)?
                       Status::AlreadyExists:Status::CannotWrite;
