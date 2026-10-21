@@ -334,7 +334,12 @@ FileOperationController::acceptTransfer(
     if(!sameContext(completion.context,liveContext))
         return TransferDisposition::StaleContext;
 
+    // Only the rejected read-only preflight offers a new decision.
+    // A failed KeepBoth execution must not reopen a confirmation after
+    // Shell work might already have committed earlier items.
     if(completion.report.error==ERROR_ALREADY_EXISTS&&
+       !completion.report.aborted&&
+       completion.request.collision==fxfile::shelltransfer::Collision::Reject&&
        !completion.report.collisions.empty()&&
        completion.request.kind!=fxfile::shelltransfer::Kind::Recycle){
         state_->pending=PendingTransfer{
