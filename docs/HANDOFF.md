@@ -1,6 +1,42 @@
 # flyExplorer 작업 인계 — 2026-10-19 L08 커서 OPEN, G01 코드·빌드 PASS
 
 
+## 2026-10-21 EP06 새 폴더·이름 변경 완료 후 대상 행 표시 (검증 보류)
+
+- 시작 기준 main `cf8a3a09`. 이름 변경/새 폴더 생성의 네이티브 작업
+  결과에는 실제 `Result.target`가 있으나, 기존 UI는 해당 경로를
+  새로 고친 목록에서 선택하지 않아 사용자가 수동으로 다시 찾아야
+  했다.
+- `app/winui/file_list_state.h`에 WindowTab/Pane 소유의
+  **비영속 일회성 표시 요청**(`FileCommandReveal`)을 추가했다.
+  `m21_commands.cpp`는 파일 명령이 `Succeeded`이고 동일한
+  WindowTab·PaneTab·route인 경우만 성공 결과의 실제 대상 경로,
+  원본 폴더와 route를 저장한다. 사용자 입력 이름을 다시 조합하거나
+  작업을 재실행하지 않는다.
+- `MainWindow.xaml.cpp`에서 성공한 정확한 Shell
+  `NavigationAction::Refresh` 결과(원래 tab/route/folder)가
+  들어왔을 때만 일회성 표시를 활성화한다. Refresh 실패/NoChange,
+  다른 탐색 이동에서는 요청을 취소한다. `FillFiles`는 이 표시
+  요청을 **한 번만** 적용해 새 경로를 대소문자 비구분으로 찾고,
+  실제 목록에 있는 경우 이전 이름의 선택을 지우고 대상 행만
+  선택한다. 원래 활성 패널에 해당 행이 있으면 키보드 포커스와
+  `ScrollIntoView`도 시도한다.
+- 필터, 그룹 접힘, 현재 렌더링 페이지 또는 기존 안전 상한 때문에
+  새 항목이 표시되지 않으면 임의 행을 선택하거나 다른 페이지를
+  자동 탐색하지 않는다. 이 동작은 기존 bounded rendering 정책을
+  보존하기 위해 의도한 제한이다. 별도 비동기 상태 머신, I/O,
+  세션 저장 스키마 변경은 없다.
+- `tests/winui/test_file_command_feedback_contract.py`에
+  일회성 표시 요청·WindowTab/route 보호·성공 refresh·대상 경로
+  비교에 관한 **미실행 소스 계약**을 추가했다.
+- 변경 커밋: `e89c6467`, `fc082632`, `5d61b09d`,
+  `7edff74c`, `1dfb3938`, `7e2ceb84`.
+  **사용자 지시대로 빌드·GUI·시각 검증 및 테스트를 실행하지
+  않았다.** 파일 생성·이름 변경 후 실제 표시, 필터/정렬/그룹/탭
+  조합, 키보드 포커스·스크롤은 NOT TESTED다. 신규 제품 PASS나
+  배포 적합성은 주장하지 않는다.
+- G01 종료 잔류 OPEN, G07 중단, G03~G05 제외 유지.
+
 ## 2026-10-21 EP04 파일 목록 선택·포커스 복원 제한 (검증 보류)
 
 - 시작 기준 main `f4093c11`. 기존 `FillFiles`는 같은 PaneTab의
