@@ -1,5 +1,39 @@
 # flyExplorer current status — G02/G06 scoped local GUI PASS; G01 open (2026-10-21)
 
+## 2026-10-21 G01 — legacy v1/v2/v3 actual restore and v4 migration PASS
+
+- Source main ebe26cf9527250909c0e62b698e5e7803a8317ea; product implementation
+  unchanged. Reused Release EXE SHA-256
+  78fb331fa88346fb4622fea4872db4ce2825e6ca2010653efa825bdacbff031f.
+  Three new test-owned profiles each contained one independently encoded legacy
+  version, four local PaneTabs (L0/L1, R0/R1), selected left L1/right R0, left
+  Name descending/right Name ascending, and 12 synthetic files. No explicit
+  startup path or test auto-restore override was supplied.
+- **Scoped actual GUI PASS:** all three default starts restored the selected
+  path, both panes/two tabs and opposite sort directions/actual row order.
+  v2/v3 restored Back availability; v3 additionally restored left compact rows
+  and hidden extensions with ordinary right rows/extensions. Through the actual
+  Workspace panel, Save Session explicitly wrote the current private profile.
+- Independent output decoding verified version 4, valid checksum, every path,
+  selected indexes, pane sort inherited by all four folder tabs, v1/v2 display
+  defaults, v3's distinct flags and v2/v3 Back history. The fixture's forward
+  histories were empty; nonempty forward data has native coverage only.
+- Normal Alt+F4 exited 0 for v1 PID 19236, v2 PID 1784 and v3 PID 4176.
+  Original legacy/WinUI user settings and each run's 12 synthetic files were
+  unchanged. No owned app remains. No product rebuild/change was required.
+- **Visual scope:** actual Dark restore screens were inspected at 1086x666,
+  Windows 10.0.26300, unchanged display settings; numeric DPI was not collected.
+  These are functional restore/presentation observations, not new BEFORE/AFTER
+  product changes or full theme/column/icon/narrow-window visual certification.
+- Native regression repair is already pushed as ebe26cf9 (41 native + 15 source
+  checks PASS). Ignored logs/g01-legacy-session contains per-version input bytes,
+  result JSON, restored PNGs and the launch/independent-output-check script.
+  No central validation was dispatched or claimed.
+- This closes the scoped real legacy restore/migration gap. G01's intermittent
+  shutdown risk remains unresolved despite these normal exits; do not mark G01
+  fully complete, repeat identical runs or add speculative shutdown changes.
+  Acquire a native stack on an actual recurrence. G03/G04/G05 remain excluded.
+
 ## 2026-10-21 G01 — native session regression gate repaired for v4
 
 - On main 64d147cd, the current native fixture built successfully but failed
