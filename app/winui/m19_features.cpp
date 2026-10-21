@@ -209,6 +209,8 @@ void MainWindow::RefreshRecentActivityPanel(){
     RecentActivityFolders().SelectedIndex(-1);
     RecentActivityOpenFileButton().IsEnabled(false);
     RecentActivityOpenFolderButton().IsEnabled(false);
+    RecentActivityRemoveFileButton().IsEnabled(false);
+    RecentActivityRemoveFolderButton().IsEnabled(false);
 }
 void MainWindow::OnToggleRecentActivity(
     IInspectable const&,RoutedEventArgs const&){
@@ -244,10 +246,43 @@ void MainWindow::OnRecentActivitySelectionChanged(
     const bool enabled=mRecentActivity.enabled();
     const int file=RecentActivityFiles().SelectedIndex();
     const int folder=RecentActivityFolders().SelectedIndex();
-    RecentActivityOpenFileButton().IsEnabled(
-        enabled&&file>=0&&static_cast<std::size_t>(file)<mRecentActivity.files().size());
-    RecentActivityOpenFolderButton().IsEnabled(
-        enabled&&folder>=0&&static_cast<std::size_t>(folder)<mRecentActivity.folders().size());
+    const bool canFile=enabled&&file>=0&&
+        static_cast<std::size_t>(file)<mRecentActivity.files().size();
+    const bool canFolder=enabled&&folder>=0&&
+        static_cast<std::size_t>(folder)<mRecentActivity.folders().size();
+    RecentActivityOpenFileButton().IsEnabled(canFile);
+    RecentActivityOpenFolderButton().IsEnabled(canFolder);
+    RecentActivityRemoveFileButton().IsEnabled(canFile);
+    RecentActivityRemoveFolderButton().IsEnabled(canFolder);
+}
+void MainWindow::OnRemoveRecentActivityFile(
+    IInspectable const&,RoutedEventArgs const&){
+    if(mClosing||!mRecentActivity.enabled()||
+       RecentActivityPanel().Visibility()!=Visibility::Visible)return;
+    const auto selected=RecentActivityFiles().SelectedIndex();
+    const auto& items=mRecentActivity.files();
+    if(selected<0||static_cast<std::size_t>(selected)>=items.size())return;
+    const auto path=items[static_cast<std::size_t>(selected)];
+    const auto row=RecentActivityFiles().SelectedItem().try_as<ComboBoxItem>();
+    if(!row||unbox_value<hstring>(row.Content())!=hstring(path))return;
+    if(!mRecentActivity.removeFile(path))return;
+    RefreshRecentActivityPanel();
+    StatusText().Text(L"최근 파일 기록만 제거했습니다. 실제 파일은 변경하지 않았습니다.");
+}
+void MainWindow::OnRemoveRecentActivityFolder(
+    IInspectable const&,RoutedEventArgs const&){
+    if(mClosing||!mRecentActivity.enabled()||
+       RecentActivityPanel().Visibility()!=Visibility::Visible)return;
+    const auto selected=RecentActivityFolders().SelectedIndex();
+    const auto& items=mRecentActivity.folders();
+    if(selected<0||static_cast<std::size_t>(selected)>=items.size())return;
+    const auto item=items[static_cast<std::size_t>(selected)];
+    const auto row=RecentActivityFolders().SelectedItem().try_as<ComboBoxItem>();
+    if(!row||unbox_value<hstring>(row.Content())!=
+       hstring(std::to_wstring(item.visits)+L"회 · "+item.path))return;
+    if(!mRecentActivity.removeFolder(item.path))return;
+    RefreshRecentActivityPanel();
+    StatusText().Text(L"방문 폴더 기록만 제거했습니다. 실제 폴더는 변경하지 않았습니다.");
 }
 void MainWindow::OnOpenRecentActivityFile(
     IInspectable const&,RoutedEventArgs const&){

@@ -21,6 +21,36 @@ class RecentActivityContracts(unittest.TestCase):
                           "std::thread", "ifstream", "ofstream"):
             self.assertNotIn(forbidden,model)
 
+    def test_individual_removal_is_memory_only_and_matches_visible_selection(self):
+        model=source("app/winui/recent_activity_controller.h")
+        xaml=source("app/winui/MainWindow.xaml")
+        header=source("app/winui/MainWindow.xaml.h")
+        features=source("app/winui/m19_features.cpp")
+        for token in ("bool removeFile(std::wstring const& path)",
+                      "bool removeFolder(std::wstring const& path)",
+                      "files_.erase(it);", "folders_.erase(it);",
+                      "if(!enabled_||!acceptable(path))return false;"):
+            self.assertIn(token,model)
+        for name,handler in (("RecentActivityRemoveFileButton","OnRemoveRecentActivityFile"),
+                             ("RecentActivityRemoveFolderButton","OnRemoveRecentActivityFolder")):
+            self.assertIn('x:Name="'+name+'"',xaml)
+            self.assertIn('Click="'+handler+'"',xaml)
+            self.assertIn("void "+handler+"(",header)
+            self.assertIn("void MainWindow::"+handler+"(",features)
+            self.assertIn(name+"().IsEnabled(false)",features)
+        removal=features.split("void MainWindow::OnRemoveRecentActivityFile(",1)[1].split(
+            "void MainWindow::OnOpenRecentActivityFile(",1)[0]
+        for token in ("RecentActivityPanel().Visibility()!=Visibility::Visible",
+                      "unbox_value<hstring>(row.Content())!=hstring(path)",
+                      'std::to_wstring(item.visits)+L"회 · "+item.path',
+                      "mRecentActivity.removeFile(path)",
+                      "mRecentActivity.removeFolder(item.path)",
+                      "RefreshRecentActivityPanel()"):
+            self.assertIn(token,removal)
+        for forbidden in ("DeleteFile", "RemoveDirectory", "Recycle",
+                          "CreateFileW", "std::filesystem::remove"):
+            self.assertNotIn(forbidden,removal+model)
+
     def test_only_accepted_navigation_and_file_launch_are_recorded(self):
         main=source("app/winui/MainWindow.xaml.cpp")
         transfer=source("app/winui/m22_transfers.cpp")

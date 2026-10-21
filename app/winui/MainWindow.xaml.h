@@ -105,6 +105,8 @@ namespace winrt::FlyExplorer::implementation
         void OnClearRecentActivity(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
         void OnOpenRecentActivityFile(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
         void OnOpenRecentActivityFolder(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
+        void OnRemoveRecentActivityFile(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
+        void OnRemoveRecentActivityFolder(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
         void OnToggleWorkspaces(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
         void OnSaveWorkspace(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
         void OnOpenWorkspace(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);

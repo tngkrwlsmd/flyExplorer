@@ -49,6 +49,15 @@ public:
   files_.insert(files_.begin(),path);
   if(files_.size()>kMaxRecentFiles)files_.resize(kMaxRecentFiles);
  }
+ // Removing a history entry never touches the underlying file.
+ bool removeFile(std::wstring const& path) {
+  if(!enabled_||!acceptable(path))return false;
+  const auto it=std::find_if(files_.begin(),files_.end(),
+      [&path](auto const& prior){return equal(prior,path);});
+  if(it==files_.end())return false;
+  files_.erase(it);
+  return true;
+ }
  void recordFolder(std::wstring const& path) {
   if(!enabled_||!acceptable(path))return;
   ++sequence_;
@@ -71,6 +80,15 @@ public:
    [](FolderVisit const& a,FolderVisit const& b){
     return a.visits==b.visits?a.last>b.last:a.visits>b.visits;
    });
+ }
+ // Removes visit statistics for only this folder; never deletes its contents.
+ bool removeFolder(std::wstring const& path) {
+  if(!enabled_||!acceptable(path))return false;
+  const auto it=std::find_if(folders_.begin(),folders_.end(),
+      [&path](FolderVisit const& prior){return equal(prior.path,path);});
+  if(it==folders_.end())return false;
+  folders_.erase(it);
+  return true;
  }
 private:
  static bool equal(std::wstring const& a,std::wstring const& b) {

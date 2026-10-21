@@ -292,6 +292,9 @@
                 <Button x:Name="RecentActivityOpenFileButton" Content="파일 열기"
                         IsEnabled="False" Click="OnOpenRecentActivityFile"
                         AutomationProperties.Name="선택한 최근 파일을 기본 앱으로 열기"/>
+                <Button x:Name="RecentActivityRemoveFileButton" Content="기록에서 제거"
+                        IsEnabled="False" Click="OnRemoveRecentActivityFile"
+                        AutomationProperties.Name="선택한 최근 파일 기록만 제거"/>
             </StackPanel>
             <StackPanel Orientation="Horizontal" Spacing="8">
                 <TextBlock Text="자주 방문한 폴더:" VerticalAlignment="Center"/>
@@ -302,6 +305,9 @@
                 <Button x:Name="RecentActivityOpenFolderButton" Content="폴더로 이동"
                         IsEnabled="False" Click="OnOpenRecentActivityFolder"
                         AutomationProperties.Name="선택한 자주 방문한 폴더로 이동"/>
+                <Button x:Name="RecentActivityRemoveFolderButton" Content="기록에서 제거"
+                        IsEnabled="False" Click="OnRemoveRecentActivityFolder"
+                        AutomationProperties.Name="선택한 방문 폴더 기록만 제거"/>
             </StackPanel>
         </StackPanel>
         <StackPanel Grid.Row="4" x:Name="FilterRulePanel" Visibility="Collapsed"
