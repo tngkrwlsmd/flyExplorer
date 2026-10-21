@@ -1,4 +1,23 @@
-# flyExplorer current status — 2026-10-22 exact-SHA Windows Release source-contract repair; G01 open
+# flyExplorer current status — 2026-10-22 Release C3773 coroutine fix; G01 open
+
+## 2026-10-22 — actual Release compilation isolated C3773
+
+- Exact main `e482c19322d0c98049593f5ac915d13741f1f781`, central Release
+  [39684379737](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39684379737)
+  passed runner-health, policy and complete source stage. Release build
+  then FAILED at `app/winui/m22_transfers.cpp:850`, MSVC C3773:
+  ordinary `return;` is forbidden inside `winrt::fire_and_forget`
+  `MainWindow::ConfirmCollision` after `co_await`.
+- Replaced only the early exit after the collision-skip choice with
+  `co_return;`. Existing skip counts, cancel/KeepBoth confirmation,
+  Shell worker and partial-output protection remain unchanged.
+  Added a focused source-contract guard against plain return reintroduction.
+- This change **has not yet passed** its own Windows build or GUI.
+  Do not mark the product/build as accepted before a matching-SHA Release
+  and GUI run. G01 intermittent termination remains OPEN; G03-G05 excluded
+  and G07 user-stopped.
+
+## 2026-10-22 — follow-up Release found one remaining stale focus assertion
 
 ## 2026-10-22 — follow-up Release found one remaining stale focus assertion
 

@@ -847,7 +847,7 @@ winrt::fire_and_forget MainWindow::ConfirmCollision(
   else if(status==FileOperationController::StartStatus::AllSkipped)
    StatusText().Text(hstring(L"충돌한 "+std::to_wstring(skipped)+
        L"개 항목을 모두 건너뛰었습니다. 파일을 변경하지 않았습니다."));
-  return;
+  co_return;
  }
  const auto status=mFileOperations.confirmCollision(
   choice==ContentDialogResult::Primary,context,post,std::move(completed));
