@@ -16,6 +16,17 @@ tngkrwlsmd/universal-agent-docs; update that core atomically rather than
 hand-editing individual generic files. Project facts belong in
 .agent-policy/PROJECT.md, while flyExplorer-specific overrides belong here.
 
+## User-directed validation boundary (2026-10-21)
+
+The user explicitly directs: **do not perform build, GUI, or pixel/visual
+verification unless the user requests that verification**. Continue scoped
+development and preserve existing accepted evidence. Record any newly edited
+product functionality as **not build/GUI/visual verified** until separately
+authorized and actually checked. This changes when the acceptance gates run,
+not what counts as accepted; do not claim those gates passed or silently run
+them through another workflow. Do not restart user-stopped G07 or excluded
+G03/G04/G05 checks.
+
 ## Codex 작업 범위와 사용량 절약
 
 Codex 사용량을 절약하면서 요청된 변경을 안전하게 완료한다. 이 절은
