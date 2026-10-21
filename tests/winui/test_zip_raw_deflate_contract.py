@@ -22,6 +22,7 @@ class ZipRawDeflateContracts(unittest.TestCase):
                   "tinfl_decompressor decompressor{}",
                   "TINFL_FLAG_USING_NON_WRAPPING_OUTPUT_BUF",
                   "TINFL_STATUS_DONE", "consumed!=packed",
+                  "decoded(expected+1u)",
                   "produced!=expected","kMaxOutputBytes",
                   "kMaxPackedBytes", "kMaxRatio",
                   "cancellation->load(std::memory_order_relaxed)"):

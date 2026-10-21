@@ -23,8 +23,10 @@ bool inflateExact(std::uint8_t const* input,std::size_t packed,
         return false;
     try{
         // One bounded output allocation, never a dynamically expanding
-        // heap decompressor. Supply one physical byte for the empty case.
-        std::vector<unsigned char> decoded(expected?expected:1u);
+        // heap decompressor. One guard byte allows a terminal DEFLATE block
+        // to finish when actual output exactly equals its declared size.
+        // Any extra expanded byte still fails produced!=expected.
+        std::vector<unsigned char> decoded(expected+1u);
         tinfl_decompressor decompressor{};
         tinfl_init(&decompressor);
         std::size_t consumed=packed;
