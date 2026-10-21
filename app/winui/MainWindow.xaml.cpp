@@ -1946,8 +1946,15 @@ namespace winrt::FlyExplorer::implementation
         const auto nextRoute=pane.routeIds[pane.active];
         // Route identity stays stable through navigation on one PaneTab;
         // distinguish a same-folder refresh from a different folder.
-        const bool sameRenderedFolder=state.visibleRoute==nextRoute&&
-            state.visibleTab==pane.active&&!state.renderedFolder.empty()&&
+        bool sameWindowTab=false;
+        try{
+            if(view.Tag())
+                sameWindowTab=winrt::unbox_value<std::uint64_t>(view.Tag())==
+                    ActiveWindowTab().identity;
+        }catch(...){}
+        const bool sameRenderedFolder=sameWindowTab&&
+            state.visibleRoute==nextRoute&&state.visibleTab==pane.active&&
+            !state.renderedFolder.empty()&&
             state.renderedFolder==snapshot.parsingName;
         if(state.visibleRoute!=nextRoute||state.visibleTab!=pane.active){
             state.groupTabCache.switchTo(nextRoute,pane.active,side);
@@ -2614,6 +2621,9 @@ namespace winrt::FlyExplorer::implementation
         // Restore keyboard focus only when that exact old row still exists
         // in the same active pane after the refresh.
         if(focusRow)focusRow.Focus(FocusState::Programmatic);
+        // The on-screen ListView is shared while WindowTabs are switched.
+        // Its owner is a presentation identity, never a Shell file identity.
+        view.Tag(winrt::box_value(ActiveWindowTab().identity));
         mPopulatingFileLists=false;
     }
     std::wstring MainWindow::WindowTabLabel(
