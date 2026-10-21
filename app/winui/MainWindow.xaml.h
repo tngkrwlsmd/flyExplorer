@@ -17,6 +17,7 @@
 #include "preferences_coordinator.h"
 #include "workspace_restore_coordinator.h"
 #include "search_controller.h"
+#include "recent_activity_controller.h"
 #include "../../src/base/shell_transfer_core.h"
 #include "../../src/base/shell_clipboard_core.h"
 #include "../../src/base/file_command_core.h"
@@ -97,6 +98,13 @@ namespace winrt::FlyExplorer::implementation
         void OnSaveFilterRule(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
         void OnApplyFilterRule(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
         void OnDeleteFilterRule(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
+        void OnToggleRecentActivity(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
+        void OnRecentActivityOptInClicked(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
+        void OnRecentActivitySelectionChanged(IInspectable const&,
+            Microsoft::UI::Xaml::Controls::SelectionChangedEventArgs const&);
+        void OnClearRecentActivity(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
+        void OnOpenRecentActivityFile(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
+        void OnOpenRecentActivityFolder(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
         void OnToggleWorkspaces(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
         void OnSaveWorkspace(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
         void OnOpenWorkspace(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
@@ -341,6 +349,8 @@ namespace winrt::FlyExplorer::implementation
         bool mPopulatingFilterRules=false;
         void InitializeFilterRules();
         void RefreshFilterRuleManager(int selected);
+        fxfile::previewactivity::RecentActivityController mRecentActivity{};
+        void RefreshRecentActivityPanel();
         fxfile::previewsearch::SearchController mSearchController{};
         // UI-only bounded snapshot of the last accepted search results. Never
         // persisted; scope/WindowTab/PaneTab/route/query are checked on action.

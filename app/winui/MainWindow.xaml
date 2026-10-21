@@ -192,6 +192,12 @@
                         Click="OnToggleSearch">
                     <FontIcon Glyph="&#xE721;" FontSize="14"/>
                 </Button>
+                <Button x:Name="RecentActivityPanelButton" Style="{StaticResource ExplorerIconButtonStyle}"
+                        ToolTipService.ToolTip="최근 파일과 자주 방문한 폴더 (이 세션만)"
+                        AutomationProperties.Name="세션 활동 기록 패널 열기"
+                        Click="OnToggleRecentActivity">
+                    <FontIcon Glyph="&#xE81C;" FontSize="14"/>
+                </Button>
                 <Button x:Name="FilterRulePanelButton" Style="{StaticResource ExplorerIconButtonStyle}"
                         ToolTipService.ToolTip="필터 프리셋"
                         AutomationProperties.Name="필터 프리셋 관리 열기"
@@ -261,6 +267,39 @@
                         AutomationProperties.Name="기존 flyExplorer 북마크 가져오기"/>
                 <TextBlock Text="기존 프로필은 자동으로 읽지 않습니다"
                            VerticalAlignment="Center" Opacity="{ThemeResource FlyExplorerSubtleTextOpacity}"/>
+            </StackPanel>
+        </StackPanel>
+        <StackPanel Grid.Row="4" x:Name="RecentActivityPanel" Visibility="Collapsed"
+                    Spacing="5" Padding="14,3,14,6">
+            <StackPanel Orientation="Horizontal" Spacing="8">
+                <CheckBox x:Name="RecentActivityOptIn"
+                          Content="이 세션의 파일·폴더 사용 기록 켜기"
+                          Click="OnRecentActivityOptInClicked"
+                          AutomationProperties.Name="세션 최근 파일 및 방문 폴더 기록 허용"/>
+                <Button x:Name="RecentActivityClearButton" Content="기록 전체 지우기"
+                        Click="OnClearRecentActivity"
+                        AutomationProperties.Name="이 세션의 최근 파일 및 폴더 기록 전체 지우기"/>
+                <TextBlock Text="종료 시 자동 삭제 · 디스크 저장 안 함"
+                           VerticalAlignment="Center"
+                           Opacity="{ThemeResource FlyExplorerSubtleTextOpacity}"/>
+            </StackPanel>
+            <StackPanel Orientation="Horizontal" Spacing="8">
+                <TextBlock Text="최근 연 파일:" VerticalAlignment="Center"/>
+                <ComboBox x:Name="RecentActivityFiles" Width="320"
+                          PlaceholderText="기록된 파일 없음"
+                          SelectionChanged="OnRecentActivitySelectionChanged"
+                          AutomationProperties.Name="최근에 연 파일 목록"/>
+                <Button x:Name="RecentActivityOpenFileButton" Content="파일 열기"
+                        IsEnabled="False" Click="OnOpenRecentActivityFile"
+                        AutomationProperties.Name="선택한 최근 파일을 기본 앱으로 열기"/>
+                <TextBlock Text="자주 방문한 폴더:" VerticalAlignment="Center"/>
+                <ComboBox x:Name="RecentActivityFolders" Width="320"
+                          PlaceholderText="기록된 폴더 없음"
+                          SelectionChanged="OnRecentActivitySelectionChanged"
+                          AutomationProperties.Name="자주 방문한 폴더 목록"/>
+                <Button x:Name="RecentActivityOpenFolderButton" Content="폴더로 이동"
+                        IsEnabled="False" Click="OnOpenRecentActivityFolder"
+                        AutomationProperties.Name="선택한 자주 방문한 폴더로 이동"/>
             </StackPanel>
         </StackPanel>
         <StackPanel Grid.Row="4" x:Name="FilterRulePanel" Visibility="Collapsed"

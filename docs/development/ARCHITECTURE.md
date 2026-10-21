@@ -47,6 +47,12 @@ in src/base/ui_session.
 
 ## SOLID rules for this codebase
 
+The optional F07 activity model is owned by
+`app/winui/recent_activity_controller.h` as a bounded, in-memory value
+controller. It holds no XAML references and does not persist, scan, or fetch
+Explorer history. MainWindow forwards only successful accepted file-open and
+active folder navigation events after user opt-in.
+
 Regular-document activation belongs to `app/winui/file_open_controller.h`.
 It owns one asynchronous Windows StorageFile/Launcher request, deadline and
 close cancellation. MainWindow supplies weak presentation callbacks and checks

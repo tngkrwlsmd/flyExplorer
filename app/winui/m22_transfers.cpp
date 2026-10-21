@@ -106,7 +106,8 @@ void MainWindow::OpenSelectedWith(int side){
  const auto context=FileOperationContext(side);
  auto weak=get_weak();
  using Open=fxfile::previewops::FileOpenController;
- const auto start=mFileOpen.request(selected->parsingName,DispatcherQueue(),
+ const auto openedPath=selected->parsingName;
+ const auto start=mFileOpen.request(openedPath,DispatcherQueue(),
      [weak,context]{
       auto ui=weak.get();
       if(!ui||ui->mClosing||
@@ -118,9 +119,14 @@ void MainWindow::OpenSelectedWith(int side){
              live.visibleFolder==context.visibleFolder&&
              live.visibleShellFolder==context.visibleShellFolder;
      },
-     [weak](Open::Result result){
+     [weak,openedPath](Open::Result result){
       if(auto ui=weak.get()){
        using Result=Open::Result;
+       if(result==Result::Opened){
+        ui->mRecentActivity.recordFile(openedPath);
+        if(ui->RecentActivityPanel().Visibility()==Visibility::Visible)
+         ui->RefreshRecentActivityPanel();
+       }
        ui->StatusText().Text(
         result==Result::Opened?
          L"선택한 연결 프로그램으로 파일을 열었습니다.":

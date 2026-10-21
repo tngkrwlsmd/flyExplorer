@@ -187,6 +187,124 @@ void MainWindow::EnsureExpandedPanelFits() {
         }
     }
 }
+void MainWindow::RefreshRecentActivityPanel(){
+    const auto& recent=mRecentActivity.files();
+    const auto& frequent=mRecentActivity.folders();
+    auto fileItems=RecentActivityFiles().Items();
+    auto folderItems=RecentActivityFolders().Items();
+    fileItems.Clear();
+    folderItems.Clear();
+    for(auto const& path:recent){
+        ComboBoxItem item;
+        item.Content(box_value(hstring(path)));
+        fileItems.Append(item);
+    }
+    for(auto const& entry:frequent){
+        ComboBoxItem item;
+        item.Content(box_value(hstring(
+            std::to_wstring(entry.visits)+L"회 · "+entry.path)));
+        folderItems.Append(item);
+    }
+    RecentActivityFiles().SelectedIndex(-1);
+    RecentActivityFolders().SelectedIndex(-1);
+    RecentActivityOpenFileButton().IsEnabled(false);
+    RecentActivityOpenFolderButton().IsEnabled(false);
+}
+void MainWindow::OnToggleRecentActivity(
+    IInspectable const&,RoutedEventArgs const&){
+    const auto next=RecentActivityPanel().Visibility()==Visibility::Collapsed?
+                    Visibility::Visible:Visibility::Collapsed;
+    WorkspacePanel().Visibility(Visibility::Collapsed);
+    SearchPanel().Visibility(Visibility::Collapsed);
+    BookmarkPanel().Visibility(Visibility::Collapsed);
+    FilterRulePanel().Visibility(Visibility::Collapsed);
+    RecentActivityPanel().Visibility(next);
+    if(next==Visibility::Visible){
+        RefreshRecentActivityPanel();
+        EnsureExpandedPanelFits();
+        StatusText().Text(L"기록은 기본 꺼짐이며, 켠 뒤 성공한 활동만 세션 내에 보관합니다.");
+    }
+}
+void MainWindow::OnRecentActivityOptInClicked(
+    IInspectable const&,RoutedEventArgs const&){
+    mRecentActivity.enable(RecentActivityOptIn().IsChecked().GetBoolean());
+    RefreshRecentActivityPanel();
+    StatusText().Text(mRecentActivity.enabled()?
+        L"세션 활동 기록을 켰습니다. 앱을 닫으면 자동으로 사라집니다.":
+        L"세션 활동 기록을 끄고 기존 기록을 모두 지웠습니다.");
+}
+void MainWindow::OnClearRecentActivity(
+    IInspectable const&,RoutedEventArgs const&){
+    mRecentActivity.clear();
+    RefreshRecentActivityPanel();
+    StatusText().Text(L"이 세션의 파일 및 폴더 기록을 모두 지웠습니다.");
+}
+void MainWindow::OnRecentActivitySelectionChanged(
+    IInspectable const&,SelectionChangedEventArgs const&){
+    const bool enabled=mRecentActivity.enabled();
+    const int file=RecentActivityFiles().SelectedIndex();
+    const int folder=RecentActivityFolders().SelectedIndex();
+    RecentActivityOpenFileButton().IsEnabled(
+        enabled&&file>=0&&static_cast<std::size_t>(file)<mRecentActivity.files().size());
+    RecentActivityOpenFolderButton().IsEnabled(
+        enabled&&folder>=0&&static_cast<std::size_t>(folder)<mRecentActivity.folders().size());
+}
+void MainWindow::OnOpenRecentActivityFile(
+    IInspectable const&,RoutedEventArgs const&){
+    if(mClosing||!mRecentActivity.enabled()||mFileOperations.busy())return;
+    const int selected=RecentActivityFiles().SelectedIndex();
+    const auto& recent=mRecentActivity.files();
+    if(selected<0||static_cast<std::size_t>(selected)>=recent.size())return;
+    const auto path=recent[static_cast<std::size_t>(selected)];
+    auto display=RecentActivityFiles().SelectedItem().try_as<ComboBoxItem>();
+    if(!display||unbox_value<hstring>(display.Content())!=hstring(path)||
+       !fxfile::previewactivity::RecentActivityController::acceptable(path))return;
+    const int side=ActiveWindowTab().model.activePane;
+    const auto context=FileOperationContext(side);
+    auto weak=get_weak();
+    using Open=fxfile::previewops::FileOpenController;
+    const auto start=mFileOpen.request(path,DispatcherQueue(),
+        [weak,context]{
+            auto ui=weak.get();
+            if(!ui||ui->mClosing||
+               ui->ActiveWindowTab().identity!=context.windowTabIdentity||
+               ui->ActiveWindowTab().model.activePane!=context.side)return false;
+            const auto live=ui->FileOperationContext(context.side);
+            return live.tab==context.tab&&live.route==context.route&&
+                   live.visibleFolder==context.visibleFolder;
+        },
+        [weak,path](Open::Result result){
+            if(auto ui=weak.get()){
+                if(result==Open::Result::Opened){
+                    ui->mRecentActivity.recordFile(path);
+                    if(ui->RecentActivityPanel().Visibility()==Visibility::Visible)
+                        ui->RefreshRecentActivityPanel();
+                }
+                ui->StatusText().Text(result==Open::Result::Opened?
+                    L"기본 앱으로 최근 파일을 열었습니다.":
+                    L"최근 파일을 열 수 없습니다. 파일 위치나 연결 앱을 확인하세요.");
+            }
+        });
+    if(start==Open::Start::Started)
+        StatusText().Text(L"선택한 최근 파일을 기본 앱으로 여는 중입니다.");
+    else if(start==Open::Start::Busy)
+        StatusText().Text(L"이전 파일 열기 요청을 처리 중입니다.");
+    else StatusText().Text(L"선택한 파일의 경로가 올바르지 않습니다.");
+}
+void MainWindow::OnOpenRecentActivityFolder(
+    IInspectable const&,RoutedEventArgs const&){
+    if(mClosing||!mRecentActivity.enabled())return;
+    const int selected=RecentActivityFolders().SelectedIndex();
+    const auto& frequent=mRecentActivity.folders();
+    if(selected<0||static_cast<std::size_t>(selected)>=frequent.size())return;
+    const auto entry=frequent[static_cast<std::size_t>(selected)];
+    auto display=RecentActivityFolders().SelectedItem().try_as<ComboBoxItem>();
+    if(!display||unbox_value<hstring>(display.Content())!=
+       hstring(std::to_wstring(entry.visits)+L"회 · "+entry.path)||
+       !fxfile::previewactivity::RecentActivityController::acceptable(entry.path))
+        return;
+    QueuePath(ActiveWindowTab().model.activePane,entry.path);
+}
 void MainWindow::OnToggleWorkspaces(
     IInspectable const&,RoutedEventArgs const&) {
     const auto next=WorkspacePanel().Visibility()==Visibility::Collapsed?
@@ -194,6 +312,7 @@ void MainWindow::OnToggleWorkspaces(
     SearchPanel().Visibility(Visibility::Collapsed);
     BookmarkPanel().Visibility(Visibility::Collapsed);
     FilterRulePanel().Visibility(Visibility::Collapsed);
+    RecentActivityPanel().Visibility(Visibility::Collapsed);
     WorkspacePanel().Visibility(next);
     if(next==Visibility::Visible)EnsureExpandedPanelFits();
     if(next==Visibility::Visible)
@@ -361,6 +480,7 @@ void MainWindow::OnToggleSearch(
     WorkspacePanel().Visibility(Visibility::Collapsed);
     BookmarkPanel().Visibility(Visibility::Collapsed);
     FilterRulePanel().Visibility(Visibility::Collapsed);
+    RecentActivityPanel().Visibility(Visibility::Collapsed);
     SearchPanel().Visibility(next);
     if(next==Visibility::Collapsed){
         mSearchController.invalidate();

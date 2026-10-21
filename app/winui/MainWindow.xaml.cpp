@@ -863,6 +863,7 @@ namespace winrt::FlyExplorer::implementation
         try{if(mTransferTimer)mTransferTimer.Stop();}catch(...){}
         if(mShellNavigation)mShellNavigation->shutdown();
         mSearchController.prepareForClose();
+        mRecentActivity.enable(false); // Clear opt-in memory on close.
     }
     MainWindow::~MainWindow()
     {
@@ -1212,6 +1213,14 @@ namespace winrt::FlyExplorer::implementation
                     L"폴더의 현재 스트리밍 항목을 불러왔습니다.");
             }
             return;
+        }
+        if(completed.kind==Kind::Applied&&completed.active&&
+           !continuation&&completed.action!=Action::Refresh){
+            const auto& pane=ActiveWindowTab().model.panes[completed.side];
+            if(pane.active<pane.filesystemPaths.size())
+                mRecentActivity.recordFolder(pane.filesystemPaths[pane.active]);
+            if(RecentActivityPanel().Visibility()==Visibility::Visible)
+                RefreshRecentActivityPanel();
         }
         if(completed.active){
             ClearFileDetails(completed.side);
@@ -3742,7 +3751,8 @@ namespace winrt::FlyExplorer::implementation
             auto weak=get_weak();
             using Open=fxfile::previewops::FileOpenController;
             StatusText().Text(L"기본 앱으로 파일을 여는 중입니다.");
-            const auto start=mFileOpen.request(indexed->parsingName,DispatcherQueue(),
+            const auto openedPath=indexed->parsingName;
+            const auto start=mFileOpen.request(openedPath,DispatcherQueue(),
                 [weak,context]{
                     auto ui=weak.get();
                     if(!ui||ui->mClosing||
@@ -3751,9 +3761,14 @@ namespace winrt::FlyExplorer::implementation
                     return live.tab==context.tab&&live.route==context.route&&
                            live.visibleFolder==context.visibleFolder;
                 },
-                [weak](Open::Result result){
+                [weak,openedPath](Open::Result result){
                     if(auto ui=weak.get()){
                         using Result=Open::Result;
+                        if(result==Result::Opened){
+                            ui->mRecentActivity.recordFile(openedPath);
+                            if(ui->RecentActivityPanel().Visibility()==Visibility::Visible)
+                                ui->RefreshRecentActivityPanel();
+                        }
                         const wchar_t* message=
                             result==Result::Opened?
                                 L"기본 앱으로 파일을 열었습니다.":
