@@ -5,6 +5,7 @@
 // Untested on Windows: hostile concurrent directory replacement remains a risk.
 #pragma once
 #include "zip_store_batch_writer.h"
+#include "zip_store_compat.h"
 #include <windows.h>
 #include <algorithm>
 #include <cstddef>
@@ -159,22 +160,23 @@ inline Result extractMany(std::wstring const& source,
                 result.status=Status::Corrupt;return result;
             }
             const auto nameLength=std::size_t(u16(bytes,localCursor+26));
+            const auto versionNeeded=u16(bytes,directoryCursor+6);
+            const auto flags=u16(bytes,directoryCursor+8);
             const auto packed=std::size_t(u32(bytes,localCursor+18));
             const auto unpacked=std::size_t(u32(bytes,localCursor+22));
             const auto checksum=u32(bytes,localCursor+14);
             const auto nameLengthCentral=std::size_t(u16(bytes,directoryCursor+28));
-            if(u16(bytes,localCursor+4)!=20||
-               u16(bytes,localCursor+6)!=0x0800u||
+            if(!fxfile::zipstorecompat::supportedDosVersion(versionNeeded)||
+               !fxfile::zipstorecompat::supportedDosVersion(
+                    u16(bytes,directoryCursor+4))||
+               !fxfile::zipstorecompat::supportedFlags(flags)||
+               u16(bytes,localCursor+4)!=versionNeeded||
+               u16(bytes,localCursor+6)!=flags||
                u16(bytes,localCursor+8)!=0||
-               u16(bytes,localCursor+10)!=0||
-               u16(bytes,localCursor+12)!=0||
+               !fxfile::zipstorecompat::sameDosTime(
+                    bytes,localCursor,directoryCursor)||
                u16(bytes,localCursor+28)!=0||
-               u16(bytes,directoryCursor+4)!=20||
-               u16(bytes,directoryCursor+6)!=20||
-               u16(bytes,directoryCursor+8)!=0x0800u||
                u16(bytes,directoryCursor+10)!=0||
-               u16(bytes,directoryCursor+12)!=0||
-               u16(bytes,directoryCursor+14)!=0||
                u16(bytes,directoryCursor+30)!=0||
                u16(bytes,directoryCursor+32)!=0||
                u16(bytes,directoryCursor+34)!=0||
@@ -203,7 +205,8 @@ inline Result extractMany(std::wstring const& source,
                 result.status=Status::Corrupt;return result;
             }
             std::wstring name;
-            if(!decode(bytes,directoryCursor+46u,nameLength,true,name)){
+            if(!fxfile::zipstorecompat::decodeName(
+                   bytes,directoryCursor+46u,nameLength,flags,name)){
                 result.status=Status::Unsupported;return result;
             }
             if(!detail::flatName(name)){

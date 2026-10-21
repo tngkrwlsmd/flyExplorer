@@ -111,6 +111,16 @@ I/O and before non-replace publication, returning Cancelled on a
 pre-commit stop and using RAII staging cleanup. A rename already
 committed cannot be undone. Single-file ZIP operations remain unchanged.
 
+The F08 Store metadata compatibility policy lives in
+`src/base/zip_store_compat.h`, reused by the one-file and batch
+Store extractors. It permits DOS version 1.0/2.0 and matching DOS
+timestamps and strict UTF-8 or unflagged ASCII-only names while
+continuing to reject all extra/comment/data-descriptor/ZIP64/encryption
+features. No third-party codec is bundled and Windows MSZIP must
+not be treated as ZIP method-8 raw Deflate. A future raw Deflate
+decoder requires reviewed pinned dependencies and separate bounded
+output/CRC/cancel handling.
+
 Regular-document activation belongs to `app/winui/file_open_controller.h`.
 It owns one asynchronous Windows StorageFile/Launcher request, deadline and
 close cancellation. MainWindow supplies weak presentation callbacks and checks

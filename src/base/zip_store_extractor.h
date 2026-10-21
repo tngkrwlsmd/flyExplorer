@@ -5,6 +5,7 @@
 // publication, and cleanup of only our temporary file.
 #pragma once
 #include "zip_store_writer.h"
+#include "zip_store_compat.h"
 #include <windows.h>
 #include <algorithm>
 #include <cstddef>
@@ -108,8 +109,9 @@ inline Result extractOne(std::wstring const& source) noexcept {
         const std::uint32_t packed=u32(archiveBytes,central+20);
         const std::uint32_t expanded=u32(archiveBytes,central+24);
         const auto nameLength=std::size_t(u16(archiveBytes,central+28));
-        if(versionMade!=20||versionNeeded!=20||
-           flags!=0x0800u||method!=0||
+        if(!fxfile::zipstorecompat::supportedDosVersion(versionMade)||
+           !fxfile::zipstorecompat::supportedDosVersion(versionNeeded)||
+           !fxfile::zipstorecompat::supportedFlags(flags)||method!=0||
            u16(archiveBytes,central+30)!=0||
            u16(archiveBytes,central+32)!=0||
            u16(archiveBytes,central+34)!=0||
@@ -129,8 +131,9 @@ inline Result extractOne(std::wstring const& source) noexcept {
         }
         // Validate the local header against the same immutable read buffer.
         if(u32(archiveBytes,0)!=0x04034b50u||
-           u16(archiveBytes,4)!=20||
+           u16(archiveBytes,4)!=versionNeeded||
            u16(archiveBytes,6)!=flags||
+           !fxfile::zipstorecompat::sameDosTime(archiveBytes,0,central)||
            u16(archiveBytes,8)!=method||
            u32(archiveBytes,14)!=checksum||
            u32(archiveBytes,18)!=packed||
@@ -147,7 +150,8 @@ inline Result extractOne(std::wstring const& source) noexcept {
             answer.status=Status::Corrupt;return answer;
         }
         std::wstring member;
-        if(!decode(archiveBytes,central+46u,nameLength,true,member)){
+        if(!fxfile::zipstorecompat::decodeName(
+               archiveBytes,central+46u,nameLength,flags,member)){
             answer.status=Status::Unsupported;return answer;
         }
         if(!detail::safeLeaf(member)){

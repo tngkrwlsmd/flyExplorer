@@ -156,6 +156,18 @@ B의 좌우 닫기 범위, F6·목록 Tab 왕복·주소/검색·메뉴 복귀·
   이유로 재요청하거나 자동 차단 조건으로 등록하지 않는다. 다른 승인된 검증(G07 등)은
   실제 시험한 범위만 기록한다. 사용자 제외 항목을 검증 완료로 주장하지 않는다.
 
+## 2026-10-21 EP10/F08 ZIP Store DOS 시각·ASCII 호환 개선 — 코드 반영, 미검증
+
+단일/다중 Store 해제에서 DOS 수정시각(로컬·중앙 일치), DOS ZIP
+버전 1.0/2.0 및 GPBF UTF-8 bit11 또는 ASCII-only 무플래그
+이름을 허용했다. 이를 별도 `zip_store_compat.h`로 분리했다.
+암호화/descriptor/Deflate/ZIP64/비ASCII 레거시 인코딩/extra/comment
+등은 여전히 거부한다. Windows MSZIP는 ZIP raw Deflate와 다르게
+취급하며, 검증되지 않은 네이티브 변환을 추가하지 않았다.
+Deflate는 라이브러리·의존성·라이선스 선정 및 raw 스트림/출력
+상한·CRC 검증 후의 별도 단위다.
+**빌드·테스트·GUI·시각 검증 미실행 / NOT TESTED.**
+
 ## 2026-10-21 EP10/F08 다중 ZIP Store 협력적 취소 — 코드 반영, 미검증
 
 다중 ZIP Store 생성·해제의 취소 토큰을 기존 파일 작업 취소

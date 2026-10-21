@@ -1,5 +1,33 @@
 # flyExplorer 작업 인계 — 2026-10-19 L08 커서 OPEN, G01 코드·빌드 PASS
 
+## 2026-10-21 EP10/F08 — 표준 DOS 수정시각·ASCII ZIP Store 호환 (코드 반영, 미검증)
+
+- 기준 main `87a968c5`. ZIP 엔진·외부 zlib/miniz 의존성이
+  저장소 런타임에 없음을 확인했다. Windows MSZIP는 RFC 1951과
+  유사한 Windows 고유 포맷이므로 **ZIP Deflate(method 8)과
+  동일하다고 간주해 연결하지 않았다**. 외부 엔진 추가 및
+  Windows 앱 패키징/라이선스는 별도 채택과 검증이 필요하다.
+- `src/base/zip_store_compat.h`에 **Store(method 0) 전용**
+  중앙·로컬 헤더 호환 정책을 분리했다. 일반적인 비제로 DOS
+  수정 시간·날짜를 허용하되 두 헤더 값이 같아야 한다.
+  ZIP 버전은 DOS 생성자/필요 버전 1.0 또는 2.0만 지원한다.
+  GPBF bit 11(UTF-8)만 허용하되 bit11 없는 ZIP은 **7비트
+  ASCII 이름만** 허용하고 비ASCII 레거시 코드를 추측하지 않는다.
+  단일/다중(Store, 2~8개) 해제 양쪽에 같은 계약을 적용했다.
+- **보존한 제약:** ZIP64, Deflate, 암호화, data descriptor,
+  비ASCII 레거시 코드 페이지, extra field, 파일·ZIP 주석,
+  링크·중첩 경로, 기존 파일 덮어쓰기 금지. 모든 경로·크기
+  검증, 실제 CRC, 임시 출력/최종 non-replace publish,
+  다중 해제 취소 정책은 그대로 유지한다.
+- 기존 추출 계약 둘을 수정하고 신규 소스 계약을 작성했다.
+  기존 다중 추출 계약에 남아 있던 옛 시그니처 문자열
+  (`extractMany(source)`)도 현행 취소 토큰 호출로 정리했다.
+  **빌드·실행 테스트·GUI·시각 검증은 전부 NOT TESTED**.
+  향후 raw Deflate는 라이브러리 버전/라이선스 고정 후
+  `inflateInit2(-MAX_WBITS)` 기반의 별도 제한적 디코딩,
+  입력 소비/출력 상한/CRC/취소 검증이 필요하다.
+  G01 OPEN, G07 중단, G03~G05 제외 유지.
+
 ## 2026-10-21 EP10/F08 — 다중 ZIP Store 생성·해제 협력적 취소 (코드 반영, 미검증)
 
 - 기준 main `3a99a309`. 기존 FileToolbar 취소 버튼으로
