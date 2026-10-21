@@ -27,6 +27,7 @@ class FileCommandFeedbackContract(unittest.TestCase):
         self.assertIn("if(originActive)StatusText().Text(hstring(notice));",completion)
         self.assertIn("if(disposition==Disposition::StaleContext)",completion)
         self.assertIn("if(disposition==Disposition::Failed)",completion)
+        self.assertIn("ActiveWindowTab().fileOperationNotice.clear();",body)
 
     def test_failure_and_success_still_use_native_result_and_refresh(self):
         body=(APP/"m21_commands.cpp").read_text(encoding="utf-8-sig")
