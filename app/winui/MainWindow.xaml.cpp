@@ -1944,6 +1944,11 @@ namespace winrt::FlyExplorer::implementation
         const auto& nameIndex=session.nameIndex();
         auto& state=ActiveWindowTab().fileLists[side];
         const auto nextRoute=pane.routeIds[pane.active];
+        // Route identity stays stable through navigation on one PaneTab;
+        // distinguish a same-folder refresh from a different folder.
+        const bool sameRenderedFolder=state.visibleRoute==nextRoute&&
+            state.visibleTab==pane.active&&!state.renderedFolder.empty()&&
+            state.renderedFolder==snapshot.parsingName;
         if(state.visibleRoute!=nextRoute||state.visibleTab!=pane.active){
             state.groupTabCache.switchTo(nextRoute,pane.active,side);
             state.groupByType=state.groupTabCache.enabled();
@@ -1962,7 +1967,26 @@ namespace winrt::FlyExplorer::implementation
         auto previous=side==0?LeftLoadPreviousButton():RightLoadPreviousButton();
         auto button=side==0?LeftLoadMoreButton():RightLoadMoreButton();
         std::vector<std::wstring> selected;
-        for(auto const& old:view.SelectedItems()){
+        std::wstring focusedPath;
+        if(sameRenderedFolder&&side==ActiveWindowTab().model.activePane){
+            for(auto const& old:view.Items()){
+                auto row=old.try_as<ListViewItem>();
+                if(!row||!row.Tag()||
+                   row.FocusState()==FocusState::Unfocused)continue;
+                std::uint64_t logical{};
+                try{logical=winrt::unbox_value<std::uint64_t>(row.Tag());}
+                catch(...){continue;}
+                auto found=std::find(state.renderedLogical.begin(),
+                                     state.renderedLogical.end(),logical);
+                if(found==state.renderedLogical.end())continue;
+                const auto position=static_cast<std::size_t>(
+                    std::distance(state.renderedLogical.begin(),found));
+                if(position<state.renderedPaths.size())
+                    focusedPath=state.renderedPaths[position];
+                break;
+            }
+        }
+        if(sameRenderedFolder)for(auto const& old:view.SelectedItems()){
             auto row=old.try_as<ListViewItem>();
             if(!row||!row.Tag())continue;
             const auto logical=winrt::unbox_value<std::uint64_t>(row.Tag());
@@ -1980,7 +2004,9 @@ namespace winrt::FlyExplorer::implementation
         view.Items().Clear();
         state.renderedLogical.clear();
         state.renderedPaths.clear();
+        state.renderedFolder=snapshot.parsingName;
         state.renderedBaseOffset=snapshot.baseOffset;
+        ListViewItem focusRow{nullptr};
         const bool residentMetadataReady=state.metadataCurrent(
             pane.routeIds[pane.active],pane.active,items.size());
         const bool indexedMetadataReady=
@@ -2574,6 +2600,8 @@ namespace winrt::FlyExplorer::implementation
             view.Items().Append(row);
             state.renderedLogical.push_back(logical);
             state.renderedPaths.push_back(itemParsing);
+            if(!focusedPath.empty()&&itemParsing==focusedPath)
+                focusRow=row;
             if(!itemParsing.empty()&&
                std::find(selected.begin(),selected.end(),itemParsing)
                   !=selected.end()){
@@ -2583,6 +2611,9 @@ namespace winrt::FlyExplorer::implementation
                 view.SelectedItems().Append(row);
             }
         }
+        // Restore keyboard focus only when that exact old row still exists
+        // in the same active pane after the refresh.
+        if(focusRow)focusRow.Focus(FocusState::Programmatic);
         mPopulatingFileLists=false;
     }
     std::wstring MainWindow::WindowTabLabel(
