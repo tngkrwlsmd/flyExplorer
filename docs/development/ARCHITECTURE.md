@@ -93,6 +93,16 @@ PaneTab/route origin and separate in-flight flag. The single-member
 extractor intentionally rejects its multi-entry output; Deflate and folder
 archives remain unsupported.
 
+F08 bounded multi-file extraction lives in `src/base/zip_store_batch_extractor.h`.
+It checks every flat Store entry's local and central record and CRC32
+against a single read-only snapshot before any file is written. An owned
+staging directory holds only the new files; the whole directory is
+published once without replacement as `flyExplorer-selection-unpacked`.
+Failed staging cleans only known staging entries; no recursive directory
+delete, no rollback of a user destination, and no general ZIP/Deflate
+support. MainWindow gates the background completion on the origin
+WindowTab/PaneTab/route and has a separate ZIP-batch-extraction busy bit.
+
 Regular-document activation belongs to `app/winui/file_open_controller.h`.
 It owns one asynchronous Windows StorageFile/Launcher request, deadline and
 close cancellation. MainWindow supplies weak presentation callbacks and checks

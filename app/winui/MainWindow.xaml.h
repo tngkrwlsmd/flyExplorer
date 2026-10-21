@@ -359,6 +359,7 @@ namespace winrt::FlyExplorer::implementation
         bool mZipCreationBusy=false;
         bool mZipExtractionBusy=false;
         bool mZipBatchCreationBusy=false;
+        bool mZipBatchExtractionBusy=false;
         void RefreshRecentActivityPanel();
         fxfile::previewsearch::SearchController mSearchController{};
         // UI-only bounded snapshot of the last accepted search results. Never
@@ -414,6 +415,7 @@ namespace winrt::FlyExplorer::implementation
         void InspectSelectedZip(int side);
         void CreateSelectedZip(int side);
         void CreateSelectedBatchZip(int side);
+        void ExtractSelectedBatchZip(int side);
         void ExtractSelectedZip(int side);
         void OnCloseZipInspection(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
         fxfile::previewops::FileOpenController mFileOpen;

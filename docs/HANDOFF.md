@@ -1,5 +1,38 @@
 # flyExplorer 작업 인계 — 2026-10-19 L08 커서 OPEN, G01 코드·빌드 PASS
 
+## 2026-10-21 EP10/F08 — 다중 ZIP Store 평면 파일 해제 (코드 반영, 미검증)
+
+- 기준 main f8d4c193. 기존 다중 파일 Store 생성기에 대응하는
+  **일반 파일 2~8개, 평면 경로, UTF-8/Store 메서드만** 해제하는
+  `src/base/zip_store_batch_extractor.h`를 도입했다.
+  입력 ZIP은 최대 16MiB, 전체 해제 크기는 8MiB 이하다.
+  ZIP64, Deflate, 중첩 디렉터리, 항목별 extra/comment, 암호화,
+  symlink, 임의 prefix/trailer, 유사하지만 다른 ZIP은 거부한다.
+- 단일 열린 ZIP 핸들에서 읽은 bounded snapshot의 모든 로컬/중앙
+  헤더, 파일명, 길이/CRC, 위치·offset, EOCD/중복 이름/안전한
+  Windows leaf 이름을 검사한다. **모든 항목의 실제 CRC를
+  확인한 뒤에만 첫 출력 파일을 생성한다.**
+- 대상은 ZIP과 동일 폴더의 `flyExplorer-selection-unpacked`이다.
+  기존 대상이 있으면 작업 자체를 거부한다. 임시 파일 예약에서
+  파생된 별도 임시 **디렉터리**를 원자적 CreateDirectory로
+  독점 생성하고 그 내부에 각 파일을 CREATE_NEW·flush한다.
+  파일 여러 개를 최종 위치에 개별 공개하지 않고, 전부 완성되면
+  디렉터리 전체를 non-replace rename한다.
+  일반 실패/예외 때 RAII로 알려진 임시 파일과 임시 디렉터리만
+  정리한다. cleanup 실패·갑작스러운 종료 시 *최종 위치가 아닌*
+  임시 잔여 디렉터리가 남을 수 있으며, 외부 동시 경로/접합점
+  바꿔치기 공격을 실제 Windows에서 입증해 차단한 것은 아니다.
+- WinUI 우클릭 메뉴에 **ZIP 여러 파일 해제 (Store, 2~8개)**
+  명령을 연결해 이전 단일/다중 ZIP 작업 시작과 상호 배제한다.
+  성공/실패 UI 및 폴더 refresh는 정확한 WindowTab/PaneTab/
+  route/원본 폴더가 유지됐을 때만 적용한다. 작업자가 시작한 뒤
+  다른 탭으로 이동해도 OS 파일 I/O 자체가 취소되지는 않는다.
+- 신규 소스 계약 추가. **빌드·테스트 실행·native/GUI/시각
+  검증 전부 미실행 / NOT TESTED**. 다음 범위는 직접 승인된
+  테스트에서 스테이징/재파싱·CRC 손상·충돌·종료 잔여물을
+  검증하고 Deflate/일반 ZIP 호환 및 명시적 취소를 별도 설계한다.
+  G01 OPEN, G07 중단, G03~G05 제외 유지.
+
 ## 2026-10-21 EP10/F08 — 다중 일반 파일 ZIP Store 생성 (코드 반영, 미검증)
 
 - 기준 main 94dacf9a. 앱 우클릭에 "선택한 파일 ZIP으로 묶기
