@@ -44,7 +44,7 @@ class TransferFeedbackContract(unittest.TestCase):
         self.assertIn("일부 항목이 처리됐을 수 있습니다.",completion)
         self.assertIn("rememberOrigin(detail);",completion)
         self.assertIn("completion.touchedFolders",completion)
-        self.assertIn("state.transferFailureNotice=message;",completion)
+        self.assertIn("state.fileOperationNotice=message;",completion)
         self.assertIn("if(originActive)StatusText().Text(hstring(detail));",completion)
         self.assertIn("if(originActive)StatusText().Text(hstring(message));",completion)
         self.assertIn(
