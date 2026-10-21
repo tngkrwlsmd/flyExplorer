@@ -152,9 +152,11 @@ namespace winrt::FlyExplorer::implementation
             IInspectable const&,
             Microsoft::UI::Xaml::Input::PointerRoutedEventArgs const&);
         void ShowAppFileContextMenu(int side,
-            Microsoft::UI::Xaml::Controls::ListViewItem const& anchor);
+            Microsoft::UI::Xaml::Controls::ListViewItem const& anchor,
+            Windows::Foundation::Point const& position);
         void ShowAppBackgroundContextMenu(int side,
-            Microsoft::UI::Xaml::UIElement const& anchor);
+            Microsoft::UI::Xaml::FrameworkElement const& anchor,
+            Windows::Foundation::Point const& position);
         void OnFileRightTapped(IInspectable const&,
             Microsoft::UI::Xaml::Input::RightTappedRoutedEventArgs const&);
         void OnFileSelectionChanged(IInspectable const&,
