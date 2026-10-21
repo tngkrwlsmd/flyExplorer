@@ -42,8 +42,11 @@ class TransferFeedbackContract(unittest.TestCase):
         self.assertIn("completion.report.aborted",completion)
         self.assertIn("completion.report.error==ERROR_CANCELLED",completion)
         self.assertIn("일부 항목이 처리됐을 수 있습니다.",completion)
-        self.assertIn("mTransferFailureNotice=detail;",completion)
+        self.assertIn("rememberOrigin(detail);",completion)
         self.assertIn("completion.touchedFolders",completion)
+        self.assertIn("state.transferFailureNotice=message;",completion)
+        self.assertIn("if(originActive)StatusText().Text(hstring(detail));",completion)
+        self.assertIn("if(originActive)StatusText().Text(hstring(message));",completion)
         self.assertIn(
             "if(completion.context.windowTabIdentity==ActiveWindowTab().identity)",
             completion
@@ -125,7 +128,7 @@ class SkipExistingTransferContract(unittest.TestCase):
         self.assertIn("completion.skippedCollisions);",body)
         self.assertIn("이전 확인에서 충돌 ",body)
         self.assertIn("일부 항목이 처리됐을 수 있습니다.",body)
-        self.assertIn("mTransferFailureNotice=detail;",body)
+        self.assertIn("rememberOrigin(detail);",body)
         self.assertNotIn("report.queued-report.completed",body)
 
 
