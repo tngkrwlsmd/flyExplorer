@@ -414,6 +414,9 @@ namespace winrt::FlyExplorer::implementation
             if(auto ui=nativeWeak.get())ui->UpdateView(index);
         });
         fileBar()->SetViewIndex(initialView);
+        fileBar()->SetFolderViewAction([nativeWeak](bool remember){
+            if(auto ui=nativeWeak.get())ui->RememberCurrentFolderView(remember);
+        });
         fileBar()->SetListDisplay([nativeWeak](int option){
             if(auto ui=nativeWeak.get())ui->ToggleListDisplay(option);
         });
@@ -1088,6 +1091,11 @@ namespace winrt::FlyExplorer::implementation
             }
         }
         const bool continuation=completed.action==Action::Continue;
+        // Private workspace restore owns its session view. Even if the last
+        // restore request settles here, do not replace that view with an
+        // unrelated in-memory folder override.
+        const bool restoring=completed.side>=0&&completed.side<2&&
+            mWorkspaceRestore.active(completed.side);
         const bool restoreSettled=continuation?false:mWorkspaceRestore.settle(
             completed.side,completed.request);
         auto continueRestore=[&]{
@@ -1217,8 +1225,22 @@ namespace winrt::FlyExplorer::implementation
         if(completed.kind==Kind::Applied&&completed.active&&
            !continuation&&completed.action!=Action::Refresh){
             const auto& pane=ActiveWindowTab().model.panes[completed.side];
-            if(pane.active<pane.filesystemPaths.size())
-                mRecentActivity.recordFolder(pane.filesystemPaths[pane.active]);
+            if(pane.active<pane.filesystemPaths.size()){
+                const auto& path=pane.filesystemPaths[pane.active];
+                // Applied native navigation only. Refresh, delayed tabs,
+                // failed results and session restoration cannot overwrite
+                // another pane's view or the saved private session.
+                int remembered=0;
+                if(!restoring&&mFolderViews.lookup(path,remembered)){
+                    auto& state=ActiveWindowTab().fileLists[completed.side];
+                    if(state.viewMode!=static_cast<FileViewMode>(remembered)){
+                        state.viewMode=static_cast<FileViewMode>(remembered);
+                        if(ActiveWindowTab().model.activePane==completed.side)
+                            fileBar()->SetViewIndex(remembered);
+                    }
+                }
+                mRecentActivity.recordFolder(path);
+            }
             if(RecentActivityPanel().Visibility()==Visibility::Visible)
                 RefreshRecentActivityPanel();
         }

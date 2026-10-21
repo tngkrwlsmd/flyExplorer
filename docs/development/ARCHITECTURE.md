@@ -53,6 +53,13 @@ controller. It holds no XAML references and does not persist, scan, or fetch
 Explorer history. MainWindow forwards only successful accepted file-open and
 active folder navigation events after user opt-in.
 
+F14 in-session folder view overrides belong to
+`app/winui/folder_view_controller.h`. It holds at most 64 explicit
+normalized local folder→view entries and has no filesystem/persistence/UI
+dependencies. The existing pane/session model retains the actual active view
+mode, and asynchronous navigation only projects an override after accepted
+navigation outside of workspace restoration.
+
 Regular-document activation belongs to `app/winui/file_open_controller.h`.
 It owns one asynchronous Windows StorageFile/Launcher request, deadline and
 close cancellation. MainWindow supplies weak presentation callbacks and checks

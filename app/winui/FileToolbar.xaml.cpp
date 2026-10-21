@@ -20,6 +20,9 @@ void FileToolbar::SetSortIndex(int value){
  SortDateAscendingItem().IsChecked(value==7);SortDateDescendingItem().IsChecked(value==3);
 }
 void FileToolbar::SetView(std::function<void(int)> view){view_=std::move(view);}
+void FileToolbar::SetFolderViewAction(std::function<void(bool)> action){
+ folderViewAction_=std::move(action);
+}
 void FileToolbar::SetListDisplay(std::function<void(int)> change){listDisplay_=std::move(change);}
 void FileToolbar::SetGroup(std::function<void(int)> change){group_=std::move(change);}
 void FileToolbar::SetGroupState(int mode){
@@ -65,6 +68,12 @@ void FileToolbar::OnToggleLeftFilter(IInspectable const&,RoutedEventArgs const&)
 void FileToolbar::OnSortNameAscending(IInspectable const&,RoutedEventArgs const&){ChooseSort(0);} void FileToolbar::OnSortNameDescending(IInspectable const&,RoutedEventArgs const&){ChooseSort(1);} void FileToolbar::OnSortSizeDescending(IInspectable const&,RoutedEventArgs const&){ChooseSort(2);} void FileToolbar::OnSortDateDescending(IInspectable const&,RoutedEventArgs const&){ChooseSort(3);}
 void FileToolbar::OnSortTypeAscending(IInspectable const&,RoutedEventArgs const&){ChooseSort(4);} void FileToolbar::OnSortTypeDescending(IInspectable const&,RoutedEventArgs const&){ChooseSort(5);} void FileToolbar::OnSortSizeAscending(IInspectable const&,RoutedEventArgs const&){ChooseSort(6);} void FileToolbar::OnSortDateAscending(IInspectable const&,RoutedEventArgs const&){ChooseSort(7);}
 void FileToolbar::OnViewDetails(IInspectable const&,RoutedEventArgs const&){ChooseView(0);} void FileToolbar::OnViewList(IInspectable const&,RoutedEventArgs const&){ChooseView(1);} void FileToolbar::OnViewSmallIcons(IInspectable const&,RoutedEventArgs const&){ChooseView(2);} void FileToolbar::OnViewMediumIcons(IInspectable const&,RoutedEventArgs const&){ChooseView(3);} void FileToolbar::OnViewLargeIcons(IInspectable const&,RoutedEventArgs const&){ChooseView(4);}
+void FileToolbar::OnRememberFolderView(IInspectable const&,RoutedEventArgs const&){
+ if(folderViewAction_)folderViewAction_(true);
+}
+void FileToolbar::OnForgetFolderView(IInspectable const&,RoutedEventArgs const&){
+ if(folderViewAction_)folderViewAction_(false);
+}
 void FileToolbar::OnViewCheckboxes(IInspectable const&,RoutedEventArgs const&){if(listDisplay_)listDisplay_(0);}
 void FileToolbar::OnViewCompactRows(IInspectable const&,RoutedEventArgs const&){if(listDisplay_)listDisplay_(1);}
 void FileToolbar::OnViewFileExtensions(IInspectable const&,RoutedEventArgs const&){if(listDisplay_)listDisplay_(2);}

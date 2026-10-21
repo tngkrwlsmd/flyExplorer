@@ -9,6 +9,7 @@ struct FileToolbar : FileToolbarT<FileToolbar> {
  void SetSortIndex(int selection);
  void SetView(std::function<void(int)> change);
  void SetViewIndex(int selection);
+ void SetFolderViewAction(std::function<void(bool)> action);
  void SetListDisplay(std::function<void(int)> change);
  void SetGroup(std::function<void(int)> change);
  void SetGroupState(int mode);
@@ -43,6 +44,8 @@ struct FileToolbar : FileToolbarT<FileToolbar> {
  void OnViewSmallIcons(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
  void OnViewMediumIcons(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
  void OnViewLargeIcons(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
+ void OnRememberFolderView(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
+ void OnForgetFolderView(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
  void OnViewCheckboxes(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
  void OnViewCompactRows(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
  void OnViewFileExtensions(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
@@ -58,6 +61,7 @@ private:
  std::function<void(int)> action_;
  std::function<void(int)> sort_;
  std::function<void(int)> view_;
+ std::function<void(bool)> folderViewAction_;
  std::function<void(int)> listDisplay_;
  std::function<void(int)> group_;
  bool restoring_=false;

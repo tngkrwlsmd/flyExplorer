@@ -18,6 +18,7 @@
 #include "workspace_restore_coordinator.h"
 #include "search_controller.h"
 #include "recent_activity_controller.h"
+#include "folder_view_controller.h"
 #include "../../src/base/shell_transfer_core.h"
 #include "../../src/base/shell_clipboard_core.h"
 #include "../../src/base/file_command_core.h"
@@ -192,6 +193,7 @@ namespace winrt::FlyExplorer::implementation
         void RunTransfer(fxfile::shelltransfer::Kind);
         void UpdateSort(int selection);
         void UpdateView(int selection);
+        void RememberCurrentFolderView(bool remember);
         void ToggleListDisplay(int option);
         void ToggleGroupByType();
         void ToggleGroupMode(int mode);
@@ -351,6 +353,7 @@ namespace winrt::FlyExplorer::implementation
         bool mPopulatingFilterRules=false;
         void InitializeFilterRules();
         void RefreshFilterRuleManager(int selected);
+        fxfile::previewfolderview::FolderViewController mFolderViews{};
         fxfile::previewactivity::RecentActivityController mRecentActivity{};
         void RefreshRecentActivityPanel();
         fxfile::previewsearch::SearchController mSearchController{};
