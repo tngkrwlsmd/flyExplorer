@@ -5,6 +5,7 @@
 #include <cstdint>
 #include <cwctype>
 #include <filesystem>
+#include <limits>
 #include <string>
 #include <vector>
 
@@ -54,7 +55,7 @@ public:
   auto it=std::find_if(folders_.begin(),folders_.end(),
      [&path](FolderVisit const& old){return equal(old.path,path);});
   if(it!=folders_.end()){
-   if(it->visits<UINT32_MAX)++it->visits;
+   if(it->visits<(std::numeric_limits<std::uint32_t>::max)())++it->visits;
    it->last=sequence_;
   }else{
    if(folders_.size()==kMaxFolders){

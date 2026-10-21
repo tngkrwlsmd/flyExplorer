@@ -3756,9 +3756,11 @@ namespace winrt::FlyExplorer::implementation
                 [weak,context]{
                     auto ui=weak.get();
                     if(!ui||ui->mClosing||
+                       ui->ActiveWindowTab().identity!=context.windowTabIdentity||
                        ui->ActiveWindowTab().model.activePane!=context.side)return false;
                     const auto live=ui->FileOperationContext(context.side);
-                    return live.tab==context.tab&&live.route==context.route&&
+                    return live.windowTabIdentity==context.windowTabIdentity&&
+                           live.tab==context.tab&&live.route==context.route&&
                            live.visibleFolder==context.visibleFolder;
                 },
                 [weak,openedPath](Open::Result result){

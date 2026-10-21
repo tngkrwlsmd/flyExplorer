@@ -32,6 +32,7 @@ class RecentActivityContracts(unittest.TestCase):
                       navigation)
         activation=main.split("void MainWindow::OpenSelectedFolder(int side)",1)[1].split(
             "void MainWindow::OnLeftFileDoubleTapped(",1)[0]
+        self.assertIn("ui->ActiveWindowTab().identity!=context.windowTabIdentity",activation)
         self.assertIn("if(result==Result::Opened)",activation)
         self.assertIn("mRecentActivity.recordFile(openedPath)",activation)
         self.assertIn("if(result==Result::Opened)",transfer)
