@@ -14,6 +14,9 @@ struct FileOperationController::PendingTransfer final {
     Context context{};
     // Destination paths from the completed read-only preflight.
     std::vector<std::wstring> collisions{};
+    // Keep earlier skip decisions when a reduced batch encounters
+    // another destination collision during its fresh worker preflight.
+    std::size_t skippedCollisions=0;
 };
 
 struct FileOperationController::SharedState final {
@@ -170,7 +173,7 @@ FileOperationController::StartStatus FileOperationController::confirmCollision(
     pending.request.collision=fxfile::shelltransfer::Collision::KeepBoth;
     return launchTransfer(
         std::move(pending.request),std::move(pending.context),
-        std::move(post),std::move(completion));
+        std::move(post),std::move(completion),pending.skippedCollisions);
 }
 
 FileOperationController::StartStatus
@@ -222,11 +225,17 @@ FileOperationController::skipCollisions(
             skipped=0;
             return StartStatus::StaleConfirmation;
         }
+        if(pending.skippedCollisions>
+            fxfile::shelltransfer::kMaxItems-skipped){
+            skipped=0;
+            return StartStatus::StaleConfirmation;
+        }
+        const auto totalSkipped=pending.skippedCollisions+skipped;
         if(remaining.empty())return StartStatus::AllSkipped;
         pending.request.sources=std::move(remaining);
         return launchTransfer(std::move(pending.request),
                               std::move(pending.context),
-                              std::move(post),std::move(completion),skipped);
+                              std::move(post),std::move(completion),totalSkipped);
     }catch(...){
         skipped=0;
         return StartStatus::StaleConfirmation;
@@ -324,7 +333,7 @@ FileOperationController::acceptTransfer(
        completion.request.kind!=fxfile::shelltransfer::Kind::Recycle){
         state_->pending=PendingTransfer{
             completion.request,completion.context,
-            completion.report.collisions};
+            completion.report.collisions,completion.skippedCollisions};
         return TransferDisposition::NeedsCollisionConfirmation;
     }
     if(completion.report.error!=ERROR_SUCCESS)
