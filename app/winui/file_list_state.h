@@ -83,6 +83,22 @@ struct PaneState final {
     // Runtime-only identity of the folder which produced renderedPaths.
     // A tab navigation can retain its route while changing the folder.
     std::wstring renderedFolder;
+    // One-shot UI reveal after a successful local create/rename refresh.
+    // Owned by this WindowTab/pane; never persisted or used as a Shell path.
+    struct FileCommandReveal final {
+        std::wstring target;
+        std::wstring folder;
+        std::uint64_t route=0;
+        std::size_t tab=0;
+        bool afterRefresh=false;
+        void clear() noexcept {
+            target.clear();
+            folder.clear();
+            route=0;
+            tab=0;
+            afterRefresh=false;
+        }
+    } fileCommandReveal{};
     std::vector<std::uint64_t> renderedLogical;
     std::vector<std::wstring> renderedPaths;
     std::uint64_t metadataRoute=0,metadataEpoch=0;
