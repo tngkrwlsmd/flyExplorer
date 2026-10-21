@@ -165,14 +165,15 @@ and Windows GUI acceptance remain NOT TESTED.
 
 F08 bounded single-root directory archives now additionally allow
 `rootName/childName/leafName` entries alongside direct root files.
-There may be only one child directory across the entire archive,
+There may be at most three child directories across the entire archive,
 and no deeper nesting or multiple roots. `createFolder` enumerates
-the selected fixed-drive folder and at most one direct child without
+the selected fixed-drive folder and at most three direct children without
 recursion, reparse points or implicit fallback. `createMany` guards
 parent/child identity per source path, checks complete normalized
 ZIP entry names and limits all names and intermediate staged paths.
 The batch extractor parses at most three segments, requires a single
-root and at most one shared child, rejects full-path name duplicates,
+root and at most three direct children, rejects full-path name duplicates and
+root-file versus child-directory collisions,
 validates CRC/headers before creating owned staging, and creates
 the root/child directories there. Cleanup deletes only known entries
 and explicitly owned child/root dirs, no arbitrary recursive removal.
@@ -181,14 +182,15 @@ NOT TESTED: compilation, real ZIP I/O and hostile path races.
 
 F08 single-root directory archive support is intentionally bounded:
 `zipbatch::createFolder` enumerates exactly one selected local
-fixed-drive directory and admits only 2-8 direct, regular, non-reparse
-children (<=8MiB total). A sibling deterministic ZIP file contains
-only `rootName/leafName` records; no recursion or directory entries.
+fixed-drive directory and admits only 2-8 regular, non-reparse files
+in the root and up to three direct children (<=8MiB total).
+Its sibling ZIP contains `rootName/leafName` or
+`rootName/childName/leafName` records without directory-only entries.
 The existing batch Store/Deflate writer applies its CRC/size/ratio
 checks, per-file codec roundtrip and cancellable non-replace staging.
 The batch extractor accepts either entirely flat entries or exactly
-one shared `root/leaf` shape, rejects mixed/multiple/deeper roots,
-validates every member/CRC before I/O, creates the single nested
+one shared root with up to three child folders, rejects mixed/multiple/deeper roots,
+validates every member/CRC before I/O, tracks each created child
 directory inside owned staging, and publishes the outer directory
 only when complete. Cleanup never recursively removes arbitrary
 folders. MainWindow shares the ZIP batch busy/cancel state and exact
