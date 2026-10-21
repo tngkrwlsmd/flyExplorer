@@ -76,6 +76,16 @@ Shell context menu is still optional and retains existing restrictions
 for multi-selection; app-specific pane/tab operations and Shell-backed
 file I/O remain available in flyExplorer.
 
+The same Explorer delegation applies to empty file-list background
+menus. For an actual filesystem PaneTab, the explicit `Windows
+탐색기에서 현재 폴더 열기` command uses the normal Shell
+`ShellExecuteExW` `explore` verb through
+`shellexplorer::openFolder` on a worker STA; it never calls an
+archive verb or modifies files. Virtual locations are not exposed
+as filesystem folders, and stale WindowTab/PaneTab/route results
+are ignored. Explorer-native background creation and archive
+choices remain user-initiated in Explorer (NOT TESTED).
+
 Old F08 ZIP inspection, writers, decoders and extractors are **retained
 as inactive implementation**, not offered as default file context
 commands, pending actual Windows acceptance and explicit removal

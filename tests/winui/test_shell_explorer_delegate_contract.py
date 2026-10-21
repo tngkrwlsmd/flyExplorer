@@ -48,6 +48,34 @@ class WindowsExplorerDelegationContracts(unittest.TestCase):
         ):
             self.assertIn(token,ui)
         self.assertIn("void RevealSelectedInWindowsExplorer(int side);",header)
+        self.assertIn("void OpenCurrentFolderInWindowsExplorer(int side);",header)
+        for token in (
+            'void MainWindow::OpenCurrentFolderInWindowsExplorer(int side)',
+            "shellexplorer::openFolder(folder)",
+            "pane.routeIds[tab]!=route",
+            "pane.filesystemPaths[tab]!=folder",
+            'make(L"Windows 탐색기에서 현재 폴더 열기"',
+            "ui.OpenCurrentFolderInWindowsExplorer(side)",
+        ):
+            self.assertIn(token,ui)
+
+    def test_native_folder_handoff_is_explicit_and_read_only(self):
+        h=source("src/base/shell_explorer_delegate.h")
+        for token in (
+            "HRESULT openFolder(std::wstring const& folder) noexcept",
+            "folder.find(L'\\0')",
+            "lexically_normal().native()!=folder",
+            "GetFileAttributesW(folder.c_str())",
+            "FILE_ATTRIBUTE_DIRECTORY",
+            "COINIT_APARTMENTTHREADED",
+            "SHELLEXECUTEINFOW request{}",
+            "SEE_MASK_FLAG_NO_UI|SEE_MASK_NOASYNC",
+            'request.lpVerb=L"explore"',
+            "ShellExecuteExW(&request)",
+        ):
+            self.assertIn(token,h)
+        self.assertNotIn("ShellExecuteExW(&request)",h.split(
+            "inline HRESULT openFolder(",1)[0])
 
     def test_no_duplicate_archive_commands_are_exposed(self):
         ui=source("app/winui/m22_transfers.cpp")

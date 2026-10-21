@@ -1,5 +1,32 @@
 # flyExplorer 작업 인계 — 2026-10-19 L08 커서 OPEN, G01 코드·빌드 PASS
 
+## 2026-10-22 EP05/F08 — Windows 탐색기 폴더 배경 명령 재사용 (코드 반영, 미검증)
+
+- 기준 main `9ab6a448`에는 선택한 항목을 Explorer 별도
+  창에서 표시하는 명령과 자체 ZIP 메뉴 비노출이 반영됐다.
+  이번에는 **빈 파일 목록 배경 우클릭**에
+  `Windows 탐색기에서 현재 폴더 열기`를 추가했다.
+- `shellexplorer::openFolder`는 명시적 로컬/파일시스템
+  폴더 경로를 정규화·실제 디렉터리로 확인하고 worker
+  STA에서 Windows `ShellExecuteExW`의 `explore`
+  동사로 Explorer에 넘긴다. Shell 명령줄 문자열 조합,
+  ZIP 직접 처리, 자동 파일 변경은 수행하지 않는다.
+  압축·새 파일·공유 등 실제 작업은 열린 Windows
+  탐색기에서 사용자가 추가로 선택하는 기능이다.
+- WinUI 작업 완료는 원래 WindowTab/PaneTab/route/
+  파일시스템 경로가 동일할 때만 알린다. Shell 가상 폴더
+  배경에서는 명령을 비활성화한다. 기존 Shell 클래식
+  메뉴와 별도 Explorer 선택 위임도 그대로 유지한다.
+- 자체 F08 ZIP 구현은 출시 및 대체 동작 검증 전까지
+  비노출 소스로 보존하며 **추가 ZIP 구현을 중단**한다.
+  Windows 기본 기능은 OS·Explorer 버전에 따라 달라지고,
+  Explorer 메뉴 전체를 flyExplorer 내부에 그대로
+  복제했다는 뜻은 아니다.
+- 소스 계약을 갱신했으나 **NOT TESTED**: 새 코드의 빌드,
+  실행 테스트, 실제 Windows 탐색기 열기, GUI·시각 검증
+  모두 수행하지 않았다. G01 OPEN, G07 중단,
+  G03~G05 제외 유지.
+
 ## 2026-10-21 EP05/F08 — Windows 탐색기 기본 기능 우선 재사용 (코드 반영, 미검증)
 
 - 기준 main `d26f2261`. 사용자 지시로 Windows 탐색기가

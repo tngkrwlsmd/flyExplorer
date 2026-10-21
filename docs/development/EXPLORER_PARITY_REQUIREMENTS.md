@@ -6,6 +6,16 @@
 이 문서는 요구사항이며, 아래 기능의 구현 완료나 새로운 GUI 수용을 뜻하지 않는다.
 기존 `NEXT_DEVELOPMENT_GOALS.md`의 G01~G08 및 F01~F18 비교 ID를 재사용한다.
 
+## 2026-10-22 선택 항목·빈 배경 양쪽 Explorer 위임 — 코드 반영, 미검증
+
+선택 항목 우클릭은 공식 Shell PIDL API로 해당 항목을
+Explorer에서 선택해 열고, 폴더 목록의 **빈 배경 우클릭**은
+`ShellExecuteExW(explore)`로 현재 폴더를 열 수 있도록
+확장했다. 파일 생성/압축/해제와 확장 Shell 동작은 열린
+Windows Explorer에서 사용자가 추가 선택한다. Windows 11
+메뉴를 WinUI 안으로 그대로 복제하는 것은 아니며,
+OS별 지원 및 실제 Windows 동작은 NOT TESTED로 유지한다.
+
 ## Windows 기본 기능 우선 재사용 원칙 (2026-10-21)
 
 - Explorer/Windows Shell에 이미 있는 압축·해제·연결 프로그램·
