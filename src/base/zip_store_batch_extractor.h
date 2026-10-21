@@ -1,7 +1,7 @@
-// F08/EP10: strict bounded Store/Deflate, 2-8 flat or single-root members.
+// F08/EP10: bounded Store/Deflate, 2-8 flat or single-root members.
 // Validate every local/central record and CRC before any output. Publish a
 // single owned staging directory by rename; never publish partial entries.
-// No ZIP64, extra/comment, symlinks, multiple roots, deep paths or overwrite.
+// No ZIP64, extra/comment, symlinks, multiple roots, >1 child dir or overwrite.
 // Untested on Windows: hostile concurrent directory replacement remains a risk.
 #pragma once
 #include "zip_store_batch_writer.h"
@@ -30,6 +30,7 @@ struct Result final {
 namespace detail {
 struct Member final {
     std::wstring name;
+    std::wstring child; // empty, or one validated common child directory
     std::vector<unsigned char> content;
 };
 // Only remove known staged, ordinary files from the uniquely created
@@ -40,8 +41,10 @@ struct StagedDirectory final {
     std::wstring path;
     std::vector<std::wstring> files;
     std::wstring nestedRoot;
+    std::wstring nestedChild;
     bool owned=false;
     bool nestedOwned=false;
+    bool childOwned=false;
     ~StagedDirectory() noexcept {
         if(!owned)return;
         const DWORD root=::GetFileAttributesW(path.c_str());
@@ -57,12 +60,20 @@ struct StagedDirectory final {
                !(child&FILE_ATTRIBUTE_DIRECTORY)||
                (child&FILE_ATTRIBUTE_REPARSE_POINT))return;
         }
+        if(!nestedChild.empty()){
+            if(!childOwned)return;
+            const DWORD grandchild=::GetFileAttributesW(nestedChild.c_str());
+            if(grandchild==INVALID_FILE_ATTRIBUTES||
+               !(grandchild&FILE_ATTRIBUTE_DIRECTORY)||
+               (grandchild&FILE_ATTRIBUTE_REPARSE_POINT))return;
+        }
         for(auto const& name:files){
             const DWORD attr=::GetFileAttributesW(name.c_str());
             if(attr!=INVALID_FILE_ATTRIBUTES&&
                !(attr&(FILE_ATTRIBUTE_DIRECTORY|FILE_ATTRIBUTE_REPARSE_POINT)))
                 ::DeleteFileW(name.c_str());
         }
+        if(!nestedChild.empty())::RemoveDirectoryW(nestedChild.c_str());
         if(!nestedRoot.empty())::RemoveDirectoryW(nestedRoot.c_str());
         ::RemoveDirectoryW(path.c_str());
     }
@@ -76,20 +87,29 @@ inline bool flatName(std::wstring const& name) {
            name.find(L'/')==std::wstring::npos&&
            fxfile::zipinspect::detail::safeName(name,isFolder)&&!isFolder;
 }
-// Reject all path shapes except "leaf" or "singleRoot/leaf".
-// No drive, dot components, empty segment, second slash, or directory-only
-// ZIP entries can pass the shared safeName validation.
+// Accept leaf, root/leaf, or root/child/leaf only. Every component
+// must independently pass the Windows safe-leaf policy. Never
+// normalize adversarial ZIP names or silently flatten subdirectories.
 inline bool memberPath(std::wstring const& value,
-                       std::wstring& root,std::wstring& leaf) {
-    const auto slash=value.find(L'/');
-    if(slash==std::wstring::npos){
-        root.clear();leaf=value;
+                       std::wstring& root,std::wstring& child,
+                       std::wstring& leaf) {
+    root.clear();child.clear();leaf.clear();
+    const auto first=value.find(L'/');
+    if(first==std::wstring::npos){
+        leaf=value;
         return flatName(leaf);
     }
-    if(value.find(L'/',slash+1)!=std::wstring::npos)return false;
-    root=value.substr(0,slash);
-    leaf=value.substr(slash+1);
-    return flatName(root)&&flatName(leaf);
+    const auto second=value.find(L'/',first+1);
+    if(second!=std::wstring::npos&&
+       value.find(L'/',second+1)!=std::wstring::npos)return false;
+    root=value.substr(0,first);
+    if(second==std::wstring::npos){
+        leaf=value.substr(first+1);
+        return flatName(root)&&flatName(leaf);
+    }
+    child=value.substr(first+1,second-first-1);
+    leaf=value.substr(second+1);
+    return flatName(root)&&flatName(child)&&flatName(leaf);
 }
 } // namespace detail
 
@@ -177,6 +197,7 @@ inline Result extractMany(std::wstring const& source,
         std::vector<detail::Member> members;
         members.reserve(count);
         std::wstring archiveRoot;
+        std::wstring archiveChild;
         bool rootMode=false;
         for(std::size_t i=0;i<count;++i){
             if(fxfile::zipstore::detail::cancelled(cancellation)){
@@ -247,8 +268,9 @@ inline Result extractMany(std::wstring const& source,
                    bytes,directoryCursor+46u,nameLength,flags,name)){
                 result.status=Status::Unsupported;return result;
             }
-            std::wstring entryRoot,entryLeaf;
-            if(!detail::memberPath(name,entryRoot,entryLeaf)){
+            std::wstring entryRoot,entryChild,entryLeaf;
+            if(!detail::memberPath(
+                    name,entryRoot,entryChild,entryLeaf)){
                 result.status=Status::UnsafeEntry;return result;
             }
             if(i==0){
@@ -259,14 +281,25 @@ inline Result extractMany(std::wstring const& source,
                          archiveRoot,entryRoot))){
                 result.status=Status::UnsafeEntry;return result;
             }
+            if(!entryChild.empty()){
+                if(archiveChild.empty())archiveChild=entryChild;
+                else if(!fxfile::zipinspect::detail::same(
+                            archiveChild,entryChild)){
+                    result.status=Status::UnsafeEntry;return result;
+                }
+            }
             for(auto const& previous:members){
-                if(fxfile::zipinspect::detail::same(previous.name,entryLeaf)){
+                if(fxfile::zipinspect::detail::same(
+                       previous.child,entryChild)&&
+                   fxfile::zipinspect::detail::same(
+                       previous.name,entryLeaf)){
                     result.status=Status::UnsafeEntry;return result;
                 }
             }
             // Validate the entire member before staging any output.
             detail::Member member{};
             member.name=std::move(entryLeaf);
+            member.child=std::move(entryChild);
             if(method==0){
                 member.content.assign(bytes.begin()+dataStart,
                                       bytes.begin()+dataStart+packed);
@@ -323,11 +356,19 @@ inline Result extractMany(std::wstring const& source,
             if(staging.nestedRoot.size()>240u){
                 result.status=Status::InvalidSource;return result;
             }
+            if(!archiveChild.empty()){
+                staging.nestedChild=(std::filesystem::path(staging.nestedRoot)/
+                                     archiveChild).native();
+                if(staging.nestedChild.size()>240u){
+                    result.status=Status::InvalidSource;return result;
+                }
+            }
         }
         for(auto const& member:members){
-            const auto base=rootMode?
-                std::filesystem::path(staging.nestedRoot):
-                std::filesystem::path(staging.path);
+            const auto base=!member.child.empty()?
+                std::filesystem::path(staging.nestedChild):
+                rootMode?std::filesystem::path(staging.nestedRoot):
+                         std::filesystem::path(staging.path);
             const auto staged=(base/member.name).native();
             if(staged.size()>253u){
                 result.status=Status::InvalidSource;return result;
@@ -343,6 +384,12 @@ inline Result extractMany(std::wstring const& source,
                 result.status=Status::CannotWrite;return result;
             }
             staging.nestedOwned=true;
+            if(!staging.nestedChild.empty()){
+                if(!::CreateDirectoryW(staging.nestedChild.c_str(),nullptr)){
+                    result.status=Status::CannotWrite;return result;
+                }
+                staging.childOwned=true;
+            }
         }
         for(std::size_t i=0;i<members.size();++i){
             if(fxfile::zipstore::detail::cancelled(cancellation)){

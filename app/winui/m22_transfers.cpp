@@ -189,7 +189,7 @@ void MainWindow::CreateSelectedFolderZip(int side){
  auto weak=get_weak();
  auto dispatch=DispatcherQueue();
  mZipBatchCreationBusy=true;
- StatusText().Text(L"한 단계 폴더 ZIP 생성 중입니다. 하위 폴더는 지원하지 않으며 취소할 수 있습니다.");
+ StatusText().Text(L"폴더 ZIP 생성 중입니다. 하위 폴더는 1개까지만 지원하며 취소할 수 있습니다.");
  try{
   auto cancel=std::make_shared<std::atomic_bool>(false);
   mZipBatchCancel=cancel;
@@ -227,7 +227,7 @@ void MainWindow::CreateSelectedFolderZip(int side){
       result.status==Status::TooLarge?
        L"폴더는 일반 파일 2~8개 및 총 8MiB까지만 지원합니다.":
       result.status==Status::InvalidSource?
-       L"하위 폴더·링크 없이 안전한 일반 파일만 든 폴더가 필요합니다.":
+       L"하위 폴더는 최대 1개이며 더 깊은 폴더·링크가 없어야 합니다.":
       result.status==Status::DuplicateName?
        L"중복 파일명으로 ZIP을 만들지 않았습니다.":
       result.status==Status::CannotRead?
@@ -560,7 +560,7 @@ void MainWindow::ExtractSelectedBatchZip(int side){
        pane.filesystemPaths[tab]!=folder)return;
     using Status=fxfile::zipbatchextract::Status;
     if(report.status==Status::Extracted){
-     ui->StatusText().Text(L"ZIP 다중 파일 해제 완료. 평면/단일 하위 폴더 구조를 보존했습니다.");
+     ui->StatusText().Text(L"ZIP 해제 완료. 지원 범위 안의 폴더 계층을 보존했습니다.");
      const auto& snap=pane.tabs[tab].snapshot();
      if(snap.folder.valid())
       ui->QueuePidl(side,fxfile::shellnav::Location(snap.folder),
@@ -981,7 +981,7 @@ void MainWindow::ShowAppFileContextMenu(
  menu.Items().Append(make(L"선택한 파일 ZIP으로 묶기 (2~8개, Deflate)",L"\uE8B7",
                           canCreateBatchZip,
      [side](MainWindow& ui){ui.CreateSelectedBatchZip(side,true);}));
- menu.Items().Append(make(L"폴더 ZIP으로 묶기 (한 단계, 2~8개 파일)",L"\uE8B7",
+ menu.Items().Append(make(L"폴더 ZIP으로 묶기 (하위 폴더 1개 이하, 2~8개 파일)",L"\uE8B7",
                           canCreateFolderZip,
      [side](MainWindow& ui){ui.CreateSelectedFolderZip(side);}));
  menu.Items().Append(make(L"ZIP 해제 (Store/Deflate, 한 파일)",L"\uE8B7",

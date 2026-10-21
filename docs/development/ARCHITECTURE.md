@@ -163,6 +163,22 @@ default, cooperative cancellation, no-replace publication and
 WindowTab/PaneTab/route ownership stay intact. Native execution
 and Windows GUI acceptance remain NOT TESTED.
 
+F08 bounded single-root directory archives now additionally allow
+`rootName/childName/leafName` entries alongside direct root files.
+There may be only one child directory across the entire archive,
+and no deeper nesting or multiple roots. `createFolder` enumerates
+the selected fixed-drive folder and at most one direct child without
+recursion, reparse points or implicit fallback. `createMany` guards
+parent/child identity per source path, checks complete normalized
+ZIP entry names and limits all names and intermediate staged paths.
+The batch extractor parses at most three segments, requires a single
+root and at most one shared child, rejects full-path name duplicates,
+validates CRC/headers before creating owned staging, and creates
+the root/child directories there. Cleanup deletes only known entries
+and explicitly owned child/root dirs, no arbitrary recursive removal.
+The final outer directory publish is still a single non-replace rename.
+NOT TESTED: compilation, real ZIP I/O and hostile path races.
+
 F08 single-root directory archive support is intentionally bounded:
 `zipbatch::createFolder` enumerates exactly one selected local
 fixed-drive directory and admits only 2-8 direct, regular, non-reparse

@@ -1,5 +1,5 @@
 // F08 / EP10. Strict 2-8-file ZIP creation: default Store-only or optional
-// per-member Deflate with Store fallback. No original/existing output overwrite.
+// per-member Deflate with Store fallback. One root and at most one child dir.
 // Windows runtime/GUI acceptance is not established by this source.
 #pragma once
 #include "zip_store_writer.h"
@@ -36,6 +36,7 @@ namespace detail {
 struct Member final {
     std::string name;
     std::wstring leaf;
+    std::wstring child; // empty or shared immediate subfolder of folderRoot
     std::vector<unsigned char> data;
     std::uint32_t crc=0;
     std::uint32_t originalSize=0;
@@ -65,7 +66,8 @@ inline Result createMany(std::vector<std::wstring> const& paths,
     try{
         std::vector<detail::Member> members;
         members.reserve(paths.size());
-        std::wstring directory;
+        std::wstring directory=folderRoot;
+        std::wstring allowedChild;
         std::uint64_t totalBytes=0;
         // Finish all source reads and validation before creating any output.
         for(auto const& source:paths){
@@ -77,12 +79,32 @@ inline Result createMany(std::vector<std::wstring> const& paths,
             if(!fxfile::zipstore::detail::safeSource(source,parent,leaf,encoded)){
                 result.status=Status::InvalidSource;return result;
             }
-            if(directory.empty())directory=parent;
-            else if(!fxfile::zipinspect::detail::same(directory,parent)){
-                result.status=Status::InvalidSource;return result;
+            std::wstring child;
+            if(folderRoot.empty()){
+                if(directory.empty())directory=parent;
+                else if(!fxfile::zipinspect::detail::same(directory,parent)){
+                    result.status=Status::InvalidSource;return result;
+                }
+            }else if(!fxfile::zipinspect::detail::same(folderRoot,parent)){
+                if(!fxfile::zipinspect::detail::same(
+                        std::filesystem::path(parent).parent_path().native(),
+                        folderRoot)){
+                    result.status=Status::InvalidSource;return result;
+                }
+                child=std::filesystem::path(parent).filename().native();
+                bool isDirectoryEntry=false;
+                if(child.empty()||child.size()>180u||
+                   !fxfile::zipinspect::detail::safeName(
+                        child,isDirectoryEntry)||isDirectoryEntry||
+                   (!allowedChild.empty()&&
+                    !fxfile::zipinspect::detail::same(allowedChild,child))){
+                    result.status=Status::InvalidSource;return result;
+                }
+                allowedChild=child;
             }
             for(auto const& prior:members){
-                if(fxfile::zipinspect::detail::same(prior.leaf,leaf)){
+                if(fxfile::zipinspect::detail::same(prior.leaf,leaf)&&
+                   fxfile::zipinspect::detail::same(prior.child,child)){
                     result.status=Status::DuplicateName;return result;
                 }
             }
@@ -109,6 +131,7 @@ inline Result createMany(std::vector<std::wstring> const& paths,
             detail::Member member{};
             member.name=std::move(encoded);
             member.leaf=std::move(leaf);
+            member.child=std::move(child);
             member.data.resize(static_cast<std::size_t>(length));
             std::size_t offset=0;
             while(offset<member.data.size()){
@@ -140,9 +163,9 @@ inline Result createMany(std::vector<std::wstring> const& paths,
         if(fxfile::zipstore::detail::cancelled(cancellation)){
             result.status=Status::Cancelled;return result;
         }
-        // Explicit folder mode: every selected file must be a direct child
-        // of exactly the same normalized, non-reparse local folder.
-        // The archive records "root/leaf", and lives beside that folder.
+        // Explicit folder mode permits direct files and files under one
+        // child directory. Never normalize ZIP names or follow other roots.
+        // Output is one sibling ZIP containing root/[child/]leaf entries.
         std::string prefix;
         if(!folderRoot.empty()){
             if(!fxfile::zipinspect::detail::same(directory,folderRoot)){
@@ -175,13 +198,38 @@ inline Result createMany(std::vector<std::wstring> const& paths,
             const std::wstring destinationParent=
                 std::filesystem::path(directory).parent_path().native();
             for(auto& member:members){
-                if(prefix.size()+member.name.size()>512u||
-                   rootLeaf.size()+1u+member.leaf.size()>260u||
+                std::string entryPrefix=prefix;
+                if(!member.child.empty()){
+                    const int childBytes=::WideCharToMultiByte(
+                        CP_UTF8,WC_ERR_INVALID_CHARS,
+                        member.child.c_str(),
+                        static_cast<int>(member.child.size()),
+                        nullptr,0,nullptr,nullptr);
+                    if(childBytes<=0||childBytes>512u){
+                        result.status=Status::InvalidSource;return result;
+                    }
+                    const auto start=entryPrefix.size();
+                    entryPrefix.resize(start+childBytes);
+                    if(::WideCharToMultiByte(
+                            CP_UTF8,WC_ERR_INVALID_CHARS,
+                            member.child.c_str(),
+                            static_cast<int>(member.child.size()),
+                            entryPrefix.data()+start,childBytes,
+                            nullptr,nullptr)!=childBytes){
+                        result.status=Status::InvalidSource;return result;
+                    }
+                    entryPrefix.push_back('/');
+                }
+                const auto innerUnits=member.child.empty()?0u:
+                    member.child.size()+1u;
+                if(entryPrefix.size()+member.name.size()>512u||
+                   rootLeaf.size()+1u+innerUnits+
+                     member.leaf.size()>260u||
                    destinationParent.size()+64u+
-                      rootLeaf.size()+member.leaf.size()>253u){
+                     rootLeaf.size()+innerUnits+member.leaf.size()>253u){
                     result.status=Status::InvalidSource;return result;
                 }
-                member.name.insert(0,prefix);
+                member.name.insert(0,entryPrefix);
             }
         }
         // Both modes use deterministic filenames, never silent replacement.
@@ -361,9 +409,10 @@ inline Result createMany(std::vector<std::wstring> const& paths,
         result.status=Status::CannotWrite;return result;
     }
 }
-// Direct children only. No nested directories, reparse points, implicit
-// traversal, hidden recursion or existing-file modifications. The creator
-// calls createMany with the same safety, CRC, Store/Deflate and cancel gates.
+// One enumerated root and at most one immediate child directory.
+// Never recurse. Any deeper directory, second child directory or reparse
+// item rejects the entire operation; no existing file is altered.
+// createMany revalidates every path/CRC and owns the atomic ZIP publish.
 inline Result createFolder(std::wstring const& folder,
                            std::atomic_bool const* cancellation=nullptr,
                            Compression mode=Compression::DeflatePreferred) noexcept {
@@ -405,23 +454,72 @@ inline Result createFolder(std::wstring const& folder,
             ~FindGuard(){::FindClose(handle);}
         } finder{found};
         std::vector<std::wstring> files;
+        std::wstring childFolder;
         do{
             if(fxfile::zipstore::detail::cancelled(cancellation)){
                 result.status=Status::Cancelled;return result;
             }
             const std::wstring name(data.cFileName);
             if(name==L"."||name==L"..")continue;
-            if(data.dwFileAttributes&
-               (FILE_ATTRIBUTE_DIRECTORY|FILE_ATTRIBUTE_REPARSE_POINT)){
+            if(data.dwFileAttributes&FILE_ATTRIBUTE_REPARSE_POINT){
                 result.status=Status::InvalidSource;return result;
             }
-            if(files.size()>=kMaxFiles){
-                result.status=Status::TooLarge;return result;
+            if(data.dwFileAttributes&FILE_ATTRIBUTE_DIRECTORY){
+                bool folderMarker=false;
+                if(!childFolder.empty()||name.size()>180u||
+                   !fxfile::zipinspect::detail::safeName(
+                        name,folderMarker)||folderMarker){
+                    result.status=Status::InvalidSource;return result;
+                }
+                childFolder=(p/name).native();
+            }else{
+                if(files.size()>=kMaxFiles){
+                    result.status=Status::TooLarge;return result;
+                }
+                files.push_back((p/name).native());
             }
-            files.push_back((p/name).native());
         }while(::FindNextFileW(found,&data));
         if(::GetLastError()!=ERROR_NO_MORE_FILES){
             result.status=Status::CannotRead;return result;
+        }
+        if(!childFolder.empty()){
+            const DWORD childAttr=::GetFileAttributesW(childFolder.c_str());
+            if(childAttr==INVALID_FILE_ATTRIBUTES||
+               !(childAttr&FILE_ATTRIBUTE_DIRECTORY)||
+               (childAttr&FILE_ATTRIBUTE_REPARSE_POINT)){
+                result.status=Status::InvalidSource;return result;
+            }
+            WIN32_FIND_DATAW nested{};
+            const auto searchChild=(std::filesystem::path(childFolder)/L"*").native();
+            const HANDLE nestedHandle=::FindFirstFileW(searchChild.c_str(),&nested);
+            if(nestedHandle==INVALID_HANDLE_VALUE){
+                result.status=Status::CannotRead;return result;
+            }
+            FindGuard nestedFinder{nestedHandle};
+            std::size_t childCount=0;
+            do{
+                if(fxfile::zipstore::detail::cancelled(cancellation)){
+                    result.status=Status::Cancelled;return result;
+                }
+                const std::wstring name(nested.cFileName);
+                if(name==L"."||name==L"..")continue;
+                if(nested.dwFileAttributes&
+                   (FILE_ATTRIBUTE_DIRECTORY|FILE_ATTRIBUTE_REPARSE_POINT)){
+                    result.status=Status::InvalidSource;return result;
+                }
+                if(files.size()>=kMaxFiles){
+                    result.status=Status::TooLarge;return result;
+                }
+                files.push_back(
+                    (std::filesystem::path(childFolder)/name).native());
+                ++childCount;
+            }while(::FindNextFileW(nestedHandle,&nested));
+            if(::GetLastError()!=ERROR_NO_MORE_FILES){
+                result.status=Status::CannotRead;return result;
+            }
+            if(!childCount){
+                result.status=Status::InvalidSource;return result;
+            }
         }
         if(files.size()<kMinFiles)return result;
         // Ordinal sort only; Windows case-insensitive name collision

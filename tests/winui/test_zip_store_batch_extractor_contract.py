@@ -35,7 +35,13 @@ class ZipStoreBatchExtractorContracts(unittest.TestCase):
             "fxfile::zipstorecompat::supportedDosVersion(versionNeeded)",
             "fxfile::zipstorecompat::sameDosTime(",
             "fxfile::zipstorecompat::decodeName(",
-            "detail::memberPath(name,entryRoot,entryLeaf)",
+            "detail::memberPath(",
+            "name,entryRoot,entryChild,entryLeaf",
+            "archiveChild,entryChild",
+            "previous.child,entryChild",
+            "staging.nestedChild",
+            "staging.childOwned=true;",
+            "CreateDirectoryW(staging.nestedChild.c_str(),nullptr)",
             "rootMode!=!entryRoot.empty()",
             "archiveRoot,entryRoot",
             "zipinspect::detail::same(previous.name,entryLeaf)",
@@ -63,7 +69,7 @@ class ZipStoreBatchExtractorContracts(unittest.TestCase):
                         s.index("GetTempFileNameW(parent.c_str()"))
         self.assertLess(s.index("ziprawdeflate::inflateExact("),
                         s.index("GetTempFileNameW(parent.c_str()"))
-        self.assertLess(s.index("detail::memberPath(name,entryRoot,entryLeaf)"),
+        self.assertLess(s.index("detail::memberPath("),
                         s.index("GetTempFileNameW(parent.c_str()"))
         self.assertLess(s.index("result.output=target;"),
                         s.index("::MoveFileExW(staging.path.c_str()"))

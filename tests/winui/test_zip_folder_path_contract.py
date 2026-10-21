@@ -48,7 +48,7 @@ class SingleRootZipContracts(unittest.TestCase):
         ):
             self.assertIn(t,method)
         self.assertIn("const bool canCreateFolderZip=",u)
-        self.assertIn('make(L"폴더 ZIP으로 묶기 (한 단계, 2~8개 파일)"',u)
+        self.assertIn('make(L"폴더 ZIP으로 묶기 (하위 폴더 1개 이하, 2~8개 파일)"',u)
         self.assertIn("void CreateSelectedFolderZip(int side);",h)
 if __name__=="__main__":
     unittest.main()
