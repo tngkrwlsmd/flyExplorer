@@ -215,6 +215,92 @@ void MainWindow::ShowAppFileContextMenu(int side,ListViewItem const& anchor){
      [side](MainWindow& ui){ui.ShowExternalWindowsContextMenu(side);}));
  menu.ShowAt(anchor);
 }
+void MainWindow::ShowAppBackgroundContextMenu(
+ int side,UIElement const& anchor){
+ if(mClosing||side<0||side>1||!anchor||
+    ActiveWindowTab().model.activePane!=side)return;
+ const auto& state=ActiveWindowTab();
+ const auto& pane=state.model.panes[side];
+ if(pane.active>=pane.tabs.size()||pane.active>=pane.routeIds.size()||
+    pane.active>=pane.pending.size()||pane.pending[pane.active])return;
+ const auto identity=state.identity;
+ const auto tab=pane.active;
+ const auto route=pane.routeIds[tab];
+ const bool ready=!mFileOperations.busy();
+ const bool localFolder=ready&&!pane.filesystemPaths[tab].empty();
+ auto weak=get_weak();
+ auto make=[weak,side,identity,tab,route](
+     wchar_t const* text,wchar_t const* glyph,bool enabled,
+     std::function<void(MainWindow&)> action){
+  MenuFlyoutItem item;
+  item.Text(text);
+  item.IsEnabled(enabled);
+  if(glyph&&*glyph){
+   FontIcon icon;
+   icon.Glyph(glyph);
+   item.Icon(icon);
+  }
+  item.Click([weak,side,identity,tab,route,
+              action=std::move(action)](IInspectable const&,
+                                       RoutedEventArgs const&){
+   auto ui=weak.get();
+   if(!ui||ui->mClosing||ui->mFileOperations.busy())return;
+   const auto& state=ui->ActiveWindowTab();
+   if(state.identity!=identity||state.model.activePane!=side)return;
+   const auto& pane=state.model.panes[side];
+   if(pane.active!=tab||tab>=pane.tabs.size()||
+      tab>=pane.routeIds.size()||tab>=pane.pending.size()||
+      pane.pending[tab]||pane.routeIds[tab]!=route){
+    ui->StatusText().Text(L"폴더가 변경됐습니다. 메뉴를 다시 여세요.");
+    return;
+   }
+   action(*ui);
+  });
+  return item;
+ };
+ MenuFlyout menu;
+ MenuFlyoutSubItem view;
+ view.Text(L"보기");
+ view.Items().Append(make(L"자세히",L"\uE8A0",ready,
+     [](MainWindow& ui){ui.UpdateView(0);}));
+ view.Items().Append(make(L"목록",L"\uE8FD",ready,
+     [](MainWindow& ui){ui.UpdateView(1);}));
+ view.Items().Append(make(L"작은 아이콘",L"\uE80A",ready,
+     [](MainWindow& ui){ui.UpdateView(2);}));
+ view.Items().Append(make(L"중간 아이콘",L"\uE80A",ready,
+     [](MainWindow& ui){ui.UpdateView(3);}));
+ view.Items().Append(make(L"큰 아이콘",L"\uE80A",ready,
+     [](MainWindow& ui){ui.UpdateView(4);}));
+ menu.Items().Append(view);
+ MenuFlyoutSubItem sort;
+ sort.Text(L"정렬 기준");
+ sort.Items().Append(make(L"이름 오름차순",nullptr,ready,
+     [](MainWindow& ui){ui.UpdateSort(0);}));
+ sort.Items().Append(make(L"이름 내림차순",nullptr,ready,
+     [](MainWindow& ui){ui.UpdateSort(1);}));
+ menu.Items().Append(sort);
+ menu.Items().Append(make(L"새로 고침",L"\uE72C",ready,
+     [side](MainWindow& ui){
+      const auto& pane=ui.ActiveWindowTab().model.panes[side];
+      const auto& snap=pane.tabs[pane.active].snapshot();
+      if(snap.folder.valid()){
+       ui.QueuePidl(side,fxfile::shellnav::Location(snap.folder),
+                    fxfile::shellnav::NavigationAction::Refresh);
+      }else ui.StatusText().Text(L"현재 위치를 새로 고칠 수 없습니다.");
+     }));
+ menu.Items().Append(MenuFlyoutSeparator{});
+ menu.Items().Append(make(L"붙여넣기",L"\uE77F",localFolder,
+     [](MainWindow& ui){ui.PasteFromWindowsClipboard();}));
+ MenuFlyoutSubItem create;
+ create.Text(L"새로 만들기");
+ create.IsEnabled(localFolder);
+ create.Items().Append(make(L"폴더",L"\uE8B7",localFolder,
+     [](MainWindow& ui){
+      ui.BeginFileNameCommand(fxfile::filecommand::Kind::CreateFolder);
+     }));
+ menu.Items().Append(create);
+ menu.ShowAt(anchor);
+}
 void MainWindow::OnFileRightTapped(
  IInspectable const& sender,Microsoft::UI::Xaml::Input::RightTappedRoutedEventArgs const& args){
  auto list=sender.try_as<ListView>();
@@ -229,7 +315,13 @@ void MainWindow::OnFileRightTapped(
   if(auto row=current.try_as<ListViewItem>()){clicked=row;break;}
   current=Microsoft::UI::Xaml::Media::VisualTreeHelper::GetParent(current);
  }
- if(!clicked)return;
+ if(!clicked){
+  list.SelectedItems().Clear();
+  args.Handled(true);
+  QueueSelectionPresentationUpdate();
+  ShowAppBackgroundContextMenu(side,list);
+  return;
+ }
  // Right-clicking a member keeps the complete selection. Only an unselected
  // row replaces it; the isolated menu retains its bounded multi-item policy.
  if(!clicked.IsSelected()){
