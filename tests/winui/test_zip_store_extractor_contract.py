@@ -53,26 +53,5 @@ class ZipStoreExtractorContracts(unittest.TestCase):
                           "RemoveDirectoryW(", "ShellExecuteW("):
             self.assertNotIn(forbidden,code)
 
-    def test_ui_wiring_and_context_not_ever_written_from_worker(self):
-        ui=read("app/winui/m22_transfers.cpp")
-        h=read("app/winui/MainWindow.xaml.h")
-        start=ui.split("void MainWindow::ExtractSelectedZip(int side)",1)[1].split(
-            "void MainWindow::ShowAppFileContextMenu(",1)[0]
-        for term in (
-            "view.SelectedItems().Size()!=1",
-            "selected->isFileSystem()",
-            "selected->isFolder()",
-            "mZipExtractionBusy=true",
-            "fxfile::zipextract::extractOne(source)",
-            "active.identity!=identity",
-            "pane.routeIds[tab]!=route",
-            "pane.filesystemPaths[tab]!=folder",
-            "NavigationAction::Refresh"):
-            self.assertIn(term,start)
-        self.assertIn("bool mZipExtractionBusy=false;",h)
-        self.assertIn("void ExtractSelectedZip(int side);",h)
-        self.assertNotIn('make(L"ZIP 해제 (Store/Deflate, 한 파일)"',ui)
-        self.assertIn('make(L"Windows 탐색기에서 선택 열기"',ui)
-
 if __name__=="__main__":
     unittest.main()

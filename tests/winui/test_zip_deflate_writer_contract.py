@@ -46,24 +46,5 @@ class ZipDeflateWriterContracts(unittest.TestCase):
                     "FILE_SHARE_WRITE","ShellExecuteW("):
             self.assertNotIn(bad,w)
 
-    def test_ui_context_and_single_selection(self):
-        ui=get("app/winui/m22_transfers.cpp")
-        h=get("app/winui/MainWindow.xaml.h")
-        code=ui.split("void MainWindow::CreateSelectedDeflateZip(int side)",1)[1].split(
-            "void MainWindow::CreateSelectedZip(int side)",1)[0]
-        for token in ("view.SelectedItems().Size()!=1",
-                      "selected->isFolder()",
-                      "mZipDeflateCreationBusy=true",
-                      "fxfile::zipdeflate::createOne(source)",
-                      "current.identity!=origin",
-                      "pane.routeIds[tab]!=route",
-                      "pane.filesystemPaths[tab]!=folder",
-                      "NavigationAction::Refresh"):
-            self.assertIn(token,code)
-        self.assertNotIn('make(L"ZIP으로 묶기 (Deflate, 한 파일)"',ui)
-        self.assertIn('make(L"Windows 탐색기에서 선택 열기"',ui)
-        self.assertIn("void CreateSelectedDeflateZip(int side);",h)
-        self.assertIn("bool mZipDeflateCreationBusy=false;",h)
-
 if __name__=="__main__":
     unittest.main()

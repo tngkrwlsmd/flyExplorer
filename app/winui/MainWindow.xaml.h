@@ -30,7 +30,6 @@
 #include "m19_workspace.h"
 #include "m19_search.h"
 #include <array>
-#include <atomic>
 #include <memory>
 #include <vector>
 #include <filesystem>
@@ -357,12 +356,6 @@ namespace winrt::FlyExplorer::implementation
         void RefreshFilterRuleManager(int selected);
         fxfile::previewfolderview::FolderViewController mFolderViews{};
         fxfile::previewactivity::RecentActivityController mRecentActivity{};
-        bool mZipCreationBusy=false;
-        bool mZipDeflateCreationBusy=false;
-        bool mZipExtractionBusy=false;
-        bool mZipBatchCreationBusy=false;
-        bool mZipBatchExtractionBusy=false;
-        std::shared_ptr<std::atomic_bool> mZipBatchCancel{};
         void RefreshRecentActivityPanel();
         fxfile::previewsearch::SearchController mSearchController{};
         // UI-only bounded snapshot of the last accepted search results. Never
@@ -417,12 +410,6 @@ namespace winrt::FlyExplorer::implementation
         void UpdateActivePaneChrome();
         void OpenSelectedFolder(int side);
         void OpenSelectedWith(int side);
-        void CreateSelectedZip(int side);
-        void CreateSelectedDeflateZip(int side);
-        void CreateSelectedBatchZip(int side, bool preferDeflate=false);
-        void CreateSelectedFolderZip(int side);
-        void ExtractSelectedBatchZip(int side);
-        void ExtractSelectedZip(int side);
         fxfile::previewops::FileOpenController mFileOpen;
         void OpenFolderInNewPaneTab(int side,std::wstring path);
         void ApplyWorkspace(fxfile::preview::Workspace&&);

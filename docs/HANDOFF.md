@@ -1,4 +1,19 @@
-# flyExplorer 작업 인계 — 2026-10-22 EP05 기본 기능 위임 및 P0/P1 정리
+# flyExplorer 작업 인계 — 2026-10-22 EP05 자체 ZIP UI 제거 및 Shell 위임
+
+## 2026-10-22 P1 — 자체 ZIP 생성·해제 UI 정리
+
+- 현행 우클릭 메뉴에서 이미 사라진 자체 ZIP 명령 6개의
+  MainWindow 진입점/비동기 작업자, busy/cancel 상태,
+  전용 헤더 include 및 오래된 UI 전제의 소스 검사만 제거했다.
+- 복사/이동/휴지통, 공용 Shell 취소와 Windows Explorer 위임,
+  파일 열기·보기·탭 동작은 보존했다. 독립 native ZIP 엔진 및
+  소스 안전성 검사는 향후 검증과 라이선스/패키징 영향 검토까지 유지한다.
+- **NOT TESTED:** Windows build, source/native tests, GUI, visual.
+  G01 간헐 종료는 재발 시 native stack 수집으로 진단하며
+  G07 중단, G03~G05 제외 조건은 변경하지 않는다.
+- 다음 단계: 사용자가 별도로 요청한 Windows 위임 실행 검증 후
+  비활성 ZIP 엔진·miniz·프로젝트 템플릿·라이선스 의존성을
+  한 논리적 단위로 정리할지 검토한다. 검증 전 완료/PASS 금지.
 
 ## 2026-10-22 P0/P1 — 도달 불가능한 ZIP 검사 화면 정리
 

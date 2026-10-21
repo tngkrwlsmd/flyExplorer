@@ -79,30 +79,5 @@ class ZipStoreBatchContracts(unittest.TestCase):
         ):
             self.assertNotIn(forbidden,code)
 
-    def test_ui_multi_select_origin_and_idle_guard(self):
-        ui=source("app/winui/m22_transfers.cpp")
-        header=source("app/winui/MainWindow.xaml.h")
-        command=ui.split("void MainWindow::CreateSelectedBatchZip(int side,bool preferDeflate)",1)[1].split(
-            "void MainWindow::CreateSelectedZip(int side)",1)[0]
-        for token in (
-            "SelectedItems().Size()", "visible.visibleRoute!=route",
-            "selectedPaths.push_back(item->parsingName)",
-            "std::adjacent_find(ids.begin(),ids.end())",
-            "fxfile::zipbatch::createMany(paths,cancel.get(),mode)",
-            "Compression::DeflatePreferred",
-            "mZipBatchCreationBusy=true",
-            "mZipBatchCancel=cancel",
-            "zipbatch::createMany(paths,cancel.get(),mode)",
-            "active.identity!=identity", "pane.routeIds[tab]!=route",
-            "pane.filesystemPaths[tab]!=folder",
-            "NavigationAction::Refresh",
-        ):
-            self.assertIn(token,command)
-        self.assertNotIn('make(L"선택한 파일 ZIP으로 묶기 (2~8개, 무압축)"',ui)
-        self.assertNotIn('make(L"선택한 파일 ZIP으로 묶기 (2~8개, Deflate)"',ui)
-        self.assertIn('make(L"Windows 탐색기에서 선택 열기"',ui)
-        self.assertIn("void CreateSelectedBatchZip(int side, bool preferDeflate=false);",header)
-        self.assertIn("bool mZipBatchCreationBusy=false;",header)
-
 if __name__=="__main__":
     unittest.main()

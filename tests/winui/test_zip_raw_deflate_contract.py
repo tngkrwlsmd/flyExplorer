@@ -50,7 +50,7 @@ class ZipRawDeflateContracts(unittest.TestCase):
         self.assertLess(ex.index("zipstore::detail::crc32(payload)!=checksum"),
                         ex.index("GetTempFileNameW(parent.c_str()"))
         ui=get("app/winui/m22_transfers.cpp")
-        self.assertIn('make(L"ZIP 해제 (Store/Deflate, 한 파일)"',ui)
+        self.assertNotIn('make(L"ZIP 해제 (Store/Deflate, 한 파일)"',ui)
 
 if __name__=="__main__":
     unittest.main()

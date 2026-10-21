@@ -86,150 +86,31 @@ as filesystem folders, and stale WindowTab/PaneTab/route results
 are ignored. Explorer-native background creation and archive
 choices remain user-initiated in Explorer (NOT TESTED).
 
-Old F08 ZIP inspection, writers, decoders and extractors are **retained
-as inactive implementation**, not offered as default file context
-commands, pending actual Windows acceptance and explicit removal
-review. This handoff is not a build or runtime PASS (NOT TESTED).
-Avoid exposing two parallel user-facing archive implementations.
+The F08 ZIP UI has been retired from WinUI: there are no archive
+creation/extraction/inspection menu commands, MainWindow archive workers,
+archive busy flags or toolbar archive-cancellation branches. Windows Explorer
+handles user-initiated archive actions in its separate native window. The
+existing Shell transfer controller and toolbar cancellation remain intact.
 
-The bounded F08 read-only metadata parser remains in
-`src/base/zip_inspection.h` as inactive rollback code. Its user-facing
-inspection panel, event handler, worker dispatch and panel-collapse calls were
-removed after the archive menu was hidden. The parser has no live WinUI entry
-point. Its retained source contract is not runtime or ZIP-integrity
-acceptance.
+Native F08 source modules are **retained, not used by the current UI**:
+`zip_inspection.h`, `zip_store_writer.h`, `zip_deflate_writer.h`,
+`zip_store_extractor.h`, `zip_store_batch_writer.h`,
+`zip_store_batch_extractor.h`, `zip_store_compat.h` and
+`zip_raw_deflate*`. The pinned miniz 3.1.2 sources and build-template
+entries also remain for source-level recovery. These modules historically
+implemented bounded one-file and 2-8-member Store/Deflate archives,
+optional one-root and up to three direct children, checked CRC and names,
+and non-replacing staged publication. ZIP64/encryption/arbitrary nested
+paths were deliberately unsupported. This native code has no newer Windows
+build/runtime/GUI acceptance and must not be represented as a functioning
+flyExplorer archive feature.
 
-The first F08 writer is `src/base/zip_store_writer.h`: a one-file,
-bounded ZIP/Store-only creator. It owns CRC/header generation and
-same-folder staged publishing without overwrite. Strict Store/Deflate
-extraction and single-file Deflate creation live in separate F08 modules. `MainWindow::CreateSelectedZip` only dispatches
-validated selection into a short-lived worker and applies UI refresh to the
-origin WindowTab/PaneTab. Do not treat unexecuted code contracts as native
-ZIP acceptance.
-
-The next F08 native extractor is `src/base/zip_store_extractor.h`:
-one in-memory, single-handle ZIP Store snapshot with strict one-file
-header/offset/name verification and actual CRC32 calculation before output.
-It uses the ZIP writer's owned staging and flush helper to publish one
-flat extracted file without replacing existing content. The WinUI
-`ExtractSelectedZip` action dispatches it off the UI thread and gates
-feedback/refresh by exact workspace origin. The single-member action
-has no cancellation guarantee and is not a general ZIP extractor.
-
-Additional F08 flat multi-file Store creation is implemented in
-`src/base/zip_store_batch_writer.h`. It takes only 2-8 explicitly selected
-ordinary fixed-drive sibling files (total <=8 MiB), checks each file before
-publishing a deterministic `flyExplorer-selection.zip` through owned
-temporary staging without overwrite. Its ZIP headers carry one CRC32/name
-and local offset per file. The WinUI dispatcher owns an exact WindowTab/
-PaneTab/route origin and separate in-flight flag. The single-member
-extractor intentionally rejects its multi-entry output. The batch
-writer still emits only Store files and cannot archive directories.
-
-F08 bounded multi-file extraction lives in `src/base/zip_store_batch_extractor.h`.
-It checks every flat Store entry's local and central record and CRC32
-against a single read-only snapshot before any file is written. An owned
-staging directory holds only the new files; the whole directory is
-published once without replacement as `flyExplorer-selection-unpacked`.
-Failed staging cleans only known staging entries; no recursive directory
-delete, no rollback of a user destination, and no general ZIP support
-beyond strict Store/Deflate entries. MainWindow gates the background completion on the origin
-WindowTab/PaneTab/route and has a separate ZIP-batch-extraction busy bit.
-
-F08 batch ZIP Store creation/extraction now accept an optional
-per-worker atomic cancellation token, owned by the UI and captured
-by a detached worker. The existing toolbar Cancel command requests it
-while retaining Shell cancellation. The native writers poll at bounded
-I/O and before non-replace publication, returning Cancelled on a
-pre-commit stop and using RAII staging cleanup. A rename already
-committed cannot be undone. Single-file ZIP operations remain unchanged.
-
-The F08 Store metadata compatibility policy lives in
-`src/base/zip_store_compat.h`, reused by the one-file and batch
-Store extractors. It permits DOS version 1.0/2.0 and matching DOS
-timestamps and strict UTF-8 or unflagged ASCII-only names while
-continuing to reject all extra/comment/data-descriptor/ZIP64/encryption
-features. Pinned miniz 3.1.2 tinfl/tdefl codecs are now bundled,
-while Windows MSZIP must not be treated as ZIP method-8 raw Deflate.
-
-F08 single-member raw DEFLATE decoder is
-`src/base/zip_raw_deflate.cpp` (paired `.h`). The native project
-template compiles this as a separate no-PCH translation unit. Pinned
-miniz v3.1.2 `tinfl` and `tdefl` are vendored under
-`src/base/third_party/miniz_3_1_2`, with upstream copyright/license
-and an explicit include adaptation. The decoder has NO filesystem or
-ZIP path authority; it has a bounded allocation and validates exact
-input consumption/output count. both ZIP extractors own
-method 8 ZIP metadata, CRC32, path restrictions and non-replace staging.
-The bounded batch extractor also permits a flat 2-8-member mix
-of Store (0) and raw Deflate (8) using the same pinned native
-`zip_raw_deflate` decoder. It gates each decompression on declared
-output size, compression ratio, exact input/output count and CRC
-before constructing the owned staging directory; the original
-whole-directory non-replace publish and cancellation policy remains.
-The batch ZIP writer retains Store-only output as its default but
-also supports the explicitly selected per-file Deflate mode described
-below. A one-shot tinfl call is not preemptible mid-call.
-All newly changed ZIP code is NOT TESTED.
-
-The first F08 **writer-side** raw DEFLATE codec is
-`src/base/zip_raw_deflate_compress.cpp`/header, using miniz 3.1.2
-tdefl compiled as an independent C source. A tightly scoped
-`miniz_tdef_compat.h` fills only the monolithic miniz.h constants
-and checksum helpers needed by tdefl. The single-file
-`zip_deflate_writer.h` writes method-8 ZIP or falls back to method 0
-when compression enlarges data or our own extractor would reject a
-ratio above 100:1. Compressed output is round-trip verified through
-the existing bounded raw inflater before staging. It uses a distinct
-`<source>.deflate.zip` destination, no-overwrite publication, and
-has no single-file cancellation UI. Unbuilt/unexecuted: NOT TESTED.
-
-F08 batch ZIP creation also has explicit
-`Compression::DeflatePreferred` mode in `zip_store_batch_writer.h`.
-It creates a separate deterministic `flyExplorer-selection-deflate.zip`
-for 2-8 flat files (combined raw <=8 MiB), choosing method 8 only if
-it shrinks data and stays inside the existing 100:1 decoder gate.
-Every compressed member is independently round-trip verified before
-staging; otherwise it uses method 0. Local/central method, CRC and
-packed/unpacked sizes and offsets match. The existing Store-only
-default, cooperative cancellation, no-replace publication and
-WindowTab/PaneTab/route ownership stay intact. Native execution
-and Windows GUI acceptance remain NOT TESTED.
-
-F08 bounded single-root directory archives now additionally allow
-`rootName/childName/leafName` entries alongside direct root files.
-There may be at most three child directories across the entire archive,
-and no deeper nesting or multiple roots. `createFolder` enumerates
-the selected fixed-drive folder and at most three direct children without
-recursion, reparse points or implicit fallback. `createMany` guards
-parent/child identity per source path, checks complete normalized
-ZIP entry names and limits all names and intermediate staged paths.
-The batch extractor parses at most three segments, requires a single
-root and at most three direct children, rejects full-path name duplicates and
-root-file versus child-directory collisions,
-validates CRC/headers before creating owned staging, and creates
-the root/child directories there. Cleanup deletes only known entries
-and explicitly owned child/root dirs, no arbitrary recursive removal.
-The final outer directory publish is still a single non-replace rename.
-NOT TESTED: compilation, real ZIP I/O and hostile path races.
-
-F08 single-root directory archive support is intentionally bounded:
-`zipbatch::createFolder` enumerates exactly one selected local
-fixed-drive directory and admits only 2-8 regular, non-reparse files
-in the root and up to three direct children (<=8MiB total).
-Its sibling ZIP contains `rootName/leafName` or
-`rootName/childName/leafName` records without directory-only entries.
-The existing batch Store/Deflate writer applies its CRC/size/ratio
-checks, per-file codec roundtrip and cancellable non-replace staging.
-The batch extractor accepts either entirely flat entries or exactly
-one shared root with up to three child folders, rejects mixed/multiple/deeper roots,
-validates every member/CRC before I/O, tracks each created child
-directory inside owned staging, and publishes the outer directory
-only when complete. Cleanup never recursively removes arbitrary
-folders. MainWindow shares the ZIP batch busy/cancel state and exact
-origin WindowTab/PaneTab/route/folder protection.
-NOT TESTED: actual Windows compile, GUI, ZIP I/O and adversarial
-filesystem races remain unverified.
+Keep the inactive core until the native Explorer handoff is accepted on an
+explicitly authorized Windows build and the release/build/license impacts
+of deleting the codec and project entries have been reviewed. Do not
+re-expose competing archive actions. Historical implementation detail and
+limitations remain recoverable from Git, the native source contracts,
+and `CURRENT_STATUS.md`.
 
 Regular-document activation belongs to `app/winui/file_open_controller.h`.
 It owns one asynchronous Windows StorageFile/Launcher request, deadline and

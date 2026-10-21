@@ -68,27 +68,5 @@ class SingleRootZipContracts(unittest.TestCase):
         self.assertLess(w.index("FindFirstFileW(searchChild.c_str()"),
                         w.index("return createMany(files,cancellation,mode,folder)"))
 
-    def test_folder_ui_exact_origin_and_cancel(self):
-        ui=source("app/winui/m22_transfers.cpp")
-        hdr=source("app/winui/MainWindow.xaml.h")
-        method=ui.split("void MainWindow::CreateSelectedFolderZip(int side)",1)[1].split(
-            "void MainWindow::CreateSelectedBatchZip(int side,bool preferDeflate)",1)[0]
-        for token in (
-            "view.SelectedItems().Size()!=1",
-            "!item->isFolder()",
-            "createFolder(",
-            "mZipBatchCreationBusy=true",
-            "mZipBatchCancel=cancel",
-            "active.identity!=identity",
-            "pane.routeIds[tab]!=route",
-            "pane.filesystemPaths[tab]!=folder",
-            "NavigationAction::Refresh",
-        ):
-            self.assertIn(token,method)
-        self.assertNotIn("const bool canCreateFolderZip=",ui)
-        self.assertNotIn('make(L"폴더 ZIP으로 묶기 (하위 폴더 최대 3개, 파일 2~8개)"',ui)
-        self.assertIn('make(L"Windows 탐색기에서 선택 열기"',ui)
-        self.assertIn("void CreateSelectedFolderZip(int side);",hdr)
-
 if __name__=="__main__":
     unittest.main()

@@ -1,4 +1,22 @@
-# flyExplorer current status — 2026-10-22 EP05 P0/P1 UI cleanup; G01 open
+# flyExplorer current status — 2026-10-22 EP05 P0/P1 ZIP UI retirement; G01 open
+
+## 2026-10-22 P1 — retire unreachable ZIP creation/extraction UI
+
+- Starting from main `3f27e628c939c0efba10fcd06999ee8a5e72ebe0`, removed all six unreachable
+  MainWindow ZIP create/extract worker methods, their five busy flags,
+  batch cancellation token and obsolete archive-specific toolbar cancel
+  handling. Shell transfer cancel/feedback, dual-pane file commands and both
+  native Explorer handoff paths are unchanged.
+- Native ZIP codecs, bounded parsers/writers/extractors and their source
+  safety-contract tests remain in-tree; six stale WinUI-target tests were
+  removed and one central negative integration contract now prevents
+  accidental restoration of the invisible ZIP entrypoints. A pre-existing
+  raw-Deflate test assertion expecting an exposed ZIP menu was corrected.
+- Condensed obsolete F08 WinUI implementation descriptions in
+  `ARCHITECTURE.md` without deleting security/rollback evidence from Git.
+- **NOT TESTED:** Windows build, source/native contract execution,
+  native Explorer handoff, functional GUI, and pixel acceptance are not run.
+  This is not acceptance of current main or resolution of G01.
 
 ## 2026-10-22 P0/P1 — retire invisible F08 ZIP inspection UI
 

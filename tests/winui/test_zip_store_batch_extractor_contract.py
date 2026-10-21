@@ -79,23 +79,5 @@ class ZipStoreBatchExtractorContracts(unittest.TestCase):
                           "std::filesystem::remove_all(", "ShellExecuteW("):
             self.assertNotIn(forbidden,s)
 
-    def test_ui_exact_origin_and_menu(self):
-        ui=read("app/winui/m22_transfers.cpp")
-        header=read("app/winui/MainWindow.xaml.h")
-        body=ui.split("void MainWindow::ExtractSelectedBatchZip(int side)",1)[1].split(
-            "void MainWindow::ExtractSelectedZip(int side)",1)[0]
-        for x in ("view.SelectedItems().Size()!=1", "mZipBatchExtractionBusy=true;",
-                  "mZipBatchCancel=cancel;",
-                  "zipbatchextract::extractMany(source,cancel.get())",
-                  "active.identity!=identity",
-                  "pane.routeIds[tab]!=route",
-                  "pane.filesystemPaths[tab]!=folder",
-                  "NavigationAction::Refresh"):
-            self.assertIn(x,body)
-        self.assertNotIn('make(L"ZIP 여러 파일 해제 (Store/Deflate, 2~8개)"',ui)
-        self.assertIn('make(L"Windows 탐색기에서 선택 열기"',ui)
-        self.assertIn("void ExtractSelectedBatchZip(int side);",header)
-        self.assertIn("bool mZipBatchExtractionBusy=false;",header)
-
 if __name__=="__main__":
     unittest.main()

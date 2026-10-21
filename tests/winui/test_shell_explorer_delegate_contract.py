@@ -91,10 +91,30 @@ class WindowsExplorerDelegationContracts(unittest.TestCase):
             "ZIP 여러 파일 해제",
         ):
             self.assertNotIn('make(L"'+text,menu)
-        # Native ZIP helpers deliberately stay available in the source tree
-        # until the handoff is build/runtime/GUI-verified on Windows.
-        self.assertIn("void MainWindow::CreateSelectedZip(int side)",ui)
-        self.assertIn("void MainWindow::ExtractSelectedBatchZip(int side)",ui)
+        # No dormant archive worker, command handler, busy bit or cancel
+        # path should remain attached to WinUI after retiring the F08 menu.
+        header=source("app/winui/MainWindow.xaml.h")
+        for retired in (
+            "CreateSelectedFolderZip", "CreateSelectedBatchZip",
+            "CreateSelectedDeflateZip", "CreateSelectedZip",
+            "ExtractSelectedBatchZip", "ExtractSelectedZip",
+            "mZipBatchCancel", "mZipCreationBusy",
+            "mZipDeflateCreationBusy", "mZipExtractionBusy",
+            "mZipBatchCreationBusy", "mZipBatchExtractionBusy",
+        ):
+            self.assertNotIn(retired,ui)
+            self.assertNotIn(retired,header)
+        self.assertIn("mFileOperations.cancel();",ui)
+        self.assertIn("fileBar()->CancelButton().IsEnabled(busy&&cancellable);",ui)
+        for path in (
+            "src/base/zip_store_writer.h",
+            "src/base/zip_deflate_writer.h",
+            "src/base/zip_store_extractor.h",
+            "src/base/zip_store_batch_writer.h",
+            "src/base/zip_store_batch_extractor.h",
+            "src/base/zip_inspection.h",
+        ):
+            self.assertTrue((ROOT/path).is_file())
 
 if __name__=="__main__":
     unittest.main()
