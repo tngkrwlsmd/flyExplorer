@@ -704,15 +704,19 @@ winrt::fire_and_forget MainWindow::ConfirmRecycle(std::size_t count){
  ApplyTransferStartStatus(status,count);
 }
 winrt::fire_and_forget MainWindow::ConfirmCollision(
- std::size_t requested,std::size_t collided,bool allowSkip){
+ std::size_t requested,std::size_t collided,bool allowSkip,
+ std::size_t previouslySkipped){
  const auto keep=get_strong();
  ContentDialog dialog;
  dialog.XamlRoot(RootShell().XamlRoot());
  dialog.Title(winrt::box_value(hstring(L"동일한 이름이 이미 존재합니다")));
- std::wstring message=L"요청한 "+std::to_wstring(requested)+
+ std::wstring message=L"현재 남은 "+std::to_wstring(requested)+
     L"개 항목 중 "+std::to_wstring(collided)+
     L"개 이름이 대상 폴더와 충돌합니다. 기존 파일은 덮어쓰지 않습니다. "
     L"이름을 바꿔 둘 다 유지하거나 작업을 취소할 수 있습니다.";
+ if(previouslySkipped)
+  message+=L" 이전 확인에서 충돌 "+std::to_wstring(previouslySkipped)+
+           L"개는 이미 건너뛰었습니다.";
  if(allowSkip)
   message+=L" 충돌한 항목만 건너뛰고 나머지를 처리할 수도 있습니다. "
            L"작업 전 확인 결과이므로 아직 파일을 변경하지 않았습니다.";
@@ -760,7 +764,8 @@ void MainWindow::OnTransferCompleted(
       request.destinationMode==fxfile::shelltransfer::DestinationMode::Filesystem&&
       request.kind!=fxfile::shelltransfer::Kind::Recycle;
   ConfirmCollision(request.sources.size(),
-                   completion.report.collisions.size(),allowSkip);
+                   completion.report.collisions.size(),allowSkip,
+                   completion.skippedCollisions);
   return;
  }
  // Failed or canceled transfers can have committed earlier items. Refresh
