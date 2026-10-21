@@ -10,6 +10,37 @@ def src(path):
 
 
 class SearchControllerContracts(unittest.TestCase):
+    def test_f11_search_result_location_is_scoped_and_nonmutating(self):
+        xaml=src("app/winui/MainWindow.xaml")
+        header=src("app/winui/MainWindow.xaml.h")
+        feature=src("app/winui/m19_features.cpp")
+        controller=src("app/winui/search_controller.h")
+        for token in ('SelectionChanged="OnSearchMatchSelectionChanged"',
+                      'Click="OnLocateSearchMatch"', 'IsEnabled="False"',
+                      '선택한 결과의 폴더로 이동'):
+            self.assertIn(token,xaml)
+        for token in ("mSearchResultContext", "mSearchResultPaths",
+                      "mSearchResultValid", "SelectedSearchMatchPath()"):
+            self.assertIn(token,header)
+        self.assertIn("static bool sameContext(Context const&,Context const&) noexcept;",controller)
+        selection=feature.split("std::wstring MainWindow::SelectedSearchMatchPath()",1)[1].split(
+            "void MainWindow::OnSelectSearchRecent(",1)[0]
+        for token in ("SearchController::sameContext(",
+                      "mSearchResultContext,SearchContext()", "SelectedIndex()",
+                      "SelectedItem().try_as<TextBlock>()",
+                      "mSearchResultPaths[static_cast<std::size_t>(index)]",
+                      "selected.is_absolute()", "selected.parent_path()",
+                      "selected.lexically_normal()!=selected",
+                      "QueuePath(mSearchResultContext.side,",
+                      "SearchPanel().Visibility(Visibility::Collapsed)"):
+            self.assertIn(token,selection)
+        self.assertNotIn("ShellExecute",selection)
+        self.assertNotIn("CreateProcess",selection)
+        self.assertIn("mSearchResultPaths=completion.result.matches;",feature)
+        self.assertIn("mSearchResultContext=completion.context;",feature)
+        self.assertIn("mSearchResultValid=false;",feature)
+        self.assertIn("mSearchController.invalidate();",feature)
+
     def test_controller_owns_lifecycle_and_close_invalidation(self):
         project = src("app/winui/flyExplorer.project-template.xml")
         header = src("app/winui/MainWindow.xaml.h")

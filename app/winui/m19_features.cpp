@@ -364,6 +364,10 @@ void MainWindow::OnToggleSearch(
     SearchPanel().Visibility(next);
     if(next==Visibility::Collapsed){
         mSearchController.invalidate();
+        mSearchResultValid=false;
+        mSearchResultPaths.clear();
+        SearchMatches().Items().Clear();
+        SearchLocateButton().IsEnabled(false);
         SearchRunButton().IsEnabled(true);
         return;
     }
@@ -377,6 +381,11 @@ void MainWindow::OnToggleSearch(
 }
 void MainWindow::OnRunSearch(
     IInspectable const&,RoutedEventArgs const&) {
+    // A new request invalidates old row-to-path mappings even when the
+    // request itself fails validation.
+    mSearchResultValid=false;
+    mSearchResultPaths.clear();
+    SearchLocateButton().IsEnabled(false);
     SearchController::Request request{};
     auto context=SearchContext();
     request.scope=context.scope;
@@ -447,6 +456,9 @@ void MainWindow::OnSearchCompleted(
     using Disposition=SearchController::Disposition;
     if(accepted.disposition==Disposition::Ignored)return;
 
+    mSearchResultValid=false;
+    mSearchResultPaths.clear();
+    SearchLocateButton().IsEnabled(false);
     SearchRunButton().IsEnabled(true);
     if(accepted.disposition==Disposition::Canceled)return;
     if(accepted.disposition==Disposition::StaleContext){
@@ -472,6 +484,10 @@ void MainWindow::OnSearchCompleted(
         StatusText().Text(L"인덱싱된 폴더인지 Windows 검색 설정에서 확인하세요. 직접 탐색으로 자동 전환하지 않았습니다.");
         return;
     }
+    if(accepted.disposition!=Disposition::Applied)return;
+    mSearchResultContext=completion.context;
+    mSearchResultPaths=completion.result.matches;
+    mSearchResultValid=true;
     auto items=SearchMatches().Items();
     items.Clear();
     for(auto const& file:completion.result.matches){
@@ -512,6 +528,55 @@ void MainWindow::OnSearchCompleted(
         completion.request.remember?
           L"검색 완료 · 선택한 위치를 미리보기 프로필에 저장했습니다.":
           L"검색 완료 · 위치를 저장하지 않았습니다(기본값).");
+}
+std::wstring MainWindow::SelectedSearchMatchPath(){
+    if(mClosing||!mSearchResultValid||
+       SearchPanel().Visibility()!=Visibility::Visible)return {};
+    if(!SearchController::sameContext(
+           mSearchResultContext,SearchContext()))return {};
+    const int index=SearchMatches().SelectedIndex();
+    if(index<0||static_cast<std::size_t>(index)>=mSearchResultPaths.size())
+        return {};
+    auto row=SearchMatches().SelectedItem().try_as<TextBlock>();
+    if(!row||std::wstring(row.Text().c_str())!=
+       mSearchResultPaths[static_cast<std::size_t>(index)])return {};
+    return mSearchResultPaths[static_cast<std::size_t>(index)];
+}
+void MainWindow::OnSearchMatchSelectionChanged(
+    IInspectable const&,SelectionChangedEventArgs const&){
+    SearchLocateButton().IsEnabled(!SelectedSearchMatchPath().empty());
+}
+void MainWindow::OnLocateSearchMatch(
+    IInspectable const&,RoutedEventArgs const&){
+    const auto match=SelectedSearchMatchPath();
+    if(match.empty()){
+        SearchLocateButton().IsEnabled(false);
+        StatusText().Text(
+            L"검색 결과 또는 작업 공간이 변경됐습니다. 다시 검색해 주세요.");
+        return;
+    }
+    std::wstring containingFolder;
+    try{
+        const std::filesystem::path selected(match);
+        if(!selected.is_absolute()||selected.parent_path().empty()||
+           selected.lexically_normal()!=selected){
+            StatusText().Text(L"검색 결과의 폴더 경로가 올바르지 않습니다.");
+            return;
+        }
+        containingFolder=selected.parent_path().native();
+    }catch(...){
+        StatusText().Text(L"검색 결과 경로를 해석할 수 없습니다.");
+        return;
+    }
+    // QueuePath uses the established isolated Shell navigation, including
+    // late-result and failed-navigation guards; never call Shell on the UI
+    // thread or launch the file merely to reveal its parent.
+    if(!QueuePath(mSearchResultContext.side,std::move(containingFolder)))
+        return;
+    SearchPanel().Visibility(Visibility::Collapsed);
+    mSearchResultValid=false;
+    mSearchResultPaths.clear();
+    SearchLocateButton().IsEnabled(false);
 }
 void MainWindow::OnSelectSearchRecent(
     IInspectable const&,SelectionChangedEventArgs const&){

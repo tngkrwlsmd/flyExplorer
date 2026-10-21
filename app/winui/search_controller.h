@@ -84,13 +84,15 @@ public:
     std::vector<std::wstring> recentScopes() const;
     bool clearRecent();
 
+    // The same pure identity check used for async acceptance must also
+    // gate subsequent navigation from a visible accepted search result.
+    static bool sameContext(Context const&,Context const&) noexcept;
+
 private:
     struct SharedState;
     std::shared_ptr<SharedState> state_;
 
     static StartStatus validateRequest(Request const&) noexcept;
-    static bool sameContext(
-        Context const&,Context const&) noexcept;
 };
 
 } // namespace fxfile::previewsearch

@@ -495,7 +495,12 @@
                            AutomationProperties.Name="검색 결과 요약"/>
             </StackPanel>
             <ListView x:Name="SearchMatches" Height="64"
+                      SelectionChanged="OnSearchMatchSelectionChanged"
                       AutomationProperties.Name="일치하는 파일 경로"/>
+            <Button x:Name="SearchLocateButton"
+                    Content="선택한 결과의 폴더로 이동" IsEnabled="False"
+                    HorizontalAlignment="Left" Click="OnLocateSearchMatch"
+                    AutomationProperties.Name="선택한 검색 결과가 들어 있는 폴더로 이동"/>
         </StackPanel>
         <Grid Grid.Row="7" Padding="8,0,8,4" ColumnSpacing="0">
             <Grid.ColumnDefinitions>

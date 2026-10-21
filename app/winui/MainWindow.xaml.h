@@ -107,6 +107,9 @@ namespace winrt::FlyExplorer::implementation
         void OnApplyShortcuts(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
         void OnResetShortcuts(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
         void OnRunSearch(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
+        void OnSearchMatchSelectionChanged(IInspectable const&,
+            Microsoft::UI::Xaml::Controls::SelectionChangedEventArgs const&);
+        void OnLocateSearchMatch(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
         void OnSelectSearchRecent(IInspectable const&,
             Microsoft::UI::Xaml::Controls::SelectionChangedEventArgs const&);
         void OnClearSearchRecent(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
@@ -339,6 +342,11 @@ namespace winrt::FlyExplorer::implementation
         void InitializeFilterRules();
         void RefreshFilterRuleManager(int selected);
         fxfile::previewsearch::SearchController mSearchController{};
+        // UI-only bounded snapshot of the last accepted search results. Never
+        // persisted; scope/WindowTab/PaneTab/route/query are checked on action.
+        fxfile::previewsearch::SearchController::Context mSearchResultContext{};
+        std::vector<std::wstring> mSearchResultPaths{};
+        bool mSearchResultValid=false;
         fxfile::searchpresets::Store mSearchPresets{};
         bool mPopulatingRecents=false;
         bool mPopulatingSearchPresets=false;
@@ -389,6 +397,7 @@ namespace winrt::FlyExplorer::implementation
         void QueueNextWorkspaceTab(int side);
         using SearchController=fxfile::previewsearch::SearchController;
         SearchController::Context SearchContext();
+        std::wstring SelectedSearchMatchPath();
         void RefreshRecentSearchOptions();
         void OnSearchCompleted(SearchController::Completion completion);
         bool WorkspaceModel(fxfile::preview::Workspace&,std::wstring& reason) const;
