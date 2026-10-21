@@ -615,8 +615,9 @@ void MainWindow::ApplyTransferStartStatus(
  else if(status==Start::StaleConfirmation)
   StatusText().Text(L"확인하는 동안 원본 또는 대상 폴더가 변경됐습니다. 다시 선택하세요.");
  else if(status==Start::Cancelled)
-  StatusText().Text(
-   L"파일 작업 확인을 취소했습니다. 앞서 처리된 항목이 있다면 원본·대상에서 확인하세요.");
+  StatusText().Text(L"파일 작업 확인을 취소했습니다. 확인 전 작업은 실행하지 않았습니다.");
+ else if(status==Start::AllSkipped)
+  StatusText().Text(L"충돌한 항목을 모두 건너뛰었습니다. 이 요청에서 파일을 변경하지 않았습니다.");
  else if(status==Start::ThreadStartFailed){
   SetFileButtonsBusy(false,false);
   StatusText().Text(L"별도 Shell 파일 작업 스레드를 시작하지 못했습니다.");
@@ -657,26 +658,43 @@ winrt::fire_and_forget MainWindow::ConfirmRecycle(std::size_t count){
   });
  ApplyTransferStartStatus(status,count);
 }
-winrt::fire_and_forget MainWindow::ConfirmCollision(){
+winrt::fire_and_forget MainWindow::ConfirmCollision(
+ std::size_t requested,std::size_t collided,bool allowSkip){
  const auto keep=get_strong();
  ContentDialog dialog;
  dialog.XamlRoot(RootShell().XamlRoot());
  dialog.Title(winrt::box_value(hstring(L"동일한 이름이 이미 존재합니다")));
- dialog.Content(winrt::box_value(hstring(
-    L"대상 폴더에 같은 이름이 있습니다. 기존 항목을 덮어쓰지 않고 "
-    L"새 항목의 이름을 자동으로 바꿔 둘 다 유지할까요? "
-    L"앞서 처리된 항목은 취소해도 되돌아가지 않을 수 있습니다.")));
- dialog.PrimaryButtonText(L"이름 변경 후 계속");
+ std::wstring message=L"요청한 "+std::to_wstring(requested)+
+    L"개 항목 중 "+std::to_wstring(collided)+
+    L"개 이름이 대상 폴더와 충돌합니다. 기존 파일은 덮어쓰지 않습니다. "
+    L"이름을 바꿔 둘 다 유지하거나 작업을 취소할 수 있습니다.";
+ if(allowSkip)
+  message+=L" 충돌한 항목만 건너뛰고 나머지를 처리할 수도 있습니다. "
+           L"작업 전 확인 결과이므로 아직 파일을 변경하지 않았습니다.";
+ dialog.Content(winrt::box_value(hstring(message)));
+ dialog.PrimaryButtonText(L"이름 바꿔 둘 다 유지");
+ if(allowSkip)dialog.SecondaryButtonText(L"충돌 항목 건너뛰기");
  dialog.CloseButtonText(L"취소");
  dialog.DefaultButton(ContentDialogButton::Close);
- const bool approved=co_await dialog.ShowAsync()==ContentDialogResult::Primary;
+ const auto choice=co_await dialog.ShowAsync();
  auto weak=get_weak();
+ const auto context=FileOperationContext(ActiveWindowTab().model.activePane);
+ const auto post=operationPost(DispatcherQueue());
+ auto completed=[weak](FileOperationController::TransferCompletion completion){
+  if(auto ui=weak.get())ui->OnTransferCompleted(std::move(completion));
+ };
+ if(allowSkip&&choice==ContentDialogResult::Secondary){
+  std::size_t skipped=0;
+  const auto status=mFileOperations.skipCollisions(
+      context,post,std::move(completed),skipped);
+  ApplyTransferStartStatus(status);
+  if(status==FileOperationController::StartStatus::Started)
+   StatusText().Text(hstring(L"충돌 항목 "+std::to_wstring(skipped)+
+       L"개를 건너뛰었습니다. 나머지를 처리 중입니다."));
+  return;
+ }
  const auto status=mFileOperations.confirmCollision(
-  approved,FileOperationContext(ActiveWindowTab().model.activePane),
-  operationPost(DispatcherQueue()),
-  [weak](FileOperationController::TransferCompletion completion){
-   if(auto ui=weak.get())ui->OnTransferCompleted(std::move(completion));
-  });
+  choice==ContentDialogResult::Primary,context,post,std::move(completed));
  ApplyTransferStartStatus(status);
 }
 void MainWindow::OnTransferCompleted(
@@ -688,7 +706,13 @@ void MainWindow::OnTransferCompleted(
  if(mTransferTimer)mTransferTimer.Stop();
  SetFileButtonsBusy(false,false);
  if(disposition==Disposition::NeedsCollisionConfirmation){
-  ConfirmCollision();
+  const auto& request=completion.request;
+  const bool allowSkip=
+      request.sourceMode==fxfile::shelltransfer::SourceMode::Filesystem&&
+      request.destinationMode==fxfile::shelltransfer::DestinationMode::Filesystem&&
+      request.kind!=fxfile::shelltransfer::Kind::Recycle;
+  ConfirmCollision(request.sources.size(),
+                   completion.report.collisions.size(),allowSkip);
   return;
  }
  // Failed or canceled transfers can have committed earlier items. Refresh
@@ -728,18 +752,22 @@ void MainWindow::OnTransferCompleted(
            completion.report.error==ERROR_CANCELLED){
    detail=L"파일 작업이 취소됐습니다.";
   }else detail=errorInKorean(completion.report.error).c_str();
-  // IFileOperation batches are not transactional. Earlier items may have
-  // succeeded even when the aggregate failed or was canceled.
+  // queued counts accepted requests, NOT completed items. Never invent
+  // a success/skip count from aggregate IFileOperation progress.
+  detail=L"요청 "+std::to_wstring(completion.request.sources.size())+
+         L"개: "+detail;
   detail+=L" 일부 항목이 처리됐을 수 있습니다. 원본·대상을 확인하세요.";
   mTransferFailureNotice=detail;
   StatusText().Text(hstring(detail));
   return;
  }
- StatusText().Text(
+ const auto count=std::to_wstring(completion.request.sources.size());
+ StatusText().Text(hstring(
   completion.request.kind==fxfile::shelltransfer::Kind::Copy?
-    L"복사를 완료했습니다.":
+    count+L"개 항목의 복사를 완료했습니다.":
   completion.request.kind==fxfile::shelltransfer::Kind::Move?
-    L"이동을 완료했습니다.":L"휴지통 이동을 완료했습니다.");
+    count+L"개 항목의 이동을 완료했습니다.":
+    count+L"개 항목의 휴지통 이동을 완료했습니다."));
 
 
 }
