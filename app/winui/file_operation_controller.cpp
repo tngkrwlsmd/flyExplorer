@@ -1,5 +1,7 @@
 #include "pch.h"
 #include "file_operation_controller.h"
+#include <algorithm>
+#include <filesystem>
 #include <mutex>
 #include <optional>
 #include <thread>
@@ -10,6 +12,8 @@ namespace fxfile::previewops {
 struct FileOperationController::PendingTransfer final {
     fxfile::shelltransfer::Request request{};
     Context context{};
+    // Destination paths from the completed read-only preflight.
+    std::vector<std::wstring> collisions{};
 };
 
 struct FileOperationController::SharedState final {
@@ -169,6 +173,66 @@ FileOperationController::StartStatus FileOperationController::confirmCollision(
         std::move(post),std::move(completion));
 }
 
+FileOperationController::StartStatus
+FileOperationController::skipCollisions(
+    Context liveContext,Post post,TransferCallback completion,
+    std::size_t& skipped)
+{
+    skipped=0;
+    PendingTransfer pending{};
+    {
+        std::lock_guard<std::mutex> lock(state_->mutex);
+        if(state_->closing||state_->busy)return StartStatus::Busy;
+        if(!state_->pending)return StartStatus::StaleConfirmation;
+        auto const& request=state_->pending->request;
+        if(request.kind==fxfile::shelltransfer::Kind::Recycle||
+           request.sourceMode!=fxfile::shelltransfer::SourceMode::Filesystem||
+           request.destinationMode!=fxfile::shelltransfer::DestinationMode::Filesystem||
+           state_->pending->collisions.empty())
+            return StartStatus::StaleConfirmation;
+        pending=std::move(*state_->pending);
+        state_->pending.reset();
+    }
+    if(!sameContext(pending.context,liveContext))
+        return StartStatus::StaleConfirmation;
+
+    // Only perform lexical matching against exactly the paths returned by
+    // preflight. Never inspect or modify the filesystem on the UI thread.
+    // launchTransfer's worker runs a fresh native validate() on the reduced
+    // request, so races and new collisions still fail closed.
+    try{
+        std::vector<std::wstring> remaining;
+        remaining.reserve(pending.request.sources.size());
+        for(auto const& source:pending.request.sources){
+            const auto destination=(
+                std::filesystem::path(pending.request.destination)/
+                std::filesystem::path(source).filename()).native();
+            const bool collision=std::any_of(
+                pending.collisions.begin(),pending.collisions.end(),
+                [&](std::wstring const& path){
+                    return ::CompareStringOrdinal(
+                        destination.c_str(),-1,path.c_str(),-1,TRUE)==CSTR_EQUAL;
+                });
+            if(collision)++skipped;
+            else remaining.push_back(source);
+        }
+        // Ambiguous collision mappings are not permission to copy an
+        // unverified subset or silently overwrite an existing target.
+        if(skipped!=pending.collisions.size()){
+            skipped=0;
+            return StartStatus::StaleConfirmation;
+        }
+        if(remaining.empty())return StartStatus::AllSkipped;
+        pending.request.sources=std::move(remaining);
+        return launchTransfer(std::move(pending.request),
+                              std::move(pending.context),
+                              std::move(post),std::move(completion));
+    }catch(...){
+        skipped=0;
+        return StartStatus::StaleConfirmation;
+    }
+}
+
 FileOperationController::StartStatus FileOperationController::launchTransfer(
     fxfile::shelltransfer::Request request,Context context,
     Post post,TransferCallback completion)
@@ -257,7 +321,8 @@ FileOperationController::acceptTransfer(
        !completion.report.collisions.empty()&&
        completion.request.kind!=fxfile::shelltransfer::Kind::Recycle){
         state_->pending=PendingTransfer{
-            completion.request,completion.context};
+            completion.request,completion.context,
+            completion.report.collisions};
         return TransferDisposition::NeedsCollisionConfirmation;
     }
     if(completion.report.error!=ERROR_SUCCESS)
