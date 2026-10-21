@@ -125,6 +125,8 @@ void MainWindow::ExecuteFileCommand(fxfile::filecommand::Kind kind){
          if(auto ui=weak.get())ui->OnFileCommandCompleted(std::move(completion));
      });
  if(status==FileOperationController::StartStatus::Started){
+     // Do not reassert an earlier failure after this new command finishes.
+     ActiveWindowTab().fileOperationNotice.clear();
      SetFileButtonsBusy(true,false);
      StatusText().Text(L"선택한 파일 작업을 별도 스레드에서 처리하는 중입니다...");
  }else if(status==FileOperationController::StartStatus::Busy){
