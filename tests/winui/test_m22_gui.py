@@ -26,8 +26,9 @@ def run(*,win,element,safe_click,focus,eventually,left,right):
   little=next((i for i,s in enumerate(titles) if "작은.txt" in s),None)
   return big is not None and little is not None and big<little
  eventually(size_sorted,"real size sorting did not order files descending",10)
- assert "txt 파일" in row("Left","큰.txt").window_text(), (
-     "real local extension type not displayed for Korean file")
+ # Windows' registered friendly type is localized and may not equal the
+ # static fallback "txt 파일". Require the actual OS-backed metadata below,
+ # not an English/Korean suffix string from one machine image.
  # App-owned icon/column UI must preserve the UIA accessible name while
  # the independent helper returns the actual OS-registered friendly type.
  eventually(lambda:row("Left","큰.txt") is not None and
@@ -140,9 +141,9 @@ def run(*,win,element,safe_click,focus,eventually,left,right):
  print("REAL_M22_KOREAN_COLLISION_CANCEL_NO_OVERWRITE",True,flush=True)
  select_one("자료.txt")
  safe_click(element("CopyButton"))
- eventually(lambda:dialog("이름 변경 후 계속").exists(timeout=.2),
+ eventually(lambda:dialog("이름 바꿔 둘 다 유지").exists(timeout=.2),
           "real Korean keep-both ContentDialog absent",12)
- safe_click(dialog("이름 변경 후 계속"))
+ safe_click(dialog("이름 바꿔 둘 다 유지"))
  eventually(lambda:len(list(right.glob("자료*")))>=2,
           "confirmed keep-both did not create new name",19)
  assert (right/"자료.txt").read_text(encoding="utf-8")=="preexisting right"

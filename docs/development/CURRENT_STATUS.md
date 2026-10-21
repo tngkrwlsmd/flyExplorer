@@ -1,4 +1,36 @@
-# flyExplorer current status — 2026-10-22 WinUI context menu route hardening; G01 open
+# flyExplorer current status — 2026-10-22 Windows GUI first failure investigated; G01 open
+
+## 2026-10-22 — owned Windows GUI failure bounded to M22 type-label assertion
+
+- Exact product SHA `c5de0c96b26f3958ee21be84c3a911354ee79e34`,
+  central Windows GUI
+  [39693531282](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39693531282):
+  runner-health, dependencies, policy, source, Release build **PASS**;
+  gui-window-tabs, gui-shortcuts, gui-filter-preset, gui-folder-tree **PASS**.
+  gui-all **FAIL**, first relevant error at `test_m22_gui.py:29`
+  demanding literal `txt 파일` in the displayed Korean test file row.
+- Exact fixture `큰.txt` was visible in retained synthetic UIA
+  evidence; Windows registered type strings are machine/association
+  dependent and the bounded evidence redacts non-fixture labels.
+  Therefore the failure is **not proof of a product type-rendering bug**.
+  Existing subsequent GUI assertion already requires `Windows 유형:`
+  returned by native metadata for this row, so drop only the obsolete
+  literal fallback claim and retain the stronger OS metadata check.
+  Also update the test's collision KeepBoth button name to match
+  `ConfirmCollision`'s actual current `이름 바꿔 둘 다 유지`.
+- Existing exact-SHA GUI passed focused WindowTabs, shortcuts,
+  filter presets and local folder tree; the integrated M22 section
+  and following steps remain unaccepted. App PID exited 0, six
+  original settings hashes unchanged and synthetic fixtures removed
+  as recorded in the owned GUI log. User-owned file contents not
+  recorded or modified.
+- This test-only correction has **NOT** been executed on its new SHA.
+  The newer deferred-menu route guard `c519818b` likewise needs
+  fresh source/Release/GUI checks before acceptance. Do not delete
+  retained F08 ZIP engine until OS delegation is actually accepted.
+  G01 open, G03-G05 excluded and G07 user-stopped.
+
+## 2026-10-22 — exact-SHA Release accepted; deferred context menu bug isolated
 
 ## 2026-10-22 — exact-SHA Release accepted; deferred context menu bug isolated
 

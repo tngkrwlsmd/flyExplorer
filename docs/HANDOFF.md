@@ -1,4 +1,27 @@
-# flyExplorer 작업 인계 — 2026-10-22 P0/EP05 메뉴 클릭 소유 경계 및 GUI 검증
+# flyExplorer 작업 인계 — 2026-10-22 Windows GUI M22 회귀 검사 정리
+
+## 2026-10-22 — 실제 GUI 실패와 후속 시험 계약 보정
+
+- 기존 소스 `c5de0c96`의 Windows GUI
+  [39693531282](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39693531282)
+  에서 WindowTabs/shortcuts/filter-preset/folder-tree PASS,
+  통합 `gui-all`의 M22 단계에서 `txt 파일` 기대가 실패했다.
+  앱 정상 종료, 6개 실제 설정 동일, 소유 픽스처 제거는 확인됐다.
+- 증거에는 테스트 소유 `큰.txt` 행이 있지만 나머지 UIA
+  텍스트는 개인정보 보호를 위해 필터링되어 있다.
+  native Windows 등록 형식 `Windows 유형:`이 같은 행에
+  표시되는지 검사하는 기존 후속 조건은 유지한다. 로케일에
+  따라 달라지는 `txt 파일` 문자열을 강제하던 검사를 제거했다.
+- 충돌 KeepBoth 버튼도 실제 WinUI 문구
+  `이름 바꿔 둘 다 유지`에 맞춰 GUI 검사만 수정했다.
+  앱/파일 작업/탭 코드 추가 변경 없이 원래 충돌 시 기존
+  파일 보존 및 대상 파일 수 증가 검증을 유지한다.
+- **미검증:** 보정한 GUI 검사 및 앞선 폴더 메뉴 경계
+  `c519818b`의 최신 main에 대한 source/Release/GUI 수용.
+  이어서 정확한 SHA 중앙 source→GUI 검증을 실행한다.
+  G03-G05 제외 및 G07 중단 유지.
+
+## 2026-10-22 — 폴더 탭 변경 후 이전 우클릭 메뉴 실행 차단
 
 ## 2026-10-22 — 폴더 탭 변경 후 이전 우클릭 메뉴 실행 차단
 
