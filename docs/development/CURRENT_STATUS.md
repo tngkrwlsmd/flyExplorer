@@ -1,4 +1,39 @@
-# flyExplorer current status — G02/G06 Windows Release PASS; functional GUI pending (2026-10-19)
+# flyExplorer current status — G02/G06 scoped local GUI PASS; G01 open (2026-10-21)
+
+## 2026-10-21 G02 — startup keyboard traversal accepted in the local scope
+
+- Live main `44d770ee0fd4904bed52ee2cc34f02d45352cd54` matched origin/main.
+  Reused the accepted Release EXE SHA-256
+  `78fb331fa88346fb4622fea4872db4ce2825e6ca2010653efa825bdacbff031f`,
+  product blob `f5ae92665411bcb4f3b64ea96aa2bf44cbb368ad`; no product edits or rebuild.
+  The latest central CI remains run `39188826255`, source PASS for `7ac35a06`,
+  not independent acceptance of this revision. This result is local Computer Use.
+- **Functional GUI PASS for the remaining G02 startup/menu scope:** one fresh,
+  isolated profile and synthetic local fixture, owned PID 20760. From the app's
+  startup focus, 39 consecutive Tab presses reached command/navigation controls,
+  left PaneTab (27), left list (32), right PaneTab (33), right list (38), then
+  WindowTab (39). No mouse clicks or hidden-control focus assignment were used.
+- Shift+Tab returned from WindowTab to the right list; Down selected alpha.txt.
+  F6 moved to the left list; five Shift+Tab presses returned through headers to
+  its PaneTab. Ctrl+L focused the full address, Tab reached quick search, and
+  reverse traversal reached the address edit button and breadcrumb controls.
+  Keyboard traversal then reached Sort. Enter opened its eight named modes,
+  Down moved to Name descending, Escape returned visible focus to Sort, and
+  Enter reopened the menu. No sort command or file operation was invoked.
+- Actual focus rings, selection, command outcomes and the menu's UIA names/order
+  were inspected. The tool's stale FileNameBox focused-element field was not used.
+  **Normal Alt+F4 exit 0**, original legacy/WinUI settings unchanged and all 12
+  synthetic files unchanged. No owned app remains.
+- **Visual scope:** existing Dark focus rings and menu legibility were inspected
+  at 1426x746 on Windows 10.0.26300 with unchanged display settings; numeric DPI
+  was not collected. No composited-pixel change was made, so no new BEFORE/AFTER
+  change gate applies. Whole-product/theme/narrow-window visual acceptance is
+  not claimed. G03/G04/G05 exclusions and the unrelated G01 shutdown risk remain.
+- Ignored evidence: `logs/g02-g06-keyboard/g02-startup-result.json`,
+  `g02-startup-cycle.png` and `g02-menu-return.png`. Prior G06 evidence is preserved
+  in `g06-accepted-result.json`. New source/build tests were unnecessary for this
+  documentation-only acceptance update. G02's interrupted run remains historical;
+  this completed run closes its outstanding local startup/menu normal-exit gate.
 
 ## 2026-10-21 G06 — PaneTab keyboard focus retained; scoped GUI PASS
 
