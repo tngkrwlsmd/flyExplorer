@@ -180,7 +180,12 @@ class MigrationContracts(unittest.TestCase):
   for forbidden in ("CWnd","Microsoft::UI","APPDATA","RegSetValue"):
    self.assertNotIn(forbidden,state+impl)
   self.assertIn("WindowWorkspaceController mWorkspace",window)
-  self.assertIn("active().model.dispatch(command,side,tab)",controller)
+  # The active workspace is bound once so PaneTab-local sort snapshots
+  # are synchronized before and after each model tab transition.
+  self.assertIn("auto& state=active();",controller)
+  self.assertIn("state.model.dispatch(command,side,tab)",controller)
+  self.assertIn("state.tabSortModes[side]",controller)
+  self.assertIn("modes[previous]=current;",controller)
 
  def test_native_model_rejects_stale_route_and_request_completions(self):
   impl=(ROOT.parents[1]/"src/base/explorer_ui_state.cpp").read_text(encoding="utf-8-sig")

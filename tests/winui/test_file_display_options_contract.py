@@ -85,7 +85,15 @@ class FileDisplayOptionsContract(unittest.TestCase):
         self.assertIn("state.visibleTab==pane.active",fill)
         self.assertIn("sameWindowTab=winrt::unbox_value<std::uint64_t>(view.Tag())",fill)
         self.assertIn("ActiveWindowTab().identity",fill)
-        self.assertIn("if(sameRenderedFolder)for(auto const& old:view.SelectedItems())",fill)
+        # A successful rename/new-file reveal takes precedence over restoring
+        # the old row selection from the same folder.
+        self.assertIn("if(revealAfterRefresh){",fill)
+        self.assertIn("selected.clear();",fill)
+        self.assertIn("focusedPath.clear();",fill)
+        self.assertIn("if(sameRenderedFolder&&!revealAfterRefresh)",fill)
+        self.assertIn("for(auto const& old:view.SelectedItems())",fill)
+        self.assertLess(fill.index("if(revealAfterRefresh){"),
+                        fill.index("if(sameRenderedFolder&&!revealAfterRefresh)"))
         self.assertIn("row.FocusState()==FocusState::Unfocused",fill)
         self.assertIn("focusedPath=state.renderedPaths[position];",fill)
         self.assertIn("if(!focusedPath.empty()&&itemParsing==focusedPath)",fill)

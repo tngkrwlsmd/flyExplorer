@@ -1,4 +1,28 @@
-# flyExplorer current status — 2026-10-22 P1 abort result fail-closed; G01 open
+# flyExplorer current status — 2026-10-22 exact-SHA Windows Release source-contract repair; G01 open
+
+## 2026-10-22 — central Release source stage failed on stale contracts
+
+- Exact trusted main `924888fe0c418422cb3ab446f076d0d3423bffa5`, central control-plane run
+  [39682792082](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39682792082):
+  runner-health and policy PASS; product-source contracts ran 260 tests
+  and FAILED 2; compilation/link and GUI stages were **not reached**.
+- The two failures were reproduced with exact source in an owned temporary
+  Windows VM checkout (diagnostic run
+  [39683625918](https://github.com/tngkrwlsmd/personal-control-plane/actions/runs/39683625918)).
+  `test_arch_contract.py` expected direct `active().model.dispatch`
+  after the controller began binding `state=active()` and preserving
+  `tabSortModes`. `test_file_display_options_contract.py` expected
+  unconditional same-folder selection restoration even though a successful
+  rename/create reveal now deliberately suppresses the old selection.
+- Updated only the two stale source-contract assertions to check current
+  state/route ownership and explicit reveal precedence. Product behavior,
+  build inputs and Windows Shell operations are unchanged.
+- **NOT YET VERIFIED:** this test-only correction needs a fresh exact-SHA
+  central source/Release run; Windows build, GUI and final visual acceptance
+  are still pending. G01 intermittent close issue remains open, G03-G05
+  excluded and G07 user-stopped.
+
+## 2026-10-22 P1 — fail closed on inconsistent aborted transfer report
 
 ## 2026-10-22 P1 — fail closed on inconsistent aborted transfer report
 
