@@ -96,8 +96,11 @@ Native F08 source modules are **retained, not used by the current UI**:
 `zip_inspection.h`, `zip_store_writer.h`, `zip_deflate_writer.h`,
 `zip_store_extractor.h`, `zip_store_batch_writer.h`,
 `zip_store_batch_extractor.h`, `zip_store_compat.h` and
-`zip_raw_deflate*`. The pinned miniz 3.1.2 sources and build-template
-entries also remain for source-level recovery. These modules historically
+`zip_raw_deflate*`. The pinned miniz 3.1.2 sources remain for source-level recovery,
+but the unreferenced raw ZIP Deflate translation units and miniz codecs
+have been removed from the active app project template. The inactive
+codecs are no longer intended to be linked into the product runtime.
+No Windows build or release-size measurement has been performed. These modules historically
 implemented bounded one-file and 2-8-member Store/Deflate archives,
 optional one-root and up to three direct children, checked CRC and names,
 and non-replacing staged publication. ZIP64/encryption/arbitrary nested

@@ -30,11 +30,11 @@ class ZipRawDeflateContracts(unittest.TestCase):
         self.assertNotIn("TINFL_FLAG_PARSE_ZLIB_HEADER",code)
         self.assertNotIn("CREATE_ALWAYS",code)
         project=get("app/winui/flyExplorer.project-template.xml")
-        self.assertIn('src\\base\\zip_raw_deflate.cpp',project)
-        self.assertIn("<PrecompiledHeader>NotUsing</PrecompiledHeader>",project)
-        self.assertIn('src\\base\\third_party\\miniz_3_1_2\\miniz_tinfl.c',project)
-        self.assertIn("<CompileAs>CompileAsC</CompileAs>",project)
-        self.assertIn("MINIZ_NO_TIME;%(PreprocessorDefinitions)",project)
+        for name in ("zip_raw_deflate.cpp",
+                     "zip_raw_deflate_compress.cpp", "miniz_tinfl.c",
+                     "miniz_tdef.c"):
+            self.assertNotIn(name,project)
+        self.assertIn("m22_transfers.cpp",project)
 
     def test_one_member_integration_and_crc_before_publication(self):
         ex=get("src/base/zip_store_extractor.h")

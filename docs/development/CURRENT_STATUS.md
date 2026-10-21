@@ -1,5 +1,19 @@
 # flyExplorer current status — 2026-10-22 EP05 P0/P1 ZIP UI retirement; G01 open
 
+## 2026-10-22 P1 — exclude unused ZIP codecs from active app build
+
+- From main baseline `5098e53143b1d115aea0e6a743432bb4998b6b91`, removed only four unused F08 codec
+  translation units (`zip_raw_deflate.cpp`,
+  `zip_raw_deflate_compress.cpp`, `miniz_tinfl.c`,
+  `miniz_tdef.c`) from `flyExplorer.project-template.xml`.
+  The native source tree, upstream license files and native safety-contract
+  tests are retained, and all non-ZIP project compile entries are unchanged.
+- Updated source contracts so they prohibit inactive codecs from re-entering
+  the product build while continuing to check their bounded native code.
+- **NOT TESTED:** no Windows build, source/native tests, GUI, package,
+  linker symbol resolution or binary-size inspection has been run.
+  This is intended build-input cleanup, not a measured runtime optimization.
+
 ## 2026-10-22 P1 — retire unreachable ZIP creation/extraction UI
 
 - Starting from main `3f27e628c939c0efba10fcd06999ee8a5e72ebe0`, removed all six unreachable

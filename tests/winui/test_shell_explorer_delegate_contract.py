@@ -78,6 +78,13 @@ class WindowsExplorerDelegationContracts(unittest.TestCase):
         self.assertNotIn("ShellExecuteExW(&request)",h.split(
             "inline HRESULT openFolder(",1)[0])
 
+    def test_archive_code_is_not_compiled_into_product(self):
+        project=source("app/winui/flyExplorer.project-template.xml")
+        for inactive in ("zip_raw_deflate.cpp", "zip_raw_deflate_compress.cpp",
+                         "miniz_tinfl.c", "miniz_tdef.c"):
+            self.assertNotIn(inactive,project)
+        self.assertIn('ClCompile Include="m22_transfers.cpp"',project)
+
     def test_no_duplicate_archive_commands_are_exposed(self):
         ui=source("app/winui/m22_transfers.cpp")
         menu=ui.split("void MainWindow::ShowAppFileContextMenu(",1)[1].split(

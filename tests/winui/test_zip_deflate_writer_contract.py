@@ -5,7 +5,7 @@ R=Path(__file__).resolve().parents[2]
 def get(path):
     return (R/path).read_text(encoding="utf-8-sig")
 class ZipDeflateWriterContracts(unittest.TestCase):
-    def test_vendor_codec_and_project_template(self):
+    def test_vendor_codec_retained_outside_app_build(self):
         d="src/base/third_party/miniz_3_1_2/"
         for p in ("LICENSE","miniz_tdef.h","miniz_tdef.c",
                   "miniz_tdef_compat.h","UPSTREAM.md"):
@@ -20,9 +20,9 @@ class ZipDeflateWriterContracts(unittest.TestCase):
             self.assertIn(token,c)
         self.assertNotIn("TDEFL_WRITE_ZLIB_HEADER;",c)
         proj=get("app/winui/flyExplorer.project-template.xml")
-        self.assertIn("zip_raw_deflate_compress.cpp",proj)
-        self.assertIn("miniz_tdef.c",proj)
-        self.assertIn("<CompileAs>CompileAsC</CompileAs>",proj)
+        for source_name in ("zip_raw_deflate_compress.cpp", "miniz_tdef.c"):
+            self.assertNotIn(source_name,proj)
+        self.assertIn("m22_transfers.cpp",proj)
 
     def test_bounded_safe_onefile_creation(self):
         w=get("src/base/zip_deflate_writer.h")
