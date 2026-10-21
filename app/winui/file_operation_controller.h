@@ -27,6 +27,7 @@ public:
         InvalidVisibleContext,
         StaleConfirmation,
         Cancelled,
+        AllSkipped,
         ThreadStartFailed
     };
 
@@ -83,6 +84,12 @@ public:
     StartStatus confirmCollision(
         bool approved,Context liveContext,Post post,
         TransferCallback completion);
+    // A preflight-only choice for ordinary filesystem Copy/Move: omit
+    // precisely the destination names already reported as collisions.
+    // No filesystem/Shell I/O occurs on the UI thread.
+    StartStatus skipCollisions(
+        Context liveContext,Post post,TransferCallback completion,
+        std::size_t& skipped);
     TransferDisposition acceptTransfer(
         TransferCompletion const& completion,Context const& liveContext);
 
