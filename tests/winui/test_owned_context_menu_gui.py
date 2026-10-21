@@ -111,7 +111,7 @@ def main(config="Debug"):
      try:
       found += [item for item in popup.descendants()
                 if item.element_info.control_type=="MenuItem"
-                and item.window_text()=="Windows 확장 메뉴…"
+                and item.window_text()=="추가 옵션 표시"
                 and item.element_info.process_id==winui.pid]
      except Exception:continue
     return found[0] if len(found)==1 else None
