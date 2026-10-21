@@ -2646,7 +2646,8 @@ namespace winrt::FlyExplorer::implementation
             if(!focusedPath.empty()&&itemParsing==focusedPath)
                 focusRow=row;
             if(revealAfterRefresh&&!itemParsing.empty()&&
-               itemParsing==state.fileCommandReveal.target){
+               ::CompareStringOrdinal(itemParsing.c_str(),-1,
+                   state.fileCommandReveal.target.c_str(),-1,TRUE)==CSTR_EQUAL){
                 view.SelectedItems().Append(row);
                 if(side==ActiveWindowTab().model.activePane)focusRow=row;
             }
