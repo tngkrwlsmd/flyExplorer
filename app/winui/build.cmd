@@ -7,7 +7,7 @@ if /I not "%CONFIG%"=="Debug" if /I not "%CONFIG%"=="Release" exit /b 2
 set "HERE=%~dp0"
 set "ROOT=%HERE%..\..\"
 set "MSBUILD="
-for /f "usebackq delims=" %%I in (`python -X utf8 "%ROOT%tools\winui\resolve_msbuild.py"`) do set "MSBUILD=%%I"
+for /f "usebackq delims=" %%I in (`python -X utf8 "%ROOT%tools\winui\resolve_msbuild.py" --winui`) do set "MSBUILD=%%I"
 if not defined MSBUILD exit /b 3
 if not exist "%MSBUILD%" exit /b 3
 rem Build the matching isolated Shell helper, then stage it beside the app.

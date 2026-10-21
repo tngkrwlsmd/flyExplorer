@@ -1,8 +1,11 @@
 """Build-environment, fixture, packaging, and profile-safety contracts."""
 from pathlib import Path
+import importlib.util
+import os
 import sys
 import tempfile
 import unittest
+from unittest.mock import patch
 import xml.etree.ElementTree as ET
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -174,6 +177,97 @@ class BuildEnvironmentContract(unittest.TestCase):
             created.write_bytes(b"must-be-detected")
             with self.assertRaises(AssertionError):
                 assert_legacy_profile_unchanged(profile, state)
+
+
+class WinUIToolchainPreflight(unittest.TestCase):
+    def setUp(self):
+        spec = importlib.util.spec_from_file_location(
+            "resolve_msbuild", ROOT / "tools/winui/resolve_msbuild.py")
+        self.resolver = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(self.resolver)
+        temp = tempfile.TemporaryDirectory()
+        self.addCleanup(temp.cleanup)
+        self.fixture = Path(temp.name)
+        self.install = self.fixture / "VS18"
+        self.vc = self.install / "MSBuild/Microsoft/VC/v180"
+        self.msbuild = self.install / "MSBuild/Current/Bin/MSBuild.exe"
+        self.store = self.vc / "Application Type/Windows Store/10.0"
+        for relative in (
+            "MSBuild/Current/Bin/MSBuild.exe",
+            "MSBuild/Microsoft/VC/v180/Platforms/x64/PlatformToolsets/v145/Toolset.props",
+            "VC/Tools/MSVC/14.51.0/bin/Hostx64/x64/cl.exe",
+        ):
+            self.touch(self.install / relative)
+        version = self.install / "VC/Auxiliary/Build/Microsoft.VCToolsVersion.default.txt"
+        self.touch(version)
+        version.write_text("14.51.0", encoding="utf-8")
+        for relative in (
+            "Include/10.0.26100.0/um/Windows.h",
+            "Lib/10.0.26100.0/um/x64/kernel32.lib",
+            "bin/10.0.26100.0/x64/rc.exe",
+        ):
+            self.touch(self.fixture / "Windows Kits/10" / relative)
+        environment = patch.dict(os.environ, {"ProgramFiles(x86)": str(self.fixture)})
+        environment.start()
+        self.addCleanup(environment.stop)
+        version_probe = patch.object(self.resolver, "msbuild_major", return_value=18)
+        version_probe.start()
+        self.addCleanup(version_probe.stop)
+        self.store_files = (
+            "Default.props", "Platforms/x64/Platform.Default.props",
+            "Platforms/x64/Platform.props", "Platforms/x64/Platform.targets",
+            "Platforms/x64/PlatformToolsets/v145/Toolset.props",
+            "Platforms/x64/PlatformToolsets/v145/Toolset.targets",
+        )
+
+    @staticmethod
+    def touch(path):
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.touch()
+
+    def seed_store(self):
+        for relative in self.store_files:
+            self.touch(self.store / relative)
+
+    def test_desktop_only_installation_is_rejected_only_for_winui(self):
+        self.assertEqual([], self.resolver.validation_errors(self.msbuild))
+        errors = self.resolver.validation_errors(self.msbuild, winui=True)
+        self.assertEqual(1, len(errors))
+        self.assertIn("Windows Store C++ x64 targets", errors[0])
+        self.assertIn("Microsoft.VisualStudio.ComponentGroup.UWP.VC", errors[0])
+
+    def test_complete_same_installation_is_accepted(self):
+        self.seed_store()
+        self.assertEqual([], self.resolver.validation_errors(self.msbuild, winui=True))
+
+    def test_each_missing_store_import_fails_preflight(self):
+        self.seed_store()
+        for relative in self.store_files:
+            with self.subTest(relative=relative):
+                path = self.store / relative
+                path.unlink()
+                self.assertTrue(self.resolver.validation_errors(self.msbuild, winui=True))
+                self.touch(path)
+
+    def test_old_toolset_overlay_does_not_satisfy_v145(self):
+        self.seed_store()
+        (self.store / "Platforms/x64/PlatformToolsets/v145").rename(
+            self.store / "Platforms/x64/PlatformToolsets/v143")
+        self.assertTrue(self.resolver.validation_errors(self.msbuild, winui=True))
+
+    def test_store_imports_cannot_be_combined_across_vc_roots(self):
+        self.seed_store()
+        path = self.store / "Platforms/x64/Platform.targets"
+        other = self.vc.parent / "v170/Application Type/Windows Store/10.0" / path.relative_to(self.store)
+        self.touch(other)
+        path.unlink()
+        self.assertTrue(self.resolver.validation_errors(self.msbuild, winui=True))
+
+    def test_only_app_build_requests_winui_preflight(self):
+        app = (ROOT / "app/winui/build.cmd").read_text(encoding="utf-8")
+        helper = (ROOT / "app/winui/helper/build.cmd").read_text(encoding="utf-8")
+        self.assertIn('resolve_msbuild.py" --winui', app)
+        self.assertNotIn("--winui", helper)
 
 
 if __name__ == "__main__":

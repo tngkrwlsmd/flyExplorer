@@ -2,9 +2,12 @@
 
 Supported full builds use Visual Studio 18.x, MSVC v145 x64 tools, and
 Windows SDK 10.0.26100.0. VS 2022/v143 is not a validated full-build target.
+App builds additionally pass --winui to validate Windows Store C++ imports;
+helper/native builds only require the desktop toolchain.
 """
 from __future__ import annotations
 
+import argparse
 import os
 from pathlib import Path
 import shutil
@@ -79,7 +82,31 @@ def msbuild_major(msbuild: Path) -> int | None:
     return None
 
 
-def validation_errors(msbuild: Path) -> list[str]:
+def winui_target_errors(toolsets: list[Path]) -> list[str]:
+    # MSBuild resolves Store imports separately from desktop C++ toolsets.
+    # A desktop-only installation otherwise falls through to TargetPlatformVersion
+    # 7.0 and reports a misleading missing-SDK error in CppWinRTVerifyKitVersion.
+    required = (
+        "Default.props",
+        "Platforms/x64/Platform.Default.props",
+        "Platforms/x64/Platform.props",
+        "Platforms/x64/Platform.targets",
+        f"Platforms/x64/PlatformToolsets/{REQUIRED_TOOLSET}/Toolset.props",
+        f"Platforms/x64/PlatformToolsets/{REQUIRED_TOOLSET}/Toolset.targets",
+    )
+    for toolset in toolsets:
+        store = toolset.parents[4] / "Application Type" / "Windows Store" / "10.0"
+        if all((store / relative).is_file() for relative in required):
+            return []
+    return [
+        "Windows Store C++ x64 targets for MSVC v145 are missing or incomplete. "
+        "In Visual Studio Installer, add C++ Universal Windows Platform tools "
+        "(Microsoft.VisualStudio.ComponentGroup.UWP.VC) to the selected "
+        "Visual Studio 18.x installation; the Windows SDK alone is insufficient."
+    ]
+
+
+def validation_errors(msbuild: Path, *, winui: bool = False) -> list[str]:
     install = installation_root(msbuild)
     if install is None:
         return [f"cannot determine Visual Studio installation root from {msbuild}"]
@@ -95,6 +122,9 @@ def validation_errors(msbuild: Path) -> list[str]:
         f"v*/Platforms/x64/PlatformToolsets/{REQUIRED_TOOLSET}/Toolset.props"))
     if not toolsets:
         errors.append(f"MSVC platform toolset {REQUIRED_TOOLSET} is missing under {install}")
+
+    if winui:
+        errors.extend(winui_target_errors(toolsets))
 
     version_file = install / "VC" / "Auxiliary" / "Build" / "Microsoft.VCToolsVersion.default.txt"
     if not version_file.is_file():
@@ -123,13 +153,13 @@ def validation_errors(msbuild: Path) -> list[str]:
     return errors
 
 
-def resolve() -> Path | None:
+def resolve(*, winui: bool = False) -> Path | None:
     candidates = candidate_msbuilds()
     if not candidates:
         return None
     diagnostics: list[str] = []
     for candidate in candidates:
-        errors = validation_errors(candidate)
+        errors = validation_errors(candidate, winui=winui)
         if not errors:
             return candidate
         diagnostics.extend(errors)
@@ -137,8 +167,13 @@ def resolve() -> Path | None:
         raise RuntimeError("; ".join(dict.fromkeys(diagnostics)))
     return None
 def main() -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        "--winui", action="store_true",
+        help="also require the Windows Store C++ x64 targets used by the WinUI app")
+    args = parser.parse_args()
     try:
-        path = resolve()
+        path = resolve(winui=args.winui)
     except RuntimeError as exc:
         print(f"ERROR: {exc}", file=sys.stderr)
         return 3

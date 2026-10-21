@@ -5301,3 +5301,25 @@ cross-pane drag with
 adding public outbound StorageItems weakened the existing private same-app drag
 path. Explorer is the concrete external acceptance target; Desktop and arbitrary
 third-party targets are not separately claimed as GUI-certified.
+
+## 2026-10-20: desktop-only Visual Studio installation passed WinUI preflight
+
+Resuming G02/G06 on main `220e949f`, the first canonical local Release build
+completed the Shell helper and NuGet restore, then failed with `MSB8036` in
+`CppWinRTVerifyKitVersion`. SDK 10.0.26100.0 and the v145 compiler were present.
+MSBuild evaluation instead reported `TargetPlatformVersion=7.0`, empty SDK
+paths and no VC platform because the selected VS 18 installation lacked its
+`Application Type/Windows Store/10.0` C++ imports. This was an environment
+failure, not evidence of a keyboard or product defect.
+
+The app build now calls the shared resolver with `--winui` before helper build
+or restore. It checks the Store defaults, x64 platform and v145 toolset imports
+within one VC root and names the missing Installer component. Native/helper
+resolution keeps its existing desktop-only requirements. Six behavioral tests
+cover desktop-only, complete, incomplete, old-toolset and split-root layouts,
+plus the app-only opt-in. The 18 build-environment and six installer contracts
+passed; Python static checks passed. Actual pre-install app preflight exited 3
+with the correct component diagnostic. The user approved adding
+`Microsoft.VisualStudio.ComponentGroup.UWP.VC`; the Installer required manual
+UAC elevation, completed with logged exit 0, and real `--winui` preflight passed.
+This does not establish G02/G06 GUI or visual acceptance.
