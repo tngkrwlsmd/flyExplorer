@@ -3602,12 +3602,20 @@ namespace winrt::FlyExplorer::implementation
                            live.visibleFolder==context.visibleFolder;
                 },
                 [weak](Open::Result result){
-                    if(auto ui=weak.get())ui->StatusText().Text(
-                        result==Open::Result::Opened?
-                        L"기본 앱으로 파일을 열었습니다.":
-                        result==Open::Result::TimedOut?
-                        L"파일 열기 대기 시간이 초과됐습니다. 다시 시도하세요.":
-                        L"파일을 열지 못했습니다. 파일과 기본 연결 앱을 확인하세요.");
+                    if(auto ui=weak.get()){
+                        using Result=Open::Result;
+                        const wchar_t* message=
+                            result==Result::Opened?
+                                L"기본 앱으로 파일을 열었습니다.":
+                            result==Result::NoAssociation?
+                                L"이 파일 유형을 열 기본 앱이 없습니다. Windows에서 연결 프로그램을 선택하세요.":
+                            result==Result::AppUnavailable?
+                                L"연결된 앱이 현재 사용할 수 없는 상태입니다. 앱 설치 또는 상태를 확인하세요.":
+                            result==Result::TimedOut?
+                                L"파일 열기 대기 시간이 초과됐습니다. 다시 시도하세요.":
+                                L"파일을 열지 못했습니다. 파일 위치와 기본 연결 앱을 확인하세요.";
+                        ui->StatusText().Text(message);
+                    }
                 });
             if(start==Open::Start::Busy)StatusText().Text(L"이전 파일 열기 요청을 처리 중입니다.");
             else if(start==Open::Start::Invalid)StatusText().Text(L"이 파일 경로를 열 수 없습니다.");
