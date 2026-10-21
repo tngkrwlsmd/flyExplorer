@@ -1,6 +1,23 @@
 # flyExplorer 작업 인계 — 2026-10-19 L08 커서 OPEN, G01 코드·빌드 PASS
 
 
+## 2026-10-21 EP06/L10 후속 수정 — 다른 WindowTab 새로 고침 차단
+
+- 기준 `ca023a68`. 파일 작업 완료 후 선택 복원은 기존 `FillFiles`의
+  Shell parsing path 기반 구현을 유지한다. 파일 작업으로 닿은 폴더를
+  새로 고치는 `OnTransferCompleted` 경로에서 완료 당시 WindowTab
+  identity와 현재 WindowTab identity가 같을 때에만 `QueuePidl`을
+  호출하도록 `2fce9cbb`에서 수정했다. 이름이나 표시 폴더가 같다는
+  이유만으로 다른 작업공간의 탐색 상태를 변경하지 않는다.
+  StaleContext는 기존 비성공 상태와 안내를 유지한다.
+- `0160d728`에서 L10 파일 메뉴의 provider Copy-out을 실제 로컬
+  경로가 없는 가상 원본 폴더에서만 활성화하도록 조건을 좁혔다.
+  로컬 폴더 내 선택으로 provider 복사를 우회하지 못하게 한다.
+- 관련 소스 계약 `9f6f0a2e`, `6f8d7b89`를 갱신했다.
+  **사용자 지시에 따라 빌드·GUI·시각 검증과 테스트 실행 없음.**
+  코드만 반영했으며 실행 수용은 NOT TESTED다.
+  G01 미해결, G07 중단, G03~G05 제외 상태 유지.
+
 ## 2026-10-21 EP05/L10 도구 모음과 메뉴 활성화 정책 통일
 
 - 기준 main `affb8e9c`. `74f21ccf`에서
