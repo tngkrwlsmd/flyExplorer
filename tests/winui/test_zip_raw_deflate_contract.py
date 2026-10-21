@@ -18,7 +18,7 @@ class ZipRawDeflateContracts(unittest.TestCase):
 
     def test_raw_only_bounded_codec(self):
         code=get("src/base/zip_raw_deflate.cpp")
-        for v in ("MINIZ_NO_MALLOC","MINIZ_NO_STDIO",
+        for v in ("MINIZ_NO_MALLOC","MINIZ_NO_STDIO","MINIZ_NO_TIME",
                   "tinfl_decompressor decompressor{}",
                   "TINFL_FLAG_USING_NON_WRAPPING_OUTPUT_BUF",
                   "TINFL_STATUS_DONE", "consumed!=packed",
@@ -31,6 +31,9 @@ class ZipRawDeflateContracts(unittest.TestCase):
         project=get("app/winui/flyExplorer.project-template.xml")
         self.assertIn('src\\base\\zip_raw_deflate.cpp',project)
         self.assertIn("<PrecompiledHeader>NotUsing</PrecompiledHeader>",project)
+        self.assertIn('src\\base\\third_party\\miniz_3_1_2\\miniz_tinfl.c',project)
+        self.assertIn("<CompileAs>CompileAsC</CompileAs>",project)
+        self.assertIn("MINIZ_NO_TIME;%(PreprocessorDefinitions)",project)
 
     def test_one_member_integration_and_crc_before_publication(self):
         ex=get("src/base/zip_store_extractor.h")

@@ -10,13 +10,13 @@ class ZipStoreExtractorContracts(unittest.TestCase):
     def test_single_entry_strict_layout_and_crc_before_publication(self):
         code=read("src/base/zip_store_extractor.h")
         for term in (
-            "zipinspect::kMaxZipBytes", "zipstore::kMaxInputBytes",
+            "zipinspect::kMaxZipBytes", "ziprawdeflate::kMaxOutputBytes",
             "FILE_FLAG_OPEN_REPARSE_POINT", "FILE_SHARE_READ",
             "u32(archiveBytes,eocd)!=0x06054b50u",
             "u32(archiveBytes,central)!=0x02014b50u",
             "u32(archiveBytes,0)!=0x04034b50u",
             "u16(archiveBytes,eocd+10)!=1",
-            "!fxfile::zipstorecompat::supportedFlags(flags)||method!=0",
+            "!fxfile::zipstorecompat::supportedFlags(flags)||",
             "fxfile::zipstorecompat::supportedDosVersion(versionMade)",
             "fxfile::zipstorecompat::supportedDosVersion(versionNeeded)",
             "fxfile::zipstorecompat::sameDosTime(archiveBytes,0,central)",

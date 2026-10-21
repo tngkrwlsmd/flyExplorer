@@ -183,6 +183,11 @@
     <ClCompile Include="..\..\src\base\zip_raw_deflate.cpp">
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
     </ClCompile>
+    <ClCompile Include="..\..\src\base\third_party\miniz_3_1_2\miniz_tinfl.c">
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <CompileAs>CompileAsC</CompileAs>
+      <PreprocessorDefinitions>MINIZ_NO_MALLOC;MINIZ_NO_STDIO;MINIZ_NO_TIME;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
     <ClCompile Include="DetailColumnHandle.cpp" />
     <ClCompile Include="pch.cpp">
       <PrecompiledHeader>Create</PrecompiledHeader>

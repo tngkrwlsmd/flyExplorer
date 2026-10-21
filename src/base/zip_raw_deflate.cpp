@@ -2,13 +2,13 @@
 // No ZIP API or dynamic archive/file features from miniz are used.
 #define MINIZ_NO_MALLOC
 #define MINIZ_NO_STDIO
+#define MINIZ_NO_TIME
 #include "zip_raw_deflate.h"
 #include "third_party/miniz_3_1_2/miniz_tinfl.h"
-#include <limits>
+#include <utility>
 
-// Only one compiled translation unit provides the tinfl low-level C symbols.
-// Upstream .c is included as C++ here rather than adding another C project.
-#include "third_party/miniz_3_1_2/miniz_tinfl.c"
+// The pinned miniz low-level C implementation is built independently as C.
+// The adapter calls its externally linked C symbols.
 
 namespace fxfile::ziprawdeflate {
 bool inflateExact(std::uint8_t const* input,std::size_t packed,

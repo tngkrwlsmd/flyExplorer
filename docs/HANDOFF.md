@@ -8,8 +8,9 @@
   독립적인 `miniz_tinfl.h`로 치환했고, `miniz_export.h`
   정적 shim을 별도 만들었다. 라이선스 조건·출처·수정 사항은
   `UPSTREAM.md`에 기록했다. 생성 프로젝트가
-  `src/base/zip_raw_deflate.cpp`를 별도 NotUsing PCH C++
-  단위로 컴파일하도록 템플릿을 갱신했다.
+  `src/base/zip_raw_deflate.cpp`는 NotUsing PCH C++로,
+  `miniz_tinfl.c`는 별도 CompileAsC/NotUsing PCH로 컴파일하도록
+  템플릿을 갱신했다(각 번역 단위 no-malloc/stdio/time).
 - `zip_raw_deflate.h/.cpp`는 raw RFC1951만 처리한다.
   출력 최대 8MiB, 입력 최대 16MiB, 최대 확장률 100:1,
   고정 크기 출력 buffer에서 `TINFL_STATUS_DONE`·**정확한

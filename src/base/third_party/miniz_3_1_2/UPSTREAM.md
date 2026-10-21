@@ -10,7 +10,8 @@
   marker because the subset is statically compiled into flyExplorer.
 - Upstream original `miniz.h` / ZIP archive reader/writer and
   unrelated compression APIs are not bundled. `MINIZ_NO_MALLOC`
-  and `MINIZ_NO_STDIO` are defined in `zip_raw_deflate.cpp`.
+  `MINIZ_NO_STDIO`, and `MINIZ_NO_TIME` are defined for the adapter
+  and the separately compiled C translation unit in the project template.
 - Copyright and MIT-style license conditions remain in the upstream
   `LICENSE` and preserved file headers.
 - No native build, test, ZIP sample compatibility or source acceptance
