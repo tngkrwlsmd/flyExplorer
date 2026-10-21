@@ -17,8 +17,8 @@ struct WindowTabState final {
     std::array<std::vector<int>,2> tabSortModes{{std::vector<int>{0},std::vector<int>{0}}};
     std::uint32_t splitPermille=500;
     bool fileInfoPaneVisible=false; // WindowTab-local, opt-in, not session persisted.
-    // Runtime-only failure feedback belongs to its originating WindowTab,
+    // Runtime-only file-operation feedback belongs to its originating WindowTab,
     // not MainWindow's global status bar or persistent session format.
-    std::wstring transferFailureNotice{};
+    std::wstring fileOperationNotice{};
 };
 } // namespace fxfile::previewtabs
