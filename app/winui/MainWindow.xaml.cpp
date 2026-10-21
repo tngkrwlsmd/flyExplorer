@@ -1193,19 +1193,26 @@ namespace winrt::FlyExplorer::implementation
         auto view=side==0?LeftTabs():RightTabs();
         const auto& pane=ActiveWindowTab().model.panes[static_cast<size_t>(side)];
         mPopulatingTabs=true;
-        view.TabItems().Clear();
-        for (const auto& tab : pane.tabs) {
+        // Keep surviving TabViewItems so selecting a folder tab does not
+        // destroy its keyboard focus and send the next Enter to a sort button.
+        const auto count=static_cast<uint32_t>(pane.tabs.size());
+        while(view.TabItems().Size()>count)view.TabItems().RemoveAtEnd();
+        while(view.TabItems().Size()<count){
             TabViewItem item;
-            const auto& folder=tab.snapshot();
+            item.IsClosable(false); // explicit shared Close tab action
+            view.TabItems().Append(item);
+        }
+        for(uint32_t i=0;i<count;++i){
+            auto item=view.TabItems().GetAt(i).as<TabViewItem>();
+            const auto& folder=pane.tabs[i].snapshot();
             const auto label=hstring(
                 folder.displayName.empty()?folder.parsingName:folder.displayName);
             item.Header(winrt::box_value(label));
             Microsoft::UI::Xaml::Automation::AutomationProperties::SetName(
                 item,(side==0?L"왼쪽 폴더 탭 ":L"오른쪽 폴더 탭 ")+label);
-            item.IsClosable(false); // explicit shared Close tab action
-            view.TabItems().Append(item);
         }
-        view.SelectedIndex(static_cast<int32_t>(pane.active));
+        const auto selected=static_cast<int32_t>(pane.active);
+        if(view.SelectedIndex()!=selected)view.SelectedIndex(selected);
         mPopulatingTabs=false;
     }
     void MainWindow::ClearFileDetails(int side){

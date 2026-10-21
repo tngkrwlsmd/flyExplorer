@@ -38,6 +38,18 @@ class WindowTabChromeContract(unittest.TestCase):
         self.assertIn("NewTabButton()",active)
         self.assertIn("CloseTabButton()",active)
 
+    def test_pane_tab_refresh_preserves_existing_focusable_items(self):
+        source=compact((ROOT/"app/winui/MainWindow.xaml.cpp").read_text(encoding="utf-8"))
+        refresh=source.split("void MainWindow::RefreshTabs(int side)",1)[1].split(
+            "void MainWindow::ClearFileDetails(int side)",1)[0]
+        self.assertNotIn(".Clear()",refresh)
+        self.assertIn("while(view.TabItems().Size()>count)",refresh)
+        self.assertIn("while(view.TabItems().Size()<count)",refresh)
+        self.assertIn("view.TabItems().GetAt(i).as<TabViewItem>()",refresh)
+        self.assertIn("if(view.SelectedIndex()!=selected)",refresh)
+        self.assertIn("mPopulatingTabs=true",refresh)
+        self.assertIn("mPopulatingTabs=false",refresh)
+
     def test_navigation_chrome_recomputes_from_active_history(self):
         source=compact((ROOT/"app/winui/MainWindow.xaml.cpp").read_text(encoding="utf-8"))
         header=(ROOT/"app/winui/MainWindow.xaml.h").read_text(encoding="utf-8")

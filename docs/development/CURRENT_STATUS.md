@@ -1,5 +1,38 @@
 # flyExplorer current status — G02/G06 Windows Release PASS; functional GUI pending (2026-10-19)
 
+## 2026-10-21 G06 — PaneTab keyboard focus retained; scoped GUI PASS
+
+- On baseline main `220e949f`, EXE `4a6909c8ff3f3e4bdbabc9615d41fa568686da5dd20cd8e3287de654b8331525`,
+  Left/Right then Enter on a PaneTab destroyed the focused item during
+  `RefreshTabs()`. Focus moved to the Name sort button; the next Enter sorted.
+  Earlier immediate focus observations did not cover this settled refresh.
+- `RefreshTabs()` now retains surviving TabViewItems, adjusts only the count,
+  updates labels/UIA names in place and avoids redundant SelectedIndex writes.
+  Product blob `f5ae92665411bcb4f3b64ea96aa2bf44cbb368ad`; Release EXE
+  `78fb331fa88346fb4622fea4872db4ce2825e6ca2010653efa825bdacbff031f`.
+- **Focused functional GUI PASS:** two WindowTabs x left/right x two PaneTabs,
+  Left/Right+Enter in both directions with a settled 450 ms check, visible
+  focus retained on the selected tab, unchanged name-sort direction, and A/B
+  workspace state preserved. Owned PID 25964 exited 0; original legacy/WinUI
+  settings and all 12 synthetic files were unchanged.
+- **Scoped visual PASS:** directly reviewed actual BEFORE/AFTER Dark captures,
+  same owned fixture and 1426x746 window, Windows 10.0.26300. Focus now remains
+  on the tab; command chrome, pane geometry, rows and text hierarchy are retained.
+  Numeric per-window DPI was not captured; display settings were unchanged.
+  This is not Light/narrow-window, alternate-DPI or whole-product visual acceptance.
+- Source checks: 11 tab-chrome + 6 shortcuts + 8 GUI-harness tests PASS.
+  Release build PASS. The expanded `test_shortcut_gui.py` was syntax/static
+  checked, not executed as an automated GUI suite; the equivalent four-region
+  scenario above was exercised through Computer Use.
+- G02 startup-only 39-Tab traversal was observed on these candidate bytes before
+  the interrupted prior run. That run has no normal-exit acceptance; G02 full
+  completion remains pending a bounded startup/menu traversal with normal exit.
+  Baseline first close returned 0xC0000005, later baseline close and this candidate
+  close returned 0. The unrelated intermittent G01 shutdown risk is not fixed.
+- Ignored evidence: `logs/g02-g06-keyboard/` result JSON, BEFORE/AFTER PNGs and
+  build logs. User-approved WinUI build-target preflight is already on main
+  `b02c51a6`. No excluded G03/G04/G05 checks or global clipboard changes were run.
+
 ## 2026-10-20 G02/G06 — scoped keyboard and tab-name GUI observations
 
 - Live main `db10ef42`; reused the unchanged `4bdde290` product binary with

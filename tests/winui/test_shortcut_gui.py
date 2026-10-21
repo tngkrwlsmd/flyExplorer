@@ -203,6 +203,33 @@ try:
     )
     print("REAL_F6_DUAL_PANE_FOCUS_NO_FILE_MUTATION", True, flush=True)
 
+    # A selected PaneTab must keep keyboard focus after the model/chrome
+    # refresh. Otherwise the next Enter can activate a column sort button.
+    def pane_tabs(tabs_id):
+        return element(tabs_id).descendants(control_type="TabItem")
+
+    def selected_and_focused(tabs_id, index):
+        items = pane_tabs(tabs_id)
+        return (len(items) == 2
+                and bool(items[index].iface_selection_item.CurrentIsSelected)
+                and bool(items[index].element_info.element.CurrentHasKeyboardFocus))
+
+    for files_id, tabs_id in (("LeftFiles", "LeftTabs"), ("RightFiles", "RightTabs")):
+        safe_click(element(files_id))
+        safe_click(element("NewTabButton"))
+        eventually(lambda: len(pane_tabs(tabs_id)) == 2,
+                   "second owned folder tab missing: " + tabs_id)
+        safe_click(pane_tabs(tabs_id)[1])
+        for keys, index in (("{LEFT}{ENTER}", 0), ("{RIGHT}{ENTER}", 1)):
+            focus()
+            send_keys(keys, pause=.12)
+            eventually(lambda: selected_and_focused(tabs_id, index),
+                       "folder-tab activation lost keyboard focus: " + tabs_id)
+            # Check again after queued Shell publications have had time to run.
+            time.sleep(.35)
+            assert selected_and_focused(tabs_id, index), tabs_id
+        print("REAL_PANE_TAB_KEYBOARD_FOCUS_RETAINED", tabs_id, True, flush=True)
+
     # Ctrl+L and Ctrl+F focus the existing controls; neither opens a
     # folder, starts a search, mutates selected files or steals foreground.
     focus()

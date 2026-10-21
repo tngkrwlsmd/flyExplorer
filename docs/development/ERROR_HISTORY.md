@@ -5323,3 +5323,17 @@ with the correct component diagnostic. The user approved adding
 `Microsoft.VisualStudio.ComponentGroup.UWP.VC`; the Installer required manual
 UAC elevation, completed with logged exit 0, and real `--winui` preflight passed.
 This does not establish G02/G06 GUI or visual acceptance.
+
+## 2026-10-21: folder-tab activation destroyed keyboard focus
+
+On the locally rebuilt `220e949f` baseline, PaneTab Left/Right+Enter called
+`Refresh()`, whose `RefreshTabs()` cleared and recreated every item. WinUI
+moved focus to the next control, the Name sort button, so the next Enter
+sorted instead of selecting the adjacent folder tab. The BEFORE image and
+settled second command distinguish this from the tool's stale FileNameBox
+focus report. Reusing surviving TabViewItems and writing SelectedIndex only
+when needed fixed the observed path. Release, 25 related source/harness tests,
+actual two-workspace/four-pane keyboard traversal, matched Dark screenshots
+and owned exit 0 passed. Full binary identity, scope and remaining G02/G01
+limits are recorded at the top of CURRENT_STATUS.md. No startup focus hack
+or shutdown workaround was added.
