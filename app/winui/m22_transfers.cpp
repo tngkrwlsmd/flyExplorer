@@ -608,6 +608,7 @@ void MainWindow::RunTransfer(fxfile::shelltransfer::Kind kind){
 FileOperationController::Context MainWindow::FileOperationContext(int side) const{
  FileOperationController::Context context{};
  if(side<0||side>1)return context;
+ context.windowTabIdentity=ActiveWindowTab().identity;
  auto const& pane=ActiveWindowTab().model.panes[static_cast<std::size_t>(side)];
  if(pane.active>=pane.routeIds.size()||
     pane.active>=pane.filesystemPaths.size())return context;
