@@ -681,7 +681,7 @@ void MainWindow::ApplyTransferStartStatus(
  }
 }
 void MainWindow::StartTransfer(fxfile::shelltransfer::Request request){
- ActiveWindowTab().transferFailureNotice.clear();
+ ActiveWindowTab().fileOperationNotice.clear();
  const auto side=ActiveWindowTab().model.activePane;
  const auto count=request.sources.size();
  auto weak=get_weak();
@@ -775,7 +775,7 @@ void MainWindow::OnTransferCompleted(
   for(std::size_t i=0;i<mWorkspace.count();++i){
    auto& state=mWorkspace.state(i);
    if(state.identity==completion.context.windowTabIdentity){
-    state.transferFailureNotice=message;
+    state.fileOperationNotice=message;
     return;
    }
   }
