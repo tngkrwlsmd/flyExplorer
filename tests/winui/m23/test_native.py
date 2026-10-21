@@ -20,8 +20,8 @@ try:
  proc=subprocess.run([str(exe),str(own)],cwd=exe.parent,
       env=env,capture_output=True,text=True,errors="replace",timeout=45)
  assert proc.returncode==0,(proc.returncode,proc.stdout,proc.stderr)
- assert "M23_NATIVE_SUMMARY 35 passed, 0 failed." in proc.stdout,proc.stdout
- print("M23_NATIVE_"+CONFIG+"_35_PASS_NO_GLOBAL_CLIPBOARD_MUTATION",True)
+ assert "M23_NATIVE_SUMMARY 41 passed, 0 failed." in proc.stdout,proc.stdout
+ print("M23_NATIVE_"+CONFIG+"_41_PASS_NO_GLOBAL_CLIPBOARD_MUTATION",True)
 finally:
  assert_legacy_profile_unchanged(config,before)
  shutil.rmtree(own)

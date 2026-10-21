@@ -24,7 +24,7 @@ struct WindowTab {
 };
 struct Session {
  // Legacy schema=1 fields are retained so old callers/tests and old private
- // files remain readable. F01 writes schema=3 for windowTabs; v1/v2 still load.
+ // files remain readable. WindowTabs save as v4; v1/v2/v3 still load.
  bool split=true;
  std::array<std::vector<std::wstring>,2> paths;
  std::array<std::uint32_t,2> selected{{0,0}},sort{{0,0}};

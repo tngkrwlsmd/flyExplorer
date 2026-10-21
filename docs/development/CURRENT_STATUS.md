@@ -1,5 +1,25 @@
 # flyExplorer current status — G02/G06 scoped local GUI PASS; G01 open (2026-10-21)
 
+## 2026-10-21 G01 — native session regression gate repaired for v4
+
+- On main 64d147cd, the current native fixture built successfully but failed
+  34/35 because it still expected wire version 3 from the v4 writer. The display
+  source contract also referenced the removed encodeV3 entry point. This is a
+  stale test expectation, not a newly diagnosed product serialization failure.
+- Updated the fixture/source contract to v4 and added real serialized round trips
+  with distinct folder-tab sorts across two WindowTabs. Independently constructed
+  v2 and v3 byte streams now check selected tabs, paths, back/forward history,
+  inheritance of each pane's sort by every tab, v2 display defaults and v3 flags.
+  Legacy v1 save/load and checksum/unknown-flag rejection coverage remain.
+- Actual Release native build and all 41 native checks PASS, plus 8 display and
+  7 session-coordinator source checks PASS. The native test uses disposable local
+  paths and private profiles; all six existing legacy configuration sentinels
+  remained unchanged. No global clipboard read/write was performed.
+- Product implementation is unchanged; only its stale schema comment was corrected.
+  No new app build or GUI acceptance is implied. Real v1/v2/v3 GUI restore and the
+  unrelated intermittent shutdown risk remain separate G01 acceptance gaps.
+  Bounded before/after logs are ignored under logs/g01-legacy-session/.
+
 ## 2026-10-21 G02 — startup keyboard traversal accepted in the local scope
 
 - Live main `44d770ee0fd4904bed52ee2cc34f02d45352cd54` matched origin/main.

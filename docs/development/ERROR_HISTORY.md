@@ -5337,3 +5337,16 @@ actual two-workspace/four-pane keyboard traversal, matched Dark screenshots
 and owned exit 0 passed. Full binary identity, scope and remaining G02/G01
 limits are recorded at the top of CURRENT_STATUS.md. No startup focus hack
 or shutdown workaround was added.
+
+## 2026-10-21: private-session native gate still expected v3 after v4 migration
+
+The current native session fixture compiled but returned 34 passed / 1 failed:
+f01_private_session_v3_wire_written expected byte 8 to be 3 while the product
+correctly wrote v4. The display-options source contract also referenced encodeV3.
+Correct those expectations rather than reverting the v4 writer. Expand runtime
+coverage with distinct per-tab sort round trips and independently composed v2/v3
+streams, including sort inheritance, selected paths/history and display flags.
+The Release native gate then passed 41/41; related display/session source checks
+passed 15/15. Test-owned profiles and existing legacy settings were preserved.
+This native result does not certify real legacy GUI restore or resolve G01's
+intermittent shutdown risk. No product implementation change was required.

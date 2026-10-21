@@ -89,7 +89,7 @@ class FileDisplayOptionsContract(unittest.TestCase):
                        "listDisplay_(1)", "listDisplay_(2)", "listDisplay_(3)"):
             self.assertIn(needle,toolbar)
 
-    def test_display_options_opt_in_private_session_v3(self):
+    def test_display_options_opt_in_private_session_v4(self):
         session=body("src/base/ui_session.h")
         serial=body("src/base/ui_session.cpp")
         coordinator=body("app/winui/session_coordinator.cpp")
@@ -100,13 +100,13 @@ class FileDisplayOptionsContract(unittest.TestCase):
             self.assertIn(f"target.{field}=state.fileLists[side].{field};",
                           coordinator)
             self.assertIn(f"source.panes[side].{field};",coordinator)
-        for expected in ("encodeV3(", "decodeV2(", "decodeV3(",
+        for expected in ("encodeV4(", "decodeV2(", "decodeV3(", "decodeV4(",
                          "if(version==3)return decodeV3",
                          "flags&~DisplayMask", "displayFlags(pane)"):
             self.assertIn(expected,serial)
         self.assertIn("legacy_v2_display_options_default_without_data_loss",fixture)
-        self.assertIn("reject_unknown_v3_display_flag_with_valid_checksum",fixture)
-        self.assertIn("f01_v3_flags_distinct_between_window_tabs_and_panes",fixture)
+        self.assertIn("reject_unknown_v4_display_flag_with_valid_checksum",fixture)
+        self.assertIn("f01_v4_flags_distinct_between_window_tabs_and_panes",fixture)
         self.assertIn("if(!mSessionCoordinator.autoRestoreAllowed())return;",
                       body("app/winui/m23_session.cpp"))
         toggler=body("app/winui/MainWindow.xaml.cpp").split(
