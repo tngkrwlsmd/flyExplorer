@@ -17,7 +17,9 @@
   하위 폴더, reparse/링크, 위험한 파일명, 다른 원본 폴더는
   모두 거부하고 recursion은 없다. ZIP 이름은 원본 폴더와
   나란한 `<폴더명>.flyExplorer-folder.zip`이며, 내부 항목은
-  `<폴더명>/<파일명>`이다. 기존 압축·CRC 확인·개별 Store
+  `<폴더명>/<파일명>`이다. 전체 ZIP 이름 260 UTF-16 단위와
+  보수적 임시 출력 경로 상한을 생성 전에 확인한다. 기존
+  압축·CRC 확인·개별 Store
   fallback·취소·같은 폴더 스테이징·기존 대상 미교체를 재사용한다.
 - WinUI에 **폴더 ZIP으로 묶기 (한 단계, 2~8개 파일)** 메뉴를
   추가하고 기존 mZipBatchCreationBusy·mZipBatchCancel 상태,

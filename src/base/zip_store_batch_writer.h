@@ -169,8 +169,16 @@ inline Result createMany(std::vector<std::wstring> const& paths,
                 result.status=Status::InvalidSource;return result;
             }
             prefix.push_back('/');
+            // Our strict extractor decodes at most 260 UTF-16 units
+            // for the full name and stages within a classic MAX_PATH
+            // directory; reject a ZIP we could not unpack ourselves.
+            const std::wstring destinationParent=
+                std::filesystem::path(directory).parent_path().native();
             for(auto& member:members){
-                if(prefix.size()+member.name.size()>512u){
+                if(prefix.size()+member.name.size()>512u||
+                   rootLeaf.size()+1u+member.leaf.size()>260u||
+                   destinationParent.size()+64u+
+                      rootLeaf.size()+member.leaf.size()>253u){
                     result.status=Status::InvalidSource;return result;
                 }
                 member.name.insert(0,prefix);
@@ -416,11 +424,9 @@ inline Result createFolder(std::wstring const& folder,
             result.status=Status::CannotRead;return result;
         }
         if(files.size()<kMinFiles)return result;
-        std::sort(files.begin(),files.end(),
-                  [](std::wstring const& lhs,std::wstring const& rhs){
-                      return fxfile::zipinspect::detail::same(lhs,rhs)?
-                          false:lhs<rhs;
-                  });
+        // Ordinal sort only; Windows case-insensitive name collision
+        // rejection is performed explicitly in createMany().
+        std::sort(files.begin(),files.end());
         return createMany(files,cancellation,mode,folder);
     }catch(...){
         result.status=Status::CannotWrite;return result;
