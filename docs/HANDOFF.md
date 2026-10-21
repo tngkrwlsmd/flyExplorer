@@ -1,6 +1,35 @@
 # flyExplorer 작업 인계 — 2026-10-19 L08 커서 OPEN, G01 코드·빌드 PASS
 
 
+## 2026-10-21 EP06 파일 작업 안내 WindowTab 소유 변경 (검증 보류)
+
+- 작업 시작 main `c981c07a`. 전송 실패 안내가 MainWindow 전역
+  `mTransferFailureNotice`로 저장되어 다른 WindowTab의 Refresh
+  상태 표시줄에 재노출될 수 있는 소유 범위 문제를 수정했다.
+  `WindowTabState::fileOperationNotice`는 런타임에만 존재하며
+  저장/세션 마이그레이션 형식에는 포함하지 않는다.
+- `MainWindow.xaml.cpp`에서 일반 탐색 시작 시 **현재 WindowTab**
+  안내만 초기화하고, Refresh 완료/WindowTab 활성화 시 해당 탭의
+  안내만 복원한다. `m22_transfers.cpp`는 전송 완료의 원본
+  `windowTabIdentity`를 사용해 해당 작업공간의 안내를 기억하며,
+  현재 표시 중인 다른 탭에는 전송 성공/실패/지연 상태를 덮어쓰지 않는다.
+  과거 WindowTab이 이미 닫혔다면 다른 탭에 결과를 전가하지 않는다.
+- `m21_commands.cpp`에서 새 폴더 생성·이름 변경 결과도 원본
+  WindowTab에 한정하며 실패/화면 변경 안내를 원래 탭에 보존한다.
+  새 파일 명령이 실제 `Started`인 경우에만 이전 안내를 비운다.
+  비동기 컨트롤러 수명과 사용자 파일 처리·취소·충돌 로직은 그대로 둔다.
+- 업데이트 파일: `app/winui/window_tab_state.h`,
+  `app/winui/MainWindow.xaml.h/.cpp`,
+  `app/winui/m22_transfers.cpp`, `app/winui/m21_commands.cpp`,
+  `tests/winui/test_file_operation_controller_contract.py`,
+  `tests/winui/test_file_command_feedback_contract.py`.
+- **검증 상태:** GitHub에 기록된 원본 소스를 읽어 코드 참조를
+  정리했을 뿐 사용자 지시로 빌드·GUI·시각 검증과 계약 테스트는
+  수행하지 않았다. 신규 기능 Windows 수용은 NOT TESTED다.
+  원래 탭으로 돌아온 뒤 실제 안내, 화면 갱신 타이밍, 접근성은
+  실행 근거가 없어 미검증으로 남긴다.
+- G01 종료 잔류는 OPEN, G07은 사용자 중단, G03~G05는 제외 유지.
+
 ## 2026-10-21 EP06/L10 후속 수정 — 다른 WindowTab 새로 고침 차단
 
 - 기준 `ca023a68`. 파일 작업 완료 후 선택 복원은 기존 `FillFiles`의
