@@ -151,6 +151,8 @@ namespace winrt::FlyExplorer::implementation
         void OnDetailColumnResizePointerCaptureLost(
             IInspectable const&,
             Microsoft::UI::Xaml::Input::PointerRoutedEventArgs const&);
+        void ShowAppFileContextMenu(int side,
+            Microsoft::UI::Xaml::Controls::ListViewItem const& anchor);
         void OnFileRightTapped(IInspectable const&,
             Microsoft::UI::Xaml::Input::RightTappedRoutedEventArgs const&);
         void OnFileSelectionChanged(IInspectable const&,
