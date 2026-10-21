@@ -74,6 +74,13 @@ class SkipExistingTransferContract(unittest.TestCase):
         self.assertNotIn("std::thread(",body)
         self.assertIn("value.skippedCollisions=skippedCollisions;",controller)
         self.assertIn("completion.report.collisions",controller)
+        # A reduced request can collide again before the Shell operation.
+        # Keep earlier skips across a second dialog or a KeepBoth decision.
+        self.assertIn("std::size_t skippedCollisions=0;",controller)
+        self.assertIn("completion.report.collisions,completion.skippedCollisions",controller)
+        self.assertIn("pending.skippedCollisions+skipped",controller)
+        self.assertIn("std::move(completion),totalSkipped",controller)
+        self.assertIn("std::move(completion),pending.skippedCollisions",controller)
 
     def test_ui_shows_explicit_choices_and_never_guesses_success_counts(self):
         body=(APP/"m22_transfers.cpp").read_text(encoding="utf-8-sig")
@@ -86,6 +93,9 @@ class SkipExistingTransferContract(unittest.TestCase):
         self.assertIn("mFileOperations.confirmCollision(",section)
         self.assertIn("if(status==FileOperationController::StartStatus::AllSkipped)",section)
         self.assertIn("completion.skippedCollisions",body)
+        self.assertIn("std::size_t previouslySkipped",body)
+        self.assertIn("completion.skippedCollisions);",body)
+        self.assertIn("이전 확인에서 충돌 ",body)
         self.assertIn("일부 항목이 처리됐을 수 있습니다.",body)
         self.assertIn("mTransferFailureNotice=detail;",body)
         self.assertNotIn("report.queued-report.completed",body)
