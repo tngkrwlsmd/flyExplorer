@@ -1,5 +1,37 @@
 # flyExplorer current status — G02/G06 scoped local GUI PASS; G01 open (2026-10-21)
 
+## 2026-10-21 G01 — owned native shutdown dump collection ready
+
+- Main baseline c410239765ee8bb5ff46ba86d4baa61e5ffaff71; no product implementation,
+  binary or UI change. Added tests/winui/owned_process_dump.py so an owned Popen
+  launcher can capture native stack/context data before timeout cleanup.
+- Collection verifies the original live handle/PID/image and known out/ executable,
+  duplicates query/read/synchronize rights into a separate collector with an
+  explicit inherited-handle list, and restricts unique output to ignored logs/.
+  It never reopens a target by arbitrary PID or grants the collector terminate
+  rights. The collector has a ten-second deadline and does not change WER/registry.
+- The shortcut GUI test now invokes this hook only after its normal 14-second
+  close wait fails, then retains its original termination/failure. The real WinUI
+  timeout hook has not been exercised; no new functional GUI/visual PASS is claimed.
+- **Actual native diagnostic PASS:** reused Release helper SHA-256
+  639017e014cfc9c9eeb88fc0f8f35148c0f57be6b3d8879bedec7db35f0c2e5d in the existing
+  test-owned synthetic block case. Collected and validated 4 threads, 4 contexts
+  and 4 stack buffers. The target remained alive afterward; owned job termination,
+  fresh recovery, kill-on-close, all six legacy sentinels and fixture cleanup PASS.
+- Initial dump validation rejected repeated unused directory slots. Actual Windows
+  output had four UnusedStream slots; ignoring those placeholders fixed the parser
+  while real duplicate/out-of-bounds data still fails. Eight portable corruption/
+  ownership regressions PASS. Standard harness 51/51, related helper/shortcut
+  contracts 16/16 and changed Python static checks PASS.
+- Bounded text evidence is ignored under logs/owned-process-dump/. The synthetic
+  raw dump was removed with its owned fixture. Future WinUI raw dumps remain local
+  and ignored; current automatic failure artifacts do not select .dmp files.
+  The machine has no cdb executable at the checked SDK path; no debugger was installed.
+- This prepares evidence capture for an actual recurrence; it neither reproduces
+  nor explains/fixes G01. A captured native dump is not a symbolic stack diagnosis.
+  Reuse accepted G02/G06/session/G08 results, do not repeat identical app runs or
+  resume user-stopped G07/excluded G03/G04/G05.
+
 ## 2026-10-21 G08 — repeatable owned helper page benchmark added
 
 - Main baseline 27395b3c6727c236afd2feb8cada289317db94e1; product code/binaries

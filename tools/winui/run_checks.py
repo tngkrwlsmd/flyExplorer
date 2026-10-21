@@ -91,6 +91,7 @@ PRODUCT_SUITES = {
     ],
 }
 HARNESS_CONTRACTS = [
+    "tests/winui/test_owned_process_dump.py",
     "tests/winui/test_source_contract_loader.py",
     "tests/winui/helper/test_page_benchmark.py",
     "tests/winui/test_build_environment_contract.py",

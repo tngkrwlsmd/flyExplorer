@@ -12,6 +12,7 @@ from pywinauto import Desktop
 from pywinauto.keyboard import send_keys
 
 from paths import ROOT, app_exe
+from owned_process_dump import capture_owned_dump
 from profile_guard import (
     assert_legacy_profile_unchanged,
     snapshot_legacy_profile,
@@ -349,6 +350,8 @@ finally:
         try:
             process.wait(timeout=14)
         except subprocess.TimeoutExpired:
+            evidence = capture_owned_dump(process, EXE, owned / "shutdown-evidence")
+            print("OWNED_SHORTCUT_SHUTDOWN_DUMP", evidence, flush=True)
             process.terminate()
             process.wait(timeout=5)
             raise AssertionError("owned shortcut probe did not close normally")

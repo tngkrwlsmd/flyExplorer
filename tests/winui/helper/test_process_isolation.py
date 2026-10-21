@@ -19,6 +19,7 @@ HERE=Path(__file__).resolve().parent
 ROOT=HERE.parents[2]
 sys.path.insert(0,str(HERE.parent))
 from profile_guard import assert_legacy_profile_unchanged,present_count,snapshot_legacy_profile
+from owned_process_dump import capture_owned_dump
 CONFIG=os.environ.get("FLY_M16_CONFIG","Debug")
 assert CONFIG in ("Debug","Release")
 EXE=ROOT/"out"/"helper"/CONFIG/"FlyShellIsolationHelper.exe"
@@ -178,6 +179,13 @@ try:
     while blocked.poll() is None and time.monotonic()<deadline:
         time.sleep(.04)
     assert blocked.poll() is None, "test hang unexpectedly returned"
+    evidence=capture_owned_dump(blocked,EXE,OWNED/"native-dump")
+    assert evidence["status"]=="CAPTURED",evidence
+    assert evidence["contexts"]>0 and evidence["stacks"]>0,evidence
+    assert blocked.poll() is None,"dump collector terminated owned target"
+    print("OWNED_NATIVE_STACK_CONTEXT_DUMP_CAPTURED",
+          "threads",evidence["threads"],"contexts",evidence["contexts"],
+          "stacks",evidence["stacks"],"unused",evidence["unused_streams"],flush=True)
     begin_recovery=time.monotonic()
     assert K.TerminateJobObject(slowjob,0xE017)
     blocked.wait(timeout=4)

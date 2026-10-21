@@ -5365,3 +5365,16 @@ One new lazy-import fixture initially contained literal backslash-n instead of
 line breaks; that fixture encoding was corrected before the final acceptance.
 The existing real helper process/recovery regression also passed after its wire
 client extraction. The new G08 benchmark is native IPC timing, not GUI acceptance.
+
+## 2026-10-21: Windows minidump directory includes repeated unused slots
+
+The first owned-helper dump collector wrote a native dump but its new validator
+rejected duplicate UnusedStream directory slots as duplicate data. This was a
+diagnostic parser defect, not a product or dump-writer failure. Ignore type-zero
+placeholders while retaining real-stream uniqueness, directory bounds and required
+thread context/stack checks. Add an explicit repeated-unused-slot regression.
+The materially changed parser then validated an actual blocked helper: four
+threads, contexts and stack buffers, target still alive, owned recovery and cleanup
+PASS. Eight focused, 51 standard harness and 16 related source checks passed.
+No real WinUI hang or symbolic root cause is claimed; the shortcut GUI timeout hook
+awaits a real recurrence. Raw test dump removed; future raw dumps stay local/ignored.
