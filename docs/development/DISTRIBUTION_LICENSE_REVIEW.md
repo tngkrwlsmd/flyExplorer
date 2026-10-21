@@ -2,6 +2,20 @@
 
 This document records engineering evidence, not legal advice.
 
+## 2026-10-21 F08 miniz codec source addition (NOT LICENSE CLEARED)
+
+The raw DEFLATE single-member decode experiment vendors low-level miniz
+tinfl **3.1.2** from `richgel999/miniz` under
+`src/base/third_party/miniz_3_1_2`, including the full upstream
+MIT-style LICENSE, unchanged headers and an include-adapted tinfl C source.
+The export-header shim and modifications are listed in `UPSTREAM.md`.
+This source inclusion is **not** release/legal approval. Before any
+distribution, ensure matching third-party copyright/license notices
+accompany the product's binary/source distribution and check the exact
+packaged payload and rightsholder grants. No external binary/code is
+downloaded at application runtime.
+
+
 ## Current product
 
 The canonical product is the WinUI 3 application in app/winui plus src/base.

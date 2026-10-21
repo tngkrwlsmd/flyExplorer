@@ -21,7 +21,11 @@ class ZipStoreExtractorContracts(unittest.TestCase):
             "fxfile::zipstorecompat::supportedDosVersion(versionNeeded)",
             "fxfile::zipstorecompat::sameDosTime(archiveBytes,0,central)",
             "fxfile::zipstorecompat::decodeName(",
-            "packed!=expanded", "u32(archiveBytes,central+42)!=0",
+            "(method==0&&packed!=expanded)",
+            "(method!=0&&method!=8)",
+            "(method==8&&versionNeeded!=20)",
+            "ziprawdeflate::inflateExact(",
+            "u32(archiveBytes,central+42)!=0",
             "central+centralBytes!=eocd",
             "dataBegin+packed!=central",
             "std::equal(archiveBytes.begin()+30u",
@@ -67,7 +71,7 @@ class ZipStoreExtractorContracts(unittest.TestCase):
             self.assertIn(term,start)
         self.assertIn("bool mZipExtractionBusy=false;",h)
         self.assertIn("void ExtractSelectedZip(int side);",h)
-        self.assertIn('make(L"ZIP 해제 (Store, 한 파일만)"',ui)
+        self.assertIn('make(L"ZIP 해제 (Store/Deflate, 한 파일)"',ui)
         self.assertIn('canInspectZip=suffix==L".zip"&&zipIdle;',ui)
         self.assertIn('const bool zipIdle=!mZipCreationBusy&&!mZipInspectionBusy&&',ui)
         self.assertIn('!mZipExtractionBusy&&!mZipBatchCreationBusy;',ui)

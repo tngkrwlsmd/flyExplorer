@@ -466,7 +466,7 @@ void MainWindow::ExtractSelectedZip(int side){
        pane.filesystemPaths[tab]!=folder)return;
     using Status=fxfile::zipextract::Status;
     if(result.status==Status::Extracted){
-     ui->StatusText().Text(L"ZIP(Store/한 파일) 해제 완료. CRC가 일치하며 기존 파일을 덮어쓰지 않았습니다.");
+     ui->StatusText().Text(L"ZIP(Store/Deflate, 한 파일) 해제 완료. CRC 검증 후 기존 파일은 유지했습니다.");
      const auto& snap=pane.tabs[tab].snapshot();
      if(snap.folder.valid())
       ui->QueuePidl(side,fxfile::shellnav::Location(snap.folder),
@@ -478,7 +478,7 @@ void MainWindow::ExtractSelectedZip(int side){
       result.status==Status::TooLarge?
        L"ZIP 파일 또는 내부 파일이 허용 크기를 초과합니다.":
       result.status==Status::Unsupported?
-       L"이 기능은 지원 범위가 제한된 단일 파일 ZIP Store만 해제합니다.":
+       L"이 기능은 지원 범위가 제한된 단일 파일 Store/Deflate ZIP만 해제합니다.":
       result.status==Status::UnsafeEntry?
        L"ZIP 경로가 안전하지 않아 해제하지 않았습니다.":
       result.status==Status::Corrupt?
@@ -793,7 +793,7 @@ void MainWindow::ShowAppFileContextMenu(
  menu.Items().Append(make(L"선택한 파일 ZIP으로 묶기 (2~8개, 무압축)",L"\uE8B7",
                           canCreateBatchZip,
      [side](MainWindow& ui){ui.CreateSelectedBatchZip(side);}));
- menu.Items().Append(make(L"ZIP 해제 (Store, 한 파일만)",L"\uE8B7",
+ menu.Items().Append(make(L"ZIP 해제 (Store/Deflate, 한 파일)",L"\uE8B7",
                           canInspectZip,
      [side](MainWindow& ui){ui.ExtractSelectedZip(side);}));
  menu.Items().Append(make(L"ZIP 여러 파일 해제 (Store, 2~8개)",L"\uE8B7",

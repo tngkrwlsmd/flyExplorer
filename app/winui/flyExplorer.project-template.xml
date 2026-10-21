@@ -180,6 +180,9 @@
     <Page Include="StatusFooter.xaml" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="..\..\src\base\zip_raw_deflate.cpp">
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+    </ClCompile>
     <ClCompile Include="DetailColumnHandle.cpp" />
     <ClCompile Include="pch.cpp">
       <PrecompiledHeader>Create</PrecompiledHeader>

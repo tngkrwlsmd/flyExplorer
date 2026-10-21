@@ -6,6 +6,7 @@
 #pragma once
 #include "zip_store_writer.h"
 #include "zip_store_compat.h"
+#include "zip_raw_deflate.h"
 #include <windows.h>
 #include <algorithm>
 #include <cstddef>
@@ -111,7 +112,9 @@ inline Result extractOne(std::wstring const& source) noexcept {
         const auto nameLength=std::size_t(u16(archiveBytes,central+28));
         if(!fxfile::zipstorecompat::supportedDosVersion(versionMade)||
            !fxfile::zipstorecompat::supportedDosVersion(versionNeeded)||
-           !fxfile::zipstorecompat::supportedFlags(flags)||method!=0||
+           !fxfile::zipstorecompat::supportedFlags(flags)||
+           (method!=0&&method!=8)||
+           (method==8&&versionNeeded!=20)||
            u16(archiveBytes,central+30)!=0||
            u16(archiveBytes,central+32)!=0||
            u16(archiveBytes,central+34)!=0||
@@ -120,8 +123,15 @@ inline Result extractOne(std::wstring const& source) noexcept {
            u32(archiveBytes,central+42)!=0){
             answer.status=Status::Unsupported;return answer;
         }
-        if(packed!=expanded||packed>fxfile::zipstore::kMaxInputBytes||
-           packed>fxfile::zipinspect::kMaxSingleBytes){
+        if(expanded>fxfile::ziprawdeflate::kMaxOutputBytes||
+           packed>fxfile::ziprawdeflate::kMaxPackedBytes||
+           packed>fxfile::zipinspect::kMaxZipBytes||
+           (method==0&&packed!=expanded)||
+           (method==8&&(!packed||
+                        (expanded>0&&
+                         std::uint64_t(expanded)>
+                         std::uint64_t(packed)*
+                         fxfile::ziprawdeflate::kMaxRatio)))){
             answer.status=Status::TooLarge;return answer;
         }
         if(!nameLength||nameLength>512u||
@@ -164,10 +174,17 @@ inline Result extractOne(std::wstring const& source) noexcept {
            outputPath.parent_path().native()!=parent){
             answer.status=Status::UnsafeEntry;return answer;
         }
-        // CRC check is over the actual member bytes, NOT declared metadata.
-        const std::vector<unsigned char> payload(
-            archiveBytes.begin()+dataBegin,
-            archiveBytes.begin()+dataBegin+packed);
+        // All size/path/header checks precede decompression. The new
+        // method-8 branch must consume exactly the compressed range and
+        // produce the declared bounded size, then match actual ZIP CRC32.
+        std::vector<unsigned char> payload;
+        if(method==0){
+            payload.assign(archiveBytes.begin()+dataBegin,
+                           archiveBytes.begin()+dataBegin+packed);
+        }else if(!fxfile::ziprawdeflate::inflateExact(
+                     archiveBytes.data()+dataBegin,packed,expanded,payload)){
+            answer.status=Status::Corrupt;return answer;
+        }
         if(fxfile::zipstore::detail::crc32(payload)!=checksum){
             answer.status=Status::Corrupt;return answer;
         }

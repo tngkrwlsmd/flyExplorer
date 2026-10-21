@@ -1,5 +1,36 @@
 # flyExplorer 작업 인계 — 2026-10-19 L08 커서 OPEN, G01 코드·빌드 PASS
 
+## 2026-10-21 EP10/F08 — raw Deflate 단일 ZIP 항목 해제 (코드 반영, 미검증)
+
+- 기준 main `f0824a32`. miniz v3.1.2의 low-level `tinfl`만
+  라이선스와 함께 `src/base/third_party/miniz_3_1_2/`에 도입했다.
+  원본 3개 파일 중 `miniz_tinfl.c`의 `miniz.h` include만
+  독립적인 `miniz_tinfl.h`로 치환했고, `miniz_export.h`
+  정적 shim을 별도 만들었다. 라이선스 조건·출처·수정 사항은
+  `UPSTREAM.md`에 기록했다. 생성 프로젝트가
+  `src/base/zip_raw_deflate.cpp`를 별도 NotUsing PCH C++
+  단위로 컴파일하도록 템플릿을 갱신했다.
+- `zip_raw_deflate.h/.cpp`는 raw RFC1951만 처리한다.
+  출력 최대 8MiB, 입력 최대 16MiB, 최대 확장률 100:1,
+  고정 크기 출력 buffer에서 `TINFL_STATUS_DONE`·**정확한
+  소비 바이트/출력 바이트 일치**가 모두 성립한 경우만 통과한다.
+  zlib/gzip wrapper를 받지 않고 암호화·ZIP64/descriptor를
+  지원하지 않는다. 단일 ZIP Store 해제의 기존 헤더·경로·
+  CRC32 확인 경로에서 **method 8**을 분기해 사용한다.
+  기존 no-overwrite 스테이징 및 최종 rename은 유지한다.
+- 작업 범위는 **평면 파일 하나가 있는 ZIP Deflate 해제**에
+  한정된다. 다중 Deflate, Deflate 압축 *생성*, nested
+  directory, Unix creator/extra/comment와 일반 ZIP
+  호환성은 지원하지 않는다. Deflate 단일 작업은 아직
+  취소 버튼을 제공하지 않으며, 디코딩 중 취소도 미지원이다.
+- 신규 vendor 소스는 미빌드·미실행이고 실제 손상/정상 raw
+  stream fixture 검증은 하지 않았다. 신규 소스 계약
+  작성 및 기존 계약 문구 갱신만 했다. **NOT TESTED**:
+  Windows Release/Debug 빌드, native 테스트, GUI,
+  시각 검증 모두 미실행. 라이선스는 릴리스 패키징에
+  포함해야 하며 GPLv3 배포와 별도 확인이 필요하다.
+  G01 OPEN, G07 중단, G03~G05 제외 유지.
+
 ## 2026-10-21 EP10/F08 — 표준 DOS 수정시각·ASCII ZIP Store 호환 (코드 반영, 미검증)
 
 - 기준 main `87a968c5`. ZIP 엔진·외부 zlib/miniz 의존성이

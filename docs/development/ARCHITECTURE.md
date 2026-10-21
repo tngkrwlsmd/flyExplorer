@@ -121,6 +121,17 @@ not be treated as ZIP method-8 raw Deflate. A future raw Deflate
 decoder requires reviewed pinned dependencies and separate bounded
 output/CRC/cancel handling.
 
+F08 single-member raw DEFLATE decoder is
+`src/base/zip_raw_deflate.cpp` (paired `.h`). The native project
+template compiles this as a separate no-PCH translation unit. Only
+the miniz v3.1.2 `tinfl` inflater is vendored under
+`src/base/third_party/miniz_3_1_2`, with upstream copyright/license
+and an explicit include adaptation. The decoder has NO filesystem or
+ZIP path authority; it has a bounded allocation and validates exact
+input consumption/output count. `zip_store_extractor.h` alone owns
+method 8 ZIP metadata, CRC32, path restrictions and non-replace staging.
+Batch ZIP and Deflate writer remain Store-only. All new code is NOT TESTED.
+
 Regular-document activation belongs to `app/winui/file_open_controller.h`.
 It owns one asynchronous Windows StorageFile/Launcher request, deadline and
 close cancellation. MainWindow supplies weak presentation callbacks and checks
