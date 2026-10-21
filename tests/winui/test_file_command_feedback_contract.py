@@ -45,5 +45,51 @@ class TransferFeedbackContract(unittest.TestCase):
         self.assertIn("mTransferFailureNotice=detail;",completion)
         self.assertIn("completion.touchedFolders",completion)
 
+class SkipExistingTransferContract(unittest.TestCase):
+    def test_skip_is_local_preflight_only_and_revalidates_remaining(self):
+        header=(APP/"file_operation_controller.h").read_text(encoding="utf-8-sig")
+        controller=(APP/"file_operation_controller.cpp").read_text(encoding="utf-8-sig")
+        for token in (
+            "AllSkipped",
+            "skipCollisions(",
+            "skippedCollisions=0",
+        ):
+            self.assertIn(token,header)
+        body=controller.split(
+            "FileOperationController::skipCollisions(",1)[1].split(
+            "FileOperationController::StartStatus FileOperationController::launchTransfer(",1
+        )[0]
+        for token in (
+            "SourceMode::Filesystem",
+            "DestinationMode::Filesystem",
+            "sameContext(pending.context,liveContext)",
+            "CompareStringOrdinal(",
+            "if(skipped!=pending.collisions.size())",
+            "if(remaining.empty())return StartStatus::AllSkipped;",
+            "launchTransfer(std::move(pending.request)",
+        ):
+            self.assertIn(token,body)
+        self.assertNotIn("DeleteFileW(",body)
+        self.assertNotIn("GetFileAttributesW(",body)
+        self.assertNotIn("std::thread(",body)
+        self.assertIn("value.skippedCollisions=skippedCollisions;",controller)
+        self.assertIn("completion.report.collisions",controller)
+
+    def test_ui_shows_explicit_choices_and_never_guesses_success_counts(self):
+        body=(APP/"m22_transfers.cpp").read_text(encoding="utf-8-sig")
+        section=body.split("MainWindow::ConfirmCollision(",1)[1].split(
+            "void MainWindow::OnTransferCompleted(",1
+        )[0]
+        self.assertIn('SecondaryButtonText(L"충돌 항목 건너뛰기")',section)
+        self.assertIn("ContentDialogResult::Secondary",section)
+        self.assertIn("mFileOperations.skipCollisions(",section)
+        self.assertIn("mFileOperations.confirmCollision(",section)
+        self.assertIn("if(status==FileOperationController::StartStatus::AllSkipped)",section)
+        self.assertIn("completion.skippedCollisions",body)
+        self.assertIn("일부 항목이 처리됐을 수 있습니다.",body)
+        self.assertIn("mTransferFailureNotice=detail;",body)
+        self.assertNotIn("report.queued-report.completed",body)
+
+
 if __name__=="__main__":
     unittest.main()
