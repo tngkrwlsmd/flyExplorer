@@ -80,6 +80,9 @@ struct PaneState final {
     std::vector<FileMetadata> metadata;
     std::vector<FileDetail> details;
     std::size_t renderedBaseOffset=0;
+    // Runtime-only identity of the folder which produced renderedPaths.
+    // A tab navigation can retain its route while changing the folder.
+    std::wstring renderedFolder;
     std::vector<std::uint64_t> renderedLogical;
     std::vector<std::wstring> renderedPaths;
     std::uint64_t metadataRoute=0,metadataEpoch=0;
