@@ -73,6 +73,28 @@ class FileDisplayOptionsContract(unittest.TestCase):
         self.assertIn("state.renderedPaths.push_back(itemParsing)",main)
         self.assertIn("view.SelectedItems().Append(row)",main)
 
+    def test_selection_and_keyboard_focus_restore_only_in_same_window_folder(self):
+        state=body("app/winui/file_list_state.h")
+        main=body("app/winui/MainWindow.xaml.cpp")
+        fill=main.split("void MainWindow::FillFiles(int side)",1)[1].split(
+            "std::wstring MainWindow::WindowTabLabel(",1
+        )[0]
+        self.assertIn("std::wstring renderedFolder;",state)
+        self.assertIn("state.renderedFolder==snapshot.parsingName",fill)
+        self.assertIn("state.visibleRoute==nextRoute",fill)
+        self.assertIn("state.visibleTab==pane.active",fill)
+        self.assertIn("sameWindowTab=winrt::unbox_value<std::uint64_t>(view.Tag())",fill)
+        self.assertIn("ActiveWindowTab().identity",fill)
+        self.assertIn("if(sameRenderedFolder)for(auto const& old:view.SelectedItems())",fill)
+        self.assertIn("row.FocusState()==FocusState::Unfocused",fill)
+        self.assertIn("focusedPath=state.renderedPaths[position];",fill)
+        self.assertIn("if(!focusedPath.empty()&&itemParsing==focusedPath)",fill)
+        self.assertIn("if(focusRow)focusRow.Focus(FocusState::Programmatic);",fill)
+        self.assertIn("view.Tag(winrt::box_value(ActiveWindowTab().identity));",fill)
+        self.assertIn("state.renderedFolder=snapshot.parsingName;",fill)
+        self.assertNotIn("QueuePidl(",fill)
+        self.assertNotIn("PersistPreferences(",fill)
+
     def test_menu_state_synced_when_switching_active_pane(self):
         impl=body("app/winui/MainWindow.xaml.cpp")
         self.assertEqual(impl.count("SetListDisplayState("),4)
