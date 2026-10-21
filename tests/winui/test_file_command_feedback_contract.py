@@ -83,7 +83,9 @@ class SkipExistingTransferContract(unittest.TestCase):
             "sameContext(pending.context,liveContext)",
             "CompareStringOrdinal(",
             "if(skipped!=pending.collisions.size())",
-            "if(remaining.empty())return StartStatus::AllSkipped;",
+            "if(remaining.empty()){",
+            "skipped=totalSkipped;",
+            "return StartStatus::AllSkipped;",
             "launchTransfer(std::move(pending.request)",
         ):
             self.assertIn(token,body)
