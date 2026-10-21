@@ -42,8 +42,8 @@ class ZipStoreWriterContracts(unittest.TestCase):
                      "pane.filesystemPaths[tab]!=folder",
                      "NavigationAction::Refresh"):
             self.assertIn(term,method)
-        self.assertIn('make(L"ZIP으로 묶기 (무압축, 한 파일)"',ui)
-        self.assertIn("canCreateZip=localSelection&&count==1&&!isFolder",ui)
+        self.assertNotIn('make(L"ZIP으로 묶기 (무압축, 한 파일)"',ui)
+        self.assertIn('make(L"Windows 탐색기에서 선택 열기"',ui)
         self.assertIn("void CreateSelectedZip(int side);",
                       source("app/winui/MainWindow.xaml.h"))
 if __name__=="__main__":

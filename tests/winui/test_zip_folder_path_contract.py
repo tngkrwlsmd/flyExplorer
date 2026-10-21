@@ -85,8 +85,9 @@ class SingleRootZipContracts(unittest.TestCase):
             "NavigationAction::Refresh",
         ):
             self.assertIn(token,method)
-        self.assertIn("const bool canCreateFolderZip=",ui)
-        self.assertIn('make(L"폴더 ZIP으로 묶기 (하위 폴더 최대 3개, 파일 2~8개)"',ui)
+        self.assertNotIn("const bool canCreateFolderZip=",ui)
+        self.assertNotIn('make(L"폴더 ZIP으로 묶기 (하위 폴더 최대 3개, 파일 2~8개)"',ui)
+        self.assertIn('make(L"Windows 탐색기에서 선택 열기"',ui)
         self.assertIn("void CreateSelectedFolderZip(int side);",hdr)
 
 if __name__=="__main__":

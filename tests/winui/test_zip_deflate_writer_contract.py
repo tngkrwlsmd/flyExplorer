@@ -60,7 +60,8 @@ class ZipDeflateWriterContracts(unittest.TestCase):
                       "pane.filesystemPaths[tab]!=folder",
                       "NavigationAction::Refresh"):
             self.assertIn(token,code)
-        self.assertIn('make(L"ZIP으로 묶기 (Deflate, 한 파일)"',ui)
+        self.assertNotIn('make(L"ZIP으로 묶기 (Deflate, 한 파일)"',ui)
+        self.assertIn('make(L"Windows 탐색기에서 선택 열기"',ui)
         self.assertIn("void CreateSelectedDeflateZip(int side);",h)
         self.assertIn("bool mZipDeflateCreationBusy=false;",h)
 

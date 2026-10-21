@@ -1,6 +1,7 @@
 #include "pch.h"
 #include "MainWindow.xaml.h"
 #include "../../src/base/shell_context_core.h"
+#include "../../src/base/shell_explorer_delegate.h"
 #include "../../src/base/zip_inspection.h"
 #include "../../src/base/zip_store_writer.h"
 #include "../../src/base/zip_deflate_writer.h"
@@ -812,7 +813,6 @@ void MainWindow::ShowAppFileContextMenu(
  std::vector<std::uint64_t> logicalIds;
  logicalIds.reserve(count);
  bool allFilesystem=true;
- bool allRegularFilesystemFiles=true;
  bool boundedSources=true;
  std::size_t sourceUnits=0;
  bool canOpen=false;
@@ -833,8 +833,6 @@ void MainWindow::ShowAppFileContextMenu(
    boundedSources=false;
   else sourceUnits+=units;
   allFilesystem=allFilesystem&&indexed->isFileSystem();
-  allRegularFilesystemFiles=allRegularFilesystemFiles&&
-      indexed->isFileSystem()&&!indexed->isFolder();
   if(count==1){
    canOpen=indexed->isFolder()||indexed->isFileSystem();
    isFolder=indexed->isFolder();
@@ -884,30 +882,8 @@ void MainWindow::ShowAppFileContextMenu(
  const bool canOppositeMove=localSelection&&destinationFilesystem;
  const bool canExternal=localSelection&&
   count<=fxfile::shellcontext::kMaxContextSelection;
- bool canInspectZip=false;
- const bool zipIdle=!mZipCreationBusy&&!mZipDeflateCreationBusy&&
-     !mZipInspectionBusy&&
-     !mZipExtractionBusy&&!mZipBatchCreationBusy&&
-     !mZipBatchExtractionBusy;
- const bool canCreateZip=localSelection&&count==1&&!isFolder&&zipIdle;
- const bool canCreateBatchZip=localSelection&&allRegularFilesystemFiles&&
-     count>=fxfile::zipbatch::kMinFiles&&
-     count<=fxfile::zipbatch::kMaxFiles&&zipIdle;
- const bool canCreateFolderZip=localSelection&&count==1&&
-     isFolder&&!folderPath.empty()&&zipIdle;
- if(localSelection&&count==1&&!isFolder){
-  auto const* item=pane.tabs[tab].indexedItem(
-      static_cast<std::size_t>((*expected)[0]));
-  if(item){
-   const auto& path=item->parsingName;
-   if(path.size()>4){
-    std::wstring suffix=path.substr(path.size()-4);
-    for(auto& ch:suffix)ch=static_cast<wchar_t>(::towlower(ch));
-    canInspectZip=suffix==L".zip"&&zipIdle;
-   }
-  }
- }
-
+ const bool canWindowsExplorer=ready&&boundedSources&&
+     allFilesystem&&count<=fxfile::shellexplorer::kMaxSelected;
  auto weak=get_weak();
  MenuFlyout menu;
  auto make=[&](wchar_t const* title,wchar_t const* iconGlyph,
@@ -966,30 +942,12 @@ void MainWindow::ShowAppFileContextMenu(
  menu.Items().Append(make(L"연결 프로그램으로 열기",L"\uE8F2",
                           localSelection&&count==1&&!isFolder,
      [side](MainWindow& ui){ui.OpenSelectedWith(side);}));
- menu.Items().Append(make(L"ZIP 내부 항목 검사 (읽기 전용)",L"\uE8B7",
-                          canInspectZip,
-     [side](MainWindow& ui){ui.InspectSelectedZip(side);}));
- menu.Items().Append(make(L"ZIP으로 묶기 (무압축, 한 파일)",L"\uE8B7",
-                          canCreateZip,
-     [side](MainWindow& ui){ui.CreateSelectedZip(side);}));
- menu.Items().Append(make(L"ZIP으로 묶기 (Deflate, 한 파일)",L"\uE8B7",
-                          canCreateZip,
-     [side](MainWindow& ui){ui.CreateSelectedDeflateZip(side);}));
- menu.Items().Append(make(L"선택한 파일 ZIP으로 묶기 (2~8개, 무압축)",L"\uE8B7",
-                          canCreateBatchZip,
-     [side](MainWindow& ui){ui.CreateSelectedBatchZip(side);}));
- menu.Items().Append(make(L"선택한 파일 ZIP으로 묶기 (2~8개, Deflate)",L"\uE8B7",
-                          canCreateBatchZip,
-     [side](MainWindow& ui){ui.CreateSelectedBatchZip(side,true);}));
- menu.Items().Append(make(L"폴더 ZIP으로 묶기 (하위 폴더 최대 3개, 파일 2~8개)",L"\uE8B7",
-                          canCreateFolderZip,
-     [side](MainWindow& ui){ui.CreateSelectedFolderZip(side);}));
- menu.Items().Append(make(L"ZIP 해제 (Store/Deflate, 한 파일)",L"\uE8B7",
-                          canInspectZip,
-     [side](MainWindow& ui){ui.ExtractSelectedZip(side);}));
- menu.Items().Append(make(L"ZIP 여러 파일 해제 (Store/Deflate, 2~8개)",L"\uE8B7",
-                          canInspectZip,
-     [side](MainWindow& ui){ui.ExtractSelectedBatchZip(side);}));
+ // Windows owns compression, extraction and other Explorer commands.
+ // F08 writers/extractors stay in the tree for rollback, but are not
+ // exposed as competing production ZIP actions before Windows acceptance.
+ menu.Items().Append(make(L"Windows 탐색기에서 선택 열기",L"\uE8B7",
+                          canWindowsExplorer,
+     [side](MainWindow& ui){ui.RevealSelectedInWindowsExplorer(side);}));
  if(count==1&&isFolder&&!folderPath.empty()){
   menu.Items().Append(make(L"새 폴더 탭에서 열기",L"\uE8B7",ready,
      [side,path=std::move(folderPath)](MainWindow& ui){
@@ -1729,6 +1687,63 @@ void MainWindow::OnWindowsCut(IInspectable const&,RoutedEventArgs const&){
 }
 void MainWindow::OnWindowsPaste(IInspectable const&,RoutedEventArgs const&){
  PasteFromWindowsClipboard();
+}
+void MainWindow::RevealSelectedInWindowsExplorer(int side){
+ if(mClosing||side<0||side>1||mFileOperations.busy()||
+    ActiveWindowTab().model.activePane!=side)return;
+ const auto& workspace=ActiveWindowTab();
+ const auto& pane=workspace.model.panes[side];
+ if(pane.active>=pane.tabs.size()||
+    pane.active>=pane.pending.size()||pane.pending[pane.active]||
+    pane.active>=pane.routeIds.size()||
+    pane.active>=pane.filesystemPaths.size())return;
+ const auto tab=pane.active;
+ const auto route=pane.routeIds[tab];
+ const auto& visible=workspace.fileLists[side];
+ if(visible.visibleTab!=tab||visible.visibleRoute!=route)return;
+ auto view=side==0?LeftFiles():RightFiles();
+ const auto count=view.SelectedItems().Size();
+ if(!count||count>fxfile::shellexplorer::kMaxSelected)return;
+ std::vector<std::wstring> paths;
+ paths.reserve(count);
+ for(auto const& selected:view.SelectedItems()){
+  auto row=selected.try_as<ListViewItem>();
+  if(!row||!row.Tag())return;
+  std::uint64_t id=0;
+  try{id=unbox_value<std::uint64_t>(row.Tag());}catch(...){return;}
+  const auto* item=pane.tabs[tab].indexedItem(
+      static_cast<std::size_t>(id));
+  if(!item||!item->isFileSystem()||item->parsingName.empty())return;
+  paths.push_back(item->parsingName);
+ }
+ const auto identity=workspace.identity;
+ const auto folder=pane.filesystemPaths[tab];
+ auto weak=get_weak();
+ auto dispatch=DispatcherQueue();
+ StatusText().Text(L"선택 항목을 Windows 탐색기로 전달하고 있습니다.");
+ try{
+  std::thread([paths=std::move(paths),weak,dispatch,
+               identity,side,tab,route,folder]{
+   const auto result=fxfile::shellexplorer::reveal(paths);
+   dispatch.TryEnqueue([weak,result,identity,side,tab,route,folder]{
+    auto ui=weak.get();
+    if(!ui||ui->mClosing)return;
+    const auto& workspace=ui->ActiveWindowTab();
+    if(workspace.identity!=identity||
+       workspace.model.activePane!=side)return;
+    const auto& pane=workspace.model.panes[side];
+    if(pane.active!=tab||tab>=pane.routeIds.size()||
+       pane.routeIds[tab]!=route||
+       tab>=pane.filesystemPaths.size()||
+       pane.filesystemPaths[tab]!=folder)return;
+    ui->StatusText().Text(SUCCEEDED(result)?
+     L"Windows 탐색기에서 항목을 선택했습니다. 압축 등 기본 메뉴를 이용하세요.":
+     L"Windows 탐색기에서 선택 항목을 열지 못했습니다.");
+   });
+  }).detach();
+ }catch(...){
+  StatusText().Text(L"Windows 탐색기 연결 작업을 시작할 수 없습니다.");
+ }
 }
 void MainWindow::ShowExternalWindowsContextMenu(int side){
  if(side<0||side>1)return;

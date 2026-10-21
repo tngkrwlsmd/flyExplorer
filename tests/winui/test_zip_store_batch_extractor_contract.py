@@ -92,10 +92,10 @@ class ZipStoreBatchExtractorContracts(unittest.TestCase):
                   "pane.filesystemPaths[tab]!=folder",
                   "NavigationAction::Refresh"):
             self.assertIn(x,body)
-        self.assertIn('make(L"ZIP 여러 파일 해제 (Store/Deflate, 2~8개)"',ui)
+        self.assertNotIn('make(L"ZIP 여러 파일 해제 (Store/Deflate, 2~8개)"',ui)
+        self.assertIn('make(L"Windows 탐색기에서 선택 열기"',ui)
         self.assertIn("void ExtractSelectedBatchZip(int side);",header)
         self.assertIn("bool mZipBatchExtractionBusy=false;",header)
-        self.assertIn("!mZipBatchExtractionBusy;",ui)
 
 if __name__=="__main__":
     unittest.main()

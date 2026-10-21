@@ -404,6 +404,7 @@ namespace winrt::FlyExplorer::implementation
         std::array<Microsoft::UI::Xaml::GridLength,4> DetailColumnWidths(int side) const;
         void ApplyDetailColumnLayout(int side);
         void ShowExternalWindowsContextMenu(int side);
+        void RevealSelectedInWindowsExplorer(int side);
         void UpdateViewPresentation(int side);
         void UpdateSortPresentation(int side);
         void UpdateBreadcrumb(std::wstring const& address);

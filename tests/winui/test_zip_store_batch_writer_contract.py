@@ -98,17 +98,9 @@ class ZipStoreBatchContracts(unittest.TestCase):
             "NavigationAction::Refresh",
         ):
             self.assertIn(token,command)
-        for token in (
-            "bool allRegularFilesystemFiles=true;",
-            "const bool zipIdle=",
-            "const bool canCreateBatchZip=",
-            "count>=fxfile::zipbatch::kMinFiles",
-            "count<=fxfile::zipbatch::kMaxFiles",
-            'make(L"선택한 파일 ZIP으로 묶기 (2~8개, 무압축)"',
-            'make(L"선택한 파일 ZIP으로 묶기 (2~8개, Deflate)"',
-            "CreateSelectedBatchZip(side,true)",
-        ):
-            self.assertIn(token,ui)
+        self.assertNotIn('make(L"선택한 파일 ZIP으로 묶기 (2~8개, 무압축)"',ui)
+        self.assertNotIn('make(L"선택한 파일 ZIP으로 묶기 (2~8개, Deflate)"',ui)
+        self.assertIn('make(L"Windows 탐색기에서 선택 열기"',ui)
         self.assertIn("void CreateSelectedBatchZip(int side, bool preferDeflate=false);",header)
         self.assertIn("bool mZipBatchCreationBusy=false;",header)
 

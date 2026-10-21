@@ -71,10 +71,8 @@ class ZipStoreExtractorContracts(unittest.TestCase):
             self.assertIn(term,start)
         self.assertIn("bool mZipExtractionBusy=false;",h)
         self.assertIn("void ExtractSelectedZip(int side);",h)
-        self.assertIn('make(L"ZIP 해제 (Store/Deflate, 한 파일)"',ui)
-        self.assertIn('canInspectZip=suffix==L".zip"&&zipIdle;',ui)
-        self.assertIn('const bool zipIdle=!mZipCreationBusy&&!mZipDeflateCreationBusy&&',ui)
-        self.assertIn('!mZipBatchExtractionBusy;',ui)
+        self.assertNotIn('make(L"ZIP 해제 (Store/Deflate, 한 파일)"',ui)
+        self.assertIn('make(L"Windows 탐색기에서 선택 열기"',ui)
 
 if __name__=="__main__":
     unittest.main()

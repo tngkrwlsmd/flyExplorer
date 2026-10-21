@@ -60,6 +60,28 @@ dependencies. The existing pane/session model retains the actual active view
 mode, and asynchronous navigation only projects an override after accepted
 navigation outside of workspace restoration.
 
+## Windows Shell-first feature routing (2026-10-21)
+
+User direction: prefer supported Windows Explorer / Shell functions to
+building parallel file-manager features, especially archive creation and
+extraction. The user-facing file context menu includes **Windows 탐색기에서
+선택 열기**; `src/base/shell_explorer_delegate.h` hands selected,
+normalized same-folder filesystem paths to Windows Explorer using
+`SHParseDisplayName` and `SHOpenFolderAndSelectItems` on a worker STA.
+This launches a separate Explorer window with the items selected. Native
+Explorer owns its OS-supported archive/share/other menu commands, progress,
+and confirmations. It does NOT embed the full Explorer menu in WinUI or
+guarantee formats on all Windows versions. The app's isolated classic
+Shell context menu is still optional and retains existing restrictions
+for multi-selection; app-specific pane/tab operations and Shell-backed
+file I/O remain available in flyExplorer.
+
+Old F08 ZIP inspection, writers, decoders and extractors are **retained
+as inactive implementation**, not offered as default file context
+commands, pending actual Windows acceptance and explicit removal
+review. This handoff is not a build or runtime PASS (NOT TESTED).
+Avoid exposing two parallel user-facing archive implementations.
+
 F08 read-only ZIP metadata preflight is in `src/base/zip_inspection.h`.
 It is a bounded parser without write/decompression APIs; the WinUI
 context action owns an opt-in worker and suppresses stale WindowTab/PaneTab

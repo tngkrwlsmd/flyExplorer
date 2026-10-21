@@ -43,8 +43,10 @@ class ZipInspectionSourceContracts(unittest.TestCase):
                   "ZipInspectionItems().Items().Clear()",
                   "ZipInspectionPanel().Visibility(Visibility::Collapsed)"):
             self.assertIn(v,main)
-        self.assertIn('make(L"ZIP 내부 항목 검사 (읽기 전용)"',menu)
-        self.assertIn("canInspectZip=suffix==L\".zip\"",menu)
+        # Legacy F08 inspection logic is retained but the OS owns the
+        # default archive workflow from the user-facing file menu.
+        self.assertNotIn('make(L"ZIP 내부 항목 검사 (읽기 전용)"',menu)
+        self.assertIn('make(L"Windows 탐색기에서 선택 열기"',menu)
         self.assertIn("void InspectSelectedZip(int side);",hdr)
         self.assertIn("void OnCloseZipInspection(",hdr)
         self.assertIn('x:Name="ZipInspectionPanel"',xaml)
