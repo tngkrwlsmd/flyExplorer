@@ -55,6 +55,12 @@ class AsyncWindowTabOwnershipContract(unittest.TestCase):
         self.assertIn("context.windowTabIdentity=ActiveWindowTab().identity;",ui)
         self.assertIn("sameContext(completion.context,liveContext)",controller)
         self.assertIn("sameContext(pending.context,liveContext)",controller)
+        self.assertIn("completion.report.error==ERROR_ALREADY_EXISTS",controller)
+        self.assertIn("!completion.report.aborted",controller)
+        self.assertIn(
+            "completion.request.collision==fxfile::shelltransfer::Collision::Reject",
+            controller
+        )
 
 
 class SkipExistingTransferContract(unittest.TestCase):
