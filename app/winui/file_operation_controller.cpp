@@ -347,7 +347,10 @@ FileOperationController::acceptTransfer(
             completion.report.collisions,completion.skippedCollisions};
         return TransferDisposition::NeedsCollisionConfirmation;
     }
-    if(completion.report.error!=ERROR_SUCCESS)
+    // An aborted native operation can have committed earlier items.
+    // Never treat an inconsistent success error code as full completion.
+    if(completion.report.aborted||
+       completion.report.error!=ERROR_SUCCESS)
         return TransferDisposition::Failed;
     return TransferDisposition::Succeeded;
 }

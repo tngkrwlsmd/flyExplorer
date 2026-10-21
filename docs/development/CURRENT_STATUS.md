@@ -1,4 +1,23 @@
-# flyExplorer current status — 2026-10-22 EP05 P1 external Shell status ownership; G01 open
+# flyExplorer current status — 2026-10-22 P1 abort result fail-closed; G01 open
+
+## 2026-10-22 P1 — fail closed on inconsistent aborted transfer report
+
+- At main `e0ea04aa688ada741333079e271e72241205d67c`, `FileOperationController::acceptTransfer`
+  classified completion as success when `report.error==ERROR_SUCCESS`,
+  even if `report.aborted` was true. The existing isolated/native
+  worker normally maps abort to an error but the controller did not
+  defensively enforce the same invariant.
+- When the report carries `aborted`, classify it as Failed regardless
+  of the reported error code. Keep the existing no-retry/no-overwrite
+  behavior, source/destination refresh after possible partial commit,
+  and user notice that earlier items may have been processed.
+  Collision preflight already rejects aborted reports and is unchanged.
+- Added a source-only regression contract to check the guard and the
+  existing UI partial-outcome notice; **not executed**.
+- Windows compile/link, source/native tests, GUI, actual cancellation,
+  recovery and visual verification were **NOT TESTED**. This is
+  conservative source hardening, not proof of a new runtime defect.
+  G01 remains open and G03-G05 exclusions/G07 stoppage remain in force.
 
 ## 2026-10-22 P1 — external Shell-menu completion status ownership
 

@@ -76,6 +76,26 @@ class FileOperationContracts(unittest.TestCase):
         self.assertIn("sharing_violation_move_reports_failure_and_preserves_source",
                       fixture)
 
+    def test_aborted_transfer_is_never_reported_as_success(self):
+        controller = read("app/winui/file_operation_controller.cpp")
+        accept = controller.split(
+            "FileOperationController::acceptTransfer(", 1)[1].split(
+            "FileOperationController::StartStatus FileOperationController::startFileCommand(", 1
+        )[0]
+        # A helper may supply an aborted flag despite a success error code.
+        # Fail closed, rather than claiming all requested items completed.
+        self.assertIn("completion.report.aborted||", accept)
+        self.assertIn("completion.report.error!=ERROR_SUCCESS", accept)
+        self.assertLess(accept.index("completion.report.aborted||"),
+                        accept.index("return TransferDisposition::Succeeded;"))
+        self.assertLess(accept.index("return TransferDisposition::Failed;"),
+                        accept.index("return TransferDisposition::Succeeded;"))
+        self.assertIn("!completion.report.aborted&&", accept)
+        transfer = read("app/winui/m22_transfers.cpp")
+        self.assertIn("completion.report.aborted||", transfer)
+        self.assertIn("일부 항목이 처리됐을 수 있습니다.", transfer)
+        self.assertIn("rememberOrigin(detail);", transfer)
+
     def test_regular_fixed_file_copy_commits_only_completed_staging(self):
         core = read("src/base/shell_transfer_core.cpp")
         fixture = read("tests/winui/m22/m22_transfer_fixture.cpp")
