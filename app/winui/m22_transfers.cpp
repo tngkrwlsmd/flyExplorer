@@ -95,6 +95,8 @@ void MainWindow::ShowAppFileContextMenu(int side,ListViewItem const& anchor){
  logicalIds.reserve(count);
  bool allFilesystem=true;
  bool canOpen=false;
+ bool isFolder=false;
+ std::wstring folderPath;
  for(auto const& selected:list.SelectedItems()){
   auto row=selected.try_as<ListViewItem>();
   if(!row||!row.Tag())return;
@@ -106,8 +108,12 @@ void MainWindow::ShowAppFileContextMenu(int side,ListViewItem const& anchor){
   if(!indexed||indexed->parsingName.empty())return;
   logicalIds.push_back(logical);
   allFilesystem=allFilesystem&&indexed->isFileSystem();
-  if(count==1)
+  if(count==1){
    canOpen=indexed->isFolder()||indexed->isFileSystem();
+   isFolder=indexed->isFolder();
+   if(isFolder&&indexed->isFileSystem())
+    folderPath=indexed->parsingName;
+  }
  }
  std::sort(logicalIds.begin(),logicalIds.end());
  if(std::adjacent_find(logicalIds.begin(),logicalIds.end())!=logicalIds.end())
@@ -125,11 +131,16 @@ void MainWindow::ShowAppFileContextMenu(int side,ListViewItem const& anchor){
 
  auto weak=get_weak();
  MenuFlyout menu;
- auto add=[&](wchar_t const* title,bool enabled,
-              std::function<void(MainWindow&)> action){
+ auto make=[&](wchar_t const* title,wchar_t const* iconGlyph,
+               bool enabled,std::function<void(MainWindow&)> action){
   MenuFlyoutItem item;
   item.Text(title);
   item.IsEnabled(enabled);
+  if(iconGlyph&&*iconGlyph){
+   FontIcon icon;
+   icon.Glyph(iconGlyph);
+   item.Icon(icon);
+  }
   item.Click([weak,side,identity,tab,route,expected,
               action=std::move(action)](IInspectable const&,
                                        RoutedEventArgs const&){
@@ -166,29 +177,42 @@ void MainWindow::ShowAppFileContextMenu(int side,ListViewItem const& anchor){
    }
    action(*ui);
   });
-  menu.Items().Append(item);
+  return item;
  };
- add(L"열기",ready&&count==1&&canOpen,
-     [side](MainWindow& ui){ui.OpenSelectedFolder(side);});
+ // Windows 11-like hierarchy: primary open action, frequently used
+ // icon commands, a separate destination submenu, and more options last.
+ menu.Items().Append(make(L"열기",L"\uE8E5",
+                          ready&&count==1&&canOpen,
+     [side](MainWindow& ui){ui.OpenSelectedFolder(side);}));
+ if(count==1&&isFolder&&!folderPath.empty()){
+  menu.Items().Append(make(L"새 폴더 탭에서 열기",L"\uE8B7",ready,
+     [side,path=std::move(folderPath)](MainWindow& ui){
+      ui.OpenFolderInNewPaneTab(side,path);
+     }));
+ }
  menu.Items().Append(MenuFlyoutSeparator{});
- add(L"복사 (클립보드)",selectedFilesystem,
-     [side](MainWindow& ui){ui.CopySelectedToWindowsClipboard(side,false);});
- add(L"잘라내기 (클립보드)",selectedFilesystem,
-     [side](MainWindow& ui){ui.CopySelectedToWindowsClipboard(side,true);});
- add(L"반대쪽 패널로 복사",canOpposite,
-     [](MainWindow& ui){ui.RunTransfer(fxfile::shelltransfer::Kind::Copy);});
- add(L"반대쪽 패널로 이동",canOppositeMove,
-     [](MainWindow& ui){ui.RunTransfer(fxfile::shelltransfer::Kind::Move);});
- menu.Items().Append(MenuFlyoutSeparator{});
- add(L"이름 변경",canRename,
+ menu.Items().Append(make(L"잘라내기",L"\uE8C6",selectedFilesystem,
+     [side](MainWindow& ui){ui.CopySelectedToWindowsClipboard(side,true);}));
+ menu.Items().Append(make(L"복사",L"\uE8C8",selectedFilesystem,
+     [side](MainWindow& ui){ui.CopySelectedToWindowsClipboard(side,false);}));
+ menu.Items().Append(make(L"이름 바꾸기",L"\uE8AC",canRename,
      [](MainWindow& ui){
       ui.BeginFileNameCommand(fxfile::filecommand::Kind::RenameSelected);
-     });
- add(L"휴지통으로 이동",selectedFilesystem,
-     [](MainWindow& ui){ui.RunTransfer(fxfile::shelltransfer::Kind::Recycle);});
+     }));
+ menu.Items().Append(make(L"삭제",L"\uE74D",selectedFilesystem,
+     [](MainWindow& ui){ui.RunTransfer(fxfile::shelltransfer::Kind::Recycle);}));
  menu.Items().Append(MenuFlyoutSeparator{});
- add(L"Windows 확장 메뉴…",canExternal,
-     [side](MainWindow& ui){ui.ShowExternalWindowsContextMenu(side);});
+ MenuFlyoutSubItem sendTo;
+ sendTo.Text(L"반대쪽 패널로 보내기");
+ sendTo.IsEnabled(canOpposite);
+ sendTo.Items().Append(make(L"복사",L"\uE8C8",canOpposite,
+     [](MainWindow& ui){ui.RunTransfer(fxfile::shelltransfer::Kind::Copy);}));
+ sendTo.Items().Append(make(L"이동",L"\uE8C6",canOppositeMove,
+     [](MainWindow& ui){ui.RunTransfer(fxfile::shelltransfer::Kind::Move);}));
+ menu.Items().Append(sendTo);
+ menu.Items().Append(MenuFlyoutSeparator{});
+ menu.Items().Append(make(L"추가 옵션 표시",L"\uE712",canExternal,
+     [side](MainWindow& ui){ui.ShowExternalWindowsContextMenu(side);}));
  menu.ShowAt(anchor);
 }
 void MainWindow::OnFileRightTapped(
