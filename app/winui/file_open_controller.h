@@ -30,7 +30,23 @@ public:
         if(s->closing||path.empty()||path.size()>32767||
            path.find(L'\0')!=std::wstring::npos||
            !std::filesystem::path(path).is_absolute())return Start::Invalid;
-        if(s->busy)return Start::Busy;
+        if(s->busy){
+            // A request whose pane/tab/route is no longer current must
+            // not block a new activation for the newly selected folder.
+            // The old coroutine retains its own state but the ticket makes
+            // its late completion inert. A duplicate in the same context
+            // remains Busy, so double-click/Enter cannot open twice.
+            bool stale=false;
+            try { stale=s->current&&!s->current(); } catch(...) { stale=false; }
+            if(!stale)return Start::Busy;
+            ++s->ticket;
+            s->busy=false;
+            s->current={};
+            s->completed={};
+            try { if(s->timer)s->timer.Stop(); } catch(...) {}
+            try { if(s->pending)s->pending.Cancel(); } catch(...) {}
+            s->pending=nullptr;
+        }
         s->busy=true;
         const auto ticket=++s->ticket;
         s->current=std::move(current);
