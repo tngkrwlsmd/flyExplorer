@@ -30,6 +30,8 @@
 #include "m19_workspace.h"
 #include "m19_search.h"
 #include <array>
+#include <atomic>
+#include <memory>
 #include <vector>
 #include <filesystem>
 
@@ -360,6 +362,7 @@ namespace winrt::FlyExplorer::implementation
         bool mZipExtractionBusy=false;
         bool mZipBatchCreationBusy=false;
         bool mZipBatchExtractionBusy=false;
+        std::shared_ptr<std::atomic_bool> mZipBatchCancel{};
         void RefreshRecentActivityPanel();
         fxfile::previewsearch::SearchController mSearchController{};
         // UI-only bounded snapshot of the last accepted search results. Never

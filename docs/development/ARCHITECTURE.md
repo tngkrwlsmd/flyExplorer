@@ -103,6 +103,14 @@ delete, no rollback of a user destination, and no general ZIP/Deflate
 support. MainWindow gates the background completion on the origin
 WindowTab/PaneTab/route and has a separate ZIP-batch-extraction busy bit.
 
+F08 batch ZIP Store creation/extraction now accept an optional
+per-worker atomic cancellation token, owned by the UI and captured
+by a detached worker. The existing toolbar Cancel command requests it
+while retaining Shell cancellation. The native writers poll at bounded
+I/O and before non-replace publication, returning Cancelled on a
+pre-commit stop and using RAII staging cleanup. A rename already
+committed cannot be undone. Single-file ZIP operations remain unchanged.
+
 Regular-document activation belongs to `app/winui/file_open_controller.h`.
 It owns one asynchronous Windows StorageFile/Launcher request, deadline and
 close cancellation. MainWindow supplies weak presentation callbacks and checks

@@ -32,10 +32,12 @@ class ZipStoreBatchExtractorContracts(unittest.TestCase):
             "CreateDirectoryW(staging.path.c_str(),nullptr)",
             "CREATE_NEW",
             "details.nNumberOfLinks!=1",
-            "zipstore::detail::writeAll(output.h,members[i].content)",
+            "members[i].content,cancellation)",
             "MoveFileExW(staging.path.c_str(),target.c_str()",
             "MOVEFILE_WRITE_THROUGH",
             "staging.owned=false",
+            "Status::Cancelled",
+            "zipstore::detail::cancelled(cancellation)",
             "RemoveDirectoryW(path.c_str())",
         )
         for token in checks:
@@ -54,6 +56,8 @@ class ZipStoreBatchExtractorContracts(unittest.TestCase):
         body=ui.split("void MainWindow::ExtractSelectedBatchZip(int side)",1)[1].split(
             "void MainWindow::ExtractSelectedZip(int side)",1)[0]
         for x in ("view.SelectedItems().Size()!=1", "mZipBatchExtractionBusy=true;",
+                  "mZipBatchCancel=cancel;",
+                  "zipbatchextract::extractMany(source,cancel.get())",
                   "zipextract::extractOne(source)" if False else
                   "zipbatchextract::extractMany(source)",
                   "active.identity!=identity",

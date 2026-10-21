@@ -1,5 +1,30 @@
 # flyExplorer 작업 인계 — 2026-10-19 L08 커서 OPEN, G01 코드·빌드 PASS
 
+## 2026-10-21 EP10/F08 — 다중 ZIP Store 생성·해제 협력적 취소 (코드 반영, 미검증)
+
+- 기준 main `3a99a309`. 기존 FileToolbar 취소 버튼으로
+  다중 ZIP Store 생성(2~8개)과 해제(2~8개)에 각 작업이 소유한
+  `shared_ptr<atomic_bool>` 취소 토큰을 전달하도록 연결했다.
+  Shell 파일 작업 취소 경로는 유지한다. 단일 ZIP 생성·해제와
+  읽기 전용 ZIP 항목 검사에 취소 기능을 확장하지 않았다.
+- `zip_store_batch_writer.h`는 원본 읽기·아카이브 생성
+  작업 중, `zip_store_batch_extractor.h`는 ZIP 검증·임시
+  폴더 출력 중 취소를 확인한다. 공용
+  `zip_store_writer.h::detail::writeAll`은 선택적 atomic
+  토큰으로 64KiB 기록 청크마다 중단한다.
+  취소를 최종 non-replace rename 이전에 확인하면
+  `Status::Cancelled`로 종료하고 임시 출력만 RAII 정리한다.
+  마지막 확인과 실제 rename 사이의 경합으로 이미 성공한
+  작업은 취소되지 않는다. 결과 메시지는 이 차이를 구별한다.
+- ZIP 작업 시작/완료에 취소 버튼을 활성화·복귀시키며,
+  UI 완료 피드백은 기존 정확한 WindowTab/PaneTab/route에만
+  반영한다. OS I/O 선점형 중단, 단일 ZIP 작업 취소,
+  DispatcherQueue enqueue 실패 복구, 비정상 종료 시
+  임시 출력 잔여물, 경로 치환 공격은 미해결·미검증이다.
+- 신규/수정 계약은 작성만 했다. **빌드·테스트·GUI·시각
+  검증 미실행 / NOT TESTED**. G01 OPEN, G07 사용자
+  중단, G03~G05 제외 유지.
+
 ## 2026-10-21 EP10/F08 — 다중 ZIP Store 평면 파일 해제 (코드 반영, 미검증)
 
 - 기준 main f8d4c193. 기존 다중 파일 Store 생성기에 대응하는

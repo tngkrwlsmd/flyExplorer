@@ -26,10 +26,12 @@ class ZipStoreBatchContracts(unittest.TestCase):
             "GetTempFileNameW(directory.c_str()",
             "zipstore::detail::Staging staging",
             "info.nNumberOfLinks==1",
-            "zipstore::detail::writeAll(writer.h,zip)",
+            "zipstore::detail::writeAll(writer.h,zip,cancellation)",
             "::MoveFileExW(staging.path,target.c_str()",
             "MOVEFILE_WRITE_THROUGH",
             "staging.owned=false",
+            "Status::Cancelled",
+            "zipstore::detail::cancelled(cancellation)",
         ):
             self.assertIn(token,code)
         self.assertLess(
@@ -55,6 +57,8 @@ class ZipStoreBatchContracts(unittest.TestCase):
             "std::adjacent_find(ids.begin(),ids.end())",
             "fxfile::zipbatch::createMany(paths)",
             "mZipBatchCreationBusy=true",
+            "mZipBatchCancel=cancel",
+            "zipbatch::createMany(paths,cancel.get())",
             "active.identity!=identity", "pane.routeIds[tab]!=route",
             "pane.filesystemPaths[tab]!=folder",
             "NavigationAction::Refresh",

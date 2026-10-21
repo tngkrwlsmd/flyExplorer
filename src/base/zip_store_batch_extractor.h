@@ -17,7 +17,7 @@
 namespace fxfile::zipbatchextract {
 inline constexpr wchar_t kExtractedDirectory[]=L"flyExplorer-selection-unpacked";
 enum class Status {
-    Extracted, InvalidSource, CannotRead, TooLarge, UnsafeEntry,
+    Extracted, Cancelled, InvalidSource, CannotRead, TooLarge, UnsafeEntry,
     Unsupported, Corrupt, AlreadyExists, CannotWrite
 };
 struct Result final {
@@ -64,8 +64,12 @@ inline bool flatName(std::wstring const& name) {
 }
 } // namespace detail
 
-inline Result extractMany(std::wstring const& source) noexcept {
+inline Result extractMany(std::wstring const& source,
+                          std::atomic_bool const* cancellation=nullptr) noexcept {
     Result result{};
+    if(fxfile::zipstore::detail::cancelled(cancellation)){
+            result.status=Status::Cancelled;return result;
+        }
     using namespace fxfile::zipinspect::detail;
     try{
         if(!fxfile::zipinspect::detail::source(source))return result;
@@ -102,6 +106,9 @@ inline Result extractMany(std::wstring const& source) noexcept {
         std::vector<unsigned char> bytes(total);
         std::size_t progress=0;
         while(progress<bytes.size()){
+            if(fxfile::zipstore::detail::cancelled(cancellation)){
+                result.status=Status::Cancelled;return result;
+            }
             DWORD read=0;
             const DWORD chunk=static_cast<DWORD>(
                 (std::min)(bytes.size()-progress,std::size_t{65536}));
@@ -141,6 +148,9 @@ inline Result extractMany(std::wstring const& source) noexcept {
         std::vector<detail::Member> members;
         members.reserve(count);
         for(std::size_t i=0;i<count;++i){
+            if(fxfile::zipstore::detail::cancelled(cancellation)){
+                result.status=Status::Cancelled;return result;
+            }
             // Local entries must be concatenated with no gaps or overlap.
             if(!span(localCursor,30u,central)||
                u32(bytes,localCursor)!=0x04034b50u||
@@ -219,6 +229,9 @@ inline Result extractMany(std::wstring const& source) noexcept {
         if(localCursor!=central||directoryCursor!=eocd){
             result.status=Status::Corrupt;return result;
         }
+        if(fxfile::zipstore::detail::cancelled(cancellation)){
+            result.status=Status::Cancelled;return result;
+        }
         if(::GetFileAttributesW(target.c_str())!=INVALID_FILE_ATTRIBUTES){
             result.status=Status::AlreadyExists;return result;
         }
@@ -249,6 +262,9 @@ inline Result extractMany(std::wstring const& source) noexcept {
         }
         staging.owned=true;
         for(std::size_t i=0;i<members.size();++i){
+            if(fxfile::zipstore::detail::cancelled(cancellation)){
+                result.status=Status::Cancelled;return result;
+            }
             const auto& filePath=staging.files[i];
             Handle output;
             output.h=::CreateFileW(filePath.c_str(),GENERIC_WRITE,0,nullptr,
@@ -262,13 +278,23 @@ inline Result extractMany(std::wstring const& source) noexcept {
                (details.dwFileAttributes&
                 (FILE_ATTRIBUTE_DIRECTORY|FILE_ATTRIBUTE_REPARSE_POINT))||
                details.nNumberOfLinks!=1||
-               !fxfile::zipstore::detail::writeAll(output.h,members[i].content)){
-                result.status=Status::CannotWrite;return result;
+               !fxfile::zipstore::detail::writeAll(
+                   output.h,members[i].content,cancellation)){
+                result.status=fxfile::zipstore::detail::cancelled(cancellation)?
+                    Status::Cancelled:Status::CannotWrite;return result;
             }
+        }
+        if(fxfile::zipstore::detail::cancelled(cancellation)){
+            result.status=Status::Cancelled;return result;
         }
         // No per-file publish: the whole completed directory is renamed.
         result.output=target; // All allocations completed before rename.
         result.fileCount=members.size();
+        if(fxfile::zipstore::detail::cancelled(cancellation)){
+            result.output.clear();result.fileCount=0;
+            result.status=Status::Cancelled;return result;
+        }
+        // No rollback if the final directory rename has committed.
         if(::MoveFileExW(staging.path.c_str(),target.c_str(),
                          MOVEFILE_WRITE_THROUGH)){
             staging.owned=false;

@@ -58,7 +58,8 @@ hstring errorInKorean(DWORD err){
 void MainWindow::SetFileButtonsBusy(bool busy,bool cancellable){
  CreateFolderButton().IsEnabled(!busy);
  fileBar()->WindowsPasteButton().IsEnabled(!busy);
- fileBar()->CancelButton().IsEnabled(busy&&cancellable);
+ fileBar()->CancelButton().IsEnabled(
+    (busy&&cancellable)||mZipBatchCreationBusy||mZipBatchExtractionBusy);
  UpdateCommandAvailability();
  if(!busy)fileBar()->OperationProgress().Value(0);
 }
@@ -72,8 +73,15 @@ void MainWindow::OnRecycleSelected(IInspectable const&,RoutedEventArgs const&){
  RunTransfer(fxfile::shelltransfer::Kind::Recycle);
 }
 void MainWindow::OnCancelTransfer(IInspectable const&,RoutedEventArgs const&){
- if(mFileOperations.cancellable()){
-  mFileOperations.cancel();
+ const bool shell=mFileOperations.cancellable();
+ if(shell)mFileOperations.cancel();
+ const bool zip=(mZipBatchCreationBusy||mZipBatchExtractionBusy)&&
+                static_cast<bool>(mZipBatchCancel);
+ if(zip){
+  mZipBatchCancel->store(true,std::memory_order_relaxed);
+  fileBar()->CancelButton().IsEnabled(shell);
+  StatusText().Text(L"다중 ZIP 작업 취소를 요청했습니다. 임시 출력은 정리됩니다.");
+ }else if(shell){
   StatusText().Text(L"Shell 파일 작업 취소를 요청했습니다.");
  }
 }
@@ -189,15 +197,20 @@ void MainWindow::CreateSelectedBatchZip(int side){
  auto weak=get_weak();
  auto dispatch=DispatcherQueue();
  mZipBatchCreationBusy=true;
- StatusText().Text(L"선택한 일반 파일을 ZIP(Store/무압축)으로 묶는 중입니다. 동일 이름은 덮어쓰지 않습니다.");
+ StatusText().Text(L"다중 ZIP 생성 중입니다. 취소 버튼을 사용할 수 있습니다.");
  try{
+  auto cancel=std::make_shared<std::atomic_bool>(false);
+  mZipBatchCancel=cancel;
+  fileBar()->CancelButton().IsEnabled(true);
   std::thread([weak,dispatch,paths=std::move(selectedPaths),
-               identity,side,tab,route,folder]{
-   const auto result=fxfile::zipbatch::createMany(paths);
+               identity,side,tab,route,folder,cancel]{
+   const auto result=fxfile::zipbatch::createMany(paths,cancel.get());
    dispatch.TryEnqueue([weak,result,identity,side,tab,route,folder]{
     auto ui=weak.get();
     if(!ui||ui->mClosing)return;
     ui->mZipBatchCreationBusy=false;
+    ui->mZipBatchCancel.reset();
+    ui->fileBar()->CancelButton().IsEnabled(ui->mFileOperations.cancellable());
     const auto& active=ui->ActiveWindowTab();
     if(active.identity!=identity||active.model.activePane!=side)return;
     const auto& pane=active.model.panes[side];
@@ -216,6 +229,8 @@ void MainWindow::CreateSelectedBatchZip(int side){
      ui->StatusText().Text(
       result.status==Status::AlreadyExists?
        L"flyExplorer-selection.zip이 이미 존재합니다. 덮어쓰지 않았습니다.":
+      result.status==Status::Cancelled?
+       L"다중 ZIP 생성을 취소했습니다. 최종 ZIP은 공개하지 않았습니다.":
       result.status==Status::TooLarge?
        L"선택 파일의 전체 크기는 8 MiB를 넘을 수 없습니다.":
       result.status==Status::DuplicateName?
@@ -230,6 +245,8 @@ void MainWindow::CreateSelectedBatchZip(int side){
   }).detach();
  }catch(...){
   mZipBatchCreationBusy=false;
+  mZipBatchCancel.reset();
+  fileBar()->CancelButton().IsEnabled(mFileOperations.cancellable());
   StatusText().Text(L"다중 파일 ZIP 생성 작업자를 시작할 수 없습니다.");
  }
 }
@@ -342,14 +359,19 @@ void MainWindow::ExtractSelectedBatchZip(int side){
  auto weak=get_weak();
  const auto dispatch=DispatcherQueue();
  mZipBatchExtractionBusy=true;
- StatusText().Text(L"다중 ZIP Store 항목의 구조와 CRC를 확인하고 있습니다. 기존 항목은 덮어쓰지 않습니다.");
+ StatusText().Text(L"다중 ZIP 해제 중입니다. 취소 버튼을 사용할 수 있습니다.");
  try{
-  std::thread([weak,dispatch,source,identity,side,tab,route,folder]{
-   const auto report=fxfile::zipbatchextract::extractMany(source);
+  auto cancel=std::make_shared<std::atomic_bool>(false);
+  mZipBatchCancel=cancel;
+  fileBar()->CancelButton().IsEnabled(true);
+  std::thread([weak,dispatch,source,identity,side,tab,route,folder,cancel]{
+   const auto report=fxfile::zipbatchextract::extractMany(source,cancel.get());
    dispatch.TryEnqueue([weak,report,identity,side,tab,route,folder]{
     auto ui=weak.get();
     if(!ui||ui->mClosing)return;
     ui->mZipBatchExtractionBusy=false;
+    ui->mZipBatchCancel.reset();
+    ui->fileBar()->CancelButton().IsEnabled(ui->mFileOperations.cancellable());
     const auto& active=ui->ActiveWindowTab();
     if(active.identity!=identity||active.model.activePane!=side)return;
     const auto& pane=active.model.panes[side];
@@ -368,6 +390,8 @@ void MainWindow::ExtractSelectedBatchZip(int side){
      ui->StatusText().Text(
       report.status==Status::AlreadyExists?
        L"flyExplorer-selection-unpacked 폴더가 이미 존재합니다. 덮어쓰지 않았습니다.":
+      report.status==Status::Cancelled?
+       L"다중 ZIP 해제를 취소했습니다. 최종 폴더는 공개하지 않았습니다.":
       report.status==Status::TooLarge?
        L"ZIP 또는 내부 총 용량이 허용 상한을 초과합니다.":
       report.status==Status::Unsupported?
@@ -386,6 +410,8 @@ void MainWindow::ExtractSelectedBatchZip(int side){
   }).detach();
  }catch(...){
   mZipBatchExtractionBusy=false;
+  mZipBatchCancel.reset();
+  fileBar()->CancelButton().IsEnabled(mFileOperations.cancellable());
   StatusText().Text(L"다중 ZIP 해제 작업자를 시작하지 못했습니다.");
  }
 }

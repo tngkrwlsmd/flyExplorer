@@ -20,7 +20,7 @@ inline constexpr std::uint64_t kMaxTotalBytes=8ull*1024ull*1024ull;
 inline constexpr wchar_t kArchiveName[]=L"flyExplorer-selection.zip";
 
 enum class Status {
-    Created, InvalidSource, DuplicateName, TooLarge,
+    Created, Cancelled, InvalidSource, DuplicateName, TooLarge,
     CannotRead, AlreadyExists, CannotWrite
 };
 struct Result final {
@@ -47,8 +47,12 @@ inline bool unchanged(BY_HANDLE_FILE_INFORMATION const& before,
 }
 } // namespace detail
 
-inline Result createMany(std::vector<std::wstring> const& paths) noexcept {
+inline Result createMany(std::vector<std::wstring> const& paths,
+                         std::atomic_bool const* cancellation=nullptr) noexcept {
     Result result{};
+    if(fxfile::zipstore::detail::cancelled(cancellation)){
+            result.status=Status::Cancelled;return result;
+        }
     if(paths.size()<kMinFiles||paths.size()>kMaxFiles)return result;
     try{
         std::vector<detail::Member> members;
@@ -57,6 +61,9 @@ inline Result createMany(std::vector<std::wstring> const& paths) noexcept {
         std::uint64_t totalBytes=0;
         // Finish all source reads and validation before creating any output.
         for(auto const& source:paths){
+            if(fxfile::zipstore::detail::cancelled(cancellation)){
+                result.status=Status::Cancelled;return result;
+            }
             std::wstring parent,leaf;
             std::string encoded;
             if(!fxfile::zipstore::detail::safeSource(source,parent,leaf,encoded)){
@@ -97,6 +104,9 @@ inline Result createMany(std::vector<std::wstring> const& paths) noexcept {
             member.data.resize(static_cast<std::size_t>(length));
             std::size_t offset=0;
             while(offset<member.data.size()){
+                if(fxfile::zipstore::detail::cancelled(cancellation)){
+                result.status=Status::Cancelled;return result;
+            }
                 DWORD read=0;
                 const DWORD desired=static_cast<DWORD>(
                     (std::min)(member.data.size()-offset,std::size_t{65536}));
@@ -118,6 +128,9 @@ inline Result createMany(std::vector<std::wstring> const& paths) noexcept {
             totalBytes+=length;
             members.push_back(std::move(member));
         }
+        if(fxfile::zipstore::detail::cancelled(cancellation)){
+            result.status=Status::Cancelled;return result;
+        }
         // A deterministic file name is deliberate: never silently find an
         // unused name that the user did not request.
         const auto destination=(std::filesystem::path(directory)/kArchiveName);
@@ -138,6 +151,9 @@ inline Result createMany(std::vector<std::wstring> const& paths) noexcept {
         std::vector<unsigned char> zip;
         zip.reserve(archiveCapacity);
         for(auto& member:members){
+            if(fxfile::zipstore::detail::cancelled(cancellation)){
+                result.status=Status::Cancelled;return result;
+            }
             const auto length=static_cast<std::uint32_t>(member.data.size());
             const auto nameLength=static_cast<std::uint16_t>(member.name.size());
             member.localOffset=static_cast<std::uint32_t>(zip.size());
@@ -192,6 +208,9 @@ inline Result createMany(std::vector<std::wstring> const& paths) noexcept {
         if(zip.size()!=archiveCapacity){
             result.status=Status::CannotWrite;return result;
         }
+        if(fxfile::zipstore::detail::cancelled(cancellation)){
+            result.status=Status::Cancelled;return result;
+        }
         fxfile::zipstore::detail::Staging staging;
         if(!::GetTempFileNameW(directory.c_str(),L"fxm",0,staging.path)){
             result.status=Status::CannotWrite;return result;
@@ -207,16 +226,26 @@ inline Result createMany(std::vector<std::wstring> const& paths) noexcept {
                 if(::GetFileInformationByHandle(writer.h,&info)&&
                    info.nNumberOfLinks==1&&
                    !(info.dwFileAttributes&FILE_ATTRIBUTE_REPARSE_POINT)&&
-                   fxfile::zipstore::detail::writeAll(writer.h,zip))
+                   fxfile::zipstore::detail::writeAll(writer.h,zip,cancellation))
                     flushed=true;
             }
         }
         if(!flushed){
-            result.status=Status::CannotWrite;return result;
+            result.status=fxfile::zipstore::detail::cancelled(cancellation)?
+                Status::Cancelled:Status::CannotWrite;
+            return result;
+        }
+        if(fxfile::zipstore::detail::cancelled(cancellation)){
+            result.status=Status::Cancelled;return result;
         }
         // Prepare all user-visible result allocations before publication.
         result.output=target;
         result.fileCount=members.size();
+        if(fxfile::zipstore::detail::cancelled(cancellation)){
+            result.output.clear();result.fileCount=0;
+            result.status=Status::Cancelled;return result;
+        }
+        // No rollback if the final rename has already committed.
         if(::MoveFileExW(staging.path,target.c_str(),
                          MOVEFILE_WRITE_THROUGH)){
             staging.owned=false;

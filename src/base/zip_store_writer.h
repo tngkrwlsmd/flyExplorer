@@ -5,6 +5,7 @@
 #include "zip_inspection.h"
 #include <windows.h>
 #include <algorithm>
+#include <atomic>
 #include <cstdint>
 #include <filesystem>
 #include <string>
@@ -78,9 +79,14 @@ struct Staging final {
     bool owned=false;
     ~Staging(){if(owned)::DeleteFileW(path);}
 };
-inline bool writeAll(HANDLE h,std::vector<unsigned char> const& bytes) noexcept {
+inline bool cancelled(std::atomic_bool const* token) noexcept {
+    return token&&token->load(std::memory_order_relaxed);
+}
+inline bool writeAll(HANDLE h,std::vector<unsigned char> const& bytes,
+                     std::atomic_bool const* token=nullptr) noexcept {
     std::size_t pos=0;
     while(pos<bytes.size()) {
+        if(cancelled(token))return false;
         const DWORD chunk=static_cast<DWORD>(
             (std::min)(bytes.size()-pos,std::size_t{65536}));
         DWORD written=0;
@@ -88,6 +94,7 @@ inline bool writeAll(HANDLE h,std::vector<unsigned char> const& bytes) noexcept 
            written==0||written>chunk)return false;
         pos+=written;
     }
+    if(cancelled(token))return false;
     return ::FlushFileBuffers(h)!=FALSE;
 }
 } // namespace detail
