@@ -14,6 +14,19 @@
   cleanup does not certify the latest Explorer delegation or close G01/G07.
   User-excluded G03/G04/G05 remain excluded.
 
+## 2026-10-22 P0 — align native Explorer menu availability
+
+- The file context menu now disables Windows Explorer handoff if the
+  accumulated selected-path budget exceeds the native delegation limit
+  (`kMaxPathUnits=16*1024`). The menu uses the existing conservative
+  counted source units; native same-parent, lexical/path and duplicate
+  validation remains in the worker. Normal selection behavior is unchanged.
+- Condensed superseded F08 implementation-phase narratives in the active
+  handoff and future-goals register. Historical source changes and safety
+  evidence remain available in Git and the retained current-status ledger.
+- **NOT TESTED:** this source-only change was not built, compiled or run
+  on Windows, and did not perform GUI or pixel tests.
+
 
 
 ## 2026-10-21 G01 — owned native shutdown dump collection ready

@@ -36,6 +36,7 @@ class WindowsExplorerDelegationContracts(unittest.TestCase):
             '#include "../../src/base/shell_explorer_delegate.h"',
             "void MainWindow::RevealSelectedInWindowsExplorer(int side)",
             "shellexplorer::kMaxSelected",
+            "sourceUnits<=fxfile::shellexplorer::kMaxPathUnits",
             "visible.visibleRoute!=route",
             "item->isFileSystem()",
             "shellexplorer::reveal(paths)",

@@ -769,7 +769,10 @@ void MainWindow::ShowAppFileContextMenu(
  const bool canOppositeMove=localSelection&&destinationFilesystem;
  const bool canExternal=localSelection&&
   count<=fxfile::shellcontext::kMaxContextSelection;
+ // Keep menu availability within the smaller Explorer handoff wire budget.
+ // The native worker still revalidates individual paths and their parent.
  const bool canWindowsExplorer=ready&&boundedSources&&
+     sourceUnits<=fxfile::shellexplorer::kMaxPathUnits&&
      allFilesystem&&count<=fxfile::shellexplorer::kMaxSelected;
  auto weak=get_weak();
  MenuFlyout menu;
