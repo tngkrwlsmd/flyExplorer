@@ -681,7 +681,7 @@ void MainWindow::ApplyTransferStartStatus(
  }
 }
 void MainWindow::StartTransfer(fxfile::shelltransfer::Request request){
- mTransferFailureNotice.clear();
+ ActiveWindowTab().transferFailureNotice.clear();
  const auto side=ActiveWindowTab().model.activePane;
  const auto count=request.sources.size();
  auto weak=get_weak();
@@ -767,6 +767,19 @@ void MainWindow::OnTransferCompleted(
  const auto disposition=mFileOperations.acceptTransfer(
   completion,FileOperationContext(completion.context.side));
  if(disposition==Disposition::Ignored)return;
+ const bool originActive=completion.context.windowTabIdentity==
+                         ActiveWindowTab().identity;
+ auto rememberOrigin=[&](std::wstring const& message){
+  // The same controller owns the request, but the notice belongs to the
+  // originating workspace even if its tab is currently inactive.
+  for(std::size_t i=0;i<mWorkspace.count();++i){
+   auto& state=mWorkspace.state(i);
+   if(state.identity==completion.context.windowTabIdentity){
+    state.transferFailureNotice=message;
+    return;
+   }
+  }
+ };
  if(mTransferTimer)mTransferTimer.Stop();
  SetFileButtonsBusy(false,false);
  if(disposition==Disposition::NeedsCollisionConfirmation){
@@ -807,7 +820,10 @@ void MainWindow::OnTransferCompleted(
  }
  }
  if(disposition==Disposition::StaleContext){
-  StatusText().Text(L"파일 작업 종료: 화면이 변경됐습니다. 원본·대상 폴더를 확인하세요.");
+  const std::wstring notice=
+      L"파일 작업 종료: 화면이 변경됐습니다. 원본·대상 폴더를 확인하세요.";
+  rememberOrigin(notice);
+  if(originActive)StatusText().Text(hstring(notice));
   return;
  }
  if(disposition==Disposition::Failed){
@@ -830,8 +846,8 @@ void MainWindow::OnTransferCompleted(
    detail+=L" 충돌 "+std::to_wstring(completion.skippedCollisions)+
            L"개는 건너뛰었습니다.";
   detail+=L" 일부 항목이 처리됐을 수 있습니다. 원본·대상을 확인하세요.";
-  mTransferFailureNotice=detail;
-  StatusText().Text(hstring(detail));
+  rememberOrigin(detail);
+  if(originActive)StatusText().Text(hstring(detail));
   return;
  }
  const auto count=std::to_wstring(completion.request.sources.size());
@@ -844,7 +860,7 @@ void MainWindow::OnTransferCompleted(
  if(completion.skippedCollisions)
   message+=L" 충돌 "+std::to_wstring(completion.skippedCollisions)+
            L"개는 건너뛰고 기존 항목을 유지했습니다.";
- StatusText().Text(hstring(message));
+ if(originActive)StatusText().Text(hstring(message));
 
 
 }
