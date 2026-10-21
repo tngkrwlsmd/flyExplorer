@@ -207,6 +207,37 @@ namespace winrt::FlyExplorer::implementation
                         }
                     }
                 }
+                // Explorer navigation keys target the active pane only.
+                // Do not consume Alt+arrows while an editor, menu or dialog
+                // owns the key route; their local keyboard behavior wins.
+                if(alt&&!control&&!shift&&
+                   (key==Windows::System::VirtualKey::Left||
+                    key==Windows::System::VirtualKey::Right||
+                    key==Windows::System::VirtualKey::Up)){
+                    auto node=args.OriginalSource().try_as<DependencyObject>();
+                    while(node){
+                        if(node.try_as<TextBox>()||
+                           node.try_as<PasswordBox>()||
+                           node.try_as<RichEditBox>()||
+                           node.try_as<ComboBox>()||
+                           node.try_as<AutoSuggestBox>()||
+                           node.try_as<MenuFlyoutPresenter>()||
+                           node.try_as<ContentDialog>())
+                            return;
+                        node=Microsoft::UI::Xaml::Media::VisualTreeHelper::
+                            GetParent(node);
+                    }
+                    if(auto ui=nativeWeak.get()){
+                        if(key==Windows::System::VirtualKey::Left)
+                            ui->OnBackClicked(nullptr,nullptr);
+                        else if(key==Windows::System::VirtualKey::Right)
+                            ui->OnForwardClicked(nullptr,nullptr);
+                        else
+                            ui->OnUpClicked(nullptr,nullptr);
+                        args.Handled(true);
+                    }
+                    return;
+                }
                 if(!control&&!shift&&!alt&&
                    key==Windows::System::VirtualKey::F5){
                     if(auto ui=nativeWeak.get()){
