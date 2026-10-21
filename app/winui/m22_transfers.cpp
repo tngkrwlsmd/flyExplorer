@@ -784,6 +784,9 @@ void MainWindow::OnTransferCompleted(
  // only the currently visible folders touched by this exact request, even
  // on failure; never infer that the batch was atomic or delete partial data.
  // ShellNavigationController supersedes earlier same-pane navigation.
+ // A completed operation may outlive its WindowTab. Do not navigate
+ // a different workspace just because it displays the same folder path.
+ if(completion.context.windowTabIdentity==ActiveWindowTab().identity){
  for(int side=0;side<2;++side){
   if(side==1&&!ActiveWindowTab().model.split)continue;
   auto const& pane=ActiveWindowTab().model.panes[side];
@@ -801,6 +804,7 @@ void MainWindow::OnTransferCompleted(
   QueuePidl(side,
    fxfile::shellnav::Location(pane.tabs[pane.active].snapshot().folder),
    fxfile::shellnav::NavigationAction::Refresh);
+ }
  }
  if(disposition==Disposition::StaleContext){
   StatusText().Text(L"파일 작업 종료: 화면이 변경됐습니다. 원본·대상 폴더를 확인하세요.");
