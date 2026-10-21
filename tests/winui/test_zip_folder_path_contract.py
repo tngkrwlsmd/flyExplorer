@@ -1,4 +1,4 @@
-"""F08 bounded one-root/one-child ZIP path containment contracts.
+"""F08 bounded one-root/three-child ZIP path containment contracts.
 Source-only expectations; NOT EXECUTED in this change.
 """
 import unittest
@@ -25,7 +25,9 @@ class SingleRootZipContracts(unittest.TestCase):
             "staging.nestedChildren",
             "staging.nestedOwned=true;",
             "++staging.createdChildren;",
-            "if(!nestedOwned)return;",
+            "if(!nestedOwned){",
+            "previous.name,entryChild",
+            "archiveChildren.begin(),archiveChildren.end()",
             "for(std::size_t i=0;i<createdChildren;++i)",
             "CreateDirectoryW(staging.nestedRoot.c_str(),nullptr)",
             "CreateDirectoryW(childPath.c_str(),nullptr)",
@@ -36,6 +38,8 @@ class SingleRootZipContracts(unittest.TestCase):
         for token in checks:
             self.assertIn(token,c)
         self.assertLess(c.index("detail::memberPath("),
+                        c.index("GetTempFileNameW(parent.c_str()"))
+        self.assertLess(c.index("previous.name,entryChild"),
                         c.index("GetTempFileNameW(parent.c_str()"))
         self.assertLess(c.index("crc32(member.content)!=checksum"),
                         c.index("GetTempFileNameW(parent.c_str()"))
