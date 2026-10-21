@@ -41,6 +41,10 @@ void MainWindow::BeginFileNameCommand(fxfile::filecommand::Kind kind){
   auto& pane=ActiveWindowTab().model.panes[static_cast<size_t>(side)];
   const size_t tab=pane.active;
   const auto view=side==0?LeftFiles():RightFiles();
+  if(view.SelectedItems().Size()!=1){
+   StatusText().Text(L"이름 변경은 파일 또는 폴더 하나만 선택해야 합니다.");
+   return;
+  }
   const auto picked=view.SelectedItem();
   const auto row=picked.try_as<ListViewItem>();
   if(!row||!row.Tag()){
@@ -61,8 +65,9 @@ void MainWindow::BeginFileNameCommand(fxfile::filecommand::Kind kind){
  }
  fileBar()->BeginNameEdit(kind==fxfile::filecommand::Kind::CreateFolder?0:1,hstring(initial),renameFolder);
  StatusText().Text(kind==fxfile::filecommand::Kind::CreateFolder?
-  L"새 폴더 이름을 입력하고 Enter를 누르세요.":
-  L"새 이름을 입력하고 Enter를 누르세요.");
+  L"새 폴더 이름을 입력하고 Enter로 확정하거나 Esc로 취소하세요.":
+  hstring(L"이름 변경 대상: "+initial+
+      L" (Enter 확정, Esc 취소)"));
 }
 void MainWindow::ExecuteFileCommand(fxfile::filecommand::Kind kind){
  if(mFileOperations.busy()){
@@ -88,6 +93,10 @@ void MainWindow::ExecuteFileCommand(fxfile::filecommand::Kind kind){
  }
  if(kind==fxfile::filecommand::Kind::RenameSelected){
      const auto view=side==0?LeftFiles():RightFiles();
+     if(view.SelectedItems().Size()!=1){
+         StatusText().Text(L"이름 변경은 파일 또는 폴더 하나만 선택해야 합니다.");
+         return;
+     }
      const auto picked=view.SelectedItem();
      const auto row=picked.try_as<ListViewItem>();
      if(!row||!row.Tag()){
