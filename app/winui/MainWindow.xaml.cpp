@@ -884,7 +884,7 @@ namespace winrt::FlyExplorer::implementation
     std::uint64_t MainWindow::QueuePath(int side,std::wstring path)
     {
         CancelTextPreview();
-        ActiveWindowTab().transferFailureNotice.clear();
+        ActiveWindowTab().fileOperationNotice.clear();
         mSearchController.invalidate();
         auto& model=ActiveWindowTab().model;
         auto& pane=model.panes[side];
@@ -908,7 +908,7 @@ namespace winrt::FlyExplorer::implementation
     {
         CancelTextPreview();
         if(action!=fxfile::shellnav::NavigationAction::Refresh){
-            ActiveWindowTab().transferFailureNotice.clear();
+            ActiveWindowTab().fileOperationNotice.clear();
             mSearchController.invalidate();
             mWorkspaceRestore.reset(side);
         }
@@ -1200,8 +1200,8 @@ namespace winrt::FlyExplorer::implementation
             // file-operation warning. Reassert it after presenting the
             // touched folder; do not mistake a partial transfer for success.
             if(completed.action==Action::Refresh&&
-               !ActiveWindowTab().transferFailureNotice.empty())
-                StatusText().Text(hstring(ActiveWindowTab().transferFailureNotice));
+               !ActiveWindowTab().fileOperationNotice.empty())
+                StatusText().Text(hstring(ActiveWindowTab().fileOperationNotice));
             UpdateWatch(completed.side,true);
             ScheduleOwnedShellProviderVisualCaptureIfNeeded(completed.side);
         }else RefreshTabs(completed.side);
@@ -2672,8 +2672,8 @@ namespace winrt::FlyExplorer::implementation
         ToolTipService::SetToolTip(SplitButton(),winrt::box_value(splitLabel));
         mDetailLayoutProfiles={{-1,-1}};
         Refresh(status);
-        if(!state.transferFailureNotice.empty())
-            StatusText().Text(hstring(state.transferFailureNotice));
+        if(!state.fileOperationNotice.empty())
+            StatusText().Text(hstring(state.fileOperationNotice));
         for(int side=0;side<2;++side){
             if(side==1&&!split)continue;
             auto& pane=state.model.panes[side];
