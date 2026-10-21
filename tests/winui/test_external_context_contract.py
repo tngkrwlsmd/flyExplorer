@@ -40,13 +40,17 @@ class ContextContract(unittest.TestCase):
   for token in (
       "pane.active>=pane.filesystemPaths.size()",
       "const bool localSource=!pane.filesystemPaths[tab].empty();",
-      "const bool canRename=selectedFilesystem&&localSource&&count==1;",
+      "bool boundedSources=true;",
+      "fxfile::shelltransfer::kMaxSourcePathUnits-sourceUnits",
+      "const bool localSelection=ready&&boundedSources&&",
+      "const bool canProviderSource=ready&&boundedSources&&!localSelection&&",
+      "const bool canRename=localSelection&&count==1;",
       "other.active<other.pending.size()",
       "!other.pending[other.active]",
-      "const bool canOppositeCopy=ready&&",
-      "const bool canOppositeMove=selectedFilesystem&&",
+      "const bool canOppositeCopy=(localSelection||canProviderSource)&&",
+      "const bool canOppositeMove=localSelection&&destinationFilesystem;",
       "sendTo.IsEnabled(canOppositeCopy||canOppositeMove);",
-      "const bool canExternal=selectedFilesystem&&localSource&&",
+      "const bool canExternal=localSelection&&",
   ):
    self.assertIn(token,itemMenu)
   self.assertIn('make(L"추가 옵션 표시"',app)
