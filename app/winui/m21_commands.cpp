@@ -171,6 +171,8 @@ void MainWindow::OnFileCommandCompleted(
      if(originActive)StatusText().Text(hstring(notice));
      return;
  }
+ // Reveal is only an outcome of an explicitly accepted success.
+ if(disposition!=Disposition::Succeeded)return;
  fileBar()->EndNameEdit();
  if(originActive)StatusText().Text(
      completion.kind==fxfile::filecommand::Kind::CreateFolder?
