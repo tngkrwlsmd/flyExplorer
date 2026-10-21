@@ -284,7 +284,8 @@ namespace winrt::FlyExplorer::implementation
         void OnTransferCompleted(FileOperationController::TransferCompletion completion);
         void OnFileCommandCompleted(FileOperationController::FileCommandCompletion completion);
         winrt::fire_and_forget ConfirmCollision(
-            std::size_t requested,std::size_t collided,bool allowSkip);
+            std::size_t requested,std::size_t collided,bool allowSkip,
+            std::size_t previouslySkipped);
         winrt::fire_and_forget ConfirmRecycle(std::size_t count);
         bool mPopulatingTabs = false;
         bool mSuppressWindowTabRefresh = false;
