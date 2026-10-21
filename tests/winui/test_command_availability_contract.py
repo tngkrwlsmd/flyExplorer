@@ -13,18 +13,27 @@ class CommandAvailabilityContract(unittest.TestCase):
         for text in (
             "state.model.activePane",
             "view.SelectedItems()",
-            "if(!row||!row.Tag())continue",
-            "pane.active<pane.pending.size()&&!pane.pending[pane.active]",
-            "const bool hasItems=ready&&chosen>0",
-            "RenameButton().IsEnabled(canRename)",
-            "indexed->isFileSystem()",
+            "if(!row||!row.Tag()){validSelection=false;break;}",
+            "state.fileLists[side].visibleRoute==pane.routeIds[pane.active]",
+            "pane.active<pane.filesystemPaths.size()",
+            "count<=fxfile::shelltransfer::kMaxItems",
             "indexed->parsingName.empty()",
+            "fxfile::shelltransfer::kMaxSourcePathUnits-sourceUnits",
+            "indexed->isFileSystem()",
+            "const bool localSelection=validSelection&&localFolder&&allFilesystem;",
+            "const bool canCopyToOpposite=sourceAllowed&&",
+            "const bool canMoveToOpposite=localSelection&&destinationFilesystem;",
+            "RenameButton().IsEnabled(canRename)",
         ):
             self.assertIn(text,body)
-        for command in ("WindowsCutButton","WindowsCopyButton","RecycleButton",
-                        "CopyButton","MoveButton"):
-            self.assertIn(f"{command}().IsEnabled(hasItems)",body)
+        for command in ("WindowsCutButton","WindowsCopyButton","RecycleButton"):
+            self.assertIn(f"{command}().IsEnabled(localSelection)",body)
+        self.assertIn("CopyButton().IsEnabled(canCopyToOpposite)",body)
+        self.assertIn("MoveButton().IsEnabled(canMoveToOpposite)",body)
+        self.assertIn("CreateFolderButton().IsEnabled(localFolder)",body)
+        self.assertIn("WindowsPasteButton().IsEnabled(localFolder)",body)
         self.assertNotIn("StatusText().Text",body)
+        self.assertNotIn("::GetFileAttributesW",body)
 
     def test_selection_change_and_pane_change_refresh_buttons(self):
         code=(APP/"MainWindow.xaml.cpp").read_text(encoding="utf-8-sig")
