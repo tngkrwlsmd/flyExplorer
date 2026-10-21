@@ -2015,7 +2015,21 @@ namespace winrt::FlyExplorer::implementation
                 break;
             }
         }
-        if(sameRenderedFolder)for(auto const& old:view.SelectedItems()){
+        const bool revealAfterRefresh=state.fileCommandReveal.afterRefresh&&
+            state.fileCommandReveal.route==nextRoute&&
+            state.fileCommandReveal.tab==pane.active&&
+            state.fileCommandReveal.folder==snapshot.parsingName&&
+            !state.fileCommandReveal.target.empty();
+        if(state.fileCommandReveal.afterRefresh&&!revealAfterRefresh)
+            state.fileCommandReveal.clear();
+        if(revealAfterRefresh){
+            // The command's new target takes priority over the old name.
+            // Do not restore a focused or selected row that was renamed.
+            selected.clear();
+            focusedPath.clear();
+        }
+        if(sameRenderedFolder&&!revealAfterRefresh)
+        for(auto const& old:view.SelectedItems()){
             auto row=old.try_as<ListViewItem>();
             if(!row||!row.Tag())continue;
             const auto logical=winrt::unbox_value<std::uint64_t>(row.Tag());
@@ -2631,6 +2645,11 @@ namespace winrt::FlyExplorer::implementation
             state.renderedPaths.push_back(itemParsing);
             if(!focusedPath.empty()&&itemParsing==focusedPath)
                 focusRow=row;
+            if(revealAfterRefresh&&!itemParsing.empty()&&
+               itemParsing==state.fileCommandReveal.target){
+                view.SelectedItems().Append(row);
+                if(side==ActiveWindowTab().model.activePane)focusRow=row;
+            }
             if(!itemParsing.empty()&&
                std::find(selected.begin(),selected.end(),itemParsing)
                   !=selected.end()){
@@ -2640,9 +2659,15 @@ namespace winrt::FlyExplorer::implementation
                 view.SelectedItems().Append(row);
             }
         }
-        // Restore keyboard focus only when that exact old row still exists
-        // in the same active pane after the refresh.
-        if(focusRow)focusRow.Focus(FocusState::Programmatic);
+        // Exactly one successful refresh may consume the file-command
+        // target. A hidden, filtered or not-yet-rendered row is never
+        // replaced with an arbitrary selected file.
+        if(revealAfterRefresh)state.fileCommandReveal.clear();
+        // Restore keyboard focus only when a matching row is rendered.
+        if(focusRow){
+            if(revealAfterRefresh)view.ScrollIntoView(focusRow);
+            focusRow.Focus(FocusState::Programmatic);
+        }
         // The on-screen ListView is shared while WindowTabs are switched.
         // Its owner is a presentation identity, never a Shell file identity.
         view.Tag(winrt::box_value(ActiveWindowTab().identity));
