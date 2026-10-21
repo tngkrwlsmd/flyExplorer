@@ -485,7 +485,7 @@ void MainWindow::ExtractSelectedBatchZip(int side){
       report.status==Status::TooLarge?
        L"ZIP 또는 내부 총 용량이 허용 상한을 초과합니다.":
       report.status==Status::Unsupported?
-       L"ZIP Store/Deflate 평면 파일 2~8개 형식만 지원합니다.":
+       L"ZIP Store/Deflate 파일 2~8개(평면 또는 한 단계 폴더)만 지원합니다.":
       report.status==Status::UnsafeEntry?
        L"위험하거나 중복된 ZIP 내부 파일명으로 해제하지 않았습니다.":
       report.status==Status::Corrupt?

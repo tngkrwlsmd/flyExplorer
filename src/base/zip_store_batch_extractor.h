@@ -1,7 +1,7 @@
-// F08/EP10: strict bounded Store/Deflate, 2-8 regular flat ZIP members.
+// F08/EP10: strict bounded Store/Deflate, 2-8 flat or single-root members.
 // Validate every local/central record and CRC before any output. Publish a
 // single owned staging directory by rename; never publish partial entries.
-// No ZIP64, extra/comment, symlinks, nested paths or overwrite.
+// No ZIP64, extra/comment, symlinks, multiple roots, deep paths or overwrite.
 // Untested on Windows: hostile concurrent directory replacement remains a risk.
 #pragma once
 #include "zip_store_batch_writer.h"
@@ -39,6 +39,7 @@ struct Member final {
 struct StagedDirectory final {
     std::wstring path;
     std::vector<std::wstring> files;
+    std::wstring nestedRoot;
     bool owned=false;
     ~StagedDirectory() noexcept {
         if(!owned)return;
@@ -46,12 +47,20 @@ struct StagedDirectory final {
         if(root==INVALID_FILE_ATTRIBUTES||
            !(root&FILE_ATTRIBUTE_DIRECTORY)||
            (root&FILE_ATTRIBUTE_REPARSE_POINT))return;
+        // Never descend into an externally replaced junction/reparse root.
+        if(!nestedRoot.empty()){
+            const DWORD child=::GetFileAttributesW(nestedRoot.c_str());
+            if(child==INVALID_FILE_ATTRIBUTES||
+               !(child&FILE_ATTRIBUTE_DIRECTORY)||
+               (child&FILE_ATTRIBUTE_REPARSE_POINT))return;
+        }
         for(auto const& name:files){
             const DWORD attr=::GetFileAttributesW(name.c_str());
             if(attr!=INVALID_FILE_ATTRIBUTES&&
                !(attr&(FILE_ATTRIBUTE_DIRECTORY|FILE_ATTRIBUTE_REPARSE_POINT)))
                 ::DeleteFileW(name.c_str());
         }
+        if(!nestedRoot.empty())::RemoveDirectoryW(nestedRoot.c_str());
         ::RemoveDirectoryW(path.c_str());
     }
     StagedDirectory()=default;
@@ -63,6 +72,21 @@ inline bool flatName(std::wstring const& name) {
     return name.size()<=180&&!name.empty()&&
            name.find(L'/')==std::wstring::npos&&
            fxfile::zipinspect::detail::safeName(name,isFolder)&&!isFolder;
+}
+// Reject all path shapes except "leaf" or "singleRoot/leaf".
+// No drive, dot components, empty segment, second slash, or directory-only
+// ZIP entries can pass the shared safeName validation.
+inline bool memberPath(std::wstring const& value,
+                       std::wstring& root,std::wstring& leaf) {
+    const auto slash=value.find(L'/');
+    if(slash==std::wstring::npos){
+        root.clear();leaf=value;
+        return flatName(leaf);
+    }
+    if(value.find(L'/',slash+1)!=std::wstring::npos)return false;
+    root=value.substr(0,slash);
+    leaf=value.substr(slash+1);
+    return flatName(root)&&flatName(leaf);
 }
 } // namespace detail
 
@@ -149,6 +173,8 @@ inline Result extractMany(std::wstring const& source,
         std::uint64_t uncompressedTotal=0;
         std::vector<detail::Member> members;
         members.reserve(count);
+        std::wstring archiveRoot;
+        bool rootMode=false;
         for(std::size_t i=0;i<count;++i){
             if(fxfile::zipstore::detail::cancelled(cancellation)){
                 result.status=Status::Cancelled;return result;
@@ -218,17 +244,26 @@ inline Result extractMany(std::wstring const& source,
                    bytes,directoryCursor+46u,nameLength,flags,name)){
                 result.status=Status::Unsupported;return result;
             }
-            if(!detail::flatName(name)){
+            std::wstring entryRoot,entryLeaf;
+            if(!detail::memberPath(name,entryRoot,entryLeaf)){
+                result.status=Status::UnsafeEntry;return result;
+            }
+            if(i==0){
+                rootMode=!entryRoot.empty();
+                archiveRoot=entryRoot;
+            }else if(rootMode!=!entryRoot.empty()||
+                     (rootMode&&!fxfile::zipinspect::detail::same(
+                         archiveRoot,entryRoot))){
                 result.status=Status::UnsafeEntry;return result;
             }
             for(auto const& previous:members){
-                if(fxfile::zipinspect::detail::same(previous.name,name)){
+                if(fxfile::zipinspect::detail::same(previous.name,entryLeaf)){
                     result.status=Status::UnsafeEntry;return result;
                 }
             }
             // Validate the entire member before staging any output.
             detail::Member member{};
-            member.name=std::move(name);
+            member.name=std::move(entryLeaf);
             if(method==0){
                 member.content.assign(bytes.begin()+dataStart,
                                       bytes.begin()+dataStart+packed);
@@ -280,8 +315,17 @@ inline Result extractMany(std::wstring const& source,
         detail::StagedDirectory staging;
         staging.path=std::wstring(reservation.path)+L".dir";
         staging.files.reserve(members.size());
+        if(rootMode){
+            staging.nestedRoot=(std::filesystem::path(staging.path)/archiveRoot).native();
+            if(staging.nestedRoot.size()>240u){
+                result.status=Status::InvalidSource;return result;
+            }
+        }
         for(auto const& member:members){
-            const auto staged=(std::filesystem::path(staging.path)/member.name).native();
+            const auto base=rootMode?
+                std::filesystem::path(staging.nestedRoot):
+                std::filesystem::path(staging.path);
+            const auto staged=(base/member.name).native();
             if(staged.size()>253u){
                 result.status=Status::InvalidSource;return result;
             }
@@ -291,6 +335,9 @@ inline Result extractMany(std::wstring const& source,
             result.status=Status::CannotWrite;return result;
         }
         staging.owned=true;
+        if(rootMode&&!::CreateDirectoryW(staging.nestedRoot.c_str(),nullptr)){
+            result.status=Status::CannotWrite;return result;
+        }
         for(std::size_t i=0;i<members.size();++i){
             if(fxfile::zipstore::detail::cancelled(cancellation)){
                 result.status=Status::Cancelled;return result;
