@@ -74,6 +74,15 @@ validated selection into a short-lived worker and applies UI refresh to the
 origin WindowTab/PaneTab. Do not treat unexecuted code contracts as native
 ZIP acceptance.
 
+The next F08 native extractor is `src/base/zip_store_extractor.h`:
+one in-memory, single-handle ZIP Store snapshot with strict one-file
+header/offset/name verification and actual CRC32 calculation before output.
+It uses the ZIP writer's owned staging and flush helper to publish one
+flat extracted file without replacing existing content. The WinUI
+`ExtractSelectedZip` action dispatches it off the UI thread and gates
+feedback/refresh by exact workspace origin. There is no ZIP general
+extraction/Deflate engine or cancellation guarantee.
+
 Regular-document activation belongs to `app/winui/file_open_controller.h`.
 It owns one asynchronous Windows StorageFile/Launcher request, deadline and
 close cancellation. MainWindow supplies weak presentation callbacks and checks
