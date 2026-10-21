@@ -226,7 +226,7 @@ FileOperationController::skipCollisions(
         pending.request.sources=std::move(remaining);
         return launchTransfer(std::move(pending.request),
                               std::move(pending.context),
-                              std::move(post),std::move(completion));
+                              std::move(post),std::move(completion),skipped);
     }catch(...){
         skipped=0;
         return StartStatus::StaleConfirmation;
@@ -235,7 +235,7 @@ FileOperationController::skipCollisions(
 
 FileOperationController::StartStatus FileOperationController::launchTransfer(
     fxfile::shelltransfer::Request request,Context context,
-    Post post,TransferCallback completion)
+    Post post,TransferCallback completion,std::size_t skippedCollisions)
 {
     if(!post||!completion)return StartStatus::ThreadStartFailed;
     auto progress=std::make_shared<fxfile::shelltransfer::Progress>();
@@ -263,7 +263,8 @@ FileOperationController::StartStatus FileOperationController::launchTransfer(
         std::thread([
             shared,progress,ticket,context=std::move(context),
             request=std::move(request),touched=std::move(touched),
-            post=std::move(post),completion=std::move(completion)
+            post=std::move(post),completion=std::move(completion),
+            skippedCollisions
         ]() mutable {
             auto report=request.kind==fxfile::shelltransfer::Kind::Recycle?
                 fxfile::shelltransfer::execute(request,*progress):
@@ -273,6 +274,7 @@ FileOperationController::StartStatus FileOperationController::launchTransfer(
             value.context=std::move(context);
             value.request=std::move(request);
             value.report=std::move(report);
+            value.skippedCollisions=skippedCollisions;
             value.touchedFolders=std::move(touched);
             bool posted=false;
             try{
