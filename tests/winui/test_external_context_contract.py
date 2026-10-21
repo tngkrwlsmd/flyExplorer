@@ -31,8 +31,8 @@ class ContextContract(unittest.TestCase):
   self.assertIn("VirtualKey::F10",app)
   self.assertIn("!ctrl&&shift&&!alt",app)
   self.assertIn("ShowExternalWindowsContextMenu(side)",app)
-  self.assertIn("ShowAppFileContextMenu(side,clicked)",app)
-  self.assertIn("ShowAppBackgroundContextMenu(side,list)",app)
+  self.assertIn("ShowAppFileContextMenu(side,clicked,args.GetPosition(clicked))",app)
+  self.assertIn("ShowAppBackgroundContextMenu(side,list,args.GetPosition(list))",app)
   self.assertIn("MenuFlyoutSubItem sendTo;",app)
   self.assertIn("MenuFlyoutSubItem create;",app)
   self.assertIn('make(L"추가 옵션 표시"',app)
@@ -60,6 +60,28 @@ class ContextContract(unittest.TestCase):
   header=src("app/winui/MainWindow.xaml.h")
   self.assertIn("ShowExternalWindowsContextMenu(int side)",header)
   self.assertIn("OnExternalWindowsContextMenu",header)
+ def test_folder_background_menu_reuses_all_toolbar_modes(self):
+  app=src("app/winui/m22_transfers.cpp")
+  header=src("app/winui/MainWindow.xaml.h")
+  body=app.split("void MainWindow::ShowAppBackgroundContextMenu(",1)[1].split(
+      "void MainWindow::OnFileRightTapped(",1)[0]
+  self.assertIn("ToggleMenuFlyoutItem item;",body)
+  self.assertIn("item.IsChecked(checked);",body)
+  self.assertEqual(body.count("view.Items().Append(choice("),5)
+  self.assertEqual(body.count("sort.Items().Append(choice("),8)
+  for label,index in (
+      ("이름 오름차순",0),("이름 내림차순",1),
+      ("유형 오름차순",4),("유형 내림차순",5),
+      ("크기 오름차순",6),("크기 내림차순",2),
+      ("수정 날짜 오름차순",7),("수정 날짜 내림차순",3),
+  ):
+   self.assertIn('choice(L"'+label+'",sortMode=='+str(index),body)
+  self.assertIn("pane.active>=pane.filesystemPaths.size()",body)
+  self.assertIn("state.identity!=identity",body)
+  self.assertIn("pane.routeIds[tab]!=route",body)
+  self.assertIn("ShowAppBackgroundContextMenu(side,view,Windows::Foundation::Point{0,0})",app)
+  self.assertIn("ShowAppBackgroundContextMenu(int side,",header)
+
  def test_external_menu_reports_safe_command_boundaries(self):
   app=src("app/winui/m22_transfers.cpp")
   helper=src("app/winui/helper/FlyShellIsolationHelper.cpp")
