@@ -55,6 +55,18 @@ class ContextContract(unittest.TestCase):
   header=src("app/winui/MainWindow.xaml.h")
   self.assertIn("ShowExternalWindowsContextMenu(int side)",header)
   self.assertIn("OnExternalWindowsContextMenu",header)
+ def test_external_menu_reports_safe_command_boundaries(self):
+  app=src("app/winui/m22_transfers.cpp")
+  helper=src("app/winui/helper/FlyShellIsolationHelper.cpp")
+  self.assertIn('if(paths.size()>1&&verb!="properties")rc=65;',helper)
+  self.assertIn("const auto count=list.SelectedItems().Size();",app)
+  self.assertIn("StatusText().Text(count>1?",app)
+  self.assertIn("여러 항목의 외부 Windows 메뉴는 속성 확인만 지원합니다.",app)
+  self.assertIn("else if(code==65)",app)
+  self.assertIn("이 Windows 메뉴 명령은 실행하지 않았습니다.",app)
+  self.assertIn("else if(code==69)",app)
+  self.assertIn("shellcontext::show(helper,paths,cursor,45000)",app)
+
  def test_no_automatic_external_command_execution(self):
   a=src("tests/winui/test_shell_gui.py")
   b=src("tests/winui/test_owned_thumbnail_gui.py")
