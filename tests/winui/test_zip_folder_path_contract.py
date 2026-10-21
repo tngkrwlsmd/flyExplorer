@@ -14,6 +14,8 @@ class SingleRootZipContracts(unittest.TestCase):
             "archiveRoot,entryRoot",
             "zipinspect::detail::same(previous.name,entryLeaf)",
             "staging.nestedRoot",
+            "staging.nestedOwned=true;",
+            "if(!nestedOwned)return;",
             "CreateDirectoryW(staging.nestedRoot.c_str(),nullptr)",
             "if(!nestedRoot.empty())::RemoveDirectoryW(nestedRoot.c_str())",
             "!(child&FILE_ATTRIBUTE_DIRECTORY)",

@@ -17,6 +17,14 @@ class ZipStoreBatchContracts(unittest.TestCase):
             "enum class Compression { StoreOnly, DeflatePreferred }",
             "Status::CompressionFailed",
             "member.originalSize",
+            "std::wstring const& folderRoot={}",
+            "member.name.insert(0,prefix)",
+            "folderRoot.empty()?directory:",
+            "targetFolder.c_str()",
+            "FindFirstFileW(search.c_str()",
+            "data.dwFileAttributes&",
+            "FILE_ATTRIBUTE_DIRECTORY|FILE_ATTRIBUTE_REPARSE_POINT",
+            "return createMany(files,cancellation,mode,folder)",
             "member.method=8",
             "ziprawdeflate::compressBounded(",
             "ziprawdeflate::inflateExact(",
@@ -33,7 +41,7 @@ class ZipStoreBatchContracts(unittest.TestCase):
             "zipstore::detail::crc32(member.data)",
             "0x04034b50u", "0x02014b50u", "0x06054b50u",
             "member.localOffset",
-            "GetTempFileNameW(directory.c_str()",
+            "GetTempFileNameW(targetFolder.c_str()",
             "zipstore::detail::Staging staging",
             "info.nNumberOfLinks==1",
             "zipstore::detail::writeAll(writer.h,zip,cancellation)",
@@ -46,7 +54,7 @@ class ZipStoreBatchContracts(unittest.TestCase):
             self.assertIn(token,code)
         self.assertLess(
             code.index("zipstore::detail::safeSource(source,parent,leaf,encoded)"),
-            code.index("GetTempFileNameW(directory.c_str()"))
+            code.index("GetTempFileNameW(targetFolder.c_str()"))
         self.assertLess(
             code.index("result.output=target;"),
             code.index("::MoveFileExW(staging.path,target.c_str()"))

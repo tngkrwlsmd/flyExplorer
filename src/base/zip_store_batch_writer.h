@@ -55,7 +55,8 @@ inline bool unchanged(BY_HANDLE_FILE_INFORMATION const& before,
 
 inline Result createMany(std::vector<std::wstring> const& paths,
                          std::atomic_bool const* cancellation=nullptr,
-                         Compression compression=Compression::StoreOnly) noexcept {
+                         Compression compression=Compression::StoreOnly,
+                         std::wstring const& folderRoot={}) noexcept {
     Result result{};
     if(fxfile::zipstore::detail::cancelled(cancellation)){
             result.status=Status::Cancelled;return result;
@@ -139,11 +140,51 @@ inline Result createMany(std::vector<std::wstring> const& paths,
         if(fxfile::zipstore::detail::cancelled(cancellation)){
             result.status=Status::Cancelled;return result;
         }
-        // Both modes use separate deterministic filenames; never silently
-        // find an alternate destination or replace an existing archive.
+        // Explicit folder mode: every selected file must be a direct child
+        // of exactly the same normalized, non-reparse local folder.
+        // The archive records "root/leaf", and lives beside that folder.
+        std::string prefix;
+        if(!folderRoot.empty()){
+            if(!fxfile::zipinspect::detail::same(directory,folderRoot)){
+                result.status=Status::InvalidSource;return result;
+            }
+            const std::wstring rootLeaf=
+                std::filesystem::path(directory).filename().native();
+            bool directoryEntry=false;
+            if(rootLeaf.empty()||rootLeaf.size()>180u||
+               !fxfile::zipinspect::detail::safeName(rootLeaf,directoryEntry)||
+               directoryEntry){
+                result.status=Status::InvalidSource;return result;
+            }
+            const int n=::WideCharToMultiByte(CP_UTF8,WC_ERR_INVALID_CHARS,
+                rootLeaf.c_str(),static_cast<int>(rootLeaf.size()),
+                nullptr,0,nullptr,nullptr);
+            if(n<=0||n>256){
+                result.status=Status::InvalidSource;return result;
+            }
+            prefix.resize(n);
+            if(::WideCharToMultiByte(CP_UTF8,WC_ERR_INVALID_CHARS,
+                rootLeaf.c_str(),static_cast<int>(rootLeaf.size()),
+                prefix.data(),n,nullptr,nullptr)!=n){
+                result.status=Status::InvalidSource;return result;
+            }
+            prefix.push_back('/');
+            for(auto& member:members){
+                if(prefix.size()+member.name.size()>512u){
+                    result.status=Status::InvalidSource;return result;
+                }
+                member.name.insert(0,prefix);
+            }
+        }
+        // Both modes use deterministic filenames, never silent replacement.
         const wchar_t* archiveName=compression==Compression::DeflatePreferred?
             kDeflateArchiveName:kArchiveName;
-        const auto destination=(std::filesystem::path(directory)/archiveName);
+        const std::wstring targetFolder=
+            folderRoot.empty()?directory:
+            std::filesystem::path(directory).parent_path().native();
+        const auto destination=folderRoot.empty()?
+            (std::filesystem::path(targetFolder)/archiveName):
+            std::filesystem::path(directory+L".flyExplorer-folder.zip");
         const std::wstring target=destination.native();
         if(target.size()>253||
            ::GetFileAttributesW(target.c_str())!=INVALID_FILE_ATTRIBUTES){
@@ -259,7 +300,7 @@ inline Result createMany(std::vector<std::wstring> const& paths,
             result.status=Status::Cancelled;return result;
         }
         fxfile::zipstore::detail::Staging staging;
-        if(!::GetTempFileNameW(directory.c_str(),L"fxm",0,staging.path)){
+        if(!::GetTempFileNameW(targetFolder.c_str(),L"fxm",0,staging.path)){
             result.status=Status::CannotWrite;return result;
         }
         staging.owned=true;
@@ -308,6 +349,79 @@ inline Result createMany(std::vector<std::wstring> const& paths,
         result.status=(error==ERROR_ALREADY_EXISTS||error==ERROR_FILE_EXISTS)?
             Status::AlreadyExists:Status::CannotWrite;
         return result;
+    }catch(...){
+        result.status=Status::CannotWrite;return result;
+    }
+}
+// Direct children only. No nested directories, reparse points, implicit
+// traversal, hidden recursion or existing-file modifications. The creator
+// calls createMany with the same safety, CRC, Store/Deflate and cancel gates.
+inline Result createFolder(std::wstring const& folder,
+                           std::atomic_bool const* cancellation=nullptr,
+                           Compression mode=Compression::DeflatePreferred) noexcept {
+    Result result{};
+    if(fxfile::zipstore::detail::cancelled(cancellation)){
+        result.status=Status::Cancelled;return result;
+    }
+    try{
+        const std::filesystem::path p(folder);
+        const auto root=p.root_path().native();
+        const auto leaf=p.filename().native();
+        bool directoryEntry=false;
+        if(folder.size()<7||folder.size()>195||root.size()!=3||
+           root[1]!=L':'||root[2]!=L'\\'||
+           ::GetDriveTypeW(root.c_str())!=DRIVE_FIXED||
+           !p.is_absolute()||p.lexically_normal().native()!=folder||
+           leaf.empty()||leaf.size()>180||
+           !fxfile::zipinspect::detail::safeName(leaf,directoryEntry)||
+           directoryEntry)return result;
+        std::filesystem::path prefix=p.root_path();
+        for(auto const& component:p.relative_path()){
+            prefix/=component;
+            const DWORD attributes=::GetFileAttributesW(prefix.c_str());
+            if(attributes==INVALID_FILE_ATTRIBUTES||
+               (attributes&FILE_ATTRIBUTE_REPARSE_POINT))return result;
+        }
+        const DWORD attr=::GetFileAttributesW(folder.c_str());
+        if(attr==INVALID_FILE_ATTRIBUTES||
+           !(attr&FILE_ATTRIBUTE_DIRECTORY)||
+           (attr&FILE_ATTRIBUTE_REPARSE_POINT))return result;
+        const std::wstring search=(p/L"*").native();
+        WIN32_FIND_DATAW data{};
+        const HANDLE found=::FindFirstFileW(search.c_str(),&data);
+        if(found==INVALID_HANDLE_VALUE){
+            result.status=Status::CannotRead;return result;
+        }
+        struct FindGuard final {
+            HANDLE handle;
+            ~FindGuard(){::FindClose(handle);}
+        } finder{found};
+        std::vector<std::wstring> files;
+        do{
+            if(fxfile::zipstore::detail::cancelled(cancellation)){
+                result.status=Status::Cancelled;return result;
+            }
+            const std::wstring name(data.cFileName);
+            if(name==L"."||name==L"..")continue;
+            if(data.dwFileAttributes&
+               (FILE_ATTRIBUTE_DIRECTORY|FILE_ATTRIBUTE_REPARSE_POINT)){
+                result.status=Status::InvalidSource;return result;
+            }
+            if(files.size()>=kMaxFiles){
+                result.status=Status::TooLarge;return result;
+            }
+            files.push_back((p/name).native());
+        }while(::FindNextFileW(found,&data));
+        if(::GetLastError()!=ERROR_NO_MORE_FILES){
+            result.status=Status::CannotRead;return result;
+        }
+        if(files.size()<kMinFiles)return result;
+        std::sort(files.begin(),files.end(),
+                  [](std::wstring const& lhs,std::wstring const& rhs){
+                      return fxfile::zipinspect::detail::same(lhs,rhs)?
+                          false:lhs<rhs;
+                  });
+        return createMany(files,cancellation,mode,folder);
     }catch(...){
         result.status=Status::CannotWrite;return result;
     }

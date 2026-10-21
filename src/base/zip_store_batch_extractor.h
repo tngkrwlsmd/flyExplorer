@@ -41,6 +41,7 @@ struct StagedDirectory final {
     std::vector<std::wstring> files;
     std::wstring nestedRoot;
     bool owned=false;
+    bool nestedOwned=false;
     ~StagedDirectory() noexcept {
         if(!owned)return;
         const DWORD root=::GetFileAttributesW(path.c_str());
@@ -49,6 +50,8 @@ struct StagedDirectory final {
            (root&FILE_ATTRIBUTE_REPARSE_POINT))return;
         // Never descend into an externally replaced junction/reparse root.
         if(!nestedRoot.empty()){
+            // A child we did not exclusively create must not be traversed.
+            if(!nestedOwned)return;
             const DWORD child=::GetFileAttributesW(nestedRoot.c_str());
             if(child==INVALID_FILE_ATTRIBUTES||
                !(child&FILE_ATTRIBUTE_DIRECTORY)||
@@ -335,8 +338,11 @@ inline Result extractMany(std::wstring const& source,
             result.status=Status::CannotWrite;return result;
         }
         staging.owned=true;
-        if(rootMode&&!::CreateDirectoryW(staging.nestedRoot.c_str(),nullptr)){
-            result.status=Status::CannotWrite;return result;
+        if(rootMode){
+            if(!::CreateDirectoryW(staging.nestedRoot.c_str(),nullptr)){
+                result.status=Status::CannotWrite;return result;
+            }
+            staging.nestedOwned=true;
         }
         for(std::size_t i=0;i<members.size();++i){
             if(fxfile::zipstore::detail::cancelled(cancellation)){
