@@ -134,8 +134,10 @@ of Store (0) and raw Deflate (8) using the same pinned native
 output size, compression ratio, exact input/output count and CRC
 before constructing the owned staging directory; the original
 whole-directory non-replace publish and cancellation policy remains.
-The batch ZIP writer still emits only Store files. A one-shot tinfl
-call is not preemptible mid-call. All new code is NOT TESTED.
+The batch ZIP writer retains Store-only output as its default but
+also supports the explicitly selected per-file Deflate mode described
+below. A one-shot tinfl call is not preemptible mid-call.
+All newly changed ZIP code is NOT TESTED.
 
 The first F08 **writer-side** raw DEFLATE codec is
 `src/base/zip_raw_deflate_compress.cpp`/header, using miniz 3.1.2

@@ -228,7 +228,7 @@ void MainWindow::CreateSelectedBatchZip(int side,bool preferDeflate){
     if(result.status==Status::Created){
      ui->StatusText().Text(preferDeflate?
         (result.deflatedFiles>0?
-          L"flyExplorer-selection-deflate.zip 생성 완료 (Store/Deflate 혼합). 원본 파일은 유지했습니다.":
+          L"flyExplorer-selection-deflate.zip 생성 완료 (Deflate 포함). 원본 파일은 유지했습니다.":
           L"flyExplorer-selection-deflate.zip 생성 완료 (전체 Store 대체). 원본 파일은 유지했습니다."):
         L"flyExplorer-selection.zip 생성 완료. 원본 파일은 유지했습니다.");
      const auto& snap=pane.tabs[tab].snapshot();

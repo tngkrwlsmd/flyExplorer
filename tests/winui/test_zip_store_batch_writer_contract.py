@@ -59,7 +59,7 @@ class ZipStoreBatchContracts(unittest.TestCase):
     def test_ui_multi_select_origin_and_idle_guard(self):
         ui=source("app/winui/m22_transfers.cpp")
         header=source("app/winui/MainWindow.xaml.h")
-        command=ui.split("void MainWindow::CreateSelectedBatchZip(int side)",1)[1].split(
+        command=ui.split("void MainWindow::CreateSelectedBatchZip(int side,bool preferDeflate)",1)[1].split(
             "void MainWindow::CreateSelectedZip(int side)",1)[0]
         for token in (
             "SelectedItems().Size()", "visible.visibleRoute!=route",
