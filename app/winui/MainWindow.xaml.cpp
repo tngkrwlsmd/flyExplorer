@@ -2864,39 +2864,96 @@ namespace winrt::FlyExplorer::implementation
     }
     void MainWindow::UpdateCommandAvailability()
     {
-        // Enable actions for the active pane's actual file rows, not for
-        // a group heading, an empty selection, or a stale route. No Shell I/O.
+        // Match the app-owned file menu and the transfer controller using
+        // only current snapshot identities. Do no Shell or filesystem I/O.
         const auto& state=ActiveWindowTab();
         const int side=state.model.activePane;
         const auto& pane=state.model.panes[side];
         auto view=side==0?LeftFiles():RightFiles();
-        std::size_t chosen=0;
+        const bool idle=!mFileOperations.busy();
+        const bool ready=idle&&pane.active<pane.tabs.size()&&
+            pane.active<pane.pending.size()&&
+            pane.active<pane.routeIds.size()&&
+            pane.active<pane.filesystemPaths.size()&&
+            !pane.pending[pane.active]&&
+            state.fileLists[side].visibleTab==pane.active&&
+            state.fileLists[side].visibleRoute==pane.routeIds[pane.active];
+        const bool localFolder=ready&&!pane.filesystemPaths[pane.active].empty();
+        const auto count=view.SelectedItems().Size();
+        bool validSelection=ready&&count>0&&
+            count<=fxfile::shelltransfer::kMaxItems;
+        bool allFilesystem=validSelection;
         std::uint64_t singleLogical=0;
-        for(auto const& selected:view.SelectedItems()){
-            auto row=selected.try_as<ListViewItem>();
-            if(!row||!row.Tag())continue;
-            try{
-                const auto logical=winrt::unbox_value<std::uint64_t>(row.Tag());
-                if(chosen==0)singleLogical=logical;
-                ++chosen;
-            }catch(...){}
+        std::size_t sourceUnits=0;
+        if(validSelection){
+            for(auto const& selected:view.SelectedItems()){
+                auto row=selected.try_as<ListViewItem>();
+                if(!row||!row.Tag()){validSelection=false;break;}
+                std::uint64_t logical{};
+                try{logical=winrt::unbox_value<std::uint64_t>(row.Tag());}
+                catch(...){validSelection=false;break;}
+                auto const* indexed=pane.tabs[pane.active].indexedItem(
+                    static_cast<std::size_t>(logical));
+                if(!indexed||indexed->parsingName.empty()){
+                    validSelection=false;break;
+                }
+                const auto units=indexed->parsingName.size()+1;
+                if(units>fxfile::shelltransfer::kMaxSourcePathUnits-sourceUnits){
+                    validSelection=false;break;
+                }
+                sourceUnits+=units;
+                allFilesystem=allFilesystem&&indexed->isFileSystem();
+                if(count==1)singleLogical=logical;
+            }
         }
-        const bool ready=!mFileOperations.busy()&&
-            pane.active<pane.pending.size()&&!pane.pending[pane.active];
+        bool canProviderSource=false;
+        if(validSelection&&!localFolder){
+            const auto& folder=pane.tabs[pane.active].snapshot();
+            canProviderSource=folder.folder.valid()&&
+                !folder.parsingName.empty()&&
+                folder.parsingName.size()<=
+                    fxfile::shelltransfer::kMaxProviderParsingUnits;
+        }
+        const bool localSelection=validSelection&&localFolder&&allFilesystem;
+        const bool sourceAllowed=validSelection&&
+            (localSelection||canProviderSource);
+        bool destinationFilesystem=false;
+        bool destinationProvider=false;
+        if(sourceAllowed&&state.model.split){
+            const auto& opposite=state.model.panes[1-side];
+            if(opposite.active<opposite.tabs.size()&&
+               opposite.active<opposite.pending.size()&&
+               opposite.active<opposite.routeIds.size()&&
+               opposite.active<opposite.filesystemPaths.size()&&
+               !opposite.pending[opposite.active]){
+                destinationFilesystem=
+                    !opposite.filesystemPaths[opposite.active].empty();
+                if(!destinationFilesystem){
+                    const auto& target=opposite.tabs[opposite.active].snapshot();
+                    destinationProvider=target.folder.valid()&&
+                        !target.parsingName.empty()&&
+                        target.parsingName.size()<=
+                            fxfile::shelltransfer::kMaxProviderParsingUnits;
+                }
+            }
+        }
+        const bool canCopyToOpposite=sourceAllowed&&
+            (destinationFilesystem||(localSelection&&destinationProvider));
+        const bool canMoveToOpposite=localSelection&&destinationFilesystem;
+        CreateFolderButton().IsEnabled(localFolder);
+        fileBar()->WindowsPasteButton().IsEnabled(localFolder);
+        fileBar()->WindowsCutButton().IsEnabled(localSelection);
+        fileBar()->WindowsCopyButton().IsEnabled(localSelection);
         bool canRename=false;
-        if(ready&&chosen==1&&pane.active<pane.tabs.size()){
+        if(localSelection&&count==1){
             const auto* indexed=pane.tabs[pane.active].indexedItem(
                 static_cast<std::size_t>(singleLogical));
-            canRename=indexed&&indexed->isFileSystem()&&
-                !indexed->parsingName.empty();
+            canRename=indexed&&indexed->isFileSystem();
         }
-        const bool hasItems=ready&&chosen>0;
-        fileBar()->WindowsCutButton().IsEnabled(hasItems);
-        fileBar()->WindowsCopyButton().IsEnabled(hasItems);
         RenameButton().IsEnabled(canRename);
-        fileBar()->RecycleButton().IsEnabled(hasItems);
-        fileBar()->CopyButton().IsEnabled(hasItems);
-        fileBar()->MoveButton().IsEnabled(hasItems);
+        fileBar()->RecycleButton().IsEnabled(localSelection);
+        fileBar()->CopyButton().IsEnabled(canCopyToOpposite);
+        fileBar()->MoveButton().IsEnabled(canMoveToOpposite);
     }
     void MainWindow::OnToggleFileInfoPane(IInspectable const&,RoutedEventArgs const&)
     {
