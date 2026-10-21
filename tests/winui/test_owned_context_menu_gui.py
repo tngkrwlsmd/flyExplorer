@@ -1,7 +1,6 @@
-"""Never invoke external verbs: verify file right-click launches Shell popup directly.
+"""Owned file-menu smoke: explicitly choose Windows extension menu, then Escape.
 
-This is an input/cancel smoke only. It must never click any third-party
-command, open a preexisting window or modify unowned files.
+Never invoke a third-party verb, touch preexisting windows or mutate user files.
 """
 import ctypes as c
 from ctypes import wintypes as w
@@ -103,8 +102,30 @@ def main(config="Debug"):
    if len(candidates)!=1:return False
    child=candidates[0]
    return True
-  # Right-click the exact owned row. flyExplorer must launch the isolated
-  # Shell popup directly; there is no app-owned intermediary MenuFlyout.
+  def choose_extension_menu():
+   # Require exactly one menu item in the test-owned WinUI process,
+   # not a similarly named command from an arbitrary desktop window.
+   def target():
+    found=[]
+    for popup in Desktop(backend="uia").windows(process=winui.pid):
+     try:
+      found += [item for item in popup.descendants()
+                if item.element_info.control_type=="MenuItem"
+                and item.window_text()=="Windows 확장 메뉴…"
+                and item.element_info.process_id==winui.pid]
+     except Exception:continue
+    return found[0] if len(found)==1 else None
+   item=eventually(target,"Owned flyExplorer extension item missing",7)
+   assert item.element_info.process_id==winui.pid
+   foreground=user.GetForegroundWindow()
+   pid=w.DWORD()
+   user.GetWindowThreadProcessId(foreground,c.byref(pid))
+   assert pid.value==winui.pid,"Refuse clicking non-owned menu"
+   assert not spawned(),"Extension helper launched before explicit selection"
+   item.click_input()
+
+  # An owned right-click opens the flyExplorer menu first. The external
+  # Shell helper may start ONLY after our explicit Windows extension choice.
   for attempt in range(2):
    eventually(select_owned_row,"Owned context row lost before right click",5)
    item=row().rectangle()
@@ -116,13 +137,14 @@ def main(config="Debug"):
    assert area.left<click[0]<area.right and area.top<click[1]<area.bottom
    mouse.click(button="right",coords=click)
    try:
-    eventually(spawned,"direct Shell helper not launched from right click",4)
+    choose_extension_menu()
+    eventually(spawned,"explicit extension action did not launch helper",4)
     break
    except AssertionError:
     if attempt:
      raise
     time.sleep(.25)
-  print("OWNED_CONTEXT_DIRECT_RIGHT_CLICK_HELPER",True,flush=True)
+  print("OWNED_CONTEXT_RIGHT_CLICK_EXPLICIT_HELPER",True,flush=True)
   def owns_foreground():
    f=user.GetForegroundWindow()
    if not f:return False
@@ -145,13 +167,15 @@ def main(config="Debug"):
              "Test-owned Shell popup did not cancel",6)
   assert file.read_text(encoding="utf-8")=="test owned only"
 
-  # Separate Shift+F10 path must spawn the same owned helper; cancel only.
+  # Shift+F10 opens the app menu too; only its explicit extension item
+  # is allowed to spawn the same owned helper. Cancel the Shell popup.
   child=None
   eventually(select_owned_row,"Owned row missing before Shift+F10",8)
   win.child_window(auto_id="LeftFiles").set_focus()
   assert user.GetForegroundWindow()==hwnd,"Refusing input to foreign window"
   keyboard.send_keys("+{F10}")
-  eventually(spawned,"Shift+F10 did not launch isolated Shell popup",8)
+  choose_extension_menu()
+  eventually(spawned,"Shift+F10 extension item did not launch helper",8)
   eventually(owns_foreground,"Shift+F10 popup did not own foreground",6)
   user.keybd_event(0x1b,0,0,0)
   user.keybd_event(0x1b,0,2,0)
@@ -184,7 +208,8 @@ def main(config="Debug"):
   click=(left+min(50,(right-left)//2),(top+bottom)//2)
   assert user.GetForegroundWindow()==hwnd,"Refusing multi-right-click foreign window"
   mouse.click(button="right",coords=click)
-  eventually(spawned,"Multi right-click did not spawn Shell helper",8)
+  choose_extension_menu()
+  eventually(spawned,"Multi explicit context command did not spawn helper",8)
   eventually(owns_foreground,"Multi right-click helper not foreground-owned",6)
   assert row().is_selected() and second_row().is_selected(),\
       "Right-click collapsed the owned multi-selection"
@@ -199,7 +224,8 @@ def main(config="Debug"):
   win.child_window(auto_id="LeftFiles").set_focus()
   assert user.GetForegroundWindow()==hwnd,"Refusing multi-menu foreign window"
   keyboard.send_keys("+{F10}")
-  eventually(spawned,"Two-file Shift+F10 did not spawn Shell helper",8)
+  choose_extension_menu()
+  eventually(spawned,"Two-file Shift+F10 extension did not spawn helper",8)
   eventually(owns_foreground,"Multi Shell popup not foreground-owned",6)
   user.keybd_event(0x1b,0,0,0)
   user.keybd_event(0x1b,0,2,0)
