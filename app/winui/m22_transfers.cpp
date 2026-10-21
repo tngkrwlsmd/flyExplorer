@@ -1034,7 +1034,11 @@ void MainWindow::HandleFileShortcut(
   if(view.SelectedItems().Size()){
    auto row=view.SelectedItems().GetAt(0).try_as<ListViewItem>();
    if(row)ShowAppFileContextMenu(side,row,Windows::Foundation::Point{0,0});
-  }else StatusText().Text(L"파일 메뉴를 열 항목을 먼저 선택하세요.");
+  }else{
+   // With no file selected Shift+F10 is the keyboard equivalent of
+   // right-clicking the empty folder background.
+   ShowAppBackgroundContextMenu(side,view,Windows::Foundation::Point{0,0});
+  }
   args.Handled(true);return;
  }
  if(ctrl&&shift&&!alt&&vk==Windows::System::VirtualKey::F){
