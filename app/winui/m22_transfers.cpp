@@ -135,7 +135,7 @@ void MainWindow::ShowAppFileContextMenu(
  const bool localSelection=ready&&boundedSources&&
   localSource&&allFilesystem;
  const auto& sourceSnapshot=pane.tabs[tab].snapshot();
- const bool canProviderSource=ready&&boundedSources&&!localSelection&&
+ const bool canProviderSource=ready&&boundedSources&&!localSource&&
   sourceSnapshot.folder.valid()&&!sourceSnapshot.parsingName.empty()&&
   sourceSnapshot.parsingName.size()<=
    fxfile::shelltransfer::kMaxProviderParsingUnits;
