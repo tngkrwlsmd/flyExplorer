@@ -136,21 +136,21 @@ class FileOperationContracts(unittest.TestCase):
         header = read("app/winui/MainWindow.xaml.h")
         workspace = read("app/winui/window_tab_state.h")
         transfer = read("app/winui/m22_transfers.cpp")
-        self.assertIn("std::wstring transferFailureNotice{};", workspace)
+        self.assertIn("std::wstring fileOperationNotice{};", workspace)
         self.assertNotIn("mTransferFailureNotice", header)
-        self.assertIn("state.transferFailureNotice=message;", transfer)
-        self.assertIn("ActiveWindowTab().transferFailureNotice.clear();", transfer)
+        self.assertIn("state.fileOperationNotice=message;", transfer)
+        self.assertIn("ActiveWindowTab().fileOperationNotice.clear();", transfer)
         self.assertIn("completion.context.windowTabIdentity", transfer)
         self.assertIn("if(originActive)StatusText().Text(hstring(detail));", transfer)
         self.assertIn("if(originActive)StatusText().Text(hstring(message));", transfer)
         self.assertIn("completed.action==Action::Refresh&&", ui)
-        self.assertIn("!ActiveWindowTab().transferFailureNotice.empty()", ui)
+        self.assertIn("!ActiveWindowTab().fileOperationNotice.empty()", ui)
         self.assertIn(
-            "StatusText().Text(hstring(ActiveWindowTab().transferFailureNotice));",
+            "StatusText().Text(hstring(ActiveWindowTab().fileOperationNotice));",
             ui
         )
-        self.assertIn("ActiveWindowTab().transferFailureNotice.clear();", ui)
-        self.assertIn("if(!state.transferFailureNotice.empty())", ui)
+        self.assertIn("ActiveWindowTab().fileOperationNotice.clear();", ui)
+        self.assertIn("if(!state.fileOperationNotice.empty())", ui)
 
     def test_selected_row_activates_command_pane(self):
         source = read("app/winui/MainWindow.xaml.cpp")
