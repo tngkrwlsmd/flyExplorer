@@ -100,9 +100,9 @@ inline Result createOne(std::wstring const& source) noexcept {
         return result;
     // The destination is deterministic and same-directory. Never choose a
     // different name silently or overwrite a pre-existing file.
-    const std::wstring target=source+L".zip";
-    if(target.size()>253u){result.status=Status::InvalidSource;return result;}
     try{
+        const std::wstring target=source+L".zip";
+        if(target.size()>253u){result.status=Status::InvalidSource;return result;}
         fxfile::zipinspect::detail::Handle reader;
         reader.h=::CreateFileW(source.c_str(),GENERIC_READ,FILE_SHARE_READ,
                    nullptr,OPEN_EXISTING,FILE_FLAG_OPEN_REPARSE_POINT,nullptr);
@@ -199,6 +199,8 @@ inline Result createOne(std::wstring const& source) noexcept {
             }
         }
         if(complete){
+            // No allocation may occur after the final rename succeeds.
+            result.output=target;
             // MOVEFILE_REPLACE_EXISTING deliberately absent.
             if(::MoveFileExW(temporary.path,target.c_str(),
                              MOVEFILE_WRITE_THROUGH)){
@@ -209,6 +211,7 @@ inline Result createOne(std::wstring const& source) noexcept {
             }
         }
         const DWORD error=::GetLastError();
+        result.output.clear();
         // Staging destructor removes the owned reservation on failure.
         result.status=(error==ERROR_FILE_EXISTS||
                        error==ERROR_ALREADY_EXISTS)?
