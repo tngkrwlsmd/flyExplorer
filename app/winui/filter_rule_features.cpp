@@ -64,6 +64,7 @@ void MainWindow::OnToggleFilterRules(
     WorkspacePanel().Visibility(Visibility::Collapsed);
     SearchPanel().Visibility(Visibility::Collapsed);
     RecentActivityPanel().Visibility(Visibility::Collapsed);
+    ZipInspectionPanel().Visibility(Visibility::Collapsed);
     FilterRulePanel().Visibility(next);
     if(next==Visibility::Visible){
         RefreshFilterRuleManager(FilterRuleManagerBox().SelectedIndex());

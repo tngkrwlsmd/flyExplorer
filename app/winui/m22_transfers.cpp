@@ -1,6 +1,7 @@
 #include "pch.h"
 #include "MainWindow.xaml.h"
 #include "../../src/base/shell_context_core.h"
+#include "../../src/base/zip_inspection.h"
 #include "../../src/base/shell_isolation_wire.h"
 #include <winrt/Microsoft.UI.Xaml.Input.h>
 #include <winrt/Microsoft.UI.Xaml.Media.h>
@@ -142,6 +143,94 @@ void MainWindow::OpenSelectedWith(int side){
  else
   StatusText().Text(L"이 파일은 연결 프로그램으로 열 수 없습니다.");
 }
+void MainWindow::InspectSelectedZip(int side){
+ if(mClosing||mZipInspectionBusy||side<0||side>1||
+    ActiveWindowTab().model.activePane!=side||mFileOperations.busy())return;
+ const auto& workspace=ActiveWindowTab();
+ const auto& pane=workspace.model.panes[side];
+ if(pane.active>=pane.tabs.size()||pane.active>=pane.pending.size()||
+    pane.pending[pane.active]||pane.active>=pane.routeIds.size()||
+    pane.active>=pane.filesystemPaths.size()||
+    pane.filesystemPaths[pane.active].empty())return;
+ const auto& visible=workspace.fileLists[side];
+ if(visible.visibleRoute!=pane.routeIds[pane.active]||
+    visible.visibleTab!=pane.active)return;
+ auto list=side==0?LeftFiles():RightFiles();
+ if(list.SelectedItems().Size()!=1)return;
+ auto row=list.SelectedItem().try_as<ListViewItem>();
+ if(!row||!row.Tag())return;
+ std::uint64_t logical=0;
+ try{logical=unbox_value<std::uint64_t>(row.Tag());}catch(...){return;}
+ auto const* item=pane.tabs[pane.active].indexedItem(
+    static_cast<std::size_t>(logical));
+ if(!item||!item->isFileSystem()||item->isFolder()||
+    item->parsingName.empty())return;
+ const auto path=item->parsingName;
+ std::wstring ext=std::filesystem::path(path).extension().native();
+ for(auto& ch:ext)ch=static_cast<wchar_t>(::towlower(ch));
+ if(ext!=L".zip")return;
+ const auto identity=workspace.identity;
+ const auto tab=pane.active;
+ const auto route=pane.routeIds[tab];
+ auto weak=get_weak();
+ auto dispatch=DispatcherQueue();
+ mZipInspectionBusy=true;
+ WorkspacePanel().Visibility(Visibility::Collapsed);
+ SearchPanel().Visibility(Visibility::Collapsed);
+ BookmarkPanel().Visibility(Visibility::Collapsed);
+ FilterRulePanel().Visibility(Visibility::Collapsed);
+ RecentActivityPanel().Visibility(Visibility::Collapsed);
+ ZipInspectionPanel().Visibility(Visibility::Visible);
+ ZipInspectionSummary().Text(L"ZIP 메타데이터를 읽는 중입니다.");
+ ZipInspectionItems().Items().Clear();
+ EnsureExpandedPanelFits();
+ try{
+  std::thread([weak,dispatch,path,identity,side,tab,route]{
+   auto report=fxfile::zipinspect::inspect(path);
+   dispatch.TryEnqueue([weak,identity,side,tab,route,
+                        report=std::move(report)]() mutable {
+    auto ui=weak.get();
+    if(!ui||ui->mClosing)return;
+    ui->mZipInspectionBusy=false;
+    const auto& current=ui->ActiveWindowTab();
+    if(current.identity!=identity||current.model.activePane!=side)return;
+    const auto& pane=current.model.panes[side];
+    if(pane.active!=tab||pane.active>=pane.routeIds.size()||
+       pane.routeIds[tab]!=route)return;
+    if(ui->ZipInspectionPanel().Visibility()!=Visibility::Visible)return;
+    using Status=fxfile::zipinspect::Result::Status;
+    const wchar_t* error=
+      report.status==Status::InvalidPath?L"로컬 고정 드라이브의 일반 ZIP만 검사합니다.":
+      report.status==Status::CannotRead?L"ZIP 파일을 읽지 못했습니다.":
+      report.status==Status::TooLarge?L"ZIP 파일 또는 예상 해제량이 안전 상한을 넘습니다.":
+      report.status==Status::UnsafeEntry?L"경로 탈출·중복·링크 등 위험 항목을 거부했습니다.":
+      report.status==Status::Unsupported?L"암호화·레거시 인코딩·지원하지 않는 ZIP 구조입니다.":
+      L"ZIP 메타데이터가 손상되었거나 구조가 올바르지 않습니다.";
+    if(report.status!=Status::Accepted){
+     ui->ZipInspectionSummary().Text(error);
+     ui->StatusText().Text(error);
+     return;
+    }
+    ui->ZipInspectionSummary().Text(hstring(
+       L"항목 "+std::to_wstring(report.entries)+L"개 / 헤더상 해제량 "+
+       std::to_wstring(report.expandedBytes)+
+       L"바이트. 구조/경로만 검사했습니다. 해제 또는 CRC 검증은 아닙니다."));
+    auto rows=ui->ZipInspectionItems().Items();
+    for(auto const& name:report.names)
+     rows.Append(box_value(hstring(name)));
+    ui->StatusText().Text(L"ZIP 항목 메타데이터 검사를 완료했습니다. 압축 해제는 수행하지 않았습니다.");
+   });
+  }).detach();
+ }catch(...){
+  mZipInspectionBusy=false;
+  ZipInspectionSummary().Text(L"ZIP 검사 작업자를 시작하지 못했습니다.");
+ }
+}
+void MainWindow::OnCloseZipInspection(
+ IInspectable const&,RoutedEventArgs const&){
+ ZipInspectionPanel().Visibility(Visibility::Collapsed);
+ ZipInspectionItems().Items().Clear();
+}
 void MainWindow::ShowAppFileContextMenu(
  int side,ListViewItem const& anchor,Windows::Foundation::Point const& position){
  if(mClosing||side<0||side>1||!anchor||
@@ -236,6 +325,19 @@ void MainWindow::ShowAppFileContextMenu(
  const bool canOppositeMove=localSelection&&destinationFilesystem;
  const bool canExternal=localSelection&&
   count<=fxfile::shellcontext::kMaxContextSelection;
+ bool canInspectZip=false;
+ if(localSelection&&count==1&&!isFolder){
+  auto const* item=pane.tabs[tab].indexedItem(
+      static_cast<std::size_t>((*expected)[0]));
+  if(item){
+   const auto& path=item->parsingName;
+   if(path.size()>4){
+    std::wstring suffix=path.substr(path.size()-4);
+    for(auto& ch:suffix)ch=static_cast<wchar_t>(::towlower(ch));
+    canInspectZip=suffix==L".zip";
+   }
+  }
+ }
 
  auto weak=get_weak();
  MenuFlyout menu;
@@ -295,6 +397,9 @@ void MainWindow::ShowAppFileContextMenu(
  menu.Items().Append(make(L"연결 프로그램으로 열기",L"\uE8F2",
                           localSelection&&count==1&&!isFolder,
      [side](MainWindow& ui){ui.OpenSelectedWith(side);}));
+ menu.Items().Append(make(L"ZIP 내부 항목 검사 (읽기 전용)",L"\uE8B7",
+                          canInspectZip,
+     [side](MainWindow& ui){ui.InspectSelectedZip(side);}));
  if(count==1&&isFolder&&!folderPath.empty()){
   menu.Items().Append(make(L"새 폴더 탭에서 열기",L"\uE8B7",ready,
      [side,path=std::move(folderPath)](MainWindow& ui){

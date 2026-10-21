@@ -355,6 +355,7 @@ namespace winrt::FlyExplorer::implementation
         void RefreshFilterRuleManager(int selected);
         fxfile::previewfolderview::FolderViewController mFolderViews{};
         fxfile::previewactivity::RecentActivityController mRecentActivity{};
+        bool mZipInspectionBusy=false;
         void RefreshRecentActivityPanel();
         fxfile::previewsearch::SearchController mSearchController{};
         // UI-only bounded snapshot of the last accepted search results. Never
@@ -407,6 +408,8 @@ namespace winrt::FlyExplorer::implementation
         void UpdateActivePaneChrome();
         void OpenSelectedFolder(int side);
         void OpenSelectedWith(int side);
+        void InspectSelectedZip(int side);
+        void OnCloseZipInspection(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
         fxfile::previewops::FileOpenController mFileOpen;
         void OpenFolderInNewPaneTab(int side,std::wstring path);
         void ApplyWorkspace(fxfile::preview::Workspace&&);

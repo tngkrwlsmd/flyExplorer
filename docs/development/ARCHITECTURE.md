@@ -60,6 +60,12 @@ dependencies. The existing pane/session model retains the actual active view
 mode, and asynchronous navigation only projects an override after accepted
 navigation outside of workspace restoration.
 
+F08 read-only ZIP metadata preflight is in `src/base/zip_inspection.h`.
+It is a bounded parser without write/decompression APIs; the WinUI
+context action owns an opt-in worker and suppresses stale WindowTab/PaneTab
+results. A preflight acceptance does not certify data integrity or authorize
+archive extraction.
+
 Regular-document activation belongs to `app/winui/file_open_controller.h`.
 It owns one asynchronous Windows StorageFile/Launcher request, deadline and
 close cancellation. MainWindow supplies weak presentation callbacks and checks
