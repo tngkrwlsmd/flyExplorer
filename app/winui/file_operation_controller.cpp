@@ -232,7 +232,12 @@ FileOperationController::skipCollisions(
             return StartStatus::StaleConfirmation;
         }
         const auto totalSkipped=pending.skippedCollisions+skipped;
-        if(remaining.empty())return StartStatus::AllSkipped;
+        if(remaining.empty()){
+            // The confirmation UI needs the total across every preflight
+            // round, not only names skipped at the final prompt.
+            skipped=totalSkipped;
+            return StartStatus::AllSkipped;
+        }
         pending.request.sources=std::move(remaining);
         return launchTransfer(std::move(pending.request),
                               std::move(pending.context),
