@@ -65,5 +65,44 @@ class DefaultFileAssociationContract(unittest.TestCase):
             self.assertIn(token, launch)
 
 
+class OpenWithFileAssociationContract(unittest.TestCase):
+    def test_picker_is_explicit_and_preserves_default_launch(self):
+        code=CONTROLLER.read_text(encoding="utf-8-sig")
+        for token in ("enum class Mode { Default, ChooseApp };",
+                      "Mode mode=Mode::Default", "if(mode==Mode::Default)try {",
+                      "Launcher::QueryFileSupportAsync(file)",
+                      "Launcher::LaunchFileAsync(file);",
+                      "LauncherOptions options;",
+                      "options.DisplayApplicationPicker(true);",
+                      "Launcher::LaunchFileAsync(file,options);",
+                      "std::chrono::seconds(120)"):
+            self.assertIn(token,code)
+        for forbidden in ("SHOpenWithDialog","ShellExecuteEx",
+                          "RegSetValue","OAIF_REGISTER_EXT"):
+            self.assertNotIn(forbidden,code)
+
+    def test_single_selected_file_scoped_to_window_tab(self):
+        app=(ROOT/"app"/"winui"/"m22_transfers.cpp").read_text(encoding="utf-8-sig")
+        method=app.split("void MainWindow::OpenSelectedWith(int side){",1)[1].split(
+            "void MainWindow::ShowAppFileContextMenu(",1)[0]
+        header=(ROOT/"app"/"winui"/"MainWindow.xaml.h").read_text(encoding="utf-8-sig")
+        self.assertIn("void OpenSelectedWith(int side);",header)
+        for token in ("ActiveWindowTab().model.activePane!=side",
+                      "visible.visibleRoute!=pane.routeIds[pane.active]",
+                      "view.SelectedItems().Size()!=1", "selected->isFileSystem()",
+                      "selected->isFolder()", "FileOperationContext(side)",
+                      "ui->ActiveWindowTab().identity!=context.windowTabIdentity",
+                      "live.tab==context.tab&&live.route==context.route",
+                      "live.visibleShellFolder==context.visibleShellFolder",
+                      "Open::Mode::ChooseApp", "result==Result::TimedOut"):
+            self.assertIn(token,method)
+        menu=app.split("void MainWindow::ShowAppFileContextMenu(",1)[1].split(
+            "void MainWindow::ShowAppBackgroundContextMenu(",1)[0]
+        self.assertIn('make(L"연결 프로그램으로 열기"',menu)
+        self.assertIn("localSelection&&count==1&&!isFolder",menu)
+        self.assertIn("ui.OpenSelectedWith(side)",menu)
+        self.assertIn("auto expected=std::make_shared<const std::vector<std::uint64_t>>",menu)
+
+
 if __name__ == "__main__":
     unittest.main()

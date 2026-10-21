@@ -17,6 +17,7 @@ class FileOpenController final {
 public:
     enum class Result { Opened, NoAssociation, AppUnavailable, Failed, TimedOut };
     enum class Start { Started, Busy, Invalid };
+    enum class Mode { Default, ChooseApp };
     FileOpenController() : state_(std::make_shared<State>()) {}
     ~FileOpenController() { prepareForClose(); }
     FileOpenController(FileOpenController const&)=delete;
@@ -25,7 +26,8 @@ public:
     Start request(std::wstring path,
                   winrt::Microsoft::UI::Dispatching::DispatcherQueue const& queue,
                   std::function<bool()> current,
-                  std::function<void(Result)> completed) {
+                  std::function<void(Result)> completed,
+                  Mode mode=Mode::Default) {
         auto s=state_;
         if(s->closing||path.empty()||path.size()>32767||
            path.find(L'\0')!=std::wstring::npos||
@@ -55,11 +57,14 @@ public:
             s->timer=queue.CreateTimer();
             s->timer.IsRepeating(false);
             s->timer.Interval(std::chrono::seconds(15));
+            // A picker requires explicit user input and has a longer bound.
+            if(mode==Mode::ChooseApp)
+                s->timer.Interval(std::chrono::seconds(120));
             s->timer.Tick([weak=std::weak_ptr<State>(s),ticket](auto const&,auto const&) {
                 if(auto live=weak.lock())finish(live,ticket,Result::TimedOut);
             });
             s->timer.Start();
-            run(s,ticket,winrt::hstring(path));
+            run(s,ticket,winrt::hstring(path),mode);
         } catch(...) { finish(s,ticket,Result::Failed); }
         return Start::Started;
     }
@@ -106,7 +111,8 @@ private:
         } catch(...) {}
     }
     static winrt::fire_and_forget run(std::shared_ptr<State> s,
-                                     std::uint64_t ticket,winrt::hstring path) {
+                                     std::uint64_t ticket,winrt::hstring path,
+                                     Mode mode) {
         try {
             auto lookup=winrt::Windows::Storage::StorageFile::GetFileFromPathAsync(path);
             s->pending=lookup;
@@ -119,7 +125,7 @@ private:
             // Query only the Windows association broker; no Shell extension
             // or external command is run while resolving the handler.
             // Unknown/query failures keep the existing default launch path.
-            try {
+            if(mode==Mode::Default)try {
                 auto query=winrt::Windows::System::Launcher::QueryFileSupportAsync(file);
                 s->pending=query;
                 const auto support=co_await query;
@@ -149,7 +155,16 @@ private:
                 finish(s,ticket,Result::Failed);
                 co_return;
             }
-            auto launch=winrt::Windows::System::Launcher::LaunchFileAsync(file);
+            // Both routes use the Windows async broker on the XAML STA.
+            // Do not silently fall back to default open after picker failure.
+            winrt::Windows::Foundation::IAsyncOperation<bool> launch{nullptr};
+            if(mode==Mode::ChooseApp){
+                winrt::Windows::System::LauncherOptions options;
+                options.DisplayApplicationPicker(true);
+                launch=winrt::Windows::System::Launcher::LaunchFileAsync(file,options);
+            }else{
+                launch=winrt::Windows::System::Launcher::LaunchFileAsync(file);
+            }
             s->pending=launch;
             const bool opened=co_await launch;
             finish(s,ticket,opened?Result::Opened:Result::Failed);

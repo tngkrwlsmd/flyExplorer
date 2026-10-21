@@ -72,6 +72,70 @@ void MainWindow::OnCancelTransfer(IInspectable const&,RoutedEventArgs const&){
   StatusText().Text(L"Shell 파일 작업 취소를 요청했습니다.");
  }
 }
+void MainWindow::OpenSelectedWith(int side){
+ if(mClosing||side<0||side>1||
+    ActiveWindowTab().model.activePane!=side||
+    mFileOperations.busy())return;
+ const auto& state=ActiveWindowTab();
+ const auto& pane=state.model.panes[side];
+ if(pane.active>=pane.tabs.size()||
+    pane.active>=pane.pending.size()||pane.pending[pane.active]||
+    pane.active>=pane.routeIds.size()||
+    pane.active>=pane.filesystemPaths.size()||
+    pane.filesystemPaths[pane.active].empty())return;
+ const auto& visible=state.fileLists[side];
+ if(visible.visibleTab!=pane.active||
+    visible.visibleRoute!=pane.routeIds[pane.active])return;
+ auto view=side==0?LeftFiles():RightFiles();
+ if(view.SelectedItems().Size()!=1){
+  StatusText().Text(L"연결 프로그램은 파일 하나를 선택해야 합니다.");
+  return;
+ }
+ auto row=view.SelectedItem().try_as<ListViewItem>();
+ if(!row||!row.Tag())return;
+ std::uint64_t logical=0;
+ try{logical=winrt::unbox_value<std::uint64_t>(row.Tag());}
+ catch(...){return;}
+ auto const* selected=pane.tabs[pane.active].indexedItem(
+     static_cast<std::size_t>(logical));
+ if(!selected||!selected->isFileSystem()||selected->isFolder()||
+    selected->parsingName.empty()){
+  StatusText().Text(L"실제 파일 하나만 연결 프로그램으로 열 수 있습니다.");
+  return;
+ }
+ const auto context=FileOperationContext(side);
+ auto weak=get_weak();
+ using Open=fxfile::previewops::FileOpenController;
+ const auto start=mFileOpen.request(selected->parsingName,DispatcherQueue(),
+     [weak,context]{
+      auto ui=weak.get();
+      if(!ui||ui->mClosing||
+         ui->ActiveWindowTab().identity!=context.windowTabIdentity||
+         ui->ActiveWindowTab().model.activePane!=context.side)return false;
+      const auto live=ui->FileOperationContext(context.side);
+      return live.windowTabIdentity==context.windowTabIdentity&&
+             live.tab==context.tab&&live.route==context.route&&
+             live.visibleFolder==context.visibleFolder&&
+             live.visibleShellFolder==context.visibleShellFolder;
+     },
+     [weak](Open::Result result){
+      if(auto ui=weak.get()){
+       using Result=Open::Result;
+       ui->StatusText().Text(
+        result==Result::Opened?
+         L"선택한 연결 프로그램으로 파일을 열었습니다.":
+        result==Result::TimedOut?
+         L"연결 프로그램 선택 대기 시간이 초과됐습니다.":
+         L"연결 프로그램 선택이 취소됐거나 파일을 열지 못했습니다.");
+      }
+     },Open::Mode::ChooseApp);
+ if(start==Open::Start::Started)
+  StatusText().Text(L"Windows 연결 프로그램 선택 창을 여는 중입니다.");
+ else if(start==Open::Start::Busy)
+  StatusText().Text(L"이전 파일 열기 요청을 처리 중입니다.");
+ else
+  StatusText().Text(L"이 파일은 연결 프로그램으로 열 수 없습니다.");
+}
 void MainWindow::ShowAppFileContextMenu(
  int side,ListViewItem const& anchor,Windows::Foundation::Point const& position){
  if(mClosing||side<0||side>1||!anchor||
@@ -222,6 +286,9 @@ void MainWindow::ShowAppFileContextMenu(
  menu.Items().Append(make(L"열기",L"\uE8E5",
                           ready&&count==1&&canOpen,
      [side](MainWindow& ui){ui.OpenSelectedFolder(side);}));
+ menu.Items().Append(make(L"연결 프로그램으로 열기",L"\uE8F2",
+                          localSelection&&count==1&&!isFolder,
+     [side](MainWindow& ui){ui.OpenSelectedWith(side);}));
  if(count==1&&isFolder&&!folderPath.empty()){
   menu.Items().Append(make(L"새 폴더 탭에서 열기",L"\uE8B7",ready,
      [side,path=std::move(folderPath)](MainWindow& ui){

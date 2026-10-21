@@ -391,6 +391,7 @@ namespace winrt::FlyExplorer::implementation
         void ActivatePane(int side);
         void UpdateActivePaneChrome();
         void OpenSelectedFolder(int side);
+        void OpenSelectedWith(int side);
         fxfile::previewops::FileOpenController mFileOpen;
         void OpenFolderInNewPaneTab(int side,std::wstring path);
         void ApplyWorkspace(fxfile::preview::Workspace&&);

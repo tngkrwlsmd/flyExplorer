@@ -1,5 +1,23 @@
 # flyExplorer 작업 인계 — 2026-10-19 L08 커서 OPEN, G01 코드·빌드 PASS
 
+## 2026-10-21 EP11/F09 — Windows 연결 프로그램으로 열기 (코드 반영, 실행 미검증)
+
+- 기준 main c9cd4944. 로컬 일반 파일 단일 선택에만 앱 우클릭
+  '연결 프로그램으로 열기'를 제공한다. 기존 WindowTab·PaneTab·route·
+  선택 논리 ID 보호를 유지하고 폴더·가상 Shell 항목·복수 선택에서는 비활성화한다.
+- 기존 FileOpenController의 ChooseApp 모드가 Windows 비동기
+  LauncherOptions.DisplayApplicationPicker(true)를 사용해 앱 선택 UI를
+  요청한다. 사용자 앱 선택에는 120초 대기 상한과 기존 닫기·오래된 결과 무시가
+  적용된다. 기존 기본 앱 열기의 조회 및 15초 경로는 변경하지 않는다.
+  앱 선택은 기본 연결이 없어도 진입하므로 사전 QueryFileSupport를 건너뛴다.
+- 실행 직전과 완료 피드백은 원래 WindowTab identity, PaneTab, route,
+  네이티브/표시 폴더를 확인한다. 취소·실패 시 기본 앱 자동 실행으로
+  전환하지 않는다. 파일 변경·레지스트리/연결 프로그램 등록 코드는 없다.
+  OS 앱 선택 창에서 사용자가 설정하는 기본 연결은 Windows가 관리한다.
+- 소스 계약 추가. 빌드·테스트 실행·GUI·시각 검증 모두 미실행,
+  NOT TESTED. 실제 Windows 앱 선택·거부·취소·탭 전환 동작은 수용 보류.
+  G01 OPEN, G07 중단, G03~G05 제외 상태 유지.
+
 ## 2026-10-21 EP08/F11 — 검색 결과가 있는 폴더로 이동 (코드 반영, 실행 미검증)
 
 - 직전 F13 커밋 96e62435 위에서 소규모 검색 UX 개선을 구현했다.
