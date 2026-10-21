@@ -156,6 +156,18 @@ B의 좌우 닫기 범위, F6·목록 Tab 왕복·주소/검색·메뉴 복귀·
   이유로 재요청하거나 자동 차단 조건으로 등록하지 않는다. 다른 승인된 검증(G07 등)은
   실제 시험한 범위만 기록한다. 사용자 제외 항목을 검증 완료로 주장하지 않는다.
 
+## 2026-10-21 EP10/F08 다중 파일 Deflate ZIP 생성 — 코드 반영, 미검증
+
+기존 다중 Store ZIP 생성기에서 명시적 DeflatePreferred 모드를
+지원한다. 평면 일반 파일 2~8개/총 원본 8MiB, 출력
+`flyExplorer-selection-deflate.zip`. 압축률/해제기 100:1
+안전 제한에 따라 파일마다 Deflate 또는 Store를 결정하고,
+Deflate 데이터는 실제 디코더를 사용해 원본과 비교한 뒤
+스테이징에 진입한다. ZIP header method/CRC/packed/unpacked
+크기 일치, 기존 파일 비교체, UI 협력적 취소/정확한
+탭 문맥 확인 정책을 유지한다. **NOT TESTED**:
+빌드/테스트/GUI/시각 검증 미실행.
+
 ## 2026-10-21 EP10/F08 단일 파일 Deflate ZIP 생성 — 코드 반영, 미검증
 
 miniz 3.1.2 low-level `tdefl` raw 압축 생성 및 단일

@@ -1,9 +1,10 @@
-// F08 / EP10. Explicitly selected 2-8 flat local files into a ZIP Store
-// archive named flyExplorer-selection.zip in their source directory.
-// This neither compresses nor extracts data; NO existing file is overwritten.
+// F08 / EP10. Strict 2-8-file ZIP creation: default Store-only or optional
+// per-member Deflate with Store fallback. No original/existing output overwrite.
 // Windows runtime/GUI acceptance is not established by this source.
 #pragma once
 #include "zip_store_writer.h"
+#include "zip_raw_deflate.h"
+#include "zip_raw_deflate_compress.h"
 #include <windows.h>
 #include <algorithm>
 #include <cstddef>
@@ -18,15 +19,18 @@ inline constexpr std::size_t kMinFiles=2;
 inline constexpr std::size_t kMaxFiles=8;
 inline constexpr std::uint64_t kMaxTotalBytes=8ull*1024ull*1024ull;
 inline constexpr wchar_t kArchiveName[]=L"flyExplorer-selection.zip";
+inline constexpr wchar_t kDeflateArchiveName[]=L"flyExplorer-selection-deflate.zip";
+enum class Compression { StoreOnly, DeflatePreferred };
 
 enum class Status {
     Created, Cancelled, InvalidSource, DuplicateName, TooLarge,
-    CannotRead, AlreadyExists, CannotWrite
+    CannotRead, CompressionFailed, AlreadyExists, CannotWrite
 };
 struct Result final {
     Status status=Status::InvalidSource;
     std::wstring output{};
     std::size_t fileCount=0;
+    std::size_t deflatedFiles=0;
 };
 namespace detail {
 struct Member final {
@@ -34,7 +38,9 @@ struct Member final {
     std::wstring leaf;
     std::vector<unsigned char> data;
     std::uint32_t crc=0;
+    std::uint32_t originalSize=0;
     std::uint32_t localOffset=0;
+    std::uint16_t method=0;
 };
 inline bool unchanged(BY_HANDLE_FILE_INFORMATION const& before,
                       BY_HANDLE_FILE_INFORMATION const& after) noexcept {
@@ -48,7 +54,8 @@ inline bool unchanged(BY_HANDLE_FILE_INFORMATION const& before,
 } // namespace detail
 
 inline Result createMany(std::vector<std::wstring> const& paths,
-                         std::atomic_bool const* cancellation=nullptr) noexcept {
+                         std::atomic_bool const* cancellation=nullptr,
+                         Compression compression=Compression::StoreOnly) noexcept {
     Result result{};
     if(fxfile::zipstore::detail::cancelled(cancellation)){
             result.status=Status::Cancelled;return result;
@@ -125,15 +132,18 @@ inline Result createMany(std::vector<std::wstring> const& paths,
                 result.status=Status::CannotRead;return result;
             }
             member.crc=fxfile::zipstore::detail::crc32(member.data);
+            member.originalSize=static_cast<std::uint32_t>(length);
             totalBytes+=length;
             members.push_back(std::move(member));
         }
         if(fxfile::zipstore::detail::cancelled(cancellation)){
             result.status=Status::Cancelled;return result;
         }
-        // A deterministic file name is deliberate: never silently find an
-        // unused name that the user did not request.
-        const auto destination=(std::filesystem::path(directory)/kArchiveName);
+        // Both modes use separate deterministic filenames; never silently
+        // find an alternate destination or replace an existing archive.
+        const wchar_t* archiveName=compression==Compression::DeflatePreferred?
+            kDeflateArchiveName:kArchiveName;
+        const auto destination=(std::filesystem::path(directory)/archiveName);
         const std::wstring target=destination.native();
         if(target.size()>253||
            ::GetFileAttributesW(target.c_str())!=INVALID_FILE_ATTRIBUTES){
@@ -141,9 +151,46 @@ inline Result createMany(std::vector<std::wstring> const& paths,
                 Status::InvalidSource:Status::AlreadyExists;
             return result;
         }
-        std::size_t archiveCapacity=static_cast<std::size_t>(totalBytes)+22;
+        // Read/check all originals first. Never stage a partial archive
+        // until all Deflate candidates are self-verified with raw inflate.
+        std::size_t deflatedFiles=0;
+        if(compression==Compression::DeflatePreferred){
+            for(auto& member:members){
+                if(fxfile::zipstore::detail::cancelled(cancellation)){
+                    result.status=Status::Cancelled;return result;
+                }
+                std::vector<unsigned char> compressed;
+                if(!fxfile::ziprawdeflate::compressBounded(member.data,compressed)){
+                    result.status=Status::CompressionFailed;return result;
+                }
+                const bool useDeflate=compressed.size()<member.data.size()&&
+                    std::uint64_t(member.originalSize)<=
+                    std::uint64_t(compressed.size())*
+                    fxfile::ziprawdeflate::kMaxRatio;
+                if(useDeflate){
+                    std::vector<unsigned char> verified;
+                    if(!fxfile::ziprawdeflate::inflateExact(
+                           compressed.data(),compressed.size(),
+                           member.originalSize,verified,cancellation)){
+                        result.status=fxfile::zipstore::detail::cancelled(cancellation)?
+                            Status::Cancelled:Status::CompressionFailed;
+                        return result;
+                    }
+                    if(verified!=member.data){
+                        result.status=Status::CompressionFailed;return result;
+                    }
+                    member.data=std::move(compressed);
+                    member.method=8;
+                    ++deflatedFiles;
+                }
+            }
+        }
+        if(fxfile::zipstore::detail::cancelled(cancellation)){
+            result.status=Status::Cancelled;return result;
+        }
+        std::size_t archiveCapacity=22;
         for(auto const& member:members){
-            archiveCapacity+=76u+member.name.size()*2u;
+            archiveCapacity+=member.data.size()+76u+member.name.size()*2u;
         }
         if(archiveCapacity>fxfile::zipinspect::kMaxZipBytes){
             result.status=Status::TooLarge;return result;
@@ -154,18 +201,18 @@ inline Result createMany(std::vector<std::wstring> const& paths,
             if(fxfile::zipstore::detail::cancelled(cancellation)){
                 result.status=Status::Cancelled;return result;
             }
-            const auto length=static_cast<std::uint32_t>(member.data.size());
+            const auto packed=static_cast<std::uint32_t>(member.data.size());
             const auto nameLength=static_cast<std::uint16_t>(member.name.size());
             member.localOffset=static_cast<std::uint32_t>(zip.size());
             fxfile::zipstore::detail::dword(zip,0x04034b50u);
             fxfile::zipstore::detail::word(zip,20);
             fxfile::zipstore::detail::word(zip,0x0800);
-            fxfile::zipstore::detail::word(zip,0); // Store
+            fxfile::zipstore::detail::word(zip,member.method); // Store/Deflate
             fxfile::zipstore::detail::word(zip,0); // DOS time
             fxfile::zipstore::detail::word(zip,0); // DOS date
             fxfile::zipstore::detail::dword(zip,member.crc);
-            fxfile::zipstore::detail::dword(zip,length);
-            fxfile::zipstore::detail::dword(zip,length);
+            fxfile::zipstore::detail::dword(zip,packed);
+            fxfile::zipstore::detail::dword(zip,member.originalSize);
             fxfile::zipstore::detail::word(zip,nameLength);
             fxfile::zipstore::detail::word(zip,0);
             zip.insert(zip.end(),member.name.begin(),member.name.end());
@@ -173,18 +220,18 @@ inline Result createMany(std::vector<std::wstring> const& paths,
         }
         const auto directoryOffset=static_cast<std::uint32_t>(zip.size());
         for(auto const& member:members){
-            const auto length=static_cast<std::uint32_t>(member.data.size());
+            const auto packed=static_cast<std::uint32_t>(member.data.size());
             const auto nameLength=static_cast<std::uint16_t>(member.name.size());
             fxfile::zipstore::detail::dword(zip,0x02014b50u);
             fxfile::zipstore::detail::word(zip,20); // DOS creator
             fxfile::zipstore::detail::word(zip,20);
             fxfile::zipstore::detail::word(zip,0x0800);
-            fxfile::zipstore::detail::word(zip,0); // Store
+            fxfile::zipstore::detail::word(zip,member.method); // Store/Deflate
             fxfile::zipstore::detail::word(zip,0);
             fxfile::zipstore::detail::word(zip,0);
             fxfile::zipstore::detail::dword(zip,member.crc);
-            fxfile::zipstore::detail::dword(zip,length);
-            fxfile::zipstore::detail::dword(zip,length);
+            fxfile::zipstore::detail::dword(zip,packed);
+            fxfile::zipstore::detail::dword(zip,member.originalSize);
             fxfile::zipstore::detail::word(zip,nameLength);
             fxfile::zipstore::detail::word(zip,0); // extra
             fxfile::zipstore::detail::word(zip,0); // comment
@@ -241,8 +288,10 @@ inline Result createMany(std::vector<std::wstring> const& paths,
         // Prepare all user-visible result allocations before publication.
         result.output=target;
         result.fileCount=members.size();
+        result.deflatedFiles=deflatedFiles;
         if(fxfile::zipstore::detail::cancelled(cancellation)){
             result.output.clear();result.fileCount=0;
+            result.deflatedFiles=0;
             result.status=Status::Cancelled;return result;
         }
         // No rollback if the final rename has already committed.
@@ -255,6 +304,7 @@ inline Result createMany(std::vector<std::wstring> const& paths,
         const DWORD error=::GetLastError();
         result.output.clear();
         result.fileCount=0;
+        result.deflatedFiles=0;
         result.status=(error==ERROR_ALREADY_EXISTS||error==ERROR_FILE_EXISTS)?
             Status::AlreadyExists:Status::CannotWrite;
         return result;

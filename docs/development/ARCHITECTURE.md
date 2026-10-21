@@ -149,6 +149,18 @@ the existing bounded raw inflater before staging. It uses a distinct
 `<source>.deflate.zip` destination, no-overwrite publication, and
 has no single-file cancellation UI. Unbuilt/unexecuted: NOT TESTED.
 
+F08 batch ZIP creation also has explicit
+`Compression::DeflatePreferred` mode in `zip_store_batch_writer.h`.
+It creates a separate deterministic `flyExplorer-selection-deflate.zip`
+for 2-8 flat files (combined raw <=8 MiB), choosing method 8 only if
+it shrinks data and stays inside the existing 100:1 decoder gate.
+Every compressed member is independently round-trip verified before
+staging; otherwise it uses method 0. Local/central method, CRC and
+packed/unpacked sizes and offsets match. The existing Store-only
+default, cooperative cancellation, no-replace publication and
+WindowTab/PaneTab/route ownership stay intact. Native execution
+and Windows GUI acceptance remain NOT TESTED.
+
 Regular-document activation belongs to `app/winui/file_open_controller.h`.
 It owns one asynchronous Windows StorageFile/Launcher request, deadline and
 close cancellation. MainWindow supplies weak presentation callbacks and checks

@@ -1,5 +1,35 @@
 # flyExplorer 작업 인계 — 2026-10-19 L08 커서 OPEN, G01 코드·빌드 PASS
 
+## 2026-10-21 EP10/F08 — 다중 파일 Deflate ZIP 생성 (코드 반영, 미검증)
+
+- 기준 main `e2fccbf2`. `src/base/zip_store_batch_writer.h`에
+  `Compression::DeflatePreferred`를 추가했다. 기존 기본
+  StoreOnly 모드와 `flyExplorer-selection.zip`은 그대로
+  두고, Deflate 우선 생성은 별도 `flyExplorer-selection-deflate.zip`
+  이름을 쓴다. 동일 폴더의 평면 일반 파일 **2~8개**,
+  전체 원본 합계 **8MiB 이하**만 지원한다.
+- 기존 모든 원본의 경로·reparse·파일 크기/mtime·파일명 중복·
+  CRC32 사전 검사 후, 각 데이터에 miniz 3.1.2 raw tdefl을
+  적용한다. 압축이 실제 더 작고 기존 해제기의 최대 **100:1**
+  확장률을 충족한 경우에만 method 8을 선택하며, 기존
+  tinfl 디코딩 결과를 원본과 완전히 비교한다.
+  그렇지 않으면 개별 파일은 method 0(Store)로 저장한다.
+  중앙/로컬 ZIP 헤더는 각각 정확한 packed/unpacked·CRC·
+  method·offset을 기입하고 EOCD를 작성한다.
+- 모든 후보 압축/자기 검사 이후에만 임시 파일 생성에 진입한다.
+  기존 임시 독점 쓰기·flush, no-replace rename, RAII 정리와
+  원본 보존 정책을 유지한다. UI는 기존 다중 ZIP 생성과
+  같은 `mZipBatchCreationBusy` 및 협력적 취소 토큰을 사용한다.
+  기존 메뉴 선택·WindowTab/PaneTab/route/folder 원점
+  검증을 공유하고 다중 Deflate 메뉴만 새로 추가한다.
+- **미구현:** 폴더/중첩 경로, ZIP64/descriptor/암호화,
+  실시간 진행, raw tdefl 호출 *도중* 선점형 취소,
+  OS 경합/프로세스 종료 잔여물/DispatcherQueue 게시 실패 시
+  작업 상태 회복. 최종 rename 이후 늦은 취소는 롤백하지 않는다.
+- 관련 소스 계약·개발 목표·인계를 작성했다.
+  **빌드/소스·네이티브 테스트/GUI/시각 검증 미실행 (NOT TESTED)**.
+  G01 OPEN, G07 중단, G03~G05 제외 유지.
+
 ## 2026-10-21 EP10/F08 — 단일 일반 파일 Deflate ZIP 생성 (코드 반영, 미검증)
 
 - 기준 main `3c2883d2`. miniz 3.1.2의 low-level `tdefl` 소스를

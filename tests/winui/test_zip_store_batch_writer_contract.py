@@ -13,6 +13,16 @@ class ZipStoreBatchContracts(unittest.TestCase):
             "kMinFiles=2", "kMaxFiles=8",
             "kMaxTotalBytes=8ull*1024ull*1024ull",
             'kArchiveName[]=L"flyExplorer-selection.zip"',
+            'kDeflateArchiveName[]=L"flyExplorer-selection-deflate.zip"',
+            "enum class Compression { StoreOnly, DeflatePreferred }",
+            "Status::CompressionFailed",
+            "member.originalSize",
+            "member.method=8",
+            "ziprawdeflate::compressBounded(",
+            "ziprawdeflate::inflateExact(",
+            "verified!=member.data",
+            "ziprawdeflate::kMaxRatio",
+            "result.deflatedFiles=deflatedFiles",
             "zipstore::detail::safeSource(source,parent,leaf,encoded)",
             "zipinspect::detail::same(directory,parent)",
             "zipinspect::detail::same(prior.leaf,leaf)",
@@ -55,10 +65,11 @@ class ZipStoreBatchContracts(unittest.TestCase):
             "SelectedItems().Size()", "visible.visibleRoute!=route",
             "selectedPaths.push_back(item->parsingName)",
             "std::adjacent_find(ids.begin(),ids.end())",
-            "fxfile::zipbatch::createMany(paths,cancel.get())",
+            "fxfile::zipbatch::createMany(paths,cancel.get(),mode)",
+            "Compression::DeflatePreferred",
             "mZipBatchCreationBusy=true",
             "mZipBatchCancel=cancel",
-            "zipbatch::createMany(paths,cancel.get())",
+            "zipbatch::createMany(paths,cancel.get(),mode)",
             "active.identity!=identity", "pane.routeIds[tab]!=route",
             "pane.filesystemPaths[tab]!=folder",
             "NavigationAction::Refresh",
@@ -71,9 +82,11 @@ class ZipStoreBatchContracts(unittest.TestCase):
             "count>=fxfile::zipbatch::kMinFiles",
             "count<=fxfile::zipbatch::kMaxFiles",
             'make(L"선택한 파일 ZIP으로 묶기 (2~8개, 무압축)"',
+            'make(L"선택한 파일 ZIP으로 묶기 (2~8개, Deflate)"',
+            "CreateSelectedBatchZip(side,true)",
         ):
             self.assertIn(token,ui)
-        self.assertIn("void CreateSelectedBatchZip(int side);",header)
+        self.assertIn("void CreateSelectedBatchZip(int side, bool preferDeflate=false);",header)
         self.assertIn("bool mZipBatchCreationBusy=false;",header)
 
 if __name__=="__main__":

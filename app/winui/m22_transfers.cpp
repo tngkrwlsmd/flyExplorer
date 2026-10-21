@@ -156,7 +156,7 @@ void MainWindow::OpenSelectedWith(int side){
  else
   StatusText().Text(L"이 파일은 연결 프로그램으로 열 수 없습니다.");
 }
-void MainWindow::CreateSelectedBatchZip(int side){
+void MainWindow::CreateSelectedBatchZip(int side,bool preferDeflate){
  if(mClosing||mZipDeflateCreationBusy||mZipBatchCreationBusy||mZipBatchExtractionBusy||mZipCreationBusy||
     mZipInspectionBusy||mZipExtractionBusy||side<0||side>1||
     ActiveWindowTab().model.activePane!=side||mFileOperations.busy())return;
@@ -198,15 +198,20 @@ void MainWindow::CreateSelectedBatchZip(int side){
  auto weak=get_weak();
  auto dispatch=DispatcherQueue();
  mZipBatchCreationBusy=true;
- StatusText().Text(L"다중 ZIP 생성 중입니다. 취소 버튼을 사용할 수 있습니다.");
+ StatusText().Text(preferDeflate?
+    L"다중 Deflate ZIP 생성 중입니다. 취소 버튼을 사용할 수 있습니다.":
+    L"다중 ZIP Store 생성 중입니다. 취소 버튼을 사용할 수 있습니다.");
  try{
   auto cancel=std::make_shared<std::atomic_bool>(false);
   mZipBatchCancel=cancel;
   fileBar()->CancelButton().IsEnabled(true);
   std::thread([weak,dispatch,paths=std::move(selectedPaths),
-               identity,side,tab,route,folder,cancel]{
-   const auto result=fxfile::zipbatch::createMany(paths,cancel.get());
-   dispatch.TryEnqueue([weak,result,identity,side,tab,route,folder]{
+               identity,side,tab,route,folder,cancel,preferDeflate]{
+   const auto mode=preferDeflate?
+       fxfile::zipbatch::Compression::DeflatePreferred:
+       fxfile::zipbatch::Compression::StoreOnly;
+   const auto result=fxfile::zipbatch::createMany(paths,cancel.get(),mode);
+   dispatch.TryEnqueue([weak,result,identity,side,tab,route,folder,preferDeflate]{
     auto ui=weak.get();
     if(!ui||ui->mClosing)return;
     ui->mZipBatchCreationBusy=false;
@@ -221,7 +226,11 @@ void MainWindow::CreateSelectedBatchZip(int side){
        pane.filesystemPaths[tab]!=folder)return;
     using Status=fxfile::zipbatch::Status;
     if(result.status==Status::Created){
-     ui->StatusText().Text(L"flyExplorer-selection.zip 생성 완료. 원본 파일은 유지했습니다.");
+     ui->StatusText().Text(preferDeflate?
+        (result.deflatedFiles>0?
+          L"flyExplorer-selection-deflate.zip 생성 완료 (Store/Deflate 혼합). 원본 파일은 유지했습니다.":
+          L"flyExplorer-selection-deflate.zip 생성 완료 (전체 Store 대체). 원본 파일은 유지했습니다."):
+        L"flyExplorer-selection.zip 생성 완료. 원본 파일은 유지했습니다.");
      const auto& snap=pane.tabs[tab].snapshot();
      if(snap.folder.valid())
       ui->QueuePidl(side,fxfile::shellnav::Location(snap.folder),
@@ -229,7 +238,9 @@ void MainWindow::CreateSelectedBatchZip(int side){
     }else{
      ui->StatusText().Text(
       result.status==Status::AlreadyExists?
-       L"flyExplorer-selection.zip이 이미 존재합니다. 덮어쓰지 않았습니다.":
+       (preferDeflate?
+         L"flyExplorer-selection-deflate.zip이 이미 존재합니다. 덮어쓰지 않았습니다.":
+         L"flyExplorer-selection.zip이 이미 존재합니다. 덮어쓰지 않았습니다."):
       result.status==Status::Cancelled?
        L"다중 ZIP 생성을 취소했습니다. 최종 ZIP은 공개하지 않았습니다.":
       result.status==Status::TooLarge?
@@ -240,6 +251,8 @@ void MainWindow::CreateSelectedBatchZip(int side){
        L"동일한 로컬 고정 드라이브 폴더의 일반 파일 2~8개만 지원합니다.":
       result.status==Status::CannotRead?
        L"선택한 원본 파일 일부를 읽을 수 없습니다.":
+      result.status==Status::CompressionFailed?
+       L"Deflate 압축 또는 복원 검증에 실패했습니다. ZIP을 공개하지 않았습니다.":
        L"ZIP 생성에 실패했습니다. 원본 파일은 변경하지 않았습니다.");
     }
    });
@@ -874,6 +887,9 @@ void MainWindow::ShowAppFileContextMenu(
  menu.Items().Append(make(L"선택한 파일 ZIP으로 묶기 (2~8개, 무압축)",L"\uE8B7",
                           canCreateBatchZip,
      [side](MainWindow& ui){ui.CreateSelectedBatchZip(side);}));
+ menu.Items().Append(make(L"선택한 파일 ZIP으로 묶기 (2~8개, Deflate)",L"\uE8B7",
+                          canCreateBatchZip,
+     [side](MainWindow& ui){ui.CreateSelectedBatchZip(side,true);}));
  menu.Items().Append(make(L"ZIP 해제 (Store/Deflate, 한 파일)",L"\uE8B7",
                           canInspectZip,
      [side](MainWindow& ui){ui.ExtractSelectedZip(side);}));
