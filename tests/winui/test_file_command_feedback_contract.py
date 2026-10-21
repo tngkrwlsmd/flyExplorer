@@ -42,6 +42,57 @@ class FileCommandFeedbackContract(unittest.TestCase):
         ):
             self.assertIn(required,completion)
 
+    def test_native_create_rename_target_revealed_only_after_same_refresh(self):
+        ui=(APP/"MainWindow.xaml.cpp").read_text(encoding="utf-8-sig")
+        commands=(APP/"m21_commands.cpp").read_text(encoding="utf-8-sig")
+        pane=(APP/"file_list_state.h").read_text(encoding="utf-8-sig")
+        native=(ROOT/"src"/"base"/"file_command_core.cpp").read_text(
+            encoding="utf-8-sig"
+        )
+        for token in ("result.target=target.native();",
+                      "MoveFileW(src.c_str(),target.c_str())"):
+            self.assertIn(token,native)
+        for token in (
+            "if(disposition==Disposition::Failed)",
+            "reveal.target=completion.result.target;",
+            "reveal.folder=completion.context.visibleShellFolder;",
+            "reveal.route=completion.context.route;",
+            "reveal.tab=completion.context.tab;",
+            "reveal.afterRefresh=false;",
+            "fxfile::shellnav::NavigationAction::Refresh",
+        ):
+            self.assertIn(token,commands)
+        self.assertIn("struct FileCommandReveal final",pane)
+        self.assertIn("bool afterRefresh=false;",pane)
+        accepted=ui.split("void MainWindow::OnNativeResult(",1)[1].split(
+            "void MainWindow::OnNativeChange(",1
+        )[0]
+        for token in (
+            "completed.action==Action::Refresh",
+            "completed.kind==Kind::Applied",
+            "reveal.route==pane.routeIds[pane.active]",
+            "reveal.tab==pane.active",
+            "reveal.afterRefresh=true;",
+            "else reveal.clear();",
+        ):
+            self.assertIn(token,accepted)
+        fill=ui.split("void MainWindow::FillFiles(int side)",1)[1].split(
+            "std::wstring MainWindow::WindowTabLabel(",1
+        )[0]
+        for token in (
+            "state.fileCommandReveal.afterRefresh",
+            "state.fileCommandReveal.folder==snapshot.parsingName",
+            "selected.clear();",
+            "focusedPath.clear();",
+            "CompareStringOrdinal(itemParsing.c_str(),-1,",
+            "view.SelectedItems().Append(row);",
+            "if(revealAfterRefresh)view.ScrollIntoView(focusRow);",
+            "if(revealAfterRefresh)state.fileCommandReveal.clear();",
+        ):
+            self.assertIn(token,fill)
+        self.assertNotIn("GetFileAttributesW(",fill)
+        self.assertNotIn("CreateDirectoryW(",fill)
+
 class TransferFeedbackContract(unittest.TestCase):
     def test_confirmation_cancel_and_partial_cancel_have_feedback(self):
         body=(APP/"m22_transfers.cpp").read_text(encoding="utf-8-sig")
