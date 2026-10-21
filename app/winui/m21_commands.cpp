@@ -175,8 +175,23 @@ void MainWindow::OnFileCommandCompleted(
  if(originActive)StatusText().Text(
      completion.kind==fxfile::filecommand::Kind::CreateFolder?
      L"새 폴더를 만들었습니다.":L"이름을 변경했습니다.");
- auto const& pane=ActiveWindowTab().model.panes[completion.context.side];
- QueuePidl(completion.context.side,
+ const int side=completion.context.side;
+ auto const& pane=ActiveWindowTab().model.panes[side];
+ // The worker supplied the actual target path. Defer selection until
+ // the matching Shell Refresh has produced a new list, never select by
+ // a stale row index or an unverified user-entered name.
+ if(originActive&&!completion.result.target.empty()&&
+    pane.active==completion.context.tab&&
+    pane.active<pane.routeIds.size()&&
+    pane.routeIds[pane.active]==completion.context.route){
+     auto& reveal=ActiveWindowTab().fileLists[side].fileCommandReveal;
+     reveal.target=completion.result.target;
+     reveal.folder=completion.context.visibleShellFolder;
+     reveal.route=completion.context.route;
+     reveal.tab=completion.context.tab;
+     reveal.afterRefresh=false;
+ }
+ QueuePidl(side,
    fxfile::shellnav::Location(
        pane.tabs[pane.active].snapshot().folder),
    fxfile::shellnav::NavigationAction::Refresh);
