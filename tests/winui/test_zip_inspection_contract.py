@@ -25,38 +25,21 @@ class ZipInspectionSourceContracts(unittest.TestCase):
                           "IFileOperation", "ShellExecute"):
             self.assertNotIn(forbidden,s)
 
-    def test_ui_displays_only_accepted_async_report(self):
+    def test_retired_inspection_panel_has_no_live_ui_entry_point(self):
+        # Keep the bounded parser contract as rollback evidence, but never
+        # register an invisible inspector panel or an F08 menu command.
         menu=read("app/winui/m22_transfers.cpp")
         hdr=read("app/winui/MainWindow.xaml.h")
         xaml=read("app/winui/MainWindow.xaml")
-        main=menu.split("void MainWindow::InspectSelectedZip(",1)[1].split(
-             "void MainWindow::ShowAppFileContextMenu(",1)[0]
-        for v in ("view.SelectedItem","list.SelectedItems().Size()!=1",
-                  "mZipInspectionBusy=true", "std::thread([weak,dispatch,path",
-                  "fxfile::zipinspect::inspect(path)",
-                  "current.identity!=identity",
-                  "currentLogical!=logical",
-                  "indexed->parsingName!=path",
-                  "shown.visibleRoute!=route",
-                  "pane.routeIds[tab]!=route",
-                  "report.status!=Status::Accepted",
-                  "ZipInspectionItems().Items().Clear()",
-                  "ZipInspectionPanel().Visibility(Visibility::Collapsed)"):
-            self.assertIn(v,main)
-        # Legacy F08 inspection logic is retained but the OS owns the
-        # default archive workflow from the user-facing file menu.
-        self.assertNotIn('make(L"ZIP 내부 항목 검사 (읽기 전용)"',menu)
         self.assertIn('make(L"Windows 탐색기에서 선택 열기"',menu)
-        self.assertIn("void InspectSelectedZip(int side);",hdr)
-        self.assertIn("void OnCloseZipInspection(",hdr)
-        self.assertIn('x:Name="ZipInspectionPanel"',xaml)
-        self.assertIn('x:Name="ZipInspectionItems"',xaml)
-        self.assertIn('Click="OnCloseZipInspection"',xaml)
-
-    def test_all_other_panels_collapse_zip_results(self):
+        self.assertNotIn("InspectSelectedZip",menu)
+        self.assertNotIn("OnCloseZipInspection",hdr)
+        self.assertNotIn("ZipInspectionPanel",xaml)
+        self.assertNotIn("ZipInspectionItems",xaml)
         for path in ("app/winui/m19_features.cpp",
                      "app/winui/bookmark_features.cpp",
                      "app/winui/filter_rule_features.cpp"):
-            self.assertIn("ZipInspectionPanel().Visibility(Visibility::Collapsed);",read(path))
+            self.assertNotIn("ZipInspectionPanel",read(path))
+
 if __name__=="__main__":
     unittest.main()

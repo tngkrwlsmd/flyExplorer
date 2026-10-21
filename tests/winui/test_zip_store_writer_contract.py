@@ -31,7 +31,7 @@ class ZipStoreWriterContracts(unittest.TestCase):
     def test_ui_revalidates_selection_and_window_before_publish(self):
         ui=source("app/winui/m22_transfers.cpp")
         method=ui.split("void MainWindow::CreateSelectedZip(int side)",1)[1].split(
-            "void MainWindow::InspectSelectedZip(int side)",1)[0]
+            "void MainWindow::ExtractSelectedBatchZip(int side)",1)[0]
         for term in ("view.SelectedItems().Size()!=1",
                      "visible.visibleRoute!=route",
                      "selected->isFolder()",

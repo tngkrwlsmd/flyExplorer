@@ -310,22 +310,6 @@
                         AutomationProperties.Name="선택한 방문 폴더 기록만 제거"/>
             </StackPanel>
         </StackPanel>
-        <StackPanel Grid.Row="4" x:Name="ZipInspectionPanel" Visibility="Collapsed"
-                    Spacing="5" Padding="14,3,14,6">
-            <StackPanel Orientation="Horizontal" Spacing="10">
-                <TextBlock Text="ZIP 메타데이터 검사 (읽기 전용)"
-                           FontWeight="SemiBold" VerticalAlignment="Center"/>
-                <Button Content="닫기" Click="OnCloseZipInspection"
-                        AutomationProperties.Name="ZIP 검사 결과 닫기"/>
-                <TextBlock Text="내부 파일 내용·CRC는 검사하지 않습니다"
-                           VerticalAlignment="Center"
-                           Opacity="{ThemeResource FlyExplorerSubtleTextOpacity}"/>
-            </StackPanel>
-            <TextBlock x:Name="ZipInspectionSummary" Text="ZIP 항목 검사 대기 중"
-                       TextWrapping="Wrap" AutomationProperties.Name="ZIP 검사 결과 요약"/>
-            <ListView x:Name="ZipInspectionItems" Height="160" SelectionMode="None"
-                      AutomationProperties.Name="ZIP 내부 항목 이름 목록"/>
-        </StackPanel>
         <StackPanel Grid.Row="4" x:Name="FilterRulePanel" Visibility="Collapsed"
                     Spacing="6" Padding="14,3,14,6">
             <StackPanel Orientation="Horizontal" Spacing="7">

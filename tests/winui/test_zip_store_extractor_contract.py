@@ -57,7 +57,7 @@ class ZipStoreExtractorContracts(unittest.TestCase):
         ui=read("app/winui/m22_transfers.cpp")
         h=read("app/winui/MainWindow.xaml.h")
         start=ui.split("void MainWindow::ExtractSelectedZip(int side)",1)[1].split(
-            "void MainWindow::InspectSelectedZip(int side)",1)[0]
+            "void MainWindow::ShowAppFileContextMenu(",1)[0]
         for term in (
             "view.SelectedItems().Size()!=1",
             "selected->isFileSystem()",

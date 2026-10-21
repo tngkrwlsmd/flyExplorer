@@ -357,7 +357,6 @@ namespace winrt::FlyExplorer::implementation
         void RefreshFilterRuleManager(int selected);
         fxfile::previewfolderview::FolderViewController mFolderViews{};
         fxfile::previewactivity::RecentActivityController mRecentActivity{};
-        bool mZipInspectionBusy=false;
         bool mZipCreationBusy=false;
         bool mZipDeflateCreationBusy=false;
         bool mZipExtractionBusy=false;
@@ -418,14 +417,12 @@ namespace winrt::FlyExplorer::implementation
         void UpdateActivePaneChrome();
         void OpenSelectedFolder(int side);
         void OpenSelectedWith(int side);
-        void InspectSelectedZip(int side);
         void CreateSelectedZip(int side);
         void CreateSelectedDeflateZip(int side);
         void CreateSelectedBatchZip(int side, bool preferDeflate=false);
         void CreateSelectedFolderZip(int side);
         void ExtractSelectedBatchZip(int side);
         void ExtractSelectedZip(int side);
-        void OnCloseZipInspection(IInspectable const&,Microsoft::UI::Xaml::RoutedEventArgs const&);
         fxfile::previewops::FileOpenController mFileOpen;
         void OpenFolderInNewPaneTab(int side,std::wstring path);
         void ApplyWorkspace(fxfile::preview::Workspace&&);

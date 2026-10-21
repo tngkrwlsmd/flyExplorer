@@ -92,11 +92,12 @@ commands, pending actual Windows acceptance and explicit removal
 review. This handoff is not a build or runtime PASS (NOT TESTED).
 Avoid exposing two parallel user-facing archive implementations.
 
-F08 read-only ZIP metadata preflight is in `src/base/zip_inspection.h`.
-It is a bounded parser without write/decompression APIs; the WinUI
-context action owns an opt-in worker and suppresses stale WindowTab/PaneTab
-results. A preflight acceptance does not certify data integrity or authorize
-archive extraction.
+The bounded F08 read-only metadata parser remains in
+`src/base/zip_inspection.h` as inactive rollback code. Its user-facing
+inspection panel, event handler, worker dispatch and panel-collapse calls were
+removed after the archive menu was hidden. The parser has no live WinUI entry
+point. Its retained source contract is not runtime or ZIP-integrity
+acceptance.
 
 The first F08 writer is `src/base/zip_store_writer.h`: a one-file,
 bounded ZIP/Store-only creator. It owns CRC/header generation and

@@ -1,4 +1,20 @@
-# flyExplorer current status — G02/G06 scoped local GUI PASS; G01 open (2026-10-21)
+# flyExplorer current status — 2026-10-22 EP05 P0/P1 UI cleanup; G01 open
+
+## 2026-10-22 P0/P1 — retire invisible F08 ZIP inspection UI
+
+- On main baseline `c759eefcdbacb82c271f03e768ec3151675eca6f`, the Explorer delegation already hides
+  the ZIP inspection command. Removed the unreachable ZIP inspector's XAML panel,
+  MainWindow handler/worker/state and five obsolete cross-panel collapse calls.
+- Retained the bounded native ZIP inspection parser and inactive ZIP creation/
+  extraction sources for exact-source rollback and separate removal review.
+  Existing tests now assert that the hidden inspector cannot be reached through
+  WinUI while preserving the parser safety contract.
+- **NOT TESTED:** Windows build, source/native test execution, native Explorer
+  handoff, functional GUI and visual acceptance were not run. This source
+  cleanup does not certify the latest Explorer delegation or close G01/G07.
+  User-excluded G03/G04/G05 remain excluded.
+
+
 
 ## 2026-10-21 G01 — owned native shutdown dump collection ready
 
