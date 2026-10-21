@@ -35,6 +35,20 @@ class ContextContract(unittest.TestCase):
   self.assertIn("ShowAppBackgroundContextMenu(side,list,args.GetPosition(list))",app)
   self.assertIn("MenuFlyoutSubItem sendTo;",app)
   self.assertIn("MenuFlyoutSubItem create;",app)
+  itemMenu=app.split("void MainWindow::ShowAppFileContextMenu(",1)[1].split(
+      "void MainWindow::ShowAppBackgroundContextMenu(",1)[0]
+  for token in (
+      "pane.active>=pane.filesystemPaths.size()",
+      "const bool localSource=!pane.filesystemPaths[tab].empty();",
+      "const bool canRename=selectedFilesystem&&localSource&&count==1;",
+      "other.active<other.pending.size()",
+      "!other.pending[other.active]",
+      "const bool canOppositeCopy=ready&&",
+      "const bool canOppositeMove=selectedFilesystem&&",
+      "sendTo.IsEnabled(canOppositeCopy||canOppositeMove);",
+      "const bool canExternal=selectedFilesystem&&localSource&&",
+  ):
+   self.assertIn(token,itemMenu)
   self.assertIn('make(L"추가 옵션 표시"',app)
   self.assertIn("kMaxContextSelection=32",src("src/base/shell_context_core.h"))
   self.assertIn("kMaxContextPathUnits=16*1024",src("src/base/shell_context_core.h"))
